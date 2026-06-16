@@ -2,7 +2,7 @@
  * API 密钥管理页面
  */
 
-import { useState, useEffect, useCallback, useMemo, type FC } from 'react';
+import { useState, useEffect, useCallback, useMemo, type FC } from "react";
 import {
   Table,
   Button,
@@ -20,8 +20,8 @@ import {
   Tooltip,
   Popconfirm,
   Alert,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+} from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
   EditOutlined,
@@ -34,18 +34,18 @@ import {
   LockOutlined,
   UnlockOutlined,
   FileTextOutlined,
-} from '@ant-design/icons';
+} from "@ant-design/icons";
 import {
   listAPIKeys,
   createAPIKey,
   updateAPIKey,
   deleteAPIKey,
   toggleAPIKeyStatus,
-} from '@/api/apikey';
-import type { APIKey, CreateAPIKeyRequest, UpdateAPIKeyRequest, APIKeyListParams } from '@/types/apikey';
-import type { PageData } from '@/types/apikey';
-import { formatDateTime } from '@/utils/datetime';
-import LogsModal from './LogsModal';
+} from "@/api/apikey";
+import type { APIKey, CreateAPIKeyRequest, UpdateAPIKeyRequest, APIKeyListParams } from "@/types/apikey";
+import type { PageData } from "@/types/apikey";
+import { formatDateTime } from "@/utils/datetime";
+import LogsModal from "./LogsModal";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -53,15 +53,15 @@ const { TextArea } = Input;
 // ==================== 常量定义 ====================
 
 const SCOPE_OPTIONS = [
-  { label: '读取', value: 'read' },
-  { label: '写入', value: 'write' },
-  { label: '管理', value: 'admin' },
+  { label: "读取", value: "read" },
+  { label: "写入", value: "write" },
+  { label: "管理", value: "admin" },
 ];
 
 const SCOPE_COLORS: Record<string, string> = {
-  read: 'blue',
-  write: 'orange',
-  admin: 'red',
+  read: "blue",
+  write: "orange",
+  admin: "red",
 };
 
 // ==================== 工具函数 ====================
@@ -82,10 +82,10 @@ function maskKey(key: string): string {
 async function copyToClipboard(text: string): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
-    message.success('已复制到剪贴板');
+    message.success("已复制到剪贴板");
     return true;
   } catch (error) {
-    message.error('复制失败，请手动复制');
+    message.error("复制失败，请手动复制");
     return false;
   }
 }
@@ -97,7 +97,7 @@ function renderScopeTags(scopes: string[]) {
   return (
     <Space size="small" wrap>
       {scopes.map((scope) => (
-        <Tag key={scope} color={SCOPE_COLORS[scope] || 'default'}>
+        <Tag key={scope} color={SCOPE_COLORS[scope] || "default"}>
           {scope}
         </Tag>
       ))}
@@ -119,16 +119,16 @@ const APIKeyManagement: FC = () => {
 
   // Modal 状态
   const [modalVisible, setModalVisible] = useState<boolean>(false);
-  const [modalType, setModalType] = useState<'create' | 'edit'>('create');
+  const [modalType, setModalType] = useState<"create" | "edit">("create");
   const [editingRecord, setEditingRecord] = useState<APIKey | null>(null);
   const [createdKey, setCreatedKey] = useState<string | null>(null);
 
   // 日志 Modal 状态
   const [logsModalVisible, setLogsModalVisible] = useState<boolean>(false);
-  const [selectedKeyId, setSelectedKeyId] = useState<string>('');
+  const [selectedKeyId, setSelectedKeyId] = useState<string>("");
 
   // 搜索筛选状态
-  const [searchKeyword, setSearchKeyword] = useState<string>('');
+  const [searchKeyword, setSearchKeyword] = useState<string>("");
   const [filterStatus, setFilterStatus] = useState<boolean | undefined>(undefined);
   const [filterScope, setFilterScope] = useState<string | undefined>(undefined);
 
@@ -163,8 +163,8 @@ const APIKeyManagement: FC = () => {
         total: result.data?.total || 0,
       }));
     } catch (error) {
-      console.error('加载 API 密钥列表失败:', error);
-      message.error('加载数据失败，请稍后重试');
+      console.error("加载 API 密钥列表失败:", error);
+      message.error("加载数据失败，请稍后重试");
     } finally {
       setLoading(false);
     }
@@ -183,13 +183,13 @@ const APIKeyManagement: FC = () => {
    * 打开创建密钥 Modal
    */
   const handleAdd = useCallback(() => {
-    setModalType('create');
+    setModalType("create");
     setEditingRecord(null);
     setCreatedKey(null);
     form.resetFields();
     form.setFieldsValue({
       inherit_perms: true,
-      scopes: ['read'],
+      scopes: ["read"],
     });
     setModalVisible(true);
   }, [form]);
@@ -198,7 +198,7 @@ const APIKeyManagement: FC = () => {
    * 打开编辑密钥 Modal
    */
   const handleEdit = useCallback((record: APIKey) => {
-    setModalType('edit');
+    setModalType("edit");
     setEditingRecord(record);
     setCreatedKey(null);
     form.setFieldsValue({
@@ -206,7 +206,7 @@ const APIKeyManagement: FC = () => {
       description: record.description,
       scopes: record.scopes,
       inherit_perms: record.inherit_perms,
-      ip_whitelist: record.ip_whitelist?.join(', '),
+      ip_whitelist: record.ip_whitelist?.join(", "),
     });
     setModalVisible(true);
   }, [form]);
@@ -216,20 +216,20 @@ const APIKeyManagement: FC = () => {
    */
   const handleView = useCallback((record: APIKey) => {
     Modal.info({
-      title: '密钥详情',
+      title: "密钥详情",
       width: 600,
       content: (
         <div style={{ marginTop: 16 }}>
           <p><strong>名称：</strong>{record.name}</p>
           <p><strong>密钥：</strong>{maskKey(record.key)}</p>
           <p><strong>作用域：</strong>{renderScopeTags(record.scopes)}</p>
-          <p><strong>继承权限：</strong>{record.inherit_perms ? '是' : '否'}</p>
+          <p><strong>继承权限：</strong>{record.inherit_perms ? "是" : "否"}</p>
           {record.ip_whitelist && record.ip_whitelist.length > 0 && (
-            <p><strong>IP 白名单：</strong>{record.ip_whitelist.join(', ')}</p>
+            <p><strong>IP 白名单：</strong>{record.ip_whitelist.join(", ")}</p>
           )}
           {record.description && <p><strong>描述：</strong>{record.description}</p>}
-          <p><strong>过期时间：</strong>{record.expires_at ? formatDateTime(record.expires_at) : '永不过期'}</p>
-          <p><strong>最后使用：</strong>{record.last_used_at ? formatDateTime(record.last_used_at) : '未使用'}</p>
+          <p><strong>过期时间：</strong>{record.expires_at ? formatDateTime(record.expires_at) : "永不过期"}</p>
+          <p><strong>最后使用：</strong>{record.last_used_at ? formatDateTime(record.last_used_at) : "未使用"}</p>
           <p><strong>创建时间：</strong>{formatDateTime(record.created_at)}</p>
         </div>
       ),
@@ -242,11 +242,11 @@ const APIKeyManagement: FC = () => {
   const handleDelete = useCallback(async (id: string) => {
     try {
       await deleteAPIKey(id);
-      message.success('删除成功');
+      message.success("删除成功");
       fetchData();
     } catch (error) {
-      console.error('删除 API 密钥失败:', error);
-      message.error('删除失败，请稍后重试');
+      console.error("删除 API 密钥失败:", error);
+      message.error("删除失败，请稍后重试");
     }
   }, [fetchData]);
 
@@ -256,11 +256,11 @@ const APIKeyManagement: FC = () => {
   const handleToggleStatus = useCallback(async (record: APIKey) => {
     try {
       await toggleAPIKeyStatus(record.id);
-      message.success(`${record.is_active ? '禁用' : '启用'}成功`);
+      message.success(`${record.is_active ? "禁用" : "启用"}成功`);
       fetchData();
     } catch (error) {
-      console.error('切换状态失败:', error);
-      message.error('操作失败，请稍后重试');
+      console.error("切换状态失败:", error);
+      message.error("操作失败，请稍后重试");
     }
   }, [fetchData]);
 
@@ -275,12 +275,12 @@ const APIKeyManagement: FC = () => {
       let ipWhitelist: string[] | undefined;
       if (values.ip_whitelist) {
         ipWhitelist = values.ip_whitelist
-          .split(',')
+          .split(",")
           .map((s: string) => s.trim())
           .filter((s: string) => s.length > 0);
       }
 
-      if (modalType === 'create') {
+      if (modalType === "create") {
         // 创建密钥
         const createData: CreateAPIKeyRequest = {
           name: values.name,
@@ -293,7 +293,7 @@ const APIKeyManagement: FC = () => {
 
         const result = await createAPIKey(createData);
         setCreatedKey(result.data?.key || null);
-        message.success('创建成功');
+        message.success("创建成功");
       } else {
         // 更新密钥
         const updateData: UpdateAPIKeyRequest = {
@@ -305,17 +305,17 @@ const APIKeyManagement: FC = () => {
         };
 
         await updateAPIKey(editingRecord!.id, updateData);
-        message.success('更新成功');
+        message.success("更新成功");
       }
 
       setModalVisible(false);
       fetchData();
     } catch (error) {
-      console.error('提交失败:', error);
+      console.error("提交失败:", error);
       if (error instanceof Error) {
         message.error(`操作失败: ${error.message}`);
       } else {
-        message.error('操作失败，请稍后重试');
+        message.error("操作失败，请稍后重试");
       }
     }
   }, [form, modalType, editingRecord, fetchData]);
@@ -331,7 +331,7 @@ const APIKeyManagement: FC = () => {
    * 重置搜索
    */
   const handleReset = useCallback(() => {
-    setSearchKeyword('');
+    setSearchKeyword("");
     setFilterStatus(undefined);
     setFilterScope(undefined);
     setPagination((prev) => ({ ...prev, current: 1 }));
@@ -367,9 +367,9 @@ const APIKeyManagement: FC = () => {
 
   const columns: ColumnsType<APIKey> = useMemo(() => [
     {
-      title: '名称',
-      dataIndex: 'name',
-      key: 'name',
+      title: "名称",
+      dataIndex: "name",
+      key: "name",
       width: 150,
       render: (text, record) => (
         <Space>
@@ -379,9 +379,9 @@ const APIKeyManagement: FC = () => {
       ),
     },
     {
-      title: '密钥',
-      dataIndex: 'key',
-      key: 'key',
+      title: "密钥",
+      dataIndex: "key",
+      key: "key",
       width: 200,
       render: (text) => (
         <Space>
@@ -398,89 +398,89 @@ const APIKeyManagement: FC = () => {
       ),
     },
     {
-      title: '作用域',
-      dataIndex: 'scopes',
-      key: 'scopes',
+      title: "作用域",
+      dataIndex: "scopes",
+      key: "scopes",
       width: 150,
       render: (scopes: string[]) => renderScopeTags(scopes),
     },
     {
-      title: '继承权限',
-      dataIndex: 'inherit_perms',
-      key: 'inherit_perms',
+      title: "继承权限",
+      dataIndex: "inherit_perms",
+      key: "inherit_perms",
       width: 100,
-      align: 'center' as const,
+      align: "center" as const,
       render: (inherit: boolean) => (
-        <Tag color={inherit ? 'green' : 'default'}>
-          {inherit ? '是' : '否'}
+        <Tag color={inherit ? "green" : "default"}>
+          {inherit ? "是" : "否"}
         </Tag>
       ),
     },
     {
-      title: 'IP 白名单',
-      dataIndex: 'ip_whitelist',
-      key: 'ip_whitelist',
+      title: "IP 白名单",
+      dataIndex: "ip_whitelist",
+      key: "ip_whitelist",
       width: 150,
       ellipsis: true,
       render: (whitelist: string[]) => {
         if (!whitelist || whitelist.length === 0) {
-          return <span style={{ color: 'var(--theme-text-tertiary, #999)' }}>-</span>;
+          return <span style={{ color: "var(--theme-text-tertiary, #999)" }}>-</span>;
         }
         return (
-          <Tooltip title={whitelist.join(', ')}>
-            <span>{whitelist[0]}{whitelist.length > 1 ? '...' : ''}</span>
+          <Tooltip title={whitelist.join(", ")}>
+            <span>{whitelist[0]}{whitelist.length > 1 ? "..." : ""}</span>
           </Tooltip>
         );
       },
     },
     {
-      title: '状态',
-      dataIndex: 'is_active',
-      key: 'is_active',
+      title: "状态",
+      dataIndex: "is_active",
+      key: "is_active",
       width: 80,
-      align: 'center' as const,
+      align: "center" as const,
       render: (active: boolean) => (
-        <Tag color={active ? 'green' : 'red'}>
-          {active ? '启用' : '禁用'}
+        <Tag color={active ? "green" : "red"}>
+          {active ? "启用" : "禁用"}
         </Tag>
       ),
     },
     {
-      title: '过期时间',
-      dataIndex: 'expires_at',
-      key: 'expires_at',
+      title: "过期时间",
+      dataIndex: "expires_at",
+      key: "expires_at",
       width: 160,
       render: (text) => {
         if (!text) {
-          return <span style={{ color: 'var(--theme-text-tertiary, #999)' }}>永不过期</span>;
+          return <span style={{ color: "var(--theme-text-tertiary, #999)" }}>永不过期</span>;
         }
         const date = new Date(text);
         const now = new Date();
         const isExpired = date < now;
         return (
-          <span style={{ color: isExpired ? '#ff4d4f' : undefined }}>
+          <span style={{ color: isExpired ? "#ff4d4f" : undefined }}>
             {formatDateTime(text)}
           </span>
         );
       },
     },
     {
-      title: '最后使用',
-      dataIndex: 'last_used_at',
-      key: 'last_used_at',
+      title: "最后使用",
+      dataIndex: "last_used_at",
+      key: "last_used_at",
       width: 160,
       render: (text) => {
         if (!text) {
-          return <span style={{ color: 'var(--theme-text-tertiary, #999)' }}>未使用</span>;
+          return <span style={{ color: "var(--theme-text-tertiary, #999)" }}>未使用</span>;
         }
         return formatDateTime(text);
       },
     },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       width: 220,
-      fixed: 'right' as const,
+      fixed: "right" as const,
       render: (_, record) => (
         <Space size="small">
           <Tooltip title="查看详情">
@@ -499,7 +499,7 @@ const APIKeyManagement: FC = () => {
               onClick={() => handleEdit(record)}
             />
           </Tooltip>
-          <Tooltip title={record.is_active ? '禁用' : '启用'}>
+          <Tooltip title={record.is_active ? "禁用" : "启用"}>
             <Button
               type="text"
               size="small"
@@ -624,7 +624,7 @@ const APIKeyManagement: FC = () => {
 
       {/* 创建/编辑 Modal */}
       <Modal
-        title={modalType === 'create' ? '创建 API 密钥' : '编辑 API 密钥'}
+        title={modalType === "create" ? "创建 API 密钥" : "编辑 API 密钥"}
         open={modalVisible}
         onOk={handleSubmit}
         onCancel={() => setModalVisible(false)}
@@ -637,8 +637,8 @@ const APIKeyManagement: FC = () => {
             description={
               <div>
                 <p>请妥善保管您的 API 密钥，完整密钥仅显示一次：</p>
-                <div style={{ marginTop: 8, padding: 12, background: '#f5f5f5', borderRadius: 4 }}>
-                  <code style={{ fontSize: 14, wordBreak: 'break-all' }}>{createdKey}</code>
+                <div style={{ marginTop: 8, padding: 12, background: "#f5f5f5", borderRadius: 4 }}>
+                  <code style={{ fontSize: 14, wordBreak: "break-all" }}>{createdKey}</code>
                 </div>
                 <Button
                   type="primary"
@@ -667,8 +667,8 @@ const APIKeyManagement: FC = () => {
             name="name"
             label="密钥名称"
             rules={[
-              { required: true, message: '请输入密钥名称' },
-              { max: 100, message: '名称长度不能超过100个字符' },
+              { required: true, message: "请输入密钥名称" },
+              { max: 100, message: "名称长度不能超过100个字符" },
             ]}
           >
             <Input placeholder="请输入密钥名称" />
@@ -677,7 +677,7 @@ const APIKeyManagement: FC = () => {
           <Form.Item
             name="description"
             label="描述"
-            rules={[{ max: 500, message: '描述长度不能超过500个字符' }]}
+            rules={[{ max: 500, message: "描述长度不能超过500个字符" }]}
           >
             <TextArea rows={3} placeholder="请输入描述（可选）" />
           </Form.Item>
@@ -685,7 +685,7 @@ const APIKeyManagement: FC = () => {
           <Form.Item
             name="scopes"
             label="作用域"
-            rules={[{ required: true, message: '请选择作用域' }]}
+            rules={[{ required: true, message: "请选择作用域" }]}
           >
             <Select
               mode="multiple"
@@ -707,10 +707,11 @@ const APIKeyManagement: FC = () => {
             label="IP 白名单"
             extra="支持单个 IP 或 CIDR 格式，多个用逗号分隔，留空表示不限制"
           >
+            {/* eslint-disable-next-line no-restricted-syntax -- placeholder hint, not an actual server URL */}
             <Input placeholder="例如: 192.168.1.100, 10.0.0.0/24" />
           </Form.Item>
 
-          {modalType === 'create' && (
+          {modalType === "create" && (
             <Form.Item
               name="expires_at"
               label="过期时间"

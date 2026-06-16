@@ -6,15 +6,15 @@
  * 支持完整的数据源配置（API/WebSocket/Static）和显示配置
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import { Modal, Card, Col, Row, Input, Button, Form, Select, Divider, Tabs } from 'antd';
-import { widgetRegistry, getWidgetTypes } from '../widgets/configs/widgetRegistry';
-import EndpointSelector from './EndpointSelector';
-import ParamsEditor from './ParamsEditor';
-import DataSourceForm from './DataSourceForm';
-import DisplayConfigForm from './DisplayConfigForm';
-import type { WidgetType, WidgetConfig, ApiDataSourceConfig, EndpointDetail, StatCardDisplayConfig, ChartDisplayConfig, TableDisplayConfig, ListDisplayConfig, ProgressDisplayConfig, DataSourceConfig, DisplayConfig } from '@/types/dashboard';
-import { widgetDefaultSizes } from '@/types/dashboard';
+import { useState, useCallback, useEffect } from "react";
+import { Modal, Card, Col, Row, Input, Button, Form, Select, Divider, Tabs } from "antd";
+import { widgetRegistry, getWidgetTypes } from "../widgets/configs/widgetRegistry";
+import EndpointSelector from "./EndpointSelector";
+import ParamsEditor from "./ParamsEditor";
+import DataSourceForm from "./DataSourceForm";
+import DisplayConfigForm from "./DisplayConfigForm";
+import type { WidgetType, WidgetConfig, ApiDataSourceConfig, EndpointDetail, StatCardDisplayConfig, ChartDisplayConfig, TableDisplayConfig, ListDisplayConfig, ProgressDisplayConfig, DataSourceConfig, DisplayConfig } from "@/types/dashboard";
+import { widgetDefaultSizes } from "@/types/dashboard";
 
 interface WidgetSelectorProps {
 	visible: boolean;
@@ -50,7 +50,7 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
 			form.setFieldsValue({
 				type: editingWidget.type,
 				title: editingWidget.title,
-				description: editingWidget.description || '',
+				description: editingWidget.description || "",
 			});
 		} else if (!visible) {
 			// 关闭时重置状态
@@ -67,7 +67,7 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
 		setSelectedType(type);
 		form.setFieldsValue({
 			type,
-			title: widgetRegistry[type]?.displayName || '',
+			title: widgetRegistry[type]?.displayName || "",
 		});
 	};
 
@@ -90,51 +90,51 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
 			// 使用数据源配置（如果已设置）或创建默认配置
 			const finalDataSource: DataSourceConfig = dataSource || {
 				api: {
-					type: 'api',
-					endpoint: values.endpoint || '/api/default',
-					method: (values.method || 'GET') as 'GET' | 'POST',
+					type: "api",
+					endpoint: values.endpoint || "/api/default",
+					method: (values.method || "GET") as "GET" | "POST",
 				},
 			};
 
 			// 使用显示配置（如果已设置）或创建默认配置
 			const createDefaultDisplayConfig = (widgetType: WidgetType): DisplayConfig => {
 				switch (widgetType) {
-					case 'stat-card':
+					case "stat-card":
 						return {
-							type: 'stat-card',
-							icon: '📊',
-							iconColor: 'var(--theme-info, #1890ff)',
+							type: "stat-card",
+							icon: "📊",
+							iconColor: "var(--theme-info, #1890ff)",
 							decimals: 0,
 						};
-					case 'chart':
+					case "chart":
 						return {
-							type: 'chart',
-							chartType: 'line',
+							type: "chart",
+							chartType: "line",
 							showLegend: true,
 						};
-					case 'table':
+					case "table":
 						return {
-							type: 'table',
+							type: "table",
 							columns: [],
 							bordered: true,
 						};
-					case 'list':
+					case "list":
 						return {
-							type: 'list',
-							titleField: 'title',
+							type: "list",
+							titleField: "title",
 							maxItems: 10,
 						};
-					case 'progress':
+					case "progress":
 						return {
-							type: 'progress',
-							progressType: 'line',
+							type: "progress",
+							progressType: "line",
 							target: 100,
 						};
 					default:
 						return {
-							type: 'stat-card',
-							icon: '📊',
-							iconColor: 'var(--theme-info, #1890ff)',
+							type: "stat-card",
+							icon: "📊",
+							iconColor: "var(--theme-info, #1890ff)",
 						};
 				}
 			};
@@ -168,7 +168,7 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
 				onClose();
 			}, 100);
 		} catch (error) {
-			console.error('Validation failed:', error);
+			console.error("Validation failed:", error);
 		}
 	};
 
@@ -182,7 +182,7 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
 
 	return (
 		<Modal
-			title={editingWidgetId ? '编辑 Widget' : '添加 Widget'}
+			title={editingWidgetId ? "编辑 Widget" : "添加 Widget"}
 			open={visible}
 			onOk={handleConfirm}
 			onCancel={handleCancel}
@@ -219,7 +219,7 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
 							← 返回选择Widget类型
 						</Button>
 
-				<Form form={form} layout="vertical" initialValues={{ method: 'GET' }}>
+				<Form form={form} layout="vertical" initialValues={{ method: "GET" }}>
 						<Form.Item name="type" hidden>
 							<input />
 						</Form.Item>
@@ -241,7 +241,7 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
 						<Form.Item
 							label="标题"
 							name="title"
-							rules={[{ required: true, message: '请输入Widget标题' }]}
+							rules={[{ required: true, message: "请输入Widget标题" }]}
 						>
 							<Input placeholder="请输入Widget标题" />
 						</Form.Item>

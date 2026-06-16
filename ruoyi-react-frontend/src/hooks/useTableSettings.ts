@@ -5,8 +5,8 @@
  * 集成分页、排序、筛选等配置
  */
 
-import { usePagination } from './usePagination';
-import type { TableProps } from 'antd';
+import { usePagination } from "./usePagination";
+import type { TableProps } from "antd";
 
 export interface UseTableSettingsOptions {
 	// 是否启用全局分页（默认 true）

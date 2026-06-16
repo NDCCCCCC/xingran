@@ -2,8 +2,8 @@
  * 楼宇表单地理编码状态管理 Hook
  */
 
-import { useState, useCallback } from 'react';
-import { useGeocoding } from '@/pages/operations/building-spaces-3d/hooks/useGeocoding';
+import { useState, useCallback } from "react";
+import { useGeocoding } from "@/pages/operations/building-spaces-3d/hooks/useGeocoding";
 
 interface GeocodingResult {
   longitude?: number;
@@ -48,11 +48,11 @@ export function useGeocodingForm(): GeocodingFormState {
         });
         setGeocodingWarning(null);
       } else {
-        setGeocodingWarning('地址解析失败，将保存不含经纬度的信息');
+        setGeocodingWarning("地址解析失败，将保存不含经纬度的信息");
         setGeocodingResult(null);
       }
     } catch (error) {
-      setGeocodingWarning('地址解析出错，将保存不含经纬度的信息');
+      setGeocodingWarning("地址解析出错，将保存不含经纬度的信息");
       setGeocodingResult(null);
     } finally {
       setGeocodingLoading(false);

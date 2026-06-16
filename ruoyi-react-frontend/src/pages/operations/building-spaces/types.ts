@@ -1,4 +1,4 @@
-import type { WorkstationOps } from '@/types';
+import type { WorkstationOps } from "@/types";
 
 export interface Building {
   id: string;
@@ -27,5 +27,5 @@ export interface WorkstationWithPosition extends WorkstationOps {
   };
 }
 
-export type AnimationState = 'stacked' | 'expanding' | 'expanded' | 'flattening' | 'flat';
-export type ModalView = 'floors' | 'workstation' | 'transition';
+export type AnimationState = "stacked" | "expanding" | "expanded" | "flattening" | "flat";
+export type ModalView = "floors" | "workstation" | "transition";

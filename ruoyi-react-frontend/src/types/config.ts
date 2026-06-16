@@ -10,12 +10,12 @@
 /**
  * 主题颜色模式
  */
-export type ColorMode = 'light' | 'dark';
+export type ColorMode = "light" | "dark";
 
 /**
  * 主题风格类型
  */
-export type ThemeStyle = 'minimal' | 'glassmorphism' | 'neumorphism' | 'flat2.0' | 'luxury-quiet';
+export type ThemeStyle = "minimal" | "glassmorphism" | "neumorphism" | "flat2.0" | "luxury-quiet";
 
 /**
  * 主题配置
@@ -39,12 +39,12 @@ export interface ThemeConfiguration {
 /**
  * 布局类型
  */
-export type LayoutType = 'classic' | 'hybrid' | 'innovative';
+export type LayoutType = "classic" | "hybrid" | "innovative";
 
 /**
  * 密度模式
  */
-export type DensityMode = 'compact' | 'comfortable' | 'spacious';
+export type DensityMode = "compact" | "comfortable" | "spacious";
 
 /**
  * 布局配置
@@ -103,7 +103,7 @@ export interface UserPreferences {
 	data: DataConfiguration;
 
 	/** 语言（预留，暂未实现完整i18n） */
-	language?: 'zh-CN' | 'en-US';
+	language?: "zh-CN" | "en-US";
 }
 
 // ============= 后端API类型 =============
@@ -140,21 +140,21 @@ export interface BackendUserPreferences {
  * 默认主题配置
  */
 export const defaultThemeConfiguration: ThemeConfiguration = {
-	mode: 'light',
-	style: 'minimal',
+	mode: "light",
+	style: "minimal",
 };
 
 /**
  * 默认布局配置
  */
 export const defaultLayoutConfiguration: LayoutConfiguration = {
-	type: 'classic',
+	type: "classic",
 	sidebar: {
 		collapsed: false,
 		width: 280,
 		collapsedWidth: 64,
 	},
-	density: 'comfortable',
+	density: "comfortable",
 };
 
 /**
@@ -173,7 +173,7 @@ export const defaultUserPreferences: UserPreferences = {
 	theme: defaultThemeConfiguration,
 	layout: defaultLayoutConfiguration,
 	data: defaultDataConfiguration,
-	language: 'zh-CN',
+	language: "zh-CN",
 };
 
 // ============= 配置验证辅助函数 =============
@@ -182,26 +182,26 @@ export const defaultUserPreferences: UserPreferences = {
  * 验证主题配置是否有效
  */
 export function isValidThemeStyle(style: string): style is ThemeStyle {
-	return ['minimal', 'glassmorphism', 'neumorphism', 'flat2.0', 'luxury-quiet'].includes(style);
+	return ["minimal", "glassmorphism", "neumorphism", "flat2.0", "luxury-quiet"].includes(style);
 }
 
 /**
  * 验证布局类型是否有效
  */
 export function isValidLayoutType(type: string): type is LayoutType {
-	return ['classic', 'hybrid', 'innovative'].includes(type);
+	return ["classic", "hybrid", "innovative"].includes(type);
 }
 
 /**
  * 验证密度模式是否有效
  */
 export function isValidDensityMode(density: string): density is DensityMode {
-	return ['compact', 'comfortable', 'spacious'].includes(density);
+	return ["compact", "comfortable", "spacious"].includes(density);
 }
 
 /**
  * 验证颜色模式是否有效
  */
 export function isValidColorMode(mode: string): mode is ColorMode {
-	return ['light', 'dark'].includes(mode);
+	return ["light", "dark"].includes(mode);
 }

@@ -9,9 +9,9 @@
  * Defaults follow D-11 (5min stale, 30min gc, no refetch-on-focus).
  */
 
-import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
-import { getDeptTree, type SimpleDept } from '@/lib/dutyApi';
-import { queryKeys } from '@/lib/queryKeys';
+import { useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
+import { getDeptTree, type SimpleDept } from "@/lib/dutyApi";
+import { queryKeys } from "@/lib/queryKeys";
 
 /**
  * Department tree node. We keep the helper's `SimpleDept` shape as the

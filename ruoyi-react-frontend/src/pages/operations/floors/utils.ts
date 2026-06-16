@@ -2,9 +2,9 @@
  * 楼层管理页面工具函数
  */
 
-import type { WorkstationOps } from '@/types';
-import type { WorkstationNode } from '@/components/shared/FloorPlanEditor.types';
-import { WORKSTATION_LAYOUT } from './constants';
+import type { WorkstationOps } from "@/types";
+import type { WorkstationNode } from "@/components/shared/FloorPlanEditor.types";
+import { WORKSTATION_LAYOUT } from "./constants";
 
 /**
  * 处理工位数据：为没有位置的工位自动分配位置
@@ -66,7 +66,7 @@ export function processWorkstations(workstations: WorkstationOps[]): Workstation
  * 当解析失败时返回原值（类型可能不匹配，需要调用方处理）
  */
 export function parseJsonField<T>(value: string | T): T {
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     try {
       return JSON.parse(value) as T;
     } catch {
@@ -82,7 +82,7 @@ export function parseJsonField<T>(value: string | T): T {
  * 序列化JSON字段
  */
 export function stringifyJsonField(value: unknown): string {
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     return value;
   }
   return JSON.stringify(value);

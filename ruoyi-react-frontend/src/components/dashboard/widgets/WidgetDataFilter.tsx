@@ -2,8 +2,8 @@
  * Widget 数据过滤器
  * 根据配置在数据请求时添加过滤参数
  */
-import { useAuthStore } from '@/store/authStore';
-import type { WidgetConfig, WidgetDataFilter } from '@/types/dashboard';
+import { useAuthStore } from "@/store/authStore";
+import type { WidgetConfig, WidgetDataFilter } from "@/types/dashboard";
 
 /**
  * 应用 Widget 数据过滤
@@ -29,23 +29,23 @@ export const applyWidgetDataFilter = (
 	}
 
 	switch (filterType) {
-		case 'dept':
+		case "dept":
 			// 按部门过滤
-			const field = filterConfig.field || 'deptId';
+			const field = filterConfig.field || "deptId";
 			return {
 				...baseParams,
 				[field]: user.deptId,
 			};
 
-		case 'user':
+		case "user":
 			// 按用户过滤
-			const userField = filterConfig.field || 'userId';
+			const userField = filterConfig.field || "userId";
 			return {
 				...baseParams,
 				[userField]: user.id,
 			};
 
-		case 'custom':
+		case "custom":
 			// 自定义过滤
 			return {
 				...baseParams,
@@ -68,34 +68,34 @@ export const getAvailableDataFilters = (): Array<{
 }> => {
 	return [
 		{
-			value: 'none',
-			label: '不过滤',
-			defaultConfig: { enabled: false, filterType: 'dept', filterConfig: {} },
+			value: "none",
+			label: "不过滤",
+			defaultConfig: { enabled: false, filterType: "dept", filterConfig: {} },
 		},
 		{
-			value: 'dept',
-			label: '按部门过滤',
+			value: "dept",
+			label: "按部门过滤",
 			defaultConfig: {
 				enabled: true,
-				filterType: 'dept',
-				filterConfig: { field: 'deptId' },
+				filterType: "dept",
+				filterConfig: { field: "deptId" },
 			},
 		},
 		{
-			value: 'user',
-			label: '按用户过滤',
+			value: "user",
+			label: "按用户过滤",
 			defaultConfig: {
 				enabled: true,
-				filterType: 'user',
-				filterConfig: { field: 'userId' },
+				filterType: "user",
+				filterConfig: { field: "userId" },
 			},
 		},
 		{
-			value: 'custom',
-			label: '自定义过滤',
+			value: "custom",
+			label: "自定义过滤",
 			defaultConfig: {
 				enabled: true,
-				filterType: 'custom',
+				filterType: "custom",
 				filterConfig: {},
 			},
 		},

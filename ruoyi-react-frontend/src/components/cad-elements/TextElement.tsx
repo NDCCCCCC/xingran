@@ -2,8 +2,8 @@
  * 文本元素组件
  */
 
-import { useMemo, useCallback } from 'react';
-import type { TextElement } from '@/components/cad-editor/types';
+import { useMemo, useCallback } from "react";
+import type { TextElement } from "@/components/cad-editor/types";
 
 export interface TextElementProps {
   text: TextElement;
@@ -16,10 +16,10 @@ export interface TextElementProps {
 }
 
 const DEFAULT_FONT_SIZE = 14;
-const DEFAULT_FONT_COLOR = 'var(--theme-text-primary, #333333)';
-const DEFAULT_FONT_FAMILY = 'Arial, sans-serif';
-const SELECTION_BG_COLOR = 'rgba(24, 144, 255, 0.1)';
-const SELECTION_BORDER_COLOR = '#1890ff';
+const DEFAULT_FONT_COLOR = "var(--theme-text-primary, #333333)";
+const DEFAULT_FONT_FAMILY = "Arial, sans-serif";
+const SELECTION_BG_COLOR = "rgba(24, 144, 255, 0.1)";
+const SELECTION_BORDER_COLOR = "#1890ff";
 const CONTROL_POINT_RADIUS = 4;
 const CONTROL_POINT_STROKE_WIDTH = 2;
 
@@ -39,14 +39,14 @@ export function CADTextElement({
     fill: textColor,
     fontSize,
     fontFamily: text.fontFamily ?? DEFAULT_FONT_FAMILY,
-    fontWeight: text.fontWeight ?? 'normal',
-    fontStyle: text.fontStyle ?? 'normal',
-    cursor: 'pointer',
-    userSelect: 'none' as const,
+    fontWeight: text.fontWeight ?? "normal",
+    fontStyle: text.fontStyle ?? "normal",
+    cursor: "pointer",
+    userSelect: "none" as const,
   }), [textColor, fontSize, text.fontFamily, text.fontWeight, text.fontStyle]);
 
   const transform = useMemo(() => {
-    if (!text.angle) return '';
+    if (!text.angle) return "";
     return `rotate(${text.angle} ${text.position.x} ${text.position.y})`;
   }, [text.angle, text.position]);
 
@@ -59,10 +59,10 @@ export function CADTextElement({
   }, [onHover]);
 
   const containerClassName = [
-    'cad-text',
-    selected && 'cad-text-selected',
-    hovered && 'cad-text-hovered',
-  ].filter(Boolean).join(' ');
+    "cad-text",
+    selected && "cad-text-selected",
+    hovered && "cad-text-hovered",
+  ].filter(Boolean).join(" ");
 
   // 选中背景的尺寸计算
   const selectionBg = useMemo(() => {
@@ -100,7 +100,7 @@ export function CADTextElement({
           stroke={SELECTION_BORDER_COLOR}
           strokeWidth={1}
           strokeDasharray="3,3"
-          style={{ pointerEvents: 'none' }}
+          style={{ pointerEvents: "none" }}
         />
       )}
 
@@ -122,7 +122,7 @@ export function CADTextElement({
           fill="#fff"
           stroke={SELECTION_BORDER_COLOR}
           strokeWidth={CONTROL_POINT_STROKE_WIDTH}
-          style={{ cursor: 'move' }}
+          style={{ cursor: "move" }}
         />
       )}
     </g>

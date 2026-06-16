@@ -1,4 +1,4 @@
-﻿import type { FC } from 'react';
+﻿import type { FC } from "react";
 import {
   Table,
   Button,
@@ -13,26 +13,26 @@ import {
   Statistic,
   Tag,
   message,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+} from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
   SearchOutlined,
   ReloadOutlined,
   DeleteOutlined,
   CloudServerOutlined,
   AppleOutlined,
-} from '@ant-design/icons';
-import type { DeviceMACAddress, NetworkDevice } from '@/types';
-import { formatDateTime } from '@/utils/datetime';
-import { post } from '@/lib/api';
-import { batchExport } from '@/lib/api/networkApi';
-import { useTableManager } from '@/hooks/useTableManager';
-import { withErrorHandling } from '@/utils/errorHandler';
-import { useState, useEffect } from 'react';
-import { usePagination } from '@/hooks/usePagination';
-import NetworkExport from '@/components/shared/NetworkExport';
-import { BatchExportModal } from '@/components/shared';
-import { DownloadOutlined } from '@ant-design/icons';
+} from "@ant-design/icons";
+import type { DeviceMACAddress, NetworkDevice } from "@/types";
+import { formatDateTime } from "@/utils/datetime";
+import { post } from "@/lib/api";
+import { batchExport } from "@/lib/api/networkApi";
+import { useTableManager } from "@/hooks/useTableManager";
+import { withErrorHandling } from "@/utils/errorHandler";
+import { useState, useEffect } from "react";
+import { usePagination } from "@/hooks/usePagination";
+import NetworkExport from "@/components/shared/NetworkExport";
+import { BatchExportModal } from "@/components/shared";
+import { DownloadOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
 
@@ -67,7 +67,7 @@ const MACAddressPage: FC = () => {
     async (params) => {
       const formValues = searchForm.getFieldsValue();
       const values = formValues as Record<string, unknown>;
-      const result = await post('/network/mac/list', {
+      const result = await post("/network/mac/list", {
         current: params.current ?? paginationProps.current ?? 1,
         pageSize: params.pageSize ?? paginationProps.pageSize ?? 10,
         ...values,
@@ -89,9 +89,9 @@ const MACAddressPage: FC = () => {
 
   // 更新统计数据
   const updateStatistics = (macList: DeviceMACAddress[]) => {
-    const dynamicCount = macList.filter(m => m.macType === 'dynamic').length;
-    const staticCount = macList.filter(m => m.macType === 'static').length;
-    const secureCount = macList.filter(m => m.macType === 'secure').length;
+    const dynamicCount = macList.filter(m => m.macType === "dynamic").length;
+    const staticCount = macList.filter(m => m.macType === "static").length;
+    const secureCount = macList.filter(m => m.macType === "secure").length;
     setStatistics({
       total: macList.length,
       dynamic: dynamicCount,
@@ -103,13 +103,13 @@ const MACAddressPage: FC = () => {
   // 加载设备列表
   const loadDevices = async () => {
     try {
-      const result = await post('/network/devices/list', {
+      const result = await post("/network/devices/list", {
         current: 1,
         pageSize: 1000,
       }) as { data?: { list: NetworkDevice[] } };
       setDevices(result.data?.list || []);
     } catch (error) {
-      console.error('加载设备列表失败:', error);
+      console.error("加载设备列表失败:", error);
     }
   };
 
@@ -121,13 +121,13 @@ const MACAddressPage: FC = () => {
   // 批量删除
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
-      message.warning('请选择要删除的数据');
+      message.warning("请选择要删除的数据");
       return;
     }
     await withErrorHandling(
       async () => {
-        await post('/network/mac/batch-delete', { ids: selectedRowKeys });
-        return '批量删除成功';
+        await post("/network/mac/batch-delete", { ids: selectedRowKeys });
+        return "批量删除成功";
       },
       {
         onSuccess: () => {
@@ -153,38 +153,38 @@ const MACAddressPage: FC = () => {
 
   // MAC类型选项
   const macTypeOptions = [
-    { label: '动态', value: 'dynamic' },
-    { label: '静态', value: 'static' },
-    { label: '安全', value: 'secure' },
+    { label: "动态", value: "dynamic" },
+    { label: "静态", value: "static" },
+    { label: "安全", value: "secure" },
   ];
 
   // 表格列
   const columns: ColumnsType<DeviceMACAddress> = [
-    { title: '设备名称', dataIndex: 'deviceName', key: 'deviceName', width: 150 },
-    { title: 'MAC地址', dataIndex: 'macAddress', key: 'macAddress', width: 160 },
-    { title: '接口', dataIndex: 'interfaceName', key: 'interfaceName', width: 150 },
+    { title: "设备名称", dataIndex: "deviceName", key: "deviceName", width: 150 },
+    { title: "MAC地址", dataIndex: "macAddress", key: "macAddress", width: 160 },
+    { title: "接口", dataIndex: "interfaceName", key: "interfaceName", width: 150 },
     {
-      title: 'VLAN ID',
-      dataIndex: 'vlanId',
-      key: 'vlanId',
+      title: "VLAN ID",
+      dataIndex: "vlanId",
+      key: "vlanId",
       width: 100,
-      render: (vlanId: number) => vlanId || '-',
+      render: (vlanId: number) => vlanId || "-",
     },
     {
-      title: 'MAC类型',
-      dataIndex: 'macType',
-      key: 'macType',
+      title: "MAC类型",
+      dataIndex: "macType",
+      key: "macType",
       width: 100,
       render: (macType: string) => {
         const option = macTypeOptions.find(o => o.value === macType);
-        const color = macType === 'dynamic' ? 'blue' : macType === 'static' ? 'green' : 'orange';
+        const color = macType === "dynamic" ? "blue" : macType === "static" ? "green" : "orange";
         return <Tag color={color}>{option?.label || macType}</Tag>;
       },
     },
     {
-      title: '采集时间',
-      dataIndex: 'collectedAt',
-      key: 'collectedAt',
+      title: "采集时间",
+      dataIndex: "collectedAt",
+      key: "collectedAt",
       width: 180,
       render: (date: string) => formatDateTime(date),
     },
@@ -208,7 +208,7 @@ const MACAddressPage: FC = () => {
             <Statistic
               title="动态MAC"
               value={statistics.dynamic}
-              styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
+              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
             />
           </Card>
         </Col>
@@ -217,7 +217,7 @@ const MACAddressPage: FC = () => {
             <Statistic
               title="静态MAC"
               value={statistics.static}
-              styles={{ content: { color: 'var(--theme-success, #52c41a)' } }}
+              styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
             />
           </Card>
         </Col>
@@ -226,7 +226,7 @@ const MACAddressPage: FC = () => {
             <Statistic
               title="安全MAC"
               value={statistics.secure}
-              styles={{ content: { color: 'var(--theme-warning, #faad14)' } }}
+              styles={{ content: { color: "var(--theme-warning, #faad14)" } }}
             />
           </Card>
         </Col>
@@ -234,7 +234,7 @@ const MACAddressPage: FC = () => {
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="deviceId" label="设备">
               <Select placeholder="请选择设备" allowClear className="user-form-input" style={{ width: 200 }} showSearch optionFilterProp="deviceName">
@@ -276,7 +276,7 @@ const MACAddressPage: FC = () => {
                 const filtered: Record<string, unknown> = {};
                 Object.keys(values).forEach(key => {
                   const value = values[key];
-                  if (value !== undefined && value !== null && value !== '') {
+                  if (value !== undefined && value !== null && value !== "") {
                     filtered[key] = value;
                   }
                 });
@@ -285,7 +285,7 @@ const MACAddressPage: FC = () => {
               current={paginationProps.current}
               pageSize={paginationProps.pageSize}
             />
-            <Button icon={<DeleteOutlined />} onClick={handleBatchDelete} disabled={selectedRowKeys.length === 0} style={{ color: 'var(--theme-error, #ff4d4f)' }}>
+            <Button icon={<DeleteOutlined />} onClick={handleBatchDelete} disabled={selectedRowKeys.length === 0} style={{ color: "var(--theme-error, #ff4d4f)" }}>
               批量删除 ({selectedRowKeys.length})
             </Button>
           </Space>{/* 批量导出 Modal */}
@@ -328,7 +328,7 @@ const MACAddressPage: FC = () => {
             const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
             Object.keys(formValues).forEach(key => {
               const value = formValues[key];
-              if (value !== undefined && value !== null && value !== '') {
+              if (value !== undefined && value !== null && value !== "") {
                 searchParams[key] = value;
               }
             });

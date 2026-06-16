@@ -3,10 +3,10 @@
  * 使用 Three.js + React Three Fiber 渲染交互式 3D 工位平面图
  */
 
-import { useRef, useState, useMemo } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera, Html } from '@react-three/drei';
-import * as THREE from 'three';
+import { useRef, useState, useMemo } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { OrbitControls, PerspectiveCamera, Html } from "@react-three/drei";
+import * as THREE from "three";
 import {
   WORKSTATION_DIMENSIONS,
   MONITOR_DIMENSIONS,
@@ -18,14 +18,14 @@ import {
   WORKSTATION_STATUS_COLORS,
   MATERIAL_COLORS,
   STATUS_TEXT,
-} from '../constants';
+} from "../constants";
 import {
   degreesToRadians,
   calculateWorkstationPositions,
   getWorkstationColor,
   getWorkstationStatusText,
   getWorkstationTypeText,
-} from '../utils';
+} from "../utils";
 
 // ============ 类型定义 ============
 
@@ -55,15 +55,15 @@ interface Text3DProps {
 }
 
 const Text3D: React.FC<Text3DProps> = ({ position, fontSize, color, children }) => (
-  <Html position={position} center distanceFactor={10} style={{ pointerEvents: 'none' }}>
+  <Html position={position} center distanceFactor={10} style={{ pointerEvents: "none" }}>
     <div
       style={{
         color,
         fontSize: `${fontSize * 10}px`,
-        fontWeight: 'bold',
-        textShadow: '0 1px 3px rgba(0,0,0,0.3)',
-        whiteSpace: 'nowrap',
-        userSelect: 'none',
+        fontWeight: "bold",
+        textShadow: "0 1px 3px rgba(0,0,0,0.3)",
+        whiteSpace: "nowrap",
+        userSelect: "none",
       }}
     >
       {children}
@@ -155,7 +155,7 @@ const Workstation3D: React.FC<Workstation3DProps> = ({
             position={[0, deskTopY + 1.6, 0]}
             center
             distanceFactor={10}
-            style={{ pointerEvents: 'none' }}
+            style={{ pointerEvents: "none" }}
           >
             <WorkstationTooltip
               name={workstation.name || workstation.code}
@@ -416,8 +416,8 @@ const WorkstationTooltip: React.FC<WorkstationTooltipProps> = ({
   type,
 }) => {
   const statusColor =
-    status === 0 ? 'var(--theme-success, #52c41a)' : status === 1 ? '#ff4d4f' : 'var(--theme-warning, #faad14)';
-  const typeColor = type === 0 ? 'var(--theme-info, #1890ff)' : type === 1 ? 'var(--theme-purple, #722ed1)' : '#13c2c2';
+    status === 0 ? "var(--theme-success, #52c41a)" : status === 1 ? "#ff4d4f" : "var(--theme-warning, #faad14)";
+  const typeColor = type === 0 ? "var(--theme-info, #1890ff)" : type === 1 ? "var(--theme-purple, #722ed1)" : "#13c2c2";
 
   return (
     <div style={styles.tooltip}>
@@ -439,7 +439,7 @@ interface TooltipRowProps {
 const TooltipRow: React.FC<TooltipRowProps> = ({ label, value, valueColor }) => (
   <div style={styles.tooltipRow}>
     <span>{label}</span>
-    <span style={{ fontWeight: 'bold', color: valueColor }}>{value}</span>
+    <span style={{ fontWeight: "bold", color: valueColor }}>{value}</span>
   </div>
 );
 
@@ -510,11 +510,11 @@ const FloorPlanScene: React.FC<FloorPlanSceneProps> = ({
       })}
 
       {/* 图例 */}
-      <Html position={[-12, 0.3, -12]} center distanceFactor={10} style={{ pointerEvents: 'none' }}>
+      <Html position={[-12, 0.3, -12]} center distanceFactor={10} style={{ pointerEvents: "none" }}>
         <div style={styles.legend}>
-          <div style={{ color: 'var(--theme-success, #388e3c)' }}>● {STATUS_TEXT.AVAILABLE}</div>
-          <div style={{ color: 'var(--theme-error, #d32f2f)' }}>● {STATUS_TEXT.OCCUPIED}</div>
-          <div style={{ color: 'var(--theme-warning, #f57c00)' }}>● {STATUS_TEXT.MAINTENANCE}</div>
+          <div style={{ color: "var(--theme-success, #388e3c)" }}>● {STATUS_TEXT.AVAILABLE}</div>
+          <div style={{ color: "var(--theme-error, #d32f2f)" }}>● {STATUS_TEXT.OCCUPIED}</div>
+          <div style={{ color: "var(--theme-warning, #f57c00)" }}>● {STATUS_TEXT.MAINTENANCE}</div>
         </div>
       </Html>
     </group>
@@ -537,7 +537,7 @@ const FloorPlan3D: React.FC<FloorPlan3DProps> = ({
         shadows
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true }}
-        style={{ background: '#f5f5f5' }}
+        style={{ background: "#f5f5f5" }}
       >
         <PerspectiveCamera
           makeDefault
@@ -590,20 +590,20 @@ const ControlHints: React.FC<ControlHintsProps> = ({ workstationCount }) => (
 
 const styles = {
   container: {
-    width: '100%',
-    height: '100%',
-    position: 'relative' as const,
+    width: "100%",
+    height: "100%",
+    position: "relative" as const,
   },
   emptyContainer: {
-    width: '100%',
-    height: '100%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'column' as const,
+    width: "100%",
+    height: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "column" as const,
     gap: 16,
-    background: '#f5f5f5',
-    color: 'var(--theme-text-tertiary, #8c8c8c)',
+    background: "#f5f5f5",
+    color: "var(--theme-text-tertiary, #8c8c8c)",
   },
   emptyIcon: {
     fontSize: 48,
@@ -616,54 +616,54 @@ const styles = {
     opacity: 0.7,
   },
   controlHints: {
-    position: 'absolute' as const,
+    position: "absolute" as const,
     bottom: 16,
     left: 16,
-    background: 'rgba(255,255,255,0.95)',
-    backdropFilter: 'blur(10px)',
-    padding: '10px 14px',
+    background: "rgba(255,255,255,0.95)",
+    backdropFilter: "blur(10px)",
+    padding: "10px 14px",
     borderRadius: 6,
-    color: 'var(--theme-text-secondary, #595959)',
+    color: "var(--theme-text-secondary, #595959)",
     fontSize: 12,
-    display: 'flex',
+    display: "flex",
     gap: 16,
-    alignItems: 'center',
-    border: '1px solid #e8e8e8',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+    alignItems: "center",
+    border: "1px solid #e8e8e8",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
   },
   tooltip: {
-    background: 'rgba(255, 255, 255, 0.95)',
+    background: "rgba(255, 255, 255, 0.95)",
     borderRadius: 8,
-    padding: '12px 16px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+    padding: "12px 16px",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
     minWidth: 180,
-    border: '1px solid #e8e8e8',
+    border: "1px solid #e8e8e8",
   },
   tooltipName: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: 'var(--theme-text-primary, #262626)',
+    fontWeight: "bold",
+    color: "var(--theme-text-primary, #262626)",
     marginBottom: 8,
   },
   tooltipContent: {
     fontSize: 12,
-    color: 'var(--theme-text-secondary, #595959)',
-    display: 'flex',
-    flexDirection: 'column' as const,
+    color: "var(--theme-text-secondary, #595959)",
+    display: "flex",
+    flexDirection: "column" as const,
     gap: 4,
   },
   tooltipRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
+    display: "flex",
+    justifyContent: "space-between",
   },
   legend: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: '8px',
-    color: 'white',
-    fontSize: '14px',
-    fontWeight: 'bold',
-    textShadow: '0 1px 3px rgba(0,0,0,0.3)',
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: "8px",
+    color: "white",
+    fontSize: "14px",
+    fontWeight: "bold",
+    textShadow: "0 1px 3px rgba(0,0,0,0.3)",
   },
 };
 

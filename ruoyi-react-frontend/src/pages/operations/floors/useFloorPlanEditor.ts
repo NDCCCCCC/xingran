@@ -2,13 +2,13 @@
  * 楼层平面图编辑器 Hook
  */
 
-import { useState, useCallback } from 'react';
-import type { Floor } from '@/types';
-import { wallApi, doorApi, workstationApi, floorPlanTextApi } from '@/lib/opsApi';
-import type { FloorPlanData, Wall, Door, TextElement, WorkstationNode } from '@/components/cad-editor/types';
-import { message } from 'antd';
-import { processWorkstations, parseJsonField, stringifyJsonField, isNewElement } from './utils';
-import { DEFAULT_FLOOR_PLAN_CONFIG } from './constants';
+import { useState, useCallback } from "react";
+import type { Floor } from "@/types";
+import { wallApi, doorApi, workstationApi, floorPlanTextApi } from "@/lib/opsApi";
+import type { FloorPlanData, Wall, Door, TextElement, WorkstationNode } from "@/components/cad-editor/types";
+import { message } from "antd";
+import { processWorkstations, parseJsonField, stringifyJsonField, isNewElement } from "./utils";
+import { DEFAULT_FLOOR_PLAN_CONFIG } from "./constants";
 
 interface UseFloorPlanEditorOptions {
   onSaveStart?: () => void;
@@ -60,7 +60,7 @@ export function useFloorPlanEditor(
         const textsResult = await floorPlanTextApi.list({ floorId, current: 1, pageSize: 1000 });
         texts = textsResult.data?.list || [];
       } catch (textError) {
-        console.warn('文本元素API不可用，可能需要重启后端服务:', textError);
+        console.warn("文本元素API不可用，可能需要重启后端服务:", textError);
       }
 
       const parsedWalls = walls.map((wall) => {
@@ -103,8 +103,8 @@ export function useFloorPlanEditor(
         snapToGrid: true,
       });
     } catch (error) {
-      console.error('加载平面图失败:', error);
-      message.error('加载平面图失败');
+      console.error("加载平面图失败:", error);
+      message.error("加载平面图失败");
       setFloorPlanData({
         floorId,
         floorName: currentFloor?.name || `${currentFloor?.floorNo}层`,
@@ -127,13 +127,13 @@ export function useFloorPlanEditor(
 
   const saveWalls = useCallback(async (walls: Wall[], floorId: string) => {
     for (const wall of walls) {
-      const isNew = isNewElement(wall.id, 'wall_');
+      const isNew = isNewElement(wall.id, "wall_");
       const { id: _wallId, ...wallWithoutId } = wall;
       const wallData = {
         ...(isNew ? wallWithoutId : wall),
         floorId,
         points: stringifyJsonField(wall.points),
-        type: wall.type as 'straight' | 'curved' | 'l_shaped' | 'polyline',
+        type: wall.type as "straight" | "curved" | "l_shaped" | "polyline",
       };
 
       if (isNew) {
@@ -146,7 +146,7 @@ export function useFloorPlanEditor(
 
   const saveDoors = useCallback(async (doors: Door[], floorId: string) => {
     for (const door of doors) {
-      const isNew = isNewElement(door.id, 'door_');
+      const isNew = isNewElement(door.id, "door_");
       const { id: _doorId, ...doorWithoutId } = door;
       const doorData = {
         ...(isNew ? doorWithoutId : door),
@@ -167,7 +167,7 @@ export function useFloorPlanEditor(
 
     try {
       for (const text of texts) {
-        const isNew = isNewElement(text.id, 'text_');
+        const isNew = isNewElement(text.id, "text_");
         const { id: _textId, ...textWithoutId } = text;
         const textData = {
           ...(isNew ? textWithoutId : text),
@@ -182,7 +182,7 @@ export function useFloorPlanEditor(
         }
       }
     } catch (textError) {
-      console.warn('保存文本元素失败，可能需要重启后端服务:', textError);
+      console.warn("保存文本元素失败，可能需要重启后端服务:", textError);
     }
   }, []);
 
@@ -214,11 +214,11 @@ export function useFloorPlanEditor(
 
       await saveWorkstations(data.workstations);
 
-      message.success('保存成功');
+      message.success("保存成功");
       await loadFloorPlanData(floorId);
     } catch (error) {
-      console.error('保存失败:', error);
-      message.error('保存失败');
+      console.error("保存失败:", error);
+      message.error("保存失败");
     } finally {
       options?.onSaveEnd?.();
     }

@@ -3,8 +3,8 @@
  * 网络命令分发页面
  */
 
-import { useEffect, useState } from 'react';
-import type { FC } from 'react';
+import { useEffect, useState } from "react";
+import type { FC } from "react";
 import {
   Table,
   Button,
@@ -17,7 +17,7 @@ import {
   Col,
   Statistic,
   message,
-} from 'antd';
+} from "antd";
 import {
   ThunderboltOutlined,
   SearchOutlined,
@@ -27,17 +27,17 @@ import {
   ClockCircleOutlined,
   ApiOutlined,
   ExportOutlined,
-} from '@ant-design/icons';
-import type { ConfigExecution, ConfigExecutionDetail, NetworkDevice } from '@/types';
-import { batchExport } from '@/lib/api/networkApi';
-import { useCommandData, useCommandModals } from './hooks';
-import { getExecutionColumns, deviceColumns } from './columns';
-import { CommandDispatchModal, CommandDetailDrawer } from './modals';
-import { STATUS_OPTIONS } from './constants';
-import { usePagination } from '@/hooks/usePagination';
-import NetworkExport from '@/components/shared/NetworkExport';
-import { BatchExportModal } from '@/components/shared';
-import { DownloadOutlined } from '@ant-design/icons';
+} from "@ant-design/icons";
+import type { ConfigExecution, ConfigExecutionDetail, NetworkDevice } from "@/types";
+import { batchExport } from "@/lib/api/networkApi";
+import { useCommandData, useCommandModals } from "./hooks";
+import { getExecutionColumns, deviceColumns } from "./columns";
+import { CommandDispatchModal, CommandDetailDrawer } from "./modals";
+import { STATUS_OPTIONS } from "./constants";
+import { usePagination } from "@/hooks/usePagination";
+import NetworkExport from "@/components/shared/NetworkExport";
+import { BatchExportModal } from "@/components/shared";
+import { DownloadOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
 
@@ -138,7 +138,7 @@ const CommandDispatch: FC = () => {
             <Statistic
               title="待执行"
               value={statistics.pending}
-              styles={{ content: { color: 'var(--theme-text-tertiary, #999)' } }}
+              styles={{ content: { color: "var(--theme-text-tertiary, #999)" } }}
               prefix={<ClockCircleOutlined />}
             />
           </Card>
@@ -148,7 +148,7 @@ const CommandDispatch: FC = () => {
             <Statistic
               title="执行中"
               value={statistics.running}
-              styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
+              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
               prefix={<ApiOutlined />}
             />
           </Card>
@@ -158,7 +158,7 @@ const CommandDispatch: FC = () => {
             <Statistic
               title="成功"
               value={statistics.success}
-              styles={{ content: { color: 'var(--theme-success, #52c41a)' } }}
+              styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
               prefix={<CheckCircleOutlined />}
             />
           </Card>
@@ -168,7 +168,7 @@ const CommandDispatch: FC = () => {
             <Statistic
               title="失败"
               value={statistics.failed}
-              styles={{ content: { color: 'var(--theme-error, #ff4d4f)' } }}
+              styles={{ content: { color: "var(--theme-error, #ff4d4f)" } }}
               prefix={<CloseCircleOutlined />}
             />
           </Card>
@@ -225,7 +225,7 @@ const CommandDispatch: FC = () => {
                   entityType="command"
                   entityName="命令分发"
                   filters={Object.fromEntries(
-                    Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null && v !== '')
+                    Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null && v !== "")
                   )}
                   current={paginationProps?.current ?? 1}
                   pageSize={paginationProps?.pageSize ?? 10}
@@ -263,7 +263,7 @@ const CommandDispatch: FC = () => {
             const searchParams: Record<string, unknown> = { current: pagination.current ?? 1, pageSize: pagination.pageSize ?? 10 };
             Object.keys(formValues).forEach(key => {
               const value = formValues[key];
-              if (value !== undefined && value !== null && value !== '') {
+              if (value !== undefined && value !== null && value !== "") {
                 searchParams[key] = value;
               }
             });

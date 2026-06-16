@@ -7,18 +7,18 @@
  * - 网络状态检测和提示
  */
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
-import { message, notification, Badge, Tooltip, Spin, Alert, Result, Button, Empty } from 'antd';
-import { WifiOutlined, DisconnectOutlined, ReloadOutlined, SyncOutlined, WarningOutlined, ReloadOutlined as RefreshIcon } from '@ant-design/icons';
-import { useDashboardStore } from '@/store/dashboardStore';
-import { useWidgetPolling } from '@/hooks/useWidgetPolling';
-import { useNetworkStatus } from '@/hooks/useNetworkStatus';
-import { useWebSocket } from '@/hooks/useWebSocket';
-import { DashboardGrid } from './layout/DashboardGrid';
-import type { Dashboard } from '@/types/dashboard';
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { message, notification, Badge, Tooltip, Spin, Alert, Result, Button, Empty } from "antd";
+import { WifiOutlined, DisconnectOutlined, ReloadOutlined, SyncOutlined, WarningOutlined, ReloadOutlined as RefreshIcon } from "@ant-design/icons";
+import { useDashboardStore } from "@/store/dashboardStore";
+import { useWidgetPolling } from "@/hooks/useWidgetPolling";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { useWebSocket } from "@/hooks/useWebSocket";
+import { DashboardGrid } from "./layout/DashboardGrid";
+import type { Dashboard } from "@/types/dashboard";
 
-import './DashboardView.css';
-import './DashboardView.css';
+import "./DashboardView.css";
+import "./DashboardView.css";
 
 export interface DashboardViewProps {
 	/** 仪表盘数据 */
@@ -68,22 +68,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 	const { loading, refresh, isPaused, pause, resume } = useWidgetPolling({
 		widgetIds,
 		interval: dashboard?.refreshInterval || 300,
-		enabled: isOnline && viewMode === 'view' && !readonly,
+		enabled: isOnline && viewMode === "view" && !readonly,
 	});
 
 	// WebSocket 连接（检查是否有 WebSocket 数据源）
 	const hasWebSocketSource = useMemo(() => {
 		return dashboard?.layout.widgets.some((w) => {
 			const ds = w.dataSource;
-			return 'websocket' in ds || (ds && 'type' in ds && ds.type === 'websocket');
+			return "websocket" in ds || (ds && "type" in ds && ds.type === "websocket");
 		}) || false;
 	}, [dashboard]);
 
 	// WebSocket 消息类型守卫
 	const isWidgetMessage = (data: unknown): data is { widgetId: string; data: unknown } => {
-		return typeof data === 'object' && data !== null &&
-			'widgetId' in data && 'data' in data &&
-			typeof (data as Record<string, unknown>).widgetId === 'string';
+		return typeof data === "object" && data !== null &&
+			"widgetId" in data && "data" in data &&
+			typeof (data as Record<string, unknown>).widgetId === "string";
 	};
 
 	// WebSocket 消息处理
@@ -95,9 +95,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
 	// WebSocket URL（使用环境变量配置，支持部署到非默认路径）
 	const wsUrl = useMemo(() => {
-		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+		const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 		const host = import.meta.env.VITE_WS_HOST || window.location.host;
-		const basePath = import.meta.env.VITE_WS_BASE_PATH || '/ws';
+		const basePath = import.meta.env.VITE_WS_BASE_PATH || "/ws";
 		return `${protocol}//${host}${basePath}/dashboard/${dashboard?.id}`;
 	}, [dashboard?.id]);
 
@@ -106,20 +106,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 		url: wsUrl,
 		onMessage: handleWebSocketMessage,
 		onOpen: () => {
-			setWsStatus('connected');
+			setWsStatus("connected");
 		},
 		onClose: () => {
-			setWsStatus('disconnected');
+			setWsStatus("disconnected");
 		},
 		onError: () => {
-			setWsStatus('error');
+			setWsStatus("error");
 		},
 		reconnect: true,
 	});
 
 	// 根据是否有 WebSocket 数据源决定是否连接
 	useEffect(() => {
-		if (hasWebSocketSource && isOnline && viewMode === 'view' && !readonly) {
+		if (hasWebSocketSource && isOnline && viewMode === "view" && !readonly) {
 			connect();
 		}
 		return () => {
@@ -133,15 +133,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 	useEffect(() => {
 		if (!isOnline) {
 			message.warning({
-				content: '网络已断开，数据将无法更新',
-				key: 'network-status',
+				content: "网络已断开，数据将无法更新",
+				key: "network-status",
 				duration: 0,
 			});
 		} else if (wasOffline) {
-			message.destroy('network-status');
+			message.destroy("network-status");
 			notification.success({
-				message: '网络已恢复',
-				description: '数据正在重新加载...',
+				message: "网络已恢复",
+				description: "数据正在重新加载...",
 				duration: 3,
 			});
 			resetWasOffline();
@@ -164,10 +164,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
 	// WebSocket 错误提示
 	useEffect(() => {
-		if (wsConnStatus === 'error') {
+		if (wsConnStatus === "error") {
 			notification.warning({
-				message: 'WebSocket 连接错误',
-				description: '实时数据推送不可用，将使用轮询模式',
+				message: "WebSocket 连接错误",
+				description: "实时数据推送不可用，将使用轮询模式",
 				duration: 5,
 			});
 		}
@@ -178,17 +178,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 		if (!hasWebSocketSource) return null;
 
 		const statusConfig = {
-			connecting: { color: 'processing', icon: <SyncOutlined spin />, text: '连接中' },
-			connected: { color: 'success', icon: <WifiOutlined />, text: '已连接' },
-			disconnected: { color: 'default', icon: <DisconnectOutlined />, text: '已断开' },
-			error: { color: 'error', icon: <DisconnectOutlined />, text: '连接错误' },
+			connecting: { color: "processing", icon: <SyncOutlined spin />, text: "连接中" },
+			connected: { color: "success", icon: <WifiOutlined />, text: "已连接" },
+			disconnected: { color: "default", icon: <DisconnectOutlined />, text: "已断开" },
+			error: { color: "error", icon: <DisconnectOutlined />, text: "连接错误" },
 		};
 
 		const config = statusConfig[wsConnStatus];
 
 		return (
 			<Tooltip title={`WebSocket ${config.text}`}>
-				<Badge status={config.color as 'processing' | 'success' | 'default' | 'error'} />
+				<Badge status={config.color as "processing" | "success" | "default" | "error"} />
 			</Tooltip>
 		);
 	};
@@ -196,7 +196,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 	// 布局变更处理
 	const handleLayoutChange = useCallback((layouts: Array<{ id: string; position: unknown }>) => {
 		// 可以在这里保存布局变更
-		console.log('Layout changed:', layouts);
+		console.log("Layout changed:", layouts);
 	}, []);
 
 	if (!dashboard) {
@@ -234,7 +234,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 				<Spin size="large">
 					<div style={{ minHeight: 120 }} />
 				</Spin>
-				<div style={{ marginTop: 8, color: 'rgba(0, 0, 0, 0.45)' }}>加载仪表盘中...</div>
+				<div style={{ marginTop: 8, color: "rgba(0, 0, 0, 0.45)" }}>加载仪表盘中...</div>
 			</div>
 		);
 	}
@@ -255,7 +255,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 			)}
 
 			{/* WebSocket 断开提示 */}
-			{hasWebSocketSource && wsConnStatus === 'disconnected' && isOnline && (
+			{hasWebSocketSource && wsConnStatus === "disconnected" && isOnline && (
 				<Alert
 					message="实时连接已断开"
 					description="正在尝试重新连接..."

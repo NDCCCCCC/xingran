@@ -4,7 +4,7 @@
  * 检测网络连接状态，提供在线/离线状态和离线历史
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from "react";
 
 export interface UseNetworkStatusReturn {
 	/** 当前是否在线 */
@@ -34,7 +34,7 @@ export interface UseNetworkStatusReturn {
 export function useNetworkStatus(): UseNetworkStatusReturn {
 	const [isOnline, setIsOnline] = useState<boolean>(() => {
 		// SSR 兼容：服务端渲染时默认为 true
-		if (typeof navigator === 'undefined') {
+		if (typeof navigator === "undefined") {
 			return true;
 		}
 		return navigator.onLine;
@@ -60,13 +60,13 @@ export function useNetworkStatus(): UseNetworkStatusReturn {
 		};
 
 		// 添加事件监听器
-		window.addEventListener('online', handleOnline);
-		window.addEventListener('offline', handleOffline);
+		window.addEventListener("online", handleOnline);
+		window.addEventListener("offline", handleOffline);
 
 		// 清理函数
 		return () => {
-			window.removeEventListener('online', handleOnline);
-			window.removeEventListener('offline', handleOffline);
+			window.removeEventListener("online", handleOnline);
+			window.removeEventListener("offline", handleOffline);
 		};
 	}, []);
 

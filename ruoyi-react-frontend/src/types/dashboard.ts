@@ -11,9 +11,9 @@
  * 仪表盘可见范围
  */
 export type DashboardScope =
-	| 'private'   // 私有：仅创建者可见
-	| 'dept'      // 部门：本部门可见
-	| 'global';   // 全局：全员可见（仅管理员可设置）
+	| "private"   // 私有：仅创建者可见
+	| "dept"      // 部门：本部门可见
+	| "global";   // 全局：全员可见（仅管理员可设置）
 
 // ============= Widget 数据过滤配置 =============
 
@@ -24,7 +24,7 @@ export interface WidgetDataFilter {
 	/** 是否启用数据过滤 */
 	enabled: boolean;
 	/** 过滤类型：dept, user, custom */
-	filterType: 'dept' | 'user' | 'custom';
+	filterType: "dept" | "user" | "custom";
 	/** 过滤配置 */
 	filterConfig: Record<string, string>;
 }
@@ -35,30 +35,30 @@ export interface WidgetDataFilter {
  * Widget 类型枚举
  */
 export type WidgetType =
-	| 'stat-card'      // 统计卡片
-	| 'chart'          // 图表（折线/柱状/饼图等）
-	| 'table'          // 表格
-	| 'list'           // 列表
-	| 'progress'       // 进度条
-	| 'metric';        // 指标（圆形进度）
+	| "stat-card"      // 统计卡片
+	| "chart"          // 图表（折线/柱状/饼图等）
+	| "table"          // 表格
+	| "list"           // 列表
+	| "progress"       // 进度条
+	| "metric";        // 指标（圆形进度）
 
 /**
  * 数据源类型枚举
  */
 export type DataSourceType =
-	| 'api'            // REST API
-	| 'websocket'      // WebSocket 实时推送
-	| 'static';        // 静态数据
+	| "api"            // REST API
+	| "websocket"      // WebSocket 实时推送
+	| "static";        // 静态数据
 
 /**
  * 图表类型枚举
  */
 export type ChartType =
-	| 'line'           // 折线图
-	| 'bar'            // 柱状图
-	| 'pie'            // 饼图
-	| 'area'           // 面积图
-	| 'gauge';         // 仪表盘
+	| "line"           // 折线图
+	| "bar"            // 柱状图
+	| "pie"            // 饼图
+	| "area"           // 面积图
+	| "gauge";         // 仪表盘
 
 /**
  * 数据转换配置（使用 JSONata 表达式）
@@ -68,7 +68,7 @@ export interface DataTransformConfig {
 	expression?: string;
 
 	/** 聚合函数（sum, avg, count, min, max） */
-	aggregate?: 'sum' | 'avg' | 'count' | 'min' | 'max' | null;
+	aggregate?: "sum" | "avg" | "count" | "min" | "max" | null;
 
 	/** 分组字段 */
 	groupBy?: string;
@@ -76,7 +76,7 @@ export interface DataTransformConfig {
 	/** 排序字段和方向 */
 	orderBy?: {
 		field: string;
-		direction: 'asc' | 'desc';
+		direction: "asc" | "desc";
 	};
 
 	/** 限制返回数量 */
@@ -87,13 +87,13 @@ export interface DataTransformConfig {
  * API 数据源配置
  */
 export interface ApiDataSourceConfig {
-	type: 'api';
+	type: "api";
 
 	/** API 端点路径 */
 	endpoint: string;
 
 	/** 请求方法 */
-	method: 'GET' | 'POST';
+	method: "GET" | "POST";
 
 	/** 请求参数（支持变量替换，如 ${userId}） */
 	params?: Record<string, unknown>;
@@ -109,7 +109,7 @@ export interface ApiDataSourceConfig {
  * WebSocket 数据源配置
  */
 export interface WebSocketDataSourceConfig {
-	type: 'websocket';
+	type: "websocket";
 
 	/** WebSocket 频道/主题 */
 	channel: string;
@@ -122,7 +122,7 @@ export interface WebSocketDataSourceConfig {
  * 静态数据源配置
  */
 export interface StaticDataSourceConfig {
-	type: 'static';
+	type: "static";
 
 	/** 静态数据 */
 	data: unknown;
@@ -167,7 +167,7 @@ export interface BaseDisplayConfig {
  * 统计卡片显示配置
  */
 export interface StatCardDisplayConfig extends BaseDisplayConfig {
-	type: 'stat-card';
+	type: "stat-card";
 
 	/** 数值前缀 */
 	prefix?: string;
@@ -195,7 +195,7 @@ export interface StatCardDisplayConfig extends BaseDisplayConfig {
  * 图表显示配置
  */
 export interface ChartDisplayConfig extends BaseDisplayConfig {
-	type: 'chart';
+	type: "chart";
 
 	/** 图表类型 */
 	chartType: ChartType;
@@ -232,7 +232,7 @@ export interface ChartDisplayConfig extends BaseDisplayConfig {
  * 表格显示配置
  */
 export interface TableDisplayConfig extends BaseDisplayConfig {
-	type: 'table';
+	type: "table";
 
 	/** 列配置 */
 	columns: Array<{
@@ -246,7 +246,7 @@ export interface TableDisplayConfig extends BaseDisplayConfig {
 		width?: number;
 
 		/** 对齐方式 */
-		align?: 'left' | 'center' | 'right';
+		align?: "left" | "center" | "right";
 
 		/** 自定义渲染器 */
 		render?: string; // 表达式或函数名
@@ -259,7 +259,7 @@ export interface TableDisplayConfig extends BaseDisplayConfig {
 	bordered?: boolean;
 
 	/** 表格大小 */
-	size?: 'small' | 'middle' | 'large';
+	size?: "small" | "middle" | "large";
 
 	/** 分页配置 */
 	pagination?: {
@@ -275,7 +275,7 @@ export interface TableDisplayConfig extends BaseDisplayConfig {
  * 列表显示配置
  */
 export interface ListDisplayConfig extends BaseDisplayConfig {
-	type: 'list';
+	type: "list";
 
 	/** 标题字段 */
 	titleField: string;
@@ -300,10 +300,10 @@ export interface ListDisplayConfig extends BaseDisplayConfig {
  * 进度条显示配置
  */
 export interface ProgressDisplayConfig extends BaseDisplayConfig {
-	type: 'progress';
+	type: "progress";
 
 	/** 进度条类型 */
-	progressType: 'line' | 'circle' | 'dashboard';
+	progressType: "line" | "circle" | "dashboard";
 
 	/** 目标值（用于计算百分比） */
 	target?: number;
@@ -437,9 +437,9 @@ export interface LayoutConfig {
  * 仪表盘模板作用域
  */
 export type TemplateScope =
-	| 'global'         // 全局模板（所有用户可见）
-	| 'dept'           // 部门模板
-	| 'personal';      // 个人模板
+	| "global"         // 全局模板（所有用户可见）
+	| "dept"           // 部门模板
+	| "personal";      // 个人模板
 
 /**
  * 仪表盘状态枚举
@@ -519,10 +519,10 @@ export interface Dashboard {
  * 预设仪表盘模板类型
  */
 export type PresetTemplateType =
-	| 'operations-overview'      // 运维总览
-	| 'workorder-management'     // 工单管理
-	| 'duty-management'          // 值班管理
-	| 'system-monitor';          // 系统监控
+	| "operations-overview"      // 运维总览
+	| "workorder-management"     // 工单管理
+	| "duty-management"          // 值班管理
+	| "system-monitor";          // 系统监控
 
 /**
  * 预设仪表盘模板配置
@@ -532,7 +532,7 @@ export interface PresetDashboardTemplate {
 	type: PresetTemplateType;
 
 	/** 仪表盘配置 */
-	dashboard: Omit<Dashboard, 'id' | 'ownerId' | 'createdAt' | 'updatedAt'>;
+	dashboard: Omit<Dashboard, "id" | "ownerId" | "createdAt" | "updatedAt">;
 
 	/** 模板显示名称 */
 	displayName: string;
@@ -710,13 +710,13 @@ export const defaultWidgetPosition: WidgetPosition = {
 /**
  * Widget 默认尺寸映射
  */
-export const widgetDefaultSizes: Record<WidgetType, Pick<WidgetPosition, 'w' | 'h'>> = {
-	'stat-card': { w: 6, h: 3 },
-	'chart': { w: 12, h: 6 },
-	'table': { w: 24, h: 8 },
-	'list': { w: 8, h: 6 },
-	'progress': { w: 6, h: 4 },
-	'metric': { w: 6, h: 4 },
+export const widgetDefaultSizes: Record<WidgetType, Pick<WidgetPosition, "w" | "h">> = {
+	"stat-card": { w: 6, h: 3 },
+	"chart": { w: 12, h: 6 },
+	"table": { w: 24, h: 8 },
+	"list": { w: 8, h: 6 },
+	"progress": { w: 6, h: 4 },
+	"metric": { w: 6, h: 4 },
 };
 
 // ============= API 端点元数据类型 =============
@@ -747,7 +747,7 @@ export interface EndpointDetail {
 	icon: string;
 
 	/** 数据类型（paginated/single） */
-	dataType: 'paginated' | 'single';
+	dataType: "paginated" | "single";
 
 	/** 数据路径（JSONata表达式） */
 	dataPath: string;

@@ -2,7 +2,7 @@
  * System User 用户管理页面
  */
 
-import { useState, useEffect, useCallback, type FC, type Key } from 'react';
+import { useState, useEffect, useCallback, type FC, type Key } from "react";
 import {
   Table,
   Button,
@@ -20,8 +20,8 @@ import {
   Statistic,
   Layout,
   Alert,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+} from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
   EditOutlined,
@@ -33,23 +33,23 @@ import {
   LockOutlined,
   UnlockOutlined,
   KeyOutlined,
-} from '@ant-design/icons';
-import type { User } from '@/types';
-import { post } from '@/lib/api';
-import type { PageResponse } from '@/types';
-import DeptTree from '@/components/DeptTree';
-import { useTableManager } from '@/hooks/useTableManager';
-import { usePagination } from '@/hooks/usePagination';
-import { handleApiError, handleSuccess } from '@/utils/errorHandler';
-import ActionButtons from '@/components/shared/ActionButtons';
-import { DepartmentTreeSelect } from '@/components/shared';
-import { formatDateTime } from '@/utils/datetime';
+} from "@ant-design/icons";
+import type { User } from "@/types";
+import { post } from "@/lib/api";
+import type { PageResponse } from "@/types";
+import DeptTree from "@/components/DeptTree";
+import { useTableManager } from "@/hooks/useTableManager";
+import { usePagination } from "@/hooks/usePagination";
+import { handleApiError, handleSuccess } from "@/utils/errorHandler";
+import ActionButtons from "@/components/shared/ActionButtons";
+import { DepartmentTreeSelect } from "@/components/shared";
+import { formatDateTime } from "@/utils/datetime";
 
 // 导入提取的文件
-import { GENDER_OPTIONS, STATUS_OPTIONS } from './constants';
-import { convertDeptTreeData, formatGender, formatStatus } from './utils.tsx';
-import { useUserData } from './hooks/useUserData';
-import { useUserModals } from './hooks/useUserModals';
+import { GENDER_OPTIONS, STATUS_OPTIONS } from "./constants";
+import { convertDeptTreeData, formatGender, formatStatus } from "./utils.tsx";
+import { useUserData } from "./hooks/useUserData";
+import { useUserModals } from "./hooks/useUserModals";
 
 const { Option } = Select;
 const { Sider, Content } = Layout;
@@ -68,9 +68,9 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
 
   return [
     {
-      title: '用户名',
-      dataIndex: 'username',
-      key: 'username',
+      title: "用户名",
+      dataIndex: "username",
+      key: "username",
       width: 140,
       minWidth: 120,
       render: (text, record) => (
@@ -81,67 +81,67 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       ),
     },
     {
-      title: '昵称',
-      dataIndex: 'nickname',
-      key: 'nickname',
+      title: "昵称",
+      dataIndex: "nickname",
+      key: "nickname",
       width: 100,
       minWidth: 80,
     },
     {
-      title: '工号',
-      dataIndex: 'employeeNo',
-      key: 'employeeNo',
+      title: "工号",
+      dataIndex: "employeeNo",
+      key: "employeeNo",
       width: 100,
       minWidth: 80,
-      render: (text) => text || '-',
+      render: (text) => text || "-",
     },
     {
-      title: '邮箱',
-      dataIndex: 'email',
-      key: 'email',
+      title: "邮箱",
+      dataIndex: "email",
+      key: "email",
       width: 180,
       minWidth: 150,
       ellipsis: true,
     },
     {
-      title: '手机号',
-      dataIndex: 'phone',
-      key: 'phone',
+      title: "手机号",
+      dataIndex: "phone",
+      key: "phone",
       width: 130,
       minWidth: 120,
     },
     {
-      title: '性别',
-      dataIndex: 'gender',
-      key: 'gender',
+      title: "性别",
+      dataIndex: "gender",
+      key: "gender",
       width: 70,
       minWidth: 60,
-      align: 'center' as const,
+      align: "center" as const,
       render: (gender) => formatGender(gender),
     },
     {
-      title: '部门',
-      dataIndex: 'deptName',
-      key: 'deptName',
+      title: "部门",
+      dataIndex: "deptName",
+      key: "deptName",
       width: 200,
       minWidth: 150,
       ellipsis: true,
-      render: (_, record) => record.deptFullName || record.deptName || '-',
+      render: (_, record) => record.deptFullName || record.deptName || "-",
     },
     {
-      title: '角色',
-      dataIndex: 'roles',
-      key: 'roles',
+      title: "角色",
+      dataIndex: "roles",
+      key: "roles",
       width: 160,
       minWidth: 120,
       render: (roles: string[] | Array<{ roleName?: string; roleKey?: string; id?: string }>) => {
         if (!roles || roles.length === 0) {
-          return <span style={{ color: 'var(--theme-text-tertiary, #999)' }}>无角色</span>;
+          return <span style={{ color: "var(--theme-text-tertiary, #999)" }}>无角色</span>;
         }
         return (
           <Space size="small" wrap>
             {roles.map((role, index) => {
-              const roleName = typeof role === 'string' ? role : role.roleName || role.roleKey || '-';
+              const roleName = typeof role === "string" ? role : role.roleName || role.roleKey || "-";
               return (
                 <Tag key={index} color="blue">
                   {roleName}
@@ -153,61 +153,61 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       },
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
       width: 80,
       minWidth: 70,
-      align: 'center' as const,
+      align: "center" as const,
       render: (status) => {
         const config = formatStatus(status);
         return <Tag color={config.color}>{config.text}</Tag>;
       },
     },
     {
-      title: '创建时间',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
+      title: "创建时间",
+      dataIndex: "createdAt",
+      key: "createdAt",
       width: 170,
       minWidth: 160,
       render: (text) => formatDateTime(text),
     },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       width: 220,
       minWidth: 200,
-      fixed: 'right' as const,
+      fixed: "right" as const,
       render: (_, record) => {
         const actions = [
           {
-            key: 'edit',
-            label: '编辑',
+            key: "edit",
+            label: "编辑",
             icon: <EditOutlined />,
             onClick: () => handleEdit(record),
           },
           {
-            key: 'status',
-            label: record.status === 0 ? '禁用' : '启用',
+            key: "status",
+            label: record.status === 0 ? "禁用" : "启用",
             icon: record.status === 1 ? <LockOutlined /> : <UnlockOutlined />,
             onClick: () => handleUpdateStatus(record.id, record.status === 1 ? 0 : 1),
           },
           {
-            key: 'reset-password',
-            label: '重置密码',
+            key: "reset-password",
+            label: "重置密码",
             icon: <KeyOutlined />,
             onClick: () => handleResetPassword(record),
           },
           {
-            key: 'delete',
-            label: '删除',
+            key: "delete",
+            label: "删除",
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
               Modal.confirm({
-                title: '确定要删除这个用户吗？',
-                okText: '确定',
-                cancelText: '取消',
+                title: "确定要删除这个用户吗？",
+                okText: "确定",
+                cancelText: "取消",
                 okButtonProps: { danger: true },
                 onOk: () => handleDelete(record.id),
               });
@@ -225,7 +225,7 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
 
 const UserManagement: FC = () => {
   // 自定义状态
-  const [selectedDeptId, setSelectedDeptId] = useState<string>('');
+  const [selectedDeptId, setSelectedDeptId] = useState<string>("");
 
   // 使用自定义 Hooks
   const { statistics, roles, departments, loadStatistics, loadRoles, loadDepartments } = useUserData();
@@ -242,7 +242,7 @@ const UserManagement: FC = () => {
 
   // 数据加载函数
   const fetchUsers = useCallback(async (params: Record<string, unknown>) => {
-    const result = await post<PageResponse<User>>('/system/users/list', params);
+    const result = await post<PageResponse<User>>("/system/users/list", params);
     return { list: result.data?.list || [], total: result.data?.total || 0 };
   }, []);
 
@@ -292,8 +292,8 @@ const UserManagement: FC = () => {
     const searchParams: Record<string, unknown> = {};
     Object.keys(values).forEach(key => {
       const value = values[key];
-      if (value !== undefined && value !== null && value !== '') {
-        if (key === 'status') {
+      if (value !== undefined && value !== null && value !== "") {
+        if (key === "status") {
           searchParams[key] = Number(value);
         } else {
           searchParams[key] = value;
@@ -310,7 +310,7 @@ const UserManagement: FC = () => {
 
   const handleReset = useCallback(() => {
     searchForm.resetFields();
-    setSelectedDeptId('');
+    setSelectedDeptId("");
     loadUsers();
   }, [searchForm, loadUsers]);
 
@@ -343,11 +343,11 @@ const UserManagement: FC = () => {
   const handleDelete = useCallback(async (id: string) => {
     try {
       await post(`/system/users/${id}/delete`);
-      handleSuccess('删除');
+      handleSuccess("删除");
       loadUsers();
       loadStatistics();
     } catch (error) {
-      handleApiError(error, '删除');
+      handleApiError(error, "删除");
     }
   }, [loadUsers, loadStatistics]);
 
@@ -357,24 +357,24 @@ const UserManagement: FC = () => {
     }
 
     try {
-      await post('/system/users/batch-delete', { ids: selectedRowKeys });
-      handleSuccess('批量删除');
+      await post("/system/users/batch-delete", { ids: selectedRowKeys });
+      handleSuccess("批量删除");
       resetSelection();
       loadUsers();
       loadStatistics();
     } catch (error) {
-      handleApiError(error, '批量删除');
+      handleApiError(error, "批量删除");
     }
   }, [selectedRowKeys, resetSelection, loadUsers, loadStatistics]);
 
   const handleUpdateStatus = useCallback(async (id: string, status: number) => {
     try {
       await post(`/system/users/${id}/status`, { status });
-      handleSuccess(status === 0 ? '启用' : '禁用');
+      handleSuccess(status === 0 ? "启用" : "禁用");
       loadUsers();
       loadStatistics();
     } catch (error) {
-      handleApiError(error, '操作');
+      handleApiError(error, "操作");
     }
   }, [loadUsers, loadStatistics]);
 
@@ -391,16 +391,16 @@ const UserManagement: FC = () => {
 
       const url = editingUser
         ? `/system/users/${editingUser.id}/update`
-        : '/system/users';
+        : "/system/users";
 
       await post(url, values);
-      handleSuccess(editingUser ? '更新' : '创建');
+      handleSuccess(editingUser ? "更新" : "创建");
       setEditModalVisible(false);
       loadUsers();
       loadStatistics();
       loadDepartments(); // 刷新部门列表以更新部门选择器中的数据
     } catch (error) {
-      handleApiError(error, '操作');
+      handleApiError(error, "操作");
     }
   }, [editingUser, editForm, loadUsers, loadStatistics, loadDepartments, setEditModalVisible]);
 
@@ -412,10 +412,10 @@ const UserManagement: FC = () => {
         password: values.password,
       });
 
-      handleSuccess('密码重置');
+      handleSuccess("密码重置");
       closeResetPasswordModal();
     } catch (error) {
-      handleApiError(error, '重置密码');
+      handleApiError(error, "重置密码");
     }
   }, [resetPasswordForm, resettingUser, closeResetPasswordModal]);
 
@@ -424,7 +424,7 @@ const UserManagement: FC = () => {
       setSelectedDeptId(selectedKeys[0] as string);
       loadUsers({ deptId: selectedKeys[0] });
     } else {
-      setSelectedDeptId('');
+      setSelectedDeptId("");
       loadUsers();
     }
   }, [loadUsers]);
@@ -438,9 +438,9 @@ const UserManagement: FC = () => {
   });
 
   return (
-    <Layout style={{ display: 'flex', alignItems: 'stretch' }}>
+    <Layout style={{ display: "flex", alignItems: "stretch" }}>
       {/* 左侧部门树 */}
-      <Sider width={360} className="dept-list-sider" style={{ background: '#fff', padding: '0 16px 16px 0' }}>
+      <Sider width={360} className="dept-list-sider" style={{ background: "#fff", padding: "0 16px 16px 0" }}>
         <DeptTree
           onSelect={(selectedKeys) => handleDeptSelect(selectedKeys)}
           selectedKeys={selectedDeptId ? [selectedDeptId] : []}
@@ -448,7 +448,7 @@ const UserManagement: FC = () => {
       </Sider>
 
       {/* 右侧内容区 */}
-      <Content style={{ padding: 0, background: '#fff' }}>
+      <Content style={{ padding: 0, background: "#fff" }}>
         <div>
           {/* 统计卡片 */}
           <Row gutter={16} style={{ marginBottom: 16 }}>
@@ -466,7 +466,7 @@ const UserManagement: FC = () => {
                 <Statistic
                   title="正常用户"
                   value={statistics.active}
-                  styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
+                  styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
                   prefix={<UnlockOutlined />}
                 />
               </Card>
@@ -476,7 +476,7 @@ const UserManagement: FC = () => {
                 <Statistic
                   title="禁用用户"
                   value={statistics.inactive}
-                  styles={{ content: { color: 'var(--theme-error, #cf1322)' } }}
+                  styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
                   prefix={<LockOutlined />}
                 />
               </Card>
@@ -485,7 +485,7 @@ const UserManagement: FC = () => {
 
           {/* 搜索表单和操作按钮 */}
           <Card style={{ marginBottom: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
               <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
                 <Form.Item name="username" label="用户名">
                   <Input placeholder="请输入用户名" />
@@ -518,7 +518,7 @@ const UserManagement: FC = () => {
                     icon={<DeleteOutlined />}
                     onClick={handleBatchDelete}
                     style={{
-                      color: 'var(--theme-error, #ff4d4f)',
+                      color: "var(--theme-error, #ff4d4f)",
                     }}
                   >
                     批量删除 ({selectedRowKeys.length})
@@ -584,7 +584,7 @@ const UserManagement: FC = () => {
 
       {/* 编辑弹窗 */}
       <Modal
-        title={editingUser ? '编辑用户' : '新增用户'}
+        title={editingUser ? "编辑用户" : "新增用户"}
         open={editModalVisible}
         onOk={handleSave}
         afterOpenChange={handleModalOpenChange}
@@ -595,7 +595,7 @@ const UserManagement: FC = () => {
           <Form.Item
             name="username"
             label="用户名"
-            rules={[{ required: true, message: '请输入用户名' }]}
+            rules={[{ required: true, message: "请输入用户名" }]}
           >
             <Input disabled={!!editingUser} className="user-form-input" />
           </Form.Item>
@@ -603,7 +603,7 @@ const UserManagement: FC = () => {
             <Form.Item
               name="password"
               label="密码"
-              rules={[{ required: true, message: '请输入密码' }]}
+              rules={[{ required: true, message: "请输入密码" }]}
             >
               <Input.Password className="user-form-input" />
             </Form.Item>
@@ -611,7 +611,7 @@ const UserManagement: FC = () => {
           <Form.Item
             name="nickname"
             label="昵称"
-            rules={[{ required: true, message: '请输入昵称' }]}
+            rules={[{ required: true, message: "请输入昵称" }]}
           >
             <Input className="user-form-input" />
           </Form.Item>
@@ -665,7 +665,7 @@ const UserManagement: FC = () => {
 
       {/* 重置密码弹窗 */}
       <Modal
-        title={`重置密码 - ${resettingUser?.username || ''}`}
+        title={`重置密码 - ${resettingUser?.username || ""}`}
         open={resetPasswordModalVisible}
         onOk={handleSaveResetPassword}
         onCancel={closeResetPasswordModal}
@@ -676,9 +676,9 @@ const UserManagement: FC = () => {
             name="password"
             label="新密码"
             rules={[
-              { required: true, message: '请输入新密码' },
-              { min: 6, message: '密码长度不能少于6位' },
-              { max: 20, message: '密码长度不能超过20位' },
+              { required: true, message: "请输入新密码" },
+              { min: 6, message: "密码长度不能少于6位" },
+              { max: 20, message: "密码长度不能超过20位" },
             ]}
           >
             <Input.Password placeholder="请输入新密码" />
@@ -686,15 +686,15 @@ const UserManagement: FC = () => {
           <Form.Item
             name="confirmPassword"
             label="确认密码"
-            dependencies={['password']}
+            dependencies={["password"]}
             rules={[
-              { required: true, message: '请确认密码' },
+              { required: true, message: "请确认密码" },
               ({ getFieldValue }) => ({
                 validator(_, value) {
-                  if (!value || getFieldValue('password') === value) {
+                  if (!value || getFieldValue("password") === value) {
                     return Promise.resolve();
                   }
-                  return Promise.reject(new Error('两次输入的密码不一致'));
+                  return Promise.reject(new Error("两次输入的密码不一致"));
                 },
               }),
             ]}

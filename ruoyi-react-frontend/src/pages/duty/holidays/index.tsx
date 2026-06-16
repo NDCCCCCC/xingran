@@ -1,4 +1,4 @@
-import type { FC } from 'react';
+import type { FC } from "react";
 import {
   Button,
   Table,
@@ -7,18 +7,18 @@ import {
   Select,
   Alert,
   Upload,
-} from 'antd';
+} from "antd";
 import {
   PlusOutlined,
   ReloadOutlined,
   UploadOutlined,
   CalendarOutlined,
   FileExcelOutlined,
-} from '@ant-design/icons';
-import { useHolidayData, useHolidayModals } from './hooks';
-import { getHolidayColumns } from './columns';
-import { HolidayEditModal, HolidayBatchModal } from './modals';
-import { handleExcelImport, downloadTemplate } from './utils';
+} from "@ant-design/icons";
+import { useHolidayData, useHolidayModals } from "./hooks";
+import { getHolidayColumns } from "./columns";
+import { HolidayEditModal, HolidayBatchModal } from "./modals";
+import { handleExcelImport, downloadTemplate } from "./utils";
 
 const { Option } = Select;
 

@@ -4,7 +4,7 @@
  * 监听窗口大小变化
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 interface WindowSize {
 	width: number;
@@ -28,8 +28,8 @@ export function useWindowSize(): WindowSize {
 			});
 		};
 
-		window.addEventListener('resize', handleResize);
-		return () => window.removeEventListener('resize', handleResize);
+		window.addEventListener("resize", handleResize);
+		return () => window.removeEventListener("resize", handleResize);
 	}, []);
 
 	return windowSize;

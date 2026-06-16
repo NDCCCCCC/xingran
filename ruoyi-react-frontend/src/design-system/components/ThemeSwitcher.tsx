@@ -3,13 +3,13 @@
  * 提供用户界面来切换主题
  */
 
-import { useState } from 'react';
-import type { FC } from 'react';
-import { Dropdown, Button, Space, Tooltip } from 'antd';
-import { useTheme } from '@/store/themeStore';
-import { useSettingsStore } from '@/store/settingsStore';
-import { themePresets } from '@/design-system/themes';
-import type { MenuProps } from 'antd';
+import { useState } from "react";
+import type { FC } from "react";
+import { Dropdown, Button, Space, Tooltip } from "antd";
+import { useTheme } from "@/store/themeStore";
+import { useSettingsStore } from "@/store/settingsStore";
+import { themePresets } from "@/design-system/themes";
+import type { MenuProps } from "antd";
 
 const ThemeSwitcher: FC = () => {
   const { theme } = useTheme();
@@ -17,7 +17,7 @@ const ThemeSwitcher: FC = () => {
   const [open, setOpen] = useState(false);
 
   // 构建菜单项
-  const menuItems: MenuProps['items'] = themePresets.map((preset) => ({
+  const menuItems: MenuProps["items"] = themePresets.map((preset) => ({
     key: preset.id,
     label: (
       <div className="flex items-center justify-between gap-3">
@@ -39,7 +39,7 @@ const ThemeSwitcher: FC = () => {
   return (
     <Dropdown
       menu={{ items: menuItems }}
-      trigger={['click']}
+      trigger={["click"]}
       open={open}
       onOpenChange={setOpen}
       placement="bottomRight"
@@ -47,10 +47,10 @@ const ThemeSwitcher: FC = () => {
       <Tooltip title="切换主题">
         <Button
           type="text"
-          icon={<span style={{ fontSize: '16px' }}>{themePresets.find(p => p.id === theme)?.icon}</span>}
+          icon={<span style={{ fontSize: "16px" }}>{themePresets.find(p => p.id === theme)?.icon}</span>}
           className="flex items-center gap-2"
           style={{
-            transition: 'var(--theme-transition-base)',
+            transition: "var(--theme-transition-base)",
           }}
         >
           <span className="hidden sm:inline">主题</span>

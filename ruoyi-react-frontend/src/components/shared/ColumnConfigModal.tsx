@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from "react";
 import {
   Modal,
   Checkbox,
@@ -6,13 +6,13 @@ import {
   InputNumber,
   Button,
   Space,
-} from 'antd';
-import { SearchOutlined, HolderOutlined } from '@ant-design/icons';
-import { DndContext, closestCenter } from '@dnd-kit/core';
-import type { DragEndEvent } from '@dnd-kit/core';
-import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import type { ColumnConfig } from '@/hooks/useColumnConfig';
+} from "antd";
+import { SearchOutlined, HolderOutlined } from "@ant-design/icons";
+import { DndContext, closestCenter } from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import type { ColumnConfig } from "@/hooks/useColumnConfig";
 
 interface SortableColumnItemProps {
   config: ColumnConfig;
@@ -100,7 +100,7 @@ export const ColumnConfigModal: React.FC<ColumnConfigModalProps> = ({
   onClose,
   saving = false,
 }) => {
-  const [searchValue, setSearchValue] = useState('');
+  const [searchValue, setSearchValue] = useState("");
   const [localConfig, setLocalConfig] = useState<ColumnConfig[]>(config);
 
   // 当弹窗打开时重置本地配置
@@ -153,10 +153,10 @@ export const ColumnConfigModal: React.FC<ColumnConfigModalProps> = ({
   // 处理重置
   const handleReset = () => {
     Modal.confirm({
-      title: '确认重置',
-      content: '确定要重置列配置吗？此操作将清除您的个人设置。',
-      okText: '确定',
-      cancelText: '取消',
+      title: "确认重置",
+      content: "确定要重置列配置吗？此操作将清除您的个人设置。",
+      okText: "确定",
+      cancelText: "取消",
       onOk: () => {
         onReset();
         onClose();
@@ -211,7 +211,7 @@ export const ColumnConfigModal: React.FC<ColumnConfigModalProps> = ({
       </div>
 
       {/* 列配置列表 */}
-      <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+      <div style={{ maxHeight: 400, overflowY: "auto" }}>
         <DndContext
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}

@@ -3,10 +3,10 @@
  * 提供表达式解析、生成、验证、预览等功能
  */
 
-import cronValidate from 'cron-validate';
-import later from '@breejs/later';
-import type { CronConfig, CronFieldConfig, CronFieldType } from './constants';
-import { WEEK_DAY_NAMES, MONTH_NAMES } from './constants';
+import cronValidate from "cron-validate";
+import later from "@breejs/later";
+import type { CronConfig, CronFieldConfig, CronFieldType } from "./constants";
+import { WEEK_DAY_NAMES, MONTH_NAMES } from "./constants";
 
 // ============ Cron配置转表达式 ============
 
@@ -17,14 +17,14 @@ import { WEEK_DAY_NAMES, MONTH_NAMES } from './constants';
  */
 export function cronConfigToExpression(config: CronConfig): string {
   const parts = [
-    fieldConfigToCronPart(config.second, 'second'),
-    fieldConfigToCronPart(config.minute, 'minute'),
-    fieldConfigToCronPart(config.hour, 'hour'),
-    fieldConfigToCronPart(config.day, 'day'),
-    fieldConfigToCronPart(config.month, 'month'),
-    fieldConfigToCronPart(config.week, 'week'),
+    fieldConfigToCronPart(config.second, "second"),
+    fieldConfigToCronPart(config.minute, "minute"),
+    fieldConfigToCronPart(config.hour, "hour"),
+    fieldConfigToCronPart(config.day, "day"),
+    fieldConfigToCronPart(config.month, "month"),
+    fieldConfigToCronPart(config.week, "week"),
   ];
-  return parts.join(' ');
+  return parts.join(" ");
 }
 
 /**
@@ -37,29 +37,29 @@ function fieldConfigToCronPart(fieldConfig: CronFieldConfig, fieldType: CronFiel
   const { periodType } = fieldConfig;
 
   // 每单位 - 使用 *
-  if (periodType === 'every') {
-    return '*';
+  if (periodType === "every") {
+    return "*";
   }
 
   // 指定特定值 - 使用逗号分隔，如 0,5,10
-  if (periodType === 'specific' && fieldConfig.specific && fieldConfig.specific.length > 0) {
+  if (periodType === "specific" && fieldConfig.specific && fieldConfig.specific.length > 0) {
     const sorted = [...fieldConfig.specific].sort((a, b) => a - b);
-    return sorted.join(',');
+    return sorted.join(",");
   }
 
   // 范围 - 使用连字符，如 5-10
-  if (periodType === 'range' && fieldConfig.rangeStart !== undefined && fieldConfig.rangeEnd !== undefined) {
+  if (periodType === "range" && fieldConfig.rangeStart !== undefined && fieldConfig.rangeEnd !== undefined) {
     return `${fieldConfig.rangeStart}-${fieldConfig.rangeEnd}`;
   }
 
   // 周期 - 使用斜杠，如 0/5
-  if (periodType === 'cycle') {
-    const start = fieldConfig.cycleStart ?? (fieldType === 'day' || fieldType === 'month' ? 1 : 0);
+  if (periodType === "cycle") {
+    const start = fieldConfig.cycleStart ?? (fieldType === "day" || fieldType === "month" ? 1 : 0);
     const interval = fieldConfig.cycleInterval ?? 1;
     return `${start}/${interval}`;
   }
 
-  return '*';
+  return "*";
 }
 
 // ============ 表达式转Cron配置 ============
@@ -73,7 +73,7 @@ export function expressionToCronConfig(expression: string): CronConfig {
   const parts = expression.trim().split(/\s+/);
   // 处理可能只有5个字段的情况（省略秒）
   if (parts.length === 5) {
-    parts.unshift('0'); // 添加默认秒字段
+    parts.unshift("0"); // 添加默认秒字段
   }
   if (parts.length !== 6) {
     // 返回默认配置
@@ -81,12 +81,12 @@ export function expressionToCronConfig(expression: string): CronConfig {
   }
 
   return {
-    second: parseCronPart(parts[0], 'second'),
-    minute: parseCronPart(parts[1], 'minute'),
-    hour: parseCronPart(parts[2], 'hour'),
-    day: parseCronPart(parts[3], 'day'),
-    month: parseCronPart(parts[4], 'month'),
-    week: parseCronPart(parts[5], 'week'),
+    second: parseCronPart(parts[0], "second"),
+    minute: parseCronPart(parts[1], "minute"),
+    hour: parseCronPart(parts[2], "hour"),
+    day: parseCronPart(parts[3], "day"),
+    month: parseCronPart(parts[4], "month"),
+    week: parseCronPart(parts[5], "week"),
   };
 }
 
@@ -98,50 +98,50 @@ export function expressionToCronConfig(expression: string): CronConfig {
  */
 function parseCronPart(part: string, fieldType: CronFieldType): CronFieldConfig {
   // 问号 - 仅用于日和周字段，表示不指定
-  if (part === '?') {
-    return { type: fieldType, periodType: 'every' };
+  if (part === "?") {
+    return { type: fieldType, periodType: "every" };
   }
 
   // 星号 - 每单位
-  if (part === '*') {
-    return { type: fieldType, periodType: 'every' };
+  if (part === "*") {
+    return { type: fieldType, periodType: "every" };
   }
 
   // 斜杠 - 周期，如 0/5 或 */5
-  if (part.includes('/')) {
-    const [startStr, intervalStr] = part.split('/');
-    const start = startStr === '*' ? 0 : parseInt(startStr);
+  if (part.includes("/")) {
+    const [startStr, intervalStr] = part.split("/");
+    const start = startStr === "*" ? 0 : parseInt(startStr);
     const interval = parseInt(intervalStr);
     return {
       type: fieldType,
-      periodType: 'cycle',
+      periodType: "cycle",
       cycleStart: start,
       cycleInterval: interval,
     };
   }
 
   // 连字符 - 范围，如 5-10 或 MON-FRI
-  if (part.includes('-')) {
-    const [startStr, endStr] = part.split('-');
+  if (part.includes("-")) {
+    const [startStr, endStr] = part.split("-");
     const start = parseFieldValue(startStr, fieldType);
     const end = parseFieldValue(endStr, fieldType);
     return {
       type: fieldType,
-      periodType: 'range',
+      periodType: "range",
       rangeStart: start,
       rangeEnd: end,
     };
   }
 
   // 逗号 - 指定多个值，如 0,5,10 或 MON,WED,FRI
-  if (part.includes(',')) {
-    const values = part.split(',').map(v => parseFieldValue(v, fieldType));
-    return { type: fieldType, periodType: 'specific', specific: values };
+  if (part.includes(",")) {
+    const values = part.split(",").map(v => parseFieldValue(v, fieldType));
+    return { type: fieldType, periodType: "specific", specific: values };
   }
 
   // 单个值
   const value = parseFieldValue(part, fieldType);
-  return { type: fieldType, periodType: 'specific', specific: [value] };
+  return { type: fieldType, periodType: "specific", specific: [value] };
 }
 
 /**
@@ -154,16 +154,16 @@ function parseFieldValue(value: string, fieldType: CronFieldType): number {
   }
 
   // 处理星期缩写（SUN, MON, TUE...）
-  if (fieldType === 'week') {
-    const dayIndex = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].indexOf(value.toUpperCase());
+  if (fieldType === "week") {
+    const dayIndex = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].indexOf(value.toUpperCase());
     if (dayIndex !== -1) {
       return dayIndex + 1; // 转换为1-7
     }
   }
 
   // 处理月份缩写（JAN, FEB...）
-  if (fieldType === 'month') {
-    const monthIndex = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'].indexOf(value.toUpperCase());
+  if (fieldType === "month") {
+    const monthIndex = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"].indexOf(value.toUpperCase());
     if (monthIndex !== -1) {
       return monthIndex + 1;
     }
@@ -180,7 +180,7 @@ function parseFieldValue(value: string, fieldType: CronFieldType): number {
  * @returns 是否有效
  */
 export function validateCronExpression(expression: string): boolean {
-  if (!expression || expression.trim() === '') {
+  if (!expression || expression.trim() === "") {
     return false;
   }
 
@@ -214,7 +214,7 @@ export function validateCronExpression(expression: string): boolean {
 export function getNextRunTimes(expression: string, count: number = 5): Date[] {
   try {
     // @breejs/later 需要标准 cron 格式，将 Quartz 的 '?' 替换为 '*'
-    const normalizedExpression = expression.replace(/\?/g, '*');
+    const normalizedExpression = expression.replace(/\?/g, "*");
 
     // 设置使用本地时间而非 UTC 时间
     // @ts-expect-error - later库类型定义不完整，但运行时正常
@@ -235,7 +235,7 @@ export function getNextRunTimes(expression: string, count: number = 5): Date[] {
     // 确保返回的是 Date 数组
     return Array.isArray(times) ? times : [];
   } catch (e) {
-    console.error('getNextRunTimes error:', e);
+    console.error("getNextRunTimes error:", e);
     return [];
   }
 }
@@ -253,71 +253,71 @@ export function cronToChinese(expression: string): string {
     const parts: string[] = [];
 
     // 处理秒
-    if (config.second.periodType === 'specific' && config.second.specific?.[0] === 0) {
+    if (config.second.periodType === "specific" && config.second.specific?.[0] === 0) {
       // 默认每分钟第0秒，不显示
-    } else if (config.second.periodType === 'every') {
-      parts.push('每秒');
-    } else if (config.second.periodType === 'cycle') {
+    } else if (config.second.periodType === "every") {
+      parts.push("每秒");
+    } else if (config.second.periodType === "cycle") {
       parts.push(`每${config.second.cycleInterval}秒`);
     }
 
     // 处理分
-    if (config.minute.periodType === 'every') {
-      if (parts.length === 0) parts.push('每分钟');
-    } else if (config.minute.periodType === 'specific' && config.minute.specific?.length === 1) {
+    if (config.minute.periodType === "every") {
+      if (parts.length === 0) parts.push("每分钟");
+    } else if (config.minute.periodType === "specific" && config.minute.specific?.length === 1) {
       parts.push(`第${config.minute.specific[0]}分`);
-    } else if (config.minute.periodType === 'cycle') {
+    } else if (config.minute.periodType === "cycle") {
       const start = config.minute.cycleStart ?? 0;
       const interval = config.minute.cycleInterval ?? 1;
       parts.push(`从${start}分开始每${interval}分钟`);
     }
 
     // 处理时
-    if (config.hour.periodType === 'every') {
-      if (parts.length === 0) parts.push('每小时');
-    } else if (config.hour.periodType === 'specific' && config.hour.specific?.length === 1) {
+    if (config.hour.periodType === "every") {
+      if (parts.length === 0) parts.push("每小时");
+    } else if (config.hour.periodType === "specific" && config.hour.specific?.length === 1) {
       parts.push(`${config.hour.specific[0]}点`);
-    } else if (config.hour.periodType === 'cycle') {
+    } else if (config.hour.periodType === "cycle") {
       const start = config.hour.cycleStart ?? 0;
       const interval = config.hour.cycleInterval ?? 1;
       parts.push(`从${start}点开始每${interval}小时`);
-    } else if (config.hour.periodType === 'specific' && config.hour.specific && config.hour.specific.length > 1) {
-      parts.push(`${config.hour.specific.join('、')}点`);
+    } else if (config.hour.periodType === "specific" && config.hour.specific && config.hour.specific.length > 1) {
+      parts.push(`${config.hour.specific.join("、")}点`);
     }
 
     // 处理日
-    if (config.day.periodType === 'every') {
-      if (parts.length === 0) parts.push('每天');
-    } else if (config.day.periodType === 'specific' && config.day.specific?.length === 1) {
+    if (config.day.periodType === "every") {
+      if (parts.length === 0) parts.push("每天");
+    } else if (config.day.periodType === "specific" && config.day.specific?.length === 1) {
       parts.push(`每月${config.day.specific[0]}号`);
-    } else if (config.day.periodType === 'cycle') {
+    } else if (config.day.periodType === "cycle") {
       const start = config.day.cycleStart ?? 1;
       const interval = config.day.cycleInterval ?? 1;
       parts.push(`从${start}号开始每${interval}天`);
     }
 
     // 处理周
-    if (config.week.periodType === 'specific' && config.week.specific && config.week.specific.length > 0) {
-      const days = config.week.specific.map(d => WEEK_DAY_NAMES[d - 1] || d).join('、');
+    if (config.week.periodType === "specific" && config.week.specific && config.week.specific.length > 0) {
+      const days = config.week.specific.map(d => WEEK_DAY_NAMES[d - 1] || d).join("、");
       parts.push(`每${days}`);
     }
 
     // 处理月
-    if (config.month.periodType === 'specific' && config.month.specific?.length === 1) {
+    if (config.month.periodType === "specific" && config.month.specific?.length === 1) {
       parts.push(`每年${MONTH_NAMES[config.month.specific[0] - 1]}`);
-    } else if (config.month.periodType === 'cycle') {
+    } else if (config.month.periodType === "cycle") {
       const start = config.month.cycleStart ?? 1;
       const interval = config.month.cycleInterval ?? 1;
       parts.push(`从${MONTH_NAMES[start - 1]}开始每${interval}个月`);
     }
 
     if (parts.length === 0) {
-      return '每分钟执行';
+      return "每分钟执行";
     }
 
-    return parts.join('') + '执行';
+    return parts.join("") + "执行";
   } catch {
-    return '无法解析的表达式';
+    return "无法解析的表达式";
   }
 }
 
@@ -328,12 +328,12 @@ export function cronToChinese(expression: string): string {
  */
 export function getDefaultCronConfig(): CronConfig {
   return {
-    second: { type: 'second', periodType: 'specific', specific: [0] },
-    minute: { type: 'minute', periodType: 'specific', specific: [0] },
-    hour: { type: 'hour', periodType: 'specific', specific: [9] },
-    day: { type: 'day', periodType: 'every' },
-    month: { type: 'month', periodType: 'every' },
-    week: { type: 'week', periodType: 'every' },
+    second: { type: "second", periodType: "specific", specific: [0] },
+    minute: { type: "minute", periodType: "specific", specific: [0] },
+    hour: { type: "hour", periodType: "specific", specific: [9] },
+    day: { type: "day", periodType: "every" },
+    month: { type: "month", periodType: "every" },
+    week: { type: "week", periodType: "every" },
   };
 }
 
@@ -342,11 +342,11 @@ export function getDefaultCronConfig(): CronConfig {
  */
 export function getEveryMinuteCronConfig(): CronConfig {
   return {
-    second: { type: 'second', periodType: 'specific', specific: [0] },
-    minute: { type: 'minute', periodType: 'every' },
-    hour: { type: 'hour', periodType: 'every' },
-    day: { type: 'day', periodType: 'every' },
-    month: { type: 'month', periodType: 'every' },
-    week: { type: 'week', periodType: 'every' },
+    second: { type: "second", periodType: "specific", specific: [0] },
+    minute: { type: "minute", periodType: "every" },
+    hour: { type: "hour", periodType: "every" },
+    day: { type: "day", periodType: "every" },
+    month: { type: "month", periodType: "every" },
+    week: { type: "week", periodType: "every" },
   };
 }

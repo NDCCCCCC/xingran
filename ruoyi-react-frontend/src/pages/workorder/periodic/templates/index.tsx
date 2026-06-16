@@ -3,7 +3,7 @@
  * Periodic Work Order Template Management Page
  */
 
-import { useState, useEffect, type FC } from 'react';
+import { useState, useEffect, type FC } from "react";
 import {
   Button,
   Form,
@@ -21,7 +21,7 @@ import {
   Timeline,
   Switch,
   TreeSelect,
-} from 'antd';
+} from "antd";
 import {
   PlusOutlined,
   EditOutlined,
@@ -32,20 +32,20 @@ import {
   PauseCircleOutlined,
   HistoryOutlined,
   ThunderboltOutlined,
-} from '@ant-design/icons';
-import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
+} from "@ant-design/icons";
+import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 
-import type { PeriodicWorkOrderTemplate } from '@/lib/workorderApi';
-import ActionButtons from '@/components/shared/ActionButtons';
-import CronSelector from '@/components/CronSelector';
-import { PeriodicAssignType } from '@/lib/workorderApi';
+import type { PeriodicWorkOrderTemplate } from "@/lib/workorderApi";
+import ActionButtons from "@/components/shared/ActionButtons";
+import CronSelector from "@/components/CronSelector";
+import { PeriodicAssignType } from "@/lib/workorderApi";
 
 // 导入提取的模块
-import { PRIORITY_CONFIG, TYPE_CONFIG, ASSIGN_TYPE_CONFIG } from './constants';
-import { formatDateTime, buildCategoryTree } from '@/lib/workorderApi';
-import { useTemplateData, useTemplateActions } from './hooks';
-import { VARIABLE_HELP_CONTENT } from './utils';
-import { usePagination } from '@/hooks/usePagination';
+import { PRIORITY_CONFIG, TYPE_CONFIG, ASSIGN_TYPE_CONFIG } from "./constants";
+import { formatDateTime, buildCategoryTree } from "@/lib/workorderApi";
+import { useTemplateData, useTemplateActions } from "./hooks";
+import { VARIABLE_HELP_CONTENT } from "./utils";
+import { usePagination } from "@/hooks/usePagination";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -67,116 +67,116 @@ function getTemplateTableColumns(props: TemplateTableColumnsProps): ColumnsType<
 
   return [
     {
-      title: '序号',
-      key: 'index',
+      title: "序号",
+      key: "index",
       width: 60,
       render: (_: unknown, __: unknown, index: number) => (current - 1) * pageSize + index + 1,
     },
     {
-      title: '模板名称',
-      dataIndex: 'templateName',
-      key: 'templateName',
+      title: "模板名称",
+      dataIndex: "templateName",
+      key: "templateName",
       width: 150,
     },
     {
-      title: '工单标题',
-      dataIndex: 'workOrderTitle',
-      key: 'workOrderTitle',
+      title: "工单标题",
+      dataIndex: "workOrderTitle",
+      key: "workOrderTitle",
       width: 200,
       ellipsis: true,
     },
     {
-      title: '类型',
-      dataIndex: 'type',
-      key: 'type',
+      title: "类型",
+      dataIndex: "type",
+      key: "type",
       width: 80,
       render: (type: string) => TYPE_CONFIG[type as keyof typeof TYPE_CONFIG]?.text || type,
     },
     {
-      title: '优先级',
-      dataIndex: 'priority',
-      key: 'priority',
+      title: "优先级",
+      dataIndex: "priority",
+      key: "priority",
       width: 80,
       render: (priority: number) => (
         <Tag color={PRIORITY_CONFIG[priority as keyof typeof PRIORITY_CONFIG]?.color}>{PRIORITY_CONFIG[priority as keyof typeof PRIORITY_CONFIG]?.text}</Tag>
       ),
     },
     {
-      title: 'Cron表达式',
-      dataIndex: 'cronExpression',
-      key: 'cronExpression',
+      title: "Cron表达式",
+      dataIndex: "cronExpression",
+      key: "cronExpression",
       width: 120,
     },
     {
-      title: '分配类型',
-      dataIndex: 'assignType',
-      key: 'assignType',
+      title: "分配类型",
+      dataIndex: "assignType",
+      key: "assignType",
       width: 120,
       render: (type: string) => ASSIGN_TYPE_CONFIG[type as keyof typeof ASSIGN_TYPE_CONFIG]?.text || type,
     },
     {
-      title: '下次执行',
-      dataIndex: 'nextRunAt',
-      key: 'nextRunAt',
+      title: "下次执行",
+      dataIndex: "nextRunAt",
+      key: "nextRunAt",
       width: 180,
       render: (date: string) => formatDateTime(date),
     },
     {
-      title: '已生成',
-      dataIndex: 'totalGenerated',
-      key: 'totalGenerated',
+      title: "已生成",
+      dataIndex: "totalGenerated",
+      key: "totalGenerated",
       width: 80,
     },
     {
-      title: '状态',
-      dataIndex: 'isEnabled',
-      key: 'isEnabled',
+      title: "状态",
+      dataIndex: "isEnabled",
+      key: "isEnabled",
       width: 80,
       render: (isEnabled: boolean) => (
-        <Tag color={isEnabled ? 'green' : 'red'}>{isEnabled ? '已启用' : '已禁用'}</Tag>
+        <Tag color={isEnabled ? "green" : "red"}>{isEnabled ? "已启用" : "已禁用"}</Tag>
       ),
     },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       width: 100,
-      fixed: 'right',
+      fixed: "right",
       render: (_: unknown, record: PeriodicWorkOrderTemplate) => {
         const actions = [
           {
-            key: 'edit',
-            label: '编辑',
+            key: "edit",
+            label: "编辑",
             icon: <EditOutlined />,
             onClick: () => handleEdit(record),
           },
           {
-            key: 'toggle',
-            label: record.isEnabled ? '禁用' : '启用',
+            key: "toggle",
+            label: record.isEnabled ? "禁用" : "启用",
             icon: record.isEnabled ? <PauseCircleOutlined /> : <PlayCircleOutlined />,
             onClick: () => handleToggleEnabled(record),
           },
           {
-            key: 'generate',
-            label: '立即生成',
+            key: "generate",
+            label: "立即生成",
             icon: <ThunderboltOutlined />,
             onClick: () => handleGenerateNow(record.id),
           },
           {
-            key: 'logs',
-            label: '执行记录',
+            key: "logs",
+            label: "执行记录",
             icon: <HistoryOutlined />,
             onClick: () => handleViewLogs(record),
           },
           {
-            key: 'delete',
-            label: '删除',
+            key: "delete",
+            label: "删除",
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
               Modal.confirm({
-                title: '确定要删除吗？',
-                okText: '确定',
-                cancelText: '取消',
+                title: "确定要删除吗？",
+                okText: "确定",
+                cancelText: "取消",
                 okButtonProps: { danger: true },
                 onOk: () => handleDelete(record.id),
               });
@@ -321,10 +321,10 @@ const PeriodicTemplatePage: FC = () => {
               <Statistic title="总模板" value={statistics.total} />
             </Col>
             <Col span={6}>
-              <Statistic title="已启用" value={statistics.enabled} styles={{ content: { color: 'var(--theme-success, #3f8600)' } }} />
+              <Statistic title="已启用" value={statistics.enabled} styles={{ content: { color: "var(--theme-success, #3f8600)" } }} />
             </Col>
             <Col span={6}>
-              <Statistic title="已禁用" value={statistics.disabled} styles={{ content: { color: 'var(--theme-error, #cf1322)' } }} />
+              <Statistic title="已禁用" value={statistics.disabled} styles={{ content: { color: "var(--theme-error, #cf1322)" } }} />
             </Col>
             <Col span={6}>
               <Statistic title="已生成工单" value={statistics.totalGenerated} />
@@ -335,7 +335,7 @@ const PeriodicTemplatePage: FC = () => {
 
       {/* 筛选表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="title" label="模板名称">
               <Input placeholder="请输入模板名称" allowClear className="user-form-input" style={{ width: 150 }} />
@@ -380,7 +380,7 @@ const PeriodicTemplatePage: FC = () => {
 
       {/* 新增/编辑弹窗 */}
       <Modal
-        title={editingRecord ? '编辑模板' : '新增模板'}
+        title={editingRecord ? "编辑模板" : "新增模板"}
         open={modalVisible}
         onOk={handleModalOk}
         onCancel={() => {
@@ -395,7 +395,7 @@ const PeriodicTemplatePage: FC = () => {
               <Form.Item
                 name="templateName"
                 label="模板名称"
-                rules={[{ required: true, message: '请输入模板名称' }]}
+                rules={[{ required: true, message: "请输入模板名称" }]}
               >
                 <Input placeholder="请输入模板名称" className="user-form-input" />
               </Form.Item>
@@ -404,14 +404,14 @@ const PeriodicTemplatePage: FC = () => {
               <Form.Item
                 name="categoryId"
                 label="工单分类"
-                rules={[{ required: true, message: '请选择工单分类' }]}
+                rules={[{ required: true, message: "请选择工单分类" }]}
               >
                 <TreeSelect
                   placeholder="请选择工单分类"
                   treeData={buildCategoryTree(categories)}
                   showSearch
                   treeNodeFilterProp="title"
-                  style={{ width: '100%' }}
+                  style={{ width: "100%" }}
                   className="user-form-input"
                 />
               </Form.Item>
@@ -421,7 +421,7 @@ const PeriodicTemplatePage: FC = () => {
           <Form.Item
             name="workOrderTitle"
             label="工单标题"
-            rules={[{ required: true, message: '请输入工单标题' }]}
+            rules={[{ required: true, message: "请输入工单标题" }]}
             extra={<VariableHelp content={VARIABLE_HELP_CONTENT} />}
           >
             <Input placeholder="例如：{date} 日例行检" className="user-form-input" />
@@ -432,7 +432,7 @@ const PeriodicTemplatePage: FC = () => {
               <Form.Item
                 name="type"
                 label="工单类型"
-                rules={[{ required: true, message: '请选择工单类型' }]}
+                rules={[{ required: true, message: "请选择工单类型" }]}
               >
                 <Select placeholder="请选择工单类型" className="user-form-input">
                   {Object.entries(TYPE_CONFIG).map(([key, { text }]) => (
@@ -447,7 +447,7 @@ const PeriodicTemplatePage: FC = () => {
               <Form.Item
                 name="priority"
                 label="优先级"
-                rules={[{ required: true, message: '请选择优先级' }]}
+                rules={[{ required: true, message: "请选择优先级" }]}
               >
                 <Select placeholder="请选择优先级" className="user-form-input">
                   {Object.entries(PRIORITY_CONFIG).map(([key, { text }]) => (
@@ -463,7 +463,7 @@ const PeriodicTemplatePage: FC = () => {
           <Form.Item
             name="cronExpression"
             label="Cron表达式"
-            rules={[{ required: true, message: '请输入Cron表达式' }]}
+            rules={[{ required: true, message: "请输入Cron表达式" }]}
           >
             <CronSelector />
           </Form.Item>
@@ -473,7 +473,7 @@ const PeriodicTemplatePage: FC = () => {
               <Form.Item
                 name="assignType"
                 label="分配类型"
-                rules={[{ required: true, message: '请选择分配类型' }]}
+                rules={[{ required: true, message: "请选择分配类型" }]}
               >
                 <Select placeholder="请选择分配类型" className="user-form-input">
                   {Object.entries(ASSIGN_TYPE_CONFIG).map(([key, { text }]) => (
@@ -487,7 +487,7 @@ const PeriodicTemplatePage: FC = () => {
             <Col span={12}>
               <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => prevValues.assignType !== currentValues.assignType}>
                 {({ getFieldValue }) => {
-                  const assignType = getFieldValue('assignType');
+                  const assignType = getFieldValue("assignType");
                   if (assignType === PeriodicAssignType.Manual) {
                     return (
                       <Form.Item name="assignTargetId" label="指定处理人">
@@ -502,7 +502,7 @@ const PeriodicTemplatePage: FC = () => {
                     );
                   } else if (assignType === PeriodicAssignType.DutyPool) {
                     return (
-                      <Form.Item name="assignTargetId" label="选择值班池" rules={[{ required: true, message: '请选择值班池' }]}>
+                      <Form.Item name="assignTargetId" label="选择值班池" rules={[{ required: true, message: "请选择值班池" }]}>
                         <Select placeholder="请选择值班池" allowClear showSearch optionFilterProp="children" className="user-form-input">
                           {dutyPools.filter((p) => p.status === 0).map((pool) => (
                             <Option key={pool.id} value={pool.id}>
@@ -549,12 +549,12 @@ const PeriodicTemplatePage: FC = () => {
                 {logs.map((log) => (
                   <Timeline.Item
                     key={log.id}
-                    color={log.status === 'success' ? 'green' : 'red'}
+                    color={log.status === "success" ? "green" : "red"}
                   >
                     <div>
                       <strong>{formatDateTime(log.executedAt)}</strong>
-                      <Tag color={log.status === 'success' ? 'green' : 'red'} className="ml-2">
-                        {log.status === 'success' ? '成功' : '失败'}
+                      <Tag color={log.status === "success" ? "green" : "red"} className="ml-2">
+                        {log.status === "success" ? "成功" : "失败"}
                       </Tag>
                     </div>
                     <p className="mt-1">{log.result || log.errorMsg}</p>

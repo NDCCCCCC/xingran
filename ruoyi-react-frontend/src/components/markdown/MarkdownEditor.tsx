@@ -13,18 +13,18 @@
  *   <MarkdownEditor value={content} onChange={setContent} preview="live" height={400} />
  */
 
-import { lazy, Suspense, type FC } from 'react';
-import { Spin } from 'antd';
-import type { MDEditorProps } from '@uiw/react-md-editor';
+import { lazy, Suspense, type FC } from "react";
+import { Spin } from "antd";
+import type { MDEditorProps } from "@uiw/react-md-editor";
 
-const MDEditor = lazy(() => import('@uiw/react-md-editor'));
+const MDEditor = lazy(() => import("@uiw/react-md-editor"));
 
 const Loading: FC = () => (
   <div
     style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
       padding: 24,
       minHeight: 200,
     }}
@@ -32,7 +32,7 @@ const Loading: FC = () => (
     <Spin>
       <div style={{ minHeight: 120 }} />
     </Spin>
-    <div style={{ marginTop: 8, color: 'rgba(0, 0, 0, 0.45)' }}>加载编辑器...</div>
+    <div style={{ marginTop: 8, color: "rgba(0, 0, 0, 0.45)" }}>加载编辑器...</div>
   </div>
 );
 

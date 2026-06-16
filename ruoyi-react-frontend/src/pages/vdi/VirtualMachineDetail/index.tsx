@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Tabs,
   Button,
@@ -15,17 +15,17 @@ import {
   Select,
   Popconfirm,
   Tooltip,
-} from 'antd';
+} from "antd";
 import {
   ArrowLeftOutlined,
   ReloadOutlined,
   PlusOutlined,
   DeleteOutlined,
   KeyOutlined,
-} from '@ant-design/icons';
-import { vmApi } from '@/lib/vdiApi';
-import type { VirtualMachine, VMAccount } from '@/types/vdi';
-import type { ColumnsType } from 'antd/es/table';
+} from "@ant-design/icons";
+import { vmApi } from "@/lib/vdiApi";
+import type { VirtualMachine, VMAccount } from "@/types/vdi";
+import type { ColumnsType } from "antd/es/table";
 
 const VirtualMachineDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -33,7 +33,7 @@ const VirtualMachineDetail: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [vm, setVM] = useState<VirtualMachine | null>(null);
   const [accounts, setAccounts] = useState<VMAccount[]>([]);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState("overview");
   const [createAccountModalVisible, setCreateAccountModalVisible] = useState(false);
   const [resetPasswordModalVisible, setResetPasswordModalVisible] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<VMAccount | null>(null);
@@ -48,7 +48,7 @@ const VirtualMachineDetail: React.FC = () => {
         setVM(result.data);
       }
     } catch (error) {
-      message.error('加载虚拟机详情失败');
+      message.error("加载虚拟机详情失败");
     } finally {
       setLoading(false);
     }
@@ -61,7 +61,7 @@ const VirtualMachineDetail: React.FC = () => {
       const result = await vmApi.listAccounts(id!);
       setAccounts(result.data?.list || []);
     } catch (error) {
-      message.error('加载账号列表失败');
+      message.error("加载账号列表失败");
     } finally {
       setLoading(false);
     }
@@ -70,7 +70,7 @@ const VirtualMachineDetail: React.FC = () => {
   useEffect(() => {
     if (id) {
       loadVMDetail();
-      if (activeTab === 'accounts') {
+      if (activeTab === "accounts") {
         loadAccounts();
       }
     }
@@ -84,15 +84,15 @@ const VirtualMachineDetail: React.FC = () => {
       await vmApi.createAccount(id!, {
         username: values.username,
         password: values.password,
-        os_type: values.os_type || 'Windows',
+        os_type: values.os_type || "Windows",
         is_admin: values.is_admin || false,
       });
-      message.success('账号创建成功');
+      message.success("账号创建成功");
       setCreateAccountModalVisible(false);
       form.resetFields();
       loadAccounts();
     } catch (error) {
-      message.error('创建账号失败');
+      message.error("创建账号失败");
     } finally {
       setLoading(false);
     }
@@ -106,12 +106,12 @@ const VirtualMachineDetail: React.FC = () => {
       await vmApi.resetAccountPassword(id!, selectedAccount!.id, {
         new_password: values.new_password,
       });
-      message.success('密码重置成功');
+      message.success("密码重置成功");
       setResetPasswordModalVisible(false);
       form.resetFields();
       loadAccounts();
     } catch (error) {
-      message.error('密码重置失败');
+      message.error("密码重置失败");
     } finally {
       setLoading(false);
     }
@@ -122,10 +122,10 @@ const VirtualMachineDetail: React.FC = () => {
     setLoading(true);
     try {
       await vmApi.deleteAccount(id!, accountId);
-      message.success('账号删除成功');
+      message.success("账号删除成功");
       loadAccounts();
     } catch (error) {
-      message.error('删除账号失败');
+      message.error("删除账号失败");
     } finally {
       setLoading(false);
     }
@@ -134,53 +134,53 @@ const VirtualMachineDetail: React.FC = () => {
   // 账号列表表格列定义
   const accountColumns: ColumnsType<VMAccount> = [
     {
-      title: '用户名',
-      dataIndex: 'username',
-      key: 'username',
+      title: "用户名",
+      dataIndex: "username",
+      key: "username",
     },
     {
-      title: '操作系统',
-      dataIndex: 'os_type',
-      key: 'os_type',
+      title: "操作系统",
+      dataIndex: "os_type",
+      key: "os_type",
       render: (os: string) => (
-        <Tag color={os === 'Windows' ? 'blue' : 'green'}>{os}</Tag>
+        <Tag color={os === "Windows" ? "blue" : "green"}>{os}</Tag>
       ),
     },
     {
-      title: '管理员',
-      dataIndex: 'is_admin',
-      key: 'is_admin',
+      title: "管理员",
+      dataIndex: "is_admin",
+      key: "is_admin",
       render: (isAdmin: boolean) => (
-        <Tag color={isAdmin ? 'red' : 'default'}>{isAdmin ? '是' : '否'}</Tag>
+        <Tag color={isAdmin ? "red" : "default"}>{isAdmin ? "是" : "否"}</Tag>
       ),
     },
     {
-      title: '状态',
-      dataIndex: 'is_enabled',
-      key: 'is_enabled',
+      title: "状态",
+      dataIndex: "is_enabled",
+      key: "is_enabled",
       render: (enabled: boolean) => (
-        <Tag color={enabled ? 'success' : 'default'}>
-          {enabled ? '启用' : '禁用'}
+        <Tag color={enabled ? "success" : "default"}>
+          {enabled ? "启用" : "禁用"}
         </Tag>
       ),
     },
     {
-      title: '同步状态',
-      dataIndex: 'sync_status',
-      key: 'sync_status',
+      title: "同步状态",
+      dataIndex: "sync_status",
+      key: "sync_status",
       render: (status: string) => {
         const config = {
-          synced: { color: 'success', text: '已同步' },
-          pending: { color: 'warning', text: '待同步' },
-          failed: { color: 'error', text: '同步失败' },
+          synced: { color: "success", text: "已同步" },
+          pending: { color: "warning", text: "待同步" },
+          failed: { color: "error", text: "同步失败" },
         };
-        const { color, text } = config[status as keyof typeof config] || { color: 'default', text: status };
+        const { color, text } = config[status as keyof typeof config] || { color: "default", text: status };
         return <Tag color={color}>{text}</Tag>;
       },
     },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       render: (_, record) => (
         <Space size="small">
           <Tooltip title="重置密码">
@@ -212,12 +212,12 @@ const VirtualMachineDetail: React.FC = () => {
 
   return (
     <Card>
-      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         {/* 头部 */}
         <Space>
           <Button
             icon={<ArrowLeftOutlined />}
-            onClick={() => navigate('/vdi/vm')}
+            onClick={() => navigate("/vdi/vm")}
           >
             返回列表
           </Button>
@@ -238,28 +238,28 @@ const VirtualMachineDetail: React.FC = () => {
               <Descriptions.Item label="名称">{vm.name}</Descriptions.Item>
               <Descriptions.Item label="电源状态">
                 <Tag color={
-                  vm.power_state === 'in_use' ? 'success' :
-                  vm.power_state === 'stopped' ? 'error' : 'warning'
+                  vm.power_state === "in_use" ? "success" :
+                  vm.power_state === "stopped" ? "error" : "warning"
                 }>
-                  {vm.power_state === 'in_use' ? '运行中' :
-                   vm.power_state === 'stopped' ? '已关机' : '已休眠'}
+                  {vm.power_state === "in_use" ? "运行中" :
+                   vm.power_state === "stopped" ? "已关机" : "已休眠"}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="IP 地址">{vm.ip_address || '-'}</Descriptions.Item>
-              <Descriptions.Item label="操作系统">{vm.os_type || '-'}</Descriptions.Item>
+              <Descriptions.Item label="IP 地址">{vm.ip_address || "-"}</Descriptions.Item>
+              <Descriptions.Item label="操作系统">{vm.os_type || "-"}</Descriptions.Item>
               <Descriptions.Item label="资源规格">
                 {vm.cpu_number || 0}核 / {vm.memory || 0}MB / {vm.disk || 0}GB
               </Descriptions.Item>
-              <Descriptions.Item label="绑定用户">{vm.bound_user_name || '-'}</Descriptions.Item>
+              <Descriptions.Item label="绑定用户">{vm.bound_user_name || "-"}</Descriptions.Item>
               <Descriptions.Item label="最后同步">
-                {vm.last_sync_at ? new Date(vm.last_sync_at).toLocaleString('zh-CN') : '-'}
+                {vm.last_sync_at ? new Date(vm.last_sync_at).toLocaleString("zh-CN") : "-"}
               </Descriptions.Item>
             </Descriptions>
           </Tabs.TabPane>
 
           {/* 账号管理标签页 */}
           <Tabs.TabPane tab="账号管理" key="accounts">
-            <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
+            <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
               <Space>
                 <Button
                   type="primary"
@@ -285,14 +285,14 @@ const VirtualMachineDetail: React.FC = () => {
 
           {/* 操作记录标签页 */}
           <Tabs.TabPane tab="操作记录" key="operations">
-            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--theme-text-tertiary, #999)' }}>
+            <div style={{ padding: "20px", textAlign: "center", color: "var(--theme-text-tertiary, #999)" }}>
               操作记录功能（未来实现）
             </div>
           </Tabs.TabPane>
 
           {/* 监控标签页 */}
           <Tabs.TabPane tab="监控" key="monitor">
-            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--theme-text-tertiary, #999)' }}>
+            <div style={{ padding: "20px", textAlign: "center", color: "var(--theme-text-tertiary, #999)" }}>
               监控数据功能（未来实现）
             </div>
           </Tabs.TabPane>
@@ -311,7 +311,7 @@ const VirtualMachineDetail: React.FC = () => {
           <Form.Item
             label="用户名"
             name="username"
-            rules={[{ required: true, message: '请输入用户名' }]}
+            rules={[{ required: true, message: "请输入用户名" }]}
           >
             <Input placeholder="用户名" />
           </Form.Item>
@@ -319,8 +319,8 @@ const VirtualMachineDetail: React.FC = () => {
             label="密码"
             name="password"
             rules={[
-              { required: true, message: '请输入密码' },
-              { min: 8, message: '密码至少 8 位' },
+              { required: true, message: "请输入密码" },
+              { min: 8, message: "密码至少 8 位" },
             ]}
           >
             <Input.Password placeholder="密码" />
@@ -362,8 +362,8 @@ const VirtualMachineDetail: React.FC = () => {
             label="新密码"
             name="new_password"
             rules={[
-              { required: true, message: '请输入新密码' },
-              { min: 8, message: '密码至少 8 位' },
+              { required: true, message: "请输入新密码" },
+              { min: 8, message: "密码至少 8 位" },
             ]}
           >
             <Input.Password placeholder="新密码" />

@@ -6,12 +6,12 @@
  * 其他 Store（themeStore, layoutStore）的配置都从这里衍生
  */
 
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import type { UserPreferences, ThemeConfiguration, LayoutConfiguration, DataConfiguration } from '@/types/config';
-import { defaultUserPreferences } from '@/types/config';
-import { configService } from '@/services/configService';
-import { ZUSTAND_STORAGE_KEYS } from '@/constants/storage';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import type { UserPreferences, ThemeConfiguration, LayoutConfiguration, DataConfiguration } from "@/types/config";
+import { defaultUserPreferences } from "@/types/config";
+import { configService } from "@/services/configService";
+import { ZUSTAND_STORAGE_KEYS } from "@/constants/storage";
 
 interface SettingsState {
 	// 权威数据
@@ -83,7 +83,7 @@ export const useSettingsStore = create<SettingsStore>()(
 					get().syncToStores();
 
 				} catch (error) {
-					console.error('Failed to initialize settings:', error);
+					console.error("Failed to initialize settings:", error);
 					set({
 						loading: false,
 						error: (error as Error).message,
@@ -153,7 +153,7 @@ export const useSettingsStore = create<SettingsStore>()(
 					get().syncToStores();
 
 				} catch (error) {
-					console.error('Failed to update preferences:', error);
+					console.error("Failed to update preferences:", error);
 					throw error;
 				}
 			},
@@ -164,8 +164,8 @@ export const useSettingsStore = create<SettingsStore>()(
 
 				// 通过事件系统通知其他 Store
 				// 这样可以避免循环依赖
-				if (typeof window !== 'undefined') {
-					window.dispatchEvent(new CustomEvent('settings-changed', {
+				if (typeof window !== "undefined") {
+					window.dispatchEvent(new CustomEvent("settings-changed", {
 						detail: preferences,
 					}));
 				}
@@ -191,8 +191,8 @@ export const useSettingsStore = create<SettingsStore>()(
 					set({ preferences: migrated });
 					get().syncToStores();
 				} catch (error) {
-					console.error('Failed to import preferences:', error);
-					throw new Error('Invalid configuration file');
+					console.error("Failed to import preferences:", error);
+					throw new Error("Invalid configuration file");
 				}
 			},
 		}),

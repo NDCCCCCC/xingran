@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
-import { get, post } from '@/lib/api';
-import type { Key } from 'react';
+import { useState, useCallback } from "react";
+import { get, post } from "@/lib/api";
+import type { Key } from "react";
 
 export interface Target {
   id: string;
@@ -48,7 +48,7 @@ export function useTargetSelector(): UseTargetSelectorResult {
         deptName: string;
         children?: DeptNode[];
       }
-      const response = await get<DeptNode[]>('/system/departments/tree');
+      const response = await get<DeptNode[]>("/system/departments/tree");
       const convertTree = (nodes: DeptNode[]): Target[] => {
         return nodes.map(node => ({
           ...node,
@@ -60,7 +60,7 @@ export function useTargetSelector(): UseTargetSelectorResult {
       };
       setDeptTree(convertTree(response.data || []));
     } catch (error) {
-      console.error('加载部门树失败:', error);
+      console.error("加载部门树失败:", error);
     } finally {
       setLoadingDepts(false);
     }
@@ -70,10 +70,10 @@ export function useTargetSelector(): UseTargetSelectorResult {
   const loadRoles = useCallback(async () => {
     setLoadingRoles(true);
     try {
-      const response = await post<Target[]>('/system/roles/all', {});
+      const response = await post<Target[]>("/system/roles/all", {});
       setRoles(response.data || []);
     } catch (error) {
-      console.error('加载角色列表失败:', error);
+      console.error("加载角色列表失败:", error);
     } finally {
       setLoadingRoles(false);
     }
@@ -83,10 +83,10 @@ export function useTargetSelector(): UseTargetSelectorResult {
   const loadUsers = useCallback(async () => {
     setLoadingUsers(true);
     try {
-      const response = await post<{ list: Target[] }>('/system/users/list', { current: 1, pageSize: 100 });
+      const response = await post<{ list: Target[] }>("/system/users/list", { current: 1, pageSize: 100 });
       setUsers(response.data?.list || []);
     } catch (error) {
-      console.error('加载用户列表失败:', error);
+      console.error("加载用户列表失败:", error);
     } finally {
       setLoadingUsers(false);
     }

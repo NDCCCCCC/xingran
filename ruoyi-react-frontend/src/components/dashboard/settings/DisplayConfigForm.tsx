@@ -5,9 +5,9 @@
  * 支持 stat-card、chart、table、list、progress 五种类型
  */
 
-import { useState, useEffect } from 'react';
-import { Form, Input, InputNumber, Select, Switch, ColorPicker, Space, Divider } from 'antd';
-import { QuestionCircleOutlined } from '@ant-design/icons';
+import { useState, useEffect } from "react";
+import { Form, Input, InputNumber, Select, Switch, ColorPicker, Space, Divider } from "antd";
+import { QuestionCircleOutlined } from "@ant-design/icons";
 import type {
 	DisplayConfig,
 	WidgetType,
@@ -16,8 +16,8 @@ import type {
 	TableDisplayConfig,
 	ListDisplayConfig,
 	ProgressDisplayConfig,
-} from '@/types/dashboard';
-import type { FormInstance } from 'antd';
+} from "@/types/dashboard";
+import type { FormInstance } from "antd";
 
 export interface DisplayConfigFormProps {
 	/** 当前显示配置 */
@@ -37,53 +37,53 @@ export interface DisplayConfigFormProps {
  */
 const getDefaultDisplayConfig = (widgetType: WidgetType): DisplayConfig => {
 	switch (widgetType) {
-		case 'stat-card':
+		case "stat-card":
 			return {
-				type: 'stat-card',
-				icon: '📊',
-				iconColor: 'var(--theme-info, #1890ff)',
+				type: "stat-card",
+				icon: "📊",
+				iconColor: "var(--theme-info, #1890ff)",
 				decimals: 0,
 				showTrend: false,
 			} as StatCardDisplayConfig;
-		case 'chart':
+		case "chart":
 			return {
-				type: 'chart',
-				chartType: 'line',
+				type: "chart",
+				chartType: "line",
 				showLegend: true,
 				showLabels: false,
 				smooth: true,
 			} as ChartDisplayConfig;
-		case 'table':
+		case "table":
 			return {
-				type: 'table',
+				type: "table",
 				columns: [],
 				bordered: true,
 				pagination: { enabled: true, pageSize: 10 },
 			} as TableDisplayConfig;
-		case 'list':
+		case "list":
 			return {
-				type: 'list',
-				titleField: 'title',
+				type: "list",
+				titleField: "title",
 				maxItems: 10,
 				showIndex: false,
 			} as ListDisplayConfig;
-		case 'progress':
+		case "progress":
 			return {
-				type: 'progress',
-				progressType: 'line',
+				type: "progress",
+				progressType: "line",
 				target: 100,
 			} as ProgressDisplayConfig;
-		case 'metric':
+		case "metric":
 			return {
-				type: 'progress',
-				progressType: 'circle',
+				type: "progress",
+				progressType: "circle",
 				target: 100,
 			} as ProgressDisplayConfig;
 		default:
 			return {
-				type: 'stat-card',
-				icon: '📊',
-				iconColor: 'var(--theme-info, #1890ff)',
+				type: "stat-card",
+				icon: "📊",
+				iconColor: "var(--theme-info, #1890ff)",
 			} as StatCardDisplayConfig;
 	}
 };
@@ -112,7 +112,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 		const values = activeForm.getFieldsValue();
 		const config: DisplayConfig = {
 			...values,
-			type: widgetType === 'metric' ? 'progress' : widgetType,
+			type: widgetType === "metric" ? "progress" : widgetType,
 		} as DisplayConfig;
 		onChange?.(config);
 	};
@@ -132,7 +132,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 				tooltip="保留的小数位数"
 				initialValue={0}
 			>
-				<InputNumber min={0} max={10} disabled={disabled} style={{ width: '100%' }} />
+				<InputNumber min={0} max={10} disabled={disabled} style={{ width: "100%" }} />
 			</Form.Item>
 			<Form.Item label="图标" name="icon" tooltip="显示的图标（emoji 或图标名称）">
 				<Input placeholder="📊" disabled={disabled} />
@@ -234,10 +234,10 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 			</Form.Item>
 			<Form.Item label="启用分页" tooltip="是否启用分页功能">
 				<Space>
-					<Form.Item name={['pagination', 'enabled']} valuePropName="checked" noStyle initialValue={true}>
+					<Form.Item name={["pagination", "enabled"]} valuePropName="checked" noStyle initialValue={true}>
 						<Switch disabled={disabled} />
 					</Form.Item>
-					<Form.Item name={['pagination', 'pageSize']} noStyle initialValue={10}>
+					<Form.Item name={["pagination", "pageSize"]} noStyle initialValue={10}>
 						<InputNumber
 							min={5}
 							max={100}
@@ -246,7 +246,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 							style={{ width: 100 }}
 						/>
 					</Form.Item>
-					<span style={{ color: 'var(--theme-text-tertiary, #999)' }}>条/页</span>
+					<span style={{ color: "var(--theme-text-tertiary, #999)" }}>条/页</span>
 				</Space>
 			</Form.Item>
 			<Divider titlePlacement="left" plain>
@@ -256,22 +256,22 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 				{(fields, { add, remove }) => (
 					<>
 						{fields.map(({ key, name, ...restField }) => (
-							<Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
+							<Space key={key} style={{ display: "flex", marginBottom: 8 }} align="baseline">
 								<Form.Item
 									{...restField}
-									name={[name, 'dataIndex']}
-									rules={[{ required: true, message: '请输入字段名' }]}
+									name={[name, "dataIndex"]}
+									rules={[{ required: true, message: "请输入字段名" }]}
 								>
 									<Input placeholder="字段名" disabled={disabled} style={{ width: 120 }} />
 								</Form.Item>
 								<Form.Item
 									{...restField}
-									name={[name, 'title']}
-									rules={[{ required: true, message: '请输入列标题' }]}
+									name={[name, "title"]}
+									rules={[{ required: true, message: "请输入列标题" }]}
 								>
 									<Input placeholder="列标题" disabled={disabled} style={{ width: 120 }} />
 								</Form.Item>
-								<Form.Item {...restField} name={[name, 'width']}>
+								<Form.Item {...restField} name={[name, "width"]}>
 									<InputNumber placeholder="宽度" disabled={disabled} style={{ width: 80 }} />
 								</Form.Item>
 							</Space>
@@ -285,10 +285,10 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 								}}
 								value={undefined}
 								options={[
-									{ value: 'id', label: 'ID' },
-									{ value: 'name', label: '名称' },
-									{ value: 'status', label: '状态' },
-									{ value: 'createTime', label: '创建时间' },
+									{ value: "id", label: "ID" },
+									{ value: "name", label: "名称" },
+									{ value: "status", label: "状态" },
+									{ value: "createTime", label: "创建时间" },
 								]}
 							/>
 						</Form.Item>
@@ -305,7 +305,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 				label="标题字段"
 				name="titleField"
 				tooltip="列表项标题对应的数据字段"
-				rules={[{ required: true, message: '请输入标题字段' }]}
+				rules={[{ required: true, message: "请输入标题字段" }]}
 				initialValue="title"
 			>
 				<Input placeholder="title" disabled={disabled} />
@@ -325,7 +325,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 				tooltip="最多显示多少条数据"
 				initialValue={10}
 			>
-				<InputNumber min={1} max={100} disabled={disabled} style={{ width: '100%' }} />
+				<InputNumber min={1} max={100} disabled={disabled} style={{ width: "100%" }} />
 			</Form.Item>
 			<Form.Item
 				label="显示序号"
@@ -360,7 +360,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 				tooltip="用于计算百分比的目标值"
 				initialValue={100}
 			>
-				<InputNumber min={1} disabled={disabled} style={{ width: '100%' }} />
+				<InputNumber min={1} disabled={disabled} style={{ width: "100%" }} />
 			</Form.Item>
 			<Divider titlePlacement="left" plain>
 				颜色阈值
@@ -369,11 +369,11 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 				{(fields, { add, remove }) => (
 					<>
 						{fields.map(({ key, name, ...restField }) => (
-							<Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
-								<Form.Item {...restField} name={[name, 'value']}>
+							<Space key={key} style={{ display: "flex", marginBottom: 8 }} align="baseline">
+								<Form.Item {...restField} name={[name, "value"]}>
 									<InputNumber placeholder="阈值" disabled={disabled} style={{ width: 100 }} />
 								</Form.Item>
-								<Form.Item {...restField} name={[name, 'color']}>
+								<Form.Item {...restField} name={[name, "color"]}>
 									<ColorPicker disabled={disabled} showText />
 								</Form.Item>
 							</Space>
@@ -383,10 +383,10 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 								disabled={disabled}
 								placeholder="添加阈值..."
 								onChange={() => {
-									add({ value: 50, color: 'var(--theme-warning, #faad14)' });
+									add({ value: 50, color: "var(--theme-warning, #faad14)" });
 								}}
 								value={undefined}
-								options={[{ value: 'add', label: '添加颜色阈值' }]}
+								options={[{ value: "add", label: "添加颜色阈值" }]}
 							/>
 						</Form.Item>
 					</>
@@ -398,20 +398,20 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 	// 根据 Widget 类型渲染对应的配置表单
 	const renderConfigForm = () => {
 		switch (widgetType) {
-			case 'stat-card':
+			case "stat-card":
 				return renderStatCardConfig();
-			case 'chart':
+			case "chart":
 				return renderChartConfig();
-			case 'table':
+			case "table":
 				return renderTableConfig();
-			case 'list':
+			case "list":
 				return renderListConfig();
-			case 'progress':
-			case 'metric':
+			case "progress":
+			case "metric":
 				return renderProgressConfig();
 			default:
 				return (
-					<div style={{ color: 'var(--theme-text-tertiary, #999)', textAlign: 'center', padding: 20 }}>
+					<div style={{ color: "var(--theme-text-tertiary, #999)", textAlign: "center", padding: 20 }}>
 						暂无额外配置项
 					</div>
 				);

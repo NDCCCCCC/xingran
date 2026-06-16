@@ -3,7 +3,7 @@
  * 解决 CommonJS 到 ES 模块的导入问题
  */
 
-declare module 'sm-crypto' {
+declare module "sm-crypto" {
   export const sm2: {
     doEncrypt(msg: string, publicKey: string, cipherMode: number): string;
     doDecrypt: (encryptedData: string, privateKey: string, cipherMode: number) => string;
@@ -22,8 +22,8 @@ declare module 'sm-crypto' {
   };
 
   export const sm4: {
-    encrypt: (msg: string, key: string, options?: { mode?: 'ecb' | 'cbc'; iv?: string }) => string;
-    decrypt: (encryptedData: string, key: string, options?: { mode?: 'ecb' | 'cbc'; iv?: string }) => string;
+    encrypt: (msg: string, key: string, options?: { mode?: "ecb" | "cbc"; iv?: string }) => string;
+    decrypt: (encryptedData: string, key: string, options?: { mode?: "ecb" | "cbc"; iv?: string }) => string;
   };
 
   const sm2: {
@@ -44,8 +44,8 @@ declare module 'sm-crypto' {
   };
 
   const sm4: {
-    encrypt: (msg: string, key: string, options?: { mode?: 'ecb' | 'cbc'; iv?: string }) => string;
-    decrypt: (encryptedData: string, key: string, options?: { mode?: 'ecb' | 'cbc'; iv?: string }) => string;
+    encrypt: (msg: string, key: string, options?: { mode?: "ecb" | "cbc"; iv?: string }) => string;
+    decrypt: (encryptedData: string, key: string, options?: { mode?: "ecb" | "cbc"; iv?: string }) => string;
   };
 
   export default sm2;

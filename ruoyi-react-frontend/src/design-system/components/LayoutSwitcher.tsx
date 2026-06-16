@@ -3,11 +3,11 @@
  * 提供用户界面来切换布局
  */
 
-import type { FC, ReactNode } from 'react';
-import { Segmented, Tooltip } from 'antd';
-import { ApartmentOutlined, AppstoreOutlined, RocketOutlined } from '@ant-design/icons';
-import { useLayout } from '@/store/layoutStore';
-import type { LayoutType } from '@/types/layout';
+import type { FC, ReactNode } from "react";
+import { Segmented, Tooltip } from "antd";
+import { ApartmentOutlined, AppstoreOutlined, RocketOutlined } from "@ant-design/icons";
+import { useLayout } from "@/store/layoutStore";
+import type { LayoutType } from "@/types/layout";
 
 const LayoutSwitcher: FC = () => {
   const { layout, setLayout } = useLayout();
@@ -19,22 +19,22 @@ const LayoutSwitcher: FC = () => {
     tooltip: string;
   }> = [
     {
-      value: 'classic',
+      value: "classic",
       icon: <ApartmentOutlined />,
-      label: '经典',
-      tooltip: '左侧导航+顶部栏+内容区',
+      label: "经典",
+      tooltip: "左侧导航+顶部栏+内容区",
     },
     {
-      value: 'hybrid',
+      value: "hybrid",
       icon: <AppstoreOutlined />,
-      label: '混合',
-      tooltip: '可折叠侧边栏+多标签页',
+      label: "混合",
+      tooltip: "可折叠侧边栏+多标签页",
     },
     {
-      value: 'innovative',
+      value: "innovative",
       icon: <RocketOutlined />,
-      label: '创新',
-      tooltip: '创新导航+模块化面板',
+      label: "创新",
+      tooltip: "创新导航+模块化面板",
     },
   ];
 
@@ -53,7 +53,7 @@ const LayoutSwitcher: FC = () => {
       }))}
       className="layout-switcher"
       style={{
-        transition: 'var(--theme-transition-base)',
+        transition: "var(--theme-transition-base)",
       }}
     />
   );

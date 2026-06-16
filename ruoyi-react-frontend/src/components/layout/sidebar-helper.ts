@@ -2,7 +2,7 @@
 // 辅助函数：菜单层级和关系判断
 // ========================================
 
-import type { Menu as MenuType } from '@/types';
+import type { Menu as MenuType } from "@/types";
 
 interface MenuPathInfo {
   topLevel: string;      // 所属一级菜单的key
@@ -22,18 +22,18 @@ export function buildMenuPathMap(
 
   const traverse = (
     menus: MenuType[],
-    parentPath: string = '',
-    topLevelKey: string = '',
-    secondLevelKey: string = '',
+    parentPath: string = "",
+    topLevelKey: string = "",
+    secondLevelKey: string = "",
     isTopLevel: boolean = true
   ) => {
     for (const menu of menus) {
-      if (menu.menuType === 'F' || menu.visible !== 1) continue;
+      if (menu.menuType === "F" || menu.visible !== 1) continue;
 
       // 构建当前菜单的完整路径
-      let menuPath = menu.path || '';
-      if (menuPath && !menuPath.startsWith('/') && parentPath) {
-        if (!menuPath.startsWith(parentPath + '/')) {
+      let menuPath = menu.path || "";
+      if (menuPath && !menuPath.startsWith("/") && parentPath) {
+        if (!menuPath.startsWith(parentPath + "/")) {
           menuPath = `${parentPath}/${menuPath}`;
         }
       }
@@ -55,7 +55,7 @@ export function buildMenuPathMap(
       // 存储映射关系 - 支持多种 key 查找方式
       // 1. 存储完整路径（去掉前导斜杠）
       if (menuPath) {
-        const normalizedPath = menuPath.startsWith('/') ? menuPath.slice(1) : menuPath;
+        const normalizedPath = menuPath.startsWith("/") ? menuPath.slice(1) : menuPath;
         pathMap.set(normalizedPath, menuInfo);
 
         // 同时存储带前导斜杠的路径（用于匹配 Ant Design Menu 的 key）

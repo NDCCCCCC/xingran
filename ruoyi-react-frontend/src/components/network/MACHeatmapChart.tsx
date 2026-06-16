@@ -7,11 +7,11 @@
  *   - 颜色映射: 低=蓝绿, 中=黄, 高=红
  */
 
-import React, { useMemo } from 'react';
-import ReactECharts from 'echarts-for-react';
-import type { EChartsOption } from 'echarts';
-import { Card, Empty, Spin, Tag } from 'antd';
-import type { HeatmapCell, HeatmapResult } from '@/lib/api/macHeatmapApi';
+import React, { useMemo } from "react";
+import ReactECharts from "echarts-for-react";
+import type { EChartsOption } from "echarts";
+import { Card, Empty, Spin, Tag } from "antd";
+import type { HeatmapCell, HeatmapResult } from "@/lib/api/macHeatmapApi";
 
 interface MACHeatmapChartProps {
   data: HeatmapResult;
@@ -21,12 +21,12 @@ interface MACHeatmapChartProps {
 
 // change_count → 颜色 (D-18 锁定色阶)
 function getHeatColor(value: number, max: number): string {
-  if (max <= 0) return '#bfbfbf';
+  if (max <= 0) return "#bfbfbf";
   const ratio = value / max;
-  if (ratio < 0.25) return '#50a3ba';
-  if (ratio < 0.5) return '#fad252';
-  if (ratio < 0.75) return '#eac736';
-  return '#d94e5d';
+  if (ratio < 0.25) return "#50a3ba";
+  if (ratio < 0.5) return "#fad252";
+  if (ratio < 0.75) return "#eac736";
+  return "#d94e5d";
 }
 
 const MACHeatmapChart: React.FC<MACHeatmapChartProps> = ({
@@ -36,7 +36,7 @@ const MACHeatmapChart: React.FC<MACHeatmapChartProps> = ({
 }) => {
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: 60 }}>
+      <div style={{ textAlign: "center", padding: 60 }}>
         <Spin tip="加载中..." />
       </div>
     );
@@ -65,7 +65,7 @@ const MACHeatmapChart: React.FC<MACHeatmapChartProps> = ({
 
     return {
       tooltip: {
-        position: 'top',
+        position: "top",
         formatter: (params: unknown) => {
           const p = params as { data: [number, number, number] };
           const port = ports[p.data[0]];
@@ -76,13 +76,13 @@ const MACHeatmapChart: React.FC<MACHeatmapChartProps> = ({
       },
       grid: { left: 120, right: 20, top: 40, bottom: 80 },
       xAxis: {
-        type: 'category',
+        type: "category",
         data: ports,
         axisLabel: { rotate: 45, fontSize: 10 },
         splitArea: { show: true },
       },
       yAxis: {
-        type: 'category',
+        type: "category",
         data: devices,
         axisLabel: { fontSize: 10 },
         splitArea: { show: true },
@@ -91,18 +91,18 @@ const MACHeatmapChart: React.FC<MACHeatmapChartProps> = ({
         min: 0,
         max: maxCount,
         calculable: true,
-        orient: 'horizontal',
-        left: 'center',
+        orient: "horizontal",
+        left: "center",
         bottom: 10,
-        inRange: { color: ['#50a3ba', '#eac736', '#d94e5d'] },
+        inRange: { color: ["#50a3ba", "#eac736", "#d94e5d"] },
       },
       series: [
         {
-          name: '端口变更次数',
-          type: 'heatmap',
+          name: "端口变更次数",
+          type: "heatmap",
           data: points,
           label: { show: false },
-          emphasis: { itemStyle: { borderColor: 'var(--theme-neutral-900, #000)', borderWidth: 1 } },
+          emphasis: { itemStyle: { borderColor: "var(--theme-neutral-900, #000)", borderWidth: 1 } },
         },
       ],
     };
@@ -125,10 +125,10 @@ const MACHeatmapChart: React.FC<MACHeatmapChartProps> = ({
             style={{ marginBottom: 8 }}
             styles={{ body: { padding: 12 } }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <div style={{ fontWeight: 500 }}>{cell.deviceNameSnapshot}</div>
-                <div style={{ fontSize: 12, color: 'var(--theme-text-tertiary, #999)' }}>{cell.interfaceName}</div>
+                <div style={{ fontSize: 12, color: "var(--theme-text-tertiary, #999)" }}>{cell.interfaceName}</div>
               </div>
               <Tag color={getHeatColor(cell.changeCount, maxCount)}>
                 {cell.changeCount} 次
@@ -144,7 +144,7 @@ const MACHeatmapChart: React.FC<MACHeatmapChartProps> = ({
     <div data-testid="mac-heatmap-desktop">
       <ReactECharts
         option={desktopOption}
-        style={{ height: 600, width: '100%' }}
+        style={{ height: 600, width: "100%" }}
         notMerge
         lazyUpdate
         theme="light"

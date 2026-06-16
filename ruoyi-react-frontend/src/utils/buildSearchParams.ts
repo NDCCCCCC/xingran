@@ -2,7 +2,7 @@
  * 合并搜索表单 + 分页 + 部门筛选的通用工具
  * 用于消除 buildings/workstations 中重复的"表单值过滤 + 部门ID注入 + 分页合并"逻辑
  */
-import type { FormInstance } from 'antd';
+import type { FormInstance } from "antd";
 
 export interface BuildSearchParamsOptions {
   searchForm?: FormInstance<unknown>;
@@ -24,7 +24,7 @@ export function buildSearchParams(opts: BuildSearchParamsOptions): Record<string
     const values = searchForm.getFieldsValue() as Record<string, unknown>;
     Object.keys(values).forEach(key => {
       const value = values[key];
-      if (value !== undefined && value !== null && value !== '') {
+      if (value !== undefined && value !== null && value !== "") {
         params[key] = value;
       }
     });

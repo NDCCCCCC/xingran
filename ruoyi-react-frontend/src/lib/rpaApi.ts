@@ -2,13 +2,13 @@
  * RPA 系统 API 客户端
  */
 
-import { post } from './api';
-import { getAuthHeaders } from '@/utils/authHelpers';
+import { post } from "./api";
+import { getAuthHeaders } from "@/utils/authHelpers";
 import type {
   BaseResponse,
   PageParams,
   PageResponse,
-} from '@/types/base';
+} from "@/types/base";
 import type {
   // 任务相关
   Task,
@@ -57,7 +57,7 @@ import type {
   NotificationListParams,
   // 统计相关
   RPAStatistics,
-} from '@/types/rpa';
+} from "@/types/rpa";
 
 // ==================== 通用 CRUD 工厂函数 ====================
 
@@ -105,7 +105,7 @@ export interface TaskListSearchParams extends PageParams {
   dateRange?: [string, string];
 }
 
-const taskCrudApi = createCrudApi<Task>({ basePath: '/rpa/tasks' });
+const taskCrudApi = createCrudApi<Task>({ basePath: "/rpa/tasks" });
 
 /**
  * RPA 任务 API
@@ -145,7 +145,7 @@ export const taskApi = {
    * 验证脚本
    */
   validateScript: async (script: Script) => {
-    return await post<{ valid: boolean; errors?: string[] }>(`/rpa/tasks/validate-script`, { script });
+    return await post<{ valid: boolean; errors?: string[] }>("/rpa/tasks/validate-script", { script });
   },
 
   /**
@@ -159,7 +159,7 @@ export const taskApi = {
    * 导入任务
    */
   import: async (data: string) => {
-    return await post<Task>(`/rpa/tasks/import`, { data });
+    return await post<Task>("/rpa/tasks/import", { data });
   },
 };
 
@@ -173,7 +173,7 @@ export const scriptApi = {
    * 获取脚本列表
    */
   list: async (params: PageParams) => {
-    return await post<PageResponse<Script>>('/rpa/scripts/list', params);
+    return await post<PageResponse<Script>>("/rpa/scripts/list", params);
   },
 
   /**
@@ -187,7 +187,7 @@ export const scriptApi = {
    * 创建脚本
    */
   create: async (data: Partial<Script>) => {
-    return await post<Script>('/rpa/scripts', data);
+    return await post<Script>("/rpa/scripts", data);
   },
 
   /**
@@ -208,7 +208,7 @@ export const scriptApi = {
    * 测试脚本动作
    */
   testAction: async (action: Action, url?: string) => {
-    return await post<{ success: boolean; result?: unknown; error?: string }>('/rpa/scripts/test-action', {
+    return await post<{ success: boolean; result?: unknown; error?: string }>("/rpa/scripts/test-action", {
       action,
       url,
     });
@@ -218,7 +218,7 @@ export const scriptApi = {
    * 格式化脚本
    */
   format: async (script: Script) => {
-    return await post<Script>('/rpa/scripts/format', { script });
+    return await post<Script>("/rpa/scripts/format", { script });
   },
 };
 
@@ -233,7 +233,7 @@ export interface WorkerListSearchParams extends PageParams {
   name?: string;
 }
 
-const workerCrudApi = createCrudApi<Worker>({ basePath: '/rpa/workers' });
+const workerCrudApi = createCrudApi<Worker>({ basePath: "/rpa/workers" });
 
 /**
  * RPA Worker API
@@ -245,7 +245,7 @@ export const workerApi = {
    * 注册 Worker（Worker 节点调用）
    */
   register: async (data: WorkerRegisterRequest) => {
-    return await post<{ workerId: string; token: string }>('/rpa/workers/register', data);
+    return await post<{ workerId: string; token: string }>("/rpa/workers/register", data);
   },
 
   /**
@@ -266,7 +266,7 @@ export const workerApi = {
    * 获取在线 Worker 列表
    */
   getOnline: async () => {
-    return await post<Worker[]>('/rpa/workers/online', {});
+    return await post<Worker[]>("/rpa/workers/online", {});
   },
 
   /**
@@ -288,7 +288,7 @@ export const workerApi = {
       currentTasks: number;
       completedTasks: number;
       failedTasks: number;
-    }>>('/rpa/workers/statistics', {});
+    }>>("/rpa/workers/statistics", {});
   },
 
   /**
@@ -318,7 +318,7 @@ export interface ExecutionListSearchParams extends PageParams {
   dateRange?: [string, string];
 }
 
-const executionCrudApi = createCrudApi<Execution>({ basePath: '/rpa/executions' });
+const executionCrudApi = createCrudApi<Execution>({ basePath: "/rpa/executions" });
 
 /**
  * RPA 执行记录 API
@@ -358,24 +358,24 @@ export const executionApi = {
   /**
    * 下载执行报告
    */
-  downloadReport: async (id: string, format: 'pdf' | 'html' = 'pdf') => {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+  downloadReport: async (id: string, format: "pdf" | "html" = "pdf") => {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api/v1";
     const authHeaders = await getAuthHeaders();
     const response = await fetch(`${baseUrl}/rpa/executions/${id}/report?format=${format}`, {
-      method: 'POST',
+      method: "POST",
       headers: {
         ...authHeaders,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
     if (!response.ok) {
-      throw new Error('下载报告失败');
+      throw new Error("下载报告失败");
     }
 
     const blob = await response.blob();
     const blobUrl = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = blobUrl;
     a.download = `execution_report_${id}.${format}`;
     document.body.appendChild(a);
@@ -403,7 +403,7 @@ export interface ScheduleListSearchParams extends PageParams {
   name?: string;
 }
 
-const scheduleCrudApi = createCrudApi<Schedule>({ basePath: '/rpa/schedules' });
+const scheduleCrudApi = createCrudApi<Schedule>({ basePath: "/rpa/schedules" });
 
 /**
  * RPA 定时调度 API
@@ -447,7 +447,7 @@ export const scheduleApi = {
       valid: boolean;
       nextRuns?: string[];
       error?: string;
-    }>('/rpa/schedules/validate-cron', { expression });
+    }>("/rpa/schedules/validate-cron", { expression });
   },
 
   /**
@@ -464,12 +464,12 @@ export const scheduleApi = {
  * 变量查询参数
  */
 export interface VariableListSearchParams extends PageParams {
-  scope?: 'global' | 'task';
+  scope?: "global" | "task";
   taskId?: string;
   name?: string;
 }
 
-const variableCrudApi = createCrudApi<Variable>({ basePath: '/rpa/variables' });
+const variableCrudApi = createCrudApi<Variable>({ basePath: "/rpa/variables" });
 
 /**
  * RPA 变量 API
@@ -481,7 +481,7 @@ export const variableApi = {
    * 获取全局变量
    */
   getGlobal: async () => {
-    return await post<Variable[]>('/rpa/variables/global', {});
+    return await post<Variable[]>("/rpa/variables/global", {});
   },
 
   /**
@@ -495,7 +495,7 @@ export const variableApi = {
    * 批量设置变量
    */
   batchSet: async (variables: Array<{ name: string; value: string }>) => {
-    return await post('/rpa/variables/batch-set', { variables });
+    return await post("/rpa/variables/batch-set", { variables });
   },
 
   /**
@@ -518,7 +518,7 @@ export interface TemplateListSearchParams extends PageParams {
   name?: string;
 }
 
-const templateCrudApi = createCrudApi<Template>({ basePath: '/rpa/templates' });
+const templateCrudApi = createCrudApi<Template>({ basePath: "/rpa/templates" });
 
 /**
  * RPA 脚本模板 API
@@ -530,7 +530,7 @@ export const templateApi = {
    * 获取模板分类
    */
   categories: async () => {
-    return await post<TemplateCategory[]>('/rpa/templates/categories', {});
+    return await post<TemplateCategory[]>("/rpa/templates/categories", {});
   },
 
   /**
@@ -572,42 +572,42 @@ export const aiApi = {
    * 自然语言生成脚本
    */
   generateScript: async (request: AIScriptGenerateRequest) => {
-    return await post<AIScriptGenerateResponse>('/rpa/ai/generate', request);
+    return await post<AIScriptGenerateResponse>("/rpa/ai/generate", request);
   },
 
   /**
    * 优化脚本
    */
   optimizeScript: async (request: AIScriptOptimizeRequest) => {
-    return await post<AIScriptOptimizeResponse>('/rpa/ai/optimize', request);
+    return await post<AIScriptOptimizeResponse>("/rpa/ai/optimize", request);
   },
 
   /**
    * 解释脚本
    */
   explainScript: async (request: AIScriptExplainRequest) => {
-    return await post<AIScriptExplainResponse>('/rpa/ai/explain', request);
+    return await post<AIScriptExplainResponse>("/rpa/ai/explain", request);
   },
 
   /**
    * AI Agent 决策（选择器失效时调用）
    */
   decide: async (request: AIAgentDecisionRequest) => {
-    return await post<AIAgentDecisionResponse>('/rpa/ai/decide', request);
+    return await post<AIAgentDecisionResponse>("/rpa/ai/decide", request);
   },
 
   /**
    * 分析失败原因并修复
    */
   analyzeFailure: async (request: AIFailureAnalysisRequest) => {
-    return await post<AIFailureAnalysisResponse>('/rpa/ai/analyze-failure', request);
+    return await post<AIFailureAnalysisResponse>("/rpa/ai/analyze-failure", request);
   },
 
   /**
    * 捕获页面状态
    */
   captureState: async (request: CaptureStateRequest) => {
-    return await post<CaptureStateResponse>('/rpa/ai/capture-state', request);
+    return await post<CaptureStateResponse>("/rpa/ai/capture-state", request);
   },
 };
 
@@ -621,7 +621,7 @@ export interface NotificationListSearchParams extends PageParams {
   enabled?: boolean;
 }
 
-const notificationCrudApi = createCrudApi<NotificationConfig>({ basePath: '/rpa/notifications' });
+const notificationCrudApi = createCrudApi<NotificationConfig>({ basePath: "/rpa/notifications" });
 
 /**
  * RPA 通知配置 API
@@ -654,7 +654,7 @@ export const notificationApi = {
    * 获取全局通知配置
    */
   getGlobal: async () => {
-    return await post<NotificationConfig[]>('/rpa/notifications/global', {});
+    return await post<NotificationConfig[]>("/rpa/notifications/global", {});
   },
 };
 
@@ -668,7 +668,7 @@ export const statisticsApi = {
    * 获取综合统计
    */
   overview: async () => {
-    return await post<RPAStatistics>('/rpa/statistics/overview', {});
+    return await post<RPAStatistics>("/rpa/statistics/overview", {});
   },
 
   /**
@@ -681,7 +681,7 @@ export const statisticsApi = {
       todayExecuted: number;
       todayFailed: number;
       successRate: number;
-    }>(`/rpa/statistics/tasks`, { taskId });
+    }>("/rpa/statistics/tasks", { taskId });
   },
 
   /**
@@ -697,7 +697,7 @@ export const statisticsApi = {
       totalCapacity: number;
       usedCapacity: number;
       availableCapacity: number;
-    }>('/rpa/statistics/workers', {});
+    }>("/rpa/statistics/workers", {});
   },
 
   /**
@@ -718,15 +718,15 @@ export const statisticsApi = {
         count: number;
         successRate: number;
       }>;
-    }>('/rpa/statistics/executions', params || {});
+    }>("/rpa/statistics/executions", params || {});
   },
 
   /**
    * 获取趋势数据
    */
   trends: async (params: {
-    type: 'executions' | 'tasks' | 'workers';
-    period: 'day' | 'week' | 'month';
+    type: "executions" | "tasks" | "workers";
+    period: "day" | "week" | "month";
     startDate?: string;
     endDate?: string;
   }) => {
@@ -734,7 +734,7 @@ export const statisticsApi = {
       date: string;
       value: number;
       label?: string;
-    }>>('/rpa/statistics/trends', params);
+    }>>("/rpa/statistics/trends", params);
   },
 };
 

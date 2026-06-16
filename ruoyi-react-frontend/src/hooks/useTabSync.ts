@@ -3,16 +3,16 @@
  * touch pathname / tabsStore. Extracted from HybridLayout.tsx for reuse and
  * to keep the layout component focused on layout concerns.
  */
-import { useEffect, useCallback } from 'react';
-import { useTabs, useTabsStore } from '@/store/tabsStore';
-import { useDashboardStore } from '@/store/dashboardStore';
-import { routeConfigManager } from '@/router/routeConfigManager';
-import { getSpecialPathTitle, matchDynamicRouteTitle, PAGE_TITLES } from '@/constants/pageTitles';
+import { useEffect, useCallback } from "react";
+import { useTabs, useTabsStore } from "@/store/tabsStore";
+import { useDashboardStore } from "@/store/dashboardStore";
+import { routeConfigManager } from "@/router/routeConfigManager";
+import { getSpecialPathTitle, matchDynamicRouteTitle, PAGE_TITLES } from "@/constants/pageTitles";
 
-const DASHBOARD_KEY = '/dashboard';
+const DASHBOARD_KEY = "/dashboard";
 
 const isDashboardPath = (path: string): boolean => {
-	return path === '/dashboard' || path.startsWith('/dashboard/');
+	return path === "/dashboard" || path.startsWith("/dashboard/");
 };
 
 const getTitleByPath = (path: string): string => {
@@ -30,8 +30,8 @@ const getTitleByPath = (path: string): string => {
 		return routeConfigManager.getRouteTitle(path);
 	}
 
-	const segments = path.split('/').filter(Boolean);
-	return segments[segments.length - 1] || '页面';
+	const segments = path.split("/").filter(Boolean);
+	return segments[segments.length - 1] || "页面";
 };
 
 export function useTabSync(pathname: string) {
@@ -40,7 +40,7 @@ export function useTabSync(pathname: string) {
 
 	const getDashboardTitle = useCallback((): string => {
 		// 当在 /dashboard 首页时，始终显示"仪表盘"，不使用 currentDashboard.name
-		if (pathname === '/dashboard') {
+		if (pathname === "/dashboard") {
 			return PAGE_TITLES.DASHBOARD;
 		}
 		return currentDashboard?.name || PAGE_TITLES.DASHBOARD;
@@ -48,7 +48,7 @@ export function useTabSync(pathname: string) {
 
 	// Effect 1: 路由变化时同步标签页状态
 	useEffect(() => {
-		if (pathname === '/login') {
+		if (pathname === "/login") {
 			return;
 		}
 
@@ -77,7 +77,7 @@ export function useTabSync(pathname: string) {
 				addTab({
 					key: DASHBOARD_KEY,
 					title: title,
-					path: '/dashboard',
+					path: "/dashboard",
 					closable: false,
 					pinned: true,
 				});
@@ -115,7 +115,7 @@ export function useTabSync(pathname: string) {
 			state.addTab({
 				key: DASHBOARD_KEY,
 				title: PAGE_TITLES.DASHBOARD,
-				path: '/dashboard',
+				path: "/dashboard",
 				closable: false,
 				pinned: true,
 			});

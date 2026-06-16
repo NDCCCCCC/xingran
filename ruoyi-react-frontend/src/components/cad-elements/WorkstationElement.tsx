@@ -3,8 +3,8 @@
  * 支持：一字型桌和L型桌，带有显示器、键盘、鼠标等设备符号
  */
 
-import { useMemo, useCallback } from 'react';
-import type { WorkstationNode } from '@/components/shared/FloorPlanEditor.types';
+import { useMemo, useCallback } from "react";
+import type { WorkstationNode } from "@/components/shared/FloorPlanEditor.types";
 
 export interface WorkstationElementProps {
   workstation: WorkstationNode;
@@ -23,13 +23,13 @@ interface Point {
 }
 
 // CAD 标准颜色常量
-const LINE_COLOR = '#2c3e50';
-const DESK_FILL_COLOR = 'rgba(236, 240, 241, 0.8)';
-const DIVIDER_COLOR = '#34495e';
-const DEVICE_STROKE_COLOR = '#5d6d7e';
-const HIGHLIGHT_COLOR = '#1890ff';
-const HOVER_COLOR = '#40a9ff';
-const DEFAULT_COLOR = '#3498db';
+const LINE_COLOR = "#2c3e50";
+const DESK_FILL_COLOR = "rgba(236, 240, 241, 0.8)";
+const DIVIDER_COLOR = "#34495e";
+const DEVICE_STROKE_COLOR = "#5d6d7e";
+const HIGHLIGHT_COLOR = "#1890ff";
+const HOVER_COLOR = "#40a9ff";
+const DEFAULT_COLOR = "#3498db";
 
 // 椅子尺寸常量
 const CHAIR_DIMENSIONS = {
@@ -43,7 +43,7 @@ const CHAIR_DIMENSIONS = {
 } as const;
 
 // 工位类型
-type DeskType = 'straight' | 'l-shaped';
+type DeskType = "straight" | "l-shaped";
 
 export function WorkstationElement({
   workstation,
@@ -59,8 +59,8 @@ export function WorkstationElement({
   const deskWidth = workstation.width ?? 160;
   const deskDepth = workstation.height ?? 70;
   const rotation = workstation.rotation ?? 0;
-  const deskType: DeskType = workstation.type === 1 ? 'l-shaped' : 'straight';
-  const isLShaped = deskType === 'l-shaped';
+  const deskType: DeskType = workstation.type === 1 ? "l-shaped" : "straight";
+  const isLShaped = deskType === "l-shaped";
 
   // 计算工位位置
   const geometry = useMemo(() => {
@@ -290,7 +290,7 @@ export function WorkstationElement({
 
   // 生成多边形路径字符串的辅助函数
   const toPointsString = function(points: Point[]): string {
-    return points.map((p) => `${p.x},${p.y}`).join(' ');
+    return points.map((p) => `${p.x},${p.y}`).join(" ");
   };
 
   // 生成所有路径字符串
@@ -308,10 +308,10 @@ export function WorkstationElement({
   const rightPartitionPoints = toPointsString(geometry.rightPartition);
 
   const containerClassName = [
-    'cad-workstation',
-    selected && 'cad-workstation-selected',
-    hovered && 'cad-workstation-hovered',
-  ].filter(Boolean).join(' ');
+    "cad-workstation",
+    selected && "cad-workstation-selected",
+    hovered && "cad-workstation-hovered",
+  ].filter(Boolean).join(" ");
 
   return (
     <g
@@ -329,7 +329,7 @@ export function WorkstationElement({
           fill={DESK_FILL_COLOR}
           stroke={highlightColor}
           strokeWidth={selected ? 2 : 1.2}
-          style={{ pointerEvents: 'none' }}
+          style={{ pointerEvents: "none" }}
         />
       )}
 
@@ -339,7 +339,7 @@ export function WorkstationElement({
         fill={DESK_FILL_COLOR}
         stroke={highlightColor}
         strokeWidth={selected ? 2 : 1.2}
-        style={{ cursor: 'pointer' }}
+        style={{ cursor: "pointer" }}
       />
 
       {/* 桌面内边框装饰线 */}
@@ -350,7 +350,7 @@ export function WorkstationElement({
         strokeWidth={0.4}
         strokeDasharray="2,2"
         opacity={0.25}
-        style={{ pointerEvents: 'none' }}
+        style={{ pointerEvents: "none" }}
       />
 
       {/* 隔断（左右两侧） */}
@@ -359,7 +359,7 @@ export function WorkstationElement({
           points={leftPartitionPoints}
           fill={DIVIDER_COLOR}
           stroke="none"
-          style={{ pointerEvents: 'none' }}
+          style={{ pointerEvents: "none" }}
         />
       )}
       {rightPartitionPoints && (
@@ -367,7 +367,7 @@ export function WorkstationElement({
           points={rightPartitionPoints}
           fill={DIVIDER_COLOR}
           stroke="none"
-          style={{ pointerEvents: 'none' }}
+          style={{ pointerEvents: "none" }}
         />
       )}
 
@@ -376,7 +376,7 @@ export function WorkstationElement({
         points={standPoints}
         fill={DEVICE_STROKE_COLOR}
         stroke="none"
-        style={{ pointerEvents: 'none' }}
+        style={{ pointerEvents: "none" }}
       />
 
       {/* 显示器 */}
@@ -388,7 +388,7 @@ export function WorkstationElement({
         fill={highlightColor}
         stroke="none"
         rx={1}
-        style={{ pointerEvents: 'none' }}
+        style={{ pointerEvents: "none" }}
       />
 
       {/* 键盘 */}
@@ -397,7 +397,7 @@ export function WorkstationElement({
         fill="none"
         stroke={DEVICE_STROKE_COLOR}
         strokeWidth={0.6}
-        style={{ pointerEvents: 'none' }}
+        style={{ pointerEvents: "none" }}
       />
 
       {/* 鼠标 */}
@@ -406,11 +406,11 @@ export function WorkstationElement({
         fill="none"
         stroke={DEVICE_STROKE_COLOR}
         strokeWidth={0.5}
-        style={{ pointerEvents: 'none' }}
+        style={{ pointerEvents: "none" }}
       />
 
       {/* 椅子 */}
-      <g style={{ pointerEvents: 'none' }}>
+      <g style={{ pointerEvents: "none" }}>
         <polygon
           points={backrestPoints}
           fill={DEVICE_STROKE_COLOR}
@@ -447,14 +447,14 @@ export function WorkstationElement({
           fontWeight="500"
           textAnchor="middle"
           dominantBaseline="hanging"
-          style={{ pointerEvents: 'none' }}
+          style={{ pointerEvents: "none" }}
         >
           {workstation.name || workstation.id.slice(0, 6)}
         </text>
       )}
 
       {/* 状态指示器 */}
-      <g style={{ pointerEvents: 'none' }}>
+      <g style={{ pointerEvents: "none" }}>
         <circle
           cx={geometry.statusIndicatorX}
           cy={geometry.statusIndicatorY}
@@ -472,7 +472,7 @@ export function WorkstationElement({
           textAnchor="middle"
           dominantBaseline="middle"
         >
-          {workstation.status === 0 ? '空' : workstation.status === 1 ? '占' : '维'}
+          {workstation.status === 0 ? "空" : workstation.status === 1 ? "占" : "维"}
         </text>
       </g>
 
@@ -489,7 +489,7 @@ export function WorkstationElement({
               stroke={HIGHLIGHT_COLOR}
               strokeWidth={1.5}
               className="cad-workstation-control-point"
-              style={{ cursor: 'move' }}
+              style={{ cursor: "move" }}
             />
           ))}
           <circle
@@ -500,14 +500,14 @@ export function WorkstationElement({
             stroke={HIGHLIGHT_COLOR}
             strokeWidth={2}
             className="cad-workstation-center-point"
-            style={{ cursor: 'grab' }}
+            style={{ cursor: "grab" }}
           />
         </>
       )}
 
       {/* 方向指示器 */}
       {rotation !== 0 && (
-        <g style={{ pointerEvents: 'none' }}>
+        <g style={{ pointerEvents: "none" }}>
           <line
             x1={geometry.labelCenterX}
             y1={geometry.labelCenterY - 5}

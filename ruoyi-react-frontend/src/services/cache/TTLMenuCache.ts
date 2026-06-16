@@ -3,8 +3,8 @@
  * 短期缓存菜单和权限数据，5 分钟自动过期
  */
 
-import type { Menu } from '@/types/system';
-import type { IMenuCache, MenuCacheEntry } from './MenuCache';
+import type { Menu } from "@/types/system";
+import type { IMenuCache, MenuCacheEntry } from "./MenuCache";
 
 /**
  * 默认 TTL：5 分钟

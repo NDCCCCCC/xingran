@@ -2,9 +2,9 @@
  * 墙体绘制Hook
  */
 
-import { useState, useCallback } from 'react';
-import type { Point } from '@/utils/cad/geometry';
-import { snapToGrid, distance } from '@/utils/cad/geometry';
+import { useState, useCallback } from "react";
+import type { Point } from "@/utils/cad/geometry";
+import { snapToGrid, distance } from "@/utils/cad/geometry";
 
 // ==================== 常量定义 ====================
 
@@ -21,7 +21,7 @@ const DEFAULT_GRID_SIZE = 20;
 
 export interface WallDrawingResult {
   points: Point[];
-  type: 'straight' | 'polyline';
+  type: "straight" | "polyline";
 }
 
 export interface UseWallDrawingOptions {
@@ -144,7 +144,7 @@ export function useWallDrawing(options: UseWallDrawingOptions = {}) {
 
     const wall: WallDrawingResult = {
       points: drawPoints,
-      type: drawPoints.length === 2 ? 'straight' : 'polyline',
+      type: drawPoints.length === 2 ? "straight" : "polyline",
     };
 
     onComplete?.(wall);

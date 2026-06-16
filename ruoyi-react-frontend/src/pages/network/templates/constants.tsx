@@ -3,31 +3,31 @@
  * 网络模板常量定义
  */
 
-import { Tag } from 'antd';
-import type { SelectOption } from './types';
+import { Tag } from "antd";
+import type { SelectOption } from "./types";
 
 // 厂商选项
 export const VENDOR_OPTIONS: SelectOption[] = [
-  { label: 'Huawei', value: 'huawei' },
-  { label: 'H3C', value: 'h3c' },
-  { label: 'Ruijie', value: 'ruijie' },
-  { label: 'Maipu', value: 'maipu' },
+  { label: "Huawei", value: "huawei" },
+  { label: "H3C", value: "h3c" },
+  { label: "Ruijie", value: "ruijie" },
+  { label: "Maipu", value: "maipu" },
 ];
 
 // 设备类型选项
 export const DEVICE_TYPE_OPTIONS: SelectOption[] = [
-  { label: '路由器', value: 'router' },
-  { label: '交换机', value: 'switch' },
-  { label: '防火墙', value: 'firewall' },
-  { label: '无线AP', value: 'ap' },
-  { label: '负载均衡器', value: 'loadbalancer' },
+  { label: "路由器", value: "router" },
+  { label: "交换机", value: "switch" },
+  { label: "防火墙", value: "firewall" },
+  { label: "无线AP", value: "ap" },
+  { label: "负载均衡器", value: "loadbalancer" },
 ];
 
 // 模板类型选项
 export const TEMPLATE_TYPE_OPTIONS: SelectOption[] = [
-  { label: '初始化配置', value: 'init' },
-  { label: '业务配置', value: 'config' },
-  { label: '备份配置', value: 'backup' },
+  { label: "初始化配置", value: "init" },
+  { label: "业务配置", value: "config" },
+  { label: "备份配置", value: "backup" },
 ];
 
 // 渲染厂商标签
@@ -39,7 +39,7 @@ export function renderVendorTag(vendor: string) {
 
 // 渲染设备类型标签
 export function renderDeviceTypeTag(deviceType: string) {
-  if (!deviceType) return '-';
+  if (!deviceType) return "-";
   const option = DEVICE_TYPE_OPTIONS.find((o) => o.value === deviceType);
   return <Tag color="purple">{option?.label}</Tag>;
 }

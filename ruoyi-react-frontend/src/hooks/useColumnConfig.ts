@@ -1,7 +1,7 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
-import { message } from 'antd';
-import { columnConfigApi } from '@/lib/columnConfigApi';
-import type { ColumnConfigItem, UserColumnConfig } from '@/lib/columnConfigApi';
+import { useState, useCallback, useMemo, useEffect } from "react";
+import { message } from "antd";
+import { columnConfigApi } from "@/lib/columnConfigApi";
+import type { ColumnConfigItem, UserColumnConfig } from "@/lib/columnConfigApi";
 
 export interface ColumnConfig {
   key: string;
@@ -18,7 +18,7 @@ export interface UseColumnConfigOptions {
   enableCache?: boolean;
 }
 
-const CACHE_PREFIX = 'column_config';
+const CACHE_PREFIX = "column_config";
 const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
 
 // localStorage 缓存工具函数
@@ -36,7 +36,7 @@ const getFromLocalStorage = (pageKey: string): ColumnConfig[] | null => {
 
     return data;
   } catch (error) {
-    console.error('Failed to read from localStorage:', error);
+    console.error("Failed to read from localStorage:", error);
     return null;
   }
 };
@@ -49,7 +49,7 @@ const saveToLocalStorage = (pageKey: string, config: ColumnConfig[]) => {
       timestamp: Date.now(),
     }));
   } catch (error) {
-    console.error('Failed to save to localStorage:', error);
+    console.error("Failed to save to localStorage:", error);
   }
 };
 
@@ -58,7 +58,7 @@ const removeFromLocalStorage = (pageKey: string) => {
     const key = `${CACHE_PREFIX}:${pageKey}`;
     localStorage.removeItem(key);
   } catch (error) {
-    console.error('Failed to remove from localStorage:', error);
+    console.error("Failed to remove from localStorage:", error);
   }
 };
 
@@ -152,7 +152,7 @@ export function useColumnConfig(options: UseColumnConfigOptions) {
         }
       }
     } catch (error) {
-      console.error('Failed to load column config:', error);
+      console.error("Failed to load column config:", error);
       // 失败时使用默认配置
       setConfig(defaultColumns);
     } finally {
@@ -181,10 +181,10 @@ export function useColumnConfig(options: UseColumnConfigOptions) {
         saveToLocalStorage(pageKey, newConfig);
       }
 
-      message.success('列配置保存成功');
+      message.success("列配置保存成功");
     } catch (error) {
-      console.error('Failed to save column config:', error);
-      message.error('保存列配置失败，请稍后重试');
+      console.error("Failed to save column config:", error);
+      message.error("保存列配置失败，请稍后重试");
       throw error;
     } finally {
       setSaving(false);
@@ -203,10 +203,10 @@ export function useColumnConfig(options: UseColumnConfigOptions) {
         removeFromLocalStorage(pageKey);
       }
 
-      message.success('列配置已重置');
+      message.success("列配置已重置");
     } catch (error) {
-      console.error('Failed to reset column config:', error);
-      message.error('重置列配置失败，请稍后重试');
+      console.error("Failed to reset column config:", error);
+      message.error("重置列配置失败，请稍后重试");
       throw error;
     } finally {
       setSaving(false);

@@ -3,14 +3,14 @@
  * 验证码背景模态框管理 Hook
  */
 
-import { useState, useCallback } from 'react';
-import { message, Upload } from 'antd';
-import type { UploadFile, UploadProps } from 'antd';
-import type { FormInstance } from 'antd/es/form';
-import type { CaptchaBackground, CaptchaBackgroundUpdateRequest, PieceShape, DifficultyLevel, CaptchaBackgroundStatus } from '@/types/captcha';
-import * as captchaService from '@/services/captcha';
-import { SHAPE_OPTIONS } from '../constants';
-import type { UnknownError } from '@/types/common';
+import { useState, useCallback } from "react";
+import { message, Upload } from "antd";
+import type { UploadFile, UploadProps } from "antd";
+import type { FormInstance } from "antd/es/form";
+import type { CaptchaBackground, CaptchaBackgroundUpdateRequest, PieceShape, DifficultyLevel, CaptchaBackgroundStatus } from "@/types/captcha";
+import * as captchaService from "@/services/captcha";
+import { SHAPE_OPTIONS } from "../constants";
+import type { UnknownError } from "@/types/common";
 
 // 表单字段类型
 interface UploadFormValues {
@@ -61,20 +61,20 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
   const [uploading, setUploading] = useState(false);
 
   const uploadProps: UploadProps = {
-    listType: 'picture-card',
+    listType: "picture-card",
     fileList,
     onChange: ({ fileList: newFileList }) => {
       setFileList(newFileList);
     },
     beforeUpload: (file) => {
-      const isImage = file.type.startsWith('image/');
+      const isImage = file.type.startsWith("image/");
       if (!isImage) {
-        message.error('只能上传图片文件');
+        message.error("只能上传图片文件");
         return Upload.LIST_IGNORE;
       }
       const isLt2M = file.size / 1024 / 1024 < 2;
       if (!isLt2M) {
-        message.error('图片大小不能超过 2MB');
+        message.error("图片大小不能超过 2MB");
         return Upload.LIST_IGNORE;
       }
       return false; // 阻止自动上传
@@ -112,7 +112,7 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
       try {
         const values = await uploadForm.validateFields();
         if (fileList.length === 0) {
-          message.warning('请选择要上传的图片');
+          message.warning("请选择要上传的图片");
           return;
         }
 
@@ -127,14 +127,14 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
           remark: formValues.remark,
         });
 
-        message.success('上传成功');
+        message.success("上传成功");
         closeUploadModal(uploadForm);
         onSuccess();
       } catch (error: unknown) {
-        if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (error && typeof error === "object" && "errorFields" in error) {
           return;
         }
-        message.error('上传失败');
+        message.error("上传失败");
       } finally {
         setUploading(false);
       }
@@ -156,16 +156,16 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
         };
 
         await captchaService.updateCaptchaBackground(editingBg.id, updateData);
-        message.success('更新成功');
+        message.success("更新成功");
         setEditModalVisible(false);
         editForm.resetFields();
         setEditingBg(null);
         onSuccess();
       } catch (error: unknown) {
-        if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (error && typeof error === "object" && "errorFields" in error) {
           return;
         }
-        message.error('更新失败');
+        message.error("更新失败");
       }
     },
     []
@@ -174,29 +174,29 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
   const handleDelete = useCallback(async (id: string, onSuccess: () => void) => {
     try {
       await captchaService.deleteCaptchaBackground(id);
-      message.success('删除成功');
+      message.success("删除成功");
       onSuccess();
     } catch (error) {
-      message.error('删除失败');
+      message.error("删除失败");
     }
   }, []);
 
   const handleToggle = useCallback(async (id: string, onSuccess: () => void) => {
     try {
       await captchaService.toggleCaptchaBackgroundStatus(id);
-      message.success('状态更新成功');
+      message.success("状态更新成功");
       onSuccess();
     } catch (error) {
-      message.error('状态更新失败');
+      message.error("状态更新失败");
     }
   }, []);
 
   const handlePreload = useCallback(async () => {
     try {
       await captchaService.preloadCaptchaCache();
-      message.success('预加载成功');
+      message.success("预加载成功");
     } catch (error) {
-      message.error('预加载失败');
+      message.error("预加载失败");
     }
   }, []);
 

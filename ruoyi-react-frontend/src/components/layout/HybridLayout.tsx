@@ -3,19 +3,19 @@
  * 可折叠侧边栏 + 多标签页系统
  */
 
-import { useEffect, useCallback } from 'react';
-import { Layout as AntLayout } from 'antd';
-import { useLocation } from 'react-router-dom';
-import { useLayout } from '@/store/layoutStore';
-import { useTabs, useTabsStore } from '@/store/tabsStore';
-import { useDashboardStore } from '@/store/dashboardStore';
-import { routeConfigManager } from '@/router/routeConfigManager';
-import Header from './header';
-import Sidebar from './sidebar';
-import TabBar from './shared/TabBar';
-import { getSpecialPathTitle, matchDynamicRouteTitle, PAGE_TITLES } from '@/constants/pageTitles';
+import { useEffect, useCallback } from "react";
+import { Layout as AntLayout } from "antd";
+import { useLocation } from "react-router-dom";
+import { useLayout } from "@/store/layoutStore";
+import { useTabs, useTabsStore } from "@/store/tabsStore";
+import { useDashboardStore } from "@/store/dashboardStore";
+import { routeConfigManager } from "@/router/routeConfigManager";
+import Header from "./header";
+import Sidebar from "./sidebar";
+import TabBar from "./shared/TabBar";
+import { getSpecialPathTitle, matchDynamicRouteTitle, PAGE_TITLES } from "@/constants/pageTitles";
 
-import type { FC, ReactNode } from 'react';
+import type { FC, ReactNode } from "react";
 
 const { Content } = AntLayout;
 
@@ -23,10 +23,10 @@ interface HybridLayoutProps {
   children: ReactNode;
 }
 
-const DASHBOARD_KEY = '/dashboard';
+const DASHBOARD_KEY = "/dashboard";
 
 const isDashboardPath = (path: string): boolean => {
-  return path === '/dashboard' || path.startsWith('/dashboard/');
+  return path === "/dashboard" || path.startsWith("/dashboard/");
 };
 
 const getTitleByPath = (path: string): string => {
@@ -44,8 +44,8 @@ const getTitleByPath = (path: string): string => {
     return routeConfigManager.getRouteTitle(path);
   }
 
-  const segments = path.split('/').filter(Boolean);
-  return segments[segments.length - 1] || '页面';
+  const segments = path.split("/").filter(Boolean);
+  return segments[segments.length - 1] || "页面";
 };
 
 const HybridLayout: FC<HybridLayoutProps> = ({ children }) => {
@@ -56,14 +56,14 @@ const HybridLayout: FC<HybridLayoutProps> = ({ children }) => {
 
   const getDashboardTitle = useCallback((): string => {
     // 当在 /dashboard 首页时，始终显示"仪表盘"，不使用 currentDashboard.name
-    if (location.pathname === '/dashboard') {
+    if (location.pathname === "/dashboard") {
       return PAGE_TITLES.DASHBOARD;
     }
     return currentDashboard?.name || PAGE_TITLES.DASHBOARD;
   }, [currentDashboard, location.pathname]);
 
   useEffect(() => {
-    if (location.pathname === '/login') {
+    if (location.pathname === "/login") {
       return;
     }
 
@@ -92,7 +92,7 @@ const HybridLayout: FC<HybridLayoutProps> = ({ children }) => {
         addTab({
           key: DASHBOARD_KEY,
           title: title,
-          path: '/dashboard',
+          path: "/dashboard",
           closable: false,
           pinned: true,
         });
@@ -130,7 +130,7 @@ const HybridLayout: FC<HybridLayoutProps> = ({ children }) => {
       state.addTab({
         key: DASHBOARD_KEY,
         title: PAGE_TITLES.DASHBOARD,
-        path: '/dashboard',
+        path: "/dashboard",
         closable: false,
         pinned: true,
       });
@@ -166,17 +166,17 @@ const HybridLayout: FC<HybridLayoutProps> = ({ children }) => {
   }, []);
 
   return (
-    <AntLayout className="h-screen" style={{ background: 'var(--theme-bg-secondary)' }}>
+    <AntLayout className="h-screen" style={{ background: "var(--theme-bg-secondary)" }}>
       <Sidebar />
-      <AntLayout className="h-full" style={{ background: 'var(--theme-bg-secondary)', position: 'relative' }}>
+      <AntLayout className="h-full" style={{ background: "var(--theme-bg-secondary)", position: "relative" }}>
         <Header />
         <TabBar />
         <Content
           className="overflow-auto"
           style={{
-            padding: sidebarCollapsed ? '16px' : '24px',
-            background: 'var(--theme-bg-surface)',
-            transition: 'padding var(--theme-transition-base)',
+            padding: sidebarCollapsed ? "16px" : "24px",
+            background: "var(--theme-bg-surface)",
+            transition: "padding var(--theme-transition-base)",
           }}
         >
           {children}

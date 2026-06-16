@@ -4,13 +4,13 @@
  * 功能：限制缩放范围、悬停显示详细信息、处理重叠楼宇
  */
 
-import { useRef, useState, useEffect } from 'react';
-import { Spin, message, Badge, List, Tag } from 'antd';
-import type { BuildingItem } from '../types';
-import { useVisualizationStore } from '@/store/visualizationStore';
-import { getMapMarkerColor } from '@/utils/three/colors';
-import { loadBaiduMapScript } from './BaiduMapScript';
-import { getBMap, type BMapNamespace, type BMapMap, type BMapMarker, type BMapInfoWindow, type BMapPolygon, type BMapPoint } from '@/types/baidu-map';
+import { useRef, useState, useEffect } from "react";
+import { Spin, message, Badge, List, Tag } from "antd";
+import type { BuildingItem } from "../types";
+import { useVisualizationStore } from "@/store/visualizationStore";
+import { getMapMarkerColor } from "@/utils/three/colors";
+import { loadBaiduMapScript } from "./BaiduMapScript";
+import { getBMap, type BMapNamespace, type BMapMap, type BMapMarker, type BMapInfoWindow, type BMapPolygon, type BMapPoint } from "@/types/baidu-map";
 
 // 聚类群组类型
 interface ClusterGroup {
@@ -21,7 +21,7 @@ interface ClusterGroup {
 }
 
 // 获取百度地图 AK
-const BAIDU_MAP_AK = import.meta.env.VITE_BAIDU_MAP_AK || '';
+const BAIDU_MAP_AK = import.meta.env.VITE_BAIDU_MAP_AK || "";
 
 // 地图配置
 const MAP_CONFIG = {
@@ -79,11 +79,11 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
   const getOfficialHubeiBoundary = (BMap: BMapNamespace): Promise<string[]> => {
     return new Promise((resolve, reject) => {
       const bdary = new BMap.Boundary();
-      bdary.get('湖北省', (rs: { boundaries?: string[] }) => {
+      bdary.get("湖北省", (rs: { boundaries?: string[] }) => {
         if (rs.boundaries && rs.boundaries.length > 0) {
           resolve(rs.boundaries);
         } else {
-          reject(new Error('未获取到边界数据'));
+          reject(new Error("未获取到边界数据"));
         }
       });
     });
@@ -91,8 +91,8 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
 
   // 将边界字符串转换为 BMap.Point 数组
   const parseBoundaryPoints = (boundaryStr: string, BMap: BMapNamespace): BMapPoint[] => {
-    return boundaryStr.split(';').map((point: string) => {
-      const [lng, lat] = point.split(',').map(Number);
+    return boundaryStr.split(";").map((point: string) => {
+      const [lng, lat] = point.split(",").map(Number);
       return new BMap.Point(lng, lat);
     });
   };
@@ -107,10 +107,10 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
       boundaries.forEach((boundaryStr) => {
         const points = parseBoundaryPoints(boundaryStr, BMap);
         const polygon = new BMap.Polygon(points, {
-          strokeColor: 'var(--theme-info, #1890ff)',
+          strokeColor: "var(--theme-info, #1890ff)",
           strokeWeight: 4,           // 加粗边界线
           strokeOpacity: 1,          // 完全不透明
-          fillColor: 'transparent',   // 无填充
+          fillColor: "transparent",   // 无填充
           fillOpacity: 0,
         });
         map.addOverlay(polygon);
@@ -126,10 +126,10 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
     // 绘制简化边界（只显示边线，无遮罩）
     const points = HUBEI_BOUNDARY.map(coord => new BMap.Point(coord[0], coord[1]));
     const polygon = new BMap.Polygon(points, {
-      strokeColor: 'var(--theme-info, #1890ff)',
+      strokeColor: "var(--theme-info, #1890ff)",
       strokeWeight: 4,           // 加粗边界线
       strokeOpacity: 0.8,
-      fillColor: 'transparent',   // 无填充
+      fillColor: "transparent",   // 无填充
       fillOpacity: 0,
     });
     map.addOverlay(polygon);
@@ -140,7 +140,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
   useEffect(() => {
     if (!mapRef.current || !BAIDU_MAP_AK) {
       if (!BAIDU_MAP_AK) {
-        message.error('未配置百度地图 AK');
+        message.error("未配置百度地图 AK");
       }
       return;
     }
@@ -155,7 +155,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
         // 创建地图实例
         const BMap = getBMap();
         if (!BMap) {
-          message.error('百度地图加载失败');
+          message.error("百度地图加载失败");
           return;
         }
         const map = new BMap.Map(mapRef.current, {
@@ -180,10 +180,10 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
         map.addControl(new BMap.ScaleControl());
 
         // 创建信息窗口实例
-        infoWindowRef.current = new BMap.InfoWindow('', {
+        infoWindowRef.current = new BMap.InfoWindow("", {
           width: 280,
           height: 0,
-          title: '',
+          title: "",
           enableAutoPan: true,
           enableCloseOnClick: true,
         });
@@ -198,7 +198,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
           const zoom = map.getZoom();
           setCurrentZoom(zoom);
         };
-        map.addEventListener('zoomend', handleZoomEnd);
+        map.addEventListener("zoomend", handleZoomEnd);
 
         // 初始设置当前缩放级别
         setCurrentZoom(MAP_CONFIG.defaultZoom);
@@ -206,7 +206,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
         setMapLoaded(true);
         setLoading(false);
       } catch (error) {
-        message.error('百度地图加载失败，请检查 AK 配置');
+        message.error("百度地图加载失败，请检查 AK 配置");
         setLoading(false);
       }
     };
@@ -305,7 +305,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
       // 聚类标记：显示数字圆圈 - 使用更醒目的样式
       const size = 48 + Math.min(buildings.length * 2, 24); // 动态大小，更大更醒目
       const clusterIcon = new BMap.Icon(
-        'data:image/svg+xml;base64,' + toBase64(`
+        "data:image/svg+xml;base64," + toBase64(`
           <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
             <defs>
               <filter id="clusterShadow" x="-50%" y="-50%" width="200%" height="200%">
@@ -327,16 +327,16 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
       const marker = new BMap.Marker(point, { icon: clusterIcon });
 
       // 鼠标悬停：显示所有楼宇
-      marker.addEventListener('mouseover', () => {
+      marker.addEventListener("mouseover", () => {
         showTooltip(buildings, centerPixel);
       });
 
-      marker.addEventListener('mouseout', () => {
+      marker.addEventListener("mouseout", () => {
         hideTooltip();
       });
 
       // 点击：打开聚类列表
-      marker.addEventListener('click', () => {
+      marker.addEventListener("click", () => {
         setSelectedCluster(cluster);
       });
 
@@ -348,16 +348,16 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
       const isStopped = building.status === 1;
 
       // 使用醒目的橙红色作为正常楼宇标记，灰色作为停用楼宇标记
-      const mainColor = isStopped ? '#9e9e9e' : '#ff6b35'; // 橙红色更醒目
-      const borderColor = isStopped ? '#757575' : '#ff4d4f';
-      const shadowColor = isStopped ? 'rgba(0,0,0,0.2)' : 'rgba(255, 107, 53, 0.5)';
+      const mainColor = isStopped ? "#9e9e9e" : "#ff6b35"; // 橙红色更醒目
+      const borderColor = isStopped ? "#757575" : "#ff4d4f";
+      const shadowColor = isStopped ? "rgba(0,0,0,0.2)" : "rgba(255, 107, 53, 0.5)";
 
       // 获取楼宇名称前两个字，不足则取全名
-      const buildingLabel = building.name ? building.name.slice(0, 2) : '楼宇';
+      const buildingLabel = building.name ? building.name.slice(0, 2) : "楼宇";
 
       const marker = new BMap.Marker(point, {
         icon: new BMap.Icon(
-          'data:image/svg+xml;base64,' + toBase64(`
+          "data:image/svg+xml;base64," + toBase64(`
             <svg xmlns="http://www.w3.org/2000/svg" width="42" height="48" viewBox="0 0 42 48">
               <defs>
                 <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
@@ -379,16 +379,16 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
       });
 
       // 鼠标悬停事件
-      marker.addEventListener('mouseover', () => {
+      marker.addEventListener("mouseover", () => {
         showTooltip([building], centerPixel);
       });
 
-      marker.addEventListener('mouseout', () => {
+      marker.addEventListener("mouseout", () => {
         hideTooltip();
       });
 
       // 点击事件
-      marker.addEventListener('click', () => {
+      marker.addEventListener("click", () => {
         showBuildingInfo(building, map, BMap);
       });
 
@@ -412,8 +412,8 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
   // 显示单个楼宇信息
   const showBuildingInfo = (building: BuildingItem, map: BMapMap, BMap: BMapNamespace) => {
     const isStopped = building.status === 1;
-    const statusColor = isStopped ? '#9e9e9e' : '#ff6b35';
-    const statusBg = isStopped ? '#f5f5f5' : '#fff2e8';
+    const statusColor = isStopped ? "#9e9e9e" : "#ff6b35";
+    const statusBg = isStopped ? "#f5f5f5" : "#fff2e8";
 
     const content = `
       <div style="padding: 12px; min-width: 260px;">
@@ -421,10 +421,10 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
           ${building.name}
         </h3>
         <div style="font-size: 13px; color: var(--theme-text-tertiary, #666); line-height: 1.8;">
-          <div>📌 ${building.address || '暂无地址'}</div>
+          <div>📌 ${building.address || "暂无地址"}</div>
           <div style="margin-top: 8px;">
             <span style="display: inline-block; padding: 2px 10px; background: ${statusBg}; color: ${statusColor}; border-radius: 12px; font-size: 12px; font-weight: 500;">
-              ${isStopped ? '⏸ 已停用' : '✓ 正常'}
+              ${isStopped ? "⏸ 已停用" : "✓ 正常"}
             </span>
             <span style="margin-left: 12px;">🏢 ${building.floorCount || 0} 层</span>
             <span style="margin-left: 12px;">🪑 ${building.workstationCount || 0} 工位</span>
@@ -466,15 +466,15 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
         // 转换 BuildingItem 为 Building 类型，补充缺失字段
         navigateToBuilding({
           id: building.id,
-          orgId: '',
+          orgId: "",
           name: building.name,
-          code: building.code || '',
+          code: building.code || "",
           address: building.address,
           longitude: building.longitude,
           latitude: building.latitude,
           status: (building.status ?? 0) as 0 | 1,
-          createdAt: '',
-          updatedAt: '',
+          createdAt: "",
+          updatedAt: "",
         });
       }
     };
@@ -488,17 +488,17 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
   if (!BAIDU_MAP_AK) {
     return (
       <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        flexDirection: 'column',
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+        flexDirection: "column",
         gap: 16,
       }}>
-        <div style={{ fontSize: 18, color: 'var(--theme-error, #ff4d4f)' }}>
+        <div style={{ fontSize: 18, color: "var(--theme-error, #ff4d4f)" }}>
           未配置百度地图 AK
         </div>
-        <div style={{ color: 'var(--theme-text-tertiary, #666)' }}>
+        <div style={{ color: "var(--theme-text-tertiary, #666)" }}>
           请在 .env.development 文件中配置 VITE_BAIDU_MAP_AK
         </div>
       </div>
@@ -506,16 +506,16 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
   }
 
   return (
-    <div style={{ height: '100vh', width: '100%', position: 'relative' }}>
+    <div style={{ height: "100vh", width: "100%", position: "relative" }}>
       {loading && (
         <div
           style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
             zIndex: 1000,
-            textAlign: 'center',
+            textAlign: "center",
           }}
         >
           <Spin size="large" />
@@ -526,7 +526,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
       {/* 地图容器 */}
       <div
         ref={mapRef}
-        style={{ height: '100vh', width: '100%' }}
+        style={{ height: "100vh", width: "100%" }}
         onClick={() => {
           clearSelection();
         }}
@@ -536,46 +536,46 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
       {hoveredBuildings.length > 0 && tooltipPosition && (
         <div
           style={{
-            position: 'absolute',
+            position: "absolute",
             left: tooltipPosition.x,
             top: tooltipPosition.y,
-            transform: 'translate(-50%, -100%)',
+            transform: "translate(-50%, -100%)",
             marginTop: -10,
-            background: 'white',
-            border: '1px solid #d9d9d9',
-            borderRadius: '4px',
-            padding: '8px 12px',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+            background: "white",
+            border: "1px solid #d9d9d9",
+            borderRadius: "4px",
+            padding: "8px 12px",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
             zIndex: 1000,
-            minWidth: '200px',
-            pointerEvents: 'none',
+            minWidth: "200px",
+            pointerEvents: "none",
           }}
         >
           {hoveredBuildings.length === 1 ? (
             <div>
-              <div style={{ fontWeight: 'bold', color: 'var(--theme-text-accent, #1890ff)', marginBottom: 4 }}>
+              <div style={{ fontWeight: "bold", color: "var(--theme-text-accent, #1890ff)", marginBottom: 4 }}>
                 {hoveredBuildings[0].name}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--theme-text-tertiary, #666)' }}>
+              <div style={{ fontSize: 11, color: "var(--theme-text-tertiary, #666)" }}>
                 {hoveredBuildings[0].floorCount || 0}层 · {hoveredBuildings[0].workstationCount || 0}工位
               </div>
             </div>
           ) : (
             <div>
-              <div style={{ fontWeight: 'bold', color: 'var(--theme-error, #ff4d4f)', marginBottom: 4 }}>
+              <div style={{ fontWeight: "bold", color: "var(--theme-error, #ff4d4f)", marginBottom: 4 }}>
                 {hoveredBuildings.length} 栋楼宇
               </div>
               {hoveredBuildings.slice(0, 3).map((b, i) => (
-                <div key={i} style={{ fontSize: 11, color: 'var(--theme-text-tertiary, #666)' }}>
+                <div key={i} style={{ fontSize: 11, color: "var(--theme-text-tertiary, #666)" }}>
                   · {b.name}
                 </div>
               ))}
               {hoveredBuildings.length > 3 && (
-                <div style={{ fontSize: 11, color: 'var(--theme-text-tertiary, #999)' }}>
+                <div style={{ fontSize: 11, color: "var(--theme-text-tertiary, #999)" }}>
                   ...还有 {hoveredBuildings.length - 3} 栋
                 </div>
               )}
-              <div style={{ fontSize: 10, color: 'var(--theme-text-tertiary, #999)', marginTop: 4 }}>
+              <div style={{ fontSize: 10, color: "var(--theme-text-tertiary, #999)", marginTop: 4 }}>
                 点击查看全部
               </div>
             </div>
@@ -586,41 +586,41 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
       {/* 地图控制提示 */}
       <div
         style={{
-          position: 'absolute',
+          position: "absolute",
           bottom: 16,
           left: 16,
-          background: 'rgba(255, 255, 255, 0.95)',
-          padding: '12px 16px',
-          borderRadius: '8px',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+          background: "rgba(255, 255, 255, 0.95)",
+          padding: "12px 16px",
+          borderRadius: "8px",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
           fontSize: 12,
-          color: 'var(--theme-text-tertiary, #666)',
+          color: "var(--theme-text-tertiary, #666)",
           zIndex: 100,
         }}
       >
-        <div style={{ fontWeight: 'bold', marginBottom: 8, fontSize: 14 }}>数据统计</div>
-        <div>当前缩放: <Badge count={currentZoom} showZero style={{ backgroundColor: 'var(--theme-info, #1890ff)' }} /></div>
-        <div>显示层级: <Badge count={currentZoom === 10 ? '全部' : '一级(城市)'} showZero style={{ backgroundColor: currentZoom === 10 ? 'var(--theme-purple, #722ed1)' : '#13c2c2' }} /></div>
+        <div style={{ fontWeight: "bold", marginBottom: 8, fontSize: 14 }}>数据统计</div>
+        <div>当前缩放: <Badge count={currentZoom} showZero style={{ backgroundColor: "var(--theme-info, #1890ff)" }} /></div>
+        <div>显示层级: <Badge count={currentZoom === 10 ? "全部" : "一级(城市)"} showZero style={{ backgroundColor: currentZoom === 10 ? "var(--theme-purple, #722ed1)" : "#13c2c2" }} /></div>
         <div>一级楼宇: <Badge count={buildings.filter(b => b.level === 1).length} showZero /></div>
         <div>二级楼宇: <Badge count={buildings.filter(b => b.level === 2).length} showZero /></div>
-        <div>有坐标: <Badge count={buildings.filter(b => b.longitude && b.latitude).length} showZero style={{ backgroundColor: buildings.filter(b => b.longitude && b.latitude).length > 0 ? 'var(--theme-success, #52c41a)' : '#ff4d4f' }} /></div>
-        <div style={{ marginTop: 8, fontSize: 11, color: 'var(--theme-text-tertiary, #999)' }}>
+        <div>有坐标: <Badge count={buildings.filter(b => b.longitude && b.latitude).length} showZero style={{ backgroundColor: buildings.filter(b => b.longitude && b.latitude).length > 0 ? "var(--theme-success, #52c41a)" : "#ff4d4f" }} /></div>
+        <div style={{ marginTop: 8, fontSize: 11, color: "var(--theme-text-tertiary, #999)" }}>
           <div>👆 滚轮缩放切换层级</div>
           <div>👆 悬停查看简要信息</div>
           <div>🖱️ 点击查看详细信息</div>
         </div>
 
         {/* 层级说明 */}
-        <div style={{ marginTop: 8, padding: '8px', background: 'var(--theme-primary-lighter, #e6f7ff)', borderRadius: '4px', border: '1px solid var(--theme-primary-subtle, #91d5ff)', color: 'var(--theme-primary, #096dd9)' }}>
-          <div style={{ fontWeight: 'bold', marginBottom: 4 }}>📋 层级说明</div>
+        <div style={{ marginTop: 8, padding: "8px", background: "var(--theme-primary-lighter, #e6f7ff)", borderRadius: "4px", border: "1px solid var(--theme-primary-subtle, #91d5ff)", color: "var(--theme-primary, #096dd9)" }}>
+          <div style={{ fontWeight: "bold", marginBottom: 4 }}>📋 层级说明</div>
           <div style={{ fontSize: 11 }}>• 缩放级别 8-9: 显示一级楼宇（城市级汇总）</div>
           <div style={{ fontSize: 11 }}>• 缩放级别 10: 显示全部楼宇（一级+二级）</div>
         </div>
 
         {/* 有坐标的楼宇为 0 时的提示 */}
         {buildings.filter(b => b.longitude && b.latitude).length === 0 && buildings.length > 0 && (
-          <div style={{ marginTop: 8, padding: '8px', background: 'var(--theme-warning-bg, #fff2e8)', borderRadius: '4px', border: '1px solid var(--theme-warning, #ffbb96)', color: 'var(--theme-warning, #d46b08)' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: 4 }}>⚠️ 楼宇缺少坐标</div>
+          <div style={{ marginTop: 8, padding: "8px", background: "var(--theme-warning-bg, #fff2e8)", borderRadius: "4px", border: "1px solid var(--theme-warning, #ffbb96)", color: "var(--theme-warning, #d46b08)" }}>
+            <div style={{ fontWeight: "bold", marginBottom: 4 }}>⚠️ 楼宇缺少坐标</div>
             <div style={{ fontSize: 11 }}>请在楼宇管理中为楼宇设置经纬度坐标</div>
           </div>
         )}
@@ -630,112 +630,112 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
       {selectedCluster && (
         <div
           style={{
-            position: 'absolute',
+            position: "absolute",
             top: 0,
             right: 0,
             width: 320,
-            height: '100vh',
-            background: 'white',
-            boxShadow: '-2px 0 8px rgba(0, 0, 0, 0.1)',
+            height: "100vh",
+            background: "white",
+            boxShadow: "-2px 0 8px rgba(0, 0, 0, 0.1)",
             zIndex: 1000,
-            display: 'flex',
-            flexDirection: 'column',
+            display: "flex",
+            flexDirection: "column",
           }}
         >
           {/* 头部 */}
           <div
             style={{
-              padding: '16px',
-              borderBottom: '1px solid #f0f0f0',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
+              padding: "16px",
+              borderBottom: "1px solid #f0f0f0",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
             }}
           >
             <div>
-              <div style={{ fontWeight: 'bold', fontSize: 16, color: 'var(--theme-error, #ff4d4f)' }}>
+              <div style={{ fontWeight: "bold", fontSize: 16, color: "var(--theme-error, #ff4d4f)" }}>
                 📍 {selectedCluster.buildings.length} 栋楼宇
               </div>
-              <div style={{ fontSize: 12, color: 'var(--theme-text-tertiary, #999)', marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: "var(--theme-text-tertiary, #999)", marginTop: 4 }}>
                 位置相近，已聚类显示
               </div>
             </div>
             <button
               onClick={() => setSelectedCluster(null)}
               style={{
-                border: 'none',
-                background: 'none',
+                border: "none",
+                background: "none",
                 fontSize: 24,
-                cursor: 'pointer',
-                color: 'var(--theme-text-tertiary, #999)',
+                cursor: "pointer",
+                color: "var(--theme-text-tertiary, #999)",
                 padding: 0,
                 width: 32,
                 height: 32,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
-              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--theme-text-tertiary, #666)'}
-              onMouseLeave={(e) => e.currentTarget.style.color = '#999'}
+              onMouseEnter={(e) => e.currentTarget.style.color = "var(--theme-text-tertiary, #666)"}
+              onMouseLeave={(e) => e.currentTarget.style.color = "#999"}
             >
               ×
             </button>
           </div>
 
           {/* 楼宇列表 */}
-          <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
+          <div style={{ flex: 1, overflow: "auto", padding: "16px" }}>
             <List
               dataSource={selectedCluster.buildings}
               renderItem={(building) => (
                 <List.Item
                   key={building.id}
                   style={{
-                    border: '1px solid #f0f0f0',
-                    borderRadius: '8px',
-                    marginBottom: '12px',
-                    padding: '12px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
+                    border: "1px solid #f0f0f0",
+                    borderRadius: "8px",
+                    marginBottom: "12px",
+                    padding: "12px",
+                    cursor: "pointer",
+                    transition: "all 0.2s",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--theme-info, #1890ff)';
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(24, 144, 255, 0.2)';
+                    e.currentTarget.style.borderColor = "var(--theme-info, #1890ff)";
+                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(24, 144, 255, 0.2)";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#f0f0f0';
-                    e.currentTarget.style.boxShadow = 'none';
+                    e.currentTarget.style.borderColor = "#f0f0f0";
+                    e.currentTarget.style.boxShadow = "none";
                   }}
                   onClick={() => {
                     setSelectedCluster(null);
                     // 转换 BuildingItem 为 Building 类型
                     navigateToBuilding({
                       id: building.id,
-                      orgId: '',
+                      orgId: "",
                       name: building.name,
-                      code: building.code || '',
+                      code: building.code || "",
                       address: building.address,
                       longitude: building.longitude,
                       latitude: building.latitude,
                       status: (building.status ?? 0) as 0 | 1,
-                      createdAt: '',
-                      updatedAt: '',
+                      createdAt: "",
+                      updatedAt: "",
                     });
                   }}
                 >
-                  <div style={{ width: '100%' }}>
+                  <div style={{ width: "100%" }}>
                     {/* 标题行 */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <div style={{ fontWeight: 'bold', color: 'var(--theme-text-accent, #1890ff)', fontSize: 14 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <div style={{ fontWeight: "bold", color: "var(--theme-text-accent, #1890ff)", fontSize: 14 }}>
                         {building.name}
                       </div>
-                      <Tag color={building.status === 1 ? 'red' : 'green'} style={{ margin: 0 }}>
-                        {building.status === 1 ? '已停用' : '正常'}
+                      <Tag color={building.status === 1 ? "red" : "green"} style={{ margin: 0 }}>
+                        {building.status === 1 ? "已停用" : "正常"}
                       </Tag>
                     </div>
 
                     {/* 详细信息 */}
-                    <div style={{ fontSize: 12, color: 'var(--theme-text-tertiary, #666)', lineHeight: 1.8 }}>
-                      <div>📌 {building.address || '暂无地址'}</div>
+                    <div style={{ fontSize: 12, color: "var(--theme-text-tertiary, #666)", lineHeight: 1.8 }}>
+                      <div>📌 {building.address || "暂无地址"}</div>
                       <div style={{ marginTop: 4 }}>
                         <span>🏢 {building.floorCount || 0} 层</span>
                         <span style={{ marginLeft: 12 }}>🪑 {building.workstationCount || 0} 工位</span>
@@ -743,8 +743,8 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
                     </div>
 
                     {/* 查看详情按钮 */}
-                    <div style={{ marginTop: 12, textAlign: 'right' }}>
-                      <Tag color="blue" style={{ cursor: 'pointer' }}>
+                    <div style={{ marginTop: 12, textAlign: "right" }}>
+                      <Tag color="blue" style={{ cursor: "pointer" }}>
                         查看详情 →
                       </Tag>
                     </div>
@@ -757,12 +757,12 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
           {/* 底部提示 */}
           <div
             style={{
-              padding: '12px 16px',
-              borderTop: '1px solid #f0f0f0',
-              background: '#fafafa',
+              padding: "12px 16px",
+              borderTop: "1px solid #f0f0f0",
+              background: "#fafafa",
               fontSize: 11,
-              color: 'var(--theme-text-tertiary, #999)',
-              textAlign: 'center',
+              color: "var(--theme-text-tertiary, #999)",
+              textAlign: "center",
             }}
           >
             点击楼宇卡片查看 3D 详情

@@ -14,9 +14,9 @@
  * 与 F-STORE-02 修复配套使用，集中 3 个 store 的 storage key
  */
 export const ZUSTAND_STORAGE_KEYS = {
-	SETTINGS: 'settings-storage',
-	LAYOUT: 'layout-storage',
-	MENU: 'menu-storage',
+	SETTINGS: "settings-storage",
+	LAYOUT: "layout-storage",
+	MENU: "menu-storage",
 } as const;
 
 /**
@@ -35,7 +35,7 @@ export const STORAGE_KEYS = {
 	 * 路由最后访问路径
 	 * 存储于 sessionStorage，用于登录后跳转到用户上次访问的页面
 	 */
-	LAST_PATH: 'ruoyi_last_visited_path',
+	LAST_PATH: "ruoyi_last_visited_path",
 } as const;
 
 /**

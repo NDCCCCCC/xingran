@@ -3,14 +3,14 @@
  * 工位编辑模态框
  */
 
-import { useLayoutEffect } from 'react';
-import { Form, Input, InputNumber, Select, Row, Col, Cascader } from 'antd';
-import type { FormInstance } from 'antd';
-import type { WorkstationOps } from '@/types';
-import type { DeptTreeNode, UserOption } from '../types';
-import { DepartmentTreeSelect } from '@/components/shared';
-import { STATUS_OPTIONS, TYPE_OPTIONS } from '../constants';
-import { BaseEditModal } from '@/components/modal/BaseEditModal';
+import { useLayoutEffect } from "react";
+import { Form, Input, InputNumber, Select, Row, Col, Cascader } from "antd";
+import type { FormInstance } from "antd";
+import type { WorkstationOps } from "@/types";
+import type { DeptTreeNode, UserOption } from "../types";
+import { DepartmentTreeSelect } from "@/components/shared";
+import { STATUS_OPTIONS, TYPE_OPTIONS } from "../constants";
+import { BaseEditModal } from "@/components/modal/BaseEditModal";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -62,7 +62,7 @@ export function WorkstationEditModal({
 
   return (
     <BaseEditModal
-      title={editingWorkstation ? '编辑工位' : '新增工位'}
+      title={editingWorkstation ? "编辑工位" : "新增工位"}
       open={open}
       onOk={async () => {
         try {
@@ -82,7 +82,7 @@ export function WorkstationEditModal({
       width={700}
     >
       <Form form={form} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
-        <Form.Item name="orgId" label="所属机构" rules={[{ required: true, message: '请选择所属机构' }]}>
+        <Form.Item name="orgId" label="所属机构" rules={[{ required: true, message: "请选择所属机构" }]}>
           <DepartmentTreeSelect
             treeData={deptTreeData}
             placeholder="请选择机构"
@@ -93,7 +93,7 @@ export function WorkstationEditModal({
             }}
           />
         </Form.Item>
-        <Form.Item name="floorId" label="所属楼层" rules={[{ required: true, message: '请选择所属楼层' }]}>
+        <Form.Item name="floorId" label="所属楼层" rules={[{ required: true, message: "请选择所属楼层" }]}>
           <Cascader
             options={cascaderOptions}
             loadData={handleCascaderLoadData}
@@ -103,10 +103,10 @@ export function WorkstationEditModal({
             showSearch={{ filter: (inputValue, path) => path.some(option => option.label?.toLowerCase().includes(inputValue.toLowerCase())) }}
           />
         </Form.Item>
-        <Form.Item name="name" label="工位名称" rules={[{ required: true, message: '请输入工位名称' }]}>
+        <Form.Item name="name" label="工位名称" rules={[{ required: true, message: "请输入工位名称" }]}>
           <Input placeholder="请输入工位名称" />
         </Form.Item>
-        <Form.Item name="type" label="工位类型" rules={[{ required: true, message: '请选择工位类型' }]}>
+        <Form.Item name="type" label="工位类型" rules={[{ required: true, message: "请选择工位类型" }]}>
           <Select placeholder="请选择工位类型">
             {TYPE_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
@@ -124,7 +124,7 @@ export function WorkstationEditModal({
                 onChange={() => {
                   // 当部门变化时，清空用户选择并重新加载用户
                   form.setFieldsValue({ userId: undefined });
-                  const deptId = form.getFieldValue('deptId');
+                  const deptId = form.getFieldValue("deptId");
                   onDeptChange(deptId);
                 }}
               />
@@ -145,28 +145,28 @@ export function WorkstationEditModal({
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="positionX" label="X坐标">
-              <InputNumber placeholder="X坐标" style={{ width: '100%' }} />
+              <InputNumber placeholder="X坐标" style={{ width: "100%" }} />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item name="positionY" label="Y坐标">
-              <InputNumber placeholder="Y坐标" style={{ width: '100%' }} />
+              <InputNumber placeholder="Y坐标" style={{ width: "100%" }} />
             </Form.Item>
           </Col>
         </Row>
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="width" label="宽度" initialValue={160}>
-              <InputNumber placeholder="宽度" min={50} max={500} style={{ width: '100%' }} />
+              <InputNumber placeholder="宽度" min={50} max={500} style={{ width: "100%" }} />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item name="depth" label="深度" initialValue={70}>
-              <InputNumber placeholder="深度" min={30} max={300} style={{ width: '100%' }} />
+              <InputNumber placeholder="深度" min={30} max={300} style={{ width: "100%" }} />
             </Form.Item>
           </Col>
         </Row>
-        <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
+        <Form.Item name="status" label="状态" rules={[{ required: true, message: "请选择状态" }]}>
           <Select placeholder="请选择状态">
             {STATUS_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>

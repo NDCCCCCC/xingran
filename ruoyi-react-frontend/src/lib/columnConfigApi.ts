@@ -1,4 +1,4 @@
-import { get, post, del } from '@/lib/api';
+import { get, post, del } from "@/lib/api";
 
 export interface ColumnConfigItem {
   columnKey: string;
@@ -30,7 +30,7 @@ export const columnConfigApi = {
 
   // 保存列配置
   save: (data: ColumnConfigData) =>
-    post('/system/column-config', data),
+    post("/system/column-config", data),
 
   // 重置列配置
   reset: (pageKey: string) =>

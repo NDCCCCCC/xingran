@@ -2,24 +2,24 @@
  * RPA Worker 监控页面
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import type { FC } from 'react';
+import { useState, useCallback, useEffect } from "react";
+import type { FC } from "react";
 import {
   Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic,
   Tag, Alert, Progress, Layout,
-} from 'antd';
+} from "antd";
 import {
   SearchOutlined, ReloadOutlined, CloudServerOutlined,
   CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined,
   LoadingOutlined,
-} from '@ant-design/icons';
-import type { Worker } from '@/types/rpa';
-import { useTableManager } from '@/hooks/useTableManager';
-import { usePagination } from '@/hooks/usePagination';
-import { getWorkerColumns } from './columns';
-import { WORKER_STATUS_OPTIONS } from '../constants';
-import { post } from '@/lib/api';
-import dayjs from 'dayjs';
+} from "@ant-design/icons";
+import type { Worker } from "@/types/rpa";
+import { useTableManager } from "@/hooks/useTableManager";
+import { usePagination } from "@/hooks/usePagination";
+import { getWorkerColumns } from "./columns";
+import { WORKER_STATUS_OPTIONS } from "../constants";
+import { post } from "@/lib/api";
+import dayjs from "dayjs";
 
 const { Option } = Select;
 const { Content } = Layout;
@@ -32,15 +32,15 @@ function isWorkerActuallyOnline(worker: Worker): boolean {
   if (!worker.lastHeartbeat) return false;
   const lastHeartbeatTime = dayjs.unix(worker.lastHeartbeat);
   const now = dayjs();
-  const diffSeconds = now.diff(lastHeartbeatTime, 'second');
+  const diffSeconds = now.diff(lastHeartbeatTime, "second");
   return diffSeconds <= HEARTBEAT_TIMEOUT;
 }
 
 // 获取 Worker 的真实状态
-function getWorkerActualStatus(worker: Worker): 'online' | 'offline' | 'busy' | 'error' {
-  if (worker.status === 'busy' && isWorkerActuallyOnline(worker)) return 'busy';
-  if (worker.status === 'error') return 'error';
-  return isWorkerActuallyOnline(worker) ? 'online' : 'offline';
+function getWorkerActualStatus(worker: Worker): "online" | "offline" | "busy" | "error" {
+  if (worker.status === "busy" && isWorkerActuallyOnline(worker)) return "busy";
+  if (worker.status === "error") return "error";
+  return isWorkerActuallyOnline(worker) ? "online" : "offline";
 }
 
 const WorkerMonitor: FC = () => {
@@ -56,7 +56,7 @@ const WorkerMonitor: FC = () => {
     handleReset,
   } = useTableManager<Worker>(
     async (params) => {
-      const result = await post('/rpa/workers/list', params);
+      const result = await post("/rpa/workers/list", params);
       // 类型断言：后端返回的数据结构
       const data = result.data as unknown as { list?: Worker[]; total?: number } | undefined;
       return {
@@ -93,10 +93,10 @@ const WorkerMonitor: FC = () => {
   // 统计数据（基于真实心跳状态）
   const stats = {
     total: workers.length,
-    online: workers.filter(w => getWorkerActualStatus(w) === 'online').length,
-    offline: workers.filter(w => getWorkerActualStatus(w) === 'offline').length,
-    busy: workers.filter(w => getWorkerActualStatus(w) === 'busy').length,
-    error: workers.filter(w => getWorkerActualStatus(w) === 'error').length,
+    online: workers.filter(w => getWorkerActualStatus(w) === "online").length,
+    offline: workers.filter(w => getWorkerActualStatus(w) === "offline").length,
+    busy: workers.filter(w => getWorkerActualStatus(w) === "busy").length,
+    error: workers.filter(w => getWorkerActualStatus(w) === "error").length,
     totalCapacity: workers.reduce((sum, w) => sum + (w.maxConcurrency || w.capabilities?.maxConcurrency || 3), 0),
     usedCapacity: workers.reduce((sum, w) => sum + (w.currentTasks || 0), 0),
   };
@@ -106,8 +106,8 @@ const WorkerMonitor: FC = () => {
     : 0;
 
   return (
-    <Layout style={{ background: '#000', minHeight: 'calc(100vh - 64px)' }}>
-      <Content style={{ background: '#fff', padding: 16 }}>
+    <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
+      <Content style={{ background: "#fff", padding: 16 }}>
       {/* 统计卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={4}>
@@ -116,7 +116,7 @@ const WorkerMonitor: FC = () => {
               title="Worker 总数"
               value={stats.total}
               prefix={<CloudServerOutlined />}
-              styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
+              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
             />
           </Card>
         </Col>
@@ -126,7 +126,7 @@ const WorkerMonitor: FC = () => {
               title="在线"
               value={stats.online}
               prefix={<CheckCircleOutlined />}
-              styles={{ content: { color: 'var(--theme-success, #52c41a)' } }}
+              styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
             />
           </Card>
         </Col>
@@ -136,7 +136,7 @@ const WorkerMonitor: FC = () => {
               title="忙碌"
               value={stats.busy}
               prefix={<LoadingOutlined />}
-              styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
+              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
             />
           </Card>
         </Col>
@@ -146,7 +146,7 @@ const WorkerMonitor: FC = () => {
               title="离线"
               value={stats.offline}
               prefix={<ClockCircleOutlined />}
-              styles={{ content: { color: 'var(--theme-text-tertiary, #8c8c8c)' } }}
+              styles={{ content: { color: "var(--theme-text-tertiary, #8c8c8c)" } }}
             />
           </Card>
         </Col>
@@ -156,7 +156,7 @@ const WorkerMonitor: FC = () => {
               title="错误"
               value={stats.error}
               prefix={<CloseCircleOutlined />}
-              styles={{ content: { color: 'var(--theme-error, #ff4d4f)' } }}
+              styles={{ content: { color: "var(--theme-error, #ff4d4f)" } }}
             />
           </Card>
         </Col>
@@ -174,7 +174,7 @@ const WorkerMonitor: FC = () => {
             </div>
             <Progress
               percent={Math.round(capacityUsagePercent)}
-              status={capacityUsagePercent > 80 ? 'exception' : 'active'}
+              status={capacityUsagePercent > 80 ? "exception" : "active"}
             />
           </Col>
           <Col span={6}>
@@ -251,16 +251,16 @@ const WorkerMonitor: FC = () => {
 	            const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
 	            Object.keys(formValues).forEach(key => {
 	              const value = formValues[key];
-	              if (value !== undefined && value !== null && value !== '') {
+	              if (value !== undefined && value !== null && value !== "") {
 	                searchParams[key] = value;
 	              }
 	            });
 	            loadWorkers(searchParams);
           }}
           rowClassName={(record) => {
-            if (record.status === 'offline') return 'row-offline';
-            if (record.status === 'error') return 'row-error';
-            return '';
+            if (record.status === "offline") return "row-offline";
+            if (record.status === "error") return "row-error";
+            return "";
           }}
         />
       </Card>

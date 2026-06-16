@@ -1,6 +1,6 @@
-import React from 'react';
-import { Modal, Form, Select, DatePicker, Switch, Alert } from 'antd';
-import type { DutyPool } from '@/lib/dutyApi';
+import React from "react";
+import { Modal, Form, Select, DatePicker, Switch, Alert } from "antd";
+import type { DutyPool } from "@/lib/dutyApi";
 
 const { RangePicker } = DatePicker;
 
@@ -30,8 +30,8 @@ export const GenerateScheduleModal: React.FC<GenerateScheduleModalProps> = ({
       const values = await form.validateFields();
       const success = await onOk({
         poolId: values.poolId,
-        startDate: values.dateRange[0].format('YYYY-MM-DD'),
-        endDate: values.dateRange[1].format('YYYY-MM-DD'),
+        startDate: values.dateRange[0].format("YYYY-MM-DD"),
+        endDate: values.dateRange[1].format("YYYY-MM-DD"),
         dutyType: values.dutyType,
         clearExists: values.clearExists || false,
       });
@@ -56,17 +56,17 @@ export const GenerateScheduleModal: React.FC<GenerateScheduleModalProps> = ({
       destroyOnHidden
     >
       <Form form={form} layout="vertical" preserve={false}>
-        <Form.Item name="poolId" label="值班池" rules={[{ required: true, message: '请选择值班池' }]}>
+        <Form.Item name="poolId" label="值班池" rules={[{ required: true, message: "请选择值班池" }]}>
           <Select placeholder="请选择值班池">
             {pools.map((pool) => (
               <Select.Option key={pool.id} value={pool.id}>{pool.poolName}</Select.Option>
             ))}
           </Select>
         </Form.Item>
-        <Form.Item name="dateRange" label="日期范围" rules={[{ required: true, message: '请选择日期范围' }]}>
-          <RangePicker style={{ width: '100%' }} />
+        <Form.Item name="dateRange" label="日期范围" rules={[{ required: true, message: "请选择日期范围" }]}>
+          <RangePicker style={{ width: "100%" }} />
         </Form.Item>
-        <Form.Item name="dutyType" label="值班类型" rules={[{ required: true, message: '请选择值班类型' }]} initialValue="weekday">
+        <Form.Item name="dutyType" label="值班类型" rules={[{ required: true, message: "请选择值班类型" }]} initialValue="weekday">
           <Select placeholder="请选择值班类型">
             <Select.Option value="weekday">工作日值班</Select.Option>
             <Select.Option value="weekend">周末值班</Select.Option>

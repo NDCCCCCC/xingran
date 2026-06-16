@@ -2,8 +2,8 @@
  * NetworkDevice 模态框状态管理 Hook
  */
 
-import { useState, useCallback } from 'react';
-import type { NetworkDevice } from '@/types';
+import { useState, useCallback } from "react";
+import type { NetworkDevice } from "@/types";
 
 export interface ProbeResult {
   success: boolean;

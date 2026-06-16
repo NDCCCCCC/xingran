@@ -2,9 +2,9 @@
  * 墙体元素组件
  */
 
-import { useMemo, useCallback } from 'react';
-import { getWallColor } from '@/components/cad-editor/theme';
-import type { Wall } from '@/components/cad-editor/types';
+import { useMemo, useCallback } from "react";
+import { getWallColor } from "@/components/cad-editor/theme";
+import type { Wall } from "@/components/cad-editor/types";
 
 export interface WallElementProps {
   wall: Wall;
@@ -18,7 +18,7 @@ export interface WallElementProps {
 
 const CONTROL_POINT_RADIUS = 5;
 const CONTROL_POINT_STROKE_WIDTH = 2;
-const CONTROL_POINT_FILL = '#fff';
+const CONTROL_POINT_FILL = "#fff";
 
 export function WallElement({
   wall,
@@ -35,11 +35,11 @@ export function WallElement({
   );
 
   const pathData = useMemo(() => {
-    if (wall.points.length === 0) return '';
+    if (wall.points.length === 0) return "";
 
     const points = wall.points;
     const path = `M ${points[0].x} ${points[0].y}` +
-      points.slice(1).map(p => ` L ${p.x} ${p.y}`).join('');
+      points.slice(1).map(p => ` L ${p.x} ${p.y}`).join("");
 
     return path;
   }, [wall.points]);
@@ -53,10 +53,10 @@ export function WallElement({
   }, [onHover]);
 
   const containerClassName = [
-    'cad-wall',
-    selected && 'cad-wall-selected',
-    hovered && 'cad-wall-hovered',
-  ].filter(Boolean).join(' ');
+    "cad-wall",
+    selected && "cad-wall-selected",
+    hovered && "cad-wall-hovered",
+  ].filter(Boolean).join(" ");
 
   return (
     <g
@@ -74,7 +74,7 @@ export function WallElement({
         fill="none"
         strokeLinecap="square"
         strokeLinejoin="miter"
-        style={{ cursor: 'pointer' }}
+        style={{ cursor: "pointer" }}
       />
 
       {selected && wall.points.length > 0 && (
@@ -89,7 +89,7 @@ export function WallElement({
               stroke={color}
               strokeWidth={CONTROL_POINT_STROKE_WIDTH}
               className="cad-wall-control-point"
-              style={{ cursor: 'move' }}
+              style={{ cursor: "move" }}
             />
           ))}
         </>

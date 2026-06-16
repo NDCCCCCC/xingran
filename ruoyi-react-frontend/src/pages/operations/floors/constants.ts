@@ -3,8 +3,8 @@
  */
 
 // 视图模式
-export type ViewMode = 'table' | 'card';
-export type PageMode = 'list' | 'editor';
+export type ViewMode = "table" | "card";
+export type PageMode = "list" | "editor";
 
 // 工位布局默认值（毫米）
 export const WORKSTATION_LAYOUT = {
@@ -25,8 +25,8 @@ export const DEFAULT_FLOOR_PLAN_CONFIG = {
 
 // 状态选项
 export const STATUS_OPTIONS = [
-  { label: '正常', value: 0 },
-  { label: '停用', value: 1 },
+  { label: "正常", value: 0 },
+  { label: "停用", value: 1 },
 ] as const;
 
 // 表单状态默认值

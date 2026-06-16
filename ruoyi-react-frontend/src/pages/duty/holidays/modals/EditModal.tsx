@@ -3,12 +3,12 @@
  * 节假日编辑模态框
  */
 
-import { Form, Input, InputNumber, Select, Switch, Modal, DatePicker } from 'antd';
-import type { FormInstance } from 'antd/es/form';
-import type { Holiday } from '@/lib/dutyApi';
-import { HOLIDAY_TYPE_OPTIONS } from '../constants';
-import dayjs from 'dayjs';
-import { useEffect } from 'react';
+import { Form, Input, InputNumber, Select, Switch, Modal, DatePicker } from "antd";
+import type { FormInstance } from "antd/es/form";
+import type { Holiday } from "@/lib/dutyApi";
+import { HOLIDAY_TYPE_OPTIONS } from "../constants";
+import dayjs from "dayjs";
+import { useEffect } from "react";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -52,7 +52,7 @@ export function HolidayEditModal({
         form.setFieldsValue({
           holidayDate: dayjs(),
           isOffday: true,
-          holidayType: 'legal',
+          holidayType: "legal",
           year: getDefaultYear(),
         });
       }
@@ -61,7 +61,7 @@ export function HolidayEditModal({
 
   return (
     <Modal
-      title={editingRecord ? '编辑节假日' : '新增节假日'}
+      title={editingRecord ? "编辑节假日" : "新增节假日"}
       open={open}
       onOk={() => onOk(form)}
       onCancel={onCancel}
@@ -71,15 +71,15 @@ export function HolidayEditModal({
         <Form.Item
           name="holidayDate"
           label="日期"
-          rules={[{ required: true, message: '请选择日期' }]}
+          rules={[{ required: true, message: "请选择日期" }]}
         >
-          <DatePicker style={{ width: '100%' }} />
+          <DatePicker style={{ width: "100%" }} />
         </Form.Item>
 
         <Form.Item
           name="holidayName"
           label="节假日名称"
-          rules={[{ required: true, message: '请输入节假日名称' }]}
+          rules={[{ required: true, message: "请输入节假日名称" }]}
         >
           <Input placeholder="请输入节假日名称" />
         </Form.Item>
@@ -87,7 +87,7 @@ export function HolidayEditModal({
         <Form.Item
           name="holidayType"
           label="类型"
-          rules={[{ required: true, message: '请选择类型' }]}
+          rules={[{ required: true, message: "请选择类型" }]}
         >
           <Select placeholder="请选择类型">
             {HOLIDAY_TYPE_OPTIONS.map(opt => (
@@ -100,8 +100,8 @@ export function HolidayEditModal({
           <Switch checkedChildren="休息" unCheckedChildren="工作" />
         </Form.Item>
 
-        <Form.Item name="year" label="年份" rules={[{ required: true, message: '请输入年份' }]}>
-          <InputNumber min={2020} max={2030} style={{ width: '100%' }} />
+        <Form.Item name="year" label="年份" rules={[{ required: true, message: "请输入年份" }]}>
+          <InputNumber min={2020} max={2030} style={{ width: "100%" }} />
         </Form.Item>
 
         <Form.Item name="remark" label="备注">

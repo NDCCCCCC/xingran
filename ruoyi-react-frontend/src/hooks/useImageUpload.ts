@@ -2,11 +2,11 @@
  * 可复用的图片上传 Hook
  */
 
-import { useState, useCallback } from 'react';
-import { message } from 'antd';
-import type { UploadFile } from 'antd';
-import type { FileUploadResponse } from '@/components/shared/FileUpload';
-import { MAX_IMAGE_SIZE } from '@/constants/upload';
+import { useState, useCallback } from "react";
+import { message } from "antd";
+import type { UploadFile } from "antd";
+import type { FileUploadResponse } from "@/components/shared/FileUpload";
+import { MAX_IMAGE_SIZE } from "@/constants/upload";
 
 export interface UseImageUploadOptions {
   businessType?: string;
@@ -31,7 +31,7 @@ const DEFAULT_MAX_SIZE = MAX_IMAGE_SIZE;
 
 export function useImageUpload(options: UseImageUploadOptions = {}): UseImageUploadReturn {
   const {
-    businessType = 'image',
+    businessType = "image",
     maxSize = DEFAULT_MAX_SIZE,
     onSuccess,
     onError,
@@ -53,14 +53,14 @@ export function useImageUpload(options: UseImageUploadOptions = {}): UseImageUpl
   const handleUploadSuccess = useCallback((file: UploadFile, response: FileUploadResponse) => {
     setUploading(false);
     setImageId(response.id);
-    setImageUrl(`/uploads/${response.storagePath || ''}`);
-    message.success('图片上传成功');
-    onSuccess?.(response.id, `/uploads/${response.storagePath || ''}`);
+    setImageUrl(`/uploads/${response.storagePath || ""}`);
+    message.success("图片上传成功");
+    onSuccess?.(response.id, `/uploads/${response.storagePath || ""}`);
   }, [onSuccess]);
 
   const handleUploadError = useCallback((_file: UploadFile, error: unknown) => {
     setUploading(false);
-    message.error('图片上传失败');
+    message.error("图片上传失败");
     onError?.(error instanceof Error ? error : new Error(String(error)));
   }, [onError]);
 
@@ -80,10 +80,10 @@ export function useImageUpload(options: UseImageUploadOptions = {}): UseImageUpl
     if (fileUrl) {
       setFileList([{
         uid: fileId,
-        name: '平面图',
-        status: 'done',
+        name: "平面图",
+        status: "done",
         url: fileUrl,
-        response: { id: fileId, storagePath: fileUrl.replace('/uploads/', '') },
+        response: { id: fileId, storagePath: fileUrl.replace("/uploads/", "") },
       }]);
     } else {
       setFileList([]);

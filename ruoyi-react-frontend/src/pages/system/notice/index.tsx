@@ -1,30 +1,30 @@
-import { useState, useEffect, useCallback } from 'react';
-import type { FC } from 'react';
-import { Form, message } from 'antd';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from "react";
+import type { FC } from "react";
+import { Form, message } from "antd";
+import { useNavigate } from "react-router-dom";
 import type {
   Notice,
   CreateNoticeRequest,
   UpdateNoticeRequest,
   NoticeChannelRequest,
-} from '@/types/notice';
-import type { NoticeStatistics as NoticeStatisticsType } from '@/types/notice';
-import { getNoticeStatistics } from '@/lib/noticeApi';
-import type { ExecutionType } from '@/types/notice';
-import dayjs from 'dayjs';
+} from "@/types/notice";
+import type { NoticeStatistics as NoticeStatisticsType } from "@/types/notice";
+import { getNoticeStatistics } from "@/lib/noticeApi";
+import type { ExecutionType } from "@/types/notice";
+import dayjs from "dayjs";
 import {
   useNoticeData,
   useNoticeStatistics,
   useTargetSelector,
   useAPIConfig,
-} from './hooks';
+} from "./hooks";
 import {
   StatisticsDrawer,
   NoticeForm,
   NoticeList,
   NoticeStatisticsCard,
-} from './components';
-import { usePagination } from '@/hooks/usePagination';
+} from "./components";
+import { usePagination } from "@/hooks/usePagination";
 
 /**
  * 管理端通知公告页面（重构版）
@@ -79,10 +79,10 @@ const NoticeManagement: FC = () => {
   const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
 
   // 执行类型
-  const [executionType, setExecutionType] = useState<ExecutionType>('once');
+  const [executionType, setExecutionType] = useState<ExecutionType>("once");
 
   // 渠道选择状态
-  const [selectedChannels, setSelectedChannels] = useState<string[]>(['web']);
+  const [selectedChannels, setSelectedChannels] = useState<string[]>(["web"]);
 
   // 统计抽屉状态
   const [statisticsVisible, setStatisticsVisible] = useState(false);
@@ -90,7 +90,7 @@ const NoticeManagement: FC = () => {
   const [statisticsLoading, setStatisticsLoading] = useState(false);
 
   // Markdown编辑器状态
-  const [markdownContent, setMarkdownContent] = useState<string>('');
+  const [markdownContent, setMarkdownContent] = useState<string>("");
 
   // 初始化加载数据
   useEffect(() => {
@@ -101,8 +101,8 @@ const NoticeManagement: FC = () => {
   // 打开编辑模态框
   const openModal = useCallback(async (record?: Notice) => {
     setModalVisible(true);
-    setExecutionType('once');
-    setSelectedChannels(['web']);
+    setExecutionType("once");
+    setSelectedChannels(["web"]);
 
     // 加载目标选择数据和API配置
     loadDeptTree();
@@ -115,8 +115,8 @@ const NoticeManagement: FC = () => {
       if (record) {
         setEditingNotice(record);
         // 加载已有渠道配置
-        let customEmailsValue = '';
-        let customWeComUsersValue = '';
+        let customEmailsValue = "";
+        let customWeComUsersValue = "";
         let apiConfigIdValue = undefined;
 
         if (record.channels && record.channels.length > 0) {
@@ -124,21 +124,21 @@ const NoticeManagement: FC = () => {
           setSelectedChannels(channelTypes);
 
           // 恢复 API 配置 ID
-          const apiChannel = record.channels.find((c: { channelType: string; apiConfigId?: string }) => c.channelType === 'api');
+          const apiChannel = record.channels.find((c: { channelType: string; apiConfigId?: string }) => c.channelType === "api");
           if (apiChannel?.apiConfigId) {
             apiConfigIdValue = apiChannel.apiConfigId;
           }
 
           // 恢复自定义邮件地址
-          const emailChannel = record.channels.find((c: { channelType: string; customRecipients?: string[] }) => c.channelType === 'email');
+          const emailChannel = record.channels.find((c: { channelType: string; customRecipients?: string[] }) => c.channelType === "email");
           if (emailChannel?.customRecipients && emailChannel.customRecipients.length > 0) {
-            customEmailsValue = emailChannel.customRecipients.join(', ');
+            customEmailsValue = emailChannel.customRecipients.join(", ");
           }
 
           // 恢复自定义企微用户
-          const apiChannelRecipients = record.channels.find((c: { channelType: string; customRecipients?: string[] }) => c.channelType === 'api');
+          const apiChannelRecipients = record.channels.find((c: { channelType: string; customRecipients?: string[] }) => c.channelType === "api");
           if (apiChannelRecipients?.customRecipients && apiChannelRecipients.customRecipients.length > 0) {
-            customWeComUsersValue = apiChannelRecipients.customRecipients.join(', ');
+            customWeComUsersValue = apiChannelRecipients.customRecipients.join(", ");
           }
         }
 
@@ -146,20 +146,20 @@ const NoticeManagement: FC = () => {
           ...record,
           publishTime: record.publishTime ? dayjs(record.publishTime) : null,
           targetType: record.targetType ?? 0,
-          targetDepts: record.targets?.filter((t: { targetType: string }) => t.targetType === 'dept').map((t: { targetId: string }) => t.targetId) || [],
-          targetRoles: record.targets?.filter((t: { targetType: string }) => t.targetType === 'role').map((t: { targetId: string }) => t.targetId) || [],
-          targetUsers: record.targets?.filter((t: { targetType: string }) => t.targetType === 'user').map((t: { targetId: string }) => t.targetId) || [],
+          targetDepts: record.targets?.filter((t: { targetType: string }) => t.targetType === "dept").map((t: { targetId: string }) => t.targetId) || [],
+          targetRoles: record.targets?.filter((t: { targetType: string }) => t.targetType === "role").map((t: { targetId: string }) => t.targetId) || [],
+          targetUsers: record.targets?.filter((t: { targetType: string }) => t.targetType === "user").map((t: { targetId: string }) => t.targetId) || [],
           apiConfigId: apiConfigIdValue,
           customEmails: customEmailsValue,
           customWeComUsers: customWeComUsersValue,
         });
-        setMarkdownContent(record.noticeContent || '');
+        setMarkdownContent(record.noticeContent || "");
       } else {
         setEditingNotice(null);
-        setMarkdownContent('');
+        setMarkdownContent("");
         editForm.resetFields();
         editForm.setFieldsValue({
-          noticeType: '1',
+          noticeType: "1",
           status: 0,
           priority: 0,
           targetType: 0,
@@ -168,8 +168,8 @@ const NoticeManagement: FC = () => {
           targetRoles: [],
           targetUsers: [],
           apiConfigId: undefined,
-          customEmails: '',
-          customWeComUsers: '',
+          customEmails: "",
+          customWeComUsers: "",
         });
       }
     }, 0);
@@ -186,21 +186,21 @@ const NoticeManagement: FC = () => {
         const offsetMinutes = new Date().getTimezoneOffset();
         const offsetHours = Math.abs(Math.floor(offsetMinutes / 60));
         const offsetMins = Math.abs(offsetMinutes % 60);
-        const offsetSign = offsetMinutes <= 0 ? '+' : '-';
-        const offsetStr = `${offsetSign}${String(offsetHours).padStart(2, '0')}:${String(offsetMins).padStart(2, '0')}`;
-        publishTimeStr = values.publishTime.format('YYYY-MM-DDTHH:mm:ss') + offsetStr;
+        const offsetSign = offsetMinutes <= 0 ? "+" : "-";
+        const offsetStr = `${offsetSign}${String(offsetHours).padStart(2, "0")}:${String(offsetMins).padStart(2, "0")}`;
+        publishTimeStr = values.publishTime.format("YYYY-MM-DDTHH:mm:ss") + offsetStr;
       }
 
       // 处理执行类型和周期配置
       let executionTypeValue: string | undefined = undefined;
       let recurrenceConfigValue: { cronExpression?: string; endDate?: string } | undefined = undefined;
 
-      if (executionType === 'recurring') {
-        executionTypeValue = 'recurring';
+      if (executionType === "recurring") {
+        executionTypeValue = "recurring";
         const cronExpression = values.recurrenceConfig?.cronExpression;
 
         if (!cronExpression) {
-          message.error('请输入 Cron 表达式');
+          message.error("请输入 Cron 表达式");
           return;
         }
 
@@ -209,7 +209,7 @@ const NoticeManagement: FC = () => {
         };
 
         if (values.recurrenceConfig?.endDate) {
-          recurrenceConfigValue.endDate = values.recurrenceConfig.endDate.format('YYYY-MM-DDTHH:mm:ss');
+          recurrenceConfigValue.endDate = values.recurrenceConfig.endDate.format("YYYY-MM-DDTHH:mm:ss");
         }
       }
 
@@ -219,7 +219,7 @@ const NoticeManagement: FC = () => {
         recurrenceConfig: recurrenceConfigValue,
       };
 
-      if (executionType !== 'recurring') {
+      if (executionType !== "recurring") {
         (request as CreateNoticeRequest & { publishTime?: string }).publishTime = publishTimeStr;
       } else {
         delete (request as CreateNoticeRequest & { publishTime?: string }).publishTime;
@@ -229,41 +229,41 @@ const NoticeManagement: FC = () => {
       const channels: NoticeChannelRequest[] = [];
 
       // 站内信渠道
-      if (selectedChannels.includes('web')) {
-        channels.push({ channelType: 'web' });
+      if (selectedChannels.includes("web")) {
+        channels.push({ channelType: "web" });
       }
 
       // 邮件通知渠道
-      if (selectedChannels.includes('email')) {
+      if (selectedChannels.includes("email")) {
         const emailRecipients = values.customEmails?.trim()
-          ? values.customEmails.split(',').map((e: string) => e.trim()).filter((e: string) => e)
+          ? values.customEmails.split(",").map((e: string) => e.trim()).filter((e: string) => e)
           : undefined;
         channels.push({
-          channelType: 'email',
+          channelType: "email",
           ...(emailRecipients && emailRecipients.length > 0 && { customRecipients: emailRecipients })
         });
       }
 
       // 企微机器人渠道
-      if (selectedChannels.includes('api')) {
+      if (selectedChannels.includes("api")) {
         const apiConfigId = values.apiConfigId;
         if (!apiConfigId) {
-          message.error('请选择企微机器人配置');
+          message.error("请选择企微机器人配置");
           return;
         }
         const weComRecipients = values.customWeComUsers?.trim()
-          ? values.customWeComUsers.split(',').map((u: string) => u.trim()).filter((u: string) => u)
+          ? values.customWeComUsers.split(",").map((u: string) => u.trim()).filter((u: string) => u)
           : undefined;
         channels.push({
-          channelType: 'api',
+          channelType: "api",
           apiConfigId: apiConfigId,
           ...(weComRecipients && weComRecipients.length > 0 && { customRecipients: weComRecipients })
         });
       }
 
       // 短信渠道（预留）
-      if (selectedChannels.includes('sms')) {
-        channels.push({ channelType: 'sms' });
+      if (selectedChannels.includes("sms")) {
+        channels.push({ channelType: "sms" });
       }
 
       if (channels.length > 0) {
@@ -286,10 +286,10 @@ const NoticeManagement: FC = () => {
       setEditingNotice(null);
       loadNotices({ current: paginationProps.current, pageSize: paginationProps.pageSize });
     } catch (error) {
-      if (error && typeof error === 'object' && 'errorFields' in error) {
+      if (error && typeof error === "object" && "errorFields" in error) {
         return;
       }
-      message.error('操作失败: ' + ((error as Error).message || '未知错误'));
+      message.error("操作失败: " + ((error as Error).message || "未知错误"));
     }
   }, [editForm, executionType, selectedChannels, editingNotice, handleCreate, handleUpdate, loadNotices]);
 
@@ -301,8 +301,8 @@ const NoticeManagement: FC = () => {
       const response = await getNoticeStatistics(notice.id);
       setCurrentStatistics(response.data || null);
     } catch (error) {
-      console.error('加载统计数据失败:', error);
-      message.error('加载统计数据失败');
+      console.error("加载统计数据失败:", error);
+      message.error("加载统计数据失败");
     } finally {
       setStatisticsLoading(false);
     }
@@ -398,20 +398,20 @@ const NoticeManagement: FC = () => {
           setModalVisible(false);
           editForm.resetFields();
           setEditingNotice(null);
-          setMarkdownContent('');
+          setMarkdownContent("");
         }}
         onSubmit={handleSubmit}
         onExecutionTypeChange={setExecutionType}
         onChannelsChange={setSelectedChannels}
         onMarkdownContentChange={setMarkdownContent}
         onTargetTypeChange={() => {
-          editForm.setFieldValue('targetDepts', []);
-          editForm.setFieldValue('targetRoles', []);
-          editForm.setFieldValue('targetUsers', []);
+          editForm.setFieldValue("targetDepts", []);
+          editForm.setFieldValue("targetRoles", []);
+          editForm.setFieldValue("targetUsers", []);
         }}
-        onDeptChange={(keys) => editForm.setFieldValue('targetDepts', keys)}
-        onRoleChange={(values) => editForm.setFieldValue('targetRoles', values)}
-        onUserChange={(values) => editForm.setFieldValue('targetUsers', values)}
+        onDeptChange={(keys) => editForm.setFieldValue("targetDepts", keys)}
+        onRoleChange={(values) => editForm.setFieldValue("targetRoles", values)}
+        onUserChange={(values) => editForm.setFieldValue("targetUsers", values)}
       />
 
       {/* 统计抽屉 */}

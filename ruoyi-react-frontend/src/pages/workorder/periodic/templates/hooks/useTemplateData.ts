@@ -3,27 +3,27 @@
  * 周期性工单模板数据管理 Hook
  */
 
-import { useState, useCallback } from 'react';
-import { message } from 'antd';
-import type { FormInstance } from 'antd/es/form';
+import { useState, useCallback } from "react";
+import { message } from "antd";
+import type { FormInstance } from "antd/es/form";
 import {
   getPeriodicTemplateList,
   getPeriodicLogs,
   type PeriodicWorkOrderTemplate,
   type PeriodicWorkOrderLog,
-} from '@/lib/workorderApi';
+} from "@/lib/workorderApi";
 import {
   getEnabledWorkOrderCategories,
   type WorkOrderCategory,
-} from '@/lib/workorderApi';
+} from "@/lib/workorderApi";
 import {
   getUserList,
   type SimpleUser,
-} from '@/lib/workorderApi';
+} from "@/lib/workorderApi";
 import {
   getDutyPoolList,
   type DutyPool,
-} from '@/lib/dutyApi';
+} from "@/lib/dutyApi";
 
 export interface TemplateStatistics {
   total: number;
@@ -92,7 +92,7 @@ export function useTemplateData(searchForm: FormInstance<unknown>, current: numb
         totalGenerated: list.reduce((sum, t) => sum + (t.totalGenerated || 0), 0),
       });
     } catch {
-      message.error('获取模板列表失败');
+      message.error("获取模板列表失败");
     } finally {
       setLoading(false);
     }
@@ -104,7 +104,7 @@ export function useTemplateData(searchForm: FormInstance<unknown>, current: numb
       const result = await getEnabledWorkOrderCategories();
       setCategories(result.data || []);
     } catch (error) {
-      console.error('获取分类列表失败:', error);
+      console.error("获取分类列表失败:", error);
     }
   }, []);
 
@@ -114,7 +114,7 @@ export function useTemplateData(searchForm: FormInstance<unknown>, current: numb
       const result = await getUserList({ status: 0 });
       setUsers(result.data?.list || []);
     } catch (error) {
-      console.error('获取用户列表失败:', error);
+      console.error("获取用户列表失败:", error);
     }
   }, []);
 
@@ -124,7 +124,7 @@ export function useTemplateData(searchForm: FormInstance<unknown>, current: numb
       const result = await getDutyPoolList({ status: 0 });
       setDutyPools(result.data?.list || []);
     } catch (error) {
-      console.error('获取值班池列表失败:', error);
+      console.error("获取值班池列表失败:", error);
     }
   }, []);
 
@@ -134,7 +134,7 @@ export function useTemplateData(searchForm: FormInstance<unknown>, current: numb
       const result = await getPeriodicLogs(templateId);
       setLogs(result.data || []);
     } catch (error) {
-      console.error('获取执行记录失败:', error);
+      console.error("获取执行记录失败:", error);
     }
   }, []);
 

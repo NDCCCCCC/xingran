@@ -3,12 +3,12 @@
  * 工位数据管理 Hook
  */
 
-import { useCallback } from 'react';
-import type { WorkstationOps } from '@/types';
-import { workstationApi, floorApi } from '@/lib/opsApi';
-import { post } from '@/lib/api';
-import { handleApiError } from '@/utils/errorHandler';
-import type { WorkstationStatistics, FloorOption, UserOption, DeptTreeNode } from '../types';
+import { useCallback } from "react";
+import type { WorkstationOps } from "@/types";
+import { workstationApi, floorApi } from "@/lib/opsApi";
+import { post } from "@/lib/api";
+import { handleApiError } from "@/utils/errorHandler";
+import type { WorkstationStatistics, FloorOption, UserOption, DeptTreeNode } from "../types";
 
 // 后端返回的部门节点类型
 interface DepartmentNode {
@@ -52,7 +52,7 @@ export function useWorkstationData(
         maintain: maintainResult.data?.total || 0,
       });
     } catch (error) {
-      handleApiError(error, '加载统计数据', false);
+      handleApiError(error, "加载统计数据", false);
     }
   }, [setStatistics]);
 
@@ -69,7 +69,7 @@ export function useWorkstationData(
         }))
       );
     } catch (error) {
-      handleApiError(error, '加载楼层选项', false);
+      handleApiError(error, "加载楼层选项", false);
     }
   }, [setFloorOptions]);
 
@@ -99,11 +99,11 @@ export function useWorkstationData(
   const buildTreeData = useCallback((depts: DepartmentNode[]): DeptTreeNode[] => {
     const build = (nodes: DepartmentNode[], ancestorNames: string[]): DeptTreeNode[] => {
       return nodes.map((node) => {
-        const name = node.deptName || node.name || '';
+        const name = node.deptName || node.name || "";
         // 顶级部门直接显示名称；从第二级开始拼接完整路径
         const title = ancestorNames.length === 0
           ? name
-          : [...ancestorNames, name].join(' / ');
+          : [...ancestorNames, name].join(" / ");
         return {
           title,
           value: node.id,
@@ -117,20 +117,20 @@ export function useWorkstationData(
 
   const loadDeptOptions = useCallback(async () => {
     try {
-      const result = await post('/system/departments/tree', {}) as { data: DepartmentNode[] };
+      const result = await post("/system/departments/tree", {}) as { data: DepartmentNode[] };
       const deptList = Array.isArray(result.data) ? result.data : [];
       // 加载所有部门（包括内部部门和外部机构），不进行过滤
       // 工位的 orgId 可能指向任何部门
       setDeptTreeData(buildTreeData(deptList));
     } catch (error) {
-      handleApiError(error, '加载部门选项', false);
+      handleApiError(error, "加载部门选项", false);
     }
   }, [setDeptTreeData, buildTreeData]);
 
   const loadUserOptions = useCallback(async (deptId?: string) => {
     try {
       const params = { current: 1, pageSize: 1000, ...(deptId && { deptId }) };
-      const result = await post('/system/users/list', params) as { data?: { list: Record<string, unknown>[] } };
+      const result = await post("/system/users/list", params) as { data?: { list: Record<string, unknown>[] } };
       const users = result.data?.list || [];
       setUserOptions(
         users.map((u: Record<string, unknown>) => ({
@@ -140,7 +140,7 @@ export function useWorkstationData(
         }))
       );
     } catch (error) {
-      handleApiError(error, '加载用户选项', false);
+      handleApiError(error, "加载用户选项", false);
     }
   }, [setUserOptions]);
 
@@ -152,7 +152,7 @@ export function useWorkstationData(
       const result = await workstationApi.list({ floorCode, current: 1, pageSize: 1000 });
       return result.data?.list || [];
     } catch (error) {
-      handleApiError(error, '加载平面图数据', false);
+      handleApiError(error, "加载平面图数据", false);
       return [];
     }
   }, []);

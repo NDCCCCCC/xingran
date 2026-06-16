@@ -9,8 +9,8 @@
  * - 通过 useMemo 稳定 props 对象（可选，但推荐）
  */
 
-import { memo, type ReactNode } from 'react';
-import { Modal } from 'antd';
+import { memo, type ReactNode } from "react";
+import { Modal } from "antd";
 
 export interface BaseEditModalProps {
   open: boolean;
@@ -36,8 +36,8 @@ function BaseEditModalImpl({
   onCancel,
   confirmLoading = false,
   width = 520,
-  okText = '确定',
-  cancelText = '取消',
+  okText = "确定",
+  cancelText = "取消",
   maskClosable = true,
   children,
 }: BaseEditModalProps) {
@@ -60,6 +60,6 @@ function BaseEditModalImpl({
 }
 
 export const BaseEditModal = memo(BaseEditModalImpl);
-BaseEditModal.displayName = 'BaseEditModal';
+BaseEditModal.displayName = "BaseEditModal";
 
 export default BaseEditModal;

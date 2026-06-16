@@ -2,7 +2,7 @@
  * 系统管理相关类型
  */
 
-import type { Status, PageParams } from './base';
+import type { Status, PageParams } from "./base";
 
 // ==================== 用户相关 ====================
 
@@ -75,7 +75,7 @@ export interface Role {
 /**
  * 菜单类型：M=目录，C=菜单，F=按钮
  */
-export type MenuType = 'M' | 'C' | 'F';
+export type MenuType = "M" | "C" | "F";
 
 /**
  * 菜单类型
@@ -93,7 +93,7 @@ export interface Menu {
   perms?: string | null;
   icon?: string | null;
   remark?: string;
-  meta?: import('./menu').RouteMeta | null;
+  meta?: import("./menu").RouteMeta | null;
   children?: Menu[];
   createTime: string;
   updateTime: string;
@@ -179,7 +179,7 @@ export interface DictData {
 /**
  * 配置类型：Y=是，N=否
  */
-export type ConfigType = 'Y' | 'N';
+export type ConfigType = "Y" | "N";
 
 /**
  * 参数配置
@@ -201,7 +201,7 @@ export interface Config {
 /**
  * 通知类型：1=公告，2=警告
  */
-export type NoticeType = '1' | '2';
+export type NoticeType = "1" | "2";
 
 /**
  * 通知公告

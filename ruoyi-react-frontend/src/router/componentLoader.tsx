@@ -5,7 +5,7 @@
  * 使用 Vite 的 import.meta.glob 实现组件懒加载
  */
 
-import { lazy, type ComponentType } from 'react';
+import { lazy, type ComponentType } from "react";
 
 /**
  * 组件加载器
@@ -16,8 +16,8 @@ export class ComponentLoader {
 
   // 允许的组件路径前缀（白名单）
   private static readonly ALLOWED_PREFIXES = [
-    'pages/',
-    'components/',
+    "pages/",
+    "components/",
   ];
 
   // 危险字符模式
@@ -31,7 +31,7 @@ export class ComponentLoader {
 
   // 使用 Vite 的 glob 导入所有页面组件
   public static componentModules = import.meta.glob<{ default: ComponentType }>(
-    '/src/pages/**/index.tsx',
+    "/src/pages/**/index.tsx",
     {
       eager: false,
     }
@@ -74,7 +74,7 @@ export class ComponentLoader {
     // 检查是否包含危险字符
     for (const pattern of ComponentLoader.DANGEROUS_PATTERNS) {
       if (pattern.test(path)) {
-        console.warn('[ComponentLoader] Path contains dangerous characters', { path });
+        console.warn("[ComponentLoader] Path contains dangerous characters", { path });
         return false;
       }
     }
@@ -85,7 +85,7 @@ export class ComponentLoader {
     );
 
     if (!isValid) {
-      console.warn('[ComponentLoader] Path not in whitelist', { path });
+      console.warn("[ComponentLoader] Path not in whitelist", { path });
     }
 
     return isValid;
@@ -98,13 +98,13 @@ export class ComponentLoader {
     let normalized = path;
 
     // 去掉前导斜杠
-    if (normalized.startsWith('/')) {
+    if (normalized.startsWith("/")) {
       normalized = normalized.slice(1);
     }
 
     // 确保 .tsx 扩展名
-    if (!normalized.endsWith('.tsx')) {
-      normalized += '.tsx';
+    if (!normalized.endsWith(".tsx")) {
+      normalized += ".tsx";
     }
 
     return normalized;
@@ -177,23 +177,23 @@ export function createLazyComponent(componentPath: string): ComponentType {
   let normalizedPath = componentPath;
 
   // 去掉前导斜杠
-  if (normalizedPath.startsWith('/')) {
+  if (normalizedPath.startsWith("/")) {
     normalizedPath = normalizedPath.slice(1);
   }
 
   // 如果路径已经包含 pages/ 前缀，去掉它（统一处理）
-  if (normalizedPath.startsWith('pages/')) {
+  if (normalizedPath.startsWith("pages/")) {
     normalizedPath = normalizedPath.slice(6);
   }
 
   // 自动添加 pages/ 前缀
-  if (!normalizedPath.startsWith('pages/')) {
+  if (!normalizedPath.startsWith("pages/")) {
     normalizedPath = `pages/${normalizedPath}`;
   }
 
   // 确保有 .tsx 扩展名
-  if (!normalizedPath.endsWith('.tsx')) {
-    normalizedPath += '.tsx';
+  if (!normalizedPath.endsWith(".tsx")) {
+    normalizedPath += ".tsx";
   }
 
   // 构建完整路径（Vite glob 格式）

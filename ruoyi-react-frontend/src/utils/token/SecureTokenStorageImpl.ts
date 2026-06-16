@@ -8,16 +8,16 @@
  * - TokenMeta: 存储在内存中
  */
 
-import { encryptSM4CBC, decryptSM4CBC, generateSM4Key, generateIV } from '@/utils/sm4';
-import { hexToBase64, base64ToHex, generateRandomHex } from '@/utils/encoding';
-import type { SecureTokenStorage, TokenMeta } from './SecureTokenStorage';
+import { encryptSM4CBC, decryptSM4CBC, generateSM4Key, generateIV } from "@/utils/sm4";
+import { hexToBase64, base64ToHex, generateRandomHex } from "@/utils/encoding";
+import type { SecureTokenStorage, TokenMeta } from "./SecureTokenStorage";
 
 /**
  * 存储密钥常量（使用简短键名避免暴露）
  */
 const STORAGE_KEYS = {
-	REFRESH_TOKEN: 'rt', // 加密存储
-	TOKEN_META: 'tm',    // JSON 存储
+	REFRESH_TOKEN: "rt", // 加密存储
+	TOKEN_META: "tm",    // JSON 存储
 } as const;
 
 /**
@@ -28,16 +28,16 @@ const STORAGE_KEYS = {
 function deriveStorageKey(): string {
 	// 使用固定的应用标识符派生密钥
 	// 实际生产环境可以使用浏览器指纹增强安全性
-	const appIdentifier = 'ruoyi-next-secure-storage';
-	const keyBase = appIdentifier + '-sm4-key-2024';
+	const appIdentifier = "ruoyi-next-secure-storage";
+	const keyBase = appIdentifier + "-sm4-key-2024";
 	// 将字符串转换为 32 字符的十六进制密钥
-	let hexKey = '';
+	let hexKey = "";
 	for (let i = 0; i < keyBase.length; i++) {
-		hexKey += keyBase.charCodeAt(i).toString(16).padStart(2, '0');
+		hexKey += keyBase.charCodeAt(i).toString(16).padStart(2, "0");
 	}
 	// 补齐或截断到 32 字符（16 字节）
 	while (hexKey.length < 32) {
-		hexKey += '0' + hexKey;
+		hexKey += "0" + hexKey;
 	}
 	return hexKey.substring(0, 32);
 }
@@ -46,13 +46,13 @@ function deriveStorageKey(): string {
  * 派生存储 IV
  */
 function deriveStorageIV(): string {
-	const ivBase = 'ruoyi-next-secure-iv-2024';
-	let hexIV = '';
+	const ivBase = "ruoyi-next-secure-iv-2024";
+	let hexIV = "";
 	for (let i = 0; i < ivBase.length; i++) {
-		hexIV += ivBase.charCodeAt(i).toString(16).padStart(2, '0');
+		hexIV += ivBase.charCodeAt(i).toString(16).padStart(2, "0");
 	}
 	while (hexIV.length < 32) {
-		hexIV += '0' + hexIV;
+		hexIV += "0" + hexIV;
 	}
 	return hexIV.substring(0, 32);
 }
@@ -100,8 +100,8 @@ export class SecureTokenStorageImpl implements SecureTokenStorage {
 			// 存储到 sessionStorage（会话级别，关闭标签页自动清除）
 			sessionStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, encryptedBase64);
 		} catch (error) {
-			console.error('[SecureTokenStorage] SM4 加密 RefreshToken 失败:', error);
-			throw new Error('Failed to encrypt refresh token');
+			console.error("[SecureTokenStorage] SM4 加密 RefreshToken 失败:", error);
+			throw new Error("Failed to encrypt refresh token");
 		}
 	}
 
@@ -128,7 +128,7 @@ export class SecureTokenStorageImpl implements SecureTokenStorage {
 
 			return decryptedToken;
 		} catch (error) {
-			console.error('[SecureTokenStorage] SM4 解密 RefreshToken 失败:', error);
+			console.error("[SecureTokenStorage] SM4 解密 RefreshToken 失败:", error);
 			// 解密失败时清除损坏的数据
 			sessionStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
 			return null;

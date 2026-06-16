@@ -1,6 +1,6 @@
-import { Card, Row, Col, Statistic } from 'antd';
-import { CheckCircleOutlined, StopOutlined, SearchOutlined } from '@ant-design/icons';
-import type { NoticeStatistics } from '../hooks/useNoticeStatistics';
+import { Card, Row, Col, Statistic } from "antd";
+import { CheckCircleOutlined, StopOutlined, SearchOutlined } from "@ant-design/icons";
+import type { NoticeStatistics } from "../hooks/useNoticeStatistics";
 
 interface NoticeStatisticsCardProps {
   statistics: NoticeStatistics;
@@ -32,7 +32,7 @@ export const NoticeStatisticsCard: React.FC<NoticeStatisticsCardProps> = ({ stat
           <Statistic
             title="已发布"
             value={statistics.published}
-            styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
+            styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
             prefix={<CheckCircleOutlined />}
           />
         </Card>
@@ -42,7 +42,7 @@ export const NoticeStatisticsCard: React.FC<NoticeStatisticsCardProps> = ({ stat
           <Statistic
             title="草稿/撤回"
             value={statistics.draft}
-            styles={{ content: { color: 'var(--theme-warning, #faad14)' } }}
+            styles={{ content: { color: "var(--theme-warning, #faad14)" } }}
             prefix={<StopOutlined />}
           />
         </Card>
@@ -52,7 +52,7 @@ export const NoticeStatisticsCard: React.FC<NoticeStatisticsCardProps> = ({ stat
           <Statistic
             title="定时发布"
             value={statistics.scheduled}
-            styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
+            styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
             prefix={<SearchOutlined />}
           />
         </Card>

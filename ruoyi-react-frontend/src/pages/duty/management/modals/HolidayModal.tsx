@@ -2,8 +2,8 @@
  * 节假日模态框组件
  */
 
-import { Modal, Form, Select, DatePicker } from 'antd';
-import { HOLIDAY_NAME_OPTIONS, HOLIDAY_TYPE_OPTIONS, HOLIDAY_REMARK_OPTIONS } from '../constants';
+import { Modal, Form, Select, DatePicker } from "antd";
+import { HOLIDAY_NAME_OPTIONS, HOLIDAY_TYPE_OPTIONS, HOLIDAY_REMARK_OPTIONS } from "../constants";
 
 const { Option } = Select;
 
@@ -30,10 +30,10 @@ export function HolidayModal({ visible, onOk, onCancel }: HolidayModalProps) {
       destroyOnHidden
     >
       <Form form={form} layout="vertical">
-        <Form.Item name="holidayDate" label="日期" rules={[{ required: true, message: '请选择日期' }]}>
-          <DatePicker style={{ width: '100%' }} />
+        <Form.Item name="holidayDate" label="日期" rules={[{ required: true, message: "请选择日期" }]}>
+          <DatePicker style={{ width: "100%" }} />
         </Form.Item>
-        <Form.Item name="holidayName" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
+        <Form.Item name="holidayName" label="名称" rules={[{ required: true, message: "请输入名称" }]}>
           <Select placeholder="选择或输入">
             {HOLIDAY_NAME_OPTIONS.map(opt => (
               <Option key={opt.value} value={opt.value}>{opt.label}</Option>

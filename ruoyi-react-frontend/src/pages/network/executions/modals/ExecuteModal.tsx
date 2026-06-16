@@ -3,9 +3,9 @@
  * 配置执行模态框
  */
 
-import { Modal, Form, Input, Select, Table, Card } from 'antd';
-import type { NetworkDevice, ConfigTemplate } from '@/types';
-import { deviceColumns } from '../columns';
+import { Modal, Form, Input, Select, Table, Card } from "antd";
+import type { NetworkDevice, ConfigTemplate } from "@/types";
+import { deviceColumns } from "../columns";
 
 const { Option } = Select;
 
@@ -53,12 +53,12 @@ export function ConfigExecuteModal({
         <Form.Item
           name="executionName"
           label="任务名称"
-          rules={[{ required: true, message: '请输入任务名称' }]}
+          rules={[{ required: true, message: "请输入任务名称" }]}
         >
           <Input placeholder="请输入任务名称" />
         </Form.Item>
 
-        <Form.Item name="templateId" label="选择模板" rules={[{ required: true, message: '请选择模板' }]}>
+        <Form.Item name="templateId" label="选择模板" rules={[{ required: true, message: "请选择模板" }]}>
           <Select
             placeholder="请选择配置模板"
             showSearch
@@ -76,7 +76,7 @@ export function ConfigExecuteModal({
         {selectedTemplate && (
           <Card size="small" style={{ marginBottom: 16 }}>
             <div><strong>模板预览:</strong></div>
-            <pre style={{ maxHeight: 200, overflow: 'auto', background: '#fafafa', padding: 12, marginTop: 8 }}>
+            <pre style={{ maxHeight: 200, overflow: "auto", background: "#fafafa", padding: 12, marginTop: 8 }}>
               {selectedTemplate.templateContent}
             </pre>
           </Card>
@@ -87,7 +87,7 @@ export function ConfigExecuteModal({
             rowSelection={{
               selectedRowKeys,
               onChange: (keys) => onSelectedRowKeysChange(keys as string[]),
-              type: 'checkbox',
+              type: "checkbox",
             }}
             columns={deviceColumns}
             dataSource={devices}
@@ -96,7 +96,7 @@ export function ConfigExecuteModal({
             size="small"
             scroll={{ y: 200 }}
           />
-          <div style={{ marginTop: 8, color: 'var(--theme-text-tertiary, #999)' }}>
+          <div style={{ marginTop: 8, color: "var(--theme-text-tertiary, #999)" }}>
             已选择 {selectedRowKeys.length} 台设备
           </div>
         </Form.Item>

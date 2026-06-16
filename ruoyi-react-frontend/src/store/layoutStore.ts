@@ -6,12 +6,12 @@
  * 这个 Store 负责将布局配置应用到 DOM 和组件
  */
 
-import { create } from 'zustand';
-import { useEffect } from 'react';
-import type { LayoutType, LayoutConfig, DensityMode } from '@/types/layout';
-import type { LayoutConfiguration } from '@/types/config';
-import { defaultLayoutConfiguration } from '@/types/config';
-import { ZUSTAND_STORAGE_KEYS } from '@/constants/storage';
+import { create } from "zustand";
+import { useEffect } from "react";
+import type { LayoutType, LayoutConfig, DensityMode } from "@/types/layout";
+import type { LayoutConfiguration } from "@/types/config";
+import { defaultLayoutConfiguration } from "@/types/config";
+import { ZUSTAND_STORAGE_KEYS } from "@/constants/storage";
 
 interface LayoutState {
 	// 从 SettingsStore 衍生的配置
@@ -45,15 +45,15 @@ type LayoutStore = LayoutState & LayoutActions;
 // 布局配置
 const layoutConfigs: Record<LayoutType, LayoutConfig> = {
 	classic: {
-		id: 'classic',
-		name: '经典布局',
-		description: '左侧导航+顶部栏+内容区',
+		id: "classic",
+		name: "经典布局",
+		description: "左侧导航+顶部栏+内容区",
 		features: {
 			sidebar: {
 				collapsible: true,
 				width: 256,
 				collapsedWidth: 64,
-				position: 'left',
+				position: "left",
 				defaultCollapsed: false,
 			},
 			header: {
@@ -64,28 +64,28 @@ const layoutConfigs: Record<LayoutType, LayoutConfig> = {
 			},
 			tabs: {
 				enabled: false,
-				position: 'top',
+				position: "top",
 				closable: false,
 				draggable: false,
 				persist: false,
 			},
 			content: {
-				padding: '24px',
+				padding: "24px",
 				centered: false,
 				scrollable: true,
 			},
 		},
 	},
 	hybrid: {
-		id: 'hybrid',
-		name: '混合式布局',
-		description: '可折叠侧边栏+多标签页系统',
+		id: "hybrid",
+		name: "混合式布局",
+		description: "可折叠侧边栏+多标签页系统",
 		features: {
 			sidebar: {
 				collapsible: true,
 				width: 240,
 				collapsedWidth: 56,
-				position: 'left',
+				position: "left",
 				defaultCollapsed: false,
 			},
 			header: {
@@ -96,28 +96,28 @@ const layoutConfigs: Record<LayoutType, LayoutConfig> = {
 			},
 			tabs: {
 				enabled: true,
-				position: 'top',
+				position: "top",
 				closable: true,
 				draggable: true,
 				persist: true,
 			},
 			content: {
-				padding: '16px',
+				padding: "16px",
 				centered: false,
 				scrollable: true,
 			},
 		},
 	},
 	innovative: {
-		id: 'innovative',
-		name: '创新布局',
-		description: '创新导航方式+模块化面板',
+		id: "innovative",
+		name: "创新布局",
+		description: "创新导航方式+模块化面板",
 		features: {
 			sidebar: {
 				collapsible: false,
 				width: 80,
 				collapsedWidth: 80,
-				position: 'left',
+				position: "left",
 				defaultCollapsed: false,
 			},
 			header: {
@@ -128,13 +128,13 @@ const layoutConfigs: Record<LayoutType, LayoutConfig> = {
 			},
 			tabs: {
 				enabled: true,
-				position: 'bottom',
+				position: "bottom",
 				closable: true,
 				draggable: false,
 				persist: true,
 			},
 			content: {
-				padding: '0',
+				padding: "0",
 				centered: true,
 				scrollable: true,
 			},
@@ -160,21 +160,21 @@ function loadInitialLayoutState(): {
 			if (savedLayout) {
 				return {
 					configuration: savedLayout,
-					currentLayout: savedLayout.type || 'classic',
+					currentLayout: savedLayout.type || "classic",
 					sidebarCollapsed: savedLayout.sidebar?.collapsed ?? false,
-					density: savedLayout.density || 'comfortable',
+					density: savedLayout.density || "comfortable",
 				};
 			}
 		}
 	} catch (e) {
-		console.error('Failed to read layout from localStorage:', e);
+		console.error("Failed to read layout from localStorage:", e);
 	}
 	// 返回默认值
 	return {
 		configuration: defaultLayoutConfiguration,
-		currentLayout: 'classic',
+		currentLayout: "classic",
 		sidebarCollapsed: false,
-		density: 'comfortable',
+		density: "comfortable",
 	};
 }
 
@@ -269,8 +269,8 @@ export const useLayoutStore = create<LayoutStore>()(
 			const { configuration } = get();
 
 			// 触发 save-layout-settings 事件
-			if (typeof window !== 'undefined') {
-				window.dispatchEvent(new CustomEvent('save-layout-settings', {
+			if (typeof window !== "undefined") {
+				window.dispatchEvent(new CustomEvent("save-layout-settings", {
 					detail: configuration,
 				}));
 			}
@@ -279,9 +279,9 @@ export const useLayoutStore = create<LayoutStore>()(
 		// 应用到 DOM
 		applyToDOM: () => {
 			const { currentLayout, density, sidebarCollapsed } = get();
-			document.documentElement.setAttribute('data-layout', currentLayout);
-			document.documentElement.setAttribute('data-density', density);
-			document.documentElement.setAttribute('data-sidebar-collapsed', String(sidebarCollapsed));
+			document.documentElement.setAttribute("data-layout", currentLayout);
+			document.documentElement.setAttribute("data-density", density);
+			document.documentElement.setAttribute("data-sidebar-collapsed", String(sidebarCollapsed));
 		},
 	}),
 );
@@ -296,8 +296,8 @@ export function useLayout() {
 	// 同步 data-layout 和 data-density 属性
 	useEffect(() => {
 		const store = useLayoutStore.getState();
-		document.documentElement.setAttribute('data-layout', store.currentLayout);
-		document.documentElement.setAttribute('data-density', store.density);
+		document.documentElement.setAttribute("data-layout", store.currentLayout);
+		document.documentElement.setAttribute("data-density", store.density);
 	}, [currentLayout, density]);
 
 	// 监听 SettingsStore 变化
@@ -309,11 +309,11 @@ export function useLayout() {
 			syncFromSettings(preferences.layout);
 		}) as EventListener;
 
-		window.addEventListener('settings-changed', handleSettingsChange);
+		window.addEventListener("settings-changed", handleSettingsChange);
 
 		// 清理函数：组件卸载时移除监听器
 		return () => {
-			window.removeEventListener('settings-changed', handleSettingsChange);
+			window.removeEventListener("settings-changed", handleSettingsChange);
 		};
 	}, [syncFromSettings]);
 
@@ -331,12 +331,12 @@ export function useLayout() {
 		setDensity,
 		setLayout,
 		saveState,
-		isClassic: currentLayout === 'classic',
-		isHybrid: currentLayout === 'hybrid',
-		isInnovative: currentLayout === 'innovative',
-		isCompact: density === 'compact',
-		isComfortable: density === 'comfortable',
-		isSpacious: density === 'spacious',
+		isClassic: currentLayout === "classic",
+		isHybrid: currentLayout === "hybrid",
+		isInnovative: currentLayout === "innovative",
+		isCompact: density === "compact",
+		isComfortable: density === "comfortable",
+		isSpacious: density === "spacious",
 	};
 }
 

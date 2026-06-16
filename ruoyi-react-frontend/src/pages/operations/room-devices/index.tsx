@@ -2,37 +2,37 @@
  * 机房设备管理页面
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
-import type { FC } from 'react';
+import { useState, useCallback, useEffect, useRef } from "react";
+import type { FC } from "react";
 import {
   Table, Button, Space, Modal, Form, Input, InputNumber, Select,
   Tag, Card, Row, Col, Alert, Radio, DatePicker, Layout,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+} from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined,
   CheckCircleOutlined, StopOutlined, WarningOutlined, AppstoreOutlined, TableOutlined,
   ImportOutlined, ExportOutlined, AppstoreAddOutlined,
-} from '@ant-design/icons';
-import type { RoomDevice } from '@/types';
-import { roomDeviceApi, serverRoomApi } from '@/lib/opsApi';
-import { useTableManager } from '@/hooks/useTableManager';
-import { usePagination } from '@/hooks/usePagination';
-import { useSidebarDeptFilter } from '@/hooks/useSidebarDeptFilter';
-import { handleApiError, handleSuccess, isFormValidationError } from '@/utils/errorHandler';
-import { createDateTimeColumn } from '@/utils/tableHelpers';
-import { fetchRoomDeviceStatistics } from '@/utils/statisticsHelper';
-import ActionButtons from '@/components/shared/ActionButtons';
-import ExcelImport from '@/components/shared/ExcelImport';
-import ExcelExport from '@/components/shared/ExcelExport';
-import { DeptSidebar } from '@/components/operations/DeptSidebar';
-import { StatisticsCards } from '@/components/operations/StatisticsCards';
+} from "@ant-design/icons";
+import type { RoomDevice } from "@/types";
+import { roomDeviceApi, serverRoomApi } from "@/lib/opsApi";
+import { useTableManager } from "@/hooks/useTableManager";
+import { usePagination } from "@/hooks/usePagination";
+import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
+import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
+import { createDateTimeColumn } from "@/utils/tableHelpers";
+import { fetchRoomDeviceStatistics } from "@/utils/statisticsHelper";
+import ActionButtons from "@/components/shared/ActionButtons";
+import ExcelImport from "@/components/shared/ExcelImport";
+import ExcelExport from "@/components/shared/ExcelExport";
+import { DeptSidebar } from "@/components/operations/DeptSidebar";
+import { StatisticsCards } from "@/components/operations/StatisticsCards";
 
 const { Option } = Select;
 const { TextArea } = Input;
 const { Content } = Layout;
 
-type ViewMode = 'table' | 'card';
+type ViewMode = "table" | "card";
 
 interface RoomOption {
   id: string;
@@ -49,7 +49,7 @@ interface Statistics {
 }
 
 const RoomDeviceManagement: FC = () => {
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
@@ -61,11 +61,11 @@ const RoomDeviceManagement: FC = () => {
   // 使用 useSidebarDeptFilter hook 管理部门筛选
   const { selectedDeptId, handleDeptSelect, setSelectedDeptId } = useSidebarDeptFilter({
     searchForm: undefined,
-    clearFieldNames: ['roomId'],
+    clearFieldNames: ["roomId"],
   });
 
   // 使用 ref 存储最新的 selectedDeptId，避免闭包问题
-  const selectedDeptIdRef = useRef<string>('');
+  const selectedDeptIdRef = useRef<string>("");
   useEffect(() => {
     selectedDeptIdRef.current = selectedDeptId;
   }, [selectedDeptId]);
@@ -80,10 +80,10 @@ const RoomDeviceManagement: FC = () => {
         id: r.id,
         name: r.name,
         buildingId: r.buildingId,
-        orgId: r.orgId || '',
+        orgId: r.orgId || "",
       })));
     } catch (error) {
-      handleApiError(error, '加载机房选项', false);
+      handleApiError(error, "加载机房选项", false);
     }
   }, []);
 
@@ -122,7 +122,7 @@ const RoomDeviceManagement: FC = () => {
     try {
       return await fetchRoomDeviceStatistics();
     } catch (error) {
-      handleApiError(error, '加载统计数据', false);
+      handleApiError(error, "加载统计数据", false);
       return { total: 0, normal: 0, fault: 0, scrapped: 0 };
     }
   }, []);
@@ -146,10 +146,10 @@ const RoomDeviceManagement: FC = () => {
 
   // 部门变化时清空搜索表单中的机房筛选字段
   useEffect(() => {
-    searchForm.setFieldValue('roomId', undefined);
-    searchForm.setFieldValue('name', undefined);
-    searchForm.setFieldValue('deviceType', undefined);
-    searchForm.setFieldValue('status', undefined);
+    searchForm.setFieldValue("roomId", undefined);
+    searchForm.setFieldValue("name", undefined);
+    searchForm.setFieldValue("deviceType", undefined);
+    searchForm.setFieldValue("status", undefined);
   }, [selectedDeptId, searchForm]);
 
   const handleSave = async () => {
@@ -157,38 +157,38 @@ const RoomDeviceManagement: FC = () => {
       const values = await deviceForm.validateFields();
       if (editingDevice) {
         await roomDeviceApi.update(editingDevice.id, values as Partial<RoomDevice>);
-        handleSuccess('更新');
+        handleSuccess("更新");
       } else {
         await roomDeviceApi.create(values as Partial<RoomDevice>);
-        handleSuccess('创建');
+        handleSuccess("创建");
       }
       handleModalClose();
       refreshData();
     } catch (error: unknown) {
       if (isFormValidationError(error)) return;
-      handleApiError(error, '操作');
+      handleApiError(error, "操作");
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       await roomDeviceApi.delete(id);
-      handleSuccess('删除');
+      handleSuccess("删除");
       refreshData();
     } catch (error) {
-      handleApiError(error, '删除');
+      handleApiError(error, "删除");
     }
   };
 
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) return;
     try {
-      await roomDeviceApi.batch('delete', { ids: selectedRowKeys });
-      handleSuccess('批量删除');
+      await roomDeviceApi.batch("delete", { ids: selectedRowKeys });
+      handleSuccess("批量删除");
       resetSelection();
       refreshData();
     } catch (error) {
-      handleApiError(error, '批量删除');
+      handleApiError(error, "批量删除");
     }
   };
 
@@ -198,7 +198,7 @@ const RoomDeviceManagement: FC = () => {
       deviceForm.setFieldsValue(record);
     } else {
       handleAdd();
-      deviceForm.setFieldsValue({ status: 0, deviceType: 'server' });
+      deviceForm.setFieldsValue({ status: 0, deviceType: "server" });
     }
   };
 
@@ -209,60 +209,60 @@ const RoomDeviceManagement: FC = () => {
 
   const getDeviceTypeText = (type: string) => {
     const types: Record<string, string> = {
-      server: '服务器', storage: '存储设备', ups: 'UPS', pdu: 'PDU',
-      firewall: '防火墙', kvm: 'KVM', cabinet: '机柜', other: '其他',
+      server: "服务器", storage: "存储设备", ups: "UPS", pdu: "PDU",
+      firewall: "防火墙", kvm: "KVM", cabinet: "机柜", other: "其他",
     };
     return types[type] || type;
   };
 
   const getStatusText = (status: number) => {
-    const statusMap: Record<number, string> = { 0: '正常', 1: '故障', 2: '报废' };
-    return statusMap[status] || '未知';
+    const statusMap: Record<number, string> = { 0: "正常", 1: "故障", 2: "报废" };
+    return statusMap[status] || "未知";
   };
 
   const columns: ColumnsType<RoomDevice> = [
-    { title: '设备名称', dataIndex: 'name', key: 'name', width: 150 },
-    { title: '设备编码', dataIndex: 'deviceCode', key: 'deviceCode', width: 150 },
+    { title: "设备名称", dataIndex: "name", key: "name", width: 150 },
+    { title: "设备编码", dataIndex: "deviceCode", key: "deviceCode", width: 150 },
     {
-      title: '所属机房',
-      dataIndex: 'roomName',
-      key: 'roomName',
+      title: "所属机房",
+      dataIndex: "roomName",
+      key: "roomName",
       width: 120,
-      render: (roomName) => roomName || '-',
+      render: (roomName) => roomName || "-",
     },
     {
-      title: '设备类型',
-      dataIndex: 'deviceType',
-      key: 'deviceType',
+      title: "设备类型",
+      dataIndex: "deviceType",
+      key: "deviceType",
       width: 100,
       render: (type) => <Tag>{getDeviceTypeText(type as string)}</Tag>,
     },
-    { title: '厂商', dataIndex: 'vendor', key: 'vendor', width: 100, render: (v) => v || '-' },
-    { title: '型号', dataIndex: 'model', key: 'model', width: 120, render: (v) => v || '-' },
-    { title: '位置', dataIndex: 'positionDesc', key: 'positionDesc', width: 100, render: (v) => v || '-' },
+    { title: "厂商", dataIndex: "vendor", key: "vendor", width: 100, render: (v) => v || "-" },
+    { title: "型号", dataIndex: "model", key: "model", width: 120, render: (v) => v || "-" },
+    { title: "位置", dataIndex: "positionDesc", key: "positionDesc", width: 100, render: (v) => v || "-" },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
       width: 80,
       render: (status) => {
-        const colors: Record<number, string> = { 0: 'success', 1: 'error', 2: 'default' };
+        const colors: Record<number, string> = { 0: "success", 1: "error", 2: "default" };
         return <Tag color={colors[status as keyof typeof colors]}>{getStatusText(status as number)}</Tag>;
       },
     },
-    createDateTimeColumn('createdAt', { width: 180 }),
+    createDateTimeColumn("createdAt", { width: 180 }),
     {
-      title: '操作', key: 'action',
+      title: "操作", key: "action",
       render: (_, record) => {
         const actions = [
-          { key: 'edit', label: '编辑', icon: <EditOutlined />, onClick: () => openModal(record) },
+          { key: "edit", label: "编辑", icon: <EditOutlined />, onClick: () => openModal(record) },
           {
-            key: 'delete', label: '删除', icon: <DeleteOutlined />, danger: true,
+            key: "delete", label: "删除", icon: <DeleteOutlined />, danger: true,
             onClick: () => {
               Modal.confirm({
-                title: '确定要删除这个设备吗？',
-                okText: '确定',
-                cancelText: '取消',
+                title: "确定要删除这个设备吗？",
+                okText: "确定",
+                cancelText: "取消",
                 okButtonProps: { danger: true },
                 onOk: () => handleDelete(record.id),
               });
@@ -275,7 +275,7 @@ const RoomDeviceManagement: FC = () => {
   ];
 
   const renderCardView = () => {
-    if (devices.length === 0) return <div style={{ textAlign: 'center', padding: '40px', color: 'var(--theme-text-tertiary, #999)' }}>暂无数据</div>;
+    if (devices.length === 0) return <div style={{ textAlign: "center", padding: "40px", color: "var(--theme-text-tertiary, #999)" }}>暂无数据</div>;
     return (
       <Row gutter={[16, 16]}>
         {devices.map((device) => (
@@ -286,12 +286,12 @@ const RoomDeviceManagement: FC = () => {
                 <EditOutlined key="edit" onClick={() => openModal(device)} />,
                 <DeleteOutlined
                   key="delete"
-                  style={{ color: 'var(--theme-error, #ff4d4f)' }}
+                  style={{ color: "var(--theme-error, #ff4d4f)" }}
                   onClick={() => {
                     Modal.confirm({
-                      title: '确定要删除这个设备吗？',
-                      okText: '确定',
-                      cancelText: '取消',
+                      title: "确定要删除这个设备吗？",
+                      okText: "确定",
+                      cancelText: "取消",
                       okButtonProps: { danger: true },
                       onOk: () => handleDelete(device.id),
                     });
@@ -301,15 +301,15 @@ const RoomDeviceManagement: FC = () => {
             >
               <Card.Meta
                 title={
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span>{device.name}</span>
-                    <Tag color={device.status === 0 ? 'success' : device.status === 1 ? 'error' : 'default'}>{getStatusText(device.status)}</Tag>
+                    <Tag color={device.status === 0 ? "success" : device.status === 1 ? "error" : "default"}>{getStatusText(device.status)}</Tag>
                   </div>
                 }
                 description={
                   <div>
                     <div><strong>编码：</strong>{device.deviceCode}</div>
-                    <div><strong>机房：</strong>{device.roomName || '-'}</div>
+                    <div><strong>机房：</strong>{device.roomName || "-"}</div>
                     <div><strong>类型：</strong>{getDeviceTypeText(device.deviceType)}</div>
                     {device.vendor && <div><strong>厂商：</strong>{device.vendor}</div>}
                     {device.model && <div><strong>型号：</strong>{device.model}</div>}
@@ -324,23 +324,23 @@ const RoomDeviceManagement: FC = () => {
   };
 
   return (
-    <Layout style={{ background: '#000', minHeight: 'calc(100vh - 64px)' }}>
+    <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
       <DeptSidebar
         selectedDeptId={selectedDeptId}
         onSelect={handleDeptSelect}
       />
-      <Content style={{ background: '#fff' }}>
+      <Content style={{ background: "#fff" }}>
         <StatisticsCards
           show={total > 10}
           items={[
-            { title: '总设备数', value: statistics.total, prefix: <AppstoreAddOutlined /> },
-            { title: '正常', value: statistics.normal, styles: { content: { color: 'var(--theme-success, #3f8600)' } }, prefix: <CheckCircleOutlined /> },
-            { title: '故障', value: statistics.fault, styles: { content: { color: 'var(--theme-error, #cf1322)' } }, prefix: <WarningOutlined /> },
-            { title: '报废', value: statistics.scrapped, styles: { content: { color: 'var(--theme-text-tertiary, #8c8c8c)' } }, prefix: <StopOutlined /> },
+            { title: "总设备数", value: statistics.total, prefix: <AppstoreAddOutlined /> },
+            { title: "正常", value: statistics.normal, styles: { content: { color: "var(--theme-success, #3f8600)" } }, prefix: <CheckCircleOutlined /> },
+            { title: "故障", value: statistics.fault, styles: { content: { color: "var(--theme-error, #cf1322)" } }, prefix: <WarningOutlined /> },
+            { title: "报废", value: statistics.scrapped, styles: { content: { color: "var(--theme-text-tertiary, #8c8c8c)" } }, prefix: <StopOutlined /> },
           ]}
         />
         <Card style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="roomId" label="所属机房">
                 <Select
@@ -348,7 +348,7 @@ const RoomDeviceManagement: FC = () => {
                   allowClear
                   showSearch
                   filterOption={(input, option) =>
-                    String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                    String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
                   }
                   style={{ width: 150 }}
                   disabled={!selectedDeptId}
@@ -396,21 +396,21 @@ const RoomDeviceManagement: FC = () => {
                 const currentFilters: Record<string, unknown> = {};
                 Object.keys(values).forEach(key => {
                   const value = values[key];
-                  if (value !== undefined && value !== null && value !== '') {
+                  if (value !== undefined && value !== null && value !== "") {
                     currentFilters[key] = value;
                   }
                 });
                 setExportFilters(currentFilters);
                 setExportVisible(true);
               }}>导出</Button>
-              {selectedRowKeys.length > 0 && <Button icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
+              {selectedRowKeys.length > 0 && <Button icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
               <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增设备</Button>
             </Space>
           </div>
           {selectedRowKeys.length > 0 && <Alert title={<span>已选择 <strong>{selectedRowKeys.length}</strong> 个设备，<Button type="link" size="small" onClick={() => setSelectedRowKeys([])} style={{ padding: 0 }}>取消选择</Button></span>} type="info" showIcon style={{ marginTop: 12 }} />}
         </Card>
         <Card>
-          {viewMode === 'table' ? (
+          {viewMode === "table" ? (
             <Table
               rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
               columns={columns}
@@ -427,7 +427,7 @@ const RoomDeviceManagement: FC = () => {
 	                const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
 	                Object.keys(formValues).forEach(key => {
 	                  const value = formValues[key];
-	                  if (value !== undefined && value !== null && value !== '') {
+	                  if (value !== undefined && value !== null && value !== "") {
 	                    searchParams[key] = value;
 	                  }
 	                });
@@ -436,20 +436,20 @@ const RoomDeviceManagement: FC = () => {
             />
           ) : renderCardView()}
         </Card>
-        <Modal title={editingDevice ? '编辑设备' : '新增设备'} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); deviceForm.resetFields(); setEditingDevice(null); }} width={700}>
+        <Modal title={editingDevice ? "编辑设备" : "新增设备"} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); deviceForm.resetFields(); setEditingDevice(null); }} width={700}>
           <Form form={deviceForm} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
-            <Form.Item name="roomId" label="所属机房" rules={[{ required: true, message: '请选择所属机房' }]}>
+            <Form.Item name="roomId" label="所属机房" rules={[{ required: true, message: "请选择所属机房" }]}>
               <Select placeholder="请选择所属机房" showSearch filterOption={(input, option) =>
-                String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
               } options={roomOptions.map(r => ({ label: r.name, value: r.id }))} />
             </Form.Item>
-            <Form.Item name="name" label="设备名称" rules={[{ required: true, message: '请输入设备名称' }]}>
+            <Form.Item name="name" label="设备名称" rules={[{ required: true, message: "请输入设备名称" }]}>
               <Input placeholder="请输入设备名称" />
             </Form.Item>
-            <Form.Item name="deviceCode" label="设备编码" rules={[{ required: true, message: '请输入设备编码' }]}>
+            <Form.Item name="deviceCode" label="设备编码" rules={[{ required: true, message: "请输入设备编码" }]}>
               <Input placeholder="请输入设备编码" />
             </Form.Item>
-            <Form.Item name="deviceType" label="设备类型" rules={[{ required: true, message: '请选择设备类型' }]}>
+            <Form.Item name="deviceType" label="设备类型" rules={[{ required: true, message: "请选择设备类型" }]}>
               <Select placeholder="请选择设备类型">
                 <Option value="server">服务器</Option>
                 <Option value="storage">存储设备</Option>
@@ -488,23 +488,23 @@ const RoomDeviceManagement: FC = () => {
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="positionU" label="U位置">
-                  <InputNumber min={0} placeholder="U位置" style={{ width: '100%' }} />
+                  <InputNumber min={0} placeholder="U位置" style={{ width: "100%" }} />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item name="heightU" label="高度(U)">
-                  <InputNumber min={0} placeholder="高度" style={{ width: '100%' }} />
+                  <InputNumber min={0} placeholder="高度" style={{ width: "100%" }} />
                 </Form.Item>
               </Col>
             </Row>
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="powerConsumption" label="功耗(W)">
-                  <InputNumber min={0} placeholder="功耗" style={{ width: '100%' }} />
+                  <InputNumber min={0} placeholder="功耗" style={{ width: "100%" }} />
                 </Form.Item>
               </Col>
               <Col span={12}>
-                <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
+                <Form.Item name="status" label="状态" rules={[{ required: true, message: "请选择状态" }]}>
                   <Select placeholder="请选择状态">
                     <Option value={0}>正常</Option>
                     <Option value={1}>故障</Option>
@@ -516,12 +516,12 @@ const RoomDeviceManagement: FC = () => {
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="purchaseDate" label="购买日期">
-                  <DatePicker style={{ width: '100%' }} />
+                  <DatePicker style={{ width: "100%" }} />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item name="warrantyDate" label="保修到期">
-                  <DatePicker style={{ width: '100%' }} />
+                  <DatePicker style={{ width: "100%" }} />
                 </Form.Item>
               </Col>
             </Row>

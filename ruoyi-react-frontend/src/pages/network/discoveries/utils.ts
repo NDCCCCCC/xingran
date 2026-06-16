@@ -3,24 +3,24 @@
  * 设备发现工具函数
  */
 
-import type { IPRange } from './types';
+import type { IPRange } from "./types";
 
 /** 解析IP范围字符串为IPRange数组 */
 export function parseIPRanges(text: string): IPRange[] {
   const ranges: IPRange[] = [];
-  const lines = text.split('\n').filter(line => line.trim());
+  const lines = text.split("\n").filter(line => line.trim());
 
   for (const line of lines) {
     const trimmed = line.trim();
-    if (trimmed.includes('-')) {
+    if (trimmed.includes("-")) {
       // 格式: 192.168.1.1-192.168.1.100
-      const [start, end] = trimmed.split('-').map(s => s.trim());
+      const [start, end] = trimmed.split("-").map(s => s.trim());
       ranges.push({ startIP: start, endIP: end });
-    } else if (trimmed.includes('/')) {
+    } else if (trimmed.includes("/")) {
       // 格式: 192.168.1.0/24
-      const [ip, cidr] = trimmed.split('/');
+      const [ip, cidr] = trimmed.split("/");
       const prefix = parseInt(cidr);
-      const parts = ip.split('.').map(Number);
+      const parts = ip.split(".").map(Number);
 
       if (prefix >= 24) {
         const startIP = `${parts[0]}.${parts[1]}.${parts[2]}.1`;

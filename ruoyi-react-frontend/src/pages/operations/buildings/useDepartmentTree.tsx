@@ -2,10 +2,10 @@
  * 部门树数据处理 Hook
  */
 
-import { useState, useCallback, useMemo } from 'react';
-import { post } from '@/lib/api';
-import { handleApiError } from '@/utils/errorHandler';
-import type { BaseResponse } from '@/types';
+import { useState, useCallback, useMemo } from "react";
+import { post } from "@/lib/api";
+import { handleApiError } from "@/utils/errorHandler";
+import type { BaseResponse } from "@/types";
 
 interface DepartmentOption {
   id: string;
@@ -27,7 +27,7 @@ export function useDepartmentTree() {
   const loadDepartments = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await post<DepartmentOption[]>('/system/departments/tree', {});
+      const result = await post<DepartmentOption[]>("/system/departments/tree", {});
       const convertToTreeData = (nodes: DepartmentNode[]): DepartmentOption[] => {
         return nodes.map(node => ({
           id: node.id,
@@ -37,7 +37,7 @@ export function useDepartmentTree() {
       };
       setDepartments(convertToTreeData(result.data || []));
     } catch (error) {
-      handleApiError(error, '加载部门列表', false);
+      handleApiError(error, "加载部门列表", false);
     } finally {
       setLoading(false);
     }
@@ -59,8 +59,8 @@ export function useDepartmentTree() {
   }, [departments]);
 
   const getOrgName = useCallback((orgId?: string) => {
-    if (!orgId) return '-';
-    return deptMap.get(orgId) || '-';
+    if (!orgId) return "-";
+    return deptMap.get(orgId) || "-";
   }, [deptMap]);
 
   return {

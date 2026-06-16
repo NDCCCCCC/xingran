@@ -3,8 +3,8 @@
  * 直接导出当前筛选条件的数据
  */
 
-import { useState, useCallback } from 'react';
-import type { FC } from 'react';
+import { useState, useCallback } from "react";
+import type { FC } from "react";
 import {
   Button,
   Space,
@@ -12,10 +12,10 @@ import {
   message,
   Alert,
   Descriptions,
-} from 'antd';
-import { ExportOutlined } from '@ant-design/icons';
-import { getAuthHeaders } from '@/utils/authHelpers';
-import { excelApi } from '@/lib/opsApi';
+} from "antd";
+import { ExportOutlined } from "@ant-design/icons";
+import { getAuthHeaders } from "@/utils/authHelpers";
+import { excelApi } from "@/lib/opsApi";
 
 export interface ExcelExportProps {
   entityType: string;
@@ -48,26 +48,26 @@ const ExcelExport: FC<ExcelExportProps> = ({
         // 自定义路径：保留原内联 fetch（处理 system/dept 等非 ops 模块的导出）
         const authHeaders = await getAuthHeaders();
         const response = await fetch(exportUrl, {
-          method: 'POST',
+          method: "POST",
           headers: {
             ...authHeaders,
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify(filters),
         });
 
         if (!response.ok) {
-          throw new Error('导出失败');
+          throw new Error("导出失败");
         }
 
-        const filename = extractFilename(response.headers.get('content-disposition'), entityName);
+        const filename = extractFilename(response.headers.get("content-disposition"), entityName);
         await downloadFile(response, filename);
       }
 
-      message.success('导出成功');
+      message.success("导出成功");
       onClose?.();
     } catch (error) {
-      message.error('导出失败');
+      message.error("导出失败");
     } finally {
       setExporting(false);
     }
@@ -98,7 +98,7 @@ const ExcelExport: FC<ExcelExportProps> = ({
           description={
             <Descriptions size="small" column={1} bordered>
               {Object.entries(filters).map(([key, value]) => {
-                if (value === undefined || value === null || value === '') return null;
+                if (value === undefined || value === null || value === "") return null;
                 return (
                   <Descriptions.Item key={key} label={getFilterLabel(key)}>
                     {formatFilterValue(key, value)}
@@ -119,7 +119,7 @@ const ExcelExport: FC<ExcelExportProps> = ({
         />
       )}
 
-      <div style={{ marginTop: 16, padding: 12, background: '#f0f7ff', borderRadius: 4 }}>
+      <div style={{ marginTop: 16, padding: 12, background: "#f0f7ff", borderRadius: 4 }}>
         <Space orientation="vertical" size={4}>
           <div>• 点击"立即导出"按钮即可下载数据</div>
           <div>• 导出文件为 .xlsx 格式</div>
@@ -132,46 +132,46 @@ const ExcelExport: FC<ExcelExportProps> = ({
 
 function getFilterLabel(key: string): string {
   const labels: Record<string, string> = {
-    name: '名称',
-    code: '编码',
-    status: '状态',
-    orgId: '所属机构',
-    buildingId: '所属楼宇',
-    floorId: '所属楼层',
-    deptId: '所属部门',
-    userId: '所属人员',
-    level: '层级',
-    workstationType: '工位类型',
-    roomCode: '机房编码',
-    isp: '运营商',
+    name: "名称",
+    code: "编码",
+    status: "状态",
+    orgId: "所属机构",
+    buildingId: "所属楼宇",
+    floorId: "所属楼层",
+    deptId: "所属部门",
+    userId: "所属人员",
+    level: "层级",
+    workstationType: "工位类型",
+    roomCode: "机房编码",
+    isp: "运营商",
   };
   return labels[key] || key;
 }
 
 function formatFilterValue(key: string, value: any): string {
-  if (value === undefined || value === null || value === '') {
-    return '-';
+  if (value === undefined || value === null || value === "") {
+    return "-";
   }
 
   // 状态值格式化
-  if (key === 'status') {
+  if (key === "status") {
     const statusMap: Record<number, string> = {
-      0: '正常',
-      1: '停用',
-      2: '故障',
+      0: "正常",
+      1: "停用",
+      2: "故障",
     };
-    if (typeof value === 'number') {
+    if (typeof value === "number") {
       return statusMap[value] ?? String(value);
     }
   }
 
   // 层级格式化
-  if (key === 'level') {
+  if (key === "level") {
     const levelMap: Record<number, string> = {
-      1: '城市级汇总',
-      2: '具体楼宇',
+      1: "城市级汇总",
+      2: "具体楼宇",
     };
-    if (typeof value === 'number') {
+    if (typeof value === "number") {
       return levelMap[value] ?? String(value);
     }
   }
@@ -185,7 +185,7 @@ function extractFilename(contentDisposition: string | null, entityName: string):
   }
   const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
   if (match && match[1]) {
-    return decodeURIComponent(match[1].replace(/['"]/g, ''));
+    return decodeURIComponent(match[1].replace(/['"]/g, ""));
   }
   return `${entityName}_${Date.now()}.xlsx`;
 }
@@ -193,7 +193,7 @@ function extractFilename(contentDisposition: string | null, entityName: string):
 async function downloadFile(response: Response, filename: string): Promise<void> {
   const blob = await response.blob();
   const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);

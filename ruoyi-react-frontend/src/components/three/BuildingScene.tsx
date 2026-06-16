@@ -11,31 +11,31 @@
  * Per D-09 / D-17: Suspense fallback uses AntD Spin with a descriptive Chinese tip.
  */
 
-import { lazy, Suspense, type FC, type ComponentProps } from 'react';
-import { Spin } from 'antd';
+import { lazy, Suspense, type FC, type ComponentProps } from "react";
+import { Spin } from "antd";
 
 type BuildingModel3DProps = ComponentProps<typeof BuildingModel3D>;
 type FloorPlan3DProps = ComponentProps<typeof FloorPlan3D>;
 
 const BuildingModel3D = lazy(
-  () => import('@/pages/operations/building-spaces-3d/components/BuildingModel3D')
+  () => import("@/pages/operations/building-spaces-3d/components/BuildingModel3D")
 );
 const FloorPlan3D = lazy(
-  () => import('@/pages/operations/building-spaces-3d/components/FloorPlan3D')
+  () => import("@/pages/operations/building-spaces-3d/components/FloorPlan3D")
 );
 const FloorView3D = lazy(
-  () => import('@/pages/operations/building-spaces-3d/components/FloorView3D')
+  () => import("@/pages/operations/building-spaces-3d/components/FloorView3D")
 );
 const BuildingView3D = lazy(
-  () => import('@/pages/operations/building-spaces-3d/components/BuildingView3D')
+  () => import("@/pages/operations/building-spaces-3d/components/BuildingView3D")
 );
 
 const Loading: FC = () => (
   <div
     style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
       padding: 40,
       minHeight: 240,
     }}
@@ -43,7 +43,7 @@ const Loading: FC = () => (
     <Spin size="large">
       <div style={{ minHeight: 120 }} />
     </Spin>
-    <div style={{ marginTop: 8, color: 'rgba(0, 0, 0, 0.45)' }}>加载 3D 场景...</div>
+    <div style={{ marginTop: 8, color: "rgba(0, 0, 0, 0.45)" }}>加载 3D 场景...</div>
   </div>
 );
 

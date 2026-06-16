@@ -3,11 +3,11 @@
  * 根据当前选择的布局类型动态渲染不同的布局组件
  */
 
-import type { FC, ReactNode } from 'react';
-import { useLayoutStore } from '@/store/layoutStore';
-import ClassicLayout from './ClassicLayout';
-import HybridLayout from './HybridLayout';
-import InnovativeLayout from './InnovativeLayout';
+import type { FC, ReactNode } from "react";
+import { useLayoutStore } from "@/store/layoutStore";
+import ClassicLayout from "./ClassicLayout";
+import HybridLayout from "./HybridLayout";
+import InnovativeLayout from "./InnovativeLayout";
 
 interface LayoutProps {
   children: ReactNode;
@@ -16,15 +16,15 @@ interface LayoutProps {
 const Layout: FC<LayoutProps> = ({ children }) => {
   const currentLayout = useLayoutStore((state) => state.currentLayout);
 
-  if (currentLayout === 'classic') {
+  if (currentLayout === "classic") {
     return <ClassicLayout key={currentLayout}>{children}</ClassicLayout>;
   }
 
-  if (currentLayout === 'hybrid') {
+  if (currentLayout === "hybrid") {
     return <HybridLayout key={currentLayout}>{children}</HybridLayout>;
   }
 
-  if (currentLayout === 'innovative') {
+  if (currentLayout === "innovative") {
     return <InnovativeLayout key={currentLayout}>{children}</InnovativeLayout>;
   }
 

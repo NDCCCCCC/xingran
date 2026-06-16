@@ -1,8 +1,8 @@
-﻿import { useState, useEffect } from 'react';
-import type { FC } from 'react';
-import { Button, Form, Input, Modal, InputNumber, Select, Space, Tag, message, Card, Tree, Radio } from 'antd';
-import type { DataNode } from 'antd/es/tree';
-import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, FolderOutlined } from '@ant-design/icons';
+﻿import { useState, useEffect } from "react";
+import type { FC } from "react";
+import { Button, Form, Input, Modal, InputNumber, Select, Space, Tag, message, Card, Tree, Radio } from "antd";
+import type { DataNode } from "antd/es/tree";
+import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, FolderOutlined } from "@ant-design/icons";
 import {
   getWorkOrderCategoryList,
   createWorkOrderCategory,
@@ -11,8 +11,8 @@ import {
   type WorkOrderCategory,
   type WorkOrderCategoryCreateRequest,
   type WorkOrderCategoryUpdateRequest,
-} from '@/lib/workorderApi';
-import { isFormValidationError } from '@/utils/errorHandler';
+} from "@/lib/workorderApi";
+import { isFormValidationError } from "@/utils/errorHandler";
 
 const { Option } = Select;
 
@@ -27,7 +27,7 @@ const WorkOrderCategoryPage: FC = () => {
 
   // 统一错误处理
   const handleApiError = (error: unknown, defaultMessage: string) => {
-    if (error && typeof error === 'object' && 'message' in error) {
+    if (error && typeof error === "object" && "message" in error) {
       message.error(error.message as string);
     } else {
       message.error(defaultMessage);
@@ -52,8 +52,8 @@ const WorkOrderCategoryPage: FC = () => {
             <div className="flex items-center justify-between">
               <span>{item.categoryName}</span>
               <Space size="small">
-                <Tag color={item.status === 0 ? 'green' : 'red'}>
-                  {item.status === 0 ? '启用' : '停用'}
+                <Tag color={item.status === 0 ? "green" : "red"}>
+                  {item.status === 0 ? "启用" : "停用"}
                 </Tag>
                 <span className="text-gray-400 text-xs">排序: {item.sortOrder}</span>
               </Space>
@@ -66,7 +66,7 @@ const WorkOrderCategoryPage: FC = () => {
 
       setTreeData(buildTree(result.data || []));
     } catch (error) {
-      handleApiError(error, '获取分类列表失败');
+      handleApiError(error, "获取分类列表失败");
     }
   };
 
@@ -103,10 +103,10 @@ const WorkOrderCategoryPage: FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await deleteWorkOrderCategory(id);
-      handleSuccess('删除成功');
+      handleSuccess("删除成功");
       fetchList();
     } catch (error) {
-      handleApiError(error, '删除失败');
+      handleApiError(error, "删除失败");
     }
   };
 
@@ -123,7 +123,7 @@ const WorkOrderCategoryPage: FC = () => {
           status: values.status,
         };
         await updateWorkOrderCategory(editingRecord.id, updateData);
-        handleSuccess('更新成功');
+        handleSuccess("更新成功");
       } else {
         const createData: WorkOrderCategoryCreateRequest = {
           categoryName: values.categoryName,
@@ -133,7 +133,7 @@ const WorkOrderCategoryPage: FC = () => {
           status: values.status,
         };
         await createWorkOrderCategory(createData);
-        handleSuccess('创建成功');
+        handleSuccess("创建成功");
       }
       setModalVisible(false);
       fetchList();
@@ -141,7 +141,7 @@ const WorkOrderCategoryPage: FC = () => {
       if (isFormValidationError(error)) {
         return;
       }
-      handleApiError(error, editingRecord ? '更新失败' : '创建失败');
+      handleApiError(error, editingRecord ? "更新失败" : "创建失败");
     }
   };
 
@@ -177,7 +177,7 @@ const WorkOrderCategoryPage: FC = () => {
           treeData={treeData}
           defaultExpandAll
           titleRender={(node: DataNode & { data?: WorkOrderCategory }) => {
-            const title = typeof node.title === 'function' ? node.title(node) : node.title;
+            const title = typeof node.title === "function" ? node.title(node) : node.title;
             return (
               <div className="flex items-center justify-between w-full pr-4">
                 {title}
@@ -188,7 +188,7 @@ const WorkOrderCategoryPage: FC = () => {
                     icon={<PlusOutlined />}
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleAdd(node.data?.id || '');
+                      handleAdd(node.data?.id || "");
                     }}
                   >
                     新增子分类
@@ -209,15 +209,15 @@ const WorkOrderCategoryPage: FC = () => {
                   <Button
                     type="link"
                     size="small"
-                    icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }}
+                    icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }}
                     onClick={(e) => {
                       e.stopPropagation();
                       Modal.confirm({
-                        title: '确定要删除吗？',
-                        okText: '确定',
-                        cancelText: '取消',
+                        title: "确定要删除吗？",
+                        okText: "确定",
+                        cancelText: "取消",
                         okButtonProps: { danger: true },
-                        onOk: () => handleDelete(node.data?.id || ''),
+                        onOk: () => handleDelete(node.data?.id || ""),
                       });
                     }}
                   >
@@ -232,7 +232,7 @@ const WorkOrderCategoryPage: FC = () => {
 
       {/* 新增/编辑弹窗 */}
       <Modal
-        title={editingRecord ? '编辑分类' : '新增分类'}
+        title={editingRecord ? "编辑分类" : "新增分类"}
         open={modalVisible}
         onOk={handleModalOk}
         onCancel={() => setModalVisible(false)}
@@ -243,7 +243,7 @@ const WorkOrderCategoryPage: FC = () => {
           <Form.Item
             name="categoryName"
             label="分类名称"
-            rules={[{ required: true, message: '请输入分类名称' }]}
+            rules={[{ required: true, message: "请输入分类名称" }]}
           >
             <Input placeholder="请输入分类名称" />
           </Form.Item>
@@ -263,15 +263,15 @@ const WorkOrderCategoryPage: FC = () => {
           <Form.Item
             name="sortOrder"
             label="排序"
-            rules={[{ required: true, message: '请输入排序' }]}
+            rules={[{ required: true, message: "请输入排序" }]}
           >
-            <InputNumber min={0} placeholder="请输入排序" style={{ width: '100%' }} />
+            <InputNumber min={0} placeholder="请输入排序" style={{ width: "100%" }} />
           </Form.Item>
 
           <Form.Item
             name="status"
             label="状态"
-            rules={[{ required: true, message: '请选择状态' }]}
+            rules={[{ required: true, message: "请选择状态" }]}
           >
             <Radio.Group>
               <Radio value={0}>启用</Radio>

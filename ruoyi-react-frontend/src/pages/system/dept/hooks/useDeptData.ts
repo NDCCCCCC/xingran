@@ -3,12 +3,12 @@
  * 部门数据管理 Hook
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import { message } from 'antd';
-import type { Department } from '@/types';
-import { post, get } from '@/lib/api';
-import type { DeptStatistics, DeptUser, ParentOption } from '../types';
-import { flattenTreeToList, transformToParentTreeOptions } from '../utils';
+import { useState, useCallback, useEffect } from "react";
+import { message } from "antd";
+import type { Department } from "@/types";
+import { post, get } from "@/lib/api";
+import type { DeptStatistics, DeptUser, ParentOption } from "../types";
+import { flattenTreeToList, transformToParentTreeOptions } from "../utils";
 
 export interface UseDeptDataReturn {
   departments: Department[];
@@ -42,7 +42,7 @@ export function useDeptData(): UseDeptDataReturn {
   const loadDepartments = useCallback(async (searchParams?: Record<string, unknown>) => {
     setLoading(true);
     try {
-      const result = await post('/system/departments/tree', searchParams || {}) as { data: Department[] };
+      const result = await post("/system/departments/tree", searchParams || {}) as { data: Department[] };
       const deptData = result.data || [];
       setDepartments(deptData);
 
@@ -59,9 +59,9 @@ export function useDeptData(): UseDeptDataReturn {
         subLevel: flatList.filter((d) => d.parentId).length,
       });
     } catch (error) {
-      console.error('加载部门列表失败:', error);
+      console.error("加载部门列表失败:", error);
       setDepartments([]);
-      setParentOptions([{ title: '顶级部门', value: '', key: '' }]);
+      setParentOptions([{ title: "顶级部门", value: "", key: "" }]);
       setStatistics({ total: 0, topLevel: 0, subLevel: 0 });
     } finally {
       setLoading(false);
@@ -74,7 +74,7 @@ export function useDeptData(): UseDeptDataReturn {
       const result = await get(`/system/departments/${deptId}/users`) as { data: DeptUser[] };
       setDeptUsers(result.data || []);
     } catch (error) {
-      console.error('加载部门用户失败:', error);
+      console.error("加载部门用户失败:", error);
       setDeptUsers([]);
     } finally {
       setLoadingUsers(false);

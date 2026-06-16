@@ -3,11 +3,11 @@
  * 支持三种导出模式：筛选导出、当前页导出、全部导出
  */
 
-import { useState, useCallback, type FC } from 'react';
-import { Button, Dropdown, message, Modal, Radio, Space } from 'antd';
-import type { MenuProps } from 'antd';
-import { ExportOutlined, DownloadOutlined } from '@ant-design/icons';
-import { getAccessToken } from '@/utils/authHelpers';
+import { useState, useCallback, type FC } from "react";
+import { Button, Dropdown, message, Modal, Radio, Space } from "antd";
+import type { MenuProps } from "antd";
+import { ExportOutlined, DownloadOutlined } from "@ant-design/icons";
+import { getAccessToken } from "@/utils/authHelpers";
 
 export interface NetworkExportProps {
   entityType: string;         // 实体类型（用于拼接导出路径 /api/v1/network/${entityType}/export）
@@ -27,7 +27,7 @@ const NetworkExport: FC<NetworkExportProps> = ({
   const exportUrl = `/api/v1/network/${entityType}/export`;
   const [exporting, setExporting] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [exportMode, setExportMode] = useState<string>('filtered');
+  const [exportMode, setExportMode] = useState<string>("filtered");
 
   const doExport = useCallback(async (mode: string) => {
     setExporting(true);
@@ -35,10 +35,10 @@ const NetworkExport: FC<NetworkExportProps> = ({
       const token = await getAccessToken();
       const body: Record<string, any> = { exportMode: mode };
 
-      if (mode === 'filtered') {
+      if (mode === "filtered") {
         // 筛选导出：带筛选条件，不分页
         body.filters = filters;
-      } else if (mode === 'currentPage') {
+      } else if (mode === "currentPage") {
         // 当前页：带筛选条件 + 分页
         body.filters = filters;
         body.current = current;
@@ -47,26 +47,26 @@ const NetworkExport: FC<NetworkExportProps> = ({
       // mode === 'all': 不带任何参数
 
       const response = await fetch(exportUrl, {
-        method: 'POST',
+        method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
       });
 
-      if (!response.ok) throw new Error('导出失败');
+      if (!response.ok) throw new Error("导出失败");
 
-      const disposition = response.headers.get('content-disposition');
+      const disposition = response.headers.get("content-disposition");
       let filename = `${entityName}_${Date.now()}.xlsx`;
       if (disposition) {
         const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-        if (match?.[1]) filename = decodeURIComponent(match[1].replace(/['"]/g, ''));
+        if (match?.[1]) filename = decodeURIComponent(match[1].replace(/['"]/g, ""));
       }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = filename;
       document.body.appendChild(a);
@@ -83,21 +83,21 @@ const NetworkExport: FC<NetworkExportProps> = ({
     }
   }, [exportUrl, entityName, filters, current, pageSize]);
 
-  const menuItems: MenuProps['items'] = [
+  const menuItems: MenuProps["items"] = [
     {
-      key: 'filtered',
-      label: '筛选导出',
-      onClick: () => { setExportMode('filtered'); setModalVisible(true); },
+      key: "filtered",
+      label: "筛选导出",
+      onClick: () => { setExportMode("filtered"); setModalVisible(true); },
     },
     {
-      key: 'currentPage',
-      label: '导出当前页',
-      onClick: () => { setExportMode('currentPage'); setModalVisible(true); },
+      key: "currentPage",
+      label: "导出当前页",
+      onClick: () => { setExportMode("currentPage"); setModalVisible(true); },
     },
     {
-      key: 'all',
-      label: '导出全部',
-      onClick: () => { setExportMode('all'); setModalVisible(true); },
+      key: "all",
+      label: "导出全部",
+      onClick: () => { setExportMode("all"); setModalVisible(true); },
     },
   ];
 
@@ -119,11 +119,11 @@ const NetworkExport: FC<NetworkExportProps> = ({
           </Space>
         }
       >
-        <Radio.Group value={exportMode} onChange={e => setExportMode(e.target.value)} style={{ width: '100%' }}>
-          <Space direction="vertical" style={{ width: '100%' }}>
+        <Radio.Group value={exportMode} onChange={e => setExportMode(e.target.value)} style={{ width: "100%" }}>
+          <Space direction="vertical" style={{ width: "100%" }}>
             <Radio value="filtered">
               筛选导出 — 按当前筛选条件导出所有匹配数据
-              {Object.keys(filters).length > 0 && <span style={{ color: 'var(--theme-info, #1890ff)', marginLeft: 8 }}>(已设置筛选条件)</span>}
+              {Object.keys(filters).length > 0 && <span style={{ color: "var(--theme-info, #1890ff)", marginLeft: 8 }}>(已设置筛选条件)</span>}
             </Radio>
             <Radio value="currentPage">
               导出当前页 — 仅导出当前页面显示的数据（第{current}页，每页{pageSize}条）

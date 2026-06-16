@@ -5,10 +5,10 @@
  * 负责用户配置的获取、更新、缓存和数据迁移
  */
 
-import type { UserPreferences, BackendUserPreferences, ThemeStyle } from '@/types/config';
-import { defaultUserPreferences, defaultThemeConfiguration, defaultLayoutConfiguration, defaultDataConfiguration } from '@/types/config';
-import { getUserPreferences } from '@/lib/profileApi';
-import { put } from '@/lib/api';
+import type { UserPreferences, BackendUserPreferences, ThemeStyle } from "@/types/config";
+import { defaultUserPreferences, defaultThemeConfiguration, defaultLayoutConfiguration, defaultDataConfiguration } from "@/types/config";
+import { getUserPreferences } from "@/lib/profileApi";
+import { put } from "@/lib/api";
 
 /**
  * 配置服务类
@@ -41,7 +41,7 @@ class ConfigService {
 			return normalized;
 
 		} catch (error) {
-			console.error('Failed to fetch user preferences:', error);
+			console.error("Failed to fetch user preferences:", error);
 
 			// 返回默认值
 			return { ...defaultUserPreferences };
@@ -57,14 +57,14 @@ class ConfigService {
 
 		try {
 			// 保存到服务器 - 直接使用 put 调用后端 API
-			await put('/system/settings/preferences', backendFormat);
+			await put("/system/settings/preferences", backendFormat);
 
 			// 更新缓存
 			this.cache = preferences;
 			this.cacheExpiry = Date.now() + this.CACHE_TTL;
 
 		} catch (error) {
-			console.error('Failed to update user preferences:', error);
+			console.error("Failed to update user preferences:", error);
 			throw error;
 		}
 	}
@@ -80,43 +80,43 @@ class ConfigService {
 		// 版本 1 → 版本 2（旧数据结构）
 		if (version === 1) {
 			// 验证主题样式
-			const validThemeStyles = ['minimal', 'glassmorphism', 'neumorphism', 'flat2.0', 'luxury-quiet'];
+			const validThemeStyles = ["minimal", "glassmorphism", "neumorphism", "flat2.0", "luxury-quiet"];
 			const themeStyle = legacyPrefs.themeStyle && validThemeStyles.includes(legacyPrefs.themeStyle as string)
 				? legacyPrefs.themeStyle as string
 				: defaultThemeConfiguration.style;
 
 			// 验证布局类型
-			const validLayoutTypes = ['classic', 'hybrid', 'innovative'];
+			const validLayoutTypes = ["classic", "hybrid", "innovative"];
 			const layoutType = legacyPrefs.layoutType && validLayoutTypes.includes(legacyPrefs.layoutType as string)
-				? legacyPrefs.layoutType as 'classic' | 'hybrid' | 'innovative'
+				? legacyPrefs.layoutType as "classic" | "hybrid" | "innovative"
 				: defaultLayoutConfiguration.type;
 
 			// 验证密度模式
-			const validDensityModes = ['compact', 'comfortable', 'spacious'];
+			const validDensityModes = ["compact", "comfortable", "spacious"];
 			const density = legacyPrefs.density && validDensityModes.includes(legacyPrefs.density as string)
-				? legacyPrefs.density as 'compact' | 'comfortable' | 'spacious'
+				? legacyPrefs.density as "compact" | "comfortable" | "spacious"
 				: defaultLayoutConfiguration.density;
 
 			const partial: Partial<UserPreferences> = {
 				version: 2,
 				theme: {
-					mode: legacyPrefs.theme === 'dark' ? 'dark' : 'light',
+					mode: legacyPrefs.theme === "dark" ? "dark" : "light",
 					style: themeStyle as ThemeStyle,
 				},
 				layout: {
 					type: layoutType,
 					sidebar: {
 						collapsed: Boolean(legacyPrefs.sidebarCollapsed),
-						width: typeof legacyPrefs.sidebarWidth === 'number' ? (legacyPrefs.sidebarWidth as number) : defaultLayoutConfiguration.sidebar.width,
-						collapsedWidth: typeof legacyPrefs.sidebarCollapsedWidth === 'number' ? (legacyPrefs.sidebarCollapsedWidth as number) : defaultLayoutConfiguration.sidebar.collapsedWidth,
+						width: typeof legacyPrefs.sidebarWidth === "number" ? (legacyPrefs.sidebarWidth as number) : defaultLayoutConfiguration.sidebar.width,
+						collapsedWidth: typeof legacyPrefs.sidebarCollapsedWidth === "number" ? (legacyPrefs.sidebarCollapsedWidth as number) : defaultLayoutConfiguration.sidebar.collapsedWidth,
 					},
 					density: density,
 				},
 				data: {
-					defaultPageSize: typeof legacyPrefs.pageSize === 'number' ? (legacyPrefs.pageSize as number) : defaultDataConfiguration.defaultPageSize,
+					defaultPageSize: typeof legacyPrefs.pageSize === "number" ? (legacyPrefs.pageSize as number) : defaultDataConfiguration.defaultPageSize,
 					pageSizeOptions: [10, 20, 50, 100],
 				},
-				language: legacyPrefs.language as 'zh-CN' | 'en-US' | undefined,
+				language: legacyPrefs.language as "zh-CN" | "en-US" | undefined,
 			};
 			return this.normalizePreferences(partial);
 		}
@@ -130,21 +130,21 @@ class ConfigService {
 	 */
 	private fromBackendFormat(backend: BackendUserPreferences): UserPreferences {
 		// 验证主题样式是否有效，无效则使用默认值
-		const validThemeStyles = ['minimal', 'glassmorphism', 'neumorphism', 'flat2.0', 'luxury-quiet'];
+		const validThemeStyles = ["minimal", "glassmorphism", "neumorphism", "flat2.0", "luxury-quiet"];
 		const themeStyle = backend.themeStyle && validThemeStyles.includes(backend.themeStyle)
 			? (backend.themeStyle as ThemeStyle)
 			: defaultThemeConfiguration.style;
 
 		// 验证布局类型是否有效
-		const validLayoutTypes: Array<'classic' | 'hybrid' | 'innovative'> = ['classic', 'hybrid', 'innovative'];
-		const layoutType = backend.layoutType && validLayoutTypes.includes(backend.layoutType as 'classic' | 'hybrid' | 'innovative')
-			? (backend.layoutType as 'classic' | 'hybrid' | 'innovative')
+		const validLayoutTypes: Array<"classic" | "hybrid" | "innovative"> = ["classic", "hybrid", "innovative"];
+		const layoutType = backend.layoutType && validLayoutTypes.includes(backend.layoutType as "classic" | "hybrid" | "innovative")
+			? (backend.layoutType as "classic" | "hybrid" | "innovative")
 			: defaultLayoutConfiguration.type;
 
 		// 验证密度模式是否有效
-		const validDensityModes: Array<'compact' | 'comfortable' | 'spacious'> = ['compact', 'comfortable', 'spacious'];
-		const density = backend.layoutDensity && validDensityModes.includes(backend.layoutDensity as 'compact' | 'comfortable' | 'spacious')
-			? (backend.layoutDensity as 'compact' | 'comfortable' | 'spacious')
+		const validDensityModes: Array<"compact" | "comfortable" | "spacious"> = ["compact", "comfortable", "spacious"];
+		const density = backend.layoutDensity && validDensityModes.includes(backend.layoutDensity as "compact" | "comfortable" | "spacious")
+			? (backend.layoutDensity as "compact" | "comfortable" | "spacious")
 			: defaultLayoutConfiguration.density;
 
 		// 构建自定义颜色对象（只有存在时才添加）
@@ -159,7 +159,7 @@ class ConfigService {
 		const partial: Partial<UserPreferences> = {
 			version: 2,
 			theme: {
-				mode: backend.theme === 'dark' ? 'dark' : 'light',
+				mode: backend.theme === "dark" ? "dark" : "light",
 				style: themeStyle,
 				// 只有存在自定义颜色时才添加
 				...(Object.keys(customColors).length > 0 ? { customColors } : {}),
@@ -177,7 +177,7 @@ class ConfigService {
 				defaultPageSize: backend.pageSize,
 				pageSizeOptions: [10, 20, 50, 100], // 使用默认值
 			},
-			language: backend.language as 'zh-CN' | 'en-US',
+			language: backend.language as "zh-CN" | "en-US",
 		};
 
 		return this.normalizePreferences(partial);
@@ -190,12 +190,12 @@ class ConfigService {
 		if (!color) return undefined;
 
 		// 如果已经是字符串，直接返回
-		if (typeof color === 'string') {
-			return color === '' ? undefined : color;
+		if (typeof color === "string") {
+			return color === "" ? undefined : color;
 		}
 
 		// 如果是对象，尝试提取颜色值
-		if (typeof color === 'object') {
+		if (typeof color === "object") {
 			// 检查是否有 cleared 标记（ColorPicker 组件的标记）
 			if (color.cleared) {
 				return undefined;
@@ -204,11 +204,11 @@ class ConfigService {
 			// 尝试从 metaColor 中提取十六进制值
 			if (color.metaColor) {
 				const { r, g, b } = color.metaColor;
-				if (typeof r === 'number' && typeof g === 'number' && typeof b === 'number') {
+				if (typeof r === "number" && typeof g === "number" && typeof b === "number") {
 					// 转换为十六进制
 					const toHex = (n: number) => {
 						const hex = Math.round(n).toString(16);
-						return hex.length === 1 ? '0' + hex : hex;
+						return hex.length === 1 ? "0" + hex : hex;
 					};
 					return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
 				}
@@ -233,12 +233,12 @@ class ConfigService {
 
 		const result: BackendUserPreferences = {
 			// 主题 - 确保有默认值
-			theme: prefs.theme?.mode || 'light',
-			themeStyle: prefs.theme?.style || 'minimal',
+			theme: prefs.theme?.mode || "light",
+			themeStyle: prefs.theme?.style || "minimal",
 
 			// 布局
-			layoutType: prefs.layout?.type || 'classic',
-			layoutDensity: prefs.layout?.density || 'comfortable',
+			layoutType: prefs.layout?.type || "classic",
+			layoutDensity: prefs.layout?.density || "comfortable",
 			sidebarWidth: prefs.layout?.sidebar?.width || 280,
 			sidebarCollapsedWidth: prefs.layout?.sidebar?.collapsedWidth || 64,
 			sidebarCollapsed: prefs.layout?.sidebar?.collapsed || false,
@@ -251,7 +251,7 @@ class ConfigService {
 			customSidebarColor: sidebarColor,
 
 			// 语言 - 确保有默认值
-			language: (prefs.language as 'zh-CN' | 'en-US') || 'zh-CN',
+			language: (prefs.language as "zh-CN" | "en-US") || "zh-CN",
 		};
 
 		return result;
@@ -279,7 +279,7 @@ class ConfigService {
 				...defaultDataConfiguration,
 				...raw.data,
 			},
-			language: (raw.language as 'zh-CN' | 'en-US') || 'zh-CN',
+			language: (raw.language as "zh-CN" | "en-US") || "zh-CN",
 		};
 	}
 

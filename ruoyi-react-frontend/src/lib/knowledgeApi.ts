@@ -1,5 +1,5 @@
-import { post } from './api';
-import type { BaseResponse, PageResponse } from '@/types';
+import { post } from "./api";
+import type { BaseResponse, PageResponse } from "@/types";
 
 // ==================== 类型定义 ====================
 
@@ -129,7 +129,7 @@ export interface ConvertWorkOrderToArticleRequest {
 // ==================== 知识库文章 API ====================
 
 export function getKnowledgeArticleList(params: KnowledgeArticleListRequest): Promise<BaseResponse<PageResponse<KnowledgeArticle>>> {
-  return post('/knowledge/articles/list', params);
+  return post("/knowledge/articles/list", params);
 }
 
 export function getKnowledgeArticle(id: string): Promise<BaseResponse<KnowledgeArticle>> {
@@ -137,7 +137,7 @@ export function getKnowledgeArticle(id: string): Promise<BaseResponse<KnowledgeA
 }
 
 export function createKnowledgeArticle(data: KnowledgeArticleCreateRequest): Promise<BaseResponse<KnowledgeArticle>> {
-  return post('/knowledge/articles', data);
+  return post("/knowledge/articles", data);
 }
 
 export function updateKnowledgeArticle(id: string, data: KnowledgeArticleUpdateRequest): Promise<BaseResponse<{ message: string }>> {
@@ -149,7 +149,7 @@ export function deleteKnowledgeArticle(id: string): Promise<BaseResponse<{ messa
 }
 
 export function searchKnowledgeArticles(data: SearchKnowledgeRequest): Promise<BaseResponse<{ list: KnowledgeArticle[]; total: number }>> {
-  return post('/knowledge/articles/search', data);
+  return post("/knowledge/articles/search", data);
 }
 
 export function likeKnowledgeArticle(id: string): Promise<BaseResponse<{ message: string }>> {
@@ -159,7 +159,7 @@ export function likeKnowledgeArticle(id: string): Promise<BaseResponse<{ message
 // ==================== 知识库分类 API ====================
 
 export function getKnowledgeCategoryList(params?: KnowledgeCategoryListRequest): Promise<BaseResponse<KnowledgeCategory[]>> {
-  return post('/knowledge/categories/list', params || {});
+  return post("/knowledge/categories/list", params || {});
 }
 
 export function getKnowledgeCategory(id: string): Promise<BaseResponse<KnowledgeCategory>> {
@@ -167,7 +167,7 @@ export function getKnowledgeCategory(id: string): Promise<BaseResponse<Knowledge
 }
 
 export function createKnowledgeCategory(data: KnowledgeCategoryCreateRequest): Promise<BaseResponse<KnowledgeCategory>> {
-  return post('/knowledge/categories', data);
+  return post("/knowledge/categories", data);
 }
 
 export function updateKnowledgeCategory(id: string, data: KnowledgeCategoryUpdateRequest): Promise<BaseResponse<{ message: string }>> {
@@ -181,11 +181,11 @@ export function deleteKnowledgeCategory(id: string): Promise<BaseResponse<{ mess
 // ==================== 知识库标签 API ====================
 
 export function getAllKnowledgeTags(): Promise<BaseResponse<KnowledgeTag[]>> {
-  return post('/knowledge/tags/all', {});
+  return post("/knowledge/tags/all", {});
 }
 
 export function createKnowledgeTag(data: { tagName: string }): Promise<BaseResponse<KnowledgeTag>> {
-  return post('/knowledge/tags', data);
+  return post("/knowledge/tags", data);
 }
 
 export function updateKnowledgeTag(id: string, data: { tagName: string }): Promise<BaseResponse<{ message: string }>> {

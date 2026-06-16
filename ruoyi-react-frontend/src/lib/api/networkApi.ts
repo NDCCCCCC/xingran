@@ -1,6 +1,6 @@
-import axios, { type AxiosInstance } from 'axios';
-import { post } from '../api';
-import { getAccessToken } from '@/utils/authHelpers';
+import axios, { type AxiosInstance } from "axios";
+import { post } from "../api";
+import { getAccessToken } from "@/utils/authHelpers";
 
 /**
  * 专用于 Blob/文件下载的 axios 实例(本文件内私有)
@@ -11,10 +11,10 @@ import { getAccessToken } from '@/utils/authHelpers';
  * - 移除硬编码 /api/v1/ 前缀,改用环境变量 VITE_API_BASE_URL
  */
 const blobAxios: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
+  baseURL: import.meta.env.VITE_API_BASE_URL || "/api/v1",
   timeout: 30000,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -22,11 +22,11 @@ blobAxios.interceptors.request.use(async (config) => {
   try {
     const token = await getAccessToken();
     if (token && config.headers) {
-      config.headers.set('Authorization', `Bearer ${token}`);
+      config.headers.set("Authorization", `Bearer ${token}`);
     }
   } catch (e) {
     // Token 获取失败不阻断,让后端 401 路径处理
-    console.warn('[networkApi.blobAxios] 获取 token 失败:', e);
+    console.warn("[networkApi.blobAxios] 获取 token 失败:", e);
   }
   return config;
 });
@@ -46,7 +46,7 @@ interface TrajectoryNode {
   startTime: string;
   endTime: string;
   duration: number;
-  eventType: 'appeared' | 'disappeared' | 'moved' | 'vlan_changed';
+  eventType: "appeared" | "disappeared" | "moved" | "vlan_changed";
 }
 
 interface TrajectoryResponse {
@@ -62,7 +62,7 @@ export const queryMACTrajectory = async (
   params: TrajectoryQueryParams
 ): Promise<TrajectoryNode[]> => {
   const result = await post<TrajectoryResponse>(
-    '/network/history/trajectory',
+    "/network/history/trajectory",
     params
   );
   return result.data!.trajectory;
@@ -97,7 +97,7 @@ export interface MACHistoryRecord {
   deviceNameSnapshot: string;
   interfaceName: string;
   vlanId?: number;
-  eventType: 'appeared' | 'disappeared' | 'moved' | 'vlan_changed';
+  eventType: "appeared" | "disappeared" | "moved" | "vlan_changed";
   firstSeen: string;
   lastSeen: string;
   collectedAt: string;
@@ -123,7 +123,7 @@ export const queryMACHistory = async (
   params: MACHistoryQueryParams
 ): Promise<MACHistoryPageResult> => {
   const result = await post<MACHistoryPageResult>(
-    '/network/history/list',
+    "/network/history/list",
     params
   );
   return result.data!;
@@ -139,7 +139,7 @@ export const getMACEvents = async (
   startTime: string,
   endTime: string
 ): Promise<MACHistoryRecord[]> => {
-  const result = await post<MACHistoryPageResult>('/network/history/list', {
+  const result = await post<MACHistoryPageResult>("/network/history/list", {
     mac,
     startTime,
     endTime,
@@ -168,35 +168,35 @@ export const getMACEvents = async (
  */
 export const exportMACHistory = async (
   params: MACHistoryQueryParams,
-  exportScope: 'current' | 'all' = 'current'
+  exportScope: "current" | "all" = "current"
 ): Promise<{ blob: Blob; filename: string }> => {
-  const queryParams: Record<string, string> = { format: 'xlsx', exportScope };
+  const queryParams: Record<string, string> = { format: "xlsx", exportScope };
   Object.entries(params).forEach(([k, v]) => {
-    if (v !== undefined && v !== null && v !== '') queryParams[k] = String(v);
+    if (v !== undefined && v !== null && v !== "") queryParams[k] = String(v);
   });
-  const response = await blobAxios.get<Blob>('/network/history/list', {
+  const response = await blobAxios.get<Blob>("/network/history/list", {
     params: queryParams,
-    responseType: 'blob',
+    responseType: "blob",
   });
   const blob = response.data as unknown as Blob;
   // CR-01 错误反序列化:若 blob 实际是 JSON 错误体,后端在异常时仍可能返回 application/json
-  if (blob && blob.size < 1024 && blob.type && blob.type.includes('json')) {
+  if (blob && blob.size < 1024 && blob.type && blob.type.includes("json")) {
     const text = await blob.text();
     try {
       const errBody = JSON.parse(text) as { message?: string; msg?: string };
-      throw new Error(errBody.message || errBody.msg || '导出失败');
+      throw new Error(errBody.message || errBody.msg || "导出失败");
     } catch (e) {
-      if (e instanceof Error && e.message !== '导出失败') throw e;
+      if (e instanceof Error && e.message !== "导出失败") throw e;
       // parse 失败说明不是 JSON,降级为通用错误
       throw new Error(`导出失败:${response.status}`);
     }
   }
-  const contentDisposition = (response.headers as Record<string, string>)['content-disposition']
-    || (response.headers as Record<string, string>)['Content-Disposition'];
+  const contentDisposition = (response.headers as Record<string, string>)["content-disposition"]
+    || (response.headers as Record<string, string>)["Content-Disposition"];
   let filename = `mac_history_${exportScope}_${Date.now()}.xlsx`;
   if (contentDisposition) {
     const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-    if (match && match[1]) filename = decodeURIComponent(match[1].replace(/['"]/g, ''));
+    if (match && match[1]) filename = decodeURIComponent(match[1].replace(/['"]/g, ""));
   }
   return { blob, filename };
 };
@@ -208,7 +208,7 @@ export const exportMACHistory = async (
  */
 const triggerBrowserDownload = (blob: Blob, filename: string): void => {
   const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);
@@ -235,29 +235,29 @@ export const batchExport = async (
   fallbackFilename = `网络管理_批量导出_${Date.now()}.zip`
 ): Promise<string> => {
   const response = await blobAxios.post<Blob>(
-    '/network/batch-export',
+    "/network/batch-export",
     { entityTypes, filters },
-    { responseType: 'blob' }
+    { responseType: "blob" }
   );
   const blob = response.data as unknown as Blob;
   // CR-01 错误反序列化:若 blob 实际是 JSON 错误体,后端在异常时仍可能返回 application/json
-  if (blob && blob.size < 1024 && blob.type && blob.type.includes('json')) {
+  if (blob && blob.size < 1024 && blob.type && blob.type.includes("json")) {
     const text = await blob.text();
     try {
       const errBody = JSON.parse(text) as { message?: string; msg?: string };
-      throw new Error(errBody.message || errBody.msg || '导出失败');
+      throw new Error(errBody.message || errBody.msg || "导出失败");
     } catch (e) {
-      if (e instanceof Error && e.message !== '导出失败') throw e;
+      if (e instanceof Error && e.message !== "导出失败") throw e;
       // parse 失败说明不是 JSON,降级为通用错误
       throw new Error(`导出失败:${response.status}`);
     }
   }
-  const contentDisposition = (response.headers as Record<string, string>)['content-disposition']
-    || (response.headers as Record<string, string>)['Content-Disposition'];
+  const contentDisposition = (response.headers as Record<string, string>)["content-disposition"]
+    || (response.headers as Record<string, string>)["Content-Disposition"];
   let filename = fallbackFilename;
   if (contentDisposition) {
     const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-    if (match && match[1]) filename = decodeURIComponent(match[1].replace(/['"]/g, ''));
+    if (match && match[1]) filename = decodeURIComponent(match[1].replace(/['"]/g, ""));
   }
   triggerBrowserDownload(blob, filename);
   return filename;

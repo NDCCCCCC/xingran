@@ -1,5 +1,5 @@
-import { Row, Col, DatePicker, Form } from 'antd';
-import CronSelector from '@/components/CronSelector';
+import { Row, Col, DatePicker, Form } from "antd";
+import CronSelector from "@/components/CronSelector";
 
 /**
  * 周期配置组件
@@ -11,10 +11,10 @@ export const RecurrenceConfig: React.FC = () => {
       <Row gutter={16}>
         <Col span={24}>
           <Form.Item
-            name={['recurrenceConfig', 'cronExpression']}
+            name={["recurrenceConfig", "cronExpression"]}
             label="Cron 表达式"
             required
-            rules={[{ required: true, message: '请输入 Cron 表达式' }]}
+            rules={[{ required: true, message: "请输入 Cron 表达式" }]}
           >
             <CronSelector />
           </Form.Item>
@@ -24,7 +24,7 @@ export const RecurrenceConfig: React.FC = () => {
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item
-            name={['recurrenceConfig', 'endDate']}
+            name={["recurrenceConfig", "endDate"]}
             label="结束时间（可选）"
             extra="留空表示永久执行"
           >

@@ -3,14 +3,14 @@
  * 角色操作管理 Hook
  */
 
-import { useState, useCallback, useRef } from 'react';
-import { message } from 'antd';
-import { useQueryClient } from '@tanstack/react-query';
-import type { Role } from '@/types';
-import type { Key } from 'antd/es/table/interface';
-import type { FormInstance } from 'antd/es/form';
-import { post } from '@/lib/api';
-import { queryKeys } from '@/lib/queryKeys';
+import { useState, useCallback, useRef } from "react";
+import { message } from "antd";
+import { useQueryClient } from "@tanstack/react-query";
+import type { Role } from "@/types";
+import type { Key } from "antd/es/table/interface";
+import type { FormInstance } from "antd/es/form";
+import { post } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface UseRoleActionsParams {
   loadRoles: () => Promise<void>;
@@ -84,19 +84,19 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
   // 编辑角色
   const handleEdit = useCallback(async (record: Role) => {
     const callStack = new Error().stack;
-    console.log('[handleEdit] ========== 开始编辑角色 ==========');
-    console.log('[handleEdit] 角色ID:', record.id, '角色名:', record.roleName);
-    console.log('[handleEdit] 调用栈:', callStack?.split('\n').slice(2, 5).join('\n'));
+    console.log("[handleEdit] ========== 开始编辑角色 ==========");
+    console.log("[handleEdit] 角色ID:", record.id, "角色名:", record.roleName);
+    console.log("[handleEdit] 调用栈:", callStack?.split("\n").slice(2, 5).join("\n"));
     setEditingRole(record);
 
     // 加载角色的菜单和部门权限
-    console.log('[handleEdit] 开始并行加载菜单和部门权限...');
+    console.log("[handleEdit] 开始并行加载菜单和部门权限...");
     const [menuIds, deptIds] = await Promise.all([
       loadRoleMenus(record.id),
       loadRoleDepts(record.id),
     ]);
 
-    console.log('[handleEdit] 权限加载完成 - menuIds:', menuIds.length, 'deptIds:', deptIds.length);
+    console.log("[handleEdit] 权限加载完成 - menuIds:", menuIds.length, "deptIds:", deptIds.length);
 
     // 保存待设置的表单数据
     const formData = {
@@ -112,40 +112,40 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
     setPendingFormData(formData);
 
     setEditModalVisible(true);
-    console.log('[handleEdit] 设置 editModalVisible = true');
-    console.log('[handleEdit] pendingFormDataRef.current 已设置，menuIds数量:', menuIds.length);
-    console.log('[handleEdit] ========== handleEdit 完成 ==========');
+    console.log("[handleEdit] 设置 editModalVisible = true");
+    console.log("[handleEdit] pendingFormDataRef.current 已设置，menuIds数量:", menuIds.length);
+    console.log("[handleEdit] ========== handleEdit 完成 ==========");
   }, [loadRoleMenus, loadRoleDepts]);
 
   // 删除角色
   const handleDelete = useCallback(async (id: string) => {
     try {
       await post(`/system/roles/${id}/delete`);
-      message.success('删除成功');
+      message.success("删除成功");
       loadRoles();
       loadStatistics();
       invalidateAllRoles();
     } catch (error) {
-      console.error('删除角色失败:', error);
+      console.error("删除角色失败:", error);
     }
   }, [loadRoles, loadStatistics, invalidateAllRoles]);
 
   // 批量删除
   const handleBatchDelete = useCallback(async (keys: Key[]) => {
     if (keys.length === 0) {
-      message.warning('请选择要删除的角色');
+      message.warning("请选择要删除的角色");
       return;
     }
 
     try {
-      await post('/system/roles/batch-delete', { ids: keys });
-      message.success('批量删除成功');
+      await post("/system/roles/batch-delete", { ids: keys });
+      message.success("批量删除成功");
       setSelectedRowKeys([]);
       loadRoles();
       loadStatistics();
       invalidateAllRoles();
     } catch (error) {
-      console.error('批量删除失败:', error);
+      console.error("批量删除失败:", error);
     }
   }, [loadRoles, loadStatistics, invalidateAllRoles]);
 
@@ -153,12 +153,12 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
   const handleUpdateStatus = useCallback(async (id: string, status: number) => {
     try {
       await post(`/system/roles/${id}/status`, { status });
-      message.success(status === 0 ? '启用成功' : '停用成功');
+      message.success(status === 0 ? "启用成功" : "停用成功");
       loadRoles();
       loadStatistics();
       invalidateAllRoles();
     } catch (error) {
-      console.error('更新角色状态失败:', error);
+      console.error("更新角色状态失败:", error);
     }
   }, [loadRoles, loadStatistics, invalidateAllRoles]);
 
@@ -186,16 +186,16 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
           id: editingRole.id,
         });
       } else {
-        await post('/system/roles', roleData);
+        await post("/system/roles", roleData);
       }
 
-      message.success(editingRole ? '更新成功' : '创建成功');
+      message.success(editingRole ? "更新成功" : "创建成功");
       setEditModalVisible(false);
       loadRoles();
       loadStatistics();
       invalidateAllRoles();
     } catch (error) {
-      console.error('保存角色失败:', error);
+      console.error("保存角色失败:", error);
     }
   }, [editingRole, loadRoles, loadStatistics, invalidateAllRoles]);
 
@@ -209,9 +209,9 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
 
   // Modal 打开后的回调 - 使用 ref 读取，避免 React 批处理延迟问题
   const handleModalOpenChange = useCallback((open: boolean, editForm: FormInstance<unknown>) => {
-    console.log('[handleModalOpenChange] 触发，open:', open);
-    console.log('[handleModalOpenChange] pendingFormDataRef.current:', pendingFormDataRef.current);
-    console.log('[handleModalOpenChange] pendingFormData (state):', pendingFormData);
+    console.log("[handleModalOpenChange] 触发，open:", open);
+    console.log("[handleModalOpenChange] pendingFormDataRef.current:", pendingFormDataRef.current);
+    console.log("[handleModalOpenChange] pendingFormData (state):", pendingFormData);
 
     if (open && pendingFormDataRef.current) {
       const formData = pendingFormDataRef.current;
@@ -227,17 +227,17 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
       setCheckedDeptKeys(deptIds);
 
       // 3. 同时更新 dataScope
-      if (typeof formData.dataScope === 'number') {
+      if (typeof formData.dataScope === "number") {
         setCurrentDataScope(formData.dataScope);
       }
 
-      console.log('[handleModalOpenChange] Modal 打开，设置表单数据');
-      console.log('[handleModalOpenChange] menuIds:', menuIds.length, 'deptIds:', deptIds.length, 'dataScope:', formData.dataScope);
+      console.log("[handleModalOpenChange] Modal 打开，设置表单数据");
+      console.log("[handleModalOpenChange] menuIds:", menuIds.length, "deptIds:", deptIds.length, "dataScope:", formData.dataScope);
     } else if (!open) {
       // Modal 关闭时清理状态和 ref
       pendingFormDataRef.current = null;
       setPendingFormData(null);
-      console.log('[handleModalOpenChange] Modal 关闭，清理 pendingFormData');
+      console.log("[handleModalOpenChange] Modal 关闭，清理 pendingFormData");
     }
   }, [pendingFormData, setCheckedMenuKeys, setCheckedDeptKeys, setCurrentDataScope]);
 

@@ -9,9 +9,9 @@
  * Defaults follow D-11 (5min stale, 30min gc, no refetch-on-focus).
  */
 
-import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
-import { post } from '@/lib/api';
-import { queryKeys } from '@/lib/queryKeys';
+import { useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
+import { post } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface DictItem {
   id: string;
@@ -45,7 +45,7 @@ export function useDict(dictType: string): UseQueryResult<DictItem[]> {
   return useQuery({
     queryKey: queryKeys.dict.list(dictType),
     queryFn: async () => {
-      const result = await post<DictListResponse>('/system/dicts/data/list', {
+      const result = await post<DictListResponse>("/system/dicts/data/list", {
         dictType,
         current: 1,
         pageSize: 1000,

@@ -3,12 +3,12 @@
  * 模板模态框管理 Hook
  */
 
-import { useState, useCallback } from 'react';
-import { message } from 'antd';
-import type { ConfigTemplate } from '@/types';
-import type { FormInstance } from 'antd/es/form';
-import { post } from '@/lib/api';
-import type { TemplateModalState } from '../types';
+import { useState, useCallback } from "react";
+import { message } from "antd";
+import type { ConfigTemplate } from "@/types";
+import type { FormInstance } from "antd/es/form";
+import { post } from "@/lib/api";
+import type { TemplateModalState } from "../types";
 
 export interface UseTemplateModalsReturn extends TemplateModalState {
   setEditModalVisible: React.Dispatch<React.SetStateAction<boolean>>;
@@ -36,11 +36,11 @@ export function useTemplateModals(): UseTemplateModalsReturn {
   const [variablesModalVisible, setVariablesModalVisible] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ConfigTemplate | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [previewContent, setPreviewContent] = useState('');
+  const [previewContent, setPreviewContent] = useState("");
   const [templateVariables, setTemplateVariables] = useState<Record<string, unknown>>({});
 
   const handleApiError = useCallback((error: unknown, defaultMessage: string) => {
-    if (error && typeof error === 'object' && 'message' in error) {
+    if (error && typeof error === "object" && "message" in error) {
       message.error(error.message as string);
     } else {
       message.error(defaultMessage);
@@ -61,7 +61,7 @@ export function useTemplateModals(): UseTemplateModalsReturn {
     } else if (editForm) {
       setEditingTemplate(null);
       editForm.resetFields();
-      editForm.setFieldsValue({ templateType: 'config' });
+      editForm.setFieldsValue({ templateType: "config" });
     }
     setEditModalVisible(true);
   }, []);
@@ -85,18 +85,18 @@ export function useTemplateModals(): UseTemplateModalsReturn {
         };
         if (editingTemplate) {
           await post(`/network/templates/${editingTemplate.id}/update`, data);
-          handleSuccess('更新成功');
+          handleSuccess("更新成功");
         } else {
-          await post('/network/templates', data);
-          handleSuccess('创建成功');
+          await post("/network/templates", data);
+          handleSuccess("创建成功");
         }
         closeModal(editForm);
         onSuccess();
       } catch (error) {
-        if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (error && typeof error === "object" && "errorFields" in error) {
           return;
         }
-        handleApiError(error, '操作失败');
+        handleApiError(error, "操作失败");
       }
     },
     [closeModal, handleSuccess, handleApiError]
@@ -106,10 +106,10 @@ export function useTemplateModals(): UseTemplateModalsReturn {
     async (id: string, onSuccess: () => void) => {
       try {
         await post(`/network/templates/${id}/delete`, {});
-        handleSuccess('删除成功');
+        handleSuccess("删除成功");
         onSuccess();
       } catch (error) {
-        handleApiError(error, '删除失败');
+        handleApiError(error, "删除失败");
       }
     },
     [handleSuccess, handleApiError]
@@ -118,16 +118,16 @@ export function useTemplateModals(): UseTemplateModalsReturn {
   const handleBatchDelete = useCallback(
     async (selectedRowKeys: React.Key[], onSuccess: () => void) => {
       if (selectedRowKeys.length === 0) {
-        message.warning('请选择要删除的数据');
+        message.warning("请选择要删除的数据");
         return;
       }
       try {
-        await post('/network/templates/batch-delete', { ids: selectedRowKeys });
-        handleSuccess('批量删除成功');
+        await post("/network/templates/batch-delete", { ids: selectedRowKeys });
+        handleSuccess("批量删除成功");
         setSelectedRowKeys([]);
         onSuccess();
       } catch (error) {
-        handleApiError(error, '批量删除失败');
+        handleApiError(error, "批量删除失败");
       }
     },
     [handleSuccess, handleApiError]
@@ -136,10 +136,10 @@ export function useTemplateModals(): UseTemplateModalsReturn {
   const handlePreview = useCallback(async (id: string) => {
     try {
       const result = await post(`/network/templates/${id}/preview`, {}) as { data?: { content?: string } };
-      setPreviewContent(result.data?.content || '');
+      setPreviewContent(result.data?.content || "");
       setPreviewVisible(true);
     } catch (error) {
-      handleApiError(error, '预览失败');
+      handleApiError(error, "预览失败");
     }
   }, [handleApiError]);
 
@@ -147,10 +147,10 @@ export function useTemplateModals(): UseTemplateModalsReturn {
     async (id: string, onSuccess: () => void) => {
       try {
         await post(`/network/templates/${id}/clone`, {});
-        handleSuccess('克隆成功');
+        handleSuccess("克隆成功");
         onSuccess();
       } catch (error) {
-        handleApiError(error, '克隆失败');
+        handleApiError(error, "克隆失败");
       }
     },
     [handleSuccess, handleApiError]
@@ -162,7 +162,7 @@ export function useTemplateModals(): UseTemplateModalsReturn {
       setTemplateVariables(result.data?.variables || {});
       setVariablesModalVisible(true);
     } catch (error) {
-      handleApiError(error, '获取变量失败');
+      handleApiError(error, "获取变量失败");
     }
   }, [handleApiError]);
 

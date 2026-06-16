@@ -3,12 +3,12 @@
  * 角色数据管理 Hook
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import type { TreeDataNode } from 'antd';
-import type { Key } from 'antd/es/table/interface';
-import type { Role } from '@/types';
-import { post } from '@/lib/api';
-import { useRoleList } from '@/hooks/useRoleList';
+import { useState, useCallback, useEffect } from "react";
+import type { TreeDataNode } from "antd";
+import type { Key } from "antd/es/table/interface";
+import type { Role } from "@/types";
+import { post } from "@/lib/api";
+import { useRoleList } from "@/hooks/useRoleList";
 
 // 菜单树节点类型（后端返回）
 interface MenuTreeNode {
@@ -99,7 +99,7 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
   const loadRoles = useCallback(async (params: Record<string, unknown> = {}) => {
     setLoading(true);
     try {
-      const result = await post('/system/roles/list', {
+      const result = await post("/system/roles/list", {
         current: params.current || current,
         pageSize: params.pageSize || pageSize,
         ...params,
@@ -107,7 +107,7 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
       setRoles(result.data.list);
       setTotal(result.data.total);
     } catch (error) {
-      console.error('加载角色列表失败:', error);
+      console.error("加载角色列表失败:", error);
     } finally {
       setLoading(false);
     }
@@ -135,36 +135,36 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
   // 加载菜单树
   const loadMenuTree = useCallback(async () => {
     try {
-      const result = await post<MenuTreeNode[]>('/system/menus/tree-select');
+      const result = await post<MenuTreeNode[]>("/system/menus/tree-select");
       const processTreeData = (nodes: MenuTreeNode[]): TreeDataNode[] => {
         return nodes.map((node) => ({
-          key: node.key || node.id || '',
-          title: node.title || node.menuName || '',
-          value: node.value || node.id || '',
+          key: node.key || node.id || "",
+          title: node.title || node.menuName || "",
+          value: node.value || node.id || "",
           children: node.children && node.children.length > 0 ? processTreeData(node.children) : undefined,
         }));
       };
       setMenuTree(processTreeData(result.data || []));
     } catch (error) {
-      console.error('加载菜单树失败:', error);
+      console.error("加载菜单树失败:", error);
     }
   }, []);
 
   // 加载部门树
   const loadDeptTree = useCallback(async () => {
     try {
-      const result = await post<DeptTreeNode[]>('/system/departments/tree-select');
+      const result = await post<DeptTreeNode[]>("/system/departments/tree-select");
       const processTreeData = (nodes: DeptTreeNode[]): TreeDataNode[] => {
         return nodes.map((node) => ({
-          key: node.key || node.id || '',
-          title: node.title || node.deptName || '',
-          value: node.value || node.id || '',
+          key: node.key || node.id || "",
+          title: node.title || node.deptName || "",
+          value: node.value || node.id || "",
           children: node.children && node.children.length > 0 ? processTreeData(node.children) : undefined,
         }));
       };
       setDeptTree(processTreeData(result.data || []));
     } catch (error) {
-      console.error('加载部门树失败:', error);
+      console.error("加载部门树失败:", error);
     }
   }, []);
 
@@ -174,7 +174,7 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
       const result = await post(`/system/menus/role-menu-tree-select/${roleId}`) as { data: { checkedKeys?: string[] } };
       return result.data.checkedKeys || [];
     } catch (error) {
-      console.error('加载角色菜单权限失败:', error);
+      console.error("加载角色菜单权限失败:", error);
       return [];
     }
   }, []);
@@ -185,7 +185,7 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
       const result = await post(`/system/departments/role-dept-tree-select/${roleId}`) as { data: { checkedKeys?: string[] } };
       return result.data.checkedKeys || [];
     } catch (error) {
-      console.error('加载角色部门权限失败:', error);
+      console.error("加载角色部门权限失败:", error);
       return [];
     }
   }, []);

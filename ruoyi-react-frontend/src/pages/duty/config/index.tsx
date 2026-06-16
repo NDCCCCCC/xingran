@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import type { FC } from 'react';
-import { Card, Form, Switch, Input, TimePicker, Select, Button, message, Space, Alert, Divider, Descriptions } from 'antd';
-import { SaveOutlined, ReloadOutlined, BellOutlined, SettingOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
-import { getDutyConfig, updateDutyConfig, type DutyConfig } from '@/lib/dutyApi';
-import { isFormValidationError } from '@/utils/errorHandler';
+import { useState, useEffect } from "react";
+import type { FC } from "react";
+import { Card, Form, Switch, Input, TimePicker, Select, Button, message, Space, Alert, Divider, Descriptions } from "antd";
+import { SaveOutlined, ReloadOutlined, BellOutlined, SettingOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
+import { getDutyConfig, updateDutyConfig, type DutyConfig } from "@/lib/dutyApi";
+import { isFormValidationError } from "@/utils/errorHandler";
 
 const DutyConfigPage: FC = () => {
   const [form] = Form.useForm();
@@ -20,12 +20,12 @@ const DutyConfigPage: FC = () => {
       setConfig(configData.data);
       form.setFieldsValue({
         reminderEnabled: configData.data.reminderEnabled,
-        reminderTime: dayjs(configData.data.reminderTime, 'HH:mm'),
-        reminderChannels: configData.data.reminderChannels.split(','),
+        reminderTime: dayjs(configData.data.reminderTime, "HH:mm"),
+        reminderChannels: configData.data.reminderChannels.split(","),
         beforeReminderMinutes: configData.data.beforeReminderMinutes,
       });
     } catch (error) {
-      message.error('获取配置失败');
+      message.error("获取配置失败");
     } finally {
       setLoading(false);
     }
@@ -41,16 +41,16 @@ const DutyConfigPage: FC = () => {
       const values = await form.validateFields();
       const data = {
         reminderEnabled: values.reminderEnabled,
-        reminderTime: values.reminderTime.format('HH:mm'),
-        reminderChannels: Array.isArray(values.reminderChannels) ? values.reminderChannels.join(',') : values.reminderChannels,
+        reminderTime: values.reminderTime.format("HH:mm"),
+        reminderChannels: Array.isArray(values.reminderChannels) ? values.reminderChannels.join(",") : values.reminderChannels,
         beforeReminderMinutes: values.beforeReminderMinutes,
       };
       await updateDutyConfig(data);
-      message.success('配置保存成功');
+      message.success("配置保存成功");
       fetchConfig();
     } catch (error: unknown) {
       if (isFormValidationError(error)) return;
-      message.error('配置保存失败');
+      message.error("配置保存失败");
     } finally {
       setSaving(false);
     }
@@ -98,7 +98,7 @@ const DutyConfigPage: FC = () => {
               <Descriptions.Item label="提醒时间">{config.reminderTime}</Descriptions.Item>
               <Descriptions.Item label="提醒渠道">{config.reminderChannels}</Descriptions.Item>
               <Descriptions.Item label="提前提醒">
-                {config.beforeReminderMinutes ? `${config.beforeReminderMinutes} 分钟` : '当天提醒'}
+                {config.beforeReminderMinutes ? `${config.beforeReminderMinutes} 分钟` : "当天提醒"}
               </Descriptions.Item>
             </Descriptions>
           </div>
@@ -106,7 +106,7 @@ const DutyConfigPage: FC = () => {
 
         <Divider />
 
-        <Form form={form} layout="vertical" initialValues={{ reminderEnabled: true, reminderChannels: ['websocket'] }}>
+        <Form form={form} layout="vertical" initialValues={{ reminderEnabled: true, reminderChannels: ["websocket"] }}>
           <Form.Item label="启用值班提醒" name="reminderEnabled" valuePropName="checked">
             <Switch checkedChildren="启用" unCheckedChildren="禁用" />
           </Form.Item>
@@ -115,7 +115,7 @@ const DutyConfigPage: FC = () => {
             label="提醒时间"
             name="reminderTime"
             tooltip="系统将在每天的此时发送值班提醒"
-            rules={[{ required: true, message: '请选择提醒时间' }]}
+            rules={[{ required: true, message: "请选择提醒时间" }]}
           >
             <TimePicker
               format="HH:mm"
@@ -129,7 +129,7 @@ const DutyConfigPage: FC = () => {
             label="提醒渠道"
             name="reminderChannels"
             tooltip="可选择多种提醒方式"
-            rules={[{ required: true, message: '请选择提醒渠道' }]}
+            rules={[{ required: true, message: "请选择提醒渠道" }]}
           >
             <Select mode="multiple" placeholder="请选择提醒渠道">
               <Select.Option value="websocket">

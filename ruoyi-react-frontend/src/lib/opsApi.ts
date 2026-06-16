@@ -2,10 +2,10 @@
  * 运维管理模块 API
  */
 
-import axios from 'axios';
-import type { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
-import { post, get, postFormData } from './api';
-import { getAccessToken } from '@/utils/authHelpers';
+import axios from "axios";
+import type { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from "axios";
+import { post, get, postFormData } from "./api";
+import { getAccessToken } from "@/utils/authHelpers";
 import type {
   BaseResponse,
   Building,
@@ -22,7 +22,7 @@ import type {
   AssetListParams,
   WorkstationDevice,
   DeviceFormData,
-} from '@/types';
+} from "@/types";
 
 // ==================== 通用 CRUD 工厂函数 ====================
 
@@ -69,7 +69,7 @@ export interface BuildingListParams extends PageParams {
   orgId?: string;  // 所属机构ID，用于按部门筛选
 }
 
-export const buildingApi = createCrudApi<Building>({ basePath: '/ops/building' });
+export const buildingApi = createCrudApi<Building>({ basePath: "/ops/building" });
 
 // ==================== 楼层管理 ====================
 
@@ -81,13 +81,13 @@ export interface FloorListParams extends PageParams {
   orgId?: string;  // 所属机构ID，用于按部门筛选
 }
 
-const floorCrudApi = createCrudApi<Floor>({ basePath: '/ops/floor' });
+const floorCrudApi = createCrudApi<Floor>({ basePath: "/ops/floor" });
 
 export const floorApi = {
   ...floorCrudApi,
 
   tree: async () => {
-    return await post<Floor[]>('/ops/floor/tree', {});
+    return await post<Floor[]>("/ops/floor/tree", {});
   },
 };
 
@@ -101,13 +101,13 @@ export interface WorkstationListParams extends PageParams {
   orgId?: string;  // 所属机构ID，用于按部门筛选
 }
 
-const workstationCrudApi = createCrudApi<WorkstationOps>({ basePath: '/ops/workstation' });
+const workstationCrudApi = createCrudApi<WorkstationOps>({ basePath: "/ops/workstation" });
 
 export const workstationApi = {
   ...workstationCrudApi,
 
   updatePositions: async (items: { id: string; positionX: number; positionY: number }[]) => {
-    return await post('/ops/workstation/positions', { items });
+    return await post("/ops/workstation/positions", { items });
   },
 };
 
@@ -120,7 +120,7 @@ export interface ServerRoomListParams extends PageParams {
   status?: number;
 }
 
-export const serverRoomApi = createCrudApi<ServerRoom>({ basePath: '/ops/serverRoom' });
+export const serverRoomApi = createCrudApi<ServerRoom>({ basePath: "/ops/serverRoom" });
 
 // ==================== 机房照片管理 ====================
 
@@ -138,13 +138,13 @@ export const roomPhotoApi = {
   // 上传照片
   upload: async (roomId: string, files: File[], primaryIndex = 0) => {
     const formData = new FormData();
-    formData.append('roomId', roomId);
-    formData.append('primaryIndex', primaryIndex.toString());
+    formData.append("roomId", roomId);
+    formData.append("primaryIndex", primaryIndex.toString());
     files.forEach(file => {
-      formData.append('files', file);
+      formData.append("files", file);
     });
 
-    return await postFormData<BaseResponse<RoomPhoto[]>>('/ops/rooms/photos/upload', formData);
+    return await postFormData<BaseResponse<RoomPhoto[]>>("/ops/rooms/photos/upload", formData);
   },
 
   // 设置主图
@@ -164,7 +164,7 @@ export const roomPhotoApi = {
 
   // 批量删除
   batchDelete: async (photoIds: string[]) => {
-    return await post('/ops/rooms/photos/batch-delete', { ids: photoIds });
+    return await post("/ops/rooms/photos/batch-delete", { ids: photoIds });
   },
 
   // 获取主图
@@ -188,7 +188,7 @@ export interface RoomDeviceListParams extends PageParams {
   status?: number;
 }
 
-export const roomDeviceApi = createCrudApi<RoomDevice>({ basePath: '/ops/roomDevice' });
+export const roomDeviceApi = createCrudApi<RoomDevice>({ basePath: "/ops/roomDevice" });
 
 // ==================== 专线管理 ====================
 
@@ -198,7 +198,7 @@ export interface DedicatedLineListParams extends PageParams {
   status?: number;
 }
 
-export const dedicatedLineApi = createCrudApi<DedicatedLine>({ basePath: '/ops/dedicatedLine' });
+export const dedicatedLineApi = createCrudApi<DedicatedLine>({ basePath: "/ops/dedicatedLine" });
 
 // ==================== 信息点管理 ====================
 
@@ -210,7 +210,7 @@ export interface InfoPointListParams extends PageParams {
   status?: number;
 }
 
-export const infoPointApi = createCrudApi<InfoPoint>({ basePath: '/ops/infoPoint' });
+export const infoPointApi = createCrudApi<InfoPoint>({ basePath: "/ops/infoPoint" });
 
 // ==================== Excel导入导出 ====================
 
@@ -219,14 +219,14 @@ export const infoPointApi = createCrudApi<InfoPoint>({ basePath: '/ops/infoPoint
 // - 不挂载响应拦截器，因为响应是 Blob 二进制流，无法 JSON 解析
 // - 请求拦截器只做 Token 注入，行为与其他 CRUD 保持一致
 const blobAxios: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
+  baseURL: import.meta.env.VITE_API_BASE_URL || "/api/v1",
   timeout: 30000,
 });
 
 blobAxios.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   const token = await getAccessToken();
   if (token && config.headers) {
-    config.headers.set('Authorization', `Bearer ${token}`);
+    config.headers.set("Authorization", `Bearer ${token}`);
   }
   return config;
 });
@@ -236,14 +236,14 @@ function extractFilenameFromBlobResponse(
   response: AxiosResponse<Blob>,
   defaultFilename: string
 ): string {
-  const contentDisposition: string | undefined = response.headers['content-disposition'];
+  const contentDisposition: string | undefined = response.headers["content-disposition"];
   if (!contentDisposition) {
     return defaultFilename;
   }
 
   const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
   if (match && match[1]) {
-    return decodeURIComponent(match[1].replace(/['"]/g, ''));
+    return decodeURIComponent(match[1].replace(/['"]/g, ""));
   }
 
   return defaultFilename;
@@ -252,7 +252,7 @@ function extractFilenameFromBlobResponse(
 // 触发浏览器下载 Blob
 function triggerBrowserDownload(blob: Blob, filename: string): void {
   const blobUrl = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = blobUrl;
   a.download = filename;
   document.body.appendChild(a);
@@ -263,7 +263,7 @@ function triggerBrowserDownload(blob: Blob, filename: string): void {
 
 // 通用文件下载函数
 async function downloadFile(url: string, filename: string): Promise<void> {
-  const response = await blobAxios.get<Blob>(url, { responseType: 'blob' });
+  const response = await blobAxios.get<Blob>(url, { responseType: "blob" });
 
   if (response.status < 200 || response.status >= 300) {
     throw new Error(`下载失败: ${filename}`);
@@ -279,7 +279,7 @@ export const excelApi = {
 
   import: async (entityType: string, file: File) => {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
     return await postFormData<BaseResponse<Record<string, unknown>>>(`/ops/${entityType}/import`, formData);
   },
 
@@ -287,11 +287,11 @@ export const excelApi = {
     const response = await blobAxios.post<Blob>(
       `/ops/${entityType}/export`,
       params,
-      { responseType: 'blob' }
+      { responseType: "blob" }
     );
 
     if (response.status < 200 || response.status >= 300) {
-      throw new Error('导出失败');
+      throw new Error("导出失败");
     }
 
     const filename = extractFilenameFromBlobResponse(
@@ -311,7 +311,7 @@ export const excelApi = {
 export interface Wall {
   id: string;
   floorId: string;
-  type: 'straight' | 'curved' | 'l_shaped' | 'polyline';
+  type: "straight" | "curved" | "l_shaped" | "polyline";
   points: string;
   thickness: number;
   height: number;
@@ -326,13 +326,13 @@ export interface WallListParams extends PageParams {
   name?: string;
 }
 
-const wallCrudApi = createCrudApi<Wall>({ basePath: '/ops/walls' });
+const wallCrudApi = createCrudApi<Wall>({ basePath: "/ops/walls" });
 
 export const wallApi = {
   ...wallCrudApi,
 
   batch: async (action: string, ids: string[]) => {
-    return await post('/ops/walls/batch', { action, ids });
+    return await post("/ops/walls/batch", { action, ids });
   },
 };
 
@@ -344,8 +344,8 @@ export interface Door {
   wallId?: string;
   position: string;
   angle: number;
-  type: 'single' | 'double' | 'sliding' | 'revolving' | 'emergency';
-  direction: 'left' | 'right' | 'double' | 'sliding';
+  type: "single" | "double" | "sliding" | "revolving" | "emergency";
+  direction: "left" | "right" | "double" | "sliding";
   width: number;
   length: number;
   color: string;
@@ -360,13 +360,13 @@ export interface DoorListParams extends PageParams {
   name?: string;
 }
 
-const doorCrudApi = createCrudApi<Door>({ basePath: '/ops/doors' });
+const doorCrudApi = createCrudApi<Door>({ basePath: "/ops/doors" });
 
 export const doorApi = {
   ...doorCrudApi,
 
   batch: async (action: string, ids: string[]) => {
-    return await post('/ops/doors/batch', { action, ids });
+    return await post("/ops/doors/batch", { action, ids });
   },
 };
 
@@ -391,19 +391,19 @@ export interface FloorPlanTextListParams extends PageParams {
   content?: string;
 }
 
-const floorPlanTextCrudApi = createCrudApi<FloorPlanText>({ basePath: '/ops/floor-plan-texts' });
+const floorPlanTextCrudApi = createCrudApi<FloorPlanText>({ basePath: "/ops/floor-plan-texts" });
 
 export const floorPlanTextApi = {
   ...floorPlanTextCrudApi,
 
   batch: async (action: string, ids: string[]) => {
-    return await post('/ops/floor-plan-texts/batch', { action, ids });
+    return await post("/ops/floor-plan-texts/batch", { action, ids });
   },
 };
 
 // ==================== 地理编码（带缓存） ====================
 
-import { getDualLevelCache } from '@/utils/dualLevelCache';
+import { getDualLevelCache } from "@/utils/dualLevelCache";
 
 export interface GeocodeResult {
   lng: number;
@@ -420,7 +420,7 @@ export interface GeocodeResult {
 }
 
 // 缓存键前缀
-const GEOCODE_CACHE_PREFIX = 'geocode_';
+const GEOCODE_CACHE_PREFIX = "geocode_";
 const DEFAULT_CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7天
 
 /**
@@ -441,25 +441,25 @@ export const geocodeWithCache = async (
   // 尝试从缓存获取
   const cached = cache.get(cacheKey);
   if (cached) {
-    console.log('✅ 地理编码缓存命中:', address);
+    console.log("✅ 地理编码缓存命中:", address);
     return cached;
   }
 
   // 调用后端API
-  console.log('🌐 调用后端地理编码API:', address);
+  console.log("🌐 调用后端地理编码API:", address);
 
   try {
-    const result = await post<GeocodeResult>('/ops/building/geocode', { address });
+    const result = await post<GeocodeResult>("/ops/building/geocode", { address });
 
     if (result.code === 0 && result.data) {
       cache.set(cacheKey, result.data);
-      console.log('💾 地理编码结果已缓存:', address);
+      console.log("💾 地理编码结果已缓存:", address);
       return result.data;
     }
 
     return null;
   } catch (error) {
-    console.error('❌ 地理编码失败:', error);
+    console.error("❌ 地理编码失败:", error);
     return null;
   }
 };
@@ -512,10 +512,10 @@ export const clearGeocodeCache = (address?: string) => {
   if (address) {
     const cacheKey = `${GEOCODE_CACHE_PREFIX}${address}`;
     cache.delete(cacheKey);
-    console.log('🗑️ 已清除地址缓存:', address);
+    console.log("🗑️ 已清除地址缓存:", address);
   } else {
     cache.clear();
-    console.log('🗑️ 已清除所有地理编码缓存');
+    console.log("🗑️ 已清除所有地理编码缓存");
   }
 };
 
@@ -525,12 +525,12 @@ export const clearGeocodeCache = (address?: string) => {
 export const resetGeocodeStats = () => {
   const cache = getDualLevelCache<unknown>();
   cache.resetStats();
-  console.log('🔄 已重置地理编码统计');
+  console.log("🔄 已重置地理编码统计");
 };
 
 // ==================== 资产管理 ====================
 
-const assetCrudApi = createCrudApi<Asset>({ basePath: '/ops/asset' });
+const assetCrudApi = createCrudApi<Asset>({ basePath: "/ops/asset" });
 
 export const assetApi = {
   ...assetCrudApi,
@@ -542,17 +542,17 @@ export const assetApi = {
 
   // 获取设备类型列表（动态数据）
   getDeviceTypes: async () => {
-    return await post<{ value: string; count: number }[]>('/ops/asset/device-types', {});
+    return await post<{ value: string; count: number }[]>("/ops/asset/device-types", {});
   },
 
   // 获取设备种类列表（动态数据）
   getDeviceCategories: async () => {
-    return await post<{ value: string; count: number }[]>('/ops/asset/device-categories', {});
+    return await post<{ value: string; count: number }[]>("/ops/asset/device-categories", {});
   },
 
   // 获取状态列表（动态数据）
   getStatusValues: async () => {
-    return await post<{ value: string; count: number }[]>('/ops/asset/status-values', {});
+    return await post<{ value: string; count: number }[]>("/ops/asset/status-values", {});
   },
   // Excel导入导出通过 SetupExcelRouter 注册在 /ops/asset 路由组下：
   // - GET  /ops/asset/template  (下载模板)
@@ -561,30 +561,30 @@ export const assetApi = {
 
   excel: {
     template: async () => {
-      return await post('/ops/asset/template', {});
+      return await post("/ops/asset/template", {});
     },
 
     import: async (file: File) => {
       const formData = new FormData();
-      formData.append('file', file);
-      return await postFormData('/ops/asset/import', formData);
+      formData.append("file", file);
+      return await postFormData("/ops/asset/import", formData);
     },
 
     export: async (params: AssetListParams & Record<string, unknown>) => {
       const response = await blobAxios.post<Blob>(
-        '/ops/asset/export',
+        "/ops/asset/export",
         params,
-        { responseType: 'blob' }
+        { responseType: "blob" }
       );
 
       if (response.status < 200 || response.status >= 300) {
-        throw new Error('导出失败');
+        throw new Error("导出失败");
       }
 
       const filename = `资产列表_${Date.now()}.xlsx`;
       triggerBrowserDownload(response.data, filename);
 
-      return { code: 0, message: '导出成功', data: null };
+      return { code: 0, message: "导出成功", data: null };
     },
   },
 };
@@ -614,17 +614,17 @@ export const workstationDeviceApi = {
 
   // 手动添加设备
   addManual: async (data: DeviceFormData) => {
-    return await post<WorkstationDevice>('/ops/workstation-device/manual', data);
+    return await post<WorkstationDevice>("/ops/workstation-device/manual", data);
   },
 
   // 同步 AD 设备到数据库（保留旧接口，新流程使用 getAD 实时查询）
   syncAD: async (workstationId: string) => {
-    return await post('/ops/workstation-device/sync-ad', { workstation_id: workstationId });
+    return await post("/ops/workstation-device/sync-ad", { workstation_id: workstationId });
   },
 
   // 同步资产设备到数据库（保留旧接口，新流程使用 getAsset 实时查询）
   syncAsset: async (workstationId: string) => {
-    return await post('/ops/workstation-device/sync-asset', { workstation_id: workstationId });
+    return await post("/ops/workstation-device/sync-asset", { workstation_id: workstationId });
   },
 
   // 将 AD/资产设备设为主设备并保存为手动设备

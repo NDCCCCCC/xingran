@@ -3,17 +3,17 @@
  * 根据后端菜单数据动态生成路由配置
  */
 
-import { useMemo, Suspense, useEffect, useState } from 'react';
-import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
-import { useMenuStore } from '@/store/menuStore';
-import { useAuthStore } from '@/store/authStore';
-import { RouteGenerator } from './routeGenerator';
-import { createLazyComponent } from './componentLoader';
-import type { MenuRouteConfig } from '@/types/menu';
-import Layout from '@/components/layout';
-import Login from '@/pages/login';
-import { Spin } from 'antd';
-import { STORAGE_KEYS } from '@/constants/storage';
+import { useMemo, Suspense, useEffect, useState } from "react";
+import { Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
+import { useMenuStore } from "@/store/menuStore";
+import { useAuthStore } from "@/store/authStore";
+import { RouteGenerator } from "./routeGenerator";
+import { createLazyComponent } from "./componentLoader";
+import type { MenuRouteConfig } from "@/types/menu";
+import Layout from "@/components/layout";
+import Login from "@/pages/login";
+import { Spin } from "antd";
+import { STORAGE_KEYS } from "@/constants/storage";
 
 // Get last visited path from sessionStorage
 export const getLastPath = (): string | null => {
@@ -28,7 +28,7 @@ export const getLastPath = (): string | null => {
 export const saveLastPath = (path: string): void => {
   try {
     // 保存所有路径，除了 /login
-    if (path && path !== '/login') {
+    if (path && path !== "/login") {
       sessionStorage.setItem(STORAGE_KEYS.LAST_PATH, path);
     }
   } catch {
@@ -49,7 +49,7 @@ export const clearLastPath = (): void => {
 let cachedRoutes: MenuRouteConfig[] | null = null;
 let cachedMenusCount = 0;
 
-const DASHBOARD_PATH = 'dashboard';
+const DASHBOARD_PATH = "dashboard";
 
 const createLazyRoute = (route: MenuRouteConfig) => {
   const Component = createLazyComponent(route.component);
@@ -89,13 +89,13 @@ function UploadsFallback() {
 function InitializingFallback() {
   return (
     <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'center',
-      height: '100vh',
-      fontSize: '16px',
-      color: 'var(--theme-text-tertiary, #999)'
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      alignItems: "center",
+      height: "100vh",
+      fontSize: "16px",
+      color: "var(--theme-text-tertiary, #999)"
     }}>
       <Spin size="large" />
       <div style={{ marginTop: 16 }}>加载中...</div>
@@ -111,11 +111,29 @@ export function DynamicRoutes() {
   // 使用 state 来保存上次访问的路径
   const [lastPath, setLastPath] = useState<string | null>(() => getLastPath());
 
+  // 兜底：防止 initialized 永远停在 false（例如 HMR 导致 onRehydrateStorage 失败）
+  // 3 秒后仍未初始化，强制将状态重置为未认证，让登录页有机会渲染。
+  useEffect(() => {
+    if (initialized) return;
+    const timer = window.setTimeout(() => {
+      const current = useAuthStore.getState();
+      if (current.initialized) return;
+      console.warn("[DynamicRoutes] 初始化超时，强制重置为未认证");
+      useAuthStore.setState({
+        user: null,
+        isAuthenticated: false,
+        menusLoaded: false,
+        initialized: true,
+      });
+    }, 3000);
+    return () => window.clearTimeout(timer);
+  }, [initialized]);
+
   // 当用户已认证但菜单未加载时，自动加载菜单
   useEffect(() => {
     if (isAuthenticated && initialized && allMenus.length === 0) {
       fetchAll().catch((error) => {
-        console.error('Failed to load menus after refresh:', error);
+        console.error("Failed to load menus after refresh:", error);
       });
     }
   }, [isAuthenticated, initialized, allMenus.length, fetchAll]);
@@ -148,7 +166,7 @@ export function DynamicRoutes() {
   }, [location.pathname, isAuthenticated]);
 
   // 检查是否是上传文件路径
-  const isUploadsPath = location.pathname.startsWith('/uploads/');
+  const isUploadsPath = location.pathname.startsWith("/uploads/");
 
   // 如果是上传文件路径，不渲染路由
   if (isUploadsPath) {
@@ -179,7 +197,7 @@ export function DynamicRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Navigate to="/" replace />} />
-      <Route path="/" element={<Navigate to={lastPath || '/dashboard'} replace />} />
+      <Route path="/" element={<Navigate to={lastPath || "/dashboard"} replace />} />
       <Route element={<Layout><Outlet /></Layout>}>
         {routeElements}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

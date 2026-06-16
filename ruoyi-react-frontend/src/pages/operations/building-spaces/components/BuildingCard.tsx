@@ -2,10 +2,10 @@
  * 楼宇卡片组件
  * 显示楼宇信息，支持3D悬浮效果
  */
-import React from 'react';
-import { ApartmentOutlined } from '@ant-design/icons';
-import type { Building } from '../types';
-import styles from './styles.module.css';
+import React from "react";
+import { ApartmentOutlined } from "@ant-design/icons";
+import type { Building } from "../types";
+import styles from "./styles.module.css";
 
 interface BuildingCardProps {
   building: Building;

@@ -3,11 +3,11 @@
  * 深信服 VDI 集成 API 封装
  */
 
-import { post } from './api';
+import { post } from "./api";
 import type {
   BaseResponse,
   PageResponse,
-} from '@/types';
+} from "@/types";
 import type {
   VirtualMachine,
   VDIServer,
@@ -27,14 +27,14 @@ import type {
   RunPosition,
   VDIStorage,
   VDINetwork,
-} from '@/types/vdi';
+} from "@/types/vdi";
 
 // ==================== 虚拟机 API（完整VDI API集成）====================
 
 export const vmApi = {
   // 基础 CRUD
   list: async (params: VMListParams) => {
-    return await post<VMPageResponse>('/vdi/vms/list', params);
+    return await post<VMPageResponse>("/vdi/vms/list", params);
   },
 
   get: async (id: string) => {
@@ -42,7 +42,7 @@ export const vmApi = {
   },
 
   create: async (data: CreateVMRequest) => {
-    return await post<VirtualMachine>('/vdi/vms', data);
+    return await post<VirtualMachine>("/vdi/vms", data);
   },
 
   update: async (id: string, data: UpdateVMRequest) => {
@@ -55,7 +55,7 @@ export const vmApi = {
 
   // VDI 操作（调用 VDI API）
   operate: async (request: VMOperateRequest) => {
-    return await post<void>('/vdi/vms/operate', request);
+    return await post<void>("/vdi/vms/operate", request);
   },
 
   bindUser: async (id: string, request: BindUserRequest) => {
@@ -73,14 +73,14 @@ export const vmApi = {
 
   // 资源组查询
   listResourceGroups: async (vdiServerId?: string) => {
-    return await post<VDIResourceGroup[]>('/vdi/vms/resource-groups', {
-      vdi_server_id: vdiServerId || '',
+    return await post<VDIResourceGroup[]>("/vdi/vms/resource-groups", {
+      vdi_server_id: vdiServerId || "",
     });
   },
 
   // 资源查询（资源组下的具体计算资源）
   listResources: async (vdiServerId: string, groupId: string) => {
-    return await post<VDIResource[]>('/vdi/vms/resources', {
+    return await post<VDIResource[]>("/vdi/vms/resources", {
       vdi_server_id: vdiServerId,
       group_id: groupId,
     });
@@ -88,7 +88,7 @@ export const vmApi = {
 
   // 批量操作辅助方法
   batchOperate: async (vmIds: string[], action: string) => {
-    return await post<void>('/vdi/vms/operate', {
+    return await post<void>("/vdi/vms/operate", {
       vm_ids: vmIds,
       action,
     });
@@ -115,27 +115,27 @@ export const vmApi = {
   // ==================== VDI 创建虚拟机相关 API ====================
 
   listVTPPlatforms: async (vdiServerId: string) => {
-    return await post<VDIPlatform[]>('/vdi/vms/vtp-platforms', {
+    return await post<VDIPlatform[]>("/vdi/vms/vtp-platforms", {
       vdi_server_id: vdiServerId,
     });
   },
 
   listRunPositions: async (vdiServerId: string, vtpId: number) => {
-    return await post<RunPosition[]>('/vdi/vms/run-positions', {
+    return await post<RunPosition[]>("/vdi/vms/run-positions", {
       vdi_server_id: vdiServerId,
       vtp_id: vtpId,
     });
   },
 
   listStorages: async (vdiServerId: string, vtpId: number) => {
-    return await post<VDIStorage[]>('/vdi/vms/storages', {
+    return await post<VDIStorage[]>("/vdi/vms/storages", {
       vdi_server_id: vdiServerId,
       vtp_id: vtpId,
     });
   },
 
   listNetworks: async (vdiServerId: string, vtpId: number) => {
-    return await post<VDINetwork[]>('/vdi/vms/networks', {
+    return await post<VDINetwork[]>("/vdi/vms/networks", {
       vdi_server_id: vdiServerId,
       vtp_id: vtpId,
     });
@@ -146,7 +146,7 @@ export const vmApi = {
 
 export const vdiServerApi = {
   list: async (params: { current: number; pageSize: number }) => {
-    return await post<PageResponse<VDIServer>>('/vdi/servers/list', params);
+    return await post<PageResponse<VDIServer>>("/vdi/servers/list", params);
   },
 
   get: async (id: string) => {
@@ -154,7 +154,7 @@ export const vdiServerApi = {
   },
 
   create: async (data: VDIServerConfig) => {
-    return await post<VDIServer>('/vdi/servers', data);
+    return await post<VDIServer>("/vdi/servers", data);
   },
 
   update: async (id: string, data: Partial<VDIServerConfig>) => {

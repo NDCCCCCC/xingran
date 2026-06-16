@@ -3,16 +3,16 @@
  * 值班排班弹窗状态管理 Hook
  */
 
-import { useState, useCallback } from 'react';
-import { Form, message } from 'antd';
-import type { FormInstance } from 'antd/es/form';
+import { useState, useCallback } from "react";
+import { Form, message } from "antd";
+import type { FormInstance } from "antd/es/form";
 import {
   generateSchedule,
   swapDuty,
   manualDuty,
   deleteDutySchedule,
   batchDeleteDutySchedules,
-} from '@/lib/dutyApi';
+} from "@/lib/dutyApi";
 
 export interface UseScheduleModalsParams {
   onLoad?: () => void;
@@ -65,8 +65,8 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
       const values = await generateForm.validateFields();
       const result = await generateSchedule({
         poolId: values.poolId,
-        startDate: values.dateRange[0].format('YYYY-MM-DD'),
-        endDate: values.dateRange[1].format('YYYY-MM-DD'),
+        startDate: values.dateRange[0].format("YYYY-MM-DD"),
+        endDate: values.dateRange[1].format("YYYY-MM-DD"),
         dutyType: values.dutyType,
         clearExists: values.clearExists || false,
       });
@@ -75,8 +75,8 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
       generateForm.resetFields();
       onLoad?.();
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'errorFields' in error) return;
-      message.error('生成排班失败');
+      if (error && typeof error === "object" && "errorFields" in error) return;
+      message.error("生成排班失败");
     }
   }, [generateForm, onLoad]);
 
@@ -89,13 +89,13 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
         toScheduleId: values.toScheduleId,
         reason: values.reason,
       });
-      message.success('调班成功');
+      message.success("调班成功");
       setSwapModalVisible(false);
       swapForm.resetFields();
       onLoad?.();
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'errorFields' in error) return;
-      message.error('调班失败');
+      if (error && typeof error === "object" && "errorFields" in error) return;
+      message.error("调班失败");
     }
   }, [swapForm, onLoad]);
 
@@ -105,18 +105,18 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
       const values = await manualForm.validateFields();
       await manualDuty({
         poolId: values.poolId,
-        dutyDate: values.dutyDate.format('YYYY-MM-DD'),
+        dutyDate: values.dutyDate.format("YYYY-MM-DD"),
         dutyType: values.dutyType,
         userIds: values.userIds,
         reason: values.reason,
       });
-      message.success('手动排班成功');
+      message.success("手动排班成功");
       setManualModalVisible(false);
       manualForm.resetFields();
       onLoad?.();
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'errorFields' in error) return;
-      message.error('手动排班失败');
+      if (error && typeof error === "object" && "errorFields" in error) return;
+      message.error("手动排班失败");
     }
   }, [manualForm, onLoad]);
 
@@ -124,17 +124,17 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
   const handleDelete = useCallback(async (id: string) => {
     try {
       await deleteDutySchedule(id);
-      message.success('删除成功');
+      message.success("删除成功");
       onLoad?.();
     } catch (error) {
-      message.error('删除失败');
+      message.error("删除失败");
     }
   }, [onLoad]);
 
   // 批量删除排班
   const handleBatchDelete = useCallback(async (selectedRowKeys: string[], setSelectedRowKeys: (keys: string[]) => void) => {
     if (selectedRowKeys.length === 0) {
-      message.warning('请先选择要删除的排班记录');
+      message.warning("请先选择要删除的排班记录");
       return;
     }
     try {
@@ -143,7 +143,7 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
       setSelectedRowKeys([]);
       onLoad?.();
     } catch (error) {
-      message.error('批量删除失败');
+      message.error("批量删除失败");
     }
   }, [onLoad]);
 

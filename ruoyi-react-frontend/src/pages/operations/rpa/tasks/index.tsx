@@ -2,23 +2,23 @@
  * RPA 任务管理页面
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import type { FC } from 'react';
+import { useState, useCallback, useEffect } from "react";
+import type { FC } from "react";
 import {
   Table, Button, Space, Form, Input, Select, Card, Modal, message, Layout,
-} from 'antd';
+} from "antd";
 import {
   PlusOutlined, SearchOutlined, ReloadOutlined, PlayCircleOutlined,
-} from '@ant-design/icons';
-import type { Task } from '@/types/rpa';
-import type { PageResponse } from '@/types/base';
-import { useTableManager } from '@/hooks/useTableManager';
-import { usePagination } from '@/hooks/usePagination';
-import { handleSuccess as showSuccessMessage } from '@/utils/errorHandler';
-import { getTaskColumns } from './columns';
-import { TaskEditModal } from './modals';
-import { TASK_STATUS_OPTIONS } from '../constants';
-import { post } from '@/lib/api';
+} from "@ant-design/icons";
+import type { Task } from "@/types/rpa";
+import type { PageResponse } from "@/types/base";
+import { useTableManager } from "@/hooks/useTableManager";
+import { usePagination } from "@/hooks/usePagination";
+import { handleSuccess as showSuccessMessage } from "@/utils/errorHandler";
+import { getTaskColumns } from "./columns";
+import { TaskEditModal } from "./modals";
+import { TASK_STATUS_OPTIONS } from "../constants";
+import { post } from "@/lib/api";
 
 const { Option } = Select;
 const { Content } = Layout;
@@ -45,7 +45,7 @@ const TaskManagement: FC = () => {
     resetSelection,
   } = useTableManager<Task>(
     async (params) => {
-      const result = await post<PageResponse<Task>>('/rpa/tasks/list', params);
+      const result = await post<PageResponse<Task>>("/rpa/tasks/list", params);
       return {
         list: result.data?.list || [],
         total: result.data?.total || 0,
@@ -75,7 +75,7 @@ const TaskManagement: FC = () => {
   const handleDelete = useCallback(async (id: string) => {
     try {
       await post(`/rpa/tasks/${id}/delete`, {});
-      showSuccessMessage('删除');
+      showSuccessMessage("删除");
       refreshData();
     } catch (error) {
       // 错误已在 errorHandler 中处理
@@ -84,15 +84,15 @@ const TaskManagement: FC = () => {
 
   const handleExecute = useCallback(async (id: string, name: string) => {
     Modal.confirm({
-      title: '确认执行',
+      title: "确认执行",
       content: `确定要执行任务 "${name}" 吗？`,
-      okText: '确定',
-      cancelText: '取消',
+      okText: "确定",
+      cancelText: "取消",
       onOk: async () => {
         setExecuteLoading(true);
         try {
           await post(`/rpa/tasks/${id}/execute`, {});
-          message.success('任务已提交执行');
+          message.success("任务已提交执行");
           refreshData();
         } catch (error) {
           // 错误已在 errorHandler 中处理
@@ -107,10 +107,10 @@ const TaskManagement: FC = () => {
     try {
       if (editingTask) {
         await post(`/rpa/tasks/${editingTask.id}/update`, values);
-        showSuccessMessage('更新');
+        showSuccessMessage("更新");
       } else {
-        await post('/rpa/tasks', values);
-        showSuccessMessage('创建');
+        await post("/rpa/tasks", values);
+        showSuccessMessage("创建");
       }
       setModalVisible(false);
       taskForm.resetFields();
@@ -135,16 +135,16 @@ const TaskManagement: FC = () => {
   });
 
   return (
-    <Layout style={{ background: '#000', minHeight: 'calc(100vh - 64px)' }}>
-      <Content style={{ background: '#fff', padding: 16 }}>
+    <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
+      <Content style={{ background: "#fff", padding: 16 }}>
       <Card style={{ marginBottom: 16 }}>
         <div
           style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            flexWrap: 'wrap',
-            gap: '16px',
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "16px",
           }}
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
@@ -186,7 +186,7 @@ const TaskManagement: FC = () => {
           </Space>
         </div>
         {selectedRowKeys.length > 0 && (
-          <div style={{ marginTop: 12, color: 'var(--theme-info, #1890ff)' }}>
+          <div style={{ marginTop: 12, color: "var(--theme-info, #1890ff)" }}>
             已选择 <strong>{selectedRowKeys.length}</strong> 个任务
           </div>
         )}
@@ -209,7 +209,7 @@ const TaskManagement: FC = () => {
 	            const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
 	            Object.keys(formValues).forEach(key => {
 	              const value = formValues[key];
-	              if (value !== undefined && value !== null && value !== '') {
+	              if (value !== undefined && value !== null && value !== "") {
 	                searchParams[key] = value;
 	              }
 	            });

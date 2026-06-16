@@ -3,21 +3,21 @@
  * 集成 TokenManager 实现自动 Token 刷新和 401 重试
  */
 
-import axios from 'axios';
-import type { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import { message } from 'antd';
-import { getTokenManager } from '@/store/authStore';
-import { useMenuStore } from '@/store/menuStore';
-import { generateIV, generateSM4Key, encryptRequestBody, hexToBase64, decryptSM4CBC, base64ToHex } from '@/utils/sm4';
-import { fetchPublicKey, encryptWithSM2, clearPublicKeyCache } from '@/utils/sm2';
+import axios from "axios";
+import type { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from "axios";
+import { message } from "antd";
+import { getTokenManager } from "@/store/authStore";
+import { useMenuStore } from "@/store/menuStore";
+import { generateIV, generateSM4Key, encryptRequestBody, hexToBase64, decryptSM4CBC, base64ToHex } from "@/utils/sm4";
+import { fetchPublicKey, encryptWithSM2, clearPublicKeyCache } from "@/utils/sm2";
 import {
 	handleHttpResponseError,
 	handleNetworkError,
 	handleParseError,
-} from '@/utils/errorHandler';
-import type { BaseResponse } from '@/types/base';
-import { getCachedEncryptionConfig, clearEncryptionConfigCache } from '@/services/encryptionConfig';
-import { LOGIN } from '@/constants/routes';
+} from "@/utils/errorHandler";
+import type { BaseResponse } from "@/types/base";
+import { getCachedEncryptionConfig, clearEncryptionConfigCache } from "@/services/encryptionConfig";
+import { LOGIN } from "@/constants/routes";
 
 // 工具函数：生成请求ID
 function generateRequestId(): string {
@@ -28,7 +28,7 @@ function generateRequestId(): string {
 function generateNonce(): string {
 	const array = new Uint8Array(16);
 	crypto.getRandomValues(array);
-	return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+	return Array.from(array, byte => byte.toString(16).padStart(2, "0")).join("");
 }
 
 // SM4 密钥和 IV 存储（用于响应解密）
@@ -40,10 +40,10 @@ const encryptionKeyStore = new Map<string, { sm4KeyHex: string; ivHex: string }>
  * 专门用于获取加密配置，避免无限循环
  */
 const rawAxios: AxiosInstance = axios.create({
-	baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
+	baseURL: import.meta.env.VITE_API_BASE_URL || "/api/v1",
 	timeout: 30000,
 	headers: {
-		'Content-Type': 'application/json',
+		"Content-Type": "application/json",
 	},
 });
 
@@ -55,23 +55,23 @@ const ENCRYPTION_WHITELIST: string[] = [];
 
 // 加密黑名单
 const ENCRYPTION_BLACKLIST: string[] = [
-	'/system/auth/public-key',
-	'/system/auth/captcha',
-	'/system/auth/encryption-config', // 防止无限循环：加密配置端点本身不能被加密
-	'/upload',
+	"/system/auth/public-key",
+	"/system/auth/captcha",
+	"/system/auth/encryption-config", // 防止无限循环：加密配置端点本身不能被加密
+	"/upload",
 ];
 
 // Token 认证白名单（不需要 Token 的 API）
 const AUTH_WHITELIST: string[] = [
-	'/system/auth/login',
-	'/system/auth/public-key',
-	'/system/auth/captcha',
-	'/system/auth/refresh', // 刷新 Token 接口本身不需要 AccessToken
+	"/system/auth/login",
+	"/system/auth/public-key",
+	"/system/auth/captcha",
+	"/system/auth/refresh", // 刷新 Token 接口本身不需要 AccessToken
 ];
 
 // 需要更长超时时间的接口
 const LONG_TIMEOUT_ENDPOINTS: string[] = [
-	'/ad-domain/configs/',
+	"/ad-domain/configs/",
 ];
 
 /**
@@ -112,7 +112,7 @@ export async function initEncryptionConfig(): Promise<void> {
 
 	for (let i = 0; i < MAX_RETRIES; i++) {
 		try {
-			const response = await rawAxios.get<{ code: number; data: { enabled: boolean; key: string; source: string } }>('/system/auth/encryption-config', {
+			const response = await rawAxios.get<{ code: number; data: { enabled: boolean; key: string; source: string } }>("/system/auth/encryption-config", {
 				timeout: 3000, // 3秒超时
 			});
 
@@ -128,7 +128,7 @@ export async function initEncryptionConfig(): Promise<void> {
 	}
 
 	// All retries failed - use secure default
-	console.error('[Encryption Config] 所有重试失败，保持安全默认值:', lastError);
+	console.error("[Encryption Config] 所有重试失败，保持安全默认值:", lastError);
 	ENABLE_REQUEST_ENCRYPTION = true; // Fail secure: enable encryption
 }
 
@@ -143,7 +143,7 @@ export async function refreshEncryptionConfig(): Promise<void> {
 
 	// 使用 rawAxios 重新获取配置（避免拦截器循环）
 	try {
-		const response = await rawAxios.get<{ code: number; data: { enabled: boolean; key: string; source: string } }>('/system/auth/encryption-config', {
+		const response = await rawAxios.get<{ code: number; data: { enabled: boolean; key: string; source: string } }>("/system/auth/encryption-config", {
 			timeout: 5000,
 		});
 
@@ -151,17 +151,17 @@ export async function refreshEncryptionConfig(): Promise<void> {
 			ENABLE_REQUEST_ENCRYPTION = response.data.data.enabled;
 		}
 	} catch (error) {
-		console.error('[Encryption Config] 刷新配置失败，保持当前设置:', error);
+		console.error("[Encryption Config] 刷新配置失败，保持当前设置:", error);
 		// 失败时不改变当前设置
 	}
 }
 
 // 创建axios实例
 const api: AxiosInstance = axios.create({
-	baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
+	baseURL: import.meta.env.VITE_API_BASE_URL || "/api/v1",
 	timeout: 30000,
 	headers: {
-		'Content-Type': 'application/json',
+		"Content-Type": "application/json",
 	},
 });
 
@@ -181,7 +181,7 @@ function shouldEncryptRequest(url: string, method: string): boolean {
 		return false;
 	}
 
-	if (!['POST', 'PUT', 'PATCH'].includes(method.toUpperCase())) {
+	if (!["POST", "PUT", "PATCH"].includes(method.toUpperCase())) {
 		return false;
 	}
 
@@ -199,7 +199,7 @@ function shouldEncryptRequest(url: string, method: string): boolean {
 // 请求拦截器
 api.interceptors.request.use(
 	async (config: InternalAxiosRequestConfig) => {
-		config.timeout = getTimeout(config.url || '');
+		config.timeout = getTimeout(config.url || "");
 
 		// 检查是否需要 Token（跳过白名单 API）
 		const needsAuth = !AUTH_WHITELIST.some(prefix => config.url?.startsWith(prefix));
@@ -212,23 +212,23 @@ api.interceptors.request.use(
 				const token = await tokenManager.getAccessToken();
 
 				if (token && config.headers) {
-					config.headers.set('Authorization', `Bearer ${token}`);
+					config.headers.set("Authorization", `Bearer ${token}`);
 				}
 			} catch (error) {
 				// Token 获取失败，可能是刷新失败
-				console.error('[Request] 获取 AccessToken 失败:', error);
+				console.error("[Request] 获取 AccessToken 失败:", error);
 
 				// 跳过登录接口的错误处理
-				if (!config.url?.includes('/system/auth/login')) {
+				if (!config.url?.includes("/system/auth/login")) {
 					// 跳转到登录页
 					window.location.href = LOGIN;
 				}
 			}
 		}
 
-		config.headers.set('X-Request-ID', generateRequestId());
+		config.headers.set("X-Request-ID", generateRequestId());
 
-		if (config.data && shouldEncryptRequest(config.url || '', config.method || '')) {
+		if (config.data && shouldEncryptRequest(config.url || "", config.method || "")) {
 			try {
 				const publicKey = await fetchPublicKey();
 				const sm4KeyHex = generateSM4Key();
@@ -237,7 +237,7 @@ api.interceptors.request.use(
 				const encryptedDataHex = await encryptRequestBody(config.data, sm4KeyHex, ivHex);
 				const encryptedSM4Key = await encryptWithSM2(sm4KeyHex, publicKey);
 
-				const requestId = config.headers.get('X-Request-ID') as string;
+				const requestId = config.headers.get("X-Request-ID") as string;
 				encryptionKeyStore.set(requestId, { sm4KeyHex, ivHex });
 
 				config.data = {
@@ -249,13 +249,13 @@ api.interceptors.request.use(
 					nonce: generateNonce(),
 				};
 
-				config.headers.set('X-Request-Encrypted', 'true');
+				config.headers.set("X-Request-Encrypted", "true");
 			} catch (error) {
-				console.error('[Request Encryption] 加密失败:', error);
-				if (import.meta.env.MODE === 'production') {
+				console.error("[Request Encryption] 加密失败:", error);
+				if (import.meta.env.MODE === "production") {
 					return Promise.reject(error);
 				}
-				console.warn('[Request Encryption] 回退到明文传输（仅开发环境）');
+				console.warn("[Request Encryption] 回退到明文传输（仅开发环境）");
 			}
 		}
 
@@ -271,11 +271,11 @@ api.interceptors.response.use(
 	async (response: AxiosResponse) => {
 		let { data } = response;
 
-		const url = response.config.url || '';
+		const url = response.config.url || "";
 		const responseHeaders = response.headers || {};
 
 		// 检查后端响应加密标志
-		const isResponseEncrypted = responseHeaders['x-response-encrypted'] === 'true' || responseHeaders['X-Response-Encrypted'] === 'true';
+		const isResponseEncrypted = responseHeaders["x-response-encrypted"] === "true" || responseHeaders["X-Response-Encrypted"] === "true";
 
 		// 检查请求体加密的响应（前端发起的加密请求，后端会加密响应）
 		const isEncrypted = !!(data && data.encrypted && data.data && data.iv);
@@ -284,15 +284,15 @@ api.interceptors.response.use(
 		const needsBackendDecryption = isResponseEncrypted && !data?.encrypted;
 
 		// 调试日志：记录楼宇列表接口的响应
-		if (url.includes('/ops/building/list')) {
-			console.log('[API Response] 楼宇列表响应:', {
+		if (url.includes("/ops/building/list")) {
+			console.log("[API Response] 楼宇列表响应:", {
 				url,
 				hasData: !!data,
 				dataType: typeof data,
 				isEncrypted,
 				isResponseEncrypted,
 				needsBackendDecryption,
-				dataKeys: typeof data === 'object' ? Object.keys(data) : 'N/A',
+				dataKeys: typeof data === "object" ? Object.keys(data) : "N/A",
 				rawData: data,
 				responseHeaders: Object.keys(responseHeaders),
 			});
@@ -300,14 +300,14 @@ api.interceptors.response.use(
 
 		// 处理后端中间件自动加密的响应（需要解密）
 		if (needsBackendDecryption) {
-			console.warn('[API Response] 检测到后端加密响应，尝试解密...');
+			console.warn("[API Response] 检测到后端加密响应，尝试解密...");
 			try {
-				const requestId = responseHeaders['x-request-id'] || responseHeaders['X-Request-ID'] || '';
+				const requestId = responseHeaders["x-request-id"] || responseHeaders["X-Request-ID"] || "";
 
 				if (!data?.data || !data?.iv) {
-					console.error('[Response Decryption] 后端加密响应缺少必要字段');
-					message.error('响应解密失败：格式错误');
-					return Promise.reject(new Error('Missing encrypted data fields'));
+					console.error("[Response Decryption] 后端加密响应缺少必要字段");
+					message.error("响应解密失败：格式错误");
+					return Promise.reject(new Error("Missing encrypted data fields"));
 				}
 
 				const encryptedDataBase64 = data.data;
@@ -316,9 +316,9 @@ api.interceptors.response.use(
 				// 使用请求时存储的密钥解密
 				const keyInfo = encryptionKeyStore.get(requestId);
 				if (!keyInfo) {
-					console.error('[Response Decryption] 找不到请求的加密密钥:', requestId);
-					message.error('响应解密失败：找不到加密密钥');
-					return Promise.reject(new Error('Encryption keys not found'));
+					console.error("[Response Decryption] 找不到请求的加密密钥:", requestId);
+					message.error("响应解密失败：找不到加密密钥");
+					return Promise.reject(new Error("Encryption keys not found"));
 				}
 
 				const encryptedDataHex = base64ToHex(encryptedDataBase64);
@@ -327,12 +327,12 @@ api.interceptors.response.use(
 				const decryptedJson = await decryptSM4CBC(encryptedDataHex, keyInfo.sm4KeyHex, ivHex);
 				data = JSON.parse(decryptedJson);
 
-				console.log('[API Response] 后端加密响应解密成功:', { url, decryptedData: data });
+				console.log("[API Response] 后端加密响应解密成功:", { url, decryptedData: data });
 
 				encryptionKeyStore.delete(requestId);
 			} catch (error) {
-				console.error('[Response Decryption] 后端加密响应解密失败:', error);
-				message.error('响应解密失败: ' + (error as Error).message);
+				console.error("[Response Decryption] 后端加密响应解密失败:", error);
+				message.error("响应解密失败: " + (error as Error).message);
 				return Promise.reject(error);
 			}
 		}
@@ -340,19 +340,19 @@ api.interceptors.response.use(
 		// 处理前端发起加密请求的响应（原有逻辑）
 		if (isEncrypted) {
 			try {
-				const requestId = response.config.headers.get('X-Request-ID') as string;
+				const requestId = response.config.headers.get("X-Request-ID") as string;
 
 				if (!requestId) {
-					console.error('[Response Decryption] 响应头中缺少请求 ID');
-					message.error('响应解密失败：缺少请求ID');
-					return Promise.reject(new Error('Missing request ID'));
+					console.error("[Response Decryption] 响应头中缺少请求 ID");
+					message.error("响应解密失败：缺少请求ID");
+					return Promise.reject(new Error("Missing request ID"));
 				}
 
 				const keyInfo = encryptionKeyStore.get(requestId);
 				if (!keyInfo) {
-					console.error('[Response Decryption] 找不到请求的加密密钥:', requestId);
-					message.error('响应解密失败：找不到加密密钥');
-					return Promise.reject(new Error('Encryption keys not found'));
+					console.error("[Response Decryption] 找不到请求的加密密钥:", requestId);
+					message.error("响应解密失败：找不到加密密钥");
+					return Promise.reject(new Error("Encryption keys not found"));
 				}
 
 				const encryptedDataBase64 = data.data;
@@ -367,27 +367,27 @@ api.interceptors.response.use(
 
 				encryptionKeyStore.delete(requestId);
 			} catch (error) {
-				console.error('[Response Decryption] 解密失败:', error);
-				message.error('响应解密失败: ' + (error as Error).message);
+				console.error("[Response Decryption] 解密失败:", error);
+				message.error("响应解密失败: " + (error as Error).message);
 				return Promise.reject(error);
 			}
 		}
 
-		if (data && typeof data === 'object' && data.code === 0) {
+		if (data && typeof data === "object" && data.code === 0) {
 			return data;
-		} else if (data && typeof data === 'object' && data.code !== undefined) {
-			message.error(data.message || '请求失败');
-			return Promise.reject(new Error(data.message || '请求失败'));
+		} else if (data && typeof data === "object" && data.code !== undefined) {
+			message.error(data.message || "请求失败");
+			return Promise.reject(new Error(data.message || "请求失败"));
 		} else {
-			console.error('[Response] 响应格式无效:', {
+			console.error("[Response] 响应格式无效:", {
 				url: response.config.url,
 				method: response.config.method,
 				dataType: typeof data,
-				dataKeys: typeof data === 'object' ? Object.keys(data) : 'N/A',
+				dataKeys: typeof data === "object" ? Object.keys(data) : "N/A",
 				data,
 			});
-			message.error('响应格式错误');
-			return Promise.reject(new Error('Invalid response format'));
+			message.error("响应格式错误");
+			return Promise.reject(new Error("Invalid response format"));
 		}
 	},
 	async (error) => {
@@ -399,7 +399,7 @@ api.interceptors.response.use(
 			useMenuStore.getState().clearMenus();
 
 			// 如果是刷新 token 请求失败，直接登出
-			if (config.url?.includes('/system/auth/refresh')) {
+			if (config.url?.includes("/system/auth/refresh")) {
 				const tokenManager = getTokenManager();
 				await tokenManager.clearTokens();
 				window.location.href = LOGIN;
@@ -453,7 +453,7 @@ api.interceptors.response.use(
 		if (response) {
 			const apiError = handleHttpResponseError(response.status, response.data);
 			return Promise.reject(apiError);
-		} else if (error.code === 'ECONNABORTED') {
+		} else if (error.code === "ECONNABORTED") {
 			const networkError = handleNetworkError(error);
 			return Promise.reject(networkError);
 		} else {
@@ -483,11 +483,11 @@ export function del<T = unknown>(url: string): Promise<BaseResponse<T>> {
 
 export function upload<T = unknown>(url: string, file: File): Promise<BaseResponse<T>> {
 	const formData = new FormData();
-	formData.append('file', file);
+	formData.append("file", file);
 
 	return api.post(url, formData, {
 		headers: {
-			'Content-Type': 'multipart/form-data',
+			"Content-Type": "multipart/form-data",
 		},
 	});
 }
@@ -495,7 +495,7 @@ export function upload<T = unknown>(url: string, file: File): Promise<BaseRespon
 export function postFormData<T = unknown>(url: string, formData: FormData): Promise<BaseResponse<T>> {
 	return api.post(url, formData, {
 		headers: {
-			'Content-Type': 'multipart/form-data',
+			"Content-Type": "multipart/form-data",
 		},
 	});
 }

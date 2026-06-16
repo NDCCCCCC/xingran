@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { useGeocoding } from '@/pages/operations/building-spaces-3d/hooks/useGeocoding';
+import { useState, useCallback } from "react";
+import { useGeocoding } from "@/pages/operations/building-spaces-3d/hooks/useGeocoding";
 
 interface GeocodingResult {
   longitude: number;
@@ -48,7 +48,7 @@ export function useBuildingGeocoding() {
         setState({
           loading: false,
           result: null,
-          warning: '地址解析失败，将保存不含经纬度的信息',
+          warning: "地址解析失败，将保存不含经纬度的信息",
         });
         return null;
       }
@@ -56,7 +56,7 @@ export function useBuildingGeocoding() {
       setState({
         loading: false,
         result: null,
-        warning: '地址解析出错，将保存不含经纬度的信息',
+        warning: "地址解析出错，将保存不含经纬度的信息",
       });
       return null;
     }

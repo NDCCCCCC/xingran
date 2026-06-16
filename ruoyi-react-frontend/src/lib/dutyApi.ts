@@ -1,5 +1,5 @@
-import { post } from './api';
-import type { BaseResponse, PageResponse } from '@/types';
+import { post } from "./api";
+import type { BaseResponse, PageResponse } from "@/types";
 
 // ==================== 类型定义 ====================
 
@@ -44,7 +44,7 @@ export interface DutySchedule {
     nickName: string;
     deptName?: string;
   };
-  dutyType: 'weekday' | 'weekend' | 'holiday';
+  dutyType: "weekday" | "weekend" | "holiday";
   status: number; // 0=正常 1=已调换 2=已取消
   isManual: boolean;
   swapFromDate?: string;
@@ -60,7 +60,7 @@ export interface Holiday {
   holidayDate: string;
   holidayName: string;
   isOffday: boolean; // true=休息日 false=调休工作日
-  holidayType: 'legal' | 'workday' | 'custom';
+  holidayType: "legal" | "workday" | "custom";
   year: number;
   remark?: string;
   createdAt: string;
@@ -122,7 +122,7 @@ export interface GenerateScheduleRequest {
   poolId: string;
   startDate: string;
   endDate: string;
-  dutyType: 'weekday' | 'weekend' | 'holiday';
+  dutyType: "weekday" | "weekend" | "holiday";
   clearExists?: boolean;
 }
 
@@ -135,7 +135,7 @@ export interface SwapDutyRequest {
 export interface ManualDutyRequest {
   poolId: string;
   dutyDate: string;
-  dutyType: 'weekday' | 'weekend' | 'holiday';
+  dutyType: "weekday" | "weekend" | "holiday";
   userIds: string[];
   reason?: string;
 }
@@ -145,11 +145,11 @@ export interface ManualDutyRequest {
 // ==================== 值班池管理 ====================
 
 export function getDutyPoolList(params: DutyPoolListRequest): Promise<BaseResponse<PageResponse<DutyPool>>> {
-  return post('/duty/pools/list', params);
+  return post("/duty/pools/list", params);
 }
 
 export function createDutyPool(data: DutyPoolCreateRequest): Promise<BaseResponse<DutyPool>> {
-  return post('/duty/pools', data);
+  return post("/duty/pools", data);
 }
 
 export function getDutyPool(id: string): Promise<BaseResponse<DutyPool>> {
@@ -167,23 +167,23 @@ export function deleteDutyPool(id: string): Promise<BaseResponse<{ message: stri
 // ==================== 排班管理 ====================
 
 export function getDutyScheduleList(params: DutyScheduleListRequest): Promise<BaseResponse<PageResponse<DutySchedule>>> {
-  return post('/duty/schedules/list', params);
+  return post("/duty/schedules/list", params);
 }
 
 export function generateSchedule(data: GenerateScheduleRequest): Promise<BaseResponse<{ message: string; count: number }>> {
-  return post('/duty/schedules/generate', data);
+  return post("/duty/schedules/generate", data);
 }
 
 export function getTodayDuty(): Promise<BaseResponse<{ date: string; members: Array<{ userId: string; username: string; nickName: string }> }>> {
-  return post('/duty/schedules/today', {});
+  return post("/duty/schedules/today", {});
 }
 
 export function swapDuty(data: SwapDutyRequest): Promise<BaseResponse<{ message: string }>> {
-  return post('/duty/schedules/swap', data);
+  return post("/duty/schedules/swap", data);
 }
 
 export function manualDuty(data: ManualDutyRequest): Promise<BaseResponse<{ message: string }>> {
-  return post('/duty/schedules/manual', data);
+  return post("/duty/schedules/manual", data);
 }
 
 export function deleteDutySchedule(id: string): Promise<BaseResponse<{ message: string }>> {
@@ -191,7 +191,7 @@ export function deleteDutySchedule(id: string): Promise<BaseResponse<{ message: 
 }
 
 export function batchDeleteDutySchedules(ids: string[]): Promise<BaseResponse<{ message: string; count: number }>> {
-  return post('/duty/schedules/batch-delete', { ids });
+  return post("/duty/schedules/batch-delete", { ids });
 }
 
 export interface MonthlyDutyMember {
@@ -205,20 +205,20 @@ export interface MonthlyDutyMember {
 }
 
 export function getMonthlyDutySchedule(year: number, month: number): Promise<BaseResponse<Record<string, MonthlyDutyMember[]>>> {
-  return post(`/duty/schedules/monthly`, { year, month });
+  return post("/duty/schedules/monthly", { year, month });
 }
 
 // ==================== 节假日管理 ====================
 
 export function getHolidayList(year: number): Promise<BaseResponse<Holiday[]>> {
-  return post(`/duty/holidays/list`, { year });
+  return post("/duty/holidays/list", { year });
 }
 
-export function createHoliday(data: Omit<Holiday, 'id' | 'createdAt' | 'createdBy'>): Promise<BaseResponse<Holiday>> {
-  return post('/duty/holidays', data);
+export function createHoliday(data: Omit<Holiday, "id" | "createdAt" | "createdBy">): Promise<BaseResponse<Holiday>> {
+  return post("/duty/holidays", data);
 }
 
-export function updateHoliday(id: string, data: Partial<Omit<Holiday, 'id' | 'createdAt' | 'createdBy'>>): Promise<BaseResponse<{ message: string }>> {
+export function updateHoliday(id: string, data: Partial<Omit<Holiday, "id" | "createdAt" | "createdBy">>): Promise<BaseResponse<{ message: string }>> {
   return post(`/duty/holidays/${id}/update`, data);
 }
 
@@ -226,22 +226,22 @@ export function deleteHoliday(id: string): Promise<BaseResponse<{ message: strin
   return post(`/duty/holidays/${id}/delete`);
 }
 
-export function batchCreateHolidays(holidays: Omit<Holiday, 'id' | 'createdAt' | 'createdBy'>[]): Promise<BaseResponse<{ message: string; count: number }>> {
-  return post('/duty/holidays/batch', { holidays });
+export function batchCreateHolidays(holidays: Omit<Holiday, "id" | "createdAt" | "createdBy">[]): Promise<BaseResponse<{ message: string; count: number }>> {
+  return post("/duty/holidays/batch", { holidays });
 }
 
 export function getHolidayYears(): Promise<BaseResponse<number[]>> {
-  return post('/duty/holidays/years', {});
+  return post("/duty/holidays/years", {});
 }
 
 // ==================== 值班配置管理 ====================
 
 export function getDutyConfig(): Promise<BaseResponse<DutyConfig>> {
-  return post('/duty/config', {});
+  return post("/duty/config", {});
 }
 
 export function updateDutyConfig(data: Partial<DutyConfig>): Promise<BaseResponse<{ message: string }>> {
-  return post('/duty/config/update', data);
+  return post("/duty/config/update", data);
 }
 
 // ==================== 用户和部门（用于下拉选择）====================
@@ -264,7 +264,7 @@ export interface SimpleDept {
 
 // 获取用户列表（用于下拉选择）
 export function getUserList(params?: { current?: number; pageSize?: number; deptId?: string; status?: number }): Promise<BaseResponse<PageResponse<SimpleUser>>> {
-  return post('/system/users/list', {
+  return post("/system/users/list", {
     current: 1,
     pageSize: 1000,
     ...params,
@@ -273,12 +273,12 @@ export function getUserList(params?: { current?: number; pageSize?: number; dept
 
 // 获取部门列表（用于下拉选择）
 export function getDeptList(): Promise<BaseResponse<SimpleDept[]>> {
-  return post('/system/departments/list');
+  return post("/system/departments/list");
 }
 
 // 获取部门树（用于下拉选择）
 export function getDeptTree(): Promise<BaseResponse<SimpleDept[]>> {
-  return post('/system/departments/tree');
+  return post("/system/departments/tree");
 }
 
 // ==================== 我的值班 ====================
@@ -299,5 +299,5 @@ export interface MyDutyStats {
 }
 
 export function getMyDutyStats(): Promise<BaseResponse<MyDutyStats>> {
-  return post('/duty/my-duty/stats', {});
+  return post("/duty/my-duty/stats", {});
 }

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import type { FC } from 'react';
+import { useState, useEffect } from "react";
+import type { FC } from "react";
 import {
   Card,
   Row,
@@ -16,22 +16,22 @@ import {
   Statistic,
   Tag,
   Space,
-} from 'antd';
+} from "antd";
 import {
   UserOutlined,
   EditOutlined,
   LockOutlined,
   UploadOutlined,
   CalendarOutlined,
-} from '@ant-design/icons';
-import { getProfileInfo, updateProfileInfo, changePassword, uploadAvatar } from '@/lib/profileApi';
-import { getMyDutyStats, type MyDutyStats } from '@/lib/dutyApi';
-import { useAuthStore } from '@/store/authStore';
-import { isFormValidationError } from '@/utils/errorHandler';
-import { LOGIN, DUTY_MY_DUTY } from '@/constants/routes';
-import type { UserProfile } from '@/types';
-import { formatDateTime } from '@/utils/datetime';
-import { Link } from 'react-router-dom';
+} from "@ant-design/icons";
+import { getProfileInfo, updateProfileInfo, changePassword, uploadAvatar } from "@/lib/profileApi";
+import { getMyDutyStats, type MyDutyStats } from "@/lib/dutyApi";
+import { useAuthStore } from "@/store/authStore";
+import { isFormValidationError } from "@/utils/errorHandler";
+import { LOGIN, DUTY_MY_DUTY } from "@/constants/routes";
+import type { UserProfile } from "@/types";
+import { formatDateTime } from "@/utils/datetime";
+import { Link } from "react-router-dom";
 
 const { Option } = Select;
 
@@ -51,7 +51,7 @@ const ProfilePage: FC = () => {
       const data = await getProfileInfo();
       setProfile(data);
     } catch (error) {
-      message.error('加载个人信息失败');
+      message.error("加载个人信息失败");
     }
   };
 
@@ -62,7 +62,7 @@ const ProfilePage: FC = () => {
       const result = await getMyDutyStats();
       setDutyStats(result.data || null);
     } catch (error) {
-      console.error('加载值班统计失败', error);
+      console.error("加载值班统计失败", error);
     } finally {
       setDutyStatsLoading(false);
     }
@@ -78,7 +78,7 @@ const ProfilePage: FC = () => {
     try {
       const values = await editForm.validateFields();
       await updateProfileInfo(values);
-      message.success('更新成功');
+      message.success("更新成功");
       setEditModalVisible(false);
       editForm.resetFields();
 
@@ -87,7 +87,7 @@ const ProfilePage: FC = () => {
       loadProfile();
     } catch (error: unknown) {
       if (isFormValidationError(error)) return;
-      message.error('更新失败');
+      message.error("更新失败");
     }
   };
 
@@ -110,7 +110,7 @@ const ProfilePage: FC = () => {
     try {
       const values = await passwordForm.validateFields();
       await changePassword(values);
-      message.success('密码修改成功，请重新登录');
+      message.success("密码修改成功，请重新登录");
       setPasswordModalVisible(false);
       passwordForm.resetFields();
 
@@ -122,16 +122,16 @@ const ProfilePage: FC = () => {
           await new Promise(resolve => setTimeout(resolve, 0));
           window.location.href = LOGIN;
         } catch (error) {
-          console.error('自动登出失败:', error);
+          console.error("自动登出失败:", error);
           window.location.href = LOGIN;
         }
       }, 1500);
     } catch (error: unknown) {
       if (isFormValidationError(error)) return;
-      if ((error as { message?: string })?.message?.includes('旧密码错误')) {
-        message.error('旧密码错误');
+      if ((error as { message?: string })?.message?.includes("旧密码错误")) {
+        message.error("旧密码错误");
       } else {
-        message.error('密码修改失败');
+        message.error("密码修改失败");
       }
     }
   };
@@ -140,13 +140,13 @@ const ProfilePage: FC = () => {
   const handleUploadAvatar = async (file: File) => {
     try {
       const result = await uploadAvatar(file);
-      message.success('头像上传成功');
+      message.success("头像上传成功");
 
       // 更新全局用户信息
       updateUser({ avatar: result.avatar });
       loadProfile();
     } catch (error) {
-      message.error('头像上传失败');
+      message.error("头像上传失败");
     }
     return false; // 阻止默认上传行为
   };
@@ -154,10 +154,10 @@ const ProfilePage: FC = () => {
   // 获取值班类型颜色
   const getDutyTypeColor = (type: string) => {
     switch (type) {
-      case 'weekday': return 'blue';
-      case 'weekend': return 'orange';
-      case 'holiday': return 'red';
-      default: return 'default';
+      case "weekday": return "blue";
+      case "weekend": return "orange";
+      case "holiday": return "red";
+      default: return "default";
     }
   };
 
@@ -194,25 +194,25 @@ const ProfilePage: FC = () => {
           >
             <Descriptions column={2} bordered>
               <Descriptions.Item label="用户名">{profile.username}</Descriptions.Item>
-              <Descriptions.Item label="昵称">{profile.nickname || '-'}</Descriptions.Item>
+              <Descriptions.Item label="昵称">{profile.nickname || "-"}</Descriptions.Item>
               <Descriptions.Item label="性别">
-                {profile.gender === 0 ? '未知' : profile.gender === 1 ? '男' : '女'}
+                {profile.gender === 0 ? "未知" : profile.gender === 1 ? "男" : "女"}
               </Descriptions.Item>
-              <Descriptions.Item label="邮箱">{profile.email || '-'}</Descriptions.Item>
-              <Descriptions.Item label="手机号">{profile.phone || '-'}</Descriptions.Item>
-              <Descriptions.Item label="部门">{profile.deptName || '-'}</Descriptions.Item>
+              <Descriptions.Item label="邮箱">{profile.email || "-"}</Descriptions.Item>
+              <Descriptions.Item label="手机号">{profile.phone || "-"}</Descriptions.Item>
+              <Descriptions.Item label="部门">{profile.deptName || "-"}</Descriptions.Item>
               <Descriptions.Item label="状态">
                 {profile.status === 0 ? (
-                  <span style={{ color: 'green' }}>正常</span>
+                  <span style={{ color: "green" }}>正常</span>
                 ) : (
-                  <span style={{ color: 'red' }}>禁用</span>
+                  <span style={{ color: "red" }}>禁用</span>
                 )}
               </Descriptions.Item>
-              <Descriptions.Item label="最后登录IP">{profile.loginIp || '-'}</Descriptions.Item>
-              <Descriptions.Item label="最后登录时间">{profile.loginTime || '-'}</Descriptions.Item>
-              <Descriptions.Item label="密码修改时间">{profile.pwdUpdateTime || '-'}</Descriptions.Item>
+              <Descriptions.Item label="最后登录IP">{profile.loginIp || "-"}</Descriptions.Item>
+              <Descriptions.Item label="最后登录时间">{profile.loginTime || "-"}</Descriptions.Item>
+              <Descriptions.Item label="密码修改时间">{profile.pwdUpdateTime || "-"}</Descriptions.Item>
               <Descriptions.Item label="备注" span={2}>
-                {profile.remark || '-'}
+                {profile.remark || "-"}
               </Descriptions.Item>
             </Descriptions>
 
@@ -250,7 +250,7 @@ const ProfilePage: FC = () => {
                   <Statistic
                     title="今日状态"
                     value={dutyStats.isOnDutyToday ? "值班中" : "休息"}
-                    styles={{ content: { color: dutyStats.isOnDutyToday ? 'var(--theme-success, #3f8600)' : 'var(--theme-text-tertiary, #8c8c8c)' } }}
+                    styles={{ content: { color: dutyStats.isOnDutyToday ? "var(--theme-success, #3f8600)" : "var(--theme-text-tertiary, #8c8c8c)" } }}
                   />
                 </Col>
                 <Col xs={12} sm={6}>
@@ -269,17 +269,17 @@ const ProfilePage: FC = () => {
                 </Col>
                 <Col xs={12} sm={6}>
                   <div>
-                    <div style={{ fontSize: '14px', color: 'rgba(0,0,0,0.45)', marginBottom: '4px' }}>下次值班</div>
-                    <div style={{ fontSize: '20px', fontWeight: 500 }}>
+                    <div style={{ fontSize: "14px", color: "rgba(0,0,0,0.45)", marginBottom: "4px" }}>下次值班</div>
+                    <div style={{ fontSize: "20px", fontWeight: 500 }}>
                       {dutyStats.nextDutyDate ? (
                         <Space>
-                          <span>{formatDateTime(dutyStats.nextDutyDate, 'MM-DD')}</span>
+                          <span>{formatDateTime(dutyStats.nextDutyDate, "MM-DD")}</span>
                           {dutyStats.nextDutyPoolName && (
                             <Tag color="blue">{dutyStats.nextDutyPoolName}</Tag>
                           )}
                         </Space>
                       ) : (
-                        <span style={{ color: 'var(--theme-text-tertiary, #8c8c8c)' }}>暂无排班</span>
+                        <span style={{ color: "var(--theme-text-tertiary, #8c8c8c)" }}>暂无排班</span>
                       )}
                     </div>
                   </div>
@@ -290,11 +290,11 @@ const ProfilePage: FC = () => {
             {/* 今日值班详情 */}
             {dutyStats?.isOnDutyToday && dutyStats.todayDutyRecords && dutyStats.todayDutyRecords.length > 0 && (
               <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
-                <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>今日值班任务</div>
+                <div style={{ fontWeight: "bold", marginBottom: "8px" }}>今日值班任务</div>
                 <Space wrap>
                   {dutyStats.todayDutyRecords.map((record, index) => (
                     <Tag key={index} color={getDutyTypeColor(record.dutyType)}>
-                      {record.poolName} ({record.dutyType === 'weekday' ? '工作日' : record.dutyType === 'weekend' ? '周末' : '节假日'})
+                      {record.poolName} ({record.dutyType === "weekday" ? "工作日" : record.dutyType === "weekend" ? "周末" : "节假日"})
                     </Tag>
                   ))}
                 </Space>
@@ -316,7 +316,7 @@ const ProfilePage: FC = () => {
           <Form.Item
             label="昵称"
             name="nickname"
-            rules={[{ max: 64, message: '昵称长度不能超过64个字符' }]}
+            rules={[{ max: 64, message: "昵称长度不能超过64个字符" }]}
           >
             <Input placeholder="请输入昵称" />
           </Form.Item>
@@ -324,7 +324,7 @@ const ProfilePage: FC = () => {
           <Form.Item
             label="邮箱"
             name="email"
-            rules={[{ type: 'email', message: '请输入有效的邮箱地址' }]}
+            rules={[{ type: "email", message: "请输入有效的邮箱地址" }]}
           >
             <Input placeholder="请输入邮箱" />
           </Form.Item>
@@ -332,7 +332,7 @@ const ProfilePage: FC = () => {
           <Form.Item
             label="手机号"
             name="phone"
-            rules={[{ max: 32, message: '手机号长度不能超过32个字符' }]}
+            rules={[{ max: 32, message: "手机号长度不能超过32个字符" }]}
           >
             <Input placeholder="请输入手机号" />
           </Form.Item>
@@ -352,7 +352,7 @@ const ProfilePage: FC = () => {
           <Form.Item
             label="备注"
             name="remark"
-            rules={[{ max: 500, message: '备注长度不能超过500个字符' }]}
+            rules={[{ max: 500, message: "备注长度不能超过500个字符" }]}
           >
             <Input.TextArea rows={3} placeholder="请输入备注" />
           </Form.Item>
@@ -371,7 +371,7 @@ const ProfilePage: FC = () => {
           <Form.Item
             label="旧密码"
             name="oldPassword"
-            rules={[{ required: true, message: '请输入旧密码' }]}
+            rules={[{ required: true, message: "请输入旧密码" }]}
           >
             <Input.Password placeholder="请输入旧密码" />
           </Form.Item>
@@ -380,9 +380,9 @@ const ProfilePage: FC = () => {
             label="新密码"
             name="newPassword"
             rules={[
-              { required: true, message: '请输入新密码' },
-              { min: 6, message: '密码长度不能少于6个字符' },
-              { max: 20, message: '密码长度不能超过20个字符' },
+              { required: true, message: "请输入新密码" },
+              { min: 6, message: "密码长度不能少于6个字符" },
+              { max: 20, message: "密码长度不能超过20个字符" },
             ]}
           >
             <Input.Password placeholder="请输入新密码（6-20个字符）" />
@@ -391,15 +391,15 @@ const ProfilePage: FC = () => {
           <Form.Item
             label="确认密码"
             name="confirmPassword"
-            dependencies={['newPassword']}
+            dependencies={["newPassword"]}
             rules={[
-              { required: true, message: '请确认新密码' },
+              { required: true, message: "请确认新密码" },
               ({ getFieldValue }) => ({
                 validator(_, value) {
-                  if (!value || getFieldValue('newPassword') === value) {
+                  if (!value || getFieldValue("newPassword") === value) {
                     return Promise.resolve();
                   }
-                  return Promise.reject(new Error('两次输入的密码不一致'));
+                  return Promise.reject(new Error("两次输入的密码不一致"));
                 },
               }),
             ]}

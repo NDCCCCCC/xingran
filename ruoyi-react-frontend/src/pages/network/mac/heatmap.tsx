@@ -9,37 +9,37 @@
  *   - 空状态: 复用 EmptyStateWithAction
  */
 
-import React, { Suspense, lazy, useCallback, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useMemo, useState } from "react";
 import {
   Card, DatePicker, Space, Button, Form, Alert, Grid, Spin, Tag,
-} from 'antd';
-import { useQuery } from '@tanstack/react-query';
-import dayjs, { type Dayjs } from 'dayjs';
+} from "antd";
+import { useQuery } from "@tanstack/react-query";
+import dayjs, { type Dayjs } from "dayjs";
 
-type RangePickerOnChange = React.ComponentProps<typeof DatePicker.RangePicker>['onChange'];
-import { queryMACHeatmap, type HeatmapResult } from '@/lib/api/macHeatmapApi';
-import { ErrorAlertWithRetry, EmptyStateWithAction } from '@/components/shared';
+type RangePickerOnChange = React.ComponentProps<typeof DatePicker.RangePicker>["onChange"];
+import { queryMACHeatmap, type HeatmapResult } from "@/lib/api/macHeatmapApi";
+import { ErrorAlertWithRetry, EmptyStateWithAction } from "@/components/shared";
 
 const { RangePicker } = DatePicker;
-const MACHeatmapChart = lazy(() => import('@/components/network/MACHeatmapChart'));
+const MACHeatmapChart = lazy(() => import("@/components/network/MACHeatmapChart"));
 
 const { useBreakpoint } = Grid;
 
 // 时间预设 (沿用 Phase 14 D-07)
-type PresetKey = '1h' | '24h' | '7d' | '30d' | '90d' | 'custom';
+type PresetKey = "1h" | "24h" | "7d" | "30d" | "90d" | "custom";
 interface Preset {
   key: PresetKey;
   label: string;
   amount: number;
-  unit: 'hour' | 'day';
+  unit: "hour" | "day";
 }
 const PRESETS: Preset[] = [
-  { key: '1h', label: '近 1h', amount: 1, unit: 'hour' },
-  { key: '24h', label: '近 24h', amount: 24, unit: 'hour' },
-  { key: '7d', label: '近 7d', amount: 7, unit: 'day' },
-  { key: '30d', label: '近 30d', amount: 30, unit: 'day' },
-  { key: '90d', label: '近 90d', amount: 90, unit: 'day' },
-  { key: 'custom', label: '自定义', amount: 0, unit: 'day' },
+  { key: "1h", label: "近 1h", amount: 1, unit: "hour" },
+  { key: "24h", label: "近 24h", amount: 24, unit: "hour" },
+  { key: "7d", label: "近 7d", amount: 7, unit: "day" },
+  { key: "30d", label: "近 30d", amount: 30, unit: "day" },
+  { key: "90d", label: "近 90d", amount: 90, unit: "day" },
+  { key: "custom", label: "自定义", amount: 0, unit: "day" },
 ];
 
 const HeatmapPage: React.FC = () => {
@@ -48,7 +48,7 @@ const HeatmapPage: React.FC = () => {
   const isMobile = !screens.sm;
 
   const [queryParams, setQueryParams] = useState<{ startTime: string; endTime: string } | null>(null);
-  const [activePreset, setActivePreset] = useState<PresetKey>('7d');
+  const [activePreset, setActivePreset] = useState<PresetKey>("7d");
   const [customRange, setCustomRange] = useState<[Dayjs, Dayjs] | null>(null);
 
   // 拉数据
@@ -58,7 +58,7 @@ const HeatmapPage: React.FC = () => {
     error,
     refetch,
   } = useQuery<HeatmapResult>({
-    queryKey: ['macHeatmap', queryParams],
+    queryKey: ["macHeatmap", queryParams],
     queryFn: () => queryMACHeatmap(queryParams!),
     enabled: !!queryParams,
     staleTime: 5 * 60 * 1000, // 5分钟 (匹配后端 TTL)
@@ -67,8 +67,8 @@ const HeatmapPage: React.FC = () => {
   // 预设点击
   const handlePresetClick = useCallback(
     (preset: Preset) => {
-      if (preset.key === 'custom') {
-        setActivePreset('custom');
+      if (preset.key === "custom") {
+        setActivePreset("custom");
         setCustomRange(null);
         return;
       }
@@ -85,7 +85,7 @@ const HeatmapPage: React.FC = () => {
   const handleCustomRange = useCallback<NonNullable<RangePickerOnChange>>((dates) => {
     setCustomRange(dates as [Dayjs, Dayjs] | null);
     if (dates && dates[0] && dates[1]) {
-      setActivePreset('custom');
+      setActivePreset("custom");
     }
   }, []);
 
@@ -98,8 +98,8 @@ const HeatmapPage: React.FC = () => {
       end = customRange[1];
     } else {
       const preset = PRESETS.find((p) => p.key === activePreset);
-      if (!preset || preset.key === 'custom') {
-        start = dayjs().subtract(7, 'day');
+      if (!preset || preset.key === "custom") {
+        start = dayjs().subtract(7, "day");
         end = dayjs();
       } else {
         start = dayjs().subtract(preset.amount, preset.unit);
@@ -149,7 +149,7 @@ const HeatmapPage: React.FC = () => {
             {PRESETS.map((p) => (
               <Button
                 key={p.key}
-                type={activePreset === p.key ? 'primary' : 'default'}
+                type={activePreset === p.key ? "primary" : "default"}
                 size="small"
                 onClick={() => handlePresetClick(p)}
               >
@@ -165,7 +165,7 @@ const HeatmapPage: React.FC = () => {
               showTime
               value={customRange}
               onChange={handleCustomRange}
-              disabled={activePreset !== 'custom'}
+              disabled={activePreset !== "custom"}
             />
           </Form.Item>
           <Form.Item>
@@ -185,13 +185,13 @@ const HeatmapPage: React.FC = () => {
         ) : (
           <Suspense
             fallback={
-              <div style={{ textAlign: 'center', padding: 60 }}>
+              <div style={{ textAlign: "center", padding: 60 }}>
                 <Spin tip="加载图表中..." />
               </div>
             }
           >
             <MACHeatmapChart
-              data={heatmapData ?? { cells: [], topN: 0, start: '', end: '', total: 0, snapshot: '' }}
+              data={heatmapData ?? { cells: [], topN: 0, start: "", end: "", total: 0, snapshot: "" }}
               loading={isLoading}
               isMobile={isMobile}
             />
@@ -199,8 +199,8 @@ const HeatmapPage: React.FC = () => {
         )}
 
         {heatmapData && heatmapData.cells.length > 0 && (
-          <div style={{ marginTop: 16, fontSize: 12, color: 'var(--theme-text-tertiary, #999)' }}>
-            数据快照: {heatmapData.snapshot} | TopN: {heatmapData.topN} | 总计:{' '}
+          <div style={{ marginTop: 16, fontSize: 12, color: "var(--theme-text-tertiary, #999)" }}>
+            数据快照: {heatmapData.snapshot} | TopN: {heatmapData.topN} | 总计:{" "}
             {heatmapData.total} 条
           </div>
         )}

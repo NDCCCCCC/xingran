@@ -2,7 +2,7 @@
  * 运维管理相关类型
  */
 
-import type { Status, PageResponse, PageParams } from './base';
+import type { Status, PageResponse, PageParams } from "./base";
 
 // 统一使用 base.ts 中的 PageResponse 类型
 export type PageData<T> = PageResponse<T>;
@@ -292,7 +292,7 @@ export interface AssetListParams extends PageParams {
 
 // ==================== 工位设备关联 ====================
 
-export type DeviceSource = 'ad' | 'asset' | 'manual';
+export type DeviceSource = "ad" | "asset" | "manual";
 
 export type OpsDeviceStatus = 0 | 1;
 
@@ -321,9 +321,9 @@ export interface WorkstationDevice {
 }
 
 export const DeviceSourceLabels: Record<DeviceSource, string> = {
-  ad: '域控',
-  asset: '资产',
-  manual: '手动',
+  ad: "域控",
+  asset: "资产",
+  manual: "手动",
 };
 
 // 别名导出，保持命名一致性

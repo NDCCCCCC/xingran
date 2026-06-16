@@ -20,14 +20,14 @@ export function loadBaiduMapGLScript(ak: string): Promise<void> {
       return;
     }
 
-    const script = document.createElement('script');
-    script.type = 'text/javascript';
+    const script = document.createElement("script");
+    script.type = "text/javascript";
     script.src = `https://api.map.baidu.com/api?type=webgl&v=1.0&ak=${ak}&callback=initBMapGL`;
     script.async = true;
-    script.onerror = () => reject(new Error('百度地图GL脚本加载失败'));
+    script.onerror = () => reject(new Error("百度地图GL脚本加载失败"));
 
     window.initBMapGL = () => {
-      console.log('百度地图GL脚本加载成功');
+      console.log("百度地图GL脚本加载成功");
       resolve();
     };
 
@@ -51,14 +51,14 @@ export function loadBaiduMapScript(ak: string): Promise<void> {
       return;
     }
 
-    const script = document.createElement('script');
-    script.type = 'text/javascript';
+    const script = document.createElement("script");
+    script.type = "text/javascript";
     script.src = `https://api.map.baidu.com/api?v=3.0&ak=${ak}&callback=init`;
     script.async = true;
-    script.onerror = () => reject(new Error('百度地图脚本加载失败'));
+    script.onerror = () => reject(new Error("百度地图脚本加载失败"));
 
     window.init = () => {
-      console.log('百度地图脚本加载成功');
+      console.log("百度地图脚本加载成功");
       resolve();
     };
 

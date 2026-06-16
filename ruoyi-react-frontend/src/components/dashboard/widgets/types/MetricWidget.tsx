@@ -1,9 +1,9 @@
-import { useMemo, memo } from 'react';
-import { Progress } from 'antd';
-import type { ProgressDisplayConfig, WidgetConfig } from '@/types/dashboard';
-import { BaseWidget } from '../base/BaseWidget';
-import type { BaseWidgetProps } from '../base/BaseWidget';
-import { useWidgetData } from '@/hooks/useWidgetData';
+import { useMemo, memo } from "react";
+import { Progress } from "antd";
+import type { ProgressDisplayConfig, WidgetConfig } from "@/types/dashboard";
+import { BaseWidget } from "../base/BaseWidget";
+import type { BaseWidgetProps } from "../base/BaseWidget";
+import { useWidgetData } from "@/hooks/useWidgetData";
 
 interface MetricWidgetProps {
 	widget: WidgetConfig;
@@ -21,7 +21,7 @@ export const MetricWidget = memo(({
 	const { data, loading, error, refresh } = useWidgetData(widget);
 
 	const { percent, color } = useMemo(() => {
-		if (!data || typeof data !== 'object') {
+		if (!data || typeof data !== "object") {
 			return { percent: 0, color: undefined };
 		}
 

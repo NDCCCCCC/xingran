@@ -4,8 +4,8 @@
  * 所有Widget组件的基础类，提供通用功能和数据获取
  */
 
-import React, { type ReactNode, useState, useCallback, useEffect } from 'react';
-import { Card, Space, Dropdown, Button, Tooltip, Spin, Empty, Result, Skeleton } from 'antd';
+import React, { type ReactNode, useState, useCallback, useEffect } from "react";
+import { Card, Space, Dropdown, Button, Tooltip, Spin, Empty, Result, Skeleton } from "antd";
 import {
 	MoreOutlined,
 	SettingOutlined,
@@ -13,13 +13,13 @@ import {
 	CloseOutlined,
 	DragOutlined,
 	WarningOutlined,
-} from '@ant-design/icons';
-import type { MenuProps } from 'antd';
-import type { WidgetConfig } from '@/types/dashboard';
-import { useDashboardStore } from '@/store/dashboardStore';
-import { useWidgetData } from '@/hooks/useWidgetData';
+} from "@ant-design/icons";
+import type { MenuProps } from "antd";
+import type { WidgetConfig } from "@/types/dashboard";
+import { useDashboardStore } from "@/store/dashboardStore";
+import { useWidgetData } from "@/hooks/useWidgetData";
 
-import './BaseWidget.css';
+import "./BaseWidget.css";
 
 // 导出BaseWidgetProps类型
 export interface BaseWidgetProps {
@@ -66,7 +66,7 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
 	loading: externalLoading,
 	error: externalError,
 	empty: externalEmpty = false,
-	emptyMessage = '暂无数据',
+	emptyMessage = "暂无数据",
 	children,
 	onEdit,
 	onDelete,
@@ -95,7 +95,7 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
 		data === null ||
 		data === undefined ||
 		(Array.isArray(data) && data.length === 0) ||
-		(typeof data === 'object' && data !== null && Object.keys(data).length === 0)
+		(typeof data === "object" && data !== null && Object.keys(data).length === 0)
 	));
 
 	// 首次加载完成后更新状态
@@ -106,7 +106,7 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
 	}, [loading, isFirstLoad]);
 
 	const isSelected = selectedWidgetId === widget.id;
-	const isEditable = viewMode === 'edit';
+	const isEditable = viewMode === "edit";
 	const showSkeleton = (isInitialLoad || isFirstLoad) && loading;
 
 	// 点击处理
@@ -117,11 +117,11 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
 	}, [isEditable, isSelected, widget.id, selectWidget]);
 
 	// 更多操作菜单
-	const menuItems: MenuProps['items'] = [
+	const menuItems: MenuProps["items"] = [
 		{
-			key: 'refresh',
+			key: "refresh",
 			icon: <ReloadOutlined />,
-			label: '刷新',
+			label: "刷新",
 			onClick: () => onRefresh?.(),
 		},
 	];
@@ -129,18 +129,18 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
 	if (isEditable) {
 		menuItems.push(
 			{
-				key: 'edit',
+				key: "edit",
 				icon: <SettingOutlined />,
-				label: '编辑',
+				label: "编辑",
 				onClick: onEdit,
 			},
 			{
-				type: 'divider',
+				type: "divider",
 			},
 			{
-				key: 'delete',
+				key: "delete",
 				icon: <CloseOutlined />,
-				label: '删除',
+				label: "删除",
 				danger: true,
 				onClick: onDelete,
 			}
@@ -149,7 +149,7 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
 
 	return (
 		<div
-			className={`base-widget ${isSelected ? 'base-widget--selected' : ''} ${isEditable ? 'base-widget--editable' : ''} ${loading ? 'base-widget--loading' : ''}`}
+			className={`base-widget ${isSelected ? "base-widget--selected" : ""} ${isEditable ? "base-widget--editable" : ""} ${loading ? "base-widget--loading" : ""}`}
 			onClick={handleClick}
 			onMouseEnter={() => setIsHovered(true)}
 			onMouseLeave={() => setIsHovered(false)}
@@ -169,10 +169,9 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
 					<Space size="small">
 						{loading && <ReloadOutlined spin />}
 						{(isHovered || isSelected) && (
-							<>
-								<Dropdown
+							<Dropdown
 									menu={{ items: menuItems }}
-									trigger={['click']}
+									trigger={["click"]}
 								>
 									<Button
 										type="text"
@@ -181,7 +180,6 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
 										onClick={(e) => e.stopPropagation()}
 									/>
 								</Dropdown>
-							</>
 						)}
 					</Space>
 				}
@@ -190,8 +188,8 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
 				data-widget-id={widget.id}
 				styles={{
 					body: {
-						height: 'calc(100% - 40px)',
-						overflow: 'auto',
+						height: "calc(100% - 40px)",
+						overflow: "auto",
 					},
 				}}
 			>
@@ -235,7 +233,7 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
 							{children}
 						</Spin>
 						{loading && (
-							<div style={{ marginTop: 8, textAlign: 'center', color: 'rgba(0, 0, 0, 0.45)' }}>
+							<div style={{ marginTop: 8, textAlign: "center", color: "rgba(0, 0, 0, 0.45)" }}>
 								加载中...
 							</div>
 						)}
@@ -272,7 +270,7 @@ export const BaseWidgetContent: React.FC<{
 	error?: string;
 	empty?: boolean;
 	emptyMessage?: string;
-}> = ({ children, loading, error, empty, emptyMessage = '暂无数据' }) => {
+}> = ({ children, loading, error, empty, emptyMessage = "暂无数据" }) => {
 	if (loading) {
 		return <div className="base-widget-content base-widget-content--loading">加载中...</div>;
 	}

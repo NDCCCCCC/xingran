@@ -5,9 +5,9 @@
  * 自动从用户配置读取默认分页大小
  */
 
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { useSettingsStore } from '@/store/settingsStore';
-import type { TablePaginationConfig } from 'antd/es/table';
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { useSettingsStore } from "@/store/settingsStore";
+import type { TablePaginationConfig } from "antd/es/table";
 
 export interface UsePaginationOptions {
 	// 页面级覆盖（可选）

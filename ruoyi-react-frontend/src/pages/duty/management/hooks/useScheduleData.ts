@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { message } from 'antd';
+import { useState, useCallback } from "react";
+import { message } from "antd";
 import {
   getDutyScheduleList,
   generateSchedule,
@@ -12,9 +12,9 @@ import {
   type GenerateScheduleRequest,
   type ManualDutyRequest,
   type MonthlyDutyMember,
-} from '@/lib/dutyApi';
-import type { Dayjs } from 'dayjs';
-import dayjs from 'dayjs';
+} from "@/lib/dutyApi";
+import type { Dayjs } from "dayjs";
+import dayjs from "dayjs";
 
 interface UseScheduleDataOptions {
   poolId?: string;
@@ -25,7 +25,7 @@ interface UseScheduleDataOptions {
   expired?: number;
 }
 
-type DutyType = 'weekday' | 'weekend' | 'holiday';
+type DutyType = "weekday" | "weekend" | "holiday";
 
 export function useScheduleData() {
   const [loading, setLoading] = useState(false);
@@ -38,7 +38,7 @@ export function useScheduleData() {
 
   // 周视图数据
   const [weeklyDutyData, setWeeklyDutyData] = useState<Record<string, MonthlyDutyMember[]>>({});
-  const [currentWeekStart, setCurrentWeekStart] = useState(dayjs().startOf('week'));
+  const [currentWeekStart, setCurrentWeekStart] = useState(dayjs().startOf("week"));
 
   // 获取排班列表
   const fetchList = useCallback(async (page?: number, size?: number, options?: UseScheduleDataOptions) => {
@@ -59,7 +59,7 @@ export function useScheduleData() {
       if (result.data?.current) setCurrent(result.data.current);
       if (result.data?.pageSize) setPageSize(result.data.pageSize);
     } catch (error) {
-      message.error('获取排班列表失败');
+      message.error("获取排班列表失败");
     } finally {
       setLoading(false);
     }
@@ -71,14 +71,14 @@ export function useScheduleData() {
       const result = await getDutyScheduleList({ current: 1, pageSize: 1000 });
       setAllSchedules(result.data?.list ?? []);
     } catch (error) {
-      console.error('获取所有排班失败', error);
+      console.error("获取所有排班失败", error);
     }
   }, []);
 
   // 获取周度值班数据
   const fetchWeeklyDuty = useCallback(async (weekStart: Dayjs) => {
     try {
-      const weekEnd = weekStart.endOf('week');
+      const weekEnd = weekStart.endOf("week");
       const yearStart = weekStart.year();
       const yearEnd = weekEnd.year();
       const monthStart = weekStart.month() + 1;
@@ -110,12 +110,12 @@ export function useScheduleData() {
         });
       }
     } catch (error) {
-      console.error('获取周度值班失败', error);
+      console.error("获取周度值班失败", error);
     }
   }, []);
 
   // 生成排班
-  const generate = useCallback(async (data: Omit<GenerateScheduleRequest, 'dutyType'> & { dutyType: string }) => {
+  const generate = useCallback(async (data: Omit<GenerateScheduleRequest, "dutyType"> & { dutyType: string }) => {
     try {
       const result = await generateSchedule({
         ...data,
@@ -126,7 +126,7 @@ export function useScheduleData() {
       await fetchWeeklyDuty(currentWeekStart);
       return true;
     } catch (error) {
-      message.error('生成排班失败');
+      message.error("生成排班失败");
       return false;
     }
   }, [fetchList, fetchWeeklyDuty, currentWeekStart]);
@@ -139,29 +139,29 @@ export function useScheduleData() {
   }) => {
     try {
       await swapDuty(data);
-      message.success('调班成功');
+      message.success("调班成功");
       await fetchList();
       await fetchWeeklyDuty(currentWeekStart);
       return true;
     } catch (error) {
-      message.error('调班失败');
+      message.error("调班失败");
       return false;
     }
   }, [fetchList, fetchWeeklyDuty, currentWeekStart]);
 
   // 手动排班
-  const manual = useCallback(async (data: Omit<ManualDutyRequest, 'dutyType'> & { dutyType: string }) => {
+  const manual = useCallback(async (data: Omit<ManualDutyRequest, "dutyType"> & { dutyType: string }) => {
     try {
       await manualDuty({
         ...data,
         dutyType: data.dutyType as DutyType,
       });
-      message.success('手动排班成功');
+      message.success("手动排班成功");
       await fetchList();
       await fetchWeeklyDuty(currentWeekStart);
       return true;
     } catch (error) {
-      message.error('手动排班失败');
+      message.error("手动排班失败");
       return false;
     }
   }, [fetchList, fetchWeeklyDuty, currentWeekStart]);
@@ -170,14 +170,14 @@ export function useScheduleData() {
   const deleteOne = useCallback(async (id: string) => {
     try {
       await deleteDutySchedule(id);
-      message.success('删除成功');
+      message.success("删除成功");
       // 计算正确的页码：如果当前页只有一条数据且不是第一页，则向前翻页
       const newPage = schedules.length === 1 && current > 1 ? current - 1 : current;
       await fetchList(newPage);
       await fetchWeeklyDuty(currentWeekStart);
       return true;
     } catch (error) {
-      message.error('删除失败');
+      message.error("删除失败");
       return false;
     }
   }, [schedules.length, current, fetchList, fetchWeeklyDuty, currentWeekStart]);
@@ -185,7 +185,7 @@ export function useScheduleData() {
   // 批量删除排班
   const batchDelete = useCallback(async (ids: string[]) => {
     if (ids.length === 0) {
-      message.warning('请先选择要删除的排班记录');
+      message.warning("请先选择要删除的排班记录");
       return false;
     }
     try {
@@ -199,28 +199,28 @@ export function useScheduleData() {
       await fetchWeeklyDuty(currentWeekStart);
       return true;
     } catch (error) {
-      message.error('批量删除失败');
+      message.error("批量删除失败");
       return false;
     }
   }, [schedules.length, current, fetchList, fetchWeeklyDuty, currentWeekStart]);
 
   // 周视图导航
   const prevWeek = useCallback(() => {
-    const newWeekStart = currentWeekStart.subtract(1, 'week');
+    const newWeekStart = currentWeekStart.subtract(1, "week");
     setCurrentWeekStart(newWeekStart);
     // 直接传递新值，避免状态异步更新的竞态条件
     fetchWeeklyDuty(newWeekStart);
   }, [currentWeekStart, fetchWeeklyDuty]);
 
   const nextWeek = useCallback(() => {
-    const newWeekStart = currentWeekStart.add(1, 'week');
+    const newWeekStart = currentWeekStart.add(1, "week");
     setCurrentWeekStart(newWeekStart);
     // 直接传递新值，避免状态异步更新的竞态条件
     fetchWeeklyDuty(newWeekStart);
   }, [currentWeekStart, fetchWeeklyDuty]);
 
   const todayWeek = useCallback(() => {
-    const todayWeekStart = dayjs().startOf('week');
+    const todayWeekStart = dayjs().startOf("week");
     setCurrentWeekStart(todayWeekStart);
     // 直接传递新值，避免状态异步更新的竞态条件
     fetchWeeklyDuty(todayWeekStart);

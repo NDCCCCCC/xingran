@@ -1,46 +1,46 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { Layout, Menu, Spin, message } from 'antd';
-import type { MenuProps } from 'antd';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useMenuStore } from '@/store/menuStore';
-import { useLayoutStore } from '@/store/layoutStore';
-import type { Menu as MenuType } from '@/types';
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Layout, Menu, Spin, message } from "antd";
+import type { MenuProps } from "antd";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useMenuStore } from "@/store/menuStore";
+import { useLayoutStore } from "@/store/layoutStore";
+import type { Menu as MenuType } from "@/types";
 import {
 	buildMenuPathMap,
 	isSameTopLevelMenu,
 	getMenuLevel,
 	isSecondLevelMenu,
 	isTopLevelMenu,
-} from './sidebar-helper';
-import { getIconComponent } from '@/utils/iconUtils';
-import { buildFullPath, findMenuById, findMenuByFullPath } from './sidebar.utils';
+} from "./sidebar-helper";
+import { getIconComponent } from "@/utils/iconUtils";
+import { buildFullPath, findMenuById, findMenuByFullPath } from "./sidebar.utils";
 import {
 	DEFAULT_SIDEBAR_WIDTH,
 	HEADER_HEIGHT,
 	COLLAPSE_BUTTON_LEFT,
 	MENU_FONT_SIZE,
 	NAVIGATION_DELAY,
-} from './sidebar.constants';
-import '@/design-system/themes/theme-styles.css';
+} from "./sidebar.constants";
+import "@/design-system/themes/theme-styles.css";
 
 const { Sider } = Layout;
 
-type MenuItem = NonNullable<MenuProps['items']>[number];
+type MenuItem = NonNullable<MenuProps["items"]>[number];
 
 const getIcon = (iconName?: string | null): React.ReactNode => getIconComponent(iconName);
 
-const convertToMenuItem = (menu: MenuType, parentPath: string = ''): MenuItem => {
+const convertToMenuItem = (menu: MenuType, parentPath: string = ""): MenuItem => {
   const icon = getIcon(menu.icon);
 
-  if (menu.menuType === 'F' || menu.visible !== 1) {
+  if (menu.menuType === "F" || menu.visible !== 1) {
     return null;
   }
 
   const isDisabled = menu.status !== 0;
-  let menuPath = menu.path || '';
+  let menuPath = menu.path || "";
 
-  if (menuPath && !menuPath.startsWith('/') && parentPath) {
-    if (!menuPath.startsWith(parentPath + '/')) {
+  if (menuPath && !menuPath.startsWith("/") && parentPath) {
+    if (!menuPath.startsWith(parentPath + "/")) {
       menuPath = `${parentPath}/${menuPath}`;
     }
   }
@@ -49,11 +49,11 @@ const convertToMenuItem = (menu: MenuType, parentPath: string = ''): MenuItem =>
 
   if (menu.children && menu.children.length > 0) {
     const validChildren = menu.children
-      .filter(child => child.menuType !== 'F' && child.visible === 1)
+      .filter(child => child.menuType !== "F" && child.visible === 1)
       .map(child => convertToMenuItem(child, menuPath))
       .filter((item): item is MenuItem => item !== null);
 
-    if (validChildren.length > 0 || menu.menuType === 'M') {
+    if (validChildren.length > 0 || menu.menuType === "M") {
       return {
         key: menuKey,
         icon,
@@ -92,7 +92,7 @@ const Sidebar = () => {
   // 将后端菜单数据转换为 Ant Design Menu 组件所需的格式
   const menuItems: MenuItem[] = useMemo(() => {
     return menus
-      .filter(menu => menu.menuType !== 'F' && menu.visible === 1)
+      .filter(menu => menu.menuType !== "F" && menu.visible === 1)
       .map(menu => convertToMenuItem(menu))
       .filter((item): item is MenuItem => item !== null);
   }, [menus]);
@@ -106,7 +106,7 @@ const Sidebar = () => {
    * 因为当前页面可能是不可展开的菜单项（menuType === 'C'）
    */
   function buildParentKeyChain(currentPath: string, menuPathMap: Map<string, { level: number; topLevel?: string; secondLevel?: string }>): string[] {
-    const normalizePath = (p: string): string => p.startsWith('/') ? p.slice(1) : p;
+    const normalizePath = (p: string): string => p.startsWith("/") ? p.slice(1) : p;
     const normalizedPathname = normalizePath(currentPath);
     const menuInfo = menuPathMap.get(normalizedPathname);
 
@@ -149,25 +149,25 @@ const Sidebar = () => {
   }, [location.pathname, menuPathMap]);
 
   // 菜单点击处理
-  const handleMenuClick: MenuProps['onClick'] = (e) => {
+  const handleMenuClick: MenuProps["onClick"] = (e) => {
     const clickedMenu = findMenuById(menus, e.key);
 
     if (clickedMenu && clickedMenu.status !== 0) {
-      message.warning('该功能已停用，暂时无法访问');
+      message.warning("该功能已停用，暂时无法访问");
       return;
     }
 
     // 只有菜单类型（C）才执行导航，目录类型（M）不导航
-    if (clickedMenu && clickedMenu.menuType === 'C') {
+    if (clickedMenu && clickedMenu.menuType === "C") {
       const menuInfo = menuPathMap.get(clickedMenu.id);
       const fullPath = menuInfo?.fullPath || buildFullPath(clickedMenu);
-      const navigationPath = fullPath.startsWith('/') ? fullPath : `/${fullPath}`;
+      const navigationPath = fullPath.startsWith("/") ? fullPath : `/${fullPath}`;
       navigate(navigationPath);
     }
   };
 
   // 处理菜单展开/收起 - 手风琴效果（支持一级和二级菜单）
-  const handleOpenChange: MenuProps['onOpenChange'] = (keys) => {
+  const handleOpenChange: MenuProps["onOpenChange"] = (keys) => {
     // 检查是否是导航触发的预期变化（防止循环刷新）
     if (expectedOpenKeysRef.current) {
       const expected = expectedOpenKeysRef.current;
@@ -246,7 +246,7 @@ const Sidebar = () => {
 
     const pathsToTry = [
       location.pathname,
-      location.pathname.startsWith('/') ? location.pathname.slice(1) : location.pathname,
+      location.pathname.startsWith("/") ? location.pathname.slice(1) : location.pathname,
     ];
 
     for (const path of pathsToTry) {
@@ -269,7 +269,7 @@ const Sidebar = () => {
       trigger={null}
       className="layout-sidebar"
       style={{
-        background: '#ffffff',
+        background: "#ffffff",
       }}
     >
 
@@ -277,9 +277,9 @@ const Sidebar = () => {
         className="flex items-center relative"
         style={{
           height: `${HEADER_HEIGHT}px`,
-          borderBottom: '1px solid var(--theme-border-primary)',
-          paddingLeft: sidebarCollapsed ? '0' : '56px',
-          transition: 'padding-left var(--theme-transition-base)',
+          borderBottom: "1px solid var(--theme-border-primary)",
+          paddingLeft: sidebarCollapsed ? "0" : "56px",
+          transition: "padding-left var(--theme-transition-base)",
         }}
       >
         {/* 收缩按钮 */}
@@ -287,10 +287,10 @@ const Sidebar = () => {
           onClick={toggleSidebar}
           className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors absolute"
           style={{
-            color: 'var(--theme-text-secondary)',
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
+            color: "var(--theme-text-secondary)",
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
             left: `${COLLAPSE_BUTTON_LEFT}px`,
           }}
         >
@@ -301,8 +301,8 @@ const Sidebar = () => {
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
             style={{
-              transition: 'transform var(--theme-transition-base)',
-              transform: sidebarCollapsed ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: "transform var(--theme-transition-base)",
+              transform: sidebarCollapsed ? "rotate(180deg)" : "rotate(0deg)",
             }}
           >
             <path
@@ -317,12 +317,12 @@ const Sidebar = () => {
         <h1
           className="text-xl font-bold"
           style={{
-            backgroundImage: 'linear-gradient(135deg, var(--theme-brand, #3b82f6) 0%, #ffffff 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            color: 'transparent',
-            display: sidebarCollapsed ? 'none' : 'inline-block',
+            backgroundImage: "linear-gradient(135deg, var(--theme-brand, #3b82f6) 0%, #ffffff 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+            color: "transparent",
+            display: sidebarCollapsed ? "none" : "inline-block",
           }}
         >
           数智化平台
@@ -343,9 +343,9 @@ const Sidebar = () => {
           onClick={handleMenuClick}
           className="border-r-0 px-2 py-4"
           style={{
-            background: 'transparent',
+            background: "transparent",
             fontSize: `${MENU_FONT_SIZE}px`,
-            color: 'var(--theme-text-primary)',
+            color: "var(--theme-text-primary)",
           }}
         />
       )}

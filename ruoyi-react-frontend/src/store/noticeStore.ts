@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import type { NoticeListItem, WebSocketNoticeMessage } from '@/types/notice';
-import type { RPAProgressMessage } from '@/types/rpa';
+import { create } from "zustand";
+import type { NoticeListItem, WebSocketNoticeMessage } from "@/types/notice";
+import type { RPAProgressMessage } from "@/types/rpa";
 
 // RPA 进度回调类型
 type RPAProgressCallback = (message: RPAProgressMessage) => void;
@@ -118,7 +118,7 @@ export const useNoticeStore = create<NoticeState & NoticeActions>()((set, get) =
   // 处理 WebSocket 消息
   handleWsMessage: (message: WebSocketNoticeMessage) => {
     // 处理新通知
-    if (message.type === 'new_notice' && message.data) {
+    if (message.type === "new_notice" && message.data) {
       const { noticeId, noticeTitle, noticeType, priority, createdAt } = message.data;
       get().addNotification({
         id: noticeId,
@@ -132,9 +132,9 @@ export const useNoticeStore = create<NoticeState & NoticeActions>()((set, get) =
 
     // 处理 RPA 进度消息
     if (
-      message.type === 'rpa_progress' ||
-      message.type === 'rpa_completed' ||
-      message.type === 'rpa_failed'
+      message.type === "rpa_progress" ||
+      message.type === "rpa_completed" ||
+      message.type === "rpa_failed"
     ) {
       try {
         let progressData: RPAProgressMessage;
@@ -142,7 +142,7 @@ export const useNoticeStore = create<NoticeState & NoticeActions>()((set, get) =
         // 尝试从 content 字段解析
         if (message.content) {
           progressData = JSON.parse(message.content);
-        } else if (message.data && typeof message.data === 'object' && 'executionId' in message.data) {
+        } else if (message.data && typeof message.data === "object" && "executionId" in message.data) {
           // 从 data 字段解析
           progressData = message.data as unknown as RPAProgressMessage;
         } else {
@@ -154,11 +154,11 @@ export const useNoticeStore = create<NoticeState & NoticeActions>()((set, get) =
           try {
             callback(progressData);
           } catch (error) {
-            console.error('[RPA Progress] Callback error:', error);
+            console.error("[RPA Progress] Callback error:", error);
           }
         });
       } catch (error) {
-        console.error('[RPA Progress] Parse error:', error);
+        console.error("[RPA Progress] Parse error:", error);
       }
     }
   },

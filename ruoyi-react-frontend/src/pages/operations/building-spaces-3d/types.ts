@@ -34,7 +34,7 @@ export interface MarkerPosition {
 // 地图标记数据
 export interface MarkerData {
   id: string;
-  type: 'city' | 'building';
+  type: "city" | "building";
   position: MarkerPosition;
   title: string;
   data: CityGroup | BuildingItem;

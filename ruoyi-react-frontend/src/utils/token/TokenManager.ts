@@ -9,8 +9,8 @@
  * 4. 处理刷新失败
  */
 
-import type { SecureTokenStorage, TokenMeta, TokenRefreshResponse } from './SecureTokenStorage';
-import { TokenRefreshError } from './SecureTokenStorage';
+import type { SecureTokenStorage, TokenMeta, TokenRefreshResponse } from "./SecureTokenStorage";
+import { TokenRefreshError } from "./SecureTokenStorage";
 
 /**
  * Token 刷新锁（防止并发刷新）
@@ -83,7 +83,7 @@ export class TokenManager {
 		const token = this.storage.getAccessToken();
 
 		if (!token) {
-			throw new TokenRefreshError('No access token available', 'INVALID_TOKEN');
+			throw new TokenRefreshError("No access token available", "INVALID_TOKEN");
 		}
 
 		// 检查是否需要刷新
@@ -141,12 +141,12 @@ export class TokenManager {
 		const refreshToken = await this.storage.getRefreshToken();
 
 		if (!refreshToken) {
-			throw new TokenRefreshError('No refresh token available', 'INVALID_TOKEN');
+			throw new TokenRefreshError("No refresh token available", "INVALID_TOKEN");
 		}
 
 		try {
 			// 动态导入 api 模块避免循环依赖
-			const { post } = await import('@/lib/api');
+			const { post } = await import("@/lib/api");
 			const response = await post(this.config.refreshEndpoint, { refreshToken }) as {
 				data: TokenRefreshResponse;
 			};
@@ -162,16 +162,16 @@ export class TokenManager {
 				expiresIn,
 			};
 		} catch (error: unknown) {
-			console.error('[TokenManager] 刷新 Token 失败:', error);
+			console.error("[TokenManager] 刷新 Token 失败:", error);
 
 			// 根据错误类型分类
 			const axiosError = error as { response?: { status?: number }; code?: string };
 			if (axiosError.response?.status === 401) {
-				throw new TokenRefreshError('Refresh token expired', 'INVALID_TOKEN');
-			} else if (axiosError.code === 'NETWORK_ERROR') {
-				throw new TokenRefreshError('Network error during refresh', 'NETWORK_ERROR');
+				throw new TokenRefreshError("Refresh token expired", "INVALID_TOKEN");
+			} else if (axiosError.code === "NETWORK_ERROR") {
+				throw new TokenRefreshError("Network error during refresh", "NETWORK_ERROR");
 			} else {
-				throw new TokenRefreshError('Server error during refresh', 'SERVER_ERROR');
+				throw new TokenRefreshError("Server error during refresh", "SERVER_ERROR");
 			}
 		}
 	}
@@ -200,7 +200,7 @@ export class TokenManager {
 		// 如果已经过期，立即刷新
 		if (refreshTime <= now) {
 			this.refreshToken().catch((error) => {
-				console.error('[TokenManager] 自动刷新失败:', error);
+				console.error("[TokenManager] 自动刷新失败:", error);
 			});
 			return;
 		}
@@ -209,7 +209,7 @@ export class TokenManager {
 		const delay = refreshTime - now;
 		this.refreshTimer = window.setTimeout(() => {
 			this.refreshToken().catch((error) => {
-				console.error('[TokenManager] 定时刷新失败:', error);
+				console.error("[TokenManager] 定时刷新失败:", error);
 			});
 		}, delay);
 	}

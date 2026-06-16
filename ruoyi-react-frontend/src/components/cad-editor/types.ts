@@ -1,35 +1,35 @@
-import type { WorkstationNode } from '@/components/shared/FloorPlanEditor.types';
-import type { Point, Size } from '@/utils/cad/geometry';
+import type { WorkstationNode } from "@/components/shared/FloorPlanEditor.types";
+import type { Point, Size } from "@/utils/cad/geometry";
 
 export type { Point, Size, WorkstationNode };
 
-export type WallType = 'straight' | 'curved' | 'l_shaped' | 'polyline';
+export type WallType = "straight" | "curved" | "l_shaped" | "polyline";
 
-export type DoorType = 'single' | 'double' | 'sliding' | 'revolving' | 'emergency';
+export type DoorType = "single" | "double" | "sliding" | "revolving" | "emergency";
 
-export type DoorDirection = 'left' | 'right' | 'double' | 'sliding';
+export type DoorDirection = "left" | "right" | "double" | "sliding";
 
-export type EditorMode = 'select' | 'draw_wall' | 'draw_door' | 'draw_workstation' | 'draw_text';
+export type EditorMode = "select" | "draw_wall" | "draw_door" | "draw_workstation" | "draw_text";
 
-export type LayerType = 'wall' | 'door' | 'workstation' | 'text' | 'grid' | 'guide' | 'plan_image';
+export type LayerType = "wall" | "door" | "workstation" | "text" | "grid" | "guide" | "plan_image";
 
-export type ExportFormat = 'png' | 'jpg' | 'svg' | 'json';
+export type ExportFormat = "png" | "jpg" | "svg" | "json";
 
-export type GuideLineType = 'horizontal' | 'vertical' | 'angular';
+export type GuideLineType = "horizontal" | "vertical" | "angular";
 
 export type ToolAction =
-  | 'select'
-  | 'draw_wall'
-  | 'draw_door'
-  | 'draw_workstation'
-  | 'zoom_in'
-  | 'zoom_out'
-  | 'reset_view'
-  | 'save'
-  | 'undo'
-  | 'redo';
+  | "select"
+  | "draw_wall"
+  | "draw_door"
+  | "draw_workstation"
+  | "zoom_in"
+  | "zoom_out"
+  | "reset_view"
+  | "save"
+  | "undo"
+  | "redo";
 
-export type SelectedElementType = 'wall' | 'door' | 'workstation' | null;
+export type SelectedElementType = "wall" | "door" | "workstation" | null;
 
 export interface Wall {
   id: string;
@@ -66,8 +66,8 @@ export interface TextElement {
   fontSize: number;
   color: string;
   fontFamily?: string;
-  fontWeight?: 'normal' | 'bold';
-  fontStyle?: 'normal' | 'italic';
+  fontWeight?: "normal" | "bold";
+  fontStyle?: "normal" | "italic";
   angle?: number;
 }
 
@@ -111,8 +111,8 @@ export interface ViewState {
 
 export interface HistoryItem {
   id: string;
-  type: 'create' | 'update' | 'delete';
-  elementType: 'wall' | 'door' | 'workstation';
+  type: "create" | "update" | "delete";
+  elementType: "wall" | "door" | "workstation";
   data: unknown;
   timestamp: number;
 }
@@ -173,7 +173,7 @@ export interface GuideLine {
 
 export interface ElementProperties {
   id: string;
-  type: 'wall' | 'door' | 'workstation';
+  type: "wall" | "door" | "workstation";
   properties: Record<string, unknown>;
 }
 
@@ -187,20 +187,20 @@ export interface ExportOptions {
 
 export interface SelectEvent {
   elementId: string;
-  elementType: 'wall' | 'door' | 'workstation';
+  elementType: "wall" | "door" | "workstation";
   ctrlKey?: boolean;
   shiftKey?: boolean;
 }
 
 export interface UpdateEvent {
   elementId: string;
-  elementType: 'wall' | 'door' | 'workstation';
+  elementType: "wall" | "door" | "workstation";
   changes: Record<string, unknown>;
 }
 
 export interface CanvasClickEvent {
   point: Point;
-  button: 'left' | 'middle' | 'right';
+  button: "left" | "middle" | "right";
   ctrlKey: boolean;
   shiftKey: boolean;
   altKey: boolean;
@@ -208,7 +208,7 @@ export interface CanvasClickEvent {
 
 export interface DragEvent {
   elementId: string;
-  elementType: 'wall' | 'door' | 'workstation';
+  elementType: "wall" | "door" | "workstation";
   from: Point;
   to: Point;
 }

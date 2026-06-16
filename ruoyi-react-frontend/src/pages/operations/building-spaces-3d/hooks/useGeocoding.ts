@@ -5,9 +5,9 @@
  * 支持缓存以减少 API 调用
  */
 
-import { useState, useCallback } from 'react';
-import { post } from '@/lib/api';
-import { getGeocodingCache } from '@/utils/geocodingCache';
+import { useState, useCallback } from "react";
+import { post } from "@/lib/api";
+import { getGeocodingCache } from "@/utils/geocodingCache";
 
 // 缓存实例
 const geocodingCache = getGeocodingCache<GeocodingResult>();
@@ -39,7 +39,7 @@ export const useGeocoding = () => {
   const geocode = useCallback(
     async (address: string, city?: string): Promise<GeocodingResult | null> => {
       if (!address || address.trim().length === 0) {
-        setError({ code: -1, message: '地址不能为空' });
+        setError({ code: -1, message: "地址不能为空" });
         return null;
       }
 
@@ -49,9 +49,9 @@ export const useGeocoding = () => {
       try {
         // 生成缓存键
         const cacheKey = geocodingCache.generateKey({
-          type: 'geocode',
+          type: "geocode",
           address: address.trim(),
-          city: city || '',
+          city: city || "",
         });
 
         // 尝试从缓存获取
@@ -62,9 +62,9 @@ export const useGeocoding = () => {
         }
 
         // 缓存未命中，调用后端 API
-        const response = await post<GeocodingResponse>('/ops/building/geocode', {
+        const response = await post<GeocodingResponse>("/ops/building/geocode", {
           address: address.trim(),
-          city: city || '',
+          city: city || "",
         });
 
         if (response.data) {
@@ -72,10 +72,10 @@ export const useGeocoding = () => {
             longitude: response.data.longitude,
             latitude: response.data.latitude,
             formattedAddress: response.data.formattedAddress || address,
-            province: response.data.province || '',
-            city: response.data.city || '',
-            district: response.data.district || '',
-            street: response.data.street || '',
+            province: response.data.province || "",
+            city: response.data.city || "",
+            district: response.data.district || "",
+            street: response.data.street || "",
           };
 
           // 存入缓存
@@ -86,14 +86,14 @@ export const useGeocoding = () => {
           // 解析失败
           setError({
             code: -1,
-            message: '地址解析失败',
+            message: "地址解析失败",
           });
           return null;
         }
       } catch (err) {
         setError({
           code: -1,
-          message: err instanceof Error ? err.message : '网络请求失败',
+          message: err instanceof Error ? err.message : "网络请求失败",
         });
         return null;
       } finally {
@@ -116,7 +116,7 @@ export const useGeocoding = () => {
       try {
         // 生成缓存键（坐标保留6位小数，精度约0.1米）
         const cacheKey = geocodingCache.generateKey({
-          type: 'reverse_geocode',
+          type: "reverse_geocode",
           lng: longitude.toFixed(6),
           lat: latitude.toFixed(6),
         });
@@ -135,7 +135,7 @@ export const useGeocoding = () => {
       } catch (err) {
         setError({
           code: -1,
-          message: err instanceof Error ? err.message : '网络请求失败',
+          message: err instanceof Error ? err.message : "网络请求失败",
         });
         return null;
       } finally {

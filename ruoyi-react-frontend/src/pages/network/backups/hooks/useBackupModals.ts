@@ -2,11 +2,11 @@
  * 备份弹窗管理 Hook
  */
 
-import { useState, useCallback } from 'react';
-import type { ConfigBackup, BaseResponse } from '@/types';
-import type { FormInstance } from 'antd/es/form';
-import type { DeviceBackupGroup } from '../types';
-import { post } from '@/lib/api';
+import { useState, useCallback } from "react";
+import type { ConfigBackup, BaseResponse } from "@/types";
+import type { FormInstance } from "antd/es/form";
+import type { DeviceBackupGroup } from "../types";
+import { post } from "@/lib/api";
 
 interface UseBackupModalsOptions {
   onLoad: () => void;
@@ -45,7 +45,7 @@ export function useBackupModals(
   const [selectedBackup, setSelectedBackup] = useState<ConfigBackup | null>(null);
   const [selectedRestoreBackup, setSelectedRestoreBackup] = useState<ConfigBackup | null>(null);
   const [selectedDeviceGroup, setSelectedDeviceGroup] = useState<DeviceBackupGroup | null>(null);
-  const [backupContent, setBackupContent] = useState('');
+  const [backupContent, setBackupContent] = useState("");
 
   // 打开备份弹窗
   const openBackupModal = useCallback(() => {
@@ -75,12 +75,12 @@ export function useBackupModals(
   // 打开内容抽屉
   const openContentDrawer = useCallback(async (backup: ConfigBackup) => {
     try {
-      const result = await post<{ content: string }>('/network/backups/content', { id: backup.id });
-      setBackupContent(result.data?.content || '');
+      const result = await post<{ content: string }>("/network/backups/content", { id: backup.id });
+      setBackupContent(result.data?.content || "");
       setSelectedBackup(backup);
       setContentDrawerVisible(true);
     } catch (error) {
-      console.error('加载备份内容失败:', error);
+      console.error("加载备份内容失败:", error);
     }
   }, []);
 
@@ -88,7 +88,7 @@ export function useBackupModals(
   const closeContentDrawer = useCallback(() => {
     setContentDrawerVisible(false);
     setSelectedBackup(null);
-    setBackupContent('');
+    setBackupContent("");
   }, []);
 
   // 打开版本列表抽屉
@@ -108,9 +108,9 @@ export function useBackupModals(
     try {
       const values = await form.validateFields() as Record<string, unknown>;
       // 调用批量备份端点，添加 backupType 字段
-      await post('/network/backups/batch', {
+      await post("/network/backups/batch", {
         deviceIds: values.deviceIds,
-        backupType: 'manual',
+        backupType: "manual",
         changeReason: values.changeReason,
       });
       closeBackupModal(form);
@@ -119,7 +119,7 @@ export function useBackupModals(
       if ((error as { errorFields?: unknown }).errorFields) {
         return;
       }
-      console.error('创建备份失败:', (error as Error).message);
+      console.error("创建备份失败:", (error as Error).message);
     }
   }, [closeBackupModal, onLoad]);
 
@@ -133,7 +133,7 @@ export function useBackupModals(
       closeRestoreModal();
       onLoad();
     } catch (error) {
-      console.error('恢复备份失败:', error);
+      console.error("恢复备份失败:", error);
     }
   }, [selectedRestoreBackup, closeRestoreModal, onLoad]);
 

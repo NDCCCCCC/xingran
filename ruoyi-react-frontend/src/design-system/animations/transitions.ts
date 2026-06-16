@@ -7,48 +7,48 @@
  */
 export const easings = {
   // 线性
-  linear: 'linear',
+  linear: "linear",
 
   // 标准缓动
-  ease: 'ease',
+  ease: "ease",
 
   // 优雅缓动（推荐）
-  easeInOut: 'cubic-bezier(0.4, 0, 0.2, 1)',
-  easeOut: 'cubic-bezier(0, 0, 0.2, 1)',
-  easeIn: 'cubic-bezier(0.4, 0, 1, 1)',
+  easeInOut: "cubic-bezier(0.4, 0, 0.2, 1)",
+  easeOut: "cubic-bezier(0, 0, 0.2, 1)",
+  easeIn: "cubic-bezier(0.4, 0, 1, 1)",
 
   // 弹性缓动
-  bouncy: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
-  bouncyIn: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
-  bouncyOut: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+  bouncy: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+  bouncyIn: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+  bouncyOut: "cubic-bezier(0.34, 1.56, 0.64, 1)",
 
   // 平滑缓动
-  smooth: 'cubic-bezier(0.25, 0.1, 0.25, 1)',
+  smooth: "cubic-bezier(0.25, 0.1, 0.25, 1)",
 
   // 快速响应
-  snappy: 'cubic-bezier(0.19, 1, 0.22, 1)',
+  snappy: "cubic-bezier(0.19, 1, 0.22, 1)",
 } as const;
 
 /**
  * 过渡时长
  */
 export const durations = {
-  instant: '0ms',
-  fast: '150ms',
-  base: '200ms',
-  normal: '300ms',
-  slow: '500ms',
-  slower: '700ms',
+  instant: "0ms",
+  fast: "150ms",
+  base: "200ms",
+  normal: "300ms",
+  slow: "500ms",
+  slower: "700ms",
 } as const;
 
 /**
  * 过渡延迟
  */
 export const delays = {
-  none: '0ms',
-  short: '100ms',
-  medium: '200ms',
-  long: '300ms',
+  none: "0ms",
+  short: "100ms",
+  medium: "200ms",
+  long: "300ms",
 } as const;
 
 /**
@@ -116,10 +116,10 @@ export const propertyTransitions = {
  * Stagger延迟配置（用于序列动画）
  */
 export const staggerDelays = {
-  none: '0ms',
-  fast: '50ms',
-  base: '100ms',
-  slow: '150ms',
+  none: "0ms",
+  fast: "50ms",
+  base: "100ms",
+  slow: "150ms",
 } as const;
 
 /**
@@ -127,7 +127,7 @@ export const staggerDelays = {
  * @param index 元素索引
  * @param delay 延迟间隔
  */
-export function getStaggerDelay(index: number, delay: keyof typeof staggerDelays = 'base'): number {
+export function getStaggerDelay(index: number, delay: keyof typeof staggerDelays = "base"): number {
   const delayMs = parseInt(staggerDelays[delay]);
   return index * delayMs;
 }
@@ -141,10 +141,10 @@ export const transitionUtils = {
    */
   create: (
     properties: string | string[],
-    duration: keyof typeof durations = 'base',
-    easing: keyof typeof easings = 'easeInOut'
+    duration: keyof typeof durations = "base",
+    easing: keyof typeof easings = "easeInOut"
   ): string => {
-    const props = Array.isArray(properties) ? properties.join(', ') : properties;
+    const props = Array.isArray(properties) ? properties.join(", ") : properties;
     return `${props} ${durations[duration]} ${easings[easing]}`;
   },
 
@@ -154,9 +154,9 @@ export const transitionUtils = {
   stagger: (
     property: string,
     index: number,
-    delay: keyof typeof staggerDelays = 'base',
-    duration: keyof typeof durations = 'base',
-    easing: keyof typeof easings = 'easeInOut'
+    delay: keyof typeof staggerDelays = "base",
+    duration: keyof typeof durations = "base",
+    easing: keyof typeof easings = "easeInOut"
   ): string => {
     const delayMs = getStaggerDelay(index, delay);
     return `${property} ${durations[duration]} ${easing} ${delayMs}ms`;

@@ -3,7 +3,7 @@
  * 提供加密配置的获取、缓存和刷新功能
  */
 
-import { get } from '@/lib/api';
+import { get } from "@/lib/api";
 
 export interface EncryptionConfig {
   enabled: boolean;
@@ -20,7 +20,7 @@ const CACHE_TTL = 5 * 60 * 1000; // 5分钟
  * 获取加密配置（公共端点，无需认证）
  */
 export async function getEncryptionConfig(): Promise<EncryptionConfig> {
-  const response = await get<EncryptionConfig>('/system/auth/encryption-config');
+  const response = await get<EncryptionConfig>("/system/auth/encryption-config");
   return response.data!;
 }
 

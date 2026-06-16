@@ -2,12 +2,12 @@
  * 主题系统类型定义
  */
 
-export type ThemeType = 'minimal' | 'glassmorphism' | 'neumorphism' | 'flat2.0' | 'luxury-quiet';
+export type ThemeType = "minimal" | "glassmorphism" | "neumorphism" | "flat2.0" | "luxury-quiet";
 
 /**
  * 颜色模式
  */
-export type ColorMode = 'light' | 'dark';
+export type ColorMode = "light" | "dark";
 
 /**
  * 颜色令牌
@@ -55,8 +55,8 @@ export interface SpacingTokens {
   md: string;
   lg: string;
   xl: string;
-  '2xl': string;
-  '3xl': string;
+  "2xl": string;
+  "3xl": string;
 }
 
 /**
@@ -70,8 +70,8 @@ export interface TypographyTokens {
     base: string;
     lg: string;
     xl: string;
-    '2xl': string;
-    '3xl': string;
+    "2xl": string;
+    "3xl": string;
   };
   fontWeight: {
     normal: string;
@@ -95,7 +95,7 @@ export interface ShadowTokens {
   md: string;
   lg: string;
   xl: string;
-  '2xl': string;
+  "2xl": string;
   inner: string;
 }
 
@@ -107,7 +107,7 @@ export interface RadiusTokens {
   md: string;
   lg: string;
   xl: string;
-  '2xl': string;
+  "2xl": string;
   full: string;
 }
 

@@ -10,7 +10,7 @@
 export async function generateHash(data: unknown): Promise<string> {
   // 检查 crypto.subtle 是否可用（需要 secure context：HTTPS 或 localhost）
   if (!crypto.subtle) {
-    console.warn('[Security] crypto.subtle 不可用，使用简单的哈希替代');
+    console.warn("[Security] crypto.subtle 不可用，使用简单的哈希替代");
     // 使用简单的字符串哈希作为后备方案
     const jsonString = JSON.stringify(data);
     let hash = 0;
@@ -25,9 +25,9 @@ export async function generateHash(data: unknown): Promise<string> {
   const jsonString = JSON.stringify(data);
   const encoder = new TextEncoder();
   const dataBuffer = encoder.encode(jsonString);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", dataBuffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
   return hashHex;
 }
 
@@ -61,7 +61,7 @@ export const SecureStorage = {
       };
       localStorage.setItem(key, JSON.stringify(storageData));
     } catch (error) {
-      console.error(`[SecureStorage] 存储失败:`, error);
+      console.error("[SecureStorage] 存储失败:", error);
       throw error;
     }
   },
@@ -91,7 +91,7 @@ export const SecureStorage = {
 
       return storageData.data;
     } catch (error) {
-      console.error(`[SecureStorage] 读取失败:`, error);
+      console.error("[SecureStorage] 读取失败:", error);
       return null;
     }
   },
@@ -116,16 +116,16 @@ export const SecureStorage = {
  * 用于防止 XSS 攻击，特别是在显示用户输入的内容时
  */
 export function escapeHtml(unsafe: unknown): string {
-  if (typeof unsafe !== 'string') {
+  if (typeof unsafe !== "string") {
     return String(unsafe);
   }
 
   return unsafe
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 /**
@@ -151,7 +151,7 @@ export function containsXSS(str: string): boolean {
 export function getCSPConfig(): string {
   // 根据环境变量决定是否启用严格模式
   const isDevelopment = import.meta.env.DEV;
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "";
 
   if (isDevelopment) {
     // 开发环境：宽松的策略，允许热更新和开发工具
@@ -163,7 +163,7 @@ export function getCSPConfig(): string {
       "style-src 'self' 'unsafe-inline'", // 开发环境需要 unsafe-inline
       "font-src 'self' data:",
       "frame-ancestors 'none'",
-    ].join('; ');
+    ].join("; ");
   } else {
     // 生产环境：严格的策略
     return [
@@ -178,7 +178,7 @@ export function getCSPConfig(): string {
       "form-action 'self'",
       "frame-ancestors 'none'",
       "upgrade-insecure-requests",
-    ].join('; ');
+    ].join("; ");
   }
 }
 
@@ -217,21 +217,21 @@ export function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
   for (const key in sanitized) {
     const value = sanitized[key];
 
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       // 检查是否包含 XSS
       if (containsXSS(value)) {
         console.warn(`[Security] 检测到潜在 XSS 风险字段: ${key}`);
         (sanitized as Record<string, unknown>)[key] = escapeHtml(value);
       }
-    } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    } else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
       // 递归处理嵌套对象
       (sanitized as Record<string, unknown>)[key] = sanitizeObject(value as Record<string, unknown>);
     } else if (Array.isArray(value)) {
       // 处理数组
       (sanitized as Record<string, unknown>)[key] = value.map((item) => {
-        if (typeof item === 'string') {
+        if (typeof item === "string") {
           return containsXSS(item) ? escapeHtml(item) : item;
-        } else if (typeof item === 'object' && item !== null) {
+        } else if (typeof item === "object" && item !== null) {
           return sanitizeObject(item as Record<string, unknown>);
         }
         return item;
@@ -247,11 +247,11 @@ export function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
  * 用于生成 nonce 等安全相关场景
  */
 export function generateSecureRandom(length: number = 16): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   const randomValues = new Uint8Array(length);
   crypto.getRandomValues(randomValues);
 
-  let result = '';
+  let result = "";
   for (let i = 0; i < length; i++) {
     result += chars[randomValues[i] % chars.length];
   }
@@ -261,12 +261,12 @@ export function generateSecureRandom(length: number = 16): string {
 /**
  * 安全的日志输出（生产环境可禁用）
  */
-export function secureLog(category: 'info' | 'warn' | 'error', message: string, data?: unknown): void {
+export function secureLog(category: "info" | "warn" | "error", message: string, data?: unknown): void {
   const isProduction = import.meta.env.PROD;
 
   if (isProduction) {
     // 生产环境：不输出敏感信息
-    if (category === 'error') {
+    if (category === "error") {
       console.error(`[${category}] ${message}`);
     }
     // 生产环境不输出 info 和 warn，也不输出 data

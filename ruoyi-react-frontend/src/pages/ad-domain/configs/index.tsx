@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+﻿import { useState } from "react";
 import {
   Button,
   Table,
@@ -11,7 +11,7 @@ import {
   message,
   Card,
   Tag
-} from 'antd';
+} from "antd";
 import {
   PlusOutlined,
   EditOutlined,
@@ -19,8 +19,8 @@ import {
   SyncOutlined,
   CheckCircleOutlined,
   ReloadOutlined
-} from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+} from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
 import {
   createADConfig,
   updateADConfig,
@@ -28,13 +28,13 @@ import {
   testADConnection,
   syncADData,
   type ADSyncResult
-} from '@/lib/adDomainApi';
-import ActionButtons from '@/components/shared/ActionButtons';
-import { formatDateTime } from '@/utils/datetime';
-import { useADConfigs } from '@/hooks/useADConfigs';
-import type { ADConfig } from '@/lib/adDomainApi';
+} from "@/lib/adDomainApi";
+import ActionButtons from "@/components/shared/ActionButtons";
+import { formatDateTime } from "@/utils/datetime";
+import { useADConfigs } from "@/hooks/useADConfigs";
+import type { ADConfig } from "@/lib/adDomainApi";
 
-import type { FC } from 'react';
+import type { FC } from "react";
 
 const ADConfigPage: FC = () => {
   const [editForm] = Form.useForm();
@@ -54,7 +54,7 @@ const ADConfigPage: FC = () => {
 
   // 统一错误处理
   const handleApiError = (error: unknown, defaultMessage: string) => {
-    if (error && typeof error === 'object' && 'message' in error) {
+    if (error && typeof error === "object" && "message" in error) {
       message.error(error.message as string);
     } else {
       message.error(defaultMessage);
@@ -111,16 +111,16 @@ const ADConfigPage: FC = () => {
           adminPassword: values.adminPassword || undefined, // 如果没有输入密码则不更新
         };
         await updateADConfig(editingConfig.id, updateData);
-        handleSuccess('更新成功');
+        handleSuccess("更新成功");
       } else {
         await createADConfig(values);
-        handleSuccess('创建成功');
+        handleSuccess("创建成功");
       }
 
       setModalVisible(false);
       fetchConfigs();
     } catch (error) {
-      handleApiError(error, '操作失败');
+      handleApiError(error, "操作失败");
     }
   };
 
@@ -128,9 +128,9 @@ const ADConfigPage: FC = () => {
     setTestingConfig(configId);
     try {
       await testADConnection(configId);
-      handleSuccess('连接测试成功');
+      handleSuccess("连接测试成功");
     } catch (error) {
-      handleApiError(error, '连接测试失败');
+      handleApiError(error, "连接测试失败");
     } finally {
       setTestingConfig(null);
     }
@@ -139,7 +139,7 @@ const ADConfigPage: FC = () => {
   const handleSync = async (configId: string) => {
     setSyncingConfig(configId);
     try {
-      const res = await syncADData(configId, 'full');
+      const res = await syncADData(configId, "full");
       if (res.code === 0 && res.data?.result) {
         const result = res.data.result;
         handleSuccess(`同步成功: OU=${result.ouCount}, 用户组=${result.groupCount}, 用户=${result.userCount}`);
@@ -147,7 +147,7 @@ const ADConfigPage: FC = () => {
         fetchConfigs();
       }
     } catch (error) {
-      handleApiError(error, '同步失败');
+      handleApiError(error, "同步失败");
     } finally {
       setSyncingConfig(null);
     }
@@ -156,47 +156,47 @@ const ADConfigPage: FC = () => {
   const handleDelete = async (configId: string) => {
     try {
       await deleteADConfig(configId);
-      handleSuccess('删除成功');
+      handleSuccess("删除成功");
       fetchConfigs();
     } catch (error) {
-      handleApiError(error, '删除失败');
+      handleApiError(error, "删除失败");
     }
   };
 
   const columns: ColumnsType<ADConfig> = [
     {
-      title: '配置名称',
-      dataIndex: 'configName',
-      key: 'configName',
+      title: "配置名称",
+      dataIndex: "configName",
+      key: "configName",
       width: 160,
       minWidth: 140,
     },
     {
-      title: '服务器地址',
-      dataIndex: 'serverAddress',
-      key: 'serverAddress',
+      title: "服务器地址",
+      dataIndex: "serverAddress",
+      key: "serverAddress",
       width: 200,
       minWidth: 180,
       render: (text: string, record: ADConfig) => `${text}:${record.serverPort}`,
     },
     {
-      title: '域名',
-      dataIndex: 'domainName',
-      key: 'domainName',
+      title: "域名",
+      dataIndex: "domainName",
+      key: "domainName",
       width: 150,
       minWidth: 120,
     },
     {
-      title: '基础DN',
-      dataIndex: 'baseDn',
-      key: 'baseDn',
+      title: "基础DN",
+      dataIndex: "baseDn",
+      key: "baseDn",
       width: 200,
       minWidth: 180,
       ellipsis: true,
     },
     {
-      title: '安全连接',
-      key: 'security',
+      title: "安全连接",
+      key: "security",
       width: 140,
       minWidth: 120,
       render: (_: unknown, record: ADConfig) => (
@@ -208,45 +208,45 @@ const ADConfigPage: FC = () => {
       ),
     },
     {
-      title: '自动同步',
-      key: 'syncEnabled',
+      title: "自动同步",
+      key: "syncEnabled",
       width: 140,
       minWidth: 120,
       render: (_: unknown, record: ADConfig) => (
-        <Tag color={record.syncEnabled ? 'success' : 'default'}>
-          {record.syncEnabled ? `是 (${record.syncInterval}s)` : '否'}
+        <Tag color={record.syncEnabled ? "success" : "default"}>
+          {record.syncEnabled ? `是 (${record.syncInterval}s)` : "否"}
         </Tag>
       ),
     },
     {
-      title: '最后同步',
-      dataIndex: 'lastSyncAt',
-      key: 'lastSyncAt',
+      title: "最后同步",
+      dataIndex: "lastSyncAt",
+      key: "lastSyncAt",
       width: 170,
       minWidth: 160,
       render: (text: string | null) => formatDateTime(text),
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
       width: 80,
       minWidth: 70,
-      align: 'center' as const,
+      align: "center" as const,
       render: (status: number) => (
-        <Tag color={status === 0 ? 'success' : 'default'}>
-          {status === 0 ? '启用' : '停用'}
+        <Tag color={status === 0 ? "success" : "default"}>
+          {status === 0 ? "启用" : "停用"}
         </Tag>
       ),
     },
     {
-      title: '同步结果',
-      key: 'syncResult',
+      title: "同步结果",
+      key: "syncResult",
       width: 150,
       minWidth: 130,
       render: (_: unknown, record: ADConfig) => {
         const result = syncProgress[record.id];
-        if (!result) return '-';
+        if (!result) return "-";
         return (
           <Space orientation="vertical" size="small">
             <span>OU: {result.ouCount}</span>
@@ -257,43 +257,43 @@ const ADConfigPage: FC = () => {
       },
     },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       width: 250,
       minWidth: 220,
-      fixed: 'right' as const,
+      fixed: "right" as const,
       render: (_: unknown, record: ADConfig) => {
         const actions = [
           {
-            key: 'test',
-            label: '测试连接',
+            key: "test",
+            label: "测试连接",
             icon: <CheckCircleOutlined />,
             onClick: () => handleTest(record.id),
             loading: testingConfig === record.id,
           },
           {
-            key: 'sync',
-            label: '同步数据',
+            key: "sync",
+            label: "同步数据",
             icon: <SyncOutlined />,
             onClick: () => handleSync(record.id),
             loading: syncingConfig === record.id,
           },
           {
-            key: 'edit',
-            label: '编辑',
+            key: "edit",
+            label: "编辑",
             icon: <EditOutlined />,
             onClick: () => handleEdit(record),
           },
           {
-            key: 'delete',
-            label: '删除',
+            key: "delete",
+            label: "删除",
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
               Modal.confirm({
-                title: '确定删除此配置吗？',
-                okText: '确定',
-                cancelText: '取消',
+                title: "确定删除此配置吗？",
+                okText: "确定",
+                cancelText: "取消",
                 okButtonProps: { danger: true },
                 onOk: () => handleDelete(record.id),
               });
@@ -328,7 +328,7 @@ const ADConfigPage: FC = () => {
       />
 
       <Modal
-        title={editingConfig ? '编辑AD配置' : '新增AD配置'}
+        title={editingConfig ? "编辑AD配置" : "新增AD配置"}
         open={modalVisible}
         onOk={handleSubmit}
         onCancel={() => setModalVisible(false)}
@@ -340,7 +340,7 @@ const ADConfigPage: FC = () => {
           <Form.Item
             label="配置名称"
             name="configName"
-            rules={[{ required: true, message: '请输入配置名称' }]}
+            rules={[{ required: true, message: "请输入配置名称" }]}
           >
             <Input placeholder="如: 公司主AD域" />
           </Form.Item>
@@ -348,23 +348,24 @@ const ADConfigPage: FC = () => {
           <Form.Item
             label="服务器地址"
             name="serverAddress"
-            rules={[{ required: true, message: '请输入AD服务器地址' }]}
+            rules={[{ required: true, message: "请输入AD服务器地址" }]}
           >
+            {/* eslint-disable-next-line no-restricted-syntax -- placeholder hint, not an actual server URL */}
             <Input placeholder="如: ad.example.com 或 192.168.1.100" />
           </Form.Item>
 
           <Form.Item
             label="端口"
             name="serverPort"
-            rules={[{ required: true, message: '请输入端口' }]}
+            rules={[{ required: true, message: "请输入端口" }]}
           >
-            <InputNumber min={1} max={65535} style={{ width: '100%' }} />
+            <InputNumber min={1} max={65535} style={{ width: "100%" }} />
           </Form.Item>
 
           <Form.Item
             label="域名"
             name="domainName"
-            rules={[{ required: true, message: '请输入域名' }]}
+            rules={[{ required: true, message: "请输入域名" }]}
           >
             <Input placeholder="如: example.com" />
           </Form.Item>
@@ -372,7 +373,7 @@ const ADConfigPage: FC = () => {
           <Form.Item
             label="基础DN"
             name="baseDn"
-            rules={[{ required: true, message: '请输入基础DN' }]}
+            rules={[{ required: true, message: "请输入基础DN" }]}
           >
             <Input placeholder="如: DC=example,DC=com" />
           </Form.Item>
@@ -380,7 +381,7 @@ const ADConfigPage: FC = () => {
           <Form.Item
             label="管理员用户名"
             name="adminUsername"
-            rules={[{ required: true, message: '请输入管理员用户名' }]}
+            rules={[{ required: true, message: "请输入管理员用户名" }]}
           >
             <Input placeholder="如: Administrator" />
           </Form.Item>
@@ -388,7 +389,7 @@ const ADConfigPage: FC = () => {
           <Form.Item
             label="管理员密码"
             name="adminPassword"
-            rules={editingConfig ? [] : [{ required: true, message: '请输入管理员密码' }]}
+            rules={editingConfig ? [] : [{ required: true, message: "请输入管理员密码" }]}
           >
             <Input.Password placeholder={editingConfig ? "留空表示不修改" : "请输入管理员密码"} />
           </Form.Item>
@@ -409,9 +410,9 @@ const ADConfigPage: FC = () => {
             label="同步间隔(秒)"
             name="syncInterval"
             initialValue={3600}
-            rules={[{ required: true, message: '请输入同步间隔' }]}
+            rules={[{ required: true, message: "请输入同步间隔" }]}
           >
-            <InputNumber min={60} style={{ width: '100%' }} />
+            <InputNumber min={60} style={{ width: "100%" }} />
           </Form.Item>
         </Form>
       </Modal>

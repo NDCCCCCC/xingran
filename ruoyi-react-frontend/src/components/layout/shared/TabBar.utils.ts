@@ -3,8 +3,8 @@
  * TabBar component utility functions
  */
 
-import type { RefObject } from 'react';
-import { SCROLL_TOLERANCE } from './TabBar.constants';
+import type { RefObject } from "react";
+import { SCROLL_TOLERANCE } from "./TabBar.constants";
 
 /** 滚动状态 */
 export interface ScrollState {
@@ -31,13 +31,13 @@ export function checkScrollState(container: HTMLElement | null): ScrollState {
 /**
  * 执行滚动操作
  */
-export function scrollContainer(container: HTMLElement | null, direction: 'left' | 'right', step: number): void {
+export function scrollContainer(container: HTMLElement | null, direction: "left" | "right", step: number): void {
   if (!container) return;
 
   const currentScroll = container.scrollLeft;
   container.scrollTo({
-    left: direction === 'left' ? currentScroll - step : currentScroll + step,
-    behavior: 'smooth'
+    left: direction === "left" ? currentScroll - step : currentScroll + step,
+    behavior: "smooth"
   });
 }
 

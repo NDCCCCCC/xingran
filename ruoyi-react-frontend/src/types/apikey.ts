@@ -2,7 +2,7 @@
  * API 密钥管理相关类型
  */
 
-import type { Status, PageParams } from './base';
+import type { Status, PageParams } from "./base";
 
 // ==================== API 密钥相关 ====================
 
@@ -94,4 +94,4 @@ export interface UsageSummary {
 /**
  * 分页数据类型（从 base.ts 导入）
  */
-export type PageData<T> = import('./base').PageResponse<T>;
+export type PageData<T> = import("./base").PageResponse<T>;

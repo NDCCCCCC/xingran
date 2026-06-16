@@ -3,12 +3,12 @@
  * 工位视图管理 Hook
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import type { WorkstationNode } from '@/components/shared/FloorPlanEditor.types';
-import { workstationApi } from '@/lib/opsApi';
-import { handleApiError } from '@/utils/errorHandler';
-import { toWorkstationNode } from '../constants';
-import type { FloorOption, ViewMode } from '../types';
+import { useState, useCallback, useEffect } from "react";
+import type { WorkstationNode } from "@/components/shared/FloorPlanEditor.types";
+import { workstationApi } from "@/lib/opsApi";
+import { handleApiError } from "@/utils/errorHandler";
+import { toWorkstationNode } from "../constants";
+import type { FloorOption, ViewMode } from "../types";
 
 export interface UseWorkstationViewReturn {
   viewMode: ViewMode;
@@ -23,8 +23,8 @@ export interface UseWorkstationViewReturn {
 }
 
 export function useWorkstationView(floorOptions: FloorOption[]): UseWorkstationViewReturn {
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
-  const [selectedFloorForPlan, setSelectedFloorForPlan] = useState<string>('');
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const [selectedFloorForPlan, setSelectedFloorForPlan] = useState<string>("");
   const [floorPlanWorkstations, setFloorPlanWorkstations] = useState<WorkstationNode[]>([]);
 
   const loadFloorPlanWorkstations = useCallback(async (floorCode: string) => {
@@ -38,7 +38,7 @@ export function useWorkstationView(floorOptions: FloorOption[]): UseWorkstationV
       // 转换为 WorkstationNode 格式
       setFloorPlanWorkstations(list.map(toWorkstationNode));
     } catch (error) {
-      handleApiError(error, '加载平面图数据', false);
+      handleApiError(error, "加载平面图数据", false);
       setFloorPlanWorkstations([]);
     }
   }, []);
@@ -64,7 +64,7 @@ export function useWorkstationView(floorOptions: FloorOption[]): UseWorkstationV
           })
         );
       } catch (error) {
-        handleApiError(error, '更新位置');
+        handleApiError(error, "更新位置");
         throw error;
       }
     },
@@ -89,7 +89,7 @@ export function useWorkstationView(floorOptions: FloorOption[]): UseWorkstationV
 
   // 当切换到平面图视图时，默认加载第一个楼层的工位
   useEffect(() => {
-    if (viewMode === 'floorplan' && !selectedFloorForPlan && floorOptions.length > 0) {
+    if (viewMode === "floorplan" && !selectedFloorForPlan && floorOptions.length > 0) {
       const firstFloor = floorOptions[0].code;
       // 使用 setTimeout 避免同步 setState
       setTimeout(() => {

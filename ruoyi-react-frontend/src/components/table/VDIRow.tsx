@@ -9,10 +9,10 @@
  * - 通过 useMemo 稳定 props 对象（强烈推荐，否则 memo 不生效）
  */
 
-import { memo } from 'react';
-import { Button, Popconfirm, Space, Tooltip } from 'antd';
-import type { VirtualMachine } from '@/types/vdi';
-import type { VMOprationButton } from '@/pages/vdi/VirtualMachineList/vmOperationButtons';
+import { memo } from "react";
+import { Button, Popconfirm, Space, Tooltip } from "antd";
+import type { VirtualMachine } from "@/types/vdi";
+import type { VMOprationButton } from "@/pages/vdi/VirtualMachineList/vmOperationButtons";
 
 export interface VDIRowProps {
   vm: VirtualMachine;
@@ -44,7 +44,7 @@ function VDIRowImpl({
   return (
     <Space size="small">
       {allowedButtons.map(btn => {
-        if (btn.action === 'delete') {
+        if (btn.action === "delete") {
           return (
             <Popconfirm
               key={btn.action}
@@ -60,7 +60,7 @@ function VDIRowImpl({
           );
         }
 
-        if (btn.action === 'bind') {
+        if (btn.action === "bind") {
           return (
             <Tooltip key={btn.action} title={btn.label}>
               <Button
@@ -72,7 +72,7 @@ function VDIRowImpl({
           );
         }
 
-        if (btn.action === 'sync') {
+        if (btn.action === "sync") {
           return (
             <Tooltip key={btn.action} title={btn.label}>
               <Button
@@ -87,18 +87,18 @@ function VDIRowImpl({
         // 电源操作按钮（start, stop, restart）
         // power_state 业务取值：pending | stopped | suspended | in_use
         let disabled = false;
-        if (btn.action === 'start') {
+        if (btn.action === "start") {
           // 仅 stopped 时可开机
-          disabled = vm.power_state !== 'stopped';
-        } else if (btn.action === 'stop') {
+          disabled = vm.power_state !== "stopped";
+        } else if (btn.action === "stop") {
           // 已停 / 已挂起 / 等待 Agent 时无法关机
           disabled =
-            vm.power_state === 'stopped' ||
-            vm.power_state === 'suspended' ||
-            vm.power_state === 'pending';
-        } else if (btn.action === 'restart') {
+            vm.power_state === "stopped" ||
+            vm.power_state === "suspended" ||
+            vm.power_state === "pending";
+        } else if (btn.action === "restart") {
           // 仅 in_use 或 suspended 可重启（注意：业务无 'running' 状态值）
-          disabled = vm.power_state !== 'in_use' && vm.power_state !== 'suspended';
+          disabled = vm.power_state !== "in_use" && vm.power_state !== "suspended";
         }
 
         return (
@@ -117,6 +117,6 @@ function VDIRowImpl({
 }
 
 export const VDIRow = memo(VDIRowImpl);
-VDIRow.displayName = 'VDIRow';
+VDIRow.displayName = "VDIRow";
 
 export default VDIRow;

@@ -3,7 +3,7 @@
  * Job Manager Page
  */
 
-import { useState, useEffect, type FC } from 'react';
+import { useState, useEffect, type FC } from "react";
 import {
   Card,
   Table,
@@ -18,20 +18,20 @@ import {
   Col,
   Statistic,
   Drawer,
-} from 'antd';
+} from "antd";
 import {
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
   ClockCircleOutlined,
-} from '@ant-design/icons';
+} from "@ant-design/icons";
 
-import type { JobInfo } from './types';
-import { STATUS_OPTIONS, MISFIRE_POLICY_OPTIONS, DEFAULT_FORM_VALUES, DEFAULT_SEARCH_FORM } from './constants';
-import { getJobColumns, getJobLogColumns } from './columns';
-import { useJobData, useJobActions } from './hooks';
-import CronSelector from '@/components/CronSelector';
-import { usePagination } from '@/hooks/usePagination';
+import type { JobInfo } from "./types";
+import { STATUS_OPTIONS, MISFIRE_POLICY_OPTIONS, DEFAULT_FORM_VALUES, DEFAULT_SEARCH_FORM } from "./constants";
+import { getJobColumns, getJobLogColumns } from "./columns";
+import { useJobData, useJobActions } from "./hooks";
+import CronSelector from "@/components/CronSelector";
+import { usePagination } from "@/hooks/usePagination";
 
 const { TextArea } = Input;
 
@@ -147,7 +147,7 @@ const JobManager: FC = () => {
                 onChange={(value) => setSearchForm({ ...searchForm, status: value })}
                 allowClear
                 className="user-form-input"
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
                 options={STATUS_OPTIONS}
               />
             </Col>
@@ -208,21 +208,21 @@ const JobManager: FC = () => {
           <Form.Item
             label="任务名称"
             name="jobName"
-            rules={[{ required: true, message: '请输入任务名称' }]}
+            rules={[{ required: true, message: "请输入任务名称" }]}
           >
             <Input placeholder="请输入任务名称" />
           </Form.Item>
           <Form.Item
             label="任务组"
             name="jobGroup"
-            rules={[{ required: true, message: '请输入任务组' }]}
+            rules={[{ required: true, message: "请输入任务组" }]}
           >
             <Input placeholder="请输入任务组，如：DEFAULT" />
           </Form.Item>
           <Form.Item
             label="调用目标"
             name="invokeTarget"
-            rules={[{ required: true, message: '请输入调用目标字符串' }]}
+            rules={[{ required: true, message: "请输入调用目标字符串" }]}
             extra="任务执行时调用的目标方法或脚本"
           >
             <TextArea
@@ -233,7 +233,7 @@ const JobManager: FC = () => {
           <Form.Item
             label="Cron表达式"
             name="cronExpression"
-            rules={[{ required: true, message: '请输入Cron表达式' }]}
+            rules={[{ required: true, message: "请输入Cron表达式" }]}
           >
             <CronSelector />
           </Form.Item>
@@ -300,7 +300,7 @@ const JobManager: FC = () => {
                 <Statistic
                   title="成功次数"
                   value={jobLogs.filter(log => log.status === 0).length}
-                  styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
+                  styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
                 />
               </Card>
             </Col>
@@ -309,7 +309,7 @@ const JobManager: FC = () => {
                 <Statistic
                   title="失败次数"
                   value={jobLogs.filter(log => log.status === 1).length}
-                  styles={{ content: { color: 'var(--theme-error, #cf1322)' } }}
+                  styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
                 />
               </Card>
             </Col>

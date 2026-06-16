@@ -3,11 +3,11 @@
  * 配置执行模态框状态管理 Hook
  */
 
-import { useState, useCallback } from 'react';
-import { message, Modal } from 'antd';
-import type { FormInstance } from 'antd/es/form';
-import { post } from '@/lib/api';
-import type { ModalState, ExecutionDataState } from '../types';
+import { useState, useCallback } from "react";
+import { message, Modal } from "antd";
+import type { FormInstance } from "antd/es/form";
+import { post } from "@/lib/api";
+import type { ModalState, ExecutionDataState } from "../types";
 
 export interface UseExecutionModalsParams {
   dataState: ExecutionDataState;
@@ -79,8 +79,8 @@ export function useExecutionModals(params: UseExecutionModalsParams): UseExecuti
         deviceIds: selectedRowKeys,
         templateVariables: values.templateVariables || {},
       };
-      await post('/network/executions/template/execute', data);
-      message.success('配置执行任务已创建');
+      await post("/network/executions/template/execute", data);
+      message.success("配置执行任务已创建");
       setModalState(prev => ({ ...prev, executeModalVisible: false }));
       executeForm.resetFields();
       setSelectedRowKeys([]);
@@ -90,7 +90,7 @@ export function useExecutionModals(params: UseExecutionModalsParams): UseExecuti
       if ((error as { errorFields?: unknown }).errorFields) {
         return;
       }
-      message.error('创建执行任务失败');
+      message.error("创建执行任务失败");
     }
   }, [selectedRowKeys, loadExecutions, setDataState]);
 
@@ -98,10 +98,10 @@ export function useExecutionModals(params: UseExecutionModalsParams): UseExecuti
   const handleCancelExecution = useCallback(async (id: string) => {
     try {
       await post(`/network/executions/${id}/cancel`, {});
-      message.success('取消成功');
+      message.success("取消成功");
       loadExecutions();
     } catch (error) {
-      message.error('取消失败');
+      message.error("取消失败");
     }
   }, [loadExecutions]);
 
@@ -114,10 +114,10 @@ export function useExecutionModals(params: UseExecutionModalsParams): UseExecuti
   // 查看输出
   const handleViewOutput = useCallback((output: string) => {
     Modal.info({
-      title: '配置输出',
+      title: "配置输出",
       width: 800,
       content: (
-        <pre style={{ maxHeight: 500, overflow: 'auto', background: '#f5f5f5', padding: 12, ['white-space']: 'pre-wrap' } as React.CSSProperties}>
+        <pre style={{ maxHeight: 500, overflow: "auto", background: "#f5f5f5", padding: 12, ["white-space"]: "pre-wrap" } as React.CSSProperties}>
           {output}
         </pre>
       ),

@@ -3,7 +3,7 @@
  * 用于展示通知的完整内容，支持用户端和管理端
  */
 
-import type { FC } from 'react';
+import type { FC } from "react";
 import {
   Card,
   Tag,
@@ -11,9 +11,9 @@ import {
   Descriptions,
   Divider,
   Button,
-} from 'antd';
-import { CheckCircleOutlined } from '@ant-design/icons';
-import type { Notice, NoticeAttachment } from '@/types/notice';
+} from "antd";
+import { CheckCircleOutlined } from "@ant-design/icons";
+import type { Notice, NoticeAttachment } from "@/types/notice";
 import {
   PRIORITY_COLORS,
   PRIORITY_LABELS,
@@ -21,8 +21,8 @@ import {
   NOTICE_TYPE_LABELS,
   PUBLISH_STATUS_COLORS,
   PUBLISH_STATUS_LABELS,
-} from '@/types/notice';
-import { formatDateTime } from '@/utils/datetime';
+} from "@/types/notice";
+import { formatDateTime } from "@/utils/datetime";
 
 export interface NoticeDetailContentProps {
   notice: Notice;
@@ -54,8 +54,8 @@ const NoticeDetailContent: FC<NoticeDetailContentProps> = ({
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-2xl font-bold m-0">{notice.noticeTitle}</h1>
           <Space size="small">
-            <Tag color={NOTICE_TYPE_COLORS[notice.noticeType as '1' | '2']}>
-              {NOTICE_TYPE_LABELS[notice.noticeType as '1' | '2']}
+            <Tag color={NOTICE_TYPE_COLORS[notice.noticeType as "1" | "2"]}>
+              {NOTICE_TYPE_LABELS[notice.noticeType as "1" | "2"]}
             </Tag>
             {notice.priority > 0 && (
               <Tag color={PRIORITY_COLORS[notice.priority]}>
@@ -78,20 +78,20 @@ const NoticeDetailContent: FC<NoticeDetailContentProps> = ({
       <Descriptions column={3} size="small" className="mb-6">
         {showCreator && (
           <Descriptions.Item label="创建人">
-            {notice.createdByName || '系统管理员'}
+            {notice.createdByName || "系统管理员"}
           </Descriptions.Item>
         )}
-        <Descriptions.Item label={showCreator ? '创建时间' : '发布人'}>
+        <Descriptions.Item label={showCreator ? "创建时间" : "发布人"}>
           {showCreator
             ? formatDateTime(notice.createdAt)
-            : (notice.createdByName || '系统管理员')
+            : (notice.createdByName || "系统管理员")
           }
         </Descriptions.Item>
         {showPublishStatus ? (
           <Descriptions.Item label="发布时间">
             {notice.publishTime
               ? formatDateTime(notice.publishTime)
-              : '尚未发布'
+              : "尚未发布"
             }
           </Descriptions.Item>
         ) : showReadStatus ? (

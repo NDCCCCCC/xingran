@@ -3,10 +3,10 @@
  * 创建发现任务模态框
  */
 
-import { Modal, Form, Input, InputNumber, Select, Switch } from 'antd';
-import type { FormInstance } from 'antd/es/form';
-import type { Department } from '@/types';
-import { DISCOVERY_TYPE_OPTIONS } from '../constants';
+import { Modal, Form, Input, InputNumber, Select, Switch } from "antd";
+import type { FormInstance } from "antd/es/form";
+import type { Department } from "@/types";
+import { DISCOVERY_TYPE_OPTIONS } from "../constants";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -20,7 +20,7 @@ export interface CreateModalProps {
 
 export function CreateModal({ open, departments, onOk, onCancel }: CreateModalProps) {
   const [form] = Form.useForm();
-  const discoveryType = Form.useWatch('discoveryType', form);
+  const discoveryType = Form.useWatch("discoveryType", form);
 
   return (
     <Modal
@@ -35,7 +35,7 @@ export function CreateModal({ open, departments, onOk, onCancel }: CreateModalPr
       destroyOnHidden
     >
       <Form form={form} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
-        <Form.Item name="taskName" label="任务名称" rules={[{ required: true, message: '请输入任务名称' }]}>
+        <Form.Item name="taskName" label="任务名称" rules={[{ required: true, message: "请输入任务名称" }]}>
           <Input placeholder="请输入任务名称" />
         </Form.Item>
 
@@ -47,7 +47,7 @@ export function CreateModal({ open, departments, onOk, onCancel }: CreateModalPr
           </Select>
         </Form.Item>
 
-        <Form.Item name="ipRanges" label="IP范围" rules={[{ required: true, message: '请输入IP范围' }]} extra="每行一个IP范围，支持CIDR格式">
+        <Form.Item name="ipRanges" label="IP范围" rules={[{ required: true, message: "请输入IP范围" }]} extra="每行一个IP范围，支持CIDR格式">
           <TextArea
             rows={4}
             placeholder={`示例：
@@ -57,13 +57,13 @@ export function CreateModal({ open, departments, onOk, onCancel }: CreateModalPr
           />
         </Form.Item>
 
-        {discoveryType === 'snmp' && (
+        {discoveryType === "snmp" && (
           <>
-            <Form.Item name="snmpCommunity" label="SNMP Community" rules={[{ required: true, message: '请输入SNMP Community' }]}>
+            <Form.Item name="snmpCommunity" label="SNMP Community" rules={[{ required: true, message: "请输入SNMP Community" }]}>
               <Input placeholder="请输入SNMP Community，如：public" />
             </Form.Item>
             <Form.Item name="snmpPort" label="SNMP端口" rules={[{ required: true }]}>
-              <InputNumber min={1} max={65535} style={{ width: '100%' }} />
+              <InputNumber min={1} max={65535} style={{ width: "100%" }} />
             </Form.Item>
           </>
         )}

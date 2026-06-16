@@ -3,13 +3,13 @@
  * 使用 Three.js + React Three Fiber 渲染交互式 3D 楼宇模型
  */
 
-import { useRef, useState } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera, Html, useCursor } from '@react-three/drei';
-import * as THREE from 'three';
-import type { FloorData } from './types';
-import { SCENE_DIMENSIONS } from './constants';
-import { getFloorColor, getFloorStatusText } from './utils';
+import { useRef, useState } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { OrbitControls, PerspectiveCamera, Html, useCursor } from "@react-three/drei";
+import * as THREE from "three";
+import type { FloorData } from "./types";
+import { SCENE_DIMENSIONS } from "./constants";
+import { getFloorColor, getFloorStatusText } from "./utils";
 
 interface BuildingModel3DProps {
   floors: FloorData[];
@@ -25,9 +25,9 @@ interface Floor3DProps {
 }
 
 const EMPTY_STATE = {
-  icon: '🏢',
-  title: '暂无楼层数据',
-  description: '请先为该楼宇添加楼层信息',
+  icon: "🏢",
+  title: "暂无楼层数据",
+  description: "请先为该楼宇添加楼层信息",
 };
 
 // 单个楼层组件
@@ -84,18 +84,18 @@ const Floor3D: React.FC<Floor3DProps> = ({ floor, position, onClick, isSelected 
         position={[0, floorHeight + 0.5, 0]}
         center
         distanceFactor={8}
-        style={{ pointerEvents: 'none', userSelect: 'none' }}
+        style={{ pointerEvents: "none", userSelect: "none" }}
       >
         <div style={{
-          background: hovered || isSelected ? 'rgba(24, 144, 255, 0.95)' : 'rgba(0, 0, 0, 0.75)',
-          color: 'var(--theme-text-inverse, #fff)',
-          padding: '8px 16px',
+          background: hovered || isSelected ? "rgba(24, 144, 255, 0.95)" : "rgba(0, 0, 0, 0.75)",
+          color: "var(--theme-text-inverse, #fff)",
+          padding: "8px 16px",
           borderRadius: 8,
-          fontSize: '18px',
-          fontWeight: 'bold',
-          whiteSpace: 'nowrap',
-          boxShadow: hovered ? '0 4px 12px rgba(24, 144, 255, 0.4)' : '0 2px 8px rgba(0,0,0,0.15)',
-          transition: 'all 0.2s',
+          fontSize: "18px",
+          fontWeight: "bold",
+          whiteSpace: "nowrap",
+          boxShadow: hovered ? "0 4px 12px rgba(24, 144, 255, 0.4)" : "0 2px 8px rgba(0,0,0,0.15)",
+          transition: "all 0.2s",
         }}>
           {floor.name || floor.floorNo}
         </div>
@@ -107,44 +107,44 @@ const Floor3D: React.FC<Floor3DProps> = ({ floor, position, onClick, isSelected 
           position={[0, floorHeight + 2.5, 0]}
           center
           distanceFactor={8}
-          style={{ pointerEvents: 'none' }}
+          style={{ pointerEvents: "none" }}
         >
           <div style={{
-            background: '#fff',
+            background: "#fff",
             borderRadius: 12,
             padding: 16,
-            boxShadow: '0 6px 20px rgba(0,0,0,0.2)',
+            boxShadow: "0 6px 20px rgba(0,0,0,0.2)",
             minWidth: 220,
-            border: '1px solid #e8e8e8',
+            border: "1px solid #e8e8e8",
           }}>
             <div style={{
               fontSize: 16,
-              fontWeight: 'bold',
-              color: 'var(--theme-text-primary, #262626)',
+              fontWeight: "bold",
+              color: "var(--theme-text-primary, #262626)",
               marginBottom: 12,
               paddingBottom: 10,
-              borderBottom: '1px solid #f0f0f0',
+              borderBottom: "1px solid #f0f0f0",
             }}>
               {floor.name || floor.floorNo}
             </div>
-            <div style={{ fontSize: 14, color: 'var(--theme-text-secondary, #595959)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: 14, color: "var(--theme-text-secondary, #595959)", display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>工位数量：</span>
-                <span style={{ fontWeight: 'bold', color: 'var(--theme-text-accent, #1890ff)', fontSize: 15 }}>
+                <span style={{ fontWeight: "bold", color: "var(--theme-text-accent, #1890ff)", fontSize: 15 }}>
                   {floor.workstationCount} 个
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>楼层状态：</span>
                 <span style={{
-                  fontWeight: 'bold',
-                  color: floor.status === 0 ? 'var(--theme-success, #52c41a)' : '#ff4d4f',
+                  fontWeight: "bold",
+                  color: floor.status === 0 ? "var(--theme-success, #52c41a)" : "#ff4d4f",
                   fontSize: 14
                 }}>
                   {getFloorStatusText(floor.status)}
                 </span>
               </div>
-              <div style={{ fontSize: 13, color: 'var(--theme-text-tertiary, #8c8c8c)', marginTop: 6, textAlign: 'center', paddingTop: 4 }}>
+              <div style={{ fontSize: 13, color: "var(--theme-text-tertiary, #8c8c8c)", marginTop: 6, textAlign: "center", paddingTop: 4 }}>
                 👇 点击查看平面图
               </div>
             </div>
@@ -191,15 +191,15 @@ const BuildingModel3D: React.FC<BuildingModel3DProps> = ({ floors, onFloorClick,
   if (floors.length === 0) {
     return (
       <div style={{
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'column',
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
         gap: 16,
-        background: '#f5f5f5',
-        color: 'var(--theme-text-tertiary, #8c8c8c)',
+        background: "#f5f5f5",
+        color: "var(--theme-text-tertiary, #8c8c8c)",
       }}>
         <div style={{ fontSize: 48 }}>{EMPTY_STATE.icon}</div>
         <div style={{ fontSize: 16 }}>{EMPTY_STATE.title}</div>
@@ -209,12 +209,12 @@ const BuildingModel3D: React.FC<BuildingModel3DProps> = ({ floors, onFloorClick,
   }
 
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+    <div style={{ width: "100%", height: "100%", position: "relative" }}>
       <Canvas
         shadows
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true }}
-        style={{ background: '#f5f5f5' }}
+        style={{ background: "#f5f5f5" }}
       >
         <PerspectiveCamera makeDefault position={[12, 10, 12]} fov={50} />
         <OrbitControls
@@ -230,20 +230,20 @@ const BuildingModel3D: React.FC<BuildingModel3DProps> = ({ floors, onFloorClick,
 
       {/* 操作提示 */}
       <div style={{
-        position: 'absolute',
+        position: "absolute",
         bottom: 16,
         left: 16,
-        background: 'rgba(255,255,255,0.95)',
-        backdropFilter: 'blur(10px)',
-        padding: '10px 14px',
+        background: "rgba(255,255,255,0.95)",
+        backdropFilter: "blur(10px)",
+        padding: "10px 14px",
         borderRadius: 6,
-        color: 'var(--theme-text-secondary, #595959)',
+        color: "var(--theme-text-secondary, #595959)",
         fontSize: 12,
-        display: 'flex',
+        display: "flex",
         gap: 16,
-        alignItems: 'center',
-        border: '1px solid #e8e8e8',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+        alignItems: "center",
+        border: "1px solid #e8e8e8",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
       }}>
         <span>🖱️ 拖拽旋转</span>
         <span>🔍 滚轮缩放</span>

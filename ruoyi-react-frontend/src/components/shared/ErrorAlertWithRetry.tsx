@@ -12,11 +12,11 @@
  * 使用场景:React Query / API 调用失败的内联错误展示。
  */
 
-import { useEffect, useRef, type FC } from 'react';
-import { Alert, Button, Space } from 'antd';
-import { ReloadOutlined } from '@ant-design/icons';
-import { useAuthStore } from '@/store/authStore';
-import { LOGIN } from '@/constants/routes';
+import { useEffect, useRef, type FC } from "react";
+import { Alert, Button, Space } from "antd";
+import { ReloadOutlined } from "@ant-design/icons";
+import { useAuthStore } from "@/store/authStore";
+import { LOGIN } from "@/constants/routes";
 
 /** 业务错误对象,支持从 API 响应中提取的 code 字段 */
 export interface ApiErrorShape {
@@ -40,18 +40,18 @@ export interface ErrorAlertWithRetryProps {
  * 兼容后端响应结构:error.code / error.response.data.code / error.status
  */
 function extractErrorCode(error: Error | ApiErrorShape | null | undefined): number | undefined {
-  if (!error || typeof error !== 'object') return undefined;
+  if (!error || typeof error !== "object") return undefined;
 
   const e = error as ApiErrorShape & {
     response?: { data?: { code?: number } };
     status?: number;
   };
 
-  if (typeof e.code === 'number') return e.code;
-  if (e.response?.data && typeof e.response.data.code === 'number') {
+  if (typeof e.code === "number") return e.code;
+  if (e.response?.data && typeof e.response.data.code === "number") {
     return e.response.data.code;
   }
-  if (typeof e.status === 'number' && e.status >= 400) return e.status;
+  if (typeof e.status === "number" && e.status >= 400) return e.status;
   return undefined;
 }
 
@@ -59,8 +59,8 @@ function extractErrorCode(error: Error | ApiErrorShape | null | undefined): numb
  * 从任意错误对象中提取错误描述
  */
 function extractErrorMessage(error: Error | ApiErrorShape | null | undefined): string {
-  if (!error) return '未知错误';
-  if (error instanceof Error) return error.message || '未知错误';
+  if (!error) return "未知错误";
+  if (error instanceof Error) return error.message || "未知错误";
 
   const e = error as ApiErrorShape & {
     response?: { data?: { message?: string; msg?: string } };
@@ -70,7 +70,7 @@ function extractErrorMessage(error: Error | ApiErrorShape | null | undefined): s
     e.message
     ?? e.response?.data?.message
     ?? e.response?.data?.msg
-    ?? '未知错误'
+    ?? "未知错误"
   );
 }
 
@@ -106,20 +106,20 @@ const ErrorAlertWithRetry: FC<ErrorAlertWithRetryProps> = ({ error, onRetry, des
   let alertMessage: string;
   switch (code) {
     case 1006:
-      alertMessage = '该设备不存在或已被删除';
+      alertMessage = "该设备不存在或已被删除";
       break;
     case 1007:
-      alertMessage = '登录已失效,正在跳转...';
+      alertMessage = "登录已失效,正在跳转...";
       break;
     case 500:
-      alertMessage = '服务暂不可用,请稍后重试';
+      alertMessage = "服务暂不可用,请稍后重试";
       break;
     default:
       alertMessage = `查询失败:${messageText}`;
   }
 
   return (
-    <Space orientation="vertical" style={{ width: '100%' }}>
+    <Space orientation="vertical" style={{ width: "100%" }}>
       <Alert
         type="error"
         message={alertMessage}

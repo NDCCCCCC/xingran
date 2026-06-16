@@ -2,14 +2,14 @@
  * 工位平面图视图
  * 复用FloorPlanEditor组件
  */
-import React, { useState, useEffect } from 'react';
-import { Button, message, Spin } from 'antd';
-import { ArrowLeftOutlined } from '@ant-design/icons';
-import FloorPlanEditor from '@/components/shared/FloorPlanEditor';
-import type { WorkstationNode } from '@/components/shared/FloorPlanEditor.types';
-import { workstationApi } from '@/lib/opsApi';
-import type { Floor } from '../types';
-import styles from './styles.module.css';
+import React, { useState, useEffect } from "react";
+import { Button, message, Spin } from "antd";
+import { ArrowLeftOutlined } from "@ant-design/icons";
+import FloorPlanEditor from "@/components/shared/FloorPlanEditor";
+import type { WorkstationNode } from "@/components/shared/FloorPlanEditor.types";
+import { workstationApi } from "@/lib/opsApi";
+import type { Floor } from "../types";
+import styles from "./styles.module.css";
 
 interface WorkstationViewProps {
   floor: Floor;
@@ -34,7 +34,7 @@ const WorkstationView: React.FC<WorkstationViewProps> = ({ floor, onBack }) => {
         const nodes: WorkstationNode[] = (result.data?.list || []).map(ws => ({
           id: ws.id,
           code: ws.name || ws.id,
-          name: ws.name || '',
+          name: ws.name || "",
           x: ws.positionX || 0,
           y: ws.positionY || 0,
           width: 80,
@@ -46,7 +46,7 @@ const WorkstationView: React.FC<WorkstationViewProps> = ({ floor, onBack }) => {
 
         setWorkstations(nodes);
       } catch (error) {
-        message.error('加载工位数据失败');
+        message.error("加载工位数据失败");
         console.error(error);
       } finally {
         setLoading(false);
@@ -61,7 +61,7 @@ const WorkstationView: React.FC<WorkstationViewProps> = ({ floor, onBack }) => {
     try {
       await workstationApi.updatePositions(items);
     } catch (error) {
-      message.error('更新位置失败');
+      message.error("更新位置失败");
       throw error;
     }
   };
@@ -84,7 +84,7 @@ const WorkstationView: React.FC<WorkstationViewProps> = ({ floor, onBack }) => {
 
       <div style={{ marginBottom: 16 }}>
         <h3>{floor.name} ({floor.floorNo}F)</h3>
-        <p style={{ color: 'var(--theme-text-tertiary, #666)', margin: 0 }}>
+        <p style={{ color: "var(--theme-text-tertiary, #666)", margin: 0 }}>
           共 {workstations.length} 个工位
         </p>
       </div>

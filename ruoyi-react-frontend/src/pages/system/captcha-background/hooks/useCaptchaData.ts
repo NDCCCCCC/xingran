@@ -3,11 +3,11 @@
  * 验证码背景数据管理 Hook
  */
 
-import { useState, useCallback } from 'react';
-import type { CaptchaBackground } from '@/types/captcha';
-import type { FormInstance } from 'antd/es/form';
-import * as captchaService from '@/services/captcha';
-import type { CaptchaStatistics } from '../types';
+import { useState, useCallback } from "react";
+import type { CaptchaBackground } from "@/types/captcha";
+import type { FormInstance } from "antd/es/form";
+import * as captchaService from "@/services/captcha";
+import type { CaptchaStatistics } from "../types";
 
 export interface UseCaptchaDataReturn {
   backgrounds: CaptchaBackground[];
@@ -39,7 +39,7 @@ export function useCaptchaData(searchForm: FormInstance<unknown>, setTotal: (tot
         setTotalLocal(result.total);
         setTotal(result.total);
       } catch (error) {
-        console.error('加载背景图列表失败:', error);
+        console.error("加载背景图列表失败:", error);
       } finally {
         setLoading(false);
       }
@@ -52,7 +52,7 @@ export function useCaptchaData(searchForm: FormInstance<unknown>, setTotal: (tot
       const stats = await captchaService.getCaptchaBackgroundStatistics();
       setStatistics(stats);
     } catch (error) {
-      console.error('加载统计信息失败:', error);
+      console.error("加载统计信息失败:", error);
     }
   }, []);
 

@@ -3,18 +3,18 @@
  * 在应用根部包裹，提供主题功能
  */
 
-import { useEffect, createContext, useContext, useRef } from 'react';
-import type { FC, ReactNode } from 'react';
-import { useThemeStore } from '@/store/themeStore';
+import { useEffect, createContext, useContext, useRef } from "react";
+import type { FC, ReactNode } from "react";
+import { useThemeStore } from "@/store/themeStore";
 
 interface ThemeContextValue {
 	theme: string;
-	mode: 'light' | 'dark';
+	mode: "light" | "dark";
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-	theme: 'minimal',
-	mode: 'light',
+	theme: "minimal",
+	mode: "light",
 });
 
 export const useThemeContext = () => useContext(ThemeContext);
@@ -29,15 +29,15 @@ const ThemeProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
 		// 如果主题发生变化，添加主题切换动画类
 		if (previousTheme !== appliedTheme) {
-			root.classList.add('theme-switching');
+			root.classList.add("theme-switching");
 
 			// 设置新主题
-			root.setAttribute('data-theme', appliedTheme);
-			root.setAttribute('data-color-mode', appliedMode);
+			root.setAttribute("data-theme", appliedTheme);
+			root.setAttribute("data-color-mode", appliedMode);
 
 			// 动画结束后移除类
 			const timer = setTimeout(() => {
-				root.classList.remove('theme-switching');
+				root.classList.remove("theme-switching");
 			}, 300);
 
 			previousThemeRef.current = appliedTheme;
@@ -45,8 +45,8 @@ const ThemeProvider: FC<{ children: ReactNode }> = ({ children }) => {
 			return () => clearTimeout(timer);
 		} else {
 			// 初始化时应用主题
-			root.setAttribute('data-theme', appliedTheme);
-			root.setAttribute('data-color-mode', appliedMode);
+			root.setAttribute("data-theme", appliedTheme);
+			root.setAttribute("data-color-mode", appliedMode);
 		}
 	}, [appliedTheme, appliedMode]);
 

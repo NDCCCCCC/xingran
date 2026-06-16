@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import type { FC } from 'react';
+import { useState, useEffect } from "react";
+import type { FC } from "react";
 import {
   Table,
   Button,
@@ -16,9 +16,9 @@ import {
   Card,
   Row,
   Col,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import type { UploadFile, UploadProps } from 'antd/es/upload';
+} from "antd";
+import type { ColumnsType } from "antd/es/table";
+import type { UploadFile, UploadProps } from "antd/es/upload";
 import {
   PlusOutlined,
   EditOutlined,
@@ -26,42 +26,42 @@ import {
   ReloadOutlined,
   UploadOutlined,
   PictureOutlined,
-} from '@ant-design/icons';
+} from "@ant-design/icons";
 import type {
   CaptchaBackground,
   CaptchaBackgroundUpdateRequest,
   PieceShape,
   DifficultyLevel,
   CaptchaBackgroundStatus,
-} from '@/types/captcha';
-import * as captchaService from '@/services/captcha';
-import { usePagination } from '@/hooks/usePagination';
-import { isFormValidationError } from '@/utils/errorHandler';
+} from "@/types/captcha";
+import * as captchaService from "@/services/captcha";
+import { usePagination } from "@/hooks/usePagination";
+import { isFormValidationError } from "@/utils/errorHandler";
 
 const { Option } = Select;
 const { TextArea } = Input;
 
 // 拼图形状映射
 const PIECE_SHAPE_MAP: Record<PieceShape, string> = {
-  circle: '圆形',
-  square: '方形',
-  star: '星形',
-  heart: '心形',
+  circle: "圆形",
+  square: "方形",
+  star: "星形",
+  heart: "心形",
 };
 
 // 难度级别映射
 const DIFFICULTY_MAP: Record<DifficultyLevel, string> = {
-  1: '简单',
-  2: '中等',
-  3: '困难',
+  1: "简单",
+  2: "中等",
+  3: "困难",
 };
 
 // 形状选项
 const SHAPE_OPTIONS = [
-  { label: '圆形', value: 'circle' },
-  { label: '方形', value: 'square' },
-  { label: '星形', value: 'star' },
-  { label: '心形', value: 'heart' },
+  { label: "圆形", value: "circle" },
+  { label: "方形", value: "square" },
+  { label: "星形", value: "star" },
+  { label: "心形", value: "heart" },
 ];
 
 const CaptchaBackgroundSettingsPage: FC = () => {
@@ -95,7 +95,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
       setBackgrounds(result.items);
       setTotal(result.total);
     } catch (error) {
-      console.error('加载背景图列表失败:', error);
+      console.error("加载背景图列表失败:", error);
     } finally {
       setLoading(false);
     }
@@ -107,7 +107,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
       const stats = await captchaService.getCaptchaBackgroundStatistics();
       setStatistics(stats);
     } catch (error) {
-      console.error('加载统计信息失败:', error);
+      console.error("加载统计信息失败:", error);
     }
   };
 
@@ -116,7 +116,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
     try {
       const values = await uploadForm.validateFields();
       if (fileList.length === 0) {
-        message.warning('请选择要上传的图片');
+        message.warning("请选择要上传的图片");
         return;
       }
 
@@ -130,7 +130,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
         remark: values.remark,
       });
 
-      message.success('上传成功');
+      message.success("上传成功");
       setUploadModalVisible(false);
       uploadForm.resetFields();
       setFileList([]);
@@ -140,7 +140,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
       if (isFormValidationError(error)) {
         return;
       }
-      message.error('上传失败');
+      message.error("上传失败");
     } finally {
       setUploading(false);
     }
@@ -160,7 +160,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
       };
 
       await captchaService.updateCaptchaBackground(editingBg!.id, updateData);
-      message.success('更新成功');
+      message.success("更新成功");
       setEditModalVisible(false);
       editForm.resetFields();
       setEditingBg(null);
@@ -169,7 +169,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
       if (isFormValidationError(error)) {
         return;
       }
-      message.error('更新失败');
+      message.error("更新失败");
     }
   };
 
@@ -177,11 +177,11 @@ const CaptchaBackgroundSettingsPage: FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await captchaService.deleteCaptchaBackground(id);
-      message.success('删除成功');
+      message.success("删除成功");
       loadBackgrounds();
       loadStatistics();
     } catch (error) {
-      message.error('删除失败');
+      message.error("删除失败");
     }
   };
 
@@ -189,11 +189,11 @@ const CaptchaBackgroundSettingsPage: FC = () => {
   const handleToggle = async (id: string) => {
     try {
       await captchaService.toggleCaptchaBackgroundStatus(id);
-      message.success('状态更新成功');
+      message.success("状态更新成功");
       loadBackgrounds();
       loadStatistics();
     } catch (error) {
-      message.error('状态更新失败');
+      message.error("状态更新失败");
     }
   };
 
@@ -201,9 +201,9 @@ const CaptchaBackgroundSettingsPage: FC = () => {
   const handlePreload = async () => {
     try {
       await captchaService.preloadCaptchaCache();
-      message.success('预加载成功');
+      message.success("预加载成功");
     } catch (error) {
-      message.error('预加载失败');
+      message.error("预加载失败");
     }
   };
 
@@ -223,20 +223,20 @@ const CaptchaBackgroundSettingsPage: FC = () => {
 
   // 上传配置
   const uploadProps: UploadProps = {
-    listType: 'picture-card',
+    listType: "picture-card",
     fileList,
     onChange: ({ fileList: newFileList }) => {
       setFileList(newFileList);
     },
     beforeUpload: (file) => {
-      const isImage = file.type.startsWith('image/');
+      const isImage = file.type.startsWith("image/");
       if (!isImage) {
-        message.error('只能上传图片文件');
+        message.error("只能上传图片文件");
         return Upload.LIST_IGNORE;
       }
       const isLt2M = file.size / 1024 / 1024 < 2;
       if (!isLt2M) {
-        message.error('图片大小不能超过 2MB');
+        message.error("图片大小不能超过 2MB");
         return Upload.LIST_IGNORE;
       }
       return false; // 阻止自动上传
@@ -247,8 +247,8 @@ const CaptchaBackgroundSettingsPage: FC = () => {
   // 表格列
   const columns: ColumnsType<CaptchaBackground> = [
     {
-      title: '预览',
-      key: 'preview',
+      title: "预览",
+      key: "preview",
       width: 80,
       render: (_, record) => (
         <Image
@@ -258,59 +258,59 @@ const CaptchaBackgroundSettingsPage: FC = () => {
           preview={{
             src: record.previewUrl,
           }}
-          style={{ objectFit: 'cover', cursor: 'pointer' }}
+          style={{ objectFit: "cover", cursor: "pointer" }}
         />
       ),
     },
-    { title: '文件名', dataIndex: 'fileName', key: 'fileName', width: 150, ellipsis: true },
+    { title: "文件名", dataIndex: "fileName", key: "fileName", width: 150, ellipsis: true },
     {
-      title: '拼图形状',
-      dataIndex: 'pieceShape',
-      key: 'pieceShape',
+      title: "拼图形状",
+      dataIndex: "pieceShape",
+      key: "pieceShape",
       width: 120,
       render: (shape: PieceShape) => <Tag color="blue">{PIECE_SHAPE_MAP[shape]}</Tag>,
     },
     {
-      title: '难度',
-      dataIndex: 'difficultyLevel',
-      key: 'difficultyLevel',
+      title: "难度",
+      dataIndex: "difficultyLevel",
+      key: "difficultyLevel",
       width: 80,
       render: (level: DifficultyLevel) => <Tag color="orange">{DIFFICULTY_MAP[level]}</Tag>,
     },
     {
-      title: '尺寸',
-      key: 'size',
+      title: "尺寸",
+      key: "size",
       width: 100,
       render: (_, record) => `${record.fileWidth}x${record.fileHeight}`,
     },
     {
-      title: '文件大小',
-      dataIndex: 'fileSize',
-      key: 'fileSize',
+      title: "文件大小",
+      dataIndex: "fileSize",
+      key: "fileSize",
       width: 100,
       render: (size: number) => `${(size / 1024).toFixed(1)} KB`,
     },
     {
-      title: '使用次数',
-      dataIndex: 'useCount',
-      key: 'useCount',
+      title: "使用次数",
+      dataIndex: "useCount",
+      key: "useCount",
       width: 100,
       sorter: (a, b) => a.useCount - b.useCount,
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
       width: 80,
       render: (status: CaptchaBackgroundStatus) => (
-        <Tag color={status === 1 ? 'success' : 'default'}>{status === 1 ? '启用' : '禁用'}</Tag>
+        <Tag color={status === 1 ? "success" : "default"}>{status === 1 ? "启用" : "禁用"}</Tag>
       ),
     },
-    { title: '备注', dataIndex: 'remark', key: 'remark', width: 150, ellipsis: true },
+    { title: "备注", dataIndex: "remark", key: "remark", width: 150, ellipsis: true },
     {
-      title: '操作',
-      key: 'action',
-      fixed: 'right',
+      title: "操作",
+      key: "action",
+      fixed: "right",
       width: 200,
       render: (_, record) => (
         <Space size="small">
@@ -327,7 +327,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
             size="small"
             onClick={() => handleToggle(record.id)}
           >
-            {record.status === 1 ? '禁用' : '启用'}
+            {record.status === 1 ? "禁用" : "启用"}
           </Button>
           <Button
             type="link"
@@ -336,9 +336,9 @@ const CaptchaBackgroundSettingsPage: FC = () => {
             icon={<DeleteOutlined />}
             onClick={() => {
               Modal.confirm({
-                title: '确认删除?',
-                okText: '确定',
-                cancelText: '取消',
+                title: "确认删除?",
+                okText: "确定",
+                cancelText: "取消",
                 okButtonProps: { danger: true },
                 onOk: () => handleDelete(record.id),
               });
@@ -357,7 +357,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
   }, [paginationProps.current, paginationProps.pageSize]);
 
   return (
-    <div style={{ padding: '0 0 24px' }}>
+    <div style={{ padding: "0 0 24px" }}>
       {/* 统计卡片 */}
       {statistics && (
         <Row gutter={16} style={{ marginBottom: 16 }}>
@@ -371,7 +371,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
               <Statistic
                 title="启用数量"
                 value={statistics.enabledCount}
-                styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
+                styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
               />
             </Card>
           </Col>
@@ -380,7 +380,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
               <Statistic
                 title="禁用数量"
                 value={statistics.disabledCount}
-                styles={{ content: { color: 'var(--theme-error, #cf1322)' } }}
+                styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
               />
             </Card>
           </Col>
@@ -476,7 +476,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
           form={uploadForm}
           labelCol={{ span: 6 }}
           wrapperCol={{ span: 16 }}
-          initialValues={{ pieceShape: 'circle', difficultyLevel: 1 }}
+          initialValues={{ pieceShape: "circle", difficultyLevel: 1 }}
         >
           <Form.Item label="图片文件" required>
             <Upload {...uploadProps}>
@@ -488,14 +488,14 @@ const CaptchaBackgroundSettingsPage: FC = () => {
               )}
             </Upload>
           </Form.Item>
-          <Form.Item name="pieceShape" label="拼图形状" rules={[{ required: true, message: '请选择拼图形状' }]}>
+          <Form.Item name="pieceShape" label="拼图形状" rules={[{ required: true, message: "请选择拼图形状" }]}>
             <Select>
               {SHAPE_OPTIONS.map(opt => (
                 <Option key={opt.value} value={opt.value}>{opt.label}</Option>
               ))}
             </Select>
           </Form.Item>
-          <Form.Item name="difficultyLevel" label="难度级别" rules={[{ required: true, message: '请选择难度' }]}>
+          <Form.Item name="difficultyLevel" label="难度级别" rules={[{ required: true, message: "请选择难度" }]}>
             <Select>
               <Option value={1}>简单</Option>
               <Option value={2}>中等</Option>
@@ -567,7 +567,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
       {/* 图片预览 */}
       {previewImage && (
         <Image
-          style={{ display: 'none' }}
+          style={{ display: "none" }}
           src={previewImage}
           preview={{
             open: previewVisible,

@@ -2,8 +2,8 @@
  * 认证和个人信息相关类型
  */
 
-import type { Gender } from './base';
-import type { User } from './system';
+import type { Gender } from "./base";
+import type { User } from "./system";
 
 // ==================== 登录相关 ====================
 
@@ -63,12 +63,12 @@ export interface ChangePasswordRequest {
 /**
  * 主题模式
  */
-export type ThemeMode = 'light' | 'dark';
+export type ThemeMode = "light" | "dark";
 
 /**
  * 语言设置
  */
-export type Language = 'zh-CN' | 'en-US';
+export type Language = "zh-CN" | "en-US";
 
 /**
  * 用户个人设置

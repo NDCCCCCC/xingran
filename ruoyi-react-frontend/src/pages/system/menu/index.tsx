@@ -3,7 +3,7 @@
  * System Menu Management Page
  */
 
-import { useState, useEffect, type FC } from 'react';
+import { useState, useEffect, type FC } from "react";
 import {
   Table,
   Button,
@@ -21,7 +21,7 @@ import {
   Switch,
   TreeSelect,
   Alert,
-} from 'antd';
+} from "antd";
 import {
   PlusOutlined,
   EditOutlined,
@@ -32,16 +32,16 @@ import {
   FolderOutlined,
   FileOutlined,
   AppstoreOutlined,
-} from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import type { Menu } from '@/types';
-import IconSelect from '@/components/IconSelect';
-import { formatDateTime } from '@/utils/datetime';
+} from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
+import type { Menu } from "@/types";
+import IconSelect from "@/components/IconSelect";
+import { formatDateTime } from "@/utils/datetime";
 
 // 导入提取的模块
-import { MENU_TYPE_OPTIONS, MENU_STATUS_OPTIONS, getMenuIcon, getMenuTypeTag, DEFAULT_FORM_VALUES } from './constants';
-import { flattenTree, buildParentOptions, renderTreeData, renderMenuName, type ParentOption } from './utils';
-import { useMenuData, useMenuActions } from './hooks';
+import { MENU_TYPE_OPTIONS, MENU_STATUS_OPTIONS, getMenuIcon, getMenuTypeTag, DEFAULT_FORM_VALUES } from "./constants";
+import { flattenTree, buildParentOptions, renderTreeData, renderMenuName, type ParentOption } from "./utils";
+import { useMenuData, useMenuActions } from "./hooks";
 
 const { Option } = Select;
 
@@ -57,67 +57,67 @@ function getMenuTableColumns(props: MenuTableColumnsProps): ColumnsType<Menu> {
 
   return [
     {
-      title: '菜单名称',
-      dataIndex: 'menuName',
-      key: 'menuName',
+      title: "菜单名称",
+      dataIndex: "menuName",
+      key: "menuName",
       render: (_: unknown, record: Menu) => renderMenuName(record),
     },
     {
-      title: '菜单类型',
-      dataIndex: 'menuType',
-      key: 'menuType',
+      title: "菜单类型",
+      dataIndex: "menuType",
+      key: "menuType",
       render: (menuType) => getMenuTypeTag(menuType),
     },
     {
-      title: '权限标识',
-      dataIndex: 'perms',
-      key: 'perms',
+      title: "权限标识",
+      dataIndex: "perms",
+      key: "perms",
       render: (perms) => perms && <Tag color="cyan">{perms}</Tag>,
     },
     {
-      title: '路由地址',
-      dataIndex: 'path',
-      key: 'path',
+      title: "路由地址",
+      dataIndex: "path",
+      key: "path",
     },
     {
-      title: '组件路径',
-      dataIndex: 'component',
-      key: 'component',
+      title: "组件路径",
+      dataIndex: "component",
+      key: "component",
     },
     {
-      title: '显示顺序',
-      dataIndex: 'orderNum',
-      key: 'orderNum',
+      title: "显示顺序",
+      dataIndex: "orderNum",
+      key: "orderNum",
     },
     {
-      title: '显示状态',
-      dataIndex: 'visible',
-      key: 'visible',
+      title: "显示状态",
+      dataIndex: "visible",
+      key: "visible",
       render: (visible) => (
-        <Tag color={visible === 1 ? 'success' : 'default'}>
-          {visible === 1 ? '显示' : '隐藏'}
+        <Tag color={visible === 1 ? "success" : "default"}>
+          {visible === 1 ? "显示" : "隐藏"}
         </Tag>
       ),
     },
     {
-      title: '菜单状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: "菜单状态",
+      dataIndex: "status",
+      key: "status",
       render: (status) => (
-        <Tag color={status === 0 ? 'success' : 'error'}>
-          {status === 0 ? '正常' : '停用'}
+        <Tag color={status === 0 ? "success" : "error"}>
+          {status === 0 ? "正常" : "停用"}
         </Tag>
       ),
     },
     {
-      title: '创建时间',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
+      title: "创建时间",
+      dataIndex: "createdAt",
+      key: "createdAt",
       render: (text) => formatDateTime(text),
     },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       render: (_: unknown, record: Menu) => (
         <Space size="middle">
           <Button
@@ -129,7 +129,7 @@ function getMenuTableColumns(props: MenuTableColumnsProps): ColumnsType<Menu> {
           </Button>
           <Button
             type="link"
-            icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }}
+            icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }}
             onClick={() => handleDeleteConfirm(record)}
           >
             删除
@@ -242,7 +242,7 @@ const MenuManagement: FC = () => {
             <Statistic
               title="目录数量"
               value={statistics.directories}
-              styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
+              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
               prefix={<FolderOutlined />}
             />
           </Card>
@@ -252,7 +252,7 @@ const MenuManagement: FC = () => {
             <Statistic
               title="菜单数量"
               value={statistics.menus}
-              styles={{ content: { color: 'var(--theme-success, #52c41a)' } }}
+              styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
               prefix={<FileOutlined />}
             />
           </Card>
@@ -262,7 +262,7 @@ const MenuManagement: FC = () => {
             <Statistic
               title="按钮数量"
               value={statistics.buttons}
-              styles={{ content: { color: '#fa8c16' } }}
+              styles={{ content: { color: "#fa8c16" } }}
               prefix={<AppstoreOutlined />}
             />
           </Card>
@@ -271,7 +271,7 @@ const MenuManagement: FC = () => {
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="menuName" label="菜单名称">
               <Input placeholder="请输入菜单名称" />
@@ -298,7 +298,7 @@ const MenuManagement: FC = () => {
           <Space>
             {selectedRowKeys.length > 0 && (
               <Button
-                icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }}
+                icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }}
                 onClick={handleBatchDelete}
               >
                 批量删除 ({selectedRowKeys.length})
@@ -356,7 +356,7 @@ const MenuManagement: FC = () => {
 
       {/* 编辑弹窗 */}
       <Modal
-        title={editingMenu ? '编辑菜单' : '新增菜单'}
+        title={editingMenu ? "编辑菜单" : "新增菜单"}
         open={editModalVisible}
         onOk={() => handleSave(editForm)}
         afterOpenChange={handleModalOpenChange}
@@ -374,8 +374,8 @@ const MenuManagement: FC = () => {
                 label="上级菜单"
               >
                 <TreeSelect
-                  style={{ width: '100%' }}
-                  styles={{ popup: { root: { maxHeight: 400, overflow: 'auto' } } }}
+                  style={{ width: "100%" }}
+                  styles={{ popup: { root: { maxHeight: 400, overflow: "auto" } } }}
                   treeData={parentOptions}
                   placeholder="请选择上级菜单"
                   treeDefaultExpandAll
@@ -387,7 +387,7 @@ const MenuManagement: FC = () => {
               <Form.Item
                 name="menuType"
                 label="菜单类型"
-                rules={[{ required: true, message: '请选择菜单类型' }]}
+                rules={[{ required: true, message: "请选择菜单类型" }]}
               >
                 <Select placeholder="请选择菜单类型">
                   {MENU_TYPE_OPTIONS.map(opt => (
@@ -403,7 +403,7 @@ const MenuManagement: FC = () => {
               <Form.Item
                 name="menuName"
                 label="菜单名称"
-                rules={[{ required: true, message: '请输入菜单名称' }]}
+                rules={[{ required: true, message: "请输入菜单名称" }]}
               >
                 <Input />
               </Form.Item>
@@ -412,9 +412,9 @@ const MenuManagement: FC = () => {
               <Form.Item
                 name="orderNum"
                 label="显示顺序"
-                rules={[{ required: true, message: '请输入显示顺序' }]}
+                rules={[{ required: true, message: "请输入显示顺序" }]}
               >
-                <InputNumber min={0} style={{ width: '100%' }} />
+                <InputNumber min={0} style={{ width: "100%" }} />
               </Form.Item>
             </Col>
           </Row>

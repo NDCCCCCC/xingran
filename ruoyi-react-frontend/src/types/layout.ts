@@ -2,7 +2,7 @@
  * 布局系统类型定义
  */
 
-export type LayoutType = 'classic' | 'hybrid' | 'innovative';
+export type LayoutType = "classic" | "hybrid" | "innovative";
 
 /**
  * 侧边栏配置
@@ -11,7 +11,7 @@ export interface SidebarConfig {
   collapsible: boolean;
   width: number;
   collapsedWidth: number;
-  position: 'left' | 'right';
+  position: "left" | "right";
   defaultCollapsed?: boolean;
 }
 
@@ -31,7 +31,7 @@ export interface HeaderConfig {
  */
 export interface TabsConfig {
   enabled: boolean;
-  position: 'top' | 'bottom' | 'left' | 'right';
+  position: "top" | "bottom" | "left" | "right";
   closable: boolean;
   draggable: boolean;
   maxTabs?: number;
@@ -96,7 +96,7 @@ export interface LayoutState {
 /**
  * 密度模式
  */
-export type DensityMode = 'compact' | 'comfortable' | 'spacious';
+export type DensityMode = "compact" | "comfortable" | "spacious";
 
 /**
  * 密度配置

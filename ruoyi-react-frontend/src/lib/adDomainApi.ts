@@ -1,5 +1,5 @@
-import { get, post } from './api';
-import type { BaseResponse, PageResponse } from '@/types';
+import { get, post } from "./api";
+import type { BaseResponse, PageResponse } from "@/types";
 
 // ==================== 类型定义 ====================
 
@@ -232,11 +232,11 @@ function withDefaultPagination<T extends { current?: number; pageSize?: number }
 // ==================== AD配置 API ====================
 
 export function getADConfigList(params: ADConfigListRequest = {}): Promise<BaseResponse<PageResponse<ADConfig>>> {
-  return post('/ad-domain/configs/list', withDefaultPagination(params));
+  return post("/ad-domain/configs/list", withDefaultPagination(params));
 }
 
 export function createADConfig(data: ADConfigCreateRequest): Promise<BaseResponse<ADConfig>> {
-  return post('/ad-domain/configs', data);
+  return post("/ad-domain/configs", data);
 }
 
 export function getADConfig(id: string): Promise<BaseResponse<ADConfig>> {
@@ -255,20 +255,20 @@ export function testADConnection(id: string): Promise<BaseResponse<{ message: st
   return post(`/ad-domain/configs/${id}/test`, {});
 }
 
-export function syncADData(id: string, syncType: string = 'full'): Promise<BaseResponse<{ message: string; result: ADSyncResult }>> {
+export function syncADData(id: string, syncType: string = "full"): Promise<BaseResponse<{ message: string; result: ADSyncResult }>> {
   return post(`/ad-domain/configs/${id}/sync`, { syncType });
 }
 
 // ==================== OU管理 API ====================
 
 export function getADOUTree(configId: string): Promise<BaseResponse<ADOUNode[]>> {
-  return post('/ad-domain/ous/tree', { configId });
+  return post("/ad-domain/ous/tree", { configId });
 }
 
 // ==================== 用户组管理 API ====================
 
 export function getADGroupList(params: ADGroupListRequest): Promise<BaseResponse<PageResponse<ADGroup>>> {
-  return post('/ad-domain/groups/list', withDefaultPagination(params));
+  return post("/ad-domain/groups/list", withDefaultPagination(params));
 }
 
 export function getADGroupDetail(id: string): Promise<BaseResponse<ADGroup>> {
@@ -327,17 +327,17 @@ export function syncADGroups(configId: string): Promise<BaseResponse<ADGroupSync
 }
 
 export function syncADSingleGroup(configId: string, groupDn: string): Promise<BaseResponse<{ message: string }>> {
-  return post('/ad-domain/groups/sync-single', { configId, groupDn });
+  return post("/ad-domain/groups/sync-single", { configId, groupDn });
 }
 
 export function getADGroupSyncStatus(configId: string): Promise<BaseResponse<ADGroupSyncStatus>> {
-  return post('/ad-domain/groups/sync-status', { configId });
+  return post("/ad-domain/groups/sync-status", { configId });
 }
 
 // ==================== 用户管理 API ====================
 
 export function getADUserList(params: ADUserListRequest): Promise<BaseResponse<PageResponse<ADUser>>> {
-  return post('/ad-domain/users/list', withDefaultPagination(params))
+  return post("/ad-domain/users/list", withDefaultPagination(params))
 }
 
 // D-08/STUB: getADUserIds — placeholder export to unblock build.
@@ -350,10 +350,10 @@ export function getADUserIds(
   // Returns empty until backend endpoint is implemented.
   return Promise.resolve({
     code: 0,
-    message: 'success',
+    message: "success",
     data: [],
     timestamp: Date.now(),
-    request_id: '',
+    request_id: "",
   }) as unknown as Promise<BaseResponse<string[]>>
 }
 
@@ -383,7 +383,7 @@ export function getADSyncLogs(
   configId: string | undefined,
   params: { current?: number; pageSize?: number } = {}
 ): Promise<BaseResponse<PageResponse<ADSyncLog>>> {
-  return post('/ad-domain/logs/list', {
+  return post("/ad-domain/logs/list", {
     configId,
     ...withDefaultPagination(params),
   });
@@ -392,11 +392,11 @@ export function getADSyncLogs(
 // ==================== 电脑设备管理 API ====================
 
 export function getADComputerList(params: ADComputerListRequest): Promise<BaseResponse<PageResponse<ADComputerDetail>>> {
-  return post('/ad-domain/computers/list', withDefaultPagination(params));
+  return post("/ad-domain/computers/list", withDefaultPagination(params));
 }
 
 export function getADComputerDetail(configId: string, computerDn: string): Promise<BaseResponse<ADComputerDetail>> {
-  return post('/ad-domain/computers/detail', { configId, computerDn });
+  return post("/ad-domain/computers/detail", { configId, computerDn });
 }
 
 // ==================== 部门组映射 API ====================
@@ -406,8 +406,8 @@ export interface DeptGroupMapping {
   deptId: string;
   adGroupId: string;
   adConfigId: string;
-  mappingType: 'auto' | 'manual';
-  mappingStatus: 'active' | 'inactive';
+  mappingType: "auto" | "manual";
+  mappingStatus: "active" | "inactive";
   groupDn: string;
   groupName: string;
   syncEnabled: boolean;
@@ -423,8 +423,8 @@ export interface DeptGroupMapping {
 export interface MappingListRequest {
   adConfigId?: string;
   deptId?: string;
-  mappingType?: 'auto' | 'manual';
-  mappingStatus?: 'active' | 'inactive';
+  mappingType?: "auto" | "manual";
+  mappingStatus?: "active" | "inactive";
   groupName?: string;
   current?: number;
   pageSize?: number;
@@ -439,21 +439,21 @@ export interface CreateMappingRequest {
   deptId: string;
   adGroupId: string;
   adConfigId: string;
-  mappingType?: 'auto' | 'manual';
+  mappingType?: "auto" | "manual";
   syncEnabled?: boolean;
 }
 
 export interface UpdateMappingRequest {
-  mappingStatus?: 'active' | 'inactive';
+  mappingStatus?: "active" | "inactive";
   syncEnabled?: boolean;
 }
 
 export function getMappingList(params: MappingListRequest): Promise<BaseResponse<MappingListResponse>> {
-  return post('/ad-domain/mappings/list', withDefaultPagination(params));
+  return post("/ad-domain/mappings/list", withDefaultPagination(params));
 }
 
 export function createMapping(data: CreateMappingRequest): Promise<BaseResponse<DeptGroupMapping>> {
-  return post('/ad-domain/mappings', data);
+  return post("/ad-domain/mappings", data);
 }
 
 export function getMapping(id: string): Promise<BaseResponse<DeptGroupMapping>> {
@@ -490,7 +490,7 @@ export function getOUDeptMapping(ouDn: string): Promise<BaseResponse<OUDeptMappi
 export function updateOUDeptMapping(
   ouDn: string,
   data: { deptId: string }
-): Promise<BaseResponse<{ message: string; mapping: OUDeptMappingResponse['mapping'] }>> {
+): Promise<BaseResponse<{ message: string; mapping: OUDeptMappingResponse["mapping"] }>> {
   return post(`/ad-domain/ou/${encodeURIComponent(ouDn)}/dept-mapping`, data);
 }
 
@@ -502,7 +502,7 @@ export interface OUGroupMapping {
   ouDn: string;
   ouName: string;
   adGroupId: string;
-  mappingStatus: 'active' | 'inactive';
+  mappingStatus: "active" | "inactive";
   syncEnabled: boolean;
   lastSyncAt?: string;
   createdAt: string;
@@ -541,11 +541,11 @@ export interface OUGroupMappingCreateRequest {
 
 export interface OUGroupMappingUpdateRequest {
   syncEnabled?: boolean;
-  status?: 'active' | 'inactive';
+  status?: "active" | "inactive";
 }
 
 export function getOUGroupMappings(params: OUGroupMappingListRequest): Promise<BaseResponse<OUGroupMappingListResponse>> {
-  return post('/ad-domain/ou-group-mappings/list', withDefaultPagination(params));
+  return post("/ad-domain/ou-group-mappings/list", withDefaultPagination(params));
 }
 
 export function getOUGroupMapping(id: string): Promise<BaseResponse<OUGroupMapping>> {
@@ -553,7 +553,7 @@ export function getOUGroupMapping(id: string): Promise<BaseResponse<OUGroupMappi
 }
 
 export function createOUGroupMapping(data: OUGroupMappingCreateRequest): Promise<BaseResponse<OUGroupMapping>> {
-  return post('/ad-domain/ou-group-mappings', data);
+  return post("/ad-domain/ou-group-mappings", data);
 }
 
 export function updateOUGroupMapping(id: string, data: OUGroupMappingUpdateRequest): Promise<BaseResponse<{ message: string }>> {
@@ -592,5 +592,5 @@ export interface BatchSyncResult {
 export function batchSyncADUsersDirect(
   data: BatchSyncUsersRequest
 ): Promise<BaseResponse<BatchSyncResult>> {
-  return post('/ad-domain/users/batch-sync', data);
+  return post("/ad-domain/users/batch-sync", data);
 }

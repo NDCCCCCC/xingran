@@ -2,8 +2,8 @@
  * 楼层搜索表单组件
  */
 
-import type { FC } from 'react';
-import { Form, Input, Select, Button, Space, Radio, Card } from 'antd';
+import type { FC } from "react";
+import { Form, Input, Select, Button, Space, Radio, Card } from "antd";
 import {
   SearchOutlined,
   ReloadOutlined,
@@ -13,16 +13,16 @@ import {
   ExportOutlined,
   PlusOutlined,
   DeleteOutlined,
-} from '@ant-design/icons';
-import type { FormInstance } from 'antd/es/form';
-import type { ViewMode } from '../constants';
-import { STATUS_OPTIONS } from '../constants';
-import type { Building } from '@/types';
+} from "@ant-design/icons";
+import type { FormInstance } from "antd/es/form";
+import type { ViewMode } from "../constants";
+import { STATUS_OPTIONS } from "../constants";
+import type { Building } from "@/types";
 
 const { Option } = Select;
 
 // 楼宇选项基础类型（只需要 id 和 name）
-type BuildingOptionBase = Pick<Building, 'id' | 'name'>;
+type BuildingOptionBase = Pick<Building, "id" | "name">;
 
 interface FloorSearchFormProps {
   form: FormInstance;
@@ -67,11 +67,11 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
     <Card style={{ marginBottom: 16 }}>
       <div
         style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          flexWrap: 'wrap',
-          gap: '16px',
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          flexWrap: "wrap",
+          gap: "16px",
         }}
       >
         <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }} disabled={disabled}>
@@ -151,7 +151,7 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
             导出
           </Button>
           {selectedCount > 0 && (
-            <Button icon={<DeleteOutlined />} onClick={onBatchDelete} style={{ color: 'var(--theme-error, #ff4d4f)' }}>
+            <Button icon={<DeleteOutlined />} onClick={onBatchDelete} style={{ color: "var(--theme-error, #ff4d4f)" }}>
               批量删除 ({selectedCount})
             </Button>
           )}

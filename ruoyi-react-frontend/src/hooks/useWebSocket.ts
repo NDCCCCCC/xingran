@@ -8,9 +8,9 @@
  * - 连接状态管理
  */
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect } from "react";
 
-export type WebSocketStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
+export type WebSocketStatus = "connecting" | "connected" | "disconnected" | "error";
 
 export interface UseWebSocketOptions {
 	/** WebSocket 服务器 URL */
@@ -49,7 +49,7 @@ export interface UseWebSocketReturn {
  */
 export function useWebSocket(options?: UseWebSocketOptions): UseWebSocketReturn {
 	const {
-		url = '',
+		url = "",
 		onMessage = () => {},
 		onOpen,
 		onClose,
@@ -59,7 +59,7 @@ export function useWebSocket(options?: UseWebSocketOptions): UseWebSocketReturn 
 		maxReconnectAttempts = 10,
 	} = options || {};
 
-	const [status, setStatus] = useState<WebSocketStatus>('disconnected');
+	const [status, setStatus] = useState<WebSocketStatus>("disconnected");
 	const [reconnectAttempts, setReconnectAttempts] = useState(0);
 
 	const wsRef = useRef<WebSocket | null>(null);
@@ -82,13 +82,13 @@ export function useWebSocket(options?: UseWebSocketOptions): UseWebSocketReturn 
 		}
 
 		isManualDisconnectRef.current = false;
-		setStatus('connecting');
+		setStatus("connecting");
 
 		try {
 			const ws = new WebSocket(url);
 
 			ws.onopen = () => {
-				setStatus('connected');
+				setStatus("connected");
 				setReconnectAttempts(0);
 				onOpen?.();
 			};
@@ -98,12 +98,12 @@ export function useWebSocket(options?: UseWebSocketOptions): UseWebSocketReturn 
 					const data = JSON.parse(event.data);
 					onMessage(data);
 				} catch (error) {
-					console.error('Failed to parse WebSocket message:', error);
+					console.error("Failed to parse WebSocket message:", error);
 				}
 			};
 
 			ws.onclose = () => {
-				setStatus('disconnected');
+				setStatus("disconnected");
 				wsRef.current = null;
 				onClose?.();
 
@@ -120,21 +120,21 @@ export function useWebSocket(options?: UseWebSocketOptions): UseWebSocketReturn 
 							connect();
 						}, delay);
 					} else {
-						console.warn('WebSocket max reconnect attempts reached');
+						console.warn("WebSocket max reconnect attempts reached");
 					}
 				}
 			};
 
 			ws.onerror = (error) => {
-				setStatus('error');
-				console.error('WebSocket error:', error);
+				setStatus("error");
+				console.error("WebSocket error:", error);
 				onError?.(error);
 			};
 
 			wsRef.current = ws;
 		} catch (error) {
-			setStatus('error');
-			console.error('Failed to create WebSocket connection:', error);
+			setStatus("error");
+			console.error("Failed to create WebSocket connection:", error);
 		}
 	}, [url, onMessage, onOpen, onClose, onError, reconnect, reconnectInterval, maxReconnectAttempts, reconnectAttempts]);
 
@@ -148,7 +148,7 @@ export function useWebSocket(options?: UseWebSocketOptions): UseWebSocketReturn 
 			wsRef.current = null;
 		}
 
-		setStatus('disconnected');
+		setStatus("disconnected");
 		setReconnectAttempts(0);
 	}, [clearReconnectTimeout]);
 
@@ -157,7 +157,7 @@ export function useWebSocket(options?: UseWebSocketOptions): UseWebSocketReturn 
 		if (wsRef.current?.readyState === WebSocket.OPEN) {
 			wsRef.current.send(JSON.stringify(data));
 		} else {
-			console.warn('WebSocket is not connected, cannot send data');
+			console.warn("WebSocket is not connected, cannot send data");
 		}
 	}, []);
 

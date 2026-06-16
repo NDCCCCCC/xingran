@@ -1,8 +1,8 @@
-import { useState, useCallback } from 'react';
-import { message } from 'antd';
-import { getDutyConfig, updateDutyConfig, type DutyConfig } from '@/lib/dutyApi';
-import type { Dayjs } from 'dayjs';
-import dayjs from 'dayjs';
+import { useState, useCallback } from "react";
+import { message } from "antd";
+import { getDutyConfig, updateDutyConfig, type DutyConfig } from "@/lib/dutyApi";
+import type { Dayjs } from "dayjs";
+import dayjs from "dayjs";
 
 export function useDutyConfig() {
   const [loading, setLoading] = useState(false);
@@ -17,7 +17,7 @@ export function useDutyConfig() {
       setConfig(result.data || null);
       return result.data || null;
     } catch (error) {
-      message.error('获取配置失败');
+      message.error("获取配置失败");
       return null;
     } finally {
       setLoading(false);
@@ -35,16 +35,16 @@ export function useDutyConfig() {
     try {
       const data = {
         reminderEnabled: values.reminderEnabled,
-        reminderTime: values.reminderTime.format('HH:mm'),
-        reminderChannels: Array.isArray(values.reminderChannels) ? values.reminderChannels.join(',') : values.reminderChannels,
+        reminderTime: values.reminderTime.format("HH:mm"),
+        reminderChannels: Array.isArray(values.reminderChannels) ? values.reminderChannels.join(",") : values.reminderChannels,
         beforeReminderMinutes: values.beforeReminderMinutes,
       };
       await updateDutyConfig(data);
-      message.success('配置保存成功');
+      message.success("配置保存成功");
       await fetch();
       return true;
     } catch (error) {
-      message.error('配置保存失败');
+      message.error("配置保存失败");
       return false;
     } finally {
       setSaving(false);
@@ -56,8 +56,8 @@ export function useDutyConfig() {
     if (!config) return {};
     return {
       reminderEnabled: config.reminderEnabled,
-      reminderTime: dayjs(config.reminderTime, 'HH:mm'),
-      reminderChannels: config.reminderChannels ? config.reminderChannels.split(',') : [],
+      reminderTime: dayjs(config.reminderTime, "HH:mm"),
+      reminderChannels: config.reminderChannels ? config.reminderChannels.split(",") : [],
       beforeReminderMinutes: config.beforeReminderMinutes,
     };
   }, [config]);

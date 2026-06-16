@@ -5,13 +5,13 @@
  * 从右侧滑出，可同时看到仪表盘内容变化
  */
 
-import { useState, useEffect } from 'react';
-import { Drawer, Form, Input, Button, message, Spin, Divider } from 'antd';
-import { SaveOutlined, CloseOutlined } from '@ant-design/icons';
-import { useDashboardStore } from '@/store/dashboardStore';
-import DashboardScopeSelector from './DashboardScopeSelector';
-import RefreshIntervalSelector from './RefreshIntervalSelector';
-import type { DashboardScope, UpdateDashboardRequest } from '@/types/dashboard';
+import { useState, useEffect } from "react";
+import { Drawer, Form, Input, Button, message, Spin, Divider } from "antd";
+import { SaveOutlined, CloseOutlined } from "@ant-design/icons";
+import { useDashboardStore } from "@/store/dashboardStore";
+import DashboardScopeSelector from "./DashboardScopeSelector";
+import RefreshIntervalSelector from "./RefreshIntervalSelector";
+import type { DashboardScope, UpdateDashboardRequest } from "@/types/dashboard";
 
 const { TextArea } = Input;
 
@@ -34,7 +34,7 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
 		deptId?: string;
 		isSystem?: boolean;
 	}>({
-		scope: 'private',
+		scope: "private",
 	});
 
 	// 当抽屉打开时初始化表单
@@ -42,11 +42,11 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
 		if (visible && currentDashboard) {
 			form.setFieldsValue({
 				name: currentDashboard.name,
-				description: currentDashboard.description || '',
+				description: currentDashboard.description || "",
 				refreshInterval: currentDashboard.refreshInterval,
 			});
 			setScopeConfig({
-				scope: currentDashboard.scope || 'private',
+				scope: currentDashboard.scope || "private",
 				deptId: currentDashboard.deptId,
 				isSystem: currentDashboard.isSystem,
 			});
@@ -56,7 +56,7 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
 	// 处理保存
 	const handleSave = async () => {
 		if (!currentDashboard) {
-			message.warning('当前没有活动的仪表盘');
+			message.warning("当前没有活动的仪表盘");
 			return;
 		}
 
@@ -73,10 +73,10 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
 			// 更新仪表盘
 			await updateDashboard(currentDashboard.id, updateData);
 
-			message.success('仪表盘设置已保存');
+			message.success("仪表盘设置已保存");
 			onClose();
 		} catch (error) {
-			console.error('保存仪表盘设置失败:', error);
+			console.error("保存仪表盘设置失败:", error);
 			if (error instanceof Error) {
 				message.error(`保存失败: ${error.message}`);
 			}
@@ -108,7 +108,7 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
 			onClose={handleCancel}
 			width={480}
 			footer={
-				<div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+				<div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
 					<Button icon={<CloseOutlined />} onClick={handleCancel}>
 						取消
 					</Button>
@@ -134,8 +134,8 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
 						label="仪表盘名称"
 						name="name"
 						rules={[
-							{ required: true, message: '请输入仪表盘名称' },
-							{ max: 100, message: '名称不能超过 100 个字符' },
+							{ required: true, message: "请输入仪表盘名称" },
+							{ max: 100, message: "名称不能超过 100 个字符" },
 						]}
 					>
 						<Input placeholder="请输入仪表盘名称" />
@@ -144,7 +144,7 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
 					<Form.Item
 						label="描述"
 						name="description"
-						rules={[{ max: 500, message: '描述不能超过 500 个字符' }]}
+						rules={[{ max: 500, message: "描述不能超过 500 个字符" }]}
 					>
 						<TextArea rows={3} placeholder="请输入仪表盘描述（可选）" />
 					</Form.Item>
@@ -180,12 +180,12 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
 						仪表盘信息
 					</Divider>
 
-					<div style={{ color: 'var(--theme-text-tertiary, #666)', fontSize: 12 }}>
+					<div style={{ color: "var(--theme-text-tertiary, #666)", fontSize: 12 }}>
 						<p>
 							<strong>ID:</strong> {currentDashboard.id}
 						</p>
 						<p>
-							<strong>创建者:</strong> {currentDashboard.ownerName || currentDashboard.createdBy || '-'}
+							<strong>创建者:</strong> {currentDashboard.ownerName || currentDashboard.createdBy || "-"}
 						</p>
 						<p>
 							<strong>创建时间:</strong> {currentDashboard.createdAt}
@@ -194,12 +194,12 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
 							<strong>更新时间:</strong> {currentDashboard.updatedAt}
 						</p>
 						{currentDashboard.isDefault && (
-							<p style={{ color: 'var(--theme-info, #1890ff)' }}>
+							<p style={{ color: "var(--theme-info, #1890ff)" }}>
 								<strong>★ 这是默认仪表盘</strong>
 							</p>
 						)}
 						{currentDashboard.isTemplate && (
-							<p style={{ color: 'var(--theme-success, #52c41a)' }}>
+							<p style={{ color: "var(--theme-success, #52c41a)" }}>
 								<strong>📋 这是一个模板</strong>
 							</p>
 						)}

@@ -2,10 +2,10 @@
  * Cache 工具函数
  */
 
-export { formatDateTime } from '@/utils/datetime';
+export { formatDateTime } from "@/utils/datetime";
 
 export function formatMemorySize(bytes: number): string {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const units = ["B", "KB", "MB", "GB", "TB"];
   let size = bytes;
   let unitIndex = 0;
 
@@ -18,13 +18,13 @@ export function formatMemorySize(bytes: number): string {
 }
 
 export function formatTTL(seconds: number): string {
-  if (seconds <= 0) return '永久';
+  if (seconds <= 0) return "永久";
 
   const units = [
-    { name: '秒', value: 60 },
-    { name: '分钟', value: 60 },
-    { name: '小时', value: 24 },
-    { name: '天', value: Infinity }
+    { name: "秒", value: 60 },
+    { name: "分钟", value: 60 },
+    { name: "小时", value: 24 },
+    { name: "天", value: Infinity }
   ];
 
   let value = seconds;
@@ -46,11 +46,11 @@ export function formatTTL(seconds: number): string {
 
 export function exportCacheAsJson(data: unknown[]): void {
   const dataStr = JSON.stringify(data, null, 2);
-  const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-  const exportFileDefaultName = `cache_export_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+  const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
+  const exportFileDefaultName = `cache_export_${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.json`;
 
-  const linkElement = document.createElement('a');
-  linkElement.setAttribute('href', dataUri);
-  linkElement.setAttribute('download', exportFileDefaultName);
+  const linkElement = document.createElement("a");
+  linkElement.setAttribute("href", dataUri);
+  linkElement.setAttribute("download", exportFileDefaultName);
   linkElement.click();
 }

@@ -2,15 +2,15 @@
  * 配置备份工具函数
  */
 
-import type { ConfigBackup } from '@/types';
-import type { DiffResult, DeviceBackupGroup, DiffLine } from './types';
+import type { ConfigBackup } from "@/types";
+import type { DiffResult, DeviceBackupGroup, DiffLine } from "./types";
 
 /**
  * 计算两个文本的差异（使用简化的 LCS 算法）
  */
 export function computeDiff(content1: string, content2: string): DiffResult {
-  const lines1 = content1.split('\n');
-  const lines2 = content2.split('\n');
+  const lines1 = content1.split("\n");
+  const lines2 = content2.split("\n");
 
   // 使用动态规划计算最长公共子序列
   const m = lines1.length;
@@ -35,19 +35,19 @@ export function computeDiff(content1: string, content2: string): DiffResult {
   while (i > 0 || j > 0) {
     if (i > 0 && j > 0 && lines1[i - 1] === lines2[j - 1]) {
       // 相同的行
-      leftLines.unshift({ type: 'same', content: lines1[i - 1], lineNum: i });
-      rightLines.unshift({ type: 'same', content: lines2[j - 1], lineNum: j });
+      leftLines.unshift({ type: "same", content: lines1[i - 1], lineNum: i });
+      rightLines.unshift({ type: "same", content: lines2[j - 1], lineNum: j });
       i--;
       j--;
     } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
       // 新增的行
-      leftLines.unshift({ type: 'empty', content: '', lineNum: undefined });
-      rightLines.unshift({ type: 'added', content: lines2[j - 1], lineNum: j });
+      leftLines.unshift({ type: "empty", content: "", lineNum: undefined });
+      rightLines.unshift({ type: "added", content: lines2[j - 1], lineNum: j });
       j--;
     } else {
       // 删除的行
-      leftLines.unshift({ type: 'removed', content: lines1[i - 1], lineNum: i });
-      rightLines.unshift({ type: 'empty', content: '', lineNum: undefined });
+      leftLines.unshift({ type: "removed", content: lines1[i - 1], lineNum: i });
+      rightLines.unshift({ type: "empty", content: "", lineNum: undefined });
       i--;
     }
   }
@@ -57,8 +57,8 @@ export function computeDiff(content1: string, content2: string): DiffResult {
     rightContent: content2,
     leftLines,
     rightLines,
-    oldVersion: '',
-    newVersion: '',
+    oldVersion: "",
+    newVersion: "",
   };
 }
 
@@ -83,8 +83,8 @@ export function groupBackupsByDevice(backups: ConfigBackup[]): DeviceBackupGroup
     deviceBackups.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     const latestBackup = deviceBackups[0];
-    const autoCount = deviceBackups.filter(b => b.backupType === 'auto').length;
-    const manualCount = deviceBackups.filter(b => b.backupType === 'manual').length;
+    const autoCount = deviceBackups.filter(b => b.backupType === "auto").length;
+    const manualCount = deviceBackups.filter(b => b.backupType === "manual").length;
 
     groups.push({
       deviceId,
@@ -105,8 +105,8 @@ export function groupBackupsByDevice(backups: ConfigBackup[]): DeviceBackupGroup
  * 更新统计数据
  */
 export function calculateStatistics(backupList: ConfigBackup[]) {
-  const autoCount = backupList.filter(b => b.backupType === 'auto').length;
-  const manualCount = backupList.filter(b => b.backupType === 'manual').length;
+  const autoCount = backupList.filter(b => b.backupType === "auto").length;
+  const manualCount = backupList.filter(b => b.backupType === "manual").length;
   const uniqueDevices = new Set(backupList.map(b => b.deviceId)).size;
 
   return {

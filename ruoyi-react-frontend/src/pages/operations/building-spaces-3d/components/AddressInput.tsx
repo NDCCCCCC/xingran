@@ -3,12 +3,12 @@
  * 支持地址解析，输入详细地址后自动获取经纬度坐标
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import { Input, Select, Button, Space, Alert, Spin } from 'antd';
-import { SearchOutlined, EnvironmentOutlined, CheckCircleOutlined } from '@ant-design/icons';
-import { useGeocoding } from '../hooks/useGeocoding';
-import { HUBEI_CITIES } from '@/utils/baidu-map';
-import type { AddressValue } from './types';
+import { useState, useCallback, useEffect } from "react";
+import { Input, Select, Button, Space, Alert, Spin } from "antd";
+import { SearchOutlined, EnvironmentOutlined, CheckCircleOutlined } from "@ant-design/icons";
+import { useGeocoding } from "../hooks/useGeocoding";
+import { HUBEI_CITIES } from "@/utils/baidu-map";
+import type { AddressValue } from "./types";
 
 const { TextArea } = Input;
 
@@ -19,9 +19,9 @@ interface AddressInputProps {
 }
 
 const DEFAULT_VALUE: AddressValue = {
-  cityCode: '',
-  cityName: '',
-  address: '',
+  cityCode: "",
+  cityName: "",
+  address: "",
 };
 
 const AddressInput: React.FC<AddressInputProps> = ({ value, onChange, disabled }) => {
@@ -50,7 +50,7 @@ const AddressInput: React.FC<AddressInputProps> = ({ value, onChange, disabled }
     const city = HUBEI_CITIES[cityCode as keyof typeof HUBEI_CITIES];
     updateValue({
       cityCode,
-      cityName: city?.name || '',
+      cityName: city?.name || "",
       longitude: undefined,
       latitude: undefined,
     });
@@ -88,7 +88,7 @@ const AddressInput: React.FC<AddressInputProps> = ({ value, onChange, disabled }
 
   return (
     <div>
-      <Space direction="vertical" style={{ width: '100%' }}>
+      <Space direction="vertical" style={{ width: "100%" }}>
         {/* 城市选择 */}
         <Space>
           <EnvironmentOutlined />
@@ -110,7 +110,7 @@ const AddressInput: React.FC<AddressInputProps> = ({ value, onChange, disabled }
           <div style={{ marginBottom: 8 }}>
             <EnvironmentOutlined /> 详细地址：
           </div>
-          <Space.Compact style={{ width: '100%' }}>
+          <Space.Compact style={{ width: "100%" }}>
             <TextArea
               rows={2}
               placeholder="请输入详细地址，如：武汉市洪山区珞喻路1037号"
@@ -123,7 +123,7 @@ const AddressInput: React.FC<AddressInputProps> = ({ value, onChange, disabled }
               icon={loading ? <Spin size="small" /> : <SearchOutlined />}
               onClick={handleResolve}
               disabled={disabled || !localValue.address}
-              style={{ height: 'auto' }}
+              style={{ height: "auto" }}
             >
               解析
             </Button>
@@ -157,7 +157,7 @@ const AddressInput: React.FC<AddressInputProps> = ({ value, onChange, disabled }
                   纬度：{localValue.latitude?.toFixed(6)}
                 </div>
                 {localValue.address && (
-                  <div style={{ fontSize: 12, color: 'var(--theme-text-tertiary, #666)', marginTop: 4 }}>
+                  <div style={{ fontSize: 12, color: "var(--theme-text-tertiary, #666)", marginTop: 4 }}>
                     {localValue.address}
                   </div>
                 )}

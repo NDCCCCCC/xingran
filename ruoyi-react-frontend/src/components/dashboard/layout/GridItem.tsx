@@ -4,15 +4,15 @@
  * 包装每个Widget，提供额外的样式和交互功能
  */
 
-import { useState, lazy, Suspense } from 'react';
-import { Space, Button } from 'antd';
-import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { useDashboardStore } from '@/store/dashboardStore';
-import type { WidgetConfig } from '@/types/dashboard';
-import './GridItem.css';
+import { useState, lazy, Suspense } from "react";
+import { Space, Button } from "antd";
+import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { useDashboardStore } from "@/store/dashboardStore";
+import type { WidgetConfig } from "@/types/dashboard";
+import "./GridItem.css";
 
 // 懒加载 WidgetSelector 组件
-const WidgetSelector = lazy(() => import('@/components/dashboard/settings/WidgetSelector'));
+const WidgetSelector = lazy(() => import("@/components/dashboard/settings/WidgetSelector"));
 
 interface GridItemProps {
 	/** Widget 配置 */
@@ -41,7 +41,7 @@ export const GridItem: React.FC<GridItemProps> = ({
 	const isSelected = selected || selectedWidgetId === widget.id;
 
 	// 判断是否可编辑
-	const isEditable = viewMode === 'edit';
+	const isEditable = viewMode === "edit";
 
 	// 点击处理
 	const handleClick = () => {
@@ -71,7 +71,7 @@ export const GridItem: React.FC<GridItemProps> = ({
 	return (
 		<>
 			<div
-				className={`grid-item ${isSelected ? 'grid-item--selected' : ''} ${isEditable ? 'grid-item--editable' : ''}`}
+				className={`grid-item ${isSelected ? "grid-item--selected" : ""} ${isEditable ? "grid-item--editable" : ""}`}
 				onClick={handleClick}
 				data-widget-id={widget.id}
 			>

@@ -1,6 +1,6 @@
-import React from 'react';
-import { Card, Form, Select, Table, Button, Space, Modal, Tag, DatePicker } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import React from "react";
+import { Card, Form, Select, Table, Button, Space, Modal, Tag, DatePicker } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
   SearchOutlined,
@@ -8,10 +8,10 @@ import {
   SwapOutlined,
   EditOutlined,
   DeleteOutlined,
-} from '@ant-design/icons';
-import dayjs from 'dayjs';
-import { formatDate } from '@/utils/datetime';
-import type { DutySchedule, DutyPool, SimpleUser } from '@/lib/dutyApi';
+} from "@ant-design/icons";
+import dayjs from "dayjs";
+import { formatDate } from "@/utils/datetime";
+import type { DutySchedule, DutyPool, SimpleUser } from "@/lib/dutyApi";
 
 const { RangePicker } = DatePicker;
 
@@ -63,25 +63,25 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
 
   const getDutyTypeColor = (type: string) => {
     switch (type) {
-      case 'weekday':
-        return 'blue';
-      case 'weekend':
-        return 'orange';
-      case 'holiday':
-        return 'red';
+      case "weekday":
+        return "blue";
+      case "weekend":
+        return "orange";
+      case "holiday":
+        return "red";
       default:
-        return 'default';
+        return "default";
     }
   };
 
   const getDutyTypeText = (type: string) => {
     switch (type) {
-      case 'weekday':
-        return '工作日';
-      case 'weekend':
-        return '周末';
-      case 'holiday':
-        return '节假日';
+      case "weekday":
+        return "工作日";
+      case "weekend":
+        return "周末";
+      case "holiday":
+        return "节假日";
       default:
         return type;
     }
@@ -89,55 +89,55 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
 
   const columns: ColumnsType<DutySchedule> = [
     {
-      title: '序号',
-      key: 'index',
+      title: "序号",
+      key: "index",
       width: 60,
       render: (_: unknown, __: unknown, index: number) => (current - 1) * pageSize + index + 1,
     },
     {
-      title: '值班日期',
-      dataIndex: 'scheduleDate',
-      key: 'scheduleDate',
+      title: "值班日期",
+      dataIndex: "scheduleDate",
+      key: "scheduleDate",
       width: 120,
       render: (date: string) => formatDate(date),
     },
     {
-      title: '星期',
-      key: 'weekday',
+      title: "星期",
+      key: "weekday",
       width: 80,
       render: (_: unknown, record: DutySchedule) => {
         const weekday = dayjs(record.scheduleDate).day();
-        const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+        const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
         return `周${weekdays[weekday]}`;
       },
     },
     {
-      title: '值班池',
-      dataIndex: ['pool', 'poolName'],
-      key: 'poolName',
+      title: "值班池",
+      dataIndex: ["pool", "poolName"],
+      key: "poolName",
       width: 120,
     },
     {
-      title: '值班人员',
-      dataIndex: ['user', 'nickName'],
-      key: 'userName',
+      title: "值班人员",
+      dataIndex: ["user", "nickName"],
+      key: "userName",
       width: 100,
       render: (nickName: string, record: DutySchedule) =>
-        nickName || record.user?.username || '-',
+        nickName || record.user?.username || "-",
     },
     {
-      title: '值班类型',
-      dataIndex: 'dutyType',
-      key: 'dutyType',
+      title: "值班类型",
+      dataIndex: "dutyType",
+      key: "dutyType",
       width: 100,
       render: (type: string) => <Tag color={getDutyTypeColor(type)}>{getDutyTypeText(type)}</Tag>,
     },
     {
-      title: '过期状态',
-      key: 'expired',
+      title: "过期状态",
+      key: "expired",
       width: 100,
       render: (_: unknown, record: DutySchedule) => {
-        const isExpired = dayjs(record.scheduleDate).isBefore(dayjs().startOf('day'));
+        const isExpired = dayjs(record.scheduleDate).isBefore(dayjs().startOf("day"));
         return isExpired ? (
           <Tag color="red">已过期</Tag>
         ) : (
@@ -146,9 +146,9 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
       },
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
       width: 80,
       render: (status: number) => {
         if (status === 0) return <Tag color="green">正常</Tag>;
@@ -158,8 +158,8 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
       },
     },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       width: 80,
       render: (_: unknown, record: DutySchedule) => (
         <Button
@@ -169,9 +169,9 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
           icon={<DeleteOutlined />}
           onClick={() => {
             Modal.confirm({
-              title: '确定要删除这条排班吗？',
-              okText: '确定',
-              cancelText: '取消',
+              title: "确定要删除这条排班吗？",
+              okText: "确定",
+              cancelText: "取消",
               okButtonProps: { danger: true },
               onOk: () => onDelete(record.id),
             });
@@ -246,9 +246,9 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
               icon={<DeleteOutlined />}
               onClick={() => {
                 Modal.confirm({
-                  title: '确定要批量删除选中的排班记录吗？',
-                  okText: '确定',
-                  cancelText: '取消',
+                  title: "确定要批量删除选中的排班记录吗？",
+                  okText: "确定",
+                  cancelText: "取消",
                   okButtonProps: { danger: true },
                   onOk: onBatchDelete,
                 });
@@ -277,7 +277,7 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (t) => `共 ${t} 条`,
-          pageSizeOptions: ['10', '20', '50', '100'],
+          pageSizeOptions: ["10", "20", "50", "100"],
           onChange: onPageChange,
         }}
       />

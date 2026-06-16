@@ -9,9 +9,9 @@
  * - 通过 useCallback 稳定 onEdit / onDelete 引用
  */
 
-import { memo } from 'react';
-import type { WidgetConfig } from '@/types/dashboard';
-import { WidgetRenderer } from './widgets/WidgetRenderer';
+import { memo } from "react";
+import type { WidgetConfig } from "@/types/dashboard";
+import { WidgetRenderer } from "./widgets/WidgetRenderer";
 
 export interface WidgetProps {
   widget: WidgetConfig;
@@ -24,6 +24,6 @@ function WidgetImpl({ widget, onEdit, onDelete }: WidgetProps) {
 }
 
 export const Widget = memo(WidgetImpl);
-Widget.displayName = 'Widget';
+Widget.displayName = "Widget";
 
 export default Widget;

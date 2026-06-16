@@ -1,8 +1,8 @@
-import { post } from './api';
-import type { BaseResponse, PageResponse } from '@/types';
+import { post } from "./api";
+import type { BaseResponse, PageResponse } from "@/types";
 
 // 时间格式化函数
-export { formatTime, formatDateTime, formatDate } from '@/utils/datetime';
+export { formatTime, formatDateTime, formatDate } from "@/utils/datetime";
 
 // ==================== 类型定义 ====================
 
@@ -22,17 +22,17 @@ export enum WorkOrderPriority {
 }
 
 export enum WorkOrderType {
-  Fault = 'fault',
-  Request = 'request',
-  Change = 'change',
-  Incident = 'incident',
-  Question = 'question',
+  Fault = "fault",
+  Request = "request",
+  Change = "change",
+  Incident = "incident",
+  Question = "question",
 }
 
 export enum PeriodicAssignType {
-  Manual = 'manual',
-  DutyPool = 'duty_pool',
-  Rotation = 'rotation',
+  Manual = "manual",
+  DutyPool = "duty_pool",
+  Rotation = "rotation",
 }
 
 // ==================== 工具类型 ====================
@@ -380,11 +380,11 @@ export interface CreateWorkOrderRatingRequest {
 // ==================== 工单管理 API ====================
 
 export function getWorkOrderList(params: WorkOrderListRequest): Promise<BaseResponse<PageResponse<WorkOrder>>> {
-  return post('/workorder/orders/list', params);
+  return post("/workorder/orders/list", params);
 }
 
 export function getMyPendingWorkOrders(params?: { limit?: number }): Promise<BaseResponse<{ list: WorkOrder[]; total: number }>> {
-  return post('/workorder/orders/my-pending', params ?? {});
+  return post("/workorder/orders/my-pending", params ?? {});
 }
 
 export function getWorkOrder(id: string): Promise<BaseResponse<WorkOrder>> {
@@ -392,7 +392,7 @@ export function getWorkOrder(id: string): Promise<BaseResponse<WorkOrder>> {
 }
 
 export function createWorkOrder(data: WorkOrderCreateRequest): Promise<BaseResponse<WorkOrder>> {
-  return post('/workorder/orders', data);
+  return post("/workorder/orders", data);
 }
 
 export function updateWorkOrder(id: string, data: WorkOrderUpdateRequest): Promise<BaseResponse<{ message: string }>> {
@@ -404,7 +404,7 @@ export function deleteWorkOrder(id: string): Promise<BaseResponse<{ message: str
 }
 
 export function batchDeleteWorkOrders(ids: string[]): Promise<BaseResponse<{ message: string; count: number }>> {
-  return post('/workorder/orders/batch-delete', { ids });
+  return post("/workorder/orders/batch-delete", { ids });
 }
 
 export function assignWorkOrder(id: string, data: AssignWorkOrderRequest): Promise<BaseResponse<{ message: string }>> {
@@ -450,11 +450,11 @@ export function getRatingStatistics(id: string): Promise<BaseResponse<{ averageR
 // ==================== 工单分类 API ====================
 
 export function getWorkOrderCategoryList(): Promise<BaseResponse<WorkOrderCategory[]>> {
-  return post('/workorder/categories/list', {});
+  return post("/workorder/categories/list", {});
 }
 
 export function getEnabledWorkOrderCategories(): Promise<BaseResponse<WorkOrderCategory[]>> {
-  return post('/workorder/categories/enabled', {});
+  return post("/workorder/categories/enabled", {});
 }
 
 export function getWorkOrderCategory(id: string): Promise<BaseResponse<WorkOrderCategory>> {
@@ -462,7 +462,7 @@ export function getWorkOrderCategory(id: string): Promise<BaseResponse<WorkOrder
 }
 
 export function createWorkOrderCategory(data: WorkOrderCategoryCreateRequest): Promise<BaseResponse<WorkOrderCategory>> {
-  return post('/workorder/categories', data);
+  return post("/workorder/categories", data);
 }
 
 export function updateWorkOrderCategory(id: string, data: WorkOrderCategoryUpdateRequest): Promise<BaseResponse<{ message: string }>> {
@@ -476,13 +476,13 @@ export function deleteWorkOrderCategory(id: string): Promise<BaseResponse<{ mess
 // ==================== 工单统计 API ====================
 
 export function getWorkOrderStatistics(): Promise<BaseResponse<WorkOrderStatistics>> {
-  return post('/workorder/statistics', {});
+  return post("/workorder/statistics", {});
 }
 
 // ==================== 周期性工单 API ====================
 
 export function getPeriodicTemplateList(params: PeriodicTemplateListRequest): Promise<BaseResponse<PageResponse<PeriodicWorkOrderTemplate>>> {
-  return post('/workorder/periodic/templates/list', params);
+  return post("/workorder/periodic/templates/list", params);
 }
 
 export function getPeriodicTemplate(id: string): Promise<BaseResponse<PeriodicWorkOrderTemplate>> {
@@ -490,7 +490,7 @@ export function getPeriodicTemplate(id: string): Promise<BaseResponse<PeriodicWo
 }
 
 export function createPeriodicTemplate(data: CreatePeriodicTemplateRequest): Promise<BaseResponse<PeriodicWorkOrderTemplate>> {
-  return post('/workorder/periodic/templates', data);
+  return post("/workorder/periodic/templates", data);
 }
 
 export function updatePeriodicTemplate(id: string, data: UpdatePeriodicTemplateRequest): Promise<BaseResponse<{ message: string }>> {
@@ -520,17 +520,17 @@ export function getPeriodicLogs(id: string): Promise<BaseResponse<PeriodicWorkOr
 // ==================== 工单配置 API ====================
 
 export function getWorkOrderConfig(): Promise<BaseResponse<WorkOrderConfig>> {
-  return post('/workorder/config', {});
+  return post("/workorder/config", {});
 }
 
 export function updateWorkOrderConfig(data: Partial<WorkOrderConfig>): Promise<BaseResponse<{ message: string }>> {
-  return post('/workorder/config/update', data);
+  return post("/workorder/config/update", data);
 }
 
 // ==================== 用户和部门（复用dutyApi中的）====================
 
 export function getUserList(params?: { current?: number; pageSize?: number; deptId?: string; status?: number }): Promise<BaseResponse<PageResponse<SimpleUser>>> {
-  return post('/system/users/list', {
+  return post("/system/users/list", {
     current: 1,
     pageSize: 1000,
     ...params,
@@ -538,9 +538,9 @@ export function getUserList(params?: { current?: number; pageSize?: number; dept
 }
 
 export function getDeptList(): Promise<BaseResponse<SimpleDept[]>> {
-  return post('/system/departments/list');
+  return post("/system/departments/list");
 }
 
 export function getDeptTree(): Promise<BaseResponse<SimpleDept[]>> {
-  return post('/system/departments/tree');
+  return post("/system/departments/tree");
 }

@@ -3,9 +3,9 @@
  * 模板变量模态框
  */
 
-import { Modal, Form, Input } from 'antd';
-import type { FormInstance } from 'antd/es/form';
-import type { ConfigTemplate } from '@/types';
+import { Modal, Form, Input } from "antd";
+import type { FormInstance } from "antd/es/form";
+import type { ConfigTemplate } from "@/types";
 
 export interface VariableModalProps {
   open: boolean;
@@ -34,7 +34,7 @@ export function VariableModal({
         {selectedTemplate?.variables && Object.entries(selectedTemplate.variables).map(([key, defaultValue]) => (
           <Form.Item
             key={key}
-            name={['templateVariables', key]}
+            name={["templateVariables", key]}
             label={key}
           >
             <Input placeholder={`默认值: ${String(defaultValue)}`} />

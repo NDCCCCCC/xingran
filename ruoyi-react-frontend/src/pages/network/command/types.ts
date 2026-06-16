@@ -3,7 +3,7 @@
  * 网络命令类型定义
  */
 
-import type { ConfigExecution, ConfigExecutionDetail } from '@/types';
+import type { ConfigExecution, ConfigExecutionDetail } from "@/types";
 
 // 统计数据
 export interface CommandStatistics {

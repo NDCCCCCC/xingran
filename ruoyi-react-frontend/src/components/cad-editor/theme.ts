@@ -22,54 +22,54 @@ export const DEFAULT_GRID_SIZE = 20;
 /** CAD 编辑器颜色主题 */
 export const CAD_COLOR_THEME = {
   /** 背景色 */
-  background: '#fafafa',
+  background: "#fafafa",
 
   /** 网格颜色 */
-  grid: '#e8e8e8',
-  gridMajor: '#d0d0d0',
+  grid: "#e8e8e8",
+  gridMajor: "#d0d0d0",
 
   /** 墙体颜色 */
   wall: {
-    default: '#5C6BC0',
-    exterior: '#455A64',
-    selected: '#1890ff',
-    hover: '#7986CB',
+    default: "#5C6BC0",
+    exterior: "#455A64",
+    selected: "#1890ff",
+    hover: "#7986CB",
   },
 
   /** 门颜色 */
   door: {
-    default: '#FF7043',
-    emergency: '#F5222D',
-    selected: '#ff4d4f',
-    hover: '#FF8A65',
+    default: "#FF7043",
+    emergency: "#F5222D",
+    selected: "#ff4d4f",
+    hover: "#FF8A65",
   },
 
   /** 工位颜色 */
   workstation: {
-    available: '#52c41a',
-    occupied: '#ff4d4f',
-    maintain: '#faad14',
-    selected: '#1890ff',
-    hover: '#69c0ff',
+    available: "#52c41a",
+    occupied: "#ff4d4f",
+    maintain: "#faad14",
+    selected: "#1890ff",
+    hover: "#69c0ff",
   },
 
   /** 辅助元素颜色 */
   guide: {
-    line: '#ffec3d',
-    snap: '#52c41a',
+    line: "#ffec3d",
+    snap: "#52c41a",
   },
 
   /** 测量元素颜色 */
   measurement: {
-    line: '#8c8c8c',
-    text: '#262626',
-    background: 'rgba(255, 255, 255, 0.9)',
+    line: "#8c8c8c",
+    text: "#262626",
+    background: "rgba(255, 255, 255, 0.9)",
   },
 
   /** 选择框颜色 */
   selection: {
-    fill: 'rgba(24, 144, 255, 0.1)',
-    stroke: '#1890ff',
+    fill: "rgba(24, 144, 255, 0.1)",
+    stroke: "#1890ff",
   },
 } as const;
 
@@ -86,7 +86,7 @@ export function getWallColor(
   if (selected) return CAD_COLOR_THEME.wall.selected;
   if (hovered) return CAD_COLOR_THEME.wall.hover;
   if (wall.color) return wall.color;
-  if (wall.type === 'exterior') return CAD_COLOR_THEME.wall.exterior;
+  if (wall.type === "exterior") return CAD_COLOR_THEME.wall.exterior;
   return CAD_COLOR_THEME.wall.default;
 }
 
@@ -101,7 +101,7 @@ export function getDoorColor(
   if (selected) return CAD_COLOR_THEME.door.selected;
   if (hovered) return CAD_COLOR_THEME.door.hover;
   if (door.color) return door.color;
-  if (door.type === 'emergency') return CAD_COLOR_THEME.door.emergency;
+  if (door.type === "emergency") return CAD_COLOR_THEME.door.emergency;
   return CAD_COLOR_THEME.door.default;
 }
 

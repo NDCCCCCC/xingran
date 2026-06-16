@@ -13,13 +13,13 @@ const DEFAULT_MEMORY_TTL = 30 * 60 * 1000;
 const DEFAULT_STORAGE_TTL = 7 * 24 * 60 * 60 * 1000;
 
 /** localStorage 存储键前缀 */
-const DEFAULT_STORAGE_PREFIX = 'dual_level_cache_';
+const DEFAULT_STORAGE_PREFIX = "dual_level_cache_";
 
 /** 定期清理间隔（5分钟） */
 const CLEANUP_INTERVAL = 5 * 60 * 1000;
 
 /** 日志前缀 */
-const LOG_PREFIX = '[DualLevelCache]';
+const LOG_PREFIX = "[DualLevelCache]";
 
 // ==================== 类型定义 ====================
 
@@ -274,7 +274,7 @@ export class DualLevelCache<T> {
     const sortedParams = Object.keys(params)
       .sort()
       .map((key) => `${key}=${params[key]}`)
-      .join('&');
+      .join("&");
     return btoa(unescape(encodeURIComponent(sortedParams)));
   }
 
@@ -370,7 +370,7 @@ export class DualLevelCache<T> {
       misses: this.stats.misses,
       totalHits,
       totalRequests,
-      hitRate: totalRequests > 0 ? `${((totalHits / totalRequests) * 100).toFixed(2)}%` : '0%',
+      hitRate: totalRequests > 0 ? `${((totalHits / totalRequests) * 100).toFixed(2)}%` : "0%",
       memorySize: this.memoryCache.size,
       storageSize: this.storageCache.getSize(),
       totalSize: this.memoryCache.size + this.storageCache.getSize(),
@@ -394,15 +394,15 @@ export class DualLevelCache<T> {
   printStats(): void {
     const stats = this.getStats();
     console.table({
-      'Memory Hits': stats.memoryHits,
-      'Storage Hits': stats.storageHits,
-      'Misses': stats.misses,
-      'Total Hits': stats.totalHits,
-      'Total Requests': stats.totalRequests,
-      'Hit Rate': stats.hitRate,
-      'Memory Size': stats.memorySize,
-      'Storage Size': stats.storageSize,
-      'Total Size': stats.totalSize,
+      "Memory Hits": stats.memoryHits,
+      "Storage Hits": stats.storageHits,
+      "Misses": stats.misses,
+      "Total Hits": stats.totalHits,
+      "Total Requests": stats.totalRequests,
+      "Hit Rate": stats.hitRate,
+      "Memory Size": stats.memorySize,
+      "Storage Size": stats.storageSize,
+      "Total Size": stats.totalSize,
     });
   }
 }

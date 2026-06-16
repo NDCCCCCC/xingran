@@ -1,5 +1,5 @@
-﻿import { useState, useEffect, useCallback } from 'react';
-import type { FC } from 'react';
+﻿import { useState, useEffect, useCallback } from "react";
+import type { FC } from "react";
 import {
   Table,
   Button,
@@ -14,8 +14,8 @@ import {
   Col,
   Statistic,
   Alert,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+} from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
   EditOutlined,
@@ -24,15 +24,15 @@ import {
   ReloadOutlined,
   CheckCircleOutlined,
   StopOutlined,
-} from '@ant-design/icons';
-import type { Post } from '@/types';
-import { post } from '@/lib/api';
-import { useTableManager } from '@/hooks/useTableManager';
-import { usePagination } from '@/hooks/usePagination';
-import { handleApiError, handleSuccess, isFormValidationError } from '@/utils/errorHandler';
-import { createStatusColumn, createDateTimeColumn } from '@/utils/tableHelpers';
-import ActionButtons from '@/components/shared/ActionButtons';
-import { BaseEditModal } from '@/components/modal/BaseEditModal';
+} from "@ant-design/icons";
+import type { Post } from "@/types";
+import { post } from "@/lib/api";
+import { useTableManager } from "@/hooks/useTableManager";
+import { usePagination } from "@/hooks/usePagination";
+import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
+import { createStatusColumn, createDateTimeColumn } from "@/utils/tableHelpers";
+import ActionButtons from "@/components/shared/ActionButtons";
+import { BaseEditModal } from "@/components/modal/BaseEditModal";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -68,7 +68,7 @@ const PostManagement: FC = () => {
     resetSelection,
   } = useTableManager<Post>(
     async (params) => {
-      const result = await post('/system/posts/list', params) as { data: { list: Post[]; total: number } };
+      const result = await post("/system/posts/list", params) as { data: { list: Post[]; total: number } };
       return { list: result.data.list || [], total: result.data.total || 0 };
     },
     {
@@ -85,7 +85,7 @@ const PostManagement: FC = () => {
   // 加载统计数据
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post('/system/posts/list', { current: 1, pageSize: 1000 }) as { data: { list: Post[] } };
+      const result = await post("/system/posts/list", { current: 1, pageSize: 1000 }) as { data: { list: Post[] } };
       const allPosts = result.data.list || [];
       const activeCount = allPosts.filter((p: Post) => p.status === 0).length;
       const inactiveCount = allPosts.filter((p: Post) => p.status === 1).length;
@@ -95,7 +95,7 @@ const PostManagement: FC = () => {
         inactive: inactiveCount,
       });
     } catch (error) {
-      handleApiError(error, '加载统计数据', false);
+      handleApiError(error, "加载统计数据", false);
     }
   }, []);
 
@@ -111,10 +111,10 @@ const PostManagement: FC = () => {
       const values = await postForm.validateFields();
       if (editingPost) {
         await post(`/system/posts/${editingPost.id}/update`, values);
-        handleSuccess('更新');
+        handleSuccess("更新");
       } else {
-        await post('/system/posts', values);
-        handleSuccess('创建');
+        await post("/system/posts", values);
+        handleSuccess("创建");
       }
       handleModalClose();
       loadPosts();
@@ -123,7 +123,7 @@ const PostManagement: FC = () => {
       if (isFormValidationError(error)) {
         return; // 表单验证错误
       }
-      handleApiError(error, '操作');
+      handleApiError(error, "操作");
     }
   };
 
@@ -131,11 +131,11 @@ const PostManagement: FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await post(`/system/posts/${id}/delete`, {});
-      handleSuccess('删除');
+      handleSuccess("删除");
       loadPosts();
       loadStatistics();
     } catch (error) {
-      handleApiError(error, '删除');
+      handleApiError(error, "删除");
     }
   };
 
@@ -145,13 +145,13 @@ const PostManagement: FC = () => {
       return;
     }
     try {
-      await post('/system/posts/batch-delete', { ids: selectedRowKeys });
-      handleSuccess('批量删除');
+      await post("/system/posts/batch-delete", { ids: selectedRowKeys });
+      handleSuccess("批量删除");
       resetSelection();
       loadPosts();
       loadStatistics();
     } catch (error) {
-      handleApiError(error, '批量删除');
+      handleApiError(error, "批量删除");
     }
   };
 
@@ -168,26 +168,26 @@ const PostManagement: FC = () => {
 
   // 表格列定义
   const columns: ColumnsType<Post> = [
-    { title: '岗位编码', dataIndex: 'postCode', key: 'postCode', width: 150 },
-    { title: '岗位名称', dataIndex: 'postName', key: 'postName', width: 150 },
-    { title: '显示排序', dataIndex: 'postSort', key: 'postSort', width: 100 },
-    createStatusColumn('status', { width: 100 }),
-    { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true },
-    createDateTimeColumn('createdAt', { width: 180 }),
+    { title: "岗位编码", dataIndex: "postCode", key: "postCode", width: 150 },
+    { title: "岗位名称", dataIndex: "postName", key: "postName", width: 150 },
+    { title: "显示排序", dataIndex: "postSort", key: "postSort", width: 100 },
+    createStatusColumn("status", { width: 100 }),
+    { title: "备注", dataIndex: "remark", key: "remark", ellipsis: true },
+    createDateTimeColumn("createdAt", { width: 180 }),
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       render: (_, record) => {
         const actions = [
           {
-            key: 'edit',
-            label: '编辑',
+            key: "edit",
+            label: "编辑",
             icon: <EditOutlined />,
             onClick: () => openModal(record),
           },
           {
-            key: 'delete',
-            label: '删除',
+            key: "delete",
+            label: "删除",
             icon: <DeleteOutlined />,
             danger: true,
             render: () => (
@@ -197,7 +197,7 @@ const PostManagement: FC = () => {
                 okText="确定"
                 cancelText="取消"
               >
-                <Button type="link" icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }} size="small">
+                <Button type="link" icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }} size="small">
                   删除
                 </Button>
               </Popconfirm>
@@ -229,7 +229,7 @@ const PostManagement: FC = () => {
               <Statistic
                 title="正常岗位"
                 value={statistics.active}
-                styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
+                styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
                 prefix={<CheckCircleOutlined />}
               />
             </Card>
@@ -239,7 +239,7 @@ const PostManagement: FC = () => {
               <Statistic
                 title="停用岗位"
                 value={statistics.inactive}
-                styles={{ content: { color: 'var(--theme-error, #cf1322)' } }}
+                styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
                 prefix={<StopOutlined />}
               />
             </Card>
@@ -249,7 +249,7 @@ const PostManagement: FC = () => {
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="postCode" label="岗位编码">
               <Input placeholder="请输入岗位编码" allowClear className="user-form-input" style={{ width: 150 }} />
@@ -278,7 +278,7 @@ const PostManagement: FC = () => {
           <Space>
             {selectedRowKeys.length > 0 && (
               <Button
-                icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }}
+                icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }}
                 onClick={handleBatchDelete}
               >
                 批量删除 ({selectedRowKeys.length})
@@ -335,23 +335,23 @@ const PostManagement: FC = () => {
 
       {/* 编辑模态框 */}
       <BaseEditModal
-        title={editingPost ? '编辑岗位' : '新增岗位'}
+        title={editingPost ? "编辑岗位" : "新增岗位"}
         open={modalVisible}
         onOk={handleCreate}
         onCancel={() => { setModalVisible(false); postForm.resetFields(); setEditingPost(null); }}
         width={600}
       >
         <Form form={postForm} layout="horizontal" labelCol={{ span: 4 }} wrapperCol={{ span: 20 }}>
-          <Form.Item name="postCode" label="岗位编码" rules={[{ required: true, message: '请输入岗位编码' }]}>
+          <Form.Item name="postCode" label="岗位编码" rules={[{ required: true, message: "请输入岗位编码" }]}>
             <Input placeholder="请输入岗位编码" disabled={!!editingPost} className="user-form-input" />
           </Form.Item>
-          <Form.Item name="postName" label="岗位名称" rules={[{ required: true, message: '请输入岗位名称' }]}>
+          <Form.Item name="postName" label="岗位名称" rules={[{ required: true, message: "请输入岗位名称" }]}>
             <Input placeholder="请输入岗位名称" className="user-form-input" />
           </Form.Item>
-          <Form.Item name="postSort" label="显示排序" rules={[{ required: true, message: '请输入显示排序' }]}>
-            <InputNumber min={0} style={{ width: '100%' }} placeholder="请输入显示排序" />
+          <Form.Item name="postSort" label="显示排序" rules={[{ required: true, message: "请输入显示排序" }]}>
+            <InputNumber min={0} style={{ width: "100%" }} placeholder="请输入显示排序" />
           </Form.Item>
-          <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
+          <Form.Item name="status" label="状态" rules={[{ required: true, message: "请选择状态" }]}>
             <Select placeholder="请选择状态" className="user-form-input">
               <Option value={0}>正常</Option>
               <Option value={1}>停用</Option>

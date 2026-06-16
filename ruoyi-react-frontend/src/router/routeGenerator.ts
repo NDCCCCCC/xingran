@@ -4,8 +4,8 @@
  * 包含安全验证：防止路径遍历攻击、XSS 注入
  */
 
-import type { Menu } from '@/types';
-import type { MenuRouteConfig, RouteMeta } from '@/types/menu';
+import type { Menu } from "@/types";
+import type { MenuRouteConfig, RouteMeta } from "@/types/menu";
 
 const DANGEROUS_PATH_PATTERNS = [
   /\.\./,
@@ -22,7 +22,7 @@ const XSS_PATTERNS = [
   /onclick=/i,
 ];
 
-const ALLOWED_COMPONENT_PREFIXES = ['pages/', 'components/'];
+const ALLOWED_COMPONENT_PREFIXES = ["pages/", "components/"];
 
 /**
  * 路由生成器
@@ -36,15 +36,15 @@ export class RouteGenerator {
 
     const routes: MenuRouteConfig[] = [];
 
-    const processMenu = (menu: Menu, parentPath = '') => {
+    const processMenu = (menu: Menu, parentPath = "") => {
       if (!this.validateMenu(menu)) {
         return;
       }
 
-      const fullPath = this.resolvePath(menu.path || '', parentPath);
+      const fullPath = this.resolvePath(menu.path || "", parentPath);
 
-      if (menu.menuType === 'C') {
-        const componentPath = this.resolveComponent(menu.component || '', fullPath);
+      if (menu.menuType === "C") {
+        const componentPath = this.resolveComponent(menu.component || "", fullPath);
 
         const route: MenuRouteConfig = {
           path: fullPath,
@@ -72,14 +72,14 @@ export class RouteGenerator {
 
   private static validateMenu(menu: Menu): boolean {
     if (!menu.id || !menu.menuName) {
-      console.warn('[RouteGenerator] Invalid menu: missing id or menuName', menu);
+      console.warn("[RouteGenerator] Invalid menu: missing id or menuName", menu);
       return false;
     }
 
     if (menu.path) {
       for (const pattern of DANGEROUS_PATH_PATTERNS) {
         if (pattern.test(menu.path)) {
-          console.warn('[RouteGenerator] Invalid path: contains dangerous characters', {
+          console.warn("[RouteGenerator] Invalid path: contains dangerous characters", {
             path: menu.path,
             pattern,
           });
@@ -88,12 +88,12 @@ export class RouteGenerator {
       }
     }
 
-    if (menu.meta && typeof menu.meta === 'object') {
+    if (menu.meta && typeof menu.meta === "object") {
       const meta = menu.meta as RouteMeta;
       if (meta.title) {
         for (const pattern of XSS_PATTERNS) {
           if (pattern.test(meta.title)) {
-            console.warn('[RouteGenerator] Invalid meta.title: potential XSS', {
+            console.warn("[RouteGenerator] Invalid meta.title: potential XSS", {
               title: meta.title,
             });
             return false;
@@ -106,25 +106,25 @@ export class RouteGenerator {
   }
 
   private static buildRouteMeta(menu: Menu): RouteMeta {
-    if (menu.meta && typeof menu.meta === 'object') {
+    if (menu.meta && typeof menu.meta === "object") {
       return menu.meta as RouteMeta;
     }
 
     return {
-      title: menu.menuName || '',
+      title: menu.menuName || "",
       icon: menu.icon || undefined,
       hidden: menu.visible !== 1,
       keepAlive: false,
-      affix: menu.path === 'dashboard',
+      affix: menu.path === "dashboard",
     };
   }
 
   private static resolvePath(menuPath: string, parentPath: string): string {
     if (!menuPath) {
-      return parentPath || '';
+      return parentPath || "";
     }
 
-    if (menuPath.startsWith('/')) {
+    if (menuPath.startsWith("/")) {
       return menuPath.slice(1);
     }
 
@@ -136,8 +136,8 @@ export class RouteGenerator {
   }
 
   private static resolveComponent(component: string, path: string): string {
-    if (path === 'dashboard') {
-      return 'pages/dashboard-system/index';
+    if (path === "dashboard") {
+      return "pages/dashboard-system/index";
     }
 
     if (!component) {
@@ -146,24 +146,24 @@ export class RouteGenerator {
 
     let normalizedComponent = component;
 
-    if (normalizedComponent.startsWith('/')) {
+    if (normalizedComponent.startsWith("/")) {
       normalizedComponent = normalizedComponent.slice(1);
     }
 
-    if (normalizedComponent.startsWith('pages/')) {
+    if (normalizedComponent.startsWith("pages/")) {
       normalizedComponent = normalizedComponent.slice(6);
     }
 
-    if (!normalizedComponent.endsWith('/index') &&
-        !normalizedComponent.includes('/index.') &&
+    if (!normalizedComponent.endsWith("/index") &&
+        !normalizedComponent.includes("/index.") &&
         !normalizedComponent.match(/\/index\.\w+$/)) {
       if (!normalizedComponent.match(/\.\w+$/)) {
         normalizedComponent = `${normalizedComponent}/index`;
       }
     }
 
-    if (!normalizedComponent.startsWith('pages/') &&
-        !normalizedComponent.startsWith('components/')) {
+    if (!normalizedComponent.startsWith("pages/") &&
+        !normalizedComponent.startsWith("components/")) {
       normalizedComponent = `pages/${normalizedComponent}`;
     }
 
@@ -171,6 +171,6 @@ export class RouteGenerator {
   }
 
   static getComponentPattern(): string {
-    return '/src/pages/**/index.tsx';
+    return "/src/pages/**/index.tsx";
   }
 }

@@ -6,10 +6,10 @@
  * - 下方: 可视化配置(Tab切换秒/分/时/日/月/周)
  */
 
-import { useState, useLayoutEffect, useImperativeHandle, forwardRef, useRef, useEffect } from 'react';
-import { Input, Select, Tabs, Alert, Space, Row, Col } from 'antd';
-import { InfoCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
-import type { CronConfig, CronFieldType } from './constants';
+import { useState, useLayoutEffect, useImperativeHandle, forwardRef, useRef, useEffect } from "react";
+import { Input, Select, Tabs, Alert, Space, Row, Col } from "antd";
+import { InfoCircleOutlined, ClockCircleOutlined } from "@ant-design/icons";
+import type { CronConfig, CronFieldType } from "./constants";
 import {
   expressionToCronConfig,
   cronConfigToExpression,
@@ -17,24 +17,24 @@ import {
   getDefaultCronConfig,
   cronToChinese,
   getNextRunTimes,
-} from './utils';
-import { DEFAULT_CRON_EXPRESSION, CRON_PRESETS, FIELD_LABELS } from './constants';
-import SecondField from './fields/SecondField';
-import MinuteField from './fields/MinuteField';
-import HourField from './fields/HourField';
-import DayField from './fields/DayField';
-import MonthField from './fields/MonthField';
-import WeekField from './fields/WeekField';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
+} from "./utils";
+import { DEFAULT_CRON_EXPRESSION, CRON_PRESETS, FIELD_LABELS } from "./constants";
+import SecondField from "./fields/SecondField";
+import MinuteField from "./fields/MinuteField";
+import HourField from "./fields/HourField";
+import DayField from "./fields/DayField";
+import MonthField from "./fields/MonthField";
+import WeekField from "./fields/WeekField";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 
 dayjs.extend(utc);
 
 const formatTime = (date: Date) => {
-  return dayjs(date).format('YYYY-MM-DD HH:mm:ss');
+  return dayjs(date).format("YYYY-MM-DD HH:mm:ss");
 };
 
-const FIELD_ORDER: CronFieldType[] = ['second', 'minute', 'hour', 'day', 'month', 'week'];
+const FIELD_ORDER: CronFieldType[] = ["second", "minute", "hour", "day", "month", "week"];
 
 export interface CronSelectorRef {
   getExpression: () => string;
@@ -50,7 +50,7 @@ export interface CronSelectorProps {
 }
 
 const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
-  ({ value = '', onChange, disabled, style, className }, ref) => {
+  ({ value = "", onChange, disabled, style, className }, ref) => {
     // 内部状态
     const [cronExpression, setCronExpression] = useState(value || DEFAULT_CRON_EXPRESSION);
     const [cronConfig, setCronConfig] = useState<CronConfig>(
@@ -58,7 +58,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
         ? expressionToCronConfig(value)
         : getDefaultCronConfig()
     );
-    const [activeField, setActiveField] = useState<CronFieldType>('minute');
+    const [activeField, setActiveField] = useState<CronFieldType>("minute");
     const [initialized, setInitialized] = useState(false);
 
     // 使用 ref 存储稳定的函数引用，遵循 Vercel React Best Practices
@@ -146,17 +146,17 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
       };
 
       switch (fieldType) {
-        case 'second':
+        case "second":
           return <SecondField key="second" {...fieldProps} />;
-        case 'minute':
+        case "minute":
           return <MinuteField key="minute" {...fieldProps} />;
-        case 'hour':
+        case "hour":
           return <HourField key="hour" {...fieldProps} />;
-        case 'day':
+        case "day":
           return <DayField key="day" {...fieldProps} />;
-        case 'month':
+        case "month":
           return <MonthField key="month" {...fieldProps} />;
-        case 'week':
+        case "week":
           return <WeekField key="week" {...fieldProps} />;
         default:
           return null;
@@ -176,7 +176,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
               value={cronExpression}
               onChange={(e) => handleExpressionInputChange(e.target.value)}
               disabled={disabled}
-              status={!isValid && cronExpression ? 'error' : undefined}
+              status={!isValid && cronExpression ? "error" : undefined}
             />
           </Col>
           <Col style={{ width: 200 }}>
@@ -188,12 +188,12 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
               allowClear
               showSearch
               optionFilterProp="label"
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
             >
               {CRON_PRESETS.map(preset => (
                 <Select.Option key={preset.value} value={preset.value}>
                   {preset.label}
-                  <span style={{ color: 'var(--theme-text-tertiary, #999)', fontSize: 12, marginLeft: 8 }}>
+                  <span style={{ color: "var(--theme-text-tertiary, #999)", fontSize: 12, marginLeft: 8 }}>
                     ({preset.value})
                   </span>
                 </Select.Option>
@@ -204,7 +204,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
 
         {/* 中文描述 */}
         {isValid && (
-          <div style={{ marginBottom: 12, color: 'var(--theme-info, #1890ff)', fontSize: 13 }}>
+          <div style={{ marginBottom: 12, color: "var(--theme-info, #1890ff)", fontSize: 13 }}>
             {chineseDesc}
           </div>
         )}
@@ -221,7 +221,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
           }))}
           className="cron-selector-tabs"
           style={{
-            overflow: 'hidden',
+            overflow: "hidden",
           }}
           tabBarStyle={{
             marginBottom: 12,
@@ -231,19 +231,19 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
         {/* 最近五次执行时间 */}
         {isValid && (
           <div style={{ marginTop: 16 }}>
-            <Space orientation="vertical" style={{ width: '100%' }} size="small">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <ClockCircleOutlined style={{ color: 'var(--theme-info, #1890ff)' }} />
+            <Space orientation="vertical" style={{ width: "100%" }} size="small">
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <ClockCircleOutlined style={{ color: "var(--theme-info, #1890ff)" }} />
                 <span style={{ fontWeight: 500 }}>最近五次执行时间</span>
               </div>
-              <div style={{ background: '#fafafa', padding: '8px 16px', borderRadius: 4 }}>
+              <div style={{ background: "#fafafa", padding: "8px 16px", borderRadius: 4 }}>
                 {getNextRunTimes(cronExpression, 5).map((item, index) => (
-                  <div key={index} style={{ padding: '4px 0' }}>
+                  <div key={index} style={{ padding: "4px 0" }}>
                     <Space>
-                      <span style={{ color: 'var(--theme-text-tertiary, #999)', minWidth: 60 }}>
+                      <span style={{ color: "var(--theme-text-tertiary, #999)", minWidth: 60 }}>
                         第{index + 1}次
                       </span>
-                      <span style={{ fontFamily: 'monospace', color: '#333' }}>
+                      <span style={{ fontFamily: "monospace", color: "#333" }}>
                         {formatTime(item)}
                       </span>
                     </Space>
@@ -270,6 +270,6 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
   }
 );
 
-CronSelector.displayName = 'CronSelector';
+CronSelector.displayName = "CronSelector";
 
 export default CronSelector;

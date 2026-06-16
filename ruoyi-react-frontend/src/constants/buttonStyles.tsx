@@ -3,27 +3,27 @@
  * 统一项目中各类按钮的样式规范
  */
 
-import React from 'react';
+import React from "react";
 import {
   DeleteOutlined,
   StopOutlined,
   CheckCircleOutlined,
-} from '@ant-design/icons';
+} from "@ant-design/icons";
 
 /**
  * 按钮类型枚举
  */
 export enum ButtonType {
   /** 默认按钮 */
-  Default = 'default',
+  Default = "default",
   /** 主要按钮 */
-  Primary = 'primary',
+  Primary = "primary",
   /** 链接按钮 */
-  Link = 'link',
+  Link = "link",
   /** 文本按钮 */
-  Text = 'text',
+  Text = "text",
   /** 虚线按钮 */
-  Dashed = 'dashed',
+  Dashed = "dashed",
 }
 
 /**
@@ -31,11 +31,11 @@ export enum ButtonType {
  */
 export enum ButtonSize {
   /** 小尺寸 */
-  Small = 'small',
+  Small = "small",
   /** 中等尺寸 */
-  Middle = 'middle',
+  Middle = "middle",
   /** 大尺寸 */
-  Large = 'large',
+  Large = "large",
 }
 
 /**
@@ -70,18 +70,18 @@ export const BUTTON_STYLES = {
  * 删除确认框配置
  */
 export const DELETE_CONFIRM = {
-  title: '确定要删除吗？',
-  okText: '确定',
-  cancelText: '取消',
+  title: "确定要删除吗？",
+  okText: "确定",
+  cancelText: "取消",
 };
 
 /**
  * 批量删除确认框配置
  */
 export const BATCH_DELETE_CONFIRM = {
-  title: '确定要批量删除选中项吗？',
-  okText: '确定',
-  cancelText: '取消',
+  title: "确定要批量删除选中项吗？",
+  okText: "确定",
+  cancelText: "取消",
 };
 
 /**

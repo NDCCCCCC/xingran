@@ -3,7 +3,7 @@
  * Role Management Page
  */
 
-import { useState, useEffect, useCallback, useRef, type FC } from 'react';
+import { useState, useEffect, useCallback, useRef, type FC } from "react";
 import {
   Table,
   Button,
@@ -17,21 +17,21 @@ import {
   Col,
   Statistic,
   Tree,
-} from 'antd';
+} from "antd";
 import {
   PlusOutlined,
   DeleteOutlined,
   SearchOutlined,
   ReloadOutlined,
   SafetyCertificateOutlined,
-} from '@ant-design/icons';
-import type { Key } from 'antd/es/table/interface';
+} from "@ant-design/icons";
+import type { Key } from "antd/es/table/interface";
 
-import { post } from '@/lib/api';
-import { STATUS_OPTIONS, DATA_SCOPE_OPTIONS, DEFAULT_FORM_VALUES } from './constants';
-import { getRoleColumns } from './columns';
-import { useRoleData, useRoleActions } from './hooks';
-import { usePagination } from '@/hooks/usePagination';
+import { post } from "@/lib/api";
+import { STATUS_OPTIONS, DATA_SCOPE_OPTIONS, DEFAULT_FORM_VALUES } from "./constants";
+import { getRoleColumns } from "./columns";
+import { useRoleData, useRoleActions } from "./hooks";
+import { usePagination } from "@/hooks/usePagination";
 
 const { Option } = Select;
 
@@ -74,27 +74,27 @@ const RoleManagement: FC = () => {
   // 使用 useCallback 包装的 loadRoleMenus - 稳定引用 + 防重复调用
   const loadRoleMenus = useCallback(async (roleId: string) => {
     // 参数验证
-    if (!roleId || roleId === 'undefined' || roleId === 'null') {
-      console.warn('[loadRoleMenus] 无效的 roleId:', roleId);
+    if (!roleId || roleId === "undefined" || roleId === "null") {
+      console.warn("[loadRoleMenus] 无效的 roleId:", roleId);
       return [];
     }
 
     // 防重复调用检查
     if (loadingMenusRef.current.has(roleId)) {
-      console.warn('[loadRoleMenus] 正在加载中，跳过重复请求:', roleId);
+      console.warn("[loadRoleMenus] 正在加载中，跳过重复请求:", roleId);
       return [];
     }
 
     loadingMenusRef.current.add(roleId);
-    console.log('[loadRoleMenus] 开始加载角色菜单权限:', roleId);
+    console.log("[loadRoleMenus] 开始加载角色菜单权限:", roleId);
 
     try {
       const result = await post(`/system/menus/role-menu-tree-select/${roleId}`) as { data: { checkedKeys: string[] } };
       const checkedKeys = result.data.checkedKeys || [];
-      console.log('[loadRoleMenus] 加载完成，权限数量:', checkedKeys.length, 'roleId:', roleId);
+      console.log("[loadRoleMenus] 加载完成，权限数量:", checkedKeys.length, "roleId:", roleId);
       return checkedKeys;
     } catch (error) {
-      console.error('[loadRoleMenus] 加载失败:', error);
+      console.error("[loadRoleMenus] 加载失败:", error);
       return [];
     } finally {
       loadingMenusRef.current.delete(roleId);
@@ -103,26 +103,26 @@ const RoleManagement: FC = () => {
 
   // 使用 useCallback 包装的 loadRoleDepts - 保持一致性
   const loadRoleDepts = useCallback(async (roleId: string) => {
-    if (!roleId || roleId === 'undefined' || roleId === 'null') {
-      console.warn('[loadRoleDepts] 无效的 roleId:', roleId);
+    if (!roleId || roleId === "undefined" || roleId === "null") {
+      console.warn("[loadRoleDepts] 无效的 roleId:", roleId);
       return [];
     }
 
     if (loadingDeptsRef.current.has(roleId)) {
-      console.warn('[loadRoleDepts] 正在加载中，跳过重复请求:', roleId);
+      console.warn("[loadRoleDepts] 正在加载中，跳过重复请求:", roleId);
       return [];
     }
 
     loadingDeptsRef.current.add(roleId);
-    console.log('[loadRoleDepts] 开始加载角色部门权限:', roleId);
+    console.log("[loadRoleDepts] 开始加载角色部门权限:", roleId);
 
     try {
       const result = await post(`/system/departments/role-dept-tree-select/${roleId}`) as { data: { checkedKeys: string[] } };
       const checkedKeys = result.data.checkedKeys || [];
-      console.log('[loadRoleDepts] 加载完成，权限数量:', checkedKeys.length, 'roleId:', roleId);
+      console.log("[loadRoleDepts] 加载完成，权限数量:", checkedKeys.length, "roleId:", roleId);
       return checkedKeys;
     } catch (error) {
-      console.error('[loadRoleDepts] 加载失败:', error);
+      console.error("[loadRoleDepts] 加载失败:", error);
       return [];
     } finally {
       loadingDeptsRef.current.delete(roleId);
@@ -210,7 +210,7 @@ const RoleManagement: FC = () => {
             <Statistic
               title="正常角色"
               value={statistics.active}
-              styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
+              styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
               prefix={<SafetyCertificateOutlined />}
             />
           </Card>
@@ -220,7 +220,7 @@ const RoleManagement: FC = () => {
             <Statistic
               title="停用角色"
               value={statistics.inactive}
-              styles={{ content: { color: 'var(--theme-error, #cf1322)' } }}
+              styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
               prefix={<DeleteOutlined />}
             />
           </Card>
@@ -229,7 +229,7 @@ const RoleManagement: FC = () => {
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="roleName" label="角色名称">
               <Input placeholder="请输入角色名称" />
@@ -262,7 +262,7 @@ const RoleManagement: FC = () => {
             </Button>
             {selectedRowKeys.length > 0 && (
               <Button
-                icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }}
+                icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }}
                 onClick={() => handleBatchDelete(selectedRowKeys)}
               >
                 批量删除 ({selectedRowKeys.length})
@@ -289,13 +289,13 @@ const RoleManagement: FC = () => {
 
       {/* 编辑弹窗 */}
       <Modal
-        title={editingRole ? '编辑角色' : '新增角色'}
+        title={editingRole ? "编辑角色" : "新增角色"}
         open={editModalVisible}
         onOk={() => handleSave(editForm)}
         afterOpenChange={(open) => handleModalOpenChange(open, editForm)}
         onCancel={() => setEditModalVisible(false)}
         width={800}
-        styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }}
+        styles={{ body: { maxHeight: "70vh", overflowY: "auto" } }}
       >
         <Form form={editForm} layout="vertical" initialValues={DEFAULT_FORM_VALUES}>
           {/* 基本信息 */}
@@ -305,7 +305,7 @@ const RoleManagement: FC = () => {
                 <Form.Item
                   name="roleName"
                   label="角色名称"
-                  rules={[{ required: true, message: '请输入角色名称' }]}
+                  rules={[{ required: true, message: "请输入角色名称" }]}
                 >
                   <Input />
                 </Form.Item>
@@ -314,7 +314,7 @@ const RoleManagement: FC = () => {
                 <Form.Item
                   name="roleKey"
                   label="权限字符"
-                  rules={[{ required: true, message: '请输入权限字符' }]}
+                  rules={[{ required: true, message: "请输入权限字符" }]}
                 >
                   <Input />
                 </Form.Item>
@@ -325,7 +325,7 @@ const RoleManagement: FC = () => {
                 <Form.Item
                   name="roleSort"
                   label="显示顺序"
-                  rules={[{ required: true, message: '请输入显示顺序' }]}
+                  rules={[{ required: true, message: "请输入显示顺序" }]}
                 >
                   <Input type="number" />
                 </Form.Item>
@@ -367,7 +367,7 @@ const RoleManagement: FC = () => {
                       editForm.setFieldsValue({ menuIds: keyArray });
                     }}
                     treeData={menuTree}
-                    style={{ background: '#f5f5f5', padding: '8px', borderRadius: '4px', maxHeight: '400px', overflowY: 'auto' }}
+                    style={{ background: "#f5f5f5", padding: "8px", borderRadius: "4px", maxHeight: "400px", overflowY: "auto" }}
                   />
                 </Form.Item>
               </Card>
@@ -402,7 +402,7 @@ const RoleManagement: FC = () => {
                         editForm.setFieldsValue({ deptIds: keyArray });
                       }}
                       treeData={deptTree}
-                      style={{ background: '#f5f5f5', padding: '8px', borderRadius: '4px', maxHeight: '400px', overflowY: 'auto' }}
+                      style={{ background: "#f5f5f5", padding: "8px", borderRadius: "4px", maxHeight: "400px", overflowY: "auto" }}
                     />
                   </Form.Item>
                 )}

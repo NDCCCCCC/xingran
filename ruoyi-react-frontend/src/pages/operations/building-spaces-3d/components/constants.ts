@@ -33,33 +33,33 @@ export const HUBEI_BOUNDARY = [
 export const MARKER_COLORS = {
   // 正常状态
   NORMAL: {
-    MAIN: '#ff6b35',
-    BORDER: '#ff4d4f',
-    SHADOW: 'rgba(255, 107, 53, 0.5)',
+    MAIN: "#ff6b35",
+    BORDER: "#ff4d4f",
+    SHADOW: "rgba(255, 107, 53, 0.5)",
   },
   // 停用状态
   STOPPED: {
-    MAIN: '#9e9e9e',
-    BORDER: '#757575',
-    SHADOW: 'rgba(0, 0, 0, 0.2)',
+    MAIN: "#9e9e9e",
+    BORDER: "#757575",
+    SHADOW: "rgba(0, 0, 0, 0.2)",
   },
   // 聚类标记
   CLUSTER: {
-    MAIN: '#ff4d4f',
-    SHADOW: 'rgba(255, 77, 79, 0.5)',
+    MAIN: "#ff4d4f",
+    SHADOW: "rgba(255, 77, 79, 0.5)",
   },
   // 边界
-  BOUNDARY: '#1890ff',
+  BOUNDARY: "#1890ff",
 } as const;
 
 // 3D 楼宇视图状态色（业务专属色，暂不归入 design-system）
 // 后续如需主题切换可考虑迁移到 design-system/tokens/colors.ts
 export const THREE_D_STATUS_COLORS = {
-  ANOMALY: { MAIN: '#ff6b35', BORDER: '#ff4d4f' },
-  INACTIVE: { MAIN: '#9e9e9e', BORDER: '#757575' },
-  ABNORMAL: { MAIN: '#ff4d4f', BORDER: '#ff4d4f' },
-  BOUNDARY: { MAIN: '#1890ff', BORDER: '#096dd9' },
-  MAINTENANCE: { MAIN: '#f57c00', BORDER: '#d46b08' },
+  ANOMALY: { MAIN: "#ff6b35", BORDER: "#ff4d4f" },
+  INACTIVE: { MAIN: "#9e9e9e", BORDER: "#757575" },
+  ABNORMAL: { MAIN: "#ff4d4f", BORDER: "#ff4d4f" },
+  BOUNDARY: { MAIN: "#1890ff", BORDER: "#096dd9" },
+  MAINTENANCE: { MAIN: "#f57c00", BORDER: "#d46b08" },
 } as const;
 
 // 3D 楼层颜色配置
@@ -105,61 +105,61 @@ export const CLUSTER_CONFIG = {
 // 样式配置
 export const STYLE_CONFIG = {
   OVERLAY: {
-    BACKGROUND: 'rgba(255, 255, 255, 0.95)',
-    BORDER: '1px solid #e8e8e8',
-    BORDER_RADIUS: '8px',
-    BOX_SHADOW: '0 2px 8px rgba(0, 0, 0, 0.1)',
-    PADDING: '12px 16px',
+    BACKGROUND: "rgba(255, 255, 255, 0.95)",
+    BORDER: "1px solid #e8e8e8",
+    BORDER_RADIUS: "8px",
+    BOX_SHADOW: "0 2px 8px rgba(0, 0, 0, 0.1)",
+    PADDING: "12px 16px",
   },
   BUTTON: {
-    GRADIENT: 'linear-gradient(135deg, #1890ff, #096dd9)',
-    BOX_SHADOW: '0 2px 4px rgba(24, 144, 255, 0.3)',
+    GRADIENT: "linear-gradient(135deg, #1890ff, #096dd9)",
+    BOX_SHADOW: "0 2px 4px rgba(24, 144, 255, 0.3)",
   },
 } as const;
 
 // 状态文本映射
 export const STATUS_TEXT = {
   BUILDING: {
-    NORMAL: '正常',
-    STOPPED: '已停用',
+    NORMAL: "正常",
+    STOPPED: "已停用",
   },
   FLOOR: {
-    NORMAL: '正常',
-    STOPPED: '停用',
+    NORMAL: "正常",
+    STOPPED: "停用",
   },
   WORKSTATION: {
-    AVAILABLE: '空闲',
-    OCCUPIED: '占用',
-    MAINTENANCE: '维护',
-    FIXED: '固定',
-    FLEXIBLE: '灵活',
-    MANAGEMENT: '管理',
+    AVAILABLE: "空闲",
+    OCCUPIED: "占用",
+    MAINTENANCE: "维护",
+    FIXED: "固定",
+    FLEXIBLE: "灵活",
+    MANAGEMENT: "管理",
   },
 } as const;
 
 // 状态颜色映射（Ant Design Tag）
 export const STATUS_COLOR = {
   BUILDING: {
-    NORMAL: 'success',
-    STOPPED: 'default',
+    NORMAL: "success",
+    STOPPED: "default",
   } as const,
   FLOOR: {
-    NORMAL: 'success',
-    STOPPED: 'default',
+    NORMAL: "success",
+    STOPPED: "default",
   } as const,
   WORKSTATION_STATUS: {
-    AVAILABLE: 'success',
-    OCCUPIED: 'error',
-    MAINTENANCE: 'warning',
+    AVAILABLE: "success",
+    OCCUPIED: "error",
+    MAINTENANCE: "warning",
   } as const,
   WORKSTATION_TYPE: {
-    FIXED: 'blue',
-    FLEXIBLE: 'purple',
-    MANAGEMENT: 'cyan',
+    FIXED: "blue",
+    FLEXIBLE: "purple",
+    MANAGEMENT: "cyan",
   } as const,
 } as const;
 
 // 缩放级别显示的楼宇层级
-export const getVisibleBuildingLevels = (zoom: number): 'all' | 'level1' => {
-  return zoom >= 10 ? 'all' : 'level1';
+export const getVisibleBuildingLevels = (zoom: number): "all" | "level1" => {
+  return zoom >= 10 ? "all" : "level1";
 };

@@ -2,30 +2,30 @@
  * 专线管理页面
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import type { FC } from 'react';
+import { useState, useCallback, useEffect } from "react";
+import type { FC } from "react";
 import {
   Table, Button, Space, Modal, Form, Input, InputNumber, Select,
   Tag, Card, Row, Col, Alert, Radio, Layout,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+} from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined,
   CheckCircleOutlined, StopOutlined, WarningOutlined, AppstoreOutlined, TableOutlined,
   ImportOutlined, ExportOutlined, LineChartOutlined,
-} from '@ant-design/icons';
-import type { DedicatedLine } from '@/types';
-import { dedicatedLineApi, serverRoomApi } from '@/lib/opsApi';
-import { useTableManager } from '@/hooks/useTableManager';
-import { usePagination } from '@/hooks/usePagination';
-import { useDict } from '@/hooks/useDict';
-import { handleApiError, handleSuccess, isFormValidationError } from '@/utils/errorHandler';
-import { createDateTimeColumn } from '@/utils/tableHelpers';
-import { fetchDedicatedLineStatistics } from '@/utils/statisticsHelper';
-import ActionButtons from '@/components/shared/ActionButtons';
-import ExcelImport from '@/components/shared/ExcelImport';
-import ExcelExport from '@/components/shared/ExcelExport';
-import { StatisticsCards } from '@/components/operations/StatisticsCards';
+} from "@ant-design/icons";
+import type { DedicatedLine } from "@/types";
+import { dedicatedLineApi, serverRoomApi } from "@/lib/opsApi";
+import { useTableManager } from "@/hooks/useTableManager";
+import { usePagination } from "@/hooks/usePagination";
+import { useDict } from "@/hooks/useDict";
+import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
+import { createDateTimeColumn } from "@/utils/tableHelpers";
+import { fetchDedicatedLineStatistics } from "@/utils/statisticsHelper";
+import ActionButtons from "@/components/shared/ActionButtons";
+import ExcelImport from "@/components/shared/ExcelImport";
+import ExcelExport from "@/components/shared/ExcelExport";
+import { StatisticsCards } from "@/components/operations/StatisticsCards";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -37,7 +37,7 @@ interface ServerRoomOption {
   orgId: string;
 }
 
-type ViewMode = 'table' | 'card';
+type ViewMode = "table" | "card";
 
 interface Statistics {
   total: number;
@@ -47,7 +47,7 @@ interface Statistics {
 }
 
 const DedicatedLineManagement: FC = () => {
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
@@ -55,8 +55,8 @@ const DedicatedLineManagement: FC = () => {
   const [statistics, setStatistics] = useState<Statistics>({ total: 0, normal: 0, fault: 0, disabled: 0 });
 
   // Wave 5: useDict replaces raw post() calls for both line type + ISP dicts
-  const { data: lineTypeDict = [] } = useDict('ops_dedicated_line_type');
-  const { data: ispDict = [] } = useDict('ops_isp');
+  const { data: lineTypeDict = [] } = useDict("ops_dedicated_line_type");
+  const { data: ispDict = [] } = useDict("ops_isp");
 
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
@@ -71,7 +71,7 @@ const DedicatedLineManagement: FC = () => {
         orgId: r.orgId as string,
       })));
     } catch (error) {
-      handleApiError(error, '加载机房列表', false);
+      handleApiError(error, "加载机房列表", false);
     }
   }, []);
 
@@ -101,7 +101,7 @@ const DedicatedLineManagement: FC = () => {
     try {
       return await fetchDedicatedLineStatistics();
     } catch (error) {
-      handleApiError(error, '加载统计数据', false);
+      handleApiError(error, "加载统计数据", false);
       return { total: 0, normal: 0, fault: 0, disabled: 0 };
     }
   }, []);
@@ -124,38 +124,38 @@ const DedicatedLineManagement: FC = () => {
       const values = await lineForm.validateFields() as Partial<DedicatedLine>;
       if (editingLine) {
         await dedicatedLineApi.update(editingLine.id, values);
-        handleSuccess('更新');
+        handleSuccess("更新");
       } else {
         await dedicatedLineApi.create(values);
-        handleSuccess('创建');
+        handleSuccess("创建");
       }
       handleModalClose();
       refreshData();
     } catch (error: unknown) {
       if (isFormValidationError(error)) return;
-      handleApiError(error, '操作');
+      handleApiError(error, "操作");
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       await dedicatedLineApi.delete(id);
-      handleSuccess('删除');
+      handleSuccess("删除");
       refreshData();
     } catch (error) {
-      handleApiError(error, '删除');
+      handleApiError(error, "删除");
     }
   };
 
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) return;
     try {
-      await dedicatedLineApi.batch('delete', { ids: selectedRowKeys });
-      handleSuccess('批量删除');
+      await dedicatedLineApi.batch("delete", { ids: selectedRowKeys });
+      handleSuccess("批量删除");
       resetSelection();
       refreshData();
     } catch (error) {
-      handleApiError(error, '批量删除');
+      handleApiError(error, "批量删除");
     }
   };
 
@@ -187,53 +187,53 @@ const DedicatedLineManagement: FC = () => {
   };
 
   const getStatusText = (status: number) => {
-    const statusMap: Record<number, string> = { 0: '正常', 1: '故障', 2: '停用' };
-    return statusMap[status] || '未知';
+    const statusMap: Record<number, string> = { 0: "正常", 1: "故障", 2: "停用" };
+    return statusMap[status] || "未知";
   };
 
   const columns: ColumnsType<DedicatedLine> = [
-    { title: '专线名称', dataIndex: 'name', key: 'name', width: 150 },
+    { title: "专线名称", dataIndex: "name", key: "name", width: 150 },
     {
-      title: '专线类型',
-      dataIndex: 'lineType',
-      key: 'lineType',
+      title: "专线类型",
+      dataIndex: "lineType",
+      key: "lineType",
       width: 120,
       render: (type) => <Tag>{getLineTypeText(type as string)}</Tag>,
     },
-    { title: '带宽', dataIndex: 'bandwidth', key: 'bandwidth', width: 100, render: (v) => v || '-' },
-    { title: '运营商', dataIndex: 'isp', key: 'isp', width: 120, render: (isp) => <Tag>{getIspText(isp as string)}</Tag> },
-    { title: '源机房', dataIndex: 'sourceRoomName', key: 'sourceRoomName', width: 120, render: (v) => v || '-' },
-    { title: '源设备', dataIndex: 'sourceDeviceName', key: 'sourceDeviceName', width: 120, render: (v) => v || '-' },
-    { title: '源端口', dataIndex: 'sourcePort', key: 'sourcePort', width: 100, render: (v) => v || '-' },
-    { title: '源IP', dataIndex: 'sourceIpAddress', key: 'sourceIpAddress', width: 130, render: (v) => v || '-' },
-    { title: '目的机房', dataIndex: 'destRoomName', key: 'destRoomName', width: 120, render: (v) => v || '-' },
-    { title: '目的设备', dataIndex: 'destDeviceName', key: 'destDeviceName', width: 120, render: (v) => v || '-' },
-    { title: '目的端口', dataIndex: 'destPort', key: 'destPort', width: 100, render: (v) => v || '-' },
-    { title: '目的IP', dataIndex: 'destIpAddress', key: 'destIpAddress', width: 130, render: (v) => v || '-' },
+    { title: "带宽", dataIndex: "bandwidth", key: "bandwidth", width: 100, render: (v) => v || "-" },
+    { title: "运营商", dataIndex: "isp", key: "isp", width: 120, render: (isp) => <Tag>{getIspText(isp as string)}</Tag> },
+    { title: "源机房", dataIndex: "sourceRoomName", key: "sourceRoomName", width: 120, render: (v) => v || "-" },
+    { title: "源设备", dataIndex: "sourceDeviceName", key: "sourceDeviceName", width: 120, render: (v) => v || "-" },
+    { title: "源端口", dataIndex: "sourcePort", key: "sourcePort", width: 100, render: (v) => v || "-" },
+    { title: "源IP", dataIndex: "sourceIpAddress", key: "sourceIpAddress", width: 130, render: (v) => v || "-" },
+    { title: "目的机房", dataIndex: "destRoomName", key: "destRoomName", width: 120, render: (v) => v || "-" },
+    { title: "目的设备", dataIndex: "destDeviceName", key: "destDeviceName", width: 120, render: (v) => v || "-" },
+    { title: "目的端口", dataIndex: "destPort", key: "destPort", width: 100, render: (v) => v || "-" },
+    { title: "目的IP", dataIndex: "destIpAddress", key: "destIpAddress", width: 130, render: (v) => v || "-" },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
       width: 80,
       render: (status) => {
-        const colors: Record<number, string> = { 0: 'success', 1: 'error', 2: 'default' };
+        const colors: Record<number, string> = { 0: "success", 1: "error", 2: "default" };
         return <Tag color={colors[status as keyof typeof colors]}>{getStatusText(status as number)}</Tag>;
       },
     },
-    { title: '月费(元)', dataIndex: 'monthlyFee', key: 'monthlyFee', width: 100, render: (v) => v ? `¥${v}` : '-' },
-    createDateTimeColumn('createdAt', { width: 180 }),
+    { title: "月费(元)", dataIndex: "monthlyFee", key: "monthlyFee", width: 100, render: (v) => v ? `¥${v}` : "-" },
+    createDateTimeColumn("createdAt", { width: 180 }),
     {
-      title: '操作', key: 'action',
+      title: "操作", key: "action",
       render: (_, record) => {
         const actions = [
-          { key: 'edit', label: '编辑', icon: <EditOutlined />, onClick: () => openModal(record) },
+          { key: "edit", label: "编辑", icon: <EditOutlined />, onClick: () => openModal(record) },
           {
-            key: 'delete', label: '删除', icon: <DeleteOutlined />, danger: true,
+            key: "delete", label: "删除", icon: <DeleteOutlined />, danger: true,
             onClick: () => {
               Modal.confirm({
-                title: '确定要删除这条专线吗？',
-                okText: '确定',
-                cancelText: '取消',
+                title: "确定要删除这条专线吗？",
+                okText: "确定",
+                cancelText: "取消",
                 okButtonProps: { danger: true },
                 onOk: () => handleDelete(record.id),
               });
@@ -246,7 +246,7 @@ const DedicatedLineManagement: FC = () => {
   ];
 
   const renderCardView = () => {
-    if (lines.length === 0) return <div style={{ textAlign: 'center', padding: '40px', color: 'var(--theme-text-tertiary, #999)' }}>暂无数据</div>;
+    if (lines.length === 0) return <div style={{ textAlign: "center", padding: "40px", color: "var(--theme-text-tertiary, #999)" }}>暂无数据</div>;
     return (
       <Row gutter={[16, 16]}>
         {lines.map((line) => (
@@ -257,12 +257,12 @@ const DedicatedLineManagement: FC = () => {
                 <EditOutlined key="edit" onClick={() => openModal(line)} />,
                 <DeleteOutlined
                   key="delete"
-                  style={{ color: 'var(--theme-error, #ff4d4f)' }}
+                  style={{ color: "var(--theme-error, #ff4d4f)" }}
                   onClick={() => {
                     Modal.confirm({
-                      title: '确定要删除这条专线吗？',
-                      okText: '确定',
-                      cancelText: '取消',
+                      title: "确定要删除这条专线吗？",
+                      okText: "确定",
+                      cancelText: "取消",
                       okButtonProps: { danger: true },
                       onOk: () => handleDelete(line.id),
                     });
@@ -272,9 +272,9 @@ const DedicatedLineManagement: FC = () => {
             >
               <Card.Meta
                 title={
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span>{line.name}</span>
-                    <Tag color={line.status === 0 ? 'success' : line.status === 1 ? 'error' : 'default'}>{getStatusText(line.status)}</Tag>
+                    <Tag color={line.status === 0 ? "success" : line.status === 1 ? "error" : "default"}>{getStatusText(line.status)}</Tag>
                   </div>
                 }
                 description={
@@ -296,19 +296,19 @@ const DedicatedLineManagement: FC = () => {
   };
 
   return (
-    <Layout style={{ background: '#000', minHeight: 'calc(100vh - 64px)' }}>
-      <Content style={{ background: '#fff', padding: 16 }}>
+    <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
+      <Content style={{ background: "#fff", padding: 16 }}>
       <StatisticsCards
         show={total > 10}
         items={[
-          { title: '总专线数', value: statistics.total, prefix: <LineChartOutlined /> },
-          { title: '正常', value: statistics.normal, styles: { content: { color: 'var(--theme-success, #3f8600)' } }, prefix: <CheckCircleOutlined /> },
-          { title: '故障', value: statistics.fault, styles: { content: { color: 'var(--theme-error, #cf1322)' } }, prefix: <WarningOutlined /> },
-          { title: '停用', value: statistics.disabled, styles: { content: { color: 'var(--theme-text-tertiary, #8c8c8c)' } }, prefix: <StopOutlined /> },
+          { title: "总专线数", value: statistics.total, prefix: <LineChartOutlined /> },
+          { title: "正常", value: statistics.normal, styles: { content: { color: "var(--theme-success, #3f8600)" } }, prefix: <CheckCircleOutlined /> },
+          { title: "故障", value: statistics.fault, styles: { content: { color: "var(--theme-error, #cf1322)" } }, prefix: <WarningOutlined /> },
+          { title: "停用", value: statistics.disabled, styles: { content: { color: "var(--theme-text-tertiary, #8c8c8c)" } }, prefix: <StopOutlined /> },
         ]}
       />
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="name" label="专线名称">
               <Input placeholder="请输入专线名称" allowClear className="user-form-input" style={{ width: 150 }} />
@@ -319,7 +319,7 @@ const DedicatedLineManagement: FC = () => {
                 allowClear
                 showSearch
                 filterOption={(input, option) =>
-                  String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                  String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
                 }
                 className="user-form-input"
                 style={{ width: 150 }}
@@ -332,7 +332,7 @@ const DedicatedLineManagement: FC = () => {
                 allowClear
                 showSearch
                 filterOption={(input, option) =>
-                  String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                  String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
                 }
                 className="user-form-input"
                 style={{ width: 150 }}
@@ -375,21 +375,21 @@ const DedicatedLineManagement: FC = () => {
               const currentFilters: Record<string, unknown> = {};
               Object.keys(values).forEach(key => {
                 const value = values[key];
-                if (value !== undefined && value !== null && value !== '') {
+                if (value !== undefined && value !== null && value !== "") {
                   currentFilters[key] = value;
                 }
               });
               setExportFilters(currentFilters);
               setExportVisible(true);
             }}>导出</Button>
-            {selectedRowKeys.length > 0 && <Button icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
+            {selectedRowKeys.length > 0 && <Button icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
             <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增专线</Button>
           </Space>
         </div>
         {selectedRowKeys.length > 0 && <Alert title={<span>已选择 <strong>{selectedRowKeys.length}</strong> 条专线，<Button type="link" size="small" onClick={() => setSelectedRowKeys([])} style={{ padding: 0 }}>取消选择</Button></span>} type="info" showIcon style={{ marginTop: 12 }} />}
       </Card>
       <Card>
-        {viewMode === 'table' ? (
+        {viewMode === "table" ? (
           <Table
             rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
             columns={columns}
@@ -406,7 +406,7 @@ const DedicatedLineManagement: FC = () => {
 	              const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
 	              Object.keys(formValues).forEach(key => {
 	                const value = formValues[key];
-	                if (value !== undefined && value !== null && value !== '') {
+	                if (value !== undefined && value !== null && value !== "") {
 	                  searchParams[key] = value;
 	                }
 	              });
@@ -415,12 +415,12 @@ const DedicatedLineManagement: FC = () => {
           />
         ) : renderCardView()}
       </Card>
-      <Modal title={editingLine ? '编辑专线' : '新增专线'} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); lineForm.resetFields(); setEditingLine(null); }} width={700}>
+      <Modal title={editingLine ? "编辑专线" : "新增专线"} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); lineForm.resetFields(); setEditingLine(null); }} width={700}>
         <Form form={lineForm} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
-          <Form.Item name="name" label="专线名称" rules={[{ required: true, message: '请输入专线名称' }]}>
+          <Form.Item name="name" label="专线名称" rules={[{ required: true, message: "请输入专线名称" }]}>
             <Input placeholder="请输入专线名称" />
           </Form.Item>
-          <Form.Item name="lineType" label="专线类型" rules={[{ required: true, message: '请选择专线类型' }]}>
+          <Form.Item name="lineType" label="专线类型" rules={[{ required: true, message: "请选择专线类型" }]}>
             <Select placeholder="请选择专线类型">
               {lineTypeDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
             </Select>
@@ -432,7 +432,7 @@ const DedicatedLineManagement: FC = () => {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="isp" label="运营商" rules={[{ required: true, message: '请选择运营商' }]}>
+              <Form.Item name="isp" label="运营商" rules={[{ required: true, message: "请选择运营商" }]}>
                 <Select placeholder="请选择运营商" className="user-form-input">
                   {ispDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
                 </Select>
@@ -447,7 +447,7 @@ const DedicatedLineManagement: FC = () => {
                   allowClear
                   showSearch
                   filterOption={(input, option) =>
-                    String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                    String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
                   }
                   className="user-form-input"
                   options={serverRooms.map(room => ({ label: room.name, value: room.id }))}
@@ -461,7 +461,7 @@ const DedicatedLineManagement: FC = () => {
             </Col>
           </Row>
           <Form.Item name="sourcePort" label="源端口">
-            <Input placeholder="请输入源端口" className="user-form-input" style={{ width: '50%' }} />
+            <Input placeholder="请输入源端口" className="user-form-input" style={{ width: "50%" }} />
           </Form.Item>
           <Row gutter={16}>
             <Col span={12}>
@@ -471,7 +471,7 @@ const DedicatedLineManagement: FC = () => {
                   allowClear
                   showSearch
                   filterOption={(input, option) =>
-                    String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                    String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
                   }
                   className="user-form-input"
                   options={serverRooms.map(room => ({ label: room.name, value: room.id }))}
@@ -485,7 +485,7 @@ const DedicatedLineManagement: FC = () => {
             </Col>
           </Row>
           <Form.Item name="destPort" label="目的端口">
-            <Input placeholder="请输入目的端口" className="user-form-input" style={{ width: '50%' }} />
+            <Input placeholder="请输入目的端口" className="user-form-input" style={{ width: "50%" }} />
           </Form.Item>
           <Row gutter={16}>
             <Col span={12}>
@@ -533,11 +533,11 @@ const DedicatedLineManagement: FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="monthlyFee" label="月租费用">
-                <InputNumber min={0} precision={2} placeholder="请输入月租费用" style={{ width: '100%' }} className="user-form-input" />
+                <InputNumber min={0} precision={2} placeholder="请输入月租费用" style={{ width: "100%" }} className="user-form-input" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
+              <Form.Item name="status" label="状态" rules={[{ required: true, message: "请选择状态" }]}>
                 <Select placeholder="请选择状态" className="user-form-input">
                   <Option value={0}>正常</Option>
                   <Option value={1}>故障</Option>

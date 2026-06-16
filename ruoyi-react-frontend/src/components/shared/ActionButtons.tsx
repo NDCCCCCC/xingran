@@ -4,12 +4,12 @@
  * 否则直接显示所有按钮
  */
 
-import { Space, Button, Dropdown, Popconfirm } from 'antd';
-import { DownOutlined, DeleteOutlined } from '@ant-design/icons';
-import type { MenuProps } from 'antd';
-import type { FC } from 'react';
-import { DELETE_CONFIRM } from '@/constants/buttonStyles';
-import '@/components/shared/ActionButtons.css';
+import { Space, Button, Dropdown, Popconfirm } from "antd";
+import { DownOutlined, DeleteOutlined } from "@ant-design/icons";
+import type { MenuProps } from "antd";
+import type { FC } from "react";
+import { DELETE_CONFIRM } from "@/constants/buttonStyles";
+import "@/components/shared/ActionButtons.css";
 
 export interface ActionButton {
   key: string;
@@ -17,7 +17,7 @@ export interface ActionButton {
   icon?: React.ReactNode;
   onClick?: () => void;
   danger?: boolean;
-  type?: 'link' | 'text' | 'primary' | 'default' | 'dashed';
+  type?: "link" | "text" | "primary" | "default" | "dashed";
   disabled?: boolean;
   render?: () => React.ReactNode;
 }
@@ -25,13 +25,13 @@ export interface ActionButton {
 interface ActionButtonsProps {
   actions: ActionButton[];
   threshold?: number;
-  size?: 'small' | 'middle' | 'large';
+  size?: "small" | "middle" | "large";
 }
 
 const ActionButtons: FC<ActionButtonsProps> = ({
   actions,
   threshold = 3,
-  size = 'small',
+  size = "small",
 }) => {
   if (actions.length === 0) {
     return null;
@@ -52,12 +52,12 @@ const ActionButtons: FC<ActionButtonsProps> = ({
               action.render()
             ) : (
               <Button
-                type={action.type ?? 'link'}
+                type={action.type ?? "link"}
                 size={size}
                 icon={action.icon}
                 onClick={action.onClick}
                 disabled={action.disabled}
-                className={action.danger ? 'action-btn-link-danger' : 'action-btn-link'}
+                className={action.danger ? "action-btn-link-danger" : "action-btn-link"}
               >
                 {action.label}
               </Button>
@@ -69,7 +69,7 @@ const ActionButtons: FC<ActionButtonsProps> = ({
   }
 
   // 按钮数量 >= 阈值，所有按钮都放到下拉菜单中
-  const menuItems: MenuProps['items'] = actions.map((action) => {
+  const menuItems: MenuProps["items"] = actions.map((action) => {
     if (action.render) {
       return {
         key: action.key,
@@ -88,12 +88,12 @@ const ActionButtons: FC<ActionButtonsProps> = ({
       danger: action.danger,
       disabled: action.disabled,
       onClick: action.onClick,
-      className: action.danger ? 'action-dropdown-item-danger' : 'action-dropdown-item',
+      className: action.danger ? "action-dropdown-item-danger" : "action-dropdown-item",
     };
   });
 
   return (
-    <Dropdown menu={{ items: menuItems }} trigger={['click']}>
+    <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
       <Button type="link" size={size} icon={<DownOutlined />} className="action-btn-link">
         操作
       </Button>
@@ -124,8 +124,8 @@ export const createDeleteAction = <T extends string | number>(
     ghost?: boolean;
   }
 ): ActionButton => ({
-  key: 'delete',
-  label: options?.label || '删除',
+  key: "delete",
+  label: options?.label || "删除",
   icon: <DeleteOutlined />,
   danger: true,
   disabled: options?.disabled,
@@ -145,7 +145,7 @@ export const createDeleteAction = <T extends string | number>(
         disabled={options?.disabled}
         className="action-btn-link-danger"
       >
-        {options?.label || '删除'}
+        {options?.label || "删除"}
       </Button>
     </Popconfirm>
   ),
@@ -160,8 +160,8 @@ export const createDeleteAction = <T extends string | number>(
 export const createCustomDeleteAction = (
   render: () => React.ReactNode
 ): ActionButton => ({
-  key: 'delete',
-  label: '删除',
+  key: "delete",
+  label: "删除",
   icon: <DeleteOutlined />,
   danger: true,
   render,

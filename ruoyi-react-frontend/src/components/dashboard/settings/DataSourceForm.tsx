@@ -5,11 +5,11 @@
  * 支持类型切换时保留公共字段（transform 配置）
  */
 
-import { useState, useEffect } from 'react';
-import { Form, Select, Input, InputNumber, Space, Alert } from 'antd';
-import { InfoCircleOutlined } from '@ant-design/icons';
-import EndpointSelector from './EndpointSelector';
-import ParamsEditor from './ParamsEditor';
+import { useState, useEffect } from "react";
+import { Form, Select, Input, InputNumber, Space, Alert } from "antd";
+import { InfoCircleOutlined } from "@ant-design/icons";
+import EndpointSelector from "./EndpointSelector";
+import ParamsEditor from "./ParamsEditor";
 import type {
 	DataSourceConfig,
 	DataSourceType,
@@ -18,8 +18,8 @@ import type {
 	StaticDataSourceConfig,
 	WidgetType,
 	EndpointDetail,
-} from '@/types/dashboard';
-import type { FormInstance } from 'antd';
+} from "@/types/dashboard";
+import type { FormInstance } from "antd";
 
 const { TextArea } = Input;
 
@@ -40,12 +40,12 @@ export interface DataSourceFormProps {
  * 从 DataSourceConfig 中提取数据源类型
  */
 const getDataSourceType = (config?: DataSourceConfig): DataSourceType => {
-	if (!config) return 'api';
-	if ('type' in config) return config.type;
-	if ('api' in config) return 'api';
-	if ('websocket' in config) return 'websocket';
-	if ('static' in config) return 'static';
-	return 'api';
+	if (!config) return "api";
+	if ("type" in config) return config.type;
+	if ("api" in config) return "api";
+	if ("websocket" in config) return "websocket";
+	if ("static" in config) return "static";
+	return "api";
 };
 
 /**
@@ -53,7 +53,7 @@ const getDataSourceType = (config?: DataSourceConfig): DataSourceType => {
  */
 const extractConfig = <T extends DataSourceConfig>(type: DataSourceType, config?: DataSourceConfig): T | null => {
 	if (!config) return null;
-	if ('type' in config && config.type === type) return config as T;
+	if ("type" in config && config.type === type) return config as T;
 	if (type in (config as object)) return (config as unknown as Record<string, T>)[type] as T;
 	return null;
 };
@@ -79,8 +79,8 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
 			const type = getDataSourceType(value);
 			setDataSourceType(type);
 
-			if (type === 'api') {
-				const apiConfig = extractConfig<ApiDataSourceConfig>('api', value);
+			if (type === "api") {
+				const apiConfig = extractConfig<ApiDataSourceConfig>("api", value);
 				if (apiConfig) {
 					activeForm.setFieldsValue({
 						endpoint: apiConfig.endpoint,
@@ -91,19 +91,19 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
 									value: String(val),
 								}))
 							: [],
-						transformExpression: apiConfig.transform?.expression || '',
+						transformExpression: apiConfig.transform?.expression || "",
 					});
 				}
-			} else if (type === 'websocket') {
-				const wsConfig = extractConfig<WebSocketDataSourceConfig>('websocket', value);
+			} else if (type === "websocket") {
+				const wsConfig = extractConfig<WebSocketDataSourceConfig>("websocket", value);
 				if (wsConfig) {
 					activeForm.setFieldsValue({
 						channel: wsConfig.channel,
-						transformExpression: wsConfig.transform?.expression || '',
+						transformExpression: wsConfig.transform?.expression || "",
 					});
 				}
-			} else if (type === 'static') {
-				const staticConfig = extractConfig<StaticDataSourceConfig>('static', value);
+			} else if (type === "static") {
+				const staticConfig = extractConfig<StaticDataSourceConfig>("static", value);
 				if (staticConfig) {
 					activeForm.setFieldsValue({
 						staticData: JSON.stringify(staticConfig.data, null, 2),
@@ -117,9 +117,9 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
 	const handleTypeChange = (newType: DataSourceType) => {
 		setDataSourceType(newType);
 		// 类型切换时清空表单，但保留 transform 配置
-		const transformExpression = activeForm.getFieldValue('transformExpression');
+		const transformExpression = activeForm.getFieldValue("transformExpression");
 		activeForm.resetFields();
-		activeForm.setFieldValue('transformExpression', transformExpression);
+		activeForm.setFieldValue("transformExpression", transformExpression);
 	};
 
 	// 处理端点选择变化
@@ -136,7 +136,7 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
 		const values = activeForm.getFieldsValue();
 		let config: DataSourceConfig;
 
-		if (dataSourceType === 'api') {
+		if (dataSourceType === "api") {
 			// 处理参数
 			const paramsObj: Record<string, unknown> = {};
 			if (values.params && Array.isArray(values.params)) {
@@ -148,19 +148,19 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
 			}
 
 			const apiConfig: ApiDataSourceConfig = {
-				type: 'api',
-				endpoint: values.endpoint || '/api/default',
-				method: (values.method || 'GET') as 'GET' | 'POST',
+				type: "api",
+				endpoint: values.endpoint || "/api/default",
+				method: (values.method || "GET") as "GET" | "POST",
 				params: Object.keys(paramsObj).length > 0 ? paramsObj : undefined,
 				transform: values.transformExpression
 					? { expression: values.transformExpression }
 					: undefined,
 			};
 			config = { api: apiConfig };
-		} else if (dataSourceType === 'websocket') {
+		} else if (dataSourceType === "websocket") {
 			const wsConfig: WebSocketDataSourceConfig = {
-				type: 'websocket',
-				channel: values.channel || '',
+				type: "websocket",
+				channel: values.channel || "",
 				transform: values.transformExpression
 					? { expression: values.transformExpression }
 					: undefined,
@@ -174,7 +174,7 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
 				staticData = values.staticData;
 			}
 			const staticConfig: StaticDataSourceConfig = {
-				type: 'static',
+				type: "static",
 				data: staticData,
 			};
 			config = { static: staticConfig };
@@ -198,20 +198,20 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
 						onChange={handleTypeChange}
 						disabled={disabled}
 						options={[
-							{ label: 'API 接口', value: 'api' },
-							{ label: 'WebSocket 实时', value: 'websocket' },
-							{ label: '静态数据', value: 'static' },
+							{ label: "API 接口", value: "api" },
+							{ label: "WebSocket 实时", value: "websocket" },
+							{ label: "静态数据", value: "static" },
 						]}
 					/>
 				</Form.Item>
 
 				{/* API 数据源配置 */}
-				{dataSourceType === 'api' && (
+				{dataSourceType === "api" && (
 					<>
 						<Form.Item
 							label="API 端点"
 							name="endpoint"
-							rules={[{ required: true, message: '请选择 API 端点' }]}
+							rules={[{ required: true, message: "请选择 API 端点" }]}
 							tooltip="从下拉列表中选择可用的 API 端点"
 						>
 							<EndpointSelector
@@ -249,12 +249,12 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
 				)}
 
 				{/* WebSocket 数据源配置 */}
-				{dataSourceType === 'websocket' && (
+				{dataSourceType === "websocket" && (
 					<>
 						<Form.Item
 							label="WebSocket 频道"
 							name="channel"
-							rules={[{ required: true, message: '请输入 WebSocket 频道' }]}
+							rules={[{ required: true, message: "请输入 WebSocket 频道" }]}
 							tooltip="订阅的 WebSocket 频道/主题名称"
 						>
 							<Input placeholder="dashboard/realtime" disabled={disabled} />
@@ -279,13 +279,13 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
 				)}
 
 				{/* 静态数据源配置 */}
-				{dataSourceType === 'static' && (
+				{dataSourceType === "static" && (
 					<>
 						<Form.Item
 							label="静态数据"
 							name="staticData"
 							rules={[
-								{ required: true, message: '请输入静态数据' },
+								{ required: true, message: "请输入静态数据" },
 								{
 									validator: (_, value) => {
 										if (!value) return Promise.resolve();
@@ -293,7 +293,7 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
 											JSON.parse(value);
 											return Promise.resolve();
 										} catch {
-											return Promise.reject(new Error('请输入有效的 JSON 格式'));
+											return Promise.reject(new Error("请输入有效的 JSON 格式"));
 										}
 									},
 								},

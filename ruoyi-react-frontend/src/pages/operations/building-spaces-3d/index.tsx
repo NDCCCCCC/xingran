@@ -3,28 +3,28 @@
  * 支持切换百度地图普通版和WebGL版本
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { Spin, Alert, Switch } from 'antd';
-import { LoadingOutlined } from '@ant-design/icons';
-import { useVisualizationStore } from '@/store/visualizationStore';
-import { buildingApi } from '@/lib/opsApi';
-import { handleApiError } from '@/utils/errorHandler';
-import HubeiMap from './components/HubeiMap';
-import HubeiMapGL from './components/HubeiMapGL';
-import { BuildingView3DLazy, FloorView3DLazy } from '@/components/three/BuildingScene';
-import type { BuildingItem } from './types';
+import { useState, useEffect, useCallback } from "react";
+import { Spin, Alert, Switch } from "antd";
+import { LoadingOutlined } from "@ant-design/icons";
+import { useVisualizationStore } from "@/store/visualizationStore";
+import { buildingApi } from "@/lib/opsApi";
+import { handleApiError } from "@/utils/errorHandler";
+import HubeiMap from "./components/HubeiMap";
+import HubeiMapGL from "./components/HubeiMapGL";
+import { BuildingView3DLazy, FloorView3DLazy } from "@/components/three/BuildingScene";
+import type { BuildingItem } from "./types";
 
 // 常量定义
 const PAGE_SIZE = 1000;
-const FULL_VH = '100vh';
+const FULL_VH = "100vh";
 const MAP_SWITCH_STYLE = {
-  position: 'absolute' as const,
+  position: "absolute" as const,
   top: 16,
   left: 16,
-  background: 'rgba(255, 255, 255, 0.95)',
-  padding: '12px 16px',
-  borderRadius: '8px',
-  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+  background: "rgba(255, 255, 255, 0.95)",
+  padding: "12px 16px",
+  borderRadius: "8px",
+  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
   zIndex: 100,
 };
 
@@ -46,16 +46,16 @@ const BuildingSpaces3D: React.FC = () => {
         id: b.id,
         name: b.name,
         code: b.code,
-        cityCode: '',
-        cityName: '',
-        address: b.address || '',
+        cityCode: "",
+        cityName: "",
+        address: b.address || "",
         longitude: b.longitude,
         latitude: b.latitude,
         level: 2 as const,
         status: b.status,
       })));
     } catch (error) {
-      handleApiError(error, '加载楼宇数据');
+      handleApiError(error, "加载楼宇数据");
     } finally {
       setLoading(false);
     }
@@ -69,7 +69,7 @@ const BuildingSpaces3D: React.FC = () => {
   const renderView = () => {
     if (loading) {
       return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: FULL_VH }}>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: FULL_VH }}>
           <Spin size="large" indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />} />
           <div style={{ marginLeft: 16, fontSize: 16 }}>加载地图数据中...</div>
         </div>
@@ -79,11 +79,11 @@ const BuildingSpaces3D: React.FC = () => {
     const MapComponent = useWebGL ? HubeiMapGL : HubeiMap;
 
     switch (viewLevel) {
-      case 'map':
+      case "map":
         return <MapComponent buildings={buildings} />;
-      case 'building':
+      case "building":
         return <BuildingView3DLazy />;
-      case 'floor':
+      case "floor":
         return <FloorView3DLazy />;
       default:
         return <MapComponent buildings={buildings} />;
@@ -92,14 +92,14 @@ const BuildingSpaces3D: React.FC = () => {
 
   // 渲染地图版本切换开关
   const renderMapSwitch = () => {
-    if (viewLevel !== 'map') {
+    if (viewLevel !== "map") {
       return null;
     }
 
     return (
       <div style={MAP_SWITCH_STYLE}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 14, fontWeight: 'bold', color: 'var(--theme-text-accent, #1890ff)' }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ fontSize: 14, fontWeight: "bold", color: "var(--theme-text-accent, #1890ff)" }}>
             🗺️ 地图版本
           </span>
           <Switch
@@ -109,15 +109,15 @@ const BuildingSpaces3D: React.FC = () => {
             unCheckedChildren="普通"
           />
         </div>
-        <div style={{ fontSize: 11, color: 'var(--theme-text-tertiary, #999)', marginTop: 4 }}>
-          {useWebGL ? 'WebGL 版本支持 3D 视角' : '普通版本兼容性更好'}
+        <div style={{ fontSize: 11, color: "var(--theme-text-tertiary, #999)", marginTop: 4 }}>
+          {useWebGL ? "WebGL 版本支持 3D 视角" : "普通版本兼容性更好"}
         </div>
       </div>
     );
   };
 
   return (
-    <div style={{ height: FULL_VH, position: 'relative', overflow: 'hidden' }}>
+    <div style={{ height: FULL_VH, position: "relative", overflow: "hidden" }}>
       {renderView()}
       {renderMapSwitch()}
 
@@ -127,7 +127,7 @@ const BuildingSpaces3D: React.FC = () => {
           description="请先在楼宇管理中添加楼宇信息"
           type="info"
           showIcon
-          style={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}
+          style={{ position: "absolute", top: 16, left: "50%", transform: "translateX(-50%)", zIndex: 1000 }}
         />
       )}
     </div>

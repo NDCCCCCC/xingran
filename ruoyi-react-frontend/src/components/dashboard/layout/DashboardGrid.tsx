@@ -5,22 +5,22 @@
  * 支持响应式布局和拖拽优化
  */
 
-import { type FC, type ReactNode, useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { Responsive, type Layout, type ResponsiveProps } from 'react-grid-layout';
-import { useWindowSize } from '@/hooks/useWindowSize';
-import { useDashboardStore } from '@/store/dashboardStore';
-import type { WidgetConfig } from '@/types/dashboard';
-import { defaultLayoutConfig } from '@/types/dashboard';
+import { type FC, type ReactNode, useRef, useEffect, useState, useCallback, useMemo } from "react";
+import { Responsive, type Layout, type ResponsiveProps } from "react-grid-layout";
+import { useWindowSize } from "@/hooks/useWindowSize";
+import { useDashboardStore } from "@/store/dashboardStore";
+import type { WidgetConfig } from "@/types/dashboard";
+import { defaultLayoutConfig } from "@/types/dashboard";
 
-import 'react-grid-layout/css/styles.css';
-import 'react-resizable/css/styles.css';
-import './DashboardGrid.css';
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
+import "./DashboardGrid.css";
 
 // 扩展 ResponsiveProps 以包含 isDraggable 和 isResizable
 interface ExtendedResponsiveProps extends ResponsiveProps {
 	isDraggable?: boolean;
 	isResizable?: boolean;
-	compactType?: 'vertical' | 'horizontal' | null;
+	compactType?: "vertical" | "horizontal" | null;
 	preventCollision?: boolean;
 	draggableHandle?: string;
 	useCSSTransforms?: boolean;
@@ -32,7 +32,7 @@ interface DashboardGridProps {
 	widgets: WidgetConfig[];
 
 	/** 布局变更回调 */
-	onLayoutChange: (layouts: Array<{ id: string; position: WidgetConfig['position'] }>) => void;
+	onLayoutChange: (layouts: Array<{ id: string; position: WidgetConfig["position"] }>) => void;
 
 	/** 子元素 */
 	children: ReactNode;
@@ -46,7 +46,7 @@ export const DashboardGrid: FC<DashboardGridProps> = ({
 	const windowSize = useWindowSize();
 	const { viewMode } = useDashboardStore();
 	const layoutConfig = defaultLayoutConfig;
-	const isEditable = viewMode === 'edit';
+	const isEditable = viewMode === "edit";
 
 	// 使用 ref 跟踪容器宽度
 	const containerRef = useRef<HTMLDivElement>(null);
@@ -87,11 +87,11 @@ export const DashboardGrid: FC<DashboardGridProps> = ({
 	// 根据屏幕宽度获取当前断点
 	const getCurrentBreakpoint = useCallback(() => {
 		const width = containerWidth;
-		if (width >= 1200) return 'lg';
-		if (width >= 996) return 'md';
-		if (width >= 768) return 'sm';
-		if (width >= 480) return 'xs';
-		return 'xxs';
+		if (width >= 1200) return "lg";
+		if (width >= 996) return "md";
+		if (width >= 768) return "sm";
+		if (width >= 480) return "xs";
+		return "xxs";
 	}, [containerWidth]);
 
 	// 响应式列数获取
@@ -102,7 +102,7 @@ export const DashboardGrid: FC<DashboardGridProps> = ({
 
 	// 是否为移动端
 	const isMobile = useMemo(() => {
-		return getCurrentBreakpoint() === 'xs' || getCurrentBreakpoint() === 'xxs';
+		return getCurrentBreakpoint() === "xs" || getCurrentBreakpoint() === "xxs";
 	}, [getCurrentBreakpoint]);
 
 	// 将 Widget 配置转换为 react-grid-layout 布局格式
@@ -145,14 +145,14 @@ export const DashboardGrid: FC<DashboardGridProps> = ({
 				y: layout.y ?? 0,
 				w: layout.w ?? 1,
 				h: layout.h ?? 1,
-			} as WidgetConfig['position'],
+			} as WidgetConfig["position"],
 		}));
 		onLayoutChange(updatedWidgets);
 	};
 
 	// 拖拽开始/结束
 	const handleDragStart = useCallback(() => {
-		useDashboardStore.getState().startDragging('dragging');
+		useDashboardStore.getState().startDragging("dragging");
 	}, []);
 
 	const handleDragStop = useCallback(() => {
@@ -160,7 +160,7 @@ export const DashboardGrid: FC<DashboardGridProps> = ({
 	}, []);
 
 	const handleResizeStart = useCallback(() => {
-		useDashboardStore.getState().startDragging('dragging');
+		useDashboardStore.getState().startDragging("dragging");
 	}, []);
 
 	const handleResizeStop = useCallback(() => {
@@ -170,7 +170,7 @@ export const DashboardGrid: FC<DashboardGridProps> = ({
 	// 准备 props - 使用 proper 类型断言
 	// 移动端禁用拖拽和调整大小
 	const gridProps: ExtendedResponsiveProps = {
-		className: 'layout',
+		className: "layout",
 		width: containerWidth,
 		layouts: { lg: layouts },
 		breakpoints,
@@ -185,15 +185,15 @@ export const DashboardGrid: FC<DashboardGridProps> = ({
 		onDragStop: handleDragStop,
 		onResizeStart: handleResizeStart,
 		onResizeStop: handleResizeStop,
-		compactType: 'vertical',
+		compactType: "vertical",
 		preventCollision: true,  // 防止 Widget 重叠
-		draggableHandle: '.widget-drag-handle',  // 指定拖拽手柄
+		draggableHandle: ".widget-drag-handle",  // 指定拖拽手柄
 		useCSSTransforms: true,  // 使用 CSS transform 提升性能
 		children,
 	};
 
 	return (
-		<div ref={containerRef} className={`dashboard-grid ${isEditable ? 'dashboard-grid--editable' : ''} ${isMobile ? 'dashboard-grid--mobile' : ''}`}>
+		<div ref={containerRef} className={`dashboard-grid ${isEditable ? "dashboard-grid--editable" : ""} ${isMobile ? "dashboard-grid--mobile" : ""}`}>
 			<Responsive {...gridProps}>
 				{children}
 			</Responsive>

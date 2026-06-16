@@ -8,14 +8,14 @@
  * - /dashboard/:id                # 查看指定仪表盘
  * - /dashboard/:id?mode=edit      # 编辑指定仪表盘
  */
-import { useEffect } from 'react';
-import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { useDashboardStore } from '@/store/dashboardStore';
-import { DashboardHome } from './components/DashboardHome';
-import DashboardList from './components/DashboardList';
-import { DashboardView } from './components/DashboardView';
-import { DashboardEdit } from './components/DashboardEdit';
-import { Spin } from 'antd';
+import { useEffect } from "react";
+import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
+import { useDashboardStore } from "@/store/dashboardStore";
+import { DashboardHome } from "./components/DashboardHome";
+import DashboardList from "./components/DashboardList";
+import { DashboardView } from "./components/DashboardView";
+import { DashboardEdit } from "./components/DashboardEdit";
+import { Spin } from "antd";
 
 const DashboardPage: React.FC = () => {
 	// 手动解析路径参数，因为 dashboard/* 通配符路由无法使用 useParams
@@ -24,9 +24,9 @@ const DashboardPage: React.FC = () => {
 	const navigate = useNavigate();
 
 	// 从路径中提取 ID：/dashboard/:id 或 /dashboard/:id?mode=edit
-	const pathParts = location.pathname.split('/').filter(Boolean);
+	const pathParts = location.pathname.split("/").filter(Boolean);
 	const id = pathParts.length > 1 ? pathParts[1] : undefined;
-	const mode = searchParams.get('mode') as 'list' | 'edit' | null;
+	const mode = searchParams.get("mode") as "list" | "edit" | null;
 
 	const { setPageMode } = useDashboardStore();
 
@@ -35,25 +35,25 @@ const DashboardPage: React.FC = () => {
 
 	useEffect(() => {
 		// 根据URL状态设置页面模式
-		if (mode === 'list') {
-			setPageMode('list');
-		} else if (mode === 'edit') {
-			setPageMode('edit');
+		if (mode === "list") {
+			setPageMode("list");
+		} else if (mode === "edit") {
+			setPageMode("edit");
 		} else if (id) {
-			setPageMode('view');
+			setPageMode("view");
 		} else {
-			setPageMode('home');
+			setPageMode("home");
 		}
 	}, [id, mode, location.key, setPageMode]);
 
 	// 路由逻辑
 	// 1. 无id, mode=list → 显示列表
-	if (!id && mode === 'list') {
+	if (!id && mode === "list") {
 		return <DashboardList key={renderKey} />;
 	}
 
 	// 2. 有id, mode=edit → 显示编辑
-	if (id && mode === 'edit') {
+	if (id && mode === "edit") {
 		return <DashboardEdit dashboardId={id} key={renderKey} />;
 	}
 

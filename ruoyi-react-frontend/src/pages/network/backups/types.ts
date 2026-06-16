@@ -2,11 +2,11 @@
  * 配置备份类型定义
  */
 
-import type { ConfigBackup } from '@/types';
+import type { ConfigBackup } from "@/types";
 
 // 差异行类型
 export interface DiffLine {
-  type: 'same' | 'removed' | 'added' | 'empty';
+  type: "same" | "removed" | "added" | "empty";
   content: string;
   lineNum?: number;
 }

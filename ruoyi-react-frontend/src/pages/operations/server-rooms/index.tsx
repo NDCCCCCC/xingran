@@ -2,37 +2,37 @@
  * 机房管理页面
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
-import type { FC } from 'react';
+import { useState, useCallback, useEffect, useRef } from "react";
+import type { FC } from "react";
 import {
   Table, Button, Space, Modal, Form, Input, Select,
   Tag, Card, Row, Col, Alert, Radio, Layout,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+} from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined,
   CheckCircleOutlined, StopOutlined, AppstoreOutlined, TableOutlined,
   ImportOutlined, ExportOutlined,
-} from '@ant-design/icons';
-import type { ServerRoom, Building, Floor } from '@/types';
-import { serverRoomApi, buildingApi, floorApi } from '@/lib/opsApi';
-import { useTableManager } from '@/hooks/useTableManager';
-import { usePagination } from '@/hooks/usePagination';
-import { useSidebarDeptFilter } from '@/hooks/useSidebarDeptFilter';
-import { handleApiError, handleSuccess, isFormValidationError } from '@/utils/errorHandler';
-import { createStatusColumn, createDateTimeColumn } from '@/utils/tableHelpers';
-import { fetchServerRoomStatistics } from '@/utils/statisticsHelper';
-import ActionButtons from '@/components/shared/ActionButtons';
-import ExcelImport from '@/components/shared/ExcelImport';
-import ExcelExport from '@/components/shared/ExcelExport';
-import { DeptSidebar } from '@/components/operations/DeptSidebar';
-import { StatisticsCards } from '@/components/operations/StatisticsCards';
+} from "@ant-design/icons";
+import type { ServerRoom, Building, Floor } from "@/types";
+import { serverRoomApi, buildingApi, floorApi } from "@/lib/opsApi";
+import { useTableManager } from "@/hooks/useTableManager";
+import { usePagination } from "@/hooks/usePagination";
+import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
+import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
+import { createStatusColumn, createDateTimeColumn } from "@/utils/tableHelpers";
+import { fetchServerRoomStatistics } from "@/utils/statisticsHelper";
+import ActionButtons from "@/components/shared/ActionButtons";
+import ExcelImport from "@/components/shared/ExcelImport";
+import ExcelExport from "@/components/shared/ExcelExport";
+import { DeptSidebar } from "@/components/operations/DeptSidebar";
+import { StatisticsCards } from "@/components/operations/StatisticsCards";
 
 const { Option } = Select;
 const { TextArea } = Input;
 const { Content } = Layout;
 
-type ViewMode = 'table' | 'card';
+type ViewMode = "table" | "card";
 
 interface BuildingOption {
   id: string;
@@ -53,7 +53,7 @@ interface Statistics {
 }
 
 const ServerRoomManagement: FC = () => {
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
@@ -70,7 +70,7 @@ const ServerRoomManagement: FC = () => {
   });
 
   // 使用 ref 存储最新的 selectedDeptId，避免闭包问题
-  const selectedDeptIdRef = useRef<string>('');
+  const selectedDeptIdRef = useRef<string>("");
   useEffect(() => {
     selectedDeptIdRef.current = selectedDeptId;
   }, [selectedDeptId]);
@@ -115,7 +115,7 @@ const ServerRoomManagement: FC = () => {
     try {
       return await fetchServerRoomStatistics();
     } catch (error) {
-      handleApiError(error, '加载统计数据', false);
+      handleApiError(error, "加载统计数据", false);
       return { total: 0, active: 0, inactive: 0 };
     }
   }, []);
@@ -132,7 +132,7 @@ const ServerRoomManagement: FC = () => {
         orgId: b.orgId,
       })));
     } catch (error) {
-      handleApiError(error, '加载楼宇选项', false);
+      handleApiError(error, "加载楼宇选项", false);
     }
   }, []);
 
@@ -146,11 +146,11 @@ const ServerRoomManagement: FC = () => {
       const floors = result.data?.list || [];
       setFloorOptions(floors.map((f: Floor) => ({
         id: f.id,
-        name: f.name || '',
+        name: f.name || "",
         floorNo: String(f.floorNo),
       })));
     } catch (error) {
-      handleApiError(error, '加载楼层选项', false);
+      handleApiError(error, "加载楼层选项", false);
     }
   }, []);
 
@@ -167,10 +167,10 @@ const ServerRoomManagement: FC = () => {
 
   // 部门变化时清空搜索表单并加载楼宇选项
   useEffect(() => {
-    searchForm.setFieldValue('buildingId', undefined);
-    searchForm.setFieldValue('floorNo', undefined);
-    searchForm.setFieldValue('name', undefined);
-    searchForm.setFieldValue('status', undefined);
+    searchForm.setFieldValue("buildingId", undefined);
+    searchForm.setFieldValue("floorNo", undefined);
+    searchForm.setFieldValue("name", undefined);
+    searchForm.setFieldValue("status", undefined);
     loadBuildingOptions(selectedDeptId || undefined);
   }, [selectedDeptId, searchForm, loadBuildingOptions]);
 
@@ -179,38 +179,38 @@ const ServerRoomManagement: FC = () => {
       const values = await serverRoomForm.validateFields() as Partial<ServerRoom>;
       if (editingServerRoom) {
         await serverRoomApi.update(editingServerRoom.id, values);
-        handleSuccess('更新');
+        handleSuccess("更新");
       } else {
         await serverRoomApi.create(values);
-        handleSuccess('创建');
+        handleSuccess("创建");
       }
       handleModalClose();
       refreshData();
     } catch (error: unknown) {
       if (isFormValidationError(error)) return;
-      handleApiError(error, '操作');
+      handleApiError(error, "操作");
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       await serverRoomApi.delete(id);
-      handleSuccess('删除');
+      handleSuccess("删除");
       refreshData();
     } catch (error) {
-      handleApiError(error, '删除');
+      handleApiError(error, "删除");
     }
   };
 
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) return;
     try {
-      await serverRoomApi.batch('delete', { ids: selectedRowKeys });
-      handleSuccess('批量删除');
+      await serverRoomApi.batch("delete", { ids: selectedRowKeys });
+      handleSuccess("批量删除");
       resetSelection();
       refreshData();
     } catch (error) {
-      handleApiError(error, '批量删除');
+      handleApiError(error, "批量删除");
     }
   };
 
@@ -226,7 +226,7 @@ const ServerRoomManagement: FC = () => {
       if (selectedDeptId && buildingOptions.length > 0) {
         const firstBuilding = buildingOptions.find(b => b.orgId === selectedDeptId);
         if (firstBuilding) {
-          serverRoomForm.setFieldValue('buildingId', firstBuilding.id);
+          serverRoomForm.setFieldValue("buildingId", firstBuilding.id);
           await loadFloorOptions(firstBuilding.id);
         }
       }
@@ -239,36 +239,36 @@ const ServerRoomManagement: FC = () => {
   };
 
   const columns: ColumnsType<ServerRoom> = [
-    { title: '机房名称', dataIndex: 'name', key: 'name', width: 150 },
+    { title: "机房名称", dataIndex: "name", key: "name", width: 150 },
     {
-      title: '所在楼宇',
-      dataIndex: 'buildingName',
-      key: 'buildingName',
+      title: "所在楼宇",
+      dataIndex: "buildingName",
+      key: "buildingName",
       width: 120,
       render: (_, record) => record.buildingName || record.buildingId,
     },
     {
-      title: '楼层',
-      dataIndex: 'floorName',
-      key: 'floorName',
+      title: "楼层",
+      dataIndex: "floorName",
+      key: "floorName",
       width: 100,
-      render: (_, record) => record.floorName || record.floorNo || '-',
+      render: (_, record) => record.floorName || record.floorNo || "-",
     },
-    createStatusColumn('status', { width: 100 }),
-    { title: '描述', dataIndex: 'remark', key: 'remark', ellipsis: true },
-    createDateTimeColumn('createdAt', { width: 180 }),
+    createStatusColumn("status", { width: 100 }),
+    { title: "描述", dataIndex: "remark", key: "remark", ellipsis: true },
+    createDateTimeColumn("createdAt", { width: 180 }),
     {
-      title: '操作', key: 'action',
+      title: "操作", key: "action",
       render: (_, record) => {
         const actions = [
-          { key: 'edit', label: '编辑', icon: <EditOutlined />, onClick: () => openModal(record) },
+          { key: "edit", label: "编辑", icon: <EditOutlined />, onClick: () => openModal(record) },
           {
-            key: 'delete', label: '删除', icon: <DeleteOutlined />, danger: true,
+            key: "delete", label: "删除", icon: <DeleteOutlined />, danger: true,
             onClick: () => {
               Modal.confirm({
-                title: '确定要删除这个机房吗？',
-                okText: '确定',
-                cancelText: '取消',
+                title: "确定要删除这个机房吗？",
+                okText: "确定",
+                cancelText: "取消",
                 okButtonProps: { danger: true },
                 onOk: () => handleDelete(record.id),
               });
@@ -281,7 +281,7 @@ const ServerRoomManagement: FC = () => {
   ];
 
   const renderCardView = () => {
-    if (serverRooms.length === 0) return <div style={{ textAlign: 'center', padding: '40px', color: 'var(--theme-text-tertiary, #999)' }}>暂无数据</div>;
+    if (serverRooms.length === 0) return <div style={{ textAlign: "center", padding: "40px", color: "var(--theme-text-tertiary, #999)" }}>暂无数据</div>;
     return (
       <Row gutter={[16, 16]}>
         {serverRooms.map((room) => (
@@ -292,12 +292,12 @@ const ServerRoomManagement: FC = () => {
                 <EditOutlined key="edit" onClick={() => openModal(room)} />,
                 <DeleteOutlined
                   key="delete"
-                  style={{ color: 'var(--theme-error, #ff4d4f)' }}
+                  style={{ color: "var(--theme-error, #ff4d4f)" }}
                   onClick={() => {
                     Modal.confirm({
-                      title: '确定要删除这个机房吗？',
-                      okText: '确定',
-                      cancelText: '取消',
+                      title: "确定要删除这个机房吗？",
+                      okText: "确定",
+                      cancelText: "取消",
                       okButtonProps: { danger: true },
                       onOk: () => handleDelete(room.id),
                     });
@@ -307,9 +307,9 @@ const ServerRoomManagement: FC = () => {
             >
               <Card.Meta
                 title={
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span>{room.name}</span>
-                    <Tag color={room.status === 0 ? 'success' : 'error'}>{room.status === 0 ? '正常' : '停用'}</Tag>
+                    <Tag color={room.status === 0 ? "success" : "error"}>{room.status === 0 ? "正常" : "停用"}</Tag>
                   </div>
                 }
                 description={
@@ -326,19 +326,19 @@ const ServerRoomManagement: FC = () => {
   };
 
   return (
-    <Layout style={{ background: '#000', minHeight: 'calc(100vh - 64px)' }}>
+    <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
       <DeptSidebar selectedDeptId={selectedDeptId} onSelect={handleDeptSelect} />
-      <Content style={{ background: '#fff' }}>
+      <Content style={{ background: "#fff" }}>
         <StatisticsCards
           show={total > 10}
           items={[
-            { title: '总机房数', value: statistics.total, prefix: <CheckCircleOutlined /> },
-            { title: '正常机房', value: statistics.active, styles: { content: { color: 'var(--theme-success, #3f8600)' } }, prefix: <CheckCircleOutlined /> },
-            { title: '停用机房', value: statistics.inactive, styles: { content: { color: 'var(--theme-error, #cf1322)' } }, prefix: <StopOutlined /> },
+            { title: "总机房数", value: statistics.total, prefix: <CheckCircleOutlined /> },
+            { title: "正常机房", value: statistics.active, styles: { content: { color: "var(--theme-success, #3f8600)" } }, prefix: <CheckCircleOutlined /> },
+            { title: "停用机房", value: statistics.inactive, styles: { content: { color: "var(--theme-error, #cf1322)" } }, prefix: <StopOutlined /> },
           ]}
         />
         <Card style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="buildingId" label="所在楼宇">
                 <Select
@@ -379,21 +379,21 @@ const ServerRoomManagement: FC = () => {
                 const currentFilters: Record<string, unknown> = {};
                 Object.keys(values).forEach(key => {
                   const value = values[key];
-                  if (value !== undefined && value !== null && value !== '') {
+                  if (value !== undefined && value !== null && value !== "") {
                     currentFilters[key] = value;
                   }
                 });
                 setExportFilters(currentFilters);
                 setExportVisible(true);
               }}>导出</Button>
-              {selectedRowKeys.length > 0 && <Button icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
+              {selectedRowKeys.length > 0 && <Button icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
               <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增机房</Button>
             </Space>
           </div>
           {selectedRowKeys.length > 0 && <Alert title={<span>已选择 <strong>{selectedRowKeys.length}</strong> 个机房，<Button type="link" size="small" onClick={() => setSelectedRowKeys([])} style={{ padding: 0 }}>取消选择</Button></span>} type="info" showIcon style={{ marginTop: 12 }} />}
         </Card>
         <Card>
-          {viewMode === 'table' ? (
+          {viewMode === "table" ? (
             <Table
               rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
               columns={columns}
@@ -410,7 +410,7 @@ const ServerRoomManagement: FC = () => {
 	                const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
 	                Object.keys(formValues).forEach(key => {
 	                  const value = formValues[key];
-	                  if (value !== undefined && value !== null && value !== '') {
+	                  if (value !== undefined && value !== null && value !== "") {
 	                    searchParams[key] = value;
 	                  }
 	                });
@@ -419,20 +419,20 @@ const ServerRoomManagement: FC = () => {
             />
           ) : renderCardView()}
         </Card>
-        <Modal title={editingServerRoom ? '编辑机房' : '新增机房'} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); serverRoomForm.resetFields(); setEditingServerRoom(null); setFloorOptions([]); }} width={600}>
+        <Modal title={editingServerRoom ? "编辑机房" : "新增机房"} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); serverRoomForm.resetFields(); setEditingServerRoom(null); setFloorOptions([]); }} width={600}>
           <Form form={serverRoomForm} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
-            <Form.Item name="buildingId" label="所在楼宇" rules={[{ required: true, message: '请选择所在楼宇' }]}>
+            <Form.Item name="buildingId" label="所在楼宇" rules={[{ required: true, message: "请选择所在楼宇" }]}>
               <Select
                 placeholder="请选择所在楼宇"
                 className="user-form-input"
                 options={buildingOptions.map(b => ({ label: b.name, value: b.id }))}
                 onChange={(value) => {
                   loadFloorOptions(value);
-                  serverRoomForm.setFieldValue('floorId', undefined);
+                  serverRoomForm.setFieldValue("floorId", undefined);
                 }}
               />
             </Form.Item>
-            <Form.Item name="floorId" label="楼层" rules={[{ required: true, message: '请选择楼层' }]}>
+            <Form.Item name="floorId" label="楼层" rules={[{ required: true, message: "请选择楼层" }]}>
               <Select
                 placeholder="请选择楼层"
                 className="user-form-input"
@@ -440,11 +440,11 @@ const ServerRoomManagement: FC = () => {
                 options={floorOptions.map(f => ({ label: `${f.floorNo} - ${f.name}`, value: f.id }))}
               />
             </Form.Item>
-            <Form.Item name="name" label="机房名称" rules={[{ required: true, message: '请输入机房名称' }]}>
+            <Form.Item name="name" label="机房名称" rules={[{ required: true, message: "请输入机房名称" }]}>
               <Input placeholder="请输入机房名称" className="user-form-input" />
             </Form.Item>
-            <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
-              <Select placeholder="请选择状态" className="user-form-input" options={[{ label: '正常', value: 0 }, { label: '停用', value: 1 }]} />
+            <Form.Item name="status" label="状态" rules={[{ required: true, message: "请选择状态" }]}>
+              <Select placeholder="请选择状态" className="user-form-input" options={[{ label: "正常", value: 0 }, { label: "停用", value: 1 }]} />
             </Form.Item>
             <Form.Item name="remark" label="描述">
               <TextArea rows={3} placeholder="请输入描述" className="user-form-input" />

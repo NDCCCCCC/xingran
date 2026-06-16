@@ -2,13 +2,13 @@
  * 默认仪表盘视图
  * 优先级：用户默认 > 系统仪表盘 > 欢迎页
  */
-import { useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useDashboardStore } from '@/store/dashboardStore';
-import { DashboardView } from './DashboardView';
-import { Empty, Button, Space, Tag } from 'antd';
-import { PlusOutlined, UnorderedListOutlined } from '@ant-design/icons';
-import { DASHBOARD } from '@/constants/routes';
+import { useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { useDashboardStore } from "@/store/dashboardStore";
+import { DashboardView } from "./DashboardView";
+import { Empty, Button, Space, Tag } from "antd";
+import { PlusOutlined, UnorderedListOutlined } from "@ant-design/icons";
+import { DASHBOARD } from "@/constants/routes";
 
 interface DashboardHomeProps {
 	isEmbedded?: boolean; // 是否作为嵌入视图显示
@@ -28,7 +28,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ isEmbedded = false
 
 	if (defaultDashboardLoading) {
 		return (
-			<div style={{ padding: '48px', textAlign: 'center' }}>
+			<div style={{ padding: "48px", textAlign: "center" }}>
 				<div>加载中...</div>
 			</div>
 		);
@@ -36,13 +36,13 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ isEmbedded = false
 
 	if (!defaultDashboard) {
 		return (
-			<div style={{ padding: '48px', textAlign: 'center' }}>
+			<div style={{ padding: "48px", textAlign: "center" }}>
 				<Empty
 					image={Empty.PRESENTED_IMAGE_SIMPLE}
 					description={
 						<div>
 							<div style={{ fontSize: 16, marginBottom: 8 }}>您还没有设置默认仪表盘</div>
-							<div style={{ color: 'var(--theme-text-tertiary, #999)' }}>创建仪表盘或从列表中选择一个设为默认</div>
+							<div style={{ color: "var(--theme-text-tertiary, #999)" }}>创建仪表盘或从列表中选择一个设为默认</div>
 						</div>
 					}
 				>

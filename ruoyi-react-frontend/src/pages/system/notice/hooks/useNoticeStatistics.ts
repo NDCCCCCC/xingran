@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { getNoticeList } from '@/lib/noticeApi';
+import { useState, useCallback } from "react";
+import { getNoticeList } from "@/lib/noticeApi";
 
 export interface NoticeStatistics {
   total: number;
@@ -43,7 +43,7 @@ export function useNoticeStatistics(): UseNoticeStatisticsResult {
         scheduled: scheduledCount,
       });
     } catch (error) {
-      console.error('加载统计数据失败:', error);
+      console.error("加载统计数据失败:", error);
     }
   }, []);
 

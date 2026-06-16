@@ -1,5 +1,5 @@
 // 验证码相关API服务
-import { post, postFormData } from '@/lib/api';
+import { post, postFormData } from "@/lib/api";
 import type {
   CaptchaResponse,
   CaptchaConfig,
@@ -10,25 +10,25 @@ import type {
   CaptchaBackgroundUpdateRequest,
   CaptchaBackground,
   StatisticsResponse,
-} from '@/types/captcha';
+} from "@/types/captcha";
 
 // ==================== 验证码相关API ====================
 
 // 获取验证码
 export async function getCaptcha(): Promise<CaptchaResponse> {
-  const response = await post<CaptchaResponse>('/system/auth/captcha', {});
+  const response = await post<CaptchaResponse>("/system/auth/captcha", {});
   return response.data!;
 }
 
 // 获取验证码配置
 export async function getCaptchaConfig(): Promise<CaptchaConfig> {
-  const response = await post<CaptchaConfig>('/system/auth/captcha/config', {});
+  const response = await post<CaptchaConfig>("/system/auth/captcha/config", {});
   return response.data!;
 }
 
 // 验证滑动验证码
 export async function verifySliderCaptcha(data: SliderVerifyRequest): Promise<SliderVerifyResponse> {
-  const response = await post<SliderVerifyResponse>('/system/auth/captcha/verify/slider', data);
+  const response = await post<SliderVerifyResponse>("/system/auth/captcha/verify/slider", data);
   return response.data!;
 }
 
@@ -36,7 +36,7 @@ export async function verifySliderCaptcha(data: SliderVerifyRequest): Promise<Sl
 
 // 获取背景图列表
 export async function getCaptchaBackgroundList(params: CaptchaBackgroundListRequest): Promise<CaptchaBackgroundListResponse> {
-  const response = await post<CaptchaBackgroundListResponse>('/system/captcha-backgrounds/list', params);
+  const response = await post<CaptchaBackgroundListResponse>("/system/captcha-backgrounds/list", params);
   return response.data!;
 }
 
@@ -48,16 +48,16 @@ export async function uploadCaptchaBackground(file: File, params: {
   remark?: string;
 }): Promise<CaptchaBackground> {
   const formData = new FormData();
-  formData.append('file', file);
-  formData.append('pieceShape', params.pieceShape);
-  formData.append('difficultyLevel', params.difficultyLevel.toString());
+  formData.append("file", file);
+  formData.append("pieceShape", params.pieceShape);
+  formData.append("difficultyLevel", params.difficultyLevel.toString());
   if (params.allowedShapes) {
-    formData.append('allowedShapes', JSON.stringify(params.allowedShapes));
+    formData.append("allowedShapes", JSON.stringify(params.allowedShapes));
   }
   if (params.remark) {
-    formData.append('remark', params.remark);
+    formData.append("remark", params.remark);
   }
-  const response = await postFormData<CaptchaBackground>('/system/captcha-backgrounds/upload', formData);
+  const response = await postFormData<CaptchaBackground>("/system/captcha-backgrounds/upload", formData);
   return response.data!;
 }
 
@@ -87,13 +87,13 @@ export async function toggleCaptchaBackgroundStatus(id: string): Promise<Captcha
 
 // 获取统计信息
 export async function getCaptchaBackgroundStatistics(): Promise<StatisticsResponse> {
-  const response = await post<StatisticsResponse>('/system/captcha-backgrounds/statistics', {});
+  const response = await post<StatisticsResponse>("/system/captcha-backgrounds/statistics", {});
   return response.data!;
 }
 
 // 预加载缓存
 export async function preloadCaptchaCache(): Promise<{ preloaded: number; message: string }> {
-  const response = await post<{ preloaded: number; message: string }>('/system/captcha-backgrounds/preload', {});
+  const response = await post<{ preloaded: number; message: string }>("/system/captcha-backgrounds/preload", {});
   return response.data!;
 }
 

@@ -3,12 +3,12 @@
  * 字典数据管理 Hook
  */
 
-import { useState, useCallback } from 'react';
-import { message } from 'antd';
-import type { FormInstance } from 'antd/es/form';
-import type { DictType, DictData } from '@/types';
-import { post } from '@/lib/api';
-import { handleApiError } from '@/utils/errorHandler';
+import { useState, useCallback } from "react";
+import { message } from "antd";
+import type { FormInstance } from "antd/es/form";
+import type { DictType, DictData } from "@/types";
+import { post } from "@/lib/api";
+import { handleApiError } from "@/utils/errorHandler";
 
 export interface DictStatistics {
   total: number;
@@ -39,7 +39,7 @@ export function useDictData(searchForm: FormInstance<unknown>, dataSearchForm: F
   const [dictDataList, setDictDataList] = useState<DictData[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
-  const [selectedType, setSelectedType] = useState<string>('');
+  const [selectedType, setSelectedType] = useState<string>("");
   const [typeStatistics, setTypeStatistics] = useState<DictStatistics>({
     total: 0,
     active: 0,
@@ -56,7 +56,7 @@ export function useDictData(searchForm: FormInstance<unknown>, dataSearchForm: F
     setLoading(true);
     try {
       const values = searchForm.getFieldsValue() as Record<string, unknown>;
-      const result = await post('/system/dicts/types/list', {
+      const result = await post("/system/dicts/types/list", {
         current: params.current || current,
         pageSize: params.pageSize || pageSize,
         ...(values as object),
@@ -64,7 +64,7 @@ export function useDictData(searchForm: FormInstance<unknown>, dataSearchForm: F
       setDictTypes(result.data.list);
       setTotal(result.data.total);
     } catch (error) {
-      console.error('加载字典类型失败:', error);
+      console.error("加载字典类型失败:", error);
     } finally {
       setLoading(false);
     }
@@ -73,13 +73,13 @@ export function useDictData(searchForm: FormInstance<unknown>, dataSearchForm: F
   // 加载字典数据列表
   const loadDictData = useCallback(async (params: Record<string, unknown> = {}) => {
     if (!selectedType) {
-      message.warning('请先选择字典类型');
+      message.warning("请先选择字典类型");
       return;
     }
     setLoading(true);
     try {
       const values = dataSearchForm.getFieldsValue() as Record<string, unknown>;
-      const result = await post('/system/dicts/data/list', {
+      const result = await post("/system/dicts/data/list", {
         current: params.current || current,
         pageSize: params.pageSize || pageSize,
         dictType: selectedType,
@@ -88,7 +88,7 @@ export function useDictData(searchForm: FormInstance<unknown>, dataSearchForm: F
       setDictDataList(result.data.list);
       setTotal(result.data.total);
     } catch (error) {
-      console.error('加载字典数据失败:', error);
+      console.error("加载字典数据失败:", error);
     } finally {
       setLoading(false);
     }
@@ -97,7 +97,7 @@ export function useDictData(searchForm: FormInstance<unknown>, dataSearchForm: F
   // 加载字典类型统计数据
   const loadTypeStatistics = useCallback(async () => {
     try {
-      const result = await post<{ list: DictType[] }>('/system/dicts/types/list', { current: 1, pageSize: 1000 });
+      const result = await post<{ list: DictType[] }>("/system/dicts/types/list", { current: 1, pageSize: 1000 });
       const allTypes = result.data?.list || [];
       const activeCount = allTypes.filter((t: DictType) => t.status === 0).length;
       const inactiveCount = allTypes.filter((t: DictType) => t.status === 1).length;
@@ -107,7 +107,7 @@ export function useDictData(searchForm: FormInstance<unknown>, dataSearchForm: F
         inactive: inactiveCount,
       });
     } catch (error) {
-      handleApiError(error, '加载统计数据', false);
+      handleApiError(error, "加载统计数据", false);
     }
   }, []);
 
@@ -118,7 +118,7 @@ export function useDictData(searchForm: FormInstance<unknown>, dataSearchForm: F
       return;
     }
     try {
-      const result = await post<{ list: DictData[] }>('/system/dicts/data/list', { current: 1, pageSize: 1000, dictType: selectedType });
+      const result = await post<{ list: DictData[] }>("/system/dicts/data/list", { current: 1, pageSize: 1000, dictType: selectedType });
       const allData = result.data?.list || [];
       const activeCount = allData.filter((d: DictData) => d.status === 0).length;
       const inactiveCount = allData.filter((d: DictData) => d.status === 1).length;
@@ -128,7 +128,7 @@ export function useDictData(searchForm: FormInstance<unknown>, dataSearchForm: F
         inactive: inactiveCount,
       });
     } catch (error) {
-      handleApiError(error, '加载统计数据', false);
+      handleApiError(error, "加载统计数据", false);
     }
   }, [selectedType]);
 

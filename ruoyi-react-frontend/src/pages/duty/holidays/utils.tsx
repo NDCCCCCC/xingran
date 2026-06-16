@@ -6,31 +6,31 @@
  * （D-06 Wave 2: xlsx 按需加载）
  */
 
-import { message } from 'antd';
-import dayjs from 'dayjs';
-import type { ExcelHolidayRow, ExcelImportOptions, HolidayType } from './types';
-import { batchCreateHolidays, type Holiday } from '@/lib/dutyApi';
+import { message } from "antd";
+import dayjs from "dayjs";
+import type { ExcelHolidayRow, ExcelImportOptions, HolidayType } from "./types";
+import { batchCreateHolidays, type Holiday } from "@/lib/dutyApi";
 
 /** 解析节假日类型 */
 function parseHolidayType(typeStr: string): HolidayType {
   const typeLower = typeStr.toLowerCase();
-  if (typeLower.includes('法定') || typeLower === 'legal') {
-    return 'legal';
-  } else if (typeLower.includes('调休') || typeLower.includes('工作') || typeLower === 'workday') {
-    return 'workday';
-  } else if (typeLower.includes('自定义') || typeLower === 'custom') {
-    return 'custom';
+  if (typeLower.includes("法定") || typeLower === "legal") {
+    return "legal";
+  } else if (typeLower.includes("调休") || typeLower.includes("工作") || typeLower === "workday") {
+    return "workday";
+  } else if (typeLower.includes("自定义") || typeLower === "custom") {
+    return "custom";
   }
-  return 'legal';
+  return "legal";
 }
 
 /** 解析是否休息 */
 function parseIsOffday(isOffdayStr: string | boolean | number): boolean {
-  if (typeof isOffdayStr === 'boolean') {
+  if (typeof isOffdayStr === "boolean") {
     return isOffdayStr;
   }
   const str = String(isOffdayStr).toLowerCase();
-  return str === '是' || str === 'true' || str === '1' || str === '休息';
+  return str === "是" || str === "true" || str === "1" || str === "休息";
 }
 
 /** 处理 Excel 导入 */
@@ -41,7 +41,7 @@ export async function handleExcelImport(
   const { file, onError } = options;
   try {
     // D-06: 动态加载 xlsx，避免进入 holidays 页面时即加载 ~150KB gzip
-    const XLSX = await import('xlsx');
+    const XLSX = await import("xlsx");
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data);
     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -49,7 +49,7 @@ export async function handleExcelImport(
 
     // 验证Excel格式（跳过表头）
     if (jsonData.length < 2) {
-      message.error('Excel文件为空或格式不正确');
+      message.error("Excel文件为空或格式不正确");
       return;
     }
 
@@ -69,10 +69,10 @@ export async function handleExcelImport(
 
       // 解析日期
       let formattedDate: string;
-      if (typeof dateStr === 'number') {
+      if (typeof dateStr === "number") {
         // Excel 日期序列号转换
         const date = XLSX.SSF.parse_date_code(dateStr);
-        formattedDate = `${date.y}-${String(date.m).padStart(2, '0')}-${String(date.d).padStart(2, '0')}`;
+        formattedDate = `${date.y}-${String(date.m).padStart(2, "0")}-${String(date.d).padStart(2, "0")}`;
       } else {
         // 字符串日期，尝试多种格式
         const parsed = dayjs(dateStr as string);
@@ -80,18 +80,18 @@ export async function handleExcelImport(
           message.error(`第 ${i + 1} 行：日期格式不正确 - ${dateStr}`);
           return;
         }
-        formattedDate = parsed.format('YYYY-MM-DD');
+        formattedDate = parsed.format("YYYY-MM-DD");
       }
 
       // 解析类型
-      const holidayType = typeof typeStr === 'string' ? parseHolidayType(typeStr) : 'legal';
+      const holidayType = typeof typeStr === "string" ? parseHolidayType(typeStr) : "legal";
 
       // 解析是否休息
       const isOffday = parseIsOffday(isOffdayStr as string | number | boolean);
 
       holidays.push({
         holidayDate: formattedDate,
-        holidayName: (name as string) || '节假日',
+        holidayName: (name as string) || "节假日",
         isOffday,
         holidayType,
         year: Number(year),
@@ -100,39 +100,39 @@ export async function handleExcelImport(
     }
 
     if (holidays.length === 0) {
-      message.error('没有有效的节假日数据');
+      message.error("没有有效的节假日数据");
       return;
     }
 
     // 批量创建
-    await batchCreateHolidays(holidays as Omit<Holiday, 'id' | 'createdAt' | 'createdBy'>[]);
+    await batchCreateHolidays(holidays as Omit<Holiday, "id" | "createdAt" | "createdBy">[]);
     message.success(`成功导入 ${holidays.length} 条节假日记录`);
 
     onSuccess?.();
     options.onSuccess?.(holidays);
   } catch (error: unknown) {
-    console.error('Excel导入失败:', error);
-    const errorMsg = error instanceof Error ? error.message : '未知错误';
+    console.error("Excel导入失败:", error);
+    const errorMsg = error instanceof Error ? error.message : "未知错误";
     message.error(`导入失败: ${errorMsg}`);
-    onError?.(error instanceof Error ? error : new Error('导入失败'));
+    onError?.(error instanceof Error ? error : new Error("导入失败"));
   }
 }
 
 /** 下载Excel模板 */
 export async function downloadTemplate(): Promise<void> {
   // D-06: 动态加载 xlsx，仅在用户点击下载模板时按需加载
-  const XLSX = await import('xlsx');
+  const XLSX = await import("xlsx");
 
   // 创建模板数据（仅表头，不包含示例数据）
   const template = [
-    ['日期', '名称', '类型', '是否休息', '年份', '备注'],
+    ["日期", "名称", "类型", "是否休息", "年份", "备注"],
   ];
 
   // 创建工作簿
   const ws = XLSX.utils.aoa_to_sheet(template);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '节假日模板');
+  XLSX.utils.book_append_sheet(wb, ws, "节假日模板");
 
   // 下载
-  XLSX.writeFile(wb, '节假日导入模板.xlsx');
+  XLSX.writeFile(wb, "节假日导入模板.xlsx");
 }

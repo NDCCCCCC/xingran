@@ -2,4 +2,4 @@
  * Role Columns Export
  */
 
-export { getRoleColumns } from './roleColumns';
+export { getRoleColumns } from "./roleColumns";

@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import type { FC, Key } from 'react';
-import { Form, Select, Tree, Checkbox, message, Spin } from 'antd';
-import { get, post } from '@/lib/api';
-import type { TargetType, DeptTreeNode, RoleOption, UserOption } from '@/types/notice';
+import { useState, useEffect } from "react";
+import type { FC, Key } from "react";
+import { Form, Select, Tree, Checkbox, message, Spin } from "antd";
+import { get, post } from "@/lib/api";
+import type { TargetType, DeptTreeNode, RoleOption, UserOption } from "@/types/notice";
 
 interface TargetSelectorProps {
   targetType: TargetType;
@@ -40,11 +40,11 @@ const TargetSelector: FC<TargetSelectorProps> = ({
   const loadDeptTree = async () => {
     setLoading(true);
     try {
-      const response = await get<DeptTreeNode[]>('/system/departments/tree');
+      const response = await get<DeptTreeNode[]>("/system/departments/tree");
       setDeptTree(response.data || []);
     } catch (error) {
-      console.error('加载部门树失败:', error);
-      message.error('加载部门树失败');
+      console.error("加载部门树失败:", error);
+      message.error("加载部门树失败");
     } finally {
       setLoading(false);
     }
@@ -54,29 +54,29 @@ const TargetSelector: FC<TargetSelectorProps> = ({
   const loadRoles = async () => {
     setLoading(true);
     try {
-      const response = await post<RoleOption[]>('/system/roles/all', {});
+      const response = await post<RoleOption[]>("/system/roles/all", {});
       setRoles(response.data || []);
     } catch (error) {
-      console.error('加载角色列表失败:', error);
-      message.error('加载角色列表失败');
+      console.error("加载角色列表失败:", error);
+      message.error("加载角色列表失败");
     } finally {
       setLoading(false);
     }
   };
 
   // 加载用户列表
-  const loadUsers = async (search = '') => {
+  const loadUsers = async (search = "") => {
     setLoading(true);
     try {
-      const response = await post<{ list: UserOption[] }>('/system/users/list', {
+      const response = await post<{ list: UserOption[] }>("/system/users/list", {
         username: search || undefined,
         current: 1,
         pageSize: 50,
       });
       setUsers(response.data?.list || []);
     } catch (error) {
-      console.error('加载用户列表失败:', error);
-      message.error('加载用户列表失败');
+      console.error("加载用户列表失败:", error);
+      message.error("加载用户列表失败");
     } finally {
       setLoading(false);
     }
@@ -124,7 +124,7 @@ const TargetSelector: FC<TargetSelectorProps> = ({
                 expandedKeys={expandedKeys}
                 onExpand={setExpandedKeys}
                 treeData={deptTree}
-                fieldNames={{ title: 'title', key: 'key', children: 'children' }}
+                fieldNames={{ title: "title", key: "key", children: "children" }}
               />
             </div>
             <div className="mt-2 text-sm text-gray-500">
@@ -186,15 +186,15 @@ const TargetSelector: FC<TargetSelectorProps> = ({
 
   return (
     <div className="space-y-4">
-      <Form.Item label="接收范围" rules={[{ required: true, message: '请选择接收范围' }]}>
+      <Form.Item label="接收范围" rules={[{ required: true, message: "请选择接收范围" }]}>
         <Select
           value={targetType}
           onChange={onTargetTypeChange}
           options={[
-            { label: '全部用户', value: 0 },
-            { label: '指定部门', value: 1 },
-            { label: '指定角色', value: 2 },
-            { label: '指定用户', value: 3 },
+            { label: "全部用户", value: 0 },
+            { label: "指定部门", value: 1 },
+            { label: "指定角色", value: 2 },
+            { label: "指定用户", value: 3 },
           ]}
         />
       </Form.Item>

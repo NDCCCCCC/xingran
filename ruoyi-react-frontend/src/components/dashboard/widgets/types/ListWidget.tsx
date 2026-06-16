@@ -4,13 +4,13 @@
  * 以简洁的列表形式展示数据
  */
 
-import { useMemo } from 'react';
-import { List } from 'antd';
-import { ClockCircleOutlined } from '@ant-design/icons';
-import type { ListDisplayConfig, WidgetConfig } from '@/types/dashboard';
-import { BaseWidget } from '../base/BaseWidget';
-import type { BaseWidgetProps } from '../base/BaseWidget';
-import { useWidgetData } from '@/hooks/useWidgetData';
+import { useMemo } from "react";
+import { List } from "antd";
+import { ClockCircleOutlined } from "@ant-design/icons";
+import type { ListDisplayConfig, WidgetConfig } from "@/types/dashboard";
+import { BaseWidget } from "../base/BaseWidget";
+import type { BaseWidgetProps } from "../base/BaseWidget";
+import { useWidgetData } from "@/hooks/useWidgetData";
 
 interface ListWidgetProps {
 	widget: WidgetConfig;
@@ -29,7 +29,7 @@ export const ListWidget: React.FC<ListWidgetProps> = ({
 	const { data, loading, error, refresh } = useWidgetData(widget);
 	// 提取列表数据
 	const listData = useMemo(() => {
-		if (!data || typeof data !== 'object') return [];
+		if (!data || typeof data !== "object") return [];
 		const d = data as Record<string, unknown>;
 		const items = extractArray(d.list ?? d.data ?? d.items ?? []);
 
@@ -105,5 +105,5 @@ function formatTime(timeStr: string): string {
 	if (days > 0) return `${days}天前`;
 	if (hours > 0) return `${hours}小时前`;
 	if (minutes > 0) return `${minutes}分钟前`;
-	return '刚刚';
+	return "刚刚";
 }

@@ -4,13 +4,13 @@
  * 以表格形式展示数据列表
  */
 
-import { useMemo } from 'react';
-import { Table } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import type { TableDisplayConfig, WidgetConfig } from '@/types/dashboard';
-import { BaseWidget } from '../base/BaseWidget';
-import type { BaseWidgetProps } from '../base/BaseWidget';
-import { useWidgetData } from '@/hooks/useWidgetData';
+import { useMemo } from "react";
+import { Table } from "antd";
+import type { ColumnsType } from "antd/es/table";
+import type { TableDisplayConfig, WidgetConfig } from "@/types/dashboard";
+import { BaseWidget } from "../base/BaseWidget";
+import type { BaseWidgetProps } from "../base/BaseWidget";
+import { useWidgetData } from "@/hooks/useWidgetData";
 
 interface TableWidgetProps {
 	widget: WidgetConfig;
@@ -49,7 +49,7 @@ export const TableWidget: React.FC<TableWidgetProps> = ({
 
 		// 如果没有配置列，从数据中自动推断列
 		// 确保data存在且是对象
-		if (!data || typeof data !== 'object') {
+		if (!data || typeof data !== "object") {
 			return [];
 		}
 
@@ -71,7 +71,7 @@ export const TableWidget: React.FC<TableWidgetProps> = ({
 
 	// 提取表格数据
 	const tableData = useMemo(() => {
-		if (!data || typeof data !== 'object') return [];
+		if (!data || typeof data !== "object") return [];
 		const d = data as Record<string, unknown>;
 		return extractArray(d.list ?? d.data ?? d.items ?? []);
 	}, [data]);
@@ -80,10 +80,10 @@ export const TableWidget: React.FC<TableWidgetProps> = ({
 	function renderCustom(renderer: string) {
 		// 简单的自定义渲染实现
 		return (value: unknown) => {
-			if (renderer === 'status') {
+			if (renderer === "status") {
 				return <span>{value as string}</span>;
 			}
-			if (renderer === 'date') {
+			if (renderer === "date") {
 				return new Date(value as string).toLocaleString();
 			}
 			return value as string;
@@ -105,9 +105,9 @@ export const TableWidget: React.FC<TableWidgetProps> = ({
 				dataSource={tableData}
 				pagination={display.pagination?.enabled ? {
 					pageSize: display.pagination.pageSize,
-					size: 'small',
+					size: "small",
 				} : false}
-				size={display.size ?? 'middle'}
+				size={display.size ?? "middle"}
 				bordered={display.bordered ?? false}
 				scroll={{ y: 300 }}
 				rowKey={(record) => String((record as Record<string, unknown>).id ?? JSON.stringify(record))}

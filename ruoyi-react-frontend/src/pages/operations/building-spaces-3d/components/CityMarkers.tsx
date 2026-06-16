@@ -3,11 +3,11 @@
  * 在地图上显示湖北省各城市的位置标记
  */
 
-import { CustomOverlay, InfoWindow } from '@uiw/react-baidu-map';
-import { useState, useCallback, useMemo } from 'react';
-import { EnvironmentOutlined, BuildOutlined } from '@ant-design/icons';
-import type { CityGroup, BuildingItem } from './types';
-import { MARKER_COLORS } from './constants';
+import { CustomOverlay, InfoWindow } from "@uiw/react-baidu-map";
+import { useState, useCallback, useMemo } from "react";
+import { EnvironmentOutlined, BuildOutlined } from "@ant-design/icons";
+import type { CityGroup, BuildingItem } from "./types";
+import { MARKER_COLORS } from "./constants";
 
 interface CityMarkersProps {
   cities: CityGroup[];
@@ -34,11 +34,11 @@ const CityMarkers: React.FC<CityMarkersProps> = ({
   }, [onCityClick]);
 
   const handleBuildingMouseEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    e.currentTarget.style.background = '#f5f5f5';
+    e.currentTarget.style.background = "#f5f5f5";
   }, []);
 
   const handleBuildingMouseLeave = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    e.currentTarget.style.background = 'transparent';
+    e.currentTarget.style.background = "transparent";
   }, []);
 
   return (
@@ -57,20 +57,20 @@ const CityMarkers: React.FC<CityMarkersProps> = ({
               <div
                 onClick={() => handleMarkerClick(city)}
                 style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "50%",
                   background: isSelected ? MARKER_COLORS.NORMAL.MAIN : MARKER_COLORS.BOUNDARY,
                   border: `3px solid ${isSelected ? MARKER_COLORS.NORMAL.BORDER : MARKER_COLORS.BOUNDARY}`,
                   boxShadow: `0 2px 8px ${MARKER_COLORS.NORMAL.SHADOW}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s',
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  transition: "all 0.3s",
                 }}
               >
-                <EnvironmentOutlined style={{ color: 'var(--theme-text-inverse, #fff)', fontSize: 16 }} />
+                <EnvironmentOutlined style={{ color: "var(--theme-text-inverse, #fff)", fontSize: 16 }} />
               </div>
             </CustomOverlay>
 
@@ -81,26 +81,26 @@ const CityMarkers: React.FC<CityMarkersProps> = ({
                 onClose={handleCloseWindow}
                 visible
               >
-                <div style={{ padding: '12px', minWidth: '200px' }}>
-                  <h3 style={{ margin: '0 0 8px 0', fontSize: 16 }}>{city.name}</h3>
-                  <div style={{ display: 'flex', gap: 16, fontSize: 13 }}>
+                <div style={{ padding: "12px", minWidth: "200px" }}>
+                  <h3 style={{ margin: "0 0 8px 0", fontSize: 16 }}>{city.name}</h3>
+                  <div style={{ display: "flex", gap: 16, fontSize: 13 }}>
                     <div>
                       <BuildOutlined /> {city.buildingCount} 栋楼宇
                     </div>
                   </div>
                   {city.buildings.length > 0 && (
-                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #eee' }}>
-                      <div style={{ fontSize: 12, color: 'var(--theme-text-tertiary, #999)', marginBottom: 8 }}>
+                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #eee" }}>
+                      <div style={{ fontSize: 12, color: "var(--theme-text-tertiary, #999)", marginBottom: 8 }}>
                         主要楼宇：
                       </div>
                       {showMainBuildings.map((building) => (
                         <div
                           key={building.id}
                           style={{
-                            padding: '4px 8px',
-                            cursor: 'pointer',
-                            borderRadius: '4px',
-                            transition: 'background 0.2s',
+                            padding: "4px 8px",
+                            cursor: "pointer",
+                            borderRadius: "4px",
+                            transition: "background 0.2s",
                           }}
                           onMouseEnter={handleBuildingMouseEnter}
                           onMouseLeave={handleBuildingMouseLeave}
@@ -110,7 +110,7 @@ const CityMarkers: React.FC<CityMarkersProps> = ({
                         </div>
                       ))}
                       {hasMoreBuildings && (
-                        <div style={{ fontSize: 12, color: 'var(--theme-text-tertiary, #999)', marginTop: 4 }}>
+                        <div style={{ fontSize: 12, color: "var(--theme-text-tertiary, #999)", marginTop: 4 }}>
                           ...等 {city.buildings.length} 栋楼宇
                         </div>
                       )}

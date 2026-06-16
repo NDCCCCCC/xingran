@@ -8,10 +8,10 @@
  * - 手动刷新
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useDashboardStore } from '@/store/dashboardStore';
-import { dashboardService } from '@/services/dashboardService';
-import type { WidgetConfig } from '@/types/dashboard';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useDashboardStore } from "@/store/dashboardStore";
+import { dashboardService } from "@/services/dashboardService";
+import type { WidgetConfig } from "@/types/dashboard";
 
 export interface UseWidgetPollingOptions {
 	/** 需要轮询的 Widget ID 列表 */
@@ -78,7 +78,7 @@ export function useWidgetPolling(options: UseWidgetPollingOptions): UseWidgetPol
 			} else {
 				// 检查缓存是否过期
 				const cached = getCachedWidgetData(id);
-				if (!cached || typeof cached !== 'object' || !('timestamp' in cached) || (now - (cached as { timestamp: number }).timestamp) > cacheExpiry) {
+				if (!cached || typeof cached !== "object" || !("timestamp" in cached) || (now - (cached as { timestamp: number }).timestamp) > cacheExpiry) {
 					uncachedIds.push(id);
 				}
 			}
@@ -97,7 +97,7 @@ export function useWidgetPolling(options: UseWidgetPollingOptions): UseWidgetPol
 			}
 			setLastRefreshTime(new Date());
 		} catch (error) {
-			console.error('Failed to fetch widget data:', error);
+			console.error("Failed to fetch widget data:", error);
 		} finally {
 			setLoading(false);
 			isFetchingRef.current = false;
@@ -165,10 +165,10 @@ export function useWidgetPolling(options: UseWidgetPollingOptions): UseWidgetPol
 			}
 		};
 
-		document.addEventListener('visibilitychange', handleVisibilityChange);
+		document.addEventListener("visibilitychange", handleVisibilityChange);
 
 		return () => {
-			document.removeEventListener('visibilitychange', handleVisibilityChange);
+			document.removeEventListener("visibilitychange", handleVisibilityChange);
 		};
 	}, [enabled, isPaused, widgetIds, interval, fetchData]);
 

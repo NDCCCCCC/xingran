@@ -1,4 +1,4 @@
-﻿import type { FC } from 'react';
+﻿import type { FC } from "react";
 import {
   Table,
   Button,
@@ -12,8 +12,8 @@ import {
   Col,
   Statistic,
   message,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+} from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
   SearchOutlined,
   ReloadOutlined,
@@ -23,27 +23,27 @@ import {
   CheckCircleOutlined,
   WarningOutlined,
   ArrowLeftOutlined,
-} from '@ant-design/icons';
-import type { DevicePortStatus, NetworkDevice } from '@/types';
-import { post, get } from '@/lib/api';
-import { batchExport } from '@/lib/api/networkApi';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useEffect } from 'react';
-import { useTableManager } from '@/hooks/useTableManager';
-import { withErrorHandling } from '@/utils/errorHandler';
-import { useState } from 'react';
-import { formatDateTime } from '@/utils/datetime';
-import { usePagination } from '@/hooks/usePagination';
-import NetworkExport from '@/components/shared/NetworkExport';
-import { BatchExportModal } from '@/components/shared';
-import { DownloadOutlined } from '@ant-design/icons';
+} from "@ant-design/icons";
+import type { DevicePortStatus, NetworkDevice } from "@/types";
+import { post, get } from "@/lib/api";
+import { batchExport } from "@/lib/api/networkApi";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect } from "react";
+import { useTableManager } from "@/hooks/useTableManager";
+import { withErrorHandling } from "@/utils/errorHandler";
+import { useState } from "react";
+import { formatDateTime } from "@/utils/datetime";
+import { usePagination } from "@/hooks/usePagination";
+import NetworkExport from "@/components/shared/NetworkExport";
+import { BatchExportModal } from "@/components/shared";
+import { DownloadOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
 
 const PortStatusPage: FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const deviceIdFromUrl = searchParams.get('deviceId') || '';
+  const deviceIdFromUrl = searchParams.get("deviceId") || "";
   const isFromDevice = !!deviceIdFromUrl;
 
   const [devices, setDevices] = useState<NetworkDevice[]>([]);
@@ -77,7 +77,7 @@ const PortStatusPage: FC = () => {
     async (params) => {
       const formValues = searchForm.getFieldsValue();
       const values = formValues as Record<string, unknown>;
-      const result = await post('/network/ports/list', {
+      const result = await post("/network/ports/list", {
         current: params.current ?? paginationProps.current ?? 1,
         pageSize: params.pageSize ?? paginationProps.pageSize ?? 10,
         ...values,
@@ -102,7 +102,7 @@ const PortStatusPage: FC = () => {
   // 加载统计数据
   const loadStatistics = async () => {
     try {
-      const result = await get('/network/ports/statistics') as { data?: { totalRecords?: number; upPortsCount?: number; downPortsCount?: number; dot1xEnabledCount?: number } };
+      const result = await get("/network/ports/statistics") as { data?: { totalRecords?: number; upPortsCount?: number; downPortsCount?: number; dot1xEnabledCount?: number } };
       const stats = result.data || {};
       setStatistics({
         total: stats.totalRecords || 0,
@@ -111,14 +111,14 @@ const PortStatusPage: FC = () => {
         dot1xEnabled: stats.dot1xEnabledCount || 0,
       });
     } catch (error) {
-      console.error('加载统计数据失败:', error);
+      console.error("加载统计数据失败:", error);
     }
   };
 
   // 更新统计数据
   const updateStatistics = (portList: DevicePortStatus[]) => {
-    const upCount = portList.filter(p => p.operStatus === 'up').length;
-    const downCount = portList.filter(p => p.operStatus === 'down').length;
+    const upCount = portList.filter(p => p.operStatus === "up").length;
+    const downCount = portList.filter(p => p.operStatus === "down").length;
     const dot1xCount = portList.filter(p => p.dot1xEnabled).length;
     setStatistics({
       total: portList.length,
@@ -131,13 +131,13 @@ const PortStatusPage: FC = () => {
   // 加载设备列表
   const loadDevices = async () => {
     try {
-      const result = await post('/network/devices/list', {
+      const result = await post("/network/devices/list", {
         current: 1,
         pageSize: 1000,
       }) as { data?: { list: NetworkDevice[] } };
       setDevices(result.data?.list || []);
     } catch (error) {
-      console.error('加载设备列表失败:', error);
+      console.error("加载设备列表失败:", error);
     }
   };
 
@@ -155,8 +155,8 @@ const PortStatusPage: FC = () => {
     setCollecting(true);
     await withErrorHandling(
       async () => {
-        await post('/network/ports/collect-all', {});
-        return '采集任务已创建';
+        await post("/network/ports/collect-all", {});
+        return "采集任务已创建";
       },
       {
         onSuccess: () => {
@@ -174,13 +174,13 @@ const PortStatusPage: FC = () => {
   // 批量删除
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
-      message.warning('请选择要删除的数据');
+      message.warning("请选择要删除的数据");
       return;
     }
     await withErrorHandling(
       async () => {
-        await post('/network/ports/batch-delete', { ids: selectedRowKeys });
-        return '批量删除成功';
+        await post("/network/ports/batch-delete", { ids: selectedRowKeys });
+        return "批量删除成功";
       },
       {
         onSuccess: () => {
@@ -207,60 +207,60 @@ const PortStatusPage: FC = () => {
 
   // 表格列
   const columns: ColumnsType<DevicePortStatus> = [
-    { title: '接口名称', dataIndex: 'interfaceName', key: 'interfaceName', width: 150 },
+    { title: "接口名称", dataIndex: "interfaceName", key: "interfaceName", width: 150 },
     {
-      title: '描述',
-      dataIndex: 'description',
-      key: 'description',
+      title: "描述",
+      dataIndex: "description",
+      key: "description",
       width: 180,
       ellipsis: true,
-      render: (desc: string) => desc || '-',
+      render: (desc: string) => desc || "-",
     },
     {
-      title: '端口状态',
-      dataIndex: 'operStatus',
-      key: 'operStatus',
+      title: "端口状态",
+      dataIndex: "operStatus",
+      key: "operStatus",
       width: 100,
       render: (status: string) => {
-        const color = status === 'up' ? 'success' : 'default';
-        return <Tag color={color}>{status?.toUpperCase() || '-'}</Tag>;
+        const color = status === "up" ? "success" : "default";
+        return <Tag color={color}>{status?.toUpperCase() || "-"}</Tag>;
       },
     },
     {
-      title: '管理员激活',
-      dataIndex: 'adminStatus',
-      key: 'adminStatus',
+      title: "管理员激活",
+      dataIndex: "adminStatus",
+      key: "adminStatus",
       width: 100,
       render: (status: string) => {
-        const color = status === 'up' ? 'processing' : 'default';
-        return <Tag color={color}>{status?.toUpperCase() || '-'}</Tag>;
+        const color = status === "up" ? "processing" : "default";
+        return <Tag color={color}>{status?.toUpperCase() || "-"}</Tag>;
       },
     },
     {
-      title: 'VLAN',
-      dataIndex: 'vlan',
-      key: 'vlan',
+      title: "VLAN",
+      dataIndex: "vlan",
+      key: "vlan",
       width: 80,
-      render: (vlan?: number) => vlan ?? '-',
+      render: (vlan?: number) => vlan ?? "-",
     },
     {
-      title: '类型',
-      dataIndex: 'portType',
-      key: 'portType',
+      title: "类型",
+      dataIndex: "portType",
+      key: "portType",
       width: 80,
-      render: (type?: string) => type || '-',
+      render: (type?: string) => type || "-",
     },
     {
-      title: '802.1X',
-      key: 'dot1x',
+      title: "802.1X",
+      key: "dot1x",
       width: 100,
       render: (_, record) => (
         <Space size="small">
-          <Tag color={record.dot1xEnabled ? 'blue' : 'default'}>
-            {record.dot1xEnabled ? '启用' : '未启用'}
+          <Tag color={record.dot1xEnabled ? "blue" : "default"}>
+            {record.dot1xEnabled ? "启用" : "未启用"}
           </Tag>
           {record.dot1xEnabled && (
-            <Tag color={record.dot1xPortStatus === 'authorized' ? 'success' : 'warning'}>
+            <Tag color={record.dot1xPortStatus === "authorized" ? "success" : "warning"}>
               {record.dot1xPortStatus}
             </Tag>
           )}
@@ -268,13 +268,13 @@ const PortStatusPage: FC = () => {
       ),
     },
     {
-      title: '端口安全',
-      key: 'portSecurity',
+      title: "端口安全",
+      key: "portSecurity",
       width: 120,
       render: (_, record) => (
         <Space size="small">
-          <Tag color={record.portSecurityEnabled ? 'purple' : 'default'}>
-            {record.portSecurityEnabled ? '启用' : '未启用'}
+          <Tag color={record.portSecurityEnabled ? "purple" : "default"}>
+            {record.portSecurityEnabled ? "启用" : "未启用"}
           </Tag>
           {record.portSecurityEnabled && record.portSecurityMode && (
             <Tag>{record.portSecurityMode}</Tag>
@@ -283,11 +283,11 @@ const PortStatusPage: FC = () => {
       ),
     },
     {
-      title: '采集时间',
-      dataIndex: 'collectedAt',
-      key: 'collectedAt',
+      title: "采集时间",
+      dataIndex: "collectedAt",
+      key: "collectedAt",
       width: 180,
-      render: (date: string) => date ? formatDateTime(date) : '-',
+      render: (date: string) => date ? formatDateTime(date) : "-",
     },
   ];
 
@@ -297,7 +297,7 @@ const PortStatusPage: FC = () => {
       {isFromDevice && (
         <Button
           icon={<ArrowLeftOutlined />}
-          onClick={() => navigate('/network/devices')}
+          onClick={() => navigate("/network/devices")}
           style={{ marginBottom: 16 }}
         >
           返回设备管理
@@ -320,7 +320,7 @@ const PortStatusPage: FC = () => {
             <Statistic
               title="UP端口"
               value={statistics.up}
-              styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
+              styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
               prefix={<CheckCircleOutlined />}
             />
           </Card>
@@ -330,7 +330,7 @@ const PortStatusPage: FC = () => {
             <Statistic
               title="DOWN端口"
               value={statistics.down}
-              styles={{ content: { color: 'var(--theme-error, #cf1322)' } }}
+              styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
               prefix={<WarningOutlined />}
             />
           </Card>
@@ -340,7 +340,7 @@ const PortStatusPage: FC = () => {
             <Statistic
               title="802.1X启用"
               value={statistics.dot1xEnabled}
-              styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
+              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
               prefix={<ApiOutlined />}
             />
           </Card>
@@ -349,7 +349,7 @@ const PortStatusPage: FC = () => {
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="deviceId" label="设备">
               <Select placeholder="请选择设备" allowClear className="user-form-input" style={{ width: 200 }} showSearch optionFilterProp="label">
@@ -402,7 +402,7 @@ const PortStatusPage: FC = () => {
                 const filtered: Record<string, unknown> = {};
                 Object.keys(values).forEach(key => {
                   const value = values[key];
-                  if (value !== undefined && value !== null && value !== '') {
+                  if (value !== undefined && value !== null && value !== "") {
                     filtered[key] = value;
                   }
                 });
@@ -414,7 +414,7 @@ const PortStatusPage: FC = () => {
             <Button icon={<CloudSyncOutlined />} onClick={handleCollectAll} loading={collecting}>
               采集所有设备
             </Button>
-            <Button icon={<DeleteOutlined />} onClick={handleBatchDelete} disabled={selectedRowKeys.length === 0} style={{ color: 'var(--theme-error, #ff4d4f)' }}>
+            <Button icon={<DeleteOutlined />} onClick={handleBatchDelete} disabled={selectedRowKeys.length === 0} style={{ color: "var(--theme-error, #ff4d4f)" }}>
               批量删除 ({selectedRowKeys.length})
             </Button>
           </Space>{/* 批量导出 Modal */}
@@ -457,7 +457,7 @@ const PortStatusPage: FC = () => {
             const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
             Object.keys(formValues).forEach(key => {
               const value = formValues[key];
-              if (value !== undefined && value !== null && value !== '') {
+              if (value !== undefined && value !== null && value !== "") {
                 searchParams[key] = value;
               }
             });
@@ -465,19 +465,17 @@ const PortStatusPage: FC = () => {
           }}
           expandable={{
             expandedRowRender: (record) => (
-              <div style={{ padding: 16, background: '#fafafa' }}>
+              <div style={{ padding: 16, background: "#fafafa" }}>
                 <p><strong>接口详情:</strong></p>
-                <p>管理状态: {record.adminStatus?.toUpperCase() || '-'}</p>
-                <p>操作状态: {record.operStatus?.toUpperCase() || '-'}</p>
+                <p>管理状态: {record.adminStatus?.toUpperCase() || "-"}</p>
+                <p>操作状态: {record.operStatus?.toUpperCase() || "-"}</p>
                 {record.dot1xEnabled && (
-                  <>
-                    <p>802.1X状态: {record.dot1xPortStatus}</p>
-                  </>
+                  <p>802.1X状态: {record.dot1xPortStatus}</p>
                 )}
                 {record.portSecurityEnabled && (
                   <>
-                    <p>安全模式: {record.portSecurityMode || '未设置'}</p>
-                    <p>最大MAC数: {record.maxMACCount || '未限制'}</p>
+                    <p>安全模式: {record.portSecurityMode || "未设置"}</p>
+                    <p>最大MAC数: {record.maxMACCount || "未限制"}</p>
                     <p>当前MAC数: {record.currentMACCount || 0}</p>
                   </>
                 )}

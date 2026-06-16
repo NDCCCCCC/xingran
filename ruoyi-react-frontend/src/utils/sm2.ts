@@ -6,8 +6,8 @@
  * 文档: https://www.npmjs.com/package/sm-crypto
  */
 
-import { get } from '@/lib/api';
-import { hexToBase64, bytesToHex } from './encoding';
+import { get } from "@/lib/api";
+import { hexToBase64, bytesToHex } from "./encoding";
 
 // SM2 模块接口定义（与 sm-crypto 实际签名匹配）
 interface SM2Module {
@@ -21,7 +21,7 @@ interface SM2Module {
 }
 
 // SM2 公钥缓存（十六进制格式）
-let cachedPublicKeyHex: string = '';
+let cachedPublicKeyHex: string = "";
 
 // sm2 模块缓存
 let sm2Module: SM2Module | null = null;
@@ -33,12 +33,12 @@ async function getSM2(): Promise<SM2Module> {
   }
 
   try {
-    const smCrypto = await import('sm-crypto');
+    const smCrypto = await import("sm-crypto");
     sm2Module = smCrypto.sm2 as SM2Module;
     return sm2Module;
   } catch (error) {
-    console.error('[SM2] 加载 sm-crypto 失败:', error);
-    throw new Error('无法加载 sm-crypto 包，请确保已安装: npm install sm-crypto');
+    console.error("[SM2] 加载 sm-crypto 失败:", error);
+    throw new Error("无法加载 sm-crypto 包，请确保已安装: npm install sm-crypto");
   }
 }
 
@@ -52,14 +52,14 @@ export async function fetchPublicKey(forceRefresh = false): Promise<string> {
     return cachedPublicKeyHex;
   }
 
-  const result = await get<{ publicKey: string }>('/system/auth/public-key');
+  const result = await get<{ publicKey: string }>("/system/auth/public-key");
 
   if (result.code === 0 && result.data?.publicKey) {
     cachedPublicKeyHex = result.data.publicKey;
     return cachedPublicKeyHex;
   }
 
-  throw new Error('获取公钥失败: ' + (result.message || '未知错误'));
+  throw new Error("获取公钥失败: " + (result.message || "未知错误"));
 }
 
 /**
@@ -76,7 +76,7 @@ export async function fetchPublicKey(forceRefresh = false): Promise<string> {
  */
 export async function encryptWithSM2(password: string, publicKeyRaw: string): Promise<string> {
   if (!password) {
-    return '';
+    return "";
   }
 
   const sm2 = await getSM2();
@@ -92,10 +92,10 @@ export async function encryptWithSM2(password: string, publicKeyRaw: string): Pr
  */
 export async function decryptWithSM2(cipherText: string, privateKeyRaw: string): Promise<string> {
   if (!cipherText) {
-    return '';
+    return "";
   }
 
-  const { base64ToHex } = await import('./encoding');
+  const { base64ToHex } = await import("./encoding");
   const cipherTextHex = base64ToHex(cipherText);
   const sm2 = await getSM2();
 
@@ -106,7 +106,7 @@ export async function decryptWithSM2(cipherText: string, privateKeyRaw: string):
  * 清除公钥缓存
  */
 export function clearPublicKeyCache(): void {
-  cachedPublicKeyHex = '';
+  cachedPublicKeyHex = "";
 }
 
 /**
@@ -127,7 +127,7 @@ export async function getEncryptedLoginRequest(
       encryptedPassword: true,
     };
   } catch (error) {
-    console.warn('SM2 加密失败，回退到明文传输（仅开发环境）:', error);
+    console.warn("SM2 加密失败，回退到明文传输（仅开发环境）:", error);
     // 回退方案：如果 SM2 不可用，使用明文传输（仅开发环境）
     return {
       username,
@@ -169,13 +169,13 @@ export function publicKeyToPEM(publicKeyHex: string): string {
   const binaryString = hexToBytes(publicKeyHex);
   const base64 = btoa(binaryString);
 
-  const lines: string[] = ['-----BEGIN PUBLIC KEY-----'];
+  const lines: string[] = ["-----BEGIN PUBLIC KEY-----"];
   for (let i = 0; i < base64.length; i += 64) {
     lines.push(base64.substring(i, i + 64));
   }
-  lines.push('-----END OF PUBLIC KEY-----');
+  lines.push("-----END OF PUBLIC KEY-----");
 
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 /**
@@ -186,5 +186,5 @@ function hexToBytes(hexString: string): string {
   for (let i = 0; i < hexString.length; i += 2) {
     bytes.push(String.fromCharCode(parseInt(hexString.substr(i, 2), 16)));
   }
-  return bytes.join('');
+  return bytes.join("");
 }

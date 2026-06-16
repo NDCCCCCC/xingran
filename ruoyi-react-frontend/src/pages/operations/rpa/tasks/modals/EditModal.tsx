@@ -2,16 +2,16 @@
  * RPA 任务编辑弹窗
  */
 
-import { useLayoutEffect, useState, useCallback } from 'react';
+import { useLayoutEffect, useState, useCallback } from "react";
 import {
   Modal, Form, Input, InputNumber, Switch, Tabs, Space, Button,
   Card, Row, Col, message, Tag, Divider, Select,
-} from 'antd';
-import { PlusOutlined, DeleteOutlined, RobotOutlined } from '@ant-design/icons';
-import type { FormInstance } from 'antd/es/form';
-import type { Task, Action } from '@/types/rpa';
-import { TASK_STATUS_OPTIONS, ACTION_TYPE_OPTIONS, ACTION_TYPE_TEXT_MAP } from '../../constants';
-import { AIScriptEditor } from './AIScriptEditor';
+} from "antd";
+import { PlusOutlined, DeleteOutlined, RobotOutlined } from "@ant-design/icons";
+import type { FormInstance } from "antd/es/form";
+import type { Task, Action } from "@/types/rpa";
+import { TASK_STATUS_OPTIONS, ACTION_TYPE_OPTIONS, ACTION_TYPE_TEXT_MAP } from "../../constants";
+import { AIScriptEditor } from "./AIScriptEditor";
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -55,7 +55,7 @@ function ActionItem({ action, index, onUpdate, onRemove }: ActionItemProps) {
             value={action.type}
             placeholder="动作类型"
             onChange={(value) => onUpdate(index, { ...action, type: value })}
-            style={{ width: '100%' }}
+            style={{ width: "100%" }}
           >
             {ACTION_TYPE_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
@@ -66,25 +66,25 @@ function ActionItem({ action, index, onUpdate, onRemove }: ActionItemProps) {
         </Col>
         <Col span={18}>
           <Input
-            value={action.description || ''}
+            value={action.description || ""}
             placeholder="动作描述"
             onChange={(e) => onUpdate(index, { ...action, description: e.target.value })}
             style={{ marginBottom: 8 }}
           />
-          {action.type !== 'navigate' && action.type !== 'wait' && (
+          {action.type !== "navigate" && action.type !== "wait" && (
             <Input
-              value={action.selector?.value || ''}
+              value={action.selector?.value || ""}
               placeholder="选择器 (CSS Selector)"
               onChange={(e) => onUpdate(index, {
                 ...action,
-                selector: { ...action.selector, type: 'css', value: e.target.value },
+                selector: { ...action.selector, type: "css", value: e.target.value },
               })}
               style={{ marginBottom: 8 }}
             />
           )}
-          {(action.type === 'fill' || action.type === 'select' || action.type === 'navigate') && (
+          {(action.type === "fill" || action.type === "select" || action.type === "navigate") && (
             <Input
-              value={action.params?.value as string || ''}
+              value={action.params?.value as string || ""}
               placeholder="值 (URL/输入内容/选项)"
               onChange={(e) => onUpdate(index, {
                 ...action,
@@ -92,7 +92,7 @@ function ActionItem({ action, index, onUpdate, onRemove }: ActionItemProps) {
               })}
             />
           )}
-          {action.type === 'wait' && (
+          {action.type === "wait" && (
             <InputNumber
               value={action.params?.duration as number || 1000}
               placeholder="等待时长(毫秒)"
@@ -102,7 +102,7 @@ function ActionItem({ action, index, onUpdate, onRemove }: ActionItemProps) {
                 ...action,
                 params: { ...action.params, duration: value || 1000 },
               })}
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
             />
           )}
         </Col>
@@ -125,7 +125,7 @@ export function TaskEditModal({
   useLayoutEffect(() => {
     if (open && !editingTask?.id) {
       form.resetFields();
-      form.setFieldsValue({ status: 'pending', priority: 50, timeout: 300, retryOnFailure: true, maxRetries: 3 });
+      form.setFieldsValue({ status: "pending", priority: 50, timeout: 300, retryOnFailure: true, maxRetries: 3 });
       setActions([]);
     } else if (open && editingTask) {
       // 设置表单值
@@ -136,16 +136,16 @@ export function TaskEditModal({
         timeout: editingTask.timeout || 300,
         retryOnFailure: true,
         maxRetries: editingTask.retryCount || editingTask.maxRetries || 3,
-        status: editingTask.status === 0 ? 'pending' : 'disabled',
+        status: editingTask.status === 0 ? "pending" : "disabled",
         // tags 是字符串，需要转换为数组（用逗号分隔）
-        tags: editingTask.tags ? editingTask.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+        tags: editingTask.tags ? editingTask.tags.split(",").map(t => t.trim()).filter(Boolean) : [],
       });
 
       // 解析脚本动作
       if (editingTask.script) {
         // script 是后端返回的 JSON 数组，需要转换为前端 Action 格式
         let scriptData: unknown[];
-        if (typeof editingTask.script === 'string') {
+        if (typeof editingTask.script === "string") {
           try {
             scriptData = JSON.parse(editingTask.script);
           } catch {
@@ -158,13 +158,13 @@ export function TaskEditModal({
         // 转换为前端 Action 格式
         const parsedActions: Action[] = (scriptData as any[]).map((item: any) => ({
           id: `action_${Date.now()}_${Math.random()}`,
-          type: item.type || 'click',
-          selector: { type: 'css', value: item.selector || '' },
+          type: item.type || "click",
+          selector: { type: "css", value: item.selector || "" },
           params: {
-            value: item.value || '',
+            value: item.value || "",
             duration: item.attributes?.duration,
           },
-          description: item.attributes?.description || '',
+          description: item.attributes?.description || "",
           timeout: item.timeout || 30000,
         }));
         setActions(parsedActions);
@@ -177,10 +177,10 @@ export function TaskEditModal({
   const handleAddAction = useCallback(() => {
     const newAction: Action = {
       id: `action_${Date.now()}`,
-      type: 'click',
-      selector: { type: 'css', value: '' },
-      params: { value: '' },
-      description: '',
+      type: "click",
+      selector: { type: "css", value: "" },
+      params: { value: "" },
+      description: "",
       timeout: 30000,
     };
     setActions([...actions, newAction]);
@@ -199,7 +199,7 @@ export function TaskEditModal({
   const handleAIGenerate = useCallback((generatedActions: Action[]) => {
     setActions(generatedActions);
     setAiEditorVisible(false);
-    message.success('AI 生成脚本成功！');
+    message.success("AI 生成脚本成功！");
   }, []);
 
   const handleOk = useCallback(async () => {
@@ -209,8 +209,8 @@ export function TaskEditModal({
       // 构建 script 数组格式（后端期望的是 ScriptAction 数组）
       const script = actions.map(action => ({
         type: action.type,
-        selector: action.selector?.value || '',
-        value: action.params?.value as string || '',
+        selector: action.selector?.value || "",
+        value: action.params?.value as string || "",
         attributes: {
           description: action.description,
           ...(action.params?.duration !== undefined && { duration: action.params.duration }),
@@ -220,7 +220,7 @@ export function TaskEditModal({
       }));
 
       // 将 tags 数组转换为逗号分隔的字符串
-      const tags = Array.isArray(values.tags) ? values.tags.join(',') : '';
+      const tags = Array.isArray(values.tags) ? values.tags.join(",") : "";
 
       await onOk({
         ...values,
@@ -235,7 +235,7 @@ export function TaskEditModal({
   return (
     <>
       <Modal
-        title={editingTask ? '编辑 RPA 任务' : '新增 RPA 任务'}
+        title={editingTask ? "编辑 RPA 任务" : "新增 RPA 任务"}
         open={open}
         onOk={handleOk}
         onCancel={onCancel}
@@ -247,14 +247,14 @@ export function TaskEditModal({
             defaultActiveKey="basic"
             items={[
               {
-                key: 'basic',
-                label: '基本信息',
+                key: "basic",
+                label: "基本信息",
                 children: (
                   <>
                     <Form.Item
                       name="name"
                       label="任务名称"
-                      rules={[{ required: true, message: '请输入任务名称' }]}
+                      rules={[{ required: true, message: "请输入任务名称" }]}
                     >
                       <Input placeholder="请输入任务名称" />
                     </Form.Item>
@@ -266,12 +266,12 @@ export function TaskEditModal({
                     <Row gutter={16}>
                       <Col span={12}>
                         <Form.Item name="priority" label="优先级" initialValue={50}>
-                          <InputNumber min={0} max={100} style={{ width: '100%' }} />
+                          <InputNumber min={0} max={100} style={{ width: "100%" }} />
                         </Form.Item>
                       </Col>
                       <Col span={12}>
                         <Form.Item name="timeout" label="超时时间(秒)" initialValue={300}>
-                          <InputNumber min={10} max={3600} style={{ width: '100%' }} />
+                          <InputNumber min={10} max={3600} style={{ width: "100%" }} />
                         </Form.Item>
                       </Col>
                     </Row>
@@ -284,7 +284,7 @@ export function TaskEditModal({
                       </Col>
                       <Col span={12}>
                         <Form.Item name="maxRetries" label="最大重试次数" initialValue={3}>
-                          <InputNumber min={0} max={10} style={{ width: '100%' }} />
+                          <InputNumber min={0} max={10} style={{ width: "100%" }} />
                         </Form.Item>
                       </Col>
                     </Row>
@@ -296,7 +296,7 @@ export function TaskEditModal({
                 ),
               },
               {
-                key: 'script',
+                key: "script",
                 label: (
                   <span>
                     脚本配置
@@ -324,9 +324,9 @@ export function TaskEditModal({
                       </Button>
                     </div>
 
-                    <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+                    <div style={{ maxHeight: 400, overflowY: "auto" }}>
                       {actions.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--theme-text-tertiary, #999)' }}>
+                        <div style={{ textAlign: "center", padding: "40px 0", color: "var(--theme-text-tertiary, #999)" }}>
                           暂无动作，请点击上方按钮添加或使用 AI 生成
                         </div>
                       ) : (

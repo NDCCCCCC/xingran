@@ -7,7 +7,7 @@
  * 将 HEX 颜色转换为 RGB
  */
 function hexToRGB(hex: string): { r: number; g: number; b: number } {
-	const hexColor = hex.replace('#', '');
+	const hexColor = hex.replace("#", "");
 	const r = parseInt(hexColor.substring(0, 2), 16);
 	const g = parseInt(hexColor.substring(2, 4), 16);
 	const b = parseInt(hexColor.substring(4, 6), 16);
@@ -106,10 +106,10 @@ export function isWCAGAAACompliant(
  * @returns 等级描述
  */
 export function getContrastRating(contrast: number): string {
-	if (contrast >= 7.0) return 'AAA (优秀)';
-	if (contrast >= 4.5) return 'AA (良好)';
-	if (contrast >= 3.0) return 'AA 大文本 (及格)';
-	return '不符合标准';
+	if (contrast >= 7.0) return "AAA (优秀)";
+	if (contrast >= 4.5) return "AA (良好)";
+	if (contrast >= 3.0) return "AA 大文本 (及格)";
+	return "不符合标准";
 }
 
 /**
@@ -133,15 +133,15 @@ export function validateThemeColors(colors: {
 	const results = [];
 
 	// 验证主要文字在各个背景上的对比度
-	const textColors = ['text.primary', 'text.secondary', 'text.tertiary'] as const;
-	const bgColors = ['background.primary', 'background.secondary', 'background.tertiary'] as const;
+	const textColors = ["text.primary", "text.secondary", "text.tertiary"] as const;
+	const bgColors = ["background.primary", "background.secondary", "background.tertiary"] as const;
 
 	for (const textKey of textColors) {
 		for (const bgKey of bgColors) {
-			const textCategory = textKey.split('.')[0] as 'text' | 'background';
-			const textColorKey = textKey.split('.')[1] as 'primary' | 'secondary' | 'tertiary';
-			const bgCategory = bgKey.split('.')[0] as 'text' | 'background';
-			const bgColorKey = bgKey.split('.')[1] as 'primary' | 'secondary' | 'tertiary';
+			const textCategory = textKey.split(".")[0] as "text" | "background";
+			const textColorKey = textKey.split(".")[1] as "primary" | "secondary" | "tertiary";
+			const bgCategory = bgKey.split(".")[0] as "text" | "background";
+			const bgColorKey = bgKey.split(".")[1] as "primary" | "secondary" | "tertiary";
 			const fg = colors[textCategory][textColorKey];
 			const bg = colors[bgCategory][bgColorKey];
 

@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import type {
 	Dashboard,
 	WidgetConfig,
@@ -7,13 +7,13 @@ import type {
 	CreateDashboardRequest,
 	UpdateDashboardRequest,
 	DashboardListParams,
-} from '@/types/dashboard';
-import { dashboardService } from '@/services/dashboardService';
+} from "@/types/dashboard";
+import { dashboardService } from "@/services/dashboardService";
 
-export type DashboardViewMode = 'view' | 'edit';
+export type DashboardViewMode = "view" | "edit";
 
 // 页面模式类型
-export type PageMode = 'home' | 'list' | 'view' | 'edit';
+export type PageMode = "home" | "list" | "view" | "edit";
 
 // ==================== 辅助函数 ====================
 
@@ -52,7 +52,7 @@ const updateSingleWidget = (
 	widgets.map((w) => (w.id === widgetId ? { ...w, ...updates } : w));
 
 // WebSocket 连接状态类型
-export type WebSocketStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
+export type WebSocketStatus = "connecting" | "connected" | "disconnected" | "error";
 
 // ==================== 类型定义 ====================
 
@@ -102,7 +102,7 @@ interface DashboardActions {
 	addWidget: (widget: WidgetConfig) => void;
 	updateWidget: (widgetId: string, updates: Partial<WidgetConfig>) => void;
 	removeWidget: (widgetId: string) => void;
-	updateWidgetLayouts: (layouts: Array<{ id: string; position: WidgetConfig['position'] }>) => void;
+	updateWidgetLayouts: (layouts: Array<{ id: string; position: WidgetConfig["position"] }>) => void;
 	updateLayout: (layout: Partial<LayoutConfig>) => void;
 	saveCurrentDashboard: () => Promise<void>;
 	resetCurrentDashboard: () => Promise<void>;
@@ -138,7 +138,7 @@ const initialState: DashboardState = {
 	currentDashboard: null,
 	currentLoading: false,
 	currentError: null,
-	viewMode: 'view',
+	viewMode: "view",
 	hasUnsavedChanges: false,
 	selectedWidgetId: null,
 	draggingWidgetId: null,
@@ -146,11 +146,11 @@ const initialState: DashboardState = {
 	showGridLines: false,
 	showWidgetBorders: false,
 	// 新增状态初始值
-	pageMode: 'home',
+	pageMode: "home",
 	defaultDashboard: null,
 	defaultDashboardLoading: false,
 	// WebSocket 和实时刷新状态初始值
-	wsStatus: 'disconnected',
+	wsStatus: "disconnected",
 	wsLastConnected: null,
 	isRefreshing: false,
 };
@@ -471,7 +471,7 @@ export const useDashboardStore = create<DashboardStore>()(
 			setWsStatus: (status) => {
 				set((state) => ({
 					wsStatus: status,
-					wsLastConnected: status === 'connected' ? new Date() : state.wsLastConnected,
+					wsLastConnected: status === "connected" ? new Date() : state.wsLastConnected,
 				}));
 			},
 
@@ -495,7 +495,7 @@ export const useDashboardStore = create<DashboardStore>()(
 			},
 		}),
 		{
-			name: 'dashboard-storage',
+			name: "dashboard-storage",
 			partialize: (state) => ({
 				viewMode: state.viewMode,
 				showGridLines: state.showGridLines,

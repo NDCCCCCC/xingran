@@ -4,7 +4,7 @@
  * @deprecated 请使用 operations.ts 中的 WorkstationOps 类型
  */
 
-import type { Status } from './base';
+import type { Status } from "./base";
 
 /**
  * 工位类型

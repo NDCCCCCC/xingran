@@ -1,8 +1,8 @@
 // 映射类型
-export type MappingType = 'manual' | 'auto';
+export type MappingType = "manual" | "auto";
 
 // 映射状态
-export type MappingStatus = 'active' | 'inactive';
+export type MappingStatus = "active" | "inactive";
 
 // 部门-组映射
 export interface DeptGroupMapping {

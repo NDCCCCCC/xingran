@@ -3,8 +3,8 @@
  * 用于处理 Widget 组件的类型转换
  */
 
-import React from 'react';
-import type { WidgetConfig } from '../dashboard';
+import React from "react";
+import type { WidgetConfig } from "../dashboard";
 
 /**
  * Widget 基础 Props 接口

@@ -4,11 +4,11 @@
  * 根据Widget类型动态渲染对应的组件
  */
 
-import { Suspense } from 'react';
-import { Spin } from 'antd';
-import type { WidgetConfig } from '@/types/dashboard';
-import { widgetRegistry } from './configs/widgetRegistry';
-import { BaseWidget } from './base/BaseWidget';
+import { Suspense } from "react";
+import { Spin } from "antd";
+import type { WidgetConfig } from "@/types/dashboard";
+import { widgetRegistry } from "./configs/widgetRegistry";
+import { BaseWidget } from "./base/BaseWidget";
 
 interface WidgetRendererProps {
 	widget: WidgetConfig;

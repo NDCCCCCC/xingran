@@ -2,42 +2,42 @@
  * RPA 系统相关类型定义
  */
 
-import type { Status, PageParams } from './base';
+import type { Status, PageParams } from "./base";
 
 // ==================== 任务相关 ====================
 
 /**
  * 任务状态
  */
-export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+export type TaskStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 
 /**
  * 动作类型
  */
 export type ActionType =
-  | 'navigate'       // 导航到URL
-  | 'click'          // 点击元素
-  | 'fill'           // 填写表单
-  | 'select'         // 下拉选择
-  | 'wait'           // 等待
-  | 'screenshot'     // 截图
-  | 'extract'        // 提取数据
-  | 'scroll'         // 滚动
-  | 'hover'          // 悬停
-  | 'press'          // 按键
-  | 'upload'         // 上传文件
-  | 'download'       // 下载文件
-  | 'iframe';        // 切换iframe
+  | "navigate"       // 导航到URL
+  | "click"          // 点击元素
+  | "fill"           // 填写表单
+  | "select"         // 下拉选择
+  | "wait"           // 等待
+  | "screenshot"     // 截图
+  | "extract"        // 提取数据
+  | "scroll"         // 滚动
+  | "hover"          // 悬停
+  | "press"          // 按键
+  | "upload"         // 上传文件
+  | "download"       // 下载文件
+  | "iframe";        // 切换iframe
 
 /**
  * 选择器类型
  */
 export type SelectorType =
-  | 'css'            // CSS选择器
-  | 'xpath'          // XPath选择器
-  | 'text'           // 文本选择器
-  | 'aria'           // ARIA标签
-  | 'data-testid';   // 测试ID
+  | "css"            // CSS选择器
+  | "xpath"          // XPath选择器
+  | "text"           // 文本选择器
+  | "aria"           // ARIA标签
+  | "data-testid";   // 测试ID
 
 /**
  * 选择器定义
@@ -74,7 +74,7 @@ export interface Script {
   actions: Action[];
   variables?: VariableValue[];  // 脚本变量
   timeout?: number;      // 全局超时
-  retryStrategy?: 'sequential' | 'parallel';  // 重试策略
+  retryStrategy?: "sequential" | "parallel";  // 重试策略
   aiEnabled?: boolean;   // 是否启用AI降级
   createdAt: string;
   updatedAt: string;
@@ -132,7 +132,7 @@ export interface TaskFormData {
 /**
  * Worker 状态
  */
-export type WorkerStatus = 'online' | 'offline' | 'busy' | 'error';
+export type WorkerStatus = "online" | "offline" | "busy" | "error";
 
 /**
  * Worker 能力
@@ -210,12 +210,12 @@ export interface WorkerHeartbeatRequest {
 /**
  * 执行状态
  */
-export type RPAExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'timeout';
+export type RPAExecutionStatus = "pending" | "running" | "completed" | "failed" | "cancelled" | "timeout";
 
 /**
  * 执行日志级别
  */
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export type LogLevel = "debug" | "info" | "warn" | "error";
 
 /**
  * 执行日志
@@ -284,18 +284,18 @@ export interface ExecutionListParams extends PageParams {
 /**
  * 调度类型
  */
-export type ScheduleType = 'cron' | 'interval' | 'once';
+export type ScheduleType = "cron" | "interval" | "once";
 
 /**
  * 调度状态
  */
-export type ScheduleStatus = 'active' | 'paused' | 'disabled';
+export type ScheduleStatus = "active" | "paused" | "disabled";
 
 /**
  * Cron 调度配置
  */
 export interface CronSchedule {
-  type: 'cron';
+  type: "cron";
   expression: string;    // Cron表达式: "* * * * *"
   timezone?: string;     // 时区
 }
@@ -304,16 +304,16 @@ export interface CronSchedule {
  * 间隔调度配置
  */
 export interface IntervalSchedule {
-  type: 'interval';
+  type: "interval";
   interval: number;      // 间隔（毫秒）
-  unit?: 'ms' | 's' | 'm' | 'h' | 'd';
+  unit?: "ms" | "s" | "m" | "h" | "d";
 }
 
 /**
  * 一次性调度配置
  */
 export interface OnceSchedule {
-  type: 'once';
+  type: "once";
   executeAt: string;     // ISO 8601时间格式
 }
 
@@ -356,7 +356,7 @@ export interface ScheduleListParams extends PageParams {
 /**
  * 变量类型
  */
-export type VariableType = 'string' | 'number' | 'boolean' | 'json' | 'encrypted';
+export type VariableType = "string" | "number" | "boolean" | "json" | "encrypted";
 
 /**
  * 变量值
@@ -377,7 +377,7 @@ export interface Variable {
   type: VariableType;
   value: string;
   description?: string;
-  scope: 'global' | 'task'; // 作用域
+  scope: "global" | "task"; // 作用域
   taskId?: string;         // 关联任务ID（scope=task时）
   masked?: boolean;        // 是否脱敏显示（如密码）
   createdBy?: string;
@@ -389,7 +389,7 @@ export interface Variable {
  * 变量查询参数
  */
 export interface VariableListParams extends PageParams {
-  scope?: 'global' | 'task';
+  scope?: "global" | "task";
   taskId?: string;
   name?: string;
 }
@@ -463,7 +463,7 @@ export interface AIScriptGenerateResponse {
  */
 export interface AIScriptOptimizeRequest {
   script: Script;
-  optimizationType?: 'performance' | 'reliability' | 'readability';
+  optimizationType?: "performance" | "reliability" | "readability";
 }
 
 /**
@@ -484,7 +484,7 @@ export interface AIScriptOptimizeResponse {
  */
 export interface AIScriptExplainRequest {
   script: Script;
-  detailLevel?: 'brief' | 'normal' | 'detailed';
+  detailLevel?: "brief" | "normal" | "detailed";
 }
 
 /**
@@ -575,12 +575,12 @@ export interface CaptureStateResponse {
 /**
  * 通知类型
  */
-export type NotificationType = 'success' | 'failure' | 'timeout' | 'warning';
+export type NotificationType = "success" | "failure" | "timeout" | "warning";
 
 /**
  * 通知渠道
  */
-export type NotificationChannel = 'email' | 'webhook' | 'websocket' | 'sms';
+export type NotificationChannel = "email" | "webhook" | "websocket" | "sms";
 
 /**
  * RPA 通知配置
@@ -663,7 +663,7 @@ export interface RPAStatistics {
 /**
  * RPA 进度消息类型
  */
-export type RPAProgressMessageType = 'rpa_progress' | 'rpa_completed' | 'rpa_failed';
+export type RPAProgressMessageType = "rpa_progress" | "rpa_completed" | "rpa_failed";
 
 /**
  * RPA 进度消息（WebSocket 推送格式）
@@ -686,7 +686,7 @@ export interface RPAProgressMessage {
 export interface RPAProgressStep {
   stepNumber: number;
   name: string;
-  status: 'pending' | 'running' | 'success' | 'failed';
+  status: "pending" | "running" | "success" | "failed";
   message: string;
   startTime: number;
   endTime?: number;

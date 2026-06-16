@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import type { FC } from 'react';
+import { useState, useEffect } from "react";
+import type { FC } from "react";
 import {
   Card,
   Table,
@@ -15,16 +15,16 @@ import {
   InputNumber,
   Tabs,
   Radio,
-} from 'antd';
+} from "antd";
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
   ReloadOutlined,
   ApiOutlined,
-} from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import { formatDateTime } from '@/utils/datetime';
+} from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
+import { formatDateTime } from "@/utils/datetime";
 import {
   getAPINotificationConfigList,
   createAPINotificationConfig,
@@ -37,9 +37,9 @@ import {
   type APINotificationConfigUpdateRequest,
   type APIConfigType,
   type AuthType,
-} from '@/lib/notificationConfigApi';
-import { usePagination } from '@/hooks/usePagination';
-import { isFormValidationError } from '@/utils/errorHandler';
+} from "@/lib/notificationConfigApi";
+import { usePagination } from "@/hooks/usePagination";
+import { isFormValidationError } from "@/utils/errorHandler";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -71,8 +71,8 @@ const APIConfigPage: FC = () => {
       setConfigs(result.data.list);
       setTotal(result.data.total);
     } catch (error) {
-      console.error('加载API配置失败:', error);
-      message.error('加载API配置失败');
+      console.error("加载API配置失败:", error);
+      message.error("加载API配置失败");
     } finally {
       setLoading(false);
     }
@@ -89,7 +89,7 @@ const APIConfigPage: FC = () => {
       setEditingConfig(null);
       editForm.resetFields();
       editForm.setFieldsValue({
-        apiMethod: 'POST',
+        apiMethod: "POST",
         authType: AuthTypes.NONE,
         retryCount: 3,
         timeout: 30,
@@ -109,11 +109,11 @@ const APIConfigPage: FC = () => {
       if (editingConfig) {
         const updateData: APINotificationConfigUpdateRequest = { ...values };
         await updateAPINotificationConfig(editingConfig.id, updateData);
-        message.success('更新成功');
+        message.success("更新成功");
       } else {
         const createData: APINotificationConfigCreateRequest = { ...values };
         await createAPINotificationConfig(createData);
-        message.success('创建成功');
+        message.success("创建成功");
       }
 
       setModalVisible(false);
@@ -124,7 +124,7 @@ const APIConfigPage: FC = () => {
       if (isFormValidationError(error)) {
         return;
       }
-      message.error('操作失败: ' + ((error as Error).message || '未知错误'));
+      message.error("操作失败: " + ((error as Error).message || "未知错误"));
     } finally {
       setSubmitting(false);
     }
@@ -134,19 +134,19 @@ const APIConfigPage: FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await deleteAPINotificationConfig(id);
-      message.success('删除成功');
+      message.success("删除成功");
       loadConfigs();
     } catch (error) {
-      message.error('删除失败');
+      message.error("删除失败");
     }
   };
 
   // 表格列定义
   const columns: ColumnsType<APINotificationConfig> = [
     {
-      title: '配置名称',
-      dataIndex: 'configName',
-      key: 'configName',
+      title: "配置名称",
+      dataIndex: "configName",
+      key: "configName",
       render: (text: string, record) => (
         <Space>
           <span>{text}</span>
@@ -155,67 +155,67 @@ const APIConfigPage: FC = () => {
       ),
     },
     {
-      title: '类型',
-      dataIndex: 'configType',
-      key: 'configType',
+      title: "类型",
+      dataIndex: "configType",
+      key: "configType",
       render: (type: APIConfigType) => {
         const config = {
-          [APIConfigTypes.SMS]: { color: 'cyan', label: '短信' },
-          [APIConfigTypes.WEBHOOK]: { color: 'purple', label: 'Webhook' },
-          [APIConfigTypes.PUSH]: { color: 'orange', label: '推送' },
+          [APIConfigTypes.SMS]: { color: "cyan", label: "短信" },
+          [APIConfigTypes.WEBHOOK]: { color: "purple", label: "Webhook" },
+          [APIConfigTypes.PUSH]: { color: "orange", label: "推送" },
         }[type];
         return <Tag color={config?.color}>{config?.label}</Tag>;
       },
     },
     {
-      title: 'API地址',
-      dataIndex: 'apiUrl',
-      key: 'apiUrl',
+      title: "API地址",
+      dataIndex: "apiUrl",
+      key: "apiUrl",
       ellipsis: true,
     },
     {
-      title: '请求方法',
-      dataIndex: 'apiMethod',
-      key: 'apiMethod',
+      title: "请求方法",
+      dataIndex: "apiMethod",
+      key: "apiMethod",
       width: 80,
     },
     {
-      title: '认证方式',
-      dataIndex: 'authType',
-      key: 'authType',
+      title: "认证方式",
+      dataIndex: "authType",
+      key: "authType",
       width: 100,
       render: (type: AuthType) => {
         const config = {
-          [AuthTypes.NONE]: { label: '无' },
-          [AuthTypes.BASIC]: { label: 'Basic' },
-          [AuthTypes.BEARER]: { label: 'Bearer' },
-          [AuthTypes.APIKEY]: { label: 'API Key' },
+          [AuthTypes.NONE]: { label: "无" },
+          [AuthTypes.BASIC]: { label: "Basic" },
+          [AuthTypes.BEARER]: { label: "Bearer" },
+          [AuthTypes.APIKEY]: { label: "API Key" },
         }[type];
         return <span>{config?.label}</span>;
       },
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
       width: 80,
       render: (status: number) => (
-        <Tag color={status === 0 ? 'success' : 'default'}>
-          {status === 0 ? '正常' : '停用'}
+        <Tag color={status === 0 ? "success" : "default"}>
+          {status === 0 ? "正常" : "停用"}
         </Tag>
       ),
     },
     {
-      title: '创建时间',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
+      title: "创建时间",
+      dataIndex: "createdAt",
+      key: "createdAt",
       width: 180,
       render: (date: string) => formatDateTime(date),
     },
     {
-      title: '操作',
-      key: 'action',
-      fixed: 'right',
+      title: "操作",
+      key: "action",
+      fixed: "right",
       width: 150,
       render: (_, record: APINotificationConfig) => (
         <Space size="small">
@@ -234,9 +234,9 @@ const APIConfigPage: FC = () => {
             icon={<DeleteOutlined />}
             onClick={() => {
               Modal.confirm({
-                title: '确认删除?',
-                okText: '确定',
-                cancelText: '取消',
+                title: "确认删除?",
+                okText: "确定",
+                cancelText: "取消",
                 okButtonProps: { danger: true },
                 onOk: () => handleDelete(record.id),
               });
@@ -300,7 +300,7 @@ const APIConfigPage: FC = () => {
 
       {/* 编辑模态框 */}
       <Modal
-        title={editingConfig ? '编辑API配置' : '新增API配置'}
+        title={editingConfig ? "编辑API配置" : "新增API配置"}
         open={modalVisible}
         onOk={handleSubmit}
         onCancel={() => {
@@ -315,7 +315,7 @@ const APIConfigPage: FC = () => {
           <Form.Item
             name="configName"
             label="配置名称"
-            rules={[{ required: true, message: '请输入配置名称' }]}
+            rules={[{ required: true, message: "请输入配置名称" }]}
           >
             <Input placeholder="请输入配置名称，如：阿里云短信" />
           </Form.Item>
@@ -323,7 +323,7 @@ const APIConfigPage: FC = () => {
           <Form.Item
             name="configType"
             label="配置类型"
-            rules={[{ required: true, message: '请选择配置类型' }]}
+            rules={[{ required: true, message: "请选择配置类型" }]}
           >
             <Select placeholder="请选择配置类型">
               <Option value={APIConfigTypes.SMS}>短信</Option>
@@ -335,7 +335,7 @@ const APIConfigPage: FC = () => {
           <Form.Item
             name="apiUrl"
             label="API地址"
-            rules={[{ required: true, message: '请输入API地址' }]}
+            rules={[{ required: true, message: "请输入API地址" }]}
           >
             <Input placeholder="请输入API调用地址" />
           </Form.Item>
@@ -354,8 +354,8 @@ const APIConfigPage: FC = () => {
           <Tabs defaultActiveKey="headers"
             items={[
               {
-                key: 'headers',
-                label: '请求头',
+                key: "headers",
+                label: "请求头",
                 children: (
                   <Form.Item name="headers" label="请求头配置">
                     <TextArea
@@ -366,8 +366,8 @@ const APIConfigPage: FC = () => {
                 )
               },
               {
-                key: 'template',
-                label: '模板内容',
+                key: "template",
+                label: "模板内容",
                 children: (
                   <Form.Item name="templateBody" label="模板内容">
                     <TextArea
@@ -379,8 +379,8 @@ const APIConfigPage: FC = () => {
                 )
               },
               {
-                key: 'auth',
-                label: '认证配置',
+                key: "auth",
+                label: "认证配置",
                 children: (
                   <>
                     <Form.Item name="authType" label="认证方式" rules={[{ required: true }]}>
@@ -393,14 +393,14 @@ const APIConfigPage: FC = () => {
                     </Form.Item>
                     <Form.Item noStyle shouldUpdate={(prev, curr) => prev.authType !== curr.authType}>
                       {({ getFieldValue }) => {
-                        const authType = getFieldValue('authType');
+                        const authType = getFieldValue("authType");
                         if (authType === AuthTypes.BASIC) {
                           return (
                             <>
-                              <Form.Item name={['authConfig', 'username']} label="用户名">
+                              <Form.Item name={["authConfig", "username"]} label="用户名">
                                 <Input placeholder="请输入用户名" />
                               </Form.Item>
-                              <Form.Item name={['authConfig', 'password']} label="密码">
+                              <Form.Item name={["authConfig", "password"]} label="密码">
                                 <Input.Password placeholder="请输入密码" />
                               </Form.Item>
                             </>
@@ -408,7 +408,7 @@ const APIConfigPage: FC = () => {
                         }
                         if (authType === AuthTypes.BEARER) {
                           return (
-                            <Form.Item name={['authConfig', 'token']} label="Token">
+                            <Form.Item name={["authConfig", "token"]} label="Token">
                               <Input placeholder="请输入Bearer Token" />
                             </Form.Item>
                           );
@@ -416,10 +416,10 @@ const APIConfigPage: FC = () => {
                         if (authType === AuthTypes.APIKEY) {
                           return (
                             <>
-                              <Form.Item name={['authConfig', 'key']} label="Key名称">
+                              <Form.Item name={["authConfig", "key"]} label="Key名称">
                                 <Input placeholder="如：X-API-Key" />
                               </Form.Item>
-                              <Form.Item name={['authConfig', 'value']} label="Key值">
+                              <Form.Item name={["authConfig", "value"]} label="Key值">
                                 <Input placeholder="请输入API Key的值" />
                               </Form.Item>
                             </>

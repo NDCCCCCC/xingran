@@ -15,16 +15,16 @@ import {
   MinusCircleOutlined,
   SwapOutlined,
   TagOutlined,
-} from '@ant-design/icons';
-import type { ComponentType, CSSProperties } from 'react';
+} from "@ant-design/icons";
+import type { ComponentType, CSSProperties } from "react";
 
-export type MACEventType = 'appeared' | 'disappeared' | 'moved' | 'vlan_changed';
+export type MACEventType = "appeared" | "disappeared" | "moved" | "vlan_changed";
 
 export const EVENT_COLORS: Record<MACEventType, string> = {
-  appeared: 'var(--theme-success, #52c41a)',
-  disappeared: '#ff4d4f',
-  moved: 'var(--theme-warning, #faad14)',
-  vlan_changed: 'var(--theme-info, #1890ff)',
+  appeared: "var(--theme-success, #52c41a)",
+  disappeared: "#ff4d4f",
+  moved: "var(--theme-warning, #faad14)",
+  vlan_changed: "var(--theme-info, #1890ff)",
 };
 
 export const EVENT_ICON: Record<MACEventType, ComponentType<{ style?: CSSProperties }>> = {
@@ -35,16 +35,16 @@ export const EVENT_ICON: Record<MACEventType, ComponentType<{ style?: CSSPropert
 };
 
 export const EVENT_LABEL: Record<MACEventType, string> = {
-  appeared: '出现',
-  disappeared: '消失',
-  moved: '迁移',
-  vlan_changed: 'VLAN 变更',
+  appeared: "出现",
+  disappeared: "消失",
+  moved: "迁移",
+  vlan_changed: "VLAN 变更",
 };
 
 /** AntD Tag color (与 ECharts hex 兼容) */
 export const EVENT_TAG_COLOR: Record<MACEventType, string> = {
-  appeared: 'green',
-  disappeared: 'red',
-  moved: 'gold',
-  vlan_changed: 'blue',
+  appeared: "green",
+  disappeared: "red",
+  moved: "gold",
+  vlan_changed: "blue",
 };

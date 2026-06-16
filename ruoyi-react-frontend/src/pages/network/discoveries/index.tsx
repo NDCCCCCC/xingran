@@ -1,5 +1,5 @@
-﻿import { useState, useEffect } from 'react';
-import type { FC } from 'react';
+﻿import { useState, useEffect } from "react";
+import type { FC } from "react";
 import {
   Table,
   Button,
@@ -10,7 +10,7 @@ import {
   Row,
   Col,
   Statistic,
-} from 'antd';
+} from "antd";
 import {
   SearchOutlined,
   ReloadOutlined,
@@ -19,22 +19,22 @@ import {
   ClockCircleOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-} from '@ant-design/icons';
-import { useDiscoveryData, useDiscoveryPolling } from './hooks';
-import { getDiscoveryColumns } from './columns';
-import { CreateModal, ResultModal } from './modals';
-import { STATUS_OPTIONS } from './constants';
-import { parseIPRanges } from './utils';
-import { post } from '@/lib/api';
-import { batchExport } from '@/lib/api/networkApi';
-import { message } from 'antd';
-import type { FormInstance } from 'antd/es/form';
-import NetworkExport from '@/components/shared/NetworkExport';
-import { BatchExportModal } from '@/components/shared';
-import { DownloadOutlined } from '@ant-design/icons';
-import { usePagination } from '@/hooks/usePagination';
-import { isFormValidationError } from '@/utils/errorHandler';
-import type { DeviceDiscovery, NetworkDevice } from '@/types';
+} from "@ant-design/icons";
+import { useDiscoveryData, useDiscoveryPolling } from "./hooks";
+import { getDiscoveryColumns } from "./columns";
+import { CreateModal, ResultModal } from "./modals";
+import { STATUS_OPTIONS } from "./constants";
+import { parseIPRanges } from "./utils";
+import { post } from "@/lib/api";
+import { batchExport } from "@/lib/api/networkApi";
+import { message } from "antd";
+import type { FormInstance } from "antd/es/form";
+import NetworkExport from "@/components/shared/NetworkExport";
+import { BatchExportModal } from "@/components/shared";
+import { DownloadOutlined } from "@ant-design/icons";
+import { usePagination } from "@/hooks/usePagination";
+import { isFormValidationError } from "@/utils/errorHandler";
+import type { DeviceDiscovery, NetworkDevice } from "@/types";
 
 const { Option } = Select;
 
@@ -76,7 +76,7 @@ const DeviceDiscoveryPage: FC = () => {
   const openModal = async () => {
     await loadDepartments();
     form.resetFields();
-    form.setFieldsValue({ snmpPort: 161, discoveryType: 'snmp' });
+    form.setFieldsValue({ snmpPort: 161, discoveryType: "snmp" });
     setModalState(prev => ({ ...prev, modalVisible: true }));
   };
 
@@ -93,11 +93,11 @@ const DeviceDiscoveryPage: FC = () => {
         groupId?: string;
         autoImport?: boolean;
       };
-      const ipRangesText = values.ipRanges || '';
+      const ipRangesText = values.ipRanges || "";
       const ipRanges = parseIPRanges(ipRangesText);
 
       if (ipRanges.length === 0) {
-        message.error('请输入有效的IP范围');
+        message.error("请输入有效的IP范围");
         return;
       }
 
@@ -105,14 +105,14 @@ const DeviceDiscoveryPage: FC = () => {
         taskName: values.taskName,
         discoveryType: values.discoveryType,
         ipRanges: ipRanges,
-        snmpCommunity: values.snmpCommunity || '',
+        snmpCommunity: values.snmpCommunity || "",
         snmpPort: values.snmpPort || 161,
         groupId: values.groupId || null,
         autoImport: values.autoImport || false,
       };
 
-      await post('/network/discoveries/create', requestData);
-      message.success('发现任务已创建');
+      await post("/network/discoveries/create", requestData);
+      message.success("发现任务已创建");
       setModalState(prev => ({ ...prev, modalVisible: false }));
       form.resetFields();
       loadDiscoveries();
@@ -121,8 +121,8 @@ const DeviceDiscoveryPage: FC = () => {
       if (isFormValidationError(error)) {
         return;
       }
-      console.error('创建任务失败:', error);
-      message.error('创建任务失败');
+      console.error("创建任务失败:", error);
+      message.error("创建任务失败");
     }
   };
 
@@ -130,10 +130,10 @@ const DeviceDiscoveryPage: FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await post(`/network/discoveries/${id}/delete`, {});
-      message.success('删除成功');
+      message.success("删除成功");
       loadDiscoveries();
     } catch (error) {
-      message.error('删除失败');
+      message.error("删除失败");
     }
   };
 
@@ -149,11 +149,11 @@ const DeviceDiscoveryPage: FC = () => {
     if (!currentDiscovery) return;
     try {
       await post(`/network/discoveries/${currentDiscovery.id}/import`, {});
-      message.success('导入成功');
+      message.success("导入成功");
       setModalState(prev => ({ ...prev, resultModalVisible: false }));
       loadDiscoveries();
     } catch (error) {
-      message.error('导入失败');
+      message.error("导入失败");
     }
   };
 
@@ -200,7 +200,7 @@ const DeviceDiscoveryPage: FC = () => {
             <Statistic
               title="待执行"
               value={statistics.pending}
-              styles={{ content: { color: 'var(--theme-text-tertiary, #999)' } }}
+              styles={{ content: { color: "var(--theme-text-tertiary, #999)" } }}
               prefix={<ClockCircleOutlined />}
             />
           </Card>
@@ -210,7 +210,7 @@ const DeviceDiscoveryPage: FC = () => {
             <Statistic
               title="扫描中"
               value={statistics.running}
-              styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
+              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
               prefix={<CloudServerOutlined />}
             />
           </Card>
@@ -220,7 +220,7 @@ const DeviceDiscoveryPage: FC = () => {
             <Statistic
               title="已完成"
               value={statistics.completed}
-              styles={{ content: { color: 'var(--theme-success, #52c41a)' } }}
+              styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
               prefix={<CheckCircleOutlined />}
             />
           </Card>
@@ -230,7 +230,7 @@ const DeviceDiscoveryPage: FC = () => {
             <Statistic
               title="失败"
               value={statistics.failed}
-              styles={{ content: { color: 'var(--theme-error, #ff4d4f)' } }}
+              styles={{ content: { color: "var(--theme-error, #ff4d4f)" } }}
               prefix={<CloseCircleOutlined />}
             />
           </Card>
@@ -247,7 +247,7 @@ const DeviceDiscoveryPage: FC = () => {
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
           <Form layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item label="状态">
               <Select

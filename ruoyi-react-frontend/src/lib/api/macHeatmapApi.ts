@@ -7,8 +7,8 @@
  *   - 默认 7 天范围 / TopN 100
  */
 
-import { post } from '../api';
-import type { BaseResponse } from '@/types/base';
+import { post } from "../api";
+import type { BaseResponse } from "@/types/base";
 
 export interface HeatmapCell {
   deviceId: string;
@@ -39,6 +39,6 @@ export interface HeatmapQuery {
  * @returns HeatmapResult
  */
 export const queryMACHeatmap = async (params: HeatmapQuery): Promise<HeatmapResult> => {
-  const result = await post<HeatmapResult>('/network/history/heatmap', params);
+  const result = await post<HeatmapResult>("/network/history/heatmap", params);
   return result.data!;
 };

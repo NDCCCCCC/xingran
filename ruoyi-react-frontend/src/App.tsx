@@ -1,15 +1,15 @@
-import { useEffect } from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import zhCN from 'antd/locale/zh_CN';
-import { useMenuStore } from '@/store/menuStore';
-import { routeConfigManager } from '@/router/routeConfigManager';
-import { ThemeProvider } from '@/design-system/components/ThemeProvider';
-import LayoutProvider from '@/design-system/components/LayoutProvider';
-import AntdThemeBridge from '@/design-system/components/AntdThemeBridge';
-import ConfigProvider from '@/components/ConfigProvider';
-import { DynamicRoutes } from '@/router/DynamicRoutes';
-import './App.css';
+import { useEffect } from "react";
+import { BrowserRouter as Router } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import zhCN from "antd/locale/zh_CN";
+import { useMenuStore } from "@/store/menuStore";
+import { routeConfigManager } from "@/router/routeConfigManager";
+import { ThemeProvider } from "@/design-system/components/ThemeProvider";
+import LayoutProvider from "@/design-system/components/LayoutProvider";
+import AntdThemeBridge from "@/design-system/components/AntdThemeBridge";
+import ConfigProvider from "@/components/ConfigProvider";
+import { DynamicRoutes } from "@/router/DynamicRoutes";
+import "./App.css";
 
 // 创建React Query客户端
 // 默认配置遵循 D-11：5 分钟 stale、30 分钟 gc、切窗口不重拉。

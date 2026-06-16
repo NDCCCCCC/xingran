@@ -4,11 +4,11 @@
  *
  * 用于编辑API请求参数，支持动态添加/删除参数键值对
  */
-import { useCallback, useEffect } from 'react';
-import { Form, Input, Button, Space, Alert, Empty } from 'antd';
-import { PlusOutlined, MinusCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
-import type { FormInstance } from 'antd';
-import type { EndpointDetail } from '@/types/dashboard';
+import { useCallback, useEffect } from "react";
+import { Form, Input, Button, Space, Alert, Empty } from "antd";
+import { PlusOutlined, MinusCircleOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import type { FormInstance } from "antd";
+import type { EndpointDetail } from "@/types/dashboard";
 
 export interface ParamsEditorProps {
 	/** 端点元数据 */
@@ -51,7 +51,7 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
 	useEffect(() => {
 		if (form && endpoint && Object.keys(exampleParams).length > 0) {
 			const examples = exampleParamsArray();
-			form.setFieldValue('params', examples);
+			form.setFieldValue("params", examples);
 		}
 	}, [endpoint, form, exampleParamsArray]);
 
@@ -59,7 +59,7 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
 	const handleLoadExample = () => {
 		if (form) {
 			const examples = exampleParamsArray();
-			form.setFieldValue('params', examples.length > 0 ? examples : []);
+			form.setFieldValue("params", examples.length > 0 ? examples : []);
 		}
 	};
 
@@ -94,7 +94,7 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
 							<Empty
 								description="该端点无需额外参数或暂未配置参数"
 								image={Empty.PRESENTED_IMAGE_SIMPLE}
-								style={{ padding: '20px 0' }}
+								style={{ padding: "20px 0" }}
 							/>
 						) : null}
 
@@ -102,16 +102,16 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
 							<Space
 								key={key}
 								style={{
-									display: 'flex',
+									display: "flex",
 									marginBottom: 8,
-									alignItems: 'flex-start',
+									alignItems: "flex-start",
 								}}
 								align="baseline"
 							>
 								<Form.Item
 									{...restField}
-									name={[name, 'name']}
-									rules={[{ required: true, message: '请输入参数名' }]}
+									name={[name, "name"]}
+									rules={[{ required: true, message: "请输入参数名" }]}
 									style={{ marginBottom: 0 }}
 								>
 									<Input
@@ -123,8 +123,8 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
 
 								<Form.Item
 									{...restField}
-									name={[name, 'value']}
-									rules={[{ required: true, message: '请输入参数值' }]}
+									name={[name, "value"]}
+									rules={[{ required: true, message: "请输入参数值" }]}
 									style={{ marginBottom: 0 }}
 								>
 									<Input
@@ -136,7 +136,7 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
 
 								<MinusCircleOutlined
 									onClick={() => remove(name)}
-									style={{ fontSize: 16, color: 'var(--theme-text-tertiary, #999)', cursor: 'pointer', marginTop: 8 }}
+									style={{ fontSize: 16, color: "var(--theme-text-tertiary, #999)", cursor: "pointer", marginTop: 8 }}
 								/>
 							</Space>
 						))}
@@ -144,7 +144,7 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
 						<Form.Item style={{ marginTop: fields.length > 0 ? 8 : 0 }}>
 							<Button
 								type="dashed"
-								onClick={() => add({ name: '', value: '' })}
+								onClick={() => add({ name: "", value: "" })}
 								block
 								icon={<PlusOutlined />}
 							>
@@ -157,13 +157,13 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
 
 			{/* 参数说明 */}
 			{endpoint && (
-				<div style={{ marginTop: 16, padding: '12px', background: '#f5f5f5', borderRadius: 4 }}>
-					<div style={{ fontSize: 12, color: '#666' }}>
+				<div style={{ marginTop: 16, padding: "12px", background: "#f5f5f5", borderRadius: 4 }}>
+					<div style={{ fontSize: 12, color: "#666" }}>
 						<strong>参数说明：</strong>
 					</div>
-					<div style={{ fontSize: 12, color: 'var(--theme-text-tertiary, #999)', marginTop: 4 }}>
+					<div style={{ fontSize: 12, color: "var(--theme-text-tertiary, #999)", marginTop: 4 }}>
 						添加的参数将作为请求参数发送到API端点。支持动态变量替换，
-						如使用 <code>{`{{userId}}`}</code> 将在请求时替换为当前用户ID。
+						如使用 <code>{"{{userId}}"}</code> 将在请求时替换为当前用户ID。
 					</div>
 				</div>
 			)}

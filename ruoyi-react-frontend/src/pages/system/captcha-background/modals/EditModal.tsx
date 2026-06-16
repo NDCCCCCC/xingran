@@ -3,9 +3,9 @@
  * 验证码背景编辑模态框
  */
 
-import { Modal, Form, Select, Input } from 'antd';
-import type { CaptchaBackground } from '@/types/captcha';
-import { SHAPE_OPTIONS, DIFFICULTY_OPTIONS, STATUS_OPTIONS } from '../constants';
+import { Modal, Form, Select, Input } from "antd";
+import type { CaptchaBackground } from "@/types/captcha";
+import { SHAPE_OPTIONS, DIFFICULTY_OPTIONS, STATUS_OPTIONS } from "../constants";
 
 const { Option } = Select;
 const { TextArea } = Input;

@@ -4,24 +4,24 @@
  * 编辑仪表盘的Widget布局和配置
  */
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { message } from 'antd';
-import type { WidgetConfig } from '@/types';
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { message } from "antd";
+import type { WidgetConfig } from "@/types";
 import {
 	LayoutToolbar,
 	DashboardGrid,
 	DashboardGridPlaceholder,
-} from '@/components/dashboard/layout';
-import { GridItem, GridItemPlaceholder } from '@/components/dashboard/layout';
-import { Suspense, lazy } from 'react';
-import { useDashboardStore } from '@/store/dashboardStore';
-import { Spin } from 'antd';
-import { Widget } from '@/components/dashboard/Widget';
+} from "@/components/dashboard/layout";
+import { GridItem, GridItemPlaceholder } from "@/components/dashboard/layout";
+import { Suspense, lazy } from "react";
+import { useDashboardStore } from "@/store/dashboardStore";
+import { Spin } from "antd";
+import { Widget } from "@/components/dashboard/Widget";
 
-import './edit.css';
+import "./edit.css";
 
-const WidgetSelector = lazy(() => import('@/components/dashboard/settings/WidgetSelector'));
+const WidgetSelector = lazy(() => import("@/components/dashboard/settings/WidgetSelector"));
 
 const DashboardEdit: React.FC = () => {
 	const { id } = useParams<{ id: string }>();
@@ -44,7 +44,7 @@ const DashboardEdit: React.FC = () => {
 	useEffect(() => {
 		if (id) {
 			fetchDashboard(id);
-			setViewMode('edit');
+			setViewMode("edit");
 		}
 
 		return () => {
@@ -55,7 +55,7 @@ const DashboardEdit: React.FC = () => {
 	// 处理Widget添加
 	const handleAddWidget = (widgetConfig: WidgetConfig) => {
 		addWidget(widgetConfig);
-		message.success('Widget添加成功');
+		message.success("Widget添加成功");
 	};
 
 	if (currentLoading) {

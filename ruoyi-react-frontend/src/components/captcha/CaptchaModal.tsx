@@ -3,10 +3,10 @@
  * 用于在登录时弹出滑动验证码或数字验证码
  */
 
-import { useState, useEffect, type FC } from 'react';
-import { Modal, message } from 'antd';
-import { SliderCaptcha, TextCaptcha } from '@/components/captcha';
-import type { CaptchaEnabled } from '@/types/captcha';
+import { useState, useEffect, type FC } from "react";
+import { Modal, message } from "antd";
+import { SliderCaptcha, TextCaptcha } from "@/components/captcha";
+import type { CaptchaEnabled } from "@/types/captcha";
 
 export interface CaptchaModalProps {
   visible: boolean;
@@ -27,22 +27,22 @@ const CaptchaModal: FC<CaptchaModalProps> = ({
   onSuccess,
   onCancel,
 }) => {
-  const [captchaValue, setCaptchaValue] = useState('');
-  const [captchaId, setCaptchaId] = useState('');
+  const [captchaValue, setCaptchaValue] = useState("");
+  const [captchaId, setCaptchaId] = useState("");
   const [sliderVerified, setSliderVerified] = useState(false);
 
   // 当模态框打开时，重置验证码状态
   useEffect(() => {
     if (visible) {
-      setCaptchaValue('');
-      setCaptchaId('');
+      setCaptchaValue("");
+      setCaptchaId("");
       setSliderVerified(false);
     }
   }, [visible]);
 
   // 处理验证码验证成功
   const handleCaptchaSuccess = (data: CaptchaSuccessData) => {
-    console.log('[CaptchaModal] 验证成功，准备关闭模态框:', data);
+    console.log("[CaptchaModal] 验证成功，准备关闭模态框:", data);
 
     // 延迟关闭模态框，让用户看到"验证成功"提示
     setTimeout(() => {
@@ -53,12 +53,12 @@ const CaptchaModal: FC<CaptchaModalProps> = ({
   // 数字验证码：点击确定按钮
   const handleNormalConfirm = () => {
     if (!captchaValue) {
-      message.warning('请输入验证码');
+      message.warning("请输入验证码");
       return;
     }
 
     if (!captchaId) {
-      message.error('验证码信息不完整，请重试');
+      message.error("验证码信息不完整，请重试");
       return;
     }
 
@@ -70,14 +70,14 @@ const CaptchaModal: FC<CaptchaModalProps> = ({
 
   // 数字验证码变更回调
   const handleCaptchaChange = (value: string, id: string) => {
-    console.log('[CaptchaModal] 验证码变更:', { value, id });
+    console.log("[CaptchaModal] 验证码变更:", { value, id });
     setCaptchaValue(value);
     setCaptchaId(id);
   };
 
   // 滑动验证码验证成功回调
   const handleSliderVerified = (_token: string, id: string) => {
-    console.log('[CaptchaModal] 滑动验证成功:', { id });
+    console.log("[CaptchaModal] 滑动验证成功:", { id });
     setCaptchaId(id);
     setSliderVerified(true);
 
@@ -89,18 +89,18 @@ const CaptchaModal: FC<CaptchaModalProps> = ({
 
   // 验证码错误回调
   const handleCaptchaError = (error: string) => {
-    console.error('[CaptchaModal] 验证码错误:', error);
+    console.error("[CaptchaModal] 验证码错误:", error);
 
-    if (error === 'CAPTCHA_TYPE_MISMATCH') {
+    if (error === "CAPTCHA_TYPE_MISMATCH") {
       // 验证码类型不匹配，关闭模态框
-      message.error('验证码类型错误');
+      message.error("验证码类型错误");
       onCancel();
     }
   };
 
   // 计算模态框宽度
   const getModalWidth = () => {
-    return captchaType === 'slider' ? 500 : 400;
+    return captchaType === "slider" ? 500 : 400;
   };
 
   return (
@@ -115,8 +115,8 @@ const CaptchaModal: FC<CaptchaModalProps> = ({
       centered
       destroyOnHidden
     >
-      <div style={{ padding: '16px 0' }}>
-        {captchaType === 'slider' ? (
+      <div style={{ padding: "16px 0" }}>
+        {captchaType === "slider" ? (
           <SliderCaptcha
             active={visible}
             onVerified={handleSliderVerified}
@@ -129,18 +129,18 @@ const CaptchaModal: FC<CaptchaModalProps> = ({
               onChange={handleCaptchaChange}
               onError={handleCaptchaError}
             />
-            <div style={{ marginTop: '16px', textAlign: 'center' }}>
+            <div style={{ marginTop: "16px", textAlign: "center" }}>
               <button
                 type="button"
                 onClick={handleNormalConfirm}
                 style={{
-                  padding: '8px 24px',
-                  background: 'var(--theme-primary, #1890ff)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
+                  padding: "8px 24px",
+                  background: "var(--theme-primary, #1890ff)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  fontSize: "14px",
                 }}
               >
                 确定

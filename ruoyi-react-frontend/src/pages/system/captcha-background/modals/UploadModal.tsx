@@ -3,10 +3,10 @@
  * 验证码背景上传模态框
  */
 
-import { Modal, Form, Select, Upload, Input } from 'antd';
-import type { UploadProps } from 'antd/es/upload';
-import { UploadOutlined } from '@ant-design/icons';
-import { SHAPE_OPTIONS, DIFFICULTY_OPTIONS } from '../constants';
+import { Modal, Form, Select, Upload, Input } from "antd";
+import type { UploadProps } from "antd/es/upload";
+import { UploadOutlined } from "@ant-design/icons";
+import { SHAPE_OPTIONS, DIFFICULTY_OPTIONS } from "../constants";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -57,7 +57,7 @@ export function CaptchaUploadModal({
         <Form.Item
           name="pieceShape"
           label="拼图形状"
-          rules={[{ required: true, message: '请选择拼图形状' }]}
+          rules={[{ required: true, message: "请选择拼图形状" }]}
         >
           <Select>
             {SHAPE_OPTIONS.map((opt) => (
@@ -70,7 +70,7 @@ export function CaptchaUploadModal({
         <Form.Item
           name="difficultyLevel"
           label="难度级别"
-          rules={[{ required: true, message: '请选择难度' }]}
+          rules={[{ required: true, message: "请选择难度" }]}
         >
           <Select>
             {DIFFICULTY_OPTIONS.map((opt) => (

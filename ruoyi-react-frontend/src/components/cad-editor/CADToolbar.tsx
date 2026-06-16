@@ -2,8 +2,8 @@
  * CAD 工具栏组件
  */
 
-import { useCallback, useMemo } from 'react';
-import { Button, Space, Tooltip } from 'antd';
+import { useCallback, useMemo } from "react";
+import { Button, Space, Tooltip } from "antd";
 import {
   BorderOutlined,
   ApartmentOutlined,
@@ -15,8 +15,8 @@ import {
   SaveOutlined,
   UndoOutlined,
   RedoOutlined,
-} from '@ant-design/icons';
-import type { EditorMode } from './types';
+} from "@ant-design/icons";
+import type { EditorMode } from "./types";
 
 // 工具按钮配置
 interface ToolButtonConfig {
@@ -26,10 +26,10 @@ interface ToolButtonConfig {
 }
 
 const DRAWING_TOOLS: readonly ToolButtonConfig[] = [
-  { key: 'draw_wall', icon: <BorderOutlined />, label: '墙体' },
-  { key: 'draw_door', icon: <ApartmentOutlined />, label: '门' },
-  { key: 'draw_workstation', icon: <DesktopOutlined />, label: '工位' },
-  { key: 'draw_text', icon: <FontSizeOutlined />, label: '文本' },
+  { key: "draw_wall", icon: <BorderOutlined />, label: "墙体" },
+  { key: "draw_door", icon: <ApartmentOutlined />, label: "门" },
+  { key: "draw_workstation", icon: <DesktopOutlined />, label: "工位" },
+  { key: "draw_text", icon: <FontSizeOutlined />, label: "文本" },
 ] as const;
 
 export interface CADToolbarProps {
@@ -63,7 +63,7 @@ export function CADToolbar({
 }: CADToolbarProps) {
   const handleModeToggle = useCallback(
     (toolMode: EditorMode) => {
-      onModeChange(mode === toolMode ? 'select' : toolMode);
+      onModeChange(mode === toolMode ? "select" : toolMode);
     },
     [mode, onModeChange]
   );
@@ -82,7 +82,7 @@ export function CADToolbar({
     return (
       <Tooltip key={tool.key} title={tool.label}>
         <Button
-          type={isActive ? 'primary' : 'default'}
+          type={isActive ? "primary" : "default"}
           icon={tool.icon}
           disabled={tool.disabled}
           onClick={() => handleModeToggle(tool.key)}
@@ -94,19 +94,19 @@ export function CADToolbar({
   };
 
   const toolbarStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
+    display: "flex",
+    alignItems: "center",
     gap: 8,
-    padding: '8px 16px',
-    background: 'var(--theme-text-inverse, #fff)',
-    borderBottom: '1px solid var(--theme-border-divider, #e8e8e8)',
+    padding: "8px 16px",
+    background: "var(--theme-text-inverse, #fff)",
+    borderBottom: "1px solid var(--theme-border-divider, #e8e8e8)",
     ...style,
   };
 
   const dividerStyle: React.CSSProperties = {
     width: 1,
     height: 24,
-    background: 'var(--theme-border-divider, #e8e8e8)',
+    background: "var(--theme-border-divider, #e8e8e8)",
   };
 
   return (

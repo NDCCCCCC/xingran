@@ -7,20 +7,20 @@
  * - 激活标签样式（底部蓝色指示条，与侧边栏保持一致）
  */
 
-import { useRef, useState, useMemo, useEffect, useCallback } from 'react';
-import { Tabs, Dropdown, Button } from 'antd';
-import type { MenuProps } from 'antd';
-import { useTabs } from '@/store/tabsStore';
-import { useNavigate } from 'react-router-dom';
+import { useRef, useState, useMemo, useEffect, useCallback } from "react";
+import { Tabs, Dropdown, Button } from "antd";
+import type { MenuProps } from "antd";
+import { useTabs } from "@/store/tabsStore";
+import { useNavigate } from "react-router-dom";
 import {
 	CloseOutlined,
 	CloseCircleOutlined,
 	DownOutlined,
 	LeftOutlined,
 	RightOutlined,
-} from '@ant-design/icons';
-import '@/design-system/themes/theme-styles.css';
-import type { FC, ReactNode } from 'react';
+} from "@ant-design/icons";
+import "@/design-system/themes/theme-styles.css";
+import type { FC, ReactNode } from "react";
 import {
 	SCROLL_STEP,
 	INITIAL_DELAYS,
@@ -28,8 +28,8 @@ import {
 	DEFAULT_PADDING,
 	MIN_WIDTH,
 	DROPDOWN_MAX_ZINDEX,
-} from './TabBar.constants';
-import { checkScrollState, scrollContainer, setupDelayedChecks } from './TabBar.utils';
+} from "./TabBar.constants";
+import { checkScrollState, scrollContainer, setupDelayedChecks } from "./TabBar.utils";
 
 interface ContextMenuState {
   visible: boolean;
@@ -56,7 +56,7 @@ const TabBar: FC = () => {
     visible: false,
     x: 0,
     y: 0,
-    tabKey: '',
+    tabKey: "",
   });
 
   // 处理标签页点击
@@ -91,7 +91,7 @@ const TabBar: FC = () => {
   }, [activeTab, tabs, setActiveTab, navigate, removeTab]);
 
   // 滚动控制函数
-  const scrollTabs = useCallback((direction: 'left' | 'right') => {
+  const scrollTabs = useCallback((direction: "left" | "right") => {
     scrollContainer(scrollContainerRef.current, direction, SCROLL_STEP);
   }, []);
 
@@ -112,7 +112,7 @@ const TabBar: FC = () => {
 
     // 监听滚动事件
     const handleScroll = () => updateScrollState();
-    container.addEventListener('scroll', handleScroll, { passive: true });
+    container.addEventListener("scroll", handleScroll, { passive: true });
 
     // 监听容器尺寸变化
     const resizeObserver = new ResizeObserver(() => {
@@ -122,13 +122,13 @@ const TabBar: FC = () => {
 
     // 监听窗口大小变化
     const handleResize = () => updateScrollState();
-    window.addEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
 
     return () => {
       timers.forEach(timer => clearTimeout(timer));
-      container.removeEventListener('scroll', handleScroll);
+      container.removeEventListener("scroll", handleScroll);
       resizeObserver.disconnect();
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener("resize", handleResize);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tabs.length]); // 只在 tabs 数量变化时重新绑定；updateScrollState 引用不变，不需要作为依赖
@@ -140,7 +140,7 @@ const TabBar: FC = () => {
   }, []);
 
   // 右键菜单项
-  const contextMenuItems: MenuProps['items'] = useMemo(() => {
+  const contextMenuItems: MenuProps["items"] = useMemo(() => {
     const tab = tabs.find(t => t.key === contextMenuState.tabKey);
     const tabIndex = tabs.findIndex(t => t.key === contextMenuState.tabKey);
     const hasLeftTabs = tabIndex > 0;
@@ -148,8 +148,8 @@ const TabBar: FC = () => {
 
     return [
       {
-        key: 'close',
-        label: '关闭当前标签',
+        key: "close",
+        label: "关闭当前标签",
         icon: <CloseOutlined />,
         disabled: !tab?.closable,
         onClick: () => {
@@ -158,10 +158,10 @@ const TabBar: FC = () => {
           }
         },
       },
-      { type: 'divider' },
+      { type: "divider" },
       {
-        key: 'closeOthers',
-        label: '关闭其他标签',
+        key: "closeOthers",
+        label: "关闭其他标签",
         icon: <CloseCircleOutlined />,
         onClick: () => {
           if (contextMenuState.tabKey) {
@@ -171,8 +171,8 @@ const TabBar: FC = () => {
         },
       },
       {
-        key: 'closeLeft',
-        label: '关闭左侧标签',
+        key: "closeLeft",
+        label: "关闭左侧标签",
         icon: <LeftOutlined />,
         disabled: !hasLeftTabs,
         onClick: () => {
@@ -183,8 +183,8 @@ const TabBar: FC = () => {
         },
       },
       {
-        key: 'closeRight',
-        label: '关闭右侧标签',
+        key: "closeRight",
+        label: "关闭右侧标签",
         icon: <RightOutlined />,
         disabled: !hasRightTabs,
         onClick: () => {
@@ -198,7 +198,7 @@ const TabBar: FC = () => {
   }, [tabs, contextMenuState.tabKey, handleTabClose, closeOtherTabs, closeLeftTabs, closeRightTabs]);
 
   // 更多标签菜单
-  const moreMenuItems: MenuProps['items'] = useMemo(() => {
+  const moreMenuItems: MenuProps["items"] = useMemo(() => {
     const closableTabs = tabs.filter(tab => tab.closable);
     const pinnedTabs = tabs.filter(tab => !tab.closable && tab.pinned);
 
@@ -206,24 +206,24 @@ const TabBar: FC = () => {
       ...pinnedTabs.map(tab => ({
         key: tab.key,
         label: (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             {tab.icon}
             <span>{tab.title}</span>
           </div>
         ),
         onClick: () => handleTabChange(tab.key),
       })),
-      ...(pinnedTabs.length > 0 && closableTabs.length > 0 ? [{ type: 'divider' as const }] : []),
+      ...(pinnedTabs.length > 0 && closableTabs.length > 0 ? [{ type: "divider" as const }] : []),
       ...closableTabs.map(tab => ({
         key: tab.key,
         label: (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               {tab.icon}
               <span>{tab.title}</span>
             </div>
             <CloseOutlined
-              style={{ fontSize: '12px' }}
+              style={{ fontSize: "12px" }}
               onClick={(e) => {
                 e.stopPropagation();
                 handleTabClose(tab.key);
@@ -233,10 +233,10 @@ const TabBar: FC = () => {
         ),
         onClick: () => handleTabChange(tab.key),
       })),
-      ...(closableTabs.length > 0 ? [{ type: 'divider' as const }] : []),
+      ...(closableTabs.length > 0 ? [{ type: "divider" as const }] : []),
       {
-        key: 'closeAll',
-        label: '关闭所有',
+        key: "closeAll",
+        label: "关闭所有",
         icon: <CloseCircleOutlined />,
         onClick: () => {
           closeAllTabs();
@@ -267,14 +267,14 @@ const TabBar: FC = () => {
     };
 
     if (contextMenuState.visible) {
-      document.addEventListener('click', handleGlobalClick);
-      document.addEventListener('scroll', handleScroll, true);
-      window.addEventListener('resize', handleScroll);
+      document.addEventListener("click", handleGlobalClick);
+      document.addEventListener("scroll", handleScroll, true);
+      window.addEventListener("resize", handleScroll);
 
       return () => {
-        document.removeEventListener('click', handleGlobalClick);
-        document.removeEventListener('scroll', handleScroll, true);
-        window.removeEventListener('resize', handleScroll);
+        document.removeEventListener("click", handleGlobalClick);
+        document.removeEventListener("scroll", handleScroll, true);
+        window.removeEventListener("resize", handleScroll);
       };
     }
   }, [contextMenuState.visible]);
@@ -298,11 +298,11 @@ const TabBar: FC = () => {
         className="layout-tab-bar border-b"
         style={{
           padding: `0 ${DEFAULT_PADDING}px`,
-          display: 'flex',
-          alignItems: 'center',
+          display: "flex",
+          alignItems: "center",
           height: `${DEFAULT_HEIGHT}px`,
           minHeight: `${DEFAULT_HEIGHT}px`,
-          position: 'relative',
+          position: "relative",
           zIndex: 1,
           flexShrink: 0,
         }}
@@ -312,7 +312,7 @@ const TabBar: FC = () => {
         <Button
           icon={<LeftOutlined />}
           disabled={!scrollState.canScrollLeft}
-          onClick={() => scrollTabs('left')}
+          onClick={() => scrollTabs("left")}
           className="tab-scroll-button"
           type="text"
         />
@@ -321,7 +321,7 @@ const TabBar: FC = () => {
         <div
           ref={scrollContainerRef}
           style={{
-            overflow: 'hidden',
+            overflow: "hidden",
             flex: 1,
             minWidth: 0,
           }}
@@ -333,13 +333,13 @@ const TabBar: FC = () => {
             hideAdd
             items={allTabItems}
             onEdit={(targetKey, action) => {
-              if (action === 'remove') {
+              if (action === "remove") {
                 handleTabClose(targetKey as string);
               }
             }}
             className="layout-tab-bar"
             style={{
-              color: 'var(--theme-text-primary)',
+              color: "var(--theme-text-primary)",
             }}
           />
         </div>
@@ -348,7 +348,7 @@ const TabBar: FC = () => {
         <Button
           icon={<RightOutlined />}
           disabled={!scrollState.canScrollRight}
-          onClick={() => scrollTabs('right')}
+          onClick={() => scrollTabs("right")}
           className="tab-scroll-button"
           type="text"
         />
@@ -361,7 +361,7 @@ const TabBar: FC = () => {
               zIndex: DROPDOWN_MAX_ZINDEX,
             },
           }}
-          trigger={['click']}
+          trigger={["click"]}
           placement="bottomRight"
           getPopupContainer={(triggerNode) => {
             return triggerNode?.parentNode?.parentNode?.parentNode as HTMLElement || document.body;
@@ -371,11 +371,11 @@ const TabBar: FC = () => {
             type="text"
             icon={<DownOutlined />}
             style={{
-              marginLeft: '8px',
+              marginLeft: "8px",
               height: `${MIN_WIDTH}px`,
               minWidth: `${MIN_WIDTH}px`,
-              padding: '0 8px',
-              color: 'var(--theme-text-secondary)',
+              padding: "0 8px",
+              color: "var(--theme-text-secondary)",
             }}
           >
             更多
@@ -394,12 +394,12 @@ const TabBar: FC = () => {
       >
         <div
           style={{
-            position: 'fixed',
+            position: "fixed",
             left: contextMenuState.x,
             top: contextMenuState.y,
             width: 1,
             height: 1,
-            pointerEvents: 'none',
+            pointerEvents: "none",
           }}
         />
       </Dropdown>

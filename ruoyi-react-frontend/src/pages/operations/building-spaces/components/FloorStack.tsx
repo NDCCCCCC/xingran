@@ -2,10 +2,10 @@
  * 楼层堆叠组件
  * 显示3D堆叠的楼层卡片
  */
-import React, { useState } from 'react';
-import FloorCard3D from './FloorCard3D';
-import type { Floor } from '../types';
-import styles from './styles.module.css';
+import React, { useState } from "react";
+import FloorCard3D from "./FloorCard3D";
+import type { Floor } from "../types";
+import styles from "./styles.module.css";
 
 interface FloorStackProps {
   floors: Floor[];

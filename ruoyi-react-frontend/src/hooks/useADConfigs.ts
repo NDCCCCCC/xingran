@@ -3,12 +3,12 @@
  * 用于统一管理 AD 域相关页面的配置选择逻辑
  */
 
-import { useState, useEffect } from 'react';
-import { message } from 'antd';
+import { useState, useEffect } from "react";
+import { message } from "antd";
 import {
   getADConfigList,
   type ADConfig,
-} from '@/lib/adDomainApi';
+} from "@/lib/adDomainApi";
 
 export interface UseADConfigsOptions {
   /** 是否只获取启用状态的配置，默认 true */
@@ -24,7 +24,7 @@ export function useADConfigs(options: UseADConfigsOptions = {}) {
   } = options;
 
   const [configs, setConfigs] = useState<ADConfig[]>([]);
-  const [selectedConfig, setSelectedConfig] = useState<string>('');
+  const [selectedConfig, setSelectedConfig] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
   // 获取 AD 配置列表
@@ -46,7 +46,7 @@ export function useADConfigs(options: UseADConfigsOptions = {}) {
         }
       }
     } catch {
-      message.error('获取AD配置失败');
+      message.error("获取AD配置失败");
     } finally {
       setLoading(false);
     }
@@ -64,7 +64,7 @@ export function useADConfigs(options: UseADConfigsOptions = {}) {
 
   // 清除选择
   const clearSelection = () => {
-    setSelectedConfig('');
+    setSelectedConfig("");
   };
 
   return {

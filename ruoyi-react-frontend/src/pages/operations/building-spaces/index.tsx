@@ -2,14 +2,14 @@
  * 楼宇空间3D可视化主页面
  * 展示楼宇卡片、3D楼层堆叠、工位平面图
  */
-import { useState, useEffect } from 'react';
-import { Card, Row, Col, Statistic, message, Spin } from 'antd';
-import { ApartmentOutlined, DesktopOutlined } from '@ant-design/icons';
-import { buildingApi, floorApi, workstationApi } from '@/lib/opsApi';
-import BuildingCard from './components/BuildingCard';
-import BuildingModal from './components/BuildingModal';
-import type { Building } from './types';
-import styles from './components/styles.module.css';
+import { useState, useEffect } from "react";
+import { Card, Row, Col, Statistic, message, Spin } from "antd";
+import { ApartmentOutlined, DesktopOutlined } from "@ant-design/icons";
+import { buildingApi, floorApi, workstationApi } from "@/lib/opsApi";
+import BuildingCard from "./components/BuildingCard";
+import BuildingModal from "./components/BuildingModal";
+import type { Building } from "./types";
+import styles from "./components/styles.module.css";
 
 const BuildingSpacesPage: React.FC = () => {
   const [buildings, setBuildings] = useState<Building[]>([]);
@@ -49,8 +49,8 @@ const BuildingSpacesPage: React.FC = () => {
 
       setBuildings(buildingsWithStats);
     } catch (error: unknown) {
-      console.error('加载楼宇数据失败:', error);
-      message.error((error as { message?: string })?.message || '加载楼宇数据失败');
+      console.error("加载楼宇数据失败:", error);
+      message.error((error as { message?: string })?.message || "加载楼宇数据失败");
     } finally {
       setLoading(false);
     }

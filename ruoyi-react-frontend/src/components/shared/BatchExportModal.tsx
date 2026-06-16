@@ -3,10 +3,10 @@
  * 支持选择多个实体类型一次性导出为 ZIP 文件
  */
 
-import { useState, useMemo, type FC } from 'react';
-import { Modal, Checkbox, Space, Button, message } from 'antd';
-import { DownloadOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
-import { getAccessToken } from '@/utils/authHelpers';
+import { useState, useMemo, type FC } from "react";
+import { Modal, Checkbox, Space, Button, message } from "antd";
+import { DownloadOutlined, CheckOutlined, CloseOutlined } from "@ant-design/icons";
+import { getAccessToken } from "@/utils/authHelpers";
 
 export interface EntityType {
   key: string;
@@ -23,15 +23,15 @@ export interface BatchExportModalProps {
 
 // 默认支持的 9 个实体类型
 const DEFAULT_ENTITY_TYPES: EntityType[] = [
-  { key: 'devices', label: '网络设备' },
-  { key: 'credentials', label: '授权凭证' },
-  { key: 'templates', label: '配置模板' },
-  { key: 'commands', label: '命令分发' },
-  { key: 'executions', label: '配置执行' },
-  { key: 'backups', label: '配置备份' },
-  { key: 'discoveries', label: '设备发现' },
-  { key: 'mac', label: 'MAC地址' },
-  { key: 'ports', label: '端口采集' },
+  { key: "devices", label: "网络设备" },
+  { key: "credentials", label: "授权凭证" },
+  { key: "templates", label: "配置模板" },
+  { key: "commands", label: "命令分发" },
+  { key: "executions", label: "配置执行" },
+  { key: "backups", label: "配置备份" },
+  { key: "discoveries", label: "设备发现" },
+  { key: "mac", label: "MAC地址" },
+  { key: "ports", label: "端口采集" },
 ];
 
 const BatchExportModal: FC<BatchExportModalProps> = ({
@@ -69,7 +69,7 @@ const BatchExportModal: FC<BatchExportModalProps> = ({
   // 确认导出
   const handleConfirm = async () => {
     if (selectedTypes.length === 0) {
-      message.warning('请至少选择一个实体类型');
+      message.warning("请至少选择一个实体类型");
       return;
     }
     await onConfirm(selectedTypes);
@@ -90,7 +90,7 @@ const BatchExportModal: FC<BatchExportModalProps> = ({
   // 响应式列数配置
   const checkboxColSpan = useMemo(() => {
     // 桌面 3 列，平板 2 列，移动 1 列
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       if (window.innerWidth >= 992) return 8;
       if (window.innerWidth >= 576) return 12;
     }
@@ -114,7 +114,7 @@ const BatchExportModal: FC<BatchExportModalProps> = ({
       afterOpenChange={open => open && handleOpen()}
       destroyOnHidden
     >
-      <Space direction="vertical" style={{ width: '100%' }} size="middle">
+      <Space direction="vertical" style={{ width: "100%" }} size="middle">
         {/* 快捷操作按钮 */}
         <Space>
           <Button size="small" onClick={handleSelectAll} disabled={loading}>
@@ -137,14 +137,14 @@ const BatchExportModal: FC<BatchExportModalProps> = ({
           </Checkbox>
         </div>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
           {availableEntityTypes.map(entity => (
             <Checkbox
               key={entity.key}
               checked={selectedTypes.includes(entity.key)}
               onChange={() => handleToggle(entity.key)}
               disabled={loading}
-              style={typeof window !== 'undefined' && window.innerWidth < 576 ? { width: '100%' } : {}}
+              style={typeof window !== "undefined" && window.innerWidth < 576 ? { width: "100%" } : {}}
             >
               {entity.label}
             </Checkbox>

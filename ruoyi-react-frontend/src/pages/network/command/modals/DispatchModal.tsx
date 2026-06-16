@@ -3,9 +3,9 @@
  * 网络命令分发模态框
  */
 
-import { Modal, Form, Input, Table } from 'antd';
-import type { NetworkDevice } from '@/types';
-import { deviceColumns } from '../columns';
+import { Modal, Form, Input, Table } from "antd";
+import type { NetworkDevice } from "@/types";
+import { deviceColumns } from "../columns";
 
 const { TextArea } = Input;
 
@@ -49,7 +49,7 @@ export function CommandDispatchModal({
             rowSelection={{
               selectedRowKeys,
               onChange: (keys) => onSelectionChange(keys),
-              type: 'checkbox',
+              type: "checkbox",
             }}
             columns={deviceColumns}
             dataSource={devices}
@@ -58,7 +58,7 @@ export function CommandDispatchModal({
             size="small"
             scroll={{ y: 200 }}
           />
-          <div style={{ marginTop: 8, color: 'var(--theme-text-tertiary, #999)' }}>
+          <div style={{ marginTop: 8, color: "var(--theme-text-tertiary, #999)" }}>
             已选择 {selectedRowKeys.length} 台设备
           </div>
         </Form.Item>
@@ -66,7 +66,7 @@ export function CommandDispatchModal({
         <Form.Item
           name="commandContent"
           label="命令内容"
-          rules={[{ required: true, message: '请输入命令内容' }]}
+          rules={[{ required: true, message: "请输入命令内容" }]}
           extra="每行一条命令，支持标准网络设备命令"
         >
           <TextArea

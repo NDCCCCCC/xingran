@@ -3,10 +3,10 @@
  * 用于运营管理页面的部门树筛选功能
  */
 
-import { useState, useCallback } from 'react';
-import type { Key } from 'react';
-import type { FormInstance } from 'antd/es/form';
-import type { DataNode } from 'antd/es/tree';
+import { useState, useCallback } from "react";
+import type { Key } from "react";
+import type { FormInstance } from "antd/es/form";
+import type { DataNode } from "antd/es/tree";
 
 interface UseSidebarDeptFilterOptions {
   /** 搜索表单实例，用于在部门变化时清空相关筛选 */
@@ -34,11 +34,11 @@ export function useSidebarDeptFilter(
 ): UseSidebarDeptFilterReturn {
   const { searchForm, clearFieldNames = [], onDeptChange } = options;
 
-  const [selectedDeptId, setSelectedDeptId] = useState<string>('');
+  const [selectedDeptId, setSelectedDeptId] = useState<string>("");
 
   const handleDeptSelect = useCallback(
     (selectedKeys: Key[], info: { selected: boolean; node: DataNode }) => {
-      const deptId = selectedKeys.length > 0 ? (selectedKeys[0] as string) : '';
+      const deptId = selectedKeys.length > 0 ? (selectedKeys[0] as string) : "";
       setSelectedDeptId(deptId);
 
       // 清空指定的表单字段

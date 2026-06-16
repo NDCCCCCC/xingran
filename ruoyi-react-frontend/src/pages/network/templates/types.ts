@@ -3,7 +3,7 @@
  * 网络模板类型定义
  */
 
-import type { ConfigTemplate } from '@/types';
+import type { ConfigTemplate } from "@/types";
 
 // 统计数据
 export interface TemplateStatistics {

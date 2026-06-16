@@ -3,7 +3,7 @@
  * 模板变量查看模态框
  */
 
-import { Modal, Button, Table } from 'antd';
+import { Modal, Button, Table } from "antd";
 
 export interface VariableRow {
   key: string;
@@ -22,15 +22,15 @@ export function TemplateVariablesModal({ open, variables, onClose }: TemplateVar
     const varValue = value as { default?: string; description?: string } | undefined;
     return {
       key,
-      description: varValue?.description || '-',
-      defaultValue: varValue?.default || String(value ?? '-'),
+      description: varValue?.description || "-",
+      defaultValue: varValue?.default || String(value ?? "-"),
     };
   });
 
   const columns = [
-    { title: '变量名', dataIndex: 'key', key: 'key' },
-    { title: '描述', dataIndex: 'description', key: 'description' },
-    { title: '默认值', dataIndex: 'defaultValue', key: 'defaultValue' },
+    { title: "变量名", dataIndex: "key", key: "key" },
+    { title: "描述", dataIndex: "description", key: "description" },
+    { title: "默认值", dataIndex: "defaultValue", key: "defaultValue" },
   ];
 
   return (
@@ -54,7 +54,7 @@ export function TemplateVariablesModal({ open, variables, onClose }: TemplateVar
           rowKey="key"
         />
       ) : (
-        <p style={{ textAlign: 'center', color: 'var(--theme-text-tertiary, #999)' }}>此模板没有定义变量</p>
+        <p style={{ textAlign: "center", color: "var(--theme-text-tertiary, #999)" }}>此模板没有定义变量</p>
       )}
     </Modal>
   );

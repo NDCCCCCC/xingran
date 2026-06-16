@@ -3,17 +3,17 @@
  * Sidebar component utility functions
  */
 
-import type { Menu as MenuType } from '@/types';
+import type { Menu as MenuType } from "@/types";
 
 /**
  * 构建完整的菜单路径
  */
-export function buildFullPath(menu: MenuType, parentPath: string = ''): string {
-	const menuPath = menu.path || '';
+export function buildFullPath(menu: MenuType, parentPath: string = ""): string {
+	const menuPath = menu.path || "";
 	if (!menuPath) return parentPath;
 
 	// 如果已经是绝对路径，直接返回
-	if (menuPath.startsWith('/')) {
+	if (menuPath.startsWith("/")) {
 		return menuPath;
 	}
 
@@ -48,23 +48,23 @@ export function findMenuById(menuList: MenuType[], id: string): MenuType | null 
  */
 export function findMenuByFullPath(menuList: MenuType[], fullPath: string): string | null {
 	const normalizePath = (path: string): string => {
-		return path.startsWith('/') ? path.slice(1) : path;
+		return path.startsWith("/") ? path.slice(1) : path;
 	};
 
 	for (const menu of menuList) {
-		if (menu.menuType === 'F') continue;
+		if (menu.menuType === "F") continue;
 
-		const menuPath = menu.path || '';
+		const menuPath = menu.path || "";
 		let computedPath = menuPath;
-		const buildFullPath = (m: MenuType, parent: string = ''): string => {
-			const p = m.path || '';
+		const buildFullPath = (m: MenuType, parent: string = ""): string => {
+			const p = m.path || "";
 			if (!p) return parent;
-			if (p.startsWith('/')) return p.slice(1);
+			if (p.startsWith("/")) return p.slice(1);
 			if (!parent) return p;
-			return p.startsWith(parent + '/') ? p : `${parent}/${p}`;
+			return p.startsWith(parent + "/") ? p : `${parent}/${p}`;
 		};
 
-		computedPath = buildFullPath(menu, '');
+		computedPath = buildFullPath(menu, "");
 
 		// 检查一级菜单
 		if (computedPath === fullPath || menuPath === fullPath) {

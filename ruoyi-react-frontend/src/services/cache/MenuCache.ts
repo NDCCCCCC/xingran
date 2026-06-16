@@ -3,7 +3,7 @@
  * 用于短期内存缓存菜单和权限数据
  */
 
-import type { Menu } from '@/types/system';
+import type { Menu } from "@/types/system";
 
 /**
  * 菜单缓存条目

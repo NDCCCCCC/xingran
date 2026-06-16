@@ -1,6 +1,6 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
-import { Form } from 'antd';
-import type { FormInstance } from 'antd/es/form';
+import { useState, useCallback, useRef, useMemo } from "react";
+import { Form } from "antd";
+import type { FormInstance } from "antd/es/form";
 
 export interface TableManagerOptions {
   pageSize?: number;
@@ -113,7 +113,7 @@ export function useTableManager<T>(
     // 过滤掉空值、undefined、null
     const filteredValues = Object.keys(values).reduce((acc, key) => {
       const value = values[key];
-      if (value !== undefined && value !== null && value !== '') {
+      if (value !== undefined && value !== null && value !== "") {
         acc[key] = value;
       }
       return acc;

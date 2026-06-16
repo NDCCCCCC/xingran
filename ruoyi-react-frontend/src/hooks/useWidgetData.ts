@@ -4,10 +4,10 @@
  * 获取和管理Widget数据
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useDashboardStore } from '@/store/dashboardStore';
-import { dataFetcher } from '@/components/dashboard/utils/dataFetcher';
-import type { WidgetConfig } from '@/types/dashboard';
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useDashboardStore } from "@/store/dashboardStore";
+import { dataFetcher } from "@/components/dashboard/utils/dataFetcher";
+import type { WidgetConfig } from "@/types/dashboard";
 
 interface UseWidgetDataOptions {
 	/** 是否禁用自动刷新 */

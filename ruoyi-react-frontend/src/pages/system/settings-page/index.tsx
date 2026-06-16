@@ -1,35 +1,35 @@
-import { useState } from 'react';
-import type { FC } from 'react';
-import { Tabs } from 'antd';
-import { MailOutlined, ApiOutlined, PictureOutlined, BgColorsOutlined } from '@ant-design/icons';
-import { EmailConfigPage, APIConfigPage, CaptchaBackgroundSettingsPage } from '../settings';
-import DefaultThemePage from '../settings/default-theme';
+import { useState } from "react";
+import type { FC } from "react";
+import { Tabs } from "antd";
+import { MailOutlined, ApiOutlined, PictureOutlined, BgColorsOutlined } from "@ant-design/icons";
+import { EmailConfigPage, APIConfigPage, CaptchaBackgroundSettingsPage } from "../settings";
+import DefaultThemePage from "../settings/default-theme";
 
 /**
  * 系统设置页面
  * 使用Tabs组织邮箱配置、API配置、验证码背景图配置和默认主题配置
  */
 const SystemSettingsPage: FC = () => {
-  const [activeTab, setActiveTab] = useState('email');
+  const [activeTab, setActiveTab] = useState("email");
 
   const tabItems = [
     {
-      key: 'email',
+      key: "email",
       label: <span><MailOutlined />邮箱配置</span>,
       children: <EmailConfigPage />
     },
     {
-      key: 'api',
+      key: "api",
       label: <span><ApiOutlined />API配置</span>,
       children: <APIConfigPage />
     },
     {
-      key: 'captcha-background',
+      key: "captcha-background",
       label: <span><PictureOutlined />验证码背景图</span>,
       children: <CaptchaBackgroundSettingsPage />
     },
     {
-      key: 'default-theme',
+      key: "default-theme",
       label: <span><BgColorsOutlined />默认主题</span>,
       children: <DefaultThemePage />
     }

@@ -3,11 +3,11 @@
  * 配置执行数据管理 Hook
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import { message } from 'antd';
-import type { ConfigExecution, NetworkDevice, ConfigTemplate, BaseResponse, PageResponse } from '@/types';
-import { post } from '@/lib/api';
-import type { ExecutionStatistics, ExecutionDataState } from '../types';
+import { useState, useCallback, useEffect } from "react";
+import { message } from "antd";
+import type { ConfigExecution, NetworkDevice, ConfigTemplate, BaseResponse, PageResponse } from "@/types";
+import { post } from "@/lib/api";
+import type { ExecutionStatistics, ExecutionDataState } from "../types";
 
 export interface UseExecutionDataParams {
   current: number;
@@ -69,28 +69,28 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
   // 加载设备列表
   const loadDevices = useCallback(async () => {
     try {
-      const result = await post<PageResponse<NetworkDevice>>('/network/devices/list', {
+      const result = await post<PageResponse<NetworkDevice>>("/network/devices/list", {
         current: 1,
         pageSize: 1000,
         status: 0, // 只显示在线设备
       });
       setDataState(prev => ({ ...prev, devices: result.data?.list || [] }));
     } catch (error) {
-      console.error('加载设备列表失败:', error);
+      console.error("加载设备列表失败:", error);
     }
   }, []);
 
   // 加载模板列表
   const loadTemplates = useCallback(async () => {
     try {
-      const result = await post<PageResponse<ConfigTemplate>>('/network/templates/list', {
+      const result = await post<PageResponse<ConfigTemplate>>("/network/templates/list", {
         current: 1,
         pageSize: 1000,
-        templateType: 'config',
+        templateType: "config",
       });
       setDataState(prev => ({ ...prev, templates: result.data?.list || [] }));
     } catch (error) {
-      console.error('加载模板列表失败:', error);
+      console.error("加载模板列表失败:", error);
     }
   }, []);
 
@@ -102,7 +102,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
       const requestCurrent = params.current ?? execCurrent ?? 1;
       const requestPageSize = params.pageSize ?? pageSize ?? 10;
 
-      const result = await post<PageResponse<ConfigExecution>>('/network/executions/list', {
+      const result = await post<PageResponse<ConfigExecution>>("/network/executions/list", {
         ...params,
         current: requestCurrent,
         pageSize: requestPageSize,
@@ -112,7 +112,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
       // 更新统计数据
       updateStatistics(result.data?.list || []);
     } catch (error) {
-      console.error('加载执行记录失败:', error);
+      console.error("加载执行记录失败:", error);
     } finally {
       setExecLoading(false);
     }
@@ -121,20 +121,20 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
   // 加载统计数据
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post<PageResponse<ConfigExecution>>('/network/executions/list', { current: 1, pageSize: 100 });
+      const result = await post<PageResponse<ConfigExecution>>("/network/executions/list", { current: 1, pageSize: 100 });
       const allExecutions = result.data?.list || [];
       updateStatistics(allExecutions);
     } catch (error) {
-      console.error('加载统计数据失败:', error);
+      console.error("加载统计数据失败:", error);
     }
   }, []);
 
   // 更新统计数据
   const updateStatistics = useCallback((executionList: ConfigExecution[]) => {
-    const pendingCount = executionList.filter(e => e.status === 'pending').length;
-    const runningCount = executionList.filter(e => e.status === 'running').length;
-    const successCount = executionList.filter(e => e.status === 'success').length;
-    const failedCount = executionList.filter(e => e.status === 'failed').length;
+    const pendingCount = executionList.filter(e => e.status === "pending").length;
+    const runningCount = executionList.filter(e => e.status === "running").length;
+    const successCount = executionList.filter(e => e.status === "success").length;
+    const failedCount = executionList.filter(e => e.status === "failed").length;
     setStatistics({
       total: executionList.length,
       pending: pendingCount,
@@ -154,7 +154,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
         executionDetails: result.data?.details || [],
       }));
     } catch (error) {
-      message.error('加载执行明细失败');
+      message.error("加载执行明细失败");
     }
   }, []);
 

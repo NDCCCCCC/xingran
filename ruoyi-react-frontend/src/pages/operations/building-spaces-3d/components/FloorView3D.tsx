@@ -3,16 +3,16 @@
  * 显示楼层堆叠效果，点击楼层进入工位平面图
  */
 
-import { useEffect, useState, useCallback } from 'react';
-import { Card, Descriptions, Button, Space, Spin, Alert, Tag, Row, Col } from 'antd';
+import { useEffect, useState, useCallback } from "react";
+import { Card, Descriptions, Button, Space, Spin, Alert, Tag, Row, Col } from "antd";
 import {
   ArrowLeftOutlined,
   ApartmentOutlined,
   DesktopOutlined,
-} from '@ant-design/icons';
-import { useVisualizationStore } from '@/store/visualizationStore';
-import { workstationApi } from '@/lib/opsApi';
-import { handleApiError } from '@/utils/errorHandler';
+} from "@ant-design/icons";
+import { useVisualizationStore } from "@/store/visualizationStore";
+import { workstationApi } from "@/lib/opsApi";
+import { handleApiError } from "@/utils/errorHandler";
 import {
   convertApiWorkstations,
   calculateWorkstationStats,
@@ -20,8 +20,8 @@ import {
   getWorkstationTypeText,
   getWorkstationStatusColorCSS,
   getWorkstationTypeColorCSS,
-} from '../utils';
-import FloorPlan3D from './FloorPlan3D';
+} from "../utils";
+import FloorPlan3D from "./FloorPlan3D";
 
 // ============ 类型定义 ============
 
@@ -80,7 +80,7 @@ const FloorView3D: React.FC = () => {
       setWorkstations(convertedWorkstations);
       setStats(calculateWorkstationStats(workstationList));
     } catch (error) {
-      handleApiError(error, '加载工位数据');
+      handleApiError(error, "加载工位数据");
     } finally {
       setLoading(false);
     }
@@ -96,8 +96,8 @@ const FloorView3D: React.FC = () => {
     return <NoFloorSelectedAlert onBackToMap={navigateToMap} />;
   }
 
-  const statusColor = selectedFloor.status === 0 ? 'success' : 'default';
-  const statusText = selectedFloor.status === 0 ? '正常' : '停用';
+  const statusColor = selectedFloor.status === 0 ? "success" : "default";
+  const statusText = selectedFloor.status === 0 ? "正常" : "停用";
 
   return (
     <div style={styles.container}>
@@ -203,10 +203,10 @@ interface WorkstationStatsCardProps {
  * 当前策略：将字面量提升为命名常量，便于后续统一替换为 token / CSS 变量。
  */
 const WORKSTATION_STAT_COLORS = {
-  primary: 'var(--theme-info, #1890ff)',   // 总工位 - AntD colorPrimary
-  success: 'var(--theme-success, #52c41a)',   // 空闲工位 - AntD colorSuccess
-  error: '#ff4d4f',     // 占用工位 - AntD colorError
-  purple: 'var(--theme-purple, #722ed1)',    // 灵活工位 - AntD 紫色
+  primary: "var(--theme-info, #1890ff)",   // 总工位 - AntD colorPrimary
+  success: "var(--theme-success, #52c41a)",   // 空闲工位 - AntD colorSuccess
+  error: "#ff4d4f",     // 占用工位 - AntD colorError
+  purple: "var(--theme-purple, #722ed1)",    // 灵活工位 - AntD 紫色
 } as const;
 
 const WorkstationStatsCard: React.FC<WorkstationStatsCardProps> = ({ stats }) => (
@@ -294,42 +294,42 @@ const WorkstationCard: React.FC<WorkstationCardProps> = ({ workstation }) => {
 
 const styles = {
   container: {
-    height: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    height: "100vh",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     padding: 24,
   },
   centerContainer: {
-    height: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    height: "100vh",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
   card: {
-    width: '100%',
+    width: "100%",
     maxWidth: 1000,
-    maxHeight: '85vh',
-    overflowY: 'auto' as const,
+    maxHeight: "85vh",
+    overflowY: "auto" as const,
   },
   loadingContainer: {
-    textAlign: 'center' as const,
+    textAlign: "center" as const,
     padding: 40,
   },
   statsCard: {
     marginTop: 16,
   },
   statCardContainer: {
-    textAlign: 'center' as const,
+    textAlign: "center" as const,
   },
   statValue: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   statLabel: {
     fontSize: 12,
-    color: 'var(--theme-text-tertiary, #666)',
+    color: "var(--theme-text-tertiary, #666)",
   },
   workstationListContainer: {
     marginTop: 24,
@@ -338,26 +338,26 @@ const styles = {
     marginBottom: 16,
   },
   workstationGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
     gap: 12,
   },
   workstationCard: {
-    textAlign: 'center' as const,
+    textAlign: "center" as const,
   },
   workstationName: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 8,
   },
   workstationStatus: {
     fontSize: 12,
-    color: 'var(--theme-text-tertiary, #666)',
+    color: "var(--theme-text-tertiary, #666)",
     marginBottom: 4,
   },
   workstationType: {
     fontSize: 11,
-    color: 'var(--theme-text-tertiary, #999)',
+    color: "var(--theme-text-tertiary, #999)",
   },
 };
 

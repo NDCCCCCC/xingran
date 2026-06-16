@@ -9,11 +9,11 @@
  * - 401 时自动清空缓存
  */
 
-import { create } from 'zustand';
-import { getUserMenus, getAllUserMenus, getUserPermissions } from '@/lib/menuApi';
-import type { Menu } from '@/types';
-import { getMenuCache } from '@/services/cache/TTLMenuCache';
-import { ZUSTAND_STORAGE_KEYS } from '@/constants/storage';
+import { create } from "zustand";
+import { getUserMenus, getAllUserMenus, getUserPermissions } from "@/lib/menuApi";
+import type { Menu } from "@/types";
+import { getMenuCache } from "@/services/cache/TTLMenuCache";
+import { ZUSTAND_STORAGE_KEYS } from "@/constants/storage";
 
 interface MenuState {
 	menus: Menu[];

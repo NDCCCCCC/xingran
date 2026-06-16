@@ -3,7 +3,7 @@
  * 模板预览模态框
  */
 
-import { Modal, Button } from 'antd';
+import { Modal, Button } from "antd";
 
 export interface TemplatePreviewModalProps {
   open: boolean;
@@ -26,11 +26,11 @@ export function TemplatePreviewModal({ open, content, onClose }: TemplatePreview
     >
       <pre
         style={{
-          background: '#f5f5f5',
+          background: "#f5f5f5",
           padding: 16,
           borderRadius: 4,
           maxHeight: 500,
-          overflow: 'auto',
+          overflow: "auto",
         }}
       >
         {content}

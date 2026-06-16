@@ -5,7 +5,7 @@
 /**
  * 值班类型
  */
-export type DutyType = 'weekday' | 'weekend' | 'holiday';
+export type DutyType = "weekday" | "weekend" | "holiday";
 
 /**
  * 今日值班记录

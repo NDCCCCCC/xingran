@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from "react";
 import {
   Card,
   Table,
@@ -12,7 +12,7 @@ import {
   Modal,
   message,
   Tooltip,
-} from 'antd';
+} from "antd";
 import {
   ReloadOutlined,
   CheckCircleOutlined,
@@ -24,8 +24,8 @@ import {
   SyncOutlined,
   CheckSquareOutlined,
   BorderOutlined,
-} from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+} from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
 import {
   getADUserList,
   getADUserIds,
@@ -38,14 +38,14 @@ import {
   type ADUser,
   type ADOUNode,
   type BatchSyncResult,
-} from '@/lib/adDomainApi';
-import type { UnknownError } from '@/types/common';
-import ActionButtons from '@/components/shared/ActionButtons';
-import { useADConfigs } from '@/hooks/useADConfigs';
-import type { ADConfig } from '@/lib/adDomainApi';
+} from "@/lib/adDomainApi";
+import type { UnknownError } from "@/types/common";
+import ActionButtons from "@/components/shared/ActionButtons";
+import { useADConfigs } from "@/hooks/useADConfigs";
+import type { ADConfig } from "@/lib/adDomainApi";
 
-import type { FC } from 'react';
-import { usePagination } from '@/hooks/usePagination';
+import type { FC } from "react";
+import { usePagination } from "@/hooks/usePagination";
 
 const ADUserPage: FC = () => {
   const [form] = Form.useForm();
@@ -86,7 +86,7 @@ const ADUserPage: FC = () => {
       const res = await getADOUTree(selectedConfig);
       if (res.code === 0 && res.data) {
         // 过滤掉不需要的OU：Computer, None, Servers, mgtgrp
-        const excludedOUNames = ['Computer', 'None', 'Servers', 'mgtgrp'];
+        const excludedOUNames = ["Computer", "None", "Servers", "mgtgrp"];
         const filterOUTree = (nodes: ADOUNode[]): ADOUNode[] => {
           return nodes
             .filter(node => !excludedOUNames.includes(node.name))
@@ -98,7 +98,7 @@ const ADUserPage: FC = () => {
         setOUTree(filterOUTree(res.data));
       }
     } catch (error) {
-      console.error('获取OU树失败', error);
+      console.error("获取OU树失败", error);
     }
   };
 
@@ -116,7 +116,7 @@ const ADUserPage: FC = () => {
       return null;
     };
 
-    const commonNames = ['湖北分公司', '失效终端', '本部部门分组'];
+    const commonNames = ["湖北分公司", "失效终端", "本部部门分组"];
     return commonNames
       .map(name => findOUByName(name))
       .filter(Boolean) as ADOUNode[];
@@ -148,7 +148,7 @@ const ADUserPage: FC = () => {
         setTotal(res.data?.total ?? 0);
       }
     } catch {
-      message.error('获取用户列表失败');
+      message.error("获取用户列表失败");
     } finally {
       setLoading(false);
     }
@@ -179,12 +179,12 @@ const ADUserPage: FC = () => {
     try {
       const values = await editForm.validateFields();
       await updateADUser(editingUser.id, selectedConfig, values);
-      message.success('更新成功');
+      message.success("更新成功");
       setEditModalVisible(false);
       fetchUsers();
     } catch (error: unknown) {
       const err = error as UnknownError;
-      message.error(err.message || '更新失败');
+      message.error(err.message || "更新失败");
     }
   };
 
@@ -198,12 +198,12 @@ const ADUserPage: FC = () => {
 
     try {
       await moveADUser(movingUser.id, selectedConfig, ouDn);
-      message.success('移动成功');
+      message.success("移动成功");
       setMoveModalVisible(false);
       fetchUsers();
     } catch (error: unknown) {
       const err = error as UnknownError;
-      message.error(err.message || '移动失败');
+      message.error(err.message || "移动失败");
     }
   };
 
@@ -213,15 +213,15 @@ const ADUserPage: FC = () => {
     try {
       if (user.isEnabled) {
         await disableADUser(user.id, selectedConfig);
-        message.success('禁用成功');
+        message.success("禁用成功");
       } else {
         await enableADUser(user.id, selectedConfig);
-        message.success('启用成功');
+        message.success("启用成功");
       }
       fetchUsers();
     } catch (error: unknown) {
       const err = error as UnknownError;
-      message.error(err.message || '操作失败');
+      message.error(err.message || "操作失败");
     }
   };
 
@@ -258,7 +258,7 @@ const ADUserPage: FC = () => {
         message.success(`已选择所有 ${allUserIds.length} 个用户`);
       }
     } catch (error) {
-      message.error('获取所有用户失败');
+      message.error("获取所有用户失败");
     } finally {
       setLoadingAllUserIds(false);
     }
@@ -275,9 +275,9 @@ const ADUserPage: FC = () => {
       title: `确定同步选中的 ${syncCount} 个用户到系统用户表？`,
       content: selectAllMode
         ? `当前选择的是"全选所有"模式，将同步所有符合筛选条件的 ${selectAllTotal} 个用户`
-        : '同步后用户可以使用AD账号登录系统',
-      okText: '确定',
-      cancelText: '取消',
+        : "同步后用户可以使用AD账号登录系统",
+      okText: "确定",
+      cancelText: "取消",
       onOk: async () => {
         setBatchSyncLoading(true);
         try {
@@ -287,9 +287,9 @@ const ADUserPage: FC = () => {
             // 全选模式：使用所有用户ID获取用户信息
             const res = await getADUserList({
               configId: selectedConfig,
-              ouDn: form.getFieldValue('ouDn'),
-              username: form.getFieldValue('username'),
-              isEnabled: form.getFieldValue('isEnabled'),
+              ouDn: form.getFieldValue("ouDn"),
+              username: form.getFieldValue("username"),
+              isEnabled: form.getFieldValue("isEnabled"),
               current: 1,
               pageSize: selectAllTotal,
             });
@@ -315,10 +315,10 @@ const ADUserPage: FC = () => {
             // 显示错误详情
             if (data.errors && data.errors.length > 0) {
               Modal.warning({
-                title: '部分用户同步失败',
+                title: "部分用户同步失败",
                 width: 600,
                 content: (
-                  <div style={{ maxHeight: 400, overflow: 'auto' }}>
+                  <div style={{ maxHeight: 400, overflow: "auto" }}>
                     {data.errors.map((err, i) => (
                       <div key={i} style={{ marginBottom: 4 }}>
                         <strong>{err.username}:</strong> {err.error}
@@ -338,7 +338,7 @@ const ADUserPage: FC = () => {
             fetchUsers();
           }
         } catch (error) {
-          message.error('批量同步失败');
+          message.error("批量同步失败");
         } finally {
           setBatchSyncLoading(false);
         }
@@ -358,45 +358,45 @@ const ADUserPage: FC = () => {
   const treeSelectData = useMemo(() => buildTreeSelectData(ouTree), [ouTree]);
 
   const handleQuickOUSelect = (ouDn: string) => {
-    form.setFieldValue('ouDn', ouDn);
+    form.setFieldValue("ouDn", ouDn);
     handleSearch();
   };
 
   const columns: ColumnsType<ADUser> = [
     {
-      title: '用户名',
-      dataIndex: 'username',
-      key: 'username',
-      fixed: 'left',
+      title: "用户名",
+      dataIndex: "username",
+      key: "username",
+      fixed: "left",
       width: 150,
     },
     {
-      title: '显示名',
-      dataIndex: 'displayName',
-      key: 'displayName',
+      title: "显示名",
+      dataIndex: "displayName",
+      key: "displayName",
       width: 150,
     },
     {
-      title: '邮箱',
-      dataIndex: 'email',
-      key: 'email',
+      title: "邮箱",
+      dataIndex: "email",
+      key: "email",
       width: 200,
       ellipsis: true,
     },
     {
-      title: '部门',
-      dataIndex: 'department',
-      key: 'department',
+      title: "部门",
+      dataIndex: "department",
+      key: "department",
       width: 150,
     },
     {
-      title: 'OU',
-      dataIndex: 'ouDn',
-      key: 'ouDn',
+      title: "OU",
+      dataIndex: "ouDn",
+      key: "ouDn",
       width: 300,
       ellipsis: true,
       render: (ouDn: string, record: ADUser) => {
-        if (!ouDn) return '-';
+        if (!ouDn) return "-";
         // 获取当前配置的BaseDN
         const currentConfig = configs.find(c => c.id === selectedConfig);
         if (!currentConfig) return ouDn;
@@ -411,45 +411,45 @@ const ADUserPage: FC = () => {
         }
 
         // 提取所有OU并格式化显示
-        const parts = dnToProcess.split(',');
+        const parts = dnToProcess.split(",");
         const ous: string[] = [];
         for (const part of parts) {
           const trimmed = part.trim();
-          if (trimmed.startsWith('OU=')) {
-            ous.push(trimmed.replace('OU=', ''));
+          if (trimmed.startsWith("OU=")) {
+            ous.push(trimmed.replace("OU=", ""));
           }
         }
 
         // 用斜杠显示多个OU层级
-        return ous.length > 0 ? ous.join(' / ') : '-';
+        return ous.length > 0 ? ous.join(" / ") : "-";
       },
     },
     {
-      title: '职位',
-      dataIndex: 'title',
-      key: 'title',
+      title: "职位",
+      dataIndex: "title",
+      key: "title",
       width: 120,
     },
     {
-      title: '办公电话',
-      dataIndex: 'phone',
-      key: 'phone',
+      title: "办公电话",
+      dataIndex: "phone",
+      key: "phone",
       width: 130,
     },
     {
-      title: '手机',
-      dataIndex: 'mobile',
-      key: 'mobile',
+      title: "手机",
+      dataIndex: "mobile",
+      key: "mobile",
       width: 130,
     },
     {
-      title: '状态',
-      key: 'status',
+      title: "状态",
+      key: "status",
       width: 200,
       render: (_: unknown, user: ADUser) => (
         <Space size="small">
-          <Tag color={user.isEnabled ? 'success' : 'default'}>
-            {user.isEnabled ? '启用' : '禁用'}
+          <Tag color={user.isEnabled ? "success" : "default"}>
+            {user.isEnabled ? "启用" : "禁用"}
           </Tag>
           {user.isLocked && <Tag color="error">锁定</Tag>}
           {user.passwordExpired && <Tag color="warning">密码过期</Tag>}
@@ -457,27 +457,27 @@ const ADUserPage: FC = () => {
       ),
     },
     {
-      title: '操作',
-      key: 'action',
-      fixed: 'right',
+      title: "操作",
+      key: "action",
+      fixed: "right",
       width: 100,
       render: (_: unknown, user: ADUser) => {
         const actions = [
           {
-            key: 'toggle-status',
-            label: user.isEnabled ? '禁用' : '启用',
+            key: "toggle-status",
+            label: user.isEnabled ? "禁用" : "启用",
             icon: user.isEnabled ? <StopOutlined /> : <CheckCircleOutlined />,
             onClick: () => handleEnable(user),
           },
           {
-            key: 'move',
-            label: '移动',
+            key: "move",
+            label: "移动",
             icon: <SwapOutlined />,
             onClick: () => handleMove(user),
           },
           {
-            key: 'edit',
-            label: '编辑',
+            key: "edit",
+            label: "编辑",
             icon: <EditOutlined />,
             onClick: () => handleEdit(user),
           },
@@ -490,7 +490,7 @@ const ADUserPage: FC = () => {
 
   return (
     <Card>
-      <Space orientation="vertical" style={{ width: '100%' }} size="large">
+      <Space orientation="vertical" style={{ width: "100%" }} size="large">
         {/* 搜索栏 */}
         <Form form={form} layout="inline">
           <Form.Item label="AD配置">
@@ -502,7 +502,7 @@ const ADUserPage: FC = () => {
             />
           </Form.Item>
           <Form.Item name="ouDn" label="所属OU">
-            <Space.Compact style={{ width: '100%' }}>
+            <Space.Compact style={{ width: "100%" }}>
               <TreeSelect
                 placeholder="请选择OU"
                 allowClear
@@ -511,10 +511,10 @@ const ADUserPage: FC = () => {
                 treeIcon={<FolderOutlined />}
                 treeNodeFilterProp="title"
                 style={{ width: 300 }}
-                styles={{ popup: { root: { maxHeight: 400, overflow: 'auto' } } }}
+                styles={{ popup: { root: { maxHeight: 400, overflow: "auto" } } }}
                 treeData={treeSelectData}
                 onChange={(value) => {
-                  form.setFieldValue('ouDn', value);
+                  form.setFieldValue("ouDn", value);
                 }}
               />
               {commonOUs.length > 0 && (
@@ -550,9 +550,9 @@ const ADUserPage: FC = () => {
                 icon={selectAllMode ? <CheckSquareOutlined /> : <BorderOutlined />}
                 onClick={handleSelectAll}
                 loading={loadingAllUserIds}
-                type={selectAllMode ? 'primary' : 'default'}
+                type={selectAllMode ? "primary" : "default"}
               >
-                {selectAllMode ? '取消全选' : '全选所有'}
+                {selectAllMode ? "取消全选" : "全选所有"}
                 {selectAllMode && ` (${selectAllTotal})`}
               </Button>
               <Button
@@ -630,17 +630,17 @@ const ADUserPage: FC = () => {
         footer={null}
         width={500}
       >
-        <Space orientation="vertical" style={{ width: '100%' }}>
+        <Space orientation="vertical" style={{ width: "100%" }}>
           <div>选择目标OU：</div>
           <TreeSelect
-            style={{ width: '100%' }}
+            style={{ width: "100%" }}
             placeholder="请选择目标OU"
             allowClear
             showSearch
             treeDefaultExpandAll={false}
             treeIcon={<FolderOutlined />}
             treeNodeFilterProp="title"
-            styles={{ popup: { root: { maxHeight: 400, overflow: 'auto' } } }}
+            styles={{ popup: { root: { maxHeight: 400, overflow: "auto" } } }}
             treeData={treeSelectData}
             onChange={(value) => {
               handleMoveConfirm(value);
@@ -661,20 +661,20 @@ const ADUserPage: FC = () => {
         ]}
         width={600}
       >
-        <Space orientation="vertical" style={{ width: '100%' }} size="middle">
-          <div style={{ color: '#666', fontSize: '14px' }}>
+        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
+          <div style={{ color: "#666", fontSize: "14px" }}>
             点击下方OU标签快速筛选该OU下的用户
           </div>
-          <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+          <div style={{ maxHeight: 400, overflowY: "auto" }}>
             <Space wrap>
               {commonOUs.map((ou) => (
                 <Tag
                   key={ou.dn}
                   style={{
-                    cursor: 'pointer',
-                    padding: '8px 16px',
-                    fontSize: '14px',
-                    marginBottom: '8px',
+                    cursor: "pointer",
+                    padding: "8px 16px",
+                    fontSize: "14px",
+                    marginBottom: "8px",
                   }}
                   icon={<FolderOutlined />}
                   onClick={() => {
@@ -688,7 +688,7 @@ const ADUserPage: FC = () => {
             </Space>
           </div>
           {commonOUs.length === 0 && (
-            <div style={{ textAlign: 'center', color: 'var(--theme-text-tertiary, #999)', padding: '40px' }}>
+            <div style={{ textAlign: "center", color: "var(--theme-text-tertiary, #999)", padding: "40px" }}>
               暂无常用OU配置
             </div>
           )}

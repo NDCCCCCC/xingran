@@ -22,12 +22,12 @@
  * - 同时挂载到 :root --ant-color-primary CSS 变量，方便自定义 CSS 引用
  */
 
-import { useMemo, type FC, type ReactNode } from 'react';
-import { ConfigProvider, theme as antdTheme } from 'antd';
-import type { ThemeConfig } from 'antd';
-import zhCN from 'antd/locale/zh_CN';
-import { useSettingsStore } from '@/store/settingsStore';
-import { useThemeStore } from '@/store/themeStore';
+import { useMemo, type FC, type ReactNode } from "react";
+import { ConfigProvider, theme as antdTheme } from "antd";
+import type { ThemeConfig } from "antd";
+import zhCN from "antd/locale/zh_CN";
+import { useSettingsStore } from "@/store/settingsStore";
+import { useThemeStore } from "@/store/themeStore";
 
 interface AntdThemeBridgeProps {
 	children: ReactNode;
@@ -37,7 +37,7 @@ interface AntdThemeBridgeProps {
  * 默认 AntD 主色（与 AntD 内部 defaultSeedToken.colorPrimary 保持一致）
  * 当用户未配置 customColors.primary 时使用此值
  */
-const DEFAULT_ANTD_PRIMARY = '#1677ff';
+const DEFAULT_ANTD_PRIMARY = "#1677ff";
 
 const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
 	// 订阅 settingsStore 的主题与布局配置
@@ -51,19 +51,19 @@ const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
 	const antdThemeConfig = useMemo<ThemeConfig>(() => {
 		// 主色：优先使用 customColors.primary（如果存在且是字符串），否则回退到默认
 		const primary =
-			typeof customColors?.primary === 'string' && customColors.primary
+			typeof customColors?.primary === "string" && customColors.primary
 				? customColors.primary
 				: DEFAULT_ANTD_PRIMARY;
 
 		// 模式：dark 模式使用 darkAlgorithm
 		const algorithm =
-			themeMode === 'dark'
+			themeMode === "dark"
 				? antdTheme.darkAlgorithm
 				: antdTheme.defaultAlgorithm;
 
 		// 密度：compact 模式叠加 compactAlgorithm
 		const algorithms =
-			density === 'compact' ? [algorithm, antdTheme.compactAlgorithm] : algorithm;
+			density === "compact" ? [algorithm, antdTheme.compactAlgorithm] : algorithm;
 
 		// 把主色同时写入 colorInfo 和 colorLink，保证 Info / Link 类组件也跟随主题
 		return {

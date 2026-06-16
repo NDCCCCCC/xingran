@@ -2,39 +2,39 @@
  * 信息点管理页面
  */
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
-import type { FC } from 'react';
+import { useState, useCallback, useEffect, useMemo } from "react";
+import type { FC } from "react";
 import {
   Table, Button, Space, Modal, Form, Input, Select,
   Tag, Card, Row, Col, Alert, Radio, Cascader, Tooltip, Layout,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+} from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined,
   CheckCircleOutlined, StopOutlined, WarningOutlined, AppstoreOutlined, TableOutlined,
   ImportOutlined, ExportOutlined, DotChartOutlined,
-} from '@ant-design/icons';
-import type { InfoPoint, WorkstationOps, Floor, Building } from '@/types';
-import { infoPointApi, workstationApi, buildingApi, floorApi } from '@/lib/opsApi';
-import { useTableManager } from '@/hooks/useTableManager';
-import { usePagination } from '@/hooks/usePagination';
-import { useSidebarDeptFilter } from '@/hooks/useSidebarDeptFilter';
-import { useDict } from '@/hooks/useDict';
-import { handleApiError, handleSuccess, isFormValidationError } from '@/utils/errorHandler';
-import { createDateTimeColumn } from '@/utils/tableHelpers';
-import { fetchInfoPointStatistics } from '@/utils/statisticsHelper';
-import ActionButtons from '@/components/shared/ActionButtons';
-import ExcelImport from '@/components/shared/ExcelImport';
-import ExcelExport from '@/components/shared/ExcelExport';
-import { DeptSidebar } from '@/components/operations/DeptSidebar';
-import { StatisticsCards } from '@/components/operations/StatisticsCards';
-import { post } from '@/lib/api';
+} from "@ant-design/icons";
+import type { InfoPoint, WorkstationOps, Floor, Building } from "@/types";
+import { infoPointApi, workstationApi, buildingApi, floorApi } from "@/lib/opsApi";
+import { useTableManager } from "@/hooks/useTableManager";
+import { usePagination } from "@/hooks/usePagination";
+import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
+import { useDict } from "@/hooks/useDict";
+import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
+import { createDateTimeColumn } from "@/utils/tableHelpers";
+import { fetchInfoPointStatistics } from "@/utils/statisticsHelper";
+import ActionButtons from "@/components/shared/ActionButtons";
+import ExcelImport from "@/components/shared/ExcelImport";
+import ExcelExport from "@/components/shared/ExcelExport";
+import { DeptSidebar } from "@/components/operations/DeptSidebar";
+import { StatisticsCards } from "@/components/operations/StatisticsCards";
+import { post } from "@/lib/api";
 
 const { Option } = Select;
 const { TextArea } = Input;
 const { Content } = Layout;
 
-type ViewMode = 'table' | 'card';
+type ViewMode = "table" | "card";
 
 interface WorkstationOption {
   id: string;
@@ -76,17 +76,17 @@ interface Statistics {
 
 const InfoPointManagement: FC = () => {
   const [statistics, setStatistics] = useState<Statistics>({ total: 0, normal: 0, fault: 0, disabled: 0 });
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
   const [workstationOptions, setWorkstationOptions] = useState<WorkstationOption[]>([]);
   const [networkDevices, setNetworkDevices] = useState<NetworkDeviceOption[]>([]);
   const [devicePorts, setDevicePorts] = useState<DevicePortOption[]>([]);
-  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
 
   // Wave 5: useDict replaces raw post() call for ops_info_point_type
-  const { data: infoPointTypeDict = [] } = useDict('ops_info_point_type');
+  const { data: infoPointTypeDict = [] } = useDict("ops_info_point_type");
 
   // Cascader 懒加载状态
   const [cascaderOptions, setCascaderOptions] = useState<CascaderOption[]>([]);
@@ -94,7 +94,7 @@ const InfoPointManagement: FC = () => {
 
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
   const { selectedDeptId, handleDeptSelect } = useSidebarDeptFilter({
-    clearFieldNames: ['workstationId'],
+    clearFieldNames: ["workstationId"],
   });
 
   const {
@@ -126,7 +126,7 @@ const InfoPointManagement: FC = () => {
     try {
       return await fetchInfoPointStatistics();
     } catch (error) {
-      handleApiError(error, '加载统计数据', false);
+      handleApiError(error, "加载统计数据", false);
       return { total: 0, normal: 0, fault: 0, disabled: 0 };
     }
   }, []);
@@ -153,7 +153,7 @@ const InfoPointManagement: FC = () => {
         isLeaf: false,
       }));
     } catch (error) {
-      handleApiError(error, '加载楼宇列表', false);
+      handleApiError(error, "加载楼宇列表", false);
       return [];
     }
   }, []);
@@ -164,12 +164,12 @@ const InfoPointManagement: FC = () => {
       const floors = floorResult.data?.list || [];
       return floors.map((f: Floor) => ({
         value: f.id,
-        label: f.name || f.floorNo || '',
+        label: f.name || f.floorNo || "",
         isLeaf: false,
         floorNo: f.floorNo,
       }));
     } catch (error) {
-      handleApiError(error, '加载楼层列表', false);
+      handleApiError(error, "加载楼层列表", false);
       return [];
     }
   }, []);
@@ -182,11 +182,11 @@ const InfoPointManagement: FC = () => {
         .filter((w: WorkstationOps) => w.id)
         .map((w: WorkstationOps) => ({
           value: w.id,
-          label: w.name || '未命名工位',
+          label: w.name || "未命名工位",
           isLeaf: true,
         }));
     } catch (error) {
-      handleApiError(error, '加载工位列表', false);
+      handleApiError(error, "加载工位列表", false);
       return [];
     }
   }, []);
@@ -245,11 +245,11 @@ const InfoPointManagement: FC = () => {
           .filter((w: WorkstationOps) => w.id)
           .map((w: WorkstationOps) => ({
             id: w.id,
-            name: w.name ?? '未命名工位',
+            name: w.name ?? "未命名工位",
           }))
       );
     } catch (error) {
-      handleApiError(error, '加载工位选项', false);
+      handleApiError(error, "加载工位选项", false);
     }
   }, [workstationOptions.length, selectedDeptId]);
 
@@ -257,10 +257,10 @@ const InfoPointManagement: FC = () => {
 
   const loadNetworkDevices = useCallback(async () => {
     try {
-      const result = await post('/network/devices/list', { current: 1, pageSize: 1000 }) as { data?: { list: NetworkDeviceOption[] } };
+      const result = await post("/network/devices/list", { current: 1, pageSize: 1000 }) as { data?: { list: NetworkDeviceOption[] } };
       setNetworkDevices(result.data?.list || []);
     } catch (error) {
-      handleApiError(error, '加载网络设备列表', false);
+      handleApiError(error, "加载网络设备列表", false);
     }
   }, []);
 
@@ -270,10 +270,10 @@ const InfoPointManagement: FC = () => {
       return;
     }
     try {
-      const result = await post('/network/ports/list', { deviceId, current: 1, pageSize: 1000 }) as { data?: { list: DevicePortOption[] } };
+      const result = await post("/network/ports/list", { deviceId, current: 1, pageSize: 1000 }) as { data?: { list: DevicePortOption[] } };
       setDevicePorts(result.data?.list || []);
     } catch (error) {
-      handleApiError(error, '加载设备端口列表', false);
+      handleApiError(error, "加载设备端口列表", false);
     }
   }, []);
 
@@ -281,7 +281,7 @@ const InfoPointManagement: FC = () => {
   useEffect(() => {
     Promise.all([loadStatistics(), loadNetworkDevices()])
       .then(([stats]) => setStatistics(stats));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [loadStatistics, loadNetworkDevices]);
 
   useEffect(() => {
@@ -302,7 +302,7 @@ const InfoPointManagement: FC = () => {
         }
       } else if (!editingInfoPoint) {
         // 新增模式：清空设备ID和端口列表
-        setSelectedDeviceId('');
+        setSelectedDeviceId("");
         setDevicePorts([]);
       }
     };
@@ -326,38 +326,38 @@ const InfoPointManagement: FC = () => {
 
       if (editingInfoPoint) {
         await infoPointApi.update(editingInfoPoint.id, values);
-        handleSuccess('更新');
+        handleSuccess("更新");
       } else {
         await infoPointApi.create(values);
-        handleSuccess('创建');
+        handleSuccess("创建");
       }
       handleModalClose();
       refreshData();
     } catch (error: unknown) {
       if (isFormValidationError(error)) return;
-      handleApiError(error, '操作');
+      handleApiError(error, "操作");
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       await infoPointApi.delete(id);
-      handleSuccess('删除');
+      handleSuccess("删除");
       refreshData();
     } catch (error) {
-      handleApiError(error, '删除');
+      handleApiError(error, "删除");
     }
   };
 
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) return;
     try {
-      await infoPointApi.batch('delete', { ids: selectedRowKeys });
-      handleSuccess('批量删除');
+      await infoPointApi.batch("delete", { ids: selectedRowKeys });
+      handleSuccess("批量删除");
       resetSelection();
       refreshData();
     } catch (error) {
-      handleApiError(error, '批量删除');
+      handleApiError(error, "批量删除");
     }
   };
 
@@ -374,16 +374,16 @@ const InfoPointManagement: FC = () => {
         setSelectedDeviceId(formValues.deviceId as string);
         // 直接调用 API 并同步设置状态，确保在 setFieldsValue 之前完成
         try {
-          const result = await post('/network/ports/list', { deviceId: formValues.deviceId, current: 1, pageSize: 1000 }) as { data?: { list: DevicePortOption[] } };
+          const result = await post("/network/ports/list", { deviceId: formValues.deviceId, current: 1, pageSize: 1000 }) as { data?: { list: DevicePortOption[] } };
           setDevicePorts(result.data?.list || []);
         } catch (error) {
-          console.error('加载设备端口列表失败:', error);
+          console.error("加载设备端口列表失败:", error);
           setDevicePorts([]);
         }
       }
 
       // 处理 workstationId：将单个字符串转换为三级路径数组
-      if (formValues.workstationId && typeof formValues.workstationId === 'string') {
+      if (formValues.workstationId && typeof formValues.workstationId === "string") {
         try {
           // 查询工位详细信息以获取所属楼层
           const wsResult = await workstationApi.get(formValues.workstationId);
@@ -407,7 +407,7 @@ const InfoPointManagement: FC = () => {
             }
           }
         } catch (error) {
-          console.error('获取工位信息失败:', error);
+          console.error("获取工位信息失败:", error);
           formValues.workstationId = undefined;
         }
       }
@@ -456,7 +456,7 @@ const InfoPointManagement: FC = () => {
       // 触发重新渲染
       setCascaderOptions(updatedOptions);
     } catch (error) {
-      console.error('预加载 Cascader 路径失败:', error);
+      console.error("预加载 Cascader 路径失败:", error);
     }
   };
 
@@ -484,78 +484,78 @@ const InfoPointManagement: FC = () => {
   };
 
   const getStatusText = (status: number) => {
-    const statusMap = { 0: '正常', 1: '故障', 2: '停用' };
-    return statusMap[status as keyof typeof statusMap] || '未知';
+    const statusMap = { 0: "正常", 1: "故障", 2: "停用" };
+    return statusMap[status as keyof typeof statusMap] || "未知";
   };
 
   // 截断设备名称，超出长度显示省略号
   const truncateDeviceName = (name: string | undefined, maxLength = 15) => {
-    if (!name || name.length <= maxLength) return name || '';
-    return name.substring(0, maxLength) + '...';
+    if (!name || name.length <= maxLength) return name || "";
+    return name.substring(0, maxLength) + "...";
   };
 
   const columns: ColumnsType<InfoPoint> = [
-    { title: '信息点名称', dataIndex: 'name', key: 'name', width: 150 },
+    { title: "信息点名称", dataIndex: "name", key: "name", width: 150 },
     {
-      title: '信息点类型',
-      dataIndex: 'infoPointType',
-      key: 'infoPointType',
+      title: "信息点类型",
+      dataIndex: "infoPointType",
+      key: "infoPointType",
       width: 100,
       render: (type) => <Tag>{getInfoPointTypeText(type)}</Tag>,
     },
     {
-      title: '所属楼宇',
-      dataIndex: 'buildingName',
-      key: 'buildingName',
+      title: "所属楼宇",
+      dataIndex: "buildingName",
+      key: "buildingName",
       width: 120,
       ellipsis: { showTitle: false },
-      render: (text) => text || '-',
+      render: (text) => text || "-",
     },
     {
-      title: '所属楼层',
-      dataIndex: 'floorName',
-      key: 'floorName',
+      title: "所属楼层",
+      dataIndex: "floorName",
+      key: "floorName",
       width: 120,
       ellipsis: { showTitle: false },
-      render: (text) => text || '-',
+      render: (text) => text || "-",
     },
     {
-      title: '所属工位',
-      dataIndex: 'workstationName',
-      key: 'workstationName',
+      title: "所属工位",
+      dataIndex: "workstationName",
+      key: "workstationName",
       width: 150,
       ellipsis: { showTitle: false },
       render: (_, record) => {
         const name = record.workstationName || getWorkstationName(record.workstationId);
-        return <Tooltip title={name}>{name || '-'}</Tooltip>;
+        return <Tooltip title={name}>{name || "-"}</Tooltip>;
       },
     },
-    { title: '所属设备', dataIndex: 'deviceName', key: 'deviceName', width: 260, ellipsis: { showTitle: false }, render: (v) => v || '-' },
-    { title: '所属端口', dataIndex: 'portName', key: 'portName', width: 140, ellipsis: { showTitle: false }, render: (v) => v || '-' },
+    { title: "所属设备", dataIndex: "deviceName", key: "deviceName", width: 260, ellipsis: { showTitle: false }, render: (v) => v || "-" },
+    { title: "所属端口", dataIndex: "portName", key: "portName", width: 140, ellipsis: { showTitle: false }, render: (v) => v || "-" },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
       width: 80,
       render: (status) => {
-        const colors: Record<number, string> = { 0: 'success', 1: 'error', 2: 'default' };
+        const colors: Record<number, string> = { 0: "success", 1: "error", 2: "default" };
         return <Tag color={colors[status as keyof typeof colors]}>{getStatusText(status)}</Tag>;
       },
     },
-    { title: '描述', dataIndex: 'remark', key: 'remark', width: 200, ellipsis: { showTitle: false }, render: (v) => <Tooltip title={v}>{v || '-'}</Tooltip> },
-    createDateTimeColumn('createdAt', { width: 180 }),
+    { title: "描述", dataIndex: "remark", key: "remark", width: 200, ellipsis: { showTitle: false }, render: (v) => <Tooltip title={v}>{v || "-"}</Tooltip> },
+    createDateTimeColumn("createdAt", { width: 180 }),
     {
-      title: '操作', key: 'action',
+      title: "操作", key: "action",
       render: (_, record) => {
         const actions = [
-          { key: 'edit', label: '编辑', icon: <EditOutlined />, onClick: () => openModal(record) },
+          { key: "edit", label: "编辑", icon: <EditOutlined />, onClick: () => openModal(record) },
           {
-            key: 'delete', label: '删除', icon: <DeleteOutlined />, danger: true,
+            key: "delete", label: "删除", icon: <DeleteOutlined />, danger: true,
             onClick: () => {
               Modal.confirm({
-                title: '确定要删除这个信息点吗？',
-                okText: '确定',
-                cancelText: '取消',
+                title: "确定要删除这个信息点吗？",
+                okText: "确定",
+                cancelText: "取消",
                 okButtonProps: { danger: true },
                 onOk: () => handleDelete(record.id),
               });
@@ -568,7 +568,7 @@ const InfoPointManagement: FC = () => {
   ];
 
   const renderCardView = () => {
-    if (infoPoints.length === 0) return <div style={{ textAlign: 'center', padding: '40px', color: 'var(--theme-text-tertiary, #999)' }}>暂无数据</div>;
+    if (infoPoints.length === 0) return <div style={{ textAlign: "center", padding: "40px", color: "var(--theme-text-tertiary, #999)" }}>暂无数据</div>;
     return (
       <Row gutter={[16, 16]}>
         {infoPoints.map((infoPoint) => (
@@ -579,12 +579,12 @@ const InfoPointManagement: FC = () => {
                 <EditOutlined key="edit" onClick={() => openModal(infoPoint)} />,
                 <DeleteOutlined
                   key="delete"
-                  style={{ color: 'var(--theme-error, #ff4d4f)' }}
+                  style={{ color: "var(--theme-error, #ff4d4f)" }}
                   onClick={() => {
                     Modal.confirm({
-                      title: '确定要删除这个信息点吗？',
-                      okText: '确定',
-                      cancelText: '取消',
+                      title: "确定要删除这个信息点吗？",
+                      okText: "确定",
+                      cancelText: "取消",
                       okButtonProps: { danger: true },
                       onOk: () => handleDelete(infoPoint.id),
                     });
@@ -594,9 +594,9 @@ const InfoPointManagement: FC = () => {
             >
               <Card.Meta
                 title={
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span>{infoPoint.name}</span>
-                    <Tag color={infoPoint.status === 0 ? 'success' : infoPoint.status === 1 ? 'error' : 'default'}>{getStatusText(infoPoint.status)}</Tag>
+                    <Tag color={infoPoint.status === 0 ? "success" : infoPoint.status === 1 ? "error" : "default"}>{getStatusText(infoPoint.status)}</Tag>
                   </div>
                 }
                 description={
@@ -616,20 +616,20 @@ const InfoPointManagement: FC = () => {
   };
 
   return (
-    <Layout style={{ background: '#000', minHeight: 'calc(100vh - 64px)' }}>
+    <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
       <DeptSidebar selectedDeptId={selectedDeptId} onSelect={handleDeptSelect} />
-      <Content style={{ background: '#fff' }}>
+      <Content style={{ background: "#fff" }}>
         <StatisticsCards
           show={total > 10}
           items={[
-            { title: '总信息点数', value: statistics.total, prefix: <DotChartOutlined /> },
-            { title: '正常', value: statistics.normal, styles: { content: { color: 'var(--theme-success, #3f8600)' } }, prefix: <CheckCircleOutlined /> },
-            { title: '故障', value: statistics.fault, styles: { content: { color: 'var(--theme-error, #cf1322)' } }, prefix: <WarningOutlined /> },
-            { title: '停用', value: statistics.disabled, styles: { content: { color: 'var(--theme-text-tertiary, #8c8c8c)' } }, prefix: <StopOutlined /> },
+            { title: "总信息点数", value: statistics.total, prefix: <DotChartOutlined /> },
+            { title: "正常", value: statistics.normal, styles: { content: { color: "var(--theme-success, #3f8600)" } }, prefix: <CheckCircleOutlined /> },
+            { title: "故障", value: statistics.fault, styles: { content: { color: "var(--theme-error, #cf1322)" } }, prefix: <WarningOutlined /> },
+            { title: "停用", value: statistics.disabled, styles: { content: { color: "var(--theme-text-tertiary, #8c8c8c)" } }, prefix: <StopOutlined /> },
           ]}
         />
         <Card style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="workstationId" label="所属工位">
                 <Select
@@ -673,21 +673,21 @@ const InfoPointManagement: FC = () => {
                 const currentFilters: Record<string, unknown> = {};
                 Object.keys(values).forEach(key => {
                   const value = values[key];
-                  if (value !== undefined && value !== null && value !== '') {
+                  if (value !== undefined && value !== null && value !== "") {
                     currentFilters[key] = value;
                   }
                 });
                 setExportFilters(currentFilters);
                 setExportVisible(true);
               }}>导出</Button>
-              {selectedRowKeys.length > 0 && <Button icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
+              {selectedRowKeys.length > 0 && <Button icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
               <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增信息点</Button>
             </Space>
           </div>
           {selectedRowKeys.length > 0 && <Alert title={<span>已选择 <strong>{selectedRowKeys.length}</strong> 个信息点，<Button type="link" size="small" onClick={() => setSelectedRowKeys([])} style={{ padding: 0 }}>取消选择</Button></span>} type="info" showIcon style={{ marginTop: 12 }} />}
         </Card>
         <Card>
-          {viewMode === 'table' ? (
+          {viewMode === "table" ? (
             <Table
               rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
               columns={columns}
@@ -704,7 +704,7 @@ const InfoPointManagement: FC = () => {
 	                const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
 	                Object.keys(formValues).forEach(key => {
 	                  const value = formValues[key];
-	                  if (value !== undefined && value !== null && value !== '') {
+	                  if (value !== undefined && value !== null && value !== "") {
 	                    searchParams[key] = value;
 	                  }
 	                });
@@ -713,9 +713,9 @@ const InfoPointManagement: FC = () => {
             />
           ) : renderCardView()}
         </Card>
-        <Modal title={editingInfoPoint ? '编辑信息点' : '新增信息点'} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); infoPointForm.resetFields(); setEditingInfoPoint(null); }} width={600}>
+        <Modal title={editingInfoPoint ? "编辑信息点" : "新增信息点"} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); infoPointForm.resetFields(); setEditingInfoPoint(null); }} width={600}>
           <Form form={infoPointForm} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
-            <Form.Item name="workstationId" label="所属工位" rules={[{ required: true, message: '请选择所属工位' }]}>
+            <Form.Item name="workstationId" label="所属工位" rules={[{ required: true, message: "请选择所属工位" }]}>
               <Cascader
                 options={cascaderOptions}
                 loadData={handleCascaderLoadData}
@@ -725,8 +725,8 @@ const InfoPointManagement: FC = () => {
                 showSearch={{ filter: (inputValue, path) => path.some(option => option.label?.toLowerCase().includes(inputValue.toLowerCase())) }}
               />
             </Form.Item>
-            <Form.Item name="name" label="信息点名称" rules={[{ required: true, message: '请输入信息点名称' }]}><Input placeholder="请输入信息点名称" /></Form.Item>
-            <Form.Item name="infoPointType" label="信息点类型" rules={[{ required: true, message: '请选择信息点类型' }]}>
+            <Form.Item name="name" label="信息点名称" rules={[{ required: true, message: "请输入信息点名称" }]}><Input placeholder="请输入信息点名称" /></Form.Item>
+            <Form.Item name="infoPointType" label="信息点类型" rules={[{ required: true, message: "请选择信息点类型" }]}>
               <Select placeholder="请选择信息点类型">
                 {infoPointTypeDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
               </Select>
@@ -745,14 +745,14 @@ const InfoPointManagement: FC = () => {
                     filterOption={(input, option) => {
                       const device = networkDevices.find(d => d.id === option?.value);
                       if (!device) return false;
-                      const deviceName = device.deviceName || '';
+                      const deviceName = device.deviceName || "";
                       const searchText = `${deviceName} ${device.ipAddress}`.toLowerCase();
                       return searchText.includes(input.toLowerCase());
                     }}
                     optionLabelProp="label"
                   >
                     {networkDevices.map(d => {
-                      const deviceName = d.deviceName || '未命名设备';
+                      const deviceName = d.deviceName || "未命名设备";
                       const fullName = `${deviceName} (${d.ipAddress})`;
                       const displayName = deviceName.length > 12 ? `${deviceName.substring(0, 12)}... (${d.ipAddress})` : fullName;
                       return (
@@ -779,7 +779,7 @@ const InfoPointManagement: FC = () => {
                     optionLabelProp="label"
                   >
                     {devicePorts.map(p => {
-                      const displayLabel = p.interfaceName || p.id || '未命名端口';
+                      const displayLabel = p.interfaceName || p.id || "未命名端口";
                       return (
                         <Option key={p.id} value={p.id} label={displayLabel}>
                           {displayLabel}
@@ -790,7 +790,7 @@ const InfoPointManagement: FC = () => {
                 </Form.Item>
               </Col>
             </Row>
-            <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}><Select placeholder="请选择状态"><Option value={0}>正常</Option><Option value={1}>故障</Option><Option value={2}>停用</Option></Select></Form.Item>
+            <Form.Item name="status" label="状态" rules={[{ required: true, message: "请选择状态" }]}><Select placeholder="请选择状态"><Option value={0}>正常</Option><Option value={1}>故障</Option><Option value={2}>停用</Option></Select></Form.Item>
             <Form.Item name="description" label="描述"><TextArea rows={3} placeholder="请输入描述" /></Form.Item>
           </Form>
         </Modal>

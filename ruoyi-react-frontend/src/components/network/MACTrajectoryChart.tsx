@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
-import ReactECharts from 'echarts-for-react';
-import type { EChartsOption } from 'echarts';
-import { Empty, Spin } from 'antd';
-import { EVENT_COLORS, type MACEventType } from './macEventMeta';
+import React, { useMemo } from "react";
+import ReactECharts from "echarts-for-react";
+import type { EChartsOption } from "echarts";
+import { Empty, Spin } from "antd";
+import { EVENT_COLORS, type MACEventType } from "./macEventMeta";
 
 export interface TrajectoryNode {
   mac: string;
@@ -13,7 +13,7 @@ export interface TrajectoryNode {
   startTime: string; // ISO timestamp
   endTime: string; // ISO timestamp
   duration: number;
-  eventType: 'appeared' | 'disappeared' | 'moved' | 'vlan_changed';
+  eventType: "appeared" | "disappeared" | "moved" | "vlan_changed";
 }
 
 interface MACTrajectoryChartProps {
@@ -34,10 +34,10 @@ const DWELL_THRESHOLDS = {
 } as const;
 
 function getDwellHeatmap(durationSeconds: number): { label: string; color: string } {
-  if (durationSeconds < DWELL_THRESHOLDS.short) return { label: '短', color: 'var(--theme-text-tertiary, #bfbfbf)' };
-  if (durationSeconds < DWELL_THRESHOLDS.medium) return { label: '中', color: 'var(--theme-info, #1890ff)' };
-  if (durationSeconds < DWELL_THRESHOLDS.long) return { label: '长', color: 'var(--theme-warning, #faad14)' };
-  return { label: '超长', color: 'var(--theme-error, #ff4d4f)' };
+  if (durationSeconds < DWELL_THRESHOLDS.short) return { label: "短", color: "var(--theme-text-tertiary, #bfbfbf)" };
+  if (durationSeconds < DWELL_THRESHOLDS.medium) return { label: "中", color: "var(--theme-info, #1890ff)" };
+  if (durationSeconds < DWELL_THRESHOLDS.long) return { label: "长", color: "var(--theme-warning, #faad14)" };
+  return { label: "超长", color: "var(--theme-error, #ff4d4f)" };
 }
 
 const MACTrajectoryChart: React.FC<MACTrajectoryChartProps> = ({
@@ -58,7 +58,7 @@ const MACTrajectoryChart: React.FC<MACTrajectoryChartProps> = ({
 
     // 按设备分组数据
     const deviceGroups = data.reduce((groups, node) => {
-      const device = node.deviceName || 'Unknown Device';
+      const device = node.deviceName || "Unknown Device";
       if (!groups[device]) {
         groups[device] = [];
       }
@@ -86,11 +86,11 @@ const MACTrajectoryChart: React.FC<MACTrajectoryChartProps> = ({
 
     return {
       title: {
-        text: `MAC轨迹: ${data[0]?.mac || 'N/A'}`,
-        left: 'center',
+        text: `MAC轨迹: ${data[0]?.mac || "N/A"}`,
+        left: "center",
       },
       tooltip: {
-        trigger: 'item',
+        trigger: "item",
         formatter: (params: any) => {
           const data = params.data.value;
           const durationHours = (data[3] / 3600).toFixed(1);
@@ -108,30 +108,30 @@ const MACTrajectoryChart: React.FC<MACTrajectoryChartProps> = ({
         },
       },
       grid: {
-        left: '15%',
-        right: '5%',
-        bottom: '15%',
-        top: '15%',
+        left: "15%",
+        right: "5%",
+        bottom: "15%",
+        top: "15%",
       },
       xAxis: {
-        type: 'time',
+        type: "time",
         axisLabel: {
-          formatter: '{yyyy}-{MM}-{dd} {HH}:{mm}',
+          formatter: "{yyyy}-{MM}-{dd} {HH}:{mm}",
         },
       },
       yAxis: {
-        type: 'category',
+        type: "category",
         data: devices,
         axisLabel: {
           formatter: (value: string) => {
             // 设备名太长时截断
-            return value.length > 15 ? value.substring(0, 12) + '...' : value;
+            return value.length > 15 ? value.substring(0, 12) + "..." : value;
           },
         },
       },
       series: [
         {
-          type: 'custom',
+          type: "custom",
           renderItem: (params: any, api: any) => {
             const categoryIndex = api.value(0);
             const timeStart = api.value(1);
@@ -144,7 +144,7 @@ const MACTrajectoryChart: React.FC<MACTrajectoryChartProps> = ({
             const barWidth = coordEnd[0] - coordStart[0];
 
             return {
-              type: 'rect',
+              type: "rect",
               shape: {
                 x: coordStart[0],
                 y: coordStart[1] - barHeight / 2,
@@ -152,7 +152,7 @@ const MACTrajectoryChart: React.FC<MACTrajectoryChartProps> = ({
                 height: barHeight,
               },
               style: {
-                fill: api.visual('color'),
+                fill: api.visual("color"),
               },
             };
           },
@@ -161,9 +161,9 @@ const MACTrajectoryChart: React.FC<MACTrajectoryChartProps> = ({
       ],
       dataZoom: [
         {
-          type: 'slider',
+          type: "slider",
           xAxisIndex: 0,
-          bottom: '5%',
+          bottom: "5%",
           start: dataZoomStart,
           end: dataZoomEnd,
         },
@@ -173,23 +173,23 @@ const MACTrajectoryChart: React.FC<MACTrajectoryChartProps> = ({
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '50px' }}>
+      <div style={{ textAlign: "center", padding: "50px" }}>
         <Spin>
           <div style={{ minHeight: 80 }} />
         </Spin>
-        <div style={{ marginTop: 8, color: 'rgba(0, 0, 0, 0.45)' }}>加载轨迹数据...</div>
+        <div style={{ marginTop: 8, color: "rgba(0, 0, 0, 0.45)" }}>加载轨迹数据...</div>
       </div>
     );
   }
 
   return (
-    <div style={{ width: '100%', height: '600px' }}>
+    <div style={{ width: "100%", height: "600px" }}>
       <ReactECharts
         option={option}
-        style={{ height: '100%', width: '100%' }}
-        opts={{ renderer: 'canvas' }}
+        style={{ height: "100%", width: "100%" }}
+        opts={{ renderer: "canvas" }}
         onError={(error) => {
-          console.error('ECharts error:', error);
+          console.error("ECharts error:", error);
           onError?.(error);
         }}
       />

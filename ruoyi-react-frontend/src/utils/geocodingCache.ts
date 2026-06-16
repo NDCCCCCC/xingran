@@ -26,7 +26,7 @@ interface CacheConfig {
 const DEFAULT_CONFIG: CacheConfig = {
   memoryTTL: 30 * 60 * 1000, // 30分钟
   storageTTL: 7 * 24 * 60 * 60 * 1000, // 7天
-  storagePrefix: 'baidu_geocoding_',
+  storagePrefix: "baidu_geocoding_",
 };
 
 // 内存缓存存储
@@ -113,7 +113,7 @@ class StorageCache<T> {
       localStorage.setItem(this.getStorageKey(key), JSON.stringify(item));
     } catch (e) {
       // localStorage 可能已满或被禁用，静默失败
-      console.warn('localStorage write failed:', e);
+      console.warn("localStorage write failed:", e);
     }
   }
 
@@ -132,7 +132,7 @@ class StorageCache<T> {
 
       return item.data;
     } catch (e) {
-      console.warn('localStorage read failed:', e);
+      console.warn("localStorage read failed:", e);
       return null;
     }
   }
@@ -145,7 +145,7 @@ class StorageCache<T> {
     try {
       localStorage.removeItem(this.getStorageKey(key));
     } catch (e) {
-      console.warn('localStorage delete failed:', e);
+      console.warn("localStorage delete failed:", e);
     }
   }
 
@@ -159,7 +159,7 @@ class StorageCache<T> {
         }
       });
     } catch (e) {
-      console.warn('localStorage clear failed:', e);
+      console.warn("localStorage clear failed:", e);
     }
   }
 
@@ -185,7 +185,7 @@ class StorageCache<T> {
         }
       });
     } catch (e) {
-      console.warn('localStorage cleanup failed:', e);
+      console.warn("localStorage cleanup failed:", e);
     }
   }
 }
@@ -222,7 +222,7 @@ export class GeocodingCache<T> {
     const sortedParams = Object.keys(params)
       .sort()
       .map(key => `${key}=${params[key]}`)
-      .join('&');
+      .join("&");
     return btoa(unescape(encodeURIComponent(sortedParams)));
   }
 

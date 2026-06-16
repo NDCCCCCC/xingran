@@ -1,62 +1,62 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import type { FC, MouseEvent } from 'react';
-import { Badge, Dropdown, Empty, Spin, Tag, Avatar, message } from 'antd';
-import { BellOutlined, DeleteOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
-import { USER_NOTICES } from '@/constants/routes';
-import { useNoticeStore } from '@/store/noticeStore';
-import { getNotificationList, markNoticeAsRead, markAllNoticesAsRead, ignoreNotice } from '@/lib/noticeApi';
-import type { NoticeListItem } from '@/types/notice';
-import { PRIORITY_COLORS, PRIORITY_LABELS, NOTICE_TYPE_COLORS, NOTICE_TYPE_LABELS } from '@/types/notice';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import 'dayjs/locale/zh-cn';
+import { useState, useRef, useEffect, useCallback } from "react";
+import type { FC, MouseEvent } from "react";
+import { Badge, Dropdown, Empty, Spin, Tag, Avatar, message } from "antd";
+import { BellOutlined, DeleteOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+import { USER_NOTICES } from "@/constants/routes";
+import { useNoticeStore } from "@/store/noticeStore";
+import { getNotificationList, markNoticeAsRead, markAllNoticesAsRead, ignoreNotice } from "@/lib/noticeApi";
+import type { NoticeListItem } from "@/types/notice";
+import { PRIORITY_COLORS, PRIORITY_LABELS, NOTICE_TYPE_COLORS, NOTICE_TYPE_LABELS } from "@/types/notice";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+import "dayjs/locale/zh-cn";
 
 dayjs.extend(relativeTime);
-dayjs.locale('zh-cn');
+dayjs.locale("zh-cn");
 
 // ==================== 样式常量 ====================
 // 遵循 Vercel React Best Practices: rendering-hoist-jsx
 // 将静态样式对象提取到组件外部，避免每次渲染重新创建
 
 const NOTIFICATION_CONTENT_STYLE = {
-  width: '400px',
-  maxHeight: '480px',
-  background: 'var(--theme-bg-primary)',
+  width: "400px",
+  maxHeight: "480px",
+  background: "var(--theme-bg-primary)",
 } as const;
 
 const HEADER_STYLE = {
-  borderBottomColor: 'var(--theme-border-primary)',
-  background: 'linear-gradient(to bottom, var(--theme-bg-primary), var(--theme-bg-secondary))',
+  borderBottomColor: "var(--theme-border-primary)",
+  background: "linear-gradient(to bottom, var(--theme-bg-primary), var(--theme-bg-secondary))",
 } as const;
 
 const LIST_CONTAINER_STYLE = {
-  maxHeight: '400px',
-  background: 'var(--theme-bg-secondary)',
+  maxHeight: "400px",
+  background: "var(--theme-bg-secondary)",
 } as const;
 
 const EMPTY_STYLE = {
-  color: 'var(--theme-text-secondary)',
+  color: "var(--theme-text-secondary)",
 } as const;
 
 const FOOTER_STYLE = {
-  borderTopColor: 'var(--theme-border-secondary)',
-  background: 'var(--theme-bg-tertiary)',
+  borderTopColor: "var(--theme-border-secondary)",
+  background: "var(--theme-bg-tertiary)",
 } as const;
 
 const BADGE_STYLE = {
-  background: 'var(--theme-error)',
-  boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)',
+  background: "var(--theme-error)",
+  boxShadow: "0 2px 8px rgba(239, 68, 68, 0.3)",
 } as const;
 
 const AVATAR_WRAPPER_STYLE = {
-  display: 'inline-block',
+  display: "inline-block",
 } as const;
 
 const AVATAR_STYLE = {
-  background: 'linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%)',
-  boxShadow: '0 2px 8px rgba(79, 70, 229, 0.2)',
-  transition: 'transform 300ms, box-shadow 300ms',
+  background: "linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%)",
+  boxShadow: "0 2px 8px rgba(79, 70, 229, 0.2)",
+  transition: "transform 300ms, box-shadow 300ms",
 } as const;
 
 /**
@@ -82,7 +82,7 @@ const NotificationBell: FC = () => {
           setNotifications(response.data?.list || []);
         })
         .catch(error => {
-          console.error('加载通知列表失败:', error);
+          console.error("加载通知列表失败:", error);
         });
       hasLoadedRef.current = true;
     }
@@ -101,7 +101,7 @@ const NotificationBell: FC = () => {
         await markNoticeAsRead(notice.id);
         markAsRead(notice.id);
       } catch (error) {
-        console.error('标记已读失败:', error);
+        console.error("标记已读失败:", error);
       }
     }
 
@@ -115,10 +115,10 @@ const NotificationBell: FC = () => {
     try {
       await markAllNoticesAsRead();
       markAllAsRead();
-      message.success('已全部标记为已读');
+      message.success("已全部标记为已读");
     } catch (error) {
-      console.error('标记全部已读失败:', error);
-      message.error('操作失败，请稍后重试');
+      console.error("标记全部已读失败:", error);
+      message.error("操作失败，请稍后重试");
     }
   }, [markAllAsRead]);
 
@@ -129,10 +129,10 @@ const NotificationBell: FC = () => {
       await ignoreNotice(noticeId);
       // 从前端列表中移除
       removeNotification(noticeId);
-      message.success('已忽略该通知');
+      message.success("已忽略该通知");
     } catch (error) {
-      console.error('忽略通知失败:', error);
-      message.error('操作失败，请稍后重试');
+      console.error("忽略通知失败:", error);
+      message.error("操作失败，请稍后重试");
     }
   }, [removeNotification]);
 
@@ -154,10 +154,10 @@ const NotificationBell: FC = () => {
         style={HEADER_STYLE}
       >
         <div className="flex items-center gap-2">
-          <BellOutlined className="text-sm" style={{ color: 'var(--theme-primary)' }} />
+          <BellOutlined className="text-sm" style={{ color: "var(--theme-primary)" }} />
           <span
             className="font-semibold text-sm"
-            style={{ color: 'var(--theme-text-primary)' }}
+            style={{ color: "var(--theme-text-primary)" }}
           >
             通知中心
           </span>
@@ -165,8 +165,8 @@ const NotificationBell: FC = () => {
             <span
               className="px-2 py-0.5 rounded-full text-xs font-medium"
               style={{
-                background: 'var(--theme-primary)',
-                color: 'var(--theme-text-inverse)',
+                background: "var(--theme-primary)",
+                color: "var(--theme-text-inverse)",
               }}
             >
               {unreadCount}
@@ -178,7 +178,7 @@ const NotificationBell: FC = () => {
             <span
               className="text-xs cursor-pointer transition-colors duration-200 font-medium"
               style={{
-                color: 'var(--theme-primary)',
+                color: "var(--theme-primary)",
               }}
               onClick={handleMarkAllRead}
             >
@@ -188,11 +188,11 @@ const NotificationBell: FC = () => {
           <span
             className="text-xs cursor-pointer transition-colors duration-200"
             style={{
-              color: 'var(--theme-text-secondary)',
+              color: "var(--theme-text-secondary)",
             }}
             onClick={handleViewAll}
-            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--theme-primary)'}
-            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--theme-text-secondary)'}
+            onMouseEnter={(e) => e.currentTarget.style.color = "var(--theme-primary)"}
+            onMouseLeave={(e) => e.currentTarget.style.color = "var(--theme-text-secondary)"}
           >
             查看全部
           </span>
@@ -219,25 +219,25 @@ const NotificationBell: FC = () => {
                 key={notice.id}
                 className="transition-all duration-200 cursor-pointer relative"
                 style={{
-                  padding: '12px 16px',
+                  padding: "12px 16px",
                   borderBottom: index < notifications.length - 1
-                    ? '1px solid var(--theme-border-secondary)'
-                    : 'none',
+                    ? "1px solid var(--theme-border-secondary)"
+                    : "none",
                   background: !notice.isRead
-                    ? 'linear-gradient(to right, var(--theme-primary-light), transparent)'
-                    : 'transparent',
+                    ? "linear-gradient(to right, var(--theme-primary-light), transparent)"
+                    : "transparent",
                   borderLeft: !notice.isRead
-                    ? '3px solid var(--theme-primary)'
-                    : '3px solid transparent',
+                    ? "3px solid var(--theme-primary)"
+                    : "3px solid transparent",
                 }}
                 onClick={() => handleClickNotification(notice)}
                 onMouseEnter={(e) => {
                   if (!notice.isRead) return;
-                  e.currentTarget.style.background = 'var(--theme-primary-light)';
+                  e.currentTarget.style.background = "var(--theme-primary-light)";
                 }}
                 onMouseLeave={(e) => {
                   if (!notice.isRead) return;
-                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.background = "transparent";
                 }}
               >
                 <div className="flex gap-3">
@@ -247,13 +247,13 @@ const NotificationBell: FC = () => {
                     style={{
                       background: NOTICE_TYPE_COLORS[notice.noticeType]
                         ? `${NOTICE_TYPE_COLORS[notice.noticeType]}15`
-                        : 'var(--theme-neutral-200)',
+                        : "var(--theme-neutral-200)",
                     }}
                   >
                     <BellOutlined
                       className="text-sm"
                       style={{
-                        color: NOTICE_TYPE_COLORS[notice.noticeType] || 'var(--theme-text-secondary)'
+                        color: NOTICE_TYPE_COLORS[notice.noticeType] || "var(--theme-text-secondary)"
                       }}
                     />
                   </div>
@@ -267,8 +267,8 @@ const NotificationBell: FC = () => {
                             <span
                               className="inline-block w-2 h-2 rounded-full"
                               style={{
-                                background: 'var(--theme-primary)',
-                                boxShadow: '0 0 0 3px var(--theme-primary-light)',
+                                background: "var(--theme-primary)",
+                                boxShadow: "0 0 0 3px var(--theme-primary-light)",
                               }}
                             />
                           )}
@@ -276,8 +276,8 @@ const NotificationBell: FC = () => {
                             className="font-medium text-sm truncate"
                             style={{
                               color: !notice.isRead
-                                ? 'var(--theme-text-primary)'
-                                : 'var(--theme-text-primary)',
+                                ? "var(--theme-text-primary)"
+                                : "var(--theme-text-primary)",
                               fontWeight: !notice.isRead ? 600 : 400,
                             }}
                           >
@@ -305,7 +305,7 @@ const NotificationBell: FC = () => {
                           )}
                           <span
                             className="text-xs"
-                            style={{ color: 'var(--theme-text-tertiary)' }}
+                            style={{ color: "var(--theme-text-tertiary)" }}
                           >
                             {dayjs(notice.createdAt).fromNow()}
                           </span>
@@ -313,14 +313,14 @@ const NotificationBell: FC = () => {
                       </div>
                       <DeleteOutlined
                         className="flex-shrink-0 text-sm transition-all duration-200"
-                        style={{ color: 'var(--theme-text-tertiary)' }}
+                        style={{ color: "var(--theme-text-tertiary)" }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.color = 'var(--theme-error)';
-                          e.currentTarget.style.transform = 'scale(1.1)';
+                          e.currentTarget.style.color = "var(--theme-error)";
+                          e.currentTarget.style.transform = "scale(1.1)";
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.color = 'var(--theme-text-tertiary)';
-                          e.currentTarget.style.transform = 'scale(1)';
+                          e.currentTarget.style.color = "var(--theme-text-tertiary)";
+                          e.currentTarget.style.transform = "scale(1)";
                         }}
                         onClick={(e) => handleDelete(e, notice.id)}
                       />
@@ -341,7 +341,7 @@ const NotificationBell: FC = () => {
         >
           <span
             className="text-xs cursor-pointer transition-colors duration-200 font-medium"
-            style={{ color: 'var(--theme-primary)' }}
+            style={{ color: "var(--theme-primary)" }}
             onClick={handleViewAll}
           >
             查看全部通知 →
@@ -357,7 +357,7 @@ const NotificationBell: FC = () => {
       onOpenChange={setDropdownOpen}
       popupRender={() => notificationContent}
       placement="bottomRight"
-      trigger={['click']}
+      trigger={["click"]}
     >
       <Badge
         count={unreadCount}
@@ -369,17 +369,17 @@ const NotificationBell: FC = () => {
           className="cursor-pointer transition-all duration-300"
           style={AVATAR_WRAPPER_STYLE}
           onMouseEnter={(e) => {
-            const avatar = e.currentTarget.querySelector('.ant-avatar') as HTMLElement;
+            const avatar = e.currentTarget.querySelector(".ant-avatar") as HTMLElement;
             if (avatar) {
-              avatar.style.transform = 'scale(1.05)';
-              avatar.style.boxShadow = '0 4px 16px rgba(79, 70, 229, 0.3)';
+              avatar.style.transform = "scale(1.05)";
+              avatar.style.boxShadow = "0 4px 16px rgba(79, 70, 229, 0.3)";
             }
           }}
           onMouseLeave={(e) => {
-            const avatar = e.currentTarget.querySelector('.ant-avatar') as HTMLElement;
+            const avatar = e.currentTarget.querySelector(".ant-avatar") as HTMLElement;
             if (avatar) {
-              avatar.style.transform = 'scale(1)';
-              avatar.style.boxShadow = '0 2px 8px rgba(79, 70, 229, 0.2)';
+              avatar.style.transform = "scale(1)";
+              avatar.style.boxShadow = "0 2px 8px rgba(79, 70, 229, 0.2)";
             }
           }}
         >

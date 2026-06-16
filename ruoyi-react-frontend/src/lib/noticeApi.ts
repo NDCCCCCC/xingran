@@ -1,4 +1,4 @@
-import { del, get, post } from './api';
+import { del, get, post } from "./api";
 import type {
   Notice,
   NoticeListItem,
@@ -8,9 +8,9 @@ import type {
   CreateNoticeRequest,
   UpdateNoticeRequest,
   PageResponse,
-} from '@/types/notice';
-import type { BaseResponse } from '@/types';
-import { SecureTokenStorageImpl } from '@/utils/token/SecureTokenStorageImpl';
+} from "@/types/notice";
+import type { BaseResponse } from "@/types";
+import { SecureTokenStorageImpl } from "@/utils/token/SecureTokenStorageImpl";
 
 // 单例 token 存储，用于 WebSocket 连接同步获取 token
 const tokenStorage = new SecureTokenStorageImpl();
@@ -21,7 +21,7 @@ const tokenStorage = new SecureTokenStorageImpl();
  * 获取通知列表（管理端）
  */
 export function getNoticeList(params: NoticeListParams): Promise<BaseResponse<PageResponse<Notice>>> {
-  return post('/system/notices/list', params);
+  return post("/system/notices/list", params);
 }
 
 /**
@@ -35,7 +35,7 @@ export function getNoticeDetail(id: string): Promise<BaseResponse<Notice>> {
  * 创建通知
  */
 export function createNotice(data: CreateNoticeRequest): Promise<BaseResponse<{ id: string; message: string }>> {
-  return post('/system/notices', data);
+  return post("/system/notices", data);
 }
 
 /**
@@ -56,7 +56,7 @@ export function deleteNotice(id: string): Promise<BaseResponse<{ message: string
  * 批量删除通知
  */
 export function batchDeleteNotices(ids: string[]): Promise<BaseResponse<{ message: string }>> {
-  return post('/system/notices/batch-delete', { ids });
+  return post("/system/notices/batch-delete", { ids });
 }
 
 /**
@@ -86,7 +86,7 @@ export function withdrawNotice(id: string): Promise<BaseResponse<{ message: stri
  * 获取用户可见的通知列表
  */
 export function getMyNotices(params: UserNoticeListParams = {}): Promise<BaseResponse<PageResponse<Notice>>> {
-  return get('/system/my-notices', params);
+  return get("/system/my-notices", params);
 }
 
 /**
@@ -107,7 +107,7 @@ export function markNoticeAsRead(id: string): Promise<BaseResponse<{ message: st
  * 标记所有通知为已读
  */
 export function markAllNoticesAsRead(): Promise<BaseResponse<{ message: string }>> {
-  return post('/system/my-notices/read-all', {});
+  return post("/system/my-notices/read-all", {});
 }
 
 /**
@@ -128,7 +128,7 @@ export function unignoreNotice(id: string): Promise<BaseResponse<{ message: stri
  * 获取未读通知数量
  */
 export function getUnreadCount(): Promise<BaseResponse<{ count: number }>> {
-  return get('/system/my-notices/unread-count');
+  return get("/system/my-notices/unread-count");
 }
 
 /**
@@ -137,7 +137,7 @@ export function getUnreadCount(): Promise<BaseResponse<{ count: number }>> {
 export function getNotificationList(params: { current?: number; pageSize?: number } = {}): Promise<
   BaseResponse<PageResponse<NoticeListItem>>
 > {
-  return get('/system/my-notices', { current: params.current || 1, pageSize: params.pageSize || 10 });
+  return get("/system/my-notices", { current: params.current || 1, pageSize: params.pageSize || 10 });
 }
 
 // ==================== WebSocket ====================
@@ -149,11 +149,11 @@ export function buildWebSocketUrl(): string {
   // 与 VITE_API_BASE_URL 解耦：优先使用独立的 VITE_WS_BASE_URL，
   // 未设置时从 API base 推导（去掉 /api/vN 后缀并将 http(s) 转成 ws(s)），
   // 保持向后兼容，不再硬编码开发机 IP。
-  const apiBaseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+  const apiBaseURL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
   const wsBaseURL =
-    import.meta.env.VITE_WS_BASE_URL || apiBaseURL.replace(/\/api\/v\d+$/, '').replace(/^http/, 'ws');
+    import.meta.env.VITE_WS_BASE_URL || apiBaseURL.replace(/\/api\/v\d+$/, "").replace(/^http/, "ws");
   const token = tokenStorage.getAccessToken();
 
   // 通过 query 参数传递 token
-  return `${wsBaseURL}/system/ws/notices?token=${token || ''}`;
+  return `${wsBaseURL}/system/ws/notices?token=${token || ""}`;
 }

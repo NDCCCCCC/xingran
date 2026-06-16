@@ -2,19 +2,19 @@
  * 网络设备管理相关类型
  */
 
-import type { Status } from './base';
+import type { Status } from "./base";
 
 // ==================== 设备基础类型 ====================
 
 /**
  * 设备厂商
  */
-export type DeviceVendor = 'huawei' | 'h3c' | 'ruijie' | 'maipu';
+export type DeviceVendor = "huawei" | "h3c" | "ruijie" | "maipu";
 
 /**
  * 设备类型
  */
-export type DeviceType = 'router' | 'switch' | 'firewall' | 'ap' | 'loadbalancer';
+export type DeviceType = "router" | "switch" | "firewall" | "ap" | "loadbalancer";
 
 /**
  * 设备状态：0=在线，1=离线，2=未知
@@ -24,29 +24,29 @@ export type DeviceStatus = 0 | 1 | 2;
 /**
  * 协议类型
  */
-export type ProtocolType = 'ssh' | 'telnet';
+export type ProtocolType = "ssh" | "telnet";
 
 /**
  * MAC地址类型
  */
-export type MACType = 'dynamic' | 'static' | 'secure';
+export type MACType = "dynamic" | "static" | "secure";
 
 /**
  * 802.1X端口状态
  */
-export type Dot1xPortStatus = 'authorized' | 'unauthorized' | 'unknown';
+export type Dot1xPortStatus = "authorized" | "unauthorized" | "unknown";
 
 /**
  * 端口安全模式
  */
-export type PortSecurityMode = '' | 'protect' | 'restrict' | 'shutdown';
+export type PortSecurityMode = "" | "protect" | "restrict" | "shutdown";
 
 // ==================== 认证凭证 ====================
 
 /**
  * SNMP版本
  */
-export type SNMPVersion = 'v1' | 'v2c' | 'v3';
+export type SNMPVersion = "v1" | "v2c" | "v3";
 
 /**
  * 授权凭证
@@ -141,7 +141,7 @@ export interface DevicePortStatus {
 /**
  * 配置模板类型
  */
-export type TemplateType = 'init' | 'config' | 'backup';
+export type TemplateType = "init" | "config" | "backup";
 
 /**
  * 配置模板
@@ -165,12 +165,12 @@ export interface ConfigTemplate {
 /**
  * 配置执行状态
  */
-export type ExecutionStatus = 'pending' | 'running' | 'success' | 'failed';
+export type ExecutionStatus = "pending" | "running" | "success" | "failed";
 
 /**
  * 配置执行类型
  */
-export type ExecutionType = 'template' | 'command';
+export type ExecutionType = "template" | "command";
 
 /**
  * 配置执行记录
@@ -187,7 +187,7 @@ export interface ConfigExecution {
   successCount: number;
   failureCount: number;
   commandContent?: string;
-  executionStrategy: 'parallel' | 'serial';
+  executionStrategy: "parallel" | "serial";
   concurrency: number;
   timeout: number;
   startedAt?: string;
@@ -221,7 +221,7 @@ export interface ConfigExecutionDetail {
 /**
  * 配置备份类型
  */
-export type BackupType = 'auto' | 'manual';
+export type BackupType = "auto" | "manual";
 
 /**
  * 配置备份
@@ -247,7 +247,7 @@ export interface ConfigBackup {
 /**
  * 设备发现状态
  */
-export type DiscoveryStatus = 'pending' | 'running' | 'completed' | 'failed';
+export type DiscoveryStatus = "pending" | "running" | "completed" | "failed";
 
 /**
  * 设备发现任务
@@ -255,7 +255,7 @@ export type DiscoveryStatus = 'pending' | 'running' | 'completed' | 'failed';
 export interface DeviceDiscovery {
   id: string;
   taskName: string;
-  discoveryType: 'snmp' | 'scan';
+  discoveryType: "snmp" | "scan";
   ipRanges: string[];
   snmpCommunity?: string;
   snmpPort: number;

@@ -3,7 +3,7 @@
 // ============ 地图相关常量 ============
 
 /** 百度地图 AK */
-export const BAIDU_MAP_AK = import.meta.env.VITE_BAIDU_MAP_AK || '';
+export const BAIDU_MAP_AK = import.meta.env.VITE_BAIDU_MAP_AK || "";
 
 /** 地图配置 */
 export const MAP_CONFIG = {
@@ -20,7 +20,7 @@ export const MAP_CONFIG = {
   /** 默认旋转角度 */
   DEFAULT_HEADING: 0,
   /** 地图样式 ID */
-  STYLE_ID: 'c6cd6c1c7b622236b02f5fcc53e7f18',
+  STYLE_ID: "c6cd6c1c7b622236b02f5fcc53e7f18",
 } as const;
 
 /** 湖北省简化边界坐标（降级方案） */
@@ -164,7 +164,7 @@ export const FLOOR_CONFIG = {
   /** 地面 Y 坐标 */
   Y: -0.01,
   /** 地面颜色 */
-  COLOR: '#ffffff',
+  COLOR: "#ffffff",
 } as const;
 
 // ============ 颜色常量 ============
@@ -214,35 +214,35 @@ export const MATERIAL_COLORS = {
 /** 标记颜色 */
 export const MARKER_COLORS = {
   /** 停用楼宇主色 */
-  STOPPED_MAIN: '#9e9e9e',
+  STOPPED_MAIN: "#9e9e9e",
   /** 停用楼宇边框色 */
-  STOPPED_BORDER: '#757575',
+  STOPPED_BORDER: "#757575",
   /** 停用楼宇阴影色 */
-  STOPPED_SHADOW: 'rgba(0,0,0,0.2)',
+  STOPPED_SHADOW: "rgba(0,0,0,0.2)",
   /** 正常楼宇主色 */
-  NORMAL_MAIN: '#ff6b35',
+  NORMAL_MAIN: "#ff6b35",
   /** 正常楼宇边框色 */
-  NORMAL_BORDER: '#ff4d4f',
+  NORMAL_BORDER: "#ff4d4f",
   /** 正常楼宇阴影色 */
-  NORMAL_SHADOW: 'rgba(255, 107, 53, 0.5)',
+  NORMAL_SHADOW: "rgba(255, 107, 53, 0.5)",
   /** 聚类标记颜色 */
-  CLUSTER: '#ff4d4f',
+  CLUSTER: "#ff4d4f",
   /** 聚类标记背景色 */
-  CLUSTER_BG: 'rgba(255,77,79,0.1)',
+  CLUSTER_BG: "rgba(255,77,79,0.1)",
   /** 聚类标记阴影色 */
-  CLUSTER_SHADOW: 'rgba(255, 77, 79, 0.5)',
+  CLUSTER_SHADOW: "rgba(255, 77, 79, 0.5)",
 } as const;
 
 /** 状态文本颜色 */
 export const STATUS_TEXT_COLORS = {
   /** 停用状态文本色 */
-  STOPPED: '#9e9e9e',
+  STOPPED: "#9e9e9e",
   /** 停用状态背景色 */
-  STOPPED_BG: '#f5f5f5',
+  STOPPED_BG: "#f5f5f5",
   /** 正常状态文本色 */
-  NORMAL: '#ff6b35',
+  NORMAL: "#ff6b35",
   /** 正常状态背景色 */
-  NORMAL_BG: '#fff2e8',
+  NORMAL_BG: "#fff2e8",
 } as const;
 
 // ============ 动画配置 ============
@@ -278,19 +278,19 @@ export const EASING_FUNCTIONS = {
 /** 状态文本 */
 export const STATUS_TEXT = {
   /** 正常 */
-  NORMAL: '正常',
+  NORMAL: "正常",
   /** 停用 */
-  STOPPED: '停用',
+  STOPPED: "停用",
   /** 空闲 */
-  AVAILABLE: '空闲',
+  AVAILABLE: "空闲",
   /** 占用 */
-  OCCUPIED: '占用',
+  OCCUPIED: "占用",
   /** 维护 */
-  MAINTENANCE: '维护',
+  MAINTENANCE: "维护",
   /** 固定工位 */
-  FIXED: '固定',
+  FIXED: "固定",
   /** 灵活工位 */
-  FLEXIBLE: '灵活',
+  FLEXIBLE: "灵活",
   /** 管理工位 */
-  MANAGERIAL: '管理',
+  MANAGERIAL: "管理",
 } as const;

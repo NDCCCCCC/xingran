@@ -2,8 +2,8 @@
  * NetworkDevice 设备管理页面
  */
 
-import { useState, useEffect, useCallback, type FC } from 'react';
-import type { ReactElement } from 'react';
+import { useState, useEffect, useCallback, type FC } from "react";
+import type { ReactElement } from "react";
 import {
   Table,
   Button,
@@ -22,9 +22,9 @@ import {
   Divider,
   Alert,
   message,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import type { DividerProps } from 'antd/es/divider';
+} from "antd";
+import type { ColumnsType } from "antd/es/table";
+import type { DividerProps } from "antd/es/divider";
 import {
   PlusOutlined,
   EditOutlined,
@@ -40,22 +40,22 @@ import {
   EyeOutlined,
   CloudUploadOutlined,
   HistoryOutlined,
-} from '@ant-design/icons';
-import type { NetworkDevice } from '@/types';
-import type { BaseResponse, PageResponse } from '@/types';
-import { post } from '@/lib/api';
-import { batchExport } from '@/lib/api/networkApi';
-import DeptTree from '@/components/DeptTree';
-import { useNavigate } from 'react-router-dom';
-import { useTableManager } from '@/hooks/useTableManager';
-import { handleApiError, handleSuccess } from '@/utils/errorHandler';
-import ActionButtons from '@/components/shared/ActionButtons';
-import { DepartmentTreeSelect } from '@/components/shared';
-import NetworkExport from '@/components/shared/NetworkExport';
-import { BatchExportModal } from '@/components/shared';
-import { DownloadOutlined } from '@ant-design/icons';
-import { usePagination } from '@/hooks/usePagination';
-import { useMenuStore } from '@/store/menuStore';
+} from "@ant-design/icons";
+import type { NetworkDevice } from "@/types";
+import type { BaseResponse, PageResponse } from "@/types";
+import { post } from "@/lib/api";
+import { batchExport } from "@/lib/api/networkApi";
+import DeptTree from "@/components/DeptTree";
+import { useNavigate } from "react-router-dom";
+import { useTableManager } from "@/hooks/useTableManager";
+import { handleApiError, handleSuccess } from "@/utils/errorHandler";
+import ActionButtons from "@/components/shared/ActionButtons";
+import { DepartmentTreeSelect } from "@/components/shared";
+import NetworkExport from "@/components/shared/NetworkExport";
+import { BatchExportModal } from "@/components/shared";
+import { DownloadOutlined } from "@ant-design/icons";
+import { usePagination } from "@/hooks/usePagination";
+import { useMenuStore } from "@/store/menuStore";
 
 // 导入提取的常量、工具和 Hook
 import {
@@ -64,14 +64,14 @@ import {
   STATUS_OPTIONS,
   DEVICE_TYPE_TAG_COLOR,
   VENDOR_TAG_COLOR,
-} from './constants';
+} from "./constants";
 import {
   formatDateTime,
   getOptionLabel,
   getStatusColor,
-} from './utils';
-import { useDeviceData } from './hooks/useDeviceData';
-import { useDeviceModals, type ProbeResult } from './hooks/useDeviceModals';
+} from "./utils";
+import { useDeviceData } from "./hooks/useDeviceData";
+import { useDeviceModals, type ProbeResult } from "./hooks/useDeviceModals";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -94,81 +94,81 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
 
   return [
     {
-      title: '设备名称',
-      dataIndex: 'deviceName',
-      key: 'deviceName',
+      title: "设备名称",
+      dataIndex: "deviceName",
+      key: "deviceName",
       width: 200,
       render: (deviceName: string, record: NetworkDevice) => (
         <a
           onClick={() => navigate(`/network/ports?deviceId=${record.id}`)}
-          style={{ color: 'var(--theme-info, #1890ff)', cursor: 'pointer' }}
+          style={{ color: "var(--theme-info, #1890ff)", cursor: "pointer" }}
         >
           {deviceName}
         </a>
       ),
     },
     {
-      title: '设备类型',
-      dataIndex: 'deviceType',
-      key: 'deviceType',
+      title: "设备类型",
+      dataIndex: "deviceType",
+      key: "deviceType",
       width: 120,
       render: (deviceType: string) => (
         <Tag color={DEVICE_TYPE_TAG_COLOR}>{getOptionLabel(DEVICE_TYPE_OPTIONS, deviceType)}</Tag>
       ),
     },
     {
-      title: '厂商',
-      dataIndex: 'vendor',
-      key: 'vendor',
+      title: "厂商",
+      dataIndex: "vendor",
+      key: "vendor",
       width: 100,
       render: (vendor: string) => (
         <Tag color={VENDOR_TAG_COLOR}>{getOptionLabel(VENDOR_OPTIONS, vendor)}</Tag>
       ),
     },
-    { title: '型号', dataIndex: 'model', key: 'model', width: 150 },
-    { title: 'IP地址', dataIndex: 'ipAddress', key: 'ipAddress', width: 140 },
-    { title: '端口', dataIndex: 'port', key: 'port', width: 80 },
+    { title: "型号", dataIndex: "model", key: "model", width: 150 },
+    { title: "IP地址", dataIndex: "ipAddress", key: "ipAddress", width: 140 },
+    { title: "端口", dataIndex: "port", key: "port", width: 80 },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
       width: 90,
       render: (status: number) => (
         <Tag color={getStatusColor(status)}>{getOptionLabel(STATUS_OPTIONS, status)}</Tag>
       ),
     },
-    { title: '部门', dataIndex: 'deptName', key: 'deptName', width: 180 },
+    { title: "部门", dataIndex: "deptName", key: "deptName", width: 180 },
     {
-      title: '最后连接',
-      dataIndex: 'lastSeenAt',
-      key: 'lastSeenAt',
+      title: "最后连接",
+      dataIndex: "lastSeenAt",
+      key: "lastSeenAt",
       width: 180,
       render: (lastSeenAt: string) => formatDateTime(lastSeenAt),
     },
     {
-      title: '创建时间',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
+      title: "创建时间",
+      dataIndex: "createdAt",
+      key: "createdAt",
       width: 180,
       render: (createdAt: string) => formatDateTime(createdAt),
     },
     {
-      title: '操作',
-      key: 'action',
-      fixed: 'right',
+      title: "操作",
+      key: "action",
+      fixed: "right",
       width: 100,
       render: (_, record) => {
         const actions = [
           {
-            key: 'collect-ports',
-            label: '采集端口',
+            key: "collect-ports",
+            label: "采集端口",
             icon: <CloudUploadOutlined />,
             onClick: () => handleCollectPorts(record),
             loading: collectingDeviceId === record.id,
           },
           {
-            key: 'detail',
-            label: '详情',
+            key: "detail",
+            label: "详情",
             icon: <EyeOutlined />,
             onClick: () => openDetailModal(record),
           },
@@ -176,8 +176,8 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
           ...(canViewMACHistory
             ? [
                 {
-                  key: 'mac-history',
-                  label: '查看 MAC 历史',
+                  key: "mac-history",
+                  label: "查看 MAC 历史",
                   icon: <HistoryOutlined />,
                   onClick: () =>
                     navigate(`/network/mac/history?deviceId=${record.id}`),
@@ -185,21 +185,21 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
               ]
             : []),
           {
-            key: 'edit',
-            label: '编辑',
+            key: "edit",
+            label: "编辑",
             icon: <EditOutlined />,
             onClick: () => openModal(record),
           },
           {
-            key: 'delete',
-            label: '删除',
+            key: "delete",
+            label: "删除",
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
               Modal.confirm({
-                title: '确认删除?',
-                okText: '确定',
-                cancelText: '取消',
+                title: "确认删除?",
+                okText: "确定",
+                cancelText: "取消",
                 okButtonProps: { danger: true },
                 onOk: () => handleDelete(record.id),
               });
@@ -220,7 +220,7 @@ const DeviceManagement: FC = () => {
 
   // 权限(14-05b:查看 MAC 历史联动入口)— 与 history 页主权限点 network:mac:list 保持一致
   const menuPermissions = useMenuStore((s) => s.permissions);
-  const canViewMACHistory = menuPermissions.includes('network:mac:list');
+  const canViewMACHistory = menuPermissions.includes("network:mac:list");
 
   // 表单实例
   const [quickCreateForm] = Form.useForm();
@@ -228,7 +228,7 @@ const DeviceManagement: FC = () => {
   const [editForm] = Form.useForm();
 
   // 自定义状态
-  const [selectedDeptId, setSelectedDeptId] = useState<string>('');
+  const [selectedDeptId, setSelectedDeptId] = useState<string>("");
   const [collectingDeviceId, setCollectingDeviceId] = useState<string | null>(null);
   const [batchModalVisible, setBatchModalVisible] = useState(false);
   const [batchExporting, setBatchExporting] = useState(false);
@@ -280,7 +280,7 @@ const DeviceManagement: FC = () => {
   } = useTableManager<NetworkDevice>(
     async (params) => {
       const values = searchForm.getFieldsValue();
-      const result = await post<PageResponse<NetworkDevice>>('/network/devices/list', {
+      const result = await post<PageResponse<NetworkDevice>>("/network/devices/list", {
         ...values,
         ...params,
       });
@@ -307,7 +307,7 @@ const DeviceManagement: FC = () => {
       setSelectedDeptId(selectedKeys[0] as string);
       loadDevices({ deptId: selectedKeys[0] });
     } else {
-      setSelectedDeptId('');
+      setSelectedDeptId("");
       loadDevices();
     }
   }, [loadDevices]);
@@ -315,26 +315,26 @@ const DeviceManagement: FC = () => {
   // 探测设备
   const handleProbe = async () => {
     try {
-      const values = await quickCreateForm.validateFields(['ipAddress', 'credentialId']);
+      const values = await quickCreateForm.validateFields(["ipAddress", "credentialId"]);
       setProbing(true);
       setProbeResult(null);
 
-      const result = await post<ProbeResult>('/network/devices/discover', {
+      const result = await post<ProbeResult>("/network/devices/discover", {
         ipAddress: values.ipAddress,
         credentialId: values.credentialId,
       });
 
       if (result.data?.success) {
         setProbeResult(result.data);
-        handleSuccess('设备探测');
+        handleSuccess("设备探测");
       } else {
-        handleApiError(result.data?.message || '探测失败', '探测');
+        handleApiError(result.data?.message || "探测失败", "探测");
       }
     } catch (error) {
-      if (error && typeof error === 'object' && 'errorFields' in error) {
-        handleApiError(error, '请先填写 IP 地址和授权凭证', false);
+      if (error && typeof error === "object" && "errorFields" in error) {
+        handleApiError(error, "请先填写 IP 地址和授权凭证", false);
       } else {
-        handleApiError(error, '探测');
+        handleApiError(error, "探测");
       }
     } finally {
       setProbing(false);
@@ -347,17 +347,17 @@ const DeviceManagement: FC = () => {
       const values = await quickCreateForm.validateFields();
       setCreating(true);
 
-      await post('/network/devices/quick-create', {
+      await post("/network/devices/quick-create", {
         ipAddress: values.ipAddress,
         credentialId: values.credentialId,
         snmpPort: values.snmpPort || 161,
         communities: values.communities || [],
         deptId: values.deptId || undefined,
-        location: values.location || '',
-        description: values.description || '',
+        location: values.location || "",
+        description: values.description || "",
       });
 
-      handleSuccess('设备创建');
+      handleSuccess("设备创建");
       closeQuickCreateModal();
       quickCreateForm.resetFields();
       setProbeResult(null);
@@ -369,10 +369,10 @@ const DeviceManagement: FC = () => {
       }
       loadStatistics();
     } catch (error) {
-      if (error && typeof error === 'object' && 'errorFields' in error) {
+      if (error && typeof error === "object" && "errorFields" in error) {
         return;
       }
-      handleApiError(error, '创建');
+      handleApiError(error, "创建");
     } finally {
       setCreating(false);
     }
@@ -384,10 +384,10 @@ const DeviceManagement: FC = () => {
       const values = await editForm.validateFields();
       if (editingDevice) {
         await post(`/network/devices/${editingDevice.id}/update`, values);
-        handleSuccess('更新');
+        handleSuccess("更新");
       } else {
-        await post('/network/devices', values);
-        handleSuccess('创建');
+        await post("/network/devices", values);
+        handleSuccess("创建");
       }
       setEditModalVisible(false);
       editForm.resetFields();
@@ -398,10 +398,10 @@ const DeviceManagement: FC = () => {
       }
       loadStatistics();
     } catch (error) {
-      if (error && typeof error === 'object' && 'errorFields' in error) {
+      if (error && typeof error === "object" && "errorFields" in error) {
         return;
       }
-      handleApiError(error, '操作');
+      handleApiError(error, "操作");
     }
   };
 
@@ -409,7 +409,7 @@ const DeviceManagement: FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await post(`/network/devices/${id}/delete`, {});
-      handleSuccess('删除');
+      handleSuccess("删除");
       if (selectedDeptId) {
         loadDevices({ deptId: selectedDeptId });
       } else {
@@ -417,7 +417,7 @@ const DeviceManagement: FC = () => {
       }
       loadStatistics();
     } catch (error) {
-      handleApiError(error, '删除');
+      handleApiError(error, "删除");
     }
   };
 
@@ -427,8 +427,8 @@ const DeviceManagement: FC = () => {
       return;
     }
     try {
-      await post('/network/devices/batch-delete', { ids: selectedRowKeys });
-      handleSuccess('批量删除');
+      await post("/network/devices/batch-delete", { ids: selectedRowKeys });
+      handleSuccess("批量删除");
       resetSelection();
       if (selectedDeptId) {
         loadDevices({ deptId: selectedDeptId });
@@ -437,7 +437,7 @@ const DeviceManagement: FC = () => {
       }
       loadStatistics();
     } catch (error) {
-      handleApiError(error, '批量删除');
+      handleApiError(error, "批量删除");
     }
   };
 
@@ -458,20 +458,20 @@ const DeviceManagement: FC = () => {
   const handleCollectPorts = async (device: NetworkDevice) => {
     try {
       setCollectingDeviceId(device.id);
-      const result = await post<{ errorMessage?: string; successCount?: number; failedCount?: number }>('/network/ports/collect', { deviceId: device.id });
+      const result = await post<{ errorMessage?: string; successCount?: number; failedCount?: number }>("/network/ports/collect", { deviceId: device.id });
 
       const data = result.data;
       if (!data) {
-        handleApiError('采集失败: 未获取到端口数据', '采集');
+        handleApiError("采集失败: 未获取到端口数据", "采集");
       } else if (data.errorMessage) {
-        handleApiError(data.errorMessage, '采集', false);
+        handleApiError(data.errorMessage, "采集", false);
       } else if (data.successCount && data.successCount > 0) {
-        handleSuccess(`采集成功: 成功 ${data.successCount} 个端口${data.failedCount && data.failedCount > 0 ? `，失败 ${data.failedCount} 个` : ''}`);
+        handleSuccess(`采集成功: 成功 ${data.successCount} 个端口${data.failedCount && data.failedCount > 0 ? `，失败 ${data.failedCount} 个` : ""}`);
       } else {
-        handleApiError('采集失败: 未获取到端口数据', '采集');
+        handleApiError("采集失败: 未获取到端口数据", "采集");
       }
     } catch (error) {
-      handleApiError(error, '采集');
+      handleApiError(error, "采集");
     } finally {
       setCollectingDeviceId(null);
     }
@@ -510,7 +510,7 @@ const DeviceManagement: FC = () => {
     const searchParams: Record<string, unknown> = {};
     Object.keys(values).forEach(key => {
       const value = values[key];
-      if (value !== undefined && value !== null && value !== '') {
+      if (value !== undefined && value !== null && value !== "") {
         searchParams[key] = value;
       }
     });
@@ -558,9 +558,9 @@ const DeviceManagement: FC = () => {
   });
 
   return (
-    <Layout style={{ background: '#000', minHeight: 'calc(100vh - 64px)' }}>
+    <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
       {/* 左侧部门树 */}
-      <Sider width={360} className="dept-list-sider" style={{ background: '#fff', padding: '0 16px 16px 0', borderRight: '1px solid #f0f0f0' }}>
+      <Sider width={360} className="dept-list-sider" style={{ background: "#fff", padding: "0 16px 16px 0", borderRight: "1px solid #f0f0f0" }}>
         <DeptTree
           onSelect={(selectedKeys) => handleDeptSelect(selectedKeys)}
           selectedKeys={selectedDeptId ? [selectedDeptId] : []}
@@ -568,7 +568,7 @@ const DeviceManagement: FC = () => {
       </Sider>
 
       {/* 右侧内容区 */}
-      <Content style={{ background: '#fff' }}>
+      <Content style={{ background: "#fff" }}>
         <div>
           {/* 统计卡片 */}
           {statistics.total > 10 && (
@@ -587,7 +587,7 @@ const DeviceManagement: FC = () => {
                   <Statistic
                     title="在线设备"
                     value={statistics.online}
-                    styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
+                    styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
                     prefix={<CheckCircleOutlined />}
                   />
                 </Card>
@@ -597,7 +597,7 @@ const DeviceManagement: FC = () => {
                   <Statistic
                     title="离线设备"
                     value={statistics.offline}
-                    styles={{ content: { color: 'var(--theme-error, #cf1322)' } }}
+                    styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
                     prefix={<CloseCircleOutlined />}
                   />
                 </Card>
@@ -607,7 +607,7 @@ const DeviceManagement: FC = () => {
                   <Statistic
                     title="未知状态"
                     value={statistics.unknown}
-                    styles={{ content: { color: 'var(--theme-warning, #faad14)' } }}
+                    styles={{ content: { color: "var(--theme-warning, #faad14)" } }}
                     prefix={<WarningOutlined />}
                   />
                 </Card>
@@ -617,7 +617,7 @@ const DeviceManagement: FC = () => {
 
           {/* 搜索表单和操作按钮 */}
           <Card style={{ marginBottom: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
               <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
                 <Form.Item name="deviceName" label="设备名称">
                   <Input placeholder="请输入设备名称" allowClear className="user-form-input" style={{ width: 150 }} />
@@ -663,7 +663,7 @@ const DeviceManagement: FC = () => {
                     const filtered: Record<string, unknown> = {};
                     Object.keys(values).forEach(key => {
                       const value = values[key];
-                      if (value !== undefined && value !== null && value !== '') {
+                      if (value !== undefined && value !== null && value !== "") {
                         filtered[key] = value;
                       }
                     });
@@ -675,7 +675,7 @@ const DeviceManagement: FC = () => {
                 <Button type="primary" icon={<ThunderboltOutlined />} onClick={openQuickCreateModal}>快速创建</Button>
                 <Button type="default" icon={<PlusOutlined />} onClick={() => openModal()}>手动新增</Button>
                 {selectedRowKeys.length > 0 && (
-                  <Button icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }} onClick={handleBatchDelete}>
+                  <Button icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }} onClick={handleBatchDelete}>
                     批量删除 ({selectedRowKeys.length})
                   </Button>
                 )}
@@ -768,10 +768,10 @@ const DeviceManagement: FC = () => {
         />
 
         <Form form={quickCreateForm} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
-          <Form.Item name="ipAddress" label="IP地址" rules={[{ required: true, message: '请输入IP地址' }]}>
+          <Form.Item name="ipAddress" label="IP地址" rules={[{ required: true, message: "请输入IP地址" }]}>
             <Input placeholder="请输入设备IP地址" />
           </Form.Item>
-          <Form.Item name="credentialId" label="授权凭证" rules={[{ required: true, message: '请选择授权凭证' }]}>
+          <Form.Item name="credentialId" label="授权凭证" rules={[{ required: true, message: "请选择授权凭证" }]}>
             <Select placeholder="请选择授权凭证">
               {credentials.map(cred => (
                 <Option key={cred.id} value={cred.id}>{cred.credentialName}</Option>
@@ -791,7 +791,7 @@ const DeviceManagement: FC = () => {
 
           {probeResult && (
             <>
-              <Divider orientationMargin={0} orientation={"left" as DividerProps['orientation']}>探测结果</Divider>
+              <Divider orientationMargin={0} orientation={"left" as DividerProps["orientation"]}>探测结果</Divider>
               <Alert
                 title="探测成功"
                 type="success"
@@ -800,23 +800,23 @@ const DeviceManagement: FC = () => {
               <Row gutter={16}>
                 <Col span={12}>
                   <Card size="small" title="设备信息">
-                    <p><strong>设备名称:</strong> {(probeResult.deviceName as string) || '-'}</p>
-                    <p><strong>设备类型:</strong> {(probeResult.deviceType as string) || '-'}</p>
-                    <p><strong>厂商:</strong> {(probeResult.vendor as string) || '-'}</p>
-                    <p><strong>型号:</strong> {(probeResult.model as string) || '-'}</p>
+                    <p><strong>设备名称:</strong> {(probeResult.deviceName as string) || "-"}</p>
+                    <p><strong>设备类型:</strong> {(probeResult.deviceType as string) || "-"}</p>
+                    <p><strong>厂商:</strong> {(probeResult.vendor as string) || "-"}</p>
+                    <p><strong>型号:</strong> {(probeResult.model as string) || "-"}</p>
                   </Card>
                 </Col>
                 <Col span={12}>
                   <Card size="small" title="系统信息">
-                    <p><strong>SysName:</strong> {(probeResult.sysName as string) || '-'}</p>
-                    <p><strong>SysDescr:</strong> {(probeResult.sysDescr as string)?.substring(0, 50) || '-'}{(probeResult.sysDescr as string)?.length > 50 ? '...' : ''}</p>
+                    <p><strong>SysName:</strong> {(probeResult.sysName as string) || "-"}</p>
+                    <p><strong>SysDescr:</strong> {(probeResult.sysDescr as string)?.substring(0, 50) || "-"}{(probeResult.sysDescr as string)?.length > 50 ? "..." : ""}</p>
                   </Card>
                 </Col>
               </Row>
             </>
           )}
 
-          <Divider orientationMargin={0} orientation={"left" as DividerProps['orientation']}>其他信息（可选）</Divider>
+          <Divider orientationMargin={0} orientation={"left" as DividerProps["orientation"]}>其他信息（可选）</Divider>
           <Form.Item name="deptId" label="所属部门">
             <DepartmentTreeSelect departments={departments} />
           </Form.Item>
@@ -831,7 +831,7 @@ const DeviceManagement: FC = () => {
 
       {/* 手动新增/编辑模态框 */}
       <Modal
-        title={editingDevice ? '编辑设备' : '手动新增设备'}
+        title={editingDevice ? "编辑设备" : "手动新增设备"}
         open={modalVisible}
         onOk={handleCreate}
         onCancel={() => { setEditModalVisible(false); editForm.resetFields(); }}
@@ -846,17 +846,17 @@ const DeviceManagement: FC = () => {
         />
 
         <Form form={editForm} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
-          <Form.Item name="deviceName" label="设备名称" rules={[{ required: true, message: '请输入设备名称' }]}>
+          <Form.Item name="deviceName" label="设备名称" rules={[{ required: true, message: "请输入设备名称" }]}>
             <Input placeholder="请输入设备名称" />
           </Form.Item>
-          <Form.Item name="deviceType" label="设备类型" rules={[{ required: true, message: '请选择设备类型' }]}>
+          <Form.Item name="deviceType" label="设备类型" rules={[{ required: true, message: "请选择设备类型" }]}>
             <Select placeholder="请选择设备类型">
               {DEVICE_TYPE_OPTIONS.map(opt => (
                 <Option key={opt.value} value={opt.value}>{opt.label}</Option>
               ))}
             </Select>
           </Form.Item>
-          <Form.Item name="vendor" label="厂商" rules={[{ required: true, message: '请选择厂商' }]}>
+          <Form.Item name="vendor" label="厂商" rules={[{ required: true, message: "请选择厂商" }]}>
             <Select placeholder="请选择厂商">
               {VENDOR_OPTIONS.map(opt => (
                 <Option key={opt.value} value={opt.value}>{opt.label}</Option>
@@ -866,14 +866,14 @@ const DeviceManagement: FC = () => {
           <Form.Item name="model" label="型号">
             <Input placeholder="请输入设备型号" />
           </Form.Item>
-          <Form.Item name="ipAddress" label="IP地址" rules={[{ required: true, message: '请输入IP地址' }]}>
+          <Form.Item name="ipAddress" label="IP地址" rules={[{ required: true, message: "请输入IP地址" }]}>
             <Input placeholder="请输入IP地址" />
           </Form.Item>
-          <Form.Item name="port" label="SSH端口" rules={[{ required: true, message: '请输入SSH端口' }]}>
-            <InputNumber min={1} max={65535} style={{ width: '100%' }} />
+          <Form.Item name="port" label="SSH端口" rules={[{ required: true, message: "请输入SSH端口" }]}>
+            <InputNumber min={1} max={65535} style={{ width: "100%" }} />
           </Form.Item>
-          <Form.Item name="snmpPort" label="SNMP端口" rules={[{ required: true, message: '请输入SNMP端口' }]}>
-            <InputNumber min={1} max={65535} style={{ width: '100%' }} />
+          <Form.Item name="snmpPort" label="SNMP端口" rules={[{ required: true, message: "请输入SNMP端口" }]}>
+            <InputNumber min={1} max={65535} style={{ width: "100%" }} />
           </Form.Item>
           <Form.Item name="credentialId" label="授权凭证">
             <Select placeholder="请选择授权凭证" allowClear>
@@ -931,42 +931,42 @@ const DeviceManagement: FC = () => {
       >
         {viewingDevice && (
           <div>
-            <Divider orientationMargin={0} orientation={"left" as DividerProps['orientation']}>基本信息</Divider>
+            <Divider orientationMargin={0} orientation={"left" as DividerProps["orientation"]}>基本信息</Divider>
             <Row gutter={16}>
               <Col span={12}>
                 <p><strong>设备名称:</strong> {viewingDevice.deviceName}</p>
-                <p><strong>设备类型:</strong> {getOptionLabel(DEVICE_TYPE_OPTIONS, viewingDevice.deviceType) || '-'}</p>
-                <p><strong>厂商:</strong> {getOptionLabel(VENDOR_OPTIONS, viewingDevice.vendor) || '-'}</p>
-                <p><strong>型号:</strong> {viewingDevice.model || '-'}</p>
+                <p><strong>设备类型:</strong> {getOptionLabel(DEVICE_TYPE_OPTIONS, viewingDevice.deviceType) || "-"}</p>
+                <p><strong>厂商:</strong> {getOptionLabel(VENDOR_OPTIONS, viewingDevice.vendor) || "-"}</p>
+                <p><strong>型号:</strong> {viewingDevice.model || "-"}</p>
                 <p><strong>IP地址:</strong> {viewingDevice.ipAddress}</p>
                 <p><strong>SSH端口:</strong> {viewingDevice.port}</p>
                 <p><strong>SNMP端口:</strong> {viewingDevice.snmpPort}</p>
               </Col>
               <Col span={12}>
-                <p><strong>状态:</strong> {getOptionLabel(STATUS_OPTIONS, viewingDevice.status) || '-'}</p>
-                <p><strong>所属部门:</strong> {viewingDevice.deptName || '-'}</p>
-                <p><strong>位置:</strong> {viewingDevice.location || '-'}</p>
-                <p><strong>授权凭证:</strong> {viewingDevice.credentialName || '-'}</p>
-                <p><strong>最后连接:</strong> {viewingDevice.lastSeenAt || '-'}</p>
+                <p><strong>状态:</strong> {getOptionLabel(STATUS_OPTIONS, viewingDevice.status) || "-"}</p>
+                <p><strong>所属部门:</strong> {viewingDevice.deptName || "-"}</p>
+                <p><strong>位置:</strong> {viewingDevice.location || "-"}</p>
+                <p><strong>授权凭证:</strong> {viewingDevice.credentialName || "-"}</p>
+                <p><strong>最后连接:</strong> {viewingDevice.lastSeenAt || "-"}</p>
                 <p><strong>创建时间:</strong> {viewingDevice.createdAt}</p>
               </Col>
             </Row>
 
-            <Divider orientationMargin={0} orientation={"left" as DividerProps['orientation']}>设备详细信息（SSH采集）</Divider>
+            <Divider orientationMargin={0} orientation={"left" as DividerProps["orientation"]}>设备详细信息（SSH采集）</Divider>
             <Row gutter={16}>
               <Col span={12}>
-                <p><strong>型号:</strong> {viewingDevice.model || '-'}</p>
-                <p><strong>序列号:</strong> {viewingDevice.serialNumber || '-'}</p>
+                <p><strong>型号:</strong> {viewingDevice.model || "-"}</p>
+                <p><strong>序列号:</strong> {viewingDevice.serialNumber || "-"}</p>
               </Col>
               <Col span={12}>
-                <p><strong>软件版本:</strong> {viewingDevice.softwareVersion || '-'}</p>
-                <p><strong>运行时间:</strong> {viewingDevice.uptime || '-'}</p>
+                <p><strong>软件版本:</strong> {viewingDevice.softwareVersion || "-"}</p>
+                <p><strong>运行时间:</strong> {viewingDevice.uptime || "-"}</p>
               </Col>
             </Row>
 
             {viewingDevice.description && (
               <>
-                <Divider orientationMargin={0} orientation={"left" as DividerProps['orientation']}>备注</Divider>
+                <Divider orientationMargin={0} orientation={"left" as DividerProps["orientation"]}>备注</Divider>
                 <p>{viewingDevice.description}</p>
               </>
             )}

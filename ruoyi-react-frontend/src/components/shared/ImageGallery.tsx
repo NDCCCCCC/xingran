@@ -3,8 +3,8 @@
  * 用于展示和管理图片集合，支持设置主图、预览、删除、描述编辑
  */
 
-import { useState } from 'react';
-import type { FC } from 'react';
+import { useState } from "react";
+import type { FC } from "react";
 import {
   Image,
   Button,
@@ -18,12 +18,12 @@ import {
   Empty,
   Row,
   Col,
-} from 'antd';
+} from "antd";
 import {
   DeleteOutlined,
   EditOutlined,
   StarFilled,
-} from '@ant-design/icons';
+} from "@ant-design/icons";
 
 export interface Photo {
   id: string;
@@ -59,9 +59,9 @@ const ImageGallery: FC<ImageGalleryProps> = ({
   onUpload,
 }) => {
   const [previewVisible, setPreviewVisible] = useState(false);
-  const [previewImage, setPreviewImage] = useState('');
+  const [previewImage, setPreviewImage] = useState("");
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
 
   // 预览图片
@@ -75,16 +75,16 @@ const ImageGallery: FC<ImageGalleryProps> = ({
     if (!onSetPrimary) return;
     try {
       await onSetPrimary(photo.id);
-      message.success('已设置为主图');
+      message.success("已设置为主图");
     } catch (error) {
-      message.error('设置主图失败');
+      message.error("设置主图失败");
     }
   };
 
   // 编辑描述
   const handleEditDescription = (photo: Photo) => {
     setEditingPhoto(photo);
-    setDescription(photo.description || '');
+    setDescription(photo.description || "");
     setModalVisible(true);
   };
 
@@ -93,10 +93,10 @@ const ImageGallery: FC<ImageGalleryProps> = ({
     if (!editingPhoto || !onUpdateDescription) return;
     try {
       await onUpdateDescription(editingPhoto.id, description);
-      message.success('描述已更新');
+      message.success("描述已更新");
       setModalVisible(false);
     } catch (error) {
-      message.error('更新描述失败');
+      message.error("更新描述失败");
     }
   };
 
@@ -105,9 +105,9 @@ const ImageGallery: FC<ImageGalleryProps> = ({
     if (!onDelete) return;
     try {
       await onDelete(photo.id);
-      message.success('删除成功');
+      message.success("删除成功");
     } catch (error) {
-      message.error('删除失败');
+      message.error("删除失败");
     }
   };
 
@@ -116,12 +116,12 @@ const ImageGallery: FC<ImageGalleryProps> = ({
     <div key={photo.id} style={{ marginBottom: 16 }}>
       <div
         style={{
-          position: 'relative',
-          paddingBottom: '75%',
+          position: "relative",
+          paddingBottom: "75%",
           borderRadius: 8,
-          overflow: 'hidden',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-          backgroundColor: photo.isPrimary ? '#fff7e6' : '#fff',
+          overflow: "hidden",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+          backgroundColor: photo.isPrimary ? "#fff7e6" : "#fff",
         }}
       >
         {/* 图片 */}
@@ -130,13 +130,13 @@ const ImageGallery: FC<ImageGalleryProps> = ({
           alt={photo.description || photo.fileName}
           onClick={() => handlePreview(photo.fileUrl)}
           style={{
-            position: 'absolute',
+            position: "absolute",
             top: 0,
             left: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            cursor: 'pointer',
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            cursor: "pointer",
           }}
         />
 
@@ -146,7 +146,7 @@ const ImageGallery: FC<ImageGalleryProps> = ({
             color="gold"
             icon={<StarFilled />}
             style={{
-              position: 'absolute',
+              position: "absolute",
               top: 8,
               left: 8,
               margin: 0,
@@ -199,7 +199,7 @@ const ImageGallery: FC<ImageGalleryProps> = ({
 
       {/* 描述 */}
       {photo.description && (
-        <div style={{ marginTop: 8, color: '#666', fontSize: 12 }}>
+        <div style={{ marginTop: 8, color: "#666", fontSize: 12 }}>
           {photo.description}
         </div>
       )}
@@ -244,7 +244,7 @@ const ImageGallery: FC<ImageGalleryProps> = ({
 
       {/* 预览模态框 */}
       <Image
-        style={{ display: 'none' }}
+        style={{ display: "none" }}
         preview={{
           visible: previewVisible,
           src: previewImage,

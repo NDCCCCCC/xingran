@@ -1,16 +1,16 @@
-import { useState, useEffect } from 'react';
-import { Card, Row, Col, Statistic, Table, Tag } from 'antd';
+import { useState, useEffect } from "react";
+import { Card, Row, Col, Statistic, Table, Tag } from "antd";
 import {
   FileTextOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-} from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import { getWorkOrderStatistics, type WorkOrderStatistics } from '@/lib/workorderApi';
-import { WorkOrderPriority } from '@/lib/workorderApi';
+} from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
+import { getWorkOrderStatistics, type WorkOrderStatistics } from "@/lib/workorderApi";
+import { WorkOrderPriority } from "@/lib/workorderApi";
 
-import type { FC } from 'react';
+import type { FC } from "react";
 
 const WorkOrderStatisticsPage: FC = () => {
   const [loading, setLoading] = useState(false);
@@ -22,7 +22,7 @@ const WorkOrderStatisticsPage: FC = () => {
       const result = await getWorkOrderStatistics();
       setStats(result.data || null);
     } catch (error) {
-      console.error('获取统计数据失败:', error);
+      console.error("获取统计数据失败:", error);
     } finally {
       setLoading(false);
     }
@@ -33,29 +33,29 @@ const WorkOrderStatisticsPage: FC = () => {
   }, []);
 
   const assigneeColumns: ColumnsType<{ assigneeName: string; assigneeId: string; totalCount: number; pendingCount: number; doneCount: number; avgProcessTime: number }> = [
-    { title: '处理人', dataIndex: 'assigneeName', key: 'assigneeName' },
-    { title: '总工单', dataIndex: 'totalCount', key: 'totalCount' },
-    { title: '待处理', dataIndex: 'pendingCount', key: 'pendingCount' },
-    { title: '已完成', dataIndex: 'doneCount', key: 'doneCount' },
+    { title: "处理人", dataIndex: "assigneeName", key: "assigneeName" },
+    { title: "总工单", dataIndex: "totalCount", key: "totalCount" },
+    { title: "待处理", dataIndex: "pendingCount", key: "pendingCount" },
+    { title: "已完成", dataIndex: "doneCount", key: "doneCount" },
     {
-      title: '平均处理时间',
-      dataIndex: 'avgProcessTime',
-      key: 'avgProcessTime',
+      title: "平均处理时间",
+      dataIndex: "avgProcessTime",
+      key: "avgProcessTime",
       render: (time: number) => `${time.toFixed(1)} 小时`,
     },
   ];
 
   const departmentColumns: ColumnsType<{ deptName: string; deptId: string; totalCount: number; doneCount: number }> = [
-    { title: '部门', dataIndex: 'deptName', key: 'deptName' },
-    { title: '总工单', dataIndex: 'totalCount', key: 'totalCount' },
-    { title: '已完成', dataIndex: 'doneCount', key: 'doneCount' },
+    { title: "部门", dataIndex: "deptName", key: "deptName" },
+    { title: "总工单", dataIndex: "totalCount", key: "totalCount" },
+    { title: "已完成", dataIndex: "doneCount", key: "doneCount" },
   ];
 
   const priorityConfig = {
-    [WorkOrderPriority.Low]: { text: '低', color: 'default' },
-    [WorkOrderPriority.Medium]: { text: '中', color: 'blue' },
-    [WorkOrderPriority.High]: { text: '高', color: 'orange' },
-    [WorkOrderPriority.Urgent]: { text: '紧急', color: 'red' },
+    [WorkOrderPriority.Low]: { text: "低", color: "default" },
+    [WorkOrderPriority.Medium]: { text: "中", color: "blue" },
+    [WorkOrderPriority.High]: { text: "高", color: "orange" },
+    [WorkOrderPriority.Urgent]: { text: "紧急", color: "red" },
   };
 
   return (
@@ -78,7 +78,7 @@ const WorkOrderStatisticsPage: FC = () => {
               title="待处理"
               value={stats?.pending || 0}
               prefix={<ClockCircleOutlined />}
-              styles={{ content: { color: 'var(--theme-warning, #faad14)' } }}
+              styles={{ content: { color: "var(--theme-warning, #faad14)" } }}
               loading={loading}
             />
           </Card>
@@ -88,7 +88,7 @@ const WorkOrderStatisticsPage: FC = () => {
             <Statistic
               title="处理中"
               value={stats?.processing || 0}
-              styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
+              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
               loading={loading}
             />
           </Card>
@@ -99,7 +99,7 @@ const WorkOrderStatisticsPage: FC = () => {
               title="已完成"
               value={stats?.completed || 0}
               prefix={<CheckCircleOutlined />}
-              styles={{ content: { color: 'var(--theme-success, #52c41a)' } }}
+              styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
               loading={loading}
             />
           </Card>
@@ -110,7 +110,7 @@ const WorkOrderStatisticsPage: FC = () => {
               title="已关闭"
               value={stats?.closed || 0}
               prefix={<CloseCircleOutlined />}
-              styles={{ content: { color: 'var(--theme-text-tertiary, #8c8c8c)' } }}
+              styles={{ content: { color: "var(--theme-text-tertiary, #8c8c8c)" } }}
               loading={loading}
             />
           </Card>
@@ -200,8 +200,8 @@ const WorkOrderStatisticsPage: FC = () => {
                 {/* 这里可以使用图表库如 ECharts 或 Recharts 来绘制趋势图 */}
                 <Table
                   columns={[
-                    { title: '日期', dataIndex: 'date', key: 'date' },
-                    { title: '工单数量', dataIndex: 'count', key: 'count' },
+                    { title: "日期", dataIndex: "date", key: "date" },
+                    { title: "工单数量", dataIndex: "count", key: "count" },
                   ]}
                   dataSource={stats.trend}
                   rowKey="date"

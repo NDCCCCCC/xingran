@@ -3,31 +3,31 @@
  * Default Theme Configuration Page
  */
 
-import { useState, useEffect } from 'react';
-import { Form, Select, Button, Card, message, Space, Divider, ColorPicker } from 'antd';
-import { BgColorsOutlined, SyncOutlined, SaveOutlined } from '@ant-design/icons';
-import type { ThemeConfiguration } from '@/types/config';
-import { getDefaultThemeConfig, setDefaultThemeConfig, syncUserThemeToDefault } from '@/lib/defaultThemeApi';
-import { useSettingsStore } from '@/store/settingsStore';
+import { useState, useEffect } from "react";
+import { Form, Select, Button, Card, message, Space, Divider, ColorPicker } from "antd";
+import { BgColorsOutlined, SyncOutlined, SaveOutlined } from "@ant-design/icons";
+import type { ThemeConfiguration } from "@/types/config";
+import { getDefaultThemeConfig, setDefaultThemeConfig, syncUserThemeToDefault } from "@/lib/defaultThemeApi";
+import { useSettingsStore } from "@/store/settingsStore";
 
 /**
  * 主题模式选项
  */
 const MODE_OPTIONS = [
-  { label: '浅色', value: 'light' },
-  { label: '深色', value: 'dark' },
-  { label: '自动', value: 'auto' },
+  { label: "浅色", value: "light" },
+  { label: "深色", value: "dark" },
+  { label: "自动", value: "auto" },
 ];
 
 /**
  * 主题风格选项
  */
 const STYLE_OPTIONS = [
-  { label: '简约', value: 'minimal' },
-  { label: '玻璃态', value: 'glassmorphism' },
-  { label: '新拟态', value: 'neumorphism' },
-  { label: '扁平化 2.0', value: 'flat2.0' },
-  { label: '奢华静雅', value: 'luxury-quiet' },
+  { label: "简约", value: "minimal" },
+  { label: "玻璃态", value: "glassmorphism" },
+  { label: "新拟态", value: "neumorphism" },
+  { label: "扁平化 2.0", value: "flat2.0" },
+  { label: "奢华静雅", value: "luxury-quiet" },
 ];
 
 const DefaultThemePage: React.FC = () => {
@@ -40,7 +40,7 @@ const DefaultThemePage: React.FC = () => {
   useEffect(() => {
     // TODO: 从 auth store 或其他地方获取当前用户ID
     // 这里暂时使用硬编码的用户ID，实际应该从认证状态获取
-    setCurrentUserId('chenchao-076');
+    setCurrentUserId("chenchao-076");
   }, []);
 
   // 加载默认主题配置
@@ -56,8 +56,8 @@ const DefaultThemePage: React.FC = () => {
           sidebarColor: config.customColors?.sidebar,
         });
       } catch (error) {
-        message.error('加载默认主题配置失败');
-        console.error('Failed to load default theme config:', error);
+        message.error("加载默认主题配置失败");
+        console.error("Failed to load default theme config:", error);
       } finally {
         setLoading(false);
       }
@@ -75,8 +75,8 @@ const DefaultThemePage: React.FC = () => {
       // 空值或未选择时退化为 undefined,后端 bind 不会报错
       const toHex = (v: any): string | undefined => {
         if (!v) return undefined;
-        if (typeof v === 'string') return v;
-        if (typeof v?.toHexString === 'function') return v.toHexString();
+        if (typeof v === "string") return v;
+        if (typeof v?.toHexString === "function") return v.toHexString();
         return undefined;
       };
 
@@ -90,10 +90,10 @@ const DefaultThemePage: React.FC = () => {
       };
 
       await setDefaultThemeConfig(config);
-      message.success('默认主题配置已更新');
+      message.success("默认主题配置已更新");
     } catch (error) {
-      message.error('保存默认主题配置失败');
-      console.error('Failed to save default theme config:', error);
+      message.error("保存默认主题配置失败");
+      console.error("Failed to save default theme config:", error);
     } finally {
       setLoading(false);
     }
@@ -102,7 +102,7 @@ const DefaultThemePage: React.FC = () => {
   // 从当前用户配置同步
   const handleSync = async () => {
     if (!currentUserId) {
-      message.warning('无法获取当前用户ID');
+      message.warning("无法获取当前用户ID");
       return;
     }
 
@@ -119,10 +119,10 @@ const DefaultThemePage: React.FC = () => {
         sidebarColor: config.customColors?.sidebar,
       });
 
-      message.success('已从当前用户配置同步到默认主题');
+      message.success("已从当前用户配置同步到默认主题");
     } catch (error) {
-      message.error('同步失败');
-      console.error('Failed to sync user theme:', error);
+      message.error("同步失败");
+      console.error("Failed to sync user theme:", error);
     } finally {
       setSyncing(false);
     }
@@ -137,7 +137,7 @@ const DefaultThemePage: React.FC = () => {
       primaryColor: preferences.theme.customColors?.primary,
       sidebarColor: preferences.theme.customColors?.sidebar,
     });
-    message.info('已加载当前设置到表单，请点击保存按钮保存');
+    message.info("已加载当前设置到表单，请点击保存按钮保存");
   };
 
   return (
@@ -171,7 +171,7 @@ const DefaultThemePage: React.FC = () => {
         <Form.Item
           label="主题模式"
           name="mode"
-          rules={[{ required: true, message: '请选择主题模式' }]}
+          rules={[{ required: true, message: "请选择主题模式" }]}
         >
           <Select options={MODE_OPTIONS} placeholder="请选择主题模式" />
         </Form.Item>
@@ -179,7 +179,7 @@ const DefaultThemePage: React.FC = () => {
         <Form.Item
           label="主题风格"
           name="style"
-          rules={[{ required: true, message: '请选择主题风格' }]}
+          rules={[{ required: true, message: "请选择主题风格" }]}
         >
           <Select options={STYLE_OPTIONS} placeholder="请选择主题风格" />
         </Form.Item>

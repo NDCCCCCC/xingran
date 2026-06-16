@@ -3,8 +3,8 @@
  * 设备发现轮询管理 Hook
  */
 
-import { useEffect, useRef } from 'react';
-import type { DeviceDiscovery } from '@/types';
+import { useEffect, useRef } from "react";
+import type { DeviceDiscovery } from "@/types";
 
 export interface UseDiscoveryPollingParams {
   discoveries: DeviceDiscovery[];
@@ -15,11 +15,11 @@ export function useDiscoveryPolling({ discoveries, onPoll }: UseDiscoveryPolling
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    const runningTasks = discoveries.filter(d => d.status === 'running');
+    const runningTasks = discoveries.filter(d => d.status === "running");
 
     if (runningTasks.length > 0 && !pollingTimerRef.current) {
       const timer = setInterval(() => {
-        const currentRunning = discoveries.filter(d => d.status === 'running');
+        const currentRunning = discoveries.filter(d => d.status === "running");
         if (currentRunning.length === 0) {
           if (pollingTimerRef.current) {
             clearInterval(pollingTimerRef.current);

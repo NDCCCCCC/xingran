@@ -3,13 +3,13 @@
  * 工位表格列定义
  */
 
-import type { ColumnsType } from 'antd/es/table';
-import { Modal } from 'antd';
-import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import type { WorkstationOps } from '@/types';
-import ActionButtons from '@/components/shared/ActionButtons';
-import { renderWorkstationTypeTag, renderWorkstationStatusTag } from './constants';
-import { createDateTimeColumn } from '@/utils/tableHelpers';
+import type { ColumnsType } from "antd/es/table";
+import { Modal } from "antd";
+import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import type { WorkstationOps } from "@/types";
+import ActionButtons from "@/components/shared/ActionButtons";
+import { renderWorkstationTypeTag, renderWorkstationStatusTag } from "./constants";
+import { createDateTimeColumn } from "@/utils/tableHelpers";
 
 export interface WorkstationColumnsParams {
   handleEdit: (record: WorkstationOps) => void;
@@ -20,78 +20,78 @@ export function getWorkstationColumns(params: WorkstationColumnsParams): Columns
   const { handleEdit, handleDelete } = params;
 
   return [
-    { title: '工位名称', dataIndex: 'name', key: 'name', width: 150 },
+    { title: "工位名称", dataIndex: "name", key: "name", width: 150 },
     {
-      title: '所属楼宇',
-      dataIndex: 'buildingName',
-      key: 'buildingName',
+      title: "所属楼宇",
+      dataIndex: "buildingName",
+      key: "buildingName",
       width: 120,
       ellipsis: true,
-      render: (text) => text || '-',
+      render: (text) => text || "-",
     },
     {
-      title: '所属楼层',
-      dataIndex: 'floorName',
-      key: 'floorName',
+      title: "所属楼层",
+      dataIndex: "floorName",
+      key: "floorName",
       width: 120,
       ellipsis: true,
-      render: (text) => text || '-',
+      render: (text) => text || "-",
     },
     {
-      title: '所属部门',
-      dataIndex: 'deptName',
-      key: 'deptName',
+      title: "所属部门",
+      dataIndex: "deptName",
+      key: "deptName",
       width: 120,
       ellipsis: true,
-      render: (text) => text || '-',
+      render: (text) => text || "-",
     },
     {
-      title: '所属用户',
-      dataIndex: 'userName',
-      key: 'userName',
+      title: "所属用户",
+      dataIndex: "userName",
+      key: "userName",
       width: 100,
       ellipsis: true,
-      render: (text) => text || '-',
+      render: (text) => text || "-",
     },
     {
-      title: '工位类型',
-      dataIndex: 'type',
-      key: 'type',
+      title: "工位类型",
+      dataIndex: "type",
+      key: "type",
       width: 100,
       render: (type) => renderWorkstationTypeTag(type),
     },
     // 工位状态为 3 态枚举（0=空闲, 1=占用, 2=维护），不能使用 createStatusColumn（该 helper 硬编码 0=正常/非0=停用的 2 态语义）。
     // 改用本模块的 renderWorkstationStatusTag，与卡片视图/平面图/模态框/搜索下拉保持一致。
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
       width: 100,
       render: (status: number) => renderWorkstationStatusTag(status),
     },
-    { title: '描述', dataIndex: 'description', key: 'description', ellipsis: true },
-    createDateTimeColumn('createdAt', { width: 180 }),
+    { title: "描述", dataIndex: "description", key: "description", ellipsis: true },
+    createDateTimeColumn("createdAt", { width: 180 }),
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       render: (_: unknown, record: WorkstationOps) => {
         const actions = [
           {
-            key: 'edit',
-            label: '编辑',
+            key: "edit",
+            label: "编辑",
             icon: <EditOutlined />,
             onClick: () => handleEdit(record),
           },
           {
-            key: 'delete',
-            label: '删除',
+            key: "delete",
+            label: "删除",
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
               Modal.confirm({
-                title: '确定要删除这个工位吗？',
-                okText: '确定',
-                cancelText: '取消',
+                title: "确定要删除这个工位吗？",
+                okText: "确定",
+                cancelText: "取消",
                 okButtonProps: { danger: true },
                 onOk: () => handleDelete(record.id),
               });

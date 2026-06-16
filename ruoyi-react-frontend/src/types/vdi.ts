@@ -13,7 +13,7 @@ export interface VirtualMachine {
   vm_id: string;
   name: string;
   resource_id: string;
-  power_state: 'pending' | 'stopped' | 'suspended' | 'in_use';
+  power_state: "pending" | "stopped" | "suspended" | "in_use";
   ip_address?: string;
   mac_address?: string;
   os_type?: string;
@@ -48,7 +48,7 @@ export interface VMListParams {
   name?: string;
   vdiServerId?: string;
   resourceId?: string;
-  powerState?: 'pending' | 'stopped' | 'suspended' | 'in_use';
+  powerState?: "pending" | "stopped" | "suspended" | "in_use";
 }
 
 /**
@@ -87,7 +87,7 @@ export interface UpdateVMRequest {
  */
 export interface VMOperateRequest {
   vm_ids: string[];
-  action: 'start' | 'stop' | 'restart' | 'suspend';
+  action: "start" | "stop" | "restart" | "suspend";
 }
 
 /**
@@ -215,10 +215,10 @@ export interface VMAccount {
   account_id: string;
   username: string;
   account_type: string;
-  os_type: 'Windows' | 'Linux';
+  os_type: "Windows" | "Linux";
   is_admin: boolean;
   is_enabled: boolean;
-  sync_status: 'synced' | 'pending' | 'failed';
+  sync_status: "synced" | "pending" | "failed";
   created_at: string;
   updated_at: string;
 }
@@ -229,7 +229,7 @@ export interface VMAccount {
 export interface CreateAccountRequest {
   username: string;
   password: string;
-  os_type: 'Windows' | 'Linux';
+  os_type: "Windows" | "Linux";
   is_admin?: boolean;
 }
 

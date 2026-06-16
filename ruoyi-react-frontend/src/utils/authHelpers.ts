@@ -3,12 +3,12 @@
  * 封装 token 获取和请求头构建逻辑
  */
 
-import { getTokenManager } from '@/store/authStore';
+import { getTokenManager } from "@/store/authStore";
 import {
   getCachedEncryptionConfig,
   clearEncryptionConfigCache,
-} from '@/services/encryptionConfig';
-import type { EncryptionConfig } from '@/services/encryptionConfig';
+} from "@/services/encryptionConfig";
+import type { EncryptionConfig } from "@/services/encryptionConfig";
 
 /**
  * 获取包含认证信息的请求头
@@ -17,7 +17,7 @@ import type { EncryptionConfig } from '@/services/encryptionConfig';
 export async function getAuthHeaders(): Promise<Record<string, string>> {
   const tokenManager = getTokenManager();
   const token = await tokenManager.getAccessToken();
-  return token ? { 'Authorization': `Bearer ${token}` } : {};
+  return token ? { "Authorization": `Bearer ${token}` } : {};
 }
 
 /**
@@ -104,7 +104,7 @@ export async function getEncryptionConfigStatus(): Promise<boolean> {
   } catch (error) {
     // 获取配置失败时，默认返回 true（启用加密）
     // 这是 fail-safe 策略：宁可加密也不要暴露敏感数据
-    console.warn('[authHelpers] 获取加密配置失败，默认启用加密:', error);
+    console.warn("[authHelpers] 获取加密配置失败，默认启用加密:", error);
     return true;
   }
 }

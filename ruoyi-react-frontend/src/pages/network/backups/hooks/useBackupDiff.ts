@@ -2,11 +2,11 @@
  * 备份差异对比 Hook
  */
 
-import { useState, useCallback, useRef, type UIEvent } from 'react';
-import type { ConfigBackup, BaseResponse } from '@/types';
-import type { DiffResult } from '../types';
-import { computeDiff } from '../utils';
-import { post } from '@/lib/api';
+import { useState, useCallback, useRef, type UIEvent } from "react";
+import type { ConfigBackup, BaseResponse } from "@/types";
+import type { DiffResult } from "../types";
+import { computeDiff } from "../utils";
+import { post } from "@/lib/api";
 
 interface UseBackupDiffReturn {
   diffModalVisible: boolean;
@@ -38,23 +38,23 @@ export function useBackupDiff(): UseBackupDiffReturn {
     try {
       // 获取两个备份的内容
       const [result1, result2] = await Promise.all([
-        post<{ content: string }>('/network/backups/content', { id: backup1.id }),
-        post<{ content: string }>('/network/backups/content', { id: backup2.id }),
+        post<{ content: string }>("/network/backups/content", { id: backup1.id }),
+        post<{ content: string }>("/network/backups/content", { id: backup2.id }),
       ]);
 
-      const content1 = result1.data?.content || '';
-      const content2 = result2.data?.content || '';
+      const content1 = result1.data?.content || "";
+      const content2 = result2.data?.content || "";
 
       const diff = computeDiff(content1, content2);
-      diff.oldVersion = String(backup1.version ?? backup1.createdAt ?? '');
-      diff.newVersion = String(backup2.version ?? backup2.createdAt ?? '');
+      diff.oldVersion = String(backup1.version ?? backup1.createdAt ?? "");
+      diff.newVersion = String(backup2.version ?? backup2.createdAt ?? "");
 
       setDiffResult(diff);
       setCompareBackup1(backup1);
       setCompareBackup2(backup2);
       setDiffModalVisible(true);
     } catch (error) {
-      console.error('加载备份内容失败:', error);
+      console.error("加载备份内容失败:", error);
     }
   }, []);
 

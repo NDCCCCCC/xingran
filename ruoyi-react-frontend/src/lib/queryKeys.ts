@@ -12,21 +12,21 @@
 
 export const queryKeys = {
   dict: {
-    all: ['dict'] as const,
-    list: (dictType: string) => ['dict', dictType] as const,
+    all: ["dict"] as const,
+    list: (dictType: string) => ["dict", dictType] as const,
   },
   list: {
-    all: (resource: string) => ['list', resource] as const,
+    all: (resource: string) => ["list", resource] as const,
     page: (resource: string, params: Record<string, unknown>) =>
-      ['list', resource, params] as const,
+      ["list", resource, params] as const,
   },
   dept: {
-    all: ['dept'] as const,
-    tree: () => ['dept', 'tree'] as const,
+    all: ["dept"] as const,
+    tree: () => ["dept", "tree"] as const,
   },
   role: {
-    all: ['role'] as const,
-    list: (params?: Record<string, unknown>) => ['role', 'list', params ?? {}] as const,
+    all: ["role"] as const,
+    list: (params?: Record<string, unknown>) => ["role", "list", params ?? {}] as const,
   },
 } as const;
 

@@ -3,7 +3,7 @@
  * 用于支持 TypeScript 严格模式迁移
  */
 
-import type { FormInstance } from 'antd';
+import type { FormInstance } from "antd";
 
 // FormFieldError 类型定义（Ant Design 6 已移除此导出）
 export interface FormFieldError {
@@ -56,9 +56,9 @@ export interface UnknownError {
  */
 export function isFormValidationError(error: unknown): error is { errorFields: FormFieldError[] } {
   return (
-    typeof error === 'object' &&
+    typeof error === "object" &&
     error !== null &&
-    'errorFields' in error &&
+    "errorFields" in error &&
     Array.isArray((error as { errorFields: FormFieldError[] }).errorFields)
   );
 }

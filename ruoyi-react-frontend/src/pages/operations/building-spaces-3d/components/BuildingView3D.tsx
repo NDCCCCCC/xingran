@@ -3,16 +3,16 @@
  * 点击地图上的楼宇标记后，显示该楼宇的 3D 模型
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import { Button, Space, Spin, Alert, Tag, Select } from 'antd';
-import { ArrowLeftOutlined, DesktopOutlined, BuildOutlined } from '@ant-design/icons';
-import { useVisualizationStore } from '@/store/visualizationStore';
-import { floorApi, workstationApi, buildingApi } from '@/lib/opsApi';
-import type { Floor } from '@/types/operations';
-import { handleApiError } from '@/utils/errorHandler';
-import { convertApiWorkstations, calculateWorkstationStats } from '../utils';
-import BuildingModel3D from './BuildingModel3D';
-import FloorPlan3D from './FloorPlan3D';
+import { useState, useCallback, useEffect } from "react";
+import { Button, Space, Spin, Alert, Tag, Select } from "antd";
+import { ArrowLeftOutlined, DesktopOutlined, BuildOutlined } from "@ant-design/icons";
+import { useVisualizationStore } from "@/store/visualizationStore";
+import { floorApi, workstationApi, buildingApi } from "@/lib/opsApi";
+import type { Floor } from "@/types/operations";
+import { handleApiError } from "@/utils/errorHandler";
+import { convertApiWorkstations, calculateWorkstationStats } from "../utils";
+import BuildingModel3D from "./BuildingModel3D";
+import FloorPlan3D from "./FloorPlan3D";
 
 // ============ 类型定义 ============
 
@@ -68,7 +68,7 @@ const BuildingView3D: React.FC = () => {
       });
       setBuildings(result.data?.list || []);
     } catch (error) {
-      handleApiError(error, '加载楼宇列表');
+      handleApiError(error, "加载楼宇列表");
     }
   }, []);
 
@@ -98,7 +98,7 @@ const BuildingView3D: React.FC = () => {
               });
               return {
                 id: floor.id,
-                name: floor.name || '',
+                name: floor.name || "",
                 code: floor.code,
                 floorNo: String(floor.floorNo),
                 status: floor.status,
@@ -107,7 +107,7 @@ const BuildingView3D: React.FC = () => {
             } catch {
               return {
                 id: floor.id,
-                name: floor.name || '',
+                name: floor.name || "",
                 code: floor.code,
                 floorNo: String(floor.floorNo),
                 status: floor.status,
@@ -119,7 +119,7 @@ const BuildingView3D: React.FC = () => {
 
         setFloors(floorsWithCount);
       } catch (error) {
-        handleApiError(error, '加载楼层数据');
+        handleApiError(error, "加载楼层数据");
       } finally {
         setLoading(false);
       }
@@ -164,7 +164,7 @@ const BuildingView3D: React.FC = () => {
 
       setWorkstations(convertedWorkstations);
     } catch (error) {
-      handleApiError(error, '加载工位数据');
+      handleApiError(error, "加载工位数据");
       setWorkstations([]);
     } finally {
       setLoadingWorkstations(false);
@@ -185,8 +185,8 @@ const BuildingView3D: React.FC = () => {
     return <NoBuildingSelectedAlert onBackToMap={navigateToMap} />;
   }
 
-  const statusColor = selectedBuilding.status === 0 ? 'success' : 'default';
-  const statusText = selectedBuilding.status === 0 ? '正常' : '停用';
+  const statusColor = selectedBuilding.status === 0 ? "success" : "default";
+  const statusText = selectedBuilding.status === 0 ? "正常" : "停用";
   const totalWorkstations = floors.reduce(
     (sum, f) => sum + (f.workstationCount || 0),
     0
@@ -280,7 +280,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
   <div style={styles.headerBar}>
     <div>
       <Space>
-        <BuildOutlined style={{ color: 'var(--theme-text-accent, #1890ff)' }} />
+        <BuildOutlined style={{ color: "var(--theme-text-accent, #1890ff)" }} />
         <span style={styles.headerTitle}>{building.name}</span>
         <Tag color={statusColor}>{statusText}</Tag>
         {floor && (
@@ -294,7 +294,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
 
     <div style={styles.headerInfo}>
       <Space split={<span style={styles.splitter}>|</span>}>
-        <span>{building.cityName || '-'}</span>
+        <span>{building.cityName || "-"}</span>
         <span>{floorCount} 层</span>
         <span>{workstationCount} 工位</span>
       </Space>
@@ -324,17 +324,17 @@ const BuildingPanel: React.FC<BuildingPanelProps> = ({
   <div
     style={{
       ...styles.buildingPanel,
-      flex: selectedFloorId ? '3' : '1',
+      flex: selectedFloorId ? "3" : "1",
     }}
   >
     {/* 楼宇切换下拉框 */}
     <div style={styles.controlPanel}>
-      <Space direction="vertical" size="small" style={{ width: '100%' }}>
+      <Space direction="vertical" size="small" style={{ width: "100%" }}>
         <Button
           icon={<ArrowLeftOutlined />}
           onClick={onBackToMap}
           size="small"
-          style={{ width: '100%' }}
+          style={{ width: "100%" }}
         >
           返回地图
         </Button>
@@ -342,7 +342,7 @@ const BuildingPanel: React.FC<BuildingPanelProps> = ({
           <>
             <div style={styles.controlLabel}>切换楼宇</div>
             <Select
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
               placeholder="选择楼宇"
               value={currentBuilding?.id}
               onChange={onBuildingChange}
@@ -382,7 +382,7 @@ const FloorPlanPanel: React.FC<FloorPlanPanelProps> = ({
     {/* 平面图标题 */}
     <div style={styles.panelHeader}>
       <Space>
-        <DesktopOutlined style={{ color: 'var(--theme-text-accent, #1890ff)' }} />
+        <DesktopOutlined style={{ color: "var(--theme-text-accent, #1890ff)" }} />
         <span style={styles.panelTitle}>
           {floor.name || floor.floorNo} - 工位平面图
         </span>
@@ -397,7 +397,7 @@ const FloorPlanPanel: React.FC<FloorPlanPanelProps> = ({
       ) : workstations.length === 0 ? (
         <EmptyView message="该楼层暂无工位" />
       ) : (
-        <div style={{ height: '100%', width: '100%' }}>
+        <div style={{ height: "100%", width: "100%" }}>
           <FloorPlan3D workstations={workstations} />
         </div>
       )}
@@ -411,14 +411,14 @@ const LoadingView: React.FC<{ message?: string }> = ({ message }) => (
       <div style={{ minHeight: 120 }} />
     </Spin>
     {message && (
-      <div style={{ marginTop: 8, color: 'rgba(0, 0, 0, 0.45)' }}>{message}</div>
+      <div style={{ marginTop: 8, color: "rgba(0, 0, 0, 0.45)" }}>{message}</div>
     )}
   </div>
 );
 
 const EmptyView: React.FC<{ message: string }> = ({ message }) => (
   <div style={styles.centerContainer}>
-    <span style={{ color: 'var(--theme-text-tertiary, #999)' }}>{message}</span>
+    <span style={{ color: "var(--theme-text-tertiary, #999)" }}>{message}</span>
   </div>
 );
 
@@ -426,102 +426,102 @@ const EmptyView: React.FC<{ message: string }> = ({ message }) => (
 
 const styles = {
   container: {
-    height: '100vh',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    overflow: 'hidden',
-    background: '#fff',
+    height: "100vh",
+    display: "flex",
+    flexDirection: "column" as const,
+    overflow: "hidden",
+    background: "#fff",
   },
   centerContainer: {
-    height: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    height: "100vh",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerBar: {
-    background: '#fff',
-    borderBottom: '1px solid #e8e8e8',
-    padding: '12px 24px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    background: "#fff",
+    borderBottom: "1px solid #e8e8e8",
+    padding: "12px 24px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
     zIndex: 100,
-    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
   },
   headerTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: 'var(--theme-text-primary, #262626)',
+    fontWeight: "bold",
+    color: "var(--theme-text-primary, #262626)",
   },
   headerArrow: {
-    color: 'var(--theme-text-tertiary, #8c8c8c)',
+    color: "var(--theme-text-tertiary, #8c8c8c)",
   },
   headerInfo: {
     fontSize: 12,
-    color: 'var(--theme-text-tertiary, #8c8c8c)',
+    color: "var(--theme-text-tertiary, #8c8c8c)",
   },
   splitter: {
-    color: 'var(--theme-border-divider, #d9d9d9)',
+    color: "var(--theme-border-divider, #d9d9d9)",
   },
   mainContent: {
     flex: 1,
-    display: 'flex',
-    overflow: 'hidden',
+    display: "flex",
+    overflow: "hidden",
   },
   buildingPanel: {
-    position: 'relative' as const,
-    background: '#f5f5f5',
-    borderRight: '1px solid #e8e8e8',
-    transition: 'flex 0.3s ease',
+    position: "relative" as const,
+    background: "#f5f5f5",
+    borderRight: "1px solid #e8e8e8",
+    transition: "flex 0.3s ease",
     minWidth: 0,
-    overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column' as const,
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column" as const,
   },
   controlPanel: {
-    position: 'absolute' as const,
+    position: "absolute" as const,
     top: 16,
     left: 16,
     zIndex: 10,
-    background: 'rgba(255, 255, 255, 0.95)',
-    backdropFilter: 'blur(10px)',
+    background: "rgba(255, 255, 255, 0.95)",
+    backdropFilter: "blur(10px)",
     borderRadius: 8,
-    padding: '12px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-    border: '1px solid #e8e8e8',
+    padding: "12px",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+    border: "1px solid #e8e8e8",
     minWidth: 220,
   },
   controlLabel: {
     fontSize: 12,
-    color: 'var(--theme-text-tertiary, #8c8c8c)',
+    color: "var(--theme-text-tertiary, #8c8c8c)",
     marginTop: 4,
   },
   modelContainer: {
-    height: '100%',
-    width: '100%',
+    height: "100%",
+    width: "100%",
   },
   floorPlanPanel: {
-    flex: '7',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    background: '#fff',
+    flex: "7",
+    display: "flex",
+    flexDirection: "column" as const,
+    background: "#fff",
     minWidth: 0,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   panelHeader: {
-    padding: '12px 16px',
-    borderBottom: '1px solid #e8e8e8',
-    background: '#fafafa',
+    padding: "12px 16px",
+    borderBottom: "1px solid #e8e8e8",
+    background: "#fafafa",
   },
   panelTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: 'var(--theme-text-primary, #262626)',
+    fontWeight: "bold",
+    color: "var(--theme-text-primary, #262626)",
   },
   panelContent: {
     flex: 1,
-    position: 'relative' as const,
-    overflow: 'hidden',
+    position: "relative" as const,
+    overflow: "hidden",
   },
 };
 

@@ -2,9 +2,9 @@
  * WorkOrder 数据管理 Hook
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { message } from 'antd';
-import type { FormInstance } from 'antd/es/form';
+import { useState, useEffect, useCallback } from "react";
+import { message } from "antd";
+import type { FormInstance } from "antd/es/form";
 import {
   getWorkOrderList,
   getUserList,
@@ -15,7 +15,7 @@ import {
   type SimpleDept,
   type WorkOrderCategory,
   WorkOrderStatus,
-} from '@/lib/workorderApi';
+} from "@/lib/workorderApi";
 
 export interface WorkOrderListParams {
   current?: number;
@@ -115,7 +115,7 @@ export function useWorkOrderData(
         closed: list.filter((o) => o.status === WorkOrderStatus.Closed).length,
       });
     } catch (error) {
-      message.error('获取工单列表失败');
+      message.error("获取工单列表失败");
     } finally {
       setLoading(false);
     }
@@ -127,7 +127,7 @@ export function useWorkOrderData(
       const result = await getUserList({ status: 0 });
       setUsers(result.data?.list || []);
     } catch (error) {
-      console.error('获取用户列表失败:', error);
+      console.error("获取用户列表失败:", error);
     }
   }, []);
 
@@ -137,7 +137,7 @@ export function useWorkOrderData(
       const result = await getDeptTree();
       setDepts(result.data || []);
     } catch (error) {
-      console.error('获取部门列表失败:', error);
+      console.error("获取部门列表失败:", error);
     }
   }, []);
 
@@ -147,7 +147,7 @@ export function useWorkOrderData(
       const result = await getEnabledWorkOrderCategories();
       setCategories(result.data || []);
     } catch (error) {
-      console.error('获取工单分类失败:', error);
+      console.error("获取工单分类失败:", error);
     }
   }, []);
 

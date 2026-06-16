@@ -4,7 +4,7 @@
  * 此组件保留用于将来的扩展需求
  */
 
-import type { ViewLevel } from '@/store/visualizationStore';
+import type { ViewLevel } from "@/store/visualizationStore";
 
 interface ViewportNavigationProps {
   currentView: ViewLevel;

@@ -3,11 +3,11 @@
  * 用于运营管理页面的左侧部门树筛选
  */
 
-import type { FC } from 'react';
-import { Layout } from 'antd';
-import type { Key } from 'react';
-import type { DataNode } from 'antd/es/tree';
-import DeptTree from '@/components/DeptTree';
+import type { FC } from "react";
+import { Layout } from "antd";
+import type { Key } from "react";
+import type { DataNode } from "antd/es/tree";
+import DeptTree from "@/components/DeptTree";
 
 const { Sider } = Layout;
 
@@ -28,7 +28,7 @@ interface DeptSidebarProps {
  * 运营管理页面通用的部门侧边栏
  */
 export const DeptSidebar: FC<DeptSidebarProps> = ({
-  selectedDeptId = '',
+  selectedDeptId = "",
   onSelect,
   width = 360,
   externalOnly = true,
@@ -38,7 +38,7 @@ export const DeptSidebar: FC<DeptSidebarProps> = ({
     <Sider
       width={width}
       className="dept-list-sider"
-      style={{ background: '#fff', padding: '0 16px 16px 0', ...style }}
+      style={{ background: "#fff", padding: "0 16px 16px 0", ...style }}
     >
       <DeptTree
         onSelect={onSelect}

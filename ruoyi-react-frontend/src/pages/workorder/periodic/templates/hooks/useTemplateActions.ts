@@ -3,12 +3,12 @@
  * 周期性工单模板操作管理 Hook
  */
 
-import { useState, useCallback } from 'react';
-import { message } from 'antd';
-import type { FormInstance } from 'antd/es/form';
+import { useState, useCallback } from "react";
+import { message } from "antd";
+import type { FormInstance } from "antd/es/form";
 import type {
   WorkOrderType,
-  PeriodicAssignType} from '@/lib/workorderApi';
+  PeriodicAssignType} from "@/lib/workorderApi";
 import {
   createPeriodicTemplate,
   updatePeriodicTemplate,
@@ -19,7 +19,7 @@ import {
   type PeriodicWorkOrderTemplate,
   type CreatePeriodicTemplateRequest,
   type UpdatePeriodicTemplateRequest
-} from '@/lib/workorderApi';
+} from "@/lib/workorderApi";
 
 export interface UseTemplateActionsParams {
   onLoad: () => void;
@@ -49,9 +49,9 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
     setEditingRecord(null);
     editForm.resetFields();
     editForm.setFieldsValue({
-      type: 'fault',
+      type: "fault",
       priority: 1,
-      assignType: 'duty_pool',
+      assignType: "duty_pool",
       notifyAssignee: true,
     });
   }, []);
@@ -79,10 +79,10 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
   const handleDelete = useCallback(async (id: string) => {
     try {
       await deletePeriodicTemplate(id);
-      message.success('删除成功');
+      message.success("删除成功");
       onLoad();
     } catch (error: unknown) {
-      const err = error instanceof Error ? error.message : '删除失败';
+      const err = error instanceof Error ? error.message : "删除失败";
       message.error(err);
     }
   }, [onLoad]);
@@ -92,14 +92,14 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
     try {
       if (record.isEnabled) {
         await disablePeriodicTemplate(record.id);
-        message.success('已禁用');
+        message.success("已禁用");
       } else {
         await enablePeriodicTemplate(record.id);
-        message.success('已启用');
+        message.success("已启用");
       }
       onLoad();
     } catch (error: unknown) {
-      const err = error instanceof Error ? error.message : '操作失败';
+      const err = error instanceof Error ? error.message : "操作失败";
       message.error(err);
     }
   }, [onLoad]);
@@ -108,10 +108,10 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
   const handleGenerateNow = useCallback(async (id: string) => {
     try {
       await generateWorkOrderNow(id);
-      message.success('工单生成成功');
+      message.success("工单生成成功");
       onLoad();
     } catch (error: unknown) {
-      const err = error instanceof Error ? error.message : '生成失败';
+      const err = error instanceof Error ? error.message : "生成失败";
       message.error(err);
     }
   }, [onLoad]);
@@ -146,7 +146,7 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
           notifyAssignee: values.notifyAssignee,
         };
         await updatePeriodicTemplate(editingRecord.id, updateData);
-        message.success('更新成功');
+        message.success("更新成功");
       } else {
         const createData: CreatePeriodicTemplateRequest = {
           templateName: values.templateName,
@@ -161,15 +161,15 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
           notifyAssignee: values.notifyAssignee,
         };
         await createPeriodicTemplate(createData);
-        message.success('创建成功');
+        message.success("创建成功");
       }
       setEditingRecord(null);
       onLoad();
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'errorFields' in error) {
+      if (error && typeof error === "object" && "errorFields" in error) {
         return;
       }
-      message.error(editingRecord ? '更新失败' : '创建失败');
+      message.error(editingRecord ? "更新失败" : "创建失败");
     }
   }, [editingRecord, onLoad]);
 

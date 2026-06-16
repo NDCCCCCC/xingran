@@ -2,9 +2,9 @@
  * 楼层统计数据 Hook
  */
 
-import { useState, useCallback } from 'react';
-import { handleApiError } from '@/utils/errorHandler';
-import { fetchFloorStatistics } from '@/utils/statisticsHelper';
+import { useState, useCallback } from "react";
+import { handleApiError } from "@/utils/errorHandler";
+import { fetchFloorStatistics } from "@/utils/statisticsHelper";
 
 interface FloorStatistics {
   total: number;
@@ -24,7 +24,7 @@ export function useFloorStatistics() {
       const stats = await fetchFloorStatistics();
       setStatistics(stats);
     } catch (error) {
-      handleApiError(error, '加载统计数据', false);
+      handleApiError(error, "加载统计数据", false);
     }
   }, []);
 

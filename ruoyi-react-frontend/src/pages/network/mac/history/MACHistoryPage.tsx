@@ -19,75 +19,75 @@
  * - 14-05b:移动端卡片视图最终样式收口
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Table, Button, Space, Form, Input, InputNumber, Select,
   Tag, Card, DatePicker, List, Grid, Spin, Tooltip, Skeleton,
   Typography, message,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+} from "antd";
+import type { ColumnsType } from "antd/es/table";
 
-type RangePickerOnChange = React.ComponentProps<typeof DatePicker.RangePicker>['onChange'];
+type RangePickerOnChange = React.ComponentProps<typeof DatePicker.RangePicker>["onChange"];
 import {
   SearchOutlined, ReloadOutlined, AppstoreOutlined, TableOutlined,
   CopyOutlined, EyeOutlined, AimOutlined, DownloadOutlined,
-} from '@ant-design/icons';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { NETWORK_MAC_TRAJECTORY } from '@/constants/routes';
-import dayjs from 'dayjs';
-import type { Dayjs } from 'dayjs';
-import { useTableQuery } from '@/hooks/useTableQuery';
-import { useColumnConfig, type ColumnConfig } from '@/hooks/useColumnConfig';
-import { queryMACHistory, exportMACHistory } from '@/lib/api/networkApi';
+} from "@ant-design/icons";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { NETWORK_MAC_TRAJECTORY } from "@/constants/routes";
+import dayjs from "dayjs";
+import type { Dayjs } from "dayjs";
+import { useTableQuery } from "@/hooks/useTableQuery";
+import { useColumnConfig, type ColumnConfig } from "@/hooks/useColumnConfig";
+import { queryMACHistory, exportMACHistory } from "@/lib/api/networkApi";
 import type {
   MACHistoryRecord,
   MACHistoryQueryParams,
-} from '@/lib/api/networkApi';
-import { MACEventsTimeline } from '@/components/network';
+} from "@/lib/api/networkApi";
+import { MACEventsTimeline } from "@/components/network";
 import {
   EmptyStateWithAction,
   ErrorAlertWithRetry,
-} from '@/components/shared';
-import { useMenuStore } from '@/store/menuStore';
-import { EVENT_LABEL, EVENT_TAG_COLOR } from '@/components/network/macEventMeta';
+} from "@/components/shared";
+import { useMenuStore } from "@/store/menuStore";
+import { EVENT_LABEL, EVENT_TAG_COLOR } from "@/components/network/macEventMeta";
 
 const { RangePicker } = DatePicker;
 const { useBreakpoint } = Grid;
 
 // 预设时间范围(单位,数量) — D-07 锁定
-type PresetKey = '1h' | '24h' | '7d' | '30d' | '90d' | 'custom';
+type PresetKey = "1h" | "24h" | "7d" | "30d" | "90d" | "custom";
 interface Preset {
   key: PresetKey;
   label: string;
   amount: number;
-  unit: 'hour' | 'day';
+  unit: "hour" | "day";
 }
 const PRESETS: Preset[] = [
-  { key: '1h', label: '近 1h', amount: 1, unit: 'hour' },
-  { key: '24h', label: '近 24h', amount: 24, unit: 'hour' },
-  { key: '7d', label: '近 7d', amount: 7, unit: 'day' },
-  { key: '30d', label: '近 30d', amount: 30, unit: 'day' },
-  { key: '90d', label: '近 90d', amount: 90, unit: 'day' },
-  { key: 'custom', label: '自定义', amount: 0, unit: 'day' },
+  { key: "1h", label: "近 1h", amount: 1, unit: "hour" },
+  { key: "24h", label: "近 24h", amount: 24, unit: "hour" },
+  { key: "7d", label: "近 7d", amount: 7, unit: "day" },
+  { key: "30d", label: "近 30d", amount: 30, unit: "day" },
+  { key: "90d", label: "近 90d", amount: 90, unit: "day" },
+  { key: "custom", label: "自定义", amount: 0, unit: "day" },
 ];
 
 // 8 列默认配置(D-08 锁定)
 const defaultHistoryColumns: ColumnConfig[] = [
-  { key: 'time', label: '时间', visible: true, order: 1, width: 160 },
-  { key: 'mac', label: 'MAC 地址', visible: true, order: 2, width: 160 },
-  { key: 'device', label: '设备', visible: true, order: 3, width: 180 },
-  { key: 'port', label: '端口', visible: true, order: 4, width: 130 },
-  { key: 'eventType', label: '事件类型', visible: true, order: 5, width: 110 },
-  { key: 'vlan', label: 'VLAN', visible: true, order: 6, width: 80 },
-  { key: 'status', label: '状态', visible: true, order: 7, width: 80 },
-  { key: 'action', label: '操作', visible: true, order: 8, width: 200 },
+  { key: "time", label: "时间", visible: true, order: 1, width: 160 },
+  { key: "mac", label: "MAC 地址", visible: true, order: 2, width: 160 },
+  { key: "device", label: "设备", visible: true, order: 3, width: 180 },
+  { key: "port", label: "端口", visible: true, order: 4, width: 130 },
+  { key: "eventType", label: "事件类型", visible: true, order: 5, width: 110 },
+  { key: "vlan", label: "VLAN", visible: true, order: 6, width: 80 },
+  { key: "status", label: "状态", visible: true, order: 7, width: 80 },
+  { key: "action", label: "操作", visible: true, order: 8, width: 200 },
 ];
 
 // MAC 规范化(从 trajectory.tsx:63-70 复制)
 const normalizeMACAddress = (mac: string): string => {
-  const cleaned = mac.replace(/[^a-fA-F0-9]/g, '');
-  if (cleaned.length !== 12) return '';
-  return cleaned.match(/.{2}/g)?.join(':').toUpperCase() || '';
+  const cleaned = mac.replace(/[^a-fA-F0-9]/g, "");
+  if (cleaned.length !== 12) return "";
+  return cleaned.match(/.{2}/g)?.join(":").toUpperCase() || "";
 };
 
 const MACHistoryPage: React.FC = () => {
@@ -100,12 +100,12 @@ const MACHistoryPage: React.FC = () => {
   // 权限(从 menuStore 拉取)— 14-04 导出按钮可见性控制
   const menuPermissions = useMenuStore((s) => s.permissions);
   const hasPermission = (perm: string) => menuPermissions.includes(perm);
-  const canExport = hasPermission('network:mac:export');
+  const canExport = hasPermission("network:mac:export");
 
   // 状态
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [activePreset, setActivePreset] = useState<PresetKey>('7d');
+  const [activePreset, setActivePreset] = useState<PresetKey>("7d");
   const [customRange, setCustomRange] = useState<[Dayjs, Dayjs] | null>(null);
   const [expandedRowKeys, setExpandedRowKeys] = useState<React.Key[]>([]);
   const [exporting, setExporting] = useState<boolean>(false);
@@ -113,7 +113,7 @@ const MACHistoryPage: React.FC = () => {
   // 计算当前时间范围(ISO 字符串)用于查询
   const [timeRange, setTimeRange] = useState<{ startTime: string; endTime: string }>(
     () => {
-      const preset = PRESETS.find((p) => p.key === '7d')!;
+      const preset = PRESETS.find((p) => p.key === "7d")!;
       return {
         startTime: dayjs().subtract(preset.amount, preset.unit).toISOString(),
         endTime: dayjs().toISOString(),
@@ -123,11 +123,11 @@ const MACHistoryPage: React.FC = () => {
 
   // URL 参数注入(D-17)
   useEffect(() => {
-    const deviceId = searchParams.get('deviceId');
-    const portName = searchParams.get('portName');
-    const startTime = searchParams.get('startTime');
-    const endTime = searchParams.get('endTime');
-    const mac = searchParams.get('mac');
+    const deviceId = searchParams.get("deviceId");
+    const portName = searchParams.get("portName");
+    const startTime = searchParams.get("startTime");
+    const endTime = searchParams.get("endTime");
+    const mac = searchParams.get("mac");
 
     const initial: Record<string, unknown> = {};
     if (deviceId) initial.deviceId = deviceId;
@@ -137,7 +137,7 @@ const MACHistoryPage: React.FC = () => {
 
     if (startTime && endTime) {
       // 视为自定义
-      setActivePreset('custom');
+      setActivePreset("custom");
       setCustomRange([dayjs(startTime), dayjs(endTime)]);
       setTimeRange({ startTime, endTime });
     }
@@ -146,8 +146,8 @@ const MACHistoryPage: React.FC = () => {
   // 切换预设
   const handlePresetClick = useCallback(
     (preset: Preset) => {
-      if (preset.key === 'custom') {
-        setActivePreset('custom');
+      if (preset.key === "custom") {
+        setActivePreset("custom");
         setCustomRange(null);
         return;
       }
@@ -167,7 +167,7 @@ const MACHistoryPage: React.FC = () => {
       const arr = values as [Dayjs, Dayjs] | null;
       setCustomRange(arr);
       if (arr && arr[0] && arr[1]) {
-        setActivePreset('custom');
+        setActivePreset("custom");
         setTimeRange({
           startTime: arr[0].toISOString(),
           endTime: arr[1].toISOString(),
@@ -194,7 +194,7 @@ const MACHistoryPage: React.FC = () => {
     error,
     refetch,
   } = useTableQuery<MACHistoryRecord>({
-    resource: 'mac.history.list',
+    resource: "mac.history.list",
     current,
     pageSize,
     filters: filters as Record<string, unknown>,
@@ -206,7 +206,7 @@ const MACHistoryPage: React.FC = () => {
 
   // 列配置(D-08)
   const { visibleColumns, config } = useColumnConfig({
-    pageKey: 'mac.history.list',
+    pageKey: "mac.history.list",
     defaultColumns: defaultHistoryColumns,
     enableCache: true,
   });
@@ -215,15 +215,15 @@ const MACHistoryPage: React.FC = () => {
   const allColumns: Record<string, ColumnsType<MACHistoryRecord>[number]> = useMemo(
     () => ({
       time: {
-        title: '时间',
-        key: 'time',
+        title: "时间",
+        key: "time",
         width: 160,
         render: (_: unknown, record: MACHistoryRecord) =>
-          dayjs(record.firstSeen).format('YYYY-MM-DD HH:mm:ss'),
+          dayjs(record.firstSeen).format("YYYY-MM-DD HH:mm:ss"),
       },
       mac: {
-        title: 'MAC 地址',
-        key: 'mac',
+        title: "MAC 地址",
+        key: "mac",
         width: 160,
         render: (_: unknown, record: MACHistoryRecord) => (
           <Space size={4}>
@@ -234,51 +234,51 @@ const MACHistoryPage: React.FC = () => {
         ),
       },
       device: {
-        title: '设备',
-        key: 'device',
+        title: "设备",
+        key: "device",
         width: 180,
         ellipsis: true,
         render: (_: unknown, record: MACHistoryRecord) =>
           record.deviceNameSnapshot || record.deviceId,
       },
       port: {
-        title: '端口',
-        key: 'port',
+        title: "端口",
+        key: "port",
         width: 130,
         render: (_: unknown, record: MACHistoryRecord) => record.interfaceName,
       },
       eventType: {
-        title: '事件类型',
-        key: 'eventType',
+        title: "事件类型",
+        key: "eventType",
         width: 110,
         render: (_: unknown, record: MACHistoryRecord) => (
-          <Tag color={EVENT_TAG_COLOR[record.eventType as keyof typeof EVENT_TAG_COLOR] ?? 'default'}>
+          <Tag color={EVENT_TAG_COLOR[record.eventType as keyof typeof EVENT_TAG_COLOR] ?? "default"}>
             {EVENT_LABEL[record.eventType as keyof typeof EVENT_LABEL] ?? record.eventType}
           </Tag>
         ),
       },
       vlan: {
-        title: 'VLAN',
-        key: 'vlan',
+        title: "VLAN",
+        key: "vlan",
         width: 80,
         render: (_: unknown, record: MACHistoryRecord) =>
-          record.vlanId ?? '-',
+          record.vlanId ?? "-",
       },
       status: {
-        title: '状态',
-        key: 'status',
+        title: "状态",
+        key: "status",
         width: 80,
         render: (_: unknown, record: MACHistoryRecord) => (
-          <Tag color={record.status === 0 ? 'green' : 'red'}>
-            {record.status === 0 ? '正常' : '停用'}
+          <Tag color={record.status === 0 ? "green" : "red"}>
+            {record.status === 0 ? "正常" : "停用"}
           </Tag>
         ),
       },
       action: {
-        title: '操作',
-        key: 'action',
+        title: "操作",
+        key: "action",
         width: 200,
-        fixed: 'right' as const,
+        fixed: "right" as const,
         render: (_: unknown, record: MACHistoryRecord) => (
           <Space size={4} wrap>
             <Button
@@ -287,10 +287,10 @@ const MACHistoryPage: React.FC = () => {
               icon={<AimOutlined />}
               onClick={() => {
                 const search = new URLSearchParams();
-                search.set('mac', record.macAddress);
-                search.set('startTime', timeRange.startTime);
-                search.set('endTime', timeRange.endTime);
-                if (record.deviceId) search.set('deviceId', record.deviceId);
+                search.set("mac", record.macAddress);
+                search.set("startTime", timeRange.startTime);
+                search.set("endTime", timeRange.endTime);
+                if (record.deviceId) search.set("deviceId", record.deviceId);
                 navigate(`${NETWORK_MAC_TRAJECTORY}?${search.toString()}`);
               }}
             >
@@ -308,7 +308,7 @@ const MACHistoryPage: React.FC = () => {
                 );
               }}
             >
-              {expandedRowKeys.includes(record.id) ? '收起事件' : '查看事件'}
+              {expandedRowKeys.includes(record.id) ? "收起事件" : "查看事件"}
             </Button>
           </Space>
         ),
@@ -332,9 +332,9 @@ const MACHistoryPage: React.FC = () => {
   // 重置
   const handleReset = useCallback(() => {
     form.resetFields();
-    setActivePreset('7d');
+    setActivePreset("7d");
     setCustomRange(null);
-    const preset = PRESETS.find((p) => p.key === '7d')!;
+    const preset = PRESETS.find((p) => p.key === "7d")!;
     setTimeRange({
       startTime: dayjs().subtract(preset.amount, preset.unit).toISOString(),
       endTime: dayjs().toISOString(),
@@ -345,7 +345,7 @@ const MACHistoryPage: React.FC = () => {
 
   // 14-04 导出按钮处理器 — exportScope = 'current' 时透传当前过滤;'all' 时只保留时间范围
   const handleExport = useCallback(
-    async (exportScope: 'current' | 'all') => {
+    async (exportScope: "current" | "all") => {
       if (exporting) return;
       setExporting(true);
       try {
@@ -355,11 +355,11 @@ const MACHistoryPage: React.FC = () => {
           startTime: timeRange.startTime,
           endTime: timeRange.endTime,
         };
-        if (exportScope === 'current') {
+        if (exportScope === "current") {
           // 透传当前过滤条件
           Object.keys(formValues).forEach((k) => {
             const v = formValues[k];
-            if (v !== undefined && v !== null && v !== '') {
+            if (v !== undefined && v !== null && v !== "") {
               baseParams[k] = v;
             }
           });
@@ -371,16 +371,16 @@ const MACHistoryPage: React.FC = () => {
         );
 
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
         a.download = filename;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        message.success(`已导出 ${exportScope === 'current' ? '当前查询' : '全量'} 数据`);
+        message.success(`已导出 ${exportScope === "current" ? "当前查询" : "全量"} 数据`);
       } catch (err) {
-        if (err && typeof err === 'object' && 'errorFields' in err) {
+        if (err && typeof err === "object" && "errorFields" in err) {
           // form.validateFields 失败,直接返回
           return;
         }
@@ -397,12 +397,12 @@ const MACHistoryPage: React.FC = () => {
   const copyMAC = async (mac: string) => {
     try {
       if (!navigator.clipboard) {
-        throw new Error('Clipboard API unavailable');
+        throw new Error("Clipboard API unavailable");
       }
       await navigator.clipboard.writeText(mac);
       message.success(`已复制 ${mac}`);
     } catch (err) {
-      message.error(err instanceof Error ? `复制失败:${err.message}` : '复制失败,请手动复制');
+      message.error(err instanceof Error ? `复制失败:${err.message}` : "复制失败,请手动复制");
     }
   };
 
@@ -415,7 +415,7 @@ const MACHistoryPage: React.FC = () => {
           active
           paragraph={{ rows: 3 }}
           title={false}
-          style={{ padding: '24px 12px' }}
+          style={{ padding: "24px 12px" }}
         />
       );
     }
@@ -479,7 +479,7 @@ const MACHistoryPage: React.FC = () => {
           active
           paragraph={{ rows: 3 }}
           title={false}
-          style={{ padding: '24px 12px' }}
+          style={{ padding: "24px 12px" }}
         />
       );
     }
@@ -499,11 +499,11 @@ const MACHistoryPage: React.FC = () => {
           <List.Item
             key={record.id}
             style={{
-              padding: '12px',
-              background: '#fff',
+              padding: "12px",
+              background: "#fff",
               marginBottom: 8,
               borderRadius: 6,
-              border: '1px solid #f0f0f0',
+              border: "1px solid #f0f0f0",
             }}
             actions={[
               <Button
@@ -512,9 +512,9 @@ const MACHistoryPage: React.FC = () => {
                 size="small"
                 onClick={() => {
                   const search = new URLSearchParams();
-                  search.set('mac', record.macAddress);
-                  search.set('startTime', timeRange.startTime);
-                  search.set('endTime', timeRange.endTime);
+                  search.set("mac", record.macAddress);
+                  search.set("startTime", timeRange.startTime);
+                  search.set("endTime", timeRange.endTime);
                   navigate(`${NETWORK_MAC_TRAJECTORY}?${search.toString()}`);
                 }}
               >
@@ -532,7 +532,7 @@ const MACHistoryPage: React.FC = () => {
                   );
                 }}
               >
-                {expandedRowKeys.includes(record.id) ? '收起事件' : '查看事件'}
+                {expandedRowKeys.includes(record.id) ? "收起事件" : "查看事件"}
               </Button>,
             ]}
           >
@@ -548,11 +548,11 @@ const MACHistoryPage: React.FC = () => {
                       onClick={() => { void copyMAC(record.macAddress); }}
                     />
                   </Tooltip>
-                  <Tag color={EVENT_TAG_COLOR[record.eventType as keyof typeof EVENT_TAG_COLOR] ?? 'default'}>
+                  <Tag color={EVENT_TAG_COLOR[record.eventType as keyof typeof EVENT_TAG_COLOR] ?? "default"}>
                     {EVENT_LABEL[record.eventType as keyof typeof EVENT_LABEL] ?? record.eventType}
                   </Tag>
-                  <Tag color={record.status === 0 ? 'green' : 'red'}>
-                    {record.status === 0 ? '正常' : '停用'}
+                  <Tag color={record.status === 0 ? "green" : "red"}>
+                    {record.status === 0 ? "正常" : "停用"}
                   </Tag>
                 </Space>
               }
@@ -560,8 +560,8 @@ const MACHistoryPage: React.FC = () => {
                 <div>
                   <div>设备: {record.deviceNameSnapshot || record.deviceId}</div>
                   <div>端口: {record.interfaceName}</div>
-                  <div>VLAN: {record.vlanId ?? '-'}</div>
-                  <div>时间: {dayjs(record.firstSeen).format('YYYY-MM-DD HH:mm:ss')}</div>
+                  <div>VLAN: {record.vlanId ?? "-"}</div>
+                  <div>时间: {dayjs(record.firstSeen).format("YYYY-MM-DD HH:mm:ss")}</div>
                 </div>
               }
             />
@@ -593,20 +593,20 @@ const MACHistoryPage: React.FC = () => {
               {PRESETS.map((p) => (
                 <Button
                   key={p.key}
-                  type={activePreset === p.key ? 'primary' : 'default'}
+                  type={activePreset === p.key ? "primary" : "default"}
                   size="small"
                   onClick={() => handlePresetClick(p)}
                 >
                   {p.label}
                 </Button>
               ))}
-              {activePreset === 'custom' && (
+              {activePreset === "custom" && (
                 <RangePicker
                   showTime
                   format="YYYY-MM-DD HH:mm"
                   value={customRange}
                   onChange={handleCustomRangeChange}
-                  placeholder={['开始时间', '结束时间']}
+                  placeholder={["开始时间", "结束时间"]}
                 />
               )}
             </Space>
@@ -620,7 +620,7 @@ const MACHistoryPage: React.FC = () => {
               {PRESETS.map((p) => (
                 <Button
                   key={p.key}
-                  type={activePreset === p.key ? 'primary' : 'default'}
+                  type={activePreset === p.key ? "primary" : "default"}
                   size="small"
                   onClick={() => handlePresetClick(p)}
                 >
@@ -628,14 +628,14 @@ const MACHistoryPage: React.FC = () => {
                 </Button>
               ))}
             </Space>
-            {activePreset === 'custom' && (
+            {activePreset === "custom" && (
               <div style={{ marginTop: 8 }}>
                 <RangePicker
                   showTime
                   format="YYYY-MM-DD HH:mm"
                   value={customRange}
                   onChange={handleCustomRangeChange}
-                  placeholder={['开始时间', '结束时间']}
+                  placeholder={["开始时间", "结束时间"]}
                 />
               </div>
             )}
@@ -644,7 +644,7 @@ const MACHistoryPage: React.FC = () => {
 
         <Form
           form={form}
-          layout={isMobile ? 'vertical' : 'inline'}
+          layout={isMobile ? "vertical" : "inline"}
           onFinish={handleSearch}
         >
           <Form.Item name="mac" label="MAC 地址">
@@ -666,10 +666,10 @@ const MACHistoryPage: React.FC = () => {
               allowClear
               style={{ width: 130 }}
               options={[
-                { value: 'appeared', label: '出现' },
-                { value: 'moved', label: '迁移' },
-                { value: 'disappeared', label: '消失' },
-                { value: 'vlan_changed', label: 'VLAN 变更' },
+                { value: "appeared", label: "出现" },
+                { value: "moved", label: "迁移" },
+                { value: "disappeared", label: "消失" },
+                { value: "vlan_changed", label: "VLAN 变更" },
               ]}
             />
           </Form.Item>
@@ -682,8 +682,8 @@ const MACHistoryPage: React.FC = () => {
               allowClear
               style={{ width: 110 }}
               options={[
-                { value: 0, label: '正常' },
-                { value: 1, label: '停用' },
+                { value: 0, label: "正常" },
+                { value: 1, label: "停用" },
               ]}
             />
           </Form.Item>
@@ -705,14 +705,14 @@ const MACHistoryPage: React.FC = () => {
                   <Button
                     type="primary"
                     icon={<DownloadOutlined />}
-                    onClick={() => handleExport('current')}
+                    onClick={() => handleExport("current")}
                     loading={exporting}
                   >
                     导出当前查询
                   </Button>
                   <Button
                     icon={<DownloadOutlined />}
-                    onClick={() => handleExport('all')}
+                    onClick={() => handleExport("all")}
                     loading={exporting}
                   >
                     导出全量
@@ -745,7 +745,7 @@ const MACHistoryPage: React.FC = () => {
         }
         extra={
           isMobile && (
-            <Tooltip title={isMobile ? '已切换卡片视图' : '切换为表格视图'}>
+            <Tooltip title={isMobile ? "已切换卡片视图" : "切换为表格视图"}>
               <Button
                 type="text"
                 icon={isMobile ? <TableOutlined /> : <AppstoreOutlined />}

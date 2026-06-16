@@ -2,12 +2,12 @@
  * 备份数据管理 Hook
  */
 
-import { useState, useCallback } from 'react';
-import type { ConfigBackup, BaseResponse, PageResponse } from '@/types';
-import type { FormInstance } from 'antd/es/form';
-import type { DeviceBackupGroup, BackupStatistics } from '../types';
-import { groupBackupsByDevice, calculateStatistics } from '../utils';
-import { post } from '@/lib/api';
+import { useState, useCallback } from "react";
+import type { ConfigBackup, BaseResponse, PageResponse } from "@/types";
+import type { FormInstance } from "antd/es/form";
+import type { DeviceBackupGroup, BackupStatistics } from "../types";
+import { groupBackupsByDevice, calculateStatistics } from "../utils";
+import { post } from "@/lib/api";
 
 interface UseBackupDataOptions {
   current: number;
@@ -45,13 +45,13 @@ export function useBackupData(
   // 加载设备列表
   const loadDevices = useCallback(async () => {
     try {
-      const result = await post<PageResponse<ConfigBackup>>('/network/devices/list', {
+      const result = await post<PageResponse<ConfigBackup>>("/network/devices/list", {
         current: 1,
         pageSize: 1000,
       });
       setDevices(result.data?.list || []);
     } catch (error) {
-      console.error('加载设备列表失败:', error);
+      console.error("加载设备列表失败:", error);
     }
   }, []);
 
@@ -60,7 +60,7 @@ export function useBackupData(
     setLoading(true);
     try {
       const values = searchForm.getFieldsValue() as Record<string, unknown>;
-      const result = await post<PageResponse<ConfigBackup>>('/network/backups/list', {
+      const result = await post<PageResponse<ConfigBackup>>("/network/backups/list", {
         current: params.current || current,
         pageSize: params.pageSize || pageSize,
         ...values,
@@ -75,7 +75,7 @@ export function useBackupData(
       const stats = calculateStatistics(backups);
       setStatistics(stats);
     } catch (error) {
-      console.error('加载备份列表失败:', error);
+      console.error("加载备份列表失败:", error);
     } finally {
       setLoading(false);
     }
@@ -84,12 +84,12 @@ export function useBackupData(
   // 加载统计数据
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post<PageResponse<ConfigBackup>>('/network/backups/list', { current: 1, pageSize: 10000 });
+      const result = await post<PageResponse<ConfigBackup>>("/network/backups/list", { current: 1, pageSize: 10000 });
       const allBackups = result.data?.list || [];
       const stats = calculateStatistics(allBackups);
       setStatistics(stats);
     } catch (error) {
-      console.error('加载统计数据失败:', error);
+      console.error("加载统计数据失败:", error);
     }
   }, []);
 

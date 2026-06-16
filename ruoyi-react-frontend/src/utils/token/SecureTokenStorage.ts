@@ -27,10 +27,10 @@ export interface TokenRefreshResponse {
 export class TokenRefreshError extends Error {
 	constructor(
 		message: string,
-		public code: 'NETWORK_ERROR' | 'INVALID_TOKEN' | 'SERVER_ERROR'
+		public code: "NETWORK_ERROR" | "INVALID_TOKEN" | "SERVER_ERROR"
 	) {
 		super(message);
-		this.name = 'TokenRefreshError';
+		this.name = "TokenRefreshError";
 	}
 }
 

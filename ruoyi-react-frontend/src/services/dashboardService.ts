@@ -5,7 +5,7 @@
  * 封装所有仪表盘相关的 API 调用
  */
 
-import { post, get, del } from '@/lib/api';
+import { post, get, del } from "@/lib/api";
 import type {
 	Dashboard,
 	CreateDashboardRequest,
@@ -16,14 +16,14 @@ import type {
 	EndpointCategory,
 	EndpointDetail,
 	EndpointsResponse,
-} from '@/types/dashboard';
+} from "@/types/dashboard";
 
 /**
  * 仪表盘 API 服务类
  */
 class DashboardService {
 	// ========== 仪表盘基础路径 ==========
-	private readonly basePath = '/system/dashboards';
+	private readonly basePath = "/system/dashboards";
 
 	// ========== 仪表盘 CRUD 操作 ==========
 
@@ -76,7 +76,7 @@ class DashboardService {
 		await post(`${this.basePath}/${id}/set-default`);
 	}
 
-	async getTemplates(scope?: 'global' | 'dept' | 'personal'): Promise<Dashboard[]> {
+	async getTemplates(scope?: "global" | "dept" | "personal"): Promise<Dashboard[]> {
 		const response = await post<{ templates: Dashboard[] }>(
 			`${this.basePath}/templates`,
 			{ scope }

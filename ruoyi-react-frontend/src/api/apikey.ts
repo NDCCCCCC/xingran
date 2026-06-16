@@ -12,7 +12,7 @@
  * @module api/apikey
  */
 
-import { get, post, put, del } from '@/lib/api';
+import { get, post, put, del } from "@/lib/api";
 import type {
   APIKey,
   CreateAPIKeyRequest,
@@ -21,8 +21,8 @@ import type {
   APIKeyUsageLog,
   UsageSummary,
   PageData,
-} from '@/types/apikey';
-import type { BaseResponse } from '@/types/base';
+} from "@/types/apikey";
+import type { BaseResponse } from "@/types/base";
 
 /**
  * 获取 API 密钥列表
@@ -42,7 +42,7 @@ import type { BaseResponse } from '@/types/base';
  * });
  */
 export function listAPIKeys(params?: APIKeyListParams): Promise<BaseResponse<PageData<APIKey>>> {
-  return post('/system/apikeys/list', params);
+  return post("/system/apikeys/list", params);
 }
 
 /**
@@ -66,7 +66,7 @@ export function listAPIKeys(params?: APIKeyListParams): Promise<BaseResponse<Pag
  * const fullKey = result.data.key; // 仅此一次返回完整密钥
  */
 export function createAPIKey(data: CreateAPIKeyRequest): Promise<BaseResponse<{ key: string }>> {
-  return post('/system/apikeys', data);
+  return post("/system/apikeys", data);
 }
 
 /**

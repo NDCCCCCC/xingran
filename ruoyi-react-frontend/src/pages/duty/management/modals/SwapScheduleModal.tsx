@@ -2,10 +2,10 @@
  * 调班模态框组件
  */
 
-import { Modal, Form, Select } from 'antd';
-import { formatDate } from '@/utils/datetime';
-import type { DutySchedule } from '@/lib/dutyApi';
-import { SWAP_REASON_OPTIONS } from '../constants';
+import { Modal, Form, Select } from "antd";
+import { formatDate } from "@/utils/datetime";
+import type { DutySchedule } from "@/lib/dutyApi";
+import { SWAP_REASON_OPTIONS } from "../constants";
 
 const { Option } = Select;
 
@@ -51,7 +51,7 @@ export function SwapScheduleModal({ visible, allSchedules, onOk, onCancel }: Swa
             ))}
           </Select>
         </Form.Item>
-        <Form.Item name="reason" label="调班原因" rules={[{ required: true, message: '请输入调班原因' }]}>
+        <Form.Item name="reason" label="调班原因" rules={[{ required: true, message: "请输入调班原因" }]}>
           <Select placeholder="选择原因">
             {SWAP_REASON_OPTIONS.map(opt => (
               <Option key={opt.value} value={opt.value}>{opt.label}</Option>

@@ -1,7 +1,7 @@
 // 验证码Hook
-import { useState, useEffect, useCallback } from 'react';
-import { getCaptcha, getCaptchaConfig } from '@/services/captcha';
-import type { CaptchaConfig, CaptchaResponse } from '@/types/captcha';
+import { useState, useEffect, useCallback } from "react";
+import { getCaptcha, getCaptchaConfig } from "@/services/captcha";
+import type { CaptchaConfig, CaptchaResponse } from "@/types/captcha";
 
 export function useCaptcha() {
   const [config, setConfig] = useState<CaptchaConfig | null>(null);
@@ -14,7 +14,7 @@ export function useCaptcha() {
       const cfg = await getCaptchaConfig();
       setConfig(cfg);
     } catch (error) {
-      console.error('加载验证码配置失败:', error);
+      console.error("加载验证码配置失败:", error);
     }
   }, []);
 
@@ -25,7 +25,7 @@ export function useCaptcha() {
       const data = await getCaptcha();
       setCaptchaData(data);
     } catch (error) {
-      console.error('加载验证码失败:', error);
+      console.error("加载验证码失败:", error);
       throw error;
     } finally {
       setLoading(false);
@@ -51,7 +51,7 @@ export function useCaptcha() {
     loadConfig,
     loadCaptcha,
     verifyCaptcha,
-    isEnabled: config?.enabled !== 'disabled',
-    captchaType: config?.enabled || 'disabled',
+    isEnabled: config?.enabled !== "disabled",
+    captchaType: config?.enabled || "disabled",
   };
 }

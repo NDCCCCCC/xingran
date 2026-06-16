@@ -3,9 +3,9 @@
  * 网络模板管理页面
  */
 
-import { useEffect, useState } from 'react';
-import type { FC } from 'react';
-import { Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic, message } from 'antd';
+import { useEffect, useState } from "react";
+import type { FC } from "react";
+import { Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic, message } from "antd";
 import {
   PlusOutlined,
   SearchOutlined,
@@ -16,21 +16,21 @@ import {
   SettingOutlined,
   FundOutlined,
   ExportOutlined,
-} from '@ant-design/icons';
-import type { ConfigTemplate } from '@/types';
-import { batchExport } from '@/lib/api/networkApi';
-import { useTemplateData, useTemplateModals } from './hooks';
-import { getTemplateColumns } from './columns';
+} from "@ant-design/icons";
+import type { ConfigTemplate } from "@/types";
+import { batchExport } from "@/lib/api/networkApi";
+import { useTemplateData, useTemplateModals } from "./hooks";
+import { getTemplateColumns } from "./columns";
 import {
   TemplateEditModal,
   TemplatePreviewModal,
   TemplateVariablesModal,
-} from './modals';
-import { VENDOR_OPTIONS, TEMPLATE_TYPE_OPTIONS } from './constants';
-import { usePagination } from '@/hooks/usePagination';
-import NetworkExport from '@/components/shared/NetworkExport';
-import { BatchExportModal } from '@/components/shared';
-import { DownloadOutlined } from '@ant-design/icons';
+} from "./modals";
+import { VENDOR_OPTIONS, TEMPLATE_TYPE_OPTIONS } from "./constants";
+import { usePagination } from "@/hooks/usePagination";
+import NetworkExport from "@/components/shared/NetworkExport";
+import { BatchExportModal } from "@/components/shared";
+import { DownloadOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
 
@@ -136,7 +136,7 @@ const TemplateManagement: FC = () => {
             <Statistic
               title="系统模板"
               value={statistics.system}
-              styles={{ content: { color: 'var(--theme-warning, #faad14)' } }}
+              styles={{ content: { color: "var(--theme-warning, #faad14)" } }}
               prefix={<AppstoreOutlined />}
             />
           </Card>
@@ -146,7 +146,7 @@ const TemplateManagement: FC = () => {
             <Statistic
               title="自定义模板"
               value={statistics.custom}
-              styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
+              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
               prefix={<SettingOutlined />}
             />
           </Card>
@@ -156,7 +156,7 @@ const TemplateManagement: FC = () => {
             <Statistic
               title="初始化模板"
               value={statistics.init}
-              styles={{ content: { color: 'var(--theme-success, #52c41a)' } }}
+              styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
               prefix={<FundOutlined />}
             />
           </Card>
@@ -167,11 +167,11 @@ const TemplateManagement: FC = () => {
       <Card style={{ marginBottom: 16 }}>
         <div
           style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            flexWrap: 'wrap',
-            gap: '16px',
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "16px",
           }}
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
@@ -229,7 +229,7 @@ const TemplateManagement: FC = () => {
               entityType="templates"
               entityName="配置模板"
               filters={Object.fromEntries(
-                Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null && v !== '')
+                Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null && v !== "")
               )}
               current={paginationProps?.current ?? 1}
               pageSize={paginationProps?.pageSize ?? 10}

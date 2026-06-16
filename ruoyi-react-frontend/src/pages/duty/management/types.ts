@@ -3,8 +3,8 @@
  * 值班管理类型定义
  */
 
-import type dayjs from 'dayjs';
-import type { Holiday } from '@/lib/dutyApi';
+import type dayjs from "dayjs";
+import type { Holiday } from "@/lib/dutyApi";
 
 /** 排班搜索参数 */
 export interface ScheduleSearchParams {
@@ -35,14 +35,14 @@ export interface DutyConfigValues {
 
 /** 节假日 Excel 行数据 */
 export interface HolidayExcelRow {
-  '日期(YYYY-MM-DD)'?: string;
-  '日期'?: string;
-  '名称'?: string;
-  '节假日名称'?: string;
-  '类型(legal/workday/custom)'?: string;
-  '类型'?: string;
-  '是否休息(true/false)'?: boolean;
-  '备注'?: string;
+  "日期(YYYY-MM-DD)"?: string;
+  "日期"?: string;
+  "名称"?: string;
+  "节假日名称"?: string;
+  "类型(legal/workday/custom)"?: string;
+  "类型"?: string;
+  "是否休息(true/false)"?: boolean;
+  "备注"?: string;
 }
 
 /** 导入选项 */
@@ -54,13 +54,13 @@ export interface ImportOptions {
 }
 
 /** 节假日创建数据 */
-export type HolidayCreateData = Omit<Holiday, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>;
+export type HolidayCreateData = Omit<Holiday, "id" | "createdAt" | "updatedAt" | "createdBy">;
 
 /** 批量节假日表单值 */
 export interface BatchHolidayFormValues {
   dateRange: [dayjs.Dayjs, dayjs.Dayjs];
   holidayName: string;
-  holidayType: 'legal' | 'custom';
+  holidayType: "legal" | "custom";
   isOffday: boolean;
   remark?: string;
 }

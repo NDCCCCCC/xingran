@@ -4,9 +4,9 @@
  * 通过 WebSocket 订阅 RPA 任务执行进度更新
  */
 
-import { useEffect, useCallback, useRef, useMemo } from 'react';
-import { useNoticeStore } from '@/store/noticeStore';
-import type { RPAProgressMessage } from '@/types/rpa';
+import { useEffect, useCallback, useRef, useMemo } from "react";
+import { useNoticeStore } from "@/store/noticeStore";
+import type { RPAProgressMessage } from "@/types/rpa";
 
 /**
  * RPA 进度更新数据
@@ -100,13 +100,13 @@ export function useRPAProgress(options?: UseRPAProgressOptions) {
 
 		// 触发回调
 		switch (message.type) {
-		case 'rpa_progress':
+		case "rpa_progress":
 			callbacks.onProgress?.(data);
 			break;
-		case 'rpa_completed':
+		case "rpa_completed":
 			callbacks.onCompleted?.(data);
 			break;
-		case 'rpa_failed':
+		case "rpa_failed":
 			callbacks.onFailed?.(data);
 			break;
 		}

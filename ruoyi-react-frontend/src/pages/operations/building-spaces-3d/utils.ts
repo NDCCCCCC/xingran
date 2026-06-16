@@ -1,8 +1,8 @@
 // 楼宇空间可视化辅助函数
 
-import type { BuildingItem } from './types';
-import { WORKSTATION_STATUS_COLORS } from './constants';
-import { getBMapGL, type BMapGLNamespace, type BMapPoint } from '@/types/baidu-map';
+import type { BuildingItem } from "./types";
+import { WORKSTATION_STATUS_COLORS } from "./constants";
+import { getBMapGL, type BMapGLNamespace, type BMapPoint } from "@/types/baidu-map";
 
 // ============ 通用辅助函数 ============
 
@@ -38,11 +38,11 @@ export function delay(ms: number): Promise<void> {
 export function getOfficialHubeiBoundary(BMapGL: BMapGLNamespace): Promise<string[]> {
   return new Promise((resolve, reject) => {
     const bdary = new BMapGL.Boundary();
-    bdary.get('湖北省', (rs: { boundaries?: string[] }) => {
+    bdary.get("湖北省", (rs: { boundaries?: string[] }) => {
       if (rs.boundaries && rs.boundaries.length > 0) {
         resolve(rs.boundaries);
       } else {
-        reject(new Error('未获取到边界数据'));
+        reject(new Error("未获取到边界数据"));
       }
     });
   });
@@ -55,8 +55,8 @@ export function getOfficialHubeiBoundary(BMapGL: BMapGLNamespace): Promise<strin
  * @returns BMapGL.Point 数组
  */
 export function parseBoundaryPoints(boundaryStr: string, BMapGL: BMapGLNamespace): BMapPoint[] {
-  return boundaryStr.split(';').map((point: string) => {
-    const [lng, lat] = point.split(',').map(Number);
+  return boundaryStr.split(";").map((point: string) => {
+    const [lng, lat] = point.split(",").map(Number);
     return new BMapGL.Point(lng, lat);
   });
 }
@@ -110,7 +110,7 @@ export function isBuildingStopped(building: BuildingItem): boolean {
  * @returns 状态文本
  */
 export function getBuildingStatusText(status: number): string {
-  return status === 1 ? '已停用' : '正常';
+  return status === 1 ? "已停用" : "正常";
 }
 
 /**
@@ -119,7 +119,7 @@ export function getBuildingStatusText(status: number): string {
  * @returns Ant Design Tag 颜色
  */
 export function getBuildingStatusColor(status: number): string {
-  return status === 1 ? 'red' : 'green';
+  return status === 1 ? "red" : "green";
 }
 
 /**
@@ -128,7 +128,7 @@ export function getBuildingStatusColor(status: number): string {
  * @returns 标签文本
  */
 export function getBuildingLabel(building: BuildingItem): string {
-  return building.name ? building.name.slice(0, 2) : '楼宇';
+  return building.name ? building.name.slice(0, 2) : "楼宇";
 }
 
 /**
@@ -156,13 +156,13 @@ export function filterBuildingsByZoom(
 export function getWorkstationStatusText(status: number): string {
   switch (status) {
     case 0:
-      return '空闲';
+      return "空闲";
     case 1:
-      return '占用';
+      return "占用";
     case 2:
-      return '维护';
+      return "维护";
     default:
-      return '未知';
+      return "未知";
   }
 }
 
@@ -174,13 +174,13 @@ export function getWorkstationStatusText(status: number): string {
 export function getWorkstationTypeText(type: number): string {
   switch (type) {
     case 0:
-      return '固定';
+      return "固定";
     case 1:
-      return '灵活';
+      return "灵活";
     case 2:
-      return '管理';
+      return "管理";
     default:
-      return '未知';
+      return "未知";
   }
 }
 
@@ -216,13 +216,13 @@ export function getWorkstationColor(workstation: {
 export function getWorkstationStatusColorCSS(status: number): string {
   switch (status) {
     case 0:
-      return 'var(--theme-success, #52c41a)';
+      return "var(--theme-success, #52c41a)";
     case 1:
-      return '#ff4d4f';
+      return "#ff4d4f";
     case 2:
-      return 'var(--theme-warning, #faad14)';
+      return "var(--theme-warning, #faad14)";
     default:
-      return '#d9d9d9';
+      return "#d9d9d9";
   }
 }
 
@@ -234,13 +234,13 @@ export function getWorkstationStatusColorCSS(status: number): string {
 export function getWorkstationTypeColorCSS(type: number): string {
   switch (type) {
     case 0:
-      return 'var(--theme-info, #1890ff)';
+      return "var(--theme-info, #1890ff)";
     case 1:
-      return 'var(--theme-purple, #722ed1)';
+      return "var(--theme-purple, #722ed1)";
     case 2:
-      return '#13c2c2';
+      return "#13c2c2";
     default:
-      return '#d9d9d9';
+      return "#d9d9d9";
   }
 }
 

@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from 'react';
-import type { FC } from 'react';
-import { Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic, message } from 'antd';
+import { useEffect, useState, useCallback } from "react";
+import type { FC } from "react";
+import { Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic, message } from "antd";
 import {
   PlusOutlined,
   SearchOutlined,
@@ -9,19 +9,19 @@ import {
   TeamOutlined,
   ImportOutlined,
   ExportOutlined,
-} from '@ant-design/icons';
-import { useQueryClient } from '@tanstack/react-query';
-import type { Department } from '@/types';
-import { useDeptData } from './hooks';
-import { getDeptColumns } from './columns';
-import { DeptEditModal } from './modals';
-import { STATUS_OPTIONS } from './constants';
-import { renderTreeData } from './utils';
-import ExcelImport from '@/components/shared/ExcelImport';
-import ExcelExport from '@/components/shared/ExcelExport';
+} from "@ant-design/icons";
+import { useQueryClient } from "@tanstack/react-query";
+import type { Department } from "@/types";
+import { useDeptData } from "./hooks";
+import { getDeptColumns } from "./columns";
+import { DeptEditModal } from "./modals";
+import { STATUS_OPTIONS } from "./constants";
+import { renderTreeData } from "./utils";
+import ExcelImport from "@/components/shared/ExcelImport";
+import ExcelExport from "@/components/shared/ExcelExport";
 
-import { post } from '@/lib/api';
-import { queryKeys } from '@/lib/queryKeys';
+import { post } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 const { Option } = Select;
 
 const DepartmentManagement: FC = () => {
@@ -96,11 +96,11 @@ const DepartmentManagement: FC = () => {
     try {
       // ✅ 优化：移除动态导入
       await post(`/system/departments/${id}/delete`);
-      message.success('删除成功');
+      message.success("删除成功");
       loadDepartments();
       invalidateAllDepts();
     } catch (error) {
-      console.error('删除部门失败:', error);
+      console.error("删除部门失败:", error);
     }
   };
 
@@ -116,8 +116,8 @@ const DepartmentManagement: FC = () => {
     const selectedUser = deptUsers.find((u) => u.id === userId);
     if (selectedUser) {
       editForm.setFieldsValue({
-        phone: selectedUser.phone || '',
-        email: selectedUser.email || '',
+        phone: selectedUser.phone || "",
+        email: selectedUser.email || "",
       });
     }
   };
@@ -134,38 +134,38 @@ const DepartmentManagement: FC = () => {
         orderNum: values.orderNum,
         status: values.status,
         isExternalOrg: values.isExternalOrg,
-        remark: values.remark || '',
+        remark: values.remark || "",
         ...(values.leader && {
           leader: values.leader,
-          phone: values.phone || '',
-          email: values.email || '',
+          phone: values.phone || "",
+          email: values.email || "",
         }),
       };
 
       const endpoint = editingDept
         ? `/system/departments/${editingDept.id}/update`
-        : '/system/departments';
+        : "/system/departments";
 
       await post(endpoint, editingDept ? { ...submitData, id: editingDept.id } : submitData);
 
-      message.success(editingDept ? '更新成功' : '创建成功');
+      message.success(editingDept ? "更新成功" : "创建成功");
       setEditModalVisible(false);
       loadDepartments();
       invalidateAllDepts();
     } catch (error) {
-      console.error('保存部门失败:', error);
+      console.error("保存部门失败:", error);
     }
   };
 
   const handleImportSuccess = () => {
-    message.success('导入成功');
+    message.success("导入成功");
     loadDepartments();
     setImportVisible(false);
     invalidateAllDepts();
   };
 
   const getRowClassName = (record: Department): string => {
-    return record.accessible === false ? 'dept-inaccessible-row' : '';
+    return record.accessible === false ? "dept-inaccessible-row" : "";
   };
 
   const columns = getDeptColumns({
@@ -190,7 +190,7 @@ const DepartmentManagement: FC = () => {
             <Statistic
               title="顶级部门"
               value={statistics.topLevel}
-              styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
+              styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
               prefix={<TeamOutlined />}
             />
           </Card>
@@ -200,7 +200,7 @@ const DepartmentManagement: FC = () => {
             <Statistic
               title="子部门"
               value={statistics.subLevel}
-              styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
+              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
               prefix={<ApartmentOutlined />}
             />
           </Card>
@@ -210,11 +210,11 @@ const DepartmentManagement: FC = () => {
       <Card style={{ marginBottom: 16 }}>
         <div
           style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            flexWrap: 'wrap',
-            gap: '16px',
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "16px",
           }}
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
@@ -274,7 +274,7 @@ const DepartmentManagement: FC = () => {
                 setExpandedRowKeys(expandedRowKeys.filter(k => k !== recordKey));
               }
             },
-            childrenColumnName: 'children',
+            childrenColumnName: "children",
           }}
         />
       </Card>

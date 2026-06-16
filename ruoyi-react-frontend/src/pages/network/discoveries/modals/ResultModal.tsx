@@ -3,10 +3,10 @@
  * 发现结果模态框
  */
 
-import { Modal, Table, Space, Button } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import { ImportOutlined } from '@ant-design/icons';
-import type { DeviceDiscovery } from '@/types';
+import { Modal, Table, Space, Button } from "antd";
+import type { ColumnsType } from "antd/es/table";
+import { ImportOutlined } from "@ant-design/icons";
+import type { DeviceDiscovery } from "@/types";
 
 export interface ResultModalProps {
   open: boolean;
@@ -18,11 +18,11 @@ export interface ResultModalProps {
 
 // 发现结果表格列
 const resultColumns: ColumnsType<Record<string, unknown>> = [
-  { title: '设备名称', dataIndex: 'deviceName', key: 'deviceName' },
-  { title: 'IP地址', dataIndex: 'ipAddress', key: 'ipAddress' },
-  { title: '厂商', dataIndex: 'vendor', key: 'vendor' },
-  { title: '型号', dataIndex: 'model', key: 'model' },
-  { title: '设备类型', dataIndex: 'deviceType', key: 'deviceType' },
+  { title: "设备名称", dataIndex: "deviceName", key: "deviceName" },
+  { title: "IP地址", dataIndex: "ipAddress", key: "ipAddress" },
+  { title: "厂商", dataIndex: "vendor", key: "vendor" },
+  { title: "型号", dataIndex: "model", key: "model" },
+  { title: "设备类型", dataIndex: "deviceType", key: "deviceType" },
 ];
 
 export function ResultModal({
@@ -34,7 +34,7 @@ export function ResultModal({
 }: ResultModalProps) {
   return (
     <Modal
-      title={`发现结果 - ${currentDiscovery?.taskName || ''}`}
+      title={`发现结果 - ${currentDiscovery?.taskName || ""}`}
       open={open}
       onCancel={onClose}
       width={900}

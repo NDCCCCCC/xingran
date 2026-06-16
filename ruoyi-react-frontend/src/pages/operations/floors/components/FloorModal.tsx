@@ -1,19 +1,19 @@
-import { useEffect } from 'react';
-import type { FC } from 'react';
-import { Modal, Form, Input, InputNumber, Select } from 'antd';
-import type { FormInstance } from 'antd/es/form';
-import type { Floor, Building } from '@/types';
-import { STATUS_OPTIONS, DEFAULT_FORM_VALUES } from '../constants';
-import { DepartmentTreeSelect, type Department } from '@/components/shared/DepartmentTreeSelect';
-import FileUpload from '@/components/shared/FileUpload';
-import { useImageUpload } from '@/hooks/useImageUpload';
-import { MAX_IMAGE_SIZE } from '@/constants/upload';
+import { useEffect } from "react";
+import type { FC } from "react";
+import { Modal, Form, Input, InputNumber, Select } from "antd";
+import type { FormInstance } from "antd/es/form";
+import type { Floor, Building } from "@/types";
+import { STATUS_OPTIONS, DEFAULT_FORM_VALUES } from "../constants";
+import { DepartmentTreeSelect, type Department } from "@/components/shared/DepartmentTreeSelect";
+import FileUpload from "@/components/shared/FileUpload";
+import { useImageUpload } from "@/hooks/useImageUpload";
+import { MAX_IMAGE_SIZE } from "@/constants/upload";
 
 const { Option } = Select;
 const { TextArea } = Input;
 
 // 楼宇选项基础类型（只需要 id 和 name）
-type BuildingOptionBase = Pick<Building, 'id' | 'name'>;
+type BuildingOptionBase = Pick<Building, "id" | "name">;
 
 interface FloorModalProps {
   visible: boolean;
@@ -41,7 +41,7 @@ export const FloorModal: FC<FloorModalProps> = ({
   onDepartmentChange,
 }) => {
   const planImageUpload = useImageUpload({
-    businessType: 'floor-plan',
+    businessType: "floor-plan",
     maxSize: MAX_IMAGE_SIZE,
   });
 
@@ -63,7 +63,7 @@ export const FloorModal: FC<FloorModalProps> = ({
   };
 
   const handleOk = async () => {
-    form.setFieldValue('planImageId', planImageUpload.imageId);
+    form.setFieldValue("planImageId", planImageUpload.imageId);
     onOk();
   };
 
@@ -74,7 +74,7 @@ export const FloorModal: FC<FloorModalProps> = ({
 
   return (
     <Modal
-      title={editingFloor ? '编辑楼层' : '新增楼层'}
+      title={editingFloor ? "编辑楼层" : "新增楼层"}
       open={visible}
       onOk={handleOk}
       onCancel={handleCancel}
@@ -95,7 +95,7 @@ export const FloorModal: FC<FloorModalProps> = ({
         <Form.Item
           name="buildingId"
           label="所属楼宇"
-          rules={[{ required: true, message: '请选择所属楼宇' }]}
+          rules={[{ required: true, message: "请选择所属楼宇" }]}
         >
           <Select
             placeholder="请选择所属楼宇"
@@ -114,7 +114,7 @@ export const FloorModal: FC<FloorModalProps> = ({
         <Form.Item
           name="floorNo"
           label="楼层号"
-          rules={[{ required: true, message: '请输入楼层号' }]}
+          rules={[{ required: true, message: "请输入楼层号" }]}
         >
           <Input placeholder="请输入楼层号，如：1F" disabled={!!editingFloor} />
         </Form.Item>
@@ -124,13 +124,13 @@ export const FloorModal: FC<FloorModalProps> = ({
         </Form.Item>
 
         <Form.Item name="area" label="面积">
-          <InputNumber min={0} placeholder="请输入面积(m²)" style={{ width: '100%' }} />
+          <InputNumber min={0} placeholder="请输入面积(m²)" style={{ width: "100%" }} />
         </Form.Item>
 
         <Form.Item
           name="status"
           label="状态"
-          rules={[{ required: true, message: '请选择状态' }]}
+          rules={[{ required: true, message: "请选择状态" }]}
           initialValue={DEFAULT_FORM_VALUES.status}
         >
           <Select placeholder="请选择状态">

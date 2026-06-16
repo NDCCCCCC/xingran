@@ -2,7 +2,7 @@
  * 全局类型声明
  */
 
-declare module '@breejs/later' {
+declare module "@breejs/later" {
   export interface Schedule {
     schedules: unknown[];
   }
@@ -10,7 +10,7 @@ declare module '@breejs/later' {
   export function timeout(expression: string, date?: Date): Date;
 }
 
-declare module 'sm-crypto' {
+declare module "sm-crypto" {
   export function sm2Encrypt(data: string, publicKey: string): string;
   export function sm2Decrypt(encryptedData: string, privateKey: string): string;
   export function sm3Encrypt(data: string): string;
@@ -20,13 +20,13 @@ declare module 'sm-crypto' {
   export function doDecrypt(encryptedText: string, privateKey: string): string;
 }
 
-declare module '@uiw/react-md-editor' {
-  import type React from 'react';
+declare module "@uiw/react-md-editor" {
+  import type React from "react";
 
   export interface MDEditorProps {
     value?: string;
     onChange?: (value: string | undefined) => void;
-    preview?: 'live' | 'edit' | 'full';
+    preview?: "live" | "edit" | "full";
     height?: number;
     visibleDragBar?: boolean;
   }
@@ -35,7 +35,7 @@ declare module '@uiw/react-md-editor' {
   export default MDEditor;
 }
 
-declare module '@uiw/react-md-editor/markdown-editor.css' {
+declare module "@uiw/react-md-editor/markdown-editor.css" {
   const content: string;
   export default content;
 }

@@ -4,10 +4,10 @@
  */
 
 export const PAGE_TITLES = {
-  DASHBOARD: '仪表盘',
-  MONITOR_DASHBOARD: '监控仪表盘',
-  HOME: '首页',
-  NOTICE_DETAIL: '通知详情',
+  DASHBOARD: "仪表盘",
+  MONITOR_DASHBOARD: "监控仪表盘",
+  HOME: "首页",
+  NOTICE_DETAIL: "通知详情",
 } as const;
 
 /**
@@ -15,9 +15,9 @@ export const PAGE_TITLES = {
  * 用于直接通过路径获取标题的场景
  */
 export const SPECIAL_PATH_TITLES: Record<string, string> = {
-  '/': PAGE_TITLES.HOME,
-  '/dashboard': PAGE_TITLES.DASHBOARD,
-  '/monitor/dashboard': PAGE_TITLES.MONITOR_DASHBOARD,
+  "/": PAGE_TITLES.HOME,
+  "/dashboard": PAGE_TITLES.DASHBOARD,
+  "/monitor/dashboard": PAGE_TITLES.MONITOR_DASHBOARD,
 } as const;
 
 /**

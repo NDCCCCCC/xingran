@@ -4,23 +4,23 @@
  * 通过WebSocket实现实时数据更新
  */
 
-import { useEffect, useCallback, useRef } from 'react';
-import { useDashboardStore } from '@/store/dashboardStore';
-import type { WidgetConfig, WebSocketDataSourceConfig, DataSourceConfig } from '@/types/dashboard';
+import { useEffect, useCallback, useRef } from "react";
+import { useDashboardStore } from "@/store/dashboardStore";
+import type { WidgetConfig, WebSocketDataSourceConfig, DataSourceConfig } from "@/types/dashboard";
 
 // 类型守卫：检查 dataSource 是否有直接的 type 属性
 function hasDataSourceType(ds: DataSourceConfig): ds is WebSocketDataSourceConfig {
-	return 'type' in ds && (ds as { type: string }).type === 'websocket';
+	return "type" in ds && (ds as { type: string }).type === "websocket";
 }
 
 // 类型守卫：检查是否为 WebSocket 数据源
 function isWebSocketDataSource(ds: DataSourceConfig): ds is WebSocketDataSourceConfig {
-	if ('type' in ds) {
+	if ("type" in ds) {
 		const typed = ds as { type: string };
-		return typed.type === 'websocket';
+		return typed.type === "websocket";
 	}
 	// 检查包装格式 { websocket: WebSocketDataSourceConfig }
-	if ('websocket' in ds) {
+	if ("websocket" in ds) {
 		return true;
 	}
 	return false;
@@ -54,9 +54,9 @@ export function useRealtimeUpdates(
 
 	// 获取WebSocket URL
 	const getWsUrl = useCallback(() => {
-		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+		const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 		const host = import.meta.env.VITE_WS_HOST || window.location.host;
-		const basePath = import.meta.env.VITE_WS_BASE_PATH || '/ws';
+		const basePath = import.meta.env.VITE_WS_BASE_PATH || "/ws";
 		return `${protocol}//${host}${basePath}/dashboard`;
 	}, []);
 
@@ -78,7 +78,7 @@ export function useRealtimeUpdates(
 						const channel = widget.dataSource.channel;
 						if (!subscribedChannelsRef.current.has(channel)) {
 							ws.send(JSON.stringify({
-								action: 'subscribe',
+								action: "subscribe",
 								channel,
 							}));
 							subscribedChannelsRef.current.add(channel);
@@ -91,7 +91,7 @@ export function useRealtimeUpdates(
 				try {
 					const message = JSON.parse(event.data);
 
-					if (message.type === 'data_update') {
+					if (message.type === "data_update") {
 						const { widgetId, data } = message;
 						// 更新缓存
 						cacheWidgetData(widgetId, data);
@@ -99,12 +99,12 @@ export function useRealtimeUpdates(
 						options?.onMessage?.(widgetId, data);
 					}
 				} catch (error) {
-					console.error('[Dashboard WebSocket] Message parse error:', error);
+					console.error("[Dashboard WebSocket] Message parse error:", error);
 				}
 			};
 
 			ws.onerror = (error) => {
-				console.error('[Dashboard WebSocket] Error:', error);
+				console.error("[Dashboard WebSocket] Error:", error);
 				options?.onError?.(error);
 				options?.onConnectionChange?.(false);
 			};
@@ -123,7 +123,7 @@ export function useRealtimeUpdates(
 
 			wsRef.current = ws;
 		} catch (error) {
-			console.error('[Dashboard WebSocket] Connection error:', error);
+			console.error("[Dashboard WebSocket] Connection error:", error);
 		}
 	}, [widgets, options, getWsUrl, cacheWidgetData]);
 
@@ -149,7 +149,7 @@ export function useRealtimeUpdates(
 				if (isWebSocketDataSource(widget.dataSource)) {
 					const channel = widget.dataSource.channel;
 					wsRef.current?.send(JSON.stringify({
-						action: 'subscribe',
+						action: "subscribe",
 						channel,
 					}));
 					subscribedChannelsRef.current.add(channel);

@@ -1,16 +1,16 @@
-import { useEffect, useState, useCallback } from 'react';
-import type { FC } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState, useCallback } from "react";
+import type { FC } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Button,
   message,
   Spin,
-} from 'antd';
-import { ArrowLeftOutlined } from '@ant-design/icons';
-import { getNoticeDetail } from '@/lib/noticeApi';
-import type { Notice } from '@/types/notice';
-import { formatDateTime } from '@/utils/datetime';
-import NoticeDetailContent from '@/components/NoticeDetail/NoticeDetailContent';
+} from "antd";
+import { ArrowLeftOutlined } from "@ant-design/icons";
+import { getNoticeDetail } from "@/lib/noticeApi";
+import type { Notice } from "@/types/notice";
+import { formatDateTime } from "@/utils/datetime";
+import NoticeDetailContent from "@/components/NoticeDetail/NoticeDetailContent";
 
 /**
  * 管理端通知详情页面
@@ -34,9 +34,9 @@ const AdminNoticeDetailPage: FC = () => {
         setNotice(noticeData);
       }
     } catch (error) {
-      console.error('加载通知详情失败:', error);
-      message.error('加载失败，请稍后重试');
-      navigate('/system/notice');
+      console.error("加载通知详情失败:", error);
+      message.error("加载失败，请稍后重试");
+      navigate("/system/notice");
     } finally {
       setLoading(false);
     }
@@ -58,7 +58,7 @@ const AdminNoticeDetailPage: FC = () => {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-gray-500">
         <p>通知不存在</p>
-        <Button type="link" onClick={() => navigate('/system/notice')}>
+        <Button type="link" onClick={() => navigate("/system/notice")}>
           返回通知列表
         </Button>
       </div>
@@ -69,7 +69,7 @@ const AdminNoticeDetailPage: FC = () => {
     <div className="p-6 max-w-5xl mx-auto">
       {/* 头部操作栏 */}
       <div className="mb-4">
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/system/notice')}>
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/system/notice")}>
           返回通知列表
         </Button>
       </div>
@@ -83,7 +83,7 @@ const AdminNoticeDetailPage: FC = () => {
 
       {/* 底部关闭按钮 */}
       <div className="flex justify-end mt-4">
-        <Button onClick={() => navigate('/system/notice')}>
+        <Button onClick={() => navigate("/system/notice")}>
           关闭
         </Button>
       </div>

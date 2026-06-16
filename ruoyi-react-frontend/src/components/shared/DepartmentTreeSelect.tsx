@@ -10,8 +10,8 @@
  * - 支持两种数据格式：标准部门格式和 TreeSelect 格式
  */
 
-import { TreeSelect } from 'antd';
-import type { TreeSelectProps } from 'antd/es/tree-select';
+import { TreeSelect } from "antd";
+import type { TreeSelectProps } from "antd/es/tree-select";
 
 export interface Department {
   id: string;
@@ -27,7 +27,7 @@ export interface TreeNode {
   children?: TreeNode[];
 }
 
-export interface DepartmentTreeSelectProps extends Omit<TreeSelectProps, 'treeData'> {
+export interface DepartmentTreeSelectProps extends Omit<TreeSelectProps, "treeData"> {
   value?: string;
   onChange?: (value: string) => void;
   departments?: Department[];
@@ -60,7 +60,7 @@ function convertDeptTreeData(departments: Department[], parentPath: string[] = [
       } else {
         // 从二级开始显示完整路径
         const pathFromSecondLevel = [...currentPath.slice(1), node.deptName];
-        displayPath = pathFromSecondLevel.join(' / ');
+        displayPath = pathFromSecondLevel.join(" / ");
       }
 
       return {
@@ -102,7 +102,7 @@ export function DepartmentTreeSelect({
   onChange,
   departments,
   treeData,
-  placeholder = '请选择部门',
+  placeholder = "请选择部门",
   allowClear = true,
   disabled = false,
   loading = false,
@@ -134,7 +134,7 @@ export function DepartmentTreeSelect({
       treeData={finalTreeData}
       treeDefaultExpandedKeys={defaultExpandedKeys}
       className={className}
-      style={{ width: '100%', ...style }}
+      style={{ width: "100%", ...style }}
       {...restProps}
     />
   );
@@ -143,7 +143,7 @@ export function DepartmentTreeSelect({
 /**
  * 带顶级部门选项的变体（用于部门编辑模态框）
  */
-export interface DepartmentTreeSelectWithTopProps extends Omit<TreeSelectProps, 'treeData'> {
+export interface DepartmentTreeSelectWithTopProps extends Omit<TreeSelectProps, "treeData"> {
   value?: string;
   onChange?: (value: string) => void;
   departments?: Department[];
@@ -163,14 +163,14 @@ export function DepartmentTreeSelectWithTop({
   onChange,
   departments,
   treeData,
-  placeholder = '请选择上级部门',
+  placeholder = "请选择上级部门",
   allowClear = true,
   disabled = false,
   loading = false,
   style,
   className,
   showTopLevel = true,
-  topLevelLabel = '顶级部门',
+  topLevelLabel = "顶级部门",
   ...restProps
 }: DepartmentTreeSelectWithTopProps) {
   // 优先使用 treeData（已转换的格式），否则使用 departments 并转换
@@ -180,8 +180,8 @@ export function DepartmentTreeSelectWithTop({
     ? [
         {
           title: topLevelLabel,
-          value: '',
-          key: '',
+          value: "",
+          key: "",
           children: baseTreeData,
         },
       ]
@@ -190,7 +190,7 @@ export function DepartmentTreeSelectWithTop({
   // 获取默认展开的 keys
   let defaultExpandedKeys: string[] = [];
   if (showTopLevel) {
-    defaultExpandedKeys = [''];
+    defaultExpandedKeys = [""];
   } else if (treeData) {
     defaultExpandedKeys = getFirstLevelKeysFromTreeData(treeData);
   } else if (departments) {
@@ -210,7 +210,7 @@ export function DepartmentTreeSelectWithTop({
       treeLine={{ showLeafIcon: false }}
       treeDefaultExpandedKeys={defaultExpandedKeys}
       className={className}
-      style={{ width: '100%', ...style }}
+      style={{ width: "100%", ...style }}
       {...restProps}
     />
   );

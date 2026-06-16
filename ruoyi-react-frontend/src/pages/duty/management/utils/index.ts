@@ -2,4 +2,4 @@
  * Duty Utils Export
  */
 
-export { downloadHolidayTemplate, handleHolidayImport } from './excelUtils';
+export { downloadHolidayTemplate, handleHolidayImport } from "./excelUtils";

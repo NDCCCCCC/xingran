@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useAuthStore } from '@/store/authStore';
-import { useMenuStore } from '@/store/menuStore';
-import { vmOperationButtons } from './vmOperationButtons';
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useAuthStore } from "@/store/authStore";
+import { useMenuStore } from "@/store/menuStore";
+import { vmOperationButtons } from "./vmOperationButtons";
 import {
   Table,
   Button,
@@ -21,7 +21,7 @@ import {
   Col,
   Spin,
   Alert,
-} from 'antd';
+} from "antd";
 import {
   ReloadOutlined,
   PlayCircleOutlined,
@@ -31,13 +31,13 @@ import {
   PlusOutlined,
   EditOutlined,
   UserAddOutlined,
-} from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
-import { vmApi, vdiServerApi } from '@/lib/vdiApi';
-import { post } from '@/lib/api';
-import type { VirtualMachine, VMListParams, CreateVMRequest, VDIServer, VDIResourceGroup, VDIResource, VDIPlatform, RunPosition, VDIStorage, VDINetwork } from '@/types/vdi';
-import type { ColumnsType } from 'antd/es/table';
-import { VDIRow } from '@/components/table/VDIRow';
+} from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+import { vmApi, vdiServerApi } from "@/lib/vdiApi";
+import { post } from "@/lib/api";
+import type { VirtualMachine, VMListParams, CreateVMRequest, VDIServer, VDIResourceGroup, VDIResource, VDIPlatform, RunPosition, VDIStorage, VDINetwork } from "@/types/vdi";
+import type { ColumnsType } from "antd/es/table";
+import { VDIRow } from "@/components/table/VDIRow";
 
 // Permission helper
 const hasPermission = (permissions: string[], perm: string) => permissions.includes(perm);
@@ -96,7 +96,7 @@ const VirtualMachineList: React.FC = () => {
   const [preloadError, setPreloadError] = useState<string | null>(null);
 
   // Whether user has VM create permission (controls preload and toolbar buttons)
-  const canCreateVM = hasPermission(permissions, 'vdi:vm:add');
+  const canCreateVM = hasPermission(permissions, "vdi:vm:add");
 
   // API缓存：5分钟过期
   const vdiDataCache = useRef<{
@@ -162,8 +162,8 @@ const VirtualMachineList: React.FC = () => {
       setNetworks(newNetworks);
       setVdiDataPreloaded(true);
     } catch (error) {
-      setPreloadError('VDI配置加载失败，部分功能可能不可用');
-      message.warning('VDI配置加载失败，将在需要时重试');
+      setPreloadError("VDI配置加载失败，部分功能可能不可用");
+      message.warning("VDI配置加载失败，将在需要时重试");
     } finally {
       setVdiDataLoading(false);
     }
@@ -182,7 +182,7 @@ const VirtualMachineList: React.FC = () => {
       setVMs(result.data?.list || []);
       setTotal(result.data?.total || 0);
     } catch (error) {
-      message.error('加载虚拟机列表失败');
+      message.error("加载虚拟机列表失败");
     } finally {
       setLoading(false);
     }
@@ -201,10 +201,10 @@ const VirtualMachineList: React.FC = () => {
   }, [preloadVDIData]);
 
   // Watch form field changes for cascading dropdowns and auto-name
-  const selectedServerId = Form.useWatch('vdi_server_id', form);
-  const selectedResourceGroupId = Form.useWatch('resource_group_id', form);
-  const selectedResourceFieldId = Form.useWatch('resource_id', form);
-  const selectedVtpId = Form.useWatch('vtp_id', form);
+  const selectedServerId = Form.useWatch("vdi_server_id", form);
+  const selectedResourceGroupId = Form.useWatch("resource_group_id", form);
+  const selectedResourceFieldId = Form.useWatch("resource_id", form);
+  const selectedVtpId = Form.useWatch("vtp_id", form);
 
   // Track previous createModalVisible value to prevent infinite loop
   const prevCreateModalVisible = useRef(createModalVisible);
@@ -364,7 +364,7 @@ const VirtualMachineList: React.FC = () => {
 
         // 过滤：只显示clustered virtual machine下的运行位置
         const clusteredHostId = newPositions.find(p =>
-          p.father_id && p.father_id.toLowerCase().includes('clustered')
+          p.father_id && p.father_id.toLowerCase().includes("clustered")
         )?.father_id;
 
         if (clusteredHostId) {
@@ -486,12 +486,12 @@ const VirtualMachineList: React.FC = () => {
       };
 
       await vmApi.create(data);
-      message.success('虚拟机创建成功，VDI API 调用完成');
+      message.success("虚拟机创建成功，VDI API 调用完成");
       setCreateModalVisible(false);
       form.resetFields();
       loadVMs();
     } catch (error) {
-      message.error('创建虚拟机失败');
+      message.error("创建虚拟机失败");
     } finally {
       setLoading(false);
     }
@@ -501,18 +501,18 @@ const VirtualMachineList: React.FC = () => {
   const handleOperate = useCallback(async (action: string, vmIds?: string[]) => {
     const ids = vmIds || selectedRowKeys as string[];
     if (ids.length === 0) {
-      message.warning('请选择要操作的虚拟机');
+      message.warning("请选择要操作的虚拟机");
       return;
     }
 
     setLoading(true);
     try {
       await vmApi.batchOperate(ids, action);
-      message.success(`${action === 'start' ? '开机' : action === 'stop' ? '关机' : '重启'}操作已提交，VDI API 调用成功`);
+      message.success(`${action === "start" ? "开机" : action === "stop" ? "关机" : "重启"}操作已提交，VDI API 调用成功`);
       setSelectedRowKeys([]);
       loadVMs();
     } catch (error) {
-      message.error('操作失败，VDI API 调用失败');
+      message.error("操作失败，VDI API 调用失败");
     } finally {
       setLoading(false);
     }
@@ -523,10 +523,10 @@ const VirtualMachineList: React.FC = () => {
     setLoading(true);
     try {
       await vmApi.delete(id);
-      message.success('删除成功，VDI API 调用完成');
+      message.success("删除成功，VDI API 调用完成");
       loadVMs();
     } catch (error) {
-      message.error('删除失败，VDI API 调用失败');
+      message.error("删除失败，VDI API 调用失败");
     } finally {
       setLoading(false);
     }
@@ -537,10 +537,10 @@ const VirtualMachineList: React.FC = () => {
     setLoading(true);
     try {
       await vmApi.sync(id);
-      message.success('同步成功，VDI 状态已更新');
+      message.success("同步成功，VDI 状态已更新");
       loadVMs();
     } catch (error) {
-      message.error('同步失败');
+      message.error("同步失败");
     } finally {
       setLoading(false);
     }
@@ -556,7 +556,7 @@ const VirtualMachineList: React.FC = () => {
   const loadSystemUsers = async (search?: string) => {
     setUserSearchLoading(true);
     try {
-      const result = await post<{ list: Array<{id: string; username: string; nickname?: string; status: number}>; total: number }>('/system/users/list', {
+      const result = await post<{ list: Array<{id: string; username: string; nickname?: string; status: number}>; total: number }>("/system/users/list", {
         current: 1,
         pageSize: 50,
         username: search || undefined,
@@ -577,12 +577,12 @@ const VirtualMachineList: React.FC = () => {
       const values = await bindUserForm.validateFields();
       setLoading(true);
       await vmApi.bindUser(selectedVM!.id, { username: values.username });
-      message.success('用户绑定成功，VDI API 调用完成');
+      message.success("用户绑定成功，VDI API 调用完成");
       setBindUserModalVisible(false);
       bindUserForm.resetFields();
       loadVMs();
     } catch (error) {
-      message.error('绑定用户失败，VDI API 调用失败');
+      message.error("绑定用户失败，VDI API 调用失败");
     } finally {
       setLoading(false);
     }
@@ -592,9 +592,9 @@ const VirtualMachineList: React.FC = () => {
   // 快速创建功能 - 自动加载默认配置
   // ============================================================================
   const DEFAULT_VTP_ID = 1;
-  const DEFAULT_RESOURCE_GROUP_ID = '0';
-  const DEFAULT_RESOURCE_NAME = 'VDI模板';
-  const DEFAULT_POSITION_NAME = '研发';
+  const DEFAULT_RESOURCE_GROUP_ID = "0";
+  const DEFAULT_RESOURCE_NAME = "VDI模板";
+  const DEFAULT_POSITION_NAME = "研发";
 
   // 加载快速创建默认配置
   const loadQuickCreateDefaults = async () => {
@@ -604,7 +604,7 @@ const VirtualMachineList: React.FC = () => {
       const availableServer = servers.find(s => s.status === 0);
 
       if (!availableServer) {
-        message.error('没有可用的VDI服务器');
+        message.error("没有可用的VDI服务器");
         return;
       }
 
@@ -612,7 +612,7 @@ const VirtualMachineList: React.FC = () => {
       const defaultGroup = resourceGroups.data?.find(g => g.resource_group_id === DEFAULT_RESOURCE_GROUP_ID);
 
       if (!defaultGroup) {
-        message.error('未找到默认资源组');
+        message.error("未找到默认资源组");
         return;
       }
 
@@ -621,15 +621,15 @@ const VirtualMachineList: React.FC = () => {
       const dataResource = resourceList.find(r => r.name === DEFAULT_RESOURCE_NAME);
 
       if (!dataResource) {
-        message.error(`未找到资源"${DEFAULT_RESOURCE_NAME}"，可用资源: ${resourceList.map(r => r.name).join(', ')}`);
+        message.error(`未找到资源"${DEFAULT_RESOURCE_NAME}"，可用资源: ${resourceList.map(r => r.name).join(", ")}`);
         return;
       }
 
       const platforms = await vmApi.listVTPPlatforms(availableServer.id);
-      const vmpPlatform = platforms.data?.find(p => p.name === 'VMP' || p.id === DEFAULT_VTP_ID);
+      const vmpPlatform = platforms.data?.find(p => p.name === "VMP" || p.id === DEFAULT_VTP_ID);
 
       if (!vmpPlatform) {
-        message.error('未找到VMP平台');
+        message.error("未找到VMP平台");
         return;
       }
 
@@ -638,7 +638,7 @@ const VirtualMachineList: React.FC = () => {
       const devPosition = positionList.find(p => p.name === DEFAULT_POSITION_NAME);
 
       if (!devPosition) {
-        message.error(`未找到运行位置"${DEFAULT_POSITION_NAME}"，可用位置: ${positionList.map(p => p.name).join(', ')}`);
+        message.error(`未找到运行位置"${DEFAULT_POSITION_NAME}"，可用位置: ${positionList.map(p => p.name).join(", ")}`);
         return;
       }
 
@@ -647,7 +647,7 @@ const VirtualMachineList: React.FC = () => {
       const firstStorage = storageList[0];
 
       if (!firstStorage) {
-        message.error('未找到存储位置');
+        message.error("未找到存储位置");
         return;
       }
 
@@ -656,7 +656,7 @@ const VirtualMachineList: React.FC = () => {
       const firstNetwork = networkList[0];
 
       if (!firstNetwork) {
-        message.error('未找到网络接口');
+        message.error("未找到网络接口");
         return;
       }
 
@@ -677,9 +677,9 @@ const VirtualMachineList: React.FC = () => {
         count: 1,
       });
 
-      message.success('快速创建配置加载成功！');
+      message.success("快速创建配置加载成功！");
     } catch (error) {
-      message.error('加载VDI配置失败，请检查网络连接和VDI服务器状态');
+      message.error("加载VDI配置失败，请检查网络连接和VDI服务器状态");
     }
   };
 
@@ -693,7 +693,7 @@ const VirtualMachineList: React.FC = () => {
   // 快速创建虚拟机
   const handleQuickCreate = async () => {
     if (!quickConfig) {
-      message.error('配置未加载，请重试');
+      message.error("配置未加载，请重试");
       return;
     }
 
@@ -703,7 +703,7 @@ const VirtualMachineList: React.FC = () => {
 
       let finalRunPositionId = quickConfig.runPositionId;
       if (quickConfig.runPositionId === quickConfig.hostId) {
-        finalRunPositionId = '';
+        finalRunPositionId = "";
       }
 
       const data: CreateVMRequest = {
@@ -721,12 +721,12 @@ const VirtualMachineList: React.FC = () => {
       };
 
       await vmApi.create(data);
-      message.success('虚拟机创建成功！');
+      message.success("虚拟机创建成功！");
       setQuickCreateModalVisible(false);
       quickCreateForm.resetFields();
       loadVMs();
     } catch (error) {
-      message.error('创建虚拟机失败');
+      message.error("创建虚拟机失败");
     } finally {
       setLoading(false);
     }
@@ -735,68 +735,68 @@ const VirtualMachineList: React.FC = () => {
   // 表格列定义（操作按钮使用 VDIRow 组件进行权限过滤）
   const columns: ColumnsType<VirtualMachine> = [
     {
-      title: '虚拟机 ID',
-      dataIndex: 'vm_id',
-      key: 'vm_id',
+      title: "虚拟机 ID",
+      dataIndex: "vm_id",
+      key: "vm_id",
       width: 120,
       ellipsis: true,
     },
     {
-      title: '名称',
-      dataIndex: 'name',
-      key: 'name',
+      title: "名称",
+      dataIndex: "name",
+      key: "name",
       width: 150,
       render: (text: string, record) => (
         <a
           onClick={() => navigate(`/vdi/vm/${record.id}`)}
-          style={{ color: 'var(--theme-info, #1890ff)', textDecoration: 'underline' }}
+          style={{ color: "var(--theme-info, #1890ff)", textDecoration: "underline" }}
         >
           {text}
         </a>
       ),
     },
     {
-      title: '虚拟机状态',
-      dataIndex: 'power_state',
-      key: 'power_state',
+      title: "虚拟机状态",
+      dataIndex: "power_state",
+      key: "power_state",
       width: 100,
       render: (state: string) => {
         const config = {
-          pending: { color: 'blue', text: '等待Agent' },
-          stopped: { color: 'red', text: '关机' },
-          suspended: { color: 'orange', text: '挂起' },
-          in_use: { color: 'lime', text: '正常使用' },
+          pending: { color: "blue", text: "等待Agent" },
+          stopped: { color: "red", text: "关机" },
+          suspended: { color: "orange", text: "挂起" },
+          in_use: { color: "lime", text: "正常使用" },
         };
-        const { color, text } = config[state as keyof typeof config] || { color: 'default', text: state };
+        const { color, text } = config[state as keyof typeof config] || { color: "default", text: state };
         return <Tag color={color}>{text}</Tag>;
       },
     },
     {
-      title: 'IP 地址',
-      dataIndex: 'ip_address',
-      key: 'ip_address',
+      title: "IP 地址",
+      dataIndex: "ip_address",
+      key: "ip_address",
       width: 120,
-      render: (ip: string) => ip || '-',
+      render: (ip: string) => ip || "-",
     },
     {
-      title: '绑定用户',
-      dataIndex: 'bound_user_name',
-      key: 'bound_user_name',
+      title: "绑定用户",
+      dataIndex: "bound_user_name",
+      key: "bound_user_name",
       width: 120,
-      render: (name: string) => name || '-',
+      render: (name: string) => name || "-",
     },
     {
-      title: '最后同步',
-      dataIndex: 'last_sync_at',
-      key: 'last_sync_at',
+      title: "最后同步",
+      dataIndex: "last_sync_at",
+      key: "last_sync_at",
       width: 160,
-      render: (time: string) => time ? new Date(time).toLocaleString('zh-CN') : '-',
+      render: (time: string) => time ? new Date(time).toLocaleString("zh-CN") : "-",
     },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       width: 300,
-      fixed: 'right',
+      fixed: "right",
       render: (_, record) => (
         <VDIRow
           vm={record}
@@ -813,7 +813,7 @@ const VirtualMachineList: React.FC = () => {
 
   return (
     <Card>
-      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         {/* Error banner for VDI data preload failures (only shown when user has create permission) */}
         {preloadError && canCreateVM && (
           <Alert
@@ -862,9 +862,9 @@ const VirtualMachineList: React.FC = () => {
         {selectedRowKeys.length > 0 && (
           <Space>
             <span>已选择 {selectedRowKeys.length} 项</span>
-            {hasPermission(permissions, 'vdi:vm:start') && <Button onClick={() => handleOperate('start')}>批量开机</Button>}
-            {hasPermission(permissions, 'vdi:vm:stop') && <Button onClick={() => handleOperate('stop')}>批量关机</Button>}
-            {hasPermission(permissions, 'vdi:vm:restart') && <Button onClick={() => handleOperate('restart')}>批量重启</Button>}
+            {hasPermission(permissions, "vdi:vm:start") && <Button onClick={() => handleOperate("start")}>批量开机</Button>}
+            {hasPermission(permissions, "vdi:vm:stop") && <Button onClick={() => handleOperate("stop")}>批量关机</Button>}
+            {hasPermission(permissions, "vdi:vm:restart") && <Button onClick={() => handleOperate("restart")}>批量重启</Button>}
           </Space>
         )}
 
@@ -907,13 +907,13 @@ const VirtualMachineList: React.FC = () => {
       >
         <Spin spinning={loading && !vtpPlatforms.length}>
           {loading && !vtpPlatforms.length && (
-            <div style={{ padding: 12, color: 'rgba(0, 0, 0, 0.45)' }}>加载VDI配置中...</div>
+            <div style={{ padding: 12, color: "rgba(0, 0, 0, 0.45)" }}>加载VDI配置中...</div>
           )}
           <Form form={form} layout="vertical">
             <Row gutter={16}>
               {/* 左列：基础配置 */}
               <Col xs={24} md={12}>
-                <Form.Item label="VDI 服务器" name="vdi_server_id" rules={[{ required: true, message: '请选择VDI服务器' }]}>
+                <Form.Item label="VDI 服务器" name="vdi_server_id" rules={[{ required: true, message: "请选择VDI服务器" }]}>
                   <Select placeholder="请选择VDI服务器" loading={vdiServers.length === 0}>
                     {vdiServers.filter(s => s.status === 0).map(server => (
                       <Select.Option key={server.id} value={server.id}>
@@ -923,27 +923,27 @@ const VirtualMachineList: React.FC = () => {
                   </Select>
                 </Form.Item>
 
-                <Form.Item label="资源组" name="resource_group_id" rules={[{ required: true, message: '请选择资源组' }]}>
+                <Form.Item label="资源组" name="resource_group_id" rules={[{ required: true, message: "请选择资源组" }]}>
                   <Select placeholder={selectedServerId ? "请选择资源组" : "请先选择VDI服务器"} disabled={!selectedServerId}>
                     {resourceGroups.map(group => (
                       <Select.Option key={group.resource_group_id} value={group.resource_group_id}>
-                        {group.name} {group.type ? `(${group.type})` : ''}
+                        {group.name} {group.type ? `(${group.type})` : ""}
                       </Select.Option>
                     ))}
                   </Select>
                 </Form.Item>
 
-                <Form.Item label="资源" name="resource_id" rules={[{ required: true, message: '请选择资源' }]}>
+                <Form.Item label="资源" name="resource_id" rules={[{ required: true, message: "请选择资源" }]}>
                   <Select placeholder={selectedResourceGroupId ? "请选择资源" : "请先选择资源组"} disabled={!selectedResourceGroupId}>
                     {resources.map(r => (
                       <Select.Option key={r.id} value={String(r.id)}>
-                        {r.name} {r.note ? `(${r.note})` : ''}
+                        {r.name} {r.note ? `(${r.note})` : ""}
                       </Select.Option>
                     ))}
                   </Select>
                 </Form.Item>
 
-                <Form.Item label="VTP 平台" name="vtp_id" rules={[{ required: true, message: '请选择VTP平台' }]}>
+                <Form.Item label="VTP 平台" name="vtp_id" rules={[{ required: true, message: "请选择VTP平台" }]}>
                   <Select placeholder={selectedServerId ? "请选择VTP平台" : "请先选择VDI服务器"} disabled={!selectedServerId}>
                     {vtpPlatforms.map(platform => (
                       <Select.Option key={platform.id} value={platform.id}>
@@ -953,7 +953,7 @@ const VirtualMachineList: React.FC = () => {
                   </Select>
                 </Form.Item>
 
-                <Form.Item label="运行位置" name="run_position_id" rules={[{ required: true, message: '请选择运行位置' }]}>
+                <Form.Item label="运行位置" name="run_position_id" rules={[{ required: true, message: "请选择运行位置" }]}>
                   <Select placeholder={selectedVtpId ? "请选择运行位置" : "请先选择VTP平台"} disabled={!selectedVtpId}>
                     {runPositions.map(position => (
                       <Select.Option key={position.id} value={position.id}>
@@ -961,12 +961,12 @@ const VirtualMachineList: React.FC = () => {
                       </Select.Option>
                     ))}
                   </Select>
-                  <div style={{ fontSize: '12px', color: 'var(--theme-text-tertiary, #999)', marginTop: '4px' }}>
+                  <div style={{ fontSize: "12px", color: "var(--theme-text-tertiary, #999)", marginTop: "4px" }}>
                     服务器会自动分配到 10.62.0.73 或 10.62.0.74
                   </div>
                 </Form.Item>
 
-                <Form.Item label="个人盘" name="disk_id" rules={[{ required: true, message: '请选择个人盘' }]}>
+                <Form.Item label="个人盘" name="disk_id" rules={[{ required: true, message: "请选择个人盘" }]}>
                   <Select placeholder={selectedVtpId ? "请选择个人盘" : "请先选择VTP平台"} disabled={!selectedVtpId}>
                     {storages.map(storage => (
                       <Select.Option key={storage.id} value={storage.id}>
@@ -977,13 +977,13 @@ const VirtualMachineList: React.FC = () => {
                 </Form.Item>
 
                 <Form.Item label="CPU 颗数" name="cpu_number" initialValue={1}>
-                  <Slider min={1} max={16} marks={{ 1: '1', 4: '4', 8: '8', 16: '16' }} />
+                  <Slider min={1} max={16} marks={{ 1: "1", 4: "4", 8: "8", 16: "16" }} />
                 </Form.Item>
               </Col>
 
               {/* 右列：虚拟机配置 */}
               <Col xs={24} md={12}>
-                <Form.Item label="存储位置" name="storage_id" rules={[{ required: true, message: '请选择存储位置' }]}>
+                <Form.Item label="存储位置" name="storage_id" rules={[{ required: true, message: "请选择存储位置" }]}>
                   <Select placeholder={selectedVtpId ? "请选择存储位置" : "请先选择VTP平台"} disabled={!selectedVtpId}>
                     {storages.map(storage => (
                       <Select.Option key={storage.id} value={storage.id}>
@@ -993,7 +993,7 @@ const VirtualMachineList: React.FC = () => {
                   </Select>
                 </Form.Item>
 
-                <Form.Item label="网络接口" name="network_id" rules={[{ required: true, message: '请选择网络接口' }]}>
+                <Form.Item label="网络接口" name="network_id" rules={[{ required: true, message: "请选择网络接口" }]}>
                   <Select placeholder={selectedVtpId ? "请选择网络接口" : "请先选择VTP平台"} disabled={!selectedVtpId}>
                     {networks.map(network => (
                       <Select.Option key={network.id} value={network.id}>
@@ -1003,8 +1003,8 @@ const VirtualMachineList: React.FC = () => {
                   </Select>
                 </Form.Item>
 
-                <Form.Item label="创建数量" name="count" initialValue={1} rules={[{ required: true, message: '请输入创建数量' }]}>
-                  <InputNumber min={1} max={10} style={{ width: '100%' }} />
+                <Form.Item label="创建数量" name="count" initialValue={1} rules={[{ required: true, message: "请输入创建数量" }]}>
+                  <InputNumber min={1} max={10} style={{ width: "100%" }} />
                 </Form.Item>
 
                 <Form.Item label="主机位置" name="host_id">
@@ -1016,8 +1016,8 @@ const VirtualMachineList: React.FC = () => {
                     min={512}
                     max={65536}
                     step={512}
-                    marks={{ 4096: '4GB', 8192: '8GB', 16384: '16GB', 32768: '32GB' }}
-                    tooltip={{ formatter: (v) => v ? `${(v / 1024).toFixed(1)} GB` : '' }}
+                    marks={{ 4096: "4GB", 8192: "8GB", 16384: "16GB", 32768: "32GB" }}
+                    tooltip={{ formatter: (v) => v ? `${(v / 1024).toFixed(1)} GB` : "" }}
                   />
                 </Form.Item>
               </Col>
@@ -1027,7 +1027,7 @@ const VirtualMachineList: React.FC = () => {
             <Row gutter={16}>
               <Col xs={24} md={12}>
                 <Form.Item label="每颗 CPU 核数" name="cpu_core" initialValue={4}>
-                  <Slider min={1} max={32} marks={{ 1: '1', 8: '8', 16: '16', 32: '32' }} />
+                  <Slider min={1} max={32} marks={{ 1: "1", 8: "8", 16: "16", 32: "32" }} />
                 </Form.Item>
               </Col>
               <Col xs={24} md={12}>
@@ -1036,8 +1036,8 @@ const VirtualMachineList: React.FC = () => {
                     min={20}
                     max={500}
                     step={10}
-                    marks={{ 20: '20GB', 100: '100GB', 200: '200GB', 500: '500GB' }}
-                    tooltip={{ formatter: (v) => v ? `${v} GB` : '' }}
+                    marks={{ 20: "20GB", 100: "100GB", 200: "200GB", 500: "500GB" }}
+                    tooltip={{ formatter: (v) => v ? `${v} GB` : "" }}
                   />
                 </Form.Item>
               </Col>
@@ -1057,13 +1057,13 @@ const VirtualMachineList: React.FC = () => {
       >
         <Spin spinning={loading && !quickConfig}>
           {loading && !quickConfig && (
-            <div style={{ padding: 12, color: 'rgba(0, 0, 0, 0.45)' }}>加载配置中...</div>
+            <div style={{ padding: 12, color: "rgba(0, 0, 0, 0.45)" }}>加载配置中...</div>
           )}
           <Form form={quickCreateForm} layout="vertical">
             {quickConfig && (
-              <div style={{ marginBottom: 16, padding: 12, background: '#f5f5f5', borderRadius: 4 }}>
+              <div style={{ marginBottom: 16, padding: 12, background: "#f5f5f5", borderRadius: 4 }}>
                 <div><strong>已加载的默认配置：</strong></div>
-                <div style={{ marginTop: 8, fontSize: '12px', color: 'var(--theme-text-tertiary, #666)' }}>
+                <div style={{ marginTop: 8, fontSize: "12px", color: "var(--theme-text-tertiary, #666)" }}>
                   • VDI 服务器: 自动选择可用服务器<br />
                   • 资源组: {quickConfig.resourceGroupName}<br />
                   • 虚拟机: {DEFAULT_RESOURCE_NAME}<br />
@@ -1075,7 +1075,7 @@ const VirtualMachineList: React.FC = () => {
             )}
 
             <Form.Item label="创建数量" name="count" initialValue={1} rules={[{ required: true }]}>
-              <InputNumber min={1} max={10} style={{ width: '100%' }} />
+              <InputNumber min={1} max={10} style={{ width: "100%" }} />
             </Form.Item>
           </Form>
         </Spin>
@@ -1090,7 +1090,7 @@ const VirtualMachineList: React.FC = () => {
         confirmLoading={loading}
       >
         <Form form={bindUserForm} layout="vertical">
-          <Form.Item label="用户" name="username" rules={[{ required: true, message: '请选择用户' }]}>
+          <Form.Item label="用户" name="username" rules={[{ required: true, message: "请选择用户" }]}>
             <Select
               showSearch
               placeholder="请输入用户名或昵称搜索"
@@ -1102,10 +1102,10 @@ const VirtualMachineList: React.FC = () => {
               }}
               onFocus={() => {
                 if (systemUsers.length === 0) {
-                  loadSystemUsers('');
+                  loadSystemUsers("");
                 }
               }}
-              notFoundContent={userSearchLoading ? '搜索中...' : '未找到用户'}
+              notFoundContent={userSearchLoading ? "搜索中..." : "未找到用户"}
             >
               {systemUsers.map(user => (
                 <Select.Option key={user.id} value={user.username}>

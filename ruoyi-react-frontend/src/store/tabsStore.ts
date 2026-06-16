@@ -5,9 +5,9 @@
  * 持久化策略：localStorage（tab 信息非敏感，可以持久化）
  */
 
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import type { TabItem } from '@/types/layout';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import type { TabItem } from "@/types/layout";
 
 interface TabsState {
 	tabs: TabItem[];
@@ -32,7 +32,7 @@ interface TabsActions {
 type TabsStore = TabsState & TabsActions;
 
 const MAX_TABS = 50;
-const DASHBOARD_KEY = '/dashboard';
+const DASHBOARD_KEY = "/dashboard";
 
 // 检查是否为仪表盘标签
 const isDashboardTab = (key: string): boolean => key === DASHBOARD_KEY;
@@ -42,7 +42,7 @@ export const useTabsStore = create<TabsStore>()(
 		(set, get) => ({
 			// 初始状态
 			tabs: [],
-			activeTab: '',
+			activeTab: "",
 			history: [],
 
 			// 添加标签
@@ -170,7 +170,7 @@ export const useTabsStore = create<TabsStore>()(
 
 				set({
 					tabs: pinnedTabs,
-					activeTab: pinnedTabs.length > 0 ? pinnedTabs[0].key : '',
+					activeTab: pinnedTabs.length > 0 ? pinnedTabs[0].key : "",
 					history: pinnedTabs.map((t) => t.key),
 				});
 			},
@@ -232,7 +232,7 @@ export const useTabsStore = create<TabsStore>()(
 
 				// 如果更新了 pinned 状态，需要重新排序
 				const updatedTab = newTabs.find(t => t.key === key);
-				if (updatedTab && 'pinned' in updates) {
+				if (updatedTab && "pinned" in updates) {
 					// 重新排序：固定标签在前，非固定标签在后
 					const sortedTabs = newTabs.sort((a, b) => {
 						if (a.pinned && !b.pinned) return -1;
@@ -263,13 +263,13 @@ export const useTabsStore = create<TabsStore>()(
 			reset: () => {
 				set({
 					tabs: [],
-					activeTab: '',
+					activeTab: "",
 					history: [],
 				});
 			},
 		}),
 		{
-			name: 'tabs-storage',
+			name: "tabs-storage",
 			partialize: (state) => ({
 				tabs: state.tabs,
 				activeTab: state.activeTab,

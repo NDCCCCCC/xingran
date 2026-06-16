@@ -3,12 +3,12 @@
  * 知识文章模态框组件
  */
 
-import { Modal, Form, Input, Select, Row, Col, Space } from 'antd';
-import { EyeOutlined, LikeOutlined } from '@ant-design/icons';
-import type { FormInstance } from 'antd/es/form';
-import type { KnowledgeArticle, KnowledgeCategory, KnowledgeTag } from '@/lib/knowledgeApi';
-import { KnowledgeArticleStatus } from '@/lib/knowledgeApi';
-import { STATUS_OPTIONS } from '../constants';
+import { Modal, Form, Input, Select, Row, Col, Space } from "antd";
+import { EyeOutlined, LikeOutlined } from "@ant-design/icons";
+import type { FormInstance } from "antd/es/form";
+import type { KnowledgeArticle, KnowledgeCategory, KnowledgeTag } from "@/lib/knowledgeApi";
+import { KnowledgeArticleStatus } from "@/lib/knowledgeApi";
+import { STATUS_OPTIONS } from "../constants";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -35,7 +35,7 @@ export function EditModal({
 
   return (
     <Modal
-      title={editingRecord ? '编辑文章' : '新增文章'}
+      title={editingRecord ? "编辑文章" : "新增文章"}
       open={open}
       onOk={() => onOk(form)}
       onCancel={() => {
@@ -49,7 +49,7 @@ export function EditModal({
         <Form.Item
           name="title"
           label="文章标题"
-          rules={[{ required: true, message: '请输入文章标题' }]}
+          rules={[{ required: true, message: "请输入文章标题" }]}
         >
           <Input placeholder="请输入文章标题" className="user-form-input" />
         </Form.Item>
@@ -59,7 +59,7 @@ export function EditModal({
             <Form.Item
               name="categoryId"
               label="文章分类"
-              rules={[{ required: true, message: '请选择文章分类' }]}
+              rules={[{ required: true, message: "请选择文章分类" }]}
             >
               <Select placeholder="请选择文章分类" className="user-form-input">
                 {flatCategories.map((cat) => (
@@ -74,7 +74,7 @@ export function EditModal({
             <Form.Item
               name="status"
               label="状态"
-              rules={[{ required: true, message: '请选择状态' }]}
+              rules={[{ required: true, message: "请选择状态" }]}
             >
               <Select placeholder="请选择状态" className="user-form-input">
                 {STATUS_OPTIONS.map((opt) => (
@@ -86,7 +86,7 @@ export function EditModal({
         </Row>
 
         <Form.Item name="tagIds" label="标签">
-          <Select mode="tags" placeholder="请选择标签" style={{ width: '100%' }} className="user-form-input">
+          <Select mode="tags" placeholder="请选择标签" style={{ width: "100%" }} className="user-form-input">
             {tags.map((tag) => (
               <Option key={tag.id} value={tag.id}>
                 {tag.tagName}
@@ -102,7 +102,7 @@ export function EditModal({
         <Form.Item
           name="content"
           label="文章内容"
-          rules={[{ required: true, message: '请输入文章内容' }]}
+          rules={[{ required: true, message: "请输入文章内容" }]}
         >
           <TextArea rows={10} placeholder="请输入文章内容（支持Markdown格式）" />
         </Form.Item>
@@ -141,7 +141,7 @@ export function PreviewModal({ open, previewRecord, onClose }: PreviewModalProps
               <strong>摘要：</strong>{previewRecord.summary}
             </div>
           )}
-          <div className="prose max-w-none" style={{ whiteSpace: 'pre-wrap' }}>
+          <div className="prose max-w-none" style={{ whiteSpace: "pre-wrap" }}>
             {previewRecord.content}
           </div>
         </div>

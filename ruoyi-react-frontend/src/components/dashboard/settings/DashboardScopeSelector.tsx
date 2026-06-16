@@ -2,10 +2,10 @@
  * 仪表盘可见范围选择器
  * 根据用户数据范围权限动态显示可用选项
  */
-import { useMemo } from 'react';
-import { Form, Select, Switch, Space } from 'antd';
-import { useAuthStore } from '@/store/authStore';
-import type { DashboardScope } from '@/types/dashboard';
+import { useMemo } from "react";
+import { Form, Select, Switch, Space } from "antd";
+import { useAuthStore } from "@/store/authStore";
+import type { DashboardScope } from "@/types/dashboard";
 
 interface DashboardScopeSelectorProps {
 	value?: {
@@ -28,7 +28,7 @@ export const DashboardScopeSelector: React.FC<DashboardScopeSelectorProps> = ({
 	// 获取用户数据范围
 	const getDataScope = () => {
 		// 从用户角色获取数据范围
-		return user?.dataScope || 'dept';
+		return user?.dataScope || "dept";
 	};
 
 	const dataScope = getDataScope();
@@ -36,20 +36,20 @@ export const DashboardScopeSelector: React.FC<DashboardScopeSelectorProps> = ({
 	// 构建可用选项
 	const scopeOptions = useMemo(() => {
 		const options = [
-			{ label: '私有（仅自己可见）', value: 'private' },
+			{ label: "私有（仅自己可见）", value: "private" },
 		];
 
 		// 部门可见
 		options.push({
-			label: dataScope === 'all' ? '部门可见（可选择部门）' : '部门可见（本部门）',
-			value: 'dept',
+			label: dataScope === "all" ? "部门可见（可选择部门）" : "部门可见（本部门）",
+			value: "dept",
 		});
 
 		// 全局可见仅管理员可设置
 		if (isAdmin) {
 			options.push({
-				label: '全局可见（所有人）',
-				value: 'global',
+				label: "全局可见（所有人）",
+				value: "global",
 			});
 		}
 
@@ -62,8 +62,8 @@ export const DashboardScopeSelector: React.FC<DashboardScopeSelectorProps> = ({
 			isSystem: value?.isSystem || false,
 		};
 
-		if (scope === 'dept') {
-			if (dataScope === 'all') {
+		if (scope === "dept") {
+			if (dataScope === "all") {
 				// 管理员可以设置部门，这里暂时使用用户部门
 				newValue.deptId = user?.deptId;
 			} else {
@@ -77,13 +77,13 @@ export const DashboardScopeSelector: React.FC<DashboardScopeSelectorProps> = ({
 
 	const handleIsSystemChange = (isSystem: boolean) => {
 		const newValue = {
-			scope: value?.scope || 'private',
+			scope: value?.scope || "private",
 			isSystem,
 		};
 
 		// 系统仪表盘必须是全局可见的
 		if (isSystem) {
-			newValue.scope = 'global';
+			newValue.scope = "global";
 		}
 
 		onChange(newValue);
@@ -93,14 +93,14 @@ export const DashboardScopeSelector: React.FC<DashboardScopeSelectorProps> = ({
 	const showSystemOption = isAdmin;
 
 	return (
-		<Space direction="vertical" style={{ width: '100%' }}>
+		<Space direction="vertical" style={{ width: "100%" }}>
 			<Form.Item label="可见范围" style={{ marginBottom: 8 }}>
 				<Select
-					value={value?.scope || 'private'}
+					value={value?.scope || "private"}
 					onChange={handleScopeChange}
 					options={scopeOptions}
-					style={{ width: '100%' }}
-					disabled={disabled || (value?.isSystem && value?.scope === 'global')}
+					style={{ width: "100%" }}
+					disabled={disabled || (value?.isSystem && value?.scope === "global")}
 				/>
 			</Form.Item>
 
@@ -113,7 +113,7 @@ export const DashboardScopeSelector: React.FC<DashboardScopeSelectorProps> = ({
 						checkedChildren="是"
 						unCheckedChildren="否"
 					/>
-					<div style={{ color: 'var(--theme-text-tertiary, #999)', fontSize: 12, marginTop: 4 }}>
+					<div style={{ color: "var(--theme-text-tertiary, #999)", fontSize: 12, marginTop: 4 }}>
 						系统仪表盘将作为无默认仪表盘用户的兜底选项
 					</div>
 				</Form.Item>

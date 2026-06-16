@@ -3,10 +3,10 @@
  * 节假日数据管理 Hook
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import { message } from 'antd';
-import type { Holiday } from '@/lib/dutyApi';
-import { getHolidayList, getHolidayYears } from '@/lib/dutyApi';
+import { useState, useCallback, useEffect } from "react";
+import { message } from "antd";
+import type { Holiday } from "@/lib/dutyApi";
+import { getHolidayList, getHolidayYears } from "@/lib/dutyApi";
 
 export interface UseHolidayDataReturn {
   loading: boolean;
@@ -42,7 +42,7 @@ export function useHolidayData(): UseHolidayDataReturn {
       setDataSource(data.data);
       if (y !== undefined) setYear(y);
     } catch (error) {
-      message.error('获取节假日列表失败');
+      message.error("获取节假日列表失败");
     } finally {
       setLoading(false);
     }
@@ -62,7 +62,7 @@ export function useHolidayData(): UseHolidayDataReturn {
         fetchList(latestYear);
       }
     } catch (error) {
-      console.error('获取年份列表失败:', error);
+      console.error("获取年份列表失败:", error);
     }
   }, [year, fetchList]);
 

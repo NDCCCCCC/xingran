@@ -4,9 +4,9 @@
  *
  * 提供友好的下拉选择界面，让用户选择API端点而非手动输入
  */
-import { useState, useEffect, useCallback } from 'react';
-import { Select, Tag, Space, Spin, Empty } from 'antd';
-import type { SelectProps } from 'antd';
+import { useState, useEffect, useCallback } from "react";
+import { Select, Tag, Space, Spin, Empty } from "antd";
+import type { SelectProps } from "antd";
 import {
 	FileTextOutlined,
 	CloudServerOutlined,
@@ -22,9 +22,9 @@ import {
 	ClockCircleOutlined,
 	SettingOutlined,
 	UsergroupAddOutlined,
-} from '@ant-design/icons';
-import { dashboardService } from '@/services/dashboardService';
-import type { EndpointCategory, EndpointDetail, WidgetType } from '@/types/dashboard';
+} from "@ant-design/icons";
+import { dashboardService } from "@/services/dashboardService";
+import type { EndpointCategory, EndpointDetail, WidgetType } from "@/types/dashboard";
 
 // 图标映射
 const iconMap: Record<string, React.ComponentType> = {
@@ -44,7 +44,7 @@ const iconMap: Record<string, React.ComponentType> = {
 	UsergroupAddOutlined,
 };
 
-interface EndpointSelectorProps extends Omit<SelectProps<any>, 'options' | 'children' | 'onChange'> {
+interface EndpointSelectorProps extends Omit<SelectProps<any>, "options" | "children" | "onChange"> {
 	/** 选中的端点路由 */
 	value?: string;
 	/** 变化回调 */
@@ -83,7 +83,7 @@ export const EndpointSelector: React.FC<EndpointSelectorProps> = ({
 				setCategories(data);
 			}
 		} catch (error) {
-			console.error('加载API端点列表失败:', error);
+			console.error("加载API端点列表失败:", error);
 		} finally {
 			setLoading(false);
 		}
@@ -112,16 +112,16 @@ export const EndpointSelector: React.FC<EndpointSelectorProps> = ({
 	// 获取方法标签颜色
 	const getMethodColor = (method: string): string => {
 		switch (method.toUpperCase()) {
-			case 'GET':
-				return 'blue';
-			case 'POST':
-				return 'green';
-			case 'PUT':
-				return 'orange';
-			case 'DELETE':
-				return 'red';
+			case "GET":
+				return "blue";
+			case "POST":
+				return "green";
+			case "PUT":
+				return "orange";
+			case "DELETE":
+				return "red";
 			default:
-				return 'default';
+				return "default";
 		}
 	};
 
@@ -168,14 +168,14 @@ export const EndpointSelector: React.FC<EndpointSelectorProps> = ({
 						value={endpoint.route}
 						label={endpoint.displayName}
 					>
-						<Space style={{ justifyContent: 'space-between', width: '100%' }}>
+						<Space style={{ justifyContent: "space-between", width: "100%" }}>
 							<Space>
 								<Tag color={getMethodColor(endpoint.method)} variant="filled">
 									{endpoint.method}
 								</Tag>
 								<span>{endpoint.displayName}</span>
 							</Space>
-							<span style={{ color: 'var(--theme-text-tertiary, #999)', fontSize: 12 }}>{endpoint.route}</span>
+							<span style={{ color: "var(--theme-text-tertiary, #999)", fontSize: 12 }}>{endpoint.route}</span>
 						</Space>
 					</Select.Option>
 				))}
@@ -193,8 +193,8 @@ export const EndpointSelector: React.FC<EndpointSelectorProps> = ({
 			optionFilterProp="label"
 			filterOption={(input, option) => {
 				// 支持搜索显示名称和路由
-				const label = (option?.label as string) || '';
-				const route = option?.value as string || '';
+				const label = (option?.label as string) || "";
+				const route = option?.value as string || "";
 				return (
 					label.toLowerCase().includes(input.toLowerCase()) ||
 					route.toLowerCase().includes(input.toLowerCase())

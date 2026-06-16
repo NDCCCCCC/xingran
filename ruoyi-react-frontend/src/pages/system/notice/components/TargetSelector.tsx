@@ -1,6 +1,6 @@
-import { Spin, Tree, Checkbox, Select } from 'antd';
-import type { DataNode } from 'antd/es/tree';
-import type { Target } from '../hooks/useTargetSelector';
+import { Spin, Tree, Checkbox, Select } from "antd";
+import type { DataNode } from "antd/es/tree";
+import type { Target } from "../hooks/useTargetSelector";
 
 interface TargetSelectorProps {
   targetType: number;
@@ -55,7 +55,7 @@ export const TargetSelector: React.FC<TargetSelectorProps> = ({
               onDeptChange(keys);
             }}
             treeData={deptTree as DataNode[]}
-            fieldNames={{ title: 'title', key: 'key', children: 'children' }}
+            fieldNames={{ title: "title", key: "key", children: "children" }}
           />
         </div>
         <div className="mt-2 text-sm text-gray-500">已选择 {targetDepts.length} 个部门（包含子部门）</div>

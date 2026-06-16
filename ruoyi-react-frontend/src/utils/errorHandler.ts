@@ -1,7 +1,7 @@
-import { message } from 'antd';
-import { useAuthStore } from '@/store/authStore';
-import { clearPublicKeyCache } from './sm2';
-import { LOGIN } from '@/constants/routes';
+import { message } from "antd";
+import { useAuthStore } from "@/store/authStore";
+import { clearPublicKeyCache } from "./sm2";
+import { LOGIN } from "@/constants/routes";
 
 // ============================================================================
 // 向后兼容性重新导出
@@ -14,8 +14,8 @@ import { LOGIN } from '@/constants/routes';
 // 这些导出可能在未来版本中移除。
 // ============================================================================
 
-export { isFormValidationError } from '@/types/common';
-export type { FormFieldError } from '@/types/common';
+export { isFormValidationError } from "@/types/common";
+export type { FormFieldError } from "@/types/common";
 
 // 自定义错误类型，带有额外属性
 interface EnhancedError extends Error {
@@ -67,11 +67,11 @@ export interface ApiResponseData {
  * 从错误对象中提取错误消息
  */
 function extractErrorMessage(error: unknown): string {
-  if (typeof error === 'string') {
+  if (typeof error === "string") {
     return error;
   }
 
-  if (error && typeof error === 'object') {
+  if (error && typeof error === "object") {
     const err = error as ErrorResponse;
     return err?.response?.data?.message
       ?? err?.response?.data?.msg
@@ -79,10 +79,10 @@ function extractErrorMessage(error: unknown): string {
       ?? err?.message
       ?? err?.msg
       ?? err?.error
-      ?? '操作失败';
+      ?? "操作失败";
   }
 
-  return '操作失败';
+  return "操作失败";
 }
 
 /**
@@ -179,16 +179,16 @@ export async function withErrorHandling<T>(
  * 默认错误消息映射
  */
 const DEFAULT_ERROR_MESSAGES: Record<HttpErrorType, string> = {
-  [HttpErrorType.BAD_REQUEST]: '请求参数错误',
-  [HttpErrorType.UNAUTHORIZED]: '登录已过期，请重新登录',
-  [HttpErrorType.FORBIDDEN]: '没有权限访问',
-  [HttpErrorType.NOT_FOUND]: '请求的资源不存在',
-  [HttpErrorType.METHOD_NOT_ALLOWED]: '请求方法不允许',
-  [HttpErrorType.CONFLICT]: '数据冲突，请刷新后重试',
-  [HttpErrorType.INTERNAL_ERROR]: '服务器内部错误',
-  [HttpErrorType.NOT_IMPLEMENTED]: '功能未实现',
-  [HttpErrorType.BAD_GATEWAY]: '网关错误',
-  [HttpErrorType.SERVICE_UNAVAILABLE]: '服务暂时不可用',
+  [HttpErrorType.BAD_REQUEST]: "请求参数错误",
+  [HttpErrorType.UNAUTHORIZED]: "登录已过期，请重新登录",
+  [HttpErrorType.FORBIDDEN]: "没有权限访问",
+  [HttpErrorType.NOT_FOUND]: "请求的资源不存在",
+  [HttpErrorType.METHOD_NOT_ALLOWED]: "请求方法不允许",
+  [HttpErrorType.CONFLICT]: "数据冲突，请刷新后重试",
+  [HttpErrorType.INTERNAL_ERROR]: "服务器内部错误",
+  [HttpErrorType.NOT_IMPLEMENTED]: "功能未实现",
+  [HttpErrorType.BAD_GATEWAY]: "网关错误",
+  [HttpErrorType.SERVICE_UNAVAILABLE]: "服务暂时不可用",
 };
 
 /**
@@ -205,8 +205,8 @@ export function handleHttpResponseError(
   const errorMessage = responseData?.message || DEFAULT_ERROR_MESSAGES[errorType];
 
   // 特殊处理 400 错误中的 SM2 解密失败
-  if (status === 400 && (errorMessage.includes('SM2') || errorMessage.includes('解密'))) {
-    console.warn('[ErrorHandler] SM2 解密失败，清除公钥缓存');
+  if (status === 400 && (errorMessage.includes("SM2") || errorMessage.includes("解密"))) {
+    console.warn("[ErrorHandler] SM2 解密失败，清除公钥缓存");
     clearPublicKeyCache();
   }
 
@@ -230,9 +230,9 @@ export function handleHttpResponseError(
  * @returns Error 对象
  */
 export function handleNetworkError(error: unknown): Error {
-  const errorMessage = (error as { code?: string })?.code === 'ECONNABORTED'
-    ? '请求超时，请检查网络连接'
-    : '网络异常，请检查网络连接';
+  const errorMessage = (error as { code?: string })?.code === "ECONNABORTED"
+    ? "请求超时，请检查网络连接"
+    : "网络异常，请检查网络连接";
 
   message.error(errorMessage);
 
@@ -247,10 +247,10 @@ export function handleNetworkError(error: unknown): Error {
  * @returns Error 对象
  */
 export function handleParseError(error: unknown): Error {
-  const errorMessage = '响应解析失败';
+  const errorMessage = "响应解析失败";
 
   message.error(errorMessage);
-  console.error('[ErrorHandler] Response parse error:', error);
+  console.error("[ErrorHandler] Response parse error:", error);
 
   const parseError = new Error(errorMessage);
   (parseError as EnhancedError).originalError = error;
@@ -305,7 +305,7 @@ function toError(error: unknown): Error {
   if (error instanceof Error) {
     return error;
   }
-  if (typeof error === 'string') {
+  if (typeof error === "string") {
     return new Error(error);
   }
   return new Error(String(error));

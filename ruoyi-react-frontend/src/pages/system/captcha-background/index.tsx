@@ -3,21 +3,21 @@
  * 验证码背景管理页面
  */
 
-import { useEffect } from 'react';
-import type { FC } from 'react';
-import { Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic } from 'antd';
+import { useEffect } from "react";
+import type { FC } from "react";
+import { Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic } from "antd";
 import {
   PlusOutlined,
   SearchOutlined,
   ReloadOutlined,
   UploadOutlined,
-} from '@ant-design/icons';
-import type { CaptchaBackground } from '@/types/captcha';
-import { useCaptchaData, useCaptchaModals } from './hooks';
-import { getCaptchaColumns } from './columns';
-import { CaptchaUploadModal, CaptchaEditModal } from './modals';
-import { SHAPE_OPTIONS, DIFFICULTY_OPTIONS, STATUS_OPTIONS } from './constants';
-import { usePagination } from '@/hooks/usePagination';
+} from "@ant-design/icons";
+import type { CaptchaBackground } from "@/types/captcha";
+import { useCaptchaData, useCaptchaModals } from "./hooks";
+import { getCaptchaColumns } from "./columns";
+import { CaptchaUploadModal, CaptchaEditModal } from "./modals";
+import { SHAPE_OPTIONS, DIFFICULTY_OPTIONS, STATUS_OPTIONS } from "./constants";
+import { usePagination } from "@/hooks/usePagination";
 
 const { Option } = Select;
 
@@ -89,7 +89,7 @@ const CaptchaBackgroundManagement: FC = () => {
               <Statistic
                 title="启用数量"
                 value={statistics.enabledCount}
-                styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
+                styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
               />
             </Card>
           </Col>
@@ -98,7 +98,7 @@ const CaptchaBackgroundManagement: FC = () => {
               <Statistic
                 title="禁用数量"
                 value={statistics.disabledCount}
-                styles={{ content: { color: 'var(--theme-error, #cf1322)' } }}
+                styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
               />
             </Card>
           </Col>

@@ -3,7 +3,7 @@
  * User Settings Page (Enhanced - Light/Dark Mode & Custom Colors)
  */
 
-import { useEffect, useState, type FC } from 'react';
+import { useEffect, useState, type FC } from "react";
 import {
 	Card,
 	Form,
@@ -17,19 +17,19 @@ import {
 	ColorPicker,
 	Row,
 	Col,
-} from 'antd';
+} from "antd";
 import {
 	SunOutlined,
 	MoonOutlined,
 	BgColorsOutlined,
 	MenuOutlined,
-} from '@ant-design/icons';
-import { useSettingsStore } from '@/store/settingsStore';
-import type { UserPreferences } from '@/types/config';
-import { themePresets } from '@/design-system/themes';
-import type { ColorPickerProps } from 'antd';
-import { applyPrimaryColor, applySidebarBackgroundColor } from '@/design-system/themes';
-import { getDefaultThemeConfig } from '@/lib/defaultThemeApi';
+} from "@ant-design/icons";
+import { useSettingsStore } from "@/store/settingsStore";
+import type { UserPreferences } from "@/types/config";
+import { themePresets } from "@/design-system/themes";
+import type { ColorPickerProps } from "antd";
+import { applyPrimaryColor, applySidebarBackgroundColor } from "@/design-system/themes";
+import { getDefaultThemeConfig } from "@/lib/defaultThemeApi";
 
 const { Option } = Select;
 
@@ -39,8 +39,8 @@ const SettingsPage: FC = () => {
 
 	// 本地状态存储颜色值（字符串格式）
 	// 初值为空字符串，组件挂载后从用户偏好/admin 默认配置填充，避免硬编码 fallback
-	const [primaryColor, setPrimaryColor] = useState<string>('');
-	const [sidebarColor, setSidebarColor] = useState<string>('');
+	const [primaryColor, setPrimaryColor] = useState<string>("");
+	const [sidebarColor, setSidebarColor] = useState<string>("");
 
 	// 加载设置
 	useEffect(() => {
@@ -55,10 +55,10 @@ const SettingsPage: FC = () => {
 			form.setFieldsValue(preferences);
 
 			// 同步颜色值到本地状态
-			if (typeof preferences.theme.customColors?.primary === 'string') {
+			if (typeof preferences.theme.customColors?.primary === "string") {
 				setPrimaryColor(preferences.theme.customColors.primary);
 			}
-			if (typeof preferences.theme.customColors?.sidebar === 'string') {
+			if (typeof preferences.theme.customColors?.sidebar === "string") {
 				setSidebarColor(preferences.theme.customColors.sidebar);
 			}
 		}
@@ -82,9 +82,9 @@ const SettingsPage: FC = () => {
 			};
 
 			await updatePreferences(processedValues);
-			message.success('设置保存成功');
+			message.success("设置保存成功");
 		} catch (error) {
-			message.error('设置保存失败');
+			message.error("设置保存失败");
 		}
 	};
 
@@ -106,14 +106,14 @@ const SettingsPage: FC = () => {
 			});
 
 			// 颜色取管理员默认自定义颜色（如有），否则保持当前用户偏好
-			if (typeof defaultTheme.customColors?.primary === 'string') {
+			if (typeof defaultTheme.customColors?.primary === "string") {
 				setPrimaryColor(defaultTheme.customColors.primary);
-			} else if (typeof preferences.theme.customColors?.primary === 'string') {
+			} else if (typeof preferences.theme.customColors?.primary === "string") {
 				setPrimaryColor(preferences.theme.customColors.primary);
 			}
-			if (typeof defaultTheme.customColors?.sidebar === 'string') {
+			if (typeof defaultTheme.customColors?.sidebar === "string") {
 				setSidebarColor(defaultTheme.customColors.sidebar);
-			} else if (typeof preferences.theme.customColors?.sidebar === 'string') {
+			} else if (typeof preferences.theme.customColors?.sidebar === "string") {
 				setSidebarColor(preferences.theme.customColors.sidebar);
 			}
 
@@ -124,13 +124,13 @@ const SettingsPage: FC = () => {
 			// 获取失败时回退到当前用户偏好
 			form.resetFields();
 			form.setFieldsValue(preferences);
-			if (typeof preferences.theme.customColors?.primary === 'string') {
+			if (typeof preferences.theme.customColors?.primary === "string") {
 				setPrimaryColor(preferences.theme.customColors.primary);
 			}
-			if (typeof preferences.theme.customColors?.sidebar === 'string') {
+			if (typeof preferences.theme.customColors?.sidebar === "string") {
 				setSidebarColor(preferences.theme.customColors.sidebar);
 			}
-			message.warning('获取系统默认主题失败，已重置为当前保存值');
+			message.warning("获取系统默认主题失败，已重置为当前保存值");
 		}
 	};
 
@@ -141,43 +141,43 @@ const SettingsPage: FC = () => {
 			const defaultTheme = await getDefaultThemeConfig();
 
 			// 主色调：管理员默认 > 当前用户偏好 > 保持现状
-			if (typeof defaultTheme.customColors?.primary === 'string') {
+			if (typeof defaultTheme.customColors?.primary === "string") {
 				setPrimaryColor(defaultTheme.customColors.primary);
 				applyPrimaryColor(defaultTheme.customColors.primary);
-			} else if (typeof preferences.theme.customColors?.primary === 'string') {
+			} else if (typeof preferences.theme.customColors?.primary === "string") {
 				setPrimaryColor(preferences.theme.customColors.primary);
 				applyPrimaryColor(preferences.theme.customColors.primary);
 			}
 
 			// 侧边栏色：管理员默认 > 当前用户偏好 > 保持现状
-			if (typeof defaultTheme.customColors?.sidebar === 'string') {
+			if (typeof defaultTheme.customColors?.sidebar === "string") {
 				setSidebarColor(defaultTheme.customColors.sidebar);
 				applySidebarBackgroundColor(defaultTheme.customColors.sidebar);
-			} else if (typeof preferences.theme.customColors?.sidebar === 'string') {
+			} else if (typeof preferences.theme.customColors?.sidebar === "string") {
 				setSidebarColor(preferences.theme.customColors.sidebar);
 				applySidebarBackgroundColor(preferences.theme.customColors.sidebar);
 			}
 
-			form.setFieldValue(['theme', 'customColors'], undefined);
-			message.info('自定义颜色已清除，将使用系统默认主题色');
+			form.setFieldValue(["theme", "customColors"], undefined);
+			message.info("自定义颜色已清除，将使用系统默认主题色");
 		} catch {
 			// 403/网络错误时回退到当前用户偏好，不回退到硬编码
-			if (typeof preferences.theme.customColors?.primary === 'string') {
+			if (typeof preferences.theme.customColors?.primary === "string") {
 				setPrimaryColor(preferences.theme.customColors.primary);
 				applyPrimaryColor(preferences.theme.customColors.primary);
 			}
-			if (typeof preferences.theme.customColors?.sidebar === 'string') {
+			if (typeof preferences.theme.customColors?.sidebar === "string") {
 				setSidebarColor(preferences.theme.customColors.sidebar);
 				applySidebarBackgroundColor(preferences.theme.customColors.sidebar);
 			}
-			form.setFieldValue(['theme', 'customColors'], undefined);
-			message.warning('无法获取管理员默认主题色，已恢复为当前保存的自定义颜色');
+			form.setFieldValue(["theme", "customColors"], undefined);
+			message.warning("无法获取管理员默认主题色，已恢复为当前保存的自定义颜色");
 		}
 	};
 
 	// 主色调变化处理
-	const handlePrimaryColorChange: ColorPickerProps['onChange'] = (color) => {
-		const hexColor = typeof color === 'string' ? color : color.toHexString();
+	const handlePrimaryColorChange: ColorPickerProps["onChange"] = (color) => {
+		const hexColor = typeof color === "string" ? color : color.toHexString();
 
 		// 立即预览
 		applyPrimaryColor(hexColor);
@@ -187,8 +187,8 @@ const SettingsPage: FC = () => {
 	};
 
 	// 侧边栏颜色变化处理
-	const handleSidebarColorChange: ColorPickerProps['onChange'] = (color) => {
-		const hexColor = typeof color === 'string' ? color : color.toHexString();
+	const handleSidebarColorChange: ColorPickerProps["onChange"] = (color) => {
+		const hexColor = typeof color === "string" ? color : color.toHexString();
 
 		// 立即预览
 		applySidebarBackgroundColor(hexColor);
@@ -201,17 +201,17 @@ const SettingsPage: FC = () => {
 	const handlePrimaryColorClear = async () => {
 		try {
 			const defaultTheme = await getDefaultThemeConfig();
-			if (typeof defaultTheme.customColors?.primary === 'string') {
+			if (typeof defaultTheme.customColors?.primary === "string") {
 				setPrimaryColor(defaultTheme.customColors.primary);
 				applyPrimaryColor(defaultTheme.customColors.primary);
 				return;
 			}
 		} catch {
 			// 403/网络错误：继续走用户偏好回退
-			message.warning('无法获取管理员默认主题色');
+			message.warning("无法获取管理员默认主题色");
 		}
 		// 回退到当前用户偏好而非硬编码
-		if (typeof preferences.theme.customColors?.primary === 'string') {
+		if (typeof preferences.theme.customColors?.primary === "string") {
 			setPrimaryColor(preferences.theme.customColors.primary);
 			applyPrimaryColor(preferences.theme.customColors.primary);
 		}
@@ -220,15 +220,15 @@ const SettingsPage: FC = () => {
 	const handleSidebarColorClear = async () => {
 		try {
 			const defaultTheme = await getDefaultThemeConfig();
-			if (typeof defaultTheme.customColors?.sidebar === 'string') {
+			if (typeof defaultTheme.customColors?.sidebar === "string") {
 				setSidebarColor(defaultTheme.customColors.sidebar);
 				applySidebarBackgroundColor(defaultTheme.customColors.sidebar);
 				return;
 			}
 		} catch {
-			message.warning('无法获取管理员默认主题色');
+			message.warning("无法获取管理员默认主题色");
 		}
-		if (typeof preferences.theme.customColors?.sidebar === 'string') {
+		if (typeof preferences.theme.customColors?.sidebar === "string") {
 			setSidebarColor(preferences.theme.customColors.sidebar);
 			applySidebarBackgroundColor(preferences.theme.customColors.sidebar);
 		}
@@ -259,9 +259,9 @@ const SettingsPage: FC = () => {
 					{/* 主题模式 - 明暗切换 */}
 					<Form.Item
 						label="明暗模式"
-						name={['theme', 'mode']}
+						name={["theme", "mode"]}
 						tooltip="选择系统的颜色模式"
-						rules={[{ required: true, message: '请选择明暗模式' }]}
+						rules={[{ required: true, message: "请选择明暗模式" }]}
 					>
 						<Radio.Group>
 							<Radio.Button value="light">
@@ -276,9 +276,9 @@ const SettingsPage: FC = () => {
 					{/* 主题风格 */}
 					<Form.Item
 						label="主题风格"
-						name={['theme', 'style']}
+						name={["theme", "style"]}
 						tooltip="选择系统的视觉风格"
-						rules={[{ required: true, message: '请选择主题风格' }]}
+						rules={[{ required: true, message: "请选择主题风格" }]}
 					>
 						<Select>
 							{themePresets.map((preset) => (
@@ -311,11 +311,11 @@ const SettingsPage: FC = () => {
 							<Col>
 								<div
 									style={{
-										width: '40px',
-										height: '40px',
-										borderRadius: '8px',
+										width: "40px",
+										height: "40px",
+										borderRadius: "8px",
 										background: primaryColor,
-										border: '1px solid rgba(0,0,0,0.1)',
+										border: "1px solid rgba(0,0,0,0.1)",
 									}}
 								/>
 							</Col>
@@ -341,11 +341,11 @@ const SettingsPage: FC = () => {
 							<Col>
 								<div
 									style={{
-										width: '40px',
-										height: '40px',
-										borderRadius: '8px',
+										width: "40px",
+										height: "40px",
+										borderRadius: "8px",
 										background: sidebarColor,
-										border: '1px solid rgba(0,0,0,0.1)',
+										border: "1px solid rgba(0,0,0,0.1)",
 									}}
 								/>
 							</Col>
@@ -363,9 +363,9 @@ const SettingsPage: FC = () => {
 					{/* 布局类型 */}
 					<Form.Item
 						label="布局类型"
-						name={['layout', 'type']}
+						name={["layout", "type"]}
 						tooltip="选择系统的布局方式"
-						rules={[{ required: true, message: '请选择布局类型' }]}
+						rules={[{ required: true, message: "请选择布局类型" }]}
 					>
 						<Select>
 							<Option value="classic">经典布局</Option>
@@ -377,9 +377,9 @@ const SettingsPage: FC = () => {
 					{/* 密度模式 */}
 					<Form.Item
 						label="密度模式"
-						name={['layout', 'density']}
+						name={["layout", "density"]}
 						tooltip="选择界面的紧凑程度"
-						rules={[{ required: true, message: '请选择密度模式' }]}
+						rules={[{ required: true, message: "请选择密度模式" }]}
 					>
 						<Select>
 							<Option value="compact">紧凑</Option>
@@ -391,7 +391,7 @@ const SettingsPage: FC = () => {
 					{/* 侧边栏折叠 */}
 					<Form.Item
 						label="默认折叠侧边栏"
-						name={['layout', 'sidebar', 'collapsed']}
+						name={["layout", "sidebar", "collapsed"]}
 						valuePropName="checked"
 						tooltip="默认折叠侧边栏以节省空间"
 					>
@@ -403,9 +403,9 @@ const SettingsPage: FC = () => {
 					{/* 默认分页大小 */}
 					<Form.Item
 						label="默认分页大小"
-						name={['data', 'defaultPageSize']}
+						name={["data", "defaultPageSize"]}
 						tooltip="列表页面默认每页显示的数据条数"
-						rules={[{ required: true, message: '请选择默认分页大小' }]}
+						rules={[{ required: true, message: "请选择默认分页大小" }]}
 					>
 						<Select>
 							<Option value={10}>10 条/页</Option>

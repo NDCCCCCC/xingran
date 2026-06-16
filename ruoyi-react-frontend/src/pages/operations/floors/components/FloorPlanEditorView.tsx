@@ -1,5 +1,5 @@
-import type { FC } from 'react';
-import { Card, Button, Space, Spin, Select } from 'antd';
+import type { FC } from "react";
+import { Card, Button, Space, Spin, Select } from "antd";
 import {
   EyeOutlined,
   EditOutlined,
@@ -7,11 +7,11 @@ import {
   ArrowLeftOutlined,
   BuildOutlined,
   AppstoreOutlined,
-} from '@ant-design/icons';
-import type { Floor, Building } from '@/types';
-import { CADFloorPlanEditor } from '@/components/cad-editor';
-import type { FloorPlanData } from '@/components/cad-editor/types';
-import { DepartmentTreeSelect, type TreeNode, type Department } from '@/components/shared/DepartmentTreeSelect';
+} from "@ant-design/icons";
+import type { Floor, Building } from "@/types";
+import { CADFloorPlanEditor } from "@/components/cad-editor";
+import type { FloorPlanData } from "@/components/cad-editor/types";
+import { DepartmentTreeSelect, type TreeNode, type Department } from "@/components/shared/DepartmentTreeSelect";
 
 export interface FloorOption {
   id: string;
@@ -66,28 +66,28 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
     return (
       <div
         style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '60vh',
-          flexDirection: 'column',
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "60vh",
+          flexDirection: "column",
           gap: 16,
         }}
       >
         <Spin size="large" />
-        <span style={{ color: 'var(--theme-text-tertiary, #999)' }}>加载中...</span>
+        <span style={{ color: "var(--theme-text-tertiary, #999)" }}>加载中...</span>
       </div>
     );
   }
 
   return (
-    <div style={{ height: 'calc(100vh - 180px)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: "calc(100vh - 180px)", display: "flex", flexDirection: "column" }}>
       <Card
-        title={`${selectedDeptName || '机构'} - ${selectedBuildingName || currentFloor?.buildingName || '楼宇'} - ${currentFloor.name || `${currentFloor.floorNo}层`} - 平面图编辑`}
+        title={`${selectedDeptName || "机构"} - ${selectedBuildingName || currentFloor?.buildingName || "楼宇"} - ${currentFloor.name || `${currentFloor.floorNo}层`} - 平面图编辑`}
         extra={
           <Space size="middle">
-            <Space size="small" style={{ display: 'flex', alignItems: 'center' }}>
-              <BuildOutlined style={{ color: 'var(--theme-info, #1890ff)' }} />
+            <Space size="small" style={{ display: "flex", alignItems: "center" }}>
+              <BuildOutlined style={{ color: "var(--theme-info, #1890ff)" }} />
               <DepartmentTreeSelect
                 style={{ width: 180 }}
                 placeholder="选择机构"
@@ -99,8 +99,8 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
               />
             </Space>
 
-            <Space size="small" style={{ display: 'flex', alignItems: 'center' }}>
-              <AppstoreOutlined style={{ color: 'var(--theme-purple, #722ed1)' }} />
+            <Space size="small" style={{ display: "flex", alignItems: "center" }}>
+              <AppstoreOutlined style={{ color: "var(--theme-purple, #722ed1)" }} />
               <Select
                 style={{ width: 150 }}
                 placeholder="选择楼宇"
@@ -115,8 +115,8 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
               />
             </Space>
 
-            <Space size="small" style={{ display: 'flex', alignItems: 'center' }}>
-              <AppstoreOutlined style={{ color: 'var(--theme-success, #52c41a)' }} />
+            <Space size="small" style={{ display: "flex", alignItems: "center" }}>
+              <AppstoreOutlined style={{ color: "var(--theme-success, #52c41a)" }} />
               <Select
                 style={{ width: 150 }}
                 placeholder="选择楼层"
@@ -135,7 +135,7 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
               icon={isEditMode ? <EyeOutlined /> : <EditOutlined />}
               onClick={() => onEditModeChange(!isEditMode)}
             >
-              {isEditMode ? '预览模式' : '编辑模式'}
+              {isEditMode ? "预览模式" : "编辑模式"}
             </Button>
             <Button icon={<ReloadOutlined />} onClick={onRefresh} loading={loading}>
               刷新
@@ -145,8 +145,8 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
             </Button>
           </Space>
         }
-        style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
-        styles={{ body: { flex: 1, padding: 0, overflow: 'hidden' } }}
+        style={{ flex: 1, display: "flex", flexDirection: "column" }}
+        styles={{ body: { flex: 1, padding: 0, overflow: "hidden" } }}
       >
         <CADFloorPlanEditor
           floorId={currentFloor.id}

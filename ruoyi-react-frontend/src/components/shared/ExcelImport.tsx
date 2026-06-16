@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import type { FC } from 'react';
+import { useState } from "react";
+import type { FC } from "react";
 import {
   Button,
   Upload,
@@ -11,19 +11,19 @@ import {
   Progress,
   Typography,
   message,
-} from 'antd';
+} from "antd";
 import {
   UploadOutlined,
   DownloadOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   DeleteOutlined,
-} from '@ant-design/icons';
-import type { UploadFile } from 'antd';
-import type { UploadRequestOption } from './FileUpload';
-import { getAuthHeaders } from '@/utils/authHelpers';
-import { excelApi } from '@/lib/opsApi';
-import { MAX_GENERAL_FILE_SIZE } from '@/constants/upload';
+} from "@ant-design/icons";
+import type { UploadFile } from "antd";
+import type { UploadRequestOption } from "./FileUpload";
+import { getAuthHeaders } from "@/utils/authHelpers";
+import { excelApi } from "@/lib/opsApi";
+import { MAX_GENERAL_FILE_SIZE } from "@/constants/upload";
 
 const { Text } = Typography;
 
@@ -82,32 +82,32 @@ const ExcelImport: FC<ExcelImportProps> = ({
         const response = await fetch(templateUrl, { headers });
 
         if (!response.ok) {
-          throw new Error('下载模板失败');
+          throw new Error("下载模板失败");
         }
 
         const filename = `${entityName}_模板.xlsx`;
         await downloadFile(response, filename);
       }
 
-      message.success('模板下载成功');
+      message.success("模板下载成功");
     } catch {
-      message.error('下载模板失败');
+      message.error("下载模板失败");
     }
   };
 
   const beforeUpload = (file: File) => {
     const validTypes = [
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     ];
-    const isExcelType = validTypes.includes(file.type) || file.name.endsWith('.xlsx');
+    const isExcelType = validTypes.includes(file.type) || file.name.endsWith(".xlsx");
     if (!isExcelType) {
-      message.error('只支持 .xlsx 格式。如需导入 .xls 文件，请先用 Excel 或 WPS 另存为 .xlsx 格式');
+      message.error("只支持 .xlsx 格式。如需导入 .xls 文件，请先用 Excel 或 WPS 另存为 .xlsx 格式");
       return Upload.LIST_IGNORE;
     }
 
     const maxSize = MAX_GENERAL_FILE_SIZE;
     if (file.size > maxSize) {
-      message.error('文件大小不能超过 10MB');
+      message.error("文件大小不能超过 10MB");
       return Upload.LIST_IGNORE;
     }
 
@@ -122,22 +122,22 @@ const ExcelImport: FC<ExcelImportProps> = ({
 
     if (file instanceof File || file instanceof Blob) {
       rawFile = file;
-    } else if (typeof file === 'string') {
+    } else if (typeof file === "string") {
       // file 是字符串（URL）的情况，不应该发生在这里
-      onError?.(new Error('不支持URL类型的文件'));
+      onError?.(new Error("不支持URL类型的文件"));
       return;
-    } else if (typeof file === 'object' && file !== null && 'originFileObj' in file) {
+    } else if (typeof file === "object" && file !== null && "originFileObj" in file) {
       // file 是 UploadFile 对象
       rawFile = (file as UploadFile).originFileObj || null;
     }
 
     if (!rawFile) {
-      onError?.(new Error('无法获取文件'));
+      onError?.(new Error("无法获取文件"));
       return;
     }
 
     const formData = new FormData();
-    formData.append('file', rawFile);
+    formData.append("file", rawFile);
 
     setImporting(true);
     setUploadProgress(0);
@@ -173,27 +173,27 @@ const ExcelImport: FC<ExcelImportProps> = ({
             );
           }
         } else {
-          throw new Error(xhr.responseText || '导入失败');
+          throw new Error(xhr.responseText || "导入失败");
         }
       };
 
       xhr.onerror = () => {
         setImporting(false);
-        const error = new Error('网络错误');
+        const error = new Error("网络错误");
         onError?.(error);
-        message.error('导入失败');
+        message.error("导入失败");
       };
 
-      xhr.open('POST', resolvedImportUrl, true);
+      xhr.open("POST", resolvedImportUrl, true);
       const headers = await getAuthHeaders();
-      if (headers['Authorization']) {
-        xhr.setRequestHeader('Authorization', headers['Authorization']);
+      if (headers["Authorization"]) {
+        xhr.setRequestHeader("Authorization", headers["Authorization"]);
       }
       xhr.send(formData);
     } catch {
       setImporting(false);
-      onError?.(new Error('导入失败'));
-      message.error('导入失败');
+      onError?.(new Error("导入失败"));
+      message.error("导入失败");
     }
   };
 
@@ -205,28 +205,28 @@ const ExcelImport: FC<ExcelImportProps> = ({
 
   const errorColumns = [
     {
-      title: '行号',
-      dataIndex: 'row',
-      key: 'row',
+      title: "行号",
+      dataIndex: "row",
+      key: "row",
       width: 80,
     },
     {
-      title: '字段',
-      dataIndex: 'field',
-      key: 'field',
+      title: "字段",
+      dataIndex: "field",
+      key: "field",
       width: 120,
     },
     {
-      title: '值',
-      dataIndex: 'value',
-      key: 'value',
+      title: "值",
+      dataIndex: "value",
+      key: "value",
       width: 150,
       ellipsis: true,
     },
     {
-      title: '错误信息',
-      dataIndex: 'error',
-      key: 'error',
+      title: "错误信息",
+      dataIndex: "error",
+      key: "error",
     },
   ];
 
@@ -239,7 +239,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
       width={800}
       destroyOnHidden
     >
-      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <Alert
           title="导入说明"
           description={
@@ -301,8 +301,8 @@ const ExcelImport: FC<ExcelImportProps> = ({
 
         {importResult && (
           <div>
-            <Space orientation="vertical" style={{ width: '100%' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Space orientation="vertical" style={{ width: "100%" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <Text strong>导入结果</Text>
                 <Button
                   size="small"
@@ -359,7 +359,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
 async function downloadFile(response: Response, filename: string): Promise<void> {
   const blob = await response.blob();
   const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);

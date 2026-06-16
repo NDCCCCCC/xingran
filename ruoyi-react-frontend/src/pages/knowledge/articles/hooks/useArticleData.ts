@@ -3,8 +3,8 @@
  * 知识文章数据管理 Hook
  */
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
-import { message } from 'antd';
+import { useState, useCallback, useEffect, useMemo } from "react";
+import { message } from "antd";
 import {
   getKnowledgeArticleList,
   createKnowledgeArticle,
@@ -13,16 +13,16 @@ import {
   likeKnowledgeArticle,
   type KnowledgeArticle,
   KnowledgeArticleStatus,
-} from '@/lib/knowledgeApi';
+} from "@/lib/knowledgeApi";
 import {
   getKnowledgeCategoryList,
   type KnowledgeCategory,
-} from '@/lib/knowledgeApi';
+} from "@/lib/knowledgeApi";
 import {
   getAllKnowledgeTags,
   type KnowledgeTag,
-} from '@/lib/knowledgeApi';
-import type { UnknownError } from '@/types/common';
+} from "@/lib/knowledgeApi";
+import type { UnknownError } from "@/types/common";
 
 export interface ArticleStatistics {
   total: number;
@@ -111,7 +111,7 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
         totalLikes: list.reduce((sum, a) => sum + (a.likeCount || 0), 0),
       });
     } catch (error) {
-      message.error('获取文章列表失败');
+      message.error("获取文章列表失败");
     } finally {
       setLoading(false);
     }
@@ -122,7 +122,7 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
       const result = await getKnowledgeCategoryList();
       setCategories(result.data || []);
     } catch (error) {
-      console.error('获取分类列表失败:', error);
+      console.error("获取分类列表失败:", error);
     }
   }, []);
 
@@ -131,40 +131,40 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
       const result = await getAllKnowledgeTags();
       setTags(result.data || []);
     } catch (error) {
-      console.error('获取标签列表失败:', error);
+      console.error("获取标签列表失败:", error);
     }
   }, []);
 
   const handleDelete = useCallback(async (id: string) => {
     try {
       await deleteKnowledgeArticle(id);
-      message.success('删除成功');
+      message.success("删除成功");
       fetchList();
     } catch (error: unknown) {
       const err = error as UnknownError;
-      message.error(err.message || '删除失败');
+      message.error(err.message || "删除失败");
     }
   }, [fetchList]);
 
   const handleLike = useCallback(async (id: string) => {
     try {
       await likeKnowledgeArticle(id);
-      message.success('点赞成功');
+      message.success("点赞成功");
       fetchList();
     } catch (error: unknown) {
       const err = error as UnknownError;
-      message.error(err.message || '点赞失败');
+      message.error(err.message || "点赞失败");
     }
   }, [fetchList]);
 
   const handlePublish = useCallback(async (record: KnowledgeArticle) => {
     try {
       await updateKnowledgeArticle(record.id, { status: KnowledgeArticleStatus.Published });
-      message.success('发布成功');
+      message.success("发布成功");
       fetchList();
     } catch (error: unknown) {
       const err = error as UnknownError;
-      message.error(err.message || '发布失败');
+      message.error(err.message || "发布失败");
     }
   }, [fetchList]);
 
@@ -179,10 +179,10 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
     };
     if (editingRecord) {
       await updateKnowledgeArticle(editingRecord.id, articleData);
-      message.success('更新成功');
+      message.success("更新成功");
     } else {
       await createKnowledgeArticle(articleData);
-      message.success('创建成功');
+      message.success("创建成功");
     }
     fetchList();
   }, [fetchList]);

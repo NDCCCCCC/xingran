@@ -3,11 +3,11 @@
  * 统一的批量删除按钮，支持计数显示和二次确认
  */
 
-import { Button, Popconfirm } from 'antd';
-import { DeleteOutlined } from '@ant-design/icons';
-import type { FC } from 'react';
-import { BATCH_DELETE_CONFIRM } from '@/constants/buttonStyles';
-import './ActionButtons.css';
+import { Button, Popconfirm } from "antd";
+import { DeleteOutlined } from "@ant-design/icons";
+import type { FC } from "react";
+import { BATCH_DELETE_CONFIRM } from "@/constants/buttonStyles";
+import "./ActionButtons.css";
 
 interface BatchDeleteButtonProps {
   /** 选中的数量 */

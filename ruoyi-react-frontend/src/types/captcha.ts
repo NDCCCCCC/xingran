@@ -1,10 +1,10 @@
 // 验证码相关类型定义
 
 // 验证码类型（与后端保持一致）
-export type CaptchaType = 'normal' | 'slider';
+export type CaptchaType = "normal" | "slider";
 
 // 验证码开关类型
-export type CaptchaEnabled = 'disabled' | 'normal' | 'slider';
+export type CaptchaEnabled = "disabled" | "normal" | "slider";
 
 // 验证码响应
 export interface CaptchaResponse {
@@ -50,7 +50,7 @@ export interface CaptchaProps {
 // ==================== 验证码背景图管理类型 ====================
 
 // 拼图形状
-export type PieceShape = 'circle' | 'square' | 'star' | 'heart';
+export type PieceShape = "circle" | "square" | "star" | "heart";
 
 // 难度级别
 export type DifficultyLevel = 1 | 2 | 3;  // 1:简单 2:中等 3:困难
@@ -117,4 +117,4 @@ export interface StatisticsResponse {
 }
 
 // 背景图模式
-export type BackgroundMode = 'auto' | 'custom' | 'mixed';
+export type BackgroundMode = "auto" | "custom" | "mixed";

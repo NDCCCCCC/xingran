@@ -3,11 +3,11 @@
  * 设备发现数据管理 Hook
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import { message } from 'antd';
-import type { DeviceDiscovery, Department, BaseResponse, PageResponse } from '@/types';
-import { post } from '@/lib/api';
-import type { DiscoveryStatistics, ModalState } from '../types';
+import { useState, useCallback, useEffect } from "react";
+import { message } from "antd";
+import type { DeviceDiscovery, Department, BaseResponse, PageResponse } from "@/types";
+import { post } from "@/lib/api";
+import type { DiscoveryStatistics, ModalState } from "../types";
 
 export interface UseDiscoveryDataParams {
   current: number;
@@ -62,7 +62,7 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
   const loadDiscoveries = useCallback(async (params: Record<string, unknown> = {}) => {
     setLoading(true);
     try {
-      const result = await post<PageResponse<DeviceDiscovery>>('/network/discoveries/list', {
+      const result = await post<PageResponse<DeviceDiscovery>>("/network/discoveries/list", {
         current: params.current || current,
         pageSize: params.pageSize || pageSize,
       });
@@ -70,7 +70,7 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
       setTotal(result.data?.total || 0);
       updateStatistics(result.data?.list || []);
     } catch (error) {
-      console.error('加载发现任务失败:', error);
+      console.error("加载发现任务失败:", error);
     } finally {
       setLoading(false);
     }
@@ -78,19 +78,19 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
 
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post<PageResponse<DeviceDiscovery>>('/network/discoveries/list', { current: 1, pageSize: 10000 });
+      const result = await post<PageResponse<DeviceDiscovery>>("/network/discoveries/list", { current: 1, pageSize: 10000 });
       const allDiscoveries = result.data?.list || [];
       updateStatistics(allDiscoveries);
     } catch (error) {
-      console.error('加载统计数据失败:', error);
+      console.error("加载统计数据失败:", error);
     }
   }, []);
 
   const updateStatistics = useCallback((discoveryList: DeviceDiscovery[]) => {
-    const pendingCount = discoveryList.filter(d => d.status === 'pending').length;
-    const runningCount = discoveryList.filter(d => d.status === 'running').length;
-    const completedCount = discoveryList.filter(d => d.status === 'completed').length;
-    const failedCount = discoveryList.filter(d => d.status === 'failed').length;
+    const pendingCount = discoveryList.filter(d => d.status === "pending").length;
+    const runningCount = discoveryList.filter(d => d.status === "running").length;
+    const completedCount = discoveryList.filter(d => d.status === "completed").length;
+    const failedCount = discoveryList.filter(d => d.status === "failed").length;
     const totalDevices = discoveryList.reduce((sum, d) => sum + (d.discoveredCount || 0), 0);
     setStatistics({
       total: discoveryList.length,
@@ -104,10 +104,10 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
 
   const loadDepartments = useCallback(async () => {
     try {
-      const result = await post<PageResponse<Department>>('/system/departments/list', { current: 1, pageSize: 1000 });
+      const result = await post<PageResponse<Department>>("/system/departments/list", { current: 1, pageSize: 1000 });
       setDepartments(result.data?.list || []);
     } catch (error) {
-      console.error('加载部门列表失败:', error);
+      console.error("加载部门列表失败:", error);
     }
   }, []);
 
@@ -116,7 +116,7 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
       const result = await post<{ devices: Record<string, unknown>[] }>(`/network/discoveries/${id}/results`, {});
       setDiscoveredDevices(result.data?.devices || []);
     } catch (error) {
-      message.error('获取结果失败');
+      message.error("获取结果失败");
     }
   }, []);
 

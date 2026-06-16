@@ -3,10 +3,10 @@
  * 值班排班数据管理 Hook
  */
 
-import { useState, useCallback } from 'react';
-import { message } from 'antd';
-import dayjs, { type Dayjs } from 'dayjs';
-import type { FormInstance } from 'antd/es/form';
+import { useState, useCallback } from "react";
+import { message } from "antd";
+import dayjs, { type Dayjs } from "dayjs";
+import type { FormInstance } from "antd/es/form";
 import {
   getDutyScheduleList,
   getTodayDuty,
@@ -17,7 +17,7 @@ import {
   type DutyPool,
   type SimpleUser,
   type MonthlyDutyMember,
-} from '@/lib/dutyApi';
+} from "@/lib/dutyApi";
 
 export interface UseScheduleDataParams {
   current: number;
@@ -55,7 +55,7 @@ export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataR
   const [pools, setPools] = useState<DutyPool[]>([]);
   const [users, setUsers] = useState<SimpleUser[]>([]);
   const [weeklyDutyData, setWeeklyDutyData] = useState<Record<string, MonthlyDutyMember[]>>({});
-  const [currentWeekStart, setCurrentWeekStart] = useState<Dayjs>(dayjs().startOf('week'));
+  const [currentWeekStart, setCurrentWeekStart] = useState<Dayjs>(dayjs().startOf("week"));
 
   // 获取排班列表
   const fetchList = useCallback(async (page?: number, size?: number) => {
@@ -73,15 +73,15 @@ export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataR
         pageSize: size ?? pageSize,
         poolId: values.poolId,
         userId: values.userId,
-        startDate: values.dateRange?.[0]?.format('YYYY-MM-DD'),
-        endDate: values.dateRange?.[1]?.format('YYYY-MM-DD'),
+        startDate: values.dateRange?.[0]?.format("YYYY-MM-DD"),
+        endDate: values.dateRange?.[1]?.format("YYYY-MM-DD"),
         dutyType: values.dutyType,
         expired: values.expired,
       });
       setDataSource(result.data?.list ?? []);
       setTotal(result.data?.total ?? 0);
     } catch (error) {
-      message.error('获取排班列表失败');
+      message.error("获取排班列表失败");
     } finally {
       setLoading(false);
     }
@@ -92,7 +92,7 @@ export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataR
     try {
       await getTodayDuty();
     } catch (error) {
-      console.error('获取今日值班失败', error);
+      console.error("获取今日值班失败", error);
     }
   }, []);
 
@@ -102,7 +102,7 @@ export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataR
       const result = await getDutyScheduleList({ current: 1, pageSize: 1000 });
       setAllSchedules(result.data?.list ?? []);
     } catch (error) {
-      console.error('获取所有排班失败', error);
+      console.error("获取所有排班失败", error);
     }
   }, []);
 
@@ -112,7 +112,7 @@ export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataR
       const result = await getDutyPoolList({ current: 1, pageSize: 1000, status: 0 });
       setPools(result.data?.list || []);
     } catch (error) {
-      console.error('获取值班池列表失败', error);
+      console.error("获取值班池列表失败", error);
     }
   }, []);
 
@@ -122,14 +122,14 @@ export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataR
       const result = await getUserList({ status: 0 });
       setUsers(result.data?.list || []);
     } catch (error) {
-      console.error('获取用户列表失败', error);
+      console.error("获取用户列表失败", error);
     }
   }, []);
 
   // 获取周度值班数据
   const fetchWeeklyDuty = useCallback(async (weekStart: Dayjs) => {
     try {
-      const weekEnd = weekStart.endOf('week');
+      const weekEnd = weekStart.endOf("week");
       const year = weekStart.year();
       const monthStart = weekStart.month() + 1;
       const monthEnd = weekEnd.month() + 1;
@@ -150,7 +150,7 @@ export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataR
         });
       }
     } catch (error) {
-      console.error('获取周度值班失败', error);
+      console.error("获取周度值班失败", error);
     }
   }, []);
 

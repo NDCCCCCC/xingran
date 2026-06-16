@@ -3,10 +3,10 @@
  * 网络命令数据管理 Hook
  */
 
-import { useState, useCallback } from 'react';
-import type { ConfigExecution, ConfigExecutionDetail, NetworkDevice, BaseResponse, PageResponse } from '@/types';
-import { post } from '@/lib/api';
-import type { CommandStatistics } from '../types';
+import { useState, useCallback } from "react";
+import type { ConfigExecution, ConfigExecutionDetail, NetworkDevice, BaseResponse, PageResponse } from "@/types";
+import { post } from "@/lib/api";
+import type { CommandStatistics } from "../types";
 
 export interface UseCommandDataParams {
   current: number;
@@ -45,10 +45,10 @@ export function useCommandData(
   });
 
   const updateStatistics = useCallback((executionList: ConfigExecution[]) => {
-    const pendingCount = executionList.filter((e) => e.status === 'pending').length;
-    const runningCount = executionList.filter((e) => e.status === 'running').length;
-    const successCount = executionList.filter((e) => e.status === 'success').length;
-    const failedCount = executionList.filter((e) => e.status === 'failed').length;
+    const pendingCount = executionList.filter((e) => e.status === "pending").length;
+    const runningCount = executionList.filter((e) => e.status === "running").length;
+    const successCount = executionList.filter((e) => e.status === "success").length;
+    const failedCount = executionList.filter((e) => e.status === "failed").length;
     setStatistics({
       total: executionList.length,
       pending: pendingCount,
@@ -63,7 +63,7 @@ export function useCommandData(
       setExecLoading(true);
       setExecLoadingState(true);
       try {
-        const result = await post<PageResponse<ConfigExecution>>('/network/command/list', {
+        const result = await post<PageResponse<ConfigExecution>>("/network/command/list", {
           ...params,
           current: params.current || current,
           pageSize: params.pageSize || pageSize,
@@ -73,7 +73,7 @@ export function useCommandData(
         // 更新统计数据
         updateStatistics(result.data?.list || []);
       } catch (error) {
-        console.error('加载执行记录失败:', error);
+        console.error("加载执行记录失败:", error);
       } finally {
         setExecLoading(false);
         setExecLoadingState(false);
@@ -84,24 +84,24 @@ export function useCommandData(
 
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post<PageResponse<ConfigExecution>>('/network/command/list', { current: 1, pageSize: 10000 });
+      const result = await post<PageResponse<ConfigExecution>>("/network/command/list", { current: 1, pageSize: 10000 });
       const allExecutions = result.data?.list || [];
       updateStatistics(allExecutions);
     } catch (error) {
-      console.error('加载统计数据失败:', error);
+      console.error("加载统计数据失败:", error);
     }
   }, [updateStatistics]);
 
   const loadDevices = useCallback(async (): Promise<NetworkDevice[]> => {
     try {
-      const result = await post<PageResponse<NetworkDevice>>('/network/devices/list', {
+      const result = await post<PageResponse<NetworkDevice>>("/network/devices/list", {
         current: 1,
         pageSize: 1000,
         status: 0,
       });
       return result.data?.list || [];
     } catch (error) {
-      console.error('加载设备列表失败:', error);
+      console.error("加载设备列表失败:", error);
       return [];
     }
   }, []);
@@ -115,7 +115,7 @@ export function useCommandData(
           details: result.data?.details || [],
         };
       } catch (error) {
-        console.error('加载执行明细失败:', error);
+        console.error("加载执行明细失败:", error);
         throw error;
       }
     },

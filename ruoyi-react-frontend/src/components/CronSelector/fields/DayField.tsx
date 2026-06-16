@@ -2,11 +2,11 @@
  * 日字段配置组件
  */
 
-import type { FC } from 'react';
-import type { RadioChangeEvent } from 'antd';
-import { Radio, Select, Space } from 'antd';
-import type { CronFieldConfig, PeriodType } from '../constants';
-import { FIELD_RANGES } from '../constants';
+import type { FC } from "react";
+import type { RadioChangeEvent } from "antd";
+import { Radio, Select, Space } from "antd";
+import type { CronFieldConfig, PeriodType } from "../constants";
+import { FIELD_RANGES } from "../constants";
 
 interface DayFieldProps {
   value: CronFieldConfig;
@@ -23,7 +23,7 @@ const DayField: FC<DayFieldProps> = ({ value, onChange }) => {
   return (
     <div>
       <Radio.Group value={periodType} onChange={(e: RadioChangeEvent) => onChange({ ...value, periodType: e.target.value as PeriodType })}>
-        <Space orientation="vertical" style={{ width: '100%' }}>
+        <Space orientation="vertical" style={{ width: "100%" }}>
           <Radio value="every">每日</Radio>
 
           <Radio value="specific">
@@ -33,7 +33,7 @@ const DayField: FC<DayFieldProps> = ({ value, onChange }) => {
                 mode="multiple"
                 style={{ width: 300 }}
                 value={value.specific || [1]}
-                onChange={(values: number[]) => onChange({ ...value, periodType: 'specific', specific: values })}
+                onChange={(values: number[]) => onChange({ ...value, periodType: "specific", specific: values })}
                 options={options.map(v => ({ label: `${v}号`, value: v }))}
                 placeholder="选择日期"
               />
@@ -47,7 +47,7 @@ const DayField: FC<DayFieldProps> = ({ value, onChange }) => {
               <Select
                 style={{ width: 80 }}
                 value={value.cycleStart ?? 1}
-                onChange={(cycleStart: number) => onChange({ ...value, periodType: 'cycle', cycleStart })}
+                onChange={(cycleStart: number) => onChange({ ...value, periodType: "cycle", cycleStart })}
               >
                 {options.map(v => <Select.Option key={v} value={v}>{v}</Select.Option>)}
               </Select>
@@ -55,7 +55,7 @@ const DayField: FC<DayFieldProps> = ({ value, onChange }) => {
               <Select
                 style={{ width: 80 }}
                 value={value.cycleInterval ?? 1}
-                onChange={(cycleInterval: number) => onChange({ ...value, periodType: 'cycle', cycleInterval })}
+                onChange={(cycleInterval: number) => onChange({ ...value, periodType: "cycle", cycleInterval })}
               >
                 {Array.from({ length: 15 }, (_, i) => i + 1).map(v => (
                   <Select.Option key={v} value={v}>{v}</Select.Option>
@@ -72,7 +72,7 @@ const DayField: FC<DayFieldProps> = ({ value, onChange }) => {
               <Select
                 style={{ width: 80 }}
                 value={value.rangeStart ?? 1}
-                onChange={(rangeStart: number) => onChange({ ...value, periodType: 'range', rangeStart })}
+                onChange={(rangeStart: number) => onChange({ ...value, periodType: "range", rangeStart })}
               >
                 {options.map(v => <Select.Option key={v} value={v}>{v}</Select.Option>)}
               </Select>
@@ -80,7 +80,7 @@ const DayField: FC<DayFieldProps> = ({ value, onChange }) => {
               <Select
                 style={{ width: 80 }}
                 value={value.rangeEnd ?? 31}
-                onChange={(rangeEnd: number) => onChange({ ...value, periodType: 'range', rangeEnd })}
+                onChange={(rangeEnd: number) => onChange({ ...value, periodType: "range", rangeEnd })}
               >
                 {options.map(v => <Select.Option key={v} value={v}>{v}</Select.Option>)}
               </Select>

@@ -4,13 +4,13 @@
  * 基于 ECharts 的图表组件，支持折线图、柱状图、饼图等
  */
 
-import { useMemo } from 'react';
-import ReactECharts from '@/components/charts/EChartsWrapper';
-import type { EChartsOption, PieSeriesOption } from 'echarts';
-import type { ChartDisplayConfig, WidgetConfig } from '@/types/dashboard';
-import { BaseWidget } from '../base/BaseWidget';
-import type { BaseWidgetProps } from '../base/BaseWidget';
-import { useWidgetData } from '@/hooks/useWidgetData';
+import { useMemo } from "react";
+import ReactECharts from "@/components/charts/EChartsWrapper";
+import type { EChartsOption, PieSeriesOption } from "echarts";
+import type { ChartDisplayConfig, WidgetConfig } from "@/types/dashboard";
+import { BaseWidget } from "../base/BaseWidget";
+import type { BaseWidgetProps } from "../base/BaseWidget";
+import { useWidgetData } from "@/hooks/useWidgetData";
 
 interface ChartWidgetProps {
 	widget: WidgetConfig;
@@ -29,7 +29,7 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
 	const { data, loading, error, refresh } = useWidgetData(widget);
 	// 构建ECharts配置
 	const option = useMemo<EChartsOption>(() => {
-		if (!data || typeof data !== 'object') {
+		if (!data || typeof data !== "object") {
 			return getEmptyOption();
 		}
 
@@ -37,13 +37,13 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
 		const { chartType } = display;
 
 		switch (chartType) {
-			case 'line':
+			case "line":
 				return getLineOption(d, display);
-			case 'bar':
+			case "bar":
 				return getBarOption(d, display);
-			case 'pie':
+			case "pie":
 				return getPieOption(d, display);
-			case 'area':
+			case "area":
 				return getAreaOption(d, display);
 			default:
 				return getEmptyOption();
@@ -63,8 +63,8 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
 			<div className="chart-widget">
 				<ReactECharts
 					option={option}
-					style={{ height: '100%', width: '100%' }}
-					opts={{ renderer: 'svg' }}
+					style={{ height: "100%", width: "100%" }}
+					opts={{ renderer: "svg" }}
 				/>
 			</div>
 		</BaseWidget>
@@ -73,61 +73,61 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
 
 // 折线图配置
 function getLineOption(data: Record<string, unknown>, display: ChartDisplayConfig): EChartsOption {
-	const xData = extractArray(data[display.xField ?? 'x']);
-	const yData = extractArray(data[display.yField ?? 'y']);
+	const xData = extractArray(data[display.xField ?? "x"]);
+	const yData = extractArray(data[display.yField ?? "y"]);
 
 	return {
 		grid: { top: 10, right: 10, bottom: 20, left: 40 },
 		xAxis: {
-			type: 'category',
+			type: "category",
 			data: xData,
-			axisLine: { lineStyle: { color: 'var(--theme-border-primary, #d9d9d9)' } },
+			axisLine: { lineStyle: { color: "var(--theme-border-primary, #d9d9d9)" } },
 		},
 		yAxis: {
-			type: 'value',
+			type: "value",
 			axisLine: { show: false },
-			splitLine: { lineStyle: { color: 'var(--theme-border-secondary, #f0f0f0)' } },
+			splitLine: { lineStyle: { color: "var(--theme-border-secondary, #f0f0f0)" } },
 		},
 		series: [{
 			data: yData,
-			type: 'line',
+			type: "line",
 			smooth: display.smooth ?? false,
 			lineStyle: { width: 2 },
-			itemStyle: { color: display.colors?.[0] ?? 'var(--theme-info, #1890ff)' },
+			itemStyle: { color: display.colors?.[0] ?? "var(--theme-info, #1890ff)" },
 		}],
 		tooltip: {
-			trigger: 'axis',
+			trigger: "axis",
 		},
 	};
 }
 
 // 柱状图配置
 function getBarOption(data: Record<string, unknown>, display: ChartDisplayConfig): EChartsOption {
-	const xData = extractArray(data[display.xField ?? 'x']);
-	const yData = extractArray(data[display.yField ?? 'y']);
+	const xData = extractArray(data[display.xField ?? "x"]);
+	const yData = extractArray(data[display.yField ?? "y"]);
 
 	return {
 		grid: { top: 10, right: 10, bottom: 20, left: 40 },
 		xAxis: {
-			type: 'category',
+			type: "category",
 			data: xData,
-			axisLine: { lineStyle: { color: 'var(--theme-border-primary, #d9d9d9)' } },
+			axisLine: { lineStyle: { color: "var(--theme-border-primary, #d9d9d9)" } },
 		},
 		yAxis: {
-			type: 'value',
+			type: "value",
 			axisLine: { show: false },
-			splitLine: { lineStyle: { color: 'var(--theme-border-secondary, #f0f0f0)' } },
+			splitLine: { lineStyle: { color: "var(--theme-border-secondary, #f0f0f0)" } },
 		},
 		series: [{
 			data: yData,
-			type: 'bar',
+			type: "bar",
 			itemStyle: {
-				color: display.colors?.[0] ?? 'var(--theme-info, #1890ff)',
+				color: display.colors?.[0] ?? "var(--theme-info, #1890ff)",
 				borderRadius: [4, 4, 0, 0],
 			},
 		}],
 		tooltip: {
-			trigger: 'axis',
+			trigger: "axis",
 		},
 	};
 }
@@ -140,12 +140,12 @@ function getPieOption(data: Record<string, unknown>, _display: ChartDisplayConfi
 	const pieData = items.map((item, index) => {
 		// Try to parse as JSON for structured data
 		try {
-			const parsed = typeof item === 'string' ? JSON.parse(item) : item;
-			if (typeof parsed === 'object' && parsed !== null) {
+			const parsed = typeof item === "string" ? JSON.parse(item) : item;
+			if (typeof parsed === "object" && parsed !== null) {
 				const rawValue = (parsed as Record<string, unknown>).value ?? 0;
 				return {
 					name: String((parsed as Record<string, unknown>).name ?? `项${index + 1}`),
-					value: typeof rawValue === 'number' ? rawValue : Number(rawValue) || 0,
+					value: typeof rawValue === "number" ? rawValue : Number(rawValue) || 0,
 				};
 			}
 		} catch {
@@ -153,63 +153,63 @@ function getPieOption(data: Record<string, unknown>, _display: ChartDisplayConfi
 		}
 		return {
 			name: `项${index + 1}`,
-			value: typeof item === 'number' ? item : Number(item) || 0,
+			value: typeof item === "number" ? item : Number(item) || 0,
 		};
 	});
 
 	return {
 		series: [{
-			type: 'pie',
+			type: "pie",
 			data: pieData,
-			radius: ['40%', '70%'],
+			radius: ["40%", "70%"],
 			itemStyle: {
 				borderRadius: 4,
-				borderColor: 'var(--theme-neutral-white, #fff)',
+				borderColor: "var(--theme-neutral-white, #fff)",
 				borderWidth: 2,
 			},
 		}],
 		tooltip: {
-			trigger: 'item',
-			formatter: '{b}: {c} ({d}%)',
+			trigger: "item",
+			formatter: "{b}: {c} ({d}%)",
 		},
 	};
 }
 
 // 面积图配置
 function getAreaOption(data: Record<string, unknown>, display: ChartDisplayConfig): EChartsOption {
-	const xData = extractArray(data[display.xField ?? 'x']);
-	const yData = extractArray(data[display.yField ?? 'y']);
+	const xData = extractArray(data[display.xField ?? "x"]);
+	const yData = extractArray(data[display.yField ?? "y"]);
 
 	return {
 		grid: { top: 10, right: 10, bottom: 20, left: 40 },
 		xAxis: {
-			type: 'category',
+			type: "category",
 			data: xData,
-			axisLine: { lineStyle: { color: 'var(--theme-border-primary, #d9d9d9)' } },
+			axisLine: { lineStyle: { color: "var(--theme-border-primary, #d9d9d9)" } },
 		},
 		yAxis: {
-			type: 'value',
+			type: "value",
 			axisLine: { show: false },
-			splitLine: { lineStyle: { color: 'var(--theme-border-secondary, #f0f0f0)' } },
+			splitLine: { lineStyle: { color: "var(--theme-border-secondary, #f0f0f0)" } },
 		},
 		series: [{
 			data: yData,
-			type: 'line',
+			type: "line",
 			smooth: display.smooth ?? true,
 			areaStyle: {
 				color: {
-					type: 'linear',
+					type: "linear",
 					x: 0, y: 0, x2: 0, y2: 1,
 					colorStops: [
-						{ offset: 0, color: display.colors?.[0] ?? 'var(--theme-info, #1890ff)' },
-						{ offset: 1, color: 'rgba(24, 144, 255, 0.1)' },
+						{ offset: 0, color: display.colors?.[0] ?? "var(--theme-info, #1890ff)" },
+						{ offset: 1, color: "rgba(24, 144, 255, 0.1)" },
 					],
 				},
 			},
 			lineStyle: { width: 2 },
 		}],
 		tooltip: {
-			trigger: 'axis',
+			trigger: "axis",
 		},
 	};
 }
@@ -218,10 +218,10 @@ function getAreaOption(data: Record<string, unknown>, display: ChartDisplayConfi
 function getEmptyOption(): EChartsOption {
 	return {
 		title: {
-			text: '暂无数据',
-			left: 'center',
-			top: 'center',
-			textStyle: { color: 'var(--theme-text-tertiary, #bfbfbf)' },
+			text: "暂无数据",
+			left: "center",
+			top: "center",
+			textStyle: { color: "var(--theme-text-tertiary, #bfbfbf)" },
 		},
 	};
 }

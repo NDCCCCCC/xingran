@@ -4,12 +4,12 @@
  * 以进度条形式展示百分比或完成度
  */
 
-import { useMemo } from 'react';
-import { Progress, Row, Col } from 'antd';
-import type { ProgressDisplayConfig, WidgetConfig } from '@/types/dashboard';
-import { BaseWidget } from '../base/BaseWidget';
-import type { BaseWidgetProps } from '../base/BaseWidget';
-import { useWidgetData } from '@/hooks/useWidgetData';
+import { useMemo } from "react";
+import { Progress, Row, Col } from "antd";
+import type { ProgressDisplayConfig, WidgetConfig } from "@/types/dashboard";
+import { BaseWidget } from "../base/BaseWidget";
+import type { BaseWidgetProps } from "../base/BaseWidget";
+import { useWidgetData } from "@/hooks/useWidgetData";
 
 interface ProgressWidgetProps {
 	widget: WidgetConfig;
@@ -28,8 +28,8 @@ export const ProgressWidget: React.FC<ProgressWidgetProps> = ({
 	const { data, loading, error, refresh } = useWidgetData(widget);
 	// 计算进度百分比和颜色
 	const { percent, color, status } = useMemo(() => {
-		if (!data || typeof data !== 'object') {
-			return { percent: 0, color: undefined, status: undefined as 'success' | 'exception' | 'normal' | undefined };
+		if (!data || typeof data !== "object") {
+			return { percent: 0, color: undefined, status: undefined as "success" | "exception" | "normal" | undefined };
 		}
 
 		const d = data as Record<string, unknown>;
@@ -39,7 +39,7 @@ export const ProgressWidget: React.FC<ProgressWidgetProps> = ({
 
 		// 根据阈值确定颜色
 		let color = undefined;
-		let status: 'success' | 'exception' | 'normal' | undefined = undefined;
+		let status: "success" | "exception" | "normal" | undefined = undefined;
 
 		if (display.colorThresholds && display.colorThresholds.length > 0) {
 			const sorted = [...display.colorThresholds].sort((a, b) => b.value - a.value);
@@ -52,15 +52,15 @@ export const ProgressWidget: React.FC<ProgressWidgetProps> = ({
 		}
 
 		// 根据百分比确定状态
-		if (percent >= 100) status = 'success';
-		else if (percent < 30) status = 'exception';
+		if (percent >= 100) status = "success";
+		else if (percent < 30) status = "exception";
 
 		return { percent, color, status };
 	}, [data, display]);
 
 	// 多指标进度条
 	const multiple = useMemo(() => {
-		if (!data || typeof data !== 'object') return [];
+		if (!data || typeof data !== "object") return [];
 		const d = data as Record<string, unknown>;
 		const items = d.items ?? d.metrics ?? d.data;
 		if (!Array.isArray(items)) return [];
@@ -92,7 +92,7 @@ export const ProgressWidget: React.FC<ProgressWidgetProps> = ({
 						{multiple.map((item, index) => (
 							<Col span={24 / multiple.length} key={index}>
 								<div className="progress-widget-item">
-									<div className="progress-widget-item__label">{String(item.label ?? '')}</div>
+									<div className="progress-widget-item__label">{String(item.label ?? "")}</div>
 									<Progress
 										percent={item.percent}
 										strokeColor={item.color}
@@ -119,7 +119,7 @@ export const ProgressWidget: React.FC<ProgressWidgetProps> = ({
 			onRefresh={refresh}
 		>
 			<div className="progress-widget">
-				{display.progressType === 'circle' ? (
+				{display.progressType === "circle" ? (
 					<Progress
 						type="circle"
 						percent={percent}
@@ -127,7 +127,7 @@ export const ProgressWidget: React.FC<ProgressWidgetProps> = ({
 						status={status}
 						width={120}
 					/>
-				) : display.progressType === 'dashboard' ? (
+				) : display.progressType === "dashboard" ? (
 					<Progress
 						type="dashboard"
 						percent={percent}

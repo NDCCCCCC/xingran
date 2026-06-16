@@ -3,11 +3,11 @@
  * 节假日页面类型定义
  */
 
-import type { Dayjs } from 'dayjs';
-import type { Holiday } from '@/lib/dutyApi';
+import type { Dayjs } from "dayjs";
+import type { Holiday } from "@/lib/dutyApi";
 
 /** 节假日类型 */
-export type HolidayType = 'legal' | 'workday' | 'custom';
+export type HolidayType = "legal" | "workday" | "custom";
 
 /** 批量添加行数据 */
 export interface BatchHolidayRow {

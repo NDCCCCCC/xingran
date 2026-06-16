@@ -2,12 +2,12 @@
  * RPA 任务表格列定义
  */
 
-import type { ColumnsType } from 'antd/es/table';
-import { PlayCircleOutlined } from '@ant-design/icons';
-import type { Task } from '@/types/rpa';
-import ActionButtons from '@/components/shared/ActionButtons';
-import { renderTriggerTypeTag, renderTaskStatusTag } from '../constants';
-import { createDateTimeColumn } from '@/utils/tableHelpers';
+import type { ColumnsType } from "antd/es/table";
+import { PlayCircleOutlined } from "@ant-design/icons";
+import type { Task } from "@/types/rpa";
+import ActionButtons from "@/components/shared/ActionButtons";
+import { renderTriggerTypeTag, renderTaskStatusTag } from "../constants";
+import { createDateTimeColumn } from "@/utils/tableHelpers";
 
 export interface TaskColumnsParams {
   handleEdit: (record: Task) => void;
@@ -20,73 +20,73 @@ export function getTaskColumns(params: TaskColumnsParams): ColumnsType<Task> {
 
   return [
     {
-      title: '任务名称',
-      dataIndex: 'taskName',
-      key: 'taskName',
+      title: "任务名称",
+      dataIndex: "taskName",
+      key: "taskName",
       width: 200,
       ellipsis: true,
     },
     {
-      title: '描述',
-      dataIndex: 'description',
-      key: 'description',
+      title: "描述",
+      dataIndex: "description",
+      key: "description",
       width: 250,
       ellipsis: true,
-      render: (text) => text || '-',
+      render: (text) => text || "-",
     },
     {
-      title: '优先级',
-      dataIndex: 'priority',
-      key: 'priority',
+      title: "优先级",
+      dataIndex: "priority",
+      key: "priority",
       width: 100,
       render: (priority) => {
-        const color = priority >= 80 ? 'red' : priority >= 50 ? 'orange' : 'default';
+        const color = priority >= 80 ? "red" : priority >= 50 ? "orange" : "default";
         return <span style={{ color }}>{priority ?? 0}</span>;
       },
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
       width: 100,
       render: (status) => renderTaskStatusTag(status ?? 0),
     },
     {
-      title: '超时(秒)',
-      dataIndex: 'timeout',
-      key: 'timeout',
+      title: "超时(秒)",
+      dataIndex: "timeout",
+      key: "timeout",
       width: 120,
-      render: (timeout) => timeout || '-',
+      render: (timeout) => timeout || "-",
     },
     {
-      title: '最后执行',
-      dataIndex: 'lastExecutionTime',
-      key: 'lastExecutionTime',
+      title: "最后执行",
+      dataIndex: "lastExecutionTime",
+      key: "lastExecutionTime",
       width: 180,
-      render: (text) => text || '-',
+      render: (text) => text || "-",
     },
-    createDateTimeColumn('createdAt', { width: 180 }),
+    createDateTimeColumn("createdAt", { width: 180 }),
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       width: 200,
-      fixed: 'right',
+      fixed: "right",
       render: (_: unknown, record: Task) => {
         const actions = [
           {
-            key: 'execute',
-            label: '执行',
+            key: "execute",
+            label: "执行",
             icon: <PlayCircleOutlined />,
-            onClick: () => handleExecute(record.id, record.taskName || record.name || ''),
+            onClick: () => handleExecute(record.id, record.taskName || record.name || ""),
           },
           {
-            key: 'edit',
-            label: '编辑',
+            key: "edit",
+            label: "编辑",
             onClick: () => handleEdit(record),
           },
           {
-            key: 'delete',
-            label: '删除',
+            key: "delete",
+            label: "删除",
             danger: true,
             onClick: () => handleDelete(record.id),
           },

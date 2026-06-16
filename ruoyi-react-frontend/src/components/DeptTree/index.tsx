@@ -1,14 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
-import type { FC, Key, CSSProperties } from 'react';
-import { Tree, Card, Spin, Input } from 'antd';
-import type { DataNode, EventDataNode } from 'antd/es/tree';
-import { ApartmentOutlined, SearchOutlined } from '@ant-design/icons';
-import { post } from '@/lib/api';
-import type { Department } from '@/types';
+import { useState, useEffect, useCallback } from "react";
+import type { FC, Key, CSSProperties } from "react";
+import { Tree, Card, Spin, Input } from "antd";
+import type { DataNode, EventDataNode } from "antd/es/tree";
+import { ApartmentOutlined, SearchOutlined } from "@ant-design/icons";
+import { post } from "@/lib/api";
+import type { Department } from "@/types";
 
 interface DeptTreeProps {
   onSelect?: (selectedKeys: Key[], info: {
-    event: 'select';
+    event: "select";
     selected: boolean;
     node: EventDataNode<DataNode>;
     selectedNodes: DataNode[];
@@ -26,7 +26,7 @@ const DeptTree: FC<DeptTreeProps> = ({
 }) => {
   const [treeData, setTreeData] = useState<DataNode[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchValue, setSearchValue] = useState('');
+  const [searchValue, setSearchValue] = useState("");
   const [expandedKeys, setExpandedKeys] = useState<Key[]>([]);
   const [autoExpandParent, setAutoExpandParent] = useState(true);
 
@@ -75,7 +75,7 @@ const DeptTree: FC<DeptTreeProps> = ({
   const loadDeptTree = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await post<Department[]>('/system/departments/tree');
+      const result = await post<Department[]>("/system/departments/tree");
       let deptData = result.data || [];
 
       if (externalOnly) {
@@ -89,7 +89,7 @@ const DeptTree: FC<DeptTreeProps> = ({
       const firstParentKey = parentKeys.length > 0 ? [parentKeys[0]] : [];
       setExpandedKeys(firstParentKey);
     } catch (error) {
-      console.error('加载部门树失败:', error);
+      console.error("加载部门树失败:", error);
       setTreeData([]);
     } finally {
       setLoading(false);
@@ -149,7 +149,7 @@ const DeptTree: FC<DeptTreeProps> = ({
   const handleTreeSelect = (
     selectedKeys: Key[],
     info: {
-      event: 'select';
+      event: "select";
       selected: boolean;
       node: EventDataNode<DataNode>;
       selectedNodes: DataNode[];
@@ -185,14 +185,14 @@ const DeptTree: FC<DeptTreeProps> = ({
   return (
     <Card
       title={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <ApartmentOutlined />
           <span>部门列表</span>
         </div>
       }
       size="small"
       style={style}
-      styles={{ body: { padding: '16px' } }}
+      styles={{ body: { padding: "16px" } }}
     >
       <Input
         placeholder="搜索部门"
@@ -208,7 +208,7 @@ const DeptTree: FC<DeptTreeProps> = ({
       />
 
       <Spin spinning={loading}>
-        <div className="dept-tree-container" style={{ maxHeight: 'calc(100vh - 220px)', overflowX: 'hidden' }}>
+        <div className="dept-tree-container" style={{ maxHeight: "calc(100vh - 220px)", overflowX: "hidden" }}>
           <Tree
             showLine
             treeData={filteredTreeData}

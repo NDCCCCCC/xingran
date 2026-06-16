@@ -1,4 +1,4 @@
-import { useState, useEffect, type FC } from 'react';
+import { useState, useEffect, type FC } from "react";
 import {
   Table,
   Button,
@@ -10,20 +10,20 @@ import {
   Col,
   Statistic,
   Space,
-} from 'antd';
+} from "antd";
 import {
   PlusOutlined,
   SearchOutlined,
   ReloadOutlined,
   FileTextOutlined,
-} from '@ant-design/icons';
-import { useArticleData } from './hooks';
-import { getArticleColumns } from './columns';
-import { EditModal, PreviewModal } from './modals';
-import { KnowledgeArticleStatus, type KnowledgeArticle } from '@/lib/knowledgeApi';
-import { message } from 'antd';
-import { usePagination } from '@/hooks/usePagination';
-import { isFormValidationError } from '@/utils/errorHandler';
+} from "@ant-design/icons";
+import { useArticleData } from "./hooks";
+import { getArticleColumns } from "./columns";
+import { EditModal, PreviewModal } from "./modals";
+import { KnowledgeArticleStatus, type KnowledgeArticle } from "@/lib/knowledgeApi";
+import { message } from "antd";
+import { usePagination } from "@/hooks/usePagination";
+import { isFormValidationError } from "@/utils/errorHandler";
 
 const { Option } = Select;
 
@@ -124,7 +124,7 @@ const KnowledgeArticlePage: FC = () => {
       setModalVisible(false);
     } catch (error: unknown) {
       if (isFormValidationError(error)) return;
-      message.error(editingRecord ? '更新失败' : '创建失败');
+      message.error(editingRecord ? "更新失败" : "创建失败");
     }
   };
 
@@ -147,10 +147,10 @@ const KnowledgeArticlePage: FC = () => {
               <Statistic title="总文章" value={statistics.total} prefix={<FileTextOutlined />} />
             </Col>
             <Col span={5}>
-              <Statistic title="草稿" value={statistics.draft} styles={{ content: { color: 'var(--theme-warning, #faad14)' } }} />
+              <Statistic title="草稿" value={statistics.draft} styles={{ content: { color: "var(--theme-warning, #faad14)" } }} />
             </Col>
             <Col span={5}>
-              <Statistic title="已发布" value={statistics.published} styles={{ content: { color: 'var(--theme-success, #52c41a)' } }} />
+              <Statistic title="已发布" value={statistics.published} styles={{ content: { color: "var(--theme-success, #52c41a)" } }} />
             </Col>
             <Col span={4}>
               <Statistic title="总浏览" value={statistics.totalViews} />
@@ -164,7 +164,7 @@ const KnowledgeArticlePage: FC = () => {
 
       {/* 筛选表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="title" label="标题">
               <Input placeholder="请输入标题" allowClear className="user-form-input" style={{ width: 150 }} />

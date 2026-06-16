@@ -6,11 +6,11 @@
  * 支持自定义输入（数字 + 单位）
  */
 
-import { useState, useEffect } from 'react';
-import { Select, InputNumber, Space } from 'antd';
-import type { SelectProps } from 'antd';
+import { useState, useEffect } from "react";
+import { Select, InputNumber, Space } from "antd";
+import type { SelectProps } from "antd";
 
-export interface RefreshIntervalSelectorProps extends Omit<SelectProps<number>, 'options' | 'onChange'> {
+export interface RefreshIntervalSelectorProps extends Omit<SelectProps<number>, "options" | "onChange"> {
 	/** 当前刷新间隔（秒） */
 	value?: number;
 	/** 变化回调 */
@@ -21,12 +21,12 @@ export interface RefreshIntervalSelectorProps extends Omit<SelectProps<number>, 
 
 // 预设选项配置
 const PRESET_OPTIONS = [
-	{ label: '30 秒', value: 30 },
-	{ label: '1 分钟', value: 60 },
-	{ label: '5 分钟', value: 300 },
-	{ label: '15 分钟', value: 900 },
-	{ label: '30 分钟', value: 1800 },
-	{ label: '1 小时', value: 3600 },
+	{ label: "30 秒", value: 30 },
+	{ label: "1 分钟", value: 60 },
+	{ label: "5 分钟", value: 300 },
+	{ label: "15 分钟", value: 900 },
+	{ label: "30 分钟", value: 1800 },
+	{ label: "1 小时", value: 3600 },
 ];
 
 // 自定义选项标识
@@ -34,9 +34,9 @@ const CUSTOM_VALUE = -1;
 
 // 单位选项
 const UNIT_OPTIONS = [
-	{ label: '秒', value: 1 },
-	{ label: '分钟', value: 60 },
-	{ label: '小时', value: 3600 },
+	{ label: "秒", value: 1 },
+	{ label: "分钟", value: 60 },
+	{ label: "小时", value: 3600 },
 ];
 
 /**
@@ -123,12 +123,12 @@ export const RefreshIntervalSelector: React.FC<RefreshIntervalSelectorProps> = (
 
 	return (
 		<div className="refresh-interval-selector">
-			<Space direction="vertical" style={{ width: '100%' }}>
+			<Space direction="vertical" style={{ width: "100%" }}>
 				<Select
 					value={selectValue}
 					onChange={handlePresetChange}
 					disabled={disabled}
-					style={{ width: '100%' }}
+					style={{ width: "100%" }}
 					{...selectProps}
 				>
 					{PRESET_OPTIONS.map((opt) => (

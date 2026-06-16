@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { message } from 'antd';
+import { useState, useCallback } from "react";
+import { message } from "antd";
 import {
   getNoticeList,
   createNotice,
@@ -8,13 +8,13 @@ import {
   batchDeleteNotices,
   publishNotice,
   withdrawNotice,
-} from '@/lib/noticeApi';
+} from "@/lib/noticeApi";
 import type {
   Notice,
   CreateNoticeRequest,
   UpdateNoticeRequest,
   NoticeListParams,
-} from '@/types/notice';
+} from "@/types/notice";
 
 interface UseNoticeDataResult {
   notices: Notice[];
@@ -61,7 +61,7 @@ export function useNoticeData(): UseNoticeDataResult {
       setNotices(result.data?.list || []);
       setTotal(result.data?.total || 0);
     } catch (error) {
-      console.error('加载通知公告失败:', error);
+      console.error("加载通知公告失败:", error);
     } finally {
       setLoading(false);
     }
@@ -70,42 +70,42 @@ export function useNoticeData(): UseNoticeDataResult {
   // 创建通知
   const handleCreate = useCallback(async (request: CreateNoticeRequest) => {
     await createNotice(request);
-    message.success('创建成功');
+    message.success("创建成功");
   }, []);
 
   // 更新通知
   const handleUpdate = useCallback(async (id: string, request: UpdateNoticeRequest) => {
     await updateNotice(id, request);
-    message.success('更新成功');
+    message.success("更新成功");
   }, []);
 
   // 删除通知
   const handleDelete = useCallback(async (id: string) => {
     await deleteNotice(id);
-    message.success('删除成功');
+    message.success("删除成功");
   }, []);
 
   // 批量删除
   const handleBatchDelete = useCallback(async (keys: React.Key[]) => {
     if (keys.length === 0) {
-      message.warning('请选择要删除的数据');
+      message.warning("请选择要删除的数据");
       return;
     }
     await batchDeleteNotices(keys as string[]);
-    message.success('批量删除成功');
+    message.success("批量删除成功");
     setSelectedRowKeys([]);
   }, []);
 
   // 发布通知
   const handlePublish = useCallback(async (id: string) => {
     await publishNotice(id);
-    message.success('发布成功');
+    message.success("发布成功");
   }, []);
 
   // 撤回通知
   const handleWithdraw = useCallback(async (id: string) => {
     await withdrawNotice(id);
-    message.success('撤回成功');
+    message.success("撤回成功");
   }, []);
 
   return {

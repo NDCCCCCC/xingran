@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
-import { getAPINotificationConfigList } from '@/lib/notificationConfigApi';
-import type { APINotificationConfig } from '@/lib/notificationConfigApi';
+import { useState, useCallback } from "react";
+import { getAPINotificationConfigList } from "@/lib/notificationConfigApi";
+import type { APINotificationConfig } from "@/lib/notificationConfigApi";
 
 interface UseAPIConfigResult {
   apiConfigs: APINotificationConfig[];
@@ -27,7 +27,7 @@ export function useAPIConfig(): UseAPIConfigResult {
       // 只显示状态为正常(0)的配置
       setApiConfigs(result.data.list.filter((c: APINotificationConfig) => c.status === 0));
     } catch (error) {
-      console.error('加载API配置失败:', error);
+      console.error("加载API配置失败:", error);
     } finally {
       setLoadingAPIConfigs(false);
     }

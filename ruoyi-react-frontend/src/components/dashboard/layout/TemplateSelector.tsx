@@ -5,22 +5,22 @@
  * 支持模板预览功能
  */
 
-import { useState, useEffect, useLayoutEffect } from 'react';
-import { Modal, Card, Row, Col, Button, Tag, Space, Tooltip, message } from 'antd';
+import { useState, useEffect, useLayoutEffect } from "react";
+import { Modal, Card, Row, Col, Button, Tag, Space, Tooltip, message } from "antd";
 import {
 	AppstoreOutlined,
 	LineChartOutlined,
 	ProfileOutlined,
 	DatabaseOutlined,
 	EyeOutlined,
-} from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
-import type { PresetTemplateType, Dashboard } from '@/types/dashboard';
-import { presetDashboardTemplates } from '@/components/dashboard/templates/presets';
-import { dashboardService } from '@/services/dashboardService';
-import TemplatePreview from './TemplatePreview';
+} from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+import type { PresetTemplateType, Dashboard } from "@/types/dashboard";
+import { presetDashboardTemplates } from "@/components/dashboard/templates/presets";
+import { dashboardService } from "@/services/dashboardService";
+import TemplatePreview from "./TemplatePreview";
 
-import './TemplateSelector.css';
+import "./TemplateSelector.css";
 
 interface TemplateSelectorProps {
 	/** 是否可见 */
@@ -39,7 +39,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 	onSelect,
 }) => {
 	const [selectedTemplate, setSelectedTemplate] = useState<PresetTemplateType | null>(null);
-	const [dashboardName, setDashboardName] = useState('');
+	const [dashboardName, setDashboardName] = useState("");
 	const [previewVisible, setPreviewVisible] = useState(false);
 	const [previewTemplate, setPreviewTemplate] = useState<Dashboard | null>(null);
 	const navigate = useNavigate();
@@ -48,7 +48,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 	useLayoutEffect(() => {
 		if (visible) {
 			setSelectedTemplate(null);
-			setDashboardName('');
+			setDashboardName("");
 		}
 	}, [visible]);
 
@@ -65,16 +65,16 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 	const handleConfirm = () => {
 		if (!selectedTemplate) {
 			Modal.warning({
-				title: '请选择模板',
-				content: '请先选择一个仪表盘模板',
+				title: "请选择模板",
+				content: "请先选择一个仪表盘模板",
 			});
 			return;
 		}
 
 		if (!dashboardName.trim()) {
 			Modal.warning({
-				title: '请输入名称',
-				content: '请输入仪表盘名称',
+				title: "请输入名称",
+				content: "请输入仪表盘名称",
 			});
 			return;
 		}
@@ -110,27 +110,27 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 	const handleApplyTemplate = async (templateId: string, name: string) => {
 		try {
 			// 从模板 ID 提取模板类型
-			const templateType = templateId.replace('template-', '') as PresetTemplateType;
+			const templateType = templateId.replace("template-", "") as PresetTemplateType;
 			// 调用创建回调
 			onSelect(templateType, name);
 			setPreviewVisible(false);
 			onClose();
 		} catch (error) {
-			console.error('应用模板失败:', error);
-			message.error('应用模板失败');
+			console.error("应用模板失败:", error);
+			message.error("应用模板失败");
 		}
 	};
 
 	// 获取模板图标
 	const getTemplateIcon = (type: PresetTemplateType) => {
 		switch (type) {
-			case 'operations-overview':
+			case "operations-overview":
 				return <AppstoreOutlined />;
-			case 'workorder-management':
+			case "workorder-management":
 				return <ProfileOutlined />;
-			case 'duty-management':
+			case "duty-management":
 				return <DatabaseOutlined />;
-			case 'system-monitor':
+			case "system-monitor":
 				return <LineChartOutlined />;
 			default:
 				return <AppstoreOutlined />;
@@ -140,13 +140,13 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 	// 获取模板标签
 	const getTemplateTag = (type: PresetTemplateType) => {
 		switch (type) {
-			case 'operations-overview':
+			case "operations-overview":
 				return <Tag color="blue">运维</Tag>;
-			case 'workorder-management':
+			case "workorder-management":
 				return <Tag color="green">工单</Tag>;
-			case 'duty-management':
+			case "duty-management":
 				return <Tag color="orange">值班</Tag>;
-			case 'system-monitor':
+			case "system-monitor":
 				return <Tag color="purple">监控</Tag>;
 			default:
 				return <Tag>其他</Tag>;
@@ -172,7 +172,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 								<Col xs={24} sm={12} md={12} key={template.type}>
 									<Card
 										hoverable
-										className={`template-card ${selectedTemplate === template.type ? 'template-card--selected' : ''}`}
+										className={`template-card ${selectedTemplate === template.type ? "template-card--selected" : ""}`}
 										onClick={() => handleSelectTemplate(template.type)}
 									>
 										<div className="template-card__header">

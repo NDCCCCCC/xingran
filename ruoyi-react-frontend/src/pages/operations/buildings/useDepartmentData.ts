@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
-import { post } from '@/lib/api';
-import type { BaseResponse } from '@/types';
+import { useState, useCallback, useEffect } from "react";
+import { post } from "@/lib/api";
+import type { BaseResponse } from "@/types";
 
 interface DepartmentOption {
   id: string;
@@ -27,12 +27,12 @@ export function useDepartmentData() {
     setLoading(true);
     try {
       const result = await post<DepartmentOption[]>(
-        '/system/departments/tree',
+        "/system/departments/tree",
         {}
       );
       setDepartments(convertToTreeData(result.data || []));
     } catch (error) {
-      console.error('加载部门列表失败:', error);
+      console.error("加载部门列表失败:", error);
     } finally {
       setLoading(false);
     }
@@ -64,9 +64,9 @@ export function useDepartmentData() {
 
   // 获取所属机构名称
   const getOrgName = useCallback((orgId?: string): string => {
-    if (!orgId) return '-';
+    if (!orgId) return "-";
     const deptMap = getDeptMap();
-    return deptMap.get(orgId) || '-';
+    return deptMap.get(orgId) || "-";
   }, [getDeptMap]);
 
   return {

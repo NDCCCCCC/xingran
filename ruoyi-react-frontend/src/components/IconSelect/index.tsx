@@ -3,11 +3,11 @@
  * 弹窗式图标选择，支持搜索和预览
  */
 
-import { useState, useMemo, useEffect } from 'react';
-import type { FC } from 'react';
-import { Input, Modal, Tabs, message } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
-import { getIconComponent, iconCategories, iconDescriptionMap } from '@/utils/iconUtils';
+import { useState, useMemo, useEffect } from "react";
+import type { FC } from "react";
+import { Input, Modal, Tabs, message } from "antd";
+import { SearchOutlined } from "@ant-design/icons";
+import { getIconComponent, iconCategories, iconDescriptionMap } from "@/utils/iconUtils";
 
 interface IconSelectProps {
   value?: string;
@@ -19,11 +19,11 @@ interface IconSelectProps {
 const IconSelect: FC<IconSelectProps> = ({
   value,
   onChange,
-  placeholder = '请选择图标',
+  placeholder = "请选择图标",
   disabled = false,
 }) => {
   const [visible, setVisible] = useState(false);
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
   const [selectedIcon, setSelectedIcon] = useState<string | undefined>(value);
 
   // 当外部 value 变化时同步内部状态
@@ -77,9 +77,9 @@ const IconSelect: FC<IconSelectProps> = ({
     if (selectedIcon) {
       onChange?.(selectedIcon);
       setVisible(false);
-      setSearchText('');
+      setSearchText("");
     } else {
-      message.warning('请先选择一个图标');
+      message.warning("请先选择一个图标");
     }
   };
 
@@ -87,28 +87,28 @@ const IconSelect: FC<IconSelectProps> = ({
   const handleCancel = () => {
     setSelectedIcon(value); // 恢复到原来的值
     setVisible(false);
-    setSearchText('');
+    setSearchText("");
   };
 
   // 清空选择
   const handleClear = () => {
     setSelectedIcon(undefined);
-    onChange?.('');
+    onChange?.("");
     setVisible(false);
-    setSearchText('');
+    setSearchText("");
   };
 
   return (
     <>
       {/* 输入框 */}
       <Input
-        value={value ? `${value} (${iconDescriptionMap[value] || value})` : ''}
+        value={value ? `${value} (${iconDescriptionMap[value] || value})` : ""}
         readOnly
         disabled={disabled}
         onClick={() => !disabled && setVisible(true)}
-        placeholder={value ? '' : placeholder}
+        placeholder={value ? "" : placeholder}
         suffix={value ? getIconComponent(value) : <span />}
-        style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}
+        style={{ cursor: disabled ? "not-allowed" : "pointer" }}
       />
 
       {/* 图标选择弹窗 */}
@@ -134,15 +134,15 @@ const IconSelect: FC<IconSelectProps> = ({
 
         {/* 搜索结果统计 */}
         {searchText && (
-          <div style={{ marginBottom: 12, color: 'var(--theme-text-tertiary, #999)' }}>
+          <div style={{ marginBottom: 12, color: "var(--theme-text-tertiary, #999)" }}>
             找到 <strong>{totalMatchedIcons}</strong> 个匹配的图标
           </div>
         )}
 
         {/* 图标分类展示 */}
-        <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+        <div style={{ maxHeight: 400, overflowY: "auto" }}>
           {Object.keys(filteredCategories).length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 40, color: 'var(--theme-text-tertiary, #999)' }}>
+            <div style={{ textAlign: "center", padding: 40, color: "var(--theme-text-tertiary, #999)" }}>
               未找到匹配的图标
             </div>
           ) : (
@@ -154,8 +154,8 @@ const IconSelect: FC<IconSelectProps> = ({
                 children: (
                   <div
                     style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(6, 1fr)',
+                      display: "grid",
+                      gridTemplateColumns: "repeat(6, 1fr)",
                       gap: 12,
                     }}
                   >
@@ -166,24 +166,24 @@ const IconSelect: FC<IconSelectProps> = ({
                           key={iconName}
                           onClick={() => handleIconClick(iconName)}
                           style={{
-                            border: `1px solid ${isSelected ? 'var(--theme-info, #1890ff)' : '#d9d9d9'}`,
+                            border: `1px solid ${isSelected ? "var(--theme-info, #1890ff)" : "#d9d9d9"}`,
                             borderRadius: 4,
                             padding: 12,
-                            textAlign: 'center',
-                            cursor: 'pointer',
-                            backgroundColor: isSelected ? '#e6f7ff' : '#fff',
-                            transition: 'all 0.2s',
+                            textAlign: "center",
+                            cursor: "pointer",
+                            backgroundColor: isSelected ? "#e6f7ff" : "#fff",
+                            transition: "all 0.2s",
                           }}
                           onMouseEnter={(e) => {
                             if (!isSelected) {
-                              e.currentTarget.style.borderColor = 'var(--theme-info, #1890ff)';
-                              e.currentTarget.style.backgroundColor = '#f0f0f0';
+                              e.currentTarget.style.borderColor = "var(--theme-info, #1890ff)";
+                              e.currentTarget.style.backgroundColor = "#f0f0f0";
                             }
                           }}
                           onMouseLeave={(e) => {
                             if (!isSelected) {
-                              e.currentTarget.style.borderColor = '#d9d9d9';
-                              e.currentTarget.style.backgroundColor = '#fff';
+                              e.currentTarget.style.borderColor = "#d9d9d9";
+                              e.currentTarget.style.backgroundColor = "#fff";
                             }
                           }}
                         >
@@ -193,10 +193,10 @@ const IconSelect: FC<IconSelectProps> = ({
                           <div
                             style={{
                               fontSize: 12,
-                              color: 'var(--theme-text-tertiary, #666)',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
+                              color: "var(--theme-text-tertiary, #666)",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
                             }}
                             title={iconName}
                           >
@@ -205,18 +205,18 @@ const IconSelect: FC<IconSelectProps> = ({
                           {isSelected && (
                             <div
                               style={{
-                                position: 'absolute',
+                                position: "absolute",
                                 top: 4,
                                 right: 4,
                                 width: 16,
                                 height: 16,
-                                borderRadius: '50%',
-                                backgroundColor: 'var(--theme-info, #1890ff)',
-                                color: '#fff',
+                                borderRadius: "50%",
+                                backgroundColor: "var(--theme-info, #1890ff)",
+                                color: "#fff",
                                 fontSize: 10,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
                               }}
                             >
                               ✓
@@ -238,10 +238,10 @@ const IconSelect: FC<IconSelectProps> = ({
             style={{
               marginTop: 16,
               padding: 12,
-              backgroundColor: '#f5f5f5',
+              backgroundColor: "#f5f5f5",
               borderRadius: 4,
-              display: 'flex',
-              alignItems: 'center',
+              display: "flex",
+              alignItems: "center",
               gap: 12,
             }}
           >
@@ -255,8 +255,8 @@ const IconSelect: FC<IconSelectProps> = ({
 
         {/* 清空按钮 */}
         {value && (
-          <div style={{ marginTop: 12, textAlign: 'center' }}>
-            <a onClick={handleClear} style={{ color: 'var(--theme-error, #ff4d4f)' }}>
+          <div style={{ marginTop: 12, textAlign: "center" }}>
+            <a onClick={handleClear} style={{ color: "var(--theme-error, #ff4d4f)" }}>
               清空已选图标
             </a>
           </div>

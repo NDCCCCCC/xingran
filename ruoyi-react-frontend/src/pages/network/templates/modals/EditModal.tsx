@@ -3,9 +3,9 @@
  * 模板编辑模态框
  */
 
-import { Modal, Form, Input, Select, Space } from 'antd';
-import type { ConfigTemplate } from '@/types';
-import { VENDOR_OPTIONS, DEVICE_TYPE_OPTIONS, TEMPLATE_TYPE_OPTIONS } from '../constants';
+import { Modal, Form, Input, Select, Space } from "antd";
+import type { ConfigTemplate } from "@/types";
+import { VENDOR_OPTIONS, DEVICE_TYPE_OPTIONS, TEMPLATE_TYPE_OPTIONS } from "../constants";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -27,7 +27,7 @@ export function TemplateEditModal({
 
   return (
     <Modal
-      title={editingTemplate ? '编辑配置模板' : '新增配置模板'}
+      title={editingTemplate ? "编辑配置模板" : "新增配置模板"}
       open={open}
       onOk={async () => {
         await onOk();
@@ -43,14 +43,14 @@ export function TemplateEditModal({
         <Form.Item
           name="templateName"
           label="模板名称"
-          rules={[{ required: true, message: '请输入模板名称' }]}
+          rules={[{ required: true, message: "请输入模板名称" }]}
         >
           <Input placeholder="请输入模板名称" />
         </Form.Item>
         <Form.Item
           name="templateCode"
           label="模板编码"
-          rules={[{ required: true, message: '请输入模板编码' }]}
+          rules={[{ required: true, message: "请输入模板编码" }]}
         >
           <Input placeholder="请输入模板编码（英文，用于API调用）" disabled={!!editingTemplate} />
         </Form.Item>
@@ -86,7 +86,7 @@ export function TemplateEditModal({
         <Form.Item
           name="templateContent"
           label="模板内容"
-          rules={[{ required: true, message: '请输入模板内容' }]}
+          rules={[{ required: true, message: "请输入模板内容" }]}
           extra="使用 {{.变量名}} 语法定义变量"
         >
           <TextArea

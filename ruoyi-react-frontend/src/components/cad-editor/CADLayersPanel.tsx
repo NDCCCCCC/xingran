@@ -2,11 +2,11 @@
  * CAD 图层面板组件
  */
 
-import { useCallback, useState } from 'react';
-import { Card, Slider, Space } from 'antd';
-import { EyeOutlined, EyeInvisibleOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
-import type { Layer } from './types';
-import './CADLayersPanel.css';
+import { useCallback, useState } from "react";
+import { Card, Slider, Space } from "antd";
+import { EyeOutlined, EyeInvisibleOutlined, LockOutlined, UnlockOutlined } from "@ant-design/icons";
+import type { Layer } from "./types";
+import "./CADLayersPanel.css";
 
 export interface CADLayersPanelProps {
   layers: Layer[];
@@ -43,16 +43,16 @@ const LayerItem = function LayerItem({
         <span className="cad-layer-name">{layer.name}</span>
         <div className="cad-layer-actions">
           <button
-            className={`cad-layer-icon-btn ${!layer.visible ? 'cad-layer-icon-btn-hidden' : ''}`}
+            className={`cad-layer-icon-btn ${!layer.visible ? "cad-layer-icon-btn-hidden" : ""}`}
             onClick={() => onVisibilityChange(!layer.visible)}
-            title={layer.visible ? '隐藏' : '显示'}
+            title={layer.visible ? "隐藏" : "显示"}
           >
             {layer.visible ? <EyeOutlined /> : <EyeInvisibleOutlined />}
           </button>
           <button
             className="cad-layer-icon-btn"
             onClick={() => onLockChange(!layer.locked)}
-            title={layer.locked ? '解锁' : '锁定'}
+            title={layer.locked ? "解锁" : "锁定"}
           >
             {layer.locked ? <LockOutlined /> : <UnlockOutlined />}
           </button>
@@ -111,7 +111,7 @@ export const CADLayersPanel = function CADLayersPanel({
       style={{ width: 180, ...style }}
       styles={{ body: { padding: 8 } }}
     >
-      <Space orientation="vertical" size={6} style={{ width: '100%' }}>
+      <Space orientation="vertical" size={6} style={{ width: "100%" }}>
         {layers.map((layer) => (
           <LayerItem
             key={layer.id}

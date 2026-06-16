@@ -3,7 +3,7 @@
  * 设备发现页面类型定义
  */
 
-import type { DeviceDiscovery, NetworkDevice } from '@/types';
+import type { DeviceDiscovery, NetworkDevice } from "@/types";
 
 /** IP 范围 */
 export interface IPRange {
@@ -12,7 +12,7 @@ export interface IPRange {
 }
 
 /** 发现状态 */
-export type DiscoveryStatus = 'pending' | 'running' | 'completed' | 'failed';
+export type DiscoveryStatus = "pending" | "running" | "completed" | "failed";
 
 /** 统计数据 */
 export interface DiscoveryStatistics {

@@ -1,5 +1,5 @@
-import { Checkbox, Select, Input, Form } from 'antd';
-import type { APINotificationConfig } from '@/lib/notificationConfigApi';
+import { Checkbox, Select, Input, Form } from "antd";
+import type { APINotificationConfig } from "@/lib/notificationConfigApi";
 
 const { Option } = Select;
 
@@ -41,7 +41,7 @@ export const ChannelSelector: React.FC<ChannelSelectorProps> = ({
             const newChannels = checkedValues as string[];
             onChannelsChange(newChannels);
             // 如果取消选择API渠道，清除API配置选择
-            if (!newChannels.includes('api')) {
+            if (!newChannels.includes("api")) {
               onAPIConfigChange(undefined);
             }
           }}
@@ -56,10 +56,10 @@ export const ChannelSelector: React.FC<ChannelSelectorProps> = ({
       </Form.Item>
 
       {/* API配置选择器（仅当选择API渠道时显示） */}
-      {selectedChannels.includes('api') && (
+      {selectedChannels.includes("api") && (
         <Form.Item
           label="企微机器人配置"
-          rules={[{ required: true, message: '请选择企微机器人配置' }]}
+          rules={[{ required: true, message: "请选择企微机器人配置" }]}
         >
           <Select
             placeholder="请选择企微机器人配置"
@@ -71,18 +71,18 @@ export const ChannelSelector: React.FC<ChannelSelectorProps> = ({
             {apiConfigs.map((config) => (
               <Option key={config.id} value={config.id}>
                 {config.configName}
-                {config.configType === 'webhook' && ` (${config.apiMethod})`}
+                {config.configType === "webhook" && ` (${config.apiMethod})`}
               </Option>
             ))}
           </Select>
           <div className="text-xs text-gray-500 mt-1">
-            {apiConfigs.length === 0 && '暂无可用的API配置，请先在系统设置中添加'}
+            {apiConfigs.length === 0 && "暂无可用的API配置，请先在系统设置中添加"}
           </div>
         </Form.Item>
       )}
 
       {/* 自定义邮件地址（仅当选择邮件渠道时显示） */}
-      {selectedChannels.includes('email') && (
+      {selectedChannels.includes("email") && (
         <Form.Item label="自定义邮件地址" extra="多个邮件地址用逗号分隔，留空则发送给目标用户">
           <Input
             placeholder="例如: user1@example.com, user2@example.com"
@@ -94,7 +94,7 @@ export const ChannelSelector: React.FC<ChannelSelectorProps> = ({
       )}
 
       {/* 自定义企微用户代码（仅当选择API渠道时显示） */}
-      {selectedChannels.includes('api') && (
+      {selectedChannels.includes("api") && (
         <Form.Item label="自定义企微用户" extra="多个用户代码用逗号分隔，留空则发送给目标用户">
           <Input
             placeholder="例如: USER001, USER002"

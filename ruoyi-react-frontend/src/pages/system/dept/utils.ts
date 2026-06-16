@@ -3,8 +3,8 @@
  * 部门工具函数
  */
 
-import type { Department } from '@/types';
-import type { ParentOption } from './types';
+import type { Department } from "@/types";
+import type { ParentOption } from "./types";
 
 // 树节点类型（包含 children 的 Department）
 type DepartmentTreeNode = Department & { children?: DepartmentTreeNode[] };

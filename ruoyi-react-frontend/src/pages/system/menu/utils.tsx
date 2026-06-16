@@ -3,9 +3,9 @@
  * 菜单管理页面工具函数
  */
 
-import type { Menu } from '@/types';
-import { getIconComponent } from '@/utils/iconUtils';
-import { getMenuIcon } from './constants';
+import type { Menu } from "@/types";
+import { getIconComponent } from "@/utils/iconUtils";
+import { getMenuIcon } from "./constants";
 
 /** 扁平化树形数据 */
 export function flattenTree(tree: Menu[]): Menu[] {
@@ -39,11 +39,11 @@ export interface ParentOption {
 }
 
 export function buildParentOptions(tree: Menu[]): ParentOption[] {
-  const options: ParentOption[] = [{ title: '顶级菜单', value: '', key: '' }];
+  const options: ParentOption[] = [{ title: "顶级菜单", value: "", key: "" }];
   if (!tree || !Array.isArray(tree)) {
     return options;
   }
-  const traverse = (nodes: Menu[], parentTitle = '') => {
+  const traverse = (nodes: Menu[], parentTitle = "") => {
     if (!nodes || !Array.isArray(nodes)) {
       return;
     }
@@ -85,9 +85,9 @@ export interface MenuStatistics {
 export function calculateStatistics(flatMenus: Menu[]): MenuStatistics {
   return {
     total: flatMenus.length,
-    directories: flatMenus.filter(m => m.menuType === 'M').length,
-    menus: flatMenus.filter(m => m.menuType === 'C').length,
-    buttons: flatMenus.filter(m => m.menuType === 'F').length,
+    directories: flatMenus.filter(m => m.menuType === "M").length,
+    menus: flatMenus.filter(m => m.menuType === "C").length,
+    buttons: flatMenus.filter(m => m.menuType === "F").length,
   };
 }
 

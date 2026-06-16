@@ -2,9 +2,9 @@
  * 3D 楼宇视图组件共享工具函数
  */
 
-import type { BuildingItem } from './types';
-import { MARKER_COLORS, STATUS_TEXT } from './constants';
-import type { BMapPoint } from '@/types/baidu-map';
+import type { BuildingItem } from "./types";
+import { MARKER_COLORS, STATUS_TEXT } from "./constants";
+import type { BMapPoint } from "@/types/baidu-map";
 
 /**
  * Base64 编码（正确处理 Unicode 字符）
@@ -51,7 +51,7 @@ export function getWorkstationStatusText(status: number): string {
     case 0: return STATUS_TEXT.WORKSTATION.AVAILABLE;
     case 1: return STATUS_TEXT.WORKSTATION.OCCUPIED;
     case 2: return STATUS_TEXT.WORKSTATION.MAINTENANCE;
-    default: return '未知';
+    default: return "未知";
   }
 }
 
@@ -63,7 +63,7 @@ export function getWorkstationTypeText(type: number): string {
     case 0: return STATUS_TEXT.WORKSTATION.FIXED;
     case 1: return STATUS_TEXT.WORKSTATION.FLEXIBLE;
     case 2: return STATUS_TEXT.WORKSTATION.MANAGEMENT;
-    default: return '未知';
+    default: return "未知";
   }
 }
 
@@ -102,10 +102,10 @@ export function generateBuildingInfoHTML(building: BuildingItem): string {
         ${building.name}
       </h3>
       <div style="font-size: 13px; color: var(--theme-text-tertiary, #666); line-height: 1.8;">
-        <div>📌 ${building.address || '暂无地址'}</div>
+        <div>📌 ${building.address || "暂无地址"}</div>
         <div style="margin-top: 8px;">
-          <span style="display: inline-block; padding: 2px 10px; background: ${isStopped ? '#f5f5f5' : '#fff2e8'}; color: ${colors.main}; border-radius: 12px; font-size: 12px; font-weight: 500;">
-            ${isStopped ? '⏸ ' + statusText : '✓ ' + statusText}
+          <span style="display: inline-block; padding: 2px 10px; background: ${isStopped ? "#f5f5f5" : "#fff2e8"}; color: ${colors.main}; border-radius: 12px; font-size: 12px; font-weight: 500;">
+            ${isStopped ? "⏸ " + statusText : "✓ " + statusText}
           </span>
           <span style="margin-left: 12px;">🏢 ${building.floorCount || 0} 层</span>
           <span style="margin-left: 12px;">🪑 ${building.workstationCount || 0} 工位</span>
@@ -171,7 +171,7 @@ export function generateBuildingMarkerSVG(
   buildingName: string,
   colors: { main: string; border: string; shadow: string }
 ): string {
-  const label = buildingName ? buildingName.slice(0, 2) : '楼宇';
+  const label = buildingName ? buildingName.slice(0, 2) : "楼宇";
 
   return `
     <svg xmlns="http://www.w3.org/2000/svg" width="42" height="48" viewBox="0 0 42 48">
@@ -195,8 +195,8 @@ export function parseBoundaryPoints<T extends new (lng: number, lat: number) => 
   boundaryStr: string,
   PointClass: T
 ): BMapPoint[] {
-  return boundaryStr.split(';').map((point) => {
-    const [lng, lat] = point.split(',').map(Number);
+  return boundaryStr.split(";").map((point) => {
+    const [lng, lat] = point.split(",").map(Number);
     return new PointClass(lng, lat);
   });
 }

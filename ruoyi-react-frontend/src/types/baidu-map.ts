@@ -130,7 +130,7 @@ export interface BMapPolygonOptions {
   strokeColor?: string;
   strokeWeight?: number;
   strokeOpacity?: number;
-  strokeStyle?: 'solid' | 'dashed';
+  strokeStyle?: "solid" | "dashed";
   fillColor?: string;
   fillOpacity?: number;
   enableMassClear?: boolean;
@@ -144,7 +144,7 @@ export interface BMapPolygon extends BMapEventEmitter {
   setStrokeColor(color: string): void;
   setStrokeWeight(weight: number): void;
   setStrokeOpacity(opacity: number): void;
-  setStrokeStyle(style: 'solid' | 'dashed'): void;
+  setStrokeStyle(style: "solid" | "dashed"): void;
   setFillColor(color: string): void;
   setFillOpacity(opacity: number): void;
   show(): void;
@@ -396,12 +396,12 @@ export function getBMapGL(): BMapGLNamespace | undefined {
  * 检查百度地图是否已加载
  */
 export function isBMapLoaded(): boolean {
-  return typeof window.BMap !== 'undefined' || typeof window.BMapGL !== 'undefined';
+  return typeof window.BMap !== "undefined" || typeof window.BMapGL !== "undefined";
 }
 
 /**
  * 检查百度地图 GL 是否已加载
  */
 export function isBMapGLLoaded(): boolean {
-  return typeof window.BMapGL !== 'undefined';
+  return typeof window.BMapGL !== "undefined";
 }

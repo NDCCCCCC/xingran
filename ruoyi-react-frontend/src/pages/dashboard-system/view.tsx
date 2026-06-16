@@ -4,17 +4,17 @@
  * 以只读模式查看仪表盘
  */
 
-import { useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { LayoutToolbar } from '@/components/dashboard/layout/LayoutToolbar';
-import { DashboardGrid, DashboardGridPlaceholder } from '@/components/dashboard/layout/DashboardGrid';
-import { GridItem } from '@/components/dashboard/layout/GridItem';
-import { Suspense } from 'react';
-import { useDashboardStore } from '@/store/dashboardStore';
-import { Spin } from 'antd';
-import { Widget } from '@/components/dashboard/Widget';
+import { useEffect } from "react";
+import { useParams } from "react-router-dom";
+import { LayoutToolbar } from "@/components/dashboard/layout/LayoutToolbar";
+import { DashboardGrid, DashboardGridPlaceholder } from "@/components/dashboard/layout/DashboardGrid";
+import { GridItem } from "@/components/dashboard/layout/GridItem";
+import { Suspense } from "react";
+import { useDashboardStore } from "@/store/dashboardStore";
+import { Spin } from "antd";
+import { Widget } from "@/components/dashboard/Widget";
 
-import './view.css';
+import "./view.css";
 
 const DashboardView: React.FC = () => {
 	const { id } = useParams<{ id: string }>();
@@ -31,7 +31,7 @@ const DashboardView: React.FC = () => {
 	useEffect(() => {
 		if (id) {
 			fetchDashboard(id);
-			setViewMode('view');
+			setViewMode("view");
 		}
 
 		return () => {

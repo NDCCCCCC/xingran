@@ -2,7 +2,7 @@
  * API 密钥使用日志和统计 Modal 组件
  */
 
-import { useState, useEffect, useCallback, useMemo, type FC } from 'react';
+import { useState, useEffect, useCallback, useMemo, type FC } from "react";
 import {
   Modal,
   Table,
@@ -13,18 +13,18 @@ import {
   Tag,
   Descriptions,
   Progress,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+} from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
   FileTextOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   ClockCircleOutlined,
-} from '@ant-design/icons';
-import { listUsageLogs, getUsageSummary } from '@/api/apikey';
-import type { APIKeyUsageLog, UsageSummary } from '@/types/apikey';
-import type { PageData } from '@/types/apikey';
-import { formatDateTime } from '@/utils/datetime';
+} from "@ant-design/icons";
+import { listUsageLogs, getUsageSummary } from "@/api/apikey";
+import type { APIKeyUsageLog, UsageSummary } from "@/types/apikey";
+import type { PageData } from "@/types/apikey";
+import { formatDateTime } from "@/utils/datetime";
 
 // ==================== 组件属性 ====================
 
@@ -40,22 +40,22 @@ interface LogsModalProps {
  * 根据状态码获取 Tag 颜色
  */
 function getStatusTagColor(statusCode: number): string {
-  if (statusCode >= 200 && statusCode < 300) return 'success';
-  if (statusCode >= 300 && statusCode < 400) return 'warning';
-  if (statusCode >= 400 && statusCode < 500) return 'error';
-  if (statusCode >= 500) return 'error';
-  return 'default';
+  if (statusCode >= 200 && statusCode < 300) return "success";
+  if (statusCode >= 300 && statusCode < 400) return "warning";
+  if (statusCode >= 400 && statusCode < 500) return "error";
+  if (statusCode >= 500) return "error";
+  return "default";
 }
 
 /**
  * 根据状态码获取标签文本
  */
 function getStatusTagLabel(statusCode: number): string {
-  if (statusCode >= 200 && statusCode < 300) return '成功';
-  if (statusCode >= 300 && statusCode < 400) return '重定向';
-  if (statusCode >= 400 && statusCode < 500) return '客户端错误';
-  if (statusCode >= 500) return '服务器错误';
-  return '未知';
+  if (statusCode >= 200 && statusCode < 300) return "成功";
+  if (statusCode >= 300 && statusCode < 400) return "重定向";
+  if (statusCode >= 400 && statusCode < 500) return "客户端错误";
+  if (statusCode >= 500) return "服务器错误";
+  return "未知";
 }
 
 /**
@@ -63,15 +63,15 @@ function getStatusTagLabel(statusCode: number): string {
  */
 function renderMethodTag(method: string) {
   const methodColors: Record<string, string> = {
-    GET: 'green',
-    POST: 'blue',
-    PUT: 'orange',
-    DELETE: 'red',
-    PATCH: 'purple',
+    GET: "green",
+    POST: "blue",
+    PUT: "orange",
+    DELETE: "red",
+    PATCH: "purple",
   };
 
   return (
-    <Tag color={methodColors[method] || 'default'} style={{ fontWeight: 'bold' }}>
+    <Tag color={methodColors[method] || "default"} style={{ fontWeight: "bold" }}>
       {method}
     </Tag>
   );
@@ -115,7 +115,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
         total: result.data?.total || 0,
       }));
     } catch (error) {
-      console.error('加载使用日志失败:', error);
+      console.error("加载使用日志失败:", error);
     } finally {
       setLoading(false);
     }
@@ -133,7 +133,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
       const result = await getUsageSummary(apiKeyId);
       setSummary(result.data || null);
     } catch (error) {
-      console.error('加载统计汇总失败:', error);
+      console.error("加载统计汇总失败:", error);
     }
   }, [visible, apiKeyId]);
 
@@ -164,33 +164,33 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
 
   const columns: ColumnsType<APIKeyUsageLog> = useMemo(() => [
     {
-      title: '时间',
-      dataIndex: 'created_at',
-      key: 'created_at',
+      title: "时间",
+      dataIndex: "created_at",
+      key: "created_at",
       width: 160,
       render: (text) => formatDateTime(text),
     },
     {
-      title: '方法',
-      dataIndex: 'method',
-      key: 'method',
+      title: "方法",
+      dataIndex: "method",
+      key: "method",
       width: 80,
-      align: 'center' as const,
+      align: "center" as const,
       render: (method: string) => renderMethodTag(method),
     },
     {
-      title: '路径',
-      dataIndex: 'path',
-      key: 'path',
+      title: "路径",
+      dataIndex: "path",
+      key: "path",
       width: 200,
       ellipsis: true,
     },
     {
-      title: '状态码',
-      dataIndex: 'status_code',
-      key: 'status_code',
+      title: "状态码",
+      dataIndex: "status_code",
+      key: "status_code",
       width: 100,
-      align: 'center' as const,
+      align: "center" as const,
       render: (statusCode: number) => (
         <Tag color={getStatusTagColor(statusCode)}>
           {statusCode}
@@ -198,29 +198,29 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
       ),
     },
     {
-      title: '成功',
-      dataIndex: 'success',
-      key: 'success',
+      title: "成功",
+      dataIndex: "success",
+      key: "success",
       width: 80,
-      align: 'center' as const,
+      align: "center" as const,
       render: (success: boolean) => (
-        <Tag color={success ? 'success' : 'error'} style={{ fontWeight: 'bold' }}>
-          {success ? '是' : '否'}
+        <Tag color={success ? "success" : "error"} style={{ fontWeight: "bold" }}>
+          {success ? "是" : "否"}
         </Tag>
       ),
     },
     {
-      title: '客户端 IP',
-      dataIndex: 'client_ip',
-      key: 'client_ip',
+      title: "客户端 IP",
+      dataIndex: "client_ip",
+      key: "client_ip",
       width: 140,
     },
     {
-      title: '耗时',
-      dataIndex: 'duration',
-      key: 'duration',
+      title: "耗时",
+      dataIndex: "duration",
+      key: "duration",
       width: 100,
-      align: 'right' as const,
+      align: "right" as const,
       render: (duration: number) => `${duration}ms`,
     },
   ], []);
@@ -257,7 +257,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                   suffix="%"
                   styles={{
                     content: {
-                      color: summary.success_rate >= 0.95 ? 'var(--theme-success, #3f8600)' : summary.success_rate >= 0.8 ? 'var(--theme-warning, #faad14)' : 'var(--theme-error, #cf1322)',
+                      color: summary.success_rate >= 0.95 ? "var(--theme-success, #3f8600)" : summary.success_rate >= 0.8 ? "var(--theme-warning, #faad14)" : "var(--theme-error, #cf1322)",
                     },
                   }}
                   prefix={summary.success_rate >= 0.95 ? <CheckCircleOutlined /> : summary.success_rate >= 0.8 ? <ClockCircleOutlined /> : <CloseCircleOutlined />}
@@ -272,7 +272,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                   suffix="ms"
                   styles={{
                     content: {
-                      color: summary.avg_duration < 100 ? 'var(--theme-success, #3f8600)' : summary.avg_duration < 500 ? 'var(--theme-warning, #faad14)' : 'var(--theme-error, #cf1322)',
+                      color: summary.avg_duration < 100 ? "var(--theme-success, #3f8600)" : summary.avg_duration < 500 ? "var(--theme-warning, #faad14)" : "var(--theme-error, #cf1322)",
                     },
                   }}
                 />
@@ -285,7 +285,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                   value={summary.total_requests - Math.floor(summary.total_requests * summary.success_rate)}
                   styles={{
                     content: {
-                      color: 'var(--theme-error, #cf1322)',
+                      color: "var(--theme-error, #cf1322)",
                     },
                   }}
                 />
@@ -303,14 +303,14 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                     <Descriptions.Item
                       key={method}
                       label={renderMethodTag(method)}
-                      contentStyle={{ textAlign: 'right' }}
+                      contentStyle={{ textAlign: "right" }}
                     >
                       {count} 次
                     </Descriptions.Item>
                   ))}
                 </Descriptions>
                 {Object.keys(summary.requests_by_method).length === 0 && (
-                  <div style={{ textAlign: 'center', color: 'var(--theme-text-tertiary, #999)', padding: '8px 0' }}>
+                  <div style={{ textAlign: "center", color: "var(--theme-text-tertiary, #999)", padding: "8px 0" }}>
                     暂无数据
                   </div>
                 )}
@@ -320,7 +320,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
             {/* 按路径统计（Top 5） */}
             <Col span={8}>
               <Card title="热门路径（Top 5）" size="small">
-                <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                <div style={{ maxHeight: 200, overflowY: "auto" }}>
                   {Object.entries(summary.requests_by_path)
                     .sort(([, a], [, b]) => (b as number) - (a as number))
                     .slice(0, 5)
@@ -330,11 +330,11 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
 
                       return (
                         <div key={path} style={{ marginBottom: 12 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                            <span style={{ fontSize: 12, color: 'var(--theme-text-tertiary, #666)' }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                            <span style={{ fontSize: 12, color: "var(--theme-text-tertiary, #666)" }}>
                               {index + 1}. {path.length > 30 ? `${path.slice(0, 30)}...` : path}
                             </span>
-                            <span style={{ fontSize: 12, fontWeight: 'bold' }}>
+                            <span style={{ fontSize: 12, fontWeight: "bold" }}>
                               {count} 次
                             </span>
                           </div>
@@ -349,7 +349,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                       );
                     })}
                   {Object.keys(summary.requests_by_path).length === 0 && (
-                    <div style={{ textAlign: 'center', color: 'var(--theme-text-tertiary, #999)', padding: '8px 0' }}>
+                    <div style={{ textAlign: "center", color: "var(--theme-text-tertiary, #999)", padding: "8px 0" }}>
                       暂无数据
                     </div>
                   )}
@@ -360,7 +360,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
             {/* 错误统计 */}
             <Col span={8}>
               <Card title="错误统计" size="small">
-                <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                <div style={{ maxHeight: 200, overflowY: "auto" }}>
                   {Object.entries(summary.errors_by_status)
                     .sort(([, a], [, b]) => (b as number) - (a as number))
                     .map(([status, count]) => (
@@ -372,7 +372,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                       </div>
                     ))}
                   {Object.keys(summary.errors_by_status).length === 0 && (
-                    <div style={{ textAlign: 'center', color: 'var(--theme-text-tertiary, #999)', padding: '8px 0' }}>
+                    <div style={{ textAlign: "center", color: "var(--theme-text-tertiary, #999)", padding: "8px 0" }}>
                       暂无错误
                     </div>
                   )}

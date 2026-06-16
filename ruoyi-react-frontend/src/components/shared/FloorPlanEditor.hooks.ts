@@ -2,9 +2,9 @@
  * FloorPlanEditor 拖拽逻辑 Hook
  */
 
-import { useState, useCallback } from 'react';
-import type { WorkstationNode } from './FloorPlanEditor.types';
-import { GRID_SIZE } from './FloorPlanEditor.constants';
+import { useState, useCallback } from "react";
+import type { WorkstationNode } from "./FloorPlanEditor.types";
+import { GRID_SIZE } from "./FloorPlanEditor.constants";
 
 interface UseWorkstationDragOptions {
   workstations: WorkstationNode[];

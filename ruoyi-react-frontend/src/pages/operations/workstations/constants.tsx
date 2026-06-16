@@ -3,58 +3,58 @@
  * 工位常量定义
  */
 
-import { Tag } from 'antd';
-import type { WorkstationNode } from '@/components/shared/FloorPlanEditor.types';
-import type { WorkstationOps } from '@/types';
+import { Tag } from "antd";
+import type { WorkstationNode } from "@/components/shared/FloorPlanEditor.types";
+import type { WorkstationOps } from "@/types";
 
 // 工位状态选项
 export const STATUS_OPTIONS = [
-  { label: '空闲', value: 0 },
-  { label: '占用', value: 1 },
-  { label: '维护', value: 2 },
+  { label: "空闲", value: 0 },
+  { label: "占用", value: 1 },
+  { label: "维护", value: 2 },
 ];
 
 // 工位类型选项
 export const TYPE_OPTIONS = [
-  { label: '固定工位', value: 0 },
-  { label: '灵活工位', value: 1 },
-  { label: '管理工位', value: 2 },
+  { label: "固定工位", value: 0 },
+  { label: "灵活工位", value: 1 },
+  { label: "管理工位", value: 2 },
 ];
 
 // 工位类型文本映射
 const TYPE_TEXT_MAP: Record<number, string> = {
-  0: '固定工位',
-  1: '灵活工位',
-  2: '管理工位',
+  0: "固定工位",
+  1: "灵活工位",
+  2: "管理工位",
 };
 
 // 工位状态文本映射
 const STATUS_TEXT_MAP: Record<number, string> = {
-  0: '空闲',
-  1: '占用',
-  2: '维护',
+  0: "空闲",
+  1: "占用",
+  2: "维护",
 };
 
 // 工位状态颜色映射
 const STATUS_COLOR_MAP: Record<number, string> = {
-  0: 'success',
-  1: 'error',
-  2: 'warning',
+  0: "success",
+  1: "error",
+  2: "warning",
 };
 
 // 获取工位类型文本
 export function getWorkstationTypeText(type: number): string {
-  return TYPE_TEXT_MAP[type] || '-';
+  return TYPE_TEXT_MAP[type] || "-";
 }
 
 // 获取工位状态文本
 export function getWorkstationStatusText(status: number): string {
-  return STATUS_TEXT_MAP[status] || '-';
+  return STATUS_TEXT_MAP[status] || "-";
 }
 
 // 获取工位状态颜色
 export function getWorkstationStatusColor(status: number): string {
-  return STATUS_COLOR_MAP[status] || 'default';
+  return STATUS_COLOR_MAP[status] || "default";
 }
 
 // 渲染工位类型标签

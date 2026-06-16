@@ -2,14 +2,14 @@
  * 楼层卡片视图组件
  */
 
-import type { FC } from 'react';
-import { Row, Col, Card, Tag, Popconfirm } from 'antd';
+import type { FC } from "react";
+import { Row, Col, Card, Tag, Popconfirm } from "antd";
 import {
   EditOutlined,
   BgColorsOutlined,
   DeleteOutlined,
-} from '@ant-design/icons';
-import type { Floor } from '@/types';
+} from "@ant-design/icons";
+import type { Floor } from "@/types";
 
 interface FloorCardViewProps {
   floors: Floor[];
@@ -26,7 +26,7 @@ export const FloorCardView: FC<FloorCardViewProps> = ({
 }) => {
   if (floors.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px', color: 'var(--theme-text-tertiary, #999)' }}>
+      <div style={{ textAlign: "center", padding: "40px", color: "var(--theme-text-tertiary, #999)" }}>
         暂无数据
       </div>
     );
@@ -52,7 +52,7 @@ export const FloorCardView: FC<FloorCardViewProps> = ({
                 okText="确定"
                 cancelText="取消"
               >
-                <DeleteOutlined style={{ color: 'var(--theme-error, #ff4d4f)' }} />
+                <DeleteOutlined style={{ color: "var(--theme-error, #ff4d4f)" }} />
               </Popconfirm>,
             ]}
           >
@@ -60,14 +60,14 @@ export const FloorCardView: FC<FloorCardViewProps> = ({
               title={
                 <div
                   style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
                   }}
                 >
                   <span>{floor.name || `${floor.floorNo}层`}</span>
-                  <Tag color={floor.status === 0 ? 'success' : 'error'}>
-                    {floor.status === 0 ? '正常' : '停用'}
+                  <Tag color={floor.status === 0 ? "success" : "error"}>
+                    {floor.status === 0 ? "正常" : "停用"}
                   </Tag>
                 </div>
               }

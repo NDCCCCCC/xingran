@@ -4,23 +4,23 @@
  * 编辑仪表盘的Widget布局和配置
  */
 
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { message } from 'antd';
-import type { WidgetConfig } from '@/types';
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { message } from "antd";
+import type { WidgetConfig } from "@/types";
 import {
 	LayoutToolbar,
 	DashboardGrid,
 	DashboardGridPlaceholder,
-} from '@/components/dashboard/layout';
-import { GridItem, GridItemPlaceholder } from '@/components/dashboard/layout';
-import { Suspense, lazy } from 'react';
-import { useDashboardStore } from '@/store/dashboardStore';
-import { Spin } from 'antd';
-import { DASHBOARD } from '@/constants/routes';
-import { Widget } from '@/components/dashboard/Widget';
+} from "@/components/dashboard/layout";
+import { GridItem, GridItemPlaceholder } from "@/components/dashboard/layout";
+import { Suspense, lazy } from "react";
+import { useDashboardStore } from "@/store/dashboardStore";
+import { Spin } from "antd";
+import { DASHBOARD } from "@/constants/routes";
+import { Widget } from "@/components/dashboard/Widget";
 
-const WidgetSelector = lazy(() => import('@/components/dashboard/settings/WidgetSelector'));
+const WidgetSelector = lazy(() => import("@/components/dashboard/settings/WidgetSelector"));
 
 interface DashboardEditProps {
 	dashboardId: string;
@@ -46,7 +46,7 @@ export const DashboardEdit: React.FC<DashboardEditProps> = ({ dashboardId }) => 
 	useEffect(() => {
 		if (dashboardId) {
 			fetchDashboard(dashboardId);
-			setViewMode('edit');
+			setViewMode("edit");
 		}
 
 		return () => {
@@ -57,7 +57,7 @@ export const DashboardEdit: React.FC<DashboardEditProps> = ({ dashboardId }) => 
 	// 处理Widget添加
 	const handleAddWidget = (widgetConfig: WidgetConfig) => {
 		addWidget(widgetConfig);
-		message.success('Widget添加成功');
+		message.success("Widget添加成功");
 	};
 
 	// 返回列表
@@ -67,7 +67,7 @@ export const DashboardEdit: React.FC<DashboardEditProps> = ({ dashboardId }) => 
 
 	if (currentLoading) {
 		return (
-			<div className="dashboard-edit loading" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+			<div className="dashboard-edit loading" style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "400px" }}>
 				<Spin size="large" />
 			</div>
 		);
@@ -75,7 +75,7 @@ export const DashboardEdit: React.FC<DashboardEditProps> = ({ dashboardId }) => 
 
 	if (!currentDashboard) {
 		return (
-			<div className="dashboard-edit empty" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+			<div className="dashboard-edit empty" style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "400px" }}>
 				<p>仪表盘不存在</p>
 			</div>
 		);

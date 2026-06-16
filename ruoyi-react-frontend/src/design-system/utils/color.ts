@@ -23,10 +23,10 @@ export interface ColorVariants {
  * @returns 亮度值 (0-1)，<0.5 为深色，>=0.5 为浅色
  */
 export function getLuminance(hexColor: string | undefined): number {
-	if (!hexColor || typeof hexColor !== 'string') {
+	if (!hexColor || typeof hexColor !== "string") {
 		return 0; // 默认返回深色
 	}
-	const hex = hexColor.replace('#', '');
+	const hex = hexColor.replace("#", "");
 	const r = parseInt(hex.substring(0, 2), 16) / 255;
 	const g = parseInt(hex.substring(2, 4), 16) / 255;
 	const b = parseInt(hex.substring(4, 6), 16) / 255;
@@ -52,9 +52,9 @@ export function getContrastTextColor(backgroundColor: string): string {
 	const luminance = getLuminance(backgroundColor);
 
 	if (luminance < 0.5) {
-		return '#F8FAFC'; // 深色背景配浅色文字
+		return "#F8FAFC"; // 深色背景配浅色文字
 	} else {
-		return '#1E293B'; // 浅色背景配深色文字
+		return "#1E293B"; // 浅色背景配深色文字
 	}
 }
 
@@ -66,10 +66,10 @@ export function getContrastTextColor(backgroundColor: string): string {
  * @returns 悬停背景色
  */
 export function getHoverBackgroundColor(backgroundColor: string | undefined): string {
-	if (!backgroundColor || typeof backgroundColor !== 'string') {
-		return '#1E293B'; // 默认返回深灰
+	if (!backgroundColor || typeof backgroundColor !== "string") {
+		return "#1E293B"; // 默认返回深灰
 	}
-	const hex = backgroundColor.replace('#', '');
+	const hex = backgroundColor.replace("#", "");
 	let r = parseInt(hex.substring(0, 2), 16);
 	let g = parseInt(hex.substring(2, 4), 16);
 	let b = parseInt(hex.substring(4, 6), 16);
@@ -88,7 +88,7 @@ export function getHoverBackgroundColor(backgroundColor: string | undefined): st
 		b = Math.max(0, b - 20);
 	}
 
-	return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+	return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
 }
 
 /**
@@ -100,7 +100,7 @@ export function getHoverBackgroundColor(backgroundColor: string | undefined): st
  */
 export function generateColorVariants(hexColor: string): ColorVariants {
 	// 将 HEX 转换为 HSL
-	const hex = hexColor.replace('#', '');
+	const hex = hexColor.replace("#", "");
 	const r = parseInt(hex.substring(0, 2), 16) / 255;
 	const g = parseInt(hex.substring(2, 4), 16) / 255;
 	const b = parseInt(hex.substring(4, 6), 16) / 255;
@@ -155,7 +155,7 @@ export function generateColorVariants(hexColor: string): ColorVariants {
 
 		const toHex = (x: number) => {
 			const hex = Math.round(x * 255).toString(16);
-			return hex.length === 1 ? '0' + hex : hex;
+			return hex.length === 1 ? "0" + hex : hex;
 		};
 
 		return `#${toHex(r)}${toHex(g)}${toHex(b)}`;

@@ -2,7 +2,7 @@
  * CAD 编辑器辅助函数
  */
 
-import type { Point, Wall } from './types';
+import type { Point, Wall } from "./types";
 
 // ==================== 常量 ====================
 
@@ -166,15 +166,15 @@ export function findNearbyWallNode(
 
 // ==================== 元素类型识别 ====================
 
-export type ElementType = 'wall' | 'door' | 'workstation' | 'text';
+export type ElementType = "wall" | "door" | "workstation" | "text";
 
 export function getElementType(element: unknown): ElementType | null {
-  if (!element || typeof element !== 'object') return null;
+  if (!element || typeof element !== "object") return null;
 
-  if ('points' in element) return 'wall';
-  if ('content' in element) return 'text';
-  if ('width' in element && 'length' in element) return 'door';
-  if ('code' in element) return 'workstation';
+  if ("points" in element) return "wall";
+  if ("content" in element) return "text";
+  if ("width" in element && "length" in element) return "door";
+  if ("code" in element) return "workstation";
 
   return null;
 }

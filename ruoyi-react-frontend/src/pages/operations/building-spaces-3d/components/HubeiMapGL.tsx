@@ -3,18 +3,18 @@
  * 集成百度地图 WebGL，显示楼宇标记，支持3D倾斜视角
  */
 
-import { useRef, useState, useEffect, useCallback } from 'react';
-import { Spin, message, Badge, List, Tag, Button } from 'antd';
+import { useRef, useState, useEffect, useCallback } from "react";
+import { Spin, message, Badge, List, Tag, Button } from "antd";
 import {
   ApartmentOutlined,
   EyeOutlined,
   EyeInvisibleOutlined,
   CompressOutlined,
   EnvironmentOutlined,
-} from '@ant-design/icons';
-import type { BuildingItem } from '../types';
-import { useVisualizationStore } from '@/store/visualizationStore';
-import { loadBaiduMapGLScript, isBaiduMapGLLoaded } from './BaiduMapScript';
+} from "@ant-design/icons";
+import type { BuildingItem } from "../types";
+import { useVisualizationStore } from "@/store/visualizationStore";
+import { loadBaiduMapGLScript, isBaiduMapGLLoaded } from "./BaiduMapScript";
 import {
   BAIDU_MAP_AK,
   MAP_CONFIG,
@@ -26,7 +26,7 @@ import {
   STATUS_TEXT_COLORS,
   ANIMATION_DURATION,
   EASING_FUNCTIONS,
-} from '../constants';
+} from "../constants";
 import {
   toBase64,
   getOfficialHubeiBoundary,
@@ -39,8 +39,8 @@ import {
   getBuildingStatusColor,
   filterBuildingsByZoom,
   animateViewTransition,
-} from '../utils';
-import { getBMapGL, type BMapGLNamespace, type BMapMap, type BMapMapGL, type BMapMarker, type BMapInfoWindow, type BMapPolygon } from '@/types/baidu-map';
+} from "../utils";
+import { getBMapGL, type BMapGLNamespace, type BMapMap, type BMapMapGL, type BMapMarker, type BMapInfoWindow, type BMapPolygon } from "@/types/baidu-map";
 
 // ============ 类型定义 ============
 
@@ -83,7 +83,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
   useEffect(() => {
     if (!mapRef.current || !BAIDU_MAP_AK) {
       if (!BAIDU_MAP_AK) {
-        message.error('未配置百度地图 AK');
+        message.error("未配置百度地图 AK");
       }
       return;
     }
@@ -97,7 +97,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
 
         const BMapGL = getBMapGL();
         if (!BMapGL) {
-          message.error('百度地图GL加载失败');
+          message.error("百度地图GL加载失败");
           return;
         }
 
@@ -126,10 +126,10 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
         addMapControls(map);
 
         // 创建信息窗口
-        infoWindowRef.current = new BMapGL.InfoWindow('', {
+        infoWindowRef.current = new BMapGL.InfoWindow("", {
           width: 280,
           height: 0,
-          title: '',
+          title: "",
           enableAutoPan: true,
           enableCloseOnClick: true,
         });
@@ -140,13 +140,13 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
         });
 
         // 监听事件
-        map.addEventListener('zoomend', () => setCurrentZoom(map.getZoom()));
-        map.addEventListener('tiltend', () => setCurrentTilt(map.getTilt()));
+        map.addEventListener("zoomend", () => setCurrentZoom(map.getZoom()));
+        map.addEventListener("tiltend", () => setCurrentTilt(map.getTilt()));
 
         setMapLoaded(true);
         setLoading(false);
       } catch (error) {
-        message.error('百度地图GL加载失败，请检查 AK 配置');
+        message.error("百度地图GL加载失败，请检查 AK 配置");
         console.error(error);
         setLoading(false);
       }
@@ -184,16 +184,16 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
       boundaries.forEach((boundaryStr: string) => {
         const points = parseBoundaryPoints(boundaryStr, BMapGL);
         const polygon = new BMapGL.Polygon(points, {
-          strokeColor: 'var(--theme-info, #1890ff)',
+          strokeColor: "var(--theme-info, #1890ff)",
           strokeWeight: 4,
           strokeOpacity: 1,
-          fillColor: 'transparent',
+          fillColor: "transparent",
           fillOpacity: 0,
         });
         map.addOverlay(polygon);
       });
     } catch (error) {
-      console.warn('获取官方边界失败，使用简化边界:', error);
+      console.warn("获取官方边界失败，使用简化边界:", error);
       addFallbackMask(map, BMapGL);
     }
   };
@@ -203,10 +203,10 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
       (coord) => new BMapGL.Point(coord[0], coord[1])
     );
     const polygon = new BMapGL.Polygon(points, {
-      strokeColor: 'var(--theme-info, #1890ff)',
+      strokeColor: "var(--theme-info, #1890ff)",
       strokeWeight: 4,
       strokeOpacity: 0.8,
-      fillColor: 'transparent',
+      fillColor: "transparent",
       fillOpacity: 0,
     });
     map.addOverlay(polygon);
@@ -343,7 +343,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
         CLUSTER_MARKER_MIN_SIZE +
         Math.min(buildings.length * 2, CLUSTER_MARKER_MAX_INCREMENT);
       const clusterIcon = new BMapGL.Icon(
-        'data:image/svg+xml;base64,' +
+        "data:image/svg+xml;base64," +
           toBase64(`
           <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
             <defs>
@@ -362,13 +362,13 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
 
       const marker = new BMapGL.Marker(point, { icon: clusterIcon });
 
-      marker.addEventListener('mouseover', () => {
+      marker.addEventListener("mouseover", () => {
         showTooltip(buildings, centerPixel);
       });
 
-      marker.addEventListener('mouseout', hideTooltip);
+      marker.addEventListener("mouseout", hideTooltip);
 
-      marker.addEventListener('click', () => {
+      marker.addEventListener("click", () => {
         setSelectedCluster(cluster);
       });
 
@@ -385,7 +385,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
 
       const marker = new BMapGL.Marker(point, {
         icon: new BMapGL.Icon(
-          'data:image/svg+xml;base64,' +
+          "data:image/svg+xml;base64," +
             toBase64(`
             <svg xmlns="http://www.w3.org/2000/svg" width="42" height="48" viewBox="0 0 42 48">
               <defs>
@@ -404,13 +404,13 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
         ),
       });
 
-      marker.addEventListener('mouseover', () => {
+      marker.addEventListener("mouseover", () => {
         showTooltip([building], centerPixel);
       });
 
-      marker.addEventListener('mouseout', hideTooltip);
+      marker.addEventListener("mouseout", hideTooltip);
 
-      marker.addEventListener('click', () => {
+      marker.addEventListener("click", () => {
         showBuildingInfo(building, map, BMapGL);
       });
 
@@ -446,10 +446,10 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
           ${building.name}
         </h3>
         <div style="font-size: 13px; color: var(--theme-text-tertiary, #666); line-height: 1.8;">
-          <div>📌 ${building.address || '暂无地址'}</div>
+          <div>📌 ${building.address || "暂无地址"}</div>
           <div style="margin-top: 8px;">
             <span style="display: inline-block; padding: 2px 10px; background: ${statusBg}; color: ${statusColor}; border-radius: 12px; font-size: 12px; font-weight: 500;">
-              ${stopped ? '⏸ 已停用' : '✓ 正常'}
+              ${stopped ? "⏸ 已停用" : "✓ 正常"}
             </span>
             <span style="margin-left: 12px;">🏢 ${building.floorCount || 0} 层</span>
             <span style="margin-left: 12px;">🪑 ${building.workstationCount || 0} 工位</span>
@@ -492,15 +492,15 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
       if (building) {
         navigateToBuilding({
           id: building.id,
-          orgId: '',
+          orgId: "",
           name: building.name,
-          code: building.code || '',
+          code: building.code || "",
           address: building.address,
           longitude: building.longitude,
           latitude: building.latitude,
           status: (building.status ?? 0) as 0 | 1,
-          createdAt: '',
-          updatedAt: '',
+          createdAt: "",
+          updatedAt: "",
         });
       }
     };
@@ -516,16 +516,16 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
     return (
       <div
         style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-          flexDirection: 'column',
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          flexDirection: "column",
           gap: 16,
         }}
       >
-        <div style={{ fontSize: 18, color: 'var(--theme-error, #ff4d4f)' }}>未配置百度地图 AK</div>
-        <div style={{ color: 'var(--theme-text-tertiary, #666)' }}>
+        <div style={{ fontSize: 18, color: "var(--theme-error, #ff4d4f)" }}>未配置百度地图 AK</div>
+        <div style={{ color: "var(--theme-text-tertiary, #666)" }}>
           请在 .env.development 文件中配置 VITE_BAIDU_MAP_AK
         </div>
       </div>
@@ -533,17 +533,17 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
   }
 
   return (
-    <div style={{ height: '100vh', width: '100%', position: 'relative' }}>
+    <div style={{ height: "100vh", width: "100%", position: "relative" }}>
       {/* 加载提示 */}
       {loading && (
         <div
           style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
             zIndex: 1000,
-            textAlign: 'center',
+            textAlign: "center",
           }}
         >
           <Spin size="large" />
@@ -554,28 +554,28 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
       {/* 地图容器 */}
       <div
         ref={mapRef}
-        style={{ height: '100vh', width: '100%' }}
+        style={{ height: "100vh", width: "100%" }}
         onClick={() => clearSelection()}
       />
 
       {/* 3D模式切换按钮 */}
       <div
         style={{
-          position: 'absolute',
+          position: "absolute",
           top: 16,
           right: 16,
           zIndex: 100,
-          display: 'flex',
-          flexDirection: 'column',
+          display: "flex",
+          flexDirection: "column",
           gap: 8,
         }}
       >
         <Button
-          type={is3DMode ? 'primary' : 'default'}
+          type={is3DMode ? "primary" : "default"}
           icon={is3DMode ? <EyeOutlined /> : <EyeInvisibleOutlined />}
           onClick={toggle3DMode}
         >
-          {is3DMode ? '3D 视角' : '2D 视角'}
+          {is3DMode ? "3D 视角" : "2D 视角"}
         </Button>
         <Button icon={<CompressOutlined />} onClick={resetView}>
           重置
@@ -605,15 +605,15 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
             setSelectedCluster(null);
             navigateToBuilding({
               id: building.id,
-              orgId: '',
+              orgId: "",
               name: building.name,
-              code: building.code || '',
+              code: building.code || "",
               address: building.address,
               longitude: building.longitude,
               latitude: building.latitude,
               status: (building.status ?? 0) as 0 | 1,
-              createdAt: '',
-              updatedAt: '',
+              createdAt: "",
+              updatedAt: "",
             });
           }}
         />
@@ -637,38 +637,38 @@ const MapInfoPanel: React.FC<MapInfoPanelProps> = ({
 }) => (
   <div
     style={{
-      position: 'absolute',
+      position: "absolute",
       top: 16,
       left: 16,
-      background: 'rgba(255, 255, 255, 0.95)',
-      padding: '12px 16px',
-      borderRadius: '8px',
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+      background: "rgba(255, 255, 255, 0.95)",
+      padding: "12px 16px",
+      borderRadius: "8px",
+      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
       fontSize: 12,
-      color: 'var(--theme-text-tertiary, #666)',
+      color: "var(--theme-text-tertiary, #666)",
       zIndex: 100,
     }}
   >
-    <div style={{ fontWeight: 'bold', marginBottom: 8, fontSize: 14 }}>
+    <div style={{ fontWeight: "bold", marginBottom: 8, fontSize: 14 }}>
       <EnvironmentOutlined /> 地图信息
     </div>
     <div>
-      缩放级别:{' '}
-      <Badge count={currentZoom} showZero style={{ backgroundColor: 'var(--theme-info, #1890ff)' }} />
+      缩放级别:{" "}
+      <Badge count={currentZoom} showZero style={{ backgroundColor: "var(--theme-info, #1890ff)" }} />
     </div>
     <div>
       3D 视角:
       <Badge
-        count={is3DMode ? `${currentTilt}°` : '关闭'}
+        count={is3DMode ? `${currentTilt}°` : "关闭"}
         showZero
         style={{
-          backgroundColor: is3DMode ? 'var(--theme-purple, #722ed1)' : '#d9d9d9',
+          backgroundColor: is3DMode ? "var(--theme-purple, #722ed1)" : "#d9d9d9",
           marginLeft: 8,
         }}
       />
     </div>
     {is3DMode && (
-      <div style={{ fontSize: 11, color: 'var(--theme-text-tertiary, #999)', marginTop: 4 }}>
+      <div style={{ fontSize: 11, color: "var(--theme-text-tertiary, #999)", marginTop: 4 }}>
         拖拽地图旋转视角
       </div>
     )}
@@ -683,43 +683,43 @@ interface TooltipPanelProps {
 const TooltipPanel: React.FC<TooltipPanelProps> = ({ buildings, position }) => (
   <div
     style={{
-      position: 'absolute',
+      position: "absolute",
       left: position.x,
       top: position.y,
-      transform: 'translate(-50%, -100%)',
+      transform: "translate(-50%, -100%)",
       marginTop: -10,
-      background: 'white',
-      border: '1px solid #d9d9d9',
-      borderRadius: '4px',
-      padding: '8px 12px',
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+      background: "white",
+      border: "1px solid #d9d9d9",
+      borderRadius: "4px",
+      padding: "8px 12px",
+      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
       zIndex: 1000,
-      minWidth: '200px',
-      pointerEvents: 'none',
+      minWidth: "200px",
+      pointerEvents: "none",
     }}
   >
     {buildings.length === 1 ? (
       <div>
-        <div style={{ fontWeight: 'bold', color: 'var(--theme-text-accent, #1890ff)', marginBottom: 4 }}>
+        <div style={{ fontWeight: "bold", color: "var(--theme-text-accent, #1890ff)", marginBottom: 4 }}>
           {buildings[0].name}
         </div>
-        <div style={{ fontSize: 11, color: 'var(--theme-text-tertiary, #666)' }}>
+        <div style={{ fontSize: 11, color: "var(--theme-text-tertiary, #666)" }}>
           {buildings[0].floorCount || 0}层 · {buildings[0].workstationCount || 0}
           工位
         </div>
       </div>
     ) : (
       <div>
-        <div style={{ fontWeight: 'bold', color: 'var(--theme-error, #ff4d4f)', marginBottom: 4 }}>
+        <div style={{ fontWeight: "bold", color: "var(--theme-error, #ff4d4f)", marginBottom: 4 }}>
           {buildings.length} 栋楼宇
         </div>
         {buildings.slice(0, 3).map((b, i) => (
-          <div key={i} style={{ fontSize: 11, color: 'var(--theme-text-tertiary, #666)' }}>
+          <div key={i} style={{ fontSize: 11, color: "var(--theme-text-tertiary, #666)" }}>
             · {b.name}
           </div>
         ))}
         {buildings.length > 3 && (
-          <div style={{ fontSize: 11, color: 'var(--theme-text-tertiary, #999)' }}>
+          <div style={{ fontSize: 11, color: "var(--theme-text-tertiary, #999)" }}>
             ...还有 {buildings.length - 3} 栋
           </div>
         )}
@@ -735,27 +735,27 @@ interface ControlHintsProps {
 const ControlHints: React.FC<ControlHintsProps> = ({ is3DMode }) => (
   <div
     style={{
-      position: 'absolute',
+      position: "absolute",
       bottom: 16,
       left: 16,
-      background: 'rgba(255, 255, 255, 0.95)',
-      padding: '12px 16px',
-      borderRadius: '8px',
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+      background: "rgba(255, 255, 255, 0.95)",
+      padding: "12px 16px",
+      borderRadius: "8px",
+      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
       fontSize: 12,
-      color: 'var(--theme-text-tertiary, #666)',
+      color: "var(--theme-text-tertiary, #666)",
       zIndex: 100,
     }}
   >
-    <div style={{ fontWeight: 'bold', marginBottom: 8, fontSize: 14 }}>操作提示</div>
+    <div style={{ fontWeight: "bold", marginBottom: 8, fontSize: 14 }}>操作提示</div>
     {is3DMode ? (
       <>
         <div>🎮 当前为 3D 视角模式</div>
-        <div style={{ fontSize: 11, color: 'var(--theme-text-tertiary, #999)', marginTop: 4 }}>
+        <div style={{ fontSize: 11, color: "var(--theme-text-tertiary, #999)", marginTop: 4 }}>
           • 右键拖拽旋转视角
         </div>
-        <div style={{ fontSize: 11, color: 'var(--theme-text-tertiary, #999)' }}>• 滚轮缩放地图</div>
-        <div style={{ fontSize: 11, color: 'var(--theme-text-tertiary, #999)' }}>• 双击重置视角</div>
+        <div style={{ fontSize: 11, color: "var(--theme-text-tertiary, #999)" }}>• 滚轮缩放地图</div>
+        <div style={{ fontSize: 11, color: "var(--theme-text-tertiary, #999)" }}>• 双击重置视角</div>
       </>
     ) : (
       <>
@@ -769,14 +769,14 @@ const ControlHints: React.FC<ControlHintsProps> = ({ is3DMode }) => (
     <div
       style={{
         marginTop: 8,
-        padding: '8px',
-        background: 'var(--theme-primary-lighter, #e6f7ff)',
-        borderRadius: '4px',
-        border: '1px solid var(--theme-primary-subtle, #91d5ff)',
-        color: 'var(--theme-primary, #096dd9)',
+        padding: "8px",
+        background: "var(--theme-primary-lighter, #e6f7ff)",
+        borderRadius: "4px",
+        border: "1px solid var(--theme-primary-subtle, #91d5ff)",
+        color: "var(--theme-primary, #096dd9)",
       }}
     >
-      <div style={{ fontWeight: 'bold', marginBottom: 4 }}>📋 WebGL 功能</div>
+      <div style={{ fontWeight: "bold", marginBottom: 4 }}>📋 WebGL 功能</div>
       <div style={{ fontSize: 11 }}>• 点击右上角按钮切换 2D/3D 视角</div>
       <div style={{ fontSize: 11 }}>• 3D 模式支持60度倾斜视角</div>
       <div style={{ fontSize: 11 }}>• 平滑动画过渡效果</div>
@@ -799,81 +799,81 @@ const ClusterSidebar: React.FC<ClusterSidebarProps> = ({
 }) => (
   <div
     style={{
-      position: 'absolute',
+      position: "absolute",
       top: 0,
       right: 0,
       width: 320,
-      height: '100vh',
-      background: 'white',
-      boxShadow: '-2px 0 8px rgba(0, 0, 0, 0.1)',
+      height: "100vh",
+      background: "white",
+      boxShadow: "-2px 0 8px rgba(0, 0, 0, 0.1)",
       zIndex: 1000,
-      display: 'flex',
-      flexDirection: 'column',
+      display: "flex",
+      flexDirection: "column",
     }}
   >
     <div
       style={{
-        padding: '16px',
-        borderBottom: '1px solid #f0f0f0',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+        padding: "16px",
+        borderBottom: "1px solid #f0f0f0",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
       }}
     >
       <div>
-        <div style={{ fontWeight: 'bold', fontSize: 16, color: 'var(--theme-error, #ff4d4f)' }}>
+        <div style={{ fontWeight: "bold", fontSize: 16, color: "var(--theme-error, #ff4d4f)" }}>
           📍 {cluster.buildings.length} 栋楼宇
         </div>
-        <div style={{ fontSize: 12, color: 'var(--theme-text-tertiary, #999)', marginTop: 4 }}>
+        <div style={{ fontSize: 12, color: "var(--theme-text-tertiary, #999)", marginTop: 4 }}>
           位置相近，已聚类显示
         </div>
       </div>
       <button
         onClick={onClose}
         style={{
-          border: 'none',
-          background: 'none',
+          border: "none",
+          background: "none",
           fontSize: 24,
-          cursor: 'pointer',
-          color: 'var(--theme-text-tertiary, #999)',
+          cursor: "pointer",
+          color: "var(--theme-text-tertiary, #999)",
           padding: 0,
           width: 32,
           height: 32,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
         ×
       </button>
     </div>
 
-    <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
+    <div style={{ flex: 1, overflow: "auto", padding: "16px" }}>
       <List
         dataSource={cluster.buildings}
         renderItem={(building) => (
           <List.Item
             key={building.id}
             style={{
-              border: '1px solid #f0f0f0',
-              borderRadius: '8px',
-              marginBottom: '12px',
-              padding: '12px',
-              cursor: 'pointer',
+              border: "1px solid #f0f0f0",
+              borderRadius: "8px",
+              marginBottom: "12px",
+              padding: "12px",
+              cursor: "pointer",
             }}
             onClick={() => onBuildingClick(building)}
           >
-            <div style={{ width: '100%' }}>
+            <div style={{ width: "100%" }}>
               <div
                 style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
                   marginBottom: 8,
                 }}
               >
                 <div
-                  style={{ fontWeight: 'bold', color: 'var(--theme-text-accent, #1890ff)', fontSize: 14 }}
+                  style={{ fontWeight: "bold", color: "var(--theme-text-accent, #1890ff)", fontSize: 14 }}
                 >
                   {building.name}
                 </div>
@@ -882,8 +882,8 @@ const ClusterSidebar: React.FC<ClusterSidebarProps> = ({
                 </Tag>
               </div>
 
-              <div style={{ fontSize: 12, color: 'var(--theme-text-tertiary, #666)', lineHeight: 1.8 }}>
-                <div>📌 {building.address || '暂无地址'}</div>
+              <div style={{ fontSize: 12, color: "var(--theme-text-tertiary, #666)", lineHeight: 1.8 }}>
+                <div>📌 {building.address || "暂无地址"}</div>
                 <div style={{ marginTop: 4 }}>
                   <span>🏢 {building.floorCount || 0} 层</span>
                   <span style={{ marginLeft: 12 }}>
@@ -892,7 +892,7 @@ const ClusterSidebar: React.FC<ClusterSidebarProps> = ({
                 </div>
               </div>
 
-              <div style={{ marginTop: 12, textAlign: 'right' }}>
+              <div style={{ marginTop: 12, textAlign: "right" }}>
                 <Tag color="blue">查看详情 →</Tag>
               </div>
             </div>
@@ -903,12 +903,12 @@ const ClusterSidebar: React.FC<ClusterSidebarProps> = ({
 
     <div
       style={{
-        padding: '12px 16px',
-        borderTop: '1px solid #f0f0f0',
-        background: '#fafafa',
+        padding: "12px 16px",
+        borderTop: "1px solid #f0f0f0",
+        background: "#fafafa",
         fontSize: 11,
-        color: 'var(--theme-text-tertiary, #999)',
-        textAlign: 'center',
+        color: "var(--theme-text-tertiary, #999)",
+        textAlign: "center",
       }}
     >
       点击楼宇卡片查看 3D 详情

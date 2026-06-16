@@ -2,10 +2,10 @@
  * FloorPlanEditor 平面图编辑器主组件
  */
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import type { CSSProperties } from 'react';
-import { Card, Button, Dropdown, Tooltip, message } from 'antd';
-import type { MenuProps } from 'antd';
+import React, { useState, useRef, useCallback, useEffect } from "react";
+import type { CSSProperties } from "react";
+import { Card, Button, Dropdown, Tooltip, message } from "antd";
+import type { MenuProps } from "antd";
 import {
   ZoomInOutlined,
   ZoomOutOutlined,
@@ -13,15 +13,15 @@ import {
   ReloadOutlined,
   AppstoreOutlined,
   InfoCircleOutlined,
-} from '@ant-design/icons';
-import { getWorkstationStatusColor, getWorkstationTypeColor } from '@/utils/three/colors';
-import './FloorPlanEditor.less';
+} from "@ant-design/icons";
+import { getWorkstationStatusColor, getWorkstationTypeColor } from "@/utils/three/colors";
+import "./FloorPlanEditor.less";
 
 // 导入提取的类型、常量和 Hooks
-import type { WorkstationNode, FloorPlanEditorProps } from './FloorPlanEditor.types';
-import { GRID_SIZE, TOOLBAR_HEIGHT, ZOOM_LEVELS } from './FloorPlanEditor.constants';
-import { usePanZoom } from './FloorPlanEditor.panZoom';
-import { useWorkstationDrag } from './FloorPlanEditor.hooks';
+import type { WorkstationNode, FloorPlanEditorProps } from "./FloorPlanEditor.types";
+import { GRID_SIZE, TOOLBAR_HEIGHT, ZOOM_LEVELS } from "./FloorPlanEditor.constants";
+import { usePanZoom } from "./FloorPlanEditor.panZoom";
+import { useWorkstationDrag } from "./FloorPlanEditor.hooks";
 
 /**
  * 获取工位颜色
@@ -115,10 +115,10 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
     const svgElement = containerRef.current;
     if (!svgElement) return;
 
-    svgElement.addEventListener('wheel', handleWheel, { passive: false });
+    svgElement.addEventListener("wheel", handleWheel, { passive: false });
 
     return () => {
-      svgElement.removeEventListener('wheel', handleWheel);
+      svgElement.removeEventListener("wheel", handleWheel);
     };
   }, [handleWheel]);
 
@@ -141,12 +141,12 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
         clearDraggedPos();
       };
 
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
 
       return () => {
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
+        window.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
       };
     }
   }, [dragState, draggedNodePos, viewState, handleDragMove, handleEndDrag, handlePanEnd, clearDraggedPos]);
@@ -154,28 +154,28 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
   // 键盘事件
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === ' ') {
+      if (e.key === " ") {
         e.preventDefault();
         if (containerRef.current?.style) {
-          (containerRef.current.style as CSSProperties).cursor = 'grab';
+          (containerRef.current.style as CSSProperties).cursor = "grab";
         }
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === ' ') {
+      if (e.key === " ") {
         if (containerRef.current?.style) {
-          (containerRef.current.style as CSSProperties).cursor = 'default';
+          (containerRef.current.style as CSSProperties).cursor = "default";
         }
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
     };
   }, []);
 
@@ -184,12 +184,12 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
    */
   const handleMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     const target = e.target as SVGElement;
-    const workstationEl = target.closest('[data-workstation-id]');
+    const workstationEl = target.closest("[data-workstation-id]");
     // 检查是否按下了空格键（通过全局状态或事件）
-    const spacePressed = (e.nativeEvent as MouseEvent & { code?: string }).code === 'Space';
+    const spacePressed = (e.nativeEvent as MouseEvent & { code?: string }).code === "Space";
 
     if (workstationEl && !spacePressed) {
-      const workstationId = workstationEl.getAttribute('data-workstation-id');
+      const workstationId = workstationEl.getAttribute("data-workstation-id");
       const workstation = workstations.find(w => w.id === workstationId);
 
       if (workstation && workstation.status === 0 && workstationId) {
@@ -278,50 +278,50 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
     if (!contextMenu.workstation) return;
 
     switch (action) {
-      case 'edit':
+      case "edit":
         onEdit(contextMenu.workstation);
         break;
-      case 'rotate-45':
+      case "rotate-45":
         await onUpdatePosition([{
           id: contextMenu.workstation.id,
           positionX: contextMenu.workstation.x,
           positionY: contextMenu.workstation.y,
           rotation: ((contextMenu.workstation.rotation || 0) + 45) % 360
         }]);
-        message.success('工位已顺时针旋转45°');
+        message.success("工位已顺时针旋转45°");
         break;
-      case 'rotate-90':
+      case "rotate-90":
         await onUpdatePosition([{
           id: contextMenu.workstation.id,
           positionX: contextMenu.workstation.x,
           positionY: contextMenu.workstation.y,
           rotation: ((contextMenu.workstation.rotation || 0) + 90) % 360
         }]);
-        message.success('工位已顺时针旋转90°');
+        message.success("工位已顺时针旋转90°");
         break;
-      case 'rotate-180':
+      case "rotate-180":
         await onUpdatePosition([{
           id: contextMenu.workstation.id,
           positionX: contextMenu.workstation.x,
           positionY: contextMenu.workstation.y,
           rotation: ((contextMenu.workstation.rotation || 0) + 180) % 360
         }]);
-        message.success('工位已旋转180°');
+        message.success("工位已旋转180°");
         break;
-      case 'rotate-reset':
+      case "rotate-reset":
         await onUpdatePosition([{
           id: contextMenu.workstation.id,
           positionX: contextMenu.workstation.x,
           positionY: contextMenu.workstation.y,
           rotation: 0
         }]);
-        message.success('工位方向已重置');
+        message.success("工位方向已重置");
         break;
-      case 'delete':
-        message.warning('删除功能待实现');
+      case "delete":
+        message.warning("删除功能待实现");
         break;
-      case 'copy':
-        message.warning('复制功能待实现');
+      case "copy":
+        message.warning("复制功能待实现");
         break;
     }
 
@@ -381,17 +381,17 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
       const h = workstation.height * viewState.scale;
 
       const style: React.CSSProperties = {
-        cursor: workstation.status === 0 ? 'move' : 'not-allowed',
-        filter: isHovered && workstation.status === 0 ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : undefined
+        cursor: workstation.status === 0 ? "move" : "not-allowed",
+        filter: isHovered && workstation.status === 0 ? "drop-shadow(0 4px 8px rgba(0,0,0,0.15))" : undefined
       };
 
       const hoverTransform = isHovered && workstation.status === 0
         ? `translate(${w / 2}, ${h / 2}) scale(1.05) translate(${-w / 2}, ${-h / 2})`
-        : '';
+        : "";
 
       const rotationTransform = rotation !== 0
         ? `rotate(${rotation}, ${w / 2}, ${h / 2})`
-        : '';
+        : "";
 
       const combinedTransform = rotationTransform
         ? `${rotationTransform} ${hoverTransform}`.trim()
@@ -413,7 +413,7 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
               width={w}
               height={h}
               fill={colors.main}
-              stroke={isSelected ? '#ff4d4f' : colors.border}
+              stroke={isSelected ? "#ff4d4f" : colors.border}
               strokeWidth={isSelected ? 3 : 2}
               rx={6}
               ry={6}
@@ -448,7 +448,7 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
               y={h * 0.12}
               width={w * 0.46}
               height={h * 0.31}
-              fill={isHovered || isSelected ? statusColor.main : '#0a0a0a'}
+              fill={isHovered || isSelected ? statusColor.main : "#0a0a0a"}
               opacity={isHovered || isSelected ? 0.6 : 0.8}
               rx={1}
               ry={1}
@@ -588,21 +588,21 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
     if (!contextMenu.visible || !contextMenu.workstation) return null;
 
     const menuItems = [
-      { key: 'edit', label: '编辑工位', icon: <InfoCircleOutlined /> },
-      { type: 'divider' },
-      { key: 'rotate-45', label: '顺时针旋转45°', icon: <InfoCircleOutlined /> },
-      { key: 'rotate-90', label: '顺时针旋转90°', icon: <InfoCircleOutlined /> },
-      { key: 'rotate-180', label: '旋转180°', icon: <InfoCircleOutlined /> },
-      { key: 'rotate-reset', label: '重置方向', icon: <InfoCircleOutlined /> },
-      { type: 'divider' },
-      { key: 'copy', label: '复制工位', icon: <InfoCircleOutlined /> },
-      { key: 'delete', label: '删除工位', icon: <InfoCircleOutlined />, danger: true }
+      { key: "edit", label: "编辑工位", icon: <InfoCircleOutlined /> },
+      { type: "divider" },
+      { key: "rotate-45", label: "顺时针旋转45°", icon: <InfoCircleOutlined /> },
+      { key: "rotate-90", label: "顺时针旋转90°", icon: <InfoCircleOutlined /> },
+      { key: "rotate-180", label: "旋转180°", icon: <InfoCircleOutlined /> },
+      { key: "rotate-reset", label: "重置方向", icon: <InfoCircleOutlined /> },
+      { type: "divider" },
+      { key: "copy", label: "复制工位", icon: <InfoCircleOutlined /> },
+      { key: "delete", label: "删除工位", icon: <InfoCircleOutlined />, danger: true }
     ];
 
     return (
       <Dropdown
         menu={{
-          items: menuItems as MenuProps['items'],
+          items: menuItems as MenuProps["items"],
           onClick: ({ key }) => handleMenuAction(key)
         }}
         open={contextMenu.visible}
@@ -611,12 +611,12 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
       >
         <div
           style={{
-            position: 'fixed',
+            position: "fixed",
             left: contextMenu.x,
             top: contextMenu.y,
             width: 1,
             height: 1,
-            pointerEvents: 'none'
+            pointerEvents: "none"
           }}
         />
       </Dropdown>
@@ -632,10 +632,10 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
       ref={cardRef}
       className="floor-plan-editor"
       styles={{ body: { padding: 0 } }}
-      style={{ height: '100%', overflow: 'hidden' }}
+      style={{ height: "100%", overflow: "hidden" }}
     >
       {/* 工具栏 */}
-      <div className="floor-plan-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
+      <div className="floor-plan-toolbar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderBottom: "1px solid #f0f0f0" }}>
         <div className="toolbar-left">
           <Tooltip title="放大 (Ctrl+滚轮)">
             <Button
@@ -668,7 +668,7 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
               onClick={resetView}
             />
           </Tooltip>
-          <Tooltip title={showGrid ? '隐藏网格' : '显示网格'}>
+          <Tooltip title={showGrid ? "隐藏网格" : "显示网格"}>
             <Button
               type="text"
               icon={<AppstoreOutlined />}
@@ -694,9 +694,9 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
         height={height}
         onMouseDown={handleMouseDown}
         style={{
-          cursor: viewState.isDragging ? 'grabbing' : 'default',
-          background: '#f5f5f5',
-          display: 'block'
+          cursor: viewState.isDragging ? "grabbing" : "default",
+          background: "#f5f5f5",
+          display: "block"
         }}
       >
         <defs>

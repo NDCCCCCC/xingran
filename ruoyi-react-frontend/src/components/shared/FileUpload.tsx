@@ -1,10 +1,10 @@
-import { useState, useCallback, useEffect } from 'react';
-import type { FC } from 'react';
-import { Upload, message, Image, Progress, Button, Space } from 'antd';
-import { PlusOutlined, LoadingOutlined } from '@ant-design/icons';
-import { getAuthHeaders } from '@/utils/authHelpers';
-import type { UploadFile, UploadProps } from 'antd';
-import { MAX_IMAGE_SIZE } from '@/constants/upload';
+import { useState, useCallback, useEffect } from "react";
+import type { FC } from "react";
+import { Upload, message, Image, Progress, Button, Space } from "antd";
+import { PlusOutlined, LoadingOutlined } from "@ant-design/icons";
+import { getAuthHeaders } from "@/utils/authHelpers";
+import type { UploadFile, UploadProps } from "antd";
+import { MAX_IMAGE_SIZE } from "@/constants/upload";
 
 // 自定义 UploadRequestOption 类型定义
 export interface UploadRequestOption {
@@ -13,7 +13,7 @@ export interface UploadRequestOption {
   filename?: string;
   file: File | Blob | UploadFile | string;
   headers?: Record<string, string>;
-  method?: 'POST' | 'PUT' | 'post' | 'put';
+  method?: "POST" | "PUT" | "post" | "put";
   onError?: (error: Error) => void;
   onProgress?: (percent: { percent: number }) => void;
   onSuccess?: (response: unknown) => void;
@@ -40,7 +40,7 @@ export interface FileUploadProps {
   accept?: string;
   maxCount?: number;
   maxSize?: number;
-  listType?: 'text' | 'picture' | 'picture-card' | 'picture-circle';
+  listType?: "text" | "picture" | "picture-card" | "picture-circle";
   disabled?: boolean;
   category?: string;
   onUploadSuccess?: (file: UploadFile, response: FileUploadResponse) => void;
@@ -52,12 +52,12 @@ const DEFAULT_MAX_SIZE = MAX_IMAGE_SIZE;
 const FileUpload: FC<FileUploadProps> = ({
   value = [],
   onChange,
-  accept = 'image/*',
+  accept = "image/*",
   maxCount = 1,
   maxSize = DEFAULT_MAX_SIZE,
-  listType = 'picture-card',
+  listType = "picture-card",
   disabled = false,
-  category = 'document',
+  category = "document",
   onUploadSuccess,
   onUploadError,
 }) => {
@@ -69,7 +69,7 @@ const FileUpload: FC<FileUploadProps> = ({
     setFileList(Array.isArray(value) ? value : []);
   }, [value]);
 
-  const handleChange: UploadProps['onChange'] = useCallback(({ fileList: newFileList }: { fileList: UploadFile[] }) => {
+  const handleChange: UploadProps["onChange"] = useCallback(({ fileList: newFileList }: { fileList: UploadFile[] }) => {
     setFileList(newFileList);
     onChange?.(newFileList);
   }, [onChange]);
@@ -77,13 +77,13 @@ const FileUpload: FC<FileUploadProps> = ({
   const isFileTypeAccepted = useCallback((file: File): boolean => {
     if (!accept) return true;
 
-    const acceptTypes = accept.split(',').map(t => t.trim());
+    const acceptTypes = accept.split(",").map(t => t.trim());
     const fileName = file.name.toLowerCase();
     return acceptTypes.some(type => {
-      if (type.startsWith('.')) {
+      if (type.startsWith(".")) {
         return fileName.endsWith(type.toLowerCase());
       }
-      if (type.endsWith('/*')) {
+      if (type.endsWith("/*")) {
         return file.type.startsWith(type.slice(0, -2));
       }
       return file.type === type;
@@ -97,7 +97,7 @@ const FileUpload: FC<FileUploadProps> = ({
     }
 
     if (!isFileTypeAccepted(file)) {
-      message.error('不支持的文件类型');
+      message.error("不支持的文件类型");
       return Upload.LIST_IGNORE;
     }
 
@@ -108,13 +108,13 @@ const FileUpload: FC<FileUploadProps> = ({
     setUploading(false);
     setUploadProgress(100);
     onUploadSuccess?.(uploadFile, response as FileUploadResponse);
-    message.success('上传成功');
+    message.success("上传成功");
   }, [onUploadSuccess]);
 
   const handleUploadError = useCallback((error: Error, uploadFile: UploadFile) => {
     setUploading(false);
     onUploadError?.(uploadFile, error);
-    message.error('上传失败');
+    message.error("上传失败");
   }, [onUploadError]);
 
   const customRequest = useCallback(async (options: UploadRequestOption) => {
@@ -128,29 +128,29 @@ const FileUpload: FC<FileUploadProps> = ({
       rawFile = file;
       uploadFile = file instanceof File
         ? { originFileObj: file, name: file.name, uid: Date.now().toString() } as UploadFile
-        : { originFileObj: file as File, name: 'blob', uid: Date.now().toString() } as UploadFile;
-    } else if (typeof file === 'string') {
+        : { originFileObj: file as File, name: "blob", uid: Date.now().toString() } as UploadFile;
+    } else if (typeof file === "string") {
       // file 是字符串（URL）的情况，不应该发生在这里
-      onError?.(new Error('不支持URL类型的文件'));
+      onError?.(new Error("不支持URL类型的文件"));
       return;
-    } else if (typeof file === 'object' && file !== null && 'originFileObj' in file) {
+    } else if (typeof file === "object" && file !== null && "originFileObj" in file) {
       // file 是 UploadFile 对象
       uploadFile = file as UploadFile;
       rawFile = (file as UploadFile).originFileObj || null;
     } else {
-      onError?.(new Error('无法获取文件'));
+      onError?.(new Error("无法获取文件"));
       return;
     }
 
     if (!rawFile) {
-      onError?.(new Error('无法获取文件'));
+      onError?.(new Error("无法获取文件"));
       return;
     }
 
     const formData = new FormData();
-    formData.append('file', rawFile);
+    formData.append("file", rawFile);
     if (category) {
-      formData.append('category', category);
+      formData.append("category", category);
     }
 
     setUploading(true);
@@ -173,28 +173,28 @@ const FileUpload: FC<FileUploadProps> = ({
           handleUploadSuccess(apiResponse.data, uploadFile);
           onSuccess?.(apiResponse.data);
         } else {
-          const error = new Error(apiResponse.message || '上传失败');
+          const error = new Error(apiResponse.message || "上传失败");
           handleUploadError(error, uploadFile);
           onError?.(error);
         }
       } else {
-        const error = new Error(xhr.responseText || '上传失败');
+        const error = new Error(xhr.responseText || "上传失败");
         handleUploadError(error, uploadFile);
         onError?.(error);
       }
     };
 
     xhr.onerror = () => {
-      const error = new Error('网络错误');
+      const error = new Error("网络错误");
       handleUploadError(error, uploadFile);
       onError?.(error);
     };
 
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-    xhr.open('POST', `${baseUrl}/system/files/upload`, true);
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
+    xhr.open("POST", `${baseUrl}/system/files/upload`, true);
     const headers = await getAuthHeaders();
-    if (headers['Authorization']) {
-      xhr.setRequestHeader('Authorization', headers['Authorization']);
+    if (headers["Authorization"]) {
+      xhr.setRequestHeader("Authorization", headers["Authorization"]);
     }
     xhr.send(formData);
   }, [category, handleUploadSuccess, handleUploadError]);
@@ -202,7 +202,7 @@ const FileUpload: FC<FileUploadProps> = ({
   const uploadButton = (
     <div>
       {uploading ? <LoadingOutlined /> : <PlusOutlined />}
-      <div style={{ marginTop: 8 }}>{uploading ? '上传中' : '上传'}</div>
+      <div style={{ marginTop: 8 }}>{uploading ? "上传中" : "上传"}</div>
       {uploading && (
         <Progress
           percent={uploadProgress}
@@ -217,14 +217,14 @@ const FileUpload: FC<FileUploadProps> = ({
   const handleRemove = useCallback(async (file: UploadFile) => {
     if (file.response?.data?.id) {
       try {
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
         const headers = await getAuthHeaders();
         await fetch(`${baseUrl}/system/files/${file.response.data.id}`, {
-          method: 'DELETE',
+          method: "DELETE",
           headers,
         });
       } catch (error) {
-        console.error('删除文件失败:', error);
+        console.error("删除文件失败:", error);
       }
     }
   }, []);
@@ -241,7 +241,7 @@ const FileUpload: FC<FileUploadProps> = ({
     onRemove: handleRemove,
   };
 
-  if (listType === 'picture-card' && maxCount === 1) {
+  if (listType === "picture-card" && maxCount === 1) {
     return (
       <Upload {...uploadProps}>
         {fileList.length >= maxCount ? null : uploadButton}
@@ -250,13 +250,13 @@ const FileUpload: FC<FileUploadProps> = ({
   }
 
   return (
-    <Space orientation="vertical" style={{ width: '100%' }}>
+    <Space orientation="vertical" style={{ width: "100%" }}>
       <Upload {...uploadProps}>
         <Button icon={<PlusOutlined />} disabled={disabled || uploading}>
           选择文件
         </Button>
       </Upload>
-      {fileList.length > 0 && listType === 'picture' && (
+      {fileList.length > 0 && listType === "picture" && (
         <Image.PreviewGroup>
           {fileList.map(file => (
             <Image

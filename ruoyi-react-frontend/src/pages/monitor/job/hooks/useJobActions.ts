@@ -3,11 +3,11 @@
  * 定时任务操作管理 Hook
  */
 
-import { useState, useCallback } from 'react';
-import { message } from 'antd';
-import type { FormInstance } from 'antd/es/form';
-import type { JobInfo, SearchFormState } from '../types';
-import { post, put, del, postLongRequest } from '@/lib/api';
+import { useState, useCallback } from "react";
+import { message } from "antd";
+import type { FormInstance } from "antd/es/form";
+import type { JobInfo, SearchFormState } from "../types";
+import { post, put, del, postLongRequest } from "@/lib/api";
 
 export interface UseJobActionsParams {
   fetchJobs: () => Promise<void>;
@@ -43,7 +43,7 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
   const { fetchJobs, fetchJobLogs } = params;
 
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalTitle, setModalTitle] = useState('');
+  const [modalTitle, setModalTitle] = useState("");
   const [isEdit, setIsEdit] = useState(false);
   const [logDrawerVisible, setLogDrawerVisible] = useState(false);
   const [selectedJob, setSelectedJob] = useState<JobInfo | null>(null);
@@ -52,7 +52,7 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
   const openModal = useCallback((record: JobInfo | undefined, form: FormInstance<unknown>) => {
     if (record) {
       setIsEdit(true);
-      setModalTitle('编辑定时任务');
+      setModalTitle("编辑定时任务");
       form.setFieldsValue({
         id: record.id,
         jobName: record.jobName,
@@ -62,11 +62,11 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
         misfirePolicy: record.misfirePolicy,
         concurrent: record.concurrent,
         status: record.status,
-        remark: record.remark || ''
+        remark: record.remark || ""
       });
     } else {
       setIsEdit(false);
-      setModalTitle('新增定时任务');
+      setModalTitle("新增定时任务");
       form.resetFields();
       form.setFieldsValue({
         misfirePolicy: 1,
@@ -85,14 +85,14 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
       if (isEdit) {
         await post(`/monitor/jobs/${values.id}/update`, values);
       } else {
-        await post('/monitor/jobs', values);
+        await post("/monitor/jobs", values);
       }
 
-      message.success(isEdit ? '更新成功' : '新增成功');
+      message.success(isEdit ? "更新成功" : "新增成功");
       setModalVisible(false);
       fetchJobs();
     } catch (error) {
-      console.error('提交失败:', error);
+      console.error("提交失败:", error);
     }
   }, [isEdit, fetchJobs]);
 
@@ -100,10 +100,10 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
   const handleDelete = useCallback(async (record: JobInfo) => {
     try {
       await post(`/monitor/jobs/${record.id}/delete`);
-      message.success('删除成功');
+      message.success("删除成功");
       fetchJobs();
     } catch (error) {
-      console.error('删除失败:', error);
+      console.error("删除失败:", error);
     }
   }, [fetchJobs]);
 
@@ -114,10 +114,10 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
         status: record.status === 0 ? 1 : 0
       });
 
-      message.success(record.status === 0 ? '暂停成功' : '启动成功');
+      message.success(record.status === 0 ? "暂停成功" : "启动成功");
       fetchJobs();
     } catch (error) {
-      console.error('操作失败:', error);
+      console.error("操作失败:", error);
     }
   }, [fetchJobs]);
 
@@ -126,12 +126,12 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
     try {
       // 使用长时间请求函数（5分钟超时），因为设备监控任务可能耗时较长
       await postLongRequest(`/monitor/jobs/${record.id}/execute`, {});
-      message.success('执行成功');
+      message.success("执行成功");
       if (selectedJob?.id === record.id) {
         fetchJobLogs(record.jobName, record.jobGroup);
       }
     } catch (error) {
-      console.error('执行失败:', error);
+      console.error("执行失败:", error);
     }
   }, [selectedJob, fetchJobLogs]);
 
@@ -149,8 +149,8 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
     fetchJobs: () => Promise<void>
   ) => {
     setSearchForm({
-      jobName: '',
-      jobGroup: '',
+      jobName: "",
+      jobGroup: "",
       status: undefined
     });
     setCurrent(1);

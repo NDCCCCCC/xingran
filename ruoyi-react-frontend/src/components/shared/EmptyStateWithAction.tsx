@@ -8,9 +8,9 @@
  * 使用场景:列表/查询结果为 0 时,提供"前往某页面"引导。
  */
 
-import type { FC, ReactNode } from 'react';
-import { Empty, Button, Space } from 'antd';
-import { Link } from 'react-router-dom';
+import type { FC, ReactNode } from "react";
+import { Empty, Button, Space } from "antd";
+import { Link } from "react-router-dom";
 
 export interface EmptyStateWithActionProps {
   /** 空状态标题(可选) */
@@ -37,7 +37,7 @@ const EmptyStateWithAction: FC<EmptyStateWithActionProps> = ({
 }) => {
   const showAction =
     Boolean(actionLabel) &&
-    (typeof actionPath === 'string' && actionPath.length > 0 || typeof onAction === 'function');
+    (typeof actionPath === "string" && actionPath.length > 0 || typeof onAction === "function");
 
   return (
     <Empty
@@ -52,11 +52,11 @@ const EmptyStateWithAction: FC<EmptyStateWithActionProps> = ({
           description
         )
       }
-      style={{ padding: '32px 0' }}
+      style={{ padding: "32px 0" }}
     >
       {showAction && actionLabel && (
         <Space>
-          {typeof actionPath === 'string' && actionPath.length > 0 ? (
+          {typeof actionPath === "string" && actionPath.length > 0 ? (
             <Link to={actionPath}>
               <Button type="primary">{actionLabel}</Button>
             </Link>

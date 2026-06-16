@@ -4,7 +4,7 @@
  * 提供仪表盘的操作按钮和工具
  */
 
-import { useCallback, useState, useRef, useEffect } from 'react';
+import { useCallback, useState, useRef, useEffect } from "react";
 import {
 	EditOutlined,
 	EyeOutlined,
@@ -13,14 +13,14 @@ import {
 	SettingOutlined,
 	AppstoreAddOutlined,
 	ArrowLeftOutlined,
-} from '@ant-design/icons';
-import { Button, Space, Modal, message } from 'antd';
-import { useNavigate } from 'react-router-dom';
-import { useDashboardStore } from '@/store/dashboardStore';
-import type { DashboardViewMode } from '@/store/dashboardStore';
-import { DASHBOARD } from '@/constants/routes';
+} from "@ant-design/icons";
+import { Button, Space, Modal, message } from "antd";
+import { useNavigate } from "react-router-dom";
+import { useDashboardStore } from "@/store/dashboardStore";
+import type { DashboardViewMode } from "@/store/dashboardStore";
+import { DASHBOARD } from "@/constants/routes";
 
-import './LayoutToolbar.css';
+import "./LayoutToolbar.css";
 
 interface LayoutToolbarProps {
 	/** 仪表盘ID */
@@ -65,18 +65,18 @@ export const LayoutToolbar: React.FC<LayoutToolbarProps> = ({
 	// 切换视图模式 - 使用 ref 避免依赖变化导致回调重新创建
 	const toggleViewMode = useCallback(() => {
 		const currentMode = viewModeRef.current;
-		const newMode: DashboardViewMode = currentMode === 'view' ? 'edit' : 'view';
+		const newMode: DashboardViewMode = currentMode === "view" ? "edit" : "view";
 
-		if (newMode === 'edit' && dashboardId) {
+		if (newMode === "edit" && dashboardId) {
 			// 如果有dashboardId，导航到编辑页面（使用 query 参数）
 			navigate(`${DASHBOARD}/${dashboardId}?mode=edit`);
 		} else {
 			// 否则切换viewMode（用于编辑页面内的预览功能）
 			setViewModeRef.current(newMode);
-			if (newMode === 'view') {
-				message.success('已切换到查看模式');
+			if (newMode === "view") {
+				message.success("已切换到查看模式");
 			} else {
-				message.info('已切换到编辑模式');
+				message.info("已切换到编辑模式");
 			}
 		}
 	}, [dashboardId, navigate]); // 减少依赖，只保留必要的 dashboardId 和 navigate
@@ -84,14 +84,14 @@ export const LayoutToolbar: React.FC<LayoutToolbarProps> = ({
 	// 保存仪表盘
 	const handleSave = async () => {
 		if (!hasUnsavedChanges) {
-			message.info('没有需要保存的更改');
+			message.info("没有需要保存的更改");
 			return;
 		}
 
 		setSaving(true);
 		try {
 			await saveCurrentDashboard();
-			message.success('保存成功');
+			message.success("保存成功");
 		} catch (error) {
 			message.error(`保存失败: ${(error as Error).message}`);
 		} finally {
@@ -102,19 +102,19 @@ export const LayoutToolbar: React.FC<LayoutToolbarProps> = ({
 	// 重置仪表盘
 	const handleReset = async () => {
 		if (!hasUnsavedChanges) {
-			message.info('没有未保存的更改');
+			message.info("没有未保存的更改");
 			return;
 		}
 
 		Modal.confirm({
-			title: '确认重置',
-			content: '确定要重置仪表盘吗？所有未保存的更改将丢失。',
-			okText: '确定',
-			cancelText: '取消',
+			title: "确认重置",
+			content: "确定要重置仪表盘吗？所有未保存的更改将丢失。",
+			okText: "确定",
+			cancelText: "取消",
 			onOk: async () => {
 				try {
 					await resetCurrentDashboard();
-					message.success('已重置仪表盘');
+					message.success("已重置仪表盘");
 				} catch (error) {
 					message.error(`重置失败: ${(error as Error).message}`);
 				}
@@ -128,24 +128,24 @@ export const LayoutToolbar: React.FC<LayoutToolbarProps> = ({
 			onAddWidget();
 		} else {
 			// TODO: 打开Widget选择器
-			message.info('Widget选择器功能待实现');
+			message.info("Widget选择器功能待实现");
 		}
 	};
 
 	// 打开设置
 	const handleOpenSettings = () => {
 		// TODO: 打开仪表盘设置
-		message.info('仪表盘设置功能待实现');
+		message.info("仪表盘设置功能待实现");
 	};
 
 	// 返回
 	const handleBack = () => {
 		if (hasUnsavedChanges) {
 			Modal.confirm({
-				title: '确认离开',
-				content: '您有未保存的更改，确定要离开吗？',
-				okText: '离开',
-				cancelText: '取消',
+				title: "确认离开",
+				content: "您有未保存的更改，确定要离开吗？",
+				okText: "离开",
+				cancelText: "取消",
 				onOk: () => {
 					navigate(DASHBOARD);
 				},
@@ -174,7 +174,7 @@ export const LayoutToolbar: React.FC<LayoutToolbarProps> = ({
 
 			<div className="layout-toolbar__right">
 				<Space>
-					{viewMode === 'edit' && (
+					{viewMode === "edit" && (
 						<>
 							<Button
 								icon={<AppstoreAddOutlined />}
@@ -207,7 +207,7 @@ export const LayoutToolbar: React.FC<LayoutToolbarProps> = ({
 							</Button>
 						</>
 					)}
-					{viewMode === 'view' && (
+					{viewMode === "view" && (
 						<>
 							<Button
 								icon={<SettingOutlined />}

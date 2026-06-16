@@ -2,22 +2,22 @@
  * RPA 执行记录页面
  */
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
-import type { FC } from 'react';
+import { useState, useCallback, useEffect, useMemo } from "react";
+import type { FC } from "react";
 import {
   Table, Button, Space, Form, Input, Select, Card, Tag, Layout,
-} from 'antd';
+} from "antd";
 import {
   SearchOutlined, ReloadOutlined, FilterOutlined,
-} from '@ant-design/icons';
-import type { Execution } from '@/types/rpa';
-import type { PageResponse } from '@/types/base';
-import { useTableManager } from '@/hooks/useTableManager';
-import { usePagination } from '@/hooks/usePagination';
-import { getExecutionColumns } from './columns';
-import { ExecutionDetailModal } from './ExecutionDetailModal';
-import { EXECUTION_STATUS_OPTIONS } from '../constants';
-import { post } from '@/lib/api';
+} from "@ant-design/icons";
+import type { Execution } from "@/types/rpa";
+import type { PageResponse } from "@/types/base";
+import { useTableManager } from "@/hooks/useTableManager";
+import { usePagination } from "@/hooks/usePagination";
+import { getExecutionColumns } from "./columns";
+import { ExecutionDetailModal } from "./ExecutionDetailModal";
+import { EXECUTION_STATUS_OPTIONS } from "../constants";
+import { post } from "@/lib/api";
 
 const { Option } = Select;
 const { Content } = Layout;
@@ -35,7 +35,7 @@ const ExecutionManagement: FC = () => {
     handleReset,
   } = useTableManager<Execution>(
     async (params) => {
-      const result = await post<PageResponse<Execution>>('/rpa/executions/list', params);
+      const result = await post<PageResponse<Execution>>("/rpa/executions/list", params);
       return {
         list: result.data?.list || [],
         total: result.data?.total || 0,
@@ -82,22 +82,22 @@ const ExecutionManagement: FC = () => {
   // 避免每次渲染时重新计算统计数据
   const stats = useMemo(() => ({
     total: executions.length,
-    running: executions.filter(e => e.status === 'running').length,
-    completed: executions.filter(e => e.status === 'completed').length,
-    failed: executions.filter(e => e.status === 'failed').length,
+    running: executions.filter(e => e.status === "running").length,
+    completed: executions.filter(e => e.status === "completed").length,
+    failed: executions.filter(e => e.status === "failed").length,
   }), [executions]);
 
   return (
-    <Layout style={{ background: '#000', minHeight: 'calc(100vh - 64px)' }}>
-      <Content style={{ background: '#fff', padding: 16 }}>
+    <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
+      <Content style={{ background: "#fff", padding: 16 }}>
       <Card style={{ marginBottom: 16 }}>
         <div
           style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            flexWrap: 'wrap',
-            gap: '16px',
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "16px",
           }}
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
@@ -131,7 +131,7 @@ const ExecutionManagement: FC = () => {
         </div>
 
         {/* 统计信息 */}
-        <Space style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #f0f0f0' }}>
+        <Space style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #f0f0f0" }}>
           <Tag icon={<FilterOutlined />} color="blue">
             总计: {stats.total}
           </Tag>
@@ -157,7 +157,7 @@ const ExecutionManagement: FC = () => {
 	            const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
 	            Object.keys(formValues).forEach(key => {
 	              const value = formValues[key];
-	              if (value !== undefined && value !== null && value !== '') {
+	              if (value !== undefined && value !== null && value !== "") {
 	                searchParams[key] = value;
 	              }
 	            });

@@ -2,10 +2,10 @@
  * 楼宇选项 Hook
  */
 
-import { useState, useCallback } from 'react';
-import { buildingApi } from '@/lib/opsApi';
-import { handleApiError } from '@/utils/errorHandler';
-import type { Building } from '@/types/operations';
+import { useState, useCallback } from "react";
+import { buildingApi } from "@/lib/opsApi";
+import { handleApiError } from "@/utils/errorHandler";
+import type { Building } from "@/types/operations";
 
 export interface BuildingOption {
   id: string;
@@ -18,10 +18,10 @@ export function useBuildingOptions() {
 
   const loadBuildingOptions = useCallback(async () => {
     try {
-      console.log('[useBuildingOptions] 开始加载楼宇选项...');
+      console.log("[useBuildingOptions] 开始加载楼宇选项...");
       const result = await buildingApi.list({ current: 1, pageSize: 1000 });
 
-      console.log('[useBuildingOptions] API响应:', {
+      console.log("[useBuildingOptions] API响应:", {
         code: result.code,
         message: result.message,
         dataType: typeof result.data,
@@ -33,23 +33,23 @@ export function useBuildingOptions() {
 
       const buildings = result.data?.list || [];
 
-      console.log('[useBuildingOptions] 解析后的楼层数据:', buildings);
-      console.log('[useBuildingOptions] 设置楼宇选项:', buildings.map((b: Building) => ({
-        id: String(b.id ?? ''),
-        code: String(b.code ?? ''),
-        name: String(b.name ?? ''),
+      console.log("[useBuildingOptions] 解析后的楼层数据:", buildings);
+      console.log("[useBuildingOptions] 设置楼宇选项:", buildings.map((b: Building) => ({
+        id: String(b.id ?? ""),
+        code: String(b.code ?? ""),
+        name: String(b.name ?? ""),
       })));
 
       setBuildingOptions(
         buildings.map((b: Building) => ({
-          id: String(b.id ?? ''),
-          code: String(b.code ?? ''),
-          name: String(b.name ?? ''),
+          id: String(b.id ?? ""),
+          code: String(b.code ?? ""),
+          name: String(b.name ?? ""),
         }))
       );
     } catch (error) {
-      console.error('[useBuildingOptions] 加载楼宇选项失败:', error);
-      handleApiError(error, '加载楼宇选项', false);
+      console.error("[useBuildingOptions] 加载楼宇选项失败:", error);
+      handleApiError(error, "加载楼宇选项", false);
     }
   }, []);
 

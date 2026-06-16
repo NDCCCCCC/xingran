@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from "react";
 import {
   Input,
   Card,
@@ -11,34 +11,34 @@ import {
   message,
   Drawer,
   Button,
-} from 'antd';
+} from "antd";
 import {
   EyeOutlined,
   LikeOutlined,
   FolderOutlined,
   TagOutlined,
   SearchOutlined,
-} from '@ant-design/icons';
+} from "@ant-design/icons";
 import {
   searchKnowledgeArticles,
   getKnowledgeArticle,
   likeKnowledgeArticle,
   type KnowledgeArticle,
-} from '@/lib/knowledgeApi';
-import { formatDateTime } from '@/utils/datetime';
-import type { UnknownError } from '@/types/common';
+} from "@/lib/knowledgeApi";
+import { formatDateTime } from "@/utils/datetime";
+import type { UnknownError } from "@/types/common";
 import {
   getKnowledgeCategoryList,
   type KnowledgeCategory,
-} from '@/lib/knowledgeApi';
+} from "@/lib/knowledgeApi";
 import {
   getAllKnowledgeTags,
   type KnowledgeTag,
-} from '@/lib/knowledgeApi';
+} from "@/lib/knowledgeApi";
 
 const { Search } = Input;
 
-import type { FC } from 'react';
+import type { FC } from "react";
 
 const KnowledgeViewPage: FC = () => {
   const [loading, setLoading] = useState(false);
@@ -46,9 +46,9 @@ const KnowledgeViewPage: FC = () => {
   const [categories, setCategories] = useState<KnowledgeCategory[]>([]);
   const [tags, setTags] = useState<KnowledgeTag[]>([]);
 
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [selectedTag, setSelectedTag] = useState<string>('');
-  const [keyword, setKeyword] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedTag, setSelectedTag] = useState<string>("");
+  const [keyword, setKeyword] = useState<string>("");
 
   const [detailVisible, setDetailVisible] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState<KnowledgeArticle | null>(null);
@@ -64,7 +64,7 @@ const KnowledgeViewPage: FC = () => {
       });
       setArticles(result.data?.list || []);
     } catch (error) {
-      message.error('搜索失败');
+      message.error("搜索失败");
     } finally {
       setLoading(false);
     }
@@ -76,7 +76,7 @@ const KnowledgeViewPage: FC = () => {
       const result = await getKnowledgeCategoryList({ status: 1 });
       setCategories(result.data || []);
     } catch (error) {
-      console.error('获取分类列表失败:', error);
+      console.error("获取分类列表失败:", error);
     }
   };
 
@@ -86,7 +86,7 @@ const KnowledgeViewPage: FC = () => {
       const result = await getAllKnowledgeTags();
       setTags(result.data || []);
     } catch (error) {
-      console.error('获取标签列表失败:', error);
+      console.error("获取标签列表失败:", error);
     }
   };
 
@@ -101,11 +101,11 @@ const KnowledgeViewPage: FC = () => {
   };
 
   const handleCategoryClick = (categoryId: string) => {
-    setSelectedCategory(categoryId === selectedCategory ? '' : categoryId);
+    setSelectedCategory(categoryId === selectedCategory ? "" : categoryId);
   };
 
   const handleTagClick = (tagId: string) => {
-    setSelectedTag(tagId === selectedTag ? '' : tagId);
+    setSelectedTag(tagId === selectedTag ? "" : tagId);
   };
 
   const handleViewArticle = async (article: KnowledgeArticle) => {
@@ -116,18 +116,18 @@ const KnowledgeViewPage: FC = () => {
     try {
       await getKnowledgeArticle(article.id);
     } catch (error) {
-      console.error('增加浏览次数失败:', error);
+      console.error("增加浏览次数失败:", error);
     }
   };
 
   const handleLike = async (id: string) => {
     try {
       await likeKnowledgeArticle(id);
-      message.success('点赞成功');
+      message.success("点赞成功");
       fetchArticles();
     } catch (error: unknown) {
       const err = error as UnknownError;
-      message.error(err.message || '点赞失败');
+      message.error(err.message || "点赞失败");
     }
   };
 
@@ -155,7 +155,7 @@ const KnowledgeViewPage: FC = () => {
       <div>
         <div
           className={`flex items-center justify-between py-2 px-3 cursor-pointer rounded hover:bg-gray-100 ${
-            isSelected ? 'bg-blue-50 text-blue-600' : ''
+            isSelected ? "bg-blue-50 text-blue-600" : ""
           }`}
           onClick={() => handleCategoryClick(category.id)}
           style={{ marginLeft: `${level * 16}px` }}
@@ -186,8 +186,8 @@ const KnowledgeViewPage: FC = () => {
             size="large"
             onSearch={handleSearch}
             onChange={(e) => {
-              if (e.target.value === '') {
-                setKeyword('');
+              if (e.target.value === "") {
+                setKeyword("");
               }
             }}
           />
@@ -217,7 +217,7 @@ const KnowledgeViewPage: FC = () => {
                     key={tag.id}
                     icon={<TagOutlined />}
                     className="cursor-pointer"
-                    color={selectedTag === tag.id ? 'blue' : 'default'}
+                    color={selectedTag === tag.id ? "blue" : "default"}
                     onClick={() => handleTagClick(tag.id)}
                   >
                     {tag.tagName} ({tag.useCount})
@@ -234,12 +234,12 @@ const KnowledgeViewPage: FC = () => {
                 <Space>
                   <span>文章列表</span>
                   {selectedCategory && (
-                    <Tag closable onClose={() => setSelectedCategory('')}>
+                    <Tag closable onClose={() => setSelectedCategory("")}>
                       {flatCategories.find((c) => c.id === selectedCategory)?.categoryName}
                     </Tag>
                   )}
                   {selectedTag && (
-                    <Tag closable onClose={() => setSelectedTag('')}>
+                    <Tag closable onClose={() => setSelectedTag("")}>
                       {tags.find((t) => t.id === selectedTag)?.tagName}
                     </Tag>
                   )}
@@ -279,7 +279,7 @@ const KnowledgeViewPage: FC = () => {
                               <span><EyeOutlined className="mr-1" />{article.viewCount || 0}</span>
                               <span><LikeOutlined className="mr-1" />{article.likeCount || 0}</span>
                             </Space>
-                            <span>{formatDateTime(article.createdAt, 'YYYY-MM-DD')}</span>
+                            <span>{formatDateTime(article.createdAt, "YYYY-MM-DD")}</span>
                           </div>
                         </Card>
                       </Col>
@@ -318,7 +318,7 @@ const KnowledgeViewPage: FC = () => {
                       <span><EyeOutlined className="mr-1" />浏览: {selectedArticle.viewCount || 0}</span>
                       <span><LikeOutlined className="mr-1" />点赞: {selectedArticle.likeCount || 0}</span>
                     </Space>
-                    <span>{formatDateTime(selectedArticle.createdAt, 'YYYY-MM-DD HH:mm')}</span>
+                    <span>{formatDateTime(selectedArticle.createdAt, "YYYY-MM-DD HH:mm")}</span>
                   </div>
                 </Space>
               </div>
@@ -330,7 +330,7 @@ const KnowledgeViewPage: FC = () => {
                 </div>
               )}
 
-              <div className="prose max-w-none" style={{ whiteSpace: 'pre-wrap' }}>
+              <div className="prose max-w-none" style={{ whiteSpace: "pre-wrap" }}>
                 {selectedArticle.content}
               </div>
 

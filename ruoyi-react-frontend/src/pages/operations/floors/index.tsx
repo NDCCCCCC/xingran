@@ -2,41 +2,41 @@
  * 楼层管理页面
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import type { FC } from 'react';
-import { Table, Button, Card, Alert, Layout } from 'antd';
-import type { Floor, Building } from '@/types';
-import type { FloorPlanData } from '@/components/cad-editor/types';
-import { floorApi, buildingApi } from '@/lib/opsApi';
-import { useTableManager } from '@/hooks/useTableManager';
-import { usePagination } from '@/hooks/usePagination';
-import { useSidebarDeptFilter } from '@/hooks/useSidebarDeptFilter';
-import { handleApiError, handleSuccess, isFormValidationError } from '@/utils/errorHandler';
-import ExcelImport from '@/components/shared/ExcelImport';
-import ExcelExport from '@/components/shared/ExcelExport';
-import { DeptSidebar } from '@/components/operations/DeptSidebar';
-import { StatisticsCards } from '@/components/operations/StatisticsCards';
+import { useState, useEffect, useCallback } from "react";
+import type { FC } from "react";
+import { Table, Button, Card, Alert, Layout } from "antd";
+import type { Floor, Building } from "@/types";
+import type { FloorPlanData } from "@/components/cad-editor/types";
+import { floorApi, buildingApi } from "@/lib/opsApi";
+import { useTableManager } from "@/hooks/useTableManager";
+import { usePagination } from "@/hooks/usePagination";
+import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
+import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
+import ExcelImport from "@/components/shared/ExcelImport";
+import ExcelExport from "@/components/shared/ExcelExport";
+import { DeptSidebar } from "@/components/operations/DeptSidebar";
+import { StatisticsCards } from "@/components/operations/StatisticsCards";
 import {
   FloorCardView,
   FloorSearchForm,
   FloorModal,
   FloorPlanEditorView,
   createFloorTableColumns,
-} from './components';
-import { useFloorPlanEditor } from './useFloorPlanEditor';
-import { useFloorStatistics } from './useFloorStatistics';
-import { useBuildingOptions } from './useBuildingOptions';
-import { useDepartmentData } from '../buildings/useDepartmentData';
-import type { ViewMode, PageMode } from './constants';
-import type { FloorOption } from './components';
-import { DEFAULT_FORM_VALUES } from './constants';
+} from "./components";
+import { useFloorPlanEditor } from "./useFloorPlanEditor";
+import { useFloorStatistics } from "./useFloorStatistics";
+import { useBuildingOptions } from "./useBuildingOptions";
+import { useDepartmentData } from "../buildings/useDepartmentData";
+import type { ViewMode, PageMode } from "./constants";
+import type { FloorOption } from "./components";
+import { DEFAULT_FORM_VALUES } from "./constants";
 
 const { Content } = Layout;
 
 const FloorManagement: FC = () => {
-  const [pageMode, setPageMode] = useState<PageMode>('list');
+  const [pageMode, setPageMode] = useState<PageMode>("list");
   const [currentFloor, setCurrentFloor] = useState<Floor | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
@@ -47,22 +47,22 @@ const FloorManagement: FC = () => {
 
   const { selectedDeptId, handleDeptSelect } = useSidebarDeptFilter({
     searchForm: undefined,
-    clearFieldNames: ['buildingId'],
+    clearFieldNames: ["buildingId"],
   });
 
   // 筛选状态
   const [filterBuildingOptions, setFilterBuildingOptions] = useState<Building[]>([]);
 
   // 模态框状态
-  const [modalDeptId, setModalDeptId] = useState<string>('');
+  const [modalDeptId, setModalDeptId] = useState<string>("");
   const [modalBuildingOptions, setModalBuildingOptions] = useState<Building[]>([]);
 
   // 编辑器模式状态
   const [buildingOptionsByDept, setBuildingOptionsByDept] = useState<Building[]>([]);
-  const [selectedDeptIdForEditor, setSelectedDeptIdForEditor] = useState<string>('');
-  const [selectedBuildingId, setSelectedBuildingId] = useState<string>('');
-  const [selectedDeptName, setSelectedDeptName] = useState<string>('');
-  const [selectedBuildingName, setSelectedBuildingName] = useState<string>('');
+  const [selectedDeptIdForEditor, setSelectedDeptIdForEditor] = useState<string>("");
+  const [selectedBuildingId, setSelectedBuildingId] = useState<string>("");
+  const [selectedDeptName, setSelectedDeptName] = useState<string>("");
+  const [selectedBuildingName, setSelectedBuildingName] = useState<string>("");
   const [floorOptions, setFloorOptions] = useState<FloorOption[]>([]);
 
   const { statistics, loadStatistics } = useFloorStatistics();
@@ -134,21 +134,21 @@ const FloorManagement: FC = () => {
 
       if (editingFloor) {
         await floorApi.update(editingFloor.id, values);
-        handleSuccess('更新');
+        handleSuccess("更新");
       } else {
         await floorApi.create(values);
-        handleSuccess('创建');
+        handleSuccess("创建");
       }
 
       setModalVisible(false);
       setEditingFloor(null);
-      setModalDeptId('');
+      setModalDeptId("");
       setModalBuildingOptions([]);
       loadFloors();
       loadStatistics();
     } catch (error: unknown) {
       if (isFormValidationError(error)) return;
-      handleApiError(error, '操作');
+      handleApiError(error, "操作");
     }
   }, [floorForm, editingFloor, loadFloors, loadStatistics, setModalVisible, setEditingFloor]);
 
@@ -156,11 +156,11 @@ const FloorManagement: FC = () => {
     async (id: string) => {
       try {
         await floorApi.delete(id);
-        handleSuccess('删除');
+        handleSuccess("删除");
         loadFloors();
         loadStatistics();
       } catch (error) {
-        handleApiError(error, '删除');
+        handleApiError(error, "删除");
       }
     },
     [loadFloors, loadStatistics]
@@ -170,13 +170,13 @@ const FloorManagement: FC = () => {
     if (selectedRowKeys.length === 0) return;
 
     try {
-      await floorApi.batch('delete', { ids: selectedRowKeys });
-      handleSuccess('批量删除');
+      await floorApi.batch("delete", { ids: selectedRowKeys });
+      handleSuccess("批量删除");
       resetSelection();
       loadFloors();
       loadStatistics();
     } catch (error) {
-      handleApiError(error, '批量删除');
+      handleApiError(error, "批量删除");
     }
   }, [selectedRowKeys, resetSelection, loadFloors, loadStatistics]);
 
@@ -196,7 +196,7 @@ const FloorManagement: FC = () => {
             setModalBuildingOptions(result.data?.list || []);
           }
         } catch (error) {
-          console.error('加载楼宇信息失败:', error);
+          console.error("加载楼宇信息失败:", error);
         }
       } else {
         handleAdd();
@@ -207,10 +207,10 @@ const FloorManagement: FC = () => {
             const result = await buildingApi.list({ orgId: selectedDeptId, current: 1, pageSize: 1000 });
             setModalBuildingOptions(result.data?.list || []);
           } catch (error) {
-            console.error('加载楼宇选项失败:', error);
+            console.error("加载楼宇选项失败:", error);
           }
         } else {
-          setModalDeptId('');
+          setModalDeptId("");
           setModalBuildingOptions([]);
         }
       }
@@ -232,14 +232,14 @@ const FloorManagement: FC = () => {
   const handleDeptSelectWithBuildingLoad = useCallback(
     async (deptId: string) => {
       setFilterBuildingOptions([]);
-      searchForm.setFieldValue('buildingId', undefined);
+      searchForm.setFieldValue("buildingId", undefined);
 
       if (deptId) {
         try {
           const result = await buildingApi.list({ orgId: deptId, current: 1, pageSize: 1000 });
           setFilterBuildingOptions(result.data?.list || []);
         } catch (error) {
-          console.error('加载筛选楼宇选项失败:', error);
+          console.error("加载筛选楼宇选项失败:", error);
         }
       }
     },
@@ -249,16 +249,16 @@ const FloorManagement: FC = () => {
   // 模态框部门变化处理
   const handleModalDepartmentChange = useCallback(
     async (deptId: string) => {
-      setModalDeptId(deptId || '');
+      setModalDeptId(deptId || "");
       setModalBuildingOptions([]);
-      floorForm.setFieldValue('buildingId', undefined);
+      floorForm.setFieldValue("buildingId", undefined);
 
       if (deptId) {
         try {
           const result = await buildingApi.list({ orgId: deptId, current: 1, pageSize: 1000 });
           setModalBuildingOptions(result.data?.list || []);
         } catch (error) {
-          console.error('加载模态框楼宇选项失败:', error);
+          console.error("加载模态框楼宇选项失败:", error);
         }
       }
     },
@@ -283,7 +283,7 @@ const FloorManagement: FC = () => {
       setBuildingOptionsByDept(buildings);
       return buildings;
     } catch (error) {
-      console.error('加载楼宇选项失败:', error);
+      console.error("加载楼宇选项失败:", error);
       return [];
     }
   }, []);
@@ -296,14 +296,14 @@ const FloorManagement: FC = () => {
 
       const options = floors.map((f: Floor) => ({
         id: f.id,
-        name: f.name || '',
+        name: f.name || "",
         floorNo: Number(f.floorNo) || 0,
       }));
 
       setFloorOptions(options);
       return options;
     } catch (error) {
-      console.error('加载楼层选项失败:', error);
+      console.error("加载楼层选项失败:", error);
       return [];
     }
   }, []);
@@ -322,7 +322,7 @@ const FloorManagement: FC = () => {
           await loadFloorPlanData(newFloor.id);
         }
       } catch (error) {
-        console.error('加载楼层失败:', error);
+        console.error("加载楼层失败:", error);
       }
     },
     [loadFloorPlanData, setEditMode]
@@ -356,8 +356,8 @@ const FloorManagement: FC = () => {
 
       setSelectedDeptIdForEditor(deptId);
       setSelectedDeptName(deptName);
-      setSelectedBuildingId('');
-      setSelectedBuildingName('');
+      setSelectedBuildingId("");
+      setSelectedBuildingName("");
 
       const buildings = await loadBuildingOptionsByDept(deptId);
 
@@ -371,7 +371,7 @@ const FloorManagement: FC = () => {
   const handleEditFloorPlan = useCallback(
     async (floor: Floor) => {
       setCurrentFloor(floor);
-      setPageMode('editor');
+      setPageMode("editor");
       setEditMode(false);
 
       try {
@@ -383,13 +383,13 @@ const FloorManagement: FC = () => {
           setSelectedBuildingName(building.name);
           setSelectedDeptIdForEditor(building.orgId);
 
-          setSelectedDeptName(building.orgName || '');
+          setSelectedDeptName(building.orgName || "");
 
           await loadBuildingOptionsByDept(building.orgId);
           await loadFloorOptionsByBuilding(building.id);
         }
       } catch (error) {
-        console.error('加载楼宇信息失败:', error);
+        console.error("加载楼宇信息失败:", error);
       }
 
       await loadFloorPlanData(floor.id);
@@ -406,7 +406,7 @@ const FloorManagement: FC = () => {
   );
 
   const handleBackToList = useCallback(() => {
-    setPageMode('list');
+    setPageMode("list");
     setCurrentFloor(null);
     resetFloorPlan();
   }, [resetFloorPlan]);
@@ -431,32 +431,32 @@ const FloorManagement: FC = () => {
       selectedBuildingId={selectedBuildingId}
       selectedBuildingName={selectedBuildingName}
       onEditModeChange={setEditMode}
-      onRefresh={() => loadFloorPlanData(currentFloor?.id || '')}
+      onRefresh={() => loadFloorPlanData(currentFloor?.id || "")}
       onBack={handleBackToList}
       onSave={handleSaveFloorPlan}
-      onDepartmentChange={(deptId) => handleEditorDepartmentChange(deptId, '')}
+      onDepartmentChange={(deptId) => handleEditorDepartmentChange(deptId, "")}
       onBuildingChange={handleEditorBuildingChange}
       onFloorChange={handleFloorChange}
     />
   );
 
   const renderListView = () => (
-    <Layout style={{ background: '#000', minHeight: 'calc(100vh - 64px)' }}>
+    <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
       <DeptSidebar
         selectedDeptId={selectedDeptId}
         onSelect={(keys, info) => {
           handleDeptSelect(keys, info);
-          const deptId = keys.length > 0 ? (keys[0] as string) : '';
+          const deptId = keys.length > 0 ? (keys[0] as string) : "";
           handleDeptSelectWithBuildingLoad(deptId);
         }}
       />
-      <Content style={{ background: '#fff' }}>
+      <Content style={{ background: "#fff" }}>
         <StatisticsCards
           show={total > 10}
           items={[
-            { title: '总楼层数', value: statistics.total },
-            { title: '正常', value: statistics.active, styles: { content: { color: 'var(--theme-success, #52c41a)' } } },
-            { title: '停用', value: statistics.inactive, styles: { content: { color: 'var(--theme-error, #ff4d4f)' } } },
+            { title: "总楼层数", value: statistics.total },
+            { title: "正常", value: statistics.active, styles: { content: { color: "var(--theme-success, #52c41a)" } } },
+            { title: "停用", value: statistics.inactive, styles: { content: { color: "var(--theme-error, #ff4d4f)" } } },
           ]}
         />
 
@@ -467,7 +467,7 @@ const FloorManagement: FC = () => {
           loading={loading}
           buildingOptionsByDept={filterBuildingOptions}
           selectedDeptId={selectedDeptId}
-          disabled={pageMode === 'editor'}
+          disabled={pageMode === "editor"}
           onSearch={handleSearch}
           onReset={handleReset}
           onRefresh={handleRefresh}
@@ -479,7 +479,7 @@ const FloorManagement: FC = () => {
             const currentFilters: Record<string, unknown> = {};
             Object.keys(values).forEach(key => {
               const value = values[key];
-              if (value !== undefined && value !== null && value !== '') {
+              if (value !== undefined && value !== null && value !== "") {
                 currentFilters[key] = value;
               }
             });
@@ -514,7 +514,7 @@ const FloorManagement: FC = () => {
         )}
 
         <Card>
-          {viewMode === 'table' ? (
+          {viewMode === "table" ? (
             <Table
               rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
               columns={columns}
@@ -531,7 +531,7 @@ const FloorManagement: FC = () => {
 	                const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
 	                Object.keys(formValues).forEach(key => {
 	                  const value = formValues[key];
-	                  if (value !== undefined && value !== null && value !== '') {
+	                  if (value !== undefined && value !== null && value !== "") {
 	                    searchParams[key] = value;
 	                  }
 	                });
@@ -560,7 +560,7 @@ const FloorManagement: FC = () => {
           onCancel={() => {
             setModalVisible(false);
             setEditingFloor(null);
-            setModalDeptId('');
+            setModalDeptId("");
             setModalBuildingOptions([]);
           }}
           onDepartmentChange={handleModalDepartmentChange}
@@ -586,7 +586,7 @@ const FloorManagement: FC = () => {
   );
 
   return (
-    <div>{pageMode === 'editor' ? renderFloorPlanEditor() : renderListView()}</div>
+    <div>{pageMode === "editor" ? renderFloorPlanEditor() : renderListView()}</div>
   );
 };
 

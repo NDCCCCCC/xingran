@@ -9,9 +9,9 @@
  * - 通过 useMemo 稳定 props 对象（可选，但推荐）
  */
 
-import { memo } from 'react';
-import { Button, Space } from 'antd';
-import type { Asset } from '@/types/operations';
+import { memo } from "react";
+import { Button, Space } from "antd";
+import type { Asset } from "@/types/operations";
 
 export interface AssetRowProps {
   record: Asset;
@@ -42,6 +42,6 @@ function AssetRowImpl({ record, onEdit, onDelete }: AssetRowProps) {
 }
 
 export const AssetRow = memo(AssetRowImpl);
-AssetRow.displayName = 'AssetRow';
+AssetRow.displayName = "AssetRow";
 
 export default AssetRow;

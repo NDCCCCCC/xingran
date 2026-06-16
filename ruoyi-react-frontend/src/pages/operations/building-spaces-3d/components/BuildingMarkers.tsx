@@ -3,11 +3,11 @@
  * 在地图上显示具体的楼宇位置标记
  */
 
-import { CustomOverlay, InfoWindow } from '@uiw/react-baidu-map';
-import { useCallback, useState } from 'react';
-import { BuildOutlined, ApartmentOutlined } from '@ant-design/icons';
-import type { BuildingItem } from './types';
-import { getBuildingMarkerColors } from './utils';
+import { CustomOverlay, InfoWindow } from "@uiw/react-baidu-map";
+import { useCallback, useState } from "react";
+import { BuildOutlined, ApartmentOutlined } from "@ant-design/icons";
+import type { BuildingItem } from "./types";
+import { getBuildingMarkerColors } from "./utils";
 
 interface BuildingMarkersProps {
   buildings: BuildingItem[];
@@ -49,20 +49,20 @@ const BuildingMarkers: React.FC<BuildingMarkersProps> = ({
               <div
                 onClick={() => handleMarkerClick(building)}
                 style={{
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '4px',
-                  background: isSelected ? '#ff4d4f' : colors.main,
-                  border: `2px solid ${isSelected ? '#ffccc7' : colors.border}`,
+                  width: "24px",
+                  height: "24px",
+                  borderRadius: "4px",
+                  background: isSelected ? "#ff4d4f" : colors.main,
+                  border: `2px solid ${isSelected ? "#ffccc7" : colors.border}`,
                   boxShadow: `0 2px 8px ${colors.shadow}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s',
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  transition: "all 0.3s",
                 }}
               >
-                <BuildOutlined style={{ color: 'var(--theme-text-inverse, #fff)', fontSize: 12 }} />
+                <BuildOutlined style={{ color: "var(--theme-text-inverse, #fff)", fontSize: 12 }} />
               </div>
             </CustomOverlay>
 
@@ -73,15 +73,15 @@ const BuildingMarkers: React.FC<BuildingMarkersProps> = ({
                 onClose={handleCloseWindow}
                 visible
               >
-                <div style={{ padding: '12px', minWidth: '250px' }}>
-                  <h3 style={{ margin: '0 0 8px 0', fontSize: 16 }}>
+                <div style={{ padding: "12px", minWidth: "250px" }}>
+                  <h3 style={{ margin: "0 0 8px 0", fontSize: 16 }}>
                     {building.name}
                   </h3>
-                  <div style={{ fontSize: 12, color: 'var(--theme-text-tertiary, #666)', marginBottom: 4 }}>
+                  <div style={{ fontSize: 12, color: "var(--theme-text-tertiary, #666)", marginBottom: 4 }}>
                     <div>📍 {building.cityName}</div>
                     <div>📌 {building.address}</div>
                   </div>
-                  <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 13 }}>
+                  <div style={{ display: "flex", gap: 16, marginTop: 8, fontSize: 13 }}>
                     <div>
                       <ApartmentOutlined /> {building.floorCount || 0} 层
                     </div>

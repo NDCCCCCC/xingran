@@ -1,31 +1,31 @@
-import { Tag, Button, Space } from 'antd';
-import type { ColumnsType, ColumnType, ColumnGroupType } from 'antd/es/table';
-import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { formatDateTime } from '@/utils/datetime';
+import { Tag, Button, Space } from "antd";
+import type { ColumnsType, ColumnType, ColumnGroupType } from "antd/es/table";
+import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { formatDateTime } from "@/utils/datetime";
 
 export interface ColumnConfig {
   title: string;
   dataIndex: string;
   key: string;
   width?: number;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
 }
 
 // 使用更宽松的类型约束，同时保持类型安全
 type TableColumn<T> = ColumnGroupType<T> | ColumnType<T>;
 
 export function createStatusColumn<T>(
-  field: string = 'status',
+  field: string = "status",
   config: Partial<ColumnConfig> = {}
 ): TableColumn<T> {
   return {
-    title: '状态',
+    title: "状态",
     dataIndex: field,
     key: field,
     width: 80,
     render: (status: number) => (
-      <Tag color={status === 0 ? 'success' : 'error'}>
-        {status === 0 ? '正常' : '停用'}
+      <Tag color={status === 0 ? "success" : "error"}>
+        {status === 0 ? "正常" : "停用"}
       </Tag>
     ),
     ...config,
@@ -33,11 +33,11 @@ export function createStatusColumn<T>(
 }
 
 export function createDateTimeColumn<T>(
-  field: string = 'createdAt',
+  field: string = "createdAt",
   config: Partial<ColumnConfig> = {}
 ): TableColumn<T> {
   return {
-    title: '创建时间',
+    title: "创建时间",
     dataIndex: field,
     key: field,
     width: 180,
@@ -52,10 +52,10 @@ export function createActionColumn<T>(
   extraActions?: (record: T) => React.ReactNode
 ): TableColumn<T> {
   return {
-    title: '操作',
-    key: 'action',
+    title: "操作",
+    key: "action",
     width: 200,
-    fixed: 'right',
+    fixed: "right",
     render: (_, record) => (
       <Space size="middle">
         {onEdit && (
@@ -84,8 +84,8 @@ export function createTagColumn<T>(
     dataIndex: field,
     key: field,
     render: (value: string) => {
-      const color = colorMap[value] || 'default';
-      const label = labelMap[value] || value || '-';
+      const color = colorMap[value] || "default";
+      const label = labelMap[value] || value || "-";
       return <Tag color={color}>{label}</Tag>;
     },
   };
@@ -96,18 +96,18 @@ export function createIndexColumn<T>(
   pageSize: number
 ): TableColumn<T> {
   return {
-    title: '序号',
-    key: 'index',
+    title: "序号",
+    key: "index",
     width: 60,
-    align: 'center',
+    align: "center",
     render: (_, __, index) => (currentPage - 1) * pageSize + index + 1,
   };
 }
 
 export const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 B';
+  if (bytes === 0) return "0 B";
   const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 };

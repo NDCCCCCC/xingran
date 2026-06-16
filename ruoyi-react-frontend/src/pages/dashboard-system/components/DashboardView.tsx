@@ -4,17 +4,17 @@
  * 以只读模式查看仪表盘
  */
 
-import { useEffect, useMemo } from 'react';
-import { LayoutToolbar } from '@/components/dashboard/layout/LayoutToolbar';
-import { DashboardGrid, DashboardGridPlaceholder } from '@/components/dashboard/layout/DashboardGrid';
-import { GridItem } from '@/components/dashboard/layout/GridItem';
-import { Suspense } from 'react';
-import { useDashboardStore } from '@/store/dashboardStore';
-import { Spin, Space, Button } from 'antd';
-import { useNavigate } from 'react-router-dom';
-import { UnorderedListOutlined, EditOutlined } from '@ant-design/icons';
-import { DASHBOARD } from '@/constants/routes';
-import { Widget } from '@/components/dashboard/Widget';
+import { useEffect, useMemo } from "react";
+import { LayoutToolbar } from "@/components/dashboard/layout/LayoutToolbar";
+import { DashboardGrid, DashboardGridPlaceholder } from "@/components/dashboard/layout/DashboardGrid";
+import { GridItem } from "@/components/dashboard/layout/GridItem";
+import { Suspense } from "react";
+import { useDashboardStore } from "@/store/dashboardStore";
+import { Spin, Space, Button } from "antd";
+import { useNavigate } from "react-router-dom";
+import { UnorderedListOutlined, EditOutlined } from "@ant-design/icons";
+import { DASHBOARD } from "@/constants/routes";
+import { Widget } from "@/components/dashboard/Widget";
 
 interface DashboardViewProps {
 	dashboardId: string;
@@ -36,7 +36,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dashboardId, isHom
 	useEffect(() => {
 		if (dashboardId) {
 			fetchDashboard(dashboardId);
-			setViewMode('view');
+			setViewMode("view");
 		}
 
 		return () => {
@@ -46,7 +46,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dashboardId, isHom
 
 	if (currentLoading) {
 		return (
-			<div className="dashboard-view loading" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+			<div className="dashboard-view loading" style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "400px" }}>
 				<Spin size="large" />
 			</div>
 		);
@@ -54,7 +54,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ dashboardId, isHom
 
 	if (!currentDashboard) {
 		return (
-			<div className="dashboard-view empty" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+			<div className="dashboard-view empty" style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "400px" }}>
 				<p>仪表盘不存在</p>
 			</div>
 		);

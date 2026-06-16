@@ -2,9 +2,9 @@
  * User 工具函数
  */
 
-import type { ReactElement } from 'react';
-import { Select } from 'antd';
-import { GENDER_OPTIONS, STATUS_TAG_CONFIG } from './constants';
+import type { ReactElement } from "react";
+import { Select } from "antd";
+import { GENDER_OPTIONS, STATUS_TAG_CONFIG } from "./constants";
 
 const { Option } = Select;
 
@@ -53,7 +53,7 @@ export function renderDeptTreeOptions(departments: { id: string; deptName: strin
     nodes.forEach(node => {
       options.push(
         <Option key={node.id} value={node.id}>
-          {'　'.repeat(level * 2)}{node.deptName}
+          {"　".repeat(level * 2)}{node.deptName}
         </Option>
       );
 
@@ -74,12 +74,12 @@ export function renderDeptTreeOptions(departments: { id: string; deptName: strin
  */
 export function formatGender(gender: number): string {
   const option = GENDER_OPTIONS.find(opt => opt.value === gender);
-  return option?.label || '保密';
+  return option?.label || "保密";
 }
 
 /**
  * 格式化状态显示
  */
 export function formatStatus(status: number): { text: string; color: string } {
-  return STATUS_TAG_CONFIG[status] || { text: '未知', color: 'default' };
+  return STATUS_TAG_CONFIG[status] || { text: "未知", color: "default" };
 }

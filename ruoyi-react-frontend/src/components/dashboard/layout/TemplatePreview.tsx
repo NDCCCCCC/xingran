@@ -5,12 +5,12 @@
  * 用户可以在预览中点击"使用此模板"创建仪表盘
  */
 
-import { useState, useEffect } from 'react';
-import { Modal, Button, Spin, message, Empty, Space } from 'antd';
-import { CloseOutlined, CheckOutlined, ReloadOutlined } from '@ant-design/icons';
-import { dashboardService } from '@/services/dashboardService';
-import { DashboardGrid } from '../layout/DashboardGrid';
-import type { Dashboard, WidgetConfig } from '@/types/dashboard';
+import { useState, useEffect } from "react";
+import { Modal, Button, Spin, message, Empty, Space } from "antd";
+import { CloseOutlined, CheckOutlined, ReloadOutlined } from "@ant-design/icons";
+import { dashboardService } from "@/services/dashboardService";
+import { DashboardGrid } from "../layout/DashboardGrid";
+import type { Dashboard, WidgetConfig } from "@/types/dashboard";
 
 export interface TemplatePreviewProps {
 	/** 是否可见 */
@@ -53,8 +53,8 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({
 			const data = await dashboardService.getBatchWidgetData(widgetIds);
 			setPreviewData(data);
 		} catch (err) {
-			console.error('加载预览数据失败:', err);
-			setError(err instanceof Error ? err.message : '加载预览数据失败');
+			console.error("加载预览数据失败:", err);
+			setError(err instanceof Error ? err.message : "加载预览数据失败");
 		} finally {
 			setLoading(false);
 		}
@@ -92,19 +92,19 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({
 			onCancel={onClose}
 			footer={null}
 			width="100vw"
-			style={{ top: 0, paddingBottom: 0, maxWidth: '100vw' }}
+			style={{ top: 0, paddingBottom: 0, maxWidth: "100vw" }}
 			styles={{
 				body: {
-					height: 'calc(100vh - 110px)',
-					overflow: 'auto',
+					height: "calc(100vh - 110px)",
+					overflow: "auto",
 					padding: 0,
 				},
 			}}
 			closeIcon={<CloseOutlined style={{ fontSize: 18 }} />}
 			title={
-				<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+				<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
 					<span>模板预览</span>
-					<span style={{ color: 'var(--theme-text-tertiary, #999)', fontSize: 14, fontWeight: 'normal' }}>
+					<span style={{ color: "var(--theme-text-tertiary, #999)", fontSize: 14, fontWeight: "normal" }}>
 						{template.name}
 					</span>
 				</div>
@@ -112,19 +112,19 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({
 		>
 			<Spin spinning={loading}>
 				{loading && (
-					<div style={{ textAlign: 'center', padding: 12, color: 'rgba(0, 0, 0, 0.45)' }}>
+					<div style={{ textAlign: "center", padding: 12, color: "rgba(0, 0, 0, 0.45)" }}>
 						加载预览数据...
 					</div>
 				)}
-				<div style={{ minHeight: 'calc(100vh - 200px)', position: 'relative' }}>
+				<div style={{ minHeight: "calc(100vh - 200px)", position: "relative" }}>
 					{error ? (
 						<div
 							style={{
-								display: 'flex',
-								flexDirection: 'column',
-								alignItems: 'center',
-								justifyContent: 'center',
-								height: '100%',
+								display: "flex",
+								flexDirection: "column",
+								alignItems: "center",
+								justifyContent: "center",
+								height: "100%",
 								minHeight: 400,
 							}}
 						>
@@ -149,10 +149,10 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({
 							{/* 底部操作按钮 */}
 							<div
 								style={{
-									position: 'fixed',
+									position: "fixed",
 									bottom: 24,
 									right: 24,
-									display: 'flex',
+									display: "flex",
 									gap: 8,
 									zIndex: 1000,
 								}}

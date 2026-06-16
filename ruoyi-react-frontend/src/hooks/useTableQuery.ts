@@ -34,8 +34,8 @@ import {
   useQuery,
   keepPreviousData,
   type UseQueryResult,
-} from '@tanstack/react-query';
-import { queryKeys } from '@/lib/queryKeys';
+} from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 
 export interface UseTableQueryParams {
   resource: string;

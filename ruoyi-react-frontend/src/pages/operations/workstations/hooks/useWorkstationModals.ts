@@ -3,12 +3,12 @@
  * 工位模态框管理 Hook
  */
 
-import { useCallback } from 'react';
-import { message } from 'antd';
-import type { WorkstationOps } from '@/types';
-import type { FormInstance } from 'antd/es/form';
-import { workstationApi } from '@/lib/opsApi';
-import { handleSuccess, handleApiError } from '@/utils/errorHandler';
+import { useCallback } from "react";
+import { message } from "antd";
+import type { WorkstationOps } from "@/types";
+import type { FormInstance } from "antd/es/form";
+import { workstationApi } from "@/lib/opsApi";
+import { handleSuccess, handleApiError } from "@/utils/errorHandler";
 
 export interface UseWorkstationModalsReturn {
   openModal: (record?: WorkstationOps, form?: FormInstance<unknown>) => void;
@@ -54,16 +54,16 @@ export function useWorkstationModals(
         const values = await form.validateFields();
         if (editingWorkstation) {
           await workstationApi.update(editingWorkstation.id, values as Partial<WorkstationOps>);
-          handleSuccess('更新');
+          handleSuccess("更新");
         } else {
           await workstationApi.create(values as Partial<WorkstationOps>);
-          handleSuccess('创建');
+          handleSuccess("创建");
         }
         closeModal(form);
         onSuccess();
       } catch (error: unknown) {
         if ((error as { errorFields?: unknown }).errorFields) return;
-        handleApiError(error, '操作');
+        handleApiError(error, "操作");
       }
     },
     [closeModal]
@@ -72,10 +72,10 @@ export function useWorkstationModals(
   const handleDelete = useCallback(async (id: string, onSuccess: () => void) => {
     try {
       await workstationApi.delete(id);
-      handleSuccess('删除');
+      handleSuccess("删除");
       onSuccess();
     } catch (error) {
-      handleApiError(error, '删除');
+      handleApiError(error, "删除");
     }
   }, []);
 
@@ -83,12 +83,12 @@ export function useWorkstationModals(
     async (selectedRowKeys: React.Key[], onSuccess: () => void, resetSelection: () => void) => {
       if (selectedRowKeys.length === 0) return;
       try {
-        await workstationApi.batch('delete', { ids: selectedRowKeys });
-        handleSuccess('批量删除');
+        await workstationApi.batch("delete", { ids: selectedRowKeys });
+        handleSuccess("批量删除");
         resetSelection();
         onSuccess();
       } catch (error) {
-        handleApiError(error, '批量删除');
+        handleApiError(error, "批量删除");
       }
     },
     []

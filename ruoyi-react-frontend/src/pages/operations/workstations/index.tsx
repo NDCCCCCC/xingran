@@ -7,39 +7,39 @@
  * - 优化 useEffect 依赖数组，减少不必要的重渲染
  */
 
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import type { FC } from 'react';
-import type React from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import type { FC } from "react";
+import type React from "react";
 import {
   Table, Button, Space, Form, Input, Select, Card,
   Alert, Radio, Layout,
-} from 'antd';
+} from "antd";
 import {
   PlusOutlined, SearchOutlined, ReloadOutlined, CheckCircleOutlined,
   StopOutlined, AppstoreOutlined, TableOutlined, ImportOutlined,
   ExportOutlined, DeleteOutlined, BgColorsOutlined, DesktopOutlined,
-} from '@ant-design/icons';
-import type { WorkstationOps } from '@/types';
-import { useTableManager } from '@/hooks/useTableManager';
-import { useTableQuery } from '@/hooks/useTableQuery';
-import { usePagination } from '@/hooks/usePagination';
-import { useSidebarDeptFilter } from '@/hooks/useSidebarDeptFilter';
-import { ExcelImportLazy } from '@/components/shared';
-import ExcelExport from '@/components/shared/ExcelExport';
-import { DeptSidebar } from '@/components/operations/DeptSidebar';
-import { StatisticsCards } from '@/components/operations/StatisticsCards';
-import { handleSuccess as showSuccessMessage } from '@/utils/errorHandler';
-import { buildSearchParams } from '@/utils/buildSearchParams';
-import { useWorkstationData, useWorkstationModals, useWorkstationView } from './hooks';
-import { getWorkstationColumns } from './columns';
-import { WorkstationEditModal } from './modals';
-import { WorkstationCardView, WorkstationFloorPlanView } from './views';
-import { STATUS_OPTIONS } from './constants';
-import type { FloorOption, UserOption, DeptTreeNode } from './types';
+} from "@ant-design/icons";
+import type { WorkstationOps } from "@/types";
+import { useTableManager } from "@/hooks/useTableManager";
+import { useTableQuery } from "@/hooks/useTableQuery";
+import { usePagination } from "@/hooks/usePagination";
+import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
+import { ExcelImportLazy } from "@/components/shared";
+import ExcelExport from "@/components/shared/ExcelExport";
+import { DeptSidebar } from "@/components/operations/DeptSidebar";
+import { StatisticsCards } from "@/components/operations/StatisticsCards";
+import { handleSuccess as showSuccessMessage } from "@/utils/errorHandler";
+import { buildSearchParams } from "@/utils/buildSearchParams";
+import { useWorkstationData, useWorkstationModals, useWorkstationView } from "./hooks";
+import { getWorkstationColumns } from "./columns";
+import { WorkstationEditModal } from "./modals";
+import { WorkstationCardView, WorkstationFloorPlanView } from "./views";
+import { STATUS_OPTIONS } from "./constants";
+import type { FloorOption, UserOption, DeptTreeNode } from "./types";
 // ❌ 移除：import { workstationApi } from '@/lib/opsApi';
 // ✅ 优化：直接导入具体 API，避免 barrel 文件 (bundle-barrel-imports)
-import { buildingApi, floorApi, workstationApi } from '@/lib/opsApi';
-import WorkstationDeviceTable from '@/components/operations/WorkstationDeviceTable';
+import { buildingApi, floorApi, workstationApi } from "@/lib/opsApi";
+import WorkstationDeviceTable from "@/components/operations/WorkstationDeviceTable";
 
 // Cascader 选项类型
 type CascaderOption = {
@@ -84,7 +84,7 @@ const WorkstationManagement: FC = () => {
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
   const { selectedDeptId, handleDeptSelect } = useSidebarDeptFilter({
     searchForm: undefined,
-    clearFieldNames: ['floorId'],
+    clearFieldNames: ["floorId"],
   });
 
   const {
@@ -170,7 +170,7 @@ const WorkstationManagement: FC = () => {
   // reads the React-Query-side first page size while the main table is
   // driven by useTableManager with the user's search filters.
   const { data: reactQueryWorkstations } = useTableQuery<WorkstationOps>({
-    resource: 'workstations',
+    resource: "workstations",
     current: 1,
     pageSize: 5,
     filters: {},
@@ -190,7 +190,7 @@ const WorkstationManagement: FC = () => {
       loadDeptOptions(),
       loadUserOptions(),
     ]).catch((error) => {
-      console.error('初始化加载失败:', error);
+      console.error("初始化加载失败:", error);
     });
     // 依赖数组保持不变，因为这些函数应该由 hooks 稳定化
   }, [loadStatisticsFromHook, loadFloorOptions, loadDeptOptions, loadUserOptions]);
@@ -218,10 +218,10 @@ const WorkstationManagement: FC = () => {
 
       if (editingWorkstation) {
         await workstationApi.update(editingWorkstation.id, submitValues);
-        showSuccessMessage('更新');
+        showSuccessMessage("更新");
       } else {
         await workstationApi.create(submitValues);
-        showSuccessMessage('创建');
+        showSuccessMessage("创建");
       }
       closeModal(workstationForm);
       setModalVisible(false);
@@ -262,7 +262,7 @@ const WorkstationManagement: FC = () => {
         isLeaf: false,
       }));
     } catch (error) {
-      console.error('加载楼宇列表失败:', error);
+      console.error("加载楼宇列表失败:", error);
       return [];
     }
   }, []); // 空依赖数组：buildingApi 是稳定的模块导入
@@ -274,11 +274,11 @@ const WorkstationManagement: FC = () => {
       const floors = floorResult.data?.list || [];
       return floors.map((f) => ({
         value: f.id,
-        label: f.name || f.floorNo || '',
+        label: f.name || f.floorNo || "",
         isLeaf: true,
       }));
     } catch (error) {
-      console.error('加载楼层列表失败:', error);
+      console.error("加载楼层列表失败:", error);
       return [];
     }
   }, []);
@@ -315,7 +315,7 @@ const WorkstationManagement: FC = () => {
       const buildings = await loadBuildingsForCascader(orgId);
       setCascaderOptions(buildings);
     } catch (error) {
-      console.error('加载楼宇列表失败:', error);
+      console.error("加载楼宇列表失败:", error);
       setCascaderOptions([]);
     } finally {
       setLoadingCascader(false);
@@ -336,7 +336,7 @@ const WorkstationManagement: FC = () => {
       }));
       setCascaderOptions(buildingWithFloors);
     } catch (error) {
-      console.error('预加载 Cascader 路径失败:', error);
+      console.error("预加载 Cascader 路径失败:", error);
     }
   }, [loadBuildingsForCascader, loadFloorsForCascader]);
 
@@ -388,7 +388,7 @@ const WorkstationManagement: FC = () => {
         pendingCascaderWrite.current = null;
       }
     } catch (error) {
-      console.error('获取楼层或楼宇信息失败:', error);
+      console.error("获取楼层或楼宇信息失败:", error);
       workstationForm.setFieldsValue(record);
       pendingCascaderWrite.current = null;
     }
@@ -437,7 +437,7 @@ const WorkstationManagement: FC = () => {
   }, [cascaderOptions, modalVisible, editingWorkstation, workstationForm]);
 
   const renderCurrentView = () => {
-    if (viewMode === 'table') {
+    if (viewMode === "table") {
       return (
         <Table
           rowSelection={{
@@ -459,9 +459,9 @@ const WorkstationManagement: FC = () => {
               // 排除复选框、展开图标、操作列按钮等已被内部 stopPropagation / 需要原生行为的位置
               const target = e.target as HTMLElement;
               if (
-                target.closest('.ant-checkbox-wrapper') ||
-                target.closest('.ant-table-row-expand-icon') ||
-                target.closest('[data-stop-row-click]')
+                target.closest(".ant-checkbox-wrapper") ||
+                target.closest(".ant-table-row-expand-icon") ||
+                target.closest("[data-stop-row-click]")
               ) {
                 return;
               }
@@ -471,7 +471,7 @@ const WorkstationManagement: FC = () => {
                 setExpandedRowKeys([record.id]);
               }
             },
-            style: { cursor: 'pointer' },
+            style: { cursor: "pointer" },
           })}
           expandedRowKeys={expandedRowKeys}
           onExpand={(expanded, record) => {
@@ -506,7 +506,7 @@ const WorkstationManagement: FC = () => {
       );
     }
 
-    if (viewMode === 'card') {
+    if (viewMode === "card") {
       return (
         <WorkstationCardView
           workstations={workstations}
@@ -530,32 +530,32 @@ const WorkstationManagement: FC = () => {
         onEdit={(ws) => {
           handleOpenModal(workstations.find(w => w.id === ws.id));
         }}
-        onCloseFloorPlan={() => setViewMode('table')}
+        onCloseFloorPlan={() => setViewMode("table")}
       />
     );
   };
 
   return (
-    <Layout style={{ background: '#000', minHeight: 'calc(100vh - 64px)' }}>
+    <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
       <DeptSidebar selectedDeptId={selectedDeptId} onSelect={handleDeptSelect} externalOnly={false} />
-      <Content style={{ background: '#fff' }}>
+      <Content style={{ background: "#fff" }}>
         <StatisticsCards
           show={total > 10}
           items={[
-            { title: '总工位数', value: statistics.total, prefix: <DesktopOutlined /> },
-            { title: '空闲', value: statistics.available, styles: { content: { color: 'var(--theme-success, #52c41a)' } }, prefix: <CheckCircleOutlined /> },
-            { title: '占用', value: statistics.occupied, styles: { content: { color: 'var(--theme-error, #ff4d4f)' } }, prefix: <StopOutlined /> },
-            { title: '维护', value: statistics.maintain, styles: { content: { color: 'var(--theme-warning, #faad14)' } }, prefix: <StopOutlined /> },
+            { title: "总工位数", value: statistics.total, prefix: <DesktopOutlined /> },
+            { title: "空闲", value: statistics.available, styles: { content: { color: "var(--theme-success, #52c41a)" } }, prefix: <CheckCircleOutlined /> },
+            { title: "占用", value: statistics.occupied, styles: { content: { color: "var(--theme-error, #ff4d4f)" } }, prefix: <StopOutlined /> },
+            { title: "维护", value: statistics.maintain, styles: { content: { color: "var(--theme-warning, #faad14)" } }, prefix: <StopOutlined /> },
           ]}
         />
         <Card style={{ marginBottom: 16 }}>
           <div
             style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              flexWrap: 'wrap',
-              gap: '16px',
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              flexWrap: "wrap",
+              gap: "16px",
             }}
           >
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
@@ -615,7 +615,7 @@ const WorkstationManagement: FC = () => {
               </Button>
               {selectedRowKeys.length > 0 && (
                 <Button
-                  icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }}
+                  icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }}
                   onClick={() => handleBatchDelete(selectedRowKeys, handleSuccess, resetSelection)}
                 >
                   批量删除 ({selectedRowKeys.length})
@@ -661,8 +661,8 @@ const WorkstationManagement: FC = () => {
               title={
                 <span>
                   useTableQuery (React Query) 已生效: 首页缓存共
-                  {' '}<strong>{reactQueryWorkstations.total}</strong> 条工位
-                  {' '}(companion pattern via React Query, 30s staleTime).
+                  {" "}<strong>{reactQueryWorkstations.total}</strong> 条工位
+                  {" "}(companion pattern via React Query, 30s staleTime).
                 </span>
               }
             />

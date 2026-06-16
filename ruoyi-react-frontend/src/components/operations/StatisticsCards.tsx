@@ -3,9 +3,9 @@
  * 用于运营管理页面的统计数据展示
  */
 
-import type { FC } from 'react';
-import { Row, Col, Card, Statistic } from 'antd';
-import type { ReactNode } from 'react';
+import type { FC } from "react";
+import { Row, Col, Card, Statistic } from "antd";
+import type { ReactNode } from "react";
 
 export interface StatisticItem {
   title: string;

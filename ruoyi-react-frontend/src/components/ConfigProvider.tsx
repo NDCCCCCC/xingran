@@ -5,11 +5,11 @@
  * 负责在应用启动时加载用户配置，并同步到各个 Store
  */
 
-import { useEffect, type FC, type ReactNode } from 'react';
-import { useAuthStore } from '@/store/authStore';
-import { useSettingsStore } from '@/store/settingsStore';
-import { useThemeStore } from '@/store/themeStore';
-import { useLayoutStore } from '@/store/layoutStore';
+import { useEffect, type FC, type ReactNode } from "react";
+import { useAuthStore } from "@/store/authStore";
+import { useSettingsStore } from "@/store/settingsStore";
+import { useThemeStore } from "@/store/themeStore";
+import { useLayoutStore } from "@/store/layoutStore";
 
 interface ConfigProviderProps {
 	children: ReactNode;
@@ -61,12 +61,12 @@ export const ConfigProvider: FC<ConfigProviderProps> = ({ children }) => {
 			updateLayout(event.detail);
 		};
 
-		window.addEventListener('save-theme-settings', handleSaveTheme as EventListener);
-		window.addEventListener('save-layout-settings', handleSaveLayout as EventListener);
+		window.addEventListener("save-theme-settings", handleSaveTheme as EventListener);
+		window.addEventListener("save-layout-settings", handleSaveLayout as EventListener);
 
 		return () => {
-			window.removeEventListener('save-theme-settings', handleSaveTheme as EventListener);
-			window.removeEventListener('save-layout-settings', handleSaveLayout as EventListener);
+			window.removeEventListener("save-theme-settings", handleSaveTheme as EventListener);
+			window.removeEventListener("save-layout-settings", handleSaveLayout as EventListener);
 		};
 	}, []);
 

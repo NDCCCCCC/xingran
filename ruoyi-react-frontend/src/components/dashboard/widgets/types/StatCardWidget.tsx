@@ -4,11 +4,11 @@
  * 显示单个关键指标的卡片组件
  */
 
-import { useMemo } from 'react';
-import { ArrowUpOutlined, ArrowDownOutlined, ReloadOutlined } from '@ant-design/icons';
-import type { StatCardDisplayConfig } from '@/types/dashboard';
-import { useWidgetData } from '@/hooks/useWidgetData';
-import type { WidgetConfig } from '@/types/dashboard';
+import { useMemo } from "react";
+import { ArrowUpOutlined, ArrowDownOutlined, ReloadOutlined } from "@ant-design/icons";
+import type { StatCardDisplayConfig } from "@/types/dashboard";
+import { useWidgetData } from "@/hooks/useWidgetData";
+import type { WidgetConfig } from "@/types/dashboard";
 
 interface StatCardWidgetProps {
 	widget: WidgetConfig;
@@ -28,8 +28,8 @@ export const StatCardWidget: React.FC<StatCardWidgetProps> = ({
 
 	// 提取数值
 	const { value, label, trend, icon, color } = useMemo(() => {
-		if (typeof data !== 'object' || !data) {
-			return { value: '-', label: widget.title, trend: null, icon: null, color: display.iconColor };
+		if (typeof data !== "object" || !data) {
+			return { value: "-", label: widget.title, trend: null, icon: null, color: display.iconColor };
 		}
 
 		const d = data as Record<string, unknown>;
@@ -40,12 +40,12 @@ export const StatCardWidget: React.FC<StatCardWidgetProps> = ({
 		// 如果还是没有，尝试常见的设备统计字段名
 		if (numericValue === undefined || numericValue === null) {
 			const possibleFields = [
-				'totalDevices', 'onlineDevices', 'offlineDevices', 'unknownDevices',
-				'deviceCount', 'serverCount', 'userCount', 'orderCount',
-				'amount', 'quantity', 'number'
+				"totalDevices", "onlineDevices", "offlineDevices", "unknownDevices",
+				"deviceCount", "serverCount", "userCount", "orderCount",
+				"amount", "quantity", "number"
 			];
 			for (const field of possibleFields) {
-				if (typeof d[field] === 'number') {
+				if (typeof d[field] === "number") {
 					numericValue = d[field];
 					break;
 				}
@@ -56,7 +56,7 @@ export const StatCardWidget: React.FC<StatCardWidgetProps> = ({
 		if (numericValue === undefined || numericValue === null) {
 			for (const key of Object.keys(d)) {
 				const val = d[key];
-				if (typeof val === 'number' && !isNaN(val)) {
+				if (typeof val === "number" && !isNaN(val)) {
 					numericValue = val;
 					break;
 				}
@@ -66,7 +66,7 @@ export const StatCardWidget: React.FC<StatCardWidgetProps> = ({
 		return {
 			value: formatValue(numericValue ?? 0, display),
 			label: d.label ?? widget.title,
-			trend: d.trend as { value: number; direction: 'up' | 'down' } | null,
+			trend: d.trend as { value: number; direction: "up" | "down" } | null,
 			icon: display.icon,
 			color: display.iconColor,
 		};
@@ -80,11 +80,11 @@ export const StatCardWidget: React.FC<StatCardWidgetProps> = ({
 		const decimals = config.decimals ?? 0;
 		num = Number(num.toFixed(decimals));
 
-		let result = '';
+		let result = "";
 		if (config.prefix) result += config.prefix;
 		result += num.toLocaleString();
 		if (config.suffix) result += config.suffix;
-		if (config.percentage) result += '%';
+		if (config.percentage) result += "%";
 
 		return result;
 	}
@@ -92,10 +92,10 @@ export const StatCardWidget: React.FC<StatCardWidgetProps> = ({
 	// 获取趋势图标
 	const trendIcon = useMemo(() => {
 		if (!trend) return null;
-		if (trend.direction === 'up') {
-			return <ArrowUpOutlined style={{ color: 'var(--theme-success, #52c41a)' }} />;
+		if (trend.direction === "up") {
+			return <ArrowUpOutlined style={{ color: "var(--theme-success, #52c41a)" }} />;
 		}
-		return <ArrowDownOutlined style={{ color: 'var(--theme-error, #ff4d4f)' }} />;
+		return <ArrowDownOutlined style={{ color: "var(--theme-error, #ff4d4f)" }} />;
 	}, [trend]);
 
 	return (
@@ -115,7 +115,7 @@ export const StatCardWidget: React.FC<StatCardWidgetProps> = ({
 					)}
 					<div className="stat-card-widget__content">
 						<div className="stat-card-widget__value">{value}</div>
-						<div className="stat-card-widget__label">{String(label ?? '')}</div>
+						<div className="stat-card-widget__label">{String(label ?? "")}</div>
 						{trend && (
 							<div className="stat-card-widget__trend">
 								{trendIcon}

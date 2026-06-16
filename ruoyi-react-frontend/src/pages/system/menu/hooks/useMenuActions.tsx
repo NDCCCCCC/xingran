@@ -3,14 +3,14 @@
  * 菜单操作管理 Hook
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { Modal, message, Alert, Checkbox } from 'antd';
-import { WarningOutlined } from '@ant-design/icons';
-import type { Menu } from '@/types';
-import type { FormInstance } from 'antd/es/form';
-import { post } from '@/lib/api';
-import type { CheckboxChangeEvent } from 'antd/es/checkbox';
-import { refreshMenuCache } from '@/store/menuStore';
+import { useState, useCallback, useRef, useEffect } from "react";
+import { Modal, message, Alert, Checkbox } from "antd";
+import { WarningOutlined } from "@ant-design/icons";
+import type { Menu } from "@/types";
+import type { FormInstance } from "antd/es/form";
+import { post } from "@/lib/api";
+import type { CheckboxChangeEvent } from "antd/es/checkbox";
+import { refreshMenuCache } from "@/store/menuStore";
 
 // 扩展 Modal 实例类型以支持 checkboxRef
 interface ModalInstanceWithCheckbox {
@@ -70,7 +70,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
       if (cascade && result.data?.deletedCount) {
         message.success(`删除成功！共删除 ${result.data.deletedCount} 个菜单（包含子菜单）`);
       } else {
-        message.success('删除成功');
+        message.success("删除成功");
       }
 
       onLoad();
@@ -78,16 +78,16 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
       // 静默刷新菜单缓存，不会触发页面跳转
       refreshMenuCache();
     } catch (error: unknown) {
-      console.error('删除菜单失败:', error);
-      let errorMsg = '删除失败';
-      if (error && typeof error === 'object') {
-        if ('response' in error && typeof error.response === 'object' && error.response) {
-          if ('data' in error.response && typeof error.response.data === 'object' && error.response.data) {
-            if ('message' in error.response.data && typeof error.response.data.message === 'string') {
+      console.error("删除菜单失败:", error);
+      let errorMsg = "删除失败";
+      if (error && typeof error === "object") {
+        if ("response" in error && typeof error.response === "object" && error.response) {
+          if ("data" in error.response && typeof error.response.data === "object" && error.response.data) {
+            if ("message" in error.response.data && typeof error.response.data.message === "string") {
               errorMsg = error.response.data.message;
             }
           }
-        } else if ('message' in error && typeof error.message === 'string') {
+        } else if ("message" in error && typeof error.message === "string") {
           errorMsg = error.message;
         }
       }
@@ -156,12 +156,12 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
     };
 
     modalInstance = Modal.confirm({
-      title: '删除菜单',
-      icon: <WarningOutlined style={{ color: 'var(--theme-warning, #faad14)' }} />,
+      title: "删除菜单",
+      icon: <WarningOutlined style={{ color: "var(--theme-warning, #faad14)" }} />,
       content: <DeleteConfirmContent />,
-      okText: '确定删除',
-      okType: 'danger',
-      cancelText: '取消',
+      okText: "确定删除",
+      okType: "danger",
+      cancelText: "取消",
       onOk: () => {
         // 从 modalInstance 获取最新的 checkbox 状态
         const cascadeValue = modalInstance?.checkboxRef?.current || false;
@@ -173,7 +173,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
   // 批量删除菜单
   const handleBatchDelete = useCallback(() => {
     if (selectedRowKeys.length === 0) {
-      message.warning('请至少选择一个菜单');
+      message.warning("请至少选择一个菜单");
       return;
     }
 
@@ -227,17 +227,17 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
     };
 
     modalInstance = Modal.confirm({
-      title: '批量删除菜单',
-      icon: <WarningOutlined style={{ color: 'var(--theme-warning, #faad14)' }} />,
+      title: "批量删除菜单",
+      icon: <WarningOutlined style={{ color: "var(--theme-warning, #faad14)" }} />,
       content: <BatchDeleteConfirmContent />,
-      okText: '确定删除',
-      okType: 'danger',
-      cancelText: '取消',
+      okText: "确定删除",
+      okType: "danger",
+      cancelText: "取消",
       onOk: async () => {
         try {
           // 从 modalInstance 获取最新的 checkbox 状态
           const cascadeValue = modalInstance?.checkboxRef?.current || false;
-          const result = await post('/system/menus/batch-delete', {
+          const result = await post("/system/menus/batch-delete", {
             ids: selectedRowKeys,
             cascade: cascadeValue,
           }) as { data?: { deletedCount?: number } };
@@ -245,7 +245,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
           if (result.data?.deletedCount) {
             message.success(`批量删除成功！共删除 ${result.data.deletedCount} 个菜单`);
           } else {
-            message.success('批量删除成功');
+            message.success("批量删除成功");
           }
 
           setSelectedRowKeys([]);
@@ -254,9 +254,9 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
           // 静默刷新菜单缓存，不会触发页面跳转
           refreshMenuCache();
         } catch (error: unknown) {
-          console.error('批量删除失败:', error);
+          console.error("批量删除失败:", error);
           const err = error as { response?: { data?: { message?: string } }; message?: string };
-          const errorMsg = err?.response?.data?.message || err?.message || '批量删除失败';
+          const errorMsg = err?.response?.data?.message || err?.message || "批量删除失败";
           message.error(errorMsg);
           throw error; // 重新抛出错误以保持 Modal 打开
         }
@@ -272,10 +272,10 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
       // 转换Switch状态值
       // visible: true->1(显示), false->0(隐藏)
       // status: true->0(正常), false->1(停用)
-      if (typeof values.visible === 'boolean') {
+      if (typeof values.visible === "boolean") {
         values.visible = values.visible ? 1 : 0;
       }
-      if (typeof values.status === 'boolean') {
+      if (typeof values.status === "boolean") {
         values.status = values.status ? 0 : 1;
       }
 
@@ -285,10 +285,10 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
           id: editingMenu.id,
         });
       } else {
-        await post('/system/menus', values);
+        await post("/system/menus", values);
       }
 
-      message.success(editingMenu ? '更新成功' : '创建成功');
+      message.success(editingMenu ? "更新成功" : "创建成功");
       setEditingMenu(null);
       onLoad();
 
@@ -298,7 +298,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
       // 调用保存成功回调，用于关闭模态框等操作
       onSaveSuccess?.();
     } catch (error) {
-      console.error('保存菜单失败:', error);
+      console.error("保存菜单失败:", error);
     }
   }, [editingMenu, onLoad, onSaveSuccess]);
 

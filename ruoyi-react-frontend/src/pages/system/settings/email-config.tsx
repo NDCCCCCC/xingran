@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import type { FC } from 'react';
+import { useState, useEffect } from "react";
+import type { FC } from "react";
 import {
   Card,
   Table,
@@ -13,16 +13,16 @@ import {
   message,
   Tag,
   InputNumber,
-} from 'antd';
+} from "antd";
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
   MailOutlined,
   SendOutlined,
-} from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import { formatDateTime } from '@/utils/datetime';
+} from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
+import { formatDateTime } from "@/utils/datetime";
 import {
   getEmailConfigList,
   createEmailConfig,
@@ -32,9 +32,9 @@ import {
   type EmailConfig,
   type EmailConfigCreateRequest,
   type EmailConfigUpdateRequest,
-} from '@/lib/notificationConfigApi';
-import { usePagination } from '@/hooks/usePagination';
-import { isFormValidationError } from '@/utils/errorHandler';
+} from "@/lib/notificationConfigApi";
+import { usePagination } from "@/hooks/usePagination";
+import { isFormValidationError } from "@/utils/errorHandler";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -69,8 +69,8 @@ const EmailConfigPage: FC = () => {
       setConfigs(result.data.list);
       setTotal(result.data.total);
     } catch (error) {
-      console.error('加载邮箱配置失败:', error);
-      message.error('加载邮箱配置失败');
+      console.error("加载邮箱配置失败:", error);
+      message.error("加载邮箱配置失败");
     } finally {
       setLoading(false);
     }
@@ -106,15 +106,15 @@ const EmailConfigPage: FC = () => {
       if (editingConfig) {
         const updateData: EmailConfigUpdateRequest = { ...values };
         // 如果密码为空或未修改，不发送密码字段
-        if (!values.password || values.password === '******') {
+        if (!values.password || values.password === "******") {
           delete updateData.password;
         }
         await updateEmailConfig(editingConfig.id, updateData);
-        message.success('更新成功');
+        message.success("更新成功");
       } else {
         const createData: EmailConfigCreateRequest = { ...values };
         await createEmailConfig(createData);
-        message.success('创建成功');
+        message.success("创建成功");
       }
 
       setModalVisible(false);
@@ -125,7 +125,7 @@ const EmailConfigPage: FC = () => {
       if (isFormValidationError(error)) {
         return;
       }
-      message.error('操作失败: ' + ((error as Error).message || '未知错误'));
+      message.error("操作失败: " + ((error as Error).message || "未知错误"));
     } finally {
       setSubmitting(false);
     }
@@ -135,10 +135,10 @@ const EmailConfigPage: FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await deleteEmailConfig(id);
-      message.success('删除成功');
+      message.success("删除成功");
       loadConfigs();
     } catch (error) {
-      message.error('删除失败');
+      message.error("删除失败");
     }
   };
 
@@ -159,13 +159,13 @@ const EmailConfigPage: FC = () => {
 
       // 调用测试API
       await testEmailConfig(values.configId, values.testTo);
-      message.success('测试邮件已发送，请查收');
+      message.success("测试邮件已发送，请查收");
       setTestModalVisible(false);
     } catch (error: unknown) {
       if (isFormValidationError(error)) {
         return;
       }
-      message.error('测试失败: ' + ((error as Error).message || '未知错误'));
+      message.error("测试失败: " + ((error as Error).message || "未知错误"));
     } finally {
       setTesting(false);
     }
@@ -174,9 +174,9 @@ const EmailConfigPage: FC = () => {
   // 表格列定义
   const columns: ColumnsType<EmailConfig> = [
     {
-      title: '配置名称',
-      dataIndex: 'configName',
-      key: 'configName',
+      title: "配置名称",
+      dataIndex: "configName",
+      key: "configName",
       width: 150,
       render: (text: string, record) => (
         <Space>
@@ -186,8 +186,8 @@ const EmailConfigPage: FC = () => {
       ),
     },
     {
-      title: 'SMTP服务器',
-      key: 'server',
+      title: "SMTP服务器",
+      key: "server",
       width: 180,
       render: (_, record) => (
         <span>
@@ -197,40 +197,40 @@ const EmailConfigPage: FC = () => {
       ),
     },
     {
-      title: '发件人',
-      dataIndex: 'username',
-      key: 'username',
+      title: "发件人",
+      dataIndex: "username",
+      key: "username",
       width: 200,
     },
     {
-      title: '发件名称',
-      dataIndex: 'fromName',
-      key: 'fromName',
+      title: "发件名称",
+      dataIndex: "fromName",
+      key: "fromName",
       width: 120,
-      render: (text) => text || '-',
+      render: (text) => text || "-",
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
       width: 80,
       render: (status: number) => (
-        <Tag color={status === 0 ? 'success' : 'default'}>
-          {status === 0 ? '正常' : '停用'}
+        <Tag color={status === 0 ? "success" : "default"}>
+          {status === 0 ? "正常" : "停用"}
         </Tag>
       ),
     },
     {
-      title: '创建时间',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
+      title: "创建时间",
+      dataIndex: "createdAt",
+      key: "createdAt",
       width: 180,
       render: (text: string) => formatDateTime(text),
     },
     {
-      title: '操作',
-      key: 'action',
-      fixed: 'right',
+      title: "操作",
+      key: "action",
+      fixed: "right",
       width: 200,
       render: (_, record: EmailConfig) => (
         <Space size="small">
@@ -257,9 +257,9 @@ const EmailConfigPage: FC = () => {
             icon={<DeleteOutlined />}
             onClick={() => {
               Modal.confirm({
-                title: '确认删除?',
-                okText: '确定',
-                cancelText: '取消',
+                title: "确认删除?",
+                okText: "确定",
+                cancelText: "取消",
                 okButtonProps: { danger: true },
                 onOk: () => handleDelete(record.id),
               });
@@ -308,7 +308,7 @@ const EmailConfigPage: FC = () => {
 
       {/* 编辑模态框 */}
       <Modal
-        title={editingConfig ? '编辑邮箱配置' : '新增邮箱配置'}
+        title={editingConfig ? "编辑邮箱配置" : "新增邮箱配置"}
         open={modalVisible}
         onOk={handleSubmit}
         onCancel={() => {
@@ -323,7 +323,7 @@ const EmailConfigPage: FC = () => {
           <Form.Item
             name="configName"
             label="配置名称"
-            rules={[{ required: true, message: '请输入配置名称' }]}
+            rules={[{ required: true, message: "请输入配置名称" }]}
           >
             <Input placeholder="请输入配置名称，如：企业邮箱" />
           </Form.Item>
@@ -331,7 +331,7 @@ const EmailConfigPage: FC = () => {
           <Form.Item
             name="host"
             label="SMTP服务器"
-            rules={[{ required: true, message: '请输入SMTP服务器地址' }]}
+            rules={[{ required: true, message: "请输入SMTP服务器地址" }]}
           >
             <Input placeholder="如：smtp.example.com" />
           </Form.Item>
@@ -339,7 +339,7 @@ const EmailConfigPage: FC = () => {
           <Form.Item
             name="port"
             label="端口"
-            rules={[{ required: true, message: '请输入端口' }]}
+            rules={[{ required: true, message: "请输入端口" }]}
           >
             <InputNumber min={1} max={65535} className="w-full" placeholder="默认587" />
           </Form.Item>
@@ -347,7 +347,7 @@ const EmailConfigPage: FC = () => {
           <Form.Item
             name="username"
             label="邮箱账号"
-            rules={[{ required: true, message: '请输入邮箱账号' }]}
+            rules={[{ required: true, message: "请输入邮箱账号" }]}
           >
             <Input placeholder="请输入发件人邮箱账号" />
           </Form.Item>
@@ -355,7 +355,7 @@ const EmailConfigPage: FC = () => {
           <Form.Item
             name="password"
             label="邮箱密码"
-            rules={editingConfig ? [] : [{ required: true, message: '请输入邮箱密码或授权码' }]}
+            rules={editingConfig ? [] : [{ required: true, message: "请输入邮箱密码或授权码" }]}
           >
             <Input.Password placeholder="请输入邮箱密码或授权码（留空则不修改）" />
           </Form.Item>
@@ -408,7 +408,7 @@ const EmailConfigPage: FC = () => {
           <Form.Item
             name="testTo"
             label="收件人"
-            rules={[{ required: true, message: '请输入收件人邮箱' }]}
+            rules={[{ required: true, message: "请输入收件人邮箱" }]}
           >
             <Input placeholder="请输入测试邮件的收件人邮箱" />
           </Form.Item>

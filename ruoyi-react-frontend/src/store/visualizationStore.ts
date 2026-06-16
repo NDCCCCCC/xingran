@@ -1,9 +1,9 @@
-import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
-import type { Building, Floor, WorkstationOps } from '@/types/operations';
+import { create } from "zustand";
+import { devtools } from "zustand/middleware";
+import type { Building, Floor, WorkstationOps } from "@/types/operations";
 
 // 视图层级类型
-export type ViewLevel = 'map' | 'building' | 'floor' | 'workstation';
+export type ViewLevel = "map" | "building" | "floor" | "workstation";
 
 // 地图状态
 interface MapState {
@@ -86,7 +86,7 @@ export const useVisualizationStore = create<VisualizationState>()(
   devtools(
     (set) => ({
       // 初始状态
-      viewLevel: 'map',
+      viewLevel: "map",
 
       mapState: {
         center: DEFAULT_MAP_CENTER,
@@ -155,7 +155,7 @@ export const useVisualizationStore = create<VisualizationState>()(
       navigateToBuilding: (building) => {
         set({
           selectedBuilding: building,
-          viewLevel: 'building',
+          viewLevel: "building",
           isTransitioning: true,
         });
 
@@ -175,7 +175,7 @@ export const useVisualizationStore = create<VisualizationState>()(
       navigateToFloor: (floor) => {
         set({
           selectedFloor: floor,
-          viewLevel: 'floor',
+          viewLevel: "floor",
           isTransitioning: true,
         });
       },
@@ -183,13 +183,13 @@ export const useVisualizationStore = create<VisualizationState>()(
       navigateToWorkstationOps: (workstation) => {
         set({
           selectedWorkstationOps: workstation,
-          viewLevel: 'workstation',
+          viewLevel: "workstation",
         });
       },
 
       navigateToMap: () => {
         set({
-          viewLevel: 'map',
+          viewLevel: "map",
           mapState: {
             center: DEFAULT_MAP_CENTER,
             zoom: 7,
@@ -204,7 +204,7 @@ export const useVisualizationStore = create<VisualizationState>()(
       },
     }),
     {
-      name: 'visualization-store',
+      name: "visualization-store",
     }
   )
 );

@@ -3,22 +3,22 @@
  * Duty Management Page
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { Tabs, Button, Modal, Form } from 'antd';
-import { LeftOutlined, RightOutlined, CalendarOutlined, SettingOutlined, TeamOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
-import { getDutyPoolList, getUserList, type Holiday } from '@/lib/dutyApi';
-import type { DutyPool, SimpleUser } from '@/lib/dutyApi';
+import { useState, useEffect, useCallback } from "react";
+import { Tabs, Button, Modal, Form } from "antd";
+import { LeftOutlined, RightOutlined, CalendarOutlined, SettingOutlined, TeamOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
+import { getDutyPoolList, getUserList, type Holiday } from "@/lib/dutyApi";
+import type { DutyPool, SimpleUser } from "@/lib/dutyApi";
 import {
   WeeklyView,
   HolidayManagement,
   DutyConfig,
-} from './components';
-import { HolidayModal, BatchHolidayModal } from './modals';
-import { useScheduleData, useHolidayData, useDutyConfig } from './hooks';
-import { downloadHolidayTemplate, handleHolidayImport } from './utils';
-import type { DutyConfigValues, ImportOptions, BatchHolidayFormValues } from './types';
-import DutyPoolPage from '../pools';
+} from "./components";
+import { HolidayModal, BatchHolidayModal } from "./modals";
+import { useScheduleData, useHolidayData, useDutyConfig } from "./hooks";
+import { downloadHolidayTemplate, handleHolidayImport } from "./utils";
+import type { DutyConfigValues, ImportOptions, BatchHolidayFormValues } from "./types";
+import DutyPoolPage from "../pools";
 
 // ==================== 主组件 ====================
 
@@ -33,7 +33,7 @@ export default function DutyManagement() {
   const dutyConfig = useDutyConfig();
 
   // ==================== 其他状态 ====================
-  const [activeTab, setActiveTab] = useState('weekly');
+  const [activeTab, setActiveTab] = useState("weekly");
   const [pools, setPools] = useState<DutyPool[]>([]);
   const [users, setUsers] = useState<SimpleUser[]>([]);
 
@@ -62,7 +62,7 @@ export default function DutyManagement() {
       const result = await getDutyPoolList({ current: 1, pageSize: 100 });
       setPools(result.data?.list || []);
     } catch (error) {
-      Modal.error({ title: '获取值班池列表失败' });
+      Modal.error({ title: "获取值班池列表失败" });
     }
   };
 
@@ -71,7 +71,7 @@ export default function DutyManagement() {
       const result = await getUserList({ current: 1, pageSize: 1000 });
       setUsers(result.data?.list || []);
     } catch (error) {
-      console.error('获取用户列表失败', error);
+      console.error("获取用户列表失败", error);
     }
   };
 
@@ -106,15 +106,15 @@ export default function DutyManagement() {
     try {
       const values = await holidayForm.validateFields();
       const data = {
-        holidayDate: values.holidayDate.format('YYYY-MM-DD'),
+        holidayDate: values.holidayDate.format("YYYY-MM-DD"),
         holidayName: values.holidayName,
         isOffday: values.isOffday ?? true,
-        holidayType: (values.holidayType || 'custom') as 'legal' | 'workday' | 'custom',
+        holidayType: (values.holidayType || "custom") as "legal" | "workday" | "custom",
         year: values.holidayDate.year(),
         remark: values.remark,
       };
 
-      const id = holidayForm.getFieldValue('id');
+      const id = holidayForm.getFieldValue("id");
       if (id) {
         await holidayData.update(id, data);
       } else {
@@ -138,16 +138,16 @@ export default function DutyManagement() {
     const holidays = [];
     let current = startDate;
 
-    while (current.isBefore(endDate) || current.isSame(endDate, 'day')) {
+    while (current.isBefore(endDate) || current.isSame(endDate, "day")) {
       holidays.push({
-        holidayDate: current.format('YYYY-MM-DD'),
+        holidayDate: current.format("YYYY-MM-DD"),
         holidayName,
         isOffday: isOffday ?? true,
-        holidayType: holidayType || 'custom',
+        holidayType: holidayType || "custom",
         year: current.year(),
         remark: values.remark,
       });
-      current = current.add(1, 'day');
+      current = current.add(1, "day");
     }
 
     await holidayData.batchCreate(holidays);
@@ -169,7 +169,7 @@ export default function DutyManagement() {
         onChange={setActiveTab}
         items={[
           {
-            key: 'weekly',
+            key: "weekly",
             label: (
               <span>
                 <CalendarOutlined />
@@ -178,7 +178,7 @@ export default function DutyManagement() {
             ),
             children: (
               <>
-                <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <div style={{ marginBottom: 16, display: "flex", justifyContent: "flex-end", gap: 8 }}>
                   <Button icon={<LeftOutlined />} onClick={scheduleData.prevWeek}>
                     上一周
                   </Button>
@@ -197,8 +197,8 @@ export default function DutyManagement() {
             ),
           },
           {
-            key: 'holiday',
-            label: '节假日管理',
+            key: "holiday",
+            label: "节假日管理",
             children: (
               <HolidayManagement
                 holidays={holidayData.holidays}
@@ -217,7 +217,7 @@ export default function DutyManagement() {
             ),
           },
           {
-            key: 'config',
+            key: "config",
             label: (
               <span>
                 <SettingOutlined />
@@ -234,7 +234,7 @@ export default function DutyManagement() {
             ),
           },
           {
-            key: 'pools',
+            key: "pools",
             label: (
               <span>
                 <TeamOutlined />

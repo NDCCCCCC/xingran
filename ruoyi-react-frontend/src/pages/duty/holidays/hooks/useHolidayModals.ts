@@ -3,13 +3,13 @@
  * 节假日模态框状态管理 Hook
  */
 
-import { useState, useCallback } from 'react';
-import { message } from 'antd';
-import dayjs from 'dayjs';
-import type { FormInstance } from 'antd/es/form';
-import type { Holiday } from '@/lib/dutyApi';
-import type { BatchHolidayRow, ModalState, BatchState } from '../types';
-import { createHoliday, updateHoliday, deleteHoliday, batchCreateHolidays } from '@/lib/dutyApi';
+import { useState, useCallback } from "react";
+import { message } from "antd";
+import dayjs from "dayjs";
+import type { FormInstance } from "antd/es/form";
+import type { Holiday } from "@/lib/dutyApi";
+import type { BatchHolidayRow, ModalState, BatchState } from "../types";
+import { createHoliday, updateHoliday, deleteHoliday, batchCreateHolidays } from "@/lib/dutyApi";
 
 export interface UseHolidayModalsParams {
   year: number | undefined;
@@ -46,7 +46,7 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
   });
 
   const [batchState, setBatchState] = useState<BatchState>({
-    batchHolidays: [{ holidayDate: dayjs(), holidayName: '', isOffday: true, holidayType: 'legal', year: new Date().getFullYear() }],
+    batchHolidays: [{ holidayDate: dayjs(), holidayName: "", isOffday: true, holidayType: "legal", year: new Date().getFullYear() }],
   });
 
   const getDefaultYear = () => year ?? availableYears[0] ?? new Date().getFullYear();
@@ -65,10 +65,10 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
   const handleDelete = useCallback(async (id: string) => {
     try {
       await deleteHoliday(id);
-      message.success('删除成功');
+      message.success("删除成功");
       fetchList();
     } catch (error) {
-      message.error('删除失败');
+      message.error("删除失败");
     }
   }, [fetchList]);
 
@@ -79,12 +79,12 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
         holidayDate: dayjs.Dayjs;
         holidayName: string;
         isOffday: boolean;
-        holidayType: 'legal' | 'workday' | 'custom';
+        holidayType: "legal" | "workday" | "custom";
         year: number;
         remark?: string;
       };
       const data = {
-        holidayDate: values.holidayDate.format('YYYY-MM-DD'),
+        holidayDate: values.holidayDate.format("YYYY-MM-DD"),
         holidayName: values.holidayName,
         isOffday: values.isOffday,
         holidayType: values.holidayType,
@@ -94,17 +94,17 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
 
       if (modalState.editingRecord) {
         await updateHoliday(modalState.editingRecord.id, data);
-        message.success('更新成功');
+        message.success("更新成功");
       } else {
         await createHoliday(data);
-        message.success('创建成功');
+        message.success("创建成功");
       }
 
       setModalState(prev => ({ ...prev, modalVisible: false }));
       fetchList();
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'errorFields' in error) return;
-      message.error(modalState.editingRecord ? '更新失败' : '创建失败');
+      if (error && typeof error === "object" && "errorFields" in error) return;
+      message.error(modalState.editingRecord ? "更新失败" : "创建失败");
     }
   }, [modalState.editingRecord, fetchList]);
 
@@ -112,7 +112,7 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
   const handleBatchAdd = useCallback(() => {
     const defaultYear = getDefaultYear();
     setBatchState({
-      batchHolidays: [{ holidayDate: dayjs(), holidayName: '', isOffday: true, holidayType: 'legal', year: defaultYear }],
+      batchHolidays: [{ holidayDate: dayjs(), holidayName: "", isOffday: true, holidayType: "legal", year: defaultYear }],
     });
     setModalState(prev => ({ ...prev, batchModalVisible: true }));
   }, [year, availableYears]);
@@ -123,7 +123,7 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
     setBatchState(prev => ({
       batchHolidays: [
         ...prev.batchHolidays,
-        { holidayDate: dayjs(), holidayName: '', isOffday: true, holidayType: 'legal', year: defaultYear },
+        { holidayDate: dayjs(), holidayName: "", isOffday: true, holidayType: "legal", year: defaultYear },
       ],
     }));
   }, [year, availableYears]);
@@ -159,10 +159,10 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
 
     try {
       const data = batchHolidays.map((row) => ({
-        holidayDate: row.holidayDate.format('YYYY-MM-DD'),
+        holidayDate: row.holidayDate.format("YYYY-MM-DD"),
         holidayName: row.holidayName,
         isOffday: row.isOffday,
-        holidayType: row.holidayType as 'legal' | 'workday' | 'custom',
+        holidayType: row.holidayType as "legal" | "workday" | "custom",
         year: row.year,
         remark: row.remark,
       }));
@@ -173,7 +173,7 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
       setModalState(prev => ({ ...prev, batchModalVisible: false }));
       fetchList();
     } catch (error) {
-      message.error('批量创建失败');
+      message.error("批量创建失败");
     }
   }, [batchState, fetchList]);
 
@@ -185,7 +185,7 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
     setBatchModalVisible: (visible: boolean) => setModalState(prev => ({ ...prev, batchModalVisible: visible })),
     setBatchHolidays: (holidays: React.SetStateAction<BatchHolidayRow[]>) => {
       setBatchState(prev => ({
-        batchHolidays: typeof holidays === 'function' ? holidays(prev.batchHolidays) : holidays,
+        batchHolidays: typeof holidays === "function" ? holidays(prev.batchHolidays) : holidays,
       }));
     },
 

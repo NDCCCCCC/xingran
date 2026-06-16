@@ -1,4 +1,4 @@
-import { post, get, put, del } from './api';
+import { post, get, put, del } from "./api";
 
 // ==================== 邮箱配置 ====================
 
@@ -56,7 +56,7 @@ export interface EmailConfigUpdateRequest {
 
 // 获取邮箱配置列表
 export const getEmailConfigList = (params: EmailConfigListParams) => {
-  return post('/system/settings/notification/email-configs/list', params);
+  return post("/system/settings/notification/email-configs/list", params);
 };
 
 // 获取邮箱配置详情
@@ -66,7 +66,7 @@ export const getEmailConfig = (id: string) => {
 
 // 创建邮箱配置
 export const createEmailConfig = (data: EmailConfigCreateRequest) => {
-  return post('/system/settings/notification/email-configs', data);
+  return post("/system/settings/notification/email-configs", data);
 };
 
 // 更新邮箱配置
@@ -88,18 +88,18 @@ export const testEmailConfig = (id: string, testTo: string) => {
 
 // 导出类型常量
 export const APIConfigTypes = {
-  SMS: 'sms',
-  WEBHOOK: 'webhook',
-  PUSH: 'push',
+  SMS: "sms",
+  WEBHOOK: "webhook",
+  PUSH: "push",
 } as const;
 
 export type APIConfigType = typeof APIConfigTypes[keyof typeof APIConfigTypes];
 
 export const AuthTypes = {
-  NONE: 'none',
-  BASIC: 'basic',
-  BEARER: 'bearer',
-  APIKEY: 'apikey',
+  NONE: "none",
+  BASIC: "basic",
+  BEARER: "bearer",
+  APIKEY: "apikey",
 } as const;
 
 export type AuthType = typeof AuthTypes[keyof typeof AuthTypes];
@@ -163,7 +163,7 @@ export interface APINotificationConfigUpdateRequest {
 
 // 获取API通知配置列表
 export const getAPINotificationConfigList = (params: APINotificationConfigListParams) => {
-  return post('/system/settings/notification/api-notification-configs/list', params);
+  return post("/system/settings/notification/api-notification-configs/list", params);
 };
 
 // 获取API通知配置详情
@@ -173,7 +173,7 @@ export const getAPINotificationConfig = (id: string) => {
 
 // 创建API通知配置
 export const createAPINotificationConfig = (data: APINotificationConfigCreateRequest) => {
-  return post('/system/settings/notification/api-notification-configs', data);
+  return post("/system/settings/notification/api-notification-configs", data);
 };
 
 // 更新API通知配置
@@ -201,5 +201,5 @@ export interface CronExpression {
 
 // 获取常用Cron表达式
 export const getCommonCronExpressions = () => {
-  return get('/system/notices/cron-expressions');
+  return get("/system/notices/cron-expressions");
 };

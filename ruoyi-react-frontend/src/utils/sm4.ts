@@ -6,13 +6,13 @@
  * 文档: https://www.npmjs.com/package/sm-crypto
  */
 
-import { get } from '@/lib/api';
-import { hexToBase64, base64ToHex, arrayBufferToHex, hexToArrayBuffer, generateRandomHex } from './encoding';
+import { get } from "@/lib/api";
+import { hexToBase64, base64ToHex, arrayBufferToHex, hexToArrayBuffer, generateRandomHex } from "./encoding";
 
 // SM4 模块接口定义
 interface SM4Module {
-	encrypt: (msg: string, key: string, options?: { mode: 'cbc' | 'ecb'; iv?: string }) => string;
-	decrypt: (cipherHex: string, key: string, options?: { mode: 'cbc' | 'ecb'; iv?: string }) => string;
+	encrypt: (msg: string, key: string, options?: { mode: "cbc" | "ecb"; iv?: string }) => string;
+	decrypt: (cipherHex: string, key: string, options?: { mode: "cbc" | "ecb"; iv?: string }) => string;
 }
 
 // sm4 模块缓存
@@ -25,12 +25,12 @@ async function getSM4(): Promise<SM4Module> {
   }
 
   try {
-    const smCrypto = await import('sm-crypto');
+    const smCrypto = await import("sm-crypto");
     sm4Module = smCrypto.sm4;
     return sm4Module;
   } catch (error) {
-    console.error('[SM4] 加载 sm-crypto 失败:', error);
-    throw new Error('无法加载 sm-crypto 包，请确保已安装: npm install sm-crypto');
+    console.error("[SM4] 加载 sm-crypto 失败:", error);
+    throw new Error("无法加载 sm-crypto 包，请确保已安装: npm install sm-crypto");
   }
 }
 
@@ -73,12 +73,12 @@ export function generateSM4KeyBytes(): string {
  */
 export async function encryptSM4CBC(plaintext: string, keyHex: string, ivHex: string): Promise<string> {
   if (!plaintext) {
-    return '';
+    return "";
   }
 
   const sm4 = await getSM4();
   return sm4.encrypt(plaintext, keyHex, {
-    mode: 'cbc',
+    mode: "cbc",
     iv: ivHex,
   });
 }
@@ -93,12 +93,12 @@ export async function encryptSM4CBC(plaintext: string, keyHex: string, ivHex: st
  */
 export async function decryptSM4CBC(cipherHex: string, keyHex: string, ivHex: string): Promise<string> {
   if (!cipherHex) {
-    return '';
+    return "";
   }
 
   const sm4 = await getSM4();
   return sm4.decrypt(cipherHex, keyHex, {
-    mode: 'cbc',
+    mode: "cbc",
     iv: ivHex,
   });
 }
@@ -157,13 +157,13 @@ export async function isSM4Available(): Promise<boolean> {
  */
 export async function encryptPasswordWithSM4(password: string, keyHex: string): Promise<string> {
   if (!password) {
-    return '';
+    return "";
   }
 
   const sm4 = await getSM4();
 
   // 使用 SM4-ECB 模式加密密码（无需 IV）
-  const cipherHex = sm4.encrypt(password, keyHex, { mode: 'ecb' });
+  const cipherHex = sm4.encrypt(password, keyHex, { mode: "ecb" });
 
   return cipherHex;
 }
@@ -188,11 +188,11 @@ export function generateSessionKey(): string {
  */
 export async function fetchSM4KeyForPassword(): Promise<string> {
   try {
-    const result = await get<{ encryptedKey?: string; keyHex?: string }>('/system/auth/sm4-key');
+    const result = await get<{ encryptedKey?: string; keyHex?: string }>("/system/auth/sm4-key");
 
     if (result.code === 0 && result.data?.encryptedKey) {
       // 使用 SM2 解密密钥
-      const { decryptWithSM2, fetchPublicKey } = await import('./sm2');
+      const { decryptWithSM2, fetchPublicKey } = await import("./sm2");
 
       // 后端使用 SM2 公钥加密密钥，需要服务端私钥解密？
       // 实际上这里应该是：后端用前端 SM2 公钥加密 SM4 密钥，前端用 SM2 私钥解密
@@ -204,12 +204,12 @@ export async function fetchSM4KeyForPassword(): Promise<string> {
         return result.data.keyHex as string;
       }
 
-      throw new Error('获取SM4密钥失败: 响应格式不正确');
+      throw new Error("获取SM4密钥失败: 响应格式不正确");
     }
 
-    throw new Error('获取SM4密钥失败: ' + (result.message || '未知错误'));
+    throw new Error("获取SM4密钥失败: " + (result.message || "未知错误"));
   } catch (error) {
-    console.error('[SM4] 获取密钥失败:', error);
+    console.error("[SM4] 获取密钥失败:", error);
     throw error;
   }
 }

@@ -9,14 +9,15 @@
  * - 集成 TokenManager 实现自动刷新
  */
 
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { post } from '@/lib/api';
-import type { User, LoginRequest } from '@/types';
-import { useMenuStore } from './menuStore';
-import { getEncryptedLoginRequest } from '@/utils/sm2';
-import { TokenManager } from '@/utils/token/TokenManager';
-import { SecureTokenStorageImpl } from '@/utils/token/SecureTokenStorageImpl';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { post } from "@/lib/api";
+import type { User, LoginRequest } from "@/types";
+import { useMenuStore } from "./menuStore";
+import { getEncryptedLoginRequest } from "@/utils/sm2";
+import { TokenManager } from "@/utils/token/TokenManager";
+import { SecureTokenStorageImpl } from "@/utils/token/SecureTokenStorageImpl";
+import { STORAGE_KEYS } from "@/constants/storage";
 
 /**
  * Token 管理器单例
@@ -24,7 +25,7 @@ import { SecureTokenStorageImpl } from '@/utils/token/SecureTokenStorageImpl';
  */
 const tokenStorage = new SecureTokenStorageImpl();
 const tokenManager = new TokenManager(tokenStorage, {
-	refreshEndpoint: '/system/auth/refresh',
+	refreshEndpoint: "/system/auth/refresh",
 	refreshBeforeSeconds: 30, // 提前 30 秒刷新
 	refreshTimeout: 10000,    // 10 秒超时
 });
@@ -73,7 +74,7 @@ export const useAuthStore = create<AuthStore>()(
 						captchaId: credentials.captchaId,
 					};
 
-					const response = await post('/system/auth/login', loginRequest) as {
+					const response = await post("/system/auth/login", loginRequest) as {
 						data: { user: User; accessToken: string; refreshToken: string; expiresIn: number }
 					};
 					const { user, accessToken, refreshToken, expiresIn } = response.data;
@@ -99,14 +100,26 @@ export const useAuthStore = create<AuthStore>()(
 
 			logout: async () => {
 				// 清除 Token（包括 sessionStorage 中的加密 RefreshToken）
-				await tokenManager.clearTokens();
+				try {
+					await tokenManager.clearTokens();
+				} catch (e) {
+					console.error("[AuthStore] clearTokens 失败，继续清理状态:", e);
+				}
 
 				// 清除菜单
-				useMenuStore.getState().clearMenus();
+				try {
+					useMenuStore.getState().clearMenus();
+				} catch (e) {
+					console.error("[AuthStore] clearMenus 失败，继续清理状态:", e);
+				}
 
 				// 清除保存的最后访问路径
-				const { clearLastPath } = await import('@/router/DynamicRoutes');
-				clearLastPath();
+				// 直接读 sessionStorage，避免动态 import 与 DynamicRoutes 循环依赖
+				try {
+					sessionStorage.removeItem(STORAGE_KEYS.LAST_PATH);
+				} catch {
+					// Ignore sessionStorage errors
+				}
 
 				set({
 					user: null,
@@ -130,7 +143,7 @@ export const useAuthStore = create<AuthStore>()(
 					await useMenuStore.getState().fetchAll(true);
 					set({ menusLoaded: true });
 				} catch (error) {
-					console.error('Failed to load menus after login:', error);
+					console.error("Failed to load menus after login:", error);
 					set({ menusLoaded: false });
 					throw error;
 				}
@@ -146,32 +159,53 @@ export const useAuthStore = create<AuthStore>()(
 					return;
 				}
 
-				// 检查 sessionStorage 中是否有有效的 RefreshToken
-				const hasRefreshToken = await tokenManager.getRefreshToken();
+				// 关键修复：使用 try/finally 确保 initialized: true 在所有路径上都被设置，
+				// 否则 DynamicRoutes 的 <InitializingFallback /> 会永久卡住。
+				try {
+					// 检查 sessionStorage 中是否有有效的 RefreshToken
+					const hasRefreshToken = await tokenManager.getRefreshToken();
 
-				if (hasRefreshToken) {
-					// 有 RefreshToken，尝试刷新获取新的 AccessToken
-					try {
-						await tokenManager.refreshToken();
-						// 刷新成功，isAuthenticated 会在后续 API 请求中保持
-						// 用户信息已经从 localStorage 恢复
-						set({ initialized: true, isAuthenticated: true });
-						return;
-					} catch (error) {
-						console.error('[AuthStore] 刷新 Token 失败，清除认证状态:', error);
+					if (hasRefreshToken) {
+						// 有 RefreshToken，尝试刷新获取新的 AccessToken
+						try {
+							await tokenManager.refreshToken();
+							// 刷新成功
+							set({ initialized: true, isAuthenticated: true });
+							return;
+						} catch (error) {
+							console.error("[AuthStore] 刷新 Token 失败，清除认证状态:", error);
+							// 刷新失败时主动清理 token 存储，避免 HMR 后反复重试
+							try {
+								await tokenManager.clearTokens();
+							} catch (e) {
+								console.error("[AuthStore] clearTokens 失败:", e);
+							}
+						}
 					}
-				}
 
-				// 没有 RefreshToken 或刷新失败，清除认证状态
-				set({
-					initialized: true,
-					isAuthenticated: false,
-					menusLoaded: false,
-				});
+					// 没有 RefreshToken 或刷新失败 — 直接设置未认证状态
+					// 不用 state.logout()，因为 logout 内部的副作用（动态 import DynamicRoutes）
+					// 在 HMR 路径上可能再次失败/循环；这里只需要最简的状态重置。
+					set({
+						user: null,
+						isAuthenticated: false,
+						menusLoaded: false,
+						initialized: true,
+					});
+				} catch (fatalError) {
+					// 兜底：任何未预期的异常都不能让 initialized 停在 false
+					console.error("[AuthStore] initializeFromStorage 兜底:", fatalError);
+					set({
+						user: null,
+						isAuthenticated: false,
+						menusLoaded: false,
+						initialized: true,
+					});
+				}
 			},
 		}),
 		{
-			name: 'auth-storage',
+			name: "auth-storage",
 			// 只持久化用户基本信息（非敏感），不持久化 Token
 			partialize: (state) => ({
 				user: state.user, // 用户基本信息（用户名、昵称等）
@@ -183,41 +217,11 @@ export const useAuthStore = create<AuthStore>()(
 				if (!state) return;
 
 				// 异步初始化（不阻塞恢复过程）
-				setTimeout(async () => {
-					// 防止重复初始化
-					if (state.initialized) {
-						return;
-					}
-
-					// 检查 sessionStorage 中是否有有效的 RefreshToken
-					const hasRefreshToken = await tokenManager.getRefreshToken();
-
-					if (hasRefreshToken) {
-						// 有 RefreshToken，尝试刷新获取新的 AccessToken
-						try {
-							await tokenManager.refreshToken();
-							// 刷新成功，设置认证状态
-							state.initializeFromStorage();
-							return;
-						} catch (error) {
-							console.error('[AuthStore] 刷新 Token 失败，清除认证状态:', error);
-						}
-					}
-
-					// 没有 RefreshToken 或刷新失败，清除认证状态
-					const { user } = state;
-
-					// 清除用户信息（如果有）
-					if (user) {
-						state.logout();
-					} else {
-						// 直接设置未认证状态
-						useAuthStore.setState({
-							initialized: true,
-							isAuthenticated: false,
-							menusLoaded: false,
-						});
-					}
+				// 关键：委托给 initializeFromStorage，避免与它内部的 refreshToken 形成双调用
+				// （之前的实现在这里直接调 refreshToken + state.initializeFromStorage，
+				//   而 initializeFromStorage 内部又会再调一次 refreshToken，HMR 后会竞态）
+				setTimeout(() => {
+					state.initializeFromStorage();
 				}, 0);
 			},
 		}

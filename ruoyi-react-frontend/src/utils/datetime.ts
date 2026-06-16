@@ -1,5 +1,5 @@
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 
 dayjs.extend(utc);
 
@@ -9,10 +9,10 @@ dayjs.extend(utc);
  */
 export function formatDateTime(
   date: string | Date | null | undefined,
-  format: string = 'YYYY-MM-DD HH:mm:ss'
+  format: string = "YYYY-MM-DD HH:mm:ss"
 ): string {
-  if (!date) return '-';
-  const dateStr = typeof date === 'string' ? date.replace(/[Zz]$/, '') : date;
+  if (!date) return "-";
+  const dateStr = typeof date === "string" ? date.replace(/[Zz]$/, "") : date;
   try {
     return dayjs(dateStr).format(format);
   } catch {
@@ -21,9 +21,9 @@ export function formatDateTime(
 }
 
 export function formatDate(date: string | Date | null | undefined): string {
-  return formatDateTime(date, 'YYYY-MM-DD');
+  return formatDateTime(date, "YYYY-MM-DD");
 }
 
 export function formatTime(date: string | Date | null | undefined): string {
-  return formatDateTime(date, 'HH:mm:ss');
+  return formatDateTime(date, "HH:mm:ss");
 }

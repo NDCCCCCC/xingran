@@ -3,11 +3,11 @@
  * 使用路由配置管理器动态生成面包屑
  */
 
-import { useMemo } from 'react';
-import type { FC } from 'react';
-import { Breadcrumb } from 'antd';
-import { useLocation, Link } from 'react-router-dom';
-import { routeConfigManager } from '@/router/routeConfigManager';
+import { useMemo } from "react";
+import type { FC } from "react";
+import { Breadcrumb } from "antd";
+import { useLocation, Link } from "react-router-dom";
+import { routeConfigManager } from "@/router/routeConfigManager";
 
 const BreadcrumbComponent: FC = () => {
   const location = useLocation();
@@ -41,15 +41,15 @@ const BreadcrumbComponent: FC = () => {
     <div
       className="px-6 py-3 border-b"
       style={{
-        background: 'var(--theme-bg-surface)',
-        borderColor: 'var(--theme-border-primary)',
+        background: "var(--theme-bg-surface)",
+        borderColor: "var(--theme-border-primary)",
       }}
     >
       <Breadcrumb
         items={breadcrumbItems}
         className="text-sm"
         style={{
-          color: 'var(--theme-text-secondary)',
+          color: "var(--theme-text-secondary)",
         }}
       />
     </div>

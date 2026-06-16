@@ -5,7 +5,7 @@
  * 1: 公告
  * 2: 警告
  */
-export type NoticeType = '1' | '2';
+export type NoticeType = "1" | "2";
 
 /**
  * 通知优先级
@@ -36,7 +36,7 @@ export type TargetType = 0 | 1 | 2 | 3;
 /**
  * 执行类型
  */
-export type ExecutionType = 'once' | 'recurring';
+export type ExecutionType = "once" | "recurring";
 
 /**
  * 周期性配置
@@ -52,7 +52,7 @@ export interface RecurrenceConfig {
 export interface NoticeTarget {
   id: string;
   noticeId: string;
-  targetType: 'dept' | 'role' | 'user';
+  targetType: "dept" | "role" | "user";
   targetId: string;
   createdAt: string;
 }
@@ -124,7 +124,7 @@ export interface NoticeStatistics {
 /**
  * 通知渠道类型
  */
-export type NotificationChannelType = 'web' | 'email' | 'sms' | 'api';
+export type NotificationChannelType = "web" | "email" | "sms" | "api";
 
 /**
  * 通知渠道配置请求
@@ -186,13 +186,13 @@ export interface NoticeListParams {
 export interface UserNoticeListParams {
   current?: number;
   pageSize?: number;
-  status?: 'read' | 'unread' | 'all';
+  status?: "read" | "unread" | "all";
 }
 
 /**
  * WebSocket 消息类型
  */
-export type WebSocketMessageType = 'new_notice' | 'ping' | 'pong' | 'rpa_progress' | 'rpa_completed' | 'rpa_failed';
+export type WebSocketMessageType = "new_notice" | "ping" | "pong" | "rpa_progress" | "rpa_completed" | "rpa_failed";
 
 /**
  * WebSocket 通知消息
@@ -243,55 +243,55 @@ export interface NoticeCenterState {
  * 优先级对应的标签和颜色
  */
 export const PRIORITY_LABELS: Record<NoticePriority, string> = {
-  0: '普通',
-  1: '重要',
-  2: '紧急'
+  0: "普通",
+  1: "重要",
+  2: "紧急"
 };
 
 export const PRIORITY_COLORS: Record<NoticePriority, string> = {
-  0: 'default',
-  1: 'warning',
-  2: 'error'
+  0: "default",
+  1: "warning",
+  2: "error"
 };
 
 /**
  * 通知类型对应的标签和颜色
  */
 export const NOTICE_TYPE_LABELS: Record<NoticeType, string> = {
-  '1': '公告',
-  '2': '警告'
+  "1": "公告",
+  "2": "警告"
 };
 
 export const NOTICE_TYPE_COLORS: Record<NoticeType, string> = {
-  '1': 'blue',
-  '2': 'orange'
+  "1": "blue",
+  "2": "orange"
 };
 
 /**
  * 发布状态对应的标签和颜色
  */
 export const PUBLISH_STATUS_LABELS: Record<PublishStatus, string> = {
-  0: '草稿',
-  1: '已发布',
-  2: '定时发布中',
-  3: '已撤回'
+  0: "草稿",
+  1: "已发布",
+  2: "定时发布中",
+  3: "已撤回"
 };
 
 export const PUBLISH_STATUS_COLORS: Record<PublishStatus, string> = {
-  0: 'default',
-  1: 'success',
-  2: 'processing',
-  3: 'warning'
+  0: "default",
+  1: "success",
+  2: "processing",
+  3: "warning"
 };
 
 /**
  * 目标类型对应的标签
  */
 export const TARGET_TYPE_LABELS: Record<TargetType, string> = {
-  0: '全部用户',
-  1: '指定部门',
-  2: '指定角色',
-  3: '指定用户'
+  0: "全部用户",
+  1: "指定部门",
+  2: "指定角色",
+  3: "指定用户"
 };
 
 /**
@@ -331,4 +331,4 @@ type Department = {
 };
 
 // 重新导出 PageResponse
-export type { PageResponse } from './index';
+export type { PageResponse } from "./index";

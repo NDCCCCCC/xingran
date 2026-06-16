@@ -6,10 +6,10 @@
  * 这个 Store 负责将配置应用到 DOM
  */
 
-import { create } from 'zustand';
-import type { ThemeType } from '@/types/theme';
-import type { ThemeConfiguration } from '@/types/config';
-import { getTheme, applyThemeVariables, applyEffectVariables, applyPrimaryColor, applySidebarBackgroundColor, type ColorMode } from '@/design-system/themes';
+import { create } from "zustand";
+import type { ThemeType } from "@/types/theme";
+import type { ThemeConfiguration } from "@/types/config";
+import { getTheme, applyThemeVariables, applyEffectVariables, applyPrimaryColor, applySidebarBackgroundColor, type ColorMode } from "@/design-system/themes";
 
 interface ThemeState {
 	// 从 SettingsStore 衍生的配置
@@ -44,11 +44,11 @@ export const useThemeStore = create<ThemeStore>()(
 	(set, get) => ({
 		// 初始状态
 		configuration: {
-			mode: 'light',
-			style: 'minimal',
+			mode: "light",
+			style: "minimal",
 		},
-		appliedTheme: 'minimal',
-		appliedMode: 'light',
+		appliedTheme: "minimal",
+		appliedMode: "light",
 
 		// 从 SettingsStore 同步配置
 		syncFromSettings: (config) => {
@@ -92,14 +92,14 @@ export const useThemeStore = create<ThemeStore>()(
 			applyEffectVariables(themeConfig.effects);
 
 			// 3. 设置 data 属性
-			document.documentElement.setAttribute('data-theme', configuration.style);
-			document.documentElement.setAttribute('data-color-mode', configuration.mode);
+			document.documentElement.setAttribute("data-theme", configuration.style);
+			document.documentElement.setAttribute("data-color-mode", configuration.mode);
 
 			// 4. 如果有自定义颜色，覆盖主题预设
-			if (configuration.customColors?.primary && typeof configuration.customColors.primary === 'string') {
+			if (configuration.customColors?.primary && typeof configuration.customColors.primary === "string") {
 				applyPrimaryColor(configuration.customColors.primary);
 			}
-			if (configuration.customColors?.sidebar && typeof configuration.customColors.sidebar === 'string') {
+			if (configuration.customColors?.sidebar && typeof configuration.customColors.sidebar === "string") {
 				applySidebarBackgroundColor(configuration.customColors.sidebar);
 			}
 		},
@@ -109,8 +109,8 @@ export const useThemeStore = create<ThemeStore>()(
 			const { configuration } = get();
 
 			// 触发 settings-changed 事件，让 ConfigProvider 处理保存
-			if (typeof window !== 'undefined') {
-				window.dispatchEvent(new CustomEvent('save-theme-settings', {
+			if (typeof window !== "undefined") {
+				window.dispatchEvent(new CustomEvent("save-theme-settings", {
 					detail: configuration,
 				}));
 			}
@@ -119,16 +119,16 @@ export const useThemeStore = create<ThemeStore>()(
 		// 取消预览
 		resetPreview: () => {
 			// 触发重新从 SettingsStore 同步
-			if (typeof window !== 'undefined') {
-				window.dispatchEvent(new Event('reset-theme-preview'));
+			if (typeof window !== "undefined") {
+				window.dispatchEvent(new Event("reset-theme-preview"));
 			}
 		},
 	})
 );
 
 // 监听 SettingsStore 变化
-if (typeof window !== 'undefined') {
-	window.addEventListener('settings-changed', ((event: CustomEvent) => {
+if (typeof window !== "undefined") {
+	window.addEventListener("settings-changed", ((event: CustomEvent) => {
 		const preferences = event.detail;
 		const syncTheme = useThemeStore.getState().syncFromSettings;
 		syncTheme(preferences.theme);
@@ -161,12 +161,12 @@ export function useTheme() {
 		resetPreview,
 
 		// 便捷属性
-		isMinimal: appliedTheme === 'minimal',
-		isGlassmorphism: appliedTheme === 'glassmorphism',
-		isNeumorphism: appliedTheme === 'neumorphism',
-		isFlat2: appliedTheme === 'flat2.0',
-		isLuxuryQuiet: appliedTheme === 'luxury-quiet',
-		isLight: appliedMode === 'light',
-		isDark: appliedMode === 'dark',
+		isMinimal: appliedTheme === "minimal",
+		isGlassmorphism: appliedTheme === "glassmorphism",
+		isNeumorphism: appliedTheme === "neumorphism",
+		isFlat2: appliedTheme === "flat2.0",
+		isLuxuryQuiet: appliedTheme === "luxury-quiet",
+		isLight: appliedMode === "light",
+		isDark: appliedMode === "dark",
 	};
 }

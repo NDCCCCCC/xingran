@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import type { FC } from 'react';
-import { batchExport } from '@/lib/api/networkApi';
+import { useState, useEffect } from "react";
+import type { FC } from "react";
+import { batchExport } from "@/lib/api/networkApi";
 import {
   Table,
   Button,
@@ -12,7 +12,7 @@ import {
   Col,
   Statistic,
   message,
-} from 'antd';
+} from "antd";
 import {
   PlayCircleOutlined,
   SearchOutlined,
@@ -22,16 +22,16 @@ import {
   ClockCircleOutlined,
   ApiOutlined,
   ExportOutlined,
-} from '@ant-design/icons';
-import { useExecutionData, useExecutionModals } from './hooks';
-import { getExecutionColumns, getDetailColumns } from './columns';
-import { ConfigExecuteModal, VariableModal, DetailDrawer } from './modals';
-import { STATUS_OPTIONS } from './constants';
-import { usePagination } from '@/hooks/usePagination';
-import NetworkExport from '@/components/shared/NetworkExport';
-import { BatchExportModal } from '@/components/shared';
-import { DownloadOutlined } from '@ant-design/icons';
-import type { ConfigExecution } from '@/types';
+} from "@ant-design/icons";
+import { useExecutionData, useExecutionModals } from "./hooks";
+import { getExecutionColumns, getDetailColumns } from "./columns";
+import { ConfigExecuteModal, VariableModal, DetailDrawer } from "./modals";
+import { STATUS_OPTIONS } from "./constants";
+import { usePagination } from "@/hooks/usePagination";
+import NetworkExport from "@/components/shared/NetworkExport";
+import { BatchExportModal } from "@/components/shared";
+import { DownloadOutlined } from "@ant-design/icons";
+import type { ConfigExecution } from "@/types";
 
 const { Option } = Select;
 
@@ -140,7 +140,7 @@ const ConfigExecutionPage: FC = () => {
             <Statistic
               title="待执行"
               value={statistics.pending}
-              styles={{ content: { color: 'var(--theme-text-tertiary, #999)' } }}
+              styles={{ content: { color: "var(--theme-text-tertiary, #999)" } }}
               prefix={<ClockCircleOutlined />}
             />
           </Card>
@@ -150,7 +150,7 @@ const ConfigExecutionPage: FC = () => {
             <Statistic
               title="执行中"
               value={statistics.running}
-              styles={{ content: { color: 'var(--theme-info, #1890ff)' } }}
+              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
               prefix={<ApiOutlined />}
             />
           </Card>
@@ -160,7 +160,7 @@ const ConfigExecutionPage: FC = () => {
             <Statistic
               title="成功"
               value={statistics.success}
-              styles={{ content: { color: 'var(--theme-success, #52c41a)' } }}
+              styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
               prefix={<CheckCircleOutlined />}
             />
           </Card>
@@ -170,7 +170,7 @@ const ConfigExecutionPage: FC = () => {
             <Statistic
               title="失败"
               value={statistics.failed}
-              styles={{ content: { color: 'var(--theme-error, #ff4d4f)' } }}
+              styles={{ content: { color: "var(--theme-error, #ff4d4f)" } }}
               prefix={<CloseCircleOutlined />}
             />
           </Card>
@@ -179,7 +179,7 @@ const ConfigExecutionPage: FC = () => {
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item label="状态">
               <Select
@@ -230,7 +230,7 @@ const ConfigExecutionPage: FC = () => {
               entityType="executions"
               entityName="配置执行"
               filters={Object.fromEntries(
-                Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null && v !== '')
+                Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null && v !== "")
               )}
               current={paginationProps?.current ?? 1}
               pageSize={paginationProps?.pageSize ?? 10}
@@ -269,7 +269,7 @@ const ConfigExecutionPage: FC = () => {
             const searchParams: Record<string, unknown> = { current: pagination.current ?? 1, pageSize: pagination.pageSize ?? 10 };
             Object.keys(formValues).forEach(key => {
               const value = formValues[key];
-              if (value !== undefined && value !== null && value !== '') {
+              if (value !== undefined && value !== null && value !== "") {
                 searchParams[key] = value;
               }
             });

@@ -6,13 +6,13 @@
  * 支持实时预览
  */
 
-import { useState, useEffect } from 'react';
-import { Drawer, Form, Input, Button, Modal, message, Spin, Divider, Space } from 'antd';
-import { SaveOutlined, DeleteOutlined, CloseOutlined } from '@ant-design/icons';
-import { useDashboardStore } from '@/store/dashboardStore';
-import DataSourceForm from '../settings/DataSourceForm';
-import DisplayConfigForm from '../settings/DisplayConfigForm';
-import type { WidgetConfig, DataSourceConfig, DisplayConfig } from '@/types/dashboard';
+import { useState, useEffect } from "react";
+import { Drawer, Form, Input, Button, Modal, message, Spin, Divider, Space } from "antd";
+import { SaveOutlined, DeleteOutlined, CloseOutlined } from "@ant-design/icons";
+import { useDashboardStore } from "@/store/dashboardStore";
+import DataSourceForm from "../settings/DataSourceForm";
+import DisplayConfigForm from "../settings/DisplayConfigForm";
+import type { WidgetConfig, DataSourceConfig, DisplayConfig } from "@/types/dashboard";
 
 const { TextArea } = Input;
 
@@ -40,7 +40,7 @@ export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onC
 		if (visible && widget) {
 			form.setFieldsValue({
 				title: widget.title,
-				description: widget.description || '',
+				description: widget.description || "",
 			});
 			setDataSource(widget.dataSource);
 			setDisplayConfig(widget.display);
@@ -55,7 +55,7 @@ export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onC
 	// 处理保存
 	const handleSave = async () => {
 		if (!widget) {
-			message.warning('没有选择要编辑的 Widget');
+			message.warning("没有选择要编辑的 Widget");
 			return;
 		}
 
@@ -70,10 +70,10 @@ export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onC
 				display: displayConfig,
 			});
 
-			message.success('Widget 已更新');
+			message.success("Widget 已更新");
 			onClose();
 		} catch (error) {
-			console.error('保存 Widget 失败:', error);
+			console.error("保存 Widget 失败:", error);
 			if (error instanceof Error) {
 				message.error(`保存失败: ${error.message}`);
 			}
@@ -87,20 +87,20 @@ export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onC
 		if (!widget) return;
 
 		Modal.confirm({
-			title: '确认删除',
+			title: "确认删除",
 			content: (
 				<div>
 					<p>确定要删除 Widget 吗？</p>
-					<p style={{ fontWeight: 'bold', marginTop: 8 }}>「{widget.title}」</p>
-					<p style={{ color: 'var(--theme-text-tertiary, #999)', marginTop: 8 }}>此操作不可撤销</p>
+					<p style={{ fontWeight: "bold", marginTop: 8 }}>「{widget.title}」</p>
+					<p style={{ color: "var(--theme-text-tertiary, #999)", marginTop: 8 }}>此操作不可撤销</p>
 				</div>
 			),
-			okText: '删除',
-			okType: 'danger',
-			cancelText: '取消',
+			okText: "删除",
+			okType: "danger",
+			cancelText: "取消",
 			onOk: () => {
 				removeWidget(widget.id);
-				message.success('Widget 已删除');
+				message.success("Widget 已删除");
 				onClose();
 			},
 		});
@@ -124,7 +124,7 @@ export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onC
 			onClose={handleCancel}
 			width={520}
 			footer={
-				<div style={{ display: 'flex', justifyContent: 'space-between' }}>
+				<div style={{ display: "flex", justifyContent: "space-between" }}>
 					<Button danger icon={<DeleteOutlined />} onClick={handleDelete}>
 						删除
 					</Button>
@@ -155,8 +155,8 @@ export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onC
 						label="标题"
 						name="title"
 						rules={[
-							{ required: true, message: '请输入 Widget 标题' },
-							{ max: 100, message: '标题不能超过 100 个字符' },
+							{ required: true, message: "请输入 Widget 标题" },
+							{ max: 100, message: "标题不能超过 100 个字符" },
 						]}
 					>
 						<Input placeholder="请输入 Widget 标题" />
@@ -165,7 +165,7 @@ export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onC
 					<Form.Item
 						label="描述"
 						name="description"
-						rules={[{ max: 500, message: '描述不能超过 500 个字符' }]}
+						rules={[{ max: 500, message: "描述不能超过 500 个字符" }]}
 					>
 						<TextArea rows={2} placeholder="可选的 Widget 描述" />
 					</Form.Item>
@@ -203,7 +203,7 @@ export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onC
 						Widget 信息
 					</Divider>
 
-					<div style={{ color: '#666', fontSize: 12 }}>
+					<div style={{ color: "#666", fontSize: 12 }}>
 						<p>
 							<strong>ID:</strong> {widget.id}
 						</p>

@@ -2,10 +2,10 @@
  * User 模态框状态管理 Hook
  */
 
-import { useState, useCallback } from 'react';
-import { Form } from 'antd';
-import type { User } from '@/types';
-import type { FormInstance } from 'antd/es/form';
+import { useState, useCallback } from "react";
+import { Form } from "antd";
+import type { User } from "@/types";
+import type { FormInstance } from "antd/es/form";
 
 export interface UseUserModalsReturn {
   resetPasswordModalVisible: boolean;

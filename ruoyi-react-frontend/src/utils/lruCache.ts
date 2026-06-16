@@ -7,7 +7,7 @@ export class LRUCache<K, V> {
   private cache = new Map<K, V>();
 
   constructor(private readonly capacity: number) {
-    if (capacity <= 0) throw new Error('LRUCache capacity must be > 0');
+    if (capacity <= 0) throw new Error("LRUCache capacity must be > 0");
   }
 
   get(key: K): V | undefined {

@@ -3,7 +3,7 @@
  * System Dictionary Management Page
  */
 
-import { useState, useEffect, type FC, type Key } from 'react';
+import { useState, useEffect, type FC, type Key } from "react";
 import {
   Table,
   Button,
@@ -20,7 +20,7 @@ import {
   InputNumber,
   Switch,
   Alert,
-} from 'antd';
+} from "antd";
 import {
   PlusOutlined,
   EditOutlined,
@@ -30,17 +30,17 @@ import {
   CheckCircleOutlined,
   StopOutlined,
   LinkOutlined,
-} from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import { formatDateTime } from '@/utils/datetime';
+} from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
+import { formatDateTime } from "@/utils/datetime";
 
-import type { DictType, DictData } from '@/types';
-import ActionButtons from '@/components/shared/ActionButtons';
-import { usePagination } from '@/hooks/usePagination';
+import type { DictType, DictData } from "@/types";
+import ActionButtons from "@/components/shared/ActionButtons";
+import { usePagination } from "@/hooks/usePagination";
 
 // 导入提取的模块
-import { STATUS_OPTIONS, renderStatusTag } from './constants';
-import { useDictData, useDictActions } from './hooks';
+import { STATUS_OPTIONS, renderStatusTag } from "./constants";
+import { useDictData, useDictActions } from "./hooks";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -58,9 +58,9 @@ function getDictTypeTableColumns(props: DictTypeTableColumnsProps): ColumnsType<
 
   return [
     {
-      title: '字典名称',
-      dataIndex: 'dictName',
-      key: 'dictName',
+      title: "字典名称",
+      dataIndex: "dictName",
+      key: "dictName",
       width: 160,
       minWidth: 140,
       render: (text: string, record: DictType) => (
@@ -74,48 +74,48 @@ function getDictTypeTableColumns(props: DictTypeTableColumnsProps): ColumnsType<
         </Button>
       ),
     },
-    { title: '字典类型', dataIndex: 'dictType', key: 'dictType', width: 140, minWidth: 120 },
+    { title: "字典类型", dataIndex: "dictType", key: "dictType", width: 140, minWidth: 120 },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
       width: 80,
       minWidth: 70,
-      align: 'center' as const,
+      align: "center" as const,
       render: (status: number) => renderStatusTag(status),
     },
-    { title: '备注', dataIndex: 'remark', key: 'remark', width: 150, minWidth: 120, ellipsis: true },
+    { title: "备注", dataIndex: "remark", key: "remark", width: 150, minWidth: 120, ellipsis: true },
     {
-      title: '创建时间',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
+      title: "创建时间",
+      dataIndex: "createdAt",
+      key: "createdAt",
       width: 180,
       render: (date: string) => formatDateTime(date),
     },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       width: 150,
       minWidth: 130,
-      fixed: 'right' as const,
+      fixed: "right" as const,
       render: (_: unknown, record: DictType) => {
         const actions = [
           {
-            key: 'edit',
-            label: '编辑',
+            key: "edit",
+            label: "编辑",
             icon: <EditOutlined />,
             onClick: () => openTypeModal(record),
           },
           {
-            key: 'delete',
-            label: '删除',
+            key: "delete",
+            label: "删除",
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
               Modal.confirm({
-                title: '确认删除?',
-                okText: '确定',
-                cancelText: '取消',
+                title: "确认删除?",
+                okText: "确定",
+                cancelText: "取消",
                 okButtonProps: { danger: true },
                 onOk: () => handleDeleteType(record.id),
               });
@@ -138,50 +138,50 @@ function getDictDataTableColumns(props: DictDataTableColumnsProps): ColumnsType<
   const { openDataModal, handleDeleteData } = props;
 
   return [
-    { title: '字典标签', dataIndex: 'dictLabel', key: 'dictLabel', width: 140, minWidth: 120 },
-    { title: '字典键值', dataIndex: 'dictValue', key: 'dictValue', width: 120, minWidth: 100 },
-    { title: '字典排序', dataIndex: 'dictSort', key: 'dictSort', width: 100, minWidth: 80 },
+    { title: "字典标签", dataIndex: "dictLabel", key: "dictLabel", width: 140, minWidth: 120 },
+    { title: "字典键值", dataIndex: "dictValue", key: "dictValue", width: 120, minWidth: 100 },
+    { title: "字典排序", dataIndex: "dictSort", key: "dictSort", width: 100, minWidth: 80 },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
       width: 80,
       minWidth: 70,
-      align: 'center' as const,
+      align: "center" as const,
       render: (status: number) => renderStatusTag(status),
     },
-    { title: '备注', dataIndex: 'remark', key: 'remark', width: 150, minWidth: 120, ellipsis: true },
+    { title: "备注", dataIndex: "remark", key: "remark", width: 150, minWidth: 120, ellipsis: true },
     {
-      title: '创建时间',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
+      title: "创建时间",
+      dataIndex: "createdAt",
+      key: "createdAt",
       width: 180,
       render: (date: string) => formatDateTime(date),
     },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       width: 150,
       minWidth: 130,
-      fixed: 'right' as const,
+      fixed: "right" as const,
       render: (_: unknown, record: DictData) => {
         const actions = [
           {
-            key: 'edit',
-            label: '编辑',
+            key: "edit",
+            label: "编辑",
             icon: <EditOutlined />,
             onClick: () => openDataModal(record),
           },
           {
-            key: 'delete',
-            label: '删除',
+            key: "delete",
+            label: "删除",
             icon: <DeleteOutlined />,
             danger: true,
             onClick: () => {
               Modal.confirm({
-                title: '确认删除?',
-                okText: '确定',
-                cancelText: '取消',
+                title: "确认删除?",
+                okText: "确定",
+                cancelText: "取消",
                 okButtonProps: { danger: true },
                 onOk: () => handleDeleteData(record.id),
               });
@@ -203,7 +203,7 @@ const DictManagement: FC = () => {
   const [typeForm] = Form.useForm();
   const [dataForm] = Form.useForm();
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
-  const [activeTab, setActiveTab] = useState('type');
+  const [activeTab, setActiveTab] = useState("type");
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -253,14 +253,14 @@ const DictManagement: FC = () => {
 
   // 初始化加载
   useEffect(() => {
-    if (activeTab === 'type') {
+    if (activeTab === "type") {
       loadDictTypes();
       loadTypeStatistics();
     }
   }, [activeTab, paginationProps.current, paginationProps.pageSize, loadTypeStatistics, loadDictTypes]);
 
   useEffect(() => {
-    if (activeTab === 'data' && selectedType) {
+    if (activeTab === "data" && selectedType) {
       loadDictData();
       loadDataStatistics();
     }
@@ -272,7 +272,7 @@ const DictManagement: FC = () => {
     handleDeleteType,
     onDictNameClick: (dictType) => {
       setSelectedType(dictType);
-      setActiveTab('data');
+      setActiveTab("data");
       setCurrent(1);
       loadDictData();
     },
@@ -288,8 +288,8 @@ const DictManagement: FC = () => {
       <Tabs activeKey={activeTab} onChange={setActiveTab}
         items={[
           {
-            key: 'type',
-            label: '字典类型',
+            key: "type",
+            label: "字典类型",
             children: (
               <>
                 {/* 统计卡片 */}
@@ -309,7 +309,7 @@ const DictManagement: FC = () => {
                         <Statistic
                           title="正常类型"
                           value={typeStatistics.active}
-                          styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
+                          styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
                           prefix={<CheckCircleOutlined />}
                         />
                       </Card>
@@ -319,7 +319,7 @@ const DictManagement: FC = () => {
                         <Statistic
                           title="停用类型"
                           value={typeStatistics.inactive}
-                          styles={{ content: { color: 'var(--theme-error, #cf1322)' } }}
+                          styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
                           prefix={<StopOutlined />}
                         />
                       </Card>
@@ -329,7 +329,7 @@ const DictManagement: FC = () => {
 
                 {/* 搜索表单和操作按钮 */}
                 <Card style={{ marginBottom: 16 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
                     <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
                       <Form.Item name="dictName" label="字典名称">
                         <Input placeholder="请输入字典名称" allowClear className="user-form-input" style={{ width: 150 }} />
@@ -358,7 +358,7 @@ const DictManagement: FC = () => {
                     <Space>
                       {selectedRowKeys.length > 0 && (
                         <Button
-                          icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }}
+                          icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }}
                           onClick={() => handleBatchDeleteType(selectedRowKeys, setSelectedRowKeys)}
                         >
                           批量删除 ({selectedRowKeys.length})
@@ -417,8 +417,8 @@ const DictManagement: FC = () => {
             )
           },
           {
-            key: 'data',
-            label: '字典数据',
+            key: "data",
+            label: "字典数据",
             children: (
               <>
                 {/* 统计卡片 */}
@@ -438,7 +438,7 @@ const DictManagement: FC = () => {
                         <Statistic
                           title="正常数据"
                           value={dataStatistics.active}
-                          styles={{ content: { color: 'var(--theme-success, #3f8600)' } }}
+                          styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
                           prefix={<CheckCircleOutlined />}
                         />
                       </Card>
@@ -448,7 +448,7 @@ const DictManagement: FC = () => {
                         <Statistic
                           title="停用数据"
                           value={dataStatistics.inactive}
-                          styles={{ content: { color: 'var(--theme-error, #cf1322)' } }}
+                          styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
                           prefix={<StopOutlined />}
                         />
                       </Card>
@@ -458,7 +458,7 @@ const DictManagement: FC = () => {
 
                 {/* 搜索表单和操作按钮 */}
                 <Card style={{ marginBottom: 16 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
                     <Form form={dataSearchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
                       <Form.Item label="字典类型">
                         <Select placeholder="请选择字典类型" value={selectedType} onChange={setSelectedType} style={{ width: 200 }}>
@@ -491,7 +491,7 @@ const DictManagement: FC = () => {
                     <Space>
                       {selectedRowKeys.length > 0 && (
                         <Button
-                          icon={<DeleteOutlined />} style={{ color: 'var(--theme-error, #ff4d4f)' }}
+                          icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }}
                           onClick={() => handleBatchDeleteData(selectedRowKeys, setSelectedRowKeys)}
                         >
                           批量删除 ({selectedRowKeys.length})
@@ -551,17 +551,17 @@ const DictManagement: FC = () => {
 
       {/* 字典类型编辑模态框 */}
       <Modal
-        title={editingType ? '编辑字典类型' : '新增字典类型'}
+        title={editingType ? "编辑字典类型" : "新增字典类型"}
         open={typeModalVisible}
         onOk={() => handleCreateType(typeForm)}
         onCancel={() => { setTypeModalVisible(false); typeForm.resetFields(); setEditingType(null); }}
         width={600}
       >
         <Form form={typeForm} layout="horizontal" labelCol={{ span: 4 }} wrapperCol={{ span: 20 }}>
-          <Form.Item name="dictName" label="字典名称" rules={[{ required: true, message: '请输入字典名称' }]}>
+          <Form.Item name="dictName" label="字典名称" rules={[{ required: true, message: "请输入字典名称" }]}>
             <Input placeholder="请输入字典名称" className="user-form-input" />
           </Form.Item>
-          <Form.Item name="dictType" label="字典类型" rules={[{ required: true, message: '请输入字典类型' }]}>
+          <Form.Item name="dictType" label="字典类型" rules={[{ required: true, message: "请输入字典类型" }]}>
             <Input placeholder="请输入字典类型" disabled={!!editingType} className="user-form-input" />
           </Form.Item>
           <Form.Item name="status" label="状态" rules={[{ required: true }]}>
@@ -579,20 +579,20 @@ const DictManagement: FC = () => {
 
       {/* 字典数据编辑模态框 */}
       <Modal
-        title={editingData ? '编辑字典数据' : '新增字典数据'}
+        title={editingData ? "编辑字典数据" : "新增字典数据"}
         open={dataModalVisible}
         onOk={() => handleCreateData(dataForm)}
         onCancel={() => { setDataModalVisible(false); dataForm.resetFields(); setEditingData(null); }}
         width={600}
       >
         <Form form={dataForm} layout="horizontal" labelCol={{ span: 4 }} wrapperCol={{ span: 20 }}>
-          <Form.Item name="dictSort" label="字典排序" rules={[{ required: true, message: '请输入字典排序' }]}>
-            <InputNumber min={0} style={{ width: '100%' }} placeholder="请输入字典排序" />
+          <Form.Item name="dictSort" label="字典排序" rules={[{ required: true, message: "请输入字典排序" }]}>
+            <InputNumber min={0} style={{ width: "100%" }} placeholder="请输入字典排序" />
           </Form.Item>
-          <Form.Item name="dictLabel" label="字典标签" rules={[{ required: true, message: '请输入字典标签' }]}>
+          <Form.Item name="dictLabel" label="字典标签" rules={[{ required: true, message: "请输入字典标签" }]}>
             <Input placeholder="请输入字典标签" className="user-form-input" />
           </Form.Item>
-          <Form.Item name="dictValue" label="字典键值" rules={[{ required: true, message: '请输入字典键值' }]}>
+          <Form.Item name="dictValue" label="字典键值" rules={[{ required: true, message: "请输入字典键值" }]}>
             <Input placeholder="请输入字典键值" className="user-form-input" />
           </Form.Item>
           <Form.Item name="cssClass" label="CSS类名">

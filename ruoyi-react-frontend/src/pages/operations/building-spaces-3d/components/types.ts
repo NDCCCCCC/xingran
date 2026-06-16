@@ -76,7 +76,7 @@ export interface AddressValue {
 }
 
 // 地图类型
-export type MapType = 'normal' | 'webgl';
+export type MapType = "normal" | "webgl";
 
 // 视图级别
-export type ViewLevel = 'map' | 'building' | 'floor';
+export type ViewLevel = "map" | "building" | "floor";

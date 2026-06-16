@@ -3,19 +3,19 @@
  * 字典管理页面常量定义
  */
 
-import type { BadgeProps } from 'antd';
-import { Tag } from 'antd';
+import type { BadgeProps } from "antd";
+import { Tag } from "antd";
 
 /** 状态选项 */
 export const STATUS_OPTIONS = [
-  { label: '启用', value: 0 },
-  { label: '禁用', value: 1 },
+  { label: "启用", value: 0 },
+  { label: "禁用", value: 1 },
 ] as const;
 
 /** 状态配置 */
-export const STATUS_CONFIG: Record<number, { text: string; color: BadgeProps['color'] }> = {
-  0: { text: '启用', color: 'success' },
-  1: { text: '禁用', color: 'error' },
+export const STATUS_CONFIG: Record<number, { text: string; color: BadgeProps["color"] }> = {
+  0: { text: "启用", color: "success" },
+  1: { text: "禁用", color: "error" },
 };
 
 /** 默认表单值 */

@@ -1,14 +1,14 @@
-import React from 'react';
-import { Form, Input, Select, Button, Modal, Row, Col, Radio, Switch, DatePicker, Checkbox } from 'antd';
-import type { FormInstance } from 'antd/es/form';
-import { MarkdownEditor as MDEditor } from '@/components/markdown/MarkdownEditor';
-import '@uiw/react-md-editor/markdown-editor.css';
-import CronSelector from '@/components/CronSelector';
-import { TargetSelector } from './TargetSelector';
-import type { Notice } from '@/types/notice';
-import type { APINotificationConfig } from '@/lib/notificationConfigApi';
-import type { Target } from '../hooks/useTargetSelector';
-import type { ExecutionType } from '@/types/notice';
+import React from "react";
+import { Form, Input, Select, Button, Modal, Row, Col, Radio, Switch, DatePicker, Checkbox } from "antd";
+import type { FormInstance } from "antd/es/form";
+import { MarkdownEditor as MDEditor } from "@/components/markdown/MarkdownEditor";
+import "@uiw/react-md-editor/markdown-editor.css";
+import CronSelector from "@/components/CronSelector";
+import { TargetSelector } from "./TargetSelector";
+import type { Notice } from "@/types/notice";
+import type { APINotificationConfig } from "@/lib/notificationConfigApi";
+import type { Target } from "../hooks/useTargetSelector";
+import type { ExecutionType } from "@/types/notice";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -21,15 +21,15 @@ const NoticeContentField: React.FC<{
   markdownContent: string;
   onMarkdownContentChange: (content: string) => void;
 }> = ({ form, isMarkdown, markdownContent, onMarkdownContentChange }) => {
-  const noticeContent = Form.useWatch('noticeContent', form) as string | undefined;
+  const noticeContent = Form.useWatch("noticeContent", form) as string | undefined;
 
   return isMarkdown ? (
     <MDEditor
       value={markdownContent}
       onChange={(val) => {
-        const content = val || '';
+        const content = val || "";
         onMarkdownContentChange(content);
-        form.setFieldValue('noticeContent', content);
+        form.setFieldValue("noticeContent", content);
       }}
       preview="live"
       height={400}
@@ -38,9 +38,9 @@ const NoticeContentField: React.FC<{
     <TextArea
       rows={10}
       placeholder="请输入公告内容"
-      value={noticeContent ?? ''}
+      value={noticeContent ?? ""}
       onChange={(e) => {
-        form.setFieldValue('noticeContent', e.target.value);
+        form.setFieldValue("noticeContent", e.target.value);
       }}
     />
   );
@@ -101,15 +101,15 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
   onRoleChange,
   onUserChange,
 }) => {
-  const targetType = Form.useWatch('targetType', form);
-  const targetDepts = Form.useWatch('targetDepts', form) || [];
-  const targetRoles = Form.useWatch('targetRoles', form) || [];
-  const targetUsers = Form.useWatch('targetUsers', form) || [];
-  const isMarkdown = Form.useWatch('isMarkdown', form) || false;
+  const targetType = Form.useWatch("targetType", form);
+  const targetDepts = Form.useWatch("targetDepts", form) || [];
+  const targetRoles = Form.useWatch("targetRoles", form) || [];
+  const targetUsers = Form.useWatch("targetUsers", form) || [];
+  const isMarkdown = Form.useWatch("isMarkdown", form) || false;
 
   return (
     <Modal
-      title={editingNotice ? '编辑通知公告' : '新增通知公告'}
+      title={editingNotice ? "编辑通知公告" : "新增通知公告"}
       open={visible}
       onOk={onSubmit}
       onCancel={onCancel}
@@ -119,7 +119,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
           取消
         </Button>,
         <Button key="submit" type="primary" onClick={onSubmit}>
-          {editingNotice ? '更新' : '创建'}
+          {editingNotice ? "更新" : "创建"}
         </Button>,
       ]}
     >
@@ -127,12 +127,12 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
         {/* 第一行：标题、类型 */}
         <Row>
           <Col span={12}>
-            <Form.Item name="noticeTitle" label="标题" labelCol={{ span: 10 }} wrapperCol={{ span: 14 }} rules={[{ required: true, message: '请输入公告标题' }]}>
+            <Form.Item name="noticeTitle" label="标题" labelCol={{ span: 10 }} wrapperCol={{ span: 14 }} rules={[{ required: true, message: "请输入公告标题" }]}>
               <Input placeholder="请输入公告标题" />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="noticeType" label="类型" labelCol={{ span: 10 }} wrapperCol={{ span: 14 }} rules={[{ required: true, message: '请选择公告类型' }]}>
+            <Form.Item name="noticeType" label="类型" labelCol={{ span: 10 }} wrapperCol={{ span: 14 }} rules={[{ required: true, message: "请选择公告类型" }]}>
               <Select>
                 <Option value="1">公告</Option>
                 <Option value="2">警告</Option>
@@ -170,7 +170,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
                 value={executionType}
                 onChange={(e) => {
                   onExecutionTypeChange(e.target.value);
-                  form.setFieldValue('publishTime', null);
+                  form.setFieldValue("publishTime", null);
                 }}
               >
                 <Radio value="once">立即发布/定时发布</Radio>
@@ -183,12 +183,12 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
         {/* 时间配置和 Markdown */}
         <Row>
           <Col span={12}>
-            {executionType === 'once' ? (
+            {executionType === "once" ? (
               <Form.Item name="publishTime" label="发布时间" labelCol={{ span: 10 }} wrapperCol={{ span: 14 }}>
                 <DatePicker showTime format="YYYY-MM-DD HH:mm:ss" className="w-full" />
               </Form.Item>
             ) : (
-              <Form.Item name={['recurrenceConfig', 'endDate']} label="结束时间" labelCol={{ span: 10 }} wrapperCol={{ span: 14 }}>
+              <Form.Item name={["recurrenceConfig", "endDate"]} label="结束时间" labelCol={{ span: 10 }} wrapperCol={{ span: 14 }}>
                 <DatePicker format="YYYY-MM-DD HH:mm:ss" className="w-full" showTime />
               </Form.Item>
             )}
@@ -201,16 +201,16 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
         </Row>
 
         {/* Cron 表达式（仅周期性发送时显示） */}
-        {executionType === 'recurring' && (
+        {executionType === "recurring" && (
           <Row>
             <Col span={24}>
               <Form.Item
-                name={['recurrenceConfig', 'cronExpression']}
+                name={["recurrenceConfig", "cronExpression"]}
                 label="Cron表达式"
                 labelCol={{ span: 5 }}
                 wrapperCol={{ span: 19 }}
                 required
-                rules={[{ required: true, message: '请输入 Cron 表达式' }]}
+                rules={[{ required: true, message: "请输入 Cron 表达式" }]}
               >
                 <CronSelector />
               </Form.Item>
@@ -286,8 +286,8 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
                 onChange={(checkedValues) => {
                   const newChannels = checkedValues as string[];
                   onChannelsChange(newChannels);
-                  if (!newChannels.includes('api')) {
-                    form.setFieldValue('apiConfigId', undefined);
+                  if (!newChannels.includes("api")) {
+                    form.setFieldValue("apiConfigId", undefined);
                   }
                 }}
               >
@@ -300,7 +300,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
         </Row>
 
         {/* 企微配置选择 */}
-        {selectedChannels.includes('api') && (
+        {selectedChannels.includes("api") && (
           <Row>
             <Col span={24}>
               <Form.Item name="apiConfigId" label="企微配置" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
@@ -309,13 +309,13 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
                   loading={loadingAPIConfigs}
                   allowClear
                   onChange={(value) => {
-                    form.setFieldValue('apiConfigId', value);
+                    form.setFieldValue("apiConfigId", value);
                   }}
                 >
                   {apiConfigs.filter((config) => config.id != null).map((config) => (
                     <Option key={config.id} value={config.id}>
                       {config.configName}
-                      {config.configType === 'webhook' && ` (${config.apiMethod})`}
+                      {config.configType === "webhook" && ` (${config.apiMethod})`}
                     </Option>
                   ))}
                 </Select>
@@ -325,7 +325,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
         )}
 
         {/* 自定义邮箱 */}
-        {selectedChannels.includes('email') && (
+        {selectedChannels.includes("email") && (
           <Row>
             <Col span={24}>
               <Form.Item name="customEmails" label="自定义邮箱" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
@@ -339,7 +339,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
         )}
 
         {/* 自定义企微用户 */}
-        {selectedChannels.includes('api') && (
+        {selectedChannels.includes("api") && (
           <Row>
             <Col span={24}>
               <Form.Item name="customWeComUsers" label="企微用户" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
@@ -360,7 +360,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
               label="内容"
               labelCol={{ span: 5 }}
               wrapperCol={{ span: 19 }}
-              rules={[{ required: true, message: '请输入公告内容' }]}
+              rules={[{ required: true, message: "请输入公告内容" }]}
             >
               <NoticeContentField
                 form={form}
