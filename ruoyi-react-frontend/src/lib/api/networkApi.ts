@@ -11,7 +11,7 @@ import { getAccessToken } from '@/utils/authHelpers';
  * - 移除硬编码 /api/v1/ 前缀,改用环境变量 VITE_API_BASE_URL
  */
 const blobAxios: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://10.62.10.33:9000/api/v1',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',

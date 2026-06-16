@@ -219,7 +219,7 @@ export const infoPointApi = createCrudApi<InfoPoint>({ basePath: '/ops/infoPoint
 // - 不挂载响应拦截器，因为响应是 Blob 二进制流，无法 JSON 解析
 // - 请求拦截器只做 Token 注入，行为与其他 CRUD 保持一致
 const blobAxios: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://10.62.10.33:9000/api/v1',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
   timeout: 30000,
 });
 
