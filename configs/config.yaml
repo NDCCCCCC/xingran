@@ -189,3 +189,15 @@ rpa:
 # 请通过参数管理界面配置VDI服务器信息
 # 配置键格式：vdi.server.{index}.{field} (如: vdi.server.0.endpoint)
 
+# VDI 客户端 TLS 证书校验开关
+# 默认 true 保持向后兼容（VDI 服务器通常使用自签名证书）。
+# 生产环境部署时务必设为 false,启用严格证书校验,避免 MITM 中间人攻击。
+vdi:
+  tls_skip_verify: true  # 仅自签名证书场景保留 true;生产环境请改 false
+
+# AD/LDAP 客户端 TLS 证书校验开关
+# 默认 true 保持向后兼容（AD 域控在内网常使用自签名证书）。
+# 生产环境部署时务必设为 false,启用严格证书校验,避免 AD 凭据被窃取。
+ad:
+  tls_skip_verify: true  # 仅自签名证书场景保留 true;生产环境请改 false
+

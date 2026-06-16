@@ -21,6 +21,24 @@ type Config struct {
 	Log      LogConfig      `mapstructure:"log"`
 	Baidu    BaiduConfig    `mapstructure:"baidu"`
 	RPA      RPAConfig      `mapstructure:"rpa"`
+	VDI      VDIConfig      `mapstructure:"vdi"`
+	AD       ADTLSConfig    `mapstructure:"ad"`
+}
+
+// VDIConfig VDI 客户端配置
+type VDIConfig struct {
+	// TLSSkipVerify 是否跳过 VDI 服务器 TLS 证书校验。
+	// 默认 true 保持向后兼容（VDI 服务器通常使用自签名证书）。
+	// 生产环境应在配置文件中设为 false,启用严格证书校验。
+	TLSSkipVerify bool `mapstructure:"tls_skip_verify"`
+}
+
+// ADTLSConfig AD/LDAP TLS 配置
+type ADTLSConfig struct {
+	// TLSSkipVerify 是否跳过 AD/LDAP 服务器 TLS 证书校验。
+	// 默认 true 保持向后兼容（AD 域控在内网常使用自签名证书）。
+	// 生产环境应在配置文件中设为 false,启用严格证书校验。
+	TLSSkipVerify bool `mapstructure:"tls_skip_verify"`
 }
 
 // ServerConfig 服务器配置
@@ -309,6 +327,12 @@ func setDefaults() {
 	// SM4 密钥必须是 16 字节（Base64 编码）
 	// 默认值 "dGVzdC1zZWNyZXQxNiEhIQ==" 解码后是 "test-secret16!!!" （16字节）
 	viper.SetDefault("security.sm4_key", "dGVzdC1zZWNyZXQxNiEhIQ==")
+
+	// VDI/AD TLS 证书校验开关默认 true（跳过校验）
+	// 原因：VDI/AD 服务器在内网部署时常使用自签名证书,跳过校验以保持向后兼容。
+	// 生产环境部署时应在 configs/config.yaml 中显式设为 false,启用严格证书校验,避免 MITM 攻击。
+	viper.SetDefault("vdi.tls_skip_verify", true)
+	viper.SetDefault("ad.tls_skip_verify", true)
 }
 
 // GetDSN 获取数据库连接字符串

@@ -59,14 +59,15 @@ type vdiClientExtendedImpl struct {
 // vdiHTTPTimeout VDI HTTP 客户端超时
 const vdiHTTPTimeout = 30 * time.Second
 
-// newVDIHTTPClient 创建跳过TLS证书验证的HTTP客户端
-// VDI服务器通常使用自签名证书，需要跳过验证
+// newVDIHTTPClient 创建 VDI HTTP 客户端
+// F-08 fix: 不再硬编码 InsecureSkipVerify=true,改为从 config.VDI.TLSSkipVerify 读取
+// 默认 true 保持向后兼容(VDI 服务器自签证书),生产环境应在 yaml 中显式设 false
 func newVDIHTTPClient() *http.Client {
 	return &http.Client{
 		Timeout: vdiHTTPTimeout,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true, // 跳过TLS证书验证（VDI服务器使用自签名证书）
+				InsecureSkipVerify: loadTLSSkipVerify(),
 			},
 		},
 	}

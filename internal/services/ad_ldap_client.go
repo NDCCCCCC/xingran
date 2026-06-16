@@ -4,11 +4,30 @@ import (
 	"crypto/tls"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-ldap/ldap/v3"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 )
+
+// adTLSSkipVerify 缓存 AD/LDAP TLS 证书校验开关,从 config.AD.TLSSkipVerify 读取。
+// 默认 true(跳过校验),以兼容 AD 域控内网自签证书的部署。
+// 生产环境应在 configs/config.yaml 中显式将 ad.tls_skip_verify 设为 false。
+var (
+	adTLSSkipVerify     bool
+	adTLSSkipVerifyOnce sync.Once
+)
+
+// loadADTLSSkipVerify 懒加载 AD TLS 跳过校验开关
+func loadADTLSSkipVerify() bool {
+	adTLSSkipVerifyOnce.Do(func() {
+		cfg := config.Load()
+		adTLSSkipVerify = cfg.AD.TLSSkipVerify
+	})
+	return adTLSSkipVerify
+}
 
 // LDAPClient LDAP客户端封装
 type LDAPClient struct {
@@ -29,7 +48,9 @@ func (c *LDAPClient) Connect() error {
 	if c.config.UseSSL {
 		// LDAPS (端口636)
 		c.conn, err = ldap.DialURL("ldaps://"+address, ldap.DialWithTLSConfig(&tls.Config{
-			InsecureSkipVerify: true, // 生产环境应验证证书
+			// F-08 fix: 不再硬编码,改为从 config.AD.TLSSkipVerify 读取
+			// 默认 true 保持向后兼容(AD 域控自签证书),生产应在 yaml 中显式设 false
+			InsecureSkipVerify: loadADTLSSkipVerify(),
 			ServerName:         c.config.ServerAddress,
 		}))
 	} else {
@@ -47,7 +68,7 @@ func (c *LDAPClient) Connect() error {
 	// 启动TLS (如果配置了StartTLS)
 	if c.config.UseTLS && !c.config.UseSSL {
 		err = c.conn.StartTLS(&tls.Config{
-			InsecureSkipVerify: true,
+			InsecureSkipVerify: loadADTLSSkipVerify(),
 			ServerName:         c.config.ServerAddress,
 		})
 		if err != nil {

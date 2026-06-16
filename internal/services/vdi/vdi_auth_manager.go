@@ -40,7 +40,9 @@ func NewVDIAuthManager(db *gorm.DB, serverID string, server models.VDIServer) *V
 			Timeout: vdiAuthHTTPTimeout,
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true, // 跳过TLS证书验证（VDI服务器使用自签名证书）
+					// F-07 fix: 不再硬编码,改为从 config.VDI.TLSSkipVerify 读取
+					// 默认 true 保持向后兼容(VDI 自签证书),生产应在 yaml 中显式设 false
+					InsecureSkipVerify: loadTLSSkipVerify(),
 				},
 			},
 		},
