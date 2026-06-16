@@ -37,5 +37,11 @@ const (
 // the body now delegates to operlog.Record so the actual recording logic lives
 // in the shared package importable by every api/v1/* module.
 func recordOperLog(c *gin.Context, core *core.Core, module string, operType int) {
+	// Defensive nil-check: a test that injects a partial Core (e.g. one
+	// without OperLogService) must not panic before the downstream Record's
+	// own nil-guard can short-circuit.
+	if core == nil {
+		return
+	}
 	operlog.Record(c, core.OperLogService, core.GetDB(), module, operType)
 }
