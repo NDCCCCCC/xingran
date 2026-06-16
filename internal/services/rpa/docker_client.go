@@ -68,16 +68,22 @@ func NewDockerClient(config *DockerConfig) DockerClient {
 }
 
 // getBaseURL 获取 Docker API 基础 URL
-func (c *dockerClientImpl) getBaseURL() string {
+// 当 dockerHost 未配置时返回错误，避免静默连接到本地 root Docker socket
+// (多租户隔离要求)
+func (c *dockerClientImpl) getBaseURL() (string, error) {
 	if c.dockerHost == "" {
-		return "http://localhost/v1.40"
+		return "", fmt.Errorf("Docker 主机地址未配置 (docker_host)")
 	}
-	return fmt.Sprintf("http://%s:%d/v1.40", c.dockerHost, c.dockerPort)
+	return fmt.Sprintf("http://%s:%d/v1.40", c.dockerHost, c.dockerPort), nil
 }
 
 // makeDockerRequest 发送 Docker API 请求
 func (c *dockerClientImpl) makeDockerRequest(ctx context.Context, method, path string, body io.Reader) (*http.Response, error) {
-	url := c.getBaseURL() + path
+	baseURL, err := c.getBaseURL()
+	if err != nil {
+		return nil, err
+	}
+	url := baseURL + path
 
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
