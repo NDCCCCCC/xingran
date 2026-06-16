@@ -5,6 +5,13 @@ import (
 	"time"
 )
 
+// API Key 作用域名称（rate_limiter 与 system/apikey_service 各持一份以避免跨包耦合）
+const (
+	APIKeyScopeRead  = "read"
+	APIKeyScopeWrite = "write"
+	APIKeyScopeAdmin = "admin"
+)
+
 // RateLimit 速率限制配置
 type RateLimit struct {
 	PerMinute int // 每分钟限制
@@ -38,9 +45,9 @@ type RateLimitResult struct {
 func NewRateLimiter() *RateLimiter {
 	return &RateLimiter{
 		limits: map[string]RateLimit{
-			"read":  {PerMinute: 30, PerHour: 500, PerDay: 5000},
-			"write": {PerMinute: 100, PerHour: 1500, PerDay: 15000},
-			"admin": {PerMinute: 200, PerHour: 5000, PerDay: 50000},
+			APIKeyScopeRead:  {PerMinute: 30, PerHour: 500, PerDay: 5000},
+			APIKeyScopeWrite: {PerMinute: 100, PerHour: 1500, PerDay: 15000},
+			APIKeyScopeAdmin: {PerMinute: 200, PerHour: 5000, PerDay: 50000},
 		},
 	}
 }
