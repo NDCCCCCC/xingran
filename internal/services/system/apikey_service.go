@@ -46,6 +46,13 @@ const (
 	apiKeyByteLen  = 32                // API Key 字节长度（256-bit，对应 KeyLength=64 hex chars）
 )
 
+// API Key 作用域名称
+const (
+	APIKeyScopeRead  = "read"
+	APIKeyScopeWrite = "write"
+	APIKeyScopeAdmin = "admin"
+)
+
 // PageResult is declared in user_service.go to avoid redeclaration
 
 // isKeyExpired 检查密钥是否过期
@@ -82,9 +89,9 @@ func isValidKeyFormat(keyStr string) bool {
 // validateScopes 验证作用域
 func validateScopes(scopes []string) error {
 	validScopes := map[string]bool{
-		"read":  true,
-		"write": true,
-		"admin": true,
+		APIKeyScopeRead:  true,
+		APIKeyScopeWrite: true,
+		APIKeyScopeAdmin: true,
 	}
 
 	for _, scope := range scopes {
