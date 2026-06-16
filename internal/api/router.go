@@ -593,6 +593,9 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			workstationDeviceHandler := operations.NewWorkstationDeviceHandler(workstationDeviceService).WithCore(core)
 
 			workstationDevices.POST("/:id", workstationDeviceHandler.GetByWorkstation)
+			workstationDevices.POST("/:id/ad", workstationDeviceHandler.GetADDevices)
+			workstationDevices.POST("/:id/asset", workstationDeviceHandler.GetAssetDevices)
+			workstationDevices.POST("/:id/set-primary-and-save", workstationDeviceHandler.SetPrimaryAndSave)
 			workstationDevices.POST("/manual", workstationDeviceHandler.AddManual)
 			workstationDevices.POST("/sync-ad", workstationDeviceHandler.SyncAD)
 			workstationDevices.POST("/sync-asset", workstationDeviceHandler.SyncAsset)
