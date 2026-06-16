@@ -63,6 +63,7 @@ export interface WorkstationOps {
   status: WorkstationOpsStatus;
   deptId?: string;
   deptName?: string;
+  orgId?: string;            // 所属机构ID（来自 building.get 的 orgId，编辑表单回显用）
   userId?: string;
   userName?: string;
   positionX?: number;
