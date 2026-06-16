@@ -359,7 +359,7 @@ export const executionApi = {
    * 下载执行报告
    */
   downloadReport: async (id: string, format: 'pdf' | 'html' = 'pdf') => {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://10.62.10.33:9000/api/v1';
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
     const authHeaders = await getAuthHeaders();
     const response = await fetch(`${baseUrl}/rpa/executions/${id}/report?format=${format}`, {
       method: 'POST',

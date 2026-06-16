@@ -40,7 +40,7 @@ const encryptionKeyStore = new Map<string, { sm4KeyHex: string; ivHex: string }>
  * 专门用于获取加密配置，避免无限循环
  */
 const rawAxios: AxiosInstance = axios.create({
-	baseURL: import.meta.env.VITE_API_BASE_URL || 'http://10.62.10.33:9000/api/v1',
+	baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
 	timeout: 30000,
 	headers: {
 		'Content-Type': 'application/json',
@@ -158,7 +158,7 @@ export async function refreshEncryptionConfig(): Promise<void> {
 
 // 创建axios实例
 const api: AxiosInstance = axios.create({
-	baseURL: import.meta.env.VITE_API_BASE_URL || 'http://10.62.10.33:9000/api/v1',
+	baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
 	timeout: 30000,
 	headers: {
 		'Content-Type': 'application/json',

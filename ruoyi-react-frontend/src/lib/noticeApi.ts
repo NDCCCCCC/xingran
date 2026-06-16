@@ -146,7 +146,7 @@ export function getNotificationList(params: { current?: number; pageSize?: numbe
  * 构建 WebSocket 连接 URL
  */
 export function buildWebSocketUrl(): string {
-  const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://10.62.10.33:9000/api/v1';
+  const baseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
   const wsURL = baseURL.replace(/^http/, 'ws');
   const token = tokenStorage.getAccessToken();
 
