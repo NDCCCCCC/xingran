@@ -26,6 +26,9 @@ import (
 
 const permSystemConfig = "system:config"
 
+// 跨模块只读选择器放行权限集 (部门树/用户/字典/网络设备选择器) 已提取到
+// pkg/middleware.OpsSelectorReadPerms (单一来源, router.go 与 network_router.go 共用)。
+
 // noticeHubAdapter 将 websocket.NoticeHub 适配为 scheduler.NoticeHub 接口
 type noticeHubAdapter struct {
 	hub *websocket.NoticeHub
@@ -142,12 +145,15 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 			// 用户管理
 			users := authorized.Group("/users")
-			users.Use(middleware.RequirePermissions([]string{
+			// 查询接口(/list)额外接受工位/空间读权限: 工位页面用户选择器(useWorkstationData)需要
+			// 读取用户列表做归属选择, 但运维角色通常不持有 system:user 权限。用户列表受
+			// DataScopePermission 限制可见数据; 写操作(create/update/delete)保持严格权限。
+			users.Use(middleware.RequirePermissionsWithQuery([]string{
 				string(permission.UserList),
 				string(permission.UserAdd),
 				string(permission.UserEdit),
 				string(permission.UserView),
-			}, core))
+			}, []string{"ops:workstation:list", "ops:building:spaces:list"}, core))
 			// 添加数据权限中间件
 			users.Use(middleware.DataScopePermission(core))
 			{
@@ -195,12 +201,16 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 			// 部门管理
 			depts := authorized.Group("/departments")
-			depts.Use(middleware.RequirePermissions([]string{
+			// 查询接口(/tree,/list,/tree-select)额外接受运维读权限(opsSelectorReadPerms):
+			// 楼宇/楼层/工位/机房等运维管理页面内嵌的 <DeptTree>/<DeptSidebar> 选择器需要读取部门树,
+			// 但运维角色通常不持有 system:dept 权限, 导致部门树在每个运维页面都 403。
+			// 部门树 GetTree 不应用数据权限, 返回组织结构全树(低敏感); 写操作保持严格权限。
+			depts.Use(middleware.RequirePermissionsWithQuery([]string{
 				string(permission.DeptList),
 				string(permission.DeptAdd),
 				string(permission.DeptEdit),
 				string(permission.DeptView),
-			}, core))
+			}, middleware.OpsSelectorReadPerms, core))
 			// 添加数据权限中间件
 			depts.Use(middleware.DataScopePermission(core))
 			{
@@ -235,12 +245,15 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 			// 字典管理
 			dicts := authorized.Group("/dicts")
-			dicts.Use(middleware.RequirePermissions([]string{
+			// 查询接口(/list,/data/list)额外接受 ops 读权限(opsSelectorReadPerms):
+			// 字典是全局基础数据, useDict hook 几乎每个页面都调用 /system/dicts/data/list,
+			// 但运维角色通常不持有 system:dict 权限。放宽只读路径; 写操作(增删改字典类型/数据)保持严格。
+			dicts.Use(middleware.RequirePermissionsWithQuery([]string{
 				string(permission.DictTypeList),
 				string(permission.DictTypeAdd),
 				string(permission.DictTypeEdit),
 				string(permission.DictTypeView),
-			}, core))
+			}, middleware.OpsSelectorReadPerms, core))
 			{
 				systemV1.SetupDictRouter(dicts, core)
 			}
@@ -693,11 +706,13 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 		// 专线管理
 		dedicatedLines := ops.Group("/dedicatedLine")
+		// perms 对齐: 专线模块统一用 ops:dedicatedline:* (单数无连字符),
+		// 与菜单 seed / sys_menu 一致, 避免命名空间割裂导致 403。
 		dedicatedLines.Use(middleware.RequirePermissions([]string{
-			"ops:line:list",
-			"ops:line:add",
-			"ops:line:edit",
-			"ops:line:delete",
+			"ops:dedicatedline:list",
+			"ops:dedicatedline:add",
+			"ops:dedicatedline:edit",
+			"ops:dedicatedline:delete",
 		}, core))
 		{
 			dedicatedLineService := opsServices.NewDedicatedLineService(core.DB.GetDB())

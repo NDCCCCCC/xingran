@@ -52,12 +52,15 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// ==================== 网络设备路由 ====================
 	devices := r.Group("/devices")
-	devices.Use(middleware.RequirePermissions([]string{
+	// 查询接口(/list)额外接受 ops 读权限(OpsSelectorReadPerms): 信息点管理等运维页面
+	// 关联网络设备时需要读取设备列表做选择器, 但运维角色不持有 network:device 权限。
+	// 放宽只读路径; 写操作(增删改网络设备/发现/导出)保持严格。
+	devices.Use(middleware.RequirePermissionsWithQuery([]string{
 		"network:device:list",
 		"network:device:add",
 		"network:device:edit",
 		"network:device:delete",
-	}, core))
+	}, middleware.OpsSelectorReadPerms, core))
 	{
 		devices.POST("/list", deviceHandler.List)
 		devices.POST("", deviceHandler.Create)
@@ -195,9 +198,11 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// ==================== 端口状态管理路由（独立权限） ====================
 	ports := r.Group("/ports")
-	ports.Use(middleware.RequirePermissions([]string{
+	// 查询接口(/list)额外接受 ops 读权限: 信息点关联网络设备端口时需要读取端口列表,
+	// 但运维角色不持有 network:port 权限。放宽只读; 写操作保持严格。
+	ports.Use(middleware.RequirePermissionsWithQuery([]string{
 		"network:port:query",
-	}, core))
+	}, middleware.OpsSelectorReadPerms, core))
 	{
 		SetupPortRouter(ports, core, exportHandler)
 	}

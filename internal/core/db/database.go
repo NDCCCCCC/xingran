@@ -377,6 +377,11 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate158WorkstationSortIndexes(d.DB); err != nil {
 			applogger.Errorf("ops_workstation 排序索引迁移失败: %v", err)
 		}
+		// ops 模块菜单 perms 命名对齐: 复数/连字符/remove → 单数/无连字符/delete
+		// (与路由 RequirePermissions 及 system/network/asset 模块一致), 修复角色读写 403
+		if err := migrations.Migrate159AlignOpsPerms(d.DB); err != nil {
+			applogger.Errorf("ops 菜单 perms 对齐迁移失败: %v", err)
+		}
 		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
 		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
 			applogger.Errorf("MAC 过滤规则表迁移失败: %v", err)
@@ -1314,13 +1319,13 @@ func createOperationsManagementMenus(db *gorm.DB) error {
 		orderNum  int
 		icon      string
 	}{
-		{"楼宇管理", "buildings", "operations/buildings/index", "ops:buildings:list", "楼宇管理菜单", 1, "BuildOutlined"},
-		{"楼层管理", "floors", "operations/floors/index", "ops:floors:list", "楼层管理菜单", 2, "ApartmentOutlined"},
-		{"工位管理", "workstations", "operations/workstations/index", "ops:workstations:list", "工位管理菜单", 3, "DesktopOutlined"},
-		{"信息点管理", "info-points", "operations/info-points/index", "ops:info-points:list", "信息点管理菜单", 4, "DotChartOutlined"},
-		{"机房管理", "server-rooms", "operations/server-rooms/index", "ops:server-rooms:list", "机房管理菜单", 5, "CloudServerOutlined"},
-		{"专线管理", "dedicated-lines", "operations/dedicated-lines/index", "ops:dedicated-lines:list", "专线管理菜单", 6, "LineChartOutlined"},
-		{"机房设备管理", "room-devices", "operations/room-devices/index", "ops:room-devices:list", "机房设备管理菜单", 7, "AppstoreOutlined"},
+		{"楼宇管理", "buildings", "operations/buildings/index", "ops:building:list", "楼宇管理菜单", 1, "BuildOutlined"},
+		{"楼层管理", "floors", "operations/floors/index", "ops:floor:list", "楼层管理菜单", 2, "ApartmentOutlined"},
+		{"工位管理", "workstations", "operations/workstations/index", "ops:workstation:list", "工位管理菜单", 3, "DesktopOutlined"},
+		{"信息点管理", "info-points", "operations/info-points/index", "ops:infopoint:list", "信息点管理菜单", 4, "DotChartOutlined"},
+		{"机房管理", "server-rooms", "operations/server-rooms/index", "ops:serverroom:list", "机房管理菜单", 5, "CloudServerOutlined"},
+		{"专线管理", "dedicated-lines", "operations/dedicated-lines/index", "ops:dedicatedline:list", "专线管理菜单", 6, "LineChartOutlined"},
+		{"机房设备管理", "room-devices", "operations/room-devices/index", "ops:roomdevice:list", "机房设备管理菜单", 7, "AppstoreOutlined"},
 	}
 
 	// 存储页面菜单的ID，用于后续创建按钮权限
@@ -1368,40 +1373,40 @@ func createOperationsManagementMenus(db *gorm.DB) error {
 		orderNum int
 	}{
 		// 楼宇管理的按钮
-		{"楼宇管理", "楼宇查询", "ops:buildings:query", "楼宇查询", 1},
-		{"楼宇管理", "楼宇新增", "ops:buildings:add", "楼宇新增", 2},
-		{"楼宇管理", "楼宇修改", "ops:buildings:edit", "楼宇修改", 3},
-		{"楼宇管理", "楼宇删除", "ops:buildings:remove", "楼宇删除", 4},
+		{"楼宇管理", "楼宇查询", "ops:building:query", "楼宇查询", 1},
+		{"楼宇管理", "楼宇新增", "ops:building:add", "楼宇新增", 2},
+		{"楼宇管理", "楼宇修改", "ops:building:edit", "楼宇修改", 3},
+		{"楼宇管理", "楼宇删除", "ops:building:delete", "楼宇删除", 4},
 		// 楼层管理的按钮
-		{"楼层管理", "楼层查询", "ops:floors:query", "楼层查询", 1},
-		{"楼层管理", "楼层新增", "ops:floors:add", "楼层新增", 2},
-		{"楼层管理", "楼层修改", "ops:floors:edit", "楼层修改", 3},
-		{"楼层管理", "楼层删除", "ops:floors:remove", "楼层删除", 4},
+		{"楼层管理", "楼层查询", "ops:floor:query", "楼层查询", 1},
+		{"楼层管理", "楼层新增", "ops:floor:add", "楼层新增", 2},
+		{"楼层管理", "楼层修改", "ops:floor:edit", "楼层修改", 3},
+		{"楼层管理", "楼层删除", "ops:floor:delete", "楼层删除", 4},
 		// 工位管理的按钮
-		{"工位管理", "工位查询", "ops:workstations:query", "工位查询", 1},
-		{"工位管理", "工位新增", "ops:workstations:add", "工位新增", 2},
-		{"工位管理", "工位修改", "ops:workstations:edit", "工位修改", 3},
-		{"工位管理", "工位删除", "ops:workstations:remove", "工位删除", 4},
+		{"工位管理", "工位查询", "ops:workstation:query", "工位查询", 1},
+		{"工位管理", "工位新增", "ops:workstation:add", "工位新增", 2},
+		{"工位管理", "工位修改", "ops:workstation:edit", "工位修改", 3},
+		{"工位管理", "工位删除", "ops:workstation:delete", "工位删除", 4},
 		// 信息点管理的按钮
-		{"信息点管理", "信息点查询", "ops:info-points:query", "信息点查询", 1},
-		{"信息点管理", "信息点新增", "ops:info-points:add", "信息点新增", 2},
-		{"信息点管理", "信息点修改", "ops:info-points:edit", "信息点修改", 3},
-		{"信息点管理", "信息点删除", "ops:info-points:remove", "信息点删除", 4},
+		{"信息点管理", "信息点查询", "ops:infopoint:query", "信息点查询", 1},
+		{"信息点管理", "信息点新增", "ops:infopoint:add", "信息点新增", 2},
+		{"信息点管理", "信息点修改", "ops:infopoint:edit", "信息点修改", 3},
+		{"信息点管理", "信息点删除", "ops:infopoint:delete", "信息点删除", 4},
 		// 机房管理的按钮
-		{"机房管理", "机房查询", "ops:server-rooms:query", "机房查询", 1},
-		{"机房管理", "机房新增", "ops:server-rooms:add", "机房新增", 2},
-		{"机房管理", "机房修改", "ops:server-rooms:edit", "机房修改", 3},
-		{"机房管理", "机房删除", "ops:server-rooms:remove", "机房删除", 4},
+		{"机房管理", "机房查询", "ops:serverroom:query", "机房查询", 1},
+		{"机房管理", "机房新增", "ops:serverroom:add", "机房新增", 2},
+		{"机房管理", "机房修改", "ops:serverroom:edit", "机房修改", 3},
+		{"机房管理", "机房删除", "ops:serverroom:delete", "机房删除", 4},
 		// 专线管理的按钮
-		{"专线管理", "专线查询", "ops:dedicated-lines:query", "专线查询", 1},
-		{"专线管理", "专线新增", "ops:dedicated-lines:add", "专线新增", 2},
-		{"专线管理", "专线修改", "ops:dedicated-lines:edit", "专线修改", 3},
-		{"专线管理", "专线删除", "ops:dedicated-lines:remove", "专线删除", 4},
+		{"专线管理", "专线查询", "ops:dedicatedline:query", "专线查询", 1},
+		{"专线管理", "专线新增", "ops:dedicatedline:add", "专线新增", 2},
+		{"专线管理", "专线修改", "ops:dedicatedline:edit", "专线修改", 3},
+		{"专线管理", "专线删除", "ops:dedicatedline:delete", "专线删除", 4},
 		// 机房设备管理的按钮
-		{"机房设备管理", "设备查询", "ops:room-devices:query", "设备查询", 1},
-		{"机房设备管理", "设备新增", "ops:room-devices:add", "设备新增", 2},
-		{"机房设备管理", "设备修改", "ops:room-devices:edit", "设备修改", 3},
-		{"机房设备管理", "设备删除", "ops:room-devices:remove", "设备删除", 4},
+		{"机房设备管理", "设备查询", "ops:roomdevice:query", "设备查询", 1},
+		{"机房设备管理", "设备新增", "ops:roomdevice:add", "设备新增", 2},
+		{"机房设备管理", "设备修改", "ops:roomdevice:edit", "设备修改", 3},
+		{"机房设备管理", "设备删除", "ops:roomdevice:delete", "设备删除", 4},
 	}
 
 	for _, bm := range buttonMenus {
