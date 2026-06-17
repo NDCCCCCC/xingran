@@ -283,21 +283,6 @@ api.interceptors.response.use(
 		// 如果响应被加密但没有 encrypted 标志，说明是后端中间件自动加密的
 		const needsBackendDecryption = isResponseEncrypted && !data?.encrypted;
 
-		// 调试日志：记录楼宇列表接口的响应
-		if (url.includes("/ops/building/list")) {
-			console.log("[API Response] 楼宇列表响应:", {
-				url,
-				hasData: !!data,
-				dataType: typeof data,
-				isEncrypted,
-				isResponseEncrypted,
-				needsBackendDecryption,
-				dataKeys: typeof data === "object" ? Object.keys(data) : "N/A",
-				rawData: data,
-				responseHeaders: Object.keys(responseHeaders),
-			});
-		}
-
 		// 处理后端中间件自动加密的响应（需要解密）
 		if (needsBackendDecryption) {
 			console.warn("[API Response] 检测到后端加密响应，尝试解密...");

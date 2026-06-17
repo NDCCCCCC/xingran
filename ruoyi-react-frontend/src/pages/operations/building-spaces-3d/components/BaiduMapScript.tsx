@@ -27,7 +27,6 @@ export function loadBaiduMapGLScript(ak: string): Promise<void> {
     script.onerror = () => reject(new Error("百度地图GL脚本加载失败"));
 
     window.initBMapGL = () => {
-      console.log("百度地图GL脚本加载成功");
       resolve();
     };
 
@@ -58,7 +57,6 @@ export function loadBaiduMapScript(ak: string): Promise<void> {
     script.onerror = () => reject(new Error("百度地图脚本加载失败"));
 
     window.init = () => {
-      console.log("百度地图脚本加载成功");
       resolve();
     };
 
