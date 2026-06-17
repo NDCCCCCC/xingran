@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback, type FC, type Key } from "react";
 import { useLocation } from "react-router-dom";
-import { usePersistedState } from "@/hooks/usePersistedState";
+import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
   Table,
   Button,
@@ -227,7 +227,7 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
 const UserManagement: FC = () => {
   // 自定义状态
   const location = useLocation();
-  const { value: selectedDeptId, setValue: setSelectedDeptId } = usePersistedState<string>({
+  const [selectedDeptId, setSelectedDeptId] = usePersistedStateController<string>({
     keyPrefix: location.pathname,
     keySuffix: "selectedDeptId",
     defaultValue: "",

@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback, useMemo, type FC } from "react";
 import { useLocation } from "react-router-dom";
-import { usePersistedState } from "@/hooks/usePersistedState";
+import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
   Table,
   Button,
@@ -132,12 +132,12 @@ const APIKeyManagement: FC = () => {
   // 搜索筛选状态
   const [searchKeyword, setSearchKeyword] = useState<string>("");
   const location = useLocation();
-  const { value: filterStatus, setValue: setFilterStatus } = usePersistedState<boolean | undefined>({
+  const [filterStatus, setFilterStatus] = usePersistedStateController<boolean | undefined>({
     keyPrefix: location.pathname,
     keySuffix: "filterStatus",
     defaultValue: undefined,
   });
-  const { value: filterScope, setValue: setFilterScope } = usePersistedState<string | undefined>({
+  const [filterScope, setFilterScope] = usePersistedStateController<string | undefined>({
     keyPrefix: location.pathname,
     keySuffix: "filterScope",
     defaultValue: undefined,

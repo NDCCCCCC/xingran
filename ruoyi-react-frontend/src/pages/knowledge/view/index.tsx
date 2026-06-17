@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
-import { usePersistedState } from "@/hooks/usePersistedState";
+import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
   Input,
   Card,
@@ -49,17 +49,17 @@ const KnowledgeViewPage: FC = () => {
   const [tags, setTags] = useState<KnowledgeTag[]>([]);
 
   const location = useLocation();
-  const { value: selectedCategory, setValue: setSelectedCategory } = usePersistedState<string>({
+  const [selectedCategory, setSelectedCategory] = usePersistedStateController<string>({
     keyPrefix: location.pathname,
     keySuffix: "selectedCategory",
     defaultValue: "",
   });
-  const { value: selectedTag, setValue: setSelectedTag } = usePersistedState<string>({
+  const [selectedTag, setSelectedTag] = usePersistedStateController<string>({
     keyPrefix: location.pathname,
     keySuffix: "selectedTag",
     defaultValue: "",
   });
-  const { value: keyword, setValue: setKeyword } = usePersistedState<string>({
+  const [keyword, setKeyword] = usePersistedStateController<string>({
     keyPrefix: location.pathname,
     keySuffix: "keyword",
     defaultValue: "",

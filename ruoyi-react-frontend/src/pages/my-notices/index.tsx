@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type { FC } from "react";
 import { useLocation } from "react-router-dom";
-import { usePersistedState } from "@/hooks/usePersistedState";
+import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
   Card,
   Table,
@@ -41,7 +41,7 @@ const MyNoticesPage: FC = () => {
   const [total, setTotal] = useState(0);
   const [allTotal, setAllTotal] = useState(0); // 全部通知总数（用于标签显示）
   const location = useLocation();
-  const { value: activeTab, setValue: setActiveTab } = usePersistedState<"all" | "unread" | "read">({
+  const [activeTab, setActiveTab] = usePersistedStateController<"all" | "unread" | "read">({
     keyPrefix: location.pathname,
     keySuffix: "activeTab",
     defaultValue: "all",

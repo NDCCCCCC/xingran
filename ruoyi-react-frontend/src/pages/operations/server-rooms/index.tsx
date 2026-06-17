@@ -5,7 +5,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { FC } from "react";
 import { useLocation } from "react-router-dom";
-import { usePersistedState } from "@/hooks/usePersistedState";
+import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
   Table, Button, Space, Modal, Form, Input, Select,
   Tag, Card, Row, Col, Alert, Radio, Layout,
@@ -56,7 +56,7 @@ interface Statistics {
 
 const ServerRoomManagement: FC = () => {
   const location = useLocation();
-  const { value: viewMode, setValue: setViewMode } = usePersistedState<ViewMode>({
+  const [viewMode, setViewMode] = usePersistedStateController<ViewMode>({
     keyPrefix: location.pathname,
     keySuffix: "viewMode",
     defaultValue: "table",

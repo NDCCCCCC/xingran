@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { usePersistedState } from "@/hooks/usePersistedState";
+import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
   Card,
   Table,
@@ -32,7 +32,7 @@ const ADSyncLogsPage: React.FC = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const location = useLocation();
-  const { value: selectedConfigId, setValue: setSelectedConfigId } = usePersistedState<string | undefined>({
+  const [selectedConfigId, setSelectedConfigId] = usePersistedStateController<string | undefined>({
     keyPrefix: location.pathname,
     keySuffix: "selectedConfigId",
     defaultValue: undefined,

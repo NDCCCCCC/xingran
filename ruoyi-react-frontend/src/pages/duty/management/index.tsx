@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import { usePersistedState } from "@/hooks/usePersistedState";
+import { usePersistedStateController } from "@/hooks/usePersistedState";
 import { Tabs, Button, Modal, Form } from "antd";
 import { LeftOutlined, RightOutlined, CalendarOutlined, SettingOutlined, TeamOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -36,7 +36,7 @@ export default function DutyManagement() {
 
   // ==================== 其他状态 ====================
   const location = useLocation();
-  const { value: activeTab, setValue: setActiveTab } = usePersistedState<string>({
+  const [activeTab, setActiveTab] = usePersistedStateController<string>({
     keyPrefix: location.pathname,
     keySuffix: "activeTab",
     defaultValue: "weekly",

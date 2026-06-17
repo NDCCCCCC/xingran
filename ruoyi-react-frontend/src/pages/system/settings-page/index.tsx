@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { FC } from "react";
 import { useLocation } from "react-router-dom";
-import { usePersistedState } from "@/hooks/usePersistedState";
+import { usePersistedStateController } from "@/hooks/usePersistedState";
 import { Tabs } from "antd";
 import { MailOutlined, ApiOutlined, PictureOutlined, BgColorsOutlined } from "@ant-design/icons";
 import { EmailConfigPage, APIConfigPage, CaptchaBackgroundSettingsPage } from "../settings";
@@ -13,7 +13,7 @@ import DefaultThemePage from "../settings/default-theme";
  */
 const SystemSettingsPage: FC = () => {
   const location = useLocation();
-  const { value: activeTab, setValue: setActiveTab } = usePersistedState<string>({
+  const [activeTab, setActiveTab] = usePersistedStateController<string>({
     keyPrefix: location.pathname,
     keySuffix: "activeTab",
     defaultValue: "email",

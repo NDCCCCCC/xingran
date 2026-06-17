@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback, type FC } from "react";
 import { useLocation } from "react-router-dom";
-import { usePersistedState } from "@/hooks/usePersistedState";
+import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
   Table,
   Button,
@@ -230,7 +230,7 @@ const DeviceManagement: FC = () => {
 
   // 自定义状态
   const location = useLocation();
-  const { value: selectedDeptId, setValue: setSelectedDeptId } = usePersistedState<string>({
+  const [selectedDeptId, setSelectedDeptId] = usePersistedStateController<string>({
     keyPrefix: location.pathname,
     keySuffix: "selectedDeptId",
     defaultValue: "",

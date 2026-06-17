@@ -5,7 +5,7 @@
 
 import { useState, useEffect, type FC, type Key } from "react";
 import { useLocation } from "react-router-dom";
-import { usePersistedState } from "@/hooks/usePersistedState";
+import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
   Table,
   Button,
@@ -206,7 +206,7 @@ const DictManagement: FC = () => {
   const [dataForm] = Form.useForm();
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
   const location = useLocation();
-  const { value: activeTab, setValue: setActiveTab } = usePersistedState<string>({
+  const [activeTab, setActiveTab] = usePersistedStateController<string>({
     keyPrefix: location.pathname,
     keySuffix: "activeTab",
     defaultValue: "type",

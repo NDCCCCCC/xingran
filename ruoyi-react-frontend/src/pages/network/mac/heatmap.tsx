@@ -15,7 +15,7 @@ import {
 } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
-import { usePersistedState } from "@/hooks/usePersistedState";
+import { usePersistedStateController } from "@/hooks/usePersistedState";
 import dayjs, { type Dayjs } from "dayjs";
 
 type RangePickerOnChange = React.ComponentProps<typeof DatePicker.RangePicker>["onChange"];
@@ -51,7 +51,7 @@ const HeatmapPage: React.FC = () => {
 
   const [queryParams, setQueryParams] = useState<{ startTime: string; endTime: string } | null>(null);
   const location = useLocation();
-  const { value: activePreset, setValue: setActivePreset } = usePersistedState<PresetKey>({
+  const [activePreset, setActivePreset] = usePersistedStateController<PresetKey>({
     keyPrefix: location.pathname,
     keySuffix: "activePreset",
     defaultValue: "7d",

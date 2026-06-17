@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import { usePersistedState } from "@/hooks/usePersistedState";
+import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
   Card,
   Table,
@@ -89,7 +89,7 @@ const loadLoginLogs = async (params: any): Promise<{ list: LoginLog[]; total: nu
 
 const LogMonitor: React.FC = () => {
   const location = useLocation();
-  const { value: activeTab, setValue: setActiveTab } = usePersistedState<"oper" | "login">({
+  const [activeTab, setActiveTab] = usePersistedStateController<"oper" | "login">({
     keyPrefix: location.pathname,
     keySuffix: "activeTab",
     defaultValue: "oper",

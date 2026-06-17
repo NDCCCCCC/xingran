@@ -10,6 +10,10 @@
  * - JSON 序列化/反序列化带 try/catch 防御,损坏的 storage 数据不会破坏页面渲染
  * - SSR 友好:typeof window 检查 + try/catch,即使在非浏览器环境下也能正常使用
  * - 与 `useTableManager` / `usePagination` 的持久化策略保持一致(`sessionStorage` + 相同前缀命名)
+ *
+ * API 形式(2026-06 优化):
+ * - `usePersistedState<T>(opts)` 只返回 `value`,适合只读筛选(消除大量 setX 未用警告)
+ * - `usePersistedStateController<T>(opts)` 返回 `[value, setValue, reset]` tuple,适合需要写入的页面
  */
 import { useState, useCallback, useEffect } from "react";
 import { TABLE_STATE_PREFIX, sanitizePathForKey } from "@/constants/storage";
@@ -31,12 +35,11 @@ export interface UsePersistedStateOptions<T> {
   deserialize?: (raw: string) => T;
 }
 
-export interface UsePersistedStateReturn<T> {
-  value: T;
-  setValue: (next: T | ((prev: T) => T)) => void;
-  /** 清除持久化值并恢复默认值 */
-  reset: () => void;
-}
+export type UsePersistedStateController<T> = readonly [
+  T,
+  (next: T | ((prev: T) => T)) => void,
+  () => void,
+];
 
 /** 安全读取 sessionStorage/localStorage */
 function safeGet(useSession: boolean, key: string): string | null {
@@ -88,7 +91,13 @@ function readInitial<T>(
   }
 }
 
-export function usePersistedState<T>(options: UsePersistedStateOptions<T>): UsePersistedStateReturn<T> {
+/**
+ * 内部实现:返回完整 controller tuple。
+ * `usePersistedState` 和 `usePersistedStateController` 都基于此。
+ */
+function usePersistedStateInternal<T>(
+  options: UsePersistedStateOptions<T>,
+): UsePersistedStateController<T> {
   const {
     keyPrefix,
     keySuffix,
@@ -146,6 +155,23 @@ export function usePersistedState<T>(options: UsePersistedStateOptions<T>): UseP
     return () => window.removeEventListener("storage", handler);
   }, [storageKey, defaultValue, deserialize]);
 
-  return { value, setValue, reset };
+  return [value, setValue, reset] as const;
 }
 
+/**
+ * 只读入口:返回持久化的 value,不带 setter。
+ * 大多数筛选场景只读取 value,使用此入口可避免 `setX is assigned a value but never used` 警告。
+ */
+export function usePersistedState<T>(options: UsePersistedStateOptions<T>): T {
+  return usePersistedStateInternal(options)[0];
+}
+
+/**
+ * 读写入口:返回 [value, setValue, reset] tuple。
+ * 需要在用户交互时更新持久化值时使用(setValue / reset 不必都使用,ESLint 视为 useState 风格豁免)。
+ */
+export function usePersistedStateController<T>(
+  options: UsePersistedStateOptions<T>,
+): UsePersistedStateController<T> {
+  return usePersistedStateInternal(options);
+}

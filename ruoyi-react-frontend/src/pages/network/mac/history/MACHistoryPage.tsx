@@ -21,7 +21,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import { usePersistedState } from "@/hooks/usePersistedState";
+import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
   Table, Button, Space, Form, Input, InputNumber, Select,
   Tag, Card, DatePicker, List, Grid, Spin, Tooltip, Skeleton,
@@ -108,7 +108,7 @@ const MACHistoryPage: React.FC = () => {
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const location = useLocation();
-  const { value: activePreset, setValue: setActivePreset } = usePersistedState<PresetKey>({
+  const [activePreset, setActivePreset] = usePersistedStateController<PresetKey>({
     keyPrefix: location.pathname,
     keySuffix: "activePreset",
     defaultValue: "7d",
