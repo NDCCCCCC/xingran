@@ -23,7 +23,7 @@
  */
 
 import { useMemo, type FC, type ReactNode } from "react";
-import { ConfigProvider, theme as antdTheme } from "antd";
+import { App, ConfigProvider, theme as antdTheme } from "antd";
 import type { ThemeConfig } from "antd";
 import zhCN from "antd/locale/zh_CN";
 import { useSettingsStore } from "@/store/settingsStore";
@@ -78,7 +78,11 @@ const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
 		};
 	}, [customColors?.primary, customColors?.sidebar, themeMode, density, appliedTheme]);
 
-	return <ConfigProvider locale={zhCN} theme={antdThemeConfig}>{children}</ConfigProvider>;
+	return (
+		<ConfigProvider locale={zhCN} theme={antdThemeConfig}>
+			<App component={false}>{children}</App>
+		</ConfigProvider>
+	);
 };
 
 export default AntdThemeBridge;
