@@ -96,7 +96,13 @@ const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
 
 	return (
 		<ConfigProvider locale={zhCN} theme={antdThemeConfig}>
-			<App component={false}>
+			{/*
+				antd v6 默认启用 cssVar(CSS 变量模式), <App> 需要一个真实 DOM 节点挂载 CSS
+				变量作用域。component={false} 不渲染节点, 会触发 warning:
+				"[antd: App] When using cssVar, ensure `component` is assigned a valid React component string."
+				故移除 component={false}, 使用 antd <App> 默认的 div 包裹。
+			*/}
+			<App>
 				<MessageContextInjector>{children}</MessageContextInjector>
 			</App>
 		</ConfigProvider>
