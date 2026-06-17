@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { usePersistedState } from "@/hooks/usePersistedState";
+import { usePersistedStateController } from "@/hooks/usePersistedState";
 import { useAuthStore } from "@/store/authStore";
 import { useMenuStore } from "@/store/menuStore";
 import { vmOperationButtons } from "./vmOperationButtons";
@@ -10,6 +10,7 @@ import {
   Space,
   Tag,
   message,
+  Modal,
   Popconfirm,
   Select,
   Card,
@@ -17,6 +18,7 @@ import {
   Form,
   Slider,
   InputNumber,
+  Input,
   Row,
   Col,
   Spin,
@@ -27,6 +29,7 @@ import {
   PlusOutlined,
 } from "@ant-design/icons";
 import { post } from "@/lib/api";
+import { vmApi, vdiServerApi } from "@/lib/vdiApi";
 import type { VirtualMachine, VMListParams, CreateVMRequest, VDIServer, VDIResourceGroup, VDIResource, VDIPlatform, RunPosition, VDIStorage, VDINetwork } from "@/types/vdi";
 import type { ColumnsType } from "antd/es/table";
 import { VDIRow } from "@/components/table/VDIRow";
@@ -48,7 +51,7 @@ const VirtualMachineList: React.FC = () => {
   const [pageSize, setPageSize] = useState(10);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const location = useLocation();
-  const { value: filters, setValue: setFilters } = usePersistedState<Partial<VMListParams>>({
+  const [filters, setFilters] = usePersistedStateController<Partial<VMListParams>>({
     keyPrefix: location.pathname,
     keySuffix: "filters",
     defaultValue: {},
