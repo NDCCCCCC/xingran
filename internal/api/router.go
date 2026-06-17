@@ -496,12 +496,14 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 	{
 		// 楼宇管理
 		buildings := ops.Group("/building")
-		buildings.Use(middleware.RequirePermissions([]string{
+		// 查询接口(/list)额外接受「楼宇空间」可视化读权限 ops:building:spaces:list，
+		// 解决只读可视化页面复用 building list 接口的权限命名空间割裂；写操作仍受严格权限保护。
+		buildings.Use(middleware.RequirePermissionsWithQuery([]string{
 			"ops:building:list",
 			"ops:building:add",
 			"ops:building:edit",
 			"ops:building:delete",
-		}, core))
+		}, []string{"ops:building:spaces:list"}, core))
 		{
 			buildingService := opsServices.NewBuildingService(core.DB.GetDB())
 			geocodingService := opsServices.NewGeocodingService(core.Config.Baidu.MapAK)
@@ -521,12 +523,13 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 		// 楼层管理
 		floors := ops.Group("/floor")
-		floors.Use(middleware.RequirePermissions([]string{
+		// 查询接口(/list,/tree)额外接受「楼宇空间」可视化读权限 ops:building:spaces:list。
+		floors.Use(middleware.RequirePermissionsWithQuery([]string{
 			"ops:floor:list",
 			"ops:floor:add",
 			"ops:floor:edit",
 			"ops:floor:delete",
-		}, core))
+		}, []string{"ops:building:spaces:list"}, core))
 		{
 			// 创建带缓存的楼层服务
 			var floorService opsServices.FloorService
@@ -558,12 +561,13 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 		// 工位管理
 		workstations := ops.Group("/workstation")
-		workstations.Use(middleware.RequirePermissions([]string{
+		// 查询接口(/list)额外接受「楼宇空间」可视化读权限 ops:building:spaces:list。
+		workstations.Use(middleware.RequirePermissionsWithQuery([]string{
 			"ops:workstation:list",
 			"ops:workstation:add",
 			"ops:workstation:edit",
 			"ops:workstation:delete",
-		}, core))
+		}, []string{"ops:building:spaces:list"}, core))
 		{
 			workstationService := opsServices.NewWorkstationService(core.DB.GetDB())
 			workstationHandler := operations.NewWorkstationHandler(workstationService).WithCore(core)

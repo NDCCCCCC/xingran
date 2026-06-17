@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
@@ -221,6 +223,65 @@ func RequirePermissions(permissions []string, core *core.Core) gin.HandlerFunc {
 		response.Error(c, response.ErrForbidden, "没有访问权限")
 		c.Abort()
 	}
+}
+
+// RequirePermissionsWithQuery 需要多个权限中的任意一个；对只读查询路径（末段为 list/tree）
+// 额外接受 queryExtraPermissions 中的任一权限。
+//
+// 用途：只读可视化页面（如「楼宇空间」「楼宇空间3D」）复用了 CRUD 模块的 list 接口拼装数据，
+// 但页面菜单自身的权限标识（ops:building:spaces:list）与 CRUD 模块的权限标识（ops:building:list）
+// 属于不同命名空间。此中间件让查询类路径额外放行可视化读权限，而 create/update/delete 等写操作
+// 仍只受严格权限保护，避免越权。
+//
+// 例：空间管理角色持有 ops:building:spaces:list
+//   - POST /ops/building/list → 命中 queryExtraPermissions → 通过
+//   - POST /ops/building      → 写操作，严格权限 → 拒绝（安全）
+func RequirePermissionsWithQuery(permissions []string, queryExtraPermissions []string, core *core.Core) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, ok := getUserIDAsString(c)
+		if !ok {
+			response.Error(c, response.ErrUnauthorized, "用户未认证")
+			c.Abort()
+			return
+		}
+
+		// 超级管理员直接通过
+		if isSuperAdmin(core, userID) {
+			c.Next()
+			return
+		}
+
+		// 查询类路径额外纳入可视化读权限；写操作保持严格权限
+		checkPerms := permissions
+		if len(queryExtraPermissions) > 0 && isQueryPath(c.Request.URL.Path) {
+			merged := make([]string, 0, len(permissions)+len(queryExtraPermissions))
+			merged = append(merged, permissions...)
+			merged = append(merged, queryExtraPermissions...)
+			checkPerms = merged
+		}
+
+		for _, permission := range checkPerms {
+			if checkUserPermission(core, userID, permission) {
+				c.Next()
+				return
+			}
+		}
+
+		response.Error(c, response.ErrForbidden, "没有访问权限")
+		c.Abort()
+	}
+}
+
+// isQueryPath 判断是否为只读查询路径（末段为 list 或 tree）。
+// 写操作路径（create/update/delete/batch/geocode/import/export 等）返回 false。
+func isQueryPath(path string) bool {
+	p := strings.TrimSuffix(path, "/")
+	idx := strings.LastIndex(p, "/")
+	if idx < 0 {
+		return false
+	}
+	last := p[idx+1:]
+	return last == "list" || last == "tree"
 }
 
 // RequireAllPermissions 需要所有权限
