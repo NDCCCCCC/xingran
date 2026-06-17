@@ -303,7 +303,10 @@ func (s *userService) List(ctx context.Context, params requests.UserListParams) 
 		query = query.Where("phone LIKE ?", "%"+*params.Phone+"%")
 	}
 	if params.Status != nil {
-		query = query.Where("status = ?", *params.Status)
+		// F-NEW: 必须使用 sys_user.status 限定符,因为 List() 后续会 LEFT JOIN sys_dept,
+		// 而 sys_dept 也有 status 列,未限定会导致 PostgreSQL 抛出 SQLSTATE 42702
+		// (column reference "status" is ambiguous)。
+		query = query.Where("sys_user.status = ?", *params.Status)
 	}
 	if params.DeptID != nil && *params.DeptID != "" {
 		query = query.Where("dept_id = ?", *params.DeptID)
