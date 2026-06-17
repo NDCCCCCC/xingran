@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { usePersistedState } from "@/hooks/usePersistedState";
 import { useAuthStore } from "@/store/authStore";
 import { useMenuStore } from "@/store/menuStore";
@@ -24,6 +24,7 @@ import {
 } from "antd";
 import {
   ReloadOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
 import { post } from "@/lib/api";
 import type { VirtualMachine, VMListParams, CreateVMRequest, VDIServer, VDIResourceGroup, VDIResource, VDIPlatform, RunPosition, VDIStorage, VDINetwork } from "@/types/vdi";
