@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
@@ -409,7 +410,8 @@ type BackupListItem struct {
 }
 
 // GetBackupList 获取备份列表（包含设备IP地址）
-func (s *ConfigBackupService) GetBackupList(ctx context.Context, current, pageSize int, deviceID string) ([]BackupListItem, int64, error) {
+// orderByColumn/isAsc 为服务端排序参数(可选,透传给 base.ApplySort 白名单)。
+func (s *ConfigBackupService) GetBackupList(ctx context.Context, current, pageSize int, deviceID string, orderByColumn string, isAsc *bool) ([]BackupListItem, int64, error) {
 	var backups []models.ConfigBackup
 	var total int64
 
@@ -424,9 +426,19 @@ func (s *ConfigBackupService) GetBackupList(ctx context.Context, current, pageSi
 		return nil, 0, fmt.Errorf("查询备份记录总数失败: %w", err)
 	}
 
-	// 分页查询
+	// 分页查询 - 用户排序(白名单)优先,无 OrderByColumn 时保留 created_at DESC 默认
 	offset := (current - 1) * pageSize
-	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&backups).Error; err != nil {
+	sortReq := base.BaseListRequest{
+		Current:       current,
+		PageSize:      pageSize,
+		OrderByColumn: orderByColumn,
+		IsAsc:         isAsc,
+	}
+	query = base.ApplySort(query, sortReq, configBackupAllowedSortFields)
+	if orderByColumn == "" {
+		query = query.Order("created_at DESC")
+	}
+	if err := query.Offset(offset).Limit(pageSize).Find(&backups).Error; err != nil {
 		return nil, 0, fmt.Errorf("查询备份记录失败: %w", err)
 	}
 
@@ -446,6 +458,14 @@ func (s *ConfigBackupService) GetBackupList(ctx context.Context, current, pageSi
 	}
 
 	return result, total, nil
+}
+
+// configBackupAllowedSortFields 配置备份可排序字段白名单(对应 sys_config_backup 表列名)。
+var configBackupAllowedSortFields = map[string]string{
+	"deviceId":  "device_id",
+	"version":   "version",
+	"status":    "status",
+	"createdAt": "created_at",
 }
 
 // GetBackupByID 获取备份详情

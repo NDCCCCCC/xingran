@@ -60,7 +60,7 @@ func (h *BackupHandler) List(c *gin.Context) {
 		deviceID = val
 	}
 
-	backups, total, err := h.backupService.GetBackupList(c.Request.Context(), current, pageSize, deviceID)
+	backups, total, err := h.backupService.GetBackupList(c.Request.Context(), current, pageSize, deviceID, getOrderByColumn(rawReq), getIsAscPtr(rawReq))
 	if err != nil {
 		response.Error(c, apperrors.InternalServerError(err))
 		return

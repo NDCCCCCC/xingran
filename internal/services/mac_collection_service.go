@@ -11,6 +11,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/lldp"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/topology"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
@@ -450,7 +451,8 @@ type MACAddressResponse struct {
 }
 
 // GetMACAddressList 获取MAC地址列表
-func (s *MACCollectionService) GetMACAddressList(ctx context.Context, current, pageSize int, deviceID, macAddress, interfaceName string) ([]MACAddressResponse, int64, error) {
+// orderByColumn/isAsc 为服务端排序参数(可选,透传给 base.ApplySort 白名单)。
+func (s *MACCollectionService) GetMACAddressList(ctx context.Context, current, pageSize int, deviceID, macAddress, interfaceName string, orderByColumn string, isAsc *bool) ([]MACAddressResponse, int64, error) {
 	var total int64
 
 	// 构建基础查询（用于计数）
@@ -495,10 +497,20 @@ func (s *MACCollectionService) GetMACAddressList(ctx context.Context, current, p
 	}
 
 	var results []macWithDeviceName
+	// 用户排序(白名单,带表别名)优先,无 OrderByColumn 时保留原默认
+	sortReq := base.BaseListRequest{
+		Current:       current,
+		PageSize:      pageSize,
+		OrderByColumn: orderByColumn,
+		IsAsc:         isAsc,
+	}
+	joinQuery = base.ApplySort(joinQuery, sortReq, macAddressAllowedSortFields)
+	if orderByColumn == "" {
+		joinQuery = joinQuery.Order("sys_device_mac_address.collected_at DESC")
+	}
 	if err := joinQuery.
 		Offset(offset).
 		Limit(pageSize).
-		Order("sys_device_mac_address.collected_at DESC").
 		Find(&results).Error; err != nil {
 		return nil, 0, fmt.Errorf("查询MAC地址列表失败: %w", err)
 	}
@@ -520,6 +532,15 @@ func (s *MACCollectionService) GetMACAddressList(ctx context.Context, current, p
 	}
 
 	return response, total, nil
+}
+
+// macAddressAllowedSortFields MAC地址可排序字段白名单(对应 sys_device_mac_address 表列名)。
+var macAddressAllowedSortFields = map[string]string{
+	"deviceId":      "sys_device_mac_address.device_id",
+	"macAddress":    "sys_device_mac_address.mac_address",
+	"interfaceName": "sys_device_mac_address.interface_name",
+	"vlanId":        "sys_device_mac_address.vlan_id",
+	"collectedAt":   "sys_device_mac_address.collected_at",
 }
 
 // GetMACAddressStats 获取MAC地址统计信息

@@ -150,7 +150,7 @@ func (h *CommandHandler) List(c *gin.Context) {
 	current := getIntField(rawReq, "current", 1)
 	pageSize := getIntField(rawReq, "pageSize", 10)
 
-	executions, total, err := h.commandService.GetExecutionList(c.Request.Context(), current, pageSize)
+	executions, total, err := h.commandService.GetExecutionList(c.Request.Context(), current, pageSize, getOrderByColumn(rawReq), getIsAscPtr(rawReq))
 	if err != nil {
 		response.Error(c, apperrors.InternalServerError(err))
 		return

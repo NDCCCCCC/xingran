@@ -253,8 +253,9 @@ func (s *ADDomainService) GetADGroupList(ctx context.Context, req *ADGroupListRe
 }
 
 // GetADSyncLogList 获取同步日志列表（兼容旧API）
-func (s *ADDomainService) GetADSyncLogList(ctx context.Context, configID string, current, pageSize int) ([]models.ADSyncLog, int64, error) {
-	return s.Log.GetList(ctx, configID, current, pageSize)
+// orderByColumn/isAsc 为服务端排序参数(可选,透传给底层 ApplySort 白名单)。
+func (s *ADDomainService) GetADSyncLogList(ctx context.Context, configID string, current, pageSize int, orderByColumn string, isAsc *bool) ([]models.ADSyncLog, int64, error) {
+	return s.Log.GetList(ctx, configID, current, pageSize, orderByColumn, isAsc)
 }
 
 // GetADGroupMembers 获取AD用户组成员（兼容旧API）

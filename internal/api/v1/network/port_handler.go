@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
@@ -13,8 +14,7 @@ import (
 
 // PortStatusListRequest 端口状态列表请求
 type PortStatusListRequest struct {
-	Current             int    `json:"current" binding:"min=1"`
-	PageSize            int    `json:"pageSize" binding:"min=1,max=1000"`
+	base.BaseListRequest
 	DeviceID            string `json:"deviceId,omitempty"`
 	InterfaceName       string `json:"interfaceName,omitempty"`
 	AdminStatus         string `json:"adminStatus,omitempty"`
@@ -67,8 +67,7 @@ func (h *PortHandler) List(c *gin.Context) {
 
 	svc := portcollection.NewPortCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
 	portStatuses, total, err := svc.Query.GetList(c.Request.Context(), &portcollection.ListRequest{
-		Current:             req.Current,
-		PageSize:            req.PageSize,
+		BaseListRequest:     req.BaseListRequest,
 		DeviceID:            req.DeviceID,
 		InterfaceName:       req.InterfaceName,
 		AdminStatus:         req.AdminStatus,

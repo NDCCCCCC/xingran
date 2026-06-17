@@ -662,15 +662,17 @@ func (h *ADDomainHandler) DisableUser(c *gin.Context) {
 // @Router /system/ad-domain/sync-logs/list [post]
 func (h *ADDomainHandler) ListSyncLogs(c *gin.Context) {
 	var req struct {
-		ConfigID string `json:"configId,omitempty"`
-		Current  int    `json:"current"`
-		PageSize int    `json:"pageSize"`
+		ConfigID      string `json:"configId,omitempty"`
+		Current       int    `json:"current"`
+		PageSize      int    `json:"pageSize"`
+		OrderByColumn string `json:"orderByColumn,omitempty"`
+		IsAsc         *bool  `json:"isAsc,omitempty"`
 	}
 	_ = c.ShouldBindJSON(&req)
 
 	h.setDefaultPagination(&req.Current, &req.PageSize)
 
-	list, total, err := h.service.GetADSyncLogList(c.Request.Context(), req.ConfigID, req.Current, req.PageSize)
+	list, total, err := h.service.GetADSyncLogList(c.Request.Context(), req.ConfigID, req.Current, req.PageSize, req.OrderByColumn, req.IsAsc)
 	if err != nil {
 		response.Error(c, err)
 		return

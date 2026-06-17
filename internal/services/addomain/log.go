@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -23,7 +24,8 @@ func NewLogService(db interface {
 }
 
 // GetList 获取同步日志列表
-func (s *LogService) GetList(ctx context.Context, configID string, current, pageSize int) ([]models.ADSyncLog, int64, error) {
+// orderByColumn/isAsc 为服务端排序参数(可选,透传给 base.ApplySort 白名单)。
+func (s *LogService) GetList(ctx context.Context, configID string, current, pageSize int, orderByColumn string, isAsc *bool) ([]models.ADSyncLog, int64, error) {
 	var logs []models.ADSyncLog
 	var total int64
 
@@ -48,10 +50,31 @@ func (s *LogService) GetList(ctx context.Context, configID string, current, page
 	}
 
 	offset := (current - 1) * pageSize
-	err := query.Offset(offset).Limit(pageSize).Order("start_time DESC").Find(&logs).Error
+	// 用户排序(白名单)优先,无 OrderByColumn 时保留 start_time DESC 默认
+	sortReq := base.BaseListRequest{
+		Current:       current,
+		PageSize:      pageSize,
+		OrderByColumn: orderByColumn,
+		IsAsc:         isAsc,
+	}
+	query = base.ApplySort(query, sortReq, adSyncLogAllowedSortFields)
+	if orderByColumn == "" {
+		query = query.Order("start_time DESC")
+	}
+	err := query.Offset(offset).Limit(pageSize).Find(&logs).Error
 	if err != nil {
 		return nil, 0, fmt.Errorf("查询同步日志失败: %w", err)
 	}
 
 	return logs, total, nil
+}
+
+// adSyncLogAllowedSortFields AD同步日志可排序字段白名单(对应 sys_ad_sync_log 表列名)。
+var adSyncLogAllowedSortFields = map[string]string{
+	"adConfigId": "ad_config_id",
+	"syncType":   "sync_type",
+	"status":     "status",
+	"startTime":  "start_time",
+	"endTime":    "end_time",
+	"createdAt":  "created_at",
 }

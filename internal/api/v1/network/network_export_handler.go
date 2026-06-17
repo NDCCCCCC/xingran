@@ -250,7 +250,7 @@ func (h *NetworkExportHandler) ExportCommands(c *gin.Context) {
 	svc := services.NewCommandDispatchService(db, h.core.DeviceExecutor)
 	current, pageSize := h.getPaginationParams(&req)
 
-	records, _, err := svc.GetExecutionList(c.Request.Context(), current, pageSize)
+	records, _, err := svc.GetExecutionList(c.Request.Context(), current, pageSize, "", nil)
 	if err != nil {
 		response.Error(c, response.ErrServerError, err.Error())
 		return
@@ -303,7 +303,7 @@ func (h *NetworkExportHandler) ExportExecutions(c *gin.Context) {
 	svc := services.NewConfigExecutionService(db, h.core.DeviceExecutor)
 	current, pageSize := h.getPaginationParams(&req)
 
-	records, _, err := svc.GetExecutionList(c.Request.Context(), current, pageSize)
+	records, _, err := svc.GetExecutionList(c.Request.Context(), current, pageSize, "", nil)
 	if err != nil {
 		response.Error(c, response.ErrServerError, err.Error())
 		return
@@ -363,7 +363,7 @@ func (h *NetworkExportHandler) ExportBackups(c *gin.Context) {
 		}
 	}
 
-	records, _, err := svc.GetBackupList(c.Request.Context(), current, pageSize, deviceID)
+	records, _, err := svc.GetBackupList(c.Request.Context(), current, pageSize, deviceID, "", nil)
 	if err != nil {
 		response.Error(c, response.ErrServerError, err.Error())
 		return
@@ -423,7 +423,7 @@ func (h *NetworkExportHandler) ExportDiscoveries(c *gin.Context) {
 	svc := h.core.DeviceDiscoveryService
 	current, pageSize := h.getPaginationParams(&req)
 
-	records, _, err := svc.GetDiscoveryList(c.Request.Context(), current, pageSize)
+	records, _, err := svc.GetDiscoveryList(c.Request.Context(), current, pageSize, "", nil)
 	if err != nil {
 		response.Error(c, response.ErrServerError, err.Error())
 		return
@@ -499,7 +499,7 @@ func (h *NetworkExportHandler) ExportMACAddresses(c *gin.Context) {
 		}
 	}
 
-	records, _, err := svc.GetMACAddressList(c.Request.Context(), current, pageSize, deviceID, macAddress, interfaceName)
+	records, _, err := svc.GetMACAddressList(c.Request.Context(), current, pageSize, deviceID, macAddress, interfaceName, "", nil)
 	if err != nil {
 		response.Error(c, response.ErrServerError, err.Error())
 		return

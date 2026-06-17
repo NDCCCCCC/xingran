@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/lldp"
 	networkServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/network"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
@@ -253,7 +254,7 @@ func (h *NetworkExportHandler) generateEntityExcel(entityType string, req Export
 		headers = []string{"执行名称", "状态", "设备总数", "成功数", "失败数", "执行策略", "并发数", "超时(秒)", "开始时间", "完成时间", "错误信息", "创建人", "创建时间"}
 
 		svc := services.NewCommandDispatchService(db, h.core.DeviceExecutor)
-		records, _, err := svc.GetExecutionList(ctx, current, pageSize)
+		records, _, err := svc.GetExecutionList(ctx, current, pageSize, "", nil)
 		if err != nil {
 			return nil, err
 		}
@@ -278,7 +279,7 @@ func (h *NetworkExportHandler) generateEntityExcel(entityType string, req Export
 		headers = []string{"执行名称", "状态", "设备总数", "成功数", "失败数", "执行策略", "并发数", "超时(秒)", "开始时间", "完成时间", "错误信息", "创建人", "创建时间"}
 
 		svc := services.NewConfigExecutionService(db, h.core.DeviceExecutor)
-		records, _, err := svc.GetExecutionList(ctx, current, pageSize)
+		records, _, err := svc.GetExecutionList(ctx, current, pageSize, "", nil)
 		if err != nil {
 			return nil, err
 		}
@@ -311,7 +312,7 @@ func (h *NetworkExportHandler) generateEntityExcel(entityType string, req Export
 			}
 		}
 
-		records, _, err := svc.GetBackupList(ctx, current, pageSize, deviceID)
+		records, _, err := svc.GetBackupList(ctx, current, pageSize, deviceID, "", nil)
 		if err != nil {
 			return nil, err
 		}
@@ -344,7 +345,7 @@ func (h *NetworkExportHandler) generateEntityExcel(entityType string, req Export
 		headers = []string{"任务名称", "发现类型", "状态", "IP总数", "已发现数", "自动导入", "SNMP团体名", "SNMP端口", "开始时间", "完成时间", "错误信息", "创建人", "创建时间"}
 
 		svc := h.core.DeviceDiscoveryService
-		records, _, err := svc.GetDiscoveryList(ctx, current, pageSize)
+		records, _, err := svc.GetDiscoveryList(ctx, current, pageSize, "", nil)
 		if err != nil {
 			return nil, err
 		}
@@ -394,7 +395,7 @@ func (h *NetworkExportHandler) generateEntityExcel(entityType string, req Export
 			}
 		}
 
-		records, _, err := svc.GetMACAddressList(ctx, current, pageSize, deviceID, macAddress, interfaceName)
+		records, _, err := svc.GetMACAddressList(ctx, current, pageSize, deviceID, macAddress, interfaceName, "", nil)
 		if err != nil {
 			return nil, err
 		}
@@ -413,8 +414,10 @@ func (h *NetworkExportHandler) generateEntityExcel(entityType string, req Export
 		portSvc := portcollection.NewPortCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor)
 
 		portReq := &portcollection.ListRequest{
-			Current:  current,
-			PageSize: pageSize,
+			BaseListRequest: base.BaseListRequest{
+				Current:  current,
+				PageSize: pageSize,
+			},
 		}
 		if req.Filters != nil {
 			if v, ok := req.Filters["deviceId"].(string); ok {

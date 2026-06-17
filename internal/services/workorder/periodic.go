@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/robfig/cron/v3"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -25,10 +26,18 @@ func NewPeriodicService(db *gorm.DB) *PeriodicService {
 
 // PeriodicTemplateListRequest 周期性工单模板列表请求
 type PeriodicTemplateListRequest struct {
-	Current   int    `json:"current"`
-	PageSize  int    `json:"pageSize"`
+	base.BaseListRequest
 	Title     string `json:"title"`
 	IsEnabled *bool  `json:"isEnabled"`
+}
+
+// periodicTemplateAllowedSortFields 周期性工单模板可排序字段白名单。
+var periodicTemplateAllowedSortFields = map[string]string{
+	"title":       "template_name",
+	"isEnabled":   "is_enabled",
+	"cronExpr":    "cron_expression",
+	"createdAt":   "created_at",
+	"updatedAt":   "updated_at",
 }
 
 // GetTemplateList 获取周期性工单模板列表
@@ -59,9 +68,13 @@ func (s *PeriodicService) GetTemplateList(ctx context.Context, req *PeriodicTemp
 	}
 	offset := (current - 1) * pageSize
 
+	// 用户排序(白名单)优先,无 OrderByColumn 时保留 created_at DESC 默认
+	query = base.ApplySort(query, req.BaseListRequest, periodicTemplateAllowedSortFields)
+	if req.OrderByColumn == "" {
+		query = query.Order("created_at DESC")
+	}
 	if err := query.
 		Preload("Category").
-		Order("created_at DESC").
 		Limit(pageSize).
 		Offset(offset).
 		Find(&list).Error; err != nil {

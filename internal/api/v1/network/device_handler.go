@@ -291,3 +291,21 @@ func getIntField(m map[string]interface{}, key string, defaultValue int) int {
 	}
 	return defaultValue
 }
+
+// getOrderByColumn 从map中获取 orderByColumn 字符串字段,无值返回 ""。
+// 用于服务端排序白名单透传,详见 internal/services/base/list_request.go。
+func getOrderByColumn(m map[string]interface{}) string {
+	if val, ok := m["orderByColumn"].(string); ok {
+		return val
+	}
+	return ""
+}
+
+// getIsAscPtr 从map中获取 isAsc 布尔字段,返回 *bool 指针(nil 表示未传)。
+// Service 层用 *bool 区分"未传(nil)" vs "传了 true/false" 三态。
+func getIsAscPtr(m map[string]interface{}) *bool {
+	if val, ok := m["isAsc"].(bool); ok {
+		return &val
+	}
+	return nil
+}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -21,8 +22,7 @@ func NewBaseService(db *gorm.DB) *BaseService {
 
 // ListRequest 工单列表查询请求
 type ListRequest struct {
-	Current     int    `json:"current"`
-	PageSize    int    `json:"pageSize"`
+	base.BaseListRequest
 	WorkOrderNo string `json:"workOrderNo"`
 	Title       string `json:"title"`
 	CategoryID  string `json:"categoryId"`
@@ -95,13 +95,18 @@ func (s *BaseService) GetList(ctx context.Context, req *ListRequest) ([]models.W
 
 	offset := (current - 1) * pageSize
 
+	// 用户排序(白名单)优先,无 OrderByColumn 时保留 created_at DESC 默认
+	query = base.ApplySort(query, req.BaseListRequest, workOrderAllowedSortFields)
+	if req.OrderByColumn == "" {
+		query = query.Order("created_at DESC")
+	}
+
 	// 预加载关联数据
 	if err := query.
 		Preload("Category").
 		Preload("Submitter").
 		Preload("Assignee").
 		Preload("Dept").
-		Order("created_at DESC").
 		Limit(pageSize).
 		Offset(offset).
 		Find(&list).Error; err != nil {
@@ -109,6 +114,21 @@ func (s *BaseService) GetList(ctx context.Context, req *ListRequest) ([]models.W
 	}
 
 	return list, total, nil
+}
+
+// workOrderAllowedSortFields 工单可排序字段白名单(对应 work_order 表列名)。
+var workOrderAllowedSortFields = map[string]string{
+	"workOrderNo":  "work_order_no",
+	"title":        "title",
+	"categoryId":   "category_id",
+	"type":         "type",
+	"priority":     "priority",
+	"status":       "status",
+	"submitterId":  "submitter_id",
+	"assigneeId":   "assignee_id",
+	"createdAt":    "created_at",
+	"updatedAt":    "updated_at",
+	"completedAt":  "completed_at",
 }
 
 // GetMyPendingRequest 获取待办工单请求

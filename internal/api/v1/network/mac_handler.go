@@ -9,12 +9,12 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 	responseHelpers "github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 )
 
 // MACAddressListRequest MAC地址列表请求
 type MACAddressListRequest struct {
-	Current       int    `json:"current" binding:"min=1"`
-	PageSize      int    `json:"pageSize" binding:"min=1,max=100"`
+	base.BaseListRequest
 	DeviceID      string `json:"deviceId,omitempty"`
 	MACAddress    string `json:"macAddress,omitempty"`
 	InterfaceName string `json:"interfaceName,omitempty"`
@@ -61,7 +61,8 @@ func (h *MACHandler) List(c *gin.Context) {
 	filterRuleSvc := topology.NewFilterRuleService(h.core.DB.GetDB())
 	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc, filterRuleSvc)
 	macAddrs, total, err := svc.GetMACAddressList(c.Request.Context(), req.Current, req.PageSize,
-		req.DeviceID, req.MACAddress, req.InterfaceName)
+		req.DeviceID, req.MACAddress, req.InterfaceName,
+		req.OrderByColumn, req.IsAsc)
 	if !responseHelpers.HandleServiceError(c, err, "获取MAC地址列表") {
 		return
 	}

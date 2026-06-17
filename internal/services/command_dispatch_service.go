@@ -8,6 +8,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 )
@@ -301,7 +302,8 @@ func (s *CommandDispatchService) QuickCommand(ctx context.Context, deviceID, com
 }
 
 // GetExecutionList 获取执行列表
-func (s *CommandDispatchService) GetExecutionList(ctx context.Context, current, pageSize int) ([]models.ConfigExecution, int64, error) {
+// orderByColumn/isAsc 为服务端排序参数(可选,透传给 base.ApplySort 白名单)。
+func (s *CommandDispatchService) GetExecutionList(ctx context.Context, current, pageSize int, orderByColumn string, isAsc *bool) ([]models.ConfigExecution, int64, error) {
 	var executions []models.ConfigExecution
 	var total int64
 
@@ -312,11 +314,31 @@ func (s *CommandDispatchService) GetExecutionList(ctx context.Context, current, 
 		return nil, 0, fmt.Errorf("查询执行记录总数失败: %w", err)
 	}
 
-	// 分页查询
+	// 分页查询 - 用户排序(白名单)优先,无 OrderByColumn 时保留 created_at DESC 默认
 	offset := (current - 1) * pageSize
-	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&executions).Error; err != nil {
+	sortReq := base.BaseListRequest{
+		Current:       current,
+		PageSize:      pageSize,
+		OrderByColumn: orderByColumn,
+		IsAsc:         isAsc,
+	}
+	query = base.ApplySort(query, sortReq, commandExecutionAllowedSortFields)
+	if orderByColumn == "" {
+		query = query.Order("created_at DESC")
+	}
+	if err := query.Offset(offset).Limit(pageSize).Find(&executions).Error; err != nil {
 		return nil, 0, fmt.Errorf("查询执行记录失败: %w", err)
 	}
 
 	return executions, total, nil
+}
+
+// commandExecutionAllowedSortFields 命令执行记录可排序字段白名单(对应 sys_config_execution 表列名)。
+var commandExecutionAllowedSortFields = map[string]string{
+	"deviceId":     "device_id",
+	"commandId":    "command_id",
+	"status":       "status",
+	"startTime":    "start_time",
+	"endTime":      "end_time",
+	"createdAt":    "created_at",
 }

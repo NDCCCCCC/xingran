@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -50,7 +51,12 @@ func (s *QueryService) GetList(ctx context.Context, req *ListRequest) ([]models.
 	}
 
 	offset := (req.Current - 1) * req.PageSize
-	if err := query.Offset(offset).Limit(req.PageSize).Order("collected_at DESC").Find(&portStatuses).Error; err != nil {
+	// 用户排序(白名单)优先,无 OrderByColumn 时保留 collected_at DESC 默认
+	query = base.ApplySort(query, req.BaseListRequest, portStatusAllowedSortFields)
+	if req.OrderByColumn == "" {
+		query = query.Order("collected_at DESC")
+	}
+	if err := query.Offset(offset).Limit(req.PageSize).Find(&portStatuses).Error; err != nil {
 		return nil, 0, fmt.Errorf("查询端口状态列表失败: %w", err)
 	}
 
@@ -94,14 +100,22 @@ func (s *QueryService) CleanOldRecords(ctx context.Context, days int) (int64, er
 
 // ListRequest 查询请求
 type ListRequest struct {
-	Current             int    `json:"current"`
-	PageSize            int    `json:"pageSize"`
+	base.BaseListRequest
 	DeviceID            string `json:"deviceId"`
 	InterfaceName       string `json:"interfaceName"`
 	AdminStatus         string `json:"adminStatus"`
 	OperStatus          string `json:"operStatus"`
 	Dot1xEnabled        *bool  `json:"dot1xEnabled"`
 	PortSecurityEnabled *bool  `json:"portSecurityEnabled"`
+}
+
+// portStatusAllowedSortFields 端口状态可排序字段白名单(对应 sys_device_port_status 表列名)。
+var portStatusAllowedSortFields = map[string]string{
+	"deviceId":      "device_id",
+	"interfaceName": "interface_name",
+	"adminStatus":   "admin_status",
+	"operStatus":    "oper_status",
+	"collectedAt":   "collected_at",
 }
 
 // StatsResult 统计结果

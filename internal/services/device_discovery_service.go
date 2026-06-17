@@ -11,6 +11,7 @@ import (
 	"github.com/gosnmp/gosnmp"
 	devicepkg "github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -323,7 +324,7 @@ func (s *DeviceDiscoveryService) discoverByScan(_ context.Context, task *models.
 }
 
 // GetDiscoveryList 获取发现任务列表
-func (s *DeviceDiscoveryService) GetDiscoveryList(ctx context.Context, current, pageSize int) ([]models.DeviceDiscovery, int64, error) {
+func (s *DeviceDiscoveryService) GetDiscoveryList(ctx context.Context, current, pageSize int, orderByColumn string, isAsc *bool) ([]models.DeviceDiscovery, int64, error) {
 	var tasks []models.DeviceDiscovery
 	var total int64
 
@@ -334,13 +335,31 @@ func (s *DeviceDiscoveryService) GetDiscoveryList(ctx context.Context, current, 
 		return nil, 0, fmt.Errorf("查询发现任务总数失败: %w", err)
 	}
 
-	// 分页查询
+	// 分页查询 - 用户排序(白名单)优先,无 OrderByColumn 时保留 created_at DESC 默认
 	offset := (current - 1) * pageSize
-	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&tasks).Error; err != nil {
+	sortReq := base.BaseListRequest{
+		Current:       current,
+		PageSize:      pageSize,
+		OrderByColumn: orderByColumn,
+		IsAsc:         isAsc,
+	}
+	query = base.ApplySort(query, sortReq, deviceDiscoveryAllowedSortFields)
+	if orderByColumn == "" {
+		query = query.Order("created_at DESC")
+	}
+	if err := query.Offset(offset).Limit(pageSize).Find(&tasks).Error; err != nil {
 		return nil, 0, fmt.Errorf("查询发现任务失败: %w", err)
 	}
 
 	return tasks, total, nil
+}
+
+// deviceDiscoveryAllowedSortFields 设备发现任务可排序字段白名单。
+var deviceDiscoveryAllowedSortFields = map[string]string{
+	"taskName":  "task_name",
+	"status":    "status",
+	"ipRange":   "ip_range",
+	"createdAt": "created_at",
 }
 
 // GetDiscoveryByID 获取发现任务详情

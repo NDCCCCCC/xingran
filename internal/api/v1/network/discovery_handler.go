@@ -74,7 +74,7 @@ func (h *DiscoveryHandler) List(c *gin.Context) {
 	current := getIntField(rawReq, "current", 1)
 	pageSize := getIntField(rawReq, "pageSize", 10)
 
-	tasks, total, err := h.discoveryService.GetDiscoveryList(c.Request.Context(), current, pageSize)
+	tasks, total, err := h.discoveryService.GetDiscoveryList(c.Request.Context(), current, pageSize, getOrderByColumn(rawReq), getIsAscPtr(rawReq))
 	if err != nil {
 		response.Error(c, apperrors.InternalServerError(err))
 		return
