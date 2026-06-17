@@ -11,6 +11,7 @@ import { getWorkOrderStatistics, type WorkOrderStatistics } from "@/lib/workorde
 import { WorkOrderPriority } from "@/lib/workorderApi";
 
 import type { FC } from "react";
+import { createSorter } from "@/utils/tableHelpers";
 
 const WorkOrderStatisticsPage: FC = () => {
   const [loading, setLoading] = useState(false);
@@ -33,22 +34,23 @@ const WorkOrderStatisticsPage: FC = () => {
   }, []);
 
   const assigneeColumns: ColumnsType<{ assigneeName: string; assigneeId: string; totalCount: number; pendingCount: number; doneCount: number; avgProcessTime: number }> = [
-    { title: "处理人", dataIndex: "assigneeName", key: "assigneeName" },
-    { title: "总工单", dataIndex: "totalCount", key: "totalCount" },
-    { title: "待处理", dataIndex: "pendingCount", key: "pendingCount" },
-    { title: "已完成", dataIndex: "doneCount", key: "doneCount" },
+    { title: "处理人", dataIndex: "assigneeName", key: "assigneeName", sorter: createSorter<{ assigneeName: string; assigneeId: string; totalCount: number; pendingCount: number; doneCount: number; avgProcessTime: number }>('assigneeName', 'string') },
+    { title: "总工单", dataIndex: "totalCount", key: "totalCount", sorter: createSorter<{ assigneeName: string; assigneeId: string; totalCount: number; pendingCount: number; doneCount: number; avgProcessTime: number }>('totalCount', 'number') },
+    { title: "待处理", dataIndex: "pendingCount", key: "pendingCount", sorter: createSorter<{ assigneeName: string; assigneeId: string; totalCount: number; pendingCount: number; doneCount: number; avgProcessTime: number }>('pendingCount', 'number') },
+    { title: "已完成", dataIndex: "doneCount", key: "doneCount", sorter: createSorter<{ assigneeName: string; assigneeId: string; totalCount: number; pendingCount: number; doneCount: number; avgProcessTime: number }>('doneCount', 'number') },
     {
       title: "平均处理时间",
       dataIndex: "avgProcessTime",
       key: "avgProcessTime",
+      sorter: createSorter<{ assigneeName: string; assigneeId: string; totalCount: number; pendingCount: number; doneCount: number; avgProcessTime: number }>('avgProcessTime', 'number'),
       render: (time: number) => `${time.toFixed(1)} 小时`,
     },
   ];
 
   const departmentColumns: ColumnsType<{ deptName: string; deptId: string; totalCount: number; doneCount: number }> = [
-    { title: "部门", dataIndex: "deptName", key: "deptName" },
-    { title: "总工单", dataIndex: "totalCount", key: "totalCount" },
-    { title: "已完成", dataIndex: "doneCount", key: "doneCount" },
+    { title: "部门", dataIndex: "deptName", key: "deptName", sorter: createSorter<{ deptName: string; deptId: string; totalCount: number; doneCount: number }>('deptName', 'string') },
+    { title: "总工单", dataIndex: "totalCount", key: "totalCount", sorter: createSorter<{ deptName: string; deptId: string; totalCount: number; doneCount: number }>('totalCount', 'number') },
+    { title: "已完成", dataIndex: "doneCount", key: "doneCount", sorter: createSorter<{ deptName: string; deptId: string; totalCount: number; doneCount: number }>('doneCount', 'number') },
   ];
 
   const priorityConfig = {

@@ -1,14 +1,100 @@
 import { Tag, Button, Space } from "antd";
 import type { ColumnsType, ColumnType, ColumnGroupType } from "antd/es/table";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
 import { formatDateTime } from "@/utils/datetime";
 
+/**
+ * Sorter 类型：标识字段的排序语义
+ * - string:  按本地化字符串比较（支持中英文）
+ * - number:  按数字比较
+ * - date:    按 dayjs 解析后的时间戳比较（兼容字符串/Date/dayjs 对象）
+ * - boolean: true 排在前
+ * - custom:  使用传入的 compareFn
+ */
+export type SorterType = "string" | "number" | "date" | "boolean" | "custom";
+
+/**
+ * 通用 sorter 工厂
+ *
+ * 用法：
+ *   sorter: createSorter("name", "string")
+ *   sorter: createSorter("createdAt", "date")
+ *   sorter: createSorter("status", "number")
+ *   sorter: createSorter("isActive", "boolean")
+ *   sorter: createSorter("priority", "custom", (a, b) => ...)
+ *
+ * 设计原则：
+ * 1. 默认安全 — 字段缺失/为 null/undefined 时按 0/空串处理（不抛错）
+ * 2. 多语言 — 字符串比较走 localeCompare(zh-Hans-CN)
+ * 3. 时间 — 优先 dayjs(...).valueOf()，解析失败回退 NaN 排序末端
+ */
+export function createSorter<T = unknown>(
+  field: string,
+  type: SorterType = "string",
+  compareFn?: (a: T, b: T) => number
+) {
+  return (a: T, b: T): number => {
+    if (type === "custom") {
+      if (!compareFn) return 0;
+      return compareFn(a, b);
+    }
+
+    const av = (a as Record<string, unknown>)[field];
+    const bv = (b as Record<string, unknown>)[field];
+
+    // null/undefined 统一排到末端
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;
+    if (bv == null) return -1;
+
+    switch (type) {
+      case "number": {
+        const an = Number(av);
+        const bn = Number(bv);
+        if (Number.isNaN(an) && Number.isNaN(bn)) return 0;
+        if (Number.isNaN(an)) return 1;
+        if (Number.isNaN(bn)) return -1;
+        return an - bn;
+      }
+      case "date": {
+        const at = dayjs(av as dayjs.ConfigType);
+        const bt = dayjs(bv as dayjs.ConfigType);
+        if (!at.isValid() && !bt.isValid()) return 0;
+        if (!at.isValid()) return 1;
+        if (!bt.isValid()) return -1;
+        return at.valueOf() - bt.valueOf();
+      }
+      case "boolean": {
+        const ab = Boolean(av);
+        const bb = Boolean(bv);
+        if (ab === bb) return 0;
+        return ab ? -1 : 1; // true 优先
+      }
+      case "string":
+      default: {
+        const as = String(av);
+        const bs = String(bv);
+        return as.localeCompare(bs, "zh-Hans-CN", { numeric: true, sensitivity: "base" });
+      }
+    }
+  };
+}
+
 export interface ColumnConfig {
-  title: string;
-  dataIndex: string;
+  // 展示态字段（与 antd Table 列对齐）
+  title?: string;
+  dataIndex?: string;
   key: string;
   width?: number;
   align?: "left" | "center" | "right";
+  sorter?: ((a: any, b: any) => number) | boolean;
+
+  // 配置态字段（ColumnConfigModal 使用,允许用户配置列的展示/隐藏/排序/分组）
+  label?: string;
+  visible?: boolean;
+  order?: number;
+  group?: string;
 }
 
 // 使用更宽松的类型约束，同时保持类型安全

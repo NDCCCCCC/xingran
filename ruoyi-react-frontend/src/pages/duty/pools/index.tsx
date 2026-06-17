@@ -1,11 +1,12 @@
-﻿import { useState, useEffect } from "react";
-import type { FC } from "react";
-import { Button, Form, Input, Select, Table, Modal, InputNumber, Space, Tag, message, Card, Statistic, Row, Col } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined, TeamOutlined, UserOutlined } from "@ant-design/icons";
-import type { ColumnsType } from "antd/es/table";
-import { formatDateTime } from "@/utils/datetime";
-import { usePagination } from "@/hooks/usePagination";
-import { DepartmentTreeSelect } from "@/components/shared";
+﻿import { useState, useEffect } from 'react';
+import type { FC } from 'react';
+import { Button, Form, Input, Select, Table, Modal, InputNumber, Space, Tag, message, Card, Statistic, Row, Col } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
+import { formatDateTime } from '@/utils/datetime';
+import { createSorter } from '@/utils/tableHelpers';
+import { usePagination } from '@/hooks/usePagination';
+import { DepartmentTreeSelect } from '@/components/shared';
 import {
   getDutyPoolList,
   createDutyPool,
@@ -18,8 +19,8 @@ import {
   type DutyPoolUpdateRequest,
   type SimpleUser,
   type SimpleDept,
-} from "@/lib/dutyApi";
-import { isFormValidationError } from "@/utils/errorHandler";
+} from '@/lib/dutyApi';
+import { isFormValidationError } from '@/utils/errorHandler';
 
 const { Option } = Select;
 
@@ -41,7 +42,7 @@ const DutyPoolPage: FC = () => {
 
   // 统一错误处理
   const handleApiError = (error: unknown, defaultMessage: string) => {
-    if (error && typeof error === "object" && "message" in error) {
+    if (error && typeof error === 'object' && 'message' in error) {
       message.error(error.message as string);
     } else {
       message.error(defaultMessage);
@@ -133,7 +134,7 @@ const DutyPoolPage: FC = () => {
         totalMembers: list.reduce((sum, p) => sum + (p.members?.length || 0), 0),
       });
     } catch (error) {
-      handleApiError(error, "获取值班池列表失败");
+      handleApiError(error, '获取值班池列表失败');
     } finally {
       setLoading(false);
     }
@@ -145,7 +146,7 @@ const DutyPoolPage: FC = () => {
       const result = await getUserList({ status: 0 }); // 只获取启用状态的用户
       setUsers(result.data?.list || []);
     } catch (error) {
-      console.error("获取用户列表失败:", error);
+      console.error('获取用户列表失败:', error);
     }
   };
 
@@ -155,7 +156,7 @@ const DutyPoolPage: FC = () => {
       const result = await getDeptTree();
       setDepts(result.data || []);
     } catch (error) {
-      console.error("获取部门列表失败:", error);
+      console.error('获取部门列表失败:', error);
     }
   };
 
@@ -213,10 +214,10 @@ const DutyPoolPage: FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await deleteDutyPool(id);
-      handleSuccess("删除成功");
+      handleSuccess('删除成功');
       fetchList(paginationProps.current, paginationProps.pageSize);
     } catch (error) {
-      handleApiError(error, "删除失败");
+      handleApiError(error, '删除失败');
     }
   };
 
@@ -232,7 +233,7 @@ const DutyPoolPage: FC = () => {
           memberIds: values.memberIds,
         };
         await updateDutyPool(editingRecord.id, updateData);
-        handleSuccess("更新成功");
+        handleSuccess('更新成功');
       } else {
         const createData: DutyPoolCreateRequest = {
           poolName: values.poolName,
@@ -242,7 +243,7 @@ const DutyPoolPage: FC = () => {
           memberIds: values.memberIds,
         };
         await createDutyPool(createData);
-        handleSuccess("创建成功");
+        handleSuccess('创建成功');
       }
       setModalVisible(false);
       fetchList(paginationProps.current, paginationProps.pageSize);
@@ -251,56 +252,60 @@ const DutyPoolPage: FC = () => {
         // 表单验证错误
         return;
       }
-      handleApiError(error, editingRecord ? "更新失败" : "创建失败");
+      handleApiError(error, editingRecord ? '更新失败' : '创建失败');
     }
   };
 
   const columns: ColumnsType<DutyPool> = [
     {
-      title: "序号",
-      key: "index",
+      title: '序号',
+      key: 'index',
       width: 60,
       render: (_: unknown, __: unknown, index: number) => ((paginationProps.current ?? 1) - 1) * (paginationProps.pageSize ?? 10) + index + 1,
     },
     {
-      title: "值班池名称",
-      dataIndex: "poolName",
-      key: "poolName",
+      title: '值班池名称',
+      dataIndex: 'poolName',
+      key: 'poolName',
       width: 150,
+      sorter: createSorter<DutyPool>('poolName', 'string'),
     },
     {
-      title: "所属部门",
-      dataIndex: "deptId",
-      key: "deptId",
+      title: '所属部门',
+      dataIndex: 'deptId',
+      key: 'deptId',
       width: 120,
+      sorter: createSorter<DutyPool>('deptId', 'string'),
       render: (_: string, record: DutyPool) => {
-        return record.department?.deptName || "-";
+        return record.department?.deptName || '-';
       },
     },
     {
-      title: "成员数量",
-      key: "memberCount",
+      title: '成员数量',
+      key: 'memberCount',
       width: 100,
+      sorter: createSorter<DutyPool>('memberCount', 'number'),
       render: (_: unknown, record: DutyPool) => record.members?.length || 0,
     },
     {
-      title: "每日值班人数",
-      dataIndex: "dailyCount",
-      key: "dailyCount",
+      title: '每日值班人数',
+      dataIndex: 'dailyCount',
+      key: 'dailyCount',
       width: 120,
+      sorter: createSorter<DutyPool>('dailyCount', 'number'),
       render: (count: number) => `${count} 人/天`,
     },
     {
-      title: "成员列表",
-      key: "members",
+      title: '成员列表',
+      key: 'members',
       width: 300,
       render: (_: unknown, record: DutyPool) => {
         const members = record.members || [];
-        if (members.length === 0) return "-";
+        if (members.length === 0) return '-';
         return (
           <Space size={[0, 4]} wrap>
             {members.map((m, i) => (
-              <Tag key={m.id} color={i < record.dailyCount ? "blue" : "default"}>
+              <Tag key={m.id} color={i < record.dailyCount ? 'blue' : 'default'}>
                 {m.user?.nickName || m.user?.username}
               </Tag>
             ))}
@@ -309,33 +314,35 @@ const DutyPoolPage: FC = () => {
       },
     },
     {
-      title: "状态",
-      dataIndex: "status",
-      key: "status",
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
       width: 80,
+      sorter: createSorter<DutyPool>('status', 'number'),
       render: (status: number) => (
-        <Tag color={status === 0 ? "green" : "red"}>{status === 0 ? "启用" : "停用"}</Tag>
+        <Tag color={status === 0 ? 'green' : 'red'}>{status === 0 ? '启用' : '停用'}</Tag>
       ),
     },
     {
-      title: "描述",
-      dataIndex: "description",
-      key: "description",
+      title: '描述',
+      dataIndex: 'description',
+      key: 'description',
       width: 200,
       ellipsis: true,
+      sorter: createSorter<DutyPool>('description', 'string'),
     },
     {
-      title: "创建时间",
-      dataIndex: "createdAt",
-      key: "createdAt",
+      title: '创建时间',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
       width: 160,
-      render: (date: string) => formatDateTime(date, "YYYY-MM-DD HH:mm"),
+      render: (date: string) => formatDateTime(date, 'YYYY-MM-DD HH:mm'),
     },
     {
-      title: "操作",
-      key: "action",
+      title: '操作',
+      key: 'action',
       width: 150,
-      fixed: "right",
+      fixed: 'right',
       render: (_: unknown, record: DutyPool) => (
         <Space>
           <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
@@ -345,12 +352,12 @@ const DutyPoolPage: FC = () => {
             type="link"
             size="small"
             icon={<DeleteOutlined />}
-            style={{ color: "var(--theme-error, #ff4d4f)" }}
+            style={{ color: '#ff4d4f' }}
             onClick={() => {
               Modal.confirm({
-                title: "确定要删除吗？",
-                okText: "确定",
-                cancelText: "取消",
+                title: '确定要删除吗？',
+                okText: '确定',
+                cancelText: '取消',
                 okButtonProps: { danger: true },
                 onOk: () => handleDelete(record.id),
               });
@@ -371,10 +378,10 @@ const DutyPoolPage: FC = () => {
             <Statistic title="总值班池" value={stats.total} prefix={<TeamOutlined />} />
           </Col>
           <Col span={6}>
-            <Statistic title="启用中" value={stats.enabled} styles={{ content: { color: "var(--theme-success, #3f8600)" } }} />
+            <Statistic title="启用中" value={stats.enabled} styles={{ content: { color: '#3f8600' } }} />
           </Col>
           <Col span={6}>
-            <Statistic title="已停用" value={stats.disabled} styles={{ content: { color: "var(--theme-error, #cf1322)" } }} />
+            <Statistic title="已停用" value={stats.disabled} styles={{ content: { color: '#cf1322' } }} />
           </Col>
           <Col span={6}>
             <Statistic title="总成员数" value={stats.totalMembers} prefix={<UserOutlined />} />
@@ -383,7 +390,7 @@ const DutyPoolPage: FC = () => {
       </Card>
 
       <Card title="值班池管理">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="poolName" label="值班池名称">
               <Input placeholder="请输入值班池名称" allowClear className="user-form-input" style={{ width: 150 }} />
@@ -438,7 +445,7 @@ const DutyPoolPage: FC = () => {
       </Card>
 
       <Modal
-        title={editingRecord ? "编辑值班池" : "新增值班池"}
+        title={editingRecord ? '编辑值班池' : '新增值班池'}
         open={modalVisible}
         onOk={handleModalOk}
         afterOpenChange={handleModalOpenChange}
@@ -450,7 +457,7 @@ const DutyPoolPage: FC = () => {
           <Form.Item
             name="poolName"
             label="值班池名称"
-            rules={[{ required: true, message: "请输入值班池名称" }]}
+            rules={[{ required: true, message: '请输入值班池名称' }]}
           >
             <Input placeholder="请输入值班池名称" />
           </Form.Item>
@@ -468,7 +475,7 @@ const DutyPoolPage: FC = () => {
                   setFilteredUsers(users);
                 }
                 // 清空已选择的成员（因为部门已改变）
-                editForm.setFieldValue("memberIds", []);
+                editForm.setFieldValue('memberIds', []);
               }}
             />
           </Form.Item>
@@ -476,25 +483,25 @@ const DutyPoolPage: FC = () => {
           <Form.Item
             name="dailyCount"
             label="每日值班人数"
-            rules={[{ required: true, message: "请输入每日值班人数" }]}
+            rules={[{ required: true, message: '请输入每日值班人数' }]}
           >
-            <InputNumber min={1} max={10} placeholder="请输入每日值班人数" style={{ width: "100%" }} />
+            <InputNumber min={1} max={10} placeholder="请输入每日值班人数" style={{ width: '100%' }} />
           </Form.Item>
 
           <Form.Item
             name="memberIds"
             label="值班成员"
-            rules={[{ required: true, message: "请选择值班成员" }]}
+            rules={[{ required: true, message: '请选择值班成员' }]}
           >
             <Select
               mode="multiple"
-              placeholder={filteredUsers.length === 0 && users.length > 0 ? "请先选择所属部门" : "请选择值班成员"}
+              placeholder={filteredUsers.length === 0 && users.length > 0 ? '请先选择所属部门' : '请选择值班成员'}
               optionLabelProp="label"
               disabled={filteredUsers.length === 0 && users.length > 0}
             >
               {(filteredUsers.length > 0 ? filteredUsers : users).map((user) => (
                 <Option key={user.id} value={user.id} label={user.nickName || user.username}>
-                  {user.username} - {user.nickName} {user.deptName ? `(${user.deptName})` : ""}
+                  {user.username} - {user.nickName} {user.deptName ? `(${user.deptName})` : ''}
                 </Option>
               ))}
             </Select>

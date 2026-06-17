@@ -36,9 +36,9 @@ import { assetApi } from "@/lib/opsApi";
 import ExcelImport from "@/components/shared/ExcelImport";
 import { getAuthHeaders } from "@/utils/authHelpers";
 import { useColumnConfig } from "@/hooks/useColumnConfig";
-import type { ColumnConfig } from "@/hooks/useColumnConfig";
 import { ColumnConfigModal } from "@/components/shared/ColumnConfigModal";
 import { AssetRow } from "@/components/table/AssetRow";
+import { createSorter } from "@/utils/tableHelpers";
 
 const { Option } = Select;
 
@@ -51,13 +51,22 @@ interface Statistics {
 }
 
 // 设备类型选项
+interface AssetColumnConfig {
+  key: string;
+  label: string;
+  visible: boolean;
+  order: number;
+  width: number;
+  group: string;
+}
+
 interface DeviceTypeOption {
   value: string;
   count: number;
 }
 
 // 默认列配置（52 列）
-const defaultAssetColumns: ColumnConfig[] = [
+const defaultAssetColumns: AssetColumnConfig[] = [
   // 核心标识 (3列)
   { key: "devicesn", label: "设备序列号", visible: true, order: 1, width: 150, group: "核心标识" },
   { key: "sequenceNo", label: "序列号", visible: false, order: 2, width: 120, group: "核心标识" },
@@ -315,6 +324,7 @@ const AssetList: FC = () => {
       key: "devicesn",
       width: 150,
       fixed: "left",
+      sorter: createSorter<Asset>('devicesn', 'string'),
       render: (text) => (
         <Tooltip title={text}>
           <span style={{ cursor: "pointer" }}>{text}</span>
@@ -323,51 +333,11 @@ const AssetList: FC = () => {
     },
     {
       title: "型号",
-      dataIndex: "deviceModelName",
-      key: "deviceModelName",
-      width: 120,
-      ellipsis: true,
-    },
-    {
-      title: "类型",
       dataIndex: "deviceTypeName",
-      key: "deviceTypeName",
-      width: 100,
-      ellipsis: true,
-    },
-    {
-      title: "受益部门",
-      dataIndex: "deptName",
       key: "deptName",
       width: 120,
       ellipsis: true,
-    },
-    {
-      title: "归属机构",
-      dataIndex: "signOrgnoName",
-      key: "signOrgnoName",
-      width: 120,
-      ellipsis: true,
-    },
-    {
-      title: "责任人",
-      dataIndex: "nowUserName",
-      key: "nowUserName",
-      width: 100,
-      ellipsis: true,
-    },
-    {
-      title: "部门编码",
-      dataIndex: "nowUserDeptCode",
-      key: "nowUserDeptCode",
-      width: 120,
-      ellipsis: true,
-    },
-    {
-      title: "状态",
-      dataIndex: "status",
-      key: "status",
-      width: 80,
+      sorter: createSorter<Asset>('nowUserDeptCode', 'string'),
       render: (status: number) => (
         <Tag color={status === 0 ? "green" : "red"}>
           {status === 0 ? "正常" : "停用"}
@@ -376,61 +346,18 @@ const AssetList: FC = () => {
     },
     {
       title: "拟报废",
-      dataIndex: "nbfStatus",
-      key: "nbfStatus",
-      width: 90,
-      render: (status?: number) => (
-        status === 1 ? <Tag color="orange">是</Tag> : <Tag>否</Tag>
-      ),
-    },
-    {
-      title: "加域IP",
       dataIndex: "machineIp",
-      key: "machineIp",
-      width: 120,
-      ellipsis: true,
-    },
-    {
-      title: "有线MAC",
-      dataIndex: "mac1",
       key: "mac1",
-      width: 140,
-      ellipsis: true,
-    },
-    {
-      title: "领取人",
-      dataIndex: "deviceUserName",
-      key: "deviceUserName",
       width: 100,
-      ellipsis: true,
-    },
-    {
-      title: "接收日期",
-      dataIndex: "drawingDate",
-      key: "drawingDate",
-      width: 140,
       render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"),
     },
     {
       title: "最后上线",
-      dataIndex: "machineUptime",
-      key: "machineUptime",
-      width: 160,
-      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD HH:mm") : "-"),
-    },
-    {
-      title: "盘点日期",
       dataIndex: "lastInventoryDate",
-      key: "lastInventoryDate",
-      width: 140,
-      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"),
-    },
-    {
-      title: "备注",
-      dataIndex: "remark",
       key: "remark",
       width: 200,
       ellipsis: true,
+      sorter: createSorter<Asset>('remark', 'string'),
     },
     // 额外的列定义（对应 defaultAssetColumns 中缺失的列）
     { key: "sequenceNo", title: "序列号", dataIndex: "sequenceNo", width: 120, ellipsis: true },
