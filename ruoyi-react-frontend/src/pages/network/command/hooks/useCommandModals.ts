@@ -4,7 +4,7 @@
  */
 
 import { useCallback } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import type { FormInstance } from "antd/es/form";
 import { post } from "@/lib/api";
 
@@ -18,6 +18,7 @@ export interface UseCommandModalsReturn {
 }
 
 export function useCommandModals(): UseCommandModalsReturn {
+  const { message } = App.useApp();
   const handleQuickCommand = useCallback(
     async (selectedRowKeys: string[], form: FormInstance<unknown>, onSuccess: () => void) => {
       try {

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
+  App,
   Input,
   Card,
   Row,
@@ -10,7 +11,6 @@ import {
   Space,
   Empty,
   Spin,
-  message,
   Drawer,
   Button,
 } from "antd";
@@ -43,6 +43,7 @@ const { Search } = Input;
 import type { FC } from "react";
 
 const KnowledgeViewPage: FC = () => {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [articles, setArticles] = useState<KnowledgeArticle[]>([]);
   const [categories, setCategories] = useState<KnowledgeCategory[]>([]);

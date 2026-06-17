@@ -5,8 +5,8 @@
 
 import { useState, useCallback } from "react";
 import {
-  Modal, Form, Input, Button, Steps, Card, Space, Alert, Spin, Tag,
-  Divider, Typography, message,
+  App, Modal, Form, Input, Button, Steps, Card, Space, Alert, Spin, Tag,
+  Divider, Typography,
 } from "antd";
 import {
   RobotOutlined, ThunderboltOutlined, CheckOutlined, CloseOutlined,
@@ -67,6 +67,7 @@ const mockGeneratedActions: Action[] = [
 ];
 
 export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps) {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [generatedActions, setGeneratedActions] = useState<Action[]>([]);

@@ -10,6 +10,7 @@ import {
   Row,
   Col,
   Statistic,
+  App,
 } from "antd";
 import {
   SearchOutlined,
@@ -27,7 +28,6 @@ import { STATUS_OPTIONS } from "./constants";
 import { parseIPRanges } from "./utils";
 import { post } from "@/lib/api";
 import { batchExport } from "@/lib/api/networkApi";
-import { message } from "antd";
 import type { FormInstance } from "antd/es/form";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
@@ -39,6 +39,7 @@ import type { DeviceDiscovery, NetworkDevice } from "@/types";
 const { Option } = Select;
 
 const DeviceDiscoveryPage: FC = () => {
+  const { message } = App.useApp();
   // 使用全局分页 hook
   const { paginationProps, setTotal } = usePagination();
   const [form] = Form.useForm();

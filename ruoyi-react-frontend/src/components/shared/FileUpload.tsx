@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import type { FC } from "react";
-import { Upload, message, Image, Progress, Button, Space } from "antd";
+import { Upload, App, Image, Progress, Button, Space } from "antd";
 import { PlusOutlined, LoadingOutlined } from "@ant-design/icons";
 import { getAuthHeaders } from "@/utils/authHelpers";
 import type { UploadFile, UploadProps } from "antd";
@@ -61,6 +61,7 @@ const FileUpload: FC<FileUploadProps> = ({
   onUploadSuccess,
   onUploadError,
 }) => {
+  const { message } = App.useApp();
   const [fileList, setFileList] = useState<UploadFile[]>(Array.isArray(value) ? value : []);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);

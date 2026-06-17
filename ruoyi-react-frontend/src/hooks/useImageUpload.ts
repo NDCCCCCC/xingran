@@ -3,7 +3,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import type { UploadFile } from "antd";
 import type { FileUploadResponse } from "@/components/shared/FileUpload";
 import { MAX_IMAGE_SIZE } from "@/constants/upload";
@@ -37,6 +37,7 @@ export function useImageUpload(options: UseImageUploadOptions = {}): UseImageUpl
     onError,
   } = options;
 
+  const { message } = App.useApp();
   const [uploading, setUploading] = useState(false);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [imageId, setImageId] = useState<string>();

@@ -18,7 +18,7 @@ import {
   Col,
   Statistic,
   Tabs,
-  message,
+  App,
   Divider,
   Popconfirm
 } from 'antd';
@@ -179,6 +179,7 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
 // ==================== 主组件 ====================
 
 const CacheManager: FC = () => {
+  const { message } = App.useApp();
   // 状态管理
   const [caches, setCaches] = useState<CacheInfo[]>([]);
   const [monitor, setMonitor] = useState<CacheMonitor | null>(null);

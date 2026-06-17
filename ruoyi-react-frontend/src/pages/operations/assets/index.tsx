@@ -6,6 +6,7 @@ import dayjs from "dayjs";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import type { FC } from "react";
 import {
+  App,
   Table,
   Button,
   Space,
@@ -14,7 +15,6 @@ import {
   Select,
   Tag,
   Modal,
-  message,
   Card,
   Tooltip,
 } from "antd";
@@ -137,6 +137,7 @@ const defaultAssetColumns: AssetColumnConfig[] = [
 ];
 
 const AssetList: FC = () => {
+  const { message } = App.useApp();
   const [statistics, setStatistics] = useState<Statistics>({
     total: 0,
     normal: 0,

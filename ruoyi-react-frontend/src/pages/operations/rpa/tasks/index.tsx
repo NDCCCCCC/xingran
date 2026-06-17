@@ -5,7 +5,7 @@
 import { useState, useCallback, useEffect } from "react";
 import type { FC } from "react";
 import {
-  Table, Button, Space, Form, Input, Select, Card, Modal, message, Layout,
+  App, Table, Button, Space, Form, Input, Select, Card, Modal, Layout,
 } from "antd";
 import {
   PlusOutlined, SearchOutlined, ReloadOutlined, PlayCircleOutlined,
@@ -24,6 +24,7 @@ const { Option } = Select;
 const { Content } = Layout;
 
 const TaskManagement: FC = () => {
+  const { message } = App.useApp();
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   const {

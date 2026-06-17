@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useEffect } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import type { DeviceDiscovery, Department, BaseResponse, PageResponse } from "@/types";
 import { post } from "@/lib/api";
 import type { DiscoveryStatistics, ModalState } from "../types";
@@ -38,6 +38,7 @@ export interface UseDiscoveryDataReturn {
 }
 
 export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDataReturn {
+  const { message } = App.useApp();
   const { current, pageSize } = params;
 
   const [discoveries, setDiscoveries] = useState<DeviceDiscovery[]>([]);

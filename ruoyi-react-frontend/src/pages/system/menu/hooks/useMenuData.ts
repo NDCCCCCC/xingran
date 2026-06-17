@@ -4,7 +4,6 @@
  */
 
 import { useState, useCallback } from "react";
-import { message } from "antd";
 import type { Menu } from "@/types";
 import { post } from "@/lib/api";
 import { refreshMenuCache } from "@/store/menuStore";

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import type { FC } from "react";
 import {
+  App,
   Card,
   Table,
   Button,
@@ -10,7 +11,6 @@ import {
   Input,
   Select,
   Switch,
-  message,
   Tag,
   InputNumber,
 } from "antd";
@@ -40,6 +40,7 @@ const { Option } = Select;
 const { TextArea } = Input;
 
 const EmailConfigPage: FC = () => {
+  const { message } = App.useApp();
   // 列表相关状态
   const [configs, setConfigs] = useState<EmailConfig[]>([]);
   const [loading, setLoading] = useState(false);

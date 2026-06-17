@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import {
   getNoticeList,
   createNotice,
@@ -40,6 +40,7 @@ interface UseNoticeDataResult {
  * 处理通知列表的加载、创建、更新、删除等操作
  */
 export function useNoticeData(): UseNoticeDataResult {
+  const { message } = App.useApp();
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);

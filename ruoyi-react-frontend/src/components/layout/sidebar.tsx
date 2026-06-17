@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Layout, Menu, Spin, message } from "antd";
+import { Layout, Menu, Spin, App } from "antd";
 import type { MenuProps } from "antd";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useMenuStore } from "@/store/menuStore";
@@ -75,6 +75,7 @@ const convertToMenuItem = (menu: MenuType, parentPath: string = ""): MenuItem =>
 };
 
 const Sidebar = () => {
+  const { message } = App.useApp();
   const [openKeys, setOpenKeys] = useState<string[]>([]);
   const expectedOpenKeysRef = useRef<string[] | null>(null);
   const navigate = useNavigate();

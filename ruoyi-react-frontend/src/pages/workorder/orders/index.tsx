@@ -12,7 +12,7 @@ import {
   Modal,
   Space,
   Tag,
-  message,
+  App,
   Popconfirm,
   Card,
   Statistic,
@@ -213,6 +213,7 @@ function getWorkOrderTableColumns(props: WorkOrderTableColumnsProps): ColumnsTyp
 // ==================== 主组件 ====================
 
 const WorkOrderPage: FC = () => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
   const [commentForm] = Form.useForm();
@@ -290,7 +291,7 @@ const WorkOrderPage: FC = () => {
     } catch (error) {
       message.error("删除失败");
     }
-  }, [fetchList]);
+  }, [fetchList, message]);
 
   const handleBatchDelete = useCallback(async () => {
     if (selectedRowKeys.length === 0) {
@@ -305,7 +306,7 @@ const WorkOrderPage: FC = () => {
     } catch (error) {
       message.error("批量删除失败");
     }
-  }, [selectedRowKeys, fetchList]);
+  }, [selectedRowKeys, fetchList, message]);
 
   const handleAssignToTodayDuty = useCallback(async (id: string) => {
     try {
@@ -357,7 +358,7 @@ const WorkOrderPage: FC = () => {
       }
       message.error(editingRecord ? "更新失败" : "创建失败");
     }
-  }, [editForm, editingRecord, fetchList, setModalVisible]);
+  }, [editForm, editingRecord, fetchList, setModalVisible, message]);
 
   const handleAddComment = useCallback(async () => {
     try {
@@ -376,7 +377,7 @@ const WorkOrderPage: FC = () => {
     } catch (error) {
       message.error("评论添加失败");
     }
-  }, [commentForm, selectedRecord, commentInternal, setComments]);
+  }, [commentForm, selectedRecord, commentInternal, setComments, message]);
 
   const handleStatusChange = useCallback(async (status: number) => {
     if (!selectedRecord) return;
@@ -392,7 +393,7 @@ const WorkOrderPage: FC = () => {
         message.error("状态更新失败");
       }
     }
-  }, [fetchList, openDetailDrawer, selectedRecord]);
+  }, [fetchList, openDetailDrawer, selectedRecord, message]);
 
   // 表格列 - 使用 useMemo 避免重复创建
   const columns = useMemo(() => getWorkOrderTableColumns({

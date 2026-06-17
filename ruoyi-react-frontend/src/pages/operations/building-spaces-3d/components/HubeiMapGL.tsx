@@ -4,7 +4,7 @@
  */
 
 import { useRef, useState, useEffect, useCallback } from "react";
-import { Spin, message, Badge, List, Tag, Button } from "antd";
+import { App, Spin, Badge, List, Tag, Button } from "antd";
 import {
   ApartmentOutlined,
   EyeOutlined,
@@ -59,6 +59,7 @@ interface HubeiMapGLProps {
 // ============ 组件 ============
 
 const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
+  const { message } = App.useApp();
   // Refs
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<BMapMapGL | null>(null);

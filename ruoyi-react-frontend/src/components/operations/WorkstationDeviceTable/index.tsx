@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Table, Button, Space, Tag, Popconfirm, message, Modal, Form, Input, Alert, Collapse } from "antd";
+import { App, Table, Button, Space, Tag, Popconfirm, Modal, Form, Input, Alert, Collapse } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined, StarOutlined } from "@ant-design/icons";
 import type { WorkstationDevice, DeviceFormData, DeviceSource, Asset } from "@/types";
 import { DEVICE_SOURCE_LABELS } from "@/types/operations";
@@ -24,6 +24,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
   onDeviceChange
 }) => {
   // 分开存储三种来源的设备
+  const { message } = App.useApp();
   const [manualDevices, setManualDevices] = useState<WorkstationDevice[]>([]);
   const [adDevices, setADDevices] = useState<WorkstationDevice[]>([]);
   const [assetDevices, setAssetDevices] = useState<WorkstationDevice[]>([]);
@@ -411,7 +412,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
 
       {/* 手动添加的设备 */}
       <Table
-        title={() => <span style={{ fontWeight: 600, fontSize: 13 }}>手动添加的设备</span>}
+        // title={() => <span style={{ fontWeight: 600, fontSize: 13 }}>手动添加的设备</span>}
         columns={createColumns(true)}
         dataSource={currentPageData}
         loading={loading}

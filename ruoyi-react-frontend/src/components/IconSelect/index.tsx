@@ -5,7 +5,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import type { FC } from "react";
-import { Input, Modal, Tabs, message } from "antd";
+import { App, Input, Modal, Tabs } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import { getIconComponent, iconCategories, iconDescriptionMap } from "@/utils/iconUtils";
 
@@ -22,6 +22,7 @@ const IconSelect: FC<IconSelectProps> = ({
   placeholder = "请选择图标",
   disabled = false,
 }) => {
+  const { message } = App.useApp();
   const [visible, setVisible] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [selectedIcon, setSelectedIcon] = useState<string | undefined>(value);

@@ -5,7 +5,7 @@
 
 import axios from "axios";
 import type { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from "axios";
-import { message } from "antd";
+import { getAppMessage } from "@/utils/antdMessage";
 import { getTokenManager } from "@/store/authStore";
 import { useMenuStore } from "@/store/menuStore";
 import { generateIV, generateSM4Key, encryptRequestBody, hexToBase64, decryptSM4CBC, base64ToHex } from "@/utils/sm4";
@@ -306,7 +306,7 @@ api.interceptors.response.use(
 
 				if (!data?.data || !data?.iv) {
 					console.error("[Response Decryption] 后端加密响应缺少必要字段");
-					message.error("响应解密失败：格式错误");
+					getAppMessage().error("响应解密失败：格式错误");
 					return Promise.reject(new Error("Missing encrypted data fields"));
 				}
 
@@ -317,7 +317,7 @@ api.interceptors.response.use(
 				const keyInfo = encryptionKeyStore.get(requestId);
 				if (!keyInfo) {
 					console.error("[Response Decryption] 找不到请求的加密密钥:", requestId);
-					message.error("响应解密失败：找不到加密密钥");
+					getAppMessage().error("响应解密失败：找不到加密密钥");
 					return Promise.reject(new Error("Encryption keys not found"));
 				}
 
@@ -332,7 +332,7 @@ api.interceptors.response.use(
 				encryptionKeyStore.delete(requestId);
 			} catch (error) {
 				console.error("[Response Decryption] 后端加密响应解密失败:", error);
-				message.error("响应解密失败: " + (error as Error).message);
+				getAppMessage().error("响应解密失败: " + (error as Error).message);
 				return Promise.reject(error);
 			}
 		}
@@ -344,14 +344,14 @@ api.interceptors.response.use(
 
 				if (!requestId) {
 					console.error("[Response Decryption] 响应头中缺少请求 ID");
-					message.error("响应解密失败：缺少请求ID");
+					getAppMessage().error("响应解密失败：缺少请求ID");
 					return Promise.reject(new Error("Missing request ID"));
 				}
 
 				const keyInfo = encryptionKeyStore.get(requestId);
 				if (!keyInfo) {
 					console.error("[Response Decryption] 找不到请求的加密密钥:", requestId);
-					message.error("响应解密失败：找不到加密密钥");
+					getAppMessage().error("响应解密失败：找不到加密密钥");
 					return Promise.reject(new Error("Encryption keys not found"));
 				}
 
@@ -368,7 +368,7 @@ api.interceptors.response.use(
 				encryptionKeyStore.delete(requestId);
 			} catch (error) {
 				console.error("[Response Decryption] 解密失败:", error);
-				message.error("响应解密失败: " + (error as Error).message);
+				getAppMessage().error("响应解密失败: " + (error as Error).message);
 				return Promise.reject(error);
 			}
 		}
@@ -376,7 +376,7 @@ api.interceptors.response.use(
 		if (data && typeof data === "object" && data.code === 0) {
 			return data;
 		} else if (data && typeof data === "object" && data.code !== undefined) {
-			message.error(data.message || "请求失败");
+			getAppMessage().error(data.message || "请求失败");
 			return Promise.reject(new Error(data.message || "请求失败"));
 		} else {
 			console.error("[Response] 响应格式无效:", {
@@ -386,7 +386,7 @@ api.interceptors.response.use(
 				dataKeys: typeof data === "object" ? Object.keys(data) : "N/A",
 				data,
 			});
-			message.error("响应格式错误");
+			getAppMessage().error("响应格式错误");
 			return Promise.reject(new Error("Invalid response format"));
 		}
 	},

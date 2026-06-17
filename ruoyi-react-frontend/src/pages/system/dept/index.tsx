@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import type { FC } from "react";
-import { Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic, message } from "antd";
+import { App, Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic } from "antd";
 import {
   PlusOutlined,
   SearchOutlined,
@@ -25,6 +25,7 @@ import { queryKeys } from "@/lib/queryKeys";
 const { Option } = Select;
 
 const DepartmentManagement: FC = () => {
+  const { message } = App.useApp();
   const [searchForm] = Form.useForm();
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingDept, setEditingDept] = useState<Department | null>(null);

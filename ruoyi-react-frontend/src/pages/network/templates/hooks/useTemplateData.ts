@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import type { ConfigTemplate, BaseResponse, PageResponse } from "@/types";
 import type { FormInstance } from "antd/es/form";
 import { post } from "@/lib/api";
@@ -23,6 +23,7 @@ export interface UseTemplateDataReturn {
 }
 
 export function useTemplateData(searchForm: FormInstance<unknown>, setTotal: (total: number) => void): UseTemplateDataReturn {
+  const { message } = App.useApp();
   const [templates, setTemplates] = useState<ConfigTemplate[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotalLocal] = useState(0);

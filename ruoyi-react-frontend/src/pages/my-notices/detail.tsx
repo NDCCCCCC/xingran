@@ -2,8 +2,8 @@ import { useEffect, useState, useCallback } from "react";
 import type { FC } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
+  App,
   Button,
-  message,
   Spin,
 } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
@@ -18,6 +18,7 @@ import { USER_NOTICES } from "@/constants/routes";
  * 用户通知详情页面
  */
 const NoticeDetailPage: FC = () => {
+  const { message } = App.useApp();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { markAsRead } = useNoticeStore();

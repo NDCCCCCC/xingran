@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { message, notification, Badge, Tooltip, Spin, Alert, Result, Button, Empty } from "antd";
+import { App, notification, Badge, Tooltip, Spin, Alert, Result, Button, Empty } from "antd";
 import { WifiOutlined, DisconnectOutlined, ReloadOutlined, SyncOutlined, WarningOutlined, ReloadOutlined as RefreshIcon } from "@ant-design/icons";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useWidgetPolling } from "@/hooks/useWidgetPolling";
@@ -43,6 +43,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 	error: externalError = null,
 	onRetry,
 }) => {
+	const { message } = App.useApp();
 	const {
 		viewMode,
 		widgetDataCache,

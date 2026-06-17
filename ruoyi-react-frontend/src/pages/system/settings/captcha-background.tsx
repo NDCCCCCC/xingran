@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import type { FC } from "react";
 import {
+  App,
   Table,
   Button,
   Space,
@@ -9,7 +10,6 @@ import {
   Input,
   Select,
   Upload,
-  message,
   Tag,
   Image,
   Statistic,
@@ -65,6 +65,7 @@ const SHAPE_OPTIONS = [
 ];
 
 const CaptchaBackgroundSettingsPage: FC = () => {
+  const { message } = App.useApp();
   const [backgrounds, setBackgrounds] = useState<CaptchaBackground[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchForm] = Form.useForm();

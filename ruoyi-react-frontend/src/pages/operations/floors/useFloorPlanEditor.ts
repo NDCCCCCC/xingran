@@ -6,7 +6,7 @@ import { useState, useCallback } from "react";
 import type { Floor } from "@/types";
 import { wallApi, doorApi, workstationApi, floorPlanTextApi } from "@/lib/opsApi";
 import type { FloorPlanData, Wall, Door, TextElement, WorkstationNode } from "@/components/cad-editor/types";
-import { message } from "antd";
+import { App } from "antd";
 import { processWorkstations, parseJsonField, stringifyJsonField, isNewElement } from "./utils";
 import { DEFAULT_FLOOR_PLAN_CONFIG } from "./constants";
 
@@ -29,6 +29,7 @@ export function useFloorPlanEditor(
   currentFloor: Floor | null,
   options?: UseFloorPlanEditorOptions
 ): UseFloorPlanEditorReturn {
+  const { message } = App.useApp();
   const [floorPlanData, setFloorPlanData] = useState<FloorPlanData | null>(null);
   const [floorPlanLoading, setFloorPlanLoading] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);

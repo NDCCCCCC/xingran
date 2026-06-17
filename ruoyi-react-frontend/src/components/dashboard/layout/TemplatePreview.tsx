@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Modal, Button, Spin, message, Empty, Space } from "antd";
+import { Modal, Button, Spin, Empty, Space } from "antd";
 import { CloseOutlined, CheckOutlined, ReloadOutlined } from "@ant-design/icons";
 import { dashboardService } from "@/services/dashboardService";
 import { DashboardGrid } from "../layout/DashboardGrid";

@@ -11,7 +11,7 @@ import {
   Row,
   Col,
   Statistic,
-  message,
+  App,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -41,6 +41,7 @@ import { DownloadOutlined } from "@ant-design/icons";
 const { Option } = Select;
 
 const PortStatusPage: FC = () => {
+  const { message } = App.useApp();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const deviceIdFromUrl = searchParams.get("deviceId") || "";

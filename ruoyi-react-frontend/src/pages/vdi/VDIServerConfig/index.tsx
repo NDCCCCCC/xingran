@@ -5,7 +5,7 @@ import {
   Space,
   Tag,
   Modal,
-  message,
+  App,
   Popconfirm,
   Input,
   Card,
@@ -25,6 +25,7 @@ import type { VDIServer, VDIServerConfig } from "@/types/vdi";
 import type { ColumnsType } from "antd/es/table";
 
 const VDIServerConfig: React.FC = () => {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [servers, setServers] = useState<VDIServer[]>([]);
   const [total, setTotal] = useState(0);

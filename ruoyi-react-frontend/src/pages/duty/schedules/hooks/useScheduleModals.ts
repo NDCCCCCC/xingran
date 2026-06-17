@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { Form, message } from "antd";
+import { Form, App } from "antd";
 import type { FormInstance } from "antd/es/form";
 import {
   generateSchedule,
@@ -50,6 +50,7 @@ export interface UseScheduleModalsReturn {
 
 export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleModalsReturn {
   const { onLoad, allSchedules, dataSource, current } = params;
+  const { message } = App.useApp();
 
   const [generateModalVisible, setGenerateModalVisible] = useState(false);
   const [swapModalVisible, setSwapModalVisible] = useState(false);

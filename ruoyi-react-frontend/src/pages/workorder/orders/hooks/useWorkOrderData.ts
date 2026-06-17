@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import type { FormInstance } from "antd/es/form";
 import {
   getWorkOrderList,
@@ -62,6 +62,7 @@ export function useWorkOrderData(
   options: UseWorkOrderDataOptions
 ): UseWorkOrderDataReturn {
   const { form } = options;
+  const { message } = App.useApp();
 
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<WorkOrder[]>([]);
@@ -119,7 +120,7 @@ export function useWorkOrderData(
     } finally {
       setLoading(false);
     }
-  }, [form, current, pageSize]);
+  }, [form, current, pageSize, message]);
 
   // 获取用户列表
   const fetchUsers = useCallback(async () => {

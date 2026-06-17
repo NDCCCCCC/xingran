@@ -3,7 +3,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import { message, Modal, Input } from "antd";
+import { App, Modal, Input } from "antd";
 import { CADToolbar } from "./CADToolbar";
 import { CADPropertyPanel } from "./CADPropertyPanel";
 import { CADLayersPanel } from "./CADLayersPanel";
@@ -46,6 +46,7 @@ export function CADFloorPlanEditor({
   style,
 }: CADFloorPlanEditorProps) {
   // ==================== 状态 ====================
+  const { message } = App.useApp();
   const [mode, setMode] = useState<EditorMode>("select");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<"wall" | "door" | "workstation" | "text" | null>(null);

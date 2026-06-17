@@ -3,7 +3,7 @@
  * 复用FloorPlanEditor组件
  */
 import React, { useState, useEffect } from "react";
-import { Button, message, Spin } from "antd";
+import { App, Button, Spin } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import FloorPlanEditor from "@/components/shared/FloorPlanEditor";
 import type { WorkstationNode } from "@/components/shared/FloorPlanEditor.types";
@@ -17,6 +17,7 @@ interface WorkstationViewProps {
 }
 
 const WorkstationView: React.FC<WorkstationViewProps> = ({ floor, onBack }) => {
+  const { message } = App.useApp();
   const [workstations, setWorkstations] = useState<WorkstationNode[]>([]);
   const [loading, setLoading] = useState(true);
 

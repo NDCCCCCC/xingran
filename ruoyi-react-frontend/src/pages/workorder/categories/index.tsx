@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect } from "react";
 import type { FC } from "react";
-import { Button, Form, Input, Modal, InputNumber, Select, Space, Tag, message, Card, Tree, Radio } from "antd";
+import { Button, Form, Input, Modal, InputNumber, Select, Space, Tag, App, Card, Tree, Radio } from "antd";
 import type { DataNode } from "antd/es/tree";
 import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, FolderOutlined } from "@ant-design/icons";
 import {
@@ -17,6 +17,7 @@ import { isFormValidationError } from "@/utils/errorHandler";
 const { Option } = Select;
 
 const WorkOrderCategoryPage: FC = () => {
+  const { message } = App.useApp();
   const [editForm] = Form.useForm();
 
   const [categories, setCategories] = useState<WorkOrderCategory[]>([]);

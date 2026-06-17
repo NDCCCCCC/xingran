@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { FC } from 'react';
 import {
+  App,
   Card,
   Table,
   Tag,
   Button,
   Space,
   Tabs,
-  message,
   Tooltip,
 } from 'antd';
 import { CheckOutlined, CheckSquareOutlined, EyeOutlined } from '@ant-design/icons';
@@ -32,6 +32,7 @@ dayjs.locale('zh-cn');
  * 显示用户可见的所有通知，支持按已读/未读筛选
  */
 const MyNoticesPage: FC = () => {
+  const { message } = App.useApp();
   const navigate = useNavigate();
   const { unreadCount, setUnreadCount, markAsRead, markAllAsRead } = useNoticeStore();
 

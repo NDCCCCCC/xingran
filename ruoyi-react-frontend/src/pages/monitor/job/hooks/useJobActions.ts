@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import type { FormInstance } from "antd/es/form";
 import type { JobInfo, SearchFormState } from "../types";
 import { post, put, del, postLongRequest } from "@/lib/api";
@@ -41,6 +41,7 @@ export interface UseJobActionsReturn {
 
 export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn {
   const { fetchJobs, fetchJobLogs } = params;
+  const { message } = App.useApp();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
@@ -94,7 +95,7 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
     } catch (error) {
       console.error("提交失败:", error);
     }
-  }, [isEdit, fetchJobs]);
+  }, [isEdit, fetchJobs, message]);
 
   // 删除任务
   const handleDelete = useCallback(async (record: JobInfo) => {
@@ -105,7 +106,7 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
     } catch (error) {
       console.error("删除失败:", error);
     }
-  }, [fetchJobs]);
+  }, [fetchJobs, message]);
 
   // 启动/停止任务
   const handleToggleStatus = useCallback(async (record: JobInfo) => {
@@ -119,7 +120,7 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
     } catch (error) {
       console.error("操作失败:", error);
     }
-  }, [fetchJobs]);
+  }, [fetchJobs, message]);
 
   // 立即执行任务
   const handleExecute = useCallback(async (record: JobInfo) => {
@@ -133,7 +134,7 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
     } catch (error) {
       console.error("执行失败:", error);
     }
-  }, [selectedJob, fetchJobLogs]);
+  }, [selectedJob, fetchJobLogs, message]);
 
   // 查看日志
   const handleViewLogs = useCallback((record: JobInfo) => {

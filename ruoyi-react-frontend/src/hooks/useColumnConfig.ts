@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import { columnConfigApi } from "@/lib/columnConfigApi";
 import type { ColumnConfigItem, UserColumnConfig } from "@/lib/columnConfigApi";
 
@@ -92,6 +92,7 @@ const transformToColumnConfig = (userConfigs: UserColumnConfig[], defaultConfigs
 
 export function useColumnConfig(options: UseColumnConfigOptions) {
   const { pageKey, defaultColumns, enableCache = true } = options;
+  const { message } = App.useApp();
   const [config, setConfig] = useState<ColumnConfig[]>(defaultColumns);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);

@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Drawer, Form, Input, Button, message, Spin, Divider } from "antd";
+import { App, Drawer, Form, Input, Button, Spin, Divider } from "antd";
 import { SaveOutlined, CloseOutlined } from "@ant-design/icons";
 import { useDashboardStore } from "@/store/dashboardStore";
 import DashboardScopeSelector from "./DashboardScopeSelector";
@@ -26,6 +26,7 @@ export interface DashboardSettingsProps {
  * 仪表盘设置侧边抽屉组件
  */
 export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, onClose }) => {
+	const { message } = App.useApp();
 	const { currentDashboard, updateDashboard } = useDashboardStore();
 	const [form] = Form.useForm();
 	const [loading, setLoading] = useState(false);

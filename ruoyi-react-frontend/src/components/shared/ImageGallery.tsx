@@ -13,7 +13,7 @@ import {
   Input,
   Tag,
   Popconfirm,
-  message,
+  App,
   Spin,
   Empty,
   Row,
@@ -58,6 +58,7 @@ const ImageGallery: FC<ImageGalleryProps> = ({
   onSortChange: _onSortChange,
   onUpload,
 }) => {
+  const { message } = App.useApp();
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);

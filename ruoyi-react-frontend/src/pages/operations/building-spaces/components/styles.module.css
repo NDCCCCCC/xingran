@@ -116,7 +116,7 @@
 }
 
 .buildingModal :global(.ant-modal-content) {
-  borderRadius: 16px;
+  border-radius: 16px;
   overflow: hidden;
 }
 

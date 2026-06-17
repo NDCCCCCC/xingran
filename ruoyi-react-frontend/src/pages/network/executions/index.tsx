@@ -11,7 +11,7 @@ import {
   Row,
   Col,
   Statistic,
-  message,
+  App,
 } from "antd";
 import {
   PlayCircleOutlined,
@@ -36,6 +36,7 @@ import type { ConfigExecution } from "@/types";
 const { Option } = Select;
 
 const ConfigExecutionPage: FC = () => {
+  const { message } = App.useApp();
   const [executeForm] = Form.useForm();
   const [searchForm] = Form.useForm();
   const [batchModalVisible, setBatchModalVisible] = useState(false);

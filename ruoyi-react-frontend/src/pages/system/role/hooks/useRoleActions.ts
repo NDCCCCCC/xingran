@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useRef } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Role } from "@/types";
 import type { Key } from "antd/es/table/interface";
@@ -47,6 +47,7 @@ export interface UseRoleActionsReturn {
 }
 
 export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsReturn {
+  const { message } = App.useApp();
   const {
     loadRoles,
     loadStatistics,

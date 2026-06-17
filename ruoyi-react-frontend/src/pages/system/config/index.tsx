@@ -1,6 +1,7 @@
 ﻿import type { FC } from "react";
 import { useState, useCallback, useEffect } from "react";
 import {
+  App,
   Table,
   Button,
   Space,
@@ -15,7 +16,6 @@ import {
   Col,
   Statistic,
   Alert,
-  message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -40,6 +40,7 @@ const { Option } = Select;
 const { TextArea } = Input;
 
 const ConfigManagement: FC = () => {
+  const { message } = App.useApp();
   const [statistics, setStatistics] = useState({
     total: 0,
     active: 0,

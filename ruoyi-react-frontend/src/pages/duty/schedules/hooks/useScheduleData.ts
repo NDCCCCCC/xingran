@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 import type { FormInstance } from "antd/es/form";
 import {
@@ -47,6 +47,7 @@ export interface UseScheduleDataReturn {
 
 export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataReturn {
   const { current, pageSize, searchForm } = params;
+  const { message } = App.useApp();
 
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<DutySchedule[]>([]);

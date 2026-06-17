@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import type { FC } from "react";
-import { Form, message } from "antd";
+import { App, Form } from "antd";
 import { useNavigate } from "react-router-dom";
 import type {
   Notice,
@@ -31,6 +31,7 @@ import { usePagination } from "@/hooks/usePagination";
  * 支持：Markdown编辑、定向推送、定时发布、优先级、阅读统计
  */
 const NoticeManagement: FC = () => {
+  const { message } = App.useApp();
   const navigate = useNavigate();
   const [searchForm] = Form.useForm();
   const [editForm] = Form.useForm();

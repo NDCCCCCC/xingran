@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
+  App,
   Card,
   Table,
   Select,
@@ -9,7 +10,6 @@ import {
   Button,
   Tag,
   Form,
-  message,
   Descriptions,
   Modal,
   Tooltip,
@@ -36,6 +36,7 @@ import type { FC } from 'react';
 import { usePagination } from '@/hooks/usePagination';
 
 const ADComputerPage: FC = () => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
 
   const { configs, selectedConfig, setSelectedConfig } = useADConfigs({

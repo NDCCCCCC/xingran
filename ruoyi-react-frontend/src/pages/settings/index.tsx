@@ -5,12 +5,12 @@
 
 import { useEffect, useState, type FC } from "react";
 import {
+	App,
 	Card,
 	Form,
 	Select,
 	Switch,
 	Button,
-	message,
 	Divider,
 	Alert,
 	Radio,
@@ -34,6 +34,7 @@ import { getDefaultThemeConfig } from "@/lib/defaultThemeApi";
 const { Option } = Select;
 
 const SettingsPage: FC = () => {
+	const { message } = App.useApp();
 	const { preferences, loading, initialized, updatePreferences } = useSettingsStore();
 	const [form] = Form.useForm();
 

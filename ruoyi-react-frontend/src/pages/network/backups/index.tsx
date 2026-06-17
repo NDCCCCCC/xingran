@@ -23,7 +23,7 @@ import {
   Col,
   Statistic,
   Descriptions,
-  message,
+  App,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -62,6 +62,7 @@ const BACKUP_TYPE_OPTIONS = [
 ];
 
 const ConfigBackupPage: FC = () => {
+  const { message } = App.useApp();
   // 表单和状态
   const [backupForm] = Form.useForm();
   const [searchForm] = Form.useForm();

@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, type FC } from "react";
-import { Button, Dropdown, message, Modal, Radio, Space } from "antd";
+import { Button, Dropdown, App, Modal, Radio, Space } from "antd";
 import type { MenuProps } from "antd";
 import { ExportOutlined, DownloadOutlined } from "@ant-design/icons";
 import { getAccessToken } from "@/utils/authHelpers";
@@ -24,6 +24,7 @@ const NetworkExport: FC<NetworkExportProps> = ({
   current = 1,
   pageSize = 10,
 }) => {
+  const { message } = App.useApp();
   const exportUrl = `/api/v1/network/${entityType}/export`;
   const [exporting, setExporting] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);

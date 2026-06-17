@@ -25,7 +25,7 @@ import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
   Table, Button, Space, Form, Input, InputNumber, Select,
   Tag, Card, DatePicker, List, Grid, Spin, Tooltip, Skeleton,
-  Typography, message,
+  Typography, App,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
@@ -93,6 +93,7 @@ const normalizeMACAddress = (mac: string): string => {
 };
 
 const MACHistoryPage: React.FC = () => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();

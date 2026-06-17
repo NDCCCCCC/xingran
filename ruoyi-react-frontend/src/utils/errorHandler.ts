@@ -1,4 +1,4 @@
-import { message } from "antd";
+import { getAppMessage } from "@/utils/antdMessage";
 import { useAuthStore } from "@/store/authStore";
 import { clearPublicKeyCache } from "./sm2";
 import { LOGIN } from "@/constants/routes";
@@ -101,7 +101,7 @@ export class ErrorHandler {
     console.error(`[${context}]`, error);
 
     if (showMessage) {
-      message.error(`${context}失败: ${errorMessage}`);
+      getAppMessage().error(`${context}失败: ${errorMessage}`);
     }
   }
 
@@ -111,7 +111,7 @@ export class ErrorHandler {
    * @param isEdit 是否是编辑操作
    */
   static handleSuccess(action: string, isEdit: boolean = false): void {
-    message.success(isEdit ? `更新${action}成功` : `${action}成功`);
+    getAppMessage().success(isEdit ? `更新${action}成功` : `${action}成功`);
   }
 
   /**
@@ -160,7 +160,7 @@ export async function withErrorHandling<T>(
   try {
     const result = await operation();
     if (options.successMessage) {
-      message.success(options.successMessage);
+      getAppMessage().success(options.successMessage);
     }
     options.onSuccess?.(result);
     return result;
@@ -216,7 +216,7 @@ export function handleHttpResponseError(
   }
 
   // 显示错误消息
-  message.error(errorMessage);
+  getAppMessage().error(errorMessage);
 
   const error = new Error(errorMessage);
   (error as EnhancedError).status = status;
@@ -234,7 +234,7 @@ export function handleNetworkError(error: unknown): Error {
     ? "请求超时，请检查网络连接"
     : "网络异常，请检查网络连接";
 
-  message.error(errorMessage);
+  getAppMessage().error(errorMessage);
 
   const networkError = new Error(errorMessage);
   (networkError as EnhancedError).originalError = error;
@@ -249,7 +249,7 @@ export function handleNetworkError(error: unknown): Error {
 export function handleParseError(error: unknown): Error {
   const errorMessage = "响应解析失败";
 
-  message.error(errorMessage);
+  getAppMessage().error(errorMessage);
   console.error("[ErrorHandler] Response parse error:", error);
 
   const parseError = new Error(errorMessage);

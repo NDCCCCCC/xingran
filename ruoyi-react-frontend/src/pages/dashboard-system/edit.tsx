@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { message } from "antd";
+import { App, Spin } from "antd";
 import type { WidgetConfig } from "@/types";
 import {
 	LayoutToolbar,
@@ -16,7 +16,6 @@ import {
 import { GridItem, GridItemPlaceholder } from "@/components/dashboard/layout";
 import { Suspense, lazy } from "react";
 import { useDashboardStore } from "@/store/dashboardStore";
-import { Spin } from "antd";
 import { Widget } from "@/components/dashboard/Widget";
 
 import "./edit.css";
@@ -24,6 +23,7 @@ import "./edit.css";
 const WidgetSelector = lazy(() => import("@/components/dashboard/settings/WidgetSelector"));
 
 const DashboardEdit: React.FC = () => {
+	const { message } = App.useApp();
 	const { id } = useParams<{ id: string }>();
 	const [showWidgetSelector, setShowWidgetSelector] = useState(false);
 	const [editingWidgetId, setEditingWidgetId] = useState<string | null>(null);

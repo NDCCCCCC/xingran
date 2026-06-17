@@ -8,7 +8,7 @@ import {
   Table,
   Card,
   Descriptions,
-  message,
+  App,
   Modal,
   Form,
   Input,
@@ -30,6 +30,7 @@ import type { ColumnsType } from "antd/es/table";
 const VirtualMachineDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [vm, setVM] = useState<VirtualMachine | null>(null);
   const [accounts, setAccounts] = useState<VMAccount[]>([]);

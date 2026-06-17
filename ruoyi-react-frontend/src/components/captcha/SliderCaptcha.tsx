@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { FC } from "react";
-import { Button, message } from "antd";
+import { Button, App } from "antd";
 import { ReloadOutlined } from "@ant-design/icons";
 import { getCaptcha, verifySliderCaptcha } from "@/services/captcha";
 import type { CaptchaResponse } from "@/types/captcha";
@@ -13,6 +13,8 @@ interface SliderCaptchaProps {
 }
 
 const SliderCaptcha: FC<SliderCaptchaProps> = ({ onVerified, onError, active = true }) => {
+  // 使用 antd v5 App context 的 message 实例，确保能消费 ConfigProvider 的动态主题
+  const { message } = App.useApp();
   const [captchaData, setCaptchaData] = useState<CaptchaResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [dragging, setDragging] = useState(false);

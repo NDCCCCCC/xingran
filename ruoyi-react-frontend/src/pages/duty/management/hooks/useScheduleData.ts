@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import {
   getDutyScheduleList,
   generateSchedule,
@@ -28,6 +28,7 @@ interface UseScheduleDataOptions {
 type DutyType = "weekday" | "weekend" | "holiday";
 
 export function useScheduleData() {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [schedules, setSchedules] = useState<DutySchedule[]>([]);
   const [total, setTotal] = useState(0);

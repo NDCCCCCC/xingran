@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, type FC } from "react";
-import { Modal, message } from "antd";
+import { App, Modal } from "antd";
 import { SliderCaptcha, TextCaptcha } from "@/components/captcha";
 import type { CaptchaEnabled } from "@/types/captcha";
 
@@ -27,6 +27,7 @@ const CaptchaModal: FC<CaptchaModalProps> = ({
   onSuccess,
   onCancel,
 }) => {
+  const { message } = App.useApp();
   const [captchaValue, setCaptchaValue] = useState("");
   const [captchaId, setCaptchaId] = useState("");
   const [sliderVerified, setSliderVerified] = useState(false);

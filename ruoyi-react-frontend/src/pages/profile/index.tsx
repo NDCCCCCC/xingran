@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import type { FC } from "react";
 import {
+  App,
   Card,
   Row,
   Col,
@@ -11,7 +12,6 @@ import {
   Form,
   Input,
   Select,
-  message,
   Upload,
   Statistic,
   Tag,
@@ -36,6 +36,7 @@ import { Link } from "react-router-dom";
 const { Option } = Select;
 
 const ProfilePage: FC = () => {
+  const { message } = App.useApp();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);

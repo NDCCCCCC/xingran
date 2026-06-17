@@ -14,7 +14,7 @@ import {
   Progress,
   Drawer,
   Descriptions,
-  message
+  App
 } from 'antd';
 import {
   SearchOutlined,
@@ -59,6 +59,7 @@ interface ServerMetrics {
 }
 
 const ServerMonitor: FC = () => {
+  const { message } = App.useApp();
   const [servers, setServers] = useState<ServerInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchForm, setSearchForm] = useState({

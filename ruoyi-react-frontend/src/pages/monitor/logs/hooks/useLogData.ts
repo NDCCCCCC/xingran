@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import type { OperLog, LoginLog, SearchFormState } from "../types";
 import { post } from "@/lib/api";
 import type { PageResponse } from "@/types";
@@ -39,6 +39,7 @@ export function useLogData(params: UseLogDataParams): UseLogDataReturn {
     current,
     pageSize,
   } = params;
+  const { message } = App.useApp();
 
   const [operLogs, setOperLogs] = useState<OperLog[]>([]);
   const [loginLogs, setLoginLogs] = useState<LoginLog[]>([]);
@@ -71,7 +72,7 @@ export function useLogData(params: UseLogDataParams): UseLogDataReturn {
     } finally {
       setLoading(false);
     }
-  }, [searchForm, current, pageSize]);
+  }, [searchForm, current, pageSize, message]);
 
   // 获取登录日志
   const fetchLoginLogs = useCallback(async (params: any = {}) => {
@@ -99,7 +100,7 @@ export function useLogData(params: UseLogDataParams): UseLogDataReturn {
     } finally {
       setLoading(false);
     }
-  }, [loginSearchForm, current, pageSize]);
+  }, [loginSearchForm, current, pageSize, message]);
 
   return {
     operLogs,

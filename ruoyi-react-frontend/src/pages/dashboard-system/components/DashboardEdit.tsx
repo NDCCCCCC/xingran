@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { message } from "antd";
+import { App, Spin } from "antd";
 import type { WidgetConfig } from "@/types";
 import {
 	LayoutToolbar,
@@ -16,7 +16,6 @@ import {
 import { GridItem, GridItemPlaceholder } from "@/components/dashboard/layout";
 import { Suspense, lazy } from "react";
 import { useDashboardStore } from "@/store/dashboardStore";
-import { Spin } from "antd";
 import { DASHBOARD } from "@/constants/routes";
 import { Widget } from "@/components/dashboard/Widget";
 
@@ -27,6 +26,7 @@ interface DashboardEditProps {
 }
 
 export const DashboardEdit: React.FC<DashboardEditProps> = ({ dashboardId }) => {
+	const { message } = App.useApp();
 	const navigate = useNavigate();
 	const [showWidgetSelector, setShowWidgetSelector] = useState(false);
 

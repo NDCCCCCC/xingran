@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from "react";
 import type { FC } from "react";
-import { Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic, message } from "antd";
+import { Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic, App } from "antd";
 import {
   PlusOutlined,
   SearchOutlined,
@@ -35,6 +35,7 @@ import { DownloadOutlined } from "@ant-design/icons";
 const { Option } = Select;
 
 const TemplateManagement: FC = () => {
+  const { message } = App.useApp();
   const [searchForm] = Form.useForm();
   const [editForm] = Form.useForm();
   const [batchModalVisible, setBatchModalVisible] = useState(false);

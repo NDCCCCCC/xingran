@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect } from 'react';
 import type { FC } from 'react';
-import { Button, Form, Input, Select, Table, Modal, InputNumber, Space, Tag, message, Card, Statistic, Row, Col } from 'antd';
+import { Button, Form, Input, Select, Table, Modal, InputNumber, Space, Tag, App, Card, Statistic, Row, Col } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { formatDateTime } from '@/utils/datetime';
@@ -25,6 +25,7 @@ import { isFormValidationError } from '@/utils/errorHandler';
 const { Option } = Select;
 
 const DutyPoolPage: FC = () => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 

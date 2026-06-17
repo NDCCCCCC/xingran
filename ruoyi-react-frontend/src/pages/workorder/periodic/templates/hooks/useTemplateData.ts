@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import type { FormInstance } from "antd/es/form";
 import {
   getPeriodicTemplateList,
@@ -54,6 +54,7 @@ export interface UseTemplateDataReturn {
 }
 
 export function useTemplateData(searchForm: FormInstance<unknown>, current: number, pageSize: number): UseTemplateDataReturn {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<PeriodicWorkOrderTemplate[]>([]);
   const [total, setTotal] = useState(0);
@@ -96,7 +97,7 @@ export function useTemplateData(searchForm: FormInstance<unknown>, current: numb
     } finally {
       setLoading(false);
     }
-  }, [current, pageSize, searchForm]);
+  }, [current, pageSize, searchForm, message]);
 
   // 获取分类列表
   const fetchCategories = useCallback(async () => {

@@ -2,13 +2,13 @@ import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
+  App,
   Card,
   Table,
   Tag,
   Space,
   Button,
-  Select,
-  message
+  Select
 } from "antd";
 import {
   ReloadOutlined,
@@ -25,6 +25,7 @@ import {
 } from "@/lib/adDomainApi";
 
 const ADSyncLogsPage: React.FC = () => {
+  const { message } = App.useApp();
   const [logs, setLogs] = useState<ADSyncLog[]>([]);
   const [configs, setConfigs] = useState<ADConfig[]>([]);
   const [loading, setLoading] = useState(false);

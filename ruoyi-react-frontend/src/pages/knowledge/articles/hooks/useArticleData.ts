@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useEffect, useMemo } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import {
   getKnowledgeArticleList,
   createKnowledgeArticle,
@@ -62,6 +62,7 @@ export interface UseArticleDataReturn {
 export function useArticleData(params: UseArticleDataParams): UseArticleDataReturn {
   const { current, pageSize } = params;
 
+  const { message } = App.useApp();
   const [articles, setArticles] = useState<KnowledgeArticle[]>([]);
   const [categories, setCategories] = useState<KnowledgeCategory[]>([]);
   const [tags, setTags] = useState<KnowledgeTag[]>([]);

@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { message, Upload } from "antd";
+import { App, Upload } from "antd";
 import type { UploadFile, UploadProps } from "antd";
 import type { FormInstance } from "antd/es/form";
 import type { CaptchaBackground, CaptchaBackgroundUpdateRequest, PieceShape, DifficultyLevel, CaptchaBackgroundStatus } from "@/types/captcha";
@@ -54,6 +54,7 @@ export interface UseCaptchaModalsReturn {
 }
 
 export function useCaptchaModals(): UseCaptchaModalsReturn {
+  const { message } = App.useApp();
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingBg, setEditingBg] = useState<CaptchaBackground | null>(null);

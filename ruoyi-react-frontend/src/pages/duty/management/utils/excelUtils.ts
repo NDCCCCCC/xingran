@@ -6,7 +6,7 @@
  * （D-06 Wave 2: xlsx 按需加载）
  */
 
-import { message } from "antd";
+import { getAppMessage } from "@/utils/antdMessage";
 import dayjs from "dayjs";
 import type { HolidayExcelRow, ImportOptions, HolidayCreateData } from "../types";
 
@@ -76,7 +76,7 @@ export async function downloadHolidayTemplate() {
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "节假日模板");
   XLSX.writeFile(workbook, "节假日导入模板.xlsx");
-  message.success("模板下载成功");
+  getAppMessage().success("模板下载成功");
 }
 
 export async function handleHolidayImport(
@@ -119,13 +119,13 @@ export async function handleHolidayImport(
       onSuccess?.(undefined);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "导入失败";
-      message.error(errorMsg);
+      getAppMessage().error(errorMsg);
       onError?.(error instanceof Error ? error : new Error("导入失败"));
     }
   };
 
   reader.onerror = () => {
-    message.error("文件读取失败");
+    getAppMessage().error("文件读取失败");
     onError?.(new Error("文件读取失败"));
   };
 

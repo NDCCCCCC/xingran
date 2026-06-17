@@ -14,7 +14,7 @@ import {
 	AppstoreAddOutlined,
 	ArrowLeftOutlined,
 } from "@ant-design/icons";
-import { Button, Space, Modal, message } from "antd";
+import { App, Button, Space, Modal } from "antd";
 import { useNavigate } from "react-router-dom";
 import { useDashboardStore } from "@/store/dashboardStore";
 import type { DashboardViewMode } from "@/store/dashboardStore";
@@ -42,6 +42,7 @@ export const LayoutToolbar: React.FC<LayoutToolbarProps> = ({
 	extraActions,
 	onAddWidget,
 }) => {
+	const { message } = App.useApp();
 	const navigate = useNavigate();
 	const [saving, setSaving] = useState(false);
 

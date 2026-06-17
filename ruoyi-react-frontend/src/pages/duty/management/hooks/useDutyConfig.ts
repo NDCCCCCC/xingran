@@ -1,10 +1,11 @@
 import { useState, useCallback } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import { getDutyConfig, updateDutyConfig, type DutyConfig } from "@/lib/dutyApi";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 
 export function useDutyConfig() {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [config, setConfig] = useState<DutyConfig | null>(null);

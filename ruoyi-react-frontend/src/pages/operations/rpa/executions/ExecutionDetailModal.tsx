@@ -5,8 +5,8 @@
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import {
-  Modal, Descriptions, Steps, Card, Timeline, Image, Space, Tag, Alert,
-  Typography, Spin, Empty, Button, Tabs, message,
+  App, Modal, Descriptions, Steps, Card, Timeline, Image, Space, Tag, Alert,
+  Typography, Spin, Empty, Button, Tabs,
 } from "antd";
 import {
   FileTextOutlined, CameraOutlined, LoadingOutlined, CheckCircleOutlined,
@@ -30,6 +30,7 @@ export function ExecutionDetailModal({
   execution,
   onClose,
 }: ExecutionDetailModalProps) {
+  const { message } = App.useApp();
   const [logs, setLogs] = useState<ExecutionLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("steps");

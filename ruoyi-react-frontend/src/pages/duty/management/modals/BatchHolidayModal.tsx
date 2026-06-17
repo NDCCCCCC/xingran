@@ -2,7 +2,7 @@
  * 批量添加节假日模态框组件
  */
 
-import { Modal, Form, Select, DatePicker, message } from "antd";
+import { Modal, Form, Select, DatePicker, App } from "antd";
 import type { FormInstance } from "antd/es/form";
 import { BATCH_HOLIDAY_NAME_OPTIONS, MAX_BATCH_DAYS } from "../constants";
 import type { BatchHolidayFormValues } from "../types";
@@ -17,6 +17,7 @@ interface BatchHolidayModalProps {
 }
 
 export function BatchHolidayModal({ visible, onOk, onCancel }: BatchHolidayModalProps) {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
 
   const handleOk = async () => {

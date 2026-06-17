@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback, useMemo, type FC } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
+  App,
   Table,
   Button,
   Space,
@@ -18,7 +19,6 @@ import {
   Card,
   Row,
   Col,
-  message,
   Tooltip,
   Popconfirm,
   Alert,
@@ -81,7 +81,7 @@ function maskKey(key: string): string {
 /**
  * 复制文本到剪贴板
  */
-async function copyToClipboard(text: string): Promise<boolean> {
+async function copyToClipboard(text: string, message: { success: (msg: string) => void; error: (msg: string) => void }): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
     message.success("已复制到剪贴板");
@@ -110,6 +110,7 @@ function renderScopeTags(scopes: string[]) {
 // ==================== 主组件 ====================
 
 const APIKeyManagement: FC = () => {
+  const { message } = App.useApp();
   // ==================== 状态管理 ====================
   const [dataSource, setDataSource] = useState<APIKey[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -402,7 +403,7 @@ const APIKeyManagement: FC = () => {
               type="text"
               size="small"
               icon={<CopyOutlined />}
-              onClick={() => copyToClipboard(text)}
+              onClick={() => copyToClipboard(text, message)}
             />
           </Tooltip>
         </Space>
@@ -655,7 +656,7 @@ const APIKeyManagement: FC = () => {
                   type="primary"
                   size="small"
                   icon={<CopyOutlined />}
-                  onClick={() => copyToClipboard(createdKey)}
+                  onClick={() => copyToClipboard(createdKey, message)}
                   style={{ marginTop: 12 }}
                 >
                   复制密钥

@@ -5,7 +5,7 @@
  */
 
 import { useRef, useState, useEffect } from "react";
-import { Spin, message, Badge, List, Tag } from "antd";
+import { App, Spin, Badge, List, Tag } from "antd";
 import type { BuildingItem } from "../types";
 import { useVisualizationStore } from "@/store/visualizationStore";
 import { getMapMarkerColor } from "@/utils/three/colors";
@@ -49,6 +49,7 @@ const toBase64 = (str: string): string => {
 };
 
 const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
+  const { message } = App.useApp();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRefLocal = useRef<BMapMap | null>(null);
   const markersRef = useRef<BMapMarker[]>([]);

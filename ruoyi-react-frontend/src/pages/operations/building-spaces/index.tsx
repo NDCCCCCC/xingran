@@ -3,7 +3,7 @@
  * 展示楼宇卡片、3D楼层堆叠、工位平面图
  */
 import { useState, useEffect } from "react";
-import { Card, Row, Col, Statistic, message, Spin } from "antd";
+import { App, Card, Row, Col, Statistic, Spin } from "antd";
 import { ApartmentOutlined, DesktopOutlined } from "@ant-design/icons";
 import { buildingApi, floorApi, workstationApi } from "@/lib/opsApi";
 import BuildingCard from "./components/BuildingCard";
@@ -12,6 +12,7 @@ import type { Building } from "./types";
 import styles from "./components/styles.module.css";
 
 const BuildingSpacesPage: React.FC = () => {
+  const { message } = App.useApp();
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);

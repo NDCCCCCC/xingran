@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Modal, message, Alert, Checkbox } from "antd";
+import { App, Modal, Alert, Checkbox } from "antd";
 import { WarningOutlined } from "@ant-design/icons";
 import type { Menu } from "@/types";
 import type { FormInstance } from "antd/es/form";
@@ -42,6 +42,7 @@ export interface UseMenuActionsReturn {
 }
 
 export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsReturn {
+  const { message } = App.useApp();
   const { onLoad, selectedRowKeys, setSelectedRowKeys, onSaveSuccess } = params;
 
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);

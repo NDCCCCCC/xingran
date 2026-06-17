@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
+  App,
   Card,
   Table,
   Select,
@@ -10,7 +11,6 @@ import {
   Tag,
   Form,
   Modal,
-  message,
   Tooltip,
 } from 'antd';
 import {
@@ -49,6 +49,7 @@ import { usePagination } from '@/hooks/usePagination';
 import { createSorter } from '@/utils/tableHelpers';
 
 const ADUserPage: FC = () => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 

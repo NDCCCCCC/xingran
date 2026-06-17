@@ -7,12 +7,12 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+	App,
 	Card,
 	Table,
 	Button,
 	Space,
 	Tag,
-	message,
 	Popconfirm,
 	Input,
 	Row,
@@ -44,6 +44,7 @@ const DashboardList: React.FC<DashboardListProps> = ({
 	onNavigateToView,
 	onNavigateToEdit,
 }) => {
+	const { message } = App.useApp();
 	const navigate = useNavigate();
 	const [searchKeyword, setSearchKeyword] = useState('');
 	const [showTemplateSelector, setShowTemplateSelector] = useState(false);

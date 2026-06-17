@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Drawer, Form, Input, Button, Modal, message, Spin, Divider, Space } from "antd";
+import { App, Drawer, Form, Input, Button, Modal, Spin, Divider, Space } from "antd";
 import { SaveOutlined, DeleteOutlined, CloseOutlined } from "@ant-design/icons";
 import { useDashboardStore } from "@/store/dashboardStore";
 import DataSourceForm from "../settings/DataSourceForm";
@@ -29,6 +29,7 @@ export interface WidgetEditorProps {
  * Widget 编辑侧边抽屉组件
  */
 export const WidgetEditor: React.FC<WidgetEditorProps> = ({ visible, widget, onClose }) => {
+	const { message } = App.useApp();
 	const { updateWidget, removeWidget } = useDashboardStore();
 	const [form] = Form.useForm();
 	const [loading, setLoading] = useState(false);

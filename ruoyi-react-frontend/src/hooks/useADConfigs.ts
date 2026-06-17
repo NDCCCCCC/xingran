@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import {
   getADConfigList,
   type ADConfig,
@@ -23,6 +23,7 @@ export function useADConfigs(options: UseADConfigsOptions = {}) {
     autoSelectFirst = true,
   } = options;
 
+  const { message } = App.useApp();
   const [configs, setConfigs] = useState<ADConfig[]>([]);
   const [selectedConfig, setSelectedConfig] = useState<string>("");
   const [loading, setLoading] = useState(false);

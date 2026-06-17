@@ -13,7 +13,7 @@ import {
   Col,
   Statistic,
   Alert,
-  message,
+  App,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -43,6 +43,7 @@ const { Option } = Select;
 const { TextArea } = Input;
 
 const CredentialManagement: FC = () => {
+  const { message } = App.useApp();
   const [showPassword, setShowPassword] = useState(false);
   const [showEnablePassword, setShowEnablePassword] = useState(false);
   const [batchModalVisible, setBatchModalVisible] = useState(false);

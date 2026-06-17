@@ -1,5 +1,6 @@
 ﻿import { useState } from 'react';
 import {
+  App,
   Button,
   Table,
   Modal,
@@ -8,7 +9,6 @@ import {
   InputNumber,
   Switch,
   Space,
-  message,
   Card,
   Tag
 } from 'antd';
@@ -38,6 +38,7 @@ import type { ADConfig } from '@/lib/adDomainApi';
 import type { FC } from 'react';
 
 const ADConfigPage: FC = () => {
+  const { message } = App.useApp();
   const [editForm] = Form.useForm();
 
   // 使用共享的 AD 配置 Hook

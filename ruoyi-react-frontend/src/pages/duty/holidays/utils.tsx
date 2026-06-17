@@ -6,7 +6,7 @@
  * （D-06 Wave 2: xlsx 按需加载）
  */
 
-import { message } from "antd";
+import { getAppMessage } from "@/utils/antdMessage";
 import dayjs from "dayjs";
 import type { ExcelHolidayRow, ExcelImportOptions, HolidayType } from "./types";
 import { batchCreateHolidays, type Holiday } from "@/lib/dutyApi";
@@ -49,7 +49,7 @@ export async function handleExcelImport(
 
     // 验证Excel格式（跳过表头）
     if (jsonData.length < 2) {
-      message.error("Excel文件为空或格式不正确");
+      getAppMessage().error("Excel文件为空或格式不正确");
       return;
     }
 
@@ -77,7 +77,7 @@ export async function handleExcelImport(
         // 字符串日期，尝试多种格式
         const parsed = dayjs(dateStr as string);
         if (!parsed.isValid()) {
-          message.error(`第 ${i + 1} 行：日期格式不正确 - ${dateStr}`);
+          getAppMessage().error(`第 ${i + 1} 行：日期格式不正确 - ${dateStr}`);
           return;
         }
         formattedDate = parsed.format("YYYY-MM-DD");
@@ -100,20 +100,20 @@ export async function handleExcelImport(
     }
 
     if (holidays.length === 0) {
-      message.error("没有有效的节假日数据");
+      getAppMessage().error("没有有效的节假日数据");
       return;
     }
 
     // 批量创建
     await batchCreateHolidays(holidays as Omit<Holiday, "id" | "createdAt" | "createdBy">[]);
-    message.success(`成功导入 ${holidays.length} 条节假日记录`);
+    getAppMessage().success(`成功导入 ${holidays.length} 条节假日记录`);
 
     onSuccess?.();
     options.onSuccess?.(holidays);
   } catch (error: unknown) {
     console.error("Excel导入失败:", error);
     const errorMsg = error instanceof Error ? error.message : "未知错误";
-    message.error(`导入失败: ${errorMsg}`);
+    getAppMessage().error(`导入失败: ${errorMsg}`);
     onError?.(error instanceof Error ? error : new Error("导入失败"));
   }
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
+  App,
   Tree,
   Card,
   Select,
@@ -8,7 +9,6 @@ import {
   Space,
   Button,
   Table,
-  message,
   Col,
   Row,
   Modal,
@@ -51,6 +51,7 @@ import type { FC } from 'react';
 interface Department extends DeptTreeNode {}
 
 const ADOUPage: FC = () => {
+  const { message } = App.useApp();
   const { configs, selectedConfig, setSelectedConfig } = useADConfigs({
     enabledOnly: true,
     autoSelectFirst: true,

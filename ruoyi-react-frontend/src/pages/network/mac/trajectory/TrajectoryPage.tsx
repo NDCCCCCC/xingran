@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  Card, DatePicker, Input, Button, Form, Space, Alert, Drawer, message,
+  Card, DatePicker, Input, Button, Form, Space, Alert, Drawer, App,
 } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
@@ -40,6 +40,7 @@ interface TrajectoryQueryParams {
 }
 
 const TrajectoryPage: React.FC = () => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const location = useLocation();
   const [queryParams, setQueryParams] = useState<TrajectoryQueryParams | null>(null);

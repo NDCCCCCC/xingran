@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
+  App,
   Card,
   Row,
   Col,
@@ -7,7 +8,6 @@ import {
   Button,
   Table,
   Tag,
-  message,
   Progress
 } from 'antd';
 import { ReloadOutlined, PlayCircleOutlined } from '@ant-design/icons';
@@ -37,6 +37,7 @@ interface SyncLog {
 }
 
 const SyncMonitor: React.FC = () => {
+  const { message } = App.useApp();
   const [status, setStatus] = useState<SyncStatus | null>(null);
   const [logs, setLogs] = useState<SyncLog[]>([]);
   const [loading, setLoading] = useState(false);

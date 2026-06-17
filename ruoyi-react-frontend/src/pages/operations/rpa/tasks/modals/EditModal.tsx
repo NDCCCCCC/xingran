@@ -4,8 +4,8 @@
 
 import { useLayoutEffect, useState, useCallback } from "react";
 import {
-  Modal, Form, Input, InputNumber, Switch, Tabs, Space, Button,
-  Card, Row, Col, message, Tag, Divider, Select,
+  App, Modal, Form, Input, InputNumber, Switch, Tabs, Space, Button,
+  Card, Row, Col, Tag, Divider, Select,
 } from "antd";
 import { PlusOutlined, DeleteOutlined, RobotOutlined } from "@ant-design/icons";
 import type { FormInstance } from "antd/es/form";
@@ -118,6 +118,7 @@ export function TaskEditModal({
   onOk,
   onCancel,
 }: TaskEditModalProps) {
+  const { message } = App.useApp();
   const [actions, setActions] = useState<Action[]>([]);
   const [aiEditorVisible, setAiEditorVisible] = useState(false);
 

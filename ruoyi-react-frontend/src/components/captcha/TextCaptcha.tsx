@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import type { FC, ChangeEvent } from "react";
-import { Button, message } from "antd";
+import { App, Button } from "antd";
 import { ReloadOutlined } from "@ant-design/icons";
 import { getCaptcha } from "@/services/captcha";
 import type { CaptchaResponse, CaptchaProps } from "@/types/captcha";
 import "./TextCaptcha.css";
 
 const TextCaptcha: FC<CaptchaProps> = ({ value, onChange, onError }) => {
+  const { message } = App.useApp();
   const [captchaData, setCaptchaData] = useState<CaptchaResponse | null>(null);
   const [loading, setLoading] = useState(false);
 

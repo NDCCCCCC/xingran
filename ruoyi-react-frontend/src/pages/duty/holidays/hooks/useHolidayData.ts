@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useEffect } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import type { Holiday } from "@/lib/dutyApi";
 import { getHolidayList, getHolidayYears } from "@/lib/dutyApi";
 
@@ -23,6 +23,7 @@ export interface UseHolidayDataReturn {
 }
 
 export function useHolidayData(): UseHolidayDataReturn {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<Holiday[]>([]);
   const [year, setYear] = useState<number | undefined>(undefined);

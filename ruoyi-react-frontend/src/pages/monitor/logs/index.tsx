@@ -20,6 +20,7 @@ import {
   Modal,
   Typography,
   Form,
+  App,
 } from "antd";
 import {
   SearchOutlined,
@@ -36,7 +37,6 @@ import { getOperLogColumns, getLoginLogColumns } from "./columns";
 import { useTableManager } from "@/hooks/useTableManager";
 import type { BaseResponse, PageResponse } from "@/types";
 import { post } from "@/lib/api";
-import { message } from "antd";
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
@@ -88,6 +88,7 @@ const loadLoginLogs = async (params: any): Promise<{ list: LoginLog[]; total: nu
 // ==================== 主组件 ====================
 
 const LogMonitor: React.FC = () => {
+  const { message } = App.useApp();
   const location = useLocation();
   const [activeTab, setActiveTab] = usePersistedStateController<"oper" | "login">({
     keyPrefix: location.pathname,
@@ -150,7 +151,7 @@ const LogMonitor: React.FC = () => {
         }
       },
     });
-  }, [activeTab, currentManager]);
+  }, [activeTab, currentManager, message]);
 
   // 刷新
   const handleRefresh = useCallback(() => {

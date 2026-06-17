@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { FC } from "react";
 import {
+  App,
   Button,
   Upload,
   Modal,
@@ -10,7 +11,6 @@ import {
   Alert,
   Progress,
   Typography,
-  message,
 } from "antd";
 import {
   UploadOutlined,
@@ -67,6 +67,7 @@ const ExcelImport: FC<ExcelImportProps> = ({
   const resolvedImportUrl = importUrl ?? `/api/v1/ops/${entityType}/import`;
 
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const { message } = App.useApp();
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);

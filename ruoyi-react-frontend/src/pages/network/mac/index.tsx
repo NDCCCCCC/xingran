@@ -12,7 +12,7 @@ import {
   Col,
   Statistic,
   Tag,
-  message,
+  App,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -37,6 +37,7 @@ import { DownloadOutlined } from "@ant-design/icons";
 const { Option } = Select;
 
 const MACAddressPage: FC = () => {
+  const { message } = App.useApp();
   const [devices, setDevices] = useState<NetworkDevice[]>([]);
 
   // 统计数据

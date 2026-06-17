@@ -4,7 +4,7 @@
  */
 
 import { useState, useMemo, type FC } from "react";
-import { Modal, Checkbox, Space, Button, message } from "antd";
+import { App, Modal, Checkbox, Space, Button } from "antd";
 import { DownloadOutlined, CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import { getAccessToken } from "@/utils/authHelpers";
 
@@ -42,6 +42,7 @@ const BatchExportModal: FC<BatchExportModalProps> = ({
   availableEntityTypes = DEFAULT_ENTITY_TYPES,
 }) => {
   // 默认全选所有实体类型
+  const { message } = App.useApp();
   const [selectedTypes, setSelectedTypes] = useState<string[]>(DEFAULT_ENTITY_TYPES.map(e => e.key));
 
   // 当 modal 打开时重置为全选

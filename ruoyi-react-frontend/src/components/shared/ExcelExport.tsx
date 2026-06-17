@@ -6,10 +6,10 @@
 import { useState, useCallback } from "react";
 import type { FC } from "react";
 import {
+  App,
   Button,
   Space,
   Modal,
-  message,
   Alert,
   Descriptions,
 } from "antd";
@@ -36,6 +36,7 @@ const ExcelExport: FC<ExcelExportProps> = ({
   filters = {},
 }) => {
   const [exporting, setExporting] = useState(false);
+  const { message } = App.useApp();
 
   const handleExport = useCallback(async () => {
     setExporting(true);

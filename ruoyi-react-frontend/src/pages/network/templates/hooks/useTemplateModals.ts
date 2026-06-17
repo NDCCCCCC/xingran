@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import type { ConfigTemplate } from "@/types";
 import type { FormInstance } from "antd/es/form";
 import { post } from "@/lib/api";
@@ -31,6 +31,7 @@ export interface UseTemplateModalsReturn extends TemplateModalState {
 }
 
 export function useTemplateModals(): UseTemplateModalsReturn {
+  const { message } = App.useApp();
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [variablesModalVisible, setVariablesModalVisible] = useState(false);

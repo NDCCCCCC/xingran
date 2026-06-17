@@ -4,7 +4,6 @@
  */
 
 import { useState, useCallback, useEffect } from "react";
-import { message } from "antd";
 import type { Department } from "@/types";
 import { post, get } from "@/lib/api";
 import type { DeptStatistics, DeptUser, ParentOption } from "../types";

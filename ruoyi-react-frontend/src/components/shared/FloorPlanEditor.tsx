@@ -4,7 +4,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import type { CSSProperties } from "react";
-import { Card, Button, Dropdown, Tooltip, message } from "antd";
+import { Card, Button, Dropdown, Tooltip, App } from "antd";
 import type { MenuProps } from "antd";
 import {
   ZoomInOutlined,
@@ -44,6 +44,7 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
   onUpdatePosition,
   onEdit,
 }) => {
+  const { message } = App.useApp();
   const containerRef = useRef<SVGSVGElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });

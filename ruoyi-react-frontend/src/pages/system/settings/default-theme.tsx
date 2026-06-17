@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Form, Select, Button, Card, message, Space, Divider, ColorPicker } from "antd";
+import { App, Form, Select, Button, Card, Space, Divider, ColorPicker } from "antd";
 import { BgColorsOutlined, SyncOutlined, SaveOutlined } from "@ant-design/icons";
 import type { ThemeConfiguration } from "@/types/config";
 import { getDefaultThemeConfig, setDefaultThemeConfig, syncUserThemeToDefault } from "@/lib/defaultThemeApi";
@@ -31,6 +31,7 @@ const STYLE_OPTIONS = [
 ];
 
 const DefaultThemePage: React.FC = () => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);

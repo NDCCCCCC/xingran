@@ -22,7 +22,7 @@ import {
   Layout,
   Divider,
   Alert,
-  message,
+  App,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { DividerProps } from "antd/es/divider";
@@ -217,6 +217,7 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
 // ==================== 主组件 ====================
 
 const DeviceManagement: FC = () => {
+  const { message } = App.useApp();
   const navigate = useNavigate();
 
   // 权限(14-05b:查看 MAC 历史联动入口)— 与 history 页主权限点 network:mac:list 保持一致

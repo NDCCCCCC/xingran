@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useEffect } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import type { ConfigExecution, NetworkDevice, ConfigTemplate, BaseResponse, PageResponse } from "@/types";
 import { post } from "@/lib/api";
 import type { ExecutionStatistics, ExecutionDataState } from "../types";
@@ -42,6 +42,7 @@ export interface UseExecutionDataReturn {
 }
 
 export function useExecutionData(params: UseExecutionDataParams): UseExecutionDataReturn {
+  const { message } = App.useApp();
   const { current, pageSize, execCurrent } = params;
 
   const [dataState, setDataState] = useState<ExecutionDataState>({

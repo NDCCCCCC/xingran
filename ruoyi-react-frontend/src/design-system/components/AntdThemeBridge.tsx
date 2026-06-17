@@ -22,12 +22,13 @@
  * - 同时挂载到 :root --ant-color-primary CSS 变量，方便自定义 CSS 引用
  */
 
-import { useMemo, type FC, type ReactNode } from "react";
+import { useEffect, useMemo, type FC, type ReactNode } from "react";
 import { App, ConfigProvider, theme as antdTheme } from "antd";
 import type { ThemeConfig } from "antd";
 import zhCN from "antd/locale/zh_CN";
 import { useSettingsStore } from "@/store/settingsStore";
 import { useThemeStore } from "@/store/themeStore";
+import { setAppMessageInstance } from "@/utils/antdMessage";
 
 interface AntdThemeBridgeProps {
 	children: ReactNode;
@@ -38,6 +39,21 @@ interface AntdThemeBridgeProps {
  * 当用户未配置 customColors.primary 时使用此值
  */
 const DEFAULT_ANTD_PRIMARY = "#1677ff";
+
+/**
+ * message context 注入器
+ * 运行在 antd <App> 内部（由 AntdThemeBridge 渲染），把 context-aware 的 message
+ * 实例注入 module-level ref，供 axios 拦截器、静态错误处理器等无法调用 hook 的
+ * 模块作用域代码共享同一 context-aware 实例（见 @/utils/antdMessage）。
+ */
+const MessageContextInjector: FC<{ children: ReactNode }> = ({ children }) => {
+	const { message } = App.useApp();
+	useEffect(() => {
+		setAppMessageInstance(message);
+		return () => setAppMessageInstance(null);
+	}, [message]);
+	return <>{children}</>;
+};
 
 const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
 	// 订阅 settingsStore 的主题与布局配置
@@ -80,7 +96,9 @@ const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
 
 	return (
 		<ConfigProvider locale={zhCN} theme={antdThemeConfig}>
-			<App component={false}>{children}</App>
+			<App component={false}>
+				<MessageContextInjector>{children}</MessageContextInjector>
+			</App>
 		</ConfigProvider>
 	);
 };

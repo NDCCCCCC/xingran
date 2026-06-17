@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import dayjs from "dayjs";
 import type { FormInstance } from "antd/es/form";
 import type { Holiday } from "@/lib/dutyApi";
@@ -38,6 +38,7 @@ export interface UseHolidayModalsReturn {
 
 export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModalsReturn {
   const { year, availableYears, fetchList } = params;
+  const { message } = App.useApp();
 
   const [modalState, setModalState] = useState<ModalState>({
     modalVisible: false,

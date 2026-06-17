@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
+  App,
   Card,
   Table,
   Select,
@@ -9,7 +10,6 @@ import {
   Tag,
   Modal,
   Form,
-  message,
   Drawer,
   Descriptions,
   Tooltip,
@@ -45,6 +45,7 @@ import type { FC } from 'react';
 import { usePagination } from '@/hooks/usePagination';
 
 const ADGroupPage: FC = () => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
 
   // 使用共享的 AD 配置 Hook

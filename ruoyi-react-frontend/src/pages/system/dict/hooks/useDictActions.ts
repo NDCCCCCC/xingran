@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, type Key } from "react";
-import { message, type FormInstance } from "antd";
+import { App, type FormInstance } from "antd";
 import { useQueryClient } from "@tanstack/react-query";
 import type { DictType, DictData } from "@/types";
 import { post } from "@/lib/api";
@@ -45,6 +45,7 @@ export interface UseDictActionsReturn {
 }
 
 export function useDictActions(params: UseDictActionsParams): UseDictActionsReturn {
+  const { message } = App.useApp();
   const {
     selectedType,
     loadDictTypes,

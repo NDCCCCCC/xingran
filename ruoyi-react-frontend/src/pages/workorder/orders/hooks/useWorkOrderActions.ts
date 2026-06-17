@@ -3,7 +3,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import type {
   WorkOrderType,
   WorkOrderPriority} from "@/lib/workorderApi";
@@ -43,6 +43,7 @@ export function useWorkOrderActions(
   options: UseWorkOrderActionsOptions
 ): UseWorkOrderActionsReturn {
   const { fetchList, openDetailDrawer, selectedRecord } = options;
+  const { message } = App.useApp();
   const [actionLoading, setActionLoading] = useState(false);
 
   const handleAdd = useCallback(() => {
@@ -61,7 +62,7 @@ export function useWorkOrderActions(
     } catch (error) {
       message.error("删除失败");
     }
-  }, [fetchList]);
+  }, [fetchList, message]);
 
   const handleBatchDelete = useCallback(async (selectedRowKeys: React.Key[]) => {
     if (selectedRowKeys.length === 0) {
@@ -75,7 +76,7 @@ export function useWorkOrderActions(
     } catch (error) {
       message.error("批量删除失败");
     }
-  }, [fetchList]);
+  }, [fetchList, message]);
 
   const handleAssignToTodayDuty = useCallback(async (id: string) => {
     try {
@@ -93,7 +94,7 @@ export function useWorkOrderActions(
       console.error("分配失败:", error);
       fetchList();
     }
-  }, [fetchList]);
+  }, [fetchList, message]);
 
   const handleModalOk = useCallback(async (
     editForm: { validateFields: () => Promise<Record<string, unknown>> },
@@ -152,7 +153,7 @@ export function useWorkOrderActions(
       }
       message.error(editingRecord ? "更新失败" : "创建失败");
     }
-  }, [fetchList]);
+  }, [fetchList, message]);
 
   const handleAddComment = useCallback(async (
     commentForm: { validateFields: () => Promise<Record<string, unknown>>; resetFields: () => void },
@@ -177,7 +178,7 @@ export function useWorkOrderActions(
     } catch (error) {
       message.error("评论添加失败");
     }
-  }, [selectedRecord]);
+  }, [selectedRecord, message]);
 
   const handleStatusChange = useCallback(async (status: number) => {
     if (!selectedRecord) return;
@@ -194,7 +195,7 @@ export function useWorkOrderActions(
         message.error("状态更新失败");
       }
     }
-  }, [fetchList, openDetailDrawer, selectedRecord]);
+  }, [fetchList, openDetailDrawer, selectedRecord, message]);
 
   return {
     actionLoading,

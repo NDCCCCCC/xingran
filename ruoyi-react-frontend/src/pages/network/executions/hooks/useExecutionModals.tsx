@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { message, Modal } from "antd";
+import { App, Modal } from "antd";
 import type { FormInstance } from "antd/es/form";
 import { post } from "@/lib/api";
 import type { ModalState, ExecutionDataState } from "../types";
@@ -34,6 +34,7 @@ export interface UseExecutionModalsReturn {
 }
 
 export function useExecutionModals(params: UseExecutionModalsParams): UseExecutionModalsReturn {
+  const { message } = App.useApp();
   const { dataState, setDataState, loadExecutions } = params;
 
   const [modalState, setModalState] = useState<ModalState>({

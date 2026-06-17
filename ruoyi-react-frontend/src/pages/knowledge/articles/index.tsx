@@ -10,6 +10,7 @@ import {
   Col,
   Statistic,
   Space,
+  App,
 } from "antd";
 import {
   PlusOutlined,
@@ -21,13 +22,13 @@ import { useArticleData } from "./hooks";
 import { getArticleColumns } from "./columns";
 import { EditModal, PreviewModal } from "./modals";
 import { KnowledgeArticleStatus, type KnowledgeArticle } from "@/lib/knowledgeApi";
-import { message } from "antd";
 import { usePagination } from "@/hooks/usePagination";
 import { isFormValidationError } from "@/utils/errorHandler";
 
 const { Option } = Select;
 
 const KnowledgeArticlePage: FC = () => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 

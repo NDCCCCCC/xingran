@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import {
   getHolidayList,
   createHoliday,
@@ -11,6 +11,7 @@ import {
 } from "@/lib/dutyApi";
 
 export function useHolidayData() {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [holidayYear, setHolidayYear] = useState<number | undefined>(undefined);

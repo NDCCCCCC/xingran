@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useState } from "react";
-import { Modal, message } from "antd";
+import { Modal, App } from "antd";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 import { post } from "@/lib/api";
 
@@ -30,6 +30,7 @@ export function useLogActions(params: UseLogActionsParams): UseLogActionsReturn 
     fetchOperLogs,
     fetchLoginLogs,
   } = params;
+  const { message } = App.useApp();
 
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedLog, setSelectedLog] = useState<any>(null);
@@ -69,8 +70,8 @@ export function useLogActions(params: UseLogActionsParams): UseLogActionsReturn 
       }
     });
     // activeTab 仅为闭包读取,变化由调用方触发(handleClearLogs 依赖 activeTab)
-     
-  }, [activeTab, fetchOperLogs, fetchLoginLogs]);
+
+  }, [activeTab, fetchOperLogs, fetchLoginLogs, message]);
 
   // 刷新
   const handleRefresh = useCallback(() => {

@@ -16,7 +16,7 @@ import {
   Row,
   Col,
   Statistic,
-  message,
+  App,
 } from "antd";
 import {
   ThunderboltOutlined,
@@ -42,6 +42,7 @@ import { DownloadOutlined } from "@ant-design/icons";
 const { Option } = Select;
 
 const CommandDispatch: FC = () => {
+  const { message } = App.useApp();
   const [execLoading, setExecLoading] = useState(false);
   const [dispatchModalVisible, setDispatchModalVisible] = useState(false);
   const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);

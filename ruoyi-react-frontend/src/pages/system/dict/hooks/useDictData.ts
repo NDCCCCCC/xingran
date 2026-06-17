@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import type { FormInstance } from "antd/es/form";
 import type { DictType, DictData } from "@/types";
 import { post } from "@/lib/api";
@@ -35,6 +35,7 @@ export interface UseDictDataReturn {
 }
 
 export function useDictData(searchForm: FormInstance<unknown>, dataSearchForm: FormInstance<unknown>, current: number, pageSize: number): UseDictDataReturn {
+  const { message } = App.useApp();
   const [dictTypes, setDictTypes] = useState<DictType[]>([]);
   const [dictDataList, setDictDataList] = useState<DictData[]>([]);
   const [loading, setLoading] = useState(false);

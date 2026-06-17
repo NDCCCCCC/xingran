@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import type { FormInstance } from "antd/es/form";
 import type {
   WorkOrderType,
@@ -41,6 +41,7 @@ export interface UseTemplateActionsReturn {
 
 export function useTemplateActions(params: UseTemplateActionsParams): UseTemplateActionsReturn {
   const { onLoad } = params;
+  const { message } = App.useApp();
 
   const [editingRecord, setEditingRecord] = useState<PeriodicWorkOrderTemplate | null>(null);
 
@@ -85,7 +86,7 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
       const err = error instanceof Error ? error.message : "删除失败";
       message.error(err);
     }
-  }, [onLoad]);
+  }, [onLoad, message]);
 
   // 切换启用状态
   const handleToggleEnabled = useCallback(async (record: PeriodicWorkOrderTemplate) => {
@@ -102,7 +103,7 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
       const err = error instanceof Error ? error.message : "操作失败";
       message.error(err);
     }
-  }, [onLoad]);
+  }, [onLoad, message]);
 
   // 立即生成工单
   const handleGenerateNow = useCallback(async (id: string) => {
@@ -114,7 +115,7 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
       const err = error instanceof Error ? error.message : "生成失败";
       message.error(err);
     }
-  }, [onLoad]);
+  }, [onLoad, message]);
 
   // 保存
   const handleSave = useCallback(async (editForm: FormInstance<unknown>) => {
@@ -171,7 +172,7 @@ export function useTemplateActions(params: UseTemplateActionsParams): UseTemplat
       }
       message.error(editingRecord ? "更新失败" : "创建失败");
     }
-  }, [editingRecord, onLoad]);
+  }, [editingRecord, onLoad, message]);
 
   return {
     editingRecord,

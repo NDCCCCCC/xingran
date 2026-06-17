@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useLayoutEffect } from "react";
-import { Modal, Card, Row, Col, Button, Tag, Space, Tooltip, message } from "antd";
+import { App, Modal, Card, Row, Col, Button, Tag, Space, Tooltip } from "antd";
 import {
 	AppstoreOutlined,
 	LineChartOutlined,
@@ -42,6 +42,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 	const [dashboardName, setDashboardName] = useState("");
 	const [previewVisible, setPreviewVisible] = useState(false);
 	const [previewTemplate, setPreviewTemplate] = useState<Dashboard | null>(null);
+	const { message } = App.useApp();
 	const navigate = useNavigate();
 
 	// 重置状态 - 使用 useLayoutEffect 避免级联渲染

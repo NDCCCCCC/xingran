@@ -11,7 +11,7 @@ import {
   Table,
   Modal,
   Input,
-  message,
+  App,
   Card,
   Space,
   Tag,
@@ -221,6 +221,7 @@ function getDutyTableColumns(props: DutyTableColumnsProps): ColumnsType<DutySche
 // ==================== 主组件 ====================
 
 const DutySchedulePage: FC = () => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
