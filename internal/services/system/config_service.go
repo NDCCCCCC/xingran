@@ -7,6 +7,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -38,6 +39,15 @@ type configService struct {
 // NewConfigService 创建参数配置服务实例
 func NewConfigService(db *gorm.DB) ConfigService {
 	return &configService{db: db}
+}
+
+// configAllowedSortFields 参数配置可排序字段白名单。
+// 值为 DB 列名(纯列名,无 JOIN)。
+var configAllowedSortFields = map[string]string{
+	"configName":  "config_name",
+	"configKey":   "config_key",
+	"configType":  "config_type",
+	"createdAt":   "created_at",
 }
 
 // ==================== 服务方法实现 ====================
@@ -200,6 +210,10 @@ func (s *configService) List(ctx context.Context, params requests.ConfigListPara
 	}
 
 	offset := (params.Current - 1) * params.PageSize
+	query = base.ApplySort(query, params.BaseListRequest, configAllowedSortFields)
+	if params.OrderByColumn == "" {
+		query = query.Order("created_at DESC")
+	}
 	if err := query.Offset(offset).Limit(params.PageSize).Find(&list).Error; err != nil {
 		return nil, fmt.Errorf("查询参数配置列表失败: %w", err)
 	}

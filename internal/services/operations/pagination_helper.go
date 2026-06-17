@@ -2,6 +2,8 @@ package operations
 
 import (
 	"math"
+
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 )
 
 const (
@@ -39,6 +41,21 @@ func extractPagination(params map[string]interface{}) PaginationParams {
 		Current:  current,
 		PageSize: pageSize,
 	}
+}
+
+// extractSortRequest 从 map 参数中提取排序请求,构造 base.BaseListRequest。
+// operations 模块 handler 直接 bind map[string]interface{},前端传的
+// orderByColumn/isAsc 会随 map 透传到这里。
+func extractSortRequest(params map[string]interface{}) base.BaseListRequest {
+	req := base.BaseListRequest{
+		Current:       extractIntParam(params, "current", DefaultCurrent),
+		PageSize:      extractIntParam(params, "pageSize", DefaultPageSize),
+		OrderByColumn: extractStringParam(params, "orderByColumn"),
+	}
+	if isAsc, ok := params["isAsc"].(bool); ok {
+		req.IsAsc = &isAsc
+	}
+	return req
 }
 
 // extractIntParam 提取整数参数

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
@@ -214,8 +215,10 @@ func WarmUpUserCache(userSvc UserService) WarmUpFunc {
 	return func(ctx context.Context, cache CacheProvider) error {
 		// 获取所有用户列表并缓存
 		params := requests.UserListParams{
-			Current:  1,
-			PageSize: 1000,
+			BaseListRequest: base.BaseListRequest{
+				Current:  1,
+				PageSize: 1000,
+			},
 		}
 		_, err := userSvc.List(ctx, params)
 		if err != nil {
@@ -230,8 +233,10 @@ func WarmUpRoleCache(roleSvc RoleService) WarmUpFunc {
 	return func(ctx context.Context, cache CacheProvider) error {
 		// 获取所有角色列表并缓存
 		params := requests.RoleListParams{
-			Current:  1,
-			PageSize: 1000,
+			BaseListRequest: base.BaseListRequest{
+				Current:  1,
+				PageSize: 1000,
+			},
 		}
 		_, err := roleSvc.List(ctx, params)
 		if err != nil {
@@ -270,8 +275,10 @@ func WarmUpPostCache(postSvc PostService) WarmUpFunc {
 	return func(ctx context.Context, cache CacheProvider) error {
 		// 获取所有岗位列表并缓存
 		params := requests.PostListParams{
-			Current:  1,
-			PageSize: 1000,
+			BaseListRequest: base.BaseListRequest{
+				Current:  1,
+				PageSize: 1000,
+			},
 		}
 		_, err := postSvc.List(ctx, params)
 		if err != nil {

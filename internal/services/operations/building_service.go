@@ -6,6 +6,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
 )
@@ -33,6 +34,17 @@ func NewBuildingService(db *gorm.DB) BuildingService {
 		codeGenerator: NewCodeGenerator(db),
 		uuidValidator: constants.UuidPattern,
 	}
+}
+
+// buildingAllowedSortFields 楼宇可排序字段白名单(对应 ops_buildings 表列名)。
+var buildingAllowedSortFields = map[string]string{
+	"name":       "name",
+	"address":    "address",
+	"level":      "level",
+	"orgId":      "org_id",
+	"orderNum":   "order_num",
+	"status":     "status",
+	"createdAt":  "created_at",
 }
 
 // Create 创建楼宇
@@ -99,8 +111,15 @@ func (s *buildingService) List(ctx context.Context, params map[string]interface{
 	pagination := extractPagination(params)
 	offset := calculateOffset(pagination)
 
+	// 应用用户排序(白名单);无 OrderByColumn 时保留 order_num ASC 默认
+	sortReq := extractSortRequest(params)
+	query = base.ApplySort(query, sortReq, buildingAllowedSortFields)
+	if sortReq.OrderByColumn == "" {
+		query = query.Order("order_num ASC")
+	}
+
 	var list []operations.OpsBuilding
-	if err := query.Offset(offset).Limit(pagination.PageSize).Order("order_num ASC").Find(&list).Error; err != nil {
+	if err := query.Offset(offset).Limit(pagination.PageSize).Find(&list).Error; err != nil {
 		return nil, err
 	}
 

@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
@@ -300,8 +301,10 @@ func (h *DictDataHandler) List(c *gin.Context) {
 	}
 
 	req := requests.DictDataListParams{
-		Current:  getIntField(rawReq, "current", 1),
-		PageSize: getIntField(rawReq, "pageSize", 10),
+		BaseListRequest: base.BaseListRequest{
+			Current:  getIntField(rawReq, "current", 1),
+			PageSize: getIntField(rawReq, "pageSize", 10),
+		},
 	}
 
 	if val, ok := rawReq["dictType"].(string); ok {

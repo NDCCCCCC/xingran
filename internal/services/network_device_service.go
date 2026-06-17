@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -27,14 +28,23 @@ func NewNetworkDeviceService(db *gorm.DB, discoveryService *DeviceDiscoveryServi
 
 // ListRequest 设备列表请求
 type ListDeviceRequest struct {
+	base.BaseListRequest
 	DeviceName *string
 	DeviceType *models.DeviceType
 	Vendor     *models.DeviceVendor
 	IP         *string
 	Status     *models.DeviceStatus
 	DeptID     *string
-	Current    int
-	PageSize   int
+}
+
+// networkDeviceAllowedSortFields 网络设备可排序字段白名单(对应 sys_network_device 表列名)。
+var networkDeviceAllowedSortFields = map[string]string{
+	"deviceName": "device_name",
+	"deviceType": "device_type",
+	"vendor":     "vendor",
+	"ipAddress":  "ip_address",
+	"status":     "status",
+	"createdAt":  "created_at",
 }
 
 // List 获取设备列表
@@ -68,9 +78,13 @@ func (s *NetworkDeviceService) List(ctx context.Context, req *ListDeviceRequest)
 		return nil, 0, fmt.Errorf("查询设备总数失败: %w", err)
 	}
 
-	// 分页查询
+	// 分页查询 - 用户排序(白名单)优先,无 OrderByColumn 时保留 created_at DESC 默认
 	offset := (req.Current - 1) * req.PageSize
-	if err := query.Offset(offset).Limit(req.PageSize).Order("created_at DESC").Find(&devices).Error; err != nil {
+	query = base.ApplySort(query, req.BaseListRequest, networkDeviceAllowedSortFields)
+	if req.OrderByColumn == "" {
+		query = query.Order("created_at DESC")
+	}
+	if err := query.Offset(offset).Limit(req.PageSize).Find(&devices).Error; err != nil {
 		return nil, 0, fmt.Errorf("查询设备列表失败: %w", err)
 	}
 

@@ -3,22 +3,24 @@ package requests
 import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 )
 
 // PostListParams 岗位列表查询参数
 type PostListParams struct {
+	base.BaseListRequest
 	PostCode *string `json:"postCode"`
 	PostName *string `json:"postName"`
 	Status   *int    `json:"status"`
-	Current  int     `json:"current"`
-	PageSize int     `json:"pageSize"`
 }
 
 // DefaultPostListParams 默认列表参数
 func DefaultPostListParams() PostListParams {
 	return PostListParams{
-		Current:  constants.DefaultCurrent,
-		PageSize: constants.DefaultPageSize,
+		BaseListRequest: base.BaseListRequest{
+			Current:  constants.DefaultCurrent,
+			PageSize: constants.DefaultPageSize,
+		},
 	}
 }
 

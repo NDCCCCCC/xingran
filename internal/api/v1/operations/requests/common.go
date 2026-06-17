@@ -2,12 +2,14 @@ package requests
 
 import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 )
 
 // PaginationParams 分页参数（基础结构）
+// 嵌入 base.BaseListRequest 使 json 顶层自动出现 orderByColumn/isAsc 字段,
+// 所有嵌入 PaginationParams 的 XxxListRequest 自动获得服务端排序能力。
 type PaginationParams struct {
-	Current  int `json:"current"`  // 当前页码
-	PageSize int `json:"pageSize"` // 每页数量
+	base.BaseListRequest
 }
 
 // GetPagination 获取分页参数，应用默认值和限制

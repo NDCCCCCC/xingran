@@ -3,24 +3,26 @@ package requests
 import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 )
 
 // ConfigListParams 参数配置列表查询参数
 type ConfigListParams struct {
+	base.BaseListRequest
 	ConfigName *string `json:"configName"`
 	ConfigKey  *string `json:"configKey"`
 	ConfigType *string `json:"configType"`
 	BeginTime  *string `json:"beginTime"`
 	EndTime    *string `json:"endTime"`
-	Current    int     `json:"current"`
-	PageSize   int     `json:"pageSize"`
 }
 
 // DefaultConfigListParams 默认列表参数
 func DefaultConfigListParams() ConfigListParams {
 	return ConfigListParams{
-		Current:  constants.DefaultCurrent,
-		PageSize: constants.DefaultPageSize,
+		BaseListRequest: base.BaseListRequest{
+			Current:  constants.DefaultCurrent,
+			PageSize: constants.DefaultPageSize,
+		},
 	}
 }
 

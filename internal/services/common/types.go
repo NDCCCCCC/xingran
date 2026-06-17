@@ -1,6 +1,10 @@
 package common
 
-import "context"
+import (
+	"context"
+
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
+)
 
 // PageResult 分页结果
 type PageResult struct {
@@ -11,16 +15,19 @@ type PageResult struct {
 }
 
 // ListParams 列表查询基础参数
+// 嵌入 base.BaseListRequest 使 json 顶层自动获得 orderByColumn/isAsc 字段,
+// 所有嵌入 ListParams 的 XxxListParams 自动获得服务端排序能力。
 type ListParams struct {
-	Current  int `json:"current"`
-	PageSize int `json:"pageSize"`
+	base.BaseListRequest
 }
 
 // DefaultListParams 默认列表参数
 func DefaultListParams() ListParams {
 	return ListParams{
-		Current:  1,
-		PageSize: 10,
+		BaseListRequest: base.BaseListRequest{
+			Current:  1,
+			PageSize: 10,
+		},
 	}
 }
 

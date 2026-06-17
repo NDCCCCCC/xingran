@@ -5,6 +5,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
 )
@@ -28,6 +29,15 @@ func NewServerRoomService(db *gorm.DB) ServerRoomService {
 	return &serverRoomService{
 		db: db,
 	}
+}
+
+// serverRoomAllowedSortFields 机房可排序字段白名单。
+// 因 List 有 LEFT JOIN buildings/floors,字段值必须带表别名。
+var serverRoomAllowedSortFields = map[string]string{
+	"name":      "ops_server_rooms.name",
+	"status":    "ops_server_rooms.status",
+	"createdAt": "ops_server_rooms.created_at",
+	"roomNo":    "ops_server_rooms.room_no",
 }
 
 // Create 创建机房
@@ -120,11 +130,14 @@ func (s *serverRoomService) List(ctx context.Context, req requests.ServerRoomLis
 		return nil, err
 	}
 
-	// 执行数据查询
+	// 执行数据查询 - 用户排序(白名单,带表别名)优先,无 OrderByColumn 时保留原默认
+	query = base.ApplySort(query, req.BaseListRequest, serverRoomAllowedSortFields)
+	if req.OrderByColumn == "" {
+		query = query.Order("ops_server_rooms.created_at DESC")
+	}
 	if err := query.
 		Offset(offset).
 		Limit(pageSize).
-		Order("ops_server_rooms.created_at DESC").
 		Find(&list).Error; err != nil {
 		return nil, err
 	}

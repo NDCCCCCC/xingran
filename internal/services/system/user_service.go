@@ -7,6 +7,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
 )
@@ -49,6 +50,20 @@ type PageResult struct {
 	Total    int64       `json:"total"`
 	Current  int         `json:"current"`
 	PageSize int         `json:"pageSize"`
+}
+
+// userAllowedSortFields 用户列表可排序字段白名单。
+// 值为 DB 列名(可能含 schema/表别名),必须与查询 Select/Joins 后的列匹配。
+// sys_user 因 List 末尾会 LEFT JOIN sys_dept,需用表别名限定避免歧义。
+var userAllowedSortFields = map[string]string{
+	"username":   "sys_user.username",
+	"nickname":   "sys_user.nickname",
+	"email":      "sys_user.email",
+	"phone":      "sys_user.phone",
+	"status":     "sys_user.status",
+	"createdAt":  "sys_user.created_at",
+	"updatedAt":  "sys_user.updated_at",
+	"deptName":   "sys_dept.dept_name",
 }
 
 // ==================== 服务方法实现 ====================
@@ -338,11 +353,11 @@ func (s *userService) List(ctx context.Context, params requests.UserListParams) 
 	userJoinSelect := "sys_user.*, sys_dept.dept_name, sys_dept.ancestors"
 	userJoinClause := "LEFT JOIN sys_dept ON sys_dept.id = sys_user.dept_id"
 
-	if err := query.Select(userJoinSelect).
-		Joins(userJoinClause).
-		Order("sys_user.created_at DESC").
-		Offset(offset).Limit(params.PageSize).
-		Find(&list).Error; err != nil {
+	// 先应用 Select + Joins(决定可见列),再应用用户排序(白名单过滤),最后分页 Find
+	query = query.Select(userJoinSelect).Joins(userJoinClause)
+	query = base.ApplySort(query, params.BaseListRequest, userAllowedSortFields)
+
+	if err := query.Offset(offset).Limit(params.PageSize).Find(&list).Error; err != nil {
 		return nil, apperrors.DatabaseError(err)
 	}
 

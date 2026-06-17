@@ -6,6 +6,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
 )
@@ -41,6 +42,17 @@ func NewAssetService(db *gorm.DB) AssetService {
 		db:            db,
 		uuidValidator: constants.UuidPattern,
 	}
+}
+
+// assetAllowedSortFields 资产可排序字段白名单(对应 ops_asset 表列名)。
+var assetAllowedSortFields = map[string]string{
+	"deviceSN":  "devicesn",
+	"name":      "name",
+	"type":      "type",
+	"status":    "status",
+	"deptId":    "dept_id",
+	"userId":    "user_id",
+	"createdAt": "created_at",
 }
 
 // Create 创建资产
@@ -145,8 +157,15 @@ func (s *assetService) List(ctx context.Context, params map[string]interface{}) 
 	pagination := extractPagination(params)
 	offset := calculateOffset(pagination)
 
+	// 用户排序(白名单);无 OrderByColumn 时保留 created_at DESC 默认
+	sortReq := extractSortRequest(params)
+	query = base.ApplySort(query, sortReq, assetAllowedSortFields)
+	if sortReq.OrderByColumn == "" {
+		query = query.Order("created_at DESC")
+	}
+
 	var list []models.Asset
-	if err := query.Offset(offset).Limit(pagination.PageSize).Order("created_at DESC").Find(&list).Error; err != nil {
+	if err := query.Offset(offset).Limit(pagination.PageSize).Find(&list).Error; err != nil {
 		return nil, err
 	}
 

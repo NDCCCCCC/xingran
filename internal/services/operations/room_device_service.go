@@ -5,6 +5,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
 )
@@ -26,6 +27,17 @@ type roomDeviceService struct {
 // NewRoomDeviceService 创建机房设备服务实例
 func NewRoomDeviceService(db *gorm.DB) RoomDeviceService {
 	return &roomDeviceService{db: db}
+}
+
+// roomDeviceAllowedSortFields 机房设备可排序字段白名单。
+// 因 List 有 LEFT JOIN server_rooms,字段值必须带表别名限定。
+var roomDeviceAllowedSortFields = map[string]string{
+	"name":       "ops_room_devices.name",
+	"deviceType": "ops_room_devices.device_type",
+	"ipAddress":  "ops_room_devices.ip_address",
+	"status":     "ops_room_devices.status",
+	"createdAt":  "ops_room_devices.created_at",
+	"roomName":   "ops_server_rooms.name",
 }
 
 // Create 创建机房设备
@@ -117,7 +129,12 @@ func (s *roomDeviceService) List(ctx context.Context, req requests.RoomDeviceLis
 	// 选择字段（包括机房名称）
 	query = query.Select("ops_room_devices.*, ops_server_rooms.name as room_name")
 
-	if err := query.Offset(offset).Limit(pageSize).Order("ops_room_devices.created_at DESC").Find(&list).Error; err != nil {
+	// 用户排序(白名单,带表别名)优先,无 OrderByColumn 时保留原默认
+	query = base.ApplySort(query, req.BaseListRequest, roomDeviceAllowedSortFields)
+	if req.OrderByColumn == "" {
+		query = query.Order("ops_room_devices.created_at DESC")
+	}
+	if err := query.Offset(offset).Limit(pageSize).Find(&list).Error; err != nil {
 		return nil, err
 	}
 

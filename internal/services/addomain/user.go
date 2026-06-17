@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -18,14 +19,23 @@ func NewUserService(db *gorm.DB) *UserService {
 	return &UserService{db: db}
 }
 
+// adUserAllowedSortFields AD用户可排序字段白名单(对应 sys_ad_user 表列名)。
+var adUserAllowedSortFields = map[string]string{
+	"username":    "username",
+	"displayName": "display_name",
+	"email":       "email",
+	"phone":       "phone",
+	"ouDn":        "ou_dn",
+	"isEnabled":   "is_enabled",
+}
+
 // UserListRequest 用户列表请求
 type UserListRequest struct {
+	base.BaseListRequest
 	ConfigID  string  `json:"configId" binding:"required"`
 	OUDN      *string `json:"ouDn,omitempty"`
 	Username  *string `json:"username,omitempty"`
 	IsEnabled *bool   `json:"isEnabled,omitempty"`
-	Current   int     `json:"current"`
-	PageSize  int     `json:"pageSize"`
 }
 
 // GetList 获取用户列表
@@ -55,7 +65,11 @@ func (s *UserService) GetList(ctx context.Context, req *UserListRequest) ([]mode
 	}
 
 	offset := (req.Current - 1) * req.PageSize
-	err := query.Offset(offset).Limit(req.PageSize).Order("username ASC").Find(&users).Error
+	query = base.ApplySort(query, req.BaseListRequest, adUserAllowedSortFields)
+	if req.OrderByColumn == "" {
+		query = query.Order("username ASC")
+	}
+	err := query.Offset(offset).Limit(req.PageSize).Find(&users).Error
 	if err != nil {
 		return nil, 0, fmt.Errorf("查询列表失败: %w", err)
 	}

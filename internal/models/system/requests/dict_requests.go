@@ -2,22 +2,24 @@ package requests
 
 import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 )
 
 // DictTypeListParams 字典类型列表查询参数
 type DictTypeListParams struct {
+	base.BaseListRequest
 	DictName *string `json:"dictName"`
 	DictType *string `json:"dictType"`
 	Status   *int    `json:"status"`
-	Current  int     `json:"current"`
-	PageSize int     `json:"pageSize"`
 }
 
 // DefaultDictTypeListParams 默认列表参数
 func DefaultDictTypeListParams() DictTypeListParams {
 	return DictTypeListParams{
-		Current:  constants.DefaultCurrent,
-		PageSize: constants.DefaultPageSize,
+		BaseListRequest: base.BaseListRequest{
+			Current:  constants.DefaultCurrent,
+			PageSize: constants.DefaultPageSize,
+		},
 	}
 }
 
@@ -61,18 +63,19 @@ type DictTypeUpdateRequest struct {
 
 // DictDataListParams 字典数据列表查询参数
 type DictDataListParams struct {
+	base.BaseListRequest
 	DictType  string  `json:"dictType" binding:"required"`
 	DictLabel *string `json:"dictLabel"`
 	Status    *int    `json:"status"`
-	Current   int     `json:"current"`
-	PageSize  int     `json:"pageSize"`
 }
 
 // DefaultDictDataListParams 默认列表参数
 func DefaultDictDataListParams() DictDataListParams {
 	return DictDataListParams{
-		Current:  constants.DefaultCurrent,
-		PageSize: constants.DefaultPageSize,
+		BaseListRequest: base.BaseListRequest{
+			Current:  constants.DefaultCurrent,
+			PageSize: constants.DefaultPageSize,
+		},
 	}
 }
 

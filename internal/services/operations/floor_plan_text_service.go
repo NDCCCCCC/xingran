@@ -5,6 +5,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -31,6 +32,13 @@ func NewFloorPlanTextService(db *gorm.DB) FloorPlanTextService {
 		db:        db,
 		validator: NewValidator(db),
 	}
+}
+
+// floorPlanTextAllowedSortFields 楼层平面文本可排序字段白名单。
+var floorPlanTextAllowedSortFields = map[string]string{
+	"floorId":   "floor_id",
+	"textType":  "text_type",
+	"createdAt": "created_at",
 }
 
 func (s *floorPlanTextService) Create(ctx context.Context, text *operationsmodels.FloorPlanText) error {
@@ -83,7 +91,12 @@ func (s *floorPlanTextService) List(ctx context.Context, req requests.FloorPlanT
 		return nil, err
 	}
 
-	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&list).Error; err != nil {
+	// 用户排序(白名单)优先,无 OrderByColumn 时保留 created_at DESC 默认
+	query = base.ApplySort(query, req.BaseListRequest, floorPlanTextAllowedSortFields)
+	if req.OrderByColumn == "" {
+		query = query.Order("created_at DESC")
+	}
+	if err := query.Offset(offset).Limit(pageSize).Find(&list).Error; err != nil {
 		return nil, err
 	}
 

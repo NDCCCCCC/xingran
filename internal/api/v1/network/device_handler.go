@@ -5,6 +5,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	networkServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/network"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
@@ -47,8 +48,22 @@ func (h *DeviceHandler) List(c *gin.Context) {
 	}
 
 	req := services.ListDeviceRequest{
-		Current:  getIntField(rawReq, "current", 1),
-		PageSize: getIntField(rawReq, "pageSize", 10),
+		BaseListRequest: base.BaseListRequest{
+			Current:  getIntField(rawReq, "current", 1),
+			PageSize: getIntField(rawReq, "pageSize", 10),
+			OrderByColumn: func() string {
+				if v, ok := rawReq["orderByColumn"].(string); ok {
+					return v
+				}
+				return ""
+			}(),
+			IsAsc: func() *bool {
+				if v, ok := rawReq["isAsc"].(bool); ok {
+					return &v
+				}
+				return nil
+			}(),
+		},
 	}
 
 	if val, ok := rawReq["deviceName"].(string); ok && val != "" {

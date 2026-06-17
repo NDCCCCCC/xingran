@@ -12,6 +12,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/lldp"
 	networkServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/network"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
@@ -649,8 +650,10 @@ func (h *NetworkExportHandler) getPaginationParams(req *ExportRequest) (int, int
 // buildDeviceListRequest 构建设备列表请求
 func (h *NetworkExportHandler) buildDeviceListRequest(filters map[string]interface{}, current, pageSize int) *services.ListDeviceRequest {
 	req := &services.ListDeviceRequest{
-		Current:  current,
-		PageSize: pageSize,
+		BaseListRequest: base.BaseListRequest{
+			Current:  current,
+			PageSize: pageSize,
+		},
 	}
 	if filters == nil {
 		return req
@@ -701,8 +704,10 @@ func (h *NetworkExportHandler) buildCredentialListRequest(filters map[string]int
 // buildTemplateListRequest 构建模板列表请求
 func (h *NetworkExportHandler) buildTemplateListRequest(filters map[string]interface{}, current, pageSize int) *services.ListTemplateRequest {
 	req := &services.ListTemplateRequest{
-		Current:  current,
-		PageSize: pageSize,
+		BaseListRequest: base.BaseListRequest{
+			Current:  current,
+			PageSize: pageSize,
+		},
 	}
 	if filters == nil {
 		return req

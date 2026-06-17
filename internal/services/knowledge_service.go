@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -27,13 +28,23 @@ func NewKnowledgeService(db *gorm.DB) *KnowledgeService {
 
 // KnowledgeArticleListRequest 知识库文章列表请求
 type KnowledgeArticleListRequest struct {
-	Current    int    `json:"current"`
-	PageSize   int    `json:"pageSize"`
+	base.BaseListRequest
 	Title      string `json:"title"`
 	CategoryID string `json:"categoryId"`
 	TagID      string `json:"tagId"`
 	Status     *int   `json:"status"`
 	CreatedBy  string `json:"createdBy"`
+}
+
+// knowledgeArticleAllowedSortFields 知识库文章可排序字段白名单。
+var knowledgeArticleAllowedSortFields = map[string]string{
+	"title":         "title",
+	"categoryId":    "category_id",
+	"viewCount":     "view_count",
+	"likeCount":     "like_count",
+	"status":        "status",
+	"createdAt":     "created_at",
+	"updatedAt":     "updated_at",
 }
 
 // KnowledgeArticleCreateRequest 创建知识库文章请求
@@ -136,11 +147,16 @@ func (s *KnowledgeService) GetKnowledgeArticleList(ctx context.Context, req *Kno
 	}
 	offset := (current - 1) * pageSize
 
+	// 用户排序(白名单)优先,无 OrderByColumn 时保留 created_at DESC 默认
+	query = base.ApplySort(query, req.BaseListRequest, knowledgeArticleAllowedSortFields)
+	if req.OrderByColumn == "" {
+		query = query.Order("created_at DESC")
+	}
+
 	if err := query.
 		Preload("Category").
 		Preload("Tags").
 		Preload("SourceWorkOrder").
-		Order("created_at DESC").
 		Limit(pageSize).
 		Offset(offset).
 		Find(&list).Error; err != nil {

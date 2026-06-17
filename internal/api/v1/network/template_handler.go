@@ -5,6 +5,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -46,8 +47,22 @@ func (h *TemplateHandler) List(c *gin.Context) {
 	}
 
 	req := services.ListTemplateRequest{
-		Current:  getIntField(rawReq, "current", 1),
-		PageSize: getIntField(rawReq, "pageSize", 10),
+		BaseListRequest: base.BaseListRequest{
+			Current:  getIntField(rawReq, "current", 1),
+			PageSize: getIntField(rawReq, "pageSize", 10),
+			OrderByColumn: func() string {
+				if v, ok := rawReq["orderByColumn"].(string); ok {
+					return v
+				}
+				return ""
+			}(),
+			IsAsc: func() *bool {
+				if v, ok := rawReq["isAsc"].(bool); ok {
+					return &v
+				}
+				return nil
+			}(),
+		},
 	}
 
 	if val, ok := rawReq["templateName"].(string); ok && val != "" {

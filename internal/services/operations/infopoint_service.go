@@ -6,6 +6,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -28,6 +29,16 @@ func NewInfoPointService(db *gorm.DB) InfoPointService {
 	return &infoPointService{
 		db: db,
 	}
+}
+
+// infoPointAllowedSortFields 信息点可排序字段白名单。
+// 因 List 有 LEFT JOIN workstation/floors/buildings,字段值带表别名。
+var infoPointAllowedSortFields = map[string]string{
+	"name":          "ops_info_points.name",
+	"infoPointType": "ops_info_points.info_point_type",
+	"status":        "ops_info_points.status",
+	"createdAt":     "ops_info_points.created_at",
+	"workstationId": "ops_info_points.workstation_id",
 }
 
 // Create 创建信息点
@@ -153,6 +164,11 @@ func (s *infoPointService) List(ctx context.Context, req requests.InfoPointListR
 
 	// JOIN 楼宇和楼层表获取关联信息（需要类型转换：floor_id/building_id是varchar，而floors/buildings的id是UUID）
 	// 注意：device_name和port_name是ops_info_points表的冗余字段，通过ops_info_points.*已经包含
+	// 用户排序(白名单,带表别名)优先,无 OrderByColumn 时保留原默认
+	query = base.ApplySort(query, req.BaseListRequest, infoPointAllowedSortFields)
+	if req.OrderByColumn == "" {
+		query = query.Order("ops_info_points.created_at DESC")
+	}
 	if err := query.
 		Select("ops_info_points.*, ops_floors.name as floor_name, ops_buildings.name as building_name, ops_buildings.id as building_id, sys_workstation.workstation_name").
 		Joins("LEFT JOIN sys_workstation ON sys_workstation.id::text = ops_info_points.workstation_id").
@@ -160,7 +176,6 @@ func (s *infoPointService) List(ctx context.Context, req requests.InfoPointListR
 		Joins("LEFT JOIN ops_buildings ON ops_buildings.id = sys_workstation.building_id::uuid").
 		Offset(offset).
 		Limit(pageSize).
-		Order("ops_info_points.created_at DESC").
 		Find(&list).Error; err != nil {
 		return nil, err
 	}

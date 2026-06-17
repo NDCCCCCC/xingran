@@ -3,22 +3,24 @@ package requests
 import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 )
 
 // RoleListParams 角色列表查询参数
 type RoleListParams struct {
+	base.BaseListRequest
 	RoleName string `json:"roleName"`
 	RoleKey  string `json:"roleKey"`
 	Status   string `json:"status"`
-	Current  int    `json:"current"`
-	PageSize int    `json:"pageSize"`
 }
 
 // DefaultRoleListParams 默认列表参数
 func DefaultRoleListParams() RoleListParams {
 	return RoleListParams{
-		Current:  constants.DefaultCurrent,
-		PageSize: constants.DefaultPageSize,
+		BaseListRequest: base.BaseListRequest{
+			Current:  constants.DefaultCurrent,
+			PageSize: constants.DefaultPageSize,
+		},
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -44,6 +45,18 @@ type dedicatedLineService struct {
 // NewDedicatedLineService 创建专线服务实例
 func NewDedicatedLineService(db *gorm.DB) DedicatedLineService {
 	return &dedicatedLineService{db: db}
+}
+
+// dedicatedLineAllowedSortFields 专线可排序字段白名单(对应 ops_dedicated_lines 表列名)。
+var dedicatedLineAllowedSortFields = map[string]string{
+	"name":               "name",
+	"lineType":           "line_type",
+	"isp":                "isp",
+	"sourceDeviceName":   "source_device_name",
+	"destDeviceName":     "dest_device_name",
+	"carrierContactName": "carrier_contact_name",
+	"status":             "status",
+	"createdAt":          "created_at",
 }
 
 // Create 创建专线
@@ -129,7 +142,12 @@ func (s *dedicatedLineService) List(ctx context.Context, req requests.DedicatedL
 		return nil, err
 	}
 
-	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&list).Error; err != nil {
+	// 用户排序(白名单)优先,无 OrderByColumn 时保留 created_at DESC 默认
+	query = base.ApplySort(query, req.BaseListRequest, dedicatedLineAllowedSortFields)
+	if req.OrderByColumn == "" {
+		query = query.Order("created_at DESC")
+	}
+	if err := query.Offset(offset).Limit(pageSize).Find(&list).Error; err != nil {
 		return nil, err
 	}
 

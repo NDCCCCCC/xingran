@@ -6,6 +6,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -32,6 +33,16 @@ type postService struct {
 // NewPostService 创建岗位服务实例
 func NewPostService(db *gorm.DB) PostService {
 	return &postService{db: db}
+}
+
+// postAllowedSortFields 岗位列表可排序字段白名单。
+// 值为 DB 列名(纯列名,无 JOIN),与 Post 模型字段一一对应。
+var postAllowedSortFields = map[string]string{
+	"postCode":  "post_code",
+	"postName":  "post_name",
+	"postSort":  "post_sort",
+	"status":    "status",
+	"createdAt": "created_at",
 }
 
 // ==================== 服务方法实现 ====================
@@ -137,9 +148,13 @@ func (s *postService) List(ctx context.Context, params requests.PostListParams) 
 		return nil, fmt.Errorf("统计岗位数量失败: %w", err)
 	}
 
-	// 分页查询
+	// 分页查询 - 用户排序(白名单)优先,无 OrderByColumn 时保留 post_sort ASC 默认排序
 	offset := (params.Current - 1) * params.PageSize
-	if err := query.Offset(offset).Limit(params.PageSize).Order("post_sort ASC").Find(&list).Error; err != nil {
+	query = base.ApplySort(query, params.BaseListRequest, postAllowedSortFields)
+	if params.OrderByColumn == "" {
+		query = query.Order("post_sort ASC")
+	}
+	if err := query.Offset(offset).Limit(params.PageSize).Find(&list).Error; err != nil {
 		return nil, fmt.Errorf("查询岗位列表失败: %w", err)
 	}
 

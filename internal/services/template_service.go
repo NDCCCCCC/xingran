@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils"
 	"gorm.io/gorm"
 )
@@ -22,13 +23,22 @@ func NewTemplateService(db *gorm.DB) *TemplateService {
 
 // ListRequest 列表请求
 type ListTemplateRequest struct {
+	base.BaseListRequest
 	TemplateName *string
 	TemplateType *models.TemplateType
 	Vendor       *models.DeviceVendor
 	DeviceType   *models.DeviceType
 	IsSystem     *bool
-	Current      int
-	PageSize     int
+}
+
+// templateAllowedSortFields 配置模板可排序字段白名单(对应 sys_config_template 表列名)。
+var templateAllowedSortFields = map[string]string{
+	"templateName": "template_name",
+	"templateType": "template_type",
+	"vendor":       "vendor",
+	"deviceType":   "device_type",
+	"isSystem":     "is_system",
+	"createdAt":    "created_at",
 }
 
 // List 获取配置模板列表
@@ -59,9 +69,13 @@ func (s *TemplateService) List(ctx context.Context, req *ListTemplateRequest) ([
 		return nil, 0, fmt.Errorf("查询模板总数失败: %w", err)
 	}
 
-	// 分页查询
+	// 分页查询 - 用户排序(白名单)优先,无 OrderByColumn 时保留 created_at DESC 默认
 	offset := (req.Current - 1) * req.PageSize
-	if err := query.Offset(offset).Limit(req.PageSize).Order("created_at DESC").Find(&templates).Error; err != nil {
+	query = base.ApplySort(query, req.BaseListRequest, templateAllowedSortFields)
+	if req.OrderByColumn == "" {
+		query = query.Order("created_at DESC")
+	}
+	if err := query.Offset(offset).Limit(req.PageSize).Find(&templates).Error; err != nil {
 		return nil, 0, fmt.Errorf("查询模板列表失败: %w", err)
 	}
 

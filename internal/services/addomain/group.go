@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -18,13 +19,19 @@ func NewGroupService(db *gorm.DB) *GroupService {
 	return &GroupService{db: db}
 }
 
+// adGroupAllowedSortFields AD用户组可排序字段白名单(对应 sys_ad_group 表列名)。
+var adGroupAllowedSortFields = map[string]string{
+	"groupName":    "group_name",
+	"memberCount":  "member_count",
+	"ouDn":         "ou_dn",
+}
+
 // GroupListRequest 用户组列表请求
 type GroupListRequest struct {
+	base.BaseListRequest
 	ConfigID  string  `json:"configId" binding:"required"`
 	OUDN      *string `json:"ouDn,omitempty"`
 	GroupName *string `json:"groupName,omitempty"`
-	Current   int     `json:"current"`
-	PageSize  int     `json:"pageSize"`
 }
 
 // GetList 获取用户组列表
@@ -49,7 +56,11 @@ func (s *GroupService) GetList(ctx context.Context, req *GroupListRequest) ([]mo
 	}
 
 	offset := (req.Current - 1) * req.PageSize
-	err := query.Offset(offset).Limit(req.PageSize).Order("group_name ASC").Find(&groups).Error
+	query = base.ApplySort(query, req.BaseListRequest, adGroupAllowedSortFields)
+	if req.OrderByColumn == "" {
+		query = query.Order("group_name ASC")
+	}
+	err := query.Offset(offset).Limit(req.PageSize).Find(&groups).Error
 	if err != nil {
 		return nil, 0, fmt.Errorf("查询列表失败: %w", err)
 	}

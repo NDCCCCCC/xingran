@@ -360,6 +360,23 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate153MacHeatmapMenu(d.DB); err != nil {
 			applogger.Errorf("MAC 端口使用热力图菜单迁移失败: %v", err)
 		}
+		// Phase A: sys_user 服务端排序索引（user-driven ORDER BY 性能支撑）
+		if err := migrations.Migrate154UserSortIndexes(d.DB); err != nil {
+			applogger.Errorf("sys_user 排序索引迁移失败: %v", err)
+		}
+		// Phase B: 日志/楼宇/工位服务端排序索引
+		if err := migrations.Migrate155OperLogSortIndexes(d.DB); err != nil {
+			applogger.Errorf("sys_oper_log 排序索引迁移失败: %v", err)
+		}
+		if err := migrations.Migrate156LoginLogSortIndexes(d.DB); err != nil {
+			applogger.Errorf("sys_logininfor 排序索引迁移失败: %v", err)
+		}
+		if err := migrations.Migrate157OpsBuildingSortIndexes(d.DB); err != nil {
+			applogger.Errorf("ops_buildings 排序索引迁移失败: %v", err)
+		}
+		if err := migrations.Migrate158WorkstationSortIndexes(d.DB); err != nil {
+			applogger.Errorf("ops_workstation 排序索引迁移失败: %v", err)
+		}
 		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
 		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
 			applogger.Errorf("MAC 过滤规则表迁移失败: %v", err)

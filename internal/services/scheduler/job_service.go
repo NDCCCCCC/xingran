@@ -8,6 +8,7 @@ import (
 
 	"github.com/robfig/cron/v3"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/common"
 	"gorm.io/gorm"
 )
@@ -69,6 +70,14 @@ type JobListParams struct {
 	JobGroup string
 	Status   *int
 	common.ListParams
+}
+
+// jobAllowedSortFields 定时任务可排序字段白名单(对应 sys_job 表列名)。
+var jobAllowedSortFields = map[string]string{
+	"jobName":    "job_name",
+	"jobGroup":   "job_group",
+	"status":     "status",
+	"createdAt":  "created_at",
 }
 
 // JobCreateRequest 创建任务请求
@@ -284,10 +293,14 @@ func (s *jobServiceImpl) List(ctx context.Context, params *JobListParams) (*comm
 		return nil, fmt.Errorf("查询定时任务总数失败: %w", err)
 	}
 
-	// 查询分页数据
+	// 查询分页数据 - 用户排序(白名单)优先,无 OrderByColumn 时保留 created_at DESC 默认
 	var jobs []models.Job
 	offset := (params.Current - 1) * params.PageSize
-	if err := db.Offset(offset).Limit(params.PageSize).Order("created_at DESC").Find(&jobs).Error; err != nil {
+	db = base.ApplySort(db, params.BaseListRequest, jobAllowedSortFields)
+	if params.OrderByColumn == "" {
+		db = db.Order("created_at DESC")
+	}
+	if err := db.Offset(offset).Limit(params.PageSize).Find(&jobs).Error; err != nil {
 		return nil, fmt.Errorf("查询定时任务列表失败: %w", err)
 	}
 

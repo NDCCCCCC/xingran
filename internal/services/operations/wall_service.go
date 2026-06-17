@@ -5,6 +5,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -60,6 +61,13 @@ func (s *wallService) GetByID(ctx context.Context, id string) (*operationsmodels
 
 func (s *wallService) List(ctx context.Context, req requests.WallListRequest) (*PageResult, error) {
 	query := s.buildListQueryFromRequest(ctx, req)
+
+	// 用户排序(白名单);无 OrderByColumn 时 fetchRecords 内部仍用 created_at DESC 默认
+	query = base.ApplySort(query, req.BaseListRequest, wallAllowedSortFields)
+	if req.OrderByColumn != "" {
+		// 用户选了排序时,移除 fetchRecords 内的硬编码 Order,避免两个 Order 冲突
+		query = query.Order("")
+	}
 
 	total, err := s.countRecords(query)
 	if err != nil {
@@ -118,4 +126,11 @@ func (s *wallService) fetchRecords(query *gorm.DB, current, pageSize int, dest i
 		Order("created_at DESC").
 		Find(dest).Error
 	return dest, err
+}
+
+// wallAllowedSortFields 墙体可排序字段白名单(对应 walls 表列名)。
+var wallAllowedSortFields = map[string]string{
+	"floorId":   "floor_id",
+	"wallType":  "type",
+	"createdAt": "created_at",
 }

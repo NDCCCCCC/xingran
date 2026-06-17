@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -19,11 +20,19 @@ func NewConfigService(db *gorm.DB) *ConfigService {
 	return &ConfigService{db: db}
 }
 
+// configAllowedSortFields AD配置可排序字段白名单(对应 sys_ad_config 表列名)。
+var configAllowedSortFields = map[string]string{
+	"configName":   "config_name",
+	"serverAddress": "server_address",
+	"domainName":   "domain_name",
+	"status":       "status",
+	"createdAt":    "created_at",
+}
+
 // ListRequest 配置列表请求
 type ListRequest struct {
-	Status   *int `json:"status,omitempty"`
-	Current  int  `json:"current"`
-	PageSize int  `json:"pageSize"`
+	base.BaseListRequest
+	Status *int `json:"status,omitempty"`
 }
 
 // GetList 获取AD配置列表
@@ -42,7 +51,11 @@ func (s *ConfigService) GetList(ctx context.Context, req *ListRequest) ([]models
 	}
 
 	offset := (req.Current - 1) * req.PageSize
-	if err := query.Offset(offset).Limit(req.PageSize).Order("created_at DESC").Find(&configs).Error; err != nil {
+	query = base.ApplySort(query, req.BaseListRequest, configAllowedSortFields)
+	if req.OrderByColumn == "" {
+		query = query.Order("created_at DESC")
+	}
+	if err := query.Offset(offset).Limit(req.PageSize).Find(&configs).Error; err != nil {
 		return nil, 0, fmt.Errorf("查询AD配置列表失败: %w", err)
 	}
 

@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"strconv"
 
-	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
+	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -38,6 +39,17 @@ type roleService struct {
 // NewRoleService 创建角色服务实例
 func NewRoleService(db *gorm.DB) RoleService {
 	return &roleService{db: db}
+}
+
+// roleAllowedSortFields 角色可排序字段白名单。
+// 注:角色默认多列排序(role_sort ASC, created_at DESC),用户单选排序时仅生效一列,
+// 不传 OrderByColumn 时保留原多列默认。
+var roleAllowedSortFields = map[string]string{
+	"roleName":  "role_name",
+	"roleKey":   "role_key",
+	"roleSort":  "role_sort",
+	"status":    "status",
+	"createdAt": "created_at",
 }
 
 // ==================== 服务方法实现 ====================
@@ -220,9 +232,13 @@ func (s *roleService) List(ctx context.Context, params requests.RoleListParams) 
 		return nil, fmt.Errorf("查询角色总数失败: %w", err)
 	}
 
-	// 查询分页数据
+	// 查询分页数据 - 用户排序(白名单)优先,无 OrderByColumn 时保留多列默认
 	offset := (params.Current - 1) * params.PageSize
-	if err := query.Offset(offset).Limit(params.PageSize).Order("role_sort ASC, created_at DESC").Find(&list).Error; err != nil {
+	query = base.ApplySort(query, params.BaseListRequest, roleAllowedSortFields)
+	if params.OrderByColumn == "" {
+		query = query.Order("role_sort ASC, created_at DESC")
+	}
+	if err := query.Offset(offset).Limit(params.PageSize).Find(&list).Error; err != nil {
 		return nil, fmt.Errorf("查询角色列表失败: %w", err)
 	}
 

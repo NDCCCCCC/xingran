@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -32,23 +33,35 @@ func NewOperLogService(db *gorm.DB) OperLogService {
 	return &operLogService{db: db}
 }
 
+// operLogAllowedSortFields 操作日志可排序字段白名单。
+// 值对应 sys_oper_log 表列名(无 JOIN)。注意 oper_name/oper_time 是真实列名。
+var operLogAllowedSortFields = map[string]string{
+	"title":        "title",
+	"businessType": "business_type",
+	"operName":     "oper_name",
+	"operTime":     "oper_time",
+	"status":       "status",
+	"costTime":     "cost_time",
+}
+
 // OperLogListParams 操作日志列表查询参数
 type OperLogListParams struct {
+	base.BaseListRequest
 	Title        *string
 	BusinessType *int
 	Status       *int
 	OperName     *string
 	BeginTime    *string
 	EndTime      *string
-	Current      int
-	PageSize     int
 }
 
 // DefaultOperLogListParams 默认列表参数
 func DefaultOperLogListParams() OperLogListParams {
 	return OperLogListParams{
-		Current:  1,
-		PageSize: 10,
+		BaseListRequest: base.BaseListRequest{
+			Current:  1,
+			PageSize: 10,
+		},
 	}
 }
 
@@ -94,9 +107,13 @@ func (s *operLogService) List(ctx context.Context, params OperLogListParams) (*P
 		return nil, fmt.Errorf("查询操作日志总数失败: %w", err)
 	}
 
-	// 查询分页数据
+	// 查询分页数据 - 用户排序(白名单)优先,无 OrderByColumn 时保留 oper_time DESC 默认
 	offset := (params.Current - 1) * params.PageSize
-	if err := query.Offset(offset).Limit(params.PageSize).Order("oper_time DESC").Find(&list).Error; err != nil {
+	query = base.ApplySort(query, params.BaseListRequest, operLogAllowedSortFields)
+	if params.OrderByColumn == "" {
+		query = query.Order("oper_time DESC")
+	}
+	if err := query.Offset(offset).Limit(params.PageSize).Find(&list).Error; err != nil {
 		return nil, fmt.Errorf("查询操作日志列表失败: %w", err)
 	}
 

@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -29,13 +30,20 @@ func NewComputerService(db *gorm.DB) *ComputerService {
 	return &ComputerService{db: db}
 }
 
+// computerAllowedSortFields AD电脑设备可排序字段白名单(对应 sys_ad_computer 表列名)。
+var computerAllowedSortFields = map[string]string{
+	"computerName":    "computer_name",
+	"operatingSystem": "operating_system",
+	"lastLogon":       "last_logon",
+	"createdAt":       "created_at",
+}
+
 // ComputerListRequest 电脑设备列表请求
 type ComputerListRequest struct {
+	base.BaseListRequest
 	ConfigID     string `json:"configId"`
 	OUN          string `json:"ouDn,omitempty"`         // 所属OU
 	ComputerName string `json:"computerName,omitempty"` // 计算机名称模糊搜索
-	Current      int    `json:"current"`
-	PageSize     int    `json:"pageSize"`
 }
 
 // ComputerDetail 电脑设备详情（包含解析后的信息）
@@ -111,8 +119,11 @@ func (s *ComputerService) fetchComputers(ctx context.Context, req *ComputerListR
 
 	var computers []models.ADComputer
 	offset := (req.Current - 1) * req.PageSize
+	query = base.ApplySort(query, req.BaseListRequest, computerAllowedSortFields)
+	if req.OrderByColumn == "" {
+		query = query.Order("created_at DESC")
+	}
 	if err := query.Offset(offset).Limit(req.PageSize).
-		Order("created_at DESC").
 		Find(&computers).Error; err != nil {
 		return nil, fmt.Errorf("查询列表失败: %w", err)
 	}

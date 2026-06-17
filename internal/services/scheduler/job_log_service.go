@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/common"
 	"gorm.io/gorm"
 )
@@ -42,6 +43,14 @@ type JobLogListParams struct {
 	StartTime *string
 	EndTime   *string
 	common.ListParams
+}
+
+// jobLogAllowedSortFields 任务日志可排序字段白名单(对应 sys_job_log 表列名)。
+var jobLogAllowedSortFields = map[string]string{
+	"jobName":   "job_name",
+	"jobGroup":  "job_group",
+	"status":    "status",
+	"createdAt": "created_at",
 }
 
 // Create 创建任务日志
@@ -91,10 +100,14 @@ func (s *jobLogServiceImpl) List(ctx context.Context, params *JobLogListParams) 
 		return nil, fmt.Errorf("查询任务日志总数失败: %w", err)
 	}
 
-	// 查询分页数据
+	// 查询分页数据 - 用户排序(白名单)优先,无 OrderByColumn 时保留 created_at DESC 默认
 	var logs []models.JobLog
 	offset := (params.Current - 1) * params.PageSize
-	if err := db.Offset(offset).Limit(params.PageSize).Order("created_at DESC").Find(&logs).Error; err != nil {
+	db = base.ApplySort(db, params.BaseListRequest, jobLogAllowedSortFields)
+	if params.OrderByColumn == "" {
+		db = db.Order("created_at DESC")
+	}
+	if err := db.Offset(offset).Limit(params.PageSize).Find(&logs).Error; err != nil {
 		return nil, fmt.Errorf("查询任务日志失败: %w", err)
 	}
 

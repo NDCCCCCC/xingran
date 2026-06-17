@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	rpamodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/rpa"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 	"gorm.io/gorm"
 	"time"
@@ -127,7 +128,11 @@ func (s *executionServiceImpl) List(ctx context.Context, params *ExecutionListPa
 	}
 
 	offset := (params.Current - 1) * params.PageSize
-	if err := query.Offset(offset).Limit(params.PageSize).Order("created_at DESC").Find(&executions).Error; err != nil {
+	query = base.ApplySort(query, params.BaseListRequest, executionAllowedSortFields)
+	if params.OrderByColumn == "" {
+		query = query.Order("created_at DESC")
+	}
+	if err := query.Offset(offset).Limit(params.PageSize).Find(&executions).Error; err != nil {
 		return nil, err
 	}
 

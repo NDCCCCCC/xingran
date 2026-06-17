@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
 )
@@ -39,6 +40,16 @@ type floorService struct {
 
 func NewFloorService(db *gorm.DB) FloorService {
 	return &floorService{db: db}
+}
+
+// floorAllowedSortFields 楼层可排序字段白名单。
+// 因 List 有 LEFT JOIN buildings/files,字段值带表别名。
+var floorAllowedSortFields = map[string]string{
+	"name":      "ops_floors.name",
+	"floorNo":   "ops_floors.floor_no",
+	"orderNum":  "ops_floors.order_num",
+	"status":    "ops_floors.status",
+	"createdAt": "ops_floors.created_at",
 }
 
 func (s *floorService) Create(ctx context.Context, floor *operations.OpsFloor) error {
@@ -170,6 +181,13 @@ func (s *floorService) List(ctx context.Context, params map[string]interface{}) 
 		pageSize = int(ps)
 	}
 
+	// 用户排序(白名单,带表别名);无 OrderByColumn 时保留原 order_num ASC 默认
+	sortReq := extractSortRequest(params)
+	query = base.ApplySort(query, sortReq, floorAllowedSortFields)
+	if sortReq.OrderByColumn == "" {
+		query = query.Order("ops_floors.order_num ASC")
+	}
+
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
@@ -181,7 +199,6 @@ func (s *floorService) List(ctx context.Context, params map[string]interface{}) 
 		Joins("LEFT JOIN sys_files ON sys_files.id = ops_floors.plan_image_id::uuid").
 		Offset(offset).
 		Limit(pageSize).
-		Order("ops_floors.order_num ASC").
 		Find(&list).Error; err != nil {
 		return nil, err
 	}

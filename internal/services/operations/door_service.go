@@ -5,6 +5,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	operationsmodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -29,6 +30,13 @@ func NewDoorService(db *gorm.DB) DoorService {
 		db:        db,
 		validator: NewValidator(db),
 	}
+}
+
+// doorAllowedSortFields 门可排序字段白名单(对应 doors 表列名)。
+var doorAllowedSortFields = map[string]string{
+	"floorId":   "floor_id",
+	"doorType":  "type",
+	"createdAt": "created_at",
 }
 
 func (s *doorService) Create(ctx context.Context, door *operationsmodels.Door) error {
@@ -60,6 +68,12 @@ func (s *doorService) GetByID(ctx context.Context, id string) (*operationsmodels
 
 func (s *doorService) List(ctx context.Context, req requests.DoorListRequest) (*PageResult, error) {
 	query := s.buildListQueryFromRequest(ctx, req)
+
+	// 用户排序(白名单);无 OrderByColumn 时 fetchRecords 内部仍用 created_at DESC 默认
+	query = base.ApplySort(query, req.BaseListRequest, doorAllowedSortFields)
+	if req.OrderByColumn != "" {
+		query = query.Order("")
+	}
 
 	total, err := s.countRecords(query)
 	if err != nil {

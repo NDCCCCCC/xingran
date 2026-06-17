@@ -3,10 +3,14 @@ package requests
 import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 )
 
 // UserListParams 用户列表查询参数
+// 嵌入 base.BaseListRequest 使 json 顶层自动获得 current/pageSize/orderByColumn/isAsc 字段。
+// promoted field 保证 p.Current / p.PageSize 访问仍能 work,GetPagination/GetOffset 方法无需改动。
 type UserListParams struct {
+	base.BaseListRequest
 	Username  *string `json:"username"`
 	Nickname  *string `json:"nickname"`
 	Phone     *string `json:"phone"`
@@ -14,15 +18,15 @@ type UserListParams struct {
 	DeptID    *string `json:"deptId"`
 	BeginTime *string `json:"beginTime"`
 	EndTime   *string `json:"endTime"`
-	Current   int     `json:"current"`
-	PageSize  int     `json:"pageSize"`
 }
 
 // DefaultUserListParams 默认列表参数
 func DefaultUserListParams() UserListParams {
 	return UserListParams{
-		Current:  constants.DefaultCurrent,
-		PageSize: constants.DefaultPageSize,
+		BaseListRequest: base.BaseListRequest{
+			Current:  constants.DefaultCurrent,
+			PageSize: constants.DefaultPageSize,
+		},
 	}
 }
 

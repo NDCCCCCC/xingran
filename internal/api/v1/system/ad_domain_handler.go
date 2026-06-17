@@ -66,15 +66,17 @@ func (h *ADDomainHandler) requireConfigID(id string) error {
 // @Router /system/ad-domain/configs/list [post]
 func (h *ADDomainHandler) ListConfigs(c *gin.Context) {
 	var req struct {
-		Status   *int `json:"status,omitempty"`
-		Current  int  `json:"current"`
-		PageSize int  `json:"pageSize"`
+		Status        *int    `json:"status,omitempty"`
+		Current       int     `json:"current"`
+		PageSize      int     `json:"pageSize"`
+		OrderByColumn string  `json:"orderByColumn,omitempty"`
+		IsAsc         *bool   `json:"isAsc,omitempty"`
 	}
 	_ = c.ShouldBindJSON(&req)
 
 	h.setDefaultPagination(&req.Current, &req.PageSize)
 
-	list, total, err := h.service.GetADConfigList(c.Request.Context(), req.Status, req.Current, req.PageSize)
+	list, total, err := h.service.GetADConfigList(c.Request.Context(), req.Status, req.Current, req.PageSize, req.OrderByColumn, req.IsAsc)
 	if err != nil {
 		response.Error(c, err)
 		return

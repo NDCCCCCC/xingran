@@ -1,6 +1,8 @@
 package system
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
@@ -59,6 +61,22 @@ func (h *ConfigHandler) isCaptchaConfig(configKey string) bool {
 	return false
 }
 
+// validateCaptchaConfigValue 校验验证码相关配置值的合法性。
+// 当前覆盖 captchaEnabled（三态枚举）；非法值返回 400，阻止写入。
+// 纵深防御的"写入校验"层：与 core/captcha.go 的读取兜底配合，
+// 防止非法值（如 "off"）让登录页陷入"既不弹模态框也无输入框"的死状态。
+func (h *ConfigHandler) validateCaptchaConfigValue(configKey, configValue string) error {
+	if configKey != "sys.account.captchaEnabled" {
+		return nil
+	}
+	switch configValue {
+	case "disabled", "normal", "slider":
+		return nil
+	default:
+		return apperrors.BadRequest(fmt.Sprintf("验证码开关值非法：%q（合法值：disabled / normal / slider）", configValue))
+	}
+}
+
 // Create 创建参数配置
 // @Summary 创建参数配置
 // @Description 创建新的系统参数配置
@@ -74,6 +92,12 @@ func (h *ConfigHandler) Create(c *gin.Context) {
 	var req requests.ConfigCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
+		return
+	}
+
+	// 写入校验：验证码相关配置值合法性（纵深防御）
+	if err := h.validateCaptchaConfigValue(req.ConfigKey, req.ConfigValue); err != nil {
+		response.Error(c, err)
 		return
 	}
 
@@ -239,6 +263,12 @@ func (h *ConfigHandler) Update(c *gin.Context) {
 	}
 
 	req.ID = id
+	// 写入校验：验证码相关配置值合法性（纵深防御）
+	if err := h.validateCaptchaConfigValue(req.ConfigKey, req.ConfigValue); err != nil {
+		response.Error(c, err)
+		return
+	}
+
 	if err := h.service.Update(c.Request.Context(), &req); err != nil {
 		response.Error(c, err)
 		return

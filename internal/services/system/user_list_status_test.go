@@ -6,6 +6,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -68,9 +69,11 @@ func TestUserList_StatusNotAmbiguous_AfterJoinSysDept(t *testing.T) {
 
 	status0 := 0
 	params := requests.UserListParams{
-		Current:  1,
-		PageSize: 10,
-		Status:   &status0,
+		BaseListRequest: base.BaseListRequest{
+			Current:  1,
+			PageSize: 10,
+		},
+		Status: &status0,
 	}
 
 	// 关键断言:这次 List 调用不再因 "column reference 'status' is ambiguous" 而失败

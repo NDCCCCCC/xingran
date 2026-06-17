@@ -6,6 +6,7 @@ import (
 	"context"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -14,9 +15,8 @@ import (
 
 // ADConfigListRequest AD配置列表请求
 type ADConfigListRequest struct {
-	Status   *int `json:"status,omitempty"`
-	Current  int  `json:"current"`
-	PageSize int  `json:"pageSize"`
+	base.BaseListRequest
+	Status *int `json:"status,omitempty"`
 }
 
 // ADConfigCreateRequest 创建AD配置请求
@@ -55,12 +55,11 @@ type ADConfigUpdateRequest struct {
 
 // ADUserListRequest AD用户列表请求
 type ADUserListRequest struct {
+	base.BaseListRequest
 	ConfigID  string  `json:"configId" binding:"required"`
 	OUDN      *string `json:"ouDn,omitempty"`
 	Username  *string `json:"username,omitempty"`
 	IsEnabled *bool   `json:"isEnabled,omitempty"`
-	Current   int     `json:"current"`
-	PageSize  int     `json:"pageSize"`
 }
 
 // ADUserUpdateRequest AD用户更新请求
@@ -76,11 +75,10 @@ type ADUserUpdateRequest struct {
 
 // ADGroupListRequest AD用户组列表请求
 type ADGroupListRequest struct {
+	base.BaseListRequest
 	ConfigID  string  `json:"configId" binding:"required"`
 	OUDN      *string `json:"ouDn,omitempty"`
 	GroupName *string `json:"groupName,omitempty"`
-	Current   int     `json:"current"`
-	PageSize  int     `json:"pageSize"`
 }
 
 // ADSyncResult AD同步结果
@@ -141,11 +139,16 @@ func NewADDomainService(db *gorm.DB, cipher ...PasswordCipher) *ADDomainService 
 // 这些方法保持与旧服务的API兼容，内部委托给新的模块化服务
 
 // GetADConfigList 获取AD配置列表（兼容旧API）
-func (s *ADDomainService) GetADConfigList(ctx context.Context, status *int, current, pageSize int) ([]models.ADConfig, int64, error) {
+// orderByColumn/isAsc 为服务端排序参数(可选,透传给底层 ApplySort 白名单)。
+func (s *ADDomainService) GetADConfigList(ctx context.Context, status *int, current, pageSize int, orderByColumn string, isAsc *bool) ([]models.ADConfig, int64, error) {
 	return s.Config.GetList(ctx, &ListRequest{
-		Status:   status,
-		Current:  current,
-		PageSize: pageSize,
+		BaseListRequest: base.BaseListRequest{
+			Current:       current,
+			PageSize:      pageSize,
+			OrderByColumn: orderByColumn,
+			IsAsc:         isAsc,
+		},
+		Status: status,
 	})
 }
 
@@ -221,12 +224,11 @@ func (s *ADDomainService) GetOUTree(ctx context.Context, configID string) ([]OUN
 // GetADUserList 获取AD用户列表（兼容旧API）
 func (s *ADDomainService) GetADUserList(ctx context.Context, req *ADUserListRequest) ([]models.ADUser, int64, error) {
 	return s.User.GetList(ctx, &UserListRequest{
-		ConfigID:  req.ConfigID,
-		OUDN:      req.OUDN,
-		Username:  req.Username,
-		IsEnabled: req.IsEnabled,
-		Current:   req.Current,
-		PageSize:  req.PageSize,
+		BaseListRequest: req.BaseListRequest,
+		ConfigID:        req.ConfigID,
+		OUDN:            req.OUDN,
+		Username:        req.Username,
+		IsEnabled:       req.IsEnabled,
 	})
 }
 
@@ -243,11 +245,10 @@ func (s *ADDomainService) GetADUserByID(ctx context.Context, userID string) (*mo
 // GetADGroupList 获取AD用户组列表（兼容旧API）
 func (s *ADDomainService) GetADGroupList(ctx context.Context, req *ADGroupListRequest) ([]models.ADGroup, int64, error) {
 	return s.Group.GetList(ctx, &GroupListRequest{
-		ConfigID:  req.ConfigID,
-		OUDN:      req.OUDN,
-		GroupName: req.GroupName,
-		Current:   req.Current,
-		PageSize:  req.PageSize,
+		BaseListRequest: req.BaseListRequest,
+		ConfigID:        req.ConfigID,
+		OUDN:            req.OUDN,
+		GroupName:       req.GroupName,
 	})
 }
 

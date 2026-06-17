@@ -1,10 +1,37 @@
 package rpa
 
+import "github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
+
 // ListParams 通用列表查询参数
+// 嵌入 base.BaseListRequest 使 json 顶层自动获得 orderByColumn/isAsc 字段,
+// 所有嵌入 ListParams 的 XxxListParams(Task/Worker/Execution)自动获得服务端排序能力。
 type ListParams struct {
-	Current  int `json:"current"`
-	PageSize int `json:"pageSize"`
+	base.BaseListRequest
 }
+
+// rpa 三个表的可排序字段白名单(同包共享)。
+var (
+	taskAllowedSortFields = map[string]string{
+		"name":      "name",
+		"status":    "status",
+		"priority":  "priority",
+		"createdAt": "created_at",
+	}
+	workerAllowedSortFields = map[string]string{
+		"name":      "name",
+		"host":      "host",
+		"status":    "status",
+		"createdAt": "created_at",
+	}
+	executionAllowedSortFields = map[string]string{
+		"taskId":    "task_id",
+		"workerId":  "worker_id",
+		"status":    "status",
+		"startTime": "start_time",
+		"endTime":   "end_time",
+		"createdAt": "created_at",
+	}
+)
 
 // PageResult 分页结果
 type PageResult struct {

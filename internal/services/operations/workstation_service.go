@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -40,6 +41,16 @@ type WorkstationService interface {
 
 type workstationService struct {
 	db *gorm.DB
+}
+
+// workstationAllowedSortFields 工位可排序字段白名单。
+// 因 List 有 LEFT JOIN floors,字段值带表别名。
+var workstationAllowedSortFields = map[string]string{
+	"workstationName": "sys_workstation.workstation_name",
+	"workstationNo":   "sys_workstation.workstation_no",
+	"status":          "sys_workstation.status",
+	"workstationType": "sys_workstation.workstation_type",
+	"createdAt":       "sys_workstation.created_at",
 }
 
 // PositionUpdateItem 位置更新项
@@ -137,12 +148,17 @@ func (s *workstationService) List(ctx context.Context, params map[string]interfa
 
 	offset := calculateOffset(pagination)
 	// JOIN ops_floors 表获取 floor_name（类型转换：varchar -> uuid）
+	// 用户排序(白名单,带表别名);无 OrderByColumn 时保留原默认
+	sortReq := extractSortRequest(params)
+	query = base.ApplySort(query, sortReq, workstationAllowedSortFields)
+	if sortReq.OrderByColumn == "" {
+		query = query.Order("sys_workstation.created_at DESC")
+	}
 	if err := query.
 		Select(workstationJoinSelect).
 		Joins(workstationJoinClause).
 		Offset(offset).
 		Limit(pagination.PageSize).
-		Order("sys_workstation.created_at DESC").
 		Find(&list).Error; err != nil {
 		return nil, err
 	}

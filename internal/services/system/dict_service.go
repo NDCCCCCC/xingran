@@ -6,6 +6,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -129,6 +130,10 @@ func (s *dictTypeService) List(ctx context.Context, params requests.DictTypeList
 	}
 
 	offset := (params.Current - 1) * params.PageSize
+	query = base.ApplySort(query, params.BaseListRequest, dictTypeAllowedSortFields)
+	if params.OrderByColumn == "" {
+		query = query.Order("created_at DESC")
+	}
 	if err := query.Offset(offset).Limit(params.PageSize).Find(&list).Error; err != nil {
 		return nil, fmt.Errorf("查询字典类型列表失败: %w", err)
 	}
@@ -175,6 +180,23 @@ type dictDataService struct {
 // NewDictDataService 创建字典数据服务实例
 func NewDictDataService(db *gorm.DB) DictDataService {
 	return &dictDataService{db: db}
+}
+
+// dictTypeAllowedSortFields 字典类型可排序字段白名单。
+var dictTypeAllowedSortFields = map[string]string{
+	"dictName":  "dict_name",
+	"dictType":  "dict_type",
+	"status":    "status",
+	"createdAt": "created_at",
+}
+
+// dictDataAllowedSortFields 字典数据可排序字段白名单。
+var dictDataAllowedSortFields = map[string]string{
+	"dictLabel": "dict_label",
+	"dictValue": "dict_value",
+	"dictSort":  "dict_sort",
+	"status":    "status",
+	"createdAt": "created_at",
 }
 
 func (s *dictDataService) Create(ctx context.Context, req *requests.DictDataCreateRequest) error {
@@ -274,7 +296,11 @@ func (s *dictDataService) List(ctx context.Context, params requests.DictDataList
 	}
 
 	offset := (params.Current - 1) * params.PageSize
-	if err := query.Order("dict_sort ASC").Offset(offset).Limit(params.PageSize).Find(&list).Error; err != nil {
+	query = base.ApplySort(query, params.BaseListRequest, dictDataAllowedSortFields)
+	if params.OrderByColumn == "" {
+		query = query.Order("dict_sort ASC")
+	}
+	if err := query.Offset(offset).Limit(params.PageSize).Find(&list).Error; err != nil {
 		return nil, fmt.Errorf("查询字典数据列表失败: %w", err)
 	}
 

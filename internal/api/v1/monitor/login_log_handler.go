@@ -3,6 +3,7 @@ package monitor
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	monitorServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/monitor"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
@@ -28,13 +29,12 @@ func (h *LoginLogHandler) WithCore(core *core.Core) *LoginLogHandler {
 
 // LoginLogListRequest 登录日志列表请求
 type LoginLogListRequest struct {
+	base.BaseListRequest
 	Username  *string `json:"username,omitempty"`
 	IPAddr    *string `json:"ipaddr,omitempty"`
 	Status    *int    `json:"status,omitempty"`
 	BeginTime *string `json:"beginTime,omitempty"`
 	EndTime   *string `json:"endTime,omitempty"`
-	Current   int     `json:"current" binding:"min=1"`
-	PageSize  int     `json:"pageSize" binding:"min=1,max=100"`
 }
 
 // List 查询登录日志列表
@@ -51,19 +51,20 @@ func (h *LoginLogHandler) List(c *gin.Context) {
 	// 允许空的请求体，设置默认值
 	if err := c.ShouldBindJSON(&req); err != nil {
 		req = LoginLogListRequest{
-			Current:  1,
-			PageSize: 10,
+			BaseListRequest: base.BaseListRequest{
+				Current:  1,
+				PageSize: 10,
+			},
 		}
 	}
 
 	params := monitorServices.LoginLogListParams{
-		Username:  req.Username,
-		IPAddr:    req.IPAddr,
-		Status:    req.Status,
-		BeginTime: req.BeginTime,
-		EndTime:   req.EndTime,
-		Current:   req.Current,
-		PageSize:  req.PageSize,
+		BaseListRequest: req.BaseListRequest,
+		Username:        req.Username,
+		IPAddr:          req.IPAddr,
+		Status:          req.Status,
+		BeginTime:       req.BeginTime,
+		EndTime:         req.EndTime,
 	}
 
 	result, err := h.service.List(c.Request.Context(), params)

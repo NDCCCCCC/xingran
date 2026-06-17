@@ -8,6 +8,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	rpamodels "github.com/ruoyi-next/ruoyi-go-backend/internal/models/rpa"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 	"gorm.io/gorm"
 )
@@ -178,9 +179,13 @@ func (s *taskServiceImpl) List(ctx context.Context, params *TaskListParams) (*Pa
 		return nil, err
 	}
 
-	// 分页查询
+	// 分页查询 - 用户排序(白名单)优先,无 OrderByColumn 时保留 created_at DESC 默认
 	offset := (params.Current - 1) * params.PageSize
-	if err := query.Offset(offset).Limit(params.PageSize).Order("created_at DESC").Find(&tasks).Error; err != nil {
+	query = base.ApplySort(query, params.BaseListRequest, taskAllowedSortFields)
+	if params.OrderByColumn == "" {
+		query = query.Order("created_at DESC")
+	}
+	if err := query.Offset(offset).Limit(params.PageSize).Find(&tasks).Error; err != nil {
 		return nil, err
 	}
 
