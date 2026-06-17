@@ -9,7 +9,7 @@ import {
   Button,
   Space,
   Tag,
-  message,
+  App,
   Modal,
   Popconfirm,
   Select,
@@ -63,6 +63,7 @@ const VirtualMachineList: React.FC = () => {
   const [form] = Form.useForm();
   const [quickCreateForm] = Form.useForm();
   const [bindUserForm] = Form.useForm();
+  const { message } = App.useApp();
 
   // Bind user modal: system user search state
   const [systemUsers, setSystemUsers] = useState<Array<{id: string; username: string; nickname?: string}>>([]);
@@ -818,7 +819,7 @@ const VirtualMachineList: React.FC = () => {
         {preloadError && canCreateVM && (
           <Alert
             type="warning"
-            message={preloadError}
+            title={preloadError}
             closable
             onClose={() => setPreloadError(null)}
             style={{ marginBottom: 16 }}
