@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"database/sql"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -47,6 +49,16 @@ func GetDeptName(c *gin.Context) *string {
 }
 
 // GetDeptNameFromDB 从数据库获取部门名称
+//
+// 关键修复:F-03 — 必须使用 sql.NullString 而不是 string。
+// 真实崩溃:PostgreSQL 返回 NULL 时(例如 sys_user.dept_name 是 NULL 字段,
+// 或系统/超管用户没有部门),Go database/sql 无法把 NULL 转换给 string,
+// 抛 "converting NULL to string is unsupported" 错误。
+// 复现:userID='8bd62962-...' 是个 NULL dept_name 的用户,导致后续
+// operlog middleware 写入失败 → handler 返回 500。
+//
+// 此函数在 oper_log middleware + operlog.Record 热路径上被调用,
+// 每次写请求都会触发,所以 NULL 兼容是必需的(系统用户/超管用户常见)。
 func GetDeptNameFromDB(c *gin.Context, db *gorm.DB) *string {
 	if deptName := GetDeptName(c); deptName != nil {
 		return deptName
@@ -57,12 +69,16 @@ func GetDeptNameFromDB(c *gin.Context, db *gorm.DB) *string {
 		return nil
 	}
 
-	var deptName string
+	// 关键:必须能接受 NULL。sys_user.dept_name 是 *string(nullable),
+	// 某些用户(系统/超管/未分配部门的用户)的 dept_name 为 NULL。
+	var deptName sql.NullString
 	if err := db.Table("sys_user").
 		Select("dept_name").
 		Where("id = ?", userID).
-		Scan(&deptName).Error; err == nil && deptName != "" {
-		return &deptName
+		Scan(&deptName).Error; err == nil && deptName.Valid && deptName.String != "" {
+		// .Valid 区分"SQL 返回 NULL"和"SQL 返回空字符串"
+		// .String 为 "" 也视为没有值,避免上游出现 "未知部门" 空标签
+		return &deptName.String
 	}
 
 	return nil
