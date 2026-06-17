@@ -19,9 +19,8 @@ progress:
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
 **Status**: 🚧 IDLE — Phase 34 review closure complete, awaiting v1.16 scope
-**Last activity**: 2026-06-16 - Phase 34 review closure (commit 5c2fc95:
-                docs(34-review): correct severity history; preceded by
-                7bebb08 critical sensitiveKeys expansion fix)
+**Last activity**: 2026-06-17 - Quick task 260617-ch1 add-table-sorting (commit 828f7df:
+                feat(260617-ch1): add createSorter helper and apply to data columns)
 **See**: `.planning/milestones/20260616-state-sync-report.md` for the
         reconciliation report that motivated this state update.
 
@@ -218,6 +217,7 @@ Run `/gsd:new-milestone` to formally start v1.16.
 | 260605-h3p | AD组自动化同步功能：实现基于OU-组映射的自动成员同步 | 2026-06-05 | 830aa0d | [260605-h3p-ad-group-auto-sync](./quick/260605-h3p-ad-group-auto-sync/) |
 | 20260613-frontend-perf | 前端性能优化三连：图标按需导入(-15~-25%)、API加密并行化(-30~-40%)、Excel懒加载(-50~-100KB) | 2026-06-13 | - | [20260613-frontend-perf-optimizations](./quick/20260613-frontend-perf-optimizations/) |
 | 260610-wsl | 修复工位管理页面同步设备后筛选条件丢失问题 | 2026-06-10 | - | [20250610-fix-workstation-filter-loss](./quick/20250610-fix-workstation-filter-loss/) |
+| 260617-ch1 | 给所有页面表格添加排序功能，按字段排序，点击切换升降序 — 新增 createSorter helper + 25 个 page column 文件已应用 sorter，195+ createSorter 调用 | 2026-06-17 | 828f7df | [260617-ch1-add-table-sorting](./quick/260617-ch1-add-table-sorting/) |
 
 ## Accumulated Context
 
