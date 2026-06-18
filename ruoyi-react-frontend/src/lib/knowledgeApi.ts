@@ -64,6 +64,8 @@ export interface KnowledgeTag {
 export interface KnowledgeArticleListRequest {
   current?: number;
   pageSize?: number;
+  orderByColumn?: string;
+  isAsc?: boolean;
   title?: string;
   categoryId?: string;
   tagId?: string;

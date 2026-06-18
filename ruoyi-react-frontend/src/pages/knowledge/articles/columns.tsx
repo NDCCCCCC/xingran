@@ -11,7 +11,8 @@ import { KnowledgeArticleStatus } from '@/lib/knowledgeApi';
 import { STATUS_CONFIG } from './constants';
 import ActionButtons from '@/components/shared/ActionButtons';
 import { formatDateTime } from '@/utils/datetime';
-import { createSorter } from '@/utils/tableHelpers';
+import type { SorterMeta } from '@/utils/tableHelpers';
+import { createSorterMeta } from '@/utils/tableHelpers';
 
 export interface ArticleColumnsParams {
   handlePreview: (record: KnowledgeArticle) => void;
@@ -21,10 +22,14 @@ export interface ArticleColumnsParams {
   handleDelete: (id: string) => Promise<void>;
   current: number;
   pageSize: number;
+  /** 列级 sortOrder：返回当前排序列的方向，其余 undefined（受控高亮） */
+  getColumnSortOrder?: (field: string) => "ascend" | "descend" | null | undefined;
+  /** 可排序列白名单（对应后端白名单 key） */
+  sorterMetas?: Array<SorterMeta<KnowledgeArticle> | undefined>;
 }
 
 export function getArticleColumns(params: ArticleColumnsParams): ColumnsType<KnowledgeArticle> {
-  const { handlePreview, handleEdit, handlePublish, handleLike, handleDelete, current, pageSize } = params;
+  const { handlePreview, handleEdit, handlePublish, handleLike, handleDelete, current, pageSize, getColumnSortOrder, sorterMetas } = params;
 
   return [
     {
@@ -39,7 +44,8 @@ export function getArticleColumns(params: ArticleColumnsParams): ColumnsType<Kno
       key: 'title',
       width: 200,
       ellipsis: true,
-      sorter: createSorter<KnowledgeArticle>('title', 'string'),
+      sorter: true,
+      sortOrder: getColumnSortOrder?.('title'),
     },
     {
       title: '分类',
@@ -68,7 +74,8 @@ export function getArticleColumns(params: ArticleColumnsParams): ColumnsType<Kno
       dataIndex: 'status',
       key: 'status',
       width: 90,
-      sorter: createSorter<KnowledgeArticle>('status', 'number'),
+      sorter: true,
+      sortOrder: getColumnSortOrder?.('status'),
       render: (status: KnowledgeArticleStatus) => {
         const config = STATUS_CONFIG[status];
         return <Tag color={config?.color}>{config?.text}</Tag>;
@@ -79,7 +86,8 @@ export function getArticleColumns(params: ArticleColumnsParams): ColumnsType<Kno
       dataIndex: 'viewCount',
       key: 'viewCount',
       width: 80,
-      sorter: createSorter<KnowledgeArticle>('viewCount', 'number'),
+      sorter: true,
+      sortOrder: getColumnSortOrder?.('viewCount'),
       render: (count: number) => <span><EyeOutlined className="mr-1" />{count}</span>,
     },
     {
@@ -87,7 +95,8 @@ export function getArticleColumns(params: ArticleColumnsParams): ColumnsType<Kno
       dataIndex: 'likeCount',
       key: 'likeCount',
       width: 80,
-      sorter: createSorter<KnowledgeArticle>('likeCount', 'number'),
+      sorter: true,
+      sortOrder: getColumnSortOrder?.('likeCount'),
       render: (count: number) => <span><LikeOutlined className="mr-1" />{count}</span>,
     },
     {
@@ -101,7 +110,8 @@ export function getArticleColumns(params: ArticleColumnsParams): ColumnsType<Kno
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 160,
-      sorter: createSorter<KnowledgeArticle>('createdAt', 'date'),
+      sorter: true,
+      sortOrder: getColumnSortOrder?.('createdAt'),
       render: (date: string) => formatDateTime(date, 'YYYY-MM-DD HH:mm'),
     },
     {

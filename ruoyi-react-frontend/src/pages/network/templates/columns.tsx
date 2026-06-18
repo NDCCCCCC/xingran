@@ -23,29 +23,47 @@ import {
   DEVICE_TYPE_OPTIONS,
   TEMPLATE_TYPE_OPTIONS,
 } from "./constants";
-import { createSorter } from '@/utils/tableHelpers';
+import type { SorterMeta } from "@/utils/tableHelpers";
+import { createSorterMeta } from "@/utils/tableHelpers";
 
 export interface TemplateColumnsParams {
   handlePreview: (id: string) => void;
   handleClone: (id: string) => void;
   handleDelete: (id: string) => void;
   openModal: (record: ConfigTemplate) => void;
+  /** 列级 sortOrder：返回当前排序列的方向，其余 undefined（受控高亮） */
+  getColumnSortOrder?: (field: string) => "ascend" | "descend" | null | undefined;
+  /** 可排序列白名单（对应后端白名单 key） */
+  sorterMetas?: Array<SorterMeta<ConfigTemplate> | undefined>;
 }
 
 export function getTemplateColumns(params: TemplateColumnsParams): ColumnsType<ConfigTemplate> {
-  const { handlePreview, handleClone, handleDelete, openModal } = params;
+  const { handlePreview, handleClone, handleDelete, openModal, getColumnSortOrder } = params;
 
   return [
-    { title: "模板名称", dataIndex: "templateName", key: "templateName", width: 180 },
-    { title: "模板编码", dataIndex: "templateCode", key: "templateCode", width: 150 },
-    { title: '模板名称', dataIndex: 'templateName', key: 'templateName', width: 180, sorter: createSorter<ConfigTemplate>('templateName', 'string') },
-    { title: '模板编码', dataIndex: 'templateCode', key: 'templateCode', width: 150, sorter: createSorter<ConfigTemplate>('templateCode', 'string') },
+    {
+      title: "模板名称",
+      dataIndex: "templateName",
+      key: "templateName",
+      width: 180,
+      sorter: true,
+      sortOrder: getColumnSortOrder?.("templateName"),
+    },
+    {
+      title: "模板编码",
+      dataIndex: "templateCode",
+      key: "templateCode",
+      width: 150,
+      sorter: true,
+      sortOrder: getColumnSortOrder?.("templateCode"),
+    },
     {
       title: "模板类型",
       dataIndex: "templateType",
       key: "templateType",
       width: 120,
-      sorter: createSorter<ConfigTemplate>('templateType', 'string'),
+      sorter: true,
+      sortOrder: getColumnSortOrder?.("templateType"),
       render: (templateType: string) => renderTemplateTypeTag(templateType),
     },
     {
@@ -53,7 +71,8 @@ export function getTemplateColumns(params: TemplateColumnsParams): ColumnsType<C
       dataIndex: "vendor",
       key: "vendor",
       width: 100,
-      sorter: createSorter<ConfigTemplate>('vendor', 'string'),
+      sorter: true,
+      sortOrder: getColumnSortOrder?.("vendor"),
       render: (vendor: string) => renderVendorTag(vendor),
     },
     {
@@ -61,7 +80,8 @@ export function getTemplateColumns(params: TemplateColumnsParams): ColumnsType<C
       dataIndex: "deviceType",
       key: "deviceType",
       width: 120,
-      sorter: createSorter<ConfigTemplate>('deviceType', 'string'),
+      sorter: true,
+      sortOrder: getColumnSortOrder?.("deviceType"),
       render: (deviceType: string) => renderDeviceTypeTag(deviceType),
     },
     {
@@ -69,19 +89,33 @@ export function getTemplateColumns(params: TemplateColumnsParams): ColumnsType<C
       dataIndex: "isSystem",
       key: "isSystem",
       width: 100,
-      sorter: createSorter<ConfigTemplate>('isSystem', 'boolean'),
+      sorter: true,
+      sortOrder: getColumnSortOrder?.("isSystem"),
       render: (isSystem: boolean) => renderSystemTemplateTag(isSystem),
     },
-    { title: "版本", dataIndex: "version", key: "version", width: 80 },
-    { title: "备注", dataIndex: "description", key: "description", ellipsis: true },
-    { title: '版本', dataIndex: 'version', key: 'version', width: 80, sorter: createSorter<ConfigTemplate>('version', 'string') },
-    { title: '备注', dataIndex: 'description', key: 'description', ellipsis: true, sorter: createSorter<ConfigTemplate>('description', 'string') },
+    {
+      title: "版本",
+      dataIndex: "version",
+      key: "version",
+      width: 80,
+      sorter: true,
+      sortOrder: getColumnSortOrder?.("version"),
+    },
+    {
+      title: "备注",
+      dataIndex: "description",
+      key: "description",
+      ellipsis: true,
+      sorter: true,
+      sortOrder: getColumnSortOrder?.("description"),
+    },
     {
       title: "更新时间",
       dataIndex: "updatedAt",
       key: "updatedAt",
       width: 180,
-      sorter: createSorter<ConfigTemplate>('updatedAt', 'date'),
+      sorter: true,
+      sortOrder: getColumnSortOrder?.("updatedAt"),
       render: (date: string) => formatDateTime(date),
     },
     {

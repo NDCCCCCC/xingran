@@ -3,7 +3,7 @@
  * 网络模板管理页面
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import type { FC } from "react";
 import { Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic, App } from "antd";
 import {
@@ -15,11 +15,13 @@ import {
   AppstoreOutlined,
   SettingOutlined,
   FundOutlined,
-  ExportOutlined,
 } from "@ant-design/icons";
 import type { ConfigTemplate } from "@/types";
 import { batchExport } from "@/lib/api/networkApi";
 import { useTemplateData, useTemplateModals } from "./hooks";
+import { useServerSort, resolveSorter } from "@/hooks/useServerSort";
+import type { SorterMeta } from "@/utils/tableHelpers";
+import { createSorterMeta } from "@/utils/tableHelpers";
 import { getTemplateColumns } from "./columns";
 import {
   TemplateEditModal,
@@ -74,6 +76,44 @@ const TemplateManagement: FC = () => {
     handleGetVariables,
   } = useTemplateModals();
 
+  const sorterMetas = useMemo<Array<SorterMeta<ConfigTemplate> | undefined>>(
+    () => [
+      createSorterMeta<ConfigTemplate>("templateName"),
+      createSorterMeta<ConfigTemplate>("templateCode"),
+      createSorterMeta<ConfigTemplate>("templateType"),
+      createSorterMeta<ConfigTemplate>("vendor"),
+      createSorterMeta<ConfigTemplate>("deviceType"),
+      createSorterMeta<ConfigTemplate>("isSystem"),
+      createSorterMeta<ConfigTemplate>("version"),
+      createSorterMeta<ConfigTemplate>("description"),
+      createSorterMeta<ConfigTemplate>("updatedAt", "date"),
+    ],
+    []
+  );
+  const sort = useServerSort<ConfigTemplate>({ sorterMetas });
+
+  const getColumnSortOrder = useCallback(
+    (field: string): "ascend" | "descend" | null | undefined => {
+      if (sort.orderByColumn !== String(field)) return undefined;
+      return sort.sortOrder;
+    },
+    [sort.orderByColumn, sort.sortOrder]
+  );
+
+  const sortRef = useRef<{ orderByColumn?: string; isAsc?: boolean }>({});
+
+  const handleTableChange = useCallback(
+    (pagination: { current?: number; pageSize?: number }, _filters: Record<string, any>, sorter: import("antd/es/table/interface").SorterResult<ConfigTemplate> | import("antd/es/table/interface").SorterResult<ConfigTemplate>[]) => {
+      const current = pagination.current ?? 1;
+      const pageSize = pagination.pageSize ?? 10;
+      sort.handleTableChange(pagination, _filters, sorter);
+      const { orderByColumn, isAsc } = resolveSorter(sorter, sorterMetas);
+      sortRef.current = { orderByColumn, isAsc };
+      const values = searchForm.getFieldsValue() as { templateName?: string; templateCode?: string; templateType?: string; vendor?: string };
+      loadTemplates({ current, pageSize, ...values, orderByColumn, isAsc });
+    },
+    [sort, sorterMetas, searchForm, loadTemplates]
+  );
   useEffect(() => {
     loadTemplates({ current: paginationProps.current, pageSize: paginationProps.pageSize });
     loadStatistics();
@@ -81,24 +121,27 @@ const TemplateManagement: FC = () => {
 
   // 搜索
   const handleSearch = () => {
-    loadTemplates({ current: paginationProps.current, pageSize: paginationProps.pageSize });
+    const values = searchForm.getFieldsValue() as { templateName?: string; templateCode?: string; templateType?: string; vendor?: string };
+    loadTemplates({ current: paginationProps.current, pageSize: paginationProps.pageSize, ...values, ...sortRef.current });
   };
 
   // 重置
   const handleReset = () => {
     searchForm.resetFields();
+    sort.resetSort();
+    sortRef.current = {};
     loadTemplates({ current: paginationProps.current, pageSize: paginationProps.pageSize });
   };
 
   // 刷新
   const handleRefresh = () => {
-    loadTemplates({ current: paginationProps.current, pageSize: paginationProps.pageSize });
+    loadTemplates({ current: paginationProps.current, pageSize: paginationProps.pageSize, ...sortRef.current });
     loadStatistics();
   };
 
   // 操作成功后刷新
   const handleSuccess = () => {
-    loadTemplates({ current: paginationProps.current, pageSize: paginationProps.pageSize });
+    loadTemplates({ current: paginationProps.current, pageSize: paginationProps.pageSize, ...sortRef.current });
     loadStatistics();
   };
 
@@ -107,6 +150,8 @@ const TemplateManagement: FC = () => {
     handleClone: (id: string) => handleClone(id, handleSuccess),
     handleDelete: (id: string) => handleDelete(id, handleSuccess),
     openModal: (record: ConfigTemplate) => openModal(record, editForm),
+    getColumnSortOrder,
+    sorterMetas,
   });
 
   // 批量导出
@@ -230,7 +275,7 @@ const TemplateManagement: FC = () => {
               entityType="templates"
               entityName="配置模板"
               filters={Object.fromEntries(
-                Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null && v !== "")
+                Object.entries(searchForm.getFieldsValue() as Record<string, any>).filter(([, v]) => v !== undefined && v !== null && v !== "")
               )}
               current={paginationProps?.current ?? 1}
               pageSize={paginationProps?.pageSize ?? 10}
@@ -266,6 +311,7 @@ const TemplateManagement: FC = () => {
           rowKey="id"
           scroll={{ x: 1500 }}
           pagination={paginationProps}
+          onChange={handleTableChange}
         />
       </Card>
 

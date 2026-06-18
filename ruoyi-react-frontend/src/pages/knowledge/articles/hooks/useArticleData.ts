@@ -50,7 +50,7 @@ export interface UseArticleDataReturn {
   setCategories: React.Dispatch<React.SetStateAction<KnowledgeCategory[]>>;
   setTags: React.Dispatch<React.SetStateAction<KnowledgeTag[]>>;
 
-  fetchList: (page?: number, pageSize?: number) => Promise<void>;
+  fetchList: (page?: number, pageSize?: number, orderByColumn?: string, isAsc?: boolean) => Promise<void>;
   fetchCategories: () => Promise<void>;
   fetchTags: () => Promise<void>;
   handleDelete: (id: string) => Promise<void>;
@@ -92,12 +92,13 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
     return flatten(categories);
   }, [categories]);
 
-  const fetchList = useCallback(async (page?: number, pageSize?: number) => {
+  const fetchList = useCallback(async (page?: number, pageSize?: number, orderByColumn?: string, isAsc?: boolean) => {
     setLoading(true);
     try {
       const result = await getKnowledgeArticleList({
         current: page ?? current,
         pageSize: pageSize ?? pageSize,
+        ...(orderByColumn ? { orderByColumn, isAsc } : {}),
       });
       const list = result.data?.list ?? [];
       setArticles(list);

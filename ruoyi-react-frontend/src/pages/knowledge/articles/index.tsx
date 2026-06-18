@@ -1,4 +1,4 @@
-import { useState, useEffect, type FC } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, type FC } from "react";
 import {
   Table,
   Button,
@@ -22,6 +22,9 @@ import { useArticleData } from "./hooks";
 import { getArticleColumns } from "./columns";
 import { EditModal, PreviewModal } from "./modals";
 import { KnowledgeArticleStatus, type KnowledgeArticle } from "@/lib/knowledgeApi";
+import { useServerSort, resolveSorter } from "@/hooks/useServerSort";
+import type { SorterMeta } from "@/utils/tableHelpers";
+import { createSorterMeta } from "@/utils/tableHelpers";
 import { usePagination } from "@/hooks/usePagination";
 import { isFormValidationError } from "@/utils/errorHandler";
 
@@ -60,6 +63,31 @@ const KnowledgeArticlePage: FC = () => {
     pageSize: paginationProps.pageSize ?? 10,
   });
 
+  // 服务端排序:field 对应后端 knowledgeArticleAllowedSortFields 白名单 key
+  const sorterMetas = useMemo<Array<SorterMeta<KnowledgeArticle> | undefined>>(
+    () => [
+      createSorterMeta<KnowledgeArticle>("title"),
+      createSorterMeta<KnowledgeArticle>("status", "number"),
+      createSorterMeta<KnowledgeArticle>("viewCount", "number"),
+      createSorterMeta<KnowledgeArticle>("likeCount", "number"),
+      createSorterMeta<KnowledgeArticle>("createdAt", "date"),
+    ],
+    []
+  );
+  const sort = useServerSort<KnowledgeArticle>({ sorterMetas });
+
+  // 列级 sortOrder：只对当前排序列返回方向，其余 undefined。
+  const getColumnSortOrder = useCallback(
+    (field: string): "ascend" | "descend" | null | undefined => {
+      if (sort.orderByColumn !== String(field)) return undefined;
+      return sort.sortOrder;
+    },
+    [sort.orderByColumn, sort.sortOrder]
+  );
+
+  // 排序 ref：resolveSorter 同步取排序新值，规避 setState 时序
+  const sortRef = useRef<{ orderByColumn?: string; isAsc?: boolean }>({});
+
   // 初始化加载
   useEffect(() => {
     fetchList(paginationProps.current ?? 1, paginationProps.pageSize ?? 10);
@@ -92,18 +120,23 @@ const KnowledgeArticlePage: FC = () => {
     handleDelete,
     current: paginationProps.current ?? 1,
     pageSize: paginationProps.pageSize ?? 10,
+    getColumnSortOrder,
+    sorterMetas,
   });
 
   // 搜索
   const handleSearch = () => {
     setCurrent(1);
-    fetchList(1, paginationProps.pageSize ?? 10);
+    const values = form.getFieldsValue() as { title?: string; categoryId?: string; tagId?: string; status?: number };
+    fetchList(1, paginationProps.pageSize ?? 10, sortRef.current.orderByColumn, sortRef.current.isAsc);
   };
 
   // 重置
   const handleReset = () => {
     form.resetFields();
     setCurrent(1);
+    sort.resetSort();
+    sortRef.current = {};
     fetchList(1, paginationProps.pageSize);
   };
 
@@ -129,14 +162,24 @@ const KnowledgeArticlePage: FC = () => {
     }
   };
 
-  // 表格分页变化
-  const handleTableChange = (pagination: { current?: number; pageSize?: number }) => {
-    const current = pagination.current ?? 1;
-    const pageSize = pagination.pageSize ?? 10;
-    setCurrent(current);
-    setPageSize(pageSize);
-    fetchList(current, pageSize);
-  };
+  // 表格分页+排序变化
+  const handleTableChange = useCallback(
+    (pagination: { current?: number; pageSize?: number }, _filters: Record<string, any>, sorter: import("antd/es/table/interface").SorterResult<KnowledgeArticle> | import("antd/es/table/interface").SorterResult<KnowledgeArticle>[]) => {
+      const current = pagination.current ?? 1;
+      const pageSize = pagination.pageSize ?? 10;
+      setCurrent(current);
+      setPageSize(pageSize);
+      // 排序受控 UI
+      sort.handleTableChange(pagination, _filters, sorter);
+      // 同步取排序值写 ref
+      const { orderByColumn, isAsc } = resolveSorter(sorter, sorterMetas);
+      sortRef.current = { orderByColumn, isAsc };
+      // 读搜索条件
+      const values = form.getFieldsValue() as { title?: string; categoryId?: string; tagId?: string; status?: number };
+      fetchList(current, pageSize, orderByColumn, isAsc);
+    },
+    [sort, sorterMetas, form, fetchList]
+  );
 
   return (
     <div className="p-6">

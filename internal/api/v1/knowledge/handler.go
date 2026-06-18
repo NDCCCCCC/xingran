@@ -5,6 +5,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	knowledgeServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/knowledge"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
@@ -39,16 +40,55 @@ func (h *ArticleHandler) WithCore(core *core.Core) *ArticleHandler {
 // @Success 200 {object} response.Response{data=response.PageResponse}
 // @Router /knowledge/articles/list [post]
 func (h *ArticleHandler) List(c *gin.Context) {
-	var req services.KnowledgeArticleListRequest
-	// 允许空请求体
-	if err := c.ShouldBindJSON(&req); err != nil {
-		// 使用默认值
-		if req.Current <= 0 {
-			req.Current = 1
-		}
-		if req.PageSize <= 0 {
-			req.PageSize = 10
-		}
+	var rawReq map[string]interface{}
+	if err := c.ShouldBindJSON(&rawReq); err != nil {
+		rawReq = make(map[string]interface{})
+	}
+
+	req := services.KnowledgeArticleListRequest{
+		BaseListRequest: base.BaseListRequest{
+			Current: func() int {
+				if v, ok := rawReq["current"].(float64); ok {
+					return int(v)
+				}
+				return 1
+			}(),
+			PageSize: func() int {
+				if v, ok := rawReq["pageSize"].(float64); ok {
+					return int(v)
+				}
+				return 10
+			}(),
+			OrderByColumn: func() string {
+				if v, ok := rawReq["orderByColumn"].(string); ok {
+					return v
+				}
+				return ""
+			}(),
+			IsAsc: func() *bool {
+				if v, ok := rawReq["isAsc"].(bool); ok {
+					return &v
+				}
+				return nil
+			}(),
+		},
+	}
+
+	if val, ok := rawReq["title"].(string); ok && val != "" {
+		req.Title = val
+	}
+	if val, ok := rawReq["categoryId"].(string); ok && val != "" {
+		req.CategoryID = val
+	}
+	if val, ok := rawReq["tagId"].(string); ok && val != "" {
+		req.TagID = val
+	}
+	if val, ok := rawReq["status"].(float64); ok {
+		status := int(val)
+		req.Status = &status
+	}
+	if val, ok := rawReq["createdBy"].(string); ok && val != "" {
+		req.CreatedBy = val
 	}
 
 	list, total, err := h.service.GetKnowledgeArticleList(c.Request.Context(), &req)
