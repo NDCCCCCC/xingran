@@ -42,8 +42,11 @@ var networkDeviceAllowedSortFields = map[string]string{
 	"deviceName": "device_name",
 	"deviceType": "device_type",
 	"vendor":     "vendor",
+	"model":      "model",
 	"ipAddress":  "ip_address",
+	"port":       "port",
 	"status":     "status",
+	"lastSeenAt": "last_seen_at",
 	"createdAt":  "created_at",
 }
 

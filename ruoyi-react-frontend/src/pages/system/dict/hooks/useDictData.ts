@@ -53,14 +53,17 @@ export function useDictData(searchForm: FormInstance<unknown>, dataSearchForm: F
   });
 
   // 加载字典类型列表
+  // params 支持透传排序等服务端参数（current/pageSize 已单独处理；其余 key 如 orderByColumn/isAsc 原样展开）
   const loadDictTypes = useCallback(async (params: Record<string, unknown> = {}) => {
     setLoading(true);
     try {
       const values = searchForm.getFieldsValue() as Record<string, unknown>;
+      const { current: _c, pageSize: _p, ...restParams } = params;
       const result = await post("/system/dicts/types/list", {
         current: params.current || current,
         pageSize: params.pageSize || pageSize,
         ...(values as object),
+        ...(restParams as object),
       }) as { data: { list: DictType[]; total: number } };
       setDictTypes(result.data.list);
       setTotal(result.data.total);
@@ -72,6 +75,7 @@ export function useDictData(searchForm: FormInstance<unknown>, dataSearchForm: F
   }, [current, pageSize, searchForm]);
 
   // 加载字典数据列表
+  // params 支持透传排序等服务端参数（current/pageSize 已单独处理；其余 key 如 orderByColumn/isAsc 原样展开）
   const loadDictData = useCallback(async (params: Record<string, unknown> = {}) => {
     if (!selectedType) {
       message.warning("请先选择字典类型");
@@ -80,11 +84,13 @@ export function useDictData(searchForm: FormInstance<unknown>, dataSearchForm: F
     setLoading(true);
     try {
       const values = dataSearchForm.getFieldsValue() as Record<string, unknown>;
+      const { current: _c, pageSize: _p, ...restParams } = params;
       const result = await post("/system/dicts/data/list", {
         current: params.current || current,
         pageSize: params.pageSize || pageSize,
         dictType: selectedType,
         ...(values as object),
+        ...(restParams as object),
       }) as { data: { list: DictData[]; total: number } };
       setDictDataList(result.data.list);
       setTotal(result.data.total);

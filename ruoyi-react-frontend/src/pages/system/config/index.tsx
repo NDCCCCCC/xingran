@@ -1,5 +1,5 @@
 ﻿import type { FC } from "react";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   App,
   Table,
@@ -35,6 +35,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { refreshEncryptionConfig } from "@/lib/api";
+import { createSorterMeta } from "@/utils/tableHelpers";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -49,6 +50,17 @@ const ConfigManagement: FC = () => {
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
+  // 服务端排序:field 对应后端 configAllowedSortFields 白名单 key
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<Config>("configName"),
+      createSorterMeta<Config>("configKey"),
+      createSorterMeta<Config>("configType"),
+      createSorterMeta<Config>("createdAt", "date"),
+    ],
+    []
+  );
 
   const {
     loading,
@@ -66,6 +78,8 @@ const ConfigManagement: FC = () => {
     handleAdd,
     handleEdit,
     handleModalClose,
+    getColumnSortOrder,
+    handleTableChange,
   } = useTableManager<Config>(
     async (params): Promise<{ list: Config[]; total: number }> => {
       const values = searchForm.getFieldsValue() as Record<string, unknown>;
@@ -100,6 +114,7 @@ const ConfigManagement: FC = () => {
         setPageSize,
         setTotal,
       },
+      sorterMetas,
     }
   );
 
@@ -210,8 +225,8 @@ const ConfigManagement: FC = () => {
 
   // 表格列
   const columns: ColumnsType<Config> = [
-    { title: "参数名称", dataIndex: "configName", key: "configName", width: 160, minWidth: 140 },
-    { title: "参数键名", dataIndex: "configKey", key: "configKey", width: 160, minWidth: 140 },
+    { title: "参数名称", dataIndex: "configName", key: "configName", width: 160, minWidth: 140, sorter: true, sortOrder: getColumnSortOrder("configName") },
+    { title: "参数键名", dataIndex: "configKey", key: "configKey", width: 160, minWidth: 140, sorter: true, sortOrder: getColumnSortOrder("configKey") },
     { title: "参数键值", dataIndex: "configValue", key: "configValue", width: 180, minWidth: 150, ellipsis: true },
     {
       title: "系统内置",
@@ -231,6 +246,8 @@ const ConfigManagement: FC = () => {
       width: 80,
       minWidth: 70,
       align: "center" as const,
+      sorter: true,
+      sortOrder: getColumnSortOrder("configType"),
       render: (configType: string) => (
         <Tag color={configType === "Y" ? "success" : "default"}>{configType === "Y" ? "是" : "否"}</Tag>
       ),
@@ -241,6 +258,8 @@ const ConfigManagement: FC = () => {
       dataIndex: "createdAt",
       key: "createdAt",
       width: 180,
+      sorter: true,
+      sortOrder: getColumnSortOrder("createdAt"),
       render: (date: string) => formatDateTime(date),
     },
     {
@@ -400,16 +419,7 @@ const ConfigManagement: FC = () => {
           loading={loading}
           rowKey="id"
           pagination={paginationProps}
-          onChange={(pagination) => {
-            const newPage = pagination.current ?? 1;
-            const newPageSize = pagination.pageSize ?? 10;
-            setCurrent(newPage);
-            setPageSize(newPageSize);
-            loadConfigs({
-              current: newPage,
-              pageSize: newPageSize,
-            });
-          }}
+          onChange={handleTableChange}
         />
       </Card>
 

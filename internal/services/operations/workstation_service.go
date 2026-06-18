@@ -44,12 +44,19 @@ type workstationService struct {
 }
 
 // workstationAllowedSortFields 工位可排序字段白名单。
-// 因 List 有 LEFT JOIN floors,字段值带表别名。
+// 因 List 有 LEFT JOIN floors/buildings/dept/user,字段值带表别名。
+// key 须与前端列 dataIndex 一致(useServerSort 按 sorter.field === dataIndex 匹配 sorterMeta)。
 var workstationAllowedSortFields = map[string]string{
 	"workstationName": "sys_workstation.workstation_name",
+	"name":            "sys_workstation.workstation_name", // 与前端 dataIndex="name" 对齐
 	"workstationNo":   "sys_workstation.workstation_no",
 	"status":          "sys_workstation.status",
 	"workstationType": "sys_workstation.workstation_type",
+	"type":            "sys_workstation.workstation_type", // 与前端 dataIndex="type" 对齐
+	"buildingName":    "ops_buildings.name",
+	"floorName":       "ops_floors.name",
+	"deptName":        "sys_dept.dept_name",
+	"userName":        "sys_user.nickname",
 	"createdAt":       "sys_workstation.created_at",
 }
 

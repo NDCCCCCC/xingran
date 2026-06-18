@@ -94,6 +94,8 @@ const FloorManagement: FC = () => {
     () => [
       createSorterMeta<Floor>("name"),
       createSorterMeta<Floor>("floorNo"),
+      createSorterMeta<Floor>("buildingName"),
+      createSorterMeta<Floor>("area"),
       createSorterMeta<Floor>("orderNum"),
       createSorterMeta<Floor>("status"),
       createSorterMeta<Floor>("createdAt", "date"),

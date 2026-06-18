@@ -28,15 +28,15 @@ import type { DevicePortStatus, NetworkDevice } from "@/types";
 import { post, get } from "@/lib/api";
 import { batchExport } from "@/lib/api/networkApi";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useTableManager } from "@/hooks/useTableManager";
 import { withErrorHandling } from "@/utils/errorHandler";
-import { useState } from "react";
 import { formatDateTime } from "@/utils/datetime";
 import { usePagination } from "@/hooks/usePagination";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
 import { DownloadOutlined } from "@ant-design/icons";
+import { createSorterMeta } from "@/utils/tableHelpers";
 
 const { Option } = Select;
 
@@ -64,6 +64,18 @@ const PortStatusPage: FC = () => {
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
+  // 服务端排序:field 对应后端 portStatusAllowedSortFields 白名单 key
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<DevicePortStatus>("interfaceName"),
+      createSorterMeta<DevicePortStatus>("adminStatus"),
+      createSorterMeta<DevicePortStatus>("operStatus"),
+      createSorterMeta<DevicePortStatus>("vlan", "number"),
+      createSorterMeta<DevicePortStatus>("collectedAt", "date"),
+    ],
+    []
+  );
+
   const {
     loading,
     data: portStatus,
@@ -71,6 +83,8 @@ const PortStatusPage: FC = () => {
     setSelectedRowKeys,
     searchForm,
     loadData: loadPortStatus,
+    getColumnSortOrder,
+    handleTableChange,
     handleSearch,
     handleReset,
     handleRefresh,
@@ -97,6 +111,7 @@ const PortStatusPage: FC = () => {
         setPageSize,
         setTotal,
       },
+      sorterMetas,
     }
   );
 
@@ -208,7 +223,7 @@ const PortStatusPage: FC = () => {
 
   // 表格列
   const columns: ColumnsType<DevicePortStatus> = [
-    { title: "接口名称", dataIndex: "interfaceName", key: "interfaceName", width: 150 },
+    { title: "接口名称", dataIndex: "interfaceName", key: "interfaceName", width: 150, sorter: true, sortOrder: getColumnSortOrder("interfaceName") },
     {
       title: "描述",
       dataIndex: "description",
@@ -222,6 +237,8 @@ const PortStatusPage: FC = () => {
       dataIndex: "operStatus",
       key: "operStatus",
       width: 100,
+      sorter: true,
+      sortOrder: getColumnSortOrder("operStatus"),
       render: (status: string) => {
         const color = status === "up" ? "success" : "default";
         return <Tag color={color}>{status?.toUpperCase() || "-"}</Tag>;
@@ -232,6 +249,8 @@ const PortStatusPage: FC = () => {
       dataIndex: "adminStatus",
       key: "adminStatus",
       width: 100,
+      sorter: true,
+      sortOrder: getColumnSortOrder("adminStatus"),
       render: (status: string) => {
         const color = status === "up" ? "processing" : "default";
         return <Tag color={color}>{status?.toUpperCase() || "-"}</Tag>;
@@ -242,6 +261,8 @@ const PortStatusPage: FC = () => {
       dataIndex: "vlan",
       key: "vlan",
       width: 80,
+      sorter: true,
+      sortOrder: getColumnSortOrder("vlan"),
       render: (vlan?: number) => vlan ?? "-",
     },
     {
@@ -288,6 +309,8 @@ const PortStatusPage: FC = () => {
       dataIndex: "collectedAt",
       key: "collectedAt",
       width: 180,
+      sorter: true,
+      sortOrder: getColumnSortOrder("collectedAt"),
       render: (date: string) => date ? formatDateTime(date) : "-",
     },
   ];
@@ -449,21 +472,7 @@ const PortStatusPage: FC = () => {
           rowKey="id"
           scroll={{ x: 1400 }}
           pagination={paginationProps}
-          onChange={(pagination) => {
-            const newPage = pagination.current ?? 1;
-            const newPageSize = pagination.pageSize ?? 10;
-            setCurrent(newPage);
-            setPageSize(newPageSize);
-            const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
-            const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
-            Object.keys(formValues).forEach(key => {
-              const value = formValues[key];
-              if (value !== undefined && value !== null && value !== "") {
-                searchParams[key] = value;
-              }
-            });
-            loadPortStatus(searchParams);
-          }}
+          onChange={handleTableChange}
           expandable={{
             expandedRowRender: (record) => (
               <div style={{ padding: 16, background: "#fafafa" }}>

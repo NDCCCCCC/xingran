@@ -54,6 +54,7 @@ const PostManagement: FC = () => {
       createSorterMeta<Post>("postName"),
       createSorterMeta<Post>("postSort"),
       createSorterMeta<Post>("status"),
+      createSorterMeta<Post>("remark"),
       createSorterMeta<Post>("createdAt", "date"),
     ],
     []
@@ -187,7 +188,7 @@ const PostManagement: FC = () => {
     { title: "岗位名称", dataIndex: "postName", key: "postName", width: 150, sorter: true, sortOrder: getColumnSortOrder("postName") },
     { title: "显示排序", dataIndex: "postSort", key: "postSort", width: 100, sorter: true, sortOrder: getColumnSortOrder("postSort") },
     createStatusColumn("status", { width: 100, sorter: true, sortOrder: getColumnSortOrder("status") }),
-    { title: "备注", dataIndex: "remark", key: "remark", ellipsis: true },
+    { title: "备注", dataIndex: "remark", key: "remark", ellipsis: true, sorter: true, sortOrder: getColumnSortOrder("remark") },
     createDateTimeColumn("createdAt", { width: 180, sorter: true, sortOrder: getColumnSortOrder("createdAt") }),
     {
       title: "操作",

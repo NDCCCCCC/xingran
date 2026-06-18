@@ -1,12 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { FC } from "react";
 import { App, Form } from "antd";
+import type { TableProps } from "antd";
 import { useNavigate } from "react-router-dom";
 import type {
   Notice,
   CreateNoticeRequest,
   UpdateNoticeRequest,
   NoticeChannelRequest,
+  NoticeType,
 } from "@/types/notice";
 import type { NoticeStatistics as NoticeStatisticsType } from "@/types/notice";
 import { getNoticeStatistics } from "@/lib/noticeApi";
@@ -25,6 +27,9 @@ import {
   NoticeStatisticsCard,
 } from "./components";
 import { usePagination } from "@/hooks/usePagination";
+import { useServerSort, resolveSorter } from "@/hooks/useServerSort";
+import type { SorterMeta } from "@/utils/tableHelpers";
+import { createSorterMeta } from "@/utils/tableHelpers";
 
 /**
  * 管理端通知公告页面（重构版）
@@ -54,6 +59,56 @@ const NoticeManagement: FC = () => {
     handleWithdraw,
     setSelectedRowKeys,
   } = useNoticeData();
+
+  // 服务端排序:field 对应后端 noticeAllowedSortFields 白名单 key
+  const sorterMetas = useMemo<Array<SorterMeta<Notice>>>(
+    () => [
+      createSorterMeta<Notice>("noticeTitle"),
+      createSorterMeta<Notice>("noticeType"),
+      createSorterMeta<Notice>("priority", "number"),
+      createSorterMeta<Notice>("publishTime", "date"),
+      createSorterMeta<Notice>("createdAt", "date"),
+    ],
+    []
+  );
+  const sort = useServerSort<Notice>({ sorterMetas });
+
+  // 列级 sortOrder：只对当前排序列返回方向，其余 undefined。
+  // useServerSort 未直接暴露 getColumnSortOrder（那是 useTableManager 的封装），这里自行实现一致语义。
+  const getColumnSortOrder = useCallback(
+    (field: string): "ascend" | "descend" | null | undefined => {
+      if (sort.orderByColumn !== String(field)) return undefined;
+      return sort.sortOrder;
+    },
+    [sort.orderByColumn, sort.sortOrder]
+  );
+
+  // 排序 ref：保留最新排序值，供所有 loadNotices 调用（初始化/搜索/CRUD 刷新/分页）携带，
+  // 避免 setState 时序导致 onChange 同周期读到旧值。
+  const sortRef = useRef<{ orderByColumn?: string; isAsc?: boolean }>({});
+  sortRef.current = {
+    orderByColumn: sort.orderByColumn,
+    isAsc: sort.isAsc,
+  };
+
+  // 统一的列表请求：合并当前分页 + 排序 ref + 可选 override（搜索条件等）。
+  // 覆盖所有既有 loadNotices({current,pageSize}) 调用点，保证排序在 CRUD/搜索/分页/初始化后保持。
+  const fetchList = useCallback((override?: {
+    current?: number;
+    pageSize?: number;
+    noticeTitle?: string;
+    noticeType?: string;
+  }) => {
+    loadNotices({
+      current: override?.current ?? paginationProps.current,
+      pageSize: override?.pageSize ?? paginationProps.pageSize,
+      noticeTitle: override?.noticeTitle,
+      noticeType: override?.noticeType as NoticeType | undefined,
+      ...(sortRef.current.orderByColumn
+        ? { orderByColumn: sortRef.current.orderByColumn, isAsc: sortRef.current.isAsc }
+        : {}),
+    });
+  }, [loadNotices, paginationProps.current, paginationProps.pageSize]);
 
   const { statistics, loadStatistics } = useNoticeStatistics();
 
@@ -95,8 +150,9 @@ const NoticeManagement: FC = () => {
 
   // 初始化加载数据
   useEffect(() => {
-    loadNotices({ current: paginationProps.current, pageSize: paginationProps.pageSize });
+    fetchList();
     loadStatistics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paginationProps.current, paginationProps.pageSize]);
 
   // 打开编辑模态框
@@ -285,14 +341,14 @@ const NoticeManagement: FC = () => {
       setModalVisible(false);
       editForm.resetFields();
       setEditingNotice(null);
-      loadNotices({ current: paginationProps.current, pageSize: paginationProps.pageSize });
+      fetchList();
     } catch (error) {
       if (error && typeof error === "object" && "errorFields" in error) {
         return;
       }
       message.error("操作失败: " + ((error as Error).message || "未知错误"));
     }
-  }, [editForm, executionType, selectedChannels, editingNotice, handleCreate, handleUpdate, loadNotices]);
+  }, [editForm, executionType, selectedChannels, editingNotice, handleCreate, handleUpdate, fetchList]);
 
   // 查看统计
   const handleViewStatistics = useCallback(async (notice: Notice) => {
@@ -312,45 +368,64 @@ const NoticeManagement: FC = () => {
   // 删除通知（包含统计刷新）
   const handleDeleteWithRefresh = useCallback(async (id: string) => {
     await handleDelete(id);
-    loadNotices({ current: paginationProps.current, pageSize: paginationProps.pageSize });
+    fetchList();
     loadStatistics();
-  }, [handleDelete, loadNotices, loadStatistics, paginationProps]);
+  }, [handleDelete, fetchList, loadStatistics]);
 
   // 批量删除（包含统计刷新）
   const handleBatchDeleteWithRefresh = useCallback(async () => {
     await handleBatchDelete(selectedRowKeys);
-    loadNotices({ current: paginationProps.current, pageSize: paginationProps.pageSize });
+    fetchList();
     loadStatistics();
-  }, [handleBatchDelete, loadNotices, loadStatistics, selectedRowKeys, paginationProps]);
+  }, [handleBatchDelete, fetchList, loadStatistics, selectedRowKeys]);
 
   // 发布通知（包含列表刷新）
   const handlePublishWithRefresh = useCallback(async (id: string) => {
     await handlePublish(id);
-    loadNotices({ current: paginationProps.current, pageSize: paginationProps.pageSize });
-  }, [handlePublish, loadNotices, paginationProps]);
+    fetchList();
+  }, [handlePublish, fetchList]);
 
   // 撤回通知（包含列表刷新）
   const handleWithdrawWithRefresh = useCallback(async (id: string) => {
     await handleWithdraw(id);
-    loadNotices({ current: paginationProps.current, pageSize: paginationProps.pageSize });
-  }, [handleWithdraw, loadNotices, paginationProps]);
+    fetchList();
+  }, [handleWithdraw, fetchList]);
 
   // 搜索处理
   const handleSearch = useCallback((params?: Record<string, unknown>) => {
     const values = searchForm.getFieldsValue();
-    loadNotices({
-      ...params,
-      current: paginationProps.current,
-      pageSize: paginationProps.pageSize,
+    fetchList({
+      ...(params as { current?: number; pageSize?: number }),
       noticeTitle: values.noticeTitle,
       noticeType: values.noticeType,
     });
-  }, [loadNotices, searchForm, paginationProps]);
+  }, [fetchList, searchForm]);
 
-  // 分页处理
+  // 分页处理（NoticeList 内联分页 onChange 直接调用）
   const handlePageChange = useCallback((page: number, size: number) => {
-    loadNotices({ current: page, pageSize: size || 10 });
-  }, [loadNotices]);
+    fetchList({ current: page, pageSize: size || 10 });
+  }, [fetchList]);
+
+  // antd Table onChange：分页 + 服务端排序一起处理。
+  // resolveSorter 同步取排序新值（规避 setState 时序），写 sortRef 供 fetchList 立即使用。
+  const handleTableChange = useCallback<NonNullable<TableProps<Notice>["onChange"]>>(
+    (pagination, filters, sorter) => {
+      // 排序受控 UI（更新 sortOrder/orderByColumn/isAsc state）
+      sort.handleTableChange(pagination, filters, sorter);
+      // 同步取排序值写 ref（fetchList 不依赖尚未提交的 setState）
+      const { orderByColumn, isAsc } = resolveSorter(sorter, sorterMetas);
+      sortRef.current = { orderByColumn, isAsc };
+      // 立即加载：带新分页 + 新排序 + 旧搜索条件（searchForm）
+      const values = searchForm.getFieldsValue() as { noticeTitle?: string; noticeType?: string };
+      fetchList({
+        current: pagination.current,
+        pageSize: pagination.pageSize,
+        noticeTitle: values.noticeTitle,
+        noticeType: values.noticeType,
+      });
+    },
+    [sort, sorterMetas, searchForm, fetchList]
+  );
 
   return (
     <div>
@@ -377,6 +452,8 @@ const NoticeManagement: FC = () => {
         onStatistics={handleViewStatistics}
         onSelectedRowKeysChange={setSelectedRowKeys}
         onPageChange={handlePageChange}
+        getColumnSortOrder={getColumnSortOrder}
+        onTableChange={handleTableChange}
       />
 
       {/* 编辑模态框 */}

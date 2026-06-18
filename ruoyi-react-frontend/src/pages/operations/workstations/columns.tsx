@@ -29,6 +29,8 @@ export function getWorkstationColumns(params: WorkstationColumnsParams): Columns
       key: "buildingName",
       width: 120,
       ellipsis: true,
+      sorter: true,
+      sortOrder: getColumnSortOrder("buildingName"),
       render: (text) => text || "-",
     },
     {
@@ -37,6 +39,8 @@ export function getWorkstationColumns(params: WorkstationColumnsParams): Columns
       key: "floorName",
       width: 120,
       ellipsis: true,
+      sorter: true,
+      sortOrder: getColumnSortOrder("floorName"),
       render: (text) => text || "-",
     },
     {
@@ -45,6 +49,8 @@ export function getWorkstationColumns(params: WorkstationColumnsParams): Columns
       key: "deptName",
       width: 120,
       ellipsis: true,
+      sorter: true,
+      sortOrder: getColumnSortOrder("deptName"),
       render: (text) => text || "-",
     },
     {
@@ -53,6 +59,8 @@ export function getWorkstationColumns(params: WorkstationColumnsParams): Columns
       key: "userName",
       width: 100,
       ellipsis: true,
+      sorter: true,
+      sortOrder: getColumnSortOrder("userName"),
       render: (text) => text || "-",
     },
     {

@@ -45,11 +45,13 @@ func NewFloorService(db *gorm.DB) FloorService {
 // floorAllowedSortFields 楼层可排序字段白名单。
 // 因 List 有 LEFT JOIN buildings/files,字段值带表别名。
 var floorAllowedSortFields = map[string]string{
-	"name":      "ops_floors.name",
-	"floorNo":   "ops_floors.floor_no",
-	"orderNum":  "ops_floors.order_num",
-	"status":    "ops_floors.status",
-	"createdAt": "ops_floors.created_at",
+	"name":          "ops_floors.name",
+	"floorNo":       "ops_floors.floor_no",
+	"orderNum":      "ops_floors.order_num",
+	"area":          "ops_floors.area",
+	"buildingName":  "ops_buildings.name",
+	"status":        "ops_floors.status",
+	"createdAt":     "ops_floors.created_at",
 }
 
 func (s *floorService) Create(ctx context.Context, floor *operations.OpsFloor) error {

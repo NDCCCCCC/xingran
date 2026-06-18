@@ -102,12 +102,15 @@ const WorkstationManagement: FC = () => {
     clearFieldNames: ["floorId"],
   });
 
-  // 服务端排序:field 对应后端 workstationAllowedSortFields 白名单 key
+  // 服务端排序:field 必须与 columns.tsx 的 dataIndex 一致(useServerSort 按 sorter.field===dataIndex 匹配)
   const sorterMetas = useMemo(
     () => [
-      createSorterMeta<WorkstationOps>("workstationName"),
-      createSorterMeta<WorkstationOps>("workstationNo"),
-      createSorterMeta<WorkstationOps>("workstationType"),
+      createSorterMeta<WorkstationOps>("name"),
+      createSorterMeta<WorkstationOps>("buildingName"),
+      createSorterMeta<WorkstationOps>("floorName"),
+      createSorterMeta<WorkstationOps>("deptName"),
+      createSorterMeta<WorkstationOps>("userName"),
+      createSorterMeta<WorkstationOps>("type"),
       createSorterMeta<WorkstationOps>("status"),
       createSorterMeta<WorkstationOps>("createdAt", "date"),
     ],

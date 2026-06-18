@@ -115,6 +115,7 @@ var portStatusAllowedSortFields = map[string]string{
 	"interfaceName": "interface_name",
 	"adminStatus":   "admin_status",
 	"operStatus":    "oper_status",
+	"vlan":          "vlan",
 	"collectedAt":   "collected_at",
 }
 

@@ -8,13 +8,15 @@ import { Space } from "antd";
 import ActionButtons from "@/components/shared/ActionButtons";
 import type { LoginLog } from "../types";
 import { renderLogStatusTag, formatLocalTime } from "../utils";
+import type { SortOrder } from "@/hooks/useServerSort";
 
 interface GetLoginLogColumnsParams {
   handleViewDetail: (record: LoginLog) => void;
+  getColumnSortOrder: (field: string) => SortOrder | undefined;
 }
 
 export function getLoginLogColumns(params: GetLoginLogColumnsParams): ColumnsType<LoginLog> {
-  const { handleViewDetail } = params;
+  const { handleViewDetail, getColumnSortOrder } = params;
 
   return [
     {
@@ -28,6 +30,8 @@ export function getLoginLogColumns(params: GetLoginLogColumnsParams): ColumnsTyp
       dataIndex: "userName",
       key: "userName",
       width: 120,
+      sorter: true,
+      sortOrder: getColumnSortOrder("userName"),
       render: (text: string) => (
         <Space>
           <UserOutlined />
@@ -40,6 +44,8 @@ export function getLoginLogColumns(params: GetLoginLogColumnsParams): ColumnsTyp
       dataIndex: "ipAddr",
       key: "ipAddr",
       width: 140,
+      sorter: true,
+      sortOrder: getColumnSortOrder("ipAddr"),
     },
     {
       title: "登录地点",
@@ -66,6 +72,8 @@ export function getLoginLogColumns(params: GetLoginLogColumnsParams): ColumnsTyp
       dataIndex: "status",
       key: "status",
       width: 100,
+      sorter: true,
+      sortOrder: getColumnSortOrder("status"),
       render: (status: number) => renderLogStatusTag(status, "login"),
     },
     {
@@ -80,6 +88,8 @@ export function getLoginLogColumns(params: GetLoginLogColumnsParams): ColumnsTyp
       dataIndex: "loginTime",
       key: "loginTime",
       width: 180,
+      sorter: true,
+      sortOrder: getColumnSortOrder("loginTime"),
       render: formatLocalTime,
     },
     {

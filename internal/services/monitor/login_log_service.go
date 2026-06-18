@@ -35,8 +35,11 @@ func NewLoginLogService(db *gorm.DB) LoginLogService {
 
 // loginLogAllowedSortFields 登录日志可排序字段白名单。
 // 值对应 sys_logininfor 表列名(无 JOIN)。
+// 注意:前端列 dataIndex/json tag 是驼峰 ipAddr(userName/loginTime/status 同),
+// 此处 key 必须与前端 dataIndex 一致才能命中白名单;旧小写 ipaddr 仅作向后兼容兜底。
 var loginLogAllowedSortFields = map[string]string{
 	"userName":  "user_name",
+	"ipAddr":    "ipaddr",
 	"ipaddr":    "ipaddr",
 	"loginTime": "login_time",
 	"status":    "status",

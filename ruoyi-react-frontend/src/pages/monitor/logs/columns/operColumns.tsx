@@ -7,13 +7,15 @@ import { EyeOutlined } from "@ant-design/icons";
 import ActionButtons from "@/components/shared/ActionButtons";
 import type { OperLog } from "../types";
 import { getBusinessTypeLabel, renderRequestMethodTag, renderLogStatusTag, formatLocalTime } from "../utils";
+import type { SortOrder } from "@/hooks/useServerSort";
 
 interface GetOperLogColumnsParams {
   handleViewDetail: (record: OperLog) => void;
+  getColumnSortOrder: (field: string) => SortOrder | undefined;
 }
 
 export function getOperLogColumns(params: GetOperLogColumnsParams): ColumnsType<OperLog> {
-  const { handleViewDetail } = params;
+  const { handleViewDetail, getColumnSortOrder } = params;
 
   return [
     {
@@ -27,12 +29,16 @@ export function getOperLogColumns(params: GetOperLogColumnsParams): ColumnsType<
       dataIndex: "title",
       key: "title",
       width: 120,
+      sorter: true,
+      sortOrder: getColumnSortOrder("title"),
     },
     {
       title: "业务类型",
       dataIndex: "businessType",
       key: "businessType",
       width: 100,
+      sorter: true,
+      sortOrder: getColumnSortOrder("businessType"),
       render: (type: number) => getBusinessTypeLabel(type),
     },
     {
@@ -47,6 +53,8 @@ export function getOperLogColumns(params: GetOperLogColumnsParams): ColumnsType<
       dataIndex: "operName",
       key: "operName",
       width: 100,
+      sorter: true,
+      sortOrder: getColumnSortOrder("operName"),
     },
     {
       title: "部门名称",
@@ -73,6 +81,8 @@ export function getOperLogColumns(params: GetOperLogColumnsParams): ColumnsType<
       dataIndex: "status",
       key: "status",
       width: 100,
+      sorter: true,
+      sortOrder: getColumnSortOrder("status"),
       render: (status: number) => renderLogStatusTag(status, "oper"),
     },
     {
@@ -80,6 +90,8 @@ export function getOperLogColumns(params: GetOperLogColumnsParams): ColumnsType<
       dataIndex: "operTime",
       key: "operTime",
       width: 180,
+      sorter: true,
+      sortOrder: getColumnSortOrder("operTime"),
       render: formatLocalTime,
     },
     {

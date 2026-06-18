@@ -10,6 +10,7 @@ import {
   BarChartOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
+import type { TableProps } from "antd";
 import ActionButtons from "@/components/shared/ActionButtons";
 import type { Notice } from "@/types/notice";
 import {
@@ -23,6 +24,7 @@ import {
 } from "@/types/notice";
 import type { NoticePriority, TargetType } from "@/types/notice";
 import { formatDateTime } from "@/utils/datetime";
+import type { SortOrder } from "@/hooks/useServerSort";
 
 const { Option } = Select;
 
@@ -45,6 +47,10 @@ export interface NoticeListProps {
   onStatistics: (record: Notice) => void;
   onSelectedRowKeysChange: (keys: React.Key[]) => void;
   onPageChange: (page: number, size: number) => void;
+  /** 列级 sortOrder：返回当前排序列的方向，其余 undefined（受控高亮） */
+  getColumnSortOrder?: (field: string) => SortOrder | undefined;
+  /** antd Table onChange 统一处理分页+排序（启用服务端排序时替代 pagination.onChange） */
+  onTableChange?: TableProps<Notice>["onChange"];
 }
 
 /**
@@ -70,6 +76,8 @@ export const NoticeList: React.FC<NoticeListProps> = ({
   onStatistics,
   onSelectedRowKeysChange,
   onPageChange,
+  getColumnSortOrder,
+  onTableChange,
 }) => {
   const columns: ColumnsType<Notice> = [
     {
@@ -77,6 +85,8 @@ export const NoticeList: React.FC<NoticeListProps> = ({
       dataIndex: "noticeTitle",
       key: "noticeTitle",
       ellipsis: true,
+      sorter: true,
+      sortOrder: getColumnSortOrder?.("noticeTitle"),
       render: (text: string) => <span className="font-medium">{text}</span>,
     },
     {
@@ -84,6 +94,8 @@ export const NoticeList: React.FC<NoticeListProps> = ({
       dataIndex: "noticeType",
       key: "noticeType",
       width: 80,
+      sorter: true,
+      sortOrder: getColumnSortOrder?.("noticeType"),
       render: (type: string) => (
         <Tag color={NOTICE_TYPE_COLORS[type as "1" | "2"]}>{NOTICE_TYPE_LABELS[type as "1" | "2"]}</Tag>
       ),
@@ -93,6 +105,8 @@ export const NoticeList: React.FC<NoticeListProps> = ({
       dataIndex: "priority",
       key: "priority",
       width: 90,
+      sorter: true,
+      sortOrder: getColumnSortOrder?.("priority"),
       render: (priority: number) => {
         if (priority === 0) return <span className="text-gray-400">普通</span>;
         return (
@@ -150,6 +164,8 @@ export const NoticeList: React.FC<NoticeListProps> = ({
       dataIndex: "publishTime",
       key: "publishTime",
       width: 180,
+      sorter: true,
+      sortOrder: getColumnSortOrder?.("publishTime"),
       render: (time: string) => time ? formatDateTime(time) : <span className="text-gray-400">-</span>,
     },
     {
@@ -164,6 +180,8 @@ export const NoticeList: React.FC<NoticeListProps> = ({
       dataIndex: "createdAt",
       key: "createdAt",
       width: 180,
+      sorter: true,
+      sortOrder: getColumnSortOrder?.("createdAt"),
       render: (date: string) => formatDateTime(date),
     },
     {
@@ -314,8 +332,13 @@ export const NoticeList: React.FC<NoticeListProps> = ({
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total) => `共 ${total} 条`,
-            onChange: onPageChange,
+            // 启用服务端排序时由 Table onChange 统一处理分页+排序，
+            // 此处不再重复挂分页 onChange（避免分页触发两次）。
+            ...(onTableChange ? {} : { onChange: onPageChange }),
           }}
+          // 服务端排序：父组件传入 onTableChange 时接管分页+排序；
+          // 否则不挂 onChange，分页走 pagination.onChange。
+          onChange={onTableChange}
         />
       </Card>
     </>

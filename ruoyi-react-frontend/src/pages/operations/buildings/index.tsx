@@ -60,6 +60,10 @@ const BuildingManagement: FC = () => {
   const sorterMetas = useMemo(
     () => [
       createSorterMeta<Building>("name"),
+      createSorterMeta<Building>("orgId"),
+      createSorterMeta<Building>("level"),
+      createSorterMeta<Building>("address"),
+      createSorterMeta<Building>("totalFloors"),
       createSorterMeta<Building>("status"),
       createSorterMeta<Building>("orderNum"),
       createSorterMeta<Building>("createdAt", "date"),
@@ -295,19 +299,21 @@ const BuildingManagement: FC = () => {
 
   const columns: ColumnsType<Building> = [
     { title: "楼宇名称", dataIndex: "name", key: "name", width: 150, sorter: true, sortOrder: getColumnSortOrder("name") },
-    { title: "所属机构", dataIndex: "orgId", key: "orgName", width: 150, render: departmentData.getOrgName },
+    { title: "所属机构", dataIndex: "orgId", key: "orgName", width: 150, sorter: true, sortOrder: getColumnSortOrder("orgId"), render: departmentData.getOrgName },
     {
       title: "层级",
       dataIndex: "level",
       key: "level",
       width: 80,
+      sorter: true,
+      sortOrder: getColumnSortOrder("level"),
       render: (level: number) => (
         <Tag color={level === 1 ? "purple" : "blue"}>
           {level === 1 ? "一级" : "二级"}
         </Tag>
       ),
     },
-    { title: "地址", dataIndex: "address", key: "address", ellipsis: true, width: 200 },
+    { title: "地址", dataIndex: "address", key: "address", ellipsis: true, width: 200, sorter: true, sortOrder: getColumnSortOrder("address") },
     {
       title: "经纬度",
       key: "coordinates",
@@ -319,7 +325,7 @@ const BuildingManagement: FC = () => {
         return "-";
       },
     },
-    { title: "楼层数", dataIndex: "totalFloors", key: "totalFloors", width: 100, render: (v) => v || 0 },
+    { title: "楼层数", dataIndex: "totalFloors", key: "totalFloors", width: 100, sorter: true, sortOrder: getColumnSortOrder("totalFloors"), render: (v) => v || 0 },
     createStatusColumn("status", { width: 100, sorter: true, sortOrder: getColumnSortOrder("status") }),
     { title: "描述", dataIndex: "remark", key: "remark", ellipsis: true },
     createDateTimeColumn("createdAt", { width: 180, title: "创建时间", sorter: true, sortOrder: getColumnSortOrder("createdAt") }),

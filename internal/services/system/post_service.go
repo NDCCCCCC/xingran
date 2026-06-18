@@ -42,6 +42,7 @@ var postAllowedSortFields = map[string]string{
 	"postName":  "post_name",
 	"postSort":  "post_sort",
 	"status":    "status",
+	"remark":    "remark",
 	"createdAt": "created_at",
 }
 

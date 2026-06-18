@@ -38,13 +38,14 @@ func NewBuildingService(db *gorm.DB) BuildingService {
 
 // buildingAllowedSortFields 楼宇可排序字段白名单(对应 ops_buildings 表列名)。
 var buildingAllowedSortFields = map[string]string{
-	"name":       "name",
-	"address":    "address",
-	"level":      "level",
-	"orgId":      "org_id",
-	"orderNum":   "order_num",
-	"status":     "status",
-	"createdAt":  "created_at",
+	"name":        "name",
+	"address":     "address",
+	"level":       "level",
+	"orgId":       "org_id",
+	"orderNum":    "order_num",
+	"totalFloors": "total_floors",
+	"status":      "status",
+	"createdAt":   "created_at",
 }
 
 // Create 创建楼宇

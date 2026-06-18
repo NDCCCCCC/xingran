@@ -28,6 +28,8 @@ export function createFloorTableColumns(callbacks: FloorTableColumnCallbacks): C
       dataIndex: "buildingName",
       key: "buildingName",
       width: 150,
+      sorter: true,
+      sortOrder: getColumnSortOrder("buildingName"),
       render: (_, record) => record.buildingName || record.buildingCode,
     },
     {
@@ -35,6 +37,8 @@ export function createFloorTableColumns(callbacks: FloorTableColumnCallbacks): C
       dataIndex: "area",
       key: "area",
       width: 120,
+      sorter: true,
+      sortOrder: getColumnSortOrder("area"),
       render: (value) => value || "-",
     },
     createStatusColumn("status", { width: 100, sorter: true, sortOrder: getColumnSortOrder("status") }),

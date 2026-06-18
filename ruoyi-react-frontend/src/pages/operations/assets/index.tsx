@@ -38,7 +38,7 @@ import { getAuthHeaders } from "@/utils/authHelpers";
 import { useColumnConfig } from "@/hooks/useColumnConfig";
 import { ColumnConfigModal } from "@/components/shared/ColumnConfigModal";
 import { AssetRow } from "@/components/table/AssetRow";
-import { createSorter } from "@/utils/tableHelpers";
+import { createSorterMeta } from "@/utils/tableHelpers";
 
 const { Option } = Select;
 
@@ -152,6 +152,16 @@ const AssetList: FC = () => {
 
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
+  // 服务端排序:field 对应后端 assetAllowedSortFields 白名单 key
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<Asset>("devicesn"),
+      createSorterMeta<Asset>("deviceTypeName"),
+      createSorterMeta<Asset>("lastInventoryDate", "date"),
+    ],
+    []
+  );
+
   const {
     loading,
     data: assets,
@@ -159,6 +169,8 @@ const AssetList: FC = () => {
     selectedRowKeys,
     searchForm,
     setSelectedRowKeys,
+    getColumnSortOrder,
+    handleTableChange,
     handleSearch,
     handleReset,
     handleAdd,
@@ -177,6 +189,7 @@ const AssetList: FC = () => {
         setPageSize,
         setTotal,
       },
+      sorterMetas,
     }
   );
 
@@ -325,7 +338,8 @@ const AssetList: FC = () => {
       key: "devicesn",
       width: 150,
       fixed: "left",
-      sorter: createSorter<Asset>('devicesn', 'string'),
+      sorter: true,
+      sortOrder: getColumnSortOrder("devicesn"),
       render: (text) => (
         <Tooltip title={text}>
           <span style={{ cursor: "pointer" }}>{text}</span>
@@ -338,7 +352,8 @@ const AssetList: FC = () => {
       key: "deptName",
       width: 120,
       ellipsis: true,
-      sorter: createSorter<Asset>('nowUserDeptCode', 'string'),
+      sorter: true,
+      sortOrder: getColumnSortOrder("deviceTypeName"),
       render: (status: number) => (
         <Tag color={status === 0 ? "green" : "red"}>
           {status === 0 ? "正常" : "停用"}
@@ -358,7 +373,8 @@ const AssetList: FC = () => {
       key: "remark",
       width: 200,
       ellipsis: true,
-      sorter: createSorter<Asset>('remark', 'string'),
+      sorter: true,
+      sortOrder: getColumnSortOrder("lastInventoryDate"),
     },
     // 额外的列定义（对应 defaultAssetColumns 中缺失的列）
     { key: "sequenceNo", title: "序列号", dataIndex: "sequenceNo", width: 120, ellipsis: true },
@@ -562,11 +578,8 @@ const AssetList: FC = () => {
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (total) => `共 ${total} 条`,
-          onChange: (page, pageSize) => {
-            setCurrent(page);
-            setPageSize(pageSize);
-          },
         }}
+        onChange={handleTableChange}
         scroll={{ x: 4200, y: 600 }}
         rowSelection={{
           selectedRowKeys,

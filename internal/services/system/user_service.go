@@ -58,8 +58,10 @@ type PageResult struct {
 var userAllowedSortFields = map[string]string{
 	"username":   "sys_user.username",
 	"nickname":   "sys_user.nickname",
+	"employeeNo": "sys_user.employee_no",
 	"email":      "sys_user.email",
 	"phone":      "sys_user.phone",
+	"gender":     "sys_user.gender",
 	"status":     "sys_user.status",
 	"createdAt":  "sys_user.created_at",
 	"updatedAt":  "sys_user.updated_at",

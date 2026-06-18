@@ -116,6 +116,16 @@ func (h *DictTypeHandler) List(c *gin.Context) {
 		}
 	}
 
+	// 服务端排序参数（透传给 service.List → base.ApplySort 白名单）
+	if val, ok := rawReq["orderByColumn"].(string); ok && val != "" {
+		params.OrderByColumn = val
+	}
+	if val, ok := rawReq["isAsc"]; ok {
+		if b, ok := val.(bool); ok {
+			params.IsAsc = &b
+		}
+	}
+
 	result, err := h.service.List(c.Request.Context(), params)
 	if err != nil {
 		response.Error(c, err)
@@ -325,6 +335,16 @@ func (h *DictDataHandler) List(c *gin.Context) {
 			req.Status = &status
 		case int:
 			req.Status = &v
+		}
+	}
+
+	// 服务端排序参数（透传给 service.List → base.ApplySort 白名单）
+	if val, ok := rawReq["orderByColumn"].(string); ok && val != "" {
+		req.OrderByColumn = val
+	}
+	if val, ok := rawReq["isAsc"]; ok {
+		if b, ok := val.(bool); ok {
+			req.IsAsc = &b
 		}
 	}
 

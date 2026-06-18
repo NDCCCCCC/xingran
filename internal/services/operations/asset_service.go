@@ -45,14 +45,19 @@ func NewAssetService(db *gorm.DB) AssetService {
 }
 
 // assetAllowedSortFields 资产可排序字段白名单(对应 ops_asset 表列名)。
+// 注意:key 必须与前端列 dataIndex/json tag 一致(驼峰)才能命中白名单;
+// deviceSN 为旧版别名,保留作向后兼容。
 var assetAllowedSortFields = map[string]string{
-	"deviceSN":  "devicesn",
-	"name":      "name",
-	"type":      "type",
-	"status":    "status",
-	"deptId":    "dept_id",
-	"userId":    "user_id",
-	"createdAt": "created_at",
+	"deviceSN":           "devicesn",
+	"devicesn":           "devicesn",
+	"name":               "name",
+	"type":               "type",
+	"status":             "status",
+	"deptId":             "dept_id",
+	"userId":             "user_id",
+	"deviceTypeName":     "device_type_name",
+	"lastInventoryDate":  "last_inventory_date",
+	"createdAt":          "created_at",
 }
 
 // Create 创建资产

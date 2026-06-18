@@ -3,7 +3,7 @@
  * Log Monitor Page
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
@@ -37,6 +37,7 @@ import { getOperLogColumns, getLoginLogColumns } from "./columns";
 import { useTableManager } from "@/hooks/useTableManager";
 import type { BaseResponse, PageResponse } from "@/types";
 import { post } from "@/lib/api";
+import { createSorterMeta } from "@/utils/tableHelpers";
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
@@ -96,8 +97,32 @@ const LogMonitor: React.FC = () => {
     defaultValue: "oper",
   });
 
+  // 服务端排序:field 对应后端 operLogAllowedSortFields 白名单 key
+  const operSorterMetas = useMemo(
+    () => [
+      createSorterMeta<OperLog>("title"),
+      createSorterMeta<OperLog>("businessType"),
+      createSorterMeta<OperLog>("operName"),
+      createSorterMeta<OperLog>("status"),
+      createSorterMeta<OperLog>("operTime", "date"),
+    ],
+    []
+  );
+
+  // 服务端排序:field 对应后端 loginLogAllowedSortFields 白名单 key
+  const loginSorterMetas = useMemo(
+    () => [
+      createSorterMeta<LoginLog>("userName"),
+      createSorterMeta<LoginLog>("ipAddr"),
+      createSorterMeta<LoginLog>("status"),
+      createSorterMeta<LoginLog>("loginTime", "date"),
+    ],
+    []
+  );
+
   // 操作日志管理器 - 不传入 pageSize，使用用户设置中的默认值
   const operLogManager = useTableManager<OperLog>(loadOperLogs, {
+    sorterMetas: operSorterMetas,
     onSuccess: () => {
       // 可选：操作成功后的回调
     },
@@ -105,6 +130,7 @@ const LogMonitor: React.FC = () => {
 
   // 登录日志管理器 - 不传入 pageSize，使用用户设置中的默认值
   const loginLogManager = useTableManager<LoginLog>(loadLoginLogs, {
+    sorterMetas: loginSorterMetas,
     onSuccess: () => {
       // 可选：操作成功后的回调
     },
@@ -159,8 +185,8 @@ const LogMonitor: React.FC = () => {
   }, [currentManager]);
 
   // 表格列
-  const operColumns = getOperLogColumns({ handleViewDetail });
-  const loginColumns = getLoginLogColumns({ handleViewDetail });
+  const operColumns = getOperLogColumns({ handleViewDetail, getColumnSortOrder: operLogManager.getColumnSortOrder });
+  const loginColumns = getLoginLogColumns({ handleViewDetail, getColumnSortOrder: loginLogManager.getColumnSortOrder });
 
   // 搜索
   const handleSearch = useCallback(() => {
@@ -329,14 +355,8 @@ const LogMonitor: React.FC = () => {
                     showSizeChanger: true,
                     showQuickJumper: true,
                     showTotal: (total) => `共 ${total} 条记录`,
-                    onChange: (page, size) => {
-                      operLogManager.setCurrent(page);
-                      if (size !== operLogManager.pageSize) {
-                        operLogManager.setPageSize(size);
-                      }
-                      operLogManager.loadData();
-                    },
                   }}
+                  onChange={operLogManager.handleTableChange}
                   scroll={{ x: 1500 }}
                 />
               )
@@ -362,14 +382,8 @@ const LogMonitor: React.FC = () => {
                     showSizeChanger: true,
                     showQuickJumper: true,
                     showTotal: (total) => `共 ${total} 条记录`,
-                    onChange: (page, size) => {
-                      loginLogManager.setCurrent(page);
-                      if (size !== loginLogManager.pageSize) {
-                        loginLogManager.setPageSize(size);
-                      }
-                      loginLogManager.loadData();
-                    },
                   }}
+                  onChange={loginLogManager.handleTableChange}
                   scroll={{ x: 1400 }}
                 />
               )

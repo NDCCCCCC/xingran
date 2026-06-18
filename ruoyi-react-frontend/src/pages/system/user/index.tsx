@@ -102,6 +102,8 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       key: "employeeNo",
       width: 100,
       minWidth: 80,
+      sorter: true,
+      sortOrder: getColumnSortOrder("employeeNo"),
       render: (text) => text || "-",
     },
     {
@@ -130,6 +132,8 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       width: 70,
       minWidth: 60,
       align: "center" as const,
+      sorter: true,
+      sortOrder: getColumnSortOrder("gender"),
       render: (gender) => formatGender(gender),
     },
     {
@@ -269,8 +273,10 @@ const UserManagement: FC = () => {
     () => [
       createSorterMeta<User>("username"),
       createSorterMeta<User>("nickname"),
+      createSorterMeta<User>("employeeNo"),
       createSorterMeta<User>("email"),
       createSorterMeta<User>("phone"),
+      createSorterMeta<User>("gender", "number"),
       createSorterMeta<User>("deptName"),
       createSorterMeta<User>("status"),
       createSorterMeta<User>("createdAt", "date"),

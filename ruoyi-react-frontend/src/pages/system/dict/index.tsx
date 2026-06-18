@@ -3,7 +3,7 @@
  * System Dictionary Management Page
  */
 
-import { useState, useEffect, type FC, type Key } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, type FC, type Key } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
@@ -34,11 +34,16 @@ import {
   LinkOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
+import type { TableProps } from "antd";
 import { formatDateTime } from "@/utils/datetime";
 
 import type { DictType, DictData } from "@/types";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { usePagination } from "@/hooks/usePagination";
+import { useServerSort, resolveSorter } from "@/hooks/useServerSort";
+import type { SortOrder } from "@/hooks/useServerSort";
+import type { SorterMeta } from "@/utils/tableHelpers";
+import { createSorterMeta } from "@/utils/tableHelpers";
 
 // 导入提取的模块
 import { STATUS_OPTIONS, renderStatusTag } from "./constants";
@@ -53,10 +58,11 @@ interface DictTypeTableColumnsProps {
   openTypeModal: (record: DictType) => void;
   handleDeleteType: (id: string) => void;
   onDictNameClick: (dictType: string) => void;
+  getColumnSortOrder: (field: string) => SortOrder | undefined;
 }
 
 function getDictTypeTableColumns(props: DictTypeTableColumnsProps): ColumnsType<DictType> {
-  const { openTypeModal, handleDeleteType, onDictNameClick } = props;
+  const { openTypeModal, handleDeleteType, onDictNameClick, getColumnSortOrder } = props;
 
   return [
     {
@@ -65,6 +71,8 @@ function getDictTypeTableColumns(props: DictTypeTableColumnsProps): ColumnsType<
       key: "dictName",
       width: 160,
       minWidth: 140,
+      sorter: true,
+      sortOrder: getColumnSortOrder("dictName"),
       render: (text: string, record: DictType) => (
         <Button
           type="link"
@@ -76,7 +84,7 @@ function getDictTypeTableColumns(props: DictTypeTableColumnsProps): ColumnsType<
         </Button>
       ),
     },
-    { title: "字典类型", dataIndex: "dictType", key: "dictType", width: 140, minWidth: 120 },
+    { title: "字典类型", dataIndex: "dictType", key: "dictType", width: 140, minWidth: 120, sorter: true, sortOrder: getColumnSortOrder("dictType") },
     {
       title: "状态",
       dataIndex: "status",
@@ -84,6 +92,8 @@ function getDictTypeTableColumns(props: DictTypeTableColumnsProps): ColumnsType<
       width: 80,
       minWidth: 70,
       align: "center" as const,
+      sorter: true,
+      sortOrder: getColumnSortOrder("status"),
       render: (status: number) => renderStatusTag(status),
     },
     { title: "备注", dataIndex: "remark", key: "remark", width: 150, minWidth: 120, ellipsis: true },
@@ -92,6 +102,8 @@ function getDictTypeTableColumns(props: DictTypeTableColumnsProps): ColumnsType<
       dataIndex: "createdAt",
       key: "createdAt",
       width: 180,
+      sorter: true,
+      sortOrder: getColumnSortOrder("createdAt"),
       render: (date: string) => formatDateTime(date),
     },
     {
@@ -134,15 +146,16 @@ function getDictTypeTableColumns(props: DictTypeTableColumnsProps): ColumnsType<
 interface DictDataTableColumnsProps {
   openDataModal: (record: DictData) => void;
   handleDeleteData: (id: string) => void;
+  getColumnSortOrder: (field: string) => SortOrder | undefined;
 }
 
 function getDictDataTableColumns(props: DictDataTableColumnsProps): ColumnsType<DictData> {
-  const { openDataModal, handleDeleteData } = props;
+  const { openDataModal, handleDeleteData, getColumnSortOrder } = props;
 
   return [
-    { title: "字典标签", dataIndex: "dictLabel", key: "dictLabel", width: 140, minWidth: 120 },
-    { title: "字典键值", dataIndex: "dictValue", key: "dictValue", width: 120, minWidth: 100 },
-    { title: "字典排序", dataIndex: "dictSort", key: "dictSort", width: 100, minWidth: 80 },
+    { title: "字典标签", dataIndex: "dictLabel", key: "dictLabel", width: 140, minWidth: 120, sorter: true, sortOrder: getColumnSortOrder("dictLabel") },
+    { title: "字典键值", dataIndex: "dictValue", key: "dictValue", width: 120, minWidth: 100, sorter: true, sortOrder: getColumnSortOrder("dictValue") },
+    { title: "字典排序", dataIndex: "dictSort", key: "dictSort", width: 100, minWidth: 80, sorter: true, sortOrder: getColumnSortOrder("dictSort") },
     {
       title: "状态",
       dataIndex: "status",
@@ -150,6 +163,8 @@ function getDictDataTableColumns(props: DictDataTableColumnsProps): ColumnsType<
       width: 80,
       minWidth: 70,
       align: "center" as const,
+      sorter: true,
+      sortOrder: getColumnSortOrder("status"),
       render: (status: number) => renderStatusTag(status),
     },
     { title: "备注", dataIndex: "remark", key: "remark", width: 150, minWidth: 120, ellipsis: true },
@@ -158,6 +173,8 @@ function getDictDataTableColumns(props: DictDataTableColumnsProps): ColumnsType<
       dataIndex: "createdAt",
       key: "createdAt",
       width: 180,
+      sorter: true,
+      sortOrder: getColumnSortOrder("createdAt"),
       render: (date: string) => formatDateTime(date),
     },
     {
@@ -258,17 +275,121 @@ const DictManagement: FC = () => {
     loadDataStatistics,
   });
 
+  // ==================== 服务端排序（字典类型表 + 字典数据表） ====================
+  // field 对应后端 dictTypeAllowedSortFields / dictDataAllowedSortFields 白名单 key
+  const typeSorterMetas = useMemo<Array<SorterMeta<DictType>>>(
+    () => [
+      createSorterMeta<DictType>("dictName"),
+      createSorterMeta<DictType>("dictType"),
+      createSorterMeta<DictType>("status", "number"),
+      createSorterMeta<DictType>("createdAt", "date"),
+    ],
+    []
+  );
+  const dataSorterMetas = useMemo<Array<SorterMeta<DictData>>>(
+    () => [
+      createSorterMeta<DictData>("dictLabel"),
+      createSorterMeta<DictData>("dictValue"),
+      createSorterMeta<DictData>("dictSort", "number"),
+      createSorterMeta<DictData>("status", "number"),
+      createSorterMeta<DictData>("createdAt", "date"),
+    ],
+    []
+  );
+
+  const typeSort = useServerSort<DictType>({ sorterMetas: typeSorterMetas });
+  const dataSort = useServerSort<DictData>({ sorterMetas: dataSorterMetas });
+
+  // 列级 sortOrder（与 useTableManager.getColumnSortOrder 语义一致）
+  const getTypeColumnSortOrder = useCallback(
+    (field: string): SortOrder | undefined => {
+      if (typeSort.orderByColumn !== String(field)) return undefined;
+      return typeSort.sortOrder;
+    },
+    [typeSort.orderByColumn, typeSort.sortOrder]
+  );
+  const getDataColumnSortOrder = useCallback(
+    (field: string): SortOrder | undefined => {
+      if (dataSort.orderByColumn !== String(field)) return undefined;
+      return dataSort.sortOrder;
+    },
+    [dataSort.orderByColumn, dataSort.sortOrder]
+  );
+
+  // 排序 ref：CRUD 刷新/初始化/搜索时携带最新排序，规避 setState 时序
+  const typeSortRef = useRef<{ orderByColumn?: string; isAsc?: boolean }>({});
+  const dataSortRef = useRef<{ orderByColumn?: string; isAsc?: boolean }>({});
+  typeSortRef.current = { orderByColumn: typeSort.orderByColumn, isAsc: typeSort.isAsc };
+  dataSortRef.current = { orderByColumn: dataSort.orderByColumn, isAsc: dataSort.isAsc };
+
+  // 统一 Table onChange：分页 + 排序一起处理并 load。
+  const handleTypeTableChange = useCallback<NonNullable<TableProps<DictType>["onChange"]>>(
+    (pagination, filters, sorter) => {
+      typeSort.handleTableChange(pagination, filters, sorter);
+      const { orderByColumn, isAsc } = resolveSorter(sorter, typeSorterMetas);
+      typeSortRef.current = { orderByColumn, isAsc };
+      setCurrent(pagination.current ?? 1);
+      setPageSize(pagination.pageSize ?? 10);
+      loadDictTypes({
+        current: pagination.current ?? 1,
+        pageSize: pagination.pageSize ?? 10,
+        ...(orderByColumn ? { orderByColumn, isAsc } : {}),
+      });
+    },
+    [typeSort, typeSorterMetas, setCurrent, setPageSize, loadDictTypes]
+  );
+
+  const handleDataTableChange = useCallback<NonNullable<TableProps<DictData>["onChange"]>>(
+    (pagination, filters, sorter) => {
+      dataSort.handleTableChange(pagination, filters, sorter);
+      const { orderByColumn, isAsc } = resolveSorter(sorter, dataSorterMetas);
+      dataSortRef.current = { orderByColumn, isAsc };
+      setCurrent(pagination.current ?? 1);
+      setPageSize(pagination.pageSize ?? 10);
+      loadDictData({
+        current: pagination.current ?? 1,
+        pageSize: pagination.pageSize ?? 10,
+        ...(orderByColumn ? { orderByColumn, isAsc } : {}),
+      });
+    },
+    [dataSort, dataSorterMetas, setCurrent, setPageSize, loadDictData]
+  );
+
+  // 搜索/刷新时保留当前排序（避免点搜索后排序丢失）
+  const loadTypesWithSort = useCallback(() => {
+    loadDictTypes(
+      typeSortRef.current.orderByColumn
+        ? { orderByColumn: typeSortRef.current.orderByColumn, isAsc: typeSortRef.current.isAsc }
+        : {}
+    );
+  }, [loadDictTypes]);
+  const loadDataWithSort = useCallback(() => {
+    loadDictData(
+      dataSortRef.current.orderByColumn
+        ? { orderByColumn: dataSortRef.current.orderByColumn, isAsc: dataSortRef.current.isAsc }
+        : {}
+    );
+  }, [loadDictData]);
+
   // 初始化加载
   useEffect(() => {
     if (activeTab === "type") {
-      loadDictTypes();
+      loadDictTypes({
+        ...(typeSortRef.current.orderByColumn
+          ? { orderByColumn: typeSortRef.current.orderByColumn, isAsc: typeSortRef.current.isAsc }
+          : {}),
+      });
       loadTypeStatistics();
     }
   }, [activeTab, paginationProps.current, paginationProps.pageSize, loadTypeStatistics, loadDictTypes]);
 
   useEffect(() => {
     if (activeTab === "data" && selectedType) {
-      loadDictData();
+      loadDictData({
+        ...(dataSortRef.current.orderByColumn
+          ? { orderByColumn: dataSortRef.current.orderByColumn, isAsc: dataSortRef.current.isAsc }
+          : {}),
+      });
       loadDataStatistics();
     }
   }, [activeTab, selectedType, paginationProps.current, paginationProps.pageSize, loadDataStatistics, loadDictData]);
@@ -277,6 +398,7 @@ const DictManagement: FC = () => {
   const typeColumns = getDictTypeTableColumns({
     openTypeModal: (record) => openTypeModal(record, typeForm),
     handleDeleteType,
+    getColumnSortOrder: getTypeColumnSortOrder,
     onDictNameClick: (dictType) => {
       setSelectedType(dictType);
       setActiveTab("data");
@@ -288,6 +410,7 @@ const DictManagement: FC = () => {
   const dataColumns = getDictDataTableColumns({
     openDataModal: (record) => openDataModal(record, dataForm),
     handleDeleteData,
+    getColumnSortOrder: getDataColumnSortOrder,
   });
 
   return (
@@ -353,10 +476,10 @@ const DictManagement: FC = () => {
                       </Form.Item>
                       <Form.Item>
                         <Space>
-                          <Button type="primary" icon={<SearchOutlined />} onClick={() => loadDictTypes()}>
+                          <Button type="primary" icon={<SearchOutlined />} onClick={loadTypesWithSort}>
                             搜索
                           </Button>
-                          <Button icon={<ReloadOutlined />} onClick={() => { searchForm.resetFields(); loadDictTypes(); loadTypeStatistics(); }}>
+                          <Button icon={<ReloadOutlined />} onClick={() => { searchForm.resetFields(); loadTypesWithSort(); loadTypeStatistics(); }}>
                             刷新
                           </Button>
                         </Space>
@@ -413,11 +536,7 @@ const DictManagement: FC = () => {
                     loading={loading}
                     rowKey="id"
                     pagination={paginationProps}
-                    onChange={(pagination) => {
-                      setCurrent(pagination.current ?? 1);
-                      setPageSize(pagination.pageSize ?? 10);
-                      loadDictTypes();
-                    }}
+                    onChange={handleTypeTableChange}
                   />
                 </Card>
               </>
@@ -486,10 +605,10 @@ const DictManagement: FC = () => {
                       </Form.Item>
                       <Form.Item>
                         <Space>
-                          <Button type="primary" icon={<SearchOutlined />} onClick={() => loadDictData()}>
+                          <Button type="primary" icon={<SearchOutlined />} onClick={loadDataWithSort}>
                             搜索
                           </Button>
-                          <Button icon={<ReloadOutlined />} onClick={() => { dataSearchForm.resetFields(); loadDictData(); loadDataStatistics(); }}>
+                          <Button icon={<ReloadOutlined />} onClick={() => { dataSearchForm.resetFields(); loadDataWithSort(); loadDataStatistics(); }}>
                             刷新
                           </Button>
                         </Space>
@@ -543,11 +662,7 @@ const DictManagement: FC = () => {
                     loading={loading}
                     rowKey="id"
                     pagination={paginationProps}
-                    onChange={(pagination) => {
-                      setCurrent(pagination.current ?? 1);
-                      setPageSize(pagination.pageSize ?? 10);
-                      loadDictData();
-                    }}
+                    onChange={handleDataTableChange}
                   />
                 </Card>
               </>
