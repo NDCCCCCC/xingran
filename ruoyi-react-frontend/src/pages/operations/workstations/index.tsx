@@ -113,6 +113,7 @@ const WorkstationManagement: FC = () => {
       createSorterMeta<WorkstationOps>("type"),
       createSorterMeta<WorkstationOps>("status"),
       createSorterMeta<WorkstationOps>("createdAt", "date"),
+      createSorterMeta<WorkstationOps>("updatedAt", "date"),
     ],
     []
   );

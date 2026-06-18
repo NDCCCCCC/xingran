@@ -58,6 +58,7 @@ var workstationAllowedSortFields = map[string]string{
 	"deptName":        "sys_dept.dept_name",
 	"userName":        "sys_user.nickname",
 	"createdAt":       "sys_workstation.created_at",
+	"updatedAt":       "sys_workstation.updated_at",
 }
 
 // PositionUpdateItem 位置更新项

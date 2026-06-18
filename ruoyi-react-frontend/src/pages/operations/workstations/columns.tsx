@@ -85,6 +85,7 @@ export function getWorkstationColumns(params: WorkstationColumnsParams): Columns
     },
     { title: "描述", dataIndex: "description", key: "description", ellipsis: true },
     createDateTimeColumn("createdAt", { width: 180, sorter: true, sortOrder: getColumnSortOrder("createdAt") }),
+    createDateTimeColumn("updatedAt", { width: 180, sorter: true, sortOrder: getColumnSortOrder("updatedAt") }),
     {
       title: "操作",
       key: "action",
