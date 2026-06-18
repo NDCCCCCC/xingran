@@ -77,6 +77,7 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       dataIndex: 'key',
       key: 'key',
       width: 300,
+      sorter: true,
       ellipsis: true,
       sorter: createSorter<CacheInfo>('key', 'string'),
       render: (text: string) => (
@@ -90,11 +91,13 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       width: 100,
       sorter: createSorter<CacheInfo>('type', 'string'),
       render: (type: string) => <Tag color="blue">{type}</Tag>,
+      sorter: true,
     },
     {
       title: '层级',
       dataIndex: 'location',
       key: 'location',
+      sorter: true,
       width: 120,
       sorter: createSorter<CacheInfo>('location', 'string'),
       render: (location: string) => {
@@ -109,6 +112,7 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       title: 'TTL',
       dataIndex: 'ttl',
       key: 'ttl',
+      sorter: true,
       width: 120,
       sorter: createSorter<CacheInfo>('ttl', 'number'),
       render: (ttl: number) => (
@@ -121,6 +125,7 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       title: '大小',
       dataIndex: 'size',
       key: 'size',
+      sorter: true,
       width: 100,
       sorter: createSorter<CacheInfo>('size', 'number'),
       render: (size: number) => formatMemorySize(size),
@@ -129,11 +134,13 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
+      sorter: true,
       width: 180,
       sorter: createSorter<CacheInfo>('createdAt', 'date'),
       render: (value: string) => cacheFormatDateTime(value),
     },
     {
+      sorter: true,
       title: '更新时间',
       dataIndex: 'updatedAt',
       key: 'updatedAt',
@@ -192,19 +199,23 @@ const CacheManager: FC = () => {
   const [operateModalVisible, setOperateModalVisible] = useState(false);
   const [statsModalVisible, setStatsModalVisible] = useState(false);
   const [form] = Form.useForm();
+  const [orderByColumn, setOrderByColumn] = useState('createdAt');
+  const [isAsc, setIsAsc] = useState(false);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   // ==================== 数据获取 ====================
 
-  const fetchCaches = useCallback(async () => {
+  const fetchCaches = useCallback(async (sortCol?: string, sortAsc?: boolean) => {
     setLoading(true);
     try {
       const result = await post<PageResponse<CacheInfo>>('/monitor/cache/list', {
         ...searchForm,
         current: paginationProps.current,
-        pageSize: paginationProps.pageSize
+        pageSize: paginationProps.pageSize,
+        orderByColumn: sortCol ?? orderByColumn,
+        isAsc: sortAsc ?? isAsc,
       });
 
       setCaches(result.data?.list || []);
@@ -215,7 +226,7 @@ const CacheManager: FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchForm, paginationProps.current, paginationProps.pageSize, setTotal]);
+  }, [searchForm, paginationProps.current, paginationProps.pageSize, orderByColumn, isAsc, setTotal]);
 
   const fetchMonitor = useCallback(async () => {
     try {
@@ -240,7 +251,9 @@ const CacheManager: FC = () => {
       message.success('操作成功');
       setOperateModalVisible(false);
       form.resetFields();
-      fetchCaches();
+      const sortField = sorter && sorter.field ? sorter.field : undefined;
+    const sortAsc = sorter && sorter.field ? sorter.order === 'ascend' : undefined;
+    fetchCaches(sortField, sortAsc);
     } catch (error) {
       console.error('操作失败:', error);
       message.error('操作失败');
@@ -255,7 +268,9 @@ const CacheManager: FC = () => {
       });
 
       message.success('批量操作成功');
-      fetchCaches();
+      const sortField = sorter && sorter.field ? sorter.field : undefined;
+    const sortAsc = sorter && sorter.field ? sorter.order === 'ascend' : undefined;
+    fetchCaches(sortField, sortAsc);
     } catch (error) {
       console.error('批量操作失败:', error);
       message.error('批量操作失败');
@@ -272,7 +287,9 @@ const CacheManager: FC = () => {
           await post('/monitor/cache/clear', {});
 
           message.success('清空成功');
-          fetchCaches();
+          const sortField = sorter && sorter.field ? sorter.field : undefined;
+    const sortAsc = sorter && sorter.field ? sorter.order === 'ascend' : undefined;
+    fetchCaches(sortField, sortAsc);
           fetchMonitor();
         } catch (error) {
           console.error('清空失败:', error);
@@ -344,11 +361,17 @@ const CacheManager: FC = () => {
     fetchMonitor();
   }, [fetchCaches, fetchMonitor]);
 
-  const handleTableChange = useCallback((pagination: { current: number; pageSize: number }) => {
+  const handleTableChange = useCallback((pagination: { current: number; pageSize: number }, _filters: Record<string, any>, sorter: any) => {
+    if (sorter && sorter.field) {
+      setOrderByColumn(sorter.field);
+      setIsAsc(sorter.order === 'ascend');
+    }
     setCurrent(pagination.current);
     setPageSize(pagination.pageSize);
-    fetchCaches();
-  }, [fetchCaches, setCurrent, setPageSize]);
+    const sortField = sorter && sorter.field ? sorter.field : undefined;
+    const sortAsc = sorter && sorter.field ? sorter.order === 'ascend' : undefined;
+    fetchCaches(sortField, sortAsc);
+  }, [fetchCaches, setCurrent, setPageSize, setOrderByColumn, setIsAsc]);
 
   // ==================== 初始化 ====================
 
@@ -539,11 +562,7 @@ const CacheManager: FC = () => {
                 rowKey="key"
                 loading={loading}
                 pagination={paginationProps}
-                onChange={(pagination) => {
-                  setCurrent(pagination.current ?? 1);
-                  setPageSize(pagination.pageSize ?? 10);
-                  fetchCaches();
-                }}
+                onChange={handleTableChange}
               />
             ),
           },

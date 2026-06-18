@@ -68,18 +68,22 @@ const ServerMonitor: FC = () => {
   });
   const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
   const [selectedServer, setSelectedServer] = useState<ServerInfo | null>(null);
+  const [orderByColumn, setOrderByColumn] = useState('timestamp');
+  const [isAsc, setIsAsc] = useState(false);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
   
   // 获取服务器列表
-  const fetchServers = async () => {
+  const fetchServers = async (sortCol?: string, sortAsc?: boolean) => {
     setLoading(true);
     try {
       const result = await post<PageResponse<ServerInfo>>('/monitor/server-info/list', {
         ...searchForm,
         current: paginationProps.current,
-        pageSize: paginationProps.pageSize
+        pageSize: paginationProps.pageSize,
+        orderByColumn: sortCol ?? orderByColumn,
+        isAsc: sortAsc ?? isAsc,
       });
 
       setServers(result.data?.list || []);
@@ -120,7 +124,9 @@ const ServerMonitor: FC = () => {
   // 搜索
   const handleSearch = () => {
     setCurrent(1);
-    fetchServers();
+    const sortField = sorter && sorter.field ? sorter.field : undefined;
+    const sortAsc = sorter && sorter.field ? sorter.order === 'ascend' : undefined;
+    fetchServers(sortField, sortAsc);
   };
 
   // 重置
@@ -138,10 +144,16 @@ const ServerMonitor: FC = () => {
   };
 
   // 分页变化
-  const handleTableChange = (pagination: { current: number; pageSize: number }) => {
+  const handleTableChange = (pagination: { current: number; pageSize: number }, _filters: Record<string, any>, sorter: any) => {
+    if (sorter && sorter.field) {
+      setOrderByColumn(sorter.field);
+      setIsAsc(sorter.order === 'ascend');
+    }
     setCurrent(pagination.current);
     setPageSize(pagination.pageSize);
-    fetchServers();
+    const sortField = sorter && sorter.field ? sorter.field : undefined;
+    const sortAsc = sorter && sorter.field ? sorter.order === 'ascend' : undefined;
+    fetchServers(sortField, sortAsc);
   };
 
   // 格式化内存大小
@@ -173,7 +185,9 @@ const ServerMonitor: FC = () => {
   };
 
   useEffect(() => {
-    fetchServers();
+    const sortField = sorter && sorter.field ? sorter.field : undefined;
+    const sortAsc = sorter && sorter.field ? sorter.order === 'ascend' : undefined;
+    fetchServers(sortField, sortAsc);
   }, [paginationProps.current, paginationProps.pageSize]);
 
   const columns: ColumnsType<ServerInfo> = [
@@ -181,6 +195,7 @@ const ServerMonitor: FC = () => {
       title: '主机名',
       dataIndex: 'hostName',
       key: 'hostName',
+      sorter: true,
       width: 160,
       minWidth: 140,
       sorter: createSorter<ServerInfo>('hostName', 'string'),
@@ -282,6 +297,7 @@ const ServerMonitor: FC = () => {
       title: '最后活跃时间',
       dataIndex: 'lastActiveAt',
       key: 'lastActiveAt',
+      sorter: true,
       width: 170,
       minWidth: 160,
       sorter: createSorter<ServerInfo>('lastActiveAt', 'date'),
@@ -361,11 +377,7 @@ const ServerMonitor: FC = () => {
           rowKey="id"
           loading={loading}
           pagination={paginationProps}
-          onChange={(pagination) => {
-            setCurrent(pagination.current ?? 1);
-            setPageSize(pagination.pageSize ?? 10);
-            fetchServers();
-          }}
+          onChange={handleTableChange} // replaced with handleTableChange
         />
       </Card>
 

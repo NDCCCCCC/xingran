@@ -90,6 +90,8 @@ type CacheListParams struct {
 	Level    string // "l1", "l2", "all"
 	Current  int
 	PageSize int
+	OrderByColumn string
+	IsAsc        bool
 }
 
 // CacheOperateParams 缓存操作参数
@@ -134,8 +136,20 @@ type CacheConfigInfo struct {
 }
 
 // ==================== 服务实现 ====================
+// cacheAllowedSortFields 服务端排序白名单
+var cacheAllowedSortFields = map[string]string{
+	"key":       "key",
+	"type":      "type",
+	"location":  "location",
+	"ttl":       "ttl",
+	"size":      "size",
+	"createdAt": "created_at",
+	"updatedAt": "updated_at",
+}
+
 
 // cacheServiceImpl 缓存服务实现
+
 type cacheServiceImpl struct {
 	db              *gorm.DB
 	cacheProvider   CacheProvider
@@ -215,7 +229,18 @@ func (s *cacheServiceImpl) getCacheListFromDB(ctx context.Context, params CacheL
 
 	var caches []models.CacheInfo
 	offset := (params.Current - 1) * params.PageSize
-	if err := db.Offset(offset).Limit(params.PageSize).Order("created_at DESC").Find(&caches).Error; err != nil {
+	// Apply server-side sort
+	orderClause := "created_at DESC"
+	if params.OrderByColumn != "" {
+		if col, ok := cacheAllowedSortFields[params.OrderByColumn]; ok {
+			direction := "DESC"
+			if params.IsAsc {
+				direction = "ASC"
+			}
+			orderClause = fmt.Sprintf("%s %s", col, direction)
+		}
+	}
+	if err := db.Offset(offset).Limit(params.PageSize).Order(orderClause).Find(&caches).Error; err != nil {
 		return nil, 0, err
 	}
 

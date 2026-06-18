@@ -37,6 +37,8 @@ type SystemMetricsData struct {
 type ServerInfoParams struct {
 	Current  int
 	PageSize int
+	OrderByColumn string
+	IsAsc        bool
 }
 
 // MetricsHistoryParams 指标历史查询参数
@@ -46,6 +48,8 @@ type MetricsHistoryParams struct {
 	EndTime   *string
 	Current   int
 	PageSize  int
+	OrderByColumn string
+	IsAsc        bool
 }
 
 // MetricsProvider 系统指标提供者接口（支持缓存降级）
@@ -54,6 +58,15 @@ type MetricsProvider interface {
 	GetCurrentMetrics(ctx context.Context) (*SystemMetricsData, error)
 }
 
+
+// serverAllowedSortFields 服务端排序白名单
+var serverAllowedSortFields = map[string]string{
+	"timestamp":   "timestamp",
+	"cpuUsage":    "cpu_usage",
+	"memoryUsage": "memory_usage",
+	"diskUsage":   "disk_usage",
+	"serverId":    "server_id",
+}
 // serverServiceImpl 服务器监控服务实现
 type serverServiceImpl struct {
 	db              *gorm.DB
@@ -124,7 +137,18 @@ func (s *serverServiceImpl) GetSystemMetricsHistory(ctx context.Context, params 
 
 	var metrics []*models.SystemMetrics
 	offset := (params.Current - 1) * params.PageSize
-	if err := db.Offset(offset).Limit(params.PageSize).Order("timestamp DESC").Find(&metrics).Error; err != nil {
+	// Apply server-side sort
+	orderClause := "timestamp DESC"
+	if params.OrderByColumn != "" {
+		if col, ok := serverAllowedSortFields[params.OrderByColumn]; ok {
+			direction := "DESC"
+			if params.IsAsc {
+				direction = "ASC"
+			}
+			orderClause = fmt.Sprintf("%s %s", col, direction)
+		}
+	}
+	if err := db.Offset(offset).Limit(params.PageSize).Order(orderClause).Find(&metrics).Error; err != nil {
 		return nil, 0, err
 	}
 

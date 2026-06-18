@@ -43,8 +43,10 @@ func (h *ServerHandler) WithCore(core *core.Core) *ServerHandler {
 // @Router /monitor/server-info/list [post]
 func (h *ServerHandler) GetServerInfo(c *gin.Context) {
 	var req struct {
-		Current  int `json:"current"`
-		PageSize int `json:"pageSize"`
+		Current      int    `json:"current"`
+		PageSize      int    `json:"pageSize"`
+		OrderByColumn string `json:"orderByColumn"`
+		IsAsc         bool   `json:"isAsc"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -60,8 +62,10 @@ func (h *ServerHandler) GetServerInfo(c *gin.Context) {
 	}
 
 	servers, total, err := h.serverService.GetServerInfo(c.Request.Context(), monitorServices.ServerInfoParams{
-		Current:  req.Current,
-		PageSize: req.PageSize,
+		Current:      req.Current,
+		PageSize:      req.PageSize,
+		OrderByColumn: req.OrderByColumn,
+		IsAsc:         req.IsAsc,
 	})
 	if err != nil {
 		response.Error(c, apperrors.InternalServerError(err))

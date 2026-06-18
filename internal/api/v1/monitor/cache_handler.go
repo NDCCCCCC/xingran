@@ -64,8 +64,10 @@ type CacheListRequest struct {
 	Key      string `json:"key,omitempty"`
 	Type     string `json:"type,omitempty"`
 	Level    string `json:"level,omitempty"` // "l1", "l2", "all"
-	Current  int    `json:"current"`
-	PageSize int    `json:"pageSize"`
+	Current      int    `json:"current"`
+	PageSize      int    `json:"pageSize"`
+	OrderByColumn string `json:"orderByColumn,omitempty"`
+	IsAsc         bool   `json:"isAsc"`
 }
 
 // CacheStatsRequest 缓存统计请求
@@ -139,13 +141,14 @@ func (h *CacheHandler) GetCacheList(c *gin.Context) {
 	}
 
 	params := monitorServices.CacheListParams{
-		Key:      req.Key,
-		Type:     req.Type,
-		Level:    req.Level,
-		Current:  req.Current,
-		PageSize: req.PageSize,
+		Key:           req.Key,
+		Type:          req.Type,
+		Level:         req.Level,
+		Current:       req.Current,
+		PageSize:      req.PageSize,
+		OrderByColumn: req.OrderByColumn,
+		IsAsc:         req.IsAsc,
 	}
-
 	caches, total, err := h.cacheService.GetCacheList(c.Request.Context(), params)
 	if err != nil {
 		response.Error(c, apperrors.CacheOperationFailed(err))
