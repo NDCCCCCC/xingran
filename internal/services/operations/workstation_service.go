@@ -84,7 +84,21 @@ func (s *workstationService) Create(ctx context.Context, workstation *models.Wor
 }
 
 // Update 更新工位
+//
+// 实现说明(handler 反序列化的请求体只含表单字段,不含 createdAt/updatedAt):
+// handler 把请求体反序列化到一个零值 models.Workstation,其 BaseModel.CreatedAt
+// 是非指针 time.Time(见 internal/models/base.go),零值即 0001-01-01。若直接 Save,
+// GORM 会用零值全量覆盖 created_at,导致工位创建时间被清零。
+// 修复:Save 前先 First 查出现有记录,把审计字段 CreatedAt/CreatedBy 回填到入参,
+// 再 Save。参考 internal/services/system/user_service.go 的 Update 模式。
 func (s *workstationService) Update(ctx context.Context, workstation *models.Workstation) error {
+	var existing models.Workstation
+	if err := s.db.WithContext(ctx).Where("id = ?", workstation.ID).First(&existing).Error; err != nil {
+		return err
+	}
+	// 保留创建时间和创建人,避免 Save 用零值覆盖(0001-01-01 bug 的根因)
+	workstation.CreatedAt = existing.CreatedAt
+	workstation.CreatedBy = existing.CreatedBy
 	return s.db.WithContext(ctx).Save(workstation).Error
 }
 
