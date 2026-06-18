@@ -3,6 +3,7 @@ package system
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
@@ -104,6 +105,7 @@ func (s *dictTypeCacheService) List(ctx context.Context, params requests.DictTyp
 	}
 
 	filtered := s.filterDictTypes(allTypes, params)
+	filtered = sortDictTypes(filtered, params.OrderByColumn, params.IsAsc)
 	paged, total := paginate(filtered, params.Current, params.PageSize)
 
 	return &PageResult{
@@ -137,6 +139,36 @@ func (s *dictTypeCacheService) filterDictTypes(types []*models.DictType, params 
 	}
 
 	return result
+}
+
+// sortDictTypes 内存排序字典类型（缓存版 List 用，field 对应前端 sorterMeta 白名单）。
+// 缓存版 List 不走数据库 ORDER BY，故在内存中对筛选结果排序，保证排序参数生效。
+func sortDictTypes(types []*models.DictType, orderByColumn string, isAsc *bool) []*models.DictType {
+	if orderByColumn == "" {
+		return types
+	}
+	asc := isAsc == nil || *isAsc
+	sort.SliceStable(types, func(i, j int) bool {
+		a, b := types[i], types[j]
+		var less bool
+		switch orderByColumn {
+		case "dictName":
+			less = a.DictName < b.DictName
+		case "dictType":
+			less = a.DictType < b.DictType
+		case "status":
+			less = a.Status < b.Status
+		case "createdAt":
+			less = a.CreatedAt.Before(b.CreatedAt)
+		default:
+			return false
+		}
+		if !asc {
+			return !less
+		}
+		return less
+	})
+	return types
 }
 
 // ==================== 字典数据缓存服务 ====================

@@ -87,23 +87,14 @@ const ConfigManagement: FC = () => {
         current: params.current || paginationProps.current,
         pageSize: params.pageSize || paginationProps.pageSize,
         ...values,
+        // 服务端排序透传：useTableManager 经 params 携带 orderByColumn/isAsc，
+        // 此前只取 current/pageSize + values 导致排序参数被丢弃。
+        ...(params.orderByColumn
+          ? { orderByColumn: params.orderByColumn, isAsc: params.isAsc }
+          : {}),
       };
-      // DEBUG: 打印实际发送的请求参数
-      console.log("[DEBUG Config List] Request params:", requestParams);
-      console.log("[DEBUG Config List] paginationProps:", {
-        current: paginationProps.current,
-        pageSize: paginationProps.pageSize,
-      });
-      console.log("[DEBUG Config List] params from loadData:", params);
 
       const result = await post<{ list: Config[]; total: number }>("/system/configs/list", requestParams);
-
-      // DEBUG: 打印返回的数据
-      console.log("[DEBUG Config List] Response:", {
-        listLength: result.data?.list?.length || 0,
-        total: result.data?.total || 0,
-      });
-
       return result.data || { list: [], total: 0 };
     },
     {
