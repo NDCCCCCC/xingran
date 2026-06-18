@@ -90,7 +90,14 @@ func (s *CaptchaService) LoadConfig(ctx context.Context) error {
 			def: captcha.CaptchaTypeDisabled,
 			parse: func(val string, target interface{}) error {
 				if p, ok := target.(*captcha.CaptchaType); ok {
-					*p = captcha.CaptchaType(val)
+					switch captcha.CaptchaType(val) {
+					case captcha.CaptchaTypeDisabled, captcha.CaptchaTypeNormal, captcha.CaptchaTypeSlider:
+						*p = captcha.CaptchaType(val)
+					default:
+						// 非法值兜底为 normal（要求验证码，偏安全）并告警，提示运维修正配置
+						applogger.Warnf("[Captcha] 非法的验证码开关值 %q（合法值: disabled/normal/slider），已回退为 normal", val)
+						*p = captcha.CaptchaTypeNormal
+					}
 					return nil
 				}
 				return fmt.Errorf("invalid target type")

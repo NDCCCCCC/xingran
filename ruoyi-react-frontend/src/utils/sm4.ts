@@ -8,6 +8,7 @@
 
 import { get } from "@/lib/api";
 import { hexToBase64, base64ToHex, arrayBufferToHex, hexToArrayBuffer, generateRandomHex } from "./encoding";
+import { decryptWithSM2, fetchPublicKey } from "./sm2";
 
 // SM4 模块接口定义
 interface SM4Module {
@@ -191,8 +192,7 @@ export async function fetchSM4KeyForPassword(): Promise<string> {
     const result = await get<{ encryptedKey?: string; keyHex?: string }>("/system/auth/sm4-key");
 
     if (result.code === 0 && result.data?.encryptedKey) {
-      // 使用 SM2 解密密钥
-      const { decryptWithSM2, fetchPublicKey } = await import("./sm2");
+      // 使用 SM2 解密密钥（sm2 已静态导入顶部）
 
       // 后端使用 SM2 公钥加密密钥，需要服务端私钥解密？
       // 实际上这里应该是：后端用前端 SM2 公钥加密 SM4 密钥，前端用 SM2 私钥解密

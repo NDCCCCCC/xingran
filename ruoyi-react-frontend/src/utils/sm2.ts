@@ -7,7 +7,7 @@
  */
 
 import { get } from "@/lib/api";
-import { hexToBase64, bytesToHex } from "./encoding";
+import { hexToBase64, bytesToHex, base64ToHex } from "./encoding";
 
 // SM2 模块接口定义（与 sm-crypto 实际签名匹配）
 interface SM2Module {
@@ -95,7 +95,6 @@ export async function decryptWithSM2(cipherText: string, privateKeyRaw: string):
     return "";
   }
 
-  const { base64ToHex } = await import("./encoding");
   const cipherTextHex = base64ToHex(cipherText);
   const sm2 = await getSM2();
 

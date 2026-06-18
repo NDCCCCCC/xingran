@@ -29,9 +29,11 @@ export class ComponentLoader {
     /\.json$/i,       // JSON 文件
   ];
 
-  // 使用 Vite 的 glob 导入所有页面组件
+  // 使用 Vite 的 glob 导入所有页面组件。
+  // 排除 login 页面：它在 DynamicRoutes.tsx 中静态导入（顶层路由，必须随首屏加载），
+  // 不需要走 glob 的懒加载机制，否则 Vite 会报 "dynamically imported but also statically imported"。
   public static componentModules = import.meta.glob<{ default: ComponentType }>(
-    "/src/pages/**/index.tsx",
+    ["/src/pages/**/index.tsx", "!**/login/**"],
     {
       eager: false,
     }

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { FC, MouseEvent } from "react";
-import { Badge, Dropdown, Empty, Spin, Tag, Avatar, message } from "antd";
+import { App, Badge, Dropdown, Empty, Spin, Tag, Avatar } from "antd";
 import { BellOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { USER_NOTICES } from "@/constants/routes";
@@ -64,6 +64,7 @@ const AVATAR_STYLE = {
  * 显示未读数量，点击展开通知列表
  */
 const NotificationBell: FC = () => {
+  const { message } = App.useApp();
   const navigate = useNavigate();
   const { unreadCount, notifications, loading, markAsRead, markAllAsRead, removeNotification, setNotifications } =
     useNoticeStore();

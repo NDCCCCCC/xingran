@@ -11,6 +11,7 @@
 
 import type { SecureTokenStorage, TokenMeta, TokenRefreshResponse } from "./SecureTokenStorage";
 import { TokenRefreshError } from "./SecureTokenStorage";
+import { post } from "@/lib/api";
 
 /**
  * Token 刷新锁（防止并发刷新）
@@ -145,8 +146,8 @@ export class TokenManager {
 		}
 
 		try {
-			// 动态导入 api 模块避免循环依赖
-			const { post } = await import("@/lib/api");
+			// post 已在顶部静态导入（@/lib/api）。原本用动态 import 注释说"避免循环依赖"，
+			// 但实际依赖链 api.ts → authStore → TokenManager 是单向的，没有循环。
 			const response = await post(this.config.refreshEndpoint, { refreshToken }) as {
 				data: TokenRefreshResponse;
 			};

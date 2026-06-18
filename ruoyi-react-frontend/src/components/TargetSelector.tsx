@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import type { FC, Key } from "react";
-import { Form, Select, Tree, Checkbox, message, Spin } from "antd";
+import { App, Form, Select, Tree, Checkbox, Spin } from "antd";
 import { get, post } from "@/lib/api";
 import type { TargetType, DeptTreeNode, RoleOption, UserOption } from "@/types/notice";
 
@@ -30,6 +30,7 @@ const TargetSelector: FC<TargetSelectorProps> = ({
   onTargetUsersChange,
 }) => {
   const [loading, setLoading] = useState(false);
+  const { message } = App.useApp();
   const [deptTree, setDeptTree] = useState<DeptTreeNode[]>([]);
   const [roles, setRoles] = useState<RoleOption[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
