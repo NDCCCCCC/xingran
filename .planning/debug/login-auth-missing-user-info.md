@@ -1,14 +1,16 @@
 ---
 name: login-auth-missing-user-info
-status: fixed
-trigger: 调查并修复登录失败bug: 前端报错"认证成功但用户信息缺失"(errorHandler.ts:220)，后端返回500错误。用户名: chenchao-076，请求路径: /api/v1/system/auth/login
+status: resolved
+trigger: 登录返回 500 + 前端报错"认证成功但用户信息缺失"(errorHandler.ts:221),后端真实原因是 AD 管理员账号被锁
 created: 2026-05-26
-updated: 2026-05-26
+updated: 2026-06-18
 labels:
   - bug
   - login
   - authentication
   - error-500
+  - ad
+  - truthful-error
 ---
 
 # Debug Session: login-auth-missing-user-info
@@ -16,101 +18,100 @@ labels:
 ## Symptoms
 
 ### Expected Behavior
-正常登录跳转到首页
+正常 AD 用户登录跳转到首页
 
 ### Actual Behavior
-后端日志发给你了，不要问我
+POST /api/v1/system/auth/login 返回 500,前端 message 为"认证成功但用户信息缺失"。
+该文案**误导**:前端 `errorHandler.ts:221` 直接用后端 response body 的 `message` 字段,而后端
+在 `internal/api/v1/auth.go` 的旧实现里硬编码了"认证成功但用户信息缺失",并未说明真实原因。
 
-### Error Messages
+### Real Cause (2026-06-18 复现)
+后端日志:
 ```
-前端: "认证成功但用户信息缺失" (errorHandler.ts:220)
-后端: ERRO[2026-05-26 13:16:22] Internal server error
-status_code=500
+WARN  [ADAuth] 管理员绑定失败: username=chenchao-076,
+      error=LDAP Result Code 49 "Invalid Credentials": 80090308: LdapErr: DSID-0C090451,
+      comment: AcceptSecurityContext error, data 775, v3839
+ERRO  Internal server error ... path=/api/v1/system/auth/login status_code=500
 ```
 
-### Timeline
-最近才开始出现
+- AD 用户 bind 在 `ad_authenticator.go:84-87` **成功**(否则会走 line 86 返回 `ErrInvalidCredentials`,根本到不了 admin bind)
+- AD 管理员 bind 在 `ad_authenticator.go:111` 失败,**data 775 = 账号被锁**(参见 memory `ad-ldap-error49-data-subcodes`)
+- 即:**被锁的是 `sys_ad_config` 中配置的管理员/服务账号**,不是终端用户
+- Authenticator 返回 `authResult = {Error:nil, User:nil, NeedsSync:true, ADUserInfo:{Username}}`
+- Handler 命中 `if authResult.User == nil { 500 "认证成功但用户信息缺失" }` 误导分支
 
-### Reproduction
-不确定，之前好像出现过类似情况
-
-### Context
-- 用户名: chenchao-076
-- 请求路径: /api/v1/system/auth/login
-- 请求体包含加密密码
+## Timeline
+- 2026-05-26: 首次记录,根因假设为 handler 未处理 NeedsSync
+- 2026-05-26: 原始 debug 记录的"Fix"提出**降级到本地用户**方案,该方案**已被用户明确拒绝**
+  (要求"不要使用降级策略,删除所有相关笔记,如果管理员账号被锁,请如实反馈错误")
+- 2026-06-18: 复现+修复,改为**如实反馈**:传递 sync 失败原因,handler 告知真实问题
 
 ## Current Focus
 
-### Hypothesis
-AD域控认证成功但无法获取完整用户信息时，authResult.User为nil，导致login handler在第198行检查时报错"认证成功但用户信息缺失"并返回500错误。
+### Hypothesis (2026-06-18, 已证实)
+原 handler 硬编码误导文案"认证成功但用户信息缺失",不区分 AD sync 失败的真实原因。
+需传递 sync 失败原因(`AuthResult.SyncErrorReason`)到 handler,如实返回对用户有用的中文提示,
+**不**降级到本地用户。
 
 ### Next Action
-实施修复：在login handler中处理NeedsSync=true且User=nil的情况
+实施修复:传递 SyncErrorReason + handler 按原因返回如实错误 + 撤掉降级策略。
 
 ### Test
-待设计测试
+待设计(可写 handler 集成测试,或人工:故意配置错误的管理员密码后登录 chenchao-076 验证)
 
 ### Expecting
-AD认证成功但用户同步失败时，仍能完成登录流程（可能需要降级处理）
-
-## Evidence
-
-### 2026-05-26 13:30:00 - Initial Analysis
-- **Source**: Code examination of `/internal/api/v1/auth.go:198-201`
-- **Finding**: Exact error message found at line 199: `response.Error(c, response.ErrServerError, "认证成功但用户信息缺失")`
-- **Trigger**: `if authResult.User == nil` check after successful authentication
-- **Impact**: Returns 500 error even though authentication succeeded
-
-### 2026-05-26 13:35:00 - AD Authenticator Analysis
-- **Source**: `/internal/core/security/ad_authenticator.go`
-- **Finding**: AD authenticator returns `User: nil` in multiple scenarios:
-  1. Lines 89-96: Admin connection fails after user auth success
-  2. Lines 103-110: Admin bind fails
-  3. Lines 117-124: User search fails
-  4. Lines 133-138: User sync fails
-  5. Lines 160-165: No user sync service configured
-- **Common Pattern**: All cases return successful auth (`error: nil`) but with `User: nil` and `NeedsSync: true`
-- **User Impact**: Users get 500 error instead of successful login when AD infrastructure has issues
-
-### 2026-05-26 13:40:00 - Authentication Flow Analysis
-- **Source**: `/internal/api/v1/auth.go:170-201`
-- **Flow**:
-  1. Line 170: `authResult, err := authenticator.Authenticate(ctx, authReq)`
-  2. Lines 171-195: Error handling for auth failures (wrong password, user disabled, etc.)
-  3. Lines 198-201: **BUG** - assumes successful auth always includes User info
-  4. Lines 204-208: Queries full user from DB using `authResult.User.ID`
-- **Root Cause**: Handler doesn't handle the `NeedsSync: true, User: nil` case properly
-
-### 2026-05-26 13:45:00 - Root Cause Identification
-- **Root Cause**: Login handler at `/internal/api/v1/auth.go:198-201` assumes `authResult.User` is always non-nil after successful authentication
-- **Why it happens**: AD authenticator returns `User: nil, NeedsSync: true` when:
-  - AD admin connection fails after user bind succeeds
-  - User sync service fails to create/update local user record
-  - User search in AD fails after successful authentication
-- **Impact**: Users who successfully authenticate against AD but encounter infrastructure issues get 500 error instead of login success
-- **Factory Setup**: Auth factory properly sets user sync service via `SetUserSyncer()` at `/internal/core/core.go:528`
-- **Specialist Hint**: backend (Go authentication handler)
+登录 `chenchao-076` 时:
+- 正常路径:绑定 + admin 搜索都成功 → 登录成功
+- 管理员账号被锁/密码错(SyncErrorReason=admin_bind):前端 message 变为
+  "AD 管理员账号配置异常(账号可能被锁定或密码错误),请联系系统管理员"
+- 用户搜索/同步失败:前端 message 变为对应的中文提示
 
 ## Eliminated
+
+- ~~降级到本地用户(NeedsSync 时按 username 查 sys_user 继续登录)~~
+  → 已被用户拒绝,理由:管理员账号被锁是 AD 基础设施问题,不应让用户用陈旧本地数据登录。
+  对应代码已撤掉。
 
 ## Resolution
 
 ### Root Cause
-Login handler (`internal/api/v1/auth.go:198-201`) doesn't handle the case where AD authentication succeeds but user sync fails, resulting in `authResult.User == nil` and a 500 error.
+1. **直接原因**:`internal/api/v1/auth.go` 在 `authResult.User == nil` 时硬编码
+   "认证成功但用户信息缺失" 误导文案,不携带真实失败原因。
+2. **真实原因**(典型触发):`sys_ad_config` 配置的 AD 管理员/服务账号被 AD 锁
+   (data 775,Account Lockout Policy),或密码过期/错。`ad_authenticator.go:111-122`
+   的管理员 bind 失败,导致 sync 失败,User==nil + NeedsSync=true。
 
-### Fix
-Modify the login handler to handle `authResult.User == nil` scenarios:
-1. When `NeedsSync: true` and `User: nil`, attempt to query existing user from database by username
-2. If user exists in DB, proceed with login using existing user record
-3. If user doesn't exist, return a more specific error message indicating user sync is required
-4. Log warnings for AD infrastructure issues but don't fail login if user already exists locally
+### Fix (2026-06-18)
+**不降级,如实反馈**。
+
+1. `internal/core/security/authenticator.go`: `AuthResult` 新增 `SyncErrorReason string` 字段,
+   传递 sync 失败阶段。
+2. `internal/core/security/ad_authenticator.go`: 在 5 个 `User==nil` 返回分支分别设置
+   `SyncErrorReason`: `admin_dial` / `admin_bind` / `user_search` / `user_sync` / `no_syncer`。
+3. `internal/api/v1/auth.go`:
+   - 撤掉降级代码,恢复简洁的 `if authResult.User == nil` 分支
+   - 新增 helper `syncErrorReasonMessage(reason)` 将原因码映射为如实中文消息
+   - admin_dial/admin_bind → "AD 管理员账号配置异常(账号可能被锁定或密码错误),请联系系统管理员"
+   - user_search/user_sync/no_syncer → 各自对应的中文提示
+   - 移除误导文案"认证成功但用户信息缺失"(保留兜底 default 通用文案)
+
+### Operational Note (非代码修复,需 AD 管理员处理)
+- 当前 `chenchao-076` 用户登录 500 的真正解决:解锁/修正 `sys_ad_config` 配置的管理员账号,
+  或等待 30 分钟 AD Account Lockout Duration 到期自动解锁
+- my memory `ad-ldap-error49-data-subcodes`: data 775=临时锁定,会自动解锁;
+  data 533=禁用;52e=密码错;532/701=过期;773=必须改密;525=用户不存在;530=时间限制
 
 ### Verification
-需要重启后端服务并测试：
-1. 使用AD账号(chenchao-076)尝试登录
-2. 验证能正常跳转到首页
-3. 检查后端日志确认使用了本地用户数据
-4. 验证修复不影响正常本地账号登录
+需要重启后端服务并测试:
+1. 配置正确的管理员密码后,用 AD 账号尝试登录 → 正常跳转首页
+2. 故意把管理员密码配错(或让 AD 管理员锁定该服务账号)后登录 → 前端 message
+   应为"AD 管理员账号配置异常(账号可能被锁定或密码错误),请联系系统管理员",
+   而非误导的"认证成功但用户信息缺失"
+3. 检查后端日志确认 `[ADAuth] 管理员绑定失败` 仍记录,前端不再误导
+4. 验证修复不影响正常本地账号登录(走 `loginLocalDirect`)
 
 ### Files Changed
-- `internal/api/v1/auth.go:197-221` - 添加NeedsSync且User==nil的处理逻辑
+- `internal/core/security/authenticator.go` — AuthResult 新增 SyncErrorReason 字段
+- `internal/core/security/ad_authenticator.go` — 5 个 User==nil 分支设置 SyncErrorReason
+- `internal/api/v1/auth.go` — 撤掉降级;新增 syncErrorReasonMessage;handler 按原因如实返回
+- `.planning/debug/login-auth-missing-user-info.md` — 本文件:更新 Resolution,标记降级方案作废

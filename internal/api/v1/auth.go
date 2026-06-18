@@ -194,8 +194,16 @@ func login(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 6. 认证成功 - 获取完整用户信息
+		// AD 用户 bind 已通过(ErrInvalidCredentials 在 ad_authenticator.go:86 提前返回),
+		// 但 authResult.User==nil 表示后续 admin 搜索/sync 失败。
+		// 原因由 AuthResult.SyncErrorReason 标识(见 ad_authenticator.go 各分支及
+		// security.AuthResult 定义)。如实反馈给用户,不降级到本地用户:
+		//   管理员账号被锁/密码错是 AD 基础设施问题,不应让用户用陈旧本地数据登录;
+		//   "认证成功但用户信息缺失" 是误导性旧文案,已替换为按原因如实提示。
 		if authResult.User == nil {
-			response.Error(c, response.ErrServerError, "认证成功但用户信息缺失")
+			applogger.Errorf("AD 认证成功但用户信息同步失败: username=%s, syncErrorReason=%s",
+				req.Username, authResult.SyncErrorReason)
+			response.Error(c, response.ErrServerError, syncErrorReasonMessage(authResult.SyncErrorReason))
 			return
 		}
 
@@ -617,4 +625,25 @@ func parseUserAgent(userAgent string) (browser, os string) {
 	}
 
 	return browser, os
+}
+
+// syncErrorReasonMessage 将 AD 用户同步失败原因(AuthResult.SyncErrorReason)
+// 映射为对用户如实的中文提示。不降级、不模糊,直接告知是 AD 管理员账号问题
+// 还是用户搜索/同步问题,便于用户判断找谁处理。
+// 原因码定义在 ad_authenticator.go 各 User==nil 返回分支。
+func syncErrorReasonMessage(reason string) string {
+	switch reason {
+	case "admin_dial", "admin_bind":
+		// 最常见:sys_ad_config 配置的管理员账号被 AD 锁(密码错多次触发
+		// Account Lockout Policy)或密码过期/错。明确告知"管理员账号"问题。
+		return "AD 管理员账号配置异常（账号可能被锁定或密码错误），请联系系统管理员"
+	case "user_search":
+		return "AD 用户信息搜索失败，请联系系统管理员"
+	case "user_sync":
+		return "AD 用户同步到本地失败，请联系系统管理员"
+	case "no_syncer":
+		return "AD 用户同步服务未配置，请联系系统管理员"
+	default:
+		return "AD 用户信息同步失败，请联系系统管理员"
+	}
 }

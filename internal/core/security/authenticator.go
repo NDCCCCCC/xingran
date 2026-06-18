@@ -30,6 +30,10 @@ type AuthResult struct {
 	AuthSource string      // "local" or "ad"
 	ADUserInfo *ADUserInfo // AD用户信息（AD认证时有值，用于自动同步）
 	NeedsSync  bool        // 是否需要同步用户信息到sys_user
+	// SyncErrorReason 当 AD 用户 bind 成功但后续 admin 搜索/sync 失败时,
+	// 记录失败原因短码（admin_dial / admin_bind / user_search / user_sync）,
+	// 供 login handler 如实反馈给用户,避免误导性"认证成功但用户信息缺失"。
+	SyncErrorReason string
 }
 
 // UserResult 用户信息（简化版，避免循环依赖）

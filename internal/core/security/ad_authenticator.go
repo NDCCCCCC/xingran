@@ -97,12 +97,11 @@ func (a *ADAuthenticator) Authenticate(ctx context.Context, req *AuthRequest) (*
 		// 仍然返回成功，但没有AD用户详情
 		applogger.Warnf("[ADAuth] 用户认证成功但无法创建管理员连接: username=%s, error=%v", req.Username, err)
 		return &AuthResult{
-			User:       nil,
-			AuthSource: "ad",
-			ADUserInfo: &ADUserInfo{
-				Username: req.Username,
-			},
-			NeedsSync: true,
+			User:            nil,
+			AuthSource:      "ad",
+			ADUserInfo:      &ADUserInfo{Username: req.Username},
+			NeedsSync:       true,
+			SyncErrorReason: "admin_dial",
 		}, nil
 	}
 	defer adminConn.Close()
@@ -112,12 +111,11 @@ func (a *ADAuthenticator) Authenticate(ctx context.Context, req *AuthRequest) (*
 		// 认证成功但搜索失败，返回基本信息
 		applogger.Warnf("[ADAuth] 管理员绑定失败: username=%s, error=%v", req.Username, err)
 		return &AuthResult{
-			User:       nil,
-			AuthSource: "ad",
-			ADUserInfo: &ADUserInfo{
-				Username: req.Username,
-			},
-			NeedsSync: true,
+			User:            nil,
+			AuthSource:      "ad",
+			ADUserInfo:      &ADUserInfo{Username: req.Username},
+			NeedsSync:       true,
+			SyncErrorReason: "admin_bind",
 		}, nil
 	}
 
@@ -128,12 +126,11 @@ func (a *ADAuthenticator) Authenticate(ctx context.Context, req *AuthRequest) (*
 		// 认证成功但搜索失败，返回基本信息
 		applogger.Errorf("[ADAuth] 搜索AD用户信息失败: username=%s, error=%v", req.Username, err)
 		return &AuthResult{
-			User:       nil,
-			AuthSource: "ad",
-			ADUserInfo: &ADUserInfo{
-				Username: req.Username,
-			},
-			NeedsSync: true,
+			User:            nil,
+			AuthSource:      "ad",
+			ADUserInfo:      &ADUserInfo{Username: req.Username},
+			NeedsSync:       true,
+			SyncErrorReason: "user_search",
 		}, nil
 	}
 	applogger.Infof("[ADAuth] 成功获取AD用户信息: username=%s, displayName=%s, email=%s, dn=%s", adUserInfo.Username, adUserInfo.DisplayName, adUserInfo.Email, adUserInfo.UserDN)
@@ -149,10 +146,11 @@ func (a *ADAuthenticator) Authenticate(ctx context.Context, req *AuthRequest) (*
 			// 同步失败不影响认证成功，但标记需要同步
 			applogger.Errorf("[ADAuth] 同步AD用户失败: username=%s, error=%v", adUserInfo.Username, err)
 			return &AuthResult{
-				User:       nil,
-				AuthSource: "ad",
-				ADUserInfo: adUserInfo,
-				NeedsSync:  true,
+				User:            nil,
+				AuthSource:      "ad",
+				ADUserInfo:      adUserInfo,
+				NeedsSync:       true,
+				SyncErrorReason: "user_sync",
 			}, nil
 		}
 
@@ -178,10 +176,11 @@ func (a *ADAuthenticator) Authenticate(ctx context.Context, req *AuthRequest) (*
 	// 没有同步服务，返回AD用户信息，标记需要同步
 	applogger.Warnf("[ADAuth] 用户同步服务未设置，返回 NeedsSync=true")
 	return &AuthResult{
-		User:       nil,
-		AuthSource: "ad",
-		ADUserInfo: adUserInfo,
-		NeedsSync:  true,
+		User:            nil,
+		AuthSource:      "ad",
+		ADUserInfo:      adUserInfo,
+		NeedsSync:       true,
+		SyncErrorReason: "no_syncer",
 	}, nil
 }
 
