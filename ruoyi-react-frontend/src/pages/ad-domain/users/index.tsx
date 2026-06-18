@@ -171,6 +171,9 @@ const ADUserPage: FC = () => {
       setOrderByColumn(sorter.field);
       setIsAsc(sorter.order === 'ascend');
     }
+    // 排序变化后立即重新拉取（useEffect 依赖不包含 orderByColumn/isAsc，
+    // 否则 setState 后表格不刷新，请求体仍用空 state——config/notice 同类坑）。
+    fetchUsers();
   };
 
   const handleEdit = (user: ADUser) => {
