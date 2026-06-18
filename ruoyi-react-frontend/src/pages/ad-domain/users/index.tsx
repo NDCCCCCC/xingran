@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
-  App,
   Card,
   Table,
   Select,
@@ -11,6 +10,7 @@ import {
   Tag,
   Form,
   Modal,
+  message,
   Tooltip,
 } from 'antd';
 import {
@@ -46,10 +46,8 @@ import type { ADConfig } from '@/lib/adDomainApi';
 
 import type { FC } from 'react';
 import { usePagination } from '@/hooks/usePagination';
-import { createSorter } from '@/utils/tableHelpers';
 
 const ADUserPage: FC = () => {
-  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
@@ -61,6 +59,10 @@ const ADUserPage: FC = () => {
 
   const [users, setUsers] = useState<ADUser[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // 排序状态
+  const [orderByColumn, setOrderByColumn] = useState<string>('');
+  const [isAsc, setIsAsc] = useState<boolean>(true);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -144,6 +146,8 @@ const ADUserPage: FC = () => {
         isEnabled: values.isEnabled,
         current: paginationProps.current,
         pageSize: paginationProps.pageSize,
+        orderByColumn,
+        isAsc,
       });
       if (res.code === 0) {
         setUsers(res.data?.list ?? []);
@@ -159,6 +163,14 @@ const ADUserPage: FC = () => {
   const handleSearch = () => {
     setCurrent(1);
     fetchUsers();
+  };
+
+  // 表格排序双向关联
+  const handleTableChange = (pagination: any, _filters: any, sorter: any) => {
+    if (sorter && sorter.field) {
+      setOrderByColumn(sorter.field);
+      setIsAsc(sorter.order === 'ascend');
+    }
   };
 
   const handleEdit = (user: ADUser) => {
@@ -371,14 +383,14 @@ const ADUserPage: FC = () => {
       key: 'username',
       fixed: 'left',
       width: 150,
-      sorter: createSorter<ADUser>('username', 'string'),
+      sorter: true,
     },
     {
       title: '显示名',
       dataIndex: 'displayName',
       key: 'displayName',
       width: 150,
-      sorter: createSorter<ADUser>('displayName', 'string'),
+      sorter: true,
     },
     {
       title: '邮箱',
@@ -386,14 +398,14 @@ const ADUserPage: FC = () => {
       key: 'email',
       width: 200,
       ellipsis: true,
-      sorter: createSorter<ADUser>('email', 'string'),
+      sorter: true,
     },
     {
       title: '部门',
       dataIndex: 'department',
       key: 'department',
       width: 150,
-      sorter: createSorter<ADUser>('department', 'string'),
+      sorter: true,
     },
     {
       title: 'OU',
@@ -401,7 +413,6 @@ const ADUserPage: FC = () => {
       key: 'ouDn',
       width: 300,
       ellipsis: true,
-      sorter: createSorter<ADUser>('ouDn', 'string'),
       render: (ouDn: string, record: ADUser) => {
         if (!ouDn) return '-';
         // 获取当前配置的BaseDN
@@ -436,21 +447,18 @@ const ADUserPage: FC = () => {
       dataIndex: 'title',
       key: 'title',
       width: 120,
-      sorter: createSorter<ADUser>('title', 'string'),
     },
     {
       title: '办公电话',
       dataIndex: 'phone',
       key: 'phone',
       width: 130,
-      sorter: createSorter<ADUser>('phone', 'string'),
     },
     {
       title: '手机',
       dataIndex: 'mobile',
       key: 'mobile',
       width: 130,
-      sorter: createSorter<ADUser>('mobile', 'string'),
     },
     {
       title: '状态',
@@ -586,6 +594,7 @@ const ADUserPage: FC = () => {
           rowKey="userDn"
           scroll={{ x: 1500 }}
           pagination={paginationProps}
+          onChange={handleTableChange}
           rowSelection={
             selectAllMode
               ? undefined // 全选模式下禁用表格行选择

@@ -148,6 +148,8 @@ export interface ADConfigListRequest {
   status?: number;
   current?: number;
   pageSize?: number;
+  orderByColumn?: string;
+  isAsc?: boolean;
 }
 
 export interface ADConfigCreateRequest {
@@ -186,6 +188,8 @@ export interface ADUserListRequest {
   isEnabled?: boolean;
   current?: number;
   pageSize?: number;
+  orderByColumn?: string;
+  isAsc?: boolean;
 }
 
 export interface ADGroupListRequest {
@@ -194,6 +198,8 @@ export interface ADGroupListRequest {
   groupName?: string;
   current?: number;
   pageSize?: number;
+  orderByColumn?: string;
+  isAsc?: boolean;
 }
 
 export interface ADComputerListRequest {

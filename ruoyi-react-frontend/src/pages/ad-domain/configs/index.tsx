@@ -1,6 +1,5 @@
 ﻿import { useState } from 'react';
 import {
-  App,
   Button,
   Table,
   Modal,
@@ -9,6 +8,7 @@ import {
   InputNumber,
   Switch,
   Space,
+  message,
   Card,
   Tag
 } from 'antd';
@@ -31,14 +31,12 @@ import {
 } from '@/lib/adDomainApi';
 import ActionButtons from '@/components/shared/ActionButtons';
 import { formatDateTime } from '@/utils/datetime';
-import { createSorter } from '@/utils/tableHelpers';
 import { useADConfigs } from '@/hooks/useADConfigs';
 import type { ADConfig } from '@/lib/adDomainApi';
 
 import type { FC } from 'react';
 
 const ADConfigPage: FC = () => {
-  const { message } = App.useApp();
   const [editForm] = Form.useForm();
 
   // 使用共享的 AD 配置 Hook
@@ -53,6 +51,10 @@ const ADConfigPage: FC = () => {
   const [testingConfig, setTestingConfig] = useState<string | null>(null);
   const [syncingConfig, setSyncingConfig] = useState<string | null>(null);
   const [syncProgress, setSyncProgress] = useState<{ [key: string]: ADSyncResult }>({});
+
+  // 排序状态
+  const [orderByColumn, setOrderByColumn] = useState<string>('createdAt');
+  const [isAsc, setIsAsc] = useState<boolean>(false);
 
   // 统一错误处理
   const handleApiError = (error: unknown, defaultMessage: string) => {
@@ -172,7 +174,7 @@ const ADConfigPage: FC = () => {
       key: 'configName',
       width: 160,
       minWidth: 140,
-      sorter: createSorter<ADConfig>('configName', 'string'),
+      sorter: true,
     },
     {
       title: '服务器地址',
@@ -180,7 +182,6 @@ const ADConfigPage: FC = () => {
       key: 'serverAddress',
       width: 200,
       minWidth: 180,
-      sorter: createSorter<ADConfig>('serverAddress', 'string'),
       render: (text: string, record: ADConfig) => `${text}:${record.serverPort}`,
     },
     {
@@ -189,7 +190,7 @@ const ADConfigPage: FC = () => {
       key: 'domainName',
       width: 150,
       minWidth: 120,
-      sorter: createSorter<ADConfig>('domainName', 'string'),
+      sorter: true,
     },
     {
       title: '基础DN',
@@ -198,7 +199,6 @@ const ADConfigPage: FC = () => {
       width: 200,
       minWidth: 180,
       ellipsis: true,
-      sorter: createSorter<ADConfig>('baseDn', 'string'),
     },
     {
       title: '安全连接',
@@ -230,7 +230,6 @@ const ADConfigPage: FC = () => {
       key: 'lastSyncAt',
       width: 170,
       minWidth: 160,
-      sorter: createSorter<ADConfig>('lastSyncAt', 'date'),
       render: (text: string | null) => formatDateTime(text),
     },
     {
@@ -240,6 +239,7 @@ const ADConfigPage: FC = () => {
       width: 80,
       minWidth: 70,
       align: 'center' as const,
+      sorter: true,
       render: (status: number) => (
         <Tag color={status === 0 ? 'success' : 'default'}>
           {status === 0 ? '启用' : '停用'}
@@ -332,6 +332,15 @@ const ADConfigPage: FC = () => {
         loading={loading}
         rowKey="id"
         pagination={false}
+        onChange={(pagination, filters, sorter) => {
+          if (sorter && typeof sorter === 'object' && 'field' in sorter) {
+            const col = (sorter as any).field;
+            const asc = (sorter as any).order === 'ascend';
+            setOrderByColumn(col);
+            setIsAsc(asc);
+            fetchConfigs(col, asc);
+          }
+        }}
       />
 
       <Modal

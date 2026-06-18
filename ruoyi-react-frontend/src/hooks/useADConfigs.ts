@@ -29,12 +29,16 @@ export function useADConfigs(options: UseADConfigsOptions = {}) {
   const [loading, setLoading] = useState(false);
 
   // 获取 AD 配置列表
-  const fetchConfigs = async () => {
+  const fetchConfigs = async (sortColumn?: string, sortAsc?: boolean) => {
     setLoading(true);
     try {
       const params: Record<string, unknown> = { current: 1, pageSize: 100 };
       if (enabledOnly) {
         params.status = 0; // 0=启用
+      }
+      if (sortColumn) {
+        params.orderByColumn = sortColumn;
+        params.isAsc = sortAsc;
       }
 
       const res = await getADConfigList(params);

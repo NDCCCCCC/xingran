@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  App,
   Card,
   Table,
   Select,
@@ -10,6 +9,7 @@ import {
   Tag,
   Modal,
   Form,
+  message,
   Drawer,
   Descriptions,
   Tooltip,
@@ -39,13 +39,11 @@ import {
 } from '@/lib/adDomainApi';
 import { useADConfigs } from '@/hooks/useADConfigs';
 import type { ADConfig } from '@/lib/adDomainApi';
-import { createSorter } from '@/utils/tableHelpers';
 
 import type { FC } from 'react';
 import { usePagination } from '@/hooks/usePagination';
 
 const ADGroupPage: FC = () => {
-  const { message } = App.useApp();
   const [form] = Form.useForm();
 
   // 使用共享的 AD 配置 Hook
@@ -56,6 +54,10 @@ const ADGroupPage: FC = () => {
 
   const [groups, setGroups] = useState<ADGroup[]>([]);
   const [groupLoading, setGroupLoading] = useState(false);
+
+  // 排序状态
+  const [orderByColumn, setOrderByColumn] = useState<string>('');
+  const [isAsc, setIsAsc] = useState<boolean>(true);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -129,6 +131,8 @@ const ADGroupPage: FC = () => {
         groupName: groupName,
         current: paginationProps.current,
         pageSize: paginationProps.pageSize,
+        orderByColumn,
+        isAsc,
       });
       if (res.code === 0) {
         setGroups(res.data?.list ?? []);
@@ -194,6 +198,14 @@ const ADGroupPage: FC = () => {
   const handleOUChange = (ouDn: string) => {
     setSelectedOUDN(ouDn || undefined);
     setCurrent(1);
+  };
+
+  // 表格排序双向关联
+  const handleTableChange = (pagination: any, _filters: any, sorter: any) => {
+    if (sorter && sorter.field) {
+      setOrderByColumn(sorter.field);
+      setIsAsc(sorter.order === 'ascend');
+    }
   };
 
   const handleViewMembers = async (group: ADGroup) => {
@@ -289,21 +301,21 @@ const ADGroupPage: FC = () => {
       title: '组名称',
       dataIndex: 'groupName',
       key: 'groupName',
-      sorter: createSorter<ADGroup>('groupName', 'string'),
+      sorter: true,
     },
     {
       title: '描述',
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
-      sorter: createSorter<ADGroup>('description', 'string'),
+      sorter: true,
     },
     {
       title: '成员数',
       dataIndex: 'memberCount',
       key: 'memberCount',
       width: 100,
-      sorter: createSorter<ADGroup>('memberCount', 'number'),
+      sorter: true,
       render: (count: number) => <Tag color="blue">{count}</Tag>,
     },
     {
@@ -311,7 +323,6 @@ const ADGroupPage: FC = () => {
       dataIndex: 'groupScope',
       key: 'groupScope',
       width: 120,
-      sorter: createSorter<ADGroup>('groupScope', 'string'),
       render: (scope: string) => scope ? <Tag>{scope}</Tag> : '-',
     },
     {
@@ -319,7 +330,6 @@ const ADGroupPage: FC = () => {
       dataIndex: 'groupType',
       key: 'groupType',
       width: 100,
-      sorter: createSorter<ADGroup>('groupType', 'number'),
       render: (type: number) => {
         if (type === 1) return <Tag color="blue">安全组</Tag>;
         if (type === 2) return <Tag color="default">分发组</Tag>;
@@ -331,7 +341,6 @@ const ADGroupPage: FC = () => {
       dataIndex: 'lastSyncAt',
       key: 'lastSyncAt',
       width: 170,
-      sorter: createSorter<ADGroup>('lastSyncAt', 'date'),
       render: (val: string) => val ? new Date(val).toLocaleString() : <Tag color="warning">未同步</Tag>,
     },
     {
@@ -356,25 +365,21 @@ const ADGroupPage: FC = () => {
       title: '用户名',
       dataIndex: 'username',
       key: 'username',
-      sorter: createSorter<ADUser>('username', 'string'),
     },
     {
       title: '显示名',
       dataIndex: 'displayName',
       key: 'displayName',
-      sorter: createSorter<ADUser>('displayName', 'string'),
     },
     {
       title: '邮箱',
       dataIndex: 'email',
       key: 'email',
-      sorter: createSorter<ADUser>('email', 'string'),
     },
     {
       title: '部门',
       dataIndex: 'department',
       key: 'department',
-      sorter: createSorter<ADUser>('department', 'string'),
     },
     {
       title: '操作',
@@ -488,6 +493,7 @@ const ADGroupPage: FC = () => {
           loading={groupLoading}
           rowKey="id"
           pagination={paginationProps}
+          onChange={handleTableChange}
         />
       </Space>
 
