@@ -133,12 +133,16 @@ const ADUserPage: FC = () => {
     }
   }, [selectedConfig, paginationProps.current, paginationProps.pageSize]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (sortCol?: string, sortAsc?: boolean) => {
     if (!selectedConfig) return;
 
     setLoading(true);
     try {
       const values = form.getFieldsValue();
+      // 接受 sortCol/sortAsc 参数（handleTableChange 同步传新值，规避 React 18 setState 异步时序
+      // 导致 fetchUsers 读到旧 state——config/notice 同类坑加深一层）
+      const orderCol = sortCol ?? orderByColumn;
+      const asc = sortAsc ?? isAsc;
       const res = await getADUserList({
         configId: selectedConfig,
         ouDn: values.ouDn,
@@ -146,8 +150,8 @@ const ADUserPage: FC = () => {
         isEnabled: values.isEnabled,
         current: paginationProps.current,
         pageSize: paginationProps.pageSize,
-        orderByColumn,
-        isAsc,
+        orderByColumn: orderCol,
+        isAsc: asc,
       });
       if (res.code === 0) {
         setUsers(res.data?.list ?? []);
@@ -167,13 +171,13 @@ const ADUserPage: FC = () => {
 
   // 表格排序双向关联
   const handleTableChange = (pagination: any, _filters: any, sorter: any) => {
-    if (sorter && sorter.field) {
-      setOrderByColumn(sorter.field);
-      setIsAsc(sorter.order === 'ascend');
-    }
-    // 排序变化后立即重新拉取（useEffect 依赖不包含 orderByColumn/isAsc，
-    // 否则 setState 后表格不刷新，请求体仍用空 state——config/notice 同类坑）。
-    fetchUsers();
+    // 用 local const 持有新值传 fetchUsers，规避 React 18 setState 异步时序
+    // （setState 后立即读 state 仍为旧值——加 deep 一层避坑）
+    const newCol = sorter?.field || '';
+    const newAsc = sorter?.order === 'ascend';
+    setOrderByColumn(newCol);
+    setIsAsc(newAsc);
+    fetchUsers(newCol, newAsc);
   };
 
   const handleEdit = (user: ADUser) => {
@@ -564,7 +568,7 @@ const ADUserPage: FC = () => {
               <Button type="primary" onClick={handleSearch}>
                 查询
               </Button>
-              <Button icon={<ReloadOutlined />} onClick={fetchUsers}>
+              <Button icon={<ReloadOutlined />} onClick={() => fetchUsers()}>
                 刷新
               </Button>
               <Button

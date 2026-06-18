@@ -120,19 +120,22 @@ const ADGroupPage: FC = () => {
     fetchOUs();
   }, [selectedConfig]);
 
-  const fetchGroups = useCallback(async (groupName?: string) => {
+  const fetchGroups = useCallback(async (groupName?: string, sortCol?: string, sortAsc?: boolean) => {
     if (!selectedConfig) return;
 
     setGroupLoading(true);
     try {
+      // 接受 sortCol/sortAsc 参数（handleTableChange 同步传新值，规避 React 18 setState 异步时序）
+      const orderCol = sortCol ?? orderByColumn;
+      const asc = sortAsc ?? isAsc;
       const res = await getADGroupList({
         configId: selectedConfig,
         ouDn: selectedOUDN,
         groupName: groupName,
         current: paginationProps.current,
         pageSize: paginationProps.pageSize,
-        orderByColumn,
-        isAsc,
+        orderByColumn: orderCol,
+        isAsc: asc,
       });
       if (res.code === 0) {
         setGroups(res.data?.list ?? []);
@@ -202,13 +205,12 @@ const ADGroupPage: FC = () => {
 
   // 表格排序双向关联
   const handleTableChange = (pagination: any, _filters: any, sorter: any) => {
-    if (sorter && sorter.field) {
-      setOrderByColumn(sorter.field);
-      setIsAsc(sorter.order === 'ascend');
-    }
-    // 排序变化后立即重新拉取（useEffect 依赖不包含 orderByColumn/isAsc，
-    // 否则 setState 后表格不刷新，请求体仍用空 state——config/notice 同类坑）。
-    fetchGroups(searchGroupName);
+    // 用 local const 持有新值传 fetchGroups，规避 React 18 setState 异步时序
+    const newCol = sorter?.field || '';
+    const newAsc = sorter?.order === 'ascend';
+    setOrderByColumn(newCol);
+    setIsAsc(newAsc);
+    fetchGroups(searchGroupName, newCol, newAsc);
   };
 
   const handleViewMembers = async (group: ADGroup) => {
