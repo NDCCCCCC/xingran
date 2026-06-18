@@ -15,6 +15,38 @@ import { formatDateTime } from "@/utils/datetime";
 export type SorterType = "string" | "number" | "date" | "boolean" | "custom";
 
 /**
+ * 排序字段元数据：用于服务端排序场景下描述"该列可按哪个字段名请求后端排序"。
+ *
+ * 与 createSorter 的区别:
+ *   - createSorter(field, type) 返回闭包，antd 内部对当前页数据做客户端比较（换页失效）
+ *   - createSorterMeta(field, type) 返回元数据，useServerSort hook 据此发请求给后端（跨页一致）
+ *
+ * 两者 field 命名约定一致（应与后端白名单 key 对应），可同时挂在一列上：
+ *
+ *   {
+ *     title: "用户名",
+ *     dataIndex: "username",
+ *     sorter: createSorter<User>("username", "string"),     // 兜底：客户端也能排序
+ *     sorterMeta: createSorterMeta<User>("username"),       // 主路径：触发服务端排序
+ *   }
+ *
+ * 但通常只挂 sorterMeta 即可——若后端 ORDER BY 生效，前端客户端排序只是浪费。
+ */
+export interface SorterMeta<T = unknown> {
+  field: string;
+  type?: SorterType;
+  // 泛型占位，仅用于在列定义处保持类型推导一致
+  _recordType?: T;
+}
+
+export function createSorterMeta<T = unknown>(
+  field: string,
+  type?: SorterType
+): SorterMeta<T> {
+  return { field, type };
+}
+
+/**
  * 通用 sorter 工厂
  *
  * 用法：

@@ -1,6 +1,9 @@
 /**
  * Role Data Hook
- * 角色数据管理 Hook
+ * 角色辅助数据管理 Hook（菜单树 / 部门树 / 统计 / 权限勾选）
+ *
+ * 角色列表的分页 / 搜索 / 排序由 useTableManager 统一管理（见 index.tsx），
+ * 本 hook 只负责列表之外的辅助数据。
  */
 
 import { useState, useCallback, useEffect } from "react";
@@ -36,16 +39,8 @@ export interface RoleStatistics {
   inactive: number;
 }
 
-export interface UseRoleDataParams {
-  current: number;
-  pageSize: number;
-}
-
 export interface UseRoleDataReturn {
   // 数据状态
-  roles: Role[];
-  loading: boolean;
-  total: number;
   menuTree: TreeDataNode[];
   deptTree: TreeDataNode[];
   statistics: RoleStatistics;
@@ -55,9 +50,7 @@ export interface UseRoleDataReturn {
   checkedDeptKeys: Key[];
   currentDataScope: number;
 
-  // 数据操作方法
-  setRoles: React.Dispatch<React.SetStateAction<Role[]>>;
-  setTotal: React.Dispatch<React.SetStateAction<number>>;
+  // Setters
   setMenuTree: React.Dispatch<React.SetStateAction<TreeDataNode[]>>;
   setDeptTree: React.Dispatch<React.SetStateAction<TreeDataNode[]>>;
   setStatistics: React.Dispatch<React.SetStateAction<RoleStatistics>>;
@@ -66,20 +59,12 @@ export interface UseRoleDataReturn {
   setCurrentDataScope: React.Dispatch<React.SetStateAction<number>>;
 
   // 数据加载方法
-  loadRoles: (params?: Record<string, unknown>) => Promise<void>;
   loadStatistics: () => void;
   loadMenuTree: () => Promise<void>;
   loadDeptTree: () => Promise<void>;
-  loadRoleMenus: (roleId: string) => Promise<string[]>;
-  loadRoleDepts: (roleId: string) => Promise<string[]>;
 }
 
-export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
-  const { current, pageSize } = params;
-
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
+export function useRoleData(): UseRoleDataReturn {
   const [menuTree, setMenuTree] = useState<TreeDataNode[]>([]);
   const [deptTree, setDeptTree] = useState<TreeDataNode[]>([]);
   const [statistics, setStatistics] = useState<RoleStatistics>({
@@ -95,39 +80,18 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
   // 用于统计计算；useRoleList 返回 pageSize=1000 的全量数据。
   const { data: allRoles = [] } = useRoleList();
 
-  // 加载角色列表
-  const loadRoles = useCallback(async (params: Record<string, unknown> = {}) => {
-    setLoading(true);
-    try {
-      const result = await post("/system/roles/list", {
-        current: params.current || current,
-        pageSize: params.pageSize || pageSize,
-        ...params,
-      }) as { data: { list: Role[]; total: number } };
-      setRoles(result.data.list);
-      setTotal(result.data.total);
-    } catch (error) {
-      console.error("加载角色列表失败:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [current, pageSize]);
-
-  // 加载统计数据 — 优先使用 useRoleList 全量缓存 (D-13 Step 2)
-  // 当 useRoleList 数据更新时，statistics 自动同步；首次加载若全量缓存尚未就绪，
-  // 回退到当前表格页的 roles 数据计算，避免统计延迟导致空白。
+  // 加载统计数据 — 使用 useRoleList 全量缓存 (D-13 Step 2)
+  // useRoleList 数据更新时 statistics 自动同步。
   const loadStatistics = useCallback(() => {
-    const list = allRoles.length > 0 ? (allRoles as unknown as Role[]) : roles;
-    const activeCount = list.filter((r: Role) => r.status === 0).length;
-    const inactiveCount = list.filter((r: Role) => r.status === 1).length;
+    const list = allRoles as unknown as Role[];
     setStatistics({
       total: list.length,
-      active: activeCount,
-      inactive: inactiveCount,
+      active: list.filter((r: Role) => r.status === 0).length,
+      inactive: list.filter((r: Role) => r.status === 1).length,
     });
-  }, [allRoles, roles]);
+  }, [allRoles]);
 
-  // 当 useRoleList 全量数据或当前页数据变化时自动同步 statistics
+  // 当 useRoleList 全量数据变化时自动同步 statistics
   useEffect(() => {
     loadStatistics();
   }, [loadStatistics]);
@@ -168,51 +132,21 @@ export function useRoleData(params: UseRoleDataParams): UseRoleDataReturn {
     }
   }, []);
 
-  // 加载角色的菜单权限
-  const loadRoleMenus = useCallback(async (roleId: string): Promise<string[]> => {
-    try {
-      const result = await post(`/system/menus/role-menu-tree-select/${roleId}`) as { data: { checkedKeys?: string[] } };
-      return result.data.checkedKeys || [];
-    } catch (error) {
-      console.error("加载角色菜单权限失败:", error);
-      return [];
-    }
-  }, []);
-
-  // 加载角色的部门权限
-  const loadRoleDepts = useCallback(async (roleId: string): Promise<string[]> => {
-    try {
-      const result = await post(`/system/departments/role-dept-tree-select/${roleId}`) as { data: { checkedKeys?: string[] } };
-      return result.data.checkedKeys || [];
-    } catch (error) {
-      console.error("加载角色部门权限失败:", error);
-      return [];
-    }
-  }, []);
-
   return {
-    roles,
-    loading,
-    total,
     menuTree,
     deptTree,
     statistics,
     checkedMenuKeys,
     checkedDeptKeys,
     currentDataScope,
-    setRoles,
-    setTotal,
     setMenuTree,
     setDeptTree,
     setStatistics,
     setCheckedMenuKeys,
     setCheckedDeptKeys,
     setCurrentDataScope,
-    loadRoles,
     loadStatistics,
     loadMenuTree,
     loadDeptTree,
-    loadRoleMenus,
-    loadRoleDepts,
   };
 }

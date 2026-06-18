@@ -9,44 +9,56 @@ import ActionButtons from "@/components/shared/ActionButtons";
 import type { Role } from "@/types";
 import { formatDateTime } from "@/utils/datetime";
 import { renderRoleName, renderRoleKeyTag, renderStatusTag } from "../utils";
+import type { SortOrder } from "@/hooks/useServerSort";
 
 interface GetRoleColumnsParams {
   handleEdit: (record: Role) => void;
   handleUpdateStatus: (id: string, status: number) => void;
   handleDelete: (id: string) => void;
+  getColumnSortOrder: (field: string) => SortOrder | undefined;
 }
 
 export function getRoleColumns(params: GetRoleColumnsParams): ColumnsType<Role> {
-  const { handleEdit, handleUpdateStatus, handleDelete } = params;
+  const { handleEdit, handleUpdateStatus, handleDelete, getColumnSortOrder } = params;
 
   return [
     {
       title: "角色名称",
       dataIndex: "roleName",
       key: "roleName",
+      sorter: true,
+      sortOrder: getColumnSortOrder("roleName"),
       render: renderRoleName,
     },
     {
       title: "权限字符",
       dataIndex: "roleKey",
       key: "roleKey",
+      sorter: true,
+      sortOrder: getColumnSortOrder("roleKey"),
       render: renderRoleKeyTag,
     },
     {
       title: "显示顺序",
       dataIndex: "roleSort",
       key: "roleSort",
+      sorter: true,
+      sortOrder: getColumnSortOrder("roleSort"),
     },
     {
       title: "状态",
       dataIndex: "status",
       key: "status",
+      sorter: true,
+      sortOrder: getColumnSortOrder("status"),
       render: renderStatusTag,
     },
     {
       title: "创建时间",
       dataIndex: "createdAt",
       key: "createdAt",
+      sorter: true,
+      sortOrder: getColumnSortOrder("createdAt"),
       render: (text: string) => formatDateTime(text),
     },
     {

@@ -3,7 +3,7 @@
  * Role Management Page
  */
 
-import { useState, useEffect, useCallback, useRef, type FC } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, type FC } from "react";
 import {
   Table,
   Button,
@@ -28,27 +28,64 @@ import {
 import type { Key } from "antd/es/table/interface";
 
 import { post } from "@/lib/api";
+import type { Role } from "@/types";
 import { STATUS_OPTIONS, DATA_SCOPE_OPTIONS, DEFAULT_FORM_VALUES } from "./constants";
 import { getRoleColumns } from "./columns";
 import { useRoleData, useRoleActions } from "./hooks";
 import { usePagination } from "@/hooks/usePagination";
+import { useTableManager } from "@/hooks/useTableManager";
+import { createSorterMeta } from "@/utils/tableHelpers";
 
 const { Option } = Select;
 
 // ==================== 主组件 ====================
 
 const RoleManagement: FC = () => {
-  const [searchForm] = Form.useForm();
-  const [editForm] = Form.useForm();
-
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
-  // 使用数据管理 Hook
+  // 服务端排序：field 对应后端 roleAllowedSortFields 白名单 key
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<Role>("roleName"),
+      createSorterMeta<Role>("roleKey"),
+      createSorterMeta<Role>("roleSort"),
+      createSorterMeta<Role>("status"),
+      createSorterMeta<Role>("createdAt", "date"),
+    ],
+    []
+  );
+
+  // 角色列表加载函数
+  const fetchRoles = useCallback(async (params: Record<string, unknown>) => {
+    const result = await post("/system/roles/list", params) as { data: { list: Role[]; total: number } };
+    return { list: result.data?.list || [], total: result.data?.total || 0 };
+  }, []);
+
+  // 使用 useTableManager 管理角色列表（分页 + 搜索 + 服务端排序）
   const {
-    roles,
     loading,
-    total,
+    data: roles,
+    searchForm,
+    editForm,
+    loadData: loadRoles,
+    applyFilters,
+    handleReset: tableHandleReset,
+    handleTableChange,
+    getColumnSortOrder,
+  } = useTableManager<Role>(fetchRoles, {
+    externalPagination: {
+      current: paginationProps.current ?? 1,
+      pageSize: paginationProps.pageSize ?? 10,
+      setCurrent,
+      setPageSize,
+      setTotal,
+    },
+    sorterMetas,
+  });
+
+  // 辅助数据 Hook（菜单树 / 部门树 / 统计 / 权限勾选）
+  const {
     menuTree,
     deptTree,
     statistics,
@@ -58,14 +95,10 @@ const RoleManagement: FC = () => {
     setCheckedMenuKeys,
     setCheckedDeptKeys,
     setCurrentDataScope,
-    loadRoles,
     loadStatistics,
     loadMenuTree,
     loadDeptTree,
-  } = useRoleData({
-    current: paginationProps.current ?? 1,
-    pageSize: paginationProps.pageSize ?? 10,
-  });
+  } = useRoleData();
 
   // 防重复调用追踪器
   const loadingMenusRef = useRef(new Set<string>());
@@ -159,24 +192,22 @@ const RoleManagement: FC = () => {
     setCurrentDataScope,
   });
 
-  // 初始化加载
+  // 初始化加载（loadStatistics 由 useRoleData 内部 useEffect 自动触发；分页由 handleTableChange 驱动）
   useEffect(() => {
     loadRoles();
-    loadStatistics();
     loadMenuTree();
     loadDeptTree();
-  }, [paginationProps.current, paginationProps.pageSize]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // 搜索
+  // 搜索：applyFilters 读 searchForm，自动带上当前排序
   const handleSearch = () => {
-    const values = searchForm.getFieldsValue();
-    loadRoles(values);
+    applyFilters();
   };
 
-  // 重置搜索
+  // 重置搜索：清表单 + 清排序，回到第 1 页
   const handleReset = () => {
-    searchForm.resetFields();
-    loadRoles();
+    tableHandleReset();
   };
 
   // 刷新
@@ -190,6 +221,7 @@ const RoleManagement: FC = () => {
     handleEdit,
     handleUpdateStatus,
     handleDelete,
+    getColumnSortOrder,
   });
 
   return (
@@ -280,6 +312,7 @@ const RoleManagement: FC = () => {
           rowKey="id"
           loading={loading}
           pagination={paginationProps}
+          onChange={handleTableChange}
           rowSelection={{
             selectedRowKeys,
             onChange: setSelectedRowKeys,

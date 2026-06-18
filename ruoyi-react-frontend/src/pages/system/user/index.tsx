@@ -2,7 +2,7 @@
  * System User 用户管理页面
  */
 
-import { useState, useEffect, useCallback, type FC, type Key } from "react";
+import { useState, useEffect, useCallback, useMemo, type FC, type Key } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
@@ -46,6 +46,8 @@ import { handleApiError, handleSuccess } from "@/utils/errorHandler";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { DepartmentTreeSelect } from "@/components/shared";
 import { formatDateTime } from "@/utils/datetime";
+import { createSorterMeta } from "@/utils/tableHelpers";
+import type { SortOrder } from "@/hooks/useServerSort";
 
 // 导入提取的文件
 import { GENDER_OPTIONS, STATUS_OPTIONS } from "./constants";
@@ -63,10 +65,11 @@ interface UserTableColumnsProps {
   handleUpdateStatus: (id: string, status: number) => void;
   handleResetPassword: (user: User) => void;
   handleDelete: (id: string) => void;
+  getColumnSortOrder: (field: string) => SortOrder | undefined;
 }
 
 function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
-  const { handleEdit, handleUpdateStatus, handleResetPassword, handleDelete } = props;
+  const { handleEdit, handleUpdateStatus, handleResetPassword, handleDelete, getColumnSortOrder } = props;
 
   return [
     {
@@ -75,6 +78,8 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       key: "username",
       width: 140,
       minWidth: 120,
+      sorter: true,
+      sortOrder: getColumnSortOrder("username"),
       render: (text, record) => (
         <Space>
           <Avatar src={record.avatar} icon={<UserOutlined />} />
@@ -88,6 +93,8 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       key: "nickname",
       width: 100,
       minWidth: 80,
+      sorter: true,
+      sortOrder: getColumnSortOrder("nickname"),
     },
     {
       title: "工号",
@@ -104,6 +111,8 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       width: 180,
       minWidth: 150,
       ellipsis: true,
+      sorter: true,
+      sortOrder: getColumnSortOrder("email"),
     },
     {
       title: "手机号",
@@ -111,6 +120,8 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       key: "phone",
       width: 130,
       minWidth: 120,
+      sorter: true,
+      sortOrder: getColumnSortOrder("phone"),
     },
     {
       title: "性别",
@@ -128,6 +139,8 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       width: 200,
       minWidth: 150,
       ellipsis: true,
+      sorter: true,
+      sortOrder: getColumnSortOrder("deptName"),
       render: (_, record) => record.deptFullName || record.deptName || "-",
     },
     {
@@ -161,6 +174,8 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       width: 80,
       minWidth: 70,
       align: "center" as const,
+      sorter: true,
+      sortOrder: getColumnSortOrder("status"),
       render: (status) => {
         const config = formatStatus(status);
         return <Tag color={config.color}>{config.text}</Tag>;
@@ -172,6 +187,8 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       key: "createdAt",
       width: 170,
       minWidth: 160,
+      sorter: true,
+      sortOrder: getColumnSortOrder("createdAt"),
       render: (text) => formatDateTime(text),
     },
     {
@@ -247,13 +264,30 @@ const UserManagement: FC = () => {
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
-  // 数据加载函数
+  // 服务端排序：field 对应后端 userAllowedSortFields 白名单 key
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<User>("username"),
+      createSorterMeta<User>("nickname"),
+      createSorterMeta<User>("email"),
+      createSorterMeta<User>("phone"),
+      createSorterMeta<User>("deptName"),
+      createSorterMeta<User>("status"),
+      createSorterMeta<User>("createdAt", "date"),
+    ],
+    []
+  );
+
+  // 数据加载函数（status 统一转 Number 以适配后端）
   const fetchUsers = useCallback(async (params: Record<string, unknown>) => {
+    if (params.status !== undefined && params.status !== null && params.status !== "") {
+      params = { ...params, status: Number(params.status) };
+    }
     const result = await post<PageResponse<User>>("/system/users/list", params);
     return { list: result.data?.list || [], total: result.data?.total || 0 };
   }, []);
 
-  // 使用 useTableManager 管理表格状态
+  // 使用 useTableManager 管理表格状态（含服务端排序 + filters 持久化）
   const {
     loading,
     data: users,
@@ -268,6 +302,10 @@ const UserManagement: FC = () => {
     handleAdd,
     handleEdit,
     resetSelection,
+    getColumnSortOrder,
+    handleTableChange,
+    applyFilters,
+    handleReset: tableHandleReset,
   } = useTableManager<User>(
     fetchUsers,
     {
@@ -278,6 +316,7 @@ const UserManagement: FC = () => {
         setPageSize,
         setTotal,
       },
+      sorterMetas,
     }
   );
 
@@ -293,33 +332,16 @@ const UserManagement: FC = () => {
 
   // ==================== 事件处理 ====================
 
+  // 搜索：applyFilters 读 searchForm 并合并 deptId，自动带上当前排序（status 在 fetchUsers 转 Number）
   const handleSearch = useCallback(() => {
-    const values = searchForm.getFieldsValue() as Record<string, unknown>;
+    applyFilters(selectedDeptId ? { deptId: selectedDeptId } : undefined);
+  }, [applyFilters, selectedDeptId]);
 
-    const searchParams: Record<string, unknown> = {};
-    Object.keys(values).forEach(key => {
-      const value = values[key];
-      if (value !== undefined && value !== null && value !== "") {
-        if (key === "status") {
-          searchParams[key] = Number(value);
-        } else {
-          searchParams[key] = value;
-        }
-      }
-    });
-
-    if (selectedDeptId) {
-      searchParams.deptId = selectedDeptId;
-    }
-
-    loadUsers(searchParams);
-  }, [searchForm, selectedDeptId, loadUsers]);
-
+  // 重置：清部门 + 清表单 + 清排序，回到第 1 页
   const handleReset = useCallback(() => {
-    searchForm.resetFields();
     setSelectedDeptId("");
-    loadUsers();
-  }, [searchForm, loadUsers]);
+    tableHandleReset();
+  }, [setSelectedDeptId, tableHandleReset]);
 
   const handleRefresh = useCallback(() => {
     loadUsers();
@@ -426,15 +448,16 @@ const UserManagement: FC = () => {
     }
   }, [resetPasswordForm, resettingUser, closeResetPasswordModal]);
 
+  // 部门联动：applyFilters 合并 deptId（保留搜索框值与当前排序），回第 1 页
   const handleDeptSelect = useCallback((selectedKeys: Key[]) => {
     if (selectedKeys.length > 0) {
       setSelectedDeptId(selectedKeys[0] as string);
-      loadUsers({ deptId: selectedKeys[0] });
+      applyFilters({ deptId: selectedKeys[0] });
     } else {
       setSelectedDeptId("");
-      loadUsers();
+      applyFilters();
     }
-  }, [loadUsers]);
+  }, [applyFilters, setSelectedDeptId]);
 
   // 表格列
   const columns = getUserTableColumns({
@@ -442,6 +465,7 @@ const UserManagement: FC = () => {
     handleUpdateStatus,
     handleResetPassword: openResetPasswordModal,
     handleDelete,
+    getColumnSortOrder,
   });
 
   return (
@@ -566,20 +590,7 @@ const UserManagement: FC = () => {
               rowKey="id"
               loading={loading}
               pagination={paginationProps}
-              onChange={(pagination) => {
-                const newPage = pagination.current ?? 1;
-                const newPageSize = pagination.pageSize ?? 10;
-                setCurrent(newPage);
-                setPageSize(newPageSize);
-                const params: Record<string, unknown> = {
-                  current: newPage,
-                  pageSize: newPageSize,
-                };
-                if (selectedDeptId) {
-                  params.deptId = selectedDeptId;
-                }
-                loadUsers(params);
-              }}
+              onChange={handleTableChange}
               rowSelection={{
                 selectedRowKeys,
                 onChange: setSelectedRowKeys,
