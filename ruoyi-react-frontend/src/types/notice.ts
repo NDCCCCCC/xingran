@@ -178,6 +178,9 @@ export interface NoticeListParams {
   createTime?: string;
   current: number;
   pageSize: number;
+  // 服务端排序参数（透传给后端 noticeAllowedSortFields 白名单）
+  orderByColumn?: string;
+  isAsc?: boolean;
 }
 
 /**
