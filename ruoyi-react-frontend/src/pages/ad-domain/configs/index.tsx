@@ -338,7 +338,9 @@ const ADConfigPage: FC = () => {
             const asc = (sorter as any).order === 'ascend';
             setOrderByColumn(col);
             setIsAsc(asc);
-            fetchConfigs(col, asc);
+            // useADConfigs.refreshConfigs 不读 sort 参数（设计为选择器无排序），
+            // 故仅更新 state，刷新仍走 fetchConfigs()；后续如需真排序需重构用直接 API。
+            fetchConfigs();
           }
         }}
       />

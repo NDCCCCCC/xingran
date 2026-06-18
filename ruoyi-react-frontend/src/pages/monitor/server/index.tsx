@@ -124,9 +124,8 @@ const ServerMonitor: FC = () => {
   // 搜索
   const handleSearch = () => {
     setCurrent(1);
-    const sortField = sorter && sorter.field ? sorter.field : undefined;
-    const sortAsc = sorter && sorter.field ? sorter.order === 'ascend' : undefined;
-    fetchServers(sortField, sortAsc);
+    // fetchServers 内部用 orderByColumn/isAsc state 兜底，无需重传
+    fetchServers();
   };
 
   // 重置
@@ -144,7 +143,7 @@ const ServerMonitor: FC = () => {
   };
 
   // 分页变化
-  const handleTableChange = (pagination: { current: number; pageSize: number }, _filters: Record<string, any>, sorter: any) => {
+  const handleTableChange = (pagination: any, _filters: Record<string, any>, sorter: any) => {
     if (sorter && sorter.field) {
       setOrderByColumn(sorter.field);
       setIsAsc(sorter.order === 'ascend');
@@ -185,9 +184,8 @@ const ServerMonitor: FC = () => {
   };
 
   useEffect(() => {
-    const sortField = sorter && sorter.field ? sorter.field : undefined;
-    const sortAsc = sorter && sorter.field ? sorter.order === 'ascend' : undefined;
-    fetchServers(sortField, sortAsc);
+    // fetchServers 内部用 orderByColumn/isAsc state 兜底，无需重传
+    fetchServers();
   }, [paginationProps.current, paginationProps.pageSize]);
 
   const columns: ColumnsType<ServerInfo> = [
@@ -195,7 +193,6 @@ const ServerMonitor: FC = () => {
       title: '主机名',
       dataIndex: 'hostName',
       key: 'hostName',
-      sorter: true,
       width: 160,
       minWidth: 140,
       sorter: createSorter<ServerInfo>('hostName', 'string'),
@@ -297,7 +294,6 @@ const ServerMonitor: FC = () => {
       title: '最后活跃时间',
       dataIndex: 'lastActiveAt',
       key: 'lastActiveAt',
-      sorter: true,
       width: 170,
       minWidth: 160,
       sorter: createSorter<ServerInfo>('lastActiveAt', 'date'),
