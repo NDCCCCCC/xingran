@@ -2,7 +2,7 @@
  * NetworkDevice 设备管理页面
  */
 
-import { useState, useEffect, useCallback, type FC } from "react";
+import { useState, useEffect, useCallback, useMemo, type FC } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
@@ -57,6 +57,8 @@ import { BatchExportModal } from "@/components/shared";
 import { DownloadOutlined } from "@ant-design/icons";
 import { usePagination } from "@/hooks/usePagination";
 import { useMenuStore } from "@/store/menuStore";
+import { createSorterMeta } from "@/utils/tableHelpers";
+import type { SortOrder } from "@/hooks/useServerSort";
 
 // 导入提取的常量、工具和 Hook
 import {
@@ -88,10 +90,11 @@ interface DeviceTableColumnsProps {
   handleDelete: (id: string) => void;
   collectingDeviceId: string | null;
   canViewMACHistory: boolean;
+  getColumnSortOrder: (field: string) => SortOrder | undefined;
 }
 
 function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<NetworkDevice> {
-  const { navigate, handleCollectPorts, openDetailModal, openModal, handleDelete, collectingDeviceId, canViewMACHistory } = props;
+  const { navigate, handleCollectPorts, openDetailModal, openModal, handleDelete, collectingDeviceId, canViewMACHistory, getColumnSortOrder } = props;
 
   return [
     {
@@ -99,6 +102,8 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
       dataIndex: "deviceName",
       key: "deviceName",
       width: 200,
+      sorter: true,
+      sortOrder: getColumnSortOrder("deviceName"),
       render: (deviceName: string, record: NetworkDevice) => (
         <a
           onClick={() => navigate(`/network/ports?deviceId=${record.id}`)}
@@ -113,6 +118,8 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
       dataIndex: "deviceType",
       key: "deviceType",
       width: 120,
+      sorter: true,
+      sortOrder: getColumnSortOrder("deviceType"),
       render: (deviceType: string) => (
         <Tag color={DEVICE_TYPE_TAG_COLOR}>{getOptionLabel(DEVICE_TYPE_OPTIONS, deviceType)}</Tag>
       ),
@@ -122,6 +129,8 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
       dataIndex: "vendor",
       key: "vendor",
       width: 100,
+      sorter: true,
+      sortOrder: getColumnSortOrder("vendor"),
       render: (vendor: string) => (
         <Tag color={VENDOR_TAG_COLOR}>{getOptionLabel(VENDOR_OPTIONS, vendor)}</Tag>
       ),
@@ -134,6 +143,8 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
       dataIndex: "status",
       key: "status",
       width: 90,
+      sorter: true,
+      sortOrder: getColumnSortOrder("status"),
       render: (status: number) => (
         <Tag color={getStatusColor(status)}>{getOptionLabel(STATUS_OPTIONS, status)}</Tag>
       ),
@@ -151,6 +162,8 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
       dataIndex: "createdAt",
       key: "createdAt",
       width: 180,
+      sorter: true,
+      sortOrder: getColumnSortOrder("createdAt"),
       render: (createdAt: string) => formatDateTime(createdAt),
     },
     {
@@ -271,6 +284,19 @@ const DeviceManagement: FC = () => {
     closeQuickCreateModal,
   } = useDeviceModals();
 
+  // 服务端排序:field 对应后端 networkDeviceAllowedSortFields 白名单 key
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<NetworkDevice>("deviceName"),
+      createSorterMeta<NetworkDevice>("deviceType"),
+      createSorterMeta<NetworkDevice>("vendor"),
+      createSorterMeta<NetworkDevice>("ipAddress"),
+      createSorterMeta<NetworkDevice>("status"),
+      createSorterMeta<NetworkDevice>("createdAt", "date"),
+    ],
+    []
+  );
+
   // 使用 useTableManager 管理表格状态
   const {
     loading,
@@ -284,6 +310,8 @@ const DeviceManagement: FC = () => {
     handleAdd,
     handleEdit,
     resetSelection,
+    getColumnSortOrder,
+    handleTableChange,
   } = useTableManager<NetworkDevice>(
     async (params) => {
       const values = searchForm.getFieldsValue();
@@ -303,6 +331,7 @@ const DeviceManagement: FC = () => {
         setPageSize,
         setTotal,
       },
+      sorterMetas,
     }
   );
 
@@ -562,6 +591,7 @@ const DeviceManagement: FC = () => {
     handleDelete,
     collectingDeviceId,
     canViewMACHistory,
+    getColumnSortOrder,
   });
 
   return (
@@ -737,20 +767,7 @@ const DeviceManagement: FC = () => {
               rowKey="id"
               scroll={{ x: 1600 }}
               pagination={paginationProps}
-              onChange={(pagination) => {
-                const newPage = pagination.current ?? 1;
-                const newPageSize = pagination.pageSize ?? 10;
-                setCurrent(newPage);
-                setPageSize(newPageSize);
-                const params: Record<string, number | string> = {
-                  current: newPage,
-                  pageSize: newPageSize,
-                };
-                if (selectedDeptId) {
-                  params.deptId = selectedDeptId;
-                }
-                loadDevices(params);
-              }}
+              onChange={handleTableChange}
             />
           </Card>
         </div>

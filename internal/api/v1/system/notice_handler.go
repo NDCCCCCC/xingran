@@ -235,6 +235,16 @@ func (h *NoticeHandler) List(c *gin.Context) {
 		params.CreateTime = &val
 	}
 
+	// 服务端排序参数（透传给 GetNoticeList → base.ApplySort 白名单）
+	if val, ok := rawReq["orderByColumn"].(string); ok && val != "" {
+		params.OrderByColumn = val
+	}
+	if val, ok := rawReq["isAsc"]; ok {
+		if b, ok := val.(bool); ok {
+			params.IsAsc = &b
+		}
+	}
+
 	result, err := h.service.List(c.Request.Context(), params)
 	if err != nil {
 		response.Error(c, err)

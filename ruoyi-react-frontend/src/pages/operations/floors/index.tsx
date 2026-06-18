@@ -2,7 +2,7 @@
  * 楼层管理页面
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import type { FC } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
@@ -18,6 +18,7 @@ import ExcelImport from "@/components/shared/ExcelImport";
 import ExcelExport from "@/components/shared/ExcelExport";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { StatisticsCards } from "@/components/operations/StatisticsCards";
+import { createSorterMeta } from "@/utils/tableHelpers";
 import {
   FloorCardView,
   FloorSearchForm,
@@ -88,6 +89,18 @@ const FloorManagement: FC = () => {
     resetFloorPlan,
   } = useFloorPlanEditor(currentFloor);
 
+  // 服务端排序:field 对应后端 floorAllowedSortFields 白名单 key
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<Floor>("name"),
+      createSorterMeta<Floor>("floorNo"),
+      createSorterMeta<Floor>("orderNum"),
+      createSorterMeta<Floor>("status"),
+      createSorterMeta<Floor>("createdAt", "date"),
+    ],
+    []
+  );
+
   const {
     loading,
     data: floors,
@@ -106,6 +119,8 @@ const FloorManagement: FC = () => {
     handleEdit,
     loadData: loadFloors,
     resetSelection,
+    getColumnSortOrder,
+    handleTableChange,
   } = useTableManager<Floor>(
     async (params) => {
       const searchParams = selectedDeptId
@@ -125,6 +140,7 @@ const FloorManagement: FC = () => {
         setPageSize,
         setTotal,
       },
+      sorterMetas,
     }
   );
 
@@ -426,6 +442,7 @@ const FloorManagement: FC = () => {
     onEdit: openModal,
     onEditFloorPlan: handleEditFloorPlan,
     onDelete: handleDelete,
+    getColumnSortOrder,
   });
 
   const renderFloorPlanEditor = () => (
@@ -533,21 +550,7 @@ const FloorManagement: FC = () => {
               loading={loading}
               rowKey="id"
               pagination={paginationProps}
-              onChange={(pagination) => {
-                const newPage = pagination.current || 1;
-                const newPageSize = pagination.pageSize || 10;
-                setCurrent(newPage);
-                setPageSize(newPageSize);
-                const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
-	                const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
-	                Object.keys(formValues).forEach(key => {
-	                  const value = formValues[key];
-	                  if (value !== undefined && value !== null && value !== "") {
-	                    searchParams[key] = value;
-	                  }
-	                });
-	                loadFloors(searchParams);
-              }}
+              onChange={handleTableChange}
             />
           ) : (
             <FloorCardView

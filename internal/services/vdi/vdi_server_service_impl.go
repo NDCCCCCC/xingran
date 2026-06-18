@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -52,8 +53,16 @@ func (s *vdiServerServiceImpl) GetServer(ctx context.Context, id string) (*VDISe
 	return s.toDTO(&server), nil
 }
 
+// vdiServerAllowedSortFields VDI服务器列表可排序字段白名单（对应 sys_vdi_server 表列名）。
+var vdiServerAllowedSortFields = map[string]string{
+	"name":      "name",
+	"status":    "status",
+	"endpoint":  "endpoint",
+	"createdAt": "created_at",
+}
+
 // ListServers 获取VDI服务器列表
-func (s *vdiServerServiceImpl) ListServers(ctx context.Context, page, pageSize int) (*VDIServerPageResult, error) {
+func (s *vdiServerServiceImpl) ListServers(ctx context.Context, page, pageSize int, orderByColumn string, isAsc *bool) (*VDIServerPageResult, error) {
 	// 设置默认分页参数
 	if page <= 0 {
 		page = 1
@@ -71,9 +80,16 @@ func (s *vdiServerServiceImpl) ListServers(ctx context.Context, page, pageSize i
 		return nil, fmt.Errorf("failed to count VDI servers: %w", err)
 	}
 
-	// 分页查询
+	// 分页查询：用户排序（白名单）优先
 	var servers []models.VDIServer
 	offset := (page - 1) * pageSize
+	sortReq := base.BaseListRequest{
+		Current:       page,
+		PageSize:      pageSize,
+		OrderByColumn: orderByColumn,
+		IsAsc:         isAsc,
+	}
+	query = base.ApplySort(query, sortReq, vdiServerAllowedSortFields)
 	if err := query.Offset(offset).Limit(pageSize).Find(&servers).Error; err != nil {
 		return nil, fmt.Errorf("failed to list VDI servers: %w", err)
 	}

@@ -68,8 +68,10 @@ func (h *VDIServerHandler) Create(c *gin.Context) {
 // @Router /vdi/servers/list [post]
 func (h *VDIServerHandler) List(c *gin.Context) {
 	var params struct {
-		Page     int `json:"page"`
-		PageSize int `json:"pageSize"`
+		Page          int    `json:"page"`
+		PageSize      int    `json:"pageSize"`
+		OrderByColumn string `json:"orderByColumn,omitempty"`
+		IsAsc         *bool  `json:"isAsc,omitempty"`
 	}
 	if !handleJSONBinding(c, &params) {
 		return
@@ -83,7 +85,7 @@ func (h *VDIServerHandler) List(c *gin.Context) {
 		params.PageSize = 10
 	}
 
-	result, err := h.serverService.ListServers(c.Request.Context(), params.Page, params.PageSize)
+	result, err := h.serverService.ListServers(c.Request.Context(), params.Page, params.PageSize, params.OrderByColumn, params.IsAsc)
 	if !handleServiceError(c, err, "查询") {
 		return
 	}

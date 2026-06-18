@@ -55,7 +55,7 @@ type VDIServerService interface {
 	// CRUD操作
 	CreateServer(ctx context.Context, req *CreateVDIServerRequest) (*VDIServerDTO, error)
 	GetServer(ctx context.Context, id string) (*VDIServerDTO, error)
-	ListServers(ctx context.Context, page, pageSize int) (*VDIServerPageResult, error)
+	ListServers(ctx context.Context, page, pageSize int, orderByColumn string, isAsc *bool) (*VDIServerPageResult, error)
 	UpdateServer(ctx context.Context, id string, req *UpdateVDIServerRequest) error
 	DeleteServer(ctx context.Context, id string) error
 

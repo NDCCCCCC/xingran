@@ -10,6 +10,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -575,6 +576,14 @@ func (s *vmServiceImpl) GetVM(ctx context.Context, id string) (*VDIVMDTO, error)
 	return s.toDTO(&vm), nil
 }
 
+// vmAllowedSortFields 虚拟机列表可排序字段白名单（对应 vdi_virtual_machine 表列名）。
+var vmAllowedSortFields = map[string]string{
+	"name":        "name",
+	"powerState":  "power_state",
+	"vdiServerId": "vdi_server_id",
+	"createdAt":   "created_at",
+}
+
 // ListVMs 获取虚拟机列表
 func (s *vmServiceImpl) ListVMs(ctx context.Context, req *ListVMRequest, userID string, dataScope models.DataScope) (*PageResult, error) {
 	// 检查是否有启用的VDI服务器配置
@@ -649,9 +658,16 @@ func (s *vmServiceImpl) ListVMs(ctx context.Context, req *ListVMRequest, userID 
 		return nil, fmt.Errorf("failed to count VMs: %w", err)
 	}
 
-	// 分页查询
+	// 分页查询：用户排序（白名单）优先，无 OrderByColumn 时保持 DB 默认顺序
 	var vms []models.VDIVirtualMachine
 	offset := (req.Page - 1) * req.PageSize
+	sortReq := base.BaseListRequest{
+		Current:       req.Page,
+		PageSize:      req.PageSize,
+		OrderByColumn: req.OrderByColumn,
+		IsAsc:         req.IsAsc,
+	}
+	query = base.ApplySort(query, sortReq, vmAllowedSortFields)
 	if err := query.Offset(offset).Limit(req.PageSize).Find(&vms).Error; err != nil {
 		return nil, fmt.Errorf("failed to list VMs: %w", err)
 	}

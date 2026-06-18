@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -98,6 +99,14 @@ func (s *DutyPoolService) CreateDutyPool(ctx context.Context, req *DutyPoolCreat
 	return pool, nil
 }
 
+// dutyPoolAllowedSortFields 值班池列表可排序字段白名单（对应 sys_duty_pool 表列名）。
+var dutyPoolAllowedSortFields = map[string]string{
+	"poolName":  "pool_name",
+	"deptId":    "dept_id",
+	"status":    "status",
+	"createdAt": "created_at",
+}
+
 // GetDutyPoolList 获取值班池列表
 func (s *DutyPoolService) GetDutyPoolList(ctx context.Context, req *DutyPoolListRequest) ([]models.DutyPool, int64, error) {
 	var pools []models.DutyPool
@@ -130,8 +139,12 @@ func (s *DutyPoolService) GetDutyPoolList(ctx context.Context, req *DutyPoolList
 	}
 
 	offset := (req.Current - 1) * req.PageSize
+	// 用户排序（白名单）优先，无 OrderByColumn 时保留 created_at DESC 默认
+	query = base.ApplySort(query, req.BaseListRequest, dutyPoolAllowedSortFields)
+	if req.OrderByColumn == "" {
+		query = query.Order("created_at DESC")
+	}
 	if err := query.Preload("Members.User").Preload("Dept").
-		Order("created_at DESC").
 		Offset(offset).Limit(req.PageSize).
 		Find(&pools).Error; err != nil {
 		return nil, 0, fmt.Errorf("查询值班池列表失败: %w", err)

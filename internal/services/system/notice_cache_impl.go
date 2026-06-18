@@ -151,7 +151,7 @@ func (s *noticeCacheService) GetNoticeByID(ctx context.Context, id string) (*mod
 
 // List 查询通知列表（不缓存，参数多变）
 func (s *noticeCacheService) List(ctx context.Context, params requests.NoticeListParams) (*PageResult, error) {
-	list, total, err := s.base.GetNoticeList(ctx, params.Current, params.PageSize, params.NoticeTitle, params.NoticeType)
+	list, total, err := s.base.GetNoticeList(ctx, params.Current, params.PageSize, params.NoticeTitle, params.NoticeType, params.OrderByColumn, params.IsAsc)
 	if err != nil {
 		return nil, err
 	}

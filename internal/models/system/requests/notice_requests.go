@@ -5,22 +5,24 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 )
 
 // NoticeListParams 通知公告列表查询参数
 type NoticeListParams struct {
+	base.BaseListRequest
 	NoticeTitle *string `json:"noticeTitle"`
 	NoticeType  *string `json:"noticeType"`
 	CreateTime  *string `json:"createTime"`
-	Current     int     `json:"current"`
-	PageSize    int     `json:"pageSize"`
 }
 
 // DefaultNoticeListParams 默认列表参数
 func DefaultNoticeListParams() NoticeListParams {
 	return NoticeListParams{
-		Current:  constants.DefaultCurrent,
-		PageSize: constants.DefaultPageSize,
+		BaseListRequest: base.BaseListRequest{
+			Current:  constants.DefaultCurrent,
+			PageSize: constants.DefaultPageSize,
+		},
 	}
 }
 

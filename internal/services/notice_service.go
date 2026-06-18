@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -100,8 +101,18 @@ func (s *NoticeService) CreateNoticeWithTargets(ctx context.Context, req *Create
 	return notice, nil
 }
 
+// noticeAllowedSortFields 通知列表可排序字段白名单（对应 sys_notice 表列名）。
+var noticeAllowedSortFields = map[string]string{
+	"noticeTitle": "notice_title",
+	"noticeType":  "notice_type",
+	"priority":    "priority",
+	"createdAt":   "created_at",
+	"publishTime": "publish_time",
+}
+
 // GetNoticeList 获取通知列表（管理端）
-func (s *NoticeService) GetNoticeList(ctx context.Context, page, pageSize int, title, noticeType *string) ([]models.Notice, int64, error) {
+// orderByColumn/isAsc 为服务端排序参数（可选，透传给 base.ApplySort 白名单）。
+func (s *NoticeService) GetNoticeList(ctx context.Context, page, pageSize int, title, noticeType *string, orderByColumn string, isAsc *bool) ([]models.Notice, int64, error) {
 	var notices []models.Notice
 	var total int64
 
@@ -120,9 +131,19 @@ func (s *NoticeService) GetNoticeList(ctx context.Context, page, pageSize int, t
 		return nil, 0, fmt.Errorf("统计通知数量失败: %w", err)
 	}
 
-	// 分页查询（按优先级和创建时间排序）
+	// 分页查询：用户排序（白名单）优先，无 OrderByColumn 时保留 priority DESC, created_at DESC 默认
 	offset := (page - 1) * pageSize
-	if err := query.Preload("Channels").Order("priority DESC, created_at DESC").Offset(offset).Limit(pageSize).Find(&notices).Error; err != nil {
+	sortReq := base.BaseListRequest{
+		Current:       page,
+		PageSize:      pageSize,
+		OrderByColumn: orderByColumn,
+		IsAsc:         isAsc,
+	}
+	query = base.ApplySort(query, sortReq, noticeAllowedSortFields)
+	if orderByColumn == "" {
+		query = query.Order("priority DESC, created_at DESC")
+	}
+	if err := query.Preload("Channels").Offset(offset).Limit(pageSize).Find(&notices).Error; err != nil {
 		return nil, 0, fmt.Errorf("查询通知列表失败: %w", err)
 	}
 

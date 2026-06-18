@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -34,11 +35,10 @@ func NewDutyService(db *gorm.DB) *DutyService {
 
 // DutyPoolListRequest 值班池列表请求
 type DutyPoolListRequest struct {
+	base.BaseListRequest
 	PoolName *string `json:"poolName,omitempty"`
 	DeptID   *string `json:"deptId,omitempty"`
 	Status   *int    `json:"status,omitempty"`
-	Current  int     `json:"current"`
-	PageSize int     `json:"pageSize"`
 }
 
 // DutyPoolCreateRequest 创建值班池请求
@@ -63,6 +63,7 @@ type DutyPoolUpdateRequest struct {
 
 // DutyScheduleListRequest 排班列表请求
 type DutyScheduleListRequest struct {
+	base.BaseListRequest
 	PoolID    *string `json:"poolId,omitempty"`
 	UserID    *string `json:"userId,omitempty"`
 	StartDate *string `json:"startDate,omitempty"` // YYYY-MM-DD
@@ -70,8 +71,6 @@ type DutyScheduleListRequest struct {
 	DutyType  *string `json:"dutyType,omitempty"`
 	Status    *int    `json:"status,omitempty"`
 	Expired   *int    `json:"expired,omitempty"` // 过期状态：0=未过期，1=已过期，不传=全部
-	Current   int     `json:"current"`
-	PageSize  int     `json:"pageSize"`
 }
 
 // GenerateScheduleRequest 生成排班请求

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useRef, type FC, type Key } from "react";
+﻿import { useState, useEffect, useCallback, useRef, useMemo, type FC, type Key } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
@@ -19,7 +19,7 @@ import { useTableManager } from "@/hooks/useTableManager";
 import { usePagination } from "@/hooks/usePagination";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
 import { isFormValidationError } from "@/utils/errorHandler";
-import { createStatusColumn, createDateTimeColumn } from "@/utils/tableHelpers";
+import { createStatusColumn, createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
 import { fetchBuildingStatistics } from "@/utils/statisticsHelper";
 import ActionButtons from "@/components/shared/ActionButtons";
 import ExcelImport from "@/components/shared/ExcelImport";
@@ -56,12 +56,25 @@ const BuildingManagement: FC = () => {
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
+  // 服务端排序:field 对应后端 buildingAllowedSortFields 白名单 key
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<Building>("name"),
+      createSorterMeta<Building>("status"),
+      createSorterMeta<Building>("orderNum"),
+      createSorterMeta<Building>("createdAt", "date"),
+    ],
+    []
+  );
+
   const {
     loading, data: buildings, total, selectedRowKeys,
     searchForm, editForm: buildingForm, editModalVisible: modalVisible,
     editingItem: editingBuilding, setSelectedRowKeys, setEditModalVisible: setModalVisible,
     setEditingItem: setEditingBuilding, handleSearch: _tableHandleSearch,
     handleReset: _handleReset, handleAdd, handleEdit, handleModalClose, loadData: loadBuildings, resetSelection,
+    getColumnSortOrder,
+    handleTableChange,
   } = useTableManager<Building>(
     async (params) => {
       const result = await buildingApi.list(params) as { data?: { list: Building[]; total: number } };
@@ -75,6 +88,7 @@ const BuildingManagement: FC = () => {
         setPageSize,
         setTotal,
       },
+      sorterMetas,
     }
   );
 
@@ -280,7 +294,7 @@ const BuildingManagement: FC = () => {
   };
 
   const columns: ColumnsType<Building> = [
-    { title: "楼宇名称", dataIndex: "name", key: "name", width: 150 },
+    { title: "楼宇名称", dataIndex: "name", key: "name", width: 150, sorter: true, sortOrder: getColumnSortOrder("name") },
     { title: "所属机构", dataIndex: "orgId", key: "orgName", width: 150, render: departmentData.getOrgName },
     {
       title: "层级",
@@ -306,9 +320,9 @@ const BuildingManagement: FC = () => {
       },
     },
     { title: "楼层数", dataIndex: "totalFloors", key: "totalFloors", width: 100, render: (v) => v || 0 },
-    createStatusColumn("status", { width: 100 }),
+    createStatusColumn("status", { width: 100, sorter: true, sortOrder: getColumnSortOrder("status") }),
     { title: "描述", dataIndex: "remark", key: "remark", ellipsis: true },
-    createDateTimeColumn("createdAt", { width: 180, title: "创建时间" }),
+    createDateTimeColumn("createdAt", { width: 180, title: "创建时间", sorter: true, sortOrder: getColumnSortOrder("createdAt") }),
     createDateTimeColumn("updatedAt", { width: 180, title: "更新时间" }),
     {
       title: "操作", key: "action",
@@ -443,24 +457,7 @@ const BuildingManagement: FC = () => {
             loading={loading}
             rowKey="id"
             pagination={paginationProps}
-            onChange={(pagination) => {
-              const newPage = pagination.current || 1;
-              const newPageSize = pagination.pageSize || 10;
-              setCurrent(newPage);
-              setPageSize(newPageSize);
-              const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
-              const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
-              if (selectedDeptId) {
-                searchParams.orgId = selectedDeptId;
-              }
-              Object.keys(formValues).forEach(key => {
-                const value = formValues[key];
-                if (value !== undefined && value !== null && value !== "") {
-                  searchParams[key] = value;
-                }
-              });
-              loadBuildings(searchParams);
-            }}
+            onChange={handleTableChange}
           />
         ) : renderCardView()}
       </Card>

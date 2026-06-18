@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/rpa"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
 )
@@ -42,6 +43,13 @@ func (s *AuditService) RecordOperation(ctx context.Context, req *AuditRequest) e
 	return nil
 }
 
+// auditLogAllowedSortFields VDI 审计日志可排序字段白名单（对应 rpa_audit_log 表列名）。
+var auditLogAllowedSortFields = map[string]string{
+	"action":    "action",
+	"result":    "result",
+	"createdAt": "created_at",
+}
+
 // QueryLogs 查询审计日志
 func (s *AuditService) QueryLogs(ctx context.Context, req *AuditQueryRequest) ([]*rpa.AuditLog, int64, error) {
 	var logs []*rpa.AuditLog
@@ -73,10 +81,19 @@ func (s *AuditService) QueryLogs(ctx context.Context, req *AuditQueryRequest) ([
 		return nil, 0, errors.DatabaseError(err)
 	}
 
-	// 分页查询
+	// 分页查询：用户排序（白名单）优先，无 OrderByColumn 时保留 created_at DESC 默认
 	offset := (req.Page - 1) * req.PageSize
-	if err := query.Order("created_at DESC").
-		Offset(offset).
+	sortReq := base.BaseListRequest{
+		Current:       req.Page,
+		PageSize:      req.PageSize,
+		OrderByColumn: req.OrderByColumn,
+		IsAsc:         req.IsAsc,
+	}
+	query = base.ApplySort(query, sortReq, auditLogAllowedSortFields)
+	if req.OrderByColumn == "" {
+		query = query.Order("created_at DESC")
+	}
+	if err := query.Offset(offset).
 		Limit(req.PageSize).
 		Find(&logs).Error; err != nil {
 		return nil, 0, errors.DatabaseError(err)
@@ -153,12 +170,14 @@ type AuditRequest struct {
 
 // AuditQueryRequest 审计日志查询请求
 type AuditQueryRequest struct {
-	VMID      string    // 虚拟机 ID
-	Operation string    // 操作类型
-	StartTime time.Time // 开始时间
-	EndTime   time.Time // 结束时间
-	Page      int       // 页码
-	PageSize  int       // 每页大小
+	VMID          string    // 虚拟机 ID
+	Operation     string    // 操作类型
+	StartTime     time.Time // 开始时间
+	EndTime       time.Time // 结束时间
+	Page          int       // 页码
+	PageSize      int       // 每页大小
+	OrderByColumn string    // 排序字段（白名单）
+	IsAsc         *bool     // 升降序
 }
 
 // VMOpsSummary 虚拟机操作摘要

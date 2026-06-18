@@ -10,17 +10,19 @@ import type { WorkstationOps } from "@/types";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { renderWorkstationTypeTag, renderWorkstationStatusTag } from "./constants";
 import { createDateTimeColumn } from "@/utils/tableHelpers";
+import type { SortOrder } from "@/hooks/useServerSort";
 
 export interface WorkstationColumnsParams {
   handleEdit: (record: WorkstationOps) => void;
   handleDelete: (id: string) => void;
+  getColumnSortOrder: (field: string) => SortOrder | undefined;
 }
 
 export function getWorkstationColumns(params: WorkstationColumnsParams): ColumnsType<WorkstationOps> {
-  const { handleEdit, handleDelete } = params;
+  const { handleEdit, handleDelete, getColumnSortOrder } = params;
 
   return [
-    { title: "工位名称", dataIndex: "name", key: "name", width: 150 },
+    { title: "工位名称", dataIndex: "name", key: "name", width: 150, sorter: true, sortOrder: getColumnSortOrder("name") },
     {
       title: "所属楼宇",
       dataIndex: "buildingName",
@@ -58,6 +60,8 @@ export function getWorkstationColumns(params: WorkstationColumnsParams): Columns
       dataIndex: "type",
       key: "type",
       width: 100,
+      sorter: true,
+      sortOrder: getColumnSortOrder("type"),
       render: (type) => renderWorkstationTypeTag(type),
     },
     // 工位状态为 3 态枚举（0=空闲, 1=占用, 2=维护），不能使用 createStatusColumn（该 helper 硬编码 0=正常/非0=停用的 2 态语义）。
@@ -67,10 +71,12 @@ export function getWorkstationColumns(params: WorkstationColumnsParams): Columns
       dataIndex: "status",
       key: "status",
       width: 100,
+      sorter: true,
+      sortOrder: getColumnSortOrder("status"),
       render: (status: number) => renderWorkstationStatusTag(status),
     },
     { title: "描述", dataIndex: "description", key: "description", ellipsis: true },
-    createDateTimeColumn("createdAt", { width: 180 }),
+    createDateTimeColumn("createdAt", { width: 180, sorter: true, sortOrder: getColumnSortOrder("createdAt") }),
     {
       title: "操作",
       key: "action",

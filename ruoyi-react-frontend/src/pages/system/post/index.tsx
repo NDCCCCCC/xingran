@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback, useMemo } from "react";
 import type { FC } from "react";
 import {
   Table,
@@ -30,7 +30,7 @@ import { post } from "@/lib/api";
 import { useTableManager } from "@/hooks/useTableManager";
 import { usePagination } from "@/hooks/usePagination";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
-import { createStatusColumn, createDateTimeColumn } from "@/utils/tableHelpers";
+import { createStatusColumn, createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { BaseEditModal } from "@/components/modal/BaseEditModal";
 
@@ -46,6 +46,18 @@ const PostManagement: FC = () => {
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
+  // 服务端排序:field 对应后端 postAllowedSortFields 白名单 key
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<Post>("postCode"),
+      createSorterMeta<Post>("postName"),
+      createSorterMeta<Post>("postSort"),
+      createSorterMeta<Post>("status"),
+      createSorterMeta<Post>("createdAt", "date"),
+    ],
+    []
+  );
 
   const {
     loading,
@@ -66,6 +78,8 @@ const PostManagement: FC = () => {
     handleModalClose,
     loadData: loadPosts,
     resetSelection,
+    getColumnSortOrder,
+    handleTableChange,
   } = useTableManager<Post>(
     async (params) => {
       const result = await post("/system/posts/list", params) as { data: { list: Post[]; total: number } };
@@ -79,6 +93,7 @@ const PostManagement: FC = () => {
         setPageSize,
         setTotal,
       },
+      sorterMetas,
     }
   );
 
@@ -168,12 +183,12 @@ const PostManagement: FC = () => {
 
   // 表格列定义
   const columns: ColumnsType<Post> = [
-    { title: "岗位编码", dataIndex: "postCode", key: "postCode", width: 150 },
-    { title: "岗位名称", dataIndex: "postName", key: "postName", width: 150 },
-    { title: "显示排序", dataIndex: "postSort", key: "postSort", width: 100 },
-    createStatusColumn("status", { width: 100 }),
+    { title: "岗位编码", dataIndex: "postCode", key: "postCode", width: 150, sorter: true, sortOrder: getColumnSortOrder("postCode") },
+    { title: "岗位名称", dataIndex: "postName", key: "postName", width: 150, sorter: true, sortOrder: getColumnSortOrder("postName") },
+    { title: "显示排序", dataIndex: "postSort", key: "postSort", width: 100, sorter: true, sortOrder: getColumnSortOrder("postSort") },
+    createStatusColumn("status", { width: 100, sorter: true, sortOrder: getColumnSortOrder("status") }),
     { title: "备注", dataIndex: "remark", key: "remark", ellipsis: true },
-    createDateTimeColumn("createdAt", { width: 180 }),
+    createDateTimeColumn("createdAt", { width: 180, sorter: true, sortOrder: getColumnSortOrder("createdAt") }),
     {
       title: "操作",
       key: "action",
@@ -323,13 +338,7 @@ const PostManagement: FC = () => {
           loading={loading}
           rowKey="id"
           pagination={paginationProps}
-          onChange={(pagination) => {
-            const newPage = pagination.current ?? 1;
-            const newPageSize = pagination.pageSize ?? 10;
-            setCurrent(newPage);
-            setPageSize(newPageSize);
-            loadPosts();
-          }}
+          onChange={handleTableChange}
         />
       </Card>
 

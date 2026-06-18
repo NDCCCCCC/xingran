@@ -49,9 +49,10 @@ func (s *roleCacheService) List(ctx context.Context, params requests.RoleListPar
 }
 
 // buildListCacheKey 构建列表查询的缓存键
+// 注意:必须包含所有影响结果的参数(筛选/排序/分页),否则不同请求会
+// 命中同一缓存返回错误数据(历史上遗漏了 BaseListRequest 排序参数)。
 func (s *roleCacheService) buildListCacheKey(params requests.RoleListParams) string {
-	// 使用基础缓存键 + 参数构建唯一键
-	// 格式：cache:role:list:roleName:roleKey:status:current:pageSize
+	// 格式:cache:role:list:<roleName>:<roleKey>:<status>:<orderBy>:<isAsc>:page:<cur>:size:<size>
 	baseKey := CacheKeyRoleAll
 	var keyPart string
 
@@ -65,7 +66,15 @@ func (s *roleCacheService) buildListCacheKey(params requests.RoleListParams) str
 		keyPart += ":status:" + params.Status
 	}
 
-	// 添加分页参数
+	// 排序参数(必须入 key,否则不同排序命中同一缓存)
+	keyPart += ":orderBy:" + params.BaseListRequest.OrderByColumn
+	if params.BaseListRequest.IsAsc != nil {
+		keyPart += ":isAsc:" + fmt.Sprintf("%v", *params.BaseListRequest.IsAsc)
+	} else {
+		keyPart += ":isAsc:default"
+	}
+
+	// 分页
 	keyPart += fmt.Sprintf(":page:%d:size:%d", params.Current, params.PageSize)
 
 	return baseKey + keyPart

@@ -37,12 +37,14 @@ type UpdateVMRequest struct {
 
 // ListVMRequest 虚拟机列表请求
 type ListVMRequest struct {
-	Page        int    `json:"page" validate:"min=1"`
-	PageSize    int    `json:"pageSize" validate:"min=1,max=100"`
-	Name        string `json:"name"`
-	VdiServerID string `json:"vdi_server_id"`
-	ResourceID  string `json:"resource_id"`
-	PowerState  string `json:"power_state"`
+	Page          int    `json:"page" validate:"min=1"`
+	PageSize      int    `json:"pageSize" validate:"min=1,max=100"`
+	Name          string `json:"name"`
+	VdiServerID   string `json:"vdi_server_id"`
+	ResourceID    string `json:"resource_id"`
+	PowerState    string `json:"power_state"`
+	OrderByColumn string `json:"orderByColumn,omitempty"`
+	IsAsc         *bool  `json:"isAsc,omitempty"`
 }
 
 // VDIVMDTO 虚拟机数据传输对象

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -143,6 +144,13 @@ func isWeekend(date time.Time) bool {
 	return weekday == time.Saturday || weekday == time.Sunday
 }
 
+// dutyScheduleAllowedSortFields 排班列表可排序字段白名单（对应 sys_duty_schedule 表列名）。
+var dutyScheduleAllowedSortFields = map[string]string{
+	"scheduleDate": "schedule_date",
+	"dutyType":     "duty_type",
+	"status":       "status",
+}
+
 // GetDutyScheduleList 获取排班列表
 func (s *DutyScheduleService) GetDutyScheduleList(ctx context.Context, req *DutyScheduleListRequest) ([]models.DutySchedule, int64, error) {
 	var schedules []models.DutySchedule
@@ -199,8 +207,12 @@ func (s *DutyScheduleService) GetDutyScheduleList(ctx context.Context, req *Duty
 	}
 
 	offset := (req.Current - 1) * req.PageSize
+	// 用户排序（白名单）优先，无 OrderByColumn 时保留 schedule_date ASC 默认
+	query = base.ApplySort(query, req.BaseListRequest, dutyScheduleAllowedSortFields)
+	if req.OrderByColumn == "" {
+		query = query.Order("schedule_date ASC")
+	}
 	if err := query.Preload("Pool").Preload("User").
-		Order("schedule_date ASC").
 		Offset(offset).Limit(req.PageSize).
 		Find(&schedules).Error; err != nil {
 		return nil, 0, fmt.Errorf("查询排班列表失败: %w", err)

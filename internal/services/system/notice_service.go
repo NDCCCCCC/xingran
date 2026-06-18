@@ -100,6 +100,8 @@ func (s *noticeService) List(ctx context.Context, params requests.NoticeListPara
 		params.PageSize,
 		params.NoticeTitle,
 		params.NoticeType,
+		params.OrderByColumn,
+		params.IsAsc,
 	)
 	if err != nil {
 		return nil, err
