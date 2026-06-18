@@ -11,13 +11,18 @@ import (
 // promoted field 保证 p.Current / p.PageSize 访问仍能 work,GetPagination/GetOffset 方法无需改动。
 type UserListParams struct {
 	base.BaseListRequest
-	Username  *string `json:"username"`
-	Nickname  *string `json:"nickname"`
-	Phone     *string `json:"phone"`
-	Status    *int    `json:"status"`
-	DeptID    *string `json:"deptId"`
-	BeginTime *string `json:"beginTime"`
-	EndTime   *string `json:"endTime"`
+	Username        *string `json:"username"`
+	Nickname        *string `json:"nickname"`
+	Phone           *string `json:"phone"`
+	Status          *int    `json:"status"`
+	DeptID          *string `json:"deptId"`
+	// RecursiveDeptID 非空时,把查询扩展为该部门及所有子部门的用户。
+	// 与 DeptID 并列存在:DeptID 保持单部门等值语义,RecursiveDeptID 用于
+	// 工位管理"所属部门"下拉需要"当前部门+子部门"递归查询的场景。
+	// 复用 sys_dept.ancestors 的 4-条件模式(参见 building_service.go applyDeptFilter)。
+	RecursiveDeptID *string `json:"recursiveDeptId"`
+	BeginTime       *string `json:"beginTime"`
+	EndTime         *string `json:"endTime"`
 }
 
 // DefaultUserListParams 默认列表参数

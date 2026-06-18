@@ -326,6 +326,30 @@ func (s *userService) List(ctx context.Context, params requests.UserListParams) 
 	if params.DeptID != nil && *params.DeptID != "" {
 		query = query.Where("dept_id = ?", *params.DeptID)
 	}
+	if params.RecursiveDeptID != nil && *params.RecursiveDeptID != "" {
+		// 递归查询该部门及所有子部门下的用户。
+		// sys_dept.ancestors 格式为 "a,b,c"(无首尾逗号,不含自身),descendant 的 ancestors
+		// 包含自身到根的完整祖先链(由 department_service.buildAncestors 维护)。
+		// 匹配 5 种情形:
+		//   1. id = rid                                  — 部门自身
+		//   2. ancestors = rid                           — 直接子部门(rid 是其唯一祖先)
+		//   3. ancestors LIKE 'rid,%'                    — 深层 descendant,rid 是其链首
+		//   4. ancestors LIKE '%,rid,%'                  — 深层 descendant,rid 在链中
+		//   5. ancestors LIKE '%,rid'                    — 深层 descendant,rid 在链尾
+		// 项目中其他 service(building/asset/infopoint/server_room)使用的是 4 条件变体,
+		// 漏了第 3 种情形,只对 2 层部门(A→B)正确,3 层及以上(A→B→C)会漏掉深层 descendant。
+		// 这里新写一个 5 条件变体以正确处理工位运维中常见的深层组织树。
+		rid := *params.RecursiveDeptID
+		query = query.Where(
+			"dept_id IN (?)",
+			s.db.WithContext(ctx).Model(&models.Department{}).
+				Select("id").
+				Where(
+					"id = ? OR ancestors = ? OR ancestors LIKE ? OR ancestors LIKE ? OR ancestors LIKE ?",
+					rid, rid, rid+",%", "%,"+rid+",%", "%,"+rid,
+				),
+		)
+	}
 	if params.BeginTime != nil && *params.BeginTime != "" {
 		if beginTime, err := time.Parse("2006-01-02 15:04:05", *params.BeginTime); err == nil {
 			query = query.Where("created_at >= ?", beginTime)
@@ -353,9 +377,16 @@ func (s *userService) List(ctx context.Context, params requests.UserListParams) 
 	userJoinSelect := "sys_user.*, sys_dept.dept_name, sys_dept.ancestors"
 	userJoinClause := "LEFT JOIN sys_dept ON sys_dept.id = sys_user.dept_id"
 
-	// 先应用 Select + Joins(决定可见列),再应用用户排序(白名单过滤),最后分页 Find
-	query = query.Select(userJoinSelect).Joins(userJoinClause)
+	// 修复 GORM v1 链式调用顺序:ApplySort(.Order) 必须在 Select/Joins 之前调用,
+	// 否则 GORM 在 Select/Joins 改变 statement state 时会丢弃 OrderBuilds,
+	// 导致最终 SQL 没有 ORDER BY(这是 user 排序无效的根因之一)。
+	// role list 无 Joins 所以未触发;user list 有 LEFT JOIN sys_dept 所以 username/nickname/email/phone 都失效。
+	// 另一个根因:user_cache_impl/role_cache_impl 的 buildListCacheKey 之前遗漏了
+	// orderByColumn/isAsc 等 BaseListRequest 字段,导致不同排序请求命中同一缓存。
 	query = base.ApplySort(query, params.BaseListRequest, userAllowedSortFields)
+
+	// 再应用 Select + Joins(决定可见列)
+	query = query.Select(userJoinSelect).Joins(userJoinClause)
 
 	if err := query.Offset(offset).Limit(params.PageSize).Find(&list).Error; err != nil {
 		return nil, apperrors.DatabaseError(err)

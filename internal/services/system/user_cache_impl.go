@@ -199,23 +199,50 @@ func (s *userCacheService) List(ctx context.Context, params requests.UserListPar
 }
 
 // buildListCacheKey 构建列表查询的缓存键
+// 注意：必须包含所有影响查询结果的参数(筛选/排序/分页),否则不同请求会
+// 命中同一缓存返回错误数据(历史上遗漏了 BaseListRequest 排序参数导致
+// 排序完全无效)。这里统一用 fmt.Sprintf 把整个 params 序列化进 key。
 func (s *userCacheService) buildListCacheKey(params requests.UserListParams) string {
-	// 使用基础缓存键 + 参数构建唯一键
-	// 格式：user:list:username:status:deptId:current:pageSize
+	// 格式:user:list:<username>:<status>:<dept>:<nickname>:<phone>:<begin>:<end>:<orderBy>:<isAsc>:page:<cur>:size:<size>
 	baseKey := CacheKeyUserList
 	var keyPart string
 
 	if params.Username != nil && *params.Username != "" {
 		keyPart += ":username:" + *params.Username
 	}
-	if params.Status != nil && *params.Status != 0 {
+	if params.Nickname != nil && *params.Nickname != "" {
+		keyPart += ":nickname:" + *params.Nickname
+	}
+	if params.Phone != nil && *params.Phone != "" {
+		keyPart += ":phone:" + *params.Phone
+	}
+	if params.Status != nil {
 		keyPart += ":status:" + fmt.Sprintf("%d", *params.Status)
 	}
 	if params.DeptID != nil && *params.DeptID != "" {
 		keyPart += ":dept:" + *params.DeptID
 	}
+	if params.RecursiveDeptID != nil && *params.RecursiveDeptID != "" {
+		// 与 DeptID 必须分别入 key:同一 deptId 用单值语义和递归语义命中的
+		// 数据集不同(递归 = 部门+所有子部门的并集),否则会读到错误缓存。
+		keyPart += ":recursiveDept:" + *params.RecursiveDeptID
+	}
+	if params.BeginTime != nil && *params.BeginTime != "" {
+		keyPart += ":begin:" + *params.BeginTime
+	}
+	if params.EndTime != nil && *params.EndTime != "" {
+		keyPart += ":end:" + *params.EndTime
+	}
 
-	// 添加分页参数
+	// 排序参数(关键:orderByColumn + isAsc 必须入 key,否则不同排序命中同一缓存)
+	keyPart += ":orderBy:" + params.BaseListRequest.OrderByColumn
+	if params.BaseListRequest.IsAsc != nil {
+		keyPart += ":isAsc:" + fmt.Sprintf("%v", *params.BaseListRequest.IsAsc)
+	} else {
+		keyPart += ":isAsc:default"
+	}
+
+	// 分页
 	keyPart += fmt.Sprintf(":page:%d:size:%d", params.Current, params.PageSize)
 
 	return baseKey + keyPart
