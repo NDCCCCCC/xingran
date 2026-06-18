@@ -35,5 +35,11 @@ export interface DeptTreeNode {
   title: string;
   value: string;
   key: string;
+  /**
+   * 是否为外部机构(0/1)。来源是 sys_dept.is_external_org。
+   * 必须在 useWorkstationData.buildTreeData 中透传,否则 filterExternalOrgDepts
+   * 会拿到 undefined 而误判,导致 orgTreeData 为空。
+   */
+  isExternalOrg?: number;
   children?: DeptTreeNode[];
 }

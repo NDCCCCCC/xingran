@@ -1,21 +1,30 @@
 /**
  * Workstation Edit Modal
  * 工位编辑模态框
+ *
+ * 级联下拉逻辑(Phase: 外部机构化):
+ * - 所属机构 → 仅外部机构(orgTreeData 派生自 deptTreeData + filterExternalOrgDepts)
+ * - 所属部门 → 选中机构下的全后代部门(从 deptTreeData 找 orgId 节点的子树)
+ * - 所属用户 → 当前部门 + 子部门的用户(loadUserOptions 用 recursiveDeptId 触发后端递归)
+ *
+ * 级联清空:
+ * - 改机构 → 清空 floorId/deptId/userId
+ * - 改部门 → 清空 userId
  */
 
-import { useLayoutEffect } from "react";
-import { Form, Input, InputNumber, Select, Row, Col, Cascader } from "antd";
+import { useLayoutEffect, useMemo } from "react";
+import { Form, Input, InputNumber, Select, Row, Col, Cascader, TreeSelect } from "antd";
 import type { FormInstance } from "antd";
 import type { WorkstationOps } from "@/types";
 import type { DeptTreeNode, UserOption } from "../types";
-import { DepartmentTreeSelect } from "@/components/shared";
+import { findDeptNode, trimTitleToLastSegment } from "@/utils/deptUtils";
 import { STATUS_OPTIONS, TYPE_OPTIONS } from "../constants";
 import { BaseEditModal } from "@/components/modal/BaseEditModal";
 
 const { Option } = Select;
 const { TextArea } = Input;
 
-// Cascader 选项类型
+// Cascader 选项类型(机构→楼宇→楼层)
 type CascaderOption = {
   value: string;
   label: string;
@@ -27,6 +36,9 @@ export interface WorkstationEditModalProps {
   open: boolean;
   form: FormInstance;
   editingWorkstation: WorkstationOps | null;
+  /** 仅外部机构(isExternalOrg===1)的部门树,用于"所属机构"下拉 */
+  orgTreeData: DeptTreeNode[];
+  /** 全量部门树(原始,含 isExternalOrg 信息),用于在选中机构下取子树展示"所属部门" */
   deptTreeData: DeptTreeNode[];
   userOptions: UserOption[];
   cascaderOptions: CascaderOption[];
@@ -42,6 +54,7 @@ export function WorkstationEditModal({
   open,
   form,
   editingWorkstation,
+  orgTreeData,
   deptTreeData,
   userOptions,
   cascaderOptions,
@@ -59,6 +72,24 @@ export function WorkstationEditModal({
       form.setFieldsValue({ status: 0, type: 0 });
     }
   }, [open, editingWorkstation, form]);
+
+  // 派生:在 deptTreeData 中按 orgId 找出节点,取其全后代子树作为"所属部门"的选项。
+  // 注意 deptTreeData 是 useWorkstationData 加载的全量部门树(顶层节点可能不是外部机构,
+  // 但其子孙可能挂在某个外部机构下),所以查找必须跨顶层边界。
+  // 使用 Form.useWatch 订阅 orgId 字段变化,避免手动监听 setFieldsValue 副作用。
+  //
+  // 标题收窄:subDeptTree 内的 title 由 useWorkstationData.buildTreeData 拼接为
+  // 完整路径(如 "中国太平洋财产保险股份有限公司/分公司本部/人力资源部")。
+  // 在"所属部门"下拉里这种全路径过于冗长,这里收窄为最后一段
+  // (即 "人力资源部"),但仍保留父子结构以便展开查看子部门。
+  // 不影响 orgTreeData(它仍展示全路径,有助于"所属机构"的辨识)。
+  const watchedOrgId = Form.useWatch("orgId", form) as string | undefined;
+  const subDeptTree = useMemo<DeptTreeNode[]>(() => {
+    if (!watchedOrgId) return [];
+    const node = findDeptNode(deptTreeData, watchedOrgId);
+    if (!node?.children?.length) return [];
+    return trimTitleToLastSegment(node.children);
+  }, [deptTreeData, watchedOrgId]);
 
   return (
     <BaseEditModal
@@ -78,13 +109,21 @@ export function WorkstationEditModal({
     >
       <Form form={form} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
         <Form.Item name="orgId" label="所属机构" rules={[{ required: true, message: "请选择所属机构" }]}>
-          <DepartmentTreeSelect
-            treeData={deptTreeData}
-            placeholder="请选择机构"
+          <TreeSelect
+            treeData={orgTreeData}
+            placeholder="请选择机构（仅外部机构）"
+            allowClear
+            showSearch
+            treeLine={{ showLeafIcon: false }}
+            treeDefaultExpandAll={false}
             onChange={(value) => {
-              // 当机构变化时，清空楼宇-楼层选择并重新加载楼宇
-              form.setFieldsValue({ floorId: undefined });
-              onOrgChange(value);
+              // 机构变化 → 清空楼层、部门、用户,触发父级重新加载楼宇
+              form.setFieldsValue({
+                floorId: undefined,
+                deptId: undefined,
+                userId: undefined,
+              });
+              onOrgChange(value as string);
             }}
           />
         </Form.Item>
@@ -113,14 +152,17 @@ export function WorkstationEditModal({
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="deptId" label="所属部门">
-              <DepartmentTreeSelect
-                treeData={deptTreeData}
-                placeholder="请选择部门"
-                onChange={() => {
-                  // 当部门变化时，清空用户选择并重新加载用户
+              <TreeSelect
+                treeData={subDeptTree}
+                placeholder={subDeptTree.length ? "请选择部门" : "请先选择机构"}
+                allowClear
+                showSearch
+                treeLine={{ showLeafIcon: false }}
+                disabled={subDeptTree.length === 0}
+                onChange={(value) => {
+                  // 部门变化 → 清空用户,触发父级按新部门加载用户
                   form.setFieldsValue({ userId: undefined });
-                  const deptId = form.getFieldValue("deptId");
-                  onDeptChange(deptId);
+                  onDeptChange((value as string) ?? "");
                 }}
               />
             </Form.Item>

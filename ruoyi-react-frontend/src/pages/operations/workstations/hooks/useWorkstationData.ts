@@ -73,29 +73,15 @@ export function useWorkstationData(
     }
   }, [setFloorOptions]);
 
-  // 递归筛选外部机构部门
-  const filterExternalOrgDepts = useCallback((nodes: DepartmentNode[]): DepartmentNode[] => {
-    return nodes.reduce<DepartmentNode[]>((acc, node) => {
-      const filteredChildren = node.children?.length
-        ? filterExternalOrgDepts(node.children)
-        : [];
-
-      if (node.isExternalOrg === 1 || filteredChildren.length > 0) {
-        acc.push({
-          ...node,
-          children: filteredChildren.length > 0 ? filteredChildren : undefined,
-        });
-      }
-
-      return acc;
-    }, []);
-  }, []);
-
   // 构建树形结构数据
   // 节点的 title 显示从第二级开始的完整路径（参考 DepartmentTreeSelect 中
   // convertDeptTreeData 的约定），例如 "集团总部/财务中心/财务部"。
   // 这样在编辑模态框的"所属部门"字段中回显时，能看到完整部门链，
   // 而非只显示最末级部门名。
+  //
+  // 重要:必须透传 isExternalOrg。如果遗漏,filterExternalOrgDepts 拿到的
+  // isExternalOrg 是 undefined,会把整棵树过滤成空,导致模态框"所属机构"
+  // 下拉无法回显(显示 UUID)。
   const buildTreeData = useCallback((depts: DepartmentNode[]): DeptTreeNode[] => {
     const build = (nodes: DepartmentNode[], ancestorNames: string[]): DeptTreeNode[] => {
       return nodes.map((node) => {
@@ -108,6 +94,8 @@ export function useWorkstationData(
           title,
           value: node.id,
           key: node.id,
+          // 透传:filterExternalOrgDepts 依赖此字段判断节点是否保留
+          isExternalOrg: node.isExternalOrg,
           children: node.children?.length ? build(node.children, [...ancestorNames, name]) : undefined,
         };
       });
@@ -120,7 +108,7 @@ export function useWorkstationData(
       const result = await post("/system/departments/tree", {}) as { data: DepartmentNode[] };
       const deptList = Array.isArray(result.data) ? result.data : [];
       // 加载所有部门（包括内部部门和外部机构），不进行过滤
-      // 工位的 orgId 可能指向任何部门
+      // 工位的 orgId 可能指向任何部门；外部机构过滤在页面 useMemo 派生 orgTreeData。
       setDeptTreeData(buildTreeData(deptList));
     } catch (error) {
       handleApiError(error, "加载部门选项", false);
@@ -129,7 +117,13 @@ export function useWorkstationData(
 
   const loadUserOptions = useCallback(async (deptId?: string) => {
     try {
-      const params = { current: 1, pageSize: 1000, ...(deptId && { deptId }) };
+      // 使用 recursiveDeptId 而非 deptId,后端会扩展为该部门+所有子部门的用户。
+      // 原 deptId 单值语义在工位模态框里不够用——用户通常需要看到整个部门树下的人。
+      const params = {
+        current: 1,
+        pageSize: 1000,
+        ...(deptId && { recursiveDeptId: deptId }),
+      };
       const result = await post("/system/users/list", params) as { data?: { list: Record<string, unknown>[] } };
       const users = result.data?.list || [];
       setUserOptions(

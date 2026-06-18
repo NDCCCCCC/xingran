@@ -5,6 +5,7 @@ import type { DataNode, EventDataNode } from "antd/es/tree";
 import { ApartmentOutlined, SearchOutlined } from "@ant-design/icons";
 import { post } from "@/lib/api";
 import type { Department } from "@/types";
+import { filterExternalOrgDepts } from "@/utils/deptUtils";
 
 interface DeptTreeProps {
   onSelect?: (selectedKeys: Key[], info: {
@@ -44,34 +45,6 @@ const DeptTree: FC<DeptTreeProps> = ({
     return parentKeys;
   };
 
-  const filterExternalOrgDepts = (data: Department[]): Department[] => {
-    if (!data || !Array.isArray(data)) {
-      return [];
-    }
-
-    const filterNodes = (nodes: Department[]): Department[] => {
-      return nodes.reduce<Department[]>((acc, node) => {
-        const filteredChildren = node.children && node.children.length > 0
-          ? filterNodes(node.children)
-          : [];
-
-        const isExternal = node.isExternalOrg === 1;
-        const hasExternalDescendants = filteredChildren.length > 0;
-
-        if (isExternal || hasExternalDescendants) {
-          acc.push({
-            ...node,
-            children: filteredChildren.length > 0 ? filteredChildren : undefined,
-          });
-        }
-
-        return acc;
-      }, []);
-    };
-
-    return filterNodes(data);
-  };
-
   const loadDeptTree = useCallback(async () => {
     setLoading(true);
     try {
@@ -79,7 +52,9 @@ const DeptTree: FC<DeptTreeProps> = ({
       let deptData = result.data || [];
 
       if (externalOnly) {
-        deptData = filterExternalOrgDepts(deptData);
+        // 收敛到 src/utils/deptUtils 的共享实现(原 DepartmentTreeSelect 与
+        // useWorkstationData 也有重复版本,现统一到 deptUtils.filterExternalOrgDepts)。
+        deptData = filterExternalOrgDepts(deptData as Department[]);
       }
 
       const treeData = transformToTreeData(deptData);

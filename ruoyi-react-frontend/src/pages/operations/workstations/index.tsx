@@ -28,6 +28,7 @@ import { ExcelImportLazy } from "@/components/shared";
 import ExcelExport from "@/components/shared/ExcelExport";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { StatisticsCards } from "@/components/operations/StatisticsCards";
+import { filterExternalOrgDepts, trimTitleToLastSegment } from "@/utils/deptUtils";
 import { handleSuccess as showSuccessMessage } from "@/utils/errorHandler";
 import { buildSearchParams } from "@/utils/buildSearchParams";
 import { useWorkstationData, useWorkstationModals, useWorkstationView } from "./hooks";
@@ -40,6 +41,7 @@ import type { FloorOption, UserOption, DeptTreeNode } from "./types";
 // ✅ 优化：直接导入具体 API，避免 barrel 文件 (bundle-barrel-imports)
 import { buildingApi, floorApi, workstationApi } from "@/lib/opsApi";
 import WorkstationDeviceTable from "@/components/operations/WorkstationDeviceTable";
+import { createSorterMeta } from "@/utils/tableHelpers";
 
 // Cascader 选项类型
 type CascaderOption = {
@@ -74,6 +76,19 @@ const WorkstationManagement: FC = () => {
   const [deptTreeData, setDeptTreeData] = useState<DeptTreeNode[]>([]);
   const [userOptions, setUserOptions] = useState<UserOption[]>([]);
 
+  // 派生:仅外部机构(isExternalOrg===1 的节点)的部门树。
+  // 模态框"所属机构"与左侧 DeptSidebar(默认 externalOnly=true)共用同一份外部机构视图。
+  // 全量部门树仍保留为 deptTreeData,以便"所属部门"下拉能在选中机构下
+  // 取该机构节点的全后代子树(deptTreeData 是含 isExternalOrg 信息的原始树)。
+  //
+  // 标题收窄:useWorkstationData.buildTreeData 把 title 拼成全路径
+  // (如 "中国太平洋财产保险股份有限公司/分公司本部")。在"所属机构"下拉里
+  // 这种全路径同样冗长(尤其"分公司本部"只占末段),这里收窄为最后一段。
+  const orgTreeData = useMemo(
+    () => trimTitleToLastSegment(filterExternalOrgDepts<DeptTreeNode>(deptTreeData)),
+    [deptTreeData]
+  );
+
   // Cascader 懒加载状态
   const [cascaderOptions, setCascaderOptions] = useState<CascaderOption[]>([]);
   const [loadingCascader, setLoadingCascader] = useState(false);
@@ -86,6 +101,18 @@ const WorkstationManagement: FC = () => {
     searchForm: undefined,
     clearFieldNames: ["floorId"],
   });
+
+  // 服务端排序:field 对应后端 workstationAllowedSortFields 白名单 key
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<WorkstationOps>("workstationName"),
+      createSorterMeta<WorkstationOps>("workstationNo"),
+      createSorterMeta<WorkstationOps>("workstationType"),
+      createSorterMeta<WorkstationOps>("status"),
+      createSorterMeta<WorkstationOps>("createdAt", "date"),
+    ],
+    []
+  );
 
   const {
     loading,
@@ -104,6 +131,8 @@ const WorkstationManagement: FC = () => {
     handleEdit,
     loadData: loadWorkstations,
     resetSelection,
+    getColumnSortOrder,
+    handleTableChange,
   } = useTableManager<WorkstationOps>(
     // ✅ 优化：移除动态导入，直接使用顶层导入的 API (bundle-dynamic-imports)
     async (params) => {
@@ -121,6 +150,7 @@ const WorkstationManagement: FC = () => {
         setPageSize,
         setTotal,
       },
+      sorterMetas,
     }
   );
 
@@ -236,7 +266,8 @@ const WorkstationManagement: FC = () => {
   const columns = useMemo(() => getWorkstationColumns({
     handleEdit: (r) => handleEditRef.current(r),
     handleDelete: (id) => handleDeleteRef.current(id),
-  }), []);
+    getColumnSortOrder,
+  }), [getColumnSortOrder]);
 
   const handleDeptChange = (deptId: string) => {
     loadUserOptions(deptId);
@@ -488,16 +519,7 @@ const WorkstationManagement: FC = () => {
             // 不再自定义 expandIcon — 使用 Ant Design 默认的三角形展开图标
             // 此前自定义的"查看设备/收起设备"按钮与默认三角图标并存，造成重复 UI
           }}
-          onChange={(pagination) => {
-            const newPage = pagination.current || 1;
-            const newPageSize = pagination.pageSize || 10;
-            setCurrent(newPage);
-            setPageSize(newPageSize);
-            loadWorkstations(buildSearchParams({
-              searchForm,
-              page: { current: newPage, pageSize: newPageSize },
-            }));
-          }}
+          onChange={handleTableChange}
         />
       );
     }
@@ -533,7 +555,7 @@ const WorkstationManagement: FC = () => {
 
   return (
     <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
-      <DeptSidebar selectedDeptId={selectedDeptId} onSelect={handleDeptSelect} externalOnly={false} />
+      <DeptSidebar selectedDeptId={selectedDeptId} onSelect={handleDeptSelect} />
       <Content style={{ background: "#fff" }}>
         <StatisticsCards
           show={total > 10}
@@ -669,6 +691,7 @@ const WorkstationManagement: FC = () => {
           open={modalVisible}
           form={workstationForm}
           editingWorkstation={editingWorkstation}
+          orgTreeData={orgTreeData}
           deptTreeData={deptTreeData}
           userOptions={userOptions}
           cascaderOptions={cascaderOptions}
