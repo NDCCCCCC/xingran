@@ -380,6 +380,18 @@ api.interceptors.response.use(
 
 		// 处理 401 未授权错误
 		if (response?.status === 401 && config) {
+			// 【登录请求短路】登录接口的 401 是凭据错误（用户名/密码错误），
+			// 绝不能进入下面的 token 刷新→失败→跳转链路，否则会丢失后端原始错误信息
+			// 并把用户"自动刷新"回登录页，看不到任何提示。
+			// 此处提取后端 message 原样 reject，由登录页 catch 显示内联提示。
+			if (config.url?.includes("/system/auth/login")) {
+				const respData = response?.data;
+				const backendMessage =
+					(respData && typeof respData === "object" && (respData.message || respData.msg)) as string | undefined;
+				const loginError = new Error(backendMessage || "用户名或密码错误");
+				return Promise.reject(loginError);
+			}
+
 			// 清空菜单缓存
 			useMenuStore.getState().clearMenus();
 

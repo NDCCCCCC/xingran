@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import type { FC } from "react";
-import { App, Form, Input, Button, Card } from "antd";
+import { App, Form, Input, Button, Card, Alert } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
@@ -13,9 +13,32 @@ import type { LoginRequest } from "@/types";
 import type { CaptchaEnabled } from "@/types/captcha";
 import "./login.css";
 
+/**
+ * 从登录失败错误中提取用户可读的错误文案。
+ * 兼容多种来源：
+ * - 普通 Error（message 字段）—— 例如 api.ts 登录短路 reject 出来的 new Error(backendMessage)
+ * - axios 错误（response.data.message / response.data.msg）—— 例如 403 账号锁定、验证码错误
+ */
+function extractLoginErrorMessage(error: unknown): string {
+  if (!error) return "登录失败，请重试";
+  // axios 风格错误
+  const anyError = error as any;
+  const respData = anyError?.response?.data;
+  if (respData && typeof respData === "object") {
+    if (typeof respData.message === "string" && respData.message) return respData.message;
+    if (typeof respData.msg === "string" && respData.msg) return respData.msg;
+  }
+  // 普通 Error
+  if (typeof anyError?.message === "string" && anyError.message) {
+    return anyError.message;
+  }
+  return "登录失败，请重试";
+}
+
 const Login: FC = () => {
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string>("");
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const { login } = useAuthStore();
@@ -47,6 +70,8 @@ const Login: FC = () => {
   // 执行登录请求
   const performLogin = async (loginData: LoginRequest) => {
     setLoading(true);
+    // 每次发起登录前清除上一次的内联错误提示
+    setLoginError("");
     try {
       await login(loginData);
       // 登录成功后获取用户菜单和权限
@@ -58,6 +83,8 @@ const Login: FC = () => {
       navigate(DASHBOARD);
     } catch (error) {
       console.error("登录失败:", error);
+      // 提取后端错误信息，显示为表单内联提示
+      setLoginError(extractLoginErrorMessage(error));
       // 登录失败后刷新验证码
       if (captchaEnabled !== "disabled") {
         setCaptchaId(""); // 清空验证码ID，触发组件重新加载
@@ -68,6 +95,8 @@ const Login: FC = () => {
   };
 
   const handleFinish = async (values: LoginRequest) => {
+    // 用户重新提交时清除旧错误提示
+    setLoginError("");
     const loginData: LoginRequest = {
       username: values.username,
       password: values.password,
@@ -169,6 +198,18 @@ const Login: FC = () => {
             企业级权限管理系统
           </p>
         </div>
+
+        {/* 登录失败内联提示 —— 仅当存在错误时显示 */}
+        {loginError && (
+          <Alert
+            type="error"
+            showIcon
+            closable
+            message={loginError}
+            onClose={() => setLoginError("")}
+            style={{ marginBottom: 16 }}
+          />
+        )}
 
         <Form
           form={form}
