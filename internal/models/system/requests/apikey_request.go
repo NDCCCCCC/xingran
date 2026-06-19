@@ -28,11 +28,13 @@ type UpdateAPIKeyRequest struct {
 
 // ListAPIKeysParams API密钥列表查询参数
 type ListAPIKeysParams struct {
-	Current int     `json:"current"`                      // 当前页
-	PageSize int    `json:"pageSize"`                     // 每页数量
-	Keyword *string `json:"keyword"`                      // 关键词搜索（名称或密钥）
-	Status  *bool   `json:"status"`                       // 状态筛选（true=启用, false=禁用）
-	Scope   *string `json:"scope"`                        // 作用域筛选
+	Current       int     `json:"current"`                      // 当前页
+	PageSize      int     `json:"pageSize"`                     // 每页数量
+	Keyword       *string `json:"keyword"`                      // 关键词搜索（名称或密钥）
+	Status        *bool   `json:"status"`                       // 状态筛选（true=启用, false=禁用）
+	Scope         *string `json:"scope"`                        // 作用域筛选
+	OrderByColumn string  `json:"orderByColumn"`                // 服务端排序字段（白名单）
+	IsAsc         *bool   `json:"isAsc"`                        // 是否升序
 }
 
 // DefaultListAPIKeysParams 默认列表参数

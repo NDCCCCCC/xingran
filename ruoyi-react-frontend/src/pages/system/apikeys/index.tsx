@@ -144,6 +144,10 @@ const APIKeyManagement: FC = () => {
     defaultValue: undefined,
   });
 
+  // 服务端排序状态（field 对应后端 apiKeyAllowedSortFields 白名单 key）
+  const [sortField, setSortField] = useState<string>("");
+  const [sortOrder, setSortOrder] = useState<"ascend" | "descend" | null>(null);
+
   // Form 实例
   const [form] = Form.useForm();
 
@@ -159,8 +163,10 @@ const APIKeyManagement: FC = () => {
       ...(searchKeyword && { keyword: searchKeyword }),
       ...(filterStatus !== undefined && { status: filterStatus }),
       ...(filterScope && { scope: filterScope }),
+      // 服务端排序透传（避坑：详见 memory server-sort-loadfunc-param-drop）
+      ...(sortField && { orderByColumn: sortField, isAsc: sortOrder === "ascend" }),
     };
-  }, [pagination.current, pagination.pageSize, searchKeyword, filterStatus, filterScope]);
+  }, [pagination.current, pagination.pageSize, searchKeyword, filterStatus, filterScope, sortField, sortOrder]);
 
   /**
    * 加载 API 密钥列表
@@ -365,14 +371,21 @@ const APIKeyManagement: FC = () => {
   }, []);
 
   /**
-   * 分页变化
+   * 分页 + 排序变化（antd Table onChange 统一入口）
    */
-  const handleTableChange = useCallback((newPagination: any) => {
+  const handleTableChange = useCallback((newPagination: any, _filters: any, sorter: any) => {
     setPagination({
       current: newPagination.current || 1,
       pageSize: newPagination.pageSize || 10,
       total: newPagination.total || 0,
     });
+    // 排序：用 local const 持有新值，规避 React 18 setState 异步时序（handleTableChange 触发的
+    // fetchData 读 state 仍为旧值——详见 commit 7ab1189 ad-domain 同类坑）。
+    // queryParams 已监听 sortField/sortOrder，setState 后 useEffect 会自动重拉。
+    const field = sorter?.field || "";
+    const order = sorter?.order ?? null;
+    setSortField(field);
+    setSortOrder(order);
   }, []);
 
   // ==================== 表格列定义 ====================
@@ -383,6 +396,8 @@ const APIKeyManagement: FC = () => {
       dataIndex: "name",
       key: "name",
       width: 150,
+      sorter: true,
+      sortOrder: sortField === "name" ? sortOrder : undefined,
       render: (text, record) => (
         <Space>
           <KeyOutlined />
@@ -451,6 +466,8 @@ const APIKeyManagement: FC = () => {
       key: "is_active",
       width: 80,
       align: "center" as const,
+      sorter: true,
+      sortOrder: sortField === "is_active" ? sortOrder : undefined,
       render: (active: boolean) => (
         <Tag color={active ? "green" : "red"}>
           {active ? "启用" : "禁用"}
@@ -462,6 +479,8 @@ const APIKeyManagement: FC = () => {
       dataIndex: "expires_at",
       key: "expires_at",
       width: 160,
+      sorter: true,
+      sortOrder: sortField === "expires_at" ? sortOrder : undefined,
       render: (text) => {
         if (!text) {
           return <span style={{ color: "var(--theme-text-tertiary, #999)" }}>永不过期</span>;
@@ -481,6 +500,8 @@ const APIKeyManagement: FC = () => {
       dataIndex: "last_used_at",
       key: "last_used_at",
       width: 160,
+      sorter: true,
+      sortOrder: sortField === "last_used_at" ? sortOrder : undefined,
       render: (text) => {
         if (!text) {
           return <span style={{ color: "var(--theme-text-tertiary, #999)" }}>未使用</span>;
@@ -546,7 +567,7 @@ const APIKeyManagement: FC = () => {
         </Space>
       ),
     },
-  ], [handleView, handleEdit, handleToggleStatus, handleViewLogs, handleDelete]);
+  ], [handleView, handleEdit, handleToggleStatus, handleViewLogs, handleDelete, sortField, sortOrder]);
 
   // ==================== 渲染 ====================
 

@@ -55,6 +55,10 @@ export interface APIKeyListParams extends PageParams {
   keyword?: string;
   status?: boolean;
   scope?: string;
+  /** 服务端排序字段（对应后端 apiKeyAllowedSortFields 白名单 key） */
+  orderByColumn?: string;
+  /** 是否升序 */
+  isAsc?: boolean;
 }
 
 // ==================== API 密钥使用日志相关 ====================

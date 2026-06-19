@@ -9,9 +9,21 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 	"gorm.io/gorm"
 )
+
+// apiKeyAllowedSortFields API密钥列表可排序字段白名单。
+// key=前端逻辑字段名(camelCase)，value=DB 列名(snake_case)。
+var apiKeyAllowedSortFields = map[string]string{
+	"name":        "name",
+	"createdAt":   "created_at",
+	"updatedAt":   "updated_at",
+	"isActive":    "is_active",
+	"expiresAt":   "expires_at",
+	"lastUsedAt":  "last_used_at",
+}
 
 // APIKeyService API密钥服务接口
 type APIKeyService interface {
@@ -238,10 +250,19 @@ func (s *apiKeyServiceImpl) ListAPIKeys(ctx context.Context, userID string, para
 		return nil, apperrors.DatabaseError(err)
 	}
 
-	// 分页查询
+	// 分页查询：服务端排序（白名单）优先，无 OrderByColumn 时保留 created_at DESC 默认
 	offset := params.GetOffset()
+	sortReq := base.BaseListRequest{
+		Current:       params.Current,
+		PageSize:      params.PageSize,
+		OrderByColumn: params.OrderByColumn,
+		IsAsc:         params.IsAsc,
+	}
+	query = base.ApplySort(query, sortReq, apiKeyAllowedSortFields)
+	if params.OrderByColumn == "" {
+		query = query.Order("created_at DESC")
+	}
 	if err := query.Preload("User").
-		Order("created_at DESC").
 		Offset(offset).Limit(params.PageSize).
 		Find(&list).Error; err != nil {
 		return nil, apperrors.DatabaseError(err)
