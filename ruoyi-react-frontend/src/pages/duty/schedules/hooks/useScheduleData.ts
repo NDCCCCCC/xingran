@@ -37,7 +37,7 @@ export interface UseScheduleDataReturn {
   currentWeekStart: Dayjs;
 
   // 数据加载方法
-  fetchList: (page?: number, pageSize?: number) => Promise<void>;
+  fetchList: (page?: number, pageSize?: number, sortCol?: string, sortAsc?: boolean) => Promise<void>;
   fetchAllSchedules: () => Promise<void>;
   fetchPools: () => Promise<void>;
   fetchUsers: () => Promise<void>;
@@ -59,7 +59,7 @@ export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataR
   const [currentWeekStart, setCurrentWeekStart] = useState<Dayjs>(dayjs().startOf("week"));
 
   // 获取排班列表
-  const fetchList = useCallback(async (page?: number, size?: number) => {
+  const fetchList = useCallback(async (page?: number, size?: number, sortCol?: string, sortAsc?: boolean) => {
     setLoading(true);
     try {
       const values = searchForm.getFieldsValue() as {
@@ -78,6 +78,8 @@ export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataR
         endDate: values.dateRange?.[1]?.format("YYYY-MM-DD"),
         dutyType: values.dutyType,
         expired: values.expired,
+        // 服务端排序透传（避坑：详见 memory server-sort-loadfunc-param-drop）
+        ...(sortCol ? { orderByColumn: sortCol, isAsc: sortAsc } : {}),
       });
       setDataSource(result.data?.list ?? []);
       setTotal(result.data?.total ?? 0);

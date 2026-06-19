@@ -96,10 +96,13 @@ interface DutyTableColumnsProps {
   current: number;
   pageSize: number;
   handleDelete: (id: string) => void;
+  /** 列级 sortOrder：返回当前排序列方向，其余 undefined（受控高亮） */
+  getColumnSortOrder?: (field: string) => 'ascend' | 'descend' | undefined;
 }
 
 function getDutyTableColumns(props: DutyTableColumnsProps): ColumnsType<DutySchedule> {
-  const { current, pageSize, handleDelete } = props;
+  const { current, pageSize, handleDelete, getColumnSortOrder } = props;
+  const gso = getColumnSortOrder ?? (() => undefined);
 
   return [
     {
@@ -113,7 +116,8 @@ function getDutyTableColumns(props: DutyTableColumnsProps): ColumnsType<DutySche
       dataIndex: 'scheduleDate',
       key: 'scheduleDate',
       width: 120,
-      sorter: createSorter<DutySchedule>('scheduleDate', 'date'),
+      sorter: true,
+      sortOrder: gso('scheduleDate'),
       render: formatDate,
     },
     {
@@ -147,7 +151,8 @@ function getDutyTableColumns(props: DutyTableColumnsProps): ColumnsType<DutySche
       dataIndex: 'dutyType',
       key: 'dutyType',
       width: 100,
-      sorter: createSorter<DutySchedule>('dutyType', 'string'),
+      sorter: true,
+      sortOrder: gso('dutyType'),
       render: (type: string) => <Tag color={getDutyTypeColor(type)}>{getDutyTypeText(type)}</Tag>,
     },
     {
@@ -168,7 +173,8 @@ function getDutyTableColumns(props: DutyTableColumnsProps): ColumnsType<DutySche
       dataIndex: 'status',
       key: 'status',
       width: 80,
-      sorter: createSorter<DutySchedule>('status', 'number'),
+      sorter: true,
+      sortOrder: gso('status'),
       render: (status: number) => {
         const config = DUTY_STATUS_CONFIG[status];
         return config ? <Tag color={config.color}>{config.text}</Tag> : <Tag>未知</Tag>;
@@ -227,6 +233,13 @@ const DutySchedulePage: FC = () => {
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize } = usePagination();
+
+  // 服务端排序状态（field 对应后端 dutyScheduleAllowedSortFields 白名单 key）
+  const [sortField, setSortField] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'ascend' | 'descend' | null>(null);
+  // 列级 sortOrder：只对当前排序列返回方向，其余 undefined（受控高亮）
+  const getColumnSortOrder = (field: string): 'ascend' | 'descend' | undefined =>
+    sortField === field ? (sortOrder ?? undefined) : undefined;
 
   // 使用数据管理 Hook
   const {
@@ -294,8 +307,13 @@ const DutySchedulePage: FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleTableChange = (pagination: TablePaginationConfig) => {
-    fetchList(pagination.current || 1, pagination.pageSize || 10);
+  const handleTableChange = (pagination: TablePaginationConfig, _filters: Record<string, unknown>, sorter: any) => {
+    // 排序：用 local const 持有新值传 fetchList，规避 React 18 setState 异步时序
+    const field = sorter && !Array.isArray(sorter) ? (sorter.field as string) || '' : '';
+    const order = sorter && !Array.isArray(sorter) ? (sorter.order ?? null) : null;
+    setSortField(field);
+    setSortOrder(order);
+    fetchList(pagination.current || 1, pagination.pageSize || 10, field, order === 'ascend');
   };
 
   const handleSearch = () => {
@@ -324,7 +342,7 @@ const DutySchedulePage: FC = () => {
   };
 
   // 表格列
-  const columns = getDutyTableColumns({ current: paginationProps.current ?? 1, pageSize: paginationProps.pageSize ?? 10, handleDelete });
+  const columns = getDutyTableColumns({ current: paginationProps.current ?? 1, pageSize: paginationProps.pageSize ?? 10, handleDelete, getColumnSortOrder });
 
   return (
     <div className="p-6">

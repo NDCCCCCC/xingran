@@ -87,6 +87,10 @@ export interface DutyPoolListRequest {
   poolName?: string;
   status?: number;
   deptId?: string;
+  /** 服务端排序字段（对应后端 dutyPoolAllowedSortFields 白名单 key） */
+  orderByColumn?: string;
+  /** 是否升序 */
+  isAsc?: boolean;
 }
 
 export interface DutyPoolCreateRequest {
@@ -116,6 +120,10 @@ export interface DutyScheduleListRequest {
   dutyType?: string;
   /** 过期状态：0=未过期，1=已过期，不传=全部 */
   expired?: number;
+  /** 服务端排序字段（对应后端 dutyScheduleAllowedSortFields 白名单 key） */
+  orderByColumn?: string;
+  /** 是否升序 */
+  isAsc?: boolean;
 }
 
 export interface GenerateScheduleRequest {

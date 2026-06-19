@@ -35,6 +35,13 @@ const DutyPoolPage: FC = () => {
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
+  // 服务端排序状态（field 对应后端 dutyPoolAllowedSortFields 白名单 key）
+  const [sortField, setSortField] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'ascend' | 'descend' | null>(null);
+  // 列级 sortOrder：只对当前排序列返回方向，其余 undefined（受控高亮）
+  const getColumnSortOrder = (field: string): 'ascend' | 'descend' | undefined =>
+    sortField === field ? (sortOrder ?? undefined) : undefined;
+
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<DutyPool | null>(null);
 
@@ -112,7 +119,7 @@ const DutyPoolPage: FC = () => {
     return ids;
   };
 
-  const fetchList = async (page?: number, pageSize?: number) => {
+  const fetchList = async (page?: number, pageSize?: number, sortCol?: string, sortAsc?: boolean) => {
     setLoading(true);
     try {
       const values = form.getFieldsValue();
@@ -122,6 +129,8 @@ const DutyPoolPage: FC = () => {
         poolName: values.poolName,
         status: values.status,
         deptId: values.deptId,
+        // 服务端排序透传（避坑：详见 memory server-sort-loadfunc-param-drop）
+        ...(sortCol ? { orderByColumn: sortCol, isAsc: sortAsc } : {}),
       });
       setDataSource(result.data?.list ?? []);
       setTotal(result.data?.total ?? 0);
@@ -269,14 +278,16 @@ const DutyPoolPage: FC = () => {
       dataIndex: 'poolName',
       key: 'poolName',
       width: 150,
-      sorter: createSorter<DutyPool>('poolName', 'string'),
+      sorter: true,
+      sortOrder: getColumnSortOrder('poolName'),
     },
     {
       title: '所属部门',
       dataIndex: 'deptId',
       key: 'deptId',
       width: 120,
-      sorter: createSorter<DutyPool>('deptId', 'string'),
+      sorter: true,
+      sortOrder: getColumnSortOrder('deptId'),
       render: (_: string, record: DutyPool) => {
         return record.department?.deptName || '-';
       },
@@ -319,7 +330,8 @@ const DutyPoolPage: FC = () => {
       dataIndex: 'status',
       key: 'status',
       width: 80,
-      sorter: createSorter<DutyPool>('status', 'number'),
+      sorter: true,
+      sortOrder: getColumnSortOrder('status'),
       render: (status: number) => (
         <Tag color={status === 0 ? 'green' : 'red'}>{status === 0 ? '启用' : '停用'}</Tag>
       ),
@@ -337,6 +349,8 @@ const DutyPoolPage: FC = () => {
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 160,
+      sorter: true,
+      sortOrder: getColumnSortOrder('createdAt'),
       render: (date: string) => formatDateTime(date, 'YYYY-MM-DD HH:mm'),
     },
     {
@@ -435,12 +449,18 @@ const DutyPoolPage: FC = () => {
           loading={loading}
           scroll={{ x: 1200 }}
           pagination={paginationProps}
-          onChange={(pagination) => {
+          onChange={(pagination, _filters, sorter) => {
             const current = pagination.current ?? 1;
             const pageSize = pagination.pageSize ?? 10;
             setCurrent(current);
             setPageSize(pageSize);
-            fetchList(current, pageSize);
+            // 排序：用 local const 持有新值传 fetchList，规避 React 18 setState 异步时序
+            // （fetchList 不在 useMemo 依赖链，setState 后读 state 仍为旧值——commit 7ab1189 同类坑）
+            const field = sorter && !Array.isArray(sorter) ? (sorter.field as string) || '' : '';
+            const order = sorter && !Array.isArray(sorter) ? (sorter.order ?? null) : null;
+            setSortField(field);
+            setSortOrder(order);
+            fetchList(current, pageSize, field, order === 'ascend');
           }}
         />
       </Card>
