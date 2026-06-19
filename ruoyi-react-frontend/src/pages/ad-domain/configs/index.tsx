@@ -39,8 +39,8 @@ import type { FC } from 'react';
 const ADConfigPage: FC = () => {
   const [editForm] = Form.useForm();
 
-  // 使用共享的 AD 配置 Hook
-  const { configs, loading, refreshConfigs: fetchConfigs } = useADConfigs({
+  // 使用共享的 AD 配置 Hook（fetchConfigs 接受排序参数，供服务端排序使用）
+  const { configs, loading, fetchConfigs } = useADConfigs({
     enabledOnly: false, // 配置页显示所有配置（包括禁用状态）
     autoSelectFirst: false, // 不自动选择
   });
@@ -320,7 +320,7 @@ const ADConfigPage: FC = () => {
           <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
             新增AD配置
           </Button>
-          <Button icon={<ReloadOutlined />} onClick={fetchConfigs}>
+          <Button icon={<ReloadOutlined />} onClick={() => fetchConfigs()}>
             刷新
           </Button>
         </Space>
@@ -333,15 +333,15 @@ const ADConfigPage: FC = () => {
         rowKey="id"
         pagination={false}
         onChange={(pagination, filters, sorter) => {
-          if (sorter && typeof sorter === 'object' && 'field' in sorter) {
-            const col = (sorter as any).field;
-            const asc = (sorter as any).order === 'ascend';
-            setOrderByColumn(col);
-            setIsAsc(asc);
-            // useADConfigs.refreshConfigs 不读 sort 参数（设计为选择器无排序），
-            // 故仅更新 state，刷新仍走 fetchConfigs()；后续如需真排序需重构用直接 API。
-            fetchConfigs();
-          }
+          // 用 local const 持有新值传 fetchConfigs，规避 React 18 setState 异步时序
+          // （fetchConfigs 不在 useMemo 依赖链，setState 后读 state 仍为旧值——commit 7ab1189 同类坑）
+          const s = sorter && !Array.isArray(sorter) ? sorter : null;
+          const col = s && s.field ? String(s.field) : '';
+          const asc = s ? s.order === 'ascend' : false;
+          setOrderByColumn(col || 'createdAt');
+          setIsAsc(col ? asc : false);
+          // fetchConfigs(sortColumn?, sortAsc?)：col 为空时传 undefined 走后端默认排序
+          fetchConfigs(col || undefined, col ? asc : undefined);
         }}
       />
 

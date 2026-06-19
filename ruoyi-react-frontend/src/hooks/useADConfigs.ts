@@ -78,6 +78,9 @@ export function useADConfigs(options: UseADConfigsOptions = {}) {
     setSelectedConfig,
     loading,
     refreshConfigs,
+    /** 带排序参数的加载方法（供 configs 管理页等服务端排序场景使用；
+     *  选择器场景仍用 refreshConfigs 0 参数版） */
+    fetchConfigs,
     clearSelection,
   };
 }
