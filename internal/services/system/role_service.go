@@ -20,6 +20,7 @@ type RoleService interface {
 	Delete(ctx context.Context, id string) error
 	GetByID(ctx context.Context, id string) (*models.Role, error)
 	List(ctx context.Context, params requests.RoleListParams) (*PageResult, error)
+	Statistics(ctx context.Context) (*RoleStatisticsResult, error)
 	GetAllEnabled(ctx context.Context) ([]*models.Role, error)
 	BatchDelete(ctx context.Context, ids []string) error
 	UpdateStatus(ctx context.Context, id string, status int) error
@@ -39,6 +40,33 @@ type roleService struct {
 // NewRoleService 创建角色服务实例
 func NewRoleService(db *gorm.DB) RoleService {
 	return &roleService{db: db}
+}
+
+// Statistics 统计角色总数及启停状态计数(status: 0=正常, 1=停用)。
+// 用条件聚合(SUM CASE)避免「加载全量行进内存再 filter」; base query 与 List 一致,
+// GORM 自动排除软删除记录。system 模块 list 的 MaxPageSize=100,旧前端用 pageSize:1000
+// 拉全量再 .length 计数,角色数 >100 时会错误卡在 100。
+func (s *roleService) Statistics(ctx context.Context) (*RoleStatisticsResult, error) {
+	var result RoleStatisticsResult
+	err := s.db.WithContext(ctx).
+		Model(&models.Role{}).
+		Select(
+			"COUNT(*) AS total",
+			"SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS active",
+			"SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS inactive",
+		).
+		Scan(&result).Error
+	if err != nil {
+		return nil, fmt.Errorf("统计角色状态失败: %w", err)
+	}
+	return &result, nil
+}
+
+// RoleStatisticsResult 角色统计结果。status: 0=正常, 1=停用。
+type RoleStatisticsResult struct {
+	Total    int64 `json:"total"`
+	Active   int64 `json:"active"`   // status = 0
+	Inactive int64 `json:"inactive"` // status = 1
 }
 
 // roleAllowedSortFields 角色可排序字段白名单。

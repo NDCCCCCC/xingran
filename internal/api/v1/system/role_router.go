@@ -28,6 +28,7 @@ func SetupRoleRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// 注册路由
 	r.POST("/list", handler.List)
+	r.POST("/statistics", handler.Statistics)
 	r.POST("/all", handler.GetAllEnabled)
 	r.POST("/batch", handler.BatchDelete)
 	r.POST("", handler.Create)

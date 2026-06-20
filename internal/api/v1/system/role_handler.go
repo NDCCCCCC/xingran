@@ -81,6 +81,22 @@ func (h *RoleHandler) List(c *gin.Context) {
 	response.Page(c, result.List, result.Total, result.Current, result.PageSize)
 }
 
+// Statistics 角色统计(总数/正常/停用)
+// @Summary 角色统计
+// @Description 返回角色总数及启停状态计数,供统计卡片使用;用 COUNT 聚合而非加载全量行
+// @Tags 角色管理
+// @Produce json
+// @Success 200 {object} response.Response
+// @Router /system/roles/statistics [post]
+func (h *RoleHandler) Statistics(c *gin.Context) {
+	result, err := h.service.Statistics(c.Request.Context())
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Success(c, result)
+}
+
 // GetByID 获取角色详情
 // @Summary 获取角色详情
 // @Description 根据角色ID获取角色详细信息
