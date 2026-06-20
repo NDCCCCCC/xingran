@@ -113,3 +113,22 @@ updated: 2026-06-20
 **第二轮改动文件：** role（service+handler+router+useRoleData）、workorder orders（base+cache_impl+handler+router+useWorkOrderData+workorderApi）、workorder periodic（periodic+handler+router+useTemplateData+workorderApi）、knowledge（knowledge_service+cache_impl+handler+router+useArticleData+knowledgeApi）+ 2 测试。
 
 **仍潜伏（未修，network ~9 处）：** 后端钳制高 ~10000，仅超大数据量触发，风险低面广，暂不动。
+
+---
+
+## 第三轮（2026-06-20）：network 模块 9 处潜伏项全部修复
+
+| 模块 | 端点 | 后端情况 |
+|------|------|---------|
+| ports | (已有 GET /statistics) | 仅删前端 fallback（updateStatistics 用当前页 list） |
+| backups | (已有 GET /statistics) | 扩展加 uniqueDevices（COUNT DISTINCT device_id） |
+| devices | POST /statistics | 暴露已有 GetDeviceStatistics（CacheService 接口本就有） |
+| mac | (已有 GET /statistics) | 扩展加 dynamic/static/secure（mac_type string） |
+| templates | POST /statistics | 新增（is_system bool + template_type） |
+| credentials | POST /statistics | 新增（protocol_type ssh/telnet） |
+| command | POST /statistics | 新增（execution_type='command' 过滤 + int 状态） |
+| executions | POST /statistics | 新增（execution_type='template' 过滤 + int 状态） |
+| discoveries | POST /statistics | 新增（int 状态 + SUM discovered_count） |
+
+要点：command/executions 同查 sys_config_execution 表，按 execution_type 分开统计；mac/discoveries/ConfigExecution 无软删除；int 状态枚举 0待执行/1执行中/2成功/3失败。
+回归测试：command_statistics_test.go（execution_type 过滤）、discovery_statistics_test.go（int 状态 + SUM）。至此「用 list.length 充当统计」反模式全仓清零。
