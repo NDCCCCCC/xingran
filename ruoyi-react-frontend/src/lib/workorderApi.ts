@@ -383,6 +383,22 @@ export function getWorkOrderList(params: WorkOrderListRequest): Promise<BaseResp
   return post("/workorder/orders/list", params);
 }
 
+/** 工单状态统计（总数 / 待处理 / 处理中 / 已完成 / 已关闭），供列表页统计卡片 */
+export interface WorkOrderStatusStatistics {
+  total: number;
+  pending: number;
+  processing: number;
+  completed: number;
+  closed: number;
+}
+
+/**
+ * 获取工单状态统计（后端 COUNT 聚合，不受分页/筛选影响）
+ */
+export function getWorkOrderStatusStatistics(): Promise<BaseResponse<WorkOrderStatusStatistics>> {
+  return post("/workorder/orders/status-statistics", {});
+}
+
 export function getMyPendingWorkOrders(params?: { limit?: number }): Promise<BaseResponse<{ list: WorkOrder[]; total: number }>> {
   return post("/workorder/orders/my-pending", params ?? {});
 }
@@ -483,6 +499,21 @@ export function getWorkOrderStatistics(): Promise<BaseResponse<WorkOrderStatisti
 
 export function getPeriodicTemplateList(params: PeriodicTemplateListRequest): Promise<BaseResponse<PageResponse<PeriodicWorkOrderTemplate>>> {
   return post("/workorder/periodic/templates/list", params);
+}
+
+/** 周期性工单模板统计（总数 / 启用 / 停用 / 累计生成数） */
+export interface PeriodicTemplateStatistics {
+  total: number;
+  enabled: number;
+  disabled: number;
+  totalGenerated: number;
+}
+
+/**
+ * 获取周期性工单模板统计（后端 COUNT 聚合，不受分页影响）
+ */
+export function getPeriodicTemplateStatistics(): Promise<BaseResponse<PeriodicTemplateStatistics>> {
+  return post("/workorder/periodic/templates/statistics", {});
 }
 
 export function getPeriodicTemplate(id: string): Promise<BaseResponse<PeriodicWorkOrderTemplate>> {

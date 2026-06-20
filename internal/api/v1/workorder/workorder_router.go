@@ -25,6 +25,7 @@ func SetupWorkOrdersRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// 工单基础操作
 	r.POST("/list", handler.List)
+	r.POST("/status-statistics", handler.GetStatusStatistics)
 	r.POST("/my-pending", handler.GetMyPending)
 	r.POST("/batch-delete", handler.BatchDelete)
 	r.POST("", handler.Create)
@@ -74,6 +75,7 @@ func SetupPeriodicWorkOrderRouter(r *gin.RouterGroup, core *core.Core) {
 	templates := r.Group("/templates")
 	{
 		templates.POST("/list", handler.ListPeriodic)
+		templates.POST("/statistics", handler.GetPeriodicStatistics)
 		templates.POST("", handler.CreatePeriodic)
 		templates.POST("/:id/update", handler.UpdatePeriodic)
 		templates.POST("/:id/delete", handler.DeletePeriodic)

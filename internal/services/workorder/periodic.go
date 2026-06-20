@@ -24,6 +24,35 @@ func NewPeriodicService(db *gorm.DB) *PeriodicService {
 	return &PeriodicService{db: db}
 }
 
+// PeriodicTemplateStatistics 周期性工单模板统计结果。
+type PeriodicTemplateStatistics struct {
+	Total          int64 `json:"total"`
+	Enabled        int64 `json:"enabled"`        // is_enabled = true
+	Disabled       int64 `json:"disabled"`       // is_enabled = false
+	TotalGenerated int64 `json:"totalGenerated"` // SUM(total_generated)
+}
+
+// GetStatistics 统计周期性工单模板总数/启停数及累计生成工单数。
+// 用条件聚合(SUM CASE)避免「按当前页 list 计算统计」的错误——旧前端用当前页 list 算
+// total/enabled/disabled/totalGenerated,多页时严重偏小。is_enabled 用裸布尔表达式
+// (CASE WHEN is_enabled)同时兼容 PostgreSQL(boolean)与 SQLite(0/1)。
+func (s *PeriodicService) GetStatistics(ctx context.Context) (*PeriodicTemplateStatistics, error) {
+	var result PeriodicTemplateStatistics
+	err := s.db.WithContext(ctx).
+		Model(&models.PeriodicWorkOrderTemplate{}).
+		Select(
+			"COUNT(*) AS total",
+			"SUM(CASE WHEN is_enabled THEN 1 ELSE 0 END) AS enabled",
+			"SUM(CASE WHEN NOT is_enabled THEN 1 ELSE 0 END) AS disabled",
+			"COALESCE(SUM(total_generated), 0) AS total_generated",
+		).
+		Scan(&result).Error
+	if err != nil {
+		return nil, fmt.Errorf("统计周期性工单模板失败: %w", err)
+	}
+	return &result, nil
+}
+
 // PeriodicTemplateListRequest 周期性工单模板列表请求
 type PeriodicTemplateListRequest struct {
 	base.BaseListRequest

@@ -7,6 +7,7 @@ import { App } from "antd";
 import type { FormInstance } from "antd/es/form";
 import {
   getWorkOrderList,
+  getWorkOrderStatusStatistics,
   getUserList,
   getDeptTree,
   getEnabledWorkOrderCategories,
@@ -14,7 +15,6 @@ import {
   type SimpleUser,
   type SimpleDept,
   type WorkOrderCategory,
-  WorkOrderStatus,
 } from "@/lib/workorderApi";
 
 export interface WorkOrderListParams {
@@ -53,6 +53,7 @@ export interface UseWorkOrderDataReturn {
   depts: SimpleDept[];
   categories: WorkOrderCategory[];
   fetchList: (page?: number, pageSize?: number) => Promise<void>;
+  fetchStats: () => Promise<void>;
   fetchUsers: () => Promise<void>;
   fetchDepts: () => Promise<void>;
   fetchCategories: () => Promise<void>;
@@ -82,6 +83,23 @@ export function useWorkOrderData(
   const [depts, setDepts] = useState<SimpleDept[]>([]);
   const [categories, setCategories] = useState<WorkOrderCategory[]>([]);
 
+  // 获取统计数据（专用端点 COUNT 聚合，全局计数，不受分页/筛选影响）。
+  // 旧实现用当前页 list.filter() 算统计，多页或筛选时严重偏小。
+  const fetchStats = useCallback(async () => {
+    try {
+      const result = await getWorkOrderStatusStatistics();
+      setStats({
+        total: result.data?.total ?? 0,
+        pending: result.data?.pending ?? 0,
+        processing: result.data?.processing ?? 0,
+        completed: result.data?.completed ?? 0,
+        closed: result.data?.closed ?? 0,
+      });
+    } catch (error) {
+      console.error("获取工单统计失败:", error);
+    }
+  }, []);
+
   // 获取列表数据
   const fetchList = useCallback(async (page?: number, size?: number) => {
     setLoading(true);
@@ -107,20 +125,15 @@ export function useWorkOrderData(
       setCurrent(result.data?.current ?? 1);
       setPageSize(result.data?.pageSize ?? 10);
 
-      // 计算统计数据
-      setStats({
-        total: list.length,
-        pending: list.filter((o) => o.status === WorkOrderStatus.Pending).length,
-        processing: list.filter((o) => o.status === WorkOrderStatus.Processing).length,
-        completed: list.filter((o) => o.status === WorkOrderStatus.Completed).length,
-        closed: list.filter((o) => o.status === WorkOrderStatus.Closed).length,
-      });
+      // 列表加载后顺带刷新统计(全局 COUNT,不受分页/筛选影响)。
+      // 这样搜索/分页/增删改(均经 fetchList)都会保持统计卡片为真实全局计数。
+      fetchStats();
     } catch (error) {
       message.error("获取工单列表失败");
     } finally {
       setLoading(false);
     }
-  }, [form, current, pageSize, message]);
+  }, [form, current, pageSize, message, fetchStats]);
 
   // 获取用户列表
   const fetchUsers = useCallback(async () => {
@@ -154,7 +167,7 @@ export function useWorkOrderData(
 
   // 初始化加载
   useEffect(() => {
-    fetchList(1, 10);
+    fetchList(1, 10); // 内部会顺带刷新统计
     fetchUsers();
     fetchDepts();
     fetchCategories();
@@ -171,6 +184,7 @@ export function useWorkOrderData(
     depts,
     categories,
     fetchList,
+    fetchStats,
     fetchUsers,
     fetchDepts,
     fetchCategories,

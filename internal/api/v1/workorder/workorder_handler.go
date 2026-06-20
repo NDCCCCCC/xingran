@@ -61,6 +61,21 @@ func (h *WorkOrderHandler) List(c *gin.Context) {
 	response.Success(c, pageResp)
 }
 
+// GetStatusStatistics 工单状态统计(总数/待处理/处理中/已完成/已关闭)
+// @Summary 工单状态统计
+// @Description 返回工单总数及各状态计数,供列表页统计卡片使用;用 COUNT 聚合而非按当前页 list 计算
+// @Tags 工单管理
+// @Produce json
+// @Success 200 {object} response.Response
+// @Router /workorder/orders/status-statistics [post]
+func (h *WorkOrderHandler) GetStatusStatistics(c *gin.Context) {
+	result, err := h.service.GetStatusStatistics(c.Request.Context())
+	if !responseHelpers.HandleServiceError(c, err, "获取工单状态统计") {
+		return
+	}
+	response.Success(c, result)
+}
+
 // GetMyPending 获取当前用户的待办工单
 // @Summary 获取待办工单
 // @Description 获取当前用户的待办工单（待处理和处理中）
@@ -601,6 +616,21 @@ func (h *WorkOrderHandler) ListPeriodic(c *gin.Context) {
 		"current":  req.Current,
 		"pageSize": req.PageSize,
 	})
+}
+
+// GetPeriodicStatistics 周期性工单模板统计(总数/启用/停用/累计生成数)
+// @Summary 周期性工单模板统计
+// @Description 返回模板总数/启停数及累计生成工单数,供列表页统计卡片使用;用 COUNT 聚合而非按当前页 list 计算
+// @Tags 工单管理
+// @Produce json
+// @Success 200 {object} response.Response
+// @Router /workorder/periodic/templates/statistics [post]
+func (h *WorkOrderHandler) GetPeriodicStatistics(c *gin.Context) {
+	result, err := h.service.Periodic().GetStatistics(c.Request.Context())
+	if !responseHelpers.HandleServiceError(c, err, "获取周期性工单模板统计") {
+		return
+	}
+	response.Success(c, result)
 }
 
 // CreatePeriodic 创建周期性工单模板

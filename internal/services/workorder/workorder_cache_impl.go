@@ -15,6 +15,7 @@ import (
 type WorkOrderCacheService interface {
 	// 基础服务方法
 	GetList(ctx context.Context, req *ListRequest) ([]models.WorkOrder, int64, error)
+	GetStatusStatistics(ctx context.Context) (*WorkOrderStatusStatistics, error)
 	GetByID(ctx context.Context, id string) (*models.WorkOrder, error)
 	Create(ctx context.Context, req *CreateRequest, submitterID string) (*models.WorkOrder, error)
 	Update(ctx context.Context, req *UpdateRequest, operatorID string) error
@@ -78,6 +79,11 @@ func (s *workOrderCacheServiceImpl) getExpiration(configKey string, defaultVal t
 // GetList 获取工单列表（不缓存，参数多变）
 func (s *workOrderCacheServiceImpl) GetList(ctx context.Context, req *ListRequest) ([]models.WorkOrder, int64, error) {
 	return s.base.Base.GetList(ctx, req)
+}
+
+// GetStatusStatistics 统计工单各状态计数(供统计卡片),委托给基础服务。不缓存。
+func (s *workOrderCacheServiceImpl) GetStatusStatistics(ctx context.Context) (*WorkOrderStatusStatistics, error) {
+	return s.base.Base.GetStatusStatistics(ctx)
 }
 
 // GetByID 获取工单详情（不缓存，查询频率低）
