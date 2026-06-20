@@ -19,32 +19,49 @@ import { usePagination } from "@/hooks/usePagination";
 import { getWorkerColumns } from "./columns";
 import { WORKER_STATUS_OPTIONS } from "../constants";
 import { post } from "@/lib/api";
-import dayjs from "dayjs";
 
 const { Option } = Select;
 const { Content } = Layout;
 
-// 心跳超时时间（秒）
-const HEARTBEAT_TIMEOUT = 120; // 2分钟无心跳视为离线
-
-// 检查 Worker 是否真正在线（基于最后心跳时间）
-function isWorkerActuallyOnline(worker: Worker): boolean {
-  if (!worker.lastHeartbeat) return false;
-  const lastHeartbeatTime = dayjs.unix(worker.lastHeartbeat);
-  const now = dayjs();
-  const diffSeconds = now.diff(lastHeartbeatTime, "second");
-  return diffSeconds <= HEARTBEAT_TIMEOUT;
-}
-
-// 获取 Worker 的真实状态
-function getWorkerActualStatus(worker: Worker): "online" | "offline" | "busy" | "error" {
-  if (worker.status === "busy" && isWorkerActuallyOnline(worker)) return "busy";
-  if (worker.status === "error") return "error";
-  return isWorkerActuallyOnline(worker) ? "online" : "offline";
-}
-
 const WorkerMonitor: FC = () => {
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
+  // 统计数据(专用聚合端点,后端按实时心跳判定 online/offline,不依赖当前页列表)
+  const [statistics, setStatistics] = useState({
+    total: 0,
+    online: 0,
+    offline: 0,
+    busy: 0,
+    error: 0,
+    totalCapacity: 0,
+    usedCapacity: 0,
+  });
+  const loadStatistics = useCallback(async () => {
+    try {
+      const result = await post<{
+        total: number;
+        online: number;
+        offline: number;
+        busy: number;
+        error: number;
+        totalCapacity: number;
+        usedCapacity: number;
+      }>("/rpa/workers/statistics");
+      setStatistics(
+        result.data ?? {
+          total: 0,
+          online: 0,
+          offline: 0,
+          busy: 0,
+          error: 0,
+          totalCapacity: 0,
+          usedCapacity: 0,
+        }
+      );
+    } catch (error) {
+      console.error("加载统计数据失败:", error);
+    }
+  }, []);
 
   const {
     loading,
@@ -59,6 +76,8 @@ const WorkerMonitor: FC = () => {
       const result = await post("/rpa/workers/list", params);
       // 类型断言：后端返回的数据结构
       const data = result.data as unknown as { list?: Worker[]; total?: number } | undefined;
+      // 搜索/分页/自动刷新(均经此 fetcher)顺带刷新全局统计
+      loadStatistics();
       return {
         list: data?.list || [],
         total: data?.total || 0,
@@ -90,19 +109,9 @@ const WorkerMonitor: FC = () => {
 
   const columns = getWorkerColumns();
 
-  // 统计数据（基于真实心跳状态）
-  const stats = {
-    total: workers.length,
-    online: workers.filter(w => getWorkerActualStatus(w) === "online").length,
-    offline: workers.filter(w => getWorkerActualStatus(w) === "offline").length,
-    busy: workers.filter(w => getWorkerActualStatus(w) === "busy").length,
-    error: workers.filter(w => getWorkerActualStatus(w) === "error").length,
-    totalCapacity: workers.reduce((sum, w) => sum + (w.maxConcurrency || w.capabilities?.maxConcurrency || 3), 0),
-    usedCapacity: workers.reduce((sum, w) => sum + (w.currentTasks || 0), 0),
-  };
-
-  const capacityUsagePercent = stats.totalCapacity > 0
-    ? (stats.usedCapacity / stats.totalCapacity) * 100
+  // 容量使用率(基于专用统计端点的全局容量,不再用当前页 reduce)
+  const capacityUsagePercent = statistics.totalCapacity > 0
+    ? (statistics.usedCapacity / statistics.totalCapacity) * 100
     : 0;
 
   return (
@@ -114,7 +123,7 @@ const WorkerMonitor: FC = () => {
           <Card>
             <Statistic
               title="Worker 总数"
-              value={stats.total}
+              value={statistics.total}
               prefix={<CloudServerOutlined />}
               styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
             />
@@ -124,7 +133,7 @@ const WorkerMonitor: FC = () => {
           <Card>
             <Statistic
               title="在线"
-              value={stats.online}
+              value={statistics.online}
               prefix={<CheckCircleOutlined />}
               styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
             />
@@ -134,7 +143,7 @@ const WorkerMonitor: FC = () => {
           <Card>
             <Statistic
               title="忙碌"
-              value={stats.busy}
+              value={statistics.busy}
               prefix={<LoadingOutlined />}
               styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
             />
@@ -144,7 +153,7 @@ const WorkerMonitor: FC = () => {
           <Card>
             <Statistic
               title="离线"
-              value={stats.offline}
+              value={statistics.offline}
               prefix={<ClockCircleOutlined />}
               styles={{ content: { color: "var(--theme-text-tertiary, #8c8c8c)" } }}
             />
@@ -154,7 +163,7 @@ const WorkerMonitor: FC = () => {
           <Card>
             <Statistic
               title="错误"
-              value={stats.error}
+              value={statistics.error}
               prefix={<CloseCircleOutlined />}
               styles={{ content: { color: "var(--theme-error, #ff4d4f)" } }}
             />
@@ -169,7 +178,7 @@ const WorkerMonitor: FC = () => {
             <div style={{ marginBottom: 8 }}>
               <Space>
                 <span>总容量使用率</span>
-                <Tag color="blue">{stats.usedCapacity}/{stats.totalCapacity}</Tag>
+                <Tag color="blue">{statistics.usedCapacity}/{statistics.totalCapacity}</Tag>
               </Space>
             </div>
             <Progress
@@ -180,7 +189,7 @@ const WorkerMonitor: FC = () => {
           <Col span={6}>
             <Statistic
               title="可用容量"
-              value={stats.totalCapacity - stats.usedCapacity}
+              value={statistics.totalCapacity - statistics.usedCapacity}
               suffix="个任务"
             />
           </Col>
@@ -218,7 +227,7 @@ const WorkerMonitor: FC = () => {
 
       {/* Worker 列表 */}
       <Card>
-        {stats.offline > 0 && stats.offline === stats.total && (
+        {statistics.offline > 0 && statistics.offline === statistics.total && (
           <Alert
             message="所有 Worker 离线"
             description="请检查 Worker 服务是否正常运行，以及网络连接是否正常"
@@ -227,9 +236,9 @@ const WorkerMonitor: FC = () => {
             style={{ marginBottom: 16 }}
           />
         )}
-        {stats.error > 0 && (
+        {statistics.error > 0 && (
           <Alert
-            message={`${stats.error} 个 Worker 处于错误状态`}
+            message={`${statistics.error} 个 Worker 处于错误状态`}
             description="请查看 Worker 日志获取详细错误信息"
             type="error"
             showIcon

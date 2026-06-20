@@ -2,7 +2,7 @@
  * RPA 执行记录页面
  */
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { FC } from "react";
 import {
   Table, Button, Space, Form, Input, Select, Card, Tag, Layout,
@@ -25,6 +25,29 @@ const { Content } = Layout;
 const ExecutionManagement: FC = () => {
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
+  // 统计数据(专用 COUNT 端点,不受分页/筛选影响,不依赖当前页列表)
+  const [statistics, setStatistics] = useState({
+    total: 0,
+    pending: 0,
+    running: 0,
+    success: 0,
+    failed: 0,
+  });
+  const loadStatistics = useCallback(async () => {
+    try {
+      const result = await post<{
+        total: number;
+        pending: number;
+        running: number;
+        success: number;
+        failed: number;
+      }>("/rpa/executions/statistics");
+      setStatistics(result.data ?? { total: 0, pending: 0, running: 0, success: 0, failed: 0 });
+    } catch (error) {
+      console.error("加载统计数据失败:", error);
+    }
+  }, []);
+
   const {
     loading,
     data: executions,
@@ -36,6 +59,8 @@ const ExecutionManagement: FC = () => {
   } = useTableManager<Execution>(
     async (params) => {
       const result = await post<PageResponse<Execution>>("/rpa/executions/list", params);
+      // 搜索/分页/自动刷新(均经此 fetcher)顺带刷新全局统计为真实 COUNT
+      loadStatistics();
       return {
         list: result.data?.list || [],
         total: result.data?.total || 0,
@@ -76,16 +101,6 @@ const ExecutionManagement: FC = () => {
   const columns = getExecutionColumns({
     handleViewDetail,
   });
-
-  // 统计数据 - 使用 useMemo 缓存计算结果
-  // 遵循 Vercel React Best Practices: rerender-memo
-  // 避免每次渲染时重新计算统计数据
-  const stats = useMemo(() => ({
-    total: executions.length,
-    running: executions.filter(e => e.status === "running").length,
-    completed: executions.filter(e => e.status === "completed").length,
-    failed: executions.filter(e => e.status === "failed").length,
-  }), [executions]);
 
   return (
     <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
@@ -133,11 +148,11 @@ const ExecutionManagement: FC = () => {
         {/* 统计信息 */}
         <Space style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #f0f0f0" }}>
           <Tag icon={<FilterOutlined />} color="blue">
-            总计: {stats.total}
+            总计: {statistics.total}
           </Tag>
-          <Tag color="processing">运行中: {stats.running}</Tag>
-          <Tag color="success">成功: {stats.completed}</Tag>
-          <Tag color="error">失败: {stats.failed}</Tag>
+          <Tag color="processing">运行中: {statistics.running}</Tag>
+          <Tag color="success">成功: {statistics.success}</Tag>
+          <Tag color="error">失败: {statistics.failed}</Tag>
         </Space>
       </Card>
 

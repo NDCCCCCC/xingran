@@ -20,6 +20,18 @@ type ExecutionService interface {
 	List(ctx context.Context, params *ExecutionListParams) (*PageResult, error)
 	GetByID(ctx context.Context, id string) (*rpamodels.Execution, error)
 	PublishProgress(ctx context.Context, update *ProgressUpdate) error
+	// Statistics 执行记录统计(专用 COUNT 聚合,不依赖分页列表,不受 pageSize 钳制)。
+	Statistics(ctx context.Context) (*ExecutionStatisticsResult, error)
+}
+
+// ExecutionStatisticsResult 执行记录统计结果。
+// Status 为字符串(pending/running/success/failed/cancelled/timeout),按真实状态聚合。
+type ExecutionStatisticsResult struct {
+	Total   int64 `json:"total"`
+	Pending int64 `json:"pending"`  // 待执行
+	Running int64 `json:"running"`  // 执行中
+	Success int64 `json:"success"`  // 成功
+	Failed  int64 `json:"failed"`   // 失败
 }
 
 // executionServiceImpl 执行记录服务实现
@@ -142,6 +154,27 @@ func (s *executionServiceImpl) List(ctx context.Context, params *ExecutionListPa
 		Current:  params.Current,
 		PageSize: params.PageSize,
 	}, nil
+}
+
+// Statistics 统计执行记录(按 status 字符串聚合,排除软删除)。
+// 不依赖分页列表,避免「用当前页 length 充当总数」导致统计恒 ≤ pageSize。
+func (s *executionServiceImpl) Statistics(ctx context.Context) (*ExecutionStatisticsResult, error) {
+	var result ExecutionStatisticsResult
+	err := s.db.WithContext(ctx).
+		Model(&rpamodels.Execution{}).
+		Where("deleted_at IS NULL").
+		Select(
+			"COUNT(*) AS total",
+			"COALESCE(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END), 0) AS pending",
+			"COALESCE(SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END), 0) AS running",
+			"COALESCE(SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END), 0) AS success",
+			"COALESCE(SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END), 0) AS failed",
+		).
+		Scan(&result).Error
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
 }
 
 // GetByID 获取执行记录详情

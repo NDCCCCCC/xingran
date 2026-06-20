@@ -62,6 +62,8 @@ func SetupWorkerRouter(r *gin.RouterGroup, services *rpa.ServiceGroup, core *cor
 	handler := NewWorkerHandler(services.WorkerService, core)
 
 	r.POST("/list", handler.List)
+	// Worker 统计(专用聚合端点,不依赖分页列表)
+	r.POST("/statistics", handler.Statistics)
 	// 注意：注册、心跳、进度接口已在公开路由中，这里不需要重复
 	// r.POST("/register", handler.Register)
 	// r.POST("/:id/heartbeat", handler.Heartbeat)
@@ -80,6 +82,8 @@ func SetupWorkerRouter(r *gin.RouterGroup, services *rpa.ServiceGroup, core *cor
 // SetupExecutionRouter 设置执行记录路由
 func SetupExecutionRouter(r *gin.RouterGroup, handler *ExecutionHandler) {
 	r.POST("/list", handler.List)
+	// 执行记录统计(专用 COUNT 聚合,不依赖分页列表)
+	r.POST("/statistics", handler.Statistics)
 	r.POST("/:id", handler.GetByID)
 	r.POST("/:id/cancel", handler.Cancel)
 	r.POST("/:id/logs", handler.GetLogs)

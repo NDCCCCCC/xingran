@@ -69,6 +69,16 @@ func (h *WorkerHandler) List(c *gin.Context) {
 	success(c, result)
 }
 
+// Statistics Worker 统计(读操作,不记操作日志)
+func (h *WorkerHandler) Statistics(c *gin.Context) {
+	result, err := h.workerService.Statistics(c.Request.Context())
+	if handleError(c, err, http.StatusInternalServerError, "统计失败") {
+		return
+	}
+
+	success(c, result)
+}
+
 // Register 注册 Worker
 func (h *WorkerHandler) Register(c *gin.Context) {
 	var req rpa.WorkerRegisterRequest

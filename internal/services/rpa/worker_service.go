@@ -28,6 +28,23 @@ type WorkerRepository interface {
 	GetByID(ctx context.Context, id string) (*rpamodels.Worker, error)
 	// List 查询 Worker 列表
 	List(ctx context.Context, params *WorkerListParams) (*PageResult, error)
+	// Statistics Worker 统计(全量查询后按实时心跳判定在线状态,不依赖分页列表)
+	Statistics(ctx context.Context) (*WorkerStatisticsResult, error)
+}
+
+// workerHeartbeatTimeoutSeconds 心跳超时秒数(与前端 getWorkerActualStatus 的 120s 一致)
+const workerHeartbeatTimeoutSeconds int64 = 120
+
+// WorkerStatisticsResult Worker 统计结果。
+// online/offline/busy 按实时心跳(now - last_heartbeat <= 120s)派生,与前端判定一致。
+type WorkerStatisticsResult struct {
+	Total         int64 `json:"total"`
+	Online        int64 `json:"online"`
+	Offline       int64 `json:"offline"`
+	Busy          int64 `json:"busy"`
+	Error         int64 `json:"error"`
+	TotalCapacity int64 `json:"totalCapacity"`
+	UsedCapacity  int64 `json:"usedCapacity"`
 }
 
 // WorkerRuntime Worker 运行时操作接口
@@ -281,6 +298,49 @@ func (s *workerServiceImpl) List(ctx context.Context, params *WorkerListParams) 
 		Current:  params.Current,
 		PageSize: params.PageSize,
 	}, nil
+}
+
+// Statistics 统计 Worker(全量查询后在内存按实时心跳派生 online/offline/busy)。
+// worker 数量通常很少(几台~几十台 RPA 节点),全量查询无性能问题;
+// online/offline 是基于 last_heartbeat 的实时判定,跨库做 SQL 时间函数不一致,故放 Go 层算。
+// 判定顺序与前端 getWorkerActualStatus 一致: busy+在线 → busy; status=error → error; 在线 → online; 否则 offline。
+func (s *workerServiceImpl) Statistics(ctx context.Context) (*WorkerStatisticsResult, error) {
+	var workers []rpamodels.Worker
+	if err := s.db.WithContext(ctx).
+		Model(&rpamodels.Worker{}).
+		Where("deleted_at IS NULL").
+		Find(&workers).Error; err != nil {
+		return nil, err
+	}
+
+	now := time.Now().Unix()
+	result := &WorkerStatisticsResult{Total: int64(len(workers))}
+	for i := range workers {
+		w := &workers[i]
+		// 心跳在线 = 有心跳时间戳且距今 <= 120s
+		online := w.LastHeartbeat != nil && (now-*w.LastHeartbeat) <= workerHeartbeatTimeoutSeconds
+
+		switch {
+		case w.Status == rpamodels.WorkerStatusBusy && online:
+			result.Busy++
+		case w.Status == "error":
+			result.Error++
+		case online:
+			result.Online++
+		default:
+			result.Offline++
+		}
+
+		// 容量聚合(max_concurrency 默认 3,与前端 fallback 一致)
+		maxConcurrency := w.MaxConcurrency
+		if maxConcurrency <= 0 {
+			maxConcurrency = 3
+		}
+		result.TotalCapacity += int64(maxConcurrency)
+		result.UsedCapacity += int64(w.CurrentTasks)
+	}
+
+	return result, nil
 }
 
 // GetByID 获取 Worker 详情
