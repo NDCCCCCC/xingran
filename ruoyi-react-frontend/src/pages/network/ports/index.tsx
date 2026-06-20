@@ -99,8 +99,6 @@ const PortStatusPage: FC = () => {
         // 如果从设备页面跳转过来，强制使用 URL 中的 deviceId
         ...(isFromDevice ? { deviceId: deviceIdFromUrl } : {}),
       }) as { data: { list: DevicePortStatus[]; total: number } };
-      // 更新统计数据
-      updateStatistics(result.data.list || []);
       return result.data;
     },
     {
@@ -129,19 +127,6 @@ const PortStatusPage: FC = () => {
     } catch (error) {
       console.error("加载统计数据失败:", error);
     }
-  };
-
-  // 更新统计数据
-  const updateStatistics = (portList: DevicePortStatus[]) => {
-    const upCount = portList.filter(p => p.operStatus === "up").length;
-    const downCount = portList.filter(p => p.operStatus === "down").length;
-    const dot1xCount = portList.filter(p => p.dot1xEnabled).length;
-    setStatistics({
-      total: portList.length,
-      up: upCount,
-      down: downCount,
-      dot1xEnabled: dot1xCount,
-    });
   };
 
   // 加载设备列表

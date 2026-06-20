@@ -18,7 +18,6 @@ export interface UseTemplateDataReturn {
 
   loadTemplates: (params?: Record<string, unknown>, searchValues?: Record<string, unknown>) => Promise<void>;
   loadStatistics: () => Promise<void>;
-  updateStatistics: (templateList: ConfigTemplate[]) => void;
   handleApiError: (error: unknown, defaultMessage: string) => void;
 }
 
@@ -55,7 +54,6 @@ export function useTemplateData(searchForm: FormInstance<unknown>, setTotal: (to
         setTemplates(result.data?.list || []);
         setTotalLocal(result.data?.total || 0);
         setTotal(result.data?.total || 0);
-        updateStatistics(result.data?.list || []);
       } catch (error) {
         console.error("加载模板列表失败:", error);
       } finally {
@@ -65,26 +63,19 @@ export function useTemplateData(searchForm: FormInstance<unknown>, setTotal: (to
     [searchForm, setTotal]
   );
 
+  // 加载统计数据(专用端点 COUNT 聚合,不受分页/筛选影响)。
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post<PageResponse<ConfigTemplate>>("/network/templates/list", { current: 1, pageSize: 10000 });
-      const allTemplates = result.data?.list || [];
-      updateStatistics(allTemplates);
+      const result = await post<TemplateStatistics>("/network/templates/statistics");
+      setStatistics({
+        total: result.data?.total ?? 0,
+        system: result.data?.system ?? 0,
+        custom: result.data?.custom ?? 0,
+        init: result.data?.init ?? 0,
+      });
     } catch (error) {
       console.error("加载统计数据失败:", error);
     }
-  }, []);
-
-  const updateStatistics = useCallback((templateList: ConfigTemplate[]) => {
-    const systemCount = templateList.filter((t) => t.isSystem).length;
-    const customCount = templateList.filter((t) => !t.isSystem).length;
-    const initCount = templateList.filter((t) => t.templateType === "init").length;
-    setStatistics({
-      total: templateList.length,
-      system: systemCount,
-      custom: customCount,
-      init: initCount,
-    });
   }, []);
 
   return {
@@ -94,7 +85,6 @@ export function useTemplateData(searchForm: FormInstance<unknown>, setTotal: (to
     statistics,
     loadTemplates,
     loadStatistics,
-    updateStatistics,
     handleApiError,
   };
 }

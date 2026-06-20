@@ -6,8 +6,8 @@ import { useState, useCallback } from "react";
 import type { ConfigBackup, BaseResponse, PageResponse } from "@/types";
 import type { FormInstance } from "antd/es/form";
 import type { DeviceBackupGroup, BackupStatistics } from "../types";
-import { groupBackupsByDevice, calculateStatistics } from "../utils";
-import { post } from "@/lib/api";
+import { groupBackupsByDevice } from "../utils";
+import { get, post } from "@/lib/api";
 
 interface UseBackupDataOptions {
   current: number;
@@ -70,10 +70,6 @@ export function useBackupData(
 
       setDeviceGroups(groups);
       setTotal(result.data?.total || 0);
-
-      // 更新统计数据
-      const stats = calculateStatistics(backups);
-      setStatistics(stats);
     } catch (error) {
       console.error("加载备份列表失败:", error);
     } finally {
@@ -81,13 +77,17 @@ export function useBackupData(
     }
   }, [current, pageSize, searchForm]);
 
-  // 加载统计数据
+  // 加载统计数据(专用端点 COUNT 聚合,不受分页影响)
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post<PageResponse<ConfigBackup>>("/network/backups/list", { current: 1, pageSize: 10000 });
-      const allBackups = result.data?.list || [];
-      const stats = calculateStatistics(allBackups);
-      setStatistics(stats);
+      const result = await get<{ totalBackups?: number; autoBackups?: number; manualBackups?: number; uniqueDevices?: number }>("/network/backups/statistics");
+      const data = result.data || {};
+      setStatistics({
+        total: data.totalBackups ?? 0,
+        auto: data.autoBackups ?? 0,
+        manual: data.manualBackups ?? 0,
+        devices: data.uniqueDevices ?? 0,
+      });
     } catch (error) {
       console.error("加载统计数据失败:", error);
     }

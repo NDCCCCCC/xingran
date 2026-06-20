@@ -44,20 +44,6 @@ export function useCommandData(
     failed: 0,
   });
 
-  const updateStatistics = useCallback((executionList: ConfigExecution[]) => {
-    const pendingCount = executionList.filter((e) => e.status === "pending").length;
-    const runningCount = executionList.filter((e) => e.status === "running").length;
-    const successCount = executionList.filter((e) => e.status === "success").length;
-    const failedCount = executionList.filter((e) => e.status === "failed").length;
-    setStatistics({
-      total: executionList.length,
-      pending: pendingCount,
-      running: runningCount,
-      success: successCount,
-      failed: failedCount,
-    });
-  }, []);
-
   const loadExecutions = useCallback(
     async (params: Record<string, unknown> = {}) => {
       setExecLoading(true);
@@ -70,8 +56,6 @@ export function useCommandData(
         });
         setExecutions(result.data?.list || []);
         setExecTotal(result.data?.total || 0);
-        // 更新统计数据
-        updateStatistics(result.data?.list || []);
       } catch (error) {
         console.error("加载执行记录失败:", error);
       } finally {
@@ -79,18 +63,24 @@ export function useCommandData(
         setExecLoadingState(false);
       }
     },
-    [current, pageSize, setExecLoading, updateStatistics]
+    [current, pageSize, setExecLoading]
   );
 
+  // 加载统计数据(专用端点 COUNT 聚合,不受分页影响)
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post<PageResponse<ConfigExecution>>("/network/command/list", { current: 1, pageSize: 10000 });
-      const allExecutions = result.data?.list || [];
-      updateStatistics(allExecutions);
+      const result = await post<CommandStatistics>("/network/command/statistics");
+      setStatistics({
+        total: result.data?.total ?? 0,
+        pending: result.data?.pending ?? 0,
+        running: result.data?.running ?? 0,
+        success: result.data?.success ?? 0,
+        failed: result.data?.failed ?? 0,
+      });
     } catch (error) {
       console.error("加载统计数据失败:", error);
     }
-  }, [updateStatistics]);
+  }, []);
 
   const loadDevices = useCallback(async (): Promise<NetworkDevice[]> => {
     try {

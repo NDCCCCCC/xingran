@@ -34,7 +34,6 @@ export interface UseDiscoveryDataReturn {
   loadStatistics: () => Promise<void>;
   loadDepartments: () => Promise<void>;
   loadDiscoveryResults: (id: string) => Promise<void>;
-  updateStatistics: (list: DeviceDiscovery[]) => void;
 }
 
 export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDataReturn {
@@ -69,7 +68,6 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
       });
       setDiscoveries(result.data?.list || []);
       setTotal(result.data?.total || 0);
-      updateStatistics(result.data?.list || []);
     } catch (error) {
       console.error("加载发现任务失败:", error);
     } finally {
@@ -77,30 +75,21 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
     }
   }, [current, pageSize]);
 
+  // 加载统计数据(专用端点 COUNT 聚合,不受分页影响)
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post<PageResponse<DeviceDiscovery>>("/network/discoveries/list", { current: 1, pageSize: 10000 });
-      const allDiscoveries = result.data?.list || [];
-      updateStatistics(allDiscoveries);
+      const result = await post<DiscoveryStatistics>("/network/discoveries/statistics");
+      setStatistics({
+        total: result.data?.total ?? 0,
+        pending: result.data?.pending ?? 0,
+        running: result.data?.running ?? 0,
+        completed: result.data?.completed ?? 0,
+        failed: result.data?.failed ?? 0,
+        totalDevices: result.data?.totalDevices ?? 0,
+      });
     } catch (error) {
       console.error("加载统计数据失败:", error);
     }
-  }, []);
-
-  const updateStatistics = useCallback((discoveryList: DeviceDiscovery[]) => {
-    const pendingCount = discoveryList.filter(d => d.status === "pending").length;
-    const runningCount = discoveryList.filter(d => d.status === "running").length;
-    const completedCount = discoveryList.filter(d => d.status === "completed").length;
-    const failedCount = discoveryList.filter(d => d.status === "failed").length;
-    const totalDevices = discoveryList.reduce((sum, d) => sum + (d.discoveredCount || 0), 0);
-    setStatistics({
-      total: discoveryList.length,
-      pending: pendingCount,
-      running: runningCount,
-      completed: completedCount,
-      failed: failedCount,
-      totalDevices,
-    });
   }, []);
 
   const loadDepartments = useCallback(async () => {
@@ -139,6 +128,5 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
     loadStatistics,
     loadDepartments,
     loadDiscoveryResults,
-    updateStatistics,
   };
 }

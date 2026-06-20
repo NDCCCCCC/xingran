@@ -92,8 +92,6 @@ const CredentialManagement: FC = () => {
         searchParams.protocolType = formValues.searchProtocolType;
       }
       const result = await post<PageResponse<AuthCredential>>("/network/credentials/list", searchParams);
-      // 更新统计数据
-      updateStatistics(result.data?.list || []);
       return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
     {
@@ -107,26 +105,18 @@ const CredentialManagement: FC = () => {
     }
   );
 
-  // 加载统计数据
+  // 加载统计数据(专用端点 COUNT 聚合,不受分页影响)
   const loadStatistics = async () => {
     try {
-      const result = await post<PageResponse<AuthCredential>>("/network/credentials/list", { current: 1, pageSize: 10000 });
-      const allCredentials = result.data?.list || [];
-      updateStatistics(allCredentials);
+      const result = await post<{ total: number; ssh: number; telnet: number }>("/network/credentials/statistics");
+      setStatistics({
+        total: result.data?.total ?? 0,
+        ssh: result.data?.ssh ?? 0,
+        telnet: result.data?.telnet ?? 0,
+      });
     } catch (error) {
       console.error("加载统计数据失败:", error);
     }
-  };
-
-  // 更新统计数据
-  const updateStatistics = (credentialList: AuthCredential[]) => {
-    const sshCount = credentialList.filter(c => c.protocolType === "ssh").length;
-    const telnetCount = credentialList.filter(c => c.protocolType === "telnet").length;
-    setStatistics({
-      total: credentialList.length,
-      ssh: sshCount,
-      telnet: telnetCount,
-    });
   };
 
   useEffect(() => {

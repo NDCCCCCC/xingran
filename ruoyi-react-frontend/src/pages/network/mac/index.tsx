@@ -24,7 +24,7 @@ import {
 } from "@ant-design/icons";
 import type { DeviceMACAddress, NetworkDevice } from "@/types";
 import { formatDateTime } from "@/utils/datetime";
-import { post } from "@/lib/api";
+import { get, post } from "@/lib/api";
 import { batchExport } from "@/lib/api/networkApi";
 import { useTableManager } from "@/hooks/useTableManager";
 import { withErrorHandling } from "@/utils/errorHandler";
@@ -73,8 +73,7 @@ const MACAddressPage: FC = () => {
         pageSize: params.pageSize ?? paginationProps.pageSize ?? 10,
         ...values,
       }) as { data: { list: DeviceMACAddress[]; total: number } };
-      // 更新统计数据
-      updateStatistics(result.data.list || []);
+      loadStatistics();
       return result.data;
     },
     {
@@ -88,17 +87,20 @@ const MACAddressPage: FC = () => {
     }
   );
 
-  // 更新统计数据
-  const updateStatistics = (macList: DeviceMACAddress[]) => {
-    const dynamicCount = macList.filter(m => m.macType === "dynamic").length;
-    const staticCount = macList.filter(m => m.macType === "static").length;
-    const secureCount = macList.filter(m => m.macType === "secure").length;
-    setStatistics({
-      total: macList.length,
-      dynamic: dynamicCount,
-      static: staticCount,
-      secure: secureCount,
-    });
+  // 加载统计数据(专用端点 COUNT 聚合,不受分页/筛选影响)
+  const loadStatistics = async () => {
+    try {
+      const result = await get<{ totalRecords?: number; dynamic?: number; static?: number; secure?: number }>("/network/mac/statistics");
+      const data = result.data || {};
+      setStatistics({
+        total: data.totalRecords ?? 0,
+        dynamic: data.dynamic ?? 0,
+        static: data.static ?? 0,
+        secure: data.secure ?? 0,
+      });
+    } catch (error) {
+      console.error("加载统计数据失败:", error);
+    }
   };
 
   // 加载设备列表

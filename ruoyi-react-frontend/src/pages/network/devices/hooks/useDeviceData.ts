@@ -5,17 +5,13 @@
 import { useState, useCallback } from "react";
 import { post } from "@/lib/api";
 import { handleApiError } from "@/utils/errorHandler";
-import type { NetworkDevice, Department, AuthCredential, BaseResponse, PageResponse } from "@/types";
+import type { Department, AuthCredential, BaseResponse, PageResponse } from "@/types";
 
 export interface DeviceStatistics {
   total: number;
   online: number;
   offline: number;
   unknown: number;
-}
-
-export interface UseDeviceDataOptions {
-  onUpdateStatistics?: (stats: DeviceStatistics) => void;
 }
 
 export interface UseDeviceDataReturn {
@@ -25,14 +21,9 @@ export interface UseDeviceDataReturn {
   loadDepartments: () => Promise<void>;
   loadCredentials: () => Promise<void>;
   loadStatistics: () => Promise<void>;
-  updateStatistics: (deviceList: NetworkDevice[]) => void;
 }
 
-export function useDeviceData(
-  options: UseDeviceDataOptions = {}
-): UseDeviceDataReturn {
-  const { onUpdateStatistics } = options;
-
+export function useDeviceData(): UseDeviceDataReturn {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [credentials, setCredentials] = useState<AuthCredential[]>([]);
   const [statistics, setStatistics] = useState<DeviceStatistics>({
@@ -42,30 +33,21 @@ export function useDeviceData(
     unknown: 0,
   });
 
-  // 更新统计数据
-  const updateStatistics = useCallback((deviceList: NetworkDevice[]) => {
-    const onlineCount = deviceList.filter(d => d.status === 0).length;
-    const offlineCount = deviceList.filter(d => d.status === 1).length;
-    const unknownCount = deviceList.filter(d => d.status === 2).length;
-    const stats = {
-      total: deviceList.length,
-      online: onlineCount,
-      offline: offlineCount,
-      unknown: unknownCount,
-    };
-    setStatistics(stats);
-    onUpdateStatistics?.(stats);
-  }, [onUpdateStatistics]);
-
-  // 加载统计数据
+  // 加载统计数据(专用端点 COUNT 聚合,不受分页/筛选影响)
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post<PageResponse<NetworkDevice>>("/network/devices/list", { current: 1, pageSize: 10000 });
-      updateStatistics(result.data?.list || []);
+      const result = await post<{ totalDevices?: number; onlineDevices?: number; offlineDevices?: number; unknownDevices?: number }>("/network/devices/statistics");
+      const data = result.data || {};
+      setStatistics({
+        total: data.totalDevices ?? 0,
+        online: data.onlineDevices ?? 0,
+        offline: data.offlineDevices ?? 0,
+        unknown: data.unknownDevices ?? 0,
+      });
     } catch (error) {
       handleApiError(error, "加载统计数据", false);
     }
-  }, [updateStatistics]);
+  }, []);
 
   // 加载部门列表（树形结构）
   const loadDepartments = useCallback(async () => {
@@ -95,6 +77,5 @@ export function useDeviceData(
     loadDepartments,
     loadCredentials,
     loadStatistics,
-    updateStatistics,
   };
 }

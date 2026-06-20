@@ -287,7 +287,6 @@ const DeviceManagement: FC = () => {
     loadDepartments,
     loadCredentials,
     loadStatistics,
-    updateStatistics,
   } = useDeviceData();
 
   const {
@@ -345,7 +344,7 @@ const DeviceManagement: FC = () => {
         ...values,
         ...params,
       });
-      updateStatistics(result.data?.list || []);
+      loadStatistics();
       return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
     {

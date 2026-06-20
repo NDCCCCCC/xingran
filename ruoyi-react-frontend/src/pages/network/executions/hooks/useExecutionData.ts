@@ -38,7 +38,6 @@ export interface UseExecutionDataReturn {
   loadExecutions: (params?: Record<string, unknown>) => Promise<void>;
   loadExecutionDetails: (executionId: string) => Promise<void>;
   loadStatistics: () => Promise<void>;
-  updateStatistics: (executionList: ConfigExecution[]) => void;
 }
 
 export function useExecutionData(params: UseExecutionDataParams): UseExecutionDataReturn {
@@ -110,8 +109,6 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
       });
       setDataState(prev => ({ ...prev, executions: result.data?.list || [] }));
       setExecTotal(result.data?.total || 0);
-      // 更新统计数据
-      updateStatistics(result.data?.list || []);
     } catch (error) {
       console.error("加载执行记录失败:", error);
     } finally {
@@ -119,30 +116,20 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
     }
   }, [execCurrent, pageSize]);
 
-  // 加载统计数据
+  // 加载统计数据(专用端点 COUNT 聚合,不受分页影响)
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post<PageResponse<ConfigExecution>>("/network/executions/list", { current: 1, pageSize: 100 });
-      const allExecutions = result.data?.list || [];
-      updateStatistics(allExecutions);
+      const result = await post<ExecutionStatistics>("/network/executions/statistics");
+      setStatistics({
+        total: result.data?.total ?? 0,
+        pending: result.data?.pending ?? 0,
+        running: result.data?.running ?? 0,
+        success: result.data?.success ?? 0,
+        failed: result.data?.failed ?? 0,
+      });
     } catch (error) {
       console.error("加载统计数据失败:", error);
     }
-  }, []);
-
-  // 更新统计数据
-  const updateStatistics = useCallback((executionList: ConfigExecution[]) => {
-    const pendingCount = executionList.filter(e => e.status === "pending").length;
-    const runningCount = executionList.filter(e => e.status === "running").length;
-    const successCount = executionList.filter(e => e.status === "success").length;
-    const failedCount = executionList.filter(e => e.status === "failed").length;
-    setStatistics({
-      total: executionList.length,
-      pending: pendingCount,
-      running: runningCount,
-      success: successCount,
-      failed: failedCount,
-    });
   }, []);
 
   // 加载执行明细
@@ -177,6 +164,5 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
     loadExecutions,
     loadExecutionDetails,
     loadStatistics,
-    updateStatistics,
   };
 }
