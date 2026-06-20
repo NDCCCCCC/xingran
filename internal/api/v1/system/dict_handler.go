@@ -30,6 +30,16 @@ func (h *DictTypeHandler) WithCore(core *core.Core) *DictTypeHandler {
 	return h
 }
 
+// Statistics 字典类型统计(读操作,不记操作日志)
+func (h *DictTypeHandler) Statistics(c *gin.Context) {
+	result, err := h.service.Statistics(c.Request.Context())
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Success(c, result)
+}
+
 // Create 创建字典类型
 // @Summary 创建字典类型
 // @Description 创建新的字典类型
@@ -263,6 +273,20 @@ func (h *DictDataHandler) WithCore(core *core.Core) *DictDataHandler {
 		h.core = core
 	}
 	return h
+}
+
+// Statistics 字典数据统计(读操作,不记操作日志;支持按 dictType 过滤)
+func (h *DictDataHandler) Statistics(c *gin.Context) {
+	var req struct {
+		DictType string `json:"dictType"`
+	}
+	_ = c.ShouldBindJSON(&req)
+	result, err := h.service.Statistics(c.Request.Context(), req.DictType)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Success(c, result)
 }
 
 // Create 创建字典数据

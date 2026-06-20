@@ -39,6 +39,16 @@ func (h *ConfigHandler) WithCore(core *core.Core) *ConfigHandler {
 	return h
 }
 
+// Statistics 参数配置统计(读操作,不记操作日志)
+func (h *ConfigHandler) Statistics(c *gin.Context) {
+	result, err := h.service.Statistics(c.Request.Context())
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Success(c, result)
+}
+
 // isCaptchaConfig 检查配置键是否与验证码相关
 func (h *ConfigHandler) isCaptchaConfig(configKey string) bool {
 	captchaKeys := []string{

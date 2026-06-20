@@ -28,6 +28,8 @@ func SetupPostRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// 注册路由
 	r.POST("/list", handler.List)
+	// 岗位统计(专用 COUNT 聚合,不依赖分页列表)
+	r.POST("/statistics", handler.Statistics)
 	r.POST("/all", handler.GetAll)
 	r.POST("/enabled", handler.GetAllEnabled)
 	r.POST("/batch-delete", handler.BatchDelete)

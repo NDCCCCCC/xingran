@@ -20,6 +20,15 @@ type DictTypeService interface {
 
 	// 新增缓存方法
 	GetAllWithCache(ctx context.Context) ([]*models.DictType, error)
+	// Statistics 字典类型统计(专用 COUNT 聚合,不依赖分页列表,不受 MaxPageSize=100 钳制)。
+	Statistics(ctx context.Context) (*DictTypeStatisticsResult, error)
+}
+
+// DictTypeStatisticsResult 字典类型统计结果(status: 0=正常 1=停用)。
+type DictTypeStatisticsResult struct {
+	Total    int64 `json:"total"`
+	Active   int64 `json:"active"`
+	Inactive int64 `json:"inactive"`
 }
 
 // dictTypeService 字典类型服务实现
@@ -30,6 +39,24 @@ type dictTypeService struct {
 // NewDictTypeService 创建字典类型服务实例
 func NewDictTypeService(db *gorm.DB) DictTypeService {
 	return &dictTypeService{db: db}
+}
+
+// Statistics 统计字典类型(按 status 聚合,排除软删除)。
+// 不依赖分页列表,避免「用 pageSize:1000 拉全量再 .length」被 MaxPageSize=100 钳制。
+func (s *dictTypeService) Statistics(ctx context.Context) (*DictTypeStatisticsResult, error) {
+	var result DictTypeStatisticsResult
+	err := s.db.WithContext(ctx).
+		Model(&models.DictType{}).
+		Select(
+			"COUNT(*) AS total",
+			"COALESCE(SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END), 0) AS active",
+			"COALESCE(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END), 0) AS inactive",
+		).
+		Scan(&result).Error
+	if err != nil {
+		return nil, fmt.Errorf("统计字典类型失败: %w", err)
+	}
+	return &result, nil
 }
 
 // ==================== 服务方法实现 ====================
@@ -170,6 +197,15 @@ type DictDataService interface {
 
 	// 新增缓存方法
 	GetByTypeWithCache(ctx context.Context, dictType string) ([]*models.DictData, error)
+	// Statistics 字典数据统计(专用 COUNT 聚合,可选按 dictType 过滤,不受 MaxPageSize=100 钳制)。
+	Statistics(ctx context.Context, dictType string) (*DictDataStatisticsResult, error)
+}
+
+// DictDataStatisticsResult 字典数据统计结果(status: 0=正常 1=停用)。
+type DictDataStatisticsResult struct {
+	Total    int64 `json:"total"`
+	Active   int64 `json:"active"`
+	Inactive int64 `json:"inactive"`
 }
 
 // dictDataService 字典数据服务实现
@@ -180,6 +216,25 @@ type dictDataService struct {
 // NewDictDataService 创建字典数据服务实例
 func NewDictDataService(db *gorm.DB) DictDataService {
 	return &dictDataService{db: db}
+}
+
+// Statistics 统计字典数据(按 status 聚合,可选按 dictType 过滤,排除软删除)。
+// dictType 为空时统计全部。不依赖分页列表,避免被 MaxPageSize=100 钳制。
+func (s *dictDataService) Statistics(ctx context.Context, dictType string) (*DictDataStatisticsResult, error) {
+	var result DictDataStatisticsResult
+	q := s.db.WithContext(ctx).Model(&models.DictData{})
+	if dictType != "" {
+		q = q.Where("dict_type = ?", dictType)
+	}
+	err := q.Select(
+		"COUNT(*) AS total",
+		"COALESCE(SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END), 0) AS active",
+		"COALESCE(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END), 0) AS inactive",
+	).Scan(&result).Error
+	if err != nil {
+		return nil, fmt.Errorf("统计字典数据失败: %w", err)
+	}
+	return &result, nil
 }
 
 // dictTypeAllowedSortFields 字典类型可排序字段白名单。

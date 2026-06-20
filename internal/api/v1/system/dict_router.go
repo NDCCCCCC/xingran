@@ -28,6 +28,8 @@ func SetupDictRouter(r *gin.RouterGroup, core *core.Core) {
 	types := r.Group("/types")
 	{
 		types.POST("/list", dictTypeHandler.List)
+		// 字典类型统计(专用 COUNT 聚合,不依赖分页列表)
+		types.POST("/statistics", dictTypeHandler.Statistics)
 		types.POST("/all", dictTypeHandler.GetAll)
 		types.POST("", dictTypeHandler.Create)
 		types.POST("/:id", dictTypeHandler.GetByID)
@@ -52,6 +54,8 @@ func SetupDictRouter(r *gin.RouterGroup, core *core.Core) {
 	data := r.Group("/data")
 	{
 		data.POST("/list", dictDataHandler.List)
+		// 字典数据统计(专用 COUNT 聚合,支持按 dictType 过滤)
+		data.POST("/statistics", dictDataHandler.Statistics)
 		data.POST("", dictDataHandler.Create)
 		data.POST("/:id", dictDataHandler.GetByID)
 		data.POST("/:id/update", dictDataHandler.Update)

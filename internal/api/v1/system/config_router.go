@@ -27,6 +27,8 @@ func SetupConfigRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// 参数配置路由
 	r.POST("/list", configHandler.List)
+	// 参数配置统计(专用 COUNT 聚合,不依赖分页列表)
+	r.POST("/statistics", configHandler.Statistics)
 	r.POST("/batch-delete", configHandler.BatchDelete)
 	r.POST("/refresh-cache", configHandler.RefreshCache)
 	r.POST("", configHandler.Create)

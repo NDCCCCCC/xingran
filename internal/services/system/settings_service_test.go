@@ -47,6 +47,9 @@ func (s *stubConfigService) BatchDelete(ctx context.Context, ids []string) error
 func (s *stubConfigService) RefreshCache(ctx context.Context) error {
 	panic("not implemented")
 }
+func (s *stubConfigService) Statistics(ctx context.Context) (*ConfigStatisticsResult, error) {
+	panic("not implemented")
+}
 
 func newSettingsServiceForTest(t *testing.T, cfg ConfigService) *settingsService {
 	t.Helper()

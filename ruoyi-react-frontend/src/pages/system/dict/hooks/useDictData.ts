@@ -101,39 +101,28 @@ export function useDictData(searchForm: FormInstance<unknown>, dataSearchForm: F
     }
   }, [selectedType, current, pageSize, dataSearchForm]);
 
-  // 加载字典类型统计数据
+  // 加载字典类型统计数据(专用 COUNT 端点,不受 MaxPageSize=100 钳制)
   const loadTypeStatistics = useCallback(async () => {
     try {
-      const result = await post<{ list: DictType[] }>("/system/dicts/types/list", { current: 1, pageSize: 1000 });
-      const allTypes = result.data?.list || [];
-      const activeCount = allTypes.filter((t: DictType) => t.status === 0).length;
-      const inactiveCount = allTypes.filter((t: DictType) => t.status === 1).length;
-      setTypeStatistics({
-        total: allTypes.length,
-        active: activeCount,
-        inactive: inactiveCount,
-      });
+      const result = await post<{ total: number; active: number; inactive: number }>("/system/dicts/types/statistics");
+      setTypeStatistics(result.data ?? { total: 0, active: 0, inactive: 0 });
     } catch (error) {
       handleApiError(error, "加载统计数据", false);
     }
   }, []);
 
-  // 加载字典数据统计数据
+  // 加载字典数据统计数据(专用 COUNT 端点,按 selectedType 过滤,不受 MaxPageSize=100 钳制)
   const loadDataStatistics = useCallback(async () => {
     if (!selectedType) {
       setDataStatistics({ total: 0, active: 0, inactive: 0 });
       return;
     }
     try {
-      const result = await post<{ list: DictData[] }>("/system/dicts/data/list", { current: 1, pageSize: 1000, dictType: selectedType });
-      const allData = result.data?.list || [];
-      const activeCount = allData.filter((d: DictData) => d.status === 0).length;
-      const inactiveCount = allData.filter((d: DictData) => d.status === 1).length;
-      setDataStatistics({
-        total: allData.length,
-        active: activeCount,
-        inactive: inactiveCount,
-      });
+      const result = await post<{ total: number; active: number; inactive: number }>(
+        "/system/dicts/data/statistics",
+        { dictType: selectedType }
+      );
+      setDataStatistics(result.data ?? { total: 0, active: 0, inactive: 0 });
     } catch (error) {
       handleApiError(error, "加载统计数据", false);
     }

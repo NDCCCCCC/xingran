@@ -29,6 +29,16 @@ func (h *PostHandler) WithCore(core *core.Core) *PostHandler {
 	return h
 }
 
+// Statistics 岗位统计(读操作,不记操作日志)
+func (h *PostHandler) Statistics(c *gin.Context) {
+	result, err := h.service.Statistics(c.Request.Context())
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Success(c, result)
+}
+
 // Create 创建岗位
 // @Summary 创建岗位
 // @Description 创建新的岗位

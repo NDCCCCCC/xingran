@@ -98,18 +98,11 @@ const PostManagement: FC = () => {
     }
   );
 
-  // 加载统计数据
+  // 加载统计数据(专用 COUNT 端点,不受 MaxPageSize=100 钳制)
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post("/system/posts/list", { current: 1, pageSize: 1000 }) as { data: { list: Post[] } };
-      const allPosts = result.data.list || [];
-      const activeCount = allPosts.filter((p: Post) => p.status === 0).length;
-      const inactiveCount = allPosts.filter((p: Post) => p.status === 1).length;
-      setStatistics({
-        total: allPosts.length,
-        active: activeCount,
-        inactive: inactiveCount,
-      });
+      const result = await post<{ total: number; active: number; inactive: number }>("/system/posts/statistics");
+      setStatistics(result.data ?? { total: 0, active: 0, inactive: 0 });
     } catch (error) {
       handleApiError(error, "加载统计数据", false);
     }

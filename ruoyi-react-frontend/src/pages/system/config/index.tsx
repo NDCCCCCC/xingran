@@ -109,18 +109,11 @@ const ConfigManagement: FC = () => {
     }
   );
 
-  // 加载统计数据
+  // 加载统计数据(专用 COUNT 端点,不受 MaxPageSize=100 钳制)
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post<{ list: Config[] }>("/system/configs/list", { current: 1, pageSize: 1000 });
-      const allConfigs = result.data?.list || [];
-      const activeCount = allConfigs.filter((c: Config) => c.configType === "Y").length;
-      const inactiveCount = allConfigs.filter((c: Config) => c.configType === "N").length;
-      setStatistics({
-        total: allConfigs.length,
-        active: activeCount,
-        inactive: inactiveCount,
-      });
+      const result = await post<{ total: number; active: number; inactive: number }>("/system/configs/statistics");
+      setStatistics(result.data ?? { total: 0, active: 0, inactive: 0 });
     } catch (error) {
       handleApiError(error, "加载统计数据", false);
     }

@@ -29,6 +29,15 @@ type ConfigService interface {
 	GetByKey(ctx context.Context, configKey string) (*models.Config, error)
 	List(ctx context.Context, params requests.ConfigListParams) (*PageResult, error)
 	RefreshCache(ctx context.Context) error
+	// Statistics 参数配置统计(专用 COUNT 聚合,不依赖分页列表,不受 MaxPageSize=100 钳制)。
+	Statistics(ctx context.Context) (*ConfigStatisticsResult, error)
+}
+
+// ConfigStatisticsResult 参数配置统计结果(config_type: Y/N 两类)。
+type ConfigStatisticsResult struct {
+	Total    int64 `json:"total"`
+	Active   int64 `json:"active"`   // config_type = 'Y'
+	Inactive int64 `json:"inactive"` // config_type = 'N'
 }
 
 // configService 参数配置服务实现
@@ -48,6 +57,24 @@ var configAllowedSortFields = map[string]string{
 	"configKey":   "config_key",
 	"configType":  "config_type",
 	"createdAt":   "created_at",
+}
+
+// Statistics 统计参数配置(按 config_type 聚合,排除软删除)。
+// 不依赖分页列表,避免「用 pageSize:1000 拉全量再 .length」被 MaxPageSize=100 钳制。
+func (s *configService) Statistics(ctx context.Context) (*ConfigStatisticsResult, error) {
+	var result ConfigStatisticsResult
+	err := s.db.WithContext(ctx).
+		Model(&models.Config{}).
+		Select(
+			"COUNT(*) AS total",
+			"COALESCE(SUM(CASE WHEN config_type = 'Y' THEN 1 ELSE 0 END), 0) AS active",
+			"COALESCE(SUM(CASE WHEN config_type = 'N' THEN 1 ELSE 0 END), 0) AS inactive",
+		).
+		Scan(&result).Error
+	if err != nil {
+		return nil, fmt.Errorf("统计参数配置失败: %w", err)
+	}
+	return &result, nil
 }
 
 // ==================== 服务方法实现 ====================

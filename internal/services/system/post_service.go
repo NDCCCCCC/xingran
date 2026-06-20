@@ -23,6 +23,15 @@ type PostService interface {
 	GetAllWithCache(ctx context.Context) ([]*models.Post, error)
 	GetEnabledWithCache(ctx context.Context) ([]*models.Post, error)
 	InvalidatePostCache(ctx context.Context) error
+	// Statistics 岗位统计(专用 COUNT 聚合,不依赖分页列表,不受 MaxPageSize=100 钳制)。
+	Statistics(ctx context.Context) (*PostStatisticsResult, error)
+}
+
+// PostStatisticsResult 岗位统计结果(status: 0=正常 1=停用)。
+type PostStatisticsResult struct {
+	Total    int64 `json:"total"`
+	Active   int64 `json:"active"`   // status = 0
+	Inactive int64 `json:"inactive"` // status = 1
 }
 
 // postService 岗位服务实现
@@ -44,6 +53,24 @@ var postAllowedSortFields = map[string]string{
 	"status":    "status",
 	"remark":    "remark",
 	"createdAt": "created_at",
+}
+
+// Statistics 统计岗位(按 status 聚合,排除软删除)。
+// 不依赖分页列表,避免「用 pageSize:1000 拉全量再 .length」被 MaxPageSize=100 钳制。
+func (s *postService) Statistics(ctx context.Context) (*PostStatisticsResult, error) {
+	var result PostStatisticsResult
+	err := s.db.WithContext(ctx).
+		Model(&models.Post{}).
+		Select(
+			"COUNT(*) AS total",
+			"COALESCE(SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END), 0) AS active",
+			"COALESCE(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END), 0) AS inactive",
+		).
+		Scan(&result).Error
+	if err != nil {
+		return nil, fmt.Errorf("统计岗位失败: %w", err)
+	}
+	return &result, nil
 }
 
 // ==================== 服务方法实现 ====================
