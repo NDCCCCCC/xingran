@@ -131,4 +131,34 @@ updated: 2026-06-20
 | discoveries | POST /statistics | 新增（int 状态 + SUM discovered_count） |
 
 要点：command/executions 同查 sys_config_execution 表，按 execution_type 分开统计；mac/discoveries/ConfigExecution 无软删除；int 状态枚举 0待执行/1执行中/2成功/3失败。
-回归测试：command_statistics_test.go（execution_type 过滤）、discovery_statistics_test.go（int 状态 + SUM）。至此「用 list.length 充当统计」反模式全仓清零。
+回归测试：command_statistics_test.go（execution_type 过滤）、discovery_statistics_test.go（int 状态 + SUM）。第三轮断言「全仓清零」，第四轮复核证明过早（见下）。
+
+---
+
+## 第四轮（2026-06-20）：复核补漏——rpa 活跃 + system 潜伏 + 死代码清理
+
+全仓再扫（搜 inline `value={...length}`、`useMemo(() => ({...length}))`、`statisticsHelper`、`calculateStatistics`）发现遗漏并修复。
+
+### 活跃 bug（当前页变体，恒 ≤ pageSize）
+| 模块 | 端点 | 说明 |
+|------|------|------|
+| RPA 执行记录 | `POST /rpa/executions/statistics` | 原 `executions.length`(当前页10) + 5s 自动刷新；顺带修正前端 status 误用（`completed`→`success` 对齐后端真实枚举） |
+| RPA Worker | `POST /rpa/workers/statistics` | 原 `workers.length` + 容量 reduce(当前页)；online/offline/busy 按实时心跳(120s)派生，worker 数量少故后端全量查 + Go 算（避免跨库时间函数） |
+
+### 潜伏（system 模块 MaxPageSize=100 钳制，数据 >100 才触发）
+| 模块 | 端点 |
+|------|------|
+| 参数配置 | `POST /system/configs/statistics`（config_type Y/N） |
+| 岗位管理 | `POST /system/posts/statistics`（status 0/1） |
+| 字典类型 | `POST /system/dicts/types/statistics` |
+| 字典数据 | `POST /system/dicts/data/statistics`（可选 dictType 过滤） |
+
+### 死代码清理
+- `network/backups/utils.ts calculateStatistics`：第三轮改前端为专用端点后遗留，无调用方，删除（menu 同名函数不同文件，保留）。
+
+### 复核确认非 bug（不修）
+- `building-spaces-3d/utils.ts calculateWorkstationStats`：单楼层范围，与 3D 渲染共用同一 list（count = 屏幕工位数），operations 模块 cap 10000，单楼层 >1000 不现实。
+- `menu/utils.tsx`、`dept tree`：用 tree 端点全量加载，非分页。
+- `utils/statisticsHelper.ts`：operations 6 模块（楼宇/楼层/机房/信息点/专线/机房设备）分页拉全量(≤10000)计数，正确但低效；数据现实不超 10000，改专用端点属独立重构，暂缓。
+
+**第四轮验证：** `go build ./...` 通过；前端 type-check 通过；5 个新回归测试（execution/worker/config/post/dict[type+data]）全绿，均含软删除排除（+dictType 过滤）。config/post/dict 的 cache wrapper 嵌入底层 service，Statistics 自动提升；`settings_service_test.go` 的 `stubConfigService` 补 Statistics 方法。

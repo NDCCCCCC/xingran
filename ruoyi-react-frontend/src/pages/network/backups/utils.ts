@@ -100,19 +100,3 @@ export function groupBackupsByDevice(backups: ConfigBackup[]): DeviceBackupGroup
 
   return groups;
 }
-
-/**
- * 更新统计数据
- */
-export function calculateStatistics(backupList: ConfigBackup[]) {
-  const autoCount = backupList.filter(b => b.backupType === "auto").length;
-  const manualCount = backupList.filter(b => b.backupType === "manual").length;
-  const uniqueDevices = new Set(backupList.map(b => b.deviceId)).size;
-
-  return {
-    total: backupList.length,
-    auto: autoCount,
-    manual: manualCount,
-    devices: uniqueDevices,
-  };
-}
