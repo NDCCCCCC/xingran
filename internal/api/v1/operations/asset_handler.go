@@ -195,6 +195,17 @@ func (h *AssetHandler) GetStatusValues(c *gin.Context) {
 	response.Success(c, result)
 }
 
+// Statistics 资产统计(读操作,不记操作日志)
+func (h *AssetHandler) Statistics(c *gin.Context) {
+	result, err := h.assetService.Statistics(c.Request.Context())
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(c, result)
+}
+
 // SearchBySerial 根据序列号查询资产
 func (h *AssetHandler) SearchBySerial(c *gin.Context) {
 	serial := c.Param("serial")

@@ -207,19 +207,11 @@ const AssetList: FC = () => {
     enableCache: true,
   });
 
-  // 加载统计数据
+  // 加载统计数据(专用 COUNT 端点,真实 status/nbf_status 计数,不再用伪造比例)
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await assetApi.list({ current: 1, pageSize: 1 }) as { data?: { list: Asset[]; total: number } };
-      const total = result.data?.total || 0;
-
-      // 获取各状态数量（简化实现）
-      setStatistics({
-        total,
-        normal: Math.floor(total * 0.8),
-        stopped: Math.floor(total * 0.15),
-        nbf: Math.floor(total * 0.05),
-      });
+      const result = await assetApi.statistics();
+      setStatistics(result ?? { total: 0, normal: 0, stopped: 0, nbf: 0 });
     } catch (error) {
       console.error("加载统计数据失败:", error);
     }

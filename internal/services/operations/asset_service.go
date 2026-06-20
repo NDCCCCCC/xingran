@@ -23,6 +23,17 @@ type AssetService interface {
 	GetDeviceTypes(ctx context.Context) ([]DeviceTypeCount, error)
 	GetDeviceCategories(ctx context.Context) ([]DeviceTypeCount, error)
 	GetStatusValues(ctx context.Context) ([]DeviceTypeCount, error)
+	// Statistics 资产统计(按 status/nbf_status 聚合,专用 COUNT 端点,不依赖分页列表)。
+	Statistics(ctx context.Context) (*AssetStatisticsResult, error)
+}
+
+// AssetStatisticsResult 资产统计结果。
+// status: 0=正常 1=停用; nbf_status: 0=否 1=拟报废(独立维度,nbf 计数与 normal/stopped 不互补)。
+type AssetStatisticsResult struct {
+	Total   int64 `json:"total"`
+	Normal  int64 `json:"normal"`  // status = 0
+	Stopped int64 `json:"stopped"` // status = 1
+	NBF     int64 `json:"nbf"`     // nbf_status = 1
 }
 
 // DeviceTypeCount 设备类型统计
@@ -42,6 +53,25 @@ func NewAssetService(db *gorm.DB) AssetService {
 		db:            db,
 		uuidValidator: constants.UuidPattern,
 	}
+}
+
+// Statistics 统计资产(按 status + nbf_status 聚合,排除软删除)。
+// 替代前端「total*0.8/0.15/0.05」的伪造比例占位实现。
+func (s *assetService) Statistics(ctx context.Context) (*AssetStatisticsResult, error) {
+	var result AssetStatisticsResult
+	err := s.db.WithContext(ctx).
+		Model(&models.Asset{}).
+		Select(
+			"COUNT(*) AS total",
+			"COALESCE(SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END), 0) AS normal",
+			"COALESCE(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END), 0) AS stopped",
+			"COALESCE(SUM(CASE WHEN nbf_status = 1 THEN 1 ELSE 0 END), 0) AS nbf",
+		).
+		Scan(&result).Error
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
 }
 
 // assetAllowedSortFields 资产可排序字段白名单(对应 ops_asset 表列名)。

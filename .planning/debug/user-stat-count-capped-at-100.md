@@ -162,3 +162,21 @@ updated: 2026-06-20
 - `utils/statisticsHelper.ts`：operations 6 模块（楼宇/楼层/机房/信息点/专线/机房设备）分页拉全量(≤10000)计数，正确但低效；数据现实不超 10000，改专用端点属独立重构，暂缓。
 
 **第四轮验证：** `go build ./...` 通过；前端 type-check 通过；5 个新回归测试（execution/worker/config/post/dict[type+data]）全绿，均含软删除排除（+dictType 过滤）。config/post/dict 的 cache wrapper 嵌入底层 service，Statistics 自动提升；`settings_service_test.go` 的 `stubConfigService` 补 Statistics 方法。
+
+---
+
+## 第五轮（2026-06-20）：复核补漏——assets 伪造比例统计
+
+第四轮后再复核（搜 `setStatistics` 数据源 + inline `value={...length}` + `Set.size`/`reduce`）。inline length 已**清零**，所有 setStatistics 逐一核实数据源——仅发现一处严重问题：
+
+### 🔴 operations/assets：统计卡片显示伪造数据（占位实现造假，非钳制 bug）
+
+`assets/index.tsx` 原 `loadStatistics` 用 `total*0.8/0.15/0.05` 编造 normal/stopped/nbf（注释自承"简化实现"），total 真实但状态桶是假的固定比例。
+
+**修复**：`POST /ops/asset/statistics`，按 model 真实字段聚合——`status`(0=正常/1=停用)→normal/stopped，`nbf_status`(0=否/1=拟报废，独立维度)→nbf，COUNT(*)→total。前端 `assetApi.statistics()` + 删伪造比例。回归测试 `asset_statistics_test.go`（status/nbf_status 双维度 + 软删除排除）。
+
+### 复核确认非 bug（不修）
+- `building-spaces/index.tsx`：楼宇空间概览页拉 building(100)/floor(1000)/workstation(10000) 全量前端关联算，operations cap 10000，属"概览页拉全量"设计假设（与 statisticsHelper 6 模块同类），潜伏，暂缓。
+- `captcha-background`：专用端点 ✅；`menu`/`dept`：树端点全量 ✅；其余全部专用端点 ✅。
+
+**结论：真正"统计卡片数据错误"至此清零**，剩余仅 building-spaces + statisticsHelper 两类"拉全量前端算"暂缓项（属独立重构）。

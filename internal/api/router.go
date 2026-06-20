@@ -638,6 +638,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 			assets.POST("", assetHandler.Create)
 			assets.POST("/list", assetHandler.List)
+			// 资产统计(专用 COUNT 聚合,不依赖分页列表)
+			assets.POST("/statistics", assetHandler.Statistics)
 			assets.POST("/:id", assetHandler.GetByID)
 				assets.POST("/device-types", assetHandler.GetDeviceTypes)
 					assets.POST("/device-categories", assetHandler.GetDeviceCategories)

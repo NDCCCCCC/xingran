@@ -554,6 +554,11 @@ export const assetApi = {
   getStatusValues: async () => {
     return await post<{ value: string; count: number }[]>("/ops/asset/status-values", {});
   },
+
+  // 资产统计(专用 COUNT 端点,真实 status/nbf_status 计数)
+  statistics: async () => {
+    return await post<{ total: number; normal: number; stopped: number; nbf: number }>("/ops/asset/statistics", {});
+  },
   // Excel导入导出通过 SetupExcelRouter 注册在 /ops/asset 路由组下：
   // - GET  /ops/asset/template  (下载模板)
   // - POST /ops/asset/import    (上传导入)
