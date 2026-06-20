@@ -22,8 +22,9 @@ type OpsBuilding struct {
 	Level       int            `gorm:"default:2;not null" json:"level"`               // 层级：1=城市级汇总，2=具体楼宇
 	OrgID       string         `gorm:"size:64" json:"orgId"`                          // 所属机构ID（关联sys_dept）
 	OrgName     *string        `gorm:"size:100" json:"orgName,omitempty"`             // 所属机构名称
-	TotalFloors int            `gorm:"default:0" json:"totalFloors"`                  // 楼层数（根据创建的楼层自动计算）
-	Status      BuildingStatus `gorm:"default:0" json:"status"`                       // 状态: 0=正常, 1=停用
+	TotalFloors      int            `gorm:"default:0" json:"totalFloors"`                  // 楼层数（根据创建的楼层自动计算）
+	WorkstationCount int            `gorm:"column:workstation_count;->" json:"workstationCount"` // 工位数(子查询动态计算,非持久化;->只读)
+	Status           BuildingStatus `gorm:"default:0" json:"status"`                       // 状态: 0=正常, 1=停用
 	Remark      *string        `gorm:"size:500" json:"remark,omitempty"`              // 备注
 	OrderNum    int            `gorm:"default:0" json:"orderNum"`                     // 排序号
 }
