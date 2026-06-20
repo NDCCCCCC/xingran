@@ -119,7 +119,8 @@ const ServerRoomManagement: FC = () => {
 
   const loadStatistics = useCallback(async (): Promise<Statistics> => {
     try {
-      return await serverRoomApi.statistics();
+      const stats = await serverRoomApi.statistics();
+      return { total: stats.total ?? 0, active: stats.active ?? 0, inactive: stats.inactive ?? 0 };
     } catch (error) {
       handleApiError(error, "加载统计数据", false);
       return { total: 0, active: 0, inactive: 0 };

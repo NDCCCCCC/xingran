@@ -98,7 +98,7 @@ const BuildingManagement: FC = () => {
   const loadStatistics = useCallback(async (searchParams: Record<string, unknown> = {}) => {
     try {
       const stats = await buildingApi.statistics(searchParams);
-      setStatistics(stats);
+      setStatistics({ total: stats.total ?? 0, active: stats.active ?? 0, inactive: stats.inactive ?? 0 });
     } catch (error) { handleApiError(error, "加载统计数据", false); }
   }, []);
 

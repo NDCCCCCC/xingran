@@ -58,9 +58,10 @@ function createCrudApi<T>(config: CrudApiConfig) {
       return await post(`${basePath}/batch`, { action, ...data });
     },
 
-    // 统计(专用 COUNT 端点,可选筛选参数;返回各 status 桶计数)
+    // 统计(专用 COUNT 端点,可选筛选参数;返回各 status 桶计数 data)
     statistics: async (params: Record<string, unknown> = {}) => {
-      return await post<Record<string, number>>(`${basePath}/statistics`, params);
+      const res = await post<Record<string, number>>(`${basePath}/statistics`, params);
+      return res.data ?? {};
     },
   };
 }
@@ -562,7 +563,8 @@ export const assetApi = {
 
   // 资产统计(专用 COUNT 端点,真实 status/nbf_status 计数)
   statistics: async () => {
-    return await post<{ total: number; normal: number; stopped: number; nbf: number }>("/ops/asset/statistics", {});
+    const res = await post<{ total: number; normal: number; stopped: number; nbf: number }>("/ops/asset/statistics", {});
+    return res.data;
   },
   // Excel导入导出通过 SetupExcelRouter 注册在 /ops/asset 路由组下：
   // - GET  /ops/asset/template  (下载模板)
