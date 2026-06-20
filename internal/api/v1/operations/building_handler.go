@@ -1,6 +1,8 @@
 package operations
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
@@ -27,6 +29,18 @@ func (h *BuildingHandler) WithCore(core *core.Core) *BuildingHandler {
 		h.core = core
 	}
 	return h
+}
+
+// Statistics 楼宇统计(读操作,不记操作日志;支持筛选参数透传)
+func (h *BuildingHandler) Statistics(c *gin.Context) {
+	var params map[string]interface{}
+	_ = c.ShouldBindJSON(&params)
+	result, err := h.service.Statistics(c.Request.Context(), params)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.Success(c, result)
 }
 
 // NewBuildingHandlerWithCore 使用 core 创建 BuildingHandler（向后兼容）

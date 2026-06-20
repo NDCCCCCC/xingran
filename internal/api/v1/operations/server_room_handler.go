@@ -1,6 +1,8 @@
 package operations
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
@@ -26,6 +28,16 @@ func (h *ServerRoomHandler) WithCore(core *core.Core) *ServerRoomHandler {
 		h.core = core
 	}
 	return h
+}
+
+// Statistics 机房统计(读操作,不记操作日志)
+func (h *ServerRoomHandler) Statistics(c *gin.Context) {
+	result, err := h.service.Statistics(c.Request.Context())
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.Success(c, result)
 }
 
 // Create 创建机房

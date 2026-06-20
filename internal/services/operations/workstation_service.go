@@ -37,6 +37,37 @@ type WorkstationService interface {
 	List(ctx context.Context, params map[string]interface{}) (*PageResult, error)
 	BatchDelete(ctx context.Context, ids []string) error
 	BatchUpdatePositions(ctx context.Context, items []PositionUpdateItem) error
+	// Statistics 工位统计(专用 COUNT 聚合,不依赖分页列表;支持 orgId 部门筛选含子部门,替代前端 4 次 list 拼 total)。
+	Statistics(ctx context.Context, params map[string]interface{}) (*WorkstationStatisticsResult, error)
+}
+
+// WorkstationStatisticsResult 工位统计结果(status: 0=可用 1=占用 2=维护)。
+type WorkstationStatisticsResult struct {
+	Total     int64 `json:"total"`
+	Available int64 `json:"available"` // status = 0
+	Occupied  int64 `json:"occupied"`  // status = 1
+	Maintain  int64 `json:"maintain"`  // status = 2
+}
+
+// Statistics 统计工位(按 status 聚合,排除软删除;支持 orgId 部门筛选含子部门,与 List orgId 过滤一致)。
+func (s *workstationService) Statistics(ctx context.Context, params map[string]interface{}) (*WorkstationStatisticsResult, error) {
+	var result WorkstationStatisticsResult
+	query := s.db.WithContext(ctx).Model(&models.Workstation{})
+	if orgId := extractStringParam(params, "orgId"); orgId != "" {
+		query = query.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON b.id = f.building_id::uuid JOIN sys_dept d ON d.id::text = b.org_id WHERE f.id::text = sys_workstation.floor_id AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors = ?) AND b.deleted_at IS NULL)", orgId, "%,"+orgId, orgId)
+	}
+	err := query.
+		Select(
+			"COUNT(*) AS total",
+			"COALESCE(SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END), 0) AS available",
+			"COALESCE(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END), 0) AS occupied",
+			"COALESCE(SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END), 0) AS maintain",
+		).
+		Scan(&result).Error
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
 }
 
 type workstationService struct {

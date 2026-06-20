@@ -18,6 +18,34 @@ type RoomDeviceService interface {
 	GetByID(ctx context.Context, id string) (*operations.OpsRoomDevice, error)
 	List(ctx context.Context, req requests.RoomDeviceListRequest) (*PageResult, error)
 	BatchDelete(ctx context.Context, ids []string) error
+	// Statistics 机房设备统计(专用 COUNT 聚合,不依赖分页列表)。
+	Statistics(ctx context.Context) (*RoomDeviceStatisticsResult, error)
+}
+
+// RoomDeviceStatisticsResult 机房设备统计结果(status: 0=正常 1=故障 2=报废)。
+type RoomDeviceStatisticsResult struct {
+	Total    int64 `json:"total"`
+	Normal   int64 `json:"normal"`   // status = 0
+	Fault    int64 `json:"fault"`    // status = 1
+	Scrapped int64 `json:"scrapped"` // status = 2
+}
+
+// Statistics 统计机房设备(按 status 聚合,排除软删除)。
+func (s *roomDeviceService) Statistics(ctx context.Context) (*RoomDeviceStatisticsResult, error) {
+	var result RoomDeviceStatisticsResult
+	err := s.db.WithContext(ctx).
+		Model(&operations.OpsRoomDevice{}).
+		Select(
+			"COUNT(*) AS total",
+			"COALESCE(SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END), 0) AS normal",
+			"COALESCE(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END), 0) AS fault",
+			"COALESCE(SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END), 0) AS scrapped",
+		).
+		Scan(&result).Error
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
 }
 
 type roomDeviceService struct {

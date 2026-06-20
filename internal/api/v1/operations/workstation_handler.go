@@ -1,6 +1,8 @@
 package operations
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
@@ -25,6 +27,18 @@ func (h *WorkstationHandler) WithCore(core *core.Core) *WorkstationHandler {
 		h.core = core
 	}
 	return h
+}
+
+// Statistics 工位统计(读操作,不记操作日志;支持 orgId 部门筛选)
+func (h *WorkstationHandler) Statistics(c *gin.Context) {
+	var params map[string]interface{}
+	_ = c.ShouldBindJSON(&params)
+	result, err := h.service.Statistics(c.Request.Context(), params)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.Success(c, result)
 }
 
 // Create 创建工位

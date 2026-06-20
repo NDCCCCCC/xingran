@@ -19,6 +19,33 @@ type BuildingService interface {
 	GetByID(ctx context.Context, id string) (*operations.OpsBuilding, error)
 	List(ctx context.Context, params map[string]interface{}) (*PageResult, error)
 	BatchDelete(ctx context.Context, ids []string) error
+	// Statistics 楼宇统计(专用 COUNT 聚合,不依赖分页列表;复用 List 筛选支持按 name/orgId/status 统计)。
+	Statistics(ctx context.Context, params map[string]interface{}) (*BuildingStatisticsResult, error)
+}
+
+// BuildingStatisticsResult 楼宇统计结果(status: 0=正常 1=停用)。
+type BuildingStatisticsResult struct {
+	Total    int64 `json:"total"`
+	Active   int64 `json:"active"`   // status = 0
+	Inactive int64 `json:"inactive"` // status = 1
+}
+
+// Statistics 统计楼宇(按 status 聚合,排除软删除;复用 applyFilters 支持筛选,与 List 筛选语义一致)。
+func (s *buildingService) Statistics(ctx context.Context, params map[string]interface{}) (*BuildingStatisticsResult, error) {
+	var result BuildingStatisticsResult
+	query := s.db.WithContext(ctx).Model(&operations.OpsBuilding{})
+	query = s.applyFilters(query, params)
+	err := query.
+		Select(
+			"COUNT(*) AS total",
+			"COALESCE(SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END), 0) AS active",
+			"COALESCE(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END), 0) AS inactive",
+		).
+		Scan(&result).Error
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
 }
 
 type buildingService struct {

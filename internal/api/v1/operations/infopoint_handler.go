@@ -1,6 +1,8 @@
 package operations
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/operations/requests"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
@@ -26,6 +28,16 @@ func (h *InfoPointHandler) WithCore(core *core.Core) *InfoPointHandler {
 		h.core = core
 	}
 	return h
+}
+
+// Statistics 信息点统计(读操作,不记操作日志)
+func (h *InfoPointHandler) Statistics(c *gin.Context) {
+	result, err := h.service.Statistics(c.Request.Context())
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.Success(c, result)
 }
 
 // Create 创建信息点
