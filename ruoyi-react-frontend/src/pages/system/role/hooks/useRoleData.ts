@@ -9,9 +9,7 @@
 import { useState, useCallback, useEffect } from "react";
 import type { TreeDataNode } from "antd";
 import type { Key } from "antd/es/table/interface";
-import type { Role } from "@/types";
 import { post } from "@/lib/api";
-import { useRoleList } from "@/hooks/useRoleList";
 
 // 菜单树节点类型（后端返回）
 interface MenuTreeNode {
@@ -76,22 +74,23 @@ export function useRoleData(): UseRoleDataReturn {
   const [checkedDeptKeys, setCheckedDeptKeys] = useState<Key[]>([]);
   const [currentDataScope, setCurrentDataScope] = useState<number>(1);
 
-  // 角色全量列表 — 通过 React Query 全局共享 (D-13 Step 2)
-  // 用于统计计算；useRoleList 返回 pageSize=1000 的全量数据。
-  const { data: allRoles = [] } = useRoleList();
+  // 加载统计数据: 调用专用统计端点(COUNT 聚合),不再用 pageSize:1000 全量列表的
+  // .length 充当总数——system 模块 MaxPageSize=100 会把请求钳到 100,角色 >100 时
+  // 统计会错误卡在 100。增删改后由 useRoleActions 显式调用本方法刷新。
+  const loadStatistics = useCallback(async () => {
+    try {
+      const result = await post<RoleStatistics>("/system/roles/statistics");
+      setStatistics({
+        total: result.data?.total ?? 0,
+        active: result.data?.active ?? 0,
+        inactive: result.data?.inactive ?? 0,
+      });
+    } catch (error) {
+      console.error("加载角色统计失败:", error);
+    }
+  }, []);
 
-  // 加载统计数据 — 使用 useRoleList 全量缓存 (D-13 Step 2)
-  // useRoleList 数据更新时 statistics 自动同步。
-  const loadStatistics = useCallback(() => {
-    const list = allRoles as unknown as Role[];
-    setStatistics({
-      total: list.length,
-      active: list.filter((r: Role) => r.status === 0).length,
-      inactive: list.filter((r: Role) => r.status === 1).length,
-    });
-  }, [allRoles]);
-
-  // 当 useRoleList 全量数据变化时自动同步 statistics
+  // 初次挂载时加载统计;后续由 useRoleActions 在增删改后调用 loadStatistics 刷新。
   useEffect(() => {
     loadStatistics();
   }, [loadStatistics]);
