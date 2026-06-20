@@ -23,7 +23,6 @@ import { usePagination } from "@/hooks/usePagination";
 import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
 import { createDateTimeColumn } from "@/utils/tableHelpers";
-import { fetchRoomDeviceStatistics } from "@/utils/statisticsHelper";
 import ActionButtons from "@/components/shared/ActionButtons";
 import ExcelImport from "@/components/shared/ExcelImport";
 import ExcelExport from "@/components/shared/ExcelExport";
@@ -127,7 +126,7 @@ const RoomDeviceManagement: FC = () => {
 
   const loadStatistics = useCallback(async (): Promise<Statistics> => {
     try {
-      return await fetchRoomDeviceStatistics();
+      return await roomDeviceApi.statistics();
     } catch (error) {
       handleApiError(error, "加载统计数据", false);
       return { total: 0, normal: 0, fault: 0, scrapped: 0 };

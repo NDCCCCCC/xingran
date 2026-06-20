@@ -57,6 +57,11 @@ function createCrudApi<T>(config: CrudApiConfig) {
     batch: async (action: string, data: Record<string, unknown>) => {
       return await post(`${basePath}/batch`, { action, ...data });
     },
+
+    // 统计(专用 COUNT 端点,可选筛选参数;返回各 status 桶计数)
+    statistics: async (params: Record<string, unknown> = {}) => {
+      return await post<Record<string, number>>(`${basePath}/statistics`, params);
+    },
   };
 }
 

@@ -4,7 +4,7 @@
 
 import { useState, useCallback } from "react";
 import { handleApiError } from "@/utils/errorHandler";
-import { fetchFloorStatistics } from "@/utils/statisticsHelper";
+import { floorApi } from "@/lib/opsApi";
 
 interface FloorStatistics {
   total: number;
@@ -21,7 +21,7 @@ export function useFloorStatistics() {
 
   const loadStatistics = useCallback(async () => {
     try {
-      const stats = await fetchFloorStatistics();
+      const stats = await floorApi.statistics();
       setStatistics(stats);
     } catch (error) {
       handleApiError(error, "加载统计数据", false);

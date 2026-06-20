@@ -23,7 +23,6 @@ import { usePagination } from "@/hooks/usePagination";
 import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
 import { createStatusColumn, createDateTimeColumn } from "@/utils/tableHelpers";
-import { fetchServerRoomStatistics } from "@/utils/statisticsHelper";
 import ActionButtons from "@/components/shared/ActionButtons";
 import ExcelImport from "@/components/shared/ExcelImport";
 import ExcelExport from "@/components/shared/ExcelExport";
@@ -120,7 +119,7 @@ const ServerRoomManagement: FC = () => {
 
   const loadStatistics = useCallback(async (): Promise<Statistics> => {
     try {
-      return await fetchServerRoomStatistics();
+      return await serverRoomApi.statistics();
     } catch (error) {
       handleApiError(error, "加载统计数据", false);
       return { total: 0, active: 0, inactive: 0 };

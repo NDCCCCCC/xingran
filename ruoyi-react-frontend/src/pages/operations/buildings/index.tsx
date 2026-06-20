@@ -20,7 +20,6 @@ import { usePagination } from "@/hooks/usePagination";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
 import { isFormValidationError } from "@/utils/errorHandler";
 import { createStatusColumn, createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
-import { fetchBuildingStatistics } from "@/utils/statisticsHelper";
 import ActionButtons from "@/components/shared/ActionButtons";
 import ExcelImport from "@/components/shared/ExcelImport";
 import ExcelExport from "@/components/shared/ExcelExport";
@@ -98,7 +97,7 @@ const BuildingManagement: FC = () => {
 
   const loadStatistics = useCallback(async (searchParams: Record<string, unknown> = {}) => {
     try {
-      const stats = await fetchBuildingStatistics(searchParams);
+      const stats = await buildingApi.statistics(searchParams);
       setStatistics(stats);
     } catch (error) { handleApiError(error, "加载统计数据", false); }
   }, []);

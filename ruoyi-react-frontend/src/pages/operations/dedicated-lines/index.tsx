@@ -23,7 +23,6 @@ import { usePagination } from "@/hooks/usePagination";
 import { useDict } from "@/hooks/useDict";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
 import { createDateTimeColumn } from "@/utils/tableHelpers";
-import { fetchDedicatedLineStatistics } from "@/utils/statisticsHelper";
 import ActionButtons from "@/components/shared/ActionButtons";
 import ExcelImport from "@/components/shared/ExcelImport";
 import ExcelExport from "@/components/shared/ExcelExport";
@@ -106,7 +105,7 @@ const DedicatedLineManagement: FC = () => {
 
   const loadStatistics = useCallback(async (): Promise<Statistics> => {
     try {
-      return await fetchDedicatedLineStatistics();
+      return await dedicatedLineApi.statistics();
     } catch (error) {
       handleApiError(error, "加载统计数据", false);
       return { total: 0, normal: 0, fault: 0, disabled: 0 };

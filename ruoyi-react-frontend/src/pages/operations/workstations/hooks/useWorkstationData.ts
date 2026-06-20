@@ -35,21 +35,14 @@ export function useWorkstationData(
 ): UseWorkstationDataReturn {
   const loadStatistics = useCallback(async (orgId?: string) => {
     try {
-      const baseParams = { current: 1, pageSize: 1, ...(orgId && { orgId }) };
-
-      // 并发请求各状态的计数
-      const [totalResult, availableResult, occupiedResult, maintainResult] = await Promise.all([
-        workstationApi.list(baseParams),
-        workstationApi.list({ ...baseParams, status: 0 }),
-        workstationApi.list({ ...baseParams, status: 1 }),
-        workstationApi.list({ ...baseParams, status: 2 }),
-      ]);
-
+      // 专用统计端点(1 次请求替代此前 4 次 list 拼 total),支持 orgId 部门筛选
+      const params: Record<string, unknown> = { ...(orgId ? { orgId } : {}) };
+      const result = await workstationApi.statistics(params);
       setStatistics({
-        total: totalResult.data?.total || 0,
-        available: availableResult.data?.total || 0,
-        occupied: occupiedResult.data?.total || 0,
-        maintain: maintainResult.data?.total || 0,
+        total: result.total || 0,
+        available: result.available || 0,
+        occupied: result.occupied || 0,
+        maintain: result.maintain || 0,
       });
     } catch (error) {
       handleApiError(error, "加载统计数据", false);
