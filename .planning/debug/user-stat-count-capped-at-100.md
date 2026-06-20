@@ -180,3 +180,21 @@ updated: 2026-06-20
 - `captcha-background`：专用端点 ✅；`menu`/`dept`：树端点全量 ✅；其余全部专用端点 ✅。
 
 **结论：真正"统计卡片数据错误"至此清零**，剩余仅 building-spaces + statisticsHelper 两类"拉全量前端算"暂缓项（属独立重构）。
+
+---
+
+## 第六轮（2026-06-21）：Phase 1+2 重构——处理两类「拉全量前端算」暂缓项
+
+### Phase 1：operations 6 模块 + workstation 统计端点化
+- 后端：building/floor/server-room/info-point/dedicated-line/room-device/workstation 各加 `Statistics` COUNT 端点（按 status 枚举聚合，排除软删除）。building 复用 `applyFilters`、workstation 内联 orgId 过滤，**保留筛选统计语义**（部门管理员按部门统计）。
+- 前端：`createCrudApi` 工厂加 `statistics` 方法；6 模块 loadStatistics 改调各自端点；workstation `useWorkstationData` 从 4 次 list 拼 total 改 1 次 `statistics({orgId})`；**删除 `utils/statisticsHelper.ts`**（零残留）。
+- 测试：`operations_statistics_test.go`（7 模块，status 全枚举 + 软删除）。
+
+### Phase 2：building-spaces 概览页重构
+- 后端：`OpsBuilding` 加 `WorkstationCount`（`gorm:"->"` 只读，子查询动态算）；`TotalFloors` 为已有维护字段（floor 增删更新）。building list Select 子查询带计数。
+- 前端：统计卡片改调 building/floor/workstation 端点 `.total`；楼宇卡片网格分页（pageSize 12）；`BuildingModal` 打开时按 `buildingId` 懒加载楼层（`floorApi.list`），工位由 `WorkstationView` 自身懒加载；删除一次性拉 floor(1000)/workstation(10000) 全量前端关联。
+
+### 关键坑（post 返回类型）
+`post<T>` 返回 `BaseResponse<T>`（非 T）。statistics 方法需取 `.data`；前端 6 模块用字段构造 `{ total: stats.total ?? 0, ... }` 避免 `Record<string,number>` 与具体 Statistics 接口类型不兼容（vite build tsc 严格模式暴露，type-check 未报）。
+
+提交：`b0d6c57`(P1 后端) `7c89d40`(P1 前端) `5f80703`(类型修复) `70d8395`(P2 后端) `9edb265`(P2 前端)。两类暂缓项至此**清零**。
