@@ -19,8 +19,18 @@ type JobLogService interface {
 	// List 查询任务日志列表
 	List(ctx context.Context, params *JobLogListParams) (*common.PageResult, error)
 
+	// Statistics 统计任务日志总数及成功/失败计数(按 jobName/jobGroup 过滤)
+	Statistics(ctx context.Context, params *JobLogListParams) (*JobLogStatistics, error)
+
 	// CleanOldLogs 清理旧日志
 	CleanOldLogs(ctx context.Context, days int) error
+}
+
+// JobLogStatistics 任务日志统计结果。status: 0=成功 1=失败。
+type JobLogStatistics struct {
+	Total   int64 `json:"total"`
+	Success int64 `json:"success"` // status = 0
+	Fail    int64 `json:"fail"`    // status = 1
 }
 
 // jobLogServiceImpl 任务日志服务实现
@@ -117,6 +127,29 @@ func (s *jobLogServiceImpl) List(ctx context.Context, params *JobLogListParams) 
 		Current:  params.Current,
 		PageSize: params.PageSize,
 	}, nil
+}
+
+// Statistics 统计任务日志总数及成功/失败计数(按 jobName/jobGroup 过滤,与 List 口径一致)。
+// 用条件聚合(SUM CASE)避免「按当前页 list(pageSize:50)算统计」——频繁任务执行 >50 次时
+// 旧前端「总执行次数」卡片会卡在 50。
+func (s *jobLogServiceImpl) Statistics(ctx context.Context, params *JobLogListParams) (*JobLogStatistics, error) {
+	db := s.db.WithContext(ctx).Model(&models.JobLog{})
+	if params.JobName != "" {
+		db = db.Where("job_name LIKE ?", "%"+params.JobName+"%")
+	}
+	if params.JobGroup != "" {
+		db = db.Where("job_group = ?", params.JobGroup)
+	}
+
+	var result JobLogStatistics
+	if err := db.Select(
+		"COUNT(*) AS total",
+		"SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS success",
+		"SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS fail",
+	).Scan(&result).Error; err != nil {
+		return nil, fmt.Errorf("统计任务日志失败: %w", err)
+	}
+	return &result, nil
 }
 
 // CleanOldLogs 清理旧日志

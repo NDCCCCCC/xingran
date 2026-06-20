@@ -299,6 +299,33 @@ func (h *JobHandler) Execute(c *gin.Context) {
 // @Success 200 {object} response.Response{data=response.PageResponse}
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
+// Statistics 任务日志统计(总次数/成功/失败,按 jobName/jobGroup 过滤)
+// @Summary 任务日志统计
+// @Description 返回任务日志总数及成功/失败计数,供日志抽屉统计卡片使用;用 COUNT 聚合而非按当前页 list(pageSize:50)计算
+// @Tags 定时任务
+// @Accept json
+// @Produce json
+// @Param request body object{jobName=string,jobGroup=string} false "任务标识"
+// @Success 200 {object} response.Response
+// @Router /monitor/jobs/logs/statistics [post]
+func (h *JobHandler) Statistics(c *gin.Context) {
+	var req struct {
+		JobName  string `json:"jobName"`
+		JobGroup string `json:"jobGroup"`
+	}
+	_ = c.ShouldBindJSON(&req)
+
+	result, err := h.jobLogService.Statistics(c.Request.Context(), &schedulerServices.JobLogListParams{
+		JobName:  req.JobName,
+		JobGroup: req.JobGroup,
+	})
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Success(c, result)
+}
+
 // @Router /monitor/jobs/logs/list [post]
 func (h *JobHandler) ListLogs(c *gin.Context) {
 	var rawReq map[string]interface{}

@@ -48,6 +48,7 @@ const JobManager: FC = () => {
   const {
     jobs,
     jobLogs,
+    jobLogStats,
     loading,
     total,
     fetchJobs,
@@ -290,7 +291,7 @@ const JobManager: FC = () => {
               <Card size="small">
                 <Statistic
                   title="总执行次数"
-                  value={jobLogs.length}
+                  value={jobLogStats.total}
                   prefix={<ClockCircleOutlined />}
                 />
               </Card>
@@ -299,7 +300,7 @@ const JobManager: FC = () => {
               <Card size="small">
                 <Statistic
                   title="成功次数"
-                  value={jobLogs.filter(log => log.status === 0).length}
+                  value={jobLogStats.success}
                   styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
                 />
               </Card>
@@ -308,7 +309,7 @@ const JobManager: FC = () => {
               <Card size="small">
                 <Statistic
                   title="失败次数"
-                  value={jobLogs.filter(log => log.status === 1).length}
+                  value={jobLogStats.fail}
                   styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
                 />
               </Card>

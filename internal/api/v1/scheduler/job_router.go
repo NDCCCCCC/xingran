@@ -29,5 +29,6 @@ func SetupJobRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// 日志相关
 	r.POST("/logs/list", handler.ListLogs)
+	r.POST("/logs/statistics", handler.Statistics)
 	r.POST("/logs/clean", handler.CleanLogs)
 }
