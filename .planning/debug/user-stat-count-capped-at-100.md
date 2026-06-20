@@ -88,4 +88,28 @@ updated: 2026-06-20
 - [ ] 增删改后卡片刷新正确（前端各 mutation 后已调统计接口）
 - [ ] 通知卡片 draft/scheduled 数值变化符合预期（状态桶已修正，与旧版数值会有差异——这是修正，非回归）
 
-**附注（预存问题，与本次无关）：** `internal/services/system/apikey_service_test.go`（TestUpdateAPIKey/TestListAPIKeys 等）与 `role_service_apperrors_test.go::TestRoleService_Create_RoleNameExists` 为 nil 指针 panic，属测试 setup 自身问题，本次未触碰这些文件。
+**附注（预存问题，与本次无关）：** `internal/services/system/apikey_service_test.go`（TestUpdateAPIKey/TestListAPIKeys 等）与 `role_service_apperrors_test.go::TestRoleService_Create_RoleNameExists` 为 nil 指针 panic，属测试 setup 自身问题，本次未触碰这些文件。`internal/services` 的 usage_logger 测试偶发 SQLite「table is locked」亦为预存并发问题。
+
+---
+
+## 第二轮（2026-06-20）：扩展修复另外 4 个活跃 bug
+
+全仓扫描发现 4 个同款活跃 bug（详见对话），一并修复，模式与第一轮一致（专用 COUNT 端点）：
+
+| 模块 | 端点 | 变体 | 备注 |
+|------|------|------|------|
+| 角色管理 | `POST /system/roles/statistics` | 钳制变体（system MaxPageSize=100） | 与 user 同款，roleCacheService 内嵌 *roleService 自动提升 |
+| 工单管理 | `POST /workorder/orders/status-statistics` | 当前页变体 | 按 WorkOrderStatus 0-3 聚合；命名避开已有 GetStatistics（统计页） |
+| 周期工单模板 | `POST /workorder/periodic/templates/statistics` | 当前页变体 | 布尔 `CASE WHEN is_enabled`（PG/SQLite 双兼容）+ COALESCE(SUM(total_generated)) |
+| 知识库文章 | `POST /knowledge/articles/statistics` | 当前页变体 | COALESCE(SUM(view_count/like_count)) 防空集 NULL |
+
+**前端模式：** workorder 两处统一用「fetchList 内部顺带调 fetchStats」，搜索/分页/增删改（均经 fetchList）都会刷新统计为真实全局计数。role 走 useRoleActions 在增删改后显式调 loadStatistics。
+
+**第二轮验证：**
+- [x] `go build ./...` / 前端 type-check / build 全通过
+- [x] 2 个新回归测试（覆盖新 SQL 构造）：`periodic_statistics_test.go`（布尔 is_enabled + SUM total_generated）、`knowledge_statistics_test.go`（COALESCE SUM views/likes），均含软删除排除断言
+- [x] role/workorder-status 为纯状态计数，与第一轮 user/notice/duty 同款已验证
+
+**第二轮改动文件：** role（service+handler+router+useRoleData）、workorder orders（base+cache_impl+handler+router+useWorkOrderData+workorderApi）、workorder periodic（periodic+handler+router+useTemplateData+workorderApi）、knowledge（knowledge_service+cache_impl+handler+router+useArticleData+knowledgeApi）+ 2 测试。
+
+**仍潜伏（未修，network ~9 处）：** 后端钳制高 ~10000，仅超大数据量触发，风险低面广，暂不动。
