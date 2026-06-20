@@ -134,6 +134,22 @@ export function getKnowledgeArticleList(params: KnowledgeArticleListRequest): Pr
   return post("/knowledge/articles/list", params);
 }
 
+/** 知识库文章统计（总数 / 草稿 / 已发布 / 累计浏览 / 累计点赞） */
+export interface KnowledgeArticleStatistics {
+  total: number;
+  draft: number;
+  published: number;
+  totalViews: number;
+  totalLikes: number;
+}
+
+/**
+ * 获取知识库文章统计（后端 COUNT 聚合，不受分页影响）
+ */
+export function getKnowledgeArticleStatistics(): Promise<BaseResponse<KnowledgeArticleStatistics>> {
+  return post("/knowledge/articles/statistics", {});
+}
+
 export function getKnowledgeArticle(id: string): Promise<BaseResponse<KnowledgeArticle>> {
   return post(`/knowledge/articles/${id}`, {});
 }

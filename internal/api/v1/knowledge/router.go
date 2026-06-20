@@ -13,6 +13,7 @@ func SetupArticleRouter(r *gin.RouterGroup, core *core.Core) {
 	articleHandler := NewArticleHandler(knowledgeService).WithCore(core)
 
 	r.POST("/list", articleHandler.List)
+	r.POST("/statistics", articleHandler.Statistics)
 	r.POST("/search", articleHandler.Search)
 	r.POST("", articleHandler.Create)
 	r.POST("/:id", articleHandler.GetByID)

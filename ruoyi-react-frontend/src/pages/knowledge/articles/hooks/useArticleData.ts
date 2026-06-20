@@ -7,6 +7,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { App } from "antd";
 import {
   getKnowledgeArticleList,
+  getKnowledgeArticleStatistics,
   createKnowledgeArticle,
   updateKnowledgeArticle,
   deleteKnowledgeArticle,
@@ -92,6 +93,23 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
     return flatten(categories);
   }, [categories]);
 
+  // 获取统计数据（专用端点 COUNT 聚合，全局计数，不受分页/筛选影响）。
+  // 旧实现用当前页 list 算 total/draft/published/totalViews/totalLikes，多页时严重偏小。
+  const fetchStats = useCallback(async () => {
+    try {
+      const result = await getKnowledgeArticleStatistics();
+      setStatistics({
+        total: result.data?.total ?? 0,
+        draft: result.data?.draft ?? 0,
+        published: result.data?.published ?? 0,
+        totalViews: result.data?.totalViews ?? 0,
+        totalLikes: result.data?.totalLikes ?? 0,
+      });
+    } catch (error) {
+      console.error("获取文章统计失败:", error);
+    }
+  }, []);
+
   const fetchList = useCallback(async (page?: number, pageSize?: number, orderByColumn?: string, isAsc?: boolean) => {
     setLoading(true);
     try {
@@ -104,20 +122,14 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
       setArticles(list);
       setTotal(result.data?.total ?? 0);
 
-      // 计算统计数据
-      setStatistics({
-        total: list.length,
-        draft: list.filter((a) => a.status === KnowledgeArticleStatus.Draft).length,
-        published: list.filter((a) => a.status === KnowledgeArticleStatus.Published).length,
-        totalViews: list.reduce((sum, a) => sum + (a.viewCount || 0), 0),
-        totalLikes: list.reduce((sum, a) => sum + (a.likeCount || 0), 0),
-      });
+      // 列表加载后顺带刷新统计（全局 COUNT）；搜索/分页/增删改均经 fetchList，统计始终为真实全局计数。
+      fetchStats();
     } catch (error) {
       message.error("获取文章列表失败");
     } finally {
       setLoading(false);
     }
-  }, [current, pageSize]);
+  }, [current, pageSize, fetchStats]);
 
   const fetchCategories = useCallback(async () => {
     try {

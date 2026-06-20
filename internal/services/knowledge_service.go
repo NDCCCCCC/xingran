@@ -24,6 +24,37 @@ func NewKnowledgeService(db *gorm.DB) *KnowledgeService {
 	return &KnowledgeService{db: db}
 }
 
+// KnowledgeArticleStatistics 知识库文章统计结果。
+// status: 0=草稿 1=已发布(models.KnowledgeArticleStatus)。
+type KnowledgeArticleStatistics struct {
+	Total      int64 `json:"total"`
+	Draft      int64 `json:"draft"`      // status = 0
+	Published  int64 `json:"published"`  // status = 1
+	TotalViews int64 `json:"totalViews"` // SUM(view_count)
+	TotalLikes int64 `json:"totalLikes"` // SUM(like_count)
+}
+
+// GetArticleStatistics 统计知识库文章总数/状态计数及累计浏览/点赞数。
+// 用条件聚合(SUM CASE)避免「按当前页 list 计算统计」的错误——旧前端用当前页 list 算
+// total/draft/published/totalViews/totalLikes,多页时严重偏小。SUM 用 COALESCE 防空集返回 NULL。
+func (s *KnowledgeService) GetArticleStatistics(ctx context.Context) (*KnowledgeArticleStatistics, error) {
+	var result KnowledgeArticleStatistics
+	err := s.db.WithContext(ctx).
+		Model(&models.KnowledgeArticle{}).
+		Select(
+			"COUNT(*) AS total",
+			"SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS draft",
+			"SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS published",
+			"COALESCE(SUM(view_count), 0) AS total_views",
+			"COALESCE(SUM(like_count), 0) AS total_likes",
+		).
+		Scan(&result).Error
+	if err != nil {
+		return nil, fmt.Errorf("统计知识库文章失败: %w", err)
+	}
+	return &result, nil
+}
+
 // ==================== 请求/响应结构 ====================
 
 // KnowledgeArticleListRequest 知识库文章列表请求

@@ -15,6 +15,7 @@ import (
 type KnowledgeCacheService interface {
 	// 基础服务方法
 	GetKnowledgeArticleList(ctx context.Context, req *services.KnowledgeArticleListRequest) ([]models.KnowledgeArticle, int64, error)
+	GetArticleStatistics(ctx context.Context) (*services.KnowledgeArticleStatistics, error)
 	GetKnowledgeArticle(ctx context.Context, id string) (*models.KnowledgeArticle, error)
 	CreateKnowledgeArticle(ctx context.Context, req *services.KnowledgeArticleCreateRequest, creatorID string) (*models.KnowledgeArticle, error)
 	UpdateKnowledgeArticle(ctx context.Context, id string, req *services.KnowledgeArticleUpdateRequest, operatorID string) error
@@ -77,6 +78,11 @@ func (s *knowledgeCacheServiceImpl) getExpiration(configKey string, defaultVal t
 // GetKnowledgeArticleList 获取知识库文章列表（不缓存，参数多变）
 func (s *knowledgeCacheServiceImpl) GetKnowledgeArticleList(ctx context.Context, req *services.KnowledgeArticleListRequest) ([]models.KnowledgeArticle, int64, error) {
 	return s.base.GetKnowledgeArticleList(ctx, req)
+}
+
+// GetArticleStatistics 统计知识库文章(总数/状态/浏览/点赞),委托给基础服务。不缓存。
+func (s *knowledgeCacheServiceImpl) GetArticleStatistics(ctx context.Context) (*services.KnowledgeArticleStatistics, error) {
+	return s.base.GetArticleStatistics(ctx)
 }
 
 // GetKnowledgeArticle 获取知识库文章详情（带缓存）

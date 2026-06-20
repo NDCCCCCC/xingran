@@ -100,6 +100,22 @@ func (h *ArticleHandler) List(c *gin.Context) {
 	response.Page(c, list, total, req.Current, req.PageSize)
 }
 
+// Statistics 知识库文章统计(总数/草稿/已发布/累计浏览/累计点赞)
+// @Summary 知识库文章统计
+// @Description 返回文章总数/状态计数及累计浏览点赞数,供列表页统计卡片使用;用 COUNT 聚合而非按当前页 list 计算
+// @Tags 知识库文章
+// @Produce json
+// @Success 200 {object} response.Response
+// @Router /knowledge/articles/statistics [post]
+func (h *ArticleHandler) Statistics(c *gin.Context) {
+	result, err := h.service.GetArticleStatistics(c.Request.Context())
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Success(c, result)
+}
+
 // GetByID 获取知识库文章详情
 // @Summary 获取知识库文章详情
 // @Description 根据文章ID获取知识库文章详细信息，并增加浏览次数
