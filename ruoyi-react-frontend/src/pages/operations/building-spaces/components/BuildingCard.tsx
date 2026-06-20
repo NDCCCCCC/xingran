@@ -35,7 +35,7 @@ const BuildingCard: React.FC<BuildingCardProps> = ({ building, onClick }) => {
           <div className={styles.buildingStatLabel}>楼层数</div>
         </div>
         <div className={styles.buildingStat}>
-          <div className={styles.buildingStatValue}>{building.totalWorkstations || 0}</div>
+          <div className={styles.buildingStatValue}>{building.workstationCount || 0}</div>
           <div className={styles.buildingStatLabel}>工位数</div>
         </div>
       </div>

@@ -6,7 +6,7 @@ export interface Building {
   code: string;
   address?: string;
   totalFloors: number;
-  totalWorkstations: number;
+  workstationCount: number;
   status: number;
   floors?: Floor[];
 }
