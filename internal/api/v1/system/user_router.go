@@ -38,6 +38,7 @@ func SetupUserRouter(r *gin.RouterGroup, core *core.Core) {
 	// 注册路由
 	r.POST("", handler.Create)
 	r.POST("/list", handler.List)
+	r.POST("/statistics", handler.Statistics)
 	r.POST("/batch-delete", handler.BatchDelete)
 	r.POST("/:id", handler.GetByID)
 	r.POST("/:id/update", handler.Update)

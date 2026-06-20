@@ -53,6 +53,22 @@ func (h *NoticeHandler) WithCore(core *core.Core) *NoticeHandler {
 	return h
 }
 
+// Statistics 通知状态统计(总数/已发布/草稿/定时发布)
+// @Summary 通知状态统计
+// @Description 返回通知总数及各发布状态计数,供统计卡片使用;用 COUNT 聚合而非加载全量行
+// @Tags 通知公告
+// @Produce json
+// @Success 200 {object} response.Response
+// @Router /system/notices/statistics [post]
+func (h *NoticeHandler) Statistics(c *gin.Context) {
+	result, err := h.service.GetStatusStatistics(c.Request.Context())
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Success(c, result)
+}
+
 // Create 创建通知公告
 // @Summary 创建通知公告
 // @Description 创建新的通知公告

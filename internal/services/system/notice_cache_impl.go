@@ -23,6 +23,7 @@ type NoticeCacheService interface {
 	Publish(ctx context.Context, id string) error
 	Withdraw(ctx context.Context, id string) error
 	GetStatistics(ctx context.Context, id string) (*models.NoticeStatistics, error)
+	GetStatusStatistics(ctx context.Context) (*services.NoticeStatusStatistics, error)
 
 	// 用户端方法（需要缓存）
 	GetUserNotices(ctx context.Context, userID string, page, pageSize int, status *string) ([]models.Notice, int64, error)
@@ -66,6 +67,12 @@ func (s *noticeCacheService) getExpiration(configKey string, defaultVal time.Dur
 		return s.config.GetDurationWithDefault(configKey, defaultVal)
 	}
 	return defaultVal
+}
+
+// GetStatusStatistics 统计通知各发布状态计数(供统计卡片),委托给基础服务。
+// 不缓存:状态计数随发布/撤回频繁变化,且各写操作后前端会主动刷新。
+func (s *noticeCacheService) GetStatusStatistics(ctx context.Context) (*services.NoticeStatusStatistics, error) {
+	return s.base.GetNoticeStatusStatistics(ctx)
 }
 
 // ==================== 基础服务方法（带缓存失效） ====================

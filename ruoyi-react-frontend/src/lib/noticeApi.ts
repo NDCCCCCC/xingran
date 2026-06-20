@@ -24,6 +24,22 @@ export function getNoticeList(params: NoticeListParams): Promise<BaseResponse<Pa
   return post("/system/notices/list", params);
 }
 
+/** 通知状态统计（按发布状态聚合，供统计卡片） */
+export interface NoticeStatusStatistics {
+  total: number;
+  published: number;
+  draft: number;
+  scheduled: number;
+}
+
+/**
+ * 获取通知状态统计（总数 / 已发布 / 草稿 / 定时发布）
+ * 后端用 COUNT 聚合，不受 list 分页上限影响。
+ */
+export function getNoticeStatusStatistics(): Promise<BaseResponse<NoticeStatusStatistics>> {
+  return post("/system/notices/statistics", {});
+}
+
 /**
  * 获取通知详情
  */

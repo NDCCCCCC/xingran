@@ -19,6 +19,42 @@ func NewDutyPoolService(db *gorm.DB) *DutyPoolService {
 	return &DutyPoolService{db: db}
 }
 
+// DutyPoolStatistics 值班池统计结果。status: 0=启用, 1=停用。
+type DutyPoolStatistics struct {
+	Total        int64 `json:"total"`
+	Enabled      int64 `json:"enabled"`      // status = 0
+	Disabled     int64 `json:"disabled"`     // status = 1
+	TotalMembers int64 `json:"totalMembers"` // 所有非软删除池的成员总数
+}
+
+// GetDutyPoolStatistics 统计值班池总数/启停数及跨池成员总数。
+// 用条件聚合(SUM CASE)避免「按当前页 list 计算统计」的错误(原前端用当前页 ~10 条算,
+// 多页时统计严重偏小)。totalMembers 用子查询限定非软删除池,避免硬编码表名。
+func (s *DutyPoolService) GetDutyPoolStatistics(ctx context.Context) (*DutyPoolStatistics, error) {
+	var result DutyPoolStatistics
+	err := s.db.WithContext(ctx).
+		Model(&models.DutyPool{}).
+		Select(
+			"COUNT(*) AS total",
+			"SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS enabled",
+			"SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS disabled",
+		).
+		Scan(&result).Error
+	if err != nil {
+		return nil, fmt.Errorf("统计值班池失败: %w", err)
+	}
+
+	// 成员总数:仅统计非软删除池的成员(子查询自动套用 DutyPool 软删除 scope)
+	if err := s.db.WithContext(ctx).
+		Model(&models.DutyPoolMember{}).
+		Where("pool_id IN (?)", s.db.Model(&models.DutyPool{}).Select("id")).
+		Count(&result.TotalMembers).Error; err != nil {
+		return nil, fmt.Errorf("统计值班池成员失败: %w", err)
+	}
+
+	return &result, nil
+}
+
 // CreateDutyPool 创建值班池
 func (s *DutyPoolService) CreateDutyPool(ctx context.Context, req *DutyPoolCreateRequest, creatorID string) (*models.DutyPool, error) {
 	var pool *models.DutyPool

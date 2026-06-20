@@ -24,6 +24,7 @@ func SetupNoticeRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// 通知公告路由
 	r.POST("/list", noticeHandler.List)
+	r.POST("/statistics", noticeHandler.Statistics)
 	r.POST("/batch-delete", noticeHandler.BatchDelete)
 	r.GET("/cron-expressions", noticeHandler.GetCronExpressions)
 	r.POST("", noticeHandler.Create)

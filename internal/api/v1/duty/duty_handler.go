@@ -66,6 +66,22 @@ func (h *DutyHandler) ListPools(c *gin.Context) {
 	response.Success(c, pageResp)
 }
 
+// StatisticsPools 值班池统计(总数/启用/停用/成员总数)
+// @Summary 值班池统计
+// @Description 返回值班池总数、启停状态计数与成员总数,供统计卡片使用;用 COUNT 聚合而非按当前页 list 计算
+// @Tags 值班管理
+// @Produce json
+// @Success 200 {object} response.Response
+// @Router /duty/pools/statistics [post]
+func (h *DutyHandler) StatisticsPools(c *gin.Context) {
+	result, err := h.service.GetDutyPoolStatistics(c.Request.Context())
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Success(c, result)
+}
+
 // CreatePool 创建值班池
 // @Summary 创建值班池
 // @Description 创建新的值班池

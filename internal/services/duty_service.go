@@ -131,6 +131,11 @@ func (s *DutyService) GetDutyPoolList(ctx context.Context, req *DutyPoolListRequ
 	return s.poolService.GetDutyPoolList(ctx, req)
 }
 
+// GetDutyPoolStatistics 统计值班池总数/启停数及成员总数
+func (s *DutyService) GetDutyPoolStatistics(ctx context.Context) (*DutyPoolStatistics, error) {
+	return s.poolService.GetDutyPoolStatistics(ctx)
+}
+
 // GetDutyPoolByID 根据ID获取值班池
 func (s *DutyService) GetDutyPoolByID(ctx context.Context, poolID string) (*models.DutyPool, error) {
 	return s.poolService.GetDutyPoolByID(ctx, poolID)

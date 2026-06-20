@@ -16,6 +16,7 @@ type DutyCacheService interface {
 	// 值班池管理（委托给基础服务）
 	CreateDutyPool(ctx context.Context, req *services.DutyPoolCreateRequest, creatorID string) (*models.DutyPool, error)
 	GetDutyPoolList(ctx context.Context, req *services.DutyPoolListRequest) ([]models.DutyPool, int64, error)
+	GetDutyPoolStatistics(ctx context.Context) (*services.DutyPoolStatistics, error)
 	GetDutyPoolByID(ctx context.Context, poolID string) (*models.DutyPool, error)
 	UpdateDutyPool(ctx context.Context, req *services.DutyPoolUpdateRequest, updaterID string) error
 	DeleteDutyPool(ctx context.Context, poolID string) error
@@ -90,6 +91,11 @@ func (s *dutyCacheServiceImpl) CreateDutyPool(ctx context.Context, req *services
 
 func (s *dutyCacheServiceImpl) GetDutyPoolList(ctx context.Context, req *services.DutyPoolListRequest) ([]models.DutyPool, int64, error) {
 	return s.base.GetDutyPoolList(ctx, req)
+}
+
+// GetDutyPoolStatistics 统计值班池(总数/启停/成员数),委托给基础服务。不缓存。
+func (s *dutyCacheServiceImpl) GetDutyPoolStatistics(ctx context.Context) (*services.DutyPoolStatistics, error) {
+	return s.base.GetDutyPoolStatistics(ctx)
 }
 
 func (s *dutyCacheServiceImpl) GetDutyPoolByID(ctx context.Context, poolID string) (*models.DutyPool, error) {

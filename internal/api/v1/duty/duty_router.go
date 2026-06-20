@@ -13,6 +13,7 @@ func SetupDutyPoolsRouter(r *gin.RouterGroup, core *core.Core) {
 	handler := NewDutyHandler(service).WithCore(core)
 
 	r.POST("/list", handler.ListPools)
+	r.POST("/statistics", handler.StatisticsPools)
 	r.POST("", handler.CreatePool)
 	r.POST("/:id", handler.GetPoolByID)
 	r.POST("/:id/update", handler.UpdatePool)

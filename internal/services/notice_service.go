@@ -101,6 +101,35 @@ func (s *NoticeService) CreateNoticeWithTargets(ctx context.Context, req *Create
 	return notice, nil
 }
 
+// NoticeStatusStatistics 通知按发布状态的聚合统计。
+// publishStatus 语义(models.PublishStatus): 0=草稿 1=已发布 2=定时发布中 3=已撤回。
+type NoticeStatusStatistics struct {
+	Total     int64 `json:"total"`
+	Published int64 `json:"published"` // = 1
+	Draft     int64 `json:"draft"`     // = 0
+	Scheduled int64 `json:"scheduled"` // = 2
+}
+
+// GetNoticeStatusStatistics 统计通知总数及各发布状态计数。
+// 用条件聚合(SUM CASE)避免「加载全量行进内存再 filter」的反模式,同时修正前端
+// 旧实现把 scheduled 误标为 3(实为已撤回)、draft 吞掉定时发布(2)的状态桶错误。
+func (s *NoticeService) GetNoticeStatusStatistics(ctx context.Context) (*NoticeStatusStatistics, error) {
+	var result NoticeStatusStatistics
+	err := s.db.WithContext(ctx).
+		Model(&models.Notice{}).
+		Select(
+			"COUNT(*) AS total",
+			"SUM(CASE WHEN publish_status = 1 THEN 1 ELSE 0 END) AS published",
+			"SUM(CASE WHEN publish_status = 0 THEN 1 ELSE 0 END) AS draft",
+			"SUM(CASE WHEN publish_status = 2 THEN 1 ELSE 0 END) AS scheduled",
+		).
+		Scan(&result).Error
+	if err != nil {
+		return nil, fmt.Errorf("统计通知状态失败: %w", err)
+	}
+	return &result, nil
+}
+
 // noticeAllowedSortFields 通知列表可排序字段白名单（对应 sys_notice 表列名）。
 var noticeAllowedSortFields = map[string]string{
 	"noticeTitle": "notice_title",

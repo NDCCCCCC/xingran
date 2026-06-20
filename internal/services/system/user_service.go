@@ -25,6 +25,7 @@ type UserService interface {
 	Delete(ctx context.Context, id string) error
 	GetByID(ctx context.Context, id string) (*models.User, error)
 	List(ctx context.Context, params requests.UserListParams) (*PageResult, error)
+	Statistics(ctx context.Context) (*UserStatisticsResult, error)
 	BatchDelete(ctx context.Context, ids []string) error
 	UpdateStatus(ctx context.Context, id string, status int) error
 	ResetPassword(ctx context.Context, id string, newPassword string) error
@@ -50,6 +51,14 @@ type PageResult struct {
 	Total    int64       `json:"total"`
 	Current  int         `json:"current"`
 	PageSize int         `json:"pageSize"`
+}
+
+// UserStatisticsResult 用户统计结果。
+// status 约定: 0=正常(active), 1=停用(inactive)。
+type UserStatisticsResult struct {
+	Total    int64 `json:"total"`
+	Active   int64 `json:"active"`
+	Inactive int64 `json:"inactive"`
 }
 
 // userAllowedSortFields 用户列表可排序字段白名单。
@@ -455,6 +464,27 @@ func (s *userService) List(ctx context.Context, params requests.UserListParams) 
 		Current:  params.Current,
 		PageSize: params.PageSize,
 	}, nil
+}
+
+// Statistics 统计用户总数及启停状态计数(status: 0=正常, 1=停用)。
+// 用单条带条件聚合的查询(SUM(CASE WHEN ...)),避免「加载全量行进内存再 filter」的反模式;
+// 用 CASE 而非 COUNT FILTER 是为了同时兼容 PostgreSQL 与 SQLite 两种后端。
+// base query 与 List 一致(s.db.Model(&models.User{})),GORM 自动排除软删除记录,
+// 因此 total 与 List 的 Count 口径完全对齐。
+func (s *userService) Statistics(ctx context.Context) (*UserStatisticsResult, error) {
+	var result UserStatisticsResult
+	err := s.db.WithContext(ctx).
+		Model(&models.User{}).
+		Select(
+			"COUNT(*) AS total",
+			"SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS active",
+			"SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS inactive",
+		).
+		Scan(&result).Error
+	if err != nil {
+		return nil, apperrors.DatabaseError(err)
+	}
+	return &result, nil
 }
 
 // buildDepartmentPaths 为用户列表构建完整部门路径（从二级部门开始）

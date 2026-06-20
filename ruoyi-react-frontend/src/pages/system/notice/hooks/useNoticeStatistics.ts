@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { getNoticeList } from "@/lib/noticeApi";
+import { getNoticeStatusStatistics } from "@/lib/noticeApi";
 
 export interface NoticeStatistics {
   total: number;
@@ -25,22 +25,18 @@ export function useNoticeStatistics(): UseNoticeStatisticsResult {
     scheduled: 0,
   });
 
-  // 加载统计数据
+  // 加载统计数据: 调用专用统计端点(COUNT 聚合),不再用列表长度充当总数——
+  // 后端 notice list 同样受 MaxPageSize 上限影响,通知数超过后会截断。
+  // 同时修正旧实现的状态桶错误: scheduled 应为 publishStatus=2(定时发布),
+  // 旧代码误用 3(已撤回); draft 应为 0(草稿),旧代码误把 2(定时)也算进 draft。
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await getNoticeList({ current: 1, pageSize: 1000 });
-      const allNotices = result.data?.list || [];
-      const publishedCount = allNotices.filter((n) => (n as { publishStatus: number }).publishStatus === 1).length;
-      const draftCount = allNotices.filter((n) => {
-        const status = (n as { publishStatus: number }).publishStatus;
-        return status === 0 || status === 2;
-      }).length;
-      const scheduledCount = allNotices.filter((n) => (n as { publishStatus: number }).publishStatus === 3).length;
+      const result = await getNoticeStatusStatistics();
       setStatistics({
-        total: allNotices.length,
-        published: publishedCount,
-        draft: draftCount,
-        scheduled: scheduledCount,
+        total: result.data?.total ?? 0,
+        published: result.data?.published ?? 0,
+        draft: result.data?.draft ?? 0,
+        scheduled: result.data?.scheduled ?? 0,
       });
     } catch (error) {
       console.error("加载统计数据失败:", error);

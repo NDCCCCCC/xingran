@@ -9,6 +9,7 @@ import { usePagination } from '@/hooks/usePagination';
 import { DepartmentTreeSelect } from '@/components/shared';
 import {
   getDutyPoolList,
+  getDutyPoolStatistics,
   createDutyPool,
   updateDutyPool,
   deleteDutyPool,
@@ -134,19 +135,26 @@ const DutyPoolPage: FC = () => {
       });
       setDataSource(result.data?.list ?? []);
       setTotal(result.data?.total ?? 0);
-
-      // 计算统计数据
-      const list = result.data?.list ?? [];
-      setStats({
-        total: list.length,
-        enabled: list.filter((p) => p.status === 0).length,
-        disabled: list.filter((p) => p.status === 1).length,
-        totalMembers: list.reduce((sum, p) => sum + (p.members?.length || 0), 0),
-      });
     } catch (error) {
       handleApiError(error, '获取值班池列表失败');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 获取统计数据（专用端点 COUNT 聚合，不受分页上限影响）。
+  // 旧实现用当前页 list(~10 条)算统计，多页时严重偏小且 total 卡在 pageSize。
+  const fetchStats = async () => {
+    try {
+      const result = await getDutyPoolStatistics();
+      setStats({
+        total: result.data?.total ?? 0,
+        enabled: result.data?.enabled ?? 0,
+        disabled: result.data?.disabled ?? 0,
+        totalMembers: result.data?.totalMembers ?? 0,
+      });
+    } catch (error) {
+      console.error('获取值班池统计失败:', error);
     }
   };
 
@@ -172,6 +180,7 @@ const DutyPoolPage: FC = () => {
 
   useEffect(() => {
     fetchList(1, paginationProps.pageSize);
+    fetchStats();
     fetchUsers();
     fetchDepts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -226,6 +235,7 @@ const DutyPoolPage: FC = () => {
       await deleteDutyPool(id);
       handleSuccess('删除成功');
       fetchList(paginationProps.current, paginationProps.pageSize);
+      fetchStats();
     } catch (error) {
       handleApiError(error, '删除失败');
     }
@@ -257,6 +267,7 @@ const DutyPoolPage: FC = () => {
       }
       setModalVisible(false);
       fetchList(paginationProps.current, paginationProps.pageSize);
+      fetchStats();
     } catch (error: unknown) {
       if (isFormValidationError(error)) {
         // 表单验证错误

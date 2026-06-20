@@ -111,6 +111,22 @@ func (h *UserHandler) List(c *gin.Context) {
 	response.Page(c, result.List, result.Total, result.Current, result.PageSize)
 }
 
+// Statistics 用户统计(总数/正常/停用)
+// @Summary 用户统计
+// @Description 返回用户总数及启停状态计数,供统计卡片使用;用 COUNT 聚合而非加载全量行
+// @Tags 用户管理
+// @Produce json
+// @Success 200 {object} response.Response
+// @Router /system/users/statistics [post]
+func (h *UserHandler) Statistics(c *gin.Context) {
+	result, err := h.service.Statistics(c.Request.Context())
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Success(c, result)
+}
+
 // GetByID 获取用户详情
 // @Summary 获取用户详情
 // @Description 根据用户ID获取用户详细信息

@@ -156,6 +156,21 @@ export function getDutyPoolList(params: DutyPoolListRequest): Promise<BaseRespon
   return post("/duty/pools/list", params);
 }
 
+/** 值班池统计（总数 / 启用 / 停用 / 成员总数） */
+export interface DutyPoolStatistics {
+  total: number;
+  enabled: number;
+  disabled: number;
+  totalMembers: number;
+}
+
+/**
+ * 获取值班池统计（后端 COUNT 聚合，不受分页上限影响）
+ */
+export function getDutyPoolStatistics(): Promise<BaseResponse<DutyPoolStatistics>> {
+  return post("/duty/pools/statistics", {});
+}
+
 export function createDutyPool(data: DutyPoolCreateRequest): Promise<BaseResponse<DutyPool>> {
   return post("/duty/pools", data);
 }
