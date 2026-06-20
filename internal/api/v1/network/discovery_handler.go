@@ -24,6 +24,22 @@ func (h *DiscoveryHandler) WithCore(core *core.Core) *DiscoveryHandler {
 	return h
 }
 
+// Statistics 设备发现统计(总数/待执行/执行中/已完成/失败/累计发现设备数)
+// @Summary 设备发现统计
+// @Description 用 COUNT 聚合返回发现任务统计,供统计卡片使用
+// @Tags 网络设备管理
+// @Produce json
+// @Success 200 {object} response.Response
+// @Router /network/discoveries/statistics [post]
+func (h *DiscoveryHandler) Statistics(c *gin.Context) {
+	result, err := h.discoveryService.GetStatistics(c.Request.Context())
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Success(c, result)
+}
+
 // Probe 探测单台设备
 // @Summary 探测单台设备
 // @Description 使用指定凭证探测单台设备的连通性和基本信息

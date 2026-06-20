@@ -566,11 +566,20 @@ func (s *MACCollectionService) GetMACAddressStats(ctx context.Context) (map[stri
 		stats.LatestCollection = latest.CollectedAt
 	}
 
+	// 按类型统计(供统计卡片 dynamic/static/secure,替代旧前端用 list.filter().length 的反模式)
+	var dynamicCount, staticCount, secureCount int64
+	s.db.WithContext(ctx).Model(&models.DeviceMACAddress{}).Where("mac_type = ?", models.MACTypeDynamic).Count(&dynamicCount)
+	s.db.WithContext(ctx).Model(&models.DeviceMACAddress{}).Where("mac_type = ?", models.MACTypeStatic).Count(&staticCount)
+	s.db.WithContext(ctx).Model(&models.DeviceMACAddress{}).Where("mac_type = ?", models.MACTypeSecure).Count(&secureCount)
+
 	return map[string]interface{}{
 		"totalRecords":     stats.TotalRecords,
 		"uniqueDevices":    stats.UniqueDevices,
 		"uniqueMACs":       stats.UniqueMACs,
 		"latestCollection": stats.LatestCollection,
+		"dynamic":          dynamicCount,
+		"static":           staticCount,
+		"secure":           secureCount,
 	}, nil
 }
 

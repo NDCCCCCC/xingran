@@ -38,6 +38,22 @@ func (h *ExecutionHandler) WithCore(core *core.Core) *ExecutionHandler {
 // @Param request body object{current=int,pageSize=int} true "分页参数"
 // @Success 200 {object} response.Response{data=response.PageResponse}
 // @Router /network/executions/list [post]
+// Statistics 配置执行统计(总数/待执行/执行中/成功/失败)
+// @Summary 配置执行统计
+// @Description 用 COUNT 聚合返回配置执行统计(execution_type=template),供统计卡片使用
+// @Tags 配置执行
+// @Produce json
+// @Success 200 {object} response.Response
+// @Router /network/executions/statistics [post]
+func (h *ExecutionHandler) Statistics(c *gin.Context) {
+	result, err := h.executionService.GetStatistics(c.Request.Context())
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Success(c, result)
+}
+
 func (h *ExecutionHandler) List(c *gin.Context) {
 	var rawReq map[string]interface{}
 	if err := c.ShouldBindJSON(&rawReq); err != nil {

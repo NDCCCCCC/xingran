@@ -40,6 +40,22 @@ func (h *TemplateHandler) WithCore(core *core.Core) *TemplateHandler {
 // @Param request body services.ListTemplateRequest true "查询条件"
 // @Success 200 {object} response.Response{data=response.PageResponse}
 // @Router /network/templates/list [post]
+// Statistics 配置模板统计(总数/系统/自定义/初始化)
+// @Summary 配置模板统计
+// @Description 用 COUNT 聚合返回模板统计,供统计卡片使用
+// @Tags 配置模板管理
+// @Produce json
+// @Success 200 {object} response.Response
+// @Router /network/templates/statistics [post]
+func (h *TemplateHandler) Statistics(c *gin.Context) {
+	result, err := h.templateService.GetStatistics(c.Request.Context())
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Success(c, result)
+}
+
 func (h *TemplateHandler) List(c *gin.Context) {
 	var rawReq map[string]interface{}
 	if err := c.ShouldBindJSON(&rawReq); err != nil {

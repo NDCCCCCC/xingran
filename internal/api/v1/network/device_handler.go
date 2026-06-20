@@ -32,6 +32,22 @@ func (h *DeviceHandler) WithCore(core *core.Core) *DeviceHandler {
 	return h
 }
 
+// Statistics 网络设备统计(总数/在线/离线/未知)
+// @Summary 网络设备统计
+// @Description 用 COUNT 聚合返回设备统计,供统计卡片使用
+// @Tags 网络设备管理
+// @Produce json
+// @Success 200 {object} response.Response
+// @Router /network/devices/statistics [post]
+func (h *DeviceHandler) Statistics(c *gin.Context) {
+	stats, err := h.deviceService.GetDeviceStatistics(c.Request.Context())
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Success(c, stats)
+}
+
 // List 查询网络设备列表
 // @Summary 查询网络设备列表
 // @Description 分页查询网络设备列表

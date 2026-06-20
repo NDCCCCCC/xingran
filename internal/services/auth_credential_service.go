@@ -23,6 +23,29 @@ func NewAuthCredentialService(db *gorm.DB, passwordCipher addomain.PasswordCiphe
 	}
 }
 
+// CredentialStatistics 授权凭证统计结果。
+type CredentialStatistics struct {
+	Total  int64 `json:"total"`
+	SSH    int64 `json:"ssh"`    // protocol_type = 'ssh'
+	Telnet int64 `json:"telnet"` // protocol_type = 'telnet'
+}
+
+// GetStatistics 统计授权凭证总数及 SSH/Telnet 数。用条件聚合避免加载全量行进内存。
+func (s *AuthCredentialService) GetStatistics(ctx context.Context) (*CredentialStatistics, error) {
+	var result CredentialStatistics
+	err := s.db.WithContext(ctx).Model(&models.AuthCredential{}).
+		Select(
+			"COUNT(*) AS total",
+			"SUM(CASE WHEN protocol_type = 'ssh' THEN 1 ELSE 0 END) AS ssh",
+			"SUM(CASE WHEN protocol_type = 'telnet' THEN 1 ELSE 0 END) AS telnet",
+		).
+		Scan(&result).Error
+	if err != nil {
+		return nil, fmt.Errorf("统计授权凭证失败: %w", err)
+	}
+	return &result, nil
+}
+
 // ListRequest 列表请求
 type ListCredentialRequest struct {
 	CredentialName *string

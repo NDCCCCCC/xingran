@@ -27,6 +27,26 @@ func NewCommandDispatchService(db *gorm.DB, executor *device.DeviceExecutor) *Co
 	}
 }
 
+// GetStatistics 统计命令执行的总数及各状态计数(execution_type='command',与 GetExecutionList 口径一致)。
+// status: 0=待执行 1=执行中 2=成功 3=失败。用条件聚合避免加载全量行进内存。
+func (s *CommandDispatchService) GetStatistics(ctx context.Context) (*ExecutionStatistics, error) {
+	var result ExecutionStatistics
+	err := s.db.WithContext(ctx).Model(&models.ConfigExecution{}).
+		Where("execution_type = ?", models.ExecutionTypeCommand).
+		Select(
+			"COUNT(*) AS total",
+			"SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS pending",
+			"SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS running",
+			"SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS success",
+			"SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) AS failed",
+		).
+		Scan(&result).Error
+	if err != nil {
+		return nil, fmt.Errorf("统计命令执行失败: %w", err)
+	}
+	return &result, nil
+}
+
 // DispatchRequest 分发请求
 type DispatchRequest struct {
 	ExecutionName     string

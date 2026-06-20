@@ -21,6 +21,32 @@ func NewTemplateService(db *gorm.DB) *TemplateService {
 	return &TemplateService{db: db}
 }
 
+// TemplateStatistics 配置模板统计结果。
+type TemplateStatistics struct {
+	Total  int64 `json:"total"`
+	System int64 `json:"system"` // is_system = true
+	Custom int64 `json:"custom"` // is_system = false
+	Init   int64 `json:"init"`   // template_type = 'init'
+}
+
+// GetStatistics 统计配置模板总数/系统/自定义/初始化模板数。
+// 用条件聚合避免「加载全量行进内存再 filter」; is_system 用裸布尔表达式(PG/SQLite 双兼容)。
+func (s *TemplateService) GetStatistics(ctx context.Context) (*TemplateStatistics, error) {
+	var result TemplateStatistics
+	err := s.db.WithContext(ctx).Model(&models.ConfigTemplate{}).
+		Select(
+			"COUNT(*) AS total",
+			"SUM(CASE WHEN is_system THEN 1 ELSE 0 END) AS system",
+			"SUM(CASE WHEN NOT is_system THEN 1 ELSE 0 END) AS custom",
+			"SUM(CASE WHEN template_type = 'init' THEN 1 ELSE 0 END) AS init",
+		).
+		Scan(&result).Error
+	if err != nil {
+		return nil, fmt.Errorf("统计配置模板失败: %w", err)
+	}
+	return &result, nil
+}
+
 // ListRequest 列表请求
 type ListTemplateRequest struct {
 	base.BaseListRequest

@@ -26,6 +26,37 @@ func NewDeviceDiscoveryService(db *gorm.DB) *DeviceDiscoveryService {
 	return &DeviceDiscoveryService{db: db}
 }
 
+// DiscoveryStatistics 设备发现统计结果。
+// status: 0=待执行 1=执行中 2=成功(前端称 completed) 3=失败。
+type DiscoveryStatistics struct {
+	Total        int64 `json:"total"`
+	Pending      int64 `json:"pending"`      // status = 0
+	Running      int64 `json:"running"`      // status = 1
+	Completed    int64 `json:"completed"`    // status = 2
+	Failed       int64 `json:"failed"`       // status = 3
+	TotalDevices int64 `json:"totalDevices"` // SUM(discovered_count)
+}
+
+// GetStatistics 统计设备发现任务总数/各状态计数及累计发现设备数。
+// 用条件聚合避免加载全量行进内存; totalDevices 用 COALESCE(SUM(discovered_count),0)。
+func (s *DeviceDiscoveryService) GetStatistics(ctx context.Context) (*DiscoveryStatistics, error) {
+	var result DiscoveryStatistics
+	err := s.db.WithContext(ctx).Model(&models.DeviceDiscovery{}).
+		Select(
+			"COUNT(*) AS total",
+			"SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS pending",
+			"SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS running",
+			"SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS completed",
+			"SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) AS failed",
+			"COALESCE(SUM(discovered_count), 0) AS total_devices",
+		).
+		Scan(&result).Error
+	if err != nil {
+		return nil, fmt.Errorf("统计设备发现失败: %w", err)
+	}
+	return &result, nil
+}
+
 // DiscoveryRequest 发现请求
 type DiscoveryRequest struct {
 	TaskName        string

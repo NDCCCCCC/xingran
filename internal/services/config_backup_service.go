@@ -569,6 +569,10 @@ func (s *ConfigBackupService) GetBackupStatistics(ctx context.Context) (map[stri
 	s.db.WithContext(ctx).Model(&models.ConfigBackup{}).Select("COALESCE(SUM(backup_size), 0) as total_size").Scan(&result)
 	stats.TotalSize = result.TotalSize
 
+	// 唯一设备数(供统计卡片,替代旧前端用 Set(list).size 的反模式)
+	var uniqueDevices int64
+	s.db.WithContext(ctx).Model(&models.ConfigBackup{}).Distinct("device_id").Count(&uniqueDevices)
+
 	return map[string]interface{}{
 		"totalBackups":     stats.TotalBackups,
 		"autoBackups":      stats.AutoBackups,
@@ -577,6 +581,7 @@ func (s *ConfigBackupService) GetBackupStatistics(ctx context.Context) (map[stri
 		"fileStorageCount": stats.FileStorageCount,
 		"totalSize":        stats.TotalSize,
 		"totalSizeMB":      stats.TotalSize / 1024 / 1024,
+		"uniqueDevices":    uniqueDevices,
 	}, nil
 }
 

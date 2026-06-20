@@ -141,6 +141,22 @@ func (h *CommandHandler) GetExecutionResult(c *gin.Context) {
 // @Param request body object{current=int,pageSize=int} true "分页参数"
 // @Success 200 {object} response.Response{data=response.PageResponse}
 // @Router /network/command/list [post]
+// Statistics 命令执行统计(总数/待执行/执行中/成功/失败)
+// @Summary 命令执行统计
+// @Description 用 COUNT 聚合返回命令执行统计(execution_type=command),供统计卡片使用
+// @Tags 命令分发
+// @Produce json
+// @Success 200 {object} response.Response
+// @Router /network/command/statistics [post]
+func (h *CommandHandler) Statistics(c *gin.Context) {
+	result, err := h.commandService.GetStatistics(c.Request.Context())
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Success(c, result)
+}
+
 func (h *CommandHandler) List(c *gin.Context) {
 	var rawReq map[string]interface{}
 	if err := c.ShouldBindJSON(&rawReq); err != nil {

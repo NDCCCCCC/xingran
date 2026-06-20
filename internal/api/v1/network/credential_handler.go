@@ -39,6 +39,22 @@ func (h *CredentialHandler) WithCore(core *core.Core) *CredentialHandler {
 // @Param request body services.ListCredentialRequest true "查询条件"
 // @Success 200 {object} response.Response{data=response.PageResponse}
 // @Router /network/credentials/list [post]
+// Statistics 授权凭证统计(总数/SSH/Telnet)
+// @Summary 授权凭证统计
+// @Description 用 COUNT 聚合返回凭证统计,供统计卡片使用
+// @Tags 授权凭证管理
+// @Produce json
+// @Success 200 {object} response.Response
+// @Router /network/credentials/statistics [post]
+func (h *CredentialHandler) Statistics(c *gin.Context) {
+	result, err := h.credentialService.GetStatistics(c.Request.Context())
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Success(c, result)
+}
+
 func (h *CredentialHandler) List(c *gin.Context) {
 	var rawReq map[string]interface{}
 	if err := c.ShouldBindJSON(&rawReq); err != nil {

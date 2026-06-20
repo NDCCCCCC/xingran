@@ -63,6 +63,7 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	}, middleware.OpsSelectorReadPerms, core))
 	{
 		devices.POST("/list", deviceHandler.List)
+		devices.POST("/statistics", deviceHandler.Statistics)
 		devices.POST("", deviceHandler.Create)
 		devices.POST("/discover", discoveryHandler.Probe)
 		devices.POST("/quick-create", deviceHandler.QuickCreate)
@@ -83,6 +84,7 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	}, core))
 	{
 		credentials.POST("/list", credentialHandler.List)
+		credentials.POST("/statistics", credentialHandler.Statistics)
 		credentials.POST("", credentialHandler.Create)
 		credentials.POST("/:id", credentialHandler.GetByID)
 		credentials.POST("/:id/update", credentialHandler.Update)
@@ -103,6 +105,7 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	}, core))
 	{
 		templates.POST("/list", templateHandler.List)
+		templates.POST("/statistics", templateHandler.Statistics)
 		templates.POST("", templateHandler.Create)
 		templates.POST("/:id", templateHandler.GetByID)
 		templates.POST("/:id/update", templateHandler.Update)
@@ -124,6 +127,7 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 		command.POST("/dispatch", commandHandler.Dispatch)
 		command.POST("/quick", commandHandler.QuickCommand)
 		command.POST("/list", commandHandler.List)
+		command.POST("/statistics", commandHandler.Statistics)
 		command.POST("/:id", commandHandler.GetExecutionResult)
 		command.POST("/:id/device/:deviceId", commandHandler.GetDeviceExecutionDetail)
 		command.POST("/export", exportHandler.ExportCommands)
@@ -136,6 +140,7 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	}, core))
 	{
 		executions.POST("/list", executionHandler.List)
+		executions.POST("/statistics", executionHandler.Statistics)
 		executions.POST("/template/execute", executionHandler.ExecuteByTemplate)
 		executions.POST("/:id", executionHandler.GetByID)
 		executions.POST("/:id/cancel", executionHandler.Cancel)
@@ -176,6 +181,7 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	}, core))
 	{
 		discoveries.POST("/list", discoveryHandler.List)
+		discoveries.POST("/statistics", discoveryHandler.Statistics)
 		discoveries.POST("/create", discoveryHandler.Create)
 		discoveries.POST("/:id", discoveryHandler.GetByID)
 		discoveries.POST("/:id/results", discoveryHandler.GetResults)
