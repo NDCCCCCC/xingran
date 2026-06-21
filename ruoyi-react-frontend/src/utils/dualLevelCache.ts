@@ -286,7 +286,6 @@ export class DualLevelCache<T> {
     const memValue = this.memoryCache.get(key);
     if (memValue) {
       this.stats.memoryHits++;
-      console.log(`${LOG_PREFIX} Memory cache hit:`, key);
       return memValue;
     }
 
@@ -294,14 +293,12 @@ export class DualLevelCache<T> {
     const storageValue = this.storageCache.get(key);
     if (storageValue) {
       this.stats.storageHits++;
-      console.log(`${LOG_PREFIX} localStorage cache hit:`, key);
       // 回填到内存缓存
       this.memoryCache.set(key, storageValue);
       return storageValue;
     }
 
     this.stats.misses++;
-    console.log(`${LOG_PREFIX} Cache miss:`, key);
     return null;
   }
 

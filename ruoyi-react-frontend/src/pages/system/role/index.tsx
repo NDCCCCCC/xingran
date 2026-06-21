@@ -119,12 +119,10 @@ const RoleManagement: FC = () => {
     }
 
     loadingMenusRef.current.add(roleId);
-    console.log("[loadRoleMenus] 开始加载角色菜单权限:", roleId);
 
     try {
       const result = await post(`/system/menus/role-menu-tree-select/${roleId}`) as { data: { checkedKeys: string[] } };
       const checkedKeys = result.data.checkedKeys || [];
-      console.log("[loadRoleMenus] 加载完成，权限数量:", checkedKeys.length, "roleId:", roleId);
       return checkedKeys;
     } catch (error) {
       console.error("[loadRoleMenus] 加载失败:", error);

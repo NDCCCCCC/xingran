@@ -196,8 +196,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
 	// 布局变更处理
 	const handleLayoutChange = useCallback((layouts: Array<{ id: string; position: unknown }>) => {
-		// 可以在这里保存布局变更
-		console.log("Layout changed:", layouts);
+		// 布局变更处理
 	}, []);
 
 	if (!dashboard) {

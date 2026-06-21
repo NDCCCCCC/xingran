@@ -447,19 +447,14 @@ export const geocodeWithCache = async (
   // 尝试从缓存获取
   const cached = cache.get(cacheKey);
   if (cached) {
-    console.log("✅ 地理编码缓存命中:", address);
     return cached;
   }
-
-  // 调用后端API
-  console.log("🌐 调用后端地理编码API:", address);
 
   try {
     const result = await post<GeocodeResult>("/ops/building/geocode", { address });
 
     if (result.code === 0 && result.data) {
       cache.set(cacheKey, result.data);
-      console.log("💾 地理编码结果已缓存:", address);
       return result.data;
     }
 
@@ -518,10 +513,8 @@ export const clearGeocodeCache = (address?: string) => {
   if (address) {
     const cacheKey = `${GEOCODE_CACHE_PREFIX}${address}`;
     cache.delete(cacheKey);
-    console.log("🗑️ 已清除地址缓存:", address);
   } else {
     cache.clear();
-    console.log("🗑️ 已清除所有地理编码缓存");
   }
 };
 
@@ -531,7 +524,6 @@ export const clearGeocodeCache = (address?: string) => {
 export const resetGeocodeStats = () => {
   const cache = getDualLevelCache<unknown>();
   cache.resetStats();
-  console.log("🔄 已重置地理编码统计");
 };
 
 // ==================== 资产管理 ====================

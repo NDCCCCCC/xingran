@@ -99,26 +99,21 @@ const SliderCaptcha: FC<SliderCaptchaProps> = ({ onVerified, onError, active = t
 
     // 验证滑动位置
     try {
-      console.log("[SliderCaptcha] 开始验证滑动位置:", { displayX, xPos, naturalWidth: bgImg?.naturalWidth, containerWidth, captchaId: captchaData.captchaId, token: captchaData.token });
       const result = await verifySliderCaptcha({
         captchaId: captchaData.captchaId,
         xPos,
         token: captchaData.token, // 使用后端返回的 token
       });
 
-      console.log("[SliderCaptcha] 验证响应:", result);
       if (result.success) {
-        console.log("[SliderCaptcha] 验证成功，调用onVerified");
         setVerified(true);
         message.success("验证成功");
         onVerified(result.token, captchaData.captchaId);
       } else {
-        console.log("[SliderCaptcha] 验证失败（success=false）");
         message.error("验证失败，请重试");
         loadCaptcha();
       }
     } catch (error) {
-      console.log("[SliderCaptcha] 验证异常（抛出错误）:", error);
       console.error("[SliderCaptcha] 验证失败:", error);
       message.error("验证失败");
       loadCaptcha();

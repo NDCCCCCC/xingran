@@ -43,8 +43,6 @@ const CaptchaModal: FC<CaptchaModalProps> = ({
 
   // 处理验证码验证成功
   const handleCaptchaSuccess = (data: CaptchaSuccessData) => {
-    console.log("[CaptchaModal] 验证成功，准备关闭模态框:", data);
-
     // 延迟关闭模态框，让用户看到"验证成功"提示
     setTimeout(() => {
       onSuccess(data);
@@ -71,14 +69,12 @@ const CaptchaModal: FC<CaptchaModalProps> = ({
 
   // 数字验证码变更回调
   const handleCaptchaChange = (value: string, id: string) => {
-    console.log("[CaptchaModal] 验证码变更:", { value, id });
     setCaptchaValue(value);
     setCaptchaId(id);
   };
 
   // 滑动验证码验证成功回调
   const handleSliderVerified = (_token: string, id: string) => {
-    console.log("[CaptchaModal] 滑动验证成功:", { id });
     setCaptchaId(id);
     setSliderVerified(true);
 

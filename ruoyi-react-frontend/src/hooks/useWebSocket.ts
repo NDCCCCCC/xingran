@@ -113,7 +113,6 @@ export function useWebSocket(options?: UseWebSocketOptions): UseWebSocketReturn 
 					if (currentAttempts < maxReconnectAttempts) {
 						// 指数退避：延迟 = interval * 2^attempts，最大 30 秒
 						const delay = Math.min(reconnectInterval * Math.pow(2, currentAttempts), 30000);
-						console.log(`WebSocket reconnecting in ${delay}ms (attempt ${currentAttempts + 1}/${maxReconnectAttempts})`);
 
 						reconnectTimeoutRef.current = setTimeout(() => {
 							setReconnectAttempts(currentAttempts);

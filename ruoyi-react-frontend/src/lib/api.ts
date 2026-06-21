@@ -312,8 +312,6 @@ api.interceptors.response.use(
 				const decryptedJson = await decryptSM4CBC(encryptedDataHex, keyInfo.sm4KeyHex, ivHex);
 				data = JSON.parse(decryptedJson);
 
-				console.log("[API Response] 后端加密响应解密成功:", { url, decryptedData: data });
-
 				encryptionKeyStore.delete(requestId);
 			} catch (error) {
 				console.error("[Response Decryption] 后端加密响应解密失败:", error);
