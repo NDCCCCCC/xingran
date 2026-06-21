@@ -43,8 +43,8 @@ func Migration_145_FixBoundUserIDUUID(db *gorm.DB) error {
 		UPDATE sys_vdi_vm vm
 		SET bound_user_id = u.id,
 			bound_user_name = CASE
-				WHEN u.nick_name IS NULL OR u.nick_name = '' THEN u.username
-				ELSE CONCAT(u.nick_name, ' (', u.username, ')')
+				WHEN u.nickname IS NULL OR u.nickname = '' THEN u.username
+				ELSE CONCAT(u.nickname, ' (', u.username, ')')
 			END
 		FROM sys_user u
 		WHERE vm.bound_user_id IS NOT NULL

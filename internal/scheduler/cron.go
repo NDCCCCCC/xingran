@@ -826,7 +826,7 @@ func getTodayDutyMembers(db *gorm.DB, date string) ([]dutyMember, error) {
 	var members []dutyMember
 
 	query := db.Table("sys_duty_schedule AS ds").
-		Select("ds.user_id, u.username, u.nick_name, dp.pool_name").
+		Select("ds.user_id, u.username, u.nickname AS nick_name, dp.pool_name").
 		Joins("LEFT JOIN sys_user AS u ON ds.user_id = u.id").
 		Joins("LEFT JOIN sys_duty_pool AS dp ON ds.pool_id = dp.id").
 		Where("ds.schedule_date = ? AND ds.status = 0", date)

@@ -60,7 +60,7 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 						Table:       "sys_user",
 						LeftField:   "leader",
 						RightField:  "id",
-						SelectField: "nick_name",
+						SelectField: "nickname",
 						As:          "leaderName",
 					},
 				},
