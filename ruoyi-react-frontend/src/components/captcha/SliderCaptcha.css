@@ -123,6 +123,9 @@
   font-size: 16px;
   cursor: grab;
   user-select: none;
+  /* 关键修复：禁用默认触摸手势（平移/缩放），让 Pointer Events 持续接收 pointermove，
+     避免触屏设备上拖动被浏览器滚动手势抢占（与桌面端 preventDefault/draggable=false 对应） */
+  touch-action: none;
   transition: background 0.3s;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
