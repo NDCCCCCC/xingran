@@ -43,13 +43,13 @@ func Migration_145_FixBoundUserIDUUID(db *gorm.DB) error {
 		UPDATE sys_vdi_vm vm
 		SET bound_user_id = u.id,
 			bound_user_name = CASE
-				WHEN u.nick_name IS NULL OR u.nick_name = '' THEN u.user_name
-				ELSE CONCAT(u.nick_name, ' (', u.user_name, ')')
+				WHEN u.nick_name IS NULL OR u.nick_name = '' THEN u.username
+				ELSE CONCAT(u.nick_name, ' (', u.username, ')')
 			END
 		FROM sys_user u
 		WHERE vm.bound_user_id IS NOT NULL
 		AND vm.bound_user_id != ''
-		AND vm.bound_user_id = u.user_name
+		AND vm.bound_user_id = u.username
 		AND vm.deleted_at IS NULL
 		AND u.deleted_at IS NULL
 		AND vm.bound_user_id !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' -- Not already a UUID
