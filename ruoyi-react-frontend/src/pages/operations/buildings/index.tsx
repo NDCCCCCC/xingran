@@ -25,8 +25,9 @@ import ExcelImport from "@/components/shared/ExcelImport";
 import ExcelExport from "@/components/shared/ExcelExport";
 import { DepartmentTreeSelect } from "@/components/shared";
 import DeptTree from "@/components/DeptTree";
+import { useDeptTree } from "@/hooks/useDeptTree";
+import { findDeptNode } from "@/utils/deptUtils";
 import { useBuildingGeocoding } from "./useBuildingGeocoding";
-import { useDepartmentData } from "./useDepartmentData";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -39,7 +40,12 @@ const BuildingManagement: FC = () => {
 
   // 使用自定义 Hooks
   const geocoding = useBuildingGeocoding();
-  const departmentData = useDepartmentData();
+  // Phase 37 批 2:直接消费 canonical useDeptTree
+  const { data: departments = [], isLoading: departmentLoading } = useDeptTree();
+  const getOrgName = useCallback((orgId?: string): string => {
+    if (!orgId) return "-";
+    return findDeptNode(departments, orgId)?.deptName ?? "-";
+  }, [departments]);
 
   const [statistics, setStatistics] = useState({ total: 0, active: 0, inactive: 0 });
   const location = useLocation();
@@ -171,10 +177,10 @@ const BuildingManagement: FC = () => {
       prevPageRef.current = { current: current ?? 1, pageSize: pageSize ?? 10 };
 
       // 使用 setTimeout 避免同步 setState 导致的循环
+      // 部门树由 useDeptTree 自动获取,无需手动触发
       setTimeout(() => {
         loadBuildings();
         loadStatistics();
-        departmentData.loadDepartments();
       }, 0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -298,7 +304,7 @@ const BuildingManagement: FC = () => {
 
   const columns: ColumnsType<Building> = [
     { title: "楼宇名称", dataIndex: "name", key: "name", width: 150, sorter: true, sortOrder: getColumnSortOrder("name") },
-    { title: "所属机构", dataIndex: "orgId", key: "orgName", width: 150, sorter: true, sortOrder: getColumnSortOrder("orgId"), render: departmentData.getOrgName },
+    { title: "所属机构", dataIndex: "orgId", key: "orgName", width: 150, sorter: true, sortOrder: getColumnSortOrder("orgId"), render: getOrgName },
     {
       title: "层级",
       dataIndex: "level",
@@ -384,7 +390,7 @@ const BuildingManagement: FC = () => {
                 description={
                   <div>
                     {building.address && <div><strong>地址：</strong>{building.address}</div>}
-                    <div><strong>所属机构：</strong>{departmentData.getOrgName(building.orgId)}</div>
+                    <div><strong>所属机构：</strong>{getOrgName(building.orgId)}</div>
                     <div><strong>楼层：</strong>{building.totalFloors || 0}层</div>
                   </div>
                 }
@@ -486,8 +492,8 @@ const BuildingManagement: FC = () => {
 
           <Form.Item name="orgId" label="所属机构">
             <DepartmentTreeSelect
-              departments={departmentData.departments}
-              loading={departmentData.loading}
+              departments={departments}
+              loading={departmentLoading}
               placeholder="请选择所属机构"
             />
           </Form.Item>
