@@ -9,7 +9,6 @@ import {
   Input,
   message,
   Popconfirm,
-  Card,
   Statistic,
   Row,
   Col,
@@ -36,9 +35,7 @@ import {
   unlockADServiceAccount,
   getADServiceAccountStats,
   type ADServiceAccount,
-  type ADServiceAccountStats,
-  getADConfigList,
-  type ADConfig
+  type ADServiceAccountStats
 } from '@/lib/adDomainApi';
 import { formatDateTime } from '@/utils/datetime';
 import { encryptPasswordWithSM4, fetchSM4KeyForPassword } from '@/utils/sm4';
@@ -50,9 +47,20 @@ const STATUS_MAP: Record<number, { color: string; text: string }> = {
   2: { color: 'orange', text: '熔断中' },
 };
 
-const ADAccountPoolPage: FC = () => {
-  const [configs, setConfigs] = useState<ADConfig[]>([]);
-  const [selectedConfigId, setSelectedConfigId] = useState<string>('');
+// Props: 接收 configId（来自父组件 AD 配置）
+interface AccountPoolTabProps {
+  configId: string;
+}
+
+/**
+ * 服务账号池 Tab（嵌入 AD 配置详情 Drawer）
+ *
+ * Phase 36: 每个 AD 配置有独立的账号池
+ * - 1:N 关系: 一个 ADConfig 对应多个 ServiceAccount
+ * - 隔离选择: 登录/同步时只使用本 config 的账号
+ * - 失败自动切换: 任一账号失败 → 立即试下一个
+ */
+const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
   const [list, setList] = useState<ADServiceAccount[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -70,28 +78,13 @@ const ADAccountPoolPage: FC = () => {
   const [unlockingId, setUnlockingId] = useState<string>('');
   const [unlockForm] = Form.useForm();
 
-  // 加载 AD 配置列表
-  const loadConfigs = useCallback(async () => {
-    try {
-      const res = await getADConfigList({ current: 1, pageSize: 100, status: 0 });
-      if (res.code === 0 && res.data && res.data.list) {
-        setConfigs(res.data.list);
-        if (res.data.list.length > 0 && !selectedConfigId) {
-          setSelectedConfigId(res.data.list[0].id);
-        }
-      }
-    } catch (e) {
-      message.error('加载 AD 配置失败');
-    }
-  }, [selectedConfigId]);
-
   // 加载账号列表
   const loadList = useCallback(async () => {
-    if (!selectedConfigId) return;
+    if (!configId) return;
     setLoading(true);
     try {
       const res = await listADServiceAccounts({
-        configId: selectedConfigId,
+        configId,
         page,
         pageSize,
       });
@@ -106,31 +99,26 @@ const ADAccountPoolPage: FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedConfigId, page, pageSize]);
+  }, [configId, page, pageSize]);
 
   // 加载统计
   const loadStats = useCallback(async () => {
-    if (!selectedConfigId) return;
+    if (!configId) return;
     try {
-      const res = await getADServiceAccountStats(selectedConfigId);
+      const res = await getADServiceAccountStats(configId);
       if (res.code === 0 && res.data) {
         setStats(res.data);
       }
     } catch (e) {
-      // 静默失败，不影响主流程
+      // 静默
     }
-  }, [selectedConfigId]);
+  }, [configId]);
 
   useEffect(() => {
-    loadConfigs();
-  }, [loadConfigs]);
-
-  useEffect(() => {
-    if (selectedConfigId) {
-      loadList();
-      loadStats();
-    }
-  }, [selectedConfigId, loadList, loadStats]);
+    setPage(1); // configId 变化时重置分页
+    loadList();
+    loadStats();
+  }, [configId, loadList, loadStats]);
 
   // 新增
   const handleCreate = () => {
@@ -153,7 +141,6 @@ const ADAccountPoolPage: FC = () => {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      // 密码字段：前端 SM4 加密后再传
       let passwordCiphertext = '';
       if (values.password) {
         try {
@@ -166,7 +153,6 @@ const ADAccountPoolPage: FC = () => {
       }
 
       if (editing) {
-        // 更新
         const updateData: any = { id: editing.id, username: values.username, remark: values.remark };
         if (passwordCiphertext) {
           updateData.passwordCiphertext = passwordCiphertext;
@@ -181,13 +167,12 @@ const ADAccountPoolPage: FC = () => {
           message.error(res.message || '更新失败');
         }
       } else {
-        // 新增
         if (!passwordCiphertext) {
           message.error('请输入密码');
           return;
         }
         const res = await createADServiceAccount({
-          configId: selectedConfigId,
+          configId,
           username: values.username,
           passwordCiphertext,
           remark: values.remark,
@@ -202,7 +187,7 @@ const ADAccountPoolPage: FC = () => {
         }
       }
     } catch (e) {
-      // 表单校验失败
+      // 校验失败
     }
   };
 
@@ -369,92 +354,54 @@ const ADAccountPoolPage: FC = () => {
   ];
 
   return (
-    <div style={{ padding: 16 }}>
-      {/* AD 配置选择 */}
-      <Card style={{ marginBottom: 16 }}>
-        <Space>
-          <span>AD 配置：</span>
-          <select
-            value={selectedConfigId}
-            onChange={(e) => setSelectedConfigId(e.target.value)}
-            style={{ minWidth: 240, padding: '4px 8px' }}
-          >
-            {configs.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.configName}
-              </option>
-            ))}
-          </select>
-        </Space>
-      </Card>
-
+    <div>
       {/* 统计卡片 */}
       {stats && (
         <Row gutter={16} style={{ marginBottom: 16 }}>
           <Col span={4}>
-            <Card>
-              <Statistic title="账号总数" value={stats.total} />
-            </Card>
+            <Statistic title="账号总数" value={stats.total} />
           </Col>
           <Col span={4}>
-            <Card>
-              <Statistic title="可用" value={stats.available} valueStyle={{ color: '#3f8600' }} />
-            </Card>
+            <Statistic title="可用" value={stats.available} valueStyle={{ color: '#3f8600' }} />
           </Col>
           <Col span={4}>
-            <Card>
-              <Statistic title="已停用" value={stats.disabled} />
-            </Card>
+            <Statistic title="已停用" value={stats.disabled} />
           </Col>
           <Col span={4}>
-            <Card>
-              <Statistic
-                title="熔断中"
-                value={stats.circuitBroken}
-                valueStyle={{ color: '#cf1322' }}
-              />
-            </Card>
+            <Statistic title="熔断中" value={stats.circuitBroken} valueStyle={{ color: '#cf1322' }} />
           </Col>
           <Col span={8}>
-            <Card>
-              <Statistic title="当前活跃账号" value={stats.currentAccount || '无'} />
-            </Card>
+            <Statistic title="当前活跃账号" value={stats.currentAccount || '无'} />
           </Col>
         </Row>
       )}
 
-      {/* 列表 */}
-      <Card
-        title="服务账号池"
-        extra={
-          <Space>
-            <Button icon={<ReloadOutlined />} onClick={() => { loadList(); loadStats(); }}>
-              刷新
-            </Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-              新增账号
-            </Button>
-          </Space>
-        }
-      >
-        <Table
-          rowKey="id"
-          columns={columns}
-          dataSource={list}
-          loading={loading}
-          scroll={{ x: 1200 }}
-          pagination={{
-            current: page,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            onChange: (p, ps) => {
-              setPage(p);
-              setPageSize(ps);
-            },
-          }}
-        />
-      </Card>
+      <Space style={{ marginBottom: 16 }}>
+        <Button icon={<ReloadOutlined />} onClick={() => { loadList(); loadStats(); }}>
+          刷新
+        </Button>
+        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+          新增账号
+        </Button>
+      </Space>
+
+      <Table
+        rowKey="id"
+        columns={columns}
+        dataSource={list}
+        loading={loading}
+        scroll={{ x: 1200 }}
+        pagination={{
+          current: page,
+          pageSize,
+          total,
+          showSizeChanger: true,
+          onChange: (p, ps) => {
+            setPage(p);
+            setPageSize(ps);
+          },
+        }}
+      />
 
       {/* 新增/编辑 Modal */}
       <Modal
@@ -515,4 +462,4 @@ const ADAccountPoolPage: FC = () => {
   );
 };
 
-export default ADAccountPoolPage;
+export default AccountPoolTab;

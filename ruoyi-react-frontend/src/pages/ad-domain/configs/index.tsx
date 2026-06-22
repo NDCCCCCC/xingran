@@ -19,8 +19,10 @@ import {
   SyncOutlined,
   CheckCircleOutlined,
   ReloadOutlined,
-  KeyOutlined
+  EyeOutlined
 } from '@ant-design/icons';
+import { Drawer, Tabs } from 'antd';
+import AccountPoolTab from './AccountPoolTab';
 import type { ColumnsType } from 'antd/es/table';
 import {
   createADConfig,
@@ -30,7 +32,6 @@ import {
   syncADData,
   type ADSyncResult
 } from '@/lib/adDomainApi';
-import { useNavigate } from 'react-router-dom';
 import ActionButtons from '@/components/shared/ActionButtons';
 import { formatDateTime } from '@/utils/datetime';
 import { useADConfigs } from '@/hooks/useADConfigs';
@@ -39,7 +40,6 @@ import type { ADConfig } from '@/lib/adDomainApi';
 import type { FC } from 'react';
 
 const ADConfigPage: FC = () => {
-  const navigate = useNavigate();
   const [editForm] = Form.useForm();
 
   // 使用共享的 AD 配置 Hook（fetchConfigs 接受排序参数，供服务端排序使用）
@@ -50,6 +50,10 @@ const ADConfigPage: FC = () => {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingConfig, setEditingConfig] = useState<ADConfig | null>(null);
+
+  // Phase 36: 详情 Drawer（含服务账号池 Tab）
+  const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
+  const [detailConfig, setDetailConfig] = useState<ADConfig | null>(null);
 
   const [testingConfig, setTestingConfig] = useState<string | null>(null);
   const [syncingConfig, setSyncingConfig] = useState<string | null>(null);
@@ -106,6 +110,12 @@ const ADConfigPage: FC = () => {
       adminPassword: undefined, // 不回填密码
     });
     setModalVisible(true);
+  };
+
+  // Phase 36: 打开详情 Drawer（含基本信息 + 服务账号池 Tab）
+  const handleDetail = (config: ADConfig) => {
+    setDetailConfig(config);
+    setDetailDrawerVisible(true);
   };
 
   const handleSubmit = async () => {
@@ -289,10 +299,10 @@ const ADConfigPage: FC = () => {
             loading: syncingConfig === record.id,
           },
           {
-            key: 'edit',
-            label: '编辑',
-            icon: <EditOutlined />,
-            onClick: () => handleEdit(record),
+            key: 'detail',
+            label: '详情',
+            icon: <EyeOutlined />,
+            onClick: () => handleDetail(record),
           },
           {
             key: 'delete',
@@ -322,9 +332,6 @@ const ADConfigPage: FC = () => {
         <Space>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
             新增AD配置
-          </Button>
-          <Button icon={<KeyOutlined />} onClick={() => navigate('/ad-domain/accounts')}>
-            管理服务账号池
           </Button>
           <Button icon={<ReloadOutlined />} onClick={() => fetchConfigs()}>
             刷新
@@ -439,6 +446,76 @@ const ADConfigPage: FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* Phase 36: 详情 Drawer（含「基本信息」+「服务账号池」Tab） */}
+      <Drawer
+        title={detailConfig ? `AD 配置详情: ${detailConfig.configName}` : 'AD 配置详情'}
+        open={detailDrawerVisible}
+        onClose={() => setDetailDrawerVisible(false)}
+        width={1100}
+        destroyOnClose
+      >
+        {detailConfig && (
+          <Tabs
+            defaultActiveKey="basic"
+            items={[
+              {
+                key: 'basic',
+                label: '基本信息',
+                children: (
+                  <div>
+                    <p>
+                      <strong>配置名：</strong>
+                      {detailConfig.configName}
+                    </p>
+                    <p>
+                      <strong>服务器：</strong>
+                      {detailConfig.serverAddress}:{detailConfig.serverPort}
+                    </p>
+                    <p>
+                      <strong>域名：</strong>
+                      {detailConfig.domainName}
+                    </p>
+                    <p>
+                      <strong>BaseDN：</strong>
+                      {detailConfig.baseDn}
+                    </p>
+                    <p>
+                      <strong>SSL/TLS：</strong>
+                      SSL={String(detailConfig.useSsl)} / TLS={String(detailConfig.useTls)}
+                    </p>
+                    <p>
+                      <strong>同步：</strong>
+                      {detailConfig.syncEnabled ? '启用' : '停用'} / 间隔{' '}
+                      {detailConfig.syncInterval}s
+                    </p>
+                    <p>
+                      <strong>状态：</strong>
+                      {detailConfig.status === 0 ? '启用' : '停用'}
+                    </p>
+                    <Button
+                      type="primary"
+                      icon={<EditOutlined />}
+                      style={{ marginTop: 16 }}
+                      onClick={() => {
+                        setDetailDrawerVisible(false);
+                        handleEdit(detailConfig);
+                      }}
+                    >
+                      编辑此配置
+                    </Button>
+                  </div>
+                ),
+              },
+              {
+                key: 'accounts',
+                label: '服务账号池',
+                children: <AccountPoolTab configId={detailConfig.id} />,
+              },
+            ]}
+          />
+        )}
+      </Drawer>
     </Card>
   );
 };
