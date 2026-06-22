@@ -159,8 +159,10 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			{
 				// 新架构：结构体Handler + Service层
 				systemV1.SetupUserRouter(users, core)
-				// Excel导入导出
-				operations.SetupExcelRouter(users, "user", core)
+				// 用户 Excel 导入由 SetupUserRouter 内的 ImportUser 处理（带 AD 域控同步触发），
+				// 不复用 operations.SetupExcelRouter —— 后者的 importData 为通用导入，不触发
+				// AD 同步。模板下载同样在 user_router（GET /import/template）。
+				// 若将来需要用户导出(/export)，可单独接入 operations.exportData("user")。
 			}
 
 			// 用户解锁路由（管理员权限）
