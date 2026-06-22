@@ -13,7 +13,7 @@
  *   因此定义本地 `RawDept` 类型窄化(参考 DeptTree/index.tsx 的做法)。
  */
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import type { WorkstationOps } from "@/types";
 import { workstationApi, floorApi } from "@/lib/opsApi";
 import { post } from "@/lib/api";
@@ -82,15 +82,25 @@ export function useWorkstationData(
   }, [setFloorOptions]);
 
   // 加载部门选项:
-  // - 数据源由 useDeptTree 提供(本组件顶层调用),本函数只负责把 rawDept 转为全路径版本
-  //   并 setState 进 deptTreeData。
+  // - 数据源由 useDeptTree 提供(本组件顶层调用)。
   // - 全路径版本(toFullPathTree, startFromLevel=1 默认):顶级节点 title 直接显示其名,
   //   深级 title 拼接为 "祖先 / ... / 自身"。页面 orgTreeData useMemo 会在"所属机构"
   //   下拉中经 trimTitleToLastSegment 反向裁剪为短名——双向语义,不可破坏。
   // - isExternalOrg 透传依赖:toFullPathTree 输出节点的 isExternalOrg 取自输入节点,
   //   filterExternalOrgDepts 仅保留 isExternalOrg===1 的节点及后代。rawDept 运行时
-  //   含此字段(见 RawDept 注释),所以这里 as unknown 窄化是安全的。
+  //   含此字段(见 RawDept 注释),所以 as unknown 窄化是安全的。
+  //
+  // Phase 37 code review WR-1 修复:
+  // loadDeptOptions 保留为 init effect 占位(index.tsx Promise.all 调用它),但改为稳定引用
+  // (依赖 [])。deptTreeData 实际由下方 useEffect 基于 rawDept 派生。这样 index.tsx 的 init
+  // effect 不会因 rawDept 变化(loadDeptOptions 引用变化)而重复触发 statistics/floors/users
+  // 请求——原实现依赖 [rawDept] 导致页面挂载时多一轮网络请求(37-03 引入的回归)。
   const loadDeptOptions = useCallback(() => {
+    // no-op: deptTreeData 由下方 useEffect 监听 rawDept 自动派生
+  }, []);
+
+  // rawDept 到达/变化时派生 deptTreeData(全路径版本,透传 isExternalOrg)
+  useEffect(() => {
     const fullPath = toFullPathTree(rawDept as unknown as RawDept[]) as unknown as DeptTreeNode[];
     setDeptTreeData(fullPath);
   }, [rawDept, setDeptTreeData]);
