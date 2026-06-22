@@ -77,7 +77,7 @@ const maxFilteredBytes = 8192
 // services.OperLogService implementation satisfies this interface structurally.
 type Recorder interface {
 	RecordAsync(db *gorm.DB, title string, businessType int, method, requestMethod, operUrl string,
-		operatorName, deptName *string, operIP *string, operParam, jsonResult, errorMsg *string, status int, costTime int64)
+		operatorName, operatorNickname, deptName *string, operIP *string, operParam, jsonResult, errorMsg *string, status int, costTime int64)
 }
 
 // ExcludedPaths is the active exclude list (Phase 35 OPERLOG-01). Configure()
@@ -250,6 +250,7 @@ func Record(c *gin.Context, operLogSvc Recorder, db *gorm.DB, module string, ope
 		c.Request.Method,
 		c.Request.URL.String(),
 		utils.GetUsernamePtr(c),
+		utils.GetNicknamePtrWithDB(c, db),
 		utils.GetDeptNameFromDB(c, db),
 		&clientIP,
 		cfg.operParam,

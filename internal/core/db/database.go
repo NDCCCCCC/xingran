@@ -382,6 +382,14 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate159AlignOpsPerms(d.DB); err != nil {
 			applogger.Errorf("ops 菜单 perms 对齐迁移失败: %v", err)
 		}
+		// Phase 28: 操作日志添加 nickname 字段，支持显示"nickname（username）"格式
+		if err := migrations.Migration160OperLogAddNickname(d.DB); err != nil {
+			applogger.Errorf("sys_oper_log nickname 字段迁移失败: %v", err)
+			}
+		// Phase 28: 登录日志添加 nickname 字段,支持显示"nickname（username）"格式
+		if err := migrations.Migration161LoginLogAddNickname(d.DB); err != nil {
+			applogger.Errorf("sys_logininfor nickname 字段迁移失败: %v", err)
+		}
 		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
 		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
 			applogger.Errorf("MAC 过滤规则表迁移失败: %v", err)

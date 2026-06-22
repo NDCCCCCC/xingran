@@ -165,6 +165,7 @@ func setUserContextForAPIKey(c *gin.Context, apiKey interface{}, scopes []string
 		// 设置上下文
 		c.Set("user_id", userID)
 		c.Set("username", username)
+		c.Set("nickname", "") // API Key 认证没有用户昵称
 		c.Set("api_key_id", ak.ID)
 		c.Set("scopes", scopes)
 		c.Set("auth_type", "api_key")

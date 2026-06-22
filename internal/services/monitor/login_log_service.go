@@ -39,6 +39,7 @@ func NewLoginLogService(db *gorm.DB) LoginLogService {
 // 此处 key 必须与前端 dataIndex 一致才能命中白名单;旧小写 ipaddr 仅作向后兼容兜底。
 var loginLogAllowedSortFields = map[string]string{
 	"userName":  "user_name",
+	"nickname":  "nickname",
 	"ipAddr":    "ipaddr",
 	"ipaddr":    "ipaddr",
 	"loginTime": "login_time",

@@ -21,7 +21,7 @@ type stubRecorder struct {
 }
 
 func (s *stubRecorder) RecordAsync(_ *gorm.DB, title string, businessType int, _, _,
-	_ string, _, _, _ *string, operParam, _, _ *string, _ int, _ int64) {
+	_ string, _, _, _, _ *string, operParam, _, _ *string, _ int, _ int64) {
 	s.title = title
 	s.businessType = businessType
 	s.operParam = operParam

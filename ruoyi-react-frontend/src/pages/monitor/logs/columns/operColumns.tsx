@@ -55,6 +55,13 @@ export function getOperLogColumns(params: GetOperLogColumnsParams): ColumnsType<
       width: 100,
       sorter: true,
       sortOrder: getColumnSortOrder("operName"),
+      render: (_: unknown, record: OperLog) => {
+        // 优先显示 nickname（username），fallback 到 username
+        if (record.nickname && record.nickname !== record.operName) {
+          return `${record.nickname}（${record.operName}）`;
+        }
+        return record.operName || "-";
+      },
     },
     {
       title: "部门名称",

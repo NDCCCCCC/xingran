@@ -29,15 +29,21 @@ export function getLoginLogColumns(params: GetLoginLogColumnsParams): ColumnsTyp
       title: "用户名称",
       dataIndex: "userName",
       key: "userName",
-      width: 120,
+      width: 140,
       sorter: true,
       sortOrder: getColumnSortOrder("userName"),
-      render: (text: string) => (
-        <Space>
-          <UserOutlined />
-          {text}
-        </Space>
-      ),
+      render: (_: unknown, record: LoginLog) => {
+        // 优先显示 nickname（username），fallback 到 username
+        const display = record.nickname && record.nickname !== record.userName
+          ? `${record.nickname}（${record.userName}）`
+          : record.userName || "-";
+        return (
+          <Space>
+            <UserOutlined />
+            {display}
+          </Space>
+        );
+      },
     },
     {
       title: "登录IP",

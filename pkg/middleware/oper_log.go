@@ -100,6 +100,7 @@ func OperLogMiddleware(operLogSvc services.OperLogService, core *core.Core) gin.
 		username := utils.GetUsernamePtr(c)
 		deptName := utils.GetDeptNameFromDB(c, core.GetDB())
 		clientIP := utils.GetClientIP(c)
+		nickname := utils.GetNicknamePtrWithDB(c, core.GetDB())
 
 		// 确定状态和错误信息
 		status := 0
@@ -119,6 +120,7 @@ func OperLogMiddleware(operLogSvc services.OperLogService, core *core.Core) gin.
 			c.Request.Method,
 			c.Request.URL.String(),
 			username,
+		nickname,
 			deptName,
 			&clientIP,
 			nil, // operParam - 可以后续添加请求参数过滤

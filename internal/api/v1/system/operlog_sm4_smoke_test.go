@@ -43,7 +43,7 @@ func (s *stubOperLogSvcForSmoke) RecordFromGinContext(_ *gin.Context, _ *gorm.DB
 }
 
 func (s *stubOperLogSvcForSmoke) RecordAsync(_ *gorm.DB, title string, businessType int, _ string, _ string, _ string,
-	_ *string, _ *string, _ *string, operParam, _ *string, _ *string, _ int, _ int64) {
+	_ *string, _ *string, _ *string, _ *string, operParam, _ *string, _ *string, _ int, _ int64) {
 	s.lastTitle = title
 	s.lastBusinessType = businessType
 	s.lastOperParam = operParam

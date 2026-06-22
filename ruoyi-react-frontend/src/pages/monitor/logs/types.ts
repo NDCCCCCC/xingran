@@ -11,6 +11,7 @@ export interface OperLog {
   method: string;
   requestMethod: string;
   operName: string;
+  nickname?: string; // 用户昵称（可选，后端可能未提供）
   deptName: string;
   operUrl: string;
   operIp: string;
@@ -25,6 +26,7 @@ export interface OperLog {
 export interface LoginLog {
   id: string;
   userName: string;
+  nickname?: string; // 用户昵称（可选，后端可能未提供）
   ipAddr: string;
   loginLocation: string;
   browser: string;

@@ -292,7 +292,7 @@ type excludedMockRecorder struct {
 }
 
 func (m *excludedMockRecorder) RecordAsync(db *gorm.DB, title string, businessType int, method, requestMethod, operUrl string,
-	operatorName, deptName *string, operIP *string, operParam, jsonResult, errorMsg *string, status int, costTime int64) {
+	operatorName, operatorNickname, deptName *string, operIP *string, operParam, jsonResult, errorMsg *string, status int, costTime int64) {
 	m.called++
 	m.lastURL = operUrl
 }

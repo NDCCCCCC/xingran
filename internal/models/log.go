@@ -11,6 +11,7 @@ type OperLog struct {
 	RequestMethod string    `gorm:"size:10;column:request_method" json:"requestMethod,omitempty"`
 	OperatorType  int       `gorm:"column:operator_type" json:"operatorType"`
 	OperatorName  *string   `gorm:"size:50;column:oper_name" json:"operName,omitempty"`
+	Nickname      *string   `gorm:"size:50;column:nickname" json:"nickname,omitempty"`
 	DeptName      *string   `gorm:"size:50;column:dept_name" json:"deptName,omitempty"`
 	OperUrl       *string   `gorm:"size:255;column:oper_url" json:"operUrl,omitempty"`
 	OperIP        *string   `gorm:"size:128;column:oper_ip" json:"operIp,omitempty"`
@@ -27,6 +28,7 @@ type OperLog struct {
 type LoginLog struct {
 	BaseTimeLine
 	Username      string    `gorm:"size:50;column:user_name" json:"userName,omitempty"`
+	Nickname      *string   `gorm:"size:50;column:nickname" json:"nickname,omitempty"`
 	IPAddr        string    `gorm:"size:128;column:ipaddr" json:"ipAddr,omitempty"`
 	LoginLocation *string   `gorm:"size:255;column:login_location" json:"loginLocation,omitempty"`
 	Browser       *string   `gorm:"size:50;column:browser" json:"browser,omitempty"`

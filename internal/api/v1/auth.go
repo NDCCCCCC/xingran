@@ -15,6 +15,14 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
+// getNicknameOrUsername 安全地获取用户昵称，如果为空则返回用户名
+func getNicknameOrUsername(user *models.User) string {
+	if user.Nickname != nil && *user.Nickname != "" {
+		return *user.Nickname
+	}
+	return user.Username
+}
+
 // LoginRequest 登录请求
 type LoginRequest struct {
 	Username string `json:"username" binding:"required"`
@@ -178,17 +186,17 @@ func login(core *core.Core) gin.HandlerFunc {
 			// 返回认证错误
 			if err == security.ErrUserNotFound || err == security.ErrInvalidCredentials {
 				response.Error(c, response.ErrCredentialInvalid)
-				recordLoginLog(c, core, req.Username, 1, "用户名或密码错误")
+				recordLoginLog(c, core, req.Username, nil, 1, "用户名或密码错误")
 			} else if err == security.ErrUserDisabled {
 				response.Error(c, response.ErrForbidden, "用户已被禁用")
-				recordLoginLog(c, core, req.Username, 1, "用户已被禁用")
+				recordLoginLog(c, core, req.Username, nil, 1, "用户已被禁用")
 			} else if err == security.ErrADConfigNotFound || err == security.ErrADConnectionFailed {
 				// AD配置/连接问题
 				response.Error(c, response.ErrServerError, "认证服务暂时不可用")
-				recordLoginLog(c, core, req.Username, 1, "认证服务不可用")
+				recordLoginLog(c, core, req.Username, nil, 1, "认证服务不可用")
 			} else {
 				response.Error(c, response.ErrCredentialInvalid)
-				recordLoginLog(c, core, req.Username, 1, "认证失败")
+				recordLoginLog(c, core, req.Username, nil, 1, "认证失败")
 			}
 			return
 		}
@@ -216,7 +224,7 @@ func login(core *core.Core) gin.HandlerFunc {
 
 		// 7. 登录成功后处理
 		core.CaptchaService.ClearLoginFailure(ctx, req.Username)
-		recordLoginLog(c, core, req.Username, 0, "登录成功")
+		recordLoginLog(c, core, req.Username, user.Nickname, 0, "登录成功")
 
 		// 8. 查询用户角色
 		var userRoles []models.UserRole
@@ -228,7 +236,7 @@ func login(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 9. 生成JWT令牌
-		tokenPair, err := core.JWTManager.GenerateTokenPair(user.ID, user.Username, roleIds)
+		tokenPair, err := core.JWTManager.GenerateTokenPair(user.ID, user.Username, getNicknameOrUsername(&user), roleIds)
 		if err != nil {
 			response.Error(c, response.ErrServerError, "生成令牌失败")
 			return
@@ -279,12 +287,12 @@ func loginLocalDirect(c *gin.Context, core *core.Core, username, password string
 	if ok, err := pwdManager.VerifyPassword(password, user.Password); err != nil || !ok {
 		core.CaptchaService.RecordLoginFailure(ctx, username)
 		response.Error(c, response.ErrCredentialInvalid)
-		recordLoginLog(c, core, username, 1, "用户或密码错误")
+		recordLoginLog(c, core, username, user.Nickname, 1, "用户或密码错误")
 		return
 	}
 
 	core.CaptchaService.ClearLoginFailure(ctx, username)
-	recordLoginLog(c, core, username, 0, "登录成功")
+	recordLoginLog(c, core, username, user.Nickname, 0, "登录成功")
 
 	var userRoles []models.UserRole
 	var roleIds []string
@@ -294,7 +302,7 @@ func loginLocalDirect(c *gin.Context, core *core.Core, username, password string
 		}
 	}
 
-	tokenPair, err := core.JWTManager.GenerateTokenPair(user.ID, user.Username, roleIds)
+	tokenPair, err := core.JWTManager.GenerateTokenPair(user.ID, user.Username, getNicknameOrUsername(&user), roleIds)
 	if err != nil {
 		response.Error(c, response.ErrServerError, "生成令牌失败")
 		return
@@ -422,7 +430,7 @@ func refreshToken(core *core.Core) gin.HandlerFunc {
 		}
 
 		// 生成新的令牌对
-		tokenPair, err := core.JWTManager.GenerateTokenPair(user.ID, user.Username, roleIds)
+		tokenPair, err := core.JWTManager.GenerateTokenPair(user.ID, user.Username, getNicknameOrUsername(&user), roleIds)
 		if err != nil {
 			response.Error(c, response.ErrServerError, "生成令牌失败")
 			return
@@ -564,7 +572,8 @@ func testSM2(core *core.Core) gin.HandlerFunc {
 }
 
 // recordLoginLog 记录登录日志
-func recordLoginLog(c *gin.Context, core *core.Core, username string, status int, msg string) {
+// nickname 可选:登录失败(用户不存在)时无 nickname;成功或本地用户密码错时从 models.User 取
+func recordLoginLog(c *gin.Context, core *core.Core, username string, nickname *string, status int, msg string) {
 	clientIP := utils.GetClientIP(c)
 	userAgent := c.Request.UserAgent()
 
@@ -572,6 +581,7 @@ func recordLoginLog(c *gin.Context, core *core.Core, username string, status int
 
 	loginLog := models.LoginLog{
 		Username:      username,
+		Nickname:      nickname,
 		IPAddr:        clientIP,
 		LoginLocation: nil,
 		Browser:       &browser,

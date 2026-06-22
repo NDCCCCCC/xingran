@@ -95,5 +95,6 @@ func extractBearerToken(authHeader string) string {
 func setUserContext(c *gin.Context, claims *security.CustomClaims) {
 	c.Set("user_id", claims.UserID)
 	c.Set("username", claims.Username)
+	c.Set("nickname", claims.Nickname)
 	c.Set("roles", claims.Roles)
 }

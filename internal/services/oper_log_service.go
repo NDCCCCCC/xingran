@@ -20,7 +20,7 @@ type OperLogService interface {
 	RecordFromGinContext(c *gin.Context, db *gorm.DB, title string, businessType int, method string)
 	// RecordAsync 异步记录操作日志（简化版）
 	RecordAsync(db *gorm.DB, title string, businessType int, method, requestMethod, operUrl string,
-		operatorName, deptName *string, operIP *string, operParam, jsonResult, errorMsg *string, status int, costTime int64)
+		operatorName, operatorNickname, deptName *string, operIP *string, operParam, jsonResult, errorMsg *string, status int, costTime int64)
 }
 
 // operLogService 操作日志服务实现
@@ -41,7 +41,7 @@ func (s *operLogService) RecordOperLog(ctx context.Context, db *gorm.DB, operLog
 
 // RecordAsync 异步记录操作日志（简化版，供handler直接调用）
 func (s *operLogService) RecordAsync(db *gorm.DB, title string, businessType int, method, requestMethod, operUrl string,
-	operatorName, deptName *string, operIP *string, operParam, jsonResult, errorMsg *string, status int, costTime int64) {
+	operatorName, operatorNickname, deptName *string, operIP *string, operParam, jsonResult, errorMsg *string, status int, costTime int64) {
 
 	operLog := &models.OperLog{
 		Title:         title,
@@ -50,6 +50,7 @@ func (s *operLogService) RecordAsync(db *gorm.DB, title string, businessType int
 		RequestMethod: requestMethod,
 		OperatorType:  1, // 1=后台用户
 		OperatorName:  operatorName,
+		Nickname:      operatorNickname,
 		DeptName:      deptName,
 		OperUrl:       &operUrl,
 		OperIP:        operIP,

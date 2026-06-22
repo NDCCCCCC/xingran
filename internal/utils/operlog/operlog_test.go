@@ -241,7 +241,7 @@ type stubOperLogSvc struct {
 var _ Recorder = (*stubOperLogSvc)(nil)
 
 func (s *stubOperLogSvc) RecordAsync(_ *gorm.DB, _ string, _ int, _ string, _ string, _ string,
-	_ *string, _ *string, _ *string, operParam, _ *string, errorMsg *string, status int, _ int64) {
+	_ *string, _ *string, _ *string, _ *string, operParam, _ *string, errorMsg *string, status int, _ int64) {
 	s.lastOperParam = operParam
 	s.lastStatus = status
 	s.lastErrorMsg = errorMsg

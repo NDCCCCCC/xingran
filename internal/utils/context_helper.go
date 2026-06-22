@@ -38,6 +38,42 @@ func GetUsernamePtr(c *gin.Context) *string {
 	return &unknown
 }
 
+// GetNicknamePtr 从上下文获取用户昵称指针
+// 优先从 context("nickname") 读(由 auth 中间件 c.Set),如果 context 缺值或为空,
+// 调用方应使用 GetNicknamePtrWithDB(c, db) 走 DB 兜底(常见于老 token / 跨服务调用场景)
+func GetNicknamePtr(c *gin.Context) *string {
+	if nickname, exists := c.Get("nickname"); exists {
+		if nicknameStr, ok := nickname.(string); ok && nicknameStr != "" {
+			return &nicknameStr
+		}
+	}
+	return nil
+}
+
+// GetNicknamePtrWithDB 从上下文获取用户昵称指针,context 缺值时回查 sys_user.nickname
+// 设计原因:老 token / 跨服务调用场景下 c.Get("nickname") 可能为 ""(老 token 没存该字段),
+// 直接写库会存 NULL,日志页面就只显示 username。DB 兜底保证 nickname 链路对历史 token 也生效。
+func GetNicknamePtrWithDB(c *gin.Context, db *gorm.DB) *string {
+	if ptr := GetNicknamePtr(c); ptr != nil {
+		return ptr
+	}
+	if db == nil {
+		return nil
+	}
+	userID := GetUserID(c)
+	if userID == "" {
+		return nil
+	}
+	var nickname sql.NullString
+	if err := db.Table("sys_user").
+		Select("nickname").
+		Where("id = ?", userID).
+		Scan(&nickname).Error; err == nil && nickname.Valid && nickname.String != "" {
+		return &nickname.String
+	}
+	return nil
+}
+
 // GetDeptName 从上下文获取部门名称
 func GetDeptName(c *gin.Context) *string {
 	if deptName, exists := c.Get("dept_name"); exists {

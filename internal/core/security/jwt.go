@@ -27,6 +27,7 @@ type JWTManager struct {
 type CustomClaims struct {
 	UserID   string   `json:"user_id"`
 	Username string   `json:"username"`
+	Nickname string   `json:"nickname"`
 	Roles    []string `json:"roles"`
 	jwt.RegisteredClaims
 }
@@ -96,13 +97,14 @@ func NewJWTManager(cfg *config.JWTConfig) (*JWTManager, error) {
 }
 
 // GenerateTokenPair 生成令牌对
-func (j *JWTManager) GenerateTokenPair(userID, username string, roles []string) (*TokenPair, error) {
+func (j *JWTManager) GenerateTokenPair(userID, username, nickname string, roles []string) (*TokenPair, error) {
 	now := time.Now()
 
 	// 生成访问令牌
 	accessClaims := &CustomClaims{
 		UserID:   userID,
 		Username: username,
+		Nickname: nickname,
 		Roles:    roles,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        fmt.Sprintf("%d", now.Unix()),
@@ -261,8 +263,12 @@ func (j *JWTManager) RefreshToken(refreshTokenString string) (*TokenPair, error)
 	// 这里返回空角色，调用者需要从数据库加载
 	roles := []string{}
 
-	// 生成新的令牌对
-	return j.GenerateTokenPair(claims.UserID, claims.Username, roles)
+	// 生成新的令牌对（使用 claims 中的 nickname，如果没有则用 username）
+	nickname := claims.Nickname
+	if nickname == "" {
+		nickname = claims.Username
+	}
+	return j.GenerateTokenPair(claims.UserID, claims.Username, nickname, roles)
 }
 
 // GetPublicKey 获取 SM2 公钥（用于前端加密密码）
