@@ -59,6 +59,10 @@ type ImportResult struct {
 	Updated  int           `json:"updated"`
 	Failed   int           `json:"failed"`
 	Errors   []ImportError `json:"errors"`
+	// AffectedKeys 收集本次导入真正写入（insert+update）记录的 UpsertKey 值
+	// （如用户的 username）。供调用方做导入后处理（如触发 AD 域控同步）。
+	// 仅在 ExcelConfig 配置了 UpsertKey 列时填充，其余场景为空。
+	AffectedKeys []string `json:"affectedKeys,omitempty"`
 }
 
 // GenerateTemplate 生成Excel模板
@@ -405,6 +409,23 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 
 			result.Inserted = inserted
 			result.Updated = updated
+
+			// 收集受影响的 UpsertKey 值（如 username），供导入后处理使用
+			// （如用户导入后触发 AD 域控同步）。仅在配置了 UpsertKey 列时填充。
+			upsertKeyField := ""
+			for _, col := range config.Columns {
+				if col.UpsertKey {
+					upsertKeyField = col.Field
+					break
+				}
+			}
+			if upsertKeyField != "" {
+				for _, rec := range validRecords {
+					if v, ok := rec[upsertKeyField].(string); ok && v != "" {
+						result.AffectedKeys = append(result.AffectedKeys, v)
+					}
+				}
+			}
 		}
 		return nil
 	}); err != nil {
