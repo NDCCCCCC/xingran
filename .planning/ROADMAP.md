@@ -788,7 +788,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 37-02-PLAN.md — 批 1 system:user + notice 迁移到 useDeptTree(Wave 2)
-- [ ] 37-03-PLAN.md — 批 2 operations:workstations 高风险双向语义迁移 + buildings 合并双 hook(Wave 2)
+- [x] 37-03-PLAN.md — 批 2 operations:workstations 高风险双向语义迁移 + buildings 合并双 hook(Wave 2)
 - [ ] 37-04-PLAN.md — 批 3 network:devices 迁移(Wave 2)
 - [ ] 37-05-PLAN.md — 批 4 duty+workorder + workorderApi 类型去重(Wave 2)
 
@@ -837,7 +837,7 @@ Plans:
 | 28. 工位设备关联子表格 | v1.15 | 4/6 | Gap Closure | 2026-06-10 |
 | 34. 操作日志全模块集成 | - | 11/10 | Complete    | 2026-06-15 |
 | 35. operlog.exclude_paths 配置驱动白名单 | v1.16 | 0/1 | Planned | - |
-| 37. 前端部门选择组件统一收敛 | v1.16 | 2/6 | In Progress|  |
+| 37. 前端部门选择组件统一收敛 | v1.16 | 3/6 | In Progress|  |
 
 **Total**: 123 plans completed, 8 gap closure plans, 24 plans planned (Phases 22C + 22D + 25 + 35 + 37), 155 total plans
 

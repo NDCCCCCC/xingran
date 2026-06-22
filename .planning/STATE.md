@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: 工位设备关联 (Phase 28)
 status: executing
-stopped_at: "Plan 37-02 完成 (批 1 system 模块迁移 ✅: useUserData 去 fetch 改 useDeptTree + utils.tsx 删 convertDeptTreeData (保留 renderDeptTreeOptions) + useTargetSelector 删 GET fetch + convertTree 改 useDeptTree+toShortNameDataNode; 2 task 单独 commit 76973d6/86b3231; npm type-check + build 通过; role/dept/AD 排除边界零触碰)"
-last_updated: "2026-06-22T09:58:00.000Z"
+stopped_at: "Plan 37-02 完成 (批 1 system 模块迁移 user+notice ✅: useUserData 去 fetch 改 useDeptTree + utils.tsx 删 convertDeptTreeData(保留 renderDeptTreeOptions) + useTargetSelector 删 GET fetch + convertTree 改 useDeptTree+toShortNameDataNode; 2 task 单独 commit 76973d6/86b3231; npm type-check + build 通过; role/dept/AD 排除边界零触碰)"
+last_updated: "2026-06-22T10:08:08.061Z"
 progress:
   total_phases: 15
   completed_phases: 9
   total_plans: 76
   completed_plans: 63
-  percent: 61
+  percent: 60
 ---
 
 # Project State
@@ -28,10 +28,10 @@ progress:
 ## Current Position
 
 Phase: 37 (dept-select-unify) — EXECUTING
-Plan: 3 of 6 (Plan 37-02 ✅ COMPLETE — 批 1 system 模块迁移: useUserData 去 fetch 改 useDeptTree + utils.tsx 删 convertDeptTreeData(保留 renderDeptTreeOptions) + useTargetSelector 删 GET fetch + convertTree 改 useDeptTree+toShortNameDataNode; type-check/build 均 pass; role/dept/AD 排除边界零触碰)
+Plan: 4 of 6 (Plan 37-03 ✅ COMPLETE — 批 2 operations 模块迁移: workstations 高风险双向语义保留(useDeptTree + toFullPathTree 全路径 + trimTitleToLastSegment 短名 + isExternalOrg 透传 RawDept 窄化) + buildings 方案 A+B 混合(删 useDepartmentTree.tsx 无消费者, useDepartmentData.ts 保留因 floors 依赖但内部改 useDeptTree 包装层 loadDepartments=no-op, index.tsx 直接消费 useDeptTree+findDeptNode); floors 排除边界零触碰; type-check/build 双 pass)
 **Latest shipped milestone**: v1.15 工位设备关联 (Phase 28, 2026-06-10)
 **Latest shipped phase**: Phase 34 操作日志全模块集成 + review (2026-06-16)
-**Most recent commit**: 86b3231 refactor(37-02): notice 模块迁移 — useTargetSelector 删 GET fetch + convertTree
+**Most recent commit**: 2279369 refactor(37-03): buildings 合并双 hook 到 useDeptTree (方案 A+B 混合)
 
 **Shipped since last state file update (v1.15 was the milestone label
 in PROJECT.md before this sync)**:
@@ -337,9 +337,9 @@ Run `/gsd:new-milestone` to formally start v1.16.
 
 ## Session Continuity
 
-Last session: 2026-06-22T09:58:00.000Z
+Last session: 2026-06-22T10:05:35.942Z
 Stopped at: Plan 37-02 完成 (批 1 system 模块迁移 user+notice ✅: useUserData 去 fetch 改 useDeptTree + utils.tsx 删 convertDeptTreeData(保留 renderDeptTreeOptions) + useTargetSelector 删 GET fetch + convertTree 改 useDeptTree+toShortNameDataNode; 2 task 单独 commit 76973d6/86b3231; npm type-check + build 通过; role/dept/AD 排除边界零触碰)
-Resume file: Completed 37-02-PLAN.md
+Resume file: None
 
 **Planned Phase:** 37 (dept-select-unify) — 6 plans — Plan 2/6 ✅ COMPLETE
 
