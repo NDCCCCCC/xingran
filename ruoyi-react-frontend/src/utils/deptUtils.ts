@@ -159,3 +159,134 @@ export function trimTitleToLastSegment<
   };
   return walk(nodes ?? []);
 }
+
+/**
+ * 全路径树转换(语义 1):把部门树转换为 antd TreeSelect/Tree 期望的
+ * `{ title, value, key, children?, isExternalOrg? }` 形状,且 `title` 拼接为
+ * 祖先 + 自身的完整路径(以 " / " 连接)。
+ *
+ * 语义维度(D-LOCKED, Phase 37 CONTEXT):
+ * - 全路径显示(从二级部门拼 "A / B / C"),与 `toShortNameDataNode` 的"短名"语义区分。
+ * - 两个函数**不可合成一个**(D-LOCKED,关键陷阱):调用方按需选用。
+ *
+ * `opts.startFromLevel` 控制祖先路径裁剪起点(默认 1):
+ * - `1`(默认):不裁剪祖先,所有祖先名都进 title。
+ *   顶级节点 `title = node.deptName`;深级 `title = [...allAncestors, node.deptName].join(" / ")`。
+ * - `2`:行为与原 `DepartmentTreeSelect.convertDeptTreeData` 的 `currentPath.slice(1)` 等价——
+ *   **总是丢弃 ancestors[0]**(即顶级祖先名),无论当前节点深度。
+ *   结果:顶级 `title = node.deptName`;孙级及以上 `title = ancestors[1..].join(" / ") + " / " + node.deptName`。
+ *   **为保持 UI 文案不变**,`DepartmentTreeSelect` 调用本函数时传 `{ startFromLevel: 2 }`。
+ *
+ * 替代原函数:
+ * - `components/shared/DepartmentTreeSelect.tsx:49` `convertDeptTreeData`(全路径,从二级开始)
+ * - `pages/operations/workstations/hooks/useWorkstationData.ts:78` `buildTreeData`(全路径)
+ *
+ * 字段透传:
+ * - `value`/`key` 取自 `getDeptNodeId(node)`(兼容 `id`/`value`/`key` 三种形状)
+ * - **`isExternalOrg` 透传**(workstations 高风险依赖:若不透传,`filterExternalOrgDepts`
+ *   会把整棵树过滤为空——见 `toFullPathTree` 在 `useWorkstationData` 的消费链路)
+ *
+ * 泛型约束 `T extends DeptLikeNode & { deptName?: string }`:允许消费方传入
+ * `SimpleDept` / `DeptTreeNode` 等任何带 `deptName` 的形状,返回类型叠加 `title/value/key`。
+ *
+ * @example
+ *   toFullPathTree([
+ *     { id: "1", deptName: "集团", children: [{ id: "2", deptName: "分公司" }] },
+ *   ])
+ *   // → [{ title: "集团", value: "1", key: "1", children: [{ title: "集团 / 分公司", value: "2", key: "2" }] }]
+ *
+ *   toFullPathTree([...], { startFromLevel: 2 })  // 复现旧 convertDeptTreeData.slice(1) 语义
+ */
+export function toFullPathTree<
+  T extends DeptLikeNode & { deptName?: string },
+>(
+  nodes: T[],
+  opts?: { startFromLevel?: 1 | 2 },
+): Array<
+  T & { title: string; value: string; key: string; isExternalOrg?: number }
+> {
+  const startFromLevel = opts?.startFromLevel ?? 1;
+  // startFromLevel=k 意味着 ancestors[0..k-2] 全部丢弃,保留 ancestors[k-1..]
+  // (k=1 时不裁剪;k=2 时丢 ancestors[0],即等价于旧 convertDeptTreeData 的 slice(1))
+  const ancestorKeepFrom = Math.max(0, startFromLevel - 1);
+  type Out = T & { title: string; value: string; key: string; isExternalOrg?: number };
+
+  const build = (list: T[], ancestors: string[]): Out[] => {
+    return (list ?? []).map((node) => {
+      const name = node.deptName ?? "";
+      const trimmedAncestors = ancestors.slice(ancestorKeepFrom);
+      const title =
+        trimmedAncestors.length === 0
+          ? name
+          : [...trimmedAncestors, name].join(" / ");
+      const id = getDeptNodeId(node);
+      const nextChildren = node.children?.length
+        ? build(node.children as T[], [...ancestors, name])
+        : undefined;
+      return {
+        ...node,
+        title,
+        value: id,
+        key: id,
+        ...(node.isExternalOrg !== undefined
+          ? { isExternalOrg: node.isExternalOrg }
+          : {}),
+        children: nextChildren,
+      } as Out;
+    });
+  };
+
+  return build(nodes ?? [], []);
+}
+
+/**
+ * 短名 DataNode 转换(语义 2):把部门树转换为 antd `DataNode` 期望的
+ * `{ title, key, value?, children?, isLeaf? }` 形状,且 `title` **只显示 deptName 短名**,
+ * 不拼接祖先路径。
+ *
+ * 语义维度(D-LOCKED, Phase 37 CONTEXT):
+ * - 短名显示(只显示当前节点名),与 `toFullPathTree` 的"全路径"语义区分。
+ *
+ * 替代原函数:
+ * - `components/DeptTree/index.tsx:74` `transformToTreeData`(短名)
+ * - `pages/system/notice/hooks/useTargetSelector.ts:52` `convertTree`(短名 + 透传 `...node`)
+ * - `pages/system/user/utils.tsx:24` `convertDeptTreeData`(实测为短名)
+ *
+ * 字段:
+ * - `title` = `node.deptName`
+ * - `key`/`value` 取自 `getDeptNodeId(node)`
+ * - `isLeaf` = 无 children 或 children 长度为 0
+ * - `children` 递归;无子节点时为 `undefined`(antd DataNode 约定)
+ *
+ * @example
+ *   toShortNameDataNode([
+ *     { id: "1", deptName: "集团", children: [{ id: "2", deptName: "分公司" }] },
+ *   ])
+ *   // → [{ title: "集团", key: "1", value: "1", children: [{ title: "分公司", key: "2", value: "2", isLeaf: true }] }]
+ */
+export interface ShortNameDataNode {
+  title: string;
+  key: string;
+  value: string;
+  children?: ShortNameDataNode[];
+  isLeaf?: boolean;
+}
+
+export function toShortNameDataNode<
+  T extends DeptLikeNode & { deptName?: string },
+>(nodes: T[]): ShortNameDataNode[] {
+  const build = (list: T[]): ShortNameDataNode[] => {
+    return (list ?? []).map((node) => {
+      const id = getDeptNodeId(node);
+      const hasChildren = !!node.children?.length;
+      return {
+        title: node.deptName ?? "",
+        key: id,
+        value: id,
+        children: hasChildren ? build(node.children as T[]) : undefined,
+        isLeaf: !hasChildren,
+      };
+    });
+  };
+  return build(nodes ?? []);
+}
