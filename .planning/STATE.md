@@ -19,8 +19,8 @@ progress:
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
 **Status**: 🚧 IDLE — Phase 34 review closure complete, awaiting v1.16 scope
-**Last activity**: 2026-06-17 - Quick task 260617-ch1 add-table-sorting (commit 828f7df:
-                feat(260617-ch1): add createSorter helper and apply to data columns)
+**Last activity**: 2026-06-22 - Quick task 260622-lv9 用户 Excel 导入功能 + 性别默认值改保密
+                + 导入后触发 AD 域同步 (commits 5d872a5, cc2a77d, 7d40b32, 4758d36)
 **See**: `.planning/milestones/20260616-state-sync-report.md` for the
         reconciliation report that motivated this state update.
 
@@ -218,6 +218,7 @@ Run `/gsd:new-milestone` to formally start v1.16.
 | 20260613-frontend-perf | 前端性能优化三连：图标按需导入(-15~-25%)、API加密并行化(-30~-40%)、Excel懒加载(-50~-100KB) | 2026-06-13 | - | [20260613-frontend-perf-optimizations](./quick/20260613-frontend-perf-optimizations/) |
 | 260610-wsl | 修复工位管理页面同步设备后筛选条件丢失问题 | 2026-06-10 | - | [20250610-fix-workstation-filter-loss](./quick/20250610-fix-workstation-filter-loss/) |
 | 260617-ch1 | 给所有页面表格添加排序功能，按字段排序，点击切换升降序 — 新增 createSorter helper + 25 个 page column 文件已应用 sorter，195+ createSorter 调用 | 2026-06-17 | 828f7df | [260617-ch1-add-table-sorting](./quick/260617-ch1-add-table-sorting/) |
+| 260622-lv9 | 系统用户 Excel 导入功能 + 性别默认值改保密 + 导入后触发 AD 域同步（复用通用 ExcelImport，username 唯一键更新，AffectedKeys 通用化） | 2026-06-22 | 5d872a5,cc2a77d,7d40b32,4758d36 | [260622-lv9-xlsx-email](./quick/260622-lv9-xlsx-email/) |
 
 ## Accumulated Context
 
@@ -247,6 +248,7 @@ Run `/gsd:new-milestone` to formally start v1.16.
 - 📋 Phase 32 added: v1.14 P1 重构与 P2 架构优化（20260612 后端审查剩余 P1/P2 任务）
 - 📋 Phase 33 added: 前端 Vercel React Best Practices 修复 — 修复审查报告 20260613 中的 26 个性能/质量缺陷（7 CRITICAL + 5 MEDIUM-HIGH + 8 MEDIUM + 5 LOW + 1 bug：登录重复请求、WebSocket/Polling 抖动、Table 引用稳定化、Map 缓存化、Excel 改用 axios、R7 楼宇状态显示 bug）
 - 📋 Phase 34 added: 操作日志全模块集成 — 审计发现 309 个写操作端点中仅 9 处（2.9%）有效记录（AD 域控），OperLogMiddleware 中间件已挂载但从未生效。基于 AD 域控参考实现分 7 Wave 集成全部端点
+- 📋 Phase 37 added: 前端部门选择组件统一收敛 — 将碎片化的部门列表实现收敛到 useDeptTree 单一数据源 + 三组件(DeptTree/DepartmentTreeSelect/DeptSidebar)职责正交不合并 + 类型去重(SimpleDept×2+Department→1) + 转换函数归一(deptUtils)；明确排除 AD 域控整模块(独立 OU 数据源)/role 的 tree-select/dept 管理页。设计见 phases/37-dept-select-unify/DESIGN.md
 
 **Total shipped**: 72 plans, 18 phases completed
 
