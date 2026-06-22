@@ -39,16 +39,29 @@ const (
 )
 
 // LDAPClient LDAP客户端封装
+//
+// Phase 36 变更：增加 account 字段（用于 Bind 时从账号池选定的具体账号）
+// 向后兼容：传 nil 时 fallback 到 config.AdminUsername/AdminPassword
 type LDAPClient struct {
-	conn   *ldap.Conn
-	config *models.ADConfig
+	conn    *ldap.Conn
+	config  *models.ADConfig
+	account *models.ADServiceAccount // Phase 36: 可选，来自账号池
 }
 
-// NewLDAPClient 创建LDAP客户端
-func NewLDAPClient(config *models.ADConfig) *LDAPClient {
-	return &LDAPClient{
+// NewLDAPClient 创建LDAP客户端（兼容旧调用，account 传 nil 走 config 字段）
+func NewLDAPClient(config *models.ADConfig, account ...*models.ADServiceAccount) *LDAPClient {
+	c := &LDAPClient{
 		config: config,
 	}
+	if len(account) > 0 && account[0] != nil {
+		c.account = account[0]
+	}
+	return c
+}
+
+// GetAccount 返回当前 client 绑定的服务账号（Phase 36，失败上报时用）
+func (c *LDAPClient) GetAccount() *models.ADServiceAccount {
+	return c.account
 }
 
 // Connect 连接到AD服务器

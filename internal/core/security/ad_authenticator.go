@@ -22,6 +22,7 @@ type ADAuthenticator struct {
 	configID    string                       // 默认AD配置ID
 	userSyncer  UserSyncer                   // 用户同步服务（可选，为nil时不同步）
 	sm4Cipher   addomain.PasswordCipher      // SM4加密器（用于解密AD管理员密码）
+	accountPool addomain.AccountPool         // Phase 36: 账号池（可选，注入后启用多账号故障切换）
 }
 
 // NewADAuthenticator 创建AD认证器
@@ -41,6 +42,12 @@ func (a *ADAuthenticator) SetUserSyncer(syncer UserSyncer) {
 // 使用 addomain.PasswordCipher 接口，与 addomain 包的加解密逻辑保持一致
 func (a *ADAuthenticator) SetPasswordCipher(cipher addomain.PasswordCipher) {
 	a.sm4Cipher = cipher
+}
+
+// SetAccountPool Phase 36: 注入账号池
+// 注入后 Authenticate 将使用 FailoverClient 进行管理员绑定，单账号锁定不阻断登录
+func (a *ADAuthenticator) SetAccountPool(pool addomain.AccountPool) {
+	a.accountPool = pool
 }
 
 // decryptPassword 解密AD管理员密码

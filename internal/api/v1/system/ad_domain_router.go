@@ -13,6 +13,10 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 	handler := NewADDomainHandler(service, core)
 	syncHandler := NewADUserSyncHandler(core)
 
+	// Phase 36: AD 服务账号池（多账号故障切换）
+	accountPool := addomainServices.NewAccountPool(core.GetDB(), nil) // 无 Redis pub/sub 跨进程广播（单机部署）
+	accountHandler := NewADAccountHandler(accountPool, core)
+
 	// 旧的组同步路由已移除 - 使用新的OU组映射功能
 	// addomainAPI.SetupGroupSyncRouter 已删除
 
@@ -34,6 +38,23 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 		configs.POST("/:id/delete", handler.DeleteConfig)
 		configs.POST("/:id/test", handler.TestConnection)
 		configs.POST("/:id/sync", handler.SyncData)
+	}
+
+	// Phase 36: 服务账号池（8 个 POST 端点，全部走 ops:ad:config:edit 权限）
+	accounts := r.Group("/accounts")
+	accounts.Use(middleware.RequirePermissions([]string{
+		"ops:ad:config:list",
+		"ops:ad:config:edit",
+	}, core))
+	{
+		accounts.POST("/list", accountHandler.List)
+		accounts.POST("/create", accountHandler.Create)
+		accounts.POST("/update", accountHandler.Update)
+		accounts.POST("/delete", accountHandler.Delete)
+		accounts.POST("/enable", accountHandler.Enable)
+		accounts.POST("/disable", accountHandler.Disable)
+		accounts.POST("/unlock", accountHandler.Unlock)
+		accounts.POST("/stats", accountHandler.Stats)
 	}
 
 	// OU管理
