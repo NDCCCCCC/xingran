@@ -518,6 +518,46 @@ func GetDictDataByTypeKey(dictType string) string {
 - **Location**: `internal/services/addomain/`
 - **Warning**: Uses `InsecureSkipVerify: true` for LDAPS/StartTLS
 
+### AD Service Account Pool (Phase 36)
+
+**解决 AD 单管理员账号被锁导致所有用户登录失败**（data 775 锁定事件）。
+
+**核心组件**：
+
+- **AccountPool** (`internal/services/addomain/account_pool.go`)
+  - 多账号池（`sys_ad_service_accounts` 表）
+  - 状态机：`0=可用 / 1=停用 / 2=熔断`
+  - 自动熔断：连续 3 次失败 → 30 分钟熔断
+  - 行锁 + 事务保证并发安全（`SELECT FOR UPDATE`）
+  - `RecoverExpiredBreakers`：cron 每 5 分钟恢复过期熔断
+
+- **FailoverClient** (`internal/services/addomain/failover_client.go`)
+  - 顺序遍历 `ListAvailable` 快照
+  - 任一账号成功即返回
+  - `maxHops = min(DefaultMaxHops=10, len(available))`
+
+- **LDAPClient** (`internal/services/addomain/ldap_client.go`)
+  - 可变参数接收 `*ADServiceAccount`
+  - `tryBindAttempts` 优先用 `c.account` 凭证（核心！）
+
+- **API**: 8 个 POST 端点（`internal/api/v1/system/ad_account_handler.go`）
+  - 权限粒度：list/stats → `list`；create/update/enable/disable/unlock → `edit`；delete → `delete`
+
+- **前端**: `src/pages/ad-domain/accounts/index.tsx`（独立页面，统计卡片 + 列表 + Modal）
+
+- **路由**: `POST /system/ad-config/accounts/{list,create,update,delete,enable,disable,unlock,stats}`
+
+**关键设计决策**：
+
+| 决策 | 说明 |
+|------|------|
+| 字段名 `password_ciphertext` | 含 `password` 关键词 → operlog 自动脱敏（OPERLOG-03 兼容） |
+| 随机轮询 | FailoverClient 用 `ListAvailable` 快照顺序遍历（避免 random pick + 防重） |
+| 无冷却期 | 失败账号不再被排除（避免池子饥饿） |
+| ManualUnlock | service 层校验 `reason ≥10 字符` + `operator 非空`（安全 invariant） |
+| Cron 注册 | `internal/scheduler/ad_sync_tasks.go` `StartADSyncScheduler` |
+| 双读兼容期 | `sys_ad_config.admin_username/password` 字段保留并标 @Deprecated |
+
 ### Workorder Management
 
 - **Assignment logic** with rotation
