@@ -346,21 +346,10 @@ export function getADUserList(params: ADUserListRequest): Promise<BaseResponse<P
   return post("/ad-domain/users/list", withDefaultPagination(params))
 }
 
-// D-08/STUB: getADUserIds — placeholder export to unblock build.
-// The full implementation requires a backend endpoint (currently missing).
-// Returns an empty list so the "全选" UI degrades gracefully.
-// TODO(后续阶段): implement backend endpoint and remove stub.
 export function getADUserIds(
   params: ADUserListRequest
 ): Promise<BaseResponse<string[]>> {
-  // Returns empty until backend endpoint is implemented.
-  return Promise.resolve({
-    code: 0,
-    message: "success",
-    data: [],
-    timestamp: Date.now(),
-    request_id: "",
-  }) as unknown as Promise<BaseResponse<string[]>>
+  return post("/ad-domain/users/ids", params)
 }
 
 export function getADUserDetail(id: string, configId: string): Promise<BaseResponse<ADUser>> {

@@ -834,3 +834,32 @@ func (h *ADDomainHandler) GetGroupSyncStatus(c *gin.Context) {
 
 	response.Success(c, status)
 }
+
+// GetADUserIds 获取AD用户ID列表
+// @Summary 获取AD用户ID列表
+// @Description 根据筛选条件获取所有匹配的AD用户ID（用于全选功能）
+// @Tags AD域管理
+// @Accept json
+// @Produce json
+// @Param request body object{configId=string,ouDn=string,username=string,isEnabled=bool} true "筛选条件"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /system/ad-domain/users/ids [post]
+func (h *ADDomainHandler) GetADUserIds(c *gin.Context) {
+	var req addomainServices.ADUserListRequest
+	_ = c.ShouldBindJSON(&req)
+
+	if err := h.requireConfigID(req.ConfigID); err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	userIds, err := h.service.GetADUserIds(c.Request.Context(), &req)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, userIds)
+}

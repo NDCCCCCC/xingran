@@ -300,3 +300,14 @@ func (s *ADDomainService) EnableADUser(ctx context.Context, config *models.ADCon
 func (s *ADDomainService) DisableADUser(ctx context.Context, config *models.ADConfig, userDN string) error {
 	return s.User.Disable(ctx, config, userDN)
 }
+
+// GetADUserIds 获取AD用户ID列表（用于全选功能）
+func (s *ADDomainService) GetADUserIds(ctx context.Context, req *ADUserListRequest) ([]string, error) {
+	return s.User.GetUserIds(ctx, &UserListRequest{
+		BaseListRequest: req.BaseListRequest,
+		ConfigID:        req.ConfigID,
+		OUDN:            req.OUDN,
+		Username:        req.Username,
+		IsEnabled:       req.IsEnabled,
+	})
+}

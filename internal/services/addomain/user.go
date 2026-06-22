@@ -249,3 +249,32 @@ func (s *UserService) Move(ctx context.Context, config *models.ADConfig, userDN,
 
 	return nil
 }
+
+// GetUserIds 获取用户ID列表（用于全选功能）
+func (s *UserService) GetUserIds(ctx context.Context, req *UserListRequest) ([]string, error) {
+	var userIds []string
+
+	query := s.db.WithContext(ctx).Model(&models.ADUser{}).
+		Where("ad_config_id = ? AND deleted_at IS NULL", req.ConfigID).
+		Where("username NOT LIKE ?", "$DUPLICATE-%")
+
+	if req.OUDN != nil {
+		// 选择父OU时包含所有子OU: ou_dn = '选中的OU' OR ou_dn LIKE '%,选中的OU'
+		query = query.Where("ou_dn = ? OR ou_dn LIKE ?", *req.OUDN, "%,"+*req.OUDN)
+	}
+
+	if req.Username != nil {
+		query = query.Where("username LIKE ?", "%"+*req.Username+"%")
+	}
+
+	if req.IsEnabled != nil {
+		query = query.Where("is_enabled = ?", *req.IsEnabled)
+	}
+
+	err := query.Pluck("id", &userIds).Error
+	if err != nil {
+		return nil, fmt.Errorf("查询用户ID列表失败: %w", err)
+	}
+
+	return userIds, nil
+}

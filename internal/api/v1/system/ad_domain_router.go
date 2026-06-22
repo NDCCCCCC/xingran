@@ -106,6 +106,7 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 	}, core))
 	{
 		users.POST("/list", handler.ListUsers)
+		users.POST("/ids", handler.GetADUserIds)
 		users.GET("/:id", handler.GetUserDetail)
 		users.POST("/:id/update", handler.UpdateUser)
 		users.POST("/:id/move", handler.MoveUser)
