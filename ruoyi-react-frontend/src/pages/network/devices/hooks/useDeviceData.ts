@@ -5,7 +5,8 @@
 import { useState, useCallback } from "react";
 import { post } from "@/lib/api";
 import { handleApiError } from "@/utils/errorHandler";
-import type { Department, AuthCredential, BaseResponse, PageResponse } from "@/types";
+import { useDeptTree } from "@/hooks/useDeptTree";
+import type { AuthCredential, BaseResponse, PageResponse } from "@/types";
 
 export interface DeviceStatistics {
   total: number;
@@ -15,16 +16,16 @@ export interface DeviceStatistics {
 }
 
 export interface UseDeviceDataReturn {
-  departments: Department[];
+  departments: ReturnType<typeof useDeptTree>["data"];
   credentials: AuthCredential[];
   statistics: DeviceStatistics;
-  loadDepartments: () => Promise<void>;
   loadCredentials: () => Promise<void>;
   loadStatistics: () => Promise<void>;
 }
 
 export function useDeviceData(): UseDeviceDataReturn {
-  const [departments, setDepartments] = useState<Department[]>([]);
+  // 部门树数据源统一收敛到 useDeptTree (Phase 37-04)
+  const { data: departments = [] } = useDeptTree();
   const [credentials, setCredentials] = useState<AuthCredential[]>([]);
   const [statistics, setStatistics] = useState<DeviceStatistics>({
     total: 0,
@@ -49,17 +50,6 @@ export function useDeviceData(): UseDeviceDataReturn {
     }
   }, []);
 
-  // 加载部门列表（树形结构）
-  const loadDepartments = useCallback(async () => {
-    try {
-      const result = await post<Department[]>("/system/departments/tree", {});
-      setDepartments(result.data || []);
-    } catch (error) {
-      handleApiError(error, "加载部门列表", false);
-      setDepartments([]);
-    }
-  }, []);
-
   // 加载授权凭证列表
   const loadCredentials = useCallback(async () => {
     try {
@@ -74,7 +64,6 @@ export function useDeviceData(): UseDeviceDataReturn {
     departments,
     credentials,
     statistics,
-    loadDepartments,
     loadCredentials,
     loadStatistics,
   };

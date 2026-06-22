@@ -284,7 +284,6 @@ const DeviceManagement: FC = () => {
     departments,
     credentials,
     statistics,
-    loadDepartments,
     loadCredentials,
     loadStatistics,
   } = useDeviceData();
@@ -551,7 +550,6 @@ const DeviceManagement: FC = () => {
       handleAdd();
       editForm.setFieldsValue({ port: 22, snmpPort: 161, status: 0 });
     }
-    loadDepartments();
     loadCredentials();
   };
 
@@ -560,7 +558,6 @@ const DeviceManagement: FC = () => {
     quickCreateForm.resetFields();
     setProbeResult(null);
     setQuickCreateModalVisible(true);
-    loadDepartments();
     loadCredentials();
   };
 
