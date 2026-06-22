@@ -648,7 +648,7 @@ const UserManagement: FC = () => {
           <Form.Item name="phone" label="手机号">
             <Input className="user-form-input" />
           </Form.Item>
-          <Form.Item name="gender" label="性别" initialValue={0}>
+          <Form.Item name="gender" label="性别" initialValue={2}>
             <Select className="user-form-input">
               {GENDER_OPTIONS.map(opt => (
                 <Option key={opt.value} value={opt.value}>{opt.label}</Option>

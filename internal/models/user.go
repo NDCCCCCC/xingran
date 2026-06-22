@@ -15,7 +15,7 @@ type User struct {
 	Email         *string    `gorm:"size:128" json:"email,omitempty"`
 	Phone         *string    `gorm:"size:32" json:"phone,omitempty"`
 	Avatar        *string    `gorm:"size:255" json:"avatar,omitempty"`
-	Gender        Gender     `gorm:"default:0" json:"gender"`
+	Gender        Gender     `gorm:"default:2" json:"gender"`
 	Status        UserStatus `gorm:"default:0" json:"status"`
 	DeptID        *string    `gorm:"size:64" json:"deptId,omitempty"`
 	DeptName      *string    `gorm:"size:64" json:"deptName,omitempty"`
