@@ -6,6 +6,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { formatDateTime } from '@/utils/datetime';
 import { createSorter } from '@/utils/tableHelpers';
 import { usePagination } from '@/hooks/usePagination';
+import { useDeptTree } from '@/hooks/useDeptTree';
 import { DepartmentTreeSelect } from '@/components/shared';
 import {
   getDutyPoolList,
@@ -14,7 +15,6 @@ import {
   updateDutyPool,
   deleteDutyPool,
   getUserList,
-  getDeptTree,
   type DutyPool,
   type DutyPoolCreateRequest,
   type DutyPoolUpdateRequest,
@@ -62,9 +62,10 @@ const DutyPoolPage: FC = () => {
     message.success(msg);
   };
 
-  // 用户和部门数据
+  // 用户数据(部门数据改用 useDeptTree 共享 React Query 缓存, 见下)
   const [users, setUsers] = useState<SimpleUser[]>([]);
-  const [depts, setDepts] = useState<SimpleDept[]>([]);
+  // 部门树数据 — 全项目共享 ['dept','tree'] 缓存条目 (D-LOCKED: 单一数据源 useDeptTree)
+  const { data: depts = [] } = useDeptTree();
   // 筛选后的用户列表（用于弹窗中的值班成员选择）
   const [filteredUsers, setFilteredUsers] = useState<SimpleUser[]>([]);
 
@@ -168,21 +169,12 @@ const DutyPoolPage: FC = () => {
     }
   };
 
-  // 获取部门列表
-  const fetchDepts = async () => {
-    try {
-      const result = await getDeptTree();
-      setDepts(result.data || []);
-    } catch (error) {
-      console.error('获取部门列表失败:', error);
-    }
-  };
+  // 部门树数据由顶层 useDeptTree() 提供,不再 useEffect 内手动 fetch
 
   useEffect(() => {
     fetchList(1, paginationProps.pageSize);
     fetchStats();
     fetchUsers();
-    fetchDepts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
