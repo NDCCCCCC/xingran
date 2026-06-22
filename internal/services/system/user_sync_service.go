@@ -50,7 +50,7 @@ func (s *UserSyncService) SyncUserFromAD(ctx context.Context, adUser *ADUserInfo
 	var user models.User
 
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// 1. 检查用户是否已存在（按ad_username查找）
+		// 1. 检查用户是否已存在（按ad_username查找，仅活跃用户）
 		err := tx.Where("ad_username = ? AND deleted_at IS NULL", adUser.Username).First(&user).Error
 
 		if err == nil {
@@ -59,7 +59,18 @@ func (s *UserSyncService) SyncUserFromAD(ctx context.Context, adUser *ADUserInfo
 		}
 
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// 用户不存在，创建新用户
+			// 2. 检查是否存在被软删除的同 username 用户。
+			// sys_user.username 是普通唯一索引(非 partial index),软删除的行仍占用 username,
+			// 直接 createNewUser 会撞 idx_sys_user_username (SQLSTATE 23505)。
+			// 因此先尝试恢复软删除用户,而非插入新行。
+			var softDeletedUser models.User
+			if findErr := tx.Unscoped().
+				Where("username = ? AND deleted_at IS NOT NULL", adUser.Username).
+				First(&softDeletedUser).Error; findErr == nil {
+				user = softDeletedUser
+				return s.restoreSoftDeletedUser(tx, &user, adUser, defaultRoleID)
+			}
+			// 3. 用户确实不存在，创建新用户
 			return s.createNewUser(tx, &user, adUser, defaultRoleID)
 		}
 
@@ -138,6 +149,65 @@ func (s *UserSyncService) updateExistingUser(tx *gorm.DB, user *models.User, adU
 		return fmt.Errorf("更新用户信息失败: %w", err)
 	}
 
+	return nil
+}
+
+// restoreSoftDeletedUser 恢复被软删除的用户并补充/重置AD信息。
+// 用于处理"用户曾被软删除(deleted_at IS NOT NULL),再次从AD同步"的场景:
+// 由于 sys_user.username 是普通唯一索引(软删除行仍占用 username),
+// 不能直接创建新行,必须恢复已有行。
+//
+// 恢复动作:
+//  1. 清除 deleted_at（恢复为活跃用户）
+//  2. 重置为初始密码(对齐 createNewUser: InitFlag=true, PwdExpireDays=90)
+//  3. 更新 AD 信息(ad_username/ad_dn/ad_ou_dn/ad_synced_at/email/phone)
+//  4. 重新分配默认角色(软删除期间角色关联可能已被清理)
+func (s *UserSyncService) restoreSoftDeletedUser(tx *gorm.DB, user *models.User, adUser *ADUserInfoForSync, defaultRoleID string) error {
+	// 重置默认密码（首次登录后要求修改，对齐 createNewUser）
+	hashedPassword, err := s.pwdManager.HashPassword("123456")
+	if err != nil {
+		return fmt.Errorf("生成默认密码失败: %w", err)
+	}
+
+	adUsername := adUser.Username
+	adDN := adUser.UserDN
+	displayName := adUser.DisplayName
+	email := adUser.Email
+	phone := adUser.Phone
+
+	updates := map[string]interface{}{
+		"deleted_at":      nil,
+		"password":        hashedPassword,
+		"init_flag":       true,
+		"pwd_expire_days": 90,
+		"status":          models.UserStatusEnabled,
+		"auth_source":     "ad",
+		"ad_username":     &adUsername,
+		"ad_dn":           &adDN,
+		"ad_ou_dn":        &adUser.OuDn,
+		"email":           &email,
+		"phone":           &phone,
+	}
+
+	// 仅当 nickname 为空时才回填（尊重本地修改）
+	if user.Nickname == nil || *user.Nickname == "" {
+		updates["nickname"] = &displayName
+	}
+
+	// 恢复 + 更新（Unscoped 绕过软删除过滤）
+	if err := tx.Unscoped().Model(user).Updates(updates).Error; err != nil {
+		return fmt.Errorf("恢复软删除用户失败: %w", err)
+	}
+
+	// 重新分配默认角色（软删除期间关联可能丢失）
+	if defaultRoleID != "" {
+		if err := s.assignRole(tx, user.ID, defaultRoleID); err != nil {
+			// 角色分配失败不阻断恢复，仅记录
+			applogger.Warnf("[SyncADUser] 恢复用户 %s 分配角色失败(不影响恢复): %v", adUser.Username, err)
+		}
+	}
+
+	applogger.Infof("[SyncADUser] 恢复软删除用户成功: username=%s, userID=%s", adUser.Username, user.ID)
 	return nil
 }
 
