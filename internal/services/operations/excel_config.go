@@ -82,16 +82,20 @@ var ExcelConfigs = map[string]ExcelConfig{
 		CachePatterns: []string{"user:*", "users:*"},
 		UniqueKeys:    []string{"username"}, // 按用户名判断重复
 		PartialUpdate: true,                 // 启用部分更新（只更新有值的字段）
+		// ⚠ 列顺序必须与"人员详情.xlsx"一致：validateAndParseRow 按位置 row[i] 匹配，
+		// 不按表头名（Header 仅用于错误提示）。Excel 实际列序：昵称/用户名/工号/邮箱/
+		// 手机号/科室代码/科室名称（共 7 列）。
 		Columns: []ExcelColumn{
-			{Field: "username", Header: "用户名", Required: true, Unique: true, MaxLength: 64, UpsertKey: true},
 			{Field: "nickname", Header: "昵称", MaxLength: 64},
+			{Field: "username", Header: "用户名", Required: true, Unique: true, MaxLength: 64, UpsertKey: true},
 			{Field: "employeeNo", Header: "工号", MaxLength: 64, DBField: "employee_no"},
 			{Field: "email", Header: "邮箱", MaxLength: 128},
 			{Field: "phone", Header: "手机号", MaxLength: 32},
-			{Field: "deptName", Header: "所属部门", Reference: "sys_dept.dept_name", DBField: "dept_id"},
+			{Field: "deptCode", Header: "科室代码", Reference: "sys_dept.dept_code", DBField: "dept_id"},
+			{Field: "deptNameText", Header: "科室名称", MaxLength: 100}, // 临时字段，无DBField不写库（prepareRecordsForUpsert 跳过）
+			// gender/status：Excel 无对应列（仅 7 列，index 7/8 越界），走 Default 填充
 			{Field: "gender", Header: "性别", Options: map[interface{}]string{int(0): "男", int(1): "女", int(2): "保密"}, Default: int(2)},
 			{Field: "status", Header: "状态", Options: map[interface{}]string{int(0): "启用", int(1): "禁用"}, Default: int(0)},
-			{Field: "remark", Header: "备注", MaxLength: 500},
 		},
 	},
 	"building": {

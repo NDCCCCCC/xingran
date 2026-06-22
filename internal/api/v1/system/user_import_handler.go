@@ -67,6 +67,9 @@ func (h *UserHandler) ImportUser(c *gin.Context) {
 	excelService := h.buildExcelService()
 	result, err := excelService.ImportData(c.Request.Context(), "user", file, userID.(string))
 	if err != nil {
+		// 记录详细错误：err.Error() 含 upsert/GORM 具体原因（如类型错误、约束冲突），
+		// 便于诊断。避免 HTTP 访问日志里 request_body 的二进制内容淹没真正根因。
+		applogger.Errorf("[USER-IMPORT] 用户导入失败 (file=%s, size=%d): %v", file.Filename, file.Size, err)
 		response.Error(c, response.ErrServerError, err.Error())
 		return
 	}
