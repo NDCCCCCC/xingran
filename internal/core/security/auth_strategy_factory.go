@@ -14,8 +14,9 @@ import (
 type AuthStrategyFactory struct {
 	db          *gorm.DB
 	pwdManager  *PasswordManager
-	userSyncer  UserSyncer           // 用户同步服务（可选）
+	userSyncer  UserSyncer              // 用户同步服务（可选）
 	sm4Cipher   addomain.PasswordCipher // SM4加密器（用于解密AD管理员密码）
+	accountPool addomain.AccountPool    // Phase 36: 账号池（可选）
 }
 
 // NewAuthStrategyFactory 创建认证策略工厂
@@ -33,6 +34,12 @@ func NewAuthStrategyFactory(db *gorm.DB, pwdMgr *PasswordManager, sm4Cipher ...a
 // SetUserSyncer 设置用户同步服务
 func (f *AuthStrategyFactory) SetUserSyncer(syncer UserSyncer) {
 	f.userSyncer = syncer
+}
+
+// SetAccountPool Phase 36: 注入账号池到工厂
+// 注入后 AD/Hybrid 模式自动使用 FailoverClient 多账号故障切换
+func (f *AuthStrategyFactory) SetAccountPool(pool addomain.AccountPool) {
+	f.accountPool = pool
 }
 
 // GetAuthenticator 根据认证模式获取认证器
@@ -53,6 +60,10 @@ func (f *AuthStrategyFactory) GetAuthenticator(mode string) (Authenticator, erro
 		if f.sm4Cipher != nil {
 			ad.SetPasswordCipher(f.sm4Cipher)
 		}
+		// Phase 36: 注入账号池（可选，未注入时走旧 bindAdmin）
+		if f.accountPool != nil {
+			ad.SetAccountPool(f.accountPool)
+		}
 		return ad, nil
 
 	case "hybrid":
@@ -65,6 +76,10 @@ func (f *AuthStrategyFactory) GetAuthenticator(mode string) (Authenticator, erro
 		ad.SetUserSyncer(f.userSyncer)
 		if f.sm4Cipher != nil {
 			ad.SetPasswordCipher(f.sm4Cipher)
+		}
+		// Phase 36: 注入账号池
+		if f.accountPool != nil {
+			ad.SetAccountPool(f.accountPool)
 		}
 		return NewHybridAuthenticator(local, ad), nil
 

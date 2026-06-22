@@ -113,10 +113,10 @@ func (a *ADAuthenticator) Authenticate(ctx context.Context, req *AuthRequest) (*
 	}
 	defer adminConn.Close()
 
-	// 管理员绑定
-	if err := a.bindAdmin(adminConn, config); err != nil {
+	// 管理员绑定（Phase 36: 优先用 FailoverClient 多账号故障切换）
+	if err := a.bindAdminWithFailover(ctx, config); err != nil {
 		// 认证成功但搜索失败，返回基本信息
-		applogger.Warnf("[ADAuth] 管理员绑定失败: username=%s, error=%v", req.Username, err)
+		applogger.Warnf("[ADAuth] 管理员绑定失败（账号池耗尽）: username=%s, error=%v", req.Username, err)
 		return &AuthResult{
 			User:            nil,
 			AuthSource:      "ad",
@@ -233,6 +233,8 @@ func (a *ADAuthenticator) dialConnection(config *models.ADConfig, address string
 }
 
 // bindAdmin 使用管理员凭证绑定
+//
+// 已废弃（@Deprecated），Phase 36 起由 bindAdminWithFailover 替代
 func (a *ADAuthenticator) bindAdmin(conn *ldap.Conn, config *models.ADConfig) error {
 	// 尝试UPN格式绑定
 	adminUPN := fmt.Sprintf("%s@%s", config.AdminUsername, config.DomainName)
@@ -242,6 +244,37 @@ func (a *ADAuthenticator) bindAdmin(conn *ldap.Conn, config *models.ADConfig) er
 
 	// 尝试直接绑定
 	return conn.Bind(config.AdminUsername, config.AdminPassword)
+}
+
+// bindAdminWithFailover Phase 36: 用账号池多账号故障切换绑定管理员
+//
+// 行为：
+//   - accountPool 非空 → 走 FailoverClient（任一账号成功即返回）
+//   - accountPool 为空 → fallback 到旧的 bindAdmin（保持双读兼容期）
+//
+// 关键修复：单管理员账号被 AD 锁定（data 775）不再阻断用户登录
+func (a *ADAuthenticator) bindAdminWithFailover(ctx context.Context, config *models.ADConfig) error {
+	if a.accountPool == nil {
+		// Phase 36 双读兼容：accountPool 未注入时走旧路径
+		// 拨号 + Bind 一次性（旧逻辑）
+		address := fmt.Sprintf("%s:%d", config.ServerAddress, config.ServerPort)
+		conn, err := a.dialConnection(config, address)
+		if err != nil {
+			return fmt.Errorf("dial: %w", err)
+		}
+		defer conn.Close()
+		return a.bindAdmin(conn, config)
+	}
+
+	// 主路径：FailoverClient
+	fc := addomain.NewFailoverClient(a.accountPool, config)
+	client, _, err := fc.PickFirstConnect(ctx)
+	if err != nil {
+		return fmt.Errorf("账号池无可用账号: %w", err)
+	}
+	defer client.Close()
+	// PickFirstConnect 内部已 Bind 成功（Connect 调用 tryBindAttempts）
+	return nil
 }
 
 // searchUserInfo 搜索AD用户信息

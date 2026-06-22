@@ -576,7 +576,18 @@ func (c *Core) initAuthFactory() {
 		userSyncService := system.NewUserSyncService(c.GetDB(), c.PwdManager, mapper)
 	c.AuthFactory.SetUserSyncer(userSyncService)
 
-	applogger.Infof("认证策略工厂初始化完成（支持 local/ad/hybrid 模式）")
+	// Phase 36: 注入 AD 账号池（多账号故障切换）
+	// 单账号被 AD 锁定（data 775）不再阻断用户登录
+	accountPool := addomain.NewAccountPool(c.GetDB(), nil) // 无 Redis pub/sub 跨进程广播（单机部署）
+	c.AuthFactory.SetAccountPool(accountPool)
+
+	// Phase 36: 启动 Redis pub/sub 跨进程缓存失效订阅
+	// TODO: 当 core.Core 接入 Redis 后启用；当前传 nil 不影响主流程
+	if err := accountPool.StartHotReload(context.Background()); err != nil {
+		applogger.Warnf("启动 AD 账号池热加载失败（不影响主流程）: %v", err)
+	}
+
+	applogger.Infof("认证策略工厂初始化完成（支持 local/ad/hybrid 模式 + AD 账号池）")
 }
 
 // GetAuthFactory 获取认证策略工厂
