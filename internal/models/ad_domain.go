@@ -26,8 +26,10 @@ type ADConfig struct {
 	ServerPort    int            `gorm:"default:389" json:"serverPort"`
 	DomainName    string         `gorm:"size:255;not null" json:"domainName"`
 	BaseDN        string         `gorm:"size:500;not null" json:"baseDn"`
+	// @Deprecated Phase 36: 改用 sys_ad_service_accounts 多账号池
+	// 仅作为账号池为空时的 fallback，v1.17 清理迁移移除
 	AdminUsername string         `gorm:"size:255;not null" json:"adminUsername"`
-	AdminPassword string         `gorm:"size:500;not null" json:"adminPassword"` // 加密存储
+	AdminPassword string         `gorm:"size:500;not null" json:"adminPassword"` // 加密存储 (@Deprecated)
 	UseSSL        bool           `gorm:"default:false" json:"useSsl"`
 	UseTLS        bool           `gorm:"default:false" json:"useTls"`
 	SyncEnabled   bool           `gorm:"default:true" json:"syncEnabled"`
