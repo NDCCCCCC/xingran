@@ -1,5 +1,10 @@
 import { post } from "./api";
 import type { BaseResponse, PageResponse } from "@/types";
+// canonical 部门类型锚点来自 dutyApi (Phase 37-05 类型去重)。
+// 本地 import 用于文件内引用 (line 84 WorkOrder.department / line 569 getDeptList 返回类型)。
+// 文件末尾的 `export type { SimpleDept } from "./dutyApi"` 仅用于 re-export 暴露给消费方,
+// 不会引入本地 binding —— 故需在顶部单独 import。
+import type { SimpleDept } from "./dutyApi";
 
 // 时间格式化函数
 export { formatTime, formatDateTime, formatDate } from "@/utils/datetime";
