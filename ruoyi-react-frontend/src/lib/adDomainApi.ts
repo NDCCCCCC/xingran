@@ -600,3 +600,88 @@ export function batchSyncADUsersDirect(
 ): Promise<BaseResponse<BatchSyncResult>> {
   return post("/ad-domain/users/batch-sync", data);
 }
+
+// ==================== Phase 36: AD 服务账号池 ====================
+
+export interface ADServiceAccount {
+  id: string;
+  configId: string;
+  username: string;
+  status: number; // 0=可用, 1=停用, 2=熔断
+  failureCount: number;
+  circuitBreakerUntil?: string;
+  lastSuccessAt?: string;
+  lastFailureAt?: string;
+  lastFailureReason?: string;
+  manualUnlockReason?: string;
+  manualUnlockedBy?: string;
+  manualUnlockedAt?: string;
+  remark?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ADServiceAccountListResponse {
+  list: ADServiceAccount[];
+  total: number;
+  current: number;
+  pageSize: number;
+}
+
+export interface ADServiceAccountStats {
+  total: number;
+  available: number;
+  disabled: number;
+  circuitBroken: number;
+  currentAccount?: string;
+}
+
+// 列表（带分页）
+export function listADServiceAccounts(
+  data: { configId: string; page?: number; pageSize?: number; status?: number }
+): Promise<BaseResponse<ADServiceAccountListResponse>> {
+  return post("/ad-domain/accounts/list", data);
+}
+
+// 新增
+export function createADServiceAccount(
+  data: { configId: string; username: string; passwordCiphertext: string; remark?: string }
+): Promise<BaseResponse<{ id: string }>> {
+  return post("/ad-domain/accounts/create", data);
+}
+
+// 更新
+export function updateADServiceAccount(
+  data: { id: string; username?: string; passwordCiphertext?: string; remark?: string }
+): Promise<BaseResponse<{ ok: boolean }>> {
+  return post("/ad-domain/accounts/update", data);
+}
+
+// 删除
+export function deleteADServiceAccount(id: string): Promise<BaseResponse<{ ok: boolean }>> {
+  return post("/ad-domain/accounts/delete", { id });
+}
+
+// 启用
+export function enableADServiceAccount(id: string): Promise<BaseResponse<{ ok: boolean }>> {
+  return post("/ad-domain/accounts/enable", { id });
+}
+
+// 停用
+export function disableADServiceAccount(id: string): Promise<BaseResponse<{ ok: boolean }>> {
+  return post("/ad-domain/accounts/disable", { id });
+}
+
+// 立即解锁（reason ≥10 字符）
+export function unlockADServiceAccount(
+  data: { id: string; reason: string }
+): Promise<BaseResponse<{ ok: boolean }>> {
+  return post("/ad-domain/accounts/unlock", data);
+}
+
+// 统计
+export function getADServiceAccountStats(
+  configId: string
+): Promise<BaseResponse<ADServiceAccountStats>> {
+  return post("/ad-domain/accounts/stats", { configId });
+}
