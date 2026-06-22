@@ -298,15 +298,6 @@ export const TARGET_TYPE_LABELS: Record<TargetType, string> = {
 };
 
 /**
- * 部门树节点（用于目标选择器）
- */
-export interface DeptTreeNode extends Department {
-  key: string;
-  title: string;
-  children?: DeptTreeNode[];
-}
-
-/**
  * 角色选项（用于目标选择器）
  */
 export interface RoleOption {
@@ -324,14 +315,6 @@ export interface UserOption {
   nickname?: string;
   deptName?: string;
 }
-
-// 重新导出部门类型，避免循环依赖
-type Department = {
-  id: string;
-  deptName: string;
-  parentId?: string;
-  children?: Department[];
-};
 
 // 重新导出 PageResponse
 export type { PageResponse } from "./index";

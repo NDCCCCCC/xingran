@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { FC, Key } from "react";
 import { App, Form, Select, Tree, Checkbox, Spin } from "antd";
-import { get, post } from "@/lib/api";
-import type { TargetType, DeptTreeNode, RoleOption, UserOption } from "@/types/notice";
+import { post } from "@/lib/api";
+import type { TargetType, RoleOption, UserOption } from "@/types/notice";
+import { useDeptTree, type DeptTreeNode } from "@/hooks/useDeptTree";
+import { toShortNameDataNode } from "@/utils/deptUtils";
 
 interface TargetSelectorProps {
   targetType: TargetType;
@@ -31,25 +33,21 @@ const TargetSelector: FC<TargetSelectorProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const { message } = App.useApp();
-  const [deptTree, setDeptTree] = useState<DeptTreeNode[]>([]);
+  // 部门树:消费 canonical useDeptTree (Phase 37 收敛),不再本地 GET fetch。
+  // 共享 ['dept','tree'] 缓存 (5min stale / 30min gc / refetchOnWindowFocus:false)。
+  const { data: rawDept = [], isLoading: loadingDeptTree } = useDeptTree();
+  // 派生 antd <Tree> 期望的 DataNode 形状 (短名 title + key + children)。
+  // 旧实现的 GET fetch 直接把后端返回的 SimpleDept[] (字段 id/deptName/children) 喂给
+  // <Tree fieldNames={{ title:"title", key:"key", children:"children" }}>,
+  // 但后端节点没有 title/key 字段——本地转一道与 useTargetSelector (37-02) 一致,行为等价。
+  const deptTree = useMemo(
+    () => toShortNameDataNode(rawDept as DeptTreeNode[]),
+    [rawDept]
+  );
   const [roles, setRoles] = useState<RoleOption[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [checkedDeptKeys, setCheckedDeptKeys] = useState<Key[]>(targetDepts);
   const [expandedKeys, setExpandedKeys] = useState<Key[]>([]);
-
-  // 加载部门树
-  const loadDeptTree = async () => {
-    setLoading(true);
-    try {
-      const response = await get<DeptTreeNode[]>("/system/departments/tree");
-      setDeptTree(response.data || []);
-    } catch (error) {
-      console.error("加载部门树失败:", error);
-      message.error("加载部门树失败");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // 加载角色列表
   const loadRoles = async () => {
@@ -84,11 +82,9 @@ const TargetSelector: FC<TargetSelectorProps> = ({
   };
 
   // 根据 target_type 加载对应数据
+  // 注意:部门树(targetType===1)数据由 useDeptTree 顶层 hook 自动提供,无需在此触发。
   useEffect(() => {
-    if (targetType === 1) {
-      // 指定部门
-      loadDeptTree();
-    } else if (targetType === 2) {
+    if (targetType === 2) {
       // 指定角色
       loadRoles();
     } else if (targetType === 3) {
@@ -116,7 +112,7 @@ const TargetSelector: FC<TargetSelectorProps> = ({
 
       case 1: // 指定部门
         return (
-          <Spin spinning={loading}>
+          <Spin spinning={loadingDeptTree}>
             <div className="max-h-64 overflow-y-auto border rounded p-4">
               <Tree
                 checkable
