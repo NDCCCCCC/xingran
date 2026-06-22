@@ -77,6 +77,43 @@ func RegisterADSyncTasks(scheduler *Scheduler) {
 	})
 }
 
+// RegisterADAccountPoolTasks Phase 36: 注册 AD 账号池维护定时任务
+//
+// 任务：
+//   1. recover_breakers - 每 5 分钟恢复已过期熔断的账号（Issue 4/11/17）
+func RegisterADAccountPoolTasks(scheduler *Scheduler) {
+	scheduler.RegisterTask("ad_account_pool_recover_breakers", func(ctx context.Context, params map[string]interface{}) error {
+		return executeADAccountPoolRecoverBreakersTask(ctx, params)
+	})
+}
+
+// executeADAccountPoolRecoverBreakersTask 执行恢复过期熔断账号任务
+//
+// 流程：
+//   1. 调 AccountPool.RecoverExpiredBreakers（事务 + 写 DB）
+//   2. 内部自动 InvalidateCache 本地缓存
+//   3. 内部自动通过 Redis pub/sub 广播（如果启用）
+//   4. 记录日志
+//
+// 频率：建议每 5 分钟（与 BreakerRecoveryCron 常量一致）
+func executeADAccountPoolRecoverBreakersTask(ctx context.Context, params map[string]interface{}) error {
+	if globalADSyncScheduler == nil {
+		return fmt.Errorf("AD同步调度器未初始化")
+	}
+
+	// 创建账号池实例（与 core.Core 共享 DB）
+	pool := addomain.NewAccountPool(globalADSyncScheduler.db, nil)
+	recovered, err := pool.RecoverExpiredBreakers(ctx)
+	if err != nil {
+		applogger.Errorf("[ADAccountPool] cron 恢复过期熔断账号失败: %v", err)
+		return err
+	}
+	if recovered > 0 {
+		applogger.Infof("[ADAccountPool] cron 恢复了 %d 个过期熔断账号", recovered)
+	}
+	return nil
+}
+
 // StartADSyncScheduler 启动全局AD同步调度器
 // 遵循 Go 最佳实践：使用 sync.Once 确保单例初始化的线程安全
 func StartADSyncScheduler(db *gorm.DB) {
@@ -116,9 +153,22 @@ func (s *ADSyncScheduler) Start() {
 		return
 	}
 
+	// Phase 36: 每 5 分钟恢复已过期熔断的 AD 账号（Issue 4/11）
+	// Cron 表达式: 6 字段（含秒）"秒 分 时 日 月 周" → "0 */5 * * * *" = 每 5 分钟整点
+	_, err = s.cron.AddFunc("0 */5 * * * *", func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+		defer cancel()
+		if err := executeADAccountPoolRecoverBreakersTask(ctx, nil); err != nil {
+			applogger.Errorf("[ADAccountPool] cron 任务执行失败: %v", err)
+		}
+	})
+	if err != nil {
+		applogger.Errorf("启动AD账号池恢复定时任务失败: %v", err)
+	}
+
 	s.cron.Start()
 	s.started = true
-	applogger.Infof("AD同步定时任务已启动（全量同步: 每5分钟）")
+	applogger.Infof("AD同步定时任务已启动（全量同步: 每5分钟 + 账号池恢复: 每5分钟）")
 }
 
 // Stop 停止AD同步调度器
