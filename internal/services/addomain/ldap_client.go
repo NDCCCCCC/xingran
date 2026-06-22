@@ -194,7 +194,7 @@ func (c *LDAPClient) SearchGroups(baseDN string) ([]*ldap.Entry, error) {
 func (c *LDAPClient) SearchUsers(baseDN string) ([]*ldap.Entry, error) {
 	return c.searchWithPaging(
 		baseDN,
-		"(&(objectClass=user)(!(cn=*DUPLICATE-*)))", // 排除AD复制冲突对象
+		"(&(objectClass=user)(!(objectClass=computer))(!(cn=*DUPLICATE-*)))", // 排除计算机账号和AD复制冲突对象
 		[]string{
 			"dn", "sAMAccountName", "displayName", "mail", "telephoneNumber",
 			"mobile", "title", "department", "company", "description",

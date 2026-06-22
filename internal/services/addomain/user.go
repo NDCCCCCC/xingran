@@ -45,7 +45,8 @@ func (s *UserService) GetList(ctx context.Context, req *UserListRequest) ([]mode
 
 	query := s.db.WithContext(ctx).Model(&models.ADUser{}).
 		Where("ad_config_id = ? AND deleted_at IS NULL", req.ConfigID).
-		Where("username NOT LIKE ?", "$DUPLICATE-%")
+		Where("username NOT LIKE ?", "$DUPLICATE-%").
+		Where("username NOT LIKE ?", "%$") // 过滤计算机账号（以$结尾）
 
 	if req.OUDN != nil {
 		// 选择父OU时包含所有子OU: ou_dn = '选中的OU' OR ou_dn LIKE '%,选中的OU'
@@ -256,7 +257,8 @@ func (s *UserService) GetUserIds(ctx context.Context, req *UserListRequest) ([]s
 
 	query := s.db.WithContext(ctx).Model(&models.ADUser{}).
 		Where("ad_config_id = ? AND deleted_at IS NULL", req.ConfigID).
-		Where("username NOT LIKE ?", "$DUPLICATE-%")
+		Where("username NOT LIKE ?", "$DUPLICATE-%").
+		Where("username NOT LIKE ?", "%$") // 过滤计算机账号（以$结尾）
 
 	if req.OUDN != nil {
 		// 选择父OU时包含所有子OU: ou_dn = '选中的OU' OR ou_dn LIKE '%,选中的OU'

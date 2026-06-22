@@ -72,6 +72,7 @@ const AUTH_WHITELIST: string[] = [
 // 需要更长超时时间的接口
 const LONG_TIMEOUT_ENDPOINTS: string[] = [
 	"/ad-domain/configs/",
+	"/ad-domain/users/batch-sync", // 批量同步AD用户可能需要较长时间
 ];
 
 /**
