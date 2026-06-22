@@ -8,16 +8,20 @@
  * - 禁用状态
  * - 支持顶级部门选项（用于部门编辑）
  * - 支持两种数据格式：标准部门格式和 TreeSelect 格式
+ *
+ * 受控组件(D-LOCKED, Phase 37 CONTEXT):
+ * - 数据通过 props `departments: SimpleDept[]` 或 `treeData: TreeNode[]` 由调用方喂入。
+ * - **禁止**在本组件内调数据获取 hook (职责正交: 调用方负责数据获取, 本组件只负责渲染)。
+ *
+ * 类型(D-LOCKED):
+ * - 不再定义本地 `Department` 接口, 统一引用 canonical `SimpleDept` (来自 `@/lib/dutyApi`)。
+ * - 树转换不再用本地旧转换函数, 改调用 `deptUtils.toFullPathTree`。
  */
 
 import { TreeSelect } from "antd";
 import type { TreeSelectProps } from "antd/es/tree-select";
-
-export interface Department {
-  id: string;
-  deptName: string;
-  children?: Department[];
-}
+import type { SimpleDept } from "@/lib/dutyApi";
+import { toFullPathTree } from "@/utils/deptUtils";
 
 // TreeSelect 原生格式（已转换的数据）
 export interface TreeNode {
@@ -25,12 +29,22 @@ export interface TreeNode {
   value: string;
   key: string;
   children?: TreeNode[];
+  isExternalOrg?: number;
 }
+
+/**
+ * 向后兼容 alias:本地旧 Department 接口已删除(canonical 类型为 `SimpleDept`)。
+ * 保留 re-export 让 floors 等下游消费方在批 2 迁移前继续编译通过。
+ * 消费方应逐步迁移到直接 import `SimpleDept`。
+ *
+ * @deprecated 请改 import `SimpleDept` from `@/lib/dutyApi`。本 alias 将在批 2/后续清理时移除。
+ */
+export type Department = SimpleDept;
 
 export interface DepartmentTreeSelectProps extends Omit<TreeSelectProps, "treeData"> {
   value?: string;
   onChange?: (value: string) => void;
-  departments?: Department[];
+  departments?: SimpleDept[];
   treeData?: TreeNode[];  // 直接传递已转换的 TreeSelect 格式数据
   placeholder?: string;
   allowClear?: boolean;
@@ -41,43 +55,9 @@ export interface DepartmentTreeSelectProps extends Omit<TreeSelectProps, "treeDa
 }
 
 /**
- * 将部门数据转换为 TreeSelect 需要的格式
- * 从二级部门开始显示完整路径（跳过顶级部门）
- * @param departments 部门数据
- * @param parentPath 父级路径（用于构建完整路径显示）
- */
-function convertDeptTreeData(departments: Department[], parentPath: string[] = []): TreeNode[] {
-  if (!departments || departments.length === 0) {
-    return [];
-  }
-  const convertNodes = (nodes: Department[], currentPath: string[]): TreeNode[] => {
-    return nodes.map(node => {
-      // 构建显示路径：从二级部门开始（跳过顶级）
-      let displayPath: string;
-      if (currentPath.length === 0) {
-        // 顶级部门，直接显示名称
-        displayPath = node.deptName;
-      } else {
-        // 从二级开始显示完整路径
-        const pathFromSecondLevel = [...currentPath.slice(1), node.deptName];
-        displayPath = pathFromSecondLevel.join(" / ");
-      }
-
-      return {
-        title: displayPath,
-        value: node.id,
-        key: node.id,
-        children: node.children && node.children.length > 0 ? convertNodes(node.children, [...currentPath, node.deptName]) : undefined,
-      };
-    });
-  };
-  return convertNodes(departments, parentPath);
-}
-
-/**
  * 获取第一级节点的 key（用于默认展开）- 标准部门格式
  */
-function getFirstLevelKeysFromDepartments(departments: Department[]): string[] {
+function getFirstLevelKeysFromDepartments(departments: SimpleDept[]): string[] {
   if (!departments || departments.length === 0) {
     return [];
   }
@@ -96,6 +76,11 @@ function getFirstLevelKeysFromTreeData(treeData: TreeNode[]): string[] {
 
 /**
  * 标准的部门树下拉选择器
+ *
+ * 行为保持(D-LOCKED):
+ * - `toFullPathTree({ startFromLevel: 2 })` 复现旧全路径转换函数的 `currentPath.slice(1)`
+ *   语义——从二级开始拼全路径, 顶级祖先名不进 title。
+ * - 保持受控模式 (value/onChange + 外部 departments/treeData)。
  */
 export function DepartmentTreeSelect({
   value,
@@ -110,8 +95,10 @@ export function DepartmentTreeSelect({
   className,
   ...restProps
 }: DepartmentTreeSelectProps) {
-  // 优先使用 treeData（已转换的格式），否则使用 departments 并转换
-  const finalTreeData = treeData || (departments ? convertDeptTreeData(departments) : []);
+  // 优先使用 treeData（已转换的格式），否则使用 departments 并通过 toFullPathTree 转换。
+  // startFromLevel=2 复现旧全路径转换函数的 slice(1) 行为, 保证 UI 文案不变。
+  const finalTreeData = treeData ||
+    (departments ? toFullPathTree(departments, { startFromLevel: 2 }) : []);
 
   // 获取默认展开的 keys
   let defaultExpandedKeys: string[] = [];
@@ -146,7 +133,7 @@ export function DepartmentTreeSelect({
 export interface DepartmentTreeSelectWithTopProps extends Omit<TreeSelectProps, "treeData"> {
   value?: string;
   onChange?: (value: string) => void;
-  departments?: Department[];
+  departments?: SimpleDept[];
   treeData?: TreeNode[];  // 直接传递已转换的 TreeSelect 格式数据
   placeholder?: string;
   allowClear?: boolean;
@@ -173,8 +160,9 @@ export function DepartmentTreeSelectWithTop({
   topLevelLabel = "顶级部门",
   ...restProps
 }: DepartmentTreeSelectWithTopProps) {
-  // 优先使用 treeData（已转换的格式），否则使用 departments 并转换
-  const baseTreeData = treeData || (departments ? convertDeptTreeData(departments) : []);
+  // 行为保持: 同 DepartmentTreeSelect, startFromLevel=2 复现旧全路径转换函数语义。
+  const baseTreeData = treeData ||
+    (departments ? toFullPathTree(departments, { startFromLevel: 2 }) : []);
 
   const finalTreeData = showTopLevel
     ? [
