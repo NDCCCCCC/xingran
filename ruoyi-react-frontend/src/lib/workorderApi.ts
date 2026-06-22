@@ -250,12 +250,10 @@ export interface SimpleUser {
   status: number;
 }
 
-export interface SimpleDept {
-  id: string;
-  deptName: string;
-  parentId?: string;
-  children?: SimpleDept[];
-}
+// SimpleDept 全项目唯一定义在 dutyApi.ts (canonical 锚点)。
+// 此处 re-export 保持外部 import 路径不变 (T-37-09 mitigate: 消费方仍可 import { SimpleDept } from "@/lib/workorderApi")。
+// 本文件内 WorkOrder.department 字段 (line 84) 亦通过此 re-export 引用。
+export type { SimpleDept } from "./dutyApi";
 
 // ==================== 请求参数类型 ====================
 
@@ -572,6 +570,6 @@ export function getDeptList(): Promise<BaseResponse<SimpleDept[]>> {
   return post("/system/departments/list");
 }
 
-export function getDeptTree(): Promise<BaseResponse<SimpleDept[]>> {
-  return post("/system/departments/tree");
-}
+// getDeptTree 副本已删除 (Phase 37-05): 全项目唯一 fetch 部门树的函数在 dutyApi.ts。
+// 消费方应改用 useDeptTree hook (共享 ['dept','tree'] React Query 缓存),
+// 或直接 import { getDeptTree } from "@/lib/dutyApi"。

@@ -9,13 +9,13 @@ import {
   getWorkOrderList,
   getWorkOrderStatusStatistics,
   getUserList,
-  getDeptTree,
   getEnabledWorkOrderCategories,
   type WorkOrder,
   type SimpleUser,
   type SimpleDept,
   type WorkOrderCategory,
 } from "@/lib/workorderApi";
+import { useDeptTree } from "@/hooks/useDeptTree";
 
 export interface WorkOrderListParams {
   current?: number;
@@ -55,7 +55,6 @@ export interface UseWorkOrderDataReturn {
   fetchList: (page?: number, pageSize?: number) => Promise<void>;
   fetchStats: () => Promise<void>;
   fetchUsers: () => Promise<void>;
-  fetchDepts: () => Promise<void>;
   fetchCategories: () => Promise<void>;
 }
 
@@ -80,7 +79,8 @@ export function useWorkOrderData(
   });
 
   const [users, setUsers] = useState<SimpleUser[]>([]);
-  const [depts, setDepts] = useState<SimpleDept[]>([]);
+  // 部门树数据 — 全项目共享 ['dept','tree'] 缓存条目 (D-LOCKED: 单一数据源 useDeptTree)
+  const { data: depts = [] } = useDeptTree();
   const [categories, setCategories] = useState<WorkOrderCategory[]>([]);
 
   // 获取统计数据（专用端点 COUNT 聚合，全局计数，不受分页/筛选影响）。
@@ -145,15 +145,7 @@ export function useWorkOrderData(
     }
   }, []);
 
-  // 获取部门列表
-  const fetchDepts = useCallback(async () => {
-    try {
-      const result = await getDeptTree();
-      setDepts(result.data || []);
-    } catch (error) {
-      console.error("获取部门列表失败:", error);
-    }
-  }, []);
+  // 部门树数据由顶层 useDeptTree() 提供,不再手动 fetch (workorderApi.getDeptTree 副本已删,类型 re-export from dutyApi)
 
   // 获取工单分类
   const fetchCategories = useCallback(async () => {
@@ -169,9 +161,8 @@ export function useWorkOrderData(
   useEffect(() => {
     fetchList(1, 10); // 内部会顺带刷新统计
     fetchUsers();
-    fetchDepts();
     fetchCategories();
-  }, [fetchList, fetchUsers, fetchDepts, fetchCategories]);
+  }, [fetchList, fetchUsers, fetchCategories]);
 
   return {
     loading,
@@ -186,7 +177,6 @@ export function useWorkOrderData(
     fetchList,
     fetchStats,
     fetchUsers,
-    fetchDepts,
     fetchCategories,
   };
 }
