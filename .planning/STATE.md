@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: 工位设备关联 (Phase 28)
 status: executing
-stopped_at: "Plan 37-05 完成 (批 4 duty+workorder 模块迁移 + workorderApi 类型去重 ✅: duty/pools 删 fetchDepts (含 getDeptTree 调用) + depts useState + useEffect 触发改 useDeptTree, DepartmentTreeSelect 受控模式保持数据由 hook 喂入 (form 筛选 + edit modal 两处); useWorkOrderData 同步删 fetchDepts (调的是 workorderApi 副本) + depts useState + return 字段, 改 useDeptTree; workorderApi.SimpleDept 本地 interface 改为 export type { SimpleDept } from ./dutyApi (T-37-09 mitigate: 外部 import 路径不变); workorderApi.getDeptTree 副本删除 (唯一消费方已迁移); 2 task commit ccbd504/0cde4f3; npm type-check exit 0; SimpleDept 全项目定义数从 2 收敛为 1 (仅 dutyApi); duty/workorder 目录 /system/departments/tree 清零)"
-last_updated: "2026-06-22T11:00:00.000Z"
+stopped_at: "Plan 37-06 完成 (批 5 收尾 TargetSelector + Phase 37 整体验收达标 ✅: TargetSelector 删 GET 自 fetch + deptTree useState + useEffect dept 分支, 改消费 useDeptTree + useMemo(toShortNameDataNode(rawDept)) 派生 antd Tree DataNode 形状 (与 37-02 useTargetSelector 完全一致); types/notice.ts DeptTreeNode 接口 + 本地 Department alias 迁移后变孤儿 Rule 1 删除 (grep 确认 0 消费方); Task 2 全量 build 验收暴露并修复 37-05 latent bug (workorderApi.SimpleDept re-export 不引入本地 binding, tsc -b 报 TS2304, 顶部补 import type 修复); 2 task commit 214c615/8309947; Phase 37 整体验收达标: 全量 grep 非排除项命中=0 (dutyApi canonical + dept 管理页 + role tree-select 三处合法排除), SimpleDept 唯一定义 (dutyApi:281), build + type-check 双通过)"
+last_updated: "2026-06-22T10:34:31.635Z"
 progress:
   total_phases: 15
-  completed_phases: 9
+  completed_phases: 10
   total_plans: 76
-  completed_plans: 65
-  percent: 60
+  completed_plans: 66
+  percent: 67
 ---
 
 # Project State
@@ -27,11 +27,11 @@ progress:
 
 ## Current Position
 
-Phase: 37 (dept-select-unify) — EXECUTING
-Plan: 6 of 6 (Plan 37-05 ✅ COMPLETE — 批 4 duty+workorder 模块迁移 + workorderApi 类型去重: duty/pools 删 fetchDepts+depts useState+getDeptTree import+useEffect 触发改 useDeptTree, DepartmentTreeSelect 受控模式保持 (form 筛选 + edit modal 两处 departments={depts}); useWorkOrderData 同步删 fetchDepts+depts useState+return 字段+getDeptTree import 改 useDeptTree; workorderApi.SimpleDept 本地 interface 改 re-export from dutyApi (T-37-09 mitigate: 外部 import 路径不变); workorderApi.getDeptTree 副本删除 (唯一消费方已迁移); 2 task commit ccbd504/0cde4f3; npm type-check exit 0; SimpleDept 全项目定义数从 2 收敛为 1 仅 dutyApi; duty/workorder 目录 /system/departments/tree 清零)
+Phase: 37 (dept-select-unify) — ✅ COMPLETE (6/6 plans, awaiting phase-level verification)
+Plan: 6 of 6 (Plan 37-06 ✅ COMPLETE — 批 5 收尾 TargetSelector + Phase 37 整体验收: TargetSelector 删 GET 自 fetch + deptTree useState + useEffect dept 分支, 改消费 useDeptTree + useMemo(toShortNameDataNode(rawDept)) 派生 antd Tree DataNode 形状 (与 37-02 useTargetSelector 完全一致); types/notice.ts DeptTreeNode 接口 + 本地 Department alias 迁移后变孤儿 Rule 1 删除; Task 2 全量 build 验收暴露并修复 37-05 latent bug (workorderApi.SimpleDept re-export 不引入本地 binding, tsc -b 报 TS2304, 顶部补 import type 修复); 2 task commit 214c615/8309947; Phase 37 整体验收达标: 全量 grep 非排除项命中=0 (dutyApi canonical + dept 管理页 + role tree-select 三处合法排除), SimpleDept 唯一定义 (dutyApi:281), build + type-check 双通过; 10 个迁移点 UI 行为核对全部与迁移前一致)
 **Latest shipped milestone**: v1.15 工位设备关联 (Phase 28, 2026-06-10)
 **Latest shipped phase**: Phase 34 操作日志全模块集成 + review (2026-06-16)
-**Most recent commit**: 0cde4f3 refactor(37-05): workorder 迁移 + workorderApi 类型/函数去重
+**Most recent commit**: 8309947 fix(37-06): workorderApi SimpleDept 引入本地 import type (37-05 latent bug)
 
 **Shipped since last state file update (v1.15 was the milestone label
 in PROJECT.md before this sync)**:
@@ -180,6 +180,7 @@ Run `/gsd:new-milestone` to formally start v1.16.
 | 2026-06-22 | Phase 37 Plan 02 完成 (批 1 system 模块迁移 user+notice) - useUserData 去 fetch (post /system/departments/tree) 改消费 useDeptTree + 删本地 Department 接口 (改 SimpleDept) + utils.tsx 删 convertDeptTreeData (实测短名, 归 toShortNameDataNode, 保留 renderDeptTreeOptions Select 专用渲染) + index.tsx 清理 loadDepartments 调用链与死 import + useTargetSelector 删 GET fetch + convertTree 改 useDeptTree+useMemo+toShortNameDataNode + Target 接口保留 (roles/users 子树依赖); 2 task commit 76973d6/86b3231; type-check + build 通过; role/dept/AD 排除边界零触碰 | 37 |
 | 2026-06-22 | Phase 37 Plan 04 完成 (批 3 network 模块迁移 devices) - useDeviceData 删 departments useState + loadDepartments useCallback (含 post /system/departments/tree + handleApiError 兜底) 改消费 useDeptTree; 返回对象保留 departments 字段删除 loadDepartments; 本地 Department 类型改 ReturnType<typeof useDeptTree>['data'] 类型透传; index.tsx 删 loadDepartments 解构与 openModal/openQuickCreateModal 两处调用点; 1 task commit 669b25b; type-check 通过; devices/ 全目录 loadDepartments 与 /system/departments/tree 清零; 最简单批次无转换函数无双向语义 | 37 |
 | 2026-06-22 | Phase 37 Plan 05 完成 (批 4 duty+workorder 模块迁移 + workorderApi 类型去重) - duty/pools 删 fetchDepts+depts useState+getDeptTree import+useEffect 触发改 useDeptTree (DepartmentTreeSelect 受控模式保持, form 筛选 + edit modal 两处 departments={depts} 由 hook 喂入); useWorkOrderData 同步删 fetchDepts+depts useState+return 字段+getDeptTree import 改 useDeptTree; workorderApi.SimpleDept 本地 interface 改 export type { SimpleDept } from ./dutyApi (T-37-09 mitigate: 外部 import 路径不变); workorderApi.getDeptTree 副本删除 (唯一消费方 useWorkOrderData 已迁移); 2 task commit ccbd504/0cde4f3; type-check 通过; SimpleDept 全项目定义数从 2 (dutyApi+workorderApi) 收敛为 1 (仅 dutyApi canonical 锚点); duty/workorder 目录 /system/departments/tree 清零 | 37 |
+| 2026-06-22 | Phase 37 Plan 06 完成 (批 5 收尾 TargetSelector + Phase 37 整体验收) - TargetSelector 删 GET 自 fetch + deptTree useState + useEffect dept 分支, 改消费 useDeptTree + useMemo(toShortNameDataNode(rawDept)) 派生 antd Tree DataNode 形状 (与 37-02 useTargetSelector 完全一致); types/notice.ts DeptTreeNode 接口 + 本地 Department alias 迁移后变孤儿 Rule 1 删除 (grep 确认 0 消费方); Task 2 全量 build 验收暴露并修复 37-05 latent bug (workorderApi.SimpleDept re-export 不引入本地 binding, tsc -b 报 TS2304, 顶部补 import type 修复, Rule 1 auto-fix bug); 2 task commit 214c615/8309947; **Phase 37 整体验收达标** (6/6 plans): 全量 grep 非排除项命中=0 (dutyApi canonical + dept 管理页 + role tree-select 三处合法排除), SimpleDept 唯一定义 (dutyApi:281), build + type-check 双通过; 10 个迁移点 UI 行为核对全部与迁移前一致 | 37 |
 
 ## Quick Tasks Completed
 
@@ -339,15 +340,15 @@ Run `/gsd:new-milestone` to formally start v1.16.
 
 ## Session Continuity
 
-Last session: 2026-06-22T11:00:00.000Z
-Stopped at: Plan 37-05 完成 (批 4 duty+workorder 模块迁移 + workorderApi 类型去重 ✅: duty/pools 删 fetchDepts (含 getDeptTree 调用) + depts useState + useEffect 触发改 useDeptTree, DepartmentTreeSelect 受控模式保持数据由 hook 喂入 (form 筛选 + edit modal 两处); useWorkOrderData 同步删 fetchDepts (调的是 workorderApi 副本) + depts useState + return 字段, 改 useDeptTree; workorderApi.SimpleDept 本地 interface 改为 export type { SimpleDept } from ./dutyApi (T-37-09 mitigate: 外部 import 路径不变); workorderApi.getDeptTree 副本删除 (唯一消费方已迁移); 2 task commit ccbd504/0cde4f3; npm type-check exit 0; SimpleDept 全项目定义数从 2 收敛为 1 (仅 dutyApi); duty/workorder 目录 /system/departments/tree 清零)
+Last session: 2026-06-22T10:34:18.360Z
+Stopped at: Plan 37-06 完成 (批 5 收尾 TargetSelector + Phase 37 整体验收达标 ✅: TargetSelector 删 GET 自 fetch + deptTree useState + useEffect dept 分支, 改消费 useDeptTree + useMemo(toShortNameDataNode(rawDept)) 派生 antd Tree DataNode 形状 (与 37-02 useTargetSelector 完全一致); types/notice.ts DeptTreeNode 接口 + 本地 Department alias 迁移后变孤儿 Rule 1 删除 (grep 确认 0 消费方); Task 2 全量 build 验收暴露并修复 37-05 latent bug (workorderApi.SimpleDept re-export 不引入本地 binding, tsc -b 报 TS2304, 顶部补 import type 修复); 2 task commit 214c615/8309947; Phase 37 整体验收达标: 全量 grep 非排除项命中=0, SimpleDept 唯一 (dutyApi:281), build + type-check 双通过)
 Resume file: None
 
-**Planned Phase:** 37 (dept-select-unify) — 6 plans — Plan 5/6 ✅ COMPLETE
+**Planned Phase:** 37 (dept-select-unify) — 6 plans — **ALL 6/6 ✅ COMPLETE (awaiting phase-level verification)**
 
   - Plan 37-01 (批 0 公共层) ✅ — 硬前置已就位
   - Plan 37-02 (批 1 system user+notice) ✅ — system 模块收敛到 useDeptTree, 本地转换函数清零
   - Plan 37-03 (批 2 operations workstations+buildings) ✅ — workstations 高风险双向语义保留, buildings 方案 A+B 混合
   - Plan 37-04 (批 3 network devices) ✅ — network 模块收敛到 useDeptTree, 无转换函数
   - Plan 37-05 (批 4 duty+workorder) ✅ — duty/pools + useWorkOrderData 收敛到 useDeptTree; workorderApi SimpleDept 改 re-export + getDeptTree 副本删除; 全项目 SimpleDept 定义唯一
-  - Plan 37-06 待执行 (批 5 收尾 TargetSelector + 临时 Department alias 清理)
+  - Plan 37-06 (批 5 收尾 TargetSelector + Phase 37 整体验收) ✅ — TargetSelector 迁移 + types/notice.ts dead code cleanup + 37-05 latent bug 修复 (Rule 1); Phase 37 §6 验收全部通过

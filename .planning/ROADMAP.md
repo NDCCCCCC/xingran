@@ -794,7 +794,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 37-06-PLAN.md — 批 5 收尾:TargetSelector + 全量 grep 验证 + build/type-check(Wave 3)
+- [x] 37-06-PLAN.md — 批 5 收尾:TargetSelector + 全量 grep 验证 + build/type-check(Wave 3)
 
 **Cross-cutting constraints:**
 
@@ -837,7 +837,7 @@ Plans:
 | 28. 工位设备关联子表格 | v1.15 | 4/6 | Gap Closure | 2026-06-10 |
 | 34. 操作日志全模块集成 | - | 11/10 | Complete    | 2026-06-15 |
 | 35. operlog.exclude_paths 配置驱动白名单 | v1.16 | 0/1 | Planned | - |
-| 37. 前端部门选择组件统一收敛 | v1.16 | 5/6 | In Progress|  |
+| 37. 前端部门选择组件统一收敛 | v1.16 | 6/6 | Complete   | 2026-06-22 |
 
 **Total**: 123 plans completed, 8 gap closure plans, 24 plans planned (Phases 22C + 22D + 25 + 35 + 37), 155 total plans
 
