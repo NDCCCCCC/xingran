@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: 工位设备关联 (Phase 28)
-status: idle
-stopped_at: Plan 34-10 完成 (Phase 34 操作日志全模块集成 ✅ CLOSED — 10/10 plans, CLAUDE.md + 开发规范.md 文档约定 + regression_test.go 公共 API 锁定)
-last_updated: "2026-06-22T09:42:16.405Z"
+status: executing
+stopped_at: "Plan 37-02 完成 (批 1 system 模块迁移 ✅: useUserData 去 fetch 改 useDeptTree + utils.tsx 删 convertDeptTreeData (保留 renderDeptTreeOptions) + useTargetSelector 删 GET fetch + convertTree 改 useDeptTree+toShortNameDataNode; 2 task 单独 commit 76973d6/86b3231; npm type-check + build 通过; role/dept/AD 排除边界零触碰)"
+last_updated: "2026-06-22T09:58:00.000Z"
 progress:
   total_phases: 15
   completed_phases: 9
   total_plans: 76
-  completed_plans: 61
-  percent: 60
+  completed_plans: 63
+  percent: 61
 ---
 
 # Project State
@@ -28,10 +28,10 @@ progress:
 ## Current Position
 
 Phase: 37 (dept-select-unify) — EXECUTING
-Plan: 2 of 6 (Plan 37-01 ✅ COMPLETE — 批 0 公共层收敛: deptUtils 新增 toFullPathTree/toShortNameDataNode + DepartmentTreeSelect 删本地类型/转换 + DeptTree 删 post fetch 改消费 useDeptTree, npm run type-check/build 均 pass)
+Plan: 3 of 6 (Plan 37-02 ✅ COMPLETE — 批 1 system 模块迁移: useUserData 去 fetch 改 useDeptTree + utils.tsx 删 convertDeptTreeData(保留 renderDeptTreeOptions) + useTargetSelector 删 GET fetch + convertTree 改 useDeptTree+toShortNameDataNode; type-check/build 均 pass; role/dept/AD 排除边界零触碰)
 **Latest shipped milestone**: v1.15 工位设备关联 (Phase 28, 2026-06-10)
 **Latest shipped phase**: Phase 34 操作日志全模块集成 + review (2026-06-16)
-**Most recent commit**: 79cc349 refactor(37-01): DeptTree 删内部 post fetch, 改消费 useDeptTree
+**Most recent commit**: 86b3231 refactor(37-02): notice 模块迁移 — useTargetSelector 删 GET fetch + convertTree
 
 **Shipped since last state file update (v1.15 was the milestone label
 in PROJECT.md before this sync)**:
@@ -177,6 +177,7 @@ Run `/gsd:new-milestone` to formally start v1.16.
 | 2026-06-16 | Phase 34 Plan 10 完成 (文档 + 回归测试) - CLAUDE.md + docs/开发规范.md 新增强制操作日志约定 + regression_test.go 4 测试锁定公共 API ✅ **PHASE 34 CLOSED (10/10)** | 34 |
 | 2026-06-16 | Phase 34 Gap-closure 完成 (34-gap) - 修复 34-VERIFICATION 发现的 25 个遗漏写端点 (6 handler 文件) + e2e 差异扫描加固 (阈值 250→290 + handler-vs-operlog 全集校验) + user_unlock 合规审计 ✅ | 34 |
 | 2026-06-22 | Phase 37 Plan 01 完成 (批 0 公共层收敛) - deptUtils 新增 toFullPathTree/toShortNameDataNode 语义区分转换函数 + DepartmentTreeSelect 删本地 Department 接口与 convertDeptTreeData (改引用 SimpleDept + toFullPathTree, 保持受控) + DeptTree 删内部 post fetch/transformToTreeData (改消费 useDeptTree, 搜索/展开逻辑保留); 3 task commit a859975/a52bc36/79cc349; type-check + build 通过; D-LOCKED 决策全部尊重 | 37 |
+| 2026-06-22 | Phase 37 Plan 02 完成 (批 1 system 模块迁移 user+notice) - useUserData 去 fetch (post /system/departments/tree) 改消费 useDeptTree + 删本地 Department 接口 (改 SimpleDept) + utils.tsx 删 convertDeptTreeData (实测短名, 归 toShortNameDataNode, 保留 renderDeptTreeOptions Select 专用渲染) + index.tsx 清理 loadDepartments 调用链与死 import + useTargetSelector 删 GET fetch + convertTree 改 useDeptTree+useMemo+toShortNameDataNode + Target 接口保留 (roles/users 子树依赖); 2 task commit 76973d6/86b3231; type-check + build 通过; role/dept/AD 排除边界零触碰 | 37 |
 
 ## Quick Tasks Completed
 
@@ -336,10 +337,12 @@ Run `/gsd:new-milestone` to formally start v1.16.
 
 ## Session Continuity
 
-Last session: 2026-06-22T09:42:16.393Z
-Stopped at: Plan 37-01 完成 (批 0 公共层收敛 ✅: deptUtils 2 函数 + DepartmentTreeSelect 去本地类型/转换 + DeptTree 去 post fetch; 3 task 单独 commit a859975/a52bc36/79cc349; npm type-check + build 通过)
-Resume file: Completed 37-01-PLAN.md
+Last session: 2026-06-22T09:58:00.000Z
+Stopped at: Plan 37-02 完成 (批 1 system 模块迁移 user+notice ✅: useUserData 去 fetch 改 useDeptTree + utils.tsx 删 convertDeptTreeData(保留 renderDeptTreeOptions) + useTargetSelector 删 GET fetch + convertTree 改 useDeptTree+toShortNameDataNode; 2 task 单独 commit 76973d6/86b3231; npm type-check + build 通过; role/dept/AD 排除边界零触碰)
+Resume file: Completed 37-02-PLAN.md
 
-**Planned Phase:** 37 (dept-select-unify) — 6 plans — Plan 1/6 ✅ COMPLETE
-  - Plan 37-01 (批 0 公共层) ✅ — 硬前置已就位, 后续 37-02~37-06 可启动
-  - Plan 37-02~37-06 待执行 (system/operations/network/duty/workorder 模块迁移)
+**Planned Phase:** 37 (dept-select-unify) — 6 plans — Plan 2/6 ✅ COMPLETE
+
+  - Plan 37-01 (批 0 公共层) ✅ — 硬前置已就位
+  - Plan 37-02 (批 1 system user+notice) ✅ — system 模块收敛到 useDeptTree, 本地转换函数清零
+  - Plan 37-03~37-06 待执行 (operations/network/duty/workorder 模块迁移)
