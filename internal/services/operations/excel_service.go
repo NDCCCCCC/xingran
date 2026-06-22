@@ -859,18 +859,23 @@ func (s *ExcelService) populateNewUserPasswords(ctx context.Context, tx *gorm.DB
 		existingSet[u] = true
 	}
 
-	// AD 同步一致的默认密码；InitFlag 强制首登改密
+	// 所有新用户同一默认密码 "123456"，只需哈希一次。
+	// HashPassword 内部 pbkdf2SM3（iterations×SM3），单次约 10-50ms；
+	// 若每用户单独哈希，1000+ 新用户将耗时 30+ 秒，把 HTTP 请求卡死。
+	// 密码本就相同，共用一份 hash 不降低安全性（弱密码 + InitFlag 强制首登改密）。
 	const defaultImportPassword = "123456"
+	hashed, err := s.pwdManager.HashPassword(defaultImportPassword)
+	if err != nil {
+		return fmt.Errorf("生成默认密码失败: %w", err)
+	}
+
 	for _, r := range records {
 		u, _ := r["username"].(string)
 		if u == "" || existingSet[u] {
 			continue // 已存在用户不改密码
 		}
-		hashed, err := s.pwdManager.HashPassword(defaultImportPassword)
-		if err != nil {
-			return fmt.Errorf("生成默认密码失败: %w", err)
-		}
 		r["password"] = hashed
+		r["salt"] = "" // Salt 列 NOT NULL；HashPassword 的 salt 已编码进 hash 字符串，独立 Salt 列留空字符串占位（与 UserSyncService 一致）
 		r["init_flag"] = true
 		r["pwd_expire_days"] = 90
 	}

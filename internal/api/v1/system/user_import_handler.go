@@ -121,8 +121,12 @@ func (h *UserHandler) triggerADSyncAfterImport(usernames []string) {
 
 		ctx := context.Background()
 		var users []models.User
+		// 只查有 AD DN 的用户：导入新增的本地用户无 AD DN，SyncUserUpdateToAD 内部
+		// 也会跳过——提前过滤避免对大量本地新用户做无意义的 LDAP 绑定尝试（每次
+		// 都会因凭据问题失败并重试3次，放大 AD 账号被锁风险）。
 		if err := h.core.GetDB().WithContext(ctx).
 			Where("username IN ?", usernames).
+			Where("ad_dn IS NOT NULL AND ad_dn <> ''").
 			Find(&users).Error; err != nil {
 			applogger.Errorf("[AD-SYNC] 查询导入用户失败: %v", err)
 			return

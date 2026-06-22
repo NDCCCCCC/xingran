@@ -264,9 +264,17 @@ func (b *BatchUpsert) buildUpdateData(record, existing map[string]interface{}, c
 		if conflictSet[col] {
 			continue
 		}
-		if val := getValidValue(record, col); val != nil {
-			updateData[col] = val
+		val := getValidValue(record, col)
+		if val == nil {
+			continue
 		}
+		// 只收集值发生变化的字段：与已存在记录对比，值相同则跳过。
+		// 避免对大量数据一致的行做无意义 UPDATE（如 AD 同步用户与 Excel 数据一致时），
+		// 大幅减少 executeUpdate 的逐条 UPDATE 数量。
+		if existingVal, ok := existing[col]; ok && fmt.Sprintf("%v", val) == fmt.Sprintf("%v", existingVal) {
+			continue
+		}
+		updateData[col] = val
 	}
 
 	// 添加更新时间
