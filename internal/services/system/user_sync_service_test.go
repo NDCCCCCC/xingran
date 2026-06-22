@@ -33,7 +33,7 @@ func TestUserSyncService_SyncUserFromAD_FirstTime(t *testing.T) {
 		Phone:       "1234567890",
 	}
 
-	_, err := service.SyncUserFromAD(context.Background(), adUser, "default-role-id")
+	_, _, err := service.SyncUserFromAD(context.Background(), adUser, "default-role-id")
 
 	// 验证结果
 	assert.NoError(t, err)
@@ -77,7 +77,7 @@ func TestUserSyncService_SyncUserFromAD_UpdateExisting(t *testing.T) {
 		Phone:       "9876543210",
 	}
 
-	_, err := service.SyncUserFromAD(context.Background(), adUser, "default-role-id")
+	_, _, err := service.SyncUserFromAD(context.Background(), adUser, "default-role-id")
 
 	// 验证结果
 	assert.NoError(t, err)
@@ -112,7 +112,7 @@ func TestUserSyncService_SyncUserFromAD_TransactionRollback(t *testing.T) {
 		Phone:       "1111111111",
 	}
 
-	_, err := service.SyncUserFromAD(context.Background(), adUser, "invalid-role-id")
+	_, _, err := service.SyncUserFromAD(context.Background(), adUser, "invalid-role-id")
 
 	// 验证事务已回滚
 	assert.Error(t, err)
@@ -148,7 +148,7 @@ func TestUserSyncService_SyncUserFromAD_RoleAssignment(t *testing.T) {
 		Phone:       "5555555555",
 	}
 
-	_, err := service.SyncUserFromAD(context.Background(), adUser, role.ID)
+	_, _, err := service.SyncUserFromAD(context.Background(), adUser, role.ID)
 
 	// 验证结果
 	assert.NoError(t, err)
@@ -191,7 +191,7 @@ func TestUserSyncService_SyncUserFromAD_DepartmentAssignment(t *testing.T) {
 	// TODO: 配置默认部门ID到sys_config表
 	// 或者通过service方法设置
 
-	_, err := service.SyncUserFromAD(context.Background(), adUser, "")
+	_, _, err := service.SyncUserFromAD(context.Background(), adUser, "")
 
 	// 验证结果
 	assert.NoError(t, err)
@@ -288,7 +288,7 @@ func TestUserSyncService_SyncUserFromAD_TableDrivenTests(t *testing.T) {
 			}
 
 			// 执行同步
-			_, err := service.SyncUserFromAD(context.Background(), tt.adUser, tt.roleID)
+			_, _, err := service.SyncUserFromAD(context.Background(), tt.adUser, tt.roleID)
 
 			// 验证结果
 			if tt.verifyFunc != nil {
