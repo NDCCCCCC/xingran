@@ -38,7 +38,6 @@ import {
   type ADServiceAccountStats
 } from '@/lib/adDomainApi';
 import { formatDateTime } from '@/utils/datetime';
-import { encryptPasswordWithSM4, fetchSM4KeyForPassword } from '@/utils/sm4';
 
 // 状态映射
 const STATUS_MAP: Record<number, { color: string; text: string }> = {
@@ -138,24 +137,17 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
   };
 
   // 提交（创建/更新）
+  // 后端用全局 SM4 cipher 加密明文密码（HTTPS 保护传输层）
+  // 服务端存为 password_ciphertext（命中 operlog password 关键词，自动脱敏）
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      let passwordCiphertext = '';
-      if (values.password) {
-        try {
-          const keyHex = await fetchSM4KeyForPassword();
-          passwordCiphertext = await encryptPasswordWithSM4(values.password, keyHex);
-        } catch (e) {
-          message.error('获取 SM4 密钥失败');
-          return;
-        }
-      }
 
       if (editing) {
+        // 更新：只在填了新密码时才传
         const updateData: any = { id: editing.id, username: values.username, remark: values.remark };
-        if (passwordCiphertext) {
-          updateData.passwordCiphertext = passwordCiphertext;
+        if (values.password) {
+          updateData.password = values.password; // 明文（HTTPS 保护 + 后端 SM4 加密）
         }
         const res = await updateADServiceAccount(updateData);
         if (res.code === 0) {
@@ -167,14 +159,14 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
           message.error(res.message || '更新失败');
         }
       } else {
-        if (!passwordCiphertext) {
+        if (!values.password) {
           message.error('请输入密码');
           return;
         }
         const res = await createADServiceAccount({
           configId,
           username: values.username,
-          passwordCiphertext,
+          password: values.password,
           remark: values.remark,
         });
         if (res.code === 0) {

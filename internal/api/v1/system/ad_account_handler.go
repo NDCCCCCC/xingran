@@ -37,18 +37,18 @@ func NewADAccountHandler(pool addomainServices.AccountPool, core *core.Core) *AD
 
 // adAccountCreateReq 新增请求
 type adAccountCreateReq struct {
-	ConfigID            string `json:"configId" binding:"required"`
-	Username            string `json:"username" binding:"required"`
-	PasswordCiphertext  string `json:"passwordCiphertext" binding:"required"` // 前端 SM4 加密后的密文
-	Remark              string `json:"remark"`
+	ConfigID string `json:"configId" binding:"required"`
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"` // 明文密码（服务端用 SM4 加密）
+	Remark   string `json:"remark"`
 }
 
 // adAccountUpdateReq 更新请求（password 可选）
 type adAccountUpdateReq struct {
-	ID                  string `json:"id" binding:"required"`
-	Username            string `json:"username"`
-	PasswordCiphertext  string `json:"passwordCiphertext"` // 空字符串 = 不更新
-	Remark              string `json:"remark"`
+	ID       string `json:"id" binding:"required"`
+	Username string `json:"username"`
+	Password string `json:"password"` // 空字符串 = 不更新；非空 = 明文密码（服务端 SM4 加密）
+	Remark   string `json:"remark"`
 }
 
 // adAccountIDReq 通用 ID 请求（用于 delete/enable/disable/unlock）
@@ -99,10 +99,19 @@ func (h *ADAccountHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// 服务端用 core 全局 SM4 cipher 加密密码
+	// 复用 addomain 包内部的 SM4 cipher（与 sys_ad_config.admin_password 同密钥）
+	encryptedPwd, err := h.core.SM4Cipher.Encrypt(req.Password)
+	if err != nil {
+		applogger.Errorf("[ADAccount] SM4 加密失败: %v", err)
+		response.Error(c, 500, "密码加密失败")
+		return
+	}
+
 	account := &models.ADServiceAccount{
 		ConfigID:           req.ConfigID,
 		Username:           req.Username,
-		PasswordCiphertext: req.PasswordCiphertext,
+		PasswordCiphertext: encryptedPwd,
 		Status:             addomainServices.AccountStatusAvailable,
 		Remark:             req.Remark,
 	}
@@ -112,7 +121,7 @@ func (h *ADAccountHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// operlog 记录（password_ciphertext 字段命中 password 关键词，自动脱敏）
+	// operlog 记录（password_ciphertext 字段命中 password 关键词，自动脱敏为 ******）
 	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "AD域控配置", operlog.OperTypeCreate)
 	response.Success(c, gin.H{"id": account.ID})
 }
@@ -134,7 +143,16 @@ func (h *ADAccountHandler) Update(c *gin.Context) {
 	}
 
 	if req.Username != "" { existing.Username = req.Username }
-	if req.PasswordCiphertext != "" { existing.PasswordCiphertext = req.PasswordCiphertext }
+	if req.Password != "" {
+		// 服务端 SM4 加密（复用 core.SM4Cipher）
+		encryptedPwd, err := h.core.SM4Cipher.Encrypt(req.Password)
+		if err != nil {
+			applogger.Errorf("[ADAccount] SM4 加密失败: %v", err)
+			response.Error(c, 500, "密码加密失败")
+			return
+		}
+		existing.PasswordCiphertext = encryptedPwd
+	}
 	// P2-M3 修复：Remark 用指针区分"未传" vs "传空"，支持清空
 	// （前端传 null = 清空；省略字段 = 不更新；非空字符串 = 更新）
 	// 当前简化版：仍用 "" 跳过；后续如需支持清空，改用 *string

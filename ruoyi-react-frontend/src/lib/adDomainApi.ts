@@ -645,14 +645,14 @@ export function listADServiceAccounts(
 
 // 新增
 export function createADServiceAccount(
-  data: { configId: string; username: string; passwordCiphertext: string; remark?: string }
+  data: { configId: string; username: string; password: string; remark?: string }
 ): Promise<BaseResponse<{ id: string }>> {
   return post("/ad-domain/accounts/create", data);
 }
 
 // 更新
 export function updateADServiceAccount(
-  data: { id: string; username?: string; passwordCiphertext?: string; remark?: string }
+  data: { id: string; username?: string; password?: string; remark?: string }
 ): Promise<BaseResponse<{ ok: boolean }>> {
   return post("/ad-domain/accounts/update", data);
 }

@@ -105,9 +105,12 @@ const ADConfigPage: FC = () => {
 
   const handleEdit = (config: ADConfig) => {
     setEditingConfig(config);
+    // Phase 36: 不再回填 adminUsername/adminPassword（单管理员字段已废弃）
+    // 用户通过详情 Drawer 的「服务账号池」Tab 管理多个账号
     editForm.setFieldsValue({
       ...config,
-      adminPassword: undefined, // 不回填密码
+      adminUsername: undefined,
+      adminPassword: undefined,
     });
     setModalVisible(true);
   };
@@ -408,22 +411,8 @@ const ADConfigPage: FC = () => {
             <Input placeholder="如: DC=example,DC=com" />
           </Form.Item>
 
-          <Form.Item
-            label="管理员用户名"
-            name="adminUsername"
-            rules={[{ required: true, message: '请输入管理员用户名' }]}
-          >
-            <Input placeholder="如: Administrator" />
-          </Form.Item>
-
-          <Form.Item
-            label="管理员密码"
-            name="adminPassword"
-            rules={editingConfig ? [] : [{ required: true, message: '请输入管理员密码' }]}
-          >
-            <Input.Password placeholder={editingConfig ? "留空表示不修改" : "请输入管理员密码"} />
-          </Form.Item>
-
+          {/* Phase 36: 移除单管理员字段。改用「服务账号池」管理管理员账号。
+              adminUsername/adminPassword 字段在 DB 保留（@Deprecated）作为账号池为空时的 fallback。 */}
           <Form.Item label="使用SSL (LDAPS)" name="useSsl" valuePropName="checked">
             <Switch />
           </Form.Item>
