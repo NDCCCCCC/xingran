@@ -73,6 +73,27 @@ var ExcelConfigs = map[string]ExcelConfig{
 			{Field: "remark", Header: "备注", MaxLength: 500, DBField: "remark"},
 		},
 	},
+	"user": {
+		SheetName:     "用户列表",
+		TableName:     "sys_user",
+		EntityName:    "用户",
+		HasHeader:     true,
+		StartRow:      2,
+		CachePatterns: []string{"user:*", "users:*"},
+		UniqueKeys:    []string{"username"}, // 按用户名判断重复
+		PartialUpdate: true,                 // 启用部分更新（只更新有值的字段）
+		Columns: []ExcelColumn{
+			{Field: "username", Header: "用户名", Required: true, Unique: true, MaxLength: 64, UpsertKey: true},
+			{Field: "nickname", Header: "昵称", MaxLength: 64},
+			{Field: "employeeNo", Header: "工号", MaxLength: 64, DBField: "employee_no"},
+			{Field: "email", Header: "邮箱", MaxLength: 128},
+			{Field: "phone", Header: "手机号", MaxLength: 32},
+			{Field: "deptName", Header: "所属部门", Reference: "sys_dept.dept_name", DBField: "dept_id"},
+			{Field: "gender", Header: "性别", Options: map[interface{}]string{int(0): "男", int(1): "女", int(2): "保密"}, Default: int(2)},
+			{Field: "status", Header: "状态", Options: map[interface{}]string{int(0): "启用", int(1): "禁用"}, Default: int(0)},
+			{Field: "remark", Header: "备注", MaxLength: 500},
+		},
+	},
 	"building": {
 		SheetName:     "楼宇列表",
 		TableName:     "ops_buildings",
