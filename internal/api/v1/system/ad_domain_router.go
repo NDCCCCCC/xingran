@@ -40,21 +40,39 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 		configs.POST("/:id/sync", handler.SyncData)
 	}
 
-	// Phase 36: 服务账号池（8 个 POST 端点，全部走 ops:ad:config:edit 权限）
+	// Phase 36: 服务账号池（8 个 POST 端点，按动作类型独立权限）
+	// 修复 REVIEWS.md opencode H4：避免共享 2 个权限导致越权
+	// 权限粒度:
+	//   list/stats → ops:ad:config:list
+	//   create/update/enable/disable/unlock → ops:ad:config:edit
+	//   delete → ops:ad:config:delete
 	accounts := r.Group("/accounts")
-	accounts.Use(middleware.RequirePermissions([]string{
-		"ops:ad:config:list",
-		"ops:ad:config:edit",
-	}, core))
 	{
-		accounts.POST("/list", accountHandler.List)
-		accounts.POST("/create", accountHandler.Create)
-		accounts.POST("/update", accountHandler.Update)
-		accounts.POST("/delete", accountHandler.Delete)
-		accounts.POST("/enable", accountHandler.Enable)
-		accounts.POST("/disable", accountHandler.Disable)
-		accounts.POST("/unlock", accountHandler.Unlock)
-		accounts.POST("/stats", accountHandler.Stats)
+		// 只读端点（list/stats）
+		readGroup := accounts.Group("")
+		readGroup.Use(middleware.RequirePermissions([]string{"ops:ad:config:list"}, core))
+		{
+			readGroup.POST("/list", accountHandler.List)
+			readGroup.POST("/stats", accountHandler.Stats)
+		}
+
+		// 写端点（create/update/enable/disable/unlock）
+		writeGroup := accounts.Group("")
+		writeGroup.Use(middleware.RequirePermissions([]string{"ops:ad:config:edit"}, core))
+		{
+			writeGroup.POST("/create", accountHandler.Create)
+			writeGroup.POST("/update", accountHandler.Update)
+			writeGroup.POST("/enable", accountHandler.Enable)
+			writeGroup.POST("/disable", accountHandler.Disable)
+			writeGroup.POST("/unlock", accountHandler.Unlock)
+		}
+
+		// 删除端点（独立权限，最敏感）
+		deleteGroup := accounts.Group("")
+		deleteGroup.Use(middleware.RequirePermissions([]string{"ops:ad:config:delete"}, core))
+		{
+			deleteGroup.POST("/delete", accountHandler.Delete)
+		}
 	}
 
 	// OU管理
