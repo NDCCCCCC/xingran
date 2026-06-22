@@ -1,9 +1,11 @@
 package system
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"mime/multipart"
+	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -185,6 +187,39 @@ const userExcelUploadSizeLimit int64 = 50 * 1024 * 1024
 // isValidExcelFile 验证文件扩展名为 .xlsx。
 func isValidExcelFile(filename string) bool {
 	return len(filename) >= 5 && filename[len(filename)-5:] == ".xlsx"
+}
+
+// DownloadImportTemplate 下载用户导入 Excel 模板。
+// 复用 ExcelService.GenerateTemplate("user")，模板字段与 excel_config.go 的
+// user 配置一致（用户名/昵称/工号/邮箱/手机号/所属部门/性别/状态/备注）。
+//
+// @Summary 下载用户导入模板
+// @Description 生成并下载用户批量导入用的 Excel 模板
+// @Tags 用户管理
+// @Produce application/octet-stream
+// @Success 200 {file} file
+// @Router /system/users/import/template [get]
+func (h *UserHandler) DownloadImportTemplate(c *gin.Context) {
+	excelService := h.buildExcelService()
+	file, err := excelService.GenerateTemplate("user")
+	if err != nil {
+		response.Error(c, response.ErrServerError, err.Error())
+		return
+	}
+	defer file.Close()
+
+	var buf bytes.Buffer
+	if _, err := file.WriteTo(&buf); err != nil {
+		response.Error(c, response.ErrServerError, "生成模板失败")
+		return
+	}
+
+	filename := fmt.Sprintf("user_template_%s.xlsx", time.Now().Format("20060102_150405"))
+	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	c.Header("Content-Disposition", "attachment; filename="+filename)
+	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buf.Bytes())
+
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "用户管理", operlog.OperTypeDownload)
 }
 
 // verifyExcelMagicBytes 读取文件前 4 字节，验证 OOXML/ZIP 魔数 (PK\x03\x04)。

@@ -35,6 +35,7 @@ import {
   LockOutlined,
   UnlockOutlined,
   KeyOutlined,
+  ImportOutlined,
 } from "@ant-design/icons";
 import type { User } from "@/types";
 import { post } from "@/lib/api";
@@ -45,6 +46,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { DepartmentTreeSelect } from "@/components/shared";
+import ExcelImport from "@/components/shared/ExcelImport";
 import { formatDateTime } from "@/utils/datetime";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import type { SortOrder } from "@/hooks/useServerSort";
@@ -264,6 +266,9 @@ const UserManagement: FC = () => {
     openResetPasswordModal,
     closeResetPasswordModal,
   } = useUserModals();
+
+  // 用户导入模态框
+  const [importModalVisible, setImportModalVisible] = useState(false);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -564,6 +569,9 @@ const UserManagement: FC = () => {
                 <Button type="primary" icon={<PlusOutlined />} onClick={handleAddUser}>
                   新增用户
                 </Button>
+                <Button icon={<ImportOutlined />} onClick={() => setImportModalVisible(true)}>
+                  导入用户
+                </Button>
               </Space>
             </div>
             {selectedRowKeys.length > 0 && (
@@ -603,6 +611,20 @@ const UserManagement: FC = () => {
               }}
             />
           </Card>
+
+          {/* 用户导入模态框：复用通用 ExcelImport 组件 */}
+          <ExcelImport
+            entityType="user"
+            entityName="用户"
+            importUrl="/api/v1/system/users/import"
+            templateUrl="/api/v1/system/users/import/template"
+            visible={importModalVisible}
+            onClose={() => setImportModalVisible(false)}
+            onImportSuccess={() => {
+              loadUsers();
+              loadStatistics();
+            }}
+          />
         </div>
       </Content>
 
