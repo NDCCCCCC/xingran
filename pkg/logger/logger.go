@@ -70,10 +70,13 @@ func Init(cfg *Config) error {
 	level := parseLogLevel(cfg.Level)
 	fileWriter = createFileWriter(cfg)
 
+	// 文件日志：JSON 格式（机器可读，方便日志聚合/分析）
 	fileLogger = createFileLogger(level, fileWriter)
 
 	if cfg.ConsoleOutput {
-		log = createConsoleLogger(level, fileWriter)
+		// 控制台日志：仅写 stdout（Text 格式，方便人类阅读）
+		// 修复 bug：之前用 MultiWriter 把 Text 格式同时写到文件，导致文件不是 JSON
+		log = createConsoleLogger(level)
 	} else {
 		log = fileLogger
 	}
@@ -119,9 +122,10 @@ func createFileLogger(level logrus.Level, writer io.Writer) *logrus.Logger {
 }
 
 // createConsoleLogger 创建控制台日志记录器
-func createConsoleLogger(level logrus.Level, fileWriter io.Writer) *logrus.Logger {
-	multiWriter := io.MultiWriter(os.Stdout, fileWriter)
-
+//
+// 仅写入 stdout（Text 格式，方便人类阅读）。
+// 文件日志由 fileLogger 独立管理（JSON 格式）。
+func createConsoleLogger(level logrus.Level) *logrus.Logger {
 	logger := logrus.New()
 	logger.SetLevel(level)
 	logger.SetFormatter(&logrus.TextFormatter{
@@ -129,7 +133,7 @@ func createConsoleLogger(level logrus.Level, fileWriter io.Writer) *logrus.Logge
 		FullTimestamp:   true,
 		ForceColors:     true,
 	})
-	logger.SetOutput(multiWriter)
+	logger.SetOutput(os.Stdout)
 
 	return logger
 }
