@@ -1,17 +1,16 @@
 ---
-gsd_state_version: 1.1
+gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: 工位设备关联 (Phase 28)
 status: idle
-stopped_at: Phase 34 review closure (commit 5c2fc95) — awaiting v1.16 scope
-last_updated: 2026-06-16T03:30:00.000Z
+stopped_at: Plan 34-10 完成 (Phase 34 操作日志全模块集成 ✅ CLOSED — 10/10 plans, CLAUDE.md + 开发规范.md 文档约定 + regression_test.go 公共 API 锁定)
+last_updated: "2026-06-22T09:19:39.544Z"
 progress:
-  total_phases: 24
-  completed_phases: 21
-  total_plans: 154
-  completed_plans: 133
-  percent: 86
-  audit_open_items: 103
+  total_phases: 15
+  completed_phases: 9
+  total_plans: 76
+  completed_plans: 60
+  percent: 60
 ---
 
 # Project State
@@ -20,7 +19,9 @@ progress:
 **Created**: 2026-04-16
 **Status**: 🚧 IDLE — Phase 34 review closure complete, awaiting v1.16 scope
 **Last activity**: 2026-06-22 - Quick task 260622-lv9 用户 Excel 导入功能 + 性别默认值改保密
+
                 + 导入后触发 AD 域同步 (commits 5d872a5, cc2a77d, 7d40b32, 4758d36)
+
 **See**: `.planning/milestones/20260616-state-sync-report.md` for the
         reconciliation report that motivated this state update.
 
@@ -33,6 +34,7 @@ progress:
 
 **Shipped since last state file update (v1.15 was the milestone label
 in PROJECT.md before this sync)**:
+
 - Phase 30 (frontend perf) — 5/5 plans, 2026-06-13
 - Phase 31 (P0 close: connection_pool lifecycle + ConfigKey API) — 5/5 plans
 - Phase 32 (v1.14 P1/P2 重构) — 7 waves, 20 commits
@@ -49,6 +51,7 @@ candidate for v1.16.
 **Next step**: `git log` shows main is at `5c2fc95`, build is clean,
 operlog test suite green. v1.16 scope is undecided. Recommended
 candidates (from state-sync report):
+
 1. Triage the 103 audit items
 2. Decide on VDI 22C/22D vs new domain
 3. Decide on Phase 34 operlog follow-up (CI gate, property test)

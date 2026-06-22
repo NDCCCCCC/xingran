@@ -495,6 +495,7 @@ Plans:
 **Plans:** 5 plans, all complete
 
 Plans:
+
 - [x] 31-01-PLAN.md — F-14 GetConnection 内部 refCount +1 (commit cf41672)
 - [x] 31-02-PLAN.md — F-14 caller 适配 4 处 (commit 2f770bf)
 - [x] 31-03-PLAN.md — F-14 设计修订 ReleaseRef API + 6 个并发测试 (commit e464d72)
@@ -512,6 +513,7 @@ Plans:
 **Requirements**:
 
 #### 🔒 P1 安全加固（7 项）
+
 - [P1-S1] `pkg/crypto/sm2_jwt.go:222-266` — 手写 JWT 解析校验 `alg` 头，杜绝算法混淆攻击
 - [P1-S2] `pkg/crypto/request_encryption.go:88-103` — timestamp 窗口从 ±300s 收紧到 ±60s（或可配置）
 - [P1-S3] `pkg/crypto/nonce_storage.go` — 启用 `cleanupExpiredNonces` 定时清理，防止内存无限增长
@@ -521,6 +523,7 @@ Plans:
 - [P1-S7] `internal/services/operations/excel_handler.go:67-72` — Excel 文件 magic number 校验，不只校验后缀
 
 #### ⚡ P1 并发与一致性（6 项）
+
 - [P1-C1] `internal/services/addomain/sync.go:35` — AD 同步系列方法加 `singleflight` 互斥，防止 scheduler+手动触发并发
 - [P1-C2] `internal/services/addomain/group_sync_service.go:336-376` — `handleDeletedGroups` 加阈值保护（如单次删除 ≥30% 视为 LDAP 故障，拒删）
 - [P1-C3] `internal/services/addomain/dept_ou_mapper.go:60-100` — `UpsertMapping` 收敛为单事务，避免 delete/insert 中间崩溃
@@ -529,10 +532,12 @@ Plans:
 - [P1-C6] `internal/services/operations/excel_service.go:905-906` — `validateUniqueness` 改批量 `IN` 查询，消除 N+1
 
 #### 🐛 P1 业务逻辑（2 项）
+
 - [P1-B1] `internal/services/system/config_service.go:91-99` — `sys.request.encryption.enabled` 修改后立即失效缓存，无需重启
 - [P1-B2] `internal/services/system/user_service.go:404` — 移除 `List` 中 `buildDepartmentPaths` 的重复调用
 
 #### 🛠️ P2 架构债（精选 8 类）
+
 - [P2-A1] `internal/core/core.go` — 拆分 god struct（25+ 字段）为 `CoreServices` / `CoreInfra` 两个组合根
 - [P2-A2] 统一缓存键体系 — `cache_keys.go` 与 `data_cache_service.go` 两套定义合并到 `cache_keys.go`
 - [P2-A3] 消除 `user_service.go` 与 `user_service_optimized.go` 并存 — 删除旧版，router 切到 optimized
@@ -565,6 +570,7 @@ Plans:
 **Source**: `.planning/reviews/20260612-backend-code-review.md`
 
 Plans:
+
 - [ ] TBD (运行 `/gsd-plan-phase 32` 生成详细 plan 文件)
 
 ### Phase 33: 前端 Vercel React Best Practices 修复 - 修复审查报告 20260613 中的 26 个性能/质量缺陷
@@ -575,6 +581,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 33 to break down)
 
 ### Phase 34: 操作日志全模块集成 ✅
@@ -582,6 +589,7 @@ Plans:
 **Goal**: 为 RuoYi-Next 后端所有 309 个业务写操作端点集成操作日志记录，覆盖率从 2.9%（9/309）提升到 100%（309/309）。基于 AD 域控参考实现（`recordOperLog` 模式），按 7 个 Wave 分批实施，确保敏感字段（password/token/key）自动脱敏、异步写入不影响响应。
 
 **Background**: 2026-06-15 审计发现：
+
 - ✅ 基础设施完整（sys_oper_log 表 + OperLog 模型 + OperLogService + 查询 Handler/Router）
 - ⚠️ `OperLogMiddleware` 已挂载到 9 个业务路由组但实际从未生效（因 handler 未调用 `SetOperLogInfo`）
 - ✅ AD 域控的 `ad_domain_handler.go` 通过 `recordOperLog` 实现 9 处有效记录（唯一参考实现）
@@ -643,6 +651,7 @@ Plans:
 - [x] 34-gap (Gap-closure) — 修复 34-VERIFICATION 发现的 25 个遗漏写端点 (6 handler 文件: cache_enhanced 3 / network_export 9 / default_theme 2 / room_photo 6 / captcha_background 4 / user_unlock 1 合规敏感) + e2e 差异扫描加固 (阈值 250→290 + handler-file-vs-operlog 全集校验含 recordOperLog shim + READONLY_ALLOWLIST + 3 新抽样) + 审计笔记 §10.7 修正 100% 表述 ✅ 2026-06-16 (commits 7338441, 977b129, f47eda4, 1d8c288, 2472a2e, f750569, a6aa193)
 
 **Success Criteria**:
+
 - sys_oper_log 表有效记录数对应 309 个端点，**覆盖率 ≥ 95%**（允许少量内部管理端点豁免）
 - 抽样 30 个端点验证 title 与业务语义匹配，businessType 与操作类型匹配
 - 密码/密钥类字段全部脱敏为 `******`
@@ -650,6 +659,7 @@ Plans:
 - 每个 Wave 独立 commit 便于回滚
 
 **Phase Highlights**:
+
 - 📊 全模块操作日志覆盖从 2.9% 提升到 95%+
 - 🔒 敏感字段自动脱敏
 - ⚡ 异步写入，不影响业务性能
@@ -671,6 +681,7 @@ Plans:
 **Todo:** `.planning/todos/pending/operlog-exclude-paths.md`
 
 **Requirements** (full text: `.planning/REQUIREMENTS.md`):
+
 - OPERLOG-01: `operlog.exclude_paths` 配置项 + `Configure(paths)` + `IsExcludedPath(path)` 实现 + `Record`/`RecordWithBody` 首行判定 + 早退
 - OPERLOG-02: `IsExcludedPath` 行为对齐 `pkg/middleware/request_decryption.go:294-315` `isExcludedPath`（`filepath.Match`，不会跨 `/`）
 - OPERLOG-03: regression_test.go 锁定的公共 API 不变（Record 6+variadic / RecordWithBody 5 / 25 OperType / 34 关键词）
@@ -679,12 +690,14 @@ Plans:
 - OPERLOG-06: 5 分钟心跳端点运行后 SQL 计数为 0
 
 **Architecture Decision** (locked):
+
 - **位置**：handler 层判定不变（仍显式调用 `Record`），但 `Record` 函数体内部根据配置跳过；与 Phase 34 哲学一致（"在 helper 层做集中判定"扩展，不替代"handler 显式调用"语义）
 - **匹配语义**：复用 `filepath.Match` + `/*` 后缀通配，与 `security.request_encryption.exclude_paths` 完全一致
 - **配置加载**：`core.go` 配置加载后调一次 `operlog.Configure(core.Config.OperLog.ExcludePaths)`；启动期单次调用，无并发问题
 - **默认排除范围**：仅 heartbeat；progress 保留（任务进度审计轨迹）；register 保留（生命周期事件）
 
 **Deferred items**:
+
 - rpaApi.ts 路径错配（前端的 `/${id}/progress` 与后端 `/progress` 不匹配）→ 独立 todo
 - `/rpa/workers/autoscale/config` (POST) 无持久化（handler 内 `// TODO`）→ 独立 todo
 - operlog 运行时热改 `Refresh()` API → 待运维需求出现
@@ -692,9 +705,11 @@ Plans:
 **Plans:** 1 plan (1 wave)
 
 Plans:
+
 - [ ] 35-01-PLAN.md — 单 Wave 计划（configs + operlog 包 + core bootstrap + 2 测试, 5 tasks）
 
 **Success Criteria**:
+
 - heartbeat 端点在 5 分钟连续运行下，sys_oper_log 中 0 条新增审计行（OPERLOG-06）
 - register / scale-up / scale-down / autoscale-config 等"真业务写"端点仍然记录
 - regression_test.go 全部用例通过（含 25 OperType 常量、6 参数 Record、5 参数 RecordWithBody、34 敏感关键词）
@@ -702,13 +717,90 @@ Plans:
 - 行为可观察：配置 `operlog.exclude_paths: ["/api/v1/rpa/workers/*/heartbeat"]` 后，心跳端点不写 sys_oper_log
 
 **Phase Highlights**:
+
 - 🎯 与现有 `security.request_encryption.exclude_paths` 风格完全一致
 - 🔒 不破坏 Phase 34 regression_test.go 锁定的公共 API
 - ⚙️ 配置驱动，集中可观测
 - 🚀 单 Wave 即可完成（改动面 3 文件 + 1 bootstrap + 2 测试）
 
----
+### Phase 37: 前端部门选择组件统一收敛
 
+**Goal**: 将前端碎片化的"部门列表/选择器/树"实现收敛到统一的分层架构——数据层单一数据源（`useDeptTree`）、组件层职责正交不合并、类型层去重、转换函数归一。在不改变 UI 形态的前提下，消除约 6 处重复 fetch、4 份重复树转换函数、3 份重复类型定义。
+
+**Background**: 调查发现前端"部门列表"实现严重碎片化：
+
+- 约 9 处页面绕过公共组件自行 `post('/system/departments/tree')` + 各写树转换逻辑
+- `SimpleDept` 类型在 `dutyApi.ts` 与 `workorderApi.ts` 重复定义 2 次；`DepartmentTreeSelect.tsx` 内部第 3 份 `Department`
+- 4 份重复转换函数（`convertDeptTreeData` / `buildDeptTreeData` / `processTreeData` / `convertTree`）
+- AD 域控的 OU 树（`getADOUTree`/`ADOUNode`，字段 `dn`/`name`）常被误当作系统部门树
+
+数据层已有标准件但未推广：`useDeptTree`（React Query 单缓存 key `queryKeys.dept.tree()`，5min stale）+ `useInvalidateDept`，但连公共组件 `DeptTree` 自己都没用它（内部 `post` 绕过缓存）。类型层已部分收敛：`deptUtils.ts` 的 `DeptLikeNode` 兼容 `id`/`value`/`key` 三种节点形状。
+
+**Depends on**: 无（独立前端重构，不依赖 Phase 36 AD 账号池）
+**Status**: 📋 Planned (6 plans, 3 waves)
+**Plans**: 6 plans across 3 waves
+
+**Requirements**:
+
+- **数据层统一**: 所有系统部门树消费点收敛到 `useDeptTree` hook；写操作后调 `useInvalidateDept` 失效缓存
+- **组件层**: 保留 `DeptTree`(筛选面板) / `DepartmentTreeSelect`(表单下拉) / `DeptSidebar`(运维侧边栏) 三个职责正交组件，**不合并**；但 `DeptTree` 改为消费 `useDeptTree`，不再内部 `post` fetch
+- **类型层去重**: `SimpleDept`(dutyApi/workorderApi 重复) + `DepartmentTreeSelect.Department` 收敛为单一 canonical 类型；保留 `DeptLikeNode`(deptUtils) 作跨形状兼容层
+- **转换函数归一**: 4 份重复转换逻辑收敛到 `deptUtils`
+- **分阶段迁移**: 批 0 = 公共层（hook/类型/组件去 fetch/转换归一）；批 1..N 按 system→operations→network→duty→workorder 逐模块迁移，每模块独立提交可回滚
+
+**明确排除（不纳入收敛）**:
+
+| 排除项 | 理由 |
+|--------|------|
+| AD 域控整模块 `ad-domain/*` | OU 树来自 AD/LDAP（`getADOUTree`/`ADOUNode`，字段 `dn`/`name`），与 `sys_dept` 是两套独立数据源 |
+| `system/role` 的 `/system/departments/tree-select` | 不同端点，返回带 `key` 节点用于数据范围权限勾选，语义独立 |
+| `system/dept` 部门管理页本体 | 部门树的管理者（CRUD）而非消费者；仅数据获取可选用 hook |
+
+**Architecture Decision** (locked, from brainstorming):
+
+- **收敛深度**: 分层彻底收敛（数据/组件/类型/工具四层），UI 形态不变
+- **迁移节奏**: 分阶段、按模块（非 big bang）
+- **组件不合并**: `DeptTree`(面板) 与 `DepartmentTreeSelect`(受控下拉) 职责正交，强行合并是 over-engineering
+
+**Success Criteria**:
+
+- `grep -r "/system/departments/tree" src/` 命中点（排除 role tree-select、dept 管理页、AD 模块后）全部经 `useDeptTree`
+- `SimpleDept` 全项目唯一定义（`workorderApi` 改为从 canonical 处 re-export）
+- `DepartmentTreeSelect` 内部 `Department` 接口删除，改引用 canonical 类型
+- 4 份转换函数收敛到 `deptUtils` 单一实现
+- `DeptTree` 不再内部 fetch，消费 `useDeptTree`
+- 各模块迁移后 UI 行为不变（部门树展示/筛选/选择与迁移前一致）
+- `npm run build` + `npm run type-check` 通过
+
+**Phase Highlights**:
+
+- 📊 约 6 处重复 fetch → 1 个 hook（共享 React Query 缓存）
+- 🧩 4 份转换函数 → 1 份（`deptUtils`）
+- 🏷️ 3 份重复类型 → 1 个 canonical `Dept`
+- 🚫 明确排除 AD 域控（独立数据源），避免数据源级别错误
+- 🔄 按模块分阶段，每块独立可回滚
+
+Plans:
+**Wave 1**
+
+- [ ] 37-01-PLAN.md — 批 0 公共层:deptUtils 新增转换函数 + DepartmentTreeSelect 删本地类型/转换 + DeptTree 去 fetch 消费 useDeptTree(Wave 1,硬前置)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 37-02-PLAN.md — 批 1 system:user + notice 迁移到 useDeptTree(Wave 2)
+- [ ] 37-03-PLAN.md — 批 2 operations:workstations 高风险双向语义迁移 + buildings 合并双 hook(Wave 2)
+- [ ] 37-04-PLAN.md — 批 3 network:devices 迁移(Wave 2)
+- [ ] 37-05-PLAN.md — 批 4 duty+workorder + workorderApi 类型去重(Wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 37-06-PLAN.md — 批 5 收尾:TargetSelector + 全量 grep 验证 + build/type-check(Wave 3)
+
+**Cross-cutting constraints:**
+
+- npm run type-check 退出码 0
+
+---
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -745,7 +837,8 @@ Plans:
 | 28. 工位设备关联子表格 | v1.15 | 4/6 | Gap Closure | 2026-06-10 |
 | 34. 操作日志全模块集成 | - | 11/10 | Complete    | 2026-06-15 |
 | 35. operlog.exclude_paths 配置驱动白名单 | v1.16 | 0/1 | Planned | - |
+| 37. 前端部门选择组件统一收敛 | v1.16 | 0/0 | Planned | - |
 
-**Total**: 123 plans completed, 8 gap closure plans, 24 plans planned (Phases 22C + 22D + 25 + 35), 155 total plans
+**Total**: 123 plans completed, 8 gap closure plans, 24 plans planned (Phases 22C + 22D + 25 + 35 + 37), 155 total plans
 
 **Completion Rate**: 84.7% (122/144) + 8 gap closure plans shipped
