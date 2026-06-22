@@ -42,15 +42,15 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 
 	// Phase 36: 服务账号池（8 个 POST 端点，按动作类型独立权限）
 	// 修复 REVIEWS.md opencode H4：避免共享 2 个权限导致越权
-	// 权限粒度:
-	//   list/stats → ops:ad:config:list
-	//   create/update/enable/disable/unlock → ops:ad:config:edit
-	//   delete → ops:ad:config:delete
+	// 权限粒度（与 menu seed migration 163 对齐）:
+	//   list/stats → ops:ad:config:account:list
+	//   create/update/enable/disable/unlock → ops:ad:config:account:edit
+	//   delete → ops:ad:config:account:delete
 	accounts := r.Group("/accounts")
 	{
 		// 只读端点（list/stats）
 		readGroup := accounts.Group("")
-		readGroup.Use(middleware.RequirePermissions([]string{"ops:ad:config:list"}, core))
+		readGroup.Use(middleware.RequirePermissions([]string{"ops:ad:config:account:list"}, core))
 		{
 			readGroup.POST("/list", accountHandler.List)
 			readGroup.POST("/stats", accountHandler.Stats)
@@ -58,7 +58,7 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 
 		// 写端点（create/update/enable/disable/unlock）
 		writeGroup := accounts.Group("")
-		writeGroup.Use(middleware.RequirePermissions([]string{"ops:ad:config:edit"}, core))
+		writeGroup.Use(middleware.RequirePermissions([]string{"ops:ad:config:account:edit"}, core))
 		{
 			writeGroup.POST("/create", accountHandler.Create)
 			writeGroup.POST("/update", accountHandler.Update)
@@ -69,7 +69,7 @@ func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
 
 		// 删除端点（独立权限，最敏感）
 		deleteGroup := accounts.Group("")
-		deleteGroup.Use(middleware.RequirePermissions([]string{"ops:ad:config:delete"}, core))
+		deleteGroup.Use(middleware.RequirePermissions([]string{"ops:ad:config:account:delete"}, core))
 		{
 			deleteGroup.POST("/delete", accountHandler.Delete)
 		}

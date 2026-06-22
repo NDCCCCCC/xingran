@@ -395,6 +395,10 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate162ADServiceAccounts(d.DB); err != nil {
 			applogger.Errorf("AD 服务账号池迁移失败: %v", err)
 		}
+		// Phase 36: AD 服务账号池菜单 + 权限 seed
+		if err := migrations.Migrate163ADAccountPoolMenu(d.DB); err != nil {
+			applogger.Errorf("AD 服务账号池菜单迁移失败: %v", err)
+		}
 		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
 		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
 			applogger.Errorf("MAC 过滤规则表迁移失败: %v", err)

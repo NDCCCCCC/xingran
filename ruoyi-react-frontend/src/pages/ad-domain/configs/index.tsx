@@ -18,7 +18,8 @@ import {
   DeleteOutlined,
   SyncOutlined,
   CheckCircleOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+  KeyOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -29,6 +30,7 @@ import {
   syncADData,
   type ADSyncResult
 } from '@/lib/adDomainApi';
+import { useNavigate } from 'react-router-dom';
 import ActionButtons from '@/components/shared/ActionButtons';
 import { formatDateTime } from '@/utils/datetime';
 import { useADConfigs } from '@/hooks/useADConfigs';
@@ -37,6 +39,7 @@ import type { ADConfig } from '@/lib/adDomainApi';
 import type { FC } from 'react';
 
 const ADConfigPage: FC = () => {
+  const navigate = useNavigate();
   const [editForm] = Form.useForm();
 
   // 使用共享的 AD 配置 Hook（fetchConfigs 接受排序参数，供服务端排序使用）
@@ -319,6 +322,9 @@ const ADConfigPage: FC = () => {
         <Space>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
             新增AD配置
+          </Button>
+          <Button icon={<KeyOutlined />} onClick={() => navigate('/ad-domain/accounts')}>
+            管理服务账号池
           </Button>
           <Button icon={<ReloadOutlined />} onClick={() => fetchConfigs()}>
             刷新
