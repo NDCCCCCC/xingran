@@ -1,11 +1,28 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { FC, Key, CSSProperties } from "react";
 import { Tree, Card, Spin, Input } from "antd";
 import type { DataNode, EventDataNode } from "antd/es/tree";
 import { ApartmentOutlined, SearchOutlined } from "@ant-design/icons";
-import { post } from "@/lib/api";
-import type { Department } from "@/types";
-import { filterExternalOrgDepts } from "@/utils/deptUtils";
+import { useDeptTree } from "@/hooks/useDeptTree";
+import type { SimpleDept } from "@/lib/dutyApi";
+import {
+  filterExternalOrgDepts,
+  toShortNameDataNode,
+  type DeptLikeNode,
+} from "@/utils/deptUtils";
+
+/**
+ * 后端部门树接口实际返回的节点形状。
+ *
+ * `SimpleDept` (canonical) 只声明 id/deptName/parentId/children, 但运行时数据
+ * 还含 isExternalOrg 等字段(见 `@/types/system.ts` 的 Department 接口)。
+ * 本组件 `externalOnly` 模式依赖 isExternalOrg, 故本地扩展一个带该字段的类型,
+ * 与 useDeptTree 的 SimpleDept 在运行时完全兼容(仅静态类型层面窄化)。
+ */
+interface RawDept extends SimpleDept {
+  isExternalOrg?: number;
+  children?: RawDept[];
+}
 
 interface DeptTreeProps {
   onSelect?: (selectedKeys: Key[], info: {
@@ -25,11 +42,43 @@ const DeptTree: FC<DeptTreeProps> = ({
   style,
   externalOnly = false,
 }) => {
-  const [treeData, setTreeData] = useState<DataNode[]>([]);
-  const [loading, setLoading] = useState(false);
+  // 数据层: 消费 canonical hook (Phase 37 收敛)。不再内部 post fetch。
+  const { data: rawDept = [], isLoading: loading } = useDeptTree();
+
+  // 把 SimpleDept[] 窄化为本地 RawDept[] (运行时同对象, 仅 TS 类型层面加 isExternalOrg 字段)。
+  const rawDeptTyped = rawDept as unknown as RawDept[];
+
+  // 转换为 antd DataNode 短名格式。
+  // externalOnly 模式: 只保留 isExternalOrg===1 的子树 (filterExternalOrgDepts)。
+  const treeData = useMemo<DataNode[]>(() => {
+    const filtered = externalOnly
+      ? filterExternalOrgDepts<RawDept & DeptLikeNode>(
+          rawDeptTyped as unknown as Array<RawDept & DeptLikeNode>,
+        )
+      : rawDeptTyped;
+    // toShortNameDataNode 输出 { title, key, value, children?, isLeaf? }, 兼容 DataNode。
+    return toShortNameDataNode(filtered) as unknown as DataNode[];
+  }, [rawDeptTyped, externalOnly]);
+
   const [searchValue, setSearchValue] = useState("");
   const [expandedKeys, setExpandedKeys] = useState<Key[]>([]);
   const [autoExpandParent, setAutoExpandParent] = useState(true);
+
+  // 首次自动展开守卫: 原 loadDeptTree 在数据到达后把 expandedKeys 初始化为
+  // parentKeys[0] (第一个父节点)。改为 useDeptTree 后, 用 ref 守卫确保**只在首次
+  // 数据到达时跑一次**, 避免每次 rawDept 引用变化都重置用户手动展开状态。
+  const didInitExpandRef = useRef(false);
+  useEffect(() => {
+    if (didInitExpandRef.current) return;
+    if (!treeData || treeData.length === 0) return;
+    const parentKeys = getParentKeys(treeData);
+    const firstParentKey = parentKeys.length > 0 ? [parentKeys[0]] : [];
+    if (firstParentKey.length > 0) {
+      setExpandedKeys(firstParentKey);
+      setAutoExpandParent(true);
+      didInitExpandRef.current = true;
+    }
+  }, [treeData]);
 
   const getParentKeys = (data: DataNode[]): Key[] => {
     const parentKeys: Key[] = [];
@@ -43,45 +92,6 @@ const DeptTree: FC<DeptTreeProps> = ({
     };
     traverse(data);
     return parentKeys;
-  };
-
-  const loadDeptTree = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await post<Department[]>("/system/departments/tree");
-      let deptData = result.data || [];
-
-      if (externalOnly) {
-        // 收敛到 src/utils/deptUtils 的共享实现(原 DepartmentTreeSelect 与
-        // useWorkstationData 也有重复版本,现统一到 deptUtils.filterExternalOrgDepts)。
-        deptData = filterExternalOrgDepts(deptData as Department[]);
-      }
-
-      const treeData = transformToTreeData(deptData);
-      setTreeData(treeData);
-
-      const parentKeys = getParentKeys(treeData);
-      const firstParentKey = parentKeys.length > 0 ? [parentKeys[0]] : [];
-      setExpandedKeys(firstParentKey);
-    } catch (error) {
-      console.error("加载部门树失败:", error);
-      setTreeData([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [externalOnly]);
-
-  const transformToTreeData = (data: Department[]): DataNode[] => {
-    if (!Array.isArray(data)) {
-      return [];
-    }
-
-    return data.map(item => ({
-      title: item.deptName,
-      key: item.id,
-      children: item.children && item.children.length > 0 ? transformToTreeData(item.children) : undefined,
-      isLeaf: !item.children || item.children.length === 0,
-    }));
   };
 
   const onSearch = (value: string) => {
@@ -135,25 +145,24 @@ const DeptTree: FC<DeptTreeProps> = ({
     }
   };
 
-  const filterTreeData = (data: DataNode[], searchValue: string): DataNode[] => {
-    if (!searchValue) {
-      return data;
-    }
+  const filterTreeData = useCallback(
+    (data: DataNode[], searchValue: string): DataNode[] => {
+      if (!searchValue) {
+        return data;
+      }
 
-    const lowerSearchValue = searchValue.toLowerCase();
-    return data.filter(node => {
-      const titleMatch = node.title?.toString().toLowerCase().includes(lowerSearchValue);
-      const childrenMatch = node.children ? filterTreeData(node.children, searchValue).length > 0 : false;
-      return titleMatch || childrenMatch;
-    }).map(node => ({
-      ...node,
-      children: node.children ? filterTreeData(node.children, searchValue) : undefined,
-    }));
-  };
-
-  useEffect(() => {
-    loadDeptTree();
-  }, [loadDeptTree]);
+      const lowerSearchValue = searchValue.toLowerCase();
+      return data.filter(node => {
+        const titleMatch = node.title?.toString().toLowerCase().includes(lowerSearchValue);
+        const childrenMatch = node.children ? filterTreeData(node.children, searchValue).length > 0 : false;
+        return titleMatch || childrenMatch;
+      }).map(node => ({
+        ...node,
+        children: node.children ? filterTreeData(node.children, searchValue) : undefined,
+      }));
+    },
+    [],
+  );
 
   const filteredTreeData = filterTreeData(treeData, searchValue);
 
