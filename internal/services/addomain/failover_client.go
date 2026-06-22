@@ -53,6 +53,7 @@ func (f *FailoverClient) ExecuteWithFailover(
 
 		client := NewLDAPClient(f.config, acct)
 		if err := client.Connect(); err != nil {
+			// P0-2 修复（H5 修正）：连接失败显式上报到 pool
 			f.pool.MarkFailure(ctx, acct.ID, "dial:"+err.Error())
 			lastErr = err
 			applogger.Warnf("[Failover] 账号 %s 连接失败，尝试下一个 [ID=%s, err=%v]",
@@ -64,9 +65,15 @@ func (f *FailoverClient) ExecuteWithFailover(
 		client.Close()
 
 		if err == nil {
+			// P0-2 修复（C2）：成功时显式上报 pool.MarkSuccess
+			// 重置 failure_count，否则 3 次非连续失败会误触熔断
+			if markErr := f.pool.MarkSuccess(ctx, acct.ID); markErr != nil {
+				applogger.Warnf("[Failover] MarkSuccess 失败 [ID=%s, err=%v]", acct.ID, markErr)
+			}
 			return nil
 		}
-		// 失败已在 client.Bind 内通过 pool 上报（同步）
+		// P0-2 修复（H5 修正）：operation 失败显式上报到 pool（之前注释说"已在 client.Bind 内上报"是错的）
+		f.pool.MarkFailure(ctx, acct.ID, "operation:"+err.Error())
 		lastErr = err
 		applogger.Warnf("[Failover] 账号 %s 操作失败，尝试下一个 [ID=%s, err=%v]",
 			acct.Username, acct.ID, err)
@@ -98,9 +105,14 @@ func (f *FailoverClient) PickFirstConnect(ctx context.Context) (*LDAPClient, *mo
 
 		client := NewLDAPClient(f.config, acct)
 		if err := client.Connect(); err != nil {
+			// P0-2: 显式上报失败
 			f.pool.MarkFailure(ctx, acct.ID, "dial:"+err.Error())
 			lastErr = err
 			continue
+		}
+		// P0-2: 连接成功立即上报 MarkSuccess（不等待后续操作）
+		if markErr := f.pool.MarkSuccess(ctx, acct.ID); markErr != nil {
+			applogger.Warnf("[Failover] MarkSuccess 失败 [ID=%s, err=%v]", acct.ID, markErr)
 		}
 		return client, acct, nil
 	}

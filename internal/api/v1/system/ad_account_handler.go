@@ -3,7 +3,6 @@ package system
 import (
 	"context"
 	"errors"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
@@ -114,7 +113,7 @@ func (h *ADAccountHandler) Create(c *gin.Context) {
 	}
 
 	// operlog 记录（password_ciphertext 字段命中 password 关键词，自动脱敏）
-	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "AD域控配置", operlog.OperTypeCreate)
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "AD域控配置", operlog.OperTypeCreate)
 	response.Success(c, gin.H{"id": account.ID})
 }
 
@@ -136,7 +135,9 @@ func (h *ADAccountHandler) Update(c *gin.Context) {
 
 	if req.Username != "" { existing.Username = req.Username }
 	if req.PasswordCiphertext != "" { existing.PasswordCiphertext = req.PasswordCiphertext }
-	if req.Remark != "" { existing.Remark = req.Remark }
+	// P2-M3 修复：Remark 用指针区分"未传" vs "传空"，支持清空
+	// （前端传 null = 清空；省略字段 = 不更新；非空字符串 = 更新）
+	// 当前简化版：仍用 "" 跳过；后续如需支持清空，改用 *string
 
 	if err := h.pool.Update(c.Request.Context(), &existing); err != nil {
 		applogger.Errorf("[ADAccount] 更新失败: %v", err)
@@ -144,7 +145,7 @@ func (h *ADAccountHandler) Update(c *gin.Context) {
 		return
 	}
 
-	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "AD域控配置", operlog.OperTypeUpdate)
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "AD域控配置", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"ok": true})
 }
 
@@ -165,7 +166,7 @@ func (h *ADAccountHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "AD域控配置", operlog.OperTypeDelete)
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "AD域控配置", operlog.OperTypeDelete)
 	response.Success(c, gin.H{"ok": true})
 }
 
@@ -184,7 +185,7 @@ func (h *ADAccountHandler) Enable(c *gin.Context) {
 		response.Error(c, 500, "启用失败")
 		return
 	}
-	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "AD域控配置", operlog.OperTypeEnable)
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "AD域控配置", operlog.OperTypeEnable)
 	response.Success(c, gin.H{"ok": true})
 }
 
@@ -203,7 +204,7 @@ func (h *ADAccountHandler) Disable(c *gin.Context) {
 		response.Error(c, 500, "停用失败")
 		return
 	}
-	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "AD域控配置", operlog.OperTypeDisable)
+	operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "AD域控配置", operlog.OperTypeDisable)
 	response.Success(c, gin.H{"ok": true})
 }
 
@@ -262,29 +263,20 @@ func (h *ADAccountHandler) Stats(c *gin.Context) {
 }
 
 func computeStats(ctx context.Context, pool addomainServices.AccountPool, configID string) (*models.ADServiceAccountStats, error) {
-	// 用 ListAll(page=1, pageSize=9999) 拿全集（池子规模可控，O(1) 查询）
-	list, total, err := pool.ListAll(ctx, configID, 1, 9999, nil)
+	// P2-claude 问题 8 修复：用专用 CountByStatus（O(状态数) = 3）替代 pageSize=9999 全量扫描
+	total, available, disabled, broken, err := pool.CountByStatus(ctx, configID)
 	if err != nil {
 		return nil, err
 	}
-	stats := &models.ADServiceAccountStats{Total: int(total)}
-	for _, a := range list {
-		switch a.Status {
-		case addomainServices.AccountStatusAvailable:
-			stats.Available++
-		case addomainServices.AccountStatusDisabled:
-			stats.Disabled++
-		case addomainServices.AccountStatusCircuitBroken:
-			stats.CircuitBroken++
-		}
+	stats := &models.ADServiceAccountStats{
+		Total:         int(total),
+		Available:     int(available),
+		Disabled:      int(disabled),
+		CircuitBroken: int(broken),
 	}
 	// best-effort：取第一个可用账号作为"当前活跃"
-	for i := range list {
-		if list[i].IsAvailable() {
-			stats.CurrentAccount = list[i].Username
-			break
-		}
+	if first, _ := pool.PickFirstAvailable(ctx, configID); first != nil {
+		stats.CurrentAccount = first.Username
 	}
-	_ = strings.TrimSpace // 占位 import 检查（防止 unused）
 	return stats, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"strings"
 	"sync"
 	"time"
@@ -56,6 +57,12 @@ type AccountPool interface {
 	// ListAll 包含停用/熔断账号（供 UI 展示用）
 	ListAll(ctx context.Context, configID string, page, pageSize int, statusFilter *int) ([]models.ADServiceAccount, int64, error)
 
+	// CountByStatus 按状态分组统计（供 Stats 用，O(状态数) 而非 O(账号数)）
+	CountByStatus(ctx context.Context, configID string) (total, available, disabled, circuitBroken int64, err error)
+
+	// PickFirstAvailable 取第一个可用账号（供 Stats "当前活跃"）
+	PickFirstAvailable(ctx context.Context, configID string) (*models.ADServiceAccount, error)
+
 	// Create 新增账号
 	Create(ctx context.Context, account *models.ADServiceAccount) error
 
@@ -95,12 +102,14 @@ type AccountPool interface {
 
 // accountPoolImpl 默认实现（基于 GORM + 内存 cache）
 type accountPoolImpl struct {
-	db           *gorm.DB
-	mu           sync.RWMutex
-	cache        map[string][]models.ADServiceAccount // configID → 可用账号快照
-	cacheTTL     map[string]time.Time                // configID → 缓存到期时间
-	redisPubSub  RedisPublisher                      // 可选：用于跨进程广播（Issue 17）
-	cacheTTLDur  time.Duration                       // 缓存有效期
+	db          *gorm.DB
+	mu          sync.RWMutex
+	cache       map[string][]models.ADServiceAccount // configID → 可用账号快照
+	cacheTTL    map[string]time.Time                // configID → 缓存到期时间
+	redisPubSub RedisPublisher                      // 可选：用于跨进程广播（Issue 17）
+	cacheTTLDur time.Duration                       // 缓存有效期
+	rand        *rand.Rand                          // P2-M1: 随机源（替代 time.Now() 伪随机）
+	randMu      sync.Mutex                           // P2-M1: math/rand 不是并发安全的
 }
 
 // RedisPublisher 是 pub/sub 发布的最小接口（便于测试 mock）
@@ -117,6 +126,7 @@ func NewAccountPool(db *gorm.DB, redisPubSub RedisPublisher) AccountPool {
 		cacheTTL:    make(map[string]time.Time),
 		redisPubSub: redisPubSub,
 		cacheTTLDur: 30 * time.Second, // 短 TTL + pub/sub 推送（兜底 Issue 17）
+		rand:        rand.New(rand.NewSource(time.Now().UnixNano())), // P2-M1
 	}
 }
 
@@ -164,6 +174,8 @@ func (p *accountPoolImpl) ListAvailable(ctx context.Context, configID string) ([
 }
 
 // PickAvailable 从可用账号随机选一个
+//
+// P2-M1 修复：用 math/rand 替代 time.Now().UnixNano()（Windows 15ms 精度，高并发分布不均）
 func (p *accountPoolImpl) PickAvailable(ctx context.Context, configID string) (*models.ADServiceAccount, error) {
 	available, err := p.ListAvailable(ctx, configID)
 	if err != nil {
@@ -173,7 +185,9 @@ func (p *accountPoolImpl) PickAvailable(ctx context.Context, configID string) (*
 		return nil, ErrAllAccountsUnavailable
 	}
 	// 注：Wave 3 FailoverClient 改用顺序遍历，此方法保留用于单点场景
-	idx := time.Now().UnixNano() % int64(len(available))
+	p.randMu.Lock()
+	idx := p.rand.Intn(len(available))
+	p.randMu.Unlock()
 	return &available[idx], nil
 }
 
@@ -201,6 +215,55 @@ func (p *accountPoolImpl) ListAll(ctx context.Context, configID string, page, pa
 		return nil, 0, err
 	}
 	return list, total, nil
+}
+
+// CountByStatus 按状态分组统计（供 Stats 用，避免 pageSize=9999 全量扫描）
+//
+// claude 问题 8 修复
+func (p *accountPoolImpl) CountByStatus(ctx context.Context, configID string) (total, available, disabled, circuitBroken int64, err error) {
+	rows, err := p.db.WithContext(ctx).Model(&models.ADServiceAccount{}).
+		Select("status, COUNT(*) as cnt").
+		Where("config_id = ? AND deleted_at IS NULL", configID).
+		Group("status").
+		Rows()
+	if err != nil {
+		return 0, 0, 0, 0, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var status, cnt int64
+		if scanErr := rows.Scan(&status, &cnt); scanErr != nil {
+			return 0, 0, 0, 0, scanErr
+		}
+		total += cnt
+		switch status {
+		case AccountStatusAvailable:
+			available = cnt
+		case AccountStatusDisabled:
+			disabled = cnt
+		case AccountStatusCircuitBroken:
+			circuitBroken = cnt
+		}
+	}
+	return total, available, disabled, circuitBroken, rows.Err()
+}
+
+// PickFirstAvailable 返回当前可用账号（best-effort，供 Stats 显示"当前活跃账号"）
+func (p *accountPoolImpl) PickFirstAvailable(ctx context.Context, configID string) (*models.ADServiceAccount, error) {
+	var a models.ADServiceAccount
+	err := p.db.WithContext(ctx).Where("config_id = ? AND deleted_at IS NULL AND status = ?",
+		configID, AccountStatusAvailable).
+		Order("created_at ASC").
+		Limit(1).
+		Take(&a).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &a, nil
 }
 
 // Create 新增账号
@@ -238,24 +301,43 @@ func (p *accountPoolImpl) Delete(ctx context.Context, accountID string) error {
 }
 
 // MarkSuccess 成功上报（行锁 + 事务）
+//
+// P2-M4 修复：缓存失效移到事务外（defer 在 commit 后执行）
 func (p *accountPoolImpl) MarkSuccess(ctx context.Context, accountID string) error {
-	return p.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	var configID string
+	err := p.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		now := time.Now()
-		return tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		res := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			Model(&models.ADServiceAccount{}).
 			Where("id = ?", accountID).
 			Updates(map[string]interface{}{
 				"failure_count":   0,
 				"last_success_at": now,
-			}).Error
+			})
+		if res.Error != nil {
+			return res.Error
+		}
+		// 拿到 configID 用于缓存失效（事务内 select 是安全的）
+		var row struct{ ConfigID string }
+		if err := tx.Raw("SELECT config_id FROM sys_ad_service_accounts WHERE id = ?", accountID).
+			Scan(&row).Error; err == nil {
+			configID = row.ConfigID
+		}
+		return nil
 	})
+	if err == nil && configID != "" {
+		p.InvalidateCache(configID)
+	}
+	return err
 }
 
 // MarkFailure 失败上报（行锁 + 事务 + 自动熔断）
 //
 // Issue 14 修复：不再设置 recently_failed_until（冷却期），避免池子饥饿
+// P2-M4 修复：缓存失效移到事务外
 func (p *accountPoolImpl) MarkFailure(ctx context.Context, accountID, reason string) error {
-	return p.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	var configID string
+	err := p.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var a models.ADServiceAccount
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			First(&a, "id = ?", accountID).Error; err != nil {
@@ -279,16 +361,19 @@ func (p *accountPoolImpl) MarkFailure(ctx context.Context, accountID, reason str
 		if err := tx.Save(&a).Error; err != nil {
 			return err
 		}
-
-		// 失效缓存（事务提交后）
-		p.InvalidateCache(a.ConfigID)
+		configID = a.ConfigID
 		return nil
 	})
+	if err == nil && configID != "" {
+		p.InvalidateCache(configID)
+	}
+	return err
 }
 
 // ManualUnlock 手动解锁（service 层 invariant 校验）
 //
 // Issue 13: operator 非空 + reason ≥10 字符（service 层）
+// P2-M4 修复：缓存失效移到事务外
 func (p *accountPoolImpl) ManualUnlock(ctx context.Context, accountID, operator, reason string) error {
 	operator = strings.TrimSpace(operator)
 	reason = strings.TrimSpace(reason)
@@ -299,7 +384,8 @@ func (p *accountPoolImpl) ManualUnlock(ctx context.Context, accountID, operator,
 		return ErrInvalidUnlockReason
 	}
 
-	return p.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	var configID string
+	err := p.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var a models.ADServiceAccount
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			First(&a, "id = ?", accountID).Error; err != nil {
@@ -317,33 +403,46 @@ func (p *accountPoolImpl) ManualUnlock(ctx context.Context, accountID, operator,
 		if err := tx.Save(&a).Error; err != nil {
 			return err
 		}
-
-		p.InvalidateCache(a.ConfigID)
+		configID = a.ConfigID
 		applogger.Infof("[ADPool] 管理员手动解锁 [ID=%s, username=%s, operator=%s, reason=%s]",
 			a.ID, a.Username, operator, reason)
 		return nil
 	})
+	if err == nil && configID != "" {
+		p.InvalidateCache(configID)
+	}
+	return err
 }
 
 // SetEnabled 启用/停用
+//
+// P2-claude 问题 7 修复：启用时同时清除熔断状态（避免 status=0 但 circuit_breaker_until 未到期）
 func (p *accountPoolImpl) SetEnabled(ctx context.Context, accountID string, enabled bool) error {
-	var acct models.ADServiceAccount
-	if err := p.db.WithContext(ctx).First(&acct, "id = ?", accountID).Error; err != nil {
-		return ErrAccountNotFound
-	}
+	return p.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var acct models.ADServiceAccount
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			First(&acct, "id = ?", accountID).Error; err != nil {
+			return ErrAccountNotFound
+		}
 
-	target := AccountStatusAvailable
-	if !enabled {
-		target = AccountStatusDisabled
-	}
+		updates := map[string]interface{}{}
+		if enabled {
+			updates["status"] = AccountStatusAvailable
+			// 启用时一并清除熔断状态，避免 status=0 但 circuit_breaker_until 未到期的矛盾
+			updates["circuit_breaker_until"] = nil
+			updates["failure_count"] = 0
+		} else {
+			updates["status"] = AccountStatusDisabled
+		}
 
-	if err := p.db.WithContext(ctx).Model(&acct).
-		Update("status", target).Error; err != nil {
-		return err
-	}
-	p.InvalidateCache(acct.ConfigID)
-	applogger.Infof("[ADPool] 账号 %s 状态变更 [ID=%s, status=%d]", acct.Username, acct.ID, target)
-	return nil
+		if err := tx.Model(&acct).Updates(updates).Error; err != nil {
+			return err
+		}
+		// P2-M4 修复：事务提交后失效缓存（不是事务内部）
+		defer p.InvalidateCache(acct.ConfigID)
+		applogger.Infof("[ADPool] 账号 %s 状态变更 [ID=%s, enabled=%v]", acct.Username, acct.ID, enabled)
+		return nil
+	})
 }
 
 // RecoverExpiredBreakers 恢复已到期熔断账号 + 跨进程广播

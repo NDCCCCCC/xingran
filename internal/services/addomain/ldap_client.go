@@ -128,9 +128,18 @@ func (c *LDAPClient) cleanDomain() string {
 }
 
 // tryBindAttempts 尝试多种绑定方式
+//
+// Phase 36 修复（C1）：优先使用 c.account 的凭证（账号池入参），fallback 到 c.config
+// 否则 FailoverClient 遍历多账号时所有账号都用同一密码绑定 → 账号池失效
 func (c *LDAPClient) tryBindAttempts(conn *ldap.Conn, domain string) error {
 	password := c.config.AdminPassword
 	username := c.config.AdminUsername
+	if c.account != nil {
+		// Phase 36: 账号池模式，使用具体账号的 SM4 密文
+		// 注意：调用方需在传入前完成密码解密（caller 负责）
+		password = c.account.PasswordCiphertext
+		username = c.account.Username
+	}
 	netbiosName := extractNetBIOSName(domain)
 
 	attempts := []struct {
