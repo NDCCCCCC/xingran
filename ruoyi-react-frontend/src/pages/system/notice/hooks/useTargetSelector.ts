@@ -1,6 +1,8 @@
-import { useState, useCallback } from "react";
-import { get, post } from "@/lib/api";
+import { useState, useCallback, useMemo } from "react";
+import { post } from "@/lib/api";
 import type { Key } from "react";
+import { useDeptTree } from "@/hooks/useDeptTree";
+import { toShortNameDataNode } from "@/utils/deptUtils";
 
 export interface Target {
   id: string;
@@ -22,7 +24,6 @@ interface UseTargetSelectorResult {
   loadingDepts: boolean;
   loadingRoles: boolean;
   loadingUsers: boolean;
-  loadDeptTree: () => Promise<void>;
   loadRoles: () => Promise<void>;
   loadUsers: () => Promise<void>;
 }
@@ -30,41 +31,30 @@ interface UseTargetSelectorResult {
 /**
  * 目标选择器数据 Hook
  * 处理部门、角色、用户数据的加载
+ *
+ * 部门树:消费 canonical useDeptTree (Phase 37 收敛),不再本地 GET fetch。
+ * 本地短名转换 (旧函数已删) 改调 deptUtils.toShortNameDataNode:
+ *   - dept 子树消费方 (TargetSelector 的 <Tree treeData>) 只读 {title,key,children},
+ *     不依赖透传的 deptName/status/id 等额外字段,行为等价。
+ *   - roles/users 子树仍保留本地 fetch (post /system/roles/all + /system/users/list),
+ *     Target 接口保留 roleName/username 等字段供这两个子树使用。
  */
 export function useTargetSelector(): UseTargetSelectorResult {
-  const [deptTree, setDeptTree] = useState<Target[]>([]);
   const [roles, setRoles] = useState<Target[]>([]);
   const [users, setUsers] = useState<Target[]>([]);
-  const [loadingDepts, setLoadingDepts] = useState(false);
   const [loadingRoles, setLoadingRoles] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
-  // 加载部门树
-  const loadDeptTree = useCallback(async () => {
-    setLoadingDepts(true);
-    try {
-      interface DeptNode {
-        id: string;
-        deptName: string;
-        children?: DeptNode[];
-      }
-      const response = await get<DeptNode[]>("/system/departments/tree");
-      const convertTree = (nodes: DeptNode[]): Target[] => {
-        return nodes.map(node => ({
-          ...node,
-          title: node.deptName,
-          key: node.id,
-          value: node.id,
-          children: node.children ? convertTree(node.children) : undefined,
-        }));
-      };
-      setDeptTree(convertTree(response.data || []));
-    } catch (error) {
-      console.error("加载部门树失败:", error);
-    } finally {
-      setLoadingDepts(false);
-    }
-  }, []);
+  // 部门树:消费 useDeptTree 共享缓存 (queryKey queryKeys.dept.tree())。
+  // 默认 staleTime 5min / gcTime 30min / refetchOnWindowFocus:false。
+  const { data: rawDept = [], isLoading: loadingDepts } = useDeptTree();
+
+  // 派生 antd Tree 期望的 DataNode 形状 (短名 title + key + children)。
+  // 旧实现透传 ...node 是冗余(TargetSelector 只读 title/key/children),此处等价。
+  const deptTree = useMemo<Target[]>(
+    () => toShortNameDataNode(rawDept) as Target[],
+    [rawDept]
+  );
 
   // 加载角色列表
   const loadRoles = useCallback(async () => {
@@ -99,7 +89,6 @@ export function useTargetSelector(): UseTargetSelectorResult {
     loadingDepts,
     loadingRoles,
     loadingUsers,
-    loadDeptTree,
     loadRoles,
     loadUsers,
   };

@@ -112,6 +112,7 @@ const NoticeManagement: FC = () => {
 
   const { statistics, loadStatistics } = useNoticeStatistics();
 
+  // deptTree 由 useDeptTree 自动管理 (Phase 37 收敛),无 loadDeptTree
   const {
     deptTree,
     roles,
@@ -119,7 +120,6 @@ const NoticeManagement: FC = () => {
     loadingDepts,
     loadingRoles,
     loadingUsers,
-    loadDeptTree,
     loadRoles,
     loadUsers,
   } = useTargetSelector();
@@ -162,7 +162,7 @@ const NoticeManagement: FC = () => {
     setSelectedChannels(["web"]);
 
     // 加载目标选择数据和API配置
-    loadDeptTree();
+    // (deptTree 由 useDeptTree 自动拉取,无需手动触发;只加载 roles/users/apiConfigs)
     loadRoles();
     loadUsers();
     loadAPIConfigs();
@@ -230,7 +230,7 @@ const NoticeManagement: FC = () => {
         });
       }
     }, 0);
-  }, [editForm, loadDeptTree, loadRoles, loadUsers, loadAPIConfigs]);
+  }, [editForm, loadRoles, loadUsers, loadAPIConfigs]);
 
   // 提交表单
   const handleSubmit = useCallback(async () => {
