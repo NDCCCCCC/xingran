@@ -5,6 +5,8 @@
 import { useState, useCallback } from "react";
 import { post } from "@/lib/api";
 import { handleApiError } from "@/utils/errorHandler";
+import { useDeptTree } from "@/hooks/useDeptTree";
+import type { SimpleDept } from "@/lib/dutyApi";
 
 export interface UserStatistics {
   total: number;
@@ -19,19 +21,12 @@ interface Role {
   status: number;
 }
 
-interface Department {
-  id: string;
-  deptName: string;
-  status: number;
-}
-
 export interface UseUserDataReturn {
   statistics: UserStatistics;
   roles: Role[];
-  departments: Department[];
+  departments: SimpleDept[];
   loadStatistics: () => Promise<void>;
   loadRoles: () => Promise<void>;
-  loadDepartments: () => Promise<void>;
 }
 
 export function useUserData(): UseUserDataReturn {
@@ -41,7 +36,11 @@ export function useUserData(): UseUserDataReturn {
     inactive: 0,
   });
   const [roles, setRoles] = useState<Role[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
+
+  // 部门列表:消费 canonical useDeptTree (Phase 37 收敛)。
+  // 共享 React Query 缓存 (5min stale / 30min gc, refetchOnWindowFocus:false)。
+  // 写操作后由调用方 useInvalidateDept() 主动失效。
+  const { data: departments = [] } = useDeptTree();
 
   // 加载统计数据: 调用专用统计端点(COUNT 聚合)。
   // 不再用列表长度充当总数——后端 user list 的 pageSize 上限为 100(MaxPageSize),
@@ -69,23 +68,11 @@ export function useUserData(): UseUserDataReturn {
     }
   }, []);
 
-  // 加载部门列表
-  const loadDepartments = useCallback(async () => {
-    try {
-      const result = await post<Department[]>("/system/departments/tree");
-      setDepartments(result.data || []);
-    } catch (error) {
-      handleApiError(error, "加载部门列表", false);
-      setDepartments([]);
-    }
-  }, []);
-
   return {
     statistics,
     roles,
     departments,
     loadStatistics,
     loadRoles,
-    loadDepartments,
   };
 }

@@ -53,7 +53,7 @@ import type { SortOrder } from "@/hooks/useServerSort";
 
 // 导入提取的文件
 import { GENDER_OPTIONS, STATUS_OPTIONS } from "./constants";
-import { convertDeptTreeData, formatGender, formatStatus } from "./utils.tsx";
+import { formatGender, formatStatus } from "./utils.tsx";
 import { useUserData } from "./hooks/useUserData";
 import { useUserModals } from "./hooks/useUserModals";
 
@@ -258,7 +258,8 @@ const UserManagement: FC = () => {
   });
 
   // 使用自定义 Hooks
-  const { statistics, roles, departments, loadStatistics, loadRoles, loadDepartments } = useUserData();
+  // departments 来自 useDeptTree 共享缓存(Phase 37 收敛),无需显式 load
+  const { statistics, roles, departments, loadStatistics, loadRoles } = useUserData();
   const {
     resetPasswordModalVisible,
     resettingUser,
@@ -337,7 +338,7 @@ const UserManagement: FC = () => {
     loadUsers();
     loadStatistics();
     loadRoles();
-    loadDepartments();
+    // departments 由 useDeptTree 自动拉取,无需在此手动触发
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -438,11 +439,13 @@ const UserManagement: FC = () => {
       setEditModalVisible(false);
       loadUsers();
       loadStatistics();
-      loadDepartments(); // 刷新部门列表以更新部门选择器中的数据
+      // 注:部门写操作(create/update/delete user 关联 deptId)不需要在此主动刷新部门列表
+      // 因为部门树本身(sys_dept)未变;若后续有部门 CRUD,应调用 useInvalidateDept()
+      // 失效共享缓存(Phase 37 收敛后部门刷新由 hook 自动管理)
     } catch (error) {
       handleApiError(error, "操作");
     }
-  }, [editingUser, editForm, loadUsers, loadStatistics, loadDepartments, setEditModalVisible]);
+  }, [editingUser, editForm, loadUsers, loadStatistics, setEditModalVisible]);
 
   const handleSaveResetPassword = useCallback(async () => {
     try {
