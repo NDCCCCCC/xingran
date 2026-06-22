@@ -1,6 +1,16 @@
 /**
  * Workstation Data Hook
  * 工位数据管理 Hook
+ *
+ * Phase 37 批 2 迁移说明:
+ * - 删除本地全路径转换函数与 loadDeptOptions 内的自 fetch post 调用。
+ * - 部门数据通过 canonical hook `useDeptTree()` 获取(共享 `['dept','tree']` React Query 缓存)。
+ * - 双向语义(D-LOCKED, 高风险)严格保留:
+ *   - `deptTreeData` = 全路径(`toFullPathTree(rawDept)`)
+ *   - 页面 `orgTreeData` = `trimTitleToLastSegment(filterExternalOrgDepts(deptTreeData))` 反向裁剪为短名
+ * - `toFullPathTree` 透传 `isExternalOrg`(否则 `filterExternalOrgDepts` 会把整棵树过滤为空)。
+ *   `SimpleDept` 类型签名不含 `isExternalOrg`,但运行时数据含此字段(后端 `sys_dept.is_external_org`),
+ *   因此定义本地 `RawDept` 类型窄化(参考 DeptTree/index.tsx 的做法)。
  */
 
 import { useCallback } from "react";
@@ -8,21 +18,23 @@ import type { WorkstationOps } from "@/types";
 import { workstationApi, floorApi } from "@/lib/opsApi";
 import { post } from "@/lib/api";
 import { handleApiError } from "@/utils/errorHandler";
+import { useDeptTree } from "@/hooks/useDeptTree";
+import type { SimpleDept } from "@/lib/dutyApi";
+import { toFullPathTree } from "@/utils/deptUtils";
 import type { WorkstationStatistics, FloorOption, UserOption, DeptTreeNode } from "../types";
 
-// 后端返回的部门节点类型
-interface DepartmentNode {
-  id: string;
-  deptName?: string;
-  name?: string;
+// 本地类型:SimpleDept 在类型层面不含 isExternalOrg,但运行时部门树节点实际带此字段
+// (sys_dept.is_external_org,见 @/types/system.ts 的 Department 超集)。
+// toFullPathTree 依赖该字段透传给 filterExternalOrgDepts,否则 orgTreeData 会被过滤为空。
+interface RawDept extends SimpleDept {
   isExternalOrg?: number;
-  children?: DepartmentNode[];
+  children?: RawDept[];
 }
 
 export interface UseWorkstationDataReturn {
   loadStatistics: (orgId?: string) => Promise<void>;
   loadFloorOptions: (orgId?: string) => Promise<void>;
-  loadDeptOptions: () => Promise<void>;
+  loadDeptOptions: () => void;
   loadUserOptions: (deptId?: string) => Promise<void>;
   loadFloorPlanWorkstations: (floorCode: string) => Promise<WorkstationOps[]>;
 }
@@ -33,6 +45,9 @@ export function useWorkstationData(
   setDeptTreeData: React.Dispatch<React.SetStateAction<DeptTreeNode[]>>,
   setUserOptions: React.Dispatch<React.SetStateAction<UserOption[]>>
 ): UseWorkstationDataReturn {
+  // canonical 部门树 hook:共享 ['dept','tree'] 缓存(5min stale, 30min gc, refetchOnWindowFocus:false)
+  const { data: rawDept = [] } = useDeptTree();
+
   const loadStatistics = useCallback(async (orgId?: string) => {
     try {
       // 专用统计端点(1 次请求替代此前 4 次 list 拼 total),支持 orgId 部门筛选
@@ -66,47 +81,19 @@ export function useWorkstationData(
     }
   }, [setFloorOptions]);
 
-  // 构建树形结构数据
-  // 节点的 title 显示从第二级开始的完整路径（参考 DepartmentTreeSelect 中
-  // convertDeptTreeData 的约定），例如 "集团总部/财务中心/财务部"。
-  // 这样在编辑模态框的"所属部门"字段中回显时，能看到完整部门链，
-  // 而非只显示最末级部门名。
-  //
-  // 重要:必须透传 isExternalOrg。如果遗漏,filterExternalOrgDepts 拿到的
-  // isExternalOrg 是 undefined,会把整棵树过滤成空,导致模态框"所属机构"
-  // 下拉无法回显(显示 UUID)。
-  const buildTreeData = useCallback((depts: DepartmentNode[]): DeptTreeNode[] => {
-    const build = (nodes: DepartmentNode[], ancestorNames: string[]): DeptTreeNode[] => {
-      return nodes.map((node) => {
-        const name = node.deptName || node.name || "";
-        // 顶级部门直接显示名称；从第二级开始拼接完整路径
-        const title = ancestorNames.length === 0
-          ? name
-          : [...ancestorNames, name].join(" / ");
-        return {
-          title,
-          value: node.id,
-          key: node.id,
-          // 透传:filterExternalOrgDepts 依赖此字段判断节点是否保留
-          isExternalOrg: node.isExternalOrg,
-          children: node.children?.length ? build(node.children, [...ancestorNames, name]) : undefined,
-        };
-      });
-    };
-    return build(depts, []);
-  }, []);
-
-  const loadDeptOptions = useCallback(async () => {
-    try {
-      const result = await post("/system/departments/tree", {}) as { data: DepartmentNode[] };
-      const deptList = Array.isArray(result.data) ? result.data : [];
-      // 加载所有部门（包括内部部门和外部机构），不进行过滤
-      // 工位的 orgId 可能指向任何部门；外部机构过滤在页面 useMemo 派生 orgTreeData。
-      setDeptTreeData(buildTreeData(deptList));
-    } catch (error) {
-      handleApiError(error, "加载部门选项", false);
-    }
-  }, [setDeptTreeData, buildTreeData]);
+  // 加载部门选项:
+  // - 数据源由 useDeptTree 提供(本组件顶层调用),本函数只负责把 rawDept 转为全路径版本
+  //   并 setState 进 deptTreeData。
+  // - 全路径版本(toFullPathTree, startFromLevel=1 默认):顶级节点 title 直接显示其名,
+  //   深级 title 拼接为 "祖先 / ... / 自身"。页面 orgTreeData useMemo 会在"所属机构"
+  //   下拉中经 trimTitleToLastSegment 反向裁剪为短名——双向语义,不可破坏。
+  // - isExternalOrg 透传依赖:toFullPathTree 输出节点的 isExternalOrg 取自输入节点,
+  //   filterExternalOrgDepts 仅保留 isExternalOrg===1 的节点及后代。rawDept 运行时
+  //   含此字段(见 RawDept 注释),所以这里 as unknown 窄化是安全的。
+  const loadDeptOptions = useCallback(() => {
+    const fullPath = toFullPathTree(rawDept as unknown as RawDept[]) as unknown as DeptTreeNode[];
+    setDeptTreeData(fullPath);
+  }, [rawDept, setDeptTreeData]);
 
   const loadUserOptions = useCallback(async (deptId?: string) => {
     try {
