@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: 工位设备关联 (Phase 28)
 status: executing
-stopped_at: "Plan 37-02 完成 (批 1 system 模块迁移 user+notice ✅: useUserData 去 fetch 改 useDeptTree + utils.tsx 删 convertDeptTreeData(保留 renderDeptTreeOptions) + useTargetSelector 删 GET fetch + convertTree 改 useDeptTree+toShortNameDataNode; 2 task 单独 commit 76973d6/86b3231; npm type-check + build 通过; role/dept/AD 排除边界零触碰)"
-last_updated: "2026-06-22T10:08:08.061Z"
+stopped_at: "Plan 37-04 完成 (批 3 network 模块迁移 devices ✅: useDeviceData 删 departments useState + loadDepartments useCallback (含 post /system/departments/tree + setDepartments + handleApiError 兜底) + 改消费 useDeptTree + 返回对象保留 departments 删 loadDepartments + 本地 Department 类型改 ReturnType<typeof useDeptTree>['data'] 类型透传; index.tsx 删 loadDepartments 解构与两处调用点 (openModal/openQuickCreateModal); 1 task 单独 commit 669b25b; npm type-check exit 0; devices/ loadDepartments 全目录清零; /system/departments/tree 全目录清零; 最简单批次无转换函数无高风险双向语义)"
+last_updated: "2026-06-22T10:30:00.000Z"
 progress:
   total_phases: 15
   completed_phases: 9
   total_plans: 76
-  completed_plans: 63
+  completed_plans: 64
   percent: 60
 ---
 
@@ -28,10 +28,10 @@ progress:
 ## Current Position
 
 Phase: 37 (dept-select-unify) — EXECUTING
-Plan: 4 of 6 (Plan 37-03 ✅ COMPLETE — 批 2 operations 模块迁移: workstations 高风险双向语义保留(useDeptTree + toFullPathTree 全路径 + trimTitleToLastSegment 短名 + isExternalOrg 透传 RawDept 窄化) + buildings 方案 A+B 混合(删 useDepartmentTree.tsx 无消费者, useDepartmentData.ts 保留因 floors 依赖但内部改 useDeptTree 包装层 loadDepartments=no-op, index.tsx 直接消费 useDeptTree+findDeptNode); floors 排除边界零触碰; type-check/build 双 pass)
+Plan: 5 of 6 (Plan 37-04 ✅ COMPLETE — 批 3 network 模块迁移 devices: useDeviceData 删 departments useState + loadDepartments useCallback (含 post /system/departments/tree + handleApiError 兜底), 改消费 useDeptTree; 返回对象保留 departments 删 loadDepartments; 本地 Department 类型改 ReturnType<typeof useDeptTree>['data'] 类型透传; index.tsx 删 loadDepartments 解构与 openModal/openQuickCreateModal 两处调用点; 1 task 单独 commit 669b25b; npm type-check exit 0; devices/ 全目录 loadDepartments 与 /system/departments/tree 清零; 最简单批次无转换函数无双向语义)
 **Latest shipped milestone**: v1.15 工位设备关联 (Phase 28, 2026-06-10)
 **Latest shipped phase**: Phase 34 操作日志全模块集成 + review (2026-06-16)
-**Most recent commit**: 2279369 refactor(37-03): buildings 合并双 hook 到 useDeptTree (方案 A+B 混合)
+**Most recent commit**: 669b25b refactor(37-04): devices 迁移到 useDeptTree
 
 **Shipped since last state file update (v1.15 was the milestone label
 in PROJECT.md before this sync)**:
@@ -178,6 +178,7 @@ Run `/gsd:new-milestone` to formally start v1.16.
 | 2026-06-16 | Phase 34 Gap-closure 完成 (34-gap) - 修复 34-VERIFICATION 发现的 25 个遗漏写端点 (6 handler 文件) + e2e 差异扫描加固 (阈值 250→290 + handler-vs-operlog 全集校验) + user_unlock 合规审计 ✅ | 34 |
 | 2026-06-22 | Phase 37 Plan 01 完成 (批 0 公共层收敛) - deptUtils 新增 toFullPathTree/toShortNameDataNode 语义区分转换函数 + DepartmentTreeSelect 删本地 Department 接口与 convertDeptTreeData (改引用 SimpleDept + toFullPathTree, 保持受控) + DeptTree 删内部 post fetch/transformToTreeData (改消费 useDeptTree, 搜索/展开逻辑保留); 3 task commit a859975/a52bc36/79cc349; type-check + build 通过; D-LOCKED 决策全部尊重 | 37 |
 | 2026-06-22 | Phase 37 Plan 02 完成 (批 1 system 模块迁移 user+notice) - useUserData 去 fetch (post /system/departments/tree) 改消费 useDeptTree + 删本地 Department 接口 (改 SimpleDept) + utils.tsx 删 convertDeptTreeData (实测短名, 归 toShortNameDataNode, 保留 renderDeptTreeOptions Select 专用渲染) + index.tsx 清理 loadDepartments 调用链与死 import + useTargetSelector 删 GET fetch + convertTree 改 useDeptTree+useMemo+toShortNameDataNode + Target 接口保留 (roles/users 子树依赖); 2 task commit 76973d6/86b3231; type-check + build 通过; role/dept/AD 排除边界零触碰 | 37 |
+| 2026-06-22 | Phase 37 Plan 04 完成 (批 3 network 模块迁移 devices) - useDeviceData 删 departments useState + loadDepartments useCallback (含 post /system/departments/tree + handleApiError 兜底) 改消费 useDeptTree; 返回对象保留 departments 字段删除 loadDepartments; 本地 Department 类型改 ReturnType<typeof useDeptTree>['data'] 类型透传; index.tsx 删 loadDepartments 解构与 openModal/openQuickCreateModal 两处调用点; 1 task commit 669b25b; type-check 通过; devices/ 全目录 loadDepartments 与 /system/departments/tree 清零; 最简单批次无转换函数无双向语义 | 37 |
 
 ## Quick Tasks Completed
 
@@ -337,12 +338,14 @@ Run `/gsd:new-milestone` to formally start v1.16.
 
 ## Session Continuity
 
-Last session: 2026-06-22T10:05:35.942Z
-Stopped at: Plan 37-02 完成 (批 1 system 模块迁移 user+notice ✅: useUserData 去 fetch 改 useDeptTree + utils.tsx 删 convertDeptTreeData(保留 renderDeptTreeOptions) + useTargetSelector 删 GET fetch + convertTree 改 useDeptTree+toShortNameDataNode; 2 task 单独 commit 76973d6/86b3231; npm type-check + build 通过; role/dept/AD 排除边界零触碰)
+Last session: 2026-06-22T10:30:00.000Z
+Stopped at: Plan 37-04 完成 (批 3 network 模块迁移 devices ✅: useDeviceData 删 departments useState + loadDepartments useCallback (含 post /system/departments/tree + setDepartments + handleApiError 兜底) + 改消费 useDeptTree + 返回对象保留 departments 删 loadDepartments + 本地 Department 类型改 ReturnType<typeof useDeptTree>['data'] 类型透传; index.tsx 删 loadDepartments 解构与两处调用点 (openModal/openQuickCreateModal); 1 task 单独 commit 669b25b; npm type-check exit 0; devices/ loadDepartments 全目录清零; /system/departments/tree 全目录清零; 最简单批次无转换函数无高风险双向语义)
 Resume file: None
 
-**Planned Phase:** 37 (dept-select-unify) — 6 plans — Plan 2/6 ✅ COMPLETE
+**Planned Phase:** 37 (dept-select-unify) — 6 plans — Plan 4/6 ✅ COMPLETE
 
   - Plan 37-01 (批 0 公共层) ✅ — 硬前置已就位
   - Plan 37-02 (批 1 system user+notice) ✅ — system 模块收敛到 useDeptTree, 本地转换函数清零
-  - Plan 37-03~37-06 待执行 (operations/network/duty/workorder 模块迁移)
+  - Plan 37-03 (批 2 operations workstations+buildings) ✅ — workstations 高风险双向语义保留, buildings 方案 A+B 混合
+  - Plan 37-04 (批 3 network devices) ✅ — network 模块收敛到 useDeptTree, 无转换函数
+  - Plan 37-05~37-06 待执行 (duty/workorder 模块迁移)
