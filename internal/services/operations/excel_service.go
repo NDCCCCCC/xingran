@@ -402,6 +402,15 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 			upserter := NewBatchUpsert(tx, config)
 			records := s.prepareRecordsForUpsert(validRecords, config)
 
+			// 用户导入特例：sys_user.password/salt 为 NOT NULL，新用户必须设密码。
+			// 参考 UserSyncService 的 AD 用户同步策略：默认密码 "123456" + InitFlag=true。
+			// 仅对新增用户设值（已存在用户不改密码）。
+			if entityType == "user" {
+				if err := s.populateNewUserPasswords(ctx, tx, records); err != nil {
+					return err
+				}
+			}
+
 			inserted, updated, err := upserter.Upsert(ctx, records)
 			if err != nil {
 				return fmt.Errorf("批量保存数据失败: %w", err)
@@ -805,6 +814,67 @@ func (s *ExcelService) prepareRecordsForUpsert(
 	}
 
 	return prepared
+}
+
+// populateNewUserPasswords 为新增的 sys_user 记录填充默认密码与初始标志。
+// 仅在 entityType=="user" 时由 ImportData 调用。
+//
+// sys_user.password 为 NOT NULL，Excel 无密码列 → 新用户 INSERT 会违反约束。
+// 策略对齐 UserSyncService 的 AD 用户同步（user_sync_service.go:89-100）：
+//   - 默认密码 "123456"，经 pwdManager.HashPassword 哈希（salt 编码进 hash）
+//   - InitFlag=true（首次登录强制改密）、PwdExpireDays=90
+//
+// 仅对新增用户（username 在 sys_user 不存在）设值；已存在用户不改密码，
+// 交由 partialUpsert 仅更新 Excel 提供的字段。
+func (s *ExcelService) populateNewUserPasswords(ctx context.Context, tx *gorm.DB, records []map[string]any) error {
+	if len(records) == 0 {
+		return nil
+	}
+	// pwdManager 未注入时跳过（测试场景）——生产环境由 NewExcelService 保证非 nil
+	if s.pwdManager == nil {
+		logger.Warnf("[USER-IMPORT] pwdManager 未注入，跳过新用户默认密码填充")
+		return nil
+	}
+
+	// 收集所有 username（prepareRecordsForUpsert 已用 DBField="username" 写入）
+	usernames := make([]string, 0, len(records))
+	for _, r := range records {
+		if u, ok := r["username"].(string); ok && u != "" {
+			usernames = append(usernames, u)
+		}
+	}
+	if len(usernames) == 0 {
+		return nil
+	}
+
+	// 查询已存在的 username（Unscoped 含软删除记录，恢复时也跳过改密）
+	var existing []string
+	if err := tx.WithContext(ctx).Table("sys_user").
+		Unscoped().Where("username IN ?", usernames).
+		Pluck("username", &existing).Error; err != nil {
+		return fmt.Errorf("查询现有用户失败: %w", err)
+	}
+	existingSet := make(map[string]bool, len(existing))
+	for _, u := range existing {
+		existingSet[u] = true
+	}
+
+	// AD 同步一致的默认密码；InitFlag 强制首登改密
+	const defaultImportPassword = "123456"
+	for _, r := range records {
+		u, _ := r["username"].(string)
+		if u == "" || existingSet[u] {
+			continue // 已存在用户不改密码
+		}
+		hashed, err := s.pwdManager.HashPassword(defaultImportPassword)
+		if err != nil {
+			return fmt.Errorf("生成默认密码失败: %w", err)
+		}
+		r["password"] = hashed
+		r["init_flag"] = true
+		r["pwd_expire_days"] = 90
+	}
+	return nil
 }
 
 func generateUUID() string {
