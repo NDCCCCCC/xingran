@@ -135,9 +135,12 @@ func (c *LDAPClient) tryBindAttempts(conn *ldap.Conn, domain string) error {
 	password := c.config.AdminPassword
 	username := c.config.AdminUsername
 	if c.account != nil {
-		// Phase 36: 账号池模式，使用具体账号的 SM4 密文
-		// 注意：调用方需在传入前完成密码解密（caller 负责）
-		password = c.account.PasswordCiphertext
+		// Phase 36: 账号池模式。
+		// password_ciphertext 写入时由 core.SM4Cipher.Encrypt() 加密（ad_account_handler.go），
+		// bind 前必须解密得到明文密码——LDAP bind 需要明文，传密文必然 LDAP error 49。
+		// 与单管理员路径（config.AdminPassword 的 decryptPassword 处理）保持一致。
+		// 历史契约"caller 负责解密"已废弃：FailoverClient 遍历多账号极易遗漏，改为内部解密更鲁棒。
+		password = decryptPassword(c.account.PasswordCiphertext)
 		username = c.account.Username
 	}
 	netbiosName := extractNetBIOSName(domain)
