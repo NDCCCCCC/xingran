@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: 工位设备关联 (Phase 28)
-status: executing
-stopped_at: "Phase 38 Plan 01 complete (Wave 1 前置 DI 脚手架), next: 38-02 连接层统一"
-last_updated: "2026-06-23T02:43:16.533Z"
+status: milestone_complete
+stopped_at: Milestone complete (Phase 38 was final phase)
+last_updated: 2026-06-23T04:49:37.509Z
 progress:
   total_phases: 16
   completed_phases: 10
   total_plans: 80
-  completed_plans: 67
+  completed_plans: 144
   percent: 63
 ---
 
@@ -27,8 +27,8 @@ progress:
 
 ## Current Position
 
-Phase: 38 (unify-ad-authentication-onto-account-pool-remove-legacy-sing) — EXECUTING (4/4 plans done, awaiting phase verification)
-Plan: 4 of 4 ✅ (38-01/02/03/04 全完成 — Wave 3: model tag 放宽 + migration_164 DROP NOT NULL 兜底+补迁 + 启动空池 WARN 校验; D-01/D-02/D-03/D-04 全部落地; next: phase-level 验证)
+Phase: 38
+Plan: Not started
 **Latest shipped milestone**: v1.15 工位设备关联 (Phase 28, 2026-06-10)
 **Latest shipped phase**: Phase 34 操作日志全模块集成 + review (2026-06-16)
 **Most recent commit**: 3084a04 refactor(38-04): migration_164 放宽列约束 + 幂等补迁账号池 (Task 2)
