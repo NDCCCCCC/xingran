@@ -32,7 +32,7 @@ type ExcelService struct {
 	// 仅做内存 set 查询。把 N(rows) × M(columns) 次 Count 降为 M 次 Pluck。
 	uniqueValueMu     sync.Mutex
 	uniqueValueCache  map[string]map[string]map[string]struct{} // tableName -> colField -> set(value)
-	uniqueValueLoaded map[string]bool                            // tableName -> 是否已加载
+	uniqueValueLoaded map[string]bool                           // tableName -> 是否已加载
 }
 
 func NewExcelService(db *gorm.DB, pwdManager *security.PasswordManager, cache system.CacheProvider, geocoding *GeocodingService) *ExcelService {
@@ -285,7 +285,7 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 			}
 			// Try partial match (contains)
 			if strings.Contains(strings.ToLower(sheet), strings.ToLower(config.SheetName)) ||
-			   strings.Contains(strings.ToLower(config.SheetName), strings.ToLower(sheet)) {
+				strings.Contains(strings.ToLower(config.SheetName), strings.ToLower(sheet)) {
 				sheetName = sheet
 				found = true
 				logger.Infof("Found matching sheet (partial match): '%s' (configured: '%s')", sheetName, config.SheetName)
@@ -914,25 +914,27 @@ func (s *ExcelService) populateNewUserPasswords(ctx context.Context, tx *gorm.DB
 	return nil
 }
 
-// assignDefaultRolesToNewUsers 为新导入的用户分配默认角色（role_key='common' 普通用户）。
+// assignDefaultRolesToNewUsers 为新导入的用户分配默认角色（role_key='user' 普通用户）。
 //
-// 与 user_ou_service.go 的 AD 用户默认角色分配策略一致：
-//   - 仅处理本次导入的新用户（usernames 由 populateNewUserPasswords 识别）
-//   - 幂等：跳过 sys_user_role 已有记录的用户（不覆盖已分配角色）
-//   - 未配置 common 角色时跳过（WARN），不阻断导入
+// 业务规则：仅给"尚无任何角色"的用户分配默认角色，已有角色的用户不会被覆盖
+// （幂等）。这样导入新用户会拿到默认"普通用户"角色，重新导入已存在但无角色
+// 的用户也会补齐，但已分配角色的用户保持原样。
 //
-// 批量 INSERT（单次 SQL），适合大批量导入（1000+ 用户）。
 // 必须在 Upsert 之后调用（此时新用户已入库，可按 username 查到 id）。
+// 批量 INSERT（单次 SQL），适合大批量导入（1000+ 用户）。
+//
+// 与 createDefaultRole（database.go）保持一致：role_key='user'，角色名'普通用户'。
 func (s *ExcelService) assignDefaultRolesToNewUsers(ctx context.Context, tx *gorm.DB, usernames []string) error {
 	if len(usernames) == 0 {
 		return nil
 	}
 
-	// 1. 查普通用户角色（role_key='common'）
+	// 1. 查普通用户角色（role_key='user'，与 createDefaultRole 一致）。
+	// 找不到时仅 WARN 跳过，不阻断导入（环境未配置该角色时静默降级）。
 	var defaultRole models.Role
-	if err := tx.WithContext(ctx).Where("role_key = ?", "common").First(&defaultRole).Error; err != nil {
-		logger.Warnf("[USER-IMPORT] 未找到普通用户角色(role_key=common)，跳过默认角色分配: %v", err)
-		return nil // 不阻断导入（环境未配置 common 角色时静默跳过）
+	if err := tx.WithContext(ctx).Where("role_key = ?", "user").First(&defaultRole).Error; err != nil {
+		logger.Warnf("[USER-IMPORT] 未找到普通用户角色(role_key=user)，跳过默认角色分配: %v", err)
+		return nil
 	}
 
 	// 2. 查新用户中尚无角色的（幂等：避免重复插入 + 不覆盖已分配角色）
@@ -963,7 +965,7 @@ func (s *ExcelService) assignDefaultRolesToNewUsers(ctx context.Context, tx *gor
 	if err := tx.WithContext(ctx).Exec(sqlStr, valueArgs...).Error; err != nil {
 		return fmt.Errorf("批量分配默认角色失败: %w", err)
 	}
-	logger.Infof("[USER-IMPORT] 为 %d 个新用户分配普通用户角色(role_key=common)", len(users))
+	logger.Infof("[USER-IMPORT] 为 %d 个新用户分配普通用户角色(role_key=user)", len(users))
 	return nil
 }
 
@@ -1210,7 +1212,7 @@ func (s *ExcelService) ensureUniqueValueCacheLoaded(ctx context.Context, config 
 		var values []string
 		err := s.db.WithContext(ctx).Table(config.TableName).
 			Select(dbField).
-			Where(dbField + " IS NOT NULL AND deleted_at IS NULL").
+			Where(dbField+" IS NOT NULL AND deleted_at IS NULL").
 			Pluck(dbField, &values).Error
 		if err != nil {
 			return fmt.Errorf("加载唯一列 %s 现有值失败: %w", dbField, err)
@@ -1277,7 +1279,6 @@ func (s *ExcelService) ExportData(ctx context.Context, entityType string, params
 
 	return f, nil
 }
-
 
 func (s *ExcelService) queryData(_ context.Context, config ExcelConfig, params map[string]any) ([]map[string]any, error) {
 	query := s.db.Table(config.TableName).Where("deleted_at IS NULL")
