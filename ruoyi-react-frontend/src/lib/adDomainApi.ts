@@ -10,8 +10,6 @@ export interface ADConfig {
   serverPort: number;
   domainName: string;
   baseDn: string;
-  adminUsername: string;
-  adminPassword?: string;
   useSsl: boolean;
   useTls: boolean;
   syncEnabled: boolean;
@@ -158,8 +156,6 @@ export interface ADConfigCreateRequest {
   serverPort: number;
   domainName: string;
   baseDn: string;
-  adminUsername: string;
-  adminPassword: string;
   useSsl?: boolean;
   useTls?: boolean;
   syncEnabled?: boolean;
@@ -172,8 +168,6 @@ export interface ADConfigUpdateRequest {
   serverPort: number;
   domainName: string;
   baseDn: string;
-  adminUsername: string;
-  adminPassword?: string;
   useSsl: boolean;
   useTls: boolean;
   syncEnabled: boolean;

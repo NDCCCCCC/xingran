@@ -85,8 +85,6 @@ type CreateRequest struct {
 	ServerPort    int    `json:"serverPort" binding:"required,min=1,max=65535"`
 	DomainName    string `json:"domainName" binding:"required,max=255"`
 	BaseDN        string `json:"baseDn" binding:"required,max=500"`
-	AdminUsername string `json:"adminUsername" binding:"required,max=255"`
-	AdminPassword string `json:"adminPassword" binding:"required,max=500"`
 	UseSSL        bool   `json:"useSsl"`
 	UseTLS        bool   `json:"useTls"`
 	SyncEnabled   bool   `json:"syncEnabled"`
@@ -107,8 +105,6 @@ func (s *ConfigService) Create(ctx context.Context, req *CreateRequest, creatorI
 		ServerPort:    req.ServerPort,
 		DomainName:    req.DomainName,
 		BaseDN:        req.BaseDN,
-		AdminUsername: req.AdminUsername,
-		AdminPassword: encryptPassword(req.AdminPassword),
 		UseSSL:        req.UseSSL,
 		UseTLS:        req.UseTLS,
 		SyncEnabled:   req.SyncEnabled,
@@ -121,8 +117,6 @@ func (s *ConfigService) Create(ctx context.Context, req *CreateRequest, creatorI
 		return nil, fmt.Errorf("保存AD配置失败: %w", err)
 	}
 
-	// 清除密码字段后返回
-	config.AdminPassword = ""
 	return config, nil
 }
 
@@ -134,8 +128,6 @@ type UpdateRequest struct {
 	ServerPort    int    `json:"serverPort" binding:"required,min=1,max=65535"`
 	DomainName    string `json:"domainName" binding:"required,max=255"`
 	BaseDN        string `json:"baseDn" binding:"required,max=500"`
-	AdminUsername string `json:"adminUsername" binding:"required,max=255"`
-	AdminPassword string `json:"adminPassword,omitempty"`
 	UseSSL        bool   `json:"useSsl"`
 	UseTLS        bool   `json:"useTls"`
 	SyncEnabled   bool   `json:"syncEnabled"`
@@ -158,18 +150,12 @@ func (s *ConfigService) Update(ctx context.Context, req *UpdateRequest, updaterI
 		"server_port":    req.ServerPort,
 		"domain_name":    req.DomainName,
 		"base_dn":        req.BaseDN,
-		"admin_username": req.AdminUsername,
 		"use_ssl":        req.UseSSL,
 		"use_tls":        req.UseTLS,
 		"sync_enabled":   req.SyncEnabled,
 		"sync_interval":  req.SyncInterval,
 		"member_ou_dn":   req.MemberOUDN,
 		"updated_by":     updaterID,
-	}
-
-	// 只有提供了新密码才更新密码
-	if req.AdminPassword != "" {
-		updates["admin_password"] = encryptPassword(req.AdminPassword)
 	}
 
 	// 更新状态

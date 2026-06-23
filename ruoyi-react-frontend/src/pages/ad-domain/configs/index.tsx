@@ -89,7 +89,6 @@ const ADConfigPage: FC = () => {
       // 编辑模式：设置表单值（因为 destroyOnHide 会销毁 Form）
       editForm.setFieldsValue({
         ...editingConfig,
-        adminPassword: undefined, // 不回填密码
       });
     } else if (open && !editingConfig) {
       // 新增模式：设置默认值
@@ -105,13 +104,8 @@ const ADConfigPage: FC = () => {
 
   const handleEdit = (config: ADConfig) => {
     setEditingConfig(config);
-    // Phase 36: 不再回填 adminUsername/adminPassword（单管理员字段已废弃）
-    // 用户通过详情 Drawer 的「服务账号池」Tab 管理多个账号
-    editForm.setFieldsValue({
-      ...config,
-      adminUsername: undefined,
-      adminPassword: undefined,
-    });
+    // 账号管理通过详情 Drawer 的「服务账号池」Tab
+    editForm.setFieldsValue({ ...config });
     setModalVisible(true);
   };
 
@@ -126,10 +120,7 @@ const ADConfigPage: FC = () => {
       const values = await editForm.validateFields();
 
       if (editingConfig) {
-        const updateData = {
-          ...values,
-          adminPassword: values.adminPassword || undefined, // 如果没有输入密码则不更新
-        };
+        const updateData = { ...values };
         await updateADConfig(editingConfig.id, updateData);
         handleSuccess('更新成功');
       } else {
@@ -411,8 +402,7 @@ const ADConfigPage: FC = () => {
             <Input placeholder="如: DC=example,DC=com" />
           </Form.Item>
 
-          {/* Phase 36: 移除单管理员字段。改用「服务账号池」管理管理员账号。
-              adminUsername/adminPassword 字段在 DB 保留（@Deprecated）作为账号池为空时的 fallback。 */}
+          {/* 账号管理改用「服务账号池」（详情 Drawer 的服务账号池 Tab） */}
           <Form.Item label="使用SSL (LDAPS)" name="useSsl" valuePropName="checked">
             <Switch />
           </Form.Item>

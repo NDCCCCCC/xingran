@@ -113,7 +113,8 @@ func (h *ADDomainHandler) CreateConfig(c *gin.Context) {
 
 	recordOperLog(c, h.core, "AD域配置", OperTypeCreate)
 
-	// 隐藏密码
+	// D-04: 单管理员字段已废弃，响应清空（账号管理收敛到账号池 Tab）
+	config.AdminUsername = ""
 	config.AdminPassword = ""
 
 	response.Success(c, config)
@@ -144,6 +145,7 @@ func (h *ADDomainHandler) GetConfig(c *gin.Context) {
 		return
 	}
 
+	config.AdminUsername = ""
 	config.AdminPassword = ""
 	response.Success(c, config)
 }

@@ -26,8 +26,6 @@ type ADConfigCreateRequest struct {
 	ServerPort    int    `json:"serverPort" binding:"required,min=1,max=65535"`
 	DomainName    string `json:"domainName" binding:"required,max=255"`
 	BaseDN        string `json:"baseDn" binding:"required,max=500"`
-	AdminUsername string `json:"adminUsername" binding:"required,max=255"`
-	AdminPassword string `json:"adminPassword" binding:"required,max=500"`
 	UseSSL        bool   `json:"useSsl"`
 	UseTLS        bool   `json:"useTls"`
 	SyncEnabled   bool   `json:"syncEnabled"`
@@ -43,8 +41,6 @@ type ADConfigUpdateRequest struct {
 	ServerPort    int    `json:"serverPort" binding:"required,min=1,max=65535"`
 	DomainName    string `json:"domainName" binding:"required,max=255"`
 	BaseDN        string `json:"baseDn" binding:"required,max=500"`
-	AdminUsername string `json:"adminUsername" binding:"required,max=255"`
-	AdminPassword string `json:"adminPassword,omitempty"`
 	UseSSL        bool   `json:"useSsl"`
 	UseTLS        bool   `json:"useTls"`
 	SyncEnabled   bool   `json:"syncEnabled"`
@@ -170,8 +166,6 @@ func (s *ADDomainService) CreateADConfig(ctx context.Context, req *ADConfigCreat
 		ServerPort:    req.ServerPort,
 		DomainName:    req.DomainName,
 		BaseDN:        req.BaseDN,
-		AdminUsername: req.AdminUsername,
-		AdminPassword: req.AdminPassword,
 		UseSSL:        req.UseSSL,
 		UseTLS:        req.UseTLS,
 		SyncEnabled:   req.SyncEnabled,
@@ -190,8 +184,6 @@ func (s *ADDomainService) UpdateADConfig(ctx context.Context, req *ADConfigUpdat
 		ServerPort:    req.ServerPort,
 		DomainName:    req.DomainName,
 		BaseDN:        req.BaseDN,
-		AdminUsername: req.AdminUsername,
-		AdminPassword: req.AdminPassword,
 		UseSSL:        req.UseSSL,
 		UseTLS:        req.UseTLS,
 		SyncEnabled:   req.SyncEnabled,
