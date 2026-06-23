@@ -29,11 +29,10 @@ func SetupUserRouter(r *gin.RouterGroup, core *core.Core) {
 	}
 
 	// 创建AD同步服务（依赖DeptOUmapper）
-	// Phase 38 Wave 1: NewUserADSyncService 签名新增 pool AccountPool 参数。
-	// 暂传 nil（pool 字段在 38-02 才被业务方法使用，当前业务逻辑走原 NewLDAPClient 路径）。
-	// 38-02 改造时会改为复用 core 共享的 AccountPool 实例（Pitfall 4 缓存共享）。
+	// Phase 38 Wave 1 (W-04): 接入 core 共享的 AccountPool 实例（Pitfall 4：缓存共享，
+	// 避免重复 New 导致熔断后账号仍被选中）。pool 来自 core.AuthFactory（core.initAuthFactory 创建）。
 	mapper := addomain.NewDeptOUmapper(core.DB.GetDB())
-	userADSyncService := addomain.NewUserADSyncService(core.DB.GetDB(), nil, nil, mapper)
+	userADSyncService := addomain.NewUserADSyncService(core.DB.GetDB(), core.GetAuthFactory().GetAccountPool(), nil, mapper)
 
 	// 创建用户处理器，注入AD同步服务
 	handler := NewUserHandler(userService, userADSyncService).WithCore(core)

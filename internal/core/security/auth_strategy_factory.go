@@ -42,6 +42,12 @@ func (f *AuthStrategyFactory) SetAccountPool(pool addomain.AccountPool) {
 	f.accountPool = pool
 }
 
+// GetAccountPool Phase 38 Wave 1: 返回工厂持有的账号池实例（供 router 层复用共享实例）
+// 用于 user_router 等 caller 接入同一 AccountPool（Pitfall 4：避免重复 New 导致缓存不共享）
+func (f *AuthStrategyFactory) GetAccountPool() addomain.AccountPool {
+	return f.accountPool
+}
+
 // GetAuthenticator 根据认证模式获取认证器
 // mode: "local" | "ad" | "hybrid"
 func (f *AuthStrategyFactory) GetAuthenticator(mode string) (Authenticator, error) {
