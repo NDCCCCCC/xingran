@@ -805,7 +805,7 @@ Plans:
 **Goal:** 删除 sys_ad_config 单管理员遗留路径（admin_username/admin_password），所有 AD 连接（同步/管理/登录认证/配置测试连接）统一收敛到 Phase 36 账号池 FailoverClient，消除双轨不对称的解密遗漏风险（debug session adpool-password-not-decrypted 根因）。
 **Requirements**: D-01 (分波次降风险迁移) / D-02 (保留空列仅删代码) / D-03 (启动空池校验+明确错误不静默fallback) / D-04 (移除前端 admin 输入项)
 **Depends on:** Phase 36 (账号池设计来源), Phase 37
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 **Wave 1**
@@ -822,7 +822,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 38-04-PLAN.md — Wave 3：model struct tag 放宽 + migration_163 幂等补迁 + 启动空池 WARN 校验，D-01 Wave 3 + D-02 + D-03 收尾
+- [x] 38-04-PLAN.md — Wave 3：model struct tag 放宽 + migration_163 幂等补迁 + 启动空池 WARN 校验，D-01 Wave 3 + D-02 + D-03 收尾
 
 ---
 

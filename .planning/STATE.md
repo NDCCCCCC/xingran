@@ -27,11 +27,11 @@ progress:
 
 ## Current Position
 
-Phase: 38 (unify-ad-authentication-onto-account-pool-remove-legacy-sing) — EXECUTING
-Plan: 4 of 4 (38-01/02/03 ✅ — Wave 2: 删 22 处 decryptPassword + bindAdmin 死代码 + 前后端 admin 字段 SHA-4 同 commit; next: 38-04 model tag + migration_164 补迁 + 启动空池 WARN 校验)
+Phase: 38 (unify-ad-authentication-onto-account-pool-remove-legacy-sing) — EXECUTING (4/4 plans done, awaiting phase verification)
+Plan: 4 of 4 ✅ (38-01/02/03/04 全完成 — Wave 3: model tag 放宽 + migration_164 DROP NOT NULL 兜底+补迁 + 启动空池 WARN 校验; D-01/D-02/D-03/D-04 全部落地; next: phase-level 验证)
 **Latest shipped milestone**: v1.15 工位设备关联 (Phase 28, 2026-06-10)
 **Latest shipped phase**: Phase 34 操作日志全模块集成 + review (2026-06-16)
-**Most recent commit**: 2b5f9eb refactor(38-03): 前后端配套删除 admin 字段 (Task 2, SHA-4 同 commit)
+**Most recent commit**: 3084a04 refactor(38-04): migration_164 放宽列约束 + 幂等补迁账号池 (Task 2)
 
 **Shipped since last state file update (v1.15 was the milestone label
 in PROJECT.md before this sync)**:
