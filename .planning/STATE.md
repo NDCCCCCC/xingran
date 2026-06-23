@@ -186,6 +186,7 @@ Run `/gsd:new-milestone` to formally start v1.16.
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260622-u8n | 从 sys_dept.leader 批量同步用户 AD manager 属性（祖先递归找 leader + 复用单 LDAP 连接 + 信号量并发，POST /system/users/sync-managers） | 2026-06-22 | - | [260622-u8n-ad-manager-leader-ad](./quick/260622-u8n-ad-manager-leader-ad/) |
 | 260614-rrk | 工位编辑模态框：所属楼层 Cascader + 所属用户 Select 显示名称/账号（昵称）而非 UUID | 2026-06-14 | b9f8894 | [260614-rrk-id](./quick/260614-rrk-id/) |
 | 260614-dpz | 工位设置主设备时按序列号合并资产+域控数据再同步 | 2026-06-14 | dcfd552 | [260614-dpz-workstation-main-device-merge](./quick/260614-dpz-workstation-main-device-merge/) |
 | 260612-d2x | 工位管理页面子表格设备信息添加字段ip地址 | 2026-06-12 | 8ad0f4a | [260612-d2x-ip](./quick/260612-d2x-ip/) |

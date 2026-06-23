@@ -42,6 +42,7 @@ func SetupUserRouter(r *gin.RouterGroup, core *core.Core) {
 	r.POST("/import", handler.ImportUser)
 	r.GET("/import/template", handler.DownloadImportTemplate)
 	r.POST("/batch-delete", handler.BatchDelete)
+	r.POST("/sync-managers", handler.SyncManagers)
 	r.POST("/:id", handler.GetByID)
 	r.POST("/:id/update", handler.Update)
 	r.POST("/:id/delete", handler.Delete)

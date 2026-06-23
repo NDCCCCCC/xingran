@@ -250,3 +250,45 @@ func verifyExcelMagicBytes(fileHeader *multipart.FileHeader) error {
 	}
 	return nil
 }
+
+// SyncManagers 手动触发"从部门负责人同步 AD manager 属性"全量任务。
+//
+// 行为：调用 UserADSyncService.SyncManagersToAD 全量同步所有有 ad_dn 的用户，
+// 将其部门（含祖先递归）leader 的 ad_dn 写入 AD manager 属性。返回同步统计
+// （总数/成功/跳过/失败）。单个用户失败不中断批量（降级记录到 errors）。
+//
+// 业务语义：AD 中 manager 是 DN 格式，故 leader 用户必须有 ad_dn；无 leader、
+// leader 自指、leader 无 ad_dn 的用户均跳过。
+//
+// @Summary 同步用户经理到AD
+// @Description 根据 sys_dept.leader 全量同步用户 AD manager 属性（部门无 leader 时递归父部门）
+// @Tags 用户管理
+// @Produce json
+// @Success 200 {object} response.Response
+// @Router /system/users/sync-managers [post]
+func (h *UserHandler) SyncManagers(c *gin.Context) {
+	if h.userADSyncService == nil {
+		response.Error(c, response.ErrServerError, "AD 同步服务未启用")
+		return
+	}
+
+	result, err := h.userADSyncService.SyncManagersToAD(c.Request.Context(), nil)
+	if err != nil {
+		applogger.Errorf("[USER-MANAGER-SYNC] 同步失败: %v", err)
+		response.Error(c, response.ErrServerError, err.Error())
+		return
+	}
+
+	// 操作日志：仅记录聚合统计，不记录 errors 明细（可能含 username，避免信息泄露）
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "用户管理", operlog.OperTypeSync,
+		operlog.WithOperParam(fmt.Sprintf(`{"total":%d,"synced":%d,"skipped":%d,"failed":%d}`,
+			result.Total, result.Synced, result.Skipped, result.Failed)))
+
+	response.Success(c, gin.H{
+		"total":   result.Total,
+		"synced":  result.Synced,
+		"skipped": result.Skipped,
+		"failed":  result.Failed,
+		"errors":  result.Errors,
+	})
+}
