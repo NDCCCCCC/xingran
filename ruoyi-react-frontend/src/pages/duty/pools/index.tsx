@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import type { FC } from 'react';
 import { Button, Form, Input, Select, Table, Modal, InputNumber, Space, Tag, App, Card, Statistic, Row, Col } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
@@ -66,6 +66,14 @@ const DutyPoolPage: FC = () => {
   const [users, setUsers] = useState<SimpleUser[]>([]);
   // 部门树数据 — 全项目共享 ['dept','tree'] 缓存条目 (D-LOCKED: 单一数据源 useDeptTree)
   const { data: depts = [] } = useDeptTree();
+  // 防御 useDeptTree 异步时序 + onChange/handleEdit 闭包陈旧:
+  // useDeptTree 在组件顶层启动 React Query,首次 data 为 undefined (默认 [])。
+  // 若用户在 depts 异步到达前快速开模态框选部门,onChange 闭包可能捕获旧 depts=[]。
+  // 用 ref 持有最新 depts,onChange/handleEdit 从 ref 读取保证用最新数据做 getDeptAndChildrenIds。
+  const deptsRef = useRef<SimpleDept[]>(depts);
+  useEffect(() => {
+    deptsRef.current = depts;
+  }, [depts]);
   // 筛选后的用户列表（用于弹窗中的值班成员选择）
   const [filteredUsers, setFilteredUsers] = useState<SimpleUser[]>([]);
 
@@ -198,9 +206,10 @@ const DutyPoolPage: FC = () => {
   const handleEdit = (record: DutyPool) => {
     setEditingRecord(record);
     setModalVisible(true);
-    // 根据记录的部门筛选用户
+    // 根据记录的部门筛选用户(从 ref 读取最新 depts, 防御 useDeptTree 异步未到达时闭包陈旧)
+    const currentDepts = deptsRef.current;
     if (record.deptId) {
-      const deptIds = getDeptAndChildrenIds(record.deptId, depts);
+      const deptIds = getDeptAndChildrenIds(record.deptId, currentDepts);
       const filtered = users.filter(user => user.deptId && deptIds.includes(user.deptId));
       setFilteredUsers(filtered);
     } else {
@@ -490,8 +499,9 @@ const DutyPoolPage: FC = () => {
             <DepartmentTreeSelect
               departments={depts}
               onChange={(value) => {
-                // 根据选择的部门筛选用户
-                const deptIds = getDeptAndChildrenIds(value, depts);
+                // 根据选择的部门筛选用户(从 ref 读取最新 depts, 防御 useDeptTree 异步/闭包陈旧)
+                const currentDepts = deptsRef.current;
+                const deptIds = getDeptAndChildrenIds(value, currentDepts);
                 if (deptIds.length > 0) {
                   const filtered = users.filter(user => user.deptId && deptIds.includes(user.deptId));
                   setFilteredUsers(filtered);
