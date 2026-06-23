@@ -2,6 +2,7 @@ package addomain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -83,21 +84,24 @@ func (s *groupManagementService) CreateGroupForDept(ctx context.Context, deptID,
 	}
 	groupDN := fmt.Sprintf("CN=%s,%s", groupName, parentOUDN)
 
-	// 4. 连接LDAP并创建组
+	// 4. 连接LDAP并创建组（Phase 38 Wave 1: 改走 FailoverClient 账号池故障切换）
 	config.AdminPassword = decryptPassword(config.AdminPassword)
-	client := NewLDAPClient(&config)
-	if err := client.Connect(); err != nil {
-		return nil, fmt.Errorf("连接AD服务器失败: %w", err)
-	}
-	defer client.Close()
-
-	// 检查组是否已存在
-	if err := client.CreateGroup(groupDN, groupName, dept.DeptName+"部门组", 0); err != nil {
-		// 判断是否为"已存在"错误
-		if strings.Contains(err.Error(), "68") || strings.Contains(err.Error(), "already exists") {
-			return nil, fmt.Errorf("AD组已存在: %s", groupName)
+	fc := NewFailoverClient(s.pool, &config)
+	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+		// 检查组是否已存在
+		if err := client.CreateGroup(groupDN, groupName, dept.DeptName+"部门组", 0); err != nil {
+			// 判断是否为"已存在"错误
+			if strings.Contains(err.Error(), "68") || strings.Contains(err.Error(), "already exists") {
+				return fmt.Errorf("AD组已存在: %s", groupName)
+			}
+			return fmt.Errorf("创建AD组失败: %w", err)
 		}
-		return nil, fmt.Errorf("创建AD组失败: %w", err)
+		return nil
+	}); err != nil {
+		if errors.Is(err, ErrAllAccountsUnavailable) {
+			return nil, fmt.Errorf("AD 账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
+		}
+		return nil, err
 	}
 
 	applogger.Infof("[组管理] 创建AD组成功: %s (%s)", groupName, groupDN)
@@ -153,14 +157,18 @@ func (s *groupManagementService) DeleteGroup(ctx context.Context, groupID string
 	}
 
 	config.AdminPassword = decryptPassword(config.AdminPassword)
-	client := NewLDAPClient(&config)
-	if err := client.Connect(); err != nil {
-		return fmt.Errorf("连接AD服务器失败: %w", err)
-	}
-	defer client.Close()
-
-	if err := client.DeleteGroup(group.GroupDN); err != nil {
-		return fmt.Errorf("删除AD组失败: %w", err)
+	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
+	fc := NewFailoverClient(s.pool, &config)
+	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+		if err := client.DeleteGroup(group.GroupDN); err != nil {
+			return fmt.Errorf("删除AD组失败: %w", err)
+		}
+		return nil
+	}); err != nil {
+		if errors.Is(err, ErrAllAccountsUnavailable) {
+			return fmt.Errorf("AD 账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
+		}
+		return err
 	}
 
 	applogger.Infof("[组管理] 删除AD组成功: %s", group.GroupName)
@@ -201,13 +209,8 @@ func (s *groupManagementService) AddMembers(ctx context.Context, groupID string,
 	}
 
 	config.AdminPassword = decryptPassword(config.AdminPassword)
-	client := NewLDAPClient(&config)
-	if err := client.Connect(); err != nil {
-		return nil, fmt.Errorf("连接AD服务器失败: %w", err)
-	}
-	defer client.Close()
 
-	// 4. 批量添加成员
+	// 4. 批量添加成员（Phase 38 Wave 1: 改走 FailoverClient 账号池故障切换）
 	userDNs := make([]string, 0, len(users))
 	for _, user := range users {
 		if user.AdDn != nil {
@@ -215,8 +218,17 @@ func (s *groupManagementService) AddMembers(ctx context.Context, groupID string,
 		}
 	}
 
-	if err := client.AddGroupMembers(group.GroupDN, userDNs); err != nil {
-		return nil, fmt.Errorf("添加组成员失败: %w", err)
+	fc := NewFailoverClient(s.pool, &config)
+	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+		if err := client.AddGroupMembers(group.GroupDN, userDNs); err != nil {
+			return fmt.Errorf("添加组成员失败: %w", err)
+		}
+		return nil
+	}); err != nil {
+		if errors.Is(err, ErrAllAccountsUnavailable) {
+			return nil, fmt.Errorf("AD 账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
+		}
+		return nil, err
 	}
 
 	result.AddedCount = len(userDNs)
@@ -259,13 +271,8 @@ func (s *groupManagementService) RemoveMembers(ctx context.Context, groupID stri
 	}
 
 	config.AdminPassword = decryptPassword(config.AdminPassword)
-	client := NewLDAPClient(&config)
-	if err := client.Connect(); err != nil {
-		return nil, fmt.Errorf("连接AD服务器失败: %w", err)
-	}
-	defer client.Close()
 
-	// 4. 批量移除成员
+	// 4. 批量移除成员（Phase 38 Wave 1: 改走 FailoverClient 账号池故障切换）
 	userDNs := make([]string, 0, len(users))
 	for _, user := range users {
 		if user.AdDn != nil {
@@ -273,8 +280,17 @@ func (s *groupManagementService) RemoveMembers(ctx context.Context, groupID stri
 		}
 	}
 
-	if err := client.RemoveGroupMembers(group.GroupDN, userDNs); err != nil {
-		return nil, fmt.Errorf("移除组成员失败: %w", err)
+	fc := NewFailoverClient(s.pool, &config)
+	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+		if err := client.RemoveGroupMembers(group.GroupDN, userDNs); err != nil {
+			return fmt.Errorf("移除组成员失败: %w", err)
+		}
+		return nil
+	}); err != nil {
+		if errors.Is(err, ErrAllAccountsUnavailable) {
+			return nil, fmt.Errorf("AD 账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
+		}
+		return nil, err
 	}
 
 	result.RemovedCount = len(userDNs)

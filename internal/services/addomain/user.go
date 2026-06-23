@@ -2,6 +2,7 @@ package addomain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
@@ -125,12 +126,6 @@ type UserUpdateRequest struct {
 func (s *UserService) Update(ctx context.Context, config *models.ADConfig, userDN string, req *UserUpdateRequest) error {
 	config.AdminPassword = decryptPassword(config.AdminPassword)
 
-	client := NewLDAPClient(config)
-	if err := client.Connect(); err != nil {
-		return fmt.Errorf("连接失败: %w", err)
-	}
-	defer client.Close()
-
 	// 构建更新属性
 	attrs := make(map[string]string)
 	if req.DisplayName != nil {
@@ -155,7 +150,14 @@ func (s *UserService) Update(ctx context.Context, config *models.ADConfig, userD
 		attrs["description"] = *req.Description
 	}
 
-	if err := client.UpdateUserAttribute(userDN, attrs); err != nil {
+	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
+	fc := NewFailoverClient(s.pool, config)
+	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+		return client.UpdateUserAttribute(userDN, attrs)
+	}); err != nil {
+		if errors.Is(err, ErrAllAccountsUnavailable) {
+			return fmt.Errorf("AD 账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
+		}
 		return err
 	}
 
@@ -194,13 +196,14 @@ func (s *UserService) Update(ctx context.Context, config *models.ADConfig, userD
 func (s *UserService) Enable(ctx context.Context, config *models.ADConfig, userDN string) error {
 	config.AdminPassword = decryptPassword(config.AdminPassword)
 
-	client := NewLDAPClient(config)
-	if err := client.Connect(); err != nil {
-		return err
-	}
-	defer client.Close()
-
-	if err := client.EnableUser(userDN); err != nil {
+	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
+	fc := NewFailoverClient(s.pool, config)
+	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+		return client.EnableUser(userDN)
+	}); err != nil {
+		if errors.Is(err, ErrAllAccountsUnavailable) {
+			return fmt.Errorf("AD 账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
+		}
 		return err
 	}
 
@@ -215,13 +218,14 @@ func (s *UserService) Enable(ctx context.Context, config *models.ADConfig, userD
 func (s *UserService) Disable(ctx context.Context, config *models.ADConfig, userDN string) error {
 	config.AdminPassword = decryptPassword(config.AdminPassword)
 
-	client := NewLDAPClient(config)
-	if err := client.Connect(); err != nil {
-		return err
-	}
-	defer client.Close()
-
-	if err := client.DisableUser(userDN); err != nil {
+	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
+	fc := NewFailoverClient(s.pool, config)
+	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+		return client.DisableUser(userDN)
+	}); err != nil {
+		if errors.Is(err, ErrAllAccountsUnavailable) {
+			return fmt.Errorf("AD 账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
+		}
 		return err
 	}
 
@@ -236,13 +240,14 @@ func (s *UserService) Disable(ctx context.Context, config *models.ADConfig, user
 func (s *UserService) Move(ctx context.Context, config *models.ADConfig, userDN, newOUDN string) error {
 	config.AdminPassword = decryptPassword(config.AdminPassword)
 
-	client := NewLDAPClient(config)
-	if err := client.Connect(); err != nil {
-		return err
-	}
-	defer client.Close()
-
-	if err := client.MoveUser(userDN, newOUDN); err != nil {
+	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
+	fc := NewFailoverClient(s.pool, config)
+	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+		return client.MoveUser(userDN, newOUDN)
+	}); err != nil {
+		if errors.Is(err, ErrAllAccountsUnavailable) {
+			return fmt.Errorf("AD 账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
+		}
 		return err
 	}
 

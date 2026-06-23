@@ -2,6 +2,7 @@ package addomain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
@@ -124,13 +125,14 @@ func (s *GroupService) GetMembers(ctx context.Context, configID, groupDN string,
 func (s *GroupService) AddMember(ctx context.Context, config *models.ADConfig, groupDN, userDN string) error {
 	config.AdminPassword = decryptPassword(config.AdminPassword)
 
-	client := NewLDAPClient(config)
-	if err := client.Connect(); err != nil {
-		return err
-	}
-	defer client.Close()
-
-	if err := client.AddGroupMember(groupDN, userDN); err != nil {
+	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
+	fc := NewFailoverClient(s.pool, config)
+	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+		return client.AddGroupMember(groupDN, userDN)
+	}); err != nil {
+		if errors.Is(err, ErrAllAccountsUnavailable) {
+			return fmt.Errorf("AD 账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
+		}
 		return err
 	}
 
@@ -154,13 +156,14 @@ func (s *GroupService) AddMember(ctx context.Context, config *models.ADConfig, g
 func (s *GroupService) RemoveMember(ctx context.Context, config *models.ADConfig, groupDN, userDN string) error {
 	config.AdminPassword = decryptPassword(config.AdminPassword)
 
-	client := NewLDAPClient(config)
-	if err := client.Connect(); err != nil {
-		return err
-	}
-	defer client.Close()
-
-	if err := client.RemoveGroupMember(groupDN, userDN); err != nil {
+	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
+	fc := NewFailoverClient(s.pool, config)
+	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+		return client.RemoveGroupMember(groupDN, userDN)
+	}); err != nil {
+		if errors.Is(err, ErrAllAccountsUnavailable) {
+			return fmt.Errorf("AD 账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
+		}
 		return err
 	}
 
@@ -186,12 +189,6 @@ type GroupUpdateRequest struct {
 func (s *GroupService) Update(ctx context.Context, config *models.ADConfig, groupDN string, req *GroupUpdateRequest) error {
 	config.AdminPassword = decryptPassword(config.AdminPassword)
 
-	client := NewLDAPClient(config)
-	if err := client.Connect(); err != nil {
-		return err
-	}
-	defer client.Close()
-
 	// 构建更新属性
 	attrs := make(map[string]string)
 	if req.GroupName != nil {
@@ -201,7 +198,14 @@ func (s *GroupService) Update(ctx context.Context, config *models.ADConfig, grou
 		attrs["description"] = *req.Description
 	}
 
-	if err := client.UpdateGroupAttribute(groupDN, attrs); err != nil {
+	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
+	fc := NewFailoverClient(s.pool, config)
+	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+		return client.UpdateGroupAttribute(groupDN, attrs)
+	}); err != nil {
+		if errors.Is(err, ErrAllAccountsUnavailable) {
+			return fmt.Errorf("AD 账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
+		}
 		return err
 	}
 

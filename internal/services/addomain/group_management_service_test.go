@@ -98,6 +98,27 @@ func setupTestDB(t *testing.T) *gorm.DB {
 		deleted_at DATETIME
 	)`)
 
+	// Phase 38 Wave 1: 账号池表（FailoverClient 改造后 CreateGroupForDept 经账号池，空池返回 ErrAllAccountsUnavailable）
+	db.Exec(`CREATE TABLE sys_ad_service_accounts (
+		id TEXT PRIMARY KEY,
+		config_id TEXT NOT NULL,
+		username TEXT NOT NULL,
+		password_ciphertext TEXT NOT NULL,
+		status INTEGER DEFAULT 0,
+		failure_count INTEGER DEFAULT 0,
+		circuit_breaker_until DATETIME,
+		last_success_at DATETIME,
+		last_failure_at DATETIME,
+		last_failure_reason TEXT,
+		manual_unlock_reason TEXT,
+		manual_unlocked_by TEXT DEFAULT '',
+		manual_unlocked_at DATETIME,
+		remark TEXT,
+		created_at DATETIME,
+		updated_at DATETIME,
+		deleted_at DATETIME
+	)`)
+
 	return db
 }
 
@@ -143,7 +164,7 @@ func createTestData(t *testing.T, db *gorm.DB) (deptID, configID, groupID string
 // TestGroupManagementService_CreateGroupForDept 测试为部门创建组
 func TestGroupManagementService_CreateGroupForDept(t *testing.T) {
 	db := setupTestDB(t)
-	service := NewGroupManagementService(db, nil)
+	service := NewGroupManagementService(db, NewAccountPool(db, nil))
 	ctx := context.Background()
 
 	deptID, configID, _ := createTestData(t, db)
@@ -169,7 +190,7 @@ func TestGroupManagementService_CreateGroupForDept(t *testing.T) {
 // TestGroupManagementService_BulkCreateGroupsForDepts 测试批量创建组
 func TestGroupManagementService_BulkCreateGroupsForDepts(t *testing.T) {
 	db := setupTestDB(t)
-	service := NewGroupManagementService(db, nil)
+	service := NewGroupManagementService(db, NewAccountPool(db, nil))
 	ctx := context.Background()
 
 	deptID1, _, _ := createTestData(t, db)
@@ -300,7 +321,7 @@ func TestBulkCreateResult(t *testing.T) {
 // TestGroupManagementService_Integration_GrantFlow 测试完整流程
 func TestGroupManagementService_Integration_GrantFlow(t *testing.T) {
 	db := setupTestDB(t)
-	service := NewGroupManagementService(db, nil)
+	service := NewGroupManagementService(db, NewAccountPool(db, nil))
 	ctx := context.Background()
 
 	t.Run("完整流程: 创建部门 -> 创建组 -> 创建映射", func(t *testing.T) {
