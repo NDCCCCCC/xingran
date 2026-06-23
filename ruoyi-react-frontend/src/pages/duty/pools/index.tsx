@@ -451,7 +451,9 @@ const DutyPoolPage: FC = () => {
           >
             <Select
               mode="multiple"
-              placeholder={filteredUsers.length === 0 ? '请先选择所属部门' : '请选择值班成员'}
+              showSearch
+              optionFilterProp="children"
+              placeholder={filteredUsers.length === 0 ? '请先选择所属部门' : '请选择值班成员（可输入账号/昵称搜索）'}
               optionLabelProp="label"
               loading={memberUsersLoading}
               disabled={filteredUsers.length === 0 || memberUsersLoading}
