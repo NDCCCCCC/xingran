@@ -28,10 +28,10 @@ progress:
 ## Current Position
 
 Phase: 38 (unify-ad-authentication-onto-account-pool-remove-legacy-sing) — EXECUTING
-Plan: 3 of 4 (38-01 ✅, 38-02 ✅ COMPLETE — Wave 1 连接层统一: 22 处 NewLDAPClient(config)→FailoverClient + 全局 pool 单例 + user_router nil-pool 接入; next: 38-03 删单管理员使用逻辑 + 前端 admin 字段)
+Plan: 4 of 4 (38-01/02/03 ✅ — Wave 2: 删 22 处 decryptPassword + bindAdmin 死代码 + 前后端 admin 字段 SHA-4 同 commit; next: 38-04 model tag + migration_164 补迁 + 启动空池 WARN 校验)
 **Latest shipped milestone**: v1.15 工位设备关联 (Phase 28, 2026-06-10)
 **Latest shipped phase**: Phase 34 操作日志全模块集成 + review (2026-06-16)
-**Most recent commit**: c126740 refactor(38-02): 接入 user_router.go 共享 pool (post-529 completion)
+**Most recent commit**: 2b5f9eb refactor(38-03): 前后端配套删除 admin 字段 (Task 2, SHA-4 同 commit)
 
 **Shipped since last state file update (v1.15 was the milestone label
 in PROJECT.md before this sync)**:
