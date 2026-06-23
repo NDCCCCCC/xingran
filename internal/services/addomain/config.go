@@ -203,13 +203,7 @@ func (s *ConfigService) Delete(ctx context.Context, id string) error {
 func (s *ConfigService) TestConnection(ctx context.Context, config *models.ADConfig) error {
 	applogger.Infof("[ADTest] 开始测试AD连接: configID=%s, server=%s:%d, baseDN=%s", config.ID, config.ServerAddress, config.ServerPort, config.BaseDN)
 
-	// P1 fix: 解密密码 — 移除密码长度日志(侧信道),
-	// 长度泄露在攻击者通过日志枚举多个配置时可缩小破解空间
-	// Phase 38 Wave 1: decryptPassword 行暂保留（38-03 统一删；PickFirstConnect 内部用账号池
-	// 的 PasswordCiphertext 而非 config.AdminPassword，保留不影响正确性）
-	config.AdminPassword = decryptPassword(config.AdminPassword)
-
-	// Phase 38 Wave 1: 改走 FailoverClient.PickFirstConnect（SP-4）
+	// Phase 38: 改走 FailoverClient.PickFirstConnect（SP-4）
 	// 只建连接 + bind 成功即返回，不做后续 operation；
 	// 唯一允许闭包外用 client 的场景（caller 负责 defer client.Close()）
 	fc := NewFailoverClient(s.pool, config)

@@ -124,7 +124,6 @@ type UserUpdateRequest struct {
 
 // Update 更新用户
 func (s *UserService) Update(ctx context.Context, config *models.ADConfig, userDN string, req *UserUpdateRequest) error {
-	config.AdminPassword = decryptPassword(config.AdminPassword)
 
 	// 构建更新属性
 	attrs := make(map[string]string)
@@ -194,7 +193,6 @@ func (s *UserService) Update(ctx context.Context, config *models.ADConfig, userD
 
 // Enable 启用用户
 func (s *UserService) Enable(ctx context.Context, config *models.ADConfig, userDN string) error {
-	config.AdminPassword = decryptPassword(config.AdminPassword)
 
 	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
 	fc := NewFailoverClient(s.pool, config)
@@ -216,7 +214,6 @@ func (s *UserService) Enable(ctx context.Context, config *models.ADConfig, userD
 
 // Disable 禁用用户
 func (s *UserService) Disable(ctx context.Context, config *models.ADConfig, userDN string) error {
-	config.AdminPassword = decryptPassword(config.AdminPassword)
 
 	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
 	fc := NewFailoverClient(s.pool, config)
@@ -238,7 +235,6 @@ func (s *UserService) Disable(ctx context.Context, config *models.ADConfig, user
 
 // Move 移动用户到其他OU
 func (s *UserService) Move(ctx context.Context, config *models.ADConfig, userDN, newOUDN string) error {
-	config.AdminPassword = decryptPassword(config.AdminPassword)
 
 	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
 	fc := NewFailoverClient(s.pool, config)

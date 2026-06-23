@@ -123,7 +123,6 @@ func (s *GroupService) GetMembers(ctx context.Context, configID, groupDN string,
 
 // AddMember 添加用户组成员
 func (s *GroupService) AddMember(ctx context.Context, config *models.ADConfig, groupDN, userDN string) error {
-	config.AdminPassword = decryptPassword(config.AdminPassword)
 
 	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
 	fc := NewFailoverClient(s.pool, config)
@@ -154,7 +153,6 @@ func (s *GroupService) AddMember(ctx context.Context, config *models.ADConfig, g
 
 // RemoveMember 移除用户组成员
 func (s *GroupService) RemoveMember(ctx context.Context, config *models.ADConfig, groupDN, userDN string) error {
-	config.AdminPassword = decryptPassword(config.AdminPassword)
 
 	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
 	fc := NewFailoverClient(s.pool, config)
@@ -187,7 +185,6 @@ type GroupUpdateRequest struct {
 
 // Update 更新用户组
 func (s *GroupService) Update(ctx context.Context, config *models.ADConfig, groupDN string, req *GroupUpdateRequest) error {
-	config.AdminPassword = decryptPassword(config.AdminPassword)
 
 	// 构建更新属性
 	attrs := make(map[string]string)

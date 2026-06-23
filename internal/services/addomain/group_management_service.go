@@ -85,7 +85,6 @@ func (s *groupManagementService) CreateGroupForDept(ctx context.Context, deptID,
 	groupDN := fmt.Sprintf("CN=%s,%s", groupName, parentOUDN)
 
 	// 4. 连接LDAP并创建组（Phase 38 Wave 1: 改走 FailoverClient 账号池故障切换）
-	config.AdminPassword = decryptPassword(config.AdminPassword)
 	fc := NewFailoverClient(s.pool, &config)
 	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
 		// 检查组是否已存在
@@ -156,7 +155,6 @@ func (s *groupManagementService) DeleteGroup(ctx context.Context, groupID string
 		return fmt.Errorf("AD配置不存在")
 	}
 
-	config.AdminPassword = decryptPassword(config.AdminPassword)
 	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
 	fc := NewFailoverClient(s.pool, &config)
 	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
@@ -208,7 +206,6 @@ func (s *groupManagementService) AddMembers(ctx context.Context, groupID string,
 		return nil, fmt.Errorf("AD配置不存在")
 	}
 
-	config.AdminPassword = decryptPassword(config.AdminPassword)
 
 	// 4. 批量添加成员（Phase 38 Wave 1: 改走 FailoverClient 账号池故障切换）
 	userDNs := make([]string, 0, len(users))
@@ -270,7 +267,6 @@ func (s *groupManagementService) RemoveMembers(ctx context.Context, groupID stri
 		return nil, fmt.Errorf("AD配置不存在")
 	}
 
-	config.AdminPassword = decryptPassword(config.AdminPassword)
 
 	// 4. 批量移除成员（Phase 38 Wave 1: 改走 FailoverClient 账号池故障切换）
 	userDNs := make([]string, 0, len(users))

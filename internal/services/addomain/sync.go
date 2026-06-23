@@ -91,7 +91,6 @@ func (s *SyncService) syncDataInternal(ctx context.Context, config *models.ADCon
 		return nil, fmt.Errorf("创建同步日志失败: %w", err)
 	}
 
-	config.AdminPassword = decryptPassword(config.AdminPassword)
 
 	// Phase 38 Wave 1: 整个同步流程（多次 LDAP Search）封装进 FailoverClient.ExecuteWithFailover
 	// 一个 operation。所有 client.Search* 必须在闭包内（Pitfall 3：闭包返回后 client.Close()）；

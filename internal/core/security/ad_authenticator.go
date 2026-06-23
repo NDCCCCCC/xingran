@@ -50,25 +50,6 @@ func (a *ADAuthenticator) SetAccountPool(pool addomain.AccountPool) {
 	a.accountPool = pool
 }
 
-// decryptPassword 解密AD管理员密码
-// 尝试 SM4 解密，失败后回退到 addomain 包的全局解密（含 AES-legacy 回退）
-func (a *ADAuthenticator) decryptPassword(encrypted string) string {
-	if encrypted == "" {
-		return ""
-	}
-
-	// 1. 尝试使用本地 SM4 cipher
-	if a.sm4Cipher != nil {
-		plaintext, err := a.sm4Cipher.Decrypt(encrypted)
-		if err == nil {
-			return plaintext
-		}
-	}
-
-	// 2. 回退到 addomain 包的全局 decryptPassword（含 SM4 + AES-legacy 回退链）
-	return addomain.DecryptPassword(encrypted)
-}
-
 // Authenticate 实现AD域控认证
 // 通过LDAP绑定验证用户凭证，成功后搜索用户详细信息用于同步
 func (a *ADAuthenticator) Authenticate(ctx context.Context, req *AuthRequest) (*AuthResult, error) {
@@ -95,8 +76,6 @@ func (a *ADAuthenticator) Authenticate(ctx context.Context, req *AuthRequest) (*
 
 	// 4. 用户绑定成功，现在需要搜索用户详细信息
 	// 需要使用管理员绑定来搜索（因为用户可能没有搜索权限）
-	// 先解密管理员密码
-	config.AdminPassword = a.decryptPassword(config.AdminPassword)
 
 	adminConn, err := a.dialConnection(config, address)
 	if err != nil {
@@ -232,41 +211,16 @@ func (a *ADAuthenticator) dialConnection(config *models.ADConfig, address string
 	}
 }
 
-// bindAdmin 使用管理员凭证绑定
+// bindAdminWithFailover 用账号池多账号故障切换绑定管理员
 //
-// 已废弃（@Deprecated），Phase 36 起由 bindAdminWithFailover 替代
-func (a *ADAuthenticator) bindAdmin(conn *ldap.Conn, config *models.ADConfig) error {
-	// 尝试UPN格式绑定
-	adminUPN := fmt.Sprintf("%s@%s", config.AdminUsername, config.DomainName)
-	if err := conn.Bind(adminUPN, config.AdminPassword); err == nil {
-		return nil
-	}
-
-	// 尝试直接绑定
-	return conn.Bind(config.AdminUsername, config.AdminPassword)
-}
-
-// bindAdminWithFailover Phase 36: 用账号池多账号故障切换绑定管理员
-//
-// 行为：
-//   - accountPool 非空 → 走 FailoverClient（任一账号成功即返回）
-//   - accountPool 为空 → fallback 到旧的 bindAdmin（保持双读兼容期）
-//
-// 关键修复：单管理员账号被 AD 锁定（data 775）不再阻断用户登录
+// Phase 38: 单管理员 fallback 分支已移除（D-03 不保留双轨），accountPool 必须由
+// core 在启动时注入（core.go initAuthFactory）。单管理员账号被 AD 锁定（data 775）
+// 不再阻断用户登录——FailoverClient 自动切换池中其他可用账号。
 func (a *ADAuthenticator) bindAdminWithFailover(ctx context.Context, config *models.ADConfig) error {
 	if a.accountPool == nil {
-		// Phase 36 双读兼容：accountPool 未注入时走旧路径
-		// 拨号 + Bind 一次性（旧逻辑）
-		address := fmt.Sprintf("%s:%d", config.ServerAddress, config.ServerPort)
-		conn, err := a.dialConnection(config, address)
-		if err != nil {
-			return fmt.Errorf("dial: %w", err)
-		}
-		defer conn.Close()
-		return a.bindAdmin(conn, config)
+		// Phase 38: 单管理员 fallback 已移除；accountPool 必须由 core 启动时注入
+		return fmt.Errorf("AD 账号池未初始化，请联系管理员检查 AD 配置（账号池 Tab）")
 	}
-
-	// 主路径：FailoverClient
 	fc := addomain.NewFailoverClient(a.accountPool, config)
 	client, _, err := fc.PickFirstConnect(ctx)
 	if err != nil {

@@ -55,7 +55,6 @@ func (s *GroupSyncService) SyncGroupsByConfig(ctx context.Context, configID stri
 	}
 
 	// 2. Connect to LDAP（Phase 38 Wave 1: 改走 FailoverClient 账号池故障切换）
-	config.AdminPassword = decryptPassword(config.AdminPassword)
 	fc := NewFailoverClient(s.pool, &config)
 	var entries []*ldap.Entry
 	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
@@ -97,7 +96,6 @@ func (s *GroupSyncService) SyncSingleGroup(ctx context.Context, configID, groupD
 		return fmt.Errorf("AD配置不存在或未启用")
 	}
 
-	config.AdminPassword = decryptPassword(config.AdminPassword)
 
 	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
 	// 仅 LDAP Search 在闭包内；DB upsert/members 同步放闭包外（不依赖 LDAP 连接）

@@ -101,7 +101,6 @@ func executeDeptToADSyncTask(ctx context.Context, params map[string]interface{})
 
 	// Phase 38 Wave 1 (W-04): 不再创建单管理员 ldapClient，改由 SyncDeptStructureToAD 内部走 FailoverClient 账号池
 	// decryptPassword 行暂保留（38-03 删）
-	adConfig.AdminPassword = addomain.DecryptPassword(adConfig.AdminPassword)
 
 	// 创建部门 OU 映射器
 	mapper := addomain.NewDeptOUmapper(db)
@@ -171,7 +170,6 @@ func executeDeptMemberToADGroupSyncTask(ctx context.Context, params map[string]i
 	applogger.Infof("找到 %d 个活动的OU-组映射，开始同步", len(mappings))
 
 	// 解密密码（Phase 38 Wave 1: decryptPassword 暂保留，38-03 统一删）
-	adConfig.AdminPassword = addomain.DecryptPassword(adConfig.AdminPassword)
 
 	// Phase 38 Wave 1 (W-04): 改走 FailoverClient 账号池故障切换
 	// operation 边界 = 整个批量同步流程（所有 mappings × 所有 users 一个 operation，SP-3）

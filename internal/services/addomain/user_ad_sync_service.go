@@ -60,7 +60,6 @@ func (s *UserADSyncService) SyncUserUpdateToAD(ctx context.Context, userID strin
 	}
 	// Phase 36 后 admin_password 为 SM4 密文存储，绑定前必须解密
 	// （遗漏会导致密文当明文绑定 → LDAP 49 data 52e → 重试触发账号锁定 775）
-	adConfig.AdminPassword = decryptPassword(adConfig.AdminPassword)
 
 	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
 	// 所有 LDAP 操作（MoveUser + UpdateUserAttribute）必须在闭包内完成（Pitfall 3）
@@ -209,7 +208,6 @@ func (s *UserADSyncService) BatchMoveUsersToNewOU(ctx context.Context, userIDs [
 	}
 	// Phase 36 后 admin_password 为 SM4 密文存储，绑定前必须解密
 	// （遗漏会导致密文当明文绑定 → LDAP 49 data 52e → 重试触发账号锁定 775）
-	adConfig.AdminPassword = decryptPassword(adConfig.AdminPassword)
 
 	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
 	// operation 边界 = 整个批量任务（SP-3：单次批量一个 operation，非每用户）
@@ -386,7 +384,6 @@ func (s *UserADSyncService) SyncManagersToAD(ctx context.Context, userIDs []stri
 		return result, nil
 	}
 	// Phase 36 后 admin_password 为 SM4 密文存储，绑定前必须解密（同 SyncUserUpdateToAD）
-	adConfig.AdminPassword = decryptPassword(adConfig.AdminPassword)
 
 	// 2. 查候选用户（ad_dn 非空）
 	query := s.db.WithContext(ctx).
