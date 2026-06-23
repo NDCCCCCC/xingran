@@ -14,15 +14,18 @@ import (
 
 // GroupSyncService handles incremental group synchronization from AD
 type GroupSyncService struct {
-	db           *gorm.DB
+	db          *gorm.DB
+	pool        AccountPool // Phase 38 Wave 1 DI 脚手架（38-02 将用于 FailoverClient 闭包改造）
 	syncService *SyncService
 }
 
 // NewGroupSyncService creates a new GroupSyncService
-func NewGroupSyncService(db *gorm.DB) *GroupSyncService {
+// Phase 38 Wave 1: 注入 AccountPool 字段，并透传给内部 SyncService。
+func NewGroupSyncService(db *gorm.DB, pool AccountPool) *GroupSyncService {
 	return &GroupSyncService{
-		db:           db,
-		syncService: NewSyncService(db),
+		db:          db,
+		pool:        pool,
+		syncService: NewSyncService(db, pool),
 	}
 }
 

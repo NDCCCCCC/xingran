@@ -11,12 +11,14 @@ import (
 
 // GroupService 用户组服务
 type GroupService struct {
-	db *gorm.DB
+	db   *gorm.DB
+	pool AccountPool // Phase 38 Wave 1 DI 脚手架（38-02 将用于 FailoverClient 闭包改造）
 }
 
 // NewGroupService 创建用户组服务
-func NewGroupService(db *gorm.DB) *GroupService {
-	return &GroupService{db: db}
+// Phase 38 Wave 1: 注入 AccountPool 字段（38-02 将用于 FailoverClient 闭包改造）。
+func NewGroupService(db *gorm.DB, pool AccountPool) *GroupService {
+	return &GroupService{db: db, pool: pool}
 }
 
 // adGroupAllowedSortFields AD用户组可排序字段白名单(对应 sys_ad_group 表列名)。

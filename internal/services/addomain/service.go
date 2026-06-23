@@ -116,19 +116,24 @@ type ADDomainService struct {
 
 // NewADDomainService creates the AD domain service.
 // cipher is optional - if provided, it sets the global password cipher for the addomain package.
-func NewADDomainService(db *gorm.DB, cipher ...PasswordCipher) *ADDomainService {
+//
+// Phase 38 Wave 1: 新增 pool 参数（AccountPool 实例）。pool 会透传到所有需要走账号池
+// FailoverClient 的 sub-service（Config/Sync/User/Group/GroupSync/GroupMgmt），
+// 38-02 将在 sub-service 内基于 s.pool 改造 NewLDAPClient(config) → FailoverClient 闭包。
+// 调用方必须保证传入同一 AccountPool 实例（Pitfall 4：避免重复 New 导致缓存不共享）。
+func NewADDomainService(db *gorm.DB, pool AccountPool, cipher ...PasswordCipher) *ADDomainService {
 	if len(cipher) > 0 && cipher[0] != nil {
 		SetADSM4Cipher(cipher[0])
 	}
 	return &ADDomainService{
-		Config:         NewConfigService(db),
-		Sync:           NewSyncService(db),
+		Config:         NewConfigService(db, pool),
+		Sync:           NewSyncService(db, pool),
 		OU:             NewOUService(db),
-		User:           NewUserService(db),
-		Group:          NewGroupService(db),
-		GroupSync:      NewGroupSyncService(db),
+		User:           NewUserService(db, pool),
+		Group:          NewGroupService(db, pool),
+		GroupSync:      NewGroupSyncService(db, pool),
 		OUGroupMapping: NewOUGroupMappingService(db),
-		GroupMgmt:      NewGroupManagementService(db),
+		GroupMgmt:      NewGroupManagementService(db, pool),
 		// MemberSync 已移除 - 依赖部门-组映射
 		Log:      NewLogService(db),
 		Computer: NewComputerService(db),

@@ -12,13 +12,15 @@ import (
 
 type DeptToADSyncService struct {
 	db     *gorm.DB
+	pool   AccountPool // Phase 38 Wave 1 DI 脚手架（38-02 将用于 FailoverClient 闭包改造）
 	ldap   *LDAPClient
 	mapper *DeptOUmapper
 }
 
-func NewDeptToADSyncService(db *gorm.DB, ldapClient *LDAPClient, mapper *DeptOUmapper) *DeptToADSyncService {
+func NewDeptToADSyncService(db *gorm.DB, pool AccountPool, ldapClient *LDAPClient, mapper *DeptOUmapper) *DeptToADSyncService {
 	return &DeptToADSyncService{
 		db:     db,
+		pool:   pool,
 		ldap:   ldapClient,
 		mapper: mapper,
 	}

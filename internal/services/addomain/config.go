@@ -12,12 +12,14 @@ import (
 
 // ConfigService AD配置管理服务
 type ConfigService struct {
-	db *gorm.DB
+	db   *gorm.DB
+	pool AccountPool // Phase 38 Wave 1 DI 脚手架（38-02 将用于 TestConnection PickFirstConnect 改造）
 }
 
 // NewConfigService 创建配置服务
-func NewConfigService(db *gorm.DB) *ConfigService {
-	return &ConfigService{db: db}
+// Phase 38 Wave 1: 注入 AccountPool 字段（38-02 将用于 TestConnection PickFirstConnect 改造）。
+func NewConfigService(db *gorm.DB, pool AccountPool) *ConfigService {
+	return &ConfigService{db: db, pool: pool}
 }
 
 // configAllowedSortFields AD配置可排序字段白名单(对应 sys_ad_config 表列名)。

@@ -11,12 +11,14 @@ import (
 
 // UserService 用户服务
 type UserService struct {
-	db *gorm.DB
+	db   *gorm.DB
+	pool AccountPool // Phase 38 Wave 1 DI 脚手架（38-02 将用于 FailoverClient 闭包改造）
 }
 
 // NewUserService 创建用户服务
-func NewUserService(db *gorm.DB) *UserService {
-	return &UserService{db: db}
+// Phase 38 Wave 1: 注入 AccountPool 字段（38-02 将用于 FailoverClient 闭包改造）。
+func NewUserService(db *gorm.DB, pool AccountPool) *UserService {
+	return &UserService{db: db, pool: pool}
 }
 
 // adUserAllowedSortFields AD用户可排序字段白名单(对应 sys_ad_user 表列名)。

@@ -18,6 +18,8 @@ import (
 // SyncService AD数据同步服务
 type SyncService struct {
 	db *gorm.DB
+	// Phase 38 Wave 1 DI 脚手架：AccountPool 字段（38-02 将用于 FailoverClient 闭包改造）
+	pool AccountPool
 	// P1 fix: singleflight 防止同一 configID 的同步并发执行
 	// (scheduler 5 分钟轮询 + 用户手动点击 + 调度漂移叠加),
 	// 否则两份同步流程同时跑会产生:
@@ -28,8 +30,9 @@ type SyncService struct {
 }
 
 // NewSyncService 创建同步服务
-func NewSyncService(db *gorm.DB) *SyncService {
-	return &SyncService{db: db}
+// Phase 38 Wave 1: 注入 AccountPool 字段（38-02 将用于 FailoverClient 闭包改造）。
+func NewSyncService(db *gorm.DB, pool AccountPool) *SyncService {
+	return &SyncService{db: db, pool: pool}
 }
 
 // SyncResult 同步结果

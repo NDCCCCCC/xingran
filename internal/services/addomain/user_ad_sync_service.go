@@ -18,6 +18,7 @@ import (
 // 负责在用户信息修改时同步变更到AD域控
 type UserADSyncService struct {
 	db     *gorm.DB
+	pool   AccountPool // Phase 38 Wave 1 DI 脚手架（38-02 将用于 FailoverClient 闭包改造）
 	ldap   *LDAPClient
 	mapper *DeptOUmapper
 	// updateUserAttributeFn 测试注入钩子：非 nil 时 SyncManagersToAD 直接调用它，
@@ -26,9 +27,11 @@ type UserADSyncService struct {
 }
 
 // NewUserADSyncService 创建UserADSyncService实例
-func NewUserADSyncService(db *gorm.DB, ldapClient *LDAPClient, mapper *DeptOUmapper) *UserADSyncService {
+// Phase 38 Wave 1: 注入 AccountPool 字段（38-02 将用于 FailoverClient 闭包改造）。
+func NewUserADSyncService(db *gorm.DB, pool AccountPool, ldapClient *LDAPClient, mapper *DeptOUmapper) *UserADSyncService {
 	return &UserADSyncService{
 		db:     db,
+		pool:   pool,
 		ldap:   ldapClient,
 		mapper: mapper,
 	}

@@ -31,12 +31,14 @@ type GroupManagementService interface {
 
 // groupManagementService 服务实现
 type groupManagementService struct {
-	db *gorm.DB
+	db   *gorm.DB
+	pool AccountPool // Phase 38 Wave 1 DI 脚手架（38-02 将用于 FailoverClient 闭包改造）
 }
 
 // NewGroupManagementService 创建服务实例
-func NewGroupManagementService(db *gorm.DB) GroupManagementService {
-	return &groupManagementService{db: db}
+// Phase 38 Wave 1: 注入 AccountPool 字段（38-02 将用于 FailoverClient 闭包改造）。
+func NewGroupManagementService(db *gorm.DB, pool AccountPool) GroupManagementService {
+	return &groupManagementService{db: db, pool: pool}
 }
 
 // MemberChangeResult 成员变更结果
