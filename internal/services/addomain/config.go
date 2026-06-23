@@ -2,6 +2,7 @@ package addomain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
@@ -204,13 +205,21 @@ func (s *ConfigService) TestConnection(ctx context.Context, config *models.ADCon
 
 	// P1 fix: 解密密码 — 移除密码长度日志(侧信道),
 	// 长度泄露在攻击者通过日志枚举多个配置时可缩小破解空间
+	// Phase 38 Wave 1: decryptPassword 行暂保留（38-03 统一删；PickFirstConnect 内部用账号池
+	// 的 PasswordCiphertext 而非 config.AdminPassword，保留不影响正确性）
 	config.AdminPassword = decryptPassword(config.AdminPassword)
 
-	applogger.Infof("[ADTest] 创建LDAP客户端")
-	client := NewLDAPClient(config)
-	if err := client.Connect(); err != nil {
+	// Phase 38 Wave 1: 改走 FailoverClient.PickFirstConnect（SP-4）
+	// 只建连接 + bind 成功即返回，不做后续 operation；
+	// 唯一允许闭包外用 client 的场景（caller 负责 defer client.Close()）
+	fc := NewFailoverClient(s.pool, config)
+	client, _, err := fc.PickFirstConnect(ctx)
+	if err != nil {
 		applogger.Errorf("[ADTest] LDAP连接失败: %v", err)
-		return err
+		if errors.Is(err, ErrAllAccountsUnavailable) {
+			return fmt.Errorf("AD 连接测试失败：账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
+		}
+		return fmt.Errorf("AD 连接测试失败（账号池无可用账号或全部 bind 失败）: %w", err)
 	}
 	defer client.Close()
 

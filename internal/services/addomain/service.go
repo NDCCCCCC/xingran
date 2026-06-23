@@ -119,7 +119,7 @@ type ADDomainService struct {
 //
 // Phase 38 Wave 1: 新增 pool 参数（AccountPool 实例）。pool 会透传到所有需要走账号池
 // FailoverClient 的 sub-service（Config/Sync/User/Group/GroupSync/GroupMgmt），
-// 38-02 将在 sub-service 内基于 s.pool 改造 NewLDAPClient(config) → FailoverClient 闭包。
+// 38-02 已在 sub-service 内基于 s.pool 改造为 FailoverClient 闭包（单管理员直连已下线）。
 // 调用方必须保证传入同一 AccountPool 实例（Pitfall 4：避免重复 New 导致缓存不共享）。
 func NewADDomainService(db *gorm.DB, pool AccountPool, cipher ...PasswordCipher) *ADDomainService {
 	if len(cipher) > 0 && cipher[0] != nil {
