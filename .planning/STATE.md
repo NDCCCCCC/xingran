@@ -4,7 +4,7 @@ milestone: v1.15
 milestone_name: 工位设备关联 (Phase 28)
 status: executing
 stopped_at: "Phase 38 context gathered (AD账号池统一: 移除单管理员双轨)"
-last_updated: "2026-06-23T01:57:43.523Z"
+last_updated: "2026-06-23T02:17:03.806Z"
 progress:
   total_phases: 16
   completed_phases: 10
@@ -27,8 +27,8 @@ progress:
 
 ## Current Position
 
-Phase: 37 (dept-select-unify) — ✅ COMPLETE (6/6 plans, awaiting phase-level verification)
-Plan: 6 of 6 (Plan 37-06 ✅ COMPLETE — 批 5 收尾 TargetSelector + Phase 37 整体验收: TargetSelector 删 GET 自 fetch + deptTree useState + useEffect dept 分支, 改消费 useDeptTree + useMemo(toShortNameDataNode(rawDept)) 派生 antd Tree DataNode 形状 (与 37-02 useTargetSelector 完全一致); types/notice.ts DeptTreeNode 接口 + 本地 Department alias 迁移后变孤儿 Rule 1 删除; Task 2 全量 build 验收暴露并修复 37-05 latent bug (workorderApi.SimpleDept re-export 不引入本地 binding, tsc -b 报 TS2304, 顶部补 import type 修复); 2 task commit 214c615/8309947; Phase 37 整体验收达标: 全量 grep 非排除项命中=0 (dutyApi canonical + dept 管理页 + role tree-select 三处合法排除), SimpleDept 唯一定义 (dutyApi:281), build + type-check 双通过; 10 个迁移点 UI 行为核对全部与迁移前一致)
+Phase: 38 (unify-ad-authentication-onto-account-pool-remove-legacy-sing) — EXECUTING
+Plan: 1 of 4
 **Latest shipped milestone**: v1.15 工位设备关联 (Phase 28, 2026-06-10)
 **Latest shipped phase**: Phase 34 操作日志全模块集成 + review (2026-06-16)
 **Most recent commit**: 8309947 fix(37-06): workorderApi SimpleDept 引入本地 import type (37-05 latent bug)
