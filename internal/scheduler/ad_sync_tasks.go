@@ -22,6 +22,8 @@ type ADSyncScheduler struct {
 	started bool
 	sem     *semaphore.Weighted // 并发控制信号量
 	db      *gorm.DB
+	// Phase 38 Wave 1 (W-04): 全局账号池单例字段，供 dept_sync_tasks 等复用（Pitfall 4 缓存共享）
+	pool    addomain.AccountPool
 	mu      sync.Mutex // 保护状态变更
 	ctx     context.Context    // 调度器上下文，用于取消延迟任务
 	cancel  context.CancelFunc // 取消函数
@@ -119,6 +121,9 @@ func executeADAccountPoolRecoverBreakersTask(ctx context.Context, params map[str
 func StartADSyncScheduler(db *gorm.DB) {
 	globalADSyncSchedulerOnce.Do(func() {
 		globalADSyncScheduler = NewADSyncScheduler(db, constants.MaxConcurrentADSync)
+		// Phase 38 Wave 1 (W-04): 创建全局账号池单例供 scheduler 内各 task 与 dept_sync_tasks 复用
+		// （Pitfall 4：避免 per-task NewAccountPool 创建独立缓存，导致熔断后账号仍被选中）
+		globalADSyncScheduler.pool = addomain.NewAccountPool(db, nil)
 		globalADSyncScheduler.Start()
 	})
 }
@@ -260,8 +265,8 @@ func (s *ADSyncScheduler) syncADConfig(ctx context.Context, configID string) {
 	applogger.Infof("开始同步AD配置: %s", config.ConfigName)
 
 	// 创建Service并执行同步（SyncData内部会创建和管理同步日志）
-	// Phase 38 Wave 1: 透传 AccountPool 实例（38-02 将用于 FailoverClient 闭包改造）
-	pool := addomain.NewAccountPool(s.db, nil)
+	// Phase 38 Wave 1 (W-04): 复用全局 pool 单例（避免 per-task NewAccountPool，Pitfall 4）
+	pool := s.getPool()
 	adService := addomain.NewADDomainService(s.db, pool, getADSM4Cipher())
 	result, err := adService.Sync.SyncDataByID(ctx, configID, "full")
 
@@ -289,8 +294,8 @@ func executeADDataSyncTask(ctx context.Context, params map[string]interface{}) e
 		syncType = syncTypeParam
 	}
 
-	// Phase 38 Wave 1: 透传 AccountPool 实例（38-02 将用于 FailoverClient 闭包改造）
-	pool := addomain.NewAccountPool(globalADSyncScheduler.db, nil)
+	// Phase 38 Wave 1 (W-04): 复用全局 pool 单例（避免 per-task NewAccountPool，Pitfall 4）
+	pool := globalADSyncScheduler.getPool()
 	adService := addomain.NewADDomainService(globalADSyncScheduler.db, pool, getADSM4Cipher())
 
 	_, err := adService.Sync.SyncDataByID(ctx, configID, syncType)
@@ -395,4 +400,17 @@ func (s *ADSyncScheduler) IsStarted() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.started
+}
+
+// getPool 返回 scheduler 持有的全局账号池单例（W-04）。
+// 若 StartADSyncScheduler 未执行（pool 为 nil），则惰性初始化并写回字段，避免所有 caller 各自 NewAccountPool
+// 造成 Pitfall 4（独立缓存 → 熔断后账号仍被选中）。所有 caller 必须通过此方法取池。
+func (s *ADSyncScheduler) getPool() addomain.AccountPool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.pool == nil {
+		// 惰性初始化（兜底 StartADSyncScheduler 未设置 pool 的极端场景）
+		s.pool = addomain.NewAccountPool(s.db, nil)
+	}
+	return s.pool
 }

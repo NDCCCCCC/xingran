@@ -2,6 +2,7 @@ package addomain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -43,18 +44,11 @@ func (s *DeptToADSyncService) SyncDeptStructureToAD(ctx context.Context, adConfi
 		return nil, fmt.Errorf("获取AD配置失败: %w", err)
 	}
 
-	// 2. 连接LDAP
+	// 2. 连接LDAP（Phase 38 Wave 1: 改走 FailoverClient 账号池故障切换）
+	//    operation 边界 = 整个同步流程（递归 syncDeptTree 整棵树一个 operation，SP-3）
 	adConfig.AdminPassword = decryptPassword(adConfig.AdminPassword)
-	ldapClient := NewLDAPClient(&adConfig)
-	if err := ldapClient.Connect(); err != nil {
-		result.Status = "failed"
-		result.EndTime = time.Now()
-		result.Duration = result.EndTime.Sub(result.StartTime)
-		return nil, fmt.Errorf("连接AD失败: %w", err)
-	}
-	defer ldapClient.Close()
 
-	// 3. 获取根部门（parentId为空的部门）
+	// 3. 获取根部门（parentId为空的部门）— DB 操作，不依赖 LDAP 连接，可放闭包外
 	rootDepts, err := s.getRootDepartments(ctx)
 	if err != nil {
 		result.Status = "failed"
@@ -82,13 +76,25 @@ func (s *DeptToADSyncService) SyncDeptStructureToAD(ctx context.Context, adConfi
 
 	result.TotalDepts = s.countTotalDepts(secondLevelDepts)
 
-	// 5. 递归同步二级部门树到AD OU
-	for _, dept := range secondLevelDepts {
-		if err := s.syncDeptTree(ctx, ldapClient, &adConfig, dept, adConfig.BaseDN, result); err != nil {
-			applogger.Errorf("同步部门树失败: %v", err)
-			result.Status = "failed"
-			break
+	fc := NewFailoverClient(s.pool, &adConfig)
+	if err := fc.ExecuteWithFailover(ctx, func(ldapClient *LDAPClient) error {
+		// 5. 递归同步二级部门树到AD OU（所有 LDAP CreateOU 在闭包内，Pitfall 3）
+		for _, dept := range secondLevelDepts {
+			if err := s.syncDeptTree(ctx, ldapClient, &adConfig, dept, adConfig.BaseDN, result); err != nil {
+				applogger.Errorf("同步部门树失败: %v", err)
+				result.Status = "failed"
+				break
+			}
 		}
+		return nil
+	}); err != nil {
+		result.Status = "failed"
+		result.EndTime = time.Now()
+		result.Duration = result.EndTime.Sub(result.StartTime)
+		if errors.Is(err, ErrAllAccountsUnavailable) {
+			return nil, fmt.Errorf("AD 账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
+		}
+		return nil, fmt.Errorf("连接AD失败: %w", err)
 	}
 
 	// 5. 更新结果

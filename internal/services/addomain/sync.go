@@ -2,6 +2,7 @@ package addomain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -92,22 +93,44 @@ func (s *SyncService) syncDataInternal(ctx context.Context, config *models.ADCon
 
 	config.AdminPassword = decryptPassword(config.AdminPassword)
 
-	// 1. LDAP 连接
-	client := NewLDAPClient(config)
-	if err := client.Connect(); err != nil {
+	// Phase 38 Wave 1: 整个同步流程（多次 LDAP Search）封装进 FailoverClient.ExecuteWithFailover
+	// 一个 operation。所有 client.Search* 必须在闭包内（Pitfall 3：闭包返回后 client.Close()）；
+	// DB 写入（syncOUs/syncGroups/...）依赖 Search 结果，因此在闭包内 collect 后传出。
+	fc := NewFailoverClient(s.pool, config)
+	var (
+		ous      []*ldap.Entry
+		groups   []*ldap.Entry
+		users    []*ldap.Entry
+		computers []*ldap.Entry
+	)
+	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+		var err error
+		// 2. 搜索 OU
+		if ous, err = client.SearchOUs(config.BaseDN); err != nil {
+			return fmt.Errorf("搜索OU失败: %w", err)
+		}
+		// 3. 搜索 Group
+		if groups, err = client.SearchGroups(config.BaseDN); err != nil {
+			return fmt.Errorf("搜索用户组失败: %w", err)
+		}
+		// 4. 搜索 User
+		if users, err = client.SearchUsers(config.BaseDN); err != nil {
+			return fmt.Errorf("搜索用户失败: %w", err)
+		}
+		// 5. 搜索 Computer
+		if computers, err = client.SearchComputers(config.BaseDN); err != nil {
+			return fmt.Errorf("搜索电脑设备失败: %w", err)
+		}
+		return nil
+	}); err != nil {
 		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, 0, 0, 0, 0, err.Error())
+		if errors.Is(err, ErrAllAccountsUnavailable) {
+			return nil, fmt.Errorf("AD 账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
+		}
 		return nil, fmt.Errorf("连接AD服务器失败: %w", err)
 	}
-	defer client.Close()
 
 	result := &SyncResult{}
-
-	// 2. 搜索和同步 OU
-	ous, err := client.SearchOUs(config.BaseDN)
-	if err != nil {
-		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, 0, 0, 0, 0, err.Error())
-		return nil, fmt.Errorf("搜索OU失败: %w", err)
-	}
 	result.OUCount = len(ous)
 
 	if err := s.syncOUs(ctx, config, ous); err != nil {
@@ -115,12 +138,6 @@ func (s *SyncService) syncDataInternal(ctx context.Context, config *models.ADCon
 		return nil, err
 	}
 
-	// 3. 搜索和同步 Group
-	groups, err := client.SearchGroups(config.BaseDN)
-	if err != nil {
-		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, result.OUCount, 0, 0, 0, err.Error())
-		return nil, fmt.Errorf("搜索用户组失败: %w", err)
-	}
 	result.GroupCount = len(groups)
 
 	if err := s.syncGroups(ctx, config, groups); err != nil {
@@ -128,12 +145,6 @@ func (s *SyncService) syncDataInternal(ctx context.Context, config *models.ADCon
 		return nil, err
 	}
 
-	// 4. 搜索和同步 User
-	users, err := client.SearchUsers(config.BaseDN)
-	if err != nil {
-		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, result.OUCount, result.GroupCount, 0, 0, err.Error())
-		return nil, fmt.Errorf("搜索用户失败: %w", err)
-	}
 	result.UserCount = len(users)
 
 	if err := s.syncUsers(ctx, config, users); err != nil {
@@ -141,13 +152,7 @@ func (s *SyncService) syncDataInternal(ctx context.Context, config *models.ADCon
 		return nil, err
 	}
 
-	// 5. 搜索和同步 Computer
 	computerService := NewComputerService(s.db)
-	computers, err := client.SearchComputers(config.BaseDN)
-	if err != nil {
-		s.updateSyncLog(ctx, syncLog.ID, models.ADSyncStatusFailed, result.OUCount, result.GroupCount, result.UserCount, 0, err.Error())
-		return nil, fmt.Errorf("搜索电脑设备失败: %w", err)
-	}
 	result.ComputerCount = len(computers)
 
 	if err := computerService.syncComputers(ctx, config, computers); err != nil {

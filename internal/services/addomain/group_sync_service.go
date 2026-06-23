@@ -2,6 +2,7 @@ package addomain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -53,18 +54,22 @@ func (s *GroupSyncService) SyncGroupsByConfig(ctx context.Context, configID stri
 		return nil, fmt.Errorf("AD配置不存在或未启用")
 	}
 
-	// 2. Connect to LDAP
+	// 2. Connect to LDAP（Phase 38 Wave 1: 改走 FailoverClient 账号池故障切换）
 	config.AdminPassword = decryptPassword(config.AdminPassword)
-	client := NewLDAPClient(&config)
-	if err := client.Connect(); err != nil {
+	fc := NewFailoverClient(s.pool, &config)
+	var entries []*ldap.Entry
+	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+		var err error
+		entries, err = client.SearchGroups(config.BaseDN)
+		if err != nil {
+			return fmt.Errorf("搜索用户组失败: %w", err)
+		}
+		return nil
+	}); err != nil {
+		if errors.Is(err, ErrAllAccountsUnavailable) {
+			return nil, fmt.Errorf("AD 账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
+		}
 		return nil, fmt.Errorf("连接AD服务器失败: %w", err)
-	}
-	defer client.Close()
-
-	// 3. Search groups from LDAP
-	entries, err := client.SearchGroups(config.BaseDN)
-	if err != nil {
-		return nil, fmt.Errorf("搜索用户组失败: %w", err)
 	}
 
 	// 4. Sync groups
@@ -93,33 +98,38 @@ func (s *GroupSyncService) SyncSingleGroup(ctx context.Context, configID, groupD
 	}
 
 	config.AdminPassword = decryptPassword(config.AdminPassword)
-	client := NewLDAPClient(&config)
-	if err := client.Connect(); err != nil {
-		return fmt.Errorf("连接AD服务器失败: %w", err)
+
+	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
+	// 仅 LDAP Search 在闭包内；DB upsert/members 同步放闭包外（不依赖 LDAP 连接）
+	fc := NewFailoverClient(s.pool, &config)
+	var entry *ldap.Entry
+	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+		// Search for the specific group by DN
+		searchRequest := ldap.NewSearchRequest(
+			groupDN,
+			ldap.ScopeBaseObject,
+			ldap.NeverDerefAliases,
+			0, 0, false,
+			"(objectClass=group)",
+			[]string{"dn", "cn", "description", "member", "groupType"},
+			nil,
+		)
+		sr, err := client.conn.Search(searchRequest)
+		if err != nil {
+			return fmt.Errorf("搜索用户组失败: %w", err)
+		}
+		if len(sr.Entries) == 0 {
+			return fmt.Errorf("用户组不存在: %s", groupDN)
+		}
+		entry = sr.Entries[0]
+		return nil
+	}); err != nil {
+		if errors.Is(err, ErrAllAccountsUnavailable) {
+			return fmt.Errorf("AD 账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
+		}
+		return err
 	}
-	defer client.Close()
 
-	// Search for the specific group by DN
-	searchRequest := ldap.NewSearchRequest(
-		groupDN,
-		ldap.ScopeBaseObject,
-		ldap.NeverDerefAliases,
-		0, 0, false,
-		"(objectClass=group)",
-		[]string{"dn", "cn", "description", "member", "groupType"},
-		nil,
-	)
-
-	sr, err := client.conn.Search(searchRequest)
-	if err != nil {
-		return fmt.Errorf("搜索用户组失败: %w", err)
-	}
-
-	if len(sr.Entries) == 0 {
-		return fmt.Errorf("用户组不存在: %s", groupDN)
-	}
-
-	entry := sr.Entries[0]
 	now := time.Now()
 	members := entry.GetAttributeValues("member")
 	groupScope, groupType := parseGroupTypeFromLDAP(entry.GetAttributeValue("groupType"))

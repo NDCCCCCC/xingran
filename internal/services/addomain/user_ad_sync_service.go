@@ -2,6 +2,7 @@ package addomain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -61,32 +62,36 @@ func (s *UserADSyncService) SyncUserUpdateToAD(ctx context.Context, userID strin
 	// （遗漏会导致密文当明文绑定 → LDAP 49 data 52e → 重试触发账号锁定 775）
 	adConfig.AdminPassword = decryptPassword(adConfig.AdminPassword)
 
-	// 创建LDAP客户端
-	ldapClient := NewLDAPClient(&adConfig)
-	if err := ldapClient.Connect(); err != nil {
-		return fmt.Errorf("连接AD失败: %w", err)
-	}
-	defer ldapClient.Close()
-
-	// 3. 如果部门变更，需要移动用户到新OU
-	if newDeptID, ok := updateReq["deptId"]; ok {
-		if newDeptIDStr, ok := newDeptID.(string); ok && newDeptIDStr != "" {
-			currentDeptID := ""
-			if user.DeptID != nil {
-				currentDeptID = *user.DeptID
-			}
-			if newDeptIDStr != currentDeptID {
-				if err := s.moveUserToNewOU(ctx, ldapClient, userID, newDeptIDStr); err != nil {
-					applogger.Errorf("移动用户 %s 到新OU失败: %v", user.Username, err)
-					// 继续处理属性更新，不因OU移动失败而中断
+	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
+	// 所有 LDAP 操作（MoveUser + UpdateUserAttribute）必须在闭包内完成（Pitfall 3）
+	fc := NewFailoverClient(s.pool, &adConfig)
+	if err := fc.ExecuteWithFailover(ctx, func(ldapClient *LDAPClient) error {
+		// 3. 如果部门变更，需要移动用户到新OU
+		if newDeptID, ok := updateReq["deptId"]; ok {
+			if newDeptIDStr, ok := newDeptID.(string); ok && newDeptIDStr != "" {
+				currentDeptID := ""
+				if user.DeptID != nil {
+					currentDeptID = *user.DeptID
+				}
+				if newDeptIDStr != currentDeptID {
+					if err := s.moveUserToNewOU(ctx, ldapClient, userID, newDeptIDStr); err != nil {
+						applogger.Errorf("移动用户 %s 到新OU失败: %v", user.Username, err)
+						// 继续处理属性更新，不因OU移动失败而中断
+					}
 				}
 			}
 		}
-	}
 
-	// 4. 更新其他属性到AD
-	if err := s.syncUserAttributes(ctx, ldapClient, &user, updateReq); err != nil {
-		return fmt.Errorf("同步用户属性失败: %w", err)
+		// 4. 更新其他属性到AD
+		if err := s.syncUserAttributes(ctx, ldapClient, &user, updateReq); err != nil {
+			return fmt.Errorf("同步用户属性失败: %w", err)
+		}
+		return nil
+	}); err != nil {
+		if errors.Is(err, ErrAllAccountsUnavailable) {
+			return fmt.Errorf("AD 账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
+		}
+		return fmt.Errorf("连接AD失败: %w", err)
 	}
 
 	// 5. 更新同步时间戳
@@ -206,38 +211,42 @@ func (s *UserADSyncService) BatchMoveUsersToNewOU(ctx context.Context, userIDs [
 	// （遗漏会导致密文当明文绑定 → LDAP 49 data 52e → 重试触发账号锁定 775）
 	adConfig.AdminPassword = decryptPassword(adConfig.AdminPassword)
 
-	// 创建LDAP客户端
-	ldapClient := NewLDAPClient(&adConfig)
-	if err := ldapClient.Connect(); err != nil {
-		return fmt.Errorf("连接AD失败: %w", err)
-	}
-	defer ldapClient.Close()
-
-	// 3. 批量移动用户（分批处理，每批10个）
-	batchSize := 10
+	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
+	// operation 边界 = 整个批量任务（SP-3：单次批量一个 operation，非每用户）
+	// 所有 LDAP 操作（MoveUser）必须在闭包内（Pitfall 3）；单用户失败计入 failedCount 不中断批量
 	successCount := 0
 	failedCount := 0
+	fc := NewFailoverClient(s.pool, &adConfig)
+	if err := fc.ExecuteWithFailover(ctx, func(ldapClient *LDAPClient) error {
+		// 批量移动用户（分批处理，每批10个）
+		batchSize := 10
+		for i := 0; i < len(userIDs); i += batchSize {
+			end := i + batchSize
+			if end > len(userIDs) {
+				end = len(userIDs)
+			}
 
-	for i := 0; i < len(userIDs); i += batchSize {
-		end := i + batchSize
-		if end > len(userIDs) {
-			end = len(userIDs)
-		}
+			batch := userIDs[i:end]
+			for _, userID := range batch {
+				if err := s.moveSingleUserToOU(ctx, ldapClient, userID, ouDN); err != nil {
+					applogger.Errorf("移动用户失败 [ID=%s]: %v", userID, err)
+					failedCount++
+				} else {
+					successCount++
+				}
+			}
 
-		batch := userIDs[i:end]
-		for _, userID := range batch {
-			if err := s.moveSingleUserToOU(ctx, ldapClient, userID, ouDN); err != nil {
-				applogger.Errorf("移动用户失败 [ID=%s]: %v", userID, err)
-				failedCount++
-			} else {
-				successCount++
+			// 每批之间暂停1秒，避免AD压力过大
+			if i+batchSize < len(userIDs) {
+				time.Sleep(1 * time.Second)
 			}
 		}
-
-		// 每批之间暂停1秒，避免AD压力过大
-		if i+batchSize < len(userIDs) {
-			time.Sleep(1 * time.Second)
+		return nil
+	}); err != nil {
+		if errors.Is(err, ErrAllAccountsUnavailable) {
+			return fmt.Errorf("AD 账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
 		}
+		return fmt.Errorf("连接AD失败: %w", err)
 	}
 
 	applogger.Infof("批量移动用户完成: 成功=%d, 失败=%d, 目标OU=%s", successCount, failedCount, ouDN)
@@ -471,74 +480,132 @@ func (s *UserADSyncService) SyncManagersToAD(ctx context.Context, userIDs []stri
 		}
 	}
 
-	// 6. 构造 updateAttr：测试钩子优先，否则建真实 LDAP 连接（复用单连接）
+	// 6. 构造 updateAttr：测试钩子优先（SHA-5），否则走 FailoverClient 账号池故障切换
 	var updateAttr func(string, map[string]string) error
 	if s.updateUserAttributeFn != nil {
+		// SHA-5: 测试钩子分支保留（7 个 TestSyncManagersToAD_* 回归测试依赖，绕过 FailoverClient）
 		updateAttr = s.updateUserAttributeFn
 	} else {
-		ldapClient := NewLDAPClient(&adConfig)
-		if err := ldapClient.Connect(); err != nil {
+		// Phase 38 Wave 1: operation 边界 = 整个 errgroup 批量（SP-3）
+		// FailoverClient 闭包内启动 errgroup，g.Wait() 必须在闭包内（Pitfall 3+5）
+		fc := NewFailoverClient(s.pool, &adConfig)
+		if err := fc.ExecuteWithFailover(ctx, func(ldapClient *LDAPClient) error {
+			updateAttr = ldapClient.UpdateUserAttribute
+			// 7. 信号量并发同步（单失败不中断：g.Go 始终返回 nil）
+			g, gctx := errgroup.WithContext(ctx)
+			g.SetLimit(constants.MaxConcurrentADSync)
+			var mu sync.Mutex
+			for _, r := range resolved {
+				r := r
+				// 跳过逻辑（主 goroutine 内，无并发）
+				if r.leaderID == "" {
+					result.Skipped++ // 部门链均无 leader
+					continue
+				}
+				if r.leaderID == r.user.ID {
+					result.Skipped++ // 自指，保持原值
+					continue
+				}
+				leaderAdDn, ok := leaderAdDnMap[r.leaderID]
+				if !ok || leaderAdDn == "" {
+					result.Skipped++ // leader 无 ad_dn，无法设 manager
+					applogger.Warnf("[AD-MANAGER-SYNC] 用户 %s 的 leader(%s) 无 ad_dn，跳过", r.user.Username, r.leaderID)
+					continue
+				}
+
+				g.Go(func() error {
+					defer func() {
+						if rec := recover(); rec != nil {
+							applogger.Errorf("[AD-MANAGER-SYNC] panic [user=%s]: %v", r.user.Username, rec)
+						}
+					}()
+
+					userDN := ""
+					if r.user.AdDn != nil {
+						userDN = *r.user.AdDn
+					}
+					err := updateAttr(userDN, map[string]string{"manager": leaderAdDn})
+
+					// 成功才更新时间戳（持锁外执行，减少临界区）
+					if err == nil {
+						if tsErr := s.updateSyncTimestamp(gctx, r.user.ID); tsErr != nil {
+							applogger.Warnf("[AD-MANAGER-SYNC] 更新时间戳失败 [user=%s]: %v", r.user.Username, tsErr)
+						}
+					}
+
+					mu.Lock()
+					defer mu.Unlock()
+					if err != nil {
+						result.Failed++
+						result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", r.user.Username, err))
+						applogger.Warnf("[AD-MANAGER-SYNC] 同步 manager 失败 [user=%s]: %v", r.user.Username, err)
+						return nil
+					}
+					result.Synced++
+					return nil
+				})
+			}
+			_ = g.Wait()
+			return nil
+		}); err != nil {
+			if errors.Is(err, ErrAllAccountsUnavailable) {
+				return nil, fmt.Errorf("AD 账号池无可用账号，请先在 AD 配置页（详情 → 服务账号池 Tab）添加服务账号: %w", err)
+			}
 			return nil, fmt.Errorf("连接 AD 失败: %w", err)
 		}
-		defer ldapClient.Close()
-		updateAttr = ldapClient.UpdateUserAttribute
 	}
 
-	// 7. 信号量并发同步（单失败不中断：g.Go 始终返回 nil）
-	g, gctx := errgroup.WithContext(ctx)
-	g.SetLimit(constants.MaxConcurrentADSync)
-	var mu sync.Mutex
-	for _, r := range resolved {
-		r := r
-		// 跳过逻辑（主 goroutine 内，无并发）
-		if r.leaderID == "" {
-			result.Skipped++ // 部门链均无 leader
-			continue
-		}
-		if r.leaderID == r.user.ID {
-			result.Skipped++ // 自指，保持原值
-			continue
-		}
-		leaderAdDn, ok := leaderAdDnMap[r.leaderID]
-		if !ok || leaderAdDn == "" {
-			result.Skipped++ // leader 无 ad_dn，无法设 manager
-			applogger.Warnf("[AD-MANAGER-SYNC] 用户 %s 的 leader(%s) 无 ad_dn，跳过", r.user.Username, r.leaderID)
-			continue
-		}
-
-		g.Go(func() error {
-			defer func() {
-				if rec := recover(); rec != nil {
-					applogger.Errorf("[AD-MANAGER-SYNC] panic [user=%s]: %v", r.user.Username, rec)
-				}
-			}()
-
-			userDN := ""
-			if r.user.AdDn != nil {
-				userDN = *r.user.AdDn
+	// 测试钩子分支仍需在外部跑 errgroup（钩子模式下闭包未执行）
+	if s.updateUserAttributeFn != nil {
+		g, gctx := errgroup.WithContext(ctx)
+		g.SetLimit(constants.MaxConcurrentADSync)
+		var mu sync.Mutex
+		for _, r := range resolved {
+			r := r
+			if r.leaderID == "" {
+				result.Skipped++
+				continue
 			}
-			err := updateAttr(userDN, map[string]string{"manager": leaderAdDn})
-
-			// 成功才更新时间戳（持锁外执行，减少临界区）
-			if err == nil {
-				if tsErr := s.updateSyncTimestamp(gctx, r.user.ID); tsErr != nil {
-					applogger.Warnf("[AD-MANAGER-SYNC] 更新时间戳失败 [user=%s]: %v", r.user.Username, tsErr)
-				}
+			if r.leaderID == r.user.ID {
+				result.Skipped++
+				continue
 			}
-
-			mu.Lock()
-			defer mu.Unlock()
-			if err != nil {
-				result.Failed++
-				result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", r.user.Username, err))
-				applogger.Warnf("[AD-MANAGER-SYNC] 同步 manager 失败 [user=%s]: %v", r.user.Username, err)
+			leaderAdDn, ok := leaderAdDnMap[r.leaderID]
+			if !ok || leaderAdDn == "" {
+				result.Skipped++
+				applogger.Warnf("[AD-MANAGER-SYNC] 用户 %s 的 leader(%s) 无 ad_dn，跳过", r.user.Username, r.leaderID)
+				continue
+			}
+			g.Go(func() error {
+				defer func() {
+					if rec := recover(); rec != nil {
+						applogger.Errorf("[AD-MANAGER-SYNC] panic [user=%s]: %v", r.user.Username, rec)
+					}
+				}()
+				userDN := ""
+				if r.user.AdDn != nil {
+					userDN = *r.user.AdDn
+				}
+				err := updateAttr(userDN, map[string]string{"manager": leaderAdDn})
+				if err == nil {
+					if tsErr := s.updateSyncTimestamp(gctx, r.user.ID); tsErr != nil {
+						applogger.Warnf("[AD-MANAGER-SYNC] 更新时间戳失败 [user=%s]: %v", r.user.Username, tsErr)
+					}
+				}
+				mu.Lock()
+				defer mu.Unlock()
+				if err != nil {
+					result.Failed++
+					result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", r.user.Username, err))
+					applogger.Warnf("[AD-MANAGER-SYNC] 同步 manager 失败 [user=%s]: %v", r.user.Username, err)
+					return nil
+				}
+				result.Synced++
 				return nil
-			}
-			result.Synced++
-			return nil
-		})
+			})
+		}
+		_ = g.Wait()
 	}
-	_ = g.Wait()
 
 	applogger.Infof("[AD-MANAGER-SYNC] 完成: total=%d synced=%d skipped=%d failed=%d",
 		result.Total, result.Synced, result.Skipped, result.Failed)
