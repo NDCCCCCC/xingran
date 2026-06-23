@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: 工位设备关联 (Phase 28)
 status: executing
-stopped_at: "Plan 37-06 完成 (批 5 收尾 TargetSelector + Phase 37 整体验收达标 ✅: TargetSelector 删 GET 自 fetch + deptTree useState + useEffect dept 分支, 改消费 useDeptTree + useMemo(toShortNameDataNode(rawDept)) 派生 antd Tree DataNode 形状 (与 37-02 useTargetSelector 完全一致); types/notice.ts DeptTreeNode 接口 + 本地 Department alias 迁移后变孤儿 Rule 1 删除 (grep 确认 0 消费方); Task 2 全量 build 验收暴露并修复 37-05 latent bug (workorderApi.SimpleDept re-export 不引入本地 binding, tsc -b 报 TS2304, 顶部补 import type 修复); 2 task commit 214c615/8309947; Phase 37 整体验收达标: 全量 grep 非排除项命中=0 (dutyApi canonical + dept 管理页 + role tree-select 三处合法排除), SimpleDept 唯一定义 (dutyApi:281), build + type-check 双通过)"
-last_updated: "2026-06-22T10:34:31.635Z"
+stopped_at: "Phase 38 context gathered (AD账号池统一: 移除单管理员双轨)"
+last_updated: "2026-06-23T00:55:56.131Z"
 progress:
-  total_phases: 15
+  total_phases: 16
   completed_phases: 10
   total_plans: 76
   completed_plans: 66
-  percent: 67
+  percent: 63
 ---
 
 # Project State
@@ -258,6 +258,7 @@ Run `/gsd:new-milestone` to formally start v1.16.
 - 📋 Phase 33 added: 前端 Vercel React Best Practices 修复 — 修复审查报告 20260613 中的 26 个性能/质量缺陷（7 CRITICAL + 5 MEDIUM-HIGH + 8 MEDIUM + 5 LOW + 1 bug：登录重复请求、WebSocket/Polling 抖动、Table 引用稳定化、Map 缓存化、Excel 改用 axios、R7 楼宇状态显示 bug）
 - 📋 Phase 34 added: 操作日志全模块集成 — 审计发现 309 个写操作端点中仅 9 处（2.9%）有效记录（AD 域控），OperLogMiddleware 中间件已挂载但从未生效。基于 AD 域控参考实现分 7 Wave 集成全部端点
 - 📋 Phase 37 added: 前端部门选择组件统一收敛 — 将碎片化的部门列表实现收敛到 useDeptTree 单一数据源 + 三组件(DeptTree/DepartmentTreeSelect/DeptSidebar)职责正交不合并 + 类型去重(SimpleDept×2+Department→1) + 转换函数归一(deptUtils)；明确排除 AD 域控整模块(独立 OU 数据源)/role 的 tree-select/dept 管理页。设计见 phases/37-dept-select-unify/DESIGN.md
+- 📋 Phase 38 added: AD 账号池统一 — 移除遗留单管理员双轨路径(sys_ad_config.admin_username/admin_password)，所有 AD 连接(同步/管理/登录)统一走 Phase 36 账号池 FailoverClient，收敛为单轨消除解密不对称风险与维护负担。背景见 .planning/debug/adpool-password-not-decrypted.md
 
 **Total shipped**: 72 plans, 18 phases completed
 
@@ -340,9 +341,9 @@ Run `/gsd:new-milestone` to formally start v1.16.
 
 ## Session Continuity
 
-Last session: 2026-06-22T10:34:18.360Z
-Stopped at: Plan 37-06 完成 (批 5 收尾 TargetSelector + Phase 37 整体验收达标 ✅: TargetSelector 删 GET 自 fetch + deptTree useState + useEffect dept 分支, 改消费 useDeptTree + useMemo(toShortNameDataNode(rawDept)) 派生 antd Tree DataNode 形状 (与 37-02 useTargetSelector 完全一致); types/notice.ts DeptTreeNode 接口 + 本地 Department alias 迁移后变孤儿 Rule 1 删除 (grep 确认 0 消费方); Task 2 全量 build 验收暴露并修复 37-05 latent bug (workorderApi.SimpleDept re-export 不引入本地 binding, tsc -b 报 TS2304, 顶部补 import type 修复); 2 task commit 214c615/8309947; Phase 37 整体验收达标: 全量 grep 非排除项命中=0, SimpleDept 唯一 (dutyApi:281), build + type-check 双通过)
-Resume file: None
+Last session: 2026-06-23T00:55:56.112Z
+Stopped at: Phase 38 context gathered (AD账号池统一: 移除单管理员双轨)
+Resume file: .planning/phases/38-unify-ad-authentication-onto-account-pool-remove-legacy-sing/38-CONTEXT.md
 
 **Planned Phase:** 37 (dept-select-unify) — 6 plans — **ALL 6/6 ✅ COMPLETE (awaiting phase-level verification)**
 

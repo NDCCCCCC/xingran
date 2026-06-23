@@ -800,6 +800,16 @@ Plans:
 
 - npm run type-check 退出码 0
 
+### Phase 38: Unify AD authentication onto account pool, remove legacy single-admin dual-track path
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 37
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 38 to break down)
+
 ---
 
 | Phase | Milestone | Plans Complete | Status | Completed |
