@@ -743,5 +743,15 @@ func (s *UserADSyncService) BatchSyncUsersToAD(ctx context.Context, userIDs []st
 
 	applogger.Infof("[AD-BATCH-SYNC] 完成: total=%d synced=%d failed=%d",
 		result.Total, result.Synced, result.Failed)
+
+	// 失败明细：逐条 WARN 输出，便于 grep 定位失败用户 / AD 错误。
+	// 不设上限：业务上需要看到全部失败（如 129/2274）；如未来批次 >10000
+	// 需考虑分批 / 文件落盘，但当前规模直接日志即可。
+	if result.Failed > 0 {
+		applogger.Warnf("[AD-BATCH-SYNC] 失败明细（共 %d 条）:", len(result.Errors))
+		for _, e := range result.Errors {
+			applogger.Warnf("[AD-BATCH-SYNC]   - %s", e)
+		}
+	}
 	return result, nil
 }
