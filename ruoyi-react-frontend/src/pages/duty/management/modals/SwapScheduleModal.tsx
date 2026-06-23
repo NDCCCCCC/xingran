@@ -37,7 +37,7 @@ export function SwapScheduleModal({ visible, allSchedules, onOk, onCancel }: Swa
           <Select placeholder="选择原排班">
             {allSchedules.map((s) => (
               <Option key={s.id} value={s.id}>
-                {formatDate(s.scheduleDate)} - {s.user?.nickName || s.user?.username}
+                {formatDate(s.scheduleDate)} - {s.user?.nickname || s.user?.username}
               </Option>
             ))}
           </Select>
@@ -46,7 +46,7 @@ export function SwapScheduleModal({ visible, allSchedules, onOk, onCancel }: Swa
           <Select placeholder="选择目标排班">
             {allSchedules.map((s) => (
               <Option key={s.id} value={s.id}>
-                {formatDate(s.scheduleDate)} - {s.user?.nickName || s.user?.username}
+                {formatDate(s.scheduleDate)} - {s.user?.nickname || s.user?.username}
               </Option>
             ))}
           </Select>

@@ -139,12 +139,12 @@ function getDutyTableColumns(props: DutyTableColumnsProps): ColumnsType<DutySche
     },
     {
       title: '值班人员',
-      dataIndex: ['user', 'nickName'],
+      dataIndex: ['user', 'nickname'],
       key: 'userName',
       width: 100,
       sorter: createSorter<DutySchedule>('userName', 'string'),
-      render: (nickName: string, record: DutySchedule) =>
-        nickName || record.user?.username || '-',
+      render: (nickname: string, record: DutySchedule) =>
+        nickname || record.user?.username || '-',
     },
     {
       title: '值班类型',
@@ -465,7 +465,7 @@ const DutySchedulePage: FC = () => {
               <Select placeholder="请选择值班人员" allowClear className="user-form-input" style={{ width: 120 }}>
                 {users.map((user) => (
                   <Option key={user.id} value={user.id}>
-                    {user.nickName || user.username}
+                    {user.nickname || user.username}
                   </Option>
                 ))}
               </Select>
@@ -716,8 +716,8 @@ const DutySchedulePage: FC = () => {
           >
             <Select mode="multiple" placeholder="请选择值班人员" optionLabelProp="label">
               {users.map((user) => (
-                <Option key={user.id} value={user.id} label={user.nickName || user.username}>
-                  {user.username} - {user.nickName}
+                <Option key={user.id} value={user.id} label={user.nickname || user.username}>
+                  {user.username} - {user.nickname}
                 </Option>
               ))}
             </Select>

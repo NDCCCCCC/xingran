@@ -122,12 +122,12 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
     },
     {
       title: '值班人员',
-      dataIndex: ['user', 'nickName'],
+      dataIndex: ['user', 'nickname'],
       key: 'userName',
       width: 100,
       sorter: createSorter<DutySchedule>('userName', 'string'),
-      render: (nickName: string, record: DutySchedule) =>
-        nickName || record.user?.username || '-',
+      render: (nickname: string, record: DutySchedule) =>
+        nickname || record.user?.username || '-',
     },
     {
       title: '值班类型',
@@ -202,7 +202,7 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
         <Form.Item name="userId">
           <Select placeholder="值班人员" allowClear style={{ width: 120 }}>
             {users.map((user) => (
-              <Select.Option key={user.id} value={user.id}>{user.nickName || user.username}</Select.Option>
+              <Select.Option key={user.id} value={user.id}>{user.nickname || user.username}</Select.Option>
             ))}
           </Select>
         </Form.Item>

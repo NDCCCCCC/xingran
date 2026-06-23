@@ -25,7 +25,7 @@ export interface DutyPoolMember {
   user?: {
     id: string;
     username: string;
-    nickName: string;
+    nickname: string;
     deptName?: string;
   };
   memberOrder: number;
@@ -41,7 +41,7 @@ export interface DutySchedule {
   user?: {
     id: string;
     username: string;
-    nickName: string;
+    nickname: string;
     deptName?: string;
   };
   dutyType: "weekday" | "weekend" | "holiday";
@@ -197,7 +197,7 @@ export function generateSchedule(data: GenerateScheduleRequest): Promise<BaseRes
   return post("/duty/schedules/generate", data);
 }
 
-export function getTodayDuty(): Promise<BaseResponse<{ date: string; members: Array<{ userId: string; username: string; nickName: string }> }>> {
+export function getTodayDuty(): Promise<BaseResponse<{ date: string; members: Array<{ userId: string; username: string; nickname: string }> }>> {
   return post("/duty/schedules/today", {});
 }
 
@@ -272,7 +272,7 @@ export function updateDutyConfig(data: Partial<DutyConfig>): Promise<BaseRespons
 export interface SimpleUser {
   id: string;
   username: string;
-  nickName: string;
+  nickname: string;
   deptId?: string;
   deptName?: string;
   status: number;
@@ -286,7 +286,9 @@ export interface SimpleDept {
 }
 
 // 获取用户列表（用于下拉选择）
-export function getUserList(params?: { current?: number; pageSize?: number; deptId?: string; status?: number }): Promise<BaseResponse<PageResponse<SimpleUser>>> {
+// recursiveDeptId: 后端按该部门+所有子部门递归查询用户（基于 sys_dept.ancestors）。
+// 用于值班池/工位等"选部门后加载该部门成员"场景——避免预加载全量用户被 MaxPageSize 钳制。
+export function getUserList(params?: { current?: number; pageSize?: number; deptId?: string; recursiveDeptId?: string; status?: number }): Promise<BaseResponse<PageResponse<SimpleUser>>> {
   return post("/system/users/list", {
     current: 1,
     pageSize: 1000,

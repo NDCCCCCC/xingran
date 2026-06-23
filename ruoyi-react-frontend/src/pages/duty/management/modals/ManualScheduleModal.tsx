@@ -54,7 +54,7 @@ export function ManualScheduleModal({ visible, pools, users, onOk, onCancel }: M
         <Form.Item name="userIds" label="值班人员" rules={[{ required: true, message: "请选择人员" }]}>
           <Select mode="multiple" placeholder="选择人员">
             {users.map((user) => (
-              <Option key={user.id} value={user.id}>{user.nickName || user.username}</Option>
+              <Option key={user.id} value={user.id}>{user.nickname || user.username}</Option>
             ))}
           </Select>
         </Form.Item>
