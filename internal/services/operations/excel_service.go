@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/xuri/excelize/v2"
@@ -435,6 +436,25 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 					}
 				}
 			}
+
+			// 用户导入：为本次导入的所有用户中无角色的分配默认角色（role_key='common' 普通用户）。
+			// 覆盖新用户 + 已存在但无角色的用户（幂等：已有角色的不覆盖）；
+			// 必须在 Upsert 后（用户已入库可查 id）；失败不阻断导入。
+			// 修复：原先只处理 populateNewUserPasswords 识别的新用户，导致重新导入已存在
+			// （走 Updated 路径）的无角色用户被遗漏。
+			if entityType == "user" {
+				importedUsernames := make([]string, 0, len(records))
+				for _, r := range records {
+					if u, ok := r["username"].(string); ok && u != "" {
+						importedUsernames = append(importedUsernames, u)
+					}
+				}
+				if len(importedUsernames) > 0 {
+					if err := s.assignDefaultRolesToNewUsers(ctx, tx, importedUsernames); err != nil {
+						return err
+					}
+				}
+			}
 		}
 		return nil
 	}); err != nil {
@@ -826,6 +846,18 @@ func (s *ExcelService) prepareRecordsForUpsert(
 //
 // 仅对新增用户（username 在 sys_user 不存在）设值；已存在用户不改密码，
 // 交由 partialUpsert 仅更新 Excel 提供的字段。
+// populateNewUserPasswords 为新增的 sys_user 记录填充默认密码与初始标志。
+//
+// sys_user.password 为 NOT NULL，Excel 无密码列 → 新用户 INSERT 会违反约束。
+// 策略对齐 UserSyncService 的 AD 用户同步：
+//   - 默认密码 "123456"，经 pwdManager.HashPassword 哈希（salt 编码进 hash）
+//   - InitFlag=true（首次登录强制改密）、PwdExpireDays=90
+//
+// 仅对新增用户（username 在 sys_user 不存在）设值；已存在用户不改密码，
+// 交由 partialUpsert 仅更新 Excel 提供的字段。
+//
+// 角色分配（assignDefaultRolesToNewUsers）由 ImportData 对**所有导入用户**触发
+// （含已存在但无角色的），不依赖此处的"新用户"判定。
 func (s *ExcelService) populateNewUserPasswords(ctx context.Context, tx *gorm.DB, records []map[string]any) error {
 	if len(records) == 0 {
 		return nil
@@ -879,6 +911,59 @@ func (s *ExcelService) populateNewUserPasswords(ctx context.Context, tx *gorm.DB
 		r["init_flag"] = true
 		r["pwd_expire_days"] = 90
 	}
+	return nil
+}
+
+// assignDefaultRolesToNewUsers 为新导入的用户分配默认角色（role_key='common' 普通用户）。
+//
+// 与 user_ou_service.go 的 AD 用户默认角色分配策略一致：
+//   - 仅处理本次导入的新用户（usernames 由 populateNewUserPasswords 识别）
+//   - 幂等：跳过 sys_user_role 已有记录的用户（不覆盖已分配角色）
+//   - 未配置 common 角色时跳过（WARN），不阻断导入
+//
+// 批量 INSERT（单次 SQL），适合大批量导入（1000+ 用户）。
+// 必须在 Upsert 之后调用（此时新用户已入库，可按 username 查到 id）。
+func (s *ExcelService) assignDefaultRolesToNewUsers(ctx context.Context, tx *gorm.DB, usernames []string) error {
+	if len(usernames) == 0 {
+		return nil
+	}
+
+	// 1. 查普通用户角色（role_key='common'）
+	var defaultRole models.Role
+	if err := tx.WithContext(ctx).Where("role_key = ?", "common").First(&defaultRole).Error; err != nil {
+		logger.Warnf("[USER-IMPORT] 未找到普通用户角色(role_key=common)，跳过默认角色分配: %v", err)
+		return nil // 不阻断导入（环境未配置 common 角色时静默跳过）
+	}
+
+	// 2. 查新用户中尚无角色的（幂等：避免重复插入 + 不覆盖已分配角色）
+	type userRow struct {
+		ID string
+	}
+	var users []userRow
+	if err := tx.WithContext(ctx).
+		Table("sys_user").
+		Select("id").
+		Where("username IN ?", usernames).
+		Where("id NOT IN (SELECT user_id FROM sys_user_role)").
+		Find(&users).Error; err != nil {
+		return fmt.Errorf("查询无角色的新用户失败: %w", err)
+	}
+	if len(users) == 0 {
+		return nil
+	}
+
+	// 3. 批量 INSERT sys_user_role（单次 SQL，性能优）
+	valueStrings := make([]string, 0, len(users))
+	valueArgs := make([]interface{}, 0, len(users)*2)
+	for _, u := range users {
+		valueStrings = append(valueStrings, "(?, ?)")
+		valueArgs = append(valueArgs, u.ID, defaultRole.ID)
+	}
+	sqlStr := "INSERT INTO sys_user_role (user_id, role_id) VALUES " + strings.Join(valueStrings, ", ")
+	if err := tx.WithContext(ctx).Exec(sqlStr, valueArgs...).Error; err != nil {
+		return fmt.Errorf("批量分配默认角色失败: %w", err)
+	}
+	logger.Infof("[USER-IMPORT] 为 %d 个新用户分配普通用户角色(role_key=common)", len(users))
 	return nil
 }
 
