@@ -587,7 +587,39 @@ func (c *Core) initAuthFactory() {
 		applogger.Warnf("启动 AD 账号池热加载失败（不影响主流程）: %v", err)
 	}
 
+	// Phase 38 (D-03): 启动空池校验（仅 WARN，不阻断启动）
+	c.checkEmptyAccountPoolOnStartup(accountPool)
+
 	applogger.Infof("认证策略工厂初始化完成（支持 local/ad/hybrid 模式 + AD 账号池）")
+}
+
+// checkEmptyAccountPoolOnStartup Phase 38 (D-03): 启动时校验启用的 AD 配置账号池非空。
+// 仅记 WARN 日志，不返回 error，不阻断启动（Pitfall 6）——避免阻塞新环境首次部署。
+func (c *Core) checkEmptyAccountPoolOnStartup(pool addomain.AccountPool) {
+	type adCfgRow struct {
+		ID         string
+		ConfigName string
+	}
+	var configs []adCfgRow
+	if err := c.GetDB().Table("sys_ad_config").
+		Select("id, config_name").
+		Where("status = 0 AND sync_enabled = true").
+		Find(&configs).Error; err != nil {
+		applogger.Warnf("[启动校验] 查询启用的 AD 配置失败: %v", err)
+		return
+	}
+	ctx := context.Background()
+	for _, cfg := range configs {
+		total, available, _, _, err := pool.CountByStatus(ctx, cfg.ID)
+		if err != nil {
+			applogger.Warnf("[启动校验] AD 配置 %s 账号池查询失败: %v", cfg.ConfigName, err)
+			continue
+		}
+		if total == 0 || available == 0 {
+			applogger.Warnf("[启动校验] AD 配置 %s (ID=%s) 账号池为空（total=%d, available=%d），请在 AD 配置页详情 → 服务账号池 Tab 添加服务账号，否则登录/同步将失败",
+				cfg.ConfigName, cfg.ID, total, available)
+		}
+	}
 }
 
 // GetAuthFactory 获取认证策略工厂

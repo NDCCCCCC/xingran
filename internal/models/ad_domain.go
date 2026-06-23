@@ -26,10 +26,11 @@ type ADConfig struct {
 	ServerPort    int            `gorm:"default:389" json:"serverPort"`
 	DomainName    string         `gorm:"size:255;not null" json:"domainName"`
 	BaseDN        string         `gorm:"size:500;not null" json:"baseDn"`
-	// @Deprecated Phase 36: 改用 sys_ad_service_accounts 多账号池
-	// 仅作为账号池为空时的 fallback，v1.17 清理迁移移除
-	AdminUsername string         `gorm:"size:255;not null" json:"adminUsername"`
-	AdminPassword string         `gorm:"size:500;not null" json:"adminPassword"` // 加密存储 (@Deprecated)
+	// AdminUsername @Deprecated Phase 38: 单管理员路径已全部移除（同步/管理/登录统一走 sys_ad_service_accounts
+	// 账号池 FailoverClient）。字段保留作 DB 列（D-02 不做 DROP COLUMN），不再读写；not null 由 migration_164 放宽。
+	AdminUsername string `gorm:"size:255" json:"adminUsername"`
+	// AdminPassword @Deprecated Phase 38: 同 AdminUsername（加密密文列保留作 DB 列，不再读写）。
+	AdminPassword string `gorm:"size:500" json:"adminPassword"`
 	UseSSL        bool           `gorm:"default:false" json:"useSsl"`
 	UseTLS        bool           `gorm:"default:false" json:"useTls"`
 	SyncEnabled   bool           `gorm:"default:true" json:"syncEnabled"`
