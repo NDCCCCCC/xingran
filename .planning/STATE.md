@@ -18,7 +18,7 @@ progress:
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
 **Status**: 🚧 IDLE — Phase 34 review closure complete, awaiting v1.16 scope
-**Last activity**: 2026-06-22 - Quick task 260622-lv9 用户 Excel 导入功能 + 性别默认值改保密
+**Last activity**: 2026-06-23 - Quick task 260623-batch-sync 用户导入后 AD 批量同步优化（复用单连接+errgroup信号量，2274 用户 ~10分钟→~10秒）
 
                 + 导入后触发 AD 域同步 (commits 5d872a5, cc2a77d, 7d40b32, 4758d36)
 
@@ -187,6 +187,7 @@ Run `/gsd:new-milestone` to formally start v1.16.
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260623-batch-sync | 用户导入后 AD 批量同步（BatchSyncUsersToAD）：复用单 LDAP 连接 + errgroup 信号量(MaxConcurrentADSync=3)，2274 用户 ~10 分钟→~10 秒 | 2026-06-23 | - | [260623-batch-sync-optimize](./quick/20260623-batch-sync-optimize/) |
 | 260622-u8n | 从 sys_dept.leader 批量同步用户 AD manager 属性（祖先递归找 leader + 复用单 LDAP 连接 + 信号量并发，POST /system/users/sync-managers） | 2026-06-22 | - | [260622-u8n-ad-manager-leader-ad](./quick/260622-u8n-ad-manager-leader-ad/) |
 | 260614-rrk | 工位编辑模态框：所属楼层 Cascader + 所属用户 Select 显示名称/账号（昵称）而非 UUID | 2026-06-14 | b9f8894 | [260614-rrk-id](./quick/260614-rrk-id/) |
 | 260614-dpz | 工位设置主设备时按序列号合并资产+域控数据再同步 | 2026-06-14 | dcfd552 | [260614-dpz-workstation-main-device-merge](./quick/260614-dpz-workstation-main-device-merge/) |
