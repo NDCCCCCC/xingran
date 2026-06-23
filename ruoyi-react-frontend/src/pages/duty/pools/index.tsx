@@ -1,12 +1,14 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect } from 'react';
 import type { FC } from 'react';
 import { Button, Form, Input, Select, Table, Modal, InputNumber, Space, Tag, App, Card, Statistic, Row, Col } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { formatDateTime } from '@/utils/datetime';
 import { createSorter } from '@/utils/tableHelpers';
+import { useQuery } from "@tanstack/react-query";
 import { usePagination } from '@/hooks/usePagination';
 import { useDeptTree } from '@/hooks/useDeptTree';
+import { queryKeys } from '@/lib/queryKeys';
 import { DepartmentTreeSelect } from '@/components/shared';
 import {
   getDutyPoolList,
@@ -18,7 +20,6 @@ import {
   type DutyPool,
   type DutyPoolCreateRequest,
   type DutyPoolUpdateRequest,
-  type SimpleUser,
 } from '@/lib/dutyApi';
 import { isFormValidationError } from '@/utils/errorHandler';
 
@@ -64,31 +65,22 @@ const DutyPoolPage: FC = () => {
   // 部门树数据 — 全项目共享 ['dept','tree'] 缓存条目 (D-LOCKED: 单一数据源 useDeptTree)
   // 仅用于 DepartmentTreeSelect 的 departments prop(展示部门树)。用户筛选改走后端 recursiveDeptId。
   const { data: depts = [] } = useDeptTree();
-  // 值班成员候选列表:选部门后用 recursiveDeptId 后端查询该部门+子部门用户。
-  // 不再预加载全量用户做前端 filter——getUserList 的 pageSize 被 system 模块 MaxPageSize=100
-  // 钳制(见 memory stat-cards-from-list-length-capped-at-100),预加载只能拿到前 100 个用户,
-  // 深层部门(科技创新部/基础运维科)的人员排在 100 之后会被漏掉,导致选部门后成员下拉空。
-  const [filteredUsers, setFilteredUsers] = useState<SimpleUser[]>([]);
-  const [memberUsersLoading, setMemberUsersLoading] = useState(false);
-
-  // 选部门后加载该部门(+子部门)的启用用户。后端按 sys_dept.ancestors 递归查询,
-  // 不受全局 MaxPageSize=100 钳制(单部门用户通常 < 100)。与 workstations/loadUserOptions 同模式。
-  const loadMemberUsers = useCallback(async (deptId?: string) => {
-    if (!deptId) {
-      setFilteredUsers([]);
-      return;
-    }
-    setMemberUsersLoading(true);
-    try {
-      const result = await getUserList({ status: 0, recursiveDeptId: deptId });
-      setFilteredUsers(result.data?.list || []);
-    } catch (error) {
-      console.error('获取值班成员失败:', error);
-      setFilteredUsers([]);
-    } finally {
-      setMemberUsersLoading(false);
-    }
-  }, []);
+  // 值班成员候选:用 React Query 自动查询选中的部门(+子部门)用户。
+  // 监听 editForm.deptId 字段(Form.useWatch)——onChange 选部门 / handleEdit 回填都自动触发。
+  // React Query 自动处理:去重(同 deptId 并发合并)+ 竞态(快速切换部门时最新 wins)+ 缓存(回切即时显示)。
+  // 后端用 recursiveDeptId 按 sys_dept.ancestors 递归查询,不受全局 MaxPageSize=100 钳制
+  // (见 memory stat-cards-from-list-length-capped-at-100)。
+  const watchedDeptId = Form.useWatch('deptId', editForm);
+  const { data: filteredUsers = [], isLoading: memberUsersLoading } = useQuery({
+    queryKey: queryKeys.duty.poolMembers(watchedDeptId ?? ''),
+    queryFn: async () => {
+      const res = await getUserList({ status: 0, recursiveDeptId: watchedDeptId as string });
+      return res.data?.list ?? [];
+    },
+    // 仅模态框打开 + 已选部门时查询(preserve={false} 关闭后字段清空 → watchedDeptId undefined → 自动停查)
+    enabled: modalVisible && !!watchedDeptId,
+    staleTime: 60_000, // 1min: 部门成员不常变,回切即时显示
+  });
 
   const fetchList = async (page?: number, pageSize?: number, sortCol?: string, sortAsc?: boolean) => {
     setLoading(true);
@@ -128,7 +120,7 @@ const DutyPoolPage: FC = () => {
     }
   };
 
-  // 部门树数据由顶层 useDeptTree() 提供,值班成员按部门加载由 loadMemberUsers 处理(选部门时触发)
+  // 部门树数据由顶层 useDeptTree() 提供;值班成员由 useQuery(监听 editForm.deptId)自动加载
 
   useEffect(() => {
     fetchList(1, paginationProps.pageSize);
@@ -147,17 +139,15 @@ const DutyPoolPage: FC = () => {
 
   const handleAdd = () => {
     setEditingRecord(null);
-    editForm.resetFields();
+    editForm.resetFields(); // resetFields 清 deptId → watchedDeptId undefined → useQuery 自动停查(候选清空)
     editForm.setFieldsValue({ dailyCount: 1, memberIds: [] });
-    setFilteredUsers([]); // 重置成员候选(未选部门)
     setModalVisible(true);
   };
 
   const handleEdit = (record: DutyPool) => {
     setEditingRecord(record);
     setModalVisible(true);
-    // 后端按部门+子部门加载成员(避免前端 filter 被 MaxPageSize=100 钳制)
-    loadMemberUsers(record.deptId);
+    // setFieldsValue 设 deptId → Form.useWatch 触发 → useQuery 自动加载该部门成员
     editForm.setFieldsValue({
       poolName: record.poolName,
       deptId: record.deptId,
@@ -167,11 +157,8 @@ const DutyPoolPage: FC = () => {
     });
   };
 
-  const handleModalOpenChange = (open: boolean) => {
-    if (open && !editingRecord) {
-      // 新增时重置筛选
-      setFilteredUsers([]);
-    }
+  const handleModalOpenChange = (_open: boolean) => {
+    // useQuery 随 watchedDeptId 自动管理候选(resetFields 清 deptId → 候选 []),无须手动重置
   };
 
   const handleDelete = async (id: string) => {
@@ -441,10 +428,9 @@ const DutyPoolPage: FC = () => {
           <Form.Item name="deptId" label="所属部门">
             <DepartmentTreeSelect
               departments={depts}
-              onChange={(value) => {
-                // 选部门后后端加载该部门+子部门的启用用户(避免前端 filter 被 MaxPageSize=100 钳制)
-                loadMemberUsers(value);
-                // 清空已选择的成员（因为部门已改变）
+              onChange={() => {
+                // Form.Item 自动更新 deptId 字段 → Form.useWatch 触发 useQuery 自动加载新部门成员
+                // 这里只清空已选成员(部门已变,旧成员失效)
                 editForm.setFieldValue('memberIds', []);
               }}
             />

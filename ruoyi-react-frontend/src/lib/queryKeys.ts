@@ -24,6 +24,11 @@ export const queryKeys = {
     all: ["dept"] as const,
     tree: () => ["dept", "tree"] as const,
   },
+  duty: {
+    all: ["duty"] as const,
+    // 值班池成员候选:按所选部门(+子部门)缓存,切换部门回切时即时显示(stale-while-revalidate)
+    poolMembers: (deptId: string) => ["duty", "pool-members", deptId] as const,
+  },
   role: {
     all: ["role"] as const,
     list: (params?: Record<string, unknown>) => ["role", "list", params ?? {}] as const,
