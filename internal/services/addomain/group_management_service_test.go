@@ -143,7 +143,7 @@ func createTestData(t *testing.T, db *gorm.DB) (deptID, configID, groupID string
 // TestGroupManagementService_CreateGroupForDept 测试为部门创建组
 func TestGroupManagementService_CreateGroupForDept(t *testing.T) {
 	db := setupTestDB(t)
-	service := NewGroupManagementService(db)
+	service := NewGroupManagementService(db, nil)
 	ctx := context.Background()
 
 	deptID, configID, _ := createTestData(t, db)
@@ -169,7 +169,7 @@ func TestGroupManagementService_CreateGroupForDept(t *testing.T) {
 // TestGroupManagementService_BulkCreateGroupsForDepts 测试批量创建组
 func TestGroupManagementService_BulkCreateGroupsForDepts(t *testing.T) {
 	db := setupTestDB(t)
-	service := NewGroupManagementService(db)
+	service := NewGroupManagementService(db, nil)
 	ctx := context.Background()
 
 	deptID1, _, _ := createTestData(t, db)
@@ -226,7 +226,7 @@ func TestGroupManagementService_NamingConvention(t *testing.T) {
 // TestGroupManagementService_DeleteGroup_SafetyChecks 测试删除组的安全检查
 func TestGroupManagementService_DeleteGroup_SafetyChecks(t *testing.T) {
 	db := setupTestDB(t)
-	service := NewGroupManagementService(db)
+	service := NewGroupManagementService(db, nil)
 	ctx := context.Background()
 
 	_, _, groupID := createTestData(t, db)
@@ -242,7 +242,7 @@ func TestGroupManagementService_DeleteGroup_SafetyChecks(t *testing.T) {
 // TestGroupManagementService_DeleteGroup_WithMappings 测试删除有映射的组
 func TestGroupManagementService_DeleteGroup_WithMappings(t *testing.T) {
 	db := setupTestDB(t)
-	service := NewGroupManagementService(db)
+	service := NewGroupManagementService(db, nil)
 	ctx := context.Background()
 
 	_, configID, groupID := createTestData(t, db)
@@ -300,7 +300,7 @@ func TestBulkCreateResult(t *testing.T) {
 // TestGroupManagementService_Integration_GrantFlow 测试完整流程
 func TestGroupManagementService_Integration_GrantFlow(t *testing.T) {
 	db := setupTestDB(t)
-	service := NewGroupManagementService(db)
+	service := NewGroupManagementService(db, nil)
 	ctx := context.Background()
 
 	t.Run("完整流程: 创建部门 -> 创建组 -> 创建映射", func(t *testing.T) {

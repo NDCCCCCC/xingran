@@ -9,12 +9,14 @@ import (
 
 // SetupADDomainRouter 设置AD域管理路由
 func SetupADDomainRouter(r *gin.RouterGroup, core *core.Core) {
-	service := addomainServices.NewADDomainService(core.GetDB(), core.SM4Cipher)
+	// Phase 36 / Phase 38 Wave 1: AD 服务账号池（多账号故障切换）
+	// Phase 38 Wave 1: accountPool 单次创建后由 NewADDomainService 与 NewADAccountHandler
+	// 共享同一实例（Pitfall 4：避免重复 New 导致内存缓存不共享，熔断后账号仍被选中）。
+	accountPool := addomainServices.NewAccountPool(core.GetDB(), nil) // 无 Redis pub/sub 跨进程广播（单机部署）
+	service := addomainServices.NewADDomainService(core.GetDB(), accountPool, core.SM4Cipher)
 	handler := NewADDomainHandler(service, core)
 	syncHandler := NewADUserSyncHandler(core)
 
-	// Phase 36: AD 服务账号池（多账号故障切换）
-	accountPool := addomainServices.NewAccountPool(core.GetDB(), nil) // 无 Redis pub/sub 跨进程广播（单机部署）
 	accountHandler := NewADAccountHandler(accountPool, core)
 
 	// 旧的组同步路由已移除 - 使用新的OU组映射功能

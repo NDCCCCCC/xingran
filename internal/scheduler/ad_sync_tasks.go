@@ -260,7 +260,9 @@ func (s *ADSyncScheduler) syncADConfig(ctx context.Context, configID string) {
 	applogger.Infof("开始同步AD配置: %s", config.ConfigName)
 
 	// 创建Service并执行同步（SyncData内部会创建和管理同步日志）
-	adService := addomain.NewADDomainService(s.db, getADSM4Cipher())
+	// Phase 38 Wave 1: 透传 AccountPool 实例（38-02 将用于 FailoverClient 闭包改造）
+	pool := addomain.NewAccountPool(s.db, nil)
+	adService := addomain.NewADDomainService(s.db, pool, getADSM4Cipher())
 	result, err := adService.Sync.SyncDataByID(ctx, configID, "full")
 
 	if err != nil {
@@ -287,7 +289,9 @@ func executeADDataSyncTask(ctx context.Context, params map[string]interface{}) e
 		syncType = syncTypeParam
 	}
 
-	adService := addomain.NewADDomainService(globalADSyncScheduler.db, getADSM4Cipher())
+	// Phase 38 Wave 1: 透传 AccountPool 实例（38-02 将用于 FailoverClient 闭包改造）
+	pool := addomain.NewAccountPool(globalADSyncScheduler.db, nil)
+	adService := addomain.NewADDomainService(globalADSyncScheduler.db, pool, getADSM4Cipher())
 
 	_, err := adService.Sync.SyncDataByID(ctx, configID, syncType)
 	return err

@@ -79,7 +79,7 @@ func TestSplitAncestorIDs(t *testing.T) {
 
 func TestResolveLeaderByAncestors_CurrentDeptHasLeader(t *testing.T) {
 	db := setupManagerSyncDB(t)
-	svc := NewUserADSyncService(db, nil, nil)
+	svc := NewUserADSyncService(db, nil, nil, nil)
 
 	// 当前部门有 leader → 直接返回，不查 DB
 	dept := deptWith("dept-1", "0", strPtr("leader-1"))
@@ -94,7 +94,7 @@ func TestResolveLeaderByAncestors_ParentFallback(t *testing.T) {
 	insertDeptRow(db, "root-id", "", "0", "")
 	insertDeptRow(db, "parent-id", "root-id", "0,root-id", "parent-leader")
 
-	svc := NewUserADSyncService(db, nil, nil)
+	svc := NewUserADSyncService(db, nil, nil, nil)
 	dept := deptWith("dept-1", "0,root-id,parent-id", nil)
 
 	leaderID, err := svc.resolveLeaderByAncestors(context.Background(), dept)
@@ -107,7 +107,7 @@ func TestResolveLeaderByAncestors_NoLeaderAnywhere(t *testing.T) {
 	insertDeptRow(db, "root-id", "", "0", "")
 	insertDeptRow(db, "parent-id", "root-id", "0,root-id", "")
 
-	svc := NewUserADSyncService(db, nil, nil)
+	svc := NewUserADSyncService(db, nil, nil, nil)
 	dept := deptWith("dept-1", "0,root-id,parent-id", nil)
 
 	leaderID, err := svc.resolveLeaderByAncestors(context.Background(), dept)
@@ -126,7 +126,7 @@ func TestSyncManagersToAD_BasicSync(t *testing.T) {
 
 	var mu sync.Mutex
 	var calls []string
-	svc := NewUserADSyncService(db, nil, nil)
+	svc := NewUserADSyncService(db, nil, nil, nil)
 	svc.updateUserAttributeFn = func(userDN string, attrs map[string]string) error {
 		mu.Lock()
 		defer mu.Unlock()
@@ -157,7 +157,7 @@ func TestSyncManagersToAD_ParentLeaderFallback(t *testing.T) {
 
 	var synced int
 	var mu sync.Mutex
-	svc := NewUserADSyncService(db, nil, nil)
+	svc := NewUserADSyncService(db, nil, nil, nil)
 	svc.updateUserAttributeFn = func(userDN string, attrs map[string]string) error {
 		mu.Lock()
 		synced++
@@ -180,7 +180,7 @@ func TestSyncManagersToAD_SelfLeaderSkipped(t *testing.T) {
 	insertUserRow(db, "user-1", "alice", "dept-1", "CN=alice,DC=x")
 
 	called := false
-	svc := NewUserADSyncService(db, nil, nil)
+	svc := NewUserADSyncService(db, nil, nil, nil)
 	svc.updateUserAttributeFn = func(userDN string, attrs map[string]string) error {
 		called = true
 		return nil
@@ -200,7 +200,7 @@ func TestSyncManagersToAD_LeaderWithoutAdDn(t *testing.T) {
 	insertUserRow(db, "leader-1", "boss", "", "") // leader 无 ad_dn
 	insertUserRow(db, "user-1", "alice", "dept-1", "CN=alice,DC=x")
 
-	svc := NewUserADSyncService(db, nil, nil)
+	svc := NewUserADSyncService(db, nil, nil, nil)
 	svc.updateUserAttributeFn = func(userDN string, attrs map[string]string) error {
 		t.Errorf("leader 无 ad_dn 时不应调用 updateAttr")
 		return nil
@@ -222,7 +222,7 @@ func TestSyncManagersToAD_UpdateFailsNotAbort(t *testing.T) {
 
 	var callCount int
 	var mu sync.Mutex
-	svc := NewUserADSyncService(db, nil, nil)
+	svc := NewUserADSyncService(db, nil, nil, nil)
 	svc.updateUserAttributeFn = func(userDN string, attrs map[string]string) error {
 		mu.Lock()
 		callCount++
@@ -245,7 +245,7 @@ func TestSyncManagersToAD_NoADConfig(t *testing.T) {
 	// 不插 ADConfig → 返回空 result，不报错
 	insertUserRow(db, "user-1", "alice", "", "CN=alice,DC=x")
 
-	svc := NewUserADSyncService(db, nil, nil)
+	svc := NewUserADSyncService(db, nil, nil, nil)
 	result, err := svc.SyncManagersToAD(context.Background(), nil)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, result.Total, "无 AD 配置应跳过同步")
@@ -261,7 +261,7 @@ func TestSyncManagersToAD_UserIDsFilter(t *testing.T) {
 
 	var mu sync.Mutex
 	var calls []string
-	svc := NewUserADSyncService(db, nil, nil)
+	svc := NewUserADSyncService(db, nil, nil, nil)
 	svc.updateUserAttributeFn = func(userDN string, attrs map[string]string) error {
 		mu.Lock()
 		calls = append(calls, userDN)
@@ -284,7 +284,7 @@ func TestSyncManagersToAD_UserWithoutDeptSkipped(t *testing.T) {
 	// 用户有 ad_dn 但无部门 → 跳过
 	insertUserRow(db, "user-1", "alice", "", "CN=alice,DC=x")
 
-	svc := NewUserADSyncService(db, nil, nil)
+	svc := NewUserADSyncService(db, nil, nil, nil)
 	svc.updateUserAttributeFn = func(userDN string, attrs map[string]string) error {
 		t.Errorf("无部门用户不应同步")
 		return nil

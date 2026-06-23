@@ -96,7 +96,9 @@ func executeDeptToADSyncTask(ctx context.Context, params map[string]interface{})
 	mapper := addomain.NewDeptOUmapper(db)
 
 	// 创建部门同步服务
-	syncService := addomain.NewDeptToADSyncService(db, ldapClient, mapper)
+	// Phase 38 Wave 1: NewDeptToADSyncService 签名新增 pool AccountPool 参数。
+	// 暂传 nil（pool 字段在 38-02 才被业务方法使用，当前 SyncDeptStructureToAD 走原 NewLDAPClient 路径）。
+	syncService := addomain.NewDeptToADSyncService(db, nil, ldapClient, mapper)
 
 	// 执行同步
 	result, err := syncService.SyncDeptStructureToAD(ctx, adConfigID)
