@@ -802,13 +802,16 @@ Plans:
 
 ### Phase 38: Unify AD authentication onto account pool, remove legacy single-admin dual-track path
 
-**Goal:** [To be planned]
-**Requirements**: TBD
-**Depends on:** Phase 37
-**Plans:** 0 plans
+**Goal:** 删除 sys_ad_config 单管理员遗留路径（admin_username/admin_password），所有 AD 连接（同步/管理/登录认证/配置测试连接）统一收敛到 Phase 36 账号池 FailoverClient，消除双轨不对称的解密遗漏风险（debug session adpool-password-not-decrypted 根因）。
+**Requirements**: D-01 (分波次降风险迁移) / D-02 (保留空列仅删代码) / D-03 (启动空池校验+明确错误不静默fallback) / D-04 (移除前端 admin 输入项)
+**Depends on:** Phase 36 (账号池设计来源), Phase 37
+**Plans:** 4 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 38 to break down)
+- [ ] 38-01-PLAN.md — Wave 1 前置：8 个同步/管理/配置服务 struct 注入 AccountPool 字段，统一改构造函数签名（SP-2/SHA-1 脚手架）
+- [ ] 38-02-PLAN.md — Wave 1 主体：21 处 NewLDAPClient(config) 改走 FailoverClient.ExecuteWithFailover/PickFirstConnect（SP-1/SP-3/SP-4），D-01 Wave 1 收敛完成
+- [ ] 38-03-PLAN.md — Wave 2：删除 22 处 decryptPassword(config.AdminPassword) Go 使用代码 + 前端 admin 字段配套清理（SHA-4 前后端同 commit），D-01 Wave 2 + D-04
+- [ ] 38-04-PLAN.md — Wave 3：model struct tag 放宽 + migration_163 幂等补迁 + 启动空池 WARN 校验，D-01 Wave 3 + D-02 + D-03 收尾
 
 ---
 
