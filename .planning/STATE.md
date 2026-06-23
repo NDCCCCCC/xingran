@@ -4,11 +4,11 @@ milestone: v1.15
 milestone_name: 工位设备关联 (Phase 28)
 status: executing
 stopped_at: "Phase 38 context gathered (AD账号池统一: 移除单管理员双轨)"
-last_updated: "2026-06-23T00:55:56.131Z"
+last_updated: "2026-06-23T01:57:43.523Z"
 progress:
   total_phases: 16
   completed_phases: 10
-  total_plans: 76
+  total_plans: 80
   completed_plans: 66
   percent: 63
 ---

@@ -808,9 +808,20 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 38-01-PLAN.md — Wave 1 前置：8 个同步/管理/配置服务 struct 注入 AccountPool 字段，统一改构造函数签名（SP-2/SHA-1 脚手架）
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 38-02-PLAN.md — Wave 1 主体：21 处 NewLDAPClient(config) 改走 FailoverClient.ExecuteWithFailover/PickFirstConnect（SP-1/SP-3/SP-4），D-01 Wave 1 收敛完成
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 38-03-PLAN.md — Wave 2：删除 22 处 decryptPassword(config.AdminPassword) Go 使用代码 + 前端 admin 字段配套清理（SHA-4 前后端同 commit），D-01 Wave 2 + D-04
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 38-04-PLAN.md — Wave 3：model struct tag 放宽 + migration_163 幂等补迁 + 启动空池 WARN 校验，D-01 Wave 3 + D-02 + D-03 收尾
 
 ---
