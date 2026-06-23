@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: 工位设备关联 (Phase 28)
 status: executing
-stopped_at: "Phase 38 context gathered (AD账号池统一: 移除单管理员双轨)"
-last_updated: "2026-06-23T02:17:03.806Z"
+stopped_at: "Phase 38 Plan 01 complete (Wave 1 前置 DI 脚手架), next: 38-02 连接层统一"
+last_updated: "2026-06-23T02:43:16.533Z"
 progress:
   total_phases: 16
   completed_phases: 10
   total_plans: 80
-  completed_plans: 66
+  completed_plans: 67
   percent: 63
 ---
 
@@ -28,10 +28,10 @@ progress:
 ## Current Position
 
 Phase: 38 (unify-ad-authentication-onto-account-pool-remove-legacy-sing) — EXECUTING
-Plan: 1 of 4
+Plan: 2 of 4 (38-01 ✅ COMPLETE — Wave 1 前置 DI 脚手架; next: 38-02 连接层统一)
 **Latest shipped milestone**: v1.15 工位设备关联 (Phase 28, 2026-06-10)
 **Latest shipped phase**: Phase 34 操作日志全模块集成 + review (2026-06-16)
-**Most recent commit**: 8309947 fix(37-06): workorderApi SimpleDept 引入本地 import type (37-05 latent bug)
+**Most recent commit**: 21ebb33 refactor(38-01): update NewADDomainService callers + preserve regression tests
 
 **Shipped since last state file update (v1.15 was the milestone label
 in PROJECT.md before this sync)**:
@@ -181,6 +181,7 @@ Run `/gsd:new-milestone` to formally start v1.16.
 | 2026-06-22 | Phase 37 Plan 04 完成 (批 3 network 模块迁移 devices) - useDeviceData 删 departments useState + loadDepartments useCallback (含 post /system/departments/tree + handleApiError 兜底) 改消费 useDeptTree; 返回对象保留 departments 字段删除 loadDepartments; 本地 Department 类型改 ReturnType<typeof useDeptTree>['data'] 类型透传; index.tsx 删 loadDepartments 解构与 openModal/openQuickCreateModal 两处调用点; 1 task commit 669b25b; type-check 通过; devices/ 全目录 loadDepartments 与 /system/departments/tree 清零; 最简单批次无转换函数无双向语义 | 37 |
 | 2026-06-22 | Phase 37 Plan 05 完成 (批 4 duty+workorder 模块迁移 + workorderApi 类型去重) - duty/pools 删 fetchDepts+depts useState+getDeptTree import+useEffect 触发改 useDeptTree (DepartmentTreeSelect 受控模式保持, form 筛选 + edit modal 两处 departments={depts} 由 hook 喂入); useWorkOrderData 同步删 fetchDepts+depts useState+return 字段+getDeptTree import 改 useDeptTree; workorderApi.SimpleDept 本地 interface 改 export type { SimpleDept } from ./dutyApi (T-37-09 mitigate: 外部 import 路径不变); workorderApi.getDeptTree 副本删除 (唯一消费方 useWorkOrderData 已迁移); 2 task commit ccbd504/0cde4f3; type-check 通过; SimpleDept 全项目定义数从 2 (dutyApi+workorderApi) 收敛为 1 (仅 dutyApi canonical 锚点); duty/workorder 目录 /system/departments/tree 清零 | 37 |
 | 2026-06-22 | Phase 37 Plan 06 完成 (批 5 收尾 TargetSelector + Phase 37 整体验收) - TargetSelector 删 GET 自 fetch + deptTree useState + useEffect dept 分支, 改消费 useDeptTree + useMemo(toShortNameDataNode(rawDept)) 派生 antd Tree DataNode 形状 (与 37-02 useTargetSelector 完全一致); types/notice.ts DeptTreeNode 接口 + 本地 Department alias 迁移后变孤儿 Rule 1 删除 (grep 确认 0 消费方); Task 2 全量 build 验收暴露并修复 37-05 latent bug (workorderApi.SimpleDept re-export 不引入本地 binding, tsc -b 报 TS2304, 顶部补 import type 修复, Rule 1 auto-fix bug); 2 task commit 214c615/8309947; **Phase 37 整体验收达标** (6/6 plans): 全量 grep 非排除项命中=0 (dutyApi canonical + dept 管理页 + role tree-select 三处合法排除), SimpleDept 唯一定义 (dutyApi:281), build + type-check 双通过; 10 个迁移点 UI 行为核对全部与迁移前一致 | 37 |
+| 2026-06-23 | Phase 38 Plan 01 完成 (Wave 1 前置 DI 脚手架) - 为 8 个 addomain 服务 struct 注入 pool AccountPool 字段 + NewADDomainService(db,pool,cipher...) 签名 + router/scheduler caller 透传同一 AccountPool 实例 (Pitfall 4 缓解); 业务逻辑零改动 (22 处 NewLDAPClient(config) 数量不变, 留待 38-02); SHA-5 严格遵守 updateUserAttributeFn 测试钩子保留 (7 个 TestSyncManagersToAD_* 全绿); 2 task commit abdd3e0/21ebb33; 2 Rule 3 auto-fix (测试 caller + user_router/dept_sync_tasks 额外 caller 适配新签名); go build ./... + addomain 全量测试通过 | 38 |
 
 ## Quick Tasks Completed
 
@@ -342,9 +343,16 @@ Run `/gsd:new-milestone` to formally start v1.16.
 
 ## Session Continuity
 
-Last session: 2026-06-23T00:55:56.112Z
-Stopped at: Phase 38 context gathered (AD账号池统一: 移除单管理员双轨)
-Resume file: .planning/phases/38-unify-ad-authentication-onto-account-pool-remove-legacy-sing/38-CONTEXT.md
+Last session: 2026-06-23T10:43:00.000Z
+Stopped at: Phase 38 Plan 01 complete (Wave 1 前置 DI 脚手架), next: 38-02 连接层统一
+Resume file: .planning/phases/38-unify-ad-authentication-onto-account-pool-remove-legacy-sing/38-02-PLAN.md
+
+**Active Phase:** 38 (unify-ad-authentication-onto-account-pool-remove-legacy-sing) — 4 plans — Wave-based linear dependency (38-01 → 38-02 → 38-03 → 38-04)
+
+  - Plan 38-01 (Wave 1 前置 DI 脚手架) ✅ COMPLETE — 8 服务 struct 注入 pool + NewADDomainService(db,pool,cipher...) + router/scheduler 共享同一实例
+  - Plan 38-02 (Wave 1 连接层统一) ⬜ NEXT — 22 处 NewLDAPClient(config) 改 FailoverClient.ExecuteWithFailover
+  - Plan 38-03 (Wave 2 Go 清理 + 前端) ⬜ — 删除 17 处 decryptPassword(config.AdminPassword) + 前端 admin 字段
+  - Plan 38-04 (Wave 3 model + migration) ⬜ — model struct tag 放宽 + migration_164 补迁校验
 
 **Planned Phase:** 37 (dept-select-unify) — 6 plans — **ALL 6/6 ✅ COMPLETE (awaiting phase-level verification)**
 
