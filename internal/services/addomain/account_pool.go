@@ -331,11 +331,25 @@ func (p *accountPoolImpl) MarkSuccess(ctx context.Context, accountID string) err
 	return err
 }
 
+// sanitizeFailureReason 清洗失败原因字符串，确保可安全写入 PostgreSQL text 列。
+// PostgreSQL 拒绝 0x00（null 字节）与无效 UTF-8 序列；AD/LDAP 错误消息可能含这些
+// （Windows AcceptSecurityContext 上下文数据），未清洗会使 UPDATE 报 SQLSTATE 22021，
+// 致 failure_count 不累加、坏账号永不熔断、FailoverClient 反复重试同一坏账号。
+func sanitizeFailureReason(reason string) string {
+	cleaned := strings.ToValidUTF8(reason, "")        // 移除无效 UTF-8 序列
+	cleaned = strings.ReplaceAll(cleaned, "\x00", "") // 移除 null 字节（UTF-8 合法但 PG text 列拒绝）
+	if len(cleaned) > 1000 {                           // 截断超长错误，避免撑爆字段
+		cleaned = cleaned[:1000]
+	}
+	return cleaned
+}
+
 // MarkFailure 失败上报（行锁 + 事务 + 自动熔断）
 //
 // Issue 14 修复：不再设置 recently_failed_until（冷却期），避免池子饥饿
 // P2-M4 修复：缓存失效移到事务外
 func (p *accountPoolImpl) MarkFailure(ctx context.Context, accountID, reason string) error {
+	reason = sanitizeFailureReason(reason) // 清洗 0x00/无效 UTF-8，避免 PG UPDATE SQLSTATE 22021
 	var configID string
 	err := p.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var a models.ADServiceAccount
