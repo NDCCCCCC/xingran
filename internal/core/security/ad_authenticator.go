@@ -76,25 +76,13 @@ func (a *ADAuthenticator) Authenticate(ctx context.Context, req *AuthRequest) (*
 
 	// 4. 用户绑定成功，现在需要搜索用户详细信息
 	// 需要使用管理员绑定来搜索（因为用户可能没有搜索权限）
-
-	adminConn, err := a.dialConnection(config, address)
+	// 通过账号池 FailoverClient 取一个已 Bind 成功的管理员连接用于搜索。
+	// 修复（pre-existing bug）：此前单独 dial 了未绑定的 adminConn，而 bindAdminWithFailover
+	// 绑定的是它自己的内部连接并丢弃，导致 searchUserInfo 跑在未绑定连接上 → LDAP "bind must be completed"。
+	// 现改为使用 bindAdminWithFailover 返回的已绑定 client 的连接搜索。
+	adminClient, err := a.bindAdminWithFailover(ctx, config)
 	if err != nil {
-		// 用户认证成功但无法搜索用户信息
-		// 仍然返回成功，但没有AD用户详情
-		applogger.Warnf("[ADAuth] 用户认证成功但无法创建管理员连接: username=%s, error=%v", req.Username, err)
-		return &AuthResult{
-			User:            nil,
-			AuthSource:      "ad",
-			ADUserInfo:      &ADUserInfo{Username: req.Username},
-			NeedsSync:       true,
-			SyncErrorReason: "admin_dial",
-		}, nil
-	}
-	defer adminConn.Close()
-
-	// 管理员绑定（Phase 36: 优先用 FailoverClient 多账号故障切换）
-	if err := a.bindAdminWithFailover(ctx, config); err != nil {
-		// 认证成功但搜索失败，返回基本信息
+		// 管理员绑定失败（账号池未初始化 / 无可用账号 / 全部 bind 失败）
 		applogger.Warnf("[ADAuth] 管理员绑定失败（账号池耗尽）: username=%s, error=%v", req.Username, err)
 		return &AuthResult{
 			User:            nil,
@@ -104,10 +92,11 @@ func (a *ADAuthenticator) Authenticate(ctx context.Context, req *AuthRequest) (*
 			SyncErrorReason: "admin_bind",
 		}, nil
 	}
+	defer adminClient.Close()
 
-	// 5. 搜索用户信息
+	// 5. 搜索用户信息（在已绑定的管理员连接上搜索）
 	applogger.Infof("[ADAuth] 开始搜索AD用户信息: username=%s, BaseDN=%s", req.Username, config.BaseDN)
-	adUserInfo, err := a.searchUserInfo(adminConn, config, req.Username)
+	adUserInfo, err := a.searchUserInfo(adminClient.Conn(), config, req.Username)
 	if err != nil {
 		// 认证成功但搜索失败，返回基本信息
 		applogger.Errorf("[ADAuth] 搜索AD用户信息失败: username=%s, error=%v", req.Username, err)
@@ -211,24 +200,25 @@ func (a *ADAuthenticator) dialConnection(config *models.ADConfig, address string
 	}
 }
 
-// bindAdminWithFailover 用账号池多账号故障切换绑定管理员
+// bindAdminWithFailover 用账号池多账号故障切换绑定管理员，返回已 Bind 成功的 *LDAPClient，
+// 供调用方（Authenticate 的用户搜索）在同一已绑定连接上执行后续操作。
+// 调用方负责 defer client.Close()。
 //
 // Phase 38: 单管理员 fallback 分支已移除（D-03 不保留双轨），accountPool 必须由
 // core 在启动时注入（core.go initAuthFactory）。单管理员账号被 AD 锁定（data 775）
 // 不再阻断用户登录——FailoverClient 自动切换池中其他可用账号。
-func (a *ADAuthenticator) bindAdminWithFailover(ctx context.Context, config *models.ADConfig) error {
+func (a *ADAuthenticator) bindAdminWithFailover(ctx context.Context, config *models.ADConfig) (*addomain.LDAPClient, error) {
 	if a.accountPool == nil {
 		// Phase 38: 单管理员 fallback 已移除；accountPool 必须由 core 启动时注入
-		return fmt.Errorf("AD 账号池未初始化，请联系管理员检查 AD 配置（账号池 Tab）")
+		return nil, fmt.Errorf("AD 账号池未初始化，请联系管理员检查 AD 配置（账号池 Tab）")
 	}
 	fc := addomain.NewFailoverClient(a.accountPool, config)
 	client, _, err := fc.PickFirstConnect(ctx)
 	if err != nil {
-		return fmt.Errorf("账号池无可用账号: %w", err)
+		return nil, fmt.Errorf("账号池无可用账号: %w", err)
 	}
-	defer client.Close()
-	// PickFirstConnect 内部已 Bind 成功（Connect 调用 tryBindAttempts）
-	return nil
+	// PickFirstConnect 内部已 Bind 成功（Connect 调用 tryBindAttempts）；返回供调用方搜索使用
+	return client, nil
 }
 
 // searchUserInfo 搜索AD用户信息

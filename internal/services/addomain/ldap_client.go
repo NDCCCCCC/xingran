@@ -64,6 +64,13 @@ func (c *LDAPClient) GetAccount() *models.ADServiceAccount {
 	return c.account
 }
 
+// Conn 返回底层已 Bind 成功的 *ldap.Conn，供外部包（如 ad_authenticator 的用户搜索）
+// 在同一已绑定连接上执行操作。
+// 调用方不得自行 Close 返回的 conn——生命周期由 LDAPClient.Close 统一管理。
+func (c *LDAPClient) Conn() *ldap.Conn {
+	return c.conn
+}
+
 // Connect 连接到AD服务器
 func (c *LDAPClient) Connect() error {
 	address := fmt.Sprintf("%s:%d", c.config.ServerAddress, c.config.ServerPort)
