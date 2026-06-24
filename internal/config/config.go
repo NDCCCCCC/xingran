@@ -242,7 +242,7 @@ func Load() *Config {
 		applogger.Errorf("解析配置失败: %v", err)
 	}
 
-	// 从环境变量直接读取敏感配置
+	// 从环境变量直接读取敏感配置(裸变量名,优先级高于 viper 自动绑定)
 	overrideFromEnv(&config.Database.Host, "DB_HOST")
 	overrideFromEnv(&config.Database.User, "DB_USER")
 	overrideFromEnv(&config.Database.Password, "DB_PASSWORD")
@@ -250,7 +250,17 @@ func Load() *Config {
 	overrideFromEnv(&config.Database.SSLMode, "DB_SSLMODE")
 	overrideFromEnv(&config.Cache.Host, "REDIS_HOST")
 	overrideFromEnv(&config.Cache.Password, "REDIS_PASSWORD")
+	// Cache.Port / Cache.DB / Server.* 用裸名,免去 .env 写 RUOYI_ 前缀
+	overrideFromEnvInt(&config.Cache.Port, "REDIS_PORT")
+	overrideFromEnvInt(&config.Cache.DB, "REDIS_DB")
+	overrideFromEnv(&config.Server.Host, "SERVER_HOST")
+	overrideFromEnv(&config.Server.Mode, "SERVER_MODE")
+	overrideFromEnvInt(&config.Server.Port, "SERVER_PORT")
 	overrideFromEnv(&config.JWT.SecretKey, "JWT_SECRET")
+	// SM2 密钥对 — 必须通过 env 注入；留空会让 jwt.go 走"动态生成"分支,
+	// 导致每次重启 SM2 密钥对都换,旧 token 全部失效,所有用户被强制登出
+	overrideFromEnv(&config.JWT.SM2PrivateKey, "JWT_SM2_PRIVATE_KEY")
+	overrideFromEnv(&config.JWT.SM2PublicKey, "JWT_SM2_PUBLIC_KEY")
 	overrideFromEnv(&config.Security.SM4Key, "SM4_KEY")
 	overrideFromEnv(&config.Baidu.MapAK, "BAIDU_MAP_AK")
 	// RPA AI 配置
@@ -259,23 +269,6 @@ func Load() *Config {
 	overrideFromEnv(&config.RPA.AI.Agent.APIKey, "RPA_AI_AGENT_KEY")
 	overrideFromEnv(&config.RPA.AI.Agent.BaseURL, "RPA_AI_AGENT_URL")
 
-	// 数值类型环境变量
-	if port := os.Getenv("DB_PORT"); port != "" {
-		if p, err := strconv.Atoi(port); err == nil {
-			config.Database.Port = p
-		}
-	}
-	if redisPort := os.Getenv("REDIS_PORT"); redisPort != "" {
-		if p, err := strconv.Atoi(redisPort); err == nil {
-			config.Cache.Port = p
-		}
-	}
-	if serverPort := os.Getenv("SERVER_PORT"); serverPort != "" {
-		if p, err := strconv.Atoi(serverPort); err == nil {
-			config.Server.Port = p
-		}
-	}
-
 	return &config
 }
 
@@ -283,6 +276,16 @@ func Load() *Config {
 func overrideFromEnv(target *string, envKey string) {
 	if value := os.Getenv(envKey); value != "" {
 		*target = value
+	}
+}
+
+// overrideFromEnvInt 从环境变量覆盖整型配置值（辅助函数）
+// env 未设置或非数字字符串时,保持 target 原值不变
+func overrideFromEnvInt(target *int, envKey string) {
+	if value := os.Getenv(envKey); value != "" {
+		if p, err := strconv.Atoi(value); err == nil {
+			*target = p
+		}
 	}
 }
 

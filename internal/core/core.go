@@ -79,7 +79,10 @@ func (c *Core) GetDB() *gorm.DB {
 // New 创建核心模块管理器
 // 根据配置创建Core实例，初始化JWT管理器和密码管理器
 func New(cfg *config.Config) (*Core, error) {
-	sm4Cipher := initSM4Cipher(cfg.Security.SM4Key)
+	sm4Cipher, err := initSM4Cipher(cfg.Security.SM4Key)
+	if err != nil {
+		return nil, fmt.Errorf("初始化 SM4 加密器失败: %w", err)
+	}
 
 	// 初始化JWT管理器
 	jwtManager, err := security.NewJWTManager(&cfg.JWT)
@@ -110,18 +113,38 @@ func New(cfg *config.Config) (*Core, error) {
 
 // initSM4Cipher 初始化SM4加密器
 // 使用配置中的SM4密钥创建加密器，用于AD域密码加解密
-func initSM4Cipher(sm4Key string) addomain.PasswordCipher {
+//
+// 启动校验策略（安全与可用性平衡）：
+//   - SM4_KEY 未配置 → 启动中止（无 cipher 启动后 AD 同步会静默失败）
+//   - SM4_KEY 是仓库默认值 dGVzdC1zZWNyZXQxNiEhIQ== → ⚠️ **仅 ERROR 日志,允许启动**
+//     原因: 数据库里可能已用默认值加密大量数据,硬性中止会让所有历史数据无法读取
+//     建议: 生成新 key (openssl rand -base64 16) → 用 migrate-sm4-key 命令迁移
+//           数据 → 切换到新 key → 移除默认值
+//   - 密钥错误无法创建 cipher → 启动中止
+//
+// ⚠️ SM4 加密的是持久化数据（设备密码/AD 凭据/RPA 凭证）,
+//   启动后**不能**动态生成,否则重启后历史加密数据永久不可解密
+func initSM4Cipher(sm4Key string) (addomain.PasswordCipher, error) {
 	if sm4Key == "" {
-		applogger.Warnf("SM4 密钥未配置，AD域密码加解密将不可用")
-		return nil
+		return nil, fmt.Errorf("SM4_KEY 未配置 — AD 域密码加解密将不可用,启动中止 (通过环境变量 SM4_KEY 注入)")
+	}
+	if sm4Key == "dGVzdC1zZWNyZXQxNiEhIQ==" {
+		// ⚠️ 不强制中止: 数据库里可能已用默认值加密大量数据,中止会让所有历史数据无法读取
+		// 仅打显眼 ERROR 日志,提醒部署者立即迁移
+		applogger.Errorf("=================================================================")
+		applogger.Errorf("= [SECURITY WARNING] SM4_KEY 是仓库默认值 test-secret16!!!")
+		applogger.Errorf("= 任何能读仓库的人都能解密您所有 AD 凭据/设备密码/RPA 凭证")
+		applogger.Errorf("= 强烈建议: 生成新 key (openssl rand -base64 16)")
+		applogger.Errorf("=           → 用 migrate-sm4-key 命令迁移历史数据")
+		applogger.Errorf("=           → 切换到新 key 后重新部署")
+		applogger.Errorf("=================================================================")
 	}
 	cipher, err := crypto.NewSM4Cipher(sm4Key)
 	if err != nil {
-		applogger.Errorf("初始化SM4加密器失败: %v，AD域密码加解密将不可用", err)
-		return nil
+		return nil, fmt.Errorf("创建 SM4 cipher 失败: %w", err)
 	}
-	applogger.Infof("SM4加密器初始化成功")
-	return cipher
+	applogger.Infof("SM4 加密器初始化成功")
+	return cipher, nil
 }
 
 
