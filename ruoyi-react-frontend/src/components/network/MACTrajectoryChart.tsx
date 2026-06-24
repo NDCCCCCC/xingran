@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
-import ReactECharts from "echarts-for-react";
+// 改用 EChartsWrapper（lazy 包装），让 echarts-for-react 从 vendor-react 移到 lazy chunk
+import ReactECharts from "@/components/charts/EChartsWrapper";
 import type { EChartsOption } from "echarts";
 import { Empty, Spin } from "antd";
 import { EVENT_COLORS, type MACEventType } from "./macEventMeta";
