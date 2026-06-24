@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import type { FC, Key, CSSProperties } from "react";
 import { Tree, Card, Spin, Input } from "antd";
 import type { DataNode, EventDataNode } from "antd/es/tree";
@@ -70,26 +70,15 @@ const DeptTree: FC<DeptTreeProps> = ({
   }, [rawDeptTyped, externalOnly]);
 
   const [searchValue, setSearchValue] = useState("");
-  const [expandedKeys, setExpandedKeys] = useState<Key[]>([]);
+  // userExpandedKeys=null 表示用户尚未手动调整 — 用派生值 firstParentKey 兜底首次自动展开。
+  // 一旦用户展开/搜索展开，setExpandedKeys 会写入具体数组 → 派生 fallback 不再生效。
+  // 这替代了原 useEffect + didInitExpandRef 的"首次设 state"模式：
+  // 既满足 Vercel rerender-derived-state-no-effect，也避开 React 19 lint react-hooks/set-state-in-effect。
+  const [userExpandedKeys, setExpandedKeys] = useState<Key[] | null>(null);
   const [autoExpandParent, setAutoExpandParent] = useState(true);
 
-  // 首次自动展开守卫: 原 loadDeptTree 在数据到达后把 expandedKeys 初始化为
-  // parentKeys[0] (第一个父节点)。改为 useDeptTree 后, 用 ref 守卫确保**只在首次
-  // 数据到达时跑一次**, 避免每次 rawDept 引用变化都重置用户手动展开状态。
-  const didInitExpandRef = useRef(false);
-  useEffect(() => {
-    if (didInitExpandRef.current) return;
-    if (!treeData || treeData.length === 0) return;
-    const parentKeys = getParentKeys(treeData);
-    const firstParentKey = parentKeys.length > 0 ? [parentKeys[0]] : [];
-    if (firstParentKey.length > 0) {
-      setExpandedKeys(firstParentKey);
-      setAutoExpandParent(true);
-      didInitExpandRef.current = true;
-    }
-  }, [treeData]);
-
-  const getParentKeys = (data: DataNode[]): Key[] => {
+  // getParentKeys 提前到 useMemo 之前定义（函数声明会提升，避免 TDZ）。
+  function getParentKeys(data: DataNode[]): Key[] {
     const parentKeys: Key[] = [];
     const traverse = (nodes: DataNode[]) => {
       for (const node of nodes) {
@@ -101,20 +90,31 @@ const DeptTree: FC<DeptTreeProps> = ({
     };
     traverse(data);
     return parentKeys;
-  };
+  }
+
+  // getParentKeys 是纯派生 (仅依赖 treeData), useMemo 避免重复全树遍历。
+  // 同时给 firstParentKey 派生和 onSearch 复用 — 两者此前各跑一次全树遍历。
+  const parentKeys = useMemo(() => getParentKeys(treeData), [treeData]);
+
+  // 首次默认展开第一个父节点 — render 阶段派生，不需 effect/ref，
+  // treeData 后到达或更新时自动反映在 expandedKeys（前提：用户未手动调整）。
+  const firstParentKey = useMemo<Key[]>(
+    () => (parentKeys.length > 0 ? [parentKeys[0]] : []),
+    [parentKeys]
+  );
+  const expandedKeys = userExpandedKeys ?? firstParentKey;
 
   const onSearch = (value: string) => {
     setSearchValue(value);
     if (!value) {
-      const parentKeys = getParentKeys(treeData);
-      const firstParentKey = parentKeys.length > 0 ? [parentKeys[0]] : [];
+      // 搜空：恢复派生 firstParentKey（与初始首屏行为一致）
       setExpandedKeys(firstParentKey);
       setAutoExpandParent(true);
       return;
     }
 
-    const expandedKeys = getExpandedKeys(treeData, value);
-    setExpandedKeys(expandedKeys);
+    const nextExpanded = getExpandedKeys(treeData, value);
+    setExpandedKeys(nextExpanded);
     setAutoExpandParent(true);
   };
 
@@ -154,26 +154,27 @@ const DeptTree: FC<DeptTreeProps> = ({
     }
   };
 
-  const filterTreeData = useCallback(
-    (data: DataNode[], searchValue: string): DataNode[] => {
-      if (!searchValue) {
-        return data;
-      }
+  // 过滤结果按 (treeData, searchValue) 缓存 — treeData 大时每次输入变化避免全树重算。
+  // 此前用 useCallback([]) 只稳定函数引用，但函数被同步调用于 render body，
+  // 每次 render 仍重算（不符合 Vercel rerender-memo 建议）。
+  const filteredTreeData = useMemo(() => {
+    if (!searchValue) {
+      return treeData;
+    }
 
+    const filterFn = (data: DataNode[]): DataNode[] => {
       const lowerSearchValue = searchValue.toLowerCase();
       return data.filter(node => {
         const titleMatch = node.title?.toString().toLowerCase().includes(lowerSearchValue);
-        const childrenMatch = node.children ? filterTreeData(node.children, searchValue).length > 0 : false;
+        const childrenMatch = node.children ? filterFn(node.children).length > 0 : false;
         return titleMatch || childrenMatch;
       }).map(node => ({
         ...node,
-        children: node.children ? filterTreeData(node.children, searchValue) : undefined,
+        children: node.children ? filterFn(node.children) : undefined,
       }));
-    },
-    [],
-  );
-
-  const filteredTreeData = filterTreeData(treeData, searchValue);
+    };
+    return filterFn(treeData);
+  }, [treeData, searchValue]);
 
   return (
     <Card
