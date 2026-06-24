@@ -296,8 +296,8 @@ const DepartmentManagement: FC = () => {
       <ExcelImport
         entityType="department"
         entityName="部门"
-        templateUrl="/system/departments/template"
-        importUrl="/system/departments/import"
+        templateUrl="/api/v1/system/departments/template"
+        importUrl="/api/v1/system/departments/import"
         visible={importVisible}
         onClose={() => setImportVisible(false)}
         onImportSuccess={handleImportSuccess}
@@ -305,7 +305,7 @@ const DepartmentManagement: FC = () => {
       <ExcelExport
         entityType="department"
         entityName="部门"
-        exportUrl="/system/departments/export"
+        exportUrl="/api/v1/system/departments/export"
         visible={exportVisible}
         onClose={() => setExportVisible(false)}
       />
