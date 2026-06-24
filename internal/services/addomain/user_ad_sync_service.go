@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-ldap/ldap/v3"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
@@ -175,8 +176,53 @@ func (s *UserADSyncService) syncUserAttributes(ctx context.Context, ldapClient *
 		return nil
 	}
 
+	// Debug session ad-update-attr-no-such-object Fix 1：
+	// 预检 sys_user.ad_dn 在 AD 端是否仍然存在，避免对已删除/移走的对象
+	// 执行 Modify → LDAP code 32 → handler 3 次重试 → MarkFailure 累加
+	// → 应用层 breaker 熔断 30 分钟 → 全池 bind 失败 → 用户看到"管理员账号被锁"。
+	//
+	// DNExists 返回 false（code 32 语义）→ 清空 ad_dn，让下次 login sync
+	// 重新拉取（走 SyncADUser 的 read path）。这条路径不返回 error，
+	// 上层 SyncUserUpdateToAD 视为同步成功，避免后续 handler 重试放大。
+	exists, err := ldapClient.DNExists(*user.AdDn)
+	if err != nil {
+		// 网络/认证错误等非 code 32 情况：上抛让 FailoverClient 走下一账号重试
+		return fmt.Errorf("DN 存在性预检失败 [%s]: %w", *user.AdDn, err)
+	}
+	if !exists {
+		applogger.Warnf("用户 %s 的 AD DN 在 AD 端不存在 [dn=%s]，清空 ad_dn 等待下次 login sync 重新拉取",
+			user.Username, *user.AdDn)
+		// 清空过期 DN（不阻塞系统主流程；ad_synced_at 也清，避免 UI 误显示"已同步"）
+		s.db.WithContext(ctx).
+			Model(&models.User{}).
+			Where("id = ?", user.ID).
+			Updates(map[string]interface{}{
+				"ad_dn":        nil,
+				"ad_ou_dn":     nil,
+				"ad_synced_at": nil,
+			})
+		return nil
+	}
+
 	// 更新AD属性
 	if err := ldapClient.UpdateUserAttribute(*user.AdDn, attributes); err != nil {
+		// 区分 code 32（对象在预检后被删/移走，竞态）与其它错误：
+		// code 32 视为"过期 DN"语义，做同样的清空 + INFO，让 handler 短路
+		// 不再重试（debug session Fix 2）。返回哨兵错误 ErrADTargetNotFound
+		// 让 handler 用 errors.Is 判定并 break 出重试循环。
+		if ldap.IsErrorWithCode(err, ldap.LDAPResultNoSuchObject) {
+			applogger.Warnf("用户 %s 的 AD DN 在 modify 时返回 code 32（预检后被删/移走）[dn=%s]，清空 ad_dn",
+				user.Username, *user.AdDn)
+			s.db.WithContext(ctx).
+				Model(&models.User{}).
+				Where("id = ?", user.ID).
+				Updates(map[string]interface{}{
+					"ad_dn":        nil,
+					"ad_ou_dn":     nil,
+					"ad_synced_at": nil,
+				})
+			return ErrADTargetNotFound
+		}
 		return fmt.Errorf("更新AD用户属性失败: %w", err)
 	}
 

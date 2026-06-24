@@ -24,10 +24,10 @@ const (
 
 // 阈值常量（与 PLAN.md 对齐）
 const (
-	FailureThreshold       = 3               // 连续失败次数触发熔断
+	FailureThreshold       = 3                // 连续失败次数触发熔断
 	CircuitBreakerDuration = 30 * time.Minute // 熔断持续时间
-	DefaultMaxHops         = 10              // FailoverClient 单次最多尝试账号数（Issue 18）
-	BreakerRecoveryCron    = "*/5 * * * *"   // 每 5 分钟恢复过期熔断
+	DefaultMaxHops         = 10               // FailoverClient 单次最多尝试账号数（Issue 18）
+	BreakerRecoveryCron    = "*/5 * * * *"    // 每 5 分钟恢复过期熔断
 )
 
 // 哨兵错误
@@ -36,6 +36,10 @@ var (
 	ErrAccountNotFound        = errors.New("账号不存在")
 	ErrInvalidOperator        = errors.New("operator 必填")
 	ErrInvalidUnlockReason    = errors.New("解锁原因必填且不少于10字符")
+	// ErrADTargetNotFound debug session ad-update-attr-no-such-object Fix 2:
+	// 标记目标 AD 对象不存在（LDAP code 32 No Such Object）。handler 层据此
+	// 短路重试，避免 3 次重试 + MarkFailure 累加触发应用层 breaker 熔断。
+	ErrADTargetNotFound = errors.New("AD 目标对象不存在")
 )
 
 // AccountPool AD 服务账号池接口
@@ -105,10 +109,10 @@ type accountPoolImpl struct {
 	db          *gorm.DB
 	mu          sync.RWMutex
 	cache       map[string][]models.ADServiceAccount // configID → 可用账号快照
-	cacheTTL    map[string]time.Time                // configID → 缓存到期时间
-	redisPubSub RedisPublisher                      // 可选：用于跨进程广播（Issue 17）
-	cacheTTLDur time.Duration                       // 缓存有效期
-	rand        *rand.Rand                          // P2-M1: 随机源（替代 time.Now() 伪随机）
+	cacheTTL    map[string]time.Time                 // configID → 缓存到期时间
+	redisPubSub RedisPublisher                       // 可选：用于跨进程广播（Issue 17）
+	cacheTTLDur time.Duration                        // 缓存有效期
+	rand        *rand.Rand                           // P2-M1: 随机源（替代 time.Now() 伪随机）
 	randMu      sync.Mutex                           // P2-M1: math/rand 不是并发安全的
 }
 
@@ -125,7 +129,7 @@ func NewAccountPool(db *gorm.DB, redisPubSub RedisPublisher) AccountPool {
 		cache:       make(map[string][]models.ADServiceAccount),
 		cacheTTL:    make(map[string]time.Time),
 		redisPubSub: redisPubSub,
-		cacheTTLDur: 30 * time.Second, // 短 TTL + pub/sub 推送（兜底 Issue 17）
+		cacheTTLDur: 30 * time.Second,                                // 短 TTL + pub/sub 推送（兜底 Issue 17）
 		rand:        rand.New(rand.NewSource(time.Now().UnixNano())), // P2-M1
 	}
 }
@@ -153,7 +157,9 @@ func (p *accountPoolImpl) ListAvailable(ctx context.Context, configID string) ([
 	now := time.Now()
 	available := make([]models.ADServiceAccount, 0, len(all))
 	for _, a := range all {
-		if a.Status == AccountStatusDisabled { continue } // 停用
+		if a.Status == AccountStatusDisabled {
+			continue
+		} // 停用
 		if a.Status == AccountStatusCircuitBroken {
 			// 熔断中：未到期则跳过；到期但不修改（由 cron 恢复）
 			if a.CircuitBreakerUntil == nil || now.Before(*a.CircuitBreakerUntil) {
@@ -193,8 +199,12 @@ func (p *accountPoolImpl) PickAvailable(ctx context.Context, configID string) (*
 
 // ListAll 包含停用/熔断账号（分页）
 func (p *accountPoolImpl) ListAll(ctx context.Context, configID string, page, pageSize int, statusFilter *int) ([]models.ADServiceAccount, int64, error) {
-	if page < 1 { page = 1 }
-	if pageSize < 1 || pageSize > 200 { pageSize = 20 }
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 200 {
+		pageSize = 20
+	}
 
 	q := p.db.WithContext(ctx).Model(&models.ADServiceAccount{}).
 		Where("config_id = ? AND deleted_at IS NULL", configID)
@@ -338,7 +348,7 @@ func (p *accountPoolImpl) MarkSuccess(ctx context.Context, accountID string) err
 func sanitizeFailureReason(reason string) string {
 	cleaned := strings.ToValidUTF8(reason, "")        // 移除无效 UTF-8 序列
 	cleaned = strings.ReplaceAll(cleaned, "\x00", "") // 移除 null 字节（UTF-8 合法但 PG text 列拒绝）
-	if len(cleaned) > 1000 {                           // 截断超长错误，避免撑爆字段
+	if len(cleaned) > 1000 {                          // 截断超长错误，避免撑爆字段
 		cleaned = cleaned[:1000]
 	}
 	return cleaned
@@ -348,8 +358,21 @@ func sanitizeFailureReason(reason string) string {
 //
 // Issue 14 修复：不再设置 recently_failed_until（冷却期），避免池子饥饿
 // P2-M4 修复：缓存失效移到事务外
+// ad-update-attr-no-such-object Fix 3：按 reason 前缀区分语义
+//   - "dial:" 前缀 → connect/bind 失败，账号健康问题 → 计入 failure_count → 触发熔断
+//   - "operation:" 前缀 → Modify/Search/Move 等单操作失败（如 LDAP code 32
+//     No Such Object、code 53 等），目标对象/数据问题，不是账号问题 →
+//     仍记录 last_failure_reason 供审计，**不计入** failure_count，
+//     不触发熔断。这避免了：单条 stale-DN modify 失败 → handler 3 次重试
+//     → 同一账号被打 3 次 MarkFailure → 熔断 → 全池 bind 失败 → 用户看到
+//     "管理员账号被锁"。
+//   - 其他前缀 → 兼容旧调用，按 dial 语义计入（保守处理）
 func (p *accountPoolImpl) MarkFailure(ctx context.Context, accountID, reason string) error {
 	reason = sanitizeFailureReason(reason) // 清洗 0x00/无效 UTF-8，避免 PG UPDATE SQLSTATE 22021
+
+	// 语义分流：operation: 前缀不计入 failure_count（仍记录原因）
+	countsTowardBreaker := !strings.HasPrefix(reason, "operation:")
+
 	var configID string
 	err := p.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var a models.ADServiceAccount
@@ -359,12 +382,17 @@ func (p *accountPoolImpl) MarkFailure(ctx context.Context, accountID, reason str
 		}
 
 		now := time.Now()
-		a.FailureCount++
+		if countsTowardBreaker {
+			a.FailureCount++
+		} else {
+			applogger.Debugf("[ADPool] operation 失败不计入熔断计数 [ID=%s, reason=%s]",
+				a.ID, reason)
+		}
 		a.LastFailureAt = &now
 		a.LastFailureReason = reason
 
-		// 触发熔断
-		if a.FailureCount >= FailureThreshold && a.Status != AccountStatusCircuitBroken {
+		// 触发熔断（仅 countsTowardBreaker 路径）
+		if countsTowardBreaker && a.FailureCount >= FailureThreshold && a.Status != AccountStatusCircuitBroken {
 			a.Status = AccountStatusCircuitBroken
 			breakerUntil := now.Add(CircuitBreakerDuration)
 			a.CircuitBreakerUntil = &breakerUntil

@@ -3,6 +3,7 @@ package system
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"math/big"
 	"strings"
 	"sync"
@@ -208,18 +209,28 @@ func (h *UserHandler) Update(c *gin.Context) {
 				var lastErr error
 				for attempt := 0; attempt < maxRetries; attempt++ {
 					if attempt > 0 {
-						// 指数退避：1s, 2s（仅阻塞本 goroutine，不影响请求）
+						// 指数退避：1s, 2s（仅阻塞本 goroutine,不影响请求）
 						time.Sleep(time.Duration(1<<uint(attempt-1)) * time.Second)
 					}
-					if err := h.userADSyncService.SyncUserUpdateToAD(ctx, id, adSyncReq); err != nil {
-						lastErr = err
-						applogger.Warnf("[AD-SYNC] 同步失败 [ID=%s] 第%d/%d次: %v", id, attempt+1, maxRetries, err)
-						continue
+					err := h.userADSyncService.SyncUserUpdateToAD(ctx, id, adSyncReq)
+					if err == nil {
+						lastErr = nil
+						break
 					}
-					lastErr = nil
-					break
+					lastErr = err
+					applogger.Warnf("[AD-SYNC] 同步失败 [ID=%s] 第%d/%d次: %v", id, attempt+1, maxRetries, err)
+					// Fix 2 (debug session ad-update-attr-no-such-object):
+					// 目标 DN 在 AD 端不存在（LDAP code 32）属于"对象不存在"语义,
+					// 重试无意义且会让 FailoverClient.MarkFailure 累加触发
+					// 应用层 breaker 熔断 30 分钟 → 用户看到"管理员账号被锁"。
+					// 短路 break,避免放大。
+					if errors.Is(err, addomain.ErrADTargetNotFound) {
+						applogger.Infof("[AD-SYNC] 目标 DN 在 AD 端不存在,短路重试 [ID=%s]", id)
+						break
+					}
+					continue
 				}
-				if lastErr != nil {
+				if lastErr != nil && !errors.Is(lastErr, addomain.ErrADTargetNotFound) {
 					applogger.Errorf("[AD-SYNC] 同步用户到AD最终失败（已重试%d次）[ID=%s]: %v", maxRetries, id, lastErr)
 				}
 			}()
@@ -442,7 +453,7 @@ func generateStrongPassword(n int) (string, error) {
 	const (
 		lower = "abcdefghijkmnpqrstuvwxyz" // 移除 l、o
 		upper = "ABCDEFGHJKLMNPQRSTUVWXYZ" // 移除 I、O
-		digit = "23456789"                  // 移除 0、1
+		digit = "23456789"                 // 移除 0、1
 		all   = lower + upper + digit
 	)
 

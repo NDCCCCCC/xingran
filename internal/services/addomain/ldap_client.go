@@ -482,3 +482,46 @@ func (c *LDAPClient) OUExists(ouDN string) (bool, error) {
 	}
 	return true, nil
 }
+
+// DNExists 预检目标 DN 是否存在（避免对不存在的对象执行 Modify/ModifyDN
+// 返回 LDAP code 32 "No Such Object"）。
+//
+// 用途（debug session ad-update-attr-no-such-object）：
+//   - user_ad_sync_service.syncUserAttributes 调用前先 DNExists，
+//     避免 sys_user.ad_dn 残留过期 DN（如 AD 端对象已被删/移走）
+//     触发 modify 失败 code 32 → handler 3 次重试 → 每次 MarkFailure
+//     累加 → 应用层 breaker 熔断 30 分钟 → 全池 bind 失败 → 用户看到
+//     "管理员账号被锁"。
+//   - 上游根据返回值决定：false → 清空 ad_dn + INFO 跳过，让下次 login sync
+//     重新拉取。
+//
+// 与 OUExists 区别：OUExists 只验证 OU 形态（objectClass=organizationalUnit），
+// DNExists 对任意 DN 做 base scope (objectClass=*) 存在性预检，
+// 用于保护 Modify/ModifyDN 操作。
+func (c *LDAPClient) DNExists(dn string) (bool, error) {
+	if dn == "" {
+		return false, fmt.Errorf("DN 不能为空")
+	}
+	searchRequest := ldap.NewSearchRequest(
+		dn,
+		ldap.ScopeBaseObject,   // Scope
+		ldap.NeverDerefAliases, // DerefAliases
+		1,                      // SizeLimit=1: base scope 只命中该 DN 自身
+		0,                      // TimeLimit
+		false,                  // TypesOnly
+		"(objectClass=*)",      // Filter
+		[]string{"dn"},         // Attributes
+		[]ldap.Control{},       // Controls(必须非 nil,空切片合法)
+	)
+
+	_, err := c.conn.Search(searchRequest)
+	if err != nil {
+		// code 32 = NoSuchObject，语义上等价于"不存在"，对外返回 (false, nil)
+		// 避免上游把"对象不存在"误判为"网络/认证错误"导致不必要的重试
+		if ldap.IsErrorWithCode(err, ldap.LDAPResultNoSuchObject) {
+			return false, nil
+		}
+		return false, fmt.Errorf("DN 存在性预检失败: %w", err)
+	}
+	return true, nil
+}
