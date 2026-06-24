@@ -60,6 +60,10 @@ import { useUserModals } from "./hooks/useUserModals";
 const { Option } = Select;
 const { Sider, Content } = Layout;
 
+// 模块级稳定空数组 — 给 DeptTree.selectedKeys 在"未选部门"时复用，
+// 避免每次 render 新数组引用（为 DeptTree 将来包 React.memo 铺路）。
+const EMPTY_SELECTED_KEYS: Key[] = [];
+
 // ==================== 表格列定义 ====================
 
 interface UserTableColumnsProps {
@@ -485,13 +489,21 @@ const UserManagement: FC = () => {
     getColumnSortOrder,
   });
 
+  // 给 DeptTree 喂稳定引用 — selectedKeys 在 selectedDeptId 不变时复用同一数组，
+  // 配合 EMPTY_SELECTED_KEYS 避免空数组每次 render 新引用。
+  // （Vercel rerender-defer-reads / rerender-memo-with-default-value）
+  const deptTreeSelectedKeys = useMemo<Key[]>(
+    () => (selectedDeptId ? [selectedDeptId] : EMPTY_SELECTED_KEYS),
+    [selectedDeptId]
+  );
+
   return (
     <Layout style={{ display: "flex", alignItems: "stretch" }}>
       {/* 左侧部门树 */}
       <Sider width={360} className="dept-list-sider" style={{ background: "#fff", padding: "0 16px 16px 0" }}>
         <DeptTree
-          onSelect={(selectedKeys) => handleDeptSelect(selectedKeys)}
-          selectedKeys={selectedDeptId ? [selectedDeptId] : []}
+          onSelect={handleDeptSelect}
+          selectedKeys={deptTreeSelectedKeys}
         />
       </Sider>
 
