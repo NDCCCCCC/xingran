@@ -316,6 +316,26 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 	var validRecords []map[string]any
 	var allRefRequests []ReferenceRequest
 
+	// 按表头文字匹配列(支持任意列序), 匹配不全则回退到 config.Columns 的位置匹配。
+	// 仅当所有 Required 列都被表头匹配到时才启用, 避免误匹配破坏已验证模块(building/user 等)。
+	effectiveColumns := config.Columns
+	if config.HasHeader && len(config.Instructions) == 0 && config.StartRow >= 2 && len(rows) >= config.StartRow-1 {
+		headerCells := rows[config.StartRow-2]
+		matched, matchedRequired := resolveColumnsByHeader(headerCells, config)
+		requiredTotal := 0
+		for _, col := range config.Columns {
+			if col.Required {
+				requiredTotal++
+			}
+		}
+		if requiredTotal > 0 && matchedRequired == requiredTotal {
+			effectiveColumns = matched
+			logger.Infof("[%s] 启用按表头列名匹配: %d/%d 个必填列已匹配", entityType, matchedRequired, requiredTotal)
+		} else if matchedRequired > 0 {
+			logger.Warnf("[%s] 表头匹配不全(%d/%d 必填列), 回退按位置匹配", entityType, matchedRequired, requiredTotal)
+		}
+	}
+
 	// F-20: 循环条件改为 `rowNum-1 < len(rows)`,使越界保护与循环不变量等价,
 	// 删除冗余的运行时 break 检查(原代码 `if rowNum-1 >= len(rows) { break }` 是死代码,
 	// 但若误改循环上界为 `<=len(rows)+1` 之类会立刻引发 index out of range panic)。
@@ -326,7 +346,7 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 			continue
 		}
 
-		data, validationErrors := s.validateAndParseRow(ctx, row, rowNum, config, userID)
+		data, validationErrors := s.validateAndParseRow(ctx, row, rowNum, config, effectiveColumns, userID)
 		if len(validationErrors) > 0 {
 			result.Failed++
 			result.Errors = append(result.Errors, validationErrors...)
@@ -1035,11 +1055,65 @@ func isEmptyRow(row []string) bool {
 	return true
 }
 
-func (s *ExcelService) validateAndParseRow(ctx context.Context, row []string, rowNum int, config ExcelConfig, _ string) (map[string]any, []ImportError) {
+// headerBracketRegexp 匹配表头中的中/英文括号及内容(如英文标识 SECTION_OFFICE_CODE),
+// 用于归一化时去除,使"科室编码(SECTION_OFFICE_CODE)"与裸"科室编码"可匹配。
+var headerBracketRegexp = regexp.MustCompile(`[（(][^)）]*[)）]`)
+
+// normalizeHeader 归一化表头文字以便跨格式匹配:
+//   - 去除括号及内容(英文标识)
+//   - trim 首尾空格、转小写
+//   - "代码"统一为"编码"(业务侧常用"部门代码/科室代码", config 用"部门编码/科室编码")
+//
+// 例: "科室编码(SECTION_OFFICE_CODE)" → "科室编码"; 用户"科室代码" → "科室编码"。
+func normalizeHeader(s string) string {
+	s = strings.TrimSpace(s)
+	s = headerBracketRegexp.ReplaceAllString(s, "")
+	s = strings.TrimSpace(s)
+	s = strings.ToLower(s)
+	s = strings.ReplaceAll(s, "代码", "编码")
+	return s
+}
+
+// resolveColumnsByHeader 按 Excel 表头文字匹配 config 列, 返回按 Excel 列序排列的
+// effectiveColumns(长度 == 表头列数)。未匹配到的列位置为零值 ExcelColumn{Field:""},
+// 解析时跳过。同一字段只匹配第一个出现的列, 避免重复。
+// matchedRequired 返回成功匹配的 Required 字段数, 调用方据此判断是否启用按表头匹配。
+func resolveColumnsByHeader(headerCells []string, config ExcelConfig) (effective []ExcelColumn, matchedRequired int) {
+	normalizedConfig := make(map[string]ExcelColumn, len(config.Columns))
+	for _, col := range config.Columns {
+		normalizedConfig[normalizeHeader(col.Header)] = col
+	}
+
+	effective = make([]ExcelColumn, len(headerCells))
+	matchedFields := make(map[string]bool)
+	for i, cell := range headerCells {
+		if strings.TrimSpace(cell) == "" {
+			continue
+		}
+		col, ok := normalizedConfig[normalizeHeader(cell)]
+		if !ok {
+			continue
+		}
+		if matchedFields[col.Field] {
+			continue
+		}
+		effective[i] = col
+		matchedFields[col.Field] = true
+		if col.Required {
+			matchedRequired++
+		}
+	}
+	return effective, matchedRequired
+}
+
+func (s *ExcelService) validateAndParseRow(ctx context.Context, row []string, rowNum int, config ExcelConfig, columns []ExcelColumn, _ string) (map[string]any, []ImportError) {
 	data := make(map[string]any)
 	errors := make([]ImportError, 0)
 
-	for i, col := range config.Columns {
+	for i, col := range columns {
+		if col.Field == "" {
+			continue // 该 Excel 列无对应字段(表头未匹配或占位列), 跳过
+		}
 		if i >= len(row) {
 			if col.Required {
 				errors = append(errors, ImportError{
