@@ -65,7 +65,23 @@ coverage.html
 *.bak
 *.backup
 
-# 生产配置文件
+# ----------------------------------------------------------------------------
+# 配置文件管理（重要）
+# ----------------------------------------------------------------------------
+# 真实环境配置（可能含密钥、内网地址）不提交到仓库
+# 模板以 .example.yaml 后缀入库，开发者从模板 cp 出真实 config.yaml
+# config.go:Load() 只加载 configs/config.yaml
+#
+# 例外（仍追踪）：configs/config.example.yaml, configs/config.prod.example.yaml
+# ----------------------------------------------------------------------------
+configs/config.yaml
+configs/config.dev.yaml
+configs/config.prod.yaml
+configs/configbs.yaml       # 服务器下载的旧版备份（防止误提交）
+configs/config*.local.yaml  # 本地覆盖
+configs/config*.bak         # 备份副本
+
+# 旧的错误条目清理
 configs/config.prod.yamlnul
 
 # Git Worktree 目录
