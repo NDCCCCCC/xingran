@@ -114,16 +114,9 @@ security:
 operlog:
   exclude_paths: []
 
-# AD 域控组同步配置
-# 实际启用通过 sys_config 表或 API（POST /api/v1/system/ad-domain/group-config/update）
-# 此处仅作参考默认值
-ad_group_sync:
-  enabled: false
-  cron: "0 */15 * * * *"
-  member_ou: ""
-  auto_create_groups: true
-  max_concurrent_syncs: 5
-  sync_batch_size: 100
+# 注: AD 域控组同步配置（ad_group_sync）已从本模板移除
+# 实际配置通过 sys_config 表或 API 管理,代码不读取配置文件
+# 详情: docs/deployment/secret-management.md 第 4 节
 
 # 百度地图配置
 # 环境变量: BAIDU_MAP_AK

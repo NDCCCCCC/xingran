@@ -42,7 +42,9 @@ configs/
 | `cache.host` | `REDIS_HOST` | ✓ | Redis 地址 |
 | `cache.port` | `REDIS_PORT` | | 整型 |
 | `cache.password` | `REDIS_PASSWORD` | ✓ | **生产绝不能留空** |
-| `jwt.secret_key` | `JWT_SECRET` | ✓ | **启动时强制非空校验** |
+| `jwt.secret_key` | `JWT_SECRET` | ✓ | HS256 备选密钥（`use_sm2: true` 时**不被使用**，仅满足启动校验） |
+| `jwt.sm2_private_key` | `RUOYI_JWT_SM2_PRIVATE_KEY` | ✓ | **真正用于 JWT 签名的密钥**；留空会触发"动态生成"分支，重启后旧 token 全部失效 |
+| `jwt.sm2_public_key` | `RUOYI_JWT_SM2_PUBLIC_KEY` | ✓ | 验签公钥；公钥可对外（嵌入前端、APP） |
 | `security.sm4_key` | `SM4_KEY` | ✓ | SM4 主密钥（Base64 编码 16 字节） |
 | `baidu.map_ak` | `BAIDU_MAP_AK` | | 百度地图 AK |
 | `rpa.ai.generator.api_key` | `RPA_AI_GENERATOR_KEY` | | 文本模型 Key |
@@ -51,12 +53,21 @@ configs/
 | `rpa.ai.agent.base_url` | `RPA_AI_AGENT_URL` | | Vision API |
 | `server.port` | `SERVER_PORT` | | 整型 |
 
-### 1.3 未覆盖的敏感字段（需手动管理）
+### 1.3 SM2 模式与 HS256 模式（重要）
+
+`config.go` 通过 `use_sm2` 开关决定 JWT 签名算法：
+
+| 模式 | 签发 | 验签 | 真正依赖的密钥 | 适用场景 |
+|------|------|------|---------------|---------|
+| **SM2 模式**（`use_sm2: true`，默认） | `crypto.GenerateTokenWithSM2(claims, j.sm2PrivateKey)` | `crypto.ValidateTokenWithSM2(token, j.sm2PublicKey)` | **SM2 私钥** | 生产环境（国密合规） |
+| HS256 模式（`use_sm2: false`） | `jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(secretKey)` | `jwt.ParseWithClaims(token, ...)` | **secret_key** | 仅作非国密场景备选 |
+
+**生产必须用 SM2 模式**。`jwt.secret_key` 在 SM2 模式下不被使用，但代码仍会校验非空（防止误用默认值）——所以仍需配置。
+
+### 1.4 未覆盖的敏感字段（需手动管理）
 
 | 字段 | 风险 | 建议处理 |
 |------|------|---------|
-| `jwt.sm2_private_key` | 仓库默认值 `d8d9a3e6...` 是公开的 | **必须重新生成**；建议加入 `overrideFromEnv` 走 `RUOYI_JWT_SM2_PRIVATE_KEY` |
-| `jwt.sm2_public_key` | 公钥可公开 | 复制到前端 `/lib/sm2.ts` 即可 |
 | `vdi.tls_skip_verify` | 生产环境保持 true = 强制 MITM 风险 | 当前部署 VDI 无 TLS 保持 true；启用 TLS 后立即改 false |
 | `ad.tls_skip_verify` | 同上 | 当前部署 AD 无 TLS 保持 true；启用 LDAPS 后立即改 false |
 
@@ -64,9 +75,11 @@ configs/
 
 ## 2. 部署期密钥生成（一键脚本）
 
+### 2.1 通用密钥（openssl 即可生成）
+
 ```bash
 #!/bin/bash
-# generate-secrets.sh — 一次性生成所有生产密钥
+# generate-secrets.sh — 一次性生成所有生产密钥（除 SM2 密钥对外）
 # 用法：bash generate-secrets.sh > .env.production
 
 set -euo pipefail
@@ -78,22 +91,47 @@ echo
 
 echo "DB_PASSWORD=$(openssl rand -hex 16)"
 echo "REDIS_PASSWORD=$(openssl rand -hex 16)"
-echo "JWT_SECRET=$(openssl rand -hex 32)"
+echo "JWT_SECRET=$(openssl rand -hex 32)"          # SM2 模式下虽不使用,但需满足启动校验
 echo "SM4_KEY=$(openssl rand -base64 16)"
-echo "BAIDU_MAP_AK=your_baidu_ak_here"  # 替换为实际申请值
+echo "BAIDU_MAP_AK=your_baidu_ak_here"              # 替换为实际申请值
 echo "SERVER_PORT=9000"
-echo
-
-echo "# === SM2 密钥对（必须用工具生成，绝不能复用仓库默认值）==="
-echo "# 方案 1: 用 sm2 工具（推荐）"
-echo "#   sm2_keygen -out sm2_private.pem -pubout sm2_public.pem"
-echo "#   提取十六进制:"
-echo "#     openssl ec -in sm2_private.pem -text -noout 2>/dev/null | grep -E '^[[:space:]]+[0-9a-f]{2}' | tr -d ' \n'"
-echo "# 方案 2: 用 GmSSL（国密库）"
-echo "#   gmssl sm2keygen -pass pass -out sm2_priv.pem -pubout sm2_pub.pem"
-echo "RUOYI_JWT_SM2_PRIVATE_KEY=REPLACE_WITH_GENERATED_PRIVATE_KEY_HEX"
-echo "RUOYI_JWT_SM2_PUBLIC_KEY=REPLACE_WITH_GENERATED_PUBLIC_KEY_HEX"
 ```
+
+### 2.2 SM2 密钥对（**必须独立工具生成，绝不能复用仓库默认值**）
+
+仓库内 `config.yaml` 的 `sm2_private_key: "d8d9a3e6..."` 是**公开已知值**，绝不能用于生产。
+
+**推荐方式：用项目自带的 Go 工具生成（依赖已在 go.mod）**
+
+`scripts/gen-sm2-keys/main.go`：
+
+```go
+package main
+
+import (
+	"fmt"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/crypto"
+)
+
+func main() {
+	priv, pub, err := crypto.GenerateKeyPairSM2()
+	if err != nil {
+		panic(err)
+	}
+	privHex, _ := crypto.PrivateKeyToHex(priv)
+	pubHex, _ := crypto.PublicKeyToHex(pub)
+	fmt.Printf("RUOYI_JWT_SM2_PRIVATE_KEY=%s\n", privHex)
+	fmt.Printf("RUOYI_JWT_SM2_PUBLIC_KEY=%s\n", pubHex)
+}
+```
+
+使用：
+
+```bash
+go run scripts/gen-sm2-keys/main.go >> .env.production
+```
+
+**⚠️ 切勿使用"动态生成"**：如果 `sm2_private_key` 配置留空，`internal/core/security/jwt.go:86-92` 会自动生成 SM2 密钥对——**每次重启密钥都换，旧 token 全部失效，所有用户被强制登出**。生产部署必须显式配置。
 
 ---
 
@@ -109,11 +147,12 @@ echo "RUOYI_JWT_SM2_PUBLIC_KEY=REPLACE_WITH_GENERATED_PUBLIC_KEY_HEX"
 grep -E "^\s*password:\s*\"\"$" configs/config.yaml || { echo "⚠️ 数据库/缓存密码未留空"; }
 
 # 3. 关键环境变量已设置
-for v in DB_PASSWORD REDIS_PASSWORD JWT_SECRET SM4_KEY; do
+for v in DB_PASSWORD REDIS_PASSWORD JWT_SECRET SM4_KEY \
+         RUOYI_JWT_SM2_PRIVATE_KEY RUOYI_JWT_SM2_PUBLIC_KEY; do
   [ -n "${!v:-}" ] || { echo "❌ 环境变量 $v 未设置"; exit 1; }
 done
 
-# 4. SM2 私钥不是仓库默认值
+# 4. SM2 私钥不是仓库默认值（公开值,任何能读仓库的人都能伪造 JWT）
 [ "$RUOYI_JWT_SM2_PRIVATE_KEY" != "d8d9a3e6b356cf7538cb0fd6a486055c2a621a63a8a095e60a6362874b26508b" ] \
   || { echo "❌ SM2 私钥是仓库默认值，必须重新生成"; exit 1; }
 
