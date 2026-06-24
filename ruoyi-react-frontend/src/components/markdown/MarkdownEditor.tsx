@@ -15,9 +15,13 @@
 
 import { lazy, Suspense, type FC } from "react";
 import { Spin } from "antd";
-import type { MDEditorProps } from "@uiw/react-md-editor";
+// 注：类型从 nohighlight 入口导入（与 lazy import 保持一致）。
+// 主包 @uiw/react-md-editor 的 MDEditorProps 含 'full' preview 选项，
+// 但 nohighlight 入口的 PreviewType 较窄（'edit' | 'live'），
+// 混用会导致 TS2322 类型不兼容。
+import type { MDEditorProps } from "@uiw/react-md-editor/nohighlight";
 
-const MDEditor = lazy(() => import("@uiw/react-md-editor"));
+const MDEditor = lazy(() => import("@uiw/react-md-editor/nohighlight"));
 
 const Loading: FC = () => (
   <div
