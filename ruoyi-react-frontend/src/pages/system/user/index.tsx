@@ -344,9 +344,11 @@ const UserManagement: FC = () => {
 
   // ==================== 事件处理 ====================
 
-  // 搜索：applyFilters 读 searchForm 并合并 deptId，自动带上当前排序（status 在 fetchUsers 转 Number）
+  // 搜索：applyFilters 读 searchForm 并合并 recursiveDeptId（部门+子部门递归），自动带上当前排序
+  // （status 在 fetchUsers 转 Number）。原来用 deptId 单值语义，选父部门时漏子部门用户，
+  // 见 debug-session user-list-only-current-dept-no-children。
   const handleSearch = useCallback(() => {
-    applyFilters(selectedDeptId ? { deptId: selectedDeptId } : undefined);
+    applyFilters(selectedDeptId ? { recursiveDeptId: selectedDeptId } : undefined);
   }, [applyFilters, selectedDeptId]);
 
   // 重置：清部门 + 清表单 + 清排序，回到第 1 页
@@ -462,11 +464,12 @@ const UserManagement: FC = () => {
     }
   }, [resetPasswordForm, resettingUser, closeResetPasswordModal]);
 
-  // 部门联动：applyFilters 合并 deptId（保留搜索框值与当前排序），回第 1 页
+  // 部门联动：applyFilters 合并 recursiveDeptId（部门+子部门递归），保留搜索框值与当前排序，回第 1 页
+  // 用 recursiveDeptId 而非 deptId：左侧点父部门时要看到父+所有子部门的用户（与用户预期一致）。
   const handleDeptSelect = useCallback((selectedKeys: Key[]) => {
     if (selectedKeys.length > 0) {
       setSelectedDeptId(selectedKeys[0] as string);
-      applyFilters({ deptId: selectedKeys[0] });
+      applyFilters({ recursiveDeptId: selectedKeys[0] });
     } else {
       setSelectedDeptId("");
       applyFilters();
