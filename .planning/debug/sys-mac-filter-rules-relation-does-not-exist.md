@@ -1,3 +1,12 @@
+---
+slug: sys-mac-filter-rules-relation-does-not-exist
+status: resolved
+trigger: sys_mac_filter_rules 表不存在 SQLSTATE 42P01
+created: 2026-06-14
+updated: 2026-06-25
+session_type: bug
+---
+
 # sys_mac_filter_rules 表不存在 (SQLSTATE 42P01)
 
 **状态**: ✅ Resolved

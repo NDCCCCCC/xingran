@@ -1,12 +1,10 @@
 ---
-name: info-point-type-null-import
-description: 工位信息点导入时 info_point_type 字段为 NULL 导致数据库约束错误
-metadata:
-  type: debug
-  status: resolved
-  trigger: 工位信息点导入时出现数据库错误：ERROR: null value in column "info_point_type" of relation "ops_info_points" violates not-null constraint。从日志看到两条记录（5D033 和 5D123）的 info_point_type 为 NULL，需要调查为什么导入时这些信息点类型没有被正确设置。
-  created: 2026-05-28T10:15:00Z
-  updated: 2026-05-28T10:35:00Z
+slug: info-point-type-null-import
+status: resolved
+trigger: 工位信息点导入时 info_point_type 字段为 NULL 导致数据库约束错误
+created: 2026-05-28
+updated: 2026-05-28
+session_type: bug
 ---
 
 ## Symptoms

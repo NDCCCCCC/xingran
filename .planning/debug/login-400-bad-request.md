@@ -1,3 +1,12 @@
+---
+slug: login-400-bad-request
+status: resolved
+trigger: POST /api/v1/system/auth/login 返回 400 错误（前后端加密 enabled 不同步）
+created: 2026-06-16
+updated: 2026-06-25
+session_type: bug
+---
+
 # Debug: Login 400 Bad Request - 请求参数错误
 
 **Slug:** login-400-bad-request

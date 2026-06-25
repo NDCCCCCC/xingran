@@ -5,6 +5,7 @@ deferred_to: v1.16-tech-debt
 trigger: 点击密钥列表菜单被路由到重复路径 /system/apikeys/system/apikeys
 created: 2026-05-20
 updated: 2026-06-25
+session_type: bug
 ---
 
 # Debug Session: apikey-route-path-duplication

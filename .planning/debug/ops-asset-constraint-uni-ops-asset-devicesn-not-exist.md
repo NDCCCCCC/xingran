@@ -1,3 +1,14 @@
+---
+slug: ops-asset-constraint-uni-ops-asset-devicesn-not-exist
+status: resolved
+trigger: GORM AutoMigrate DROP uni_ops_asset_devicesn 不存在导致约束 DROP 失败
+created: 2026-06-15
+updated: 2026-06-25
+session_type: bug
+related:
+  - sys-mac-filter-rules-relation-does-not-exist
+---
+
 # GORM AutoMigrate DROP uni_ops_asset_devicesn 不存在
 
 **状态**: 🔧 Fix Applied (待用户重启验证)

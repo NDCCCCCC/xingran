@@ -1,3 +1,13 @@
+---
+slug: knowledge-base
+status: resolved
+skip_audit: true
+trigger: GSD Debug Knowledge Base 索引文件（非 debug session）
+created: 2026-06-15
+updated: 2026-06-25
+session_type: meta
+---
+
 # GSD Debug Knowledge Base
 
 Resolved debug sessions. Used by `gsd-debugger` to surface known-pattern hypotheses at the start of new investigations.
