@@ -1,5 +1,5 @@
 ---
-status: root_cause_found
+status: resolved
 deferred_to: v1.16-tech-debt
 trigger: 普通用户角色没有赋予任何权限，但是登录后可以使用网络设备管理所有功能（除了部门列表无权限）
 created: 2026-05-24
@@ -141,3 +141,16 @@ network.Use(middleware.RequirePermissions([]string{
 3. 更灵活，可以为不同功能配置不同权限
 
 **specialist_hint:** go, permissions, middleware, security
+
+## Phase 40 Closure (2026-06-25)
+
+复测 `internal/api/router.go:333-345` 网络设备模块已移除路由组级别的 OR 权限中间件，
+改为委托给 `networkV1.SetupNetworkRouter` 在子路由组分别配置权限：
+- `internal/api/v1/network/network_router.go:58` devices → RequirePermissionsWithQuery
+- line 79 credentials / 100 templates / 122 command / 138 executions /
+  154 backups / 178 discoveries / 198 mac / 209 ports 各自独立 RequirePermissions
+
+已采用 Resolution 推荐方案 1（细化到子路由）。frontmatter 翻 `resolved`。
+
+verification: `grep -rn "RequirePermissions" internal/api/v1/network/network_router.go` 多处命中；`internal/api/router.go` 网络段无 OR 大杂烩
+files_changed: .planning/debug/permission-control-bypass-network-devices.md
