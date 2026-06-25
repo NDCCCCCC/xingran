@@ -1,6 +1,6 @@
 ---
 slug: ad-sync-500-on-conflict-duplicate-row
-status: root_cause_found
+status: resolved
 deferred_to: v1.16-tech-debt
 trigger: AD 全量同步点击 → 8.5 秒后报 500 (Internal Server Error),后端日志显示 "批量更新电脑设备失败: ERROR: ON CONFLICT DO UPDATE command cannot affect row a second time (SQLSTATE 21000)"
 created: 2026-06-16
@@ -212,3 +212,14 @@ Computer 用 `computer_name` 作 unique constraint 是因为 AD 电脑常重命�
 
 **修复已应用并通过测试** — 等待用户重启后端 + 触发同步验证 500 不再出现。
 **建议后续 Phase**: 数据清理(删除 sys_ad_computer 重复行 + 重建 unique index)。
+
+## Phase 40 Closure (2026-06-25)
+
+复测 `internal/services/addomain/computer.go`：
+- `processComputerEntry` (line 561-572) 已用复合 key `configID + "/" + computerName`
+- `syncComputers` (line 436-444) 已对 `toCreate` 加 `dedupMap` 去重
+
+PostgreSQL SQLSTATE 21000 (ON CONFLICT 同行二次) 风险已消除。frontmatter 翻 `resolved`。
+
+verification: `grep -n "conflictKey\|dedupMap" internal/services/addomain/computer.go` 命中
+files_changed: .planning/debug/ad-sync-500-on-conflict-duplicate-row.md
