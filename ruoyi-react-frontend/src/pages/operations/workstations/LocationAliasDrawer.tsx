@@ -15,7 +15,7 @@
  * - 写操作成功后调 useInvalidateDept + invalidate locationAlias(双失效)
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Drawer,
   Form,
@@ -80,6 +80,10 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
   ) as unknown as DeptTreeNode[];
   const locationTreeData: DeptTreeNode[] = filterExternalOrgDepts<DeptTreeNode>(fullDeptTreeData);
 
+  // 仅展开第一层(根节点),避免全树展开导致下拉太长难找部门。
+  const deptRootKeys = useMemo(() => fullDeptTreeData.map((n) => n.value), [fullDeptTreeData]);
+  const locationRootKeys = useMemo(() => locationTreeData.map((n) => n.value), [locationTreeData]);
+
   // 双失效工具
   const invalidateDept = useInvalidateDept();
   const queryClient = useQueryClient();
@@ -131,20 +135,26 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
 
   const columns = [
     {
-      title: "部门 ID",
-      dataIndex: "deptId",
-      key: "deptId",
-      width: 160,
+      title: "所属部门",
+      key: "dept",
       ellipsis: true,
-      render: (v: string) => <Text code>{v}</Text>,
+      render: (_: unknown, r: LocationAlias) =>
+        r.originDeptName ? (
+          <Text>{r.originDeptName}</Text>
+        ) : (
+          <Text code>{r.deptId}</Text>
+        ),
     },
     {
-      title: "物理位置 ID",
-      dataIndex: "locationId",
-      key: "locationId",
-      width: 160,
+      title: "物理位置",
+      key: "location",
       ellipsis: true,
-      render: (v: string) => <Text code>{v}</Text>,
+      render: (_: unknown, r: LocationAlias) =>
+        r.locationDeptName ? (
+          <Text>{r.locationDeptName}</Text>
+        ) : (
+          <Text code>{r.locationId}</Text>
+        ),
     },
     {
       title: "场景",
@@ -222,7 +232,7 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
             >
               <TreeSelect
                 treeData={fullDeptTreeData}
-                treeDefaultExpandAll
+                treeDefaultExpandedKeys={deptRootKeys}
                 placeholder="请选择部门(系统内任意部门)"
                 showSearch
                 treeNodeFilterProp="title"
@@ -239,7 +249,7 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
             >
               <TreeSelect
                 treeData={locationTreeData}
-                treeDefaultExpandAll
+                treeDefaultExpandedKeys={locationRootKeys}
                 placeholder="请选择物理位置(外部机构)"
                 showSearch
                 treeNodeFilterProp="title"

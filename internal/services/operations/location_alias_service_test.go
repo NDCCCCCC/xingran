@@ -236,7 +236,7 @@ func TestLocationAliasService_List(t *testing.T) {
 	require.Equal(t, 1, result.Current)
 	require.Equal(t, 10, result.PageSize)
 
-	list, ok := result.List.([]models.SysDeptLocationAlias)
+	list, ok := result.List.([]LocationAliasListItem)
 	require.True(t, ok)
 	require.Len(t, list, 3)
 }

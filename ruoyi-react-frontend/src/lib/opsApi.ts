@@ -143,6 +143,10 @@ export interface LocationAlias {
   remark?: string;
   createdAt?: string;
   updatedAt?: string;
+  /** 原组织部门名(后端 List JOIN sys_dept 产出,仅列表接口返回) */
+  originDeptName?: string;
+  /** 物理位置部门名(后端 List JOIN sys_dept 产出,仅列表接口返回) */
+  locationDeptName?: string;
 }
 
 // Phase 39: 工位部门物理位置映射管理 (Drawer UI 使用)

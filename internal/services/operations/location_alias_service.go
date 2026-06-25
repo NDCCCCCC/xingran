@@ -68,6 +68,18 @@ type LocationAliasUpdateRequest struct {
 	Remark     *string `json:"remark"`
 }
 
+// LocationAliasListItem alias 列表项(含 JOIN sys_dept 出来的部门名)。
+//
+// 这是查询 DTO,不是表模型 —— origin_dept_name / location_dept_name 是 List
+// 查询通过 aliasListJoinSelect 动态 JOIN sys_dept 出来的列,不对应
+// sys_dept_location_alias 的真实列(故不放进 SysDeptLocationAlias model,
+// 避免 AutoMigrate 误建列)。嵌入 SysDeptLocationAlias 复用其全部字段。
+type LocationAliasListItem struct {
+	models.SysDeptLocationAlias
+	OriginDeptName   string `gorm:"column:origin_dept_name" json:"originDeptName,omitempty"`
+	LocationDeptName string `gorm:"column:location_dept_name" json:"locationDeptName,omitempty"`
+}
+
 // locationAliasServiceImpl LocationAliasService 私有实现
 type locationAliasServiceImpl struct {
 	db *gorm.DB
@@ -89,7 +101,7 @@ func (s *locationAliasServiceImpl) List(ctx context.Context, pageNum, pageSize i
 	pageSize = clampPageSize(pageSize)
 
 	var total int64
-	var list []models.SysDeptLocationAlias
+	var list []LocationAliasListItem
 
 	query := s.db.WithContext(ctx).Model(&models.SysDeptLocationAlias{}).
 		Where("sys_dept_location_alias.deleted_at IS NULL")
