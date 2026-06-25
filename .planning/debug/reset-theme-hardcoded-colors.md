@@ -1,9 +1,10 @@
 ---
 slug: reset-theme-hardcoded-colors
 status: awaiting_human_verify
+deferred_to: v1.16-tech-debt
 trigger: "默认主题修改保存成功了，但是在用户设置界面重置主题时还是恢复到了硬编码的颜色和布局"
 created: 2026-06-15
-updated: 2026-06-15
+updated: 2026-06-25
 ---
 
 ## Reasoning Checkpoint

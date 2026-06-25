@@ -1,8 +1,9 @@
 ---
 status: awaiting_human_verify
+deferred_to: v1.16-tech-debt
 trigger: 用户管理页面修改用户后刷新页面会丢失筛选参数，请修复，之前其他页面出现过类似问题，请全部检查
 created: 2026-06-16
-updated: 2026-06-16
+updated: 2026-06-25
 ---
 
 ## Symptoms

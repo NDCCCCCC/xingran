@@ -1,8 +1,9 @@
 ---
 status: root_cause_found
+deferred_to: v1.16-tech-debt
 trigger: 角色 test 访问虚拟机列表页面返回 403 Forbidden
 created: 2026-06-04
-updated: 2026-06-04
+updated: 2026-06-25
 type: bug
 session_type: bug
 ---

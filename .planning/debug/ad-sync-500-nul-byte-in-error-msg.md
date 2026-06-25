@@ -1,9 +1,10 @@
 ---
 slug: ad-sync-500-nul-byte-in-error-msg
 status: root_cause_found
+deferred_to: v1.16-tech-debt
 trigger: AD 域控手动同步点击后,前端报 500 (Internal Server Error),用户误以为是路由丢失
 created: 2026-06-16
-updated: 2026-06-16
+updated: 2026-06-25
 session_type: bug
 ---
 

@@ -1,9 +1,10 @@
 ---
 slug: operlog-dept-name-null-scan
 status: root_cause_found
+deferred_to: v1.16-tech-debt
 trigger: 第三次 AD 同步链路崩溃 — operlog middleware 报 "converting NULL to string is unsupported",触发用户 sys_user.id='8bd62962-...' 的 dept_name 为 NULL
 created: 2026-06-16
-updated: 2026-06-16
+updated: 2026-06-25
 session_type: bug
 related:
   - ad-sync-500-nul-byte-in-error-msg          # 同一链路 bug 1

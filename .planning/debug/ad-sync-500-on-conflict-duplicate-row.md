@@ -1,9 +1,10 @@
 ---
 slug: ad-sync-500-on-conflict-duplicate-row
 status: root_cause_found
+deferred_to: v1.16-tech-debt
 trigger: AD 全量同步点击 → 8.5 秒后报 500 (Internal Server Error),后端日志显示 "批量更新电脑设备失败: ERROR: ON CONFLICT DO UPDATE command cannot affect row a second time (SQLSTATE 21000)"
 created: 2026-06-16
-updated: 2026-06-16
+updated: 2026-06-25
 session_type: bug
 related:
   - ad-sync-500-nul-byte-in-error-msg  # 同一 sync 链路上一个被修复的崩溃点

@@ -1,9 +1,10 @@
 ---
 slug: mac-collection-trunk-filter
 status: root_cause_found
+deferred_to: v1.16-tech-debt
 trigger: MAC地址采集问题：交换机trunk口导致重复，需过滤trunk口
 created: 2026-05-09T00:00:00Z
-updated: 2026-05-09T00:00:00Z
+updated: 2026-06-25
 session_type: bug
 ---
 

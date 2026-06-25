@@ -1,9 +1,10 @@
 ---
 slug: ad-sync-duplicate-username-softdeleted
 status: root_cause_found
+deferred_to: v1.16-tech-debt
 trigger: 批量同步AD用户时大量用户报错 "duplicate key value violates unique constraint idx_sys_user_username (SQLSTATE 23505)"
 created: 2026-06-22
-updated: 2026-06-22
+updated: 2026-06-25
 session_type: bug
 related:
   - ad-sync-500-on-conflict-duplicate-row

@@ -1,8 +1,9 @@
 ---
 status: awaiting_human_verify
+deferred_to: v1.16-tech-debt
 trigger: 修改前端，系统自动热加载之后报错提示：TokenRefreshError: No access token available；删除 rt 之后，刷新第一次系统一直显示加载中图标，刷新第二次才能打开登录页面
 created: 2026-06-16
-updated: 2026-06-16
+updated: 2026-06-25
 ---
 
 # Debug Session: vite-hmr-token-blank-page

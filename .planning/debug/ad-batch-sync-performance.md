@@ -1,9 +1,10 @@
 ---
 slug: ad-batch-sync-performance
 status: root_cause_found
+deferred_to: v1.16-tech-debt
 trigger: 经过今日几次修改(计算机过滤/超时/软删除恢复)后,域控用户批量同步到 sys_user 变慢,耗时显著变长
 created: 2026-06-22
-updated: 2026-06-22
+updated: 2026-06-25
 session_type: performance
 related:
   - ad-sync-duplicate-username-softdeleted

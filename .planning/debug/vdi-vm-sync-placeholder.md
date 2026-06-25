@@ -1,8 +1,9 @@
 ---
 status: root_cause_found
+deferred_to: v1.16-tech-debt
 trigger: vdi虚拟机获取的定时任务提示占位，请排查代码，确认实际情况
 created: 2026-05-27
-updated: 2026-05-27
+updated: 2026-06-25
 ---
 
 ## Symptoms

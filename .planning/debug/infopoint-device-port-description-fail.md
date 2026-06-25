@@ -1,9 +1,10 @@
 ---
 slug: infopoint-device-port-description-fail
 status: root_cause_found
+deferred_to: v1.16-tech-debt
 trigger: 信息点Excel导入后出现两个问题：1)所属设备和所属端口显示不正确；2)描述字段未保存到数据库。之前的修复可能导致了新的问题。
 created: 2026-05-18T11:20:00Z
-updated: 2026-05-18T11:30:00Z
+updated: 2026-06-25
 session_type: bug
 ---
 

@@ -1,9 +1,10 @@
 ---
 slug: captcha-rate-limit-not-expiring
 status: root_cause_found
+deferred_to: v1.16-tech-debt
 trigger: 10.62.10.33登录一直提示验证码"获取验证码过于频繁，请稍后再试"，过了一天了还是提示这个，请检查1分钟有效期的配置是否生效
 created: 2026-05-23T11:15:00+08:00
-updated: 2026-05-23T11:15:00+08:00
+updated: 2026-06-25
 session_type: bug
 ---
 

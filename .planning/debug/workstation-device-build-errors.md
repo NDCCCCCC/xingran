@@ -1,9 +1,10 @@
 ---
 slug: workstation-device-build-errors
 status: awaiting_human_verify
+deferred_to: v1.16-tech-debt
 trigger: Frontend build FAILED with 3 TypeScript errors in src/components/operations/WorkstationDeviceTable/index.tsx
 created: 2026-06-12T14:00:00+08:00
-updated: 2026-06-12T14:05:00+08:00
+updated: 2026-06-25
 session_type: bug
 ---
 

@@ -1,8 +1,9 @@
 ---
 status: root_cause_found
+deferred_to: v1.16-tech-debt
 trigger: AD用户登录成功，但系统重用了已删除的乱码部门，而不是创建新的正确部门层级
 created: 2026-05-26
-updated: 2026-05-26
+updated: 2026-06-25
 type: bug
 ---
 

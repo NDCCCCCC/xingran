@@ -1,8 +1,9 @@
 ---
 status: awaiting_human_verify
+deferred_to: v1.16-tech-debt
 trigger: "工位管理页面点击展开子列表展示设备提示加载设备失败，控制台及后端日志没有报错"
 created: 2026-06-13
-updated: 2026-06-13
+updated: 2026-06-25
 ---
 
 # Debug Session: workstation-expand-device-load-empty

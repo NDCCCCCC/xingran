@@ -1,9 +1,10 @@
 ---
 status: root_cause_found
+deferred_to: v1.16-tech-debt
 trigger: API秘钥管理前端应该也完成了，但是之前创建的测试数据现在没有显示了
 slug: api-key-data-not-displaying
 created: "2026-05-24T13:00:00Z"
-updated: "2026-05-24T13:45:00Z"
+updated: 2026-06-25
 ---
 
 # Debug Session: API Key Data Not Displaying

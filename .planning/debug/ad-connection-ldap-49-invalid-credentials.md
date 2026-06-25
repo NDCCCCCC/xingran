@@ -1,9 +1,10 @@
 ---
 slug: ad-connection-ldap-49-invalid-credentials
 status: root_cause_found
+deferred_to: v1.16-tech-debt
 trigger: 连接AD失败: LDAP Result Code 49 "Invalid Credentials": 80090308: LdapErr: DSID-0C0904AE, comment: AcceptSecurityContext error, data 52e, v3839 (尝试: UPN, NetBIOS, 直连)
 created: 2026-05-25T00:00:00+08:00
-updated: 2026-05-25T15:10:00+08:00
+updated: 2026-06-25
 session_type: bug
 ---
 

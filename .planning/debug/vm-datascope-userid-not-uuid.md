@@ -1,9 +1,10 @@
 ---
 status: root_cause_found
+deferred_to: v1.16-tech-debt
 trigger: 虚拟机 bound_user_id=ninedrunk 但用户 ninedrunk 登录后看不到该虚拟机
 slug: vm-datascope-userid-not-uuid
 created: "2026-06-04T06:00:00Z"
-updated: "2026-06-04T06:30:00Z"
+updated: 2026-06-25
 phase: "25"
 ---
 
