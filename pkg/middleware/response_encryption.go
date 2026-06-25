@@ -61,6 +61,16 @@ func ResponseEncryption(encryptor *crypto.RequestEncryptor, config *ResponseEncr
 			return
 		}
 
+		// Phase 40 修复（api-key-data-not-displaying）：
+		// 即使响应加密开关为 true，也必须确认当前请求确实走过请求解密中间件
+		// 并往 context 注入了 sm4_key（GET 类、未加密 POST 等路径不会注入）。
+		// 若 context 中无 sm4_key，仍走加密路径会生成 sm4Key="" timestamp=0 的
+		// 无效加密响应，前端无法解密，导致 API 密钥列表等页面数据不显示。
+		if _, hasKey := c.Get("sm4_key"); !hasKey {
+			c.Next()
+			return
+		}
+
 		// 检查是否在排除列表中
 		if isExcludedPath(c.Request.URL.Path, config.ExcludePaths) {
 			c.Next()

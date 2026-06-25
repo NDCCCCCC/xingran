@@ -1,5 +1,5 @@
 ---
-status: root_cause_found
+status: resolved
 deferred_to: v1.16-tech-debt
 trigger: API秘钥管理前端应该也完成了，但是之前创建的测试数据现在没有显示了
 slug: api-key-data-not-displaying
@@ -164,3 +164,21 @@ if !hasKey {
 ### Files Changed
 
 待记录
+
+## Phase 40 Closure (2026-06-25)
+
+落地 Resolution 方案 3（在响应加密中间件检查 context 是否有 sm4_key）于
+`pkg/middleware/response_encryption.go` ResponseEncryption 中间件：
+
+```go
+if _, hasKey := c.Get("sm4_key"); !hasKey {
+    c.Next()
+    return
+}
+```
+
+效果：GET 类未走请求解密中间件的请求（context 无 sm4_key）将跳过响应加密，
+不再生成 sm4Key="" timestamp=0 的无效加密响应，前端 API 密钥列表等页面可正常显示。
+
+verification: `go build ./...` 退出 0；`grep -n 'c.Get("sm4_key")' pkg/middleware/response_encryption.go` 命中
+files_changed: pkg/middleware/response_encryption.go, .planning/debug/api-key-data-not-displaying.md
