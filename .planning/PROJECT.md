@@ -251,6 +251,7 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 - ✓ Phase 32 v1.14 P1/P2 (unlabeled, 2026-06-13) — 7 waves, 20 commits
 - ✓ Phase 33 Vercel React Best Practices (unlabeled, 2026-06-13) — 4 waves
 - ✓ Phase 34 操作日志全模块集成 + review (2026-06-16) — 11 plans + 7 review-fix commits
+- ✓ Phase 39 工位部门物理位置映射 (workstation dept-location alias) (2026-06-25) — 8 plans + UAT 修复 commits
 
 ---
-*Last updated: 2026-06-16 after state-sync for v1.16 planning*
+*Last updated: 2026-06-25 after Phase 39 completion*
