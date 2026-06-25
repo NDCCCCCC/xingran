@@ -1,6 +1,6 @@
 ---
 slug: ad-sync-duplicate-username-softdeleted
-status: root_cause_found
+status: resolved
 deferred_to: v1.16-tech-debt
 trigger: 批量同步AD用户时大量用户报错 "duplicate key value violates unique constraint idx_sys_user_username (SQLSTATE 23505)"
 created: 2026-06-22
@@ -124,3 +124,15 @@ if errors.Is(err, gorm.ErrRecordNotFound) {
 ## Status
 
 修复已应用并通过编译。等待用户重启后端 + 触发批量同步验证 23505 不再出现。
+
+## Phase 40 Closure (2026-06-25)
+
+复测 `internal/services/system/user_sync_service.go`:
+- line 69 已调用 `s.restoreSoftDeletedUser(tx, &user, adUser, defaultRoleID)`
+- line 147 用 `Unscoped()` + `deleted_at IS NOT NULL` 预检软删除用户
+- line 237-288 `restoreSoftDeletedUser` 实现：清除 deleted_at + 更新 AD 字段 + 重置密码/角色
+
+23505 重复键风险已通过"软删除恢复"分支解决。frontmatter 翻 `resolved`。
+
+verification: `grep -n "restoreSoftDeletedUser\|Unscoped" internal/services/system/user_sync_service.go` 命中
+files_changed: .planning/debug/ad-sync-duplicate-username-softdeleted.md
