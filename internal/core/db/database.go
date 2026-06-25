@@ -403,6 +403,10 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate164Phase38VerifyAdminMigrated(d.DB); err != nil {
 			applogger.Errorf("Phase 38 账号池补迁校验失败: %v", err)
 		}
+		// Phase 39: 工位部门物理位置映射表 (sys_dept_location_alias) + 4 条按钮权限 seed
+		if err := migrations.Migrate165SysDeptLocationAlias(d.DB); err != nil {
+			applogger.Errorf("Phase 39 工位部门映射迁移失败: %v", err)
+		}
 		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
 		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
 			applogger.Errorf("MAC 过滤规则表迁移失败: %v", err)
