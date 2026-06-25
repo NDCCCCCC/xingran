@@ -19,7 +19,7 @@
 - ✅ **v1.15 工位设备关联** — Phase 28 (shipped 2026-06-10)
 - ✅ **v1.12 深信服桌面云集成 (22A+22B)** — Phases 22A/22B (shipped 2026-06-02)
 - ✅ **v1.15 部门物理位置映射** — Phase 39 (shipped 2026-06-25)
-- 🚧 **v1.16 技术债清理 (Tech-Debt Cleanup)** — Phase 40 (planning)
+- 🚧 **v1.16 技术债清理 (Tech-Debt Cleanup)** — Phases 40-41 (Phase 40 shipped 3/3; Phase 41 closes debug_sessions gap)
 
 ---
 
@@ -43,6 +43,26 @@
   7. `gsd-sdk query audit-open` 输出 `debug_sessions < 5`(从当前 57 下降)
   8. `scripts/validate_debug_frontmatter.sh`(或等价校验脚本)对 `.planning/debug/*.md` 全量扫描通过率 = 100%
 
+**Plans**: 3/3 complete (40-01 / 40-02 / 40-03)
+
+**UI hint**: no
+
+### Phase 41: Debug Session Gap Closure (debug_sessions 29 → < 5)
+
+**Goal**: 闭环 Phase 40 遗留的 `audit-open` debug_sessions 缺口 —— Phase 40 完成 22 个 deferred session + 6 audit 文件规范化,但仍有 29 个 scope 外历史 open session(investigating 10 / debug_complete 5 / fixed 3 / verifying 2 / fix_applied 2 / diagnosed 2 / 其他 5)。本 phase 把 debug_sessions 降到 < 5,达成 TECH-05 验收。
+
+**Depends on**: Phase 40(其批量 frontmatter 修复 + validator/verify 工具链就位)
+
+**Requirements**: TECH-06(支撑 TECH-05 的 debug_sessions < 5 部分)
+
+**Success Criteria** (what must be TRUE):
+  1. ~12 个"实质已完成态"session(debug_complete / fixed / fix_applied / applied / fixed_pending_restart)经核查修复确实落地后,frontmatter 翻 `status: resolved`
+  2. 剩余 ~17 个真正在途 session(investigating / verifying / diagnosed / root_cause_identified / checkpoint_reached)逐个处理:能修则修 + 验证 → resolved;陈年/重复/不适用者标记 won't-fix 或 `skip_audit: true` 移出 audit 计数
+  3. `gsd-sdk query audit-open` 输出 `debug_sessions < 5`
+  4. `bash scripts/verify_phase40.sh` 两条标准全 PASS(exit 0)
+  5. 每个被翻/won't-fix 的 session 在其 `.md` Resolution 章节追加 Phase 41 Closure 证据(D-07 沿用)
+  6. `go build ./...` / `npm run build` 全程退出码 0(若有代码修复)
+
 **Plans**: TBD
 
 **UI hint**: no
@@ -52,6 +72,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 40. Tech-Debt Cleanup | 3/3 | Complete   | 2026-06-25 |
+| 41. Debug Session Gap Closure | 0/TBD | Planning | - |
 
 ---
 

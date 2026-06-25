@@ -28,6 +28,7 @@ last_updated: 2026-06-25
   - `knowledge-base` 不是 debug 会话(是 GSD 知识库文件),明确移出 audit 范围(添加 `skip_audit: true` 注释或改名)
   - `info-point-type-null-import` / `sys-mac-filter-rules-relation-does-not-exist` 实际已是 resolved/Resolved,统一 frontmatter 格式让 audit 能正确识别
 - [ ] **TECH-05**: 全部清理后,审计指标达到:`audit-open` 中 debug_sessions < 5(从当前 57 大幅下降);所有 `.planning/debug/*.md` 文件均有标准 YAML frontmatter。
+- [ ] **TECH-06** (Phase 41 新增): 闭环 Phase 40 遗留的 debug_sessions 缺口 —— Phase 40 完成 22 个 deferred session + 6 audit 文件,但 `audit-open` 仍有 29 个 scope 外历史 open session(investigating/debug_complete/fixed 等),需降到 < 5 才能达成 TECH-05 验收。策略:批量翻 ~12 个"实质已完成态"(debug_complete/fixed/fix_applied/applied)→ resolved;逐个闭环剩余 ~17 个真正在途调查(能修则修,陈年/重复/不适用者标记 won't-fix 或 skip_audit 移出 audit)。
 
 ### Future / Out of Scope
 
@@ -49,8 +50,9 @@ last_updated: 2026-06-25
 | TECH-03 | 1 root-cause-found 会话(apikey-route-path-duplication) | Phase 40 (tech-debt-cleanup) | Planned |
 | TECH-04 | 6 audit 数据质量问题整理(frontmatter + 排除范围) | Phase 40 (tech-debt-cleanup) | Planned |
 | TECH-05 | 验收指标:debug_sessions < 5 + 全量 frontmatter 校验通过 | Phase 40 (tech-debt-cleanup) | Planned |
+| TECH-06 | 闭环 Phase 40 遗留 debug_sessions 缺口(29→<5):翻 ~12 实质已完成 + 闭环 ~17 在途 | Phase 41 (debug-session-gap-closure) | Planned |
 
-**Coverage**: 5/5 v1.16 requirements mapped to Phase 40 ✓
+**Coverage**: 6/6 v1.16 requirements mapped to Phase 40 + Phase 41 ✓
 **No orphans, no duplicates**
 
 ### Phase 40 Success Criteria Cross-Check
