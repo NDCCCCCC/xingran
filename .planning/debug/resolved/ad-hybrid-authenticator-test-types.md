@@ -1,4 +1,5 @@
 ---
+slug: ad-hybrid-authenticator-test-types
 status: resolved
 trigger: 'Cluster 4/5: ad_authenticator_test.go + hybrid_authenticator_test.go 类型不匹配'
 created: 2026-06-12

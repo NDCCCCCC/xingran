@@ -1,4 +1,5 @@
 ---
+slug: vdi-cpu-display-issue
 name: vdi-cpu-display-issue
 status: debug_complete
 trigger: 虚拟机列表页面显示CPU核数不正确：页面显示1核，但实际API返回的是"1颗 × 8核"。需要调查：

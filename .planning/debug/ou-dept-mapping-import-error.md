@@ -1,4 +1,5 @@
 ---
+slug: ou-dept-mapping-import-error
 status: resolved
 trigger: Phase 23 执行后，点击 OU 组织单位菜单提示 getOUDeptMapping 导入错误
 created: 2026-05-26

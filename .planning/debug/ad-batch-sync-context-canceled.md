@@ -1,4 +1,5 @@
 ---
+slug: ad-batch-sync-context-canceled
 status: resolved
 trigger: AD域控用户批量同步时出现两个问题：选择全部同步全部失败（context canceled），且计算机账户（如CXHUB-70Q4FEC$）被当作用户同步
 created: 2026-06-09

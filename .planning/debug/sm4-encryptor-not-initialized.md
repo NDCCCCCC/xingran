@@ -1,4 +1,5 @@
 ---
+slug: sm4-encryptor-not-initialized
 status: resolved
 trigger: SM4 加密器未初始化，无法解密密码
 created: 2026-05-27T16:00:00+08:00

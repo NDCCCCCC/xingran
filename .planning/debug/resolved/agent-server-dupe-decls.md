@@ -1,4 +1,5 @@
 ---
+slug: agent-server-dupe-decls
 status: awaiting_human_verify
 trigger: 'Cluster 1/5: 修复 internal/agent/server/ 编译错误 - 重名声明 (WithRequestID, log)'
 created: 2026-06-12

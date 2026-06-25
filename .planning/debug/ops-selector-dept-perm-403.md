@@ -1,4 +1,5 @@
 ---
+slug: ops-selector-dept-perm-403
 status: resolved
 trigger: "空间管理/运维管理所有页面几乎都需要部门管理权限，部门树/用户列表/机房列表接口全部 403"
 created: 2026-06-17

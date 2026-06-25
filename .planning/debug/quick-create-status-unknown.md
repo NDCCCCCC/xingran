@@ -1,4 +1,5 @@
 ---
+slug: quick-create-status-unknown
 status: resolved
 trigger: "快速创建设备成功后，设备状态显示为'未知' (status=2)，期望是正常 (status=0)"
 created: "2026-05-08"

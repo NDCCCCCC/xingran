@@ -1,4 +1,5 @@
 ---
+slug: backup-create-validation-error
 status: resolved
 trigger: "手动创建配置备份时 DeviceID 和 BackupType 验证失败"
 created: "2026-05-08"

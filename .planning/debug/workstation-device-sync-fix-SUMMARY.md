@@ -1,3 +1,12 @@
+---
+slug: workstation-device-sync-fix-summary
+status: resolved
+skip_audit: true
+trigger: 工位设备同步修复完成总结（非 debug session，是 fix SUMMARY 文档）
+created: 2026-06-25
+updated: 2026-06-25
+session_type: meta
+---
 # 工位设备同步数据为空问题 - 修复完成
 
 ## 问题摘要

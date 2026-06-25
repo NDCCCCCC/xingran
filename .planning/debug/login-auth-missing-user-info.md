@@ -1,4 +1,5 @@
 ---
+slug: login-auth-missing-user-info
 name: login-auth-missing-user-info
 status: resolved
 trigger: 登录返回 500 + 前端报错"认证成功但用户信息缺失"(errorHandler.ts:221),后端真实原因是 AD 管理员账号被锁

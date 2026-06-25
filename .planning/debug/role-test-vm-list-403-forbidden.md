@@ -1,4 +1,5 @@
 ---
+slug: role-test-vm-list-403-forbidden
 status: resolved
 deferred_to: v1.16-tech-debt
 trigger: 角色 test 访问虚拟机列表页面返回 403 Forbidden

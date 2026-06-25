@@ -1,4 +1,5 @@
 ---
+slug: workstation-ad-asset-404-recurre
 status: resolved
 trigger: |
   POST http://10.62.10.33:9000/api/v1/ops/workstation-device/83fe475d-c16a-47ac-9dcc-323503d907fc/ad 404

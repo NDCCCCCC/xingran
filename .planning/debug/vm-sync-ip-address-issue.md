@@ -1,4 +1,5 @@
 ---
+slug: vm-sync-ip-address-issue
 name: vm-sync-ip-address-issue
 status: resolved
 trigger: 虚拟机信息定时同步任务，使用的api接口是可以获取ip地址的，但是现在只有两台获取静态地址，其他的都是-，请检查原因

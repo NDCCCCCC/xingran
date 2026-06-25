@@ -18,8 +18,10 @@ set -euo pipefail
 STRICT=0
 [[ "${1:-}" == "--strict" ]] && STRICT=1
 
-# 状态枚举白名单
-VALID_STATUSES='^(resolved|root_cause_found|awaiting_human_verify|investigating|verifying|fixed|diagnosed|debug_complete|root_cause_identified|fix_applied)$'
+# 状态枚举白名单（D-11 + Phase 40 批量修复时据代码库实普查扩充：checkpoint_reached /
+# fixed_pending_restart / fixing / investigation_in_progress / complete / applied 均为
+# gsd-debugger 工作流真实生命周期状态，原 D-11 枚举不全）
+VALID_STATUSES='^(resolved|root_cause_found|root_cause_identified|awaiting_human_verify|investigating|investigation_in_progress|verifying|fixed|fixing|fix_applied|fixed_pending_restart|diagnosed|debug_complete|complete|checkpoint_reached|applied)$'
 # slug 格式：小写 + 连字符
 SLUG_PATTERN='^[a-z0-9]+(-[a-z0-9]+)*$'
 # 日期格式：YYYY-MM-DD
@@ -50,6 +52,7 @@ scan_file() {
   local fm_content=""
   local line
   while IFS= read -r line; do
+    line="${line%$'\r'}"  # CRLF 容忍：剥离行尾 CR
     if [[ "$line" == "---" ]]; then
       if [[ $in_fm -eq 0 ]]; then
         in_fm=1
@@ -86,7 +89,7 @@ scan_file() {
 
   # 状态枚举
   local status_val
-  status_val=$(echo "$fm_content" | grep -E "^status:" | head -1 | sed -E 's/^status:[[:space:]]*//')
+  status_val=$(echo "$fm_content" | grep -E "^status:" | head -1 | sed -E 's/^status:[[:space:]]*//' | sed -E 's/^"(.*)"$/\1/')
   if ! [[ "$status_val" =~ $VALID_STATUSES ]]; then
     FAIL=$((FAIL + 1))
     FAIL_FILES+=("$file (invalid status: $status_val)")
@@ -96,7 +99,7 @@ scan_file() {
 
   # slug 格式
   local slug_val
-  slug_val=$(echo "$fm_content" | grep -E "^slug:" | head -1 | sed -E 's/^slug:[[:space:]]*//')
+  slug_val=$(echo "$fm_content" | grep -E "^slug:" | head -1 | sed -E 's/^slug:[[:space:]]*//' | sed -E 's/^"(.*)"$/\1/')
   if ! [[ "$slug_val" =~ $SLUG_PATTERN ]]; then
     FAIL=$((FAIL + 1))
     FAIL_FILES+=("$file (invalid slug: $slug_val)")
@@ -107,7 +110,7 @@ scan_file() {
   # 日期格式
   for date_field in created updated; do
     local date_val
-    date_val=$(echo "$fm_content" | grep -E "^${date_field}:" | head -1 | sed -E "s/^${date_field}:[[:space:]]*//")
+    date_val=$(echo "$fm_content" | grep -E "^${date_field}:" | head -1 | sed -E "s/^${date_field}:[[:space:]]*//" | sed -E 's/^"(.*)"$/\1/')
     if ! [[ "$date_val" =~ $DATE_PATTERN ]]; then
       WARN=$((WARN + 1))
       echo "  [WARN] $file (${date_field} not YYYY-MM-DD: $date_val)"
@@ -139,7 +142,7 @@ echo "  pass:  $PASS"
 echo "  warn:  $WARN"
 echo "  skip:  $SKIP"
 echo "  fail:  $FAIL"
-echo "  pass rate: $(awk "BEGIN{printf \"%.1f\", ($PASS * 100.0) / $TOTAL}")%"
+echo "  pass rate: $(awk "BEGIN{d=$TOTAL-$SKIP; if(d<=0) printf \"%.1f\", 100.0; else printf \"%.1f\", ($PASS*100.0)/d}")% (of audited; $SKIP skip_audit excluded)"
 
 if [[ $FAIL -gt 0 ]]; then
   echo

@@ -1,4 +1,5 @@
 ---
+slug: ad-dept-member-sync-all-zero
 name: ad-dept-member-sync-all-zero
 status: resolved
 trigger: AD域成员同步任务执行成功但所有计数都是0（部门=0, 成功=0, 失败=0, 总成员=0, 添加=0, 移除=0），耗时仅4ms

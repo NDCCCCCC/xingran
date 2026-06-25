@@ -1,4 +1,5 @@
 ---
+slug: quick-create-fields-not-saving
 status: debug_complete
 trigger: "快速创建设备功能没有正确保存型号 (model) 和 IP 地址 (ip_address) 字段"
 created: "2026-05-08"

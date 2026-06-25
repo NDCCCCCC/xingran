@@ -1,4 +1,5 @@
 ---
+slug: quick-create-createdby-validation
 status: resolved
 trigger: "网络设备管理页面，快速创建设备，输入ip和凭证后探测设备成功，但是创建设备报错：创建失败: 请求参数错误: Key: 'QuickCreateRequest.CreatedBy' Error:Field validation for 'CreatedBy' failed on the 'required' tag"
 created: "2026-05-08"

@@ -1,4 +1,5 @@
 ---
+slug: vdi-vm-sync-placeholder
 status: resolved
 deferred_to: v1.16-tech-debt
 trigger: vdi虚拟机获取的定时任务提示占位，请排查代码，确认实际情况

@@ -1,4 +1,5 @@
 ---
+slug: vm-list-usenavigate-undefi
 status: resolved
 trigger: 访问虚拟机列表页面空白，控制台报错：index.tsx:37 Uncaught ReferenceError: useNavigate is not defined at VirtualMachineList
 created: 2026-06-17T09:05:00.000Z

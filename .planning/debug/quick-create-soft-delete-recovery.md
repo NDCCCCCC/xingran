@@ -1,4 +1,5 @@
 ---
+slug: quick-create-soft-delete-recovery
 status: complete
 trigger: "快速创建设备时 IP 地址重复错误 - 设备已被软删除，应该恢复而不是报错"
 created: "2026-05-08"

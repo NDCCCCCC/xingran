@@ -1,4 +1,5 @@
 ---
+slug: login-captcha-no-slider-modal
 status: resolved
 trigger: 登录时提示"请输入验证码"，但没有弹出图形滑动验证码的模态框。请调查原因，不要修改代码。
 goal: find_and_fix

@@ -1,4 +1,5 @@
 ---
+slug: user-deptid-uuid-cast-recurring
 status: diagnosed
 trigger: "ERRO[2026-06-15 12:38:58] invalid input syntax for type uuid: \"\" (SQLSTATE 22P02) — CASE WHEN regex guard in JOIN ON clause is still failing"
 created: 2026-06-15T00:00:00.000Z

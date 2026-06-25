@@ -1,4 +1,5 @@
 ---
+slug: workstation-update-createdat-zeroed
 status: resolved
 trigger: "工位编辑保存后 created_at 变成 0001-01-01 08:06:26"
 created: 2026-06-18T00:00:00+08:00

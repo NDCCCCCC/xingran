@@ -1,4 +1,5 @@
 ---
+slug: workorder-page-ambiguous-status
 status: resolved
 trigger: "Work order management page triggers 400 Bad Request on /api/v1/system/users/list due to ambiguous 'status' column"
 created: 2026-06-17

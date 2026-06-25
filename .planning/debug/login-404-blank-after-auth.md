@@ -1,4 +1,5 @@
 ---
+slug: login-404-blank-after-auth
 status: resolved
 trigger: "启动构建好的exe程序（包含前后端），访问login报错，访问根目录/会正常跳转到login,但是登录后页面为空白，无法打开任何页面"
 created: 2026-05-22

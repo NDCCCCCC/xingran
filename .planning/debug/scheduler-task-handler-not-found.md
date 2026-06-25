@@ -1,4 +1,5 @@
 ---
+slug: scheduler-task-handler-not-found
 name: scheduler-task-handler-not-found
 description: 调度任务执行失败 - 未找到任务处理器
 status: resolved

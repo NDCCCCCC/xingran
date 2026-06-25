@@ -1,4 +1,5 @@
 ---
+slug: portcollect-empty-slice-conn
 name: portcollect-empty-slice-conn
 status: resolved
 trigger: 端口采集任务对设备 10.62.25.252 (Huawei S5735) 采集时连接进入 Closed 状态导致接口列表解析失败，随后空端口列表被传入 sys_device_port_status 批量 upsert，GORM 报 "empty slice found" 错误

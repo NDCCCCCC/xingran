@@ -1,3 +1,11 @@
+---
+slug: column-config-reset-after-save
+status: resolved
+trigger: (legacy session, see body)
+created: 2026-06-25
+updated: 2026-06-25
+session_type: bug
+---
 # Debug Session: Column Configuration Reset After Save
 
 **Status:** resolved

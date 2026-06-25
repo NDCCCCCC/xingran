@@ -1,6 +1,6 @@
 ---
 slug: "dept-ou-column-name-fix"
-status: "fixing"
+status: fixing
 trigger: "部门AD同步列名错误"
 created: "2026-05-25T07:50:00.000Z"
 updated: "2026-05-25T07:50:00.000Z"

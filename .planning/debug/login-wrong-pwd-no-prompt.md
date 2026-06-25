@@ -1,4 +1,5 @@
 ---
+slug: login-wrong-pwd-no-prompt
 status: investigating
 trigger: 登录时使用错误密码，系统没有任何提示，请帮我添加提示
 goal: find_and_fix

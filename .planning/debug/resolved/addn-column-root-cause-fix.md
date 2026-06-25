@@ -1,3 +1,11 @@
+---
+slug: addn-column-root-cause-fix
+status: resolved
+trigger: (legacy session, see body)
+created: 2026-06-25
+updated: 2026-06-25
+session_type: bug
+---
 # addn 列反复出现的根本原因修复报告
 
 **日期**: 2026-05-27

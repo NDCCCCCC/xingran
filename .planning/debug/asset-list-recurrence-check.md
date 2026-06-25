@@ -1,4 +1,5 @@
 ---
+slug: asset-list-recurrence-check
 status: resolved
 trigger: "资产列表页面只显示一列，多选框宽度太大的问题已经出现过一次，修复过一次，请查看历史"
 created: 2026-06-15T17:45:00.000Z

@@ -1,4 +1,5 @@
 ---
+slug: vdi-vm-sync-missing-vm
 status: resolved
 deferred_to: v1.16-tech-debt
 trigger: VDI虚拟机数据同步任务没有将新增的第9台虚拟机同步到数据库，之前任务能正常同步新增和删除虚拟机，推测最近添加删除功能时破坏了新增功能

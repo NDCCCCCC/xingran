@@ -1,4 +1,5 @@
 ---
+slug: vm-list-input-not-defined
 status: resolved
 trigger: index.tsx:837 Uncaught ReferenceError: Input is not defined at VirtualMachineList
 created: 2026-06-17T09:20:00.000Z

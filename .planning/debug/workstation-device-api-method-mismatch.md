@@ -1,4 +1,5 @@
 ---
+slug: workstation-device-api-method-mismatch
 status: resolved
 phase: 28-workstation-device-association
 trigger: 工位设备关联API返回404错误

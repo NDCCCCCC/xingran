@@ -1,4 +1,5 @@
 ---
+slug: scrapligo-queue-panic-windows
 status: resolved
 trigger: "scrapligo util.(*Queue).Dequeue panic: index out of range [0] with length 0 in Windows local dev, not on Linux server. Connection pool reuses connection 10.62.25.252:22 successfully but panics in GetPrompt on subsequent calls. Memory usage high concurrent with panic."
 created: "2026-06-15"

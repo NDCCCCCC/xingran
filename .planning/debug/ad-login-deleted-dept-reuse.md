@@ -1,4 +1,5 @@
 ---
+slug: ad-login-deleted-dept-reuse
 status: resolved
 deferred_to: v1.16-tech-debt
 trigger: AD用户登录成功，但系统重用了已删除的乱码部门，而不是创建新的正确部门层级

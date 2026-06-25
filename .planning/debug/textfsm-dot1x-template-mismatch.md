@@ -1,4 +1,5 @@
 ---
+slug: textfsm-dot1x-template-mismatch
 status: resolved
 trigger: 华为设备 display dot1x 的 TextFSM 模板匹配失败
 created: 2026-05-12

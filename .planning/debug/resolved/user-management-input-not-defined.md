@@ -1,4 +1,5 @@
 ---
+slug: user-management-input-not-defined
 status: resolved
 trigger: "Uncaught ReferenceError: Input is not defined at UserManagement (index.tsx:497:20)"
 created: 2026-06-17

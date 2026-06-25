@@ -1,4 +1,5 @@
 ---
+slug: resource-group-dropdown-empty
 status: resolved
 trigger: 创建虚拟机时资源组下拉框没有数据
 created: 2026-05-29

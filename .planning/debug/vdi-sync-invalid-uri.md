@@ -3,6 +3,7 @@ slug: vdi-sync-invalid-uri
 status: investigating
 trigger: VDI虚拟机同步失败 - 使用错误的API端点导致 [COMMON_INVALID_URI]
 created: 2026-05-28T18:45:00+08:00
+updated: 2026-06-25
 ---
 
 ## Trigger

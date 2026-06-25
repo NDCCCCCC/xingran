@@ -1,4 +1,5 @@
 ---
+slug: device-modal-serial-auto-match
 status: investigating
 trigger: "调查手动添加设备模态框设计不符 - 设计要求输入序列号自动从资产系统匹配设备信息，但当前实现显示多个手动输入字段"
 created: 2025-06-18T14:30:00Z

@@ -1,4 +1,5 @@
 ---
+slug: vm-list-empty-vdi-server
 status: resolved
 trigger: 虚拟机列表是空的!请检查原因，该列表应该会连接vdi服务器获取虚拟机信息才对！
 created: 2026-05-26T00:00:00Z

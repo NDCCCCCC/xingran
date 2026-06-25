@@ -1,4 +1,5 @@
 ---
+slug: dot1x-interface-name-format-mism
 status: resolved
 trigger: dot1x字段没有显示。TextFSM日志显示已捕获接口名 GigabitEthernet0/0/1，但数据库没有保存。问题：数据库存储的是简写格式 GE0/0/1，而TextFSM捕获的是完整格式 GigabitEthernet0/0/1，两者不匹配。需要添加格式转换逻辑。
 created: 2026-05-12

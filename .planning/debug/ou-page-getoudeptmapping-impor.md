@@ -1,4 +1,5 @@
 ---
+slug: ou-page-getoudeptmapping-impor
 name: ou-page-getoudeptmapping-impor
 description: OU组织管理页面空白 - getOUDeptMapping 导出不存在
 status: resolved

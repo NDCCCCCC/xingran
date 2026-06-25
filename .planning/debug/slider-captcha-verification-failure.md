@@ -1,4 +1,5 @@
 ---
+slug: slider-captcha-verification-failure
 status: resolved
 trigger: "调查并修复这个滑动验证码验证失败的问题"
 created: 2025-06-15T08:00:00Z

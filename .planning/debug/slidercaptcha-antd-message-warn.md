@@ -1,4 +1,5 @@
 ---
+slug: slidercaptcha-antd-message-warn
 status: resolved
 trigger: SliderCaptcha.tsx:83 Warning: [antd: message] Static function can not consume context like dynamic theme. Please use 'App' component instead.
 created: 2026-06-17T07:03:50.000Z

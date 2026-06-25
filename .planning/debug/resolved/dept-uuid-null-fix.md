@@ -1,6 +1,6 @@
 ---
 slug: "dept-uuid-null-fix"
-status: "fixing"
+status: fixing
 trigger: "部门AD同步失败: UUID类型错误"
 created: "2026-05-25T07:35:00.000Z"
 updated: "2026-05-25T07:35:00.000Z"

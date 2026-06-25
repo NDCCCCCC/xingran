@@ -1,3 +1,11 @@
+---
+slug: column-config-boolean-false-not-persisting
+status: resolved
+trigger: (legacy session, see body)
+created: 2026-06-25
+updated: 2026-06-25
+session_type: bug
+---
 # Debug Session: Boolean False Values Not Persisting
 
 **Status:** resolved

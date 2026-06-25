@@ -1,4 +1,5 @@
 ---
+slug: user-sync-service-test-args
 status: investigating
 trigger: 'Side finding 1: user_sync_service_test.go - 构造函数缺参 + ADUser 未定义 + 返回值数量'
 created: 2026-06-12

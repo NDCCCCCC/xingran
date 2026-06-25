@@ -1,4 +1,5 @@
 ---
+slug: request-encryption-token-refresh-400
 status: investigating
 trigger: 在参数管理中设置请求加密开关为false，报错：api.ts:404 POST http://10.62.10.33:9000/api/v1/system/auth/refresh 400 (Bad Request)
 created: 2026-05-20T15:32:00+08:00

@@ -1,4 +1,5 @@
 ---
+slug: scrapligo-snmp-panic
 status: resolved
 trigger: "scrapligo transport panic during SNMP Ping operation - transport.(*Standard).Write crash during Channel.GetPrompt when trying to get system name OID 1.3.6.1.2.1.1.5.0"
 created: "2026-04-20"

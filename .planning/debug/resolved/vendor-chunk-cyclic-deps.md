@@ -1,4 +1,5 @@
 ---
+slug: vendor-chunk-cyclic-deps
 status: resolved
 trigger: 打包部署到服务器运行时报错：vendor-commons-DTGzsS6G.js:1 Uncaught TypeError: Cannot read properties of undefined (reading 'createContext')；后续每次"修复"后错误换位置：useLayoutEffect undefined，且每次 chunk 文件名/位置都变
 created: 2026-06-17T12:30:00.000Z

@@ -1,4 +1,5 @@
 ---
+slug: ad-ou-chinese-encoding-issue
 status: resolved
 trigger: AD用户登录时，中文字符在OU DN解析过程中变成乱码，导致无法匹配数据库部门
 created: 2026-05-26

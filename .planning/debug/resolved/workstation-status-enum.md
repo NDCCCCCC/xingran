@@ -1,4 +1,5 @@
 ---
+slug: workstation-status-enum
 status: awaiting_human_verify
 trigger: '工位管理中工位状态枚举值前后端及数据库定义不一致，之前debug过一次但现在还是有问题，请重新检查'
 created: 2026-06-12

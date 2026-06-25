@@ -1,4 +1,5 @@
 ---
+slug: vdi-vm-sync-duplicate-key-error
 name: vdi-vm-sync-duplicate-key-error
 status: resolved
 trigger: 调查并修复 VDI 虚拟机同步中的 duplicate key 错误

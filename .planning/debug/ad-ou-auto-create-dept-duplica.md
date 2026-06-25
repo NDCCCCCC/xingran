@@ -1,4 +1,5 @@
 ---
+slug: ad-ou-auto-create-dept-duplica
 status: resolved
 trigger: AD用户登录时自动创建部门失败，出现唯一约束冲突错误
 created: 2026-05-26

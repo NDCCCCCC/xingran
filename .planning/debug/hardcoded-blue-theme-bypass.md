@@ -1,4 +1,5 @@
 ---
+slug: hardcoded-blue-theme-bypass
 status: investigating
 trigger: 项目中有些按钮不受系统主题颜色控制，比如工位管理页面的表格卡片平面图三选一按钮，硬编码写死了蓝色，请检查所有类似情况。
 created: 2026-06-15

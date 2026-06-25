@@ -1,4 +1,5 @@
 ---
+slug: vdi-vm-delete-3001-error
 name: vdi-vm-delete-3001-error
 status: resolved
 trigger: |-

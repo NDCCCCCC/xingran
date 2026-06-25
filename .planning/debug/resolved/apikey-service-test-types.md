@@ -1,4 +1,5 @@
 ---
+slug: apikey-service-test-types
 status: resolved
 trigger: 'Cluster 5/5: apikey_service_test.go - Scopes/IPWhitelist 类型不匹配'
 created: 2026-06-12

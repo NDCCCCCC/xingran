@@ -1,4 +1,5 @@
 ---
+slug: frontend-build-66-ts-errors
 status: investigating
 trigger: "Frontend build fails with 66 TypeScript errors - usePersistedState refactor + missing VDI imports"
 created: 2026-06-17

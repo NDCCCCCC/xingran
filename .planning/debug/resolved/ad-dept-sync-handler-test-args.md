@@ -1,4 +1,5 @@
 ---
+slug: ad-dept-sync-handler-test-args
 status: resolved
 trigger: 'Cluster 2/5: ad_dept_sync_handler_test.go - NewADDeptSyncHandler 缺参'
 created: 2026-06-12

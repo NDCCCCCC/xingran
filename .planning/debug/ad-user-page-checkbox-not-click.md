@@ -1,4 +1,5 @@
 ---
+slug: ad-user-page-checkbox-not-click
 name: ad-user-page-checkbox-not-click
 status: verifying
 trigger: AD域控的用户管理页面多选框无法勾选！

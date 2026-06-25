@@ -1,4 +1,5 @@
 ---
+slug: permission-control-bypass-network-devices
 status: resolved
 deferred_to: v1.16-tech-debt
 trigger: 普通用户角色没有赋予任何权限，但是登录后可以使用网络设备管理所有功能（除了部门列表无权限）

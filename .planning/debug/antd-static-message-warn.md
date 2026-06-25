@@ -1,4 +1,5 @@
 ---
+slug: antd-static-message-warn
 status: resolved
 trigger: index.tsx:184 Warning: [antd: message] Static function can not consume context like dynamic theme. Please use 'App' component instead. + index.tsx:818 Warning: [antd: Alert] message is deprecated. Please use title instead.
 created: 2026-06-17T09:35:00.000Z

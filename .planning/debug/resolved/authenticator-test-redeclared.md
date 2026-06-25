@@ -1,4 +1,5 @@
 ---
+slug: authenticator-test-redeclared
 status: awaiting_human_verify
 trigger: 'Cluster 3/5: authenticator_test.go - createTestUser + TestADUserInfo 与同包其它 _test.go 重复声明'
 created: 2026-06-12

@@ -1,4 +1,5 @@
 ---
+slug: workstation-edit-modal-org-empt
 status: resolved
 trigger: "工位管理编辑工位模态框，所属机构为空，没有正确显示，所属部门显示的是最末级机构，需要使用xxx/xxx/xxx的样式显示全部部门"
 created: 2026-06-15

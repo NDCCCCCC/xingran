@@ -1,4 +1,5 @@
 ---
+slug: space-mgmt-role-no-perm
 status: resolved
 trigger: "我创建了空间管理 角色，有空间管理菜单下的所有权限，但是用户登录后提示没有权限，请检查原因"
 created: 2026-06-17

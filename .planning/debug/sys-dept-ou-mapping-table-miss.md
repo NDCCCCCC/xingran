@@ -1,4 +1,5 @@
 ---
+slug: sys-dept-ou-mapping-table-miss
 status: resolved
 trigger: 后端报错：ERRO[2026-05-25 13:16:27] [GORM错误] SELECT * FROM "sys_dept_ou_mapping" WHERE ou_dn = 'OU=基础运维科,OU=科技创新部,OU=分公司本部,OU=湖北分公司,OU=CX,DC=PR,DC=intra,DC=cpic,DC=com,DC=cn' AND sync_enabled = true ORDER BY "sys_dept_ou_mapping"."id" LIMIT 1 | 耗时: 0s | 错误: ERROR: relation "sys_dept_ou_mapping" does not exist (SQLSTATE 42P01) WARN[2026-05-25 13:16:27] 用户 chenchao-076 的AD OU OU=基础运维科,OU=科技创新部,OU=分公司本部,OU=湖北分公司,OU=CX,DC=PR,DC=intra,DC=cpic,DC=com,DC=cn 未找到对应部门: 查询OU DN映射失败: ERROR: relation "sys_dept_ou_mapping" does not exist (SQLSTATE 42P01) 部门里明明有分公司本部-科技创新部-基础运维科，为什么这里系统提示未找到？
 created: 2026-05-25

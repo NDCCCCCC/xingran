@@ -1,4 +1,5 @@
 ---
+slug: asset-list-missing-fields
 name: asset-list-missing-fields
 status: resolved
 trigger: 资产列表页面字段数据不全，请检查原因。导入的数据有很多字段数据没有显示，缺失字段包括：使用机构、部门、受益部门、领取人、责任人。需要全面检查所有字段，确定所有字段来历和映射关系

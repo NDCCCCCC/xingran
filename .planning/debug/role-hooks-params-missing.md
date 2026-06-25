@@ -1,4 +1,5 @@
 ---
+slug: role-hooks-params-missing
 name: role-hooks-params-missing
 description: Frontend tsc -b fails — hooks/index.ts re-exports UseRoleDataParams but useRoleData.ts no longer defines it
 status: resolved
