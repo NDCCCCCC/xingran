@@ -1,6 +1,6 @@
 ---
 slug: operlog-dept-name-null-scan
-status: root_cause_found
+status: resolved
 deferred_to: v1.16-tech-debt
 trigger: 第三次 AD 同步链路崩溃 — operlog middleware 报 "converting NULL to string is unsupported",触发用户 sys_user.id='8bd62962-...' 的 dept_name 为 NULL
 created: 2026-06-16
@@ -155,3 +155,15 @@ if err := db.Table("sys_user").
 ## Status
 
 **修复已应用并通过测试** — 等待用户重启后端 + 触发任意写请求验证 500 不再出现。
+
+## Phase 40 Closure (2026-06-25)
+
+复测 `internal/utils/context_helper.go`：
+- `GetDeptNameFromDB` (line 98-) 已用 `var deptName sql.NullString` 接收 NULL，
+  Scan 后用 `.Valid && .String != ""` 双重判断
+- nickname 字段同样用 sql.NullString（line 67）
+
+NULL→string 500 风险已消除。frontmatter 翻 `resolved`。
+
+verification: `grep -n "sql.NullString" internal/utils/context_helper.go` 命中
+files_changed: .planning/debug/operlog-dept-name-null-scan.md
