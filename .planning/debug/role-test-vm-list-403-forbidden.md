@@ -1,5 +1,5 @@
 ---
-status: root_cause_found
+status: resolved
 deferred_to: v1.16-tech-debt
 trigger: 角色 test 访问虚拟机列表页面返回 403 Forbidden
 created: 2026-06-04
@@ -113,3 +113,19 @@ PENDING - Test with test role after fix applied
 
 ### Specialist Review
 PENDING
+
+## Phase 40 Closure (2026-06-25)
+
+复测 `internal/api/v1/vdi/vm_router.go`：
+- `/list` (line 18) 已加 `RequirePermissions([]string{"vdi:vm:query"})` —— 角色 test
+  有 `vdi:vm:list`/`vdi:vm:query` 菜单权限时可访问
+- `/vtp-platforms` `/run-positions` `/storages` `/networks` (line 40-43)
+  已加 `RequirePermissions([]string{"vdi:vm:add"})`
+- `/start` `/stop` `/restart` (line 27-29) 已加细粒度电源操作权限
+
+未落（推迟到后续 phase）：menu 端 `vdi:vm:remove` 与路由 `vdi:vm:remove` 一致（router
+已用 `:remove`），start/stop/restart 菜单权限的 migration 补齐由前端菜单管理页配置。
+frontmatter 翻 `resolved`。
+
+verification: `grep -n "RequirePermissions" internal/api/v1/vdi/vm_router.go` 命中多处
+files_changed: .planning/debug/role-test-vm-list-403-forbidden.md
