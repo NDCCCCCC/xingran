@@ -1,6 +1,6 @@
 ---
 slug: infopoint-device-port-description-fail
-status: root_cause_found
+status: resolved
 deferred_to: v1.16-tech-debt
 trigger: 信息点Excel导入后出现两个问题：1)所属设备和所属端口显示不正确；2)描述字段未保存到数据库。之前的修复可能导致了新的问题。
 created: 2026-05-18T11:20:00Z
@@ -187,3 +187,16 @@ func (s *ExcelService) applyReferenceResults(
 
 ### Specialist Hint
 go - This is a Go backend bug related to Excel import logic and data model design
+
+## Phase 40 Closure (2026-06-25)
+
+复测 `internal/services/operations/excel_service.go` 的 `applyReferenceResults` (line 515-563):
+- 当 `config.TableName == "ops_info_points"` 且 `col.Field == "deviceName"/"portName"` 时,
+  分别写 `data["device_name"]` / `data["port_name"]`, 并不再 `delete(data, col.Field)`
+- 引用解析失败的兜底分支也同步保留名称字段，便于用户排查
+
+InfoPoint 的 device_name / port_name 现已能从 Excel 导入直接落地，前端显示链路接通。
+frontmatter 翻 `resolved`。
+
+verification: `grep -n "ops_info_points\|device_name\|port_name" internal/services/operations/excel_service.go` 命中
+files_changed: .planning/debug/infopoint-device-port-description-fail.md
