@@ -614,7 +614,22 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		}, core))
 		{
 			locationAliasService := opsServices.NewLocationAliasService(core.DB.GetDB())
-			locationAliasHandler := operations.NewLocationAliasHandler(locationAliasService).WithCore(core)
+
+			// 构造 DepartmentService 用于 alias 写操作后触发 dept 缓存失效 (D-03 决策)。
+			// core 不直接持有 DepartmentService, 在路由组现场构造 — 与 department_router.go 一致。
+			aliasCacheProvider := systemServices.NewCacheProvider(core.DataCacheService)
+			var aliasDeptSvc systemServices.DepartmentService
+			if core.DataCacheService != nil {
+				aliasDeptSvc = systemServices.NewDepartmentServiceWithCache(
+					core.DB.GetDB(), aliasCacheProvider, core.CacheConfigService,
+				)
+			} else {
+				aliasDeptSvc = systemServices.NewDepartmentService(core.DB.GetDB())
+			}
+
+			locationAliasHandler := operations.NewLocationAliasHandler(locationAliasService).
+				WithCore(core).
+				WithDeptCacheInvalidator(aliasDeptSvc)
 
 			// 注意:更具体的路由放在前面,避免被通用路由匹配
 			locationAlias.POST("/list", locationAliasHandler.List)

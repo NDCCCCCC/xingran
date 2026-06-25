@@ -7,8 +7,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
+	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -22,9 +24,13 @@ import (
 //
 // 3 个写方法(Create/Update/Delete)遵循 CLAUDE.md operlog 约定,模块名用 "工位管理"
 // (与 workstation_handler.go 一致 — 工位部门下拉 union 是工位域功能)。
+//
+// 注:core 不直接持有 DepartmentService (该字段位于私有 warmUpServices),
+// 因此 dept cache 失效通过 WithDeptCacheInvalidator 链式注入。
 type LocationAliasHandler struct {
-	service opsServices.LocationAliasService
-	core    *core.Core
+	service              opsServices.LocationAliasService
+	deptCacheInvalidator systemServices.DepartmentService // 可选,通过 WithDeptCacheInvalidator 注入
+	core                 *core.Core
 }
 
 // NewLocationAliasHandler 构造 LocationAliasHandler 实例
@@ -39,6 +45,26 @@ func (h *LocationAliasHandler) WithCore(core *core.Core) *LocationAliasHandler {
 		h.core = core
 	}
 	return h
+}
+
+// WithDeptCacheInvalidator 注入 DepartmentService 用于触发 dept 缓存失效 (D-03 决策)。
+// 链式注入,可选依赖:未注入时跳过缓存失效(不阻断业务)。
+func (h *LocationAliasHandler) WithDeptCacheInvalidator(deptSvc systemServices.DepartmentService) *LocationAliasHandler {
+	if h != nil {
+		h.deptCacheInvalidator = deptSvc
+	}
+	return h
+}
+
+// invalidateDeptCache 触发 dept 缓存失效,失败仅 warn 不阻断响应 (D-03 决策)。
+func (h *LocationAliasHandler) invalidateDeptCache(c *gin.Context) {
+	if h.deptCacheInvalidator == nil {
+		return
+	}
+	if cacheErr := h.deptCacheInvalidator.InvalidateDeptCache(c.Request.Context()); cacheErr != nil {
+		applogger.Warnf("location alias 写操作后失效 dept 缓存失败: %v", cacheErr)
+		// 不阻断响应 — 缓存失效失败不影响业务数据落地
+	}
 }
 
 // aliasListQuery alias 列表查询请求体(分页参数)
@@ -86,6 +112,9 @@ func (h *LocationAliasHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// 触发 dept 缓存失效 (D-03 决策 — alias 变更影响工位部门下拉 union 结果)
+	h.invalidateDeptCache(c)
+
 	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "工位管理", operlog.OperTypeCreate)
 	response.Success(c, alias)
 }
@@ -103,6 +132,9 @@ func (h *LocationAliasHandler) Update(c *gin.Context) {
 		return
 	}
 
+	// 触发 dept 缓存失效 (D-03 决策 — alias 变更影响工位部门下拉 union 结果)
+	h.invalidateDeptCache(c)
+
 	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "工位管理", operlog.OperTypeUpdate)
 	response.Success(c, gin.H{"id": id})
 }
@@ -115,6 +147,9 @@ func (h *LocationAliasHandler) Delete(c *gin.Context) {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	// 触发 dept 缓存失效 (D-03 决策 — alias 变更影响工位部门下拉 union 结果)
+	h.invalidateDeptCache(c)
 
 	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "工位管理", operlog.OperTypeDelete)
 	response.Success(c, gin.H{"id": id})
