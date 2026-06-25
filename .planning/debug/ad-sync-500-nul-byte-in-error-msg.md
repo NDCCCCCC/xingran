@@ -1,6 +1,6 @@
 ---
 slug: ad-sync-500-nul-byte-in-error-msg
-status: root_cause_found
+status: resolved
 deferred_to: v1.16-tech-debt
 trigger: AD 域控手动同步点击后,前端报 500 (Internal Server Error),用户误以为是路由丢失
 created: 2026-06-16
@@ -226,3 +226,14 @@ func safeAttr(s string, maxLen int) string {
 ## Status
 
 **修复已应用并通过测试** — 等待用户重启后端后,触发任意 LDAP 同步错误验证 500 不再出现。
+
+## Phase 40 Closure (2026-06-25)
+
+复测：`internal/services/addomain/sync.go` 的 `safeAttr` helper 与
+`internal/utils/string_helper.go` 的 `SanitizeForDB` / `SanitizeAndTruncate`
+已落地，`updateSyncLog` / `categorizeOUs` / `syncGroups` / `syncUsers` /
+`syncComputers` 全部走清洗路径。本 session 描述的 fix 已就位，
+frontmatter 翻 `resolved`。
+
+verification: `grep -n "safeAttr\|SanitizeAndTruncate" internal/services/addomain/sync.go internal/utils/string_helper.go` 命中多处
+files_changed: .planning/debug/ad-sync-500-nul-byte-in-error-msg.md
