@@ -1,5 +1,6 @@
 ---
-status: awaiting_human_verify
+slug: user-filter-lost-after-edit
+status: resolved
 deferred_to: v1.16-tech-debt
 trigger: 用户管理页面修改用户后刷新页面会丢失筛选参数，请修复，之前其他页面出现过类似问题，请全部检查
 created: 2026-06-16
@@ -168,12 +169,15 @@ Changes:
 - `D:\CODE\ClaudeCode\ruoyi-go-backend\ruoyi-react-frontend\src\hooks\usePagination.ts` — current/pageSize persistence
 - `D:\CODE\ClaudeCode\ruoyi-go-backend\ruoyi-react-frontend\src\hooks\usePersistedState.ts` — new generic helper
 
-## Resolution
+## Phase 40 Closure (2026-06-25)
 
-### Root Cause
+复测确认 hook 层持久化方案已落地:
+- `src/hooks/useTableManager.ts` — sessionStorage 持久化 searchForm + 智能 `loadData()` 默认应用当前 filter + `loadDataWithCurrentFilter()`
+- `src/hooks/usePagination.ts` — `current`/`pageSize` 持久化到 sessionStorage
+- `src/hooks/usePersistedState.ts`(新)— 非 searchForm 本地 filter 状态(如 `selectedDeptId`)opt-in 持久化
+- `src/constants/storage.ts` — `TABLE_STATE_PREFIX` + `sanitizePathForKey()`
+- 30+ 列表页通过共用 `useTableManager` 自动继承修复,无需逐页改
 
-### Fix
+**dev 浏览器验证通过(用户操作)**:用户管理 → 搜索框输入"test" + 状态选"启用" → 编辑某用户改昵称保存 → 返回列表页 → 搜索框仍"test"、状态仍"启用"、列表仍为筛选结果(未刷新整页)。frontmatter 翻 `resolved`(D-05 + D-07)。
 
-### Verification
-
-### Files Changed
+verification: 2026-06-25 dev 浏览器验证通过,编辑用户后筛选条件(search + status)保留,列表仍为筛选结果
