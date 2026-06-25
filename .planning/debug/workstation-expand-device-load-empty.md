@@ -1,5 +1,6 @@
 ---
-status: awaiting_human_verify
+slug: workstation-expand-device-load-empty
+status: resolved
 deferred_to: v1.16-tech-debt
 trigger: "工位管理页面点击展开子列表展示设备提示加载设备失败，控制台及后端日志没有报错"
 created: 2026-06-13
@@ -114,3 +115,13 @@ updated: 2026-06-25
   - `ruoyi-react-frontend/src/lib/opsApi.ts`
   - `internal/api/v1/operations/workstation_device_handler.go`
   - `internal/api/router.go`
+
+## Phase 40 Closure (2026-06-25)
+
+复测确认两层修复均已就位:
+- Layer 1 前端:`opsApi.ts:657-672` 已定义 `getManual`/`getAD`/`getAsset`,`getByWorkstation` 保留为兼容别名;`WorkstationDeviceTable/index.tsx` 三段并行查询 + catch `console.error` 就位
+- Layer 2 后端:`workstation_device_handler.go` 全部用 `c.Param("id")`(line 43/97/124),路由 `POST /:id` 一致
+
+**dev 浏览器验证通过(用户操作)**:登录 → 工位管理 → 展开有设备的工位行 → 子表格成功加载手动/域控/资产设备列表;Network `workstation-device/{id}/...` 返回 200;console 无 TypeError / 无 "加载设备失败"。frontmatter 翻 `resolved`(D-05 + D-07)。
+
+verification: 2026-06-25 dev 浏览器验证通过,展开工位加载设备成功,Network 200,console 无错误
