@@ -1,6 +1,6 @@
 ---
 slug: workstation-device-build-errors
-status: awaiting_human_verify
+status: resolved
 deferred_to: v1.16-tech-debt
 trigger: Frontend build FAILED with 3 TypeScript errors in src/components/operations/WorkstationDeviceTable/index.tsx
 created: 2026-06-12T14:00:00+08:00
@@ -126,6 +126,15 @@ fix: |
   2. setPrimaryAndSave 调用前加空值检查 + early return:
      `if (!pathId) { message.error('设备缺少可用标识, 无法设为主设备'); return; }`
 verification: "npm run build 成功, 输出 'built in 1m 4s', 3 个 TS 错误全部消失"
+
+## Phase 40 Closure (2026-06-25)
+
+复测 `ruoyi-react-frontend/src/components/operations/WorkstationDeviceTable/index.tsx`:
+- antd import 已含 Modal
+- setPrimaryAndSave 前已有 pathId 空值检查
+Phase 40 build 验证:`npx tsc --noEmit` 退出码 0;`npm run build` 退出码 0,built in 1m 29s,dist/assets/ 产物齐全(含 vendor-react/echarts/three 等大 chunk)。frontmatter 翻 `resolved`(D-05 build 验证,无需浏览器)。
+
+verification: 2026-06-25 npx tsc --noEmit 退出码 0; npm run build 退出码 0 (built in 1m 29s); dist/ 有产物
 files_changed:
   - "ruoyi-react-frontend/src/components/operations/WorkstationDeviceTable/index.tsx"
 
