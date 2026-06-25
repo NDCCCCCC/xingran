@@ -1,6 +1,6 @@
 ---
 slug: captcha-rate-limit-not-expiring
-status: root_cause_found
+status: resolved
 deferred_to: v1.16-tech-debt
 trigger: 10.62.10.33登录一直提示验证码"获取验证码过于频繁，请稍后再试"，过了一天了还是提示这个，请检查1分钟有效期的配置是否生效
 created: 2026-05-23T11:15:00+08:00
@@ -140,3 +140,13 @@ client_ip=10.62.10.33 latency=2 method=POST path=/api/v1/system/auth/captcha req
     4. ⏳ 临时解除封禁：删除 Redis key `ruoyi:captcha:rate:10.62.10.33`
 
 - status: fix_applied
+
+## Phase 40 Closure (2026-06-25)
+
+复测 `pkg/cache/redis.go:177 IncrementWithExpire`（Lua 脚本原子 INCR+EXPIRE）
++ `internal/core/captcha.go:253-265` 已优先走原子路径，仅当 cache 实现未实现
+该接口时降级 Increment+Expire。TTL 静默丢失风险已消除。
+frontmatter 翻 `resolved`。
+
+verification: `grep -n "IncrementWithExpire" pkg/cache/redis.go internal/core/captcha.go` 命中
+files_changed: .planning/debug/captcha-rate-limit-not-expiring.md
