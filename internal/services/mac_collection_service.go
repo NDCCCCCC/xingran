@@ -13,6 +13,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/lldp"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/topology"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
@@ -163,6 +164,14 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 		macCountByInterface[normalized]++
 	}
 
+	// Step 2.5: 构建 trunk/互联端口 blockset（mac-collection-trunk-filter）
+	// 从 sys_device_port_status 取 PortType 暗示 trunk/hybrid/uplink 的端口名集合,
+	// 后续 Step 4 用它过滤掉交换机间互联 trunk 口上的重复 MAC。
+	trunkBlockset := portcollection.BuildTrunkPortBlockset(ctx, s.db, device.ID)
+	if len(trunkBlockset) > 0 {
+		applogger.Infof("[MAC采集] %s: trunk/互联端口 blockset=%v", device.DeviceName, trunkBlockset)
+	}
+
 	// Step 3: 获取设备类型对应的MAC数量阈值
 	threshold := s.getMACThreshold(device)
 	applogger.Infof("[MAC采集] %s: MAC数阈值=%d (设备类型=%s)", device.DeviceName, threshold, device.DeviceType)
@@ -188,6 +197,16 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 		if macCount > threshold {
 			applogger.Debugf("[MAC采集] %s: 过滤高MAC数端口 %s (MAC数=%d, 阈值=%d)",
 				device.DeviceName, mac.InterfaceName, macCount, threshold)
+			filteredCount++
+			continue
+		}
+
+		// 过滤规则3: trunk/互联端口过滤（mac-collection-trunk-filter）
+		// sys_device_port_status.PortType 暗示 trunk/hybrid/uplink 时,
+		// 该端口为交换机间互联口,跳过其上的 MAC 入库避免重复。
+		if portcollection.IsTrunkPort(trunkBlockset, mac.InterfaceName) {
+			applogger.Debugf("[MAC采集] %s: 过滤trunk/互联端口 %s",
+				device.DeviceName, mac.InterfaceName)
 			filteredCount++
 			continue
 		}

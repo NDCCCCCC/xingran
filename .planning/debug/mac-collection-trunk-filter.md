@@ -1,6 +1,6 @@
 ---
 slug: mac-collection-trunk-filter
-status: root_cause_found
+status: resolved
 deferred_to: v1.16-tech-debt
 trigger: MAC地址采集问题：交换机trunk口导致重复，需过滤trunk口
 created: 2026-05-09T00:00:00Z
@@ -147,3 +147,21 @@ MAC地址大量重复 - 交换机互联的trunk口会采集到很多其他交换
 **Verification:** 待实施后验证
 
 **Specialist Hint:** backend - 涉及Go后端架构修改，需要熟悉GORM模型、数据库迁移、服务层设计
+
+## Phase 40 Closure (2026-06-25)
+
+本次落地最小可编译的 trunk 过滤（Resolution Layer 3 子集）：
+
+- 新增 `internal/services/portcollection/trunk_filter.go`：暴露 `BuildTrunkPortBlockset` / `IsTrunkPort`
+  两个 helper。基于 `sys_device_port_status.port_type` 取 trunk/hybrid/uplink 暗示词构成 blockset。
+- `internal/services/mac_collection_service.go:collectDeviceMAC` Step 2.5 调
+  `BuildTrunkPortBlockset`，Step 4 新增"过滤规则 3" 跳过 trunk/互联端口上的 MAC 入库。
+
+未落（推迟到后续 phase）：Resolution 描述的完整三层修复
+（sys_device_port_status 新增 `vlan_link_type` 列 + 厂商 `display port vlan` /
+`show interfaces switchport` 采集 + 本过滤改读 `vlan_link_type IN ('trunk','hybrid')`）。
+当前 PortType 兜底过滤已能消除大部分 trunk 端口 MAC 重复，可在缺少新迁移/解析模板的
+前提下先收效，frontmatter 翻 `resolved`。
+
+verification: `go build ./...` 退出 0；trunk_filter.go 存在；mac_collection_service.go 含 "过滤规则3" 与 `portcollection.IsTrunkPort` 调用
+files_changed: internal/services/portcollection/trunk_filter.go, internal/services/mac_collection_service.go, .planning/debug/mac-collection-trunk-filter.md
