@@ -97,16 +97,21 @@ func TestValidateAlias_LocationNotExternalOrgRejected(t *testing.T) {
 	require.Contains(t, err.Error(), "外部机构", "错误信息须含 '外部机构' 关键字,供前端展示")
 }
 
-// TestValidateAlias_DeptNotDescendantRejected 验证三级校验第 3 级:
-// dept.ancestors 不含 location_id → 后代关系校验失败。
-func TestValidateAlias_DeptNotDescendantRejected(t *testing.T) {
+// TestValidateAlias_CrossBranchMappingPasses 验证 Phase 39 核心场景:
+// dept 编制上属于另一分支(非 location 后代),物理上挂在 location 办公 → 校验通过。
+//
+// 历史偏差:原 SPEC REQ-39-02 规则③要求"dept 必须是 location 后代",与功能本质矛盾
+// (alias 存在的意义正是 dept 不是 location 后代)。UAT 确认移除规则③后,跨分支映射
+// 应当通过(只要 location 是外部机构 + 非自映射)。
+func TestValidateAlias_CrossBranchMappingPasses(t *testing.T) {
 	db := setupLocationAliasTestDB(t)
 	svc := NewLocationAliasService(db)
 	ctx := context.Background()
 
-	// 两个互不相关的外部机构 + 内部部门(dept 的 ancestors 不含 location_id)
-	locationID := seedDept(t, db, "外部机构A", 1, "")
-	deptID := seedDept(t, db, "外部机构B", 1, "") // ancestors 为空,与 location 无血缘
+	// location = 外部机构(中心支公司B);dept = 另一分支的子部门(运营服务部/子部门A),
+	// 其 ancestors 不含 location_id(编制上不在 location 子树下)。
+	locationID := seedDept(t, db, "中心支公司B", 1, "")
+	deptID := seedDept(t, db, "运营服务部/子部门A", 0, ",其他上级分支,") // ancestors 不含 location
 
 	alias := &models.SysDeptLocationAlias{
 		DeptID:     deptID,
@@ -115,40 +120,29 @@ func TestValidateAlias_DeptNotDescendantRejected(t *testing.T) {
 	}
 
 	err := svc.(*locationAliasServiceImpl).validateAlias(ctx, alias)
-	require.Error(t, err, "ancestors 不含 location_id 必须被拒绝")
-	require.Contains(t, err.Error(), "后代", "错误信息须含 '后代' 关键字,供前端展示")
+	require.NoError(t, err, "跨分支物理位置映射(非后代)应当通过 — 这是 Phase 39 的核心场景")
 }
 
-// TestValidateAlias_SubstringFalsePositive 边界用例:
-// ancestors 含 location_id 的**子串**但非完整 ID 时不能误判。
-// 例如 ancestors = ",uuid-abc," location_id = "uuid-ab" → 子串误判风险;
-// ","+ancestors+"," + ","+locationID+"," 模式可避免此 bug。
-func TestValidateAlias_SubstringFalsePositive(t *testing.T) {
+// TestValidateAlias_LocationNotExistRejected 验证 location 不存在时校验失败
+// (原 SubstringFalsePositive 用例的前提——ancestor 子串匹配——已随规则③移除,
+// 改为守护 location 必须真实存在这一约束)。
+func TestValidateAlias_LocationNotExistRejected(t *testing.T) {
 	db := setupLocationAliasTestDB(t)
 	svc := NewLocationAliasService(db)
 	ctx := context.Background()
 
-	// 两个真实的 uuid,人为构造一个 location_id 是 dept.ancestors 中 ID 的前缀的伪场景
-	// 因为我们手工指定 ancestors,可以直接覆盖这一边界。
-	// ancestors = ",loc-root,"  location_id = "loc-roo" (前缀)
-	// 期望: validateAlias 失败(因为 dept.ancestors 真实不含 "loc-roo",但即使祖先真的
-	// 存在前缀相似,逗号包围匹配也必须正确区分)。
-	rootID := seedDept(t, db, "root", 1, "")
-	deptID := seedDept(t, db, "sub", 1, ","+rootID+",")
+	deptID := seedDept(t, db, "原组织", 0, "")
+	notExistLocation := uuid.NewString() // 不存在的 location_id
 
-	// 让 location_id 是 rootID 的前缀(人为),dept 的 ancestors 是完整 rootID → 不命中
-	prefix := rootID[:len(rootID)-1] // 去掉最后一个字符,得到 rootID 的前缀
 	alias := &models.SysDeptLocationAlias{
 		DeptID:     deptID,
-		LocationID: prefix,
+		LocationID: notExistLocation,
 		Scope:      aliasDefaultScope,
 	}
 
 	err := svc.(*locationAliasServiceImpl).validateAlias(ctx, alias)
-	require.Error(t, err, "前缀子串不能误判为后代命中")
-	// 错误来源可能是 location 不存在(is_external_org=1 校验需要 location 真实存在)
-	// 或者后代校验失败 — 只要不是 false-positive 放行即可
-	require.NotContains(t, err.Error(), "panic", "不能 panic")
+	require.Error(t, err, "location 不存在必须被拒绝")
+	require.Contains(t, err.Error(), "物理位置部门不存在")
 }
 
 // TestValidateAlias_Pass 完整链路:

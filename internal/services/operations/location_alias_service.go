@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"gorm.io/gorm"
@@ -35,10 +34,9 @@ const aliasDefaultScope = "workstation"
 // 用途:管理 sys_dept_location_alias 表的 CRUD,工位导入/查询时把外部物理机构
 // 合入到本系统的部门选择列表。
 //
-// 三级校验(REQ-39-02):所有 Create/Update 调用都会经过 validateAlias 三级校验:
+// 二级校验(REQ-39-02):所有 Create/Update 调用都会经过 validateAlias 二级校验:
 //  1. 自映射拦截(dept_id == location_id)
 //  2. location 必须是外部机构(is_external_org = 1)
-//  3. dept 必须是 location 的后代(ancestors 含 location_id)
 //
 // 校验失败返回中文 error,handler 直接透传给前端(400 + 明确错误信息)。
 type LocationAliasService interface {
@@ -212,13 +210,20 @@ func (s *locationAliasServiceImpl) Delete(ctx context.Context, id string) error 
 	return s.db.WithContext(ctx).Where("id = ?", id).Delete(&models.SysDeptLocationAlias{}).Error
 }
 
-// validateAlias 三级校验(REQ-39-02 后端防线)
+// validateAlias 二级校验(REQ-39-02 后端防线)
 //
 //  1. 防自映射:dept_id == location_id 直接拒绝
 //  2. location 必须是外部机构:is_external_org = 1
-//  3. dept 必须是 location 的后代:dept.ancestors 含 location_id(逗号包围避免子串误匹配)
 //
 // 校验失败返回中文 error,handler 透传给前端,HTTP 400。
+//
+// 历史偏差说明:原 SPEC REQ-39-02 还含第 3 条"dept 必须是 location 的后代
+// (dept.ancestors 含 location_id)"。该规则与 Phase 39 功能本质直接矛盾——
+// alias 存在的意义正是"组织编制与物理办公地分离"(dept 编制上属于另一分支,
+// 物理上在 location 办公),dept 本就不是 location 的后代。SPEC 自身的验收用例
+// (dept=运营服务部/子部门A, location=中心支公司B)在该规则下也无法创建。
+// UAT 确认后移除规则③,保留 ①防自映射 + ②location 必须是外部机构。详见
+// 39-VERIFICATION.md 偏差记录。
 func (s *locationAliasServiceImpl) validateAlias(ctx context.Context, alias *models.SysDeptLocationAlias) error {
 	// 1. 防自映射
 	if alias.DeptID == alias.LocationID {
@@ -240,21 +245,6 @@ func (s *locationAliasServiceImpl) validateAlias(ctx context.Context, alias *mod
 	}
 	if location.IsExternalOrg != 1 {
 		return errors.New("物理位置必须是外部机构(is_external_org=1)")
-	}
-
-	// 3. dept 必须是 location 的后代
-	var dept models.Department
-	if err := s.db.WithContext(ctx).
-		Where("id = ? AND deleted_at IS NULL", alias.DeptID).
-		First(&dept).Error; err != nil {
-		return fmt.Errorf("原组织部门不存在: %w", err)
-	}
-
-	// ancestors 字段是逗号分隔的 id 列表(自底向上)
-	// 判定: alias.LocationID 必须在 dept.Ancestors 字符串中(逗号包围,避免子串误匹配)
-	// 例如 ancestors = ",uuid1,uuid2," location_id = "uuid1" → ",uuid1," 命中
-	if !strings.Contains(","+dept.Ancestors+",", ","+alias.LocationID+",") {
-		return errors.New("原组织必须是物理位置的后代部门(ancestor 关系校验失败)")
 	}
 
 	return nil
