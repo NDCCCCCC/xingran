@@ -41,6 +41,31 @@ func (h *WorkstationHandler) Statistics(c *gin.Context) {
 	response.Success(c, result)
 }
 
+// GetWorkstationDeptOptions 工位编辑"所属部门"下拉数据源(orgId 子孙 + alias union)
+// @Summary 工位部门下拉选项
+// @Description union 查询: orgId 子孙节点 + alias 映射节点 (含 isAlias 标记)
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body object{orgId=string} true "orgId"
+// @Success 200 {object} response.Response{data=[]opsServices.DeptOption}
+// @Failure 500 {object} response.Response
+// @Router /ops/workstation/dept-options [post]
+func (h *WorkstationHandler) GetWorkstationDeptOptions(c *gin.Context) {
+	var req struct {
+		OrgID string `json:"orgId"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		req.OrgID = ""
+	}
+	result, err := h.service.GetWorkstationDeptOptions(c.Request.Context(), req.OrgID)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.Success(c, result)
+}
+
 // Create 创建工位
 // @Summary 创建工位
 // @Description 创建新的工位信息

@@ -591,6 +591,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 			// 注意：更具体的路由要放在前面，避免被通用路由匹配
 			workstations.POST("/list", workstationHandler.List)
+			workstations.POST("/dept-options", workstationHandler.GetWorkstationDeptOptions)
 			workstations.POST("/statistics", workstationHandler.Statistics)
 			workstations.POST("/batch", workstationHandler.BatchOperation)
 			workstations.POST("/positions", workstationHandler.BatchUpdatePositions)
