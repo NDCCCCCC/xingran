@@ -824,6 +824,13 @@ Plans:
 
 - [x] 38-04-PLAN.md — Wave 3：model struct tag 放宽 + migration_163 幂等补迁 + 启动空池 WARN 校验，D-01 Wave 3 + D-02 + D-03 收尾
 
+### Phase 39: 工位部门物理位置映射 (workstation dept location alias)
+
+**Goal:** 解决"组织编制与物理办公地分离"的部门（如运营服务部）在工位管理页面无法绑定的问题。方案：新增 `sys_dept_location_alias` 表 + 工位列表页内联 Drawer 管理映射 + 部门下拉查询 union 改写，使运营服务部等"逻辑上独立编制、物理上分散办公"的子部门能出现在工位部门下拉中。
+**Requirements**: 待 SPEC.md 锁定（spec-phase 进行中）
+**Depends on:** Phase 28 (工位设备关联)
+**Plans:** 0/? plans (spec-phase in progress)
+
 ---
 
 | Phase | Milestone | Plans Complete | Status | Completed |
