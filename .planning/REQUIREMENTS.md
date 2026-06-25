@@ -44,9 +44,32 @@ last_updated: 2026-06-25
 
 | REQ-ID | Description | Phase | Status |
 |--------|-------------|-------|--------|
-| TECH-01..03 | 22 个 deferred debug 会话处理 | 40 (tech-debt-cleanup) | Planned |
-| TECH-04 | 6 个 audit 数据质量问题 | 40 (tech-debt-cleanup) | Planned |
-| TECH-05 | 清理完成的审计指标验收 | 40 (tech-debt-cleanup) | Planned |
+| TECH-01 | 16 root_cause_found debug 会话修复 + commit | Phase 40 (tech-debt-cleanup) | Planned |
+| TECH-02 | 5 awaiting_human_verify debug 会话 dev 复现验证 | Phase 40 (tech-debt-cleanup) | Planned |
+| TECH-03 | 1 root-cause-found 会话(apikey-route-path-duplication) | Phase 40 (tech-debt-cleanup) | Planned |
+| TECH-04 | 6 audit 数据质量问题整理(frontmatter + 排除范围) | Phase 40 (tech-debt-cleanup) | Planned |
+| TECH-05 | 验收指标:debug_sessions < 5 + 全量 frontmatter 校验通过 | Phase 40 (tech-debt-cleanup) | Planned |
+
+**Coverage**: 5/5 v1.16 requirements mapped to Phase 40 ✓
+**No orphans, no duplicates**
+
+### Phase 40 Success Criteria Cross-Check
+
+8 observable success criteria (full text in `.planning/ROADMAP.md`):
+
+| # | Criterion | Supporting REQ |
+|---|-----------|---------------|
+| 1 | 16 root_cause_found 会话修复 + commit 闭环 | TECH-01 |
+| 2 | 5 awaiting_human_verify 会话 dev 复现 + resolved | TECH-02 |
+| 3 | apikey-route-path-duplication 修复 | TECH-03 |
+| 4 | login-400 + ops-asset-constraint 补 frontmatter | TECH-04 |
+| 5 | knowledge-base 移出 audit 范围 | TECH-04 |
+| 6 | info-point-type-null + sys-mac-filter-rules frontmatter 统一 | TECH-04 |
+| 7 | audit-open debug_sessions < 5 | TECH-05 |
+| 8 | 全量 frontmatter 校验脚本通过率 100% | TECH-05 |
+
+**Coverage check**: All 8 success criteria trace to ≥1 TECH requirement ✓
+All 5 TECH requirements contribute to ≥1 success criterion ✓
 
 ---
 
