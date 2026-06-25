@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: 工位设备关联 (Phase 28)
 status: milestone_complete
-stopped_at: Milestone complete (Phase 38 was final phase)
-last_updated: 2026-06-23T04:49:37.509Z
+stopped_at: "Phase 38 Plan 01 complete (Wave 1 前置 DI 脚手架), next: 38-02 连接层统一"
+last_updated: "2026-06-25T03:32:13.508Z"
 progress:
-  total_phases: 16
-  completed_phases: 10
-  total_plans: 80
-  completed_plans: 144
-  percent: 63
+  total_phases: 17
+  completed_phases: 11
+  total_plans: 88
+  completed_plans: 70
+  percent: 65
 ---
 
 # Project State
