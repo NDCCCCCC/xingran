@@ -33,7 +33,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { locationAliasApi, type LocationAlias } from "@/lib/opsApi";
 import { queryKeys } from "@/lib/queryKeys";
 import { useDeptTree, useInvalidateDept } from "@/hooks/useDeptTree";
-import { filterExternalOrgDepts, trimTitleToLastSegment } from "@/utils/deptUtils";
+import { filterExternalOrgDepts, toFullPathTree } from "@/utils/deptUtils";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
 import { useMenuStore } from "@/store/menuStore";
 import type { DeptTreeNode } from "./types";
@@ -70,14 +70,12 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
     },
   });
 
-  // 派生:全量短名树 + 仅外部机构子树
-  // 注意:useDeptTree 返回的是 SimpleDept 形状(id/deptName/children/isExternalOrg),
-  // 但其同包内 buildTreeData 类函数已将 title 拼为全路径。trimTitleToLastSegment
-  // 只裁 title 不动 value/key,因此先 trim 再 filter 是安全顺序。
-  // 若数据源未来切到不含 title 的形状,trim 是 no-op。
-  const fullDeptTreeData: DeptTreeNode[] = trimTitleToLastSegment(
-    (deptTreeData ?? []) as unknown as DeptTreeNode[],
-  );
+  // 派生:全量部门树 + 仅外部机构子树
+  // useDeptTree 返回 SimpleDept 形状(id/deptName/children/isExternalOrg),
+  // antd TreeSelect 需要 {value,title,key} 形状;用 toFullPathTree 把 id→value、
+  // deptName 拼成全路径 title(管理 Drawer 用全路径利于消歧同名部门)。
+  // trimTitleToLastSegment 不适用(SimpleDept 无 title 字段,是 no-op)。
+  const fullDeptTreeData = toFullPathTree(deptTreeData ?? []) as unknown as DeptTreeNode[];
   const locationTreeData: DeptTreeNode[] = filterExternalOrgDepts<DeptTreeNode>(fullDeptTreeData);
 
   // 双失效工具
@@ -189,11 +187,11 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
       title="工位部门物理位置映射管理"
       open={open}
       onClose={onClose}
-      width={600}
+      size="large"
       destroyOnHidden
       maskClosable
     >
-      <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
         {/* 新增映射入口 + 折叠表单 */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <Text strong>映射列表({total} 条)</Text>
