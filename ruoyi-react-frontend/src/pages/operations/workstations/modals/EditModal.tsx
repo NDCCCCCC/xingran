@@ -98,12 +98,16 @@ export function WorkstationEditModal({
       ? trimTitleToLastSegment(node.children)
       : [];
 
-    // Phase 39 union 注入 (D-01 决策): alias 映射部门追加到 baseTree 末尾。
+    // Phase 39 union 注入 (D-01 决策): 仅 isAlias=true 的映射部门追加到 baseTree 末尾。
     // 数据源为后端 POST /ops/workstation/dept-options 的 isAlias=true 条目,
     // 经父组件 useAliasByLocation → aliasList 透传进来。
-    if (!aliasList || aliasList.length === 0) return baseTree;
+    // 注意:aliasList 也含 isAlias=false 的机构子树条目(后端 union 第一段),但那些
+    // 已经在 baseTree(deptTreeData 子树)里了,必须过滤掉,否则整棵子树重复注入 →
+    // 下拉显示所有部门 + TreeSelect "Same key" 重复告警。
+    const aliasOnly = (aliasList ?? []).filter((a) => a?.isAlias === true);
+    if (aliasOnly.length === 0) return baseTree;
 
-    const aliasNodes: DeptTreeNode[] = aliasList.map((a) => {
+    const aliasNodes: DeptTreeNode[] = aliasOnly.map((a) => {
       // 走 trimTitleToLastSegment 保持与 baseTree title 收窄规则一致
       // (DeptOption.deptName 一般不含 " / ",函数会原样返回)
       const trimmed =

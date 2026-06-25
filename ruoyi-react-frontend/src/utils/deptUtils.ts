@@ -290,3 +290,33 @@ export function toShortNameDataNode<
   };
   return build(nodes ?? []);
 }
+
+/**
+ * 按节点 value/key 去重部门树(深度优先,保留首次出现的节点)。
+ *
+ * 背景:后端 buildDeptTree 把 ParentID 非空但 Ancestors 为空的历史/导入数据
+ * 提升到根,同时又嵌套在其真实父节点下 → 同一部门在树中出现两次 → antd
+ * Tree/TreeSelect "Same key exist in the Tree" 告警 + 选中歧义。
+ * 本函数在前端兜底去重,保证喂给 TreeSelect 的 treeData 每个 value 唯一。
+ * 对 TreeSelect 是安全的(同 value 的重复节点本就无法区分)。
+ */
+export function dedupTreeByKey<
+  T extends { value?: string; key?: string; children?: T[] },
+>(nodes: T[]): T[] {
+  const seen = new Set<string>();
+  const walk = (list: T[]): T[] => {
+    const result: T[] = [];
+    for (const node of list) {
+      const id = node.value ?? node.key ?? "";
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      const next = { ...node };
+      if (node.children?.length) {
+        next.children = walk(node.children);
+      }
+      result.push(next);
+    }
+    return result;
+  };
+  return walk(nodes ?? []);
+}

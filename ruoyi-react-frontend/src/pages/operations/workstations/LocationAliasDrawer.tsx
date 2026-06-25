@@ -33,7 +33,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { locationAliasApi, type LocationAlias } from "@/lib/opsApi";
 import { queryKeys } from "@/lib/queryKeys";
 import { useDeptTree, useInvalidateDept } from "@/hooks/useDeptTree";
-import { filterExternalOrgDepts, toFullPathTree, trimTitleToLastSegment } from "@/utils/deptUtils";
+import { dedupTreeByKey, filterExternalOrgDepts, toFullPathTree, trimTitleToLastSegment } from "@/utils/deptUtils";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
 import { useMenuStore } from "@/store/menuStore";
 import type { DeptTreeNode } from "./types";
@@ -71,14 +71,22 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
   });
 
   // 派生:全量部门树 + 仅外部机构子树
-  // 两步组合:toFullPathTree 把 SimpleDept{id,deptName} 转成 TreeSelect 需要的
+  // 三步组合:toFullPathTree 把 SimpleDept{id,deptName} 转成 TreeSelect 需要的
   // {title, value:id, key:id, isExternalOrg, children}(修复 value=undefined);
-  // 再用 trimTitleToLastSegment 把全路径 title 裁成末段(只显示当前部门名,
-  // 如 "业务部" 而非 "集团 / 中心支公司 / 业务部"),下拉更简洁。
-  const fullDeptTreeData = trimTitleToLastSegment(
-    toFullPathTree(deptTreeData ?? []),
-  ) as unknown as DeptTreeNode[];
-  const locationTreeData: DeptTreeNode[] = filterExternalOrgDepts<DeptTreeNode>(fullDeptTreeData);
+  // trimTitleToLastSegment 把全路径 title 裁成末段(只显示当前部门名);
+  // dedupTreeByKey 兜底去重(后端 buildDeptTree 会把 Ancestors 为空但有 ParentID
+  // 的部门提升到根 + 嵌套父节点下,导致同一部门重复 → antd "Same key" 告警)。
+  const fullDeptTreeData = useMemo(
+    () =>
+      dedupTreeByKey(
+        trimTitleToLastSegment(toFullPathTree(deptTreeData ?? [])),
+      ) as unknown as DeptTreeNode[],
+    [deptTreeData],
+  );
+  const locationTreeData: DeptTreeNode[] = useMemo(
+    () => dedupTreeByKey(filterExternalOrgDepts<DeptTreeNode>(fullDeptTreeData)) as unknown as DeptTreeNode[],
+    [fullDeptTreeData],
+  );
 
   // 仅展开第一层(根节点),避免全树展开导致下拉太长难找部门。
   const deptRootKeys = useMemo(() => fullDeptTreeData.map((n) => n.value), [fullDeptTreeData]);
