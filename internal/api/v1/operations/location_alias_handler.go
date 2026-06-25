@@ -2,7 +2,6 @@ package operations
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
@@ -68,25 +67,25 @@ func (h *LocationAliasHandler) invalidateDeptCache(c *gin.Context) {
 }
 
 // aliasListQuery alias 列表查询请求体(分页参数)
+// 前端 opsApi.locationAliasApi.list 在 POST body 发送 { pageNum, pageSize },
+// 这里从 body 绑定(与本包 workstation_handler.List 的 body 绑定约定一致)。
 type aliasListQuery struct {
-	Current  int `json:"current" form:"current"`
-	PageSize int `json:"pageSize" form:"pageSize"`
+	PageNum  int `json:"pageNum"`
+	PageSize int `json:"pageSize"`
 }
 
 // List 查询 alias 列表(读操作,不写 operlog)
 func (h *LocationAliasHandler) List(c *gin.Context) {
+	// 从 POST body 读取分页参数;缺失或非法时回退默认值( pageNum=1, pageSize=10)
+	var q aliasListQuery
+	_ = c.ShouldBindJSON(&q)
 	pageNum := 1
 	pageSize := 10
-
-	if v := c.Query("current"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			pageNum = n
-		}
+	if q.PageNum > 0 {
+		pageNum = q.PageNum
 	}
-	if v := c.Query("pageSize"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			pageSize = n
-		}
+	if q.PageSize > 0 {
+		pageSize = q.PageSize
 	}
 
 	result, err := h.service.List(c.Request.Context(), pageNum, pageSize)
