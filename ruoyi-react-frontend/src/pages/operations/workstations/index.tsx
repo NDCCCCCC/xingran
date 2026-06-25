@@ -24,6 +24,7 @@ import { useTableManager } from "@/hooks/useTableManager";
 import { useTableQuery } from "@/hooks/useTableQuery";
 import { usePagination } from "@/hooks/usePagination";
 import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
+import { useAliasByLocation } from "@/hooks/useAliasByLocation";
 import { ExcelImportLazy } from "@/components/shared";
 import ExcelExport from "@/components/shared/ExcelExport";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
@@ -75,6 +76,13 @@ const WorkstationManagement: FC = () => {
   const [floorOptions, setFloorOptions] = useState<FloorOption[]>([]);
   const [deptTreeData, setDeptTreeData] = useState<DeptTreeNode[]>([]);
   const [userOptions, setUserOptions] = useState<UserOption[]>([]);
+
+  // Phase 39: 监听工位编辑模态框 orgId 变化 (新增时由 onOrgChange, 编辑时由 setEditFormValues 触发),
+  // 顶层 state lift → useAliasByLocation 拉取该机构的 alias 映射部门列表 (D-06/D-07 决策)。
+  // 注意: EditModal 内部的 Form.useWatch("orgId") 仍保留 (subDeptTree 派生依赖),
+  // 这里只是为了在顶层拿到 orgId 喂给 useAliasByLocation, 不修改 EditModal 内部逻辑。
+  const [watchedOrgId, setWatchedOrgId] = useState<string | undefined>(undefined);
+  const { data: aliasList = [] } = useAliasByLocation(watchedOrgId);
 
   // 派生:仅外部机构(isExternalOrg===1 的节点)的部门树。
   // 模态框"所属机构"与左侧 DeptSidebar(默认 externalOnly=true)共用同一份外部机构视图。
@@ -336,6 +344,8 @@ const WorkstationManagement: FC = () => {
 
   // 机构变化时加载楼宇列表
   const handleOrgChange = useCallback(async (orgId: string) => {
+    // Phase 39: 同步 orgId 到顶层 state, 触发 useAliasByLocation 重新拉取 alias 映射部门
+    setWatchedOrgId(orgId || undefined);
     if (!orgId) {
       setCascaderOptions([]);
       return;
@@ -377,6 +387,8 @@ const WorkstationManagement: FC = () => {
   const setEditFormValues = useCallback(async (record: WorkstationOps) => {
     if (!record.floorId) {
       workstationForm.setFieldsValue(record);
+      // Phase 39: 同步编辑模式的 orgId 到顶层 state, 触发 useAliasByLocation
+      setWatchedOrgId(record.orgId || undefined);
       return;
     }
 
@@ -406,6 +418,10 @@ const WorkstationManagement: FC = () => {
         buildingId,
       };
 
+      // Phase 39: 编辑模式 orgId 也要同步到顶层 state,
+      // 触发 useAliasByLocation 拉取该机构的 alias 映射部门
+      setWatchedOrgId(orgId || undefined);
+
       if (orgId) {
         // 预加载 cascaderOptions；useEffect 会在选项就绪后写入表单
         await preloadCascaderPath(orgId, buildingId);
@@ -433,6 +449,8 @@ const WorkstationManagement: FC = () => {
     } else {
       handleAdd();
       setCascaderOptions([]);
+      // Phase 39: 新增模式无 orgId, 清空顶层 watchedOrgId 避免上一次编辑的 alias 数据残留
+      setWatchedOrgId(undefined);
       workstationForm.setFieldsValue({ status: 0, type: 0 });
     }
     setModalVisible(true);
@@ -697,6 +715,7 @@ const WorkstationManagement: FC = () => {
           editingWorkstation={editingWorkstation}
           orgTreeData={orgTreeData}
           deptTreeData={deptTreeData}
+          aliasList={aliasList}
           userOptions={userOptions}
           cascaderOptions={cascaderOptions}
           loadingCascader={loadingCascader}
