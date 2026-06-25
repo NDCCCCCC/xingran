@@ -197,19 +197,34 @@ export function trimTitleToLastSegment<
  *
  *   toFullPathTree([...], { startFromLevel: 2 })  // 复现旧 convertDeptTreeData.slice(1) 语义
  */
+/**
+ * 全路径树节点:`toFullPathTree` 的递归输出类型。
+ *
+ * 每个节点(含深层 children)都叠加 `title/value/key/isExternalOrg?`。
+ * 用 `Omit<T, "children">` 避开 T 自身 children 类型(如 `SimpleDept.children: SimpleDept[]`)
+ * 与叠加 children 的冲突 —— 否则交集类型的 children 仍是非递归的 `SimpleDept[]`,
+ * 无法满足 `trimTitleToLastSegment`/`dedupTreeByKey` 等自引用泛型约束
+ * `<T extends { children?: T[] }>`(深层子节点也必须有 title/value/key)。
+ */
+export type FullPathTreeNode<T> = Omit<T, "children"> & {
+  title: string;
+  value: string;
+  key: string;
+  isExternalOrg?: number;
+  children?: FullPathTreeNode<T>[];
+};
+
 export function toFullPathTree<
   T extends DeptLikeNode & { deptName?: string },
 >(
   nodes: T[],
   opts?: { startFromLevel?: 1 | 2 },
-): Array<
-  T & { title: string; value: string; key: string; isExternalOrg?: number }
-> {
+): FullPathTreeNode<T>[] {
   const startFromLevel = opts?.startFromLevel ?? 1;
   // startFromLevel=k 意味着 ancestors[0..k-2] 全部丢弃,保留 ancestors[k-1..]
   // (k=1 时不裁剪;k=2 时丢 ancestors[0],即等价于旧 convertDeptTreeData 的 slice(1))
   const ancestorKeepFrom = Math.max(0, startFromLevel - 1);
-  type Out = T & { title: string; value: string; key: string; isExternalOrg?: number };
+  type Out = FullPathTreeNode<T>;
 
   const build = (list: T[], ancestors: string[]): Out[] => {
     return (list ?? []).map((node) => {
