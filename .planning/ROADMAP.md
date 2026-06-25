@@ -183,12 +183,12 @@
 
 **预期子计划 (6 plans, 14-05 拆分为 14-05a + 14-05b)**:
 
-- [ ] 14-01-PLAN.md — MAC 历史查询主列表页 (时间筛选、MAC/设备/端口筛选、分页、操作列)
-- [ ] 14-02-PLAN.md — 轨迹可视化页 UX 增强 (ECharts Gantt 交互、停留时长热力、时间范围预设导出)
-- [ ] 14-03-PLAN.md — 菜单/权限/路由注册 (与 sys_menu 同步,与现有网络设备模块并列展示)
-- [ ] 14-04-PLAN.md — Excel 导出与批量操作 (后端 export 接口 + 前端 download 触发)
-- [ ] 14-05a-PLAN.md — 共享三态组件抽取 (EmptyStateWithAction + ErrorAlertWithRetry,Wave 2)
-- [ ] 14-05b-PLAN.md — 列表/轨迹页改造 + 网络设备联动入口 (Wave 3,保留 14-04 导出按钮)
+- [x] 14-01-PLAN.md — MAC 历史查询主列表页 (时间筛选、MAC/设备/端口筛选、分页、操作列)
+- [x] 14-02-PLAN.md — 轨迹可视化页 UX 增强 (ECharts Gantt 交互、停留时长热力、时间范围预设导出)
+- [x] 14-03-PLAN.md — 菜单/权限/路由注册 (与 sys_menu 同步,与现有网络设备模块并列展示)
+- [x] 14-04-PLAN.md — Excel 导出与批量操作 (后端 export 接口 + 前端 download 触发)
+- [x] 14-05a-PLAN.md — 共享三态组件抽取 (EmptyStateWithAction + ErrorAlertWithRetry,Wave 2)
+- [x] 14-05b-PLAN.md — 列表/轨迹页改造 + 网络设备联动入口 (Wave 3,保留 14-04 导出按钮)
 
 **Phase Highlights**:
 
@@ -278,17 +278,17 @@
   - 绑定用户张三：张三所在部门和张三本人可见
 
 **Depends on:** Phase 22 (深信服桌面云集成)
-**Plans:** 4 plans
+**Plans:** 5/5 plans complete
 
 **Wave 1 - 基础设施**
 
-- [ ] 25-01-PLAN.md — 数据库迁移：细粒度权限菜单
-- [ ] 25-02-PLAN.md — 后端数据范围过滤函数
+- [x] 25-01-PLAN.md — 数据库迁移：细粒度权限菜单
+- [x] 25-02-PLAN.md — 后端数据范围过滤函数
 
 **Wave 2 - 路由与前端**
 
-- [ ] 25-03-PLAN.md — 路由权限中间件配置
-- [ ] 25-04-PLAN.md — 前端动态按钮渲染
+- [x] 25-03-PLAN.md — 路由权限中间件配置
+- [x] 25-04-PLAN.md — 前端动态按钮渲染
 
 **Phase Highlights**:
 
@@ -867,7 +867,7 @@ Plans:
 | 11. MAC地址采集优化 - 过滤设备间互联端口 | v1.4 | 4/4 | Complete | 2026-05-09 |
 | 12. 数据模型与采集集成 | v1.5 | 5/5 | Complete | 2026-05-11 |
 | 13. 查询层与轨迹 | v1.5 | 6/6 | Complete | 2026-06-13 |
-| 14. 前端与用户体验 | v1.5 | 10/10 | Complete | 2026-06-15 |
+| 14. 前端与用户体验 | v1.5 | 10/10 | Complete    | 2026-06-25 |
 | 15. 性能优化 | v1.5 | 5/5 | Complete | 2026-06-15 |
 | 16. API 密钥管理 | v1.6 | 10/10 | Complete | 2026-05-19 |
 | 17. 前后端加密配置同步 | v1.7 | 6/6 | Complete | 2026-05-20 |
@@ -877,7 +877,7 @@ Plans:
 | 21. 网络设备管理权限泄露修复 | v1.10 | 1/1 | Complete | 2026-05-24 |
 | 23. AD组自动同步系统 | v1.11 | 18/18 | Complete | 2026-05-26 |
 | 24. UUID类型一致性优化 | - | 2/2 | Complete | 2026-05-27 |
-| 25. 虚拟机数据范围权限配置 | - | 0/4 | Planned | - |
+| 25. 虚拟机数据范围权限配置 | - | 5/5 | Complete    | 2026-06-25 |
 | 22A. VDI 基础集成 | v1.12 | 0/5 | Planned | - |
 | 22B. VM Agent 服务 | v1.12 | 0/1 | Planned | - |
 | 22C. 账号管理与密码 | v1.12 | 0/2 | Planned | - |
