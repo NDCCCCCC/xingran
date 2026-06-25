@@ -19,12 +19,13 @@ const aliasListJoinSelect = `sys_dept_location_alias.*,
 // aliasListJoinClause alias 列表查询 join 子句:
 //
 // alias.dept_id / location_id 都是 varchar(64),sys_dept.id 是 uuid。
-// 生产 PG 端 `id::text = ?` 把 uuid 转 text 再比较;SQLite 端 uuid 列实际
-// 存为 TEXT,GORM 按字符串直接比对。
-// 此处使用裸 `id = ?`(由 GORM 生成 SQL 时自动适配 driver),与 building_service.go
-// 同样不使用 ::text 转换,在 PG 与 SQLite 双 DB 行为一致。
-const aliasListJoinClause = `LEFT JOIN sys_dept origin ON origin.id = sys_dept_location_alias.dept_id AND origin.deleted_at IS NULL
-	LEFT JOIN sys_dept location ON location.id = sys_dept_location_alias.location_id AND location.deleted_at IS NULL`
+// PG 拒绝 uuid = character varying 的列对列比较(SQLSTATE 42883),
+// 必须显式转换一侧类型。用标准 SQL 的 CAST(... AS TEXT):
+//   - PG: CAST(uuid AS TEXT) 把 uuid 转成 text,再与 varchar 比较(text 与 varchar 同族,有 = 操作符)
+//   - SQLite: uuid 列实际存为 TEXT,CAST(x AS TEXT) 是 no-op,TEXT = TEXT 正常
+// 故 CAST 写法在 PG/SQLite 双 DB 行为一致(不能用 PG 专有 `::text`,SQLite 语法错误)。
+const aliasListJoinClause = `LEFT JOIN sys_dept origin ON CAST(origin.id AS TEXT) = sys_dept_location_alias.dept_id AND origin.deleted_at IS NULL
+	LEFT JOIN sys_dept location ON CAST(location.id AS TEXT) = sys_dept_location_alias.location_id AND location.deleted_at IS NULL`
 
 // aliasDefaultScope alias.scope 字段默认取值(D-04 决策:聚焦 workstation 场景)。
 const aliasDefaultScope = "workstation"
