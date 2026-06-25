@@ -604,6 +604,25 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			operations.SetupExcelRouter(workstations, "workstation", core)
 		}
 
+		// 工位部门物理位置映射 (Phase 39)
+		locationAlias := ops.Group("/location-alias")
+		locationAlias.Use(middleware.RequirePermissions([]string{
+			"ops:location:alias:list",
+			"ops:location:alias:add",
+			"ops:location:alias:edit",
+			"ops:location:alias:delete",
+		}, core))
+		{
+			locationAliasService := opsServices.NewLocationAliasService(core.DB.GetDB())
+			locationAliasHandler := operations.NewLocationAliasHandler(locationAliasService).WithCore(core)
+
+			// 注意:更具体的路由放在前面,避免被通用路由匹配
+			locationAlias.POST("/list", locationAliasHandler.List)
+			locationAlias.POST("/:id/update", locationAliasHandler.Update)
+			locationAlias.POST("/:id/delete", locationAliasHandler.Delete)
+			locationAlias.POST("", locationAliasHandler.Create) // 放在最后,作为兜底路由
+		}
+
 		// 工位设备关联
 		workstationDevices := ops.Group("/workstation-device")
 		workstationDevices.Use(middleware.RequirePermissions([]string{
