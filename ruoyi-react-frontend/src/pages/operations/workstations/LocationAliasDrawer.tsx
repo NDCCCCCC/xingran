@@ -165,12 +165,6 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
         ),
     },
     {
-      title: "场景",
-      dataIndex: "scope",
-      key: "scope",
-      width: 100,
-    },
-    {
       title: "备注",
       dataIndex: "remark",
       key: "remark",
