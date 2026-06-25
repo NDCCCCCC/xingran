@@ -165,6 +165,13 @@ func (s *locationAliasServiceImpl) Create(ctx context.Context, req *LocationAlia
 	}
 
 	if err := s.db.WithContext(ctx).Create(alias).Error; err != nil {
+		// partial unique idx_sys_dept_location_alias_dept_scope 冲突 → 友好中文
+		// (CR-03a:避免把 PG 索引名 idx_... 透传给前端)
+		// isDuplicateKeyError 同包 floor_service.go 提供,跨 PG/SQLite 识别
+		// (pgconn 23505 + 字符串兜底)。
+		if isDuplicateKeyError(err) {
+			return nil, fmt.Errorf("该 dept_id + scope 组合已存在,不可重复创建: dept_id=%s scope=%s", alias.DeptID, alias.Scope)
+		}
 		return nil, fmt.Errorf("创建别名映射失败: %w", err)
 	}
 	return alias, nil
@@ -174,7 +181,8 @@ func (s *locationAliasServiceImpl) Create(ctx context.Context, req *LocationAlia
 //
 // 实现说明:handler 反序列化的请求体只含表单字段,不含 id/createdAt/updatedAt,
 // 必须先用 id 查出原记录,再用 req 中的非空字段覆写,最后 Save。
-// dept_id/location_id 发生变更时重新跑 validateAlias 三级校验。
+// dept_id / location_id / scope 任一字段变更时都重新跑 validateAlias(保持校验对称性,
+// 修复 CR-03b:之前仅 dept/location 变更触发,scope 单独变更漏校验)。
 func (s *locationAliasServiceImpl) Update(ctx context.Context, id string, req *LocationAliasUpdateRequest) error {
 	if req == nil {
 		return errors.New("请求体不能为空")
@@ -187,6 +195,7 @@ func (s *locationAliasServiceImpl) Update(ctx context.Context, id string, req *L
 
 	deptChanged := false
 	locationChanged := false
+	scopeChanged := false
 
 	if req.DeptID != nil && *req.DeptID != existing.DeptID {
 		existing.DeptID = *req.DeptID
@@ -196,15 +205,16 @@ func (s *locationAliasServiceImpl) Update(ctx context.Context, id string, req *L
 		existing.LocationID = *req.LocationID
 		locationChanged = true
 	}
-	if req.Scope != nil {
+	if req.Scope != nil && *req.Scope != existing.Scope {
 		existing.Scope = *req.Scope
+		scopeChanged = true
 	}
 	if req.Remark != nil {
 		existing.Remark = *req.Remark
 	}
 
-	// 校验 dept_id / location_id 变更时必须重跑三级校验
-	if deptChanged || locationChanged {
+	// dept_id / location_id / scope 任一变更时重跑二级校验(CR-03b 修复)
+	if deptChanged || locationChanged || scopeChanged {
 		if err := s.validateAlias(ctx, &existing); err != nil {
 			return err
 		}
@@ -212,6 +222,10 @@ func (s *locationAliasServiceImpl) Update(ctx context.Context, id string, req *L
 
 	// 保留创建时间(避免 Save 零值覆盖)
 	if err := s.db.WithContext(ctx).Save(&existing).Error; err != nil {
+		// partial unique 冲突 → 友好中文(CR-03a)
+		if isDuplicateKeyError(err) {
+			return fmt.Errorf("该 dept_id + scope 组合已存在,不可重复: dept_id=%s scope=%s", existing.DeptID, existing.Scope)
+		}
 		return fmt.Errorf("更新别名映射失败: %w", err)
 	}
 	return nil

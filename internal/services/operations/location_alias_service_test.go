@@ -36,6 +36,13 @@ func setupLocationAliasTestDB(t *testing.T) *gorm.DB {
 		"auto-migrate test tables",
 	)
 
+	// 手动建 partial unique index(SQLite 支持 CREATE UNIQUE INDEX ... WHERE ...)
+	// AutoMigrate 不支持 partial index 语法,需 Exec 手写。
+	// 生产 migration_165 同样手写 partial unique idx_sys_dept_location_alias_dept_scope。
+	require.NoError(t, db.Exec(
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_test_alias_dept_scope ON sys_dept_location_alias(dept_id, scope) WHERE deleted_at IS NULL`,
+	).Error)
+
 	// 清空数据(避免其它测试文件残留干扰)
 	require.NoError(t, db.Where("1=1").Delete(&models.SysDeptLocationAlias{}).Error)
 	require.NoError(t, db.Exec("DELETE FROM sys_dept").Error)
@@ -209,6 +216,96 @@ func TestLocationAliasService_Create_RejectSelfMapping(t *testing.T) {
 	require.True(t, strings.Contains(err.Error(), "自映射"))
 }
 
+// TestLocationAliasService_Create_DuplicateRejectedFriendly 验证 partial unique idx
+// (dept_id, scope) 冲突时,Create 返回友好中文(CR-03a:不再透传 PG 索引名
+// idx_sys_dept_location_alias_dept_scope 等)。SQLite 走 GORM ErrDuplicatedKey
+// 同样覆盖。
+func TestLocationAliasService_Create_DuplicateRejectedFriendly(t *testing.T) {
+	db := setupLocationAliasTestDB(t)
+	svc := NewLocationAliasService(db)
+	ctx := context.Background()
+
+	locationID := seedDept(t, db, "外部-去重", 1, "")
+	deptID := seedDept(t, db, "内部-去重", 0, ","+locationID+",")
+
+	// 第 1 次创建应成功
+	_, err := svc.Create(ctx, &LocationAliasCreateRequest{
+		DeptID: deptID, LocationID: locationID, Scope: aliasDefaultScope,
+	})
+	require.NoError(t, err)
+
+	// 第 2 次同 (dept_id, scope) 必须被拒绝,且错误信息是中文友好提示,
+	// 不含 PG 索引名 idx_...
+	_, err = svc.Create(ctx, &LocationAliasCreateRequest{
+		DeptID: deptID, LocationID: locationID, Scope: aliasDefaultScope,
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "该 dept_id + scope 组合已存在", "必须返回友好中文提示")
+	require.Contains(t, err.Error(), deptID, "错误信息应包含 dept_id 便于定位")
+	require.NotContains(t, err.Error(), "idx_", "不应透传 PG 索引名 idx_...")
+}
+
+// TestLocationAliasService_Update_DuplicateRejectedFriendly 验证 Update 触发
+// partial unique 冲突时同样返回友好中文(CR-03a)。
+func TestLocationAliasService_Update_DuplicateRejectedFriendly(t *testing.T) {
+	db := setupLocationAliasTestDB(t)
+	svc := NewLocationAliasService(db)
+	ctx := context.Background()
+
+	locationID := seedDept(t, db, "外部-更新去重", 1, "")
+	deptA := seedDept(t, db, "内部A", 0, ","+locationID+",")
+	deptB := seedDept(t, db, "内部B", 0, ","+locationID+",")
+
+	// 创建两条 alias(deptA / deptB, 同 location + scope)
+	first, err := svc.Create(ctx, &LocationAliasCreateRequest{
+		DeptID: deptA, LocationID: locationID, Scope: aliasDefaultScope,
+	})
+	require.NoError(t, err)
+	_, err = svc.Create(ctx, &LocationAliasCreateRequest{
+		DeptID: deptB, LocationID: locationID, Scope: aliasDefaultScope,
+	})
+	require.NoError(t, err)
+
+	// 把 first 的 dept_id 改成 deptB → 触发 (dept_id, scope) 唯一冲突
+	err = svc.Update(ctx, first.ID, &LocationAliasUpdateRequest{DeptID: &deptB})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "该 dept_id + scope 组合已存在")
+	require.NotContains(t, err.Error(), "idx_")
+}
+
+// TestLocationAliasService_Update_ScopeChangedRunsValidation 验证 scope 单字段变更
+// 也会触发 validateAlias(CR-03b:之前只 dept/location 变更触发,scope 漏校验)。
+//
+// 设计:location 部门原本 is_external_org=1(创建时通过校验),创建 alias 后将其
+// 降级为 is_external_org=0,然后 Update 仅改 scope → 应触发 validateAlias →
+// location 不是外部机构 → 失败。这样不依赖软删除,稳定触发校验失败。
+func TestLocationAliasService_Update_ScopeChangedRunsValidation(t *testing.T) {
+	db := setupLocationAliasTestDB(t)
+	svc := NewLocationAliasService(db)
+	ctx := context.Background()
+
+	locationID := seedDept(t, db, "外部-scope改", 1, "")
+	deptID := seedDept(t, db, "内部-scope改", 0, ","+locationID+",")
+
+	created, err := svc.Create(ctx, &LocationAliasCreateRequest{
+		DeptID: deptID, LocationID: locationID, Scope: aliasDefaultScope,
+	})
+	require.NoError(t, err)
+
+	// 把 location 降级为非外部机构(模拟数据/权限漂移)
+	require.NoError(t, db.Model(&models.Department{}).
+		Where("id = ?", locationID).
+		Update("is_external_org", 0).Error)
+
+	// 仅改 scope("workstation" → "floor") → 应触发 validateAlias → location
+	// 不是外部机构 → 应失败。scope 必须**实际改变**才能触发 scopeChanged 分支
+	//("workstation"=="workstation" → scopeChanged=false → validateAlias 不跑)。
+	newScope := "floor"
+	err = svc.Update(ctx, created.ID, &LocationAliasUpdateRequest{Scope: &newScope})
+	require.Error(t, err, "scope 单独变更也必须跑 validateAlias")
+	require.Contains(t, err.Error(), "物理位置必须是外部机构")
+}
+
 // TestLocationAliasService_List 列表查询 + 分页 + 含 JOIN 部门名。
 func TestLocationAliasService_List(t *testing.T) {
 	db := setupLocationAliasTestDB(t)
@@ -216,10 +313,14 @@ func TestLocationAliasService_List(t *testing.T) {
 	ctx := context.Background()
 
 	locationID := seedDept(t, db, "外部-列表", 1, "")
-	deptID := seedDept(t, db, "内部-列表", 0, ","+locationID+",")
+	// 建 3 个不同的 dept(partial unique (dept_id, scope) 不能三条都用同 dept)
+	deptIDs := []string{
+		seedDept(t, db, "内部-列表-A", 0, ","+locationID+","),
+		seedDept(t, db, "内部-列表-B", 0, ","+locationID+","),
+		seedDept(t, db, "内部-列表-C", 0, ","+locationID+","),
+	}
 
-	// 直接插 3 条 alias
-	for i := 0; i < 3; i++ {
+	for _, deptID := range deptIDs {
 		req := &LocationAliasCreateRequest{
 			DeptID:     deptID,
 			LocationID: locationID,

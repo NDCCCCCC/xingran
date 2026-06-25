@@ -89,16 +89,23 @@ func (s *workstationService) GetWorkstationDeptOptions(ctx context.Context, orgI
 	// 单 query union: sys_dept 子孙节点 (is_alias=false) + alias 命中节点 (is_alias=true)
 	// 1) 子孙节点: ancestors LIKE '%,<orgId>,%' OR id = orgId, 排除外部机构本身
 	// 2) alias 节点: scope='workstation' AND location_id=orgId, JOIN sys_dept 取 dept_name
+	//
+	// 关于 sys_dept.id (uuid) 与 alias.dept_id/location_id (varchar) 的列对列比较:
+	// 用标准 SQL CAST(... AS TEXT) 而非 PG 专有 ::text。
+	//   - PG: CAST(uuid AS TEXT) 把 uuid 转成 text,与 varchar 比较(text/varchar 同族有 =)
+	//   - SQLite: uuid 列实际存为 TEXT,CAST 是 no-op,TEXT = TEXT 正常
+	// 故 CAST 写法在 PG/SQLite 双 DB 行为一致(避免 PG 专有 ::text 在 SQLite 语法错误)。
+	// 与 location_alias_service.go 的 aliasListJoinClause 处理方式一致。
 	err := s.db.WithContext(ctx).Raw(`
-		SELECT id::text AS dept_id, dept_name AS dept_name, false AS is_alias
+		SELECT CAST(id AS TEXT) AS dept_id, dept_name AS dept_name, false AS is_alias
 		FROM sys_dept
 		WHERE deleted_at IS NULL
 		  AND is_external_org = 0
-		  AND ((',' || ancestors || ',') LIKE ('%,' || ? || ',%') OR id::text = ?)
+		  AND ((',' || ancestors || ',') LIKE ('%,' || ? || ',%') OR CAST(id AS TEXT) = ?)
 		UNION ALL
 		SELECT a.dept_id, d.dept_name, true AS is_alias
 		FROM sys_dept_location_alias a
-		JOIN sys_dept d ON d.id::text = a.dept_id
+		JOIN sys_dept d ON CAST(d.id AS TEXT) = a.dept_id
 		WHERE a.deleted_at IS NULL
 		  AND a.scope = 'workstation'
 		  AND a.location_id = ?
