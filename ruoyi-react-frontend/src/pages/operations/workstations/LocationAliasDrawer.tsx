@@ -94,12 +94,17 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
 
   const handleCreate = async () => {
     try {
-      const values = await form.validateFields();
+      const values = (await form.validateFields()) as {
+        deptId: string;
+        locationId: string;
+        scope?: string;
+        remark?: string;
+      };
       await locationAliasApi.create({
-        deptId: values.deptId as string,
-        locationId: values.locationId as string,
-        scope: (values.scope as string | undefined) ?? "workstation",
-        remark: values.remark as string | undefined,
+        deptId: values.deptId,
+        locationId: values.locationId,
+        scope: values.scope ?? "workstation",
+        remark: values.remark,
       });
       handleSuccess("映射创建");
       form.resetFields();

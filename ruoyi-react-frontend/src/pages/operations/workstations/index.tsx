@@ -18,6 +18,7 @@ import {
   PlusOutlined, SearchOutlined, ReloadOutlined, CheckCircleOutlined,
   StopOutlined, AppstoreOutlined, TableOutlined, ImportOutlined,
   ExportOutlined, DeleteOutlined, BgColorsOutlined, DesktopOutlined,
+  SettingOutlined,
 } from "@ant-design/icons";
 import type { WorkstationOps } from "@/types";
 import { useTableManager } from "@/hooks/useTableManager";
@@ -36,6 +37,7 @@ import { useWorkstationData, useWorkstationModals, useWorkstationView } from "./
 import { getWorkstationColumns } from "./columns";
 import { WorkstationEditModal } from "./modals";
 import { WorkstationCardView, WorkstationFloorPlanView } from "./views";
+import { LocationAliasDrawer } from "./LocationAliasDrawer";
 import { STATUS_OPTIONS } from "./constants";
 import type { FloorOption, UserOption, DeptTreeNode } from "./types";
 // ❌ 移除：import { workstationApi } from '@/lib/opsApi';
@@ -43,6 +45,7 @@ import type { FloorOption, UserOption, DeptTreeNode } from "./types";
 import { buildingApi, floorApi, workstationApi } from "@/lib/opsApi";
 import WorkstationDeviceTable from "@/components/operations/WorkstationDeviceTable";
 import { createSorterMeta } from "@/utils/tableHelpers";
+import { useMenuStore } from "@/store/menuStore";
 
 // Cascader 选项类型
 type CascaderOption = {
@@ -83,6 +86,11 @@ const WorkstationManagement: FC = () => {
   // 这里只是为了在顶层拿到 orgId 喂给 useAliasByLocation, 不修改 EditModal 内部逻辑。
   const [watchedOrgId, setWatchedOrgId] = useState<string | undefined>(undefined);
   const { data: aliasList = [] } = useAliasByLocation(watchedOrgId);
+
+  // Phase 39-07: 工位部门物理位置映射 Drawer 状态
+  const [aliasDrawerOpen, setAliasDrawerOpen] = useState(false);
+  const menuPermissions = useMenuStore((s) => s.permissions);
+  const canListAlias = menuPermissions.includes("ops:location:alias:list");
 
   // 派生:仅外部机构(isExternalOrg===1 的节点)的部门树。
   // 模态框"所属机构"与左侧 DeptSidebar(默认 externalOnly=true)共用同一份外部机构视图。
@@ -653,6 +661,14 @@ const WorkstationManagement: FC = () => {
               }}>
                 导出
               </Button>
+              {canListAlias && (
+                <Button
+                  icon={<SettingOutlined />}
+                  onClick={() => setAliasDrawerOpen(true)}
+                >
+                  映射
+                </Button>
+              )}
               {selectedRowKeys.length > 0 && (
                 <Button
                   icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }}
@@ -727,6 +743,10 @@ const WorkstationManagement: FC = () => {
             closeModal(workstationForm);
           }}
           onDeptChange={handleDeptChange}
+        />
+        <LocationAliasDrawer
+          open={aliasDrawerOpen}
+          onClose={() => setAliasDrawerOpen(false)}
         />
         <ExcelImportLazy
           entityType="workstation"
