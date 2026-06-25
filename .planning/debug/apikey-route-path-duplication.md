@@ -1,6 +1,6 @@
 ---
 slug: apikey-route-path-duplication
-status: root-cause-found
+status: resolved
 deferred_to: v1.16-tech-debt
 trigger: 点击密钥列表菜单被路由到重复路径 /system/apikeys/system/apikeys
 created: 2026-05-20
@@ -134,3 +134,19 @@ updated: 2026-06-25
     LOOKS_GOOD - The proposed fix approach is correct. Database migration to update path values is the right solution.
     Ensure the new path values align with the frontend's buildFullPath and resolvePath logic in sidebar.utils.ts
     to avoid future path concatenation issues.
+
+## Phase 40 Closure (2026-06-25)
+
+落地 Resolution：
+- D-14 状态值归一：`root-cause-found` → `root_cause_found` → `resolved`
+- 新增 `internal/core/db/migrations/migration_166_apikey_route_path_fix.go`：
+  按 `menu_name` 锁定 `API密钥管理` / `密钥列表` / `使用日志` 三行，
+  path 分别归一为 `apikeys` / `list` / `logs`（去除重复的 `system/apikeys` 前缀）
+- `internal/core/db/database.go` 在 `Migrate165SysDeptLocationAlias` 之后注册
+  `Migrate166ApikeyRoutePathFix`，启动时自动执行
+
+效果：前端 sidebar buildFullPath 把父 path（`apikeys`）与子 path（`list`/`logs`）
+拼接成 `/system/apikeys/list`、`/system/apikeys/logs`，不再出现 `/system/apikeys/system/apikeys` 重复。
+
+verification: migration 166 准备就绪，启动后端时自动执行
+files_changed: internal/core/db/migrations/migration_166_apikey_route_path_fix.go, internal/core/db/database.go, .planning/debug/apikey-route-path-duplication.md

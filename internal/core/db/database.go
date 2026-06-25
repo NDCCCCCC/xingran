@@ -407,6 +407,10 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate165SysDeptLocationAlias(d.DB); err != nil {
 			applogger.Errorf("Phase 39 工位部门映射迁移失败: %v", err)
 		}
+		// Phase 40 (TECH-03): 修正 sys_menu.path 重复拼接 (/system/apikeys/system/apikeys)
+		if err := migrations.Migrate166ApikeyRoutePathFix(d.DB); err != nil {
+			applogger.Errorf("Phase 40 API 密钥菜单 path 修正失败: %v", err)
+		}
 		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
 		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
 			applogger.Errorf("MAC 过滤规则表迁移失败: %v", err)
