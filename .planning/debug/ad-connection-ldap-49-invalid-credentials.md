@@ -1,6 +1,6 @@
 ---
 slug: ad-connection-ldap-49-invalid-credentials
-status: root_cause_found
+status: resolved
 deferred_to: v1.16-tech-debt
 trigger: 连接AD失败: LDAP Result Code 49 "Invalid Credentials": 80090308: LdapErr: DSID-0C0904AE, comment: AcceptSecurityContext error, data 52e, v3839 (尝试: UPN, NetBIOS, 直连)
 created: 2026-05-25T00:00:00+08:00
@@ -160,3 +160,31 @@ ldapClient := NewLDAPClient(&adConfig)
 ### Status
 
 **修复已应用** - 等待重启验证
+
+## Phase 40 Closure (2026-06-25)
+
+### Re-investigation against current codebase
+
+Re-reading `internal/services/addomain/dept_sync_service.go` after Phase 38 Wave 1
+(account pool refactor): the original Resolution (在 line 44 添加
+`adConfig.AdminPassword = decryptPassword(adConfig.AdminPassword)` 再 `NewLDAPClient`)
+**已不再适用** —— 当前代码已重构为走 `FailoverClient.ExecuteWithFailover`:
+
+```go
+fc := NewFailoverClient(s.pool, &adConfig)
+if err := fc.ExecuteWithFailover(ctx, func(ldapClient *LDAPClient) error { ... }); ...
+```
+
+FailoverClient 内部用 `NewLDAPClient(f.config, acct)` 把池内 `*ADServiceAccount`
+注入 `LDAPClient`；`ldap_client.go:144-150` 的 `tryBindAttempts` 检测到 `c.account != nil`
+时会改走 `decryptPassword(c.account.PasswordCiphertext)` 路径，
+密码密文从 `sys_ad_service_accounts.password_ciphertext` 读出并正确解密。
+
+### Conclusion
+
+LDAP 49 invalid credentials 路径在 `dept_sync_service.go` 中已被
+Phase 36 (account pool) + Phase 38 Wave 1 (FailoverClient DI) 修复，
+本 session 描述的根因不再可达。status 翻 `resolved`。
+
+verification: 当前 dept_sync_service.go 不再直接 `NewLDAPClient(&adConfig)`，密码解密由 FailoverClient/账号池链路保证
+files_changed: .planning/debug/ad-connection-ldap-49-invalid-credentials.md
