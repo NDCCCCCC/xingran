@@ -3,8 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.16
 milestone_name: 技术债清理 (Tech-Debt Cleanup)
 status: planning
-last_updated: "2026-06-25T08:30:00.000Z"
-last_activity: 2026-06-25
+stopped_at: Phase 40 context gathered
+last_updated: "2026-06-25T09:26:27.562Z"
+last_activity: 2026-06-25 — v1.16 roadmap drafted, 5 TECH requirements mapped to Phase 40
 progress:
   total_phases: 1
   completed_phases: 0
@@ -30,6 +31,7 @@ Last activity: 2026-06-25 — v1.16 roadmap drafted, 5 TECH requirements mapped 
 ## Project Reference
 
 **Core value**:
+
 - 端到端运维可观测与审计能力:每个写操作产生可追溯记录(who/when/what/from-where/before-after-state),敏感字段自动脱敏
 - Excel 驱动的批量管理(导入/导出含 dept-name → UUID 自动解析)
 - 单一可信 IT 资产系统
@@ -84,16 +86,19 @@ Last activity: 2026-06-25 — v1.16 roadmap drafted, 5 TECH requirements mapped 
 ### v1.16 Tech-Debt Cleanup 范围
 
 **22 个 deferred debug 会话** (frontmatter `deferred_to: v1.16-tech-debt`):
+
 - 16 个 `root_cause_found`(AD 域控 6 + VDI 2 + infopoint/captcha/permission/api-key 等 8)
 - 5 个 `awaiting_human_verify`(workstation-device-build-errors、workstation-expand-device-load-empty、reset-theme-hardcoded-colors、user-filter-lost-after-edit、vite-hmr-token-blank-page)
 - 1 个 `root-cause-found`(apikey-route-path-duplication,连字符变体状态值)
 
 **6 个 audit 数据质量问题**:
+
 - `login-400-bad-request` / `ops-asset-constraint-uni-ops-asset-devicesn-not-exist` — 缺标准 YAML frontmatter
 - `knowledge-base` — 非 debug 会话,需移出 audit 范围
 - `info-point-type-null-import` / `sys-mac-filter-rules-relation-does-not-exist` — 实际已 resolved,frontmatter 需统一
 
 **验收指标**:
+
 - `gsd-sdk query audit-open` → `debug_sessions < 5`(从当前 57 大幅下降)
 - `.planning/debug/*.md` → 100% 标准 YAML frontmatter
 
@@ -126,8 +131,8 @@ Last activity: 2026-06-25 — v1.16 roadmap drafted, 5 TECH requirements mapped 
 
 ## Session Continuity
 
-Last session: 2026-06-25T08:30:00.000Z
-Stopped at: v1.16 ROADMAP created, Phase 40 ready to plan
-Resume file: `.planning/ROADMAP.md`
+Last session: 2026-06-25T09:26:27.547Z
+Stopped at: Phase 40 context gathered
+Resume file: .planning/phases/40-tech-debt-cleanup/40-CONTEXT.md
 
 **Active Phase:** 40 (tech-debt-cleanup) — 5 TECH requirements — 0 plans — ready for `/gsd:plan-phase 40`
