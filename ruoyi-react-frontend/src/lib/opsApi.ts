@@ -109,11 +109,64 @@ export interface WorkstationListParams extends PageParams {
 
 const workstationCrudApi = createCrudApi<WorkstationOps>({ basePath: "/ops/workstation" });
 
+// Phase 39: 工位部门下拉选项(后端 union: orgId 子孙 + alias 映射)
+// JSON tag 与后端 Plan 39-03 的 DeptOption 完全对齐 (deptId / deptName / isAlias)
+export interface DeptOption {
+  deptId: string;
+  deptName: string;
+  isAlias: boolean;
+}
+
 export const workstationApi = {
   ...workstationCrudApi,
 
   updatePositions: async (items: { id: string; positionX: number; positionY: number }[]) => {
     return await post("/ops/workstation/positions", { items });
+  },
+
+  // Phase 39: 工位编辑"所属部门"下拉数据源(orgId 子孙 + alias union)
+  // 返回 DeptOption[], isAlias=true 表示该条目是 alias 映射而来,前端应追加 [映射] 后缀
+  deptOptions: async (orgId: string): Promise<DeptOption[]> => {
+    const res = await post<DeptOption[]>("/ops/workstation/dept-options", { orgId });
+    return res.data ?? [];
+  },
+};
+
+// ==================== 工位部门物理位置映射 (Phase 39) ====================
+
+// Phase 39: alias 表记录(deptId ↔ locationId 映射, scope 限定场景)
+export interface LocationAlias {
+  id: string;
+  deptId: string;
+  locationId: string;
+  scope: string;
+  remark?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Phase 39: 工位部门物理位置映射管理 (Drawer UI 使用)
+export const locationAliasApi = {
+  list: async (params: { pageNum?: number; pageSize?: number } = {}) => {
+    return await post<PageResponse<LocationAlias>>("/ops/location-alias/list", {
+      pageNum: params.pageNum ?? 1,
+      pageSize: params.pageSize ?? 10,
+    });
+  },
+
+  create: async (data: { deptId: string; locationId: string; scope?: string; remark?: string }) => {
+    return await post<LocationAlias>("/ops/location-alias", {
+      ...data,
+      scope: data.scope ?? "workstation",
+    });
+  },
+
+  update: async (id: string, data: { deptId?: string; locationId?: string; remark?: string }) => {
+    return await post(`/ops/location-alias/${id}/update`, data);
+  },
+
+  delete: async (id: string) => {
+    return await post(`/ops/location-alias/${id}/delete`, {});
   },
 };
 
