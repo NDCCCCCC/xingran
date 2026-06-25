@@ -1,8 +1,17 @@
 ---
-last_updated: 2026-06-16
-update_trigger: state-sync after Phase 34 review closure (commit 5c2fc95)
-previous_update: 2026-05-09 after v1.3 milestone (now obsolete for current-state section)
+last_updated: 2026-06-25
+update_trigger: start of milestone v1.16 (tech-debt cleanup)
+previous_update: 2026-06-25 after Phase 39 (workstation dept-location alias) completion
 ---
+
+## Current Milestone: v1.16 技术债清理 (Tech-Debt Cleanup)
+
+**Goal:** 把 v1.15 累积的旧 debug 会话和 audit 数据质量缺口集中处理，让系统回到"无遗留债务"状态，再开启下一轮功能开发。
+
+**Target features / 工作池:**
+- 22 个 deferred debug 会话(frontmatter 已加 `deferred_to: v1.16-tech-debt`):16 个 root_cause_found + 5 个 awaiting_human_verify + 1 个 root-cause-found
+- 6 个 audit 数据质量问题(无 YAML frontmatter 或误归类到 debug)
+- Phase 39 advisory 项清理(CR-02/03a/03b 已提交 506865dd)
 
 # RuoYi-Next 运维管理系统
 

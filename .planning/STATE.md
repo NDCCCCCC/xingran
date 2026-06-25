@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.15
-milestone_name: 工位设备关联 (Phase 28)
-status: ready_to_plan
-stopped_at: Phase 25 complete (5/5) — ready to discuss Phase 26
-last_updated: 2026-06-25T07:39:13.070Z
+milestone: v1.16
+milestone_name: 技术债清理 (Tech-Debt Cleanup)
+status: planning
+last_updated: "2026-06-25T08:02:48.998Z"
+last_activity: 2026-06-25
 progress:
-  total_phases: 17
-  completed_phases: 11
-  total_plans: 88
-  completed_plans: 152
-  percent: 65
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -27,37 +27,10 @@ progress:
 
 ## Current Position
 
-Phase: 26
-Plan: Not started
-**Latest shipped milestone**: v1.15 工位设备关联 (Phase 28, 2026-06-10)
-**Latest shipped phase**: Phase 34 操作日志全模块集成 + review (2026-06-16)
-**Most recent commit**: 3084a04 refactor(38-04): migration_164 放宽列约束 + 幂等补迁账号池 (Task 2)
-
-**Shipped since last state file update (v1.15 was the milestone label
-in PROJECT.md before this sync)**:
-
-- Phase 30 (frontend perf) — 5/5 plans, 2026-06-13
-- Phase 31 (P0 close: connection_pool lifecycle + ConfigKey API) — 5/5 plans
-- Phase 32 (v1.14 P1/P2 重构) — 7 waves, 20 commits
-- Phase 33 (Vercel React Best Practices) — 4 waves, 25/25 perf defects fixed
-- Phase 34 (operlog full coverage) — 10 plans + gap-closure + 4 review commits
-  + 1 critical fix (sensitiveKeys 17→34 expansion to cover camelCase
-  field names that the substring-search needle did not match)
-
-**Audit**: 103 open items in `gsd-sdk query audit-open` (45 debug
-sessions, 51 quick tasks, 4 UAT gaps, 3 verification gaps). Most
-debug sessions are `root_cause_found` from May 2026 — bulk-defer
-candidate for v1.16.
-
-**Next step**: `git log` shows main is at `5c2fc95`, build is clean,
-operlog test suite green. v1.16 scope is undecided. Recommended
-candidates (from state-sync report):
-
-1. Triage the 103 audit items
-2. Decide on VDI 22C/22D vs new domain
-3. Decide on Phase 34 operlog follow-up (CI gate, property test)
-
-Run `/gsd:new-milestone` to formally start v1.16.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-25 — Milestone v1.16 started
 
 ## Project Reference
 
