@@ -397,6 +397,14 @@ func (c *vdiClientExtendedImpl) ListResources(ctx context.Context, groupID strin
 
 // ListResourceServers 获取指定资源下的虚拟机列表
 // VDI API endpoint: GET /v1/resource/servers?rcid=xxx&page=x&page_size=x
+//
+// Phase 40 已知限制（vdi-vm-sync-missing-vm）：
+// 本端点仅返回"派生（derive）"虚拟机，存储在 VDI 服务器上的派生 VM
+// 可被同步到本地 vdi_vm。**克隆（clone）虚拟机存储在 VMP 服务器上**，
+// 不在此端点的返回结果中，因此同步任务无法发现克隆 VM。
+// 若运维需要同步克隆 VM，请扩展 syncVDIData 增加 VMP API 调用，
+// 或将克隆 VM 转为派生 VM。
+// 参见 .planning/debug/vdi-vm-sync-missing-vm.md。
 func (c *vdiClientExtendedImpl) ListResourceServers(ctx context.Context, resourceID string, page, pageSize int) ([]VDIVMResource, int, error) {
 	token, err := c.Authenticate(ctx)
 	if err != nil {

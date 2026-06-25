@@ -1,5 +1,5 @@
 ---
-status: root_cause_found
+status: resolved
 deferred_to: v1.16-tech-debt
 trigger: VDI虚拟机数据同步任务没有将新增的第9台虚拟机同步到数据库，之前任务能正常同步新增和删除虚拟机，推测最近添加删除功能时破坏了新增功能
 created: 2026-06-02
@@ -103,3 +103,16 @@ INFO[2026-06-02 09:51:31] 任务执行成功 [VDI虚拟机数据同步.DEFAULT],
 ## Eliminated
 
 
+## Phase 40 Closure (2026-06-25)
+
+根因为 VDI API 覆盖范围限制（VMP 服务器持有克隆 VM，`/v1/resource/servers`
+端点不可见）。Phase 40 采取 Resolution 方案 B（文档化限制）：
+在 `internal/services/vdi/vdi_client_extended.go` 的 `ListResourceServers`
+添加文档注释，说明本端点仅返回派生 VM，克隆 VM 需扩展 VMP API 调用或转换类型。
+
+方案 A（扩展 VMP API）需要 VMP 服务器端点信息与认证方式，目前不可得，
+推迟到后续 phase；方案 C（克隆→派生转换）属运维侧动作，非代码修复。
+本次落地为最小且无运行时副作用的注释标注，frontmatter 翻 `resolved`。
+
+verification: `go build ./...` 退出 0；`ListResourceServers` 文档注释含"克隆 VM" 说明
+files_changed: internal/services/vdi/vdi_client_extended.go, .planning/debug/vdi-vm-sync-missing-vm.md
