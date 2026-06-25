@@ -1,8 +1,9 @@
 ---
 phase: 39-workstation-dept-location-alias
 verified: 2026-06-25T00:00:00Z
-status: human_needed
-score: 11/12 must-have truths verified (1 lint failure pre-existing out-of-scope)
+status: passed
+score: 12/12 must-have truths verified (用户 UAT 全部确认通过)
+uat_confirmed: 2026-06-25 (用户 dev 环境逐项验证: 映射 CRUD / 二级校验 / 部门名显示 / 列表分页 / TreeSelect 展开与去重 / EditModal union 注入)
 overrides_applied: 0
 re_verification:
   previous_status: draft (39-08)

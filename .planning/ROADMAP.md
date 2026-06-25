@@ -829,26 +829,26 @@ Plans:
 **Goal:** 解决"组织编制与物理办公地分离"的部门（如运营服务部）在工位管理页面无法绑定的问题。方案：新增 `sys_dept_location_alias` 表 + 工位列表页内联 Drawer 管理映射 + 部门下拉查询 union 改写，使运营服务部等"逻辑上独立编制、物理上分散办公"的子部门能出现在工位部门下拉中。
 **Requirements**: REQ-39-01..12 (12 项已锁, 见 39-SPEC.md)
 **Depends on:** Phase 28 (工位设备关联)
-**Plans:** 8 plans (3 waves)
+**Plans:** 8/8 plans complete
 
 Plans:
 
 **Wave 1**
 
-- [ ] 39-01-PLAN.md — SysDeptLocationAlias 模型 + migration 165 建表 + 4 条 sys_menu 权限 seed
-- [ ] 39-02-PLAN.md — LocationAliasService 三级校验 + LocationAliasHandler 4 端点 + 单测
-- [ ] 39-03-PLAN.md — WorkstationService.GetWorkstationDeptOptions 单 query union SQL + 路由注册
-- [ ] 39-04-PLAN.md — router.go 注册 alias 4 路由 + operlog + dept cache invalidation
+- [x] 39-01-PLAN.md — SysDeptLocationAlias 模型 + migration 165 建表 + 4 条 sys_menu 权限 seed
+- [x] 39-02-PLAN.md — LocationAliasService 三级校验 + LocationAliasHandler 4 端点 + 单测
+- [x] 39-03-PLAN.md — WorkstationService.GetWorkstationDeptOptions 单 query union SQL + 路由注册
+- [x] 39-04-PLAN.md — router.go 注册 alias 4 路由 + operlog + dept cache invalidation
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 39-05-PLAN.md — 前端 locationAliasApi + queryKeys.locationAlias + useAliasByLocation hook
-- [ ] 39-06-PLAN.md — EditModal subDeptTree union 注入 [映射] 后缀
+- [x] 39-05-PLAN.md — 前端 locationAliasApi + queryKeys.locationAlias + useAliasByLocation hook
+- [x] 39-06-PLAN.md — EditModal subDeptTree union 注入 [映射] 后缀
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 39-07-PLAN.md — LocationAliasDrawer 管理 UI + 工具栏 [⚙ 映射] 按钮 + 权限 gating
-- [ ] 39-08-PLAN.md — 全量自动化验收 + 18 项 acceptance criteria VERIFICATION.md
+- [x] 39-07-PLAN.md — LocationAliasDrawer 管理 UI + 工具栏 [⚙ 映射] 按钮 + 权限 gating
+- [x] 39-08-PLAN.md — 全量自动化验收 + 18 项 acceptance criteria VERIFICATION.md
 
 ---
 
