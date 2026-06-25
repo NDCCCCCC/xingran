@@ -1,5 +1,5 @@
 ---
-status: root_cause_found
+status: resolved
 deferred_to: v1.16-tech-debt
 trigger: 虚拟机 bound_user_id=ninedrunk 但用户 ninedrunk 登录后看不到该虚拟机
 slug: vm-datascope-userid-not-uuid
@@ -138,6 +138,19 @@ root_cause: "bound_user_id 字段存储用户名，但数据范围过滤使用�
 fix: "修改 BindUser 服务，将 bound_user_id 从存储用户名改为存储用户 UUID"
 verification: "修复后，DataScope=5 用户应该能看到绑定给自己的虚拟机"
 files_changed: []
+
+## Phase 40 Closure (2026-06-25)
+
+复测 `internal/services/vdi/vm_service_impl.go` 的 `BindUser` (line 810-833)：
+- line 819-822 已先用 `username` 查 `sys_user` 拿到 `systemUser`
+- line 832 `"bound_user_id": systemUser.ID` —— 写入的是 UUID（不是 username）
+
+与 `vm_data_scope_filter.go` 的 `case DataScopeSelf: Where("bound_user_id = ?", userID)`
+（userID 来自 JWT 也是 UUID）类型对齐，DataScope=5 用户可看到绑定给自己的 VM。
+frontmatter 翻 `resolved`。
+
+verification: `grep -n '"bound_user_id":' internal/services/vdi/vm_service_impl.go` 显示 `systemUser.ID`
+files_changed: .planning/debug/vm-datascope-userid-not-uuid.md
 
 ---
 
