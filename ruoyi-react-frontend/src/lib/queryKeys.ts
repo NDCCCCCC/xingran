@@ -33,6 +33,12 @@ export const queryKeys = {
     all: ["role"] as const,
     list: (params?: Record<string, unknown>) => ["role", "list", params ?? {}] as const,
   },
+  // Phase 39: 工位部门物理位置映射 — 按 location 缓存,用于工位编辑下拉 union 注入
+  locationAlias: {
+    all: ["location-alias"] as const,
+    byLocation: (locationId: string) => ["location-alias", "by-location", locationId] as const,
+    list: (params?: Record<string, unknown>) => ["location-alias", "list", params ?? {}] as const,
+  },
 } as const;
 
 export type QueryKeys = typeof queryKeys;
