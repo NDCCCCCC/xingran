@@ -1,5 +1,5 @@
 ---
-status: root_cause_found
+status: resolved
 deferred_to: v1.16-tech-debt
 trigger: AD用户登录成功，但系统重用了已删除的乱码部门，而不是创建新的正确部门层级
 created: 2026-05-26
@@ -144,3 +144,23 @@ err := m.db.WithContext(ctx).
 **specialist_hint:** typescript (该代码库是 Go 项目，但修复方向涉及数据库查询优化，需要了解 GORM 的最佳实践)
 
 **fix_status:** pending_implementation
+
+## Phase 40 Closure (2026-06-25)
+
+落地推荐方案 1（JOIN sys_dept 过滤软删除部门）于
+`internal/services/addomain/dept_ou_mapper.go` 的 `FindDeptByOUDN`：
+
+```go
+err := m.db.WithContext(ctx).
+    Joins("JOIN sys_dept ON sys_dept.id = sys_dept_ou_mapping.dept_id").
+    Where("sys_dept_ou_mapping.ou_dn = ? AND sys_dept_ou_mapping.sync_enabled = ?", ouDN, true).
+    Where("sys_dept.deleted_at IS NULL").
+    First(&mapping).Error
+```
+
+效果：当映射的部门已被软删除时返回 `ErrRecordNotFound`，上层
+`user_ou_service.resolveDeptFromOU` 落到 `createDeptFromOUDN` 重建部门链，
+不再把用户挂到乱码已删除部门。
+
+verification: `go build ./...` 退出 0；JOIN sys_dept + `sys_dept.deleted_at IS NULL` 在 dept_ou_mapper.go FindDeptByOUDN 内可见
+files_changed: internal/services/addomain/dept_ou_mapper.go, .planning/debug/ad-login-deleted-dept-reuse.md

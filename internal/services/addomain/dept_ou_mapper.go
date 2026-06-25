@@ -23,14 +23,22 @@ func NewDeptOUmapper(db *gorm.DB) *DeptOUmapper {
 
 // FindDeptByOUDN 通过OU DN查找部门ID
 // 用于用户AD登录时，根据用户所在OU反向查找系统部门
+//
+// Phase 40 修复（ad-login-deleted-dept-reuse）：JOIN sys_dept 过滤已软删除部门。
+// 原实现只校验映射表存在性，未验证映射部门是否已被软删除，导致登录时把用户
+// 挂到 deleted_at IS NOT NULL 的乱码部门（参见 .planning/debug/ad-login-deleted-dept-reuse.md）。
+// JOIN 后若映射部门已被删除，本函数返回 ErrRecordNotFound，
+// 上层 user_ou_service.resolveDeptFromOU 会落到 createDeptFromOUDN 重建部门链。
 func (m *DeptOUmapper) FindDeptByOUDN(ctx context.Context, ouDN string) (string, error) {
 	var mapping models.DeptOUMapping
 	err := m.db.WithContext(ctx).
-		Where("ou_dn = ? AND sync_enabled = ?", ouDN, true).
+		Joins("JOIN sys_dept ON sys_dept.id = sys_dept_ou_mapping.dept_id").
+		Where("sys_dept_ou_mapping.ou_dn = ? AND sys_dept_ou_mapping.sync_enabled = ?", ouDN, true).
+		Where("sys_dept.deleted_at IS NULL").
 		First(&mapping).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return "", fmt.Errorf("未找到OU DN %s 对应的部门", ouDN)
+			return "", fmt.Errorf("未找到OU DN %s 对应的有效部门", ouDN)
 		}
 		return "", fmt.Errorf("查询OU DN映射失败: %w", err)
 	}
