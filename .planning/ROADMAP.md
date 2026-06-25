@@ -51,7 +51,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 40. Tech-Debt Cleanup | 1/3 | In Progress|  |
+| 40. Tech-Debt Cleanup | 2/3 | In Progress|  |
 
 ---
 
