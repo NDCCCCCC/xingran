@@ -1,6 +1,6 @@
 ---
 slug: reset-theme-hardcoded-colors
-status: awaiting_human_verify
+status: resolved
 deferred_to: v1.16-tech-debt
 trigger: "默认主题修改保存成功了，但是在用户设置界面重置主题时还是恢复到了硬编码的颜色和布局"
 created: 2026-06-15
@@ -127,3 +127,11 @@ reasoning_checkpoint:
 - hypothesis: "Refactor themeStore or layout system is needed"
   - evidence: themeStore has no reset action; the reset is purely in `pages/settings/index.tsx`. Fixing the handler resolves the bug without touching themeStore.
   - timestamp: 2026-06-15
+
+## Phase 40 Closure (2026-06-25)
+
+复测确认:`pages/settings/index.tsx` `handleReset`(line 93-96)+ 其余 3 处 reset 路径(line 142/204/223)均调用 `getDefaultThemeConfig()`(line 32 import),无硬编码 `#4F46E5`/`#1E293B` 残留。
+
+**dev 浏览器验证通过(用户操作)**:admin 在"系统设置→默认主题"配置 customColors(如 #FF0000)→ 用户"个人中心→设置"修改主题颜色 → 点击"重置主题" → 颜色恢复为 admin 配置值(#FF0000),非硬编码默认。frontmatter 翻 `resolved`(D-05 + D-07)。
+
+verification: 2026-06-25 dev 浏览器验证通过,重置主题恢复为 admin 配置的默认颜色,非硬编码值
