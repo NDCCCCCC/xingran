@@ -39,6 +39,15 @@ type WorkstationService interface {
 	BatchUpdatePositions(ctx context.Context, items []PositionUpdateItem) error
 	// Statistics 工位统计(专用 COUNT 聚合,不依赖分页列表;支持 orgId 部门筛选含子部门,替代前端 4 次 list 拼 total)。
 	Statistics(ctx context.Context, params map[string]interface{}) (*WorkstationStatisticsResult, error)
+	// GetWorkstationDeptOptions 工位编辑"所属部门"下拉数据源(orgId 子孙 + alias union)
+	GetWorkstationDeptOptions(ctx context.Context, orgId string) ([]DeptOption, error)
+}
+
+// DeptOption 工位编辑"所属部门"下拉选项(union: orgId 子孙 + alias 映射)
+type DeptOption struct {
+	DeptID   string `json:"deptId"`   // 部门 ID (UUID text)
+	DeptName string `json:"deptName"` // 部门名称 (短名,由前端 trimTitleToLastSegment 进一步收窄)
+	IsAlias  bool   `json:"isAlias"`  // 是否为 alias 映射条目; true → 前端追加 [映射] 后缀
 }
 
 // WorkstationStatisticsResult 工位统计结果(status: 0=可用 1=占用 2=维护)。
@@ -68,6 +77,33 @@ func (s *workstationService) Statistics(ctx context.Context, params map[string]i
 		return nil, err
 	}
 	return &result, nil
+}
+
+// GetWorkstationDeptOptions 工位编辑"所属部门"下拉数据源 (D-06 单 query union)
+// union: orgId 子孙节点 (is_alias=false) + alias 命中节点 (is_alias=true)
+func (s *workstationService) GetWorkstationDeptOptions(ctx context.Context, orgId string) ([]DeptOption, error) {
+	if orgId == "" {
+		return []DeptOption{}, nil
+	}
+	var result []DeptOption
+	// 单 query union: sys_dept 子孙节点 (is_alias=false) + alias 命中节点 (is_alias=true)
+	// 1) 子孙节点: ancestors LIKE '%,<orgId>,%' OR id = orgId, 排除外部机构本身
+	// 2) alias 节点: scope='workstation' AND location_id=orgId, JOIN sys_dept 取 dept_name
+	err := s.db.WithContext(ctx).Raw(`
+		SELECT id::text AS dept_id, dept_name AS dept_name, false AS is_alias
+		FROM sys_dept
+		WHERE deleted_at IS NULL
+		  AND is_external_org = 0
+		  AND ((',' || ancestors || ',') LIKE ('%,' || ? || ',%') OR id::text = ?)
+		UNION ALL
+		SELECT a.dept_id, d.dept_name, true AS is_alias
+		FROM sys_dept_location_alias a
+		JOIN sys_dept d ON d.id::text = a.dept_id
+		WHERE a.deleted_at IS NULL
+		  AND a.scope = 'workstation'
+		  AND a.location_id = ?
+	`, orgId, orgId, orgId).Scan(&result).Error
+	return result, err
 }
 
 type workstationService struct {
