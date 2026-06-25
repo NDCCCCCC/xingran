@@ -1,5 +1,6 @@
 ---
-status: awaiting_human_verify
+slug: vite-hmr-token-blank-page
+status: resolved
 deferred_to: v1.16-tech-debt
 trigger: 修改前端，系统自动热加载之后报错提示：TokenRefreshError: No access token available；删除 rt 之后，刷新第一次系统一直显示加载中图标，刷新第二次才能打开登录页面
 created: 2026-06-16
@@ -110,3 +111,13 @@ The specialist confirmed the diagnosis correctly identifies three coupled HMR fa
 - The 3-second safety `useEffect` correctly clears its `setTimeout` in the effect cleanup (already done at line 129). The reminder is noted as defense-in-depth.
 - `useAuthStore.setState({ initialized: true, isAuthenticated: false })` in the safety net is a direct store write — could be refactored to a named action like `forceUnauthenticated()` for future-proofing.
 - `SecureTokenStorageImpl` shares the same HMR-reset risk as `tokenManager`. Worth a follow-up note that it should re-read sessionStorage on construction so a stale `rt` is not seen by a freshly-instantiated module after HMR.
+
+## Phase 40 Closure (2026-06-25)
+
+复测确认两文件修复均已就位:
+- `src/store/authStore.ts` — `initializeFromStorage` 用 `try/finally` 保证 `initialized: true`(line 155-162),refresh 失败调 `tokenManager.clearTokens()`(line 104);`logout()` 移除 `@/router/DynamicRoutes` 动态 import(消 circular dep),直读 `STORAGE_KEYS.LAST_PATH`
+- `src/router/DynamicRoutes.tsx` — 3 秒 safety `useEffect`(`window.setTimeout` line 121 → force `initialized: true, isAuthenticated: false` line 127-129),cleanup 清 timer
+
+**dev 浏览器验证通过(用户操作)**:登录后 IDE 改前端组件保存触发 Vite HMR → 自动热加载,**未弹** "TokenRefreshError: No access token available";删除 localStorage 的 `rt` 后刷新 → 第一次显示加载中、第二次正确跳登录页。frontmatter 翻 `resolved`(D-05 + D-07)。
+
+verification: 2026-06-25 dev 浏览器验证通过,HMR 不触发 TokenRefreshError;删 rt 后首次加载中、二次跳登录页
