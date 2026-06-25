@@ -231,3 +231,49 @@ Phase 39 未声明 probe 脚本，跳过。
 _Verified: 2026-06-25_
 _Verifier: Claude (gsd-verifier)_
 _Methodology: goal-backward + 与 plan 39-08 草稿 reconciliation + CR-01/02/03 处置纳入_
+
+---
+
+## Deviations from Locked SPEC (UAT 期间发现并处理)
+
+### DEV-01: 移除 REQ-39-02 规则③(dept 必须是 location 后代) — commit b8dca97
+
+**触发:** UAT 创建"运营服务部/子部门A → 中心支公司B"映射被规则③拒绝。
+
+**根因:** 规则③要求 dept.ancestors 含 location_id(dept 是 location 后代)。但 alias
+的业务本质是"组织编制与物理办公地分离"——dept 编制上属于另一分支,物理上在 location
+办公,本就不是 location 后代。SPEC 自身验收用例(39-SPEC.md REQ-39-05:dept=子部门A,
+location=中心支公司B)在该规则下无法创建,属规格内在矛盾。
+
+**处置:** 移除规则③,保留 ①防自映射 + ②location 必须是外部机构。validateAlias 由三级
+降为二级。单测同步:DeptNotDescendantRejected → CrossBranchMappingPasses(核心场景)。
+
+**影响范围:** location_alias_service.go validateAlias + 接口 docstring;单测。
+**不影响:** 表结构、API 端点、权限、前端、operlog、缓存失效、union 注入逻辑。
+
+### DEV-02: alias List JOIN 用 CAST(id AS TEXT) — commit 6119418
+
+**触发:** UAT alias 列表 500,PG 报 uuid = character varying (SQLSTATE 42883)。
+
+**根因:** aliasListJoinClause 的 origin.id (uuid) = alias.dept_id (varchar) 列对列比较,
+PG 无此操作符。原注释误判"裸 id = ? 双 DB 一致"。
+
+**处置:** 改用标准 SQL CAST(origin.id AS TEXT),PG 转 text 与 varchar 比较,SQLite 是
+no-op(双 DB 一致)。不能用 PG 专有 ::text(破坏 SQLite 单测)。
+
+### DEV-03: LocationAliasDrawer TreeSelect 数据源 — commit d3bea9c, 1266f3a
+
+**触发:** UAT Drawer 两个下拉全显示 ---(value=undefined)。
+
+**根因:** useDeptTree() 返回 SimpleDept{id,deptName}(无 value/title),原代码 as unknown as
+强转 + trimTitleToLastSegment(对无 title 的 SimpleDept 是 no-op)→ TreeSelect 拿到 undefined。
+
+**处置:** toFullPathTree(SimpleDept→{title,value,key}) 再套 trimTitleToLastSegment(裁全路径
+只留当前部门名)。顺带修 antd 6 弃用:Drawer width→size、Space direction→orientation。
+
+### DEV-04: alias List 分页参数 — commit 5ef0f37
+
+**触发:** code-review CR-01。handler 从 query string 读 current,前端在 body 发 pageNum,
+通道+名称双错位 → 分页永远返回第 1 页。
+
+**处置:** handler 改 ShouldBindJSON 读 pageNum/pageSize,JSON tag 对齐前端。
