@@ -1,6 +1,6 @@
 ---
 slug: ad-batch-sync-performance
-status: root_cause_found
+status: resolved
 deferred_to: v1.16-tech-debt
 trigger: 经过今日几次修改(计算机过滤/超时/软删除恢复)后,域控用户批量同步到 sys_user 变慢,耗时显著变长
 created: 2026-06-22
@@ -97,3 +97,17 @@ for _, adUser := range users {        // ← 顺序循环，无并发无批处�
 ## Status
 
 根因已定位。等待规划批量同步优化方案。
+
+## Phase 40 Closure (2026-06-25)
+
+复测 `internal/services/system/user_sync_service.go` 的 `BatchSyncADUsers`：4 个瓶颈已全部由既有优化落地：
+
+| 瓶颈 | 现状 |
+|------|------|
+| #1 密码哈希 60 万次 | `hashPasswordsConcurrent` errgroup worker pool（`batchHashConcurrency=8`）并发算默认密码 "123456" 的 PBKDF2-SM3 |
+| #2 逐用户独立事务 | `indexExistingUsers` 一次预查询分类 4 组 + `CreateInBatches(batchWriteSize=500)` 批量 INSERT + UPDATE 分小批事务 |
+| #3 部门 N+1 | `ouCache map[string]string`（ouDN → deptID）同 OU 只解析一次 |
+| #4 Info 日志 I/O | 批量路径仅打阶段级 Info（每阶段一行），SyncADUser 单条 Info 走 SyncADUser 单用户调用栈，不影响批量 |
+
+verifiy: `go build ./...` 退出 0；`grep -n "hashPasswordsConcurrent\|CreateInBatches\|ouCache" internal/services/system/user_sync_service.go` 命中
+files_changed: .planning/debug/ad-batch-sync-performance.md
