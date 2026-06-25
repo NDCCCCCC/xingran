@@ -1,5 +1,5 @@
 ---
-status: root_cause_found
+status: resolved
 deferred_to: v1.16-tech-debt
 trigger: vdi虚拟机获取的定时任务提示占位，请排查代码，确认实际情况
 created: 2026-05-27
@@ -184,3 +184,15 @@ INFO[2026-05-27 16:32:31] VDI 虚拟机数据同步完成: 成功=1, 失败=0
 **files_changed**:
 - internal/scheduler/vdi_sync_tasks.go: Replace placeholder implementation with real sync call
 - internal/scheduler/scheduler.go: Add VMService dependency injection
+
+## Phase 40 Closure (2026-06-25)
+
+复测 `internal/scheduler/vdi_sync_tasks.go`:
+- `syncVDIServerVMs` (line 92-119) 已不再 `time.Sleep(100ms)` 占位，
+  改调 `GetVDIVMService()` 拿到 `VMService` 实例并调用 `SyncVMsFromVDIByServer(ctx, server)`
+- 整条链路（scheduler → service → vdi_client_extended → saveOrUpdateVM）已接通
+
+`占位实现` 字符串在 internal/scheduler/ 下已 0 命中。frontmatter 翻 `resolved`。
+
+verification: `grep -rn "占位实现" internal/scheduler/` 0 命中；`vmService.SyncVMsFromVDIByServer` 调用存在于 vdi_sync_tasks.go:105
+files_changed: .planning/debug/vdi-vm-sync-placeholder.md
