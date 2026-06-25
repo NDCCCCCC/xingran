@@ -16,6 +16,7 @@ import { useLayoutEffect, useMemo } from "react";
 import { Form, Input, InputNumber, Select, Row, Col, Cascader, TreeSelect } from "antd";
 import type { FormInstance } from "antd";
 import type { WorkstationOps } from "@/types";
+import type { DeptOption } from "@/lib/opsApi";
 import type { DeptTreeNode, UserOption } from "../types";
 import { findDeptNode, trimTitleToLastSegment } from "@/utils/deptUtils";
 import { STATUS_OPTIONS, TYPE_OPTIONS } from "../constants";
@@ -48,6 +49,10 @@ export interface WorkstationEditModalProps {
   onCancel: () => void;
   onDeptChange: (deptId: string) => void;
   onOrgChange: (orgId: string) => void;
+  /** Phase 39: union 注入的 alias 映射部门列表(isAlias=true 条目)。
+   *  由父组件 index.tsx 通过 useAliasByLocation(watchedOrgId) 拉取后透传。
+   *  在 subDeptTree 末尾追加为带 `[映射]` 后缀的叶子节点。 */
+  aliasList?: DeptOption[];
 }
 
 export function WorkstationEditModal({
@@ -56,6 +61,7 @@ export function WorkstationEditModal({
   editingWorkstation,
   orgTreeData,
   deptTreeData,
+  aliasList,
   userOptions,
   cascaderOptions,
   loadingCascader,
@@ -87,9 +93,34 @@ export function WorkstationEditModal({
   const subDeptTree = useMemo<DeptTreeNode[]>(() => {
     if (!watchedOrgId) return [];
     const node = findDeptNode(deptTreeData, watchedOrgId);
-    if (!node?.children?.length) return [];
-    return trimTitleToLastSegment(node.children);
-  }, [deptTreeData, watchedOrgId]);
+    // D-LOCKED (Phase 37): 基线子树派生语义不可变 — findDeptNode(deptTreeData, orgId).children → trimTitleToLastSegment
+    const baseTree: DeptTreeNode[] = node?.children?.length
+      ? trimTitleToLastSegment(node.children)
+      : [];
+
+    // Phase 39 union 注入 (D-01 决策): alias 映射部门追加到 baseTree 末尾。
+    // 数据源为后端 POST /ops/workstation/dept-options 的 isAlias=true 条目,
+    // 经父组件 useAliasByLocation → aliasList 透传进来。
+    if (!aliasList || aliasList.length === 0) return baseTree;
+
+    const aliasNodes: DeptTreeNode[] = aliasList.map((a) => {
+      // 走 trimTitleToLastSegment 保持与 baseTree title 收窄规则一致
+      // (DeptOption.deptName 一般不含 " / ",函数会原样返回)
+      const trimmed =
+        trimTitleToLastSegment([{ title: a.deptName, children: [] }])[0]?.title ??
+        a.deptName;
+      return {
+        title: `${trimmed} [映射]`, // D-01 锁定: 原名 + " [映射]" 后缀 (UAT 文本断言依赖)
+        value: a.deptId,
+        key: a.deptId,
+        isLeaf: true,
+        // 标记 is_alias 便于其他消费者识别(不影响渲染)
+        ...({ is_alias: true } as Record<string, unknown>),
+      } as DeptTreeNode;
+    });
+
+    return [...baseTree, ...aliasNodes];
+  }, [deptTreeData, watchedOrgId, aliasList]);
 
   return (
     <BaseEditModal
