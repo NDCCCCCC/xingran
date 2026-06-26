@@ -1,6 +1,6 @@
 ---
 slug: vdi-vm-operations-fail
-status: fixed
+status: resolved
 trigger: VDI虚拟机操作问题
 created: "2026-05-28T20:15:00+08:00"
 updated: "2026-05-28T21:00:00+08:00"
@@ -101,3 +101,8 @@ if vdiErr.ErrorCode == 1101 {
 - `internal/services/vdi/vdi_types.go` - 添加VMID字段
 - `internal/services/vdi/vm_service_impl.go` - 修正字段比较逻辑
 - `internal/services/vdi/vdi_client_extended.go` - 增强错误解析
+
+## Phase 41 Closure (2026-06-26)
+verification: 2026-06-26 复测三处确认修复落地 — (1) `internal/services/vdi/vdi_types.go:44/49/54/60/67/100/118/126` 中 VMID 字段存在于 CreateVMResponse/VMOperationRequest/RenameVMRequest/BindUserRequest/VMInfo/VDIVMDetail 等多个结构（grep 命中 8 行），VDIVMResource 的 ID 字段在 line 159 注释为 `// VDI API返回整数，但Go json会自动转换为字符串` 对应 VDI `_id`；(2) `vm_service_impl.go:890` SyncVMFromVDI 比较逻辑 `if vms[i].ID == vm.VMID` 正确（resource._id 等于本地 vm.VMID，即 VDI 数字 VM ID）；(3) `vdi_client_extended.go:502-505` 增强错误解析 `if vdiErr.ErrorCode == 1101 { return fmt.Errorf("AUTH_TOKEN_INVALID: %s", vdiErr.ErrorMessage) }` 已落地。
+files_changed: internal/services/vdi/vdi_types.go + vm_service_impl.go (SyncVMFromVDI 比较) + vdi_client_extended.go (AUTH_TOKEN_INVALID 错误码 1101 解析)
+action: re-verify-then-flip (D-01)
