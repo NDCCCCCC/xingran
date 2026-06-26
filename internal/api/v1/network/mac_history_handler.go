@@ -132,7 +132,7 @@ type GetVendorRequest struct {
 
 // GetVendorResponse 厂商查询响应
 type GetVendorResponse struct {
-	VendorName string `json:"vendor_name"`
+	VendorName string `json:"vendorName"` // camelCase,与项目其他响应字段一致(Phase 13 W4 修复)
 }
 
 // GetVendor 查询MAC地址的厂商信息
