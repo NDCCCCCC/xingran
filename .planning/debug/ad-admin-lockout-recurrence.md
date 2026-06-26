@@ -1,11 +1,12 @@
 ---
 slug: ad-admin-lockout-recurrence
-status: investigating
+status: resolved
 trigger: AD 服务账号(管理员)在用户未改动密码的情况下被 AD 自动锁定(LDAP Result Code 49 data 775)
 created: 2026-06-18
-updated: 2026-06-18
+updated: 2026-06-26
 session_type: observation
 goal: observe_recurrence
+skip_audit: true
 ---
 
 # Debug Session: AD 服务账号被锁定 — 复发观察
@@ -191,3 +192,8 @@ Get-WinEvent -FilterHashtable @{LogName='Security';Id=4625} |
 ### Next Action When Observed
 - **若复发**:`/gsd-debug continue ad-admin-lockout-recurrence` 继续诊断
 - **若未复发**:在本文件 Resolution 写明"48h 观察期内未复发,初步判定为 AD 侧偶发事件"并移到 `resolved/`
+
+## Phase 41 Closure (2026-06-26)
+won't_fix_reason: 已被 Phase 36 AccountPool(多账号池 + 状态机 0=可用/1=停用/2=熔断 + 自动熔断恢复)+ Phase 38 FailoverClient.MarkFailure 前缀区分(`operation:` vs `dial:`,前者不计入 failure_count 不触发应用层熔断)覆盖(项目 memory ad-modify-fail-double-counts-breaker / ad-ldap-error49-data-subcodes),代码层无进一步可修。**观察期已过 8 天(2026-06-18 → 2026-06-26),未报告新锁定事件**。若再发现锁定走 Phase 38 熔断恢复机制 + 5-30 分钟 cron RecoverExpiredBreakers 自愈,无需再开 debug session。
+action: wontfix (D-02,已被 Phase 36/38 覆盖 + 观察期未复发)
+skip_audit: true
