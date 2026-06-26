@@ -1,7 +1,7 @@
 ---
 slug: vdi-cpu-display-issue
 name: vdi-cpu-display-issue
-status: debug_complete
+status: resolved
 trigger: 虚拟机列表页面显示CPU核数不正确：页面显示1核，但实际API返回的是"1颗 × 8核"。需要调查：
 1. 后端API响应的CPU数据结构
 2. 前端如何解析和显示CPU信息
@@ -213,3 +213,8 @@ if (cpuNumber > 0 && cpuCore > 0) {
 - ✅ Go代码编译成功
 - ✅ 前端TypeScript类型检查通过
 - ✅ 数据库迁移脚本已创建
+
+## Phase 41 Closure (2026-06-26)
+verification: 2026-06-26 复测三处确认修复落地 — (1) `internal/models/vdi.go:22-28` 的 VDIVirtualMachine 模型含 `CPUNumber/CPUCore/CPUPer/MemoryPer/DiskPer` 五个字段（grep 命中 lines 22/23/24/26/28）；(2) `internal/core/db/migrations/migration_141_vdi_cpu_fields.go` 与 `migration_142_vdi_network_config.go` 两个迁移文件均存在；(3) `ruoyi-react-frontend/src/pages/vdi/VirtualMachineList/index.tsx` 已用 cpu_number/cpu_core/cpu_per 渲染（Form.Item label="CPU 颗数" name="cpu_number" 在 line 980 命中）。原 .md 述及的扩展字段+迁移+前端渲染三链路完整保留。
+files_changed: internal/models/vdi.go + internal/core/db/migrations/migration_141_vdi_cpu_fields.go + migration_142_vdi_network_config.go + ruoyi-react-frontend/src/pages/vdi/VirtualMachineList/index.tsx
+action: re-verify-then-flip (D-01)
