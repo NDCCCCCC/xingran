@@ -411,6 +411,10 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate166ApikeyRoutePathFix(d.DB); err != nil {
 			applogger.Errorf("Phase 40 API 密钥菜单 path 修正失败: %v", err)
 		}
+		// n71: 工位状态联动 — 回填历史 user_id 有值但 status=0 的工位为 status=1 (占用)
+		if err := migrations.Migrate167WorkstationBackfillStatus(d.DB); err != nil {
+			applogger.Errorf("n71 工位状态回填失败: %v", err)
+		}
 		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
 		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
 			applogger.Errorf("MAC 过滤规则表迁移失败: %v", err)
