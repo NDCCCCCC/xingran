@@ -1,6 +1,6 @@
 ---
 slug: go-textfsm-dollar-anchor-bug
-status: debug_complete
+status: resolved
 trigger: 修复Go TextFSM实现中$$行尾锚点的bug：parseRule函数移除^和$$后未添加回锚点，导致正则表达式无法正确匹配。位置：internal/templates/textfsm.go:240-254
 created: 2026-05-12T01:00:00Z
 updated: 2026-05-12T02:00:00Z
@@ -158,3 +158,8 @@ Go TextFSM实现中，`parseRule`函数移除`^`和`$$`后，在调用`buildRege
   go run test_template_go.go
   # 预期输出：解析结果: 4 条记录
   ```
+
+## Phase 41 Closure (2026-06-26)
+verification: 2026-06-26 复测 `internal/templates/textfsm.go:239/241/251/255` 确认修复落地 — parseRule 函数中 `hasStartAnchor := strings.HasPrefix(line, "^")` (line 239) 与 `hasEndAnchor := strings.HasSuffix(line, "$")` (line 241) 记录原始锚点存在性，并在 buildRegexWithVariables 后通过 `regexPattern = "^" + regexPattern` (line 252) / `regexPattern += "$"` (line 256) 拼回行首/行尾锚点。`grep -c "hasStartAnchor\|hasEndAnchor" internal/templates/textfsm.go` 命中 4 行，符合预期。
+files_changed: internal/templates/textfsm.go (parseRule 函数 lines 237-257，记录锚点并拼回)
+action: re-verify-then-flip (D-01)
