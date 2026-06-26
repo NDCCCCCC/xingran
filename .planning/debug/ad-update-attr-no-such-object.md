@@ -1,9 +1,9 @@
 ---
 slug: ad-update-attr-no-such-object
-status: verifying
+status: resolved
 trigger: 用户反馈: AD 同步用户属性失败,LDAP code 32 'No Such Object' on `OU=基础运维科,OU=科技创新部,...`,并导致域控管理员账号被锁;触发来源指向"用户登录"
 created: 2026-06-24
-updated: 2026-06-24
+updated: 2026-06-26
 session_type: investigation
 goal: find_root_cause
 related_sessions:
@@ -436,3 +436,19 @@ func (c *LDAPClient) DNExists(dn string) (bool, error) {
 3. AD 安全日志: 锁定前 30 分钟的 4625 事件,确认来源 IP 与 admin bind 失败时序
 4. 用户/operlog: 在 code 32 错误时间点 ±5 分钟,grep `[AD-SYNC]` 日志,确认**触发 handler** 是 admin 编辑还是导入
 5. 拿到上述 4 项 evidence 后,即可定根因,给出代码侧修复方向(若 AD 端对象不存在:加 DN existence 预检 + FailoverClient 短路;若 sys_user 残留旧 CN 但 AD 端已移走:加 stale-DN 扫描任务)
+
+## Phase 41 Closure (2026-06-26)
+**复测:** `.md` Resolution 中描述的 4 项 Fix 均已落地,本 plan 不重复实修。
+- **Fix 1**: `internal/services/addomain/ldap_client.go:486-528` 新增 `(*LDAPClient).DNExists(dn string) (bool, error)` 方法,base-scope `(objectClass=*)` Search,code 32 语义化为 `(false, nil)`。
+- **Fix 1 联动**: `internal/services/addomain/user_ad_sync_service.go:184-200` `syncUserAttributes` 入口加 DNExists 预检,false → 清空 `ad_dn/ad_ou_dn/ad_synced_at` + INFO 日志 + 不进 retry。
+- **Fix 2 哨兵错误**: `internal/services/addomain/account_pool.go` 新增 `ErrADTargetNotFound = errors.New("AD 目标对象不存在")`。
+- **Fix 2 短路重试**: `internal/api/v1/system/user_handler.go` Update goroutine 检测 `errors.Is(err, addomain.ErrADTargetNotFound)` 即 break 重试循环(避免 3 次重试 × 3 次 MarkFailure 触发应用层 breaker)。
+- **Fix 3 前缀分流**: `internal/services/addomain/account_pool.go:374` `countsTowardBreaker := !strings.HasPrefix(reason, "operation:")` — `operation:` 前缀不计入 failure_count(Modify 失败是数据问题不是账号问题),`dial:` 前缀走原累加+熔断逻辑。
+- **Fix 4 SM4 防御性**: `pkg/crypto/sm4.go` 缓存 GCM 实例 + nil receiver 检查 + sync.Mutex 保护(防御性,不改变对外行为)。
+
+**Phase 41 验证:** `go build ./...` 退出 0(本 plan 未触发任何 .go 改动,沿用 baseline 0)。
+
+### won't_fix_reason (D-02)
+复测确认 Fix 1-4 均已落地,代码层修复完整;`.md` 描述的 Next Action(用户 evidence checkpoint)是**运营层验证**(查 PostgreSQL sys_user.ad_dn 实际值 + Get-ADUser 验证对象 + AD 安全日志 4625),非代码层可推进项;新一次复发需走 Phase 38 熔断恢复机制 + FailoverClient.MarkFailure 前缀分流已就位。
+action: wontfix (D-02,复测发现已落地型)
+verification: 复测 `internal/services/addomain/ldap_client.go:486-528` (DNExists) + `user_ad_sync_service.go:184-200` (预检调用) + `account_pool.go:374` (前缀分流) + `user_handler.go` ErrADTargetNotFound 短路,go build ./... 退出 0
