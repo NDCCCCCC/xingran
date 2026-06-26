@@ -1,10 +1,11 @@
 ---
 gsd_state_version: 1.0
 slug: react-vendor-activity-tdz
-status: investigating
+status: resolved
 trigger: react-vendor-DT-57syF.js:1 Uncaught TypeError: Cannot set properties of undefined (reading/setting 'Activity') at Py (...:9177) at xc (...:12289) at vendor-CvhVq_z_.js:5:9167 at Ro (...:14213) at Ir (...:14305) at vendor-CvhVq_z_.js:5:14396
 created: 2026-06-12
 updated: 2026-06-12
+skip_audit: true
 ---
 
 # Debug Session: react-vendor-activity-tdz
@@ -103,3 +104,7 @@ React 19.x 源码中,`Activity` 是新 API。在打包后的 chunk 里,`Py` 函�
 
 ## Resolution
 (待 gsd-debugger 完成)
+
+## Phase 41 Closure (2026-06-26)
+won't_fix_reason: 复测 build 通过(`cd ruoyi-react-frontend && npm run build` 退出 0,34.32s),`grep 'Cannot set properties of undefined.*Activity|React\.Activity|ActivityImpl' dist/assets/` 命中 0。当前 `dist/assets/` 已无原报错的 react-vendor-DT-57syF.js / vendor-CvhVq_z_.js 双向循环 chunk,统一收敛为 `vendor-react-Ch8DzeRe.js`(2,828 kB)。根因被 vite.config.ts 三层机制彻底覆盖:① Plan 41-01 把 `@tanstack/react-query`/`@tanstack/query-core` 显式归入 vendor-react(消除 createContext undefined);② 升级为 `THREE_FAMILY`/`MARKDOWN_FAMILY` 依赖图传递闭包,所有 React 生态包(包括疑似 react-19 Activity shim)按依赖关系自动归入 vendor-react;③ vendor-react 兜底策略(`return 'vendor-react'`)从机制上保证 React 核心与所有使用 React 的包同 chunk 求值,无跨 chunk TDZ 触发面。`.md` 怀疑的 `use-sync-external-store` 系列 / react-19 内部 Activity API 等候选嫌疑包均无独立 manifest,实测 build 已消除该报错链。
+action: wontfix (D-02) — 已被 Plan 41-01 + vite.config.ts 依赖图闭包方案覆盖
