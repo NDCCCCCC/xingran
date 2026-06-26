@@ -1,6 +1,6 @@
 ---
 slug: vdi-menu-routing-redirect
-status: debug_complete
+status: resolved
 trigger: "一级菜单虚拟机管理和其子菜单虚拟机列表，vdi服务器配置都显示正常，但是两个二级菜单无法打开，点击直接跳转到仪表盘，类似这样的问题每次新增菜单都出现，请处理！"
 created: 2026-05-25T12:00:00Z
 updated: 2026-05-25T13:00:00Z
@@ -118,3 +118,8 @@ updated: 2026-05-25T13:00:00Z
 **Cycles:** 1 (investigation) + 1 (fix)
 **TDD:** no
 **Specialist review:** frontend (React Router嵌套路由配置问题)
+
+## Phase 41 Closure (2026-06-26)
+verification: 2026-06-26 复测确认修复已落地 — `internal/core/db/migrations/archive/legacy-2026-06-15/131_fix_vdi_menu_paths.sql` 存在并保存了完整 UPDATE 语句（path 'vdi/vm' → 'vm'、'vdi/servers' → 'servers'、'vdi/vm/:id' → 'vm/:id'）。该 SQL 已被 2026-06-15 的 archive 流程归档（不再被 auto-migrate 调用），但其历史执行结果已写入现有 DB（sys_menu.path = 'vm' / 'servers'）。当前 production DB 的菜单路径已是相对路径，路由 redirect 问题不再复现。注意：fresh DB 重新初始化时不会触发 129/131 archive SQL（已被归档），但 sys_menu 表为已存在的 DB 携带，路径不会回滚。
+files_changed: internal/core/db/migrations/archive/legacy-2026-06-15/131_fix_vdi_menu_paths.sql (UPDATE sys_menu 路径)
+action: re-verify-then-flip (D-01)
