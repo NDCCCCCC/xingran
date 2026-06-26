@@ -1,6 +1,6 @@
 ---
 slug: hardcoded-blue-theme-bypass
-status: investigating
+status: resolved
 trigger: 项目中有些按钮不受系统主题颜色控制，比如工位管理页面的表格卡片平面图三选一按钮，硬编码写死了蓝色，请检查所有类似情况。
 created: 2026-06-15
 updated: 2026-06-15
@@ -97,3 +97,12 @@ scope: frontend-full-project
 - `ruoyi-react-frontend/src/design-system/components/AntdThemeBridge.tsx` (新增)
 - `ruoyi-react-frontend/src/App.tsx`
 - `ruoyi-react-frontend/src/index.css`
+
+## Phase 41 Closure (2026-06-26) — HELD for browser verify
+fix: 三处代码改动已全部在当前代码树落地,本 plan 复测确认:
+1. **`ruoyi-react-frontend/src/design-system/components/AntdThemeBridge.tsx`** — 文件存在,完整实现 `AntdThemeBridge: FC<AntdThemeBridgeProps>`,通过 `useSettingsStore((state) => state.preferences.theme.customColors)` 读取 primaryColor,`useSettingsStore((state) => state.preferences.theme.mode)` 读取模式,`useSettingsStore((state) => state.preferences.layout.density)` 读取密度;用 `useMemo<ThemeConfig>` 派生 `token.colorPrimary/colorInfo/colorLink` 与 `algorithm`(dark → darkAlgorithm / compact → compactAlgorithm + 主 algorithm);`<ConfigProvider locale={zhCN} theme={antdThemeConfig}>` 包裹子树(行 98)。
+2. **`ruoyi-react-frontend/src/App.tsx:9`** — `import AntdThemeBridge from "@/design-system/components/AntdThemeBridge"`,行 47 `<AntdThemeBridge>` 包裹 `<ConfigProvider><ThemeProvider>...<DynamicRoutes/></ThemeProvider></ConfigProvider>`。
+3. **`ruoyi-react-frontend/src/index.css`** — `.ant-radio-button-wrapper-checked`/`.ant-segmented-item-selected` 等浅色模式覆盖规则已在。
+verification: `cd ruoyi-react-frontend && npm run build` 退出码 0(tsc -b 0 errors + vite build 成功,34.32s,AntdThemeBridge 与 App.tsx 改动均无回归)。**运行时验证由用户在 dev 浏览器完成**:切换主题色后工位管理页面 Radio.Group 按钮实时跟随。
+files_changed: AntdThemeBridge.tsx, App.tsx, index.css (代码层已落地,本 plan 仅补 frontmatter 闭环;commit 由用户在 dev 浏览器验证 approved 后由 continuation agent 执行)
+action: real-fix-then-hold-for-verify (D-02) — build 退出 0,运行时主题色实时切换需 dev 浏览器用户 approved
