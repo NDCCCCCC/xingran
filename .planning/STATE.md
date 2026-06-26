@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.16
 milestone_name: 技术债清理 (Tech-Debt Cleanup)
 status: executing
-stopped_at: Phase 41 plan 01 complete — Cohort A 12 sessions flipped to resolved
-last_updated: "2026-06-26T02:30:00.000Z"
-last_activity: 2026-06-26 -- Phase 41 Plan 01 complete (12 fix(41) commits, validator 100% pass)
+stopped_at: Phase 41 plan 03 complete — Cohort B backend/auth 10 sessions closed (9 wontfix + 1 real-fix)
+last_updated: "2026-06-26T02:50:00.000Z"
+last_activity: 2026-06-26 -- Phase 41 Plan 03 complete (1 fix(41) + 9 docs(41) commits, validator 100% pass)
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 7
-  completed_plans: 4
-  percent: 57
+  completed_plans: 5
+  percent: 71
 ---
 
 # Project State
@@ -19,14 +19,14 @@ progress:
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
 **Status**: Planning v1.16 — ROADMAP drafted, ready to plan Phase 40
-**Last activity**: 2026-06-26 — Phase 41 Plan 01 complete: 12 Cohort A sessions flipped to resolved (12 fix(41) commits, validator 100% pass). Audit-open debug_sessions expected 29 → 17.
+**Last activity**: 2026-06-26 — Phase 41 Plan 03 complete: 10 Cohort B backend/auth sessions closed (1 real-fix ad-user-page-checkbox + 9 wontfix with written reasons; 2 skip_audit for fully-removed). Audit-open debug_sessions expected 17 → 7 (or lower, depending on 41-02 contribution).
 
 ## Current Position
 
 Phase: 41 (debug-session-gap-closure) — EXECUTING
-Plan: 1 of 4 (41-01 complete; 41-02/41-03/41-04 pending)
-Status: Plan 41-01 complete — Cohort A 12 sessions all flipped to resolved (0 escalated)
-Last activity: 2026-06-26 -- Phase 41 Plan 01 SUMMARY.md committed (12 fix(41) commits, validator 100%)
+Plan: 3 of 4 (41-01/41-03 complete; 41-02/41-04 pending)
+Status: Plan 41-03 complete — Cohort B backend/auth 10 sessions all closed via D-02 (1 real-fix + 9 wontfix, 2 with skip_audit)
+Last activity: 2026-06-26 -- Phase 41 Plan 03 SUMMARY.md committed (10 atomic commits, validator 100%, go build 0)
 
 ## Project Reference
 
