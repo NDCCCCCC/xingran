@@ -1,9 +1,9 @@
 ---
 slug: user-deptid-uuid-cast-recurring
-status: diagnosed
+status: resolved
 trigger: "ERRO[2026-06-15 12:38:58] invalid input syntax for type uuid: \"\" (SQLSTATE 22P02) — CASE WHEN regex guard in JOIN ON clause is still failing"
 created: 2026-06-15T00:00:00.000Z
-updated: 2026-06-15T00:00:00.000Z
+updated: 2026-06-26
 ---
 
 # Debug Session: sys_user.dept_id UUID Cast — DEEP ROOT CAUSE
@@ -152,3 +152,19 @@ This is why each "fix" continues to fail with the same misleading `invalid input
 ```
 
 **Specialist Hint:** `go` (GORM Go backend; Go code change)
+
+## Phase 41 Closure (2026-06-26)
+
+**复测:** `userJoinClause` 简化修复已落地,本 plan 不重复实修。
+- `internal/services/system/user_service.go:389` `userJoinClause := "LEFT JOIN sys_dept ON sys_dept.id = sys_user.dept_id"` — 直接等值连接,**无 CASE WHEN / NULLIF / regex guard**。
+- `internal/services/system/user_service.go:385` 注释明确说明"之前的 NULLIF/CASE WHEN 防御性写法是错误的:基于'dept_id 是 VARCHAR'的错误假设"。
+- 文件中其余 4 处 `CASE WHEN` 出现在统计聚合查询(行 470/480/481),用于 `SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END)` 类聚合,与本 session JOIN 问题无关,**保留**。
+
+**根因复述(沿用 .md 诊断):** `sys_user.dept_id` 列原生是 PostgreSQL `uuid` 类型,所有"防御性"写法(`dept_id != ''`、`dept_id ~ 'regex'`、`dept_id::uuid`)都基于错误假设;PostgreSQL planner 在尝试对 uuid 列做 text 比较/正则时产生误导性二次错误 `invalid input syntax for type uuid: ""`。直接 `sys_dept.id = sys_user.dept_id` 等值连接即可,无需任何 cast 或 guard。
+
+**Phase 41 验证:** `go build ./...` 退出 0(本 plan 未触发任何 .go 改动)。
+
+### won't_fix_reason (D-02)
+复测确认 userJoinClause 已简化为 `LEFT JOIN sys_dept ON sys_dept.id = sys_user.dept_id`(user_service.go:389),代码层修复完整;本 plan 复测证据即翻 resolved。
+action: wontfix (D-02,复测发现已落地型)
+verification: 复测 `internal/services/system/user_service.go:389` userJoinClause 已简化,go build ./... 退出 0
