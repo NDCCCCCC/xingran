@@ -850,6 +850,17 @@ func (s *ExcelService) prepareRecordsForUpsert(
 		preparedRecord["created_at"] = time.Now()
 		preparedRecord["deleted_at"] = nil // 显式设置为未删除状态
 
+		// ✨ 联动 user_id ↔ status(占用/空闲),Maintain 状态保留
+		// Excel 中的 status 列将被忽略,以 user_id 为准
+		// 仅对 sys_workstation 生效(其他表 status 字段语义不同)
+		if config.TableName == "sys_workstation" {
+			if userID, ok := preparedRecord["user_id"]; ok && userID != nil && fmt.Sprintf("%v", userID) != "" {
+				preparedRecord["status"] = int(models.WorkstationStatusOccupied)
+			} else {
+				preparedRecord["status"] = int(models.WorkstationStatusAvailable)
+			}
+		}
+
 		prepared = append(prepared, preparedRecord)
 	}
 
