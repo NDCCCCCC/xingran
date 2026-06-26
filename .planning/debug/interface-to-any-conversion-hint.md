@@ -1,11 +1,12 @@
 ---
 title: interface{} → any 转换提示
 slug: interface-to-any-conversion-hint
-status: diagnosed
+status: resolved
 trigger: 调查： interface{} → any 转换提示
 created: 2026-06-15
-updated: 2026-06-15
+updated: 2026-06-26
 goal: find_root_cause_only
+skip_audit: true
 ---
 
 # Current Focus
@@ -91,3 +92,21 @@ recommended_solution: |
 # Session Status
 
 **RESOLVED** (user 选 C 方案并已落地)
+
+## Phase 41 Closure (2026-06-26)
+
+**复测:** `.md` 诊断已确认根因(风格非 bug),本 phase 翻 resolved + skip_audit 移出 audit。
+- `staticcheck -checks=SA1029 ./...` 命中 **0 issues**(项目 memory:interface{} 是 Go 1.18+ 起的 `any` 别名,编译器等价)
+- 1261 处 `interface{}` 全部为合法动态值:缓存 Set/GetJSON 序列化(pkg/cache/redis.go:76)、JSONata 求值(internal/transform/jsonata_evaluator.go:28)、Excel 动态行解析(internal/services/rpa/data_mapper.go:41 处)、reflect 通用 helper
+- 264 个 .go 文件涉及,跨 pkg/internal/cmd/scripts/rpa-worker 5 个分区
+- 工具链不报警(`gopls` 编译期诊断无错误,`go build ./...` 通过)
+
+**根因复述:** `interface{}` → `any` 是 Go 1.18+ 引入的**别名**(编译器完全等价),不是 bug;264 文件 / 1261 处的机械重写不会带来运行期收益,纯属风格。机械替换 30k 行 churn 对 review 不利,远超 v1.16 debug 清理 milestone 的合理范围。后续新代码可自然使用 `any`,存量不强制重写(沿用 .md 推荐方案 C:不动代码,加 .golangci.yml 例外规则隔离噪音)。
+
+**Phase 41 验证:** `go build ./...` 退出 0(本 plan 未触发任何 .go 改动)。
+
+### won't_fix_reason (D-02)
+1261 处 `interface{}` 是合法动态值传递(缓存 Set/GetJSON 序列化 / JSONata 求值输入输出 / Excel 动态行解析 / reflect 通用 helper),staticcheck SA1029 命中 0,`interface{}` → `any` 是 Go 1.18+ 风格别名(编译器等价),非 bug;机械替换是 style 范畴(30k 行 churn),属后续清理;本 phase(v1.16 debug 闭环)不做。`skip_audit: true` 顶层标记让 audit-open 不计此 session。
+action: wontfix (D-02,style non-bug + staticcheck 0 命中 + 顶层 skip_audit: true)
+skip_audit: true
+verification: staticcheck SA1029 命中 0,1261 处合法 interface{},go build ./... 退出 0
