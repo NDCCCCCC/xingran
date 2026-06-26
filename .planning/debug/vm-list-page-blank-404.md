@@ -1,6 +1,6 @@
 ---
 slug: vm-list-page-blank-404
-status: debug_complete
+status: resolved
 trigger: 虚拟机列表页面打开显示空白
 created: 2025-01-03T13:29:00+08:00
 updated: 2025-01-03T13:40:00+08:00
@@ -98,3 +98,8 @@ An error occurred in one of your React components.
 **verdict:** LOOKS_GOOD
 
 **Reasoning:** 清除 Vite 缓存是解决此 React/Vite 模块解析问题的正确方法。这是文件重命名后的常见缓存问题，解决方法符合 Vite 最佳实践。
+
+## Phase 41 Closure (2026-06-26)
+verification: 2026-06-26 复测确认修复已落地 — (1) `ruoyi-react-frontend/src/pages/vdi/VirtualMachineList/vmOperationButtons.tsx` 存在（grep 命中 line 11 export const vmOperationButtons）；(2) `index.tsx:6` 的导入语句 `import { vmOperationButtons } from "./vmOperationButtons"` 不带扩展名，TypeScript 编译时正确解析到 `.tsx` 文件。原始 .md 述及的"文件从 .ts 重命名为 .tsx + 清除 Vite 缓存"修复在当前代码树中完整保留，import 路径无扩展名依赖由 TS 解析器处理，缓存问题不会复现。
+files_changed: ruoyi-react-frontend/src/pages/vdi/VirtualMachineList/vmOperationButtons.tsx (rename .ts → .tsx 后源文件存在)
+action: re-verify-then-flip (D-01)
