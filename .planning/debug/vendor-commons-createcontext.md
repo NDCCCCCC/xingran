@@ -1,6 +1,6 @@
 ---
 slug: vendor-commons-createcontext
-status: fixed
+status: resolved
 trigger: 使用scripts目录下的build-linux.bat构建程序后部署到服务器上运行报错：vendor-commons-igDAyHU2.js:1 Uncaught TypeError: Cannot read properties of undefined (reading 'createContext')
     at vendor-commons-igDAyHU2.js:1:31027
 created: 2026-06-14T00:00:00+08:00
@@ -157,3 +157,8 @@ After fix:
 **Fix:** Add a `manualChunks` rule that places `@tanstack/react-query` and `@tanstack/query-core` into the `vendor-react` chunk, ensuring they share the same evaluation scope as their React dependency. Verified by rebuilding and inspecting chunks: `QueryClient` symbol is now inside `vendor-react` and uses the same-chunk `C` binding for `createContext`, eliminating the cross-chunk evaluation issue.
 
 **Status:** FIXED — entry-time createContext TypeError resolved.
+
+## Phase 41 Closure (2026-06-26)
+verification: 2026-06-26 复测 `ruoyi-react-frontend/vite.config.ts:193` 与 `:195` 确认修复落地 — `manualChunks` 兜底分支注释明确列出 `@tanstack/react-query`，并通过 `computePackageFamilies()` 的 REACT_FAMILY 传递闭包把所有依赖 react/react-dom 的包（含 @tanstack/react-query）统一返回 `'vendor-react'`，从机制上根除跨 chunk 引用环。原 `.md` 述及的 `if (id.includes('@tanstack/react-query')) return 'vendor-react'` 显式规则已升级为更健壮的依赖图闭包方案，修复意图（@tanstack/react-query 与 React 同 chunk 求值）完整保留。
+files_changed: ruoyi-react-frontend/vite.config.ts (manualChunks 兜底返回 'vendor-react'，含 @tanstack/react-query)
+action: re-verify-then-flip (D-01)
