@@ -1,6 +1,6 @@
 ---
 slug: ops-perms-alignment
-status: applied
+status: resolved
 created: 2026-06-17
 updated: 2026-06-17
 title: ops 模块 perms 命名系统性对齐方案
@@ -105,3 +105,8 @@ deploy:
   - 重启 ruoyi-backend.exe → migration_159 自动 UPDATE sys_menu.perms
   - 用户重新登录 (刷新菜单/perms 缓存)
   - 验证: 重跑诊断 SQL, perms 应已变为 ops:building:* / ops:serverroom:* / ops:dedicatedline:* (单数)
+
+## Phase 41 Closure (2026-06-26)
+verification: 2026-06-26 复测三处确认修复落地 — (1) `internal/core/db/migrations/migration_159_align_ops_perms.go` 文件存在，是新格式的 Go 迁移（非 archive SQL）；(2) `internal/core/db/database.go:382` 注册调用 `migrations.Migrate159AlignOpsPerms(d.DB)` 启动时自动执行；(3) `internal/api/router.go:753-759` 专线模块已用 `ops:dedicatedline:list/add/edit/delete`（grep 命中 4 处）。原 .md 述及的"路由端对齐 + seed 改单数 + migration 159 UPDATE DB"三链路完整保留在当前代码树，可被 auto-migrate 调用。
+files_changed: internal/api/router.go (dedicatedLine 改为 ops:dedicatedline:*) + internal/core/db/database.go (seed 单数化 + 注册 migration_159) + internal/core/db/migrations/migration_159_align_ops_perms.go (新增)
+action: re-verify-then-flip (D-01)
