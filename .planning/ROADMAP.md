@@ -19,7 +19,7 @@
 - ✅ **v1.15 工位设备关联** — Phase 28 (shipped 2026-06-10)
 - ✅ **v1.12 深信服桌面云集成 (22A+22B)** — Phases 22A/22B (shipped 2026-06-02)
 - ✅ **v1.15 部门物理位置映射** — Phase 39 (shipped 2026-06-25)
-- 🚧 **v1.16 技术债清理 (Tech-Debt Cleanup)** — Phases 40-41 (Phase 40 shipped 3/3; Phase 41 Task 1 verification PASS, Task 2 queued for orchestrator as checkpoint:human-verify)
+- ✅ **v1.16 技术债清理 (Tech-Debt Cleanup)** — Phases 40-41 (shipped 2026-06-26)
 
 ---
 
@@ -74,9 +74,11 @@ Plans:
 - [x] 41-02-PLAN.md — Cohort B 前端集群 7 个 session 混合修+wontfix(D-02) — 2026-06-26 complete, 2 fix(41) + 4 docs(41) commits, 4 with skip_audit (css-tree-vendor-chunk-tdz + login-md-vendor-crash + react-vendor-activity-tdz + device-modal-serial-auto-match), 1 HELD for browser verify (hardcoded-blue-theme-bypass), validator 100%, npm run build 0
 - [x] 41-03-PLAN.md — Cohort B 后端/认证集群 10 个 session 混合修+wontfix(D-02) — 2026-06-26 complete, 1 fix(41) + 9 docs(41) commits, 2 with skip_audit (ad-admin-lockout-recurrence + interface-to-any-conversion-hint), validator 100%, go build 0
 
-**Wave 2** *(Task 1 verification gate PASS; Task 2 checkpoint:human-verify queued for orchestrator)*
+**Wave 2**
 
-- [x] 41-04-PLAN.md — 验收关门:audit-open<5 + verify_phase40.sh 双 PASS(D-03/04/05) — 2026-06-26 Task 1 verification gate PASS (audit-open debug_sessions=0, verify_phase40.sh [ALL PASS] exit 0, validator 100.0%; 29/29 sessions closed; TECH-05+TECH-06 achieved); Task 2 (STATE/ROADMAP/REQUIREMENTS final closure + user final approval + push decision) queued for orchestrator as checkpoint:human-verify
+- [x] 41-04-PLAN.md — 验收关门:audit-open<5 + verify_phase40.sh 双 PASS(D-03/04/05) — 2026-06-26 complete (Task 1: three-piece suite ALL PASS, 29/29 sessions closed, TECH-05+TECH-06 achieved; Task 2: STATE/ROADMAP/REQUIREMENTS updated, v1.16 milestone closed, user approved, push deferred)
+
+**Phase 41 Plans**: 4/4 complete (2026-06-26)
 
 **UI hint**: no
 

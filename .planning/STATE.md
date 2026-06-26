@@ -2,31 +2,31 @@
 gsd_state_version: 1.0
 milestone: v1.16
 milestone_name: 技术债清理 (Tech-Debt Cleanup)
-status: executing
-stopped_at: Phase 41 plan 04 Task 1 complete — three-piece verification suite ALL PASS (audit-open debug_sessions=0 / verify_phase40.sh [ALL PASS] exit 0 / validator 100.0%); 41-VERIFICATION.md + 41-04-SUMMARY.md committed; Task 2 (STATE/ROADMAP/REQUIREMENTS final closure + user final approval + push decision) queued for orchestrator as checkpoint:human-verify
-last_updated: "2026-06-26T03:50:00.000Z"
-last_activity: 2026-06-26 -- Phase 41 Plan 04 Task 1 verification gate PASS (1 docs(41) commit for VERIFICATION.md + 1 docs(41) commit for SUMMARY.md, three-piece suite ALL PASS, audit-open debug_sessions=0)
+status: milestone_complete
+stopped_at: Phase 41 complete — v1.16 milestone closed (audit-open debug_sessions=0, verify_phase40.sh [ALL PASS], validator 100.0%, 29/29 sessions disposed with strict per-slug matrix)
+last_updated: "2026-06-26T11:58:00.000Z"
+last_activity: 2026-06-26 -- Phase 41 complete — 4/4 plans; gsd-verifier verdict PASSED 7/7; STATE/ROADMAP/REQUIREMENTS updated; v1.16 TECH-05 + TECH-06 achieved; no git push (user choice — push deferred)
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 8
-  completed_plans: 7
-  percent: 88
+  completed_plans: 8
+  percent: 100
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.16 Phase 41 verification PASS — Task 1 done; Task 2 (final closure + user approval + push decision) queued for orchestrator
-**Last activity**: 2026-06-26 — Phase 41 Plan 04 Task 1 complete: three-piece verification suite ALL PASS (audit-open debug_sessions=0 / verify_phase40.sh [ALL PASS] exit 0 / validator 100.0%); 41-VERIFICATION.md (29 session 处置矩阵) + 41-04-SUMMARY.md committed.
+**Status**: v1.16 milestone complete — Phase 40 + Phase 41 shipped (8/8 plans, 100%)
+**Last activity**: 2026-06-26 — Phase 41 Plan 04 Task 2 closed: STATE/ROADMAP/REQUIREMENTS updated, v1.16 milestone closed (audit-open debug_sessions=0, verify_phase40.sh [ALL PASS], validator 100.0%, 29/29 debug sessions disposed).
 
 ## Current Position
 
-Phase: 41 (debug-session-gap-closure) — VERIFICATION PASS (Task 1 of 4-plan sequence)
-Plan: 4 of 4 (41-01/41-02/41-03/41-04 Task 1 complete; 41-04 Task 2 checkpoint:human-verify queued for orchestrator)
-Status: Plan 41-04 Task 1 verification gate PASS — audit-open debug_sessions=0, verify_phase40.sh [ALL PASS] exit 0, validator 100.0%; 29/29 sessions closed with strict per-slug matrix; TECH-05 + TECH-06 both achieved
-Last activity: 2026-06-26 -- Phase 41 Plan 04 Task 1 complete (2 docs(41) commits: 9252117e VERIFICATION.md + 55cdda94 SUMMARY.md, three-piece suite ALL PASS)
+Phase: 41 (debug-session-gap-closure) — COMPLETE
+Plan: 4 of 4 (41-01 / 41-02 / 41-03 / 41-04 Task 1 + Task 2 — all done)
+Status: gsd-verifier verdict PASSED (7/7 must-haves); TECH-05 + TECH-06 achieved; 39 phase-41 commits landed (12 fix(41) for 41-01 + 11 fix/docs(41) for 41-03 + 7 fix/docs(41) for 41-02 + 1 hold-commit for hardcoded-blue-theme-bypass + 5 docs(41) for 41-04 closure + 3 metadata = 39 total)
+Last activity: 2026-06-26 -- Phase 41 Plan 04 Task 2 closed; STATE.md/ROADMAP.md/REQUIREMENTS.md updated; v1.16 milestone_complete (user chose: 暂不 push,本地完成)
 
 ## Project Reference
 
@@ -43,7 +43,7 @@ Last activity: 2026-06-26 -- Phase 41 Plan 04 Task 1 complete (2 docs(41) commit
 | Phase | Name | Status | Progress |
 |-------|------|--------|----------|
 | 40 | Tech-Debt Cleanup | ✅ Complete | 3/3 plans |
-| 41 | Debug Session Gap Closure | 🚧 Verification PASS (Task 1 done; Task 2 checkpoint:human-verify queued) | 4/4 plans |
+| 41 | Debug Session Gap Closure | ✅ Complete | 4/4 plans |
 
 ## Completed Milestones
 
@@ -63,6 +63,7 @@ Last activity: 2026-06-26 -- Phase 41 Plan 04 Task 1 complete (2 docs(41) commit
 - ✅ **v1.14 全局列自定义** (2026-06-09) — 1 phase (27), 1 plan
 - ✅ **v1.15 工位设备关联** (2026-06-10) — 1 phase (28), 4 plans
 - ✅ **Phase 39 工位部门物理位置映射** (2026-06-25) — 1 phase (39), 8 plans
+- ✅ **v1.16 技术债清理 (Tech-Debt Cleanup)** (2026-06-26) — 2 phases (40 + 41), 8 plans (39 commits, audit-open 29→0, verify_phase40.sh [ALL PASS])
 
 ## Session History
 
@@ -75,7 +76,7 @@ Last activity: 2026-06-26 -- Phase 41 Plan 04 Task 1 complete (2 docs(41) commit
 | 2026-06-25 | Milestone v1.16 started — ROADMAP drafted (Phase 40: tech-debt-cleanup) | 40 |
 | 2026-06-26 | Phase 41 Plan 03 complete — 10 Cohort B backend/auth sessions closed (1 fix(41) + 9 docs(41), 2 skip_audit) | 41 |
 | 2026-06-26 | Phase 41 Plan 02 complete — 6 Cohort B frontend sessions closed (2 fix(41) + 4 docs(41), 4 skip_audit); 1 HELD for browser verify | 41 |
-| 2026-06-26 | Phase 41 Plan 04 Task 1 complete — three-piece verification suite ALL PASS (audit-open debug_sessions=0 / verify_phase40.sh [ALL PASS] / validator 100.0%); 29/29 sessions closed; TECH-05+TECH-06 achieved; Task 2 queued for orchestrator | 41 |
+| 2026-06-26 | Phase 41 Plan 04 Task 2 complete — STATE/ROADMAP/REQUIREMENTS updated, v1.16 milestone closed (audit-open debug_sessions=0, verify_phase40.sh [ALL PASS], validator 100%); user approved + 暂不 push | 41 |
 
 ## Quick Tasks Completed (recent)
 
@@ -124,17 +125,20 @@ Last activity: 2026-06-26 -- Phase 41 Plan 04 Task 1 complete (2 docs(41) commit
 
 **当前选项**:
 
-1. **继续 Phase 41 后续 plan**
-   - 41-02 (Wave 1): Cohort B 前端集群 7 个 session 混合 修+wontfix
-   - 41-03 (Wave 1): Cohort B 后端/认证集群 10 个 session 混合 修+wontfix
-   - 41-04 (Wave 2): 验收关门 — audit-open<5 + verify_phase40.sh 双 PASS
+1. **v1.16 milestone 已闭环** —— Phase 40 + Phase 41 全部完成,8/8 plans,audit-open 29→0,TECH-05+TECH-06 双达成。
+2. **推送决策** —— 用户选择"暂不 push,本地完成"。您可在合适时机手动执行 `git push origin main`(39 个 phase-41 commit + 已有 phase-40 commit 在 main 分支)。
+3. **下一 milestone 规划** —— v1.17 候选范围(可后续规划):
+   - VDI 22C / 22D(依赖 v1.11 生产稳定性观察数据)
+   - DICT-29 (sys_dict 重构,纯样式)
+   - 新功能(mobile app / AI features) — 待业务决策
+   - 残余 deferred debug session(若有新增)
 
-**推荐**: 继续 Plan 41-02(Cohort B 前端集群 7 个 session 是 Plan 41-03 后端/认证集群 10 个 session 的前置依赖,先易后难)
+**推荐**: v1.16 推送前先做一次完整 UAT,确认 14 个 re-verify-flip + 2 real-fix + 13 wontfix 的 29 个 session 处置与生产表现一致后,再 git push。
 
 ## Session Continuity
 
-Last session: 2026-06-26T03:50:00.000Z
-Stopped at: Phase 41 plan 04 Task 1 complete — three-piece verification suite ALL PASS (audit-open debug_sessions=0 / verify_phase40.sh [ALL PASS] / validator 100.0%); 29/29 sessions closed
-Resume file: .planning/phases/41-debug-session-gap-closure/41-VERIFICATION.md (Task 1 verification gate) + .planning/phases/41-debug-session-gap-closure/41-04-SUMMARY.md (Task 1 summary)
+Last session: 2026-06-26T11:58:00.000Z
+Stopped at: v1.16 milestone complete — Phase 41 Plan 04 Task 2 closed, STATE/ROADMAP/REQUIREMENTS updated, audit-open debug_sessions=0, verify_phase40.sh [ALL PASS], validator 100.0%
+Resume file: .planning/phases/41-debug-session-gap-closure/41-VERIFICATION.md (29 session 处置矩阵 + 三件套输出 + TECH-05/06 达成声明)
 
-**Active Phase:** 41 (debug-session-gap-closure) — 4/4 plans complete; Task 2 (STATE/ROADMAP/REQUIREMENTS final closure + user final approval + push decision) queued for orchestrator as checkpoint:human-verify. Verification materials ready in 41-VERIFICATION.md (29 session 处置矩阵 + 三件套输出 + TECH-05/06 达成声明).
+**Milestone status:** v1.16 技术债清理 — milestone_complete (2026-06-26), 2 phases (40+41), 8 plans, 39 phase-41 commits + 3 phase-40 plans. v1.17 规划待启动。
