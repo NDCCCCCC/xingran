@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.16
 milestone_name: 技术债清理 (Tech-Debt Cleanup)
 status: executing
-stopped_at: Phase 41 plan 03 complete — Cohort B backend/auth 10 sessions closed (9 wontfix + 1 real-fix)
-last_updated: "2026-06-26T02:50:00.000Z"
-last_activity: 2026-06-26 -- Phase 41 Plan 03 complete (1 fix(41) + 9 docs(41) commits, validator 100% pass)
+stopped_at: Phase 41 plan 02 complete — Cohort B frontend 6 sessions closed (2 re-verify-fix + 4 wontfix); 1 HELD (hardcoded-blue-theme-bypass) awaiting user browser verify
+last_updated: "2026-06-26T03:15:00.000Z"
+last_activity: 2026-06-26 -- Phase 41 Plan 02 complete (2 fix(41) + 4 docs(41) commits, validator 100% pass, 1 HELD for browser verify)
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 7
-  completed_plans: 5
-  percent: 71
+  completed_plans: 6
+  percent: 86
 ---
 
 # Project State
@@ -24,9 +24,9 @@ progress:
 ## Current Position
 
 Phase: 41 (debug-session-gap-closure) — EXECUTING
-Plan: 3 of 4 (41-01/41-03 complete; 41-02/41-04 pending)
-Status: Plan 41-03 complete — Cohort B backend/auth 10 sessions all closed via D-02 (1 real-fix + 9 wontfix, 2 with skip_audit)
-Last activity: 2026-06-26 -- Phase 41 Plan 03 SUMMARY.md committed (10 atomic commits, validator 100%, go build 0)
+Plan: 2 of 4 (41-01/41-02/41-03 complete; 41-04 pending verification gate)
+Status: Plan 41-02 complete — Cohort B frontend 6 sessions all closed via D-02 (2 re-verify-fix + 4 wontfix, 4 with skip_audit); 1 HELD (hardcoded-blue-theme-bypass) awaiting user browser verify
+Last activity: 2026-06-26 -- Phase 41 Plan 02 SUMMARY.md committed (6 atomic commits: 2 fix(41) + 4 docs(41), validator 100% pass, 1 HELD for browser verify)
 
 ## Project Reference
 
@@ -43,7 +43,7 @@ Last activity: 2026-06-26 -- Phase 41 Plan 03 SUMMARY.md committed (10 atomic co
 | Phase | Name | Status | Progress |
 |-------|------|--------|----------|
 | 40 | Tech-Debt Cleanup | ✅ Complete | 3/3 plans |
-| 41 | Debug Session Gap Closure | 🚧 Executing (1/4 plans) | 1/4 plans |
+| 41 | Debug Session Gap Closure | 🚧 Executing (3/4 plans, 1 HELD for verify) | 3/4 plans |
 
 ## Completed Milestones
 
@@ -73,7 +73,8 @@ Last activity: 2026-06-26 -- Phase 41 Plan 03 SUMMARY.md committed (10 atomic co
 | 2026-06-22 | Phase 37 完成 (前端部门选择组件统一收敛) - 6/6 plans | 37 |
 | 2026-06-23 | Phase 38 Plan 01 完成 (Wave 1 前置 DI 脚手架) - 8 服务 struct 注入 AccountPool | 38 |
 | 2026-06-25 | Milestone v1.16 started — ROADMAP drafted (Phase 40: tech-debt-cleanup) | 40 |
-| 2026-06-26 | Phase 41 Plan 01 complete — 12 Cohort A sessions flipped to resolved (12 fix(41) commits) | 41 |
+| 2026-06-26 | Phase 41 Plan 03 complete — 10 Cohort B backend/auth sessions closed (1 fix(41) + 9 docs(41), 2 skip_audit) | 41 |
+| 2026-06-26 | Phase 41 Plan 02 complete — 6 Cohort B frontend sessions closed (2 fix(41) + 4 docs(41), 4 skip_audit); 1 HELD for browser verify | 41 |
 
 ## Quick Tasks Completed (recent)
 
@@ -131,8 +132,8 @@ Last activity: 2026-06-26 -- Phase 41 Plan 03 SUMMARY.md committed (10 atomic co
 
 ## Session Continuity
 
-Last session: 2026-06-26T02:30:00.000Z
-Stopped at: Phase 41 plan 01 complete — Cohort A 12 sessions flipped to resolved
-Resume file: .planning/phases/41-debug-session-gap-closure/41-01-SUMMARY.md
+Last session: 2026-06-26T03:15:00.000Z
+Stopped at: Phase 41 plan 02 complete — Cohort B frontend 6 sessions closed; 1 HELD for browser verify (hardcoded-blue-theme-bypass)
+Resume file: .planning/phases/41-debug-session-gap-closure/41-02-SUMMARY.md
 
-**Active Phase:** 41 (debug-session-gap-closure) — 1/4 plans complete — next: Plan 41-02 (Cohort B 前端集群 7 个 session 混合 修+wontfix)
+**Active Phase:** 41 (debug-session-gap-closure) — 3/4 plans complete — next: Plan 41-04 (Wave 2 验收关门 — verify_phase40.sh 双 PASS + audit-open < 5). HELD session 仍需用户在 dev 浏览器验证主题色实时切换 → continuation agent 补 commit fix(41)。

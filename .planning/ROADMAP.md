@@ -71,7 +71,7 @@ Plans:
 **Wave 1**
 
 - [x] 41-01-PLAN.md — Cohort A 12 个'实质已完成态'session 复测-后-翻(D-01) — 2026-06-26 complete, 12 fix(41) commits, validator 100%
-- [ ] 41-02-PLAN.md — Cohort B 前端集群 7 个 session 混合修+wontfix(D-02)
+- [x] 41-02-PLAN.md — Cohort B 前端集群 7 个 session 混合修+wontfix(D-02) — 2026-06-26 complete, 2 fix(41) + 4 docs(41) commits, 4 with skip_audit (css-tree-vendor-chunk-tdz + login-md-vendor-crash + react-vendor-activity-tdz + device-modal-serial-auto-match), 1 HELD for browser verify (hardcoded-blue-theme-bypass), validator 100%, npm run build 0
 - [x] 41-03-PLAN.md — Cohort B 后端/认证集群 10 个 session 混合修+wontfix(D-02) — 2026-06-26 complete, 1 fix(41) + 9 docs(41) commits, 2 with skip_audit (ad-admin-lockout-recurrence + interface-to-any-conversion-hint), validator 100%, go build 0
 
 **Wave 2** *(blocked on Wave 1 completion)*
@@ -131,4 +131,4 @@ The full history of Phases 1-39 is preserved below. See also:
 
 ---
 
-*Last updated: 2026-06-26 — Phase 41 Plan 03 complete (Cohort B backend/auth 10 sessions closed, 1 real-fix + 9 wontfix)*
+*Last updated: 2026-06-26 — Phase 41 Plan 02 complete (Cohort B frontend 6 sessions closed, 1 HELD for browser verify); Plan 41-03 done (Cohort B backend/auth 10 sessions closed, 1 real-fix + 9 wontfix)*
