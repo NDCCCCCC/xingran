@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.16
 milestone_name: 技术债清理 (Tech-Debt Cleanup)
 status: executing
-stopped_at: Phase 40 context gathered
-last_updated: "2026-06-26T01:42:39.572Z"
-last_activity: 2026-06-26 -- Phase 41 execution started
+stopped_at: Phase 41 plan 01 complete — Cohort A 12 sessions flipped to resolved
+last_updated: "2026-06-26T02:30:00.000Z"
+last_activity: 2026-06-26 -- Phase 41 Plan 01 complete (12 fix(41) commits, validator 100% pass)
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 7
-  completed_plans: 3
-  percent: 43
+  completed_plans: 4
+  percent: 57
 ---
 
 # Project State
@@ -19,14 +19,14 @@ progress:
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
 **Status**: Planning v1.16 — ROADMAP drafted, ready to plan Phase 40
-**Last activity**: 2026-06-26 — Quick task 260626-dai: 工位导出补充部门/人员名称 + 设备序列号等 (commit 212f73fb)
+**Last activity**: 2026-06-26 — Phase 41 Plan 01 complete: 12 Cohort A sessions flipped to resolved (12 fix(41) commits, validator 100% pass). Audit-open debug_sessions expected 29 → 17.
 
 ## Current Position
 
 Phase: 41 (debug-session-gap-closure) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 41
-Last activity: 2026-06-26 -- Phase 41 execution started
+Plan: 1 of 4 (41-01 complete; 41-02/41-03/41-04 pending)
+Status: Plan 41-01 complete — Cohort A 12 sessions all flipped to resolved (0 escalated)
+Last activity: 2026-06-26 -- Phase 41 Plan 01 SUMMARY.md committed (12 fix(41) commits, validator 100%)
 
 ## Project Reference
 
@@ -42,7 +42,8 @@ Last activity: 2026-06-26 -- Phase 41 execution started
 
 | Phase | Name | Status | Progress |
 |-------|------|--------|----------|
-| 40 | Tech-Debt Cleanup | 📋 Planning ready | 0/TBD plans |
+| 40 | Tech-Debt Cleanup | ✅ Complete | 3/3 plans |
+| 41 | Debug Session Gap Closure | 🚧 Executing (1/4 plans) | 1/4 plans |
 
 ## Completed Milestones
 
@@ -72,6 +73,7 @@ Last activity: 2026-06-26 -- Phase 41 execution started
 | 2026-06-22 | Phase 37 完成 (前端部门选择组件统一收敛) - 6/6 plans | 37 |
 | 2026-06-23 | Phase 38 Plan 01 完成 (Wave 1 前置 DI 脚手架) - 8 服务 struct 注入 AccountPool | 38 |
 | 2026-06-25 | Milestone v1.16 started — ROADMAP drafted (Phase 40: tech-debt-cleanup) | 40 |
+| 2026-06-26 | Phase 41 Plan 01 complete — 12 Cohort A sessions flipped to resolved (12 fix(41) commits) | 41 |
 
 ## Quick Tasks Completed (recent)
 
@@ -120,20 +122,17 @@ Last activity: 2026-06-26 -- Phase 41 execution started
 
 **当前选项**:
 
-1. **规划 Phase 40 详细 plan**
-   - 建议 3-wave 拆分:
-     - **Wave 1**: 16 个 root_cause_found 修复 + 1 个 root-cause-found (TECH-01 + TECH-03,17 项代码修复 + commit)
-     - **Wave 2**: 5 个 awaiting_human_verify dev 环境复现验证 (TECH-02,5 项需在 dev 启动)
-     - **Wave 3**: 6 个 audit 数据质量整理 + 验收指标核验 (TECH-04 + TECH-05,frontmatter 修复 + 脚本验证)
+1. **继续 Phase 41 后续 plan**
+   - 41-02 (Wave 1): Cohort B 前端集群 7 个 session 混合 修+wontfix
+   - 41-03 (Wave 1): Cohort B 后端/认证集群 10 个 session 混合 修+wontfix
+   - 41-04 (Wave 2): 验收关门 — audit-open<5 + verify_phase40.sh 双 PASS
 
-2. **运行 `/gsd:plan-phase 40`** 进入详细 plan 阶段
-
-**推荐**: Wave 1 优先(纯代码修复,可独立提交),Wave 2 需 dev 环境 + 用户配合复现
+**推荐**: 继续 Plan 41-02(Cohort B 前端集群 7 个 session 是 Plan 41-03 后端/认证集群 10 个 session 的前置依赖,先易后难)
 
 ## Session Continuity
 
-Last session: 2026-06-25T09:26:27.547Z
-Stopped at: Phase 40 context gathered
-Resume file: .planning/phases/40-tech-debt-cleanup/40-CONTEXT.md
+Last session: 2026-06-26T02:30:00.000Z
+Stopped at: Phase 41 plan 01 complete — Cohort A 12 sessions flipped to resolved
+Resume file: .planning/phases/41-debug-session-gap-closure/41-01-SUMMARY.md
 
-**Active Phase:** 40 (tech-debt-cleanup) — 5 TECH requirements — 0 plans — ready for `/gsd:plan-phase 40`
+**Active Phase:** 41 (debug-session-gap-closure) — 1/4 plans complete — next: Plan 41-02 (Cohort B 前端集群 7 个 session 混合 修+wontfix)

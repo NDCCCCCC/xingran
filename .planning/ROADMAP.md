@@ -70,7 +70,7 @@
 Plans:
 **Wave 1**
 
-- [ ] 41-01-PLAN.md — Cohort A 12 个'实质已完成态'session 复测-后-翻(D-01)
+- [x] 41-01-PLAN.md — Cohort A 12 个'实质已完成态'session 复测-后-翻(D-01) — 2026-06-26 complete, 12 fix(41) commits, validator 100%
 - [ ] 41-02-PLAN.md — Cohort B 前端集群 7 个 session 混合修+wontfix(D-02)
 - [ ] 41-03-PLAN.md — Cohort B 后端/认证集群 10 个 session 混合修+wontfix(D-02)
 
@@ -85,7 +85,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 40. Tech-Debt Cleanup | 3/3 | Complete   | 2026-06-25 |
-| 41. Debug Session Gap Closure | 0/4 | Planned | - |
+| 41. Debug Session Gap Closure | 1/4 | Executing (41-01 done) | 2026-06-26 (partial) |
 
 ---
 
