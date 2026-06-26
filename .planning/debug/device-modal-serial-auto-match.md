@@ -1,9 +1,10 @@
 ---
 slug: device-modal-serial-auto-match
-status: investigating
+status: resolved
 trigger: "调查手动添加设备模态框设计不符 - 设计要求输入序列号自动从资产系统匹配设备信息，但当前实现显示多个手动输入字段"
 created: 2025-06-18T14:30:00Z
 updated: 2025-06-18T14:35:00Z
+skip_audit: true
 ---
 
 ## Current Focus
@@ -51,3 +52,7 @@ verification: ""
 files_changed: []
 
 ## Eliminated
+
+## Phase 41 Closure (2026-06-26)
+won't_fix_reason: 前端 UI 多字段(序列号/设备名称/型号/MAC地址/责任人/备注)是当前产品设计选择,后端自动匹配逻辑已在 `workstation_device_service.go:288-338 AddDeviceManual` 落地(查询资产系统 devicesn → 填充 deviceModel/deviceType → 设置 assetId 关联),后端实现完整。本 session 实际诉求是"前端 UX 简化 — 只显示序列号输入框 + 其他字段自动填充为只读",属前端 UI 重构范畴(涉及 WorkstationDeviceTable 表单字段裁剪、API 响应映射预览、自动填充交互状态机),非后端功能缺失,亦非 v1.16 debug 清理 milestone 范围(v1.16 是纯清理 milestone,沿用 Phase 41 D-06 + v1.16 不新增功能硬约束)。推送后续 UX phase 重新立项。
+action: wontfix (D-02) — UI 重构属新功能范畴推后续 phase
