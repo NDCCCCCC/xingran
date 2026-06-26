@@ -1,9 +1,9 @@
 ---
 slug: file-upload-401-refresh
-status: checkpoint_reached
+status: resolved
 trigger: 文件管理页面视频上传失败问题：1. 后端日志显示文件上传成功（storage/file_service.go:203）2. 前端显示"服务器返回的数据格式无效" 3. 控制台出现401错误：GET /api/v1/recordings 和 GET /api/v1/input-configs/active 返回401 Unauthorized 4. 错误发生在文件上传成功后尝试刷新列表时
 created: 2026-05-13
-updated: 2026-05-13
+updated: 2026-06-26
 ---
 
 ## Symptoms
@@ -105,3 +105,8 @@ updated: 2026-05-13
 **Fix:** 待定
 **Verification:** 待定
 **Files changed:** None
+
+## Phase 41 Closure (2026-06-26)
+won't_fix_reason: FileUpload 组件(`src/components/shared/FileUpload.tsx:160`)用原生 XMLHttpRequest + `xhr.upload.onprogress` 实时进度条,refactor 到 axios 会丢失精细进度控制,需配合 antd Upload 组件的 customRequest 重写 + onProgress callback 重构,涉及上传 UX 行为变更(预计 2-3 文件 + UX 测试),属新功能范畴(v1.16 是 debug 清理 milestone,不做 UX 重构);当前缓解:用户上传完手动刷新页面,token 走 axios 拦截器可正常 401→refresh→重试
+action: wontfix (D-02,XHR 改造属新功能推后续 phase)
+verification: 复测 `src/components/shared/FileUpload.tsx:160` 仍用 XHR + onprogress,改动范围超出 v1.16 边界
