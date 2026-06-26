@@ -3,30 +3,30 @@ gsd_state_version: 1.0
 milestone: v1.16
 milestone_name: 技术债清理 (Tech-Debt Cleanup)
 status: executing
-stopped_at: Phase 41 plan 02 complete — Cohort B frontend 6 sessions closed (2 re-verify-fix + 4 wontfix); 1 HELD (hardcoded-blue-theme-bypass) awaiting user browser verify
-last_updated: "2026-06-26T03:15:00.000Z"
-last_activity: 2026-06-26 -- Phase 41 Plan 02 complete (2 fix(41) + 4 docs(41) commits, validator 100% pass, 1 HELD for browser verify)
+stopped_at: Phase 41 plan 04 Task 1 complete — three-piece verification suite ALL PASS (audit-open debug_sessions=0 / verify_phase40.sh [ALL PASS] exit 0 / validator 100.0%); 41-VERIFICATION.md + 41-04-SUMMARY.md committed; Task 2 (STATE/ROADMAP/REQUIREMENTS final closure + user final approval + push decision) queued for orchestrator as checkpoint:human-verify
+last_updated: "2026-06-26T03:50:00.000Z"
+last_activity: 2026-06-26 -- Phase 41 Plan 04 Task 1 verification gate PASS (1 docs(41) commit for VERIFICATION.md + 1 docs(41) commit for SUMMARY.md, three-piece suite ALL PASS, audit-open debug_sessions=0)
 progress:
   total_phases: 2
   completed_phases: 1
-  total_plans: 7
-  completed_plans: 6
-  percent: 86
+  total_plans: 8
+  completed_plans: 7
+  percent: 88
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: Planning v1.16 — ROADMAP drafted, ready to plan Phase 40
-**Last activity**: 2026-06-26 — Phase 41 Plan 03 complete: 10 Cohort B backend/auth sessions closed (1 real-fix ad-user-page-checkbox + 9 wontfix with written reasons; 2 skip_audit for fully-removed). Audit-open debug_sessions expected 17 → 7 (or lower, depending on 41-02 contribution).
+**Status**: v1.16 Phase 41 verification PASS — Task 1 done; Task 2 (final closure + user approval + push decision) queued for orchestrator
+**Last activity**: 2026-06-26 — Phase 41 Plan 04 Task 1 complete: three-piece verification suite ALL PASS (audit-open debug_sessions=0 / verify_phase40.sh [ALL PASS] exit 0 / validator 100.0%); 41-VERIFICATION.md (29 session 处置矩阵) + 41-04-SUMMARY.md committed.
 
 ## Current Position
 
-Phase: 41 (debug-session-gap-closure) — EXECUTING
-Plan: 2 of 4 (41-01/41-02/41-03 complete; 41-04 pending verification gate)
-Status: Plan 41-02 complete — Cohort B frontend 6 sessions all closed via D-02 (2 re-verify-fix + 4 wontfix, 4 with skip_audit); 1 HELD (hardcoded-blue-theme-bypass) awaiting user browser verify
-Last activity: 2026-06-26 -- Phase 41 Plan 02 SUMMARY.md committed (6 atomic commits: 2 fix(41) + 4 docs(41), validator 100% pass, 1 HELD for browser verify)
+Phase: 41 (debug-session-gap-closure) — VERIFICATION PASS (Task 1 of 4-plan sequence)
+Plan: 4 of 4 (41-01/41-02/41-03/41-04 Task 1 complete; 41-04 Task 2 checkpoint:human-verify queued for orchestrator)
+Status: Plan 41-04 Task 1 verification gate PASS — audit-open debug_sessions=0, verify_phase40.sh [ALL PASS] exit 0, validator 100.0%; 29/29 sessions closed with strict per-slug matrix; TECH-05 + TECH-06 both achieved
+Last activity: 2026-06-26 -- Phase 41 Plan 04 Task 1 complete (2 docs(41) commits: 9252117e VERIFICATION.md + 55cdda94 SUMMARY.md, three-piece suite ALL PASS)
 
 ## Project Reference
 
@@ -43,7 +43,7 @@ Last activity: 2026-06-26 -- Phase 41 Plan 02 SUMMARY.md committed (6 atomic com
 | Phase | Name | Status | Progress |
 |-------|------|--------|----------|
 | 40 | Tech-Debt Cleanup | ✅ Complete | 3/3 plans |
-| 41 | Debug Session Gap Closure | 🚧 Executing (3/4 plans, 1 HELD for verify) | 3/4 plans |
+| 41 | Debug Session Gap Closure | 🚧 Verification PASS (Task 1 done; Task 2 checkpoint:human-verify queued) | 4/4 plans |
 
 ## Completed Milestones
 
@@ -75,6 +75,7 @@ Last activity: 2026-06-26 -- Phase 41 Plan 02 SUMMARY.md committed (6 atomic com
 | 2026-06-25 | Milestone v1.16 started — ROADMAP drafted (Phase 40: tech-debt-cleanup) | 40 |
 | 2026-06-26 | Phase 41 Plan 03 complete — 10 Cohort B backend/auth sessions closed (1 fix(41) + 9 docs(41), 2 skip_audit) | 41 |
 | 2026-06-26 | Phase 41 Plan 02 complete — 6 Cohort B frontend sessions closed (2 fix(41) + 4 docs(41), 4 skip_audit); 1 HELD for browser verify | 41 |
+| 2026-06-26 | Phase 41 Plan 04 Task 1 complete — three-piece verification suite ALL PASS (audit-open debug_sessions=0 / verify_phase40.sh [ALL PASS] / validator 100.0%); 29/29 sessions closed; TECH-05+TECH-06 achieved; Task 2 queued for orchestrator | 41 |
 
 ## Quick Tasks Completed (recent)
 
@@ -132,8 +133,8 @@ Last activity: 2026-06-26 -- Phase 41 Plan 02 SUMMARY.md committed (6 atomic com
 
 ## Session Continuity
 
-Last session: 2026-06-26T03:15:00.000Z
-Stopped at: Phase 41 plan 02 complete — Cohort B frontend 6 sessions closed; 1 HELD for browser verify (hardcoded-blue-theme-bypass)
-Resume file: .planning/phases/41-debug-session-gap-closure/41-02-SUMMARY.md
+Last session: 2026-06-26T03:50:00.000Z
+Stopped at: Phase 41 plan 04 Task 1 complete — three-piece verification suite ALL PASS (audit-open debug_sessions=0 / verify_phase40.sh [ALL PASS] / validator 100.0%); 29/29 sessions closed
+Resume file: .planning/phases/41-debug-session-gap-closure/41-VERIFICATION.md (Task 1 verification gate) + .planning/phases/41-debug-session-gap-closure/41-04-SUMMARY.md (Task 1 summary)
 
-**Active Phase:** 41 (debug-session-gap-closure) — 3/4 plans complete — next: Plan 41-04 (Wave 2 验收关门 — verify_phase40.sh 双 PASS + audit-open < 5). HELD session 仍需用户在 dev 浏览器验证主题色实时切换 → continuation agent 补 commit fix(41)。
+**Active Phase:** 41 (debug-session-gap-closure) — 4/4 plans complete; Task 2 (STATE/ROADMAP/REQUIREMENTS final closure + user final approval + push decision) queued for orchestrator as checkpoint:human-verify. Verification materials ready in 41-VERIFICATION.md (29 session 处置矩阵 + 三件套输出 + TECH-05/06 达成声明).
