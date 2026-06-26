@@ -598,7 +598,7 @@ const ADUserPage: FC = () => {
           columns={columns}
           dataSource={users}
           loading={loading}
-          rowKey="userDn"
+          rowKey="id"
           scroll={{ x: 1500 }}
           pagination={paginationProps}
           onChange={handleTableChange}
@@ -606,7 +606,7 @@ const ADUserPage: FC = () => {
             selectAllMode
               ? undefined // 全选模式下禁用表格行选择
               : {
-                  selectedRowKeys: selectedUsers.map(u => u.userDn),
+                  selectedRowKeys: selectedUsers.map(u => u.id),
                   onChange: (selectedKeys, selectedRows) => {
                     setSelectedUsers(selectedRows);
                   },

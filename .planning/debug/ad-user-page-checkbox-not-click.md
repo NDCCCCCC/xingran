@@ -1,10 +1,10 @@
 ---
 slug: ad-user-page-checkbox-not-click
 name: ad-user-page-checkbox-not-click
-status: verifying
+status: resolved
 trigger: AD域控的用户管理页面多选框无法勾选！
 created: 2026-05-27
-updated: 2026-05-27
+updated: 2026-06-26
 ---
 
 ## Symptoms
@@ -107,3 +107,18 @@ None provided
 - This eliminates potential string encoding/comparison issues with complex LDAP DN strings
 
 **Files Changed:** ["ruoyi-react-frontend/src/pages/ad-domain/users/index.tsx"]
+
+## Phase 41 Closure (2026-06-26)
+
+**实修落地(2026-06-26):**
+- `ruoyi-react-frontend/src/pages/ad-domain/users/index.tsx:601` `rowKey="userDn"` → `rowKey="id"` (改用 DB UUID)
+- `ruoyi-react-frontend/src/pages/ad-domain/users/index.tsx:609` `selectedUsers.map(u => u.userDn)` → `selectedUsers.map(u => u.id)`
+- **保持不变**:`userDns = selectedUsers.map(u => u.userDn)` (行 323 + 全选路径行 319) 是发给 `batchSyncADUsersDirect` API 的实际 LDAP DN 列表,API 必须收 DN,这部分不动。
+
+**根因复述:** LDAP `userDn` 字符串含逗号、等号、特殊字符(OU=xxx,CN=yyy,DC=zzz),antd Table 的 `strict equality` 比较对复杂字符串不稳定,导致 checkbox 视觉状态不同步;改用 DB UUID 后字符串简单无特殊字符,严格比较工作正常。
+
+**verification:** `cd ruoyi-react-frontend && npm run build` 退出 0。
+
+fix: ad-domain/users/index.tsx rowKey + rowSelection 改用 DB `id` UUID
+files_changed: ruoyi-react-frontend/src/pages/ad-domain/users/index.tsx
+action: real-fix (D-02)
