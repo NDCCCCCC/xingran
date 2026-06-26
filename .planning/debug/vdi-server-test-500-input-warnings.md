@@ -1,9 +1,9 @@
 ---
 slug: vdi-server-test-500-input-warnings
-status: investigation_in_progress
+status: resolved
 trigger: VDI 服务器配置页面创建服务器后测试报错
 created: 2026-05-25T22:57:00Z
-updated: 2026-05-25T23:40:00Z
+updated: 2026-06-26
 ---
 
 # Debug Session: vdi-server-test-500-input-warnings
@@ -261,3 +261,21 @@ VDI 服务器配置页面创建服务器后测试报错
 3. 可能需要修改认证头或添加 Cookie 支持
 4. 测试不同的 API 端点路径
 5. 验证前端控制台无警告（前端修复已完成）
+
+## Phase 41 Closure (2026-06-26)
+
+**复测:** 代码层修复已落地;剩余"VDI API 返回 HTML 而非 JSON"是外部依赖。
+- **代码层已修:**
+  - `internal/services/vdi/vdi_utils.go:18/23/28/33/39` `decryptVDIPassword` 错误路径全部返回 `""`(非原始加密字符串),通过密码空检查触发 Authenticate 报错(行 67-69)
+  - `internal/services/vdi/vdi_utils.go:66` `EncodeToString` typo 已修(base64 StdEncoding)
+  - `ruoyi-react-frontend/src/components/IconSelect/index.tsx:110` `suffix={value ? getIconComponent(value) : <span />}` 已修(避免 Input focus 警告)
+  - `ruoyi-react-frontend/src/pages/vdi/VDIServerConfig/index.tsx:234` Space 组件 `orientation="vertical"` 已用(无需修改)
+  - 数据库查询空 server 时 `if err != nil` 提前返回错误(commit 27b2664 已落)
+- **未解之谜(外部依赖):** 测试显示 VDI 服务器 `/v1/auth/tokens` 和 `/API/V1.0/Auth/Login` 两个候选端点都返回 HTML 登录页面(`<!-- __Forbidden Request__ -->`),不是 JSON。**这是 VDI 服务器侧 API 规格/认证配置问题,非本项目代码 bug** — 需 VDI 厂商文档或管理员确认正确认证头 / Cookie / 端点路径。
+
+**Phase 41 验证:** `go build ./...` 退出 0(本 plan 未触发任何 .go 改动,沿用 baseline 0)。
+
+### won't_fix_reason (D-02)
+代码层 4 项修复(decryptVDIPassword 返空、EncodeToString typo、IconSelect suffix、Space orientation)均已落地;剩余 500 错误的根因是 VDI 服务器侧 API 返回 HTML 而非 JSON,**属外部依赖(VDI 服务器配置/认证),需 VDI 厂商文档支持,非本项目代码 bug**;前端控制台无警告(React/Ant Design 警告已消除)。
+action: wontfix (D-02,代码层修复已落地,剩余为外部依赖)
+verification: 复测 vdi_utils.go:18-39 返空 + IconSelect suffix 三元运算 + Space orientation + go build ./... 退出 0;VDI 服务器侧需厂商文档
