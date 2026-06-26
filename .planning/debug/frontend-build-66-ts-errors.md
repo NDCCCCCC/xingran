@@ -1,6 +1,6 @@
 ---
 slug: frontend-build-66-ts-errors
-status: investigating
+status: resolved
 trigger: "Frontend build fails with 66 TypeScript errors - usePersistedState refactor + missing VDI imports"
 created: 2026-06-17
 updated: 2026-06-17
@@ -70,3 +70,9 @@ verification:
 files_changed:
 - D:\CODE\ClaudeCode\ruoyi-go-backend\ruoyi-react-frontend\src\hooks\usePersistedState.test.ts
 - D:\CODE\ClaudeCode\ruoyi-go-backend\ruoyi-react-frontend\src\pages\vdi\VirtualMachineList\index.tsx
+
+## Phase 41 Closure (2026-06-26)
+fix: 已落地 usePersistedStateController 元组 API + 补 vdiApi import — `ruoyi-react-frontend/src/hooks/usePersistedState.test.ts:11` `import { usePersistedStateController } from "./usePersistedState"` + describe 重命名 `usePersistedStateController` + tuple index `[0]/[1]/[2]` 断言;`src/pages/vdi/VirtualMachineList/index.tsx:3` `import { usePersistedStateController } from "@/hooks/usePersistedState"` + `:32` `import { vmApi, vdiServerApi } from "@/lib/vdiApi"` + `:54` `const [filters, setFilters] = usePersistedStateController<Partial<VMListParams>>(...)` 元组解构。
+verification: 2026-06-26 复测 `cd ruoyi-react-frontend && npm run build` 退出码 0(tsc -b 0 errors + vite build 成功,34.32s),原 66 errors 全部消除。
+files_changed: usePersistedState.test.ts, VirtualMachineList/index.tsx
+action: re-verify-then-flip (D-01) — 代码已在前序实修落地,本 plan 仅补 frontmatter 闭环
