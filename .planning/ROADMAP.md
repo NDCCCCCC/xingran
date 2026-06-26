@@ -7,7 +7,7 @@
 - ✅ **v1.2 可配置仪表盘生产级改造** — Phases 4-7 (shipped 2026-04-21)
 - ✅ **v1.3 技术债清理** — Phases 8-10 (shipped 2026-04-27)
 - ✅ **v1.4 MAC地址采集优化** — Phase 11 (shipped 2026-05-09)
-- ✅ **v1.5 MAC地址历史数据管理** — Phases 12-15 (shipped 2026-06-15)
+- ✅ **v1.5 MAC地址历史数据管理** — Phases 12-15 (shipped 2026-06-15; Phase 13 gap closure retroactive 2026-06-26)
 - ✅ **v1.6 API密钥管理系统** — Phase 16 (shipped 2026-05-19)
 - ✅ **v1.7 前后端加密配置同步** — Phase 17 (shipped 2026-05-20)
 - ✅ **v1.8 登录端点加密增强** — Phase 18 (shipped 2026-05-21)
@@ -87,7 +87,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 40. Tech-Debt Cleanup | 3/3 | Complete   | 2026-06-25 |
-| 41. Debug Session Gap Closure | 4/4 | Verification PASS (Task 1 done; Task 2 checkpoint:human-verify queued for orchestrator) | 2026-06-26 |
+| 41. Debug Session Gap Closure | 4/4 | Complete    | 2026-06-26 |
 
 ---
 

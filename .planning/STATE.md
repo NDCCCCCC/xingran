@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.16
 milestone_name: 技术债清理 (Tech-Debt Cleanup)
 status: executing
-stopped_at: v1.16 milestone complete — Phase 41 Plan 04 Task 2 closed, STATE/ROADMAP/REQUIREMENTS updated, audit-open debug_sessions=0, verify_phase40.sh [ALL PASS], validator 100.0%
-last_updated: "2026-06-26T05:42:39.120Z"
-last_activity: 2026-06-26 -- Phase 13 planning complete
+stopped_at: Phase 13 gap closure complete — plans 13-07/08/09/10 shipped, 5/5 code gaps fixed (CR-01/CR-02/CR-03/W4-vendor/W5-echarts), VERIFICATION.md status:passed score:18/18, 8 atomic commits on main, go build 0
+last_updated: "2026-06-26T12:30:00.000Z"
+last_activity: 2026-06-26 -- Phase 13 gap closure complete (4/4 plans, 8 atomic commits)
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
+  total_phases: 3
+  completed_phases: 3
+  total_plans: 11
+  completed_plans: 11
   percent: 100
 ---
 
@@ -18,15 +18,15 @@ progress:
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.16 milestone complete — Phase 40 + Phase 41 shipped (8/8 plans, 100%)
-**Last activity**: 2026-06-26 — Phase 41 Plan 04 Task 2 closed: STATE/ROADMAP/REQUIREMENTS updated, v1.16 milestone closed (audit-open debug_sessions=0, verify_phase40.sh [ALL PASS], validator 100.0%, 29/29 debug sessions disposed).
+**Status**: v1.16 milestone complete + Phase 13 gap closure complete (3 phases, 11/11 plans, 100%)
+**Last activity**: 2026-06-26 — Phase 13 gap closure shipped: plans 13-07 (backend TrajectoryNode.MACAddress + camelCase vendorName), 13-08 (frontend queryMACVendor + MACTrajectoryChart tooltip fix + TrajectoryPage vendor merge), 13-09 (MAC input controlled component via form.setFieldValue), 13-10 (regression tests + VERIFICATION.md status:passed). 5/5 code gaps closed, go build 0.
 
 ## Current Position
 
-Phase: 41
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-06-26 -- Phase 13 planning complete
+Phase: 13 (gap closure complete)
+Plan: 4/4 (gap closure plans)
+Status: All gap plans complete — VERIFICATION.md status:passed, score 18/18
+Last activity: 2026-06-26 -- Phase 13 gap closure complete (8 atomic commits)
 
 ## Project Reference
 
@@ -44,6 +44,7 @@ Last activity: 2026-06-26 -- Phase 13 planning complete
 |-------|------|--------|----------|
 | 40 | Tech-Debt Cleanup | ✅ Complete | 3/3 plans |
 | 41 | Debug Session Gap Closure | ✅ Complete | 4/4 plans |
+| 13 | Query Layer Trajectory (Gap Closure) | ✅ Complete | 4/4 gap plans (10/10 incl. baseline) |
 
 ## Completed Milestones
 
@@ -77,6 +78,7 @@ Last activity: 2026-06-26 -- Phase 13 planning complete
 | 2026-06-26 | Phase 41 Plan 03 complete — 10 Cohort B backend/auth sessions closed (1 fix(41) + 9 docs(41), 2 skip_audit) | 41 |
 | 2026-06-26 | Phase 41 Plan 02 complete — 6 Cohort B frontend sessions closed (2 fix(41) + 4 docs(41), 4 skip_audit); 1 HELD for browser verify | 41 |
 | 2026-06-26 | Phase 41 Plan 04 Task 2 complete — STATE/ROADMAP/REQUIREMENTS updated, v1.16 milestone closed (audit-open debug_sessions=0, verify_phase40.sh [ALL PASS], validator 100%); user approved + 暂不 push | 41 |
+| 2026-06-26 | Phase 13 gap closure complete — 4 plans (13-07/08/09/10) shipped, 5/5 code gaps fixed (CR-01/CR-02/CR-03/W4-vendor/W5-echarts), VERIFICATION.md status:passed score:18/18, 8 atomic commits | 13 |
 
 ## Quick Tasks Completed (recent)
 
@@ -137,8 +139,8 @@ Last activity: 2026-06-26 -- Phase 13 planning complete
 
 ## Session Continuity
 
-Last session: 2026-06-26T11:58:00.000Z
-Stopped at: v1.16 milestone complete — Phase 41 Plan 04 Task 2 closed, STATE/ROADMAP/REQUIREMENTS updated, audit-open debug_sessions=0, verify_phase40.sh [ALL PASS], validator 100.0%
-Resume file: .planning/phases/41-debug-session-gap-closure/41-VERIFICATION.md (29 session 处置矩阵 + 三件套输出 + TECH-05/06 达成声明)
+Last session: 2026-06-26T12:30:00.000Z
+Stopped at: Phase 13 gap closure complete — plans 13-07/08/09/10 shipped, 5/5 code gaps fixed, VERIFICATION.md status:passed score:18/18, 8 atomic commits on main
+Resume file: .planning/phases/13-query-layer-trajectory/13-VERIFICATION.md (status:passed, score 18/18, 5 gaps fixed + 1 deployment-artifact gap)
 
-**Milestone status:** v1.16 技术债清理 — milestone_complete (2026-06-26), 2 phases (40+41), 8 plans, 39 phase-41 commits + 3 phase-40 plans. v1.17 规划待启动。
+**Milestone status:** v1.16 技术债清理 — milestone_complete (2026-06-26), 2 phases (40+41), 8 plans, 39 phase-41 commits + 3 phase-40 plans. **Phase 13 retroactive gap closure** — 4/4 plans (13-07/08/09/10), 8 atomic commits on main, 5/5 code gaps fixed. v1.17 规划待启动。
