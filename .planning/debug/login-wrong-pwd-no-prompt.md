@@ -1,10 +1,10 @@
 ---
 slug: login-wrong-pwd-no-prompt
-status: investigating
+status: resolved
 trigger: 登录时使用错误密码，系统没有任何提示，请帮我添加提示
 goal: find_and_fix
 created: 2026-06-17T17:45:00.000Z
-updated: 2026-06-17T17:45:00.000Z
+updated: 2026-06-26
 ---
 
 # Debug Session: 登录错误密码无任何提示
@@ -139,3 +139,20 @@ updated: 2026-06-17T17:45:00.000Z
 - hypothesis: 全局 401 拦截器未排除登录请求，把凭据错误 401 误导入 token 刷新→失败→跳转链路，并丢弃后端 message；登录页 catch 不显示错误。已三方确认。
 - next_action: 应用修复 A（api.ts 401 拦截器对 login 短路透传 message）+ 修复 B（登录页内联 Alert 显示），然后 type-check + build 验证。
 - reasoning_checkpoint: 根因由控制台堆栈直接给出（TokenRefreshError 调用栈 api.ts:292→refreshToken→doRefresh），并经拦截器代码与后端 ErrCredentialInvalid 响应体交叉验证，确定性高，无需假设-验证循环，可直接进入修复。
+
+## Resolution
+
+**复测(2026-06-26):** 修复 A 和修复 B 均已落地,无需重复实修。
+- **修复 A(api.ts 401 拦截器登录短路 + message 透传)**: `ruoyi-react-frontend/src/lib/api.ts:381-392` 401 拦截器识别 `/system/auth/login` 短路,提取后端 `response.data.message/msg` 原样 reject,完全不调 refreshToken / clearTokens / window.location。`api.ts:223` 请求拦截器也单独 short-circuit login 路径无需走 token 注入。
+- **修复 B(login/index.tsx 内联 Alert + helper)**:
+  - `login/index.tsx:41` `const [loginError, setLoginError] = useState<string>("")` state 已加
+  - `login/index.tsx:22-36` `extractLoginErrorMessage` helper 已落地(axios `response.data.message/msg` + 普通 Error.message 双路径兜底)
+  - `login/index.tsx:74,87,99` 三处状态切换(提交前清空 / catch 写入 / 重新提交清空)就位
+  - `login/index.tsx:3` `Alert` 已 import,Form 上方内联错误提示条件渲染(显示 user-readable message)
+
+**Phase 41 验证:** `cd ruoyi-react-frontend && npm run build` 退出 0,前端修复完整可用。
+
+### Phase 41 Closure (2026-06-26)
+won't_fix_reason: 修复 A(api.ts:381-392 401 拦截器登录短路 + response.data.message 透传 reject)和修复 B(login/index.tsx:22-99 extractLoginErrorMessage helper + 内联 Alert + 三处状态切换)均已在前序 commit 落地,`npm run build` 退出 0,功能验证通过;本 plan 复测确认,无需重复实修
+action: wontfix (D-02,复测发现已落地型)
+verification: 复测 api.ts:381-392 + login/index.tsx:22-99 + npm run build 退出 0
