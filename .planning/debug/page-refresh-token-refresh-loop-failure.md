@@ -1,6 +1,6 @@
 ---
 slug: page-refresh-token-refresh-loop-failure
-status: fix_applied
+status: resolved
 trigger: 页面刷新时陷入登出循环，控制台输出 TokenRefreshError: No access token available，且 SM2 公钥获取失败
 created: 2026-05-21T14:20:00Z
 updated: 2026-05-21T14:30:00Z
@@ -136,3 +136,8 @@ TokenRefreshError: No access token available
 1. 问题：TokenManager.doRefresh() → getCachedEncryptionConfig() → get() → api interceptor → getAccessToken() → 循环
 2. 解决：移除中间的 getCachedEncryptionConfig() 调用，直接进行 token 刷新
 3. 安全性：/system/auth/refresh 接口在 AUTH_WHITELIST 中，不需要加密，因此不需要获取加密配置
+
+## Phase 41 Closure (2026-06-26)
+verification: 2026-06-26 复测 `ruoyi-react-frontend/src/utils/token/TokenManager.ts` 确认修复落地 — `grep "getCachedEncryptionConfig" TokenManager.ts` 命中数=0，doRefresh 方法已彻底移除对加密配置获取的调用，循环依赖（doRefresh → getCachedEncryptionConfig → api 拦截器 → getAccessToken → 循环）已斩断。
+files_changed: ruoyi-react-frontend/src/utils/token/TokenManager.ts (doRefresh 移除 getCachedEncryptionConfig 调用)
+action: re-verify-then-flip (D-01)
