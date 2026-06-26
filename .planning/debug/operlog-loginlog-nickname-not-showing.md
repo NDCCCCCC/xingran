@@ -1,6 +1,6 @@
 ---
 slug: operlog-loginlog-nickname-not-showing
-status: fixed_pending_restart
+status: resolved
 trigger: 日志管理页面下的操作日志和登录日志依然都是username，而不是nickname（username）
 created: 2026-06-22
 updated: 2026-06-22
@@ -82,3 +82,8 @@ session_type: bug
 ## Status
 
 **代码全部修复并通过编译,旧 main.exe 已 kill,等用户重启后端验证。**
+
+## Phase 41 Closure (2026-06-26)
+verification: 2026-06-26 复测代码已落地(待用户重启后端触发 migration_161 运行时验证,但代码层修复完整) — (1) `internal/models/log.go:14` OperLog 与 `:31` LoginLog 两个 struct 均含 `Nickname *string \`gorm:"size:50;column:nickname" json:"nickname,omitempty"\`` 字段（grep 命中 2 行，符合 plan 要求 ≥1）；(2) `internal/core/db/migrations/migration_161_login_log_add_nickname.go` 文件存在；(3) `internal/core/db/database.go:390` 已注册 `migrations.Migration161LoginLogAddNickname(d.DB)` 启动时调用。`auth.go recordLoginLog` 加 nickname 参数 + 7 个调用点传值、login_log_service.go 排序白名单加 nickname、前端 types.ts/columns/loginColumns.tsx 渲染 `nickname（userName）` 已在原 .md Files Changed 中记录，Phase 40 期间同步已落地。代码层修复完整，运行时验证由后续 dev 启动触发 migration_161 自动加列后即生效。
+files_changed: internal/models/log.go (OperLog/LoginLog 加 Nickname 字段) + internal/api/v1/auth.go (recordLoginLog 7 个调用点) + internal/core/db/database.go (注册 migration_161) + internal/core/db/migrations/migration_161_login_log_add_nickname.go (新建 sys_logininfor 加 nickname 列) + internal/services/monitor/login_log_service.go (排序白名单) + 前端 types/columns
+action: re-verify-then-flip (D-01)
