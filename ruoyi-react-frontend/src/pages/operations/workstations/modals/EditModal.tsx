@@ -204,7 +204,21 @@ export function WorkstationEditModal({
           </Col>
           <Col span={12}>
             <Form.Item name="userId" label="所属用户">
-              <Select placeholder="请先选择部门" allowClear showSearch optionFilterProp="children">
+              <Select
+                placeholder="请先选择部门"
+                allowClear
+                showSearch
+                optionFilterProp="children"
+                onChange={(value) => {
+                  // ✨ 联动: 选择/清空用户时自动切换 status (Maintain=2 保留)
+                  // 后端 Service 层为兜底,绕过前端无效
+                  const currentStatus = form.getFieldValue("status");
+                  if (currentStatus === 2) return; // 维护状态不变
+                  form.setFieldsValue({
+                    status: value ? 1 : 0,
+                  });
+                }}
+              >
                 {userOptions.map((u) => (
                   <Option key={u.id} value={u.id}>
                     {u.nickname ? `${u.username} (${u.nickname})` : u.username}
@@ -238,7 +252,12 @@ export function WorkstationEditModal({
             </Form.Item>
           </Col>
         </Row>
-        <Form.Item name="status" label="状态" rules={[{ required: true, message: "请选择状态" }]}>
+        <Form.Item
+          name="status"
+          label="状态"
+          rules={[{ required: true, message: "请选择状态" }]}
+          extra="选择/清空所属用户时,状态会自动切换为占用/空闲(维护状态除外)"
+        >
           <Select placeholder="请选择状态">
             {STATUS_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
