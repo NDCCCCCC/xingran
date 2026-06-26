@@ -66,6 +66,7 @@ export interface WorkstationOps {
   orgId?: string;            // 所属机构ID（来自 building.get 的 orgId，编辑表单回显用）
   userId?: string;
   userName?: string;
+  primaryDeviceSerial?: string;  // 主设备序列号（设置了主设备时由后端子查询返回）
   positionX?: number;
   positionY?: number;
   rotation?: number;

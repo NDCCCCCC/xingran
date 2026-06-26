@@ -88,6 +88,7 @@ Last activity: 2026-06-26 -- Phase 13 gap closure complete (8 atomic commits)
 | 260622-lv9 | 系统用户 Excel 导入功能 + 性别默认值改保密 + 导入后触发 AD 域同步 | 2026-06-22 | 5d872a5,cc2a77d,7d40b32,4758d36 | [260622-lv9-xlsx-email](./quick/260622-lv9-xlsx-email/) |
 | 260622-u8n | 从 sys_dept.leader 批量同步用户 AD manager 属性 | 2026-06-22 | - | [260622-u8n-ad-manager-leader-ad](./quick/260622-u8n-ad-manager-leader-ad/) |
 | 260626-dai | 工位 Excel 导出补充所属部门/人员名称 + 设备序列号/名称/型号（新增 WorkstationQueryBuilder，镜像 List JOIN） | 2026-06-26 | 212f73fb | [260626-dai-workstation-export-fields](./quick/260626-dai-workstation-export-fields/) |
+| 260626-lbd | 工位管理主表添加"主设备序列号"列（后端子查询严格 is_primary=true + 前端列，设主设备才显示） | 2026-06-26 | - | [260626-workstation-primary-device-serial](./quick/260626-workstation-primary-device-serial/) |
 
 ## Accumulated Context
 

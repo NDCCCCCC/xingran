@@ -58,6 +58,9 @@ type Workstation struct {
 	UserID   *string `gorm:"size:64" json:"userId,omitempty"`    // 所属人员ID
 	UserName *string `gorm:"size:100" json:"userName,omitempty"` // 所属人员名称
 
+	// 主设备序列号（来自 ops_workstation_device 子查询，非表列；gorm:-:migration 避免 AutoMigrate 建列）
+	PrimaryDeviceSerial *string `gorm:"-:migration" json:"primaryDeviceSerial,omitempty"`
+
 	// 平面图信息
 	PositionX *int `json:"positionX,omitempty"`                 // X坐标
 	PositionY *int `json:"positionY,omitempty"`                 // Y坐标

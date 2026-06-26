@@ -64,6 +64,14 @@ export function getWorkstationColumns(params: WorkstationColumnsParams): Columns
       render: (text) => text || "-",
     },
     {
+      title: "主设备序列号",
+      dataIndex: "primaryDeviceSerial",
+      key: "primaryDeviceSerial",
+      width: 140,
+      ellipsis: true,
+      render: (text) => text || "-",
+    },
+    {
       title: "工位类型",
       dataIndex: "type",
       key: "type",
