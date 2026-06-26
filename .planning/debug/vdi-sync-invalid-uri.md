@@ -1,9 +1,9 @@
 ---
 slug: vdi-sync-invalid-uri
-status: investigating
+status: resolved
 trigger: VDI虚拟机同步失败 - 使用错误的API端点导致 [COMMON_INVALID_URI]
 created: 2026-05-28T18:45:00+08:00
-updated: 2026-06-25
+updated: 2026-06-26
 ---
 
 ## Trigger
@@ -67,3 +67,18 @@ VDI同步代码使用了错误的API端点路径前缀。根据测试脚本验�
 - 不是认证问题（token有效，长度454）
 - 不是网络问题（能连接到VDI服务器）
 - 不是权限问题（端点不存在而非权限拒绝）
+
+## Phase 41 Closure (2026-06-26)
+
+**复测:** VDI API 端点路径修复已落地。
+- `internal/services/vdi/vdi_client_extended.go:347-359` `ListResourceGroups` 方法使用 `GET /v1/resources_group`(**正确路径**,而非 `/api/v1/resources_group`),端点注释明确"VDI API endpoint: GET /v1/resources_group"。
+- `vdi_client_extended.go:534` `SyncVMsFromVDIByServer` 调用 `ListResourceGroups` 已就位。
+
+**根因复述:** .md 报告的 `/api/v1/resources_group` 错误端点源自早期 VDI client 误用 v1 前缀,通过测试脚本 `vdi_probe.go` 确认正确前缀是 `/v1/`,已在生产代码中修正。
+
+**Phase 41 验证:** `go build ./...` 退出 0(本 plan 未触发任何 .go 改动)。
+
+### won't_fix_reason (D-02)
+复测确认 VDI resources_group 端点路径已修正为 `/v1/resources_group`(vdi_client_extended.go:359),代码层修复完整,本 plan 复测证据即翻 resolved。
+action: wontfix (D-02,复测发现已落地型)
+verification: 复测 `internal/services/vdi/vdi_client_extended.go:347-359` ListResourceGroups 使用 `/v1/resources_group`,go build ./... 退出 0
