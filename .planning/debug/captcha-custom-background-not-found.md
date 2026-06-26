@@ -1,6 +1,6 @@
 ---
 slug: captcha-custom-background-not-found
-status: fix_applied
+status: resolved
 trigger: 请继续debug图形滑动验证码的问题。后端提示：WARN[2026-05-21 14:50:42] [Captcha] GetRandomEnabled failed: 没有找到可用的背景图 (shape=square, difficulty=3) INFO[2026-05-21 14:50:42] [Captcha] Falling back to auto-generated background 但是我已经添加了自定义图形，相关参数也设置的custom
 created: 2026-05-21T14:50:00+08:00
 updated: 2026-05-21T15:15:00+08:00
@@ -116,3 +116,8 @@ updates["allowed_shapes"] = models.StringArray(*req.AllowedShapes)
 
 **files_changed:**
 - internal/api/v1/captcha_background_handler.go (line 180-181)
+
+## Phase 41 Closure (2026-06-26)
+verification: 2026-06-26 复测 `internal/api/v1/captcha_background_handler.go:184` 确认修复落地 — `updates["allowed_shapes"] = models.StringArray(*req.AllowedShapes)`，原 `*req.AllowedShapes`（直接 `[]string` 赋值）已改为 `models.StringArray(...)` 类型转换以正确处理 PostgreSQL JSONB 列。
+files_changed: internal/api/v1/captcha_background_handler.go (updateCaptchaBackground handler 的 allowed_shapes 字段类型转换修复)
+action: re-verify-then-flip (D-01)
