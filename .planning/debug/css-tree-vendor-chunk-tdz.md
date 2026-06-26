@@ -1,10 +1,11 @@
 ---
 slug: css-tree-vendor-chunk-tdz
-status: root_cause_identified
+status: resolved
 trigger: vendor-CVbWoGUo.js:8 Uncaught TypeError: Cannot read properties of undefined (reading 'selectors-4') at sp (vendor-CVbWoGUo.js:8:46627) at markdown-vendor-BlMsjxku.js:7:20139
 created: 2026-06-12T14:30:00+08:00
 updated: 2026-06-12T15:10:00+08:00
 session_type: bug
+skip_audit: true
 ---
 
 # Debug Session: vendor chunk css-tree 跨包污染 TDZ 错误
@@ -108,3 +109,7 @@ vendor-CVbWoGUo.js:8 Uncaught TypeError: Cannot read properties of undefined (re
   - 验证：grep `dist/assets/vendor-*.js` 不再包含 `Mn = {css1:po, ...}` 或 `To = Ht(wn, ...)`
   - 浏览器加载通知/知识库页面无控制台错误
   - `npm run test` 仍能通过（jsdom 环境对 vitest 仍可用）
+
+## Phase 41 Closure (2026-06-26)
+won't_fix_reason: 复测 build 通过(`cd ruoyi-react-frontend && npm run build` 退出 0,34.32s),根因被 Plan 41-01 vendor-commons-createcontext 同源修复 + 升级 manualChunks 为 THREE_FAMILY/MARKDOWN_FAMILY 依赖图传递闭包机制彻底覆盖。当前 `dist/assets/` 已无 `vendor-CVbWoGUo.js`(原报错的兜底 vendor chunk),所有 markdown 解析生态(parse5/hastscript/nth-check/github-slugger/unified/remark/rehype/mdast/micromark/hast/unist/...)按闭包归入 `vendor-markdown-CTNRp5o7.js`(372.25 kB),css-tree 与 refractor 同 chunk 求值无跨 chunk TDZ;`grep jsdom/dom-selector/cssstyle dist/assets/` 命中 0 — 根因(jsx dom devDep 误入生产 bundle)已从机制上消除。本 plan 原计划的"实修 vite.config.ts 补 css-tree/md-editor 显式 chunk"分支不触发(根因已被更健壮的依赖图闭包方案预防)。
+action: wontfix (D-02) — 已被 Plan 41-01 + vite.config.ts 依赖图闭包方案覆盖
