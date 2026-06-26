@@ -1,6 +1,6 @@
 ---
 slug: quick-create-fields-not-saving
-status: debug_complete
+status: resolved
 trigger: "快速创建设备功能没有正确保存型号 (model) 和 IP 地址 (ip_address) 字段"
 created: "2026-05-08"
 updated: "2026-05-08"
@@ -179,3 +179,8 @@ This ensures that:
 4. Existing device information is never overwritten by async collection
 
 **Impact**: Quick-create devices will now retain their SNMP-probed model and other information, while still allowing SSH collection to supplement additional details later.
+
+## Phase 41 Closure (2026-06-26)
+verification: 2026-06-26 复测 `internal/services/device_info_collection_service.go:307` 确认修复落地 — `if info.Model != "" && device.Model == "" { updates["model"] = info.Model }`，updateDeviceInfo 已改为只更新当前为空的字段，保留 SNMP 探测获取的数据；后续 SerialNumber 等字段同样应用 `device.<Field> == ""` 守卫（line 310 同模式）。
+files_changed: internal/services/device_info_collection_service.go (updateDeviceInfo 函数 lines 297-322，加 device.<Field> == "" 守卫保留 SNMP 探测数据)
+action: re-verify-then-flip (D-01)
