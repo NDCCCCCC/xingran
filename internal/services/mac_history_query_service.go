@@ -84,14 +84,15 @@ type MACTrajectoryQuery struct {
 
 // TrajectoryNode 轨迹节点
 type TrajectoryNode struct {
-	DeviceID    string     `json:"deviceId"`
-	DeviceName  string     `json:"deviceName"`
-	Interface   string     `json:"interface"`
-	VLANID      *int       `json:"vlanId,omitempty"`
-	EventType   string     `json:"eventType"`
-	StartTime   time.Time  `json:"startTime"`
-	EndTime     time.Time  `json:"endTime"`
-	Duration    int64      `json:"duration"` // 秒
+	DeviceID    string    `json:"deviceId"`
+	DeviceName  string    `json:"deviceName"`
+	Interface   string    `json:"interface"`
+	VLANID      *int      `json:"vlanId,omitempty"`
+	MACAddress  string    `json:"mac"` // 每节点携带的 MAC 地址(用于前端 tooltip 展示,Phase 13 CR-03)
+	EventType   string    `json:"eventType"`
+	StartTime   time.Time `json:"startTime"`
+	EndTime     time.Time `json:"endTime"`
+	Duration    int64     `json:"duration"` // 秒
 }
 
 // MACTrajectoryResult MAC轨迹查询结果
@@ -931,6 +932,7 @@ func (s *macHistoryQueryServiceImpl) aggregateTrajectory(rawEvents []rawEvent) [
 				DeviceName: evt.DeviceNameSnapshot,
 				Interface:  evt.InterfaceName,
 				VLANID:     evt.VLANID,
+				MACAddress: evt.MACAddress,
 				EventType:  evt.EventType,
 				StartTime:  evt.FirstSeen,
 				EndTime:    evt.LastSeen,
@@ -939,6 +941,7 @@ func (s *macHistoryQueryServiceImpl) aggregateTrajectory(rawEvents []rawEvent) [
 			// 检查是否与当前节点属于同一位置（复合键比较）
 			if s.sameLocation(*current, evt) {
 				// 同一位置，合并区间：更新EndTime和EventType
+				// 同一位置的 MAC 必然相等(查询已按 mac_address 过滤),无需更新 MACAddress
 				current.EndTime = evt.LastSeen
 				current.EventType = evt.EventType // 保留最新事件类型用于tooltip
 			} else {
@@ -951,6 +954,7 @@ func (s *macHistoryQueryServiceImpl) aggregateTrajectory(rawEvents []rawEvent) [
 					DeviceName: evt.DeviceNameSnapshot,
 					Interface:  evt.InterfaceName,
 					VLANID:     evt.VLANID,
+					MACAddress: evt.MACAddress,
 					EventType:  evt.EventType,
 					StartTime:  evt.FirstSeen,
 					EndTime:    evt.LastSeen,

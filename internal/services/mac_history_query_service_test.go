@@ -127,6 +127,7 @@ func TestAggregateTrajectory(t *testing.T) {
 	assert.Equal(t, "Switch-01", firstNode.DeviceName)
 	assert.Equal(t, "Gi0/1", firstNode.Interface)
 	assert.Equal(t, 100, *firstNode.VLANID)
+	assert.Equal(t, "AABBCCDDEEFF", firstNode.MACAddress, "第一个节点的MACAddress应与rawEvent一致")
 	assert.Equal(t, baseTime, firstNode.StartTime)
 	assert.Equal(t, baseTime.Add(2*time.Hour), firstNode.EndTime)
 	assert.Equal(t, int64(7200), firstNode.Duration, "停留时长应为2小时")
@@ -135,7 +136,71 @@ func TestAggregateTrajectory(t *testing.T) {
 	secondNode := nodes[1]
 	assert.Equal(t, "Gi0/2", secondNode.Interface)
 	assert.Equal(t, 200, *secondNode.VLANID)
+	assert.Equal(t, "AABBCCDDEEFF", secondNode.MACAddress, "第二个节点的MACAddress也应正确填充")
 	assert.Equal(t, baseTime.Add(3*time.Hour), secondNode.StartTime)
+}
+
+// TestAggregateTrajectory_MACAddressPropagation 验证 TrajectoryNode.MACAddress
+// 字段在所有节点(包括合并区间后)上均被正确填充(Phase 13 CR-03 修复覆盖)。
+func TestAggregateTrajectory_MACAddressPropagation(t *testing.T) {
+	service := &macHistoryQueryServiceImpl{}
+
+	baseTime := time.Date(2025, 6, 1, 8, 0, 0, 0, time.UTC)
+	vlan10 := 10
+	vlan20 := 20
+	const expectedMAC = "AABBCCDDEEFF"
+
+	rawEvents := []rawEvent{
+		// 同一位置连续状态(被合并为一个 TrajectoryNode)
+		{
+			ID:                 "m1",
+			DeviceID:           "dev-A",
+			DeviceNameSnapshot: "Core-Switch-A",
+			MACAddress:         expectedMAC,
+			InterfaceName:      "GigabitEthernet0/1",
+			VLANID:             &vlan10,
+			EventType:          "appeared",
+			FirstSeen:          baseTime,
+			LastSeen:           baseTime.Add(30 * time.Minute),
+		},
+		{
+			ID:                 "m2",
+			DeviceID:           "dev-A",
+			DeviceNameSnapshot: "Core-Switch-A",
+			MACAddress:         expectedMAC,
+			InterfaceName:      "GigabitEthernet0/1",
+			VLANID:             &vlan10,
+			EventType:          "moved",
+			FirstSeen:          baseTime.Add(30 * time.Minute),
+			LastSeen:           baseTime.Add(1 * time.Hour),
+		},
+		// 不同位置(产生第二个 TrajectoryNode)
+		{
+			ID:                 "m3",
+			DeviceID:           "dev-B",
+			DeviceNameSnapshot: "Access-Switch-B",
+			MACAddress:         expectedMAC,
+			InterfaceName:      "FastEthernet0/2",
+			VLANID:             &vlan20,
+			EventType:          "moved",
+			FirstSeen:          baseTime.Add(1 * time.Hour),
+			LastSeen:           baseTime.Add(2 * time.Hour),
+		},
+	}
+
+	nodes := service.aggregateTrajectory(rawEvents)
+
+	// 断言:3 个 rawEvent 应聚合为 2 个节点(前 2 个合并)
+	require.Equal(t, 2, len(nodes), "前2个rawEvent应合并为1个节点")
+
+	// 所有节点的 MACAddress 必须非空且等于 expectedMAC
+	for i, node := range nodes {
+		assert.Equal(t, expectedMAC, node.MACAddress,
+			"节点 #%d (device=%s, interface=%s) 的MACAddress应等于rawEvent中的MAC",
+			i, node.DeviceID, node.Interface)
+		assert.NotEmpty(t, node.MACAddress,
+			"节点 #%d 的MACAddress字段不能为空(tooltip需要展示)", i)
+	}
 }
 
 // TestSameLocation 测试位置比较逻辑
