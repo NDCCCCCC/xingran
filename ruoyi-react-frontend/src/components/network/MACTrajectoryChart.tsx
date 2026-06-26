@@ -15,6 +15,8 @@ export interface TrajectoryNode {
   endTime: string; // ISO timestamp
   duration: number;
   eventType: "appeared" | "disappeared" | "moved" | "vlan_changed";
+  /** 厂商名(由 TrajectoryPage 调用 queryMACVendor 合并填充) */
+  vendor?: string;
 }
 
 interface MACTrajectoryChartProps {
@@ -88,17 +90,22 @@ const MACTrajectoryChart: React.FC<MACTrajectoryChartProps> = ({
       tooltip: {
         trigger: "item",
         formatter: (params: any) => {
-          const data = params.data.value;
-          const durationHours = (data[3] / 3600).toFixed(1);
-          const dwell = getDwellHeatmap(data[3]);
+          // Phase 13 CR + W5 修复:不再读 value 数组下标(value 数组服务于 ECharts
+          // custom series renderItem 的 position 索引,index 错位是脆弱的契约)。
+          // 改用 data[params.dataIndex] 节点对象访问字段,稳定且与字段增减解耦。
+          const node = data[params.dataIndex];
+          const durationHours = (node.duration / 3600).toFixed(1);
+          const dwell = getDwellHeatmap(node.duration);
           return `
             <div>
               <span style="display:inline-block;padding:0 6px;background:${dwell.color};color:#fff;border-radius:2px;font-size:12px;">停留${dwell.label}</span><br/>
-              <strong>MAC: ${data[4]}</strong><br/>
-              设备: ${data[5]}<br/>
+              <strong>MAC: ${node.mac}</strong><br/>
+              厂商: ${node.vendor ?? "Unknown"}<br/>
+              设备: ${node.deviceName}<br/>
               端口: ${params.name}<br/>
               停留: ${durationHours}小时<br/>
-              事件: ${data[6]}
+              事件: ${node.eventType}<br/>
+              VLAN: ${node.vlanId ?? "-"}
             </div>
           `;
         },
