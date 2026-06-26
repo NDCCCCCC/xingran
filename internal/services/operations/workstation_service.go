@@ -154,7 +154,14 @@ func NewWorkstationService(db *gorm.DB) WorkstationService {
 }
 
 // Create 创建工位
+//
+// 新建工位默认 status=0（空闲）。如果用户在创建时同时指定了 user_id，则
+// applyWorkstationOccupancyLink 会把 status 联动为 1（占用）。Maintain 状态
+// 仅由管理员手动设置，新建路径不会触发（因为新工位入库前 status 来自表单，
+// 通常是 Available）。
 func (s *workstationService) Create(ctx context.Context, workstation *models.Workstation) error {
+	// ✨ 联动 user_id ↔ status(占用/空闲)
+	applyWorkstationOccupancyLink(workstation, workstation.Status)
 	return s.db.WithContext(ctx).Create(workstation).Error
 }
 
@@ -174,7 +181,32 @@ func (s *workstationService) Update(ctx context.Context, workstation *models.Wor
 	// 保留创建时间和创建人,避免 Save 用零值覆盖(0001-01-01 bug 的根因)
 	workstation.CreatedAt = existing.CreatedAt
 	workstation.CreatedBy = existing.CreatedBy
+
+	// ✨ 联动 user_id ↔ status(占用/空闲),Maintain(2) 保留维护语义
+	applyWorkstationOccupancyLink(workstation, existing.Status)
+
 	return s.db.WithContext(ctx).Save(workstation).Error
+}
+
+// applyWorkstationOccupancyLink 联动工位状态与所属人员。
+//
+// 规则:
+//   - 如果 user_id 有值 → status = Occupied(1)
+//   - 如果 user_id 为空 → status = Available(0)
+//   - 如果当前 status = Maintain(2)，**保留维护状态不变**(运维流程强语义)
+//
+// 调用入口: Create + Update(在 Save 前)。Excel 导入路径单独在
+// excel_service.prepareRecordsForUpsert 里覆盖 status(参见 n71)。
+func applyWorkstationOccupancyLink(w *models.Workstation, currentStatus models.WorkstationStatus) {
+	if currentStatus == models.WorkstationStatusMaintain {
+		// 维护状态不受 user_id 联动影响
+		return
+	}
+	if w.UserID != nil && *w.UserID != "" {
+		w.Status = models.WorkstationStatusOccupied
+	} else {
+		w.Status = models.WorkstationStatusAvailable
+	}
 }
 
 func (s *workstationService) Delete(ctx context.Context, id string) error {
