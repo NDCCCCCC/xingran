@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Card, DatePicker, Input, Button, Form, Space, Alert, Drawer, App,
 } from "antd";
@@ -11,7 +11,7 @@ import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
 import MACTrajectoryChart from "@/components/network/MACTrajectoryChart";
 import MACEventsTimeline from "@/components/network/MACEventsTimeline";
-import { queryMACTrajectory } from "@/lib/api/networkApi";
+import { queryMACTrajectory, queryMACVendor } from "@/lib/api/networkApi";
 import { EmptyStateWithAction, ErrorAlertWithRetry } from "@/components/shared";
 
 const { RangePicker } = DatePicker;
@@ -34,9 +34,9 @@ const PRESETS: Preset[] = [
 ];
 
 interface TrajectoryQueryParams {
-  mac: string;
-  start_time: string; // ISO timestamp
-  end_time: string;   // ISO timestamp
+  macAddress: string;
+  startTime: string; // ISO timestamp
+  endTime: string;   // ISO timestamp
 }
 
 const TrajectoryPage: React.FC = () => {
@@ -64,6 +64,25 @@ const TrajectoryPage: React.FC = () => {
     enabled: !!queryParams, // 有参数时才查询
     staleTime: 5 * 60 * 1000, // 5分钟缓存
   });
+
+  // Phase 13 W4:并行查询 MAC 厂商(OUI),用于 tooltip 展示
+  // - 与轨迹查询并行触发(Promise.all 行为由 useQuery queryKey 触发顺序保证)
+  // - 24h staleTime 对齐后端 OUI Redis 缓存 TTL(13-08 设计决策 T-13W8-03)
+  // - enabled 依赖 queryParams:无参数时不触发,避免空查询
+  const { data: vendorName } = useQuery({
+    queryKey: ["macVendor", queryParams?.macAddress],
+    queryFn: () => queryMACVendor(queryParams!.macAddress),
+    enabled: !!queryParams,
+    staleTime: 24 * 60 * 60 * 1000, // 24h
+  });
+
+  // 合并 trajectoryData + vendorName 为 chartData,每个 node 携带 vendor 字段
+  // - useMemo deps 锁定 trajectoryData + vendorName,避免重建数组
+  // - 后端 TrajectoryNode 不含 vendor,前端在 page 层合并(网络契约最小化)
+  const chartData = useMemo(() => {
+    if (!trajectoryData) return [];
+    return trajectoryData.map((node) => ({ ...node, vendor: vendorName }));
+  }, [trajectoryData, vendorName]);
 
   // MAC地址规范化函数(复用后端逻辑)
   const normalizeMACAddress = (mac: string): string => {
@@ -126,9 +145,9 @@ const TrajectoryPage: React.FC = () => {
       const normalizedMAC = normalizeMACAddress(urlMac);
       if (normalizedMAC) {
         setQueryParams({
-          mac: normalizedMAC,
-          start_time: dayjs(startTime).toISOString(),
-          end_time: dayjs(endTime).toISOString(),
+          macAddress: normalizedMAC,
+          startTime: dayjs(startTime).toISOString(),
+          endTime: dayjs(endTime).toISOString(),
         });
       }
     }
@@ -148,9 +167,9 @@ const TrajectoryPage: React.FC = () => {
       }
 
       setQueryParams({
-        mac: normalizedMAC,
-        start_time: dateRange[0].toISOString(),
-        end_time: dateRange[1].toISOString(),
+        macAddress: normalizedMAC,
+        startTime: dateRange[0].toISOString(),
+        endTime: dateRange[1].toISOString(),
       });
     } catch (err) {
       console.error("Form validation failed:", err);
@@ -273,7 +292,7 @@ const TrajectoryPage: React.FC = () => {
 
       <div style={{ marginTop: "16px" }}>
         <MACTrajectoryChart
-          data={trajectoryData || []}
+          data={chartData}
           loading={isLoading}
           onError={(err) => {
             console.error("Trajectory chart error:", err);
@@ -293,9 +312,9 @@ const TrajectoryPage: React.FC = () => {
       >
         {queryParams ? (
           <MACEventsTimeline
-            mac={queryParams.mac}
-            startTime={queryParams.start_time}
-            endTime={queryParams.end_time}
+            mac={queryParams.macAddress}
+            startTime={queryParams.startTime}
+            endTime={queryParams.endTime}
           />
         ) : (
           <Alert
