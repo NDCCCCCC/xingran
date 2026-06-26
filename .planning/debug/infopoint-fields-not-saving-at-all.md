@@ -1,6 +1,6 @@
 ---
 slug: infopoint-fields-not-saving-at-all
-status: fixed
+status: resolved
 trigger: 设备名称、端口、描述三个字段全部没有正确保存到数据库。之前已修改代码但问题仍存在。
 created: 2026-05-18T11:40:00Z
 updated: 2026-05-18T12:15:00Z
@@ -118,3 +118,8 @@ if config.TableName == "ops_info_points" {
 2. 重启后端服务
 3. 使用Excel模板导入信息点数据，填写设备名称、端口、描述信息
 4. 检查数据库ops_info_points表，确认device_name, port_name, remark字段是否正确保存
+
+## Phase 41 Closure (2026-06-26)
+verification: 2026-06-26 复测确认修复已落地 — (1) `internal/services/operations/excel_service.go:535-560` 的 applyReferenceResults 在 `config.TableName == "ops_info_points"` 分支下动态添加 `data["device_name"]` / `data["port_name"]` 字段（grep 命中 lines 535/537/552/554 等）；(2) `excel_service.go:832-840` 的 prepareRecordsForUpsert 同样在 InfoPoint 分支下保留 `record["device_name"]` / `record["port_name"]` 到 preparedRecord（grep 命中 lines 832/833/835）。原 .md 述及的两处 InfoPoint 特殊处理逻辑完整保留，device_name/port_name 冗余字段可正常保存。
+files_changed: internal/services/operations/excel_service.go (applyReferenceResults lines 532-540 + prepareRecordsForUpsert lines 829-840，InfoPoint 特殊处理)
+action: re-verify-then-flip (D-01)
