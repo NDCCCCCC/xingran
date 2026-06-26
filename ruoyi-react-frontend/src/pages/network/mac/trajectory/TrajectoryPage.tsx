@@ -230,14 +230,14 @@ const TrajectoryPage: React.FC = () => {
               placeholder="AA:BB:CC:DD:EE:FF"
               style={{ width: 200 }}
               onChange={(e) => {
-                // 实时格式化输入
+                // 实时格式化输入(Phase 13 CR-02:走 AntD Form 单一源,删除 e.target.value = formatted 反模式)
                 const formatted = normalizeMACAddress(e.target.value);
                 if (formatted) {
-                  e.target.value = formatted;
+                  form.setFieldValue("mac", formatted);
                 }
               }}
               onBlur={(e) => {
-                // 失焦自动规范化(增强 UX)
+                // 失焦自动规范化(增强 UX,与 onChange 形成双重保险)
                 const formatted = normalizeMACAddress(e.target.value);
                 if (formatted) {
                   form.setFieldValue("mac", formatted);
