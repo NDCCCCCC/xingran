@@ -4,8 +4,8 @@ milestone: v1.16
 milestone_name: 技术债清理 (Tech-Debt Cleanup)
 status: executing
 stopped_at: Phase 40 context gathered
-last_updated: "2026-06-26T01:18:51.916Z"
-last_activity: 2026-06-26 -- Phase 41 planning complete
+last_updated: "2026-06-26T01:42:39.572Z"
+last_activity: 2026-06-26 -- Phase 41 execution started
 progress:
   total_phases: 2
   completed_phases: 1
@@ -19,14 +19,14 @@ progress:
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
 **Status**: Planning v1.16 — ROADMAP drafted, ready to plan Phase 40
-**Last activity**: 2026-06-25 — v1.16 ROADMAP created (Phase 40: tech-debt-cleanup)
+**Last activity**: 2026-06-26 — Quick task 260626-dai: 工位导出补充部门/人员名称 + 设备序列号等 (commit 212f73fb)
 
 ## Current Position
 
-Phase: 40 (tech-debt-cleanup) — EXECUTING
-Plan: 1 of 3
-Status: Ready to execute
-Last activity: 2026-06-26 -- Phase 41 planning complete
+Phase: 41 (debug-session-gap-closure) — EXECUTING
+Plan: 1 of 4
+Status: Executing Phase 41
+Last activity: 2026-06-26 -- Phase 41 execution started
 
 ## Project Reference
 
@@ -80,6 +80,7 @@ Last activity: 2026-06-26 -- Phase 41 planning complete
 | 260623-batch-sync | 用户导入后 AD 批量同步（BatchSyncUsersToAD）：复用单 LDAP 连接 + errgroup 信号量 | 2026-06-23 | - | [260623-batch-sync-optimize](./quick/20260623-batch-sync-optimize/) |
 | 260622-lv9 | 系统用户 Excel 导入功能 + 性别默认值改保密 + 导入后触发 AD 域同步 | 2026-06-22 | 5d872a5,cc2a77d,7d40b32,4758d36 | [260622-lv9-xlsx-email](./quick/260622-lv9-xlsx-email/) |
 | 260622-u8n | 从 sys_dept.leader 批量同步用户 AD manager 属性 | 2026-06-22 | - | [260622-u8n-ad-manager-leader-ad](./quick/260622-u8n-ad-manager-leader-ad/) |
+| 260626-dai | 工位 Excel 导出补充所属部门/人员名称 + 设备序列号/名称/型号（新增 WorkstationQueryBuilder，镜像 List JOIN） | 2026-06-26 | 212f73fb | [260626-dai-workstation-export-fields](./quick/260626-dai-workstation-export-fields/) |
 
 ## Accumulated Context
 
