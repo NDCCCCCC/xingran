@@ -38,6 +38,8 @@ result: blocked
 blocked_by: no-default-dashboard
 reason: "admin 账号当前无默认仪表盘（dashboard 渲染 hasNoDataMessage=true + widgetCount=0 + gridItemCount=0；bodyText 含"您还没有设置默认仪表盘"），无法验证 widget memo 边界——前置条件缺失（Phase 30 验证时 admin 有默认 dashboard，当前数据库状态不一致：可能 DB 重置/admin dashboard 被删）。localStorage 仍有 `dashboard-storage` 持久化键，但未生效为默认。"
 note: 即使通过"查看仪表盘列表"恢复默认 dashboard，**chrome-devtools MCP 不支持 React Devtools Profiler**（无 `react-devtools-*` 工具），无法精确测量"只有该 widget 重新渲染"。performance_start_trace 可粗略观察组件渲染时长，但无法严格证明 memo 边界。Phase 30 Wave 4 4 个 React.memo + 5 条 ESLint 规则的代码层保护（前 3 个 virtual table 已实测验证 #3）已生效，但运行时 Profiler 验证需要浏览器 DevTools Profiler 扩展或 React DevTools standalone。
+
+**b 审计详情 (2026-06-26 via scripts/uat-audit 一次性 Go 脚本，已删除)**：admin user_id = `652eae20-48e6-4a42-b2c5-b53247195627`。dashboard 实际表名是 **`sys_dashboards`**（不是 `sys_dashboard`），20 列；+ `sys_dashboard_versions`（6 列，0 行）。sys_dashboards 表共 6 行，**全部 `deleted_at` 非空**（2026-01-21 ~ 2026-01-26 软删除）+ **全部 `is_default=false`** + 所有 owner_id = admin user_id。即 admin 名下所有 dashboard 都被软删除，导致"无默认仪表盘"。修复路径（用户选择不修复）：`UPDATE sys_dashboards SET deleted_at=NULL, is_default=true WHERE id=<某存活 dashboard id>`，并刷新前端 React Query 缓存。
 how-to-verify: (1) 在浏览器手动创建/选择默认 dashboard + 添加 6 widget；(2) 启用 React DevTools 浏览器扩展；(3) 录制 Profiler，更新单个 widget 数据，确认 flame graph 中只有目标 widget 重新渲染。
 
 ### 5. Dict cache invalidation E2E
@@ -64,6 +66,15 @@ evidence: |
   - 字典类型下拉 8 个选项（无 sys_user_sex）
   - 设备类型字典原 12 条 → 新增后 13 条（"创建成功" toast）
   - /assets/assets 设备类型下拉 10 选项（聚合枚举，非字典值）
+
+**b 审计详情 (2026-06-26)**：grep `useDict\('[^']+'\)` 全前端代码 = **3 个真实消费者**：
+  - `pages/operations/dedicated-lines/index.tsx:64` → `useDict("ops_dedicated_line_type")`
+  - `pages/operations/dedicated-lines/index.tsx:65` → `useDict("ops_isp")`
+  - `pages/operations/info-points/index.tsx:95` → `useDict("ops_info_point_type")`
+
+**`sys_user_sex` 仅在 `src/hooks/useDict.ts:4` JSDoc 注释示例**，前端零真实 `useDict('sys_user_sex')` 调用。sys_dict_type 表查询：`sys_user_sex` / `sys_user_status` / `sys_yes_no` **不存在**；6 个 ops/dashboard 字典 status=0 + 数据齐全。6 种 widget 类型可用：stat-card / chart / table / list / progress / metric。
+
+**正确的 #5 验证路径应是**：改 `ops_dedicated_line_type` 或 `ops_isp` 数据 → 在 `/operations/dedicated-lines` 看 useDict 缓存失效。但**顶部 tab 切换触发完整 page navigation**（`Page navigated to http://localhost:4000/assets/assets`），React Query 内存缓存重置，仍破坏"不刷新页面"前提。所以即便换正确路径 + 正确字典，验证手段仍受限（除非用 SPA 内 React Router 导航或直接 URL 跳转）。
 
 ## Summary
 
