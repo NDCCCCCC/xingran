@@ -63,7 +63,13 @@
   5. 每个被翻/won't-fix 的 session 在其 `.md` Resolution 章节追加 Phase 41 Closure 证据(D-07 沿用)
   6. `go build ./...` / `npm run build` 全程退出码 0(若有代码修复)
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 41-01-PLAN.md — Cohort A 12 个'实质已完成态'session 复测-后-翻(D-01)
+- [ ] 41-02-PLAN.md — Cohort B 前端集群 7 个 session 混合修+wontfix(D-02)
+- [ ] 41-03-PLAN.md — Cohort B 后端/认证集群 10 个 session 混合修+wontfix(D-02)
+- [ ] 41-04-PLAN.md — 验收关门:audit-open<5 + verify_phase40.sh 双 PASS(D-03/04/05)
 
 **UI hint**: no
 
@@ -72,7 +78,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 40. Tech-Debt Cleanup | 3/3 | Complete   | 2026-06-25 |
-| 41. Debug Session Gap Closure | 0/TBD | Planning | - |
+| 41. Debug Session Gap Closure | 0/4 | Planned | - |
 
 ---
 
