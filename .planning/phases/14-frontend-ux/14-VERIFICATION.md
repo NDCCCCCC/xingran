@@ -1,9 +1,22 @@
 ---
 phase: 14-frontend-ux
-verified: 2026-06-15T02:00:00Z
+verified: 2026-06-26T16:00:00Z
 status: gaps_found
 score: 12/19 must-haves verified
 overrides_applied: 0
+re_verification:
+  previous_status: gaps_found
+  previous_score: 12/19
+  gaps_closed:
+    - "TrajectoryNode contract: Phase 13 (2026-06-26) fixed TrajectoryNode.MACAddress (json:mac) + queryMACVendor (camelCase vendorName) + MACTrajectoryChart tooltip node-object access (CR-03 + CR-04 + W4-vendor partial mitigation). See 13-VERIFICATION.md status:passed score:18/18 + 13-{07,08,09,10}-SUMMARY.md."
+  gaps_remaining:
+    - "exportMACHistory returns BaseResponse instead of Blob (14-01 EXPORT-01, CR-01 of 14-REVIEW)"
+    - "/network/history/list endpoint does not exist (14-02 + 14-03 blocker)"
+    - "ErrorAlertWithRetry 1007 logout fires twice without useRef guard (CR-03 of 14-REVIEW)"
+    - "EmptyStateWithAction actionPath type narrowing (CR-04 of 14-REVIEW)"
+    - "MAC copy success/error feedback missing (WR-07)"
+    - "Excel export end-to-end non-functional (no backend format=xlsx branch + frontend never receives real Blob)"
+  regressions: []
 gaps:
   - truth: "工具栏出现两个互斥按钮 '导出当前查询' / '导出全量',点击后浏览器下载 .xlsx 文件"
     status: failed

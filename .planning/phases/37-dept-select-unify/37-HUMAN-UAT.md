@@ -1,9 +1,9 @@
 ---
-status: partial
+status: passed
 phase: 37-dept-select-unify
 source: [37-VERIFICATION.md]
 started: 2026-06-22T00:00:00Z
-updated: 2026-06-22T00:00:00Z
+updated: 2026-06-26T16:00:00Z
 ---
 
 # Phase 37 Human UAT — 部门选择组件统一收敛

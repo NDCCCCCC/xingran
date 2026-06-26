@@ -1,3 +1,11 @@
+---
+status: passed
+phase: 23-ad-group-sync
+verified: 2026-05-26T13:00:00Z
+updated: 2026-06-26T16:00:00Z
+note: Phase 23 服务层验证结论报告（body 已"通过"）；加 frontmatter 关闭 audit format-level uat_gap。
+---
+
 # Phase 23 UAT: AD组自动同步系统 - 验证报告
 
 **验证时间**: 2026-05-26

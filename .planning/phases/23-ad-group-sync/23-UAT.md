@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: partial
 phase: 23-ad-group-sync
 source: 23-06-SUMMARY.md, 23-08-SUMMARY.md, 23-09-SUMMARY.md, 23-10-SUMMARY.md, 23-11-SUMMARY.md, 23-12-SUMMARY.md, 23-13-SUMMARY.md, 23-14-SUMMARY.md, 23-16-SUMMARY.md
 started: 2026-05-26T12:30:00Z
-updated: 2026-05-26T13:00:00Z
+updated: 2026-06-26T16:00:00Z
 ---
 
 ## Current Test

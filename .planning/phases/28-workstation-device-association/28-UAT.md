@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: partial
 phase: 28-workstation-device-association
 source: [28-01-SUMMARY.md, 28-EXECUTE-SUMMARY.md]
 started: 2026-06-10T11:30:00Z
