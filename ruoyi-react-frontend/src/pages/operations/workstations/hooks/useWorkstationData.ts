@@ -109,15 +109,37 @@ export function useWorkstationData(
     try {
       // 使用 recursiveDeptId 而非 deptId,后端会扩展为该部门+所有子部门的用户。
       // 原 deptId 单值语义在工位模态框里不够用——用户通常需要看到整个部门树下的人。
-      const params = {
-        current: 1,
-        pageSize: 1000,
-        ...(deptId && { recursiveDeptId: deptId }),
-      };
-      const result = await post("/system/users/list", params) as { data?: { list: Record<string, unknown>[] } };
-      const users = result.data?.list || [];
+      //
+      // **必须分页循环**:system 模块 list 的 MaxPageSize=100(后端 internal/constants/pagination.go),
+      // 即使前端传 pageSize:1000 也只返回前 100 条。运营服务本部类大部门递归后 >100 人
+      // (e.g. 运营服务部递归后 106 人),wangmin-135 排在第 100 之后会被丢弃,导致
+      // Select 的 showSearch 过滤不到。
+      // 修复:pageSize 固定 100,按 total 分页累加,直到拉完所有页(实测运营服务部 2 页)。
+      const PAGE_SIZE = 100;
+      const allUsers: Record<string, unknown>[] = [];
+      let current = 1;
+      let total = 0;
+      // 上限保护:避免 total 异常时无限循环(部门下用户数 >1 万时退出,前端一次拉这么多也不合理)
+      const MAX_PAGES = 100;
+      let pages = 0;
+      while (pages < MAX_PAGES) {
+        const params: Record<string, unknown> = {
+          current,
+          pageSize: PAGE_SIZE,
+          ...(deptId && { recursiveDeptId: deptId }),
+        };
+        const result = await post("/system/users/list", params) as {
+          data?: { list?: Record<string, unknown>[]; total?: number };
+        };
+        const list = result.data?.list || [];
+        total = result.data?.total ?? total;
+        allUsers.push(...list);
+        if (allUsers.length >= total || list.length < PAGE_SIZE) break;
+        current += 1;
+        pages += 1;
+      }
       setUserOptions(
-        users.map((u: Record<string, unknown>) => ({
+        allUsers.map((u: Record<string, unknown>) => ({
           id: String(u.id),
           username: String(u.username),
           nickname: u.nickname ? String(u.nickname) : undefined,
