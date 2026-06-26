@@ -34,6 +34,7 @@
 **Requirements**: TECH-01, TECH-02, TECH-03, TECH-04, TECH-05
 
 **Success Criteria** (what must be TRUE):
+
   1. `.planning/debug/` 中 16 个 `root_cause_found` 会话已通过代码修复 + commit 闭环，frontmatter `status: resolved` 可被 audit 工具正确识别
   2. `.planning/debug/` 中 5 个 `awaiting_human_verify` 会话(workstation-device-build-errors、workstation-expand-device-load-empty、reset-theme-hardcoded-colors、user-filter-lost-after-edit、vite-hmr-token-blank-page)经 dev 环境复现验证后,frontmatter `status: resolved`
   3. `.planning/debug/apikey-route-path-duplication.md`(`root-cause-found` 状态)随 TECH-01 一并处理完成,frontmatter `status: resolved`
@@ -56,6 +57,7 @@
 **Requirements**: TECH-06(支撑 TECH-05 的 debug_sessions < 5 部分)
 
 **Success Criteria** (what must be TRUE):
+
   1. ~12 个"实质已完成态"session(debug_complete / fixed / fix_applied / applied / fixed_pending_restart)经核查修复确实落地后,frontmatter 翻 `status: resolved`
   2. 剩余 ~17 个真正在途 session(investigating / verifying / diagnosed / root_cause_identified / checkpoint_reached)逐个处理:能修则修 + 验证 → resolved;陈年/重复/不适用者标记 won't-fix 或 `skip_audit: true` 移出 audit 计数
   3. `gsd-sdk query audit-open` 输出 `debug_sessions < 5`
@@ -66,9 +68,14 @@
 **Plans**: 4 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 41-01-PLAN.md — Cohort A 12 个'实质已完成态'session 复测-后-翻(D-01)
 - [ ] 41-02-PLAN.md — Cohort B 前端集群 7 个 session 混合修+wontfix(D-02)
 - [ ] 41-03-PLAN.md — Cohort B 后端/认证集群 10 个 session 混合修+wontfix(D-02)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 41-04-PLAN.md — 验收关门:audit-open<5 + verify_phase40.sh 双 PASS(D-03/04/05)
 
 **UI hint**: no
@@ -88,6 +95,7 @@ Plans:
 <summary>Earlier phase history (v1.0–v1.15) preserved for reference</summary>
 
 The full history of Phases 1-39 is preserved below. See also:
+
 - `.planning/PROJECT.md` (Validated section) for v1.0–v1.15 requirement history
 - `.planning/MILESTONES.md` for shipped-milestone summaries
 - `.planning/phases/` for per-phase plan files
