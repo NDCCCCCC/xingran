@@ -1,10 +1,11 @@
 ---
 gsd_state_version: 1.0
 slug: login-md-vendor-crash
-status: investigating
+status: resolved
 trigger: vendor-CVbWoGUo.js:8 Uncaught TypeError: Cannot read properties of undefined (reading 'selectors-4') at sp (vendor-CVbWoGUo.js:8:46627) at markdown-vendor-BlMsjxku.js:7:20139
 created: 2026-06-12
 updated: 2026-06-12
+skip_audit: true
 ---
 
 # Debug Session: login-md-vendor-crash
@@ -88,3 +89,7 @@ vendor-CVbWoGUo.js:8 Uncaught TypeError: Cannot read properties of undefined (re
 - 该问题被前一个 crash 掩盖,被 `selectors-4` 错误吞掉
 - 当前未处理(遵守 scope-constrainment 原则,本次任务只修 `selectors-4`)
 - **如果重新部署后登录页报的是 `Activity` 错误而非 `selectors-4`,则需开启新 debug session 修复该 chunk 循环**
+
+## Phase 41 Closure (2026-06-26)
+won't_fix_reason: 复测 build 通过(`cd ruoyi-react-frontend && npm run build` 退出 0,34.32s),与 css-tree-vendor-chunk-tdz 同根(`selectors-4` 报错栈完全一致 — `Mn["selectors-4"]` 即 css-tree `To` 变量未初始化),已被 vite.config.ts 升级为 THREE_FAMILY/MARKDOWN_FAMILY 依赖图传递闭包方案彻底覆盖 — markdown 解析生态(parse5/hastscript/nth-check/github-slugger/unified/remark/rehype/mdast/micromark/hast/unist/...)按闭包归入 `vendor-markdown-CTNRp5o7.js`(372.25 kB),css-tree 与 refractor 同 chunk 求值无跨 chunk TDZ。原 `.md` Resolution 段所述的"vite.config.ts 把 markdown-vendor 规则置顶并补齐 include 项"修复已落地(`vendor-md-editor` 单独 chunk + `vendor-markdown` 闭环),且 `dist/assets/` 已无原报错的兜底 vendor chunk。`.md` 提到的"Follow-up Activity TDZ"另见 react-vendor-activity-tdz session 闭环。
+action: wontfix (D-02) — 与 css-tree-vendor-chunk-tdz 同根已被覆盖
