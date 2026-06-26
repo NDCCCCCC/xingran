@@ -147,15 +147,15 @@ func (b *WorkstationQueryBuilder) BuildQuery(
 			sys_dept.dept_name AS dept_name,
 			sys_user.nickname AS user_name,
 			(SELECT device_serial FROM ops_workstation_device
-				WHERE workstation_id = sys_workstation.id::uuid AND deleted_at IS NULL
+				WHERE workstation_id = sys_workstation.id::text AND deleted_at IS NULL
 				ORDER BY (CASE WHEN is_primary = true THEN 0 ELSE 1 END), priority DESC, created_at ASC
 				LIMIT 1) AS device_serial,
 			(SELECT device_name FROM ops_workstation_device
-				WHERE workstation_id = sys_workstation.id::uuid AND deleted_at IS NULL
+				WHERE workstation_id = sys_workstation.id::text AND deleted_at IS NULL
 				ORDER BY (CASE WHEN is_primary = true THEN 0 ELSE 1 END), priority DESC, created_at ASC
 				LIMIT 1) AS device_name,
 			(SELECT device_model FROM ops_workstation_device
-				WHERE workstation_id = sys_workstation.id::uuid AND deleted_at IS NULL
+				WHERE workstation_id = sys_workstation.id::text AND deleted_at IS NULL
 				ORDER BY (CASE WHEN is_primary = true THEN 0 ELSE 1 END), priority DESC, created_at ASC
 				LIMIT 1) AS device_model`).
 		Joins("LEFT JOIN ops_floors ON ops_floors.id = sys_workstation.floor_id::uuid").
