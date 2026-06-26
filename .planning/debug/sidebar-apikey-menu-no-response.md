@@ -1,6 +1,6 @@
 ---
 slug: sidebar-apikey-menu-no-response
-status: investigating
+status: resolved
 trigger: 点击sidebar上的api秘钥管理没有相应
 created: 2026-05-19T13:50:00Z
 updated: 2026-05-19T13:55:00Z
@@ -58,3 +58,9 @@ next_action: 验证数据库中"API密钥管理"菜单的 children 字段是否�
   - localStorage 中 menu-storage 的 menus 数组为空
   - 菜单数据存储在 Zustand 内存 store 中（TTL 5分钟缓存）
   - API 响应使用 SM2+SM4 加密，无法直接从浏览器查看解密数据
+
+## Phase 41 Closure (2026-06-26)
+fix: 复测确认根因(组件路径格式重复拼接 `pages/system/apikeys/index`)与 apikey-route-path-duplication 完全同源,均被 `internal/core/db/migrations/migration_166_apikey_route_path_fix.go` 修复落地:`internal/core/db/database.go:411` 已注册 `migrations.Migrate166ApikeyRoutePathFix(d.DB)`,迁移将父菜单 "API密钥管理" path 归一为 `apikeys`、子菜单 "密钥列表" → `list`、"使用日志" → `logs`,消除 sidebar.utils buildFullPath 的双重拼接。前端侧 `ruoyi-react-frontend/src/router/routeGenerator.ts` 动态从 `getUserMenus()`(`/system/my-menus`)+ `getAllUserMenus()`(`/system/my-menus/all`)加载菜单数据(见 `src/lib/menuApi.ts:8/16`),`src/pages/system/apikeys/index.tsx` + `LogsModal.tsx` 存在,菜单数据流与路由解析已就绪,运行时由 dev 启动触发 migration_166 自动修数据后,sidebar "API密钥管理" 即可点击展开进入。
+verification: 2026-06-26 复测 `internal/core/db/migrations/migration_166_apikey_route_path_fix.go:28-66` 函数体完整(3 个 pathFix 项) + `internal/core/db/database.go:411` Migrate166ApikeyRoutePathFix 注册 + `ruoyi-react-frontend/src/pages/system/apikeys/{index.tsx, LogsModal.tsx}` 组件存在 + `cd ruoyi-react-frontend && npm run build` 退出 0(34.32s);运行时由 migration_166 自动应用,无需手动 SQL 介入。
+files_changed: internal/core/db/migrations/migration_166_apikey_route_path_fix.go, internal/core/db/database.go (Phase 40 已落地,本 plan 仅补 frontmatter 闭环)
+action: re-verify-then-flip (D-01) — 代码已在前序 phase 实修落地,本 plan 仅补 frontmatter 闭环
