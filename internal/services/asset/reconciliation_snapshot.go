@@ -17,6 +17,7 @@ package asset
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -123,4 +124,19 @@ func ExecuteDetectExpiredSilenceTask(ctx context.Context) error {
 func ExecuteCleanupExpiredExceptionsTask(ctx context.Context) error {
 	log.Info("reconciliation:cleanupExpiredExceptions invoked (R1 placeholder, R3 implements)")
 	return nil
+}
+
+// StartupRefreshView 启动时调用一次 RefreshView(D-02 避免冷启 0-5min 数据为空)。
+//
+// 与 ExecuteRefreshViewTask 的区别:
+//   - 本函数接收 *gorm.DB 参数,直接构造 service 真实执行 SQL;
+//   - ExecuteRefreshViewTask 是 InvokeTarget 字符串的 stub,无 core 依赖。
+//
+// 调用方:internal/core/core.go Init() 末尾异步调用一次,失败仅 log 不阻断启动。
+func StartupRefreshView(ctx context.Context, db *gorm.DB) error {
+	if db == nil {
+		return fmt.Errorf("StartupRefreshView: db is nil")
+	}
+	svc := NewReconciliationSnapshotService(db)
+	return svc.RefreshView(ctx)
 }

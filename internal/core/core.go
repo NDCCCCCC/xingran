@@ -14,6 +14,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	assetSvc "github.com/ruoyi-next/ruoyi-go-backend/internal/services/asset"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/rpa"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
@@ -426,6 +427,19 @@ func (c *Core) Init() error {
 	c.reaperCtx, c.reaperCancel = context.WithCancel(context.Background())
 	c.startSubprocessReaper(c.reaperCtx)
 	applogger.Infof("子进程 reaper 已启动")
+
+	// 20. Phase 42 R1: 启动时刷新 reconciliation_normalized 物化视图 (D-02 冷启兜底)
+	// 避免 0-5min 数据为空(用户首次访问 dashboard 不会看到 0 资产)。goroutine + 30s 超时,不阻断启动;
+	// 失败仅 log 警告 — 与 cron 调度一致(D-02 设计)。
+	go func() {
+		refreshCtx, refreshCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer refreshCancel()
+		if err := assetSvc.StartupRefreshView(refreshCtx, c.GetDB()); err != nil {
+			applogger.Errorf("Phase 42 R1 startup RefreshView failed (D-02 仅 log): %v", err)
+			return
+		}
+		applogger.Infof("Phase 42 R1 startup RefreshView succeeded (D-02 冷启兜底)")
+	}()
 
 	return nil
 }
