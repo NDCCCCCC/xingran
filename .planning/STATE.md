@@ -2,11 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.17
 milestone_name: 资产对账 (Asset Reconciliation)
-status: planning
-last_updated: "2026-06-27T00:46:39.045Z"
-last_activity: 2026-06-27
+status: Defining requirements
+stopped_at: Phase 42 context gathered
+last_updated: "2026-06-27T01:35:39.049Z"
+last_activity: 2026-06-27 — Milestone v1.17 started
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -139,8 +140,8 @@ Last activity: 2026-06-27 — Milestone v1.17 started
 
 ## Session Continuity
 
-Last session: 2026-06-26T12:30:00.000Z
-Stopped at: Phase 13 gap closure complete — plans 13-07/08/09/10 shipped, 5/5 code gaps fixed, VERIFICATION.md status:passed score:18/18, 8 atomic commits on main
-Resume file: .planning/phases/13-query-layer-trajectory/13-VERIFICATION.md (status:passed, score 18/18, 5 gaps fixed + 1 deployment-artifact gap)
+Last session: 2026-06-27T01:35:39.020Z
+Stopped at: Phase 42 context gathered
+Resume file: .planning/phases/42-r1/42-CONTEXT.md
 
 **Milestone status:** v1.16 技术债清理 — milestone_complete (2026-06-26), 2 phases (40+41), 8 plans, 39 phase-41 commits + 3 phase-40 plans. **Phase 13 retroactive gap closure** — 4/4 plans (13-07/08/09/10), 8 atomic commits on main, 5/5 code gaps fixed. v1.17 规划待启动。
