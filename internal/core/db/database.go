@@ -460,6 +460,13 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate169ReconciliationDictsConfigs(d.DB); err != nil {
 			applogger.Errorf("Phase 42 R1 reconciliation seed 迁移失败: %v", err)
 		}
+		// Phase 42 R1 后置修复: 资产列表菜单 path 'assets' -> 'list'。
+		// migration_147 种子数据 bug: childPath = "assets" 与父菜单 path='assets' 重复,
+		// routeGenerator 拼出 'assets/assets' 无路由 → fallback /dashboard。
+		// 这里用 SQL UPDATE 修复已存在记录;新部署 147 同步改 childPath = "list"。
+		if err := migrations.Migrate170FixAssetListMenuPath(d.DB); err != nil {
+			applogger.Errorf("Phase 42 R1 资产列表菜单 path 修复失败: %v", err)
+		}
 		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
 		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
 			applogger.Errorf("MAC 过滤规则表迁移失败: %v", err)

@@ -140,16 +140,21 @@ const Dashboard = () => {
     };
   }, [healthTrend.data]);
 
-  // 饼图 click → /exceptions?type=A|B|C|...
+  // 饼图 click → /assets/exceptions?type=A|B|C|...
+  // 路径必须与 sys_menu 父菜单 path='assets' + 子菜单 path='exceptions' 拼接一致;
+  // routeGenerator.resolvePath 会拼成 'assets/exceptions'。原代码写成
+  // '/asset/reconciliation/exceptions' 是单数 + 长路径,React Router 找不到 → fallback /dashboard。
+  // D-05 双向打通:饼图 click 应跳到异常列表并用 type 预填筛选。
   const onPieClick = (params: { name?: string }) => {
     if (!params?.name) return;
-    navigate(`/asset/reconciliation/exceptions?type=${encodeURIComponent(params.name)}`);
+    navigate(`/assets/exceptions?type=${encodeURIComponent(params.name)}`);
   };
 
-  // 柱状图 click → /exceptions?severity=low|medium|high|critical
+  // 柱状图 click → /assets/exceptions?severity=low|medium|high|critical
+  // 同上:路径必须是前端动态路由注册的实际路径,后端 API 路径 /api/v1/... 不可用。
   const onBarClick = (params: { name?: string }) => {
     if (!params?.name) return;
-    navigate(`/asset/reconciliation/exceptions?severity=${encodeURIComponent(params.name)}`);
+    navigate(`/assets/exceptions?severity=${encodeURIComponent(params.name)}`);
   };
 
   // 错误兜底

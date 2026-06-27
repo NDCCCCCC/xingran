@@ -36,7 +36,10 @@ func Migrate147FixAssetMenuStructure(db *gorm.DB) error {
 	log.Println("Updated asset menu component to 'Layout'")
 
 	// Step 2: Create "资产列表" child menu (menu_type = 'C')
-	childPath := "assets"
+	// 关键修正:子菜单 path 必须与父菜单 path 不同,否则 routeGenerator.resolvePath
+	// 会拼接出 'assets/assets' 这种无意义路径(React Router 找不到 → fallback /dashboard)。
+	// 用 'list' 作为子路径(其他子菜单也是单词: dashboard / exceptions)。
+	childPath := "list"
 	childComponent := "operations/assets/index"
 	childIcon := "UnorderedListOutlined"
 

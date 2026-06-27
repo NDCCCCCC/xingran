@@ -265,9 +265,16 @@ func (s *reconciliationServiceImpl) ListExceptions(ctx context.Context, params *
 	}
 
 	// 基础查询
+	// 关键修复:assetCode LIKE 过滤在 WHERE 子句里直接引用 `a.devicesn`,
+	// 因此基础 query 必须先 Joins(ops_asset AS a),否则 Count 阶段 SQL 不含
+	// `a` 别名会报 SQLSTATE 42P01 "missing FROM-clause entry for table \"a\""。
+	// mvAvailable() 探测保证 MV 存在,所以这里只 Joins(ops_asset);MV 缺失时
+	// fallback 路径使用全新 session(见下),再 Joins(fallback_clause),GORM
+	// Joins() 链式累加特性由 fallback 路径独立 session 规避。
 	query := s.db.WithContext(ctx).
 		Model(&models.SysDataReconciliation{}).
-		Where("sys_data_reconciliation.deleted_at IS NULL")
+		Where("sys_data_reconciliation.deleted_at IS NULL").
+		Joins("LEFT JOIN ops_asset a ON a.id = sys_data_reconciliation.asset_id AND a.deleted_at IS NULL")
 
 	// 过滤:精确匹配
 	if params.ConflictType != "" {
@@ -306,9 +313,13 @@ func (s *reconciliationServiceImpl) ListExceptions(ctx context.Context, params *
 	mvAvailable := s.mvAvailable()
 	var findQuery *gorm.DB
 	if mvAvailable {
+		// 基础 query 已 Joins(ops_asset) 保证 a.devicesn WHERE 引用可解析,
+		// 这里只追加 MV JOIN + SELECT。注意:不能再次 .Joins("LEFT JOIN ops_asset ..."),
+		// GORM Joins() 链式累加会导致重复 JOIN(不影响结果但污染 SQL)。
 		findQuery = query.
 			Select(exceptionListJoinSelect).
-			Joins(exceptionListJoinClause)
+			Joins("LEFT JOIN reconciliation_normalized rn ON rn.asset_id = a.id").
+			Joins("LEFT JOIN sys_user ru ON ru.id = a.user_id::uuid AND ru.deleted_at IS NULL")
 	} else {
 		applogger.Warnf("[reconciliation] reconciliation_normalized 物化视图缺失,异常列表查询降级 (无 physical_username / ad_username 字段)。请执行 migration_168 创建 MV 后重启服务")
 		// 全新 session,只含 filter WHERE,不累加前次 Joins()
