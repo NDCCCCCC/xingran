@@ -45,12 +45,12 @@ last_updated: 2026-06-27
 ### WORKORDER — 工单闭环
 
 - [x] **WORKORDER-01**: 系统能在 critical / high 异常出现时，自动调用 `workorder.BaseService.Create()` 生成工单（带 6 类冲突分类）
-- [ ] **WORKORDER-02**: 系统能在工单状态变更时通过 `operlog.Record()` 写入审计日志
+- [x] **WORKORDER-02**: 系统能在工单状态变更时通过 `operlog.Record()` 写入审计日志
 
 ### MONITOR — 看板 + 告警
 
 - [ ] **MONITOR-01**: 系统能提供 6 个 Statistics 专用 COUNT 端点（Summary / ByConflictType / BySeverity / HealthTrend / TopUnresolved / ExceptionRuleStats），不依赖 `list.length` 防 MaxPageSize 钳制
-- [ ] **MONITOR-02**: 系统能通过 WebSocket 实时推送 critical 异常到前端
+- [x] **MONITOR-02**: 系统能通过 WebSocket 实时推送 critical 异常到前端
 - [ ] **MONITOR-03**: 系统能将高危异常写入 `sys_notice` 系统通知
 
 ### INTEGRATE — 前端整合
