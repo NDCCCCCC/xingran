@@ -88,10 +88,12 @@ func TestDetectLayer3_TypeA_NotInserted(t *testing.T) {
 	require.NoError(t, db.Exec(`INSERT INTO ops_asset_physical (asset_id, physical_user_id, physical_username) VALUES (?, ?, 'alice')`, uid, uid).Error)
 	require.NoError(t, db.Exec(`INSERT INTO ops_asset_ad (asset_id, ad_id, ad_username, ad_is_enabled) VALUES (?, ?, 'alice', 1)`, uid, uid).Error)
 
-	inserted, skipped, err := svc.DetectLayer3(context.Background())
+	inserted, skipped, skippedSilence, skippedThrottle, err := svc.DetectLayer3(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, 0, inserted, "Type A 不应插入 sys_data_reconciliation")
 	require.Equal(t, 1, skipped, "Type A 行计入 skipped")
+	require.Equal(t, 0, skippedSilence, "Type A 不应命中静默期")
+	require.Equal(t, 0, skippedThrottle, "Type A 不应命中节流")
 
 	var count int64
 	require.NoError(t, db.Table("sys_data_reconciliation").Count(&count).Error)
@@ -99,6 +101,11 @@ func TestDetectLayer3_TypeA_NotInserted(t *testing.T) {
 }
 
 // TestDetectLayer3_DuplicateViolation_Skipped D-11 unique violation 静默跳过
+//
+// R2 更新:DetectLayer3 在 INSERT 前先走 24h 节流 guard(D-A3-02),命中后计入
+// skippedThrottle 而不是抛 unique violation。这意味着 D-11 的 unique violation
+// catch 路径在 R2 仅作为"没有 24h 内记录但碰巧唯一索引冲突"的兜底(例如并发 cron)。
+// 本测试保留"不重复插入"语义,但验证计数走 skippedThrottle。
 func TestDetectLayer3_DuplicateViolation_Skipped(t *testing.T) {
 	db := setupTestDB(t, "test_duplicate")
 	svc := &reconciliationDetectionImpl{db: db}
@@ -109,14 +116,14 @@ func TestDetectLayer3_DuplicateViolation_Skipped(t *testing.T) {
 	require.NoError(t, db.Exec(`INSERT INTO ops_asset (id, devicesn, user_id, status, deleted_at) VALUES (?, ?, NULL, 0, NULL)`, uid, "BSET-001").Error)
 	require.NoError(t, db.Exec(`INSERT INTO ops_asset_physical (asset_id, physical_user_id, physical_username) VALUES (?, ?, 'bob')`, uid, uid).Error)
 
-	// 预插入一条 (uid, "B") 异常(模拟上次检测已写入)
+	// 预插入一条 (uid, "B") 异常(模拟上次检测已写入,detected_at=NOW() 命中 24h 节流窗口)
 	require.NoError(t, db.Exec(`INSERT INTO sys_data_reconciliation (id, asset_id, conflict_type, severity, confidence_score, raw_snapshot, detected_at) VALUES (?, ?, 'B', 'high', 0.5, '{}', ?)`,
 		"11111111-1111-1111-1111-111111111111", uid, now).Error)
 
-	inserted, skipped, err := svc.DetectLayer3(context.Background())
+	inserted, _, _, skippedThrottle, err := svc.DetectLayer3(context.Background())
 	require.NoError(t, err, "duplicate 不应抛错,仅静默跳过")
 	require.Equal(t, 0, inserted, "已存在则不重复插入")
-	require.GreaterOrEqual(t, skipped, 1, "应计入 skipped")
+	require.GreaterOrEqual(t, skippedThrottle, 1, "R2: 24h 节流命中应计入 skippedThrottle")
 
 	var count int64
 	require.NoError(t, db.Table("sys_data_reconciliation").Where("asset_id = ?", uid).Count(&count).Error)
@@ -215,6 +222,8 @@ func setupTestDB(t *testing.T, testName string) *gorm.DB {
 
 	// 建 reconciliation_normalized view(SQLite 不支持 MV,用 view 模拟)
 	// DROP VIEW IF EXISTS 兼容 SQLite,允许重跑测试
+	// R2 扩展:last_resolved_at / last_resolved_by / last_conflict_type 三字段(NULL 占位,
+	// 因 SQLite 测试无真实 sys_data_reconciliation 数据,这两条 guard 永远不命中)
 	require.NoError(t, db.Exec(`DROP VIEW IF EXISTS reconciliation_normalized`).Error)
 	require.NoError(t, db.Exec(`
 		CREATE VIEW reconciliation_normalized AS
@@ -232,7 +241,10 @@ func setupTestDB(t *testing.T, testName string) *gorm.DB {
 			NULL AS mv_refreshed_at,
 			a.mac1 AS mac1,
 			a.mac2 AS mac2,
-			NULL AS mac_join
+			NULL AS mac_join,
+			NULL AS last_resolved_at,
+			NULL AS last_resolved_by,
+			NULL AS last_conflict_type
 		FROM ops_asset a
 		LEFT JOIN ops_asset_physical p ON p.asset_id = a.id
 		LEFT JOIN ops_asset_ad ad ON ad.asset_id = a.id

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -15,7 +16,11 @@ import (
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
 
-// NormalizedRow reconciliation_normalized 物化视图单行(R1 检测引擎输入)
+// NormalizedRow reconciliation_normalized 物化视图单行(R1 + R2 检测引擎输入)
+//
+// R2 新增 3 字段(Phase 43 / D-A3-01):LastResolvedAt / LastResolvedBy / LastConflictType
+// — 来自 LEFT JOIN LATERAL,语义为"该资产最近一条已解决异常"的快照。
+// DetectLayer3 据此实现 7d 静默期(同 asset + type 在 7 天内不重复触发)。
 type NormalizedRow struct {
 	AssetID          string     `gorm:"column:asset_id" json:"assetId"`
 	AssetCode        string     `gorm:"column:asset_code" json:"assetCode"`
@@ -31,6 +36,10 @@ type NormalizedRow struct {
 	MAC1             *string    `gorm:"column:mac1" json:"mac1,omitempty"`
 	MAC2             *string    `gorm:"column:mac2" json:"mac2,omitempty"`
 	MACJoin          *string    `gorm:"column:mac_join" json:"macJoin,omitempty"`
+	// === Phase 43 R2 / D-A3-01 新增字段 ===
+	LastResolvedAt   *time.Time `gorm:"column:last_resolved_at" json:"lastResolvedAt,omitempty"`
+	LastResolvedBy   *string    `gorm:"column:last_resolved_by" json:"lastResolvedBy,omitempty"`
+	LastConflictType *string    `gorm:"column:last_conflict_type" json:"lastConflictType,omitempty"`
 }
 
 // ConflictSignals Layer 3 分类信号(三路存在 + 两路匹配)
@@ -54,8 +63,18 @@ type ClassifiedException struct {
 // ReconciliationDetection Layer 3 检测引擎接口
 type ReconciliationDetection interface {
 	// DetectLayer3 遍历 reconciliation_normalized 物化视图,按 Type A-F 分类,
-	// 写 sys_data_reconciliation 主表(Type A 跳过,D-09;唯一冲突 catch 跳过,D-11)
-	DetectLayer3(ctx context.Context) (inserted int, skipped int, err error)
+	// 写 sys_data_reconciliation 主表。
+	//
+	// R1 返回值: (inserted int, skipped int, err error)
+	// R2 扩展返回值(Phase 43 / D-A3-03):(inserted int, skipped int,
+	// skippedSilence int, skippedThrottle int, err error)
+	//
+	// 计数语义:
+	//   - inserted       — 本轮 INSERT 成功笔数(Type B-F,D-09 健康跳过不算)
+	//   - skipped        — Type A 健康跳过 + partial unique index 冲突跳过(D-09/D-11)
+	//   - skippedSilence — 7d 静默期命中跳过(D-A3-01)
+	//   - skippedThrottle — 24h 节流命中跳过(D-A3-02)
+	DetectLayer3(ctx context.Context) (inserted int, skipped int, skippedSilence int, skippedThrottle int, err error)
 	// ClassifySignals (纯函数,可独立测试)从行数据提取三路存在 + 两路匹配信号
 	ClassifySignals(row NormalizedRow) ConflictSignals
 	// ClassifyType (纯函数)从信号判定 Type A-F
@@ -171,23 +190,37 @@ func (s *reconciliationDetectionImpl) ComputeSeverity(t string) string {
 
 // DetectLayer3 Layer 3 同步检测引擎
 //
-// 流程:
+// 流程(R2 升级版):
 //  1. 读 reconciliation_normalized 全部行
 //  2. 逐行 ClassifySignals + ClassifyType
-//  3. Type A 跳过(D-09,不入 sys_data_reconciliation)
-//  4. 其余类型构造 sys_data_reconciliation 行 + INSERT
-//  5. unique violation on uniq_recon_asset_type_open catch 跳过(D-11)
-//  6. 计数 inserted / skipped 返回
-func (s *reconciliationDetectionImpl) DetectLayer3(ctx context.Context) (int, int, error) {
+//  3. Type A 跳过(D-09,计入 skipped)
+//  4. [R2 / D-A3-01] guard 1:7d 静默期拦截
+//     — 若 last_resolved_at + last_conflict_type 与当前 conflictType 匹配,
+//       且 NOW() - last_resolved_at < 7d → 计入 skippedSilence,continue
+//  5. [R2 / D-A3-02] guard 2:24h 节流拦截
+//     — 查 sys_data_reconciliation WHERE detected_at > NOW() - INTERVAL '24h'
+//       AND asset_id=? AND conflict_type=? AND deleted_at IS NULL,
+//       命中则计入 skippedThrottle,continue
+//  6. 构造 sys_data_reconciliation 行 + INSERT
+//  7. unique violation on uniq_recon_asset_type_open catch 跳过(D-11,计入 skipped)
+//  8. 计数 inserted / skipped / skippedSilence / skippedThrottle 返回
+func (s *reconciliationDetectionImpl) DetectLayer3(ctx context.Context) (int, int, int, int, error) {
 	var rows []NormalizedRow
 	if err := s.db.WithContext(ctx).
 		Table("reconciliation_normalized").
 		Find(&rows).Error; err != nil {
-		return 0, 0, err
+		return 0, 0, 0, 0, err
 	}
 
 	inserted := 0
 	skipped := 0
+	skippedSilence := 0
+	skippedThrottle := 0
+
+	// 7d 静默期时长(硬编码,D-A3-01 锁定 ROADMAP SC 7 默认值)
+	const silencePeriod = 7 * 24 * time.Hour
+	// 24h 节流时长(硬编码,D-A3-02 锁定 ROADMAP SC 8 默认值)
+	const throttleWindow = 24 * time.Hour
 
 	for _, row := range rows {
 		signals := s.ClassifySignals(row)
@@ -195,6 +228,36 @@ func (s *reconciliationDetectionImpl) DetectLayer3(ctx context.Context) (int, in
 		if conflictType == "A" {
 			skipped++
 			continue // D-09 健康不写
+		}
+
+		// === R2 / D-A3-01 guard 1: 7d 静默期 ===
+		// 条件:MV.last_resolved_at 非空 + last_conflict_type 等于当前 type +
+		//       距 last_resolved_at < 7d → 跳过
+		// 这是运维"标记已解决"后的 7 天静默窗口,避免同一异常被反复触发
+		if row.LastResolvedAt != nil && row.LastConflictType != nil &&
+			*row.LastConflictType == conflictType &&
+			time.Since(*row.LastResolvedAt) < silencePeriod {
+			skippedSilence++
+			continue
+		}
+
+		// === R2 / D-A3-02 guard 2: 24h 节流 ===
+		// 条件:sys_data_reconciliation 24h 内同 (asset_id, conflict_type) 已有记录 → 跳过
+		// 注意:这条 guard 写在 guard 1 之后,语义上"即使没有 resolved 记录,
+		// 24h 内已插过同 (asset, type) 也不再重复插"
+		var recentCount int64
+		throttleFrom := time.Now().Add(-throttleWindow)
+		if err := s.db.WithContext(ctx).
+			Model(&models.SysDataReconciliation{}).
+			Where("asset_id = ? AND conflict_type = ? AND detected_at > ? AND deleted_at IS NULL",
+				row.AssetID, conflictType, throttleFrom).
+			Count(&recentCount).Error; err != nil {
+			return inserted, skipped, skippedSilence, skippedThrottle,
+				fmt.Errorf("24h 节流查询失败 asset_id=%s: %w", row.AssetID, err)
+		}
+		if recentCount > 0 {
+			skippedThrottle++
+			continue
 		}
 
 		// 脏数据防御:ops_asset.machine_ip 是 inet 列,历史数据可能含非法值(如 '192.168.x.x*10.x.x.x')。
@@ -260,12 +323,12 @@ func (s *reconciliationDetectionImpl) DetectLayer3(ctx context.Context) (int, in
 				skipped++
 				continue
 			}
-			return inserted, skipped, err
+			return inserted, skipped, skippedSilence, skippedThrottle, err
 		}
 		inserted++
 	}
 
-	return inserted, skipped, nil
+	return inserted, skipped, skippedSilence, skippedThrottle, nil
 }
 
 // isReconciliationDuplicate 检测 PG unique_violation(23505)或 SQLite UNIQUE 约束失败

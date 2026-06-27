@@ -58,12 +58,14 @@ func RegisterReconciliationTasks(s *Scheduler, db *gorm.DB) {
 				return err
 			}
 		case "detectLayer3":
-			created, skipped, err := detSvc.DetectLayer3(ctx)
+			// R2 返回值扩展(Phase 43 / D-A3-03):inserted / skipped / skippedSilence / skippedThrottle
+			created, skipped, skippedSilence, skippedThrottle, err := detSvc.DetectLayer3(ctx)
 			if err != nil {
 				applogger.Errorf("[reconciliation:detectLayer3] 失败: %v", err)
 				return err
 			}
-			applogger.Infof("[reconciliation:detectLayer3] 完成: created=%d skipped=%d", created, skipped)
+			applogger.Infof("[reconciliation:detectLayer3] 完成: created=%d skipped=%d skippedSilence=%d skippedThrottle=%d",
+				created, skipped, skippedSilence, skippedThrottle)
 		case "detectExpiredSilence":
 			applogger.Infof("[reconciliation:detectExpiredSilence] R1 placeholder, R2 真实实现")
 		case "cleanupExpiredExceptions":
