@@ -2,9 +2,13 @@ package asset
 
 import (
 	"context"
+	"database/sql"
 	"errors"
+	"sync"
+	"sync/atomic"
 	"time"
 
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
@@ -121,11 +125,62 @@ type ReconciliationService interface {
 // reconciliationServiceImpl ReconciliationService 私有实现
 type reconciliationServiceImpl struct {
 	db *gorm.DB
+
+	// mvExists 缓存 reconciliation_normalized 物化视图是否存在(避免每次查询重复探测)。
+	// 三态:1=MV 就位 / 0=MV 缺失 / -1=未探测。
+	// 关键:必须显式初始化为 -1(默认零值 0 会被误判为"已探测且 MV 缺失")。
+	mvExists    int32 // 0=false, 1=true, -1=未探测;atomic 操作
+	mvExistsMux sync.Mutex
 }
 
 // NewReconciliationService 构造 ReconciliationService 实例
+//
+// mvExists 显式初始化为 -1(未探测),避免默认零值 0 导致首次查询跳过 probe。
 func NewReconciliationService(db *gorm.DB) ReconciliationService {
-	return &reconciliationServiceImpl{db: db}
+	return &reconciliationServiceImpl{db: db, mvExists: -1}
+}
+
+// probeMaterializedView 检查 reconciliation_normalized 物化视图是否存在。
+//
+// 仅 PostgreSQL 需要探测(SQLite 测试用 view 模拟,MySQL 由 migration 168 直接跳过);
+// 使用 PG `to_regclass('schema.name')` 内置函数 — 返回 NULL 表示不存在,返回 oid 表示存在。
+// 安全:SELECT to_regclass 不写表,且非破坏性。
+func (s *reconciliationServiceImpl) probeMaterializedView() bool {
+	if s.db == nil {
+		return false
+	}
+	if s.db.Dialector.Name() != "postgres" {
+		// SQLite 测试用 view 模拟,unit test 路径下 MV 等价物总存在(setupTestDB 建 view)
+		return true
+	}
+	var exists sql.NullString
+	if err := s.db.Raw("SELECT to_regclass('public.reconciliation_normalized')::text").Scan(&exists).Error; err != nil {
+		applogger.Warnf("[reconciliation] MV probe SQL error: %v", err)
+		return false
+	}
+	applogger.Infof("[reconciliation] MV probe result: valid=%v string=%q", exists.Valid, exists.String)
+	return exists.Valid && exists.String != ""
+}
+
+// mvAvailable 返回并缓存 MV 可用性。
+// 三态 mvExists 字段:-1 未探测 / 0 不可用 / 1 可用。
+// sync.Mutex + atomic store 保证并发安全。
+func (s *reconciliationServiceImpl) mvAvailable() bool {
+	if atomic.LoadInt32(&s.mvExists) >= 0 {
+		return atomic.LoadInt32(&s.mvExists) == 1
+	}
+	s.mvExistsMux.Lock()
+	defer s.mvExistsMux.Unlock()
+	if atomic.LoadInt32(&s.mvExists) >= 0 {
+		return atomic.LoadInt32(&s.mvExists) == 1
+	}
+	avail := s.probeMaterializedView()
+	if avail {
+		atomic.StoreInt32(&s.mvExists, 1)
+	} else {
+		atomic.StoreInt32(&s.mvExists, 0)
+	}
+	return avail
 }
 
 // exceptionListJoinSelect ListExceptions 的 SELECT 子句
@@ -154,13 +209,34 @@ const exceptionListJoinSelect = `sys_data_reconciliation.*,
 //   - ops_asset.id (uuid) → reconciliation_normalized.asset_id (uuid) ——
 //     MV 与 ops_asset 一对一(见 migration_168 定义:一个 asset 一行 MV)
 //   - ops_asset.user_id (varchar(64) in asset model) → sys_user.id (uuid) ——
-//     理论上应一致(已被 migration_145 规范化);如遇脏数据,本 JOIN 会留空
+//     类型不一致,必须 ::uuid 显式转换(PG 强类型不会自动 cast,SQLSTATE 42883)
 //
 // 软删除条件:各表都加 deleted_at IS NULL 兜底,避免已删除的资产/用户污染对账展示。
 const exceptionListJoinClause = `
 LEFT JOIN ops_asset a ON a.id = sys_data_reconciliation.asset_id AND a.deleted_at IS NULL
 LEFT JOIN reconciliation_normalized rn ON rn.asset_id = a.id
-LEFT JOIN sys_user ru ON ru.id = a.user_id AND ru.deleted_at IS NULL`
+LEFT JOIN sys_user ru ON ru.id = a.user_id::uuid AND ru.deleted_at IS NULL`
+
+// exceptionListJoinSelectFallback MV 缺失时的降级 SELECT 子句
+//
+// 不引用 rn.physical_username / rn.ad_username,以 NULL 字面量占位,让 GORM Scan 时
+// ExceptionListItem.PhysicalUsername / AdUsername 字段为空字符串(omitempty tag 会隐藏)。
+// 其余字段(资产维度 + 责任人维度)由 ops_asset / sys_user JOIN 提供,无依赖 MV。
+const exceptionListJoinSelectFallback = `sys_data_reconciliation.*,
+	a.devicesn AS asset_code,
+	COALESCE(a.machine_ip::text, '') AS asset_ip,
+	''::text AS physical_username,
+	ru.username AS responsible_username,
+	''::text AS ad_username`
+
+// exceptionListJoinClauseFallback MV 缺失时的降级 JOIN 子句
+//
+// 不 JOIN reconciliation_normalized,避免 SQLSTATE 42P01。
+// 仍保留 ops_asset / sys_user JOIN 以提供 asset_code / asset_ip / responsible_username。
+// a.user_id 是 varchar(64) 而 sys_user.id 是 uuid,必须 ::uuid 显式转换(同 MV 内 JOIN)。
+const exceptionListJoinClauseFallback = `
+LEFT JOIN ops_asset a ON a.id = sys_data_reconciliation.asset_id AND a.deleted_at IS NULL
+LEFT JOIN sys_user ru ON ru.id = a.user_id::uuid AND ru.deleted_at IS NULL`
 
 // ListExceptions 列出对账异常
 //
@@ -221,9 +297,43 @@ func (s *reconciliationServiceImpl) ListExceptions(ctx context.Context, params *
 
 	// Find 携带 SELECT + JOIN
 	var list []ExceptionListItem
-	findQuery := query.
-		Select(exceptionListJoinSelect).
-		Joins(exceptionListJoinClause)
+	// MV 降级路径:R1 部署场景下 reconciliation_normalized 可能尚未创建(migration_168 未跑或被 drop)。
+	// 若 MV 缺失,LEFT JOIN 会触发 SQLSTATE 42P01 "relation does not exist",前端 400。
+	// 探测结果通过 s.mvAvailable() 缓存,后续查询跳过探测;MV 缺失时 SELECT/JOIN 子句都不含 rn.*。
+	//
+	// GORM Joins() 链式调用会 **累积追加** 到同一查询对象(query 已含 dev_assets LIKE filter 等),
+	// 因此 fallback 路径必须使用全新 DB session(s.db.WithContext(ctx))避免 JOIN 重复堆叠。
+	mvAvailable := s.mvAvailable()
+	var findQuery *gorm.DB
+	if mvAvailable {
+		findQuery = query.
+			Select(exceptionListJoinSelect).
+			Joins(exceptionListJoinClause)
+	} else {
+		applogger.Warnf("[reconciliation] reconciliation_normalized 物化视图缺失,异常列表查询降级 (无 physical_username / ad_username 字段)。请执行 migration_168 创建 MV 后重启服务")
+		// 全新 session,只含 filter WHERE,不累加前次 Joins()
+		filterQuery := s.db.WithContext(ctx).
+			Model(&models.SysDataReconciliation{}).
+			Where("sys_data_reconciliation.deleted_at IS NULL")
+		if params.ConflictType != "" {
+			filterQuery = filterQuery.Where("sys_data_reconciliation.conflict_type = ?", params.ConflictType)
+		}
+		if params.Severity != "" {
+			filterQuery = filterQuery.Where("sys_data_reconciliation.severity = ?", params.Severity)
+		}
+		if params.AssetCode != "" {
+			filterQuery = filterQuery.Where("a.devicesn LIKE ?", "%"+params.AssetCode+"%")
+		}
+		if params.DetectedFrom != nil {
+			filterQuery = filterQuery.Where("sys_data_reconciliation.detected_at >= ?", *params.DetectedFrom)
+		}
+		if params.DetectedTo != nil {
+			filterQuery = filterQuery.Where("sys_data_reconciliation.detected_at <= ?", *params.DetectedTo)
+		}
+		findQuery = filterQuery.
+			Select(exceptionListJoinSelectFallback).
+			Joins(exceptionListJoinClauseFallback)
+	}
 
 	// 排序:白名单过滤;无显式排序则默认 detected_at DESC(操作员最关心"最新告警")
 	findQuery = base.ApplySort(findQuery, params.BaseListRequest, reconAllowedSortFields)

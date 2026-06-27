@@ -392,18 +392,14 @@ func (s *reconciliationStatisticsImpl) HealthTrend(ctx context.Context, filter S
 
 // TopUnresolved 长期未解决异常 Top N
 //
-// SQL:
+// SQL (dialect-aware):
+//   - PostgreSQL: EXTRACT(DAY FROM (NOW() - r.detected_at)) — 标准 PG 语法
+//   - SQLite:     julianday('now') - julianday(r.detected_at)     — SQLite 内置
 //
-//	SELECT r.id, a.devicesn AS asset_code, r.conflict_type, r.severity, r.detected_at,
-//	       CAST((julianday('now') - julianday(r.detected_at)) AS INTEGER) AS days_unresolved
-//	FROM sys_data_reconciliation r
-//	LEFT JOIN ops_asset a ON a.id = r.asset_id
-//	WHERE r.deleted_at IS NULL AND r.resolved_at IS NULL
-//	ORDER BY r.detected_at ASC
-//	LIMIT ?
+// 背景:`julianday()` 是 SQLite 函数,PostgreSQL 不支持(SQLSTATE 42883)。
+// 用 GORM dialector.Name() 在运行时分支,避免 PG 生产环境 400。
 //
 // limit 默认 10,MaxPageSize=10000 钳制(T-42-12 mitigates DoS)。
-// days_unresolved 通过 julianday 差计算(SQLite 兼容,PG 同样支持 julianday)。
 func (s *reconciliationStatisticsImpl) TopUnresolved(ctx context.Context, limit int) ([]ExceptionSummary, error) {
 	if s.db == nil {
 		return nil, errors.New("db 不能为空")
@@ -415,6 +411,12 @@ func (s *reconciliationStatisticsImpl) TopUnresolved(ctx context.Context, limit 
 		limit = MaxPageSize
 	}
 
+	// D-13 dialect 分支:PG 用 EXTRACT,SQLite 用 julianday
+	daysExpr := "CAST((julianday('now') - julianday(r.detected_at)) AS INTEGER)"
+	if s.db.Dialector.Name() == "postgres" {
+		daysExpr = "CAST(EXTRACT(DAY FROM (NOW() - r.detected_at)) AS INTEGER)"
+	}
+
 	sql := `
 		SELECT
 			r.id AS id,
@@ -422,7 +424,7 @@ func (s *reconciliationStatisticsImpl) TopUnresolved(ctx context.Context, limit 
 			r.conflict_type,
 			r.severity,
 			r.detected_at,
-			CAST((julianday('now') - julianday(r.detected_at)) AS INTEGER) AS days_unresolved
+			` + daysExpr + ` AS days_unresolved
 		FROM sys_data_reconciliation r
 		LEFT JOIN ops_asset a ON a.id = r.asset_id
 		WHERE r.deleted_at IS NULL AND r.resolved_at IS NULL

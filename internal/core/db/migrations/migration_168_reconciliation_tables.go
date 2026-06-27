@@ -61,9 +61,22 @@ func Migrate168ReconciliationTables(db *gorm.DB) error {
 	// 2. 物化视图 reconciliation_normalized
 	//    R1 简化版:仅 LEFT JOIN ops_asset ↔ sys_user ↔ sys_ad_user。
 	//    物理链路 sys_port_mac/sys_info_point/sys_workstation_info_point 在 R2 引入。
+	//
+	//    关键修正:
+	//      1) sys_user.id (uuid) ≠ ops_asset.user_id (varchar(64)),必须 ::uuid 显式转换
+	//         (PG 强类型不会自动 cast,SQLSTATE 42883 "operator does not exist")
+	//      2) sys_ad_user.username 可能有重复(同账号在多 OU/历史残留),
+	//         用 DISTINCT ON (a.id) 保证每 asset 一行,避免后续 unique index SQLSTATE 23505
+	//      3) SELECT 字段顺序:asset 主字段 → JOIN 字段 → 预留字段
+	//
+	//    DROP IF EXISTS + CREATE:迁移在二次启动时需要应用修正后的 SQL(原 MV 已创建但
+	//    数据不符合新 DISTINCT 约束,且 unique index 未创建)。IF NOT EXISTS 会跳过
+	//    CREATE 导致旧 MV 仍在;DROP + CREATE 保证每次迁移启动都按最新 SQL 重建。
+	dropMatViewSQL := `DROP MATERIALIZED VIEW IF EXISTS reconciliation_normalized;`
+
 	matViewSQL := `
-CREATE MATERIALIZED VIEW IF NOT EXISTS reconciliation_normalized AS
-SELECT
+CREATE MATERIALIZED VIEW reconciliation_normalized AS
+SELECT DISTINCT ON (a.id)
     a.id                                              AS asset_id,
     a.devicesn                                        AS asset_code,
     a.machine_ip                                      AS asset_ip,
@@ -76,19 +89,24 @@ SELECT
     -- R2 字段预留(物理链路反推 user_id)
     NULL::uuid                                        AS physical_user_id,
     NULL::varchar                                     AS physical_username,
-    -- AD 字段
+    -- AD 字段(DISTINCT 决定只取首条 ad 记录)
     ad.id                                             AS ad_id,
     ad.username                                       AS ad_username,
     ad.is_enabled                                     AS ad_is_enabled,
     -- 检测时间戳(MV 刷新时统一)
     NOW()                                             AS mv_refreshed_at
 FROM ops_asset a
-LEFT JOIN sys_user ru ON ru.id = a.user_id AND ru.deleted_at IS NULL
+LEFT JOIN sys_user ru ON ru.id = a.user_id::uuid AND ru.deleted_at IS NULL
 LEFT JOIN sys_ad_user ad ON ad.username = ru.username
                        AND ad.deleted_at IS NULL
                        AND ad.is_enabled = TRUE
-WHERE a.deleted_at IS NULL;
+WHERE a.deleted_at IS NULL
+ORDER BY a.id, ad.id NULLS LAST;
 `
+	if err := db.Exec(dropMatViewSQL).Error; err != nil {
+		return fmt.Errorf("删除旧 reconciliation_normalized 物化视图失败: %w", err)
+	}
+
 	if err := db.Exec(matViewSQL).Error; err != nil {
 		return fmt.Errorf("创建 reconciliation_normalized 物化视图失败: %w", err)
 	}
