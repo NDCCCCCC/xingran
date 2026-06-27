@@ -197,6 +197,16 @@ func (s *reconciliationDetectionImpl) DetectLayer3(ctx context.Context) (int, in
 			continue // D-09 健康不写
 		}
 
+		// 脏数据防御:ops_asset.machine_ip 是 inet 列,历史数据可能含非法值(如 '192.168.x.x*10.x.x.x')。
+		// MV 直接 SELECT machine_ip,脏值会原样穿透到 row.AssetIP,后续 INSERT inet 列触发
+		// SQLSTATE 22P02 "invalid input syntax for type inet"。这里做轻量校验:含 * 或空格的视为脏数据,
+		// AssetIP 置 nil(不写入),其余字段继续保存,异常检测结论不受影响。
+		if row.AssetIP != nil {
+			if s := *row.AssetIP; s == "" || strings.ContainsAny(s, "* ") {
+				row.AssetIP = nil
+			}
+		}
+
 		confidence := s.ComputeConfidence(signals)
 		severity := s.ComputeSeverity(conflictType)
 

@@ -140,9 +140,9 @@ CREATE INDEX IF NOT EXISTS idx_recon_norm_asset_code
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint
-        WHERE conname = 'uniq_recon_asset_type_open'
-          AND conrelid = 'sys_data_reconciliation'::regclass
+        SELECT 1 FROM pg_indexes
+        WHERE indexname = 'uniq_recon_asset_type_open'
+          AND schemaname = 'public'
     ) THEN
         -- 部分唯一索引不能用 ADD CONSTRAINT(只支持 UNIQUE 全列),改用 CREATE UNIQUE INDEX
         EXECUTE 'CREATE UNIQUE INDEX uniq_recon_asset_type_open

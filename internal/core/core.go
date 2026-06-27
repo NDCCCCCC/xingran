@@ -319,6 +319,13 @@ func (c *Core) Init() error {
 		scheduler.RegisterADSyncTasks(c.Scheduler)
 		applogger.Infof("AD域同步定时任务注册完成")
 
+		// Phase 42 R1: 注册对账相关 4 个 cron 任务处理器(refreshView / detectLayer3 /
+		// detectExpiredSilence / cleanupExpiredExceptions)。原 42-02 plan 创建了 sys_job
+		// 记录和 Execute*Task 全局函数,但漏了 RegisterTask 把 InvokeTarget 映射到
+		// 实际 handler,导致调度器报 "未找到任务处理器: reconciliation"。
+		scheduler.RegisterReconciliationTasks(c.Scheduler, c.GetDB())
+		applogger.Infof("对账定时任务注册完成")
+
 		// 注册MAC历史清理任务
 		if c.PartitionService != nil {
 			scheduler.SetPartitionService(c.PartitionService)
