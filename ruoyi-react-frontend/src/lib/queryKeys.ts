@@ -10,6 +10,8 @@
  * - Nested factories accept their discriminators (dict type, role params, etc.).
  */
 
+import type { ExceptionListParams } from "@/lib/assetApi";
+
 export const queryKeys = {
   dict: {
     all: ["dict"] as const,
@@ -38,6 +40,32 @@ export const queryKeys = {
     all: ["location-alias"] as const,
     byLocation: (locationId: string) => ["location-alias", "by-location", locationId] as const,
     list: (params?: Record<string, unknown>) => ["location-alias", "list", params ?? {}] as const,
+  },
+  // Phase 42 R1: 资产对账观测底座 — Dashboard + 异常列表
+  reconciliation: {
+    all: ["reconciliation"] as const,
+    /** 5 KPI 卡片聚合 */
+    summary: (windowDays: number) => ["reconciliation", "summary", windowDays] as const,
+    /** 按冲突类型分组(Type A-F 6 keys) */
+    byConflictType: (windowDays: number) =>
+      ["reconciliation", "by-conflict-type", windowDays] as const,
+    /** 按严重级别分组(low/medium/high/critical 4 keys) */
+    bySeverity: (windowDays: number) =>
+      ["reconciliation", "by-severity", windowDays] as const,
+    /** 健康度趋势点序列(7d/30d/90d) */
+    healthTrend: (windowDays: number) =>
+      ["reconciliation", "health-trend", windowDays] as const,
+    /** Top N 长期未解决异常(默认 limit=10) */
+    topUnresolved: (limit: number) =>
+      ["reconciliation", "top-unresolved", limit] as const,
+    /** 异常列表(分页 + 筛选 + 服务端排序) */
+    exceptionList: (params: ExceptionListParams) =>
+      ["reconciliation", "exception-list", params] as const,
+    /** 异常详情(单条) */
+    exceptionDetail: (id: string) =>
+      ["reconciliation", "exception-detail", id] as const,
+    /** 例外规则命中统计(R3 启用后才有数据) */
+    ruleStats: () => ["reconciliation", "rule-stats"] as const,
   },
 } as const;
 

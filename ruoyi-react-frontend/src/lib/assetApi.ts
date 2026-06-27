@@ -1,0 +1,214 @@
+/**
+ * 资产对账模块 API 工厂 (Phase 42 R1)
+ *
+ * 依据 .planning/phases/42-r1/42-05-PLAN.md:
+ *   - 6 statistics 端点(summary / byConflictType / bySeverity / healthTrend / topUnresolved / exceptionRuleStats)
+ *   - 2 exception 端点(exceptionList / exceptionGetByID)
+ *
+ * 后端契约:internal/api/v1/asset/reconciliation_statistics_handler.go + reconciliation_handler.go
+ * 类型严格对齐后端 JSON 字段(无 list.length 路径,所有统计走独立 COUNT/GROUP BY 端点,见 memory: stat-cards-from-list-length-capped-at-100)
+ */
+
+import { post } from "@/lib/api";
+
+// ==================== 类型定义 ====================
+
+/**
+ * 5 KPI 卡片数据(D-06)
+ */
+export interface SummaryResult {
+  /** 全量资产数(SELECT COUNT(*) FROM ops_asset WHERE deleted_at IS NULL) */
+  totalAssets: number;
+  /** 未解决异常数(resolved_at IS NULL AND deleted_at IS NULL) */
+  openExceptions: number;
+  /** critical 级未解决数 */
+  criticalOpen: number;
+  /** 7d 新增异常数(detected_at >= NOW() - INTERVAL '7 days') */
+  last7dNew: number;
+  /** Top1 冲突类型(空字符串表示无数据) */
+  topConflictType: string;
+  /** Top1 冲突类型计数(0 表示无数据) */
+  topConflictCount: number;
+}
+
+/**
+ * 7d/30d 健康度趋势点
+ */
+export interface TrendPoint {
+  /** YYYY-MM-DD */
+  date: string;
+  /** 当日未解决异常数 */
+  openCount: number;
+  /** 当日 critical 级未解决数 */
+  criticalCount: number;
+  /** 当日新增异常数 */
+  newCount: number;
+}
+
+/**
+ * Top N 长期未解决异常摘要(TopUnresolved 端点)
+ */
+export interface ExceptionSummary {
+  id: string;
+  assetCode: string;
+  conflictType: string;
+  severity: string;
+  detectedAt: string;
+  daysUnresolved: number;
+}
+
+/**
+ * 例外规则命中统计(R3 启用后才有数据,R1 返回空 slice)
+ */
+export interface RuleStats {
+  ruleId: string;
+  ruleName: string;
+  matchedCount: number;
+}
+
+/**
+ * 异常列表查询参数(POST /asset/reconciliation/exception/list)
+ */
+export interface ExceptionListParams {
+  conflictType?: string;
+  severity?: string;
+  assetCode?: string;
+  detectedFrom?: string;
+  detectedTo?: string;
+  current: number;
+  pageSize: number;
+  orderByColumn?: string;
+  isAsc?: boolean;
+}
+
+/**
+ * 异常列表返回行(JOIN ops_asset + sys_user + reconciliation_normalized)
+ *
+ * 字段名与后端 reconciliation_service.go ExceptionListItem 严格对齐:
+ *   - assetCode / assetIpDisplay(避开 SysDataReconciliation.AssetIP 冲突,见 42-02 SUMMARY)
+ *   - physicalUsername / responsibleUsername
+ *   - exceptionRuleId 可空(R3 命中才非空)
+ */
+export interface ExceptionListItem {
+  id: string;
+  conflictType: string;
+  severity: string;
+  confidenceScore: number;
+  detectedAt: string;
+  resolvedAt: string | null;
+  exceptionRuleId: string | null;
+  assetCode: string;
+  assetIpDisplay: string;
+  physicalUsername: string;
+  responsibleUsername: string;
+}
+
+export interface PageResult<T> {
+  list: T[];
+  total: number;
+  current: number;
+  pageSize: number;
+}
+
+// ==================== reconciliationApi 工厂 ====================
+
+/**
+ * ReconciliationApi — 8 个端点(6 statistics + 2 exception)
+ *
+ * 使用统一的 post() 封装,NOT raw axios(见 CLAUDE.md 强约束)。
+ * 每个方法返回后端响应的 data 字段(BaseResponse.data)。
+ */
+export const reconciliationApi = {
+  /**
+   * 5 KPI 卡片聚合
+   * @param days 统计窗口(默认 7d,R1 走 7d,handler/service 已 clamp 到 [1, 365])
+   */
+  summary: async (days: number = 7): Promise<SummaryResult> => {
+    const res = await post<SummaryResult>(
+      "/asset/reconciliation/statistics/summary",
+      { days }
+    );
+    return res.data;
+  },
+
+  /**
+   * 按冲突类型分组(Type A-F 6 keys,seed merge 保证空数据 = 0)
+   */
+  byConflictType: async (days: number = 7): Promise<Record<string, number>> => {
+    const res = await post<Record<string, number>>(
+      "/asset/reconciliation/statistics/by-conflict-type",
+      { days }
+    );
+    return res.data;
+  },
+
+  /**
+   * 按严重级别分组(low/medium/high/critical 4 keys)
+   */
+  bySeverity: async (days: number = 7): Promise<Record<string, number>> => {
+    const res = await post<Record<string, number>>(
+      "/asset/reconciliation/statistics/by-severity",
+      { days }
+    );
+    return res.data;
+  },
+
+  /**
+   * 健康度趋势(7d/30d/90d 切换)
+   * 返回 TrendPoint[](date/openCount/criticalCount/newCount)
+   */
+  healthTrend: async (days: number = 7): Promise<TrendPoint[]> => {
+    const res = await post<TrendPoint[]>(
+      "/asset/reconciliation/statistics/health-trend",
+      { days }
+    );
+    return res.data;
+  },
+
+  /**
+   * Top N 长期未解决异常(默认 limit=10,按 detected_at ASC 排序)
+   * R4 工位详情页可能复用。
+   */
+  topUnresolved: async (limit: number = 10): Promise<ExceptionSummary[]> => {
+    const res = await post<ExceptionSummary[]>(
+      "/asset/reconciliation/statistics/top-unresolved",
+      { limit }
+    );
+    return res.data;
+  },
+
+  /**
+   * 例外规则命中统计(R3 启用后才有数据,R1 返回空)
+   */
+  exceptionRuleStats: async (): Promise<RuleStats[]> => {
+    const res = await post<RuleStats[]>(
+      "/asset/reconciliation/statistics/exception-rule-stats",
+      {}
+    );
+    return res.data;
+  },
+
+  /**
+   * 异常列表(带分页 + 筛选 + 服务端排序)
+   */
+  exceptionList: async (
+    params: ExceptionListParams
+  ): Promise<PageResult<ExceptionListItem>> => {
+    const res = await post<PageResult<ExceptionListItem>>(
+      "/asset/reconciliation/exception/list",
+      params
+    );
+    return res.data;
+  },
+
+  /**
+   * 异常详情(单条)
+   */
+  exceptionGetByID: async (id: string): Promise<ExceptionListItem> => {
+    const res = await post<ExceptionListItem>(
+      `/asset/reconciliation/exception/${id}`,
+      {}
+    );
+    return res.data;
+  },
+};
