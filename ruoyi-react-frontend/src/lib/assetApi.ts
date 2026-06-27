@@ -128,7 +128,7 @@ export const reconciliationApi = {
       "/asset/reconciliation/statistics/summary",
       { days }
     );
-    return res.data;
+    return res.data as SummaryResult;
   },
 
   /**
@@ -139,7 +139,7 @@ export const reconciliationApi = {
       "/asset/reconciliation/statistics/by-conflict-type",
       { days }
     );
-    return res.data;
+    return (res.data ?? {}) as Record<string, number>;
   },
 
   /**
@@ -150,7 +150,7 @@ export const reconciliationApi = {
       "/asset/reconciliation/statistics/by-severity",
       { days }
     );
-    return res.data;
+    return (res.data ?? {}) as Record<string, number>;
   },
 
   /**
@@ -162,7 +162,7 @@ export const reconciliationApi = {
       "/asset/reconciliation/statistics/health-trend",
       { days }
     );
-    return res.data;
+    return (res.data ?? []) as TrendPoint[];
   },
 
   /**
@@ -174,7 +174,7 @@ export const reconciliationApi = {
       "/asset/reconciliation/statistics/top-unresolved",
       { limit }
     );
-    return res.data;
+    return (res.data ?? []) as ExceptionSummary[];
   },
 
   /**
@@ -185,7 +185,7 @@ export const reconciliationApi = {
       "/asset/reconciliation/statistics/exception-rule-stats",
       {}
     );
-    return res.data;
+    return (res.data ?? []) as RuleStats[];
   },
 
   /**
@@ -198,7 +198,9 @@ export const reconciliationApi = {
       "/asset/reconciliation/exception/list",
       params
     );
-    return res.data;
+    return (
+      (res.data ?? { list: [], total: 0, current: 1, pageSize: 20 }) as PageResult<ExceptionListItem>
+    );
   },
 
   /**
@@ -209,6 +211,6 @@ export const reconciliationApi = {
       `/asset/reconciliation/exception/${id}`,
       {}
     );
-    return res.data;
+    return res.data as ExceptionListItem;
   },
 };
