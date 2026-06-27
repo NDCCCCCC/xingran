@@ -1,17 +1,55 @@
 ---
-last_updated: 2026-06-25
-update_trigger: start of milestone v1.16 (tech-debt cleanup)
-previous_update: 2026-06-25 after Phase 39 (workstation dept-location alias) completion
+last_updated: 2026-06-27
+update_trigger: start of milestone v1.17 (asset reconciliation)
+previous_update: 2026-06-26 after v1.16 milestone close (Phase 40/41 + 13 gap closure shipped)
 ---
 
-## Current Milestone: v1.16 技术债清理 (Tech-Debt Cleanup)
+## Current Milestone: v1.17 资产对账 (Asset Reconciliation)
 
-**Goal:** 把 v1.15 累积的旧 debug 会话和 audit 数据质量缺口集中处理，让系统回到"无遗留债务"状态，再开启下一轮功能开发。
+**Goal:** 建立"实物层 vs 声明层"对账引擎，使资产系统数据保持与实际情况相符。
 
 **Target features / 工作池:**
-- 22 个 deferred debug 会话(frontmatter 已加 `deferred_to: v1.16-tech-debt`):16 个 root_cause_found + 5 个 awaiting_human_verify + 1 个 root-cause-found
-- 6 个 audit 数据质量问题(无 YAML frontmatter 或误归类到 debug)
-- Phase 39 advisory 项清理(CR-02/03a/03b 已提交 506865dd)
+- 多源数据冲突检测（物理链路 vs 系统责任人 vs AD managed_by）
+- Observe-only 策略 + 告警驱动人工修复（不动业务表）
+- IP 段级别例外规则（5 种 actions：no_alert/no_notice/no_workorder/skip_severity/silence）
+- 工位详情页整合对账健康度（顶部卡片 + 行内徽标 + 抽屉）
+- 自动转工单闭环（critical/high 异常）
+- 半自动修复建议（高置信度，R5 可选）
+
+**5 phases (42-46):**
+- Phase 42 / R1: 观测底座（物化视图 + reconciliation 表 + dashboard + Statistics 端点）
+- Phase 43 / R2: 告警 + 工单闭环
+- Phase 44 / R3: 置信度评分 + IP 段例外规则 + 例外管理页 + 命中测试
+- Phase 45 / R4: 工位详情整合 + 资产详情摘要块
+- Phase 46 / R5: 半自动修复（可选）
+
+**关键决策 (locked):**
+- 策略：Observe-only（不修改业务表，仅记录 + 告警 + 人工修复）
+- 菜单归属：资产管理 / 数据质量（资产对账 + 3 个二级菜单）
+- 权限命名：asset:reconciliation:*
+- API 路由：/asset/reconciliation/*
+- 跨模块调用：ops/workstation → asset/reconciliation（service 层直接 + 权限降级）
+- Owner 合并：运维 + 资产 + 权限 同一人（无需双签，单人签字）
+
+**复用审计结论 (v0.4):**
+- ✅ 已复用 13 项：字典/参数/operlog/Handler-Service/CacheProvider/Excel/UUID/Status/前端 hooks/opsApi/ECharts/UI库
+- ⚠️ 部分复用 4 项：字典枚举值/参数 seed/Excel config/operlog module 常量
+- ❌ 必须新增 7 项：cache_key helper/Statistics 端点/queryKeys/operlog module/HealthScore 函数/路由注册/Cron 注册
+
+**R1 启动门槛 (✅ 已满足):**
+- 端口采集覆盖率达标（运维 owner 确认）
+- T1-T7 基础设施调查完成
+- v0.3 架构 + v0.4 复用审计 + 跨模块权限声明已落盘
+
+**决策记录 (.planning/notes/):**
+- asset-reconciliation-strategy.md (v0.3 + v0.4)
+- 260627-reconciliation-reuse-audit.md
+- 260627-cross-module-permission.md
+- 260627-port-coverage-audit.md
+
+**Seed:** .planning/seeds/asset-reconciliation-v1.17.md
+
+**Todo:** .planning/todos/pending/v1.17-reconciliation-decisions.md (T1-T30)
 
 # RuoYi-Next 运维管理系统
 
