@@ -1,78 +1,106 @@
 ---
 type: requirements
 project: RuoYi-Next
-milestone: v1.16
-status: complete
-last_updated: 2026-06-26
+milestone: v1.17
+status: planning
+last_updated: 2026-06-27
 ---
 
-# Requirements: v1.16 技术债清理 (Tech-Debt Cleanup)
+# Requirements: v1.17 资产对账 (Asset Reconciliation)
 
 **Project:** RuoYi-Next 网络运维管理系统
-**Milestone:** v1.16 技术债清理 (Tech-Debt Cleanup)
-**Status:** Complete — 2026-06-26 milestone closed (Phase 40 + 41 shipped, audit-open debug_sessions=0, TECH-05+TECH-06 achieved)
-**Last Updated:** 2026-06-26
-**Previous:** v1.15 完结于 Phase 39（workstation dept-location alias）
+**Milestone:** v1.17 资产对账 (Asset Reconciliation)
+**Status:** Planning — 2026-06-27 milestone started
+**Last Updated:** 2026-06-27
+**Previous:** v1.16 完结于 Phase 13 gap closure (8 atomic commits, score 18/18)
+
+**关键决策 (locked, 来自 v0.3):**
+- 策略：Observe-only（不修改业务表）
+- 菜单归属：资产管理 / 数据质量
+- 权限命名：asset:reconciliation:*
+- API 路由：/asset/reconciliation/*
+- Owner：运维 + 资产 + 权限 同一人
 
 ---
 
-## Milestone v1.16 Requirements
+## Milestone v1.17 Requirements
 
-### TECH — 技术债清理
+### RECON — 对账引擎核心
 
-- [x] **TECH-01**: 修复 16 个 `root_cause_found` debug 会话(根因已找到,实施修复 + 提交 commit)。涉及 AD 域控 6 个、VDI 2 个、infopoint/captcha/permission/api-key 等 8 个。
-- [x] **TECH-02**: 验证 5 个 `awaiting_human_verify` debug 会话(workstation-device-build-errors、workstation-expand-device-load-empty、reset-theme-hardcoded-colors、user-filter-lost-after-edit、vite-hmr-token-blank-page)。需在 dev 环境复现原 bug → 确认修复有效 → 标记 resolved。
-- [x] **TECH-03**: 处理 1 个 `root-cause-found` 会话(apikey-route-path-duplication,连字符变体状态值,与 TECH-01 一并处理)。
-- [x] **TECH-04**: 整理 6 个 audit 数据质量问题:
-  - 为 `login-400-bad-request` / `ops-asset-constraint-uni-ops-asset-devicesn-not-exist` 补标准 YAML frontmatter(status + slug + updated + session_type + related)
-  - `knowledge-base` 不是 debug 会话(是 GSD 知识库文件),明确移出 audit 范围(添加 `skip_audit: true` 注释或改名)
-  - `info-point-type-null-import` / `sys-mac-filter-rules-relation-does-not-exist` 实际已是 resolved/Resolved,统一 frontmatter 格式让 audit 能正确识别
-- [x] **TECH-05**: 全部清理后,审计指标达到:`audit-open` 中 debug_sessions < 5(从当前 57 大幅下降);所有 `.planning/debug/*.md` 文件均有标准 YAML frontmatter。
-- [x] **TECH-06** (Phase 41 新增): 闭环 Phase 40 遗留的 debug_sessions 缺口 —— Phase 40 完成 22 个 deferred session + 6 audit 文件,但 `audit-open` 仍有 29 个 scope 外历史 open session(investigating/debug_complete/fixed 等),需降到 < 5 才能达成 TECH-05 验收。策略:批量翻 ~12 个"实质已完成态"(debug_complete/fixed/fix_applied/applied)→ resolved;逐个闭环剩余 ~17 个真正在途调查(能修则修,陈年/重复/不适用者标记 won't-fix 或 skip_audit 移出 audit)。
+- [ ] **RECON-01**: 系统能建立三路对账（物理链路 vs 系统责任人 vs AD managed_by），并按 Type A-F 分类（A 健康 / B 无主 / C 不一致 / D 未上线 / E 幽灵 / F AD 不一致）
+- [ ] **RECON-02**: 系统能基于 `ops_asset.mac1/mac2` + `sys_port_mac` + `sys_info_point` + `sys_workstation.user_id` 反向推导物理链路 user_id
+- [ ] **RECON-03**: 系统能计算置信度评分（physical +0.5 / declared +0.3 / ad +0.2），低于阈值进异常池
+- [ ] **RECON-04**: 系统能维护 `reconciliation_normalized` 物化视图，5 分钟增量刷新
+- [ ] **RECON-05**: 系统能在冲突检出时立即写入 `sys_data_reconciliation`，包含 raw_snapshot (JSONB) 完整快照
+- [ ] **RECON-06**: 系统能在修复回写后保留 7 天静默期（避免循环触发）
+- [ ] **RECON-07**: 系统能基于 `sys_config` 的 `asset.reconciliation.score.*` 与 `view.refresh_interval` 参数化运行行为
+
+### EXCEPTION — 例外规则
+
+- [ ] **EXCEPTION-01**: 系统能按 CIDR 格式（如 `192.168.0.0/16`）配置 IP 段级别例外规则
+- [ ] **EXCEPTION-02**: 系统能配置 5 种 actions 组合（no_alert / no_notice / no_workorder / skip_severity / silence），多条规则取并集
+- [ ] **EXCEPTION-03**: 系统能在例外规则中设定有效期（expires_at），到期自动停用
+- [ ] **EXCEPTION-04**: 系统能提供"命中测试"工具，输入 IP/CIDR 实时返回命中规则与合并效果
+
+### WORKORDER — 工单闭环
+
+- [ ] **WORKORDER-01**: 系统能在 critical / high 异常出现时，自动调用 `workorder.BaseService.Create()` 生成工单（带 6 类冲突分类）
+- [ ] **WORKORDER-02**: 系统能在工单状态变更时通过 `operlog.Record()` 写入审计日志
+
+### MONITOR — 看板 + 告警
+
+- [ ] **MONITOR-01**: 系统能提供 6 个 Statistics 专用 COUNT 端点（Summary / ByConflictType / BySeverity / HealthTrend / TopUnresolved / ExceptionRuleStats），不依赖 `list.length` 防 MaxPageSize 钳制
+- [ ] **MONITOR-02**: 系统能通过 WebSocket 实时推送 critical 异常到前端
+- [ ] **MONITOR-03**: 系统能将高危异常写入 `sys_notice` 系统通知
+
+### INTEGRATE — 前端整合
+
+- [ ] **INTEGRATE-01**: 系统能在工位详情页（`/ops/workstation/:id`）顶部显示健康度卡片（5 KPI + 趋势 mini chart），无权限时静默隐藏
+- [ ] **INTEGRATE-02**: 系统能在工位详情页的资产设备子表 + 域控设备子表中加入"对账健康"列（行内徽标）
+- [ ] **INTEGRATE-03**: 系统能在点击徽标时打开 `ReconciliationDrawer`（冲突摘要 / 历史变更 / 例外规则三 Tab）
+
+### AUDIT — 审计 + 血缘
+
+- [ ] **AUDIT-01**: 系统能在所有对账相关写操作（标记已解决 / 例外 CRUD / 自动转工单）中调用 `operlog.Record()` 或 `operlog.RecordWithBody()`
+- [ ] **AUDIT-02**: 系统能在 `raw_snapshot` JSONB 中冻结触发时刻的三路原始值，支持事后溯源
+
+### INFRA — 基础设施复用
+
+- [ ] **INFRA-01**: 系统能在 `sys_dict_type` / `sys_dict_data` 中 seed 4 个字典（`asset_reconciliation_conflict_type` / `asset_reconciliation_severity` / `asset_reconciliation_exception_action` / `asset_reconciliation_status`）
+- [ ] **INFRA-02**: 系统能在 `sys_config` 中 seed 8 个 config 项（refresh_interval / score.physical / score.declared / score.ad / default_expiry_days / critical_threshold / silence_after_resolved_hours / health.score_weights）
+- [ ] **INFRA-03**: 系统能在 `sys_workorder_category` 中 seed 6 个对账冲突分类（A-F）
+- [ ] **INFRA-04**: 系统能在 `internal/services/asset/cache_keys.go` 定义 8 个 cache key 常量与 helper 函数
+- [ ] **INFRA-05**: 系统能在 `src/lib/queryKeys.ts` 注册 9 个 reconciliation queryKey
 
 ### Future / Out of Scope
 
 | 项 | 原因 |
 |----|------|
-| 新功能 (AI features, mobile app) | v1.16 是清理 milestone,不做功能开发 |
-| VDI 22C / 22D | 依赖 v1.11 VDI 生产稳定性观察数据 |
-| Phase 22 VDI 剩余扩展 | 同上 |
-| DICT-29 (sys_dict 重构) | 纯样式,无功能增益,推 v1.18 |
+| 自动覆盖业务表 | 用户明确选择 observe-only；自动覆盖需后续 R5 演进 |
+| AD 域控实时同步 | 已知不可靠（code 32 / lockout），仅作 fallback 信号 |
+| 机器学习异常检测 | 当前置信度评分够用；ML 是远期方向 |
+| VDI 虚拟机对账 | VDI 模块独立 domain，关联用户通过 AD，反向推导与现有链路重合 |
+| 工单自动关闭 | 工单状态由人工闭环，不应系统自动关单 |
 
----
+### Traceability
 
-## Traceability
+| Requirement | Phase | Plan |
+|-------------|-------|------|
+| RECON-01~07 | Phase 42 (R1) | 42-01 / 42-02 / 42-03 |
+| EXCEPTION-01~04 | Phase 44 (R3) | 44-01 / 44-02 |
+| WORKORDER-01~02 | Phase 43 (R2) | 43-01 / 43-02 |
+| MONITOR-01 | Phase 42 (R1) | 42-04 |
+| MONITOR-02~03 | Phase 43 (R2) | 43-03 |
+| INTEGRATE-01~03 | Phase 45 (R4) | 45-01 / 45-02 |
+| AUDIT-01~02 | 跨 phase | 各 plan 内 |
+| INFRA-01~03 | Phase 42 (R1) | 42-05（基础 seed） |
+| INFRA-04~05 | Phase 42 (R1) | 42-06（基础设施） |
 
-| REQ-ID | Description | Phase | Status |
-|--------|-------------|-------|--------|
-| TECH-01 | 16 root_cause_found debug 会话修复 + commit | Phase 40 (tech-debt-cleanup) | Completed |
-| TECH-02 | 5 awaiting_human_verify debug 会话 dev 复现验证 | Phase 40 (tech-debt-cleanup) | Completed |
-| TECH-03 | 1 root-cause-found 会话(apikey-route-path-duplication) | Phase 40 (tech-debt-cleanup) | Completed |
-| TECH-04 | 6 audit 数据质量问题整理(frontmatter + 排除范围) | Phase 40 (tech-debt-cleanup) | Completed |
-| TECH-05 | 验收指标:debug_sessions < 5 + 全量 frontmatter 校验通过 | Phase 40+41 | Completed |
-| TECH-06 | 闭环 Phase 40 遗留 debug_sessions 缺口(29→0):14 re-verify-flip + 2 real-fix + 13 wontfix | Phase 41 (debug-session-gap-closure) | Completed |
+### 关联决策记录
 
-**Coverage**: 6/6 v1.16 requirements mapped to Phase 40 + Phase 41 ✓
-**No orphans, no duplicates**
-
-### Phase 40 Success Criteria Cross-Check
-
-8 observable success criteria (full text in `.planning/ROADMAP.md`):
-
-| # | Criterion | Supporting REQ |
-|---|-----------|---------------|
-| 1 | 16 root_cause_found 会话修复 + commit 闭环 | TECH-01 |
-| 2 | 5 awaiting_human_verify 会话 dev 复现 + resolved | TECH-02 |
-| 3 | apikey-route-path-duplication 修复 | TECH-03 |
-| 4 | login-400 + ops-asset-constraint 补 frontmatter | TECH-04 |
-| 5 | knowledge-base 移出 audit 范围 | TECH-04 |
-| 6 | info-point-type-null + sys-mac-filter-rules frontmatter 统一 | TECH-04 |
-| 7 | audit-open debug_sessions < 5 | TECH-05 |
-| 8 | 全量 frontmatter 校验脚本通过率 100% | TECH-05 |
-
-**Coverage check**: All 8 success criteria trace to ≥1 TECH requirement ✓
-All 5 TECH requirements contribute to ≥1 success criterion ✓
-
----
-
-*This file replaces the stale v1.16 requirements (which contained OPERLOG-01..06 from Phase 35, completed in v1.15).*
+- [.planning/notes/asset-reconciliation-strategy.md](notes/asset-reconciliation-strategy.md) — v0.3 架构 + v0.4 复用审计
+- [.planning/notes/260627-reconciliation-reuse-audit.md](notes/260627-reconciliation-reuse-audit.md) — 完整复用审计
+- [.planning/notes/260627-cross-module-permission.md](notes/260627-cross-module-permission.md) — 跨模块权限边界
+- [.planning/notes/260627-port-coverage-audit.md](notes/260627-port-coverage-audit.md) — 端口采集覆盖率审计模板
+- [.planning/seeds/asset-reconciliation-v1.17.md](seeds/asset-reconciliation-v1.17.md) — 阶段种子
+- [.planning/todos/pending/v1.17-reconciliation-decisions.md](todos/pending/v1.17-reconciliation-decisions.md) — T1-T30 待办
