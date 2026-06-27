@@ -37,6 +37,7 @@ import {
   Card,
   Empty,
   App,
+  Modal,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type {
@@ -44,12 +45,20 @@ import type {
   FilterValue,
   SorterResult,
 } from "antd/es/table/interface";
-import { SearchOutlined, ReloadOutlined, LinkOutlined } from "@ant-design/icons";
+import {
+  SearchOutlined,
+  ReloadOutlined,
+  LinkOutlined,
+  CheckOutlined,
+} from "@ant-design/icons";
+import { useQueryClient } from "@tanstack/react-query";
 import { useExceptionList } from "@/hooks/useExceptionList";
 import { useDict } from "@/hooks/useDict";
 import { useServerSort, resolveSorter } from "@/hooks/useServerSort";
 import { createSorterMeta, createSorter } from "@/utils/tableHelpers";
-import type { ExceptionListItem, ExceptionListParams } from "@/lib/assetApi";
+import { reconciliationApi, type ExceptionListItem, type ExceptionListParams } from "@/lib/assetApi";
+import { queryKeys } from "@/lib/queryKeys";
+import { useMenuStore } from "@/store/menuStore";
 
 const { RangePicker } = DatePicker;
 
@@ -73,12 +82,25 @@ function buildDictLabelMap(
 
 const Exceptions = () => {
   const { message } = App.useApp();
+  const queryClient = useQueryClient();
   const [form] = Form.useForm();
   const [searchParams, setSearchParams] = useSearchParams();
+  // 权限(D-08):复用 menuStore.permissions(established pattern,见 MACHistoryPage)
+  const permissions = useMenuStore((s) => s.permissions);
+  const canResolve = permissions.includes("asset:reconciliation:resolve");
 
   // 当前分页
   const [current, setCurrent] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+
+  // Phase 43 R2 / D-A4-04:标记已解决 Modal 状态
+  const [resolveModal, setResolveModal] = useState<{
+    open: boolean;
+    exceptionId: string | null;
+    note: string;
+    submitting: boolean;
+  }>({ open: false, exceptionId: null, note: "", submitting: false });
+  const [resolveForm] = Form.useForm();
 
   // 服务端排序
   const { orderByColumn, isAsc, sortOrder, handleTableChange, resetSort } =
@@ -258,6 +280,39 @@ const Exceptions = () => {
         render: (val: string | null) => (val ? <Tag color="purple">{val}</Tag> : "-"),
       },
       {
+        // Phase 43 R2 / D-A4-04:标记已解决按钮列
+        // 权限控制:无 asset:reconciliation:resolve perm 时不渲染(对齐 T-43-11 mitigation)
+        // 已 resolved(异常 resolvedAt 非空)的记录 disabled,避免重复 resolve
+        title: "解决",
+        key: "resolve_btn",
+        width: 110,
+        fixed: "right",
+        render: (_: unknown, record: ExceptionListItem) => {
+          if (!canResolve) return null;
+          // resolvedAt 字段在 list 返回里通常为 null 或时间戳;空/null 视为未解决
+          const resolved = record.resolvedAt !== null && record.resolvedAt !== undefined && record.resolvedAt !== "";
+          return (
+            <Button
+              type="link"
+              size="small"
+              icon={<CheckOutlined />}
+              disabled={resolved}
+              onClick={() => {
+                setResolveModal({
+                  open: true,
+                  exceptionId: record.id,
+                  note: "",
+                  submitting: false,
+                });
+                resolveForm.resetFields();
+              }}
+            >
+              {resolved ? "已解决" : "标记已解决"}
+            </Button>
+          );
+        },
+      },
+      {
         title: "操作",
         key: "operlog_btn",
         width: 110,
@@ -287,11 +342,45 @@ const Exceptions = () => {
         ),
       },
     ],
-    [sortOrder, conflictTypeMap, conflictTypeListClass, severityMap]
+    [sortOrder, conflictTypeMap, conflictTypeListClass, severityMap, canResolve]
   );
 
-  // Table.onChange 集成分页 + 排序(per useTableManager 模式)
-  const onTableChange = useCallback(
+  // 提交"标记已解决" Modal
+//
+// 流程:
+//   1. validate Form(resolutionNote 可选,但提供就 trim 校验)
+//   2. 调 reconciliationApi.exceptionResolve(id, { resolutionNote })
+//   3. 成功后 message.success + queryClient.invalidateQueries(reconciliation)
+//   4. 关闭 Modal,清空状态
+//   5. 失败 message.error + 保留 Modal
+//
+// 后端 handler 调 operlog.Record(OperTypeUpdate) → 写 sys_oper_log(WORKORDER-02)
+const handleResolveSubmit = useCallback(async () => {
+  if (!resolveModal.exceptionId) return;
+  try {
+    const values = await resolveForm.validateFields();
+    setResolveModal((prev) => ({ ...prev, submitting: true }));
+    await reconciliationApi.exceptionResolve(resolveModal.exceptionId, {
+      resolutionNote: values.resolutionNote?.trim() || undefined,
+    });
+    message.success("已标记为已解决");
+    // 触发 dashboard + 异常列表 query 重新拉取(7d 静默期也自动生效)
+    queryClient.invalidateQueries({ queryKey: queryKeys.reconciliation.all });
+    setResolveModal({ open: false, exceptionId: null, note: "", submitting: false });
+    resolveForm.resetFields();
+  } catch (err) {
+    // 后端返回 400 "该异常已标记为已解决" 时,同步 invalidate 让 UI 刷新
+    const errMsg = (err as Error)?.message ?? "标记失败";
+    if (errMsg.includes("已解决")) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.reconciliation.all });
+    }
+    message.error(errMsg);
+    setResolveModal((prev) => ({ ...prev, submitting: false }));
+  }
+}, [resolveModal.exceptionId, resolveForm, message, queryClient]);
+
+// Table.onChange 集成分页 + 排序(per useTableManager 模式)
+const onTableChange = useCallback(
     (
       pagination: TablePaginationConfig,
       _filters: Record<string, FilterValue | null>,
@@ -395,7 +484,7 @@ const Exceptions = () => {
         columns={columns}
         dataSource={data?.list ?? []}
         loading={isLoading}
-        scroll={{ x: 1280 }}
+        scroll={{ x: 1380 }}
         pagination={{
           current,
           pageSize,
@@ -406,6 +495,37 @@ const Exceptions = () => {
         }}
         onChange={onTableChange}
       />
+
+      {/* Phase 43 R2 / D-A4-04:标记已解决 Modal */}
+      <Modal
+        title="标记异常已解决"
+        open={resolveModal.open}
+        onOk={handleResolveSubmit}
+        confirmLoading={resolveModal.submitting}
+        onCancel={() => {
+          if (resolveModal.submitting) return;
+          setResolveModal({ open: false, exceptionId: null, note: "", submitting: false });
+          resolveForm.resetFields();
+        }}
+        okText="确认标记"
+        cancelText="取消"
+        destroyOnClose
+      >
+        <Form form={resolveForm} layout="vertical" preserve={false}>
+          <Form.Item
+            label="解决说明(可选)"
+            name="resolutionNote"
+            extra="请简要说明解决方式,如:已修正责任人 / 已同步 AD 域账号 等"
+          >
+            <Input.TextArea
+              rows={4}
+              maxLength={500}
+              showCount
+              placeholder="例如:已将 sys_user.user_id 同步到 ops_asset.responsible_user_id"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

@@ -213,4 +213,22 @@ export const reconciliationApi = {
     );
     return res.data as ExceptionListItem;
   },
+
+  /**
+   * 标记异常已解决 (Phase 43 R2 / D-A4-04)
+   * 后端:POST /asset/reconciliation/exception/:id/resolve
+   * Body: { resolutionNote?: string }
+   * 权限:前端按钮按 asset:reconciliation:resolve perm 控制可见性(R3 后端强制)
+   * OperLog:后端 handler 自动写 sys_oper_log(OperTypeUpdate,WORKORDER-02)
+   */
+  exceptionResolve: async (
+    id: string,
+    body: { resolutionNote?: string } = {}
+  ): Promise<{ id: string; resolvedAt: string; resolvedBy: string; resolutionNote?: string }> => {
+    const res = await post<{ id: string; resolvedAt: string; resolvedBy: string; resolutionNote?: string }>(
+      `/asset/reconciliation/exception/${id}/resolve`,
+      body
+    );
+    return res.data as { id: string; resolvedAt: string; resolvedBy: string; resolutionNote?: string };
+  },
 };

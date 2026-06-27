@@ -17,7 +17,8 @@
 
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, Row, Col, Spin, Empty, Alert } from "antd";
+import { useQueryClient } from "@tanstack/react-query";
+import { Card, Row, Col, Spin, Empty, Alert, Badge, App } from "antd";
 import {
   AppstoreOutlined,
   WarningOutlined,
@@ -27,6 +28,7 @@ import {
 } from "@ant-design/icons";
 import ReactECharts from "@/components/charts/EChartsWrapper";
 import { useDashboard } from "@/hooks/useDashboard";
+import { useReconciliationWebSocket } from "@/hooks/useReconciliationWebSocket";
 
 /** 7d 默认窗口,后续可加 30d/90d 切换 */
 const DEFAULT_WINDOW_DAYS = 7;
@@ -44,6 +46,8 @@ const SEVERITY_FALLBACK = ["low", "medium", "high", "critical"];
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { message } = App.useApp();
+  const queryClient = useQueryClient();
   const {
     summary,
     byConflictType,
@@ -52,6 +56,25 @@ const Dashboard = () => {
     isLoading,
     isError,
   } = useDashboard(DEFAULT_WINDOW_DAYS);
+
+  // Phase 43 R2: 订阅 critical 异常/工单 WS 事件
+  // 收到事件后 hook 自动 queryClient.invalidateQueries,这里 onCriticalEvent
+  // 只负责给运维一个 toast 提示(可见的反馈,运维不必盯着数据看也能感知到推送)
+  const { status: wsStatus } = useReconciliationWebSocket({
+    queryClient,
+    onCriticalEvent: (event, data) => {
+      const labelMap: Record<string, string> = {
+        critical_exception_detected: "新 critical 异常",
+        critical_workorder_created: "已生成 critical 工单",
+      };
+      const label = labelMap[event] ?? event;
+      const assetHint = data.asset_code || data.conflict_type || "";
+      message.info({
+        content: `${label}${assetHint ? `: ${assetHint}` : ""}`,
+        duration: 3,
+      });
+    },
+  });
 
   // 饼图 option — 6 keys(空数据 0)
   const pieOption = useMemo(() => {
@@ -173,7 +196,30 @@ const Dashboard = () => {
 
   return (
     <div className="p-6">
-      <h2 style={{ marginBottom: 16 }}>资产对账看板</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 style={{ margin: 0 }}>资产对账看板</h2>
+        {/* Phase 43 R2: WS 连接状态 Badge,运维一眼看到实时推送是否就绪 */}
+        <Badge
+          status={
+            wsStatus === "connected"
+              ? "success"
+              : wsStatus === "connecting"
+                ? "processing"
+                : wsStatus === "error"
+                  ? "error"
+                  : "default"
+          }
+          text={
+            wsStatus === "connected"
+              ? "实时推送已连接"
+              : wsStatus === "connecting"
+                ? "正在连接..."
+                : wsStatus === "error"
+                  ? "推送连接异常"
+                  : "推送已断开"
+          }
+        />
+      </div>
 
       {/* 5 KPI 卡片 */}
       <Spin spinning={isLoading}>
