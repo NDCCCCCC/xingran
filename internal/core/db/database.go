@@ -213,11 +213,48 @@ func (d *Database) cleanupOldConstraints() {
 	}
 }
 
+// dropDependentMaterializedViews 在 AutoMigrate 之前 DROP 引用业务表的物化视图。
+//
+// 设计原因: 物化视图(MV)持久存在于数据库中。GORM AutoMigrate 每次启动都会尝试
+// ALTER 被引用表的列(即使类型已匹配,GORM 仍会下发 ALTER TYPE 语句)。当列被 MV
+// 引用时,PG 抛 SQLSTATE 0A000 "cannot alter type of a column used by a view or rule",
+// 导致启动 FATA。
+//
+// 解决: AutoMigrate 之前 DROP 所有引用业务表的 MV;对应的 migration_NNN 会在
+// AutoMigrate 完成后重新 CREATE 它们(用最新表结构 + 列类型)。
+//
+// 当前已知 MV:
+//   - reconciliation_normalized (migration_168 创建,引用 sys_ad_user / sys_user / ops_asset)
+//     → migration_168 末尾有 CREATE MATERIALIZED VIEW(非 IF NOT EXISTS,强制重建)
+//
+// MAC 历史 MV(mv_mac_*)引用 sys_device_mac_history,该表无 GORM ALTER 需求,无需在此 DROP。
+func (d *Database) dropDependentMaterializedViews() {
+	// 仅 DROP 引用会触发 ALTER 的表的 MV;用 CASCADE 一并清理其上的 unique index。
+	dependentMV := []string{
+		"reconciliation_normalized",
+	}
+	for _, mv := range dependentMV {
+		// DROP MATERIALIZED VIEW IF EXISTS ... CASCADE — 安全跳过不存在的 MV
+		sql := fmt.Sprintf("DROP MATERIALIZED VIEW IF EXISTS %s CASCADE", mv)
+		if err := d.DB.Exec(sql).Error; err != nil {
+			applogger.Debugf("DROP MV %s 跳过: %v", mv, err)
+			continue
+		}
+		applogger.Infof("[迁移] 预清理物化视图 %s(AutoMigrate 前置,后续 migration 重建)", mv)
+	}
+}
+
 // AutoMigrate 自动迁移所有模型
 func (d *Database) AutoMigrate() error {
 	// 先清理可能存在的旧约束
 	if d.Type == "postgres" {
 		d.cleanupOldConstraints()
+		// 关键: 先 DROP 引用业务表的物化视图,否则 ALTER TABLE 被阻塞。
+		// reconciliation_normalized 引用 sys_ad_user.username / sys_user.id / ops_asset,
+		// 当 GORM AutoMigrate 试图 ALTER 这些表的列类型(如 sys_ad_user.username → varchar(255))
+		// 时,PG 抛 SQLSTATE 0A000 "cannot alter type of a column used by a view or rule"。
+		// migration_168 会在 AutoMigrate 完成后重新 CREATE 该 MV。
+		d.dropDependentMaterializedViews()
 	}
 
 	// 禁用外键约束的自动创建，避免类型不匹配的问题
