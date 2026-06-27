@@ -263,8 +263,12 @@ const Exceptions = () => {
         width: 110,
         fixed: "right",
         render: (_: unknown, record: ExceptionListItem) => (
+          // R1 范围: 后端 sys_oper_log 表无 biz_id 列,无法按 reconciliation.id 过滤。
+          // 链接到操作日志页(去掉 bizId),运维按操作时间/模块人工查找。
+          // R2 接入 WebSocket 推送 + 转工单后,oper_log 会写入 business_type=RECONCILIATION
+          // + 关联 record.id,届时再加 /monitor/oper-logs?bizId=... 精确跳转。
           <Link
-            to={`/monitor/operlog?bizId=${encodeURIComponent(record.id)}`}
+            to="/monitor/oper-logs"
             target="_blank"
             rel="noopener"
           >
