@@ -51,7 +51,7 @@ last_updated: 2026-06-27
 
 - [ ] **MONITOR-01**: 系统能提供 6 个 Statistics 专用 COUNT 端点（Summary / ByConflictType / BySeverity / HealthTrend / TopUnresolved / ExceptionRuleStats），不依赖 `list.length` 防 MaxPageSize 钳制
 - [x] **MONITOR-02**: 系统能通过 WebSocket 实时推送 critical 异常到前端
-- [ ] **MONITOR-03**: 系统能将高危异常写入 `sys_notice` 系统通知
+- [x] **MONITOR-03**: 系统能将高危异常写入 `sys_notice` 系统通知
 
 ### INTEGRATE — 前端整合
 

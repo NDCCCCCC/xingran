@@ -255,3 +255,16 @@ None — 计划无外部认证依赖;WS endpoint 复用现有 /system/ws/notices
 - `go build ./...` exit 0 ✓
 - `go test ./internal/services/asset/... ./internal/api/v1/asset/... ./internal/scheduler/...` PASS ✓
 - `npm run build` exit 0 ✓
+## Self-Check: PASSED
+
+- `ruoyi-react-frontend/src/hooks/useReconciliationWebSocket.ts` exists
+- `internal/services/asset/reconciliation_workorder.go` updated with WS + SysNotice dual-channel
+- `internal/scheduler/reconciliation_tasks.go` updated signature + woSvc injection
+- `internal/core/core.go` updated call site with c.NoticeHub + NewNoticeService
+- `ruoyi-react-frontend/src/lib/assetApi.ts` updated with exceptionResolve
+- `ruoyi-react-frontend/src/pages/asset/reconciliation/dashboard/index.tsx` updated with useReconciliationWebSocket + Badge
+- `ruoyi-react-frontend/src/pages/asset/reconciliation/exceptions/index.tsx` updated with resolve_btn col + Modal
+- Commits `9a32c80a` (Task 1) + `9a9d1fdf` (Task 2) + `82cc63c1` (SUMMARY) + `af9f2225` (state metadata) exist in git log
+- `go build ./...` exit 0
+- `go test ./internal/services/asset/... ./internal/api/v1/asset/... ./internal/scheduler/...` PASS
+- `npm run build` exit 0

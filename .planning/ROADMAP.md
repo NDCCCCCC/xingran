@@ -177,7 +177,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 42. 资产对账观测底座 (R1) | 0/6 | Planning | — |
-| 43. 告警 + 工单闭环 (R2) | 2/3 | In Progress|  |
+| 43. 告警 + 工单闭环 (R2) | 3/3 | Complete   | 2026-06-27 |
 | 44. 置信度评分 + IP 段例外 (R3) | 0/2 | Pending | — |
 | 45. 工位详情整合 (R4) | 0/2 | Pending | — |
 | 46. 半自动修复 (R5, 可选) | 0/2 | Pending | — |
