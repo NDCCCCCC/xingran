@@ -415,6 +415,14 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate167WorkstationBackfillStatus(d.DB); err != nil {
 			applogger.Errorf("n71 工位状态回填失败: %v", err)
 		}
+		// Phase 42 R1: 资产对账观测底座 — 主表 + 物化视图 + partial unique index
+		if err := migrations.Migrate168ReconciliationTables(d.DB); err != nil {
+			applogger.Errorf("Phase 42 R1 reconciliation tables 迁移失败: %v", err)
+		}
+		// Phase 42 R1: 字典 + config + workorder category + sys_job + 菜单 seed
+		if err := migrations.Migrate169ReconciliationDictsConfigs(d.DB); err != nil {
+			applogger.Errorf("Phase 42 R1 reconciliation seed 迁移失败: %v", err)
+		}
 		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
 		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
 			applogger.Errorf("MAC 过滤规则表迁移失败: %v", err)
