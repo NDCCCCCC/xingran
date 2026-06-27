@@ -266,12 +266,19 @@ const Exceptions = () => {
           // R1 范围: 后端 sys_oper_log 表无 biz_id 列,无法按 reconciliation.id 过滤。
           // 链接到操作日志页(去掉 bizId),运维按操作时间/模块人工查找。
           // R2 接入 WebSocket 推送 + 转工单后,oper_log 会写入 business_type=RECONCILIATION
-          // + 关联 record.id,届时再加 /monitor/oper-logs?bizId=... 精确跳转。
-          <Link
-            to="/monitor/oper-logs"
-            target="_blank"
-            rel="noopener"
-          >
+          // + 关联 record.id,届时再加 ?bizId=... 精确跳转。
+          //
+          // 路径说明: 前端路由是动态从 sys_menu 菜单生成。
+          // 父菜单"系统监控" path='monitor',子菜单"日志管理" path='logs'。
+          // routeGenerator.resolvePath 拼接成 'monitor/logs'(注意:不是 /logs,也不是后端
+          // API 路径 /api/v1/monitor/oper-logs)。React Router 注册的实际 path 是
+          // 'monitor/logs',直接 navigate '/monitor/oper-logs' 或 '/logs' 都会 fallback
+          // 到 /dashboard。
+          //
+          // 不要加 target="_blank": SPA 新 tab 启动时 auth 状态与原 tab 不一致
+          // (无 cookie 跨 tab 共享,某些 race condition 触发 refresh 失败 → redirect
+          // /login)。用 SPA 内导航(同 tab 跳转)最稳,用户可点浏览器后退回异常页。
+          <Link to="/monitor/logs">
             <Space size={4}>
               <LinkOutlined />
               查看日志
