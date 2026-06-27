@@ -323,7 +323,9 @@ func (c *Core) Init() error {
 		// detectExpiredSilence / cleanupExpiredExceptions)。原 42-02 plan 创建了 sys_job
 		// 记录和 Execute*Task 全局函数,但漏了 RegisterTask 把 InvokeTarget 映射到
 		// 实际 handler,导致调度器报 "未找到任务处理器: reconciliation"。
-		scheduler.RegisterReconciliationTasks(c.Scheduler, c.GetDB())
+		// Phase 43 R2: 注入 NoticeHub + NoticeService,critical 转单成功后触发 WS 推送 +
+		// SysNotice 写入(D-A4-01/03 双通道)。nil 时跳过,保持向后兼容。
+		scheduler.RegisterReconciliationTasks(c.Scheduler, c.GetDB(), c.NoticeHub, services.NewNoticeService(c.GetDB()))
 		applogger.Infof("对账定时任务注册完成")
 
 		// 注册MAC历史清理任务

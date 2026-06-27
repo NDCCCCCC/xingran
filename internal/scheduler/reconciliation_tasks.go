@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/asset"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -32,11 +34,16 @@ import (
 //   - reconciliation:createWorkorderCritical → 扫 critical 异常(@every 2m)→ 调
 //     asset.ReconciliationWorkorderService.CreateWorkorderFromException
 //   - reconciliation:createWorkorderHigh    → 扫 high 异常(@every 5m)→ 同上
-func RegisterReconciliationTasks(s *Scheduler, db *gorm.DB) {
+//
+// R2 闭环(Phase 43 / D-A4-01 + D-A4-03):
+//   - wsSvc + noticeSvc 注入到 ReconciliationWorkorderService,critical 转单成功后
+//     触发 WS 广播 + sys_notice 写入(双通道)
+//   - 兼容性:wsSvc/noticeSvc 为 nil 时跳过 WS/SysNotice(单测 / 非 production)
+func RegisterReconciliationTasks(s *Scheduler, db *gorm.DB, wsSvc *websocket.NoticeHub, noticeSvc *services.NoticeService) {
 	// 实例化对账服务(无 core 依赖,只依赖 *gorm.DB)
 	snapSvc := asset.NewReconciliationSnapshotService(db)
 	detSvc := asset.NewReconciliationDetection(db)
-	woSvc := asset.NewReconciliationWorkorderService(db)
+	woSvc := asset.NewReconciliationWorkorderService(db, wsSvc, noticeSvc)
 
 	// === 1. 物化视图刷新 ===
 	//

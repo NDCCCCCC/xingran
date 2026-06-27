@@ -8,14 +8,16 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/workorder"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
-// ReconciliationWorkorderService 资产对账异常转工单服务(Phase 43 R2 / D-A1~D-A2)
+// ReconciliationWorkorderService 资产对账异常转工单服务(Phase 43 R2 / D-A1~D-A2 + R2 闭环)
 //
 // 业务边界:
 //   - 本服务由 internal/scheduler/reconciliation_tasks.go 续写的 2 个 cron 触发:
@@ -30,17 +32,48 @@ import (
 // 跨模块依赖:
 //   - workorder.BaseService.Create: Phase 23 已存在,接受 CreateRequest 结构体
 //   - system.ConfigService.GetByKey: Phase 39 已有,从 sys_config 读 JSONB
+//   - websocket.NoticeHub.BroadcastToAll: 全量 WS 推送(D-A4-01 全量 broadcast)
+//   - services.NoticeService.CreateNoticeWithTargets + PublishNotice: SysNotice 写入(D-A4-03 双通道)
+//
+// R2 WS 事件类型常量(与 useReconciliationWebSocket hook 对齐):
+//   - EventCriticalExceptionDetected = "critical_exception_detected"
+//   - - EventCriticalWorkorderCreated = "critical_workorder_created"
+//
+// R2 SysNotice NoticeType 字面量(无 schema 字段时通过 NoticeContent 头部拼接):
+//   - sys_notice.notice_type='2'(警告) + NoticeContent 头部 prefix "[asset_reconciliation_critical]"
+//   - 该字面量是前端过滤 token,R3 可考虑扩展 schema notice_type_str 字段
 //
 // Status Convention: 0=启用 1=停用(CLAUDE.md 强制);本服务处理 severity/critical/high 等业务字段,
 // 不涉及 status convention。
 type ReconciliationWorkorderService struct {
-	db *gorm.DB
+	db            *gorm.DB
+	noticeHub     *websocket.NoticeHub
+	noticeService *services.NoticeService
 }
 
-// NewReconciliationWorkorderService 构造器
-func NewReconciliationWorkorderService(db *gorm.DB) *ReconciliationWorkorderService {
-	return &ReconciliationWorkorderService{db: db}
+// NewReconciliationWorkorderService 构造器(向后兼容 — 无 WS / SysNotice 时为 nil)
+//
+// 参数说明:
+//   - db: 数据库句柄
+//   - noticeHub: WebSocket 推送中心(可选,nil 时跳过 WS 推送)
+//   - noticeService: SysNotice 服务(可选,nil 时跳过 SysNotice 写入)
+//
+// 兼容性:
+//   - 旧调用方 NewReconciliationWorkorderService(db) 仍能工作,但 WS / SysNotice 不触发
+//   - R2 推荐构造: NewReconciliationWorkorderService(db, core.NoticeHub, services.NewNoticeService(db))
+//   - nil 字段的存在是为了非 production 环境(test / 单测)的解耦测试
+func NewReconciliationWorkorderService(db *gorm.DB, noticeHub *websocket.NoticeHub, noticeService *services.NoticeService) *ReconciliationWorkorderService {
+	return &ReconciliationWorkorderService{db: db, noticeHub: noticeHub, noticeService: noticeService}
 }
+
+// WS 事件类型常量(D-A4-02 锁定只推 2 类)
+const (
+	EventCriticalExceptionDetected = "critical_exception_detected"
+	EventCriticalWorkorderCreated  = "critical_workorder_created"
+)
+
+// SysNotice content 前缀(D-A4-03 锁定) — 前端过滤 token
+const sysNoticePrefix = "[asset_reconciliation_critical]"
 
 // AssigneeRoleMap type→role 映射表(D-A2-02)
 //
@@ -68,7 +101,7 @@ type AssigneeRoleMap map[string]int64
 //   - *models.WorkOrder: 成功创建的工单;失败返回 nil
 //   - error: 失败原因(已 logrus.Errorf,调用方可继续)
 //
-// 12 步流程(D-A1-01/02 + D-A2-01~04):
+// 12 步流程(D-A1-01/02 + D-A2-01~04 + R2 WS/SysNotice):
 //  1. SELECT sys_data_reconciliation WHERE id=? AND workorder_id IS NULL AND deleted_at IS NULL
 //     (排除已转单 + 软删除记录,避免重复转单)
 //  2. SELECT WorkOrderCategory WHERE category_name="对账-{Type}类"
@@ -82,7 +115,8 @@ type AssigneeRoleMap map[string]int64
 //  9. workorder.NewBaseService(s.db).Create(ctx,&CreateRequest{...},"SYSTEM")
 // 10. 失败 logrus.Errorf,return nil,err(D-A1-03 不写 SysNotice)
 // 11. 成功 s.db.Model(&rec).Update("workorder_id",wo.ID)
-// 12. return wo
+// 12a. WS 推送 critical_workorder_created(D-A4-01 全量 broadcast,non-blocking)
+// 12b. SysNotice 写入(立即发布,避免草稿状态)
 //
 // submitterID="SYSTEM"(T-43-01 转单越权 mitigation):工单创建后 status=Pending,
 // 等运维接管,避免"自动转单+自动受理"双重系统行为。
@@ -99,6 +133,11 @@ func (s *ReconciliationWorkorderService) CreateWorkorderFromException(ctx contex
 		}
 		logrus.Errorf("[reconciliation:workorder] 查询异常 %s 失败: %v", exceptionID, err)
 		return nil, fmt.Errorf("查询异常失败: %w", err)
+	}
+
+	// R2 WS:critical_exception_detected 推送(在任何转单动作之前,D-A4-02 锁定只 critical 触发)
+	if rec.Severity == "critical" {
+		s.broadcastCriticalException(ctx, &rec)
 	}
 
 	// 第 2 步:查 category(B-F 5 类)
@@ -207,8 +246,196 @@ func (s *ReconciliationWorkorderService) CreateWorkorderFromException(ctx contex
 	applogger.Infof("[reconciliation:workorder] 异常 %s (ConflictType=%s, Severity=%s) 已生成工单 %s",
 		exceptionID, rec.ConflictType, rec.Severity, wo.ID)
 
+	// R2 WS + SysNotice 闭环(只 critical 触发,与 D-A4-02 一致)
+	if rec.Severity == "critical" {
+		// 第 12a 步:WS 推送 critical_workorder_created(全量 broadcast)
+		s.broadcastCriticalWorkorder(ctx, &rec, wo.ID, title)
+
+		// 第 12b 步:SysNotice 写入(立即发布,避免草稿状态)
+		s.publishCriticalSysNotice(ctx, &rec, wo.ID, title, assetCode)
+	}
+
 	// 第 12 步:返回工单
 	return wo, nil
+}
+
+// broadcastCriticalException WS 推送 critical_exception_detected 事件(D-A4-02)
+//
+// 调用栈:CreateWorkorderFromException 第 1 步 SELECT 后(severity='critical' 时)
+//
+// payload 结构:
+//   - exception_id: sys_data_reconciliation.id
+//   - asset_code: 从 raw_snapshot 取(若有)
+//   - conflict_type: B/C/D/E/F
+//   - severity: critical
+//   - detected_at: RFC3339
+//
+// 注意:NoticeHub.BroadcastToAll 内部 channel 有缓冲(256),不会阻塞调用方;
+//       仅在 hub 已关闭时 select panic(罕见,启动期 race)。
+func (s *ReconciliationWorkorderService) broadcastCriticalException(ctx context.Context, rec *models.SysDataReconciliation) {
+	if s.noticeHub == nil {
+		return // 兼容非 production 环境
+	}
+
+	// 从 raw_snapshot 取 asset_code(失败时不阻塞 WS 推送)
+	assetCode := rec.AssetID
+	if len(rec.RawSnapshot) > 0 {
+		var snap map[string]interface{}
+		if json.Unmarshal(rec.RawSnapshot, &snap) == nil {
+			if v, ok := snap["asset_code"].(string); ok && v != "" {
+				assetCode = v
+			}
+		}
+	}
+
+	payload := map[string]interface{}{
+		"event": EventCriticalExceptionDetected,
+		"data": map[string]interface{}{
+			"exception_id":  rec.ID,
+			"asset_id":      rec.AssetID,
+			"asset_code":    assetCode,
+			"conflict_type": rec.ConflictType,
+			"severity":      rec.Severity,
+			"detected_at":   rec.DetectedAt.Format(time.RFC3339),
+		},
+	}
+	content, err := json.Marshal(payload)
+	if err != nil {
+		logrus.Warnf("[reconciliation:workorder] WS payload 序列化失败: %v", err)
+		return
+	}
+
+	defer func() {
+		// Hub 关闭时 BroadcastToAll 写 channel 会 panic,兜底避免 cron 崩溃
+		if r := recover(); r != nil {
+			logrus.Warnf("[reconciliation:workorder] WS broadcast 异常(忽略): %v", r)
+		}
+	}()
+
+	s.noticeHub.BroadcastToAll(websocket.NoticeMessage{
+		Type:      EventCriticalExceptionDetected,
+		Content:   string(content),
+		Timestamp: time.Now().Unix(),
+	})
+
+	logrus.Debugf("[reconciliation:workorder] WS 推送 %s 已广播 (exception_id=%s)",
+		EventCriticalExceptionDetected, rec.ID)
+}
+
+// broadcastCriticalWorkorder WS 推送 critical_workorder_created 事件(D-A4-02)
+//
+// 调用栈:CreateWorkorderFromException 第 11 步 UPDATE workorder_id 后
+//
+// payload 结构:
+//   - workorder_id: 新建工单 uuid
+//   - exception_id: 关联异常 uuid
+//   - title: 工单标题(含 [资产对账·X类] 前缀)
+//   - asset_code: 从 raw_snapshot 取
+//   - severity: critical
+//
+// 注意:前端 useReconciliationWebSocket hook 只过滤 critical_* 2 类事件,
+//       high/medium/low 工单创建不推送(避免 dashboard 事件过载)。
+func (s *ReconciliationWorkorderService) broadcastCriticalWorkorder(ctx context.Context, rec *models.SysDataReconciliation, workorderID string, title string) {
+	if s.noticeHub == nil {
+		return
+	}
+
+	assetCode := rec.AssetID
+	if len(rec.RawSnapshot) > 0 {
+		var snap map[string]interface{}
+		if json.Unmarshal(rec.RawSnapshot, &snap) == nil {
+			if v, ok := snap["asset_code"].(string); ok && v != "" {
+				assetCode = v
+			}
+		}
+	}
+
+	payload := map[string]interface{}{
+		"event": EventCriticalWorkorderCreated,
+		"data": map[string]interface{}{
+			"workorder_id":  workorderID,
+			"exception_id":  rec.ID,
+			"asset_id":      rec.AssetID,
+			"asset_code":    assetCode,
+			"conflict_type": rec.ConflictType,
+			"severity":      rec.Severity,
+			"title":         title,
+		},
+	}
+	content, err := json.Marshal(payload)
+	if err != nil {
+		logrus.Warnf("[reconciliation:workorder] WS payload(workorder) 序列化失败: %v", err)
+		return
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			logrus.Warnf("[reconciliation:workorder] WS broadcast(workorder) 异常(忽略): %v", r)
+		}
+	}()
+
+	s.noticeHub.BroadcastToAll(websocket.NoticeMessage{
+		Type:      EventCriticalWorkorderCreated,
+		Content:   string(content),
+		Timestamp: time.Now().Unix(),
+	})
+
+	logrus.Debugf("[reconciliation:workorder] WS 推送 %s 已广播 (workorder_id=%s)",
+		EventCriticalWorkorderCreated, workorderID)
+}
+
+// publishCriticalSysNotice 写入 sys_notice(D-A4-03 双通道之 SysNotice 通道)
+//
+// 业务说明:
+//   - WS 给在线 dashboard,SysNotice 给未在线的运维(下次登录时收件箱可见)
+//   - notice_type='2'(警告),Priority=Urgent,TargetType=All
+//   - NoticeContent 头部拼接 sysNoticePrefix 前端过滤 token
+//   - 立即发布(PublishStatus=Published)避免草稿状态,运维能立即看到
+//
+// 软失败:
+//   - noticeService == nil 时跳过(test 环境)
+//   - CreateNoticeWithTargets / PublishNotice 失败时仅 logrus.Warnf,不阻塞主流程
+//     (工单已创建并 WS 推送,D-A1-03 风格 — 告警通道失败不影响业务)
+func (s *ReconciliationWorkorderService) publishCriticalSysNotice(ctx context.Context, rec *models.SysDataReconciliation, workorderID, title, assetCode string) {
+	if s.noticeService == nil {
+		return
+	}
+
+	// NoticeContent 头部拼接 [asset_reconciliation_critical] 前端过滤 token
+	noticeContent := fmt.Sprintf("%s\n异常: %s\n冲突类型: %s\n严重级别: %s\n检测时间: %s\n关联工单: %s\n\n工单已自动创建,请及时处理。",
+		sysNoticePrefix,
+		rec.ID,
+		rec.ConflictType,
+		rec.Severity,
+		rec.DetectedAt.Format("2006-01-02 15:04:05"),
+		workorderID,
+	)
+
+	req := &services.CreateNoticeRequest{
+		NoticeTitle:   title,
+		NoticeType:    "2", // 2=警告(参见 models.Notice.NoticeType 字典)
+		NoticeContent: noticeContent,
+		Priority:      models.PriorityUrgent, // 紧急
+		TargetType:    models.TargetAll,     // 全部用户
+		IsMarkdown:    false,
+	}
+
+	// 创建 + 立即发布(避免草稿状态)
+	notice, err := s.noticeService.CreateNoticeWithTargets(ctx, req, "SYSTEM", "SYSTEM")
+	if err != nil {
+		logrus.Warnf("[reconciliation:workorder] SysNotice 创建失败(exception=%s, workorder=%s): %v",
+			rec.ID, workorderID, err)
+		return
+	}
+
+	if publishErr := s.noticeService.PublishNotice(ctx, notice.ID); publishErr != nil {
+		logrus.Warnf("[reconciliation:workorder] SysNotice 发布失败(notice=%s, exception=%s): %v",
+			notice.ID, rec.ID, publishErr)
+		return
+	}
+
+	logrus.Infof("[reconciliation:workorder] SysNotice 已发布 notice_id=%s (asset=%s, severity=%s, workorder=%s)",
+		notice.ID, assetCode, rec.Severity, workorderID)
 }
 
 // severityToSLAMinutes 根据 severity 字符串返回 SLA 分钟数(D-A2-03)
