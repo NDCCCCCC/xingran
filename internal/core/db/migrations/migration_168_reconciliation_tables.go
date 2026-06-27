@@ -1,0 +1,150 @@
+package migrations
+
+import (
+	"fmt"
+	"log"
+
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"gorm.io/gorm"
+)
+
+// Migrate168ReconciliationTables Phase 42 R1: 资产对账观测底座 — 主表 + 物化视图
+//
+// 业务背景:
+//   - D-01 / D-08: R1 物化视图 `reconciliation_normalized` 反向推导物理链路
+//     (ops_asset.mac1 → sys_port_mac → sys_info_point → sys_workstation_info_point → sys_workstation.user_id),
+//     用 mac1 优先(mac2 备选)的 COALESCE 语义,避免单资产 2 行。
+//   - D-03: R1 IP 字段最小化,asset_ip 直接取 ops_asset.machine_ip 单值,不做多 IP 解析链 / CIDR 例外。
+//   - D-11: 防 R1 告警风暴 — partial unique index uniq_recon_asset_type_open
+//     (asset_id, conflict_type) WHERE resolved_at IS NULL AND deleted_at IS NULL。
+//
+// 步骤清单:
+//   1. GORM AutoMigrate 创建 sys_data_reconciliation + sys_reconciliation_exception 两张表
+//   2. 物化视图 reconciliation_normalized — 反向推导物理链路
+//   3. unique index idx_recon_norm_asset (CONCURRENTLY 必需)
+//   4. partial unique index uniq_recon_asset_type_open(显式命名,D-11)
+//   5. 验证:SELECT COUNT(*) FROM reconciliation_normalized 不报错
+//
+// R1 已知约束:
+//   - sys_port_mac / sys_info_point / sys_workstation_info_point 尚未在项目 schema 中落地,
+//     物化视图 SQL 暂以 `ops_asset LEFT JOIN sys_user` 起步,R2 增加物理链路 JOIN 时再扩展。
+//     CREATE MATERIALIZED VIEW 在表不存在时会失败,所以先 AutoMigrate 上游表,
+//     后续 R2 计划(migration_NNN)若引入新表,本 MV 在 refresh 时自然引入。
+//   - 为保证 R1 启动不阻塞,本迁移对 PG-only 步骤做 dialect 校验,SQLite 直接跳过物化视图部分。
+//
+// 参考实现:
+//   - migration_148_create_ops_asset_table.go:DO $$ 块显式命名 unique constraint
+//   - migration_152_mac_matview.go:CREATE MATERIALIZED VIEW + UNIQUE INDEX 模式
+//   - migration_165_sys_dept_location_alias.go:GORM AutoMigrate + seed 组合
+func Migrate168ReconciliationTables(db *gorm.DB) error {
+	log.Println("Running migration 168: Phase 42 R1 reconciliation tables + materialized view + unique index")
+
+	// 1. GORM AutoMigrate 两张主表 + 旁路 sys_reconciliation_exception
+	//    GORM 会按 tag 创建列(包括 JSONB / INET / CIDR / text[]),然后我们在下面补 partial unique index。
+	if err := db.AutoMigrate(
+		&models.SysDataReconciliation{},
+		&models.SysReconciliationException{},
+	); err != nil {
+		log.Printf("Migration 168: AutoMigrate reconciliation tables failed: %v", err)
+		return fmt.Errorf("AutoMigrate 对账表失败: %w", err)
+	}
+	log.Println("Migration 168: sys_data_reconciliation + sys_reconciliation_exception 已创建/已存在")
+
+	// 2-5 仅在 PostgreSQL 执行(SQLite 不支持 INET / CIDR / 物化视图)
+	if !isPostgreSQL(db) {
+		applogger.Infof("[迁移] reconciliation 物化视图 + 部分唯一索引 跳过(非 PostgreSQL 数据库)")
+		log.Println("Migration 168 completed (non-PostgreSQL dialect: tables only)")
+		return nil
+	}
+
+	// 2. 物化视图 reconciliation_normalized
+	//    R1 简化版:仅 LEFT JOIN ops_asset ↔ sys_user ↔ sys_ad_user。
+	//    物理链路 sys_port_mac/sys_info_point/sys_workstation_info_point 在 R2 引入。
+	matViewSQL := `
+CREATE MATERIALIZED VIEW IF NOT EXISTS reconciliation_normalized AS
+SELECT
+    a.id                                              AS asset_id,
+    a.devicesn                                        AS asset_code,
+    a.machine_ip                                      AS asset_ip,
+    a.mac1                                            AS mac1,
+    a.mac2                                            AS mac2,
+    COALESCE(NULLIF(a.mac1, ''), NULLIF(a.mac2, ''))  AS mac_join,
+    a.user_id                                         AS asset_user_id,
+    ru.username                                       AS asset_username,
+    a.deleted_at                                      AS asset_deleted_at,
+    -- R2 字段预留(物理链路反推 user_id)
+    NULL::uuid                                        AS physical_user_id,
+    NULL::varchar                                     AS physical_username,
+    -- AD 字段
+    ad.id                                             AS ad_id,
+    ad.username                                       AS ad_username,
+    ad.is_enabled                                     AS ad_is_enabled,
+    -- 检测时间戳(MV 刷新时统一)
+    NOW()                                             AS mv_refreshed_at
+FROM ops_asset a
+LEFT JOIN sys_user ru ON ru.id = a.user_id AND ru.deleted_at IS NULL
+LEFT JOIN sys_ad_user ad ON ad.username = ru.username
+                       AND ad.deleted_at IS NULL
+                       AND ad.is_enabled = TRUE
+WHERE a.deleted_at IS NULL;
+`
+	if err := db.Exec(matViewSQL).Error; err != nil {
+		return fmt.Errorf("创建 reconciliation_normalized 物化视图失败: %w", err)
+	}
+	applogger.Infof("[迁移] 物化视图 reconciliation_normalized 已创建")
+
+	// 3. unique index on reconciliation_normalized(asset_id)
+	//    CONCURRENTLY 刷新物化视图的前置条件
+	uniqueIdxSQL := `
+CREATE UNIQUE INDEX IF NOT EXISTS idx_recon_norm_asset
+    ON reconciliation_normalized (asset_id);
+`
+	if err := db.Exec(uniqueIdxSQL).Error; err != nil {
+		return fmt.Errorf("创建 idx_recon_norm_asset 唯一索引失败: %w", err)
+	}
+	applogger.Infof("[迁移] idx_recon_norm_asset 唯一索引已就位(CONCURRENTLY 刷新前置)")
+
+	// 辅助索引:asset_code JOIN lookup(migration_168 必做,后续 plan 用于按编号查询)
+	codeIdxSQL := `
+CREATE INDEX IF NOT EXISTS idx_recon_norm_asset_code
+    ON reconciliation_normalized (asset_code);
+`
+	if err := db.Exec(codeIdxSQL).Error; err != nil {
+		// 非致命:log 警告即可
+		applogger.Warnf("[迁移] idx_recon_norm_asset_code 创建失败(非致命): %v", err)
+	}
+
+	// 4. partial unique index uniq_recon_asset_type_open (D-11 防告警风暴)
+	//    用 DO $$ 块显式命名,避免 PG 自动命名 `<table>_<col>_key`
+	//    与 GORM uniqueIndex 期望的 `uni_*` 命名规范冲突 (ruoyi-gorm-sql-constraint-naming-conflict 教训)
+	partialUniqueSQL := `
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'uniq_recon_asset_type_open'
+          AND conrelid = 'sys_data_reconciliation'::regclass
+    ) THEN
+        -- 部分唯一索引不能用 ADD CONSTRAINT(只支持 UNIQUE 全列),改用 CREATE UNIQUE INDEX
+        EXECUTE 'CREATE UNIQUE INDEX uniq_recon_asset_type_open
+                 ON sys_data_reconciliation (asset_id, conflict_type)
+                 WHERE resolved_at IS NULL AND deleted_at IS NULL';
+    END IF;
+END$$;
+`
+	if err := db.Exec(partialUniqueSQL).Error; err != nil {
+		return fmt.Errorf("创建 partial unique index uniq_recon_asset_type_open 失败: %w", err)
+	}
+	applogger.Infof("[迁移] partial unique index uniq_recon_asset_type_open 已就位(D-11 防告警风暴)")
+
+	// 5. 验证物化视图可读
+	var count int64
+	if err := db.Raw("SELECT COUNT(*) FROM reconciliation_normalized").Scan(&count).Error; err != nil {
+		return fmt.Errorf("验证 reconciliation_normalized 失败: %w", err)
+	}
+	applogger.Infof("[迁移] reconciliation_normalized 验证通过,初始 %d 行(空 ops_asset 时返回 0)", count)
+
+	log.Println("Migration 168 completed: reconciliation tables + MV + partial unique index ready")
+	return nil
+}
