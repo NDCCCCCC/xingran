@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/gin-gonic/gin"
 	v1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1"
+	assetV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/asset"
 	dutyV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/duty"
 	v1_knowledge "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/knowledge"
 	monitorV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/monitor"
@@ -920,5 +921,29 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		// 使用统一的 RPA 路由设置（排除公开的 worker 接口）
 		rpaV1.SetupRPARouter(rpa, core)
 	}
+
+	// 资产对账模块 (Phase 42 R1)
+	// 新增顶层 /asset/reconciliation 路由组,与 /ops/asset/* 分离避免冲突。
+	// 中间件链:JWTAuth → OperLogMiddleware(D-17 写操作自动记)→ RequirePermissions(读端点同样受权限保护)。
+	// 不在 router.go 预注册通用 /asset/reconciliation/* 路径 — 由 Setup*Router 函数内部注册,
+	// 避免与 Excel 导入路由冲突陷阱(MEMORY: ruoyi-excel-import-route-conflict)。
+	assetReconciliation := r.Group("/asset/reconciliation")
+	assetReconciliation.Use(middleware.JWTAuth(core.JWTManager))
+	// 添加操作日志中间件(D-17:全部写操作都走 operlog)。LogPaths 必须在 pkg/middleware/oper_log.go 追加 /asset/reconciliation 才会触发。
+	assetReconciliation.Use(middleware.OperLogMiddleware(core.OperLogService, core))
+	assetReconciliation.Use(middleware.RequirePermissions([]string{
+		"asset:reconciliation:list",
+		"asset:reconciliation:dashboard",
+		"asset:reconciliation:export",
+	}, core))
+	{
+		// 异常列表读端点 (SetupReconciliationRouter: /exception/list, /exception/:id)
+		assetV1.SetupReconciliationRouter(assetReconciliation, core)
+		// 例外规则读端点 (SetupReconciliationExceptionRouter: /exception-rule/list, /exception-rule/:id)
+		assetV1.SetupReconciliationExceptionRouter(assetReconciliation, core)
+		// 6 个统计端点 (SetupReconciliationStatisticsRouter: /statistics/summary 等)
+		assetV1.SetupReconciliationStatisticsRouter(assetReconciliation, core)
+	}
+
 	// 注意：前端静态文件路由已移至 cmd/main.go，直接注册在 engine 上
 }

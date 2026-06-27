@@ -47,6 +47,8 @@ func DefaultOperLogConfig() *OperLogConfig {
 			"/ops/wall",
 			"/ops/door",
 			"/ops/text",
+			// 资产对账模块 (Phase 42 R1)
+			"/asset/reconciliation",
 		},
 		ExcludePaths: []string{
 			"/list",     // 列表查询不记录
