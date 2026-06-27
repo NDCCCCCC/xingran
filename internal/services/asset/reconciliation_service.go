@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -114,12 +115,35 @@ var reconAllowedSortFields = map[string]string{
 //
 // R1 范围:ListExceptions(分页过滤 + 排序) + GetByID(单条详情)。
 // 写操作 / 标记已解决 / 例外规则 CRUD 见 R2/R3 的独立 service。
+//
+// R2 扩展(Phase 43 / D-A4-04):
+//   - ResolveException:标记异常为已解决,SET resolved_at/resolved_by/resolution_note 三字段;
+//     用于前端异常列表"标记已解决"按钮。
 type ReconciliationService interface {
 	// ListExceptions 列出对账异常(分页 + 过滤 + 白名单排序 + 多表 JOIN)
 	ListExceptions(ctx context.Context, params *ExceptionListParams) (*base.PageResult, error)
 
 	// GetByID 按主键查询单条异常(不带 JOIN,纯主表元数据)
 	GetByID(ctx context.Context, id string) (*models.SysDataReconciliation, error)
+
+	// ResolveException 标记异常为已解决(Phase 43 / D-A4-04)
+	//
+	// 行为:
+	//   1. 按 id 查主表(deleted_at IS NULL 兜底)
+	//   2. 防御:若 resolved_at 已存在 → 返回 error "该异常已标记为已解决",不允许重复 resolve
+	//   3. SET resolved_at = NOW(), resolved_by = userID; resolution_note = note(可选)
+	//   4. 不联动 workorder 关闭(workorder 独立在 workorder UI 关闭,D-A4-04 锁定)
+	//
+	// 入参:
+	//   - ctx: 请求上下文
+	//   - id: 异常主键(uuid)
+	//   - userID: 当前操作用户 id(从 gin context 的 user_id 字段获取)
+	//   - note: resolution_note,可为 nil(留空)或非空字符串
+	//
+	// 返回:
+	//   - 成功 → nil
+	//   - 失败 → error,handler 层映射为 500 / 400 / 404
+	ResolveException(ctx context.Context, id string, userID string, note *string) error
 }
 
 // reconciliationServiceImpl ReconciliationService 私有实现
@@ -390,4 +414,72 @@ func (s *reconciliationServiceImpl) GetByID(ctx context.Context, id string) (*mo
 		return nil, err
 	}
 	return &recon, nil
+}
+
+// ResolveException 标记异常为已解决(Phase 43 R2 / D-A4-04)
+//
+// 行为(详见接口注释):
+//   step 1: SELECT ... WHERE id=? AND deleted_at IS NULL → First
+//   step 2: 防御检查 — 若 resolved_at != nil → 返回 error(不允许重复 resolve)
+//   step 3: 构造 updates map(resolved_at=NOW, resolved_by=userID, resolution_note=note)
+//   step 4: db.Model(&rec).Updates(updates) — GORM 只 SET 包含的字段,避免覆盖其他字段
+//
+// 并发安全:
+//   - 防御 1:layer 2 SELECT resolved_at 检查 → 普通并发可拦截
+//   - 防御 2:GORM Update 本身在 PG 上是单行 UPDATE,原子操作
+//   - 防御 3:即使并发两个 resolve 请求同时进入 step 4,两次 UPDATE 都设置相同的
+//     resolved_at=NOW() + resolved_by=userID,但第二次 UPDATE 不会失败 — 业务上
+//     可接受(同状态被不同用户重写)。若需严格互斥,可在 handler 层加分布式锁;
+//     当前 R2 范围不做。
+//
+// 入参:
+//   - id: 异常主键(uuid)
+//   - userID: 当前操作用户(从 gin context 的 user_id 字段获取)
+//   - note: resolution_note,可为 nil(留空)或非空字符串(运维填的备注)
+//
+// 返回:
+//   - nil: 成功
+//   - errors.New("该异常已标记为已解决"): 重复 resolve 防御
+//   - 其他 err: DB 层错误(handler 层映射 500)
+func (s *reconciliationServiceImpl) ResolveException(ctx context.Context, id string, userID string, note *string) error {
+	if id == "" {
+		return errors.New("异常ID不能为空")
+	}
+	if userID == "" {
+		return errors.New("当前用户ID不能为空")
+	}
+
+	// step 1: 查询异常
+	var rec models.SysDataReconciliation
+	err := s.db.WithContext(ctx).
+		Where("id = ? AND deleted_at IS NULL", id).
+		First(&rec).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("异常不存在")
+		}
+		return fmt.Errorf("查询异常失败: %w", err)
+	}
+
+	// step 2: 已 resolved 不允许重复 resolve(D-A4-04 锁定)
+	if rec.ResolvedAt != nil {
+		return errors.New("该异常已标记为已解决")
+	}
+
+	// step 3: 构造 updates map(GORM Updates 只 SET 包含字段,避免覆盖其他字段)
+	now := time.Now()
+	updates := map[string]interface{}{
+		"resolved_at": now,
+		"resolved_by": userID,
+	}
+	if note != nil && *note != "" {
+		updates["resolution_note"] = *note
+	}
+
+	// step 4: UPDATE
+	if err := s.db.WithContext(ctx).Model(&rec).Updates(updates).Error; err != nil {
+		return fmt.Errorf("更新异常已解决状态失败: %w", err)
+	}
+	applogger.Infof("[reconciliation] 异常已标记为已解决 id=%s userID=%s hasNote=%v", id, userID, note != nil && *note != "")
+	return nil
 }
