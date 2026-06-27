@@ -237,9 +237,15 @@ func (s *ReconciliationWorkorderService) CreateWorkorderFromException(ctx contex
 	if err := s.db.WithContext(ctx).
 		Model(&rec).
 		Update("workorder_id", wo.ID).Error; err != nil {
-		// 工单已创建但 workorder_id 回写失败:log 严重错误(可能产生重复转单)
-		// 下个 cron 周期会重复扫描,但 workorder_id IS NULL 已被其他周期写过会跳过(若第一次失败)
+		// WR-03 修复:工单已创建但 workorder_id 回写失败 → 必须补偿删除孤儿工单。
+		// 否则 workorder_id 仍为 NULL,下个 cron 周期 WHERE workorder_id IS NULL 再次命中,
+		// 重复创建工单。BaseService.Delete 仅删 Pending 状态工单(cron 建单即 Pending,T-43-01)。
 		logrus.Errorf("[reconciliation:workorder] UPDATE workorder_id 失败(工单=%s, 异常=%s): %v", wo.ID, exceptionID, err)
+		if delErr := baseSvc.Delete(ctx, wo.ID); delErr != nil {
+			logrus.Errorf("[reconciliation:workorder] 补偿删除孤儿工单失败(工单=%s): %v — 需人工介入防止重复转单", wo.ID, delErr)
+		} else {
+			logrus.Warnf("[reconciliation:workorder] 已补偿删除孤儿工单 %s(异常=%s),下个 cron 周期将重试转单", wo.ID, exceptionID)
+		}
 		return nil, fmt.Errorf("UPDATE workorder_id 失败: %w", err)
 	}
 

@@ -265,7 +265,7 @@ func (s *reconciliationDetectionImpl) DetectLayer3(ctx context.Context) (int, in
 		// SQLSTATE 22P02 "invalid input syntax for type inet"。这里做轻量校验:含 * 或空格的视为脏数据,
 		// AssetIP 置 nil(不写入),其余字段继续保存,异常检测结论不受影响。
 		if row.AssetIP != nil {
-			if s := *row.AssetIP; s == "" || strings.ContainsAny(s, "* ") {
+			if ip := *row.AssetIP; ip == "" || strings.ContainsAny(ip, "* ") {
 				row.AssetIP = nil
 			}
 		}
