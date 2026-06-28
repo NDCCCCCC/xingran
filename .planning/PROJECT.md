@@ -299,6 +299,7 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 - ✓ Phase 33 Vercel React Best Practices (unlabeled, 2026-06-13) — 4 waves
 - ✓ Phase 34 操作日志全模块集成 + review (2026-06-16) — 11 plans + 7 review-fix commits
 - ✓ Phase 39 工位部门物理位置映射 (workstation dept-location alias) (2026-06-25) — 8 plans + UAT 修复 commits
+- ✓ Phase 44 R3 IP 例外规则引擎 (v1.17 资产对账) (2026-06-28) — 2 plans, CIDR GiST 引擎 + Layer 3.5 拦截 + 例外 CRUD/命中测试 + cron 过期清理 + 转单 no_workorder 过滤 + 降噪基线 + Excel 导入导出; VERIFICATION 10/10 passed, 1 CR-03 gap-closure fix (baseline 路由权限), 4 硬化债 BLOCKER 跟踪
 
 ---
-*Last updated: 2026-06-25 after Phase 39 completion*
+*Last updated: 2026-06-28 after Phase 44 completion*
