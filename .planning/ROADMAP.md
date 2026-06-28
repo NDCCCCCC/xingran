@@ -141,8 +141,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- 45-01: 工位详情页 + 资产详情页整合 + HealthCard/HealthBadge/ReconciliationDrawer 组件
-- 45-02: 跨模块调用 + 权限降级 + N+1 优化 + operlog 接入
+- [ ] 45-01-PLAN.md — 工位详情页 + 资产详情页整合 + HealthCard/HealthBadge/ReconciliationDrawer 组件（INTEGRATE-01/02/03, Wave 1）
+- [ ] 45-02-PLAN.md — 跨模块调用收尾 + R2 转单缓存失效 + IP 解析 + operlog 全覆盖 + VERIFICATION（INTEGRATE-01/02/03, Wave 2）
 
 **UI hint**: yes
 
@@ -179,7 +179,7 @@ Plans:
 | 42. 资产对账观测底座 (R1) | 0/6 | Planning | — |
 | 43. 告警 + 工单闭环 (R2) | 3/3 | Complete    | 2026-06-27 |
 | 44. 置信度评分 + IP 段例外 (R3) | 2/2 | Complete    | 2026-06-28 |
-| 45. 工位详情整合 (R4) | 0/2 | Pending | — |
+| 45. 工位详情整合 (R4) | 0/2 | Ready | — |
 | 46. 半自动修复 (R5, 可选) | 0/2 | Pending | — |
 
 ---
@@ -294,4 +294,4 @@ The full history of Phases 1-39 is preserved below. See also:
 
 ---
 
-*Last updated: 2026-06-26 — Phase 41 Plan 04 Task 1 verification gate PASS (audit-open debug_sessions=0 / verify_phase40.sh [ALL PASS] / validator 100.0%; 29/29 sessions closed; TECH-05+TECH-06 achieved); Task 2 (STATE/ROADMAP/REQUIREMENTS final closure + user final approval + push decision) queued for orchestrator as checkpoint:human-verify*
+*Last updated: 2026-06-28 — Phase 45 planning complete (2 plans: 45-01 INTEGRATE-01/02/03 Wave 1 + 45-02 Wave 2 verification + operlog closure), ready for execute-phase*
