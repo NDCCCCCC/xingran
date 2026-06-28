@@ -27,7 +27,9 @@ import (
 //   - 4 个新端点全部 RequirePermissions,仅持权限角色可调
 //   - list/:id 路由现有无权限中间件(R1 skeleton),R3 保持现状
 //     参照项目记忆 ruoyi-perm-namespace-split-readonly-page 教训:读路径可放宽避免误锁只读场景
-//   - baseline 端点放宽权限(admin 持 list 权限即可访问,与 list/:id 一致;audit-only 场景)
+//   - baseline 端点 RequirePermissions 闭合权限闭环(CR-03 修复):snapshot=exception:create(写),
+//     compare=reconciliation:list(读,模块标准读权限)。verifier 原 suggestion exception:list 未 seed,
+//     改用已 seed 的 reconciliation:list 避免误锁 dashboard 卡片。
 func SetupReconciliationExceptionRouter(r *gin.RouterGroup, core *core.Core) {
 	svc := asset.NewReconciliationExceptionService(core.DB.GetDB())
 	baselineSvc := asset.NewReconciliationBaselineService(core.DB.GetDB())
@@ -53,11 +55,18 @@ func SetupReconciliationExceptionRouter(r *gin.RouterGroup, core *core.Core) {
 		middleware.RequirePermissions([]string{"asset:reconciliation:exception:test"}, core),
 		handler.TestRule)
 
-	// Phase 44 R3 / Plan 44-02 Task 3 — 降噪基线端点(放宽权限:admin 默认持读权限,audit-only)
-	// SnapshotBaseline 是写操作但调 operlog 留痕;CompareBaseline 只读。
-	// 不加 RequirePermissions 避免误锁 dashboard 卡片(参照 list/:id 放宽模式)。
-	r.POST("/baseline/snapshot", handler.SnapshotBaseline)
-	r.POST("/baseline/compare", handler.CompareBaseline)
+	// Phase 44 R3 — 降噪基线端点(CR-03 修复:写端点必须 RequirePermissions,闭合 SC 2/AUDIT-01 权限闭环)
+	// SnapshotBaseline 是写操作(覆盖 sys_config 中 R2 末期基线 + 写 operlog OperTypeUpdate),
+	//   任意认证用户可覆盖会污染 SC 8 ≥60% 降噪分母 → RequirePermissions(create 权限,与 import 一致,admin 持)。
+	// CompareBaseline 是读操作(sys_config + COUNT) → RequirePermissions(asset:reconciliation:list,
+	//   模块标准读权限,与 statistics/summary/exception-list 一致;verifier 建议 exception:list 未 seed,
+	//   改用已 seed 的 reconciliation:list,避免误锁 dashboard)。
+	r.POST("/baseline/snapshot",
+		middleware.RequirePermissions([]string{"asset:reconciliation:exception:create"}, core),
+		handler.SnapshotBaseline)
+	r.POST("/baseline/compare",
+		middleware.RequirePermissions([]string{"asset:reconciliation:list"}, core),
+		handler.CompareBaseline)
 
 	// Phase 44 R3 / Plan 44-02 Task 4 — Excel 导入/导出/模板(SC 9)
 	//

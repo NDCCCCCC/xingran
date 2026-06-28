@@ -83,6 +83,26 @@ func TestExceptionRouter4NewRoutes(t *testing.T) {
 		"test 路由必须 RequirePermissions(asset:reconciliation:exception:test)")
 }
 
+// TestExceptionRouterBaselineRoutesPermissioned 静态断言:baseline 写/读路由均加 RequirePermissions(CR-03 修复)
+// 防回归:SnapshotBaseline 是写操作(覆盖 R2 基线),未授权用户不应能调用;CompareBaseline 读也走模块读权限。
+func TestExceptionRouterBaselineRoutesPermissioned(t *testing.T) {
+	routerSrc := mustReadFile(t, "reconciliation_exception_router.go")
+	// snapshot 写路由必须有 RequirePermissions(exception:create,与 import 一致)
+	assert.Contains(t, routerSrc,
+		`r.POST("/baseline/snapshot",`+"\n"+
+			"\t\tmiddleware.RequirePermissions([]string{\"asset:reconciliation:exception:create\"}, core),",
+		"/baseline/snapshot 写路由必须 RequirePermissions(asset:reconciliation:exception:create) — CR-03 SC2/AUDIT-01 闭合")
+	// compare 读路由必须有 RequirePermissions(reconciliation:list,模块标准读权限,已 seed)
+	assert.Contains(t, routerSrc,
+		`r.POST("/baseline/compare",`+"\n"+
+			"\t\tmiddleware.RequirePermissions([]string{\"asset:reconciliation:list\"}, core),",
+		"/baseline/compare 读路由必须 RequirePermissions(asset:reconciliation:list)")
+	// 防回归:snapshot 路由不能再以裸 handler 形式出现(无中间件)
+	assert.NotContains(t, routerSrc,
+		`r.POST("/baseline/snapshot", handler.SnapshotBaseline)`,
+		"/baseline/snapshot 不允许无 RequirePermissions(CR-03 回归守护)")
+}
+
 // TestModuleReconciliationExceptionRuleConst 静态断言:module 常量存在
 func TestModuleReconciliationExceptionRuleConst(t *testing.T) {
 	src := mustReadFile(t, "reconciliation_handler.go")
