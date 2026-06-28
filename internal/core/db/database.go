@@ -481,6 +481,11 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate173ReconciliationSilenceMV(d.DB); err != nil {
 			applogger.Errorf("Phase 43 R2 资产对账 silence MV 失败: %v", err)
 		}
+		// Phase 44 R3: sys_reconciliation_exception GiST inet_ops 索引 + CHECK 约束
+		// (D-R3-A1-03 命中测试单点查询 + chk_recon_exc_actions / chk_recon_exc_severity_override)
+		if err := migrations.Migrate174ReconciliationExceptionGist(d.DB); err != nil {
+			applogger.Errorf("Phase 44 R3 reconciliation GiST/CHECK 失败: %v", err)
+		}
 		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
 		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
 			applogger.Errorf("MAC 过滤规则表迁移失败: %v", err)
