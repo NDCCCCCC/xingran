@@ -67,7 +67,7 @@ export const queryKeys = {
     /** 例外规则命中统计(R3 启用后才有数据) */
     ruleStats: () => ["reconciliation", "rule-stats"] as const,
     /** 例外规则列表(admin 页,分页 + 筛选) */
-    ruleList: (params?: Record<string, unknown>) =>
+    ruleList: (params?: object) =>
       ["reconciliation", "rule-list", params ?? {}] as const,
     /** 例外规则详情(单条,编辑回填) */
     ruleDetail: (id: string) =>

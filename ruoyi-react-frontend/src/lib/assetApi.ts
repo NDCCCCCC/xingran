@@ -241,51 +241,51 @@ export const reconciliationApi = {
    * 权限命名空间:asset:reconciliation:exception:{list,create,update,delete,test}
    */
   exceptionRule: {
-    list: async (
+    list: async <T = unknown>(
       params: Record<string, unknown> = {}
-    ): Promise<PageResult<Record<string, unknown>>> => {
-      const res = await post<PageResult<Record<string, unknown>>>(
+    ): Promise<PageResult<T>> => {
+      const res = await post<PageResult<T>>(
         "/asset/reconciliation/exception-rule/list",
         params
       );
       return (
-        (res.data ?? { list: [], total: 0, current: 1, pageSize: 20 }) as PageResult<Record<string, unknown>>
+        (res.data ?? { list: [], total: 0, current: 1, pageSize: 20 }) as PageResult<T>
       );
     },
-    getById: async (
+    getById: async <T = unknown>(
       id: string
-    ): Promise<Record<string, unknown>> => {
-      const res = await post<Record<string, unknown>>(
+    ): Promise<T> => {
+      const res = await post<T>(
         `/asset/reconciliation/exception-rule/${id}`,
         {}
       );
-      return res.data as Record<string, unknown>;
+      return res.data as T;
     },
-    create: async (
+    create: async <T = unknown>(
       data: Record<string, unknown>
-    ): Promise<Record<string, unknown>> => {
-      const res = await post<Record<string, unknown>>(
+    ): Promise<T> => {
+      const res = await post<T>(
         "/asset/reconciliation/exception-rule/create",
         data
       );
-      return res.data as Record<string, unknown>;
+      return res.data as T;
     },
-    update: async (
+    update: async <T = unknown>(
       id: string,
       data: Record<string, unknown>
-    ): Promise<Record<string, unknown>> => {
-      const res = await post<Record<string, unknown>>(
+    ): Promise<T> => {
+      const res = await post<T>(
         `/asset/reconciliation/exception-rule/${id}/update`,
         data
       );
-      return res.data as Record<string, unknown>;
+      return res.data as T;
     },
-    delete: async (id: string): Promise<Record<string, unknown>> => {
-      const res = await post<Record<string, unknown>>(
+    delete: async <T = unknown>(id: string): Promise<T> => {
+      const res = await post<T>(
         `/asset/reconciliation/exception-rule/${id}/delete`,
         {}
       );
-      return res.data as Record<string, unknown>;
+      return res.data as T;
     },
     test: async (data: {
       ip: string;
