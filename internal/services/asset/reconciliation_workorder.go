@@ -502,7 +502,11 @@ func (s *ReconciliationWorkorderService) WorkstationIDForException(ctx context.C
 		Row().
 		Scan(&wsID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		// gorm.Row() returns *sql.Row from database/sql, whose Scan() reports
+		// sql.ErrNoRows for the empty case (not gorm.ErrRecordNotFound).
+		// CR-02: check sql.ErrNoRows so expected "no row" returns ("", nil)
+		// and only real DB failures propagate.
+		if errors.Is(err, sql.ErrNoRows) {
 			return "", nil
 		}
 		return "", err

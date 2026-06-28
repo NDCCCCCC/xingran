@@ -1,6 +1,8 @@
 package asset
 
 import (
+	"database/sql"
+	"errors"
 	"net/http"
 	"time"
 
@@ -161,8 +163,10 @@ func (h *ReconciliationHandler) ResolveException(c *gin.Context) {
 	// 注:ResolveException 改动后,reconciliation_normalized.workstation_id 关联的工位健康度
 	// 缓存需要被失效。该工位通过 reconciliation_normalized JOIN sys_data_reconciliation 反查。
 	// 失败仅 logrus.Warnf(不影响 operlog 写入),与 scheduler 路径保持一致。
-	var wsID string
-	_ = h.core.GetDB().WithContext(c.Request.Context()).
+	// CR-02 修复:gorm.Row().Scan() 返回 sql.ErrNoRows(不是 gorm.ErrRecordNotFound),
+	// 这里与 scheduler 调用 WorkstationIDForException 保持一致的 sql.ErrNoRows 语义。
+	var wsID sql.NullString
+	scanErr := h.core.GetDB().WithContext(c.Request.Context()).
 		Table("reconciliation_normalized").
 		Select("reconciliation_normalized.workstation_id").
 		Joins("JOIN sys_data_reconciliation ON sys_data_reconciliation.asset_id = reconciliation_normalized.asset_id").
@@ -170,9 +174,13 @@ func (h *ReconciliationHandler) ResolveException(c *gin.Context) {
 		Limit(1).
 		Row().
 		Scan(&wsID)
-	if wsID != "" {
-		if invErr := asset.InvalidateWorkstationHealth(c.Request.Context(), h.core.Cache, wsID); invErr != nil {
-			applogger.Warnf("[reconciliation:ResolveException] R4 invalidate cache failed exceptionID=%s wsID=%s: %v", id, wsID, invErr)
+	if scanErr != nil && !errors.Is(scanErr, sql.ErrNoRows) {
+		// 真实 DB 故障(非 "no row" 情况)记 warning,但不阻断 operlog 写入
+		applogger.Warnf("[reconciliation:ResolveException] R4 query workstation failed exceptionID=%s: %v", id, scanErr)
+	}
+	if wsID.Valid && wsID.String != "" {
+		if invErr := asset.InvalidateWorkstationHealth(c.Request.Context(), h.core.Cache, wsID.String); invErr != nil {
+			applogger.Warnf("[reconciliation:ResolveException] R4 invalidate cache failed exceptionID=%s wsID=%s: %v", id, wsID.String, invErr)
 		}
 	}
 
