@@ -99,6 +99,82 @@ func TestOperlogRegressionStillPasses(t *testing.T) {
 	t.Skip("operlog 回归由 plan-level `go test ./internal/utils/operlog/ -count=1` 验收,本测试占位防漏跑")
 }
 
+// ============================================================================
+// Phase 44 R3 / Plan 44-02 Task 3 — SnapshotBaseline + CompareBaseline handler
+//
+// 44-01 Task 5 仅产出 CreateRule/UpdateRule/DeleteRule/TestRule。本 plan Task 3 新增
+// baseline handler(后端实现,BLOCKER-2)。SnapshotBaseline 是写操作调 operlog.Record,
+// CompareBaseline 是读操作不调 operlog。
+// ============================================================================
+
+// TestSnapshotBaselineHandlerExists 静态断言:SnapshotBaseline handler 存在
+func TestSnapshotBaselineHandlerExists(t *testing.T) {
+	src := mustReadHandlerSrc(t)
+	assert.Contains(t, src, "func (h *ReconciliationExceptionHandler) SnapshotBaseline(",
+		"SnapshotBaseline handler 必须存在(BLOCKER-2: 44-01 未实现后端 baseline handler)")
+}
+
+// TestSnapshotBaselineHandlerOperlog 静态断言:SnapshotBaseline 调 operlog.Record(OperTypeUpdate)
+//
+// SnapshotBaseline 写 sys_config(覆盖现有 baseline),是写操作,success path 必须调 operlog。
+// 用 OperTypeUpdate 而非 Create(基线是"更新当前快照"语义,二次调用覆盖)。
+func TestSnapshotBaselineHandlerOperlog(t *testing.T) {
+	src := mustReadHandlerSrc(t)
+	assert.Contains(t, src,
+		"operlog.Record(c, h.core.OperLogService, h.core.GetDB(), ModuleReconciliationExceptionRule, operlog.OperTypeUpdate)",
+		"SnapshotBaseline 必须调 operlog.Record(OperTypeUpdate)")
+	// 提取 SnapshotBaseline 函数体,确认 operlog 在函数体内
+	body := extractFuncBody(src, "SnapshotBaseline")
+	assert.Contains(t, body, "operlog.Record",
+		"SnapshotBaseline 函数体必须含 operlog.Record 调用")
+}
+
+// TestCompareBaselineHandlerExists 静态断言:CompareBaseline handler 存在
+func TestCompareBaselineHandlerExists(t *testing.T) {
+	src := mustReadHandlerSrc(t)
+	assert.Contains(t, src, "func (h *ReconciliationExceptionHandler) CompareBaseline(",
+		"CompareBaseline handler 必须存在(BLOCKER-2)")
+}
+
+// TestCompareBaselineHandlerNoOperlog 静态断言:CompareBaseline 是读操作,不调 operlog.Record
+func TestCompareBaselineHandlerNoOperlog(t *testing.T) {
+	src := mustReadHandlerSrc(t)
+	body := extractFuncBody(src, "CompareBaseline")
+	assert.NotEmpty(t, body, "CompareBaseline 函数体必须存在")
+	assert.NotContains(t, body, "operlog.Record",
+		"CompareBaseline 是读操作(读 sys_config + COUNT),不调 operlog.Record")
+}
+
+// TestCompareBaselineHandler400OnNoBaseline 静态断言:无 baseline 时返回 400
+//
+// service.Compare 在无 baseline 时返回 error,handler 应映射为 http.StatusBadRequest
+// 前端依赖此 400 状态码渲染"请先记录基线"Alert(BLOCKER-3 可观察条件)。
+func TestCompareBaselineHandler400OnNoBaseline(t *testing.T) {
+	src := mustReadHandlerSrc(t)
+	body := extractFuncBody(src, "CompareBaseline")
+	assert.Contains(t, body, "http.StatusBadRequest",
+		"CompareBaseline handler 在 service 返回 error(无 baseline)时必须返回 400")
+}
+
+// TestReconciliationExceptionHandlerHasBaselineSvcField 静态断言:struct 含 baselineSvc 字段
+func TestReconciliationExceptionHandlerHasBaselineSvcField(t *testing.T) {
+	src := mustReadHandlerSrc(t)
+	assert.Contains(t, src, "baselineSvc asset.ReconciliationBaselineService",
+		"ReconciliationExceptionHandler struct 必须含 baselineSvc 字段(Task 3 注入)")
+}
+
+// TestBaselineRouter2Routes 静态断言:router 含 /baseline/snapshot + /baseline/compare
+func TestBaselineRouter2Routes(t *testing.T) {
+	routerSrc := mustReadFile(t, "reconciliation_exception_router.go")
+	assert.Contains(t, routerSrc, `r.POST("/baseline/snapshot"`,
+		"router 必须含 /baseline/snapshot 路由")
+	assert.Contains(t, routerSrc, `r.POST("/baseline/compare"`,
+		"router 必须含 /baseline/compare 路由")
+	// 构造 baselineSvc 并注入 handler
+	assert.Contains(t, routerSrc, "NewReconciliationBaselineService",
+		"router 必须构造 baseline service 并注入 handler")
+}
+
 // helpers
 
 func mustReadHandlerSrc(t *testing.T) string {
