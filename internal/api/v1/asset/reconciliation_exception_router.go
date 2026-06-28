@@ -19,13 +19,21 @@ import (
 //   POST /exception-rule/:id/delete     -> handler.DeleteRule    (RequirePermissions asset:reconciliation:exception:delete)
 //   POST /exception-rule/test           -> handler.TestRule      (RequirePermissions asset:reconciliation:exception:test)
 //
+// Phase 44 R3 / Plan 44-02 Task 3 新增(降噪基线):
+//   POST /baseline/snapshot             -> handler.SnapshotBaseline (写 sys_config, 调 operlog OperTypeUpdate)
+//   POST /baseline/compare              -> handler.CompareBaseline  (读 sys_config + COUNT, 不调 operlog)
+//
 // 权限粒度参考 44-CONTEXT.md(T-44-02 越权创建例外规则缓解):
 //   - 4 个新端点全部 RequirePermissions,仅持权限角色可调
 //   - list/:id 路由现有无权限中间件(R1 skeleton),R3 保持现状
 //     参照项目记忆 ruoyi-perm-namespace-split-readonly-page 教训:读路径可放宽避免误锁只读场景
+//   - baseline 端点放宽权限(admin 持 list 权限即可访问,与 list/:id 一致;audit-only 场景)
 func SetupReconciliationExceptionRouter(r *gin.RouterGroup, core *core.Core) {
 	svc := asset.NewReconciliationExceptionService(core.DB.GetDB())
-	handler := NewReconciliationExceptionHandler(svc).WithCore(core)
+	baselineSvc := asset.NewReconciliationBaselineService(core.DB.GetDB())
+	handler := NewReconciliationExceptionHandler(svc).
+		WithCore(core).
+		WithBaselineService(baselineSvc)
 
 	// R1 只读端点(无 RequirePermissions,放宽读路径)
 	r.POST("/exception-rule/list", handler.ListRules)
@@ -44,4 +52,10 @@ func SetupReconciliationExceptionRouter(r *gin.RouterGroup, core *core.Core) {
 	r.POST("/exception-rule/test",
 		middleware.RequirePermissions([]string{"asset:reconciliation:exception:test"}, core),
 		handler.TestRule)
+
+	// Phase 44 R3 / Plan 44-02 Task 3 — 降噪基线端点(放宽权限:admin 默认持读权限,audit-only)
+	// SnapshotBaseline 是写操作但调 operlog 留痕;CompareBaseline 只读。
+	// 不加 RequirePermissions 避免误锁 dashboard 卡片(参照 list/:id 放宽模式)。
+	r.POST("/baseline/snapshot", handler.SnapshotBaseline)
+	r.POST("/baseline/compare", handler.CompareBaseline)
 }

@@ -15,9 +15,12 @@ import (
 // R1 边界: 仅 List + GetByID skeleton,R3 实现 Create/Update/Delete/enable/disable。
 // 例外规则 seed 数据已就位(42-01 migration_169),R1 仅提供只读查询入口,
 // 不调 operlog.Record(读操作)。
+//
+// Phase 44 R3 / Plan 44-02 Task 3: 加 baselineSvc 字段(降噪基线 Snapshot/Compare)。
 type ReconciliationExceptionHandler struct {
-	service asset.ReconciliationExceptionService
-	core    *core.Core
+	service    asset.ReconciliationExceptionService
+	core       *core.Core
+	baselineSvc asset.ReconciliationBaselineService
 }
 
 func NewReconciliationExceptionHandler(svc asset.ReconciliationExceptionService) *ReconciliationExceptionHandler {
@@ -27,6 +30,16 @@ func NewReconciliationExceptionHandler(svc asset.ReconciliationExceptionService)
 func (h *ReconciliationExceptionHandler) WithCore(core *core.Core) *ReconciliationExceptionHandler {
 	if h != nil {
 		h.core = core
+	}
+	return h
+}
+
+// WithBaselineService 注入 baseline service(Phase 44 R3 / Plan 44-02 Task 3)
+//
+// 链式注入,与 WithCore 模式一致。router 内构造 baselineSvc 后调用本方法。
+func (h *ReconciliationExceptionHandler) WithBaselineService(svc asset.ReconciliationBaselineService) *ReconciliationExceptionHandler {
+	if h != nil {
+		h.baselineSvc = svc
 	}
 	return h
 }
@@ -177,6 +190,70 @@ func (h *ReconciliationExceptionHandler) TestRule(c *gin.Context) {
 	result, err := h.service.MatchTest(c.Request.Context(), req.IP, req.UserID, req.DeptID)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(c, result)
+}
+
+// ============================================================================
+// Phase 44 R3 / Plan 44-02 Task 3 — 降噪基线 Snapshot / Compare handler (BLOCKER-2)
+//
+// 44-01 Task 5 仅产出 CreateRule/UpdateRule/DeleteRule/TestRule。本 plan Task 3 在
+// handler 文件新增 SnapshotBaseline + CompareBaseline 两个 handler(后端实现)。
+//
+// operlog 强制约定(CLAUDE.md):
+//   - SnapshotBaseline: 写操作(写 sys_config 覆盖现有 baseline)→ success path 末尾
+//     调 operlog.Record(OperTypeUpdate),基线是"更新当前快照"语义
+//   - CompareBaseline: 读操作(读 sys_config + COUNT)→ 不调 operlog.Record
+// ============================================================================
+
+// SnapshotBaseline 记录当前为基线(D-R3-A4-01)
+//
+// ⚠ 运维责任(BLOCKER-3):R3 部署前 + R2 数据保留期内必须调用本端点记录 R2 末期基线,
+// 否则 dashboard "降噪效果"卡片无法显示(SC 8 ≥60% 降噪不可量化验证)。
+// 无 baseline 时 CompareBaseline 返回 400,前端显示引导提示。
+//
+// 行为:
+//  1. baselineSvc.Snapshot 失败 → 500
+//  2. success path 末尾 operlog.Record(OperTypeUpdate) → 写 sys_oper_log
+//  3. response.Success(snapshot)
+func (h *ReconciliationExceptionHandler) SnapshotBaseline(c *gin.Context) {
+	if h.baselineSvc == nil {
+		response.Error(c, http.StatusInternalServerError, "baseline service 未注入")
+		return
+	}
+
+	snapshot, err := h.baselineSvc.Snapshot(c.Request.Context())
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// operlog 写入(CLAUDE.md 强制约定,基线是更新语义 → OperTypeUpdate)
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), ModuleReconciliationExceptionRule, operlog.OperTypeUpdate)
+
+	response.Success(c, snapshot)
+}
+
+// CompareBaseline 对比当前与 baseline,返回下降百分比(D-R3-A4-01)
+//
+// 读操作 — 不调 operlog.Record(参考 TestRule/Compare 只读路径)。
+//
+// 行为:
+//  1. baselineSvc.Compare 失败(含 "未找到基线") → 400(前端依赖此状态码显示引导提示)
+//  2. 其他 service 失败 → 500
+//  3. success → response.Success(result)
+func (h *ReconciliationExceptionHandler) CompareBaseline(c *gin.Context) {
+	if h.baselineSvc == nil {
+		response.Error(c, http.StatusInternalServerError, "baseline service 未注入")
+		return
+	}
+
+	result, err := h.baselineSvc.Compare(c.Request.Context())
+	if err != nil {
+		// 无 baseline 时返回 400,前端 Alert 引导运维先记录基线(BLOCKER-3 可观察条件)
+		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
 

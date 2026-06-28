@@ -7,18 +7,21 @@
  *       1. 饼图 按冲突类型(Type A-F) — 点击扇区 → 跳 /exceptions?type=X
  *       2. 柱状图 按严重级别(low/medium/high/critical) — 点击柱条 → 跳 /exceptions?severity=Y
  *       3. 趋势图 7d 健康度(3 条线: openCount / criticalCount / newCount)
+ *   - Phase 44 R3 降噪效果卡片(3 个下降% + 无 baseline 引导 Alert)
  *
  * 设计要点:
  *   - 所有 KPI 走 useDashboard() 独立 useQuery,**严禁**用 list.length 路径
  *     (memory: stat-cards-from-list-length-capped-at-100)
  *   - 图表 click 事件通过 onEvents 实现 → navigate D-05 双向打通
  *   - 图表用 EChartsWrapper(懒加载,见 memory: vendor-react-bundle-composition)
+ *   - Phase 44 R3 降噪卡片用 reconciliationApi.baseline.compare()(独立 COUNT 端点,
+ *     规避 MaxPageSize=100;queryKey 用 queryKeys.reconciliation.baselineCompare())
  */
 
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
-import { Card, Row, Col, Spin, Empty, Alert, Badge, App } from "antd";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Card, Row, Col, Spin, Empty, Alert, Badge, Statistic, Tag, App } from "antd";
 import {
   AppstoreOutlined,
   WarningOutlined,
@@ -29,6 +32,8 @@ import {
 import ReactECharts from "@/components/charts/EChartsWrapper";
 import { useDashboard } from "@/hooks/useDashboard";
 import { useReconciliationWebSocket } from "@/hooks/useReconciliationWebSocket";
+import { reconciliationApi } from "@/lib/assetApi";
+import { queryKeys } from "@/lib/queryKeys";
 
 /** 7d 默认窗口,后续可加 30d/90d 切换 */
 const DEFAULT_WINDOW_DAYS = 7;
@@ -75,6 +80,38 @@ const Dashboard = () => {
       });
     },
   });
+
+  // Phase 44 R3 / Plan 44-02 Task 3 — 降噪基线对比(SC 8 ≥60% 降噪量化验证)
+  //
+  // 用 queryKeys.reconciliation.baselineCompare() 稳定 queryKey(CLAUDE.md useEffect 稳定性)。
+  // CompareBaseline 在无 baseline 时返回 400 → 用 isError 渲染引导 Alert(BLOCKER-3 可观察条件)。
+  // 有 baseline 时显示 3 个下降% Statistic(异常 / 工单 / Critical)。
+  const baselineCompareQuery = useQuery({
+    queryKey: queryKeys.reconciliation.baselineCompare(),
+    queryFn: () => reconciliationApi.baseline.compare(),
+    retry: false, // 400 不重试(无 baseline 是合法状态,引导用户去 exception-rules 记录)
+  });
+
+  // 计算 3 个下降% (baselineCompareQuery.data 字段是后端 BaselineCompareResult snake_case)
+  const reductions = useMemo(() => {
+    const d = baselineCompareQuery.data;
+    if (!d) return null;
+    // 后端 BaselineCompareResult 字段: exceptions_reduction_pct / workorders_reduction_pct / critical_reduction_pct
+    // (assetApi baseline.compare 返回类型当前用 reductions map, 后端实际返回结构体字段)
+    const excPct =
+      (d as unknown as { exceptions_reduction_pct?: number }).exceptions_reduction_pct ??
+      (d.reductions?.exceptions_reduction_pct as number | undefined) ??
+      0;
+    const woPct =
+      (d as unknown as { workorders_reduction_pct?: number }).workorders_reduction_pct ??
+      (d.reductions?.workorders_reduction_pct as number | undefined) ??
+      0;
+    const critPct =
+      (d as unknown as { critical_reduction_pct?: number }).critical_reduction_pct ??
+      (d.reductions?.critical_reduction_pct as number | undefined) ??
+      0;
+    return { excPct, woPct, critPct };
+  }, [baselineCompareQuery.data]);
 
   // 饼图 option — 6 keys(空数据 0)
   const pieOption = useMemo(() => {
@@ -289,6 +326,87 @@ const Dashboard = () => {
           </Col>
         </Row>
       </Spin>
+
+      {/* Phase 44 R3 / Plan 44-02 Task 3 — 降噪效果卡片(SC 8 ≥60% 降噪量化验证)
+          * 前置:运维必须先在 /assets/exception-rules 点"记录当前为基线"按钮记录 R2 末期基线
+          * 无 baseline 时 compare 返回 400 → 显示 Alert 引导(BLOCKER-3 可观察条件)
+          * 有 baseline 时显示 3 个下降% Statistic, ≥60% 绿色达标 + Tag, <60% 橙色未达标 */}
+      <Card
+        title="降噪效果(SC 8 ≥60% 降噪验证)"
+        style={{ marginTop: 16 }}
+        extra={
+          reductions && (
+            <Tag color={reductions.excPct >= 60 && reductions.woPct >= 60 && reductions.critPct >= 60 ? "success" : "warning"}>
+              {reductions.excPct >= 60 && reductions.woPct >= 60 && reductions.critPct >= 60
+                ? "达标"
+                : "未达标"}
+            </Tag>
+          )
+        }
+      >
+        {baselineCompareQuery.isLoading ? (
+          <Spin />
+        ) : baselineCompareQuery.isError ? (
+          // 无 baseline 时引导运维去 exception-rules 页记录(BLOCKER-3 可观察条件)
+          <Alert
+            type="info"
+            showIcon
+            message="请先到例外规则管理页记录基线"
+            description={
+              <>
+                R3 部署前 + R2 数据保留期内必须调用 Snapshot 记录 R2 末期基线,否则 SC 8
+                ≥60% 降噪不可量化验证。前往{" "}
+                <a href="/assets/exception-rules" rel="noreferrer">
+                  例外规则管理
+                </a>{" "}
+                点击"记录当前为基线"按钮。
+              </>
+            }
+          />
+        ) : reductions ? (
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={8}>
+              <Statistic
+                title="异常下降%"
+                value={reductions.excPct}
+                precision={1}
+                suffix="%"
+                valueStyle={{ color: reductions.excPct >= 60 ? "#52c41a" : "#faad14" }}
+              />
+              <small style={{ color: "var(--theme-text-secondary, #888)" }}>
+                baseline {baselineCompareQuery.data?.baseline?.total_exceptions ?? 0} →{" "}
+                current {baselineCompareQuery.data?.current?.total_exceptions ?? 0}
+              </small>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Statistic
+                title="工单下降%"
+                value={reductions.woPct}
+                precision={1}
+                suffix="%"
+                valueStyle={{ color: reductions.woPct >= 60 ? "#52c41a" : "#faad14" }}
+              />
+              <small style={{ color: "var(--theme-text-secondary, #888)" }}>
+                baseline {baselineCompareQuery.data?.baseline?.total_workorders ?? 0} →{" "}
+                current {baselineCompareQuery.data?.current?.total_workorders ?? 0}
+              </small>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Statistic
+                title="Critical 下降%"
+                value={reductions.critPct}
+                precision={1}
+                suffix="%"
+                valueStyle={{ color: reductions.critPct >= 60 ? "#52c41a" : "#faad14" }}
+              />
+              <small style={{ color: "var(--theme-text-secondary, #888)" }}>
+                baseline {baselineCompareQuery.data?.baseline?.critical_exceptions ?? 0} →{" "}
+                current {baselineCompareQuery.data?.current?.critical_exceptions ?? 0}
+              </small>
+            </Col>
+          </Row>
+        ) : null}
+      </Card>
 
       {/* 3 个图表 */}
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
