@@ -39,6 +39,12 @@ import { useColumnConfig } from "@/hooks/useColumnConfig";
 import { ColumnConfigModal } from "@/components/shared/ColumnConfigModal";
 import { AssetRow } from "@/components/table/AssetRow";
 import { createSorterMeta } from "@/utils/tableHelpers";
+import {
+  HealthBadge,
+  ReconciliationDrawer,
+  useReconciliationVisibility,
+  type DrawerTabKey,
+} from "@/components/reconciliation";
 
 const { Option } = Select;
 
@@ -149,6 +155,18 @@ const AssetList: FC = () => {
   const [deviceTypeOptions, setDeviceTypeOptions] = useState<DeviceTypeOption[]>([]);
   const [deviceCategoryOptions, setDeviceCategoryOptions] = useState<DeviceTypeOption[]>([]);
   const [showColumnConfig, setShowColumnConfig] = useState(false);
+
+  // R4 (Phase 45) — ReconciliationDrawer state (lifts to page level per UI-SPEC)
+  const [drawerState, setDrawerState] = useState<{
+    open: boolean;
+    assetId: string | null;
+    workstationId: string | null;
+    assetCode?: string;
+    activeTab: DrawerTabKey;
+  }>({ open: false, assetId: null, workstationId: null, activeTab: "summary" });
+
+  const _reconciliationVisible = useReconciliationVisibility();
+  void _reconciliationVisible;
 
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
@@ -418,6 +436,28 @@ const AssetList: FC = () => {
         />
       ),
     },
+    // R4 (Phase 45) — 对账健康列(行内徽标,assets 列表)
+    {
+      title: "对账健康",
+      key: "reconciliation",
+      width: 96,
+      render: (_: unknown, record: Asset) => (
+        <HealthBadge
+          assetId={record.id ?? ""}
+          conflictType={null}
+          onClick={(id) =>
+            setDrawerState({
+              open: true,
+              assetId: id,
+              // Asset 类型无 workstationId 字段;Plan 02 接入工位关联后填充
+              workstationId: null,
+              assetCode: record.devicesn,
+              activeTab: "summary",
+            })
+          }
+        />
+      ),
+    },
   ];
 
   // 根据列配置过滤和排序列
@@ -602,6 +642,32 @@ const AssetList: FC = () => {
         onReset={resetConfig}
         onClose={() => setShowColumnConfig(false)}
         saving={configSaving}
+      />
+
+      {/* R4 (Phase 45) — ReconciliationDrawer at page level */}
+      <ReconciliationDrawer
+        open={drawerState.open}
+        onClose={() =>
+          setDrawerState((s) => ({ ...s, open: false, activeTab: "summary" }))
+        }
+        selectedAssetId={drawerState.assetId}
+        workstationId={drawerState.workstationId}
+        assetCode={drawerState.assetCode}
+        activeTab={drawerState.activeTab}
+        onTabChange={(k) => setDrawerState((s) => ({ ...s, activeTab: k }))}
+        onApplyException={() => {
+          const params = new URLSearchParams();
+          if (drawerState.workstationId) {
+            params.set("workstationId", drawerState.workstationId);
+          }
+          if (drawerState.assetId) {
+            params.set("assetId", drawerState.assetId);
+          }
+          window.open(
+            `/asset/reconciliation/exception-rules/new?${params.toString()}`,
+            "_blank"
+          );
+        }}
       />
     </div>
   );

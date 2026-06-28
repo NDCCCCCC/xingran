@@ -46,6 +46,13 @@ import { buildingApi, floorApi, workstationApi } from "@/lib/opsApi";
 import WorkstationDeviceTable from "@/components/operations/WorkstationDeviceTable";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { useMenuStore } from "@/store/menuStore";
+import {
+  HealthCard,
+  ReconciliationDrawer,
+  useWorkstationHealth,
+  useReconciliationVisibility,
+  type DrawerTabKey,
+} from "@/components/reconciliation";
 
 // Cascader 选项类型
 type CascaderOption = {
@@ -111,6 +118,36 @@ const WorkstationManagement: FC = () => {
 
   // 控制子表（设备列表）展开/收起 — 整行点击切换
   const [expandedRowKeys, setExpandedRowKeys] = useState<React.Key[]>([]);
+
+  // R4 (Phase 45) — Lift state for reconciliation integration (B6 lift)
+  //
+  // expandedWorkstationId:取展开行的第一行作为"激活工位"
+  // workstationHealthQuery:在 page level 调一次 useWorkstationHealth,避免 WorkstationDeviceTable
+  //   内每行 N+1 useQuery
+  // assetConflictMap:从 query.data.assets 提取 assetId → conflictType 映射,通过 prop 下传
+  const expandedWorkstationId =
+    expandedRowKeys.length > 0 ? String(expandedRowKeys[0]) : "";
+  const workstationHealthQuery = useWorkstationHealth(expandedWorkstationId);
+  const assetConflictMap = useMemo(() => {
+    const m = new Map<string, string>();
+    (workstationHealthQuery.data?.assets ?? []).forEach((a) => {
+      if (a.conflictType) {
+        m.set(a.assetId, a.conflictType);
+      }
+    });
+    return m;
+  }, [workstationHealthQuery.data?.assets]);
+
+  // Drawer state (lifts to page level per UI-SPEC "Both pages — at page level: render once")
+  const [drawerState, setDrawerState] = useState<{
+    open: boolean;
+    assetId: string | null;
+    workstationId: string | null;
+    assetCode?: string;
+    activeTab: DrawerTabKey;
+  }>({ open: false, assetId: null, workstationId: null, activeTab: "summary" });
+
+  const reconciliationVisible = useReconciliationVisibility();
 
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
   const { selectedDeptId, handleDeptSelect } = useSidebarDeptFilter({
@@ -538,10 +575,33 @@ const WorkstationManagement: FC = () => {
           }}
           expandable={{
             expandedRowRender: (record: WorkstationOps) => (
-              <WorkstationDeviceTable
-                workstationId={record.id}
-                onDeviceChange={refreshData}
-              />
+              <div>
+                {/* R4 (Phase 45) — HealthCard 嵌入工位 expand 顶部 (D-A1-01) */}
+                {reconciliationVisible && (
+                  <HealthCard
+                    workstationId={record.id}
+                    onApplyException={() => {
+                      window.open(
+                        `/asset/reconciliation/exception-rules/new?workstationId=${record.id}`,
+                        "_blank"
+                      );
+                    }}
+                  />
+                )}
+                <WorkstationDeviceTable
+                  workstationId={record.id}
+                  conflictTypeMap={assetConflictMap}
+                  onDeviceChange={refreshData}
+                  onBadgeClick={(assetId, conflictType) =>
+                    setDrawerState({
+                      open: true,
+                      assetId,
+                      workstationId: record.id,
+                      activeTab: "summary",
+                    })
+                  }
+                />
+              </div>
             ),
             rowExpandable: () => true,
             // 收紧展开图标列宽度（默认 48px → 40px），与复选框列对齐
@@ -761,6 +821,30 @@ const WorkstationManagement: FC = () => {
           visible={exportVisible}
           onClose={() => setExportVisible(false)}
           filters={exportFilters}
+        />
+        {/* R4 (Phase 45) — ReconciliationDrawer at page level (UI-SPEC "Both pages — at page level: render once") */}
+        <ReconciliationDrawer
+          open={drawerState.open}
+          onClose={() =>
+            setDrawerState((s) => ({ ...s, open: false, activeTab: "summary" }))
+          }
+          selectedAssetId={drawerState.assetId}
+          workstationId={drawerState.workstationId}
+          activeTab={drawerState.activeTab}
+          onTabChange={(k) => setDrawerState((s) => ({ ...s, activeTab: k }))}
+          onApplyException={() => {
+            const params = new URLSearchParams();
+            if (drawerState.workstationId) {
+              params.set("workstationId", drawerState.workstationId);
+            }
+            if (drawerState.assetId) {
+              params.set("assetId", drawerState.assetId);
+            }
+            window.open(
+              `/asset/reconciliation/exception-rules/new?${params.toString()}`,
+              "_blank"
+            );
+          }}
         />
       </Content>
     </Layout>

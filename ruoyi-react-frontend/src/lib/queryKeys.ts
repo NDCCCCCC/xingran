@@ -78,6 +78,12 @@ export const queryKeys = {
     /** 降噪基线对比结果(dashboard 降噪卡片) */
     baselineCompare: () =>
       ["reconciliation", "baseline-compare"] as const,
+    /** Phase 45 R4 — 工位对账健康度(POST /asset/reconciliation/by-workstation) */
+    workstationHealth: (workstationId: string) =>
+      ["reconciliation", "workstation-health", workstationId] as const,
+    /** Phase 45 R4 — 资产对账健康度(从 workstationHealth 切片,无独立端点) */
+    assetHealth: (assetId: string) =>
+      ["reconciliation", "asset-health", assetId] as const,
   },
 } as const;
 

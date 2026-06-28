@@ -112,6 +112,49 @@ export interface PageResult<T> {
   pageSize: number;
 }
 
+// ==================== Phase 45 R4 — Types ====================
+
+/**
+ * 工位对账健康度聚合响应(POST /asset/reconciliation/by-workstation)
+ * D-A4-02 锁定:Workstation/HealthScore/Assets/Visible
+ */
+export interface ByWorkstationResponse {
+  workstation: { id: string; name: string; code: string };
+  healthScore: HealthScore;
+  assets: AssetHealthItem[];
+  /** 权限降级标记(D-A1-03):false 时 Assets 已被后端清空,前端渲染 "-" */
+  visible: boolean;
+}
+
+/**
+ * 5 KPI 卡片数据 + 趋势 — 复用 R1 TrendPoint 形态
+ * 字段命名严格对齐后端 HealthScore struct
+ */
+export interface HealthScore {
+  total: number;
+  normal: number;
+  drift: number;
+  conflict: number;
+  noData: number;
+  exceptionHit: number;
+  score: number;
+  trend: TrendPoint[];
+}
+
+export interface AssetHealthItem {
+  assetId: string;
+  assetCode: string;
+  /** 冲突类型 A-F 或 ""(健康) */
+  conflictType: string;
+  /** 严重度 low/medium/high/critical 或 "" */
+  severity: string;
+  exceptionRuleId?: string | null;
+  appliedActions?: string[];
+  confidenceScore: number;
+  /** 解析后的 IP(asset.ip → workstation.ip → "unknown",D-A4-02) */
+  ip?: string;
+}
+
 // ==================== reconciliationApi 工厂 ====================
 
 /**
@@ -232,6 +275,26 @@ export const reconciliationApi = {
       body
     );
     return res.data as { id: string; resolvedAt: string; resolvedBy: string; resolutionNote?: string };
+  },
+
+  /**
+   * Phase 45 R4 — 工位对账健康度聚合(D-A4-01/02/03)
+   *
+   * 单次拿完顶部卡片 + 资产子表徽标 + 详情跳转锚点(避免 N+1,与 SC7 一致)。
+   * 缓存 TTL 5min(后端 CacheProvider.GetOrSet,handler 注入 visible 标记)。
+   */
+  byWorkstation: async (data: {
+    workstationId: string;
+    window?: string;
+  }): Promise<ByWorkstationResponse> => {
+    const res = await post<ByWorkstationResponse>(
+      "/asset/reconciliation/by-workstation",
+      {
+        workstationId: data.workstationId,
+        window: data.window ?? "7d",
+      }
+    );
+    return res.data as ByWorkstationResponse;
   },
 
   /**

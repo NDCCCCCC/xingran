@@ -12,16 +12,22 @@ import type { WorkstationDevice, DeviceFormData, DeviceSource, Asset } from "@/t
 import { DEVICE_SOURCE_LABELS } from "@/types/operations";
 import { workstationDeviceApi, assetApi } from "@/lib/opsApi";
 import { usePagination } from "@/hooks/usePagination";
+import { HealthBadge } from "@/components/reconciliation";
 
 export interface WorkstationDeviceTableProps {
   workstationId: string;
   expandable?: boolean;
   onDeviceChange?: () => void;
+  // R4 (Phase 45) — 从父级 lift 注入的对账徽标数据(B6 修复 N+1)
+  conflictTypeMap?: Map<string, string>;
+  onBadgeClick?: (assetId: string, conflictType: string) => void;
 }
 
 export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
   workstationId,
-  onDeviceChange
+  onDeviceChange,
+  conflictTypeMap,
+  onBadgeClick,
 }) => {
   // 分开存储三种来源的设备
   const { message } = App.useApp();
@@ -321,6 +327,23 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
           {status === 0 ? "正常" : "停用"}
         </Tag>
       ),
+    },
+    // R4 (Phase 45) — 对账健康列(行内徽标,从父级 lift 的 conflictTypeMap 取)
+    {
+      title: "对账健康",
+      key: "reconciliation",
+      width: 96,
+      render: (_: unknown, record: WorkstationDevice) => {
+        const aid = record.assetId;
+        const ct = (aid && conflictTypeMap?.get(aid)) || null;
+        return (
+          <HealthBadge
+            assetId={aid ?? ""}
+            conflictType={ct}
+            onClick={(id, t) => onBadgeClick?.(id, t)}
+          />
+        );
+      },
     },
     {
       title: "主设备",
