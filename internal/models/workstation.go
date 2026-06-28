@@ -70,6 +70,20 @@ type Workstation struct {
 	Width    *int `gorm:"default:160" json:"width,omitempty"`  // 宽度，默认1600mm
 	Depth    *int `gorm:"default:70" json:"depth,omitempty"`   // 深度，默认700mm
 	DeskType *int `gorm:"default:0" json:"deskType,omitempty"` // 桌型：0=一字型, 1=L型
+
+	// R4 (Phase 45) — 资产对账健康度集成 (D-A1-01/03)
+	//
+	// 三个字段在 WorkstationHandler.GetByID 注入,service 层 (WorkstationService) 不感知
+	// 保持与现有 handler/service 分层一致(WorkstationService 不引入 asset 依赖)。
+	// 字段为虚拟属性,不映射到 DB 列 — 通过 gorm:"->;-:migration" 设为只读+跳过 AutoMigrate,
+	// 避免 DB 侧因列不存在触发 SQLSTATE 42703 (MEMORY: gorm-migration-tag-does-not-block-insert)。
+	//
+	// Reconciliation 使用弱类型 map[string]interface{} 避免 models → asset → models 循环依赖
+	// (asset 包内含 models 引用)。handler 层注入前做一次 json marshal/unmarshal 类型转换。
+	// 无权限时 Reconciliation=nil + ReconciliationVisible=false (D-A1-03 静默降级)
+	Reconciliation          map[string]interface{} `gorm:"->;-:migration" json:"reconciliation,omitempty"`
+	ReconciliationVisible   bool                   `gorm:"->;-:migration" json:"reconciliationVisible"`
+	ReconciliationHiddenReason string               `gorm:"->;-:migration" json:"reconciliationHiddenReason,omitempty"`
 }
 
 // TableName 设置表名

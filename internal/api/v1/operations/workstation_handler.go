@@ -1,20 +1,25 @@
 package operations
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/asset"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
 type WorkstationHandler struct {
-	service opsServices.WorkstationService
-	core    *core.Core
+	service          opsServices.WorkstationService
+	reconciliationSvc asset.ReconciliationService
+	core             *core.Core
 }
 
 func NewWorkstationHandler(service opsServices.WorkstationService) *WorkstationHandler {
@@ -25,6 +30,20 @@ func NewWorkstationHandler(service opsServices.WorkstationService) *WorkstationH
 func (h *WorkstationHandler) WithCore(core *core.Core) *WorkstationHandler {
 	if h != nil {
 		h.core = core
+	}
+	return h
+}
+
+// WithReconciliationService 注入跨模块 ReconciliationService 依赖 (Phase 45 R4 / D-A1-01)
+//
+// 跨模块 service 注入模式 (cross-module-permission.md §2.3 + ADAccountHandler 类比):
+//   - WorkstationHandler 持有 asset.ReconciliationService 句柄
+//   - GetByID 内根据 hasReconciliationPerm 决定是否调 GetByWorkstation + 注入 ReconciliationVisible
+//   - 无权限时 → 静默降级(ReconciliationVisible=false + ReconciliationHiddenReason)
+//   - 不调 c.Abort(),不返回 403,与 D-A1-03 锁定一致
+func (h *WorkstationHandler) WithReconciliationService(svc asset.ReconciliationService) *WorkstationHandler {
+	if h != nil {
+		h.reconciliationSvc = svc
 	}
 	return h
 }
@@ -129,14 +148,54 @@ func (h *WorkstationHandler) List(c *gin.Context) {
 // @Failure 404 {object} response.Response
 // @Router /ops/workstation/{id} [post]
 func (h *WorkstationHandler) GetByID(c *gin.Context) {
+	ctx := c.Request.Context()
 	id := c.Param("id")
-	workstation, err := h.service.GetByID(c.Request.Context(), id)
+	workstation, err := h.service.GetByID(ctx, id)
 	if err != nil {
 		response.Error(c, apperrors.WorkstationNotFound())
 		return
 	}
 
+	// R4 (Phase 45) — 跨模块注入对账健康度 (D-A1-01/03 + cross-module-permission.md §2.3)
+	//
+	// 行为:
+	//  - hasReconciliationPerm=true:调 reconciliationSvc.GetByWorkstation,填 Reconciliation/Visible
+	//  - hasReconciliationPerm=false:静默降级(ReconciliationVisible=false + HiddenReason 标记)
+	//  - reconciliationSvc 注入失败或 GetByWorkstation 报错:可见=true 但 Reconciliation=nil
+	//    (前端 HealthCard 渲染错误态,不抛 500 阻塞工位主信息返回)
+	//
+	// 类型转换:Workstation.Reconciliation 是 map[string]interface{} 弱类型(避免 models→asset
+	// 循环依赖),从 *asset.ByWorkstationResponse 经 json.Marshal/Unmarshal 转换。
+	visible := h.hasReconciliationPerm(c)
+	workstation.ReconciliationVisible = visible
+	if visible {
+		if h.reconciliationSvc != nil {
+			if recon, rErr := h.reconciliationSvc.GetByWorkstation(ctx, id, "7d"); rErr == nil {
+				if recon != nil {
+					if data, mErr := json.Marshal(recon); mErr == nil {
+						var m map[string]interface{}
+						if uErr := json.Unmarshal(data, &m); uErr == nil {
+							workstation.Reconciliation = m
+						}
+					}
+				}
+			} else {
+				applogger.Warnf("[workstation:reconciliation] GetByWorkstation 失败 workstationID=%s: %v", id, rErr)
+			}
+		}
+	} else {
+		workstation.ReconciliationHiddenReason = "无资产对账查看权限"
+	}
+
 	response.Success(c, workstation)
+}
+
+// hasReconciliationPerm 内部权限检查 (per cross-module-permission.md §2.3 + D-A1-03)
+//
+// 复用 pkg/middleware.HasUserPermission 复用底层 checkUserPermission / isSuperAdmin 链路。
+// 静默降级:不调 c.Abort(),调用方决定如何处理 false。
+func (h *WorkstationHandler) hasReconciliationPerm(c *gin.Context) bool {
+	return middleware.HasUserPermission(c, h.core, "asset:reconciliation:list")
 }
 
 // Update 更新工位

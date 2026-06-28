@@ -16,6 +16,7 @@ import (
 	workorderV1 "github.com/ruoyi-next/ruoyi-go-backend/internal/api/v1/workorder"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/scheduler"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/asset"
 	opsServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
 	systemServices "github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
@@ -588,7 +589,12 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		}, []string{"ops:building:spaces:list"}, core))
 		{
 			workstationService := opsServices.NewWorkstationService(core.DB.GetDB())
-			workstationHandler := operations.NewWorkstationHandler(workstationService).WithCore(core)
+			// R4 (Phase 45) — 跨模块注入 ReconciliationService 到 WorkstationHandler
+			// GetByID 内根据 hasReconciliationPerm 决定是否拉对账健康度 (D-A1-01/03)
+			reconciliationSvc := asset.NewReconciliationService(core.DB.GetDB(), core.Cache)
+			workstationHandler := operations.NewWorkstationHandler(workstationService).
+				WithCore(core).
+				WithReconciliationService(reconciliationSvc)
 
 			// 注意：更具体的路由要放在前面，避免被通用路由匹配
 			workstations.POST("/list", workstationHandler.List)

@@ -19,13 +19,21 @@ import (
 //   - 不联动 workorder 关闭(workorder 独立在 workorder UI 关闭)
 //   - 不触发重检(7d 静默期已兜底)
 //
+// R4 端点(Phase 45 / D-A4-01/02/03):
+//   POST /by-workstation          -> handler.GetByWorkstation
+//   - 工位对账健康度聚合(Workstation/HealthScore/Assets/Visible 一次拉完,避免 N+1,SC7)
+//   - 缓存 TTL=5min 与 R1 MV 刷新一致
+//   - Visible 字段由 handler 注入(基于 HasUserPermission 静默降级,D-A1-03)
+//
 // 本函数是 reconciliation 读端点入口,42-04 会再 SetupReconciliationStatisticsRouter;
 // 42-06 整合到 internal/api/router.go 主路由(避免 Excel 导入路由冲突陷阱)。
 func SetupReconciliationRouter(r *gin.RouterGroup, core *core.Core) {
-	svc := asset.NewReconciliationService(core.DB.GetDB())
+	// R4:Cache 注入支持 GetByWorkstation 的 5min TTL 缓存
+	svc := asset.NewReconciliationService(core.DB.GetDB(), core.Cache)
 	handler := NewReconciliationHandler(svc).WithCore(core)
 
 	r.POST("/exception/list", handler.ListExceptions)
 	r.POST("/exception/:id", handler.GetExceptionByID)
 	r.POST("/exception/:id/resolve", handler.ResolveException)
+	r.POST("/by-workstation", handler.GetByWorkstation)
 }

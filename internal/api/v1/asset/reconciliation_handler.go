@@ -8,6 +8,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/asset"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
 
@@ -163,4 +164,64 @@ func (h *ReconciliationHandler) ResolveException(c *gin.Context) {
 		"resolvedBy":  userID,
 		"resolutionNote": req.ResolutionNote,
 	})
+}
+
+// GetByWorkstation 工位对账健康度聚合 (Phase 45 R4 / D-A4-01/02/03)
+//
+// 入参:
+//
+//	{ "workstationId": "uuid", "window": "7d" }
+//
+// 出参 (D-A4-02 锁定):ByWorkstationResponse{Workstation, HealthScore, Assets, Visible}
+//
+// 行为:
+//  1. JSON 绑定(workstationId 必填)
+//  2. window 为空时设默认 "7d"
+//  3. 调 service.GetByWorkstation 拿数据
+//  4. 注入 Visible (D-A1-03 静默降级):基于 HasUserPermission("asset:reconciliation:list")
+//     - true:  正常返回 HealthScore + Assets
+//     - false: HealthScore 全零,Assets 空切片(避免返回数据但前端 hide,B3 安全 invariant)
+//  5. response.Success — 读路径,无 operlog.Record(参考 ListExceptions 模式)
+//
+// 注:Plan 01 不修改 ResolveException(缓存失效归 Plan 02,B1/B2 锁定)。
+func (h *ReconciliationHandler) GetByWorkstation(c *gin.Context) {
+	var req struct {
+		WorkstationID string `json:"workstationId" binding:"required"`
+		Window        string `json:"window"` // 默认 "7d"
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "请求参数错误")
+		return
+	}
+	if req.Window == "" {
+		req.Window = "7d"
+	}
+
+	result, err := h.service.GetByWorkstation(c.Request.Context(), req.WorkstationID, req.Window)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// 权限降级标记 (D-A1-03 + cross-module-permission.md §2.3)
+	// handler 注入 Visible — service 单一职责,不再混入 perm 判断
+	result.Visible = h.hasReconciliationPerm(c)
+	if !result.Visible {
+		// 静默降级:返回结构保留但 Assets 清空,前端 HealthBadge 会渲染 "-"
+		result.Assets = []asset.AssetHealthItem{}
+		result.HealthScore = asset.HealthScore{
+			Total:    0,
+			Trend:    []asset.TrendPoint{},
+		}
+	}
+
+	response.Success(c, result)
+}
+
+// hasReconciliationPerm 内部权限检查 (per cross-module-permission.md §2.3 + D-A1-03)
+//
+// 复用 pkg/middleware.HasUserPermission 复用底层 checkUserPermission / isSuperAdmin 链路。
+// 静默降级:不调 c.Abort(),调用方决定如何处理 false(handler 注入 Visible=false)。
+func (h *ReconciliationHandler) hasReconciliationPerm(c *gin.Context) bool {
+	return middleware.HasUserPermission(c, h.core, "asset:reconciliation:list")
 }

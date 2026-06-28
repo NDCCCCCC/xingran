@@ -1,8 +1,11 @@
 package asset
 
 import (
+	"context"
 	"fmt"
 	"strings"
+
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 )
 
 // Cache key 常量模板 — 资产对账模块
@@ -104,4 +107,28 @@ func GetReconciliationHealthByAssetKey(assetID string) string {
 func StripCachePrefix(key string) string {
 	const prefix = "ruoyi:"
 	return strings.TrimPrefix(key, prefix)
+}
+
+// InvalidateWorkstationHealth 删除该工位的健康度缓存 (D-A4-04 R4 触发点)
+//
+// 调用顺序约定 (D-A4-04 锁定):
+//
+//	asset.InvalidateWorkstationHealth(ctx, c, wsID)  // 先失效
+//	operlog.Record(...)                              // 再写日志
+//	response.Success(c, ...)                         // 最后返响应
+//
+// 参数:
+//   - ctx: 请求上下文
+//   - c:   cache.Cache 实例(nil-safe,nil 时直接返回 nil)
+//   - workstationID: 工位 uuid
+//
+// 返回:
+//   - error: 来自 cache.Delete(Redis 删除失败);调用方决定是否 abort
+//
+// 本 plan (45-01) 仅定义,实际调用在 Plan 02 (ResolveException + R2 scheduler)。
+func InvalidateWorkstationHealth(ctx context.Context, c cache.Cache, workstationID string) error {
+	if c == nil || workstationID == "" {
+		return nil
+	}
+	return c.Delete(ctx, GetReconciliationHealthByWorkstationKey(workstationID))
 }

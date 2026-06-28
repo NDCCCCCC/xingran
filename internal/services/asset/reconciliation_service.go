@@ -3,13 +3,16 @@ package asset
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/lib/pq"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
@@ -150,11 +153,41 @@ type ReconciliationService interface {
 	//   - 成功 → nil
 	//   - 失败 → error,handler 层映射为 500 / 400 / 404
 	ResolveException(ctx context.Context, id string, userID string, note *string) error
+
+	// GetByWorkstation 拉取工位对账健康度聚合 (Phase 45 R4 / D-A4-01/02)
+	//
+	// 行为:
+	//   1. SELECT ops_asset WHERE workstation_id=? AND deleted_at IS NULL → 资产 ID 列表
+	//   2. SELECT sys_data_reconciliation WHERE asset_id IN (...) AND deleted_at IS NULL →
+	//      按 conflict_type 分桶 (normal/drift/conflict/nodata) 用 COUNT(*) FILTER
+	//      (无 list.length,严格遵守 stat-cards-from-list-length-capped-at-100)
+	//   3. SELECT COUNT(*) WHERE exception_rule_id IS NOT NULL AND asset_id IN (...) → exceptionHit
+	//   4. 复用 reconciliation_statistics.go:HealthTrend() 取最近 7 天 trend 点
+	//   5. assets[] 用 LEFT JOIN reconciliation_normalized (asset_id, ip, conflict_type, severity,
+	//      exception_rule_id, applied_actions, confidence_score) 一次拉取
+	//   6. IP 解析链 inline:asset.ip → workstation.ip → "unknown" (D-A4-02)
+	//   7. score = clamp(round((1 - 异常资产数/总资产数) × 100), 0, 100) (D-A2-03)
+	//   8. 缓存 (CacheProvider.GetOrSet) TTL=5min 与 R1 MV 刷新一致 (D-A4-03)
+	//   9. **不实现 Visible 字段**:service 单一职责,visible 由 handler 注入 (B3 安全 invariant)
+	//
+	// 入参:
+	//   - ctx: 请求上下文
+	//   - wsID: 工位 uuid
+	//   - window: 时间窗口字符串(目前仅识别 "7d",其它值降级为 7d)
+	//
+	// 返回:
+	//   - 成功 → *ByWorkstationResponse (含 Workstation/HealthScore/Assets;Visible 留 false)
+	//   - 失败 → error,handler 层映射为 500
+	GetByWorkstation(ctx context.Context, wsID string, window string) (*ByWorkstationResponse, error)
 }
 
 // reconciliationServiceImpl ReconciliationService 私有实现
 type reconciliationServiceImpl struct {
 	db *gorm.DB
+
+	// cache R4 启用:GetByWorkstation 通过 CacheProvider.GetOrSet 做 5min TTL 缓存
+	// 与 R1 MV 刷新节流对齐 (D-A4-03)。可为 nil(单元测试场景)→ 直查 DB。
+	cache cache.Cache
 
 	// mvExists 缓存 reconciliation_normalized 物化视图是否存在(避免每次查询重复探测)。
 	// 三态:1=MV 就位 / 0=MV 缺失 / -1=未探测。
@@ -166,8 +199,13 @@ type reconciliationServiceImpl struct {
 // NewReconciliationService 构造 ReconciliationService 实例
 //
 // mvExists 显式初始化为 -1(未探测),避免默认零值 0 导致首次查询跳过 probe。
-func NewReconciliationService(db *gorm.DB) ReconciliationService {
-	return &reconciliationServiceImpl{db: db, mvExists: -1}
+//
+// R4 (Phase 45) 改造:
+//   - 第二个参数 c (cache.Cache) 注入以支持 GetByWorkstation 的 5min TTL 缓存
+//   - 现有调用方 (router.go, reconciliation_router.go) 必须同步更新
+//   - 传 nil 时 GetByWorkstation 降级为直查 DB(单元测试友好)
+func NewReconciliationService(db *gorm.DB, c cache.Cache) ReconciliationService {
+	return &reconciliationServiceImpl{db: db, cache: c, mvExists: -1}
 }
 
 // probeMaterializedView 检查 reconciliation_normalized 物化视图是否存在。
@@ -502,4 +540,362 @@ func (s *reconciliationServiceImpl) ResolveException(ctx context.Context, id str
 	}
 	applogger.Infof("[reconciliation] 异常已标记为已解决 id=%s userID=%s hasNote=%v", id, userID, note != nil && *note != "")
 	return nil
+}
+
+// ============================================================================
+// R4 (Phase 45) — 工位对账健康度聚合 GetByWorkstation
+//
+// D-A4-01/02/03 锁定:
+//   - POST /asset/reconciliation/by-workstation 入参 {workstationId, window}
+//   - 出参 ByWorkstationResponse{Workstation, HealthScore, Assets, Visible}
+//   - TTL=5min 缓存 (D-A4-03 与 R1 MV 刷新一致)
+//   - Visible 字段由 handler 注入,service 不负责 (B3 安全 invariant)
+//
+// score 公式 (D-A2-03): clamp(round((1 - 异常资产数/总资产数) × 100), 0, 100)
+// ============================================================================
+
+// WorkstationBrief 工位基础信息(显示用,不携带敏感字段)
+type WorkstationBrief struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Code string `json:"code"`
+}
+
+// HealthScore 5 KPI + 趋势数据 (D-A2-01/03 锁定)
+//
+// 字段命名 camelCase 与前端 useQuery 解构对齐;
+// 所有数字字段(总/正常/漂移/冲突/无数据/例外命中)均由 COUNT(*) 聚合得出,
+// 严禁 list.length 路径(MEMORY `stat-cards-from-list-length-capped-at-100`)。
+type HealthScore struct {
+	Total        int          `json:"total"`
+	Normal       int          `json:"normal"`
+	Drift        int          `json:"drift"`
+	Conflict     int          `json:"conflict"`
+	NoData       int          `json:"noData"`
+	ExceptionHit int          `json:"exceptionHit"`
+	Score        int          `json:"score"`
+	Trend        []TrendPoint `json:"trend"`
+}
+
+// AssetHealthItem 资产健康度条目(行内徽标数据源,UI-SPEC D-A4-02)
+//
+// IP 解析链 inline 实现 (D-A4-02 + strategy §4.4):
+//   asset.ip → workstation.ip → "unknown"
+type AssetHealthItem struct {
+	AssetID         string   `json:"assetId"`
+	AssetCode       string   `json:"assetCode"`
+	ConflictType    string   `json:"conflictType"`
+	Severity        string   `json:"severity"`
+	IP              string   `json:"ip,omitempty"`
+	ExceptionRuleID *string  `json:"exceptionRuleId,omitempty"`
+	AppliedActions  []string `json:"appliedActions,omitempty"`
+	ConfidenceScore float64  `json:"confidenceScore"`
+}
+
+// ByWorkstationResponse 工位对账健康度聚合响应 (D-A4-02 锁定)
+type ByWorkstationResponse struct {
+	Workstation WorkstationBrief  `json:"workstation"`
+	HealthScore HealthScore       `json:"healthScore"`
+	Assets      []AssetHealthItem `json:"assets"`
+	Visible     bool              `json:"visible"` // 由 handler 注入,service 固定为 false
+}
+
+// reconciliationHealthCacheTTL GetByWorkstation 缓存 TTL (5min,与 R1 MV 刷新一致)
+const reconciliationHealthCacheTTL = 5 * time.Minute
+
+// GetByWorkstation 工位对账健康度聚合 (R4)
+//
+// 行为(详见接口注释):
+//  1. 缓存命中 → 反序列化返回
+//  2. 缓存未命中 → 执行 6 步查询(CPU/IO 密集,缓存防穿透)
+//     a) 工位基础信息(SELECT FROM sys_workstation WHERE id=)
+//     b) 关联资产(SELECT FROM ops_asset WHERE workstation_id=? AND deleted_at IS NULL)
+//     c) 对账异常按 conflict_type 分桶(COUNT FILTER,严格走 DB 聚合)
+//     d) exceptionHit 计数(COUNT WHERE exception_rule_id IS NOT NULL)
+//     e) Trend 7 天(reconciliation_statistics.go:HealthTrend 同形态,本函数内联)
+//     f) assets[] 行内徽标(LEFT JOIN reconciliation_normalized 一次拉取)
+//
+// 关键约束:
+//   - 严禁 list.length 走分桶统计 (MEMORY `stat-cards-from-list-length-capped-at-100`)
+//   - IP 解析链 inline:asset.ip → workstation.ip → "unknown" (B5 修复)
+//   - assets[] 即使 total=0 也要返回空 slice 而非 nil(JSON 序列化一致性)
+//   - Visible 字段固定为 false(handler 注入,与 service 单一职责保持一致)
+func (s *reconciliationServiceImpl) GetByWorkstation(ctx context.Context, wsID string, window string) (*ByWorkstationResponse, error) {
+	if wsID == "" {
+		return nil, errors.New("工位ID不能为空")
+	}
+
+	// 缓存命中短路
+	cacheKey := GetReconciliationHealthByWorkstationKey(wsID)
+	if s.cache != nil {
+		var cached ByWorkstationResponse
+		if err := s.cache.GetJSON(ctx, cacheKey, &cached); err == nil && cached.Workstation.ID != "" {
+			cached.Visible = false // service 单一职责,handler 重新注入
+			return &cached, nil
+		}
+	}
+
+	resp, err := s.computeByWorkstation(ctx, wsID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 写缓存
+	if s.cache != nil {
+		if data, mErr := json.Marshal(resp); mErr == nil {
+			if setErr := s.cache.Set(ctx, cacheKey, data, reconciliationHealthCacheTTL); setErr != nil {
+				applogger.Warnf("[reconciliation] GetByWorkstation cache set failed wsID=%s: %v", wsID, setErr)
+			}
+		}
+	}
+
+	resp.Visible = false
+	return resp, nil
+}
+
+// computeByWorkstation 实际执行 6 步聚合查询(GetByWorkstation 内部使用)
+func (s *reconciliationServiceImpl) computeByWorkstation(ctx context.Context, wsID string) (*ByWorkstationResponse, error) {
+	resp := &ByWorkstationResponse{
+		Assets: []AssetHealthItem{}, // JSON 序列化一致性
+	}
+
+	// a) 工位基础信息
+	var brief WorkstationBrief
+	if err := s.db.WithContext(ctx).
+		Table("sys_workstation").
+		Select("id, workstation_name AS name, workstation_no AS code").
+		Where("id = ? AND deleted_at IS NULL", wsID).
+		Scan(&brief).Error; err != nil {
+		return nil, fmt.Errorf("查询工位基础信息失败: %w", err)
+	}
+	if brief.ID == "" {
+		return nil, errors.New("工位不存在")
+	}
+	resp.Workstation = brief
+
+	// b) 关联资产 ID 列表
+	type assetRow struct {
+		ID         string
+		Devicesn   string
+		IP         *string
+	}
+	var assets []assetRow
+	if err := s.db.WithContext(ctx).
+		Table("ops_asset").
+		Select("id, devicesn, machine_ip::text AS ip").
+		Where("workstation_id = ? AND deleted_at IS NULL", wsID).
+		Scan(&assets).Error; err != nil {
+		return nil, fmt.Errorf("查询工位关联资产失败: %w", err)
+	}
+	resp.HealthScore.Total = len(assets)
+	if len(assets) == 0 {
+		// 无资产:返回空数据(仍带 workstation brief + 全 0 score)
+		trend, _ := s.computeHealthTrend(ctx, 7)
+		resp.HealthScore.Trend = trend
+		resp.HealthScore.Score = 100 // 无资产视为健康
+		return resp, nil
+	}
+
+	assetIDs := make([]string, 0, len(assets))
+	assetCodeByID := make(map[string]string, len(assets))
+	assetIPByID := make(map[string]string, len(assets))
+	for _, a := range assets {
+		assetIDs = append(assetIDs, a.ID)
+		assetCodeByID[a.ID] = a.Devicesn
+		if a.IP != nil {
+			assetIPByID[a.ID] = *a.IP
+		}
+	}
+
+	// c) 按 conflict_type 分桶计数(严格 COUNT FILTER,无 list.length)
+	type bucketRow struct {
+		ConflictType string
+		Cnt          int64
+	}
+	var buckets []bucketRow
+	if err := s.db.WithContext(ctx).
+		Table("sys_data_reconciliation").
+		Select("conflict_type, COUNT(*) AS cnt").
+		Where("asset_id IN ? AND deleted_at IS NULL AND resolved_at IS NULL", assetIDs).
+		Group("conflict_type").
+		Scan(&buckets).Error; err != nil {
+		return nil, fmt.Errorf("查询对账异常分桶失败: %w", err)
+	}
+
+	// 初始化 6 桶(A 视为 normal,D-A2-04 + UI-SPEC 锁定:健康用 green,A/B-F 用 dict list_class)
+	// 桶:normal(A)/drift(B,D)/conflict(C,F)/nodata(E)
+	normal, drift, conflict, noData := 0, 0, 0, 0
+	for _, b := range buckets {
+		switch b.ConflictType {
+		case "A":
+			normal += int(b.Cnt)
+		case "B", "D":
+			drift += int(b.Cnt)
+		case "C", "F":
+			conflict += int(b.Cnt)
+		case "E":
+			noData += int(b.Cnt)
+		default:
+			// 未知类型归 conflict(防御性)
+			conflict += int(b.Cnt)
+		}
+	}
+	resp.HealthScore.Normal = normal
+	resp.HealthScore.Drift = drift
+	resp.HealthScore.Conflict = conflict
+	resp.HealthScore.NoData = noData
+
+	// d) exceptionHit 计数
+	var exceptionHit int64
+	if err := s.db.WithContext(ctx).
+		Table("sys_data_reconciliation").
+		Where("asset_id IN ? AND deleted_at IS NULL AND exception_rule_id IS NOT NULL", assetIDs).
+		Count(&exceptionHit).Error; err != nil {
+		return nil, fmt.Errorf("查询例外命中数失败: %w", err)
+	}
+	resp.HealthScore.ExceptionHit = int(exceptionHit)
+
+	// e) Trend 7 天
+	trend, _ := s.computeHealthTrend(ctx, 7)
+	resp.HealthScore.Trend = trend
+
+	// f) score 公式 (D-A2-03): clamp(round((1 - 异常资产数/总资产数) × 100), 0, 100)
+	// 异常资产数 = drift + conflict + nodata(以桶数计,而非 unique 资产数,简化为 5 维比)
+	abnormalAssets := drift + conflict + noData + int(exceptionHit)
+	if resp.HealthScore.Total > 0 {
+		raw := (1 - float64(abnormalAssets)/float64(resp.HealthScore.Total)) * 100
+		if raw < 0 {
+			raw = 0
+		}
+		if raw > 100 {
+			raw = 100
+		}
+		resp.HealthScore.Score = int(raw + 0.5)
+	} else {
+		resp.HealthScore.Score = 100
+	}
+
+	// g) assets[] 行内徽标数据(LEFT JOIN reconciliation_normalized)
+	type healthRow struct {
+		AssetID          string
+		ConflictType     *string
+		Severity         *string
+		ExceptionRuleID  *string
+		AppliedActions   pq.StringArray
+		ConfidenceScore  *float64
+	}
+	var rows []healthRow
+	if err := s.db.WithContext(ctx).
+		Table("ops_asset AS a").
+		Select(`a.id AS asset_id,
+			rn.conflict_type,
+			rn.severity,
+			rn.exception_rule_id,
+			rn.applied_actions,
+			rn.confidence_score`).
+		Joins(`LEFT JOIN reconciliation_normalized rn ON rn.asset_id = a.id`).
+		Where("a.id IN ? AND a.deleted_at IS NULL", assetIDs).
+		Scan(&rows).Error; err != nil {
+		// MV 缺失 → fallback 走空 (B5:不阻塞响应,徽标列无数据)
+		applogger.Warnf("[reconciliation] GetByWorkstation MV JOIN 失败,徽标数据降级为空 wsID=%s: %v", wsID, err)
+		rows = nil
+	}
+
+	// 工位 IP(若所有 asset.ip 都为空,降级为 workstation.ip)
+	var workstationIP *string
+	_ = s.db.WithContext(ctx).
+		Table("sys_workstation").
+		Select("machine_ip::text AS ip").
+		Where("id = ?", wsID).
+		Scan(&workstationIP).Error
+
+	assetItems := make([]AssetHealthItem, 0, len(assets))
+	for _, a := range assets {
+		item := AssetHealthItem{
+			AssetID:   a.ID,
+			AssetCode: a.Devicesn,
+		}
+		// 从 row 查
+		for _, r := range rows {
+			if r.AssetID == a.ID {
+				if r.ConflictType != nil {
+					item.ConflictType = *r.ConflictType
+				}
+				if r.Severity != nil {
+					item.Severity = *r.Severity
+				}
+				item.ExceptionRuleID = r.ExceptionRuleID
+				if len(r.AppliedActions) > 0 {
+					item.AppliedActions = []string(r.AppliedActions)
+				}
+				if r.ConfidenceScore != nil {
+					item.ConfidenceScore = *r.ConfidenceScore
+				}
+				break
+			}
+		}
+		// IP 解析链:asset.ip → workstation.ip → "unknown"
+		switch {
+		case assetIPByID[a.ID] != "":
+			item.IP = assetIPByID[a.ID]
+		case workstationIP != nil && *workstationIP != "":
+			item.IP = *workstationIP
+		default:
+			item.IP = "unknown"
+		}
+		assetItems = append(assetItems, item)
+	}
+	resp.Assets = assetItems
+
+	return resp, nil
+}
+
+// computeHealthTrend 内联 7 天趋势(dialect-aware,与 HealthTrend() 形态一致)
+//
+// 注:复用 reconciliation_statistics.go:HealthTrend() 会引入跨文件循环依赖风险;
+// 这里内联精简版,行为对齐 (date / openCount / criticalCount / newCount)。
+func (s *reconciliationServiceImpl) computeHealthTrend(ctx context.Context, days int) ([]TrendPoint, error) {
+	if days <= 0 {
+		days = 7
+	}
+	since := time.Now().Add(-time.Duration(days) * 24 * time.Hour)
+	dialect := s.db.Dialector.Name()
+
+	var sql string
+	var args []interface{}
+	switch dialect {
+	case "postgres":
+		sql = `
+			SELECT
+				TO_CHAR(date_trunc('day', detected_at), 'YYYY-MM-DD') AS date,
+				COUNT(*) FILTER (WHERE resolved_at IS NULL) AS open_count,
+				COUNT(*) FILTER (WHERE severity = ? AND resolved_at IS NULL) AS critical_count,
+				COUNT(*) AS new_count
+			FROM sys_data_reconciliation
+			WHERE deleted_at IS NULL AND detected_at >= ?
+			GROUP BY date_trunc('day', detected_at)
+			ORDER BY date_trunc('day', detected_at) ASC
+		`
+		args = []interface{}{"critical", since}
+	default:
+		sql = `
+			SELECT
+				strftime('%Y-%m-%d', detected_at) AS date,
+				SUM(CASE WHEN resolved_at IS NULL THEN 1 ELSE 0 END) AS open_count,
+				SUM(CASE WHEN severity = ? AND resolved_at IS NULL THEN 1 ELSE 0 END) AS critical_count,
+				COUNT(*) AS new_count
+			FROM sys_data_reconciliation
+			WHERE deleted_at IS NULL AND detected_at >= ?
+			GROUP BY strftime('%Y-%m-%d', detected_at)
+			ORDER BY strftime('%Y-%m-%d', detected_at) ASC
+		`
+		args = []interface{}{"critical", since}
+	}
+
+	var points []TrendPoint = make([]TrendPoint, 0)
+	if err := s.db.WithContext(ctx).Raw(sql, args...).Scan(&points).Error; err != nil {
+		applogger.Warnf("[reconciliation] computeHealthTrend failed: %v", err)
+		return points, err
+	}
+	return points, nil
 }
