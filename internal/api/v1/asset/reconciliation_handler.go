@@ -18,6 +18,12 @@ import (
 // 无 operlog.Record 调用(参考 operations/asset_handler.go Statistics handler 模式)。
 const ModuleReconciliation = "资产对账"
 
+// ModuleReconciliationExceptionRule 例外规则 operlog 模块名(Phase 44 R3 / Phase 42 D-16 锁定)
+//
+// 用于 CreateRule/UpdateRule/DeleteRule 的 operlog.Record 调用,审计 sys_oper_log.module
+// 显示"资产对账-例外规则",区别于主异常流的"资产对账"。
+const ModuleReconciliationExceptionRule = "资产对账-例外规则"
+
 // ReconciliationHandler 资产对账异常 handler
 //
 // R1 边界 (D-18): 不暴露 MarkResolved / Create / Update / Delete handler。
