@@ -29,10 +29,8 @@ import {
   Space,
   Tag,
   Card,
-  Empty,
   App,
   Drawer,
-  Modal,
   Statistic,
   Row,
   Col,
@@ -59,6 +57,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import ExceptionRuleForm, {
   type ExceptionRuleFormValues,
 } from "@/components/asset/reconciliation/ExceptionRuleForm";
+import MatchTestPanel from "@/components/asset/reconciliation/MatchTestPanel";
 
 // 类型:例外规则列表项(对齐后端 SysReconciliationException JSON)
 interface ExceptionRuleItem {
@@ -462,15 +461,14 @@ const ExceptionRulesPage: React.FC = () => {
         onCancel={() => setModalState({ open: false })}
       />
 
-      {/* 命中测试 Drawer(内容 Task 6c 接入 MatchTestPanel) */}
+      {/* 命中测试 Drawer(嵌入 MatchTestPanel,Phase 44 R3 / Task 6c) */}
       <Drawer
         title="命中测试"
         open={matchTestOpen}
         onClose={() => setMatchTestOpen(false)}
-        width={720}
+        width={780}
       >
-        {/* Task 6c:在此处插入 <MatchTestPanel /> */}
-        <Empty description="命中测试面板(Task 6c 接入 MatchTestPanel)" />
+        <MatchTestPanel embedded />
       </Drawer>
     </div>
   );

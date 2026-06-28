@@ -38,6 +38,7 @@ import {
   Empty,
   App,
   Modal,
+  Switch,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type {
@@ -137,6 +138,7 @@ const Exceptions = () => {
     severity?: string;
     assetCode?: string;
     detectedAt?: [Dayjs, Dayjs];
+    showSilenced?: boolean;
   }>(() => {
     const type = searchParams.get("type") || undefined;
     const severity = searchParams.get("severity") || undefined;
@@ -169,6 +171,8 @@ const Exceptions = () => {
       p.detectedFrom = filterValues.detectedAt[0].startOf("day").toISOString();
       p.detectedTo = filterValues.detectedAt[1].endOf("day").toISOString();
     }
+    // R3 / D-R3-A1-01 — silence 默认隐藏,开关打开时透传 showSilenced
+    if (filterValues.showSilenced) p.showSilenced = true;
     if (orderByColumn) {
       p.orderByColumn = orderByColumn;
       p.isAsc = isAsc;
@@ -464,6 +468,10 @@ const onTableChange = useCallback(
               style={{ width: 280 }}
               placeholder={["开始日期", "结束日期"]}
             />
+          </Form.Item>
+          {/* R3 / D-R3-A1-01 — 显示已静默(silence)记录开关,默认 false 隐藏 */}
+          <Form.Item name="showSilenced" label="显示已静默" valuePropName="checked">
+            <Switch />
           </Form.Item>
           <Form.Item>
             <Space>
