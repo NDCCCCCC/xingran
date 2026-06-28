@@ -39,7 +39,7 @@ last_updated: 2026-06-27
 
 - [x] **EXCEPTION-01**: 系统能按 CIDR 格式（如 `192.168.0.0/16`）配置 IP 段级别例外规则
 - [x] **EXCEPTION-02**: 系统能配置 5 种 actions 组合（no_alert / no_notice / no_workorder / skip_severity / silence），多条规则取并集
-- [ ] **EXCEPTION-03**: 系统能在例外规则中设定有效期（expires_at），到期自动停用
+- [x] **EXCEPTION-03**: 系统能在例外规则中设定有效期（expires_at），到期自动停用
 - [x] **EXCEPTION-04**: 系统能提供"命中测试"工具，输入 IP/CIDR 实时返回命中规则与合并效果
 
 ### WORKORDER — 工单闭环

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.17
 milestone_name: 资产对账 (Asset Reconciliation)
 status: executing
-stopped_at: Phase 44 context gathered
-last_updated: "2026-06-28T01:08:46.189Z"
-last_activity: 2026-06-28 -- Phase 44 execution started
+stopped_at: Phase 44 plan 02 complete, awaiting phase gate
+last_updated: "2026-06-28T01:39:14Z"
+last_activity: 2026-06-28 -- Phase 44 plan 02 shipped (cron 软停用 + 转单 no_workorder 过滤 + 降噪基线 + dashboard 卡片 + Excel 导入导出)
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 11
-  completed_plans: 9
-  percent: 20
+  completed_plans: 10
+  percent: 22
 ---
 
 # Project State
@@ -24,9 +24,9 @@ progress:
 ## Current Position
 
 Phase: 44 (ip-r3) — EXECUTING
-Plan: 1 of 2
-Status: Executing Phase 44
-Last activity: 2026-06-28 -- Phase 44 execution started
+Plan: 2 of 2 (plan 02 complete, awaiting phase gate / UAT)
+Status: Phase 44 plan 02 complete — both plans shipped, ready for phase gate verification
+Last activity: 2026-06-28 -- Phase 44 plan 02 shipped: cleanupExpiredExceptions 软停用 cron + 转单 SQL no_workorder 过滤 (IS NULL 兜底 BLOCKER-4) + ReconciliationBaselineService Snapshot/Compare (独立 COUNT, sys_config JSON) + SnapshotBaseline/CompareBaseline handler + dashboard 降噪效果卡片 + Excel 导入导出 reconciliationExceptionRule (方案 B). 4/4 tasks, 14 files, 9 commits.
 
 ## Project Reference
 
@@ -146,11 +146,12 @@ Last activity: 2026-06-28 -- Phase 44 execution started
 | Phase 43-r2 P01 | 720 | 2 tasks | 6 files |
 | Phase 43 P03 | 9 | 2 tasks | 7 files |
 | Phase 44 P01 | 50 | 8 tasks | 20 files |
+| Phase 44 P02 | 25 | 4 tasks | 14 files |
 
 ## Session Continuity
 
-Last session: 2026-06-28T01:08:45.363Z
-Stopped at: Phase 44 context gathered
+Last session: 2026-06-28T01:39:14Z
+Stopped at: Phase 44 plan 02 complete (cron 软停用 + 转单 no_workorder 过滤 + 降噪基线 + dashboard 卡片 + Excel 导入导出)
 Resume file: None
 
 **Milestone status:** v1.16 技术债清理 — milestone_complete (2026-06-26), 2 phases (40+41), 8 plans, 39 phase-41 commits + 3 phase-40 plans. **Phase 13 retroactive gap closure** — 4/4 plans (13-07/08/09/10), 8 atomic commits on main, 5/5 code gaps fixed. v1.17 规划待启动。
