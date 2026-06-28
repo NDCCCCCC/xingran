@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"mime/multipart"
 	"net"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
 )
 
 // ============================================================================
@@ -88,6 +90,19 @@ type ReconciliationExceptionService interface {
 	//   - 未传 userID + deptID 时,user/dept scope 规则不参与合并(NeedsUserDept=true)
 	//   - 返回 MatchTestResult(命中规则 + 合并卡片)
 	MatchTest(ctx context.Context, ip string, userID string, deptID string) (*MatchTestResult, error)
+
+	// ImportFromExcel Excel 导入(方案 B,WARN-7 锁定,Phase 44 R3 / Plan 44-02 Task 4)
+	//
+	// 行为:
+	//   - 调 excel_service.ImportData("reconciliationExceptionRule", file) 写入基础字段
+	//     (excel_service 把 conflict_types/exception_actions 作为 TEXT 写入,
+	//      scope_name 因无 DBField 不入库)
+	//   - 后处理:读 raw Excel 行,对每条规则按 scope_type 解析 scope_name→scope_id
+	//     (dept→sys_dept.dept_name / user→sys_user.username / global→NULL),
+	//     同时把 conflict_types/exception_actions 从 CSV 字符串转为 pq.StringArray (TEXT[])
+	//   - 用 GORM 占位符防 SQL 注入 (T-44-10)
+	//   - 非法 CIDR 行级拒绝 (excel_service Required + DB cidr 列兜底)
+	ImportFromExcel(ctx context.Context, file *multipart.FileHeader) (*operations.ImportResult, error)
 }
 
 // CreateExceptionRuleRequest 创建例外规则请求
@@ -512,4 +527,195 @@ func (s *reconciliationExceptionServiceImpl) invalidateCache() {
 	// 当前 service 层 ctx-agnostic,CacheProvider 注入由 handler 完成。
 	// 数据写入 DB 后,下次 List 查询会从 DB 读取,缓存陈旧窗口在 cron 周期内
 	// 可接受(告警通路由 DetectLayer3 内存匹配驱动,不依赖此缓存)。
+}
+
+// ============================================================================
+// Phase 44 R3 / Plan 44-02 Task 4 — Excel 导入 (方案 B 后处理)
+// ============================================================================
+
+// ImportFromExcel Excel 导入例外规则(方案 B,WARN-7 锁定)
+//
+// 行为:
+//   - 调 operations.ExcelService.ImportData 写入基础字段(name/ip_range/scope_type 等),
+//     AffectedKeys 返回本次写入的规则 name 列表
+//   - 后处理:对每条写入的规则,读 raw Excel 行 (二次读文件) 拿到 scopeName/conflictTypes/exceptionActions
+//   - 按 scope_type 解析 scopeName → scope_id (dept/user/global)
+//   - 把 conflictTypes/exceptionActions CSV 字符串转为 pq.StringArray (TEXT[])
+//   - UPDATE sys_reconciliation_exception SET scope_id=?, conflict_types=?, exception_actions=? WHERE name=?
+//
+// 注:本方法依赖 operations.ExcelService (在 handler 注入或本方法内部 new)。
+// 当前实现不直接注入 ExcelService,而是由 handler 调用前先用 ExcelService.ImportData 拿到 AffectedKeys,
+// 再调本方法的 post-process helper ResolveReconScopeIDForImport。
+//
+// 简化设计:本方法直接调 operations.NewExcelService(db, nil, nil, nil).ImportData,然后做后处理。
+// pwdManager/cache/geocoding 都不需要(例外规则无密码/缓存/地理编码)。
+func (s *reconciliationExceptionServiceImpl) ImportFromExcel(ctx context.Context, file *multipart.FileHeader) (*operations.ImportResult, error) {
+	if file == nil {
+		return nil, errors.New("文件不能为空")
+	}
+
+	// 用 excel_service 写入基础字段 (AffectedKeys = 写入的 name 列表)
+	excelSvc := operations.NewExcelService(s.db, nil, nil, nil)
+	result, err := excelSvc.ImportData(ctx, "reconciliationExceptionRule", file, "")
+	if err != nil {
+		return nil, fmt.Errorf("Excel 导入失败: %w", err)
+	}
+
+	// 后处理:对每条写入的规则,解析 scope_id + TEXT[] 转换
+	// 读 raw Excel 行拿 scopeName (excel_service 不返回 raw row,故二次读 Excel)
+	if err := s.postProcessImportedRules(ctx, file, result.AffectedKeys); err != nil {
+		// 后处理失败不阻断主流程(基础字段已写库),仅 log
+		// 严谨场景可考虑回滚,但 R3 优先可用性 (运维可在 admin 页手动补 scope_id)
+		fmt.Printf("[reconciliation:ImportFromExcel] 后处理失败 (基础字段已写库): %v\n", err)
+	}
+
+	s.invalidateCache()
+	return result, nil
+}
+
+// postProcessImportedRules 二次读 Excel,对每条导入规则做 scope_id 解析 + TEXT[] 转换
+//
+// 步骤:
+//   - 重新打开 Excel,按 name 列定位每行
+//   - 读 scopeName / conflictTypes / exceptionActions 原始 CSV 字符串
+//   - 按 scope_type 用 ResolveReconScopeID 解析 scope_id
+//   - ParseCSVToTextArray 转换 conflict_types/exception_actions
+//   - UPDATE sys_reconciliation_exception SET scope_id/conflict_types/exception_actions WHERE name=?
+func (s *reconciliationExceptionServiceImpl) postProcessImportedRules(ctx context.Context, file *multipart.FileHeader, affectedNames []string) error {
+	if len(affectedNames) == 0 {
+		return nil
+	}
+
+	// 读 Excel 拿 raw 行
+	rawRows, err := operations.ReadRawRowsByName(file, "对账例外规则")
+	if err != nil {
+		return fmt.Errorf("读 Excel raw 行失败: %w", err)
+	}
+
+	// 按 name 后处理
+	for _, name := range affectedNames {
+		row, ok := rawRows[name]
+		if !ok {
+			continue
+		}
+
+		scopeType, _ := row["scopeType"].(string)
+		scopeName, _ := row["scopeName"].(string)
+		conflictTypesCSV, _ := row["conflictTypes"].(string)
+		exceptionActionsCSV, _ := row["exceptionActions"].(string)
+
+		// 解析 scope_id
+		scopeID, scopeErr := ResolveReconScopeID(ctx, s.db, scopeType, scopeName)
+		if scopeErr != nil {
+			// 单条失败不阻断 (运维可在 admin 页修复)
+			fmt.Printf("[reconciliation:ImportFromExcel] 解析 scope_id 失败 name=%s scopeType=%s scopeName=%s: %v\n",
+				name, scopeType, scopeName, scopeErr)
+			scopeID = ""
+		}
+
+		// 转 TEXT[] (nil 表示清空,空数组保留)
+		conflictTypes := ParseCSVToTextArray(conflictTypesCSV)
+		exceptionActions := ParseCSVToTextArray(exceptionActionsCSV)
+		if exceptionActions == nil {
+			// exception_actions 是 NOT NULL, 空时给个默认防 NOT NULL 违反
+			exceptionActions = pq.StringArray{}
+		}
+
+		// UPDATE (用 GORM 占位符防注入 T-44-10)
+		updates := map[string]interface{}{
+			"conflict_types":    pq.StringArray(conflictTypes),
+			"exception_actions": pq.StringArray(exceptionActions),
+		}
+		if scopeID != "" {
+			updates["scope_id"] = scopeID
+		} else if scopeType == "global" {
+			updates["scope_id"] = nil
+		}
+
+		if err := s.db.WithContext(ctx).
+			Table("sys_reconciliation_exception").
+			Where("name = ? AND deleted_at IS NULL", name).
+			Updates(updates).Error; err != nil {
+			fmt.Printf("[reconciliation:ImportFromExcel] UPDATE 失败 name=%s: %v\n", name, err)
+		}
+	}
+	return nil
+}
+
+// ResolveReconScopeID 按 scope_type 解析 scope_name → scope_id
+//
+// dept → sys_dept.dept_name (软删除兜底)
+// user → sys_user.username (软删除兜底)
+// global → 空字符串 (scope_id 保持 NULL, D-R3-A4-02)
+// 空 name → 空字符串 (允许导入时不指定 scope_id)
+//
+// 用 GORM 占位符防 SQL 注入 (T-44-10)。
+func ResolveReconScopeID(ctx context.Context, db *gorm.DB, scopeType, scopeName string) (string, error) {
+	scopeType = strings.TrimSpace(scopeType)
+	scopeName = strings.TrimSpace(scopeName)
+
+	// global 或空 name 都返回空 (scope_id 保持 NULL)
+	if scopeType == "global" || scopeType == "" || scopeName == "" {
+		return "", nil
+	}
+
+	var ids []string
+	switch scopeType {
+	case "dept":
+		// sys_dept.dept_name (T-44-10 占位符防注入)
+		err := db.WithContext(ctx).
+			Table("sys_dept").
+			Where("dept_name = ? AND deleted_at IS NULL", scopeName).
+			Limit(1).
+			Pluck("id", &ids).Error
+		if err != nil {
+			return "", fmt.Errorf("查询 dept 失败 name=%s: %w", scopeName, err)
+		}
+		if len(ids) == 0 {
+			return "", fmt.Errorf("dept 不存在 name=%s", scopeName)
+		}
+		return ids[0], nil
+	case "user":
+		// sys_user.username
+		err := db.WithContext(ctx).
+			Table("sys_user").
+			Where("username = ? AND deleted_at IS NULL", scopeName).
+			Limit(1).
+			Pluck("id", &ids).Error
+		if err != nil {
+			return "", fmt.Errorf("查询 user 失败 username=%s: %w", scopeName, err)
+		}
+		if len(ids) == 0 {
+			return "", fmt.Errorf("user 不存在 username=%s", scopeName)
+		}
+		return ids[0], nil
+	default:
+		return "", fmt.Errorf("未知 scope_type=%s (白名单: global/dept/user)", scopeType)
+	}
+}
+
+// ParseCSVToTextArray 把 "B,C,D" 转为 ["B","C","D"] (TEXT[] 转换 helper)
+//
+// 规则:
+//   - 空字符串返回 nil (NULL)
+//   - 单值返回 ["value"]
+//   - 多值按逗号分隔,自动 trim 空格
+//   - 空段过滤 ("a,,b" → ["a","b"])
+func ParseCSVToTextArray(csv string) []string {
+	csv = strings.TrimSpace(csv)
+	if csv == "" {
+		return nil
+	}
+	parts := strings.Split(csv, ",")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			result = append(result, p)
+		}
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
 }

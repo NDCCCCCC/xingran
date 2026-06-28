@@ -294,6 +294,37 @@ var ExcelConfigs = map[string]ExcelConfig{
 			{Field: "description", Header: "描述", MaxLength: 500, DBField: "remark"},
 		},
 	},
+	// Phase 44 R3 / Plan 44-02 Task 4 — 资产对账例外规则 Excel 导入导出
+	//
+	// 方案 B (WARN-7 锁定):
+	//   - 9 列顺序严格 = name/ip_range/conflict_types/exception_actions/severity_override/scope_type/scope_name/expires_at/reason
+	//     (项目记忆 ruoyi-excel-import-column-position-matching: validateAndParseRow 按 row[i] 位置匹配)
+	//   - name 列 UpsertKey=true + DBField="name"(项目记忆 ruoyi-excel-import-upsertkey-needs-dbfield)
+	//   - scopeName 是临时字段无 DBField, 由 ImportFromExcel 后处理按 scope_type 解析为 scope_id
+	//     (dept→sys_dept.dept_name / user→sys_user.username / global→NULL)
+	//   - conflict_types / exception_actions 用 TEXT 存(后处理转 TEXT[])
+	//   - 不在 router.go 预注册 /asset/reconciliation/import (项目记忆 ruoyi-excel-import-route-conflict)
+	"reconciliationExceptionRule": {
+		SheetName:     "对账例外规则",
+		TableName:     "sys_reconciliation_exception",
+		EntityName:    "例外规则",
+		HasHeader:     true,
+		StartRow:      2,
+		CachePatterns: []string{"reconciliation:*"},
+		UniqueKeys:    []string{"name"},
+		PartialUpdate: true,
+		Columns: []ExcelColumn{
+			{Field: "name", Header: "规则名称", Required: true, MaxLength: 128, UpsertKey: true, DBField: "name"},
+			{Field: "ipRange", Header: "IP段(CIDR)", Required: true, DBField: "ip_range"},
+			{Field: "conflictTypes", Header: "冲突类型(逗号分隔B/C/D/E/F,空=全部)", DBField: "conflict_types"},
+			{Field: "exceptionActions", Header: "动作(逗号分隔no_alert/no_notice/no_workorder/skip_severity/silence)", Required: true, DBField: "exception_actions"},
+			{Field: "severityOverride", Header: "严重度覆盖(low/medium/high,可空)", DBField: "severity_override"},
+			{Field: "scopeType", Header: "范围(global/dept/user)", DBField: "scope_type"},
+			{Field: "scopeName", Header: "范围名称(部门名/用户名,global留空)"}, // 无 DBField, 临时字段 (后处理 UPDATE scope_id)
+			{Field: "expiresAt", Header: "过期时间(可空,YYYY-MM-DD)", DBField: "expires_at"},
+			{Field: "reason", Header: "原因(≥10字符)", Required: true, DBField: "reason"},
+		},
+	},
 }
 
 func GetExcelConfig(entityType string) (ExcelConfig, bool) {

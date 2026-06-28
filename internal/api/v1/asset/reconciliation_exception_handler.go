@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/asset"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/operations"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
 )
@@ -258,4 +259,81 @@ func (h *ReconciliationExceptionHandler) CompareBaseline(c *gin.Context) {
 	}
 
 	response.Success(c, result)
+}
+
+// ============================================================================
+// Phase 44 R3 / Plan 44-02 Task 4 — Excel 导入/导出/模板 (SC 9)
+//
+// 方案 B (WARN-7 锁定):专用 ImportRules handler + service.ImportFromExcel 后处理
+// scope_name→scope_id + TEXT[] 转换。
+//
+// operlog 强制约定(CLAUDE.md):
+//   - ImportRules: 写操作 → success path 末尾 operlog.Record(OperTypeImport)
+//   - ExportRules: 导出 → success path 末尾 operlog.Record(OperTypeExport)
+//   - DownloadTemplate: 下载 → success path 末尾 operlog.Record(OperTypeDownload)
+// ============================================================================
+
+// ImportRules Excel 导入例外规则(SC 9)
+//
+// 行为:
+//  1. c.FormFile 拿 file
+//  2. service.ImportFromExcel 调 excel_service.ImportData 写入 + 后处理 scope_id + TEXT[]
+//  3. success path 末尾 operlog.Record(OperTypeImport) → 写 sys_oper_log
+//  4. response.Success(result)
+func (h *ReconciliationExceptionHandler) ImportRules(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "请上传 Excel 文件")
+		return
+	}
+
+	result, err := h.service.ImportFromExcel(c.Request.Context(), file)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// operlog 写入(CLAUDE.md 强制约定,导入 → OperTypeImport)
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), ModuleReconciliationExceptionRule, operlog.OperTypeImport)
+
+	response.Success(c, result)
+}
+
+// ExportRules Excel 导出例外规则
+func (h *ReconciliationExceptionHandler) ExportRules(c *gin.Context) {
+	excelSvc := operations.NewExcelService(h.core.GetDB(), nil, nil, nil)
+	f, err := excelSvc.ExportData(c.Request.Context(), "reconciliationExceptionRule", nil)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// operlog 写入(导出 → OperTypeExport)
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), ModuleReconciliationExceptionRule, operlog.OperTypeExport)
+
+	c.Header("Content-Disposition", `attachment; filename="reconciliation_exception_rules.xlsx"`)
+	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	if err := f.Write(c.Writer); err != nil {
+		// 写流失败仅 log,response 已部分发出无法改 status
+		_ = err
+	}
+}
+
+// DownloadTemplate 下载例外规则 Excel 模板
+func (h *ReconciliationExceptionHandler) DownloadTemplate(c *gin.Context) {
+	excelSvc := operations.NewExcelService(h.core.GetDB(), nil, nil, nil)
+	f, err := excelSvc.GenerateTemplate("reconciliationExceptionRule")
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// operlog 写入(下载模板 → OperTypeDownload)
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), ModuleReconciliationExceptionRule, operlog.OperTypeDownload)
+
+	c.Header("Content-Disposition", `attachment; filename="reconciliation_exception_rule_template.xlsx"`)
+	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	if err := f.Write(c.Writer); err != nil {
+		_ = err
+	}
 }

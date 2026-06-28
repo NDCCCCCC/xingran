@@ -58,4 +58,19 @@ func SetupReconciliationExceptionRouter(r *gin.RouterGroup, core *core.Core) {
 	// 不加 RequirePermissions 避免误锁 dashboard 卡片(参照 list/:id 放宽模式)。
 	r.POST("/baseline/snapshot", handler.SnapshotBaseline)
 	r.POST("/baseline/compare", handler.CompareBaseline)
+
+	// Phase 44 R3 / Plan 44-02 Task 4 — Excel 导入/导出/模板(SC 9)
+	//
+	// 方案 B 专路由(WARN-7 锁定),避免项目记忆 ruoyi-excel-import-route-conflict
+	// (不在 router.go 预注册 /asset/reconciliation/import,由本 router 自管)。
+	//
+	// 权限:
+	//   - import 是写操作 → RequirePermissions asset:reconciliation:exception:create
+	//     (与 /exception-rule/create 同权限, admin 默认持)
+	//   - export/template 是读 + 下载 → 放宽 (与 list/:id 一致, audit-only 场景)
+	r.POST("/exception-rule/import",
+		middleware.RequirePermissions([]string{"asset:reconciliation:exception:create"}, core),
+		handler.ImportRules)
+	r.POST("/exception-rule/export", handler.ExportRules)
+	r.POST("/exception-rule/template", handler.DownloadTemplate)
 }
