@@ -50,6 +50,7 @@
 **Plans**: 6 plans
 
 Plans:
+
 - 42-01: 表 + 物化视图 migration + 字典 seed + config seed + workorder 分类 seed
 - 42-02: ReconciliationService 核心（Layer 3 冲突检测 + 置信度评分）
 - 42-03: ReconciliationExceptionService（IP 段例外规则 CRUD）
@@ -82,6 +83,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
+
 - 43-01: 异常 → 工单自动转单（critical/high）+ 6 类工单模板
 - 43-02: 修复回写 + 7d 静默期 + 24h 节流
 - 43-03: WebSocket 推送 + SysNotice + operlog 完整接入
@@ -112,6 +114,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
+
 - 44-01: 例外规则引擎 + CRUD API + admin 管理页 + 命中测试工具
 - 44-02: Excel 导入导出 + Cron 自动清理 + 告警降噪验证
 
@@ -141,7 +144,12 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 45-01-PLAN.md — 工位详情页 + 资产详情页整合 + HealthCard/HealthBadge/ReconciliationDrawer 组件（INTEGRATE-01/02/03, Wave 1）
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 45-02-PLAN.md — 跨模块调用收尾 + R2 转单缓存失效 + IP 解析 + operlog 全覆盖 + VERIFICATION（INTEGRATE-01/02/03, Wave 2）
 
 **UI hint**: yes
@@ -167,6 +175,7 @@ Plans:
 **Plans**: 2 plans (如果启动)
 
 Plans:
+
 - 46-01: 修复建议生成器 + 人工确认 UI
 - 46-02: 一键回滚机制 + 误修复监控
 
