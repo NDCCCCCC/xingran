@@ -146,11 +146,11 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 45-01-PLAN.md — 工位详情页 + 资产详情页整合 + HealthCard/HealthBadge/ReconciliationDrawer 组件（INTEGRATE-01/02/03, Wave 1）
+- [x] 45-01-PLAN.md — 工位详情页 + 资产详情页整合 + HealthCard/HealthBadge/ReconciliationDrawer 组件（INTEGRATE-01/02/03, Wave 1） — shipped 2026-06-28
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 45-02-PLAN.md — 跨模块调用收尾 + R2 转单缓存失效 + IP 解析 + operlog 全覆盖 + VERIFICATION（INTEGRATE-01/02/03, Wave 2）
+- [x] 45-02-PLAN.md — 跨模块调用收尾 + R2 转单缓存失效 + IP 解析 + operlog 全覆盖 + VERIFICATION（INTEGRATE-01/02/03, Wave 2） — shipped 2026-06-28
 
 **UI hint**: yes
 
@@ -188,7 +188,7 @@ Plans:
 | 42. 资产对账观测底座 (R1) | 0/6 | Planning | — |
 | 43. 告警 + 工单闭环 (R2) | 3/3 | Complete    | 2026-06-27 |
 | 44. 置信度评分 + IP 段例外 (R3) | 2/2 | Complete    | 2026-06-28 |
-| 45. 工位详情整合 (R4) | 0/2 | Ready | — |
+| 45. 工位详情整合 (R4) | 2/2 | Complete | 2026-06-28 |
 | 46. 半自动修复 (R5, 可选) | 0/2 | Pending | — |
 
 ---
@@ -303,4 +303,4 @@ The full history of Phases 1-39 is preserved below. See also:
 
 ---
 
-*Last updated: 2026-06-28 — Phase 45 planning complete (2 plans: 45-01 INTEGRATE-01/02/03 Wave 1 + 45-02 Wave 2 verification + operlog closure), ready for execute-phase*
+*Last updated: 2026-06-28 — Phase 45 R4 complete (2/2 plans, 10/10 SCs verified PASS, INTEGRATE-01/02/03 全覆盖, code review 0 critical). Phase 46 (R5) ready to start.*
