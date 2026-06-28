@@ -219,7 +219,7 @@ func TestUpdateExceptionRule(t *testing.T) {
 	// 更新
 	err = svc.Update(context.Background(), rule.ID, &UpdateExceptionRuleRequest{
 		Name: "updated", IPRange: "10.0.0.0/8",
-		ExceptionActions: pq.StringArray{"no_notice"}, Reason: "更新后的原因10字",
+		ExceptionActions: pq.StringArray{"no_notice"}, Reason: "更新后的原因足够十个字符",
 	})
 	require.NoError(t, err)
 
