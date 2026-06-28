@@ -75,6 +75,8 @@ export interface ExceptionListParams {
   assetCode?: string;
   detectedFrom?: string;
   detectedTo?: string;
+  /** R3 / D-R3-A1-01: 是否显示 silence 记录(默认 false 隐藏) */
+  showSilenced?: boolean;
   current: number;
   pageSize: number;
   orderByColumn?: string;
@@ -230,5 +232,133 @@ export const reconciliationApi = {
       body
     );
     return res.data as { id: string; resolvedAt: string; resolvedBy: string; resolutionNote?: string };
+  },
+
+  /**
+   * Phase 44 R3 — 例外规则 CRUD + 命中测试 (admin 页用)
+   *
+   * 后端契约:internal/api/v1/asset/reconciliation_exception_{handler,router}.go
+   * 权限命名空间:asset:reconciliation:exception:{list,create,update,delete,test}
+   */
+  exceptionRule: {
+    list: async (
+      params: Record<string, unknown> = {}
+    ): Promise<PageResult<Record<string, unknown>>> => {
+      const res = await post<PageResult<Record<string, unknown>>>(
+        "/asset/reconciliation/exception-rule/list",
+        params
+      );
+      return (
+        (res.data ?? { list: [], total: 0, current: 1, pageSize: 20 }) as PageResult<Record<string, unknown>>
+      );
+    },
+    getById: async (
+      id: string
+    ): Promise<Record<string, unknown>> => {
+      const res = await post<Record<string, unknown>>(
+        `/asset/reconciliation/exception-rule/${id}`,
+        {}
+      );
+      return res.data as Record<string, unknown>;
+    },
+    create: async (
+      data: Record<string, unknown>
+    ): Promise<Record<string, unknown>> => {
+      const res = await post<Record<string, unknown>>(
+        "/asset/reconciliation/exception-rule/create",
+        data
+      );
+      return res.data as Record<string, unknown>;
+    },
+    update: async (
+      id: string,
+      data: Record<string, unknown>
+    ): Promise<Record<string, unknown>> => {
+      const res = await post<Record<string, unknown>>(
+        `/asset/reconciliation/exception-rule/${id}/update`,
+        data
+      );
+      return res.data as Record<string, unknown>;
+    },
+    delete: async (id: string): Promise<Record<string, unknown>> => {
+      const res = await post<Record<string, unknown>>(
+        `/asset/reconciliation/exception-rule/${id}/delete`,
+        {}
+      );
+      return res.data as Record<string, unknown>;
+    },
+    test: async (data: {
+      ip: string;
+      userId?: string;
+      deptId?: string;
+    }): Promise<{
+      matchedRules: unknown[];
+      mergedActions: string[];
+      finalSeverity: string;
+      isSilence: boolean;
+      needsUserDept: boolean;
+    }> => {
+      const res = await post<{
+        matchedRules: unknown[];
+        mergedActions: string[];
+        finalSeverity: string;
+        isSilence: boolean;
+        needsUserDept: boolean;
+      }>("/asset/reconciliation/exception-rule/test", data);
+      return (
+        (res.data ?? {
+          matchedRules: [],
+          mergedActions: [],
+          finalSeverity: "",
+          isSilence: false,
+          needsUserDept: false,
+        }) as {
+          matchedRules: unknown[];
+          mergedActions: string[];
+          finalSeverity: string;
+          isSilence: boolean;
+          needsUserDept: boolean;
+        }
+      );
+    },
+  },
+
+  /**
+   * Phase 44 R3 — 降噪基线 snapshot / compare (D-R3-A4-01)
+   *
+   * 后端契约:44-02 plan 实现(本 plan 仅 wire 前端基建,UI 44-02 接入)
+   * 调用 reconciliationApi.baseline.snapshot() 记录当前为基线,
+   * 后续 dashboard "降噪效果"卡片读 compare 对比下降百分比。
+   */
+  baseline: {
+    snapshot: async (): Promise<{ snapshot_at: string }> => {
+      const res = await post<{ snapshot_at: string }>(
+        "/asset/reconciliation/baseline/snapshot",
+        {}
+      );
+      return res.data as { snapshot_at: string };
+    },
+    compare: async (): Promise<{
+      baseline: { snapshot_at: string; total_exceptions: number; total_workorders: number; critical_exceptions: number };
+      current: { total_exceptions: number; total_workorders: number; critical_exceptions: number };
+      reductions: Record<string, number>;
+    }> => {
+      const res = await post<{
+        baseline: { snapshot_at: string; total_exceptions: number; total_workorders: number; critical_exceptions: number };
+        current: { total_exceptions: number; total_workorders: number; critical_exceptions: number };
+        reductions: Record<string, number>;
+      }>("/asset/reconciliation/baseline/compare", {});
+      return (
+        (res.data ?? {
+          baseline: { snapshot_at: "", total_exceptions: 0, total_workorders: 0, critical_exceptions: 0 },
+          current: { total_exceptions: 0, total_workorders: 0, critical_exceptions: 0 },
+          reductions: {},
+        }) as {
+          baseline: { snapshot_at: string; total_exceptions: number; total_workorders: number; critical_exceptions: number };
+          current: { total_exceptions: number; total_workorders: number; critical_exceptions: number };
+          reductions: Record<string, number>;
+        }
+      );
+    },
   },
 };

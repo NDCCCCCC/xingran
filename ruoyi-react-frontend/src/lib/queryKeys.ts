@@ -66,6 +66,18 @@ export const queryKeys = {
       ["reconciliation", "exception-detail", id] as const,
     /** 例外规则命中统计(R3 启用后才有数据) */
     ruleStats: () => ["reconciliation", "rule-stats"] as const,
+    /** 例外规则列表(admin 页,分页 + 筛选) */
+    ruleList: (params?: Record<string, unknown>) =>
+      ["reconciliation", "rule-list", params ?? {}] as const,
+    /** 例外规则详情(单条,编辑回填) */
+    ruleDetail: (id: string) =>
+      ["reconciliation", "rule-detail", id] as const,
+    /** 命中测试结果(按 IP+userID+deptID 入参缓存) */
+    matchTest: (params: { ip: string; userId?: string; deptId?: string }) =>
+      ["reconciliation", "match-test", params] as const,
+    /** 降噪基线对比结果(dashboard 降噪卡片) */
+    baselineCompare: () =>
+      ["reconciliation", "baseline-compare"] as const,
   },
 } as const;
 
