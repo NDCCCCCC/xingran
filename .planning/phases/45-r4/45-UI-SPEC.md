@@ -1,10 +1,11 @@
 ---
 phase: 45
 slug: 45-r4
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-06-28
+reviewed_at: 2026-06-28
 ---
 
 # Phase 45 — UI Design Contract (R4 工位详情整合 + 资产详情摘要)
