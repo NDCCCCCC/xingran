@@ -12,8 +12,10 @@
  *
  * 数据源:sys_reconciliation_exception WHERE is_active=0 AND deleted_at IS NULL
  *   AND ipRange CIDR 包含该资产 IP。Plan 02 接入实际查询;Plan 01 固定组件契约。
+ *
+ * Phase 45 R4 / Plan 02: 抽屉 "申请例外" 跳转携带 assetIp + conflictType 预填
  */
-import React from "react";
+import React, { useCallback } from "react";
 import { List, Tag, Empty, Spin, Button, Space } from "antd";
 import dayjs from "dayjs";
 
@@ -30,7 +32,12 @@ export interface ExceptionRuleItem {
 export interface ExceptionMatchListProps {
   rules: ExceptionRuleItem[];
   loading: boolean;
-  onCreateRule: () => void;
+  /** 当前选中资产的 IP(预填到新建规则页) */
+  assetIp?: string;
+  /** 当前选中资产的冲突类型(预填到新建规则页) */
+  conflictType?: string;
+  /** 兜底回调(由 ReconciliationDrawer 注入,优先级低于本组件内 navigate) */
+  onCreateRule?: () => void;
 }
 
 // actionTagColor 给 exception action 上色(运维识别)
@@ -60,7 +67,21 @@ const SCOPE_COLOR: Record<string, string> = {
   user: "purple",
 };
 
-const ListInner: React.FC<ExceptionMatchListProps> = ({ rules, loading, onCreateRule }) => {
+const ListInner: React.FC<ExceptionMatchListProps> = ({ rules, loading, assetIp, conflictType, onCreateRule }) => {
+  // Plan 02 锁定(SC9): 申请例外按钮携带 assetIp + conflictType query 参数
+  // (ReconciliationDrawer 顶部"申请例外"按钮携带 workstationId + assetIp + conflictType 三个参数,
+  //  本组件的"去创建例外规则"按钮只携带 assetIp + conflictType 两个参数 — 因为本组件在例外规则 Tab,
+  //  上下文是单条资产,工位 ID 已隐含在 ReconciliationDrawer 的 state 中可由父级注入)
+  const handleCreateRule = useCallback(() => {
+    if (onCreateRule) {
+      // 父级已注入 navigate(携带 workstationId) → 优先用父级回调
+      onCreateRule();
+      return;
+    }
+    const url = `/asset/reconciliation/exception-rules/new?assetIp=${encodeURIComponent(assetIp ?? "")}&conflictType=${encodeURIComponent(conflictType ?? "")}`;
+    window.open(url, "_blank");
+  }, [onCreateRule, assetIp, conflictType]);
+
   if (loading) {
     return <Spin />;
   }
@@ -68,7 +89,7 @@ const ListInner: React.FC<ExceptionMatchListProps> = ({ rules, loading, onCreate
   if (!rules || rules.length === 0) {
     return (
       <Empty description="当前没有例外规则覆盖该资产所在 IP 段。">
-        <Button type="primary" onClick={onCreateRule}>
+        <Button type="primary" onClick={handleCreateRule}>
           去创建例外规则
         </Button>
       </Empty>

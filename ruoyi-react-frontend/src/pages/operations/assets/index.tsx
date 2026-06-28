@@ -644,7 +644,10 @@ const AssetList: FC = () => {
         saving={configSaving}
       />
 
-      {/* R4 (Phase 45) — ReconciliationDrawer at page level */}
+      {/* R4 (Phase 45) — ReconciliationDrawer at page level
+          Plan 02 / SC9: onApplyException 省略让抽屉自带的内联 navigate 接管,自动携带
+          workstationId + assetId + assetIp + conflictType 四个 query 参数。
+      */}
       <ReconciliationDrawer
         open={drawerState.open}
         onClose={() =>
@@ -655,19 +658,6 @@ const AssetList: FC = () => {
         assetCode={drawerState.assetCode}
         activeTab={drawerState.activeTab}
         onTabChange={(k) => setDrawerState((s) => ({ ...s, activeTab: k }))}
-        onApplyException={() => {
-          const params = new URLSearchParams();
-          if (drawerState.workstationId) {
-            params.set("workstationId", drawerState.workstationId);
-          }
-          if (drawerState.assetId) {
-            params.set("assetId", drawerState.assetId);
-          }
-          window.open(
-            `/asset/reconciliation/exception-rules/new?${params.toString()}`,
-            "_blank"
-          );
-        }}
       />
     </div>
   );

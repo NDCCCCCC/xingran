@@ -14,9 +14,12 @@
  *   - Tab 1:useAssetHealth (从父级 useWorkstationHealth cache 切片,无 N+1)
  *   - Tab 2:ReconciliationTimeline(Plan 02 接入)
  *   - Tab 3:ExceptionMatchList(Plan 02 接入)
+ *
+ * Phase 45 R4 / Plan 02 (SC9): 申请例外按钮携带 workstationId + assetIp + conflictType
+ * 三个 query 参数,跳转后由 /asset/reconciliation/exception-rules/new 页面 useSearchParams 解析
  */
-import React, { useState } from "react";
-import { Drawer, Tabs, Tag, Descriptions, Button, Skeleton, Empty } from "antd";
+import React, { useCallback, useState } from "react";
+import { Drawer, Tabs, Tag, Descriptions, Button, Skeleton, Empty, message } from "antd";
 import { ReconciliationTimeline, type TimelineRecord } from "./ReconciliationTimeline";
 import { ExceptionMatchList, type ExceptionRuleItem } from "./ExceptionMatchList";
 import { useAssetHealth } from "./hooks/useAssetHealth";
@@ -33,7 +36,13 @@ export interface ReconciliationDrawerProps {
   workstationName?: string;
   activeTab: DrawerTabKey;
   onTabChange: (key: DrawerTabKey) => void;
-  onApplyException: () => void;
+  /**
+   * 抽屉顶部"申请例外"按钮回调(由父级 page 注入,默认走本组件内的内联实现)。
+   * Plan 02 改动: 该参数变为可选;若未提供,本组件自动 navigate 到
+   * /asset/reconciliation/exception-rules/new 携带 workstationId + assetIp + conflictType
+   * query 参数。
+   */
+  onApplyException?: () => void;
 }
 
 const SEVERITY_COLOR: Record<string, string> = {
@@ -64,6 +73,33 @@ const DrawerInner: React.FC<ReconciliationDrawerProps> = ({
 
   // Plan 01:timeline / rules 实际数据由 Plan 02 接入(实时查询 sys_data_reconciliation /
   //   sys_reconciliation_exception)。当前 local state 保留供 Plan 02 填充。
+
+  // 🆕 Plan 02 / SC9: 申请例外按钮 — 携带 workstationId + assetIp + conflictType
+  // 三参数(优先用父级 onApplyException 回调,否则用本组件内联 navigate)
+  // 注意:useCallback 必须在所有 early return 之前(react-hooks/rules-of-hooks)
+  // deps 使用 asset 对象引用,React compiler 会基于 asset 引用变化自动推断
+  const handleApplyException = useCallback(() => {
+    if (onApplyException) {
+      onApplyException();
+      return;
+    }
+    const params = new URLSearchParams();
+    if (workstationId) {
+      params.set("workstationId", workstationId);
+    }
+    if (selectedAssetId) {
+      params.set("assetId", selectedAssetId);
+    }
+    if (asset?.ip) {
+      params.set("assetIp", asset.ip);
+    }
+    if (asset?.conflictType) {
+      params.set("conflictType", asset.conflictType);
+    }
+    const url = `/asset/reconciliation/exception-rules/new?${params.toString()}`;
+    window.open(url, "_blank");
+    message.success("已跳转到例外规则新建页,IP 与冲突类型已预填。");
+  }, [onApplyException, workstationId, selectedAssetId, asset]);
 
   if (!visible) {
     return null;
@@ -118,10 +154,13 @@ const DrawerInner: React.FC<ReconciliationDrawerProps> = ({
     <ReconciliationTimeline records={timeline} loading={timelineLoading} />
   );
 
+  // 🆕 Plan 02: 例外规则 Tab 传入 assetIp + conflictType 让空态"去创建"按钮携带预填
   const exceptionTab = (
     <ExceptionMatchList
       rules={rules}
       loading={rulesLoading}
+      assetIp={asset?.ip}
+      conflictType={asset?.conflictType}
       onCreateRule={onApplyException}
     />
   );
@@ -133,7 +172,7 @@ const DrawerInner: React.FC<ReconciliationDrawerProps> = ({
       onClose={onClose}
       width={780}
       extra={
-        <Button type="primary" onClick={onApplyException}>
+        <Button type="primary" onClick={handleApplyException}>
           申请例外
         </Button>
       }

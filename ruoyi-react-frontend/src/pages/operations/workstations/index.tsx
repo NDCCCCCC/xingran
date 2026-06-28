@@ -832,19 +832,6 @@ const WorkstationManagement: FC = () => {
           workstationId={drawerState.workstationId}
           activeTab={drawerState.activeTab}
           onTabChange={(k) => setDrawerState((s) => ({ ...s, activeTab: k }))}
-          onApplyException={() => {
-            const params = new URLSearchParams();
-            if (drawerState.workstationId) {
-              params.set("workstationId", drawerState.workstationId);
-            }
-            if (drawerState.assetId) {
-              params.set("assetId", drawerState.assetId);
-            }
-            window.open(
-              `/asset/reconciliation/exception-rules/new?${params.toString()}`,
-              "_blank"
-            );
-          }}
         />
       </Content>
     </Layout>
