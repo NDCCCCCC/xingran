@@ -210,9 +210,9 @@ func TestPreloadActiveRulesSkipsInvalidCIDR(t *testing.T) {
 	db := setupMatcherTestDB(t)
 	// 1 条合法 + 1 条非法 CIDR + 1 条已停用(is_active=1)
 	require.NoError(t, db.Exec(`INSERT INTO sys_reconciliation_exception (id, name, ip_range, exception_actions, scope_type, reason, is_active, created_by, deleted_at) VALUES
-		('r-valid', 'valid-rule', '192.168.0.0/16', '["no_alert"]', 'global', '测试原因文本', 0, 1, NULL),
-		('r-bad',    'bad-rule',   '999.999.0.0/16', '["no_alert"]', 'global', '测试原因文本', 0, 1, NULL),
-		('r-inactive','inactive-rule','10.0.0.0/8', '["no_alert"]', 'global', '测试原因文本', 1, 1, NULL)`).Error)
+		('r-valid', 'valid-rule', '192.168.0.0/16', '{no_alert}', 'global', '测试原因文本', 0, 1, NULL),
+		('r-bad',    'bad-rule',   '999.999.0.0/16', '{no_alert}', 'global', '测试原因文本', 0, 1, NULL),
+		('r-inactive','inactive-rule','10.0.0.0/8', '{no_alert}', 'global', '测试原因文本', 1, 1, NULL)`).Error)
 
 	rules := preloadActiveRules(db)
 	// 仅保留合法 + 启用规则,非法 CIDR 与停用规则被跳过
