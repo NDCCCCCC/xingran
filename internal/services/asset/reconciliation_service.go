@@ -189,6 +189,14 @@ type reconciliationServiceImpl struct {
 	// 与 R1 MV 刷新节流对齐 (D-A4-03)。可为 nil(单元测试场景)→ 直查 DB。
 	cache cache.Cache
 
+	// matcher 例外规则匹配器(Phase 45 R4 / D-A4-02 注入)
+	//
+	// 用于 GetByWorkstation 内的 IP CIDR 命中测试:
+	//   - assets[].IP 解析后调 matcher.MatchException 计算 exceptionHit
+	//   - 为 nil 时跳过 MatchException 调用(单测场景,exceptionHit 仍由 DB COUNT
+	//     提供基本准确度,但 per-asset actions 字段为空)
+	matcher ReconciliationExceptionService
+
 	// mvExists 缓存 reconciliation_normalized 物化视图是否存在(避免每次查询重复探测)。
 	// 三态:1=MV 就位 / 0=MV 缺失 / -1=未探测。
 	// 关键:必须显式初始化为 -1(默认零值 0 会被误判为"已探测且 MV 缺失")。
@@ -202,10 +210,21 @@ type reconciliationServiceImpl struct {
 //
 // R4 (Phase 45) 改造:
 //   - 第二个参数 c (cache.Cache) 注入以支持 GetByWorkstation 的 5min TTL 缓存
+//   - 第三个参数 matcher 例外规则匹配器(Phase 45 R4 / D-A4-02),nil 时跳过 per-asset 匹配
 //   - 现有调用方 (router.go, reconciliation_router.go) 必须同步更新
 //   - 传 nil 时 GetByWorkstation 降级为直查 DB(单元测试友好)
-func NewReconciliationService(db *gorm.DB, c cache.Cache) ReconciliationService {
-	return &reconciliationServiceImpl{db: db, cache: c, mvExists: -1}
+func NewReconciliationService(db *gorm.DB, c cache.Cache, matcher ReconciliationExceptionService) ReconciliationService {
+	return &reconciliationServiceImpl{db: db, cache: c, matcher: matcher, mvExists: -1}
+}
+
+// SetMatcher 注入例外规则匹配器(用于延迟注入 — 避免初始化循环依赖)
+//
+// 使用场景:router.go 构造 ReconciliationService 时 matcher 尚未就绪,可在
+// reconciliation_router.go 内调 SetMatcher 注入。注:本方法为 nil-safe。
+func (s *reconciliationServiceImpl) SetMatcher(matcher ReconciliationExceptionService) {
+	if s != nil {
+		s.matcher = matcher
+	}
 }
 
 // probeMaterializedView 检查 reconciliation_normalized 物化视图是否存在。
@@ -809,6 +828,10 @@ func (s *reconciliationServiceImpl) computeByWorkstation(ctx context.Context, ws
 		Where("id = ?", wsID).
 		Scan(&workstationIP).Error
 
+	// 一次性预拉所有工位关联信息点的 device_ip(降低 N+1 风险)
+	// 即使全部为空,这些工位信息点可作为 IP 解析链第三级的来源
+	workstationDeviceIPs := s.fetchWorkstationDeviceIPs(ctx, wsID)
+
 	assetItems := make([]AssetHealthItem, 0, len(assets))
 	for _, a := range assets {
 		item := AssetHealthItem{
@@ -834,20 +857,90 @@ func (s *reconciliationServiceImpl) computeByWorkstation(ctx context.Context, ws
 				break
 			}
 		}
-		// IP 解析链:asset.ip → workstation.ip → "unknown"
-		switch {
-		case assetIPByID[a.ID] != "":
-			item.IP = assetIPByID[a.ID]
-		case workstationIP != nil && *workstationIP != "":
-			item.IP = *workstationIP
-		default:
-			item.IP = "unknown"
-		}
+		// IP 解析链(Phase 45 R4 / D-A4-02 inline):
+		//   第一优先:ops_asset.machine_ip → 第二优先:sys_workstation.machine_ip
+		//   第三优先:通过 ops_info_points 关联 sys_network_device.ip_address → "unknown"
+		item.IP = resolveAssetIPChain(assetIPByID[a.ID], workstationIP, workstationDeviceIPs)
 		assetItems = append(assetItems, item)
+
+		// 🆕 Phase 45 R4 / D-A4-02:per-asset 例外规则命中(MatchException inline)
+		//
+		// 若 IP 解析成功且 matcher 已注入(单测场景可为 nil),调 MatchException 计算
+		// applied_actions 合并结果。命中时:
+		//   - item.ExceptionRuleID 已由 MV 填充(基于 reconciliation_normalized,
+		//     数据可能在 R3 软停用后短暂不一致),MatchException 重新计算为最新 active 规则
+		//   - item.AppliedActions 用 merge 后的并集覆盖 MV 值
+		// 未命中时:保持 MV 填充值(不污染数据)
+		// 失败仅 logrus.Warnf(不阻塞响应,异常统计兜底由 DB COUNT 提供)
+		if s.matcher != nil && item.IP != "" && item.IP != "unknown" && item.ConflictType != "" {
+			if match, mErr := s.matcher.MatchException(ctx, item.IP, "", item.ConflictType); mErr != nil {
+				applogger.Warnf("[reconciliation] GetByWorkstation per-asset MatchException failed assetID=%s: %v", a.ID, mErr)
+			} else if match != nil {
+				item.ExceptionRuleID = &match.MatchedRuleID
+				if len(match.AppliedActions) > 0 {
+					item.AppliedActions = []string(match.AppliedActions)
+				}
+			}
+		}
 	}
 	resp.Assets = assetItems
 
 	return resp, nil
+}
+
+// fetchWorkstationDeviceIPs 一次性预拉工位关联信息点的设备 IP(避免 N+1)
+//
+// 业务说明(Phase 45 R4 / D-A4-02):
+//   - IP 解析链第三级通过 ops_info_points JOIN sys_network_device.ip_address 实现
+//   - 一个工位可能关联多条信息点,本函数 SELECT DISTINCT 去重后返回
+//   - 失败返回 nil(IP 解析链第三级降级为 "unknown",不影响主路径)
+//
+// 表名校正(以 codebase 实际 schema 为准):
+//   - 信息点:ops_info_points(非 sys_workstation_info_point,该表尚未在 R1 引入)
+//   - 设备:sys_network_device
+//   - 设备 IP 列:ip_address(非 ip)
+func (s *reconciliationServiceImpl) fetchWorkstationDeviceIPs(ctx context.Context, wsID string) []string {
+	if wsID == "" {
+		return nil
+	}
+	var ips []string
+	if err := s.db.WithContext(ctx).
+		Table("ops_info_points").
+		Distinct("sys_network_device.ip_address").
+		Joins("JOIN sys_network_device ON sys_network_device.id = ops_info_points.device_id").
+		Where("ops_info_points.workstation_id = ? AND ops_info_points.deleted_at IS NULL "+
+			"AND sys_network_device.deleted_at IS NULL "+
+			"AND sys_network_device.ip_address IS NOT NULL AND sys_network_device.ip_address != ''", wsID).
+		Pluck("sys_network_device.ip_address", &ips).Error; err != nil {
+		applogger.Warnf("[reconciliation] GetByWorkstation 拉取工位关联设备 IP 失败 wsID=%s: %v", wsID, err)
+		return nil
+	}
+	return ips
+}
+
+// resolveAssetIPChain IP 解析链(Phase 45 R4 / D-A4-02)
+//
+// 优先级(三步降级):
+//  1. ops_asset.machine_ip(assetIP) — 资产最直接的 IP
+//  2. sys_workstation.machine_ip(workstationIP) — 工位 IP,适合 IP 集中分配场景
+//  3. sys_network_device.ip_address(通过 ops_info_points JOIN 拉取的设备 IP 列表)
+//     — 工位物理链路反查(最贴近用户实际接入设备)
+//  4. "unknown" — 全部为空
+//
+// 入参均为已解析好的字符串(本函数不发起 DB 查询,纯计算路径)。
+func resolveAssetIPChain(assetIP string, workstationIP *string, deviceIPs []string) string {
+	if assetIP != "" {
+		return assetIP
+	}
+	if workstationIP != nil && *workstationIP != "" {
+		return *workstationIP
+	}
+	for _, ip := range deviceIPs {
+		if ip != "" {
+			return ip
+		}
+	}
+	return "unknown"
 }
 
 // computeHealthTrend 内联 7 天趋势(dialect-aware,与 HealthTrend() 形态一致)

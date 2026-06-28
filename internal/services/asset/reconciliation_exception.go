@@ -91,6 +91,15 @@ type ReconciliationExceptionService interface {
 	//   - 返回 MatchTestResult(命中规则 + 合并卡片)
 	MatchTest(ctx context.Context, ip string, userID string, deptID string) (*MatchTestResult, error)
 
+	// MatchException 单条资产例外规则命中(Phase 45 R4 / D-A4-02)
+	//
+	// 行为:
+	//   - 复用 preloadActiveRules + matchException 包级函数
+	//   - 适用 GetByWorkstation / GetByAssetHealth 等需要"是否命中规则"轻量级判断的查询
+	//   - 返回 *ExceptionMatch 简化版(MatchedRuleID + AppliedActions + IsSilence)
+	//   - nil 表示无命中(同 D-R3-A2-01 行为)
+	MatchException(ctx context.Context, ip string, userID string, conflictType string) (*ExceptionMatch, error)
+
 	// ImportFromExcel Excel 导入(方案 B,WARN-7 锁定,Phase 44 R3 / Plan 44-02 Task 4)
 	//
 	// 行为:
@@ -138,6 +147,22 @@ type MatchTestResult struct {
 	FinalSeverity string                              `json:"finalSeverity"`
 	IsSilence     bool                                `json:"isSilence"`
 	NeedsUserDept bool                                `json:"needsUserDept"`
+}
+
+// ExceptionMatch 轻量级命中结果(Phase 45 R4 / D-A4-02)
+//
+// 与 MatchTestResult 不同:本结构只携带 MatchedRuleID + AppliedActions,用于
+// GetByWorkstation 内的 "exceptionHit 计数 + 资产徽标" 快速判断,无需返回
+// 全部命中规则列表。
+//
+// 字段对齐 D-R3-A2-01 行为:
+//   - MatchedRuleID: 首条命中规则 ID(空表示无命中)
+//   - AppliedActions: 合并后 actions 并集(无命中时 nil)
+//   - IsSilence: actions 含 silence(无命中时 false)
+type ExceptionMatch struct {
+	MatchedRuleID  string         `json:"matchedRuleId"`
+	AppliedActions pq.StringArray `json:"appliedActions"`
+	IsSilence      bool           `json:"isSilence"`
 }
 
 // ============================================================================
@@ -516,6 +541,33 @@ func (s *reconciliationExceptionServiceImpl) MatchTest(ctx context.Context, ip s
 	}
 
 	return result, nil
+}
+
+// MatchException 单条资产例外规则命中(Phase 45 R4 / D-A4-02)
+//
+// 实现:
+//   - 预加载 active 规则(同 MatchTest)
+//   - 用 matchException 包级函数做单点 IP CIDR 匹配(D-R3-A1-03 GiST 留给 DB 优化器)
+//   - 严重度基线用 "medium"(与服务路径一致 — GetByWorkstation 在显示前已知
+//     conflictType,不需要再次 ComputeSeverity)
+//   - 返回 *ExceptionMatch 简化版(nonnil 表示命中)
+//
+// 调用栈:ReconciliationService.GetByWorkstation 内部 inline,用于 exceptionHit 计数
+// 和 assets[].AppliedActions 字段填充。
+func (s *reconciliationExceptionServiceImpl) MatchException(ctx context.Context, ip string, userID string, conflictType string) (*ExceptionMatch, error) {
+	if ip == "" {
+		return nil, nil
+	}
+	activeRules := preloadActiveRules(s.db.WithContext(ctx))
+	ruleID, actions, _, silence := matchException(activeRules, ip, userID, conflictType)
+	if ruleID == "" {
+		return nil, nil
+	}
+	return &ExceptionMatch{
+		MatchedRuleID:  ruleID,
+		AppliedActions: actions,
+		IsSilence:      silence,
+	}, nil
 }
 
 // invalidateCache 失效例外规则缓存(R3 写操作后调用)

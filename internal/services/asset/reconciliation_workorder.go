@@ -2,7 +2,9 @@ package asset
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -12,6 +14,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/workorder"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -49,6 +52,7 @@ type ReconciliationWorkorderService struct {
 	db            *gorm.DB
 	noticeHub     *websocket.NoticeHub
 	noticeService *services.NoticeService
+	cache         cache.Cache // R4 启用:用于 R2 createWorkorder 缓存失效
 }
 
 // NewReconciliationWorkorderService 构造器(向后兼容 — 无 WS / SysNotice 时为 nil)
@@ -62,8 +66,31 @@ type ReconciliationWorkorderService struct {
 //   - 旧调用方 NewReconciliationWorkorderService(db) 仍能工作,但 WS / SysNotice 不触发
 //   - R2 推荐构造: NewReconciliationWorkorderService(db, core.NoticeHub, services.NewNoticeService(db))
 //   - nil 字段的存在是为了非 production 环境(test / 单测)的解耦测试
+//
+// R4 扩展(Phase 45):
+//   - 增加第 4 参数 cache,支持 R2 createWorkorder 缓存失效(D-A4-04)
+//   - 旧调用方(无 cache) 通过 SetCache 注入,或继续传 nil(单测 / 非 production)
 func NewReconciliationWorkorderService(db *gorm.DB, noticeHub *websocket.NoticeHub, noticeService *services.NoticeService) *ReconciliationWorkorderService {
 	return &ReconciliationWorkorderService{db: db, noticeHub: noticeHub, noticeService: noticeService}
+}
+
+// NewReconciliationWorkorderServiceWithCache 构造器(R4 带 cache,D-A4-04 缓存失效用)
+//
+// 推荐生产构造: NewReconciliationWorkorderServiceWithCache(db, core.Cache, core.NoticeHub, services.NewNoticeService(db))
+func NewReconciliationWorkorderServiceWithCache(db *gorm.DB, c cache.Cache, noticeHub *websocket.NoticeHub, noticeService *services.NoticeService) *ReconciliationWorkorderService {
+	return &ReconciliationWorkorderService{db: db, cache: c, noticeHub: noticeHub, noticeService: noticeService}
+}
+
+// SetCache 注入 cache.Cache(R2 cron 调用方在创建 service 后注入 cache)
+//
+// 使用场景:
+//   - 调用方使用旧 NewReconciliationWorkorderService 构造(无 cache 参数),后续可
+//     通过 SetCache 注入 cache,避免破坏 R2 cron 既有调用方
+//   - 与 NewReconciliationWorkorderServiceWithCache 二选一
+func (s *ReconciliationWorkorderService) SetCache(c cache.Cache) {
+	if s != nil {
+		s.cache = c
+	}
 }
 
 // WS 事件类型常量(D-A4-02 锁定只推 2 类)
@@ -442,6 +469,75 @@ func (s *ReconciliationWorkorderService) publishCriticalSysNotice(ctx context.Co
 
 	logrus.Infof("[reconciliation:workorder] SysNotice 已发布 notice_id=%s (asset=%s, severity=%s, workorder=%s)",
 		notice.ID, assetCode, rec.Severity, workorderID)
+}
+
+// WorkstationIDForException 通过 exceptionID 反查工位 ID(Phase 45 R4 / D-A4-04)
+//
+// 设计原因(plan 45-02 B2 锁定):
+//   - **不修改** CreateWorkorderFromException 签名(保持 R2 cron 既有 12 步流程不变)
+//   - 单独提供轻量级反查方法,scheduler 在 CreateWorkorderFromException 成功后
+//     调此方法拿 wsID,再触发 InvalidateWorkstationHealth
+//
+// 查询路径:
+//   - sys_data_reconciliation.id (exceptionID) → sys_data_reconciliation.asset_id
+//   - asset_id → reconciliation_normalized.workstation_id (R1 MV 已 JOIN)
+//   - 若 reconciliation_normalized 缺失该 asset 行或 workstation_id IS NULL → 返回 ""
+//     (caller 跳过 invalidate,正常情况)
+//
+// 返回:
+//   - workstationID == "" 表示该 exception 孤立无工位归属(常见于 A 类不入主表但 cron
+//     漏查场景,或 reconciliation_normalized 尚未刷新),正常情况
+//   - error != nil 表示 DB 故障(查询失败),scheduler 应 logger.Warnf 但不阻断 cron 流程
+func (s *ReconciliationWorkorderService) WorkstationIDForException(ctx context.Context, exceptionID string) (string, error) {
+	if exceptionID == "" {
+		return "", nil
+	}
+	var wsID sql.NullString
+	err := s.db.WithContext(ctx).
+		Table("reconciliation_normalized").
+		Select("reconciliation_normalized.workstation_id").
+		Joins("JOIN sys_data_reconciliation ON sys_data_reconciliation.asset_id = reconciliation_normalized.asset_id").
+		Where("sys_data_reconciliation.id = ? AND sys_data_reconciliation.deleted_at IS NULL AND reconciliation_normalized.workstation_id IS NOT NULL", exceptionID).
+		Limit(1).
+		Row().
+		Scan(&wsID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", nil
+		}
+		return "", err
+	}
+	if !wsID.Valid {
+		return "", nil
+	}
+	return wsID.String, nil
+}
+
+// InvalidateWorkstationHealth 失效工位健康度缓存(Phase 45 R4 / D-A4-04)
+//
+// 包装 cache_keys.InvalidateWorkstationHealth,nil-safe:
+//   - s.cache == nil → 返回 nil(单测 / 非 production 环境,跳过)
+//   - workstationID == "" → 返回 nil(caller 跳过)
+//
+// 调用栈:
+//   - R2 createWorkorderBySeverity(在 CreateWorkorderFromException 成功后,通过
+//     woSvc.WorkstationIDForException 拿 wsID,然后调本方法)
+//   - ReconciliationHandler.ResolveException(通过 h.core.Cache 直接调 cache_keys.InvalidateWorkstationHealth)
+//
+// 顺序约定(D-A4-04):
+//
+//	workorderSvc.InvalidateWorkstationHealth(ctx, wsID)   // 先失效
+//	operlog.Record(...)                                  // 再写日志
+//	response.Success(...)                                // 最后返响应
+func (s *ReconciliationWorkorderService) InvalidateWorkstationHealth(ctx context.Context, workstationID string) error {
+	if workstationID == "" {
+		return nil
+	}
+	if s == nil || s.cache == nil {
+		// 单测 / 非 production 场景 cache 未注入,跳过失效(不报错)
+		return nil
+	}
+	return InvalidateWorkstationHealth(ctx, s.cache, workstationID)
 }
 
 // severityToSLAMinutes 根据 severity 字符串返回 SLA 分钟数(D-A2-03)

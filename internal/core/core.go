@@ -325,7 +325,11 @@ func (c *Core) Init() error {
 		// 实际 handler,导致调度器报 "未找到任务处理器: reconciliation"。
 		// Phase 43 R2: 注入 NoticeHub + NoticeService,critical 转单成功后触发 WS 推送 +
 		// SysNotice 写入(D-A4-01/03 双通道)。nil 时跳过,保持向后兼容。
-		scheduler.RegisterReconciliationTasks(c.Scheduler, c.GetDB(), c.NoticeHub, services.NewNoticeService(c.GetDB()))
+		//
+		// Phase 45 R4: 注入 c.Cache,R2 createWorkorderBySeverity 完成后通过
+		// woSvc.WorkstationIDForException + woSvc.InvalidateWorkstationHealth 主动失效
+		// 工位健康度缓存(D-A4-04)。nil 时跳过(单测 / 非 production)。
+		scheduler.RegisterReconciliationTasks(c.Scheduler, c.GetDB(), c.Cache, c.NoticeHub, services.NewNoticeService(c.GetDB()))
 		applogger.Infof("对账定时任务注册完成")
 
 		// 注册MAC历史清理任务

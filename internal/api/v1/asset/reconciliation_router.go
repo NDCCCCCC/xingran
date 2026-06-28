@@ -29,7 +29,9 @@ import (
 // 42-06 整合到 internal/api/router.go 主路由(避免 Excel 导入路由冲突陷阱)。
 func SetupReconciliationRouter(r *gin.RouterGroup, core *core.Core) {
 	// R4:Cache 注入支持 GetByWorkstation 的 5min TTL 缓存
-	svc := asset.NewReconciliationService(core.DB.GetDB(), core.Cache)
+	// R4 (Phase 45 / D-A4-02):exceptionSvc 注入用于 per-asset exception rule 命中
+	exceptionSvc := asset.NewReconciliationExceptionService(core.DB.GetDB())
+	svc := asset.NewReconciliationService(core.DB.GetDB(), core.Cache, exceptionSvc)
 	handler := NewReconciliationHandler(svc).WithCore(core)
 
 	r.POST("/exception/list", handler.ListExceptions)

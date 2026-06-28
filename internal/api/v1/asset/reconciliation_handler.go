@@ -10,6 +10,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/utils/operlog"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/middleware"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/response"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
 // ModuleReconciliation operlog 模块名常量 (D-16)
@@ -155,13 +156,33 @@ func (h *ReconciliationHandler) ResolveException(c *gin.Context) {
 		return
 	}
 
+	// 🆕 Phase 45 R4 / D-A4-04: 缓存主动失效(避免用户重看页面仍命中旧缓存)
+	// 严格顺序(D-A4-04):service → invalidate → operlog → response
+	// 注:ResolveException 改动后,reconciliation_normalized.workstation_id 关联的工位健康度
+	// 缓存需要被失效。该工位通过 reconciliation_normalized JOIN sys_data_reconciliation 反查。
+	// 失败仅 logrus.Warnf(不影响 operlog 写入),与 scheduler 路径保持一致。
+	var wsID string
+	_ = h.core.GetDB().WithContext(c.Request.Context()).
+		Table("reconciliation_normalized").
+		Select("reconciliation_normalized.workstation_id").
+		Joins("JOIN sys_data_reconciliation ON sys_data_reconciliation.asset_id = reconciliation_normalized.asset_id").
+		Where("sys_data_reconciliation.id = ? AND sys_data_reconciliation.deleted_at IS NULL AND reconciliation_normalized.workstation_id IS NOT NULL", id).
+		Limit(1).
+		Row().
+		Scan(&wsID)
+	if wsID != "" {
+		if invErr := asset.InvalidateWorkstationHealth(c.Request.Context(), h.core.Cache, wsID); invErr != nil {
+			applogger.Warnf("[reconciliation:ResolveException] R4 invalidate cache failed exceptionID=%s wsID=%s: %v", id, wsID, invErr)
+		}
+	}
+
 	// operlog 写入(CLAUDE.md 强制约定,状态变更 → OperTypeUpdate)
 	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), ModuleReconciliation, operlog.OperTypeUpdate)
 
 	response.Success(c, gin.H{
-		"id":          id,
-		"resolvedAt":  time.Now(),
-		"resolvedBy":  userID,
+		"id":             id,
+		"resolvedAt":     time.Now(),
+		"resolvedBy":     userID,
 		"resolutionNote": req.ResolutionNote,
 	})
 }

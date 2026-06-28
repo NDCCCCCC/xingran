@@ -9,6 +9,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/asset"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -39,11 +40,17 @@ import (
 //   - wsSvc + noticeSvc 注入到 ReconciliationWorkorderService,critical 转单成功后
 //     触发 WS 广播 + sys_notice 写入(双通道)
 //   - 兼容性:wsSvc/noticeSvc 为 nil 时跳过 WS/SysNotice(单测 / 非 production)
-func RegisterReconciliationTasks(s *Scheduler, db *gorm.DB, wsSvc *websocket.NoticeHub, noticeSvc *services.NoticeService) {
+//
+// R4 扩展(Phase 45 / D-A4-04 缓存失效):
+//   - cacheSvc 注入到 ReconciliationWorkorderService,createWorkorderBySeverity 在
+//     CreateWorkorderFromException 成功后通过 woSvc.WorkstationIDForException 拿
+//     wsID,再调 woSvc.InvalidateWorkstationHealth 主动失效缓存
+//   - cacheSvc 为 nil 时跳过(单测 / 非 production),失效失败仅 logrus.Warnf
+func RegisterReconciliationTasks(s *Scheduler, db *gorm.DB, cacheSvc cache.Cache, wsSvc *websocket.NoticeHub, noticeSvc *services.NoticeService) {
 	// 实例化对账服务(无 core 依赖,只依赖 *gorm.DB)
 	snapSvc := asset.NewReconciliationSnapshotService(db)
 	detSvc := asset.NewReconciliationDetection(db)
-	woSvc := asset.NewReconciliationWorkorderService(db, wsSvc, noticeSvc)
+	woSvc := asset.NewReconciliationWorkorderServiceWithCache(db, cacheSvc, wsSvc, noticeSvc)
 
 	// === 1. 物化视图刷新 ===
 	//
@@ -232,6 +239,18 @@ func createWorkorderBySeverity(ctx context.Context, db *gorm.DB, woSvc *asset.Re
 			continue
 		}
 		successCount++
+
+		// 🆕 Phase 45 R4 / D-A4-04: 缓存主动失效(避免用户重看页面仍命中旧缓存)
+		// 反查 exception → workstation_id,然后调 woSvc.InvalidateWorkstationHealth 失效缓存。
+		// 失效失败仅 logrus.Warnf,不阻断 cron 流程(缓存最终会在 5min TTL 后自动失效)。
+		wsID, wsErr := woSvc.WorkstationIDForException(ctx, rec.ID)
+		if wsErr != nil {
+			logrus.Warnf("[reconciliation:createWorkorder%s] WorkstationIDForException 失败 exceptionID=%s: %v", severity, rec.ID, wsErr)
+		} else if wsID != "" {
+			if invErr := woSvc.InvalidateWorkstationHealth(ctx, wsID); invErr != nil {
+				logrus.Warnf("[reconciliation:createWorkorder%s] R4 invalidate cache failed exceptionID=%s wsID=%s: %v", severity, rec.ID, wsID, invErr)
+			}
+		}
 	}
 
 	applogger.Infof("[reconciliation:createWorkorder%s] 完成: success=%d failure=%d total=%d",
