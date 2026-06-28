@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 
@@ -212,6 +213,12 @@ func (s *reconciliationDetectionImpl) DetectLayer3(ctx context.Context) (int, in
 		return 0, 0, 0, 0, err
 	}
 
+	// === R3 / D-R3-A1-03 Layer 3.5 前置:预加载 active 例外规则 ===
+	// 一次性 SELECT * FROM sys_reconciliation_exception WHERE is_active=0 AND deleted_at IS NULL,
+	// 逐条 net.ParseCIDR 预编译。循环内零 DB 查询(性能架构 D-R3-A1-03)。
+	activeRules := preloadActiveRules(s.db.WithContext(ctx))
+	exceptionHit := 0 // 统计命中例外数(仅日志,不影响返回签名)
+
 	inserted := 0
 	skipped := 0
 	skippedSilence := 0
@@ -260,6 +267,39 @@ func (s *reconciliationDetectionImpl) DetectLayer3(ctx context.Context) (int, in
 			continue
 		}
 
+		// === R3 / D-R3-A1-02 Layer 3.5: 例外规则匹配 ===
+		//
+		// 例外过滤集中在 DetectLayer3 循环内,一次性匹配后写 exception_rule_id +
+		// applied_actions 到 sys_data_reconciliation(单一真相源 D-R3-A1-02)。
+		// 下游通路(R2 WS / SysNotice / 转单 cron)读 applied_actions 决定行为,
+		// 不各自重查例外表。
+		//
+		// matchException 纯函数(Task 2):返回首条命中规则 ID + 合并 actions +
+		// 最终 severity + isSilence。命中时填入 rec 的 ExceptionRuleID +
+		// AppliedActions + 调整 Severity(D-R3-A2-02 skip_severity 降级 + severity_override 取最低)。
+		// silence 命中仍写表(D-R3-A1-01),仅 ListExceptions 默认过滤。
+		confidence := s.ComputeConfidence(signals)
+		severity := s.ComputeSeverity(conflictType)
+
+		var exceptionRuleID *string
+		var appliedActions pq.StringArray
+
+		// 资产 IP 非空时参与例外匹配(IP 是 CIDR 匹配的必要条件)
+		// 资产责任人 user_id 用于 dept/user scope 双条件匹配(D-R3-A3-01)
+		assetUserIDForMatch := ""
+		if row.AssetUserID != nil {
+			assetUserIDForMatch = *row.AssetUserID
+		}
+		if row.AssetIP != nil && *row.AssetIP != "" {
+			ruleID, actions, finalSev, _ := matchExceptionWithSeverity(activeRules, *row.AssetIP, assetUserIDForMatch, conflictType, severity)
+			if ruleID != "" {
+				exceptionRuleID = &ruleID
+				appliedActions = actions
+				severity = finalSev // R3/D-R3-A2-02: skip_severity 降级 + severity_override 取最低
+				exceptionHit++
+			}
+		}
+
 		// 脏数据防御:ops_asset.machine_ip 是 inet 列,历史数据可能含非法值(如 '192.168.x.x*10.x.x.x')。
 		// MV 直接 SELECT machine_ip,脏值会原样穿透到 row.AssetIP,后续 INSERT inet 列触发
 		// SQLSTATE 22P02 "invalid input syntax for type inet"。这里做轻量校验:含 * 或空格的视为脏数据,
@@ -269,9 +309,6 @@ func (s *reconciliationDetectionImpl) DetectLayer3(ctx context.Context) (int, in
 				row.AssetIP = nil
 			}
 		}
-
-		confidence := s.ComputeConfidence(signals)
-		severity := s.ComputeSeverity(conflictType)
 
 		// 构造 RawSnapshot(jsonb)
 		rawSnapshot, _ := json.Marshal(map[string]interface{}{
@@ -312,6 +349,8 @@ func (s *reconciliationDetectionImpl) DetectLayer3(ctx context.Context) (int, in
 			ConfidenceScore: confidence,
 			RawSnapshot:     rawSnapshot,
 			AssetIP:         row.AssetIP,
+			ExceptionRuleID: exceptionRuleID, // R3 / D-R3-A1-02 Layer 3.5 命中例外规则 ID
+			AppliedActions:  appliedActions,  // R3 / D-R3-A1-02 合并后的 actions(可能含 silence)
 			DetectedAt:      time.Now(),
 		}
 
@@ -326,6 +365,11 @@ func (s *reconciliationDetectionImpl) DetectLayer3(ctx context.Context) (int, in
 			return inserted, skipped, skippedSilence, skippedThrottle, err
 		}
 		inserted++
+	}
+
+	// R3 / D-R3-A1-02 — Layer 3.5 命中例外规则数日志(运维可观测降噪效果)
+	if exceptionHit > 0 {
+		logrus.Infof("[reconciliation:DetectLayer3] Layer 3.5 命中例外规则 %d 条(inserted=%d)", exceptionHit, inserted)
 	}
 
 	return inserted, skipped, skippedSilence, skippedThrottle, nil

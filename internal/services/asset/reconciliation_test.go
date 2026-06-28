@@ -220,6 +220,29 @@ func setupTestDB(t *testing.T, testName string) *gorm.DB {
 		)
 	`).Error)
 
+	// R3: 建 sys_reconciliation_exception 表(DetectLayer3 Layer 3.5 预加载 active 规则)
+	require.NoError(t, db.Exec(`
+		CREATE TABLE IF NOT EXISTS sys_reconciliation_exception (
+			id TEXT PRIMARY KEY,
+			created_at DATETIME,
+			updated_at DATETIME,
+			deleted_at DATETIME,
+			created_by TEXT,
+			updated_by TEXT,
+			version INTEGER DEFAULT 0,
+			name TEXT,
+			ip_range TEXT,
+			conflict_types TEXT,
+			exception_actions TEXT,
+			severity_override TEXT,
+			scope_type TEXT,
+			scope_id TEXT,
+			reason TEXT,
+			is_active INTEGER DEFAULT 0,
+			expires_at DATETIME
+		)
+	`).Error)
+
 	// 建 reconciliation_normalized view(SQLite 不支持 MV,用 view 模拟)
 	// DROP VIEW IF EXISTS 兼容 SQLite,允许重跑测试
 	// R2 扩展:last_resolved_at / last_resolved_by / last_conflict_type 三字段(NULL 占位,

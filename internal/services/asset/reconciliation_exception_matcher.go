@@ -112,7 +112,21 @@ func preloadActiveRules(db *gorm.DB) []compiledRule {
 // 关键(D-R3-A2-01/02):
 //   - matchedRuleID 取首条命中(审计可追溯),但 actions/severity 取**所有命中规则**的合并结果
 //   - 合并顺序: step1 skip_severity 降级 → step2 severity_override 取最低 → step3 actions UNION
+//
+// 注:originalSeverity 默认 "medium"(命中测试工具的基线);DetectLayer3 调用方
+// 应在调用前用 ComputeSeverity(conflictType) 算出真实 severity,通过
+// matchExceptionWithSeverity 显式传入,本便捷函数保留 medium 兼容现有测试。
 func matchException(rules []compiledRule, assetIP string, assetUserID string, conflictType string) (
+	matchedRuleID string, appliedActions pq.StringArray, finalSeverity string, isSilence bool,
+) {
+	return matchExceptionWithSeverity(rules, assetIP, assetUserID, conflictType, "medium")
+}
+
+// matchExceptionWithSeverity 显式传入原始 severity 的版本(DetectLayer3 用)
+//
+// DetectLayer3 调用前已用 ComputeSeverity(conflictType) 算出真实 severity,
+// 传入后 mergeActions 据此降级 / 覆盖。
+func matchExceptionWithSeverity(rules []compiledRule, assetIP string, assetUserID string, conflictType string, originalSeverity string) (
 	matchedRuleID string, appliedActions pq.StringArray, finalSeverity string, isSilence bool,
 ) {
 	ip := net.ParseIP(assetIP)
@@ -157,10 +171,8 @@ func matchException(rules []compiledRule, assetIP string, assetUserID string, co
 	// 审计指向首条命中规则(规则变更后历史记录仍可回溯到此 ID)
 	matchedRuleID = matched[0].rule.ID
 
-	// 合并 actions + severity(传入默认 severity medium,DetectedLayer3 调用方
-	// 应在调 matchException 之前用 ComputeSeverity 算出 conflictType 的 severity)
-	// 这里 finalSeverity 由调用方提供的 originalSeverity 驱动,简化版固定 medium
-	actions, sev, silence := mergeActions("medium", matched, conflictType)
+	// 合并 actions + severity(D-R3-A2-01/02)
+	actions, sev, silence := mergeActions(originalSeverity, matched, conflictType)
 	return matchedRuleID, actions, sev, silence
 }
 

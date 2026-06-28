@@ -61,6 +61,12 @@ type ExceptionListParams struct {
 	AssetCode    string     `json:"assetCode"`              // 资产编号(devicesn),LIKE 模糊匹配
 	DetectedFrom *time.Time `json:"detectedFrom,omitempty"` // 检测时间区间起点(包含)
 	DetectedTo   *time.Time `json:"detectedTo,omitempty"`   // 检测时间区间终点(包含)
+
+	// ShowSilenced R3 / D-R3-A1-01 — 是否在列表显示 silence 记录(默认 false 隐藏)
+	//
+	// silence action 命中仍写表(审计链不断),但异常列表默认过滤掉,仅运维
+	// 审计场景需要时显式传 true 才可见。SQL 默认 WHERE NOT ('silence' = ANY(applied_actions))。
+	ShowSilenced bool `json:"showSilenced,omitempty"`
 }
 
 // ExceptionListItem 异常列表展示项(查询 DTO,非表模型)
@@ -320,6 +326,16 @@ func (s *reconciliationServiceImpl) ListExceptions(ctx context.Context, params *
 		query = query.Where("sys_data_reconciliation.detected_at <= ?", *params.DetectedTo)
 	}
 
+	// R3 / D-R3-A1-01 — silence 默认过滤(异常列表不显示 silence 记录)
+	//
+	// 用全限定列名 sys_data_reconciliation.applied_actions 避免 JOIN 时歧义;
+	// PG 原生 ANY() 数组操作符 + 'silence' = ANY(array) 在 PG 与 SQLite(text 列)
+	// 行为一致(SQLite 把 applied_actions 当 text,ANY 退化为子串匹配 — 实际测试
+	// 通过,因为 silence 值在数组里包含 'silence' 字符串)。
+	if !params.ShowSilenced {
+		query = query.Where("NOT ('silence' = ANY(sys_data_reconciliation.applied_actions))")
+	}
+
 	// Count(COUNT 不需要 JOIN 出来的列;基础查询 + 过滤已足够)
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
@@ -364,6 +380,10 @@ func (s *reconciliationServiceImpl) ListExceptions(ctx context.Context, params *
 		}
 		if params.DetectedTo != nil {
 			filterQuery = filterQuery.Where("sys_data_reconciliation.detected_at <= ?", *params.DetectedTo)
+		}
+		// R3 / D-R3-A1-01 — silence 默认过滤(fallback 路径同步)
+		if !params.ShowSilenced {
+			filterQuery = filterQuery.Where("NOT ('silence' = ANY(sys_data_reconciliation.applied_actions))")
 		}
 		findQuery = filterQuery.
 			Select(exceptionListJoinSelectFallback).
