@@ -885,24 +885,26 @@ func createWorkorderBySeverity(ctx context.Context, db *gorm.DB, woSvc *asset.Re
 | A7 | Phase 42 R1 seed 的 global 例外规则 actions 都在白名单内（migration_174 CHECK 不会 FATA） | Runtime State Inventory | LOW — 若 seed 数据含非法值，migration_174 会 SQLSTATE 23514。planner 应在 Plan 44-01 Task 跑 migration 前先 SELECT 校验现有 seed 数据 |
 | A8 | `operlog.Record` 在例外规则 CRUD handler 可直接调用（无 exclude_paths 冲突） | Standard Stack / Don't Hand-Roll | LOW — operlog.exclude_paths 是 RPA heartbeat 专用（项目记忆 `operlog-exclude-paths.md`），与 `/asset/reconciliation/exception-rule/*` 路径无关 |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Excel TEXT[] 列原生支持（A3）**
+> 下列 4 个 OPEN QUESTION 已在 44-01 / 44-02 PLAN.md 中明确解决（plan-checker 迭代 2/3 验证）。每个问题末尾标注 RESOLVED 溯源。
+
+1. **Excel TEXT[] 列原生支持（A3）** — RESOLVED: 见 44-02 Task 4 方案 B（专用 ImportRules handler + service.ImportFromExcel 后处理），不依赖 validateAndParseRow 原生 TEXT[] 支持。
    - What we know: `validateAndParseRow` 按 ExcelColumn 配置转换；Reference 字段走 ReferenceResolver；其他字段按类型推断。
    - What's unclear: TEXT[]（pq.StringArray）列是否原生支持逗号分隔字符串自动转数组。
    - Recommendation: planner 在 Plan 44-02 Task 1 先写一个最小 PoC 测试 `excel_service.ImportData` 对 TEXT[] 列的行为；若不支持，方案 B 后处理 UPDATE。
 
-2. **Excel scope_name 条件性解析（A4）**
+2. **Excel scope_name 条件性解析（A4）** — RESOLVED: 见 44-02 Task 4 方案 B（ImportFromExcel 返回后逐条按 scope_type 解析 scope_id 并 UPDATE，锁定非 executor discretion）。
    - What we know: 现有 Reference 是静态配置（building 导入固定 Reference `sys_dept.dept_code`）。
    - What's unclear: scope_name 按 scope_type 动态走不同表（dept→sys_dept / user→sys_user / global→留空）是否需 service 层 post-process。
    - Recommendation: planner 在 Plan 44-02 Task 显式实现 post-process：ImportData 返回 AffectedKeys 后，逐条 SELECT name + scope_name + scope_type，按 scope_type 解析 scope_id 并 UPDATE。
 
-3. **dept scope 递归子部门策略（A6 + D-R3-A3-01 Claude's Discretion）**
+3. **dept scope 递归子部门策略（A6 + D-R3-A3-01 Claude's Discretion）** — RESOLVED: 见 44-01 Task 3 WARN-10 锁定（R3 dept scope 不递归，仅匹配 scope_id == deptID 直接部门；R4/R5 再评估）。
    - What we know: sys_dept.ancestors 存逗号分隔祖先 ID（如 `0,root_id,parent_id'`）。
    - What's unclear: dept scope 规则匹配时，是否把子部门资产也算入。
    - Recommendation: planner 决策——若递归，匹配函数 `matchException` 需在 dept scope 规则命中时额外查 `sys_dept WHERE ancestors LIKE '%'||scope_dept_id||'%'` 取子部门 ID 集，再判断 assetUserID ∈ 子部门用户集。简化版不递归，仅匹配 scope_id 对应部门直接成员（D-R3-A3-01 留 planner discretion）。
 
-4. **"显示已静默"开关是否在异常列表提供（D-R3-A1-01 Claude's Discretion）**
+4. **"显示已静默"开关是否在异常列表提供（D-R3-A1-01 Claude's Discretion）** — RESOLVED: 提供（见 44-01 Task 4 ShowSilenced + 44-01 Task 6c 前端 Switch 组件）。
    - What we know: D-R3-A1-01 留此开关为 planner discretion。
    - Recommendation: 提供（低成本，复用 ExceptionListParams.ShowSilenced 字段 + 前端 Switch 组件），运维审计场景需要。
 
