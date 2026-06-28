@@ -76,7 +76,20 @@ func RegisterReconciliationTasks(s *Scheduler, db *gorm.DB, wsSvc *websocket.Not
 		case "detectExpiredSilence":
 			applogger.Infof("[reconciliation:detectExpiredSilence] R1 placeholder, R2 真实实现")
 		case "cleanupExpiredExceptions":
-			applogger.Infof("[reconciliation:cleanupExpiredExceptions] R1 placeholder, R3 真实实现")
+			// Phase 44 R3 / Plan 44-02 Task 1 — 过期例外规则软停用(D-R3-A4-03 + T-44-07)
+			//
+			// 行为:
+			//   - WHERE expires_at IS NOT NULL AND expires_at < NOW() AND is_active=0 AND deleted_at IS NULL
+			//   - UPDATE is_active=1 (Status Convention: 0=启用→1=停用)
+			//   - **软停用不软删除**:deleted_at 保持 NULL,历史 sys_data_reconciliation.exception_rule_id
+			//     仍指向有效(虽停用)记录,审计链不断(D-R3-A4-03)
+			//   - 幂等:WHERE 含 is_active=0(仅启用规则),二次 cron 调用 rowsAffected=0
+			rowsAffected, err := cleanupExpiredExceptionsDirect(ctx, db, time.Now())
+			if err != nil {
+				applogger.Errorf("[reconciliation:cleanupExpiredExceptions] 失败: %v", err)
+				return err
+			}
+			applogger.Infof("[reconciliation:cleanupExpiredExceptions] 软停用 %d 条过期例外规则", rowsAffected)
 		case "createWorkorderCritical":
 			// Phase 43 R2 / D-A1-01: critical 异常 ≤2min 自动转工单
 			// 扫 sys_data_reconciliation WHERE severity='critical' AND deleted_at IS NULL
@@ -175,6 +188,14 @@ func RegisterReconciliationTasks(s *Scheduler, db *gorm.DB, wsSvc *websocket.Not
 //   - 单函数支持 critical / high 两种 severity,避免重复 switch 代码
 //   - SELECT 含 deleted_at IS NULL AND resolved_at IS NULL AND workorder_id IS NULL 4 条件,
 //     确保只处理真正"开放 + 未转单"的异常(防重复转单)
+//   - **BLOCKER-4 (Phase 44 R3 / D-R3-A1-02)**:WHERE 强制含
+//     `AND (applied_actions IS NULL OR 'no_workorder' != ANY(applied_actions))`。
+//     理由:`internal/models/reconciliation.go:50` 的 `AppliedActions pq.StringArray` 无 default tag,
+//     PG INSERT 未指定值时默认 NULL(非空数组)。PG 三值逻辑下
+//     `'no_workorder' != ANY(NULL)` 返回 NULL,整个 WHERE 子句该行被过滤——会导致所有
+//     "无例外命中"(applied_actions=NULL)的 critical/high 异常被漏转,反向破坏 R2 WORKORDER-01/02。
+//     IS NULL 兜底保证 NULL 数组的异常仍被转单。
+//     参考: https://www.postgresql.org/docs/current/functions-comparisons.html#id-1.5.8.30.16
 //   - ORDER BY detected_at ASC LIMIT N:按时间顺序处理(先到先服务);LIMIT 避免单次 cron 周期
 //     处理过多(预留 1-2min 时间给单条转单流程)
 //   - 单条转单失败仅 logrus.Errorf + continue(D-A1-03 不写 SysNotice),其他正常异常继续处理
@@ -188,7 +209,8 @@ func RegisterReconciliationTasks(s *Scheduler, db *gorm.DB, wsSvc *websocket.Not
 func createWorkorderBySeverity(ctx context.Context, db *gorm.DB, woSvc *asset.ReconciliationWorkorderService, severity string, limit int) error {
 	var exceptions []models.SysDataReconciliation
 	if err := db.WithContext(ctx).
-		Where("severity = ? AND deleted_at IS NULL AND resolved_at IS NULL AND workorder_id IS NULL", severity).
+		Where("severity = ? AND deleted_at IS NULL AND resolved_at IS NULL AND workorder_id IS NULL "+
+			"AND (applied_actions IS NULL OR 'no_workorder' != ANY(applied_actions))", severity).
 		Order("detected_at ASC").
 		Limit(limit).
 		Find(&exceptions).Error; err != nil {
@@ -215,6 +237,30 @@ func createWorkorderBySeverity(ctx context.Context, db *gorm.DB, woSvc *asset.Re
 	applogger.Infof("[reconciliation:createWorkorder%s] 完成: success=%d failure=%d total=%d",
 		severity, successCount, failureCount, len(exceptions))
 	return nil
+}
+
+// cleanupExpiredExceptionsDirect 软停用过期例外规则(Phase 44 R3 / Plan 44-02 Task 1)
+//
+// 行为(D-R3-A4-03 + T-44-07 审计链缓解):
+//   - WHERE expires_at IS NOT NULL AND expires_at < ?(now) AND is_active = 0 AND deleted_at IS NULL
+//   - UPDATE is_active = 1 (Status Convention: 0=启用 → 1=停用)
+//   - **软停用不软删除**:deleted_at 保持 NULL,历史 sys_data_reconciliation.exception_rule_id
+//     仍指向有效(虽停用)记录,审计链不断(D-R3-A4-03 / Pitfall 4 防外键断链)
+//   - 幂等:WHERE 含 is_active=0(仅启用规则),二次 cron 调用 rowsAffected=0
+//
+// now 参数(cron 调用方传 time.Now())让函数 deterministic 可测(SQLite 上 NOW() 不可移植)。
+// 生产 cron 调度时,now 等价于 PG 的 NOW()(同一 cron 周期内的时刻)。
+//
+// 抽出为独立函数便于单测(避免依赖完整 cron 引擎 + Scheduler 实例)。
+func cleanupExpiredExceptionsDirect(ctx context.Context, db *gorm.DB, now time.Time) (int64, error) {
+	result := db.WithContext(ctx).
+		Model(&models.SysReconciliationException{}).
+		Where("expires_at IS NOT NULL AND expires_at < ? AND is_active = ? AND deleted_at IS NULL", now, 0).
+		Update("is_active", 1) // Status Convention: 0=启用 → 1=停用
+	if result.Error != nil {
+		return 0, fmt.Errorf("软停用过期例外规则失败: %w", result.Error)
+	}
+	return result.RowsAffected, nil
 }
 
 // jobNameToInvokeTarget 把中文 job name 映射到 InvokeTarget 字符串

@@ -11,6 +11,7 @@ package scheduler
 
 import (
 	"context"
+	"database/sql"
 	"os"
 	"testing"
 	"time"
@@ -50,43 +51,9 @@ func setupReconExceptionTestDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-// setupReconDataTestDB 构造内存 sqlite + sys_data_reconciliation 表(用于转单 SQL 测试)
-//
-// applied_actions 用 TEXT 模拟 PG TEXT[](SQLite 无原生数组类型),
-// 测试 SQL 用 ANY() 不可移植;故转单 SQL 测试改用静态源码扫描 + 集成断言双轨制。
-func setupReconDataTestDB(t *testing.T) *gorm.DB {
-	t.Helper()
-	db, err := gorm.Open(sqlite.Open("file:recon_data_"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
-	require.NoError(t, err)
-	require.NoError(t, db.Exec(`
-		CREATE TABLE IF NOT EXISTS sys_data_reconciliation (
-			id TEXT PRIMARY KEY,
-			created_at DATETIME,
-			updated_at DATETIME,
-			deleted_at DATETIME,
-			created_by TEXT,
-			updated_by TEXT,
-			version INTEGER DEFAULT 0,
-			asset_id TEXT,
-			conflict_type TEXT,
-			severity TEXT,
-			physical_value TEXT,
-			declared_value TEXT,
-			ad_value TEXT,
-			confidence_score REAL,
-			raw_snapshot TEXT,
-			asset_ip TEXT,
-			exception_rule_id TEXT,
-			applied_actions TEXT,
-			detected_at DATETIME,
-			resolved_at DATETIME,
-			resolved_by TEXT,
-			resolution_note TEXT,
-			workorder_id TEXT
-		)
-	`).Error)
-	return db
-}
+// 注:转单 SQL 测试不用 SQLite runtime —— PG `ANY(text[])` 不可移植。
+// 改用静态源码扫描锁定 WHERE 文本(BLOCKER-4: IS NULL 兜底),与 44-01 Task 4
+// silence 过滤测试模式一致(参见 reconciliation_service_test.go 静态断言)。
 
 // ============================================================================
 // cleanupExpiredExceptions (内部辅助函数 cleanupExpiredExceptionsDirect)
@@ -107,7 +74,7 @@ func TestCleanupExpiredExceptions(t *testing.T) {
 	require.NoError(t, db.Exec(`INSERT INTO sys_reconciliation_exception (id, name, ip_range, is_active, expires_at, created_at, reason) VALUES (?, ?, ?, 0, ?, ?, ?)`,
 		"rule-future", "未过期规则", "10.0.0.0/8", future, time.Now(), "测试").Error)
 
-	rowsAffected, err := cleanupExpiredExceptionsDirect(ctx, db)
+	rowsAffected, err := cleanupExpiredExceptionsDirect(ctx, db, time.Now())
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), rowsAffected, "仅过期那条被软停用")
 
@@ -120,9 +87,9 @@ func TestCleanupExpiredExceptions(t *testing.T) {
 	assert.Equal(t, 0, futureActive, "未过期规则应保持启用(is_active=0)")
 
 	// deleted_at 仍 NULL(软停用不软删除,D-R3-A4-03 审计链)
-	var pastDeletedAt *time.Time
+	var pastDeletedAt sql.NullTime
 	require.NoError(t, db.Raw(`SELECT deleted_at FROM sys_reconciliation_exception WHERE id = 'rule-past'`).Scan(&pastDeletedAt).Error)
-	assert.Nil(t, pastDeletedAt, "软停用 deleted_at 必须为 NULL(审计链不断,T-44-07)")
+	assert.False(t, pastDeletedAt.Valid, "软停用 deleted_at 必须为 NULL(审计链不断,T-44-07)")
 }
 
 // TestCleanupExpiredExceptionsIdempotent 二次调用 rowsAffected=0(WHERE is_active=0 已不匹配)
@@ -134,11 +101,11 @@ func TestCleanupExpiredExceptionsIdempotent(t *testing.T) {
 	require.NoError(t, db.Exec(`INSERT INTO sys_reconciliation_exception (id, name, ip_range, is_active, expires_at, created_at, reason) VALUES (?, ?, ?, 0, ?, ?, ?)`,
 		"rule-past", "过期规则", "192.168.0.0/16", past, past, "测试").Error)
 
-	first, err := cleanupExpiredExceptionsDirect(ctx, db)
+	first, err := cleanupExpiredExceptionsDirect(ctx, db, time.Now())
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), first, "第一次应停用 1 条")
 
-	second, err := cleanupExpiredExceptionsDirect(ctx, db)
+	second, err := cleanupExpiredExceptionsDirect(ctx, db, time.Now())
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), second, "第二次调用应 rowsAffected=0(幂等)")
 }
@@ -151,7 +118,7 @@ func TestCleanupExpiredExceptionsNoExpiresAt(t *testing.T) {
 	require.NoError(t, db.Exec(`INSERT INTO sys_reconciliation_exception (id, name, ip_range, is_active, expires_at, created_at, reason) VALUES (?, ?, ?, 0, NULL, ?, ?)`,
 		"rule-no-exp", "无过期规则", "192.168.0.0/16", time.Now(), "测试").Error)
 
-	rowsAffected, err := cleanupExpiredExceptionsDirect(ctx, db)
+	rowsAffected, err := cleanupExpiredExceptionsDirect(ctx, db, time.Now())
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), rowsAffected, "无 expires_at 的规则不被处理")
 }
@@ -165,7 +132,7 @@ func TestCleanupExpiredExceptionsAlreadyDeleted(t *testing.T) {
 	require.NoError(t, db.Exec(`INSERT INTO sys_reconciliation_exception (id, name, ip_range, is_active, expires_at, deleted_at, created_at, reason) VALUES (?, ?, ?, 0, ?, ?, ?, ?)`,
 		"rule-deleted", "已软删规则", "192.168.0.0/16", past, past, time.Now(), "测试").Error)
 
-	rowsAffected, err := cleanupExpiredExceptionsDirect(ctx, db)
+	rowsAffected, err := cleanupExpiredExceptionsDirect(ctx, db, time.Now())
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), rowsAffected, "软删除的规则不被处理(WHERE deleted_at IS NULL)")
 }
@@ -198,8 +165,10 @@ func TestCleanupExpiredExceptionsNoPlaceholder(t *testing.T) {
 		"R1 placeholder 字符串必须消失(R3 真实实现已落地)")
 	assert.Contains(t, src, `Update("is_active", 1)`,
 		"软停用实现必须用 Update(is_active, 1)")
+	// WHERE 用 ? 参数化(now time.Time),NOW() 仅出现在 doc comment 中。
+	// 实际运行时 SQL 等价于 PG 的 `expires_at < NOW()`(由 cron 调度方传 time.Now())。
 	assert.Contains(t, src,
-		"expires_at IS NOT NULL AND expires_at < NOW() AND is_active = ? AND deleted_at IS NULL",
+		`Where("expires_at IS NOT NULL AND expires_at < ? AND is_active = ? AND deleted_at IS NULL"`,
 		"WHERE 必须含 expires_at + is_active=0 + deleted_at IS NULL(幂等 + 审计链)")
 }
 
