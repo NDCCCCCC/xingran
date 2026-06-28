@@ -62,19 +62,21 @@ func setupBaselineTestDB(t *testing.T) *gorm.DB {
 }
 
 // insertExceptions 插入 N 条异常(severity + workorder_id + applied_actions 可控)
-func insertExceptions(t *testing.T, db *gorm.DB, n int, severity string, withWorkorder bool, actions string) {
+//
+// prefix 用于避免不同批次的 ID 冲突(同 severity 多次调用时 prefix 区分)。
+func insertExceptions(t *testing.T, db *gorm.DB, prefix string, n int, severity string, withWorkorder bool, actions string) {
 	t.Helper()
 	for i := 0; i < n; i++ {
 		var woID interface{} = nil
 		if withWorkorder {
-			woID = "wo-" + severity + "-" + string(rune('a'+i))
+			woID = "wo-" + prefix + "-" + severity + "-" + string(rune('a'+i%26)) + "-" + string(rune('A'+i/26))
 		}
-		_, err := db.DB()
-		require.NoError(t, err)
+		// ID = prefix + severity + index(双重去重防同 severity 多批次冲突)
+		id := "rec-" + prefix + "-" + severity + "-" + string(rune('a'+i%26)) + "-" + string(rune('A'+i/26))
 		// 直接 INSERT (applied_actions 在 SQLite 用 TEXT 模拟,生产是 TEXT[])
 		require.NoError(t, db.Exec(`INSERT INTO sys_data_reconciliation (id, asset_id, conflict_type, severity, applied_actions, detected_at, workorder_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-			"rec-"+severity+"-"+string(rune('a'+i)),
-			"asset-"+severity+"-"+string(rune('a'+i)),
+			id,
+			"asset-"+id,
 			"B",
 			severity,
 			actions,
@@ -117,9 +119,9 @@ func TestSnapshotReflectsCurrentCounts(t *testing.T) {
 	ctx := context.Background()
 
 	// 500 总异常 + 120 工单(workorder_id 非 NULL)+ 30 critical
-	insertExceptions(t, db, 350, "high", false, "")
-	insertExceptions(t, db, 120, "critical", true, "")
-	insertExceptions(t, db, 30, "critical", false, "")
+	insertExceptions(t, db, "high-no-wo", 350, "high", false, "")
+	insertExceptions(t, db, "crit-wo", 120, "critical", true, "")
+	insertExceptions(t, db, "crit-no-wo", 30, "critical", false, "")
 
 	svc := NewReconciliationBaselineService(db)
 	snap, err := svc.Snapshot(ctx)
@@ -138,7 +140,7 @@ func TestSnapshotIdempotentOverwrite(t *testing.T) {
 	_, err := svc.Snapshot(ctx)
 	require.NoError(t, err)
 
-	insertExceptions(t, db, 10, "high", false, "")
+	insertExceptions(t, db, "after-snapshot", 10, "high", false, "")
 	_, err = svc.Snapshot(ctx)
 	require.NoError(t, err)
 
@@ -157,8 +159,8 @@ func TestSnapshotCountIncludesSilenceRecords(t *testing.T) {
 	ctx := context.Background()
 
 	// 480 普通 + 20 silence(用 "[\"silence\"]" 模拟 PG TEXT[] 的 JSON 序列化)
-	insertExceptions(t, db, 480, "medium", false, "")
-	insertExceptions(t, db, 20, "medium", false, `[\"silence\"]`)
+	insertExceptions(t, db, "normal", 480, "medium", false, "")
+	insertExceptions(t, db, "silenced", 20, "medium", false, `[\"silence\"]`)
 
 	svc := NewReconciliationBaselineService(db)
 	snap, err := svc.Snapshot(ctx)
@@ -167,30 +169,39 @@ func TestSnapshotCountIncludesSilenceRecords(t *testing.T) {
 		"Snapshot COUNT 必须含 silence 记录 (WARN-8: WHERE 仅 deleted_at IS NULL, 不加 silence 过滤)")
 }
 
-// TestCompareReturnsReductionPct baseline 500/120/30, 当前 200/50/10
+// TestCompareReturnsReductionPct baseline 500/120/150-critical, 当前 200/50/10
+//
+// baseline:
+//   - 总异常 = 350(high,no-wo) + 120(critical, wo) + 30(critical, no-wo) = 500
+//   - 工单数 = 120(仅 critical+wo)
+//   - critical 数 = 120 + 30 = 150(critical 与是否有工单无关)
+//
+// current:
+//   - 总异常 = 140(medium) + 50(high, wo) + 10(critical, no-wo) = 200
+//   - 工单数 = 50
+//   - critical 数 = 10
 //
 // 异常下降% = (500-200)/500*100 = 60.0
 // 工单下降% = (120-50)/120*100 ≈ 58.33
-// critical 下降% = (30-10)/30*100 ≈ 66.67
+// critical 下降% = (150-10)/150*100 ≈ 93.33
 func TestCompareReturnsReductionPct(t *testing.T) {
 	db := setupBaselineTestDB(t)
 	ctx := context.Background()
 
-	// 先写 baseline (DB 含 500/120/30)
-	insertExceptions(t, db, 350, "high", false, "")
-	insertExceptions(t, db, 120, "critical", true, "")
-	insertExceptions(t, db, 30, "critical", false, "")
+	// 先写 baseline (DB 含 500/120/150-critical)
+	insertExceptions(t, db, "high-no-wo", 350, "high", false, "")
+	insertExceptions(t, db, "crit-wo", 120, "critical", true, "")
+	insertExceptions(t, db, "crit-no-wo", 30, "critical", false, "")
 
 	svc := NewReconciliationBaselineService(db)
 	_, err := svc.Snapshot(ctx)
 	require.NoError(t, err)
 
 	// 删除大部分数据模拟降噪后(剩余 200/50/10)
-	// 简化:直接清表 + 重建 200 条(50 工单 + 10 critical)
 	require.NoError(t, db.Exec(`DELETE FROM sys_data_reconciliation`).Error)
-	insertExceptions(t, db, 140, "medium", false, "")
-	insertExceptions(t, db, 50, "high", true, "")
-	insertExceptions(t, db, 10, "critical", false, "")
+	insertExceptions(t, db, "after-medium", 140, "medium", false, "")
+	insertExceptions(t, db, "after-high-wo", 50, "high", true, "")
+	insertExceptions(t, db, "after-crit", 10, "critical", false, "")
 
 	result, err := svc.Compare(ctx)
 	require.NoError(t, err)
@@ -198,7 +209,7 @@ func TestCompareReturnsReductionPct(t *testing.T) {
 
 	assert.InDelta(t, 60.0, result.ExceptionsReductionPct, 0.1, "异常下降% ≈ 60.0")
 	assert.InDelta(t, 58.33, result.WorkordersReductionPct, 0.1, "工单下降% ≈ 58.33")
-	assert.InDelta(t, 66.67, result.CriticalReductionPct, 0.1, "critical 下降% ≈ 66.67")
+	assert.InDelta(t, 93.33, result.CriticalReductionPct, 0.1, "critical 下降% ≈ 93.33 (baseline=150, current=10)")
 }
 
 // TestCompareNoBaselineReturnsError 无 baseline 时 Compare 返回 error 引导用户先 Snapshot
@@ -213,19 +224,22 @@ func TestCompareNoBaselineReturnsError(t *testing.T) {
 }
 
 // TestCompareCountsUseIndependentCountNotListLength 静态源码扫描:
-//  1. baseline service 文件不含 ListExceptions 调用
-//  2. 含 .Count( 独立 COUNT
+//  1. countCurrent 函数体不含 ListExceptions 调用
+//  2. countCurrent 函数体含 3 个 Count( 独立 COUNT
 //
-// 用静态扫描规避 SQLite 不支持 PG ANY() / 不可集成测试 ListExceptions JOIN 复杂 SQL。
-// 参考 reconciliation_service_test.go 静态断言模式。
+// 注:Go 格式化后方法链常把 . 放前一行,Count( 在新行开头,
+// 故扫描用 "Count(" (不带前导点) 而非 ".Count("。
 func TestCompareCountsUseIndependentCountNotListLength(t *testing.T) {
 	src := mustReadBaselineSrc(t)
-	assert.NotContains(t, src, "ListExceptions",
-		"baseline service 严禁调 ListExceptions (Pitfall 5: MaxPageSize=100 钳制)")
-	// 含 .Count( 至少 3 次(Snapshot 当前 + Compare 当前 = 6 次,Snapshot 占 3 次)
-	// 用 CountOccurrences 不区分 main/test 文件——本测试读 service 非 test 文件
-	assert.GreaterOrEqual(t, strings.Count(src, ".Count("), 3,
-		"baseline service 必须用独立 .Count(&...) (3+ 次: total/totalWorkorders/critical)")
+	// countCurrent 是实际做 COUNT 的函数,提取其函数体扫描
+	body := extractBaselineFuncBody(t, src, "countCurrent")
+	require.NotEmpty(t, body, "countCurrent 函数必须存在")
+	// 严禁调 ListExceptions (Pitfall 5: MaxPageSize=100 钳制)
+	assert.NotContains(t, body, "ListExceptions",
+		"countCurrent 严禁调 ListExceptions (Pitfall 5: MaxPageSize=100 钳制)")
+	// 含 3 个独立 Count(&...) (total / totalWorkorders / critical)
+	assert.GreaterOrEqual(t, strings.Count(body, "Count("), 3,
+		"countCurrent 必须用独立 Count(&...) 3 次: total/totalWorkorders/critical")
 }
 
 // TestSnapshotDoesNotFilterSilenceStatic 静态断言:Snapshot 函数体无 silence 过滤(WARN-8)
@@ -284,3 +298,5 @@ func extractBaselineFuncBody(t *testing.T, src, funcName string) string {
 	}
 	return src[start:]
 }
+
+// 注:上述 helper 同时支持导出 (Snapshot/Compare) 和未导出 (countCurrent) 方法签名。
