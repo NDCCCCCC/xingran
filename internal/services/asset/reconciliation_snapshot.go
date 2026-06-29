@@ -42,13 +42,55 @@ func NewReconciliationSnapshotService(db *gorm.DB) ReconciliationSnapshot {
 	return &reconciliationSnapshotServiceImpl{db: db}
 }
 
+// reconciliationRefreshTimeout MV 刷新强制上限。
+//
+// 2026-06-30 生产事故:cron 路径(@every 5m)传入无超时 ctx,REFRESH 在 O(N²) 视图上
+// 烧 CPU 27min+,多个 cron 节拍堆叠僵尸后端,级联锁死后续 app 启动(卡在
+// cleanupOldConstraints 的 ALTER ops_asset)。RefreshView 不能假设调用方一定传 timeout
+// ctx —— 故在此强制 90s 上限,与调用方无关(migration_180 已让视图 O(N+M) 亚秒级,
+// 90s 纯属防御网;视图若退化到超 90s 说明有回归,应被取消并告警)。
+const reconciliationRefreshTimeout = 90 * time.Second
+
 // RefreshView REFRESH MATERIALIZED VIEW CONCURRENTLY reconciliation_normalized.
 //
-// D-02: 失败仅 logrus 日志,不返回 error 给调用方(handler 自行处理 500 / cron 写 job_log)。
-// 实际策略: 返回 error 让调用方决定(cron 调用方收到 error 后写 job_log;
-// handler 调用方把 error 透传给客户端 500)。日志由本方法内置。
+// D-02: 失败仅 logrus 日志,返回 error 让调用方决定(cron 写 job_log,handler 透传 500)。
+//
+// 超时双保险(防御纵深):
+//  1. Go context WithTimeout(90s) —— pgx/v5 在 ctx 取消时向 PG 发 cancel
+//  2. 服务端 SET statement_timeout=90s —— PG 自杀,不依赖驱动 ctx 链路
+//
+// 用专用 *sql.Conn 保证 SET/REFRESH/RESET 落同一连接(REFRESH ... CONCURRENTLY 不能
+// 在事务块里,故不能用 SET LOCAL;专用连接避免 statement_timeout 泄漏到连接池其他查询)。
 func (s *reconciliationSnapshotServiceImpl) RefreshView(ctx context.Context) error {
-	if err := s.db.WithContext(ctx).Exec("REFRESH MATERIALIZED VIEW CONCURRENTLY reconciliation_normalized").Error; err != nil {
+	// 1. Go 侧 timeout(与调用方 ctx 取交集:startup 的 30s 仍生效,cron 的无超时 ctx 被 90s 兜住)
+	refreshCtx, cancel := context.WithTimeout(ctx, reconciliationRefreshTimeout)
+	defer cancel()
+
+	// 2. 专用连接,statement_timeout 会话级隔离
+	sqlDB, err := s.db.DB()
+	if err != nil {
+		return fmt.Errorf("RefreshView: 获取 *sql.DB 失败: %w", err)
+	}
+	conn, err := sqlDB.Conn(refreshCtx)
+	if err != nil {
+		return fmt.Errorf("RefreshView: 获取专用连接失败: %w", err)
+	}
+	defer conn.Close()
+
+	// 3. 服务端 statement_timeout(毫秒)。defer 先于 conn.Close() 执行(LIFO),
+	//    用独立 ctx 防止 refreshCtx 已取消时 RESET 也被拒。
+	timeoutMs := int64(reconciliationRefreshTimeout / time.Millisecond)
+	if _, err := conn.ExecContext(refreshCtx, fmt.Sprintf("SET statement_timeout = %d", timeoutMs)); err != nil {
+		return fmt.Errorf("RefreshView: 设置 statement_timeout 失败: %w", err)
+	}
+	defer func() {
+		if _, err := conn.ExecContext(context.Background(), "RESET statement_timeout"); err != nil {
+			log.WithError(err).Warn("RefreshView: RESET statement_timeout 失败(连接归还池前)")
+		}
+	}()
+
+	// 4. REFRESH CONCURRENTLY(不能在事务块里,用 autocommit Exec)
+	if _, err := conn.ExecContext(refreshCtx, "REFRESH MATERIALIZED VIEW CONCURRENTLY reconciliation_normalized"); err != nil {
 		log.WithError(err).Warn("snapshot refresh failed, retry next cycle")
 		return err
 	}
