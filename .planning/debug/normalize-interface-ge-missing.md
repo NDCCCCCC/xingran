@@ -150,3 +150,26 @@ DBA 第一次跑 migration_179 触发 `SQLSTATE 42601: mismatched parentheses`�
   - `internal/core/db/migrations/migration_179_reconciliation_physical_iface_fold.go` (新增) — PL/pgSQL 函数 + view 重建 + MV 刷新
   - `internal/core/db/database.go` — 注册 Migrate179ReconciliationPhysicalIfaceFold
   - `.planning/debug/normalize-interface-ge-missing.md` — 调试会话状态
+
+## Production Incident 2 (2026-06-30) — migration_179 引入 O(N²) 性能回归
+
+DBA 在生产验证时发现 `SELECT COUNT(*) FROM reconciliation_physical_chain` 直接触发
+PostgreSQL **statement_timeout**(不是应用的 30s context,是 PG 语句超时)。
+
+根因:migration_179 的 `normalize_iface()` PL/pgSQL 函数(10 顺序 REGEXP_REPLACE)配合
+视图 `ops_info_points` JOIN 的**相关子查询**(`ip.port_id::text IN (SELECT ... FROM
+sys_device_port_status WHERE device_id::text = n.device_id::text AND normalize_iface(...)
+= n.mac_norm_iface AND normalize_iface(...) = n.port_norm_iface)`),子查询引用外层 norm.n
+→ 每 norm 行重跑、全表扫 port_status、逐行调函数 2 次 → **O(norm_rows × port_rows × 2)**
+≈ N=M=5000 时 5000万次调用。叠加 `device_id::text` 强转 UUID 致索引失效。
+
+**这是 normalize fix 的副作用 + migration_179 视图结构选择不当,需 own。**
+
+修复(migration_180,commit `4caa48b9`,详见 `.planning/notes/260630-mv-refresh-30s-timeout.md` §2.5):
+- `port_norm`/`latest_mac` CTE 预算 normalize_iface(O(N+M))
+- 透传已 JOIN 的 `port.id`,消除相关子查询,外层改 `ip.port_id = port.id::text`
+- 去 `device_id::text`(uuid=uuid);`mac_join` 改用 `a.mac1/mac2`
+- normalize_iface 函数不动(已非主因,改函数有 42601 风险)
+- 语义等价(MV 消费者按 asset_id 去重;消费者审计仅 MV + ops_asset_physical,均按 asset 去重)
+
+待 DBA 验证:COUNT 秒级 + REFRESH 回到 30s 内 + physical_user_id 命中率仍 >0。
