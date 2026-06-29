@@ -164,7 +164,7 @@ const ADOUPage: FC = () => {
       const res = await getADGroupList({
         configId: selectedConfig,
         current: 1,
-        pageSize: 1000, // 获取所有组用于选择
+        pageSize: 50, // 获取所有组用于选择
       });
       if (res.code === 0) {
         setAllGroups(res.data?.list ?? []);

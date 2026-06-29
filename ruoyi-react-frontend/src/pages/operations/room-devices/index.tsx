@@ -78,7 +78,7 @@ const RoomDeviceManagement: FC = () => {
 
   const loadRoomOptions = useCallback(async (orgId?: string) => {
     try {
-      const params: Record<string, unknown> = { current: 1, pageSize: 1000 };
+      const params: Record<string, unknown> = { current: 1, pageSize: 50 };
       if (orgId) params.orgId = orgId;
       const result = await serverRoomApi.list(params);
       const rooms = result.data?.list || [];

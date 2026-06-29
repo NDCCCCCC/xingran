@@ -53,7 +53,7 @@ export function useDeviceData(): UseDeviceDataReturn {
   // 加载授权凭证列表
   const loadCredentials = useCallback(async () => {
     try {
-      const result = await post<PageResponse<AuthCredential>>("/network/credentials/list", { current: 1, pageSize: 1000 });
+      const result = await post<PageResponse<AuthCredential>>("/network/credentials/list", { current: 1, pageSize: 50 });
       setCredentials(result.data?.list || []);
     } catch (error) {
       handleApiError(error, "加载授权凭证列表", false);

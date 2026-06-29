@@ -13,7 +13,10 @@
  *  - 所有非 pages/ 目录下的 .list() 调用(可能在 hooks/utils 内合理使用)
  */
 
-const { ESLintUtils } = require("typescript-eslint");
+// CommonJS 规则(因 eslint.config.js 通过 createRequire 加载)
+// @typescript-eslint/utils 是 RuleCreator 的实际提供方
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { ESLintUtils } = require("@typescript-eslint/utils");
 
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://example.com/rules/${name}`
@@ -91,7 +94,8 @@ module.exports = createRule({
         if (!BAD_PAGE_SIZES.has(pageSizeProp.value.value)) return;
 
         // 向上回溯函数声明或 const 赋值,确认是 dropdown loader
-        const ancestors = context.getAncestors();
+        // typescript-eslint v8 用 sourceCode.getAncestors(node);旧 context.getAncestors 已废弃
+        const ancestors = context.sourceCode.getAncestors(node);
         const inDropdownLoader = ancestors.some((a) => {
           if (a.type === "FunctionDeclaration" && a.id && DROPDOWN_FUNC_NAME.test(a.id.name)) {
             return true;
@@ -117,3 +121,6 @@ module.exports = createRule({
     };
   },
 });
+
+// ESM default export 供 eslint.config.js 的 import 使用
+module.exports.default = module.exports;

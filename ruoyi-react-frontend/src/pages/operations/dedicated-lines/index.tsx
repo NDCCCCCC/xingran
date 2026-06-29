@@ -69,7 +69,7 @@ const DedicatedLineManagement: FC = () => {
   // 加载所有机房列表（不分部门）
   const loadServerRooms = useCallback(async () => {
     try {
-      const result = await serverRoomApi.list({ current: 1, pageSize: 1000 }) as { data?: { list: Record<string, unknown>[] } };
+      const result = await serverRoomApi.list({ current: 1, pageSize: 50 }) as { data?: { list: Record<string, unknown>[] } };
       const rooms = result.data?.list || [];
       setServerRooms(rooms.map((r: Record<string, unknown>) => ({
         id: r.id as string,

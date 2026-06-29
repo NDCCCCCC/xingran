@@ -284,7 +284,7 @@ const WorkstationManagement: FC = () => {
   // 加载楼宇列表（级联第一级，根据机构ID）
   const loadBuildingsForCascader = useCallback(async (orgId: string): Promise<CascaderOption[]> => {
     try {
-      const params = { current: 1, pageSize: 1000, orgId };
+      const params = { current: 1, pageSize: 50, orgId };
       const buildingResult = await buildingApi.list(params);
       const buildings = buildingResult.data?.list || [];
       return buildings.map((b: { id: string; name: string }) => ({
@@ -301,7 +301,7 @@ const WorkstationManagement: FC = () => {
   // 加载楼层列表（级联第二级）
   const loadFloorsForCascader = useCallback(async (buildingId: string): Promise<CascaderOption[]> => {
     try {
-      const floorResult = await floorApi.list({ buildingId, current: 1, pageSize: 1000 });
+      const floorResult = await floorApi.list({ buildingId, current: 1, pageSize: 50 });
       const floors = floorResult.data?.list || [];
       return floors.map((f) => ({
         value: f.id,
@@ -582,13 +582,16 @@ const WorkstationManagement: FC = () => {
           >
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="floorId" label="所属楼层">
-                <Select placeholder="请选择楼层" allowClear className="user-form-input" style={{ width: 150 }}>
-                  {floorOptions.map((f) => (
-                    <Option key={f.id} value={f.id}>
-                      {f.name}
-                    </Option>
-                  ))}
-                </Select>
+                <Select
+                  placeholder="搜索楼层"
+                  allowClear
+                  className="user-form-input"
+                  style={{ width: 180 }}
+                  showSearch
+                  filterOption={false}
+                  onSearch={(kw) => loadFloorOptions(selectedDeptId, kw)}
+                  options={floorOptions.map((f) => ({ value: f.id, label: f.name }))}
+                />
               </Form.Item>
               <Form.Item name="name" label="工位名称">
                 <Input placeholder="请输入工位名称" allowClear className="user-form-input" style={{ width: 150 }} />

@@ -33,7 +33,7 @@ interface RawDept extends SimpleDept {
 
 export interface UseWorkstationDataReturn {
   loadStatistics: (orgId?: string) => Promise<void>;
-  loadFloorOptions: (orgId?: string) => Promise<void>;
+  loadFloorOptions: (orgId?: string, keyword?: string) => Promise<void>;
   loadDeptOptions: () => void;
   loadUserOptions: (deptId?: string) => Promise<void>;
   loadFloorPlanWorkstations: (floorCode: string) => Promise<WorkstationOps[]>;
@@ -64,16 +64,21 @@ export function useWorkstationData(
     }
   }, [setStatistics]);
 
-  const loadFloorOptions = useCallback(async (orgId?: string) => {
+  const loadFloorOptions = useCallback(async (orgId?: string, keyword = "") => {
     try {
-      const params = { current: 1, pageSize: 1000, ...(orgId && { orgId }) };
-      const result = await floorApi.list(params);
-      const floors = result.data?.list || [];
+      // 使用专用 searchOptions 端点(LIMIT 50),替代 pageSize:1000 + filterOption 反模式
+      const opts = await floorApi.searchOptions({
+        ...(orgId ? { orgId } : {}),
+        ...(keyword ? { name: keyword } : {}),
+      });
+      // 注:searchOptions 只返回 id+name,丢失了 buildingName/buildingCode 等上下文。
+      // 如需显示 "楼宇 - 楼层" 复合 label,需用 workstationApi.list({pageSize:50, orgId})
+      // 或后端扩展 dropdown DTO。这里保持 label=楼层名,够 filter 面板辨识。
       setFloorOptions(
-        floors.map((f) => ({
-          id: f.id,
-          code: f.code || String(f.floorNo),
-          name: `${f.buildingName || f.buildingCode} - ${f.name || f.floorNo}`,
+        opts.map((o) => ({
+          id: o.value,
+          code: o.value, // dropdown-options 不返回 floorNo,前端用 id 兜底
+          name: o.label,
         }))
       );
     } catch (error) {
@@ -109,9 +114,11 @@ export function useWorkstationData(
     try {
       // 使用 recursiveDeptId 而非 deptId,后端会扩展为该部门+所有子部门的用户。
       // 原 deptId 单值语义在工位模态框里不够用——用户通常需要看到整个部门树下的人。
+      // Phase 46: pageSize 1000 → 50,虽然 system MaxPageSize=100 仍允许 100,
+      // 但前端 Select 仅渲染 ≤50 行,vDOM 节点数可控。
       const params = {
         current: 1,
-        pageSize: 1000,
+        pageSize: 50,
         ...(deptId && { recursiveDeptId: deptId }),
       };
       const result = await post("/system/users/list", params) as { data?: { list: Record<string, unknown>[] } };

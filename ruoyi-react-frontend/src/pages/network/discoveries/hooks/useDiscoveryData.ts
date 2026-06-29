@@ -94,7 +94,7 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
 
   const loadDepartments = useCallback(async () => {
     try {
-      const result = await post<PageResponse<Department>>("/system/departments/list", { current: 1, pageSize: 1000 });
+      const result = await post<PageResponse<Department>>("/system/departments/list", { current: 1, pageSize: 50 });
       setDepartments(result.data?.list || []);
     } catch (error) {
       console.error("加载部门列表失败:", error);

@@ -4,11 +4,15 @@ import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
-import noLargeDropdownList from './eslint-rules/no-large-dropdown-list.js'
+import { createRequire } from 'node:module'
+
+// CommonJS 规则加载(因为规则文件用了 require 语法)
+const require = createRequire(import.meta.url)
+const noLargeDropdownList = require('./eslint-rules/no-large-dropdown-list.cjs')
 
 export default tseslint.config(
   {
-    ignores: ['dist', 'vitest.config.ts'],
+    ignores: ['dist', 'vitest.config.ts', 'eslint-rules/**'],
   },
   {
     extends: [
@@ -110,8 +114,9 @@ export default tseslint.config(
       'quotes': ['error', 'double', { avoidEscape: true, allowTemplateLiterals: false }],
 
       // 本地自定义规则 — Phase 46 下拉框反模式防护
-      // 当前 off,等 Wave 3 全部反模式点修完后再启用为 error
-      'local/no-large-dropdown-list': 'off',
+      // 当前 warn;后续 phase 把存量 247 个 violation 全部修完后再升级为 error。
+      // (项目 baseline 有 3099 个 pre-existing 错误,error 级别会立即 fail CI)
+      'local/no-large-dropdown-list': 'warn',
     },
   }
 )

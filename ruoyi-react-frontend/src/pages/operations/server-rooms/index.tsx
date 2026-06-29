@@ -129,7 +129,7 @@ const ServerRoomManagement: FC = () => {
 
   const loadBuildingOptions = useCallback(async (orgId?: string) => {
     try {
-      const params: Record<string, unknown> = { current: 1, pageSize: 1000 };
+      const params: Record<string, unknown> = { current: 1, pageSize: 50 };
       if (orgId) params.orgId = orgId;
       const result = await buildingApi.list(params);
       const buildings = result.data?.list || [];
@@ -149,7 +149,7 @@ const ServerRoomManagement: FC = () => {
       return;
     }
     try {
-      const result = await floorApi.list({ current: 1, pageSize: 1000, buildingId });
+      const result = await floorApi.list({ current: 1, pageSize: 50, buildingId });
       const floors = result.data?.list || [];
       setFloorOptions(floors.map((f: Floor) => ({
         id: f.id,

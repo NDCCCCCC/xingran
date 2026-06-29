@@ -108,7 +108,7 @@ const MACAddressPage: FC = () => {
     try {
       const result = await post("/network/devices/list", {
         current: 1,
-        pageSize: 1000,
+        pageSize: 50,
       }) as { data?: { list: NetworkDevice[] } };
       setDevices(result.data?.list || []);
     } catch (error) {

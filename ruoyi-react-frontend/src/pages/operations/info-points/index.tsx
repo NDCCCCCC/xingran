@@ -23,6 +23,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { useDict } from "@/hooks/useDict";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
+import { debounce } from "@/utils/debounce";
 import { createDateTimeColumn } from "@/utils/tableHelpers";
 import ActionButtons from "@/components/shared/ActionButtons";
 import ExcelImport from "@/components/shared/ExcelImport";
@@ -148,7 +149,7 @@ const InfoPointManagement: FC = () => {
 
   const loadBuildingsForCascader = useCallback(async (orgId?: string) => {
     try {
-      const params: Record<string, unknown> = { current: 1, pageSize: 1000 };
+      const params: Record<string, unknown> = { current: 1, pageSize: 50 };
       if (orgId) {
         params.orgId = orgId;
       }
@@ -167,7 +168,7 @@ const InfoPointManagement: FC = () => {
 
   const loadFloorsForCascader = useCallback(async (buildingId: string) => {
     try {
-      const floorResult = await floorApi.list({ buildingId, current: 1, pageSize: 1000 });
+      const floorResult = await floorApi.list({ buildingId, current: 1, pageSize: 50 });
       const floors = floorResult.data?.list || [];
       return floors.map((f: Floor) => ({
         value: f.id,
@@ -183,7 +184,7 @@ const InfoPointManagement: FC = () => {
 
   const loadWorkstationsForCascader = useCallback(async (floorId: string, floorNo: string) => {
     try {
-      const wsResult = await workstationApi.list({ floorCode: floorNo, current: 1, pageSize: 1000 });
+      const wsResult = await workstationApi.list({ floorCode: floorNo, current: 1, pageSize: 50 });
       const workstations = wsResult.data?.list || [];
       return workstations
         .filter((w: WorkstationOps) => w.id)
@@ -235,36 +236,31 @@ const InfoPointManagement: FC = () => {
     }
   }, [loadBuildingsForCascader, selectedDeptId]);
 
-  const loadSearchWorkstationOptions = useCallback(async () => {
-    if (workstationOptions.length > 0) {
-      return;
-    }
-
+  const loadSearchWorkstationOptions = useCallback(async (keyword = "") => {
     try {
-      const params: Record<string, unknown> = { current: 1, pageSize: 1000 };
-      if (selectedDeptId) {
-        params.orgId = selectedDeptId;
-      }
-      const wsResult = await workstationApi.list(params);
-      const workstations = wsResult.data?.list ?? [];
+      const opts = await workstationApi.searchOptions({
+        name: keyword,
+        ...(selectedDeptId ? { orgId: selectedDeptId } : {}),
+      });
       setWorkstationOptions(
-        workstations
-          .filter((w: WorkstationOps) => w.id)
-          .map((w: WorkstationOps) => ({
-            id: w.id,
-            name: w.name ?? "未命名工位",
-          }))
+        opts.map((o) => ({ id: o.value, name: o.label }))
       );
     } catch (error) {
       handleApiError(error, "加载工位选项", false);
     }
-  }, [workstationOptions.length, selectedDeptId]);
+  }, [selectedDeptId]);
+
+  // onSearch 防抖包装,避免每个 keystroke 都触发远程查询
+  const debouncedWorkstationSearch = useMemo(
+    () => debounce((kw: string) => loadSearchWorkstationOptions(kw), 300),
+    [loadSearchWorkstationOptions]
+  );
 
   // ===========================================================
 
   const loadNetworkDevices = useCallback(async () => {
     try {
-      const result = await post("/network/devices/list", { current: 1, pageSize: 1000 }) as { data?: { list: NetworkDeviceOption[] } };
+      const result = await post("/network/devices/list", { current: 1, pageSize: 50 }) as { data?: { list: NetworkDeviceOption[] } };
       setNetworkDevices(result.data?.list || []);
     } catch (error) {
       handleApiError(error, "加载网络设备列表", false);
@@ -277,7 +273,7 @@ const InfoPointManagement: FC = () => {
       return;
     }
     try {
-      const result = await post("/network/ports/list", { deviceId, current: 1, pageSize: 1000 }) as { data?: { list: DevicePortOption[] } };
+      const result = await post("/network/ports/list", { deviceId, current: 1, pageSize: 50 }) as { data?: { list: DevicePortOption[] } };
       setDevicePorts(result.data?.list || []);
     } catch (error) {
       handleApiError(error, "加载设备端口列表", false);
@@ -381,7 +377,7 @@ const InfoPointManagement: FC = () => {
         setSelectedDeviceId(formValues.deviceId as string);
         // 直接调用 API 并同步设置状态，确保在 setFieldsValue 之前完成
         try {
-          const result = await post("/network/ports/list", { deviceId: formValues.deviceId, current: 1, pageSize: 1000 }) as { data?: { list: DevicePortOption[] } };
+          const result = await post("/network/ports/list", { deviceId: formValues.deviceId, current: 1, pageSize: 50 }) as { data?: { list: DevicePortOption[] } };
           setDevicePorts(result.data?.list || []);
         } catch (error) {
           console.error("加载设备端口列表失败:", error);
@@ -640,19 +636,17 @@ const InfoPointManagement: FC = () => {
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="workstationId" label="所属工位">
                 <Select
-                  placeholder="请先选择部门"
+                  placeholder={selectedDeptId ? "搜索工位名称" : "请先选择部门"}
                   allowClear
                   className="user-form-input"
-                  style={{ width: 150 }}
+                  style={{ width: 180 }}
                   disabled={!selectedDeptId}
                   onOpenChange={(open) => {
                     if (open) loadSearchWorkstationOptions();
                   }}
                   showSearch
-                  filterOption={(input, option) => {
-                    const ws = workstationOptions.find(w => w.id === option?.value);
-                    return ws?.name.toLowerCase().includes(input.toLowerCase()) ?? false;
-                  }}
+                  filterOption={false}
+                  onSearch={debouncedWorkstationSearch}
                 >
                   {workstationOptions.filter(w => w.id).map(w => <Option key={w.id} value={w.id}>{w.name}</Option>)}
                 </Select>

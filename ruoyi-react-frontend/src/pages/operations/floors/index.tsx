@@ -221,7 +221,7 @@ const FloorManagement: FC = () => {
 
           if (building) {
             setModalDeptId(building.orgId);
-            const result = await buildingApi.list({ orgId: building.orgId, current: 1, pageSize: 1000 });
+            const result = await buildingApi.list({ orgId: building.orgId, current: 1, pageSize: 50 });
             setModalBuildingOptions(result.data?.list || []);
           }
         } catch (error) {
@@ -233,7 +233,7 @@ const FloorManagement: FC = () => {
         if (selectedDeptId) {
           setModalDeptId(selectedDeptId);
           try {
-            const result = await buildingApi.list({ orgId: selectedDeptId, current: 1, pageSize: 1000 });
+            const result = await buildingApi.list({ orgId: selectedDeptId, current: 1, pageSize: 50 });
             setModalBuildingOptions(result.data?.list || []);
           } catch (error) {
             console.error("加载楼宇选项失败:", error);
@@ -265,7 +265,7 @@ const FloorManagement: FC = () => {
 
       if (deptId) {
         try {
-          const result = await buildingApi.list({ orgId: deptId, current: 1, pageSize: 1000 });
+          const result = await buildingApi.list({ orgId: deptId, current: 1, pageSize: 50 });
           setFilterBuildingOptions(result.data?.list || []);
         } catch (error) {
           console.error("加载筛选楼宇选项失败:", error);
@@ -284,7 +284,7 @@ const FloorManagement: FC = () => {
 
       if (deptId) {
         try {
-          const result = await buildingApi.list({ orgId: deptId, current: 1, pageSize: 1000 });
+          const result = await buildingApi.list({ orgId: deptId, current: 1, pageSize: 50 });
           setModalBuildingOptions(result.data?.list || []);
         } catch (error) {
           console.error("加载模态框楼宇选项失败:", error);
@@ -306,7 +306,7 @@ const FloorManagement: FC = () => {
   // 加载指定部门的楼宇选项（用于编辑器模式）
   const loadBuildingOptionsByDept = useCallback(async (deptId: string): Promise<Building[]> => {
     try {
-      const result = await buildingApi.list({ orgId: deptId, current: 1, pageSize: 1000 });
+      const result = await buildingApi.list({ orgId: deptId, current: 1, pageSize: 50 });
       const buildings = result.data?.list || [];
 
       setBuildingOptionsByDept(buildings);
@@ -320,7 +320,7 @@ const FloorManagement: FC = () => {
   // 加载指定楼宇的楼层选项（用于编辑器模式）
   const loadFloorOptionsByBuilding = useCallback(async (buildingId: string): Promise<FloorOption[]> => {
     try {
-      const result = await floorApi.list({ buildingId, current: 1, pageSize: 1000 });
+      const result = await floorApi.list({ buildingId, current: 1, pageSize: 50 });
       const floors = result.data?.list || [];
 
       const options = floors.map((f: Floor) => ({

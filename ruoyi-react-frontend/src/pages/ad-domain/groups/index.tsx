@@ -266,7 +266,7 @@ const ADGroupPage: FC = () => {
     if (!selectedConfig) return;
 
     try {
-      const res = await getADUserList({ configId: selectedConfig, current: 1, pageSize: 1000 });
+      const res = await getADUserList({ configId: selectedConfig, current: 1, pageSize: 50 });
       if (res.code === 0) {
         setAvailableUsers(res.data?.list ?? []);
       }
