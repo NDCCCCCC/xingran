@@ -803,25 +803,30 @@ func (s *reconciliationServiceImpl) computeByWorkstation(ctx context.Context, ws
 		resp.HealthScore.Score = 100
 	}
 
-	// g) assets[] 行内徽标数据(LEFT JOIN reconciliation_normalized)
+	// g) assets[] 行内徽标数据(LEFT JOIN sys_data_reconciliation)
+	//
+	// 注意:reconciliation_normalized 物化视图(由 migration_168 创建)只包含 asset + AD 字段
+	// (asset_id, asset_username, ad_username 等),冲突/严重程度/置信度等列在 sys_data_reconciliation 表。
+	// 原代码 LEFT JOIN MV 取这些列会 SQLSTATE 42703 → graceful fallback 丢徽标数据。
+	// 修复:改为 LEFT JOIN sys_data_reconciliation (resolved_at IS NULL 表示 open 冲突)。
 	type healthRow struct {
-		AssetID          string
-		ConflictType     *string
-		Severity         *string
-		ExceptionRuleID  *string
-		AppliedActions   pq.StringArray
-		ConfidenceScore  *float64
+		AssetID         string
+		ConflictType    *string
+		Severity        *string
+		ExceptionRuleID *string
+		AppliedActions  pq.StringArray
+		ConfidenceScore *float64
 	}
 	var rows []healthRow
 	if err := s.db.WithContext(ctx).
 		Table("ops_asset AS a").
 		Select(`a.id AS asset_id,
-			rn.conflict_type,
-			rn.severity,
-			rn.exception_rule_id,
-			rn.applied_actions,
-			rn.confidence_score`).
-		Joins(`LEFT JOIN reconciliation_normalized rn ON rn.asset_id = a.id`).
+			r.conflict_type,
+			r.severity,
+			r.exception_rule_id,
+			r.applied_actions,
+			r.confidence_score`).
+		Joins(`LEFT JOIN sys_data_reconciliation r ON r.asset_id = a.id AND r.deleted_at IS NULL AND r.resolved_at IS NULL`).
 		Where("a.id IN ? AND a.deleted_at IS NULL", assetIDs).
 		Scan(&rows).Error; err != nil {
 		// MV 缺失 → fallback 走空 (B5:不阻塞响应,徽标列无数据)
