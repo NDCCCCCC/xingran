@@ -424,4 +424,24 @@ export const reconciliationApi = {
       );
     },
   },
+  /**
+   * Phase 45 R5: 手动刷新对账(运维/UAT 调试用)
+   * 1) REFRESH MATERIALIZED VIEW reconciliation_normalized
+   * 2) 立即 DetectLayer3(绕过 5min/6min cron)
+   * 返回 inserted / skipped / skippedSilence / skippedThrottle 计数
+   */
+  refresh: async (): Promise<{
+    inserted: number;
+    skipped: number;
+    skippedSilence: number;
+    skippedThrottle: number;
+  }> => {
+    const res = await post<{
+      inserted: number;
+      skipped: number;
+      skippedSilence: number;
+      skippedThrottle: number;
+    }>("/asset/reconciliation/refresh", {});
+    return res.data;
+  },
 };

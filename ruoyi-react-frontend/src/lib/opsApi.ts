@@ -668,6 +668,12 @@ export const workstationDeviceApi = {
     return await post<WorkstationDevice[]>(`/ops/workstation-device/${workstationId}/asset`, {});
   },
 
+  // 实时查询工位关联的物理链路设备(Phase 45 R5)
+  // MAC→port→infoPoint→workstation 反推链,资产字段优先、AD 字段补全
+  getPhysical: async (workstationId: string) => {
+    return await post<WorkstationDevice[]>(`/ops/workstation-device/${workstationId}/physical`, {});
+  },
+
   // 查询工位下全部设备（手动持久化部分），与 getManual 等价；保留为兼容旧调用
   getByWorkstation: async (workstationId: string) => {
     return await post<WorkstationDevice[]>(`/ops/workstation-device/${workstationId}`, {});

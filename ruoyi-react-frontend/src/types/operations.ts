@@ -293,7 +293,7 @@ export interface AssetListParams extends PageParams {
 
 // ==================== 工位设备关联 ====================
 
-export type DeviceSource = "ad" | "asset" | "manual";
+export type DeviceSource = "ad" | "asset" | "manual" | "physical";
 
 export type OpsDeviceStatus = 0 | 1;
 
@@ -325,6 +325,7 @@ export const DeviceSourceLabels: Record<DeviceSource, string> = {
   ad: "域控",
   asset: "资产",
   manual: "手动",
+  physical: "物理链路",
 };
 
 // 别名导出，保持命名一致性
