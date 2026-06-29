@@ -4,6 +4,7 @@ import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
+import noLargeDropdownList from './eslint-rules/no-large-dropdown-list.js'
 
 export default tseslint.config(
   {
@@ -27,6 +28,11 @@ export default tseslint.config(
       react,
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
+      local: {
+        rules: {
+          'no-large-dropdown-list': noLargeDropdownList,
+        },
+      },
     },
     settings: {
       react: { version: 'detect' },
@@ -102,6 +108,10 @@ export default tseslint.config(
       // 引号统一 — 防止 LogsModal.tsx:344 这类 JSX 属性引号错配 (双引号开始、单引号收尾) 复发。
       // 历史存量靠 `npm run lint:fix` 在引入时一次性消化。
       'quotes': ['error', 'double', { avoidEscape: true, allowTemplateLiterals: false }],
+
+      // 本地自定义规则 — Phase 46 下拉框反模式防护
+      // 当前 off,等 Wave 3 全部反模式点修完后再启用为 error
+      'local/no-large-dropdown-list': 'off',
     },
   }
 )
