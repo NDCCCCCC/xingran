@@ -679,10 +679,13 @@ func (s *reconciliationServiceImpl) computeByWorkstation(ctx context.Context, ws
 	}
 
 	// a) 工位基础信息
+	//
+	// 注意:sys_workstation 表无 workstation_no/code 列(legacy-2026-06-15/034 删除了 workstation_code)
+	// — 只 select 真实存在的列,Code 字段在 Scan 后保留零值 "" (前端的 ByWorkstationResponse.workstation.code 类型兼容)
 	var brief WorkstationBrief
 	if err := s.db.WithContext(ctx).
 		Table("sys_workstation").
-		Select("id, workstation_name AS name, workstation_no AS code").
+		Select("id, workstation_name AS name").
 		Where("id = ? AND deleted_at IS NULL", wsID).
 		Scan(&brief).Error; err != nil {
 		return nil, fmt.Errorf("查询工位基础信息失败: %w", err)
