@@ -301,6 +301,23 @@ The full history of Phases 1-39 is preserved below. See also:
 
 </details>
 
+### Phase 47: 修复資產對賬系統根因（infoPoint 配置、Layer3 引擎、port_status 漂移、parser 校驗）
+
+**Goal:** 根除 Phase 45 R5 reconciliation 系统中识别出的 4 个数据完整性问题:① infoPoint.port_id 指向错设备的 port_status（drift 引发）② Layer 3 检测引擎只 INSERT 不 UPDATE 既有 conflict，导致 124 个 D 异常卡住无法重新分类 ③ sys_device_port_status.device_id 在不同设备之间漂移 ④ MAC parser 接受非 MAC 文本（如 "Flags:"、"total"、"#"，导致垃圾数据入库）。
+
+**Requirements**:
+- R1: 4F001 工位 infoPoint 4D217 指向 RS8607E-03 的 GE2/25 端口（port_id=230e8ef7）
+- R2: sys_data_reconciliation 所有卡住的 open 异常能在 5 分钟内被 Layer 3 cron 重新分类
+- R3: Layer 3 检测改为 UPSERT 语义（UPDATE if exists else INSERT），不再吃 SQLSTATE 23505
+- R4: sys_device_port_status 行 id 与 device_id 一一对应，永不漂移
+- R5: parseRuijiePortSecurityLine 加 MAC 格式校验（12位 hex），过滤 #/flags/total 等噪声
+
+**Depends on:** Phase 46
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 47 to break down)
+
 ---
 
-*Last updated: 2026-06-28 — Phase 45 R4 complete (2/2 plans, 10/10 SCs verified PASS, INTEGRATE-01/02/03 全覆盖, code review 0 critical). Phase 46 (R5) ready to start.*
+*Last updated: 2026-06-29 — Phase 47 added (root cause fixes for Phase 45 R5 reconciliation issues).*
