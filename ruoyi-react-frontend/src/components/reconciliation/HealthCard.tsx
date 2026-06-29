@@ -98,8 +98,6 @@ const HealthCardInner: React.FC<HealthCardProps> = ({ workstationId, onApplyExce
   const { healthScore } = data;
   const scoreColor = SCORE_BAND_COLOR(healthScore.score);
 
-  void trendOption; // 实际在下方 ECharts option 中复用
-
   return (
     <Card
       size="small"
