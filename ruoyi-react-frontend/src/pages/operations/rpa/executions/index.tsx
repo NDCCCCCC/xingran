@@ -120,7 +120,7 @@ const ExecutionManagement: FC = () => {
               <Input placeholder="请输入任务名称" allowClear style={{ width: 200 }} />
             </Form.Item>
             <Form.Item name="status" label="执行状态">
-              <Select placeholder="请选择" allowClear style={{ width: 150 }}>
+              <Select placeholder="请选择" allowClear style={{ width: 150 }} onSearch={() => {}}>
                 {EXECUTION_STATUS_OPTIONS.map((opt) => (
                   <Option key={opt.value} value={opt.value}>
                     {opt.label}

@@ -71,7 +71,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
     try {
       const result = await post<PageResponse<NetworkDevice>>("/network/devices/list", {
         current: 1,
-        pageSize: 1000,
+        pageSize: 50,
         status: 0, // 只显示在线设备
       });
       setDataState(prev => ({ ...prev, devices: result.data?.list || [] }));
@@ -85,7 +85,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
     try {
       const result = await post<PageResponse<ConfigTemplate>>("/network/templates/list", {
         current: 1,
-        pageSize: 1000,
+        pageSize: 50,
         templateType: "config",
       });
       setDataState(prev => ({ ...prev, templates: result.data?.list || [] }));

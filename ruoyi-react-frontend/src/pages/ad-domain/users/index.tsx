@@ -523,8 +523,8 @@ const ADUserPage: FC = () => {
               style={{ width: 200 }}
               value={selectedConfig}
               onChange={setSelectedConfig}
-              options={configs.map(c => ({ label: c.configName, value: c.id }))}
-            />
+              options={configs.map(c =>    ({ label: c.configName, value: c.id }))}
+             onSearch={() => {}}/>
           </Form.Item>
           <Form.Item name="ouDn" label="所属OU">
             <Space.Compact style={{ width: '100%' }}>
@@ -558,7 +558,7 @@ const ADUserPage: FC = () => {
             <Input placeholder="用户名" allowClear style={{ width: 150 }} />
           </Form.Item>
           <Form.Item name="isEnabled">
-            <Select placeholder="状态" allowClear style={{ width: 120 }}>
+            <Select placeholder="状态" allowClear style={{ width: 120 }} onSearch={() => {}}>
               <Select.Option value={true}>启用</Select.Option>
               <Select.Option value={false}>禁用</Select.Option>
             </Select>

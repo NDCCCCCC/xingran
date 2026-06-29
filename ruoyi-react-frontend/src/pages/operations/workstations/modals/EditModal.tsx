@@ -141,7 +141,7 @@ export function WorkstationEditModal({
           <Input placeholder="请输入工位名称" />
         </Form.Item>
         <Form.Item name="type" label="工位类型" rules={[{ required: true, message: "请选择工位类型" }]}>
-          <Select placeholder="请选择工位类型">
+          <Select placeholder="请选择工位类型" onSearch={() => {}}>
             {TYPE_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -169,7 +169,7 @@ export function WorkstationEditModal({
           </Col>
           <Col span={12}>
             <Form.Item name="userId" label="所属用户">
-              <Select placeholder="请先选择部门" allowClear showSearch optionFilterProp="children">
+              <Select placeholder="请先选择部门" allowClear showSearch optionFilterProp="children" onSearch={() => {}}>
                 {userOptions.map((u) => (
                   <Option key={u.id} value={u.id}>
                     {u.nickname ? `${u.username} (${u.nickname})` : u.username}
@@ -204,7 +204,7 @@ export function WorkstationEditModal({
           </Col>
         </Row>
         <Form.Item name="status" label="状态" rules={[{ required: true, message: "请选择状态" }]}>
-          <Select placeholder="请选择状态">
+          <Select placeholder="请选择状态" onSearch={() => {}}>
             {STATUS_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}

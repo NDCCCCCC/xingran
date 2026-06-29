@@ -23,6 +23,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { useDict } from "@/hooks/useDict";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
+import { debounce } from "@/utils/debounce";
 import { createDateTimeColumn } from "@/utils/tableHelpers";
 import ActionButtons from "@/components/shared/ActionButtons";
 import ExcelImport from "@/components/shared/ExcelImport";
@@ -148,7 +149,7 @@ const InfoPointManagement: FC = () => {
 
   const loadBuildingsForCascader = useCallback(async (orgId?: string) => {
     try {
-      const params: Record<string, unknown> = { current: 1, pageSize: 1000 };
+      const params: Record<string, unknown> = { current: 1, pageSize: 50 };
       if (orgId) {
         params.orgId = orgId;
       }
@@ -167,7 +168,7 @@ const InfoPointManagement: FC = () => {
 
   const loadFloorsForCascader = useCallback(async (buildingId: string) => {
     try {
-      const floorResult = await floorApi.list({ buildingId, current: 1, pageSize: 1000 });
+      const floorResult = await floorApi.list({ buildingId, current: 1, pageSize: 50 });
       const floors = floorResult.data?.list || [];
       return floors.map((f: Floor) => ({
         value: f.id,
@@ -183,7 +184,7 @@ const InfoPointManagement: FC = () => {
 
   const loadWorkstationsForCascader = useCallback(async (floorId: string, floorNo: string) => {
     try {
-      const wsResult = await workstationApi.list({ floorCode: floorNo, current: 1, pageSize: 1000 });
+      const wsResult = await workstationApi.list({ floorCode: floorNo, current: 1, pageSize: 50 });
       const workstations = wsResult.data?.list || [];
       return workstations
         .filter((w: WorkstationOps) => w.id)
@@ -235,36 +236,31 @@ const InfoPointManagement: FC = () => {
     }
   }, [loadBuildingsForCascader, selectedDeptId]);
 
-  const loadSearchWorkstationOptions = useCallback(async () => {
-    if (workstationOptions.length > 0) {
-      return;
-    }
-
+  const loadSearchWorkstationOptions = useCallback(async (keyword = "") => {
     try {
-      const params: Record<string, unknown> = { current: 1, pageSize: 1000 };
-      if (selectedDeptId) {
-        params.orgId = selectedDeptId;
-      }
-      const wsResult = await workstationApi.list(params);
-      const workstations = wsResult.data?.list ?? [];
+      const opts = await workstationApi.searchOptions({
+        name: keyword,
+        ...(selectedDeptId ? { orgId: selectedDeptId } : {}),
+      });
       setWorkstationOptions(
-        workstations
-          .filter((w: WorkstationOps) => w.id)
-          .map((w: WorkstationOps) => ({
-            id: w.id,
-            name: w.name ?? "未命名工位",
-          }))
+        opts.map((o) => ({ id: o.value, name: o.label }))
       );
     } catch (error) {
       handleApiError(error, "加载工位选项", false);
     }
-  }, [workstationOptions.length, selectedDeptId]);
+  }, [selectedDeptId]);
+
+  // onSearch 防抖包装,避免每个 keystroke 都触发远程查询
+  const debouncedWorkstationSearch = useMemo(
+    () => debounce((kw: string) => loadSearchWorkstationOptions(kw), 300),
+    [loadSearchWorkstationOptions]
+  );
 
   // ===========================================================
 
   const loadNetworkDevices = useCallback(async () => {
     try {
-      const result = await post("/network/devices/list", { current: 1, pageSize: 1000 }) as { data?: { list: NetworkDeviceOption[] } };
+      const result = await post("/network/devices/list", { current: 1, pageSize: 50 }) as { data?: { list: NetworkDeviceOption[] } };
       setNetworkDevices(result.data?.list || []);
     } catch (error) {
       handleApiError(error, "加载网络设备列表", false);
@@ -277,7 +273,7 @@ const InfoPointManagement: FC = () => {
       return;
     }
     try {
-      const result = await post("/network/ports/list", { deviceId, current: 1, pageSize: 1000 }) as { data?: { list: DevicePortOption[] } };
+      const result = await post("/network/ports/list", { deviceId, current: 1, pageSize: 50 }) as { data?: { list: DevicePortOption[] } };
       setDevicePorts(result.data?.list || []);
     } catch (error) {
       handleApiError(error, "加载设备端口列表", false);
@@ -381,7 +377,7 @@ const InfoPointManagement: FC = () => {
         setSelectedDeviceId(formValues.deviceId as string);
         // 直接调用 API 并同步设置状态，确保在 setFieldsValue 之前完成
         try {
-          const result = await post("/network/ports/list", { deviceId: formValues.deviceId, current: 1, pageSize: 1000 }) as { data?: { list: DevicePortOption[] } };
+          const result = await post("/network/ports/list", { deviceId: formValues.deviceId, current: 1, pageSize: 50 }) as { data?: { list: DevicePortOption[] } };
           setDevicePorts(result.data?.list || []);
         } catch (error) {
           console.error("加载设备端口列表失败:", error);
@@ -640,31 +636,29 @@ const InfoPointManagement: FC = () => {
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="workstationId" label="所属工位">
                 <Select
-                  placeholder="请先选择部门"
+                  placeholder={selectedDeptId ? "搜索工位名称" : "请先选择部门"}
                   allowClear
                   className="user-form-input"
-                  style={{ width: 150 }}
+                  style={{ width: 180 }}
                   disabled={!selectedDeptId}
                   onOpenChange={(open) => {
                     if (open) loadSearchWorkstationOptions();
                   }}
                   showSearch
-                  filterOption={(input, option) => {
-                    const ws = workstationOptions.find(w => w.id === option?.value);
-                    return ws?.name.toLowerCase().includes(input.toLowerCase()) ?? false;
-                  }}
+                  filterOption={false}
+                  onSearch={debouncedWorkstationSearch}
                 >
                   {workstationOptions.filter(w => w.id).map(w => <Option key={w.id} value={w.id}>{w.name}</Option>)}
                 </Select>
               </Form.Item>
               <Form.Item name="name" label="信息点名称"><Input placeholder="请输入信息点名称" allowClear className="user-form-input" style={{ width: 150 }} /></Form.Item>
               <Form.Item name="infoPointType" label="信息点类型">
-                <Select placeholder="请选择类型" allowClear className="user-form-input" style={{ width: 120 }}>
+                <Select placeholder="请选择类型" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
                   {infoPointTypeDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
                 </Select>
               </Form.Item>
               <Form.Item name="status" label="状态">
-                <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }}><Option value={0}>正常</Option><Option value={1}>故障</Option><Option value={2}>停用</Option></Select>
+                <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}><Option value={0}>正常</Option><Option value={1}>故障</Option><Option value={2}>停用</Option></Select>
               </Form.Item>
               <Form.Item>
                 <Space><Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>搜索</Button><Button onClick={handleReset}>重置</Button><Button icon={<ReloadOutlined />} onClick={refreshData}>刷新</Button></Space>
@@ -734,7 +728,7 @@ const InfoPointManagement: FC = () => {
             </Form.Item>
             <Form.Item name="name" label="信息点名称" rules={[{ required: true, message: "请输入信息点名称" }]}><Input placeholder="请输入信息点名称" /></Form.Item>
             <Form.Item name="infoPointType" label="信息点类型" rules={[{ required: true, message: "请选择信息点类型" }]}>
-              <Select placeholder="请选择信息点类型">
+              <Select placeholder="请选择信息点类型" onSearch={() => {}}>
                 {infoPointTypeDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
               </Select>
             </Form.Item>
@@ -745,7 +739,7 @@ const InfoPointManagement: FC = () => {
                     placeholder="请选择网络设备"
                     allowClear
                     showSearch
-                    onChange={(value) => {
+                    onChange={(value) =>   {
                       setSelectedDeviceId(value);
                       loadDevicePorts(value);
                     }}
@@ -757,7 +751,7 @@ const InfoPointManagement: FC = () => {
                       return searchText.includes(input.toLowerCase());
                     }}
                     optionLabelProp="label"
-                  >
+                   onSearch={() => {}}>
                     {networkDevices.map(d => {
                       const deviceName = d.deviceName || "未命名设备";
                       const fullName = `${deviceName} (${d.ipAddress})`;
@@ -780,11 +774,11 @@ const InfoPointManagement: FC = () => {
                     allowClear
                     disabled={!selectedDeviceId}
                     showSearch
-                    filterOption={(input, option) =>
+                    filterOption={(input, option) =>  
                       (option?.label as string)?.toString().toLowerCase().includes(input.toLowerCase())
                     }
                     optionLabelProp="label"
-                  >
+                   onSearch={() => {}}>
                     {devicePorts.map(p => {
                       const displayLabel = p.interfaceName || p.id || "未命名端口";
                       return (
@@ -797,7 +791,7 @@ const InfoPointManagement: FC = () => {
                 </Form.Item>
               </Col>
             </Row>
-            <Form.Item name="status" label="状态" rules={[{ required: true, message: "请选择状态" }]}><Select placeholder="请选择状态"><Option value={0}>正常</Option><Option value={1}>故障</Option><Option value={2}>停用</Option></Select></Form.Item>
+            <Form.Item name="status" label="状态" rules={[{ required: true, message: "请选择状态" }]}><Select placeholder="请选择状态" onSearch={() => {}}><Option value={0}>正常</Option><Option value={1}>故障</Option><Option value={2}>停用</Option></Select></Form.Item>
             <Form.Item name="description" label="描述"><TextArea rows={3} placeholder="请输入描述" /></Form.Item>
           </Form>
         </Modal>

@@ -266,7 +266,7 @@ const ADGroupPage: FC = () => {
     if (!selectedConfig) return;
 
     try {
-      const res = await getADUserList({ configId: selectedConfig, current: 1, pageSize: 1000 });
+      const res = await getADUserList({ configId: selectedConfig, current: 1, pageSize: 50 });
       if (res.code === 0) {
         setAvailableUsers(res.data?.list ?? []);
       }
@@ -421,8 +421,8 @@ const ADGroupPage: FC = () => {
               style={{ width: 200 }}
               value={selectedConfig}
               onChange={setSelectedConfig}
-              options={configs.map(c => ({ label: c.configName, value: c.id }))}
-            />
+              options={configs.map(c =>    ({ label: c.configName, value: c.id }))}
+             onSearch={() => {}}/>
           </Form.Item>
           <Form.Item label="所属OU">
             <Select
@@ -433,7 +433,7 @@ const ADGroupPage: FC = () => {
               placeholder="选择OU（默认：本部部门分组）"
               showSearch
               optionFilterProp="children"
-            >
+             onSearch={() => {}}>
               {ouList.map(ou => (
                 <Select.Option key={ou.dn} value={ou.dn}>
                   {ou.name}

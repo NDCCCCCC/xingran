@@ -527,6 +527,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			buildings.POST("", buildingHandler.Create)
 			buildings.POST("/list", buildingHandler.List)
 			buildings.POST("/statistics", buildingHandler.Statistics)
+			buildings.POST("/dropdown-options", buildingHandler.SearchBuildingOptions)
 			buildings.POST("/:id", buildingHandler.GetByID)
 			buildings.POST("/:id/update", buildingHandler.Update)
 			buildings.POST("/:id/delete", buildingHandler.Delete)
@@ -566,6 +567,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			floors.POST("/list", floorHandler.List)
 			floors.POST("/statistics", floorHandler.Statistics)
 			floors.POST("/tree", floorHandler.GetTree)
+			floors.POST("/dropdown-options", floorHandler.SearchFloorOptions)
 			floors.POST("/batch", floorHandler.BatchOperation)
 			floors.POST("/:id", floorHandler.GetByID)
 			floors.POST("/:id/update", floorHandler.Update)
@@ -592,6 +594,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			// 注意：更具体的路由要放在前面，避免被通用路由匹配
 			workstations.POST("/list", workstationHandler.List)
 			workstations.POST("/statistics", workstationHandler.Statistics)
+			workstations.POST("/dropdown-options", workstationHandler.SearchWorkstationOptions)
 			workstations.POST("/batch", workstationHandler.BatchOperation)
 			workstations.POST("/positions", workstationHandler.BatchUpdatePositions)
 			workstations.POST("/:id", workstationHandler.GetByID)
@@ -672,6 +675,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			// 注意：更具体的路由要放在前面
 			infoPoints.POST("/list", infoPointHandler.List)
 			infoPoints.POST("/statistics", infoPointHandler.Statistics)
+			infoPoints.POST("/dropdown-options", infoPointHandler.SearchInfoPointOptions)
 			infoPoints.POST("/batch", infoPointHandler.BatchOperation)
 			infoPoints.POST("/:id", infoPointHandler.GetByID)
 			infoPoints.POST("/:id/update", infoPointHandler.Update)
@@ -697,6 +701,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			// 注意：更具体的路由要放在前面
 			serverRooms.POST("/list", serverRoomHandler.List)
 			serverRooms.POST("/statistics", serverRoomHandler.Statistics)
+			serverRooms.POST("/dropdown-options", serverRoomHandler.SearchServerRoomOptions)
 			serverRooms.POST("/batch", serverRoomHandler.BatchOperation)
 			serverRooms.POST("/:id", serverRoomHandler.GetByID)
 			serverRooms.POST("/:id/update", serverRoomHandler.Update)
@@ -730,6 +735,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			// 注意：更具体的路由要放在前面
 			dedicatedLines.POST("/list", dedicatedLineHandler.List)
 			dedicatedLines.POST("/statistics", dedicatedLineHandler.Statistics)
+			dedicatedLines.POST("/dropdown-options", dedicatedLineHandler.SearchDedicatedLineOptions)
 			dedicatedLines.POST("/batch", dedicatedLineHandler.BatchOperation)
 			dedicatedLines.POST("/:id", dedicatedLineHandler.GetByID)
 			dedicatedLines.POST("/:id/update", dedicatedLineHandler.Update)
@@ -755,6 +761,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			// 注意：更具体的路由要放在前面
 			roomDevices.POST("/list", roomDeviceHandler.List)
 			roomDevices.POST("/statistics", roomDeviceHandler.Statistics)
+			roomDevices.POST("/dropdown-options", roomDeviceHandler.SearchRoomDeviceOptions)
 			roomDevices.POST("/batch", roomDeviceHandler.BatchOperation)
 			roomDevices.POST("/:id", roomDeviceHandler.GetByID)
 			roomDevices.POST("/:id/update", roomDeviceHandler.Update)

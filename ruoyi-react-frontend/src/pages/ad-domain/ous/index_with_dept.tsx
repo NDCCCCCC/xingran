@@ -388,8 +388,8 @@ const ADOUPage: FC = () => {
                 placeholder="选择AD配置"
                 value={selectedConfig}
                 onChange={setSelectedConfig}
-                options={configs.map(c => ({ label: c.configName, value: c.id }))}
-              />
+                options={configs.map(c =>    ({ label: c.configName, value: c.id }))}
+               onSearch={() => {}}/>
               <Spin spinning={treeLoading}>
                 {ouTree.length > 0 ? (
                   <Tree

@@ -228,7 +228,7 @@ const TemplateManagement: FC = () => {
               <Input placeholder="请输入模板编码" allowClear className="user-form-input" style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="templateType" label="模板类型">
-              <Select placeholder="请选择模板类型" allowClear className="user-form-input" style={{ width: 130 }}>
+              <Select placeholder="请选择模板类型" allowClear className="user-form-input" style={{ width: 130 }} onSearch={() => {}}>
                 {TEMPLATE_TYPE_OPTIONS.map((opt) => (
                   <Option key={opt.value} value={opt.value}>
                     {opt.label}
@@ -237,7 +237,7 @@ const TemplateManagement: FC = () => {
               </Select>
             </Form.Item>
             <Form.Item name="vendor" label="厂商">
-              <Select placeholder="请选择厂商" allowClear className="user-form-input" style={{ width: 120 }}>
+              <Select placeholder="请选择厂商" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
                 {VENDOR_OPTIONS.map((opt) => (
                   <Option key={opt.value} value={opt.value}>
                     {opt.label}

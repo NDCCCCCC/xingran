@@ -331,7 +331,7 @@ const VirtualMachineDetail: React.FC = () => {
             name="os_type"
             initialValue="Windows"
           >
-            <Select>
+            <Select onSearch={() => {}}>
               <Select.Option value="Windows">Windows</Select.Option>
               <Select.Option value="Linux">Linux</Select.Option>
             </Select>
@@ -342,7 +342,7 @@ const VirtualMachineDetail: React.FC = () => {
             valuePropName="checked"
             initialValue={false}
           >
-            <Select>
+            <Select onSearch={() => {}}>
               <Select.Option value={false}>普通用户</Select.Option>
               <Select.Option value={true}>管理员</Select.Option>
             </Select>

@@ -38,6 +38,8 @@ type DedicatedLineService interface {
 	BatchDelete(ctx context.Context, ids []string) error
 	// Statistics 专线统计(专用 COUNT 聚合,不依赖分页列表)。
 	Statistics(ctx context.Context) (*DedicatedLineStatisticsResult, error)
+	// SearchDedicatedLineOptions 专线下拉数据源(LIKE 模糊 + 类型/ISP/状态筛选,LIMIT 50)。
+	SearchDedicatedLineOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error)
 }
 
 // DedicatedLineStatisticsResult 专线统计结果(status: 0=正常 1=故障 2=停用)。
@@ -190,4 +192,38 @@ func (s *dedicatedLineService) List(ctx context.Context, req requests.DedicatedL
 // BatchDelete 批量删除专线
 func (s *dedicatedLineService) BatchDelete(ctx context.Context, ids []string) error {
 	return s.db.WithContext(ctx).Delete(&operations.OpsDedicatedLine{}, "id IN ?", ids).Error
+}
+
+// SearchDedicatedLineOptions 专线下拉数据源(name LIKE 模糊 + lineType/ISP/sourceRoomId/destRoomId/status 筛选,LIMIT 50)。
+// 与 List 同款 WHERE 语义;只 SELECT id+name 两列。
+func (s *dedicatedLineService) SearchDedicatedLineOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error) {
+	var result []DropdownOption
+
+	query := s.db.WithContext(ctx).Table("ops_dedicated_lines").
+		Select("id AS value, name AS label").
+		Limit(DropdownMaxRows)
+
+	if name := extractStringParam(params, "name"); name != "" {
+		query = query.Where("name LIKE ?", "%"+name+"%")
+	}
+	if lineType := extractStringParam(params, "lineType"); lineType != "" {
+		query = query.Where("line_type = ?", lineType)
+	}
+	if isp := extractStringParam(params, "isp"); isp != "" {
+		query = query.Where("isp = ?", isp)
+	}
+	if sourceRoomId := extractStringParam(params, "sourceRoomId"); sourceRoomId != "" {
+		query = query.Where("source_room_id = ?", sourceRoomId)
+	}
+	if destRoomId := extractStringParam(params, "destRoomId"); destRoomId != "" {
+		query = query.Where("dest_room_id = ?", destRoomId)
+	}
+	if status := extractIntParam(params, "status", -1); status >= 0 {
+		query = query.Where("status = ?", status)
+	}
+
+	if err := query.Order("name ASC").Find(&result).Error; err != nil {
+		return nil, err
+	}
+	return result, nil
 }

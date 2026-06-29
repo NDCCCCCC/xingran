@@ -227,7 +227,7 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
 							tooltip="根据所选端点自动设置"
 							initialValue="GET"
 						>
-							<Select disabled={disabled}>
+							<Select disabled={disabled} onSearch={() => {}}>
 								<Select.Option value="GET">GET</Select.Option>
 								<Select.Option value="POST">POST</Select.Option>
 							</Select>

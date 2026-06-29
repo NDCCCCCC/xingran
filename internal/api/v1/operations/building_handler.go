@@ -43,6 +43,21 @@ func (h *BuildingHandler) Statistics(c *gin.Context) {
 	response.Success(c, result)
 }
 
+// SearchBuildingOptions 楼宇下拉数据源(name LIKE 模糊 + orgId/status 筛选,LIMIT 50,读操作不写操作日志)
+// 设计给前端 Select/AutoComplete 远程搜索,避免分页 list 当全集源导致 >1000 楼宇后截断。
+func (h *BuildingHandler) SearchBuildingOptions(c *gin.Context) {
+	var params map[string]interface{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		params = map[string]interface{}{}
+	}
+	result, err := h.service.SearchBuildingOptions(c.Request.Context(), params)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.Success(c, result)
+}
+
 // NewBuildingHandlerWithCore 使用 core 创建 BuildingHandler（向后兼容）
 func NewBuildingHandlerWithCore(service opsServices.BuildingService, core *core.Core) *BuildingHandler {
 	return NewBuildingHandler(service, opsServices.NewGeocodingService(core.Config.Baidu.MapAK))

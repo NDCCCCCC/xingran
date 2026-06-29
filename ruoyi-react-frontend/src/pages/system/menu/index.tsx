@@ -277,7 +277,7 @@ const MenuManagement: FC = () => {
               <Input placeholder="请输入菜单名称" />
             </Form.Item>
             <Form.Item name="status" label="菜单状态">
-              <Select placeholder="请选择状态" style={{ width: 120 }} allowClear>
+              <Select placeholder="请选择状态" style={{ width: 120 }} allowClear onSearch={() => {}}>
                 {MENU_STATUS_OPTIONS.map(opt => (
                   <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                 ))}
@@ -389,7 +389,7 @@ const MenuManagement: FC = () => {
                 label="菜单类型"
                 rules={[{ required: true, message: "请选择菜单类型" }]}
               >
-                <Select placeholder="请选择菜单类型">
+                <Select placeholder="请选择菜单类型" onSearch={() => {}}>
                   {MENU_TYPE_OPTIONS.map(opt => (
                     <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                   ))}

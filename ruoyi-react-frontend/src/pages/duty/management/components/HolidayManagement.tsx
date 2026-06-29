@@ -149,7 +149,7 @@ export const HolidayManagement: React.FC<HolidayManagementProps> = ({
             value={holidayYear}
             onChange={onYearChange}
             style={{ width: 120 }}
-          >
+           onSearch={() => {}}>
             {availableYears.map((y) => (
               <Option key={y} value={y}>{y}年</Option>
             ))}

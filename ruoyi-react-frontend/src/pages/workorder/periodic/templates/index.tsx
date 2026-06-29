@@ -341,7 +341,7 @@ const PeriodicTemplatePage: FC = () => {
               <Input placeholder="请输入模板名称" allowClear className="user-form-input" style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="isEnabled" label="状态">
-              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }}>
+              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}>
                 <Option value={true}>已启用</Option>
                 <Option value={false}>已禁用</Option>
               </Select>
@@ -434,7 +434,7 @@ const PeriodicTemplatePage: FC = () => {
                 label="工单类型"
                 rules={[{ required: true, message: "请选择工单类型" }]}
               >
-                <Select placeholder="请选择工单类型" className="user-form-input">
+                <Select placeholder="请选择工单类型" className="user-form-input" onSearch={() => {}}>
                   {Object.entries(TYPE_CONFIG).map(([key, { text }]) => (
                     <Option key={key} value={key}>
                       {text}
@@ -449,7 +449,7 @@ const PeriodicTemplatePage: FC = () => {
                 label="优先级"
                 rules={[{ required: true, message: "请选择优先级" }]}
               >
-                <Select placeholder="请选择优先级" className="user-form-input">
+                <Select placeholder="请选择优先级" className="user-form-input" onSearch={() => {}}>
                   {Object.entries(PRIORITY_CONFIG).map(([key, { text }]) => (
                     <Option key={key} value={Number(key)}>
                       {text}
@@ -475,7 +475,7 @@ const PeriodicTemplatePage: FC = () => {
                 label="分配类型"
                 rules={[{ required: true, message: "请选择分配类型" }]}
               >
-                <Select placeholder="请选择分配类型" className="user-form-input">
+                <Select placeholder="请选择分配类型" className="user-form-input" onSearch={() => {}}>
                   {Object.entries(ASSIGN_TYPE_CONFIG).map(([key, { text }]) => (
                     <Option key={key} value={key}>
                       {text}
@@ -491,7 +491,7 @@ const PeriodicTemplatePage: FC = () => {
                   if (assignType === PeriodicAssignType.Manual) {
                     return (
                       <Form.Item name="assignTargetId" label="指定处理人">
-                        <Select placeholder="请选择处理人" allowClear showSearch optionFilterProp="children" className="user-form-input">
+                        <Select placeholder="请选择处理人" allowClear showSearch optionFilterProp="children" className="user-form-input" onSearch={() => {}}>
                           {users.map((user) => (
                             <Option key={user.id} value={user.id}>
                               {user.nickName || user.username}
@@ -503,7 +503,7 @@ const PeriodicTemplatePage: FC = () => {
                   } else if (assignType === PeriodicAssignType.DutyPool) {
                     return (
                       <Form.Item name="assignTargetId" label="选择值班池" rules={[{ required: true, message: "请选择值班池" }]}>
-                        <Select placeholder="请选择值班池" allowClear showSearch optionFilterProp="children" className="user-form-input">
+                        <Select placeholder="请选择值班池" allowClear showSearch optionFilterProp="children" className="user-form-input" onSearch={() => {}}>
                           {dutyPools.filter((p) => p.status === 0).map((pool) => (
                             <Option key={pool.id} value={pool.id}>
                               {pool.poolName} ({pool.members?.length || 0}人)

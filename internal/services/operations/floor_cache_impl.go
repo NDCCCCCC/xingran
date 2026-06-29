@@ -163,3 +163,24 @@ func (s *floorCacheService) GetByID(ctx context.Context, id string) (*operations
 func (s *floorCacheService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
 	return s.floorService.List(ctx, params)
 }
+
+// SearchFloorOptions 楼层下拉数据源(仅 name="" 路径走 5min Redis 缓存;
+// keyword 查询绕过缓存避免 keyspace 爆炸)。参考 GetTree 的 cache.GetOrSet 模式。
+func (s *floorCacheService) SearchFloorOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error) {
+	// keyword 查询不走缓存(每次 keystroke 都会触发,keyspace 爆炸)
+	if name, _ := params["name"].(string); name != "" {
+		return s.floorService.SearchFloorOptions(ctx, params)
+	}
+
+	cacheKey := BuildDropdownCacheKey("floor", params)
+	var result []DropdownOption
+	expiration := s.GetExpiration("cache.floor.dropdown", 5*time.Minute)
+
+	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
+		return s.floorService.SearchFloorOptions(ctx, params)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}

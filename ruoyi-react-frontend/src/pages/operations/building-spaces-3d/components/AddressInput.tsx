@@ -102,7 +102,7 @@ const AddressInput: React.FC<AddressInputProps> = ({ value, onChange, disabled }
             showSearch
             optionFilterProp="children"
             options={cityOptions}
-          />
+           onSearch={() => {}}/>
         </Space>
 
         {/* 地址输入 */}

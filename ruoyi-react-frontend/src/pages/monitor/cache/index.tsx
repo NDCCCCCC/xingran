@@ -485,23 +485,23 @@ const CacheManager: FC = () => {
               <Select
                 placeholder="缓存类型"
                 value={searchForm.type}
-                onChange={(value) => setSearchForm({ ...searchForm, type: value })}
+                onChange={(value) =>    setSearchForm({ ...searchForm, type: value })}
                 allowClear
                 className="user-form-input"
                 style={{ width: '100%' }}
                 options={TYPE_OPTIONS}
-              />
+               onSearch={() => {}}/>
             </Col>
             <Col xs={24} sm={8} md={3}>
               <Select
                 placeholder="缓存层级"
                 value={searchForm.level}
-                onChange={(value) => setSearchForm({ ...searchForm, level: value })}
+                onChange={(value) =>    setSearchForm({ ...searchForm, level: value })}
                 allowClear
                 className="user-form-input"
                 style={{ width: '100%' }}
                 options={LEVEL_OPTIONS}
-              />
+               onSearch={() => {}}/>
             </Col>
             <Col xs={24} sm={24} md={12}>
               <Space wrap>
@@ -670,7 +670,7 @@ const CacheManager: FC = () => {
             name="operation"
             rules={[{ required: true, message: '请选择操作类型' }]}
           >
-            <Select options={OPERATION_OPTIONS} />
+            <Select options={OPERATION_OPTIONS}  onSearch={() => {}}/>
           </Form.Item>
           <Form.Item
             label="缓存值"

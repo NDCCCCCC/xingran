@@ -256,11 +256,11 @@ const DeviceDiscoveryPage: FC = () => {
                 allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
-                onChange={() => {
+                onChange={() =>    {
                   loadDiscoveries();
                   loadStatistics();
                 }}
-              >
+               onSearch={() => {}}>
                 {STATUS_OPTIONS.map((opt) => (
                   <Option key={opt.value} value={opt.value}>
                     {opt.label}

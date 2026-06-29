@@ -20,6 +20,8 @@ type InfoPointService interface {
 	BatchDelete(ctx context.Context, ids []string) error
 	// Statistics 信息点统计(专用 COUNT 聚合,不依赖分页列表)。
 	Statistics(ctx context.Context) (*InfoPointStatisticsResult, error)
+	// SearchInfoPointOptions 信息点下拉数据源(LIKE 模糊 + 工位/类型/状态筛选,LIMIT 50)。
+	SearchInfoPointOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error)
 }
 
 // InfoPointStatisticsResult 信息点统计结果(status: 0=正常 1=故障 2=停用)。
@@ -219,4 +221,35 @@ func (s *infoPointService) List(ctx context.Context, req requests.InfoPointListR
 // BatchDelete 批量删除信息点
 func (s *infoPointService) BatchDelete(ctx context.Context, ids []string) error {
 	return s.db.WithContext(ctx).Delete(&operations.OpsInfoPoint{}, "id IN ?", ids).Error
+}
+
+// SearchInfoPointOptions 信息点下拉数据源(name LIKE 模糊 + workstationId/infoPointType/status 筛选,LIMIT 50)。
+// 与 List 同款 WHERE 语义;只 SELECT id+name 两列,无 JOIN 无分页。
+func (s *infoPointService) SearchInfoPointOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error) {
+	var result []DropdownOption
+
+	query := s.db.WithContext(ctx).Table("ops_info_points").
+		Select("ops_info_points.id AS value, ops_info_points.name AS label").
+		Limit(DropdownMaxRows)
+
+	if name := extractStringParam(params, "name"); name != "" {
+		query = query.Where("ops_info_points.name LIKE ?", "%"+name+"%")
+	}
+	// 兼容前端传 workstationId 或旧字段 workId
+	if workstationId := extractStringParam(params, "workstationId"); workstationId != "" {
+		query = query.Where("ops_info_points.workstation_id = ?", workstationId)
+	} else if workId := extractStringParam(params, "workId"); workId != "" {
+		query = query.Where("ops_info_points.workstation_id = ?", workId)
+	}
+	if infoPointType := extractStringParam(params, "infoPointType"); infoPointType != "" {
+		query = query.Where("ops_info_points.info_point_type = ?", infoPointType)
+	}
+	if status := extractIntParam(params, "status", -1); status >= 0 {
+		query = query.Where("ops_info_points.status = ?", status)
+	}
+
+	if err := query.Order("ops_info_points.name ASC").Find(&result).Error; err != nil {
+		return nil, err
+	}
+	return result, nil
 }

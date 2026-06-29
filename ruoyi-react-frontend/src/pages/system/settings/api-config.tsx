@@ -269,8 +269,8 @@ const APIConfigPage: FC = () => {
               placeholder="筛选类型"
               allowClear
               style={{ width: 120 }}
-              onChange={(value) => setConfigTypeFilter(value)}
-            >
+              onChange={(value) =>    setConfigTypeFilter(value)}
+             onSearch={() => {}}>
               <Option value={APIConfigTypes.SMS}>短信</Option>
               <Option value={APIConfigTypes.WEBHOOK}>Webhook</Option>
               <Option value={APIConfigTypes.PUSH}>推送</Option>
@@ -326,7 +326,7 @@ const APIConfigPage: FC = () => {
             label="配置类型"
             rules={[{ required: true, message: "请选择配置类型" }]}
           >
-            <Select placeholder="请选择配置类型">
+            <Select placeholder="请选择配置类型" onSearch={() => {}}>
               <Option value={APIConfigTypes.SMS}>短信</Option>
               <Option value={APIConfigTypes.WEBHOOK}>Webhook</Option>
               <Option value={APIConfigTypes.PUSH}>推送</Option>
@@ -385,7 +385,7 @@ const APIConfigPage: FC = () => {
                 children: (
                   <>
                     <Form.Item name="authType" label="认证方式" rules={[{ required: true }]}>
-                      <Select>
+                      <Select onSearch={() => {}}>
                         <Option value={AuthTypes.NONE}>无需认证</Option>
                         <Option value={AuthTypes.BASIC}>Basic Auth</Option>
                         <Option value={AuthTypes.BEARER}>Bearer Token</Option>
@@ -448,7 +448,7 @@ const APIConfigPage: FC = () => {
           </Form.Item>
 
           <Form.Item name="status" label="状态" initialValue={0}>
-            <Select>
+            <Select onSearch={() => {}}>
               <Option value={0}>正常</Option>
               <Option value={1}>停用</Option>
             </Select>

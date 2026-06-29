@@ -399,21 +399,21 @@ const CaptchaBackgroundSettingsPage: FC = () => {
           <Input placeholder="请输入文件名" allowClear className="user-form-input" style={{ width: 150 }} />
         </Form.Item>
         <Form.Item name="pieceShape" label="拼图形状">
-          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 120 }}>
+          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
             {SHAPE_OPTIONS.map(opt => (
               <Option key={opt.value} value={opt.value}>{opt.label}</Option>
             ))}
           </Select>
         </Form.Item>
         <Form.Item name="difficultyLevel" label="难度">
-          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 100 }}>
+          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}>
             <Option value={1}>简单</Option>
             <Option value={2}>中等</Option>
             <Option value={3}>困难</Option>
           </Select>
         </Form.Item>
         <Form.Item name="status" label="状态">
-          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 100 }}>
+          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}>
             <Option value={1}>启用</Option>
             <Option value={0}>禁用</Option>
           </Select>
@@ -490,21 +490,21 @@ const CaptchaBackgroundSettingsPage: FC = () => {
             </Upload>
           </Form.Item>
           <Form.Item name="pieceShape" label="拼图形状" rules={[{ required: true, message: "请选择拼图形状" }]}>
-            <Select>
+            <Select onSearch={() => {}}>
               {SHAPE_OPTIONS.map(opt => (
                 <Option key={opt.value} value={opt.value}>{opt.label}</Option>
               ))}
             </Select>
           </Form.Item>
           <Form.Item name="difficultyLevel" label="难度级别" rules={[{ required: true, message: "请选择难度" }]}>
-            <Select>
+            <Select onSearch={() => {}}>
               <Option value={1}>简单</Option>
               <Option value={2}>中等</Option>
               <Option value={3}>困难</Option>
             </Select>
           </Form.Item>
           <Form.Item name="allowedShapes" label="允许的形状">
-            <Select mode="multiple" placeholder="不限制则默认使用当前形状">
+            <Select mode="multiple" placeholder="不限制则默认使用当前形状" onSearch={() => {}}>
               {SHAPE_OPTIONS.map(opt => (
                 <Option key={opt.value} value={opt.value}>{opt.label}</Option>
               ))}
@@ -530,28 +530,28 @@ const CaptchaBackgroundSettingsPage: FC = () => {
       >
         <Form form={editForm} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
           <Form.Item name="pieceShape" label="拼图形状" rules={[{ required: true }]}>
-            <Select>
+            <Select onSearch={() => {}}>
               {SHAPE_OPTIONS.map(opt => (
                 <Option key={opt.value} value={opt.value}>{opt.label}</Option>
               ))}
             </Select>
           </Form.Item>
           <Form.Item name="difficultyLevel" label="难度级别" rules={[{ required: true }]}>
-            <Select>
+            <Select onSearch={() => {}}>
               <Option value={1}>简单</Option>
               <Option value={2}>中等</Option>
               <Option value={3}>困难</Option>
             </Select>
           </Form.Item>
           <Form.Item name="allowedShapes" label="允许的形状">
-            <Select mode="multiple" placeholder="不限制则使用默认">
+            <Select mode="multiple" placeholder="不限制则使用默认" onSearch={() => {}}>
               {SHAPE_OPTIONS.map(opt => (
                 <Option key={opt.value} value={opt.value}>{opt.label}</Option>
               ))}
             </Select>
           </Form.Item>
           <Form.Item name="status" label="状态" rules={[{ required: true }]}>
-            <Select>
+            <Select onSearch={() => {}}>
               <Option value={1}>启用</Option>
               <Option value={0}>禁用</Option>
             </Select>

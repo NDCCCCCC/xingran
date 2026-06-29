@@ -132,7 +132,7 @@ const DutyConfigPage: FC = () => {
             tooltip="可选择多种提醒方式"
             rules={[{ required: true, message: "请选择提醒渠道" }]}
           >
-            <Select mode="multiple" placeholder="请选择提醒渠道">
+            <Select mode="multiple" placeholder="请选择提醒渠道" onSearch={() => {}}>
               <Select.Option value="websocket">
                 <Space>
                   <BellOutlined />

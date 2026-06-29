@@ -55,7 +55,7 @@ export function TemplateEditModal({
           <Input placeholder="请输入模板编码（英文，用于API调用）" disabled={!!editingTemplate} />
         </Form.Item>
         <Form.Item name="templateType" label="模板类型" rules={[{ required: true }]}>
-          <Select>
+          <Select onSearch={() => {}}>
             {TEMPLATE_TYPE_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -65,7 +65,7 @@ export function TemplateEditModal({
         </Form.Item>
         <Space size="large">
           <Form.Item name="vendor" label="适用厂商">
-            <Select placeholder="通用" allowClear style={{ width: 150 }}>
+            <Select placeholder="通用" allowClear style={{ width: 150 }} onSearch={() => {}}>
               {VENDOR_OPTIONS.map((opt) => (
                 <Option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -74,7 +74,7 @@ export function TemplateEditModal({
             </Select>
           </Form.Item>
           <Form.Item name="deviceType" label="适用设备">
-            <Select placeholder="通用" allowClear style={{ width: 150 }}>
+            <Select placeholder="通用" allowClear style={{ width: 150 }} onSearch={() => {}}>
               {DEVICE_TYPE_OPTIONS.map((opt) => (
                 <Option key={opt.value} value={opt.value}>
                   {opt.label}

@@ -26,6 +26,9 @@ type FloorService interface {
 	BatchDelete(ctx context.Context, ids []string) error
 	// Statistics 楼层统计(专用 COUNT 聚合,不依赖分页列表)。
 	Statistics(ctx context.Context) (*FloorStatisticsResult, error)
+	// SearchFloorOptions 楼层下拉数据源(LIKE 模糊 + buildingId 筛选,LIMIT 50)。
+	// 设计给前端 Select/AutoComplete/Cascader children 远程搜索。
+	SearchFloorOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error)
 }
 
 // FloorStatisticsResult 楼层统计结果(status: 0=正常 1=停用)。
@@ -237,6 +240,37 @@ func (s *floorService) List(ctx context.Context, params map[string]interface{}) 
 		Current:  current,
 		PageSize: pageSize,
 	}, nil
+}
+
+// SearchFloorOptions 楼层下拉数据源(name LIKE 模糊 + buildingId/orgId/status 筛选,LIMIT 50)。
+// 设计给前端 Select/AutoComplete/Cascader children 远程搜索。
+//
+// 与 List 语义对齐(同样的 WHERE 闭包),但只 SELECT id+name 两列且无分页无 JOIN,
+// 保证 dropdown 单次响应 < 5KB。
+func (s *floorService) SearchFloorOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error) {
+	var result []DropdownOption
+
+	query := s.db.WithContext(ctx).Table("ops_floors").
+		Select("ops_floors.id AS value, ops_floors.name AS label").
+		Limit(DropdownMaxRows)
+
+	if name := extractStringParam(params, "name"); name != "" {
+		query = query.Where("ops_floors.name LIKE ?", "%"+name+"%")
+	}
+	if buildingId := extractStringParam(params, "buildingId"); buildingId != "" {
+		query = query.Where("ops_floors.building_id = ?", buildingId)
+	}
+	if orgId := extractStringParam(params, "orgId"); orgId != "" {
+		query = query.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE b.id::text = ops_floors.building_id AND b.org_id = ? AND b.deleted_at IS NULL)", orgId)
+	}
+	if status := extractIntParam(params, "status", -1); status >= 0 {
+		query = query.Where("ops_floors.status = ?", status)
+	}
+
+	if err := query.Order("ops_floors.name ASC").Find(&result).Error; err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func (s *floorService) GetTree(ctx context.Context) ([]FloorTreeNode, error) {

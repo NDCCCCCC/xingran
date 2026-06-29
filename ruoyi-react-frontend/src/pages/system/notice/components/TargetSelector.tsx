@@ -93,7 +93,7 @@ export const TargetSelector: React.FC<TargetSelectorProps> = ({
         <Select
           mode="multiple"
           value={targetUsers as string[]}
-          onChange={(values) => onUserChange(values as string[])}
+          onChange={(values) =>    onUserChange(values as string[])}
           placeholder="请选择用户"
           showSearch
           filterOption={(input, option) => {
@@ -109,7 +109,7 @@ export const TargetSelector: React.FC<TargetSelectorProps> = ({
             label: `${user.nickname || user.username} (${user.username})`,
             value: user.id,
           }))}
-        />
+         onSearch={() => {}}/>
         <div className="mt-2 text-sm text-gray-500">已选择 {targetUsers.length} 个用户</div>
       </Spin>
     );

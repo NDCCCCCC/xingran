@@ -685,21 +685,21 @@ const DeviceManagement: FC = () => {
                   <Input placeholder="请输入IP地址" allowClear className="user-form-input" style={{ width: 150 }} />
                 </Form.Item>
                 <Form.Item name="vendor" label="厂商">
-                  <Select placeholder="请选择厂商" allowClear className="user-form-input" style={{ width: 120 }}>
+                  <Select placeholder="请选择厂商" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
                     {VENDOR_OPTIONS.map(opt => (
                       <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                     ))}
                   </Select>
                 </Form.Item>
                 <Form.Item name="deviceType" label="设备类型">
-                  <Select placeholder="请选择设备类型" allowClear className="user-form-input" style={{ width: 130 }}>
+                  <Select placeholder="请选择设备类型" allowClear className="user-form-input" style={{ width: 130 }} onSearch={() => {}}>
                     {DEVICE_TYPE_OPTIONS.map(opt => (
                       <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                     ))}
                   </Select>
                 </Form.Item>
                 <Form.Item name="status" label="状态">
-                  <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }}>
+                  <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}>
                     {STATUS_OPTIONS.map(opt => (
                       <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                     ))}
@@ -818,7 +818,7 @@ const DeviceManagement: FC = () => {
             <Input placeholder="请输入设备IP地址" />
           </Form.Item>
           <Form.Item name="credentialId" label="授权凭证" rules={[{ required: true, message: "请选择授权凭证" }]}>
-            <Select placeholder="请选择授权凭证">
+            <Select placeholder="请选择授权凭证" onSearch={() => {}}>
               {credentials.map(cred => (
                 <Option key={cred.id} value={cred.id}>{cred.credentialName}</Option>
               ))}
@@ -896,14 +896,14 @@ const DeviceManagement: FC = () => {
             <Input placeholder="请输入设备名称" />
           </Form.Item>
           <Form.Item name="deviceType" label="设备类型" rules={[{ required: true, message: "请选择设备类型" }]}>
-            <Select placeholder="请选择设备类型">
+            <Select placeholder="请选择设备类型" onSearch={() => {}}>
               {DEVICE_TYPE_OPTIONS.map(opt => (
                 <Option key={opt.value} value={opt.value}>{opt.label}</Option>
               ))}
             </Select>
           </Form.Item>
           <Form.Item name="vendor" label="厂商" rules={[{ required: true, message: "请选择厂商" }]}>
-            <Select placeholder="请选择厂商">
+            <Select placeholder="请选择厂商" onSearch={() => {}}>
               {VENDOR_OPTIONS.map(opt => (
                 <Option key={opt.value} value={opt.value}>{opt.label}</Option>
               ))}
@@ -922,7 +922,7 @@ const DeviceManagement: FC = () => {
             <InputNumber min={1} max={65535} style={{ width: "100%" }} />
           </Form.Item>
           <Form.Item name="credentialId" label="授权凭证">
-            <Select placeholder="请选择授权凭证" allowClear>
+            <Select placeholder="请选择授权凭证" allowClear onSearch={() => {}}>
               {credentials.map(cred => (
                 <Option key={cred.id} value={cred.id}>{cred.credentialName}</Option>
               ))}
@@ -937,7 +937,7 @@ const DeviceManagement: FC = () => {
             <Input placeholder="请输入位置" />
           </Form.Item>
           <Form.Item name="status" label="状态" rules={[{ required: true }]}>
-            <Select>
+            <Select onSearch={() => {}}>
               {STATUS_OPTIONS.map(opt => (
                 <Option key={opt.value} value={opt.value}>{opt.label}</Option>
               ))}

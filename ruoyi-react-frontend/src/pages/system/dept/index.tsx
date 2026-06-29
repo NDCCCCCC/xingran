@@ -223,7 +223,7 @@ const DepartmentManagement: FC = () => {
               <Input placeholder="请输入部门名称" />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" style={{ width: 120 }} allowClear>
+              <Select placeholder="请选择状态" style={{ width: 120 }} allowClear onSearch={() => {}}>
                 {STATUS_OPTIONS.map((opt) => (
                   <Option key={opt.value} value={opt.value}>
                     {opt.label}

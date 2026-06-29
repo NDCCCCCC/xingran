@@ -145,12 +145,12 @@ const JobManager: FC = () => {
               <Select
                 placeholder="状态"
                 value={searchForm.status}
-                onChange={(value) => setSearchForm({ ...searchForm, status: value })}
+                onChange={(value) =>    setSearchForm({ ...searchForm, status: value })}
                 allowClear
                 className="user-form-input"
                 style={{ width: "100%" }}
                 options={STATUS_OPTIONS}
-              />
+               onSearch={() => {}}/>
             </Col>
             <Col xs={24} sm={24} md={6}>
               <Space>
@@ -244,7 +244,7 @@ const JobManager: FC = () => {
             rules={[{ required: true }]}
             extra="任务错过执行时间的处理策略"
           >
-            <Select options={MISFIRE_POLICY_OPTIONS} />
+            <Select options={MISFIRE_POLICY_OPTIONS}  onSearch={() => {}}/>
           </Form.Item>
           <Form.Item
             label="并发执行"
@@ -259,7 +259,7 @@ const JobManager: FC = () => {
             name="status"
             rules={[{ required: true }]}
           >
-            <Select options={STATUS_OPTIONS} />
+            <Select options={STATUS_OPTIONS}  onSearch={() => {}}/>
           </Form.Item>
           <Form.Item
             label="备注"

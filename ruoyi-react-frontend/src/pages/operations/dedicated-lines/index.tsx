@@ -69,7 +69,7 @@ const DedicatedLineManagement: FC = () => {
   // 加载所有机房列表（不分部门）
   const loadServerRooms = useCallback(async () => {
     try {
-      const result = await serverRoomApi.list({ current: 1, pageSize: 1000 }) as { data?: { list: Record<string, unknown>[] } };
+      const result = await serverRoomApi.list({ current: 1, pageSize: 50 }) as { data?: { list: Record<string, unknown>[] } };
       const rooms = result.data?.list || [];
       setServerRooms(rooms.map((r: Record<string, unknown>) => ({
         id: r.id as string,
@@ -328,6 +328,7 @@ const DedicatedLineManagement: FC = () => {
                 filterOption={(input, option) =>
                   String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
                 }
+                onSearch={() => {}}
                 className="user-form-input"
                 style={{ width: 150 }}
                 options={serverRooms.map(room => ({ label: room.name, value: room.id }))}
@@ -341,23 +342,24 @@ const DedicatedLineManagement: FC = () => {
                 filterOption={(input, option) =>
                   String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
                 }
+                onSearch={() => {}}
                 className="user-form-input"
                 style={{ width: 150 }}
                 options={serverRooms.map(room => ({ label: room.name, value: room.id }))}
               />
             </Form.Item>
             <Form.Item name="lineType" label="专线类型">
-              <Select placeholder="请选择类型" allowClear className="user-form-input" style={{ width: 130 }}>
+              <Select placeholder="请选择类型" allowClear className="user-form-input" style={{ width: 130 }} onSearch={() => {}}>
                 {lineTypeDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
               </Select>
             </Form.Item>
             <Form.Item name="isp" label="运营商">
-              <Select placeholder="请选择运营商" allowClear className="user-form-input" style={{ width: 120 }}>
+              <Select placeholder="请选择运营商" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
                 {ispDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
               </Select>
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }}>
+              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}>
                 <Option value={0}>正常</Option>
                 <Option value={1}>故障</Option>
                 <Option value={2}>停用</Option>
@@ -428,7 +430,7 @@ const DedicatedLineManagement: FC = () => {
             <Input placeholder="请输入专线名称" />
           </Form.Item>
           <Form.Item name="lineType" label="专线类型" rules={[{ required: true, message: "请选择专线类型" }]}>
-            <Select placeholder="请选择专线类型">
+            <Select placeholder="请选择专线类型" onSearch={() => {}}>
               {lineTypeDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
             </Select>
           </Form.Item>
@@ -440,7 +442,7 @@ const DedicatedLineManagement: FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item name="isp" label="运营商" rules={[{ required: true, message: "请选择运营商" }]}>
-                <Select placeholder="请选择运营商" className="user-form-input">
+                <Select placeholder="请选择运营商" className="user-form-input" onSearch={() => {}}>
                   {ispDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
                 </Select>
               </Form.Item>
@@ -456,6 +458,7 @@ const DedicatedLineManagement: FC = () => {
                   filterOption={(input, option) =>
                     String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
                   }
+                  onSearch={() => {}}
                   className="user-form-input"
                   options={serverRooms.map(room => ({ label: room.name, value: room.id }))}
                 />
@@ -480,6 +483,7 @@ const DedicatedLineManagement: FC = () => {
                   filterOption={(input, option) =>
                     String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
                   }
+                  onSearch={() => {}}
                   className="user-form-input"
                   options={serverRooms.map(room => ({ label: room.name, value: room.id }))}
                 />
@@ -545,7 +549,7 @@ const DedicatedLineManagement: FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item name="status" label="状态" rules={[{ required: true, message: "请选择状态" }]}>
-                <Select placeholder="请选择状态" className="user-form-input">
+                <Select placeholder="请选择状态" className="user-form-input" onSearch={() => {}}>
                   <Option value={0}>正常</Option>
                   <Option value={1}>故障</Option>
                   <Option value={2}>停用</Option>

@@ -229,7 +229,7 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
 							name="type"
 							rules={[{ required: true }]}
 						>
-							<Select disabled>
+							<Select disabled onSearch={() => {}}>
 								{widgetTypes.map((type: WidgetType) => (
 									<Select.Option key={type} value={type}>
 										{widgetRegistry[type]?.displayName}

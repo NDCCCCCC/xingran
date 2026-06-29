@@ -106,13 +106,13 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
                 placeholder="选择楼宇"
                 value={selectedBuildingId}
                 onChange={onBuildingChange}
-                options={buildingOptions.map(b => ({
+                options={buildingOptions.map(b =>    ({
                   label: b.name,
                   value: b.id,
                 }))}
                 showSearch
                 optionFilterProp="label"
-              />
+               onSearch={() => {}}/>
             </Space>
 
             <Space size="small" style={{ display: "flex", alignItems: "center" }}>
@@ -122,13 +122,13 @@ export const FloorPlanEditorView: FC<FloorPlanEditorViewProps> = ({
                 placeholder="选择楼层"
                 value={currentFloor?.id}
                 onChange={onFloorChange}
-                options={floorOptions.map(f => ({
+                options={floorOptions.map(f =>    ({
                   label: f.name || `${f.floorNo}层`,
                   value: f.id,
                 }))}
                 showSearch
                 optionFilterProp="label"
-              />
+               onSearch={() => {}}/>
             </Space>
 
             <Button

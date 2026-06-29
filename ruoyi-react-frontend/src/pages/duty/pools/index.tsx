@@ -361,7 +361,7 @@ const DutyPoolPage: FC = () => {
               />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }}>
+              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}>
                 <Option value={0}>启用</Option>
                 <Option value={1}>停用</Option>
               </Select>
@@ -457,7 +457,7 @@ const DutyPoolPage: FC = () => {
               optionLabelProp="label"
               loading={memberUsersLoading}
               disabled={filteredUsers.length === 0 || memberUsersLoading}
-            >
+             onSearch={() => {}}>
               {filteredUsers.map((user) => (
                 <Option key={user.id} value={user.id} label={user.nickname || user.username}>
                   {user.username} - {user.nickname} {user.deptName ? `(${user.deptName})` : ''}
