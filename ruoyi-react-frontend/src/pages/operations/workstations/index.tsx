@@ -125,6 +125,14 @@ const WorkstationManagement: FC = () => {
   // workstationHealthQuery:在 page level 调一次 useWorkstationHealth,避免 WorkstationDeviceTable
   //   内每行 N+1 useQuery
   // assetConflictMap:从 query.data.assets 提取 assetId → conflictType 映射,通过 prop 下传
+  //
+  // WR-01 提示(代码契约锁): useWorkstationHealth 的 cache key 是 workstationId 本身,
+  // 因此无论这里(expand 行)、ReconciliationDrawer(useAssetHealth)还是后续可能的
+  // WorkstationDeviceTable 子查询,只要 workstationId 一致就会命中同一份 cache entry,
+  // 不会 N+1。Future refactor 切勿:
+  //   1) 把这个 hook 拆到不同 provider 树(失去共享 cache)
+  //   2) 把 expandedWorkstationId 替换为 expandedRowKeys(导致 cache key 在每次 collapse/expand
+  //      时变化,触发额外 fetch)
   const expandedWorkstationId =
     expandedRowKeys.length > 0 ? String(expandedRowKeys[0]) : "";
   const workstationHealthQuery = useWorkstationHealth(expandedWorkstationId);
