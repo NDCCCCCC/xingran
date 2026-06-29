@@ -36,7 +36,7 @@ const HealthCardInner: React.FC<HealthCardProps> = ({ workstationId, onApplyExce
   const trendOption = useMemo(() => {
     const points = (data?.healthScore?.trend ?? []).map((t: { date: string; openCount: number }) => [t.date, t.openCount]);
     return {
-      grid: { left: 0, right: 0, top: 4, bottom: 4 },
+      grid: { left: 0, right: 0, top: 2, bottom: 2 },
       xAxis: { type: "category", show: false, data: points.map((p: (string | number)[]) => p[0]) },
       yAxis: { type: "value", show: false },
       tooltip: { show: false },
@@ -46,7 +46,7 @@ const HealthCardInner: React.FC<HealthCardProps> = ({ workstationId, onApplyExce
           data: points.map((p: (string | number)[]) => p[1]),
           smooth: true,
           symbol: "none",
-          lineStyle: { color: data ? SCORE_BAND_COLOR(data.healthScore.score) : "#22c55e", width: 2 },
+          lineStyle: { color: data ? SCORE_BAND_COLOR(data.healthScore.score) : "#22c55e", width: 1.5 },
           areaStyle: { color: data ? SCORE_BAND_COLOR(data.healthScore.score) : "#22c55e", opacity: 0.1 },
         },
       ],
@@ -88,9 +88,10 @@ const HealthCardInner: React.FC<HealthCardProps> = ({ workstationId, onApplyExce
         size="small"
         title="对账健康度"
         extra={<Tag color="blue">本周</Tag>}
-        style={{ marginBottom: 16 }}
+        style={{ marginBottom: 8 }}
+        styles={{ body: { padding: "8px 12px" } }}
       >
-        <Empty description="该工位暂无关联资产。" />
+        <Empty description="该工位暂无关联资产。" image={Empty.PRESENTED_IMAGE_SIMPLE} />
       </Card>
     );
   }
@@ -98,57 +99,63 @@ const HealthCardInner: React.FC<HealthCardProps> = ({ workstationId, onApplyExce
   const { healthScore } = data;
   const scoreColor = SCORE_BAND_COLOR(healthScore.score);
 
+  // 紧凑 KPI 样式(antd 6.x 弃用 valueStyle,改用 styles.content)
+  const compactKpiValue = { fontSize: 16, fontWeight: 600, lineHeight: 1.2 };
+  const compactKpiTitle = { fontSize: 12, marginBottom: 0 };
+  const compactScoreValue = { color: scoreColor, fontSize: 22, fontWeight: 700, lineHeight: 1.2 };
+
   return (
     <Card
       size="small"
       title="对账健康度"
       extra={
-        <Tag color="blue" style={{ marginRight: 8 }}>
+        <Tag color="blue" style={{ marginRight: 4 }}>
           本周
         </Tag>
       }
-      style={{ marginBottom: 16 }}
+      style={{ marginBottom: 8 }}
+      styles={{ body: { padding: "8px 12px" } }}
     >
-      <Row gutter={16} align="middle" style={{ marginBottom: 12 }}>
-        <Col flex="80px">
+      <Row gutter={8} align="middle" style={{ marginBottom: 4 }}>
+        <Col flex="64px">
           <Statistic
             value={healthScore.score}
             suffix="/100"
-            valueStyle={{ color: scoreColor, fontSize: 28, fontWeight: 700 }}
+            styles={{ content: compactScoreValue }}
           />
         </Col>
         <Col flex="auto">
           <ReactECharts
             option={trendOption}
-            style={{ height: 56, width: "100%" }}
+            style={{ height: 40, width: "100%" }}
             opts={{ renderer: "svg" }}
             notMerge
             lazyUpdate
           />
         </Col>
         {onApplyException && (
-          <Col flex="100px" style={{ textAlign: "right" }}>
-            <Button type="link" onClick={onApplyException}>
+          <Col flex="72px" style={{ textAlign: "right" }}>
+            <Button type="link" size="small" onClick={onApplyException}>
               申请例外
             </Button>
           </Col>
         )}
       </Row>
-      <Row gutter={16}>
+      <Row gutter={8}>
         <Col span={4} xs={12} sm={8} md={6} lg={4}>
-          <Statistic title="正常" value={healthScore.normal} valueStyle={{ fontSize: 20, fontWeight: 600 }} />
+          <Statistic title="正常" value={healthScore.normal} styles={{ content: compactKpiValue, title: compactKpiTitle }} />
         </Col>
         <Col span={4} xs={12} sm={8} md={6} lg={4}>
-          <Statistic title="漂移" value={healthScore.drift} valueStyle={{ fontSize: 20, fontWeight: 600 }} />
+          <Statistic title="漂移" value={healthScore.drift} styles={{ content: compactKpiValue, title: compactKpiTitle }} />
         </Col>
         <Col span={4} xs={12} sm={8} md={6} lg={4}>
-          <Statistic title="冲突" value={healthScore.conflict} valueStyle={{ fontSize: 20, fontWeight: 600 }} />
+          <Statistic title="冲突" value={healthScore.conflict} styles={{ content: compactKpiValue, title: compactKpiTitle }} />
         </Col>
         <Col span={4} xs={12} sm={8} md={6} lg={4}>
-          <Statistic title="无数据" value={healthScore.noData} valueStyle={{ fontSize: 20, fontWeight: 600 }} />
+          <Statistic title="无数据" value={healthScore.noData} styles={{ content: compactKpiValue, title: compactKpiTitle }} />
         </Col>
         <Col span={4} xs={12} sm={8} md={6} lg={4}>
-          <Statistic title="例外命中" value={healthScore.exceptionHit} valueStyle={{ fontSize: 20, fontWeight: 600 }} />
+          <Statistic title="例外命中" value={healthScore.exceptionHit} styles={{ content: compactKpiValue, title: compactKpiTitle }} />
         </Col>
       </Row>
     </Card>
