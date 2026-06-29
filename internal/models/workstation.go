@@ -75,15 +75,17 @@ type Workstation struct {
 	//
 	// 三个字段在 WorkstationHandler.GetByID 注入,service 层 (WorkstationService) 不感知
 	// 保持与现有 handler/service 分层一致(WorkstationService 不引入 asset 依赖)。
-	// 字段为虚拟属性,不映射到 DB 列 — 通过 gorm:"->;-:migration" 设为只读+跳过 AutoMigrate,
-	// 避免 DB 侧因列不存在触发 SQLSTATE 42703 (MEMORY: gorm-migration-tag-does-not-block-insert)。
+	// 字段为 handler-only 虚拟属性,不映射到 DB 列 — 用 gorm:"-" 完全忽略(无 migration、query、scan),
+	// 因为 List 端点用 Select(workstationJoinSelect) 含 sys_workstation.* 显式覆盖 GORM 字段标签,
+	// 若用 gorm:"->;-:migration" 会让 GORM 尝试找 reconciliation 列 → "Table not set" 错(已修)。
+	// (参 MEMORY: gorm-migration-tag-does-not-block-insert;原 →;-:migration 适用于有 DBName 的 JOIN 字段)
 	//
 	// Reconciliation 使用弱类型 map[string]interface{} 避免 models → asset → models 循环依赖
 	// (asset 包内含 models 引用)。handler 层注入前做一次 json marshal/unmarshal 类型转换。
 	// 无权限时 Reconciliation=nil + ReconciliationVisible=false (D-A1-03 静默降级)
-	Reconciliation          map[string]interface{} `gorm:"->;-:migration" json:"reconciliation,omitempty"`
-	ReconciliationVisible   bool                   `gorm:"->;-:migration" json:"reconciliationVisible"`
-	ReconciliationHiddenReason string               `gorm:"->;-:migration" json:"reconciliationHiddenReason,omitempty"`
+	Reconciliation             map[string]interface{} `gorm:"-" json:"reconciliation,omitempty"`
+	ReconciliationVisible      bool                   `gorm:"-" json:"reconciliationVisible"`
+	ReconciliationHiddenReason string                 `gorm:"-" json:"reconciliationHiddenReason,omitempty"`
 }
 
 // TableName 设置表名
