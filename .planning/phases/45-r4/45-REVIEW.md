@@ -1,5 +1,5 @@
 ---
-status: issues_found
+status: warnings
 phase: 45-r4
 verified: 2026-06-29T00:00:00Z
 verifier: gsd-code-reviewer
@@ -94,6 +94,32 @@ Apply the same fix in `ResolveException` (or factor out a shared helper in `reco
 
 ---
 
+## Fix Log
+
+Applied 2026-06-29 via `/gsd:code-review --fix` workflow. All Critical and Warning findings addressed; Info findings (I-01/I-02/I-03) skipped per fix_scope=critical_warning.
+
+| ID  | Severity | Status | Commit      | Notes |
+|-----|----------|--------|-------------|-------|
+| CR-01 | Critical | Fixed | `266b2e55` | Assets page HealthBadge → literal '-' placeholder + comment (workstationId not in /ops/asset/list DTO, lift-up pattern not feasible without backend DTO extension) |
+| CR-02 | Critical | Fixed | `b41e80c4` | Both WorkstationIDForException and ResolveException now check sql.ErrNoRows; real DB errors still propagate with Warnf |
+| WR-01 | Warning  | Fixed | `84c65f9d` | Added comment block documenting cache-key contract for workstationHealthQuery lift-up |
+| WR-02 | Warning  | Fixed | `523cfaec` | Trend computed once at top; Score=100 only on Total==0 branch; redundant Trend call removed |
+| WR-03 | Warning  | Fixed | `6d94fec0` | Deleted dead `void trendOption` statement in HealthCard.tsx:101 |
+| WR-04 | Warning  | Fixed | `ad71c988` | useEffect deps audited — all 4 deps already stable (useCallback); comment added |
+| I-01  | Info     | Skipped | n/a | Out of fix scope |
+| I-02  | Info     | Skipped | n/a | Out of fix scope |
+| I-03  | Info     | Skipped | n/a | Out of fix scope |
+
+**Build:** PASS (go build ./...)  
+**Tests:** PASS (go test ./internal/services/asset/... ./internal/api/v1/asset/... ./internal/scheduler/...)  
+**TypeScript:** PASS (tsc --noEmit)  
+**Vitest:** PASS (src/components/reconciliation — 9 tests across 2 files)
+
+**Final status:** All in-scope findings fixed. No skipped Critical/Warning findings. Build + tests green.
+
+---
+
 _Reviewed: 2026-06-29T00:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
+_Fixer: Claude (gsd-code-fixer)_
 _Depth: standard_
