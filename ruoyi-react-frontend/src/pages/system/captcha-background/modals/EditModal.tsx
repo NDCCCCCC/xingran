@@ -36,7 +36,7 @@ export function CaptchaEditModal({ open, editingBg, onOk, onCancel }: CaptchaEdi
     >
       <Form form={form} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
         <Form.Item name="pieceShape" label="拼图形状" rules={[{ required: true }]}>
-          <Select>
+          <Select onSearch={() => {}}>
             {SHAPE_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -45,7 +45,7 @@ export function CaptchaEditModal({ open, editingBg, onOk, onCancel }: CaptchaEdi
           </Select>
         </Form.Item>
         <Form.Item name="difficultyLevel" label="难度级别" rules={[{ required: true }]}>
-          <Select>
+          <Select onSearch={() => {}}>
             {DIFFICULTY_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -54,7 +54,7 @@ export function CaptchaEditModal({ open, editingBg, onOk, onCancel }: CaptchaEdi
           </Select>
         </Form.Item>
         <Form.Item name="allowedShapes" label="允许的形状">
-          <Select mode="multiple" placeholder="不限制则使用默认">
+          <Select mode="multiple" placeholder="不限制则使用默认" onSearch={() => {}}>
             {SHAPE_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -63,7 +63,7 @@ export function CaptchaEditModal({ open, editingBg, onOk, onCancel }: CaptchaEdi
           </Select>
         </Form.Item>
         <Form.Item name="status" label="状态" rules={[{ required: true }]}>
-          <Select>
+          <Select onSearch={() => {}}>
             {STATUS_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}

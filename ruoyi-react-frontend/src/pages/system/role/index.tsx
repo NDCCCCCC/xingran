@@ -268,7 +268,7 @@ const RoleManagement: FC = () => {
               <Input placeholder="请输入权限字符" />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" style={{ width: 120 }} allowClear>
+              <Select placeholder="请选择状态" style={{ width: 120 }} allowClear onSearch={() => {}}>
                 {STATUS_OPTIONS.map(opt => (
                   <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                 ))}
@@ -366,7 +366,7 @@ const RoleManagement: FC = () => {
                   name="status"
                   label="状态"
                 >
-                  <Select>
+                  <Select onSearch={() => {}}>
                     {STATUS_OPTIONS.map(opt => (
                       <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                     ))}
@@ -411,7 +411,7 @@ const RoleManagement: FC = () => {
                   name="dataScope"
                   label="数据范围"
                 >
-                  <Select onChange={(value) => handleDataScopeChange(value, editForm)}>
+                  <Select onChange={(value) => handleDataScopeChange(value, editForm)} onSearch={() => {}}>
                     {DATA_SCOPE_OPTIONS.map(opt => (
                       <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                     ))}

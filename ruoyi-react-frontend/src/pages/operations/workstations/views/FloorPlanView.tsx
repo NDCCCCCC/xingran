@@ -50,7 +50,7 @@ export function WorkstationFloorPlanView({
               value={selectedFloorForPlan}
               onChange={onFloorChange}
               allowClear
-            >
+             onSearch={() => {}}>
               {floorOptions.map((f) => (
                 <Option key={f.code} value={f.code}>
                   {f.name}

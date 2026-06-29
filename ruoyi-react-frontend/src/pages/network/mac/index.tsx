@@ -240,7 +240,7 @@ const MACAddressPage: FC = () => {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="deviceId" label="设备">
-              <Select placeholder="请选择设备" allowClear className="user-form-input" style={{ width: 200 }} showSearch optionFilterProp="deviceName">
+              <Select placeholder="请选择设备" allowClear className="user-form-input" style={{ width: 200 }} showSearch optionFilterProp="deviceName" onSearch={() => {}}>
                 {devices.map(device => (
                   <Option key={device.id} value={device.id}>{device.deviceName}</Option>
                 ))}
@@ -256,7 +256,7 @@ const MACAddressPage: FC = () => {
               <InputNumber placeholder="VLAN ID" style={{ width: 120 }} />
             </Form.Item>
             <Form.Item name="macType" label="MAC类型">
-              <Select placeholder="请选择类型" allowClear className="user-form-input" style={{ width: 120 }}>
+              <Select placeholder="请选择类型" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
                 {macTypeOptions.map(opt => (
                   <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                 ))}

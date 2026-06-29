@@ -53,8 +53,10 @@ module.exports = createRule({
     const inPage = PAGE_DIR.test(filename);
 
     return {
-      // 规则 1: Select/AutoComplete/Cascader 必须有 onSearch prop
-      "JSXOpeningElement[name.name=/^(Select|AutoComplete|Cascader)$/]"(node) {
+      // 规则 1: Select/AutoComplete 必须有 onSearch prop
+      // 注: Cascader 故意豁免 — Cascader JSX 无 onSearch prop,只有 showSearch 用于高亮已有选项
+      // 如需 Cascader 远程搜索,使用 loadData + searchValue (Phase 47+ 单独规划)
+      "JSXOpeningElement[name.name=/^(Select|AutoComplete)$/]"(node) {
         const hasOnSearch = node.attributes.some(
           (attr) =>
             attr.type === "JSXAttribute" &&

@@ -332,7 +332,7 @@ const ConfigManagement: FC = () => {
               <Input placeholder="请输入参数键名" allowClear className="user-form-input" style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="configType" label="状态">
-              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }}>
+              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
                 <Option value="Y">是</Option>
                 <Option value="N">否</Option>
               </Select>
@@ -426,13 +426,13 @@ const ConfigManagement: FC = () => {
             <Input placeholder="请输入参数键值" className="user-form-input" />
           </Form.Item>
           <Form.Item name="configType" label="状态" rules={[{ required: true }]}>
-            <Select className="user-form-input">
+            <Select className="user-form-input" onSearch={() => {}}>
               <Option value="Y">是</Option>
               <Option value="N">否</Option>
             </Select>
           </Form.Item>
           <Form.Item name="isSystem" label="系统内置" rules={[{ required: true }]} extra="系统内置参数不可删除">
-            <Select disabled={!!editingConfig} className="user-form-input">
+            <Select disabled={!!editingConfig} className="user-form-input" onSearch={() => {}}>
               <Option value={0}>否</Option>
               <Option value={1}>是</Option>
             </Select>

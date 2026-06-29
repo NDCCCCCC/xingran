@@ -130,7 +130,7 @@ export const RefreshIntervalSelector: React.FC<RefreshIntervalSelectorProps> = (
 					disabled={disabled}
 					style={{ width: "100%" }}
 					{...selectProps}
-				>
+				 onSearch={() => {}}>
 					{PRESET_OPTIONS.map((opt) => (
 						<Select.Option key={opt.value} value={opt.value}>
 							{opt.label}
@@ -154,7 +154,7 @@ export const RefreshIntervalSelector: React.FC<RefreshIntervalSelectorProps> = (
 							onChange={handleCustomUnitChange}
 							disabled={disabled}
 							style={{ width: 80 }}
-						>
+						 onSearch={() => {}}>
 							{UNIT_OPTIONS.map((opt) => (
 								<Select.Option key={opt.value} value={opt.value}>
 									{opt.label}

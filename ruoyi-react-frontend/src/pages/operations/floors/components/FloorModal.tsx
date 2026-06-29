@@ -102,7 +102,7 @@ export const FloorModal: FC<FloorModalProps> = ({
             disabled={isDisabled}
             showSearch
             optionFilterProp="children"
-          >
+           onSearch={() => {}}>
             {effectiveBuildingOptions.map((b) => (
               <Option key={b.id} value={b.id}>
                 {b.name}
@@ -133,7 +133,7 @@ export const FloorModal: FC<FloorModalProps> = ({
           rules={[{ required: true, message: "请选择状态" }]}
           initialValue={DEFAULT_FORM_VALUES.status}
         >
-          <Select placeholder="请选择状态">
+          <Select placeholder="请选择状态" onSearch={() => {}}>
             {STATUS_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}

@@ -84,8 +84,8 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
               showSearch
               optionFilterProp="children"
               disabled={disabled || !selectedDeptId}
-              onChange={(value) => onBuildingChange?.(value)}
-            >
+              onChange={(value) =>    onBuildingChange?.(value)}
+             onSearch={() => {}}>
               {buildingOptionsByDept.map((b) => (
                 <Option key={b.id} value={b.id}>
                   {b.name}
@@ -103,7 +103,7 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
           </Form.Item>
 
           <Form.Item name="status" label="状态">
-            <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }} disabled={disabled}>
+            <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }} disabled={disabled} onSearch={() => {}}>
               {STATUS_OPTIONS.map((opt) => (
                 <Option key={opt.value} value={opt.value}>
                   {opt.label}

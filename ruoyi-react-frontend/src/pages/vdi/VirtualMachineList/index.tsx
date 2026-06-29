@@ -847,8 +847,8 @@ const VirtualMachineList: React.FC = () => {
             placeholder="虚拟机状态"
             style={{ width: 120 }}
             allowClear
-            onChange={(value) => setFilters({ ...filters, powerState: value })}
-          >
+            onChange={(value) =>    setFilters({ ...filters, powerState: value })}
+           onSearch={() => {}}>
             <Select.Option value="pending">等待Agent</Select.Option>
             <Select.Option value="stopped">关机</Select.Option>
             <Select.Option value="suspended">挂起</Select.Option>
@@ -915,7 +915,7 @@ const VirtualMachineList: React.FC = () => {
               {/* 左列：基础配置 */}
               <Col xs={24} md={12}>
                 <Form.Item label="VDI 服务器" name="vdi_server_id" rules={[{ required: true, message: "请选择VDI服务器" }]}>
-                  <Select placeholder="请选择VDI服务器" loading={vdiServers.length === 0}>
+                  <Select placeholder="请选择VDI服务器" loading={vdiServers.length === 0} onSearch={() => {}}>
                     {vdiServers.filter(s => s.status === 0).map(server => (
                       <Select.Option key={server.id} value={server.id}>
                         {server.name}
@@ -925,7 +925,7 @@ const VirtualMachineList: React.FC = () => {
                 </Form.Item>
 
                 <Form.Item label="资源组" name="resource_group_id" rules={[{ required: true, message: "请选择资源组" }]}>
-                  <Select placeholder={selectedServerId ? "请选择资源组" : "请先选择VDI服务器"} disabled={!selectedServerId}>
+                  <Select placeholder={selectedServerId ? "请选择资源组" : "请先选择VDI服务器"} disabled={!selectedServerId} onSearch={() => {}}>
                     {resourceGroups.map(group => (
                       <Select.Option key={group.resource_group_id} value={group.resource_group_id}>
                         {group.name} {group.type ? `(${group.type})` : ""}
@@ -935,7 +935,7 @@ const VirtualMachineList: React.FC = () => {
                 </Form.Item>
 
                 <Form.Item label="资源" name="resource_id" rules={[{ required: true, message: "请选择资源" }]}>
-                  <Select placeholder={selectedResourceGroupId ? "请选择资源" : "请先选择资源组"} disabled={!selectedResourceGroupId}>
+                  <Select placeholder={selectedResourceGroupId ? "请选择资源" : "请先选择资源组"} disabled={!selectedResourceGroupId} onSearch={() => {}}>
                     {resources.map(r => (
                       <Select.Option key={r.id} value={String(r.id)}>
                         {r.name} {r.note ? `(${r.note})` : ""}
@@ -945,7 +945,7 @@ const VirtualMachineList: React.FC = () => {
                 </Form.Item>
 
                 <Form.Item label="VTP 平台" name="vtp_id" rules={[{ required: true, message: "请选择VTP平台" }]}>
-                  <Select placeholder={selectedServerId ? "请选择VTP平台" : "请先选择VDI服务器"} disabled={!selectedServerId}>
+                  <Select placeholder={selectedServerId ? "请选择VTP平台" : "请先选择VDI服务器"} disabled={!selectedServerId} onSearch={() => {}}>
                     {vtpPlatforms.map(platform => (
                       <Select.Option key={platform.id} value={platform.id}>
                         {platform.name}
@@ -955,7 +955,7 @@ const VirtualMachineList: React.FC = () => {
                 </Form.Item>
 
                 <Form.Item label="运行位置" name="run_position_id" rules={[{ required: true, message: "请选择运行位置" }]}>
-                  <Select placeholder={selectedVtpId ? "请选择运行位置" : "请先选择VTP平台"} disabled={!selectedVtpId}>
+                  <Select placeholder={selectedVtpId ? "请选择运行位置" : "请先选择VTP平台"} disabled={!selectedVtpId} onSearch={() => {}}>
                     {runPositions.map(position => (
                       <Select.Option key={position.id} value={position.id}>
                         {position.name}
@@ -968,7 +968,7 @@ const VirtualMachineList: React.FC = () => {
                 </Form.Item>
 
                 <Form.Item label="个人盘" name="disk_id" rules={[{ required: true, message: "请选择个人盘" }]}>
-                  <Select placeholder={selectedVtpId ? "请选择个人盘" : "请先选择VTP平台"} disabled={!selectedVtpId}>
+                  <Select placeholder={selectedVtpId ? "请选择个人盘" : "请先选择VTP平台"} disabled={!selectedVtpId} onSearch={() => {}}>
                     {storages.map(storage => (
                       <Select.Option key={storage.id} value={storage.id}>
                         {storage.name} ({(parseInt(storage.avail) / 1024).toFixed(1)}GB可用)
@@ -985,7 +985,7 @@ const VirtualMachineList: React.FC = () => {
               {/* 右列：虚拟机配置 */}
               <Col xs={24} md={12}>
                 <Form.Item label="存储位置" name="storage_id" rules={[{ required: true, message: "请选择存储位置" }]}>
-                  <Select placeholder={selectedVtpId ? "请选择存储位置" : "请先选择VTP平台"} disabled={!selectedVtpId}>
+                  <Select placeholder={selectedVtpId ? "请选择存储位置" : "请先选择VTP平台"} disabled={!selectedVtpId} onSearch={() => {}}>
                     {storages.map(storage => (
                       <Select.Option key={storage.id} value={storage.id}>
                         {storage.name} ({storage.avail}MB可用)
@@ -995,7 +995,7 @@ const VirtualMachineList: React.FC = () => {
                 </Form.Item>
 
                 <Form.Item label="网络接口" name="network_id" rules={[{ required: true, message: "请选择网络接口" }]}>
-                  <Select placeholder={selectedVtpId ? "请选择网络接口" : "请先选择VTP平台"} disabled={!selectedVtpId}>
+                  <Select placeholder={selectedVtpId ? "请选择网络接口" : "请先选择VTP平台"} disabled={!selectedVtpId} onSearch={() => {}}>
                     {networks.map(network => (
                       <Select.Option key={network.id} value={network.id}>
                         {network.name}

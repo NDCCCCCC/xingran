@@ -116,7 +116,7 @@ const CaptchaBackgroundManagement: FC = () => {
           <Input placeholder="请输入文件名" allowClear className="user-form-input" />
         </Form.Item>
         <Form.Item name="pieceShape" label="拼图形状">
-          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 120 }}>
+          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
             {SHAPE_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -125,7 +125,7 @@ const CaptchaBackgroundManagement: FC = () => {
           </Select>
         </Form.Item>
         <Form.Item name="difficultyLevel" label="难度">
-          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 100 }}>
+          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}>
             {DIFFICULTY_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -134,7 +134,7 @@ const CaptchaBackgroundManagement: FC = () => {
           </Select>
         </Form.Item>
         <Form.Item name="status" label="状态">
-          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 100 }}>
+          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}>
             {STATUS_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}

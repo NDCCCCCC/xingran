@@ -148,7 +148,7 @@ const TaskManagement: FC = () => {
               <Input placeholder="请输入任务名称" allowClear style={{ width: 200 }} />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择" allowClear style={{ width: 150 }}>
+              <Select placeholder="请选择" allowClear style={{ width: 150 }} onSearch={() => {}}>
                 <Option value="pending">等待中</Option>
                 <Option value="running">运行中</Option>
                 <Option value="completed">已完成</Option>

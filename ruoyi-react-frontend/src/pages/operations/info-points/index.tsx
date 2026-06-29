@@ -653,12 +653,12 @@ const InfoPointManagement: FC = () => {
               </Form.Item>
               <Form.Item name="name" label="信息点名称"><Input placeholder="请输入信息点名称" allowClear className="user-form-input" style={{ width: 150 }} /></Form.Item>
               <Form.Item name="infoPointType" label="信息点类型">
-                <Select placeholder="请选择类型" allowClear className="user-form-input" style={{ width: 120 }}>
+                <Select placeholder="请选择类型" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
                   {infoPointTypeDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
                 </Select>
               </Form.Item>
               <Form.Item name="status" label="状态">
-                <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }}><Option value={0}>正常</Option><Option value={1}>故障</Option><Option value={2}>停用</Option></Select>
+                <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}><Option value={0}>正常</Option><Option value={1}>故障</Option><Option value={2}>停用</Option></Select>
               </Form.Item>
               <Form.Item>
                 <Space><Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>搜索</Button><Button onClick={handleReset}>重置</Button><Button icon={<ReloadOutlined />} onClick={refreshData}>刷新</Button></Space>
@@ -728,7 +728,7 @@ const InfoPointManagement: FC = () => {
             </Form.Item>
             <Form.Item name="name" label="信息点名称" rules={[{ required: true, message: "请输入信息点名称" }]}><Input placeholder="请输入信息点名称" /></Form.Item>
             <Form.Item name="infoPointType" label="信息点类型" rules={[{ required: true, message: "请选择信息点类型" }]}>
-              <Select placeholder="请选择信息点类型">
+              <Select placeholder="请选择信息点类型" onSearch={() => {}}>
                 {infoPointTypeDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
               </Select>
             </Form.Item>
@@ -739,7 +739,7 @@ const InfoPointManagement: FC = () => {
                     placeholder="请选择网络设备"
                     allowClear
                     showSearch
-                    onChange={(value) => {
+                    onChange={(value) =>   {
                       setSelectedDeviceId(value);
                       loadDevicePorts(value);
                     }}
@@ -751,7 +751,7 @@ const InfoPointManagement: FC = () => {
                       return searchText.includes(input.toLowerCase());
                     }}
                     optionLabelProp="label"
-                  >
+                   onSearch={() => {}}>
                     {networkDevices.map(d => {
                       const deviceName = d.deviceName || "未命名设备";
                       const fullName = `${deviceName} (${d.ipAddress})`;
@@ -774,11 +774,11 @@ const InfoPointManagement: FC = () => {
                     allowClear
                     disabled={!selectedDeviceId}
                     showSearch
-                    filterOption={(input, option) =>
+                    filterOption={(input, option) =>  
                       (option?.label as string)?.toString().toLowerCase().includes(input.toLowerCase())
                     }
                     optionLabelProp="label"
-                  >
+                   onSearch={() => {}}>
                     {devicePorts.map(p => {
                       const displayLabel = p.interfaceName || p.id || "未命名端口";
                       return (
@@ -791,7 +791,7 @@ const InfoPointManagement: FC = () => {
                 </Form.Item>
               </Col>
             </Row>
-            <Form.Item name="status" label="状态" rules={[{ required: true, message: "请选择状态" }]}><Select placeholder="请选择状态"><Option value={0}>正常</Option><Option value={1}>故障</Option><Option value={2}>停用</Option></Select></Form.Item>
+            <Form.Item name="status" label="状态" rules={[{ required: true, message: "请选择状态" }]}><Select placeholder="请选择状态" onSearch={() => {}}><Option value={0}>正常</Option><Option value={1}>故障</Option><Option value={2}>停用</Option></Select></Form.Item>
             <Form.Item name="description" label="描述"><TextArea rows={3} placeholder="请输入描述" /></Form.Item>
           </Form>
         </Modal>

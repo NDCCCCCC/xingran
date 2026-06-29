@@ -512,7 +512,7 @@ const [batchExporting, setBatchExporting] = useState(false);
               <Input placeholder="请输入设备名称" allowClear className="user-form-input" style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="backupType" label="备份类型">
-              <Select placeholder="请选择备份类型" allowClear className="user-form-input" style={{ width: 120 }}>
+              <Select placeholder="请选择备份类型" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
                 {BACKUP_TYPE_OPTIONS.map(opt => (
                   <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                 ))}
@@ -582,7 +582,7 @@ const [batchExporting, setBatchExporting] = useState(false);
               placeholder="请选择要备份的设备"
               showSearch
               optionFilterProp="children"
-            >
+             onSearch={() => {}}>
               {devices.map(device => (
                 <Option key={device.id} value={device.id}>
                   {device.deviceName} ({device.ipAddress})
@@ -637,7 +637,7 @@ const [batchExporting, setBatchExporting] = useState(false);
                 <Select
                   style={{ width: 400 }}
                   value={selectedRestoreBackup?.id}
-                  onChange={(value) => {
+                  onChange={(value) =>    {
                     const backup = selectedDeviceGroup.backups.find(b => b.id === value);
                     if (backup) {
                       setSelectedDeviceGroup(selectedDeviceGroup);
@@ -645,7 +645,7 @@ const [batchExporting, setBatchExporting] = useState(false);
                     }
                   }}
                   placeholder="请选择要还原的版本"
-                >
+                 onSearch={() => {}}>
                   {selectedDeviceGroup.backups.map(backup => (
                     <Option key={backup.id} value={backup.id}>
                       <Space>
@@ -750,7 +750,7 @@ const [batchExporting, setBatchExporting] = useState(false);
                 placeholder="选择第一个版本"
                 style={{ width: "100%" }}
                 value={compareBackup1?.id}
-                onChange={(value) => {
+                onChange={(value) =>    {
                   if (selectedDeviceGroup) {
                     const backup = selectedDeviceGroup.backups.find(b => b.id === value);
                     if (backup && compareBackup2) {
@@ -758,7 +758,7 @@ const [batchExporting, setBatchExporting] = useState(false);
                     }
                   }
                 }}
-              >
+               onSearch={() => {}}>
                 {selectedDeviceGroup?.backups.map(backup => (
                   <Option key={backup.id} value={backup.id}>
                     版本 {backup.version} - {formatDateTime(backup.createdAt)}
@@ -774,7 +774,7 @@ const [batchExporting, setBatchExporting] = useState(false);
                 placeholder="选择第二个版本"
                 style={{ width: "100%" }}
                 value={compareBackup2?.id}
-                onChange={(value) => {
+                onChange={(value) =>    {
                   if (selectedDeviceGroup) {
                     const backup = selectedDeviceGroup.backups.find(b => b.id === value);
                     if (backup && compareBackup1) {
@@ -782,7 +782,7 @@ const [batchExporting, setBatchExporting] = useState(false);
                     }
                   }
                 }}
-              >
+               onSearch={() => {}}>
                 {selectedDeviceGroup?.backups.map(backup => (
                   <Option key={backup.id} value={backup.id}>
                     版本 {backup.version} - {formatDateTime(backup.createdAt)}

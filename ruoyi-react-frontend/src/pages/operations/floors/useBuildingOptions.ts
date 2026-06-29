@@ -18,7 +18,7 @@ export function useBuildingOptions() {
 
   const loadBuildingOptions = useCallback(async () => {
     try {
-      const result = await buildingApi.list({ current: 1, pageSize: 1000 });
+      const result = await buildingApi.list({ current: 1, pageSize: 50 });
       const buildings = result.data?.list || [];
 
       setBuildingOptions(

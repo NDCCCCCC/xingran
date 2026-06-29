@@ -350,9 +350,9 @@ const ServerRoomManagement: FC = () => {
               <Form.Item name="buildingId" label="所在楼宇">
                 <Select
                   placeholder="请先选择部门"
-                  options={buildingOptions.map(b => ({ label: b.name, value: b.id }))}
+                  options={buildingOptions.map(b =>    ({ label: b.name, value: b.id }))}
                   disabled={!selectedDeptId}
-                />
+                 onSearch={() => {}}/>
               </Form.Item>
               <Form.Item name="floorNo" label="楼层">
                 <Input placeholder="请输入楼层" />
@@ -361,7 +361,7 @@ const ServerRoomManagement: FC = () => {
                 <Input placeholder="请输入机房名称" />
               </Form.Item>
               <Form.Item name="status" label="状态">
-                <Select placeholder="请选择状态">
+                <Select placeholder="请选择状态" onSearch={() => {}}>
                   <Option value={0}>正常</Option>
                   <Option value={1}>停用</Option>
                 </Select>
@@ -432,26 +432,26 @@ const ServerRoomManagement: FC = () => {
               <Select
                 placeholder="请选择所在楼宇"
                 className="user-form-input"
-                options={buildingOptions.map(b => ({ label: b.name, value: b.id }))}
+                options={buildingOptions.map(b =>    ({ label: b.name, value: b.id }))}
                 onChange={(value) => {
                   loadFloorOptions(value);
                   serverRoomForm.setFieldValue("floorId", undefined);
                 }}
-              />
+               onSearch={() => {}}/>
             </Form.Item>
             <Form.Item name="floorId" label="楼层" rules={[{ required: true, message: "请选择楼层" }]}>
               <Select
                 placeholder="请选择楼层"
                 className="user-form-input"
                 disabled={floorOptions.length === 0}
-                options={floorOptions.map(f => ({ label: `${f.floorNo} - ${f.name}`, value: f.id }))}
-              />
+                options={floorOptions.map(f =>    ({ label: `${f.floorNo} - ${f.name}`, value: f.id }))}
+               onSearch={() => {}}/>
             </Form.Item>
             <Form.Item name="name" label="机房名称" rules={[{ required: true, message: "请输入机房名称" }]}>
               <Input placeholder="请输入机房名称" className="user-form-input" />
             </Form.Item>
             <Form.Item name="status" label="状态" rules={[{ required: true, message: "请选择状态" }]}>
-              <Select placeholder="请选择状态" className="user-form-input" options={[{ label: "正常", value: 0 }, { label: "停用", value: 1 }]} />
+              <Select placeholder="请选择状态" className="user-form-input" options={[{ label: "正常", value: 0 }, { label: "停用", value: 1 }]}  onSearch={() => {}}/>
             </Form.Item>
             <Form.Item name="remark" label="描述">
               <TextArea rows={3} placeholder="请输入描述" className="user-form-input" />

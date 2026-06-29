@@ -480,7 +480,7 @@ const AssetList: FC = () => {
               allowClear
               style={{ width: 200 }}
               loading={deviceTypeOptions.length === 0}
-            >
+             onSearch={() => {}}>
               {deviceTypeOptions.map((option) => (
                 <Option key={option.value} value={option.value}>
                   {option.value} ({option.count})
@@ -494,7 +494,7 @@ const AssetList: FC = () => {
               allowClear
               style={{ width: 200 }}
               loading={deviceCategoryOptions.length === 0}
-            >
+             onSearch={() => {}}>
               {deviceCategoryOptions.map((option) => (
                 <Option key={option.value} value={option.value}>
                   {option.value} ({option.count})
@@ -503,13 +503,13 @@ const AssetList: FC = () => {
             </Select>
           </Form.Item>
           <Form.Item name="status" label="状态">
-            <Select placeholder="请选择状态" allowClear style={{ width: 120 }}>
+            <Select placeholder="请选择状态" allowClear style={{ width: 120 }} onSearch={() => {}}>
               <Option value={0}>正常</Option>
               <Option value={1}>停用</Option>
             </Select>
           </Form.Item>
           <Form.Item name="nbfStatus" label="拟报废">
-            <Select placeholder="请选择" allowClear style={{ width: 120 }}>
+            <Select placeholder="请选择" allowClear style={{ width: 120 }} onSearch={() => {}}>
               <Option value={0}>否</Option>
               <Option value={1}>是</Option>
             </Select>

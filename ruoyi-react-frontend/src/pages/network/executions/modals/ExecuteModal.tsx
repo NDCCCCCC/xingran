@@ -64,7 +64,7 @@ export function ConfigExecuteModal({
             showSearch
             optionFilterProp="children"
             onChange={onTemplateChange}
-          >
+           onSearch={() => {}}>
             {templates.map(t => (
               <Option key={t.id} value={t.id}>
                 {t.templateName} ({t.templateCode})

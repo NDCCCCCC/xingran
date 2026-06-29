@@ -260,7 +260,7 @@ export const NoticeList: React.FC<NoticeListProps> = ({
               <Input placeholder="请输入公告标题" allowClear className="user-form-input" style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="noticeType" label="公告类型">
-              <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 120 }}>
+              <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
                 <Option value="1">公告</Option>
                 <Option value="2">警告</Option>
               </Select>

@@ -382,7 +382,7 @@ const EmailConfigPage: FC = () => {
           </Form.Item>
 
           <Form.Item name="status" label="状态" initialValue={0}>
-            <Select>
+            <Select onSearch={() => {}}>
               <Option value={0}>正常</Option>
               <Option value={1}>停用</Option>
             </Select>

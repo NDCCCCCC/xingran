@@ -592,7 +592,7 @@ const APIKeyManagement: FC = () => {
                 onChange={setFilterStatus}
                 style={{ width: 120 }}
                 allowClear
-              >
+               onSearch={() => {}}>
                 <Option value={true}>启用</Option>
                 <Option value={false}>禁用</Option>
               </Select>
@@ -602,7 +602,7 @@ const APIKeyManagement: FC = () => {
                 onChange={setFilterScope}
                 style={{ width: 120 }}
                 allowClear
-              >
+               onSearch={() => {}}>
                 {SCOPE_OPTIONS.map(opt => (
                   <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                 ))}
@@ -724,7 +724,7 @@ const APIKeyManagement: FC = () => {
               mode="multiple"
               placeholder="请选择作用域"
               options={SCOPE_OPTIONS}
-            />
+             onSearch={() => {}}/>
           </Form.Item>
 
           <Form.Item

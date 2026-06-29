@@ -554,7 +554,7 @@ const UserManagement: FC = () => {
                   <Input placeholder="请输入昵称" />
                 </Form.Item>
                 <Form.Item name="status" label="状态">
-                  <Select placeholder="请选择状态" style={{ width: 120 }} allowClear>
+                  <Select placeholder="请选择状态" style={{ width: 120 }} allowClear onSearch={() => {}}>
                     {STATUS_OPTIONS.map(opt => (
                       <Option key={opt.value} value={String(opt.value)}>{opt.label}</Option>
                     ))}
@@ -689,7 +689,7 @@ const UserManagement: FC = () => {
             <Input className="user-form-input" />
           </Form.Item>
           <Form.Item name="gender" label="性别" initialValue={2}>
-            <Select className="user-form-input">
+            <Select className="user-form-input" onSearch={() => {}}>
               {GENDER_OPTIONS.map(opt => (
                 <Option key={opt.value} value={opt.value}>{opt.label}</Option>
               ))}
@@ -709,7 +709,7 @@ const UserManagement: FC = () => {
               optionFilterProp="label"
               showSearch
               className="user-form-input"
-            >
+             onSearch={() => {}}>
               {roles.map(role => (
                 <Option key={role.id} value={role.id} label={role.roleName}>
                   {role.roleName}
@@ -718,7 +718,7 @@ const UserManagement: FC = () => {
             </Select>
           </Form.Item>
           <Form.Item name="status" label="状态" initialValue={0}>
-            <Select className="user-form-input">
+            <Select className="user-form-input" onSearch={() => {}}>
               {STATUS_OPTIONS.map(opt => (
                 <Option key={opt.value} value={opt.value}>{opt.label}</Option>
               ))}

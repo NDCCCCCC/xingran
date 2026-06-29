@@ -73,10 +73,10 @@ const DutyHolidayPage: FC = () => {
           <Space>
             <Select
               value={year}
-              onChange={(y) => fetchList(y)}
+              onChange={(y) =>    fetchList(y)}
               style={{ width: 120 }}
               suffixIcon={null}
-            >
+             onSearch={() => {}}>
               {availableYears.map((y) => (
                 <Option key={y} value={y}>
                   {y}年

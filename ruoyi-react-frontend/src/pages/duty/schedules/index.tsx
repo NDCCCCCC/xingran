@@ -453,7 +453,7 @@ const DutySchedulePage: FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="poolId" label="值班池">
-              <Select placeholder="请选择值班池" allowClear className="user-form-input" style={{ width: 150 }}>
+              <Select placeholder="请选择值班池" allowClear className="user-form-input" style={{ width: 150 }} onSearch={() => {}}>
                 {pools.map((pool) => (
                   <Option key={pool.id} value={pool.id}>
                     {pool.poolName}
@@ -462,7 +462,7 @@ const DutySchedulePage: FC = () => {
               </Select>
             </Form.Item>
             <Form.Item name="userId" label="值班人员">
-              <Select placeholder="请选择值班人员" allowClear className="user-form-input" style={{ width: 120 }}>
+              <Select placeholder="请选择值班人员" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
                 {users.map((user) => (
                   <Option key={user.id} value={user.id}>
                     {user.nickname || user.username}
@@ -471,14 +471,14 @@ const DutySchedulePage: FC = () => {
               </Select>
             </Form.Item>
             <Form.Item name="dutyType" label="值班类型">
-              <Select placeholder="请选择值班类型" allowClear className="user-form-input" style={{ width: 120 }}>
+              <Select placeholder="请选择值班类型" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
                 {DUTY_TYPE_OPTIONS.map(opt => (
                   <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                 ))}
               </Select>
             </Form.Item>
             <Form.Item name="expired" label="排班状态">
-              <Select placeholder="请选择排班状态" allowClear className="user-form-input" style={{ width: 120 }}>
+              <Select placeholder="请选择排班状态" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
                 <Option value={0}>未过期</Option>
                 <Option value={1}>已过期</Option>
               </Select>
@@ -559,7 +559,7 @@ const DutySchedulePage: FC = () => {
             label="值班池"
             rules={[{ required: true, message: '请选择值班池' }]}
           >
-            <Select placeholder="请选择值班池">
+            <Select placeholder="请选择值班池" onSearch={() => {}}>
               {pools.map((pool) => (
                 <Option key={pool.id} value={pool.id}>
                   {pool.poolName}
@@ -582,7 +582,7 @@ const DutySchedulePage: FC = () => {
             rules={[{ required: true, message: '请选择值班类型' }]}
             initialValue="weekday"
           >
-            <Select placeholder="请选择值班类型">
+            <Select placeholder="请选择值班类型" onSearch={() => {}}>
               {DUTY_TYPE_OPTIONS.map(opt => (
                 <Option key={opt.value} value={opt.value}>{opt.label}值班</Option>
               ))}
@@ -622,7 +622,7 @@ const DutySchedulePage: FC = () => {
             label="原排班记录"
             rules={[{ required: true, message: '请选择排班记录' }]}
           >
-            <Select placeholder="请选择原排班记录" showSearch optionFilterProp="label">
+            <Select placeholder="请选择原排班记录" showSearch optionFilterProp="label" onSearch={() => {}}>
               {allSchedules.map((s) => (
                 <Option
                   key={s.id}
@@ -640,7 +640,7 @@ const DutySchedulePage: FC = () => {
             label="目标排班记录"
             rules={[{ required: true, message: '请选择排班记录' }]}
           >
-            <Select placeholder="请选择目标排班记录" showSearch optionFilterProp="label">
+            <Select placeholder="请选择目标排班记录" showSearch optionFilterProp="label" onSearch={() => {}}>
               {allSchedules.map((s) => (
                 <Option
                   key={s.id}
@@ -680,7 +680,7 @@ const DutySchedulePage: FC = () => {
             label="值班池"
             rules={[{ required: true, message: '请选择值班池' }]}
           >
-            <Select placeholder="请选择值班池">
+            <Select placeholder="请选择值班池" onSearch={() => {}}>
               {pools.map((pool) => (
                 <Option key={pool.id} value={pool.id}>
                   {pool.poolName}
@@ -702,7 +702,7 @@ const DutySchedulePage: FC = () => {
             label="值班类型"
             rules={[{ required: true, message: '请选择值班类型' }]}
           >
-            <Select placeholder="请选择值班类型">
+            <Select placeholder="请选择值班类型" onSearch={() => {}}>
               {DUTY_TYPE_OPTIONS.map(opt => (
                 <Option key={opt.value} value={opt.value}>{opt.label}</Option>
               ))}
@@ -714,7 +714,7 @@ const DutySchedulePage: FC = () => {
             label="值班人员"
             rules={[{ required: true, message: '请选择值班人员' }]}
           >
-            <Select mode="multiple" placeholder="请选择值班人员" optionLabelProp="label">
+            <Select mode="multiple" placeholder="请选择值班人员" optionLabelProp="label" onSearch={() => {}}>
               {users.map((user) => (
                 <Option key={user.id} value={user.id} label={user.nickname || user.username}>
                   {user.username} - {user.nickname}

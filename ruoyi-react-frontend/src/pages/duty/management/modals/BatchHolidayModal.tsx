@@ -60,20 +60,20 @@ export function BatchHolidayModal({ visible, onOk, onCancel }: BatchHolidayModal
           <RangePicker style={{ width: "100%" }} />
         </Form.Item>
         <Form.Item name="holidayName" label="名称" rules={[{ required: true, message: "请输入名称" }]}>
-          <Select placeholder="选择假期名称">
+          <Select placeholder="选择假期名称" onSearch={() => {}}>
             {BATCH_HOLIDAY_NAME_OPTIONS.map(opt => (
               <Option key={opt.value} value={opt.value}>{opt.label}</Option>
             ))}
           </Select>
         </Form.Item>
         <Form.Item name="holidayType" label="类型" rules={[{ required: true }]} initialValue="legal">
-          <Select>
+          <Select onSearch={() => {}}>
             <Option value="legal">法定节假日</Option>
             <Option value="custom">自定义</Option>
           </Select>
         </Form.Item>
         <Form.Item name="isOffday" label="是否休息" valuePropName="checked" initialValue={true}>
-          <Select>
+          <Select onSearch={() => {}}>
             <Option value={true}>休息</Option>
             <Option value={false}>工作</Option>
           </Select>

@@ -113,10 +113,10 @@ export default tseslint.config(
       // 历史存量靠 `npm run lint:fix` 在引入时一次性消化。
       'quotes': ['error', 'double', { avoidEscape: true, allowTemplateLiterals: false }],
 
-      // 本地自定义规则 — Phase 46 下拉框反模式防护
-      // 当前 warn;后续 phase 把存量 247 个 violation 全部修完后再升级为 error。
-      // (项目 baseline 有 3099 个 pre-existing 错误,error 级别会立即 fail CI)
-      'local/no-large-dropdown-list': 'warn',
+      // 本地自定义规则 — Phase 46/47 下拉框反模式防护
+      // Phase 47: 244 个存量 violation 全部修完,升级为 error
+      // Cascader 已在规则中豁免(无 onSearch prop)
+      'local/no-large-dropdown-list': 'error',
     },
   }
 )

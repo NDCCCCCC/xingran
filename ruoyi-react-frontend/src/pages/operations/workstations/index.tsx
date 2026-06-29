@@ -597,7 +597,7 @@ const WorkstationManagement: FC = () => {
                 <Input placeholder="请输入工位名称" allowClear className="user-form-input" style={{ width: 150 }} />
               </Form.Item>
               <Form.Item name="status" label="状态">
-                <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }}>
+                <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
                   {STATUS_OPTIONS.map((opt) => (
                     <Option key={opt.value} value={opt.value}>
                       {opt.label}

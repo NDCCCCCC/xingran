@@ -40,7 +40,7 @@ export function CreateModal({ open, departments, onOk, onCancel }: CreateModalPr
         </Form.Item>
 
         <Form.Item name="discoveryType" label="发现类型" rules={[{ required: true }]}>
-          <Select>
+          <Select onSearch={() => {}}>
             {DISCOVERY_TYPE_OPTIONS.map(opt => (
               <Option key={opt.value} value={opt.value}>{opt.label}</Option>
             ))}
@@ -69,7 +69,7 @@ export function CreateModal({ open, departments, onOk, onCancel }: CreateModalPr
         )}
 
         <Form.Item name="groupId" label="导入部门">
-          <Select placeholder="请选择部门" allowClear>
+          <Select placeholder="请选择部门" allowClear onSearch={() => {}}>
             {departments.map(dept => (
               <Option key={dept.id} value={dept.id}>{dept.deptName}</Option>
             ))}

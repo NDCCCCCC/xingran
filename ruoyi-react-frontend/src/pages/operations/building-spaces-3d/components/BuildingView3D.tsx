@@ -346,11 +346,11 @@ const BuildingPanel: React.FC<BuildingPanelProps> = ({
               placeholder="选择楼宇"
               value={currentBuilding?.id}
               onChange={onBuildingChange}
-              options={buildings.map((b) => ({
+              options={buildings.map((b) =>    ({
                 label: b.name,
                 value: b.id,
               }))}
-            />
+             onSearch={() => {}}/>
           </>
         )}
       </Space>

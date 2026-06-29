@@ -281,7 +281,7 @@ const SettingsPage: FC = () => {
 						tooltip="选择系统的视觉风格"
 						rules={[{ required: true, message: "请选择主题风格" }]}
 					>
-						<Select>
+						<Select onSearch={() => {}}>
 							{themePresets.map((preset) => (
 								<Option key={preset.id} value={preset.id}>
 									{preset.icon} {preset.name} - {preset.description}
@@ -368,7 +368,7 @@ const SettingsPage: FC = () => {
 						tooltip="选择系统的布局方式"
 						rules={[{ required: true, message: "请选择布局类型" }]}
 					>
-						<Select>
+						<Select onSearch={() => {}}>
 							<Option value="classic">经典布局</Option>
 							<Option value="hybrid">混合布局</Option>
 							<Option value="innovative">创新布局</Option>
@@ -382,7 +382,7 @@ const SettingsPage: FC = () => {
 						tooltip="选择界面的紧凑程度"
 						rules={[{ required: true, message: "请选择密度模式" }]}
 					>
-						<Select>
+						<Select onSearch={() => {}}>
 							<Option value="compact">紧凑</Option>
 							<Option value="comfortable">舒适</Option>
 							<Option value="spacious">宽松</Option>
@@ -408,7 +408,7 @@ const SettingsPage: FC = () => {
 						tooltip="列表页面默认每页显示的数据条数"
 						rules={[{ required: true, message: "请选择默认分页大小" }]}
 					>
-						<Select>
+						<Select onSearch={() => {}}>
 							<Option value={10}>10 条/页</Option>
 							<Option value={20}>20 条/页</Option>
 							<Option value={50}>50 条/页</Option>

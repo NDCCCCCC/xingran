@@ -75,9 +75,9 @@ export function HolidayBatchModal({
                 <td className="border p-2">
                   <Select
                     value={row.holidayType}
-                    onChange={(v) => onUpdateRow(index, "holidayType", v)}
+                    onChange={(v) =>    onUpdateRow(index, "holidayType", v)}
                     style={{ width: "100%" }}
-                  >
+                   onSearch={() => {}}>
                     {HOLIDAY_TYPE_OPTIONS.map(opt => (
                       <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                     ))}

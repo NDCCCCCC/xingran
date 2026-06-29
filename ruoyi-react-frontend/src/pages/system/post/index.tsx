@@ -267,7 +267,7 @@ const PostManagement: FC = () => {
               <Input placeholder="请输入岗位名称" allowClear className="user-form-input" style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }}>
+              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
                 <Option value={0}>正常</Option>
                 <Option value={1}>停用</Option>
               </Select>
@@ -355,7 +355,7 @@ const PostManagement: FC = () => {
             <InputNumber min={0} style={{ width: "100%" }} placeholder="请输入显示排序" />
           </Form.Item>
           <Form.Item name="status" label="状态" rules={[{ required: true, message: "请选择状态" }]}>
-            <Select placeholder="请选择状态" className="user-form-input">
+            <Select placeholder="请选择状态" className="user-form-input" onSearch={() => {}}>
               <Option value={0}>正常</Option>
               <Option value={1}>停用</Option>
             </Select>

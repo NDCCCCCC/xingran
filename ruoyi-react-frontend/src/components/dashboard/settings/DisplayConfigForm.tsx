@@ -161,7 +161,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 				tooltip="选择图表的展示形式"
 				initialValue="line"
 			>
-				<Select disabled={disabled}>
+				<Select disabled={disabled} onSearch={() => {}}>
 					<Select.Option value="line">折线图</Select.Option>
 					<Select.Option value="bar">柱状图</Select.Option>
 					<Select.Option value="pie">饼图</Select.Option>
@@ -226,7 +226,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 				tooltip="表格行高大小"
 				initialValue="middle"
 			>
-				<Select disabled={disabled}>
+				<Select disabled={disabled} onSearch={() => {}}>
 					<Select.Option value="small">紧凑</Select.Option>
 					<Select.Option value="middle">默认</Select.Option>
 					<Select.Option value="large">宽松</Select.Option>
@@ -348,7 +348,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 				tooltip="进度条的展示形式"
 				initialValue="line"
 			>
-				<Select disabled={disabled}>
+				<Select disabled={disabled} onSearch={() => {}}>
 					<Select.Option value="line">线性进度条</Select.Option>
 					<Select.Option value="circle">圆形进度</Select.Option>
 					<Select.Option value="dashboard">仪表盘</Select.Option>

@@ -189,7 +189,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
               showSearch
               optionFilterProp="label"
               style={{ width: "100%" }}
-            >
+             onSearch={() => {}}>
               {CRON_PRESETS.map(preset => (
                 <Select.Option key={preset.value} value={preset.value}>
                   {preset.label}

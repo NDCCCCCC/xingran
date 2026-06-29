@@ -357,6 +357,7 @@ const RoomDeviceManagement: FC = () => {
                   filterOption={(input, option) =>
                     String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
                   }
+                  onSearch={() => {}}
                   style={{ width: 150 }}
                   disabled={!selectedDeptId}
                   options={roomOptions.map(r => ({ label: r.name, value: r.id }))}
@@ -366,7 +367,7 @@ const RoomDeviceManagement: FC = () => {
                 <Input placeholder="请输入设备名称" allowClear style={{ width: 150 }} />
               </Form.Item>
               <Form.Item name="deviceType" label="设备类型">
-                <Select placeholder="请选择类型" allowClear style={{ width: 130 }}>
+                <Select placeholder="请选择类型" allowClear style={{ width: 130 }} onSearch={() => {}}>
                   <Option value="server">服务器</Option>
                   <Option value="storage">存储设备</Option>
                   <Option value="ups">UPS</Option>
@@ -378,7 +379,7 @@ const RoomDeviceManagement: FC = () => {
                 </Select>
               </Form.Item>
               <Form.Item name="status" label="状态">
-                <Select placeholder="请选择状态" allowClear style={{ width: 100 }}>
+                <Select placeholder="请选择状态" allowClear style={{ width: 100 }} onSearch={() => {}}>
                   <Option value={0}>正常</Option>
                   <Option value={1}>故障</Option>
                   <Option value={2}>报废</Option>
@@ -448,7 +449,7 @@ const RoomDeviceManagement: FC = () => {
             <Form.Item name="roomId" label="所属机房" rules={[{ required: true, message: "请选择所属机房" }]}>
               <Select placeholder="请选择所属机房" showSearch filterOption={(input, option) =>
                 String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-              } options={roomOptions.map(r => ({ label: r.name, value: r.id }))} />
+              } onSearch={() => {}} options={roomOptions.map(r => ({ label: r.name, value: r.id }))} />
             </Form.Item>
             <Form.Item name="name" label="设备名称" rules={[{ required: true, message: "请输入设备名称" }]}>
               <Input placeholder="请输入设备名称" />
@@ -457,7 +458,7 @@ const RoomDeviceManagement: FC = () => {
               <Input placeholder="请输入设备编码" />
             </Form.Item>
             <Form.Item name="deviceType" label="设备类型" rules={[{ required: true, message: "请选择设备类型" }]}>
-              <Select placeholder="请选择设备类型">
+              <Select placeholder="请选择设备类型" onSearch={() => {}}>
                 <Option value="server">服务器</Option>
                 <Option value="storage">存储设备</Option>
                 <Option value="ups">UPS</Option>
@@ -512,7 +513,7 @@ const RoomDeviceManagement: FC = () => {
               </Col>
               <Col span={12}>
                 <Form.Item name="status" label="状态" rules={[{ required: true, message: "请选择状态" }]}>
-                  <Select placeholder="请选择状态">
+                  <Select placeholder="请选择状态" onSearch={() => {}}>
                     <Option value={0}>正常</Option>
                     <Option value={1}>故障</Option>
                     <Option value={2}>报废</Option>

@@ -214,7 +214,7 @@ const KnowledgeArticlePage: FC = () => {
               <Input placeholder="请输入标题" allowClear className="user-form-input" style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="categoryId" label="分类">
-              <Select placeholder="请选择分类" allowClear className="user-form-input" style={{ width: 120 }}>
+              <Select placeholder="请选择分类" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
                 {flatCategories.map((cat) => (
                   <Option key={cat.id} value={cat.id}>
                     {cat.categoryName}
@@ -223,7 +223,7 @@ const KnowledgeArticlePage: FC = () => {
               </Select>
             </Form.Item>
             <Form.Item name="tagId" label="标签">
-              <Select placeholder="请选择标签" allowClear className="user-form-input" style={{ width: 120 }}>
+              <Select placeholder="请选择标签" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
                 {tags.map((tag) => (
                   <Option key={tag.id} value={tag.id}>
                     {tag.tagName}
@@ -232,7 +232,7 @@ const KnowledgeArticlePage: FC = () => {
               </Select>
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }}>
+              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}>
                 <Option value={KnowledgeArticleStatus.Draft}>草稿</Option>
                 <Option value={KnowledgeArticleStatus.Published}>已发布</Option>
               </Select>
