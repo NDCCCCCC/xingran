@@ -707,10 +707,15 @@ func (s *reconciliationServiceImpl) computeByWorkstation(ctx context.Context, ws
 		return nil, fmt.Errorf("查询工位关联资产失败: %w", err)
 	}
 	resp.HealthScore.Total = len(assets)
-	if len(assets) == 0 {
-		// 无资产:返回空数据(仍带 workstation brief + 全 0 score)
-		trend, _ := s.computeHealthTrend(ctx, 7)
-		resp.HealthScore.Trend = trend
+
+	// WR-02: 单一流(原 early-return 拆成 trend + score 两段)。
+	//   - Trend 始终先计算(廉价查询,无副作用)
+	//   - Score 仅在 Total==0 时短路为 100
+	//   - Total>0 时 Score 留给后续 bucket / exceptionHit 累加后由 (1 - abnormal/total)*100 公式算出
+	// 两条路径收敛:无资产早退 / 有资产走完 bucket+exceptionHit+score。
+	trend, _ := s.computeHealthTrend(ctx, 7)
+	resp.HealthScore.Trend = trend
+	if resp.HealthScore.Total == 0 {
 		resp.HealthScore.Score = 100 // 无资产视为健康
 		return resp, nil
 	}
@@ -773,10 +778,6 @@ func (s *reconciliationServiceImpl) computeByWorkstation(ctx context.Context, ws
 		return nil, fmt.Errorf("查询例外命中数失败: %w", err)
 	}
 	resp.HealthScore.ExceptionHit = int(exceptionHit)
-
-	// e) Trend 7 天
-	trend, _ := s.computeHealthTrend(ctx, 7)
-	resp.HealthScore.Trend = trend
 
 	// f) score 公式 (D-A2-03): clamp(round((1 - 异常资产数/总资产数) × 100), 0, 100)
 	// 异常资产数 = drift + conflict + nodata(以桶数计,而非 unique 资产数,简化为 5 维比)
