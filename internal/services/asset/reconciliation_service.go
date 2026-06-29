@@ -701,11 +701,16 @@ func (s *reconciliationServiceImpl) computeByWorkstation(ctx context.Context, ws
 		Devicesn   string
 		IP         *string
 	}
+	// 关联资产通过 ops_workstation_device 中间表(已有 workstation_id + asset_id 外键)
+	// 不能直接 WHERE ops_asset.workstation_id = ? — 该列在 ops_asset 不存在
+	// (R1 已知约束:物理链路 sys_port_mac→sys_info_point→sys_workstation_info_point 未落地,
+	//  R4 用 ops_workstation_device 作工位-资产关联的可靠路径)
 	var assets []assetRow
 	if err := s.db.WithContext(ctx).
-		Table("ops_asset").
-		Select("id, devicesn, machine_ip::text AS ip").
-		Where("workstation_id = ? AND deleted_at IS NULL", wsID).
+		Table("ops_asset a").
+		Select("a.id, a.devicesn, a.machine_ip::text AS ip").
+		Joins("INNER JOIN ops_workstation_device wsd ON wsd.asset_id = a.id AND wsd.deleted_at IS NULL").
+	Where("wsd.workstation_id = ? AND a.deleted_at IS NULL", wsID).
 		Scan(&assets).Error; err != nil {
 		return nil, fmt.Errorf("查询工位关联资产失败: %w", err)
 	}
