@@ -1,26 +1,29 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.15
-milestone_name: 工位设备关联 (Phase 28)
-status: milestone_complete
-stopped_at: Milestone complete (Phase 38 was final phase)
-last_updated: 2026-06-23T04:49:37.509Z
+milestone: v1.17
+milestone_name: 资产对账 (Asset Reconciliation)
+status: dropdown_governance_shipped
+stopped_at: Phase 46/47/48 dropdown governance shipped — awaiting MR review
+last_updated: 2026-06-29T18:30:00.000Z
 progress:
-  total_phases: 16
-  completed_phases: 10
-  total_plans: 80
-  completed_plans: 144
-  percent: 63
+  total_phases: 5
+  completed_phases: 3
+  total_plans: 15
+  completed_plans: 15
+  percent: 100
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: 🚧 IDLE — Phase 34 review closure complete, awaiting v1.16 scope
-**Last activity**: 2026-06-23 - Quick task 260623-batch-sync 用户导入后 AD 批量同步优化（复用单连接+errgroup信号量，2274 用户 ~10分钟→~10秒）
-
-                + 导入后触发 AD 域同步 (commits 5d872a5, cc2a77d, 7d40b32, 4758d36)
+**Status**: 🚢 Phase 46/47/48 dropdown governance shipped — branch `worktree-feat-dropdown-governance` pushed, MR pending
+**Last activity**: 2026-06-29 - Phase 46-48 Dropdown 反模式全量治理:
+  - 4 atomic commits on branch `worktree-feat-dropdown-governance`
+  - 7 个后端 dropdown-options 端点 (building/floor/workstation/infoPoint/serverRoom/dedicatedLine/roomDevice)
+  - 27 个前端文件重构 (pageSize 1000→50, searchOptions + onSearch debounce)
+  - 100+ 文件 ESLint 规则升级 (245 violations → 0)
+  - 计划文件: C:\Users\CPIC\.claude\plans\happy-waddling-wand.md (107 行)
 
 **See**: `.planning/milestones/20260616-state-sync-report.md` for the
         reconciliation report that motivated this state update.
