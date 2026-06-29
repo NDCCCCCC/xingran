@@ -244,7 +244,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 			{/* 离线提示条 */}
 			{!isOnline && (
 				<Alert
-					message="当前处于离线模式"
+					title="当前处于离线模式"
 					description="数据可能不是最新，网络恢复后将自动刷新"
 					type="warning"
 					icon={<WarningOutlined />}
@@ -257,7 +257,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 			{/* WebSocket 断开提示 */}
 			{hasWebSocketSource && wsConnStatus === "disconnected" && isOnline && (
 				<Alert
-					message="实时连接已断开"
+					title="实时连接已断开"
 					description="正在尝试重新连接..."
 					type="info"
 					showIcon

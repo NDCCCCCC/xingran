@@ -517,7 +517,7 @@ const onTableChange = useCallback(
         }}
         okText="确认标记"
         cancelText="取消"
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={resolveForm} layout="vertical" preserve={false}>
           <Form.Item

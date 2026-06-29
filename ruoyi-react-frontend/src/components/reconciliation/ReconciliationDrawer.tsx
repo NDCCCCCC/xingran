@@ -170,7 +170,7 @@ const DrawerInner: React.FC<ReconciliationDrawerProps> = ({
       title={title}
       open={open}
       onClose={onClose}
-      width={780}
+      size="large"
       extra={
         <Button type="primary" onClick={handleApplyException}>
           申请例外
