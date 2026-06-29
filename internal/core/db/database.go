@@ -538,6 +538,13 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate179ReconciliationPhysicalIfaceFold(d.DB); err != nil {
 			applogger.Errorf("Phase 45+ reconciliation_physical_chain iface 真折叠失败: %v", err)
 		}
+		// Phase 45 R5 性能修复 (2026-06-30): migration_179 的 PL/pgSQL normalize_iface()
+		// 配合视图里的相关子查询产生 O(N×M) 调用,SELECT COUNT(*) 直接触发 statement_timeout。
+		// migration_180 把 normalize_iface 预算到 CTE(O(N+M)),消除相关子查询 + 去 device_id::text
+		// 强转,COUNT 回到秒级。normalize_iface 函数本身不动(结构修复后已非主因)。
+		if err := migrations.Migrate180ReconciliationPhysicalChainPerf(d.DB); err != nil {
+			applogger.Errorf("Phase 45+ reconciliation_physical_chain O(N²)→O(N+M) 性能重构失败: %v", err)
+		}
 		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
 		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
 			applogger.Errorf("MAC 过滤规则表迁移失败: %v", err)
