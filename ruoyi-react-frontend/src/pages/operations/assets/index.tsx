@@ -274,6 +274,11 @@ const AssetList: FC = () => {
     }
   }, []);
 
+  // WR-04 审计 useEffect deps: useTableManager.loadData 内部已用 useCallback([]) 稳定
+  // (loadAssets 来自 useTableManager 的 destructure),同样 loadStatistics / loadDeviceTypes /
+  // loadDeviceCategories 均为本页内 useCallback([]) 稳定引用。整个 deps 数组都是稳定引用,
+  // 不会触发额外 re-render / re-fetch。R4 在本文件新增 useReconciliationVisibility() 与
+  // ReconciliationDrawer 状态未引入新依赖 — 上述 deps 保持完整且稳定。
   useEffect(() => {
     loadStatistics();
     loadDeviceTypes();
