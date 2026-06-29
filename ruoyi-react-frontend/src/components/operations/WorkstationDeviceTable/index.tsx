@@ -5,13 +5,12 @@
  * 数据源逻辑：手动设备保存到数据库，AD/资产设备实时查询
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { App, Table, Button, Space, Tag, Popconfirm, Modal, Form, Input, Alert, Collapse } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined, StarOutlined } from "@ant-design/icons";
 import type { WorkstationDevice, DeviceFormData, DeviceSource, Asset } from "@/types";
 import { DEVICE_SOURCE_LABELS } from "@/types/operations";
 import { workstationDeviceApi, assetApi } from "@/lib/opsApi";
-import { usePagination } from "@/hooks/usePagination";
 import { HealthBadge } from "@/components/reconciliation";
 
 export interface WorkstationDeviceTableProps {
@@ -29,15 +28,18 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
   conflictTypeMap,
   onBadgeClick,
 }) => {
-  // 分开存储三种来源的设备
+  // 分开存储四种来源的设备
   const { message } = App.useApp();
   const [manualDevices, setManualDevices] = useState<WorkstationDevice[]>([]);
   const [adDevices, setADDevices] = useState<WorkstationDevice[]>([]);
   const [assetDevices, setAssetDevices] = useState<WorkstationDevice[]>([]);
+  // Phase 45 R5: 物理链路设备(MAC→port→infoPoint→workstation 反推,user-anchored)
+  const [physicalDevices, setPhysicalDevices] = useState<WorkstationDevice[]>([]);
 
   // 折叠面板展开状态
   const [adExpanded, setADExpanded] = useState(false);
   const [assetExpanded, setAssetExpanded] = useState(false);
+  const [physicalExpanded, setPhysicalExpanded] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -48,26 +50,25 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
   // 使用 Form.useWatch 订阅序列号字段，避免在未连接 Form 上调用 getFieldValue
   const deviceSerial = Form.useWatch("deviceSerial", form);
 
-  // 子表格分页（默认每页10条，独立于主表格）
-  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination({ pageSize: 10 });
+  // 注:手动添加的设备最多 1-2 条,无需分页;只有资产/域控/物理链路子表可能多行,
+  //     这三张子表已配置 pagination={false},故此处删除分页状态以缩减组件高度。
 
-  // 并行查询三种来源的设备（手动持久化 + AD/资产实时查询）
+  // 并行查询四种来源的设备（手动持久化 + AD/资产/物理链路实时查询）
   const fetchAllDevices = useCallback(async () => {
     setLoading(true);
     try {
-      const [manualResult, adResult, assetResult] = await Promise.allSettled([
+      const [manualResult, adResult, assetResult, physicalResult] = await Promise.allSettled([
         workstationDeviceApi.getManual(workstationId),
         workstationDeviceApi.getAD(workstationId).catch(() => ({ data: [] })),
         workstationDeviceApi.getAsset(workstationId).catch(() => ({ data: [] })),
+        workstationDeviceApi.getPhysical(workstationId).catch(() => ({ data: [] })),
       ]);
 
       // 处理手动设备（持久化）
       if (manualResult.status === "fulfilled" && manualResult.value.data) {
         setManualDevices(manualResult.value.data);
-        setTotal(manualResult.value.data.length);
       } else {
         setManualDevices([]);
-        setTotal(0);
       }
 
       // 处理 AD 设备（实时查询，失败时返回空数组）
@@ -84,6 +85,13 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
         setAssetDevices([]);
       }
 
+      // Phase 45 R5: 处理物理链路设备（实时查询，失败时返回空数组）
+      if (physicalResult.status === "fulfilled" && physicalResult.value.data) {
+        setPhysicalDevices(physicalResult.value.data);
+      } else {
+        setPhysicalDevices([]);
+      }
+
       // 任一关键查询失败时给出提示
       if (manualResult.status === "rejected") {
         console.error("[WorkstationDeviceTable] 加载手动设备失败:", manualResult.reason);
@@ -95,6 +103,9 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       if (assetResult.status === "rejected") {
         console.warn("[WorkstationDeviceTable] 加载资产设备失败:", assetResult.reason);
       }
+      if (physicalResult.status === "rejected") {
+        console.warn("[WorkstationDeviceTable] 加载物理链路设备失败:", physicalResult.reason);
+      }
     } catch (error) {
       // 记录错误便于排查（之前的实现吞掉了真实错误，导致"无声失败"）
       console.error("[WorkstationDeviceTable] 加载设备失败:", error);
@@ -102,11 +113,11 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       setManualDevices([]);
       setADDevices([]);
       setAssetDevices([]);
-      setTotal(0);
+      setPhysicalDevices([]);
     } finally {
       setLoading(false);
     }
-  }, [workstationId, setTotal]);
+  }, [workstationId]);
 
   useEffect(() => {
     fetchAllDevices();
@@ -273,57 +284,57 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
     }
   };
 
-  // 通用表格列定义
+  // 通用表格列定义(紧凑布局:列宽收窄,字号 11)
   const createColumns = (canEdit: boolean) => [
     {
       title: "设备名称",
       dataIndex: "deviceName",
       key: "deviceName",
-      width: 140,
+      width: 120,
       ellipsis: true,
     },
     {
       title: "序列号",
       dataIndex: "deviceSerial",
       key: "deviceSerial",
-      width: 120,
+      width: 100,
       ellipsis: true,
     },
     {
       title: "型号",
       dataIndex: "deviceModel",
       key: "deviceModel",
-      width: 100,
+      width: 80,
       ellipsis: true,
     },
     {
       title: "MAC地址",
       dataIndex: "macAddress",
       key: "macAddress",
-      width: 120,
+      width: 110,
       ellipsis: true,
     },
     {
       title: "IP地址",
       dataIndex: "ipAddress",
       key: "ipAddress",
-      width: 120,
+      width: 100,
       ellipsis: true,
     },
     {
       title: "责任人",
       dataIndex: "responsibleUser",
       key: "responsibleUser",
-      width: 90,
+      width: 80,
       ellipsis: true,
     },
     {
       title: "状态",
       dataIndex: "status",
       key: "status",
-      width: 60,
+      width: 50,
       render: (status: number) => (
-        <Tag color={status === 0 ? "success" : "error"} style={{ margin: 0, fontSize: 11 }}>
+        <Tag color={status === 0 ? "success" : "error"} style={{ margin: 0, fontSize: 10, padding: "0 4px", lineHeight: "16px" }}>
           {status === 0 ? "正常" : "停用"}
         </Tag>
       ),
@@ -332,7 +343,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
     {
       title: "对账健康",
       key: "reconciliation",
-      width: 96,
+      width: 80,
       render: (_: unknown, record: WorkstationDevice) => {
         const aid = record.assetId;
         const ct = (aid && conflictTypeMap?.get(aid)) || null;
@@ -349,25 +360,25 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       title: "主设备",
       dataIndex: "isPrimary",
       key: "isPrimary",
-      width: 60,
+      width: 50,
       align: "center" as const,
       render: (isPrimary: boolean) => (
-        isPrimary ? <StarOutlined style={{ color: "var(--theme-warning, #faad14)", fontSize: 12 }} /> : null
+        isPrimary ? <StarOutlined style={{ color: "var(--theme-warning, #faad14)", fontSize: 11 }} /> : null
       ),
     },
     {
       title: "操作",
       key: "action",
-      width: canEdit ? 130 : 100,
+      width: canEdit ? 110 : 80,
       render: (_: any, record: WorkstationDevice) => (
-        <Space size={4}>
+        <Space size={2}>
           {canEdit && (
             <Button
               type="link"
               size="small"
               icon={<EditOutlined />}
               onClick={() => handleEdit(record)}
-              style={{ padding: 0, fontSize: 12, height: "auto" }}
+              style={{ padding: 0, fontSize: 11, height: "auto" }}
             >
               编辑
             </Button>
@@ -384,7 +395,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
                 size="small"
                 danger
                 icon={<DeleteOutlined />}
-                style={{ padding: 0, fontSize: 12, height: "auto" }}
+                style={{ padding: 0, fontSize: 11, height: "auto" }}
               >
                 删除
               </Button>
@@ -401,7 +412,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
                 type="link"
                 size="small"
                 icon={<StarOutlined />}
-                style={{ padding: 0, fontSize: 12, height: "auto" }}
+                style={{ padding: 0, fontSize: 11, height: "auto" }}
               >
                 主设备
               </Button>
@@ -412,17 +423,11 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
     },
   ];
 
-  // 当前页数据切片（前端分页）
-  const currentPageData = useMemo(() => {
-    const { current, pageSize } = paginationProps;
-    const start = ((current || 1) - 1) * (pageSize || 10);
-    const end = start + (pageSize || 10);
-    return manualDevices.slice(start, end);
-  }, [manualDevices, paginationProps]);
+  // 注:删除 currentPageData 分页切片,直接渲染 manualDevices(最多 1-2 条无需分页)
 
   return (
-    <div style={{ padding: "8px", backgroundColor: "#fafafa" }}>
-      <Space style={{ marginBottom: 8 }} size="small">
+    <div style={{ padding: "4px 8px", backgroundColor: "#fafafa" }}>
+      <Space style={{ marginBottom: 4 }} size="small">
         <Button
           type="primary"
           size="small"
@@ -437,29 +442,19 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       <Table
         // title={() => <span style={{ fontWeight: 600, fontSize: 13 }}>手动添加的设备</span>}
         columns={createColumns(true)}
-        dataSource={currentPageData}
+        dataSource={manualDevices}
         loading={loading}
         rowKey="id"
         size="small"
-        pagination={{
-          ...paginationProps,
-          size: "small",
-          showTotal: (total) => `共 ${total} 条`,
-        }}
-        onChange={(pagination) => {
-          const newPage = pagination.current || 1;
-          const newPageSize = pagination.pageSize || 10;
-          setCurrent(newPage);
-          setPageSize(newPageSize);
-        }}
+        pagination={false}
         bordered={false}
-        style={{ fontSize: 12 }}
+        style={{ fontSize: 11 }}
       />
 
       {/* AD设备（折叠面板） */}
       {adDevices.length > 0 && (
         <Collapse
-          style={{ marginTop: 8, backgroundColor: "transparent" }}
+          style={{ marginTop: 4, backgroundColor: "transparent" }}
           activeKey={adExpanded ? ["ad"] : []}
           onChange={(keys) => setADExpanded(keys.includes("ad"))}
           size="small"
@@ -467,7 +462,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
           items={[
             {
               key: "ad",
-              label: <span style={{ fontSize: 13 }}>域控设备（{adDevices.length}台）</span>,
+              label: <span style={{ fontSize: 12 }}>域控设备（{adDevices.length}台）</span>,
               children: (
                 <Table
                   columns={createColumns(false)}
@@ -477,7 +472,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
                   pagination={false}
                   showHeader={false}
                   bordered={false}
-                  style={{ fontSize: 12 }}
+                  style={{ fontSize: 11 }}
                 />
               ),
             },
@@ -488,7 +483,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       {/* 资产设备（折叠面板） */}
       {assetDevices.length > 0 && (
         <Collapse
-          style={{ marginTop: 4, backgroundColor: "transparent" }}
+          style={{ marginTop: 2, backgroundColor: "transparent" }}
           activeKey={assetExpanded ? ["asset"] : []}
           onChange={(keys) => setAssetExpanded(keys.includes("asset"))}
           size="small"
@@ -496,7 +491,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
           items={[
             {
               key: "asset",
-              label: <span style={{ fontSize: 13 }}>资产设备（{assetDevices.length}台）</span>,
+              label: <span style={{ fontSize: 12 }}>资产设备（{assetDevices.length}台）</span>,
               children: (
                 <Table
                   columns={createColumns(false)}
@@ -506,13 +501,47 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
                   pagination={false}
                   showHeader={false}
                   bordered={false}
-                  style={{ fontSize: 12 }}
+                  style={{ fontSize: 11 }}
                 />
               ),
             },
           ]}
         />
       )}
+
+      {/* Phase 45 R5: 物理链路设备（折叠面板） — MAC→port→infoPoint→workstation 反推 */}
+      {/* Phase 45 R5: 物理链路设备(0 行也显示,跟 AD/资产保持一致便于排错) */}
+      <Collapse
+        style={{ marginTop: 2, backgroundColor: "transparent" }}
+        activeKey={physicalExpanded ? ["physical"] : []}
+        onChange={(keys) => setPhysicalExpanded(keys.includes("physical"))}
+        size="small"
+        bordered={false}
+        items={[
+          {
+            key: "physical",
+            label: <span style={{ fontSize: 12 }}>物理链路设备（{physicalDevices.length}台）</span>,
+            children:
+              physicalDevices.length > 0 ? (
+                <Table
+                  columns={createColumns(false)}
+                  dataSource={physicalDevices}
+                  rowKey="id"
+                  size="small"
+                  pagination={false}
+                  showHeader={false}
+                  bordered={false}
+                  style={{ fontSize: 11 }}
+                />
+              ) : (
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", padding: "4px 0" }}>
+                  该工位暂无通过 MAC→port→infoPoint 反推到的设备。
+                  请确认工位下是否已配置 ops_info_points 关联到网络设备端口。
+                </div>
+              )
+          },
+        ]}
+      />
 
       <Modal
         title={editingDevice ? "编辑设备" : "添加设备"}
