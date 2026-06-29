@@ -46,7 +46,7 @@ func Migrate136GroupMappingMenu(db *gorm.DB) error {
 	}
 
 	// Execute SQL
-	return executeSQL(db, string(content))
+	return executeSQL(db, string(content), 136)
 }
 
 // executeInlineSQL executes the migration using hardcoded SQL statements
@@ -160,7 +160,6 @@ func executeInlineSQL(db *gorm.DB) error {
 		}
 	}
 
-	log.Printf("Migration 136 completed successfully")
 	return nil
 }
 
@@ -173,7 +172,10 @@ func executeInlineSQL(db *gorm.DB) error {
 //
 // 不支持: 字符串字面量内的 `;`, dollar-quoted 字符串 `$$...;...$$`, 多行 /* ... */ 注释。
 // 如需这些场景,改用 `db.Exec(整段 SQL)` 单次执行。
-func executeSQL(db *gorm.DB, sqlContent string) error {
+//
+// migrationNum 用于在末尾统一打印 "Migration N completed successfully",
+// 让 SQL-based 迁移与其他迁移日志格式对齐。
+func executeSQL(db *gorm.DB, sqlContent string, migrationNum int) error {
 	// 去掉每行 `--` 之后的内容,避免注释中的 `;` 干扰分割
 	var cleaned []string
 	for line := range strings.SplitSeq(sqlContent, "\n") {
@@ -199,5 +201,6 @@ func executeSQL(db *gorm.DB, sqlContent string) error {
 		}
 	}
 
+	log.Printf("Migration %d completed successfully", migrationNum)
 	return nil
 }

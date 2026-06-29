@@ -38,4 +38,7 @@ func SetupReconciliationRouter(r *gin.RouterGroup, core *core.Core) {
 	r.POST("/exception/:id", handler.GetExceptionByID)
 	r.POST("/exception/:id/resolve", handler.ResolveException)
 	r.POST("/by-workstation", handler.GetByWorkstation)
+	// Phase 45 R5 / D-R5-A3-01: 手动刷新对账(REFRESH MV + 立即 DetectLayer3)
+	// 用于运维/UAT 调试,避开 5min/6min cron 周期
+	r.POST("/refresh", handler.Refresh)
 }

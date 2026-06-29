@@ -192,6 +192,10 @@ func (d *Database) cleanupOldConstraints() {
 		{"sys_ad_ous", "uk_ad_ou_dn"},
 		{"sys_ad_configs", "uk_ad_config_name"},
 		{"sys_ad_group_members", "uk_ad_group_member"},
+		// === 端口状态 (migration_177 重新应用 uniq_device_interface) ===
+		// model.DevicePortStatus 现在有 uniqueIndex:uniq_device_interface,
+		// AutoMigrate 期望此名,旧 SQL 约束(若有)在此清理
+		{"sys_device_port_status", "uniq_device_interface"},
 	}
 
 	for _, c := range constraints {
@@ -225,22 +229,44 @@ func (d *Database) cleanupOldConstraints() {
 //
 // 当前已知 MV:
 //   - reconciliation_normalized (migration_168 创建,引用 sys_ad_user / sys_user / ops_asset)
-//     → migration_168 末尾有 CREATE MATERIALIZED VIEW(非 IF NOT EXISTS,强制重建)
+//     → migration_168/176 末尾有 CREATE MATERIALIZED VIEW(非 IF NOT EXISTS,强制重建)
+//   - reconciliation_physical_chain (migration_175 创建,普通视图,引用 sys_device_mac_address /
+//     sys_device_port_status / ops_info_points / sys_workstation / sys_user)
+//   - reconciliation_user_lookup (migration_175 创建,普通视图,引用 sys_user / sys_dept / ops_asset)
 //
 // MAC 历史 MV(mv_mac_*)引用 sys_device_mac_history,该表无 GORM ALTER 需求,无需在此 DROP。
 func (d *Database) dropDependentMaterializedViews() {
-	// 仅 DROP 引用会触发 ALTER 的表的 MV;用 CASCADE 一并清理其上的 unique index。
-	dependentMV := []string{
+	// 仅 DROP 引用会触发 ALTER 的表的视图(MV + 普通视图);CASCADE 一并清理其上的索引。
+	//
+	// 同一对象可能是 MATERIALIZED VIEW(reconciliation_normalized)也可能是普通 VIEW
+	// (reconciliation_physical_chain / reconciliation_user_lookup)。用 DO $$ 块做兼容:
+	// 先查 pg_class.relkind — 'm' 表 MV, 'v' 表 view,逐个分支 DROP。
+	// 任何分支报错都不会阻断 AutoMigrate 流程。
+	dependentViews := []string{
 		"reconciliation_normalized",
+		"reconciliation_physical_chain",
+		"reconciliation_user_lookup",
 	}
-	for _, mv := range dependentMV {
-		// DROP MATERIALIZED VIEW IF EXISTS ... CASCADE — 安全跳过不存在的 MV
-		sql := fmt.Sprintf("DROP MATERIALIZED VIEW IF EXISTS %s CASCADE", mv)
-		if err := d.DB.Exec(sql).Error; err != nil {
-			applogger.Debugf("DROP MV %s 跳过: %v", mv, err)
+	for _, view := range dependentViews {
+		dropSQL := fmt.Sprintf(`
+DO $$
+DECLARE
+    kind char;
+BEGIN
+    SELECT relkind INTO kind FROM pg_class
+     WHERE relname = '%s' AND relnamespace = 'public'::regnamespace;
+    IF kind = 'm' THEN
+        EXECUTE 'DROP MATERIALIZED VIEW IF EXISTS public.%s CASCADE';
+    ELSIF kind = 'v' THEN
+        EXECUTE 'DROP VIEW IF EXISTS public.%s CASCADE';
+    END IF;
+END$$;
+`, view, view, view)
+		if err := d.DB.Exec(dropSQL).Error; err != nil {
+			applogger.Debugf("DROP VIEW/MV %s 跳过: %v", view, err)
 			continue
 		}
-		applogger.Infof("[迁移] 预清理物化视图 %s(AutoMigrate 前置,后续 migration 重建)", mv)
+		applogger.Infof("[迁移] 预清理视图 %s(AutoMigrate 前置,后续 migration 重建)", view)
 	}
 }
 
@@ -485,6 +511,32 @@ func (d *Database) AutoMigrate() error {
 		// (D-R3-A1-03 命中测试单点查询 + chk_recon_exc_actions / chk_recon_exc_severity_override)
 		if err := migrations.Migrate174ReconciliationExceptionGist(d.DB); err != nil {
 			applogger.Errorf("Phase 44 R3 reconciliation GiST/CHECK 失败: %v", err)
+		}
+		// Phase 45 R5: 物理链路底座 — ops_asset_physical + reconciliation_physical_chain 视图
+		// + reconciliation_user_lookup 视图(D-R5-A1-01)
+		if err := migrations.Migrate175ReconciliationPhysicalLink(d.DB); err != nil {
+			applogger.Errorf("Phase 45 R5 reconciliation 物理链路底座失败: %v", err)
+		}
+		// Phase 45 R5: reconciliation_normalized MV 重写接双源 declared + 真物理链路(D-R5-A2-01)
+		if err := migrations.Migrate176ReconciliationPhysicalMV(d.DB); err != nil {
+			applogger.Errorf("Phase 45 R5 reconciliation_normalized MV 重写失败: %v", err)
+		}
+		// 重新应用 sys_device_port_status 唯一约束(原 migration 010 被 archive,从未被部署)
+		// 修复 port 采集 UPSERT 实际 INSERT 重复行 + infoPoint.port_id 漂移问题
+		if err := migrations.Migrate177ReapplyPortStatusUnique(d.DB); err != nil {
+			applogger.Errorf("Phase 45+ 端口状态唯一约束重应用失败: %v", err)
+		}
+		// 修复 reconciliation_physical_chain 视图的 JOIN 失配(MAC 格式 + interface_name 格式)
+		// 同步重建 reconciliation_normalized 物化视图,让对账健康度不再误判"物理无"
+		if err := migrations.Migrate178FixPhysicalChainNormalization(d.DB); err != nil {
+			applogger.Errorf("Phase 45+ reconciliation_physical_chain 归一化修复失败: %v", err)
+		}
+		// Phase 45 R5 修复 (2026-06-29): migration_178 view 注释声称 iface 折叠但实际
+		// 只做了 LOWER + strip spaces,导致 reconciliation_physical_chain.physical_user_id
+		// 命中率为 0。migration_179 用 PL/pgSQL 函数 normalize_iface() 真正折叠
+		// GE/Gi/GigabitEthernet/te/TenGigE/xe/twe/tw/hge/fge 等跨厂商命名,重建 view + MV
+		if err := migrations.Migrate179ReconciliationPhysicalIfaceFold(d.DB); err != nil {
+			applogger.Errorf("Phase 45+ reconciliation_physical_chain iface 真折叠失败: %v", err)
 		}
 		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
 		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {

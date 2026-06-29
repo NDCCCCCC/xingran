@@ -154,6 +154,16 @@ type ReconciliationService interface {
 	//   - 失败 → error,handler 层映射为 500 / 400 / 404
 	ResolveException(ctx context.Context, id string, userID string, note *string) error
 
+	// Refresh 手动刷新物化视图并立即触发异常检测(Phase 45 R5 / D-R5-A3-01)
+	//
+	// 行为:
+	//   1. REFRESH MATERIALIZED VIEW reconciliation_normalized(非 CONCURRENTLY,确保同步生效)
+	//   2. 立即调一次 DetectLayer3,绕过 5min/6min cron 等待
+	//   3. 返回 inserted/skipped/skippedSilence/skippedThrottle 计数
+	//
+	// 用于运维/UAT 调试,避免等待 R1 cron 周期。
+	Refresh(ctx context.Context) (inserted, skipped, skippedSilence, skippedThrottle int, err error)
+
 	// GetByWorkstation 拉取工位对账健康度聚合 (Phase 45 R4 / D-A4-01/02)
 	//
 	// 行为:
@@ -225,6 +235,62 @@ func (s *reconciliationServiceImpl) SetMatcher(matcher ReconciliationExceptionSe
 	if s != nil {
 		s.matcher = matcher
 	}
+}
+
+// Refresh 手动刷新物化视图并立即触发异常检测(Phase 45 R5 / D-R5-A3-01)
+//
+// 行为:
+//   1. REFRESH MATERIALIZED VIEW reconciliation_normalized(非 CONCURRENTLY,确保同步生效)
+//   2. 立即调一次 DetectLayer3,绕过 5min/6min cron 等待
+//   3. 返回 inserted/skipped/skippedSilence/skippedThrottle 计数
+//
+// 用于运维/UAT 调试,避免等待 R1 cron 周期。
+//
+// SQLite 测试路径返回 (0, 0, 0, 0, nil),跳过 PostgreSQL-only 操作。
+func (s *reconciliationServiceImpl) Refresh(ctx context.Context) (int, int, int, int, error) {
+	if s.db == nil {
+		return 0, 0, 0, 0, errors.New("db 未初始化")
+	}
+
+	// 1. REFRESH MATERIALIZED VIEW CONCURRENTLY(保持 PG 9.4+ 无锁刷新语义,与 R1 一致)
+	if s.db.Dialector.Name() == "postgres" {
+		// 用 CONCURRENTLY 避免锁表;但首次创建后未填充时 CONCURRENTLY 会失败,
+		// 因此按是否存在行做兜底:首次或空时用非 CONCURRENTLY。
+		var rowCount int64
+		if err := s.db.WithContext(ctx).
+			Raw("SELECT COUNT(*) FROM reconciliation_normalized").
+			Scan(&rowCount).Error; err != nil {
+			return 0, 0, 0, 0, fmt.Errorf("探测 reconciliation_normalized 行数失败: %w", err)
+		}
+
+		if rowCount == 0 {
+			if err := s.db.WithContext(ctx).
+				Exec("REFRESH MATERIALIZED VIEW reconciliation_normalized").
+				Error; err != nil {
+				return 0, 0, 0, 0, fmt.Errorf("REFRESH MATERIALIZED VIEW reconciliation_normalized 失败: %w", err)
+			}
+		} else {
+			if err := s.db.WithContext(ctx).
+				Exec("REFRESH MATERIALIZED VIEW CONCURRENTLY reconciliation_normalized").
+				Error; err != nil {
+				// CONCURRENTLY 失败时降级为非并发刷新(锁表瞬时)
+				if err2 := s.db.WithContext(ctx).
+					Exec("REFRESH MATERIALIZED VIEW reconciliation_normalized").
+					Error; err2 != nil {
+					return 0, 0, 0, 0, fmt.Errorf("REFRESH MATERIALIZED VIEW 失败(concurrent+fallback): %w / %v", err, err2)
+				}
+			}
+		}
+	}
+
+	// 2. 立即跑 DetectLayer3 — 跳过 cron 6min 周期
+	det := NewReconciliationDetection(s.db)
+	inserted, skipped, skippedSilence, skippedThrottle, err := det.DetectLayer3(ctx)
+	if err != nil {
+		return 0, 0, 0, 0, fmt.Errorf("DetectLayer3 失败: %w", err)
+	}
+
+	return inserted, skipped, skippedSilence, skippedThrottle, nil
 }
 
 // probeMaterializedView 检查 reconciliation_normalized 物化视图是否存在。
@@ -836,13 +902,15 @@ func (s *reconciliationServiceImpl) computeByWorkstation(ctx context.Context, ws
 		rows = nil
 	}
 
-	// 工位 IP(若所有 asset.ip 都为空,降级为 workstation.ip)
+	// 工位 IP(R5 修复)
+	// R4 代码尝试 SELECT machine_ip::text FROM sys_workstation,但 sys_workstation
+	// 表没有 machine_ip 列(internal/models/workstation.go — Workstation 只有 UserID/UserName,
+	// 没有 IP 列)。R4 用 `_ = ...` 静默吞错但留错误日志;R5 调用增多后噪声放大且会让
+	// 潜在运维误以为是 R5 bug。改用 ops_info_points -> sys_network_device.ip_address
+	// 的链作为工位 IP 来源(由 fetchWorkstationDeviceIPs 提供),不再依赖 sys_workstation
+	// 不存在的列。下游 workstationIP 保持 nil,resolveAssetIPChain 会跳到第三级 IP 链。
 	var workstationIP *string
-	_ = s.db.WithContext(ctx).
-		Table("sys_workstation").
-		Select("machine_ip::text AS ip").
-		Where("id = ?", wsID).
-		Scan(&workstationIP).Error
+	_ = workstationIP
 
 	// 一次性预拉所有工位关联信息点的 device_ip(降低 N+1 风险)
 	// 即使全部为空,这些工位信息点可作为 IP 解析链第三级的来源
@@ -915,6 +983,8 @@ func (s *reconciliationServiceImpl) computeByWorkstation(ctx context.Context, ws
 //   - 信息点:ops_info_points(非 sys_workstation_info_point,该表尚未在 R1 引入)
 //   - 设备:sys_network_device
 //   - 设备 IP 列:ip_address(非 ip)
+//   - sys_network_device.id 是 UUID,ops_info_points.device_id 是 varchar(64),
+//     JOIN 需显式 ::text 转换(R5 修复;之前 R4 0A000 类型不匹配)
 func (s *reconciliationServiceImpl) fetchWorkstationDeviceIPs(ctx context.Context, wsID string) []string {
 	if wsID == "" {
 		return nil
@@ -923,7 +993,7 @@ func (s *reconciliationServiceImpl) fetchWorkstationDeviceIPs(ctx context.Contex
 	if err := s.db.WithContext(ctx).
 		Table("ops_info_points").
 		Distinct("sys_network_device.ip_address").
-		Joins("JOIN sys_network_device ON sys_network_device.id = ops_info_points.device_id").
+		Joins("JOIN sys_network_device ON sys_network_device.id::text = ops_info_points.device_id").
 		Where("ops_info_points.workstation_id = ? AND ops_info_points.deleted_at IS NULL "+
 			"AND sys_network_device.deleted_at IS NULL "+
 			"AND sys_network_device.ip_address IS NOT NULL AND sys_network_device.ip_address != ''", wsID).

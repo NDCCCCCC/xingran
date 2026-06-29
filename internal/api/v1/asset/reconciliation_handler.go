@@ -247,6 +247,34 @@ func (h *ReconciliationHandler) GetByWorkstation(c *gin.Context) {
 	response.Success(c, result)
 }
 
+// Refresh 手动刷新物化视图并立即触发异常检测
+// @Summary 手动刷新对账(REFRESH MV + 立即 DetectLayer3)
+// @Description 用于运维/UAT 调试,避免等待 5min/6min cron 周期。
+// 流程:REFRESH MATERIALIZED VIEW reconciliation_normalized → DetectLayer3 → 返回计数。
+// @Tags 资产对账
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response{data=object{inserted=int,skipped=int,skippedSilence=int,skippedThrottle=int}}
+// @Failure 500 {object} response.Response
+// @Router /asset/reconciliation/refresh [post]
+func (h *ReconciliationHandler) Refresh(c *gin.Context) {
+	inserted, skipped, skippedSilence, skippedThrottle, err := h.service.Refresh(c.Request.Context())
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// 写操作日志(运营/UAT 审计)
+	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "资产对账", operlog.OperTypeSync)
+
+	response.Success(c, gin.H{
+		"inserted":        inserted,
+		"skipped":         skipped,
+		"skippedSilence":  skippedSilence,
+		"skippedThrottle": skippedThrottle,
+	})
+}
+
 // hasReconciliationPerm 内部权限检查 (per cross-module-permission.md §2.3 + D-A1-03)
 //
 // 复用 pkg/middleware.HasUserPermission 复用底层 checkUserPermission / isSuperAdmin 链路。

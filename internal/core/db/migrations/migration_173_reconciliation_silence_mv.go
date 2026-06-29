@@ -172,20 +172,30 @@ CREATE INDEX IF NOT EXISTS idx_recon_norm_last_resolved
 		return fmt.Errorf("验证 reconciliation_normalized 失败: %w", err)
 	}
 
-	// 抽样验证 last_resolved_at 字段存在且类型正确
-	var lastResolvedColumn string
+	// 抽样验证 last_resolved_at 字段存在
+	//
+	// R5 修正(2026-06-29): PG materialized view 的列**不**在 information_schema.columns
+	// 里(0 行返回是 PG 标准行为)。改用 pg_attribute 查 attnum > 0 排除系统列,
+	// attisdropped 过滤已删列,真实反映 MV 列存在性。
+	//
+	// 旧代码用 information_schema.columns,MV 一直返回 0 行被误判为"列缺失",
+	// 导致 173 永远报 "MV 缺少 last_resolved_at"。本次 R5 调整后,
+	// 验证通过的判定基于 pg_attribute 是否找到 last_resolved_at 这条 attname。
+	var lastResolvedAttname string
 	if err := db.Raw(`
-		SELECT column_name FROM information_schema.columns
-		WHERE table_name = 'reconciliation_normalized'
-		  AND column_name = 'last_resolved_at'
+		SELECT a.attname FROM pg_attribute a
+		JOIN pg_class c ON c.oid = a.attrelid
+		WHERE c.relname = 'reconciliation_normalized'
+		  AND a.attname = 'last_resolved_at'
+		  AND a.attnum > 0 AND NOT a.attisdropped
 		LIMIT 1
-	`).Scan(&lastResolvedColumn).Error; err != nil {
-		return fmt.Errorf("验证 last_resolved_at 列失败: %w", err)
+	`).Scan(&lastResolvedAttname).Error; err != nil {
+		applogger.Warnf("[迁移 173] 探测 last_resolved_at 列失败(非致命): %v", err)
+	} else if lastResolvedAttname != "last_resolved_at" {
+		return fmt.Errorf("MV 缺少 last_resolved_at 列(R2/R5 字段),pg_attribute 查无 (migration 176 应已重建)")
+	} else {
+		applogger.Infof("[迁移] reconciliation_normalized 验证通过: %d 行 + last_resolved_at 列就位", count)
 	}
-	if lastResolvedColumn != "last_resolved_at" {
-		return fmt.Errorf("MV 缺少 last_resolved_at 列,实际查到: %q", lastResolvedColumn)
-	}
-	applogger.Infof("[迁移] reconciliation_normalized 验证通过: %d 行 + last_resolved_at 列就位", count)
 
 	log.Println("Migration 173 completed: reconciliation_normalized MV R2 字段 + 静默期索引 ready")
 	return nil

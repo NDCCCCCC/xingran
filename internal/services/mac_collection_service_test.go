@@ -128,7 +128,7 @@ func TestParseMACLineHuawei(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			entry, ok := service.parseMACLine(tt.line, models.VendorHuawei)
+			entry, ok := service.parseMACLine(tt.line, models.VendorHuawei, MACCommandTypeMacTable)
 			if tt.wantEntry {
 				assert.True(t, ok, "Should parse successfully")
 				assert.Equal(t, tt.expectedMAC, entry.MACAddress)
@@ -140,7 +140,7 @@ func TestParseMACLineHuawei(t *testing.T) {
 	}
 }
 
-// TestParseMACLineRuijie 测试解析锐捷设备MAC地址行
+// TestParseMACLineRuijie 测试解析锐捷设备MAC地址行（show mac-address-table 格式）
 func TestParseMACLineRuijie(t *testing.T) {
 	service := &MACCollectionService{}
 
@@ -167,7 +167,7 @@ func TestParseMACLineRuijie(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			entry, ok := service.parseMACLine(tt.line, models.VendorRuijie)
+			entry, ok := service.parseMACLine(tt.line, models.VendorRuijie, MACCommandTypeMacTable)
 			if tt.wantEntry {
 				assert.True(t, ok, "Should parse successfully")
 				assert.Equal(t, tt.expectedMAC, entry.MACAddress)
@@ -177,6 +177,170 @@ func TestParseMACLineRuijie(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestParseMACLineHuawei 解析华为设备的 parseMACLine 调用现在需要 cmdType 参数,
+// 此测试同时验证旧 case 仍按 mac-table 格式工作。
+func TestParseMACLineHuaweiSignature(t *testing.T) {
+	service := &MACCollectionService{}
+	entry, ok := service.parseMACLine("d89e.f327.2d19 100 GigabitEthernet0/1/1 Dynamic", models.VendorHuawei, MACCommandTypeMacTable)
+	assert.True(t, ok)
+	assert.Equal(t, "d89e.f327.2d19", entry.MACAddress)
+	assert.Equal(t, 100, entry.VLANID)
+}
+
+// TestParseRuijiePortSecurityLine 验证锐捷 show port-security address 格式解析
+// 格式: Index VLAN MAC Interface(<多 token>) Type LearnAge Action
+// 真实设备输出样本（来源: CX-WH-WH-04F-FL-RS8607E-03, 2026-06-29）:
+//   56   308   b022.7a2e.4a4f  GigabitEthernet 2/25      Dynamic            --          active
+func TestParseRuijiePortSecurityLine(t *testing.T) {
+	service := &MACCollectionService{}
+
+	tests := []struct {
+		name              string
+		line              string
+		wantEntry         bool
+		expectedMAC       string
+		expectedVLAN      int
+		expectedInterface string
+		expectedType      string
+	}{
+		{
+			name:              "User-reported port-security line (8 fields)",
+			line:              "56   308   b022.7a2e.4a4f  GigabitEthernet 2/25      Dynamic            --          active",
+			wantEntry:         true,
+			expectedMAC:       "b022.7a2e.4a4f",
+			expectedVLAN:      308,
+			expectedInterface: "GigabitEthernet 2/25",
+			expectedType:      "Dynamic",
+		},
+		{
+			name:              "Standard port-security with hyphenated MAC (8 fields)",
+			line:              "12   100   0011.2233.4455  GigabitEthernet 0/1  SecureDynamic  00:01:23  active",
+			wantEntry:         true,
+			expectedMAC:       "0011.2233.4455",
+			expectedVLAN:      100,
+			expectedInterface: "GigabitEthernet 0/1",
+			expectedType:      "SecureDynamic",
+		},
+		{
+			name:              "Single-token interface (7 fields)",
+			line:              "1   200   aabb.ccdd.eeff  Gi0/5  Static  --  active",
+			wantEntry:         true,
+			expectedMAC:       "aabb.ccdd.eeff",
+			expectedVLAN:      200,
+			expectedInterface: "Gi0/5",
+			expectedType:      "Static",
+		},
+		{
+			name:      "Too few fields for port-security format",
+			line:      "1 200 aabb.ccdd.eeff Gi0/5",
+			wantEntry: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			entry, ok := service.parseMACLine(tt.line, models.VendorRuijie, MACCommandTypePortSecurity)
+			if tt.wantEntry {
+				assert.True(t, ok, "Should parse port-security line: %q", tt.line)
+				assert.Equal(t, tt.expectedMAC, entry.MACAddress, "MAC mismatch")
+				assert.Equal(t, tt.expectedVLAN, entry.VLANID, "VLAN mismatch")
+				assert.Equal(t, tt.expectedInterface, entry.InterfaceName, "Interface mismatch")
+				assert.Equal(t, tt.expectedType, entry.MACType, "Type mismatch")
+			} else {
+				assert.False(t, ok, "Should fail to parse: %q", tt.line)
+			}
+		})
+	}
+}
+
+// TestGetMACCommands 验证各厂商的 MAC 采集命令列表
+// Ruijie/Maipu 返回双命令（show mac-address-table + show port-security address）,
+// 其他厂商保持单命令。
+func TestGetMACCommands(t *testing.T) {
+	service := &MACCollectionService{}
+
+	tests := []struct {
+		vendor        models.DeviceVendor
+		expectedCmds  []MACCommand
+	}{
+		{
+			models.VendorHuawei,
+			[]MACCommand{{Cmd: "display mac-address", Type: MACCommandTypeMacTable}},
+		},
+		{
+			models.VendorH3C,
+			[]MACCommand{{Cmd: "display mac-address", Type: MACCommandTypeMacTable}},
+		},
+		{
+			models.VendorRuijie,
+			[]MACCommand{
+				{Cmd: "show mac-address-table", Type: MACCommandTypeMacTable},
+				{Cmd: "show port-security address", Type: MACCommandTypePortSecurity},
+			},
+		},
+		{
+			models.VendorMaipu,
+			[]MACCommand{
+				{Cmd: "show mac-address-table", Type: MACCommandTypeMacTable},
+				{Cmd: "show port-security address", Type: MACCommandTypePortSecurity},
+			},
+		},
+		{
+			"unknown",
+			[]MACCommand{{Cmd: "show mac-address-table", Type: MACCommandTypeMacTable}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.vendor), func(t *testing.T) {
+			cmds := service.getMACCommands(tt.vendor)
+			assert.Equal(t, tt.expectedCmds, cmds, "Commands mismatch for vendor %s", tt.vendor)
+		})
+	}
+}
+
+// TestMergeMACEntries 验证多命令结果合并去重
+// 同一 MAC 在 mac-address-table 和 port-security address 中都出现时,
+// 应只保留一条（不影响后续过滤逻辑的计数）。
+func TestMergeMACEntries(t *testing.T) {
+	service := &MACCollectionService{}
+
+	// 模拟 mac-address-table 输出
+	macTableOutput := `Vlan    Mac Address       Type    Ports
+----    -----------       ----    -----
+100     0001.0001.0001    DYNAMIC Gi0/1
+308     b022.7a2e.4a4f    DYNAMIC GigabitEthernet 2/25`
+
+	// 模拟 port-security address 输出（同一 MAC 也出现在 port-security 表）
+	portSecurityOutput := `Vlan    Mac Address       Type           Interface
+----    -----------       ----           ---------
+308     b022.7a2e.4a4f    Dynamic        GigabitEthernet 2/25`
+
+	// 解析两条命令输出
+	cmds := service.getMACCommands(models.VendorRuijie)
+	assert.Equal(t, 2, len(cmds), "Ruijie should have 2 commands")
+
+	entriesA, _ := service.parseMACAddressTable(macTableOutput, models.VendorRuijie, MACCommandTypeMacTable)
+	entriesB, _ := service.parseMACAddressTable(portSecurityOutput, models.VendorRuijie, MACCommandTypePortSecurity)
+
+	// 合并去重
+	merged := service.mergeMACEntries([][]MACAddressEntry{entriesA, entriesB})
+
+	// 应当有 2 条唯一记录 (0001.0001.0001 和 b022.7a2e.4a4f)
+	assert.Equal(t, 2, len(merged), "Should have 2 unique MAC entries after dedup")
+
+	// 验证 b022.7a2e.4a4f 在合并结果中
+	found := false
+	for _, e := range merged {
+		if e.MACAddress == "b022.7a2e.4a4f" {
+			found = true
+			assert.Equal(t, 308, e.VLANID)
+			assert.Equal(t, "GigabitEthernet 2/25", e.InterfaceName)
+		}
+	}
+	assert.True(t, found, "b022.7a2e.4a4f should be in merged result")
 }
 
 // TestCleanTimestampFromInterface 测试清理接口名称中的时间戳
@@ -467,7 +631,7 @@ func BenchmarkParseMACLine(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = service.parseMACLine(line, models.VendorHuawei)
+		_, _ = service.parseMACLine(line, models.VendorHuawei, MACCommandTypeMacTable)
 	}
 }
 

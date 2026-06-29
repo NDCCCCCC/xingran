@@ -4,9 +4,10 @@ package models
 type DeviceSource string
 
 const (
-	DeviceSourceAD      DeviceSource = "ad"      // 域控设备
-	DeviceSourceAsset   DeviceSource = "asset"   // 资产系统
-	DeviceSourceManual  DeviceSource = "manual"  // 手动添加
+	DeviceSourceAD       DeviceSource = "ad"       // 域控设备
+	DeviceSourceAsset    DeviceSource = "asset"    // 资产系统
+	DeviceSourceManual   DeviceSource = "manual"   // 手动添加
+	DeviceSourcePhysical DeviceSource = "physical" // R5 物理链路设备(MAC→port→infoPoint→workstation 反推)
 )
 
 // WorkstationDevice 工位设备关联模型

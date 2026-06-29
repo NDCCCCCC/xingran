@@ -78,6 +78,9 @@ func (s *stubReconciliationService) GetByID(_ context.Context, _ string) (*model
 func (s *stubReconciliationService) ResolveException(_ context.Context, _ string, _ string, _ *string) error {
 	return nil
 }
+func (s *stubReconciliationService) Refresh(_ context.Context) (int, int, int, int, error) {
+	return 0, 0, 0, 0, nil
+}
 func (s *stubReconciliationService) GetByWorkstation(_ context.Context, _ string, _ string) (*asset.ByWorkstationResponse, error) {
 	return s.resp, s.err
 }

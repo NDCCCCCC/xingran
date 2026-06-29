@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -162,12 +163,19 @@ func setupGinEngine(cfg *config.Config) *gin.Engine {
 }
 
 // setGinMode 设置 Gin 运行模式
+//
+// R5 调整(2026-06-29): GIN-debug 路由注册日志太多(每次启动打印 100+ 行),
+// 统一改写到 io.Discard(完全静默)。需要路由调试时,改这里临时改回 os.Stdout。
 func setGinMode(mode string) {
 	if mode == "release" {
 		gin.SetMode(gin.ReleaseMode)
 	} else {
 		gin.SetMode(gin.DebugMode)
 	}
+	// 关闭 GIN 内置 debug 日志(路由注册表 + 请求级 [GIN] 日志)，
+	// 走项目自己的 logrus + middleware.Logger 中间件记录请求
+	gin.DefaultWriter = io.Discard
+	gin.DefaultErrorWriter = io.Discard
 }
 
 // setupRoutes 设置路由

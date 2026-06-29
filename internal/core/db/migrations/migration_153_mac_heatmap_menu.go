@@ -49,7 +49,7 @@ func Migrate153MacHeatmapMenu(db *gorm.DB) error {
 		return migrate153Inline(db)
 	}
 
-	return executeSQL(db, string(content))
+	return executeSQL(db, string(content), 153)
 }
 
 // migrate153Inline 兜底: SQL 文件不可用时,使用 GORM 写菜单

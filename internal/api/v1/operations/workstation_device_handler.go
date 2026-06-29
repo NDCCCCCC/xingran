@@ -136,6 +136,35 @@ func (h *WorkstationDeviceHandler) GetAssetDevices(c *gin.Context) {
 	response.Success(c, devices)
 }
 
+// GetPhysicalDevices 实时查询物理链路设备
+// @Summary 实时查询工位关联的物理链路设备
+// @Description 通过工位绑定的用户反查物理链路 MAC→port→infoPoint→workstation→user
+// 解析出该工位用户实际接入的设备，资产字段与域控字段合并时资产优先
+// （不保存到数据库）。
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param id path string true "工位ID"
+// @Success 200 {object} response.Response{data=[]models.WorkstationDevice}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/workstation-device/{id}/physical [post]
+func (h *WorkstationDeviceHandler) GetPhysicalDevices(c *gin.Context) {
+	workstationID := c.Param("id")
+	if workstationID == "" {
+		response.Error(c, apperrors.ParamMissing("工位ID"))
+		return
+	}
+
+	devices, err := h.service.GetPhysicalDevices(c.Request.Context(), workstationID)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, devices)
+}
+
 // SetPrimaryAndSave 设置主设备并保存
 // @Summary 将 AD/资产设备设为主设备并保存为手动设备
 // @Description 用于将实时查询到的 AD 或资产设备持久化到数据库并标记为主设备。

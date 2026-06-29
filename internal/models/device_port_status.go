@@ -29,8 +29,8 @@ const (
 // DevicePortStatus 设备端口状态模型
 type DevicePortStatus struct {
 	ID            string `gorm:"type:uuid;primary_key" json:"id"`
-	DeviceID      string `gorm:"type:uuid;not null" json:"deviceId"`
-	InterfaceName string `gorm:"size:100;not null" json:"interfaceName"`
+	DeviceID      string `gorm:"type:uuid;not null;uniqueIndex:uniq_device_interface,priority:1" json:"deviceId"`
+	InterfaceName string `gorm:"size:100;not null;uniqueIndex:uniq_device_interface,priority:2" json:"interfaceName"`
 	AdminStatus   string `gorm:"size:20" json:"adminStatus,omitempty"`  // 管理状态
 	OperStatus    string `gorm:"size:20" json:"operStatus,omitempty"`   // 操作状态
 	Description   string `gorm:"size:500" json:"description,omitempty"` // 端口描述

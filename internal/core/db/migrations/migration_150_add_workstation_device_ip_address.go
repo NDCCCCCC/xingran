@@ -33,7 +33,7 @@ func Migrate150AddWorkstationDeviceIPAddress(db *gorm.DB) error {
 		return executeInlineSQLFor150(db)
 	}
 
-	return executeSQL(db, string(content))
+	return executeSQL(db, string(content), 150)
 }
 
 func executeInlineSQLFor150(db *gorm.DB) error {

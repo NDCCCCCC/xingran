@@ -257,6 +257,45 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 		return result
 	}
 
+	// [C-fix] 防同名异物冲突:
+	// 如果DB中已存在同interface_name但不同device_id的端口,说明该端口名
+	// 在两台设备上独立存在。修复:对此次采集的每个interface_name,先检查DB是否已有不同device_id的同名端口,
+	// 有则跳过该端口(不UPSERT),避免覆盖另一台设备的端口记录。
+	{
+		conflictIfaces := make(map[string]string)
+		ifaceNames := make([]string, len(portStatuses))
+		for i, p := range portStatuses {
+			ifaceNames[i] = p.InterfaceName
+		}
+		if err := s.db.WithContext(ctx).
+			Model(&models.DevicePortStatus{}).
+			Select("interface_name, device_id").
+			Where("interface_name IN ? AND device_id <> ?", ifaceNames, device.ID).
+			Find(&conflictIfaces).Error; err != nil {
+			applogger.Warnf("[PortCollection] %s: check ownership clash failed: %v", device.DeviceName, err)
+		} else if len(conflictIfaces) > 0 {
+			filtered := portStatuses[:0]
+			for _, p := range portStatuses {
+				if conflictDevID, exists := conflictIfaces[p.InterfaceName]; exists {
+					applogger.Warnf("[PortCollection] %s: skip iface %s (already owned by device %s, ownership clash)",
+						device.DeviceName, p.InterfaceName, conflictDevID)
+					result.FailedCount++
+					continue
+				}
+				filtered = append(filtered, p)
+			}
+			if len(filtered) == 0 {
+				applogger.Warnf("[PortCollection] %s: all ports have ownership clashes, skip batch save", device.DeviceName)
+				result.SuccessCount = 0
+				if result.ErrorMessage == "" {
+					result.ErrorMessage = "all ports have ownership clashes"
+				}
+				return result
+			}
+			portStatuses = filtered
+		}
+	}
+
 	err = s.db.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "device_id"}, {Name: "interface_name"}},
 		DoUpdates: clause.AssignmentColumns([]string{"admin_status", "oper_status", "description", "vlan", "duplex", "speed", "port_type", "dot1x_enabled", "dot1x_port_status", "collected_at"}),

@@ -140,21 +140,43 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 		}
 	}
 
-	// 获取MAC地址表命令
-	command := s.getMACCommand(device.Vendor)
+	// 获取MAC采集命令列表（Ruijie/Maipu 返回双命令,其他厂商单命令）
+	macCommands := s.getMACCommands(device.Vendor)
+	cmdStrs := make([]string, len(macCommands))
+	for i, c := range macCommands {
+		cmdStrs[i] = c.Cmd
+	}
 
-	// 使用 executor 发送命令
-	response, err := s.executor.ExecuteOnDevice(ctx, device.ID, command, true)
-	if err != nil {
-		result.ErrorMessage = err.Error()
+	// 在设备上执行命令。单命令走 ExecuteOnDevice,多命令走 ExecuteMultipleOnDevice,
+	// 后者复用同一条 SSH 连接,避免重复握手开销。
+	var responses []string
+	var cmdErr error
+	if len(cmdStrs) == 1 {
+		resp, err := s.executor.ExecuteOnDevice(ctx, device.ID, cmdStrs[0], true)
+		responses = []string{resp}
+		cmdErr = err
+	} else {
+		responses, cmdErr = s.executor.ExecuteMultipleOnDevice(ctx, device.ID, cmdStrs, true)
+	}
+	if cmdErr != nil {
+		result.ErrorMessage = cmdErr.Error()
 		return result
 	}
 
-	// 解析MAC地址表
-	macAddresses, err := s.parseMACAddressTable(response, device.Vendor)
-	if err != nil {
-		result.ErrorMessage = err.Error()
-		return result
+	// 解析每条命令输出,合并去重
+	var buckets [][]MACAddressEntry
+	for i, resp := range responses {
+		entries, parseErr := s.parseMACAddressTable(resp, device.Vendor, macCommands[i].Type)
+		if parseErr != nil {
+			applogger.Warnf("[MAC采集] %s: 命令 %s 解析失败: %v", device.DeviceName, macCommands[i].Cmd, parseErr)
+			continue
+		}
+		buckets = append(buckets, entries)
+		applogger.Debugf("[MAC采集] %s: 命令 %s 解析出 %d 条 MAC", device.DeviceName, macCommands[i].Cmd, len(entries))
+	}
+	macAddresses := s.mergeMACEntries(buckets)
+	if len(macCommands) > 1 {
+		applogger.Infof("[MAC采集] %s: 多命令合并,共 %d 条去重后 MAC", device.DeviceName, len(macAddresses))
 	}
 
 	// Step 2: 构建每个接口的MAC地址数量统计
@@ -311,23 +333,53 @@ type MACAddressEntry struct {
 	MACType       string
 }
 
-// getMACCommand 根据厂商获取MAC地址表命令
-func (s *MACCollectionService) getMACCommand(vendor models.DeviceVendor) string {
-	commands := map[models.DeviceVendor]string{
-		models.VendorHuawei: "display mac-address",
-		models.VendorH3C:    "display mac-address",
-		models.VendorRuijie: "show mac-address-table",
-		models.VendorMaipu:  "show mac-address-table",
-	}
+// MACCommandType MAC采集命令类型,用于选择对应的解析格式
+type MACCommandType string
 
-	if cmd, ok := commands[vendor]; ok {
-		return cmd
+const (
+	// MACCommandTypeMacTable 普通 MAC 地址表（display mac-address / show mac-address-table）
+	MACCommandTypeMacTable MACCommandType = "mac-table"
+	// MACCommandTypePortSecurity port-security 安全 MAC 表（show port-security address）
+	// Ruijie/Maipu 设备的 port-security 表输出含 Index 列,与 mac-address-table 字段顺序不同,
+	// 需要独立解析路径。
+	MACCommandTypePortSecurity MACCommandType = "port-security"
+)
+
+// MACCommand 单条 MAC 采集命令,包含命令本身与对应解析格式。
+type MACCommand struct {
+	Cmd  string
+	Type MACCommandType
+}
+
+// getMACCommand 根据厂商获取MAC地址表命令（返回首条命令,保留向后兼容）
+func (s *MACCollectionService) getMACCommand(vendor models.DeviceVendor) string {
+	if cmds := s.getMACCommands(vendor); len(cmds) > 0 {
+		return cmds[0].Cmd
 	}
-	return "show mac-address-table" // 默认命令
+	return "show mac-address-table" // 防御性兜底
+}
+
+// getMACCommands 根据厂商返回所有需要执行的 MAC 采集命令（含格式提示）
+// Ruijie/Maipu 返回双命令:show mac-address-table + show port-security address,
+// 后者输出与 mac-address-table 字段顺序不同,需要 MACCommandTypePortSecurity 解析路径。
+// 其他厂商保持单命令。
+func (s *MACCollectionService) getMACCommands(vendor models.DeviceVendor) []MACCommand {
+	switch vendor {
+	case models.VendorHuawei, models.VendorH3C:
+		return []MACCommand{{Cmd: "display mac-address", Type: MACCommandTypeMacTable}}
+	case models.VendorRuijie, models.VendorMaipu:
+		return []MACCommand{
+			{Cmd: "show mac-address-table", Type: MACCommandTypeMacTable},
+			{Cmd: "show port-security address", Type: MACCommandTypePortSecurity},
+		}
+	}
+	return []MACCommand{{Cmd: "show mac-address-table", Type: MACCommandTypeMacTable}}
 }
 
 // parseMACAddressTable 解析MAC地址表
-func (s *MACCollectionService) parseMACAddressTable(output string, vendor models.DeviceVendor) ([]MACAddressEntry, error) {
+// cmdType 指定输出格式:Ruijie 的 show port-security address 与 show mac-address-table
+// 字段顺序不同,需要独立解析路径。
+func (s *MACCollectionService) parseMACAddressTable(output string, vendor models.DeviceVendor, cmdType MACCommandType) ([]MACAddressEntry, error) {
 	var entries []MACAddressEntry
 	lines := strings.Split(output, "\n")
 
@@ -349,8 +401,8 @@ func (s *MACCollectionService) parseMACAddressTable(output string, vendor models
 			continue
 		}
 
-		// 根据不同厂商的格式解析
-		entry, ok := s.parseMACLine(line, vendor)
+		// 根据不同厂商+命令类型的格式解析
+		entry, ok := s.parseMACLine(line, vendor, cmdType)
 		if ok {
 			entries = append(entries, entry)
 		}
@@ -360,7 +412,8 @@ func (s *MACCollectionService) parseMACAddressTable(output string, vendor models
 }
 
 // parseMACLine 解析MAC地址行
-func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVendor) (MACAddressEntry, bool) {
+// cmdType 用于在 Ruijie 场景下区分 mac-address-table 与 port-security address 的字段顺序差异。
+func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVendor, cmdType MACCommandType) (MACAddressEntry, bool) {
 	fields := strings.Fields(line)
 	if len(fields) < 3 {
 		return MACAddressEntry{}, false
@@ -408,7 +461,13 @@ func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVen
 		}
 
 	case models.VendorRuijie, models.VendorMaipu:
-		// Ruijie/Maipu 格式: VLAN MAC Address Type Interface...
+		// Ruijie/Maipu: 根据命令类型选择解析路径
+		// port-security address 输出含 Index 列,字段顺序与 mac-address-table 不同。
+		if cmdType == MACCommandTypePortSecurity {
+			return s.parseRuijiePortSecurityLine(fields)
+		}
+
+		// 通用 mac-address-table 格式: VLAN MAC Address Type Interface...
 		if len(fields) >= 4 {
 			// 解析VLAN ID (fields[0])
 			if vlanID, err := strconv.Atoi(fields[0]); err == nil {
@@ -438,6 +497,59 @@ func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVen
 		return entry, true
 	}
 	return MACAddressEntry{}, false
+}
+
+// parseRuijiePortSecurityLine 解析锐捷 show port-security address 输出
+// 字段顺序:Index VLAN MAC Interface(<多 token,可能含空格>) Type LearnAge Action
+// 真实样本（CX-WH-WH-04F-FL-RS8607E-03,2026-06-29）:
+//   56   308   b022.7a2e.4a4f  GigabitEthernet 2/25      Dynamic            --          active
+//   [0]  [1]    [2]            [3..N-3]                [N-3]            [N-2] [N-1]
+// 至少需要 7 字段:Idx + VLAN + MAC + Interface(≥1 token) + Type + LearnAge + Action
+// 若 Interface 含多个 token（如 "GigabitEthernet 2/25"）则为 8 字段。
+func (s *MACCollectionService) parseRuijiePortSecurityLine(fields []string) (MACAddressEntry, bool) {
+	if len(fields) < 7 {
+		return MACAddressEntry{}, false
+	}
+
+	// 防御:fields[1] 必须是数字（VLAN），否则表明这不是 port-security 格式
+	if _, err := strconv.Atoi(fields[1]); err != nil {
+		return MACAddressEntry{}, false
+	}
+
+	entry := MACAddressEntry{}
+	entry.VLANID, _ = strconv.Atoi(fields[1])
+	entry.MACAddress = fields[2]
+
+	// 字段尾部固定为 Type / LearnAge / Action
+	// Interface = fields[3 .. len-3]
+	typeIdx := len(fields) - 3
+	interfaceParts := fields[3:typeIdx]
+
+	if len(interfaceParts) > 0 {
+		entry.InterfaceName = s.cleanTimestampFromInterface(strings.Join(interfaceParts, " "))
+	}
+	entry.MACType = fields[typeIdx]
+
+	return entry, true
+}
+
+// mergeMACEntries 合并多命令解析结果,按 (MAC, VLAN, Interface) 去重
+// 当同一 MAC 同时出现在 show mac-address-table 与 show port-security address 时,
+// 只保留首条,避免下游阈值/历史逻辑重复计数。
+func (s *MACCollectionService) mergeMACEntries(buckets [][]MACAddressEntry) []MACAddressEntry {
+	seen := make(map[string]bool)
+	var merged []MACAddressEntry
+	for _, bucket := range buckets {
+		for _, e := range bucket {
+			key := fmt.Sprintf("%s|%d|%s", e.MACAddress, e.VLANID, e.InterfaceName)
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+			merged = append(merged, e)
+		}
+	}
+	return merged
 }
 
 // cleanTimestampFromInterface 清理接口名称中的时间戳

@@ -23,6 +23,10 @@ type WorkstationDeviceService interface {
 	// GetAssetDevices 实时查询资产设备（不保存到数据库）
 	GetAssetDevices(ctx context.Context, workstationID string) ([]*models.WorkstationDevice, error)
 
+	// GetPhysicalDevices 实时查询物理链路设备（不保存到数据库）
+	// Phase 45 R5: MAC→port→infoPoint→workstation 反推链汇总
+	GetPhysicalDevices(ctx context.Context, workstationID string) ([]*models.WorkstationDevice, error)
+
 	// GetADDevicesByUser 获取用户的域控设备
 	GetADDevicesByUser(ctx context.Context, userID string) ([]*ADDeviceMatch, error)
 
@@ -280,6 +284,213 @@ func (s *workstationDeviceService) GetAssetDevices(ctx context.Context, workstat
 			Status:           0,
 			IsPrimary:        false,
 			Priority:         0,
+		})
+	}
+
+	return devices, nil
+}
+
+// GetPhysicalDevices 实时查询物理链路设备（不保存到数据库）
+//
+// Phase 45 R5: 按 MAC→port→infoPoint→workstation 反推链路,找到该工位用户实际接入的设备
+//
+// 链路(同 reconciliation_physical_chain 物化视图):
+//   asset.mac1/mac2 → sys_device_mac_address → sys_device_port_status
+//     → ops_info_points.workstation_id → sys_workstation.user_id (= 工位绑定用户)
+//
+// 字段合并策略(用户要求"以资产为准"):
+//   - DeviceName / DeviceModel / DeviceType / ResponsibleUser / IP: 优先取 ops_asset
+//   - MAC: 优先 ops_asset.mac1,缺失时回退 ad_computer.mac_address
+//   - AD 字段(ComputerName / OperatingSystem): 用 ad_computer 补全,但不覆盖资产字段
+//
+// 退化场景(与 GetAssetDevicesByUser 双策略同款):
+//   - 工位未绑定 user_id → 返回空(不擅自用工作站 IP 反查)
+//   - MAC 未采集 → 无设备返回
+func (s *workstationDeviceService) GetPhysicalDevices(ctx context.Context, workstationID string) ([]*models.WorkstationDevice, error) {
+	if workstationID == "" {
+		return nil, apperrors.ParamMissing("工位ID")
+	}
+
+	if !s.uuidValidator.MatchString(workstationID) {
+		return nil, apperrors.ParamInvalid("工位ID")
+	}
+
+	// 1. 获取工位信息以查找绑定的用户
+	var workstation models.Workstation
+	err := s.db.WithContext(ctx).
+		Where("id = ? AND deleted_at IS NULL", workstationID).
+		First(&workstation).Error
+	if err != nil {
+		return nil, fmt.Errorf("工位不存在: %w", err)
+	}
+
+	// 工位未绑定用户时返回空数组(对齐 AD/资产设备行为)
+	if workstation.UserID == nil || *workstation.UserID == "" {
+		return []*models.WorkstationDevice{}, nil
+	}
+	userID := *workstation.UserID
+
+	logger.Infof("[GetPhysicalDevices] 工位 %s 绑定用户: %s", workstationID, userID)
+
+	// 2. 走 MAC→port→infoPoint→workstation→user 反推链
+	//    反推逻辑:
+	//    (1) ops_info_points.workstation_id = 当前工位 → 拿到 port_id
+	//    (2) sys_device_port_status.id = port_id → 拿到 device_id (= 网络设备)
+	//    (3) sys_device_mac_address.device_id + interface_name → 拿到 mac_address
+	//    (4) ops_asset.mac1 = mac_address (或 mac2) → 拿到 asset 详情
+	//    (5) sys_ad_computer.mac_address (或 serial_number) → 合并 AD 字段
+	//
+	//    使用 DISTINCT ON (devicesn) 去重,合并字段"资产优先"
+	type physicalRow struct {
+		AssetID         *string
+		DeviceSerial    *string
+		DeviceModel     *string
+		DeviceType      *string
+		MACAddress      *string
+		IPAddress       *string
+		ResponsibleUser *string
+		PortName        *string
+		InfoPointName   *string
+		// AD 侧只补字段,不覆盖
+		ADComputerID *string
+		ADDeviceName *string
+		ADOperatingSystem *string
+	}
+
+	var rows []physicalRow
+
+	rawSQL := `
+WITH workstation_ports AS (
+    SELECT DISTINCT port.id AS port_id,
+           port.interface_name,
+           port.device_id,
+           ip.name AS info_point_name,
+           REGEXP_REPLACE(
+               REGEXP_REPLACE(LOWER(port.interface_name), '\s+', '', 'g'),
+               '^(gigabitethernet|gigabitether|ge|gi)', 'ge'
+           ) AS norm_iface
+      FROM ops_info_points ip
+      JOIN sys_device_port_status port
+        ON port.id::text = ip.port_id
+       -- 防御:port_status.device_id 必须与 infoPoint.device_id 一致
+       -- 否则说明 port_status 发生了 device_id 漂移,反查不应跨设备错指
+       AND port.device_id::text = ip.device_id::text
+     WHERE ip.workstation_id = ?
+       AND ip.deleted_at IS NULL
+       AND ip.status = 0
+),
+latest_mac AS (
+    SELECT DISTINCT ON (m.mac_address, m.device_id, m.interface_name)
+        m.mac_address,
+        m.device_id,
+        m.interface_name,
+        REGEXP_REPLACE(
+            REGEXP_REPLACE(LOWER(m.interface_name), '\s+', '', 'g'),
+            '^(gigabitethernet|gigabitether|ge|gi)', 'ge'
+        ) AS norm_iface,
+        -- MAC 归一化:小写 + 去 . : - 三种分隔符,统一 12 位 hex
+        -- 解决 sys_device_mac_address('b022.7a2e.4a4f') 与 ops_asset.mac1('B0:22:7A:2E:4A:4F') 格式不一致
+        LOWER(REGEXP_REPLACE(COALESCE(m.mac_address, ''), '[.:\-]', '', 'g')) AS norm_mac
+      FROM sys_device_mac_address m
+     ORDER BY m.mac_address, m.device_id, m.interface_name, m.collected_at DESC NULLS LAST
+),
+ad_devices AS (
+    SELECT DISTINCT ON (LOWER(REGEXP_REPLACE(COALESCE(ad.mac_address, ''), '[.:\-]', '', 'g')))
+        ad.id,
+        ad.mac_address,
+        ad.serial_number,
+        ad.computer_name,
+        ad.ip_address,
+        ad.operating_system,
+        LOWER(REGEXP_REPLACE(COALESCE(ad.mac_address, ''), '[.:\-]', '', 'g')) AS norm_mac
+      FROM sys_ad_computer ad
+     WHERE ad.deleted_at IS NULL
+     ORDER BY LOWER(REGEXP_REPLACE(COALESCE(ad.mac_address, ''), '[.:\-]', '', 'g')),
+              ad.updated_at DESC NULLS LAST
+)
+SELECT DISTINCT ON (COALESCE(a.devicesn,''))
+       a.id                                                                AS asset_id,
+       a.devicesn                                                          AS device_serial,
+       a.device_model_name                                                 AS device_model,
+       a.device_type_name                                                  AS device_type,
+       -- 优先用 ops_asset 的 mac1(原格式展示给前端),若未命中再用 mac_address 表的
+       COALESCE(a.mac1, mac.mac_address)                                   AS mac_address,
+       a.machine_ip                                                        AS ip_address,
+       a.nowuser_name                                                      AS responsible_user,
+       wp.interface_name                                                   AS port_name,
+       wp.info_point_name                                                  AS info_point_name,
+       ad_devices.id                                                       AS ad_computer_id,
+       ad_devices.computer_name                                            AS ad_device_name,
+       ad_devices.operating_system                                         AS ad_operating_system
+  FROM workstation_ports wp
+  JOIN latest_mac mac
+       ON mac.device_id::text = wp.device_id::text
+      AND mac.norm_iface        = wp.norm_iface
+  LEFT JOIN ops_asset a
+       ON a.deleted_at IS NULL
+      AND (LOWER(REGEXP_REPLACE(COALESCE(a.mac1, ''), '[.:\-]', '', 'g')) = mac.norm_mac
+        OR LOWER(REGEXP_REPLACE(COALESCE(a.mac2, ''), '[.:\-]', '', 'g')) = mac.norm_mac)
+  LEFT JOIN ad_devices
+       ON ad_devices.norm_mac = mac.norm_mac
+       OR (ad_devices.serial_number IS NOT NULL AND ad_devices.serial_number = a.devicesn)
+ ORDER BY COALESCE(a.devicesn,''), wp.interface_name NULLS LAST;
+`
+
+	if err := s.db.WithContext(ctx).Raw(rawSQL, workstationID).Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("查询物理链路设备失败: %w", err)
+	}
+
+	logger.Infof("[GetPhysicalDevices] MAC→port→infoPoint→workstation 反查命中 %d 行", len(rows))
+
+	// 3. 转换为 WorkstationDevice(不写入数据库)
+	devices := make([]*models.WorkstationDevice, 0, len(rows))
+	for i, row := range rows {
+		tempID := fmt.Sprintf("physical-%d", i)
+
+		// 字段冲突策略：资产优先
+		var deviceName *string
+		if row.ADDeviceName != nil && *row.ADDeviceName != "" {
+			deviceName = row.ADDeviceName
+		} else if row.DeviceModel != nil && *row.DeviceModel != "" {
+			// 资产侧没有 device_name 字段,用 model 兜底
+			dm := *row.DeviceModel
+			deviceName = &dm
+		}
+
+		var os *string
+		if row.ADOperatingSystem != nil {
+			os = row.ADOperatingSystem
+		}
+		_ = os // 暂不放入 WorkstationDevice(没有 OS 字段);保留备查
+
+		var portDesc *string
+		if row.PortName != nil {
+			pd := fmt.Sprintf("端口 %s", *row.PortName)
+			portDesc = &pd
+			if row.InfoPointName != nil && *row.InfoPointName != "" {
+				pdv := fmt.Sprintf("端口 %s (信息点 %s)", *row.PortName, *row.InfoPointName)
+				portDesc = &pdv
+			}
+		}
+
+		devices = append(devices, &models.WorkstationDevice{
+			BaseModel:         models.BaseModel{ID: tempID},
+			WorkstationID:     workstationID,
+			DeviceSource:      models.DeviceSourcePhysical,
+			AssetID:           row.AssetID,
+			ADComputerID:      row.ADComputerID,
+			DeviceSerial:      row.DeviceSerial,
+			DeviceName:        deviceName,
+			DeviceModel:       row.DeviceModel,
+			DeviceType:        row.DeviceType,
+			MACAddress:        row.MACAddress,
+			IPAddress:         row.IPAddress,
+			ResponsibleUser:   row.ResponsibleUser,
+			ResponsibleUserID: &userID,
+			Status:            0,
+			IsPrimary:         false,
+			Priority:          0,
+			Description:       portDesc,
 		})
 	}
 

@@ -661,6 +661,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			workstationDevices.POST("/:id", workstationDeviceHandler.GetByWorkstation)
 			workstationDevices.POST("/:id/ad", workstationDeviceHandler.GetADDevices)
 			workstationDevices.POST("/:id/asset", workstationDeviceHandler.GetAssetDevices)
+			// Phase 45 R5: 物理链路设备(MAC→port→infoPoint→workstation 反推)
+			workstationDevices.POST("/:id/physical", workstationDeviceHandler.GetPhysicalDevices)
 			workstationDevices.POST("/:id/set-primary-and-save", workstationDeviceHandler.SetPrimaryAndSave)
 			workstationDevices.POST("/manual", workstationDeviceHandler.AddManual)
 			workstationDevices.POST("/sync-ad", workstationDeviceHandler.SyncAD)
