@@ -40,7 +40,6 @@ import { ColumnConfigModal } from "@/components/shared/ColumnConfigModal";
 import { AssetRow } from "@/components/table/AssetRow";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import {
-  HealthBadge,
   ReconciliationDrawer,
   useReconciliationVisibility,
   type DrawerTabKey,
@@ -437,26 +436,17 @@ const AssetList: FC = () => {
       ),
     },
     // R4 (Phase 45) — 对账健康列(行内徽标,assets 列表)
+    // CR-01 修复:ops_asset 工作站绑定未在 /ops/asset/list API 响应中暴露(workstation_id
+    // 不在 SELECT 列表,无法 lift useWorkstationHealth 到页面层)。在此后端限制解除前,
+    // 渲染 "-" 占位以避免显示错误的 healthy 绿色徽标(原 conflictType={null} 会让
+    // HealthBadge 默认渲染绿色圆点,误导用户以为所有资产均健康)。后续若需要真实
+    // 对账状态需扩展 Asset DTO 增加 workstationId 字段,然后才能复用 workstations 页面的
+    // lift-up 模式(assetConflictMap)。
     {
       title: "对账健康",
       key: "reconciliation",
       width: 96,
-      render: (_: unknown, record: Asset) => (
-        <HealthBadge
-          assetId={record.id ?? ""}
-          conflictType={null}
-          onClick={(id) =>
-            setDrawerState({
-              open: true,
-              assetId: id,
-              // Asset 类型无 workstationId 字段;Plan 02 接入工位关联后填充
-              workstationId: null,
-              assetCode: record.devicesn,
-              activeTab: "summary",
-            })
-          }
-        />
-      ),
+      render: (_: unknown, _record: Asset) => <>-</>,
     },
   ];
 
