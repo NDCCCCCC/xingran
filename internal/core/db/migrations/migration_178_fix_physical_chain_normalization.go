@@ -104,100 +104,32 @@ WHERE n.asset_norm_mac = n.mac_norm_mac;  -- 防御:只在 MAC 归一化相等�
 	}
 	applogger.Infof("[迁移] reconciliation_physical_chain 视图已重建(JOIN 加入 MAC/接口名归一化)")
 
-	// 2. 验证 view 抽样
-	var physicalCount int64
-	if err := db.Raw(`
-		SELECT COUNT(*) FROM reconciliation_physical_chain WHERE physical_user_id IS NOT NULL
-	`).Scan(&physicalCount).Error; err != nil {
-		return fmt.Errorf("验证 reconciliation_physical_chain 视图失败: %w", err)
-	}
-	applogger.Infof("[迁移] reconciliation_physical_chain 命中 physical_user_id 的行数: %d", physicalCount)
-
-	// 3. 重建 reconciliation_normalized 物化视图
-	//    用的是 migration_176 的同一段 SQL,无逻辑变化(数据源已修)
-	reconMVSQL := `
-DROP MATERIALIZED VIEW IF EXISTS reconciliation_normalized CASCADE;
-CREATE MATERIALIZED VIEW reconciliation_normalized AS
-SELECT DISTINCT ON (a.id)
-    a.id                                              AS asset_id,
-    a.devicesn                                        AS asset_code,
-    a.machine_ip                                      AS asset_ip,
-    a.mac1                                            AS mac1,
-    a.mac2                                            AS mac2,
-    COALESCE(NULLIF(a.mac1,''), NULLIF(a.mac2,''))    AS mac_join,
-    COALESCE(
-        NULLIF(a.user_id,''),
-        (SELECT user_id_by_name_and_dept FROM reconciliation_user_lookup WHERE asset_id = a.id LIMIT 1),
-        (SELECT user_id_by_name          FROM reconciliation_user_lookup WHERE asset_id = a.id LIMIT 1)
-    )                                                 AS asset_user_id,
-    COALESCE(
-        (SELECT username FROM sys_user WHERE id::text = NULLIF(a.user_id,'') LIMIT 1),
-        a.nowuser_name
-    )                                                 AS asset_username,
-    a.deleted_at                                      AS asset_deleted_at,
-    pc.physical_user_id                               AS physical_user_id,
-    pc.physical_username                              AS physical_username,
-    ad.id                                             AS ad_id,
-    ad.username                                       AS ad_username,
-    ad.is_enabled                                     AS ad_is_enabled,
-    NOW()                                             AS mv_refreshed_at,
-    last_resolved.resolved_at                         AS last_resolved_at,
-    last_resolved.resolved_by                         AS last_resolved_by,
-    last_resolved.conflict_type                       AS last_conflict_type
-FROM ops_asset a
-LEFT JOIN reconciliation_physical_chain pc ON pc.asset_id = a.id
-LEFT JOIN sys_ad_user ad
-       ON ad.username = COALESCE(
-              (SELECT username FROM sys_user WHERE id::text = NULLIF(a.user_id,'') LIMIT 1),
-              a.nowuser_name
-          )
-      AND ad.deleted_at IS NULL
-      AND ad.is_enabled = TRUE
-LEFT JOIN LATERAL (
-    SELECT resolved_at, resolved_by, conflict_type
-    FROM sys_data_reconciliation r
-    WHERE r.asset_id = a.id
-      AND r.resolved_at IS NOT NULL
-      AND r.deleted_at IS NULL
-    ORDER BY r.resolved_at DESC
-    LIMIT 1
-) last_resolved ON true
-WHERE a.deleted_at IS NULL
-ORDER BY a.id, ad.id NULLS LAST;
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_recon_norm_asset
-    ON reconciliation_normalized (asset_id);
+	// ⚠ 2026-06-30 性能修正:本迁移原在此 DROP+CREATE MV + 两次 COUNT 验证 + REFRESH MV,
+	// 但 LOWER 视图虽少匹配(GE≠GigabitEthernet 不等值),其相关子查询仍在生产数据下让
+	// 这组操作烧 ~1.5min(实测 COUNT 16s + MV 重建 1m19s)。MV + unique index 已由
+	// migration_176 创建,migration_180 会用 O(N+M) 快视图 REFRESH MV。故本迁移只保留:
+	//   - CREATE OR REPLACE VIEW(轻量 DDL,上面已做)
+	//   - 补 2 个 MV 查询索引(workstation/physical,176 未建;IF NOT EXISTS 幂等,MV 已存在)
+	//   - view 版本注释
+	// 去掉 DROP+CREATE MV + COUNT 验证 + REFRESH MV,启动省 ~1.5min。COUNT 命中验证由
+	// migration_180(快视图)统一做。
+	idxSQL := `
 CREATE INDEX IF NOT EXISTS idx_recon_norm_workstation
     ON reconciliation_normalized (asset_user_id);
 CREATE INDEX IF NOT EXISTS idx_recon_norm_physical
     ON reconciliation_normalized (physical_user_id)
     WHERE physical_user_id IS NOT NULL;
 `
-	if err := db.Exec(reconMVSQL).Error; err != nil {
-		return fmt.Errorf("重建 reconciliation_normalized 物化视图失败: %w", err)
+	if err := db.Exec(idxSQL).Error; err != nil {
+		applogger.Warnf("[迁移] 178 创建 MV 查询索引失败 (非阻断): %v", err)
 	}
-	applogger.Infof("[迁移] reconciliation_normalized MV 已重建(用新 reconciliation_physical_chain 视图数据)")
 
-	// 4. 验证 MV 抽样
-	var mvPhysicalCount int64
-	if err := db.Raw(`
-		SELECT COUNT(*) FROM reconciliation_normalized WHERE physical_user_id IS NOT NULL
-	`).Scan(&mvPhysicalCount).Error; err != nil {
-		return fmt.Errorf("验证 reconciliation_normalized 物化视图失败: %w", err)
-	}
-	applogger.Infof("[迁移] reconciliation_normalized MV 命中 physical_user_id 的行数: %d(修复前应为 0)", mvPhysicalCount)
-
-	// 5. 标记 view 定义以便 SQL 端验证是否已重建
+	// 标记 view 版本以便 SQL 端验证
 	markViewSQL := `COMMENT ON VIEW reconciliation_physical_chain IS 'R5_fix_mac_iface_20260629'`
 	if err := db.Exec(markViewSQL).Error; err != nil {
 		applogger.Warnf("[迁移] 设置 view 标记失败 (非阻断): %v", err)
 	}
 
-	// 6. 同步刷新 reconciliation_user_lookup(它也可能被重写)
-	if err := db.Exec(`REFRESH MATERIALIZED VIEW reconciliation_normalized`).Error; err != nil {
-		applogger.Warnf("[迁移] 刷新 reconciliation_normalized MV 失败 (非阻断): %v", err)
-	}
-
-	log.Println("Migration 178 completed: reconciliation_physical_chain view + reconciliation_normalized MV rebuilt with normalization")
+	log.Println("Migration 178 completed: reconciliation_physical_chain view(MV rebuild deferred to migration 180)")
 	return nil
 }
