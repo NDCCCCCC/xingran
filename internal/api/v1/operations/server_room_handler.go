@@ -40,6 +40,20 @@ func (h *ServerRoomHandler) Statistics(c *gin.Context) {
 	response.Success(c, result)
 }
 
+// SearchServerRoomOptions 机房下拉数据源(name LIKE 模糊 + buildingId/floorId/status/orgId 筛选,LIMIT 50,读操作不写操作日志)
+func (h *ServerRoomHandler) SearchServerRoomOptions(c *gin.Context) {
+	var params map[string]interface{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		params = map[string]interface{}{}
+	}
+	result, err := h.service.SearchServerRoomOptions(c.Request.Context(), params)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.Success(c, result)
+}
+
 // Create 创建机房
 // @Summary 创建机房
 // @Description 创建新的机房信息

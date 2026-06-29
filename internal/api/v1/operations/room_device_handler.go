@@ -40,6 +40,20 @@ func (h *RoomDeviceHandler) Statistics(c *gin.Context) {
 	response.Success(c, result)
 }
 
+// SearchRoomDeviceOptions 机房设备下拉数据源(name LIKE 模糊 + roomId/deviceType/status 筛选,LIMIT 50,读操作不写操作日志)
+func (h *RoomDeviceHandler) SearchRoomDeviceOptions(c *gin.Context) {
+	var params map[string]interface{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		params = map[string]interface{}{}
+	}
+	result, err := h.service.SearchRoomDeviceOptions(c.Request.Context(), params)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.Success(c, result)
+}
+
 // Create 创建机房设备
 // @Summary 创建机房设备
 // @Description 创建新的机房设备信息

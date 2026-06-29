@@ -39,6 +39,9 @@ type WorkstationService interface {
 	BatchUpdatePositions(ctx context.Context, items []PositionUpdateItem) error
 	// Statistics 工位统计(专用 COUNT 聚合,不依赖分页列表;支持 orgId 部门筛选含子部门,替代前端 4 次 list 拼 total)。
 	Statistics(ctx context.Context, params map[string]interface{}) (*WorkstationStatisticsResult, error)
+	// SearchWorkstationOptions 工位下拉数据源(LIKE 模糊 + 多维筛选,LIMIT 50)。
+	// 设计给前端 Select/AutoComplete 远程搜索。workstation 高频变更,不缓存。
+	SearchWorkstationOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error)
 }
 
 // WorkstationStatisticsResult 工位统计结果(status: 0=可用 1=占用 2=维护)。
@@ -329,4 +332,44 @@ func (s *workstationService) BatchUpdatePositions(ctx context.Context, items []P
 
 		return nil
 	})
+}
+
+// SearchWorkstationOptions 工位下拉数据源(name LIKE 模糊 + floorId/floorCode/status/type/orgId 多维筛选,LIMIT 50)。
+// 设计给前端 Select/AutoComplete 远程搜索(原 bug 位置: info-points/index.tsx 「所属工位」下拉)。
+//
+// 工位高频变更(占用/释放/调位),不缓存避免 staleness。
+func (s *workstationService) SearchWorkstationOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error) {
+	var result []DropdownOption
+
+	query := s.db.WithContext(ctx).Table("sys_workstation").
+		Select("sys_workstation.id AS value, sys_workstation.workstation_name AS label").
+		Limit(DropdownMaxRows)
+
+	if name := extractStringParam(params, "name"); name != "" {
+		query = query.Where("sys_workstation.workstation_name LIKE ?", "%"+name+"%")
+	}
+	if floorId := extractStringParam(params, "floorId"); floorId != "" {
+		query = query.Where("sys_workstation.floor_id = ?", floorId)
+	}
+	if floorCode := extractStringParam(params, "floorCode"); floorCode != "" {
+		if !validateTableName(floorTable) {
+			return nil, fmt.Errorf("invalid table name: %s", floorTable)
+		}
+		query = query.Where("EXISTS (SELECT 1 FROM "+floorTable+" WHERE "+floorTable+".id = sys_workstation.floor_id::uuid AND "+floorTable+".floor_no = ?)", floorCode)
+	}
+	if status := extractIntParam(params, "status", -1); status >= 0 {
+		query = query.Where("sys_workstation.status = ?", status)
+	}
+	if typeVal := extractIntParam(params, "type", -1); typeVal >= 0 {
+		query = query.Where("sys_workstation.workstation_type = ?", typeVal)
+	}
+	// orgId 部门筛选含子部门:与 List 同款 EXISTS 子查询,避免类型转换问题
+	if orgId := extractStringParam(params, "orgId"); orgId != "" {
+		query = query.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON b.id = f.building_id::uuid JOIN sys_dept d ON d.id::text = b.org_id WHERE f.id::text = sys_workstation.floor_id AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors = ?) AND b.deleted_at IS NULL)", orgId, "%,"+orgId, orgId)
+	}
+
+	if err := query.Order("sys_workstation.workstation_name ASC").Find(&result).Error; err != nil {
+		return nil, err
+	}
+	return result, nil
 }
