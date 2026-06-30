@@ -34,7 +34,10 @@ function isWorkerActuallyOnline(worker: Worker): boolean {
   return diffSeconds <= HEARTBEAT_TIMEOUT;
 }
 
-export function getWorkerColumns(): ColumnsType<Worker> {
+export function getWorkerColumns(options?: {
+  getSortOrder?: (field: string) => "ascend" | "descend" | null;
+}): ColumnsType<Worker> {
+  const getSortOrder = options?.getSortOrder;
   return [
     {
       title: "Worker ID",
@@ -42,6 +45,8 @@ export function getWorkerColumns(): ColumnsType<Worker> {
       key: "workerId",
       width: 200,
       ellipsis: true,
+      sorter: true,
+      sortOrder: getSortOrder?.("workerId"),
       render: (workerId, record) => workerId || record.id || "-",
     },
     {
@@ -50,6 +55,8 @@ export function getWorkerColumns(): ColumnsType<Worker> {
       key: "workerName",
       width: 200,
       ellipsis: true,
+      sorter: true,
+      sortOrder: getSortOrder?.("workerName"),
       render: (name) => name || "-",
     },
     {
@@ -58,6 +65,8 @@ export function getWorkerColumns(): ColumnsType<Worker> {
       key: "ipAddress",
       width: 150,
       ellipsis: true,
+      sorter: true,
+      sortOrder: getSortOrder?.("ipAddress"),
       render: (ip, record) => ip || record.workerId || "-",
     },
     {
@@ -65,6 +74,8 @@ export function getWorkerColumns(): ColumnsType<Worker> {
       dataIndex: "status",
       key: "status",
       width: 100,
+      sorter: true,
+      sortOrder: getSortOrder?.("status"),
       render: (status, record) => {
         // 基于最后心跳时间判断真实状态
         const actualStatus = isWorkerActuallyOnline(record) ? "online" : "offline";
@@ -129,6 +140,8 @@ export function getWorkerColumns(): ColumnsType<Worker> {
       dataIndex: "createdAt",
       key: "createdAt",
       width: 180,
+      sorter: true,
+      sortOrder: getSortOrder?.("createdAt"),
       render: (date) => formatDateTime(date),
     },
   ];
