@@ -251,9 +251,8 @@ const MACAddressPage: FC = () => {
     { label: "安全", value: "secure" },
   ];
 
-  // 表格列
+  // 表格列(2026-06-30 quick:移除"设备名称"列,信息密度低)
   const columns: ColumnsType<DeviceMACAddress> = [
-    { title: "设备名称", dataIndex: "deviceName", key: "deviceName", width: 150 },
     {
       title: "MAC地址",
       dataIndex: "macAddress",
