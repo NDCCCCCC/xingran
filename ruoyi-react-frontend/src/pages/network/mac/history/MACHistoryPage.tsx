@@ -32,10 +32,9 @@ import type { ColumnsType } from "antd/es/table";
 type RangePickerOnChange = React.ComponentProps<typeof DatePicker.RangePicker>["onChange"];
 import {
   SearchOutlined, ReloadOutlined, AppstoreOutlined, TableOutlined,
-  CopyOutlined, EyeOutlined, AimOutlined, DownloadOutlined,
+  CopyOutlined, EyeOutlined, DownloadOutlined,
 } from "@ant-design/icons";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { NETWORK_MAC_TRAJECTORY } from "@/constants/routes";
 import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
 import { useTableQuery } from "@/hooks/useTableQuery";
@@ -289,21 +288,8 @@ const MACHistoryPage: React.FC = () => {
         fixed: "right" as const,
         render: (_: unknown, record: MACHistoryRecord) => (
           <Space size={4} wrap>
-            <Button
-              type="link"
-              size="small"
-              icon={<AimOutlined />}
-              onClick={() => {
-                const search = new URLSearchParams();
-                search.set("mac", record.macAddress);
-                search.set("startTime", timeRange.startTime);
-                search.set("endTime", timeRange.endTime);
-                if (record.deviceId) search.set("deviceId", record.deviceId);
-                navigate(`${NETWORK_MAC_TRAJECTORY}?${search.toString()}`);
-              }}
-            >
-              查看轨迹
-            </Button>
+            {/* 2026-06-30 quick:独立 trajectory 页已合并到列表页抽屉,
+                此处不再提供"查看轨迹"按钮,仅保留"查看/收起事件"展开行内嵌 timeline */}
             <Button
               type="link"
               size="small"
@@ -322,7 +308,7 @@ const MACHistoryPage: React.FC = () => {
         ),
       },
     }),
-    [timeRange, expandedRowKeys, navigate]
+    [expandedRowKeys, navigate]
   );
 
   // 列配置过滤(根据 visibleColumns 顺序)
@@ -514,20 +500,7 @@ const MACHistoryPage: React.FC = () => {
               border: "1px solid #f0f0f0",
             }}
             actions={[
-              <Button
-                key="trajectory"
-                type="link"
-                size="small"
-                onClick={() => {
-                  const search = new URLSearchParams();
-                  search.set("mac", record.macAddress);
-                  search.set("startTime", timeRange.startTime);
-                  search.set("endTime", timeRange.endTime);
-                  navigate(`${NETWORK_MAC_TRAJECTORY}?${search.toString()}`);
-                }}
-              >
-                查看轨迹
-              </Button>,
+              // 2026-06-30 quick:独立 trajectory 页已合并到列表页抽屉,移除"查看轨迹"按钮
               <Button
                 key="events"
                 type="link"

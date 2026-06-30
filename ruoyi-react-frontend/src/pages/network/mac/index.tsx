@@ -37,9 +37,11 @@ import { useState, useEffect, useMemo } from "react";
 import { usePagination } from "@/hooks/usePagination";
 import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { useSearchParams } from "react-router-dom";
+import dayjs from "dayjs";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
+import { MACEventsTimeline } from "@/components/network";
 import { DownloadOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
@@ -63,6 +65,20 @@ const MACAddressPage: FC = () => {
 
   // 移动端 dept tree 折叠进 Drawer
   const [deptDrawerOpen, setDeptDrawerOpen] = useState(false);
+
+  // MAC 事件时间线抽屉(2026-06-30 quick:替代独立 trajectory 页,
+  // 信息密度低合并到列表页;点击 MAC 列 → 右侧抽屉显示该 MAC 7d 范围事件)
+  const [timelineDrawerOpen, setTimelineDrawerOpen] = useState(false);
+  const [timelineDrawerMac, setTimelineDrawerMac] = useState<string>("");
+  // 抽屉打开瞬间锁定 7d 范围,避免抽屉打开期间用户停留时间过长导致 endTime 漂移
+  // (与旧 trajectory 页 PRESETS[7d] 等价)
+  const timelineDrawerRange = useMemo(() => {
+    if (!timelineDrawerOpen) return null;
+    return {
+      startTime: dayjs().subtract(7, "day").toISOString(),
+      endTime: dayjs().toISOString(),
+    };
+  }, [timelineDrawerOpen]);
 
   // URL ?deptId=xxx 同步(2026-06-30 quick)
   useEffect(() => {
@@ -238,7 +254,27 @@ const MACAddressPage: FC = () => {
   // 表格列
   const columns: ColumnsType<DeviceMACAddress> = [
     { title: "设备名称", dataIndex: "deviceName", key: "deviceName", width: 150 },
-    { title: "MAC地址", dataIndex: "macAddress", key: "macAddress", width: 160, sorter: true, sortOrder: getMacColumnSortOrder("macAddress") },
+    {
+      title: "MAC地址",
+      dataIndex: "macAddress",
+      key: "macAddress",
+      width: 160,
+      sorter: true,
+      sortOrder: getMacColumnSortOrder("macAddress"),
+      render: (mac: string) => (
+        <Button
+          type="link"
+          size="small"
+          style={{ padding: 0, height: "auto", fontFamily: "monospace" }}
+          onClick={() => {
+            setTimelineDrawerMac(mac);
+            setTimelineDrawerOpen(true);
+          }}
+        >
+          {mac}
+        </Button>
+      ),
+    },
     {
       title: "接口",
       dataIndex: "interfaceName",
@@ -453,6 +489,25 @@ const MACAddressPage: FC = () => {
           onChange={handleMacTableChange}
         />
       </Card>
+
+      {/* MAC 事件时间线抽屉(2026-06-30 quick):
+          点击 MAC 列 → 抽屉打开显示该 MAC 7d 范围内的事件;
+          替代独立 /network/mac/trajectory 页面(信息密度低,合并到列表页) */}
+      <Drawer
+        title={timelineDrawerMac ? `MAC 事件时间线 — ${timelineDrawerMac}` : "MAC 事件时间线"}
+        open={timelineDrawerOpen}
+        onClose={() => setTimelineDrawerOpen(false)}
+        width={480}
+        destroyOnClose
+      >
+        {timelineDrawerMac && timelineDrawerRange && (
+          <MACEventsTimeline
+            mac={timelineDrawerMac}
+            startTime={timelineDrawerRange.startTime}
+            endTime={timelineDrawerRange.endTime}
+          />
+        )}
+      </Drawer>
       </Content>
     </Layout>
   );

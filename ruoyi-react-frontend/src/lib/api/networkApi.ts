@@ -47,7 +47,7 @@ interface TrajectoryNode {
   endTime: string;
   duration: number;
   eventType: "appeared" | "disappeared" | "moved" | "vlan_changed";
-  /** 厂商名(由 TrajectoryPage 调用 queryMACVendor 合并填充,后端不在 TrajectoryNode 中返回) */
+  /** 厂商名(由调用方合并 queryMACVendor 填充,后端不在 TrajectoryNode 中返回) */
   vendor?: string;
 }
 
