@@ -136,51 +136,122 @@ func (s *macHistoryServiceImpl) BuildMACStateMap(macList []models.DeviceMACAddre
 
 // RecordMACChange 记录MAC地址变更（CONTEXT.md D-01, D-02, D-03）
 // 对比新旧状态，识别4种变更类型并写入历史表
+//
+// 2026-06-30 quick 优化(2 层去重):
+//   - 第 1 层:用 normalized MAC 集合判定"MAC 是否在设备上",取代 (mac, interface, vlan)
+//     三元组比对,避免漏采周期产生冗余 disappeared/appeared 配对
+//   - 第 2 层:写入前查 history 表,如果最近一次同 MAC 记录是同端口 → 视为 re-detection
+//     跳过(原本会写 disappeared 然后下一周期再写 appeared 配对,现在两次都不写)
+//   - 结果:稳定 MAC 7 天 ≈ 1 条(首次出现)而不是 366 条冗余
+//   - 真实变化(换端口/换 VLAN/新出现)仍正常写入
+//   - 已知 trade-off:真实离开数天的 MAC 可能漏写 disappeared(同端口 re-check 命中
+//     上次的 appeared),如需可加时间阈值扩展
+//
+// 关联: [[mac-address-normalize-returns-colon-format]]
 func (s *macHistoryServiceImpl) RecordMACChange(ctx context.Context, device *models.NetworkDevice, oldMACs, newMACs map[MACEvent]*models.DeviceMACAddress) error {
 	// 构建历史记录列表
 	var historyRecords []*models.DeviceMACHistory
 	collectionTime := time.Now()
 
-	// 1. appeared: 新数据存在且旧数据不存在
-	for eventKey := range newMACs {
-		if _, exists := oldMACs[eventKey]; !exists {
-			history := &models.DeviceMACHistory{
-				DeviceID:           device.ID,
-				DeviceNameSnapshot: device.DeviceName,
-				MACAddress:         eventKey.MACAddress,
-				InterfaceName:      eventKey.InterfaceName,
-				VLANID:             eventKey.VLANID,
-				EventType:          EventAppeared,
-				FirstSeen:          collectionTime,
-				LastSeen:           collectionTime,
-				CollectedAt:        collectionTime,
-			}
-			historyRecords = append(historyRecords, history)
+	// 2026-06-30 quick L1:normalized MAC 集合判定
+	oldMACNormSet := make(map[string]bool, len(oldMACs))
+	for _, oldMAC := range oldMACs {
+		oldMACNormSet[NormalizeMACAddress(oldMAC.MACAddress)] = true
+	}
+	newMACNormSet := make(map[string]bool, len(newMACs))
+	for _, newMAC := range newMACs {
+		newMACNormSet[NormalizeMACAddress(newMAC.MACAddress)] = true
+	}
 
-			applogger.Debugf("[MAC历史] %s: appeared MAC=%s interface=%s vlan=%v",
-				device.DeviceName, eventKey.MACAddress, eventKey.InterfaceName, eventKey.VLANID)
+	// 2026-06-30 quick L2:查询候选 MAC 的最近一次历史记录接口
+	// 单次 IN 查询,避免 N 次点查
+	candidateMACs := make([]string, 0)
+	for eventKey := range newMACs {
+		normMAC := NormalizeMACAddress(eventKey.MACAddress)
+		if !oldMACNormSet[normMAC] {
+			candidateMACs = append(candidateMACs, eventKey.MACAddress)
+		}
+	}
+	for eventKey := range oldMACs {
+		normMAC := NormalizeMACAddress(eventKey.MACAddress)
+		if !newMACNormSet[normMAC] {
+			candidateMACs = append(candidateMACs, eventKey.MACAddress)
 		}
 	}
 
-	// 2. disappeared: 新数据不存在且旧数据存在
-	for eventKey, oldMAC := range oldMACs {
-		if _, exists := newMACs[eventKey]; !exists {
-			history := &models.DeviceMACHistory{
-				DeviceID:           device.ID,
-				DeviceNameSnapshot: device.DeviceName,
-				MACAddress:         eventKey.MACAddress,
-				InterfaceName:      eventKey.InterfaceName,
-				VLANID:             eventKey.VLANID,
-				EventType:          EventDisappeared,
-				FirstSeen:          oldMAC.CollectedAt,
-				LastSeen:           collectionTime,
-				CollectedAt:        collectionTime,
-			}
-			historyRecords = append(historyRecords, history)
-
-			applogger.Debugf("[MAC历史] %s: disappeared MAC=%s interface=%s vlan=%v",
-				device.DeviceName, eventKey.MACAddress, eventKey.InterfaceName, eventKey.VLANID)
+	// mac -> 最近一次记录的接口(去重:同 mac 多条记录只保留最新)
+	recentIfaceByMAC := make(map[string]string)
+	if len(candidateMACs) > 0 {
+		var recentRecords []models.DeviceMACHistory
+		if err := s.db.WithContext(ctx).
+			Where("device_id = ? AND mac_address IN ?", device.ID, candidateMACs).
+			Order("collected_at DESC").
+			Find(&recentRecords).Error; err != nil {
+			applogger.Warnf("[MAC历史] %s: 查询最近历史失败(非阻塞,继续): %v", device.DeviceName, err)
 		}
+		for _, r := range recentRecords {
+			if _, exists := recentIfaceByMAC[r.MACAddress]; !exists {
+				recentIfaceByMAC[r.MACAddress] = r.InterfaceName
+			}
+		}
+	}
+
+	// 1. appeared: MAC 在设备上完全新增(不在 oldMACs 任何端口)
+	//    且最近一次记录不是同端口(re-detection 跳过)
+	for eventKey := range newMACs {
+		normMAC := NormalizeMACAddress(eventKey.MACAddress)
+		if oldMACNormSet[normMAC] {
+			continue
+		}
+		if recentIfaceByMAC[eventKey.MACAddress] == eventKey.InterfaceName {
+			applogger.Debugf("[MAC历史] %s: 跳过 appeared(re-detection 同端口): MAC=%s interface=%s",
+				device.DeviceName, eventKey.MACAddress, eventKey.InterfaceName)
+			continue
+		}
+		history := &models.DeviceMACHistory{
+			DeviceID:           device.ID,
+			DeviceNameSnapshot: device.DeviceName,
+			MACAddress:         eventKey.MACAddress,
+			InterfaceName:      eventKey.InterfaceName,
+			VLANID:             eventKey.VLANID,
+			EventType:          EventAppeared,
+			FirstSeen:          collectionTime,
+			LastSeen:           collectionTime,
+			CollectedAt:        collectionTime,
+		}
+		historyRecords = append(historyRecords, history)
+
+		applogger.Debugf("[MAC历史] %s: appeared MAC=%s interface=%s vlan=%v",
+			device.DeviceName, eventKey.MACAddress, eventKey.InterfaceName, eventKey.VLANID)
+	}
+
+	// 2. disappeared: MAC 在设备上完全消失(不在 newMACs 任何端口)
+	//    且最近一次记录不是同端口(漏采视为 re-detection 跳过)
+	for eventKey, oldMAC := range oldMACs {
+		normMAC := NormalizeMACAddress(eventKey.MACAddress)
+		if newMACNormSet[normMAC] {
+			continue
+		}
+		if recentIfaceByMAC[oldMAC.MACAddress] == eventKey.InterfaceName {
+			applogger.Debugf("[MAC历史] %s: 跳过 disappeared(漏采 re-detection 同端口): MAC=%s interface=%s",
+				device.DeviceName, oldMAC.MACAddress, eventKey.InterfaceName)
+			continue
+		}
+		history := &models.DeviceMACHistory{
+			DeviceID:           device.ID,
+			DeviceNameSnapshot: device.DeviceName,
+			MACAddress:         eventKey.MACAddress,
+			InterfaceName:      eventKey.InterfaceName,
+			VLANID:             eventKey.VLANID,
+			EventType:          EventDisappeared,
+			FirstSeen:          oldMAC.CollectedAt,
+			LastSeen:           collectionTime,
+			CollectedAt:        collectionTime,
+		}
+		historyRecords = append(historyRecords, history)
+
+		applogger.Debugf("[MAC历史] %s: disappeared MAC=%s interface=%s vlan=%v",
+			device.DeviceName, eventKey.MACAddress, eventKey.InterfaceName, eventKey.VLANID)
 	}
 
 	// 3. moved: MAC地址相同但接口不同
