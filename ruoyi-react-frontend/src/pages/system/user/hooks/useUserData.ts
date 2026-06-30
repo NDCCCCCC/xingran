@@ -27,6 +27,9 @@ export interface UseUserDataReturn {
   departments: SimpleDept[];
   loadStatistics: () => Promise<void>;
   loadRoles: () => Promise<void>;
+  // 注入式兜底(2026-06-30):编辑回填时若 record.roles 含 roleName 但
+  // roles 列表未及时加载 → 多选 Select 显示 raw UUID。用 list 元素注入临时 Option。
+  ensureRoles: (rolesToEnsure: Array<{ id: string; roleName?: string; roleKey?: string }>) => void;
 }
 
 export function useUserData(): UseUserDataReturn {
@@ -68,11 +71,33 @@ export function useUserData(): UseUserDataReturn {
     }
   }, []);
 
+  // 注入式兜底(2026-06-30):若角色 id 已在列表中则保持原引用,否则追加(去重)
+  // setRoles 列入 deps 以满足 React Compiler 推断(setState 引用稳定,不影响实际行为)。
+  const ensureRoles = useCallback((rolesToEnsure: Array<{ id: string; roleName?: string; roleKey?: string }>) => {
+    setRoles(prev => {
+      const known = new Set(prev.map(r => r.id));
+      const toAdd: Role[] = [];
+      rolesToEnsure.forEach(r => {
+        if (!known.has(r.id)) {
+          toAdd.push({
+            id: r.id,
+            roleName: r.roleName || r.roleKey || "未命名角色",
+            roleKey: r.roleKey || "",
+            status: 0,
+          });
+          known.add(r.id);
+        }
+      });
+      return toAdd.length ? [...prev, ...toAdd] : prev;
+    });
+  }, [setRoles]);
+
   return {
     statistics,
     roles,
     departments,
     loadStatistics,
     loadRoles,
+    ensureRoles,
   };
 }

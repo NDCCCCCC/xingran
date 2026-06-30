@@ -263,7 +263,7 @@ const UserManagement: FC = () => {
 
   // 使用自定义 Hooks
   // departments 来自 useDeptTree 共享缓存(Phase 37 收敛),无需显式 load
-  const { statistics, roles, departments, loadStatistics, loadRoles } = useUserData();
+  const { statistics, roles, departments, loadStatistics, loadRoles, ensureRoles } = useUserData();
   const {
     resetPasswordModalVisible,
     resettingUser,
@@ -383,9 +383,22 @@ const UserManagement: FC = () => {
 
   const handleModalOpenChange = useCallback((open: boolean) => {
     if (open && editingUser) {
+      // 角色兜底注入(2026-06-30,同 info-points):loadRoles 是 init 阶段异步调用,
+      // 编辑打开模态框时若 roles 列表未到位 → 多选 Select 显示 raw UUID。
+      // 主动重触发 loadRoles,并用 record.roles(若带 roleName)注入兜底。
+      loadRoles().catch(() => {/* hook 内部已 handleApiError */});
+      if (Array.isArray(editingUser.roles)) {
+        // 兼容两种形态:string[] (UUID) 或 Array<{id, roleName, roleKey}>
+        const asObjects = editingUser.roles
+          .filter((r): r is { id: string; roleName?: string; roleKey?: string } => typeof r === "object" && r !== null && "id" in r)
+          .map(r => ({ id: r.id, roleName: r.roleName, roleKey: r.roleKey }));
+        if (asObjects.length > 0) {
+          ensureRoles(asObjects);
+        }
+      }
       editForm.setFieldsValue(editingUser);
     }
-  }, [editingUser, editForm]);
+  }, [editingUser, editForm, loadRoles, ensureRoles]);
 
   const handleDelete = useCallback(async (id: string) => {
     try {
