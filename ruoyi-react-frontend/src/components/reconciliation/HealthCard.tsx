@@ -12,7 +12,7 @@
  * useEffect/useQuery deps 仅 primitive workstationId
  */
 import React from "react";
-import { Card, Tag, Skeleton, Empty, Result, Button } from "antd";
+import { Empty, Skeleton, Result, Button } from "antd";
 import { useWorkstationHealth } from "./hooks/useWorkstationHealth";
 import { useReconciliationVisibility } from "./hooks/useReconciliationVisibility";
 
@@ -60,18 +60,12 @@ const HealthCardInner: React.FC<HealthCardProps> = ({ workstationId, onApplyExce
     return <Empty description="暂无数据" />;
   }
 
-  // 空态
+  // 空态(/gsd-fast: 同步压成单行内联,去掉 Card 标题/Empty 图标撑出的空白)
   if (data.healthScore.total === 0) {
     return (
-      <Card
-        size="small"
-        title="对账健康度"
-        extra={<Tag color="blue">本周</Tag>}
-        style={{ marginBottom: 8 }}
-        styles={{ body: { padding: "8px 12px" } }}
-      >
-        <Empty description="该工位暂无关联资产。" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-      </Card>
+      <div style={{ padding: "4px 8px", marginBottom: 8, fontSize: 12, color: "#999" }}>
+        对账健康度:该工位暂无关联资产。
+      </div>
     );
   }
 
