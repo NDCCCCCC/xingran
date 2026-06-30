@@ -137,10 +137,15 @@ func initializeCoreModule(cfg *config.Config) *core.Core {
 	system.OnEncryptionConfigChanged = middleware.RefreshEncryptionConfigCache
 
 	// 添加MAC历史保留期默认配置
-	initMACHistoryRetentionConfig(coreModule)
-
-	// 导入OUI厂商数据
-	importOUIData(coreModule)
+	// SkipSetup 开关: 与 InitData 一致,dev 默认跑(幂等 count 检查),
+	// 生产/CI 设 SERVER_SKIP_SETUP=true 时跳过这俩 cmd-level seed。
+	if !coreModule.Config.Server.SkipSetup {
+		initMACHistoryRetentionConfig(coreModule)
+		// 导入OUI厂商数据
+		importOUIData(coreModule)
+	} else {
+		applogger.Infof("[SkipSetup=true] 跳过 cmd-level seed (MAC history retention / OUI)")
+	}
 
 	return coreModule
 }
