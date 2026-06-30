@@ -2,7 +2,7 @@
  * RPA 任务管理页面
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import type { FC } from "react";
 import {
   App, Table, Button, Space, Form, Input, Select, Card, Modal, Layout,
@@ -13,6 +13,8 @@ import {
 import type { Task } from "@/types/rpa";
 import type { PageResponse } from "@/types/base";
 import { useTableManager } from "@/hooks/useTableManager";
+import { useServerSort } from "@/hooks/useServerSort";
+import { createSorterMeta } from "@/utils/tableHelpers";
 import { usePagination } from "@/hooks/usePagination";
 import { handleSuccess as showSuccessMessage } from "@/utils/errorHandler";
 import { getTaskColumns } from "./columns";
@@ -26,6 +28,20 @@ const { Content } = Layout;
 const TaskManagement: FC = () => {
   const { message } = App.useApp();
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
+  // 服务端排序:field 必须与 columns 的 dataIndex 一致
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<Task>("taskName"),
+      createSorterMeta<Task>("priority"),
+      createSorterMeta<Task>("status"),
+      createSorterMeta<Task>("createdAt", "date"),
+    ],
+    []
+  );
+  const { orderByColumn, isAsc, handleTableChange: handleTaskSortChange, sortOrder: taskSortOrder } = useServerSort<Task>({
+    sorterMetas,
+  });
 
   const {
     loading,
@@ -46,7 +62,10 @@ const TaskManagement: FC = () => {
     resetSelection,
   } = useTableManager<Task>(
     async (params) => {
-      const result = await post<PageResponse<Task>>("/rpa/tasks/list", params);
+      const result = await post<PageResponse<Task>>("/rpa/tasks/list", {
+        ...params,
+        ...(orderByColumn ? { orderByColumn, isAsc } : {}),
+      });
       return {
         list: result.data?.list || [],
         total: result.data?.total || 0,
@@ -122,13 +141,18 @@ const TaskManagement: FC = () => {
     taskForm.resetFields();
   }, [setModalVisible, taskForm]);
 
-  const columns = getTaskColumns({
-    handleEdit: (record: Task) => {
-      handleEdit(record);
-    },
-    handleDelete,
-    handleExecute,
-  });
+  const columns = useMemo(
+    () =>
+      getTaskColumns({
+        handleEdit: (record: Task) => {
+          handleEdit(record);
+        },
+        handleDelete,
+        handleExecute,
+        getSortOrder: (field) => (orderByColumn === field ? taskSortOrder : null),
+      }),
+    [handleEdit, handleDelete, handleExecute, orderByColumn, taskSortOrder]
+  );
 
   return (
     <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
@@ -196,20 +220,21 @@ const TaskManagement: FC = () => {
           loading={loading || executeLoading}
           rowKey="id"
           pagination={paginationProps}
-          onChange={(pagination) => {
+          onChange={(pagination, _filters, sorter) => {
+            handleTaskSortChange(pagination, _filters, sorter);
             const newPage = pagination.current ?? 1;
             const newPageSize = pagination.pageSize ?? 10;
             setCurrent(newPage);
             setPageSize(newPageSize);
             const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
-	            const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
-	            Object.keys(formValues).forEach(key => {
-	              const value = formValues[key];
-	              if (value !== undefined && value !== null && value !== "") {
-	                searchParams[key] = value;
-	              }
-	            });
-	            loadTasks(searchParams);
+            const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize, ...(orderByColumn ? { orderByColumn, isAsc } : {}) };
+            Object.keys(formValues).forEach(key => {
+              const value = formValues[key];
+              if (value !== undefined && value !== null && value !== "") {
+                searchParams[key] = value;
+              }
+            });
+            loadTasks(searchParams);
           }}
         />
       </Card>

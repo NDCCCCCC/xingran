@@ -13,10 +13,12 @@ export interface TaskColumnsParams {
   handleEdit: (record: Task) => void;
   handleDelete: (id: string) => void;
   handleExecute: (id: string, name: string) => void;
+  /** 由 useServerSort 注入,返回字段当前排序方向 */
+  getSortOrder?: (field: string) => "ascend" | "descend" | null;
 }
 
 export function getTaskColumns(params: TaskColumnsParams): ColumnsType<Task> {
-  const { handleEdit, handleDelete, handleExecute } = params;
+  const { handleEdit, handleDelete, handleExecute, getSortOrder } = params;
 
   return [
     {
@@ -25,6 +27,8 @@ export function getTaskColumns(params: TaskColumnsParams): ColumnsType<Task> {
       key: "taskName",
       width: 200,
       ellipsis: true,
+      sorter: true,
+      sortOrder: getSortOrder?.("taskName"),
     },
     {
       title: "描述",
@@ -39,6 +43,8 @@ export function getTaskColumns(params: TaskColumnsParams): ColumnsType<Task> {
       dataIndex: "priority",
       key: "priority",
       width: 100,
+      sorter: true,
+      sortOrder: getSortOrder?.("priority"),
       render: (priority) => {
         const color = priority >= 80 ? "red" : priority >= 50 ? "orange" : "default";
         return <span style={{ color }}>{priority ?? 0}</span>;
@@ -49,6 +55,8 @@ export function getTaskColumns(params: TaskColumnsParams): ColumnsType<Task> {
       dataIndex: "status",
       key: "status",
       width: 100,
+      sorter: true,
+      sortOrder: getSortOrder?.("status"),
       render: (status) => renderTaskStatusTag(status ?? 0),
     },
     {
@@ -65,7 +73,7 @@ export function getTaskColumns(params: TaskColumnsParams): ColumnsType<Task> {
       width: 180,
       render: (text) => text || "-",
     },
-    createDateTimeColumn("createdAt", { width: 180 }),
+    createDateTimeColumn("createdAt", { width: 180, sorter: true, sortOrder: getSortOrder?.("createdAt") }),
     {
       title: "操作",
       key: "action",
