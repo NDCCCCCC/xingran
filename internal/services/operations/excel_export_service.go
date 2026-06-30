@@ -140,10 +140,17 @@ func (s *excelExportServiceImpl) resolveAssociations(
 		}
 
 		results := make(map[string]string)
+		// RightCast 字段(可选):RightField 类型转换,如 "text" → "id::text IN (?)"
+		// 用于 LeftField 是 varchar 存 UUID 字符串但 RightField 是 uuid 类型的场景
+		// (例: ops_info_points.workstation_id varchar, sys_workstation.id uuid)
+		rightFieldExpr := join.RightField
+		if join.RightCast != "" {
+			rightFieldExpr = join.RightField + "::" + join.RightCast
+		}
 		rows, err := s.db.WithContext(ctx).
 			Table(join.Table).
 			Select(join.RightField+", "+join.SelectField).
-			Where(join.RightField+" IN ?", ids).
+			Where(rightFieldExpr+" IN ?", ids).
 			Where("deleted_at IS NULL").
 			Rows()
 

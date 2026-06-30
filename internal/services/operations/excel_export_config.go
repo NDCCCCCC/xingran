@@ -15,6 +15,7 @@ type JoinConfig struct {
 	RightField  string // 右表字段
 	SelectField string // 要查询的字段
 	As          string // 别名
+	RightCast   string // 选填, RightField 类型转换(如 "text"),用于 IN 子句类型匹配
 }
 
 type ExcelExportConfig struct {
@@ -333,15 +334,15 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 				{Field: "workstationId", Header: "所属工位ID", DBField: "workstation_id"},
 				{Field: "workstationName", Header: "所属工位",
 					Join: &JoinConfig{Table: "sys_workstation", LeftField: "workstation_id",
-						RightField: "id", SelectField: "workstation_name", As: "workstationName"}},
+						RightField: "id", RightCast: "text", SelectField: "workstation_name", As: "workstationName"}},
 				{Field: "deviceId", Header: "关联设备ID", DBField: "device_id"},
 				{Field: "deviceName", Header: "关联设备",
 					Join: &JoinConfig{Table: "sys_network_device", LeftField: "device_id",
-						RightField: "id", SelectField: "name", As: "deviceName"}},
+						RightField: "id", RightCast: "text", SelectField: "device_name", As: "deviceName"}},
 				{Field: "portId", Header: "端口ID", DBField: "port_id"},
 				{Field: "portName", Header: "端口名称",
 					Join: &JoinConfig{Table: "sys_device_port_status", LeftField: "port_id",
-						RightField: "id", SelectField: "port_name", As: "portName"}},
+						RightField: "id", RightCast: "text", SelectField: "interface_name", As: "portName"}},
 				{Field: "status", Header: "状态", DBField: "status",
 					Options: map[interface{}]string{int(0): "正常", int(1): "故障", int(2): "停用"}},
 				{Field: "remark", Header: "备注", DBField: "remark"},

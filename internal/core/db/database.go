@@ -551,19 +551,11 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate181ReconciliationNormalizedWorkstationID(d.DB); err != nil {
 			applogger.Errorf("Phase 45+ reconciliation_normalized MV workstation_id 列修复失败: %v", err)
 		}
-		// Phase 45 R5 数据治理 (2026-06-30): 修复 sys_device_port_status.device_id 在
-		// 84.14% 信息点上的历史漂移。根因:port_status 历史数据导入时未正确匹配设备 +
-		// 端口名跨设备不唯一(每台 RS8607E 都有 GE1/1~GE5/48)。物理真相在 MAC 表,
-		// 本迁移把 1247 行 port_status.device_id 对齐到 ops_info_points.device_id,
-		// 备份表 sys_device_port_status_drift_backup 提供 1 行 SQL 回滚。
-		// 必须先于 migration_183 (FK 约束) 执行,否则 FK 校验会失败。
-		if err := migrations.Migrate182FixPortStatusDeviceIdDrift(d.DB); err != nil {
-			applogger.Errorf("Phase 45+ 数据治理 修复 port_status.device_id 漂移失败: %v", err)
-		}
 		// Phase 45 R5 数据治理 (2026-06-30): 加 sys_device_port_status.device_id FK 约束,
 		// 防止未来 device_id 漂移到不存在的设备(orphan)。NOT VALID + 异步 VALIDATE
 		// 避免锁表。FK 局限:只能防 orphan,无法防"指向错误但存在的设备",
-		// 后者靠 Phase 4 每日定时对账任务捕获。
+		// 后者靠 Excel 信息点重新录入 + 每日定时对账任务捕获。
+		// (注:2026-06-30 migration_182 自动化修复被删除,改用 Excel 重新录入策略)
 		if err := migrations.Migrate183AddPortStatusDeviceFK(d.DB); err != nil {
 			applogger.Errorf("Phase 45+ 数据治理 加 port_status.device_id FK 约束失败: %v", err)
 		}
