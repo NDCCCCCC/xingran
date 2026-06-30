@@ -182,7 +182,13 @@ func (c *Core) Init() error {
 
 	// 3. 初始化系统基础数据
 	// 包括创建默认管理员账户、基础角色等
-	if err := c.DB.InitData(); err != nil {
+	//
+	// SkipSetup 开关: dev 默认开启(每次跑 count 检查是浪费但安全);
+	// 生产/CI 部署可设 SERVER_SKIP_SETUP=true 跳过,只跑首次 setup 阶段。
+	// 注意: AutoMigrate 必须保留(表结构可能变化),只跳 InitData seed。
+	if c.Config.Server.SkipSetup {
+		applogger.Infof("[SkipSetup=true] 跳过系统基础数据初始化(InitData)")
+	} else if err := c.DB.InitData(); err != nil {
 		applogger.Warnf("初始化基础数据失败: %v", err)
 		// 数据初始化失败不影响服务启动
 	} else {
@@ -192,11 +198,15 @@ func (c *Core) Init() error {
 	// 4. 初始化权限服务
 	// 创建默认角色和菜单权限
 	if c.DB != nil {
-		permissionSvc := permission.NewService()
-		if err := permissionSvc.InitDefaultRolesAndMenus(c.GetDB()); err != nil {
-			applogger.Warnf("初始化默认角色和菜单失败: %v", err)
+		if c.Config.Server.SkipSetup {
+			applogger.Infof("[SkipSetup=true] 跳过默认角色和菜单初始化")
 		} else {
-			applogger.Infof("默认角色和菜单初始化成功")
+			permissionSvc := permission.NewService()
+			if err := permissionSvc.InitDefaultRolesAndMenus(c.GetDB()); err != nil {
+				applogger.Warnf("初始化默认角色和菜单失败: %v", err)
+			} else {
+				applogger.Infof("默认角色和菜单初始化成功")
+			}
 		}
 	}
 
