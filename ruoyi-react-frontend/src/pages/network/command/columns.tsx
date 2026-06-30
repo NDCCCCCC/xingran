@@ -22,20 +22,24 @@ export const deviceColumns: ColumnsType<NetworkDevice> = [
 export interface ExecutionColumnsParams {
   handleViewDetail: (record: ConfigExecution) => void;
   handleCancel: (id: string) => void;
+  /** 由 useServerSort 注入,返回字段当前排序方向 */
+  getSortOrder?: (field: string) => "ascend" | "descend" | null;
 }
 
 export function getExecutionColumns(
   params: ExecutionColumnsParams
 ): ColumnsType<ConfigExecution> {
-  const { handleViewDetail, handleCancel } = params;
+  const { handleViewDetail, handleCancel, getSortOrder } = params;
 
   return [
-    { title: "任务名称", dataIndex: "executionName", key: "executionName", width: 200 },
+    { title: "任务名称", dataIndex: "executionName", key: "executionName", width: 200, sorter: true, sortOrder: getSortOrder?.("executionName") },
     {
       title: "状态",
       dataIndex: "status",
       key: "status",
       width: 100,
+      sorter: true,
+      sortOrder: getSortOrder?.("status"),
       render: (status: string) => renderExecutionStatusTag(status),
     },
     { title: "设备总数", dataIndex: "totalDevices", key: "totalDevices", width: 100 },
@@ -64,6 +68,8 @@ export function getExecutionColumns(
       dataIndex: "createdAt",
       key: "createdAt",
       width: 180,
+      sorter: true,
+      sortOrder: getSortOrder?.("createdAt"),
       render: (date: string) => formatDateTime(date),
     },
     {
