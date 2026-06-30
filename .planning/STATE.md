@@ -4,8 +4,8 @@ milestone: v1.17
 milestone_name: 资产对账 (Asset Reconciliation)
 status: R5_reconciliation_merged_with_dropdown_governance; v1.17 work shipped, awaiting push
 stopped_at: active merge resolution (2026-06-30, R5 + dropdown integration)
-last_updated: "2026-06-30T00:00:00.000Z"
-last_activity: "2026-06-30 -- merged origin/main dropdown governance (6 commits) into local R5 work (282 commits). R5: reconciliation physical chain (normalize GE/Gi/GigabitEthernet via normalize_iface), view O(N²)→O(N+M) (COUNT 72ms), RefreshView 90s timeout root-cause fix, HealthCard single-line collapse. Dropdown: Phase 46-48 governance (MR !5, 7 endpoints + 27 frontend files + ESLint). Awaiting git push origin main."
+last_updated: "2026-06-30T17:30:00.000Z"
+last_activity: "2026-06-30 -- gsd-quick task 启动流程分类文档化完成: 梳理 cmd/main.go + core.Init() 19+ 步骤 + database.go AutoMigrate/InitData,产出 docs/启动流程清单.md(7 阶段 × 3 分类 × 详细表格 + 风险清单 + 未来 setup/start 拆分建议)。无代码变更,文档化产出。"
 progress:
   total_phases: 5
   completed_phases: 3
@@ -99,6 +99,8 @@ Last activity: 2026-06-28 -- Phase 45 R4 execution complete: 6 atomic commits (3
 | 260626-lbd | 工位管理主表添加"主设备序列号"列（后端子查询严格 is_primary=true + 前端列，设主设备才显示） | 2026-06-26 | - | [260626-workstation-primary-device-serial](./quick/260626-workstation-primary-device-serial/) |
 | 260630-sort | 信息点查询等 16 个前端列表页补齐服务端排序(useServerSort + useTableManager.sorterMetas),含 1 处 params-drop bug 修复 + 5 处后端 ApplySort 白名单补全 | 2026-06-30 | 0cd7ddb0..bb8f4dc9 (18 commits) | [260630-server-sort-promote-16-pages](./quick/20260630-server-sort-promote-16-pages/) |
 | 260630-mac-tree | mac 地址页接口列排序 + 左侧 DeptSidebar + 部门联动(后端 deptId JOIN 一处过滤,弃用前端 deviceIds 中间层;含 migration_181 验证修复) | 2026-06-30 | 2f2894d2 | [20260630-mac-page-dept-tree](./quick/20260630-mac-page-dept-tree/) |
+| 260630-startup-flow | 启动流程分类文档化: docs/启动流程清单.md(7 阶段 × 3 分类:🔴每次必跑/🟢一次性/🟡混合幂等),含核心.Init() 19+ 步骤 + AutoMigrate/InitData 全表 + 风险清单 + setup/start 拆分建议 | 2026-06-30 | - | [20260630-startup-flow-classify](./quick/20260630-startup-flow-classify/) |
+| 260630-skip-setup | 启动流程优化 - 加 SERVER_SKIP_SETUP 开关: config.ServerConfig.SkipSetup + SERVER_SKIP_SETUP 环境变量 + core.Init() 条件化跳过 InitData/默认角色菜单 + cmd/main.go 条件化跳过 MAC retention/OUI seed;docs/启动流程清单.md §6 同步 | 2026-06-30 | (待提交) | [20260630-skip-setup-impl](./quick/20260630-skip-setup-impl/) |
 
 ## Accumulated Context
 
