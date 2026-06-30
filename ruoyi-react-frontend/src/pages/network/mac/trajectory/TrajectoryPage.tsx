@@ -1,18 +1,31 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
-  Card, DatePicker, Input, Button, Form, Space, Alert, Drawer, App,
+  Card,
+  DatePicker,
+  Input,
+  Button,
+  Form,
+  Space,
+  Alert,
+  App,
+  Row,
+  Col,
+  Statistic,
+  Spin,
 } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
-
-type RangePickerOnChange = React.ComponentProps<typeof DatePicker.RangePicker>["onChange"];
 import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
 import MACTrajectoryChart from "@/components/network/MACTrajectoryChart";
 import MACEventsTimeline from "@/components/network/MACEventsTimeline";
 import { queryMACTrajectory, queryMACVendor } from "@/lib/api/networkApi";
 import { EmptyStateWithAction, ErrorAlertWithRetry } from "@/components/shared";
+import { formatDurationSeconds } from "@/utils/duration";
+import { formatDateTime } from "@/utils/datetime";
+
+type RangePickerOnChange = React.ComponentProps<typeof DatePicker.RangePicker>["onChange"];
 
 const { RangePicker } = DatePicker;
 
@@ -36,7 +49,18 @@ const PRESETS: Preset[] = [
 interface TrajectoryQueryParams {
   macAddress: string;
   startTime: string; // ISO timestamp
-  endTime: string;   // ISO timestamp
+  endTime: string; // ISO timestamp
+}
+
+// 本地聚合统计结果(从 trajectoryData reduce 而来)
+interface TrajectoryStats {
+  deviceCount: number; // 涉及设备数(去重 deviceName)
+  portCount: number; // 涉及端口数(去重 deviceId+interface)
+  segmentCount: number; // 停留区间数(= nodes.length)
+  totalDurationSec: number; // 总停留时长(秒)
+  firstSeen: string | null; // 最早 startTime(ISO)
+  lastSeen: string | null; // 最晚 endTime(ISO)
+  vendor: string; // 厂商
 }
 
 const TrajectoryPage: React.FC = () => {
@@ -50,7 +74,6 @@ const TrajectoryPage: React.FC = () => {
     defaultValue: "7d",
   });
   const [customRange, setCustomRange] = useState<[Dayjs, Dayjs] | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState<boolean>(true);
 
   // 查询轨迹数据
   const {
@@ -65,8 +88,7 @@ const TrajectoryPage: React.FC = () => {
     staleTime: 5 * 60 * 1000, // 5分钟缓存
   });
 
-  // Phase 13 W4:并行查询 MAC 厂商(OUI),用于 tooltip 展示
-  // - 与轨迹查询并行触发(Promise.all 行为由 useQuery queryKey 触发顺序保证)
+  // Phase 13 W4:并行查询 MAC 厂商(OUI),用于统计卡片 + tooltip 展示
   // - 24h staleTime 对齐后端 OUI Redis 缓存 TTL(13-08 设计决策 T-13W8-03)
   // - enabled 依赖 queryParams:无参数时不触发,避免空查询
   const { data: vendorName } = useQuery({
@@ -79,9 +101,41 @@ const TrajectoryPage: React.FC = () => {
   // 合并 trajectoryData + vendorName 为 chartData,每个 node 携带 vendor 字段
   // - useMemo deps 锁定 trajectoryData + vendorName,避免重建数组
   // - 后端 TrajectoryNode 不含 vendor,前端在 page 层合并(网络契约最小化)
+  // - chartData 作为 Gantt 图数据源
   const chartData = useMemo(() => {
     if (!trajectoryData) return [];
     return trajectoryData.map((node) => ({ ...node, vendor: vendorName }));
+  }, [trajectoryData, vendorName]);
+
+  // 本地聚合统计(Phase 14 重构)
+  // 安全性:queryMACTrajectory 返回单 MAC 全量已聚合节点(trajectory 端点非分页,
+  // 无 MaxPageSize=100 截断),与 stat-cards-from-list-length-capped-at-100 反模式
+  // (分页 list 端点 list.length)本质不同,本地 reduce 即统计事实源。
+  const stats: TrajectoryStats | null = useMemo(() => {
+    if (!trajectoryData || trajectoryData.length === 0) return null;
+    const deviceSet = new Set<string>();
+    const portSet = new Set<string>();
+    let totalDuration = 0;
+    let minStart = Infinity;
+    let maxEnd = -Infinity;
+    for (const n of trajectoryData) {
+      deviceSet.add(n.deviceName || n.deviceId);
+      portSet.add(n.deviceId + "|" + n.interface);
+      totalDuration += n.duration || 0;
+      const s = new Date(n.startTime).getTime();
+      const e = new Date(n.endTime).getTime();
+      if (!Number.isNaN(s) && s < minStart) minStart = s;
+      if (!Number.isNaN(e) && e > maxEnd) maxEnd = e;
+    }
+    return {
+      deviceCount: deviceSet.size,
+      portCount: portSet.size,
+      segmentCount: trajectoryData.length,
+      totalDurationSec: totalDuration,
+      firstSeen: minStart === Infinity ? null : new Date(minStart).toISOString(),
+      lastSeen: maxEnd === -Infinity ? null : new Date(maxEnd).toISOString(),
+      vendor: vendorName ?? "Unknown Vendor",
+    };
   }, [trajectoryData, vendorName]);
 
   // MAC地址规范化函数(复用后端逻辑)
@@ -105,7 +159,7 @@ const TrajectoryPage: React.FC = () => {
       const end = dayjs();
       form.setFieldsValue({ dateRange: [start, end] });
     },
-    [form]
+    [form, setActivePreset]
   );
 
   const handleCustomRangeChange = useCallback<NonNullable<RangePickerOnChange>>(
@@ -117,7 +171,7 @@ const TrajectoryPage: React.FC = () => {
         form.setFieldsValue({ dateRange: arr });
       }
     },
-    [form]
+    [form, setActivePreset]
   );
 
   // URL 参数预填(D-17 锁定)— 进入页面时读取 ?mac=...&startTime=...&endTime=...&deviceId=...
@@ -189,6 +243,7 @@ const TrajectoryPage: React.FC = () => {
 
   return (
     <div style={{ padding: "24px" }}>
+      {/* 段1:查询区 */}
       <Card title="MAC地址轨迹查询" bordered={false}>
         {/* 时间预设按钮组(D-07) */}
         <Space wrap style={{ marginBottom: 12 }}>
@@ -252,11 +307,7 @@ const TrajectoryPage: React.FC = () => {
             initialValue={[dayjs().subtract(7, "days"), dayjs()]}
             rules={[{ required: true, message: "请选择时间范围" }]}
           >
-            <RangePicker
-              showTime
-              format="YYYY-MM-DD HH:mm"
-              style={{ width: 400 }}
-            />
+            <RangePicker showTime format="YYYY-MM-DD HH:mm" style={{ width: 400 }} />
           </Form.Item>
 
           <Form.Item>
@@ -264,9 +315,7 @@ const TrajectoryPage: React.FC = () => {
               <Button type="primary" onClick={handleSearch}>
                 查询
               </Button>
-              <Button onClick={handleReset}>
-                重置
-              </Button>
+              <Button onClick={handleReset}>重置</Button>
             </Space>
           </Form.Item>
         </Form>
@@ -279,63 +328,91 @@ const TrajectoryPage: React.FC = () => {
         </div>
       )}
 
-      {/* 14-05b:数据为空时 EmptyStateWithAction 提示(D-18 引导)— queryParams 已就绪但轨迹数据为空 */}
+      {/* 14-05b:数据为空时 EmptyStateWithAction 提示(D-18 引导) */}
       {!error && queryParams && !isLoading && (!trajectoryData || trajectoryData.length === 0) && (
         <div style={{ marginTop: "16px" }}>
-          <EmptyStateWithAction
-            description="该 MAC 在此时间范围内无轨迹数据"
-            actionLabel="查看事件时间线"
-            actionPath="#timeline"
-          />
+          <EmptyStateWithAction description="该 MAC 在此时间范围内无轨迹数据" />
         </div>
       )}
 
-      <div style={{ marginTop: "16px" }}>
-        <MACTrajectoryChart
-          data={chartData}
-          loading={isLoading}
-          onError={(err) => {
-            console.error("Trajectory chart error:", err);
-          }}
-        />
-      </div>
-
-      {/* 右侧事件时间线 Drawer(14-01 组件复用) */}
-      <Drawer
-        title="事件时间线"
-        placement="right"
-        width={420}
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        mask={false}
-        destroyOnClose={false}
-      >
-        {queryParams ? (
-          <MACEventsTimeline
-            mac={queryParams.macAddress}
-            startTime={queryParams.startTime}
-            endTime={queryParams.endTime}
-          />
-        ) : (
-          <Alert
-            type="info"
-            showIcon
-            message="请先执行查询"
-            description="查询后将在此显示 MAC 在该时间范围内的事件时间线"
-          />
-        )}
-      </Drawer>
-
-      {/* Drawer 关闭后显示"显示时间线"按钮 */}
-      {!drawerOpen && (
-        <Button
-          type="primary"
-          style={{ position: "fixed", right: 24, top: 96, zIndex: 100 }}
-          onClick={() => setDrawerOpen(true)}
-        >
-          显示时间线
-        </Button>
+      {/* 段2:统计卡片行(本地聚合,见 stats 安全性注释) */}
+      {stats && (
+        <Spin spinning={isLoading}>
+          <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+            <Col xs={24} sm={12} md={8} lg={6}>
+              <Card size="small">
+                <Statistic title="涉及设备" value={stats.deviceCount} />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} md={8} lg={6}>
+              <Card size="small">
+                <Statistic title="涉及端口" value={stats.portCount} />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} md={8} lg={6}>
+              <Card size="small">
+                <Statistic title="停留区间" value={stats.segmentCount} />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} md={8} lg={6}>
+              <Card size="small">
+                <Statistic title="总停留时长" value={formatDurationSeconds(stats.totalDurationSec)} />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} md={8} lg={6}>
+              <Card size="small">
+                <Statistic title="首次出现" value={formatDateTime(stats.firstSeen)} />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} md={8} lg={6}>
+              <Card size="small">
+                <Statistic title="最后出现" value={formatDateTime(stats.lastSeen)} />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} md={8} lg={6}>
+              <Card size="small">
+                <Statistic title="厂商" value={stats.vendor} />
+              </Card>
+            </Col>
+          </Row>
+        </Spin>
       )}
+
+      {/* 段3:轨迹 Gantt 图(左) + 事件时间线(右) 左右布局(Phase 14 重构:更紧凑) */}
+      <Row gutter={16} style={{ marginTop: 16 }}>
+        <Col xs={24} lg={14}>
+          <Card
+            title={queryParams ? `轨迹时间线 — ${queryParams.macAddress}` : "轨迹时间线"}
+            bordered={false}
+          >
+            <MACTrajectoryChart
+              data={chartData}
+              loading={isLoading}
+              onError={(err) => {
+                console.error("Trajectory chart error:", err);
+              }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} lg={10}>
+          {queryParams ? (
+            <MACEventsTimeline
+              mac={queryParams.macAddress}
+              startTime={queryParams.startTime}
+              endTime={queryParams.endTime}
+            />
+          ) : (
+            <Card title="事件时间线" bordered={false}>
+              <Alert
+                type="info"
+                showIcon
+                message="请先执行查询"
+                description="查询后将在此显示 MAC 在该时间范围内的事件时间线"
+              />
+            </Card>
+          )}
+        </Col>
+      </Row>
     </div>
   );
 };
