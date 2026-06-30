@@ -573,15 +573,6 @@ func (s *macHistoryQueryServiceImpl) queryDeviceHistoryFromDB(ctx context.Contex
 	return result, nil
 }
 
-// normalizeMAC 规范化MAC地址：移除分隔符、转大写
-func normalizeMAC(mac string) string {
-	normalized := strings.ReplaceAll(mac, ".", "")
-	normalized = strings.ReplaceAll(normalized, ":", "")
-	normalized = strings.ReplaceAll(normalized, "-", "")
-	normalized = strings.ToUpper(normalized)
-	return normalized
-}
-
 // QueryHistory 通用MAC历史查询（支持任意字段过滤 + 分页）
 // 用于 Phase 14 前端列表页 POST /network/history/list
 func (s *macHistoryQueryServiceImpl) QueryHistory(ctx context.Context, req *MACHistoryListQuery) (*MACHistoryQueryResult, error) {
@@ -617,7 +608,7 @@ func (s *macHistoryQueryServiceImpl) QueryHistory(ctx context.Context, req *MACH
 		query = query.Where("interface_name = ?", req.InterfaceName)
 	}
 	if req.MAC != "" {
-		query = query.Where("mac_address = ?", normalizeMAC(req.MAC))
+		query = query.Where("mac_address = ?", NormalizeMACAddress(req.MAC))
 	}
 	if req.VLANID != nil {
 		query = query.Where("vlan_id = ?", *req.VLANID)
@@ -757,7 +748,7 @@ func (s *macHistoryQueryServiceImpl) ExportHistory(ctx context.Context, req *MAC
 		query = query.Where("interface_name = ?", req.InterfaceName)
 	}
 	if req.MAC != "" {
-		query = query.Where("mac_address = ?", normalizeMAC(req.MAC))
+		query = query.Where("mac_address = ?", NormalizeMACAddress(req.MAC))
 	}
 	if req.VLANID != nil {
 		query = query.Where("vlan_id = ?", *req.VLANID)
@@ -845,11 +836,11 @@ func (s *macHistoryQueryServiceImpl) QueryMACTrajectory(ctx context.Context, req
 		return nil, fmt.Errorf("MAC地址验证失败: %w", err)
 	}
 
-	// 2. 规范化MAC地址（移除分隔符，转大写）
-	normalizedMAC := strings.ReplaceAll(req.MACAddress, ".", "")
-	normalizedMAC = strings.ReplaceAll(normalizedMAC, ":", "")
-	normalizedMAC = strings.ReplaceAll(normalizedMAC, "-", "")
-	normalizedMAC = strings.ToUpper(normalizedMAC)
+	// 2. 规范化MAC地址(2026-06-30 bugfix: 复用写入侧 NormalizeMACAddress)
+	// 历史 bug: 本函数原本只去分隔符不重新插入冒号(输出 B0227A2E4A4F),
+	// 而 NormalizeMACAddress 写入 B0:22:7A:2E:4A:4F — 两者字符串不匹配导致
+	// WHERE mac_address = ? 永远返回 0 行,API 表现为"轨迹查询查不到任何 MAC"。
+	normalizedMAC := NormalizeMACAddress(req.MACAddress)
 
 	// 3. 解析时间范围，设置默认值（now-30d ~ now）
 	const maxQueryRange = 365 * 24 * time.Hour // 最多查询1年（复用现有常量）
@@ -1099,10 +1090,7 @@ func (s *macHistoryQueryServiceImpl) queryConnectionStatsFromDB(ctx context.Cont
 			return nil, fmt.Errorf("MAC地址验证失败: %w", err)
 		}
 		// 规范化MAC地址
-		normalizedMAC := strings.ReplaceAll(req.MACAddress, ".", "")
-		normalizedMAC = strings.ReplaceAll(normalizedMAC, ":", "")
-		normalizedMAC = strings.ReplaceAll(normalizedMAC, "-", "")
-		normalizedMAC = strings.ToUpper(normalizedMAC)
+		normalizedMAC := NormalizeMACAddress(req.MACAddress)
 		detailSQL += " AND mac_address = ?"
 		args = append(args, normalizedMAC)
 	}
@@ -1160,10 +1148,7 @@ func (s *macHistoryQueryServiceImpl) queryConnectionStatsFromDB(ctx context.Cont
 
 	topByMACArgs := []interface{}{startTime, endTime}
 	if req.MACAddress != "" {
-		normalizedMAC := strings.ReplaceAll(req.MACAddress, ".", "")
-		normalizedMAC = strings.ReplaceAll(normalizedMAC, ":", "")
-		normalizedMAC = strings.ReplaceAll(normalizedMAC, "-", "")
-		normalizedMAC = strings.ToUpper(normalizedMAC)
+		normalizedMAC := NormalizeMACAddress(req.MACAddress)
 		topByMACSQL += " AND mac_address = ?"
 		topByMACArgs = append(topByMACArgs, normalizedMAC)
 	}
@@ -1212,10 +1197,7 @@ func (s *macHistoryQueryServiceImpl) queryConnectionStatsFromDB(ctx context.Cont
 	// 注意：TopByPort不过滤MAC，因为用户可能想看特定MAC的端口热点
 	// 但如果请求指定了MAC，则只统计该MAC的端口连接
 	if req.MACAddress != "" {
-		normalizedMAC := strings.ReplaceAll(req.MACAddress, ".", "")
-		normalizedMAC = strings.ReplaceAll(normalizedMAC, ":", "")
-		normalizedMAC = strings.ReplaceAll(normalizedMAC, "-", "")
-		normalizedMAC = strings.ToUpper(normalizedMAC)
+		normalizedMAC := NormalizeMACAddress(req.MACAddress)
 		topByPortSQL += " AND mac_address = ?"
 		topByPortArgs = append(topByPortArgs, normalizedMAC)
 	}

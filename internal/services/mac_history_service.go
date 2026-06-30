@@ -44,6 +44,11 @@ type MACHistoryService interface {
 	// MergeFlappingRecords 合并MAC flapping记录
 	// 查询同一设备的连续相同MAC状态记录，更新last_seen避免重复
 	MergeFlappingRecords(ctx context.Context, deviceID string) error
+
+	// CleanupAllDevicesFlapping 全量清理所有设备的 MAC flapping 记录(2026-06-30 新增)
+	// 用途:Merge 算法放宽后,Retroactive 清理已有 flapping 数据。
+	// 建议由 cron / 一次性任务调用(如每周一次),避免在线查询时合并数据造成延迟。
+	CleanupAllDevicesFlapping(ctx context.Context) (int, error)
 }
 
 // macHistoryServiceImpl MAC历史服务实现
@@ -56,7 +61,7 @@ func NewMACHistoryService(db *gorm.DB) MACHistoryService {
 	return &macHistoryServiceImpl{db: db}
 }
 
-// normalizeMACAddress 规范化MAC地址格式
+// NormalizeMACAddress 规范化MAC地址格式
 // 将各种格式的MAC地址统一转换为 AA:BB:CC:DD:EE:FF 格式
 // 处理不同厂商输出格式不一致的问题（RESEARCH.md Pitfall 3）
 //
@@ -65,7 +70,7 @@ func NewMACHistoryService(db *gorm.DB) MACHistoryService {
 //   - aa-bb-cc-dd-ee-ff (标准格式) -> AA:BB:CC:DD:EE:FF
 //   - aa:bb:cc:dd:ee:ff (已规范) -> AA:BB:CC:DD:EE:FF
 //   - AABBCCDDEEFF (无分隔符) -> AA:BB:CC:DD:EE:FF
-func normalizeMACAddress(mac string) string {
+func NormalizeMACAddress(mac string) string {
 	if mac == "" {
 		return ""
 	}
@@ -112,7 +117,7 @@ func (s *macHistoryServiceImpl) BuildMACStateMap(macList []models.DeviceMACAddre
 		mac := &macList[i]
 
 		// 规范化MAC地址格式（RESEARCH.md Pitfall 3）
-		normalizedMAC := normalizeMACAddress(mac.MACAddress)
+		normalizedMAC := NormalizeMACAddress(mac.MACAddress)
 
 		eventKey := MACEvent{
 			MACAddress:    normalizedMAC,
@@ -184,13 +189,13 @@ func (s *macHistoryServiceImpl) RecordMACChange(ctx context.Context, device *mod
 	// 构建新MAC的映射: MAC地址 -> 事件列表
 	newMACByAddress := make(map[string][]MACEvent)
 	for eventKey, mac := range newMACs {
-		normMAC := normalizeMACAddress(mac.MACAddress)
+		normMAC := NormalizeMACAddress(mac.MACAddress)
 		newMACByAddress[normMAC] = append(newMACByAddress[normMAC], eventKey)
 	}
 
 	// 遍历旧MAC，通过映射查找匹配的新MAC（O(1)查找）
 	for oldEventKey, oldMAC := range oldMACs {
-		oldMACNorm := normalizeMACAddress(oldMAC.MACAddress)
+		oldMACNorm := NormalizeMACAddress(oldMAC.MACAddress)
 
 		if matchingEvents, exists := newMACByAddress[oldMACNorm]; exists {
 			// 遍历所有匹配的事件
@@ -260,8 +265,31 @@ func vlanEqual(v1, v2 *int) bool {
 	return *v1 == *v2
 }
 
-// MergeFlappingRecords 合并MAC flapping记录（CONTEXT.md D-03）
-// 查询同一设备的连续相同MAC状态记录，更新last_seen避免重复
+// FlappingMergeWindow MAC flapping 合并窗口(2026-06-30 调整)
+//
+// 设计原因: 旧算法要求 next.FirstSeen == current.LastSeen(纳秒级精确相等),
+// 实际 collector 写入时间会因 schedule jitter 偏差几毫秒~十几毫秒(如你数据里
+// 12:46:51.890833 vs 12:46:51.876795 差 14ms),导致旧 Merge 永远不触发。
+//
+// 改用 2 小时窗口的语义依据:
+//   - MAC history collector 每小时跑一次,2h = 2 个采集周期
+//   - 网络设备 mac-address-table aging-time 通常 5 分钟(短)
+//   - collector 偶发读不到 → 1h 后下次能读到 → 出现 flapping
+//   - 但 2h 内 5+ 次都没出现 → 真消失
+//   - 故 2h 内的 appeared/disappeared 交替认为是 flapping(短抖动),合并成单条区间
+const FlappingMergeWindow = 2 * time.Hour
+
+// MergeFlappingRecords 合并MAC flapping记录(2026-06-30 优化:放宽时间窗口+允许跨事件类型)
+//
+// 算法:
+//   - 按 (MAC, interface, VLAN) 分组(同设备内)
+//   - 按 first_seen ASC 排序后,逐对判断 next 与 current 的间隔 ≤ FlappingMergeWindow
+//   - 允许 next 与 current 是不同事件类型(appeared/disappeared 交替,真实 flapping 模式)
+//   - 合并后保留第一条记录(其 EventType 通常是 appeared),更新其 last_seen = 序列末 last_seen
+//   - 中间记录删除
+//
+// 实际效果: 你给的 20 行 flapping 数据会合并成 1 条 (first_seen=12:46:51, last_seen=21:01:03),
+// 前端轨迹查询展示为"MAC 在 [12:46, 21:01] 期间持续在 GigabitEthernet 2/25"——更接近真实业务语义。
 func (s *macHistoryServiceImpl) MergeFlappingRecords(ctx context.Context, deviceID string) error {
 	// 查询该设备的所有历史记录，按时间排序
 	var histories []models.DeviceMACHistory
@@ -272,38 +300,39 @@ func (s *macHistoryServiceImpl) MergeFlappingRecords(ctx context.Context, device
 		return fmt.Errorf("查询设备 %s 的MAC历史记录失败: %w", deviceID, err)
 	}
 
-	// 合并逻辑：
-	// 1. 按MAC地址分组
-	// 2. 对每个MAC地址，找到连续的相同状态记录
-	// 3. 更新第一条记录的last_seen为最后一条记录的last_seen
-	// 4. 删除中间的重复记录
+	// 合并逻辑:
+	// 1. 按 MAC+interface+VLAN 复合键分组(同 MAC 在不同接口/VLAN 不能合并)
+	// 2. 在每个组内按 first_seen ASC 顺序逐对判断合并条件
+	// 3. 跨事件类型(appeared ↔ disappeared)只要时间间隔 ≤ FlappingMergeWindow 就合并
+	// 4. 更新当前记录 last_seen = next 的 last_seen;EventType 保留第一条(通常是 appeared)
+	// 5. 删除中间的"被吞掉"记录
 
-	// 按MAC地址分组
 	type historyGroup struct {
-		MACAddress string
-		Records    []*models.DeviceMACHistory
+		Key     string // MAC|interface|VLAN
+		Records []*models.DeviceMACHistory
 	}
 	groups := make(map[string]*historyGroup)
 
 	for i := range histories {
 		hist := &histories[i]
+		// 复合键:MAC + interface + VLAN(只在这三个全一致时合并)
+		key := hist.MACAddress + "|" + hist.InterfaceName + "|" + fmt.Sprintf("%v", hist.VLANID)
 
-		if _, exists := groups[hist.MACAddress]; !exists {
-			groups[hist.MACAddress] = &historyGroup{
-				MACAddress: hist.MACAddress,
-				Records:    []*models.DeviceMACHistory{},
+		if _, exists := groups[key]; !exists {
+			groups[key] = &historyGroup{
+				Key:     key,
+				Records: []*models.DeviceMACHistory{},
 			}
 		}
-		groups[hist.MACAddress].Records = append(groups[hist.MACAddress].Records, hist)
+		groups[key].Records = append(groups[key].Records, hist)
 	}
 
-	// 对每个MAC地址组进行合并
+	// 对每个分组进行合并
 	for _, group := range groups {
 		if len(group.Records) <= 1 {
 			continue
 		}
 
-		// 找到连续的相同事件类型记录
 		merged := make([]*models.DeviceMACHistory, 0, len(group.Records))
 		retainedIDs := make(map[string]bool) // 记录保留的记录ID
 		current := group.Records[0]
@@ -311,20 +340,26 @@ func (s *macHistoryServiceImpl) MergeFlappingRecords(ctx context.Context, device
 		for i := 1; i < len(group.Records); i++ {
 			next := group.Records[i]
 
-			// 检查是否可以合并：
-			// 1. 事件类型相同
-			// 2. 接口名称相同
-			// 3. VLAN相同
-			// 4. 时间连续（next.FirstSeen == current.LastSeen）
-			if current.EventType == next.EventType &&
-				current.InterfaceName == next.InterfaceName &&
+			// 合并条件(2026-06-30 放宽):
+			// 1. 接口名称相同(已在 group key 强制)
+			// 2. VLAN 相同(已在 group key 强制)
+			// 3. 时间间隔 ≤ FlappingMergeWindow(放宽自原纳秒相等)
+			// 4. 不允许 next.FirstSeen < current.LastSeen(防历史回填乱序)
+			//
+			// 允许 next.EventType != current.EventType(原限制过严,
+			// 真实 flapping 模式就是 appeared/disappeared 交替)
+			gap := next.FirstSeen.Sub(current.LastSeen)
+			canMerge := current.InterfaceName == next.InterfaceName &&
 				vlanEqual(current.VLANID, next.VLANID) &&
-				next.FirstSeen.Equal(current.LastSeen) {
+				gap >= 0 && gap <= FlappingMergeWindow
 
-				// 合并：更新当前记录的last_seen
+			if canMerge {
+				// 合并: 更新当前记录的 last_seen 为 next 的 last_seen
+				// EventType 保留第一条(通常是 appeared,语义"该 MAC 持续存在")
 				current.LastSeen = next.LastSeen
+				// 标记 next 待删除(不加入 retainedIDs)
 			} else {
-				// 不能合并，保存当前记录，开始新的合并组
+				// 不能合并,保存当前记录,开始新的合并组
 				merged = append(merged, current)
 				retainedIDs[current.ID] = true
 				current = next
@@ -337,8 +372,8 @@ func (s *macHistoryServiceImpl) MergeFlappingRecords(ctx context.Context, device
 
 		// 如果有合并发生，更新数据库
 		if len(merged) < len(group.Records) {
-			applogger.Infof("[MAC历史] 设备 %s: MAC %s 合并前 %d 条记录，合并后 %d 条记录",
-				deviceID, group.MACAddress, len(group.Records), len(merged))
+			applogger.Infof("[MAC历史] 设备 %s: key=%s 合并前 %d 条记录，合并后 %d 条记录",
+				deviceID, group.Key, len(group.Records), len(merged))
 
 			// CR-03 fix: 实现完整的合并逻辑
 			// 1. 批量更新保留记录的last_seen
@@ -366,11 +401,57 @@ func (s *macHistoryServiceImpl) MergeFlappingRecords(ctx context.Context, device
 					Delete(&models.DeviceMACHistory{}).Error; err != nil {
 					return fmt.Errorf("删除重复记录失败: %w", err)
 				}
-				applogger.Infof("[MAC历史] 设备 %s: MAC %s 删除了 %d 条重复记录",
-					deviceID, group.MACAddress, len(deletedIDs))
+				applogger.Infof("[MAC历史] 设备 %s: key=%s 删除了 %d 条重复记录",
+					deviceID, group.Key, len(deletedIDs))
 			}
 		}
 	}
 
 	return nil
+}
+
+// CleanupAllDevicesFlapping 全量清理所有设备的 MAC flapping 记录(2026-06-30 新增)
+//
+// 流程:
+//  1. 查 sys_device_mac_history.distinct device_id(只查有记录的设备,避免空扫)
+//  2. 逐个 deviceID 调用 MergeFlappingRecords
+//  3. 返回成功处理的设备数 + 首个错误(如有)
+//
+// 性能注意:每个 device 一次查询(已有索引 idx_device_first_seen 应足够),
+// 全量清理在 1000 设备量级约 5-30s;建议低峰期手动触发或 cron 每周一次。
+//
+// 调用方:内部 CLI 工具 / 一次性运维脚本 / 未来的 scheduler 任务(暂未注册)。
+// 不在常规请求路径调用,避免长时间持有 DB 连接。
+func (s *macHistoryServiceImpl) CleanupAllDevicesFlapping(ctx context.Context) (int, error) {
+	// 1. 查所有有 MAC 历史记录的设备 ID
+	var deviceIDs []string
+	if err := s.db.WithContext(ctx).
+		Model(&models.DeviceMACHistory{}).
+		Distinct("device_id").
+		Pluck("device_id", &deviceIDs).Error; err != nil {
+		return 0, fmt.Errorf("查询所有 deviceID 失败: %w", err)
+	}
+
+	applogger.Infof("[MAC历史] CleanupAllDevicesFlapping 开始: 共 %d 个设备", len(deviceIDs))
+
+	// 2. 逐设备清理
+	successCount := 0
+	for i, deviceID := range deviceIDs {
+		if err := s.MergeFlappingRecords(ctx, deviceID); err != nil {
+			applogger.Errorf("[MAC历史] 设备 %s Merge 失败: %v (已成功 %d/%d)",
+				deviceID, err, successCount, len(deviceIDs))
+			return successCount, fmt.Errorf("设备 %s Merge 失败(已处理 %d/%d): %w",
+				deviceID, successCount, len(deviceIDs), err)
+		}
+		successCount++
+
+		// 每 50 个设备 log 一次进度(避免高频日志)
+		if (i+1)%50 == 0 {
+			applogger.Infof("[MAC历史] CleanupAllDevicesFlapping 进度: %d/%d",
+				i+1, len(deviceIDs))
+		}
+	}
+
+	applogger.Infof("[MAC历史] CleanupAllDevicesFlapping 完成: %d 个设备全量清理成功", successCount)
+	return successCount, nil
 }
