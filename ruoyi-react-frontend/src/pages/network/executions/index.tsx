@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { FC } from "react";
 import { batchExport } from "@/lib/api/networkApi";
 import {
@@ -28,6 +28,8 @@ import { getExecutionColumns, getDetailColumns } from "./columns";
 import { ConfigExecuteModal, VariableModal, DetailDrawer } from "./modals";
 import { STATUS_OPTIONS } from "./constants";
 import { usePagination } from "@/hooks/usePagination";
+import { useServerSort } from "@/hooks/useServerSort";
+import { createSorterMeta } from "@/utils/tableHelpers";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
 import { DownloadOutlined } from "@ant-design/icons";
@@ -44,6 +46,20 @@ const ConfigExecutionPage: FC = () => {
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
+  // 服务端排序:field 与 columns.dataIndex 对齐
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<ConfigExecution>("executionName"),
+      createSorterMeta<ConfigExecution>("templateName"),
+      createSorterMeta<ConfigExecution>("status"),
+      createSorterMeta<ConfigExecution>("createdAt", "date"),
+    ],
+    []
+  );
+  const { orderByColumn, isAsc, handleTableChange: handleNetExecSortChange, sortOrder: netExecSortOrder } = useServerSort<ConfigExecution>({
+    sorterMetas,
+  });
 
   // 数据管理
   const {
@@ -96,10 +112,15 @@ const ConfigExecutionPage: FC = () => {
   };
 
   // 表格列
-  const executionColumns = getExecutionColumns({
-    handleViewDetail,
-    handleCancelExecution,
-  });
+  const executionColumns = useMemo(
+    () =>
+      getExecutionColumns({
+        handleViewDetail,
+        handleCancelExecution,
+        getSortOrder: (field) => (orderByColumn === field ? netExecSortOrder : null),
+      }),
+    [handleViewDetail, handleCancelExecution, orderByColumn, netExecSortOrder]
+  );
 
   const detailColumns = getDetailColumns({
     handleViewOutput,
@@ -263,11 +284,16 @@ const ConfigExecutionPage: FC = () => {
           rowKey="id"
           scroll={{ x: 1400 }}
           pagination={paginationProps}
-          onChange={(pagination) => {
+          onChange={(pagination, _filters, sorter) => {
+            handleNetExecSortChange(pagination, _filters, sorter);
             setCurrent(pagination.current ?? 1);
             setPageSize(pagination.pageSize ?? 10);
             const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
-            const searchParams: Record<string, unknown> = { current: pagination.current ?? 1, pageSize: pagination.pageSize ?? 10 };
+            const searchParams: Record<string, unknown> = {
+              current: pagination.current ?? 1,
+              pageSize: pagination.pageSize ?? 10,
+              ...(orderByColumn ? { orderByColumn, isAsc } : {}),
+            };
             Object.keys(formValues).forEach(key => {
               const value = formValues[key];
               if (value !== undefined && value !== null && value !== "") {

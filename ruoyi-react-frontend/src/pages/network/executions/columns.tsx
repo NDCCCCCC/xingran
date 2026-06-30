@@ -14,6 +14,8 @@ import ActionButtons from "@/components/shared/ActionButtons";
 export interface ExecutionColumnsParams {
   handleViewDetail: (record: ConfigExecution) => void;
   handleCancelExecution: (id: string) => Promise<void>;
+  /** 由 useServerSort 注入,返回字段当前排序方向 */
+  getSortOrder?: (field: string) => "ascend" | "descend" | null;
 }
 
 export interface DetailColumnsParams {
@@ -34,16 +36,18 @@ export const deviceColumns: ColumnsType<NetworkDevice> = [
 
 /** 执行记录表格列 */
 export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType<ConfigExecution> {
-  const { handleViewDetail, handleCancelExecution } = params;
+  const { handleViewDetail, handleCancelExecution, getSortOrder } = params;
 
   return [
-    { title: "任务名称", dataIndex: "executionName", key: "executionName", width: 200 },
-    { title: "模板名称", dataIndex: "templateName", key: "templateName", width: 150 },
+    { title: "任务名称", dataIndex: "executionName", key: "executionName", width: 200, sorter: true, sortOrder: getSortOrder?.("executionName") },
+    { title: "模板名称", dataIndex: "templateName", key: "templateName", width: 150, sorter: true, sortOrder: getSortOrder?.("templateName") },
     {
       title: "状态",
       dataIndex: "status",
       key: "status",
       width: 100,
+      sorter: true,
+      sortOrder: getSortOrder?.("status"),
       render: (status: string) => {
         const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
         return <Tag color={config.color} icon={config.icon}>{config.text}</Tag>;
@@ -68,6 +72,8 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
       dataIndex: "createdAt",
       key: "createdAt",
       width: 180,
+      sorter: true,
+      sortOrder: getSortOrder?.("createdAt"),
       render: (date: string) => formatDateTime(date),
     },
     {
@@ -119,6 +125,8 @@ export function getDetailColumns(params: DetailColumnsParams): ColumnsType<Confi
       dataIndex: "status",
       key: "status",
       width: 100,
+      sorter: true,
+      sortOrder: getSortOrder?.("status"),
       render: (status: string) => {
         const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
         return <Tag color={config.color}>{config.text}</Tag>;
