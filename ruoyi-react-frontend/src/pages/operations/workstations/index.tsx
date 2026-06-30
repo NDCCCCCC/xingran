@@ -219,7 +219,7 @@ const WorkstationManagement: FC = () => {
     }
   );
 
-  const { loadStatistics: loadStatisticsFromHook, loadFloorOptions, loadDeptOptions, loadUserOptions } = useWorkstationData(
+  const { loadStatistics: loadStatisticsFromHook, loadFloorOptions, loadDeptOptions, loadUserOptions, ensureUser } = useWorkstationData(
     setStatistics,
     setFloorOptions,
     setDeptTreeData,
@@ -438,6 +438,11 @@ const WorkstationManagement: FC = () => {
   // ✅ 优化：移除动态导入，并行获取楼层和楼宇信息 (async-parallel, bundle-dynamic-imports)
   // 不再使用 setTimeout(0)；回显值通过 pendingCascaderWrite ref + cascaderOptions useEffect 协调
   const setEditFormValues = useCallback(async (record: WorkstationOps) => {
+    // 所属用户兜底注入(2026-06-30,同 info-points):userOptions 是 pageSize:50 全集源,
+    // 当前工位的 userId 可能不在 → Select 显示 raw UUID。用 record.userName 注入临时 Option。
+    if (record.userId) {
+      ensureUser({ id: record.userId, username: record.userName });
+    }
     if (!record.floorId) {
       workstationForm.setFieldsValue(record);
       // Phase 39: 同步编辑模式的 orgId 到顶层 state, 触发 useAliasByLocation
@@ -492,12 +497,17 @@ const WorkstationManagement: FC = () => {
       workstationForm.setFieldsValue(record);
       pendingCascaderWrite.current = null;
     }
-  }, [preloadCascaderPath, workstationForm]);
+  }, [preloadCascaderPath, workstationForm, ensureUser]);
 
   // 打开编辑模态框
   const handleOpenModal = useCallback(async (record?: WorkstationOps) => {
     if (record) {
       handleEdit(record);
+      // 编辑模式触发部门下用户的异步加载(2026-06-30):除 ensureUser 兜底当前用户外,
+      // 仍以 deptId 加载该部门+子部门用户作为 Select 候选,根因修复。
+      if (record.deptId) {
+        loadUserOptions(record.deptId).catch(() => {/* hook 内部已 handleApiError */});
+      }
       await setEditFormValues(record);
     } else {
       handleAdd();
@@ -507,7 +517,7 @@ const WorkstationManagement: FC = () => {
       workstationForm.setFieldsValue({ status: 0, type: 0 });
     }
     setModalVisible(true);
-  }, [setEditFormValues, handleEdit, handleAdd, workstationForm, setModalVisible]);
+  }, [setEditFormValues, handleEdit, handleAdd, workstationForm, setModalVisible, loadUserOptions]);
 
   const handleImportSuccess = useCallback(() => {
     refreshData();
