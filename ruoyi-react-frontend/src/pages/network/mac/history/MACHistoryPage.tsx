@@ -11,7 +11,7 @@
  *
  * 锁定端点:POST /network/history/list(D-01)
  * 默认时间范围:近 7d(D-07)
- * 颜色与图标:与 MACTrajectoryChart.tsx:24-29 完全一致(D-10)
+ * 颜色与图标:与 macEventMeta.ts 单一事实源对齐(D-10)
  *
  * 已知 TODO(由后续 plan 接管):
  * - 14-04:工具栏新增 2 个互斥导出按钮

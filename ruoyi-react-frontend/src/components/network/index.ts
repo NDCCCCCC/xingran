@@ -2,8 +2,7 @@
  * 网络模块共享组件统一导出
  *
  * - MACEventsTimeline:Phase 14-01 跨页复用垂直时间线组件
- *   2026-06-30 quick: 轨迹查询从独立页面合并到列表页 Drawer,
- *   MACTrajectoryChart(ECharts Gantt)随之删除,仅保留 timeline 组件。
+ *   2026-06-30 quick:轨迹查询从独立页面合并到列表页(/network/mac)Drawer。
  */
 
 export { default as MACEventsTimeline } from "./MACEventsTimeline";

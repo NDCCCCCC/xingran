@@ -31,63 +31,6 @@ blobAxios.interceptors.request.use(async (config) => {
   return config;
 });
 
-interface TrajectoryQueryParams {
-  macAddress: string;
-  startTime: string; // ISO timestamp
-  endTime: string;   // ISO timestamp
-}
-
-interface TrajectoryNode {
-  mac: string;
-  deviceId: string;
-  deviceName: string;
-  interface: string;
-  vlanId?: number;
-  startTime: string;
-  endTime: string;
-  duration: number;
-  eventType: "appeared" | "disappeared" | "moved" | "vlan_changed";
-  /** 厂商名(由调用方合并 queryMACVendor 填充,后端不在 TrajectoryNode 中返回) */
-  vendor?: string;
-}
-
-interface TrajectoryResponse {
-  macAddress: string;
-  nodes: TrajectoryNode[];
-}
-
-/**
- * 查询MAC地址轨迹
- * @param params 查询参数（MAC地址 + 时间范围）
- * @returns 轨迹节点数组
- * - 后端返回结构: { macAddress: string, nodes: TrajectoryNode[] } (13-07 修复)
- * - 字段名 camelCase 与后端 mac_history_query_service.go MACTrajectoryQuery 对齐
- */
-export const queryMACTrajectory = async (
-  params: TrajectoryQueryParams
-): Promise<TrajectoryNode[]> => {
-  const result = await post<TrajectoryResponse>(
-    "/network/history/trajectory",
-    params
-  );
-  return result.data!.nodes;
-};
-
-/**
- * 查询MAC地址厂商(OUI)
- * @param mac 规范化 MAC 地址(AA:BB:CC:DD:EE:FF 格式)
- * @returns 厂商名称字符串(若后端无厂商返回 "Unknown Vendor")
- * - 端点: POST /network/history/vendor (D-01 锁定)
- * - 响应字段: { vendorName: string } (camelCase,Phase 13 W4 修复)
- * - 错误处理: 后端 4xx/5xx 由 post 包装层抛错,本函数向上抛,由 useQuery onError 处理
- */
-export const queryMACVendor = async (mac: string): Promise<string> => {
-  const result = await post<{ vendorName: string }>("/network/history/vendor", {
-    mac,
-  });
-  return result.data?.vendorName ?? "Unknown Vendor";
-};
-
 /**
  * MAC 历史查询参数(Phase 14-01 引入)
  * - 端点: POST /network/history/list (D-01 锁定)
@@ -284,8 +227,6 @@ export const batchExport = async (
 };
 
 export default {
-  queryMACTrajectory,
-  queryMACVendor,
   queryMACHistory,
   getMACEvents,
   exportMACHistory,
