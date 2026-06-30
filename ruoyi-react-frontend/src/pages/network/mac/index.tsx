@@ -27,8 +27,9 @@ import { formatDateTime } from "@/utils/datetime";
 import { get, post } from "@/lib/api";
 import { batchExport } from "@/lib/api/networkApi";
 import { useTableManager } from "@/hooks/useTableManager";
+import { createSorterMeta } from "@/utils/tableHelpers";
 import { withErrorHandling } from "@/utils/errorHandler";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { usePagination } from "@/hooks/usePagination";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
@@ -54,6 +55,15 @@ const MACAddressPage: FC = () => {
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
+  // 服务端排序:field 必须与 columns 的 dataIndex 一致
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<DeviceMACAddress>("macAddress"),
+      createSorterMeta<DeviceMACAddress>("vlanId"),
+    ],
+    []
+  );
+
   const {
     loading,
     data: macAddresses,
@@ -64,6 +74,8 @@ const MACAddressPage: FC = () => {
     handleSearch,
     handleReset,
     handleRefresh,
+    handleTableChange: handleMacTableChange,
+    getColumnSortOrder: getMacColumnSortOrder,
   } = useTableManager<DeviceMACAddress>(
     async (params) => {
       const formValues = searchForm.getFieldsValue();
@@ -84,6 +96,7 @@ const MACAddressPage: FC = () => {
         setPageSize,
         setTotal,
       },
+      sorterMetas,
     }
   );
 
@@ -164,13 +177,15 @@ const MACAddressPage: FC = () => {
   // 表格列
   const columns: ColumnsType<DeviceMACAddress> = [
     { title: "设备名称", dataIndex: "deviceName", key: "deviceName", width: 150 },
-    { title: "MAC地址", dataIndex: "macAddress", key: "macAddress", width: 160 },
+    { title: "MAC地址", dataIndex: "macAddress", key: "macAddress", width: 160, sorter: true, sortOrder: getMacColumnSortOrder("macAddress") },
     { title: "接口", dataIndex: "interfaceName", key: "interfaceName", width: 150 },
     {
       title: "VLAN ID",
       dataIndex: "vlanId",
       key: "vlanId",
       width: 100,
+      sorter: true,
+      sortOrder: getMacColumnSortOrder("vlanId"),
       render: (vlanId: number) => vlanId || "-",
     },
     {
@@ -322,21 +337,7 @@ const MACAddressPage: FC = () => {
           rowKey="id"
           scroll={{ x: 1200 }}
           pagination={paginationProps}
-          onChange={(pagination) => {
-            const newPage = pagination.current ?? 1;
-            const newPageSize = pagination.pageSize ?? 10;
-            setCurrent(newPage);
-            setPageSize(newPageSize);
-            const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
-            const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
-            Object.keys(formValues).forEach(key => {
-              const value = formValues[key];
-              if (value !== undefined && value !== null && value !== "") {
-                searchParams[key] = value;
-              }
-            });
-            loadMACAddresses(searchParams);
-          }}
+          onChange={handleMacTableChange}
         />
       </Card>
     </div>
