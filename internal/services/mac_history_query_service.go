@@ -896,6 +896,27 @@ func (s *macHistoryQueryServiceImpl) QueryMACTrajectory(ctx context.Context, req
 		return nil, fmt.Errorf("查询MAC轨迹失败: %w", err)
 	}
 
+	// 修正 pgx 给 rawEvent 字段强制 UTC loc 的时区 bug(Plan D 续)。
+	//
+	// 背景: sys_device_mac_history 的 first_seen/last_seen 是 timestamp without time zone,
+	// 采集器 time.Now()(UTC+8) 写入,DB 存北京时间裸值(如 13:01 = 北京 13:01)。
+	// pgx 驱动读取时无视 session timezone,强制赋予 UTC loc → JSON "...Z" → 前端 +8 → 错 8 小时。
+	//
+	// 为何不能靠 models.DeviceMACHistory.AfterFind: 本查询走 Raw().Scan(&rawEvents),
+	// rawEvent 是自定义 struct(非 GORM model),AfterFind 钩子不触发 — 必须在应用层手动修。
+	// models.LocalWallClock 保持 wall clock 不变、loc 重塑为 time.Local,使下游 JSON 输出 "+08:00",
+	// 前端 dayjs/formatDateTime/ECharts 全部正确显示北京时间。
+	//
+	// 为何不在 schema 层修: first_seen 是分区键,PG 禁止 ALTER 分区键列类型(SQLSTATE 42P16)。
+	for i := range rawEvents {
+		rawEvents[i].FirstSeen = models.LocalWallClock(rawEvents[i].FirstSeen)
+		rawEvents[i].LastSeen = models.LocalWallClock(rawEvents[i].LastSeen)
+		if rawEvents[i].PrevFirstSeen != nil {
+			t := models.LocalWallClock(*rawEvents[i].PrevFirstSeen)
+			rawEvents[i].PrevFirstSeen = &t
+		}
+	}
+
 	// 6. 应用层区间聚合（按DeviceID, InterfaceName, VLANID复合键合并连续状态）
 	nodes := s.aggregateTrajectory(rawEvents)
 
