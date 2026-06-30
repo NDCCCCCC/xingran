@@ -129,7 +129,7 @@ const WorkerMonitor: FC = () => {
 
   const columns = useMemo(
   () => getWorkerColumns({
-    getSortOrder: (field) => (orderByColumn === field ? workerSortOrder : null),
+    getSortOrder: (field) => (orderByColumn === field ? (workerSortOrder ?? null) as "ascend" | "descend" | null : null),
   }),
   [orderByColumn, workerSortOrder]
 );

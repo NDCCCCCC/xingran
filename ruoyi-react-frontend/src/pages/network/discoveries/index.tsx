@@ -196,7 +196,7 @@ const DeviceDiscoveryPage: FC = () => {
       getDiscoveryColumns({
         handleViewResult,
         handleDelete,
-        getSortOrder: (field) => (orderByColumn === field ? discoverySortOrder : null),
+        getSortOrder: (field) => (orderByColumn === field ? (discoverySortOrder ?? null) as "ascend" | "descend" | null : null),
       }),
     [handleViewResult, handleDelete, orderByColumn, discoverySortOrder]
   );

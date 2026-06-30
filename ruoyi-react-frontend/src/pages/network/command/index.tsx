@@ -126,7 +126,7 @@ const CommandDispatch: FC = () => {
       getExecutionColumns({
         handleViewDetail,
         handleCancel: (id: string) => handleCancelExecution(id, handleSuccess),
-        getSortOrder: (field) => (orderByColumn === field ? cmdSortOrder : null),
+        getSortOrder: (field) => (orderByColumn === field ? (cmdSortOrder ?? null) as "ascend" | "descend" | null : null),
       }),
     [handleViewDetail, handleSuccess, orderByColumn, cmdSortOrder]
   );

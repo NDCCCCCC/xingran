@@ -117,7 +117,7 @@ const ConfigExecutionPage: FC = () => {
       getExecutionColumns({
         handleViewDetail,
         handleCancelExecution,
-        getSortOrder: (field) => (orderByColumn === field ? netExecSortOrder : null),
+        getSortOrder: (field) => (orderByColumn === field ? (netExecSortOrder ?? null) as "ascend" | "descend" | null : null),
       }),
     [handleViewDetail, handleCancelExecution, orderByColumn, netExecSortOrder]
   );

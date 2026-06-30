@@ -123,7 +123,7 @@ const ExecutionManagement: FC = () => {
     () =>
       getExecutionColumns({
         handleViewDetail,
-        getSortOrder: (field) => (orderByColumn === field ? execSortOrder : null),
+        getSortOrder: (field) => (orderByColumn === field ? (execSortOrder ?? null) as "ascend" | "descend" | null : null),
       }),
     [handleViewDetail, orderByColumn, execSortOrder]
   );

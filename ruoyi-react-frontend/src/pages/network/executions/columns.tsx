@@ -20,6 +20,8 @@ export interface ExecutionColumnsParams {
 
 export interface DetailColumnsParams {
   handleViewOutput: (output: string) => void;
+  /** 由 useServerSort 注入,返回字段当前排序方向 */
+  getSortOrder?: (field: string) => "ascend" | "descend" | null;
 }
 
 /** 设备表格列 */
@@ -115,7 +117,7 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
 
 /** 执行明细表格列 */
 export function getDetailColumns(params: DetailColumnsParams): ColumnsType<ConfigExecutionDetail> {
-  const { handleViewOutput } = params;
+  const { handleViewOutput, getSortOrder } = params;
 
   return [
     { title: "设备名称", dataIndex: "deviceName", key: "deviceName", width: 150 },

@@ -149,7 +149,7 @@ const TaskManagement: FC = () => {
         },
         handleDelete,
         handleExecute,
-        getSortOrder: (field) => (orderByColumn === field ? taskSortOrder : null),
+        getSortOrder: (field) => (orderByColumn === field ? (taskSortOrder ?? null) as "ascend" | "descend" | null : null),
       }),
     [handleEdit, handleDelete, handleExecute, orderByColumn, taskSortOrder]
   );
