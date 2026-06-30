@@ -21,6 +21,9 @@ export interface UseDeviceDataReturn {
   statistics: DeviceStatistics;
   loadCredentials: () => Promise<void>;
   loadStatistics: () => Promise<void>;
+  // 注入式兜底(2026-06-30):编辑回填时若 credentialId 不在 pageSize:50 列表,
+  // 调此方法基于 record.credentialName 注入一条临时 Option,避免 Select 显示 raw UUID。
+  ensureCredential: (cred: Pick<AuthCredential, "id"> & Partial<AuthCredential>) => void;
 }
 
 export function useDeviceData(): UseDeviceDataReturn {
@@ -60,11 +63,32 @@ export function useDeviceData(): UseDeviceDataReturn {
     }
   }, []);
 
+  // 注入式兜底(2026-06-30):若凭证 id 已在列表中则保持原引用,否则追加。
+  // 必填字段(protocolType/snmpCommunities/snmpVersion/isDefault/createdAt/updatedAt)
+  // 用合理默认值占位,Select 渲染仅依赖 id+credentialName,不影响业务提交。
+  // setCredentials 列入 deps 以满足 React Compiler 推断(setState 引用稳定)。
+  const ensureCredential = useCallback((cred: Pick<AuthCredential, "id"> & Partial<AuthCredential>) => {
+    setCredentials(prev =>
+      prev.find(c => c.id === cred.id) ? prev : [...prev, {
+        id: cred.id,
+        credentialName: cred.credentialName || "未命名凭证",
+        protocolType: cred.protocolType ?? ("ssh" as AuthCredential["protocolType"]),
+        username: cred.username ?? "",
+        snmpCommunities: cred.snmpCommunities ?? [],
+        snmpVersion: cred.snmpVersion ?? ("v2c" as AuthCredential["snmpVersion"]),
+        isDefault: cred.isDefault ?? false,
+        createdAt: cred.createdAt ?? "",
+        updatedAt: cred.updatedAt ?? "",
+      }]
+    );
+  }, [setCredentials]);
+
   return {
     departments,
     credentials,
     statistics,
     loadCredentials,
     loadStatistics,
+    ensureCredential,
   };
 }
