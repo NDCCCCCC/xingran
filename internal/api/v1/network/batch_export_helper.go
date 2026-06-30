@@ -382,10 +382,13 @@ func (h *NetworkExportHandler) generateEntityExcel(entityType string, req Export
 		filterRuleSvc := topology.NewFilterRuleService(h.core.DB.GetDB())
 		svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc, filterRuleSvc)
 
-		var deviceID, macAddress, interfaceName string
+		var deviceID, deptID, macAddress, interfaceName string
 		if req.Filters != nil {
 			if v, ok := req.Filters["deviceId"].(string); ok {
 				deviceID = v
+			}
+			if v, ok := req.Filters["deptId"].(string); ok {
+				deptID = v
 			}
 			if v, ok := req.Filters["macAddress"].(string); ok {
 				macAddress = v
@@ -395,7 +398,7 @@ func (h *NetworkExportHandler) generateEntityExcel(entityType string, req Export
 			}
 		}
 
-		records, _, err := svc.GetMACAddressList(ctx, current, pageSize, deviceID, macAddress, interfaceName, "", nil)
+		records, _, err := svc.GetMACAddressList(ctx, current, pageSize, deviceID, deptID, macAddress, interfaceName, "", nil)
 		if err != nil {
 			return nil, err
 		}

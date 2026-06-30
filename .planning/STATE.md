@@ -98,6 +98,7 @@ Last activity: 2026-06-28 -- Phase 45 R4 execution complete: 6 atomic commits (3
 | 260626-dai | 工位 Excel 导出补充所属部门/人员名称 + 设备序列号/名称/型号（新增 WorkstationQueryBuilder，镜像 List JOIN） | 2026-06-26 | 212f73fb | [260626-dai-workstation-export-fields](./quick/260626-dai-workstation-export-fields/) |
 | 260626-lbd | 工位管理主表添加"主设备序列号"列（后端子查询严格 is_primary=true + 前端列，设主设备才显示） | 2026-06-26 | - | [260626-workstation-primary-device-serial](./quick/260626-workstation-primary-device-serial/) |
 | 260630-sort | 信息点查询等 16 个前端列表页补齐服务端排序(useServerSort + useTableManager.sorterMetas),含 1 处 params-drop bug 修复 + 5 处后端 ApplySort 白名单补全 | 2026-06-30 | 0cd7ddb0..bb8f4dc9 (18 commits) | [260630-server-sort-promote-16-pages](./quick/20260630-server-sort-promote-16-pages/) |
+| 260630-mac-tree | mac 地址页接口列排序 + 左侧 DeptSidebar + 部门联动(后端 deptId JOIN 一处过滤,弃用前端 deviceIds 中间层;含 migration_181 验证修复) | 2026-06-30 | 2f2894d2 | [20260630-mac-page-dept-tree](./quick/20260630-mac-page-dept-tree/) |
 
 ## Accumulated Context
 

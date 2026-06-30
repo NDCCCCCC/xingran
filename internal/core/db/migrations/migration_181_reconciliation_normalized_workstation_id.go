@@ -125,17 +125,18 @@ ORDER BY a.id, ad.id NULLS LAST;
 	applogger.Infof("[迁移] 181 reconciliation_normalized 索引重建完成(4 个,含 workstation_id)")
 
 	// 4. 验证 MV 已含 workstation_id 列 + REFRESH(让 WorkstationIDForException 立即可查)
-	var hasWsID bool
+	// 注意:不能用 SELECT EXISTS(...) + Scan(&bool) — gorm 对裸 bool 的 Scan 映射会
+	// 静默失败(hasWsID 保持 false 但 Error 为 nil),导致误报"列缺失"。
+	// 改用 count(*) + int64(与 migration_176 验证 MV 行数同款模式),稳妥。
+	var wsIDColCount int64
 	if err := db.Raw(`
-		SELECT EXISTS (
-			SELECT 1 FROM information_schema.columns
-			 WHERE table_name = 'reconciliation_normalized'
-			   AND column_name = 'workstation_id'
-		)
-	`).Scan(&hasWsID).Error; err != nil {
+		SELECT count(*) FROM information_schema.columns
+		 WHERE table_name = 'reconciliation_normalized'
+		   AND column_name = 'workstation_id'
+	`).Scan(&wsIDColCount).Error; err != nil {
 		return fmt.Errorf("验证 reconciliation_normalized.workstation_id 列存在失败: %w", err)
 	}
-	if !hasWsID {
+	if wsIDColCount == 0 {
 		return fmt.Errorf("reconciliation_normalized.workstation_id 列创建失败(information_schema 仍缺失)")
 	}
 	applogger.Infof("[迁移] 181 验证 reconciliation_normalized.workstation_id 列存在 ✓")

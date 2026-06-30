@@ -583,7 +583,12 @@ type MACAddressResponse struct {
 
 // GetMACAddressList 获取MAC地址列表
 // orderByColumn/isAsc 为服务端排序参数(可选,透传给 base.ApplySort 白名单)。
-func (s *MACCollectionService) GetMACAddressList(ctx context.Context, current, pageSize int, deviceID, macAddress, interfaceName string, orderByColumn string, isAsc *bool) ([]MACAddressResponse, int64, error) {
+// deptID(2026-06-30):部门树联动 — 后端一处 JOIN sys_network_device.dept_id 过滤该部门下所有设备的 MAC,
+//   彻底替代前端 dept→deviceIds→MAC 三层链路(后者有 stale closure / setSearchParams 重挂载导致
+//   devices/list 丢 deptId 的时序 bug:选"分公司本部"却查出"武汉中支"设备)。
+//   baseQuery(用于 Count)无 JOIN → 用子查询;joinQuery 已 JOIN → 直接 WHERE sys_network_device.dept_id。
+//   deviceID(单设备精确)与 deptID 可叠加(选部门后又选具体设备),互不冲突。
+func (s *MACCollectionService) GetMACAddressList(ctx context.Context, current, pageSize int, deviceID string, deptID string, macAddress, interfaceName string, orderByColumn string, isAsc *bool) ([]MACAddressResponse, int64, error) {
 	var total int64
 
 	// 构建基础查询（用于计数）
@@ -591,6 +596,10 @@ func (s *MACCollectionService) GetMACAddressList(ctx context.Context, current, p
 
 	if deviceID != "" {
 		baseQuery = baseQuery.Where("device_id = ?", deviceID)
+	}
+	if deptID != "" {
+		// 2026-06-30: 部门树联动 — 子查询过滤该部门下所有设备的 MAC(baseQuery 用于 Count,无 JOIN)
+		baseQuery = baseQuery.Where("device_id IN (SELECT id FROM sys_network_device WHERE dept_id = ?)", deptID)
 	}
 	if macAddress != "" {
 		baseQuery = baseQuery.Where("mac_address LIKE ?", "%"+macAddress+"%")
@@ -619,6 +628,9 @@ func (s *MACCollectionService) GetMACAddressList(ctx context.Context, current, p
 	// 应用筛选条件到JOIN查询
 	if deviceID != "" {
 		joinQuery = joinQuery.Where("sys_device_mac_address.device_id = ?", deviceID)
+	}
+	if deptID != "" {
+		joinQuery = joinQuery.Where("sys_network_device.dept_id = ?", deptID)
 	}
 	if macAddress != "" {
 		joinQuery = joinQuery.Where("sys_device_mac_address.mac_address LIKE ?", "%"+macAddress+"%")

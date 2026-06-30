@@ -12,6 +12,9 @@ import {
   Col,
   Statistic,
   Tag,
+  Layout,
+  Drawer,
+  Grid,
   App,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
@@ -21,6 +24,7 @@ import {
   DeleteOutlined,
   CloudServerOutlined,
   AppleOutlined,
+  ApartmentOutlined,
 } from "@ant-design/icons";
 import type { DeviceMACAddress, NetworkDevice } from "@/types";
 import { formatDateTime } from "@/utils/datetime";
@@ -31,15 +35,54 @@ import { createSorterMeta } from "@/utils/tableHelpers";
 import { withErrorHandling } from "@/utils/errorHandler";
 import { useState, useEffect, useMemo } from "react";
 import { usePagination } from "@/hooks/usePagination";
+import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
+import { useSearchParams } from "react-router-dom";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
+import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { DownloadOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
+const { Content } = Layout;
+const { useBreakpoint } = Grid;
 
 const MACAddressPage: FC = () => {
   const { message } = App.useApp();
+  const breakpoint = useBreakpoint();
+  const isMobile = !!breakpoint.xs;
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [devices, setDevices] = useState<NetworkDevice[]>([]);
+
+  // 部门侧栏筛选 hook(2026-06-30):与 workstations/index.tsx 同款。
+  // 联动:后端 /network/mac/list 直接支持 deptId(JOIN sys_network_device.dept_id),
+  // queryFn 透传 selectedDeptId 即可,无需前端 deviceIds 中间层。
+  const { selectedDeptId, handleDeptSelect, setSelectedDeptId } = useSidebarDeptFilter({
+    searchForm: undefined,
+  });
+
+  // 移动端 dept tree 折叠进 Drawer
+  const [deptDrawerOpen, setDeptDrawerOpen] = useState(false);
+
+  // URL ?deptId=xxx 同步(2026-06-30 quick)
+  useEffect(() => {
+    const urlDeptId = searchParams.get("deptId");
+    if (urlDeptId && urlDeptId !== selectedDeptId) {
+      setSelectedDeptId(urlDeptId);
+    }
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleDeptChangeWithUrl = (
+    selectedKeys: Parameters<NonNullable<ReturnType<typeof useSidebarDeptFilter>["handleDeptSelect"]>>[0],
+    info: Parameters<NonNullable<ReturnType<typeof useSidebarDeptFilter>["handleDeptSelect"]>>[1]
+  ) => {
+    handleDeptSelect(selectedKeys, info);
+    const deptId = selectedKeys.length > 0 ? (selectedKeys[0] as string) : "";
+    const next = new URLSearchParams(searchParams);
+    if (deptId) next.set("deptId", deptId);
+    else next.delete("deptId");
+    setSearchParams(next);
+  };
 
   // 统计数据
   const [statistics, setStatistics] = useState({
@@ -59,6 +102,7 @@ const MACAddressPage: FC = () => {
   const sorterMetas = useMemo(
     () => [
       createSorterMeta<DeviceMACAddress>("macAddress"),
+      createSorterMeta<DeviceMACAddress>("interfaceName"),
       createSorterMeta<DeviceMACAddress>("vlanId"),
     ],
     []
@@ -80,9 +124,15 @@ const MACAddressPage: FC = () => {
     async (params) => {
       const formValues = searchForm.getFieldsValue();
       const values = formValues as Record<string, unknown>;
+      // 2026-06-30: 透传 dept 联动的 deptId。selectedDeptId 是 state,本 queryFn 闭包在
+      // 每次 render 同步重建(loadFunctionRef.current = loadFunction),useEffect[selectedDeptId]
+      // 在 re-render 后才触发 handleSearch → 此刻读到的 selectedDeptId 已最新,无 stale closure。
+      // 后端 JOIN sys_network_device.dept_id 一处过滤,无需前端 deviceIds 中间层。
+      const deptIdPayload = selectedDeptId ? { deptId: selectedDeptId } : {};
       const result = await post("/network/mac/list", {
         current: params.current ?? paginationProps.current ?? 1,
         pageSize: params.pageSize ?? paginationProps.pageSize ?? 10,
+        ...deptIdPayload,
         ...values,
       }) as { data: { list: DeviceMACAddress[]; total: number } };
       loadStatistics();
@@ -116,23 +166,34 @@ const MACAddressPage: FC = () => {
     }
   };
 
-  // 加载设备列表
-  const loadDevices = async () => {
+  // 加载设备列表(2026-06-30:加 deptId 参数,选部门后重查该部门的设备,填充设备下拉框)
+  // 设备下拉框与 MAC 列表是两条独立链路:MAC 列表靠 queryFn 透传 deptId 给后端过滤,
+  // 不依赖本函数结果,故无 await 时序要求,可与 handleSearch 并行触发。
+  const loadDevices = async (deptId?: string) => {
     try {
       const result = await post("/network/devices/list", {
         current: 1,
         pageSize: 50,
+        ...(deptId ? { deptId } : {}),
       }) as { data?: { list: NetworkDevice[] } };
-      setDevices(result.data?.list || []);
+      const list = result.data?.list || [];
+      setDevices(list);
     } catch (error) {
       console.error("加载设备列表失败:", error);
     }
   };
 
+  // 部门变化时重查设备下拉框 + 重查 MAC 列表(2026-06-30)
+  // 触发链路:DeptSidebar 选中 → selectedDeptId 变 → 这里:
+  //   - handleSearch 读最新 selectedDeptId → queryFn 透传 deptId → 后端 JOIN 过滤
+  //   - loadDevices 并行重查设备下拉框(不阻塞 MAC 查询)
   useEffect(() => {
-    Promise.all([loadDevices(), loadMACAddresses()]);
+    // 清空 deviceId(原选的可能不属于新部门,避免误筛)
+    searchForm.setFieldValue("deviceId", undefined);
+    void loadDevices(selectedDeptId || undefined);
+    handleSearch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedDeptId]);
 
   // 批量删除
   const handleBatchDelete = async () => {
@@ -178,7 +239,14 @@ const MACAddressPage: FC = () => {
   const columns: ColumnsType<DeviceMACAddress> = [
     { title: "设备名称", dataIndex: "deviceName", key: "deviceName", width: 150 },
     { title: "MAC地址", dataIndex: "macAddress", key: "macAddress", width: 160, sorter: true, sortOrder: getMacColumnSortOrder("macAddress") },
-    { title: "接口", dataIndex: "interfaceName", key: "interfaceName", width: 150 },
+    {
+      title: "接口",
+      dataIndex: "interfaceName",
+      key: "interfaceName",
+      width: 150,
+      sorter: true,
+      sortOrder: getMacColumnSortOrder("interfaceName"),
+    },
     {
       title: "VLAN ID",
       dataIndex: "vlanId",
@@ -209,8 +277,44 @@ const MACAddressPage: FC = () => {
   ];
 
   return (
-    <div>
-      {/* 统计卡片 */}
+    <Layout style={{ background: "transparent" }}>
+      {/* 桌面端:左侧部门树常驻(2026-06-30 quick,与 workstations 同款 DeptSidebar) */}
+      {!isMobile && (
+        <DeptSidebar
+          width={240}
+          selectedDeptId={selectedDeptId}
+          onSelect={handleDeptChangeWithUrl}
+        />
+      )}
+      <Content style={{ background: "#fff", padding: isMobile ? 12 : 24 }}>
+        {/* 移动端:Dept tree 折叠进 Drawer,通过按钮触发(与 workstations 同步) */}
+        {isMobile && (
+          <div style={{ marginBottom: 16 }}>
+            <Button
+              icon={<ApartmentOutlined />}
+              onClick={() => setDeptDrawerOpen(true)}
+            >
+              {selectedDeptId ? `已选部门:${selectedDeptId.slice(0, 8)}...` : "选择部门"}
+            </Button>
+            <Drawer
+              title="选择部门"
+              open={deptDrawerOpen}
+              onClose={() => setDeptDrawerOpen(false)}
+              width={300}
+              styles={{ body: { padding: 0 } }}
+            >
+              <DeptSidebar
+                width={300}
+                selectedDeptId={selectedDeptId}
+                onSelect={(keys, info) => {
+                  handleDeptChangeWithUrl(keys, info);
+                  setDeptDrawerOpen(false);
+                }}
+              />
+            </Drawer>
+          </div>
+        )}
+        {/* 统计卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
           <Card>
@@ -340,7 +444,8 @@ const MACAddressPage: FC = () => {
           onChange={handleMacTableChange}
         />
       </Card>
-    </div>
+      </Content>
+    </Layout>
   );
 };
 
