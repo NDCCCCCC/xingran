@@ -49,6 +49,23 @@ type MACHistoryService interface {
 	// 用途:Merge 算法放宽后,Retroactive 清理已有 flapping 数据。
 	// 建议由 cron / 一次性任务调用(如每周一次),避免在线查询时合并数据造成延迟。
 	CleanupAllDevicesFlapping(ctx context.Context) (int, error)
+
+	// PurgeMeaninglessRecords 全量清理 sys_device_mac_history 中的"无意义记录"
+	// (2026-06-30 新增)。保留策略:
+	//   - KEEP: 所有 moved 事件
+	//   - KEEP: 所有 vlan_changed 事件
+	//   - KEEP: 每个 (device_id, mac_address) 第一条 appeared(first_seen ASC)
+	//   - DELETE: 其他 appeared / 所有 disappeared
+	//
+	// 实现细节:
+	//   - 执行前自动创建备份表 sys_device_mac_history_purge_backup_YYYYMMDD_HHMMSS,
+	//     包含所有当前行,可用于回滚
+	//   - 事务内执行 DELETE + 自校验受影响行数
+	//   - 返回 (deletedCount, backupTableName, error)
+	//
+	// 建议由 cron 任务每月调用一次(2026-06-30 用户决策),防新数据再次堆积。
+	// 用户原始决策:"只有 mac 出现到其他交换机端口了,终端移动了位置,才记录"。
+	PurgeMeaninglessRecords(ctx context.Context, dryRun bool) (deletedCount int64, backupTable string, err error)
 }
 
 // macHistoryServiceImpl MAC历史服务实现
@@ -525,4 +542,186 @@ func (s *macHistoryServiceImpl) CleanupAllDevicesFlapping(ctx context.Context) (
 
 	applogger.Infof("[MAC历史] CleanupAllDevicesFlapping 完成: %d 个设备全量清理成功", successCount)
 	return successCount, nil
+}
+
+// PurgeMeaninglessRecords 全量清理 sys_device_mac_history 中的"无意义记录"(2026-06-30 新增)
+//
+// 保留策略(用户决策):
+//   - KEEP: 所有 moved 事件
+//   - KEEP: 所有 vlan_changed 事件
+//   - KEEP: 每个 (device_id, mac_address) 第一条 appeared(first_seen ASC)
+//   - DELETE: 其他 appeared / 所有 disappeared
+//
+// 流程:
+//  1. dry-run 模式:仅统计将删除的行数,跳过备份与 DELETE
+//  2. 真跑模式:创建备份表(普通表,时间戳命名) → 事务内 DELETE → 后置校验
+//
+// 备份表:sys_device_mac_history_purge_backup_YYYYMMDD_HHMMSS
+//
+// 回滚:
+//   INSERT INTO sys_device_mac_history SELECT * FROM <backup_table>;
+//   注意:备份表不含分区(普通表),需手工处理 first_seen 落对应分区。
+//
+// 性能:基于现有 idx_device_first_seen + DISTINCT ON,<100 万行 ~12s(见 cmd/mac_purge_meaningless 实测)。
+//
+// 建议调用频率:cron 每月 1 次(月初凌晨 3 点,见 internal/scheduler/mac_history_tasks.go)。
+func (s *macHistoryServiceImpl) PurgeMeaninglessRecords(ctx context.Context, dryRun bool) (int64, string, error) {
+	// 1. 总行数(用于校验)
+	var totalCount int64
+	if err := s.db.WithContext(ctx).
+		Table("sys_device_mac_history").
+		Count(&totalCount).Error; err != nil {
+		return 0, "", fmt.Errorf("查总行数失败: %w", err)
+	}
+
+	// 2. 计算将被删除的行数(取每个 (device_id, mac_address) 第一条 appeared 的 id)
+	//    - PostgreSQL:用 DISTINCT ON (PG 专属语法,生产用)
+	//    - SQLite:用子查询 + MIN(first_seen) JOIN(单测用)
+	var deleteCountSQL string
+	if s.db.Dialector.Name() == "postgres" {
+		deleteCountSQL = `
+			WITH first_appeared AS (
+			    SELECT DISTINCT ON (device_id, mac_address)
+			           id
+			      FROM sys_device_mac_history
+			     WHERE event_type = 'appeared'
+			     ORDER BY device_id, mac_address, first_seen ASC
+			)
+			SELECT COUNT(*)
+			  FROM sys_device_mac_history
+			 WHERE (event_type = 'disappeared')
+			    OR (event_type = 'appeared' AND id NOT IN (SELECT id FROM first_appeared))
+		`
+	} else {
+		// SQLite 兼容:用子查询取每组 MIN(first_seen) 对应的 id
+		deleteCountSQL = `
+			WITH first_appeared AS (
+			    SELECT h.id
+			      FROM sys_device_mac_history h
+			      JOIN (
+			          SELECT device_id, mac_address, MIN(first_seen) AS min_first_seen
+			            FROM sys_device_mac_history
+			           WHERE event_type = 'appeared'
+			           GROUP BY device_id, mac_address
+			      ) m
+			        ON h.device_id = m.device_id
+			       AND h.mac_address = m.mac_address
+			       AND h.first_seen = m.min_first_seen
+			     WHERE h.event_type = 'appeared'
+			)
+			SELECT COUNT(*)
+			  FROM sys_device_mac_history
+			 WHERE (event_type = 'disappeared')
+			    OR (event_type = 'appeared' AND id NOT IN (SELECT id FROM first_appeared))
+		`
+	}
+	var toDeleteCount int64
+	if err := s.db.WithContext(ctx).Raw(deleteCountSQL).Scan(&toDeleteCount).Error; err != nil {
+		return 0, "", fmt.Errorf("计算删除行数失败: %w", err)
+	}
+	toKeepCount := totalCount - toDeleteCount
+
+	applogger.Infof("[MAC历史] PurgeMeaningless 预览: 总行=%d, 预计保留=%d, 预计删除=%d",
+		totalCount, toKeepCount, toDeleteCount)
+
+	if dryRun {
+		return toDeleteCount, "", nil
+	}
+
+	if toDeleteCount == 0 {
+		applogger.Infof("[MAC历史] PurgeMeaningless 无需删除,退出")
+		return 0, "", nil
+	}
+
+	// 3. 创建备份表(普通表,非分区)
+	backupTS := time.Now().Format("20060102_150405")
+	backupTable := fmt.Sprintf("sys_device_mac_history_purge_backup_%s", backupTS)
+
+	applogger.Infof("[MAC历史] PurgeMeaningless 创建备份表: %s", backupTable)
+	createBackupSQL := fmt.Sprintf(`CREATE TABLE %s AS SELECT * FROM sys_device_mac_history`, backupTable)
+	if err := s.db.WithContext(ctx).Exec(createBackupSQL).Error; err != nil {
+		return 0, "", fmt.Errorf("创建备份表失败: %w", err)
+	}
+
+	// 4. 校验备份表行数
+	var backupCount int64
+	if err := s.db.WithContext(ctx).Table(backupTable).Count(&backupCount).Error; err != nil {
+		applogger.Warnf("[MAC历史] 校验备份表行数失败(非阻断): %v", err)
+	} else if backupCount != totalCount {
+		applogger.Warnf("[MAC历史] 备份表行数 %d != 当前行数 %d,可能并发写入,中止清理",
+			backupCount, totalCount)
+		return 0, backupTable, fmt.Errorf("备份行数不匹配(backup=%d, total=%d)", backupCount, totalCount)
+	}
+
+	// 5. 事务内执行 DELETE
+	applogger.Infof("[MAC历史] PurgeMeaningless 开始删除 %d 行...", toDeleteCount)
+	start := time.Now()
+
+	var deletedRows int64
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var execSQL string
+		if tx.Dialector.Name() == "postgres" {
+			execSQL = `
+				WITH first_appeared AS (
+				    SELECT DISTINCT ON (device_id, mac_address)
+				           id
+				      FROM sys_device_mac_history
+				     WHERE event_type = 'appeared'
+				     ORDER BY device_id, mac_address, first_seen ASC
+				)
+				DELETE FROM sys_device_mac_history
+				 WHERE (event_type = 'disappeared')
+				    OR (event_type = 'appeared' AND id NOT IN (SELECT id FROM first_appeared))
+			`
+		} else {
+			execSQL = `
+				WITH first_appeared AS (
+				    SELECT h.id
+				      FROM sys_device_mac_history h
+				      JOIN (
+				          SELECT device_id, mac_address, MIN(first_seen) AS min_first_seen
+				            FROM sys_device_mac_history
+				           WHERE event_type = 'appeared'
+				           GROUP BY device_id, mac_address
+				      ) m
+				        ON h.device_id = m.device_id
+				       AND h.mac_address = m.mac_address
+				       AND h.first_seen = m.min_first_seen
+				     WHERE h.event_type = 'appeared'
+				)
+				DELETE FROM sys_device_mac_history
+				 WHERE (event_type = 'disappeared')
+				    OR (event_type = 'appeared' AND id NOT IN (SELECT id FROM first_appeared))
+			`
+		}
+		result := tx.Exec(execSQL)
+		if result.Error != nil {
+			return fmt.Errorf("DELETE 失败: %w", result.Error)
+		}
+		deletedRows = result.RowsAffected
+		applogger.Infof("[MAC历史] PurgeMeaningless DELETE 完成: %d 行受影响", deletedRows)
+		return nil
+	})
+	if err != nil {
+		applogger.Errorf("[MAC历史] PurgeMeaningless 删除失败: %v (回滚: INSERT INTO sys_device_mac_history SELECT * FROM %s)",
+			err, backupTable)
+		return 0, backupTable, err
+	}
+
+	// 6. 后置校验
+	var finalCount int64
+	if err := s.db.WithContext(ctx).Table("sys_device_mac_history").Count(&finalCount).Error; err != nil {
+		return deletedRows, backupTable, fmt.Errorf("校验最终行数失败: %w", err)
+	}
+	elapsed := time.Since(start)
+
+	applogger.Infof("[MAC历史] PurgeMeaningless 完成: 删除前=%d, 删除后=%d, 实际删除=%d (预期 %d), 备份=%s, 耗时=%s",
+		totalCount, finalCount, totalCount-finalCount, toDeleteCount, backupTable, elapsed)
+
+	if totalCount-finalCount != toDeleteCount {
+		applogger.Warnf("[MAC历史] PurgeMeaningless 警告: 实际删除数 (%d) 与预期 (%d) 不一致,需人工核对",
+			totalCount-finalCount, toDeleteCount)
+	}
+
+	return deletedRows, backupTable, nil
 }
