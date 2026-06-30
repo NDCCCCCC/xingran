@@ -125,19 +125,28 @@ ORDER BY a.id, ad.id NULLS LAST;
 	applogger.Infof("[迁移] 181 reconciliation_normalized 索引重建完成(4 个,含 workstation_id)")
 
 	// 4. 验证 MV 已含 workstation_id 列 + REFRESH(让 WorkstationIDForException 立即可查)
-	// 注意:不能用 SELECT EXISTS(...) + Scan(&bool) — gorm 对裸 bool 的 Scan 映射会
-	// 静默失败(hasWsID 保持 false 但 Error 为 nil),导致误报"列缺失"。
-	// 改用 count(*) + int64(与 migration_176 验证 MV 行数同款模式),稳妥。
-	var wsIDColCount int64
+	//
+	// R5 修正(2026-06-30): PG materialized view 的列**不**在 information_schema.columns
+	// 里(0 行返回是 PG 标准行为,与 migration_173 验证 last_resolved_at 时踩过的坑同款)。
+	// 改用 pg_attribute 查 attnum > 0 排除系统列,attisdropped 过滤已删列,真实反映 MV
+	// 列存在性。SELECT a.attname 返回列名字符串,与 "workstation_id" 字面比对,既避免了
+	// GORM Scan(&bool) 静默失败,又跳过了 information_schema 不覆盖 MV 的陷阱。
+	//
+	// 证据链:Step 3 的 CREATE INDEX idx_recon_norm_workstation_id 在 workstation_id 上
+	// 已成功(否则会 SQLSTATE 42703 报错),即列一定存在;此处只是把"真在"翻译成"程序看到在"。
+	var wsIDAttname string
 	if err := db.Raw(`
-		SELECT count(*) FROM information_schema.columns
-		 WHERE table_name = 'reconciliation_normalized'
-		   AND column_name = 'workstation_id'
-	`).Scan(&wsIDColCount).Error; err != nil {
+		SELECT a.attname FROM pg_attribute a
+		JOIN pg_class c ON c.oid = a.attrelid
+		 WHERE c.relname = 'reconciliation_normalized'
+		   AND a.attname = 'workstation_id'
+		   AND a.attnum > 0 AND NOT a.attisdropped
+		 LIMIT 1
+	`).Scan(&wsIDAttname).Error; err != nil {
 		return fmt.Errorf("验证 reconciliation_normalized.workstation_id 列存在失败: %w", err)
 	}
-	if wsIDColCount == 0 {
-		return fmt.Errorf("reconciliation_normalized.workstation_id 列创建失败(information_schema 仍缺失)")
+	if wsIDAttname != "workstation_id" {
+		return fmt.Errorf("reconciliation_normalized.workstation_id 列创建失败(pg_attribute 查无)")
 	}
 	applogger.Infof("[迁移] 181 验证 reconciliation_normalized.workstation_id 列存在 ✓")
 

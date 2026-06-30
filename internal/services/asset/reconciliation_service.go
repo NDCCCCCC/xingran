@@ -877,12 +877,27 @@ func (s *reconciliationServiceImpl) computeByWorkstation(ctx context.Context, ws
 	// (asset_id, asset_username, ad_username 等),冲突/严重程度/置信度等列在 sys_data_reconciliation 表。
 	// 原代码 LEFT JOIN MV 取这些列会 SQLSTATE 42703 → graceful fallback 丢徽标数据。
 	// 修复:改为 LEFT JOIN sys_data_reconciliation (resolved_at IS NULL 表示 open 冲突)。
+	// healthRow 本地 Scan 结构。
+	//
+	// R5 修复 (2026-06-30):必须给 AppliedActions 加 gorm:"column:applied_actions" tag。
+	//
+	// 否则 GORM schema.Parse (gorm.io/gorm@v1.30.5/schema/schema.go:294-305) 会把
+	// pq.StringArray (driver.Valuer) 误判为 relationship 字段:
+	//   1. pq.StringArray.Value() 对零值返回 (nil, nil) → DataType 保持 ""
+	//   2. DataType 为空 + Creatable/Updatable/Readable=true → 被分类为 relationship
+	//   3. parseRelation → getOrParse → 解引用 *[] → [] → string,string 的
+	//      PkgPath()=="" → 返回 "unsupported data type: &[]"
+	//   4. 整行 Scan 失败 → rows=nil → LEFT JOIN 徽标数据全丢(200 仍返回,但 item 退化)
+	//
+	// 已有正解参考:internal/services/asset/reconciliation_detection_test.go:46-50, 72-76
+	// 同样 SELECT applied_actions FROM ... 的测试用 gorm:"column:applied_actions" tag
+	// 工作正常,正是缺这一行的差别。
 	type healthRow struct {
 		AssetID         string
 		ConflictType    *string
 		Severity        *string
 		ExceptionRuleID *string
-		AppliedActions  pq.StringArray
+		AppliedActions  pq.StringArray `gorm:"column:applied_actions"`
 		ConfidenceScore *float64
 	}
 	var rows []healthRow
