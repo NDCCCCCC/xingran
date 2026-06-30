@@ -222,7 +222,14 @@ const FloorManagement: FC = () => {
           if (building) {
             setModalDeptId(building.orgId);
             const result = await buildingApi.list({ orgId: building.orgId, current: 1, pageSize: 50 });
-            setModalBuildingOptions(result.data?.list || []);
+            let options = result.data?.list || [];
+            // 楼宇兜底注入(2026-06-30,同 info-points):pageSize:50 可能不包含当前
+            // buildingId → 模态框 Select 显示 raw UUID。buildingApi.get 已返回完整对象,
+            // 用它注入一条临时 Option,确保 Select 一定能找到 label。
+            if (!options.find(b => b.id === building.id)) {
+              options = [...options, building];
+            }
+            setModalBuildingOptions(options);
           }
         } catch (error) {
           console.error("加载楼宇信息失败:", error);
