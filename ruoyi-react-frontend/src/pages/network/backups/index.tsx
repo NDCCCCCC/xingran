@@ -7,7 +7,7 @@
  * - hooks/: 自定义 Hooks (数据管理、差异对比、弹窗管理)
  */
 
-import { useState, useEffect, type FC } from "react";
+import { useState, useEffect, useMemo, type FC } from "react";
 import {
   Table,
   Button,
@@ -50,6 +50,8 @@ import ActionButtons from "@/components/shared/ActionButtons";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
 import { usePagination } from "@/hooks/usePagination";
+import { useServerSort } from "@/hooks/useServerSort";
+import { createSorterMeta } from "@/utils/tableHelpers";
 import { formatDateTime } from "@/utils/datetime";
 
 const { Option } = Select;
@@ -73,6 +75,19 @@ const [batchExporting, setBatchExporting] = useState(false);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
+  // 服务端排序:field 与 columns.dataIndex 对齐(useServerSort 按 sorter.field 匹配)
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<DeviceBackupGroup>("deviceId"),
+      createSorterMeta<DeviceBackupGroup>("deviceName"),
+      createSorterMeta<DeviceBackupGroup>("createdAt", "date"),
+    ],
+    []
+  );
+  const { orderByColumn, isAsc, handleTableChange: handleBackupSortChange, sortOrder: backupSortOrder } = useServerSort<DeviceBackupGroup>({
+    sorterMetas,
+  });
 
   // 使用自定义 Hooks
   const {
@@ -313,6 +328,8 @@ const [batchExporting, setBatchExporting] = useState(false);
       dataIndex: "deviceName",
       key: "deviceName",
       width: 200,
+      sorter: true,
+      sortOrder: orderByColumn === "deviceName" ? backupSortOrder : null,
     },
     {
       title: "IP地址",
@@ -551,11 +568,16 @@ const [batchExporting, setBatchExporting] = useState(false);
           rowKey="deviceId"
           scroll={{ x: 1200 }}
           pagination={paginationProps}
-          onChange={(pagination) => {
+          onChange={(pagination, _filters, sorter) => {
+            handleBackupSortChange(pagination, _filters, sorter);
             setCurrent(pagination.current ?? 1);
             setPageSize(pagination.pageSize ?? 10);
             const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
-            const searchParams: Record<string, unknown> = { current: pagination.current ?? 1, pageSize: pagination.pageSize ?? 10 };
+            const searchParams: Record<string, unknown> = {
+              current: pagination.current ?? 1,
+              pageSize: pagination.pageSize ?? 10,
+              ...(orderByColumn ? { orderByColumn, isAsc } : {}),
+            };
             Object.keys(formValues).forEach(key => {
               const value = formValues[key];
               if (value !== undefined && value !== null && value !== "") {
