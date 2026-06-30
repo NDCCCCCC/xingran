@@ -635,6 +635,11 @@ func (s *macHistoryQueryServiceImpl) QueryHistory(ctx context.Context, req *MACH
 		if endTime.Sub(startTime) > maxQueryRange {
 			return nil, fmt.Errorf("查询时间跨度过大，最大允许 %d 天", int(maxQueryRange.Hours()/24))
 		}
+		// 把 RFC3339 UTC 瞬时值转本地 loc(Asia/Shanghai,见 cmd/main.go setTimeZone),
+		// 让 pgx 发北京墙钟匹配 timestamp without time zone 列存储,避免 8h 错位
+		// (同 device_mac_history.go 时区注释,与 QueryMACTrajectory 共用根因)。
+		startTime = startTime.Local()
+		endTime = endTime.Local()
 		query = query.Where("first_seen >= ?", startTime).
 			Where("first_seen <= ?", endTime)
 	} else if req.StartTime != "" {
@@ -642,12 +647,14 @@ func (s *macHistoryQueryServiceImpl) QueryHistory(ctx context.Context, req *MACH
 		if err != nil {
 			return nil, fmt.Errorf("无效的开始时间格式: %w", err)
 		}
+		startTime = startTime.Local()
 		query = query.Where("first_seen >= ?", startTime)
 	} else if req.EndTime != "" {
 		endTime, err := time.Parse(time.RFC3339, req.EndTime)
 		if err != nil {
 			return nil, fmt.Errorf("无效的结束时间格式: %w", err)
 		}
+		endTime = endTime.Local()
 		query = query.Where("first_seen <= ?", endTime)
 	}
 
@@ -853,8 +860,12 @@ func (s *macHistoryQueryServiceImpl) QueryMACTrajectory(ctx context.Context, req
 		if err != nil {
 			return nil, fmt.Errorf("无效的开始时间格式: %w", err)
 		}
+		// 把 RFC3339 UTC 瞬时值转成本地 loc(Asia/Shanghai,见 cmd/main.go setTimeZone),
+		// 这样 pgx 写入 timestamp without time zone 比较参数时用的是北京墙钟,
+		// 与 DB 列存储的北京墙钟匹配,避免 8 小时 UTC/Beijing 错位(详见 device_mac_history.go 注释)。
+		startTime = startTime.Local()
 	} else {
-		// 默认30天前
+		// 默认30天前(time.Now() 已是 Local)
 		startTime = time.Now().Add(-30 * 24 * time.Hour)
 	}
 
@@ -863,8 +874,10 @@ func (s *macHistoryQueryServiceImpl) QueryMACTrajectory(ctx context.Context, req
 		if err != nil {
 			return nil, fmt.Errorf("无效的结束时间格式: %w", err)
 		}
+		// 同上:转本地 loc 让 pgx 发北京墙钟
+		endTime = endTime.Local()
 	} else {
-		// 默认当前时间
+		// 默认当前时间(time.Now() 已是 Local)
 		endTime = time.Now()
 	}
 
