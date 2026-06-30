@@ -97,27 +97,39 @@ export const queryMACHistory = async (
  * - 内部复用 /network/history/list 端点,pageSize 设为 100 一次性拉满
  * - 返回按 firstSeen 倒序的事件列表
  */
+/**
+ * 查询 MAC 事件(分页版,2026-06-30 quick 改造支持 load-more)
+ * - 端点:POST /network/history/list
+ * - 用于 MAC 事件时间线(列表页抽屉 / 历史页展开行)
+ * - 返回按 firstSeen 倒序的事件列表 + total + hasMore
+ * - 调用方负责"加载更多"按钮的 state 管理
+ */
+export interface MACEventsPage {
+  list: MACHistoryRecord[];
+  total: number;
+  current: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
 export const getMACEvents = async (
   mac: string,
   startTime: string,
-  endTime: string
-): Promise<MACHistoryRecord[]> => {
+  endTime: string,
+  options: { current?: number; pageSize?: number } = {}
+): Promise<MACEventsPage> => {
+  const { current = 1, pageSize = 100 } = options;
   const result = await post<MACHistoryPageResult>("/network/history/list", {
     mac,
     startTime,
     endTime,
-    current: 1,
-    pageSize: 100,
+    current,
+    pageSize,
   });
   const list = result.data?.list ?? [];
   const total = result.data?.total ?? 0;
-  if (total > list.length) {
-    console.warn(`[getMACEvents] 事件被截断:total=${total}, returned=${list.length}。前端 pageSize=100 上限。考虑添加 sort 扩展或扩大分页。`);
-  }
-  return list.slice().sort(
-    (a, b) =>
-      new Date(b.firstSeen).getTime() - new Date(a.firstSeen).getTime()
-  );
+  const hasMore = current * pageSize < total;
+  return { list, total, current, pageSize, hasMore };
 };
 
 /**
