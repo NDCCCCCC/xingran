@@ -28,6 +28,8 @@ export interface WorkOrderListParams {
   status?: number;
   assigneeId?: string;
   deptId?: string;
+  orderByColumn?: string;
+  isAsc?: boolean;
 }
 
 export interface WorkOrderStats {
@@ -52,7 +54,7 @@ export interface UseWorkOrderDataReturn {
   users: SimpleUser[];
   depts: SimpleDept[];
   categories: WorkOrderCategory[];
-  fetchList: (page?: number, pageSize?: number) => Promise<void>;
+  fetchList: (page?: number, pageSize?: number, sortParams?: { orderByColumn?: string; isAsc?: boolean }) => Promise<void>;
   fetchStats: () => Promise<void>;
   fetchUsers: () => Promise<void>;
   fetchCategories: () => Promise<void>;
@@ -100,8 +102,8 @@ export function useWorkOrderData(
     }
   }, []);
 
-  // 获取列表数据
-  const fetchList = useCallback(async (page?: number, size?: number) => {
+  // 获取列表数据;sortParams 携带 orderByColumn/isAsc(由 useServerSort 注入)
+  const fetchList = useCallback(async (page?: number, size?: number, sortParams?: { orderByColumn?: string; isAsc?: boolean }) => {
     setLoading(true);
     try {
       const values = form.getFieldsValue() as Record<string, unknown>;
@@ -116,6 +118,7 @@ export function useWorkOrderData(
         status: values.status as number,
         assigneeId: values.assigneeId as string,
         deptId: values.deptId as string,
+        ...(sortParams?.orderByColumn ? { orderByColumn: sortParams.orderByColumn, isAsc: sortParams.isAsc } : {}),
       };
 
       const result = await getWorkOrderList(params);

@@ -84,10 +84,12 @@ interface WorkOrderTableColumnsProps {
   handleDelete: (id: string) => void;
   current: number;
   pageSize: number;
+  /** 由 useServerSort 注入,返回字段当前排序方向 */
+  getSortOrder?: (field: string) => "ascend" | "descend" | null;
 }
 
 function getWorkOrderTableColumns(props: WorkOrderTableColumnsProps): ColumnsType<WorkOrder> {
-  const { handleViewDetail, handleEdit, handleAssignToTodayDuty, handleDelete, current, pageSize } = props;
+  const { handleViewDetail, handleEdit, handleAssignToTodayDuty, handleDelete, current, pageSize, getSortOrder } = props;
 
   return [
     {
@@ -121,6 +123,8 @@ function getWorkOrderTableColumns(props: WorkOrderTableColumnsProps): ColumnsTyp
       dataIndex: "priority",
       key: "priority",
       width: 80,
+      sorter: true,
+      sortOrder: getSortOrder?.("priority"),
       render: (priority: WorkOrderPriority) => (
         <Tag color={PRIORITY_CONFIG[priority]?.color}>{PRIORITY_CONFIG[priority]?.text}</Tag>
       ),
@@ -403,7 +407,8 @@ const WorkOrderPage: FC = () => {
     handleDelete,
     current: paginationProps.current ?? 1,
     pageSize: paginationProps.pageSize ?? 10,
-  }), [openDetailDrawer, handleEdit, handleAssignToTodayDuty, handleDelete, paginationProps]);
+    getSortOrder: (field) => (orderByColumn === field ? woSortOrder : null),
+  }), [openDetailDrawer, handleEdit, handleAssignToTodayDuty, handleDelete, paginationProps, orderByColumn, woSortOrder]);
 
   // 分类树 - 使用 useMemo 避免重复构建
   const categoryTree = useMemo(() => buildCategoryTree(categories), [categories]);
