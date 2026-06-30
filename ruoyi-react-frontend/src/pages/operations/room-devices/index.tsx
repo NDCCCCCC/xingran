@@ -218,6 +218,15 @@ const RoomDeviceManagement: FC = () => {
   const openModal = (record?: RoomDevice) => {
     if (record) {
       handleEdit(record);
+      // 机房兜底注入(2026-06-30,同 info-points):loadRoomOptions 异步且 pageSize:50
+      // 可能不包含当前 roomId → Select 显示 raw UUID。用 record.roomName 注入。
+      if (record.roomId) {
+        setRoomOptions(prev =>
+          prev.find(r => r.id === record.roomId)
+            ? prev
+            : [...prev, { id: record.roomId, name: record.roomName || "未命名机房", buildingId: "", orgId: "" }]
+        );
+      }
       deviceForm.setFieldsValue(record);
     } else {
       handleAdd();
