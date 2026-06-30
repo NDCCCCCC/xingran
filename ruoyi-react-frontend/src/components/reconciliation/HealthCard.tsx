@@ -1,20 +1,18 @@
 /**
  * HealthCard — Phase 45 R4 / D-A1-01
  *
- * 工位对账健康度卡片(5 KPI + 趋势 mini chart + 得分)。
+ * 工位对账健康度(单行紧凑版,/gsd-fast 2026-06-30)。
  * 放置于工位 expand 展开区顶部(参 UI-SPEC "Anchor" + D-A1-01)。
  *
- * 锁定决策 (UI-SPEC):
- *   - antd Card title="对账健康度" + "本周" tag + score + 两个链接
- *   - 5 KPI grid (5 Col span=4)
- *   - 趋势 mini chart:echarts-for-react,height=56,单 line series,无坐标轴
- *   - 得分颜色:≥80 绿 / 60-79 黄 / <60 红
- *   - useReconciliationVisibility() === false → render null
- *   - useEffect/useQuery deps 仅 primitive workstationId
+ * 显示(单行,无 Card 标题/趋势 chart/5 KPI grid):
+ *   [score/100(颜色按分数段)] 正常 N · 漂移 N · 冲突 N [· 无数据 N] [· 例外 N] [申请例外 →]
+ *
+ * 得分颜色:≥80 绿 / 60-79 黄 / <60 红
+ * useReconciliationVisibility() === false → render null
+ * useEffect/useQuery deps 仅 primitive workstationId
  */
-import React, { useMemo } from "react";
-import { Card, Col, Row, Statistic, Tag, Skeleton, Empty, Result, Button } from "antd";
-import ReactECharts from "echarts-for-react";
+import React from "react";
+import { Card, Tag, Skeleton, Empty, Result, Button } from "antd";
 import { useWorkstationHealth } from "./hooks/useWorkstationHealth";
 import { useReconciliationVisibility } from "./hooks/useReconciliationVisibility";
 
@@ -33,26 +31,7 @@ const HealthCardInner: React.FC<HealthCardProps> = ({ workstationId, onApplyExce
   const visible = useReconciliationVisibility();
   const { data, isLoading, isError, refetch } = useWorkstationHealth(workstationId);
 
-  const trendOption = useMemo(() => {
-    const points = (data?.healthScore?.trend ?? []).map((t: { date: string; openCount: number }) => [t.date, t.openCount]);
-    return {
-      grid: { left: 0, right: 0, top: 2, bottom: 2 },
-      xAxis: { type: "category", show: false, data: points.map((p: (string | number)[]) => p[0]) },
-      yAxis: { type: "value", show: false },
-      tooltip: { show: false },
-      series: [
-        {
-          type: "line",
-          data: points.map((p: (string | number)[]) => p[1]),
-          smooth: true,
-          symbol: "none",
-          lineStyle: { color: data ? SCORE_BAND_COLOR(data.healthScore.score) : "#22c55e", width: 1.5 },
-          areaStyle: { color: data ? SCORE_BAND_COLOR(data.healthScore.score) : "#22c55e", opacity: 0.1 },
-        },
-      ],
-    };
-  }, [data]);
-
+  
   // 静默降级(D-A1-03)
   if (!visible) {
     return null;
@@ -99,66 +78,40 @@ const HealthCardInner: React.FC<HealthCardProps> = ({ workstationId, onApplyExce
   const { healthScore } = data;
   const scoreColor = SCORE_BAND_COLOR(healthScore.score);
 
-  // 紧凑 KPI 样式(antd 6.x 弃用 valueStyle,改用 styles.content)
-  const compactKpiValue = { fontSize: 16, fontWeight: 600, lineHeight: 1.2 };
-  const compactKpiTitle = { fontSize: 12, marginBottom: 0 };
-  const compactScoreValue = { color: scoreColor, fontSize: 22, fontWeight: 700, lineHeight: 1.2 };
-
+  // /gsd-fast (2026-06-30): 单行紧凑版 — 彩色 score · 内联 KPI 摘要 · 申请例外。
+  // 原 Card 标题/score 大数字/trend chart/5 KPI grid 占位过高,expand 后行高跳变。
   return (
-    <Card
-      size="small"
-      title="对账健康度"
-      extra={
-        <Tag color="blue" style={{ marginRight: 4 }}>
-          本周
-        </Tag>
-      }
-      style={{ marginBottom: 8 }}
-      styles={{ body: { padding: "8px 12px" } }}
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "4px 8px",
+        marginBottom: 8,
+        fontSize: 12,
+        color: "#666",
+      }}
     >
-      <Row gutter={8} align="middle" style={{ marginBottom: 4 }}>
-        <Col flex="64px">
-          <Statistic
-            value={healthScore.score}
-            suffix="/100"
-            styles={{ content: compactScoreValue }}
-          />
-        </Col>
-        <Col flex="auto">
-          <ReactECharts
-            option={trendOption}
-            style={{ height: 40, width: "100%" }}
-            opts={{ renderer: "svg" }}
-            notMerge
-            lazyUpdate
-          />
-        </Col>
-        {onApplyException && (
-          <Col flex="72px" style={{ textAlign: "right" }}>
-            <Button type="link" size="small" onClick={onApplyException}>
-              申请例外
-            </Button>
-          </Col>
-        )}
-      </Row>
-      <Row gutter={8}>
-        <Col span={4} xs={12} sm={8} md={6} lg={4}>
-          <Statistic title="正常" value={healthScore.normal} styles={{ content: compactKpiValue, title: compactKpiTitle }} />
-        </Col>
-        <Col span={4} xs={12} sm={8} md={6} lg={4}>
-          <Statistic title="漂移" value={healthScore.drift} styles={{ content: compactKpiValue, title: compactKpiTitle }} />
-        </Col>
-        <Col span={4} xs={12} sm={8} md={6} lg={4}>
-          <Statistic title="冲突" value={healthScore.conflict} styles={{ content: compactKpiValue, title: compactKpiTitle }} />
-        </Col>
-        <Col span={4} xs={12} sm={8} md={6} lg={4}>
-          <Statistic title="无数据" value={healthScore.noData} styles={{ content: compactKpiValue, title: compactKpiTitle }} />
-        </Col>
-        <Col span={4} xs={12} sm={8} md={6} lg={4}>
-          <Statistic title="例外命中" value={healthScore.exceptionHit} styles={{ content: compactKpiValue, title: compactKpiTitle }} />
-        </Col>
-      </Row>
-    </Card>
+      <span style={{ color: scoreColor, fontWeight: 700, fontSize: 16 }}>
+        {healthScore.score}
+        <span style={{ fontSize: 11, color: "#999", fontWeight: 400 }}> /100</span>
+      </span>
+      <span>
+        正常 {healthScore.normal} · 漂移 {healthScore.drift} · 冲突 {healthScore.conflict}
+        {healthScore.noData > 0 ? ` · 无数据 ${healthScore.noData}` : ""}
+        {healthScore.exceptionHit > 0 ? ` · 例外 ${healthScore.exceptionHit}` : ""}
+      </span>
+      {onApplyException && (
+        <Button
+          type="link"
+          size="small"
+          style={{ marginLeft: "auto", padding: 0, height: "auto" }}
+          onClick={onApplyException}
+        >
+          申请例外
+        </Button>
+      )}
+    </div>
   );
 };
 
