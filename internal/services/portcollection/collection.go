@@ -267,13 +267,25 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 		for i, p := range portStatuses {
 			ifaceNames[i] = p.InterfaceName
 		}
+		// GORM 不支持 Find(&map[string]string) (会触发 'sql: Scan called without
+		// calling Next'),只能 Find 进 struct 切片然后本地组 map。
+		// 这里只用 interface_name + device_id 两个字段,加 anon struct 避免引入新 model。
+		var conflicts []struct {
+			InterfaceName string
+			DeviceID      string
+		}
 		if err := s.db.WithContext(ctx).
 			Model(&models.DevicePortStatus{}).
 			Select("interface_name, device_id").
 			Where("interface_name IN ? AND device_id <> ?", ifaceNames, device.ID).
-			Find(&conflictIfaces).Error; err != nil {
+			Find(&conflicts).Error; err != nil {
 			applogger.Warnf("[PortCollection] %s: check ownership clash failed: %v", device.DeviceName, err)
-		} else if len(conflictIfaces) > 0 {
+		} else {
+			for _, c := range conflicts {
+				conflictIfaces[c.InterfaceName] = c.DeviceID
+			}
+		}
+		if len(conflictIfaces) > 0 {
 			filtered := portStatuses[:0]
 			for _, p := range portStatuses {
 				if conflictDevID, exists := conflictIfaces[p.InterfaceName]; exists {
