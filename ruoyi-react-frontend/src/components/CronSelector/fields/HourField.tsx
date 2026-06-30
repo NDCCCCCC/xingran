@@ -48,7 +48,7 @@ const HourField: FC<HourFieldProps> = ({ value, onChange }) => {
                 style={{ width: 80 }}
                 value={value.cycleStart ?? 0}
                 onChange={(cycleStart: number) => onChange({ ...value, periodType: "cycle", cycleStart })}
-              >
+               onSearch={() => {}}>
                 {options.map(v => <Select.Option key={v} value={v}>{v}</Select.Option>)}
               </Select>
               <span>点开始，每</span>
@@ -56,7 +56,7 @@ const HourField: FC<HourFieldProps> = ({ value, onChange }) => {
                 style={{ width: 80 }}
                 value={value.cycleInterval ?? 1}
                 onChange={(cycleInterval: number) => onChange({ ...value, periodType: "cycle", cycleInterval })}
-              >
+               onSearch={() => {}}>
                 {Array.from({ length: Math.min(12, range.max) }, (_, i) => i + 1).map(v => (
                   <Select.Option key={v} value={v}>{v}</Select.Option>
                 ))}
@@ -73,7 +73,7 @@ const HourField: FC<HourFieldProps> = ({ value, onChange }) => {
                 style={{ width: 80 }}
                 value={value.rangeStart ?? 0}
                 onChange={(rangeStart: number) => onChange({ ...value, periodType: "range", rangeStart })}
-              >
+               onSearch={() => {}}>
                 {options.map(v => <Select.Option key={v} value={v}>{v}</Select.Option>)}
               </Select>
               <span>到</span>
@@ -81,7 +81,7 @@ const HourField: FC<HourFieldProps> = ({ value, onChange }) => {
                 style={{ width: 80 }}
                 value={value.rangeEnd ?? 23}
                 onChange={(rangeEnd: number) => onChange({ ...value, periodType: "range", rangeEnd })}
-              >
+               onSearch={() => {}}>
                 {options.map(v => <Select.Option key={v} value={v}>{v}</Select.Option>)}
               </Select>
               <span>点</span>

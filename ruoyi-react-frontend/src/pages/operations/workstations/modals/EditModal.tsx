@@ -176,7 +176,7 @@ export function WorkstationEditModal({
           <Input placeholder="请输入工位名称" />
         </Form.Item>
         <Form.Item name="type" label="工位类型" rules={[{ required: true, message: "请选择工位类型" }]}>
-          <Select placeholder="请选择工位类型">
+          <Select placeholder="请选择工位类型" onSearch={() => {}}>
             {TYPE_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}

@@ -75,7 +75,7 @@ export default function DutyManagement() {
 
   const fetchUsers = async () => {
     try {
-      const result = await getUserList({ current: 1, pageSize: 1000 });
+      const result = await getUserList({ current: 1, pageSize: 50 });
       setUsers(result.data?.list || []);
     } catch (error) {
       console.error("获取用户列表失败", error);

@@ -174,7 +174,7 @@ const DefaultThemePage: React.FC = () => {
           name="mode"
           rules={[{ required: true, message: "请选择主题模式" }]}
         >
-          <Select options={MODE_OPTIONS} placeholder="请选择主题模式" />
+          <Select options={MODE_OPTIONS} placeholder="请选择主题模式"  onSearch={() => {}}/>
         </Form.Item>
 
         <Form.Item
@@ -182,7 +182,7 @@ const DefaultThemePage: React.FC = () => {
           name="style"
           rules={[{ required: true, message: "请选择主题风格" }]}
         >
-          <Select options={STYLE_OPTIONS} placeholder="请选择主题风格" />
+          <Select options={STYLE_OPTIONS} placeholder="请选择主题风格"  onSearch={() => {}}/>
         </Form.Item>
 
         <Divider>自定义颜色（可选）</Divider>

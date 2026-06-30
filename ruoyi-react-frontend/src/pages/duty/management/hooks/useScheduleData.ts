@@ -69,7 +69,7 @@ export function useScheduleData() {
   // 获取所有排班（用于调班）
   const fetchAllSchedules = useCallback(async () => {
     try {
-      const result = await getDutyScheduleList({ current: 1, pageSize: 1000 });
+      const result = await getDutyScheduleList({ current: 1, pageSize: 50 });
       setAllSchedules(result.data?.list ?? []);
     } catch (error) {
       console.error("获取所有排班失败", error);

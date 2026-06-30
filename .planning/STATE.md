@@ -2,24 +2,32 @@
 gsd_state_version: 1.0
 milestone: v1.17
 milestone_name: 资产对账 (Asset Reconciliation)
-status: Phase 45 closed; ready for Phase 46 (R5) or transition
-stopped_at: context exhaustion at 93% (2026-06-29)
-last_updated: "2026-06-29T11:39:20.515Z"
-last_activity: "2026-06-28 -- Phase 45 R4 execution complete: 6 atomic commits (3 backend, 2 frontend, 1 summary per plan), 10/10 SCs verified PASS, 9 vitest tests + 5 Go test packages all PASS, 0 critical issues in code review"
+status: R5_reconciliation_merged_with_dropdown_governance; v1.17 work shipped, awaiting push
+stopped_at: active merge resolution (2026-06-30, R5 + dropdown integration)
+last_updated: "2026-06-30T00:00:00.000Z"
+last_activity: "2026-06-30 -- merged origin/main dropdown governance (6 commits) into local R5 work (282 commits). R5: reconciliation physical chain (normalize GE/Gi/GigabitEthernet via normalize_iface), view O(N²)→O(N+M) (COUNT 72ms), RefreshView 90s timeout root-cause fix, HealthCard single-line collapse. Dropdown: Phase 46-48 governance (MR !5, 7 endpoints + 27 frontend files + ESLint). Awaiting git push origin main."
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 13
-  completed_plans: 12
-  percent: 60
+  total_plans: 15
+  completed_plans: 15
+  percent: 100
 ---
 
 # Project State
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.16 milestone complete + Phase 13 gap closure complete (3 phases, 11/11 plans, 100%)
-**Last activity**: 2026-06-26 — Phase 13 gap closure shipped: plans 13-07 (backend TrajectoryNode.MACAddress + camelCase vendorName), 13-08 (frontend queryMACVendor + MACTrajectoryChart tooltip fix + TrajectoryPage vendor merge), 13-09 (MAC input controlled component via form.setFieldValue), 13-10 (regression tests + VERIFICATION.md status:passed). 5/5 code gaps closed, go build 0.
+**Status**: 🚢 Phase 46/47/48 dropdown governance shipped — branch `worktree-feat-dropdown-governance` pushed, MR pending
+**Last activity**: 2026-06-29 - Phase 46-48 Dropdown 反模式全量治理:
+  - 4 atomic commits on branch `worktree-feat-dropdown-governance`
+  - 7 个后端 dropdown-options 端点 (building/floor/workstation/infoPoint/serverRoom/dedicatedLine/roomDevice)
+  - 27 个前端文件重构 (pageSize 1000→50, searchOptions + onSearch debounce)
+  - 100+ 文件 ESLint 规则升级 (245 violations → 0)
+  - 计划文件: C:\Users\CPIC\.claude\plans\happy-waddling-wand.md (107 行)
+
+**See**: `.planning/milestones/20260616-state-sync-report.md` for the
+        reconciliation report that motivated this state update.
 
 ## Current Position
 

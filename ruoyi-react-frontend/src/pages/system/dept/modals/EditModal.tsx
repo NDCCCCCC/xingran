@@ -105,7 +105,7 @@ export function DeptEditModal({
             optionFilterProp="label"
             onChange={onLeaderChange}
             notFoundContent={loadingUsers ? "加载中..." : "请先选择上级部门"}
-          >
+           onSearch={() => {}}>
             {deptUsers.map((user) => (
               <Option
                 key={user.id}
@@ -133,14 +133,14 @@ export function DeptEditModal({
           initialValue={0}
           tooltip="标记为外部机构的部门可以作为楼宇的所属机构"
         >
-          <Select>
+          <Select onSearch={() => {}}>
             {EXTERNAL_ORG_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>{opt.label}</Option>
             ))}
           </Select>
         </Form.Item>
         <Form.Item name="status" label="状态" initialValue={0}>
-          <Select>
+          <Select onSearch={() => {}}>
             {STATUS_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>{opt.label}</Option>
             ))}

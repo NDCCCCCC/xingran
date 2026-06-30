@@ -465,28 +465,28 @@ const WorkOrderPage: FC = () => {
               />
             </Form.Item>
             <Form.Item name="type" label="类型">
-              <Select placeholder="请选择类型" allowClear className="user-form-input" style={{ width: 100 }}>
+              <Select placeholder="请选择类型" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}>
                 {Object.entries(TYPE_CONFIG).map(([key, { text }]) => (
                   <Option key={key} value={key}>{text}</Option>
                 ))}
               </Select>
             </Form.Item>
             <Form.Item name="priority" label="优先级">
-              <Select placeholder="请选择优先级" allowClear className="user-form-input" style={{ width: 100 }}>
+              <Select placeholder="请选择优先级" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}>
                 {Object.entries(PRIORITY_CONFIG).map(([key, { text }]) => (
                   <Option key={key} value={Number(key)}>{text}</Option>
                 ))}
               </Select>
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }}>
+              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}>
                 {Object.entries(STATUS_CONFIG).map(([key, { text }]) => (
                   <Option key={key} value={Number(key)}>{text}</Option>
                 ))}
               </Select>
             </Form.Item>
             <Form.Item name="assigneeId" label="处理人">
-              <Select placeholder="请选择处理人" allowClear className="user-form-input" showSearch style={{ width: 120 }} optionFilterProp="children">
+              <Select placeholder="请选择处理人" allowClear className="user-form-input" showSearch style={{ width: 120 }} optionFilterProp="children" onSearch={() => {}}>
                 {users.filter(user => user.id).map((user) => (
                   <Option key={user.id} value={user.id}>{user.nickName || user.username}</Option>
                 ))}
@@ -573,7 +573,7 @@ const WorkOrderPage: FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="type" label="工单类型" rules={[{ required: true, message: "请选择工单类型" }]}>
-                <Select placeholder="请选择工单类型" className="user-form-input">
+                <Select placeholder="请选择工单类型" className="user-form-input" onSearch={() => {}}>
                   {Object.entries(TYPE_CONFIG).map(([key, { text }]) => (
                     <Option key={key} value={key}>{text}</Option>
                   ))}
@@ -582,7 +582,7 @@ const WorkOrderPage: FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item name="priority" label="优先级" rules={[{ required: true, message: "请选择优先级" }]}>
-                <Select placeholder="请选择优先级" className="user-form-input">
+                <Select placeholder="请选择优先级" className="user-form-input" onSearch={() => {}}>
                   {Object.entries(PRIORITY_CONFIG).map(([key, { text }]) => (
                     <Option key={key} value={Number(key)}>{text}</Option>
                   ))}
@@ -593,7 +593,7 @@ const WorkOrderPage: FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="deptId" label="所属部门">
-                <Select placeholder="请选择部门" allowClear className="user-form-input">
+                <Select placeholder="请选择部门" allowClear className="user-form-input" onSearch={() => {}}>
                   {depts.filter(dept => dept.id).map((dept) => (
                     <Option key={dept.id} value={dept.id}>{dept.deptName}</Option>
                   ))}
@@ -602,7 +602,7 @@ const WorkOrderPage: FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item name="assigneeId" label="处理人">
-                <Select placeholder="请选择处理人" allowClear showSearch optionFilterProp="children" className="user-form-input">
+                <Select placeholder="请选择处理人" allowClear showSearch optionFilterProp="children" className="user-form-input" onSearch={() => {}}>
                   {users.filter(user => user.id).map((user) => (
                     <Option key={user.id} value={user.id}>{user.nickName || user.username}</Option>
                   ))}

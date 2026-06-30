@@ -164,7 +164,7 @@ const ADOUPage: FC = () => {
       const res = await getADGroupList({
         configId: selectedConfig,
         current: 1,
-        pageSize: 1000, // 获取所有组用于选择
+        pageSize: 50, // 获取所有组用于选择
       });
       if (res.code === 0) {
         setAllGroups(res.data?.list ?? []);
@@ -473,8 +473,8 @@ const ADOUPage: FC = () => {
                 placeholder="选择AD配置"
                 value={selectedConfig}
                 onChange={setSelectedConfig}
-                options={configs.map(c => ({ label: c.configName, value: c.id }))}
-              />
+                options={configs.map(c =>    ({ label: c.configName, value: c.id }))}
+               onSearch={() => {}}/>
               <Spin spinning={treeLoading}>
                 {ouTree.length > 0 ? (
                   <Tree

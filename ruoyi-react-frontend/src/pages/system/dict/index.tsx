@@ -468,7 +468,7 @@ const DictManagement: FC = () => {
                         <Input placeholder="请输入字典类型" allowClear className="user-form-input" style={{ width: 150 }} />
                       </Form.Item>
                       <Form.Item name="status" label="状态">
-                        <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }}>
+                        <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
                           {STATUS_OPTIONS.map(opt => (
                             <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                           ))}
@@ -587,7 +587,7 @@ const DictManagement: FC = () => {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
                     <Form form={dataSearchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
                       <Form.Item label="字典类型">
-                        <Select placeholder="请选择字典类型" value={selectedType} onChange={setSelectedType} style={{ width: 200 }}>
+                        <Select placeholder="请选择字典类型" value={selectedType} onChange={setSelectedType} style={{ width: 200 }} onSearch={() => {}}>
                           {dictTypes.filter(t => t.status === 0).map(t => (
                             <Option key={t.id} value={t.dictType}>{t.dictName}</Option>
                           ))}
@@ -597,7 +597,7 @@ const DictManagement: FC = () => {
                         <Input placeholder="请输入字典标签" allowClear className="user-form-input" style={{ width: 150 }} />
                       </Form.Item>
                       <Form.Item name="status" label="状态">
-                        <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }}>
+                        <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
                           {STATUS_OPTIONS.map(opt => (
                             <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                           ))}
@@ -687,7 +687,7 @@ const DictManagement: FC = () => {
             <Input placeholder="请输入字典类型" disabled={!!editingType} className="user-form-input" />
           </Form.Item>
           <Form.Item name="status" label="状态" rules={[{ required: true }]}>
-            <Select className="user-form-input">
+            <Select className="user-form-input" onSearch={() => {}}>
               {STATUS_OPTIONS.map(opt => (
                 <Option key={opt.value} value={opt.value}>{opt.label}</Option>
               ))}
@@ -727,7 +727,7 @@ const DictManagement: FC = () => {
             <Switch checkedChildren="是" unCheckedChildren="否" />
           </Form.Item>
           <Form.Item name="status" label="状态" rules={[{ required: true }]}>
-            <Select className="user-form-input">
+            <Select className="user-form-input" onSearch={() => {}}>
               {STATUS_OPTIONS.map(opt => (
                 <Option key={opt.value} value={opt.value}>{opt.label}</Option>
               ))}

@@ -203,7 +203,7 @@ const WorkerMonitor: FC = () => {
             <Input placeholder="请输入Worker名称" allowClear style={{ width: 200 }} />
           </Form.Item>
           <Form.Item name="status" label="状态">
-            <Select placeholder="请选择" allowClear style={{ width: 150 }}>
+            <Select placeholder="请选择" allowClear style={{ width: 150 }} onSearch={() => {}}>
               {WORKER_STATUS_OPTIONS.map((opt) => (
                 <Option key={opt.value} value={opt.value}>
                   {opt.label}

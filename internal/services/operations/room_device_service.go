@@ -20,6 +20,8 @@ type RoomDeviceService interface {
 	BatchDelete(ctx context.Context, ids []string) error
 	// Statistics 机房设备统计(专用 COUNT 聚合,不依赖分页列表)。
 	Statistics(ctx context.Context) (*RoomDeviceStatisticsResult, error)
+	// SearchRoomDeviceOptions 机房设备下拉数据源(LIKE 模糊 + roomId/类型/状态筛选,LIMIT 50)。
+	SearchRoomDeviceOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error)
 }
 
 // RoomDeviceStatisticsResult 机房设备统计结果(status: 0=正常 1=故障 2=报废)。
@@ -177,6 +179,34 @@ func (s *roomDeviceService) List(ctx context.Context, req requests.RoomDeviceLis
 // BatchDelete 批量删除机房设备
 func (s *roomDeviceService) BatchDelete(ctx context.Context, ids []string) error {
 	return s.db.WithContext(ctx).Delete(&operations.OpsRoomDevice{}, "id IN ?", ids).Error
+}
+
+// SearchRoomDeviceOptions 机房设备下拉数据源(name LIKE 模糊 + roomId/deviceType/status 筛选,LIMIT 50)。
+// 与 List 同款 WHERE 语义;只 SELECT id+name 两列,无需 JOIN server_rooms(orgId 不支持以简化 SQL)。
+func (s *roomDeviceService) SearchRoomDeviceOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error) {
+	var result []DropdownOption
+
+	query := s.db.WithContext(ctx).Table("ops_room_devices").
+		Select("ops_room_devices.id AS value, ops_room_devices.name AS label").
+		Limit(DropdownMaxRows)
+
+	if name := extractStringParam(params, "name"); name != "" {
+		query = query.Where("ops_room_devices.name LIKE ?", "%"+name+"%")
+	}
+	if roomId := extractStringParam(params, "roomId"); roomId != "" {
+		query = query.Where("ops_room_devices.room_id = ?", roomId)
+	}
+	if deviceType := extractStringParam(params, "deviceType"); deviceType != "" {
+		query = query.Where("ops_room_devices.device_type = ?", deviceType)
+	}
+	if status := extractIntParam(params, "status", -1); status >= 0 {
+		query = query.Where("ops_room_devices.status = ?", status)
+	}
+
+	if err := query.Order("ops_room_devices.name ASC").Find(&result).Error; err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 // validateRoom 验证机房存在性

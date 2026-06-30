@@ -343,7 +343,7 @@ const ProfilePage: FC = () => {
             name="gender"
             initialValue={0}
           >
-            <Select>
+            <Select onSearch={() => {}}>
               <Option value={0}>未知</Option>
               <Option value={1}>男</Option>
               <Option value={2}>女</Option>

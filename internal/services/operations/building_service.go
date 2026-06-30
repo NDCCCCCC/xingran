@@ -21,6 +21,9 @@ type BuildingService interface {
 	BatchDelete(ctx context.Context, ids []string) error
 	// Statistics 楼宇统计(专用 COUNT 聚合,不依赖分页列表;复用 List 筛选支持按 name/orgId/status 统计)。
 	Statistics(ctx context.Context, params map[string]interface{}) (*BuildingStatisticsResult, error)
+	// SearchBuildingOptions 楼宇下拉数据源(LIKE 模糊 + orgId 部门筛选,LIMIT 50)。
+	// 设计给前端 Select/AutoComplete 用,不支持分页;name="" 时走 5min Redis 缓存。
+	SearchBuildingOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error)
 }
 
 // BuildingStatisticsResult 楼宇统计结果(status: 0=正常 1=停用)。
@@ -247,4 +250,49 @@ func (s *buildingService) validateNameUnique(ctx context.Context, orgID, name st
 	}
 
 	return nil
+}
+
+// SearchBuildingOptions 楼宇下拉数据源(name LIKE 模糊 + orgId 部门含子部门,LIMIT 50)。
+// 设计给前端 Select/AutoComplete 远程搜索;keyword 命中 >50 后截断,前端可继续 narrow。
+//
+// 不复用 buildingService.applyFilters:因下拉只需要 id+name 两列且要 ORDER BY name ASC,
+// 而 applyFilters 不控制排序;直接手写 SQL 更清晰且无歧义。
+func (s *buildingService) SearchBuildingOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error) {
+	var result []DropdownOption
+
+	query := s.db.WithContext(ctx).Table("ops_buildings").
+		Select("id AS value, name AS label").
+		Limit(DropdownMaxRows)
+
+	if name := extractStringParam(params, "name"); name != "" {
+		query = query.Where("name LIKE ?", "%"+name+"%")
+	}
+
+	// 部门筛选含子部门:复用 applyDeptFilter 的语义
+	if orgId := extractStringParam(params, "orgId"); orgId != "" {
+		var deptIDs []string
+		err := s.db.Table("sys_dept").
+			Where("id = ? OR ancestors LIKE ? OR ancestors LIKE ? OR ancestors = ?",
+				orgId, "%,"+orgId+",%", "%,"+orgId, orgId).
+			Pluck("id", &deptIDs).Error
+		if err != nil {
+			return nil, err
+		}
+		if len(deptIDs) == 0 {
+			// 没有匹配的部门,返回空集而非全集
+			return result, nil
+		}
+		query = query.Where("org_id IN ?", deptIDs)
+	}
+
+	// 状态筛选(0=正常 1=停用)
+	if status := extractIntParam(params, "status", -1); status >= 0 {
+		query = query.Where("status = ?", status)
+	}
+
+	// 按名称排序,保证首屏选项可预期
+	if err := query.Order("name ASC").Find(&result).Error; err != nil {
+		return nil, err
+	}
+	return result, nil
 }

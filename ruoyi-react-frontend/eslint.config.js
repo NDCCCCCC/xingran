@@ -4,10 +4,15 @@ import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
+import { createRequire } from 'node:module'
+
+// CommonJS 规则加载(因为规则文件用了 require 语法)
+const require = createRequire(import.meta.url)
+const noLargeDropdownList = require('./eslint-rules/no-large-dropdown-list.cjs')
 
 export default tseslint.config(
   {
-    ignores: ['dist', 'vitest.config.ts'],
+    ignores: ['dist', 'vitest.config.ts', 'eslint-rules/**'],
   },
   {
     extends: [
@@ -27,6 +32,11 @@ export default tseslint.config(
       react,
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
+      local: {
+        rules: {
+          'no-large-dropdown-list': noLargeDropdownList,
+        },
+      },
     },
     settings: {
       react: { version: 'detect' },
@@ -102,6 +112,11 @@ export default tseslint.config(
       // 引号统一 — 防止 LogsModal.tsx:344 这类 JSX 属性引号错配 (双引号开始、单引号收尾) 复发。
       // 历史存量靠 `npm run lint:fix` 在引入时一次性消化。
       'quotes': ['error', 'double', { avoidEscape: true, allowTemplateLiterals: false }],
+
+      // 本地自定义规则 — Phase 46/47 下拉框反模式防护
+      // Phase 47: 244 个存量 violation 全部修完,升级为 error
+      // Cascader 已在规则中豁免(无 onSearch prop)
+      'local/no-large-dropdown-list': 'error',
     },
   }
 )

@@ -31,7 +31,7 @@ const BuildingModal: React.FC<BuildingModalProps> = ({ building, visible, onClos
     const loadFloors = async () => {
       setLoadingFloors(true);
       try {
-        const result = await floorApi.list({ buildingId: building.id, current: 1, pageSize: 1000 });
+        const result = await floorApi.list({ buildingId: building.id, current: 1, pageSize: 50 });
         const list = (result.data?.list || []) as unknown as Array<Record<string, unknown>>;
         setFloors(
           list.map((f) => ({

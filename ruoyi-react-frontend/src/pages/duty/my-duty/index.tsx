@@ -390,7 +390,7 @@ const MyDutyPage: FC = () => {
                     allowClear
                     style={{ width: 100 }}
                     onChange={handleSearch}
-                  >
+                   onSearch={() => {}}>
                     <Option value="weekday">工作日</Option>
                     <Option value="weekend">周末</Option>
                     <Option value="holiday">节假日</Option>

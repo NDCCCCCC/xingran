@@ -24,14 +24,30 @@ import type {
   DeviceFormData,
 } from "@/types";
 
+// ==================== 通用类型 ====================
+
+/**
+ * 通用下拉选项 — 后端 dropdown-options 端点的响应元素。
+ * 与 antd Select 的 options={[{value, label}]} 直接对齐。
+ *
+ * 后端硬 LIMIT 50;keyword 通过 onSearch 远程查询。
+ * 替代反模式: pageSize:1000 + filterOption 客户端 substring 匹配。
+ */
+export interface DropdownOption {
+  value: string;
+  label: string;
+}
+
 // ==================== 通用 CRUD 工厂函数 ====================
 
 interface CrudApiConfig {
   basePath: string;
+  /** 自定义 dropdown-options 端点路径,默认 "/dropdown-options" */
+  dropdownPath?: string;
 }
 
 function createCrudApi<T>(config: CrudApiConfig) {
-  const { basePath } = config;
+  const { basePath, dropdownPath = "/dropdown-options" } = config;
 
   return {
     list: async (params: PageParams & Record<string, unknown>) => {
@@ -62,6 +78,20 @@ function createCrudApi<T>(config: CrudApiConfig) {
     statistics: async (params: Record<string, unknown> = {}) => {
       const res = await post<Record<string, number>>(`${basePath}/statistics`, params);
       return res.data ?? {};
+    },
+
+    /**
+     * 下拉数据源远程搜索 — 配合 antd Select 的 showSearch + filterOption={false} + onSearch。
+     * 后端硬 LIMIT 50;keyword 通过 onSearch 防抖传入。
+     * @example
+     *   const [opts, setOpts] = useState<DropdownOption[]>([]);
+     *   const debouncedSearch = useMemo(() => debounce(setOpts, 300), []);
+     *   <Select showSearch filterOption={false} options={opts}
+     *           onSearch={(kw) => workstationApi.searchOptions({ name: kw }).then(setOpts)} />
+     */
+    searchOptions: async (params: Record<string, unknown> = {}) => {
+      const res = await post<DropdownOption[]>(`${basePath}${dropdownPath}`, params);
+      return res.data ?? [];
     },
   };
 }

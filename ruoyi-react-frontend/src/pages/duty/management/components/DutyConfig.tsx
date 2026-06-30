@@ -92,7 +92,7 @@ export const DutyConfig: React.FC<DutyConfigProps> = ({
               <TimePicker style={{ width: "100%" }} format="HH:mm" />
             </Form.Item>
             <Form.Item label="提醒渠道" name="reminderChannels" rules={[{ required: true, message: "请选择渠道" }]}>
-              <Select mode="multiple" placeholder="选择渠道">
+              <Select mode="multiple" placeholder="选择渠道" onSearch={() => {}}>
                 <Option value="websocket">站内通知</Option>
                 <Option value="email" disabled>邮件（未开放）</Option>
                 <Option value="sms" disabled>短信（未开放）</Option>

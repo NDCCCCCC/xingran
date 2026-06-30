@@ -20,6 +20,8 @@ type ServerRoomService interface {
 	BatchDelete(ctx context.Context, ids []string) error
 	// Statistics 机房统计(专用 COUNT 聚合,不依赖分页列表)。
 	Statistics(ctx context.Context) (*ServerRoomStatisticsResult, error)
+	// SearchServerRoomOptions 机房下拉数据源(LIKE 模糊 + floorId 筛选,LIMIT 50)。
+	SearchServerRoomOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error)
 }
 
 // ServerRoomStatisticsResult 机房统计结果(status: 0=正常 1=停用)。
@@ -179,6 +181,38 @@ func (s *serverRoomService) List(ctx context.Context, req requests.ServerRoomLis
 // BatchDelete 批量删除机房
 func (s *serverRoomService) BatchDelete(ctx context.Context, ids []string) error {
 	return s.db.WithContext(ctx).Delete(&operations.OpsServerRoom{}, "id IN ?", ids).Error
+}
+
+// SearchServerRoomOptions 机房下拉数据源(name LIKE 模糊 + buildingId/floorId/status/orgId 筛选,LIMIT 50)。
+// 与 List 同款 WHERE 语义;orgId 经 sys_dept.ancestors 包含子部门。
+func (s *serverRoomService) SearchServerRoomOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error) {
+	var result []DropdownOption
+
+	query := s.db.WithContext(ctx).Table("ops_server_rooms").
+		Select("ops_server_rooms.id AS value, ops_server_rooms.name AS label").
+		Limit(DropdownMaxRows)
+
+	if name := extractStringParam(params, "name"); name != "" {
+		query = query.Where("ops_server_rooms.name LIKE ?", "%"+name+"%")
+	}
+	if buildingId := extractStringParam(params, "buildingId"); buildingId != "" {
+		query = query.Where("ops_server_rooms.building_id = ?", buildingId)
+	}
+	if floorId := extractStringParam(params, "floorId"); floorId != "" {
+		query = query.Where("ops_server_rooms.floor_id = ?", floorId)
+	}
+	if status := extractIntParam(params, "status", -1); status >= 0 {
+		query = query.Where("ops_server_rooms.status = ?", status)
+	}
+	// orgId 部门筛选:机房 → 楼宇 → 部门(org_id 直接匹配)
+	if orgId := extractStringParam(params, "orgId"); orgId != "" {
+		query = query.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE b.id::text = ops_server_rooms.building_id AND b.org_id = ? AND b.deleted_at IS NULL)", orgId)
+	}
+
+	if err := query.Order("ops_server_rooms.name ASC").Find(&result).Error; err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 // validateFloor 验证楼层存在性

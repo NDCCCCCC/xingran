@@ -47,7 +47,7 @@ export function useBackupData(
     try {
       const result = await post<PageResponse<ConfigBackup>>("/network/devices/list", {
         current: 1,
-        pageSize: 1000,
+        pageSize: 50,
       });
       setDevices(result.data?.list || []);
     } catch (error) {

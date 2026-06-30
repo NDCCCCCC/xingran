@@ -39,6 +39,21 @@ func (h *FloorHandler) Statistics(c *gin.Context) {
 	response.Success(c, result)
 }
 
+// SearchFloorOptions 楼层下拉数据源(name LIKE 模糊 + buildingId/orgId/status 筛选,LIMIT 50,读操作不写操作日志)
+// 替代 frontend Select/Cascader children 用分页 list 当全集源导致的截断问题。
+func (h *FloorHandler) SearchFloorOptions(c *gin.Context) {
+	var params map[string]interface{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		params = map[string]interface{}{}
+	}
+	result, err := h.service.SearchFloorOptions(c.Request.Context(), params)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.Success(c, result)
+}
+
 // Create 创建楼层
 // @Summary 创建楼层
 // @Description 创建新的楼层信息

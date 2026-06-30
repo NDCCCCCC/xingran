@@ -340,7 +340,7 @@ const ServerMonitor: FC = () => {
               <Select
                 placeholder="状态"
                 value={searchForm.status}
-                onChange={(value) => setSearchForm({ ...searchForm, status: value })}
+                onChange={(value) =>    setSearchForm({ ...searchForm, status: value })}
                 allowClear
                 className="user-form-input"
                 style={{ width: '100%' }}
@@ -348,7 +348,7 @@ const ServerMonitor: FC = () => {
                   { label: '正常', value: 0 },
                   { label: '异常', value: 1 }
                 ]}
-              />
+               onSearch={() => {}}/>
             </Col>
             <Col xs={24} sm={8} md={12}>
               <Space>

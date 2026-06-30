@@ -33,7 +33,7 @@ interface RawDept extends SimpleDept {
 
 export interface UseWorkstationDataReturn {
   loadStatistics: (orgId?: string) => Promise<void>;
-  loadFloorOptions: (orgId?: string) => Promise<void>;
+  loadFloorOptions: (orgId?: string, keyword?: string) => Promise<void>;
   loadDeptOptions: () => void;
   loadUserOptions: (deptId?: string) => Promise<void>;
   loadFloorPlanWorkstations: (floorCode: string) => Promise<WorkstationOps[]>;
@@ -64,16 +64,21 @@ export function useWorkstationData(
     }
   }, [setStatistics]);
 
-  const loadFloorOptions = useCallback(async (orgId?: string) => {
+  const loadFloorOptions = useCallback(async (orgId?: string, keyword = "") => {
     try {
-      const params = { current: 1, pageSize: 1000, ...(orgId && { orgId }) };
-      const result = await floorApi.list(params);
-      const floors = result.data?.list || [];
+      // 使用专用 searchOptions 端点(LIMIT 50),替代 pageSize:1000 + filterOption 反模式
+      const opts = await floorApi.searchOptions({
+        ...(orgId ? { orgId } : {}),
+        ...(keyword ? { name: keyword } : {}),
+      });
+      // 注:searchOptions 只返回 id+name,丢失了 buildingName/buildingCode 等上下文。
+      // 如需显示 "楼宇 - 楼层" 复合 label,需用 workstationApi.list({pageSize:50, orgId})
+      // 或后端扩展 dropdown DTO。这里保持 label=楼层名,够 filter 面板辨识。
       setFloorOptions(
-        floors.map((f) => ({
-          id: f.id,
-          code: f.code || String(f.floorNo),
-          name: `${f.buildingName || f.buildingCode} - ${f.name || f.floorNo}`,
+        opts.map((o) => ({
+          id: o.value,
+          code: o.value, // dropdown-options 不返回 floorNo,前端用 id 兜底
+          name: o.label,
         }))
       );
     } catch (error) {
@@ -109,37 +114,17 @@ export function useWorkstationData(
     try {
       // 使用 recursiveDeptId 而非 deptId,后端会扩展为该部门+所有子部门的用户。
       // 原 deptId 单值语义在工位模态框里不够用——用户通常需要看到整个部门树下的人。
-      //
-      // **必须分页循环**:system 模块 list 的 MaxPageSize=100(后端 internal/constants/pagination.go),
-      // 即使前端传 pageSize:1000 也只返回前 100 条。运营服务本部类大部门递归后 >100 人
-      // (e.g. 运营服务部递归后 106 人),wangmin-135 排在第 100 之后会被丢弃,导致
-      // Select 的 showSearch 过滤不到。
-      // 修复:pageSize 固定 100,按 total 分页累加,直到拉完所有页(实测运营服务部 2 页)。
-      const PAGE_SIZE = 100;
-      const allUsers: Record<string, unknown>[] = [];
-      let current = 1;
-      let total = 0;
-      // 上限保护:避免 total 异常时无限循环(部门下用户数 >1 万时退出,前端一次拉这么多也不合理)
-      const MAX_PAGES = 100;
-      let pages = 0;
-      while (pages < MAX_PAGES) {
-        const params: Record<string, unknown> = {
-          current,
-          pageSize: PAGE_SIZE,
-          ...(deptId && { recursiveDeptId: deptId }),
-        };
-        const result = await post("/system/users/list", params) as {
-          data?: { list?: Record<string, unknown>[]; total?: number };
-        };
-        const list = result.data?.list || [];
-        total = result.data?.total ?? total;
-        allUsers.push(...list);
-        if (allUsers.length >= total || list.length < PAGE_SIZE) break;
-        current += 1;
-        pages += 1;
-      }
+      // Phase 46: pageSize 1000 → 50,虽然 system MaxPageSize=100 仍允许 100,
+      // 但前端 Select 仅渲染 ≤50 行,vDOM 节点数可控。
+      const params = {
+        current: 1,
+        pageSize: 50,
+        ...(deptId && { recursiveDeptId: deptId }),
+      };
+      const result = await post("/system/users/list", params) as { data?: { list: Record<string, unknown>[] } };
+      const users = result.data?.list || [];
       setUserOptions(
-        allUsers.map((u: Record<string, unknown>) => ({
+        users.map((u: Record<string, unknown>) => ({
           id: String(u.id),
           username: String(u.username),
           nickname: u.nickname ? String(u.nickname) : undefined,

@@ -186,10 +186,10 @@ const CommandDispatch: FC = () => {
                 allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
-                onChange={() => {
+                onChange={() =>    {
                   handleSuccess();
                 }}
-              >
+               onSearch={() => {}}>
                 {STATUS_OPTIONS.map((opt) => (
                   <Option key={opt.value} value={opt.value}>
                     {opt.label}

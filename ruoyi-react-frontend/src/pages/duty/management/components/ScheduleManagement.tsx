@@ -193,28 +193,28 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
     <Card variant="borderless">
       <Form form={searchForm} layout="inline" style={{ marginBottom: 16 }}>
         <Form.Item name="poolId">
-          <Select placeholder="值班池" allowClear style={{ width: 140 }}>
+          <Select placeholder="值班池" allowClear style={{ width: 140 }} onSearch={() => {}}>
             {pools.map((pool) => (
               <Select.Option key={pool.id} value={pool.id}>{pool.poolName}</Select.Option>
             ))}
           </Select>
         </Form.Item>
         <Form.Item name="userId">
-          <Select placeholder="值班人员" allowClear style={{ width: 120 }}>
+          <Select placeholder="值班人员" allowClear style={{ width: 120 }} onSearch={() => {}}>
             {users.map((user) => (
               <Select.Option key={user.id} value={user.id}>{user.nickname || user.username}</Select.Option>
             ))}
           </Select>
         </Form.Item>
         <Form.Item name="dutyType">
-          <Select placeholder="值班类型" allowClear style={{ width: 120 }}>
+          <Select placeholder="值班类型" allowClear style={{ width: 120 }} onSearch={() => {}}>
             <Select.Option value="weekday">工作日</Select.Option>
             <Select.Option value="weekend">周末</Select.Option>
             <Select.Option value="holiday">节假日</Select.Option>
           </Select>
         </Form.Item>
         <Form.Item name="expired">
-          <Select placeholder="排班状态" allowClear style={{ width: 120 }}>
+          <Select placeholder="排班状态" allowClear style={{ width: 120 }} onSearch={() => {}}>
             <Select.Option value={0}>未过期</Select.Option>
             <Select.Option value={1}>已过期</Select.Option>
           </Select>

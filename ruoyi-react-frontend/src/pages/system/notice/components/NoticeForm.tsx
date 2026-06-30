@@ -133,7 +133,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
           </Col>
           <Col span={12}>
             <Form.Item name="noticeType" label="类型" labelCol={{ span: 10 }} wrapperCol={{ span: 14 }} rules={[{ required: true, message: "请选择公告类型" }]}>
-              <Select>
+              <Select onSearch={() => {}}>
                 <Option value="1">公告</Option>
                 <Option value="2">警告</Option>
               </Select>
@@ -145,7 +145,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
         <Row>
           <Col span={12}>
             <Form.Item name="priority" label="优先级" labelCol={{ span: 10 }} wrapperCol={{ span: 14 }} initialValue={0}>
-              <Select>
+              <Select onSearch={() => {}}>
                 <Option value={0}>普通</Option>
                 <Option value={1}>重要</Option>
                 <Option value={2}>紧急</Option>
@@ -154,7 +154,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
           </Col>
           <Col span={12}>
             <Form.Item name="status" label="状态" labelCol={{ span: 10 }} wrapperCol={{ span: 14 }} initialValue={0}>
-              <Select>
+              <Select onSearch={() => {}}>
                 <Option value={0}>正常</Option>
                 <Option value={1}>关闭</Option>
               </Select>
@@ -233,7 +233,7 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
               <Row gutter={8}>
                 <Col span={6}>
                   <Form.Item name="targetType" noStyle initialValue={0}>
-                    <Select onChange={onTargetTypeChange}>
+                    <Select onChange={onTargetTypeChange} onSearch={() => {}}>
                       <Option value={0}>全部用户</Option>
                       <Option value={1}>指定部门</Option>
                       <Option value={2}>指定角色</Option>
@@ -308,10 +308,10 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
                   placeholder="请选择企微机器人配置"
                   loading={loadingAPIConfigs}
                   allowClear
-                  onChange={(value) => {
+                  onChange={(value) =>    {
                     form.setFieldValue("apiConfigId", value);
                   }}
-                >
+                 onSearch={() => {}}>
                   {apiConfigs.filter((config) => config.id != null).map((config) => (
                     <Option key={config.id} value={config.id}>
                       {config.configName}

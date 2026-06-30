@@ -56,7 +56,7 @@ const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
                 style={{ width: 100 }}
                 value={value.cycleStart ?? 1}
                 onChange={(cycleStart: number) => onChange({ ...value, periodType: "cycle", cycleStart })}
-              >
+               onSearch={() => {}}>
                 {weekOptions.map(opt => (
                   <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
                 ))}
@@ -66,7 +66,7 @@ const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
                 style={{ width: 80 }}
                 value={value.cycleInterval ?? 1}
                 onChange={(cycleInterval: number) => onChange({ ...value, periodType: "cycle", cycleInterval })}
-              >
+               onSearch={() => {}}>
                 {Array.from({ length: 7 }, (_, i) => i + 1).map(v => (
                   <Select.Option key={v} value={v}>{v}</Select.Option>
                 ))}
@@ -83,7 +83,7 @@ const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
                 style={{ width: 100 }}
                 value={value.rangeStart ?? 1}
                 onChange={(rangeStart: number) => onChange({ ...value, periodType: "range", rangeStart })}
-              >
+               onSearch={() => {}}>
                 {weekOptions.map(opt => (
                   <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
                 ))}
@@ -93,7 +93,7 @@ const WeekField: FC<WeekFieldProps> = ({ value, onChange }) => {
                 style={{ width: 100 }}
                 value={value.rangeEnd ?? 7}
                 onChange={(rangeEnd: number) => onChange({ ...value, periodType: "range", rangeEnd })}
-              >
+               onSearch={() => {}}>
                 {weekOptions.map(opt => (
                   <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
                 ))}

@@ -54,9 +54,9 @@ function ActionItem({ action, index, onUpdate, onRemove }: ActionItemProps) {
           <Select
             value={action.type}
             placeholder="动作类型"
-            onChange={(value) => onUpdate(index, { ...action, type: value })}
+            onChange={(value) =>    onUpdate(index, { ...action, type: value })}
             style={{ width: "100%" }}
-          >
+           onSearch={() => {}}>
             {ACTION_TYPE_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -287,7 +287,7 @@ export function TaskEditModal({
                     </Row>
 
                     <Form.Item name="tags" label="标签">
-                      <Select mode="tags" placeholder="请输入标签" />
+                      <Select mode="tags" placeholder="请输入标签"  onSearch={() => {}}/>
                     </Form.Item>
                   </>
                 ),

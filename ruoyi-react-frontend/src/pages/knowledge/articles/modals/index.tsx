@@ -61,7 +61,7 @@ export function EditModal({
               label="文章分类"
               rules={[{ required: true, message: "请选择文章分类" }]}
             >
-              <Select placeholder="请选择文章分类" className="user-form-input">
+              <Select placeholder="请选择文章分类" className="user-form-input" onSearch={() => {}}>
                 {flatCategories.map((cat) => (
                   <Option key={cat.id} value={cat.id}>
                     {cat.categoryName}
@@ -76,7 +76,7 @@ export function EditModal({
               label="状态"
               rules={[{ required: true, message: "请选择状态" }]}
             >
-              <Select placeholder="请选择状态" className="user-form-input">
+              <Select placeholder="请选择状态" className="user-form-input" onSearch={() => {}}>
                 {STATUS_OPTIONS.map((opt) => (
                   <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                 ))}
@@ -86,7 +86,7 @@ export function EditModal({
         </Row>
 
         <Form.Item name="tagIds" label="标签">
-          <Select mode="tags" placeholder="请选择标签" style={{ width: "100%" }} className="user-form-input">
+          <Select mode="tags" placeholder="请选择标签" style={{ width: "100%" }} className="user-form-input" onSearch={() => {}}>
             {tags.map((tag) => (
               <Option key={tag.id} value={tag.id}>
                 {tag.tagName}

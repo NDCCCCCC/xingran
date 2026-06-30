@@ -201,7 +201,7 @@ export const EndpointSelector: React.FC<EndpointSelectorProps> = ({
 				);
 			}}
 			{...selectProps}
-		>
+		 onSearch={() => {}}>
 			{renderOptions()}
 		</Select>
 	);

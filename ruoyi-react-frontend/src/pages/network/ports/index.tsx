@@ -134,7 +134,7 @@ const PortStatusPage: FC = () => {
     try {
       const result = await post("/network/devices/list", {
         current: 1,
-        pageSize: 1000,
+        pageSize: 50,
       }) as { data?: { list: NetworkDevice[] } };
       setDevices(result.data?.list || []);
     } catch (error) {
@@ -361,7 +361,7 @@ const PortStatusPage: FC = () => {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="deviceId" label="设备">
-              <Select placeholder="请选择设备" allowClear className="user-form-input" style={{ width: 200 }} showSearch optionFilterProp="label">
+              <Select placeholder="请选择设备" allowClear className="user-form-input" style={{ width: 200 }} showSearch optionFilterProp="label" onSearch={() => {}}>
                 {devices.map(device => (
                   <Option key={device.id} value={device.id} label={device.deviceName}>{device.deviceName}</Option>
                 ))}
@@ -371,25 +371,25 @@ const PortStatusPage: FC = () => {
               <Input placeholder="请输入接口名称" allowClear className="user-form-input" style={{ width: 150 }} />
             </Form.Item>
             <Form.Item name="adminStatus" label="管理状态">
-              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }}>
+              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
                 <Option value="up">UP</Option>
                 <Option value="down">DOWN</Option>
               </Select>
             </Form.Item>
             <Form.Item name="operStatus" label="操作状态">
-              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }}>
+              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
                 <Option value="up">UP</Option>
                 <Option value="down">DOWN</Option>
               </Select>
             </Form.Item>
             <Form.Item name="dot1xEnabled" label="802.1X状态">
-              <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 120 }}>
+              <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
                 <Option value={true}>已启用</Option>
                 <Option value={false}>未启用</Option>
               </Select>
             </Form.Item>
             <Form.Item name="portSecurityEnabled" label="端口安全">
-              <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 120 }}>
+              <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
                 <Option value={true}>已启用</Option>
                 <Option value={false}>未启用</Option>
               </Select>

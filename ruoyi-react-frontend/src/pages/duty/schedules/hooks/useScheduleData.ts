@@ -102,7 +102,7 @@ export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataR
   // 获取所有排班（用于调班）
   const fetchAllSchedules = useCallback(async () => {
     try {
-      const result = await getDutyScheduleList({ current: 1, pageSize: 1000 });
+      const result = await getDutyScheduleList({ current: 1, pageSize: 50 });
       setAllSchedules(result.data?.list ?? []);
     } catch (error) {
       console.error("获取所有排班失败", error);
@@ -112,7 +112,7 @@ export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataR
   // 获取值班池列表（只获取启用的）
   const fetchPools = useCallback(async () => {
     try {
-      const result = await getDutyPoolList({ current: 1, pageSize: 1000, status: 0 });
+      const result = await getDutyPoolList({ current: 1, pageSize: 50, status: 0 });
       setPools(result.data?.list || []);
     } catch (error) {
       console.error("获取值班池列表失败", error);

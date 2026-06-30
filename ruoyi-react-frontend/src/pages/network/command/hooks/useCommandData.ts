@@ -86,7 +86,7 @@ export function useCommandData(
     try {
       const result = await post<PageResponse<NetworkDevice>>("/network/devices/list", {
         current: 1,
-        pageSize: 1000,
+        pageSize: 50,
         status: 0,
       });
       return result.data?.list || [];

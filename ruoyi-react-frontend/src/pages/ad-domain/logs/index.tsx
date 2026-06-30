@@ -181,7 +181,7 @@ const ADSyncLogsPage: React.FC = () => {
             allowClear
             value={selectedConfigId}
             onChange={setSelectedConfigId}
-          >
+           onSearch={() => {}}>
             {configs.map(config => (
               <Select.Option key={config.id} value={config.id}>
                 {config.configName}

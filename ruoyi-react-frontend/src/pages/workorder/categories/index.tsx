@@ -250,7 +250,7 @@ const WorkOrderCategoryPage: FC = () => {
           </Form.Item>
 
           <Form.Item name="parentId" label="父分类">
-            <Select placeholder="请选择父分类" allowClear>
+            <Select placeholder="请选择父分类" allowClear onSearch={() => {}}>
               {flatCategories(categories)
                 .filter((cat) => cat.id !== editingRecord?.id) // 不能选择自己作为父分类
                 .map((cat) => (

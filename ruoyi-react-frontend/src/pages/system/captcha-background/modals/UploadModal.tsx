@@ -59,7 +59,7 @@ export function CaptchaUploadModal({
           label="拼图形状"
           rules={[{ required: true, message: "请选择拼图形状" }]}
         >
-          <Select>
+          <Select onSearch={() => {}}>
             {SHAPE_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -72,7 +72,7 @@ export function CaptchaUploadModal({
           label="难度级别"
           rules={[{ required: true, message: "请选择难度" }]}
         >
-          <Select>
+          <Select onSearch={() => {}}>
             {DIFFICULTY_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -81,7 +81,7 @@ export function CaptchaUploadModal({
           </Select>
         </Form.Item>
         <Form.Item name="allowedShapes" label="允许的形状">
-          <Select mode="multiple" placeholder="不限制则默认使用当前形状">
+          <Select mode="multiple" placeholder="不限制则默认使用当前形状" onSearch={() => {}}>
             {SHAPE_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
