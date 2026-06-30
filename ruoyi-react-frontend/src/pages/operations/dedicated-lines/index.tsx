@@ -2,7 +2,7 @@
  * 专线管理页面
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import type { FC } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
@@ -22,7 +22,7 @@ import { useTableManager } from "@/hooks/useTableManager";
 import { usePagination } from "@/hooks/usePagination";
 import { useDict } from "@/hooks/useDict";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
-import { createDateTimeColumn } from "@/utils/tableHelpers";
+import { createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
 import ActionButtons from "@/components/shared/ActionButtons";
 import ExcelImport from "@/components/shared/ExcelImport";
 import ExcelExport from "@/components/shared/ExcelExport";
@@ -81,12 +81,25 @@ const DedicatedLineManagement: FC = () => {
     }
   }, []);
 
+  // 服务端排序:field 必须与 columns 的 dataIndex 一致(useServerSort 按 sorter.field===dataIndex 匹配)
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<DedicatedLine>("name"),
+      createSorterMeta<DedicatedLine>("bandwidth"),
+      createSorterMeta<DedicatedLine>("status"),
+      createSorterMeta<DedicatedLine>("createdAt", "date"),
+    ],
+    []
+  );
+
   const {
     loading, data: lines, total, selectedRowKeys,
     searchForm, editForm: lineForm, editModalVisible: modalVisible,
     editingItem: editingLine, setSelectedRowKeys, setEditModalVisible: setModalVisible,
     setEditingItem: setEditingLine, handleSearch,
     handleReset, handleAdd, handleEdit, handleModalClose, loadData: loadLines, resetSelection,
+    handleTableChange: handleLineTableChange,
+    getColumnSortOrder: getLineColumnSortOrder,
   } = useTableManager<DedicatedLine>(
     async (params) => {
       const result = await dedicatedLineApi.list(params) as { data?: { list: DedicatedLine[]; total: number } };
@@ -100,6 +113,7 @@ const DedicatedLineManagement: FC = () => {
         setPageSize,
         setTotal,
       },
+      sorterMetas,
     }
   );
 
@@ -199,7 +213,7 @@ const DedicatedLineManagement: FC = () => {
   };
 
   const columns: ColumnsType<DedicatedLine> = [
-    { title: "专线名称", dataIndex: "name", key: "name", width: 150 },
+    { title: "专线名称", dataIndex: "name", key: "name", width: 150, sorter: true, sortOrder: getLineColumnSortOrder("name") },
     {
       title: "专线类型",
       dataIndex: "lineType",
@@ -207,7 +221,7 @@ const DedicatedLineManagement: FC = () => {
       width: 120,
       render: (type) => <Tag>{getLineTypeText(type as string)}</Tag>,
     },
-    { title: "带宽", dataIndex: "bandwidth", key: "bandwidth", width: 100, render: (v) => v || "-" },
+    { title: "带宽", dataIndex: "bandwidth", key: "bandwidth", width: 100, sorter: true, sortOrder: getLineColumnSortOrder("bandwidth"), render: (v) => v || "-" },
     { title: "运营商", dataIndex: "isp", key: "isp", width: 120, render: (isp) => <Tag>{getIspText(isp as string)}</Tag> },
     { title: "源机房", dataIndex: "sourceRoomName", key: "sourceRoomName", width: 120, render: (v) => v || "-" },
     { title: "源设备", dataIndex: "sourceDeviceName", key: "sourceDeviceName", width: 120, render: (v) => v || "-" },
@@ -222,13 +236,15 @@ const DedicatedLineManagement: FC = () => {
       dataIndex: "status",
       key: "status",
       width: 80,
+      sorter: true,
+      sortOrder: getLineColumnSortOrder("status"),
       render: (status) => {
         const colors: Record<number, string> = { 0: "success", 1: "error", 2: "default" };
         return <Tag color={colors[status as keyof typeof colors]}>{getStatusText(status as number)}</Tag>;
       },
     },
     { title: "月费(元)", dataIndex: "monthlyFee", key: "monthlyFee", width: 100, render: (v) => v ? `¥${v}` : "-" },
-    createDateTimeColumn("createdAt", { width: 180 }),
+    createDateTimeColumn("createdAt", { width: 180, sorter: true, sortOrder: getLineColumnSortOrder("createdAt") }),
     {
       title: "操作", key: "action",
       render: (_, record) => {
@@ -406,21 +422,7 @@ const DedicatedLineManagement: FC = () => {
             loading={loading}
             rowKey="id"
             pagination={paginationProps}
-            onChange={(pagination) => {
-              const newPage = pagination.current || 1;
-              const newPageSize = pagination.pageSize || 10;
-              setCurrent(newPage);
-              setPageSize(newPageSize);
-              const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
-	              const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
-	              Object.keys(formValues).forEach(key => {
-	                const value = formValues[key];
-	                if (value !== undefined && value !== null && value !== "") {
-	                  searchParams[key] = value;
-	                }
-	              });
-	              loadLines(searchParams);
-            }}
+            onChange={handleLineTableChange}
           />
         ) : renderCardView()}
       </Card>
