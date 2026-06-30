@@ -113,6 +113,15 @@ func RegisterReconciliationTasks(s *Scheduler, db *gorm.DB, cacheSvc cache.Cache
 				applogger.Errorf("[reconciliation:createWorkorderHigh] 失败: %v", err)
 				return err
 			}
+		case "checkPortStatusDrift":
+			// Phase 45 R5 数据治理 (2026-06-30): 每日对账 sys_device_port_status.device_id
+			// 与 ops_info_points.device_id 漂移。migration_182 已修复 1247 行历史漂移,
+			// migration_183 已加 FK 约束防 orphan,但 FK 无法捕获"指向错误但存在的设备"
+			// (业务规则违反)。本任务作为兜底,每天检测新漂移并 log warn。
+			if err := checkPortStatusDrift(ctx, db); err != nil {
+				applogger.Errorf("[reconciliation:checkPortStatusDrift] 失败: %v", err)
+				return err
+			}
 		default:
 			return fmt.Errorf("未知子任务: %s", target)
 		}
@@ -159,6 +168,12 @@ func RegisterReconciliationTasks(s *Scheduler, db *gorm.DB, cacheSvc cache.Cache
 			jobName:        "对账-自动转工单high",
 			cronExpression: "@every 5m",
 			remark:         "Phase 43 R2: high 异常自动转工单(D-A1-02 5min 周期,符合 ROADMAP SC 2)",
+		},
+		// === Phase 45 R5 数据治理 (2026-06-30): 每日 port_status.device_id 漂移对账 ===
+		{
+			jobName:        "对账-port_status漂移检测",
+			cronExpression: "0 0 3 * * *",
+			remark:         "Phase 45 R5: 每日 03:00 检测 sys_device_port_status.device_id 与 ops_info_points.device_id 一致性,migration_182 治理后应为 0,>0 触发告警",
 		},
 	}
 
@@ -300,7 +315,55 @@ func jobNameToInvokeTarget(jobName string) string {
 		return "reconciliation:createWorkorderCritical"
 	case "对账-自动转工单high":
 		return "reconciliation:createWorkorderHigh"
+	case "对账-port_status漂移检测":
+		return "reconciliation:checkPortStatusDrift"
 	default:
 		return ""
 	}
+}
+
+// checkPortStatusDrift 每日检测 sys_device_port_status.device_id 与
+// ops_info_points.device_id 漂移(Phase 45 R5 数据治理 2026-06-30)
+//
+// 背景:
+//   - migration_182 已修复 1247 行历史漂移
+//   - migration_183 已加 FK 约束 sys_device_port_status.device_id REFERENCES sys_network_device(id)
+//   - FK 只能防 orphan(device_id 指向不存在的设备),无法捕获"指向错误但存在的设备"
+//   - 本任务作为业务规则层兜底,每天检测新漂移
+//
+// 检测条件(safe-fix 等价):
+//   - port.id::text = ip.port_id(同一端口)
+//   - port.device_id::text != ip.device_id::text(确实漂移)
+//   - ip.deleted_at IS NULL AND ip.status = 0(信息点未删除/停用)
+//   - ip.device_id 存在于 sys_network_device(避免误报非物理设备)
+//   - ip.device_id 在 sys_device_mac_address 有 MAC(物理证据)
+//
+// 行为:
+//   - 漂移 == 0: log info "[reconciliation:checkPortStatusDrift] 0 行漂移(健康)"
+//   - 漂移 > 0: log warn + 记录提示人工 review(migration_182 后应为 0)
+//   - 后续 PR 可在此处加企业微信/钉钉 webhook 推送告警
+func checkPortStatusDrift(ctx context.Context, db *gorm.DB) error {
+	var driftedCount int64
+	err := db.WithContext(ctx).Raw(`
+SELECT COUNT(*)
+  FROM sys_device_port_status port
+  JOIN ops_info_points ip ON port.id::text = ip.port_id
+ WHERE port.device_id::text != ip.device_id::text
+   AND ip.deleted_at IS NULL
+   AND ip.status = 0
+   AND ip.device_id IS NOT NULL
+   AND EXISTS (SELECT 1 FROM sys_network_device WHERE id::text = ip.device_id)
+   AND EXISTS (SELECT 1 FROM sys_device_mac_address WHERE device_id::text = ip.device_id)
+`).Scan(&driftedCount).Error
+
+	if err != nil {
+		return fmt.Errorf("查询 port_status 漂移失败: %w", err)
+	}
+
+	if driftedCount > 0 {
+		applogger.Warnf("[reconciliation:checkPortStatusDrift] 发现 %d 行 device_id 漂移(migration_182 后应为 0) — 需要人工 review", driftedCount)
+	} else {
+		applogger.Infof("[reconciliation:checkPortStatusDrift] 0 行漂移(健康)")
+	}
+	return nil
 }

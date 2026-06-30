@@ -372,8 +372,10 @@ WITH workstation_ports AS (
       FROM ops_info_points ip
       JOIN sys_device_port_status port
         ON port.id::text = ip.port_id
-       -- 防御:port_status.device_id 必须与 infoPoint.device_id 一致
-       -- 否则说明 port_status 发生了 device_id 漂移,反查不应跨设备错指
+       -- Phase 3 (2026-06-30 数据治理): 加严格 device_id 防御性 JOIN
+       -- migration_182 已对齐 1247 行 port_status.device_id ← ops_info_points.device_id
+       -- migration_183 已加 FK 约束,此 JOIN 安全(同步路径: 设备名/IP + 端口名)
+       -- port_id (UUID PK) 锚定单端口,device_id 一致性保证 MAC 落表位置正确
        AND port.device_id::text = ip.device_id::text
      WHERE ip.workstation_id = ?
        AND ip.deleted_at IS NULL
@@ -424,8 +426,8 @@ SELECT DISTINCT ON (COALESCE(a.devicesn,''))
        ad_devices.operating_system                                         AS ad_operating_system
   FROM workstation_ports wp
   JOIN latest_mac mac
-       ON mac.device_id::text = wp.device_id::text
-      AND mac.norm_iface        = wp.norm_iface
+       ON mac.norm_iface        = wp.norm_iface
+      AND mac.device_id::text    = wp.device_id::text
   LEFT JOIN ops_asset a
        ON a.deleted_at IS NULL
       AND (LOWER(REGEXP_REPLACE(COALESCE(a.mac1, ''), '[.:\-]', '', 'g')) = mac.norm_mac
