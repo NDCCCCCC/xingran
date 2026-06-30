@@ -684,10 +684,9 @@ func (h *NetworkExportHandler) buildDeviceListRequest(filters map[string]interfa
 
 // buildCredentialListRequest 构建凭证列表请求
 func (h *NetworkExportHandler) buildCredentialListRequest(filters map[string]interface{}, current, pageSize int) *services.ListCredentialRequest {
-	req := &services.ListCredentialRequest{
-		Current:  current,
-		PageSize: pageSize,
-	}
+	req := &services.ListCredentialRequest{}
+	req.Current = current
+	req.PageSize = pageSize
 	if filters == nil {
 		return req
 	}

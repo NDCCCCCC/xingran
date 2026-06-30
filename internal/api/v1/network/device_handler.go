@@ -308,6 +308,27 @@ func getIntField(m map[string]interface{}, key string, defaultValue int) int {
 	return defaultValue
 }
 
+// getStringField 从map中获取字符串字段，缺省返回空串
+func getStringField(m map[string]interface{}, key string) string {
+	if val, ok := m[key]; ok {
+		if s, ok := val.(string); ok {
+			return s
+		}
+	}
+	return ""
+}
+
+// getBoolFieldPtr 从map中获取布尔字段,返回 *bool(nil 表示未提供)。
+// isAsc=true / isAsc=false 都要保留语义,因此用指针传递。
+func getBoolFieldPtr(m map[string]interface{}, key string) *bool {
+	if val, ok := m[key]; ok {
+		if b, ok := val.(bool); ok {
+			return &b
+		}
+	}
+	return nil
+}
+
 // getOrderByColumn 从map中获取 orderByColumn 字符串字段,无值返回 ""。
 // 用于服务端排序白名单透传,详见 internal/services/base/list_request.go。
 func getOrderByColumn(m map[string]interface{}) string {

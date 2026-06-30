@@ -31,8 +31,9 @@ import { formatDateTime } from "@/utils/datetime";
 import { post } from "@/lib/api";
 import { batchExport } from "@/lib/api/networkApi";
 import { useTableManager } from "@/hooks/useTableManager";
+import { createSorterMeta } from "@/utils/tableHelpers";
 import { withErrorHandling } from "@/utils/errorHandler";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import ActionButtons from "@/components/shared/ActionButtons";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
@@ -59,6 +60,15 @@ const CredentialManagement: FC = () => {
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
+  // 服务端排序:field 必须与 columns 的 dataIndex 一致
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<AuthCredential>("credentialName"),
+      createSorterMeta<AuthCredential>("protocolType"),
+    ],
+    []
+  );
+
   const {
     loading,
     data: credentials,
@@ -77,6 +87,8 @@ const CredentialManagement: FC = () => {
     handleAdd,
     handleEdit,
     handleModalClose,
+    handleTableChange: handleCredTableChange,
+    getColumnSortOrder: getCredColumnSortOrder,
   } = useTableManager<AuthCredential>(
     async (params) => {
       const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
@@ -102,6 +114,7 @@ const CredentialManagement: FC = () => {
         setPageSize,
         setTotal,
       },
+      sorterMetas,
     }
   );
 
@@ -254,12 +267,14 @@ const CredentialManagement: FC = () => {
 
   // 表格列
   const columns: ColumnsType<AuthCredential> = [
-    { title: "凭证名称", dataIndex: "credentialName", key: "credentialName", width: 180 },
+    { title: "凭证名称", dataIndex: "credentialName", key: "credentialName", width: 180, sorter: true, sortOrder: getCredColumnSortOrder("credentialName") },
     {
       title: "协议类型",
       dataIndex: "protocolType",
       key: "protocolType",
       width: 100,
+      sorter: true,
+      sortOrder: getCredColumnSortOrder("protocolType"),
       render: (protocolType: string) => (
         <Tag color="blue">{protocolType?.toUpperCase()}</Tag>
       ),
@@ -454,21 +469,7 @@ const CredentialManagement: FC = () => {
           rowKey="id"
           scroll={{ x: 1400 }}
           pagination={paginationProps}
-          onChange={(pagination) => {
-            const newPage = pagination.current ?? 1;
-            const newPageSize = pagination.pageSize ?? 10;
-            setCurrent(newPage);
-            setPageSize(newPageSize);
-            const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
-            const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
-            Object.keys(formValues).forEach(key => {
-              const value = formValues[key];
-              if (value !== undefined && value !== null && value !== "") {
-                searchParams[key] = value;
-              }
-            });
-            loadCredentials(searchParams);
-          }}
+          onChange={handleCredTableChange}
         />
       </Card>
 
