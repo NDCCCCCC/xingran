@@ -91,6 +91,19 @@ const DepartmentManagement: FC = () => {
     setEditingDept(record);
     setEditModalVisible(true);
     loadDeptUsers(record.id);
+    // 负责人兜底注入(2026-06-30,同 info-points):loadDeptUsers 异步且可能不包含当前 leader
+    // (无该部门成员/leader 离职后) → 负责人 Select 显示 raw UUID。用 record.leaderUsername 注入。
+    if (record.leader) {
+      setDeptUsers(prev =>
+        prev.find(u => u.id === record.leader)
+          ? prev
+          : [...prev, {
+              id: record.leader,
+              username: record.leaderUsername || record.leaderName || "未命名用户",
+              nickname: record.leaderName,
+            }]
+      );
+    }
   };
 
   const handleDelete = async (id: string) => {
