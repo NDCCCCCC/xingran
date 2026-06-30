@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+﻿import { useState, useEffect, useMemo } from "react";
 import type { FC } from "react";
 import {
   Table,
@@ -33,6 +33,8 @@ import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
 import { DownloadOutlined } from "@ant-design/icons";
 import { usePagination } from "@/hooks/usePagination";
+import { useServerSort } from "@/hooks/useServerSort";
+import { createSorterMeta } from "@/utils/tableHelpers";
 import { isFormValidationError } from "@/utils/errorHandler";
 import type { DeviceDiscovery, NetworkDevice } from "@/types";
 
@@ -42,6 +44,22 @@ const DeviceDiscoveryPage: FC = () => {
   const { message } = App.useApp();
   // 使用全局分页 hook
   const { paginationProps, setTotal } = usePagination();
+
+  // 服务端排序:field 与 columns.dataIndex 对齐
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<DeviceDiscovery>("taskName"),
+      createSorterMeta<DeviceDiscovery>("discoveryType"),
+      createSorterMeta<DeviceDiscovery>("status"),
+      createSorterMeta<DeviceDiscovery>("startedAt"),
+      createSorterMeta<DeviceDiscovery>("completedAt"),
+    ],
+    []
+  );
+  const { orderByColumn, isAsc, handleTableChange: handleDiscoverySortChange, sortOrder: discoverySortOrder } = useServerSort<DeviceDiscovery>({
+    sorterMetas,
+  });
+
   const [form] = Form.useForm();
   const [batchModalVisible, setBatchModalVisible] = useState(false);
   const [batchExporting, setBatchExporting] = useState(false);
@@ -173,10 +191,15 @@ const DeviceDiscoveryPage: FC = () => {
   };
 
   // 表格列
-  const discoveryColumns = getDiscoveryColumns({
-    handleViewResult,
-    handleDelete,
-  });
+  const discoveryColumns = useMemo(
+    () =>
+      getDiscoveryColumns({
+        handleViewResult,
+        handleDelete,
+        getSortOrder: (field) => (orderByColumn === field ? discoverySortOrder : null),
+      }),
+    [handleViewResult, handleDelete, orderByColumn, discoverySortOrder]
+  );
 
   useEffect(() => {
     loadDiscoveries();
@@ -329,6 +352,14 @@ const DeviceDiscoveryPage: FC = () => {
           rowKey="id"
           scroll={{ x: 1500 }}
           pagination={paginationProps}
+          onChange={(pagination, _filters, sorter) => {
+            handleDiscoverySortChange(pagination, _filters, sorter);
+            loadDiscoveries({
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              ...(orderByColumn ? { orderByColumn, isAsc } : {}),
+            });
+          }}
         />
       </Card>
 

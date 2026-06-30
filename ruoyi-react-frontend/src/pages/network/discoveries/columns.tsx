@@ -13,18 +13,22 @@ import ActionButtons from "@/components/shared/ActionButtons";
 export interface DiscoveryColumnsParams {
   handleViewResult: (record: DeviceDiscovery) => void;
   handleDelete: (id: string) => Promise<void>;
+  /** 由 useServerSort 注入,返回字段当前排序方向 */
+  getSortOrder?: (field: string) => "ascend" | "descend" | null;
 }
 
 export function getDiscoveryColumns(params: DiscoveryColumnsParams): ColumnsType<DeviceDiscovery> {
-  const { handleViewResult, handleDelete } = params;
+  const { handleViewResult, handleDelete, getSortOrder } = params;
 
   return [
-    { title: "任务名称", dataIndex: "taskName", key: "taskName", width: 200 },
+    { title: "任务名称", dataIndex: "taskName", key: "taskName", width: 200, sorter: true, sortOrder: getSortOrder?.("taskName") },
     {
       title: "发现类型",
       dataIndex: "discoveryType",
       key: "discoveryType",
       width: 100,
+      sorter: true,
+      sortOrder: getSortOrder?.("discoveryType"),
       render: (type: string) => {
         const option = DISCOVERY_TYPE_OPTIONS.find(o => o.value === type);
         return <Tag color="blue">{option?.label}</Tag>;
@@ -61,10 +65,12 @@ export function getDiscoveryColumns(params: DiscoveryColumnsParams): ColumnsType
       dataIndex: "status",
       key: "status",
       width: 100,
+      sorter: true,
+      sortOrder: getSortOrder?.("status"),
       render: (status: string) => renderStatusTag(status as "pending" | "running" | "completed" | "failed"),
     },
-    { title: "开始时间", dataIndex: "startedAt", key: "startedAt", width: 180 },
-    { title: "完成时间", dataIndex: "completedAt", key: "completedAt", width: 180 },
+    { title: "开始时间", dataIndex: "startedAt", key: "startedAt", width: 180, sorter: true, sortOrder: getSortOrder?.("startedAt") },
+    { title: "完成时间", dataIndex: "completedAt", key: "completedAt", width: 180, sorter: true, sortOrder: getSortOrder?.("completedAt") },
     {
       title: "操作",
       key: "action",
