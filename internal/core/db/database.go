@@ -545,6 +545,12 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate180ReconciliationPhysicalChainPerf(d.DB); err != nil {
 			applogger.Errorf("Phase 45+ reconciliation_physical_chain O(N²)→O(N+M) 性能重构失败: %v", err)
 		}
+		// Phase 45 R5 收尾 (2026-06-30): reconciliation_normalized MV 增加 workstation_id 列。
+		// migration_176 创建 MV 时漏 select pc.workstation_id,导致 WorkstationIDForException
+		// 触发 SQLSTATE 42703,R4 工位健康度缓存失效链断裂。本迁移 DROP + CREATE + REFRESH 修复。
+		if err := migrations.Migrate181ReconciliationNormalizedWorkstationID(d.DB); err != nil {
+			applogger.Errorf("Phase 45+ reconciliation_normalized MV workstation_id 列修复失败: %v", err)
+		}
 		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
 		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
 			applogger.Errorf("MAC 过滤规则表迁移失败: %v", err)
