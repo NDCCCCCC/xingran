@@ -24,7 +24,7 @@ import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { useDict } from "@/hooks/useDict";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
 import { debounce } from "@/utils/debounce";
-import { createDateTimeColumn } from "@/utils/tableHelpers";
+import { createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
 import ActionButtons from "@/components/shared/ActionButtons";
 import ExcelImport from "@/components/shared/ExcelImport";
 import ExcelExport from "@/components/shared/ExcelExport";
@@ -104,12 +104,25 @@ const InfoPointManagement: FC = () => {
     clearFieldNames: ["workstationId"],
   });
 
+  // 服务端排序:field 必须与 columns 的 dataIndex 一致(useServerSort 按 sorter.field===dataIndex 匹配)
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<InfoPoint>("name"),
+      createSorterMeta<InfoPoint>("infoPointType"),
+      createSorterMeta<InfoPoint>("status"),
+      createSorterMeta<InfoPoint>("createdAt", "date"),
+    ],
+    []
+  );
+
   const {
     loading, data: infoPoints, total, selectedRowKeys,
     searchForm, editForm: infoPointForm, editModalVisible: modalVisible,
     editingItem: editingInfoPoint, setSelectedRowKeys, setEditModalVisible: setModalVisible,
     setEditingItem: setEditingInfoPoint, handleSearch,
     handleReset, handleAdd, handleEdit, handleModalClose, loadData: loadInfoPoints, resetSelection,
+    handleTableChange: handleInfoPointTableChange,
+    getColumnSortOrder: getInfoPointColumnSortOrder,
   } = useTableManager<InfoPoint>(
     async (params) => {
       const searchParams = selectedDeptId
@@ -126,6 +139,7 @@ const InfoPointManagement: FC = () => {
         setPageSize,
         setTotal,
       },
+      sorterMetas,
     }
   );
 
@@ -498,12 +512,14 @@ const InfoPointManagement: FC = () => {
   };
 
   const columns: ColumnsType<InfoPoint> = [
-    { title: "信息点名称", dataIndex: "name", key: "name", width: 150 },
+    { title: "信息点名称", dataIndex: "name", key: "name", width: 150, sorter: true, sortOrder: getInfoPointColumnSortOrder("name") },
     {
       title: "信息点类型",
       dataIndex: "infoPointType",
       key: "infoPointType",
       width: 100,
+      sorter: true,
+      sortOrder: getInfoPointColumnSortOrder("infoPointType"),
       render: (type) => <Tag>{getInfoPointTypeText(type)}</Tag>,
     },
     {
@@ -540,13 +556,15 @@ const InfoPointManagement: FC = () => {
       dataIndex: "status",
       key: "status",
       width: 80,
+      sorter: true,
+      sortOrder: getInfoPointColumnSortOrder("status"),
       render: (status) => {
         const colors: Record<number, string> = { 0: "success", 1: "error", 2: "default" };
         return <Tag color={colors[status as keyof typeof colors]}>{getStatusText(status)}</Tag>;
       },
     },
     { title: "描述", dataIndex: "remark", key: "remark", width: 200, ellipsis: { showTitle: false }, render: (v) => <Tooltip title={v}>{v || "-"}</Tooltip> },
-    createDateTimeColumn("createdAt", { width: 180 }),
+    createDateTimeColumn("createdAt", { width: 180, sorter: true, sortOrder: getInfoPointColumnSortOrder("createdAt") }),
     {
       title: "操作", key: "action",
       render: (_, record) => {
@@ -696,21 +714,7 @@ const InfoPointManagement: FC = () => {
               loading={loading}
               rowKey="id"
               pagination={paginationProps}
-              onChange={(pagination) => {
-                const newPage = pagination.current || 1;
-                const newPageSize = pagination.pageSize || 10;
-                setCurrent(newPage);
-                setPageSize(newPageSize);
-                const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
-	                const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
-	                Object.keys(formValues).forEach(key => {
-	                  const value = formValues[key];
-	                  if (value !== undefined && value !== null && value !== "") {
-	                    searchParams[key] = value;
-	                  }
-	                });
-	                loadInfoPoints(searchParams);
-              }}
+              onChange={handleInfoPointTableChange}
             />
           ) : renderCardView()}
         </Card>
