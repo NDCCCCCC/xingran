@@ -33,8 +33,6 @@ export const SYSTEM_NOTICE = "/system/notice"; // 通知公告
 export const NETWORK_DEVICES = "/network/devices"; // 设备管理
 export const NETWORK_PORTS = "/network/ports"; // 端口管理
 export const NETWORK_DISCOVERIES = "/network/discoveries"; // 设备发现
-// 2026-06-30 quick:独立 MAC 轨迹页(/network/mac/trajectory)已合并到列表页(/network/mac)抽屉。
-// 如有遗留链接指向该 URL,后端路由层应返回 404 并引导用户到列表页。
 
 // ============================================
 // 工单管理相关路由

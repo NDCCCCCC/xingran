@@ -1,2 +1,2 @@
-// 路由兼容 re-export:与 trajectory 一致
+// 路由兼容 re-export
 export { default } from "./MACHistoryPage";

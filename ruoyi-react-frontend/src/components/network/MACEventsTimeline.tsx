@@ -2,7 +2,6 @@
  * MAC 事件时间线组件(Phase 14-01 引入,2026-06-30 quick 改造)
  *
  * 当前用法: MAC 地址列表页(/network/mac)的右侧 Drawer 内显示。
- * 不再跳转独立轨迹页(独立页已合并)。
  *
  * 2026-06-30 quick 改造:
  * - 把 getMACEvents 改为分页版,支持"加载更多"按钮(busy MAC 数据量大时分页拉)

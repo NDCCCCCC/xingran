@@ -84,7 +84,7 @@ const defaultHistoryColumns: ColumnConfig[] = [
   { key: "action", label: "操作", visible: true, order: 8, width: 200 },
 ];
 
-// MAC 规范化(从 trajectory.tsx:63-70 复制)
+// MAC 规范化
 const normalizeMACAddress = (mac: string): string => {
   const cleaned = mac.replace(/[^a-fA-F0-9]/g, "");
   if (cleaned.length !== 12) return "";
@@ -288,8 +288,6 @@ const MACHistoryPage: React.FC = () => {
         fixed: "right" as const,
         render: (_: unknown, record: MACHistoryRecord) => (
           <Space size={4} wrap>
-            {/* 2026-06-30 quick:独立 trajectory 页已合并到列表页抽屉,
-                此处不再提供"查看轨迹"按钮,仅保留"查看/收起事件"展开行内嵌 timeline */}
             <Button
               type="link"
               size="small"
@@ -500,7 +498,6 @@ const MACHistoryPage: React.FC = () => {
               border: "1px solid #f0f0f0",
             }}
             actions={[
-              // 2026-06-30 quick:独立 trajectory 页已合并到列表页抽屉,移除"查看轨迹"按钮
               <Button
                 key="events"
                 type="link"

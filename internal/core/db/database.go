@@ -582,6 +582,12 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate188FixInfoPointsPortIdDrift(d.DB); err != nil {
 			applogger.Errorf("Phase 45+ 数据治理 修复 info_points.port_id 漂移失败: %v", err)
 		}
+		// 2026-07-01 mac-trajectory-cleanup: MAC 轨迹查询功能已合并到 MAC 地址列表页 Drawer,
+		// 独立菜单 (path=network/mac/trajectory) 成了死入口。代码层无 seed, 这里 DELETE
+		// sys_menu + sys_role_menu 清掉所有已部署环境的侧边栏残留。幂等可重复执行。
+		if err := migrations.Migrate189RemoveMACTrajectoryMenu(d.DB); err != nil {
+			applogger.Errorf("清理 MAC 轨迹菜单残留失败: %v", err)
+		}
 		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
 		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
 			applogger.Errorf("MAC 过滤规则表迁移失败: %v", err)

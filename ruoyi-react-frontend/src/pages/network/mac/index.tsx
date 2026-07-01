@@ -66,12 +66,10 @@ const MACAddressPage: FC = () => {
   // 移动端 dept tree 折叠进 Drawer
   const [deptDrawerOpen, setDeptDrawerOpen] = useState(false);
 
-  // MAC 事件时间线抽屉(2026-06-30 quick:替代独立 trajectory 页,
-  // 信息密度低合并到列表页;点击 MAC 列 → 右侧抽屉显示该 MAC 7d 范围事件)
+  // MAC 事件时间线抽屉:点击 MAC 列 → 右侧抽屉显示该 MAC 7d 范围事件
   const [timelineDrawerOpen, setTimelineDrawerOpen] = useState(false);
   const [timelineDrawerMac, setTimelineDrawerMac] = useState<string>("");
   // 抽屉打开瞬间锁定 7d 范围,避免抽屉打开期间用户停留时间过长导致 endTime 漂移
-  // (与旧 trajectory 页 PRESETS[7d] 等价)
   const timelineDrawerRange = useMemo(() => {
     if (!timelineDrawerOpen) return null;
     return {
@@ -489,9 +487,7 @@ const MACAddressPage: FC = () => {
         />
       </Card>
 
-      {/* MAC 事件时间线抽屉(2026-06-30 quick):
-          点击 MAC 列 → 抽屉打开显示该 MAC 7d 范围内的事件;
-          替代独立 /network/mac/trajectory 页面(信息密度低,合并到列表页) */}
+      {/* MAC 事件时间线抽屉:点击 MAC 列 → 抽屉打开显示该 MAC 7d 范围内的事件 */}
       <Drawer
         title={timelineDrawerMac ? `MAC 事件时间线 — ${timelineDrawerMac}` : "MAC 事件时间线"}
         open={timelineDrawerOpen}
