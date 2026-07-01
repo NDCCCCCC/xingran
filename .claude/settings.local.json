@@ -13,7 +13,13 @@
       "mcp__chrome-devtools__evaluate_script",
       "Skill(gsd-debug)",
       "Bash(go test *)",
-      "Bash(go build *)"
+      "Bash(go build *)",
+      "Bash(git stash *)",
+      "Bash(git reset *)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'refactor\\(operations\\): 删除 ops_info_points 4 个冗余物理列' -m 'building_id/building_name/floor_name: 建表 SQL\\(032\\) 从未定义, 是 GORM AutoMigrate *)",
+      "Bash(git checkout *)",
+      "Bash(git merge *)"
     ]
   }
 }
