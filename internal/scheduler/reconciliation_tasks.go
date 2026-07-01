@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
@@ -339,10 +340,11 @@ func jobNameToInvokeTarget(jobName string) string {
 //   - ip.device_id 存在于 sys_network_device
 //   - ip.device_id 在 sys_device_mac_address 有 MAC(物理证据)
 //
-// 行为:
-//   - 漂移 == 0: log info "[reconciliation:checkPortStatusDrift] 0 行漂移(健康)"
-//   - 漂移 > 0 且 == 历史基线 1247: log info "历史漂移未变, 不影响 query"
-//   - 漂移 > 历史基线: log warn "新增漂移, 需排查采集器/IP 录入流程"
+// 行为 (自适应基线, sys_config 存历史最低漂移数, 不硬编码):
+//   - 首次观测: 记录当前 drift 为基线 (info, 不告警)
+//   - drift 下降: 更新基线, info "数据治理见效" (历史漂移被修复后基线自动下降)
+//   - drift 上涨超阈值: WARN 新增 (基线不更新, 持续告警直到人工处理)
+//   - drift == 0: info 健康, 基线归 0
 //   - 后续 PR 可在此处加企业微信/钉钉 webhook 推送告警
 func checkPortStatusDrift(ctx context.Context, db *gorm.DB) error {
 	var driftedCount int64
@@ -362,10 +364,61 @@ SELECT COUNT(*)
 		return fmt.Errorf("查询 port_status 漂移失败: %w", err)
 	}
 
-	if driftedCount > 0 {
-		applogger.Warnf("[reconciliation:checkPortStatusDrift] 发现 %d 行 device_id 漂移(migration_182 后应为 0) — 需要人工 review", driftedCount)
-	} else {
+	// 自适应基线告警 (2026-07-01):
+	//   drift 是历史脏数据, 不影响物理链路查询 (MAC JOIN 已锚定 ip.device_id)。
+	//   基线 = sys_config 记录的"历史最低漂移数", 自适应追踪:
+	//     - 历史漂移被修复 → 基线自动下降, 不锁死在初始高值
+	//     - 新增漂移 → 持续 WARN 直到人工处理 (基线不随上涨更新)
+	//   阈值容差避免采集抖动 ±几行触发告警。
+	const driftBaselineKey = "reconciliation.port_status.drift_baseline"
+	const driftWarnThreshold int64 = 5
+
+	baseline, baselineExists := readDriftBaseline(ctx, db, driftBaselineKey)
+	switch {
+	case driftedCount == 0:
 		applogger.Infof("[reconciliation:checkPortStatusDrift] 0 行漂移(健康)")
+		if baselineExists && baseline != 0 {
+			upsertDriftBaseline(ctx, db, driftBaselineKey, 0)
+		}
+	case !baselineExists:
+		applogger.Infof("[reconciliation:checkPortStatusDrift] 首次观测 %d 行漂移, 记录为基线", driftedCount)
+		upsertDriftBaseline(ctx, db, driftBaselineKey, driftedCount)
+	case driftedCount > baseline+driftWarnThreshold:
+		applogger.Warnf("[reconciliation:checkPortStatusDrift] %d 行漂移(基线 %d, 新增 %d 行) — 需排查采集器/IP 录入流程",
+			driftedCount, baseline, driftedCount-baseline)
+	case driftedCount < baseline:
+		applogger.Infof("[reconciliation:checkPortStatusDrift] %d 行漂移(基线 %d → %d 下降, 数据治理见效)",
+			driftedCount, baseline, driftedCount)
+		upsertDriftBaseline(ctx, db, driftBaselineKey, driftedCount)
+	default:
+		applogger.Infof("[reconciliation:checkPortStatusDrift] %d 行漂移(基线 %d, 持平, 不影响 query)", driftedCount, baseline)
 	}
 	return nil
+}
+
+// readDriftBaseline 读取 sys_config 中记录的历史最低漂移数基线。
+// 未初始化或查询失败都按"首次观测"处理 (返回 exists=false)。
+func readDriftBaseline(ctx context.Context, db *gorm.DB, key string) (int64, bool) {
+	var config models.Config
+	if err := db.WithContext(ctx).Where("config_key = ?", key).First(&config).Error; err != nil {
+		return 0, false
+	}
+	val, err := strconv.ParseInt(config.ConfigValue, 10, 64)
+	if err != nil {
+		return 0, false
+	}
+	return val, true
+}
+
+// upsertDriftBaseline 更新或创建 sys_config 中的漂移基线 (历史最低值)。
+// 用 map 形式 Assign 避免覆盖 config_key 与其他字段。
+func upsertDriftBaseline(ctx context.Context, db *gorm.DB, key string, value int64) {
+	var config models.Config
+	db.WithContext(ctx).
+		Where("config_key = ?", key).
+		Assign(map[string]interface{}{
+			"config_value": strconv.FormatInt(value, 10),
+			"config_name":  "端口状态漂移基线(自适应)",
+		}).
+		FirstOrCreate(&config, models.Config{ConfigKey: key, ConfigName: "端口状态漂移基线(自适应)"})
 }
