@@ -613,6 +613,13 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate194CleanIfaceSecuritySuffix(d.DB); err != nil {
 			applogger.Errorf("清理 interface_name SECURITY 后缀失败: %v", err)
 		}
+		// 2026-07-02 reconciliation-exception-rules-menu: 补种"例外规则管理"路由菜单 (Phase 44 R3 遗漏)。
+		// exception-rules 页面 UI 早已存在, 但 sys_menu 从未 seed 该菜单 (migration_169 只埋了按钮权限
+		// 占位), 动态路由不生成 /asset/reconciliation/exception-rules → 对账看板引导链接及几处
+		// window.open('/new') 全部被 DynamicRoutes catch-all 重定向到仪表盘。仿 dashboard seed 补种。
+		if err := migrations.Migrate195ReconciliationExceptionRulesMenu(d.DB); err != nil {
+			applogger.Errorf("补种例外规则管理菜单失败: %v", err)
+		}
 		// 2026-07-01 info-points-redundant-cols: 删除 ops_info_points 4 个冗余物理列
 		// (building_id/building_name/floor_name/workstation_name)。building_*/floor_name 是
 		// AutoMigrate 自动建的幽灵列(从不写入), workstation_name 被 List JOIN 覆盖, 物理列冗余。
