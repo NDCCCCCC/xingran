@@ -4,8 +4,8 @@ milestone: v1.17
 milestone_name: 资产对账 (Asset Reconciliation)
 status: R5_reconciliation_merged_with_dropdown_governance; v1.17 work shipped, awaiting push
 stopped_at: active merge resolution (2026-06-30, R5 + dropdown integration)
-last_updated: "2026-06-30T17:30:00.000Z"
-last_activity: "2026-06-30 -- gsd-quick task 启动流程分类文档化完成: 梳理 cmd/main.go + core.Init() 19+ 步骤 + database.go AutoMigrate/InitData,产出 docs/启动流程清单.md(7 阶段 × 3 分类 × 详细表格 + 风险清单 + 未来 setup/start 拆分建议)。无代码变更,文档化产出。"
+last_updated: "2026-07-01T00:00:00.000Z"
+last_activity: "2026-07-01 -- gsd-quick task 接口名称列数值排序完成: query.go 新增 interfaceNameSortExpr(dialect-aware,PG regexp_matches int 数组 + 速率前缀三键) + GetList 对 interfaceName 特殊分支;修正 GE0/10<GE0/2 字典序错误;4 新测试全绿;未触碰 migration_187/pkg:normalize 未提交工作"
 progress:
   total_phases: 5
   completed_phases: 3
@@ -101,6 +101,7 @@ Last activity: 2026-06-28 -- Phase 45 R4 execution complete: 6 atomic commits (3
 | 260630-mac-tree | mac 地址页接口列排序 + 左侧 DeptSidebar + 部门联动(后端 deptId JOIN 一处过滤,弃用前端 deviceIds 中间层;含 migration_181 验证修复) | 2026-06-30 | 2f2894d2 | [20260630-mac-page-dept-tree](./quick/20260630-mac-page-dept-tree/) |
 | 260630-startup-flow | 启动流程分类文档化: docs/启动流程清单.md(7 阶段 × 3 分类:🔴每次必跑/🟢一次性/🟡混合幂等),含核心.Init() 19+ 步骤 + AutoMigrate/InitData 全表 + 风险清单 + setup/start 拆分建议 | 2026-06-30 | - | [20260630-startup-flow-classify](./quick/20260630-startup-flow-classify/) |
 | 260630-skip-setup | 启动流程优化 - 加 SERVER_SKIP_SETUP 开关: config.ServerConfig.SkipSetup + SERVER_SKIP_SETUP 环境变量 + core.Init() 条件化跳过 InitData/默认角色菜单 + cmd/main.go 条件化跳过 MAC retention/OUI seed;docs/启动流程清单.md §6 同步 | 2026-06-30 | (待提交) | [20260630-skip-setup-impl](./quick/20260630-skip-setup-impl/) |
+| 260701-iface-sort | 端口采集接口名称列数值排序(速率前缀 + 板卡/子卡/接口号;PG regexp_matches int 数组,dialect-aware 降级 sqlite);修正 GE0/10<GE0/2 字典序;query.go interfaceNameSortExpr + GetList 特殊分支,4 新测试全绿 | 2026-07-01 | (待提交) | [260701-iface-sort](./quick/260701-iface-sort/) |
 
 ## Accumulated Context
 
