@@ -328,7 +328,7 @@ const Dashboard = () => {
       </Spin>
 
       {/* Phase 44 R3 / Plan 44-02 Task 3 — 降噪效果卡片(SC 8 ≥60% 降噪量化验证)
-          * 前置:运维必须先在 /asset/reconciliation/exception-rules 点"记录当前为基线"按钮记录 R2 末期基线
+          * 前置:运维必须先在 /assets/exception-rules 点"记录当前为基线"按钮记录 R2 末期基线
           * 无 baseline 时 compare 返回 400 → 显示 Alert 引导(BLOCKER-3 可观察条件)
           * 有 baseline 时显示 3 个下降% Statistic, ≥60% 绿色达标 + Tag, <60% 橙色未达标 */}
       <Card
@@ -356,7 +356,7 @@ const Dashboard = () => {
               <>
                 R3 部署前 + R2 数据保留期内必须调用 Snapshot 记录 R2 末期基线,否则 SC 8
                 ≥60% 降噪不可量化验证。前往{" "}
-                <Link to="/asset/reconciliation/exception-rules">例外规则管理</Link>{" "}
+                <Link to="/assets/exception-rules">例外规则管理</Link>{" "}
                 点击"记录当前为基线"按钮。
               </>
             }
