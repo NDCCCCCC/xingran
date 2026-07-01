@@ -555,7 +555,7 @@ func (d *Database) AutoMigrate() error {
 		// 防止未来 device_id 漂移到不存在的设备(orphan)。NOT VALID + 异步 VALIDATE
 		// 避免锁表。FK 局限:只能防 orphan,无法防"指向错误但存在的设备",
 		// 后者靠 Excel 信息点重新录入 + 每日定时对账任务捕获。
-		// (注:2026-06-30 migration_182 自动化修复被删除,改用 Excel 重新录入策略)
+		// (注: 原计划 migration_182 改 port_status.device_id 方向错误已删除; 2026-07-01 改用 migration_188 修复 ip.port_id)
 		if err := migrations.Migrate183AddPortStatusDeviceFK(d.DB); err != nil {
 			applogger.Errorf("Phase 45+ 数据治理 加 port_status.device_id FK 约束失败: %v", err)
 		}
@@ -574,6 +574,13 @@ func (d *Database) AutoMigrate() error {
 		// 2026-07-01 port-mac-format-unify: 清理 sys_device_port_status + sys_device_mac_address 乱码 interface_name
 		if err := migrations.Migrate187CleanGarbledInterfaceNames(d.DB); err != nil {
 			applogger.Errorf("清理 interface_name 乱码失败: %v", err)
+		}
+		// 2026-07-01 info-point-port-drift-recheck: 修复 ops_info_points.port_id 历史漂移
+		// (Excel import DependsOn scope 失效, port_id 跨设备 first-match 拿错同名 port)。
+		// UPDATE ip.port_id 指向 (ip.device_id, 同 interface) 的正确 port, 安全可逆。
+		// dry-run 默认开启 (MIGRATION_188_DRY_RUN), 对物理链路显示无影响。
+		if err := migrations.Migrate188FixInfoPointsPortIdDrift(d.DB); err != nil {
+			applogger.Errorf("Phase 45+ 数据治理 修复 info_points.port_id 漂移失败: %v", err)
 		}
 		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
 		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
