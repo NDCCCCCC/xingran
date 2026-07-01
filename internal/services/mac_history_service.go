@@ -3,8 +3,6 @@ package services
 import (
 	"context"
 	"fmt"
-	"regexp"
-	"strings"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
@@ -78,51 +76,10 @@ func NewMACHistoryService(db *gorm.DB) MACHistoryService {
 	return &macHistoryServiceImpl{db: db}
 }
 
-// NormalizeMACAddress 规范化MAC地址格式
-// 将各种格式的MAC地址统一转换为 AA:BB:CC:DD:EE:FF 格式
-// 处理不同厂商输出格式不一致的问题（RESEARCH.md Pitfall 3）
+// NormalizeMACAddress 委托共享实现（见 internal/services/mac_normalize.go）
 //
-// 支持的输入格式：
-//   - aabb.ccdd.eeff (Cisco/Huawei) -> AA:BB:CC:DD:EE:FF
-//   - aa-bb-cc-dd-ee-ff (标准格式) -> AA:BB:CC:DD:EE:FF
-//   - aa:bb:cc:dd:ee:ff (已规范) -> AA:BB:CC:DD:EE:FF
-//   - AABBCCDDEEFF (无分隔符) -> AA:BB:CC:DD:EE:FF
-func NormalizeMACAddress(mac string) string {
-	if mac == "" {
-		return ""
-	}
-
-	// 移除所有空格
-	mac = strings.TrimSpace(mac)
-	if mac == "" {
-		return ""
-	}
-
-	// 移除所有分隔符（.: -）
-	normalized := strings.ReplaceAll(mac, ".", "")
-	normalized = strings.ReplaceAll(normalized, ":", "")
-	normalized = strings.ReplaceAll(normalized, "-", "")
-	normalized = strings.ToUpper(strings.TrimSpace(normalized))
-
-	// 验证格式：应该是12个十六进制字符
-	macPattern := regexp.MustCompile(`^[0-9A-F]{12}$`)
-	if !macPattern.MatchString(normalized) {
-		// 格式不合法，返回原始值
-		applogger.Warnf("[MAC历史] MAC地址格式无效: %s", mac)
-		return mac
-	}
-
-	// 插入冒号分隔符：AA:BB:CC:DD:EE:FF
-	var result strings.Builder
-	for i := 0; i < 12; i += 2 {
-		if i > 0 {
-			result.WriteString(":")
-		}
-		result.WriteString(normalized[i : i+2])
-	}
-
-	return result.String()
-}
+// 历史背景：2026-07-01 port-mac-format-unify 之前此文件有本地实现（已删除）。
+// 统一入口见 services.NormalizeMACAddress（mac_normalize.go），与 mac_collector 共享。
 
 // BuildMACStateMap 构建MAC状态映射（导出方法供其他服务使用）
 // 将DeviceMACAddress切片转换为map[MACEvent]*models.DeviceMACAddress

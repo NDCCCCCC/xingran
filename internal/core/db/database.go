@@ -559,6 +559,22 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate183AddPortStatusDeviceFK(d.DB); err != nil {
 			applogger.Errorf("Phase 45+ 数据治理 加 port_status.device_id FK 约束失败: %v", err)
 		}
+		// 2026-07-01 port-mac-format-unify: 历史 MAC 提升大写+冒号
+		if err := migrations.Migrate184NormalizeMACAddressToUppercase(d.DB); err != nil {
+			applogger.Errorf("统一 sys_device_mac_address MAC 大写+冒号失败: %v", err)
+		}
+		// 2026-07-01 port-mac-format-unify: 历史 ARP MAC 提升大写+冒号
+		if err := migrations.Migrate185NormalizeARPEntriesToUppercase(d.DB); err != nil {
+			applogger.Errorf("统一 sys_device_arp_entries MAC 大写+冒号失败: %v", err)
+		}
+		// 2026-07-01 port-mac-format-unify: 历史 port_status.interface_name 折叠到短名大写
+		if err := migrations.Migrate186NormalizePortStatusInterfaceName(d.DB); err != nil {
+			applogger.Errorf("统一 sys_device_port_status.interface_name 短名大写失败: %v", err)
+		}
+		// 2026-07-01 port-mac-format-unify: 清理 sys_device_port_status + sys_device_mac_address 乱码 interface_name
+		if err := migrations.Migrate187CleanGarbledInterfaceNames(d.DB); err != nil {
+			applogger.Errorf("清理 interface_name 乱码失败: %v", err)
+		}
 		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
 		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
 			applogger.Errorf("MAC 过滤规则表迁移失败: %v", err)

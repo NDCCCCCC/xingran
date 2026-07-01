@@ -10,6 +10,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 	"gorm.io/gorm"
 )
 
@@ -194,7 +195,9 @@ func (c *PortCollector) parseHuaweiInterfaceLine(line string, result map[string]
 		return
 	}
 
-	interfaceName := matches[1]
+	// 2026-07-01 port-mac-format-unify: 写入前用 NormalizeInterfaceName 归一化
+	// 保证 sys_device_port_status.interface_name 全是短名大写,跨厂商 JOIN 一致
+	interfaceName := portcollection.NormalizeInterfaceName(matches[1])
 	adminStatus := strings.ToLower(matches[2])
 	operStatus := strings.ToLower(matches[3])
 
@@ -255,7 +258,8 @@ func (c *PortCollector) parseHuaweiDot1xLine(line string, result map[string]Port
 		return
 	}
 
-	interfaceName := matches[1]
+	// 2026-07-01 port-mac-format-unify: 写入前归一化
+	interfaceName := portcollection.NormalizeInterfaceName(matches[1])
 	enabled := strings.ToLower(matches[2]) == "enabled"
 
 	portStatus := models.Dot1xStatusUnauthorized
@@ -307,7 +311,8 @@ func (c *PortCollector) parseHuaweiPortSecurityLine(line string, result map[stri
 		return
 	}
 
-	interfaceName := matches[1]
+	// 2026-07-01 port-mac-format-unify: 写入前归一化
+	interfaceName := portcollection.NormalizeInterfaceName(matches[1])
 	enabled := strings.ToLower(matches[2]) == "enabled"
 
 	entry := PortStatusEntry{

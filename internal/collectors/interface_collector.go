@@ -8,6 +8,8 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 	"gorm.io/gorm"
 )
 
@@ -178,7 +180,8 @@ func (c *InterfaceCollector) parseHuaweiInterfaceLine(line string, currentInterf
 			if *currentInterface != nil && (*currentInterface).Name != "" {
 				*interfaces = append(*interfaces, **currentInterface)
 			}
-			name := strings.TrimSuffix(parts[0], " ")
+			// 2026-07-01 port-mac-format-unify: 写入前归一化
+			name := portcollection.NormalizeInterfaceName(strings.TrimSuffix(parts[0], " "))
 			*currentInterface = &InterfaceInfo{Name: name}
 		}
 	}
@@ -214,7 +217,8 @@ func (c *InterfaceCollector) parseHuaweiInterfaceLine(line string, currentInterf
 	if strings.Contains(line, "Hardware address") {
 		parts := strings.Fields(line)
 		if len(parts) >= 3 {
-			(*currentInterface).MAC = parts[2]
+			// 2026-07-01 port-mac-format-unify: MAC 大写+冒号
+			(*currentInterface).MAC = services.NormalizeMACAddress(parts[2])
 		}
 	}
 }
@@ -228,7 +232,8 @@ func (c *InterfaceCollector) parseRuijieInterfaceLine(line string, currentInterf
 		}
 		parts := strings.Fields(line)
 		if len(parts) >= 2 {
-			name := strings.Join(parts[1:], " ")
+			// 2026-07-01 port-mac-format-unify: 写入前归一化
+			name := portcollection.NormalizeInterfaceName(strings.Join(parts[1:], " "))
 			*currentInterface = &InterfaceInfo{Name: name}
 		}
 	}
@@ -256,11 +261,13 @@ func (c *InterfaceCollector) parseRuijieInterfaceLine(line string, currentInterf
 		parts := strings.Fields(line)
 		for i, part := range parts {
 			if strings.Contains(part, ":") && len(part) == 17 {
-				(*currentInterface).MAC = part
+				// 2026-07-01 port-mac-format-unify: 大写+冒号
+				(*currentInterface).MAC = services.NormalizeMACAddress(part)
 				break
 			}
 			if i > 0 && strings.Contains(parts[i-1], "address") {
-				(*currentInterface).MAC = part
+				// 2026-07-01 port-mac-format-unify: 大写+冒号
+				(*currentInterface).MAC = services.NormalizeMACAddress(part)
 			}
 		}
 	}

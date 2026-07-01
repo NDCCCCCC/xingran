@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 )
 
 // TestLLDPServiceCache 测试LLDP缓存功能
@@ -112,21 +113,23 @@ func TestNormalizeInterfaceName(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"GigabitEthernet full", "GigabitEthernet0/0/1", "GigabitEthernet0/0/1"},
-		{"Short form Gi", "Gi0/1", "GigabitEthernet0/1"},
-		{"Short form fa", "Fa0/1", "FastEthernet0/1"},
-		{"Short form te", "Te0/1", "TenGigE0/1"},
-		{"Short form fo", "Fo0/1", "FortyGigE0/1"},
-		{"With spaces", "GigabitEthernet 0/0/1", "GigabitEthernet0/0/1"},
-		{"Lowercase gi", "gi0/1", "GigabitEthernet0/1"},
-		{"Mixed case", "GigabitEthernet0/0/1", "GigabitEthernet0/0/1"},
-		{"Vlanif", "Vlanif100", "Vlanif100"},
-		{"Loopback", "Loopback0", "Loopback0"},
+		// 2026-07-01 port-mac-format-unify: 现调用 portcollection.NormalizeInterfaceName
+		// (全称→短名大写,双向归一化). 预期值已对齐 portcollection 函数契约.
+		{"GigabitEthernet full -> short GE", "GigabitEthernet0/0/1", "GE0/0/1"},
+		{"Short form Gi -> full", "Gi0/1", "GigabitEthernet0/1"},
+		{"Short form fa -> full", "Fa0/1", "FastEthernet0/1"},
+		{"Short form te -> full", "Te0/1", "TenGigE0/1"},
+		{"Short form fo -> full", "Fo0/1", "FortyGigE0/1"},
+		{"With spaces -> short GE", "GigabitEthernet 0/0/1", "GE0/0/1"},
+		{"Lowercase gi -> full", "gi0/1", "GigabitEthernet0/1"},
+		{"Mixed case -> short GE", "GigabitEthernet0/0/1", "GE0/0/1"},
+		{"Vlanif 不变", "Vlanif100", "Vlanif100"},
+		{"Loopback -> short Loop", "Loopback0", "Loop0"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := normalizeInterfaceName(tt.input)
+			result := portcollection.NormalizeInterfaceName(tt.input)
 			assert.Equal(t, tt.expected, result, "Normalization mismatch for '%s'", tt.input)
 		})
 	}
@@ -226,7 +229,7 @@ func BenchmarkNormalizeInterfaceName(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for _, tc := range testCases {
-			_ = normalizeInterfaceName(tc)
+			_ = portcollection.NormalizeInterfaceName(tc)
 		}
 	}
 }

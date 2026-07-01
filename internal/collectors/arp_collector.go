@@ -9,6 +9,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"gorm.io/gorm"
 )
 
@@ -203,7 +204,8 @@ func (c *ARPCollector) parseHuaweiARPLine(fields []string) (ARPEntry, bool) {
 	// MAC地址可能是第二个或第三个字段
 	for i := 1; i < len(fields); i++ {
 		if c.isValidMAC(fields[i]) {
-			entry.MACAddress = fields[i]
+			// 2026-07-01 port-mac-format-unify: 写入前大写+冒号
+			entry.MACAddress = services.NormalizeMACAddress(fields[i])
 			// VLAN通常在MAC后面
 			if i+1 < len(fields) {
 				if vlan, err := parseVLAN(fields[i+1]); err == nil {
@@ -242,7 +244,8 @@ func (c *ARPCollector) parseRuijieARPLine(fields []string) (ARPEntry, bool) {
 	// 查找MAC地址
 	for i := 2; i < len(fields); i++ {
 		if c.isValidMAC(fields[i]) {
-			entry.MACAddress = fields[i]
+			// 2026-07-01 port-mac-format-unify: 大写+冒号
+			entry.MACAddress = services.NormalizeMACAddress(fields[i])
 			entry.Type = "dynamic"
 			return entry, true
 		}
@@ -329,9 +332,9 @@ func (c *ARPCollector) SearchByIP(ctx context.Context, ipAddress string) ([]mode
 
 // SearchByMAC 按MAC地址搜索ARP条目
 func (c *ARPCollector) SearchByMAC(ctx context.Context, macAddress string) ([]models.DeviceARPEntry, error) {
-	// 标准化MAC地址格式
-	macAddress = strings.ReplaceAll(macAddress, "-", ":")
-	macAddress = strings.ReplaceAll(macAddress, ".", ":")
+	// 2026-07-01 port-mac-format-unify: 共享 NormalizeMACAddress(大写+冒号)
+	// 原实现只换分隔符不动大小写,导致大小写不同 LIke 漏查
+	macAddress = services.NormalizeMACAddress(macAddress)
 
 	var entries []models.DeviceARPEntry
 	err := c.db.WithContext(ctx).

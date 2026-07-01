@@ -82,7 +82,7 @@ func parseInterfaceList(wrapper *device.ScrapliWrapper, vendor models.DeviceVend
 		}
 
 		originalName := strings.ReplaceAll(name, " ", "")
-		info.Name = normalizeInterfaceName(originalName)
+		info.Name = NormalizeInterfaceName(originalName)
 
 		if vlanStr, ok := record["VLAN"]; ok && vlanStr != "--" && vlanStr != "" {
 			if vlan, err := strconv.Atoi(vlanStr); err == nil {
@@ -134,7 +134,7 @@ func parseInterfaceDescriptions(wrapper *device.ScrapliWrapper, vendor models.De
 
 		if name, ok := record["INTERFACE"]; ok {
 			trimmedName := strings.TrimSpace(name)
-			desc.InterfaceName = normalizeInterfaceName(trimmedName)
+			desc.InterfaceName = NormalizeInterfaceName(trimmedName)
 			desc.OriginalName = trimmedName
 		}
 
@@ -193,7 +193,7 @@ func getAllDot1xStatus(wrapper *device.ScrapliWrapper, vendor models.DeviceVendo
 
 	result := make(map[string]Dot1xInfo)
 	for _, record := range records {
-		ifaceName := normalizeInterfaceName(record["INTERFACE"])
+		ifaceName := NormalizeInterfaceName(record["INTERFACE"])
 
 		if vendor == models.VendorHuawei || vendor == models.VendorH3C {
 			// 从 display dot1x 命令解析
@@ -265,7 +265,7 @@ func getAllPortSecurity(wrapper *device.ScrapliWrapper, vendor models.DeviceVend
 	if vendor == models.VendorRuijie || vendor == models.VendorMaipu {
 		portMACCount := make(map[string]int)
 		for _, record := range records {
-			portName := normalizeInterfaceName(record["PORT"])
+			portName := NormalizeInterfaceName(record["PORT"])
 			portMACCount[portName]++
 		}
 
@@ -278,7 +278,7 @@ func getAllPortSecurity(wrapper *device.ScrapliWrapper, vendor models.DeviceVend
 		}
 	} else {
 		for _, record := range records {
-			ifaceName := normalizeInterfaceName(record["INTERFACE"])
+			ifaceName := NormalizeInterfaceName(record["INTERFACE"])
 			maxMAC, _ := strconv.Atoi(record["MAX_MAC"])
 			currentMAC, _ := strconv.Atoi(record["CURRENT_MAC"])
 
@@ -436,7 +436,7 @@ func parseInterfaceVLANInfo(wrapper *device.ScrapliWrapper, vendor models.Device
 
 	vlanMap := make(map[string]*int)
 	for _, record := range records {
-		ifaceName := normalizeInterfaceName(record["INTERFACE"])
+		ifaceName := NormalizeInterfaceName(record["INTERFACE"])
 		
 		// 优先使用PVID (VLAN_ID)
 		if vlanStr, ok := record["VLAN_ID"]; ok && vlanStr != "" && vlanStr != "0" {

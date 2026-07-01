@@ -212,7 +212,7 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 		applogger.Debugf("[端口采集] %s (%s): 获取到 %d 个接口", device.DeviceName, device.IPAddress, len(interfaces))
 		emptySecurityMap := make(map[string]PortSecurityInfo)
 		for _, iface := range interfaces {
-			normalizedName := normalizeInterfaceName(iface.Name)
+			normalizedName := NormalizeInterfaceName(iface.Name)
 			var adminStatus, operStatus, description string
 			if desc, ok := descriptionMap[normalizedName]; ok {
 				adminStatus = desc.AdminStatus
@@ -229,7 +229,7 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 	} else {
 		// 锐捷/迈普：使用 interfaces + descriptionMap
 		for _, iface := range interfaces {
-			normalizedName := normalizeInterfaceName(iface.Name)
+			normalizedName := NormalizeInterfaceName(iface.Name)
 			var adminStatus, operStatus, description string
 			if desc, ok := descriptionMap[normalizedName]; ok {
 				adminStatus = desc.AdminStatus

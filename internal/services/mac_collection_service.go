@@ -182,7 +182,7 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 	// Step 2: 构建每个接口的MAC地址数量统计
 	macCountByInterface := make(map[string]int)
 	for _, mac := range macAddresses {
-		normalized := lldp.NormalizeInterfaceName(mac.InterfaceName)
+		normalized := portcollection.NormalizeInterfaceName(mac.InterfaceName)
 		macCountByInterface[normalized]++
 	}
 
@@ -203,7 +203,7 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 	var filteredMACAddresses []MACAddressEntry
 
 	for _, mac := range macAddresses {
-		normalizedIface := lldp.NormalizeInterfaceName(mac.InterfaceName)
+		normalizedIface := portcollection.NormalizeInterfaceName(mac.InterfaceName)
 
 		// 过滤规则1: LLDP邻居端口
 		// 注意：LLDP map的键已经是规范化的（来自Plan 01），可以直接查找
@@ -277,8 +277,8 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 
 		macRecord := &models.DeviceMACAddress{
 			DeviceID:      device.ID,
-			MACAddress:    macAddr.MACAddress,
-			InterfaceName: macAddr.InterfaceName,
+			MACAddress:    NormalizeMACAddress(macAddr.MACAddress),  // 2026-07-01: 防御性归一化(LLDP/filterRule 路径)
+			InterfaceName: portcollection.NormalizeInterfaceName(macAddr.InterfaceName),  // 同上
 			VLANID:        vlanIDPtr,
 			MACType:       macType,
 			CollectedAt:   collectionTime,
@@ -428,7 +428,7 @@ func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVen
 		// d89e.f327.2d19 100 GigabitEthernet0/1/1 Dynamic
 		// 或者包含更多空格的变体
 		if len(fields) >= 4 {
-			entry.MACAddress = fields[0]
+			entry.MACAddress = NormalizeMACAddress(fields[0])  // 2026-07-01: 写入前归一化
 			// 解析VLAN ID (fields[1])
 			if vlanID, err := strconv.Atoi(fields[1]); err == nil {
 				entry.VLANID = vlanID
@@ -450,14 +450,14 @@ func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVen
 			}
 
 			if len(interfaceParts) > 0 {
-				entry.InterfaceName = strings.Join(interfaceParts, " ")
+				entry.InterfaceName = s.cleanTimestampFromInterface(strings.Join(interfaceParts, " "))
 			} else {
 				// fallback: 使用fields[2]
 				entry.InterfaceName = fields[2]
 			}
 
-			// 清理接口名称中的时间戳格式（如 "2026-5-9 0:51:07"）
-			entry.InterfaceName = s.cleanTimestampFromInterface(entry.InterfaceName)
+			// 2026-07-01: 接口名归一化(短名大写,去空格等)
+			entry.InterfaceName = portcollection.NormalizeInterfaceName(s.cleanTimestampFromInterface(entry.InterfaceName))
 		}
 
 	case models.VendorRuijie, models.VendorMaipu:
@@ -473,7 +473,7 @@ func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVen
 			if vlanID, err := strconv.Atoi(fields[0]); err == nil {
 				entry.VLANID = vlanID
 			}
-			entry.MACAddress = fields[1]
+			entry.MACAddress = NormalizeMACAddress(fields[1])  // 2026-07-01: 写入前归一化
 			entry.MACType = fields[2]
 
 			// 接口名称从fields[3]开始
@@ -483,13 +483,10 @@ func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVen
 			}
 
 			if len(interfaceParts) > 0 {
-				entry.InterfaceName = strings.Join(interfaceParts, " ")
+				entry.InterfaceName = portcollection.NormalizeInterfaceName(s.cleanTimestampFromInterface(strings.Join(interfaceParts, " ")))
 			} else {
-				entry.InterfaceName = fields[3]
+				entry.InterfaceName = portcollection.NormalizeInterfaceName(fields[3])
 			}
-
-			// 清理接口名称中的时间戳格式（如 "2026-5-9 0:51:07"）
-			entry.InterfaceName = s.cleanTimestampFromInterface(entry.InterfaceName)
 		}
 	}
 
@@ -518,7 +515,7 @@ func (s *MACCollectionService) parseRuijiePortSecurityLine(fields []string) (MAC
 
 	entry := MACAddressEntry{}
 	entry.VLANID, _ = strconv.Atoi(fields[1])
-	entry.MACAddress = fields[2]
+	entry.MACAddress = NormalizeMACAddress(fields[2])  // 2026-07-01: 写入前归一化
 
 	// 字段尾部固定为 Type / LearnAge / Action
 	// Interface = fields[3 .. len-3]
@@ -526,7 +523,7 @@ func (s *MACCollectionService) parseRuijiePortSecurityLine(fields []string) (MAC
 	interfaceParts := fields[3:typeIdx]
 
 	if len(interfaceParts) > 0 {
-		entry.InterfaceName = s.cleanTimestampFromInterface(strings.Join(interfaceParts, " "))
+		entry.InterfaceName = portcollection.NormalizeInterfaceName(s.cleanTimestampFromInterface(strings.Join(interfaceParts, " ")))
 	}
 	entry.MACType = fields[typeIdx]
 
@@ -602,6 +599,8 @@ func (s *MACCollectionService) GetMACAddressList(ctx context.Context, current, p
 		baseQuery = baseQuery.Where("device_id IN (SELECT id FROM sys_network_device WHERE dept_id = ?)", deptID)
 	}
 	if macAddress != "" {
+		// 2026-07-01 port-mac-format-unify: 大写+冒号,避免大小写不同 LIKE 漏查
+		macAddress = NormalizeMACAddress(macAddress)
 		baseQuery = baseQuery.Where("mac_address LIKE ?", "%"+macAddress+"%")
 	}
 	if interfaceName != "" {
@@ -633,6 +632,8 @@ func (s *MACCollectionService) GetMACAddressList(ctx context.Context, current, p
 		joinQuery = joinQuery.Where("sys_network_device.dept_id = ?", deptID)
 	}
 	if macAddress != "" {
+		// 2026-07-01 port-mac-format-unify: 与 baseQuery 同步归一化
+		macAddress = NormalizeMACAddress(macAddress)
 		joinQuery = joinQuery.Where("sys_device_mac_address.mac_address LIKE ?", "%"+macAddress+"%")
 	}
 	if interfaceName != "" {

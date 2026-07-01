@@ -2,11 +2,11 @@ package lldp
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
@@ -65,7 +65,7 @@ func (s *LLDPService) DiscoverNeighbors(ctx context.Context, netDevice *models.N
 	result := make(map[string]*models.LLDPNeighborInfo)
 	for _, neighbor := range neighbors {
 		// 规范化接口名以确保MAC采集查找成功
-		normalizedKey := normalizeInterfaceName(neighbor.LocalInterface)
+		normalizedKey := portcollection.NormalizeInterfaceName(neighbor.LocalInterface)
 		result[normalizedKey] = neighbor
 	}
 
@@ -74,58 +74,6 @@ func (s *LLDPService) DiscoverNeighbors(ctx context.Context, netDevice *models.N
 
 	applogger.Infof("Discovered %d LLDP neighbors for device %s", len(result), netDevice.DeviceName)
 	return result, nil
-}
-
-// normalizeInterfaceName 标准化接口名称
-// 复制自 portcollection/utils.go，确保MAC采集查找成功
-func normalizeInterfaceName(name string) string {
-	name = strings.ReplaceAll(name, " ", "")
-
-	// 有效的标准前缀（直接返回）
-	validPrefixes := []string{"FastEthernet", "GigabitEthernet", "TenGigE", "FortyGigE", "HundredGigE", "Vlan", "Vlanif", "Loopback", "NULL"}
-	for _, prefix := range validPrefixes {
-		if strings.HasPrefix(name, prefix) {
-			return name
-		}
-	}
-
-	lowerName := strings.ToLower(name)
-
-	// 前缀映射
-	type prefixMapping struct {
-		short string
-		full  string
-	}
-	prefixList := []prefixMapping{
-		{"fastethernet", "FastEthernet"},
-		{"gigabitethernet", "GigabitEthernet"},
-		{"tengige", "TenGigE"},
-		{"fortygige", "FortyGigE"},
-		{"hundredgige", "HundredGigE"},
-		{"vlanif", "Vlanif"},
-		{"loopback", "Loopback"},
-		{"fa", "FastEthernet"},
-		{"gi", "GigabitEthernet"},
-		{"te", "TenGigE"},
-		{"fo", "FortyGigE"},
-		{"vlan", "Vlan"},
-		{"vl", "Vlan"},
-		{"null", "NULL"},
-	}
-
-	for _, mapping := range prefixList {
-		if strings.HasPrefix(lowerName, mapping.short) {
-			suffix := lowerName[len(mapping.short):]
-			if len(suffix) > 0 && (suffix[0] >= '0' && suffix[0] <= '9') {
-				return mapping.full + suffix
-			}
-			if len(suffix) > 0 {
-				return mapping.full + suffix
-			}
-		}
-	}
-
-	return name
 }
 
 // GetCache 获取缓存实例（用于测试或手动清除）

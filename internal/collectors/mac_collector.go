@@ -11,6 +11,8 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 	"gorm.io/gorm"
 )
 
@@ -156,8 +158,8 @@ func (c *MACCollector) parseHuaweiMACAddress(output string) ([]MACAddressEntry, 
 			continue
 		}
 
-		macAddr := normalizeMACAddress(matches[1])
-		interfaceName := matches[4]
+		macAddr := services.NormalizeMACAddress(matches[1])
+		interfaceName := portcollection.NormalizeInterfaceName(matches[4])
 		vlanID := c.parseVLANID(matches[2])
 
 		// 解析MAC类型
@@ -205,8 +207,8 @@ func (c *MACCollector) parseCiscoLikeMACAddress(output string) ([]MACAddressEntr
 		}
 
 		vlanID, _ := strconv.Atoi(matches[1])
-		macAddr := normalizeMACAddress(matches[2])
-		interfaceName := strings.TrimSpace(matches[4])
+		macAddr := services.NormalizeMACAddress(matches[2])
+		interfaceName := portcollection.NormalizeInterfaceName(strings.TrimSpace(matches[4]))
 
 		// 解析MAC类型
 		macType := models.MACTypeDynamic
@@ -245,7 +247,7 @@ func (c *MACCollector) parseGenericMACAddress(output string) ([]MACAddressEntry,
 
 		matches := macRegex.FindAllString(line, -1)
 		for _, macMatch := range matches {
-			macAddr := normalizeMACAddress(macMatch)
+			macAddr := services.NormalizeMACAddress(macMatch)
 			if isValidMACAddress(macAddr) {
 				entries = append(entries, MACAddressEntry{
 					MACAddress:    macAddr,
@@ -274,29 +276,6 @@ func (c *MACCollector) parseVLANID(vlanStr string) *int {
 	}
 
 	return nil
-}
-
-// normalizeMACAddress 标准化MAC地址格式
-func normalizeMACAddress(mac string) string {
-	// 移除所有分隔符
-	cleaned := strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(mac, ".", ""), "-", ""), ":", "")
-
-	// 转换为小写
-	cleaned = strings.ToLower(cleaned)
-
-	// 格式化为 xx:xx:xx:xx:xx:xx
-	if len(cleaned) == 12 {
-		var result strings.Builder
-		for i := 0; i < 12; i += 2 {
-			if i > 0 {
-				result.WriteString(":")
-			}
-			result.WriteString(cleaned[i : i+2])
-		}
-		return result.String()
-	}
-
-	return mac
 }
 
 // isValidMACAddress 验证MAC地址格式
@@ -345,7 +324,7 @@ func (c *MACCollector) SearchMACAddress(macAddress string, limit, offset int) ([
 	var total int64
 
 	// 标准化MAC地址
-	normalizedMAC := normalizeMACAddress(macAddress)
+	normalizedMAC := services.NormalizeMACAddress(macAddress)
 
 	query := c.db.Model(&models.DeviceMACAddress{}).Where("mac_address LIKE ?", "%"+normalizedMAC+"%")
 

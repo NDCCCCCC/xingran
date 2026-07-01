@@ -6,9 +6,10 @@ import "testing"
 //
 // 回归目标:
 //   - 同一物理端口跨厂商命名(GE/Gi/GigabitEthernet/te/TenGigE/xe/twe/tw/hge/fge/fa)
-//     经 normalizeInterfaceName 后落到一致的"短名"或"全称"上,确保下游 SQL view
+//     经 NormalizeInterfaceName 后落到一致的"短名"或"全称"上,确保下游 SQL view
 //     (reconciliation_physical_chain) 的 JOIN 能匹配
-//   - 2026-06-29 物理链路物理链路 view 失配根因之一即 prefixList 缺 ge/xe/twe/tw/hge/fge
+//   - 2026-06-29 物理链路 view 失配根因之一即 prefixList 缺 ge/xe/twe/tw/hge/fge
+//   - 2026-07-01 port-mac-format-unify 提升为导出符号,本测试函数名/调用点同步
 //   - Phase 45 R5 修复(GetPhysicalDevices 已用 REGEXP_REPLACE 折叠)与 Go 函数对齐
 func TestNormalizeInterfaceName(t *testing.T) {
 	tests := []struct {
@@ -175,13 +176,104 @@ func TestNormalizeInterfaceName(t *testing.T) {
 			input:    "Vlanif100",
 			expected: "Vlanif100",
 		},
+
+		// === 2026-07-01 port-mac-format-unify 新增契约 ===
+		// 注:全小写 full name(gigabitethernet...)走 short→full 路径,落到 GigabitEthernet
+		// 这是当前函数行为,符合"等价类:GE/Gi/GigabitEthernet 全部归一为 GigabitEthernet"
+		// 既有断言.真实采集器侧由 collector 调用 NormalizeInterfaceName,
+		// 把已是大写 full name 的 GigabitEthernet0/0/1 折叠为短名 GE0/0/1.
+		{
+			name:     "[新] 全小写 full name gigabitethernet0/0/1 -> 全称 GigabitEthernet0/0/1(走 short->full 路径)",
+			input:    "gigabitethernet0/0/1",
+			expected: "GigabitEthernet0/0/1",
+		},
+		{
+			name:     "[新] 前导空格 GigabitEthernet0/0/1 -> GE0/0/1",
+			input:    " GigabitEthernet0/0/1",
+			expected: "GE0/0/1",
+		},
+		{
+			name:     "[新] 尾随空格 GigabitEthernet0/0/1 -> GE0/0/1",
+			input:    "GigabitEthernet0/0/1 ",
+			expected: "GE0/0/1",
+		},
+		{
+			name:     "[新] TenGigE 全小写 tengige1/0/1 -> TenGigE1/0/1(走 short->full 路径)",
+			input:    "tengige1/0/1",
+			expected: "TenGigE1/0/1",
+		},
+		{
+			name:     "[新] FastEthernet 全小写 fastethernet0/1 -> FastEthernet0/1(走 short->full 路径)",
+			input:    "fastethernet0/1",
+			expected: "FastEthernet0/1",
+		},
+		{
+			name:     "[新] HundredGigE 全小写 hundredgige1/49 -> HundredGigE1/49(走 short->full 路径)",
+			input:    "hundredgige1/49",
+			expected: "HundredGigE1/49",
+		},
+		{
+			name:     "[新] FortyGigE 全小写 fortygige1/1 -> FortyGigE1/1(走 short->full 路径)",
+			input:    "fortygige1/1",
+			expected: "FortyGigE1/1",
+		},
+		{
+			name:     "[新] TwentyFiveGigE 全小写 twentyfivegige1/1 -> TwentyFiveGigE1/1(走 short->full 路径)",
+			input:    "twentyfivegige1/1",
+			expected: "TwentyFiveGigE1/1",
+		},
+
+		// === 2026-07-01 port-mac-format-unify 阶段 2:Huawei et 短名 + 乱码清理 ===
+		{
+			name:     "[新] 短名 et (Huawei 25G) -> TwentyFiveGigE",
+			input:    "et3/46",
+			expected: "TwentyFiveGigE3/46",
+		},
+		{
+			name:     "[新] 短名 et 大写 ET -> TwentyFiveGigE",
+			input:    "ET3/46",
+			expected: "TwentyFiveGigE3/46",
+		},
+		// 乱码(短+全+数字)清理
+		{
+			name:     "[新] 乱码 GEGigabitEthernet5/29 -> GE5/29",
+			input:    "GEGigabitEthernet5/29",
+			expected: "GE5/29",
+		},
+		{
+			name:     "[新] 乱码 GEgabitetherngigabitethernet4/48 -> GE4/48",
+			input:    "GEgabitetherngigabitethernet4/48",
+			expected: "GE4/48",
+		},
+		{
+			name:     "[新] 乱码 GEngigabitethernet5/34 -> GE5/34",
+			input:    "GEngigabitethernet5/34",
+			expected: "GE5/34",
+		},
+		{
+			name:     "[新] 乱码 XGengigabitethernet0/49 -> XGE0/49",
+			input:    "XGengigabitethernet0/49",
+			expected: "XGE0/49",
+		},
+		{
+			name:     "[新] 乱码 XGigabitEthernet0/0/1 -> XGE0/0/1",
+			input:    "XGigabitEthernet0/0/1",
+			expected: "XGE0/0/1",
+		},
+		// 注: GEet5/34 留待 migration 187 单独处理(中间是 'et' 不是 gigabit 残,
+		// 阶段 0 不触发;阶段 1+ 也不识别;需要 SQL 显式 case-when)
+		{
+			name:     "[新] 乱码 GEet5/34 保持原样(留给 migration 187 显式处理)",
+			input:    "GEet5/34",
+			expected: "GEet5/34",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := normalizeInterfaceName(tt.input)
+			got := NormalizeInterfaceName(tt.input)
 			if got != tt.expected {
-				t.Errorf("normalizeInterfaceName(%q) = %q, want %q", tt.input, got, tt.expected)
+				t.Errorf("NormalizeInterfaceName(%q) = %q, want %q", tt.input, got, tt.expected)
 			}
 		})
 	}
@@ -190,19 +282,19 @@ func TestNormalizeInterfaceName(t *testing.T) {
 // TestNormalizeInterfaceName_PrefixOrder 验证前缀匹配顺序正确(防止 tw 误吞 twe)
 func TestNormalizeInterfaceName_PrefixOrder(t *testing.T) {
 	// "twe1/1" 应该匹配 TwentyFiveGigE 而不是 Tw(未知前缀)
-	got := normalizeInterfaceName("twe1/1")
+	got := NormalizeInterfaceName("twe1/1")
 	if got != "TwentyFiveGigE1/1" {
 		t.Errorf("前缀顺序错误:twe1/1 = %q, want TwentyFiveGigE1/1", got)
 	}
 
 	// "tw1/1" 应该匹配 TwentyFiveGigE
-	got = normalizeInterfaceName("tw1/1")
+	got = NormalizeInterfaceName("tw1/1")
 	if got != "TwentyFiveGigE1/1" {
 		t.Errorf("tw1/1 = %q, want TwentyFiveGigE1/1", got)
 	}
 
 	// "te1/0/1" 应该匹配 TenGigE 而非 twe(防止 twe 误吞 te)
-	got = normalizeInterfaceName("te1/0/1")
+	got = NormalizeInterfaceName("te1/0/1")
 	if got != "TenGigE1/0/1" {
 		t.Errorf("te1/0/1 = %q, want TenGigE1/0/1", got)
 	}
