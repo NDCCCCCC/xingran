@@ -147,12 +147,17 @@ func (s *excelExportServiceImpl) resolveAssociations(
 		if join.RightCast != "" {
 			rightFieldExpr = join.RightField + "::" + join.RightCast
 		}
-		rows, err := s.db.WithContext(ctx).
+		// SkipSoftDelete 字段(可选):某些 join 目标表为硬删除表(无 deleted_at 列,如 sys_device_port_status),
+		// 加 `deleted_at IS NULL` 会触发 PG SQLSTATE 42703 → 整个 join 失败 → 关联列整列空,
+		// 错误被 logger.Warnf 后 continue 时静默吞掉。此字段为 true 时跳过该过滤。
+		queryBuilder := s.db.WithContext(ctx).
 			Table(join.Table).
 			Select(join.RightField+", "+join.SelectField).
-			Where(rightFieldExpr+" IN ?", ids).
-			Where("deleted_at IS NULL").
-			Rows()
+			Where(rightFieldExpr+" IN ?", ids)
+		if !join.SkipSoftDelete {
+			queryBuilder = queryBuilder.Where("deleted_at IS NULL")
+		}
+		rows, err := queryBuilder.Rows()
 
 		if err != nil {
 			logger.Warnf("批量查询关联数据失败: %v", err)

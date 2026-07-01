@@ -10,12 +10,13 @@ type ExcelExportField struct {
 }
 
 type JoinConfig struct {
-	Table       string // 关联表名
-	LeftField   string // 左表字段（通常是ID）
-	RightField  string // 右表字段
-	SelectField string // 要查询的字段
-	As          string // 别名
-	RightCast   string // 选填, RightField 类型转换(如 "text"),用于 IN 子句类型匹配
+	Table          string // 关联表名
+	LeftField      string // 左表字段（通常是ID）
+	RightField     string // 右表字段
+	SelectField    string // 要查询的字段
+	As             string // 别名
+	RightCast      string // 选填, RightField 类型转换(如 "text"),用于 IN 子句类型匹配
+	SkipSoftDelete bool   // 选填: true 时跳过 `deleted_at IS NULL` 过滤(用于无 deleted_at 列的硬删除表,如 sys_device_port_status)
 }
 
 type ExcelExportConfig struct {
@@ -334,7 +335,7 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 				{Field: "workstationId", Header: "所属工位ID", DBField: "workstation_id"},
 				{Field: "workstationName", Header: "所属工位",
 					Join: &JoinConfig{Table: "sys_workstation", LeftField: "workstation_id",
-						RightField: "id", RightCast: "text", SelectField: "workstation_name", As: "workstationName"}},
+						RightField: "id", RightCast: "text", SelectField: "workstation_name", As: "workstationName", SkipSoftDelete: true}}, // SkipSoftDelete: 109 个软删除工位恢复名称显示(诊断: sys_workstation ids=1168 results=1059 matched, 109 未匹配是软删)
 				{Field: "deviceId", Header: "关联设备ID", DBField: "device_id"},
 				{Field: "deviceName", Header: "关联设备",
 					Join: &JoinConfig{Table: "sys_network_device", LeftField: "device_id",
@@ -342,7 +343,7 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 				{Field: "portId", Header: "端口ID", DBField: "port_id"},
 				{Field: "portName", Header: "端口名称",
 					Join: &JoinConfig{Table: "sys_device_port_status", LeftField: "port_id",
-						RightField: "id", RightCast: "text", SelectField: "interface_name", As: "portName"}},
+						RightField: "id", RightCast: "text", SelectField: "interface_name", As: "portName", SkipSoftDelete: true}}, // sys_device_port_status 是硬删除表(无 deleted_at 列)
 				{Field: "status", Header: "状态", DBField: "status",
 					Options: map[interface{}]string{int(0): "正常", int(1): "故障", int(2): "停用"}},
 				{Field: "remark", Header: "备注", DBField: "remark"},
