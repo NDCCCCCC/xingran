@@ -331,16 +331,16 @@ func TestMergeMACEntries(t *testing.T) {
 	// 应当有 2 条唯一记录 (0001.0001.0001 和 b022.7a2e.4a4f)
 	assert.Equal(t, 2, len(merged), "Should have 2 unique MAC entries after dedup")
 
-	// 验证 b022.7a2e.4a4f 在合并结果中
+	// 验证 b022.7a2e.4a4f (归一化后 B0:22:7A:2E:4A:4F) 在合并结果中
 	found := false
 	for _, e := range merged {
-		if e.MACAddress == "b022.7a2e.4a4f" {
+		if e.MACAddress == "B0:22:7A:2E:4A:4F" { // 2026-07-01: parseMACLine 归一化为大写+冒号
 			found = true
 			assert.Equal(t, 308, e.VLANID)
-			assert.Equal(t, "GigabitEthernet 2/25", e.InterfaceName)
+			assert.Equal(t, "GE2/25", e.InterfaceName) // 2026-07-01: 全称+空格 → 短名
 		}
 	}
-	assert.True(t, found, "b022.7a2e.4a4f should be in merged result")
+	assert.True(t, found, "B0:22:7A:2E:4A:4F should be in merged result")
 }
 
 // TestCleanTimestampFromInterface 测试清理接口名称中的时间戳

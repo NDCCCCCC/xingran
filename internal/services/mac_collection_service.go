@@ -551,6 +551,10 @@ func (s *MACCollectionService) mergeMACEntries(buckets [][]MACAddressEntry) []MA
 
 // cleanTimestampFromInterface 清理接口名称中的时间戳
 // 示例: "GigabitEthernet 0/12 2026-5-9 0:51:07" -> "GigabitEthernet 0/12"
+//
+// 2026-07-01 fix: 清理后为空(纯时间戳输入,无接口名)返回空字符串,
+// 替代原"返回原始 interfaceName"逻辑(会把纯时间戳当接口名入库,不合理)。
+// 匹配 TestCleanTimestampFromInterface/Only_timestamp 契约。
 func (s *MACCollectionService) cleanTimestampFromInterface(interfaceName string) string {
 	// 使用正则表达式匹配时间戳格式
 	// 可能的格式: "2026-5-9 0:51:07", "2026-05-09 08:52:15" 等
@@ -558,10 +562,7 @@ func (s *MACCollectionService) cleanTimestampFromInterface(interfaceName string)
 	cleaned := timestampPattern.ReplaceAllString(interfaceName, "")
 	cleaned = strings.TrimSpace(cleaned)
 
-	// 如果清理后为空，返回原始接口名称
-	if cleaned == "" {
-		return interfaceName
-	}
+	// 清理后为空(纯时间戳输入)返回空字符串,避免把时间戳当接口名
 	return cleaned
 }
 
