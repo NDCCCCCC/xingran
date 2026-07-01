@@ -397,7 +397,11 @@ func (s *MACCollectionService) parseMACAddressTable(output string, vendor models
 		   strings.Contains(lowerLine, "vlan") && strings.Contains(lowerLine, "mac") ||
 		   strings.Contains(lowerLine, "type") && strings.Contains(lowerLine, "interface") ||
 		   strings.Contains(lowerLine, "port") && strings.Contains(lowerLine, "mac") ||
-		   strings.Contains(lowerLine, "learned") {
+		   strings.Contains(lowerLine, "learned") ||
+		   strings.Contains(lowerLine, "flags") ||          // 华为列头 "Flags:"
+		   strings.Contains(lowerLine, "total") ||          // 汇总行 "Total items displayed"
+		   strings.Contains(lowerLine, "forwarding logical") || // 华为注释行
+		   strings.HasPrefix(line, "#") {                   // 华为注释行首字符
 			continue
 		}
 
@@ -490,7 +494,10 @@ func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVen
 		}
 	}
 
-	if entry.MACAddress != "" {
+	// 2026-07-01: 校验 MAC 是标准大写冒号格式,过滤设备 display mac-address 输出里的
+	// 表头/汇总行/注释行(实测垃圾: 'Flags:'/'Total'/'#'/'Invalid' 被误当 MAC)。
+	// 不校验的话这些垃圾会入库污染 mac_address 与连锁的 mac_history 轨迹表。
+	if entry.MACAddress != "" && isCanonicalMAC(entry.MACAddress) {
 		return entry, true
 	}
 	return MACAddressEntry{}, false

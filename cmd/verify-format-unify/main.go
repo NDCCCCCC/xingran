@@ -79,6 +79,9 @@ func main() {
 	// === Section 6: 端口名前缀分布 ===
 	checkPortNamePrefixes(ctx, dbConn.GetDB())
 
+	// === Section 7: MAC 轨迹表(sys_device_mac_history)格式 ===
+	checkMACHistoryFormat(ctx, dbConn.GetDB())
+
 	// 输出汇总
 	printSummary()
 }
@@ -376,6 +379,32 @@ func checkPortNamePrefixes(ctx context.Context, g *gorm.DB) {
 			applogger.Warnf("  %-30s cnt=%d  example='%s'", p.Prefix, p.Cnt, p.Example)
 		}
 	}
+}
+
+// checkMACHistoryFormat 检查 sys_device_mac_history 的 interface_name + mac_address 格式
+// 验证 M190(Migrate190NormalizeMACHistory) 清理效果
+func checkMACHistoryFormat(ctx context.Context, g *gorm.DB) {
+	applogger.Info("=================================================================")
+	applogger.Info("= Section 7: sys_device_mac_history 格式 (M190)")
+	applogger.Info("=================================================================")
+
+	// 7.1 interface_name 全称残留(应 = 0,M190 折叠后全短名)
+	var fullnameResidual int64
+	g.WithContext(ctx).Raw(`
+		SELECT COUNT(*) FROM sys_device_mac_history
+		 WHERE interface_name ~ '^(GigabitEthernet|TenGigabitEthernet|TenGigE|TwentyFiveGigE|HundredGigE|FortyGigE|FastEthernet)'
+	`).Scan(&fullnameResidual)
+	addCheck("M190", "mac_history 无全称 interface_name", fullnameResidual == 0,
+		fmt.Sprintf("失败行数=%d", fullnameResidual))
+
+	// 7.2 mac_address 小写残留(应 = 0,M190 归一化后全大写+冒号)
+	var lowercaseResidual int64
+	g.WithContext(ctx).Raw(`
+		SELECT COUNT(*) FROM sys_device_mac_history
+		 WHERE mac_address ~ '[a-f]' AND mac_address IS NOT NULL
+	`).Scan(&lowercaseResidual)
+	addCheck("M190", "mac_history 无小写 mac_address", lowercaseResidual == 0,
+		fmt.Sprintf("失败行数=%d", lowercaseResidual))
 }
 
 // isStandardPrefix 列出本项目已知的合法端口名前缀

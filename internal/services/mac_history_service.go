@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/normalize"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -83,24 +84,31 @@ func NewMACHistoryService(db *gorm.DB) MACHistoryService {
 
 // BuildMACStateMap 构建MAC状态映射（导出方法供其他服务使用）
 // 将DeviceMACAddress切片转换为map[MACEvent]*models.DeviceMACAddress
-// 关键：在构建时调用normalizeMACAddress规范化MAC地址格式
+// 关键：在构建时归一化 MAC 地址 + 接口名格式
+//
+// 2026-07-01 修复: 此前仅归一 MAC,InterfaceName 原样使用。当 DB 历史数据是全称
+// (GigabitEthernet0/0/1) 而新采集是短名(GE0/0/1)时,oldState/newState 的 InterfaceName
+// 不等会被误判为 moved 事件,产生虚假 MAC 轨迹。且全称 InterfaceName 直接写入
+// sys_device_mac_history,导致轨迹表接口名都是全称。归一化后两端一致,虚假 moved 消失。
 func (s *macHistoryServiceImpl) BuildMACStateMap(macList []models.DeviceMACAddress) map[MACEvent]*models.DeviceMACAddress {
 	stateMap := make(map[MACEvent]*models.DeviceMACAddress)
 
 	for i := range macList {
 		mac := &macList[i]
 
-		// 规范化MAC地址格式（RESEARCH.md Pitfall 3）
+		// 归一化 MAC 地址(大写+冒号) + 接口名(大写短名)
 		normalizedMAC := NormalizeMACAddress(mac.MACAddress)
+		normalizedIface := normalize.InterfaceName(mac.InterfaceName)
 
 		eventKey := MACEvent{
 			MACAddress:    normalizedMAC,
-			InterfaceName: mac.InterfaceName,
+			InterfaceName: normalizedIface,
 			VLANID:        mac.VLANID,
 		}
 
-		// 更新MAC地址为规范化格式
+		// 更新为归一化格式(调用方 Step9 用 macRecordsSlice 构建 newState,保持一致)
 		mac.MACAddress = normalizedMAC
+		mac.InterfaceName = normalizedIface
 
 		stateMap[eventKey] = mac
 	}

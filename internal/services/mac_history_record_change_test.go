@@ -145,7 +145,9 @@ func TestRecordMACChange_SkipsRedundantEvents(t *testing.T) {
 		)
 		require.Len(t, records, 1, "真实移动只写 1 条 moved")
 		assert.Equal(t, models.EventMoved, records[0].EventType)
-		assert.Equal(t, "GigabitEthernet 1/2", records[0].InterfaceName, "moved 记录用新端口(语义=现在在哪)")
+		// 2026-07-01: BuildMACStateMap + DeviceMACHistory.BeforeCreate hook 双重归一化,
+		// moved 记录的 InterfaceName 落短名(GE1/2)而非全称(GigabitEthernet 1/2)
+		assert.Equal(t, "GE1/2", records[0].InterfaceName, "moved 记录用新端口(归一化短名,语义=现在在哪)")
 		assert.Equal(t, t0, records[0].FirstSeen, "moved 起点 FirstSeen = 旧 CollectedAt(何时离开旧端口)")
 		// LastSeen = collectionTime(本次 RecordMACChange 调用时的 time.Now()),不固定
 		assert.True(t, !records[0].LastSeen.Before(beforeRun),

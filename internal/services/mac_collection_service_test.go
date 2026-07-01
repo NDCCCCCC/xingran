@@ -229,7 +229,7 @@ func TestParseRuijiePortSecurityLine(t *testing.T) {
 			wantEntry:         true,
 			expectedMAC:       "AA:BB:CC:DD:EE:FF", // 2026-07-01: 归一化
 			expectedVLAN:      200,
-			expectedInterface: "GigabitEthernet0/5", // Gi 短名经 NormalizeInterfaceName 映射到全称(migration 187 会再折叠为 GE0/5)
+			expectedInterface: "GE0/5", // Gi 短名经 NormalizeInterfaceName 对称化映射到大写短名
 			expectedType:      "Static",
 		},
 		{
@@ -623,6 +623,28 @@ func TestMACFilteringScenario(t *testing.T) {
 		ne := portcollection.NormalizeInterfaceName(mac.InterfaceName)
 		assert.NotEqual(t, "GigabitEthernet0/0/1", ne, "LLDP port should be filtered")
 	}
+}
+
+// TestParseMACAddressTable_FiltersGarbageLines 锁定 2026-07-01 垃圾行过滤契约:
+// 华为 display mac-address 输出的表头/汇总行/注释行(Flags:/Total/#/forwarding logical)
+// 必须被丢弃,不能当成 MAC 条目入库污染 mac_address 与 mac_history 轨迹表。
+//
+// 双层防护: parseMACAddressTable 关键词过滤 + parseMACLine 的 isCanonicalMAC 校验。
+func TestParseMACAddressTable_FiltersGarbageLines(t *testing.T) {
+	svc := &MACCollectionService{}
+	output := `MAC address table of slot 1:
+MAC Address    VLAN/  Learned-from      Type
+---
+00e0-fc12-3456 100/-  GE0/0/1           dynamic
+Flags:  -       -      forwarding
+# forwarding logical interface, operations cannot be performed
+Total items displayed = 1`
+
+	entries, err := svc.parseMACAddressTable(output, models.VendorHuawei, MACCommandTypeMacTable)
+	assert.NoError(t, err)
+	assert.Len(t, entries, 1, "只应解析出 1 条有效 MAC,表头/汇总/注释行全过滤")
+	assert.Equal(t, "00:E0:FC:12:34:56", entries[0].MACAddress)
+	assert.Equal(t, "GE0/0/1", entries[0].InterfaceName)
 }
 
 // BenchmarkParseMACLine 基准测试MAC地址解析性能

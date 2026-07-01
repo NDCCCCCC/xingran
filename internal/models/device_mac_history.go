@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/normalize"
 	"gorm.io/gorm"
 )
 
@@ -37,11 +38,17 @@ func (DeviceMACHistory) TableName() string {
 	return "sys_device_mac_history"
 }
 
-// BeforeCreate GORM 钩子：在创建记录前自动生成 UUID
+// BeforeCreate GORM 钩子：在创建记录前自动生成 UUID + 强制归一化 MAC/接口名
+//
+// 2026-07-01 根治(port-mac-format-unify): MAC 轨迹表此前接口名全是全称
+// (BuildMACStateMap 未归一化 InterfaceName),写入前兜底归一化 MAC(大写+冒号)与
+// 接口名(大写短名),保证轨迹表格式与 port_status/mac_address 一致。
 func (d *DeviceMACHistory) BeforeCreate(tx *gorm.DB) error {
 	if d.ID == "" || d.ID == "00000000-0000-0000-0000-000000000000" {
 		d.ID = uuid.New().String()
 	}
+	d.MACAddress = normalize.MACAddress(d.MACAddress)
+	d.InterfaceName = normalize.InterfaceName(d.InterfaceName)
 	return nil
 }
 

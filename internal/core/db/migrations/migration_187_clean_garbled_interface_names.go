@@ -172,6 +172,9 @@ UPDATE sys_device_port_status
 	}
 
 	// ========== Step 2: 清理 sys_device_mac_address.interface_name ==========
+	// 2026-07-01 修复: 原 WHERE 用 'GigabitEthernet %'(带空格)只匹配 "GigabitEthernet 3/33"
+	// (interface_name 与数字间含空格),漏掉最常见的 "GigabitEthernet3/33"(无空格,华为/H3C 标准输出)。
+	// 改为 'GigabitEthernet%'(无空格) + 补 'TenGigabitEthernet%'(华为/Cisco 10G 全称,原仅 Step 1 有)。
 	log.Println("[187] === Step 2: sys_device_mac_address.interface_name ===")
 
 	// 这一表没有 BaseModel/无 deleted_at,无 unique 约束,可以放心 UPDATE
@@ -190,6 +193,7 @@ SELECT id::text AS id,
        interface_name AS old_iface,
        CASE
          WHEN interface_name ILIKE 'GigabitEthernet%'    THEN 'GE'    || SUBSTRING(interface_name, 16)
+         WHEN interface_name ILIKE 'TenGigabitEthernet%' THEN 'XGE'   || SUBSTRING(interface_name, 19)
          WHEN interface_name ILIKE 'TenGigE%'            THEN 'XGE'   || SUBSTRING(interface_name, 8)
          WHEN interface_name ILIKE 'TwentyFiveGigE%'     THEN 'TWE'   || SUBSTRING(interface_name, 15)
          WHEN interface_name ILIKE 'HundredGigE%'        THEN 'HGE'   || SUBSTRING(interface_name, 12)
@@ -199,7 +203,8 @@ SELECT id::text AS id,
          ELSE interface_name
        END AS new_iface
   FROM sys_device_mac_address
- WHERE interface_name ILIKE 'GigabitEthernet %'
+ WHERE interface_name ILIKE 'GigabitEthernet%'
+    OR interface_name ILIKE 'TenGigabitEthernet%'
     OR interface_name ILIKE 'TenGigE%'
     OR interface_name ILIKE 'TwentyFiveGigE%'
     OR interface_name ILIKE 'HundredGigE%'

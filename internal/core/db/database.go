@@ -588,6 +588,11 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate189RemoveMACTrajectoryMenu(d.DB); err != nil {
 			applogger.Errorf("清理 MAC 轨迹菜单残留失败: %v", err)
 		}
+		// 2026-07-01 port-mac-format-unify: 归一化 sys_device_mac_history 的 mac_address + interface_name
+		// (MAC 轨迹表此前 BuildMACStateMap 未归一 InterfaceName,历史接口名全是全称;本迁移补清)
+		if err := migrations.Migrate190NormalizeMACHistory(d.DB); err != nil {
+			applogger.Errorf("归一化 sys_device_mac_history 失败: %v", err)
+		}
 		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
 		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
 			applogger.Errorf("MAC 过滤规则表迁移失败: %v", err)

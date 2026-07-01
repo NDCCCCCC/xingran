@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/normalize"
 	"gorm.io/gorm"
 )
 
@@ -33,10 +34,16 @@ func (DeviceMACAddress) TableName() string {
 	return "sys_device_mac_address"
 }
 
-// BeforeCreate GORM 钩子：在创建记录前自动生成 UUID
+// BeforeCreate GORM 钩子：在创建记录前自动生成 UUID + 强制归一化 MAC/接口名
+//
+// 2026-07-01 根治(port-mac-format-unify): 写入前兜底归一化 MAC(大写+冒号)与
+// 接口名(大写短名)。即使上游调用方漏调 normalize,hook 也保证入库格式一致,
+// 消灭 verify-format-unify 反复报告的脏数据。归一化实现见 pkg/normalize。
 func (d *DeviceMACAddress) BeforeCreate(tx *gorm.DB) error {
 	if d.ID == "" || d.ID == "00000000-0000-0000-0000-000000000000" {
 		d.ID = uuid.New().String()
 	}
+	d.MACAddress = normalize.MACAddress(d.MACAddress)
+	d.InterfaceName = normalize.InterfaceName(d.InterfaceName)
 	return nil
 }

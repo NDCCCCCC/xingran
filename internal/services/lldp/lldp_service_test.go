@@ -113,15 +113,15 @@ func TestNormalizeInterfaceName(t *testing.T) {
 		input    string
 		expected string
 	}{
-		// 2026-07-01 port-mac-format-unify: 现调用 portcollection.NormalizeInterfaceName
-		// (全称→短名大写,双向归一化). 预期值已对齐 portcollection 函数契约.
+		// 2026-07-01 port-mac-format-unify 对称化: 调 portcollection.NormalizeInterfaceName,
+		// 目标统一为"大写短名"(GE/XGE/FE/FOE...),不再展开为全称。
 		{"GigabitEthernet full -> short GE", "GigabitEthernet0/0/1", "GE0/0/1"},
-		{"Short form Gi -> full", "Gi0/1", "GigabitEthernet0/1"},
-		{"Short form fa -> full", "Fa0/1", "FastEthernet0/1"},
-		{"Short form te -> full", "Te0/1", "TenGigE0/1"},
-		{"Short form fo -> full", "Fo0/1", "FortyGigE0/1"},
+		{"Short form Gi -> short GE", "Gi0/1", "GE0/1"},
+		{"Short form fa -> short FE", "Fa0/1", "FE0/1"},
+		{"Short form te -> short XGE", "Te0/1", "XGE0/1"},
+		{"Short form fo -> short FOE", "Fo0/1", "FOE0/1"},
 		{"With spaces -> short GE", "GigabitEthernet 0/0/1", "GE0/0/1"},
-		{"Lowercase gi -> full", "gi0/1", "GigabitEthernet0/1"},
+		{"Lowercase gi -> short GE", "gi0/1", "GE0/1"},
 		{"Mixed case -> short GE", "GigabitEthernet0/0/1", "GE0/0/1"},
 		{"Vlanif 不变", "Vlanif100", "Vlanif100"},
 		{"Loopback -> short Loop", "Loopback0", "Loop0"},
