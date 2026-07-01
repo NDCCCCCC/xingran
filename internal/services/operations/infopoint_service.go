@@ -124,9 +124,17 @@ func (s *infoPointService) Delete(ctx context.Context, id string) error {
 }
 
 // GetByID 根据ID获取信息点
+// 通过 LEFT JOIN 工位/楼层/楼宇 动态填充 workstation_name/building_name/floor_name/building_id
+// (这些字段是 JOIN 虚拟字段，见 OpsInfoPoint model 的 gorm:"->;-:migration" tag，非物理列)
 func (s *infoPointService) GetByID(ctx context.Context, id string) (*operations.OpsInfoPoint, error) {
 	var infoPoint operations.OpsInfoPoint
-	err := s.db.WithContext(ctx).Where("id = ?", id).First(&infoPoint).Error
+	err := s.db.WithContext(ctx).
+		Select("ops_info_points.*, ops_floors.name as floor_name, ops_buildings.name as building_name, ops_buildings.id as building_id, sys_workstation.workstation_name").
+		Joins("LEFT JOIN sys_workstation ON sys_workstation.id::text = ops_info_points.workstation_id").
+		Joins("LEFT JOIN ops_floors ON ops_floors.id = sys_workstation.floor_id::uuid").
+		Joins("LEFT JOIN ops_buildings ON ops_buildings.id = sys_workstation.building_id::uuid").
+		Where("ops_info_points.id = ?", id).
+		First(&infoPoint).Error
 	if err != nil {
 		return nil, err
 	}

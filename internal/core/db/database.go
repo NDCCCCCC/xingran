@@ -593,6 +593,27 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate190NormalizeMACHistory(d.DB); err != nil {
 			applogger.Errorf("归一化 sys_device_mac_history 失败: %v", err)
 		}
+		// 2026-07-01 info-points-building-backfill-v1: 反推 ops_floors.building_id (no-op,
+		// 初始诊断方向错了,ops_floors.building_id 实际全有值)。保留 v1 作历史记录,
+		// 真正修复见下方 Migrate193BackfillSysWorkstationBuildingId。
+		if err := migrations.Migrate192BackfillOpsFloorsBuildingId(d.DB); err != nil {
+			applogger.Errorf("反推回填 ops_floors.building_id 失败: %v", err)
+		}
+		// 2026-07-01 info-points-building-backfill-v2 (真修复): 反推回填
+		// sys_workstation.building_id (uuid 类型),从 ops_floors.building_id (varchar(64)) ::uuid
+		// 强转赋值。这是信息点列表所属楼宇显示 "-" 的真正根因 —— List JOIN 用
+		// sys_workstation.building_id 而非 ops_floors.building_id;260 个工位冗余字段为 NULL。
+		// 用户 dry-run 验证 100% 可反推(全部 → "浙商大厦")。
+		if err := migrations.Migrate193BackfillSysWorkstationBuildingId(d.DB); err != nil {
+			applogger.Errorf("反推回填 sys_workstation.building_id 失败: %v", err)
+		}
+		// 2026-07-01 info-points-redundant-cols: 删除 ops_info_points 4 个冗余物理列
+		// (building_id/building_name/floor_name/workstation_name)。building_*/floor_name 是
+		// AutoMigrate 自动建的幽灵列(从不写入), workstation_name 被 List JOIN 覆盖, 物理列冗余。
+		// model 4 字段 tag 已改 gorm:"->;-:migration" (只读+忽略迁移), GetByID 补同款 JOIN。
+		if err := migrations.Migrate191DropInfoPointsRedundantColumns(d.DB); err != nil {
+			applogger.Errorf("删除 ops_info_points 冗余列失败: %v", err)
+		}
 		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
 		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
 			applogger.Errorf("MAC 过滤规则表迁移失败: %v", err)
