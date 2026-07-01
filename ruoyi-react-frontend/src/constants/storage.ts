@@ -61,3 +61,48 @@ export function sanitizePathForKey(path: string): string {
   if (!path) return "";
   return path.replace(/^\/+/, "").replace(/\//g, "_");
 }
+
+/**
+ * 清理指定路由路径对应的所有表格状态（filters/分页/排序）。
+ * 按路径前缀精确匹配 sessionStorage key，仅删除该路径下的状态。
+ *
+ * 用于关闭应用内标签页时清理，满足"关闭标签页才取消状态"需求；
+ * 也在切换部门/数据源等场景按需调用。
+ *
+ * 安全：仅删除 `TABLE_STATE_PREFIX` 命名空间下的查询参数态数据，
+ * 不触及 token / 业务数据行 / 凭据。
+ */
+export function clearTableStateByPath(path: string): void {
+  if (typeof window === "undefined") return;
+  const sanitized = sanitizePathForKey(path);
+  if (!sanitized) return;
+  const prefix = `${TABLE_STATE_PREFIX}${sanitized}_`;
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key && key.startsWith(prefix)) keysToRemove.push(key);
+    }
+    keysToRemove.forEach((k) => sessionStorage.removeItem(k));
+  } catch {
+    // 隐私模式 / 配额溢出 — 静默吞掉，不阻塞调用方
+  }
+}
+
+/**
+ * 清理全部表格状态（所有路径）。用于登出，确保换人登录无上一用户筛选/分页/排序痕迹。
+ * 对标等保 2.0「剩余信息保护」最小实践。
+ */
+export function clearAllTableState(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key && key.startsWith(TABLE_STATE_PREFIX)) keysToRemove.push(key);
+    }
+    keysToRemove.forEach((k) => sessionStorage.removeItem(k));
+  } catch {
+    // ignore
+  }
+}

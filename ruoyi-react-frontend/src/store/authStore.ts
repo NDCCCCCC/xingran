@@ -17,7 +17,7 @@ import { useMenuStore } from "./menuStore";
 import { getEncryptedLoginRequest } from "@/utils/sm2";
 import { TokenManager } from "@/utils/token/TokenManager";
 import { SecureTokenStorageImpl } from "@/utils/token/SecureTokenStorageImpl";
-import { STORAGE_KEYS } from "@/constants/storage";
+import { STORAGE_KEYS, clearAllTableState } from "@/constants/storage";
 
 /**
  * Token 管理器单例
@@ -117,8 +117,11 @@ export const useAuthStore = create<AuthStore>()(
 				// 直接读 sessionStorage，避免动态 import 与 DynamicRoutes 循环依赖
 				try {
 					sessionStorage.removeItem(STORAGE_KEYS.LAST_PATH);
+					// 清理表格状态（筛选/分页/排序）+ 标签页元信息，确保换人登录无上一用户痕迹
+					clearAllTableState();
+					localStorage.removeItem("tabs-storage");
 				} catch {
-					// Ignore sessionStorage errors
+					// Ignore sessionStorage/localStorage errors
 				}
 
 				set({
