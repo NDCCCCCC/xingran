@@ -5,7 +5,7 @@ milestone_name: 资产对账 (Asset Reconciliation)
 status: R5_reconciliation_merged_with_dropdown_governance; v1.17 work shipped, awaiting push
 stopped_at: active merge resolution (2026-06-30, R5 + dropdown integration)
 last_updated: "2026-07-02T00:00:00Z"
-last_activity: "2026-07-02 -- gsd-quick 260702-148 续作: 对账看板例外规则链接失效真根因 = exception-rules 路由菜单从未 seed(Phase 44 R3 加了 UI 忘补 sys_menu, migration_169 注释'菜单未建')→ 动态路由不生成 → DynamicRoutes catch-all 重定向仪表盘。第一阶段 href 修复(d033e510)必要但不充分;第二阶段新增 migration_195 仿 dashboard seed 补种 menu_type=C 菜单(复用 dashboard parent_id, 幂等, 不插 sys_role_menu)。go build 全绿。生效需重启后端(迁移执行)+重建前端。commit 607da270"
+last_activity: "2026-07-02 -- gsd-quick 260702-148 三轮诊断闭环: 对账看板'例外规则管理'链接跳仪表盘。真根因双重叠加 = ①exception-rules 路由菜单从未 seed(migration_195 补种,607da270)②把 menu.component 模块路径(asset/reconciliation/...)误当路由路径——真实路由来自 menu.path 层级拼接 /assets/exception-rules(父'资产管理'path=assets)。DB 实查 sys_menu 揭真相(写 cmd/check_exception_menu 诊断后已删)。最终 href 改回 /assets/exception-rules(a63e1fdf)。教训入记忆: menu.component≠route path, 诊断直查 DB。菜单已在库无需重启后端, 仅重建前端"
 progress:
   total_phases: 5
   completed_phases: 3
@@ -102,7 +102,7 @@ Last activity: 2026-06-28 -- Phase 45 R4 execution complete: 6 atomic commits (3
 | 260630-startup-flow | 启动流程分类文档化: docs/启动流程清单.md(7 阶段 × 3 分类:🔴每次必跑/🟢一次性/🟡混合幂等),含核心.Init() 19+ 步骤 + AutoMigrate/InitData 全表 + 风险清单 + setup/start 拆分建议 | 2026-06-30 | - | [20260630-startup-flow-classify](./quick/20260630-startup-flow-classify/) |
 | 260630-skip-setup | 启动流程优化 - 加 SERVER_SKIP_SETUP 开关: config.ServerConfig.SkipSetup + SERVER_SKIP_SETUP 环境变量 + core.Init() 条件化跳过 InitData/默认角色菜单 + cmd/main.go 条件化跳过 MAC retention/OUI seed;docs/启动流程清单.md §6 同步 | 2026-06-30 | (待提交) | [20260630-skip-setup-impl](./quick/20260630-skip-setup-impl/) |
 | 260701-iface-sort | 端口采集接口名称列数值排序(速率前缀 + 板卡/子卡/接口号;PG regexp_matches int 数组,dialect-aware 降级 sqlite);修正 GE0/10<GE0/2 字典序;query.go interfaceNameSortExpr + GetList 特殊分支,4 新测试全绿 | 2026-07-01 | (待提交) | [260701-iface-sort](./quick/260701-iface-sort/) |
-| 260702-148 | 对账看板"例外规则管理"链接失效修复(真根因: exception-rules 路由菜单从未 seed → 动态路由不生成 → catch-all 重定向仪表盘;两阶段: ①d033e510 前端 href 改 Link 修路径 ②607da270 migration_195 仿 dashboard 补种 menu_type=C 菜单;生效需重启后端+重建前端) | 2026-07-02 | d033e510,607da270 | [260702-148-fix-dashboard-exception-rules-link](./quick/260702-148-fix-dashboard-exception-rules-link/) |
+| 260702-148 | 对账看板"例外规则管理"链接跳仪表盘(三轮: ①d033e510 href 改错(component当路由) ②607da270 migration_195 补种菜单(菜单确未seed) ③a63e1fdf href 改回真实路由 /assets/exception-rules;真根因双重: 菜单未seed + component≠route path;DB实查确认) | 2026-07-02 | d033e510,607da270,a63e1fdf | [260702-148-fix-dashboard-exception-rules-link](./quick/260702-148-fix-dashboard-exception-rules-link/) |
 
 ## Accumulated Context
 
