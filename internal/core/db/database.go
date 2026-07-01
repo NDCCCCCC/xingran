@@ -607,6 +607,12 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate193BackfillSysWorkstationBuildingId(d.DB); err != nil {
 			applogger.Errorf("反推回填 sys_workstation.building_id 失败: %v", err)
 		}
+		// 2026-07-02 mac-iface-security-suffix: 清理三表 interface_name 的 SECURITY 尾部后缀
+		// (华为 security 类型 MAC 接口名粘连,如 GE1/0/4SECURITY → GE1/0/4)。normalize 已修
+		// (pkg/normalize/iface.go 守卫剥离尾部),本迁移清历史脏数据;并幂等重跑去空格/全称/小写MAC。
+		if err := migrations.Migrate194CleanIfaceSecuritySuffix(d.DB); err != nil {
+			applogger.Errorf("清理 interface_name SECURITY 后缀失败: %v", err)
+		}
 		// 2026-07-01 info-points-redundant-cols: 删除 ops_info_points 4 个冗余物理列
 		// (building_id/building_name/floor_name/workstation_name)。building_*/floor_name 是
 		// AutoMigrate 自动建的幽灵列(从不写入), workstation_name 被 List JOIN 覆盖, 物理列冗余。

@@ -447,7 +447,9 @@ func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVen
 			for i := 2; i < len(fields)-1; i++ {
 				// 跳过已知的MAC类型字段
 				lowerField := strings.ToLower(fields[i])
-				if lowerField == "dynamic" || lowerField == "static" || lowerField == "secure" {
+				// 跳过 MAC 类型字段(防止其混入接口名)。华为 VRP 用 security,锐捷用 secure。
+				// 2026-07-02 mac-iface-security-suffix: 补 security(原仅 secure,华为粘连场景兜底)。
+				if lowerField == "dynamic" || lowerField == "static" || lowerField == "secure" || lowerField == "security" {
 					continue
 				}
 				interfaceParts = append(interfaceParts, fields[i])

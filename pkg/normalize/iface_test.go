@@ -60,6 +60,14 @@ func TestInterfaceName(t *testing.T) {
 		{"尾随空格", "GigabitEthernet0/0/1 ", "GE0/0/1"},
 		{"大小写混写 Ge2/25 → GE2/25", "Ge2/25", "GE2/25"},
 
+		// 尾部字母垃圾剥离(2026-07-02 mac-iface-security-suffix)
+		// 华为 security 类型 MAC 接口名粘连 security 标记,必须剥离尾部
+		{"GE1/0/4SECURITY → 剥离尾部", "GE1/0/4SECURITY", "GE1/0/4"},
+		{"GE1/0/4security → 剥离尾部", "GE1/0/4security", "GE1/0/4"},
+		{"GE1/0/4 security 去空格+剥离", "GE1/0/4 security", "GE1/0/4"},
+		{"GE0/0/1.5 子接口点保留", "GE0/0/1.5", "GE0/0/1.5"},
+		{"XGE1/0/1dynamic → 剥离", "XGE1/0/1dynamic", "XGE1/0/1"},
+
 		// 乱码清理
 		{"GEGigabitEthernet5/29 → GE5/29", "GEGigabitEthernet5/29", "GE5/29"},
 		{"GEgabitetherngigabitethernet4/48 → GE4/48", "GEgabitetherngigabitethernet4/48", "GE4/48"},

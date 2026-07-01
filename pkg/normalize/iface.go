@@ -42,6 +42,31 @@ var garbledXGPrefix = regexp.MustCompile(`(?i)^XG(.*?(?:igabit|gigabit|gige).*?)
 //   - GigabitEthernet0/0/1 → 不命中,走 fullToShort 折叠
 var standardShortPrefix = regexp.MustCompile(`^(GE|XGE|TWE|HGE|FOE|FE|ET)[0-9]`)
 
+// shortIfaceBodyPattern 在 standardShortPrefix 守卫命中后,提取"速率短名 + 数字 + 数字/斜杠/点/冒号"
+// 的合法接口名主体,丢弃尾部粘连的字母垃圾。
+//
+// 背景(2026-07-02 mac-iface-security-suffix): 华为 display mac-address 输出 security 类型
+// MAC 时,Learned-From 列接口名会粘连 security 标记(无空格),如 GE1/0/4security。守卫命中
+// GE1/... 后若直接 ToUpper 返回会得到 GE1/0/4SECURITY 入库。本正则提取合法主体 GE1/0/4,
+// 丢弃尾部 SECURITY。
+//
+// 字符集 [0-9/.:]: 接口名数字段常见字符。不含字母(物理口数字段无大段字母);不含横杠
+// (Eth-Trunk 等逻辑接口前缀不匹配本守卫,走另一路径)。
+//   - GE1/0/4SECURITY → GE1/0/4
+//   - GE0/0/1 → GE0/0/1(不变)
+//   - GE0/0/1.5(子接口) → GE0/0/1.5(点保留)
+var shortIfaceBodyPattern = regexp.MustCompile(`^(GE|XGE|TWE|HGE|FOE|FE|ET)[0-9][0-9/.:]*`)
+
+// extractShortIfaceBody 从已通过 standardShortPrefix 守卫的接口名中提取合法主体,ToUpper 返回。
+// 守卫已保证开头是合法短名+数字,故 shortIfaceBodyPattern 必能匹配;理论失配时回退 ToUpper 原值。
+func extractShortIfaceBody(name string) string {
+	upper := strings.ToUpper(name)
+	if matched := shortIfaceBodyPattern.FindString(upper); matched != "" {
+		return matched
+	}
+	return upper
+}
+
 // InterfaceName 把任意厂商接口名归一化为"大写短名 + 数字"。
 //
 // 对称化策略(2026-07-01):
@@ -60,9 +85,11 @@ func InterfaceName(name string) string {
 		return name
 	}
 
-	// 阶段 -1: 已是标准大写短名 + 数字直接返回(防反向展开)
+	// 阶段 -1: 已是标准大写短名 + 数字,提取合法主体并剥离尾部字母垃圾后返回(防反向展开)
+	// 2026-07-02 fix: 原 ToUpper(name) 直接返回会放行尾部粘连(如 GE1/0/4security → GE1/0/4SECURITY),
+	// 改用 extractShortIfaceBody 剥离尾部字母垃圾。
 	if standardShortPrefix.MatchString(strings.ToUpper(name)) {
-		return strings.ToUpper(name)
+		return extractShortIfaceBody(name)
 	}
 
 	// 阶段 0: 清理乱码形式(短名+全称残+数字)
