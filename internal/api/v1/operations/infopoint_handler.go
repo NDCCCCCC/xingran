@@ -1,6 +1,8 @@
 package operations
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -28,6 +30,39 @@ func (h *InfoPointHandler) WithCore(core *core.Core) *InfoPointHandler {
 		h.core = core
 	}
 	return h
+}
+
+// validateDevicePortConsistency 防漂移 (2026-07-01): 当 device_id 和 port_id 都非空时,
+// 校验 port_status 表中该 port_id 归属 device_id 与 info_point 指定一致。
+// 返回 (ok, errMsg)。ok=false 时 handler 应 4xx 返回。
+//
+// 设计目的: 阻止 REST API 产生新的 device_id/port_id 漂移(历史 1247 行由 Excel 导入累积)。
+// 旧漂移数据不受影响 — query 端已通过砍 strict JOIN 兼容。
+func (h *InfoPointHandler) validateDevicePortConsistency(ctx context.Context, deviceID, portID *string) (bool, string) {
+	if deviceID == nil || *deviceID == "" || portID == nil || *portID == "" {
+		return true, "" // 任意字段为空则跳过 (port_id 在 infoPoint 配置中非必填)
+	}
+	if h.core == nil || h.core.GetDB() == nil {
+		return true, "" // 没有 DB (单元测试场景) 跳过
+	}
+
+	// sys_device_port_status.id 是 uuid PK; portID 是 varchar 存 UUID 字符串
+	var portDeviceID string
+	err := h.core.GetDB().WithContext(ctx).
+		Table("sys_device_port_status").
+		Select("device_id").
+		Where("id = ?", *portID).
+		Scan(&portDeviceID).Error
+	if err != nil {
+		return false, fmt.Sprintf("校验端口归属失败: %v", err)
+	}
+	if portDeviceID == "" {
+		return false, fmt.Sprintf("端口不存在 (portId=%s)", *portID)
+	}
+	if portDeviceID != *deviceID {
+		return false, fmt.Sprintf("端口归属设备不一致: info_point.device_id=%s, port.device_id=%s", *deviceID, portDeviceID)
+	}
+	return true, ""
 }
 
 // Statistics 信息点统计(读操作,不记操作日志)
@@ -68,6 +103,12 @@ func (h *InfoPointHandler) SearchInfoPointOptions(c *gin.Context) {
 func (h *InfoPointHandler) Create(c *gin.Context) {
 	var infoPoint operations.OpsInfoPoint
 	if !handleJSONBinding(c, &infoPoint) {
+		return
+	}
+
+	// 防漂移 (2026-07-01): device_id↔port_id 一致性校验, 阻止 REST API 产生新漂移
+	if ok, errMsg := h.validateDevicePortConsistency(c.Request.Context(), infoPoint.DeviceID, infoPoint.PortID); !ok {
+		response.Error(c, http.StatusBadRequest, errMsg)
 		return
 	}
 
@@ -148,6 +189,12 @@ func (h *InfoPointHandler) Update(c *gin.Context) {
 	}
 
 	infoPoint.ID = id
+	// 防漂移 (2026-07-01): device_id↔port_id 一致性校验, 阻止 REST API 产生新漂移
+	if ok, errMsg := h.validateDevicePortConsistency(c.Request.Context(), infoPoint.DeviceID, infoPoint.PortID); !ok {
+		response.Error(c, http.StatusBadRequest, errMsg)
+		return
+	}
+
 	if !handleServiceError(c, h.service.Update(c.Request.Context(), &infoPoint), "更新") {
 		return
 	}

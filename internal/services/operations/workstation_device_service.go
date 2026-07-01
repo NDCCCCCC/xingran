@@ -363,7 +363,7 @@ func (s *workstationDeviceService) GetPhysicalDevices(ctx context.Context, works
 WITH workstation_ports AS (
     SELECT DISTINCT port.id AS port_id,
            port.interface_name,
-           port.device_id,
+           ip.device_id AS effective_device_id,
            ip.name AS info_point_name,
            REGEXP_REPLACE(
                REGEXP_REPLACE(LOWER(port.interface_name), '\s+', '', 'g'),
@@ -372,14 +372,18 @@ WITH workstation_ports AS (
       FROM ops_info_points ip
       JOIN sys_device_port_status port
         ON port.id::text = ip.port_id
-       -- Phase 3 (2026-06-30 数据治理): 加严格 device_id 防御性 JOIN
-       -- migration_182 已对齐 1247 行 port_status.device_id ← ops_info_points.device_id
-       -- migration_183 已加 FK 约束,此 JOIN 安全(同步路径: 设备名/IP + 端口名)
-       -- port_id (UUID PK) 锚定单端口,device_id 一致性保证 MAC 落表位置正确
-       AND port.device_id::text = ip.device_id::text
+       -- Phase 3 v3 (2026-07-01): MAC JOIN 锚点改用 ip.device_id (不是 port.device_id)
+       -- 根因: 用户实测确认 MAC 表里 GE5/44 的 3 条 MAC 都在 aca124c8 (05F #1) 下,
+       -- 但 port.device_id 被 collector 错写成 515f4c58 (04F #2)。
+       -- 物理真相: MAC 是 collector 按 info_point 写入的(mac_collection_service.go:279),
+       -- 所以 MAC 真实位置 = ip.device_id, 不是 port.device_id。
+       -- - port.id (UUID PK) 锚定单端口
+       -- - ip.device_id 锚定 MAC (collector 写入依据)
+       -- - port.device_id 是历史脏数据, 不影响 query
      WHERE ip.workstation_id = ?
        AND ip.deleted_at IS NULL
        AND ip.status = 0
+       AND EXISTS (SELECT 1 FROM sys_network_device WHERE id::text = ip.device_id)
 ),
 latest_mac AS (
     SELECT DISTINCT ON (m.mac_address, m.device_id, m.interface_name)
@@ -410,7 +414,7 @@ ad_devices AS (
      ORDER BY LOWER(REGEXP_REPLACE(COALESCE(ad.mac_address, ''), '[.:\-]', '', 'g')),
               ad.updated_at DESC NULLS LAST
 )
-SELECT DISTINCT ON (COALESCE(a.devicesn,''))
+SELECT DISTINCT ON (COALESCE(a.devicesn, COALESCE(mac.mac_address, '')))
        a.id                                                                AS asset_id,
        a.devicesn                                                          AS device_serial,
        a.device_model_name                                                 AS device_model,
@@ -427,7 +431,7 @@ SELECT DISTINCT ON (COALESCE(a.devicesn,''))
   FROM workstation_ports wp
   JOIN latest_mac mac
        ON mac.norm_iface        = wp.norm_iface
-      AND mac.device_id::text    = wp.device_id::text
+      AND mac.device_id::text    = wp.effective_device_id::text
   LEFT JOIN ops_asset a
        ON a.deleted_at IS NULL
       AND (LOWER(REGEXP_REPLACE(COALESCE(a.mac1, ''), '[.:\-]', '', 'g')) = mac.norm_mac
@@ -435,7 +439,7 @@ SELECT DISTINCT ON (COALESCE(a.devicesn,''))
   LEFT JOIN ad_devices
        ON ad_devices.norm_mac = mac.norm_mac
        OR (ad_devices.serial_number IS NOT NULL AND ad_devices.serial_number = a.devicesn)
- ORDER BY COALESCE(a.devicesn,''), wp.interface_name NULLS LAST;
+ ORDER BY COALESCE(a.devicesn, COALESCE(mac.mac_address, '')), wp.interface_name NULLS LAST;
 `
 
 	if err := s.db.WithContext(ctx).Raw(rawSQL, workstationID).Scan(&rows).Error; err != nil {
@@ -457,6 +461,16 @@ SELECT DISTINCT ON (COALESCE(a.devicesn,''))
 			// 资产侧没有 device_name 字段,用 model 兜底
 			dm := *row.DeviceModel
 			deviceName = &dm
+		}
+		// Phase 3 v3 兜底 (2026-07-01): 当 AD + 资产都没有名字时, 用 MAC + 端口名兜底
+		// 避免前端因 deviceName 为 nil 过滤掉设备 (5F003 等工位实际有设备但元数据缺失)
+		if deviceName == nil && row.MACAddress != nil && *row.MACAddress != "" {
+			mn := fmt.Sprintf("设备 (%s)", *row.MACAddress)
+			deviceName = &mn
+		}
+		if deviceName == nil && row.PortName != nil && *row.PortName != "" {
+			pn := fmt.Sprintf("端口 %s", *row.PortName)
+			deviceName = &pn
 		}
 
 		var os *string
