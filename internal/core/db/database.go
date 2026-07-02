@@ -620,6 +620,15 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate195ReconciliationExceptionRulesMenu(d.DB); err != nil {
 			applogger.Errorf("补种例外规则管理菜单失败: %v", err)
 		}
+		// 2026-07-02 reconciliation-dict-labels-align: 对齐 sys_dict_data 中
+		// asset_reconciliation_conflict_type 的 dict_label 与 detection 真值。
+		// 根因见 .planning/debug/reconciliation-health-misjudgment.md: migration_169 R1 seed 时
+		// B/C/D/E/F 五类 dict_label 文字与 detection ClassifyType 完全相反, 导致截图 9/10/11
+		// "物理有责任/无人" / "缺数据" / "物理无责" 等标签错位 (admin 看到与底层语义相反)。
+		// 改 dict_label (只显示层), 不动 detection logic, 不动 HealthBadge (已是真值)。
+		if err := migrations.Migrate196ReconciliationDictLabelsAlign(d.DB); err != nil {
+			applogger.Errorf("对齐 asset_reconciliation_conflict_type dict_label 失败: %v", err)
+		}
 		// 2026-07-01 info-points-redundant-cols: 删除 ops_info_points 4 个冗余物理列
 		// (building_id/building_name/floor_name/workstation_name)。building_*/floor_name 是
 		// AutoMigrate 自动建的幽灵列(从不写入), workstation_name 被 List JOIN 覆盖, 物理列冗余。
