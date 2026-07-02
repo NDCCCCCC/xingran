@@ -201,7 +201,15 @@ export function DynamicRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Navigate to="/" replace />} />
-      <Route path="/" element={<Navigate to={lastPath || "/dashboard"} replace />} />
+      <Route
+        path="/"
+        element={
+          <Navigate
+            to={lastPath && lastPath !== "/" ? lastPath : "/dashboard"}
+            replace
+          />
+        }
+      />
       <Route element={<Layout><Outlet /></Layout>}>
         {routeElements}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
