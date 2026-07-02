@@ -3,7 +3,7 @@
 **Slug**: `reconciliation-health-misjudgment`
 **Created**: 2026-07-02
 **Reporter**: 用户
-**Status**: 🟡 fix_applied_pending_4F001_recheck
+**Status**: 🟢 all_three_fixes_applied
 **Module**: 资产对账 (v1.17)
 
 ## 现象 (Symptoms)
@@ -139,5 +139,23 @@
 - [x] 编写 migration_196 修 dict_label + list_class
 - [x] 注册 migration_196 到 database.go
 - [x] go build / go vet / go test 验证
-- [ ] **后续: 4F001 红点 DB 验证** (reconciliation_normalized MV physical_user_id / asset_user_id 实际取值, 类型转换, 归一化差异)
-- [ ] **后续: sys_workorder_category 描述同步修正** (同根因, migration_169 seed 错位)
+- [x] commit M196 (0c202ad5)
+- [x] **4F001 红点深挖**: cmd/diag_4f001_red/ 一次性诊断脚本, 跑出真相
+- [x] **修复 4F001 红点**: reconciliation_detection.go:235-263 加 auto-resolve-on-healthy 逻辑
+- [x] **同步修 workorder_category 描述**: migration_197 (新建, 在 database.go 注册)
+- [ ] commit 4F001 修复 + M197
+
+## 完整修复清单 (3 个修复, 同根因)
+
+### 修复 1 (M196): dict_label + list_class 颜色
+文件: `internal/core/db/migrations/migration_196_reconciliation_dict_labels_align.go`
+状态: ✓ commit 0c202ad5
+
+### 修复 2: detection 引擎 Type A 时 auto-resolve 历史 open 冲突
+文件: `internal/services/asset/reconciliation_detection.go:235-263`
+影响: 4F001 红点 + 所有"已自愈但 open 记录未清理"的资产
+部署后: 5-6 分钟 cron 自动清, 无需手动 SQL
+
+### 修复 3 (M197): sys_workorder_category 描述同步对齐
+文件: `internal/core/db/migrations/migration_197_reconciliation_workorder_categories_align.go`
+状态: ✓ 已注册, 待 commit

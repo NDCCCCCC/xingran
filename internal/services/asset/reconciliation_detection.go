@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
@@ -234,6 +235,33 @@ func (s *reconciliationDetectionImpl) DetectLayer3(ctx context.Context) (int, in
 		conflictType := s.ClassifyType(signals)
 		if conflictType == "A" {
 			skipped++
+			// === D-09-fix-01 (2026-07-02 排查 .planning/debug/reconciliation-health-misjudgment):
+			// 资产变健康时, 把该资产所有 open 冲突 (resolved_at IS NULL) 标记为
+			// auto-resolved. 否则:
+			//   1. HealthScore = (1 - open_count/total)*100 仍计入老 open → 红点误报
+			//      (典型: 4F001 三路径设备全一致但因 C 记录 open 导致 score=0 红)
+			//   2. GetByWorkstation LEFT JOIN resolved_at IS NULL → assets[].conflictType=C
+			//      → HealthBadge 红点 + tooltip "物理有/责任人不一致(高危)"
+			//   3. 异常列表长期显示已不存在的冲突
+			//
+			// 边界与权衡:
+			//   - 仅 UPDATE resolved_at IS NULL 的 open 记录, 已 resolved 的不动 (审计)
+			//   - resolved_by 标 "system:auto-resolve-on-healthy" 区分人工 vs 系统
+			//   - 不限定 grace period: open 记录存在即代表上次检测时冲突, 现在 A 即
+			//     表示已自愈, 即时 resolve 是正确行为
+			//   - 静默执行, 失败不阻塞 skipped 计数 (UI 降级在 GetByWorkstation 已处理)
+			//   - 性能: 每次 cron (5min) 跑一次, open 记录数 << 总资产, 可接受
+			if err := s.db.WithContext(ctx).
+				Model(&models.SysDataReconciliation{}).
+				Where("asset_id = ? AND deleted_at IS NULL AND resolved_at IS NULL", row.AssetID).
+				Updates(map[string]interface{}{
+					"resolved_at": time.Now(),
+					"resolved_by": "system:auto-resolve-on-healthy",
+				}).Error; err != nil {
+				applogger.Warnf("[reconciliation] auto-resolve-on-healthy 失败 asset_id=%s: %v",
+					row.AssetID, err)
+				// 不 return: 降级处理, 不影响 skipped 统计; 下次 cron 会重试
+			}
 			continue // D-09 健康不写
 		}
 

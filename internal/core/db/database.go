@@ -629,6 +629,12 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate196ReconciliationDictLabelsAlign(d.DB); err != nil {
 			applogger.Errorf("对齐 asset_reconciliation_conflict_type dict_label 失败: %v", err)
 		}
+		// 2026-07-02 reconciliation-workorder-categories-align: 同步对齐 sys_workorder_category
+		// (对账-A/B/C/D/E/F 类) 的 description 与 detection 真值。同根因, M196 只改了 dict_label,
+		// 这里补齐工单模板描述 (生成工单时 frontend 详情页用 description 显示原因/处理建议).
+		if err := migrations.Migrate197ReconciliationWorkorderCategoriesAlign(d.DB); err != nil {
+			applogger.Errorf("对齐 sys_workorder_category 对账类 description 失败: %v", err)
+		}
 		// 2026-07-01 info-points-redundant-cols: 删除 ops_info_points 4 个冗余物理列
 		// (building_id/building_name/floor_name/workstation_name)。building_*/floor_name 是
 		// AutoMigrate 自动建的幽灵列(从不写入), workstation_name 被 List JOIN 覆盖, 物理列冗余。
