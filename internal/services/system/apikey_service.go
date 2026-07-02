@@ -234,15 +234,27 @@ func (s *apiKeyServiceImpl) ListAPIKeys(ctx context.Context, userID string, para
 	}
 
 	// 添加筛选条件
+	// 注:生产用 PostgreSQL(LEFT() / @> JSONB),测试用 SQLite 需要 dialect 兼容分支
+	isSQLite := s.db.Dialector.Name() == "sqlite"
 	if params.Keyword != nil && *params.Keyword != "" {
 		keyword := "%" + *params.Keyword + "%"
-		query = query.Where("name LIKE ? OR LEFT(key, 12) LIKE ?", keyword, keyword)
+		if isSQLite {
+			// SQLite 用 substr() 替代 LEFT(),取 key 前 12 字符匹配
+			query = query.Where("name LIKE ? OR substr(key, 1, 12) LIKE ?", keyword, keyword)
+		} else {
+			query = query.Where("name LIKE ? OR LEFT(key, 12) LIKE ?", keyword, keyword)
+		}
 	}
 	if params.Status != nil {
 		query = query.Where("is_active = ?", *params.Status)
 	}
 	if params.Scope != nil && *params.Scope != "" {
-		query = query.Where("scopes @> ?", fmt.Sprintf("[\"%s\"]", *params.Scope))
+		if isSQLite {
+			// SQLite 无 JSONB @>,用 json_each() 遍历 scopes 数组检查 value 匹配
+			query = query.Where("EXISTS (SELECT 1 FROM json_each(sys_api_keys.scopes) WHERE json_each.value = ?)", *params.Scope)
+		} else {
+			query = query.Where("scopes @> ?", fmt.Sprintf("[\"%s\"]", *params.Scope))
+		}
 	}
 
 	// 统计总数
