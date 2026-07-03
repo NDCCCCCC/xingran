@@ -582,6 +582,18 @@ func (s *fixSuggestionServiceImpl) Apply(ctx context.Context, id, userID string)
 }
 
 // Rollback 回滚应用(applied → rolled_back,7d 窗口内)
+//
+// 校验顺序加固(46-02 / D-C1+D-C2+D-C3):
+//   1) id / userID 非空
+//   2) len(reason) >= 10(D-C3 审计:回滚必须填原因)
+//   3) 读 applied 建议(WHERE fix_status='applied' AND deleted_at IS NULL)→ 防御性检查
+//      3a) sugg.RollbackWindowUntil 非 nil
+//      3b) time.Now().Before(*sugg.RollbackWindowUntil)(7d 内,Go-side 防御性 + DB-side 主判定)
+//   4) sugg.PreFixUserID 非 nil(防止数据被外部修改为 NULL 致回滚静默写空值)
+//   5) DB-side 主判定:SELECT (rollback_window_until > NOW()) — 避免 app clock 漂移
+//   6) 反查 exception → asset_id → UPDATE ops_asset.user_id = pre_fix_user_id(D-C1)
+//   7) UPDATE sys_reconciliation_fix_suggestion SET fix_status='rolled_back' + 时间戳
+//   8) UPDATE sys_data_reconciliation SET resolved_at = NULL(让 DetectLayer3 重新检出)
 func (s *fixSuggestionServiceImpl) Rollback(ctx context.Context, id, userID, reason string) error {
 	if id == "" {
 		return errors.New("建议ID不能为空")
@@ -600,7 +612,7 @@ func (s *fixSuggestionServiceImpl) Rollback(ctx context.Context, id, userID, rea
 		}
 	}()
 
-	// 1. 读 applied 建议
+	// 1. 读 applied 建议(带 fix_status='applied' 守卫,保证状态机严格)
 	var sugg models.SysReconciliationFixSuggestion
 	if err := tx.Where("id = ? AND fix_status = ? AND deleted_at IS NULL", id, "applied").First(&sugg).Error; err != nil {
 		tx.Rollback()
@@ -610,7 +622,33 @@ func (s *fixSuggestionServiceImpl) Rollback(ctx context.Context, id, userID, rea
 		return fmt.Errorf("查询建议失败: %w", err)
 	}
 
-	// 2. 7d 回滚窗口检查(D-C2):用 DB-side 比较避免 app clock 漂移
+	// 2. 7d 回滚窗口硬约束(D-C2) — Go-side 防御性兜底
+	//    真正权威的判定在 step 5 DB-side 表达式(app clock 可能与 DB clock 漂移)
+	if sugg.RollbackWindowUntil == nil {
+		tx.Rollback()
+		return errors.New("回滚窗口未设置,无法回滚")
+	}
+	if time.Now().After(*sugg.RollbackWindowUntil) {
+		tx.Rollback()
+		return errors.New("回滚窗口已过(7d),不允许回滚")
+	}
+
+	// 3. pre_fix_user_id 非 nil 防御性检查(D-C1:回滚粒度仅 user_id,
+	//    若为空说明 Apply 路径异常,禁止回滚静默写空值)
+	if sugg.PreFixUserID == nil {
+		tx.Rollback()
+		return errors.New("pre_fix_user_id 为空,无法回滚")
+	}
+
+	// 4. 反查 exception → asset_id
+	var exception models.SysDataReconciliation
+	if err := tx.Where("id = ? AND deleted_at IS NULL", sugg.ExceptionID).First(&exception).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("查询异常失败: %w", err)
+	}
+
+	// 5. DB-side 主判定(避免 app clock vs DB clock 漂移,W-3 修订通用原则)
+	//    即使 step 2 的 Go-side 判定通过,DB-side 仍可能拒绝(时钟漂移场景)
 	var stillInWindow bool
 	row := tx.Raw("SELECT (rollback_window_until > NOW()) AS in_window FROM sys_reconciliation_fix_suggestion WHERE id = ?", id).Row()
 	if err := row.Scan(&stillInWindow); err != nil {
@@ -622,18 +660,9 @@ func (s *fixSuggestionServiceImpl) Rollback(ctx context.Context, id, userID, rea
 		return errors.New("回滚窗口已过(7d),不允许回滚")
 	}
 
-	// 3. 反查 exception → asset_id
-	var exception models.SysDataReconciliation
-	if err := tx.Where("id = ? AND deleted_at IS NULL", sugg.ExceptionID).First(&exception).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("查询异常失败: %w", err)
-	}
-
-	// 4. 恢复 ops_asset.user_id = pre_fix_user_id(D-C1 粒度仅 user_id)
-	if sugg.PreFixUserID == nil {
-		tx.Rollback()
-		return errors.New("pre_fix_user_id 为空,无法回滚")
-	}
+	// 6. 恢复 ops_asset.user_id = pre_fix_user_id(D-C1 粒度仅 user_id)
+	//    注意 ops_asset.user_id 是 varchar size:64,不做 ?::uuid 强转
+	//    (参 ruoyi-info-point-port-id-varchar 记忆)
 	if err := tx.Model(&models.Asset{}).
 		Where("id = ?", exception.AssetID).
 		Update("user_id", sugg.PreFixUserID).Error; err != nil {
@@ -641,19 +670,19 @@ func (s *fixSuggestionServiceImpl) Rollback(ctx context.Context, id, userID, rea
 		return fmt.Errorf("回滚 ops_asset.user_id 失败: %w", err)
 	}
 
-	// 5. UPDATE 建议状态 → rolled_back
+	// 7. UPDATE 建议状态 → rolled_back(D-C2/D-C3 落库)
 	now := time.Now()
 	if err := tx.Model(&sugg).Updates(map[string]interface{}{
-		"fix_status":       "rolled_back",
-		"rolled_back_at":   now,
-		"rolled_back_by":   userID,
-		"rollback_reason":  reason,
+		"fix_status":      "rolled_back",
+		"rolled_back_at":  now,
+		"rolled_back_by":  userID,
+		"rollback_reason": reason,
 	}).Error; err != nil {
 		tx.Rollback()
 		return fmt.Errorf("更新建议 rolled_back 状态失败: %w", err)
 	}
 
-	// 6. 反向操作 sys_data_reconciliation.resolved_at = NULL + workorder_id 不动
+	// 8. 反向操作 sys_data_reconciliation.resolved_at = NULL + workorder_id 不动
 	//    让 DetectLayer3 下次 cron 重新检出该 Type B
 	if err := tx.Model(&exception).Update("resolved_at", nil).Error; err != nil {
 		tx.Rollback()

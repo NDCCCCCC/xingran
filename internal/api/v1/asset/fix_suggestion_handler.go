@@ -221,6 +221,16 @@ func (h *FixSuggestionHandler) Apply(c *gin.Context) {
 }
 
 // Rollback 回滚应用(applied → rolled_back,7d 窗口内)
+//
+// 严格顺序(D-A4-04):service → invalidate cache → operlog → response
+//
+// 错误码映射(46-02 强化):
+//   - "该建议不存在或未处于 applied 状态" → 409
+//   - "回滚窗口已过(7d),不允许回滚"     → 400
+//   - "回滚原因至少 10 字符"             → 400
+//   - 其他                                → 500
+//
+// D-C3: operlog.OperTypeReset=11(语义"恢复到原值",与密码/密钥重置同)
 func (h *FixSuggestionHandler) Rollback(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
