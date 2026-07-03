@@ -333,13 +333,15 @@ Plans:
 
 **Requirements**:
 - R1: 扩展 `Asset`(`ops_asset`) 模型 + migration，新增 `parent_asset_id`（自引用 → ops_asset.id，从属关系）、`source_device_id`（→ sys_network_device.id，采集来源）、`component_type`(chassis/card/engine/power/fan/transceiver)、`component_slot`
-- R2: 四厂商（华为/H3C/锐捷/迈普）× 组件类型 的 CLI 命令分发 + TextFSM 模板（板卡/电源/风扇 + 光模块 transceiver manuinfo）
+- R2: **采集双路径**（基于真机探针 2026-07-03 重定）
+  - **主路径**: SNMP ENTITY-MIB 单 GET（不走 BulkWalk —— HW 拒绝）拉 `entPhysicalSerialNum` / `entPhysicalModelName` / `entPhysicalClass` / `entPhysicalContainedIn`，覆盖 chassis/module/fan；已知华为 S8700 上电源 SN 也是空，需 fallback
+  - **CLI 路径**: 锐捷 `show version`（含模块 SN） + 华为 `display interface transceiver`（光模块 SN + DDM） + `display device esn`（整机 SN 互验）
 - R3: 光模块只采在用/up 接口
 - R4: 采集组件序列号 + 所属交换机 → 按 `DeviceSN` 匹配 `ops_asset` 已有行（**只 UPDATE 不 INSERT**，保住实物/声明分层）→ 写 parent_asset_id / source_device_id / component_type / component_slot 建立双向桥接
 - R5: API + 前端资产/设备详情页展示"从属组件清单"（按 parent_asset_id 聚合，按 component_type 分组）；设备列表/统计默认按 `component_type IS NULL` 排除组件行（避免 1 机+6 板=7 台），组件另开视图
 - R6: **SN 匹配不上生成 `sys_data_reconciliation` 对账异常**（新增"组件序列号"专属 category，前提确认引擎可扩展 category，否则回退复用；实物有账无=盘盈、账有实物无=盘亏）；父交换机不在 ops_asset 时 parent_asset_id 留空、仍写 source_device_id；堆叠（iStack/IRF）序列号归属处理 + 操作日志（module「资产管理」，OperTypeSync）
 
-**前置条件:** RQ-001 四厂商真机输出格式验证（`.planning/research/questions.md`，阻塞 R2 模板）。RQ-002 资产建模细节已全部定案。
+**前置条件:** RQ-001 真机采样已 80% 完成，剩余：锐捷 ENTITY-MIB 真机探针（确认主板/电源/风扇 SN 也覆盖）、锐捷光模块 DDM TextFSM 另一设备采样、H3C/迈普另环境采样。
 
 **Depends on:** **v1.17 对账底座（Phase 42-46）** — Phase 48 是 R2 物理层对账的组件序列号形态，需对账引擎先就位
 **Plans:** 0 plans

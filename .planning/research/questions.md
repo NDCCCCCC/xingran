@@ -59,27 +59,57 @@ Module information:
 **唯一可靠**：`display interface transceiver`（每个接口一段，含厂商 + PN + Manu. Serial Number）。
 V600R024C00 的 `transceiver` 子命令在不同 VRP 版本间可能不一样；本机 `display transceiver ?` 返回 "Unrecognized"，说明这版直接走 `display interface transceiver`。建议 Phase 48 模板覆盖该命令。
 
+### 实测数据：SNMP ENTITY-MIB 关键突破 (2026-07-03)
+
+参考真机探针 `cmd/snmp_entity_probe/`（已删）的产物，结论：
+
+- 华为 S8700 V600R024C00 **启用 ENTITY-MIB 且覆盖完整**：`entPhysicalSerialNum` 板卡/引擎/风扇**实测有非空值**；`entPhysicalContainedIn` 给完整父子容器树。
+- **唯一缺口：电源 SN**——S8700 在 entPhysicalSerialNum 对电源也是空（HW 实现漏洞），需走 CLI `display power` 兜底该子集。
+
+**华为 S8700 实测 ENTITY-MIB 摘录** (community=`Jt0916ct@M1`, 设备 IP `10.62.25.253`):
+
+| Class | Name | Model | SerialNum |
+|-------|------|-------|-----------|
+| chassis(3) | CloudEngine S8700-6 | — | **102599861597** |
+| fan(9)* | LSG7G48VX1E0 1 | LSG7G48VX1E0 | **102599806093** |
+| module(5) | LPU slot 1 | — | _empty_ |
+| fan(9)* | LSG7G48VX1E0 2 | LSG7G48VX1E0 | **102599806089** |
+| fan(9)* | LSG7G48VX1E0 3 | LSG7G48VX1E0 | **102599806092** |
+| fan(9)* | LSG7G48VX1E0 4 | LSG7G48VX1E0 | **102599806088** |
+| fan(9)* | LSG7SRUEX1C0 5 | LSG7SRUEX1C0 | **102599806030** (主控) |
+| fan(9)* | LSG7SRUEX1C0 6 | LSG7SRUEX1C0 | **102599806031** (备控) |
+| module(5) | POWER slot 1-6 | — | _empty_ (HW 漏洞) |
+| stack(7) | FAN 1 | — | **5B2599001652** |
+| stack(7) | FAN 2 | — | **5B2599001751** |
+
+注：华为 LPU/MPU 业务板与引擎在 ENTITY-MIB 中**实体化了两次**（module 占位 + class=fan 实体带 SN），取后者即可；电源 module 占位但 SN 空。
+
+**结论**：**SNMP 必须成为 Phase 48 v1 的主采集路径**（CLI 退为 CLI 端 CLI 补充；光模块 CLI 仍为主）。原 seed `snmp-entity-mib-acceleration` 已 superseded 并入 Phase 48 R2。
+
+**踩坑记录**：
+- gosnmp v1.35.0 `WalkFunc` 只收 `SnmpPDU`，OID 在 `dataUnit.Name`
+- 华为设备对 GETBULK/walk 大概率限制/拒绝（基础 OID 单 GET 立即返回，wALK 类全 timeout），**v1 实现需走单 GET 而非 BulkWalk**
+- 测试 community 时**避免公开默认值 `public`** ——真实 community 从 `sys_auth_credential.snmp_communities` 取，格式如 `Jt0916ct@M1`
+
 ### 剩余缺口
 
-1. **华为板卡/电源/风扇的 SN**：V600R024C00 elabel 路径完全失效。三个备选：
-   - **走 SNMP ENTITY-MIB** 拉板卡/电源/风扇 SN（`entPhysicalSerialNum`），华为/H3C CE 系基本支持（此时 seed `snmp-entity-mib-acceleration` 应**提前到 v1 实现**而非留 v2）；
-   - **接受现状**：仅采集光模块 SN + 整机 SN，板卡/电源/风扇作为采集盲区留人工盘点；
-   - **走 ELabel 历史命令**的替代：试 `display device-info`/`display device asset-info`/`display board-info`，本机尚未测。
+1. ~~华为板卡/电源/风扇 SN~~ ✅ **完成**：SNMP 拿到板卡/引擎/风扇；电源仍缺，需 CLI 兜底
 2. **锐捷光模块样本缺**：这台 RS8607E 所有光口都没插模块（`transceiver is absent`），无法拿真实 DDM 输出。建议换一台有 SFP 的设备补一次。
-3. **SNMP ENTITY-MIB 真机覆盖度**：两家设备是否真返回非空 `entPhysicalSerialNum`？建议接入阶段先抓 `snmpwalk` 输出验证。
+3. **锐捷 ENTITY-MIB 测**：仅测了华为，锐捷需同等探针验证 `entPhysicalSerialNum` 覆盖
 4. **H3C / 迈普完全无采样**：此环境无 H3C/迈普设备，模板必须留待其他环境落地。
 
 ### 建议方式
 
-跑过的工具（已删）：`cmd/collect_component_samples/` 用现有 `DeviceConnectionPool` + `SendCommand` 复用生产代码路径，对接本环境在线设备批量跑命令。建议**重写为常驻 ad-hoc 工具**，方便以后再补样本。
+跑过的工具（已删）：`cmd/snmp_entity_probe/` 用 gosnmp v1.35.0 单 GET 模式探针，验证 ENTITY-MIB 在生产设备可用。建议**重写为常驻 ad-hoc 工具**，便于以后再扩展采样。
 
 模板落地优先顺序：
 1. ✅ **锐捷 `show version`** — 立刻可写 (data 已有)
 2. ✅ **华为 `display interface transceiver`** — 立刻可写 (data 已有)
-3. ⏳ 华为 `display device esn` / `display device` — 立刻可写 (用于整机 SN 与硬件清单骨架)
-4. ⚠️ 华为板卡/电源/风扇 SN — 待技术路线拍板 (SNMP / 接受盲区 / 其他命令)
-5. ⚠️ 锐捷光模块 DDM TextFSM — 待另一台设备采样
-6. ⚠️ H3C/迈普模板 — 待另一环境
+3. ✅ **华为 ENTITY-MIB `(class=5/module | class=8/powerSupply | class=9/fan | class=3/chassis)` 拉 SN** — 立刻可写 (data 已有)
+4. ✅ 华为 `display device esn` — 立刻可写 (data 已有，与 SNMP chassis SN 互验)
+5. ⏳ 锐捷 ENTITY-MIB 同等探针
+6. ⚠️ 锐捷光模块 DDM TextFSM — 待另一台设备采样
+7. ⚠️ H3C/迈普模板 — 待另一环境
 
 ---
 

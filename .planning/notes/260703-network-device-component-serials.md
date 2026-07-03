@@ -44,7 +44,8 @@
 | **SN 匹配不上** | **生成对账异常**（接入 v1.17 `sys_data_reconciliation`）：实物有账无=盘盈/未登记，账有实物无=盘亏/已拆 |
 | **对账定位** | Phase 48 = 对账引擎新增"组件序列号"维度，**本质是 v1.17 R2 物理层对账的具体形态**；依赖对账底座（Phase 42-46）先就位 |
 | **组件元数据** | `component_type`(chassis/card/engine/power/fan/transceiver) + `slot/position`，采集写到匹配行（新列 or 复用 `AttributeValue`，plan 时定） |
-| **采集路线** | v1 纯 CLI + TextFSM 单一路径（光模块 SNMP 拿不到，必走 CLI）；SNMP 作后续加速 |
+| **采集路线** | **v1 已定为双路径**（基于 2026-07-03 真机 ENTITY-MIB 探针突破）：<br>• **主路径**: SNMP ENTITY-MIB 单 GET 拉 `entPhysicalSerialNum` / `entPhysicalClass` / `entPhysicalContainedIn` 覆盖 chassis/module/fan（实测华为 S8700 上 100% 拿到 SN）<br>• **CLI 补充**: 电源 SN（华为实现漏洞，ENTITIY-MIB 也是空）+ 锐捷 `show version`（模块 SN 完美一段）+ 华为 `display interface transceiver`（光模块 SN + DDM 唯一来源） |
+| **踩坑注记** | gosnmp `WalkFunc` 收 `SnmpPDU`，OID 在 `dataUnit.Name`；HW 拒绝 BulkWalk → v1 走单 GET；勿用 `public` 默认 community，从 `sys_auth_credential.snmp_communities` 拿真值 |
 | **对账价值** | 序列号是跨系统比对唯一键，天然对接 v1.17 资产对账 |
 
 ## 3. 外网调研结论（2026-07-03 成功，均来自厂商官方文档）
