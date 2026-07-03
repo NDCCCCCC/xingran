@@ -1,0 +1,47 @@
+ 10GE5/0/4 transceiver information:
+-------------------------------------------------------------------
+ Common information:
+   Transceiver Type                      :1000BASE_SX
+   Connector Type                        :LC
+   Wavelength (nm)                       :850
+   Transfer Distance (m)                 :275(OM1)
+                                          550(OM2)
+                                          1000(OM3)
+   Digital Diagnostic Monitoring         :YES
+   Vendor Name                           :HUAWEI
+   Vendor Part Number                    :02312UUB
+   Ordering Name                         :
+-------------------------------------------------------------------
+ Manufacture information:
+   Manu. Serial Number                   :8000012000082
+   Manufacturing Date                    :2025-2-20
+   Vendor Name                           :HUAWEI
+-------------------------------------------------------------------
+ Alarm information:
+-------------------------------------------------------------------
+ Warning information:
+-------------------------------------------------------------------
+
+ 10GE5/0/5 transceiver information:
+-------------------------------------------------------------------
+ Common information:
+   Transceiver Type                      :1000BASE_SX
+   Connector Type                        :LC
+   Wavelength (nm)                       :850
+   Transfer Distance (m)                 :275(OM1)
+                                          550(OM2)
+                                          1000(OM3)
+   Digital Diagnostic Monitoring         :YES
+   Vendor Name                           :HUAWEI
+   Vendor Part Number                    :02312UUB
+   Ordering Name                         :
+-------------------------------------------------------------------
+ Manufacture information:
+   Manu. Serial Number                   :1000159211688
+   Manufacturing Date                    :2025-4-25
+   Vendor Name                           :HUAWEI
+-------------------------------------------------------------------
+ Alarm information:
+-------------------------------------------------------------------
+ Warning information:
+-------------------------------------------------------------------

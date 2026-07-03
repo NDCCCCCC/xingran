@@ -2,6 +2,9 @@ package services
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -13,8 +16,21 @@ import (
 )
 
 // setupUsageLoggerTestDB 创建使用日志测试数据库
+//
+// 2026-07-01 fix: 改用每测试独立的文件 DB(os.TempDir + 唯一名),
+// 替代原 `file::memory:?cache=shared`(所有测试函数共享同一内存 DB)。
+// 原方案在多个 usage_logger 测试并发跑时,异步后台 goroutine 的 INSERT
+// 撞 SQLite 写锁(database table is locked),导致 TestAsyncLogging/日志完整性
+// 的 5 条日志部分丢失,assert.Len(logs, 5) 失败。
+//
+// busy_timeout=5000 让写锁排队(而非立即报错)。
+// 不用 t.TempDir:LogUsage 的 fire-and-forget goroutine 在测试结束后仍可能
+// 持有文件句柄写,t.TempDir 的自动 cleanup 删除占用文件会 mark test failed。
+// 残留 .db 文件留在系统 temp 目录,由 OS 定期清理(单测试 <100KB)。
 func setupUsageLoggerTestDB(t *testing.T) *gorm.DB {
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{
+	dbPath := filepath.Join(os.TempDir(), fmt.Sprintf("ruoyi_usage_%d_%d.db", time.Now().UnixNano(), os.Getpid()))
+	dsn := fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)", dbPath)
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true,
 	})
 	require.NoError(t, err)

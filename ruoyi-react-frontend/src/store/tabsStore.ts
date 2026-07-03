@@ -3,11 +3,16 @@
  * 用于混合式布局的多标签页功能
  *
  * 持久化策略：localStorage（tab 信息非敏感，可以持久化）
+ *
+ * 关闭标签时的表格状态清理：removeTab / closeOtherTabs / closeAllTabs /
+ * closeLeftTabs / closeRightTabs 会调用 clearTableStateByPath 清理对应路径
+ * 下 sessionStorage 中的筛选/分页/排序，满足"关闭标签页才取消状态"需求。
  */
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { TabItem } from "@/types/layout";
+import { clearTableStateByPath } from "@/constants/storage";
 
 interface TabsState {
 	tabs: TabItem[];
@@ -81,6 +86,8 @@ export const useTabsStore = create<TabsStore>()(
 					// 移除最早的非固定标签
 					const closableTab = tabs.find((t) => !t.pinned && t.closable);
 					if (closableTab) {
+						// 标签被淘汰，清理其对应路径的表格状态
+						clearTableStateByPath(closableTab.key);
 						const newTabs = tabs.filter((t) => t.key !== closableTab.key);
 						const newHistory = history.filter((key) => key !== closableTab.key);
 						// 排序：固定标签在前，非固定标签在后
@@ -123,6 +130,9 @@ export const useTabsStore = create<TabsStore>()(
 				const tab = tabs.find((t) => t.key === key);
 				if (tab?.pinned) return;
 
+				// 清理该标签对应路径的表格状态（筛选/分页/排序）
+				clearTableStateByPath(key);
+
 				const newTabs = tabs.filter((t) => t.key !== key);
 				const newHistory = history.filter((k) => k !== key);
 
@@ -153,6 +163,10 @@ export const useTabsStore = create<TabsStore>()(
 			// 关闭其他标签
 			closeOtherTabs: (keepKey: string) => {
 				const { tabs, history } = get();
+				// 清理被关闭标签对应路径的表格状态（保留 keepKey 与固定标签）
+				tabs
+					.filter((t) => t.key !== keepKey && !t.pinned)
+					.forEach((t) => clearTableStateByPath(t.key));
 				const newTabs = tabs.filter((t) => t.key === keepKey || t.pinned);
 				const newHistory = history.filter((key) => key === keepKey || tabs.find((t) => t.key === key)?.pinned);
 
@@ -166,6 +180,8 @@ export const useTabsStore = create<TabsStore>()(
 			// 关闭所有标签
 			closeAllTabs: () => {
 				const { tabs } = get();
+				// 清理所有非固定标签对应路径的表格状态
+				tabs.filter((t) => !t.pinned).forEach((t) => clearTableStateByPath(t.key));
 				const pinnedTabs = tabs.filter((t) => t.pinned);
 
 				set({
@@ -181,6 +197,10 @@ export const useTabsStore = create<TabsStore>()(
 				const keepIndex = tabs.findIndex((t) => t.key === keepKey);
 				if (keepIndex === -1) return;
 
+				// 清理被关闭标签对应路径的表格状态
+				tabs
+					.filter((t, index) => index < keepIndex && !t.pinned)
+					.forEach((t) => clearTableStateByPath(t.key));
 				const newTabs = tabs.filter((t, index) => {
 					return index >= keepIndex || t.pinned;
 				});
@@ -202,6 +222,10 @@ export const useTabsStore = create<TabsStore>()(
 				const keepIndex = tabs.findIndex((t) => t.key === keepKey);
 				if (keepIndex === -1) return;
 
+				// 清理被关闭标签对应路径的表格状态
+				tabs
+					.filter((t, index) => index > keepIndex && !t.pinned)
+					.forEach((t) => clearTableStateByPath(t.key));
 				const newTabs = tabs.filter((t, index) => {
 					return index <= keepIndex || t.pinned;
 				});

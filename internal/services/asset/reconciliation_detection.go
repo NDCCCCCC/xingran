@@ -12,7 +12,9 @@ import (
 	"github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	apperrors "github.com/ruoyi-next/ruoyi-go-backend/pkg/errors"
 )
@@ -202,9 +204,18 @@ func (s *reconciliationDetectionImpl) ComputeSeverity(t string) string {
 //     — 查 sys_data_reconciliation WHERE detected_at > NOW() - INTERVAL '24h'
 //       AND asset_id=? AND conflict_type=? AND deleted_at IS NULL,
 //       命中则计入 skippedThrottle,continue
-//  6. 构造 sys_data_reconciliation 行 + INSERT
-//  7. unique violation on uniq_recon_asset_type_open catch 跳过(D-11,计入 skipped)
+//  6. 构造 sys_data_reconciliation 行 + UPSERT(2026-07-03 Phase 47 R3 改造)
+//     — ON CONFLICT 复用 partial unique index uniq_recon_asset_type_open,
+//       命中即更新 9 字段 EXCLUDED.* + detected_at = CURRENT_TIMESTAMP,UPSERT 命中计入 inserted
+//  7. (D-01 死代码删除) 不再有 unique violation catch 静默 skip 路径 —
+//     24h 内同 (asset_id, conflict_type) 已存在 open 行由 PG 走 UPDATE,不再抛错
 //  8. 计数 inserted / skipped / skippedSilence / skippedThrottle 返回
+//
+// 2026-07-03 Phase 47 R3 改造:
+//   - D-01: INSERT → UPSERT (ON CONFLICT 复用 partial unique index 列序匹配)
+//   - D-02: 9 字段 EXCLUDED.* + detected_at=CURRENT_TIMESTAMP (resolved_at/resolved_by 不更新)
+//   - D-03: 返回签名保留,UPSERT 命中计入 inserted 而非 skipped
+//   - 移除 isReconciliationDuplicate(err) catch 路径,函数定义保留
 func (s *reconciliationDetectionImpl) DetectLayer3(ctx context.Context) (int, int, int, int, error) {
 	var rows []NormalizedRow
 	if err := s.db.WithContext(ctx).
@@ -234,6 +245,33 @@ func (s *reconciliationDetectionImpl) DetectLayer3(ctx context.Context) (int, in
 		conflictType := s.ClassifyType(signals)
 		if conflictType == "A" {
 			skipped++
+			// === D-09-fix-01 (2026-07-02 排查 .planning/debug/reconciliation-health-misjudgment):
+			// 资产变健康时, 把该资产所有 open 冲突 (resolved_at IS NULL) 标记为
+			// auto-resolved. 否则:
+			//   1. HealthScore = (1 - open_count/total)*100 仍计入老 open → 红点误报
+			//      (典型: 4F001 三路径设备全一致但因 C 记录 open 导致 score=0 红)
+			//   2. GetByWorkstation LEFT JOIN resolved_at IS NULL → assets[].conflictType=C
+			//      → HealthBadge 红点 + tooltip "物理有/责任人不一致(高危)"
+			//   3. 异常列表长期显示已不存在的冲突
+			//
+			// 边界与权衡:
+			//   - 仅 UPDATE resolved_at IS NULL 的 open 记录, 已 resolved 的不动 (审计)
+			//   - resolved_by 标 "system:auto-resolve-on-healthy" 区分人工 vs 系统
+			//   - 不限定 grace period: open 记录存在即代表上次检测时冲突, 现在 A 即
+			//     表示已自愈, 即时 resolve 是正确行为
+			//   - 静默执行, 失败不阻塞 skipped 计数 (UI 降级在 GetByWorkstation 已处理)
+			//   - 性能: 每次 cron (5min) 跑一次, open 记录数 << 总资产, 可接受
+			if err := s.db.WithContext(ctx).
+				Model(&models.SysDataReconciliation{}).
+				Where("asset_id = ? AND deleted_at IS NULL AND resolved_at IS NULL", row.AssetID).
+				Updates(map[string]interface{}{
+					"resolved_at": time.Now(),
+					"resolved_by": "system:auto-resolve-on-healthy",
+				}).Error; err != nil {
+				applogger.Warnf("[reconciliation] auto-resolve-on-healthy 失败 asset_id=%s: %v",
+					row.AssetID, err)
+				// 不 return: 降级处理, 不影响 skipped 统计; 下次 cron 会重试
+			}
 			continue // D-09 健康不写
 		}
 
@@ -354,17 +392,44 @@ func (s *reconciliationDetectionImpl) DetectLayer3(ctx context.Context) (int, in
 			DetectedAt:      time.Now(),
 		}
 
-		err := s.db.WithContext(ctx).Create(rec).Error
+		// R3 / D-01/D-02/D-03: UPSERT 语义(2026-07-03 Phase 47 改造)
+		// 原实现 INSERT-only, 同 (asset_id, conflict_type) 24h 内已存在 open 行 →
+		//   抛 SQLSTATE 23505 → isReconciliationDuplicate catch → skipped++。
+		// 现改为 ON CONFLICT 复用 partial unique index uniq_recon_asset_type_open
+		//   (resolved_at IS NULL AND deleted_at IS NULL),命中即更新 9 字段
+		//   severity/raw_snapshot/physical_value/declared_value/ad_value/
+		//   asset_ip/exception_rule_id/applied_actions/confidence_score +
+		//   detected_at = NOW()。
+		// 返回 inserted 累计 INSERT 或 UPDATE 命中数(语义统一 D-03)。
+		rec.ID = ""                  // 显式重置,确保 GORM 走 INSERT-or-UPDATE 而非 full UPDATE
+		rec.CreatedAt = time.Time{}  // 同上
+		err := s.db.WithContext(ctx).Clauses(clause.OnConflict{
+			Columns: []clause.Column{
+				{Name: "asset_id"},
+				{Name: "conflict_type"},
+			},
+			// 不使用 OnConstraint("uniq_recon_asset_type_open") — GORM v1.30.5
+			// 在 SQLite 下生成 `ON CONFLICT ON CONSTRAINT ...`,SQLite 不支持此语法。
+			// 用 Columns 模式 GORM 生成 `ON CONFLICT (asset_id, conflict_type)
+			// DO UPDATE ...`,PG 和 SQLite 双方言兼容,且 PG 会自动匹配
+			// uniq_recon_asset_type_open partial unique index(列序一致)。
+			DoUpdates: clause.Assignments(map[string]interface{}{
+				"severity":          gorm.Expr("EXCLUDED.severity"),
+				"raw_snapshot":      gorm.Expr("EXCLUDED.raw_snapshot"),
+				"physical_value":    gorm.Expr("EXCLUDED.physical_value"),
+				"declared_value":    gorm.Expr("EXCLUDED.declared_value"),
+				"ad_value":          gorm.Expr("EXCLUDED.ad_value"),
+				"asset_ip":          gorm.Expr("EXCLUDED.asset_ip"),
+				"exception_rule_id": gorm.Expr("EXCLUDED.exception_rule_id"),
+				"applied_actions":   gorm.Expr("EXCLUDED.applied_actions"),
+				"confidence_score":  gorm.Expr("EXCLUDED.confidence_score"),
+				"detected_at":       gorm.Expr("CURRENT_TIMESTAMP"),
+			}),
+		}).Create(rec).Error
 		if err != nil {
-			if isReconciliationDuplicate(err) {
-				logrus.WithError(err).WithField("asset_id", row.AssetID).
-					Debug("Layer 3 detect: duplicate key skipped (D-11)")
-				skipped++
-				continue
-			}
 			return inserted, skipped, skippedSilence, skippedThrottle, err
 		}
-		inserted++
+		inserted++ // D-03: UPSERT 命中(无论 INSERT 或 UPDATE)都计入 inserted
 	}
 
 	// R3 / D-R3-A1-02 — Layer 3.5 命中例外规则数日志(运维可观测降噪效果)
@@ -393,3 +458,6 @@ func isReconciliationDuplicate(err error) bool {
 
 // 防止 unused import 警告
 var _ = apperrors.BadRequest
+
+// 防止 isReconciliationDuplicate unused 警告 — D-01 死代码,函数定义保留供单元测试 / 外部兼容路径引用
+var _ = isReconciliationDuplicate

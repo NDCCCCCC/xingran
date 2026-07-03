@@ -11,10 +11,12 @@ import { createDateTimeColumn } from "@/utils/tableHelpers";
 
 export interface ExecutionColumnsParams {
   handleViewDetail: (record: Execution) => void;
+  /** 由 useServerSort 注入,返回字段当前排序方向 */
+  getSortOrder?: (field: string) => "ascend" | "descend" | null;
 }
 
 export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType<Execution> {
-  const { handleViewDetail } = params;
+  const { handleViewDetail, getSortOrder } = params;
 
   return [
     {
@@ -23,12 +25,16 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
       key: "taskName",
       width: 200,
       ellipsis: true,
+      sorter: true,
+      sortOrder: getSortOrder?.("taskName"),
     },
     {
       title: "执行状态",
       dataIndex: "status",
       key: "status",
       width: 120,
+      sorter: true,
+      sortOrder: getSortOrder?.("status"),
       render: (status) => renderExecutionStatusTag(status || "pending"),
     },
     {
@@ -37,6 +43,8 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
       key: "workerName",
       width: 150,
       ellipsis: true,
+      sorter: true,
+      sortOrder: getSortOrder?.("workerName"),
       render: (text) => text || "-",
     },
     {
@@ -64,6 +72,8 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
       dataIndex: "startedAt",
       key: "startedAt",
       width: 180,
+      sorter: true,
+      sortOrder: getSortOrder?.("startTime"),
       render: (text) => text || "-",
     },
     {
@@ -71,6 +81,8 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
       dataIndex: "completedAt",
       key: "completedAt",
       width: 180,
+      sorter: true,
+      sortOrder: getSortOrder?.("endTime"),
       render: (text) => text || "-",
     },
     {
@@ -92,7 +104,7 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
         </span>
       ) : "-",
     },
-    createDateTimeColumn("createdAt", { width: 180 }),
+    createDateTimeColumn("createdAt", { width: 180, sorter: true, sortOrder: getSortOrder?.("createdAt") }),
     {
       title: "操作",
       key: "action",

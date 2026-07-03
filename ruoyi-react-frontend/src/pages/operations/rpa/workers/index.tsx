@@ -2,7 +2,7 @@
  * RPA Worker 监控页面
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import type { FC } from "react";
 import {
   Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic,
@@ -15,6 +15,8 @@ import {
 } from "@ant-design/icons";
 import type { Worker } from "@/types/rpa";
 import { useTableManager } from "@/hooks/useTableManager";
+import { useServerSort } from "@/hooks/useServerSort";
+import { createSorterMeta } from "@/utils/tableHelpers";
 import { usePagination } from "@/hooks/usePagination";
 import { getWorkerColumns } from "./columns";
 import { WORKER_STATUS_OPTIONS } from "../constants";
@@ -63,6 +65,21 @@ const WorkerMonitor: FC = () => {
     }
   }, []);
 
+  // 服务端排序:field 必须与 columns 的 dataIndex 一致
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<Worker>("workerName"),
+      createSorterMeta<Worker>("workerId"),
+      createSorterMeta<Worker>("ipAddress"),
+      createSorterMeta<Worker>("status"),
+      createSorterMeta<Worker>("createdAt", "date"),
+    ],
+    []
+  );
+  const { orderByColumn, isAsc, handleTableChange: handleWorkerSortChange, sortOrder: workerSortOrder } = useServerSort<Worker>({
+    sorterMetas,
+  });
+
   const {
     loading,
     data: workers,
@@ -73,7 +90,10 @@ const WorkerMonitor: FC = () => {
     handleReset,
   } = useTableManager<Worker>(
     async (params) => {
-      const result = await post("/rpa/workers/list", params);
+      const result = await post("/rpa/workers/list", {
+        ...params,
+        ...(orderByColumn ? { orderByColumn, isAsc } : {}),
+      });
       // 类型断言：后端返回的数据结构
       const data = result.data as unknown as { list?: Worker[]; total?: number } | undefined;
       // 搜索/分页/自动刷新(均经此 fetcher)顺带刷新全局统计
@@ -107,7 +127,12 @@ const WorkerMonitor: FC = () => {
     return () => clearInterval(interval);
   }, [loadWorkers]);
 
-  const columns = getWorkerColumns();
+  const columns = useMemo(
+  () => getWorkerColumns({
+    getSortOrder: (field) => (orderByColumn === field ? (workerSortOrder ?? null) as "ascend" | "descend" | null : null),
+  }),
+  [orderByColumn, workerSortOrder]
+);
 
   // 容量使用率(基于专用统计端点的全局容量,不再用当前页 reduce)
   const capacityUsagePercent = statistics.totalCapacity > 0
@@ -251,20 +276,21 @@ const WorkerMonitor: FC = () => {
           loading={loading}
           rowKey="id"
           pagination={paginationProps}
-          onChange={(pagination) => {
+          onChange={(pagination, _filters, sorter) => {
+            handleWorkerSortChange(pagination, _filters, sorter);
             const newPage = pagination.current ?? 1;
             const newPageSize = pagination.pageSize ?? 10;
             setCurrent(newPage);
             setPageSize(newPageSize);
             const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
-	            const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
-	            Object.keys(formValues).forEach(key => {
-	              const value = formValues[key];
-	              if (value !== undefined && value !== null && value !== "") {
-	                searchParams[key] = value;
-	              }
-	            });
-	            loadWorkers(searchParams);
+            const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize, ...(orderByColumn ? { orderByColumn, isAsc } : {}) };
+            Object.keys(formValues).forEach(key => {
+              const value = formValues[key];
+              if (value !== undefined && value !== null && value !== "") {
+                searchParams[key] = value;
+              }
+            });
+            loadWorkers(searchParams);
           }}
           rowClassName={(record) => {
             if (record.status === "offline") return "row-offline";

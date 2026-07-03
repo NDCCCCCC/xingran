@@ -11,7 +11,7 @@
  *
  * 锁定端点:POST /network/history/list(D-01)
  * 默认时间范围:近 7d(D-07)
- * 颜色与图标:与 MACTrajectoryChart.tsx:24-29 完全一致(D-10)
+ * 颜色与图标:与 macEventMeta.ts 单一事实源对齐(D-10)
  *
  * 已知 TODO(由后续 plan 接管):
  * - 14-04:工具栏新增 2 个互斥导出按钮
@@ -32,10 +32,9 @@ import type { ColumnsType } from "antd/es/table";
 type RangePickerOnChange = React.ComponentProps<typeof DatePicker.RangePicker>["onChange"];
 import {
   SearchOutlined, ReloadOutlined, AppstoreOutlined, TableOutlined,
-  CopyOutlined, EyeOutlined, AimOutlined, DownloadOutlined,
+  CopyOutlined, EyeOutlined, DownloadOutlined,
 } from "@ant-design/icons";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { NETWORK_MAC_TRAJECTORY } from "@/constants/routes";
 import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
 import { useTableQuery } from "@/hooks/useTableQuery";
@@ -85,7 +84,7 @@ const defaultHistoryColumns: ColumnConfig[] = [
   { key: "action", label: "操作", visible: true, order: 8, width: 200 },
 ];
 
-// MAC 规范化(从 trajectory.tsx:63-70 复制)
+// MAC 规范化
 const normalizeMACAddress = (mac: string): string => {
   const cleaned = mac.replace(/[^a-fA-F0-9]/g, "");
   if (cleaned.length !== 12) return "";
@@ -292,21 +291,6 @@ const MACHistoryPage: React.FC = () => {
             <Button
               type="link"
               size="small"
-              icon={<AimOutlined />}
-              onClick={() => {
-                const search = new URLSearchParams();
-                search.set("mac", record.macAddress);
-                search.set("startTime", timeRange.startTime);
-                search.set("endTime", timeRange.endTime);
-                if (record.deviceId) search.set("deviceId", record.deviceId);
-                navigate(`${NETWORK_MAC_TRAJECTORY}?${search.toString()}`);
-              }}
-            >
-              查看轨迹
-            </Button>
-            <Button
-              type="link"
-              size="small"
               icon={<EyeOutlined />}
               onClick={() => {
                 setExpandedRowKeys((prev) =>
@@ -322,7 +306,7 @@ const MACHistoryPage: React.FC = () => {
         ),
       },
     }),
-    [timeRange, expandedRowKeys, navigate]
+    [expandedRowKeys, navigate]
   );
 
   // 列配置过滤(根据 visibleColumns 顺序)
@@ -514,20 +498,6 @@ const MACHistoryPage: React.FC = () => {
               border: "1px solid #f0f0f0",
             }}
             actions={[
-              <Button
-                key="trajectory"
-                type="link"
-                size="small"
-                onClick={() => {
-                  const search = new URLSearchParams();
-                  search.set("mac", record.macAddress);
-                  search.set("startTime", timeRange.startTime);
-                  search.set("endTime", timeRange.endTime);
-                  navigate(`${NETWORK_MAC_TRAJECTORY}?${search.toString()}`);
-                }}
-              >
-                查看轨迹
-              </Button>,
               <Button
                 key="events"
                 type="link"

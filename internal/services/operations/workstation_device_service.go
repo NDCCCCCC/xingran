@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
@@ -341,6 +342,11 @@ func (s *workstationDeviceService) GetPhysicalDevices(ctx context.Context, works
 	//    (5) sys_ad_computer.mac_address (或 serial_number) → 合并 AD 字段
 	//
 	//    使用 DISTINCT ON (devicesn) 去重,合并字段"资产优先"
+	//
+	// 2026-07-02 扩展: 增加 sys_device_mac_history 作为 fallback,解决设备已离线但端口关联信息仍可用
+	//   的场景。新增字段:
+	//     - HistoryLastSeen *time.Time: 仅历史MAC命中时的最后上线时间
+	//     - Confidence      *float64:  1.0=实测, 0.5=仅历史, 0.0=无MAC
 	type physicalRow struct {
 		AssetID         *string
 		DeviceSerial    *string
@@ -351,6 +357,8 @@ func (s *workstationDeviceService) GetPhysicalDevices(ctx context.Context, works
 		ResponsibleUser *string
 		PortName        *string
 		InfoPointName   *string
+		HistoryLastSeen *time.Time
+		Confidence      *float64
 		// AD 侧只补字段,不覆盖
 		ADComputerID *string
 		ADDeviceName *string
@@ -363,7 +371,7 @@ func (s *workstationDeviceService) GetPhysicalDevices(ctx context.Context, works
 WITH workstation_ports AS (
     SELECT DISTINCT port.id AS port_id,
            port.interface_name,
-           port.device_id,
+           ip.device_id AS effective_device_id,
            ip.name AS info_point_name,
            REGEXP_REPLACE(
                REGEXP_REPLACE(LOWER(port.interface_name), '\s+', '', 'g'),
@@ -372,12 +380,18 @@ WITH workstation_ports AS (
       FROM ops_info_points ip
       JOIN sys_device_port_status port
         ON port.id::text = ip.port_id
-       -- 防御:port_status.device_id 必须与 infoPoint.device_id 一致
-       -- 否则说明 port_status 发生了 device_id 漂移,反查不应跨设备错指
-       AND port.device_id::text = ip.device_id::text
+       -- Phase 3 v3 (2026-07-01): MAC JOIN 锚点改用 ip.device_id (不是 port.device_id)
+       -- 根因: 用户实测确认 MAC 表里 GE5/44 的 3 条 MAC 都在 aca124c8 (05F #1) 下,
+       -- 但 port.device_id 被 collector 错写成 515f4c58 (04F #2)。
+       -- 物理真相: MAC 是 collector 按 info_point 写入的(mac_collection_service.go:279),
+       -- 所以 MAC 真实位置 = ip.device_id, 不是 port.device_id。
+       -- - port.id (UUID PK) 锚定单端口
+       -- - ip.device_id 锚定 MAC (collector 写入依据)
+       -- - port.device_id 是历史脏数据, 不影响 query
      WHERE ip.workstation_id = ?
        AND ip.deleted_at IS NULL
        AND ip.status = 0
+       AND EXISTS (SELECT 1 FROM sys_network_device WHERE id::text = ip.device_id)
 ),
 latest_mac AS (
     SELECT DISTINCT ON (m.mac_address, m.device_id, m.interface_name)
@@ -394,6 +408,22 @@ latest_mac AS (
       FROM sys_device_mac_address m
      ORDER BY m.mac_address, m.device_id, m.interface_name, m.collected_at DESC NULLS LAST
 ),
+-- 2026-07-02 新增: 历史 MAC CTE,作为设备离线后的 fallback 来源。
+-- sys_device_mac_history 在采集器确认设备下线/迁移/消失时写入,同一 (mac,device,iface) 保留最新一行。
+latest_mac_history AS (
+    SELECT DISTINCT ON (h.mac_address, h.device_id, h.interface_name)
+        h.mac_address,
+        h.device_id,
+        h.interface_name,
+        h.last_seen,
+        REGEXP_REPLACE(
+            REGEXP_REPLACE(LOWER(h.interface_name), '\s+', '', 'g'),
+            '^(gigabitethernet|gigabitether|ge|gi)', 'ge'
+        ) AS norm_iface,
+        LOWER(REGEXP_REPLACE(COALESCE(h.mac_address, ''), '[.:\-]', '', 'g')) AS norm_mac
+      FROM sys_device_mac_history h
+     ORDER BY h.mac_address, h.device_id, h.interface_name, h.last_seen DESC NULLS LAST
+),
 ad_devices AS (
     SELECT DISTINCT ON (LOWER(REGEXP_REPLACE(COALESCE(ad.mac_address, ''), '[.:\-]', '', 'g')))
         ad.id,
@@ -408,32 +438,44 @@ ad_devices AS (
      ORDER BY LOWER(REGEXP_REPLACE(COALESCE(ad.mac_address, ''), '[.:\-]', '', 'g')),
               ad.updated_at DESC NULLS LAST
 )
-SELECT DISTINCT ON (COALESCE(a.devicesn,''))
+SELECT DISTINCT ON (COALESCE(a.devicesn, COALESCE(mac.mac_address, hist.mac_address, '')))
        a.id                                                                AS asset_id,
        a.devicesn                                                          AS device_serial,
        a.device_model_name                                                 AS device_model,
        a.device_type_name                                                  AS device_type,
-       -- 优先用 ops_asset 的 mac1(原格式展示给前端),若未命中再用 mac_address 表的
-       COALESCE(a.mac1, mac.mac_address)                                   AS mac_address,
+       -- 优先 ops_asset.mac1;其次实测 sys_device_mac_address;最后历史 sys_device_mac_history(离线兜底)
+       COALESCE(a.mac1, mac.mac_address, hist.mac_address)                 AS mac_address,
        a.machine_ip                                                        AS ip_address,
        a.nowuser_name                                                      AS responsible_user,
        wp.interface_name                                                   AS port_name,
        wp.info_point_name                                                  AS info_point_name,
+       hist.last_seen                                                      AS history_last_seen,
+       -- 置信度分级:实测=1.0,仅历史=0.5,无MAC=0.0
+       CASE
+         WHEN mac.mac_address IS NOT NULL THEN 1.0
+         WHEN hist.mac_address IS NOT NULL THEN 0.5
+         ELSE 0.0
+       END                                                                 AS confidence,
        ad_devices.id                                                       AS ad_computer_id,
        ad_devices.computer_name                                            AS ad_device_name,
        ad_devices.operating_system                                         AS ad_operating_system
   FROM workstation_ports wp
-  JOIN latest_mac mac
-       ON mac.device_id::text = wp.device_id::text
-      AND mac.norm_iface        = wp.norm_iface
+  LEFT JOIN latest_mac mac
+       ON mac.norm_iface        = wp.norm_iface
+      AND mac.device_id::text    = wp.effective_device_id::text
+  LEFT JOIN latest_mac_history hist
+       ON hist.norm_iface        = wp.norm_iface
+      AND hist.device_id::text    = wp.effective_device_id::text
   LEFT JOIN ops_asset a
        ON a.deleted_at IS NULL
-      AND (LOWER(REGEXP_REPLACE(COALESCE(a.mac1, ''), '[.:\-]', '', 'g')) = mac.norm_mac
-        OR LOWER(REGEXP_REPLACE(COALESCE(a.mac2, ''), '[.:\-]', '', 'g')) = mac.norm_mac)
+      AND (LOWER(REGEXP_REPLACE(COALESCE(a.mac1, ''), '[.:\-]', '', 'g')) = COALESCE(mac.norm_mac, hist.norm_mac)
+        OR LOWER(REGEXP_REPLACE(COALESCE(a.mac2, ''), '[.:\-]', '', 'g')) = COALESCE(mac.norm_mac, hist.norm_mac))
   LEFT JOIN ad_devices
-       ON ad_devices.norm_mac = mac.norm_mac
+       ON ad_devices.norm_mac = COALESCE(mac.norm_mac, hist.norm_mac)
        OR (ad_devices.serial_number IS NOT NULL AND ad_devices.serial_number = a.devicesn)
- ORDER BY COALESCE(a.devicesn,''), wp.interface_name NULLS LAST;
+ ORDER BY COALESCE(a.devicesn, COALESCE(mac.mac_address, hist.mac_address, '')),
+          confidence DESC NULLS LAST,
+          wp.interface_name NULLS LAST;
 `
 
 	if err := s.db.WithContext(ctx).Raw(rawSQL, workstationID).Scan(&rows).Error; err != nil {
@@ -456,6 +498,16 @@ SELECT DISTINCT ON (COALESCE(a.devicesn,''))
 			dm := *row.DeviceModel
 			deviceName = &dm
 		}
+		// Phase 3 v3 兜底 (2026-07-01): 当 AD + 资产都没有名字时, 用 MAC + 端口名兜底
+		// 避免前端因 deviceName 为 nil 过滤掉设备 (5F003 等工位实际有设备但元数据缺失)
+		if deviceName == nil && row.MACAddress != nil && *row.MACAddress != "" {
+			mn := fmt.Sprintf("设备 (%s)", *row.MACAddress)
+			deviceName = &mn
+		}
+		if deviceName == nil && row.PortName != nil && *row.PortName != "" {
+			pn := fmt.Sprintf("端口 %s", *row.PortName)
+			deviceName = &pn
+		}
 
 		var os *string
 		if row.ADOperatingSystem != nil {
@@ -469,6 +521,20 @@ SELECT DISTINCT ON (COALESCE(a.devicesn,''))
 			portDesc = &pd
 			if row.InfoPointName != nil && *row.InfoPointName != "" {
 				pdv := fmt.Sprintf("端口 %s (信息点 %s)", *row.PortName, *row.InfoPointName)
+				portDesc = &pdv
+			}
+		}
+
+		// 历史关联降级提示: 当且仅当设备在 sys_device_mac_address(实测) 中未命中,
+		// 但 sys_device_mac_history(历史) 命中时,在 description 末尾追加 "历史关联 (最后上线时间: ...)"
+		// 置信度由 SQL CASE 计算,本函数原样回填;置信度低于 1.0 的行默认排在实测之后(DESC 排序)
+		if row.Confidence != nil && *row.Confidence < 1.0 && row.HistoryLastSeen != nil && !row.HistoryLastSeen.IsZero() {
+			hint := fmt.Sprintf("\n历史关联 (最后上线时间: %s)", row.HistoryLastSeen.Format("2006-01-02 15:04:05"))
+			if portDesc == nil {
+				pd := hint
+				portDesc = &pd
+			} else {
+				pdv := *portDesc + hint
 				portDesc = &pdv
 			}
 		}
@@ -491,6 +557,8 @@ SELECT DISTINCT ON (COALESCE(a.devicesn,''))
 			IsPrimary:         false,
 			Priority:          0,
 			Description:       portDesc,
+			Confidence:        row.Confidence,
+			HistoryLastSeen:   row.HistoryLastSeen,
 		})
 	}
 
@@ -532,17 +600,23 @@ func (s *workstationDeviceService) GetADDevicesByUser(ctx context.Context, userI
 
 	logger.Infof("[GetADDevicesByUser] 用户AD DN: %s", adUser.UserDN)
 
-	// 查询该用户管理的AD设备（通过 ManagedBy 字段）
+	// 查询策略：取并集
+	//   1) 管理者(managed_by = UserDN): AD 属性的 ManagedBy 字段
+	//   2) 最后登录者(original_description LIKE '%|username|%'): description 字段
+	//      按 "|" 切分, parts[1] = 最后登录用户名(见 addomain.parseComputerDescriptionForUser)
+	//      该字段在工位实际关联场景比 managed_by 更可靠(参考 memory: workstation-ad-device-managedby-vs-description)
 	var adComputers []models.ADComputer
 	err = s.db.WithContext(ctx).
-		Where("managed_by = ? AND deleted_at IS NULL", adUser.UserDN).
+		Where("deleted_at IS NULL").
+		Where("managed_by = ? OR original_description LIKE ?",
+			adUser.UserDN, "%|"+sysUser.Username+"|%").
 		Find(&adComputers).Error
 
 	if err != nil {
 		return nil, fmt.Errorf("查询AD设备失败: %w", err)
 	}
 
-	logger.Infof("[GetADDevicesByUser] 找到 %d 个AD设备", len(adComputers))
+	logger.Infof("[GetADDevicesByUser] 找到 %d 个AD设备(managed_by ∪ last_logged_user)", len(adComputers))
 
 	matches := make([]*ADDeviceMatch, 0, len(adComputers))
 	for _, computer := range adComputers {
@@ -554,8 +628,8 @@ func (s *workstationDeviceService) GetADDevicesByUser(ctx context.Context, userI
 			IPAddress:       computer.IPAddress,
 			OperatingSystem: computer.OperatingSystem,
 		})
-		logger.Infof("[GetADDevicesByUser] 设备详情 - Name: %s, SN: %s, MAC: %s, IP: %s",
-			computer.ComputerName, computer.SerialNumber, computer.MacAddress, computer.IPAddress)
+		logger.Infof("[GetADDevicesByUser] 设备详情 - Name: %s, SN: %s, MAC: %s, IP: %s, ManagedBy: %s",
+			computer.ComputerName, computer.SerialNumber, computer.MacAddress, computer.IPAddress, computer.ManagedBy)
 	}
 
 	return matches, nil

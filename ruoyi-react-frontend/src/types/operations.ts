@@ -252,7 +252,7 @@ export interface Asset {
   attributeValue?: string;       // 设备属性
 
   // 位置与归属
-  scanSite?: string;             // AAP扫码地理位置
+  scanSite?: string;             // APP扫码地理位置
   remark?: string;               // 备注
   qudaoName?: string;            // 设备渠道
   usingTypeName?: string;        // 用途
@@ -317,6 +317,11 @@ export interface WorkstationDevice {
   description?: string;
   createdAt: string;
   updatedAt: string;
+  // R5 物理链路(2026-07-02): 置信度 + 历史最后上线时间
+  //   confidence: 1.0 = 实测 MAC 命中, 0.5 = 仅历史 MAC 命中(设备离线), undefined = 非物理链路/未分级
+  //   historyLastSeen: 仅当 confidence < 1.0 且来自历史 MAC 表时有值
+  confidence?: number;
+  historyLastSeen?: string;
   // 关联对象
   asset?: Asset;
 }

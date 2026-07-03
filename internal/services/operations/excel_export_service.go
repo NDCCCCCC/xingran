@@ -140,12 +140,24 @@ func (s *excelExportServiceImpl) resolveAssociations(
 		}
 
 		results := make(map[string]string)
-		rows, err := s.db.WithContext(ctx).
+		// RightCast 字段(可选):RightField 类型转换,如 "text" → "id::text IN (?)"
+		// 用于 LeftField 是 varchar 存 UUID 字符串但 RightField 是 uuid 类型的场景
+		// (例: ops_info_points.workstation_id varchar, sys_workstation.id uuid)
+		rightFieldExpr := join.RightField
+		if join.RightCast != "" {
+			rightFieldExpr = join.RightField + "::" + join.RightCast
+		}
+		// SkipSoftDelete 字段(可选):某些 join 目标表为硬删除表(无 deleted_at 列,如 sys_device_port_status),
+		// 加 `deleted_at IS NULL` 会触发 PG SQLSTATE 42703 → 整个 join 失败 → 关联列整列空,
+		// 错误被 logger.Warnf 后 continue 时静默吞掉。此字段为 true 时跳过该过滤。
+		queryBuilder := s.db.WithContext(ctx).
 			Table(join.Table).
 			Select(join.RightField+", "+join.SelectField).
-			Where(join.RightField+" IN ?", ids).
-			Where("deleted_at IS NULL").
-			Rows()
+			Where(rightFieldExpr+" IN ?", ids)
+		if !join.SkipSoftDelete {
+			queryBuilder = queryBuilder.Where("deleted_at IS NULL")
+		}
+		rows, err := queryBuilder.Rows()
 
 		if err != nil {
 			logger.Warnf("批量查询关联数据失败: %v", err)

@@ -182,7 +182,7 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 	// Step 2: 构建每个接口的MAC地址数量统计
 	macCountByInterface := make(map[string]int)
 	for _, mac := range macAddresses {
-		normalized := lldp.NormalizeInterfaceName(mac.InterfaceName)
+		normalized := portcollection.NormalizeInterfaceName(mac.InterfaceName)
 		macCountByInterface[normalized]++
 	}
 
@@ -203,7 +203,7 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 	var filteredMACAddresses []MACAddressEntry
 
 	for _, mac := range macAddresses {
-		normalizedIface := lldp.NormalizeInterfaceName(mac.InterfaceName)
+		normalizedIface := portcollection.NormalizeInterfaceName(mac.InterfaceName)
 
 		// 过滤规则1: LLDP邻居端口
 		// 注意：LLDP map的键已经是规范化的（来自Plan 01），可以直接查找
@@ -277,8 +277,8 @@ func (s *MACCollectionService) collectDeviceMAC(ctx context.Context, device *mod
 
 		macRecord := &models.DeviceMACAddress{
 			DeviceID:      device.ID,
-			MACAddress:    macAddr.MACAddress,
-			InterfaceName: macAddr.InterfaceName,
+			MACAddress:    NormalizeMACAddress(macAddr.MACAddress),  // 2026-07-01: 防御性归一化(LLDP/filterRule 路径)
+			InterfaceName: portcollection.NormalizeInterfaceName(macAddr.InterfaceName),  // 同上
 			VLANID:        vlanIDPtr,
 			MACType:       macType,
 			CollectedAt:   collectionTime,
@@ -397,7 +397,11 @@ func (s *MACCollectionService) parseMACAddressTable(output string, vendor models
 		   strings.Contains(lowerLine, "vlan") && strings.Contains(lowerLine, "mac") ||
 		   strings.Contains(lowerLine, "type") && strings.Contains(lowerLine, "interface") ||
 		   strings.Contains(lowerLine, "port") && strings.Contains(lowerLine, "mac") ||
-		   strings.Contains(lowerLine, "learned") {
+		   strings.Contains(lowerLine, "learned") ||
+		   strings.Contains(lowerLine, "flags") ||          // 华为列头 "Flags:"
+		   strings.Contains(lowerLine, "total") ||          // 汇总行 "Total items displayed"
+		   strings.Contains(lowerLine, "forwarding logical") || // 华为注释行
+		   strings.HasPrefix(line, "#") {                   // 华为注释行首字符
 			continue
 		}
 
@@ -428,7 +432,7 @@ func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVen
 		// d89e.f327.2d19 100 GigabitEthernet0/1/1 Dynamic
 		// 或者包含更多空格的变体
 		if len(fields) >= 4 {
-			entry.MACAddress = fields[0]
+			entry.MACAddress = NormalizeMACAddress(fields[0])  // 2026-07-01: 写入前归一化
 			// 解析VLAN ID (fields[1])
 			if vlanID, err := strconv.Atoi(fields[1]); err == nil {
 				entry.VLANID = vlanID
@@ -443,21 +447,23 @@ func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVen
 			for i := 2; i < len(fields)-1; i++ {
 				// 跳过已知的MAC类型字段
 				lowerField := strings.ToLower(fields[i])
-				if lowerField == "dynamic" || lowerField == "static" || lowerField == "secure" {
+				// 跳过 MAC 类型字段(防止其混入接口名)。华为 VRP 用 security,锐捷用 secure。
+				// 2026-07-02 mac-iface-security-suffix: 补 security(原仅 secure,华为粘连场景兜底)。
+				if lowerField == "dynamic" || lowerField == "static" || lowerField == "secure" || lowerField == "security" {
 					continue
 				}
 				interfaceParts = append(interfaceParts, fields[i])
 			}
 
 			if len(interfaceParts) > 0 {
-				entry.InterfaceName = strings.Join(interfaceParts, " ")
+				entry.InterfaceName = s.cleanTimestampFromInterface(strings.Join(interfaceParts, " "))
 			} else {
 				// fallback: 使用fields[2]
 				entry.InterfaceName = fields[2]
 			}
 
-			// 清理接口名称中的时间戳格式（如 "2026-5-9 0:51:07"）
-			entry.InterfaceName = s.cleanTimestampFromInterface(entry.InterfaceName)
+			// 2026-07-01: 接口名归一化(短名大写,去空格等)
+			entry.InterfaceName = portcollection.NormalizeInterfaceName(s.cleanTimestampFromInterface(entry.InterfaceName))
 		}
 
 	case models.VendorRuijie, models.VendorMaipu:
@@ -473,7 +479,7 @@ func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVen
 			if vlanID, err := strconv.Atoi(fields[0]); err == nil {
 				entry.VLANID = vlanID
 			}
-			entry.MACAddress = fields[1]
+			entry.MACAddress = NormalizeMACAddress(fields[1])  // 2026-07-01: 写入前归一化
 			entry.MACType = fields[2]
 
 			// 接口名称从fields[3]开始
@@ -483,17 +489,17 @@ func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVen
 			}
 
 			if len(interfaceParts) > 0 {
-				entry.InterfaceName = strings.Join(interfaceParts, " ")
+				entry.InterfaceName = portcollection.NormalizeInterfaceName(s.cleanTimestampFromInterface(strings.Join(interfaceParts, " ")))
 			} else {
-				entry.InterfaceName = fields[3]
+				entry.InterfaceName = portcollection.NormalizeInterfaceName(fields[3])
 			}
-
-			// 清理接口名称中的时间戳格式（如 "2026-5-9 0:51:07"）
-			entry.InterfaceName = s.cleanTimestampFromInterface(entry.InterfaceName)
 		}
 	}
 
-	if entry.MACAddress != "" {
+	// 2026-07-01: 校验 MAC 是标准大写冒号格式,过滤设备 display mac-address 输出里的
+	// 表头/汇总行/注释行(实测垃圾: 'Flags:'/'Total'/'#'/'Invalid' 被误当 MAC)。
+	// 不校验的话这些垃圾会入库污染 mac_address 与连锁的 mac_history 轨迹表。
+	if entry.MACAddress != "" && isCanonicalMAC(entry.MACAddress) {
 		return entry, true
 	}
 	return MACAddressEntry{}, false
@@ -518,7 +524,7 @@ func (s *MACCollectionService) parseRuijiePortSecurityLine(fields []string) (MAC
 
 	entry := MACAddressEntry{}
 	entry.VLANID, _ = strconv.Atoi(fields[1])
-	entry.MACAddress = fields[2]
+	entry.MACAddress = NormalizeMACAddress(fields[2])  // 2026-07-01: 写入前归一化
 
 	// 字段尾部固定为 Type / LearnAge / Action
 	// Interface = fields[3 .. len-3]
@@ -526,7 +532,7 @@ func (s *MACCollectionService) parseRuijiePortSecurityLine(fields []string) (MAC
 	interfaceParts := fields[3:typeIdx]
 
 	if len(interfaceParts) > 0 {
-		entry.InterfaceName = s.cleanTimestampFromInterface(strings.Join(interfaceParts, " "))
+		entry.InterfaceName = portcollection.NormalizeInterfaceName(s.cleanTimestampFromInterface(strings.Join(interfaceParts, " ")))
 	}
 	entry.MACType = fields[typeIdx]
 
@@ -554,6 +560,10 @@ func (s *MACCollectionService) mergeMACEntries(buckets [][]MACAddressEntry) []MA
 
 // cleanTimestampFromInterface 清理接口名称中的时间戳
 // 示例: "GigabitEthernet 0/12 2026-5-9 0:51:07" -> "GigabitEthernet 0/12"
+//
+// 2026-07-01 fix: 清理后为空(纯时间戳输入,无接口名)返回空字符串,
+// 替代原"返回原始 interfaceName"逻辑(会把纯时间戳当接口名入库,不合理)。
+// 匹配 TestCleanTimestampFromInterface/Only_timestamp 契约。
 func (s *MACCollectionService) cleanTimestampFromInterface(interfaceName string) string {
 	// 使用正则表达式匹配时间戳格式
 	// 可能的格式: "2026-5-9 0:51:07", "2026-05-09 08:52:15" 等
@@ -561,10 +571,7 @@ func (s *MACCollectionService) cleanTimestampFromInterface(interfaceName string)
 	cleaned := timestampPattern.ReplaceAllString(interfaceName, "")
 	cleaned = strings.TrimSpace(cleaned)
 
-	// 如果清理后为空，返回原始接口名称
-	if cleaned == "" {
-		return interfaceName
-	}
+	// 清理后为空(纯时间戳输入)返回空字符串,避免把时间戳当接口名
 	return cleaned
 }
 
@@ -583,7 +590,12 @@ type MACAddressResponse struct {
 
 // GetMACAddressList 获取MAC地址列表
 // orderByColumn/isAsc 为服务端排序参数(可选,透传给 base.ApplySort 白名单)。
-func (s *MACCollectionService) GetMACAddressList(ctx context.Context, current, pageSize int, deviceID, macAddress, interfaceName string, orderByColumn string, isAsc *bool) ([]MACAddressResponse, int64, error) {
+// deptID(2026-06-30):部门树联动 — 后端一处 JOIN sys_network_device.dept_id 过滤该部门下所有设备的 MAC,
+//   彻底替代前端 dept→deviceIds→MAC 三层链路(后者有 stale closure / setSearchParams 重挂载导致
+//   devices/list 丢 deptId 的时序 bug:选"分公司本部"却查出"武汉中支"设备)。
+//   baseQuery(用于 Count)无 JOIN → 用子查询;joinQuery 已 JOIN → 直接 WHERE sys_network_device.dept_id。
+//   deviceID(单设备精确)与 deptID 可叠加(选部门后又选具体设备),互不冲突。
+func (s *MACCollectionService) GetMACAddressList(ctx context.Context, current, pageSize int, deviceID string, deptID string, macAddress, interfaceName string, orderByColumn string, isAsc *bool) ([]MACAddressResponse, int64, error) {
 	var total int64
 
 	// 构建基础查询（用于计数）
@@ -592,7 +604,13 @@ func (s *MACCollectionService) GetMACAddressList(ctx context.Context, current, p
 	if deviceID != "" {
 		baseQuery = baseQuery.Where("device_id = ?", deviceID)
 	}
+	if deptID != "" {
+		// 2026-06-30: 部门树联动 — 子查询过滤该部门下所有设备的 MAC(baseQuery 用于 Count,无 JOIN)
+		baseQuery = baseQuery.Where("device_id IN (SELECT id FROM sys_network_device WHERE dept_id = ?)", deptID)
+	}
 	if macAddress != "" {
+		// 2026-07-01 port-mac-format-unify: 大写+冒号,避免大小写不同 LIKE 漏查
+		macAddress = NormalizeMACAddress(macAddress)
 		baseQuery = baseQuery.Where("mac_address LIKE ?", "%"+macAddress+"%")
 	}
 	if interfaceName != "" {
@@ -620,7 +638,12 @@ func (s *MACCollectionService) GetMACAddressList(ctx context.Context, current, p
 	if deviceID != "" {
 		joinQuery = joinQuery.Where("sys_device_mac_address.device_id = ?", deviceID)
 	}
+	if deptID != "" {
+		joinQuery = joinQuery.Where("sys_network_device.dept_id = ?", deptID)
+	}
 	if macAddress != "" {
+		// 2026-07-01 port-mac-format-unify: 与 baseQuery 同步归一化
+		macAddress = NormalizeMACAddress(macAddress)
 		joinQuery = joinQuery.Where("sys_device_mac_address.mac_address LIKE ?", "%"+macAddress+"%")
 	}
 	if interfaceName != "" {

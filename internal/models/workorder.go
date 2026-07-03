@@ -1,6 +1,7 @@
 package models
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -118,13 +119,21 @@ func (wo *WorkOrder) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-// generateWorkOrderNo 生成工单编号（格式：WO20250104123456）
+// generateWorkOrderNo 生成工单编号(格式:WO + YYYYMMDD + 12 位 UUID hex 后缀)
+//
+// 历史 bug(2026-06-30):原实现用 now.Format("150405")(HHMMSS) 作为"随机6位数字",
+// reconciliation:createWorkorderHigh 同秒内批量创建 15 张工单时全部得到同一编号,
+// 触发 sys_workorder.idx_wo_no UNIQUE 约束 (SQLSTATE 23505)。
+//
+// 修复:复用 internal/scheduler/workorder_tasks.go:131-144 已有的碰撞安全样板
+// (WO + YYYYMMDD + uuid hex[:12]),碰撞概率 < 10^-12,无需重试。
+//
+// 格式示例: WO20260630a1b2c3d4e5f6(人类仍可识别日期前缀,后缀肉眼无意义)
 func generateWorkOrderNo() string {
 	now := time.Now()
 	dateStr := now.Format("20060102")
-	// 随机6位数字
-	randomPart := now.Format("150405") // 使用时间戳作为后缀
-	return "WO" + dateStr + randomPart
+	suffix := strings.ReplaceAll(uuid.New().String(), "-", "")[:12]
+	return "WO" + dateStr + suffix
 }
 
 // TableName 指定表名

@@ -19,7 +19,7 @@
  */
 
 import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, Row, Col, Spin, Empty, Alert, Badge, Statistic, Tag, App } from "antd";
 import {
@@ -356,9 +356,7 @@ const Dashboard = () => {
               <>
                 R3 部署前 + R2 数据保留期内必须调用 Snapshot 记录 R2 末期基线,否则 SC 8
                 ≥60% 降噪不可量化验证。前往{" "}
-                <a href="/assets/exception-rules" rel="noreferrer">
-                  例外规则管理
-                </a>{" "}
+                <Link to="/assets/exception-rules">例外规则管理</Link>{" "}
                 点击"记录当前为基线"按钮。
               </>
             }

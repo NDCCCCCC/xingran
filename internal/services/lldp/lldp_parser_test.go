@@ -22,7 +22,10 @@ func TestParseHuaweiLLDPNeighbors(t *testing.T) {
 	firstNeighbor := neighbors[0]
 	assert.Equal(t, "GigabitEthernet0/0/1", firstNeighbor.LocalInterface)
 	assert.Equal(t, "3815.sep12.eth0", firstNeighbor.NeighborID)
-	assert.Equal(t, "60P-28", firstNeighbor.NeighborName)
+	// 2026-07-01: 第3列(60P-28)经模板 NEIGHBOR_PORT 映射到 NeighborInterface。
+	// Huawei/H3C brief 共用同一模板, 第3列统一按 PortID 处理(H3C 第3列 eth0 同此)。
+	// 原断言 NeighborName 是 pre-existing 笔误(模板未映射 NEIGHBOR_NAME)。
+	assert.Equal(t, "60P-28", firstNeighbor.NeighborInterface)
 
 	// 验证LLDP未启用的端口也被解析
 	disabledNeighbor := neighbors[2]

@@ -8,6 +8,8 @@ import (
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 )
 
 // ============================================================================
@@ -181,3 +183,109 @@ func TestDetectLayer3DeptScopeNoMatch(t *testing.T) {
 // ============================================================================
 
 var _ = time.Now
+
+// ============================================================================
+// Phase 47 R3 UPSERT 行为测试(2026-07-03)
+//
+// 验证 DetectLayer3 由 INSERT-only 改造为 GORM UPSERT 后的三层命中场景:
+//   - TestDetectLayer3UpsertInsertNoExisting:无 open → INSERT 路径
+//   - TestDetectLayer3UpsertUpdateExisting:有 open → UPDATE 路径
+//   - TestDetectLayer3UpsertInsertAfterResolved:resolved 后 INSERT 新行
+// ============================================================================
+
+// TestDetectLayer3UpsertInsertNoExisting 无 open → UPSERT INSERT 路径
+func TestDetectLayer3UpsertInsertNoExisting(t *testing.T) {
+	db := setupTestDB(t, "test_upsert_insert")
+	uid := "00000000-0000-0000-0000-000000000100"
+	require.NoError(t, db.Exec(`INSERT INTO ops_asset (id, devicesn, machine_ip, user_id, status, deleted_at)
+		VALUES (?, 'IP-100', '10.0.0.100', NULL, 0, NULL)`, uid).Error)
+	require.NoError(t, db.Exec(`INSERT INTO ops_asset_physical (asset_id, physical_user_id, physical_username)
+		VALUES (?, ?, 'alice')`, uid, uid).Error)
+
+	svc := &reconciliationDetectionImpl{db: db}
+	inserted, _, _, _, err := svc.DetectLayer3(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, 1, inserted)
+
+	var rowCount int64
+	require.NoError(t, db.Model(&models.SysDataReconciliation{}).
+		Where("asset_id = ? AND deleted_at IS NULL", uid).Count(&rowCount).Error)
+	assert.Equal(t, int64(1), rowCount, "无 open 时 UPSERT INSERT 应产生 1 行")
+
+	var severity string
+	require.NoError(t, db.Raw(`SELECT severity FROM sys_data_reconciliation WHERE asset_id = ?`, uid).
+		Scan(&severity).Error)
+	assert.NotEmpty(t, severity, "severity 应非空")
+}
+
+// TestDetectLayer3UpsertUpdateExisting 有 open → UPSERT UPDATE 路径
+func TestDetectLayer3UpsertUpdateExisting(t *testing.T) {
+	db := setupTestDB(t, "test_upsert_update")
+	// 手动建 partial unique index 模拟 PG 行为 — setupTestDB 已通过 GORM AutoMigrate
+	// 从 uniqueIndex tag 建过同名索引,这里 IF NOT EXISTS 容错(SQLite 12+ 支持)
+	sqlDB, dbErr := db.DB()
+	require.NoError(t, dbErr, "获取 *sql.DB 失败")
+	_, err := sqlDB.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS uniq_recon_asset_type_open
+		ON sys_data_reconciliation (asset_id, conflict_type)
+		WHERE resolved_at IS NULL AND deleted_at IS NULL`)
+	require.NoError(t, err, "建 partial unique index 失败")
+
+	uid := "00000000-0000-0000-0000-000000000200"
+	require.NoError(t, db.Exec(`INSERT INTO ops_asset (id, devicesn, machine_ip, user_id, status, deleted_at)
+		VALUES (?, 'IP-200', '10.0.0.200', NULL, 0, NULL)`, uid).Error)
+	require.NoError(t, db.Exec(`INSERT INTO ops_asset_physical (asset_id, physical_user_id, physical_username)
+		VALUES (?, ?, 'bob')`, uid, uid).Error)
+
+	// 预存一条 open 冲突行(模拟卡住的 B 异常 — 该资产 has_physical 但无 declared,
+	// ClassifyType 判定为 Type B,故 pre-existing 也须 conflict_type='B' 才能触发 UPSERT UPDATE)
+	require.NoError(t, db.Exec(`INSERT INTO sys_data_reconciliation
+		(id, asset_id, conflict_type, severity, raw_snapshot, physical_value, declared_value, ad_value,
+		 confidence_score, detected_at, resolved_at, deleted_at)
+		VALUES (?, ?, 'B', 'medium', '{}', '{}', '{}', '{}', 0.5, ?, NULL, NULL)`,
+		"rec-pre-existing", uid, time.Now().Add(-48*time.Hour)).Error)
+
+	svc := &reconciliationDetectionImpl{db: db}
+	inserted, _, _, _, err := svc.DetectLayer3(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, 1, inserted, "UPSERT UPDATE 命中应计入 inserted(D-03)")
+
+	// 验证: 仍只有 1 行 (UPDATE 不增行), 且 severity 已覆盖
+	var rowCount int64
+	require.NoError(t, db.Model(&models.SysDataReconciliation{}).
+		Where("asset_id = ? AND deleted_at IS NULL", uid).Count(&rowCount).Error)
+	assert.Equal(t, int64(1), rowCount, "UPSERT UPDATE 不应新增行")
+
+	var severity string
+	require.NoError(t, db.Raw(`SELECT severity FROM sys_data_reconciliation WHERE asset_id = ?`, uid).
+		Scan(&severity).Error)
+	assert.NotEqual(t, "medium", severity, "severity 应已被 UPSERT 覆盖")
+}
+
+// TestDetectLayer3UpsertInsertAfterResolved resolved 后 INSERT 新行
+func TestDetectLayer3UpsertInsertAfterResolved(t *testing.T) {
+	db := setupTestDB(t, "test_upsert_resolved")
+	uid := "00000000-0000-0000-0000-000000000300"
+	require.NoError(t, db.Exec(`INSERT INTO ops_asset (id, devicesn, machine_ip, user_id, status, deleted_at)
+		VALUES (?, 'IP-300', '10.0.0.300', NULL, 0, NULL)`, uid).Error)
+	require.NoError(t, db.Exec(`INSERT INTO ops_asset_physical (asset_id, physical_user_id, physical_username)
+		VALUES (?, ?, 'charlie')`, uid, uid).Error)
+
+	// 预存一条 resolved 历史行(不参与 partial unique index 冲突)
+	resolvedAt := time.Now().Add(-72 * time.Hour)
+	require.NoError(t, db.Exec(`INSERT INTO sys_data_reconciliation
+		(id, asset_id, conflict_type, severity, raw_snapshot, physical_value, declared_value, ad_value,
+		 confidence_score, detected_at, resolved_at, resolved_by, deleted_at)
+		VALUES (?, ?, 'D', 'medium', '{}', '{}', '{}', '{}', 0.5, ?, ?, 'manual', NULL)`,
+		"rec-resolved", uid, resolvedAt, resolvedAt).Error)
+
+	svc := &reconciliationDetectionImpl{db: db}
+	inserted, _, _, _, err := svc.DetectLayer3(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, 1, inserted)
+
+	// 验证: 历史 resolved 行保留 + 新 INSERT 1 行 = 2 行(partial index 不约束 resolved)
+	var rowCount int64
+	require.NoError(t, db.Model(&models.SysDataReconciliation{}).
+		Where("asset_id = ? AND deleted_at IS NULL", uid).Count(&rowCount).Error)
+	assert.Equal(t, int64(2), rowCount, "resolved 历史 + 新 open 行 = 2 行")
+}

@@ -61,7 +61,7 @@ func BuildTrunkPortBlockset(ctx context.Context, db *gorm.DB, deviceID string) m
 			if pt == hint || strings.Contains(pt, hint) {
 				// 原始名 + 规范化名都加入，上层 MAC 采集用 NormalizeInterfaceName 比对
 				blockset[p.InterfaceName] = true
-				blockset[normalizeInterfaceName(p.InterfaceName)] = true
+				blockset[NormalizeInterfaceName(p.InterfaceName)] = true
 				break
 			}
 		}
@@ -77,5 +77,5 @@ func IsTrunkPort(blockset map[string]bool, interfaceName string) bool {
 	if blockset[interfaceName] {
 		return true
 	}
-	return blockset[normalizeInterfaceName(interfaceName)]
+	return blockset[NormalizeInterfaceName(interfaceName)]
 }

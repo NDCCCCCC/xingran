@@ -18,10 +18,12 @@ var (
 		"createdAt": "created_at",
 	}
 	workerAllowedSortFields = map[string]string{
-		"name":      "name",
-		"host":      "host",
-		"status":    "status",
-		"createdAt": "created_at",
+		"workerName":    "worker_name",
+		"workerId":      "worker_id",
+		"ipAddress":     "ip_address",
+		"status":        "status",
+		"lastHeartbeat": "last_heartbeat",
+		"createdAt":     "created_at",
 	}
 	executionAllowedSortFields = map[string]string{
 		"taskId":    "task_id",

@@ -5,10 +5,9 @@
  * - 中文标签:出现 / 消失 / 迁移 / VLAN 变更
  *
  * 被以下文件 import:
- * - components/network/MACTrajectoryChart.tsx
  * - components/network/MACEventsTimeline.tsx
  * - pages/network/mac/history/MACHistoryPage.tsx
- * - pages/network/mac/trajectory/TrajectoryPage.tsx
+ * - pages/network/mac/index.tsx(列表页 Drawer,2026-06-30 quick)
  */
 import {
   PlusCircleOutlined,

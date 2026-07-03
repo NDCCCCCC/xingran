@@ -62,9 +62,11 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
   const loadDiscoveries = useCallback(async (params: Record<string, unknown> = {}) => {
     setLoading(true);
     try {
+      // 直接透传所有 params(含 orderByColumn/isAsc)给后端,后端白名单过滤非法字段
       const result = await post<PageResponse<DeviceDiscovery>>("/network/discoveries/list", {
         current: params.current || current,
         pageSize: params.pageSize || pageSize,
+        ...params,
       });
       setDiscoveries(result.data?.list || []);
       setTotal(result.data?.total || 0);

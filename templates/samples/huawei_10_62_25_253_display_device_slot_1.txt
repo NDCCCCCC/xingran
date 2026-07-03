@@ -1,0 +1,16 @@
+/$[ArchivesInfo Version]
+/$ArchivesInfoVersion=3.0
+
+
+[Board Properties]
+BoardType=
+BarCode=
+Item=
+Description=
+Manufactured=
+VendorName=
+IssueNumber=
+CLEICode=
+BOM=
+Model=
+/$ElabelVersion=4.0

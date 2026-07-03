@@ -71,6 +71,8 @@ import { formatDateTime, buildCategoryTree } from "@/lib/workorderApi";
 import { useWorkOrderData } from "./hooks/useWorkOrderData";
 import { useWorkOrderModals, type Comment, type HistoryItem } from "./hooks/useWorkOrderModals";
 import { usePagination } from "@/hooks/usePagination";
+import { useServerSort } from "@/hooks/useServerSort";
+import { createSorterMeta } from "@/utils/tableHelpers";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -84,10 +86,12 @@ interface WorkOrderTableColumnsProps {
   handleDelete: (id: string) => void;
   current: number;
   pageSize: number;
+  /** 由 useServerSort 注入,返回字段当前排序方向 */
+  getSortOrder?: (field: string) => "ascend" | "descend" | null;
 }
 
 function getWorkOrderTableColumns(props: WorkOrderTableColumnsProps): ColumnsType<WorkOrder> {
-  const { handleViewDetail, handleEdit, handleAssignToTodayDuty, handleDelete, current, pageSize } = props;
+  const { handleViewDetail, handleEdit, handleAssignToTodayDuty, handleDelete, current, pageSize, getSortOrder } = props;
 
   return [
     {
@@ -121,6 +125,8 @@ function getWorkOrderTableColumns(props: WorkOrderTableColumnsProps): ColumnsTyp
       dataIndex: "priority",
       key: "priority",
       width: 80,
+      sorter: true,
+      sortOrder: getSortOrder?.("priority"),
       render: (priority: WorkOrderPriority) => (
         <Tag color={PRIORITY_CONFIG[priority]?.color}>{PRIORITY_CONFIG[priority]?.text}</Tag>
       ),
@@ -254,9 +260,31 @@ const WorkOrderPage: FC = () => {
 
   // ==================== 表格操作 ====================
 
-  const handleTableChange = useCallback((pagination: TablePaginationConfig) => {
-    fetchList(pagination.current || 1, pagination.pageSize || 10);
-  }, [fetchList]);
+  // 服务端排序:field 与 columns.dataIndex 对齐
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<WorkOrder>("workOrderNo"),
+      createSorterMeta<WorkOrder>("title"),
+      createSorterMeta<WorkOrder>("type"),
+      createSorterMeta<WorkOrder>("priority"),
+      createSorterMeta<WorkOrder>("status"),
+      createSorterMeta<WorkOrder>("createdAt", "date"),
+      createSorterMeta<WorkOrder>("updatedAt", "date"),
+    ],
+    []
+  );
+  const { orderByColumn, isAsc, handleTableChange: handleWoSortChange, sortOrder: woSortOrder } = useServerSort<WorkOrder>({
+    sorterMetas,
+  });
+
+  const handleTableChange = useCallback(
+    (pagination: TablePaginationConfig, _filters?: unknown, sorter?: unknown) => {
+      handleWoSortChange(pagination, _filters as never, sorter as never);
+      const sortParams = orderByColumn ? { orderByColumn, isAsc } : undefined;
+      fetchList(pagination.current || 1, pagination.pageSize || 10, sortParams);
+    },
+    [fetchList, handleWoSortChange, orderByColumn, isAsc]
+  );
 
   const handleSearch = useCallback(() => {
     fetchList(1, paginationProps.pageSize);
@@ -403,7 +431,8 @@ const WorkOrderPage: FC = () => {
     handleDelete,
     current: paginationProps.current ?? 1,
     pageSize: paginationProps.pageSize ?? 10,
-  }), [openDetailDrawer, handleEdit, handleAssignToTodayDuty, handleDelete, paginationProps]);
+    getSortOrder: (field) => (orderByColumn === field ? (woSortOrder ?? null) as "ascend" | "descend" | null : null),
+  }), [openDetailDrawer, handleEdit, handleAssignToTodayDuty, handleDelete, paginationProps, orderByColumn, woSortOrder]);
 
   // 分类树 - 使用 useMemo 避免重复构建
   const categoryTree = useMemo(() => buildCategoryTree(categories), [categories]);

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/ruoyi-next/ruoyi-go-backend/pkg/normalize"
 	"gorm.io/gorm"
 )
 
@@ -65,5 +66,7 @@ func (d *DevicePortStatus) BeforeCreate(tx *gorm.DB) error {
 	if d.ID == "" {
 		d.ID = uuid.New().String()
 	}
+	// 2026-07-01 根治: 写入前兜底归一化接口名(大写短名),防 GE0/0/1 反向展开成全称等脏数据
+	d.InterfaceName = normalize.InterfaceName(d.InterfaceName)
 	return nil
 }

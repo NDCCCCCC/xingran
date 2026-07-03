@@ -2,12 +2,17 @@ package system
 
 import (
 	"context"
+	"embed"
+	"encoding/json"
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	systemRequests "github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"gorm.io/gorm"
 )
+
+//go:embed asset_columns_schema.json
+var assetColumnsSchemaFS embed.FS
 
 // ColumnConfigService 列配置服务接口
 type ColumnConfigService interface {
@@ -137,55 +142,29 @@ type ColumnConfigItem struct {
 	Width   int
 }
 
-// defaultAssetColumns 资产列表默认配置（43 列）
+// defaultAssetColumns 资产列表默认配置 — 数据来源 asset_columns_schema.json (go:embed)
+// 真实源: ruoyi-react-frontend/src/pages/operations/assets/columnsSchema.ts
+// 同步机制: 前端 npm run sync-columns-schema (prebuild 钩子) 序列化 → JSON → 后端 embed
 func defaultAssetColumns() []ColumnConfigItem {
-	return []ColumnConfigItem{
-		{Key: "devicesn", Visible: true, Width: 150},                    // 设备序列号
-		{Key: "sequenceNo", Visible: false, Width: 120},                // 序列号
-		{Key: "fixAssetNo", Visible: true, Width: 120},                // 固定资产编号
-		{Key: "deviceModelName", Visible: true, Width: 120},           // 设备型号
-		{Key: "deviceTypeName", Visible: true, Width: 100},            // 设备类型
-		{Key: "deviceCategorySecondName", Visible: false, Width: 120}, // 设备中类
-		{Key: "deviceBasicTypeName", Visible: true, Width: 100},        // 是否固定资产
-		{Key: "deviceStatusName", Visible: true, Width: 100},           // 设备状态
-		{Key: "deptName", Visible: true, Width: 120},                   // 所属部门
-		{Key: "recipientName", Visible: true, Width: 100},               // 领取人
-		{Key: "recipientPhone", Visible: false, Width: 120},             // 领取人电话
-		{Key: "recipientEmail", Visible: false, Width: 150},             // 领取人邮箱
-		{Key: "assetIp", Visible: true, Width: 120},                    // 资产IP地址
-		{Key: "assetMac", Visible: true, Width: 140},                   // 资产MAC地址
-		{Key: "assetHostname", Visible: false, Width: 120},              // 主机名
-		{Key: "osName", Visible: false, Width: 100},                     // 操作系统
-		{Key: "osVersion", Visible: false, Width: 100},                   // 系统版本
-		{Key: "cpuModel", Visible: false, Width: 120},                   // CPU型号
-		{Key: "cpuCores", Visible: false, Width: 80},                     // CPU核心数
-		{Key: "memoryCapacity", Visible: false, Width: 100},            // 内存容量
-		{Key: "diskCapacity", Visible: false, Width: 100},              // 硬盘容量
-		{Key: "graphicsCard", Visible: false, Width: 120},               // 显卡型号
-		{Key: "purchaseDate", Visible: false, Width: 120},               // 购置日期
-		{Key: "warrantyExpireDate", Visible: false, Width: 120},         // 保修到期日
-		{Key: "supplierName", Visible: false, Width: 120},               // 供应商
-		{Key: "manufacturerName", Visible: false, Width: 120},             // 制造商
-		{Key: "assetLocation", Visible: true, Width: 120},                // 资产位置
-		{Key: "buildingName", Visible: true, Width: 100},                // 所在大楼
-		{Key: "floorName", Visible: true, Width: 80},                    // 所在楼层
-		{Key: "workstationName", Visible: false, Width: 120},            // 所在工位
-		{Key: "serverRoomName", Visible: false, Width: 120},             // 所在机房
-		{Key: "networkSwitchName", Visible: false, Width: 120},          // 网络交换机
-		{Key: "switchPort", Visible: false, Width: 120},                 // 交换机端口
-		{Key: "voltage", Visible: false, Width: 80},                     // 电压
-		{Key: "useStatusName", Visible: true, Width: 100},               // 使用状态
-		{Key: "financeCode", Visible: false, Width: 100},                // 财务编码
-		{Key: "projectCode", Visible: false, Width: 100},                // 项目编码
-		{Key: "assetCost", Visible: false, Width: 100},                  // 资产成本
-		{Key: "depreciationPeriod", Visible: false, Width: 100},        // 折旧年限
-		{Key: "netBookValue", Visible: false, Width: 100},              // 账面净值
-		{Key: "depreciationRate", Visible: false, Width: 100},          // 折旧率
-		{Key: "accumulatorDepreciation", Visible: false, Width: 120},  // 累计折旧
-		{Key: "assetValue", Visible: false, Width: 100},                 // 资产价值
-		{Key: "assetYear", Visible: false, Width: 80},                   // 资产年份
-		{Key: "remark", Visible: true, Width: 200},                      // 备注
+	return loadAssetColumnsFromEmbed()
+}
+
+// loadAssetColumnsFromEmbed 从 embed JSON 读取资产列表默认列配置。
+// JSON 由前端 sync-columns-schema.mjs 维护,确保前后端单一真理源。
+// 注:此函数无 ctx 参数;embed 在进程启动时已加载到内存。
+func loadAssetColumnsFromEmbed() []ColumnConfigItem {
+	data, err := assetColumnsSchemaFS.ReadFile("asset_columns_schema.json")
+	if err != nil {
+		// embed 失败 = 构建/部署错误,panic 暴露问题优于静默回退
+		panic(fmt.Sprintf("asset_columns_schema.json embed read failed: %v", err))
 	}
+	var schema struct {
+		Columns []ColumnConfigItem `json:"columns"`
+	}
+	if err := json.Unmarshal(data, &schema); err != nil {
+		panic(fmt.Sprintf("asset_columns_schema.json parse failed: %v", err))
+	}
+	return schema.Columns
 }
 
 // defaultUserColumns 用户列表默认配置（12 列）

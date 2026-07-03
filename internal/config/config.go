@@ -48,6 +48,21 @@ type ServerConfig struct {
 	Host string `mapstructure:"host"`
 	Port int    `mapstructure:"port"`
 	Mode string `mapstructure:"mode"`
+
+	// SkipSetup 跳过一次性 setup 步骤(InitData / 默认角色菜单 / cmd seed)。
+	//
+	// 设计目的: 让"启动"与"初始化"分离。当前每次启动都跑 InitData(10+ 张表 count 查询)、
+	// 默认角色菜单 permission、cmd 末尾的 MAC history retention + OUI 导入。
+	// 这些是首次部署/恢复场景才需要的,在 DB 已稳定的环境每次跑是纯浪费。
+	//
+	// 用法:
+	//   - 配置文件: server.skip_setup: true
+	//   - 环境变量: SERVER_SKIP_SETUP=true (裸名,无需 RUOYI_ 前缀)
+	//   - 配套 viper AutomaticEnv 自动绑定: RUOYI_SERVER_SKIP_SETUP=true
+	//
+	// 默认 false: dev 环境默认仍跑(零破坏性,符合现有 GSD 约定的"零破坏性变更")。
+	// 生产/CI 部署: 显式置 true 跳过,只跑 setup 阶段需要的可单独 `ruoyi-backend setup` 命令(未来)。
+	SkipSetup bool `mapstructure:"skip_setup"`
 }
 
 // DatabaseConfig 数据库配置
@@ -256,6 +271,7 @@ func Load() *Config {
 	overrideFromEnv(&config.Server.Host, "SERVER_HOST")
 	overrideFromEnv(&config.Server.Mode, "SERVER_MODE")
 	overrideFromEnvInt(&config.Server.Port, "SERVER_PORT")
+	overrideFromEnvBool(&config.Server.SkipSetup, "SERVER_SKIP_SETUP")
 	overrideFromEnv(&config.JWT.SecretKey, "JWT_SECRET")
 	// SM2 密钥对 — 必须通过 env 注入；留空会让 jwt.go 走"动态生成"分支,
 	// 导致每次重启 SM2 密钥对都换,旧 token 全部失效,所有用户被强制登出
@@ -286,6 +302,24 @@ func overrideFromEnvInt(target *int, envKey string) {
 		if p, err := strconv.Atoi(value); err == nil {
 			*target = p
 		}
+	}
+}
+
+// overrideFromEnvBool 从环境变量覆盖布尔型配置值（辅助函数）
+// env 未设置或非 true/false 字符串时,保持 target 原值不变（不覆盖）
+// 支持: true/1/yes (true) / false/0/no (false),其余值忽略
+func overrideFromEnvBool(target *bool, envKey string) {
+	value := os.Getenv(envKey)
+	if value == "" {
+		return
+	}
+	switch strings.ToLower(value) {
+	case "true", "1", "yes":
+		*target = true
+	case "false", "0", "no":
+		*target = false
+	default:
+		// 非标准布尔值,保持 target 原值不变
 	}
 }
 

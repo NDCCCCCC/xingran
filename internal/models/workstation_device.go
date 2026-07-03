@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 // DeviceSource 设备来源枚举
 type DeviceSource string
 
@@ -41,6 +43,11 @@ type WorkstationDevice struct {
 
 	// 备注
 	Description *string `gorm:"type:text" json:"description,omitempty"` // 备注
+
+	// 置信度（仅 R5 物理链路设备使用,不入库）: 1.0=实测MAC命中, 0.5=仅历史MAC命中, nil=AD/资产/手动来源(未分级)
+	Confidence *float64 `gorm:"-" json:"confidence,omitempty"`
+	// 历史关联最后上线时间(仅 R5 物理链路设备,仅历史MAC命中时有值;不入库)
+	HistoryLastSeen *time.Time `gorm:"-" json:"historyLastSeen,omitempty"`
 
 	// 关联对象（GORM不会存储到数据库）
 	Workstation  *Workstation `gorm:"foreignKey:WorkstationID" json:"workstation,omitempty"`

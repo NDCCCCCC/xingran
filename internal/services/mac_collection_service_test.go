@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/lldp"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 	"github.com/ruoyi-next/ruoyi-go-backend/test/fixtures"
+	"github.com/stretchr/testify/assert"
 )
 
 // TestGetMACThreshold 测试获取MAC阈值
@@ -111,7 +111,7 @@ func TestParseMACLineHuawei(t *testing.T) {
 			name:        "Valid Huawei MAC line",
 			line:        "d89e.f327.2d19 100 GigabitEthernet0/1/1 Dynamic",
 			wantEntry:   true,
-			expectedMAC: "d89e.f327.2d19",
+			expectedMAC: "D8:9E:F3:27:2D:19", // 2026-07-01: parseMACLine 现在写入前归一化为大写+冒号
 			expectedVLAN: 100,
 		},
 		{
@@ -185,7 +185,7 @@ func TestParseMACLineHuaweiSignature(t *testing.T) {
 	service := &MACCollectionService{}
 	entry, ok := service.parseMACLine("d89e.f327.2d19 100 GigabitEthernet0/1/1 Dynamic", models.VendorHuawei, MACCommandTypeMacTable)
 	assert.True(t, ok)
-	assert.Equal(t, "d89e.f327.2d19", entry.MACAddress)
+	assert.Equal(t, "D8:9E:F3:27:2D:19", entry.MACAddress) // 2026-07-01: 归一化为大写+冒号
 	assert.Equal(t, 100, entry.VLANID)
 }
 
@@ -209,27 +209,27 @@ func TestParseRuijiePortSecurityLine(t *testing.T) {
 			name:              "User-reported port-security line (8 fields)",
 			line:              "56   308   b022.7a2e.4a4f  GigabitEthernet 2/25      Dynamic            --          active",
 			wantEntry:         true,
-			expectedMAC:       "b022.7a2e.4a4f",
+			expectedMAC:       "B0:22:7A:2E:4A:4F", // 2026-07-01: 归一化为大写+冒号
 			expectedVLAN:      308,
-			expectedInterface: "GigabitEthernet 2/25",
+			expectedInterface: "GE2/25",            // 2026-07-01: 全称+空格 → 短名
 			expectedType:      "Dynamic",
 		},
 		{
 			name:              "Standard port-security with hyphenated MAC (8 fields)",
 			line:              "12   100   0011.2233.4455  GigabitEthernet 0/1  SecureDynamic  00:01:23  active",
 			wantEntry:         true,
-			expectedMAC:       "0011.2233.4455",
+			expectedMAC:       "00:11:22:33:44:55",
 			expectedVLAN:      100,
-			expectedInterface: "GigabitEthernet 0/1",
+			expectedInterface: "GE0/1",             // 2026-07-01: 全称+空格 → 短名
 			expectedType:      "SecureDynamic",
 		},
 		{
 			name:              "Single-token interface (7 fields)",
 			line:              "1   200   aabb.ccdd.eeff  Gi0/5  Static  --  active",
 			wantEntry:         true,
-			expectedMAC:       "aabb.ccdd.eeff",
+			expectedMAC:       "AA:BB:CC:DD:EE:FF", // 2026-07-01: 归一化
 			expectedVLAN:      200,
-			expectedInterface: "Gi0/5",
+			expectedInterface: "GE0/5", // Gi 短名经 NormalizeInterfaceName 对称化映射到大写短名
 			expectedType:      "Static",
 		},
 		{
@@ -331,16 +331,16 @@ func TestMergeMACEntries(t *testing.T) {
 	// 应当有 2 条唯一记录 (0001.0001.0001 和 b022.7a2e.4a4f)
 	assert.Equal(t, 2, len(merged), "Should have 2 unique MAC entries after dedup")
 
-	// 验证 b022.7a2e.4a4f 在合并结果中
+	// 验证 b022.7a2e.4a4f (归一化后 B0:22:7A:2E:4A:4F) 在合并结果中
 	found := false
 	for _, e := range merged {
-		if e.MACAddress == "b022.7a2e.4a4f" {
+		if e.MACAddress == "B0:22:7A:2E:4A:4F" { // 2026-07-01: parseMACLine 归一化为大写+冒号
 			found = true
 			assert.Equal(t, 308, e.VLANID)
-			assert.Equal(t, "GigabitEthernet 2/25", e.InterfaceName)
+			assert.Equal(t, "GE2/25", e.InterfaceName) // 2026-07-01: 全称+空格 → 短名
 		}
 	}
-	assert.True(t, found, "b022.7a2e.4a4f should be in merged result")
+	assert.True(t, found, "B0:22:7A:2E:4A:4F should be in merged result")
 }
 
 // TestCleanTimestampFromInterface 测试清理接口名称中的时间戳
@@ -420,13 +420,14 @@ func TestMACFilteringLogic(t *testing.T) {
 	// 计算每个接口的MAC数量
 	macCountByInterface := make(map[string]int)
 	for _, mac := range macAddresses {
-		normalized := lldp.NormalizeInterfaceName(mac.InterfaceName)
+		normalized := portcollection.NormalizeInterfaceName(mac.InterfaceName)
 		macCountByInterface[normalized]++
 	}
 
-	// 验证MAC计数
-	assert.Equal(t, 2, macCountByInterface["GigabitEthernet0/0/1"])
-	assert.Equal(t, 1, macCountByInterface["GigabitEthernet0/0/2"])
+	// 验证MAC计数(归一化后 key 是短名 GE0/0/1 / GE0/0/2)
+	// portcollection.NormalizeInterfaceName 把全称 GigabitEthernet0/0/1 折叠为短名 GE0/0/1
+	assert.Equal(t, 2, macCountByInterface["GE0/0/1"])
+	assert.Equal(t, 1, macCountByInterface["GE0/0/2"])
 }
 
 // TestMACAddressEntryToServiceEntry 测试类型转换
@@ -583,7 +584,7 @@ func TestMACFilteringScenario(t *testing.T) {
 
 	// 模拟LLDP邻居
 	lldpNeighbors := map[string]bool{
-		lldp.NormalizeInterfaceName("GigabitEthernet0/0/1"): true, // LLDP邻居端口
+		portcollection.NormalizeInterfaceName("GigabitEthernet0/0/1"): true, // LLDP邻居端口
 	}
 
 	// 模拟过滤逻辑
@@ -593,13 +594,13 @@ func TestMACFilteringScenario(t *testing.T) {
 
 	// 计算每个端口的MAC数
 	for _, mac := range macAddresses {
-		normalized := lldp.NormalizeInterfaceName(mac.InterfaceName)
+		normalized := portcollection.NormalizeInterfaceName(mac.InterfaceName)
 		macCountByInterface[normalized]++
 	}
 
 	// 应用过滤规则
 	for _, mac := range macAddresses {
-		normalized := lldp.NormalizeInterfaceName(mac.InterfaceName)
+		normalized := portcollection.NormalizeInterfaceName(mac.InterfaceName)
 
 		// 规则1: LLDP邻居端口过滤
 		if lldpNeighbors[normalized] {
@@ -619,9 +620,31 @@ func TestMACFilteringScenario(t *testing.T) {
 
 	// 验证Gi0/0/1被过滤(LDP邻居)
 	for _, mac := range filteredMACs {
-		ne := lldp.NormalizeInterfaceName(mac.InterfaceName)
+		ne := portcollection.NormalizeInterfaceName(mac.InterfaceName)
 		assert.NotEqual(t, "GigabitEthernet0/0/1", ne, "LLDP port should be filtered")
 	}
+}
+
+// TestParseMACAddressTable_FiltersGarbageLines 锁定 2026-07-01 垃圾行过滤契约:
+// 华为 display mac-address 输出的表头/汇总行/注释行(Flags:/Total/#/forwarding logical)
+// 必须被丢弃,不能当成 MAC 条目入库污染 mac_address 与 mac_history 轨迹表。
+//
+// 双层防护: parseMACAddressTable 关键词过滤 + parseMACLine 的 isCanonicalMAC 校验。
+func TestParseMACAddressTable_FiltersGarbageLines(t *testing.T) {
+	svc := &MACCollectionService{}
+	output := `MAC address table of slot 1:
+MAC Address    VLAN/  Learned-from      Type
+---
+00e0-fc12-3456 100/-  GE0/0/1           dynamic
+Flags:  -       -      forwarding
+# forwarding logical interface, operations cannot be performed
+Total items displayed = 1`
+
+	entries, err := svc.parseMACAddressTable(output, models.VendorHuawei, MACCommandTypeMacTable)
+	assert.NoError(t, err)
+	assert.Len(t, entries, 1, "只应解析出 1 条有效 MAC,表头/汇总/注释行全过滤")
+	assert.Equal(t, "00:E0:FC:12:34:56", entries[0].MACAddress)
+	assert.Equal(t, "GE0/0/1", entries[0].InterfaceName)
 }
 
 // BenchmarkParseMACLine 基准测试MAC地址解析性能
@@ -646,7 +669,7 @@ func BenchmarkNormalizeInterfaceNameMAC(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for _, tc := range testCases {
-			_ = lldp.NormalizeInterfaceName(tc)
+			_ = portcollection.NormalizeInterfaceName(tc)
 		}
 	}
 }

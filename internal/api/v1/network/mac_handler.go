@@ -16,6 +16,7 @@ import (
 type MACAddressListRequest struct {
 	base.BaseListRequest
 	DeviceID      string `json:"deviceId,omitempty"`
+	DeptID        string `json:"deptId,omitempty"` // 2026-06-30: 部门树联动 — 后端 JOIN sys_network_device.dept_id 过滤
 	MACAddress    string `json:"macAddress,omitempty"`
 	InterfaceName string `json:"interfaceName,omitempty"`
 }
@@ -61,7 +62,7 @@ func (h *MACHandler) List(c *gin.Context) {
 	filterRuleSvc := topology.NewFilterRuleService(h.core.DB.GetDB())
 	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc, filterRuleSvc)
 	macAddrs, total, err := svc.GetMACAddressList(c.Request.Context(), req.Current, req.PageSize,
-		req.DeviceID, req.MACAddress, req.InterfaceName,
+		req.DeviceID, req.DeptID, req.MACAddress, req.InterfaceName,
 		req.OrderByColumn, req.IsAsc)
 	if !responseHelpers.HandleServiceError(c, err, "获取MAC地址列表") {
 		return

@@ -1,20 +1,24 @@
 /**
- * MAC 事件时间线组件(Phase 14-01 引入)
+ * MAC 事件时间线组件(Phase 14-01 引入,2026-06-30 quick 改造)
  *
- * 跨页复用:列表页"展开行" / 轨迹页"右侧侧边栏" / 设备详情页"该设备 MAC 事件"
- * 颜色与图标体系与 MACTrajectoryChart.tsx:24-29 完全一致(D-10 锁定)
+ * 当前用法: MAC 地址列表页(/network/mac)的右侧 Drawer 内显示。
+ *
+ * 2026-06-30 quick 改造:
+ * - 把 getMACEvents 改为分页版,支持"加载更多"按钮(busy MAC 数据量大时分页拉)
+ * - 本组件维护累积 events 列表 + currentPage + hasMore
+ * - 抽屉空间有限,> 100 事件时分页拉,避免一次性渲染卡顿
+ *
+ * 颜色与图标体系(D-10 锁定):
  *   appeared     → #52c41a (绿色) + PlusCircleOutlined
  *   disappeared → #ff4d4f (红色) + MinusCircleOutlined
  *   moved        → #faad14 (黄色) + SwapOutlined
  *   vlan_changed → #1890ff (蓝色) + TagOutlined
- *
- * 事件项点击后跳 `/network/mac/trajectory?mac=...&startTime=...&endTime=...[&deviceId=...]`(D-11 锁定)
  */
 
-import React from "react";
-import { Timeline, Empty, Skeleton, Tag, Card, Space, Typography } from "antd";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
+import { Timeline, Empty, Skeleton, Tag, Card, Space, Typography, Button } from "antd";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { DownOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { getMACEvents } from "@/lib/api/networkApi";
 import type { MACHistoryRecord } from "@/lib/api/networkApi";
@@ -28,35 +32,20 @@ export interface MACEventsTimelineProps {
   startTime: string;
   /** 时间范围终点(ISO 字符串) */
   endTime: string;
-  /** 设备 ID(可选,点击事件项跳轨迹页时携带) */
+  /** 单页条数(默认 100) */
+  pageSize?: number;
+  /** 设备 ID(可选, R5 物理链路场景传入, 当前未在组件内使用, 仅透传给未来扩展) */
   deviceId?: string;
 }
 
-/**
- * 渲染单条事件
- */
 const TimelineItem: React.FC<{
   event: MACHistoryRecord;
-  onClick: () => void;
-}> = ({ event, onClick }) => {
+}> = ({ event }) => {
   const eventType = (event.eventType ?? "appeared") as MACEventType;
-  const Icon = EVENT_ICON[eventType];
-  const color = EVENT_COLORS[eventType];
   const label = EVENT_LABEL[eventType];
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onClick}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClick();
-        }
-      }}
-      style={{ cursor: "pointer", padding: "4px 8px", borderRadius: 4 }}
-    >
+    <div style={{ padding: "4px 8px", borderRadius: 4 }}>
       <Space direction="vertical" size={2} style={{ width: "100%" }}>
         <Space size={8} wrap>
           <Typography.Text strong>
@@ -80,16 +69,55 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
   mac,
   startTime,
   endTime,
-  deviceId,
+  pageSize = 100,
 }) => {
-  const navigate = useNavigate();
+  // 累积 events 列表 + 分页状态(2026-06-30 quick:替换原 useQuery 单次全量)
+  const [allEvents, setAllEvents] = useState<MACHistoryRecord[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  const { data: events, isLoading, error, refetch } = useQuery({
-    queryKey: ["macEvents", mac, startTime, endTime],
-    queryFn: () => getMACEvents(mac, startTime, endTime),
+  // mac/startTime/endTime 变化时重置(抽屉开关场景)
+  useEffect(() => {
+    setAllEvents([]);
+    setCurrentPage(1);
+    setHasMore(false);
+    setTotal(0);
+  }, [mac, startTime, endTime]);
+
+  // 首页查询(交给 useQuery 处理 loading / error / refetch)
+  const { data: firstPage, isLoading, error, refetch } = useQuery({
+    queryKey: ["macEvents", mac, startTime, endTime, 1],
+    queryFn: () => getMACEvents(mac, startTime, endTime, { current: 1, pageSize }),
     enabled: !!mac,
     staleTime: 60 * 1000,
   });
+
+  // 同步首页结果到累积状态
+  useEffect(() => {
+    if (firstPage) {
+      setAllEvents(firstPage.list);
+      setTotal(firstPage.total);
+      setHasMore(firstPage.hasMore);
+      setCurrentPage(1);
+    }
+  }, [firstPage]);
+
+  // 加载更多
+  const handleLoadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    const nextPage = currentPage + 1;
+    setLoadingMore(true);
+    try {
+      const result = await getMACEvents(mac, startTime, endTime, { current: nextPage, pageSize });
+      setAllEvents((prev) => [...prev, ...result.list]);
+      setHasMore(result.hasMore);
+      setCurrentPage(nextPage);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, currentPage, mac, startTime, endTime, pageSize]);
 
   // 错误
   if (error) {
@@ -110,7 +138,7 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
   }
 
   // 空数据
-  if (!events || events.length === 0) {
+  if (allEvents.length === 0) {
     return (
       <Card size="small" title={`MAC 事件时间线 — ${mac}`} bordered={false}>
         <Empty description="该 MAC 在此时间范围内无事件" />
@@ -119,10 +147,23 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
   }
 
   return (
-    <Card size="small" title={`MAC 事件时间线 — ${mac}`} bordered={false}>
+    <Card
+      size="small"
+      title={
+        <Space size={4}>
+          <span>MAC 事件时间线 — {mac}</span>
+          {total > pageSize && (
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              (已显示 {allEvents.length}/{total})
+            </Typography.Text>
+          )}
+        </Space>
+      }
+      bordered={false}
+    >
       <Timeline
         mode="left"
-        items={events.map((event) => {
+        items={allEvents.map((event) => {
           const eventType = (event.eventType ?? "appeared") as MACEventType;
           const Icon = EVENT_ICON[eventType];
           const color = EVENT_COLORS[eventType];
@@ -131,22 +172,22 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
             dot: React.createElement(Icon, {
               style: { color, fontSize: 16 },
             }),
-            children: (
-              <TimelineItem
-                event={event}
-                onClick={() => {
-                  const search = new URLSearchParams();
-                  search.set("mac", mac);
-                  search.set("startTime", startTime);
-                  search.set("endTime", endTime);
-                  if (deviceId) search.set("deviceId", deviceId);
-                  navigate(`/network/mac/trajectory?${search.toString()}`);
-                }}
-              />
-            ),
+            children: <TimelineItem event={event} />,
           };
         })}
       />
+      {hasMore && (
+        <div style={{ textAlign: "center", marginTop: 12 }}>
+          <Button
+            type="link"
+            icon={<DownOutlined />}
+            onClick={handleLoadMore}
+            loading={loadingMore}
+          >
+            加载更多 (还剩 {total - allEvents.length} 条)
+          </Button>
+        </div>
+      )}
     </Card>
   );
 };

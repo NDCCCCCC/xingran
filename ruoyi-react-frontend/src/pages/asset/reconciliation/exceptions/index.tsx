@@ -115,6 +115,16 @@ const Exceptions = () => {
       defaultSort: { orderByColumn: "detectedAt", isAsc: false },
     });
 
+  // 列级 sortOrder：只对当前排序列返回方向，其余 undefined。
+  // 修"高亮恒落第一列"——sortOrder 是全局单值，必须按 dataIndex 派发到对应列。
+  const getColumnSortOrder = useCallback(
+    (field: string): "ascend" | "descend" | null | undefined => {
+      if (orderByColumn !== String(field)) return undefined;
+      return sortOrder;
+    },
+    [orderByColumn, sortOrder]
+  );
+
   // 字典 — conflict_type / severity
   const conflictTypeDict = useDict("asset_reconciliation_conflict_type");
   const severityDict = useDict("asset_reconciliation_severity");
@@ -217,7 +227,7 @@ const Exceptions = () => {
         key: "detectedAt",
         width: 170,
         sorter: createSorter<ExceptionListItem>("detectedAt", "date"),
-        sortOrder: sortOrder === null ? undefined : sortOrder,
+        sortOrder: getColumnSortOrder("detectedAt"),
         render: (val: string) => (val ? dayjs(val).format("YYYY-MM-DD HH:mm:ss") : "-"),
       },
       {
@@ -226,7 +236,7 @@ const Exceptions = () => {
         key: "conflictType",
         width: 110,
         sorter: createSorter<ExceptionListItem>("conflictType"),
-        sortOrder: sortOrder === null ? undefined : sortOrder,
+        sortOrder: getColumnSortOrder("conflictType"),
         render: (val: string) => {
           const label = conflictTypeMap[val] || val;
           const cls = conflictTypeListClass[val];
@@ -239,7 +249,7 @@ const Exceptions = () => {
         key: "severity",
         width: 100,
         sorter: createSorter<ExceptionListItem>("severity"),
-        sortOrder: sortOrder === null ? undefined : sortOrder,
+        sortOrder: getColumnSortOrder("severity"),
         render: (val: string) => {
           const label = severityMap[val] || val;
           const isCritical = val === "critical";
@@ -253,7 +263,7 @@ const Exceptions = () => {
         width: 140,
         ellipsis: true,
         sorter: createSorter<ExceptionListItem>("assetCode"),
-        sortOrder: sortOrder === null ? undefined : sortOrder,
+        sortOrder: getColumnSortOrder("assetCode"),
       },
       {
         title: "资产IP",
@@ -346,7 +356,7 @@ const Exceptions = () => {
         ),
       },
     ],
-    [sortOrder, conflictTypeMap, conflictTypeListClass, severityMap, canResolve]
+    [getColumnSortOrder, conflictTypeMap, conflictTypeListClass, severityMap, canResolve]
   );
 
   // 提交"标记已解决" Modal

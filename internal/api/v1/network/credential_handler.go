@@ -61,10 +61,11 @@ func (h *CredentialHandler) List(c *gin.Context) {
 		rawReq = make(map[string]interface{})
 	}
 
-	req := services.ListCredentialRequest{
-		Current:  getIntField(rawReq, "current", 1),
-		PageSize: getIntField(rawReq, "pageSize", 10),
-	}
+	req := services.ListCredentialRequest{}
+	req.Current = getIntField(rawReq, "current", 1)
+	req.PageSize = getIntField(rawReq, "pageSize", 10)
+	req.OrderByColumn = getStringField(rawReq, "orderByColumn")
+	req.IsAsc = getBoolFieldPtr(rawReq, "isAsc")
 
 	if val, ok := rawReq["credentialName"].(string); ok && val != "" {
 		req.CredentialName = &val

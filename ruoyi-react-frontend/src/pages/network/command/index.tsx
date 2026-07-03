@@ -3,7 +3,7 @@
  * 网络命令分发页面
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FC } from "react";
 import {
   Table,
@@ -35,6 +35,8 @@ import { getExecutionColumns, deviceColumns } from "./columns";
 import { CommandDispatchModal, CommandDetailDrawer } from "./modals";
 import { STATUS_OPTIONS } from "./constants";
 import { usePagination } from "@/hooks/usePagination";
+import { useServerSort } from "@/hooks/useServerSort";
+import { createSorterMeta } from "@/utils/tableHelpers";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
 import { DownloadOutlined } from "@ant-design/icons";
@@ -57,6 +59,19 @@ const CommandDispatch: FC = () => {
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
+  // 服务端排序:field 与 columns.dataIndex 对齐
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<ConfigExecution>("executionName"),
+      createSorterMeta<ConfigExecution>("status"),
+      createSorterMeta<ConfigExecution>("createdAt", "date"),
+    ],
+    []
+  );
+  const { orderByColumn, isAsc, handleTableChange: handleCmdSortChange, sortOrder: cmdSortOrder } = useServerSort<ConfigExecution>({
+    sorterMetas,
+  });
 
   const {
     executions,
@@ -106,10 +121,15 @@ const CommandDispatch: FC = () => {
     setDispatchModalVisible(true);
   };
 
-  const columns = getExecutionColumns({
-    handleViewDetail,
-    handleCancel: (id: string) => handleCancelExecution(id, handleSuccess),
-  });
+  const columns = useMemo(
+    () =>
+      getExecutionColumns({
+        handleViewDetail,
+        handleCancel: (id: string) => handleCancelExecution(id, handleSuccess),
+        getSortOrder: (field) => (orderByColumn === field ? (cmdSortOrder ?? null) as "ascend" | "descend" | null : null),
+      }),
+    [handleViewDetail, handleSuccess, orderByColumn, cmdSortOrder]
+  );
 
   // 批量导出
   const handleBatchExport = async (entityTypes: string[]) => {
@@ -257,11 +277,16 @@ const CommandDispatch: FC = () => {
           rowKey="id"
           scroll={{ x: 1400 }}
           pagination={paginationProps}
-          onChange={(pagination) => {
+          onChange={(pagination, _filters, sorter) => {
+            handleCmdSortChange(pagination, _filters, sorter);
             setCurrent(pagination.current ?? 1);
             setPageSize(pagination.pageSize ?? 10);
             const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
-            const searchParams: Record<string, unknown> = { current: pagination.current ?? 1, pageSize: pagination.pageSize ?? 10 };
+            const searchParams: Record<string, unknown> = {
+              current: pagination.current ?? 1,
+              pageSize: pagination.pageSize ?? 10,
+              ...(orderByColumn ? { orderByColumn, isAsc } : {}),
+            };
             Object.keys(formValues).forEach(key => {
               const value = formValues[key];
               if (value !== undefined && value !== null && value !== "") {

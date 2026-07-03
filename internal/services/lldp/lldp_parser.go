@@ -39,7 +39,9 @@ func (p *LLDPParser) ParseLLDPNeighbors(output string, vendor models.DeviceVendo
 		return nil, fmt.Errorf("failed to parse LLDP output: %w", err)
 	}
 
-	var neighbors []*models.LLDPNeighborInfo
+	// 2026-07-01: 初始化为空 slice(非 nil),让格式错误/无匹配的输入返回
+	// 非 nil 空切片,匹配 TestParseMalformedLLDPOutput 的 NotNil 断言。
+	neighbors := make([]*models.LLDPNeighborInfo, 0)
 	for _, record := range records {
 		neighbor := &models.LLDPNeighborInfo{}
 

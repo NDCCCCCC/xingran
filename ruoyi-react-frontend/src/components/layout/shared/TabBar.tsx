@@ -18,6 +18,8 @@ import {
 	DownOutlined,
 	LeftOutlined,
 	RightOutlined,
+	LockOutlined,
+	UnlockOutlined,
 } from "@ant-design/icons";
 import "@/design-system/themes/theme-styles.css";
 import type { FC, ReactNode } from "react";
@@ -39,7 +41,7 @@ interface ContextMenuState {
 }
 
 const TabBar: FC = () => {
-  const { tabs, activeTab, setActiveTab, removeTab, closeAllTabs, closeOtherTabs, closeLeftTabs, closeRightTabs } = useTabs();
+  const { tabs, activeTab, setActiveTab, removeTab, closeAllTabs, closeOtherTabs, closeLeftTabs, closeRightTabs, pinTab, unpinTab } = useTabs();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -148,6 +150,24 @@ const TabBar: FC = () => {
 
     return [
       {
+        key: "lock",
+        label: tab?.pinned ? "解锁标签" : "锁定标签",
+        icon: tab?.pinned ? <UnlockOutlined /> : <LockOutlined />,
+        // 仪表盘始终固定，不允许解锁
+        disabled: contextMenuState.tabKey === "/dashboard",
+        onClick: () => {
+          if (contextMenuState.tabKey) {
+            if (tab?.pinned) {
+              unpinTab(contextMenuState.tabKey);
+            } else {
+              pinTab(contextMenuState.tabKey);
+            }
+          }
+          setContextMenuState(prev => ({ ...prev, visible: false }));
+        },
+      },
+      { type: "divider" },
+      {
         key: "close",
         label: "关闭当前标签",
         icon: <CloseOutlined />,
@@ -195,7 +215,7 @@ const TabBar: FC = () => {
         },
       },
     ];
-  }, [tabs, contextMenuState.tabKey, handleTabClose, closeOtherTabs, closeLeftTabs, closeRightTabs]);
+  }, [tabs, contextMenuState.tabKey, handleTabClose, closeOtherTabs, closeLeftTabs, closeRightTabs, pinTab, unpinTab]);
 
   // 更多标签菜单
   const moreMenuItems: MenuProps["items"] = useMemo(() => {
@@ -247,9 +267,17 @@ const TabBar: FC = () => {
     ];
   }, [tabs, handleTabChange, handleTabClose, closeAllTabs]);
 
-  // 自定义 Tab label（添加右键菜单）
-  const createTabLabel = (tab: { title: string | ReactNode; key: string }) => (
-    <span onContextMenu={(e) => handleTabContextMenu(tab.key, e)}>{tab.title}</span>
+  // 自定义 Tab label（添加右键菜单 + 锁定图标）
+  const createTabLabel = (tab: { title: string | ReactNode; key: string; pinned?: boolean }) => (
+    <span
+      onContextMenu={(e) => handleTabContextMenu(tab.key, e)}
+      style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
+    >
+      {tab.pinned && (
+        <LockOutlined style={{ fontSize: "11px", color: "var(--theme-text-secondary)" }} />
+      )}
+      {tab.title}
+    </span>
   );
 
   // 全局事件监听 - 关闭右键菜单

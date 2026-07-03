@@ -88,6 +88,8 @@ const PortStatusPage: FC = () => {
     handleSearch,
     handleReset,
     handleRefresh,
+    orderByColumn,
+    isAsc,
   } = useTableManager<DevicePortStatus>(
     async (params) => {
       const formValues = searchForm.getFieldsValue();
@@ -98,6 +100,9 @@ const PortStatusPage: FC = () => {
         ...values,
         // 如果从设备页面跳转过来，强制使用 URL 中的 deviceId
         ...(isFromDevice ? { deviceId: deviceIdFromUrl } : {}),
+        // useTableManager 内部通过 params 已带 current/pageSize;排序由其内部 ref
+        // 写入 params.orderByColumn/isAsc(随 sorterMetas 启用后),这里显式展开保证不被覆盖
+        ...(params.orderByColumn ? { orderByColumn: params.orderByColumn, isAsc: params.isAsc } : {}),
       }) as { data: { list: DevicePortStatus[]; total: number } };
       return result.data;
     },

@@ -1,5 +1,6 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Form } from "antd";
+import { useLocation } from "react-router-dom";
 import type { FormInstance } from "antd/es/form";
 import type {
   TablePaginationConfig,
@@ -7,6 +8,8 @@ import type {
   SorterResult,
 } from "antd/es/table/interface";
 import { useServerSort, resolveSorter } from "@/hooks/useServerSort";
+import { usePersistedStateController } from "@/hooks/usePersistedState";
+import { TABLE_STATE_PREFIX, sanitizePathForKey } from "@/constants/storage";
 import type { SortOrder } from "@/hooks/useServerSort";
 import type { SorterMeta } from "@/utils/tableHelpers";
 
@@ -89,6 +92,24 @@ function filterEmpty(values?: Record<string, unknown>): Record<string, unknown> 
 }
 
 /**
+ * 读取 sessionStorage 中持久化的 filters 作为 filtersRef 初始值（mount 恢复用）。
+ * 仅在 useRef 初始化时执行一次；损坏 / 非对象数据返回 {}。
+ */
+function readInitialFilters(storageKey: string): Record<string, unknown> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.sessionStorage.getItem(storageKey);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+/**
  * 统一表格管理 Hook
  * 封装表格页面常见的状态和操作：加载/分页/搜索/排序/表单/弹窗/选中行。
  *
@@ -109,16 +130,25 @@ export function useTableManager<T>(
     sorterMetas,
     defaultSort,
   } = options;
+  const location = useLocation();
 
-  // 表格状态
+  // 表格状态（运行时，不持久化）
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<T[]>([]);
   const [total, setTotal] = useState(0);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
-  // 内部分页状态
-  const [internalCurrent, setInternalCurrent] = useState(1);
-  const [internalPageSize, setInternalPageSize] = useState(defaultPageSize);
+  // 内部分页状态（持久化；slot 与 usePagination 一致，同页互洽）
+  const [internalCurrent, setInternalCurrent] = usePersistedStateController<number>({
+    keyPrefix: location.pathname,
+    keySuffix: "current",
+    defaultValue: 1,
+  });
+  const [internalPageSize, setInternalPageSize] = usePersistedStateController<number>({
+    keyPrefix: location.pathname,
+    keySuffix: "pageSize",
+    defaultValue: defaultPageSize,
+  });
 
   // 分页状态（优先使用外部）
   const current = externalPagination?.current ?? internalCurrent;
@@ -135,13 +165,40 @@ export function useTableManager<T>(
   // 服务端排序
   const sort = useServerSort<T>({ sorterMetas, defaultSort });
 
+  // filters 持久化：ref + sessionStorage mirror。
+  // 保持 filtersRef 的同步可读性（loadData 空依赖读 ref），mount 时从 sessionStorage 恢复，
+  // 写入时同步镜像；切 tab / 刷新可恢复筛选条件，关闭 tab / 登出由外部统一清理。
+  const filtersStorageKey = `${TABLE_STATE_PREFIX}${sanitizePathForKey(location.pathname)}_filters`;
+  const filtersRef = useRef<Record<string, unknown>>(readInitialFilters(filtersStorageKey));
+
+  const persistFilters = useCallback((next: Record<string, unknown>) => {
+    filtersRef.current = next;
+    try {
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem(filtersStorageKey, JSON.stringify(next));
+      }
+    } catch {
+      // 隐私模式 / 配额溢出 — 静默
+    }
+  }, [filtersStorageKey]);
+
+  const clearPersistedFilters = useCallback(() => {
+    filtersRef.current = {};
+    try {
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem(filtersStorageKey);
+      }
+    } catch {
+      // ignore
+    }
+  }, [filtersStorageKey]);
+
   // ref 镜像层：loadData 等用空依赖 useCallback 读 ref，规避 stale 闭包（沿用既定模式）
   const loadFunctionRef = useRef(loadFunction);
   const externalPaginationRef = useRef(externalPagination);
   const onSuccessRef = useRef(onSuccess);
   const currentRef = useRef(current);
   const pageSizeRef = useRef(pageSize);
-  const filtersRef = useRef<Record<string, unknown>>({});
   const orderByColumnRef = useRef(sort.orderByColumn);
   const isAscRef = useRef(sort.isAsc);
   loadFunctionRef.current = loadFunction;
@@ -151,6 +208,16 @@ export function useTableManager<T>(
   pageSizeRef.current = pageSize;
   orderByColumnRef.current = sort.orderByColumn;
   isAscRef.current = sort.isAsc;
+
+  // mount 时若存在恢复的 filters，回填到搜索表单，保持 UI 与查询参数一致
+  useEffect(() => {
+    const restored = filtersRef.current;
+    if (restored && Object.keys(restored).length > 0) {
+      searchForm.setFieldsValue(restored);
+    }
+    // 仅 mount 一次：searchForm 引用稳定
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchForm]);
 
   // loadData 读 ref 组装参数：current/pageSize + filters(持久化) + 排序。
   // params 作为 override 最后展开，可覆盖任意字段（分页/排序联动显式传新值）。
@@ -181,15 +248,15 @@ export function useTableManager<T>(
   // 供外部筛选联动（如部门树点击）显式调用；handleSearch 是它的无参便捷形式。
   const applyFilters = useCallback(
     (extra?: Record<string, unknown>) => {
-      filtersRef.current = {
+      persistFilters({
         ...filterEmpty(searchForm.getFieldsValue() as Record<string, unknown>),
         ...filterEmpty(extra),
-      };
+      });
       currentRef.current = 1;
       setCurrent(1);
       loadData({ current: 1 });
     },
-    [searchForm, setCurrent, loadData]
+    [searchForm, setCurrent, loadData, persistFilters]
   );
 
   const handleSearch = useCallback(() => {
@@ -198,14 +265,14 @@ export function useTableManager<T>(
 
   const handleReset = useCallback(() => {
     searchForm.resetFields();
-    filtersRef.current = {};
+    clearPersistedFilters();
     sort.resetSort();
     orderByColumnRef.current = undefined;
     isAscRef.current = undefined;
     currentRef.current = 1;
     setCurrent(1);
     loadData({ current: 1 });
-  }, [searchForm, setCurrent, loadData, sort]);
+  }, [searchForm, setCurrent, loadData, sort, clearPersistedFilters]);
 
   const handleRefresh = useCallback(() => {
     loadData();

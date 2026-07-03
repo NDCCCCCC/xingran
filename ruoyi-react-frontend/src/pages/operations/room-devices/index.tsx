@@ -2,7 +2,7 @@
  * 机房设备管理页面
  */
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import type { FC } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
@@ -22,7 +22,7 @@ import { useTableManager } from "@/hooks/useTableManager";
 import { usePagination } from "@/hooks/usePagination";
 import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
-import { createDateTimeColumn } from "@/utils/tableHelpers";
+import { createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
 import ActionButtons from "@/components/shared/ActionButtons";
 import ExcelImport from "@/components/shared/ExcelImport";
 import ExcelExport from "@/components/shared/ExcelExport";
@@ -93,12 +93,27 @@ const RoomDeviceManagement: FC = () => {
     }
   }, []);
 
+  // 服务端排序:field 必须与 columns 的 dataIndex 一致
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<RoomDevice>("name"),
+      createSorterMeta<RoomDevice>("deviceCode"),
+      createSorterMeta<RoomDevice>("roomName"),
+      createSorterMeta<RoomDevice>("deviceType"),
+      createSorterMeta<RoomDevice>("status"),
+      createSorterMeta<RoomDevice>("createdAt", "date"),
+    ],
+    []
+  );
+
   const {
     loading, data: devices, total, selectedRowKeys,
     searchForm, editForm: deviceForm, editModalVisible: modalVisible,
     editingItem: editingDevice, setSelectedRowKeys, setEditModalVisible: setModalVisible,
     setEditingItem: setEditingDevice, handleSearch,
     handleReset, handleAdd, handleEdit, handleModalClose, loadData: loadDevices, resetSelection,
+    handleTableChange: handleDeviceTableChange,
+    getColumnSortOrder: getDeviceColumnSortOrder,
   } = useTableManager<RoomDevice>(
     async (params) => {
       // 使用 ref 获取最新的部门 ID，避免闭包捕获旧值
@@ -115,6 +130,7 @@ const RoomDeviceManagement: FC = () => {
         setPageSize,
         setTotal,
       },
+      sorterMetas,
     }
   );
 
@@ -202,6 +218,15 @@ const RoomDeviceManagement: FC = () => {
   const openModal = (record?: RoomDevice) => {
     if (record) {
       handleEdit(record);
+      // 机房兜底注入(2026-06-30,同 info-points):loadRoomOptions 异步且 pageSize:50
+      // 可能不包含当前 roomId → Select 显示 raw UUID。用 record.roomName 注入。
+      if (record.roomId) {
+        setRoomOptions(prev =>
+          prev.find(r => r.id === record.roomId)
+            ? prev
+            : [...prev, { id: record.roomId, name: record.roomName || "未命名机房", buildingId: "", orgId: "" }]
+        );
+      }
       deviceForm.setFieldsValue(record);
     } else {
       handleAdd();
@@ -228,13 +253,15 @@ const RoomDeviceManagement: FC = () => {
   };
 
   const columns: ColumnsType<RoomDevice> = [
-    { title: "设备名称", dataIndex: "name", key: "name", width: 150 },
-    { title: "设备编码", dataIndex: "deviceCode", key: "deviceCode", width: 150 },
+    { title: "设备名称", dataIndex: "name", key: "name", width: 150, sorter: true, sortOrder: getDeviceColumnSortOrder("name") },
+    { title: "设备编码", dataIndex: "deviceCode", key: "deviceCode", width: 150, sorter: true, sortOrder: getDeviceColumnSortOrder("deviceCode") },
     {
       title: "所属机房",
       dataIndex: "roomName",
       key: "roomName",
       width: 120,
+      sorter: true,
+      sortOrder: getDeviceColumnSortOrder("roomName"),
       render: (roomName) => roomName || "-",
     },
     {
@@ -242,6 +269,8 @@ const RoomDeviceManagement: FC = () => {
       dataIndex: "deviceType",
       key: "deviceType",
       width: 100,
+      sorter: true,
+      sortOrder: getDeviceColumnSortOrder("deviceType"),
       render: (type) => <Tag>{getDeviceTypeText(type as string)}</Tag>,
     },
     { title: "厂商", dataIndex: "vendor", key: "vendor", width: 100, render: (v) => v || "-" },
@@ -252,12 +281,14 @@ const RoomDeviceManagement: FC = () => {
       dataIndex: "status",
       key: "status",
       width: 80,
+      sorter: true,
+      sortOrder: getDeviceColumnSortOrder("status"),
       render: (status) => {
         const colors: Record<number, string> = { 0: "success", 1: "error", 2: "default" };
         return <Tag color={colors[status as keyof typeof colors]}>{getStatusText(status as number)}</Tag>;
       },
     },
-    createDateTimeColumn("createdAt", { width: 180 }),
+    createDateTimeColumn("createdAt", { width: 180, sorter: true, sortOrder: getDeviceColumnSortOrder("createdAt") }),
     {
       title: "操作", key: "action",
       render: (_, record) => {
@@ -426,21 +457,7 @@ const RoomDeviceManagement: FC = () => {
               loading={loading}
               rowKey="id"
               pagination={paginationProps}
-              onChange={(pagination) => {
-                const newPage = pagination.current || 1;
-                const newPageSize = pagination.pageSize || 10;
-                setCurrent(newPage);
-                setPageSize(newPageSize);
-                const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
-	                const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
-	                Object.keys(formValues).forEach(key => {
-	                  const value = formValues[key];
-	                  if (value !== undefined && value !== null && value !== "") {
-	                    searchParams[key] = value;
-	                  }
-	                });
-	                loadDevices(searchParams);
-              }}
+              onChange={handleDeviceTableChange}
             />
           ) : renderCardView()}
         </Card>

@@ -1,4 +1,6 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
+import { useLocation } from "react-router-dom";
+import { usePersistedStateController } from "@/hooks/usePersistedState";
 import type {
   TablePaginationConfig,
   FilterValue,
@@ -19,7 +21,7 @@ export interface UseServerSortOptions<T = unknown> {
    */
   sorterMetas?: Array<SorterMeta<T> | undefined>;
   /**
-   * 默认排序。可选;若提供则首屏按此排序(对应后端硬编码默认排序的覆盖)。
+   * 默认排序。可选;同时作为"无持久化值时"的首屏排序。
    */
   defaultSort?: { orderByColumn: string; isAsc?: boolean };
 }
@@ -29,7 +31,7 @@ export interface UseServerSortReturn {
   orderByColumn: string | undefined;
   /** 后端排序方向:true=升序 false=降序 undefined=无排序 */
   isAsc: boolean | undefined;
-  /** 当前 antd 排序方向字面量("ascend"/"descend"/null),用于受控 Table 的 sortDirections 同步 */
+  /** 当前 antd 排序方向字面量("ascend"/"descend"/null),由 orderByColumn/isAsc 派生 */
   sortOrder: SortOrder;
   /**
    * 接 antd Table onChange 第三参数。
@@ -53,11 +55,12 @@ export interface UseServerSortReturn {
 
 /**
  * 通用服务端排序 hook:把 antd Table 的 sorter 状态翻译成
- * 后端 BaseListRequest 的 { orderByColumn, isAsc } 参数。
+ * 后端 BaseListRequest 的 { orderByColumn, isAsc } 参数，并按 location.pathname
+ * 持久化到 sessionStorage，使切换应用内标签页 / 刷新后能恢复到上次的排序。
  *
  * 设计要点:
- *   - 零依赖:不调用 antd message / 不修改 URL;仅维护 useState
- *   - 类型安全:T 列类型通过 sorterMetas 的 SorterMeta<T> 推导
+ *   - 零依赖:不调用 antd message / 不修改 URL;持久化走 sessionStorage
+ *   - sortOrder 由 orderByColumn/isAsc 派生,不单独持久化（避免三态不一致）
  *   - 兼容单列与多列(取最后一列有效 sorter;antd v5 多列排序通常被禁用)
  *   - 兜底:若 sorter.field 不在 sorterMetas 列表中(用户点了不可排序列),
  *     则忽略该次操作并保持当前 state,避免污染
@@ -91,33 +94,32 @@ export function useServerSort<T = unknown>(
   options: UseServerSortOptions<T> = {}
 ): UseServerSortReturn {
   const { sorterMetas = [], defaultSort } = options;
+  const location = useLocation();
 
-  const initial: {
-    orderByColumn: string | undefined;
-    isAsc: boolean | undefined;
-    sortOrder: SortOrder;
-  } = useMemo(() => {
-    if (defaultSort) {
-      return {
-        orderByColumn: defaultSort.orderByColumn,
-        isAsc: defaultSort.isAsc ?? true,
-        sortOrder: defaultSort.isAsc === false ? "descend" : "ascend",
-      };
-    }
-    return { orderByColumn: undefined, isAsc: undefined, sortOrder: null };
-  }, [defaultSort]);
+  // 持久化排序：defaultSort 作为"无持久化值时"的首屏值与 reset 回退目标。
+  const [orderByColumn, setOrderByColumn] = usePersistedStateController<string | undefined>({
+    keyPrefix: location.pathname,
+    keySuffix: "orderByColumn",
+    defaultValue: defaultSort?.orderByColumn,
+  });
+  const [isAsc, setIsAsc] = usePersistedStateController<boolean | undefined>({
+    keyPrefix: location.pathname,
+    keySuffix: "isAsc",
+    defaultValue: defaultSort?.isAsc ?? true,
+  });
 
-  const [orderByColumn, setOrderByColumn] = useState<string | undefined>(
-    initial.orderByColumn
-  );
-  const [isAsc, setIsAsc] = useState<boolean | undefined>(initial.isAsc);
-  const [sortOrder, setSortOrder] = useState<SortOrder>(initial.sortOrder);
+  // sortOrder 派生（不单独持久化，避免与 orderByColumn/isAsc 三态不一致）
+  const sortOrder: SortOrder = useMemo(() => {
+    if (orderByColumn === undefined) return null;
+    return isAsc === false ? "descend" : "ascend";
+  }, [orderByColumn, isAsc]);
 
   const resetSort = useCallback(() => {
+    // 清空排序：强制 undefined（即使存在 defaultSort 也回到无排序状态）。
+    // 注：setValue(undefined) 写入的脏值会在下次 mount 时由 readInitial 自愈回 defaultValue。
     setOrderByColumn(undefined);
     setIsAsc(undefined);
-    setSortOrder(null);
-  }, []);
+  }, [setOrderByColumn, setIsAsc]);
 
   const handleTableChange = useCallback(
     <R,>(
@@ -134,7 +136,6 @@ export function useServerSort<T = unknown>(
       }
 
       // 仅当 sorter.field 对应 sorterMetas 中已注册的可排序列时才更新 state
-      // 这样可以安全地让该 hook 与多 Table / 不可排序列混用
       const meta = sorterMetas.find(
         (m) => m !== undefined && m.field === String(s.field)
       );
@@ -147,19 +148,16 @@ export function useServerSort<T = unknown>(
       if (order === "ascend") {
         setOrderByColumn(meta.field);
         setIsAsc(true);
-        setSortOrder("ascend");
       } else if (order === "descend") {
         setOrderByColumn(meta.field);
         setIsAsc(false);
-        setSortOrder("descend");
       } else {
         // antd 'null' / undefined: 清空排序
         setOrderByColumn(undefined);
         setIsAsc(undefined);
-        setSortOrder(null);
       }
     },
-    [sorterMetas, resetSort]
+    [sorterMetas, resetSort, setOrderByColumn, setIsAsc]
   );
 
   return { orderByColumn, isAsc, sortOrder, handleTableChange, resetSort };

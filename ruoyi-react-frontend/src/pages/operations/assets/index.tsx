@@ -44,6 +44,7 @@ import {
   useReconciliationVisibility,
   type DrawerTabKey,
 } from "@/components/reconciliation";
+import { defaultAssetColumns, type AssetColumnConfig } from "./columnsSchema";
 
 const { Option } = Select;
 
@@ -56,90 +57,13 @@ interface Statistics {
 }
 
 // 设备类型选项
-interface AssetColumnConfig {
-  key: string;
-  label: string;
-  visible: boolean;
-  order: number;
-  width: number;
-  group: string;
-}
-
 interface DeviceTypeOption {
   value: string;
   count: number;
 }
 
-// 默认列配置（52 列）
-const defaultAssetColumns: AssetColumnConfig[] = [
-  // 核心标识 (3列)
-  { key: "devicesn", label: "设备序列号", visible: true, order: 1, width: 150, group: "核心标识" },
-  { key: "sequenceNo", label: "序列号", visible: false, order: 2, width: 120, group: "核心标识" },
-  { key: "fixAssetNo", label: "固定资产编号", visible: true, order: 3, width: 120, group: "核心标识" },
-  // 设备信息 (4列)
-  { key: "deviceModelName", label: "设备型号", visible: true, order: 4, width: 120, group: "设备信息" },
-  { key: "deviceTypeName", label: "设备类型", visible: true, order: 5, width: 100, group: "设备信息" },
-  { key: "deviceCategorySecondName", label: "设备中类", visible: false, order: 6, width: 120, group: "设备信息" },
-  { key: "deviceBasicTypeName", label: "是否固定资产", visible: true, order: 7, width: 100, group: "设备信息" },
-  // 设备状态 (1列)
-  { key: "deviceStatusName", label: "设备状态", visible: true, order: 8, width: 100, group: "设备状态" },
-  // 所属部门和领取人 (4列)
-  { key: "deptName", label: "所属部门", visible: true, order: 9, width: 120, group: "部门与用户" },
-  { key: "recipientName", label: "领取人", visible: true, order: 10, width: 100, group: "部门与用户" },
-  { key: "recipientPhone", label: "领取人电话", visible: false, order: 11, width: 120, group: "部门与用户" },
-  { key: "recipientEmail", label: "领取人邮箱", visible: false, order: 12, width: 150, group: "部门与用户" },
-  // 网络信息 (2列)
-  { key: "machineIp", label: "加域IP", visible: true, order: 13, width: 120, group: "网络信息" },
-  { key: "mac1", label: "有线MAC", visible: true, order: 14, width: 140, group: "网络信息" },
-  // 主机和操作系统 (2列)
-  { key: "assetHostname", label: "主机名", visible: false, order: 15, width: 120, group: "系统信息" },
-  { key: "osName", label: "操作系统", visible: false, order: 16, width: 100, group: "系统信息" },
-  { key: "osVersion", label: "系统版本", visible: false, order: 17, width: 100, group: "系统信息" },
-  // 硬件信息 (5列)
-  { key: "cpuModel", label: "CPU型号", visible: false, order: 18, width: 120, group: "硬件信息" },
-  { key: "cpuCores", label: "CPU核心数", visible: false, order: 19, width: 80, group: "硬件信息" },
-  { key: "memoryCapacity", label: "内存容量", visible: false, order: 20, width: 100, group: "硬件信息" },
-  { key: "diskCapacity", label: "硬盘容量", visible: false, order: 21, width: 100, group: "硬件信息" },
-  { key: "graphicsCard", label: "显卡型号", visible: false, order: 22, width: 120, group: "硬件信息" },
-  // 采购与保修 (3列)
-  { key: "purchaseDate", label: "购置日期", visible: false, order: 23, width: 120, group: "采购信息" },
-  { key: "warrantyExpireDate", label: "保修到期日", visible: false, order: 24, width: 120, group: "采购信息" },
-  { key: "supplierName", label: "供应商", visible: false, order: 25, width: 120, group: "采购信息" },
-  { key: "manufacturerName", label: "制造商", visible: false, order: 26, width: 120, group: "采购信息" },
-  // 位置信息 (5列)
-  { key: "assetLocation", label: "资产位置", visible: true, order: 27, width: 120, group: "位置信息" },
-  { key: "buildingName", label: "所在大楼", visible: true, order: 28, width: 100, group: "位置信息" },
-  { key: "floorName", label: "所在楼层", visible: true, order: 29, width: 80, group: "位置信息" },
-  { key: "workstationName", label: "所在工位", visible: false, order: 30, width: 120, group: "位置信息" },
-  { key: "serverRoomName", label: "所在机房", visible: false, order: 31, width: 120, group: "位置信息" },
-  // 网络连接 (2列)
-  { key: "networkSwitchName", label: "网络交换机", visible: false, order: 32, width: 120, group: "网络连接" },
-  { key: "switchPort", label: "交换机端口", visible: false, order: 33, width: 120, group: "网络连接" },
-  { key: "voltage", label: "电压", visible: false, order: 34, width: 80, group: "网络连接" },
-  // 使用状态 (1列)
-  { key: "useStatusName", label: "使用状态", visible: true, order: 35, width: 100, group: "使用状态" },
-  // 财务信息 (7列)
-  { key: "financeCode", label: "财务编码", visible: false, order: 36, width: 100, group: "财务信息" },
-  { key: "projectCode", label: "项目编码", visible: false, order: 37, width: 100, group: "财务信息" },
-  { key: "assetCost", label: "资产成本", visible: false, order: 38, width: 100, group: "财务信息" },
-  { key: "depreciationPeriod", label: "折旧年限", visible: false, order: 39, width: 100, group: "财务信息" },
-  { key: "netBookValue", label: "账面净值", visible: false, order: 40, width: 100, group: "财务信息" },
-  { key: "depreciationRate", label: "折旧率", visible: false, order: 41, width: 100, group: "财务信息" },
-  { key: "accumulatorDepreciation", label: "累计折旧", visible: false, order: 42, width: 120, group: "财务信息" },
-  // 其他信息 (1列)
-  { key: "remark", label: "备注", visible: true, order: 43, width: 200, group: "其他" },
-  // 归属与责任 (5列)
-  { key: "signOrgnoName", label: "归属机构", visible: true, order: 44, width: 150, group: "归属与责任" },
-  { key: "nowUserName", label: "责任人", visible: true, order: 45, width: 100, group: "归属与责任" },
-  { key: "nowUserDeptCode", label: "部门编码", visible: true, order: 46, width: 120, group: "归属与责任" },
-  { key: "deviceUserName", label: "领取人", visible: true, order: 47, width: 100, group: "归属与责任" },
-  // 状态与日期 (4列)
-  { key: "status", label: "状态", visible: true, order: 48, width: 80, group: "状态与日期" },
-  { key: "nbfStatus", label: "拟报废", visible: true, order: 49, width: 80, group: "状态与日期" },
-  { key: "drawingDate", label: "接收日期", visible: true, order: 50, width: 120, group: "状态与日期" },
-  { key: "machineUptime", label: "最后上线", visible: true, order: 51, width: 150, group: "状态与日期" },
-  { key: "lastInventoryDate", label: "盘点日期", visible: true, order: 52, width: 120, group: "状态与日期" },
-];
+// 导出类型供其他文件复用(避免 columnsSchema.ts 直接被外引,保持单向依赖)
+export type { AssetColumnConfig };
 
 const AssetList: FC = () => {
   const { message } = App.useApp();
@@ -346,98 +270,110 @@ const AssetList: FC = () => {
   };
 
   const columns: ColumnsType<Asset> = [
+    // order=1
     {
-      title: "设备序列号",
-      dataIndex: "devicesn",
-      key: "devicesn",
-      width: 150,
-      fixed: "left",
-      sorter: true,
-      sortOrder: getColumnSortOrder("devicesn"),
+      title: "设备序列号", dataIndex: "devicesn", key: "devicesn", width: 150,
+      fixed: "left", sorter: true, sortOrder: getColumnSortOrder("devicesn"),
       render: (text) => (
-        <Tooltip title={text}>
-          <span style={{ cursor: "pointer" }}>{text}</span>
-        </Tooltip>
+        <Tooltip title={text}><span style={{ cursor: "pointer" }}>{text}</span></Tooltip>
       ),
     },
+    // order=2
+    { key: "sequenceNo", title: "序列号", dataIndex: "sequenceNo", width: 120, ellipsis: true },
+    // order=3
+    { key: "fixAssetNo", title: "固定资产编号", dataIndex: "fixAssetNo", width: 120, ellipsis: true },
+    // order=4
+    { key: "deviceModelName", title: "设备型号", dataIndex: "deviceModelName", width: 120, ellipsis: true },
+    // order=5
     {
-      title: "型号",
-      dataIndex: "deviceTypeName",
-      key: "deptName",
-      width: 120,
-      ellipsis: true,
-      sorter: true,
-      sortOrder: getColumnSortOrder("deviceTypeName"),
-      render: (status: number) => (
-        <Tag color={status === 0 ? "green" : "red"}>
-          {status === 0 ? "正常" : "停用"}
-        </Tag>
+      key: "deviceTypeName", title: "设备类型", dataIndex: "deviceTypeName", width: 100,
+      ellipsis: true, sorter: true, sortOrder: getColumnSortOrder("deviceTypeName"),
+    },
+    // order=6
+    { key: "deviceCategorySecondName", title: "设备中类", dataIndex: "deviceCategorySecondName", width: 120, ellipsis: true },
+    // order=7
+    { key: "deviceBasicTypeName", title: "是否固定资产", dataIndex: "deviceBasicTypeName", width: 100, ellipsis: true },
+    // order=9
+    { key: "usefulDeptName", title: "所属部门", dataIndex: "usefulDeptName", width: 120, ellipsis: true },
+    // order=13
+    { key: "machineIp", title: "加域IP", dataIndex: "machineIp", width: 120, ellipsis: true },
+    // order=14
+    { key: "mac1", title: "有线MAC", dataIndex: "mac1", width: 140, ellipsis: true,
+      render: (text) => (text ? String(text).toUpperCase() : "-") },
+    // order=35
+    { key: "useStatusLabel", title: "使用状态", dataIndex: "useStatusLabel", width: 100, ellipsis: true },
+    // order=43
+    { key: "remark", title: "备注", dataIndex: "remark", width: 200, ellipsis: true },
+    // order=44
+    { key: "signOrgnoName", title: "归属机构", dataIndex: "signOrgnoName", width: 150, ellipsis: true },
+    // order=45
+    { key: "nowUserName", title: "责任人", dataIndex: "nowUserName", width: 100, ellipsis: true },
+    // order=46
+    { key: "nowUserDeptCode", title: "部门编码", dataIndex: "nowUserDeptCode", width: 120, ellipsis: true },
+    // order=47
+    { key: "deviceUserName", title: "领取人", dataIndex: "deviceUserName", width: 100, ellipsis: true },
+    // order=48
+    {
+      key: "status", title: "状态", dataIndex: "status", width: 80,
+      render: (s: number) => (
+        <Tag color={s === 0 ? "green" : "red"}>{s === 0 ? "正常" : "停用"}</Tag>
       ),
     },
+    // order=49
     {
-      title: "拟报废",
-      dataIndex: "machineIp",
-      key: "mac1",
-      width: 100,
+      key: "nbfStatus", title: "拟报废", dataIndex: "nbfStatus", width: 80,
+      render: (s: number) => (
+        <Tag color={s === 1 ? "orange" : "default"}>{s === 1 ? "是" : "否"}</Tag>
+      ),
+    },
+    // order=50
+    { key: "drawingDate", title: "接收日期", dataIndex: "drawingDate", width: 120,
+      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"), ellipsis: true },
+    // order=51
+    { key: "machineUptime", title: "最后上线", dataIndex: "machineUptime", width: 150,
+      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD HH:mm:ss") : "-"), ellipsis: true },
+    // order=52
+    {
+      key: "lastInventoryDate", title: "盘点日期", dataIndex: "lastInventoryDate", width: 120,
+      ellipsis: true, sorter: true, sortOrder: getColumnSortOrder("lastInventoryDate"),
       render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"),
     },
+    // 设备信息扩展 (order=54 设备渠道, order=55 设备属性)
+    { key: "qudaoName", title: "设备渠道", dataIndex: "qudaoName", width: 100, ellipsis: true },
+    { key: "attributeValue", title: "设备属性", dataIndex: "attributeValue", width: 120, ellipsis: true },
+    // 部门与用户扩展 (order=53 受益部门)
+    { key: "deptName", title: "受益部门", dataIndex: "deptName", width: 120, ellipsis: true },
+    // 网络信息扩展 (order=63 加域标识, order=64 无线MAC)
+    { key: "machineBs", title: "加域标识", dataIndex: "machineBs", width: 100, ellipsis: true },
+    { key: "mac2", title: "无线MAC", dataIndex: "mac2", width: 140, ellipsis: true,
+      render: (text) => (text ? String(text).toUpperCase() : "-") },
+    // 归属与责任扩展 (order=58 使用机构, 59 使用人, 60 责任人岗位, 61 用途, 62 子用途, 66 APP扫码账号, 68 APP扫码地理位置)
+    { key: "orgnoName", title: "使用机构", dataIndex: "orgnoName", width: 150, ellipsis: true },
+    { key: "outerUser", title: "使用人", dataIndex: "outerUser", width: 100, ellipsis: true },
+    { key: "nowUserJobName", title: "责任人岗位", dataIndex: "nowUserJobName", width: 120, ellipsis: true },
+    { key: "usingTypeName", title: "用途", dataIndex: "usingTypeName", width: 100, ellipsis: true },
+    { key: "subUsingTypeName", title: "子用途", dataIndex: "subUsingTypeName", width: 100, ellipsis: true },
+    { key: "userName", title: "APP扫码账号", dataIndex: "userName", width: 100, ellipsis: true },
+    { key: "scanSite", title: "APP扫码地理位置", dataIndex: "scanSite", width: 200, ellipsis: true },
+    // 状态与日期扩展 (order=56 发放日期, 57 入库日期, 65 最后上线账号, 67 APP扫码时间, 69 Y07更新时间)
+    { key: "useDate", title: "发放日期", dataIndex: "useDate", width: 120,
+      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"), ellipsis: true },
+    { key: "storageDatetime", title: "入库日期", dataIndex: "storageDatetime", width: 120,
+      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"), ellipsis: true },
+    { key: "machineUserId", title: "最后上线账号", dataIndex: "machineUserId", width: 120, ellipsis: true },
+    { key: "lastUpdateDate", title: "APP扫码时间", dataIndex: "lastUpdateDate", width: 150,
+      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD HH:mm:ss") : "-"), ellipsis: true },
+    { key: "y07UpdateTime", title: "Y07更新时间", dataIndex: "y07UpdateTime", width: 150,
+      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD HH:mm:ss") : "-"), ellipsis: true },
+    // 标识与盘点 (order=70 新设备标识, 71 异常标识, 72 盘点结果)
+    { key: "newFlagLabel", title: "新设备标识", dataIndex: "newFlagLabel", width: 100, ellipsis: true },
+    { key: "errorFlagName", title: "异常标识", dataIndex: "errorFlagName", width: 100, ellipsis: true },
+    { key: "inventoryResult", title: "盘点结果", dataIndex: "inventoryResult", width: 100, ellipsis: true },
+    // 末尾特殊列:action + reconciliation(不参与 defaultAssetColumns 排序)
     {
-      title: "最后上线",
-      dataIndex: "lastInventoryDate",
-      key: "remark",
-      width: 200,
-      ellipsis: true,
-      sorter: true,
-      sortOrder: getColumnSortOrder("lastInventoryDate"),
-    },
-    // 额外的列定义（对应 defaultAssetColumns 中缺失的列）
-    { key: "sequenceNo", title: "序列号", dataIndex: "sequenceNo", width: 120, ellipsis: true },
-    { key: "fixAssetNo", title: "固定资产编号", dataIndex: "fixAssetNo", width: 120, ellipsis: true },
-    { key: "deviceCategorySecondName", title: "设备中类", dataIndex: "deviceCategorySecondName", width: 120, ellipsis: true },
-    { key: "deviceBasicTypeName", title: "是否固定资产", dataIndex: "deviceBasicTypeName", width: 100, ellipsis: true },
-    { key: "deviceStatusName", title: "设备状态", dataIndex: "deviceStatusName", width: 100, ellipsis: true },
-    { key: "recipientName", title: "领取人", dataIndex: "recipientName", width: 100, ellipsis: true },
-    { key: "recipientPhone", title: "领取人电话", dataIndex: "recipientPhone", width: 120, ellipsis: true },
-    { key: "recipientEmail", title: "领取人邮箱", dataIndex: "recipientEmail", width: 150, ellipsis: true },
-    { key: "assetHostname", title: "主机名", dataIndex: "assetHostname", width: 120, ellipsis: true },
-    { key: "osName", title: "操作系统", dataIndex: "osName", width: 100, ellipsis: true },
-    { key: "osVersion", title: "系统版本", dataIndex: "osVersion", width: 100, ellipsis: true },
-    { key: "cpuModel", title: "CPU型号", dataIndex: "cpuModel", width: 120, ellipsis: true },
-    { key: "cpuCores", title: "CPU核心数", dataIndex: "cpuCores", width: 80, ellipsis: true },
-    { key: "memoryCapacity", title: "内存容量", dataIndex: "memoryCapacity", width: 100, ellipsis: true },
-    { key: "diskCapacity", title: "硬盘容量", dataIndex: "diskCapacity", width: 100, ellipsis: true },
-    { key: "graphicsCard", title: "显卡型号", dataIndex: "graphicsCard", width: 120, ellipsis: true },
-    { key: "purchaseDate", title: "购置日期", dataIndex: "purchaseDate", width: 120, render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"), ellipsis: true },
-    { key: "warrantyExpireDate", title: "保修到期日", dataIndex: "warrantyExpireDate", width: 120, render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"), ellipsis: true },
-    { key: "supplierName", title: "供应商", dataIndex: "supplierName", width: 120, ellipsis: true },
-    { key: "manufacturerName", title: "制造商", dataIndex: "manufacturerName", width: 120, ellipsis: true },
-    { key: "assetLocation", title: "资产位置", dataIndex: "assetLocation", width: 120, ellipsis: true },
-    { key: "buildingName", title: "所在大楼", dataIndex: "buildingName", width: 100, ellipsis: true },
-    { key: "floorName", title: "所在楼层", dataIndex: "floorName", width: 80, ellipsis: true },
-    { key: "workstationName", title: "所在工位", dataIndex: "workstationName", width: 120, ellipsis: true },
-    { key: "serverRoomName", title: "所在机房", dataIndex: "serverRoomName", width: 120, ellipsis: true },
-    { key: "networkSwitchName", title: "网络交换机", dataIndex: "networkSwitchName", width: 120, ellipsis: true },
-    { key: "switchPort", title: "交换机端口", dataIndex: "switchPort", width: 120, ellipsis: true },
-    { key: "voltage", title: "电压", dataIndex: "voltage", width: 80, ellipsis: true },
-    { key: "useStatusName", title: "使用状态", dataIndex: "useStatusName", width: 100, ellipsis: true },
-    { key: "financeCode", title: "财务编码", dataIndex: "financeCode", width: 100, ellipsis: true },
-    { key: "projectCode", title: "项目编码", dataIndex: "projectCode", width: 100, ellipsis: true },
-    { key: "assetCost", title: "资产成本", dataIndex: "assetCost", width: 100, ellipsis: true },
-    { key: "depreciationPeriod", title: "折旧年限", dataIndex: "depreciationPeriod", width: 100, ellipsis: true },
-    { key: "netBookValue", title: "账面净值", dataIndex: "netBookValue", width: 100, ellipsis: true },
-    { key: "depreciationRate", title: "折旧率", dataIndex: "depreciationRate", width: 100, ellipsis: true },
-    { key: "accumulatorDepreciation", title: "累计折旧", dataIndex: "accumulatorDepreciation", width: 120, ellipsis: true },
-    {
-      title: "操作",
-      key: "action",
-      width: 120,
-      fixed: "right",
+      title: "操作", key: "action", width: 120, fixed: "right",
       render: (_, record) => (
-        <AssetRow
-          record={record}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
+        <AssetRow record={record} onEdit={handleEdit} onDelete={handleDelete} />
       ),
     },
     // R4 (Phase 45) — 对账健康列(行内徽标,assets 列表)
@@ -448,9 +384,7 @@ const AssetList: FC = () => {
     // 对账状态需扩展 Asset DTO 增加 workstationId 字段,然后才能复用 workstations 页面的
     // lift-up 模式(assetConflictMap)。
     {
-      title: "对账健康",
-      key: "reconciliation",
-      width: 96,
+      title: "对账健康", key: "reconciliation", width: 96,
       render: (_: unknown, _record: Asset) => <>-</>,
     },
   ];

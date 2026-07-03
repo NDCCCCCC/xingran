@@ -107,16 +107,16 @@ const sysNoticePrefix = "[asset_reconciliation_critical]"
 // 业务说明:
 //   - key 是 workorder.ReconciliationWorkorderTemplate.AssigneeRoleKey
 //     (B/C/D="asset_owner", E="ops_owner", F="responsible_owner")
-//   - value 是 sys_role.id(运维预建,迁移不创建)
+//   - value 是 sys_role.id(uuid 字符串 — sys_role 主键为 type:uuid)
 //   - 由 sys_config:asset.reconciliation.workorder.assignee_role_map JSONB 字符串反序列化
 //
 // 反查流程:
 //   1. GetTemplate(conflictType) → AssigneeRoleKey(如 "asset_owner")
-//   2. roleMap["asset_owner"] → role_id(uuid)
-//   3. SELECT sys_user WHERE role_id=? AND status=0 LIMIT 1 → assigneeID
+//   2. roleMap["asset_owner"] → role_id(uuid 字符串)
+//   3. INNER JOIN sys_user_role ON ur.user_id=sys_user.id WHERE ur.role_id=? AND sys_user.status=0 LIMIT 1 → assigneeID
 //
 // 软失败:JSONB 缺失或解析失败时,AssigneeID 为 nil,工单仍创建,等待人工分配。
-type AssigneeRoleMap map[string]int64
+type AssigneeRoleMap map[string]string
 
 // CreateWorkorderFromException 从对账异常记录生成工单(12 步流程)
 //
@@ -135,18 +135,25 @@ type AssigneeRoleMap map[string]int64
 //     (B-F 5 类,migration_169 已 seed)
 //  3. tpl=workorder.GetTemplate(rec.ConflictType);nil → err("无模板")
 //  4. configSvc.GetByKey("asset.reconciliation.workorder.assignee_role_map") 软失败
-//  5. JSONB 反查 role_id → SELECT sys_user WHERE role_id=? AND status=0 LIMIT 1
+//  5. JSONB 反查 role_id → JOIN sys_user_role 查 sys_user
 //  6. json.Unmarshal(rec.RawSnapshot) 取 asset_code(用于标题)
 //  7. title=fmt.Sprintf("[资产对账·%s类] 资产 %s (%s) %s",conflictType,asset_code,severity,detectedAt)
 //  8. description=descLines+"\n\n【原始数据】\n"+raw_snapshot+"\n\n## SLA: "+slaMin+"m"
-//  9. workorder.NewBaseService(s.db).Create(ctx,&CreateRequest{...},"SYSTEM")
-// 10. 失败 logrus.Errorf,return nil,err(D-A1-03 不写 SysNotice)
-// 11. 成功 s.db.Model(&rec).Update("workorder_id",wo.ID)
-// 12a. WS 推送 critical_workorder_created(D-A4-01 全量 broadcast,non-blocking)
-// 12b. SysNotice 写入(立即发布,避免草稿状态)
+//  9. SELECT sys_user WHERE username='system' → systemSubmitterID
+// 10. workorder.NewBaseService(s.db).Create(ctx,&CreateRequest{...}, systemSubmitterID)
+// 11. 失败 logrus.Errorf,return nil,err(D-A1-03 不写 SysNotice)
+// 12. 成功 s.db.Model(&rec).Update("workorder_id",wo.ID)
+// 13a. WS 推送 critical_workorder_created(D-A4-01 全量 broadcast,non-blocking)
+// 13b. SysNotice 写入(立即发布,避免草稿状态)
 //
-// submitterID="SYSTEM"(T-43-01 转单越权 mitigation):工单创建后 status=Pending,
-// 等运维接管,避免"自动转单+自动受理"双重系统行为。
+// submitterID = systemSubmitterID(T-43-01 转单越权 mitigation 的真实实现):
+// 按 username='system' 查 sys_user.id(uuid),确保 submitter_id(uuid;not null) 写入合法 UUID。
+// 复用 internal/scheduler/workorder_tasks.go:60-62 已有的查询样板(周期性工单 cron 同款)。
+// 工单创建后 status=Pending,等运维接管,避免"自动转单+自动受理"双重系统行为。
+//
+// 依赖约束:
+//   - sys_user 必须存在 username='system' 的用户(由初始化或运营预建)
+//   - 不存在时本方法返回 error,cron 下个周期重试(D-A1-03 不写 SysNotice)
 func (s *ReconciliationWorkorderService) CreateWorkorderFromException(ctx context.Context, exceptionID string) (*models.WorkOrder, error) {
 	// 第 1 步:查异常记录(已转单 + 软删除 跳过)
 	var rec models.SysDataReconciliation
@@ -196,17 +203,19 @@ func (s *ReconciliationWorkorderService) CreateWorkorderFromException(ctx contex
 		var roleMap AssigneeRoleMap
 		if jsonErr := json.Unmarshal([]byte(cfg.ConfigValue), &roleMap); jsonErr != nil {
 			logrus.Warnf("[reconciliation:workorder] 解析 assignee_role_map JSONB 失败: %v", jsonErr)
-		} else if roleID, ok := roleMap[tpl.AssigneeRoleKey]; ok && roleID > 0 {
+		} else if roleID, ok := roleMap[tpl.AssigneeRoleKey]; ok && roleID != "" {
 			var user models.User
 			if userErr := s.db.WithContext(ctx).
-				Where("role_id = ? AND status = ?", roleID, 0). // status=0 启用
-				Order("created_at ASC").
+				Table("sys_user u").
+				Joins("INNER JOIN sys_user_role ur ON ur.user_id = u.id").
+				Where("ur.role_id = ? AND u.status = ?", roleID, 0). // status=0 启用
+				Order("u.created_at ASC").
 				Limit(1).
 				First(&user).Error; userErr == nil {
 				uid := user.ID
 				assigneeID = &uid
 			} else {
-				logrus.Warnf("[reconciliation:workorder] role %d 下未找到可用用户(role_id=%d)", roleID, roleID)
+				logrus.Warnf("[reconciliation:workorder] role %s 下未找到可用用户(role_id=%s)", roleID, roleID)
 			}
 		} else {
 			logrus.Warnf("[reconciliation:workorder] AssigneeRoleKey=%s 在 roleMap 中无映射", tpl.AssigneeRoleKey)
@@ -243,7 +252,23 @@ func (s *ReconciliationWorkorderService) CreateWorkorderFromException(ctx contex
 	description := fmt.Sprintf("【建议修复】\n%s\n\n【原始数据】\n%s\n\n## SLA: %dm",
 		descLines, rawSnapshotStr, slaMin)
 
-	// 第 9 步:创建工单(submitterID="SYSTEM" — T-43-01 mitigation)
+	// 第 9 步:查询 system 用户的真实 UUID 作为 submitterID(T-43-01 mitigation 的真实实现)
+	// 复用 internal/scheduler/workorder_tasks.go:60-62 同款查询样板。
+	// sys_user.username='system' 必须存在(运维预建或初始化时 seed)。
+	var systemSubmitter struct {
+		ID string
+	}
+	if sysUserErr := s.db.WithContext(ctx).
+		Table("sys_user").
+		Select("id").
+		Where("username = ?", "system").
+		First(&systemSubmitter).Error; sysUserErr != nil {
+		logrus.Errorf("[reconciliation:workorder] 查询 system 用户失败,请确保 sys_user 存在 username='system' 的用户(exception=%s): %v",
+			exceptionID, sysUserErr)
+		return nil, fmt.Errorf("查询 system 用户失败: %w", sysUserErr)
+	}
+
+	// 第 10 步:创建工单(submitterID = systemSubmitter.ID,合法 UUID)
 	baseSvc := workorder.NewBaseService(s.db)
 	wo, createErr := baseSvc.Create(ctx, &workorder.CreateRequest{
 		Title:       title,
@@ -252,7 +277,7 @@ func (s *ReconciliationWorkorderService) CreateWorkorderFromException(ctx contex
 		Priority:    tpl.DefaultPriority,
 		Description: description,
 		AssigneeID:  assigneeID,
-	}, "SYSTEM")
+	}, systemSubmitter.ID)
 	if createErr != nil {
 		// 第 10 步:失败仅 logrus.Errorf,不写 SysNotice(D-A1-03)
 		logrus.Errorf("[reconciliation:workorder] 创建工单失败(exceptionID=%s, conflictType=%s, severity=%s): %v",

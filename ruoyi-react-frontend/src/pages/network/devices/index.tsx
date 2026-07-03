@@ -286,6 +286,7 @@ const DeviceManagement: FC = () => {
     statistics,
     loadCredentials,
     loadStatistics,
+    ensureCredential,
   } = useDeviceData();
 
   const {
@@ -541,6 +542,11 @@ const DeviceManagement: FC = () => {
   const openModal = (record?: NetworkDevice) => {
     if (record) {
       handleEdit(record);
+      // 凭证兜底注入(2026-06-30,同 info-points):loadCredentials 异步且 pageSize:50
+      // 可能不覆盖当前凭证 → 编辑回填 Select 显示 raw UUID。用 record.credentialName 注入。
+      if (record.credentialId) {
+        ensureCredential({ id: record.credentialId, credentialName: record.credentialName });
+      }
       editForm.setFieldsValue({
         ...record,
         deptId: record.deptId || undefined,

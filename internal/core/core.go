@@ -182,7 +182,13 @@ func (c *Core) Init() error {
 
 	// 3. 初始化系统基础数据
 	// 包括创建默认管理员账户、基础角色等
-	if err := c.DB.InitData(); err != nil {
+	//
+	// SkipSetup 开关: dev 默认开启(每次跑 count 检查是浪费但安全);
+	// 生产/CI 部署可设 SERVER_SKIP_SETUP=true 跳过,只跑首次 setup 阶段。
+	// 注意: AutoMigrate 必须保留(表结构可能变化),只跳 InitData seed。
+	if c.Config.Server.SkipSetup {
+		applogger.Infof("[SkipSetup=true] 跳过系统基础数据初始化(InitData)")
+	} else if err := c.DB.InitData(); err != nil {
 		applogger.Warnf("初始化基础数据失败: %v", err)
 		// 数据初始化失败不影响服务启动
 	} else {
@@ -192,11 +198,15 @@ func (c *Core) Init() error {
 	// 4. 初始化权限服务
 	// 创建默认角色和菜单权限
 	if c.DB != nil {
-		permissionSvc := permission.NewService()
-		if err := permissionSvc.InitDefaultRolesAndMenus(c.GetDB()); err != nil {
-			applogger.Warnf("初始化默认角色和菜单失败: %v", err)
+		if c.Config.Server.SkipSetup {
+			applogger.Infof("[SkipSetup=true] 跳过默认角色和菜单初始化")
 		} else {
-			applogger.Infof("默认角色和菜单初始化成功")
+			permissionSvc := permission.NewService()
+			if err := permissionSvc.InitDefaultRolesAndMenus(c.GetDB()); err != nil {
+				applogger.Warnf("初始化默认角色和菜单失败: %v", err)
+			} else {
+				applogger.Infof("默认角色和菜单初始化成功")
+			}
 		}
 	}
 
@@ -335,9 +345,20 @@ func (c *Core) Init() error {
 		// 注册MAC历史清理任务
 		if c.PartitionService != nil {
 			scheduler.SetPartitionService(c.PartitionService)
+
+			// 2026-06-30 新增:注册 MAC历史 purge 服务(cron 月度无意义记录清理)。
+			// 单独构造,不挂在 Core 字段上(服务无状态、每次调用新建 *gorm.DB 即用即弃)。
+			macPurgeSvc := services.NewMACHistoryService(c.GetDB())
+			scheduler.SetMACHistoryPurgeService(macPurgeSvc)
+
 			scheduler.RegisterMACHistoryTasks(c.Scheduler, c.GetDB())
 			applogger.Infof("MAC历史清理任务注册完成")
 		}
+
+		// 注意:Phase 45 R5 数据治理 (2026-06-30) 的"对账-port_status漂移检测"已整合到
+		// 上方 scheduler.RegisterReconciliationTasks(...) 调用中,作为 reconciliation 框架
+		// 的子任务 reconciliation:checkPortStatusDrift,与现有对账任务共用 sys_job 表
+		// + cron 调度,避免与对账任务重复。
 
 		// Phase 15: 性能优化 — 物化视图刷新任务 + 性能配置 seed
 		if err := services.SeedMACPerfConfigs(c.GetDB()); err != nil {

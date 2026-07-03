@@ -6,6 +6,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/addomain"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -48,10 +49,17 @@ func (s *AuthCredentialService) GetStatistics(ctx context.Context) (*CredentialS
 
 // ListRequest 列表请求
 type ListCredentialRequest struct {
+	base.BaseListRequest
 	CredentialName *string
 	ProtocolType   *models.ProtocolType // 改为协议类型过滤
-	Current        int
-	PageSize       int
+}
+
+// credentialAllowedSortFields 授权凭证可排序字段白名单(对应 sys_auth_credential 表列名)。
+var credentialAllowedSortFields = map[string]string{
+	"credentialName": "credential_name",
+	"protocolType":   "protocol_type",
+	"username":       "username",
+	"createdAt":      "created_at",
 }
 
 // List 获取授权凭证列表
@@ -73,9 +81,13 @@ func (s *AuthCredentialService) List(ctx context.Context, req *ListCredentialReq
 		return nil, 0, fmt.Errorf("查询凭证总数失败: %w", err)
 	}
 
-	// 分页查询
+	// 分页查询;用户排序(白名单)优先,无 OrderByColumn 时保留原默认 created_at DESC
 	offset := (req.Current - 1) * req.PageSize
-	if err := query.Offset(offset).Limit(req.PageSize).Order("created_at DESC").Find(&credentials).Error; err != nil {
+	query = base.ApplySort(query, req.BaseListRequest, credentialAllowedSortFields)
+	if req.OrderByColumn == "" {
+		query = query.Order("created_at DESC")
+	}
+	if err := query.Offset(offset).Limit(req.PageSize).Find(&credentials).Error; err != nil {
 		return nil, 0, fmt.Errorf("查询凭证列表失败: %w", err)
 	}
 

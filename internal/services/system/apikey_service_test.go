@@ -3,6 +3,7 @@ package system
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -12,6 +13,21 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/system/requests"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+)
+
+// 测试数据 ID 跟踪 — cleanupTestData 按 tracked-IDs 精确删除,避免
+// "Where(1=1).Delete" 把 parent-scope user 也清掉,导致后续 subtest
+// 拿到失效 user.ID 误报"用户不存在"。setupTestDB 用 cache=shared,
+// user.username 用 nanos 唯一所以跨 TestXxx 累积无 UNIQUE 冲突。
+//
+// testKeySeq 单调递增计数器,保证 createTestAPIKey 在快速循环内
+// (如分页 subtest 5 次连续 create) 生成的 key 唯一 — 仅靠 time.Now().UnixNano()
+// 在 µs 级循环里可能产生相同值,导致 UNIQUE 约束失败。
+var (
+	testTrackedUserIDs   []string
+	testTrackedAPIKeyIDs []string
+	testTrackedMu        sync.Mutex
+	testKeySeq           uint64
 )
 
 // setupTestDB 创建测试数据库连接
@@ -120,15 +136,24 @@ func createTestUser(t *testing.T, db *gorm.DB) *models.User {
 	}
 	err := db.Create(user).Error
 	require.NoError(t, err)
+
+	testTrackedMu.Lock()
+	testTrackedUserIDs = append(testTrackedUserIDs, user.ID)
+	testTrackedMu.Unlock()
 	return user
 }
 
 // createTestAPIKey 创建测试API密钥
 func createTestAPIKey(t *testing.T, db *gorm.DB, userID string, isActive bool) *models.APIKey {
-	// 每次生成唯一 key,避免软删除残留导致 UNIQUE 冲突。
+	// 每次生成唯一 key,避免软删除残留 + 快速循环 nanos 重合 导致 UNIQUE 冲突。
 	// 必须恰好 64 hex chars 以通过 isValidKeyFormat(KeyLength=64)。
-	// 高 16 位用 nanos 填充保证唯一,低 48 位填 0 凑足长度。
-	key := fmt.Sprintf("rec_%016x%048x", time.Now().UnixNano(), 0)
+	// 高 16 位用 nanos,低 48 位用 atomic counter (单调递增) — 单靠 nanos 在
+	// µs 级循环内可能产生相同值(如分页 subtest 5 次连续 create)。
+	testTrackedMu.Lock()
+	seq := testKeySeq
+	testKeySeq++
+	testTrackedMu.Unlock()
+	key := fmt.Sprintf("rec_%016x%048x", time.Now().UnixNano(), seq)
 
 	apiKey := &models.APIKey{
 		Name:        "Test API Key",
@@ -153,21 +178,33 @@ func createTestAPIKey(t *testing.T, db *gorm.DB, userID string, isActive bool) *
 	err = db.Exec("UPDATE sys_api_keys SET is_active = ? WHERE id = ?", activeVal, apiKey.ID).Error
 	require.NoError(t, err)
 
+	testTrackedMu.Lock()
+	testTrackedAPIKeyIDs = append(testTrackedAPIKeyIDs, apiKey.ID)
+	testTrackedMu.Unlock()
+
 	// 同步内存对象
 	apiKey.IsActive = isActive
 	return apiKey
 }
 
-// cleanupTestData 清理测试数据(Unscoped 真删,避免软删记录占用 unique key)
+// cleanupTestData 清理测试数据(按 tracked-APIKeyIDs 精确删除,user 不删)
+//
+// 设计要点:parent-scope user 必须在 subtest 之间保持,否则后续 subtest
+// 拿到失效 user.ID 误报"用户不存在"(如 TestCreateAPIKey/无效作用域)。
+// user.username 用 nanos 唯一生成,跨 subtest/TestXxx 累积无 UNIQUE 冲突,
+// 所以 user 表不删 — 只删 apikey + usage_log (按 tracked-APIKeyIDs 关联)。
 func cleanupTestData(t *testing.T, db *gorm.DB) {
-	err := db.Unscoped().Where("1 = 1").Delete(&models.APIKeyUsageLog{}).Error
-	require.NoError(t, err)
+	testTrackedMu.Lock()
+	apiKeyIDs := testTrackedAPIKeyIDs
+	testTrackedAPIKeyIDs = nil
+	// 同样清空 tracked-user 引用以避免内存膨胀(实际 user 行保留在 db)
+	testTrackedUserIDs = nil
+	testTrackedMu.Unlock()
 
-	err = db.Unscoped().Where("1 = 1").Delete(&models.APIKey{}).Error
-	require.NoError(t, err)
-
-	err = db.Unscoped().Where("1 = 1").Delete(&models.User{}).Error
-	require.NoError(t, err)
+	if len(apiKeyIDs) > 0 {
+		require.NoError(t, db.Unscoped().Where("api_key_id IN ?", apiKeyIDs).Delete(&models.APIKeyUsageLog{}).Error)
+		require.NoError(t, db.Unscoped().Where("id IN ?", apiKeyIDs).Delete(&models.APIKey{}).Error)
+	}
 }
 
 // TestCreateAPIKey 测试创建API密钥
@@ -251,6 +288,9 @@ func TestCreateAPIKey(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, fmt.Sprintf("%v", err), "已达到最大密钥数量限制")
 
+		// 这 100 个 key 是直接 db.Create (不走 createTestAPIKey helper),
+		// 不在 tracked-IDs 范围,需要显式按 user_id 删,避免 shared cache 残留
+		require.NoError(t, db.Unscoped().Where("user_id = ?", limitUser.ID).Delete(&models.APIKey{}).Error)
 		cleanupTestData(t, db)
 	})
 
@@ -414,7 +454,7 @@ func TestListAPIKeys(t *testing.T) {
 	db.Save(key1)
 
 	key2 := createTestAPIKey(t, db, user.ID, false)
-	key2.Name = "Inactive Key"
+	key2.Name = "Other Key" // 不能含 "Active" 子串,否则关键词搜索 LIKE '%Active%' 会误匹配
 	key2.Scopes = []string{"write"}
 	db.Save(key2)
 
@@ -449,6 +489,7 @@ func TestListAPIKeys(t *testing.T) {
 		result, err := service.ListAPIKeys(ctx, user.ID, params)
 
 		assert.NoError(t, err)
+		require.NotNil(t, result)
 		assert.Equal(t, int64(1), result.Total)
 		list, _ := result.List.([]models.APIKey)
 		assert.Equal(t, 1, len(list))
@@ -466,6 +507,7 @@ func TestListAPIKeys(t *testing.T) {
 		result, err := service.ListAPIKeys(ctx, user.ID, params)
 
 		assert.NoError(t, err)
+		require.NotNil(t, result)
 		assert.Equal(t, int64(1), result.Total)
 		list, _ := result.List.([]models.APIKey)
 		assert.True(t, list[0].IsActive)
@@ -482,6 +524,7 @@ func TestListAPIKeys(t *testing.T) {
 		result, err := service.ListAPIKeys(ctx, user.ID, params)
 
 		assert.NoError(t, err)
+		require.NotNil(t, result)
 		assert.Equal(t, int64(1), result.Total)
 		list, _ := result.List.([]models.APIKey)
 		assert.Contains(t, list[0].Scopes, "read")
@@ -503,6 +546,7 @@ func TestListAPIKeys(t *testing.T) {
 		result, err := service.ListAPIKeys(ctx, user.ID, params)
 
 		assert.NoError(t, err)
+		require.NotNil(t, result)
 		assert.Equal(t, int64(7), result.Total) // 2 existing + 5 new
 		list, _ := result.List.([]models.APIKey)
 		assert.Equal(t, 3, len(list))
@@ -581,7 +625,7 @@ func TestUpdateAPIKey(t *testing.T) {
 
 		// 验证更新结果
 		var updated models.APIKey
-		db.First(&updated, apiKey.ID)
+		db.First(&updated, "id = ?", apiKey.ID)
 		assert.Equal(t, newName, updated.Name)
 		assert.Equal(t, newDesc, *updated.Description)
 
@@ -633,7 +677,7 @@ func TestDeleteAPIKey(t *testing.T) {
 
 		// 验证软删除（deleted_at 不为空）
 		var deleted models.APIKey
-		err = db.Unscoped().First(&deleted, apiKey.ID).Error
+		err = db.Unscoped().First(&deleted, "id = ?", apiKey.ID).Error
 		assert.NoError(t, err)
 		assert.NotNil(t, deleted.DeletedAt)
 
@@ -680,7 +724,7 @@ func TestToggleAPIKeyStatus(t *testing.T) {
 
 		// 验证状态已切换
 		var toggled models.APIKey
-		db.First(&toggled, apiKey.ID)
+		db.First(&toggled, "id = ?", apiKey.ID)
 		assert.NotEqual(t, initialStatus, toggled.IsActive)
 		assert.False(t, toggled.IsActive)
 
@@ -697,7 +741,7 @@ func TestToggleAPIKeyStatus(t *testing.T) {
 
 		// 验证状态已切换
 		var toggled models.APIKey
-		db.First(&toggled, apiKey.ID)
+		db.First(&toggled, "id = ?", apiKey.ID)
 		assert.NotEqual(t, initialStatus, toggled.IsActive)
 		assert.True(t, toggled.IsActive)
 
@@ -814,6 +858,7 @@ func TestListUsageLogs(t *testing.T) {
 		result, err := service.ListUsageLogs(ctx, params)
 
 		assert.NoError(t, err)
+		require.NotNil(t, result)
 		assert.Equal(t, int64(1), result.Total)
 		assert.Equal(t, "/api/v1/recent", result.List[0].Path)
 
@@ -858,6 +903,7 @@ func TestListUsageLogs(t *testing.T) {
 		result, err := service.ListUsageLogs(ctx, params)
 
 		assert.NoError(t, err)
+		require.NotNil(t, result)
 		assert.Equal(t, int64(1), result.Total)
 		assert.True(t, result.List[0].Success)
 		assert.Equal(t, "/api/v1/success", result.List[0].Path)
@@ -892,6 +938,7 @@ func TestListUsageLogs(t *testing.T) {
 		result, err := service.ListUsageLogs(ctx, params)
 
 		assert.NoError(t, err)
+		require.NotNil(t, result)
 		assert.Equal(t, int64(5), result.Total)
 		assert.Equal(t, 3, len(result.List))
 		assert.Equal(t, 1, result.Current)

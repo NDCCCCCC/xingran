@@ -37,6 +37,9 @@ export interface UseWorkstationDataReturn {
   loadDeptOptions: () => void;
   loadUserOptions: (deptId?: string) => Promise<void>;
   loadFloorPlanWorkstations: (floorCode: string) => Promise<WorkstationOps[]>;
+  // 注入式兜底(2026-06-30):编辑回填时若 userId 不在 pageSize:50 列表,
+  // 调此方法基于 record.userName 注入一条临时 Option,避免 Select 显示 raw UUID。
+  ensureUser: (user: { id: string; username?: string; nickname?: string }) => void;
 }
 
 export function useWorkstationData(
@@ -148,11 +151,24 @@ export function useWorkstationData(
     }
   }, []);
 
+  // 注入式兜底(2026-06-30):同 info-points 模式,若用户 id 已在列表中则保持原引用。
+  // setUserOptions 列入 deps 以满足 React Compiler 推断(setState 引用稳定,不影响实际行为)。
+  const ensureUser = useCallback((user: { id: string; username?: string; nickname?: string }) => {
+    setUserOptions(prev =>
+      prev.find(u => u.id === user.id) ? prev : [...prev, {
+        id: user.id,
+        username: user.username || "未命名用户",
+        nickname: user.nickname,
+      }]
+    );
+  }, [setUserOptions]);
+
   return {
     loadStatistics,
     loadFloorOptions,
     loadDeptOptions,
     loadUserOptions,
     loadFloorPlanWorkstations,
+    ensureUser,
   };
 }

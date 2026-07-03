@@ -823,6 +823,15 @@ func (s *ExcelService) prepareRecordsForUpsert(
 
 			if exists {
 				dbFieldName := s.getDBFieldName(col)
+				// 同 DBField 多列时保留先写非空值（first-non-empty-wins）。
+				// 解决 P0-4: machineIP + domainIP 同写 machine_ip 时真实 IP 被覆盖
+				// (e.g. D9L90K2 的 10.62.101.143 被 PR.intra.cpic.com.cn 覆盖)。
+				// 仅影响 config 中存在同 DBField 多列的场景, 其他表无此情况故零回归。
+				if existing, already := preparedRecord[dbFieldName]; already {
+					if !isEmptyValue(existing) {
+						continue
+					}
+				}
 				preparedRecord[dbFieldName] = value
 			}
 		}
@@ -1009,6 +1018,22 @@ func (s *ExcelService) getDBFieldName(col ExcelColumn) string {
 		return col.DBField
 	}
 	return col.Field
+}
+
+// isEmptyValue 判断 Excel 单元格值是否为空（nil / 空字符串 / 全空白）。
+// 用于 first-non-empty-wins 合并逻辑: preparedRecord 中已存在非空值时跳过覆盖。
+func isEmptyValue(v any) bool {
+	if v == nil {
+		return true
+	}
+	switch val := v.(type) {
+	case string:
+		return strings.TrimSpace(val) == ""
+	case *string:
+		return val == nil || strings.TrimSpace(*val) == ""
+	default:
+		return false
+	}
 }
 
 // validateReferenceFields 验证必填的引用字段是否成功解析

@@ -2,7 +2,7 @@
  * 机房管理页面
  */
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import type { FC } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
@@ -22,7 +22,7 @@ import { useTableManager } from "@/hooks/useTableManager";
 import { usePagination } from "@/hooks/usePagination";
 import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
-import { createStatusColumn, createDateTimeColumn } from "@/utils/tableHelpers";
+import { createStatusColumn, createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
 import ActionButtons from "@/components/shared/ActionButtons";
 import ExcelImport from "@/components/shared/ExcelImport";
 import ExcelExport from "@/components/shared/ExcelExport";
@@ -81,6 +81,18 @@ const ServerRoomManagement: FC = () => {
     selectedDeptIdRef.current = selectedDeptId;
   }, [selectedDeptId]);
 
+  // 服务端排序:field 必须与 columns 的 dataIndex 一致
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<ServerRoom>("name"),
+      createSorterMeta<ServerRoom>("buildingName"),
+      createSorterMeta<ServerRoom>("floorName"),
+      createSorterMeta<ServerRoom>("status"),
+      createSorterMeta<ServerRoom>("createdAt", "date"),
+    ],
+    []
+  );
+
   const {
     loading, data: serverRooms, total, selectedRowKeys,
     searchForm, editForm: serverRoomForm, editModalVisible: modalVisible,
@@ -88,6 +100,8 @@ const ServerRoomManagement: FC = () => {
     setEditingItem: setEditingServerRoom, handleSearch,
     handleReset, handleAdd, handleEdit, handleModalClose, loadData: loadServerRooms, resetSelection,
     setData, setLoading,
+    handleTableChange: handleServerRoomTableChange,
+    getColumnSortOrder: getServerRoomColumnSortOrder,
   } = useTableManager<ServerRoom>(
     async (params) => {
       // 使用 ref 获取最新的部门 ID，避免闭包捕获旧值
@@ -104,6 +118,7 @@ const ServerRoomManagement: FC = () => {
         setPageSize,
         setTotal,
       },
+      sorterMetas,
     }
   );
 
@@ -246,12 +261,14 @@ const ServerRoomManagement: FC = () => {
   };
 
   const columns: ColumnsType<ServerRoom> = [
-    { title: "机房名称", dataIndex: "name", key: "name", width: 150 },
+    { title: "机房名称", dataIndex: "name", key: "name", width: 150, sorter: true, sortOrder: getServerRoomColumnSortOrder("name") },
     {
       title: "所在楼宇",
       dataIndex: "buildingName",
       key: "buildingName",
       width: 120,
+      sorter: true,
+      sortOrder: getServerRoomColumnSortOrder("buildingName"),
       render: (_, record) => record.buildingName || record.buildingId,
     },
     {
@@ -259,11 +276,13 @@ const ServerRoomManagement: FC = () => {
       dataIndex: "floorName",
       key: "floorName",
       width: 100,
+      sorter: true,
+      sortOrder: getServerRoomColumnSortOrder("floorName"),
       render: (_, record) => record.floorName || record.floorNo || "-",
     },
-    createStatusColumn("status", { width: 100 }),
+    createStatusColumn("status", { width: 100, sorter: true, sortOrder: getServerRoomColumnSortOrder("status") }),
     { title: "描述", dataIndex: "remark", key: "remark", ellipsis: true },
-    createDateTimeColumn("createdAt", { width: 180 }),
+    createDateTimeColumn("createdAt", { width: 180, sorter: true, sortOrder: getServerRoomColumnSortOrder("createdAt") }),
     {
       title: "操作", key: "action",
       render: (_, record) => {
@@ -408,21 +427,7 @@ const ServerRoomManagement: FC = () => {
               loading={loading}
               rowKey="id"
               pagination={paginationProps}
-              onChange={(pagination) => {
-                const newPage = pagination.current || 1;
-                const newPageSize = pagination.pageSize || 10;
-                setCurrent(newPage);
-                setPageSize(newPageSize);
-                const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
-	                const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
-	                Object.keys(formValues).forEach(key => {
-	                  const value = formValues[key];
-	                  if (value !== undefined && value !== null && value !== "") {
-	                    searchParams[key] = value;
-	                  }
-	                });
-	                loadServerRooms(searchParams);
-              }}
+              onChange={handleServerRoomTableChange}
             />
           ) : renderCardView()}
         </Card>

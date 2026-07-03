@@ -1,9 +1,8 @@
 package lldp
 
 import (
-	"strings"
-
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 )
 
 // ClassifyPort 根据LLDP邻居信息和MAC数量阈值对端口进行分类
@@ -39,8 +38,8 @@ func ClassifyPort(
 	macCount int,
 	threshold int,
 ) models.PortClassification {
-	// 标准化接口名称（与LLDP服务的normalizeInterfaceName逻辑一致）
-	normalizedName := normalizeInterfaceName(interfaceName)
+	// 标准化接口名称（与LLDP服务的 NormalizeInterfaceName 逻辑一致）
+	normalizedName := portcollection.NormalizeInterfaceName(interfaceName)
 
 	// 检查是否存在LLDP邻居
 	if neighbor, exists := lldpNeighbors[normalizedName]; exists {
@@ -79,56 +78,4 @@ func ClassifyPort(
 		Threshold:       threshold,
 		HasLLDPNeighbor: false,
 	}
-}
-
-// NormalizeInterfaceName 导出标准化接口名称函数（供外部使用）
-// 复制自 lldp_service.go 和 portcollection/utils.go
-func NormalizeInterfaceName(name string) string {
-	name = strings.ReplaceAll(name, " ", "")
-
-	// 有效的标准前缀（直接返回）
-	validPrefixes := []string{"FastEthernet", "GigabitEthernet", "TenGigE", "FortyGigE", "HundredGigE", "Vlan", "Vlanif", "Loopback", "NULL"}
-	for _, prefix := range validPrefixes {
-		if strings.HasPrefix(name, prefix) {
-			return name
-		}
-	}
-
-	lowerName := strings.ToLower(name)
-
-	// 前缀映射
-	type prefixMapping struct {
-		short string
-		full  string
-	}
-	prefixList := []prefixMapping{
-		{"fastethernet", "FastEthernet"},
-		{"gigabitethernet", "GigabitEthernet"},
-		{"tengige", "TenGigE"},
-		{"fortygige", "FortyGigE"},
-		{"hundredgige", "HundredGigE"},
-		{"vlanif", "Vlanif"},
-		{"loopback", "Loopback"},
-		{"fa", "FastEthernet"},
-		{"gi", "GigabitEthernet"},
-		{"te", "TenGigE"},
-		{"fo", "FortyGigE"},
-		{"vlan", "Vlan"},
-		{"vl", "Vlan"},
-		{"null", "NULL"},
-	}
-
-	for _, mapping := range prefixList {
-		if strings.HasPrefix(lowerName, mapping.short) {
-			suffix := lowerName[len(mapping.short):]
-			if len(suffix) > 0 && (suffix[0] >= '0' && suffix[0] <= '9') {
-				return mapping.full + suffix
-			}
-			if len(suffix) > 0 {
-				return mapping.full + suffix
-			}
-		}
-	}
-
-	return name
 }

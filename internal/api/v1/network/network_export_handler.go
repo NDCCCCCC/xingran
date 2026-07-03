@@ -486,10 +486,13 @@ func (h *NetworkExportHandler) ExportMACAddresses(c *gin.Context) {
 	svc := services.NewMACCollectionService(h.core.DB.GetDB(), h.core.DeviceExecutor, lldpSvc, filterRuleSvc)
 	current, pageSize := h.getPaginationParams(&req)
 
-	var deviceID, macAddress, interfaceName string
+	var deviceID, deptID, macAddress, interfaceName string
 	if req.Filters != nil {
 		if v, ok := req.Filters["deviceId"].(string); ok {
 			deviceID = v
+		}
+		if v, ok := req.Filters["deptId"].(string); ok {
+			deptID = v
 		}
 		if v, ok := req.Filters["macAddress"].(string); ok {
 			macAddress = v
@@ -499,7 +502,7 @@ func (h *NetworkExportHandler) ExportMACAddresses(c *gin.Context) {
 		}
 	}
 
-	records, _, err := svc.GetMACAddressList(c.Request.Context(), current, pageSize, deviceID, macAddress, interfaceName, "", nil)
+	records, _, err := svc.GetMACAddressList(c.Request.Context(), current, pageSize, deviceID, deptID, macAddress, interfaceName, "", nil)
 	if err != nil {
 		response.Error(c, response.ErrServerError, err.Error())
 		return
@@ -684,10 +687,9 @@ func (h *NetworkExportHandler) buildDeviceListRequest(filters map[string]interfa
 
 // buildCredentialListRequest 构建凭证列表请求
 func (h *NetworkExportHandler) buildCredentialListRequest(filters map[string]interface{}, current, pageSize int) *services.ListCredentialRequest {
-	req := &services.ListCredentialRequest{
-		Current:  current,
-		PageSize: pageSize,
-	}
+	req := &services.ListCredentialRequest{}
+	req.Current = current
+	req.PageSize = pageSize
 	if filters == nil {
 		return req
 	}

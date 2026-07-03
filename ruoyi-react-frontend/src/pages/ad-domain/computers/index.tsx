@@ -31,7 +31,8 @@ import {
   type ADOUNode,
 } from '@/lib/adDomainApi';
 import { useADConfigs } from '@/hooks/useADConfigs';
-import { createSorter } from '@/utils/tableHelpers';
+import { createSorter, createSorterMeta } from '@/utils/tableHelpers';
+import { useServerSort } from '@/hooks/useServerSort';
 import type { FC } from 'react';
 import { usePagination } from '@/hooks/usePagination';
 
@@ -99,6 +100,21 @@ const ADComputerPage: FC = () => {
     }
   }, [selectedConfig, paginationProps.current, paginationProps.pageSize]);
 
+  // 服务端排序:field 与 columns.dataIndex 对齐(useServerSort 按 sorter.field 匹配)
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<ADComputerDetail>("computerName"),
+      createSorterMeta<ADComputerDetail>("lastLogonUser"),
+      createSorterMeta<ADComputerDetail>("ipAddress"),
+      createSorterMeta<ADComputerDetail>("operatingSystem"),
+      createSorterMeta<ADComputerDetail>("status"),
+    ],
+    []
+  );
+  const { orderByColumn, isAsc, handleTableChange: handleCompSortChange, sortOrder: compSortOrder } = useServerSort<ADComputerDetail>({
+    sorterMetas,
+  });
+
   const fetchComputers = async () => {
     if (!selectedConfig) return;
 
@@ -111,6 +127,7 @@ const ADComputerPage: FC = () => {
         computerName: values.computerName,
         current: paginationProps.current,
         pageSize: paginationProps.pageSize,
+        ...(orderByColumn ? { orderByColumn, isAsc } : {}),
       });
       if (res.code === 0) {
         setComputers(res.data?.list ?? []);
@@ -322,12 +339,21 @@ const ADComputerPage: FC = () => {
 
         {/* 电脑设备列表 */}
         <Table
-          columns={columns}
+          columns={columns.map((col) =>
+            "dataIndex" in col && col.dataIndex && sorterMetas.some((m) => m?.field === String(col.dataIndex))
+              ? { ...col, sortOrder: orderByColumn === col.dataIndex ? compSortOrder : null }
+              : col
+          )}
           dataSource={computers}
           loading={loading}
           rowKey="id"
           scroll={{ x: 1800 }}
           pagination={paginationProps}
+          onChange={(pagination, _filters, sorter) => {
+            handleCompSortChange(pagination, _filters, sorter);
+            setCurrent(pagination.current ?? 1);
+            fetchComputers();
+          }}
         />
       </Space>
 

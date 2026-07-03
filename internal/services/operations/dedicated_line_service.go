@@ -81,6 +81,7 @@ func NewDedicatedLineService(db *gorm.DB) DedicatedLineService {
 var dedicatedLineAllowedSortFields = map[string]string{
 	"name":               "name",
 	"lineType":           "line_type",
+	"bandwidth":          "bandwidth",
 	"isp":                "isp",
 	"sourceDeviceName":   "source_device_name",
 	"destDeviceName":     "dest_device_name",

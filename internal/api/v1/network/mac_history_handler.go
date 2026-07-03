@@ -75,31 +75,6 @@ func (h *MACHistoryHandler) QueryDeviceHistory(c *gin.Context) {
 	response.Page(c, result.List, result.Total, result.Current, result.PageSize)
 }
 
-// QueryTrajectory 查询MAC地址移动轨迹
-// @Summary 查询MAC地址移动轨迹
-// @Description 按MAC地址查询跨设备/端口的移动路径，返回按时间排序的轨迹节点
-// @Tags 网络设备管理
-// @Accept json
-// @Produce json
-// @Param request body mac_history_query_service.MACTrajectoryQuery true "查询条件"
-// @Success 200 {object} response.Response{data=mac_history_query_service.MACTrajectoryResult}
-// @Failure 400 {object} response.Response
-// @Failure 500 {object} response.Response
-// @Router /network/history/trajectory [post]
-func (h *MACHistoryHandler) QueryTrajectory(c *gin.Context) {
-	var req mac_history_query_service.MACTrajectoryQuery
-	if !responseHelpers.HandleJSONBinding(c, &req) {
-		return
-	}
-
-	result, err := h.historyQueryService.QueryMACTrajectory(c.Request.Context(), &req)
-	if !responseHelpers.HandleServiceError(c, err, "查询MAC轨迹") {
-		return
-	}
-
-	response.Success(c, result)
-}
-
 // QueryConnectionStats 查询MAC连接时长统计
 // @Summary 查询MAC连接时长统计
 // @Description 输出明细(MAC×端口停留时长)+ Top-N(按MAC长期占用、端口热门连接)

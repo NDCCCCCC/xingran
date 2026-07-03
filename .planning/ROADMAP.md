@@ -21,6 +21,7 @@
 - ✅ **v1.15 部门物理位置映射** — Phase 39 (shipped 2026-06-25)
 - ✅ **v1.16 技术债清理 (Tech-Debt Cleanup)** — Phases 40-41 (shipped 2026-06-26)
 - 🚧 **v1.17 资产对账 (Asset Reconciliation)** — Phases 42-46 (planning, started 2026-06-27)
+- 📋 **v1.18 网络设备硬件清单 (Device Component Serials)** — Phase 48 (backlog, added 2026-07-03 via /gsd-explore)
 
 ---
 
@@ -320,4 +321,42 @@ Plans:
 
 ---
 
-*Last updated: 2026-06-29 — Phase 47 added (root cause fixes for Phase 45 R5 reconciliation issues).*
+### Phase 48: 网络设备组件序列号采集 (Device Component Serials)
+
+**Milestone:** v1.18 网络设备硬件清单
+
+**Goal:** 支持"一机多序列号"——将网络设备的板卡/引擎卡、电源、风扇、光模块各自的序列号**作为资产设备纳入资产系统 `ops_asset`**（每个组件一条记录，`DeviceSN`=组件序列号），保存组件对交换机/路由的从属关系并在前端展示。服务设备档案 / 资产盘点审计 / 备件管理 / 对账合规上报四类用途；序列号作为跨系统比对唯一键，对接 v1.17 资产对账。
+
+**背景:** `ops_asset` 以 `DeviceSN` 为唯一键，组件序列号天然是一条资产记录主键，但缺"从属关系"与"采集来源"字段。采集链路（Scrapli SSH + TextFSM + `DeviceInfoCollectionService`）成熟可复用；`templates/huawei_vrp_display_device.textfsm` 已能解析板卡但从未落库。详见 `.planning/notes/260703-network-device-component-serials.md`。
+
+**采集路线:** v1 纯 CLI + TextFSM 单一路径（光模块 SNMP 拿不到，必走 CLI）；命令已调研确认（华为 `display device`/`display elabel`/`display transceiver`；H3C `display device manuinfo`/`display asset-info`/`display transceiver manuinfo`；锐捷 `show version`/`show interface transceiver`；迈普 `show hardware`/`show transceiver`）。SNMP ENTITY-MIB（`entPhysicalContainedIn` 天然表达从属树）加速留作 seed `.planning/seeds/snmp-entity-mib-acceleration.md`。
+
+**Requirements**:
+- R1: 扩展 `Asset`(`ops_asset`) 模型 + migration，新增 `parent_asset_id`（自引用 → ops_asset.id，从属关系）、`source_device_id`（→ sys_network_device.id，采集来源）、`component_type`(chassis/card/engine/power/fan/transceiver)、`component_slot`
+- R2: **采集双路径**（基于 2026-07-03 真机探针）
+  - **主路径 (SNMP ENTITY-MIB)**：单 GET（不走 BulkWalk，HW/锐捷都拒绝）拉 `entPhysicalSerialNum` / `entPhysicalModelName` / `entPhysicalClass` / `entPhysicalContainedIn`
+    - 华为 S8700 覆盖：chassis / module / fan / 业务板 + 引擎，**电源 SN 是空（HW 漏洞）**
+    - 锐捷 RS8607E 覆盖：chassis / fan / 电源 / M1-M2 主控，**业务板 slot 1-5 仅占位**（SN 在 CLI）
+    - 必备过滤：锐捷 `powerSupply(8)` 但 Name 形如 `temprature*` 的传感器伪实体（typo "temprature"，锐捷私有扩展噪声，全表 352 个需剔除）
+  - **CLI 补充路径**：
+    - 锐捷 `show version`：拿业务板（slot 1-5）的 SN
+    - 华为 `display interface transceiver`：光模块 SN + DDM（SNMP 拿不到）
+    - 华为 `display device esn`：整机 SN，与 SNMP 互验
+    - 华为 `display device` / `display device board`：硬件清单骨架（含槽位+电源状态）
+- R2.1: SNMP 单 GET 而非 BulkWalk；community 从 `sys_auth_credential.snmp_communities` 读；丢 non-empty SerialNum 噪声
+- R3: 光模块只采在用/up 接口
+- R4: 采集组件序列号 + 所属交换机 → 按 `DeviceSN` 匹配 `ops_asset` 已有行（**只 UPDATE 不 INSERT**，保住实物/声明分层）→ 写 parent_asset_id / source_device_id / component_type / component_slot 建立双向桥接
+- R5: API + 前端资产/设备详情页展示"从属组件清单"（按 parent_asset_id 聚合，按 component_type 分组）；设备列表/统计默认按 `component_type IS NULL` 排除组件行（避免 1 机+6 板=7 台），组件另开视图
+- R6: **SN 匹配不上生成 `sys_data_reconciliation` 对账异常**（新增"组件序列号"专属 category，前提确认引擎可扩展 category，否则回退复用；实物有账无=盘盈、账有实物无=盘亏）；父交换机不在 ops_asset 时 parent_asset_id 留空、仍写 source_device_id；堆叠（iStack/IRF）序列号归属处理 + 操作日志（module「资产管理」，OperTypeSync）
+
+**前置条件:** RQ-001 真机采样已 80% 完成，剩余：锐捷 ENTITY-MIB 真机探针（确认主板/电源/风扇 SN 也覆盖）、锐捷光模块 DDM TextFSM 另一设备采样、H3C/迈普另环境采样。
+
+**Depends on:** **v1.17 对账底座（Phase 42-46）** — Phase 48 是 R2 物理层对账的组件序列号形态，需对账引擎先就位
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 48 to break down)
+
+---
+
+*Last updated: 2026-07-03 — Phase 48 added (网络设备组件序列号采集, v1.18 milestone) via /gsd-explore.*

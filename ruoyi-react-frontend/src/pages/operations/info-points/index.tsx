@@ -24,7 +24,7 @@ import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { useDict } from "@/hooks/useDict";
 import { handleApiError, handleSuccess, isFormValidationError } from "@/utils/errorHandler";
 import { debounce } from "@/utils/debounce";
-import { createDateTimeColumn } from "@/utils/tableHelpers";
+import { createDateTimeColumn, createSorterMeta } from "@/utils/tableHelpers";
 import ActionButtons from "@/components/shared/ActionButtons";
 import ExcelImport from "@/components/shared/ExcelImport";
 import ExcelExport from "@/components/shared/ExcelExport";
@@ -104,12 +104,25 @@ const InfoPointManagement: FC = () => {
     clearFieldNames: ["workstationId"],
   });
 
+  // 服务端排序:field 必须与 columns 的 dataIndex 一致(useServerSort 按 sorter.field===dataIndex 匹配)
+  const sorterMetas = useMemo(
+    () => [
+      createSorterMeta<InfoPoint>("name"),
+      createSorterMeta<InfoPoint>("infoPointType"),
+      createSorterMeta<InfoPoint>("status"),
+      createSorterMeta<InfoPoint>("createdAt", "date"),
+    ],
+    []
+  );
+
   const {
     loading, data: infoPoints, total, selectedRowKeys,
     searchForm, editForm: infoPointForm, editModalVisible: modalVisible,
     editingItem: editingInfoPoint, setSelectedRowKeys, setEditModalVisible: setModalVisible,
     setEditingItem: setEditingInfoPoint, handleSearch,
     handleReset, handleAdd, handleEdit, handleModalClose, loadData: loadInfoPoints, resetSelection,
+    handleTableChange: handleInfoPointTableChange,
+    getColumnSortOrder: getInfoPointColumnSortOrder,
   } = useTableManager<InfoPoint>(
     async (params) => {
       const searchParams = selectedDeptId
@@ -126,6 +139,7 @@ const InfoPointManagement: FC = () => {
         setPageSize,
         setTotal,
       },
+      sorterMetas,
     }
   );
 
@@ -297,8 +311,27 @@ const InfoPointManagement: FC = () => {
   useEffect(() => {
     const initializeDeviceAndPorts = async () => {
       if (editingInfoPoint && editingInfoPoint.deviceId) {
-        setSelectedDeviceId(editingInfoPoint.deviceId);
-        await loadDevicePorts(editingInfoPoint.deviceId);
+        // 收窄到局部 const,避免 setState 闭包内 editingInfoPoint.deviceId 被推回 string|undefined
+        const deviceId: string = editingInfoPoint.deviceId;
+        setSelectedDeviceId(deviceId);
+        // 设备兜底注入(2026-06-30,同 openModal):当前设备可能不在 pageSize:50 列表
+        const devName = editingInfoPoint.deviceName || "";
+        setNetworkDevices(prev =>
+          prev.find(d => d.id === deviceId)
+            ? prev
+            : [...prev, { id: deviceId, deviceName: devName || "未命名设备", ipAddress: "" }]
+        );
+        await loadDevicePorts(deviceId);
+        // 端口兜底注入:loadDevicePorts(pageSize:50)可能没覆盖当前 portId,用 portName 注入
+        if (editingInfoPoint.portId && editingInfoPoint.portName) {
+          const portId: string = editingInfoPoint.portId;
+          const portName: string = editingInfoPoint.portName;
+          setDevicePorts(prev =>
+            prev.find(p => p.id === portId)
+              ? prev
+              : [...prev, { id: portId, interfaceName: portName }]
+          );
+        }
         // 端口列表加载完成后，重新设置 portId 以确保 Select 显示正确的标签
         if (editingInfoPoint.portId) {
           infoPointForm.setFieldsValue({ portId: editingInfoPoint.portId });
@@ -374,14 +407,35 @@ const InfoPointManagement: FC = () => {
 
       // 如果有设备ID，先加载设备端口列表，确保表单回显时能找到匹配的端口
       if (formValues.deviceId) {
-        setSelectedDeviceId(formValues.deviceId as string);
+        const devId = formValues.deviceId as string;
+        setSelectedDeviceId(devId);
+        // 编辑回填兜底(2026-06-30):当前设备可能不在 loadNetworkDevices 的 pageSize:50
+        // 列表里 → Select 找不到 Option → 显示 raw UUID。用 record.deviceName 注入兜底。
+        const devName = (formValues.deviceName as string) || "";
+        setNetworkDevices(prev =>
+          prev.find(d => d.id === devId)
+            ? prev
+            : [...prev, { id: devId, deviceName: devName || "未命名设备", ipAddress: "" }]
+        );
         // 直接调用 API 并同步设置状态，确保在 setFieldsValue 之前完成
         try {
-          const result = await post("/network/ports/list", { deviceId: formValues.deviceId, current: 1, pageSize: 50 }) as { data?: { list: DevicePortOption[] } };
-          setDevicePorts(result.data?.list || []);
+          const result = await post("/network/ports/list", { deviceId: devId, current: 1, pageSize: 50 }) as { data?: { list: DevicePortOption[] } };
+          let ports = result.data?.list || [];
+          // 端口同理:当前 portId 可能不在 pageSize:50 列表,用 record.portName 注入兜底
+          const portId = formValues.portId as string | undefined;
+          const portName = formValues.portName as string | undefined;
+          if (portId && portName && !ports.find(p => p.id === portId)) {
+            ports = [...ports, { id: portId, interfaceName: portName }];
+          }
+          setDevicePorts(ports);
         } catch (error) {
           console.error("加载设备端口列表失败:", error);
-          setDevicePorts([]);
+          // 加载失败时至少保留当前端口兜底,避免显示 UUID
+          setDevicePorts(
+            formValues.portId && formValues.portName
+              ? [{ id: formValues.portId as string, interfaceName: formValues.portName as string }]
+              : []
+          );
         }
       }
 
@@ -403,7 +457,7 @@ const InfoPointManagement: FC = () => {
 
             if (buildingId && floorId && workstationId) {
               // 预加载 Cascader 路径数据，确保回显时能找到匹配的节点
-              await preloadCascaderPath(buildingId, floorId);
+              await preloadCascaderPath(buildingId, floorId, workstationId, formValues.workstationName as string | undefined);
 
               // 构建三级路径: [buildingId, floorId, workstationId]
               formValues.workstationId = [buildingId, floorId, workstationId];
@@ -431,7 +485,7 @@ const InfoPointManagement: FC = () => {
   };
 
   // 预加载 Cascader 路径数据（用于编辑回显）
-  const preloadCascaderPath = async (buildingId: string, floorId: string) => {
+  const preloadCascaderPath = async (buildingId: string, floorId: string, workstationId?: string, workstationName?: string) => {
     try {
       // 找到对应的楼宇节点
       const buildingIndex = cascaderOptions.findIndex(b => b.value === buildingId);
@@ -447,7 +501,13 @@ const InfoPointManagement: FC = () => {
       const floorNo = floors[floorIndex].floorNo;
 
       // 加载该楼层下的工位列表
-      const workstations = await loadWorkstationsForCascader(floorId, floorNo || floorId);
+      let workstations = await loadWorkstationsForCascader(floorId, floorNo || floorId);
+      // 兜底(2026-06-30):当前工位可能因 floorCode 不匹配等原因未加载到,
+      // Cascader 路径末级会显示 raw UUID(用户报告:所属工位末级显示 70869f9b...)。
+      // 用 record.workstationName 注入兜底节点,确保末级有 label。
+      if (workstationId && !workstations.find(w => w.value === workstationId)) {
+        workstations = [...workstations, { value: workstationId, label: workstationName || "未命名工位", isLeaf: true }];
+      }
 
       // 更新楼层节点的 children（工位列表）- 使用类型断言
       (floors[floorIndex] as CascaderOption & { children?: CascaderOption[] }).children = workstations;
@@ -491,19 +551,15 @@ const InfoPointManagement: FC = () => {
     return statusMap[status as keyof typeof statusMap] || "未知";
   };
 
-  // 截断设备名称，超出长度显示省略号
-  const truncateDeviceName = (name: string | undefined, maxLength = 15) => {
-    if (!name || name.length <= maxLength) return name || "";
-    return name.substring(0, maxLength) + "...";
-  };
-
   const columns: ColumnsType<InfoPoint> = [
-    { title: "信息点名称", dataIndex: "name", key: "name", width: 150 },
+    { title: "信息点名称", dataIndex: "name", key: "name", width: 150, sorter: true, sortOrder: getInfoPointColumnSortOrder("name") },
     {
       title: "信息点类型",
       dataIndex: "infoPointType",
       key: "infoPointType",
       width: 100,
+      sorter: true,
+      sortOrder: getInfoPointColumnSortOrder("infoPointType"),
       render: (type) => <Tag>{getInfoPointTypeText(type)}</Tag>,
     },
     {
@@ -540,13 +596,15 @@ const InfoPointManagement: FC = () => {
       dataIndex: "status",
       key: "status",
       width: 80,
+      sorter: true,
+      sortOrder: getInfoPointColumnSortOrder("status"),
       render: (status) => {
         const colors: Record<number, string> = { 0: "success", 1: "error", 2: "default" };
         return <Tag color={colors[status as keyof typeof colors]}>{getStatusText(status)}</Tag>;
       },
     },
     { title: "描述", dataIndex: "remark", key: "remark", width: 200, ellipsis: { showTitle: false }, render: (v) => <Tooltip title={v}>{v || "-"}</Tooltip> },
-    createDateTimeColumn("createdAt", { width: 180 }),
+    createDateTimeColumn("createdAt", { width: 180, sorter: true, sortOrder: getInfoPointColumnSortOrder("createdAt") }),
     {
       title: "操作", key: "action",
       render: (_, record) => {
@@ -696,43 +754,32 @@ const InfoPointManagement: FC = () => {
               loading={loading}
               rowKey="id"
               pagination={paginationProps}
-              onChange={(pagination) => {
-                const newPage = pagination.current || 1;
-                const newPageSize = pagination.pageSize || 10;
-                setCurrent(newPage);
-                setPageSize(newPageSize);
-                const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
-	                const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize };
-	                Object.keys(formValues).forEach(key => {
-	                  const value = formValues[key];
-	                  if (value !== undefined && value !== null && value !== "") {
-	                    searchParams[key] = value;
-	                  }
-	                });
-	                loadInfoPoints(searchParams);
-              }}
+              onChange={handleInfoPointTableChange}
             />
           ) : renderCardView()}
         </Card>
-        <Modal title={editingInfoPoint ? "编辑信息点" : "新增信息点"} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); infoPointForm.resetFields(); setEditingInfoPoint(null); }} width={600}>
-          <Form form={infoPointForm} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
-            <Form.Item name="workstationId" label="所属工位" rules={[{ required: true, message: "请选择所属工位" }]}>
-              <Cascader
-                options={cascaderOptions}
-                loadData={handleCascaderLoadData}
-                loading={loadingCascader}
-                placeholder="请先选择楼宇，再选择楼层，最后选择工位"
-                changeOnSelect
-                showSearch={{ filter: (inputValue, path) => path.some(option => option.label?.toLowerCase().includes(inputValue.toLowerCase())) }}
-              />
-            </Form.Item>
-            <Form.Item name="name" label="信息点名称" rules={[{ required: true, message: "请输入信息点名称" }]}><Input placeholder="请输入信息点名称" /></Form.Item>
-            <Form.Item name="infoPointType" label="信息点类型" rules={[{ required: true, message: "请选择信息点类型" }]}>
-              <Select placeholder="请选择信息点类型" onSearch={() => {}}>
-                {infoPointTypeDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
-              </Select>
-            </Form.Item>
-            <Row gutter={16}>
+        <Modal title={editingInfoPoint ? "编辑信息点" : "新增信息点"} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); infoPointForm.resetFields(); setEditingInfoPoint(null); }} width={760}>
+          <Form form={infoPointForm} layout="horizontal" labelCol={{ span: 8 }} wrapperCol={{ span: 16 }}>
+            <Row gutter={24}>
+              <Col span={12}>
+                <Form.Item name="workstationId" label="所属工位" rules={[{ required: true, message: "请选择所属工位" }]}>
+                  <Cascader
+                    options={cascaderOptions}
+                    loadData={handleCascaderLoadData}
+                    loading={loadingCascader}
+                    placeholder="楼宇 / 楼层 / 工位"
+                    changeOnSelect
+                    showSearch={{ filter: (inputValue, path) => path.some(option => option.label?.toLowerCase().includes(inputValue.toLowerCase())) }}
+                  />
+                </Form.Item>
+                <Form.Item name="name" label="名称" rules={[{ required: true, message: "请输入名称" }]}><Input placeholder="请输入名称" /></Form.Item>
+                <Form.Item name="infoPointType" label="类型" rules={[{ required: true, message: "请选择类型" }]}>
+                  <Select placeholder="请选择类型" onSearch={() => {}}>
+                    {infoPointTypeDict.map(d => <Option key={d.dictValue} value={d.dictValue}>{d.dictLabel}</Option>)}
+                  </Select>
+                </Form.Item>
+                <Form.Item name="status" label="状态" rules={[{ required: true, message: "请选择状态" }]}><Select placeholder="请选择状态" onSearch={() => {}}><Option value={0}>正常</Option><Option value={1}>故障</Option><Option value={2}>停用</Option></Select></Form.Item>
+              </Col>
               <Col span={12}>
                 <Form.Item name="deviceId" label="所属设备">
                   <Select
@@ -766,15 +813,13 @@ const InfoPointManagement: FC = () => {
                     })}
                   </Select>
                 </Form.Item>
-              </Col>
-              <Col span={12}>
                 <Form.Item name="portId" label="所属端口">
                   <Select
                     placeholder={selectedDeviceId ? "请选择端口" : "请先选择设备"}
                     allowClear
                     disabled={!selectedDeviceId}
                     showSearch
-                    filterOption={(input, option) =>  
+                    filterOption={(input, option) =>
                       (option?.label as string)?.toString().toLowerCase().includes(input.toLowerCase())
                     }
                     optionLabelProp="label"
@@ -791,8 +836,7 @@ const InfoPointManagement: FC = () => {
                 </Form.Item>
               </Col>
             </Row>
-            <Form.Item name="status" label="状态" rules={[{ required: true, message: "请选择状态" }]}><Select placeholder="请选择状态" onSearch={() => {}}><Option value={0}>正常</Option><Option value={1}>故障</Option><Option value={2}>停用</Option></Select></Form.Item>
-            <Form.Item name="description" label="描述"><TextArea rows={3} placeholder="请输入描述" /></Form.Item>
+            <Form.Item name="description" label="描述" labelCol={{ span: 4 }} wrapperCol={{ span: 20 }}><TextArea rows={3} placeholder="请输入描述" /></Form.Item>
           </Form>
         </Modal>
         <ExcelImport entityType="infoPoint" entityName="信息点" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />
