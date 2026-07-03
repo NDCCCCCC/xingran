@@ -564,29 +564,29 @@ func (s *DeviceInfoCollectionService) processTask(ctx context.Context, deviceID 
 | A4 | Huawei V600R024C00 single-GET works for ENTITY-MIB across `entPhysicalSerialNum.1..N` (not just sample-tested N≤32) — extrapolation from one chassis. | Pitfall #1/2 | If larger S12700 multi-frame chassis has different behavior, plan needs a discovery pass before UAT |
 | A5 | Adding `component_type IS NULL` filter at `assetService.List()` (NOT at the controller) doesn't break Excel import's `GetByDeviceSN` callers — checked that those paths return single asset, no list. | Architectural Map / D-07 | If a list caller exists outside service entry, Excel-rejected components still show in UI |
 
-## Open Questions
+## Open Questions (RESOLVED — 全部并入 CONTEXT.md D-XX 或 plan task)
 
-1. **Conflict-type semantics for component anomalies**
+1. **Conflict-type semantics for component anomalies** — RESOLVED: D-06 锁定 conflict_type=F + recon_category=component_serial sibling 列方案
    - What we know: `sys_data_reconciliation.conflict_type` is `A-F` (A=match, B=phys no user, C=phys has user, D=mismatch, E=triple mismatch, F=missing).
    - What's unclear: For Phase 48, "盘盈" (实物有账无 = new component observed, no matching `ops_asset` row) doesn't fit A-F cleanly. Similarly "盘亏" (账有实物无 = component declared but collector no longer sees it).
    - Recommendation: treat both as **F类-缺数据** with `recon_category='component_serial'` distinct. Plan must add a sibling dict seed for 2 sub-cases if UI wants them, OR just call them "新增组件" / "消失组件" in the description, using the existing `resolution_note` field for human-readable text.
 
-2. **operlog severity on missing-vs-orphan**
+2. **operlog severity on missing-vs-orphan** — RESOLVED: 48-03 T1 ReconciliationEmitter action 固定 severity='medium'(双方向),severity_override 字段供后期 rule-based 调整
    - What we know: D-06 says component anomalies use existing category.
    - What's unclear: Should "盘盈" (实物有账无) — meaning someone added physical hardware without registering it in the asset system — be flagged as `severity=high` (compliance risk) or `severity=medium`?
    - Recommendation: **`medium` for both directions in v1**. The new `severity_override` field in `SysReconciliationException` (already in model) lets ops add rule-based severity shifts later.
 
-3. **Number of `ops_asset` rows that become "components" after Phase 48**
+3. **Number of `ops_asset` rows that become "components" after Phase 48** — RESOLVED: D-02 锁"采集只匹配不新建",Q3 audit pre-flight 由 D-02 决策消解(不存在采集自动建组件行,故无 retroactive 标记风险)
    - What we know: For 1 S8700 = chassis + 4×LPU + 2×MPU + 4×PSU + 2×FAN = 13 components; for 1 RS8607E = chassis + 7 board slots + 2 M1/M2 + 3 PSU + 2 fans = ~16 components.
    - What's unclear: Total `ops_asset` rows pre-import = ?. If user already imported components AS main devices in Excel, Phase 48 will mark them as components retroactively — could be confusing.
    - Recommendation: **Audit pre-flight** in Wave 0 (not visible to user): query `SELECT COUNT(*) FROM ops_asset WHERE devicesn IN (chassis_or_card_sn)` for the 2 sample devices' known SNs (12 from RQ-001 table) to estimate impact. If non-zero hits, plan must include a "data review" task before UPDATE.
 
-4. **`component_type` enum persistence**
+4. **`component_type` enum persistence** — RESOLVED: 48-01 T1 action 采用 VARCHAR(32) 无 CHECK 约束,字典驱动 asset_component_type
    - What we know: D-05 lists 6 types: `chassis | card | engine | power | fan | transceiver`.
    - What's unclear: VARCHAR (open-ended future types) vs hardcoded enum with PG check constraint?
    - Recommendation: **VARCHAR(32)**, no PG enum type. Reason: dict-driven (`asset_component_type`) lets user add `sled` / `fabric` etc. without schema change. Migration_NNN just adds the column; no CHECK constraint.
 
-5. **`entPhysicalClass=6` (port) handling**
+5. **`entPhysicalClass=6` (port) handling** — RESOLVED: 48-02 T2a action 采用 Class ∈ {6,8} AND Name 前缀 power* → component_type='power'
    - What we know: Ruijie reports PSU as `class=port(6)` (`port(6) power0 RG-PA600I A82603150300065`), not `class=powerSupply(8)`. Sample table confirms.
    - What's unclear: Should PSU be re-mapped to `component_type='power'` only when `Class=8`, or also when `Class=6 && Name starts with "power"`?
    - Recommendation: **Combine**: Class ∈ {6,8} AND Name has prefix `power*` → `component_type='power'`. Re-checked against sample: `power0` / `power1` / `power2` are RG-PA600I PSUs. Document the rule in TextFSM macro.
@@ -646,15 +646,18 @@ func (s *DeviceInfoCollectionService) processTask(ctx context.Context, deviceID 
 - **Phase gate:** `go test ./...` green + frontend `npm run test` + manual UAT site visit deferred
 
 ### Wave 0 Gaps
-- [ ] `internal/services/component_collector/service_test.go` — base test scaffold
-- [ ] `internal/services/component_collector/snmp_entity_collector_test.go` — mocked SNMP for single-GET loop
-- [ ] `internal/services/component_collector/cli_huawei_collector_test.go` — fixture-driven TextFSM
-- [ ] `internal/services/component_collector/cli_ruijie_collector_test.go` — fixture-driven TextFSM
-- [ ] `internal/services/component_collector/ops_asset_writer_test.go` — UPDATE-only assertion
-- [ ] `internal/services/component_collector/owner_resolver_test.go` — containment tree
-- [ ] `internal/services/component_collector/reconciliation_test.go` — anomaly emission
-- [ ] `templates/parser/samples_*.txt` (copies of `templates/samples/` for test fixtures)
-- [ ] Migration smoke test (PostgreSQL fixture, validates column existence after apply)
+
+> **REVISION NOTE (gsd-plan-checker INFO 1, 2026-07-04):** The entry `templates/parser/samples_*.txt` (copies of `templates/samples/`) has been **removed** from this list. Plans read `templates/samples/*.txt` directly via `fixtures_loader.go` (no copies). Wave 0 tests are inlined as RED-first TDD in 48-01 T2 / 48-02 T1,T2a,T2b,T2c / 48-03 T1,T2 — no separate `48-00-PLAN.md` is created (gsd-plan-checker WARNING 2). See `48-VALIDATION.md` for the authoritative REQ→test map.
+
+- [ ] `internal/services/component_collector/snmp_entity_collector_test.go` — mocked SNMP for single-GET loop (inlined in 48-02 T2a)
+- [ ] `internal/services/component_collector/cli_huawei_collector_test.go` — fixture-driven TextFSM (inlined in 48-02 T2b)
+- [ ] `internal/services/component_collector/cli_ruijie_collector_test.go` — fixture-driven TextFSM (inlined in 48-02 T2c)
+- [ ] `internal/services/component_collector/ops_asset_writer_test.go` — UPDATE-only assertion (inlined in 48-03 T1)
+- [ ] `internal/services/component_collector/owner_resolver_test.go` — containment tree (inlined in 48-02 T1)
+- [ ] `internal/services/component_collector/reconciliation_emitter_test.go` — anomaly emission (inlined in 48-03 T1)
+- [ ] `internal/services/component_collector/pipeline_test.go` — end-to-end pipeline (inlined in 48-03 T1)
+- [ ] `internal/services/operations/asset_listfilter_test.go` — List/Statistics exclude component_type (inlined in 48-01 T2)
+- [ ] Migration smoke test (PostgreSQL fixture, validates column existence after apply) — covered by UAT 步骤 2
 
 ## Security Domain
 

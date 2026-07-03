@@ -48,6 +48,44 @@ See [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md) for details.
 
 **Depends on**: **v1.17 对账底座（Phase 42-46）** — Phase 48 是 R2 物理层对账的组件序列号形态，需对账引擎先就位
 
+**Requirements**: REQ-48-01 ~ REQ-48-11 (源自 CONTEXT.md D-01 ~ D-14, 无正式 REQ-ID; 见 48-RESEARCH.md §phase_requirements)
+
+**Success Criteria** (what must be TRUE):
+
+  1. `ops_asset` 表新增 4 列(parent_asset_id / source_device_id / component_type / component_slot),`sys_data_reconciliation` 新增 recon_category varchar(32) 列
+  2. 旧 partial unique index uniq_recon_asset_type_open 被替换为 uniq_recon_asset_type_cat_open(asset_id, conflict_type, recon_category) WHERE open
+  3. 字典 asset_reconciliation_recon_category 含 component_serial 等条目
+  4. SNMP ENTITY-MIB 单 GET 收集器(不走 BulkWalk)能解析华为 S8700 + 锐捷 RS8607E 的 35 个真机样本(29 huawei + 6 ruijie)
+  5. 锐捷 ENTITY-MIB 中 temprature* 噪声节点(Class=8 且 Name 前缀 temprature)按规则 `Class==8 && HasPrefix(Name,"temprature")` 全部剔除,真电源(power0/1/2)保留
+  6. 华为 dual-class(module/fan)重复行通过 SN 非空优先策略去重
+  7. CLI 收集器解析华为 display device esn / display interface transceiver / 锐捷 show version modules 全部真机样本
+  8. 光模块仅采集 up 接口(D-10)
+  9. OwnerResolver 实现堆叠场景 entPhysicalContainedIn 树重建接口(D-12,本环境无 stack UAT 弱)
+  10. Pipeline UPDATE-only 写 ops_asset 4 新列(D-02);匹配不上生成 sys_data_reconciliation 异常 conflict_type=F, recon_category=component_serial(D-06)
+  11. 父交换机不在 ops_asset 时 parent_asset_id=NULL(D-04),不报异常
+  12. 每次 UPDATE 调用 operlog.RecordBackground("资产管理", OperTypeSync)(D-13)
+  13. DeviceInfoCollectionService.processTask 在 updateDeviceInfo 之后调用 collectComponentInfo(D-14),失败仅 warn 不阻塞 chassis 更新
+  14. 资产列表/统计默认 WHERE component_type IS NULL(D-07),组件不污染主设备视图
+  15. 前端资产详情可看「从属组件清单」Tab
+  16. `go build ./...` / `go test ./...` / `npm run type-check` 全绿
+
+**Plans**: 3 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 48-01-PLAN.md — Schema 迁移(migration_201) + Asset/Reconciliation model 扩展 + asset_service List/Statistics 默认 component_type IS NULL 过滤 (D-01, D-05, D-06, D-07)
+
+**Wave 2** (depends on 48-01)
+
+- [ ] 48-02-PLAN.md — component_collector 包(SNMP ENTITY-MIB 单 GET 收集器 + 锐捷 temprature* 过滤 + 华为 dual-class 去重 + OwnerResolver stack 接口 + 4 TextFSM 模板 + CLI 收集器) (D-08, D-09, D-10, D-11, D-12)
+
+**Wave 3** (depends on 48-01 + 48-02)
+
+- [ ] 48-03-PLAN.md — OpsAssetWriter(UPDATE-only + D-04 父缺失降级) + ReconciliationEmitter(conflict_type=F + recon_category=component_serial) + Pipeline + DeviceInfoCollectionService cron hook + operlog + 后端 list 端点 + 前端组件清单 Tab + UAT 推迟声明 (D-02, D-03, D-04, D-06, D-07, D-13, D-14)
+
+**UI hint**: yes (前端组件清单 Tab,asset 详情 expandable)
+
 ### Progress Table
 
 | Phase | Plans Complete | Status | Completed |
@@ -149,7 +187,7 @@ The full history of Phases 1-39 is preserved below. See also:
 - ✓ Phase 18 — v1.8 登录端点加密 (4/4 plans)
 - ✓ Phases 19-20 — v1.9 AD域控集成 (11/11 plans)
 - ✓ Phase 21 — v1.10 网络设备权限 (1/1 plan)
-- ✓ Phase 22A/22B — v1.12 深信服 VDI (6/6 plans)
+- ✓ Phases 22A/22B — v1.12 深信服 VDI (6/6 plans)
 - ✓ Phase 23 — v1.11 AD组自动同步 (6/7 plans, 23-13 superseded)
 - ✓ Phase 24 — UUID一致性优化 (2/2 plans)
 - ✓ Phase 25 — VM 数据范围权限 (5/5 plans)
@@ -185,4 +223,4 @@ The full history of Phases 1-39 is preserved below. See also:
 
 ---
 
-*Last updated: 2026-07-03 — v1.17 milestone archived + Phase 47 marked shipped (independent of v1.17) + Phase 48 v1.18 planned.*
+*Last updated: 2026-07-04 — Phase 48 v1.18 3 plans created (48-01/48-02/48-03) covering D-01 ~ D-14 across 3 waves.*
