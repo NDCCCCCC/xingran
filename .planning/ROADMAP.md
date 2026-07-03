@@ -20,8 +20,7 @@
 - ✅ **v1.12 深信服桌面云集成 (22A+22B)** — Phases 22A/22B (shipped 2026-06-02)
 - ✅ **v1.15 部门物理位置映射** — Phase 39 (shipped 2026-06-25)
 - ✅ **v1.16 技术债清理 (Tech-Debt Cleanup)** — Phases 40-41 (shipped 2026-06-26)
-- 🚧 **v1.17 资产对账 (Asset Reconciliation)** — Phases 42-46 (planning, started 2026-06-27)
-- 📋 **v1.18 网络设备硬件清单 (Device Component Serials)** — Phase 48 (backlog, added 2026-07-03 via /gsd-explore)
+- 🚧 **v1.17 资产对账 (Asset Reconciliation)** — Phases 42-46 (executing, started 2026-06-27)
 
 ---
 
@@ -190,7 +189,7 @@ Plans:
 | 43. 告警 + 工单闭环 (R2) | 3/3 | Complete    | 2026-06-27 |
 | 44. 置信度评分 + IP 段例外 (R3) | 2/2 | Complete    | 2026-06-28 |
 | 45. 工位详情整合 (R4) | 2/2 | Complete | 2026-06-28 |
-| 46. 半自动修复 (R5, 可选) | 0/2 | Pending | — |
+| 46. 半自动修复 (R5, 可选) | 2/2 | Complete | 2026-07-03 |
 
 ---
 
