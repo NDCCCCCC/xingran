@@ -566,9 +566,10 @@ func (s *fixSuggestionServiceImpl) Apply(ctx context.Context, id, userID string)
 
 	// 6. 【B-3 关键】UPDATE sys_data_reconciliation.resolved_at
 	//    必须同步写,否则下次 DetectLayer3 cron 重新检出该 Type B
+	//    注: 实际列名为 resolution_note (text), PLAN 误写为 resolution_method
 	if err := tx.Model(&exception).Updates(map[string]interface{}{
-		"resolved_at":       now,
-		"resolution_method": "fix_suggestion_applied",
+		"resolved_at":     now,
+		"resolution_note": "fix_suggestion_applied",
 	}).Error; err != nil {
 		tx.Rollback()
 		return fmt.Errorf("更新异常 resolved_at 失败[B-3 关键]: %w", err)
@@ -633,12 +634,10 @@ func (s *fixSuggestionServiceImpl) Rollback(ctx context.Context, id, userID, rea
 		return errors.New("回滚窗口已过(7d),不允许回滚")
 	}
 
-	// 3. pre_fix_user_id 非 nil 防御性检查(D-C1:回滚粒度仅 user_id,
-	//    若为空说明 Apply 路径异常,禁止回滚静默写空值)
-	if sugg.PreFixUserID == nil {
-		tx.Rollback()
-		return errors.New("pre_fix_user_id 为空,无法回滚")
-	}
+	// 3. (原 pre_fix_user_id != nil 防御性检查已删除:
+	//    原 ops_asset.user_id 为 NULL 时 Apply 写 pre_fix_user_id=NULL,
+	//    Rollback 需允许恢复 NULL 才能完整撤销到原状, 此检查过度防御, 删除.
+	//    GORM Update("user_id", nil) 会正确写 NULL.)
 
 	// 4. 反查 exception → asset_id
 	var exception models.SysDataReconciliation
