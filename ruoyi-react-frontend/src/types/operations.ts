@@ -252,7 +252,7 @@ export interface Asset {
   attributeValue?: string;       // 设备属性
 
   // 位置与归属
-  scanSite?: string;             // AAP扫码地理位置
+  scanSite?: string;             // APP扫码地理位置
   remark?: string;               // 备注
   qudaoName?: string;            // 设备渠道
   usingTypeName?: string;        // 用途

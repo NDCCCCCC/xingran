@@ -61,7 +61,7 @@ type Asset struct {
 	AttributeValue  *string `gorm:"size:500;column:attribute_value" json:"attributeValue,omitempty"` // 设备属性
 
 	// 位置与归属 (8 fields)
-	ScanSite              *string `gorm:"size:200;column:scan_site" json:"scanSite,omitempty"`           // AAP扫码地理位置
+	ScanSite              *string `gorm:"size:200;column:scan_site" json:"scanSite,omitempty"`           // APP扫码地理位置
 	Remark                *string `gorm:"size:1000;column:remark" json:"remark,omitempty"`              // 备注
 	QudaoName             *string `gorm:"size:100;column:qudao_name" json:"qudaoName,omitempty"`       // 设备渠道
 	UsingTypeName         *string `gorm:"size:100;column:using_type_name" json:"usingTypeName,omitempty"` // 用途
