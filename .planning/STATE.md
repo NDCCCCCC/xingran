@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.17
 milestone_name: 资产对账 (Asset Reconciliation)
-status: R5_reconciliation_merged_with_dropdown_governance; v1.17 work shipped, awaiting push
-stopped_at: active merge resolution (2026-06-30, R5 + dropdown integration)
-last_updated: "2026-07-02T00:00:00Z"
-last_activity: "2026-07-03 -- gsd-quick 260703-eaj 实施 B 方案(前后端 schema 单一真理源): columnsSchema.ts 新建(94 行,51 列)+ index.tsx 改 import(-78/+19 行)+ sync-columns-schema.mjs 脚本(142 行,bracket-match + new Function 解析 TS 数组字面量生成 JSON,8632 字节)+ package.json 加 sync-columns-schema + prebuild 钩子 + 后端 //go:embed asset_columns_schema.json 替换 43 列硬编码 defaultAssetColumns(-47/+26 行,新增 loadAssetColumnsFromEmbed,保留 defaultAssetColumns 函数签名作 embed 薄壳零 blast radius) → 3 原子提交 43ecb291/1f2e4d21/69ef4161,前端 type-check 0 / sync 51 列 OK / go build ./... 0 / go test 1 个 pre-existing 失败(非本次改动,基线 stash 已确认无关)"
+status: Phase 45 closed; ready for Phase 46 (R5) or transition
+stopped_at: Phase 47 context gathered
+last_updated: "2026-07-03T04:44:03.603Z"
+last_activity: "2026-06-28 -- Phase 45 R4 execution complete: 6 atomic commits (3 backend, 2 frontend, 1 summary per plan), 10/10 SCs verified PASS, 9 vitest tests + 5 Go test packages all PASS, 0 critical issues in code review"
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 15
-  completed_plans: 15
-  percent: 100
+  total_plans: 13
+  completed_plans: 12
+  percent: 60
 ---
 
 # Project State
@@ -20,6 +20,7 @@ progress:
 **Created**: 2026-04-16
 **Status**: 🚢 Phase 46/47/48 dropdown governance shipped — branch `worktree-feat-dropdown-governance` pushed, MR pending
 **Last activity**: 2026-06-29 - Phase 46-48 Dropdown 反模式全量治理:
+
   - 4 atomic commits on branch `worktree-feat-dropdown-governance`
   - 7 个后端 dropdown-options 端点 (building/floor/workstation/infoPoint/serverRoom/dedicatedLine/roomDevice)
   - 27 个前端文件重构 (pageSize 1000→50, searchOptions + onSearch debounce)
@@ -166,8 +167,8 @@ Last activity: 2026-06-28 -- Phase 45 R4 execution complete: 6 atomic commits (3
 
 ## Session Continuity
 
-Last session: 2026-06-29T11:39:20.503Z
-Stopped at: context exhaustion at 93% (2026-06-29)
-Resume file: None
+Last session: 2026-07-03T04:44:03.584Z
+Stopped at: Phase 47 context gathered
+Resume file: .planning/phases/47-phase-46-infopoint-layer3-port-status-parser/47-CONTEXT.md
 
 **Milestone status:** v1.16 技术债清理 — milestone_complete (2026-06-26), 2 phases (40+41), 8 plans, 39 phase-41 commits + 3 phase-40 plans. **Phase 13 retroactive gap closure** — 4/4 plans (13-07/08/09/10), 8 atomic commits on main, 5/5 code gaps fixed. v1.17 规划待启动。
