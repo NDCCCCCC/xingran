@@ -57,6 +57,9 @@ func RegisterReconciliationTasks(s *Scheduler, db *gorm.DB, cacheSvc cache.Cache
 	// 注入 configService + noticeHub(D-A3 读 sys_config / D-C5 误修复率告警)
 	configSvc := system.NewConfigService(db)
 	fixSuggestionSvc := asset.NewFixSuggestionService(db, cacheSvc, configSvc, wsSvc)
+	// Phase 46 R5 误修复率监控(46-02 / D-C5)
+	// 注入 db + configSvc + wsSvc + noticeSvc + fixSuggestionSvc
+	fixSuggestionMonitor := asset.NewFixSuggestionMonitor(db, configSvc, wsSvc, noticeSvc, fixSuggestionSvc)
 
 	// === 1. 物化视图刷新 ===
 	//
@@ -128,6 +131,13 @@ func RegisterReconciliationTasks(s *Scheduler, db *gorm.DB, cacheSvc cache.Cache
 				return err
 			}
 			applogger.Infof("[reconciliation:generateFixSuggestions] 本轮生成 %d 条建议", inserted)
+		case "monitorFixSuggestionMisFix":
+			// Phase 46 R5 / 46-02: 误修复率监控(D-C5)
+			// 1h 节流防告警风暴 + WS + SysNotice + operlog 三通道(46-02 监控 service 内部处理)
+			if err := fixSuggestionMonitor.CheckAndNotify(ctx); err != nil {
+				applogger.Errorf("[reconciliation:monitorFixSuggestionMisFix] 失败: %v", err)
+				return err
+			}
 		default:
 			return fmt.Errorf("未知子任务: %s", target)
 		}
@@ -180,6 +190,13 @@ func RegisterReconciliationTasks(s *Scheduler, db *gorm.DB, cacheSvc cache.Cache
 			jobName:        "对账-修复建议生成",
 			cronExpression: "@every 5m",
 			remark:         "Phase 46 R5: 扫描 Type B 高置信度异常 → 写 sys_reconciliation_fix_suggestion (D-A4 触发器)",
+		},
+		// === Phase 46 R5 / 46-02 新增: 误修复率监控(46-02 / D-C5) ===
+		// W-7 错峰:7,17,27,37,47,57(每 10min 第 7 分钟)与 generator 3,8,13,18,... 错开 4min
+		{
+			jobName:        "对账-误修复率监控",
+			cronExpression: "7,17,27,37,47,57 * * * *",
+			remark:         "Phase 46 R5 / 46-02: 7d 误修复率超阈告警(D-C5 1h 节流防风暴 + WS + SysNotice + operlog 三通道)",
 		},
 	}
 
@@ -323,6 +340,8 @@ func jobNameToInvokeTarget(jobName string) string {
 		return "reconciliation:createWorkorderHigh"
 	case "对账-修复建议生成":
 		return "reconciliation:generateFixSuggestions"
+	case "对账-误修复率监控":
+		return "reconciliation:monitorFixSuggestionMisFix"
 	default:
 		return ""
 	}
