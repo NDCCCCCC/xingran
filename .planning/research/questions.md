@@ -94,20 +94,42 @@ V600R024C00 的 `transceiver` 子命令在不同 VRP 版本间可能不一样；
 ### 剩余缺口
 
 1. ~~华为板卡/电源/风扇 SN~~ ✅ **完成**：SNMP 拿到板卡/引擎/风扇；电源仍缺，需 CLI 兜底
-2. **锐捷光模块样本缺**：这台 RS8607E 所有光口都没插模块（`transceiver is absent`），无法拿真实 DDM 输出。建议换一台有 SFP 的设备补一次。
-3. **锐捷 ENTITY-MIB 测**：仅测了华为，锐捷需同等探针验证 `entPhysicalSerialNum` 覆盖
+2. ~~锐捷 ENTITY-MIB 测~~ ✅ **完成 (2026-07-03)**：覆盖甚至超过华为；详见下表
+3. **锐捷光模块样本缺**：这台 RS8607E 所有光口都没插模块（`transceiver is absent`），无法拿真实 DDM 输出。建议换一台有 SFP 的设备补一次。
 4. **H3C / 迈普完全无采样**：此环境无 H3C/迈普设备，模板必须留待其他环境落地。
+
+### 锐捷 ENTITY-MIB 实测数据 (2026-07-03, RS8607E 10.62.63.21, community=`cpic321`)
+
+锐捷实现比华为**更完整**——电源 SN 也在 SNMP 返回（华为电源 SN 是空的）。**M1/M2 SN（`G1HLC0R000096`/`G1HLB1R000196`）与 CLI `show version` 完全一致**，双向交叉验证。
+
+| Class | Name | Model | SN | ContainedIn |
+|-------|------|-------|----|-----|
+| chassis(3) | RG-S8607E | RG-S8607E | **G1J40D100022A** | 0 |
+| backplane(4) | BACKPLANE_CA05 | — | — | 1 (passive) |
+| module(5) | slot 1-5, M1, M2 | — | — | 2 (实槽占位) |
+| **stack(7)** | fan1 | M07-FAN | **3530J40CZ0012** | 1 |
+| **port(6)** | power0 | RG-PA600I | **A82603150300065** | 1 |
+| port(6) | power1 | RG-PA600I | **A82603150300758** | 1 |
+| port(6) | power2 | RG-PA600I | **A82603150300534** | 1 |
+| fan(9) | mboard M1 | M8600E-CM | **G1HLC0R000096** | 8 (Master) |
+| fan(9) | mboard M2 | M8600E-CM | **G1HLB1R000196** | 9 (Slave) |
+
+锐捷全表 627 项，**非空 SN: 12**（其中 4 电源 + 1 风扇 + 1 chassis + 2 引擎 M1/M2 + 2x SensorBoard + 2x CN6130 都是噪声），核心 12 个全对得上。
+
+**锐捷唯一 SNP 缺口**：slot 1-5 的 module 占位（"slot 1"-仅占位，无 SN）。**这部分正好是 CLI `show version` 拿到的 5 个单板 SN**（G1P7286000129 / G1N20TZ00011A / G1MV41U000047 / G1NRBA000001B / G1MV41U00001C）。所以 **CLI `show version` 是锐捷单板 SN 的唯一来源**。
+
+**过滤建议**：锐捷 ENTITY-MIB 实质 import 时需 **从 SN 维度去重**+丢掉 `Class=8/powerSupply` 且 Name 以 `temprature`/`温度` 开头的传感器节点（typo `temprature` 出现 352 次，是锐捷私有扩展）。
 
 ### 建议方式
 
-跑过的工具（已删）：`cmd/snmp_entity_probe/` 用 gosnmp v1.35.0 单 GET 模式探针，验证 ENTITY-MIB 在生产设备可用。建议**重写为常驻 ad-hoc 工具**，便于以后再扩展采样。
+跑过的工具（已删）：`cmd/snmp_entity_probe/` 用 gosnmp v1.35.0 单 GET 模式探针。建议**重写为常驻 ad-hoc 工具**，便于以后再扩展采样。
 
 模板落地优先顺序：
-1. ✅ **锐捷 `show version`** — 立刻可写 (data 已有)
+1. ✅ **锐捷 `show version`** — 立刻可写 (data 已有) — 补 SNMP 缺的 5 个业务板 SN
 2. ✅ **华为 `display interface transceiver`** — 立刻可写 (data 已有)
-3. ✅ **华为 ENTITY-MIB `(class=5/module | class=8/powerSupply | class=9/fan | class=3/chassis)` 拉 SN** — 立刻可写 (data 已有)
-4. ✅ 华为 `display device esn` — 立刻可写 (data 已有，与 SNMP chassis SN 互验)
-5. ⏳ 锐捷 ENTITY-MIB 同等探针
+3. ✅ **华为 ENTITY-MIB** — 立刻可写 (data 已有) — chassis/module/fan
+4. ✅ **锐捷 ENTITY-MIB** — 立刻可写 (data 已有) — chassis/fan/powerSupply
+5. ⏳ 华为 `display device esn` 互验 + `display power` 兜底缺漏的电源 SN
 6. ⚠️ 锐捷光模块 DDM TextFSM — 待另一台设备采样
 7. ⚠️ H3C/迈普模板 — 待另一环境
 

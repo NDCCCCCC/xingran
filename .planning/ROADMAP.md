@@ -333,9 +333,17 @@ Plans:
 
 **Requirements**:
 - R1: 扩展 `Asset`(`ops_asset`) 模型 + migration，新增 `parent_asset_id`（自引用 → ops_asset.id，从属关系）、`source_device_id`（→ sys_network_device.id，采集来源）、`component_type`(chassis/card/engine/power/fan/transceiver)、`component_slot`
-- R2: **采集双路径**（基于真机探针 2026-07-03 重定）
-  - **主路径**: SNMP ENTITY-MIB 单 GET（不走 BulkWalk —— HW 拒绝）拉 `entPhysicalSerialNum` / `entPhysicalModelName` / `entPhysicalClass` / `entPhysicalContainedIn`，覆盖 chassis/module/fan；已知华为 S8700 上电源 SN 也是空，需 fallback
-  - **CLI 路径**: 锐捷 `show version`（含模块 SN） + 华为 `display interface transceiver`（光模块 SN + DDM） + `display device esn`（整机 SN 互验）
+- R2: **采集双路径**（基于 2026-07-03 真机探针）
+  - **主路径 (SNMP ENTITY-MIB)**：单 GET（不走 BulkWalk，HW/锐捷都拒绝）拉 `entPhysicalSerialNum` / `entPhysicalModelName` / `entPhysicalClass` / `entPhysicalContainedIn`
+    - 华为 S8700 覆盖：chassis / module / fan / 业务板 + 引擎，**电源 SN 是空（HW 漏洞）**
+    - 锐捷 RS8607E 覆盖：chassis / fan / 电源 / M1-M2 主控，**业务板 slot 1-5 仅占位**（SN 在 CLI）
+    - 必备过滤：锐捷 `powerSupply(8)` 但 Name 形如 `temprature*` 的传感器伪实体（typo "temprature"，锐捷私有扩展噪声，全表 352 个需剔除）
+  - **CLI 补充路径**：
+    - 锐捷 `show version`：拿业务板（slot 1-5）的 SN
+    - 华为 `display interface transceiver`：光模块 SN + DDM（SNMP 拿不到）
+    - 华为 `display device esn`：整机 SN，与 SNMP 互验
+    - 华为 `display device` / `display device board`：硬件清单骨架（含槽位+电源状态）
+- R2.1: SNMP 单 GET 而非 BulkWalk；community 从 `sys_auth_credential.snmp_communities` 读；丢 non-empty SerialNum 噪声
 - R3: 光模块只采在用/up 接口
 - R4: 采集组件序列号 + 所属交换机 → 按 `DeviceSN` 匹配 `ops_asset` 已有行（**只 UPDATE 不 INSERT**，保住实物/声明分层）→ 写 parent_asset_id / source_device_id / component_type / component_slot 建立双向桥接
 - R5: API + 前端资产/设备详情页展示"从属组件清单"（按 parent_asset_id 聚合，按 component_type 分组）；设备列表/统计默认按 `component_type IS NULL` 排除组件行（避免 1 机+6 板=7 台），组件另开视图
