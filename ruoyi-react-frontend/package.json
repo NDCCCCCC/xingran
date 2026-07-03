@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "npm run sync-columns-schema",
     "build": "tsc -b && vite build",
+    "sync-columns-schema": "node scripts/sync-columns-schema.mjs",
     "analyze": "cross-env ANALYZE=true vite build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
