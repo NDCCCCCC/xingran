@@ -37,9 +37,13 @@
 | **组件范围** | 板卡/引擎卡（必选）+ 电源 + 风扇 + 光模块 |
 | **光模块粒度** | 只采在用/up 接口 |
 | **建模方式** | **组件 = `ops_asset` 行**（`DeviceSN` = 组件序列号），非独立子表 |
-| **从属关系** | 新增 `parent_asset_id`（自引用 → `ops_asset.id`）指向交换机资产行 |
-| **采集桥接** | 新增 `source_device_id`（→ `sys_network_device.id`）标记采集来源；**双向桥接** |
-| **组件元数据** | 需 `component_type`(chassis/card/engine/power/fan/transceiver) + `slot/position`（存哪列待定，可复用 `AttributeValue` 或新增列） |
+| **组件资产来源** | **外部资产系统 Excel 已导入**，采集**只匹配、不新建**（不引入 ops_asset 自动写入路径） |
+| **采集核心价值** | 发现**从属关系**——外部 Excel 只有扁平资产行，"哪块板卡插在哪台交换机哪个槽"靠 SSH 采集才知道 |
+| **从属关系** | 采集在匹配到的组件 `ops_asset` 行上写 `parent_asset_id`（自引用 → 交换机资产行） |
+| **采集桥接** | 写 `source_device_id`（→ `sys_network_device.id`）标记采集来源；**双向桥接** |
+| **SN 匹配不上** | **生成对账异常**（接入 v1.17 `sys_data_reconciliation`）：实物有账无=盘盈/未登记，账有实物无=盘亏/已拆 |
+| **对账定位** | Phase 48 = 对账引擎新增"组件序列号"维度，**本质是 v1.17 R2 物理层对账的具体形态**；依赖对账底座（Phase 42-46）先就位 |
+| **组件元数据** | `component_type`(chassis/card/engine/power/fan/transceiver) + `slot/position`，采集写到匹配行（新列 or 复用 `AttributeValue`，plan 时定） |
 | **采集路线** | v1 纯 CLI + TextFSM 单一路径（光模块 SNMP 拿不到，必走 CLI）；SNMP 作后续加速 |
 | **对账价值** | 序列号是跨系统比对唯一键，天然对接 v1.17 资产对账 |
 
@@ -78,8 +82,10 @@
 
 ## 5. 建议实现骨架
 
+**现状约束（Explore 复核，2026-07-03）**：三张表完全独立、无同步——`sys_network_device`（唯一键 `ip_address`，SSH 采集）、`ops_asset`（唯一键 `devicesn`，**纯外部 Excel 导入**，采集器至今从不写它）、`sys_device_asset`（采集快照）。v1.17 对账以 `ops_asset` 为单一源，网络侧数据尚未进对账（R2 预留）。
+
 ```go
-// internal/models/asset.go 扩展 Asset（ops_asset）
+// internal/models/asset.go 扩展 Asset（ops_asset）— 仅加关系/元数据列，不改 DeviceSN 语义
 type Asset struct {
     // ... 现有字段 ...
     ParentAssetID  *string `gorm:"size:64;index;column:parent_asset_id" json:"parentAssetId,omitempty"`   // 自引用 → ops_asset.id（从属关系）
@@ -89,6 +95,13 @@ type Asset struct {
 }
 ```
 
-**采集→落库流程**：SSH 采集组件序列号 → 按 vendor 分发 TextFSM 解析 → 组装 `[]Asset`（设 ComponentType/Slot/SourceDeviceID/ParentAssetID）→ 按 `DeviceSN` upsert 到 `ops_asset`（参考端口采集 BatchUpsert + CacheInvalidator）→ 对账：与外部资产同步来的组件资产按 SN 匹配。
+**采集→匹配→对账流程（不新建资产行）**：
+1. SSH 采集组件序列号 + 所属交换机（按 vendor 分发 TextFSM 解析）。
+2. 采集侧父交换机以 `sys_network_device` 锚定；组件/交换机在 `ops_asset` 里按 `DeviceSN` **查找已有行**。
+3. 匹配到组件行 → UPDATE `parent_asset_id`（指向交换机资产行）+ `source_device_id` + `component_type/slot`。
+4. **匹配不上 → 生成 `sys_data_reconciliation` 对账异常**（实物有账无 / 账有实物无）。
+5. 前端资产/设备详情页按 `parent_asset_id` 聚合展示"从属组件清单"。
 
-**待定问题**（见 RQ-001）：真机输出格式；component_type/slot 用新列还是复用 `AttributeValue`；父交换机若尚未是 `ops_asset` 行时如何创建/链接。
+**关键约束**：采集对 `ops_asset` **只 UPDATE 不 INSERT**，保住"实物层 vs 声明层"分层不被污染。父交换机若不在 `ops_asset`，`parent_asset_id` 留空、仍写 `source_device_id`（见 RQ-002）。
+
+**待定问题**（见 RQ-002）：真机输出格式；父交换机不在 ops_asset 时的降级；component_type/slot 用新列还是 `AttributeValue`；组件对账异常用哪个 category（新增 vs 复用 v1.17 D 异常）。

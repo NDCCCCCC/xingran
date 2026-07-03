@@ -48,8 +48,13 @@
 
 ### 待确认项
 
-1. **父交换机是否已存在于 `ops_asset`**？若交换机只在 `sys_network_device` 而无对应资产行，`parent_asset_id` 指不到——需先创建/链接交换机资产行，还是允许 parent 为空只留 source_device_id？
+已定（2026-07-03 discuss）：
+- **组件资产来源** = 外部资产系统 Excel 已导入，采集**只匹配不新建**（不引入 ops_asset 自动写入路径）。
+- **SN 匹配不上** = 生成 `sys_data_reconciliation` 对账异常（实物有账无=盘盈、账有实物无=盘亏）。Phase 48 依赖并扩展 v1.17 对账引擎，是 R2 物理层对账的组件形态。
+
+仍待确认：
+1. **父交换机若不在 `ops_asset`**（外部只导了组件、没导交换机本体）→ `parent_asset_id` 留空、只写 `source_device_id` 降级，还是也报一条对账异常？
 2. **`component_type` / `component_slot` 存哪**：新增专用列，还是复用现有 `AttributeValue`(size:500) JSON？
-3. **组件资产与外部资产系统同步的冲突**：外部资产同步可能已把某些组件作为资产导入，采集发现的同 SN 组件如何 merge（对账语义，参考 v1.17）？
-4. **资产层级区分**：设备 vs 组件在 `ops_asset` 同表，前端列表/统计是否需过滤组件行（避免把板卡当独立设备统计）？
+3. **组件对账异常用哪个 category**：v1.17 现有异常类型（如 D 异常）能否复用，还是需新增"组件序列号"异常类别？需读 `models/reconciliation.go` + `reconciliation_detection.go` 定。
+4. **资产层级区分**：组件行与设备行在 `ops_asset` 同表，前端设备列表/统计（`asset_service.go` `List()`/`Statistics()`）是否需按 `component_type IS NOT NULL` 过滤组件行，避免把板卡当独立设备统计。
 

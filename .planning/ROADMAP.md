@@ -332,16 +332,16 @@ Plans:
 **采集路线:** v1 纯 CLI + TextFSM 单一路径（光模块 SNMP 拿不到，必走 CLI）；命令已调研确认（华为 `display device`/`display elabel`/`display transceiver`；H3C `display device manuinfo`/`display asset-info`/`display transceiver manuinfo`；锐捷 `show version`/`show interface transceiver`；迈普 `show hardware`/`show transceiver`）。SNMP ENTITY-MIB（`entPhysicalContainedIn` 天然表达从属树）加速留作 seed `.planning/seeds/snmp-entity-mib-acceleration.md`。
 
 **Requirements**:
-- R1: 扩展 `Asset`(`ops_asset`) 模型 + migration，新增 `parent_asset_id`（自引用 → ops_asset.id，从属关系）、`source_device_id`（→ sys_network_device.id，采集来源）、`component_type`(chassis/card/engine/power/fan/transceiver)、`component_slot`；空 SN 容错（不污染 DeviceSN 唯一键）
+- R1: 扩展 `Asset`(`ops_asset`) 模型 + migration，新增 `parent_asset_id`（自引用 → ops_asset.id，从属关系）、`source_device_id`（→ sys_network_device.id，采集来源）、`component_type`(chassis/card/engine/power/fan/transceiver)、`component_slot`
 - R2: 四厂商（华为/H3C/锐捷/迈普）× 组件类型 的 CLI 命令分发 + TextFSM 模板（板卡/电源/风扇 + 光模块 transceiver manuinfo）
 - R3: 光模块只采在用/up 接口
-- R4: 扩展 `DeviceInfoCollectionService` 采集组件、组装 Asset 并按 DeviceSN 批量 upsert 到 ops_asset（参考端口采集 BatchUpsert + CacheInvalidator）；建立 parent_asset_id / source_device_id 双向桥接
+- R4: 采集组件序列号 + 所属交换机 → 按 `DeviceSN` 匹配 `ops_asset` 已有行（**只 UPDATE 不 INSERT**，保住实物/声明分层）→ 写 parent_asset_id / source_device_id / component_type / component_slot 建立双向桥接
 - R5: API + 前端资产/设备详情页展示"从属组件清单"（按 parent_asset_id 聚合，按 component_type 分组，含序列号/槽位/型号/状态）
-- R6: 堆叠（iStack/IRF）序列号归属处理 + 与外部资产同步组件按 SN 对账 + 操作日志（module「资产管理」，OperTypeSync）
+- R6: **SN 匹配不上生成 `sys_data_reconciliation` 对账异常**（实物有账无=盘盈、账有实物无=盘亏）；堆叠（iStack/IRF）序列号归属处理 + 操作日志（module「资产管理」，OperTypeSync）
 
-**前置条件:** RQ-001 四厂商真机输出格式验证（`.planning/research/questions.md`），阻塞 R2 模板编写
+**前置条件:** RQ-001 四厂商真机输出格式验证 + RQ-002 资产建模细节（`.planning/research/questions.md`），阻塞 R2 模板与 R1 migration
 
-**Depends on:** 独立于 v1.17，可并行
+**Depends on:** **v1.17 对账底座（Phase 42-46）** — Phase 48 是 R2 物理层对账的组件序列号形态，需对账引擎先就位
 **Plans:** 0 plans
 
 Plans:
