@@ -177,7 +177,7 @@ var ExcelConfigs = map[string]ExcelConfig{
 			{Field: "signOrgnoName", Header: "归属机构", MaxLength: 100, DBField: "sign_orgno_name"},
 			{Field: "orgnoName", Header: "使用机构", MaxLength: 100, DBField: "orgno_name"},
 			{Field: "usefulDeptName", Header: "部门", MaxLength: 100, DBField: "useful_dept_name"},
-			{Field: "deptName", Header: "受益部门", MaxLength: 100, Reference: "sys_dept.dept_name", DBField: "dept_id"},
+			{Field: "deptName", Header: "受益部门", MaxLength: 100, DBField: "deptname"},
 			{Field: "deviceUserName", Header: "领取人", MaxLength: 100, DBField: "deviceuser_name"},
 			{Field: "nowUserName", Header: "责任人", MaxLength: 100, DBField: "nowuser_name"},
 			{Field: "outerUser", Header: "使用人", MaxLength: 100, DBField: "outer_user"},
