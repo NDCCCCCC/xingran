@@ -687,12 +687,13 @@ const WorkstationManagement: FC = () => {
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="floorId" label="所属楼层">
                 <Select
-                  placeholder="搜索楼层"
+                  placeholder={selectedDeptId ? "搜索楼层" : "请先选择部门"}
                   allowClear
                   className="user-form-input"
                   style={{ width: 180 }}
                   showSearch
                   filterOption={false}
+                  disabled={!selectedDeptId}
                   onSearch={(kw) => loadFloorOptions(selectedDeptId, kw)}
                   options={floorOptions.map((f) => ({ value: f.id, label: f.name }))}
                 />
