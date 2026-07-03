@@ -325,19 +325,19 @@ Plans:
 
 **Milestone:** v1.18 网络设备硬件清单
 
-**Goal:** 支持"一机多序列号"——采集并持久化网络设备的板卡、电源、风扇、光模块各自的序列号，形成完整硬件清单，服务设备档案 / 资产盘点审计 / 备件管理 / 对账合规上报四类用途。序列号作为跨系统比对唯一键，对接 v1.17 资产对账。
+**Goal:** 支持"一机多序列号"——将网络设备的板卡/引擎卡、电源、风扇、光模块各自的序列号**作为资产设备纳入资产系统 `ops_asset`**（每个组件一条记录，`DeviceSN`=组件序列号），保存组件对交换机/路由的从属关系并在前端展示。服务设备档案 / 资产盘点审计 / 备件管理 / 对账合规上报四类用途；序列号作为跨系统比对唯一键，对接 v1.17 资产对账。
 
-**背景:** 现有 `NetworkDevice.SerialNumber` / `DeviceAsset.SerialNumber` 均为单字段，无组件表；`templates/huawei_vrp_display_device.textfsm` 已能解析板卡但从未落库。采集链路（Scrapli SSH + TextFSM + `DeviceInfoCollectionService`）成熟可复用。详见 `.planning/notes/260703-network-device-component-serials.md`。
+**背景:** `ops_asset` 以 `DeviceSN` 为唯一键，组件序列号天然是一条资产记录主键，但缺"从属关系"与"采集来源"字段。采集链路（Scrapli SSH + TextFSM + `DeviceInfoCollectionService`）成熟可复用；`templates/huawei_vrp_display_device.textfsm` 已能解析板卡但从未落库。详见 `.planning/notes/260703-network-device-component-serials.md`。
 
-**采集路线:** v1 纯 CLI + TextFSM 单一路径（光模块 SNMP 拿不到，必走 CLI）；SNMP ENTITY-MIB 加速留作 seed `.planning/seeds/snmp-entity-mib-acceleration.md`。
+**采集路线:** v1 纯 CLI + TextFSM 单一路径（光模块 SNMP 拿不到，必走 CLI）；命令已调研确认（华为 `display device`/`display elabel`/`display transceiver`；H3C `display device manuinfo`/`display asset-info`/`display transceiver manuinfo`；锐捷 `show version`/`show interface transceiver`；迈普 `show hardware`/`show transceiver`）。SNMP ENTITY-MIB（`entPhysicalContainedIn` 天然表达从属树）加速留作 seed `.planning/seeds/snmp-entity-mib-acceleration.md`。
 
 **Requirements**:
-- R1: 新建 `DeviceComponent` 一对多组件模型 + migration（device_id / component_type[chassis|card|power|fan|transceiver] / slot / serial_number / model / status），SN 空值容错
-- R2: 四厂商（华为/H3C/锐捷/迈普）× 组件类型 的 CLI 命令分发 + TextFSM 模板（板卡/电源/风扇走 `display device manuinfo` 系；光模块走 `display transceiver` 系）
+- R1: 扩展 `Asset`(`ops_asset`) 模型 + migration，新增 `parent_asset_id`（自引用 → ops_asset.id，从属关系）、`source_device_id`（→ sys_network_device.id，采集来源）、`component_type`(chassis/card/engine/power/fan/transceiver)、`component_slot`；空 SN 容错（不污染 DeviceSN 唯一键）
+- R2: 四厂商（华为/H3C/锐捷/迈普）× 组件类型 的 CLI 命令分发 + TextFSM 模板（板卡/电源/风扇 + 光模块 transceiver manuinfo）
 - R3: 光模块只采在用/up 接口
-- R4: 扩展 `DeviceInfoCollectionService` 采集组件并批量 upsert 落库（参考端口采集 BatchUpsert + CacheInvalidator）
-- R5: API + 前端设备详情页展示硬件清单（组件列表按类型分组，含序列号/槽位/型号/状态）
-- R6: 堆叠（iStack/IRF）序列号归属处理 + 操作日志（module「网络设备」，OperTypeSync）
+- R4: 扩展 `DeviceInfoCollectionService` 采集组件、组装 Asset 并按 DeviceSN 批量 upsert 到 ops_asset（参考端口采集 BatchUpsert + CacheInvalidator）；建立 parent_asset_id / source_device_id 双向桥接
+- R5: API + 前端资产/设备详情页展示"从属组件清单"（按 parent_asset_id 聚合，按 component_type 分组，含序列号/槽位/型号/状态）
+- R6: 堆叠（iStack/IRF）序列号归属处理 + 与外部资产同步组件按 SN 对账 + 操作日志（module「资产管理」，OperTypeSync）
 
 **前置条件:** RQ-001 四厂商真机输出格式验证（`.planning/research/questions.md`），阻塞 R2 模板编写
 
