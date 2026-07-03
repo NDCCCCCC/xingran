@@ -952,6 +952,13 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		"asset:reconciliation:list",
 		"asset:reconciliation:dashboard",
 		"asset:reconciliation:export",
+		// Phase 46 R5: 修复建议命名空间 5 个 perm(list/accept/reject/apply/rollback/stats)
+		"asset:reconciliation:fix:list",
+		"asset:reconciliation:fix:accept",
+		"asset:reconciliation:fix:reject",
+		"asset:reconciliation:fix:apply",
+		"asset:reconciliation:fix:rollback",
+		"asset:reconciliation:fix:stats",
 	}, core))
 	{
 		// 异常列表读端点 (SetupReconciliationRouter: /exception/list, /exception/:id)
@@ -960,6 +967,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 		assetV1.SetupReconciliationExceptionRouter(assetReconciliation, core)
 		// 6 个统计端点 (SetupReconciliationStatisticsRouter: /statistics/summary 等)
 		assetV1.SetupReconciliationStatisticsRouter(assetReconciliation, core)
+		// Phase 46 R5: 修复建议(7 个端点:list/getById/accept/reject/apply/rollback/stats)
+		assetV1.SetupFixSuggestionRouter(assetReconciliation, core)
 	}
 
 	// 注意：前端静态文件路由已移至 cmd/main.go，直接注册在 engine 上
