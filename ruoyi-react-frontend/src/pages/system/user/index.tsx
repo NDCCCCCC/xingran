@@ -389,9 +389,10 @@ const UserManagement: FC = () => {
       loadRoles().catch(() => {/* hook 内部已 handleApiError */});
       if (Array.isArray(editingUser.roles)) {
         // 兼容两种形态:string[] (UUID) 或 Array<{id, roleName, roleKey}>
-        const asObjects = editingUser.roles
+        // 用 unknown 显式声明谓词参数,绕开 TS2677(predicate 必须可赋给参数类型)。
+        const asObjects = (editingUser.roles as unknown[])
           .filter((r): r is { id: string; roleName?: string; roleKey?: string } => typeof r === "object" && r !== null && "id" in r)
-          .map(r => ({ id: r.id, roleName: r.roleName, roleKey: r.roleKey }));
+          .map(r => ({ id: (r as { id: string }).id, roleName: r.roleName, roleKey: r.roleKey }));
         if (asObjects.length > 0) {
           ensureRoles(asObjects);
         }

@@ -3,6 +3,9 @@
  */
 
 import type { WorkstationDevice, DeviceSource, DeviceFormData } from "@/types";
+// 复用 @/types/operations 中已包含全部 DeviceSource 键(含 physical)的标签表,
+// 避免本地重复定义遗漏导致 Record<DeviceSource, string> 不完整。
+export { DEVICE_SOURCE_LABELS } from "@/types/operations";
 
 // 导出类型，方便外部使用
 export type { WorkstationDevice, DeviceSource, DeviceFormData };
@@ -13,10 +16,3 @@ export interface WorkstationDeviceTableProps {
   expandable?: boolean;
   onDeviceChange?: () => void;
 }
-
-// 设备来源枚举和标签
-export const DEVICE_SOURCE_LABELS: Record<DeviceSource, string> = {
-  ad: "域控",
-  asset: "资产",
-  manual: "手动",
-} as const;

@@ -311,21 +311,25 @@ const InfoPointManagement: FC = () => {
   useEffect(() => {
     const initializeDeviceAndPorts = async () => {
       if (editingInfoPoint && editingInfoPoint.deviceId) {
-        setSelectedDeviceId(editingInfoPoint.deviceId);
+        // 收窄到局部 const,避免 setState 闭包内 editingInfoPoint.deviceId 被推回 string|undefined
+        const deviceId: string = editingInfoPoint.deviceId;
+        setSelectedDeviceId(deviceId);
         // 设备兜底注入(2026-06-30,同 openModal):当前设备可能不在 pageSize:50 列表
         const devName = editingInfoPoint.deviceName || "";
         setNetworkDevices(prev =>
-          prev.find(d => d.id === editingInfoPoint.deviceId)
+          prev.find(d => d.id === deviceId)
             ? prev
-            : [...prev, { id: editingInfoPoint.deviceId, deviceName: devName || "未命名设备", ipAddress: "" }]
+            : [...prev, { id: deviceId, deviceName: devName || "未命名设备", ipAddress: "" }]
         );
-        await loadDevicePorts(editingInfoPoint.deviceId);
+        await loadDevicePorts(deviceId);
         // 端口兜底注入:loadDevicePorts(pageSize:50)可能没覆盖当前 portId,用 portName 注入
         if (editingInfoPoint.portId && editingInfoPoint.portName) {
+          const portId: string = editingInfoPoint.portId;
+          const portName: string = editingInfoPoint.portName;
           setDevicePorts(prev =>
-            prev.find(p => p.id === editingInfoPoint.portId)
+            prev.find(p => p.id === portId)
               ? prev
-              : [...prev, { id: editingInfoPoint.portId, interfaceName: editingInfoPoint.portName }]
+              : [...prev, { id: portId, interfaceName: portName }]
           );
         }
         // 端口列表加载完成后，重新设置 portId 以确保 Select 显示正确的标签

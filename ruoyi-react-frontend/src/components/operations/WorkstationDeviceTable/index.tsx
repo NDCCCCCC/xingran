@@ -6,8 +6,8 @@
  */
 
 import React, { useState, useEffect, useCallback } from "react";
-import { App, Table, Button, Space, Tag, Popconfirm, Modal, Form, Input, Alert, Collapse } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, StarOutlined } from "@ant-design/icons";
+import { App, Table, Button, Space, Tag, Popconfirm, Modal, Form, Input, Alert, Collapse, Tooltip } from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined, StarOutlined, HistoryOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import type { WorkstationDevice, DeviceFormData, DeviceSource, Asset } from "@/types";
 import { DEVICE_SOURCE_LABELS } from "@/types/operations";
 import { workstationDeviceApi, assetApi } from "@/lib/opsApi";
@@ -285,7 +285,8 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
   };
 
   // 通用表格列定义(紧凑布局:列宽收窄,字号 11)
-  const createColumns = (canEdit: boolean) => [
+  // showConfidence: 仅 R5 物理链路子表传 true,显示置信度徽标 + 历史时间提示
+  const createColumns = (canEdit: boolean, showConfidence = false) => [
     {
       title: "设备名称",
       dataIndex: "deviceName",
@@ -339,6 +340,49 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
         </Tag>
       ),
     },
+    // R5 (2026-07-02) — 置信度列(仅物理链路子表显示):实测=绿色Tag,历史关联=橙色Tag+Tooltip
+    ...(showConfidence
+      ? [
+          {
+            title: "置信度",
+            key: "confidence",
+            width: 90,
+            render: (_: unknown, record: WorkstationDevice) => {
+              // 非物理链路或未分级:不渲染(物理链路以外的数据 confidence 为 undefined)
+              if (record.confidence === undefined || record.confidence === null) {
+                return null;
+              }
+              if (record.confidence >= 1.0) {
+                // 实测 MAC 命中:绿色 "实测"
+                return (
+                  <Tag
+                    icon={<CheckCircleOutlined />}
+                    color="success"
+                    style={{ margin: 0, fontSize: 10, padding: "0 4px", lineHeight: "16px" }}
+                  >
+                    实测
+                  </Tag>
+                );
+              }
+              // 仅历史 MAC 命中:橙色 "历史关联" + Tooltip 显示最后上线时间
+              const tip = record.historyLastSeen
+                ? `最后上线时间: ${record.historyLastSeen}`
+                : "设备已离线,基于历史 MAC 关联";
+              return (
+                <Tooltip title={tip}>
+                  <Tag
+                    icon={<HistoryOutlined />}
+                    color="warning"
+                    style={{ margin: 0, fontSize: 10, padding: "0 4px", lineHeight: "16px", cursor: "help" }}
+                  >
+                    历史关联
+                  </Tag>
+                </Tooltip>
+              );
+            },
+          },
+        ]
+      : []),
     // R4 (Phase 45) — 对账健康列(行内徽标,从父级 lift 的 conflictTypeMap 取)
     {
       title: "对账健康",
@@ -524,7 +568,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
             children:
               physicalDevices.length > 0 ? (
                 <Table
-                  columns={createColumns(false)}
+                  columns={createColumns(false, true)}
                   dataSource={physicalDevices}
                   rowKey="id"
                   size="small"

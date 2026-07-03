@@ -317,6 +317,11 @@ export interface WorkstationDevice {
   description?: string;
   createdAt: string;
   updatedAt: string;
+  // R5 物理链路(2026-07-02): 置信度 + 历史最后上线时间
+  //   confidence: 1.0 = 实测 MAC 命中, 0.5 = 仅历史 MAC 命中(设备离线), undefined = 非物理链路/未分级
+  //   historyLastSeen: 仅当 confidence < 1.0 且来自历史 MAC 表时有值
+  confidence?: number;
+  historyLastSeen?: string;
   // 关联对象
   asset?: Asset;
 }

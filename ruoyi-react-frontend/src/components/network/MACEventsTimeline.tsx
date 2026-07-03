@@ -34,6 +34,8 @@ export interface MACEventsTimelineProps {
   endTime: string;
   /** 单页条数(默认 100) */
   pageSize?: number;
+  /** 设备 ID(可选, R5 物理链路场景传入, 当前未在组件内使用, 仅透传给未来扩展) */
+  deviceId?: string;
 }
 
 const TimelineItem: React.FC<{

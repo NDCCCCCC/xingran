@@ -442,6 +442,8 @@ export const reconciliationApi = {
       skippedSilence: number;
       skippedThrottle: number;
     }>("/asset/reconciliation/refresh", {});
-    return res.data;
+    // res.data 实际是 T | undefined(BaseResponse 契约),这里业务契约保证非空,
+    // 兜底 {} 以满足返回类型。
+    return res.data ?? { inserted: 0, skipped: 0, skippedSilence: 0, skippedThrottle: 0 };
   },
 };
