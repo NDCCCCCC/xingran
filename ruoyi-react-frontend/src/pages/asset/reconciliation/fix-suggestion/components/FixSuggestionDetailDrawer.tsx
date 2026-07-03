@@ -38,18 +38,33 @@ const fixStatusLabel: Record<FixStatus, string> = {
 };
 
 /**
- * 7d 倒计时显示
+ * 7d 倒计时显示(46-02 Task 3 / D-C2 视觉强化)
+ *
+ * 返回结构化剩余时间(天数 / 小时 / 分钟)便于渲染为彩色 Tag。
+ * remainingMs <= 0 表示已过 7d 窗口,按钮将隐藏。
  */
-function formatCountdown(target: string | null): string {
-  if (!target) return "-";
+interface CountdownInfo {
+  remainingMs: number;
+  remainingDays: number;
+  remainingHours: number;
+  remainingMinutes: number;
+  isExpired: boolean;
+}
+
+function calcCountdown(target: string | null): CountdownInfo {
+  if (!target) {
+    return { remainingMs: 0, remainingDays: 0, remainingHours: 0, remainingMinutes: 0, isExpired: true };
+  }
   const t = new Date(target).getTime();
   const now = Date.now();
-  if (t <= now) return "已过期(不可回滚)";
-  const diff = t - now;
-  const days = Math.floor(diff / (24 * 60 * 60 * 1000));
-  const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-  const mins = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
-  return `剩余 ${days} 天 ${hours} 小时 ${mins} 分`;
+  const remainingMs = t - now;
+  if (remainingMs <= 0) {
+    return { remainingMs: 0, remainingDays: 0, remainingHours: 0, remainingMinutes: 0, isExpired: true };
+  }
+  const remainingDays = Math.floor(remainingMs / (24 * 60 * 60 * 1000));
+  const remainingHours = Math.floor((remainingMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+  const remainingMinutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
+  return { remainingMs, remainingDays, remainingHours, remainingMinutes, isExpired: false };
 }
 
 export const FixSuggestionDetailDrawer = ({
@@ -125,11 +140,29 @@ export const FixSuggestionDetailDrawer = ({
                         {sugg.preFixUserId ?? <span style={{ color: "#999" }}>未应用</span>}
                       </Descriptions.Item>
                       <Descriptions.Item label="回滚窗口截止">
-                        {sugg.rollbackWindowUntil ?? "-"}
-                        {sugg.rollbackWindowUntil && (
-                          <span style={{ marginLeft: 8, color: "#fa8c16" }}>
-                            ({formatCountdown(sugg.rollbackWindowUntil)})
-                          </span>
+                        {sugg.rollbackWindowUntil ? (
+                          <>
+                            <span>{sugg.rollbackWindowUntil}</span>
+                            {(() => {
+                              const cd = calcCountdown(sugg.rollbackWindowUntil);
+                              if (cd.isExpired) {
+                                return (
+                                  <Tag color="default" style={{ marginLeft: 8 }}>
+                                    已超 7d 窗口
+                                  </Tag>
+                                );
+                              }
+                              // 颜色:剩余 < 1d 红色紧急;< 3d 橙色;>= 3d 蓝色
+                              const color = cd.remainingDays < 1 ? "red" : cd.remainingDays < 3 ? "orange" : "blue";
+                              return (
+                                <Tag color={color} style={{ marginLeft: 8 }}>
+                                  剩余 {cd.remainingDays}d {cd.remainingHours}h {cd.remainingMinutes}m 可回滚
+                                </Tag>
+                              );
+                            })()}
+                          </>
+                        ) : (
+                          "-"
                         )}
                       </Descriptions.Item>
                     </Descriptions>

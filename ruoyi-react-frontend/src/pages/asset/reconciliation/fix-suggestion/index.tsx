@@ -52,16 +52,25 @@ import {
 import { queryKeys } from "@/lib/queryKeys";
 import { useMenuStore } from "@/store/menuStore";
 import { FixSuggestionDetailDrawer } from "./components/FixSuggestionDetailDrawer";
+import { RollbackModal } from "./components/RollbackModal";
 
 /**
- * 状态机颜色映射
+ * 状态机颜色映射(D-D2 视觉强化 / 46-02 Task 3 锁定)
+ *
+ * 6 种状态:
+ *   - pending     黄色  待处理
+ *   - accepted    蓝色  已接受(未应用)
+ *   - rejected    灰色  已拒绝
+ *   - applied     绿色  已应用(可回滚)
+ *   - rolled_back 橙色  已回滚(从 applied 恢复)
+ *   - failed      红色  失败
  */
 const fixStatusColor: Record<FixStatus, string> = {
   pending: "gold",
   accepted: "blue",
   rejected: "default",
   applied: "green",
-  rolled_back: "magenta",
+  rolled_back: "orange",
   failed: "red",
 };
 
@@ -105,9 +114,9 @@ const FixSuggestion = () => {
   const [rollbackModal, setRollbackModal] = useState<{
     open: boolean;
     suggestionId: string | null;
+    rollbackReason: string;
     submitting: boolean;
-  }>({ open: false, suggestionId: null, submitting: false });
-  const [rollbackForm] = Form.useForm();
+  }>({ open: false, suggestionId: null, rollbackReason: "", submitting: false });
 
   // 服务端排序 — 4 个白名单字段
   const { orderByColumn, isAsc, handleTableChange } = useServerSort<FixSuggestionListItem>({
@@ -242,32 +251,42 @@ const FixSuggestion = () => {
 
   // 打开 Rollback Modal
   const openRollback = useCallback((record: FixSuggestionListItem) => {
-    setRollbackModal({ open: true, suggestionId: record.id, submitting: false });
-    rollbackForm.resetFields();
-  }, [rollbackForm]);
+    setRollbackModal({ open: true, suggestionId: record.id, rollbackReason: "", submitting: false });
+  }, []);
 
   // 提交 Rollback
-  const handleRollbackSubmit = useCallback(async () => {
-    if (!rollbackModal.suggestionId) return;
-    try {
-      const values = (await rollbackForm.validateFields()) as { rollbackReason: string };
-      if (values.rollbackReason.trim().length < 10) {
+  const handleRollbackSubmit = useCallback(
+    async (reason: string) => {
+      if (!rollbackModal.suggestionId) return;
+      if (reason.trim().length < 10) {
         message.error("回滚原因至少 10 字符");
         return;
       }
-      setRollbackModal((prev) => ({ ...prev, submitting: true }));
-      await fixSuggestionApi.rollback(rollbackModal.suggestionId, values.rollbackReason.trim());
-      message.success("已回滚修复");
-      queryClient.invalidateQueries({ queryKey: queryKeys.reconciliation.fixSuggestionList(listParams) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.reconciliation.fixSuggestionStats(7) });
-      setRollbackModal({ open: false, suggestionId: null, submitting: false });
-      rollbackForm.resetFields();
-    } catch (err) {
-      const errMsg = (err as Error)?.message ?? "回滚失败";
-      message.error(errMsg);
-      setRollbackModal((prev) => ({ ...prev, submitting: false }));
-    }
-  }, [rollbackModal.suggestionId, rollbackForm, queryClient, listParams, message]);
+      try {
+        setRollbackModal((prev) => ({ ...prev, submitting: true, rollbackReason: reason.trim() }));
+        await fixSuggestionApi.rollback(rollbackModal.suggestionId, reason.trim());
+        message.success("已回滚修复");
+        // 失效 list + stats + detail 三组 query
+        queryClient.invalidateQueries({ queryKey: queryKeys.reconciliation.fixSuggestionList(listParams) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.reconciliation.fixSuggestionStats(7) });
+        if (rollbackModal.suggestionId) {
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.reconciliation.fixSuggestionDetail(rollbackModal.suggestionId),
+          });
+        }
+        setRollbackModal({ open: false, suggestionId: null, rollbackReason: "", submitting: false });
+      } catch (err) {
+        const errMsg = (err as Error)?.message ?? "回滚失败";
+        message.error(errMsg);
+        // 特定错误:窗口已过 → 刷新列表隐藏按钮
+        if (errMsg.includes("回滚窗口已过")) {
+          queryClient.invalidateQueries({ queryKey: queryKeys.reconciliation.fixSuggestionList(listParams) });
+        }
+        setRollbackModal((prev) => ({ ...prev, submitting: false }));
+      }
+    },
+    [rollbackModal.suggestionId, queryClient, listParams, message]
+  );
 
   // 打开详情 Drawer
   const openDrawer = useCallback((record: FixSuggestionListItem) => {
@@ -275,8 +294,13 @@ const FixSuggestion = () => {
     setDrawerOpen(true);
   }, []);
 
-  // 7d 回滚窗口判断
-  const isWithinRollbackWindow = (record: FixSuggestionListItem): boolean => {
+  // 7d 回滚窗口判断(46-02 Task 3 / D-C2)
+  //
+  // 规则:
+  //   - record.rollbackWindowUntil 为 null → 不在窗口(未应用)
+  //   - 当前时间 < rollbackWindowUntil → 在 7d 窗口内(可回滚)
+  //   - 当前时间 >= rollbackWindowUntil → 超过 7d(按钮隐藏,DB 仍允许)
+  const isWithin7d = (record: FixSuggestionListItem): boolean => {
     if (!record.rollbackWindowUntil) return false;
     return new Date(record.rollbackWindowUntil).getTime() > Date.now();
   };
@@ -362,7 +386,7 @@ const FixSuggestion = () => {
             </Button>
           );
         }
-        if (record.fixStatus === "applied" && isWithinRollbackWindow(record) && canRollback) {
+        if (record.fixStatus === "applied" && isWithin7d(record) && canRollback) {
           return (
             <Button type="link" size="small" icon={<UndoOutlined />} onClick={() => openRollback(record)}>
               回滚
@@ -505,26 +529,13 @@ const FixSuggestion = () => {
         </Form>
       </Modal>
 
-      {/* Rollback Modal */}
-      <Modal
-        title="回滚修复"
+      {/* Rollback Modal(46-02 Task 3 提取为独立组件) */}
+      <RollbackModal
         open={rollbackModal.open}
-        confirmLoading={rollbackModal.submitting}
-        onCancel={() => setRollbackModal({ open: false, suggestionId: null, submitting: false })}
-        onOk={handleRollbackSubmit}
-        okText="确认回滚"
-        okButtonProps={{ danger: true }}
-      >
-        <Form form={rollbackForm} layout="vertical">
-          <Form.Item
-            name="rollbackReason"
-            label="回滚原因"
-            rules={[{ required: true, min: 10, message: "至少 10 字符" }]}
-          >
-            <Input.TextArea rows={4} placeholder="请说明回滚原因(至少 10 字符,7d 窗口内才允许)" />
-          </Form.Item>
-        </Form>
-      </Modal>
+        submitting={rollbackModal.submitting}
+        onCancel={() => setRollbackModal({ open: false, suggestionId: null, rollbackReason: "", submitting: false })}
+        onSubmit={handleRollbackSubmit}
+      />
     </div>
   );
 };
