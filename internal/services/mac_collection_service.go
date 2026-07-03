@@ -512,6 +512,9 @@ func (s *MACCollectionService) parseMACLine(line string, vendor models.DeviceVen
 //   [0]  [1]    [2]            [3..N-3]                [N-3]            [N-2] [N-1]
 // 至少需要 7 字段:Idx + VLAN + MAC + Interface(≥1 token) + Type + LearnAge + Action
 // 若 Interface 含多个 token（如 "GigabitEthernet 2/25"）则为 8 字段。
+//
+// 2026-07-03 Phase 47 R5 (D-04): 加 NormalizeMACAddress 归一 + isCanonicalMAC 守卫,
+//   过滤解析层垃圾行;脏历史由 migration_181 软删除清理(D-05)。
 func (s *MACCollectionService) parseRuijiePortSecurityLine(fields []string) (MACAddressEntry, bool) {
 	if len(fields) < 7 {
 		return MACAddressEntry{}, false
@@ -524,7 +527,10 @@ func (s *MACCollectionService) parseRuijiePortSecurityLine(fields []string) (MAC
 
 	entry := MACAddressEntry{}
 	entry.VLANID, _ = strconv.Atoi(fields[1])
-	entry.MACAddress = NormalizeMACAddress(fields[2])  // 2026-07-01: 写入前归一化
+	// 2026-07-03 Phase 47 R5 (D-04): 归一 MAC 格式 — 锐捷输出混 cisco 点分 / 无分隔符
+	//   / 冒号格式,统一归一为 canonical `AA:BB:CC:DD:EE:FF` 大写冒号格式。
+	//   NormalizeMACAddress 对非 12-hex 字符串返回 "",后续守卫拦截。
+	entry.MACAddress = NormalizeMACAddress(fields[2])
 
 	// 字段尾部固定为 Type / LearnAge / Action
 	// Interface = fields[3 .. len-3]
@@ -535,6 +541,14 @@ func (s *MACCollectionService) parseRuijiePortSecurityLine(fields []string) (MAC
 		entry.InterfaceName = portcollection.NormalizeInterfaceName(s.cleanTimestampFromInterface(strings.Join(interfaceParts, " ")))
 	}
 	entry.MACType = fields[typeIdx]
+
+	// 2026-07-03 Phase 47 R5 (D-04): canonical MAC 校验, 拦截解析层垃圾行
+	// 背景: parseRuijiePortSecurityLine (锐捷 show port-security address 输出)
+	//   混有 'Flags:'/'Total'/'#'/注释行/空字段,此前未校验,垃圾以原样入库。
+	//   与 parseMACLine 的丢弃语义对齐: 空 / 非 canonical → 返回 (_, false)。
+	if entry.MACAddress == "" || !isCanonicalMAC(entry.MACAddress) {
+		return MACAddressEntry{}, false
+	}
 
 	return entry, true
 }
