@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run build)",
+      "mcp__chrome-devtools__list_pages",
+      "mcp__chrome-devtools__navigate_page",
+      "Bash(grep:*)",
+      "mcp__chrome-devtools__take_snapshot",
+      "mcp__chrome-devtools__list_console_messages",
+      "Bash(xxd:*)",
+      "mcp__chrome-devtools__evaluate_script",
+      "Skill(gsd-debug)",
+      "Bash(go test *)",
+      "Bash(go build *)",
+      "Bash(git stash *)",
+      "Bash(git reset *)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'refactor\\(operations\\): 删除 ops_info_points 4 个冗余物理列' -m 'building_id/building_name/floor_name: 建表 SQL\\(032\\) 从未定义, 是 GORM AutoMigrate *)",
+      "Bash(git checkout *)",
+      "Bash(git merge *)",
+      "Skill(gsd-discuss-phase)",
+      "Bash(gsd-sdk query *)"
+    ]
+  }
+}

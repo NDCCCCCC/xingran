@@ -485,7 +485,7 @@ export interface FixSuggestionListItem {
   exceptionId: string;
   assetId: string;
   assetCode: string;
-  conflictType: "B";
+  conflictType: "A" | "B" | "C" | "D" | "E" | "F";
   currentUserId: string | null;
   suggestedUserId: string;
   suggestedUsername: string | null;
@@ -493,10 +493,21 @@ export interface FixSuggestionListItem {
   confidenceScore: number;
   reason: string;
   fixStatus: FixStatus;
-  createdAt: string;
+  acceptedAt: string | null;
+  rejectedAt: string | null;
   appliedAt: string | null;
   rolledBackAt: string | null;
+  rejectionReason: string | null;
+  rollbackReason: string | null;
   rollbackWindowUntil: string | null;
+  createdAt: string;
+  updatedAt: string;
+  acceptedBy: string | null;
+  rejectedBy: string | null;
+  appliedBy: string | null;
+  rolledBackBy: string | null;
+  /** 同 exception 的全部 fix_suggestion 数量(详情页用) */
+  superseded: boolean;
 }
 
 /**
