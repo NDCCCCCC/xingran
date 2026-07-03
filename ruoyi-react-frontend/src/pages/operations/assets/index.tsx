@@ -293,78 +293,15 @@ const AssetList: FC = () => {
     { key: "deviceCategorySecondName", title: "设备中类", dataIndex: "deviceCategorySecondName", width: 120, ellipsis: true },
     // order=7
     { key: "deviceBasicTypeName", title: "是否固定资产", dataIndex: "deviceBasicTypeName", width: 100, ellipsis: true },
-    // order=8
-    { key: "deviceStatusName", title: "设备状态", dataIndex: "deviceStatusName", width: 100, ellipsis: true },
     // order=9
     { key: "usefulDeptName", title: "所属部门", dataIndex: "usefulDeptName", width: 120, ellipsis: true },
-    // order=10 已删除(recipientName 后端不存在)
-    // order=11
-    { key: "recipientPhone", title: "领取人电话", dataIndex: "recipientPhone", width: 120, ellipsis: true },
-    // order=12
-    { key: "recipientEmail", title: "领取人邮箱", dataIndex: "recipientEmail", width: 150, ellipsis: true },
     // order=13
     { key: "machineIp", title: "加域IP", dataIndex: "machineIp", width: 120, ellipsis: true },
     // order=14
     { key: "mac1", title: "有线MAC", dataIndex: "mac1", width: 140, ellipsis: true,
       render: (text) => (text ? String(text).toUpperCase() : "-") },
-    // order=15
-    { key: "assetHostname", title: "主机名", dataIndex: "assetHostname", width: 120, ellipsis: true },
-    // order=16
-    { key: "osName", title: "操作系统", dataIndex: "osName", width: 100, ellipsis: true },
-    // order=17
-    { key: "osVersion", title: "系统版本", dataIndex: "osVersion", width: 100, ellipsis: true },
-    // order=18
-    { key: "cpuModel", title: "CPU型号", dataIndex: "cpuModel", width: 120, ellipsis: true },
-    // order=19
-    { key: "cpuCores", title: "CPU核心数", dataIndex: "cpuCores", width: 80, ellipsis: true },
-    // order=20
-    { key: "memoryCapacity", title: "内存容量", dataIndex: "memoryCapacity", width: 100, ellipsis: true },
-    // order=21
-    { key: "diskCapacity", title: "硬盘容量", dataIndex: "diskCapacity", width: 100, ellipsis: true },
-    // order=22
-    { key: "graphicsCard", title: "显卡型号", dataIndex: "graphicsCard", width: 120, ellipsis: true },
-    // order=23
-    { key: "purchaseDate", title: "购置日期", dataIndex: "purchaseDate", width: 120,
-      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"), ellipsis: true },
-    // order=24
-    { key: "warrantyExpireDate", title: "保修到期日", dataIndex: "warrantyExpireDate", width: 120,
-      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"), ellipsis: true },
-    // order=25
-    { key: "supplierName", title: "供应商", dataIndex: "supplierName", width: 120, ellipsis: true },
-    // order=26
-    { key: "manufacturerName", title: "制造商", dataIndex: "manufacturerName", width: 120, ellipsis: true },
-    // order=27
-    { key: "assetLocation", title: "资产位置", dataIndex: "assetLocation", width: 120, ellipsis: true },
-    // order=28
-    { key: "buildingName", title: "所在大楼", dataIndex: "buildingName", width: 100, ellipsis: true },
-    // order=29
-    { key: "floorName", title: "所在楼层", dataIndex: "floorName", width: 80, ellipsis: true },
-    // order=30
-    { key: "workstationName", title: "所在工位", dataIndex: "workstationName", width: 120, ellipsis: true },
-    // order=31
-    { key: "serverRoomName", title: "所在机房", dataIndex: "serverRoomName", width: 120, ellipsis: true },
-    // order=32
-    { key: "networkSwitchName", title: "网络交换机", dataIndex: "networkSwitchName", width: 120, ellipsis: true },
-    // order=33
-    { key: "switchPort", title: "交换机端口", dataIndex: "switchPort", width: 120, ellipsis: true },
-    // order=34
-    { key: "voltage", title: "电压", dataIndex: "voltage", width: 80, ellipsis: true },
     // order=35
     { key: "useStatusLabel", title: "使用状态", dataIndex: "useStatusLabel", width: 100, ellipsis: true },
-    // order=36
-    { key: "financeCode", title: "财务编码", dataIndex: "financeCode", width: 100, ellipsis: true },
-    // order=37
-    { key: "projectCode", title: "项目编码", dataIndex: "projectCode", width: 100, ellipsis: true },
-    // order=38
-    { key: "assetCost", title: "资产成本", dataIndex: "assetCost", width: 100, ellipsis: true },
-    // order=39
-    { key: "depreciationPeriod", title: "折旧年限", dataIndex: "depreciationPeriod", width: 100, ellipsis: true },
-    // order=40
-    { key: "netBookValue", title: "账面净值", dataIndex: "netBookValue", width: 100, ellipsis: true },
-    // order=41
-    { key: "depreciationRate", title: "折旧率", dataIndex: "depreciationRate", width: 100, ellipsis: true },
-    // order=42
-    { key: "accumulatorDepreciation", title: "累计折旧", dataIndex: "accumulatorDepreciation", width: 120, ellipsis: true },
     // order=43
     { key: "remark", title: "备注", dataIndex: "remark", width: 200, ellipsis: true },
     // order=44
@@ -373,7 +310,7 @@ const AssetList: FC = () => {
     { key: "nowUserName", title: "责任人", dataIndex: "nowUserName", width: 100, ellipsis: true },
     // order=46
     { key: "nowUserDeptCode", title: "部门编码", dataIndex: "nowUserDeptCode", width: 120, ellipsis: true },
-    // order=47 deviceUserName 取代 recipientName(真领取人字段)
+    // order=47
     { key: "deviceUserName", title: "领取人", dataIndex: "deviceUserName", width: 100, ellipsis: true },
     // order=48
     {
@@ -401,8 +338,37 @@ const AssetList: FC = () => {
       ellipsis: true, sorter: true, sortOrder: getColumnSortOrder("lastInventoryDate"),
       render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"),
     },
-    // order=53 (受益部门)
+    // 设备信息扩展 (order=54 设备渠道, order=55 设备属性)
+    { key: "qudaoName", title: "设备渠道", dataIndex: "qudaoName", width: 100, ellipsis: true },
+    { key: "attributeValue", title: "设备属性", dataIndex: "attributeValue", width: 120, ellipsis: true },
+    // 部门与用户扩展 (order=53 受益部门)
     { key: "deptName", title: "受益部门", dataIndex: "deptName", width: 120, ellipsis: true },
+    // 网络信息扩展 (order=63 加域标识, order=64 无线MAC)
+    { key: "machineBs", title: "加域标识", dataIndex: "machineBs", width: 100, ellipsis: true },
+    { key: "mac2", title: "无线MAC", dataIndex: "mac2", width: 140, ellipsis: true,
+      render: (text) => (text ? String(text).toUpperCase() : "-") },
+    // 归属与责任扩展 (order=58 使用机构, 59 使用人, 60 责任人岗位, 61 用途, 62 子用途, 66 APP扫码账号, 68 APP扫码地理位置)
+    { key: "orgnoName", title: "使用机构", dataIndex: "orgnoName", width: 150, ellipsis: true },
+    { key: "outerUser", title: "使用人", dataIndex: "outerUser", width: 100, ellipsis: true },
+    { key: "nowUserJobName", title: "责任人岗位", dataIndex: "nowUserJobName", width: 120, ellipsis: true },
+    { key: "usingTypeName", title: "用途", dataIndex: "usingTypeName", width: 100, ellipsis: true },
+    { key: "subUsingTypeName", title: "子用途", dataIndex: "subUsingTypeName", width: 100, ellipsis: true },
+    { key: "userName", title: "APP扫码账号", dataIndex: "userName", width: 100, ellipsis: true },
+    { key: "scanSite", title: "APP扫码地理位置", dataIndex: "scanSite", width: 200, ellipsis: true },
+    // 状态与日期扩展 (order=56 发放日期, 57 入库日期, 65 最后上线账号, 67 APP扫码时间, 69 Y07更新时间)
+    { key: "useDate", title: "发放日期", dataIndex: "useDate", width: 120,
+      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"), ellipsis: true },
+    { key: "storageDatetime", title: "入库日期", dataIndex: "storageDatetime", width: 120,
+      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"), ellipsis: true },
+    { key: "machineUserId", title: "最后上线账号", dataIndex: "machineUserId", width: 120, ellipsis: true },
+    { key: "lastUpdateDate", title: "APP扫码时间", dataIndex: "lastUpdateDate", width: 150,
+      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD HH:mm:ss") : "-"), ellipsis: true },
+    { key: "y07UpdateTime", title: "Y07更新时间", dataIndex: "y07UpdateTime", width: 150,
+      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD HH:mm:ss") : "-"), ellipsis: true },
+    // 标识与盘点 (order=70 新设备标识, 71 异常标识, 72 盘点结果)
+    { key: "newFlagLabel", title: "新设备标识", dataIndex: "newFlagLabel", width: 100, ellipsis: true },
+    { key: "errorFlagName", title: "异常标识", dataIndex: "errorFlagName", width: 100, ellipsis: true },
+    { key: "inventoryResult", title: "盘点结果", dataIndex: "inventoryResult", width: 100, ellipsis: true },
     // 末尾特殊列:action + reconciliation(不参与 defaultAssetColumns 排序)
     {
       title: "操作", key: "action", width: 120, fixed: "right",
