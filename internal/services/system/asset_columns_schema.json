@@ -1,5 +1,5 @@
 {
-  "__generated__": "2026-07-03T02:26:34.226Z",
+  "__generated__": "2026-07-03T03:02:18.554Z",
   "source": "ruoyi-react-frontend/src/pages/operations/assets/columnsSchema.ts",
   "pageKey": "asset.list",
   "columns": [
@@ -268,7 +268,7 @@
       "group": "网络连接"
     },
     {
-      "key": "useStatusName",
+      "key": "useStatusLabel",
       "label": "使用状态",
       "visible": true,
       "order": 35,

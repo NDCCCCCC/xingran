@@ -69,7 +69,7 @@ export const defaultAssetColumns: AssetColumnConfig[] = [
   { key: "switchPort", label: "交换机端口", visible: false, order: 33, width: 120, group: "网络连接" },
   { key: "voltage", label: "电压", visible: false, order: 34, width: 80, group: "网络连接" },
   // 使用状态 (1列)
-  { key: "useStatusName", label: "使用状态", visible: true, order: 35, width: 100, group: "使用状态" },
+  { key: "useStatusLabel", label: "使用状态", visible: true, order: 35, width: 100, group: "使用状态" },
   // 财务信息 (7列)
   { key: "financeCode", label: "财务编码", visible: false, order: 36, width: 100, group: "财务信息" },
   { key: "projectCode", label: "项目编码", visible: false, order: 37, width: 100, group: "财务信息" },
