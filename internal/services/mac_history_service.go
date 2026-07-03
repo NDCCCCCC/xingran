@@ -49,6 +49,13 @@ type MACHistoryService interface {
 	// 建议由 cron / 一次性任务调用(如每周一次),避免在线查询时合并数据造成延迟。
 	CleanupAllDevicesFlapping(ctx context.Context) (int, error)
 
+	// MergeByTransitions 按状态转换点合并 flapping 记录(2026-07-01 新增)。
+	// 用户原话:"仅保留设备或接口有变化的记录,删除其余的所有记录"。
+	// 按 (device_id, mac_address) 分组,仅保留位置签名 (interface_name, vlan_id)
+	// 与上一保留记录不同的转换点。同位置签名下的反复出现/消失/迁移全部删除。
+	// 与 CleanupAllDevicesFlapping (2h 时间窗口) 的区别:本工具按位置签名判定。
+	MergeByTransitions(ctx context.Context) (int64, error)
+
 	// PurgeMeaninglessRecords 全量清理 sys_device_mac_history 中的"无意义记录"
 	// (2026-06-30 新增)。保留策略:
 	//   - KEEP: 所有 moved 事件
@@ -119,15 +126,13 @@ func (s *macHistoryServiceImpl) BuildMACStateMap(macList []models.DeviceMACAddre
 // RecordMACChange 记录MAC地址变更（CONTEXT.md D-01, D-02, D-03）
 // 对比新旧状态，识别4种变更类型并写入历史表
 //
-// 2026-06-30 quick 优化(2 层去重):
-//   - 第 1 层:用 normalized MAC 集合判定"MAC 是否在设备上",取代 (mac, interface, vlan)
+// 设计原则(2026-07-01 修正):
+//   - L1:用 normalized MAC 集合判定"MAC 是否在设备上",取代 (mac, interface, vlan)
 //     三元组比对,避免漏采周期产生冗余 disappeared/appeared 配对
-//   - 第 2 层:写入前查 history 表,如果最近一次同 MAC 记录是同端口 → 视为 re-detection
-//     跳过(原本会写 disappeared 然后下一周期再写 appeared 配对,现在两次都不写)
-//   - 结果:稳定 MAC 7 天 ≈ 1 条(首次出现)而不是 366 条冗余
-//   - 真实变化(换端口/换 VLAN/新出现)仍正常写入
-//   - 已知 trade-off:真实离开数天的 MAC 可能漏写 disappeared(同端口 re-check 命中
-//     上次的 appeared),如需可加时间阈值扩展
+//   - 不再做 L2 history re-check 同端口跳过 — 该优化过激,会把真实同端口
+//     反复出现/消失/迁移也吞掉(2026-07-01 用户反馈的 bug 现象)
+//   - flapping 合并由 MergeFlappingRecords (2h 窗口) 兜底
+//   - 长尾清理由 PurgeMeaninglessRecords 兜底(只保留每 MAC 首条 appeared)
 //
 // 关联: [[mac-address-normalize-returns-colon-format]]
 func (s *macHistoryServiceImpl) RecordMACChange(ctx context.Context, device *models.NetworkDevice, oldMACs, newMACs map[MACEvent]*models.DeviceMACAddress) error {
@@ -135,7 +140,7 @@ func (s *macHistoryServiceImpl) RecordMACChange(ctx context.Context, device *mod
 	var historyRecords []*models.DeviceMACHistory
 	collectionTime := time.Now()
 
-	// 2026-06-30 quick L1:normalized MAC 集合判定
+	// L1:normalized MAC 集合判定 — 取代旧 (mac, iface, vlan) 三元组比对
 	oldMACNormSet := make(map[string]bool, len(oldMACs))
 	for _, oldMAC := range oldMACs {
 		oldMACNormSet[NormalizeMACAddress(oldMAC.MACAddress)] = true
@@ -145,49 +150,10 @@ func (s *macHistoryServiceImpl) RecordMACChange(ctx context.Context, device *mod
 		newMACNormSet[NormalizeMACAddress(newMAC.MACAddress)] = true
 	}
 
-	// 2026-06-30 quick L2:查询候选 MAC 的最近一次历史记录接口
-	// 单次 IN 查询,避免 N 次点查
-	candidateMACs := make([]string, 0)
-	for eventKey := range newMACs {
-		normMAC := NormalizeMACAddress(eventKey.MACAddress)
-		if !oldMACNormSet[normMAC] {
-			candidateMACs = append(candidateMACs, eventKey.MACAddress)
-		}
-	}
-	for eventKey := range oldMACs {
-		normMAC := NormalizeMACAddress(eventKey.MACAddress)
-		if !newMACNormSet[normMAC] {
-			candidateMACs = append(candidateMACs, eventKey.MACAddress)
-		}
-	}
-
-	// mac -> 最近一次记录的接口(去重:同 mac 多条记录只保留最新)
-	recentIfaceByMAC := make(map[string]string)
-	if len(candidateMACs) > 0 {
-		var recentRecords []models.DeviceMACHistory
-		if err := s.db.WithContext(ctx).
-			Where("device_id = ? AND mac_address IN ?", device.ID, candidateMACs).
-			Order("collected_at DESC").
-			Find(&recentRecords).Error; err != nil {
-			applogger.Warnf("[MAC历史] %s: 查询最近历史失败(非阻塞,继续): %v", device.DeviceName, err)
-		}
-		for _, r := range recentRecords {
-			if _, exists := recentIfaceByMAC[r.MACAddress]; !exists {
-				recentIfaceByMAC[r.MACAddress] = r.InterfaceName
-			}
-		}
-	}
-
 	// 1. appeared: MAC 在设备上完全新增(不在 oldMACs 任何端口)
-	//    且最近一次记录不是同端口(re-detection 跳过)
 	for eventKey := range newMACs {
 		normMAC := NormalizeMACAddress(eventKey.MACAddress)
 		if oldMACNormSet[normMAC] {
-			continue
-		}
-		if recentIfaceByMAC[eventKey.MACAddress] == eventKey.InterfaceName {
-			applogger.Debugf("[MAC历史] %s: 跳过 appeared(re-detection 同端口): MAC=%s interface=%s",
-				device.DeviceName, eventKey.MACAddress, eventKey.InterfaceName)
 			continue
 		}
 		history := &models.DeviceMACHistory{
@@ -208,15 +174,9 @@ func (s *macHistoryServiceImpl) RecordMACChange(ctx context.Context, device *mod
 	}
 
 	// 2. disappeared: MAC 在设备上完全消失(不在 newMACs 任何端口)
-	//    且最近一次记录不是同端口(漏采视为 re-detection 跳过)
 	for eventKey, oldMAC := range oldMACs {
-		normMAC := NormalizeMACAddress(eventKey.MACAddress)
+		normMAC := NormalizeMACAddress(oldMAC.MACAddress)
 		if newMACNormSet[normMAC] {
-			continue
-		}
-		if recentIfaceByMAC[oldMAC.MACAddress] == eventKey.InterfaceName {
-			applogger.Debugf("[MAC历史] %s: 跳过 disappeared(漏采 re-detection 同端口): MAC=%s interface=%s",
-				device.DeviceName, oldMAC.MACAddress, eventKey.InterfaceName)
 			continue
 		}
 		history := &models.DeviceMACHistory{
@@ -507,6 +467,123 @@ func (s *macHistoryServiceImpl) CleanupAllDevicesFlapping(ctx context.Context) (
 
 	applogger.Infof("[MAC历史] CleanupAllDevicesFlapping 完成: %d 个设备全量清理成功", successCount)
 	return successCount, nil
+}
+
+// MergeByTransitions 合并同 (device_id, mac_address) 内 flapping 记录,
+// 仅保留设备或接口(VLAN)有变化的转换点(2026-07-01 新增)。
+//
+// 设计目标:
+//   - 用户原话:"仅保留设备或接口有变化的记录,删除其余的所有记录"
+//   - 把"同一 MAC 在同设备同端口(同 VLAN)反复出现/消失/迁移"的抖动序列
+//     折叠成单条首次事件
+//   - 真实"跨设备/跨端口"的状态转换保留为多条事件,提供完整移动轨迹
+//
+// 算法:
+//  1. 按 (device_id, mac_address) 分组
+//  2. 每组内按 first_seen ASC, created_at ASC 排序
+//  3. 维护"当前位置签名" = (interface_name, vlan_id)
+//  4. 遍历:
+//     - 首条记录 → 始终保留(初始位置)
+//     - disappeared 事件 → 视为"在当前位置签名上离开",不更新当前位置签名
+//     - 其他事件 → 若 (interface_name, vlan_id) 与当前位置签名不同,保留并更新;
+//       若相同(纯 flapping),删除
+//
+// 与现有工具的对比:
+//   - MergeFlappingRecords (2h 窗口):按时间窗口合并,本工具按位置签名
+//   - PurgeMeaninglessRecords:保留 vlan_changed;本工具严格按用户原话,不保留 VLAN-only 变化
+//
+// 返回删除条数 + 首个错误。
+func (s *macHistoryServiceImpl) MergeByTransitions(ctx context.Context) (int64, error) {
+	// 1. 列出所有有 MAC 历史记录的 device_id
+	var deviceIDs []string
+	if err := s.db.WithContext(ctx).
+		Model(&models.DeviceMACHistory{}).
+		Distinct("device_id").
+		Pluck("device_id", &deviceIDs).Error; err != nil {
+		return 0, fmt.Errorf("查询所有 deviceID 失败: %w", err)
+	}
+	applogger.Infof("[MAC历史] MergeByTransitions 开始: 共 %d 个设备", len(deviceIDs))
+
+	var totalDeleted int64
+	for _, deviceID := range deviceIDs {
+		deleted, err := s.mergeTransitionsForDevice(ctx, deviceID)
+		if err != nil {
+			return totalDeleted, fmt.Errorf("设备 %s MergeByTransitions 失败(已处理 %d): %w",
+				deviceID, totalDeleted, err)
+		}
+		totalDeleted += deleted
+	}
+	applogger.Infof("[MAC历史] MergeByTransitions 完成: 删除 %d 条 flapping 记录", totalDeleted)
+	return totalDeleted, nil
+}
+
+// mergeTransitionsForDevice 单设备内的转换点合并。
+//
+// 按 (device_id, mac_address) 分组遍历,每组保留状态转换点。
+func (s *macHistoryServiceImpl) mergeTransitionsForDevice(ctx context.Context, deviceID string) (int64, error) {
+	// 1. 查该设备所有 MAC 历史记录,按 first_seen ASC 排序
+	var histories []models.DeviceMACHistory
+	if err := s.db.WithContext(ctx).
+		Where("device_id = ?", deviceID).
+		Order("first_seen ASC, created_at ASC").
+		Find(&histories).Error; err != nil {
+		return 0, fmt.Errorf("查询设备 %s 的 MAC 历史失败: %w", deviceID, err)
+	}
+
+	// 2. 按 mac_address 分组
+	byMAC := make(map[string][]*models.DeviceMACHistory)
+	for i := range histories {
+		h := &histories[i]
+		byMAC[h.MACAddress] = append(byMAC[h.MACAddress], h)
+	}
+
+	// 3. 每组内标记待删除的 ID
+	toDelete := make([]string, 0)
+	for mac, records := range byMAC {
+		if len(records) <= 1 {
+			continue
+		}
+		// 当前位置签名 = 第一条记录的位置(代表 MAC 当前所在)
+		currentIface := records[0].InterfaceName
+		currentVLAN := records[0].VLANID
+
+		// 首条记录始终保留
+		for i := 1; i < len(records); i++ {
+			r := records[i]
+			switch r.EventType {
+			case models.EventDisappeared, models.EventVLANChanged:
+				// disappeared:不更新位置签名(MAC 离开了当前位置但不视为去新位置)
+				// vlan_changed:严格按用户原话"仅保留设备或接口有变化",VLAN 不算接口变化
+				// 两者均删除
+				toDelete = append(toDelete, r.ID)
+			case models.EventAppeared, models.EventMoved:
+				if r.InterfaceName == currentIface && vlanEqual(r.VLANID, currentVLAN) {
+					// 同位置签名 = 纯 flapping,删除
+					toDelete = append(toDelete, r.ID)
+				} else {
+					// 真实转换,保留并更新位置签名
+					currentIface = r.InterfaceName
+					currentVLAN = r.VLANID
+				}
+			default:
+				// 未知类型保守保留
+				applogger.Warnf("[MAC历史] 设备 %s MAC %s 未知事件类型 %s 保守保留",
+					deviceID, mac, r.EventType)
+			}
+		}
+	}
+
+	// 4. 批量删除
+	if len(toDelete) == 0 {
+		return 0, nil
+	}
+	if err := s.db.WithContext(ctx).
+		Where("id IN ?", toDelete).
+		Delete(&models.DeviceMACHistory{}).Error; err != nil {
+		return 0, fmt.Errorf("删除 flapping 记录失败: %w", err)
+	}
+	applogger.Debugf("[MAC历史] 设备 %s 合并: 删 %d 条 flapping 记录", deviceID, len(toDelete))
+	return int64(len(toDelete)), nil
 }
 
 // PurgeMeaninglessRecords 全量清理 sys_device_mac_history 中的"无意义记录"(2026-06-30 新增)
