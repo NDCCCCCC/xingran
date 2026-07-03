@@ -366,6 +366,8 @@ func (d *Database) AutoMigrate() error {
 		// 仪表盘系统相关模型
 		&models.Dashboard{},
 		&models.DashboardVersion{},
+		// Phase 46 R5: 半自动修复建议表
+		&models.SysReconciliationFixSuggestion{},
 	)
 	if err != nil {
 		return err
@@ -552,6 +554,21 @@ func (d *Database) AutoMigrate() error {
 		//   2026-07-03 适配:DeviceMACAddress 模型无 DeletedAt,改用物理 DELETE(行为等价)。
 		if err := migrations.Migrate181CleanupDirtyMACRows(d.DB); err != nil {
 			applogger.Errorf("清理脏 MAC 行失败: %v", err)
+		}
+		// Phase 46 R5: 半自动修复建议表 + 4 索引 + 2 CHECK
+		// (D-B1 独立表 / D-B2 6 状态 / D-B3 多版本化 / D-B4 partial unique)
+		if err := migrations.Migrate198CreateFixSuggestionTable(d.DB); err != nil {
+			applogger.Errorf("Phase 46 R5 fix suggestion table 迁移失败: %v", err)
+		}
+		// Phase 46 R5: partial unique index uniq_fix_suggestion_pending_per_exception
+		// (D-B4 防同 exception 多 pending,独立成 199 便于失败重跑)
+		if err := migrations.Migrate199FixSuggestionUniqueIndex(d.DB); err != nil {
+			applogger.Errorf("Phase 46 R5 fix suggestion partial unique index 迁移失败: %v", err)
+		}
+		// Phase 46 R5: 4 sys_config + 1 菜单 + 5 按钮 + 1 sys_job seed
+		// (D-A3 置信度门槛 / D-C2 7d 回滚 / D-C5 误修复率阈值 / 紧急熔断)
+		if err := migrations.Migrate200FixSuggestionConfigSeeds(d.DB); err != nil {
+			applogger.Errorf("Phase 46 R5 fix suggestion config/menu/job seed 迁移失败: %v", err)
 		}
 		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
 		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
