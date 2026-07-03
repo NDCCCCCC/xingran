@@ -22,6 +22,10 @@ tmpclaude-*
 # Claude 并行 agent worktree 快照（临时状态，不应入库）
 .claude/worktrees/
 
+# Claude 个人 settings（每台机器不同，不入公开仓）
+# 真实配置复制到 .claude/settings.local.json,本地覆盖
+.claude/settings.local.json
+
 # 环境变量文件
 .env
 .env.local
