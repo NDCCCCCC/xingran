@@ -1,5 +1,5 @@
 {
-  "__generated__": "2026-07-03T03:02:18.554Z",
+  "__generated__": "2026-07-03T03:03:50.888Z",
   "source": "ruoyi-react-frontend/src/pages/operations/assets/columnsSchema.ts",
   "pageKey": "asset.list",
   "columns": [
@@ -68,7 +68,7 @@
       "group": "设备状态"
     },
     {
-      "key": "deptName",
+      "key": "usefulDeptName",
       "label": "所属部门",
       "visible": true,
       "order": 9,
@@ -410,6 +410,14 @@
       "order": 52,
       "width": 120,
       "group": "状态与日期"
+    },
+    {
+      "key": "deptName",
+      "label": "受益部门",
+      "visible": false,
+      "order": 53,
+      "width": 120,
+      "group": "部门与用户"
     }
   ]
 }

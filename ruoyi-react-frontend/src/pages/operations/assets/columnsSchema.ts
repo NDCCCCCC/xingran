@@ -37,7 +37,7 @@ export const defaultAssetColumns: AssetColumnConfig[] = [
   // 设备状态 (1列)
   { key: "deviceStatusName", label: "设备状态", visible: true, order: 8, width: 100, group: "设备状态" },
   // 所属部门和领取人 (4列)
-  { key: "deptName", label: "所属部门", visible: true, order: 9, width: 120, group: "部门与用户" },
+  { key: "usefulDeptName", label: "所属部门", visible: true, order: 9, width: 120, group: "部门与用户" },
   { key: "recipientPhone", label: "领取人电话", visible: false, order: 11, width: 120, group: "部门与用户" },
   { key: "recipientEmail", label: "领取人邮箱", visible: false, order: 12, width: 150, group: "部门与用户" },
   // 网络信息 (2列)
@@ -91,4 +91,5 @@ export const defaultAssetColumns: AssetColumnConfig[] = [
   { key: "drawingDate", label: "接收日期", visible: true, order: 50, width: 120, group: "状态与日期" },
   { key: "machineUptime", label: "最后上线", visible: true, order: 51, width: 150, group: "状态与日期" },
   { key: "lastInventoryDate", label: "盘点日期", visible: true, order: 52, width: 120, group: "状态与日期" },
+  { key: "deptName", label: "受益部门", visible: false, order: 53, width: 120, group: "部门与用户" },
 ];

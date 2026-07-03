@@ -296,7 +296,7 @@ const AssetList: FC = () => {
     // order=8
     { key: "deviceStatusName", title: "设备状态", dataIndex: "deviceStatusName", width: 100, ellipsis: true },
     // order=9
-    { key: "deptName", title: "所属部门", dataIndex: "deptName", width: 120, ellipsis: true },
+    { key: "usefulDeptName", title: "所属部门", dataIndex: "usefulDeptName", width: 120, ellipsis: true },
     // order=10 已删除(recipientName 后端不存在)
     // order=11
     { key: "recipientPhone", title: "领取人电话", dataIndex: "recipientPhone", width: 120, ellipsis: true },
@@ -350,7 +350,7 @@ const AssetList: FC = () => {
     // order=34
     { key: "voltage", title: "电压", dataIndex: "voltage", width: 80, ellipsis: true },
     // order=35
-    { key: "useStatusName", title: "使用状态", dataIndex: "useStatusName", width: 100, ellipsis: true },
+    { key: "useStatusLabel", title: "使用状态", dataIndex: "useStatusLabel", width: 100, ellipsis: true },
     // order=36
     { key: "financeCode", title: "财务编码", dataIndex: "financeCode", width: 100, ellipsis: true },
     // order=37
@@ -401,6 +401,8 @@ const AssetList: FC = () => {
       ellipsis: true, sorter: true, sortOrder: getColumnSortOrder("lastInventoryDate"),
       render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"),
     },
+    // order=53 (受益部门)
+    { key: "deptName", title: "受益部门", dataIndex: "deptName", width: 120, ellipsis: true },
     // 末尾特殊列:action + reconciliation(不参与 defaultAssetColumns 排序)
     {
       title: "操作", key: "action", width: 120, fixed: "right",
