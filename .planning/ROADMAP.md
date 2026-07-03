@@ -336,10 +336,10 @@ Plans:
 - R2: 四厂商（华为/H3C/锐捷/迈普）× 组件类型 的 CLI 命令分发 + TextFSM 模板（板卡/电源/风扇 + 光模块 transceiver manuinfo）
 - R3: 光模块只采在用/up 接口
 - R4: 采集组件序列号 + 所属交换机 → 按 `DeviceSN` 匹配 `ops_asset` 已有行（**只 UPDATE 不 INSERT**，保住实物/声明分层）→ 写 parent_asset_id / source_device_id / component_type / component_slot 建立双向桥接
-- R5: API + 前端资产/设备详情页展示"从属组件清单"（按 parent_asset_id 聚合，按 component_type 分组，含序列号/槽位/型号/状态）
-- R6: **SN 匹配不上生成 `sys_data_reconciliation` 对账异常**（实物有账无=盘盈、账有实物无=盘亏）；堆叠（iStack/IRF）序列号归属处理 + 操作日志（module「资产管理」，OperTypeSync）
+- R5: API + 前端资产/设备详情页展示"从属组件清单"（按 parent_asset_id 聚合，按 component_type 分组）；设备列表/统计默认按 `component_type IS NULL` 排除组件行（避免 1 机+6 板=7 台），组件另开视图
+- R6: **SN 匹配不上生成 `sys_data_reconciliation` 对账异常**（新增"组件序列号"专属 category，前提确认引擎可扩展 category，否则回退复用；实物有账无=盘盈、账有实物无=盘亏）；父交换机不在 ops_asset 时 parent_asset_id 留空、仍写 source_device_id；堆叠（iStack/IRF）序列号归属处理 + 操作日志（module「资产管理」，OperTypeSync）
 
-**前置条件:** RQ-001 四厂商真机输出格式验证 + RQ-002 资产建模细节（`.planning/research/questions.md`），阻塞 R2 模板与 R1 migration
+**前置条件:** RQ-001 四厂商真机输出格式验证（`.planning/research/questions.md`，阻塞 R2 模板）。RQ-002 资产建模细节已全部定案。
 
 **Depends on:** **v1.17 对账底座（Phase 42-46）** — Phase 48 是 R2 物理层对账的组件序列号形态，需对账引擎先就位
 **Plans:** 0 plans
