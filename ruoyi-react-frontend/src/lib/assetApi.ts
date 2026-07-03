@@ -447,3 +447,228 @@ export const reconciliationApi = {
     return res.data ?? { inserted: 0, skipped: 0, skippedSilence: 0, skippedThrottle: 0 };
   },
 };
+
+// ==================== Phase 46 R5 — 修复建议 Types + API ====================
+
+/**
+ * 修复建议状态机 6 状态(D-B2 锁定)
+ */
+export type FixStatus =
+  | "pending"
+  | "accepted"
+  | "rejected"
+  | "applied"
+  | "rolled_back"
+  | "failed";
+
+/**
+ * 修复建议列表查询参数
+ * (POST /asset/reconciliation/fix-suggestion/list)
+ */
+export interface FixSuggestionListParams {
+  fixStatus?: FixStatus;
+  conflictType?: "A" | "B" | "C" | "D" | "E" | "F";
+  responsibleDeptId?: string;
+  createdFrom?: string;
+  createdTo?: string;
+  current: number;
+  pageSize: number;
+  orderByColumn?: string;
+  isAsc?: boolean;
+}
+
+/**
+ * 修复建议列表行(JOIN sys_data_reconciliation + ops_asset + sys_user)
+ */
+export interface FixSuggestionListItem {
+  id: string;
+  exceptionId: string;
+  assetId: string;
+  assetCode: string;
+  conflictType: "A" | "B" | "C" | "D" | "E" | "F";
+  currentUserId: string | null;
+  suggestedUserId: string;
+  suggestedUsername: string | null;
+  preFixUserId: string | null;
+  confidenceScore: number;
+  reason: string;
+  fixStatus: FixStatus;
+  acceptedAt: string | null;
+  rejectedAt: string | null;
+  appliedAt: string | null;
+  rolledBackAt: string | null;
+  rejectionReason: string | null;
+  rollbackReason: string | null;
+  rollbackWindowUntil: string | null;
+  createdAt: string;
+  updatedAt: string;
+  acceptedBy: string | null;
+  rejectedBy: string | null;
+  appliedBy: string | null;
+  rolledBackBy: string | null;
+  /** 同 exception 的全部 fix_suggestion 数量(详情页用) */
+  superseded: boolean;
+}
+
+/**
+ * 修复建议详情(包含异常元数据 + 同 exception_id 历史)
+ */
+export interface FixSuggestionDetail {
+  suggestion: FixSuggestionListItem;
+  exception?: {
+    id: string;
+    assetId: string;
+    assetCode?: string;
+    conflictType: string;
+    severity: string;
+    confidenceScore: number;
+    rawSnapshot: object;
+    detectedAt: string;
+    [key: string]: unknown;
+  };
+  history: FixSuggestionListItem[];
+}
+
+/**
+ * 7d 统计响应(D-C5)
+ */
+export interface FixSuggestionStatsResponse {
+  windowDays: number;
+  /** 7d 窗口内 created pending */
+  pending: number;
+  /** 全量 pending(无 7d 窗口,W-I3 修订) */
+  pendingAll: number;
+  accepted: number;
+  rejected: number;
+  /** 按 applied_at 过滤(W-2 修订) */
+  applied: number;
+  /** 按 rolled_back_at 过滤 */
+  rolledBack: number;
+  failed: number;
+  misFixRate: number;
+  threshold: number;
+  thresholdBreached: boolean;
+  trendSeries: TrendPoint[];
+}
+
+/**
+ * 修复建议 API 工厂(7 个端点)
+ */
+export const fixSuggestionApi = {
+  /**
+   * 列表(分页 + 过滤 + 白名单排序)
+   */
+  list: async (
+    params: FixSuggestionListParams
+  ): Promise<PageResult<FixSuggestionListItem>> => {
+    const res = await post<PageResult<FixSuggestionListItem>>(
+      "/asset/reconciliation/fix-suggestion/list",
+      params
+    );
+    return (
+      (res.data ?? { list: [], total: 0, current: 1, pageSize: 20 }) as PageResult<FixSuggestionListItem>
+    );
+  },
+
+  /**
+   * 详情(单条 + 异常 + 历史)
+   */
+  getById: async (id: string): Promise<FixSuggestionDetail> => {
+    const res = await post<FixSuggestionDetail>(
+      `/asset/reconciliation/fix-suggestion/${id}`,
+      {}
+    );
+    return res.data as FixSuggestionDetail;
+  },
+
+  /**
+   * 接受(pending → accepted)
+   */
+  accept: async (id: string): Promise<{ id: string; acceptedBy: string }> => {
+    const res = await post<{ id: string; acceptedBy: string }>(
+      `/asset/reconciliation/fix-suggestion/${id}/accept`,
+      {}
+    );
+    return res.data as { id: string; acceptedBy: string };
+  },
+
+  /**
+   * 拒绝(pending → rejected,reason ≥10 字符)
+   */
+  reject: async (
+    id: string,
+    rejectionReason: string
+  ): Promise<{ id: string; rejectedBy: string; rejectionReason: string }> => {
+    const res = await post<{
+      id: string;
+      rejectedBy: string;
+      rejectionReason: string;
+    }>(`/asset/reconciliation/fix-suggestion/${id}/reject`, {
+      rejectionReason,
+    });
+    return res.data as {
+      id: string;
+      rejectedBy: string;
+      rejectionReason: string;
+    };
+  },
+
+  /**
+   * 应用(accepted → applied,写 ops_asset.user_id)
+   */
+  apply: async (id: string): Promise<{ id: string; appliedBy: string }> => {
+    const res = await post<{ id: string; appliedBy: string }>(
+      `/asset/reconciliation/fix-suggestion/${id}/apply`,
+      {}
+    );
+    return res.data as { id: string; appliedBy: string };
+  },
+
+  /**
+   * 回滚(applied → rolled_back,7d 窗口内)
+   */
+  rollback: async (
+    id: string,
+    rollbackReason: string
+  ): Promise<{ id: string; rolledBackBy: string; rollbackReason: string }> => {
+    const res = await post<{
+      id: string;
+      rolledBackBy: string;
+      rollbackReason: string;
+    }>(`/asset/reconciliation/fix-suggestion/${id}/rollback`, {
+      rollbackReason,
+    });
+    return res.data as {
+      id: string;
+      rolledBackBy: string;
+      rollbackReason: string;
+    };
+  },
+
+  /**
+   * 7d 统计(KPI 卡片 + 误修复率监控)
+   * @param windowDays 统计窗口(默认 7,后端已 clamp 到 [1, 365])
+   */
+  stats: async (windowDays: number = 7): Promise<FixSuggestionStatsResponse> => {
+    const res = await post<FixSuggestionStatsResponse>(
+      "/asset/reconciliation/fix-suggestion/stats",
+      { windowDays }
+    );
+    return (
+      (res.data ?? {
+        windowDays,
+        pending: 0,
+        pendingAll: 0,
+        accepted: 0,
+        rejected: 0,
+        applied: 0,
+        rolledBack: 0,
+        failed: 0,
+        misFixRate: 0,
+        threshold: 0.01,
+        thresholdBreached: false,
+        trendSeries: [],
+      }) as FixSuggestionStatsResponse
+    );
+  },
+};

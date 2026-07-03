@@ -20,177 +20,44 @@
 - ✅ **v1.12 深信服桌面云集成 (22A+22B)** — Phases 22A/22B (shipped 2026-06-02)
 - ✅ **v1.15 部门物理位置映射** — Phase 39 (shipped 2026-06-25)
 - ✅ **v1.16 技术债清理 (Tech-Debt Cleanup)** — Phases 40-41 (shipped 2026-06-26)
-- 🚧 **v1.17 资产对账 (Asset Reconciliation)** — Phases 42-46 (planning, started 2026-06-27)
-- 📋 **v1.18 网络设备硬件清单 (Device Component Serials)** — Phase 48 (backlog, added 2026-07-03 via /gsd-explore)
+- ✅ **v1.17 资产对账 (Asset Reconciliation)** — Phases 42-46 (shipped 2026-07-03) — see [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md)
+- 📋 **v1.18 网络设备硬件清单 (Device Component Serials)** — Phase 48 (planned, started 2026-06-29)
 
 ---
 
 ## Phases (v1.17)
 
-### Phase 42: 资产对账观测底座 (R1)
+<details>
+<summary>✅ v1.17 资产对账 (Phases 42-46) — SHIPPED 2026-07-03</summary>
 
-**Goal**: 建立 reconciliation 引擎骨架（物化视图 + 主表 + dashboard），不含告警/例外规则/前端整合。
+- [x] Phase 42: 资产对账观测底座 (R1) — 5/6 plans (42-03 skeleton superseded by R3)
+- [x] Phase 43: 告警 + 工单闭环 (R2) — 3/3 plans
+- [x] Phase 44: 置信度评分 + IP 段例外 (R3) — 2/2 plans
+- [x] Phase 45: 工位详情整合 (R4) — 2/2 plans
+- [x] Phase 46: 半自动修复 (R5, 可选) — 2/2 plans (UAT 9/10 PASS)
 
-**Depends on**: 无（独立启动；运维 owner 已确认端口采集率达标）
+See [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md) for details.
 
-**Requirements**: RECON-01~07, MONITOR-01, INFRA-01~05
+</details>
 
-**Success Criteria** (what must be TRUE):
+### Phase 47: 修复資產對賬系統根因 (infoPoint 配置、Layer 3 引擎、port_status 漂移、parser 校驗) — 2/2 plans, shipped 2026-07-03 (independent of v1.17)
 
-  1. `sys_data_reconciliation` + `sys_reconciliation_exception` 表创建成功，UUID + 软删除 + BaseModel 规范
-  2. `reconciliation_normalized` 物化视图 5 分钟增量刷新，包含 asset → port_mac → info_point → workstation → user_id 完整链路
-  3. 6 个 Statistics 专用 COUNT 端点（Summary / ByConflictType / BySeverity / HealthTrend / TopUnresolved / ExceptionRuleStats）返回正确
-  4. 4 个字典 seed 完整（asset_reconciliation_*）
-  5. 8 个 config seed 完整（asset.reconciliation.*）
-  6. 6 个 workorder 分类 seed 完整（Type A-F）
-  7. 异常列表 admin 页面可正确展示 Type A-F 分布与 Top 10 长期未解决
-  8. Dashboard 顶部 5 KPI 卡片、饼图、柱状图、趋势图正确渲染
-  9. `go build ./...` + `npm run build` 通过
-  10. operlog 完整接入所有写操作
+### Phase 48: 网络设备组件序列号采集 (Device Component Serials) — planned
 
-**Plans**: 6 plans
+**Goal**: 支持"一机多序列号"——将网络设备的板卡/引擎卡、电源、风扇、光模块各自的序列号**作为资产设备纳入资产系统 `ops_asset`**（每个组件一条记录，`DeviceSN`=组件序列号），保存组件对交换机/路由的从属关系并在前端展示。
 
-Plans:
-
-- 42-01: 表 + 物化视图 migration + 字典 seed + config seed + workorder 分类 seed
-- 42-02: ReconciliationService 核心（Layer 3 冲突检测 + 置信度评分）
-- 42-03: ReconciliationExceptionService（IP 段例外规则 CRUD）
-- 42-04: ReconciliationStatistics 6 个专用 COUNT 端点
-- 42-05: 异常列表 admin 页 + Dashboard 前端（含 queryKeys + cache_key helper）
-- 42-06: 路由注册 + operlog 接入 + Cron 注册 + 跨模块权限边界测试
-
-**UI hint**: yes
-
-### Phase 43: 告警 + 工单闭环 (R2)
-
-**Goal**: 将 R1 的"观测"提升为"可行动"——critical/high 自动转工单，WebSocket + SysNotice 推送。
-
-**Depends on**: Phase 42
-
-**Requirements**: WORKORDER-01~02, MONITOR-02~03
-
-**Success Criteria** (what must be TRUE):
-
-  1. critical 异常检出 → 2 分钟内自动创建 workorder（通过 `workorder.BaseService.Create()`）
-  2. high 异常检出 → 5 分钟内自动创建 workorder
-  3. 工单模板按 Type A-F 差异化（标题、默认分派、SLA、期望动作）
-  4. WebSocket 实时推送 critical 异常到 dashboard
-  5. SysNotice 写入高危异常
-  6. 工单状态变更触发 operlog.Record（OperTypeUpdate / Approve）
-  7. 修复回写后 7d 静默期生效（避免循环触发）
-  8. 24h 节流规则生效（同一 asset + conflict_type 仅 1 条新异常）
-  9. 跨模块权限边界测试通过（无 `asset:reconciliation:list` 时工位页正确隐藏健康度）
-
-**Plans**: 3 plans
-
-Plans:
-
-- 43-01: 异常 → 工单自动转单（critical/high）+ 6 类工单模板
-- 43-02: 修复回写 + 7d 静默期 + 24h 节流
-- 43-03: WebSocket 推送 + SysNotice + operlog 完整接入
-
-**UI hint**: minimal (扩展现有 dashboard)
-
-### Phase 44: 置信度评分 + IP 段例外 (R3)
-
-**Goal**: 通过 IP 段级别例外规则抑制告警风暴，提供 admin 可视化管理界面。
-
-**Depends on**: Phase 43
-
-**Requirements**: EXCEPTION-01~04
-
-**Success Criteria** (what must be TRUE):
-
-  1. CIDR 格式输入校验（IPv4/IPv6）+ GiST 索引加速查询
-  2. 例外规则 CRUD（创建/更新/启用/停用/删除）+ operlog 完整接入
-  3. 5 种 actions 多选组合（no_alert/no_notice/no_workorder/skip_severity/silence）
-  4. 多条规则取并集（合并效果可视化）
-  5. 有效期（expires_at）自动停用 cron 每日清理
-  6. 命中测试工具（输入 IP/CIDR 实时返回命中规则）
-  7. 例外规则生效统计（按 IP 段聚合）
-  8. 告警量比 R2 末期下降 ≥ 60%
-  9. Excel 导入/导出例外规则（复用 ExcelConfig 模式）
-  10. 命中例外的异常仍记录 reconciliation 表（含 exception_rule_id + applied_actions）
-
-**Plans**: 2 plans
-
-Plans:
-
-- 44-01: 例外规则引擎 + CRUD API + admin 管理页 + 命中测试工具
-- 44-02: Excel 导入导出 + Cron 自动清理 + 告警降噪验证
-
-**UI hint**: yes
-
-### Phase 45: 工位详情整合 + 资产详情摘要 (R4)
-
-**Goal**: 把对账健康度嵌入现有 ops/workstation 与 asset/card 页面，提供冲突详情抽屉。
-
-**Depends on**: Phase 44
-
-**Requirements**: INTEGRATE-01~03
-
-**Success Criteria** (what must be TRUE):
-
-  1. 工位详情页 `/ops/workstation/:id` 顶部显示健康度卡片（5 KPI + 趋势 mini chart）
-  2. 资产设备子表 + 域控设备子表加入"对账健康"列（行内徽标）
-  3. 点击徽标打开 ReconciliationDrawer（冲突摘要 / 历史变更 / 例外规则三 Tab）
-  4. 资产详情页 `/asset/card/:id` 顶部摘要块显示对账状态
-  5. 跨模块调用性能 ≤ 200ms（service 层直接调用 + 缓存）
-  6. 无 `asset:reconciliation:list` 权限时静默隐藏（非 403）
-  7. 工位 N+1 查询优化（后端聚合 API）
-  8. 修复闭环解耦（修复回写不直接触发对账引擎）
-  9. 抽屉"申请例外"按钮预填 IP/类型正确
-  10. `npm run build` + `go build ./...` 全通过
-
-**Plans**: 2 plans
-
-Plans:
-**Wave 1**
-
-- [x] 45-01-PLAN.md — 工位详情页 + 资产详情页整合 + HealthCard/HealthBadge/ReconciliationDrawer 组件（INTEGRATE-01/02/03, Wave 1） — shipped 2026-06-28
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 45-02-PLAN.md — 跨模块调用收尾 + R2 转单缓存失效 + IP 解析 + operlog 全覆盖 + VERIFICATION（INTEGRATE-01/02/03, Wave 2） — shipped 2026-06-28
-
-**UI hint**: yes
-
-### Phase 46: 半自动修复（可选） (R5)
-
-**Goal**: 高置信度（≥0.9）的 Type B/D 异常走"建议修复"流程（仍需人工确认，不直接覆盖）。
-
-**Depends on**: Phase 45
-
-**Requirements**: （Future, 非必需）
-
-**Success Criteria** (what must be TRUE):
-
-  1. 高置信度异常生成"修复建议"（含建议的 responsible_user_id + 理由）
-  2. 人工确认 UI（一键接受 / 拒绝 / 修改建议）
-  3. 一键回滚机制（所有修复可回滚到修复前状态）
-  4. 误修复率 < 1%（监控 + 告警）
-  5. 修复回写完整 operlog + raw_snapshot 留痕
-  6. 状态机：建议 → 待确认 → 已接受 / 已拒绝 → 已应用
-  7. R5 完成后 v1.17 milestone close
-
-**Plans**: 2 plans (如果启动)
-
-Plans:
-
-- 46-01: 修复建议生成器 + 人工确认 UI
-- 46-02: 一键回滚机制 + 误修复监控
-
-**UI hint**: yes (建议独立页面)
+**Depends on**: **v1.17 对账底座（Phase 42-46）** — Phase 48 是 R2 物理层对账的组件序列号形态，需对账引擎先就位
 
 ### Progress Table
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 42. 资产对账观测底座 (R1) | 0/6 | Planning | — |
+| 42. 资产对账观测底座 (R1) | 5/6 | Complete | 2026-06-27 |
 | 43. 告警 + 工单闭环 (R2) | 3/3 | Complete    | 2026-06-27 |
 | 44. 置信度评分 + IP 段例外 (R3) | 2/2 | Complete    | 2026-06-28 |
 | 45. 工位详情整合 (R4) | 2/2 | Complete | 2026-06-28 |
-| 46. 半自动修复 (R5, 可选) | 0/2 | Pending | — |
+| 46. 半自动修复 (R5, 可选) | 2/2 | Complete | 2026-07-03 |
+| 47. 修复資產對賬系統根因 | 2/2 | Complete | 2026-07-03 |
 
 ---
 
@@ -302,7 +169,7 @@ The full history of Phases 1-39 is preserved below. See also:
 
 </details>
 
-### Phase 47: 修复資產對賬系統根因（infoPoint 配置、Layer3 引擎、port_status 漂移、parser 校驗）
+### Phase 47 (Root Cause Fixes): 修复資產對賬系統根因 — SHIPPED 2026-07-03 (independent of v1.17)
 
 **Goal:** 根除 Phase 45 R5 reconciliation 系统中识别出的 4 个数据完整性问题:① infoPoint.port_id 指向错设备的 port_status（drift 引发）② Layer 3 检测引擎只 INSERT 不 UPDATE 既有 conflict，导致 124 个 D 异常卡住无法重新分类 ③ sys_device_port_status.device_id 在不同设备之间漂移 ④ MAC parser 接受非 MAC 文本（如 "Flags:"、"total"、"#"，导致垃圾数据入库）。
 
@@ -314,49 +181,8 @@ The full history of Phases 1-39 is preserved below. See also:
 - R5: parseRuijiePortSecurityLine 加 MAC 格式校验（12位 hex），过滤 #/flags/total 等噪声
 
 **Depends on:** Phase 46
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (run /gsd-plan-phase 47 to break down)
+**Plans:** 2 plans (47-01 / 47-02) — both shipped 2026-07-03
 
 ---
 
-### Phase 48: 网络设备组件序列号采集 (Device Component Serials)
-
-**Milestone:** v1.18 网络设备硬件清单
-
-**Goal:** 支持"一机多序列号"——将网络设备的板卡/引擎卡、电源、风扇、光模块各自的序列号**作为资产设备纳入资产系统 `ops_asset`**（每个组件一条记录，`DeviceSN`=组件序列号），保存组件对交换机/路由的从属关系并在前端展示。服务设备档案 / 资产盘点审计 / 备件管理 / 对账合规上报四类用途；序列号作为跨系统比对唯一键，对接 v1.17 资产对账。
-
-**背景:** `ops_asset` 以 `DeviceSN` 为唯一键，组件序列号天然是一条资产记录主键，但缺"从属关系"与"采集来源"字段。采集链路（Scrapli SSH + TextFSM + `DeviceInfoCollectionService`）成熟可复用；`templates/huawei_vrp_display_device.textfsm` 已能解析板卡但从未落库。详见 `.planning/notes/260703-network-device-component-serials.md`。
-
-**采集路线:** v1 纯 CLI + TextFSM 单一路径（光模块 SNMP 拿不到，必走 CLI）；命令已调研确认（华为 `display device`/`display elabel`/`display transceiver`；H3C `display device manuinfo`/`display asset-info`/`display transceiver manuinfo`；锐捷 `show version`/`show interface transceiver`；迈普 `show hardware`/`show transceiver`）。SNMP ENTITY-MIB（`entPhysicalContainedIn` 天然表达从属树）加速留作 seed `.planning/seeds/snmp-entity-mib-acceleration.md`。
-
-**Requirements**:
-- R1: 扩展 `Asset`(`ops_asset`) 模型 + migration，新增 `parent_asset_id`（自引用 → ops_asset.id，从属关系）、`source_device_id`（→ sys_network_device.id，采集来源）、`component_type`(chassis/card/engine/power/fan/transceiver)、`component_slot`
-- R2: **采集双路径**（基于 2026-07-03 真机探针）
-  - **主路径 (SNMP ENTITY-MIB)**：单 GET（不走 BulkWalk，HW/锐捷都拒绝）拉 `entPhysicalSerialNum` / `entPhysicalModelName` / `entPhysicalClass` / `entPhysicalContainedIn`
-    - 华为 S8700 覆盖：chassis / module / fan / 业务板 + 引擎，**电源 SN 是空（HW 漏洞）**
-    - 锐捷 RS8607E 覆盖：chassis / fan / 电源 / M1-M2 主控，**业务板 slot 1-5 仅占位**（SN 在 CLI）
-    - 必备过滤：锐捷 `powerSupply(8)` 但 Name 形如 `temprature*` 的传感器伪实体（typo "temprature"，锐捷私有扩展噪声，全表 352 个需剔除）
-  - **CLI 补充路径**：
-    - 锐捷 `show version`：拿业务板（slot 1-5）的 SN
-    - 华为 `display interface transceiver`：光模块 SN + DDM（SNMP 拿不到）
-    - 华为 `display device esn`：整机 SN，与 SNMP 互验
-    - 华为 `display device` / `display device board`：硬件清单骨架（含槽位+电源状态）
-- R2.1: SNMP 单 GET 而非 BulkWalk；community 从 `sys_auth_credential.snmp_communities` 读；丢 non-empty SerialNum 噪声
-- R3: 光模块只采在用/up 接口
-- R4: 采集组件序列号 + 所属交换机 → 按 `DeviceSN` 匹配 `ops_asset` 已有行（**只 UPDATE 不 INSERT**，保住实物/声明分层）→ 写 parent_asset_id / source_device_id / component_type / component_slot 建立双向桥接
-- R5: API + 前端资产/设备详情页展示"从属组件清单"（按 parent_asset_id 聚合，按 component_type 分组）；设备列表/统计默认按 `component_type IS NULL` 排除组件行（避免 1 机+6 板=7 台），组件另开视图
-- R6: **SN 匹配不上生成 `sys_data_reconciliation` 对账异常**（新增"组件序列号"专属 category，前提确认引擎可扩展 category，否则回退复用；实物有账无=盘盈、账有实物无=盘亏）；父交换机不在 ops_asset 时 parent_asset_id 留空、仍写 source_device_id；堆叠（iStack/IRF）序列号归属处理 + 操作日志（module「资产管理」，OperTypeSync）
-
-**前置条件:** RQ-001 真机采样已 80% 完成，剩余：锐捷 ENTITY-MIB 真机探针（确认主板/电源/风扇 SN 也覆盖）、锐捷光模块 DDM TextFSM 另一设备采样、H3C/迈普另环境采样。
-
-**Depends on:** **v1.17 对账底座（Phase 42-46）** — Phase 48 是 R2 物理层对账的组件序列号形态，需对账引擎先就位
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (run /gsd-plan-phase 48 to break down)
-
----
-
-*Last updated: 2026-07-03 — Phase 48 added (网络设备组件序列号采集, v1.18 milestone) via /gsd-explore.*
+*Last updated: 2026-07-03 — v1.17 milestone archived + Phase 47 marked shipped (independent of v1.17) + Phase 48 v1.18 planned.*

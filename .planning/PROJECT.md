@@ -108,6 +108,14 @@ estate.
 - ✓ SNMP panic 修复 (panic 恢复 + 并发安全 + 连接验证) — v1.3
 - ✓ 后端代码优化 (Core 清理 + 安全修复) — v1.3
 - ✓ 批量导出功能 (多实体 ZIP 打包下载) — v1.3
+- ✓ **v1.16 技术债清理** (Tech-Debt Cleanup) — Phases 40/41 — 2026-06-26 (22+29 个 deferred debug session + 6 audit 文件规范化)
+- ✓ **v1.17 资产对账** (Asset Reconciliation) — Phases 42-46 — 2026-07-03 (observe-only 对账引擎 + 工单闭环 + IP 段例外 + 工位详情整合 + 半自动修复建议 + UAT 9/10 PASS)
+  - R1 观测底座：物化视图 + Statistics 端点 + operlog 全覆盖
+  - R2 告警+工单：critical/high 自动转工单 + WebSocket + SysNotice + 7d 静默期
+  - R3 IP 段例外：CIDR + 5 actions + 命中测试 + Excel 导入导出
+  - R4 工位详情：健康度卡片 + ReconciliationDrawer 3 Tab
+  - R5 半自动修复：6 状态机 + 7d 回滚 + 误修复率告警三通道
+- ✓ **Phase 47 根因修复** (infoPoint drift / Layer3 UPSERT / port_status 漂移 / MAC parser 校验) — 2026-07-03
 
 ### Active
 
@@ -119,18 +127,43 @@ frontend perf, P0 closure, P1/P2 review fixes, Vercel React
 best-practices, and operlog full coverage. See "Active" section
 for the v1.16 planning state.
 
-## Active: v1.16 (planning) — see `.planning/REQUIREMENTS.md`
+## Active: v1.18 (planning) — Phase 48 网络设备组件序列号采集
 
-The v1.16 scope is **not yet defined**. Candidate areas from the
-state-sync report (20260616):
+The v1.18 scope targets the **Device Component Serials** feature:
+one-network-device-many-component-serials — chassis/card/engine/power/fan/transceiver
+each as a separate `ops_asset` record (`DeviceSN` = component SN),
+preserving the parent-child topology between component and switch/router.
 
-- Triage the 103 open items from `gsd-sdk query audit-open`
-  (45 debug sessions, 51 quick tasks, 4 UAT gaps, 3 verification gaps)
-- Decide whether to extend Phase 22 (VDI 22C/22D) or move to a
-  new domain
-- Decide whether to build on the Phase 34 operlog foundation
-  (e.g., realtime audit dashboard) or stabilize it (linter fixes,
-  CI gate for e2e harness)
+**Candidate work**:
+- **R1**: Extend `Asset` (`ops_asset`) model + migration: `parent_asset_id` (self-FK),
+  `source_device_id` (FK to `sys_network_device.id`), `component_type` (chassis/card/engine/power/fan/transceiver),
+  `component_slot`
+- **R2**: Dual-path collection (based on 2026-07-03 real-device probes)
+  - **Main (SNMP ENTITY-MIB)**: Single GET (NOT BulkWalk; HW/Ruijie reject) pull
+    `entPhysicalSerialNum` / `entPhysicalModelName` / `entPhysicalClass` / `entPhysicalContainedIn`
+    - Huawei S8700: chassis / module / fan / business card + engine
+    - Ruijie RS8607E: chassis / fan / power / M1-M2 main control, business card slot 1-5 placeholder (SN via CLI)
+    - Required filter: Ruijie `powerSupply(8)` but Name like `temprature*` sensor pseudo-entity
+      (typo "temprature", Ruijie private extension noise, full table 352 must filter)
+  - **CLI supplement**:
+    - Ruijie `show version`: business card (slot 1-5) SN
+    - Huawei `display interface transceiver`: transceiver SN + DDM (not via SNMP)
+    - Huawei `display device esn`: device SN (cross-verify with SNMP)
+    - Huawei `display device` / `display device board`: hardware list skeleton
+- **R3**: Only collect in-use / up transceivers
+- **R4**: Match component SN against `ops_asset` by `DeviceSN`; only UPDATE not INSERT (实物/声明 分层)
+- **R5**: Display component list under asset/device detail page (grouped by `parent_asset_id`)
+- **R6**: Generate `sys_data_reconciliation` anomalies for unmatched SNs (新 category "组件序列号")
+
+**Prerequisites** (mostly done):
+- RQ-001 真机采样 (real-device probes) ~80% complete as of 2026-07-03
+- 锐捷 ENTITY-MIB real-device probe ✓ (2026-07-03)
+- 锐捷光模块 DDM TextFSM 另一设备采样 (remaining)
+- H3C/迈普 另环境采样 (remaining)
+
+**Dependency**: Requires v1.17 对账引擎 (Phase 42-46) ✓ SHIPPED 2026-07-03
+
+See `.planning/ROADMAP.md` Phase 48 section for details.
 
 ### Completed
 
@@ -302,4 +335,4 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 - ✓ Phase 44 R3 IP 例外规则引擎 (v1.17 资产对账) (2026-06-28) — 2 plans, CIDR GiST 引擎 + Layer 3.5 拦截 + 例外 CRUD/命中测试 + cron 过期清理 + 转单 no_workorder 过滤 + 降噪基线 + Excel 导入导出; VERIFICATION 10/10 passed, 1 CR-03 gap-closure fix (baseline 路由权限), 4 硬化债 BLOCKER 跟踪
 
 ---
-*Last updated: 2026-06-28 after Phase 44 completion*
+*Last updated: 2026-07-03 after v1.17 milestone close + Phase 47 root cause fixes shipped + v1.18 Phase 48 planning*

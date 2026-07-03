@@ -209,7 +209,7 @@ func TestParseRuijiePortSecurityLine(t *testing.T) {
 			name:              "User-reported port-security line (8 fields)",
 			line:              "56   308   b022.7a2e.4a4f  GigabitEthernet 2/25      Dynamic            --          active",
 			wantEntry:         true,
-			expectedMAC:       "B0:22:7A:2E:4A:4F", // 2026-07-01: 归一化为大写+冒号
+			expectedMAC:       "B0:22:7A:2E:4A:4F", // 2026-07-03 Phase 47 R5: NormalizeMACAddress 归一 cisco 点分 → canonical 冒号
 			expectedVLAN:      308,
 			expectedInterface: "GE2/25",            // 2026-07-01: 全称+空格 → 短名
 			expectedType:      "Dynamic",
@@ -218,7 +218,7 @@ func TestParseRuijiePortSecurityLine(t *testing.T) {
 			name:              "Standard port-security with hyphenated MAC (8 fields)",
 			line:              "12   100   0011.2233.4455  GigabitEthernet 0/1  SecureDynamic  00:01:23  active",
 			wantEntry:         true,
-			expectedMAC:       "00:11:22:33:44:55",
+			expectedMAC:       "00:11:22:33:44:55", // 2026-07-03 Phase 47 R5: 归一
 			expectedVLAN:      100,
 			expectedInterface: "GE0/1",             // 2026-07-01: 全称+空格 → 短名
 			expectedType:      "SecureDynamic",
@@ -227,7 +227,7 @@ func TestParseRuijiePortSecurityLine(t *testing.T) {
 			name:              "Single-token interface (7 fields)",
 			line:              "1   200   aabb.ccdd.eeff  Gi0/5  Static  --  active",
 			wantEntry:         true,
-			expectedMAC:       "AA:BB:CC:DD:EE:FF", // 2026-07-01: 归一化
+			expectedMAC:       "AA:BB:CC:DD:EE:FF", // 2026-07-03 Phase 47 R5: 归一
 			expectedVLAN:      200,
 			expectedInterface: "GE0/5", // Gi 短名经 NormalizeInterfaceName 对称化映射到大写短名
 			expectedType:      "Static",
@@ -235,6 +235,36 @@ func TestParseRuijiePortSecurityLine(t *testing.T) {
 		{
 			name:      "Too few fields for port-security format",
 			line:      "1 200 aabb.ccdd.eeff Gi0/5",
+			wantEntry: false,
+		},
+		// === Phase 47 R5 (D-04) 负向用例: isCanonicalMAC 拦截解析层垃圾行 ===
+		{
+			// fields[2] = "Flags:" → NormalizeMACAddress 剥离分隔符后是 "FLAGS" → 非 12 hex → 返回 ""
+			// entry.MACAddress == "" 短路,守卫返回 (_, false)
+			name:      "R5-D04 Header row 'Flags:' rejected",
+			line:      "1   100   Flags:    GigabitEthernet 0/1      Dynamic    --    active",
+			wantEntry: false,
+		},
+		{
+			// fields[2] = "Total"(strings.Fields 按空格 split,误认"Total entries: 42" 中 9 个 token)
+			//   → NormalizeMACAddress 剥离分隔符后是 "TOTAL" → 非 12 hex → ""
+			// entry.MACAddress == "" 守卫短路
+			name:      "R5-D04 Summary row 'Total' rejected",
+			line:      "1   100   Total entries: 42    --    --    --    active",
+			wantEntry: false,
+		},
+		{
+			// fields[2] = "#" → NormalizeMACAddress 剥离后是 "#" → 非 hex → ""
+			name:      "R5-D04 Comment line '#' rejected",
+			line:      "1   100   #    GigabitEthernet 0/1    Dynamic    --    active",
+			wantEntry: false,
+		},
+		{
+			// fields[2] = "GigabitEthernet"(因 MAC 槽被接口名占据 — 真实锐捷 show port-security 在某些版本会这样)
+			//   → NormalizeMACAddress 剥离后是 "GIGABITETHERNET" → 非 12 hex → ""
+			// entry.MACAddress == "" 守卫短路
+			name:      "R5-D04 MAC slot occupied by interface name rejected",
+			line:      "1   100   GigabitEthernet 0/1    Dynamic    --    active",
 			wantEntry: false,
 		},
 	}

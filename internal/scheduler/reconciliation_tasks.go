@@ -9,6 +9,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/asset"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/system"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/websocket"
 	"github.com/ruoyi-next/ruoyi-go-backend/pkg/cache"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
@@ -52,6 +53,13 @@ func RegisterReconciliationTasks(s *Scheduler, db *gorm.DB, cacheSvc cache.Cache
 	snapSvc := asset.NewReconciliationSnapshotService(db)
 	detSvc := asset.NewReconciliationDetection(db)
 	woSvc := asset.NewReconciliationWorkorderServiceWithCache(db, cacheSvc, wsSvc, noticeSvc)
+	// Phase 46 R5: 半自动修复建议生成器
+	// 注入 configService + noticeHub(D-A3 读 sys_config / D-C5 误修复率告警)
+	configSvc := system.NewConfigService(db)
+	fixSuggestionSvc := asset.NewFixSuggestionService(db, cacheSvc, configSvc, wsSvc)
+	// Phase 46 R5 误修复率监控(46-02 / D-C5)
+	// 注入 db + configSvc + wsSvc + noticeSvc + fixSuggestionSvc
+	fixSuggestionMonitor := asset.NewFixSuggestionMonitor(db, configSvc, wsSvc, noticeSvc, fixSuggestionSvc)
 
 	// === 1. 物化视图刷新 ===
 	//
@@ -114,13 +122,20 @@ func RegisterReconciliationTasks(s *Scheduler, db *gorm.DB, cacheSvc cache.Cache
 				applogger.Errorf("[reconciliation:createWorkorderHigh] 失败: %v", err)
 				return err
 			}
-		case "checkPortStatusDrift":
-			// Phase 45 R5 数据治理 (2026-06-30): 每日对账 sys_device_port_status.device_id
-			// 与 ops_info_points.device_id 漂移。migration_182 已修复 1247 行历史漂移,
-			// migration_183 已加 FK 约束防 orphan,但 FK 无法捕获"指向错误但存在的设备"
-			// (业务规则违反)。本任务作为兜底,每天检测新漂移并 log warn。
-			if err := checkPortStatusDrift(ctx, db); err != nil {
-				applogger.Errorf("[reconciliation:checkPortStatusDrift] 失败: %v", err)
+		case "generateFixSuggestions":
+			// Phase 46 R5: 扫描 Type B 高置信度异常 → 写 sys_reconciliation_fix_suggestion
+			// (D-A4 触发条件:D-A3 sys_config confidence_threshold / 紧急熔断 enabled=0)
+			inserted, err := fixSuggestionSvc.GenerateFixSuggestions(ctx)
+			if err != nil {
+				applogger.Errorf("[reconciliation:generateFixSuggestions] 失败: %v", err)
+				return err
+			}
+			applogger.Infof("[reconciliation:generateFixSuggestions] 本轮生成 %d 条建议", inserted)
+		case "monitorFixSuggestionMisFix":
+			// Phase 46 R5 / 46-02: 误修复率监控(D-C5)
+			// 1h 节流防告警风暴 + WS + SysNotice + operlog 三通道(46-02 监控 service 内部处理)
+			if err := fixSuggestionMonitor.CheckAndNotify(ctx); err != nil {
+				applogger.Errorf("[reconciliation:monitorFixSuggestionMisFix] 失败: %v", err)
 				return err
 			}
 		default:
@@ -170,11 +185,18 @@ func RegisterReconciliationTasks(s *Scheduler, db *gorm.DB, cacheSvc cache.Cache
 			cronExpression: "@every 5m",
 			remark:         "Phase 43 R2: high 异常自动转工单(D-A1-02 5min 周期,符合 ROADMAP SC 2)",
 		},
-		// === Phase 45 R5 数据治理 (2026-06-30): 每日 port_status.device_id 漂移对账 ===
+		// === Phase 46 R5 新增: 修复建议生成 ===
 		{
-			jobName:        "对账-port_status漂移检测",
-			cronExpression: "0 0 3 * * *",
-			remark:         "Phase 45 R5: 每日 03:00 检测 sys_device_port_status.device_id 与 ops_info_points.device_id 一致性,migration_182 治理后应为 0,>0 触发告警",
+			jobName:        "对账-修复建议生成",
+			cronExpression: "@every 5m",
+			remark:         "Phase 46 R5: 扫描 Type B 高置信度异常 → 写 sys_reconciliation_fix_suggestion (D-A4 触发器)",
+		},
+		// === Phase 46 R5 / 46-02 新增: 误修复率监控(46-02 / D-C5) ===
+		// W-7 错峰:7,17,27,37,47,57(每 10min 第 7 分钟)与 generator 3,8,13,18,... 错开 4min
+		{
+			jobName:        "对账-误修复率监控",
+			cronExpression: "7,17,27,37,47,57 * * * *",
+			remark:         "Phase 46 R5 / 46-02: 7d 误修复率超阈告警(D-C5 1h 节流防风暴 + WS + SysNotice + operlog 三通道)",
 		},
 	}
 
@@ -316,8 +338,10 @@ func jobNameToInvokeTarget(jobName string) string {
 		return "reconciliation:createWorkorderCritical"
 	case "对账-自动转工单high":
 		return "reconciliation:createWorkorderHigh"
-	case "对账-port_status漂移检测":
-		return "reconciliation:checkPortStatusDrift"
+	case "对账-修复建议生成":
+		return "reconciliation:generateFixSuggestions"
+	case "对账-误修复率监控":
+		return "reconciliation:monitorFixSuggestionMisFix"
 	default:
 		return ""
 	}

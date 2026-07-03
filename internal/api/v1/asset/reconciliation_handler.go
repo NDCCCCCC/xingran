@@ -28,6 +28,12 @@ const ModuleReconciliation = "资产对账"
 // 显示"资产对账-例外规则",区别于主异常流的"资产对账"。
 const ModuleReconciliationExceptionRule = "资产对账-例外规则"
 
+// ModuleReconciliationFixSuggestion 修复建议 operlog 模块名(Phase 46 R5 锁定)
+//
+// 用于 fix_suggestion_handler.go 的 Accept/Apply/Reject/Rollback operlog.Record 调用,
+// 审计 sys_oper_log.module 显示 "资产对账-修复建议",区别于主异常流的 "资产对账"。
+const ModuleReconciliationFixSuggestion = "资产对账-修复建议"
+
 // ReconciliationHandler 资产对账异常 handler
 //
 // R1 边界 (D-18): 不暴露 MarkResolved / Create / Update / Delete handler。

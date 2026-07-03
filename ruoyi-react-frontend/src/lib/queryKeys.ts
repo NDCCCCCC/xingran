@@ -10,7 +10,7 @@
  * - Nested factories accept their discriminators (dict type, role params, etc.).
  */
 
-import type { ExceptionListParams } from "@/lib/assetApi";
+import type { ExceptionListParams, FixSuggestionListParams } from "@/lib/assetApi";
 
 export const queryKeys = {
   dict: {
@@ -84,6 +84,15 @@ export const queryKeys = {
     /** Phase 45 R4 — 资产对账健康度(从 workstationHealth 切片,无独立端点) */
     assetHealth: (assetId: string) =>
       ["reconciliation", "asset-health", assetId] as const,
+    /** Phase 46 R5 — 修复建议列表(分页 + 筛选) */
+    fixSuggestionList: (params: FixSuggestionListParams) =>
+      ["reconciliation", "fix-suggestion-list", params] as const,
+    /** Phase 46 R5 — 修复建议详情 */
+    fixSuggestionDetail: (id: string) =>
+      ["reconciliation", "fix-suggestion-detail", id] as const,
+    /** Phase 46 R5 — 修复建议统计(7d KPI 卡片 + 误修复率) */
+    fixSuggestionStats: (windowDays: number) =>
+      ["reconciliation", "fix-suggestion-stats", windowDays] as const,
   },
 } as const;
 

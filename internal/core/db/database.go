@@ -366,6 +366,8 @@ func (d *Database) AutoMigrate() error {
 		// 仪表盘系统相关模型
 		&models.Dashboard{},
 		&models.DashboardVersion{},
+		// Phase 46 R5: 半自动修复建议表
+		&models.SysReconciliationFixSuggestion{},
 	)
 	if err != nil {
 		return err
@@ -545,102 +547,28 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate180ReconciliationPhysicalChainPerf(d.DB); err != nil {
 			applogger.Errorf("Phase 45+ reconciliation_physical_chain O(N²)→O(N+M) 性能重构失败: %v", err)
 		}
-		// Phase 45 R5 收尾 (2026-06-30): reconciliation_normalized MV 增加 workstation_id 列。
-		// migration_176 创建 MV 时漏 select pc.workstation_id,导致 WorkstationIDForException
-		// 触发 SQLSTATE 42703,R4 工位健康度缓存失效链断裂。本迁移 DROP + CREATE + REFRESH 修复。
-		if err := migrations.Migrate181ReconciliationNormalizedWorkstationID(d.DB); err != nil {
-			applogger.Errorf("Phase 45+ reconciliation_normalized MV workstation_id 列修复失败: %v", err)
+		// 2026-07-03 mac-r5-cleanup: 清理 sys_device_mac_address 非 canonical MAC 行 (D-05)
+		//   配合 parseRuijiePortSecurityLine isCanonicalMAC 守卫(D-04)做数据层兜底;
+		//   备份表 sys_dirty_mac_rows_backup 保留 30 天审计链(手动 DROP);
+		//   mac_history 表不动(AUDIT-02);
+		//   2026-07-03 适配:DeviceMACAddress 模型无 DeletedAt,改用物理 DELETE(行为等价)。
+		if err := migrations.Migrate181CleanupDirtyMACRows(d.DB); err != nil {
+			applogger.Errorf("清理脏 MAC 行失败: %v", err)
 		}
-		// Phase 45 R5 数据治理 (2026-06-30): 加 sys_device_port_status.device_id FK 约束,
-		// 防止未来 device_id 漂移到不存在的设备(orphan)。NOT VALID + 异步 VALIDATE
-		// 避免锁表。FK 局限:只能防 orphan,无法防"指向错误但存在的设备",
-		// 后者靠 Excel 信息点重新录入 + 每日定时对账任务捕获。
-		// (注: 原计划 migration_182 改 port_status.device_id 方向错误已删除; 2026-07-01 改用 migration_188 修复 ip.port_id)
-		if err := migrations.Migrate183AddPortStatusDeviceFK(d.DB); err != nil {
-			applogger.Errorf("Phase 45+ 数据治理 加 port_status.device_id FK 约束失败: %v", err)
+		// Phase 46 R5: 半自动修复建议表 + 4 索引 + 2 CHECK
+		// (D-B1 独立表 / D-B2 6 状态 / D-B3 多版本化 / D-B4 partial unique)
+		if err := migrations.Migrate198CreateFixSuggestionTable(d.DB); err != nil {
+			applogger.Errorf("Phase 46 R5 fix suggestion table 迁移失败: %v", err)
 		}
-		// 2026-07-01 port-mac-format-unify: 历史 MAC 提升大写+冒号
-		if err := migrations.Migrate184NormalizeMACAddressToUppercase(d.DB); err != nil {
-			applogger.Errorf("统一 sys_device_mac_address MAC 大写+冒号失败: %v", err)
+		// Phase 46 R5: partial unique index uniq_fix_suggestion_pending_per_exception
+		// (D-B4 防同 exception 多 pending,独立成 199 便于失败重跑)
+		if err := migrations.Migrate199FixSuggestionUniqueIndex(d.DB); err != nil {
+			applogger.Errorf("Phase 46 R5 fix suggestion partial unique index 迁移失败: %v", err)
 		}
-		// 2026-07-01 port-mac-format-unify: 历史 ARP MAC 提升大写+冒号
-		if err := migrations.Migrate185NormalizeARPEntriesToUppercase(d.DB); err != nil {
-			applogger.Errorf("统一 sys_device_arp_entries MAC 大写+冒号失败: %v", err)
-		}
-		// 2026-07-01 port-mac-format-unify: 历史 port_status.interface_name 折叠到短名大写
-		if err := migrations.Migrate186NormalizePortStatusInterfaceName(d.DB); err != nil {
-			applogger.Errorf("统一 sys_device_port_status.interface_name 短名大写失败: %v", err)
-		}
-		// 2026-07-01 port-mac-format-unify: 清理 sys_device_port_status + sys_device_mac_address 乱码 interface_name
-		if err := migrations.Migrate187CleanGarbledInterfaceNames(d.DB); err != nil {
-			applogger.Errorf("清理 interface_name 乱码失败: %v", err)
-		}
-		// 2026-07-01 info-point-port-drift-recheck: 修复 ops_info_points.port_id 历史漂移
-		// (Excel import DependsOn scope 失效, port_id 跨设备 first-match 拿错同名 port)。
-		// UPDATE ip.port_id 指向 (ip.device_id, 同 interface) 的正确 port, 安全可逆。
-		// dry-run 默认开启 (MIGRATION_188_DRY_RUN), 对物理链路显示无影响。
-		if err := migrations.Migrate188FixInfoPointsPortIdDrift(d.DB); err != nil {
-			applogger.Errorf("Phase 45+ 数据治理 修复 info_points.port_id 漂移失败: %v", err)
-		}
-		// 2026-07-01 mac-trajectory-cleanup: MAC 轨迹查询功能已合并到 MAC 地址列表页 Drawer,
-		// 独立菜单 (path=network/mac/trajectory) 成了死入口。代码层无 seed, 这里 DELETE
-		// sys_menu + sys_role_menu 清掉所有已部署环境的侧边栏残留。幂等可重复执行。
-		if err := migrations.Migrate189RemoveMACTrajectoryMenu(d.DB); err != nil {
-			applogger.Errorf("清理 MAC 轨迹菜单残留失败: %v", err)
-		}
-		// 2026-07-01 port-mac-format-unify: 归一化 sys_device_mac_history 的 mac_address + interface_name
-		// (MAC 轨迹表此前 BuildMACStateMap 未归一 InterfaceName,历史接口名全是全称;本迁移补清)
-		if err := migrations.Migrate190NormalizeMACHistory(d.DB); err != nil {
-			applogger.Errorf("归一化 sys_device_mac_history 失败: %v", err)
-		}
-		// 2026-07-01 info-points-building-backfill-v1: 反推 ops_floors.building_id (no-op,
-		// 初始诊断方向错了,ops_floors.building_id 实际全有值)。保留 v1 作历史记录,
-		// 真正修复见下方 Migrate193BackfillSysWorkstationBuildingId。
-		if err := migrations.Migrate192BackfillOpsFloorsBuildingId(d.DB); err != nil {
-			applogger.Errorf("反推回填 ops_floors.building_id 失败: %v", err)
-		}
-		// 2026-07-01 info-points-building-backfill-v2 (真修复): 反推回填
-		// sys_workstation.building_id (uuid 类型),从 ops_floors.building_id (varchar(64)) ::uuid
-		// 强转赋值。这是信息点列表所属楼宇显示 "-" 的真正根因 —— List JOIN 用
-		// sys_workstation.building_id 而非 ops_floors.building_id;260 个工位冗余字段为 NULL。
-		// 用户 dry-run 验证 100% 可反推(全部 → "浙商大厦")。
-		if err := migrations.Migrate193BackfillSysWorkstationBuildingId(d.DB); err != nil {
-			applogger.Errorf("反推回填 sys_workstation.building_id 失败: %v", err)
-		}
-		// 2026-07-02 mac-iface-security-suffix: 清理三表 interface_name 的 SECURITY 尾部后缀
-		// (华为 security 类型 MAC 接口名粘连,如 GE1/0/4SECURITY → GE1/0/4)。normalize 已修
-		// (pkg/normalize/iface.go 守卫剥离尾部),本迁移清历史脏数据;并幂等重跑去空格/全称/小写MAC。
-		if err := migrations.Migrate194CleanIfaceSecuritySuffix(d.DB); err != nil {
-			applogger.Errorf("清理 interface_name SECURITY 后缀失败: %v", err)
-		}
-		// 2026-07-02 reconciliation-exception-rules-menu: 补种"例外规则管理"路由菜单 (Phase 44 R3 遗漏)。
-		// exception-rules 页面 UI 早已存在, 但 sys_menu 从未 seed 该菜单 (migration_169 只埋了按钮权限
-		// 占位), 动态路由不生成 /asset/reconciliation/exception-rules → 对账看板引导链接及几处
-		// window.open('/new') 全部被 DynamicRoutes catch-all 重定向到仪表盘。仿 dashboard seed 补种。
-		if err := migrations.Migrate195ReconciliationExceptionRulesMenu(d.DB); err != nil {
-			applogger.Errorf("补种例外规则管理菜单失败: %v", err)
-		}
-		// 2026-07-02 reconciliation-dict-labels-align: 对齐 sys_dict_data 中
-		// asset_reconciliation_conflict_type 的 dict_label 与 detection 真值。
-		// 根因见 .planning/debug/reconciliation-health-misjudgment.md: migration_169 R1 seed 时
-		// B/C/D/E/F 五类 dict_label 文字与 detection ClassifyType 完全相反, 导致截图 9/10/11
-		// "物理有责任/无人" / "缺数据" / "物理无责" 等标签错位 (admin 看到与底层语义相反)。
-		// 改 dict_label (只显示层), 不动 detection logic, 不动 HealthBadge (已是真值)。
-		if err := migrations.Migrate196ReconciliationDictLabelsAlign(d.DB); err != nil {
-			applogger.Errorf("对齐 asset_reconciliation_conflict_type dict_label 失败: %v", err)
-		}
-		// 2026-07-02 reconciliation-workorder-categories-align: 同步对齐 sys_workorder_category
-		// (对账-A/B/C/D/E/F 类) 的 description 与 detection 真值。同根因, M196 只改了 dict_label,
-		// 这里补齐工单模板描述 (生成工单时 frontend 详情页用 description 显示原因/处理建议).
-		if err := migrations.Migrate197ReconciliationWorkorderCategoriesAlign(d.DB); err != nil {
-			applogger.Errorf("对齐 sys_workorder_category 对账类 description 失败: %v", err)
-		}
-		// 2026-07-01 info-points-redundant-cols: 删除 ops_info_points 4 个冗余物理列
-		// (building_id/building_name/floor_name/workstation_name)。building_*/floor_name 是
-		// AutoMigrate 自动建的幽灵列(从不写入), workstation_name 被 List JOIN 覆盖, 物理列冗余。
-		// model 4 字段 tag 已改 gorm:"->;-:migration" (只读+忽略迁移), GetByID 补同款 JOIN。
-		if err := migrations.Migrate191DropInfoPointsRedundantColumns(d.DB); err != nil {
-			applogger.Errorf("删除 ops_info_points 冗余列失败: %v", err)
+		// Phase 46 R5: 4 sys_config + 1 菜单 + 5 按钮 + 1 sys_job seed
+		// (D-A3 置信度门槛 / D-C2 7d 回滚 / D-C5 误修复率阈值 / 紧急熔断)
+		if err := migrations.Migrate200FixSuggestionConfigSeeds(d.DB); err != nil {
+			applogger.Errorf("Phase 46 R5 fix suggestion config/menu/job seed 迁移失败: %v", err)
 		}
 		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
 		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
