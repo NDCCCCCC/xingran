@@ -1,5 +1,28 @@
 # Milestones
 
+## v1.17 资产对账 (Asset Reconciliation) — ✅ SHIPPED 2026-07-03
+
+**Phases**: 5 (Phases 42-46) | **Plans**: 14 (16 planned, 42-03 skeleton superseded by R3) | **Tasks**: ~70
+
+**Delivered**: 建立"实物层 vs 声明层"对账引擎（R1-R5 完整）+ 4 个根因修复（Phase 47 独立）。Observe-only 策略 + 告警驱动人工修复 + 工单闭环 + IP 段例外 + 半自动修复建议（高置信度 6 状态机）。
+
+**Key Accomplishments**:
+1. ✅ **R1 观测底座** — 物化视图 + 主表 + Dashboard + 6 个 Statistics 端点（防 MaxPageSize 钳制）+ operlog 全覆盖
+2. ✅ **R2 告警 + 工单闭环** — critical/high 自动转工单 + WebSocket 推送 + SysNotice + 7d 静默期 + 24h 节流
+3. ✅ **R3 IP 段例外** — CIDR 格式 + 5 种 actions 组合 + expires_at + 命中测试工具 + Excel 导入导出 + VERIFICATION 10/10
+4. ✅ **R4 工位详情整合** — 健康度卡片（5 KPI + 趋势 mini chart）+ 对账健康列 + ReconciliationDrawer 3 Tab
+5. ✅ **R5 半自动修复** — 6 状态机 + 7d 回滚 + 误修复率告警三通道（SysNotice+WS+operlog）+ UAT 9/10 PASS
+6. ✅ **Phase 47 根因修复** — infoPoint drift / Layer3 UPSERT / port_status 漂移 / MAC parser 校验（独立完成）
+
+**Known in-session fixes during UAT**:
+- Apply 400: `resolution_method` → `resolution_note` 列不存在 bug (commit 87d5fc82)
+- Rollback 400: 删除 `pre_fix_user_id == nil` 过度防御检查
+- Cron 5 fields 缺年份: UPDATE sys_job 加 `0` 前缀
+
+**Known deferred items at close**: 0 (Test 10 权限非 admin 端到端 skipped due to 缺测试账号，不阻塞)
+
+---
+
 ## v1.3 技术债清理 — ✅ SHIPPED 2026-04-27
 
 **Phases**: 3 (Phases 8-10) | **Plans**: 9 | **Tasks**: ~50

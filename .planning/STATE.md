@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.17
 milestone_name: 资产对账 (Asset Reconciliation)
-status: phase_46_complete
-stopped_at: Phase 46 R5 execution complete (2/2 plans, 12 atomic commits + 2 docs)
-last_updated: "2026-07-03T18:54:00Z"
-last_activity: 2026-07-03 -- Phase 46 R5 半自动修复 complete: 2/2 plans shipped, 12 atomic commits (7 + 5) + 2 docs, 17 R5 tests PASS (9 + 6 + 2), 7 ROADMAP SC covered (SC1-SC7), v1.17 milestone close report drafted
+status: milestone_archived
+stopped_at: v1.17 milestone archived (Phases 42-46 + Phase 47 root cause fixes shipped 2026-07-03)
+last_updated: "2026-07-03T23:50:00Z"
+last_activity: 2026-07-03 -- /gsd:complete-milestone v1.17 archived: milestones/v1.17-ROADMAP.md + v1.17-REQUIREMENTS.md created; ROADMAP.md + PROJECT.md updated; Phase 47 marked shipped; v1.18 Phase 48 planning started
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 15
-  completed_plans: 14
-  percent: 93
+  completed_phases: 5
+  total_plans: 17
+  completed_plans: 16
+  percent: 94
 ---
 
 # Project State
