@@ -1,0 +1,13 @@
+CloudEngine S8700-6's Device status:
+--------------------------------------------------------------------------------
+Slot  Card   Type                     Online   Power Register     Alarm     Primary
+--------------------------------------------------------------------------------
+1     -      LSG7G48VX1E0             Present  On    Registered   Normal    NA
+2     -      LSG7G48VX1E0             Present  On    Registered   Normal    NA
+3     -      LSG7G48VX1E0             Present  On    Registered   Normal    NA
+4     -      LSG7G48VX1E0             Present  On    Registered   Normal    NA
+5     0      VIRTUAL-PIC              Present  On    Registered   Normal    NA
+5     -      LSG7SRUEX1C0             Present  On    Registered   Normal    Master
+6     0      VIRTUAL-PIC              Present  On    Registered   Normal    NA
+6     -      LSG7SRUEX1C0             Present  On    Registered   Normal    Slave
+--------------------------------------------------------------------------------

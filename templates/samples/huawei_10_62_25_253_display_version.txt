@@ -1,0 +1,69 @@
+Huawei YunShan OS
+Version 1.24.0.1 (S8700 V600R024C00SPC500)
+Copyright (C) 2021-2024 Huawei Technologies Co., Ltd.
+HUAWEI CloudEngine S8700-6 uptime is 82 days, 14 hours, 17 minutes
+Patch Version: V600R024SPH180
+
+BKP  version information:
+1.PCB      Version  : GFAFB04FC VER B
+2.Board    Type     : LSS8706SP0
+3.MPU Slot Quantity : 2
+4.LPU Slot Quantity : 4
+
+MPU(Master) 5 : uptime is  82 days, 14 hours, 15 minutes
+        StartupTime 2026/04/11   21:44:03
+Memory      Size    : 8192 M bytes
+Flash       Size    : 7641 M bytes
+MPU version information:
+1.PCB       Version : GFSCXP04FC VER A
+2.MAB       Version : 0
+3.Board     Type    : LSG7SRUEX1C0
+4.BIOS      Version : 2400
+5.CPLD1     Version : 257
+  CPLD2     Version : 257
+  CPLD3     Version : 257
+6.FPGA1     Version : 256
+  FPGA2     Version : 256
+
+MPU(Slave) 6 : uptime is  82 days, 14 hours, 12 minutes
+        StartupTime 2026/04/11   21:47:01
+Memory      Size    : 8192 M bytes
+Flash       Size    : 7641 M bytes
+MPU version information:
+1.PCB       Version : GFSCXP04FC VER A
+2.MAB       Version : 0
+3.Board     Type    : LSG7SRUEX1C0
+4.BIOS      Version : 2400
+5.CPLD1     Version : 257
+  CPLD2     Version : 257
+  CPLD3     Version : 257
+6.FPGA1     Version : 256
+  FPGA2     Version : 256
+
+LPU 1 : StartupTime 2026/04/11   21:44:15
+LPU version information:
+1.PCB       Version : GFSL48GU VER B
+2.Board     Type    : LSG7G48VX1E0
+3.CPLD      Version : 256
+4.FPGA      Version : 256
+
+LPU 2 : StartupTime 2026/04/11   21:44:15
+LPU version information:
+1.PCB       Version : GFSL48GU VER B
+2.Board     Type    : LSG7G48VX1E0
+3.CPLD      Version : 256
+4.FPGA      Version : 256
+
+LPU 3 : StartupTime 2026/04/11   21:44:15
+LPU version information:
+1.PCB       Version : GFSL48GU VER B
+2.Board     Type    : LSG7G48VX1E0
+3.CPLD      Version : 256
+4.FPGA      Version : 256
+
+LPU 4 : StartupTime 2026/04/11   21:44:15
+LPU version information:
+1.PCB       Version : GFSL48GU VER B
+2.Board     Type    : LSG7G48VX1E0
+3.CPLD      Version : 256
+4.FPGA      Version : 256

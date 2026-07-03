@@ -1,0 +1,9 @@
+  Dev Slot Port Configured Module            Online Module                Software Status
+  --- ---- ---- ---------------------------- ---------------------------- ---------------
+  1   1    48   M8600E-24GT20SFP4XS-ED       M8600E-24GT20SFP4XS-ED       ok
+  1   2    48   M8600E-48GT-P-ED             M8600E-48GT-P-ED             ok
+  1   3    48   M8600E-48GT-P-ED             M8600E-48GT-P-ED             ok
+  1   4    48   M8600E-48GT-P-ED             M8600E-48GT-P-ED             ok
+  1   5    48   M8600E-48GT-P-ED             M8600E-48GT-P-ED             ok
+  1   M1   0    N/A                          M8600E-CM                    master
+  1   M2   0    N/A                          M8600E-CM                    backup
