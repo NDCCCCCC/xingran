@@ -4,8 +4,8 @@ milestone: v1.18
 milestone_name: 网络设备硬件清单 (Device Component Serials)
 status: Awaiting next milestone
 stopped_at: Phase 46 context gathered
-last_updated: "2026-07-04T04:31:56.175Z"
-last_activity: 2026-07-04 — Milestone v1.18 completed and archived
+last_updated: "2026-07-04T08:50:34.476Z"
+last_activity: 2026-07-04 — Completed quick task 260704-ne5: database.go 启动期 migration 调用精简 + snapshot 脚本
 progress:
   total_phases: 4
   completed_phases: 4
@@ -106,6 +106,7 @@ Last activity: 2026-07-04 — Milestone v1.18 completed and archived
 | 260702-148 | 对账看板"例外规则管理"链接跳仪表盘(三轮: ①d033e510 href 改错(component当路由) ②607da270 migration_195 补种菜单(菜单确未seed) ③a63e1fdf href 改回真实路由 /assets/exception-rules;真根因双重: 菜单未seed + component≠route path;DB实查确认) | 2026-07-02 | d033e510,607da270,a63e1fdf | [260702-148-fix-dashboard-exception-rules-link](./quick/260702-148-fix-dashboard-exception-rules-link/) |
 | 260703-dkc | 重写资产列表 columns 数组 — 4 假列全删(错 key/title/dataIndex/render: deptName key 占 deviceTypeName 字符串当 status 数字 Tag 渲染、mac1 key 占 nbfStatus 渲染日期、remark key 占 machineUptime)+ 15 visible 列补齐(deviceModelName/deptName/machineIp/mac1/assetLocation/buildingName/floorName/signOrgnoName/nowUserName/nowUserDeptCode/status/nbfStatus/drawingDate/machineUptime/lastInventoryDate)+ defaultAssetColumns order=10 删(后端无 recipientName;真领取人是 deviceUserName);type-check 0 / lint 8 pre-existing unchanged | 2026-07-03 | 97b49ea7 | [260703-dkc-ruoyi-react-frontend-src-pages-operation](./quick/260703-dkc-ruoyi-react-frontend-src-pages-operation/) |
 | 260703-eaj | 实施 B 方案(前后端 schema 单一真理源): columnsSchema.ts 新建 + index.tsx 改 import + sync-columns-schema.mjs(bracket-match + new Function 解析)+ package.json 加 sync-columns-schema + prebuild 钩子 + 后端 //go:embed asset_columns_schema.json 替换 43 列硬编码 → 3 原子提交(43ecb291/1f2e4d21/69ef4161),type-check 0 / sync 51 列 / go build 0 / go test 1 pre-existing;user/role/dept 同模式待推广 | 2026-07-03 | 43ecb291,1f2e4d21,69ef4161 | [260703-eaj-b-schema-embed-ruoyi-react-frontend-src-](./quick/260703-eaj-b-schema-embed-ruoyi-react-frontend-src-/) |
+| 260704-ne5 | database.go AutoMigrate() 精简:删除 200+ 启动期 idempotent noop migration 调用 + dropDependentMaterializedViews() + migrateCredentialModel();保留 GORM AutoMigrate(model) + cleanupOldConstraints();新增 scripts/db/snapshot.sh 一键导出 schema/seed snapshot(白名单 key 循环加载 .env 避免密码特殊字符);新部署从"跑 200+ migration"改为"两次 psql -f 导入";启动期 ~30s→~2s,日志噪音 250 行→3 行 | 2026-07-04 | 0e3430ab,361a1ecd | [260704-ne5-database-go-migration-schema-seed-snapsh](./quick/260704-ne5-database-go-migration-schema-seed-snapsh/) |
 
 ## Accumulated Context
 
