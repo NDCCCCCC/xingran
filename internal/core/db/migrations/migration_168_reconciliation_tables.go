@@ -136,9 +136,56 @@ CREATE INDEX IF NOT EXISTS idx_recon_norm_asset_code
 	// 4. partial unique index uniq_recon_asset_type_open (D-11 防告警风暴)
 	//    用 DO $$ 块显式命名,避免 PG 自动命名 `<table>_<col>_key`
 	//    与 GORM uniqueIndex 期望的 `uni_*` 命名规范冲突 (ruoyi-gorm-sql-constraint-naming-conflict 教训)
+	//
+	//    Idempotency 修复 (debug: recon-uniq-index-23505):
+	//    migration_201 (Phase 48) 已 DROP 2 列版 uniq_recon_asset_type_open 并替换为
+	//    3 列版 uniq_recon_asset_type_cat_open (asset_id, conflict_type, recon_category)
+	//    WHERE resolved_at IS NULL AND deleted_at IS NULL。启动顺序中 168 在 201 之前;
+	//    重启场景下 168 第二次跑时 2 列 index 不存在(被 201 DROP),DO $$ 块 IF NOT EXISTS
+	//    检查通过,试图 CREATE UNIQUE INDEX 却被现存重复行 (asset_id, conflict_type)
+	//    (recon_category=NULL 时 24h 节流兜底不严的历史数据) 阻断 → SQLSTATE 23505。
+	//
+	//    修复策略:
+	//    (a) 如果 3 列版 uniq_recon_asset_type_cat_open 已存在 → 168 已接管,跳过 2 列版创建
+	//        (避免无意义重建后又被 201 DROP)
+	//    (b) 如果 2 列版不存在 → 先按 (asset_id, conflict_type) 去重
+	//        (保留最新 detected_at 一行,其余 DELETE),再 CREATE UNIQUE INDEX 2 列版
+	//        (留给 201 后续 DROP + 重建 3 列版)
 	partialUniqueSQL := `
 DO $$
+DECLARE
+    three_col_exists BOOLEAN;
 BEGIN
+    -- (a) 3 列版已存在 (migration_201 已运行) → 跳过 2 列版
+    SELECT EXISTS (
+        SELECT 1 FROM pg_indexes
+        WHERE indexname = 'uniq_recon_asset_type_cat_open'
+          AND schemaname = 'public'
+    ) INTO three_col_exists;
+
+    IF three_col_exists THEN
+        RAISE NOTICE 'uniq_recon_asset_type_cat_open 已存在 (migration_201 已运行), 跳过 2 列版 uniq_recon_asset_type_open';
+        RETURN;
+    END IF;
+
+    -- (b) 2 列版不存在 → 先 dedup 现有重复行 (resolved_at IS NULL AND deleted_at IS NULL)
+    --     保留每组 (asset_id, conflict_type) 中 detected_at 最新的 1 行,
+    --     其余 DELETE (release 2026-07-04 debug: recon-uniq-index-23505)
+    DELETE FROM sys_data_reconciliation
+    WHERE id IN (
+        SELECT id FROM (
+            SELECT id,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY asset_id, conflict_type
+                       ORDER BY detected_at DESC, created_at DESC
+                   ) AS rn
+            FROM sys_data_reconciliation
+            WHERE resolved_at IS NULL AND deleted_at IS NULL
+        ) t
+        WHERE t.rn > 1
+    );
+
+    -- 2 列版不存在则创建 (后续 migration_201 会 DROP 它重建 3 列版)
     IF NOT EXISTS (
         SELECT 1 FROM pg_indexes
         WHERE indexname = 'uniq_recon_asset_type_open'
