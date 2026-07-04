@@ -74,7 +74,7 @@ See [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md) for details.
 Plans:
 **Wave 1**
 
-- [ ] 48-01-PLAN.md — Schema 迁移(migration_201) + Asset/Reconciliation model 扩展 + asset_service List/Statistics 默认 component_type IS NULL 过滤 (D-01, D-05, D-06, D-07)
+- [x] 48-01-PLAN.md — Schema 迁移(migration_201) + Asset/Reconciliation model 扩展 + asset_service List/Statistics 默认 component_type IS NULL 过滤 (D-01, D-05, D-06, D-07)
 
 **Wave 2** (depends on 48-01)
 
