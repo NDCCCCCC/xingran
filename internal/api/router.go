@@ -690,6 +690,12 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			// 注意：更具体的路由要放在前面
 			assets.GET("/search-by-serial/:serial", assetHandler.SearchBySerial)
 
+			// Phase 48 Wave 3 (D-07): 从属组件清单 read-only 端点。
+			// 复用 ops:asset:list 组级 middleware(MEMORY ruoyi-perm-namespace-split-readonly-page)。
+			// 放在 /:id 通配之前避免被吞噬。
+			assetComponentHandler := operations.NewAssetComponentHandler(core)
+			assets.GET("/components", assetComponentHandler.ListComponents)
+
 			assets.POST("", assetHandler.Create)
 			assets.POST("/list", assetHandler.List)
 			// 资产统计(专用 COUNT 聚合,不依赖分页列表)

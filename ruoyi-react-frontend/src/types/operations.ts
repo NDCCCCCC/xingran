@@ -280,6 +280,13 @@ export interface Asset {
 
   // 状态
   status: AssetStatus;           // 0=正常, 1=停用
+
+  // Phase 48 组件序列号采集(D-01 / D-03 / D-05):板卡/引擎/电源/风扇/光模块作为 ops_asset 行,
+  // 通过以下 4 列与父交换机/采集来源建立关联。主设备这些列保持 NULL(D-07 默认 component_type IS NULL 过滤)。
+  parentAssetId?: string;        // 自引用 → ops_asset.id(父交换机/路由器行)
+  sourceDeviceId?: string;       // → sys_network_device.id(采集来源设备)
+  componentType?: string;        // chassis / card / engine / power / fan / transceiver
+  componentSlot?: string;        // 槽位/接口位置(如 Slot 1 / GE1/0/24)
 }
 
 export interface AssetListParams extends PageParams {
