@@ -217,29 +217,40 @@ func (d *Database) cleanupOldConstraints() {
 	}
 }
 
-// dropDependentMaterializedViews 在 AutoMigrate 之前 DROP 引用业务表的物化视图。
+// dropDependentMaterializedViews 在 AutoMigrate 之前 DROP 引用业务表的视图(MV + 普通 VIEW)。
 //
-// 设计原因: 物化视图(MV)持久存在于数据库中。GORM AutoMigrate 每次启动都会尝试
-// ALTER 被引用表的列(即使类型已匹配,GORM 仍会下发 ALTER TYPE 语句)。当列被 MV
-// 引用时,PG 抛 SQLSTATE 0A000 "cannot alter type of a column used by a view or rule",
-// 导致启动 FATA。
+// 设计原因: 视图(MV 和普通 VIEW)持久存在于数据库中。GORM AutoMigrate 每次启动都会
+// ALTER 被引用表的列(类型/长度变化)。当列被视图引用时,PG 抛 SQLSTATE 0A000
+// "cannot alter type of a column used by a view or rule",导致启动 FATA。
 //
-// 解决: AutoMigrate 之前 DROP 所有引用业务表的 MV;对应的 migration_NNN 会在
-// AutoMigrate 完成后重新 CREATE 它们(用最新表结构 + 列类型)。
+// 重要: 普通 VIEW 也会触发 0A000!
+//   - 2026-07-04 17:35 验证:只 DROP MV reconciliation_normalized,启动时报
+//     "ALTER TABLE ops_asset ALTER COLUMN devicesn TYPE varchar(200)
+//      ERROR: cannot alter type of a column used by a view or rule"
+//     因为 reconciliation_physical_chain 普通 VIEW 引用了 ops_asset.devicesn。
+//   - 回归守护 memory gorm-automigrate-blocked-by-matview.md 描述的是 MV 场景,
+//     未涵盖普通 VIEW。已补"普通 VIEW 也会阻塞 GORM ALTER TYPE"的子条目。
 //
-// 当前已知 MV:
-//   - reconciliation_normalized (migration_168 创建,引用 sys_ad_user / sys_user / ops_asset)
-//     → migration_168/176 末尾有 CREATE MATERIALIZED VIEW(非 IF NOT EXISTS,强制重建)
-//   - reconciliation_physical_chain (migration_175 创建,普通视图,引用 sys_device_mac_address /
-//     sys_device_port_status / ops_info_points / sys_workstation / sys_user)
-//   - reconciliation_user_lookup (migration_175 创建,普通视图,引用 sys_user / sys_dept / ops_asset)
+// 解决: AutoMigrate 之前 DROP 所有引用业务表的视图(MV + 普通 VIEW);
+//       对应的 migration_NNN 会在 AutoMigrate 完成后重建。
+//
+// 当前已知视图(全部 DROP):
+//   - reconciliation_normalized (MV, migration_168/176 创建,引用 sys_ad_user / sys_user /
+//     reconciliation_user_lookup / reconciliation_physical_chain / ops_asset)
+//   - reconciliation_physical_chain (普通 VIEW, migration_175 创建,引用 sys_device_mac_address /
+//     sys_device_port_status / ops_info_points / sys_workstation / sys_user / ops_asset.devicesn)
+//   - reconciliation_user_lookup (普通 VIEW, migration_175 创建,引用 sys_user / sys_dept / ops_asset)
 //
 // MAC 历史 MV(mv_mac_*)引用 sys_device_mac_history,该表无 GORM ALTER 需求,无需在此 DROP。
 //
-// 恢复时间: 260704-ne5-regression-fix。260704-ne5 误删此函数导致启动 SQLSTATE 0A000 FATA,
-// 重建引用: docs/.planning/memory/gorm-automigrate-blocked-by-matview.md
+// 优化历史:
+//   - 260704-ne5: 误删此函数 → SQLSTATE 0A000 FATA,regression-fix 恢复
+//   - 260704-round3 (17:30): 误以为"普通 VIEW 不阻塞"只 DROP MV → 0A000 在 devicesn ALTER 复现
+//   - 260704-round3 (17:38): 回滚,恢复 3 视图全 DROP
+//
+// 回归守护: docs/.planning/memory/gorm-automigrate-blocked-by-matview.md
 func (d *Database) dropDependentMaterializedViews() {
-	// 仅 DROP 引用会触发 ALTER 的表的视图(MV + 普通视图);CASCADE 一并清理其上的索引。
+	// DROP 3 个视图(MV + 2 普通 VIEW)。CASCADE 清依赖(GRANTS / rules / triggers)。
 	//
 	// 同一对象可能是 MATERIALIZED VIEW(reconciliation_normalized)也可能是普通 VIEW
 	// (reconciliation_physical_chain / reconciliation_user_lookup)。用 DO $$ 块做兼容:
