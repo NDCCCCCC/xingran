@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.18
 milestone_name: 网络设备硬件清单 (Device Component Serials)
 status: executing
-stopped_at: Phase 48 Wave 2 complete (48-02 merged)
+stopped_at: Phase 48 complete (all 3 waves merged, awaiting verification)
 last_updated: "2026-07-04T00:52:54.426Z"
-last_activity: 2026-07-04 -- Phase 48 Wave 2 (48-02) component collectors merged; operations 包 4 个 pre-existing test failures (TestValidator_ValidateWall/Door/Floor + ResolveSingle) 经 6ab334e0 baseline 确认为 Phase 48 之前就存在,非本 phase 引入
+last_activity: 2026-07-04 -- Phase 48 全部 3 waves (48-01/02/03) merged to main @ 0d262898; UAT 自动化部分全绿 (psql schema + go build + tsc + vite build); 真机 UAT (华为 S8700/锐捷 RS8607E) 按 plan 声明推迟到现场访问
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 3
-  completed_plans: 2
-  percent: 67
+  completed_plans: 3
+  percent: 100
 ---
 
 # Project State
@@ -32,10 +32,10 @@ progress:
 
 ## Current Position
 
-Phase: 48 (device-component-serials-planned) — EXECUTING (Wave 2 complete)
-Plan: 2/3 complete (48-02 merged to main @ e10c9a4a)
-Status: Executing Phase 48 — Wave 3 (pipeline + operlog + frontend, checkpoint plan) next
-Last activity: 2026-07-04 -- Phase 48 Wave 2 (48-02) collectors merged; operations 包 4 个 pre-existing failures 非 Phase 48 引入
+Phase: 48 (device-component-serials-planned) — EXECUTING (all 3 plans complete, awaiting verification)
+Plan: 3/3 complete (48-03 merged to main @ 0d262898)
+Status: Phase 48 execution complete — awaiting phase verification + milestone close-out
+Last activity: 2026-07-04 -- Phase 48 all 3 plans merged; UAT 自动化全绿; 真机部分推迟到现场
 
 ## Project Reference
 
@@ -154,6 +154,29 @@ Last activity: 2026-07-04 -- Phase 48 Wave 2 (48-02) collectors merged; operatio
    - 残余 deferred debug session(若有新增)
 
 **推荐**: v1.16 推送前先做一次完整 UAT,确认 14 个 re-verify-flip + 2 real-fix + 13 wontfix 的 29 个 session 处置与生产表现一致后,再 git push。
+
+## Phase 48 真机 UAT deferred 声明
+
+**声明时间**: 2026-07-04
+**Phase**: 48 (网络设备硬件清单 / Device Component Serials)
+**Milestone**: v1.18
+
+按 `.planning/phases/48-device-component-serials-planned/48-RESEARCH.md` §Environment Availability 的显式声明,本执行环境无可用于真机验证的华为 S8700 / 锐捷 RS8607E 设备。**Phase 48 真机 UAT 推迟到下次现场访问**,推迟范围:
+
+- 真机 SNMP ENTITY-MIB (S8700 / RS8607E) 采集路径
+- 真机 CLI 解析 (`display device esn` / `show version modules` / `display interface transceiver` / `show interface transceiver` / DDM)
+- D-10 真机两步流水线 (status → transceiver) 在 Huawei S8700 `10GE5/0/4` 实际 up 接口下走通
+
+**已通过的 UAT 自动化部分** (本环境执行, 2026-07-04):
+
+- psql schema introspection (远程 PG `10.62.10.34/ruoyi`): `ops_asset` 4 新列全部 OK, `sys_data_reconciliation.recon_category` OK, 索引 `uniq_recon_asset_type_cat_open` PRESENT + 旧 `uniq_recon_asset_type_open` MISSING (替换正确), 字典 `asset_reconciliation_recon_category` rows=2 seed OK
+- `go build ./...` clean (post-merge of 48-01+48-02+48-03)
+- `cd ruoyi-react-frontend && npm run build` exit 0 (1m 40s, vendor-react 775 kB gzip 基线与 Phase 48 前一致)
+- `tsc --noEmit` clean
+- collector-package 21 tests, 5 D-10 pipeline tests, 3 handler tests, operlog regression 不回归
+
+**手动 UAT** (dev server 启动 + 浏览器渲染层): deferred 到 dev environment。
+**owner**: 现场访问时由运维同事携带 S8700 / RS8607E 接入,跑 `collectComponentInfo` cron + 前端 `ComponentListTab` 实测。
 
 ## Performance Metrics
 
