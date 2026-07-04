@@ -1,7 +1,7 @@
 ---
 gsd_state_version: 1.0
 slug: recon-uniq-index-23505
-status: awaiting_human_verify
+status: resolved
 created: 2026-07-04
 updated: 2026-07-04
 trigger: "Phase 42 R1 reconciliation tables 迁移失败: 创建 partial unique index uniq_recon_asset_type_open 失败"
@@ -86,6 +86,7 @@ END$$;
   - uniq_recon_asset_type_cat_open (3 列): **存在**
 - **expecting**: ✅ 已确认 — DO $$ 块的 IF NOT EXISTS 检查通过,CREATE UNIQUE INDEX 触发 SQLSTATE 23505
 - **next_action**: 应用 fix: 让 migration_168 在重建 2 列 partial unique index 前先对重复行做 dedup (合并成 1 行),或者跳过创建当 3 列版本已存在
+  - ✅ **RESOLVED 2026-07-04**: 用户确认重启后 168 skip + 201 DROP 2 列 + 重建 3 列 terminal state 正确,fix landed @ 94f8c3bc
 - **reasoning_checkpoint**:
   - hypothesis: 现有 (asset_id, conflict_type) 重复行阻止 migration_168 重建 partial unique index
   - confirming_evidence: (1) DB 直接查询显示 33 组重复 + 204 open 行 (2) pg_indexes 显示 2 列 index 不存在(被 201 DROP),3 列版存在
