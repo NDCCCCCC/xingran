@@ -7,7 +7,6 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db/migrations"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
@@ -217,70 +216,34 @@ func (d *Database) cleanupOldConstraints() {
 	}
 }
 
-// dropDependentMaterializedViews 在 AutoMigrate 之前 DROP 引用业务表的物化视图。
-//
-// 设计原因: 物化视图(MV)持久存在于数据库中。GORM AutoMigrate 每次启动都会尝试
-// ALTER 被引用表的列(即使类型已匹配,GORM 仍会下发 ALTER TYPE 语句)。当列被 MV
-// 引用时,PG 抛 SQLSTATE 0A000 "cannot alter type of a column used by a view or rule",
-// 导致启动 FATA。
-//
-// 解决: AutoMigrate 之前 DROP 所有引用业务表的 MV;对应的 migration_NNN 会在
-// AutoMigrate 完成后重新 CREATE 它们(用最新表结构 + 列类型)。
-//
-// 当前已知 MV:
-//   - reconciliation_normalized (migration_168 创建,引用 sys_ad_user / sys_user / ops_asset)
-//     → migration_168/176 末尾有 CREATE MATERIALIZED VIEW(非 IF NOT EXISTS,强制重建)
-//   - reconciliation_physical_chain (migration_175 创建,普通视图,引用 sys_device_mac_address /
-//     sys_device_port_status / ops_info_points / sys_workstation / sys_user)
-//   - reconciliation_user_lookup (migration_175 创建,普通视图,引用 sys_user / sys_dept / ops_asset)
-//
-// MAC 历史 MV(mv_mac_*)引用 sys_device_mac_history,该表无 GORM ALTER 需求,无需在此 DROP。
-func (d *Database) dropDependentMaterializedViews() {
-	// 仅 DROP 引用会触发 ALTER 的表的视图(MV + 普通视图);CASCADE 一并清理其上的索引。
-	//
-	// 同一对象可能是 MATERIALIZED VIEW(reconciliation_normalized)也可能是普通 VIEW
-	// (reconciliation_physical_chain / reconciliation_user_lookup)。用 DO $$ 块做兼容:
-	// 先查 pg_class.relkind — 'm' 表 MV, 'v' 表 view,逐个分支 DROP。
-	// 任何分支报错都不会阻断 AutoMigrate 流程。
-	dependentViews := []string{
-		"reconciliation_normalized",
-		"reconciliation_physical_chain",
-		"reconciliation_user_lookup",
-	}
-	for _, view := range dependentViews {
-		dropSQL := fmt.Sprintf(`
-DO $$
-DECLARE
-    kind char;
-BEGIN
-    SELECT relkind INTO kind FROM pg_class
-     WHERE relname = '%s' AND relnamespace = 'public'::regnamespace;
-    IF kind = 'm' THEN
-        EXECUTE 'DROP MATERIALIZED VIEW IF EXISTS public.%s CASCADE';
-    ELSIF kind = 'v' THEN
-        EXECUTE 'DROP VIEW IF EXISTS public.%s CASCADE';
-    END IF;
-END$$;
-`, view, view, view)
-		if err := d.DB.Exec(dropSQL).Error; err != nil {
-			applogger.Debugf("DROP VIEW/MV %s 跳过: %v", view, err)
-			continue
-		}
-		applogger.Infof("[迁移] 预清理视图 %s(AutoMigrate 前置,后续 migration 重建)", view)
-	}
-}
-
 // AutoMigrate 自动迁移所有模型
+//
+// 设计变更 (260704-ne5): 启动期不再调用 200+ migration 函数 ——
+//
+//   1. 所有迁移(Migrate033/117/143~201)都是 schema 演进期一次性脚本,生产 DB 已全部应用过,
+//      每次启动都是 idempotent noop,但累计产生 ~30s 启动开销 + 250 行启动日志噪音。
+//
+//   2. 新部署流程改为:
+//        a) 用 scripts/db/snapshot.sh 从生产 DB 导出 schema-{date}.sql + seed-{date}.sql
+//        b) 新机 psql -f schema-snapshot.sql && psql -f seed-snapshot.sql 一次性导入
+//        c) ./ruoyi-backend 启动
+//
+//   3. GORM AutoMigrate(model) 仍保留 — 它是 model 加新字段时的安全网(ALTER TABLE ADD COLUMN)。
+//      启动期只跑 ~2s,日志 1 行 "所有表迁移成功"。
+//
+//   4. cleanupOldConstraints() 仍保留 — 清理 GORM uniqueIndex 与 SQL inline UNIQUE 命名冲突,
+//      ~5ms,无日志噪音。
+//
+//   5. dropDependentMaterializedViews() 已删除 — schema snapshot 已包含 MV 定义,启动无需 DROP+CREATE。
+//
+//   6. migrateCredentialModel() 已删除 — 凭证模型已在生产迁移完成(protocol_type 列已存在)。
+//
+// 所有 migrations.MigrateNNN 函数定义仍保留在 internal/core/db/migrations/,仅不再启动期调用。
+// 如需重放某次迁移,手动跑对应函数(d.DB)即可。
 func (d *Database) AutoMigrate() error {
 	// 先清理可能存在的旧约束
 	if d.Type == "postgres" {
 		d.cleanupOldConstraints()
-		// 关键: 先 DROP 引用业务表的物化视图,否则 ALTER TABLE 被阻塞。
-		// reconciliation_normalized 引用 sys_ad_user.username / sys_user.id / ops_asset,
-		// 当 GORM AutoMigrate 试图 ALTER 这些表的列类型(如 sys_ad_user.username → varchar(255))
-		// 时,PG 抛 SQLSTATE 0A000 "cannot alter type of a column used by a view or rule"。
-		// migration_168 会在 AutoMigrate 完成后重新 CREATE 该 MV。
-		d.dropDependentMaterializedViews()
 	}
 
 	// 禁用外键约束的自动创建，避免类型不匹配的问题
@@ -375,215 +338,6 @@ func (d *Database) AutoMigrate() error {
 
 	applogger.Infof("所有表迁移成功")
 
-	// 执行凭证模型重新设计迁移
-	if err := d.migrateCredentialModel(); err != nil {
-		applogger.Errorf("凭证模型迁移失败: %v", err)
-		// 迁移失败不中断启动，只记录日志
-	}
-
-	// 执行VDI虚拟机status字段移除迁移
-	if err := migrations.Migrate143VDIRemoveVMStatus(d.DB); err != nil {
-		applogger.Errorf("VDI虚拟机status字段移除迁移失败: %v", err)
-	}
-	// 执行VDI虚拟机细粒度权限迁移
-	if err := migrations.Migrate144VDIGranularPermissions(d.DB); err != nil {
-		applogger.Errorf("VDI虚拟机细粒度权限迁移失败: %v", err)
-	}
-	// 执行VDI虚拟机bound_user_id UUID转换迁移
-	if err := migrations.Migration_145_FixBoundUserIDUUID(d.DB); err != nil {
-		applogger.Errorf("VDI虚拟机bound_user_id UUID转换迁移失败: %v", err)
-	}
-	// 执行资产管理菜单和权限迁移
-	if err := migrations.Migrate146AddAssetMenuPermissions(d.DB); err != nil {
-		applogger.Errorf("资产管理菜单和权限迁移失败: %v", err)
-	}
-	// 修复资产管理菜单结构（添加缺失的C类型子菜单）
-	if err := migrations.Migrate147FixAssetMenuStructure(d.DB); err != nil {
-		applogger.Errorf("资产管理菜单结构修复迁移失败: %v", err)
-	}
-
-		// 创建资产管理表
-		if err := migrations.Migrate148CreateOpsAssetTable(d.DB); err != nil {
-			applogger.Errorf("创建资产管理表迁移失败: %v", err)
-		}
-		// 修复列配置visible字段默认值问题
-		if err := migrations.Migrate149FixColumnVisibleDefault(d.DB); err != nil {
-			applogger.Errorf("修复列配置visible字段默认值迁移失败: %v", err)
-		}
-		// 为工位设备关联表添加 IP 地址字段
-		if err := migrations.Migrate150AddWorkstationDeviceIPAddress(d.DB); err != nil {
-			applogger.Errorf("工位设备 IP 地址字段迁移失败: %v", err)
-		}
-		// Phase 15: 性能优化 (PERF-01 复合索引 + PERF-02 物化视图 DDL)
-		if err := migrations.Migrate151MACPerfIndexes(d.DB); err != nil {
-			applogger.Errorf("MAC 历史复合索引迁移失败: %v", err)
-		}
-		if err := migrations.Migrate152MACMatView(d.DB); err != nil {
-			applogger.Errorf("MAC 历史物化视图迁移失败: %v", err)
-		}
-		// Phase 15 PERF-04: 端口使用热力图菜单与权限
-		if err := migrations.Migrate153MacHeatmapMenu(d.DB); err != nil {
-			applogger.Errorf("MAC 端口使用热力图菜单迁移失败: %v", err)
-		}
-		// Phase A: sys_user 服务端排序索引（user-driven ORDER BY 性能支撑）
-		if err := migrations.Migrate154UserSortIndexes(d.DB); err != nil {
-			applogger.Errorf("sys_user 排序索引迁移失败: %v", err)
-		}
-		// Phase B: 日志/楼宇/工位服务端排序索引
-		if err := migrations.Migrate155OperLogSortIndexes(d.DB); err != nil {
-			applogger.Errorf("sys_oper_log 排序索引迁移失败: %v", err)
-		}
-		if err := migrations.Migrate156LoginLogSortIndexes(d.DB); err != nil {
-			applogger.Errorf("sys_logininfor 排序索引迁移失败: %v", err)
-		}
-		if err := migrations.Migrate157OpsBuildingSortIndexes(d.DB); err != nil {
-			applogger.Errorf("ops_buildings 排序索引迁移失败: %v", err)
-		}
-		if err := migrations.Migrate158WorkstationSortIndexes(d.DB); err != nil {
-			applogger.Errorf("ops_workstation 排序索引迁移失败: %v", err)
-		}
-		// ops 模块菜单 perms 命名对齐: 复数/连字符/remove → 单数/无连字符/delete
-		// (与路由 RequirePermissions 及 system/network/asset 模块一致), 修复角色读写 403
-		if err := migrations.Migrate159AlignOpsPerms(d.DB); err != nil {
-			applogger.Errorf("ops 菜单 perms 对齐迁移失败: %v", err)
-		}
-		// Phase 28: 操作日志添加 nickname 字段，支持显示"nickname（username）"格式
-		if err := migrations.Migration160OperLogAddNickname(d.DB); err != nil {
-			applogger.Errorf("sys_oper_log nickname 字段迁移失败: %v", err)
-			}
-		// Phase 28: 登录日志添加 nickname 字段,支持显示"nickname（username）"格式
-		if err := migrations.Migration161LoginLogAddNickname(d.DB); err != nil {
-			applogger.Errorf("sys_logininfor nickname 字段迁移失败: %v", err)
-		}
-		// Phase 36: AD 域控服务账号池 + 自动故障切换
-		// 创建 sys_ad_service_accounts 表 + 从 sys_ad_config 迁移首个管理员账号
-		if err := migrations.Migrate162ADServiceAccounts(d.DB); err != nil {
-			applogger.Errorf("AD 服务账号池迁移失败: %v", err)
-		}
-		// Phase 36: AD 服务账号池菜单 + 权限 seed
-		if err := migrations.Migrate163ADAccountPoolMenu(d.DB); err != nil {
-			applogger.Errorf("AD 服务账号池菜单迁移失败: %v", err)
-		}
-		// Phase 38: 放宽 sys_ad_config 单管理员列约束 + 幂等校验账号已迁入池（D-02 + D-03）
-		if err := migrations.Migrate164Phase38VerifyAdminMigrated(d.DB); err != nil {
-			applogger.Errorf("Phase 38 账号池补迁校验失败: %v", err)
-		}
-		// Phase 39: 工位部门物理位置映射表 (sys_dept_location_alias) + 4 条按钮权限 seed
-		if err := migrations.Migrate165SysDeptLocationAlias(d.DB); err != nil {
-			applogger.Errorf("Phase 39 工位部门映射迁移失败: %v", err)
-		}
-		// Phase 40 (TECH-03): 修正 sys_menu.path 重复拼接 (/system/apikeys/system/apikeys)
-		if err := migrations.Migrate166ApikeyRoutePathFix(d.DB); err != nil {
-			applogger.Errorf("Phase 40 API 密钥菜单 path 修正失败: %v", err)
-		}
-		// n71: 工位状态联动 — 回填历史 user_id 有值但 status=0 的工位为 status=1 (占用)
-		if err := migrations.Migrate167WorkstationBackfillStatus(d.DB); err != nil {
-			applogger.Errorf("n71 工位状态回填失败: %v", err)
-		}
-		// Phase 42 R1: 资产对账观测底座 — 主表 + 物化视图 + partial unique index
-		if err := migrations.Migrate168ReconciliationTables(d.DB); err != nil {
-			applogger.Errorf("Phase 42 R1 reconciliation tables 迁移失败: %v", err)
-		}
-		// Phase 42 R1: 字典 + config + workorder category + sys_job + 菜单 seed
-		if err := migrations.Migrate169ReconciliationDictsConfigs(d.DB); err != nil {
-			applogger.Errorf("Phase 42 R1 reconciliation seed 迁移失败: %v", err)
-		}
-		// Phase 42 R1 后置修复: 资产列表菜单 path 'assets' -> 'list'。
-		// migration_147 种子数据 bug: childPath = "assets" 与父菜单 path='assets' 重复,
-		// routeGenerator 拼出 'assets/assets' 无路由 → fallback /dashboard。
-		// 这里用 SQL UPDATE 修复已存在记录;新部署 147 同步改 childPath = "list"。
-		if err := migrations.Migrate170FixAssetListMenuPath(d.DB); err != nil {
-			applogger.Errorf("Phase 42 R1 资产列表菜单 path 修复失败: %v", err)
-		}
-		// Phase 43 R2: 资产对账 workorder assignee_role + SLA minutes sys_config seed
-		// (D-A2-02 + D-A2-03)
-		if err := migrations.Migrate171ReconciliationWorkorderAssigneeRole(d.DB); err != nil {
-			applogger.Errorf("Phase 43 R2 资产对账 workorder assignee_role 失败: %v", err)
-		}
-		// Phase 43 R2: 6 个对账 category description 补种(D-A2-04)
-		if err := migrations.Migrate172ReconciliationWorkorderTemplatesSeed(d.DB); err != nil {
-			applogger.Errorf("Phase 43 R2 资产对账 workorder templates seed 失败: %v", err)
-		}
-		// Phase 43 R2: reconciliation_normalized MV 扩展 last_resolved_at / last_resolved_by /
-		// last_conflict_type 三字段,给 DetectLayer3 提供 7d 静默期查询(D-A3-01)
-		if err := migrations.Migrate173ReconciliationSilenceMV(d.DB); err != nil {
-			applogger.Errorf("Phase 43 R2 资产对账 silence MV 失败: %v", err)
-		}
-		// Phase 44 R3: sys_reconciliation_exception GiST inet_ops 索引 + CHECK 约束
-		// (D-R3-A1-03 命中测试单点查询 + chk_recon_exc_actions / chk_recon_exc_severity_override)
-		if err := migrations.Migrate174ReconciliationExceptionGist(d.DB); err != nil {
-			applogger.Errorf("Phase 44 R3 reconciliation GiST/CHECK 失败: %v", err)
-		}
-		// Phase 45 R5: 物理链路底座 — ops_asset_physical + reconciliation_physical_chain 视图
-		// + reconciliation_user_lookup 视图(D-R5-A1-01)
-		if err := migrations.Migrate175ReconciliationPhysicalLink(d.DB); err != nil {
-			applogger.Errorf("Phase 45 R5 reconciliation 物理链路底座失败: %v", err)
-		}
-		// Phase 45 R5: reconciliation_normalized MV 重写接双源 declared + 真物理链路(D-R5-A2-01)
-		if err := migrations.Migrate176ReconciliationPhysicalMV(d.DB); err != nil {
-			applogger.Errorf("Phase 45 R5 reconciliation_normalized MV 重写失败: %v", err)
-		}
-		// 重新应用 sys_device_port_status 唯一约束(原 migration 010 被 archive,从未被部署)
-		// 修复 port 采集 UPSERT 实际 INSERT 重复行 + infoPoint.port_id 漂移问题
-		if err := migrations.Migrate177ReapplyPortStatusUnique(d.DB); err != nil {
-			applogger.Errorf("Phase 45+ 端口状态唯一约束重应用失败: %v", err)
-		}
-		// 修复 reconciliation_physical_chain 视图的 JOIN 失配(MAC 格式 + interface_name 格式)
-		// 同步重建 reconciliation_normalized 物化视图,让对账健康度不再误判"物理无"
-		if err := migrations.Migrate178FixPhysicalChainNormalization(d.DB); err != nil {
-			applogger.Errorf("Phase 45+ reconciliation_physical_chain 归一化修复失败: %v", err)
-		}
-		// Phase 45 R5 修复 (2026-06-29): migration_178 view 注释声称 iface 折叠但实际
-		// 只做了 LOWER + strip spaces,导致 reconciliation_physical_chain.physical_user_id
-		// 命中率为 0。migration_179 用 PL/pgSQL 函数 normalize_iface() 真正折叠
-		// GE/Gi/GigabitEthernet/te/TenGigE/xe/twe/tw/hge/fge 等跨厂商命名,重建 view + MV
-		if err := migrations.Migrate179ReconciliationPhysicalIfaceFold(d.DB); err != nil {
-			applogger.Errorf("Phase 45+ reconciliation_physical_chain iface 真折叠失败: %v", err)
-		}
-		// Phase 45 R5 性能修复 (2026-06-30): migration_179 的 PL/pgSQL normalize_iface()
-		// 配合视图里的相关子查询产生 O(N×M) 调用,SELECT COUNT(*) 直接触发 statement_timeout。
-		// migration_180 把 normalize_iface 预算到 CTE(O(N+M)),消除相关子查询 + 去 device_id::text
-		// 强转,COUNT 回到秒级。normalize_iface 函数本身不动(结构修复后已非主因)。
-		if err := migrations.Migrate180ReconciliationPhysicalChainPerf(d.DB); err != nil {
-			applogger.Errorf("Phase 45+ reconciliation_physical_chain O(N²)→O(N+M) 性能重构失败: %v", err)
-		}
-		// 2026-07-03 mac-r5-cleanup: 清理 sys_device_mac_address 非 canonical MAC 行 (D-05)
-		//   配合 parseRuijiePortSecurityLine isCanonicalMAC 守卫(D-04)做数据层兜底;
-		//   备份表 sys_dirty_mac_rows_backup 保留 30 天审计链(手动 DROP);
-		//   mac_history 表不动(AUDIT-02);
-		//   2026-07-03 适配:DeviceMACAddress 模型无 DeletedAt,改用物理 DELETE(行为等价)。
-		if err := migrations.Migrate181CleanupDirtyMACRows(d.DB); err != nil {
-			applogger.Errorf("清理脏 MAC 行失败: %v", err)
-		}
-		// Phase 46 R5: 半自动修复建议表 + 4 索引 + 2 CHECK
-		// (D-B1 独立表 / D-B2 6 状态 / D-B3 多版本化 / D-B4 partial unique)
-		if err := migrations.Migrate198CreateFixSuggestionTable(d.DB); err != nil {
-			applogger.Errorf("Phase 46 R5 fix suggestion table 迁移失败: %v", err)
-		}
-		// Phase 46 R5: partial unique index uniq_fix_suggestion_pending_per_exception
-		// (D-B4 防同 exception 多 pending,独立成 199 便于失败重跑)
-		if err := migrations.Migrate199FixSuggestionUniqueIndex(d.DB); err != nil {
-			applogger.Errorf("Phase 46 R5 fix suggestion partial unique index 迁移失败: %v", err)
-		}
-		// Phase 46 R5: 4 sys_config + 1 菜单 + 5 按钮 + 1 sys_job seed
-		// (D-A3 置信度门槛 / D-C2 7d 回滚 / D-C5 误修复率阈值 / 紧急熔断)
-		if err := migrations.Migrate200FixSuggestionConfigSeeds(d.DB); err != nil {
-			applogger.Errorf("Phase 46 R5 fix suggestion config/menu/job seed 迁移失败: %v", err)
-		}
-		// Phase 48 Wave 1: ops_asset 4 新列 + sys_data_reconciliation.recon_category +
-		// DROP uniq_recon_asset_type_open → CREATE uniq_recon_asset_type_cat_open + 字典 seed
-		if err := migrations.Migrate201Phase48ComponentColumns(d.DB); err != nil {
-			applogger.Errorf("Phase 48 组件序列号 schema 迁移失败: %v", err)
-		}
-		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
-		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
-			applogger.Errorf("MAC 过滤规则表迁移失败: %v", err)
-		}
-		// 创建 OUI 厂商表(对应 033_create_mac_oui_vendor_table.up.sql)
-		if err := migrations.Migrate033CreateMacOuiVendorTable(d.DB); err != nil {
-			applogger.Errorf("OUI 厂商表迁移失败: %v", err)
-		}
-
 	// 所有迁移完成后,审计约束命名是否一致,提前暴露潜在 AutoMigrate 冲突
 	d.auditConstraintNaming()
 
@@ -634,148 +388,14 @@ func (d *Database) auditConstraintNaming() {
 		return
 	}
 
-	// 改为 INFO 级别,因为多数是历史关联表/复合 unique,不一定造成实际冲突
-	// 真正冲突会在 AutoMigrate 阶段 FATA,届时根据错误信息加入 cleanupOldConstraints
-	applogger.Infof("[约束审计] 发现 %d 个 PG 自动命名 unique 约束(若对应 model 无 uniqueIndex tag 可忽略):", len(rows))
+	// 改为 DEBUG 级别:这 8 个 PG 自动命名 unique 约束是历史关联表/复合 unique 的稳定结构,
+	// 真正冲突会在 AutoMigrate 阶段 FATA,届时根据错误信息加入 cleanupOldConstraints。
+	// DEBUG 保留诊断能力,但不污染每次启动的 INFO 日志(降噪 ~10 行)。
+	applogger.Debugf("[约束审计] 发现 %d 个 PG 自动命名 unique 约束(若对应 model 无 uniqueIndex tag 可忽略):", len(rows))
 	for _, r := range rows {
-		applogger.Infof("  · %s.%s", r.TableName, r.ConstraintName)
+		applogger.Debugf("  · %s.%s", r.TableName, r.ConstraintName)
 	}
-	applogger.Infof("[约束审计] 如遇 `DROP CONSTRAINT uni_*` FATA,把 {表名,约束名} 加入 cleanupOldConstraints 即可")
-}
-
-// migrateCredentialModel 迁移凭证模型（从 credential_type 到 protocol_type）
-// 这个迁移将凭证从 SSH/Telnet/SNMP 分类改为统一的凭证模型
-func (d *Database) migrateCredentialModel() error {
-	// 只对 PostgreSQL 执行 SQL 迁移
-	if d.Type != "postgres" {
-		applogger.Infof("非 PostgreSQL 数据库，跳过凭证模型 SQL 迁移")
-		return nil
-	}
-
-	// 检查迁移是否已经执行过（通过检查 protocol_type 列是否存在）
-	var columnExists bool
-	err := d.DB.Raw(`
-		SELECT EXISTS (
-			SELECT 1 FROM information_schema.columns
-			WHERE table_name = 'sys_auth_credential' AND column_name = 'protocol_type'
-		)
-	`).Scan(&columnExists).Error
-	if err != nil {
-		return fmt.Errorf("检查迁移状态失败: %w", err)
-	}
-
-	// 检查旧列是否存在，如果存在则删除（即使主迁移已执行）
-	var oldColumnExists bool
-	err = d.DB.Raw(`
-		SELECT EXISTS (
-			SELECT 1 FROM information_schema.columns
-			WHERE table_name = 'sys_auth_credential' AND column_name = 'credential_type'
-		)
-	`).Scan(&oldColumnExists).Error
-	if err != nil {
-		return fmt.Errorf("检查旧列状态失败: %w", err)
-	}
-
-	// 如果旧列存在，需要删除
-	if oldColumnExists {
-		applogger.Infof("发现旧的 credential_type 列，执行清理...")
-		if err := d.dropOldCredentialColumns(); err != nil {
-			return fmt.Errorf("删除旧列失败: %w", err)
-		}
-	}
-
-	// 如果 protocol_type 列已存在，说明迁移已执行过
-	if columnExists {
-		applogger.Infof("凭证模型迁移已执行，跳过")
-		return nil
-	}
-
-	applogger.Infof("开始执行凭证模型迁移...")
-
-	// 使用事务
-	if err := d.DB.Transaction(func(tx *gorm.DB) error {
-		// 步骤1：添加新列
-		if err := tx.Exec("ALTER TABLE sys_auth_credential ADD COLUMN IF NOT EXISTS protocol_type VARCHAR(10)").Error; err != nil {
-			return fmt.Errorf("添加 protocol_type 列失败: %w", err)
-		}
-
-		if err := tx.Exec("ALTER TABLE sys_auth_credential ADD COLUMN IF NOT EXISTS snmp_communities TEXT[]").Error; err != nil {
-			return fmt.Errorf("添加 snmp_communities 列失败: %w", err)
-		}
-
-		// 步骤2：根据旧的 credential_type 设置 protocol_type
-		if err := tx.Exec("UPDATE sys_auth_credential SET protocol_type = 'ssh' WHERE credential_type = 'ssh'").Error; err != nil {
-			return fmt.Errorf("迁移 SSH 凭证失败: %w", err)
-		}
-
-		if err := tx.Exec("UPDATE sys_auth_credential SET protocol_type = 'telnet' WHERE credential_type = 'telnet'").Error; err != nil {
-			return fmt.Errorf("迁移 Telnet 凭证失败: %w", err)
-		}
-
-		if err := tx.Exec("UPDATE sys_auth_credential SET protocol_type = 'ssh' WHERE credential_type = 'snmp' AND protocol_type IS NULL").Error; err != nil {
-			return fmt.Errorf("迁移 SNMP 凭证失败: %w", err)
-		}
-
-		// 步骤3：将旧的 snmp_community 转换为数组
-		if err := tx.Exec("UPDATE sys_auth_credential SET snmp_communities = ARRAY[snmp_community] WHERE snmp_community IS NOT NULL AND snmp_community != '' AND snmp_community != ' '").Error; err != nil {
-			return fmt.Errorf("转换 SNMP community 失败: %w", err)
-		}
-
-		// 步骤4：初始化空数组
-		if err := tx.Exec("UPDATE sys_auth_credential SET snmp_communities = ARRAY[]::TEXT[] WHERE snmp_communities IS NULL").Error; err != nil {
-			return fmt.Errorf("初始化 SNMP communities 数组失败: %w", err)
-		}
-
-		// 步骤5：设置默认 protocol_type
-		if err := tx.Exec("UPDATE sys_auth_credential SET protocol_type = 'ssh' WHERE protocol_type IS NULL").Error; err != nil {
-			return fmt.Errorf("设置默认 protocol_type 失败: %w", err)
-		}
-
-		// 步骤6：删除旧列
-		if err := tx.Exec("ALTER TABLE sys_auth_credential DROP COLUMN IF EXISTS credential_type").Error; err != nil {
-			return fmt.Errorf("删除 credential_type 列失败: %w", err)
-		}
-
-		if err := tx.Exec("ALTER TABLE sys_auth_credential DROP COLUMN IF EXISTS snmp_community").Error; err != nil {
-			return fmt.Errorf("删除 snmp_community 列失败: %w", err)
-		}
-
-		// 步骤7：添加约束
-		if err := tx.Exec("ALTER TABLE sys_auth_credential ADD CONSTRAINT chk_protocol_type CHECK (protocol_type IN ('ssh', 'telnet'))").Error; err != nil {
-			// 约束可能已存在，忽略错误
-			applogger.Warnf("添加 protocol_type 约束失败（可能已存在）: %v", err)
-		}
-
-		if err := tx.Exec("ALTER TABLE sys_auth_credential ADD CONSTRAINT chk_snmp_version CHECK (snmp_version IN ('v1', 'v2c', 'v3'))").Error; err != nil {
-			// 约束可能已存在，忽略错误
-			applogger.Warnf("添加 snmp_version 约束失败（可能已存在）: %v", err)
-		}
-
-		return nil
-	}); err != nil {
-		return fmt.Errorf("凭证模型迁移失败: %w", err)
-	}
-
-	applogger.Infof("凭证模型迁移完成")
-
-	return nil
-}
-
-// dropOldCredentialColumns 删除旧的凭证列（credential_type 和 snmp_community）
-func (d *Database) dropOldCredentialColumns() error {
-	return d.DB.Transaction(func(tx *gorm.DB) error {
-		// 删除旧的 credential_type 列
-		if err := tx.Exec("ALTER TABLE sys_auth_credential DROP COLUMN IF EXISTS credential_type").Error; err != nil {
-			return fmt.Errorf("删除 credential_type 列失败: %w", err)
-		}
-
-		// 删除旧的 snmp_community 列
-		if err := tx.Exec("ALTER TABLE sys_auth_credential DROP COLUMN IF EXISTS snmp_community").Error; err != nil {
-			return fmt.Errorf("删除 snmp_community 列失败: %w", err)
-		}
-
-		return nil
-	})
+	applogger.Debugf("[约束审计] 如遇 `DROP CONSTRAINT uni_*` FATA,把 {表名,约束名} 加入 cleanupOldConstraints 即可")
 }
 
 // InitData 初始化基础数据
