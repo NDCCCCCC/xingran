@@ -1,0 +1,21 @@
+# Huawei VRP display interface status parser.
+#
+# Extracts the interface name and link status from a display interface
+# status table. Used as the D-10 pre-filter step before parsing the
+# transceiver table (only up ports carry plugged optics).
+#
+# Sample input (minimal; the on-site Huawei S8700 sample for display
+# interface status was not captured — RESEARCH §Wave 0 / 48-02 T2b).
+# Test fixture uses inline minimal output like:
+#   10GE5/0/4  up   10G  Full  fiber  ...
+#   10GE5/0/6  down 10G  Full  fiber  ...
+#
+# Field semantics:
+#   INTERFACE — device interface name (10GE5/0/4, GE1/0/24, ...).
+#   STATUS    — "up" or "down".
+
+Value Required INTERFACE (\S+)
+Value STATUS (up|down)
+
+Start
+  ^\s*${INTERFACE}\s+${STATUS}\s+.*$$ -> Record
