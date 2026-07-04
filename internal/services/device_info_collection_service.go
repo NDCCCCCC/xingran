@@ -167,7 +167,10 @@ func (s *DeviceInfoCollectionService) EnqueueAllOnlineDevices(ctx context.Contex
 func (s *DeviceInfoCollectionService) worker(ctx context.Context, workerIndex int) {
 	defer s.wg.Done()
 
-	applogger.Infof("设备信息采集工作协程 #%d 启动", workerIndex)
+	// 启动日志从 Info 降级为 Debug:Start() 已经在第 73 行打印过"工作协程数: N"
+	// 汇总,worker 内部每个 goroutine 各自再打一行属于噪音(N=10 时重复 10 行)。
+	// Debug 模式可保留逐个 worker 的可追溯性。
+	applogger.Debugf("设备信息采集工作协程 #%d 启动", workerIndex)
 
 	for {
 		select {

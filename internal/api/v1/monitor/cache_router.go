@@ -280,8 +280,15 @@ func (a *CacheConfigProviderAdapter) ReloadConfig(ctx context.Context) error {
 
 // SetupCacheRouter 设置缓存监控路由
 func SetupCacheRouter(r *gin.RouterGroup, core *core.Core) {
-	// 创建缓存配置服务
-	cacheConfigService := services.NewCacheConfigService(core.DB.GetDB())
+	// 复用 core 已有的 CacheConfigService(在 core 初始化阶段已 LoadConfigs)。
+	// 之前这里 new 一个新实例会重复打印 37 项 cache.* 配置 + 触发一次 DB 扫描,
+	// 是启动日志的"通知中心已启动"后第二段 [CACHE_CONFIG] 日志的根因。
+	cacheConfigService := core.CacheConfigService
+	if cacheConfigService == nil {
+		// 兜底:core.CacheConfigService 仅在 c.Cache != nil 时初始化(参见 core.go:224-226)。
+		// 若禁用缓存启动(CacheConfigService 为 nil),按需 new 一个本地实例供本路由使用。
+		cacheConfigService = services.NewCacheConfigService(core.DB.GetDB())
+	}
 
 	// 创建适配器
 	cacheProvider := NewCacheProviderAdapter(core)
