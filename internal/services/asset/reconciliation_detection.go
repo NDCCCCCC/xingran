@@ -403,16 +403,21 @@ func (s *reconciliationDetectionImpl) DetectLayer3(ctx context.Context) (int, in
 		// 返回 inserted 累计 INSERT 或 UPDATE 命中数(语义统一 D-03)。
 		rec.ID = ""                  // 显式重置,确保 GORM 走 INSERT-or-UPDATE 而非 full UPDATE
 		rec.CreatedAt = time.Time{}  // 同上
-		err := s.db.WithContext(ctx).Clauses(clause.OnConflict{
+		// 修复 SQLSTATE 42P10 (debug: recon-upsert-partial-idx):
+		// uniq_recon_asset_type_open 是 PARTIAL unique index (带 WHERE resolved_at IS NULL
+		// AND deleted_at IS NULL)。PG 的 ON CONFLICT inference 对 partial index 强制要求
+		// conflict_target 显式带 index_predicate,否则报 42P10 "no unique or exclusion
+		// constraint matching the ON CONFLICT specification"。SQLite 的 conflict_target
+		// 语法不支持 WHERE 谓词,且 SQLite 测试环境未建该 partial index (migration_168 在非
+		// PG 下跳过建索引),故按 dialect 分支:
+		//   postgres: TargetWhere → ON CONFLICT (asset_id, conflict_type) WHERE resolved_at IS NULL AND deleted_at IS NULL DO UPDATE
+		//   sqlite:   无 TargetWhere,Columns 模式即可(测试环境无 partial index)
+		// 旧注释"PG 会自动匹配 partial unique index(列序一致)"假设错误,已废弃。
+		onConflict := clause.OnConflict{
 			Columns: []clause.Column{
 				{Name: "asset_id"},
 				{Name: "conflict_type"},
 			},
-			// 不使用 OnConstraint("uniq_recon_asset_type_open") — GORM v1.30.5
-			// 在 SQLite 下生成 `ON CONFLICT ON CONSTRAINT ...`,SQLite 不支持此语法。
-			// 用 Columns 模式 GORM 生成 `ON CONFLICT (asset_id, conflict_type)
-			// DO UPDATE ...`,PG 和 SQLite 双方言兼容,且 PG 会自动匹配
-			// uniq_recon_asset_type_open partial unique index(列序一致)。
 			DoUpdates: clause.Assignments(map[string]interface{}{
 				"severity":          gorm.Expr("EXCLUDED.severity"),
 				"raw_snapshot":      gorm.Expr("EXCLUDED.raw_snapshot"),
@@ -425,7 +430,14 @@ func (s *reconciliationDetectionImpl) DetectLayer3(ctx context.Context) (int, in
 				"confidence_score":  gorm.Expr("EXCLUDED.confidence_score"),
 				"detected_at":       gorm.Expr("CURRENT_TIMESTAMP"),
 			}),
-		}).Create(rec).Error
+		}
+		if s.db.Dialector.Name() == "postgres" {
+			onConflict.TargetWhere = clause.Where{Exprs: []clause.Expression{
+				clause.Expr{SQL: "resolved_at IS NULL"},
+				clause.Expr{SQL: "deleted_at IS NULL"},
+			}}
+		}
+		err := s.db.WithContext(ctx).Clauses(onConflict).Create(rec).Error
 		if err != nil {
 			return inserted, skipped, skippedSilence, skippedThrottle, err
 		}
