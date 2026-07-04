@@ -250,34 +250,22 @@ func (d *Database) cleanupOldConstraints() {
 //
 // 回归守护: docs/.planning/memory/gorm-automigrate-blocked-by-matview.md
 func (d *Database) dropDependentMaterializedViews() {
-	// DROP 2 个普通 VIEW(reconciliation_physical_chain / reconciliation_user_lookup)。
-	// 不 DROP reconciliation_normalized MV — GORM AutoMigrate 不再发 ALTER 到被 MV
-	// 引用的列(2026-07-04 20:02 root cause:PG 端 character varying(N) 被 GORM 读为
-	// DatabaseTypeName="varchar"(长度丢失),model tag `size:N` 会让 GORM 期望带长度,
-	// 不一致触发 ALTER → SQLSTATE 0A000)。
+	// 2026-07-04 21:05 round-3 教训:DROP VIEW reconciliation_physical_chain
+	// **永远会失败**(SQLSTATE 2BP01 "other objects depend on it")。
 	//
-	// 历史教训:
-	//   - 2026-07-04 17:35:误以为只有 MV 触发 0A000,实则普通 VIEW 也会
-	//   - 2026-07-04 19:56:DROP VIEW ... CASCADE 会级联 DROP 引用它的 MV!
-	//     普通 VIEW 自身没依赖对象,用 RESTRICT(默认)即可,CASCADE 不必要
-	//   - 2026-07-04 20:00:model tag size:N → type:varchar(无长度)匹配 GORM 读取
+	// 原因:reconciliation_normalized MV LEFT JOIN reconciliation_physical_chain /
+	// reconciliation_user_lookup → MV 依赖普通 VIEW → RESTRICT 也无法 DROP。
+	// 而 CASCADE 会级联 DROP MV(2026-07-04 19:56 教训)。
 	//
-	// 如果将来 model tag 改回 size:N(且 DB 仍带长度),GORM 仍可能发 ALTER → 0A000,
-	// 届时要么恢复 DROP reconciliation_normalized MV,要么 model 保持 type:varchar。
-	dependentViews := []string{
-		"reconciliation_physical_chain",
-		"reconciliation_user_lookup",
-	}
-	for _, view := range dependentViews {
-		// RESTRICT (非 CASCADE):reconciliation_normalized MV LEFT JOIN 普通 VIEW,
-		// CASCADE 会级联 DROP MV(2026-07-04 19:56 root cause)。普通 VIEW 自身无依赖。
-		dropSQL := fmt.Sprintf(`DROP VIEW IF EXISTS public.%s RESTRICT`, view)
-		if err := d.DB.Exec(dropSQL).Error; err != nil {
-			applogger.Debugf("DROP VIEW %s 跳过: %v", view, err)
-			continue
-		}
-		applogger.Infof("[迁移] 预清理视图 %s(AutoMigrate 前置,后续 migration 175 重建)", view)
-	}
+	// 新设计 (260704-regression-fix-5):
+	//   - DROP 普通 VIEW 是冗余的(永远不会成功,且破坏依赖)
+	//   - 175 用 CREATE OR REPLACE VIEW 已经 idempotent 重建视图定义
+	//   - DROP reconciliation_normalized MV 不再需要(GORM 不发 ALTER,见上面注释)
+	//
+	// 此函数现在 noop + 仅 log 文档。如果将来 model tag 改回 size:N,GORM 重新发 ALTER,
+	// 0A000 会再次出现 → 届时恢复 DROP 普通 VIEW + DROP MV (CASCADE)。
+	applogger.Infof("[dropDependent] 当前架构下 noop(reconciliation_normalized MV 保留,普通 VIEW 由 175 CREATE OR REPLACE 重建)。" +
+		"如需恢复 DROP,见 internal/core/db/database.go 历史 commit。")
 }
 
 // AutoMigrate 自动迁移所有模型
@@ -308,11 +296,8 @@ func (d *Database) dropDependentMaterializedViews() {
 // 所有 migrations.MigrateNNN 函数定义仍保留在 internal/core/db/migrations/,仅不再启动期调用。
 // 如需重放某次迁移,手动跑对应函数(d.DB)即可。
 func (d *Database) AutoMigrate() error {
-	// 先清理可能存在的旧约束 + DROP 引用业务表的视图(普通 VIEW)
-	// 这两步必须在 GORM AutoMigrate 之前执行,否则 reconciliation_physical_chain /
-	// reconciliation_user_lookup 普通 VIEW 引用被 ALTER 的列会抛 SQLSTATE 0A000。
-	// reconciliation_normalized MV 不在此列表 — GORM AutoMigrate 不再发 ALTER 到
-	// 被 MV 引用的列(model tag 已与 GORM 内部读取一致,见 migration_176 快路径注释)。
+	// 先清理可能存在的旧约束。dropDependentMaterializedViews() 当前 noop,
+	// 保留调用便于将来 model tag 漂移时回退 (260704-regression-fix-5)。
 	if d.Type == "postgres" {
 		d.cleanupOldConstraints()
 		d.dropDependentMaterializedViews()
