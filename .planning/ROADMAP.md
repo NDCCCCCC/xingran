@@ -82,7 +82,7 @@ Plans:
 
 **Wave 3** (depends on 48-01 + 48-02)
 
-- [ ] 48-03-PLAN.md — OpsAssetWriter(UPDATE-only + D-04 父缺失降级) + ReconciliationEmitter(conflict_type=F + recon_category=component_serial) + Pipeline + DeviceInfoCollectionService cron hook + operlog + 后端 list 端点 + 前端组件清单 Tab + UAT 推迟声明 (D-02, D-03, D-04, D-06, D-07, D-13, D-14)
+- [x] 48-03-PLAN.md — OpsAssetWriter(UPDATE-only + D-04 父缺失降级) + ReconciliationEmitter(conflict_type=F + recon_category=component_serial) + Pipeline + DeviceInfoCollectionService cron hook + operlog + 后端 list 端点 + 前端组件清单 Tab + UAT 推迟声明 (D-02, D-03, D-04, D-06, D-07, D-13, D-14)
 
 **UI hint**: yes (前端组件清单 Tab,asset 详情 expandable)
 
