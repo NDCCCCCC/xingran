@@ -218,17 +218,13 @@ func TestDetectLayer3UpsertInsertNoExisting(t *testing.T) {
 	assert.NotEmpty(t, severity, "severity 应非空")
 }
 
-// TestDetectLayer3UpsertUpdateExisting 有 open → UPSERT UPDATE 路径
+// TestDetectLayer3UpsertUpdateExisting 有 open 时的行为 (b8fd2f45 后: NULL 不冲突 → INSERT 新行, 非 UPDATE)
 func TestDetectLayer3UpsertUpdateExisting(t *testing.T) {
 	db := setupTestDB(t, "test_upsert_update")
-	// 手动建 partial unique index 模拟 PG 行为 — setupTestDB 已通过 GORM AutoMigrate
-	// 从 uniqueIndex tag 建过同名索引,这里 IF NOT EXISTS 容错(SQLite 12+ 支持)
-	sqlDB, dbErr := db.DB()
-	require.NoError(t, dbErr, "获取 *sql.DB 失败")
-	_, err := sqlDB.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS uniq_recon_asset_type_open
-		ON sys_data_reconciliation (asset_id, conflict_type)
-		WHERE resolved_at IS NULL AND deleted_at IS NULL`)
-	require.NoError(t, err, "建 partial unique index 失败")
+	// partial unique index 已由 setupTestDB 统一建 (uniq_recon_asset_type_cat_open 三列,
+	// 模拟 migration_201)。b8fd2f45 后 DetectLayer3 写 recon_category=NULL, 三列 index
+	// NULL 语义不冲突 → pre-existing open (NULL) 不会被 UPDATE, DetectLayer3 INSERT 新行。
+	// 防重复靠 24h 节流 guard (D-A3-02); 此处 pre-existing 48h 前 → guard 不阻止 → INSERT。
 
 	uid := "00000000-0000-0000-0000-000000000200"
 	require.NoError(t, db.Exec(`INSERT INTO ops_asset (id, devicesn, machine_ip, user_id, status, deleted_at)
@@ -247,18 +243,26 @@ func TestDetectLayer3UpsertUpdateExisting(t *testing.T) {
 	svc := &reconciliationDetectionImpl{db: db}
 	inserted, _, _, _, err := svc.DetectLayer3(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, 1, inserted, "UPSERT UPDATE 命中应计入 inserted(D-03)")
+	assert.Equal(t, 1, inserted, "DetectLayer3 INSERT 1 行 (NULL 不冲突, 计入 inserted)")
 
-	// 验证: 仍只有 1 行 (UPDATE 不增行), 且 severity 已覆盖
+	// b8fd2f45 (Phase 48-01) 后实际行为: 三列 partial index 含 recon_category,
+	// DetectLayer3 写 recon_category=NULL → NULL 语义不与 pre-existing (NULL) 冲突 →
+	// 走 INSERT 而非 UPDATE。防重复靠 24h 节流 guard (D-A3-02); 此处 pre-existing
+	// detected_at=now-48h (>24h 窗口) → guard 不阻止 → INSERT 新行。
+	// 结果: pre-existing (medium) + 新行 (high) = 2 行。
+	// TODO(Phase 48 后续): 若 DetectLayer3 普通对账需靠 index 防重复, 需为其指定固定
+	// recon_category (当前字典仅 component_serial/future_expansion, NULL 表"普通对账")。
 	var rowCount int64
 	require.NoError(t, db.Model(&models.SysDataReconciliation{}).
 		Where("asset_id = ? AND deleted_at IS NULL", uid).Count(&rowCount).Error)
-	assert.Equal(t, int64(1), rowCount, "UPSERT UPDATE 不应新增行")
+	assert.Equal(t, int64(2), rowCount, "NULL 不冲突 → pre-existing + 新 INSERT = 2 行")
 
-	var severity string
-	require.NoError(t, db.Raw(`SELECT severity FROM sys_data_reconciliation WHERE asset_id = ?`, uid).
-		Scan(&severity).Error)
-	assert.NotEqual(t, "medium", severity, "severity 应已被 UPSERT 覆盖")
+	// pre-existing (medium) 保留未被覆盖; 新行 ComputeSeverity('B')='high'
+	var severities []string
+	require.NoError(t, db.Raw(`SELECT severity FROM sys_data_reconciliation WHERE asset_id = ? AND deleted_at IS NULL`, uid).
+		Scan(&severities).Error)
+	assert.Contains(t, severities, "medium", "pre-existing medium 保留 (未被覆盖)")
+	assert.Contains(t, severities, "high", "新行 severity=high")
 }
 
 // TestDetectLayer3UpsertInsertAfterResolved resolved 后 INSERT 新行

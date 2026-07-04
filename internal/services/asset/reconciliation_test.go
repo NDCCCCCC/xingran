@@ -151,6 +151,7 @@ func setupTestDB(t *testing.T, testName string) *gorm.DB {
 			version INTEGER DEFAULT 0,
 			asset_id TEXT NOT NULL,
 			conflict_type TEXT NOT NULL,
+			recon_category TEXT,
 			severity TEXT NOT NULL,
 			physical_value TEXT,
 			declared_value TEXT,
@@ -166,6 +167,14 @@ func setupTestDB(t *testing.T, testName string) *gorm.DB {
 			resolution_note TEXT,
 			workorder_id TEXT
 		)
+	`).Error)
+
+	// 三列 partial unique index (模拟 migration_201 的 uniq_recon_asset_type_cat_open;
+	// b8fd2f45 切换: 旧两列 uniq_recon_asset_type_open 已 DROP)。SQLite 3.8+ 支持 partial index。
+	require.NoError(t, db.Exec(`
+		CREATE UNIQUE INDEX IF NOT EXISTS uniq_recon_asset_type_cat_open
+			ON sys_data_reconciliation (asset_id, conflict_type, recon_category)
+			WHERE resolved_at IS NULL AND deleted_at IS NULL
 	`).Error)
 
 	// 建 ops_asset 依赖(SQLite)
@@ -273,11 +282,10 @@ func setupTestDB(t *testing.T, testName string) *gorm.DB {
 		LEFT JOIN ops_asset_ad ad ON ad.asset_id = a.id
 	`).Error)
 
-	// 简化为非 partial unique,所有 (asset_id, conflict_type) 必须唯一 → test 5 仍然有效
-	require.NoError(t, db.Exec(`DROP INDEX IF EXISTS uniq_recon_asset_type_open`).Error)
-	require.NoError(t, db.Exec(`
-		CREATE UNIQUE INDEX uniq_recon_asset_type_open ON sys_data_reconciliation (asset_id, conflict_type)
-	`).Error)
+	// 旧两列非 partial unique index (uniq_recon_asset_type_open) 已废弃:
+	// migration_201 (b8fd2f45) DROP 它换三列 partial (uniq_recon_asset_type_cat_open, 见上方建表后)。
+	// 测试基础设施同步, 此处不再建两列 index。
+	// TestDetectLayer3_DuplicateViolation_Skipped 靠 24h 节流 guard (非 unique index) 防重复。
 
 	// 抑制 unused import 警告
 	_ = sql.ErrNoRows

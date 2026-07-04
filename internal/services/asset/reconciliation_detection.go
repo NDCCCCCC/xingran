@@ -404,20 +404,29 @@ func (s *reconciliationDetectionImpl) DetectLayer3(ctx context.Context) (int, in
 		rec.ID = ""                  // 显式重置,确保 GORM 走 INSERT-or-UPDATE 而非 full UPDATE
 		rec.CreatedAt = time.Time{}  // 同上
 		// 修复 SQLSTATE 42P10 (debug: recon-upsert-partial-idx):
-		// uniq_recon_asset_type_open 是 PARTIAL unique index (带 WHERE resolved_at IS NULL
-		// AND deleted_at IS NULL)。PG 的 ON CONFLICT inference 对 partial index 强制要求
-		// conflict_target 显式带 index_predicate,否则报 42P10 "no unique or exclusion
-		// constraint matching the ON CONFLICT specification"。SQLite 的 conflict_target
-		// 语法不支持 WHERE 谓词,且 SQLite 测试环境未建该 partial index (migration_168 在非
-		// PG 下跳过建索引),故按 dialect 分支:
-		//   postgres: TargetWhere → ON CONFLICT (asset_id, conflict_type) WHERE resolved_at IS NULL AND deleted_at IS NULL DO UPDATE
-		//   sqlite:   无 TargetWhere,Columns 模式即可(测试环境无 partial index)
-		// 旧注释"PG 会自动匹配 partial unique index(列序一致)"假设错误,已废弃。
+		// migration_201 (Phase 48-01) 切换了 partial unique index:
+		//   DROP uniq_recon_asset_type_open (asset_id, conflict_type)
+		//   CREATE uniq_recon_asset_type_cat_open (asset_id, conflict_type, recon_category)
+		//     WHERE resolved_at IS NULL AND deleted_at IS NULL (三列, 谓词不变)
+		// PG 与 SQLite(3.35+) 对 partial unique index 的 ON CONFLICT inference 都强制要求
+		// conflict_target 显式带 index_predicate, 且列集精确匹配 index 列(此处三列);
+		// 否则报 "there is no unique or exclusion constraint matching the ON CONFLICT
+		// specification"(PG, 42P10) / "ON CONFLICT clause does not match any PRIMARY KEY
+		// or UNIQUE constraint"(SQLite)。故 TargetWhere 跨 dialect 统一:
+		//   ON CONFLICT (asset_id, conflict_type, recon_category) WHERE resolved_at IS NULL AND deleted_at IS NULL DO UPDATE
+		// 注: DetectLayer3 不设 ReconCategory (NULL); 三列 index 下 NULL 语义使同 (asset,type,NULL)
+		// 不冲突, 靠 24h 节流 guard (D-A3-02) 防重复 INSERT。UPSERT UPDATE 路径对 recon_category
+		// 非 NULL 场景 (如 component_serial) 生效。
 		onConflict := clause.OnConflict{
 			Columns: []clause.Column{
 				{Name: "asset_id"},
 				{Name: "conflict_type"},
+				{Name: "recon_category"},
 			},
+			TargetWhere: clause.Where{Exprs: []clause.Expression{
+				clause.Expr{SQL: "resolved_at IS NULL"},
+				clause.Expr{SQL: "deleted_at IS NULL"},
+			}},
 			DoUpdates: clause.Assignments(map[string]interface{}{
 				"severity":          gorm.Expr("EXCLUDED.severity"),
 				"raw_snapshot":      gorm.Expr("EXCLUDED.raw_snapshot"),
@@ -430,12 +439,6 @@ func (s *reconciliationDetectionImpl) DetectLayer3(ctx context.Context) (int, in
 				"confidence_score":  gorm.Expr("EXCLUDED.confidence_score"),
 				"detected_at":       gorm.Expr("CURRENT_TIMESTAMP"),
 			}),
-		}
-		if s.db.Dialector.Name() == "postgres" {
-			onConflict.TargetWhere = clause.Where{Exprs: []clause.Expression{
-				clause.Expr{SQL: "resolved_at IS NULL"},
-				clause.Expr{SQL: "deleted_at IS NULL"},
-			}}
 		}
 		err := s.db.WithContext(ctx).Clauses(onConflict).Create(rec).Error
 		if err != nil {
