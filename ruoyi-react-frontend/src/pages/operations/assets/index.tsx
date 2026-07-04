@@ -45,6 +45,7 @@ import {
   type DrawerTabKey,
 } from "@/components/reconciliation";
 import { defaultAssetColumns, type AssetColumnConfig } from "./columnsSchema";
+import ComponentListTab from "./components/ComponentListTab";
 
 const { Option } = Select;
 
@@ -532,6 +533,15 @@ const AssetList: FC = () => {
         dataSource={assets}
         loading={loading || configLoading}
         virtual
+        expandable={{
+          // Phase 48 Wave 3 (D-07): 行展开渲染「从属组件清单」Tab。
+          // 仅主设备行可展开(componentType 为空即主设备);组件行本身不会
+          // 出现在此列表(后端默认 component_type IS NULL 过滤已生效)。
+          expandedRowRender: (record) => (
+            <ComponentListTab parentAssetId={record.id} />
+          ),
+          rowExpandable: (record) => !record.componentType,
+        }}
         pagination={{
           current: paginationProps.current,
           pageSize: paginationProps.pageSize,

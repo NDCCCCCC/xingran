@@ -682,6 +682,21 @@ export const assetApi = {
 
 // ==================== 工位设备关联 ====================
 
+// Phase 48 Wave 3: 从属组件清单 read-only API(D-07 前端展示)。
+// 后端 GET /ops/asset/components?parentAssetId=<uuid> 在 router.go:691-697
+// asset 组内联注册,复用 ops:asset:list 组级 middleware。
+export const componentApi = {
+  // 列出某父交换机下的所有从属组件(板卡/引擎/电源/风扇/光模块)。
+  // 返回 Asset[] 数组(后端已加 component_type IS NOT NULL 过滤)。
+  list: async (parentAssetId: string) => {
+    const res = await get<{ list: Asset[]; total: number }>(
+      "/ops/asset/components",
+      { parentAssetId }
+    );
+    return res;
+  },
+};
+
 export const workstationDeviceApi = {
   // 查询工位下手动持久化的设备
   getManual: async (workstationId: string) => {

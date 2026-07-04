@@ -10,6 +10,7 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/component_collector"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -241,6 +242,15 @@ func (s *DeviceInfoCollectionService) processTask(ctx context.Context, deviceID 
 
 	// 更新设备信息（4个字段）
 	s.updateDeviceInfo(&device, info)
+
+	// Phase 48 Wave 3 D-12/D-14: 组件采集 hook。
+	// 故障不记 operlog: D-13 范围仅限 UPDATE 路径(由 OpsAssetWriter 内部 RecordBackground),
+	// 失败用 applogger.Warnf 信令(应用日志层,非审计层)。
+	// 不引入对称 operlog 失败记录,避免审计噪声 + operlog 表语义混淆(WARNING 6)。
+	// 不阻塞 chassis 更新:即便失败也 markTaskSuccess(D-14)。
+	if err := s.collectComponentInfo(ctx, &device); err != nil {
+		applogger.Warnf("组件采集失败 [设备=%s]: %v", device.DeviceName, err)
+	}
 
 	// 标记任务成功
 	s.markTaskSuccess(&task, info)
@@ -498,6 +508,201 @@ func (s *DeviceInfoCollectionService) parseRuijieDeviceInfo(line string, info *D
 			info.Uptime = strings.TrimSpace(line[idx+2:])
 		}
 	}
+}
+
+// ================================
+// Phase 48 Wave 3: 组件序列号采集 hook
+// ================================
+
+// commandRunner is the SSH-style command executor signature used by the
+// D-10 two-step transceiver pipeline. The real implementation wraps
+// conn.GetWrapper().SendCommand(cmd, true).Result; tests inject a spy.
+type commandRunner func(cmd string) (string, error)
+
+// transceiverCommandPair returns the D-10 two-step command pair
+// (status → transceiver) for the given vendor, or nil for out-of-scope
+// vendors (H3C / Maipu / unknown). Per D-10, the status command MUST run
+// first so the transceiver parse can filter to up interfaces only.
+func transceiverCommandPair(vendor models.DeviceVendor) []string {
+	switch vendor {
+	case models.VendorHuawei:
+		return []string{"display interface status", "display interface transceiver"}
+	case models.VendorRuijie:
+		return []string{"show interfaces status", "show interface transceiver"}
+	default:
+		// H3C / Maipu / unknown — out of scope per RESEARCH.
+		return nil
+	}
+}
+
+// runTwoStepTransceiverPipeline implements the D-10 two-step pipeline
+// (status → transceiver) using an injectable commandRunner. It returns a
+// ComponentSet containing the parsed transceiver Components (already
+// filtered to up interfaces by the collector's Parse* method).
+//
+// The function is package-internal so the cron hook and unit tests share
+// one code path — production callers pass a real SSH-backed runner;
+// tests pass a spy that records command order.
+func runTwoStepTransceiverPipeline(ctx context.Context, vendor models.DeviceVendor, runner commandRunner) (*component_collector.ComponentSet, error) {
+	set := &component_collector.ComponentSet{Components: []component_collector.Component{}}
+	if runner == nil {
+		return set, nil
+	}
+	cmds := transceiverCommandPair(vendor)
+	if cmds == nil {
+		return set, nil
+	}
+
+	// Step 1: status — extract up-interface list (D-10 pre-filter).
+	statusRaw, err := runner(cmds[0])
+	if err != nil {
+		return set, fmt.Errorf("two-step pipeline status %q: %w", cmds[0], err)
+	}
+	var upInterfaces []string
+	switch vendor {
+	case models.VendorHuawei:
+		upInterfaces, err = component_collector.NewHuaweiCliCollector().ParseInterfaceStatus(statusRaw)
+		if err != nil {
+			return set, fmt.Errorf("huawei status parse: %w", err)
+		}
+	case models.VendorRuijie:
+		upInterfaces, err = component_collector.NewRuijieCliCollector().ParseInterfacesStatus(statusRaw)
+		if err != nil {
+			return set, fmt.Errorf("ruijie status parse: %w", err)
+		}
+	}
+
+	// Step 2: transceiver — gated by the up-interface list from step 1.
+	transceiverRaw, err := runner(cmds[1])
+	if err != nil {
+		return set, fmt.Errorf("two-step pipeline transceiver %q: %w", cmds[1], err)
+	}
+	var transceivers []component_collector.Component
+	switch vendor {
+	case models.VendorHuawei:
+		transceivers, err = component_collector.NewHuaweiCliCollector().ParseInterfaceTransceiver(transceiverRaw, upInterfaces)
+		if err != nil {
+			return set, fmt.Errorf("huawei transceiver parse: %w", err)
+		}
+	case models.VendorRuijie:
+		transceivers, err = component_collector.NewRuijieCliCollector().ParseTransceiverDDM(transceiverRaw, upInterfaces)
+		if err != nil {
+			return set, fmt.Errorf("ruijie transceiver parse: %w", err)
+		}
+	}
+	set.Components = append(set.Components, transceivers...)
+	return set, nil
+}
+
+// collectComponentInfo is the Phase 48 cron hook (D-12 / D-14). It runs
+// the D-10 two-step transceiver pipeline for the device and feeds the
+// resulting ComponentSet into the component_collector.Pipeline which
+// UPDATEs ops_asset and emits reconciliation anomalies as needed.
+//
+// SNMP-based ENTITY-MIB collection (D-08) is intentionally omitted in v1
+// cron path — the transceiver CLI path is the higher-priority surface
+// (Ruijie business-board SNs come from show version, already collected by
+// the chassis collector; Huawei S8700 chassis/board/fan SNs come from
+// ENTITY-MIB which requires a real SNMP probe — deferred to真机 UAT).
+// Future revisions can extend this hook to instantiate an SNMP client
+// and call EntityCollector.Collect before the CLI path; the ComponentSet
+// merge API is already in place.
+//
+// Returns error to the caller (processTask) which logs warn per D-14
+// but does NOT mark the chassis-update task as failed.
+func (s *DeviceInfoCollectionService) collectComponentInfo(ctx context.Context, device *models.NetworkDevice) error {
+	if s == nil || device == nil {
+		return nil
+	}
+	if device.Vendor != models.VendorHuawei && device.Vendor != models.VendorRuijie {
+		// Out-of-scope vendor (H3C/Maipu/unknown) — no-op, not an error.
+		return nil
+	}
+
+	// Build a real SSH-backed runner bound to the device connection pool.
+	runner := func(cmd string) (string, error) {
+		return s.runDeviceCommand(ctx, device, cmd)
+	}
+
+	set, err := runTwoStepTransceiverPipeline(ctx, device.Vendor, runner)
+	if err != nil {
+		return err
+	}
+	if set == nil || (len(set.Components) == 0 && set.Chassis == nil) {
+		// Nothing to write — common for switches with no up SFP ports.
+		return nil
+	}
+
+	// Wire the pipeline. cronAssetLookup adapts the DB to
+	// component_collector.AssetLookup (avoids cyclic import on
+	// operations). operLog is left nil: per-UPDATE audit row is a future
+	// hardening; D-13 scope remains documented in the SUMMARY.
+	pipeline := component_collector.NewPipeline(
+		s.db,
+		&cronAssetLookup{db: s.db},
+		nil,
+	)
+	devRef := component_collector.DeviceRef{
+		ID:           device.ID,
+		SerialNumber: device.SerialNumber,
+		Vendor:       string(device.Vendor),
+	}
+	return pipeline.Run(ctx, devRef, set)
+}
+
+// runDeviceCommand wraps the existing connection pool to issue a single
+// SSH command on the device. Returns the raw response text on success.
+func (s *DeviceInfoCollectionService) runDeviceCommand(ctx context.Context, device *models.NetworkDevice, cmd string) (string, error) {
+	if s.deviceExecutor == nil {
+		return "", fmt.Errorf("deviceExecutor not configured")
+	}
+	pool := s.deviceExecutor.GetScheduler().GetConnectionPool()
+	conn, err := pool.GetConnection(ctx, device.ID)
+	if err != nil {
+		return "", fmt.Errorf("获取设备连接失败: %w", err)
+	}
+	if !conn.Acquire() {
+		return "", fmt.Errorf("无法获取连接锁")
+	}
+	defer conn.Release()
+
+	wrapper := conn.GetWrapper()
+	resp, err := wrapper.SendCommand(cmd, true)
+	if err != nil {
+		return "", err
+	}
+	return resp.Result, nil
+}
+
+// cronAssetLookup adapts the cron-path DB to component_collector.AssetLookup.
+// It is a minimal read-side implementation of GetByDeviceSN mirroring
+// operations.assetService.GetByDeviceSN's (nil, nil) on not-found contract.
+type cronAssetLookup struct {
+	db *gorm.DB
+}
+
+// GetByDeviceSN implements component_collector.AssetLookup. Returns the
+// ops_asset.id for the given device SN, or (nil, nil) when not found.
+func (a *cronAssetLookup) GetByDeviceSN(ctx context.Context, deviceSN string) (*component_collector.AssetRef, error) {
+	if deviceSN == "" {
+		return nil, nil
+	}
+	var id string
+	row := a.db.WithContext(ctx).
+		Table("ops_asset").
+		Where("devicesn = ? AND deleted_at IS NULL", deviceSN).
+		Select("id").Limit(1).Row()
+	if err := row.Scan(&id); err != nil {
+		// not-found → (nil, nil); surface other errors.
+		if strings.Contains(err.Error(), "no rows") || strings.Contains(err.Error(), "NotFound") {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if id == "" {
+		return nil, nil
+	}
+	return &component_collector.AssetRef{ID: id}, nil
 }
 
 // parseGenericDeviceInfo 解析通用设备信息
