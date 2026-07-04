@@ -116,54 +116,29 @@ estate.
   - R4 工位详情：健康度卡片 + ReconciliationDrawer 3 Tab
   - R5 半自动修复：6 状态机 + 7d 回滚 + 误修复率告警三通道
 - ✓ **Phase 47 根因修复** (infoPoint drift / Layer3 UPSERT / port_status 漂移 / MAC parser 校验) — 2026-07-03
+- ✓ **v1.18 网络设备硬件清单** (Device Component Serials) — Phase 48 — 2026-07-04 (1 phase / 3 plans / 3 waves, 14/14 D-id 覆盖 + 3 site-visit UAT 推迟)
+  - Wave 1 Schema：migration_201 给 `ops_asset` 加 4 列 (parent_asset_id / source_device_id / component_type / component_slot) + `sys_data_reconciliation.recon_category`
+  - Wave 2 Collectors：`internal/services/component_collector/` 17 文件包,SNMP ENTITY-MIB 单 GET + Ruijie `temprature*` 噪声过滤 + Huawei dual-class 去重 + OwnerResolver stack containtedIn tree + Huawei/Ruijie CLI 双厂商 + 6 TextFSM 模板
+  - Wave 3 Pipeline+Audit+UI：OpsAssetWriter UPDATE-only + ReconciliationEmitter (component_serial recon_category) + DeviceInfoCollectionService cron hook + operlog.RecordBackground (cron-path) + GET /ops/asset/components + ComponentListTab expandable row
 
 ### Active
 
-## Current Milestone: v1.15 工位设备关联 (Phase 28) — ✅ SHIPPED 2026-06-10
+## Current Milestone: v1.18 SHIPPED 2026-07-04 — awaiting v1.19 planning
 
-Most recent shipped milestone. Since v1.15, additional work has
-shipped in **unlabeled phases** (30, 31, 32, 33, 34) covering
-frontend perf, P0 closure, P1/P2 review fixes, Vercel React
-best-practices, and operlog full coverage. See "Active" section
-for the v1.16 planning state.
+**v1.18 已闭环** — Phase 48, 3/3 plans, 0 critical regressions, 14/14 D-id 覆盖 + 3 项 site-visit UAT 推迟到下次现场访问(S8700/RS8607E 真机)。
 
-## Active: v1.18 (planning) — Phase 48 网络设备组件序列号采集
+## Active: v1.19 (planning) — 候选范围
 
-The v1.18 scope targets the **Device Component Serials** feature:
-one-network-device-many-component-serials — chassis/card/engine/power/fan/transceiver
-each as a separate `ops_asset` record (`DeviceSN` = component SN),
-preserving the parent-child topology between component and switch/router.
+候选方向(择 1-3 个,phase scope 决策)：
 
-**Candidate work**:
-- **R1**: Extend `Asset` (`ops_asset`) model + migration: `parent_asset_id` (self-FK),
-  `source_device_id` (FK to `sys_network_device.id`), `component_type` (chassis/card/engine/power/fan/transceiver),
-  `component_slot`
-- **R2**: Dual-path collection (based on 2026-07-03 real-device probes)
-  - **Main (SNMP ENTITY-MIB)**: Single GET (NOT BulkWalk; HW/Ruijie reject) pull
-    `entPhysicalSerialNum` / `entPhysicalModelName` / `entPhysicalClass` / `entPhysicalContainedIn`
-    - Huawei S8700: chassis / module / fan / business card + engine
-    - Ruijie RS8607E: chassis / fan / power / M1-M2 main control, business card slot 1-5 placeholder (SN via CLI)
-    - Required filter: Ruijie `powerSupply(8)` but Name like `temprature*` sensor pseudo-entity
-      (typo "temprature", Ruijie private extension noise, full table 352 must filter)
-  - **CLI supplement**:
-    - Ruijie `show version`: business card (slot 1-5) SN
-    - Huawei `display interface transceiver`: transceiver SN + DDM (not via SNMP)
-    - Huawei `display device esn`: device SN (cross-verify with SNMP)
-    - Huawei `display device` / `display device board`: hardware list skeleton
-- **R3**: Only collect in-use / up transceivers
-- **R4**: Match component SN against `ops_asset` by `DeviceSN`; only UPDATE not INSERT (实物/声明 分层)
-- **R5**: Display component list under asset/device detail page (grouped by `parent_asset_id`)
-- **R6**: Generate `sys_data_reconciliation` anomalies for unmatched SNs (新 category "组件序列号")
+- **真机 site-visit UAT 闭环** — 把 48-HUMAN-UAT.md 的 3 项 deferred(S8700 / RS8607E SNMP + CLI + D-10 两步流水线)由现场运维同事跑通后回写 `48-HUMAN-UAT.md` 为 `passed`
+- **残余 deferred debug session 清理** — 当前 audit-open 18 debug_sessions + 60 quick_tasks,虽然 Phase 41 已闭环 29 个,仍可继续推回到 debug_sessions < 5
+- **VDI 22C / 22D** — 依赖 v1.11 生产稳定性观察数据(账号管理 + Web Console 子阶段)
+- **新功能(mobile app / AI features)** — 待业务决策
 
-**Prerequisites** (mostly done):
-- RQ-001 真机采样 (real-device probes) ~80% complete as of 2026-07-03
-- 锐捷 ENTITY-MIB real-device probe ✓ (2026-07-03)
-- 锐捷光模块 DDM TextFSM 另一设备采样 (remaining)
-- H3C/迈普 另环境采样 (remaining)
+**Dependency**: v1.19 候选项均与 v1.18 独立;真机 site-visit 是唯一依赖 Phase 48 部署环境的项。
 
-**Dependency**: Requires v1.17 对账引擎 (Phase 42-46) ✓ SHIPPED 2026-07-03
-
-See `.planning/ROADMAP.md` Phase 48 section for details.
+See `.planning/ROADMAP.md` for current state + `.planning/MILESTONES.md` for shipped-milestone history.
 
 ### Completed
 
@@ -335,4 +310,4 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 - ✓ Phase 44 R3 IP 例外规则引擎 (v1.17 资产对账) (2026-06-28) — 2 plans, CIDR GiST 引擎 + Layer 3.5 拦截 + 例外 CRUD/命中测试 + cron 过期清理 + 转单 no_workorder 过滤 + 降噪基线 + Excel 导入导出; VERIFICATION 10/10 passed, 1 CR-03 gap-closure fix (baseline 路由权限), 4 硬化债 BLOCKER 跟踪
 
 ---
-*Last updated: 2026-07-03 after v1.17 milestone close + Phase 47 root cause fixes shipped + v1.18 Phase 48 planning*
+*Last updated: 2026-07-04 after v1.18 milestone close (Phase 48 shipped: 1 phase / 3 plans / 3 waves, 14/14 D-id 覆盖 + 3 site-visit UAT 推迟到下次现场访问)*
