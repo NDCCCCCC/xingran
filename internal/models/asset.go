@@ -89,6 +89,13 @@ type Asset struct {
 
 	// 状态字段 (遵循 0=正常, 1=停用 惯例)
 	Status            int     `gorm:"default:0;column:status" json:"status"`                                // 0=正常, 1=停用
+
+	// Phase 48 组件序列号采集(D-01 / D-03 / D-05):板卡/引擎/电源/风扇/光模块作为 ops_asset 行,
+	// 通过以下 4 列与父交换机/采集来源建立关联。主设备这些列保持 NULL(D-07 默认 component_type IS NULL 过滤)。
+	ParentAssetID  *string `gorm:"size:64;index;column:parent_asset_id" json:"parentAssetId,omitempty"`   // 自引用 → ops_asset.id(父交换机/路由器行)
+	SourceDeviceID *string `gorm:"size:64;index;column:source_device_id" json:"sourceDeviceId,omitempty"` // → sys_network_device.id(采集来源设备)
+	ComponentType  *string `gorm:"size:32;index;column:component_type" json:"componentType,omitempty"`    // chassis / card / engine / power / fan / transceiver
+	ComponentSlot  *string `gorm:"size:64;column:component_slot" json:"componentSlot,omitempty"`           // 槽位/接口位置(如 Slot 1 / GE1/0/24)
 }
 
 // TableName 设置表名

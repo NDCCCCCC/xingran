@@ -27,6 +27,12 @@ type SysDataReconciliation struct {
 	// ConflictType 取值字典 asset_reconciliation_conflict_type (A/B/C/D/E/F),size:2 与字典值匹配
 	ConflictType string `gorm:"size:2;not null;column:conflict_type;index:idx_recon_conflict_type,priority:1" json:"conflictType"`
 
+	// ReconCategory Phase 48 sibling 列(D-06):业务类型分类,与 conflict_type(A-F)正交。
+	// 取值字典 asset_reconciliation_recon_category,当前唯一值:component_serial(组件序列号对账)。
+	// 由 migration_201 DROP uniq_recon_asset_type_open 并重建为
+	// uniq_recon_asset_type_cat_open (asset_id, conflict_type, recon_category) WHERE open 兼容本列。
+	ReconCategory *string `gorm:"size:32;column:recon_category;index:idx_recon_category,priority:1" json:"reconCategory,omitempty"`
+
 	// 严重程度
 	// 取值字典 asset_reconciliation_severity: low / medium / high / critical
 	Severity string `gorm:"size:16;not null;column:severity;index:idx_recon_severity,priority:1" json:"severity"`

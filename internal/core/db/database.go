@@ -570,6 +570,11 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate200FixSuggestionConfigSeeds(d.DB); err != nil {
 			applogger.Errorf("Phase 46 R5 fix suggestion config/menu/job seed 迁移失败: %v", err)
 		}
+		// Phase 48 Wave 1: ops_asset 4 新列 + sys_data_reconciliation.recon_category +
+		// DROP uniq_recon_asset_type_open → CREATE uniq_recon_asset_type_cat_open + 字典 seed
+		if err := migrations.Migrate201Phase48ComponentColumns(d.DB); err != nil {
+			applogger.Errorf("Phase 48 组件序列号 schema 迁移失败: %v", err)
+		}
 		// 创建 MAC 地址过滤规则表(对应 117_create_mac_filter_rules.sql, 含 5 条系统默认规则)
 		if err := migrations.Migrate117CreateMacFilterRules(d.DB); err != nil {
 			applogger.Errorf("MAC 过滤规则表迁移失败: %v", err)
