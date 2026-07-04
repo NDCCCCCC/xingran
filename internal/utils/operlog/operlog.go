@@ -15,6 +15,7 @@ package operlog
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"log"
 	"path/filepath"
@@ -258,6 +259,64 @@ func Record(c *gin.Context, operLogSvc Recorder, db *gorm.DB, module string, ope
 		errMsgPtr,
 		cfg.status,
 		cfg.costTime,
+	)
+}
+
+// RecordBackground records an operation log entry from a non-request context
+// (cron workers, async pipelines, scheduled sync tasks). It is the cron-path
+// counterpart of Record: instead of pulling operator/IP/URL from a
+// *gin.Context, it takes an explicit operatorName (e.g. "system-cron") and
+// fills the remaining fields with sentinel values that distinguish the row
+// from interactive requests in sys_oper_log.
+//
+// Phase 48 D-13 uses this for component-asset UPDATEs emitted by the
+// DeviceInfoCollectionService cron hook (no *gin.Context available).
+//
+// method="BACKGROUND" / requestMethod="CRON" / operUrl="" / operIP=nil /
+// deptName=nil. operParam is JSON-encoded when non-nil. The call is
+// panic-safe (a logging bug never crashes the caller).
+//
+// Note: D-13 scope is the UPDATE path only. Failure-path events from cron
+// pipelines use applogger.Warnf (application log), NOT RecordBackground —
+// the asymmetry avoids audit noise and keeps sys_oper_log semantic.
+func RecordBackground(operLogSvc Recorder, db *gorm.DB, module string, operType int, operatorName string, params map[string]interface{}) {
+	// Panic-safety (threat T-34-01): a logging failure must never crash the
+	// caller.
+	defer func() {
+		_ = recover()
+	}()
+
+	if operLogSvc == nil || db == nil {
+		return
+	}
+
+	var operParam *string
+	if params != nil {
+		if raw, err := json.Marshal(params); err == nil {
+			s := string(raw)
+			operParam = &s
+		}
+	}
+
+	// operatorName doubles as both operator + nickname for cron rows.
+	namePtr := operatorName
+
+	operLogSvc.RecordAsync(
+		db,
+		module,
+		operType,
+		"BACKGROUND",
+		"CRON",
+		"",
+		&namePtr,
+		&namePtr,
+		nil, // deptName — cron has no dept
+		nil, // operIP — cron has no client IP
+		operParam,
+		nil, // jsonResult
+		nil, // errorMsg
+		0,   // status — success
+		0,   // costTime
 	)
 }
 
