@@ -14,7 +14,7 @@ type Asset struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"deletedAt,omitempty"`
 
 	// 核心标识 (3 fields)
-	DeviceSN        string  `gorm:"size:200;not null;uniqueIndex;column:devicesn" json:"devicesn"`               // 设备序列号（唯一标识）
+	DeviceSN        string  `gorm:"type:varchar;not null;uniqueIndex;column:devicesn" json:"devicesn"`            // 设备序列号（唯一标识）
 	SequenceNo      string  `gorm:"size:100;column:sequenceno" json:"sequenceNo,omitempty"`                     // 序列号
 	FixAssetNo      *string `gorm:"size:100;column:fixassetno" json:"fixAssetNo,omitempty"`                   // 固定资产编号
 
@@ -26,12 +26,12 @@ type Asset struct {
 
 	// 用户关联 (4 fields)
 	DeviceUserName *string `gorm:"size:100;column:deviceuser_name" json:"deviceUserName,omitempty"`   // 领取人
-	NowUserName    *string `gorm:"size:100;column:nowuser_name" json:"nowUserName,omitempty"`        // 责任人
+	NowUserName    *string `gorm:"type:varchar;column:nowuser_name" json:"nowUserName,omitempty"`     // 责任人
 	NowUserP13     *string `gorm:"size:100;column:nowuser_p13" json:"nowUserP13,omitempty"`          // 责任人p13
 	DeviceUserP13  *string `gorm:"size:100;column:deviceuser_p13" json:"deviceUserP13,omitempty"`    // 领取人p13
 
 	// 部门关联 (3 fields)
-	DeptName         *string `gorm:"size:100;column:deptname" json:"deptName,omitempty"`              // 受益部门
+	DeptName         *string `gorm:"type:varchar;column:deptname" json:"deptName,omitempty"`           // 受益部门
 	NowUserDeptCode  *string `gorm:"size:100;column:nowuser_dept_code" json:"nowUserDeptCode,omitempty"` // 部门编码
 	XNDeptCode       *string `gorm:"size:100;column:xndept_code" json:"xnDeptCode,omitempty"`        // 受益部门编码
 
@@ -51,9 +51,9 @@ type Asset struct {
 	LastInventoryDate *time.Time `gorm:"column:last_inventory_date" json:"lastInventoryDate,omitempty"` // 最近一次盘点时间
 
 	// 网络信息 (4 fields)
-	MAC1        *string `gorm:"size:100;column:mac1" json:"mac1,omitempty"`           // 有线MAC
-	MAC2        *string `gorm:"size:100;column:mac2" json:"mac2,omitempty"`           // 无线MAC
-	MachineIP   *string `gorm:"size:50;column:machine_ip" json:"machineIp,omitempty"` // 加域IP
+	MAC1        *string `gorm:"type:varchar;column:mac1" json:"mac1,omitempty"`        // 有线MAC
+	MAC2        *string `gorm:"type:varchar;column:mac2" json:"mac2,omitempty"`        // 无线MAC
+	MachineIP   *string `gorm:"type:varchar;column:machine_ip" json:"machineIp,omitempty"` // 加域IP
 	MachineBS   *string `gorm:"size:50;column:machine_bs" json:"machineBs,omitempty"` // 加域标识
 
 	// 合同与属性 (2 fields)
@@ -84,7 +84,7 @@ type Asset struct {
 
 	// 系统关联字段 (2 fields) - 用于关联系统部门和用户
 	DeptID            *string `gorm:"size:64;column:dept_id" json:"deptId,omitempty"`                     // 关联 sys_dept.id
-	UserID            *string `gorm:"size:64;column:user_id" json:"userId,omitempty"`                     // 关联 sys_user.id
+	UserID            *string `gorm:"type:varchar;column:user_id" json:"userId,omitempty"`              // 关联 sys_user.id
 	MachineUserID     *string `gorm:"size:100;column:machine_user_id" json:"machineUserId,omitempty"`      // 最后上线账号
 
 	// 状态字段 (遵循 0=正常, 1=停用 惯例)

@@ -3,6 +3,7 @@ package migrations
 import (
 	"fmt"
 	"log"
+	"time"
 
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
@@ -54,7 +55,64 @@ func Migrate176ReconciliationPhysicalMV(db *gorm.DB) error {
 		return nil
 	}
 
-	// 2. DROP 旧 MV
+	// 2. 快路径检查: reconciliation_normalized MV 是否已存在?
+	//
+	// 优化动机 (260704-ne5-regression-fix-3):
+	//   - dropDependentMaterializedViews() 已不再 DROP reconciliation_normalized MV
+	//     (GORM AutoMigrate 在当前 model tag + DB schema 一致时不会发 ALTER,见
+	//      internal/models/{user,asset,ad_domain}.go 的 type:varchar 修改注释)
+	//   - 视图每次启动期都存在,走 REFRESH CONCURRENTLY 而非 DROP+CREATE。
+	//   - 实际节省:wall-clock 不显著(REFRESH 仍需全量重算 6688 行,约 10s),
+	//     但 REFRESH 不锁表(热重启期间对账查询可继续读到旧 MV 数据,不报错)。
+	//
+	// 前提条件:
+	//   - idx_recon_norm_asset UNIQUE INDEX 必须存在(CONCURRENTLY 必需),创建 MV 时已建
+	//   - model tag 与 DB 实际类型一致(否则 GORM ALTER 会触发 0A000,见 memory
+	//     gorm-automigrate-blocked-by-matview.md 的"普通 VIEW 也会阻塞"补充段)
+	type mvExistsRow struct {
+		Exists bool `gorm:"column:exists"`
+	}
+	var mvExists mvExistsRow
+	if err := db.Raw(`SELECT EXISTS (
+		SELECT 1 FROM pg_matviews WHERE matviewname = 'reconciliation_normalized'
+	) AS exists`).Scan(&mvExists).Error; err != nil {
+		applogger.Errorf("[迁移 176] 探测 reconciliation_normalized 失败: %v", err)
+		return fmt.Errorf("探测 MV 存在性失败: %w", err)
+	}
+
+	if mvExists.Exists {
+		// ===== 快路径 (~10s, 不锁表) =====
+		applogger.Infof("[迁移] reconciliation_normalized 已存在,走 REFRESH CONCURRENTLY 快路径")
+
+		// 2.1 兜底索引(防运维误删)
+		if err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_recon_norm_asset
+			ON reconciliation_normalized (asset_id)`).Error; err != nil {
+			applogger.Warnf("[迁移 176] 兜底 idx_recon_norm_asset 失败(非致命): %v", err)
+		}
+
+		// 2.2 REFRESH CONCURRENTLY - 不锁表,增量刷新 6688 行
+		start := time.Now()
+		if err := db.Exec(`REFRESH MATERIALIZED VIEW CONCURRENTLY reconciliation_normalized`).Error; err != nil {
+			applogger.Errorf("[迁移 176] REFRESH CONCURRENTLY 失败: %v", err)
+			return fmt.Errorf("REFRESH CONCURRENTLY 失败: %w", err)
+		}
+		applogger.Infof("[迁移] reconciliation_normalized REFRESH CONCURRENTLY 完成 (耗时 %v, 不锁表)", time.Since(start))
+
+		// 2.3 轻量验证
+		var mvCount int64
+		if err := db.Raw("SELECT COUNT(*) FROM reconciliation_normalized").Scan(&mvCount).Error; err != nil {
+			return fmt.Errorf("验证 reconciliation_normalized MV 失败: %w", err)
+		}
+		applogger.Infof("[迁移 176] 验证通过 (快路径): MV=%d 行", mvCount)
+
+		log.Println("Migration 176 completed (fast path: REFRESH CONCURRENTLY)")
+		return nil
+	}
+
+	// ===== 慢路径 (~10s, 首次启动 / 视图被外部删除) =====
+	// MV 不存在 → 完整 DROP+CREATE 流程
+
+	// 3. DROP 旧 MV
 	//    字段集已变(双源 declared + 真物理链路),IF NOT EXISTS 会跳过
 	dropMV := `DROP MATERIALIZED VIEW IF EXISTS reconciliation_normalized CASCADE;`
 	if err := db.Exec(dropMV).Error; err != nil {

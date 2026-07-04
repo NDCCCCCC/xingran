@@ -115,7 +115,7 @@ type ADUser struct {
 	BaseModel
 	ADConfigID         string     `gorm:"type:uuid;not null;index:idx_ad_user_config,priority:1;uniqueIndex:uni_sys_ad_user_config_dn,priority:1" json:"adConfigId"`
 	UserDN             string     `gorm:"size:500;not null;uniqueIndex:uni_sys_ad_user_config_dn,priority:2" json:"userDn"`
-	Username           string     `gorm:"size:255;not null;index:idx_ad_user_username" json:"username"`
+	Username           string     `gorm:"type:varchar;not null;index:idx_ad_user_username" json:"username"`
 	DisplayName        string     `gorm:"size:255" json:"displayName,omitempty"`
 	Email              string     `gorm:"size:255;index:idx_ad_user_email" json:"email,omitempty"`
 	Phone              string     `gorm:"size:50" json:"phone,omitempty"`
