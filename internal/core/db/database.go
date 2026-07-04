@@ -7,6 +7,7 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/db/migrations"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core/security"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models/operations"
@@ -216,6 +217,62 @@ func (d *Database) cleanupOldConstraints() {
 	}
 }
 
+// dropDependentMaterializedViews 在 AutoMigrate 之前 DROP 引用业务表的物化视图。
+//
+// 设计原因: 物化视图(MV)持久存在于数据库中。GORM AutoMigrate 每次启动都会尝试
+// ALTER 被引用表的列(即使类型已匹配,GORM 仍会下发 ALTER TYPE 语句)。当列被 MV
+// 引用时,PG 抛 SQLSTATE 0A000 "cannot alter type of a column used by a view or rule",
+// 导致启动 FATA。
+//
+// 解决: AutoMigrate 之前 DROP 所有引用业务表的 MV;对应的 migration_NNN 会在
+// AutoMigrate 完成后重新 CREATE 它们(用最新表结构 + 列类型)。
+//
+// 当前已知 MV:
+//   - reconciliation_normalized (migration_168 创建,引用 sys_ad_user / sys_user / ops_asset)
+//     → migration_168/176 末尾有 CREATE MATERIALIZED VIEW(非 IF NOT EXISTS,强制重建)
+//   - reconciliation_physical_chain (migration_175 创建,普通视图,引用 sys_device_mac_address /
+//     sys_device_port_status / ops_info_points / sys_workstation / sys_user)
+//   - reconciliation_user_lookup (migration_175 创建,普通视图,引用 sys_user / sys_dept / ops_asset)
+//
+// MAC 历史 MV(mv_mac_*)引用 sys_device_mac_history,该表无 GORM ALTER 需求,无需在此 DROP。
+//
+// 恢复时间: 260704-ne5-regression-fix。260704-ne5 误删此函数导致启动 SQLSTATE 0A000 FATA,
+// 重建引用: docs/.planning/memory/gorm-automigrate-blocked-by-matview.md
+func (d *Database) dropDependentMaterializedViews() {
+	// 仅 DROP 引用会触发 ALTER 的表的视图(MV + 普通视图);CASCADE 一并清理其上的索引。
+	//
+	// 同一对象可能是 MATERIALIZED VIEW(reconciliation_normalized)也可能是普通 VIEW
+	// (reconciliation_physical_chain / reconciliation_user_lookup)。用 DO $$ 块做兼容:
+	// 先查 pg_class.relkind — 'm' 表 MV, 'v' 表 view,逐个分支 DROP。
+	// 任何分支报错都不会阻断 AutoMigrate 流程。
+	dependentViews := []string{
+		"reconciliation_normalized",
+		"reconciliation_physical_chain",
+		"reconciliation_user_lookup",
+	}
+	for _, view := range dependentViews {
+		dropSQL := fmt.Sprintf(`
+DO $$
+DECLARE
+    kind char;
+BEGIN
+    SELECT relkind INTO kind FROM pg_class
+     WHERE relname = '%s' AND relnamespace = 'public'::regnamespace;
+    IF kind = 'm' THEN
+        EXECUTE 'DROP MATERIALIZED VIEW IF EXISTS public.%s CASCADE';
+    ELSIF kind = 'v' THEN
+        EXECUTE 'DROP VIEW IF EXISTS public.%s CASCADE';
+    END IF;
+END$$;
+`, view, view, view)
+		if err := d.DB.Exec(dropSQL).Error; err != nil {
+			applogger.Debugf("DROP VIEW/MV %s 跳过: %v", view, err)
+			continue
+		}
+		applogger.Infof("[迁移] 预清理视图 %s(AutoMigrate 前置,后续 migration 重建)", view)
+	}
+}
+
 // AutoMigrate 自动迁移所有模型
 //
 // 设计变更 (260704-ne5): 启动期不再调用 200+ migration 函数 ——
@@ -234,16 +291,23 @@ func (d *Database) cleanupOldConstraints() {
 //   4. cleanupOldConstraints() 仍保留 — 清理 GORM uniqueIndex 与 SQL inline UNIQUE 命名冲突,
 //      ~5ms,无日志噪音。
 //
-//   5. dropDependentMaterializedViews() 已删除 — schema snapshot 已包含 MV 定义,启动无需 DROP+CREATE。
+//   5. dropDependentMaterializedViews() 已恢复(260704-ne5-regression-fix)——
+//      GORM AutoMigrate 仍会 ALTER sys_ad_user.username 等被 MV 引用的列,导致 PG SQLSTATE 0A000 FATA。
+//      前置 DROP 引用业务表的 MV,AutoMigrate 完成后由 migrations.Migrate176ReconciliationPhysicalMV
+//      重建 reconciliation_normalized(MV 重建 ~10s 是 R5 双源+物理链路版本的固有开销)。
 //
 //   6. migrateCredentialModel() 已删除 — 凭证模型已在生产迁移完成(protocol_type 列已存在)。
 //
 // 所有 migrations.MigrateNNN 函数定义仍保留在 internal/core/db/migrations/,仅不再启动期调用。
 // 如需重放某次迁移,手动跑对应函数(d.DB)即可。
 func (d *Database) AutoMigrate() error {
-	// 先清理可能存在的旧约束
+	// 先清理可能存在的旧约束 + DROP 引用业务表的物化视图(MV)
+	// 这两步必须在 GORM AutoMigrate 之前执行,否则 sys_ad_user.username 等列
+	// 被 MV 引用时,ALTER TYPE 会抛 SQLSTATE 0A000 FATA(回归守护:
+	// docs/.planning/memory/gorm-automigrate-blocked-by-matview.md)。
 	if d.Type == "postgres" {
 		d.cleanupOldConstraints()
+		d.dropDependentMaterializedViews()
 	}
 
 	// 禁用外键约束的自动创建，避免类型不匹配的问题
@@ -340,6 +404,22 @@ func (d *Database) AutoMigrate() error {
 
 	// 所有迁移完成后,审计约束命名是否一致,提前暴露潜在 AutoMigrate 冲突
 	d.auditConstraintNaming()
+
+	// 重建被 dropDependentMaterializedViews() DROP 的 reconciliation MV
+	// (R5 双源 declared + 真物理链路版本,migration_176 内置 DROP+CREATE 重建)。
+	// 必须调用而非跳过的原因:cron `对账-物化视图刷新` 用 REFRESH CONCURRENTLY,
+	// 需要视图存在才能成功;若不重建,下次 cron 任务会 FATA。
+	// 重建顺序固定:175 先建前置 VIEW → 176 再建 MV(MV 引用 175 的 VIEW)。
+	// migration_175 用 CREATE OR REPLACE VIEW,完全 idempotent;~5s。
+	// migration_176 用 DROP+CREATE MATERIALIZED VIEW,~10s(R5 双源 declared + 物理链路版本固有成本)。
+	if d.Type == "postgres" {
+		if err := migrations.Migrate175ReconciliationPhysicalLink(d.DB); err != nil {
+			applogger.Errorf("reconciliation 前置视图重建失败 (非阻断,留待下次启动): %v", err)
+		}
+		if err := migrations.Migrate176ReconciliationPhysicalMV(d.DB); err != nil {
+			applogger.Errorf("reconciliation_normalized MV 重建失败 (非阻断,留待下次启动): %v", err)
+		}
+	}
 
 	return nil
 }
