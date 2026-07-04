@@ -1,0 +1,18 @@
+# Huawei VRP display device esn parser.
+#
+# Sample input (templates/samples/huawei_10_62_25_253_display_esn.txt):
+#   ESN of chassis 1: 102599861597
+#
+# Tolerates the V600R024C00 \"Error: Unrecognized command\" path where the
+# chassis returns an error string instead of an ESN — in that case the
+# parser yields zero records without panicking.
+#
+# Field semantics:
+#   ChassisID — integer chassis identifier (1, 2, ...).
+#   ESN       — vendor-assigned chassis electronic serial number.
+
+Value ChassisID (\d+)
+Value ESN (\S+)
+
+Start
+  ^ESN\s+of\s+chassis\s+${ChassisID}\s*:\s+${ESN}\s*$$ -> Record
