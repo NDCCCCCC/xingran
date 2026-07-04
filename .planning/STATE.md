@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.18
 milestone_name: 网络设备硬件清单 (Device Component Serials)
-status: milestone_complete
-stopped_at: Milestone complete (Phase 48 was final phase)
-last_updated: 2026-07-04T04:20:45.549Z
-last_activity: 2026-07-04 -- Phase 48 全部 3 waves (48-01/02/03) merged to main @ 0d262898; UAT 自动化部分全绿 (psql schema + go build + tsc + vite build); 真机 UAT (华为 S8700/锐捷 RS8607E) 按 plan 声明推迟到现场访问
+status: Awaiting next milestone
+stopped_at: Phase 46 context gathered
+last_updated: "2026-07-04T04:31:56.175Z"
+last_activity: 2026-07-04 — Milestone v1.18 completed and archived
 progress:
-  total_phases: 1
-  completed_phases: 0
-  total_plans: 3
-  completed_plans: 182
-  percent: 0
+  total_phases: 4
+  completed_phases: 4
+  total_plans: 12
+  completed_plans: 12
+  percent: 100
 ---
 
 # Project State
@@ -32,10 +32,10 @@ progress:
 
 ## Current Position
 
-Phase: 48
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-07-04
+Phase: Milestone v1.18 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-04 — Milestone v1.18 completed and archived
 
 ## Project Reference
 
@@ -143,17 +143,52 @@ Last activity: 2026-07-04
 
 ## Next Steps
 
-**当前选项**:
+**v1.18 网络设备硬件清单 (Device Component Serials) — milestone_complete (2026-07-04)**
 
-1. **v1.16 milestone 已闭环** —— Phase 40 + Phase 41 全部完成,8/8 plans,audit-open 29→0,TECH-05+TECH-06 双达成。
-2. **推送决策** —— 用户选择"暂不 push,本地完成"。您可在合适时机手动执行 `git push origin main`(39 个 phase-41 commit + 已有 phase-40 commit 在 main 分支)。
-3. **下一 milestone 规划** —— v1.17 候选范围(可后续规划):
-   - VDI 22C / 22D(依赖 v1.11 生产稳定性观察数据)
-   - DICT-29 (sys_dict 重构,纯样式)
-   - 新功能(mobile app / AI features) — 待业务决策
-   - 残余 deferred debug session(若有新增)
+- 1 phase (Phase 48) / 3 plans / 3 waves (schema → collectors → pipeline+operlog+frontend)
+- 44 files / 4,712 insertions / 19 commits / 0 critical regressions
+- 14/14 D-id 覆盖 + 3 项 site-visit UAT 推迟到下次现场 (S8700/RS8607E 真机)
 
-**推荐**: v1.16 推送前先做一次完整 UAT,确认 14 个 re-verify-flip + 2 real-fix + 13 wontfix 的 29 个 session 处置与生产表现一致后,再 git push。
+**下一 milestone 规划** —— v1.19 候选范围:
+
+- 真机 site-visit UAT (S8700 + RS8607E) 闭环
+- VDI 22C / 22D(依赖 v1.11 生产稳定性观察)
+- 残余 deferred debug session 清理
+- 新功能(mobile app / AI features) — 待业务决策
+
+## Deferred Items
+
+Items acknowledged and deferred at milestone v1.18 close on 2026-07-04:
+
+### Phase 48 真机 UAT deferred (3 项 site-visit, owner: 现场访问运维同事)
+
+| Testable | Category | Result | Owner | Addressed in |
+|----------|----------|--------|-------|--------------|
+| 真机 Huawei S8700 SNMP ENTITY-MIB 单 GET 路径 (D-08) | device_needed | pending | 现场运维 | 下次现场访问 |
+| 真机 Ruijie RS8607E SNMP 627 行含 352 `temprature*` 噪声过滤 (D-11) | device_needed | pending | 现场运维 | 下次现场访问 |
+| 真机 D-10 两步流水线 (Huawei S8700 `10GE5/0/4` up interface) | device_needed | pending | 现场运维 | 下次现场访问 |
+
+详见 `.planning/phases/48-device-component-serials-planned/48-HUMAN-UAT.md`。
+
+### Phase 48 实施期发现的 pre-existing 测试失败 (11 个,non-regression)
+
+| Test | File | Category |
+|------|------|----------|
+| TestValidator_ValidateFloor/存在的楼层 | internal/services/operations/validation_helper_test.go:73 | pre-existing (sqlite fixture) |
+| TestValidator_ValidateWall/存在的墙体 | validation_helper_test.go:124 | pre-existing |
+| TestValidator_ValidateDoor/存在的门 | validation_helper_test.go:173 | pre-existing |
+| TestReferenceResolver_ResolveSingle | reference_resolver_test.go:144 | pre-existing |
+| TestBatchUpsert_Update / Mixed / CamelCaseFields | batch_upserter_test.go | pre-existing (sqlite fixture) |
+| TestExtractPagination / ClampPageSize / ClampPageSizeMath / PageSizeConstants | pagination_helper_test.go | pre-existing |
+| TestReferenceResolver_ResolveBatch | reference_resolver_test.go | pre-existing (sqlite) |
+| TestRoleService_Create_RoleNameExists | system/role_service_apperrors_test.go:27 | pre-existing (fixture/seed) |
+
+✅ 在 commit `b8fd2f45` (Phase 48 改动前) baseline 跑过这些测试,确认 fail 状态 pre-exist;Phase 48 未引入回归。详见 `.planning/phases/48-device-component-serials-planned/deferred-items.md`。
+
+### Historical audit-open items (与 v1.18 无关)
+
+- `audit-open` 输出 18 debug_sessions + 60 quick_tasks 等历史债务项,均为 v1.17 之前的累积,与 v1.18 增量代码无关。
+- 计划在 v1.19+ 推进清理 (Phase 41 已闭环 29 个,但仍残留 18 个新出现的 investigating 项目,以及 quick_tasks 区域扩大)。
 
 ## Phase 48 真机 UAT deferred 声明
 
@@ -195,3 +230,7 @@ Stopped at: Phase 46 context gathered
 Resume file: .planning/phases/46-r5/46-CONTEXT.md
 
 **Milestone status:** v1.16 技术债清理 — milestone_complete (2026-06-26), 2 phases (40+41), 8 plans, 39 phase-41 commits + 3 phase-40 plans. **Phase 13 retroactive gap closure** — 4/4 plans (13-07/08/09/10), 8 atomic commits on main, 5/5 code gaps fixed. v1.17 规划待启动。
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
