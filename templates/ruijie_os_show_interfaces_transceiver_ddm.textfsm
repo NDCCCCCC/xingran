@@ -1,0 +1,40 @@
+# Ruijie RGOS show interface transceiver parser with DDM fields.
+#
+# Sample input (templates/samples/ruijie_10_62_63_21_show_interfaces_transceiver.txt):
+#   ========Interface TenGigabitEthernet 1/47========
+#   Transceiver Type    :  10GBASE-SR-SFP+
+#   ...
+#   Vendor Serial Number           : G1PT549427799
+#
+#   Current diagnostic parameters[AP:Average Power]:
+#   Temp(Celsius)   Voltage(V)      Bias(mA)            RX power(dBm)       TX power(dBm)
+#   39(OK)          3.27(OK)        6.68(OK)            -2.99(OK)[AP]       -2.40(OK)
+#
+# Field semantics:
+#   INTERFACE — device interface name (TenGigabitEthernet 1/47).
+#   SN        — vendor serial number (Vendor Serial Number).
+#   BIAS      — DDM bias current in milliamps (DDM row, Bias column value
+#               before the "(OK)" suffix).
+#   TX_POWER  — DDM transmit power in dBm.
+#   RX_POWER  — DDM receive power in dBm.
+#
+# WARNING 4 mitigation: this template is referenced by
+# RuijieCliCollector.ParseTransceiverDDM — no dead TextFSM templates in
+# the project.
+#
+# D-10 (RESEARCH Pitfall 5): the Wave 2 collector filters transceiver
+# rows by the up-interface list produced by show interfaces status
+# BEFORE parsing this template. The Go collector applies the up-filter
+# post-parse.
+
+Value Required INTERFACE (\S+(?:\s+\S+)*?)
+Value SN (\S+)
+Value BIAS (\S+?)
+Value TX_POWER (\S+?)
+Value RX_POWER (\S+?)
+
+Start
+  ^========Interface\s+${INTERFACE}========
+  ^Vendor\s+Serial\s+Number\s*:\s*${SN}\s*$$
+  ^\d+\(OK\)\s+\d+\.\d+\(OK\)\s+${BIAS}\(OK\)\s+${RX_POWER}\(OK\).+${TX_POWER}\(OK\)\s*$$ -> Record
+  ^\d+\(OK\)\s+\d+\.\d+\(OK\)\s+${BIAS}\(OK\)\s+${RX_POWER}\(OK\).+\S+\(OK\)\s*$$ -> Record
