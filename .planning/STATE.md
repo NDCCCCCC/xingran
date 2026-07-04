@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.18
 milestone_name: 网络设备硬件清单 (Device Component Serials)
 status: executing
-stopped_at: Phase 48 Wave 1 complete (48-01 merged)
+stopped_at: Phase 48 Wave 2 complete (48-02 merged)
 last_updated: "2026-07-04T00:52:54.426Z"
-last_activity: 2026-07-04 -- Phase 48 Wave 1 (48-01) merged; milestone frontmatter 修正为 v1.18 (对齐 ROADMAP L24; v1.17 已于 2026-07-03 shipped)
+last_activity: 2026-07-04 -- Phase 48 Wave 2 (48-02) component collectors merged; operations 包 4 个 pre-existing test failures (TestValidator_ValidateWall/Door/Floor + ResolveSingle) 经 6ab334e0 baseline 确认为 Phase 48 之前就存在,非本 phase 引入
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
-  percent: 33
+  completed_plans: 2
+  percent: 67
 ---
 
 # Project State
@@ -32,10 +32,10 @@ progress:
 
 ## Current Position
 
-Phase: 48 (device-component-serials-planned) — EXECUTING (Wave 1 complete)
-Plan: 1/3 complete (48-01 merged to main @ 9157be4a)
-Status: Executing Phase 48 — Wave 2 (collectors) next
-Last activity: 2026-07-04 -- Phase 48 Wave 1 (48-01) merged; milestone frontmatter 修正 v1.18
+Phase: 48 (device-component-serials-planned) — EXECUTING (Wave 2 complete)
+Plan: 2/3 complete (48-02 merged to main @ e10c9a4a)
+Status: Executing Phase 48 — Wave 3 (pipeline + operlog + frontend, checkpoint plan) next
+Last activity: 2026-07-04 -- Phase 48 Wave 2 (48-02) collectors merged; operations 包 4 个 pre-existing failures 非 Phase 48 引入
 
 ## Project Reference
 
