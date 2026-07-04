@@ -57,10 +57,14 @@ func NewAssetService(db *gorm.DB) AssetService {
 
 // Statistics 统计资产(按 status + nbf_status 聚合,排除软删除)。
 // 替代前端「total*0.8/0.15/0.05」的伪造比例占位实现。
+//
+// Phase 48 D-07:默认排除 component_type IS NOT NULL 的组件行(与 List() 一致),
+// 组件行不参与设备总数/正常/停用/拟报废的统计(避免 1 台交换机 + N 板卡被重复计数)。
 func (s *assetService) Statistics(ctx context.Context) (*AssetStatisticsResult, error) {
 	var result AssetStatisticsResult
 	err := s.db.WithContext(ctx).
 		Model(&models.Asset{}).
+		Where("component_type IS NULL").
 		Select(
 			"COUNT(*) AS total",
 			"COALESCE(SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END), 0) AS normal",
@@ -178,6 +182,12 @@ func (s *assetService) GetByDeviceSN(ctx context.Context, deviceSN string) (*mod
 // List 查询资产列表
 func (s *assetService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
 	query := s.db.WithContext(ctx).Table("ops_asset")
+
+	// Phase 48 D-07 默认过滤:组件行(component_type IS NOT NULL)不出现在常规列表,
+	// 避免 "1 台交换机 + 6 块板卡" 被数成 7 台设备。组件另开独立视图(按 parent_asset_id 聚合)。
+	// 硬编码在 service 层(非 controller),保证所有调用入口(含 Excel 导入 GetByDeviceSN 之外的列表
+	// 统计路径)默认排除。GetByDeviceSN 不受影响,对账仍能查到组件 SN。
+	query = query.Where("component_type IS NULL")
 
 	// 应用筛选条件
 	query = s.applyFilters(query, params)

@@ -22,6 +22,7 @@ func TestAssetService_Statistics(t *testing.T) {
 		CREATE TABLE ops_asset (
 			id TEXT PRIMARY KEY,
 			devicesn TEXT,
+			component_type TEXT,
 			status INTEGER DEFAULT 0,
 			nbf_status INTEGER DEFAULT 0,
 			deleted_at DATETIME,
