@@ -171,6 +171,6 @@ export class RouteGenerator {
   }
 
   static getComponentPattern(): string {
-    return "/src/pages/**/index.tsx";
+    return "/src/pages/**/{index,detail}.tsx";
   }
 }

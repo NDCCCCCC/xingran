@@ -12,6 +12,8 @@ import { createLazyComponent } from "./componentLoader";
 import type { MenuRouteConfig } from "@/types/menu";
 import Layout from "@/components/layout";
 import Login from "@/pages/login";
+import AdminNoticeDetailPage from "@/pages/system/notice/detail";
+import MyNoticeDetailPage from "@/pages/my-notices/detail";
 import { Spin } from "antd";
 import { STORAGE_KEYS } from "@/constants/storage";
 
@@ -212,6 +214,10 @@ export function DynamicRoutes() {
       />
       <Route element={<Layout><Outlet /></Layout>}>
         {routeElements}
+        {/* 通知公告详情: 静态子路由,详情页无对应 sys_menu 节点,无法走 RouteGenerator */}
+        <Route path="system/notice/:id" element={<AdminNoticeDetailPage />} />
+        {/* 我的通知详情: 同上,NoticeBell + my-notices 列表查看按钮跳此处 */}
+        <Route path="my-notices/:id" element={<MyNoticeDetailPage />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>
