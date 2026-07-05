@@ -114,11 +114,13 @@ func TestCollectDeviceInfo_ChassisSN_DoesNotOverwriteExisting(t *testing.T) {
 func TestCollectDeviceInfo_LegacyParseStillRuns(t *testing.T) {
 	svc := &DeviceInfoCollectionService{}
 
-	// Ruijie legacy parser: uptime keyword must populate info.Uptime.
-	legacyRuijie := "System uptime           : 2085:10:54:27"
+	// Ruijie legacy parser: "Software Version" keyword must populate
+	// info.SoftwareVersion. This is the format parseRuijieDeviceInfo was
+	// designed for (idx+7 trim logic).
+	legacyRuijie := "Software Version 11.0(4)B8P3"
 	info := &DeviceInfo{}
 	svc.parseDeviceInfo(legacyRuijie, models.VendorRuijie, info)
-	if info.Uptime == "" {
-		t.Errorf("ruijie legacy parse: expected Uptime to be populated, got empty")
+	if info.SoftwareVersion == "" {
+		t.Errorf("ruijie legacy parse: expected SoftwareVersion populated, got empty")
 	}
 }

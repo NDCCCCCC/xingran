@@ -1,7 +1,11 @@
 # Huawei VRP display device esn parser.
 #
-# Sample input (templates/samples/huawei_10_62_25_253_display_esn.txt):
-#   ESN of chassis 1: 102599861597
+# Sample input (templates/samples/huawei_10_62_25_253_display_device_esn.txt):
+#   ESN of chassis 1:102599861597
+#
+# Real-device output places the ESN immediately after the colon (no space);
+# older synthetic samples used ": " with a space. The pattern tolerates both
+# by using \s* (zero-or-more whitespace) on both sides of the colon.
 #
 # Tolerates the V600R024C00 \"Error: Unrecognized command\" path where the
 # chassis returns an error string instead of an ESN — in that case the
@@ -15,4 +19,4 @@ Value ChassisID (\d+)
 Value ESN (\S+)
 
 Start
-  ^ESN\s+of\s+chassis\s+${ChassisID}\s*:\s+${ESN}\s*$$ -> Record
+  ^ESN\s+of\s+chassis\s+${ChassisID}\s*:\s*${ESN}\s*$$ -> Record

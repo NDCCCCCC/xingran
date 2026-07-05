@@ -294,7 +294,11 @@ func (s *DeviceInfoCollectionService) CollectDeviceInfo(ctx context.Context, dev
 			applogger.Infof("执行命令失败 [设备=%s, 命令=%s]: %v", device.DeviceName, cmd, err)
 			continue
 		}
+		// Phase 49-01 Gap 3: legacy 字符串解析路径(负责 Model/SoftwareVersion/Uptime)。
 		s.parseDeviceInfo(response.Result, device.Vendor, info)
+		// Phase 49-01 Gap 3: 叠加 chassis SN 解析器(已验证稳定),回填 info.SerialNumber。
+		// 仅在 chassis SN 命令上触发,避免对其它输出重复跑模板解析。
+		s.enrichChassisSerial(cmd, device.Vendor, response.Result, info)
 	}
 
 	return info, nil
@@ -304,12 +308,79 @@ func (s *DeviceInfoCollectionService) CollectDeviceInfo(ctx context.Context, dev
 func (s *DeviceInfoCollectionService) getCommandsByVendor(vendor models.DeviceVendor) []string {
 	switch vendor {
 	case models.VendorHuawei, models.VendorH3C:
-		return []string{"display version", "display device"}
+		// Phase 49-01 Gap 3: 加入 "display device esn" 用于 chassis SN 采集。
+		// 该命令在部分 Huawei V600R024C00 机型上已退役 → 解析器返回空切片+nil err(非错误)。
+		return []string{"display version", "display device", "display device esn"}
 	case models.VendorRuijie, models.VendorMaipu:
 		return []string{"show version"}
 	default:
 		return []string{"show version"}
 	}
+}
+
+// isChassisSNCommand 返回 cmd 是否是用于提取 chassis SN 的厂商命令。
+// Phase 49-01 Gap 3: 仅 chassis SN 命令走解析器路径(避免重复解析无关输出)。
+func isChassisSNCommand(vendor models.DeviceVendor, cmd string) bool {
+	switch vendor {
+	case models.VendorHuawei, models.VendorH3C:
+		return cmd == "display device esn"
+	case models.VendorRuijie, models.VendorMaipu:
+		return cmd == "show version"
+	default:
+		return false
+	}
+}
+
+// enrichChassisSerial 复用 component_collector 已经过单测验证的解析器
+// (ParseShowVersionModules / ParseDisplayDeviceEsn) 从 chassis SN 命令的
+// 原始输出中提取 chassis SN,回填到 info.SerialNumber。
+//
+// Phase 49-01 Gap 3: 修复 sys_network_device.serial_number 在 ruijie/huawei
+// 在线设备上 100% 为空的问题。现有 parseRuijieDeviceInfo/parseHuaweiDeviceInfo
+// 字符串关键字解析过于脆弱(无法匹配生产输出格式),本方法叠加(非替换)使用
+// 已验证的解析器作为 chassis SN 的真实来源。
+//
+// 语义:
+//   - 仅当 info.SerialNumber 当前为空时写入(only-if-empty,沿用 updateDeviceInfo 语义)
+//   - huawei "Unrecognized command" → 解析器返回空切片+nil err(非错误)
+//   - 其它解析错误: applogger.Infof 记录并返回(不阻塞,D-14 容错语义)
+//   - 不修改 Model/SoftwareVersion/Uptime(继续由 legacy parseDeviceInfo 路径负责)
+func (s *DeviceInfoCollectionService) enrichChassisSerial(cmd string, vendor models.DeviceVendor, raw string, info *DeviceInfo) {
+	if info == nil {
+		return
+	}
+	// only-if-empty: 不覆盖更早命令(或 SNMP 探测)已经填入的 SN。
+	if info.SerialNumber != "" {
+		return
+	}
+	if !isChassisSNCommand(vendor, cmd) {
+		return
+	}
+
+	var components []component_collector.Component
+	var err error
+	switch vendor {
+	case models.VendorRuijie, models.VendorMaipu:
+		components, err = component_collector.NewRuijieCliCollector().ParseShowVersionModules(raw)
+	case models.VendorHuawei, models.VendorH3C:
+		components, err = component_collector.NewHuaweiCliCollector().ParseDisplayDeviceEsn(raw)
+	default:
+		return
+	}
+	if err != nil {
+		// 沿用 D-14 容错语义:解析失败不阻塞,记录日志(不打印 SN 全量值)。
+		applogger.Infof("chassis SN 解析失败 [vendor=%s, cmd=%s]: %v", vendor, cmd, err)
+		return
+	}
+
+	for _, c := range components {
+		if c.ComponentType == component_collector.ComponentTypeChassis && c.SerialNumber != "" {
+			info.SerialNumber = c.SerialNumber
+			return
+		}
+	}
+	// 未找到 chassis 行(如 huawei Unrecognized command 场景)→ 静默返回,
+	// info.SerialNumber 保持空,符合 Pitfall 3 语义。
 }
 
 // updateDeviceInfo 更新设备信息（仅更新空字段，保留现有数据）
