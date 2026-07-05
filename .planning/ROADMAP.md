@@ -211,6 +211,18 @@ The full history of Phases 1-39 is preserved below. See also:
 **Depends on:** Phase 46
 **Plans:** 2 plans (47-01 / 47-02) — both shipped 2026-07-03
 
+### Phase 49: v1.18 组件采集 gap closure
+
+**Goal:** 修复 v1.18 组件采集链路 3 个连锁缺口,使 chassis 资产展开「从属组件清单」Tab 能正确显示板卡/引擎卡组件。修复顺序:Gap 3(chassis SN 采集写回 `sys_network_device.serial_number`)→ Gap 2(板卡组件 `parent_asset_id` 通过 `ops_asset.devicesn = sys_network_device.serial_number` 关联 chassis 资产)→ Gap 1(`collectComponentInfo` 接入已写好但未调用的 `ParseShowVersionModules` / `ParseDisplayDeviceEsn`)。端到端验证目标:资产 `CX-WH-WH-04F-FL-RS8607E-03`(devicesn=G1M9140000175)展开显示 6 条板卡组件。
+
+**Requirements**: TBD (源自 49-CONTEXT.md 的 3 个连锁缺口 + 端到端验证目标,无正式 REQ-ID)
+**Depends on:** Phase 48
+**Plans:** 2 plans (49-01 / 49-02)
+
+Plans:
+- [ ] 49-01-PLAN.md — Gap 3 chassis SN 解析器接入,回填 sys_network_device.serial_number(ruijie/huawei 在线设备)
+- [ ] 49-02-PLAN.md — Gap 1+2 collectComponentInfo 接入板卡+chassis 解析器,合并 ComponentSet 喂 Pipeline.Run + E2E 验证
+
 ---
 
 *Last updated: 2026-07-04 — Phase 48 v1.18 SHIPPED (3/3 plans, 14/14 D-ids, 3 site-visit UAT 推迟到下次现场); v1.18 archived to `milestones/v1.18-ROADMAP.md` + `MILESTONES.md`. Awaiting next milestone (v1.19).*
