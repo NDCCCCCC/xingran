@@ -202,6 +202,7 @@ The full history of Phases 1-39 is preserved below. See also:
 **Goal:** 根除 Phase 45 R5 reconciliation 系统中识别出的 4 个数据完整性问题:① infoPoint.port_id 指向错设备的 port_status（drift 引发）② Layer 3 检测引擎只 INSERT 不 UPDATE 既有 conflict，导致 124 个 D 异常卡住无法重新分类 ③ sys_device_port_status.device_id 在不同设备之间漂移 ④ MAC parser 接受非 MAC 文本（如 "Flags:"、"total"、"#"，导致垃圾数据入库）。
 
 **Requirements**:
+
 - R1: 4F001 工位 infoPoint 4D217 指向 RS8607E-03 的 GE2/25 端口（port_id=230e8ef7）
 - R2: sys_data_reconciliation 所有卡住的 open 异常能在 5 分钟内被 Layer 3 cron 重新分类
 - R3: Layer 3 检测改为 UPSERT 语义（UPDATE if exists else INSERT），不再吃 SQLSTATE 23505
@@ -220,7 +221,12 @@ The full history of Phases 1-39 is preserved below. See also:
 **Plans:** 2 plans (49-01 / 49-02)
 
 Plans:
+**Wave 1**
+
 - [ ] 49-01-PLAN.md — Gap 3 chassis SN 解析器接入,回填 sys_network_device.serial_number(ruijie/huawei 在线设备)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 49-02-PLAN.md — Gap 1+2 collectComponentInfo 接入板卡+chassis 解析器,合并 ComponentSet 喂 Pipeline.Run + E2E 验证
 
 ---
