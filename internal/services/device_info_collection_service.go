@@ -669,18 +669,21 @@ func runTwoStepTransceiverPipeline(ctx context.Context, vendor models.DeviceVend
 }
 
 // collectComponentInfo is the Phase 48 cron hook (D-12 / D-14). It runs
-// the D-10 two-step transceiver pipeline for the device and feeds the
-// resulting ComponentSet into the component_collector.Pipeline which
-// UPDATEs ops_asset and emits reconciliation anomalies as needed.
+// the board-collection branch (Gap 1 fix, 49-02) and the D-10 two-step
+// transceiver pipeline, then feeds the merged ComponentSet into the
+// component_collector.Pipeline which UPDATEs ops_asset and emits
+// reconciliation anomalies as needed.
+//
+// Phase 49-02 Gap 1 fix: previously this hook ONLY ran the transceiver
+// pipeline, leaving the already-implemented ParseShowVersionModules as
+// dead code — boards (engine/card) were never collected. The misleading
+// historical comment "already collected by the chassis collector"
+// referenced a collector that never existed.
 //
 // SNMP-based ENTITY-MIB collection (D-08) is intentionally omitted in v1
-// cron path — the transceiver CLI path is the higher-priority surface
-// (Ruijie business-board SNs come from show version, already collected by
-// the chassis collector; Huawei S8700 chassis/board/fan SNs come from
-// ENTITY-MIB which requires a real SNMP probe — deferred to真机 UAT).
-// Future revisions can extend this hook to instantiate an SNMP client
-// and call EntityCollector.Collect before the CLI path; the ComponentSet
-// merge API is already in place.
+// cron path (Huawei chassis/board/fan SNs come from ENTITY-MIB which
+// requires a real SNMP probe — deferred to真机 UAT; Ruijie boards come
+// from `show version` which IS collected here).
 //
 // Returns error to the caller (processTask) which logs warn per D-14
 // but does NOT mark the chassis-update task as failed.
@@ -698,12 +701,37 @@ func (s *DeviceInfoCollectionService) collectComponentInfo(ctx context.Context, 
 		return s.runDeviceCommand(ctx, device, cmd)
 	}
 
-	set, err := runTwoStepTransceiverPipeline(ctx, device.Vendor, runner)
-	if err != nil {
-		return err
+	// Initialize the merge set explicitly. set.Chassis MUST stay nil —
+	// the chassis asset already exists (the parent device itself), and
+	// Pipeline.Run (pipeline.go:108) only consumes set.Components via
+	// writer.Write, never *set.Chassis.
+	set := &component_collector.ComponentSet{Components: []component_collector.Component{}}
+
+	// Step 1: board collection (Gap 1 fix, 49-02). D-14 fault tolerance:
+	// command/parse errors are logged + swallowed so the transceiver
+	// pipeline below is never blocked by a board-collection failure.
+	if err := collectBoardsInto(device, runner, set); err != nil {
+		applogger.Infof("板卡采集失败 [设备=%s]: %v", device.DeviceName, err)
 	}
-	if set == nil || (len(set.Components) == 0 && set.Chassis == nil) {
-		// Nothing to write — common for switches with no up SFP ports.
+
+	// Step 2: D-10 two-step transceiver pipeline. Merge its Components
+	// into set.Components; ignore its Chassis field (keep set.Chassis nil).
+	xceiverSet, err := runTwoStepTransceiverPipeline(ctx, device.Vendor, runner)
+	if err != nil {
+		// Boards collected in step 1 are still valuable — fall through to
+		// Pipeline.Run even if the transceiver pipeline errored, as long as
+		// we have at least one board. If boards are also empty, return err.
+		if len(set.Components) == 0 {
+			return err
+		}
+		applogger.Infof("光模块采集失败 [设备=%s]: %v", device.DeviceName, err)
+	} else if xceiverSet != nil {
+		set.Components = append(set.Components, xceiverSet.Components...)
+	}
+
+	if len(set.Components) == 0 {
+		// Nothing to write — common for switches with no up SFP ports
+		// AND no boards (e.g. huawei with deferred ENTITY-MIB).
 		return nil
 	}
 
@@ -722,6 +750,66 @@ func (s *DeviceInfoCollectionService) collectComponentInfo(ctx context.Context, 
 		Vendor:       string(device.Vendor),
 	}
 	return pipeline.Run(ctx, devRef, set)
+}
+
+// collectBoardsInto is the Phase 49-02 Gap-1 board-collection branch.
+// It parses per-slot board components (engine/card) from vendor CLI
+// output and appends them to set.Components.
+//
+// Key design decisions (BLOCKER-2):
+//   - Ruijie: parses `show version` via NewRuijieCliCollector().ParseShowVersionModules.
+//     The chassis row (ComponentType==ComponentTypeChassis) is DROPPED — the
+//     chassis asset already exists (parent device), and Pipeline.Run only
+//     consumes set.Components (never *set.Chassis). engine/card rows
+//     (M1/1-5/M2) are appended. Note: M1's SN on real hardware may equal
+//     chassis SN (Ruijie main-control-board reuse), but M1's ComponentType
+//     is ComponentTypeEngine — independent of the dropped chassis row.
+//   - Huawei: NO module command (board collection is via ENTITY-MIB SNMP,
+//     deferred per D-08 in this environment). 49-01 already handles huawei
+//     chassis SN writeback to sys_network_device — no duplication here.
+//   - Out-of-scope vendor (H3C/Maipu/unknown): no-op.
+//
+// D-14 fault tolerance: command execution errors are logged + swallowed
+// (return nil) so the caller (collectComponentInfo) can still run the
+// transceiver pipeline. Parser errors are also tolerated.
+//
+// set.Chassis is NEVER set by this function (it stays nil per BLOCKER-2).
+func collectBoardsInto(device *models.NetworkDevice, runner commandRunner, set *component_collector.ComponentSet) error {
+	if device == nil || runner == nil || set == nil {
+		return nil
+	}
+	if device.Vendor != models.VendorRuijie {
+		// Huawei board collection is via ENTITY-MIB SNMP (D-08 deferred);
+		// H3C/Maipu/unknown out of scope. No-op, not an error.
+		return nil
+	}
+
+	// Ruijie board path: `show version` → ParseShowVersionModules.
+	raw, err := runner("show version")
+	if err != nil {
+		// D-14: don't block the transceiver pipeline on a command failure.
+		applogger.Infof("板卡命令执行失败 [设备=%s, cmd=show version]: %v", device.DeviceName, err)
+		return nil
+	}
+	components, err := component_collector.NewRuijieCliCollector().ParseShowVersionModules(raw)
+	if err != nil {
+		// D-14: parser/template error is tolerated.
+		applogger.Infof("板卡解析失败 [设备=%s]: %v", device.DeviceName, err)
+		return nil
+	}
+
+	for _, c := range components {
+		// BLOCKER-2: drop chassis row — the chassis asset already exists
+		// (parent device itself) and Pipeline.Run never consumes
+		// *set.Chassis. Appending a chassis row here would cause the
+		// writer to emit a component_type='chassis' row that pollutes the
+		// 前端「从属组件清单」Tab filter.
+		if c.ComponentType == component_collector.ComponentTypeChassis {
+			continue
+		}
+		set.Components = append(set.Components, c)
+	}
+	return nil
 }
 
 // runDeviceCommand wraps the existing connection pool to issue a single
