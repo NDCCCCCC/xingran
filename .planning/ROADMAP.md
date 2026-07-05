@@ -218,12 +218,12 @@ The full history of Phases 1-39 is preserved below. See also:
 
 **Requirements**: TBD (源自 49-CONTEXT.md 的 3 个连锁缺口 + 端到端验证目标,无正式 REQ-ID)
 **Depends on:** Phase 48
-**Plans:** 2 plans (49-01 / 49-02)
+**Plans:** 1/2 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 49-01-PLAN.md — Gap 3 chassis SN 解析器接入,回填 sys_network_device.serial_number(ruijie/huawei 在线设备)
+- [x] 49-01-PLAN.md — Gap 3 chassis SN 解析器接入,回填 sys_network_device.serial_number(ruijie/huawei 在线设备)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
