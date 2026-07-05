@@ -357,6 +357,15 @@ func (s *DeviceInfoCollectionService) enrichChassisSerial(cmd string, vendor mod
 		return
 	}
 
+	// Phase 49 E2E 诊断:记录进入解析路径的信号,定位 chassis SN 为何空。
+	// raw 头 80 字符帮助核对生产输出格式是否与 fixture 一致。
+	rawHead := raw
+	if len(rawHead) > 80 {
+		rawHead = rawHead[:80]
+	}
+	rawHead = strings.ReplaceAll(strings.ReplaceAll(rawHead, "\n", " "), "\r", "")
+	applogger.Infof("chassis SN 解析开始 [vendor=%s, cmd=%s, rawLen=%d, head=%q]", vendor, cmd, len(raw), rawHead)
+
 	var components []component_collector.Component
 	var err error
 	switch vendor {
@@ -376,11 +385,26 @@ func (s *DeviceInfoCollectionService) enrichChassisSerial(cmd string, vendor mod
 	for _, c := range components {
 		if c.ComponentType == component_collector.ComponentTypeChassis && c.SerialNumber != "" {
 			info.SerialNumber = c.SerialNumber
+			applogger.Infof("chassis SN 命中 [vendor=%s, cmd=%s, components=%d, sn=%s]", vendor, cmd, len(components), c.SerialNumber)
 			return
 		}
 	}
 	// 未找到 chassis 行(如 huawei Unrecognized command 场景)→ 静默返回,
 	// info.SerialNumber 保持空,符合 Pitfall 3 语义。
+	applogger.Infof("chassis SN 未命中 [vendor=%s, cmd=%s, components=%d, types=%v]", vendor, cmd, len(components), componentTypes(components))
+}
+
+// componentTypes 返回 components 中各 ComponentType 的去重列表(诊断用)。
+func componentTypes(components []component_collector.Component) []string {
+	seen := make(map[string]struct{})
+	out := []string{}
+	for _, c := range components {
+		if _, ok := seen[c.ComponentType]; !ok {
+			seen[c.ComponentType] = struct{}{}
+			out = append(out, c.ComponentType)
+		}
+	}
+	return out
 }
 
 // updateDeviceInfo 更新设备信息（仅更新空字段，保留现有数据）

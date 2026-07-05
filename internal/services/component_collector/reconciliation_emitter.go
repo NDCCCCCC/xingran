@@ -55,11 +55,18 @@ func (e *ReconciliationEmitter) Emit(ctx context.Context, assetID, conflictType,
 	// Pre-INSERT dedup — SQLite has no partial unique index; on PG this
 	// is a cheap defensive query that also handles the race window before
 	// the unique violation surfaces.
+	//
+	// NOTE: 用 `recon_category = ?` 单子句。原写法 `(recon_category IS ? OR
+	// recon_category = ?)` 在 SQLite 下工作(SQLite 把 IS 当 nullable 等价),
+	// 但 PostgreSQL 拒绝 `IS <string>` —— SQLSTATE 42601 "syntax error at or
+	// near $3",导致每次组件 MISS 的 anomaly emit 失败(Phase 49-02 E2E 暴露)。
+	// partial unique index uniq_recon_asset_type_cat_open 本身按精确值匹配,
+	// NULL 在 PG unique index 里互异,因此 dedup 也只需精确值匹配。
 	var existing int64
 	if err := e.db.WithContext(ctx).
 		Table("sys_data_reconciliation").
-		Where("asset_id = ? AND conflict_type = ? AND (recon_category IS ? OR recon_category = ?)",
-			assetID, conflictType, reconCategory, reconCategory).
+		Where("asset_id = ? AND conflict_type = ? AND recon_category = ?",
+			assetID, conflictType, reconCategory).
 		Where("resolved_at IS NULL AND deleted_at IS NULL").
 		Count(&existing).Error; err != nil {
 		return err
