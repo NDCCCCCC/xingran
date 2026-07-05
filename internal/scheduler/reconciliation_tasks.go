@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -146,83 +147,96 @@ func RegisterReconciliationTasks(s *Scheduler, db *gorm.DB, cacheSvc cache.Cache
 	})
 	applogger.Infof("对账任务处理器已注册(单一 taskType 'reconciliation',内部分发 6 个子任务)")
 
-	// === sys_job 记录: 4 条 R1 + 2 条 R2 任务,若已存在(migration_169/171 seed 过)则跳过 ===
-	// 注意: 这里只在 sys_job 不存在时 INSERT,避免与 migration_169/171 seed 冲突。
-	// 若已存在,AddJob 会按 cron 表达式自动加载,无需重复插入。
+	// === sys_job 记录: 8 条对账任务 seed + 历史脏 cron 自愈 ===
+	//
+	// 历史背景(2026-07-05 修订):
+	//   - 260704-ne5 已删除启动期 migrations.MigrateNNN(d.DB) 调用块,故
+	//     migration_169/200 的 seedReconciliationSysJobs / seedFixSuggestionSysJobs
+	//     不再启动期执行 —— 本循环是 sys_job 唯一启动期 seed 途径。
+	//   - cron / InvokeTarget / JobGroup 表达式权威源在 reconciliation_crons.go
+	//     (常量集中管理,避免双权威源漂移)。
+	//
+	// 三态自愈策略:
+	//   1. sys_job 不存在 → INSERT (全新环境首次启动)
+	//   2. sys_job 存在 + cron 命中 legacyCronOverrides 黑名单 → UPDATE 修正历史脏值
+	//   3. sys_job 存在 + JobGroup 大小写不一致 / InvokeTarget 漂移 → UPDATE 统一
+	//
+	// 不动运维手动改的自定义 cron(尊重运维自治)—— 只命中黑名单的脏值才覆盖。
 	reconJobs := []struct {
 		jobName        string
 		cronExpression string
+		invokeTarget   string // 子任务名,完整 InvokeTarget = "reconciliation:" + invokeTarget
 		remark         string
 	}{
-		{
-			jobName:        "对账-物化视图刷新",
-			cronExpression: "@every 5m",
-			remark:         "Phase 42 R1: REFRESH MATERIALIZED VIEW CONCURRENTLY reconciliation_normalized (D-01 5min 周期)",
-		},
-		{
-			jobName:        "对账-Layer3检测",
-			cronExpression: "@every 6m",
-			remark:         "Phase 42 R1: 遍历 reconciliation_normalized MV,按 Type A-F 分类写入 sys_data_reconciliation (D-07)",
-		},
-		{
-			jobName:        "对账-静默期重检测",
-			cronExpression: "0 0 2 * * *",
-			remark:         "Phase 42 R1 placeholder: 修复回写后 7d 静默期重检测 (R2 真实实现)",
-		},
-		{
-			jobName:        "对账-例外规则清理",
-			cronExpression: "0 0 3 * * *",
-			remark:         "Phase 42 R1 placeholder: 临时例外规则到期清理 (R3 真实实现)",
-		},
-		// === Phase 43 R2 新增 2 条 cron(续写,见 plan 43-01 Task 2) ===
-		{
-			jobName:        "对账-自动转工单critical",
-			cronExpression: "@every 2m",
-			remark:         "Phase 43 R2: critical 异常自动转工单(D-A1-01 2min 周期,符合 ROADMAP SC 1)",
-		},
-		{
-			jobName:        "对账-自动转工单high",
-			cronExpression: "@every 5m",
-			remark:         "Phase 43 R2: high 异常自动转工单(D-A1-02 5min 周期,符合 ROADMAP SC 2)",
-		},
-		// === Phase 46 R5 新增: 修复建议生成 ===
-		{
-			jobName:        "对账-修复建议生成",
-			cronExpression: "@every 5m",
-			remark:         "Phase 46 R5: 扫描 Type B 高置信度异常 → 写 sys_reconciliation_fix_suggestion (D-A4 触发器)",
-		},
-		// === Phase 46 R5 / 46-02 新增: 误修复率监控(46-02 / D-C5) ===
-		// W-7 错峰:7,17,27,37,47,57(每 10min 第 7 分钟)与 generator 3,8,13,18,... 错开 4min
-		{
-			jobName:        "对账-误修复率监控",
-			cronExpression: "7,17,27,37,47,57 * * * *",
-			remark:         "Phase 46 R5 / 46-02: 7d 误修复率超阈告警(D-C5 1h 节流防风暴 + WS + SysNotice + operlog 三通道)",
-		},
+		{"对账-物化视图刷新", reconCronRefreshView, reconInvokeRefreshView, "Phase 42 R1: REFRESH MATERIALIZED VIEW CONCURRENTLY reconciliation_normalized (D-01 5min 周期)"},
+		{"对账-Layer3检测", reconCronDetectLayer3, reconInvokeDetectLayer3, "Phase 42 R1: 遍历 reconciliation_normalized MV,按 Type A-F 分类写入 sys_data_reconciliation (D-07)"},
+		{"对账-静默期重检测", reconCronDetectExpiredSilence, reconInvokeDetectExpiredSilence, "Phase 42 R1 placeholder: 修复回写后 7d 静默期重检测 (R2 真实实现)"},
+		{"对账-例外规则清理", reconCronCleanupExpiredExceptions, reconInvokeCleanupExpiredExceptions, "Phase 42 R1 placeholder: 临时例外规则到期清理 (R3 真实实现)"},
+		{"对账-自动转工单critical", reconCronCreateWorkorderCritical, reconInvokeCreateWorkorderCritical, "Phase 43 R2: critical 异常自动转工单(D-A1-01 2min 周期,符合 ROADMAP SC 1)"},
+		{"对账-自动转工单high", reconCronCreateWorkorderHigh, reconInvokeCreateWorkorderHigh, "Phase 43 R2: high 异常自动转工单(D-A1-02 5min 周期,符合 ROADMAP SC 2)"},
+		{"对账-修复建议生成", reconCronGenerateFixSuggestions, reconInvokeGenerateFixSuggestions, "Phase 46 R5: 扫描 Type B 高置信度异常 → 写 sys_reconciliation_fix_suggestion (D-A4 触发器)"},
+		{"对账-误修复率监控", reconCronMonitorFixSuggestionMisFix, reconInvokeMonitorMisFix, "Phase 46 R5 / 46-02: 7d 误修复率超阈告警(D-C5 1h 节流防风暴 + WS + SysNotice + operlog 三通道,W-2026-07-05:Stats() 加 MinSampleSize=5 避免小样本假阳性)"},
 	}
 
 	for _, j := range reconJobs {
-		invokeTarget := jobNameToInvokeTarget(j.jobName)
-		var existingCount int64
-		if err := db.Model(&models.Job{}).Where("job_name = ?", j.jobName).Count(&existingCount).Error; err == nil && existingCount > 0 {
-			applogger.Debugf("对账任务 %s 已存在数据库,跳过创建", j.jobName)
+		fullInvokeTarget := "reconciliation:" + j.invokeTarget
+
+		var existing models.Job
+		err := db.Unscoped().Where("job_name = ?", j.jobName).First(&existing).Error
+
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// 状态 1: 不存在 → INSERT
+			nextMinute := time.Now().Add(5 * time.Minute)
+			newJob := &models.Job{
+				JobName:        j.jobName,
+				JobGroup:       reconciliationJobGroup,
+				InvokeTarget:   fullInvokeTarget,
+				CronExpression: j.cronExpression,
+				MisfirePolicy:  1, // MisfirePolicyImmediately
+				Status:         0, // 0=启用
+				NextRunTime:    &nextMinute,
+				Remark:         &j.remark,
+			}
+			if cErr := db.Create(newJob).Error; cErr != nil {
+				applogger.Warnf("创建对账任务 %s 失败: %v", j.jobName, cErr)
+			} else {
+				applogger.Infof("对账任务 %s 已创建 (cron=%s)", j.jobName, j.cronExpression)
+			}
+			continue
+		}
+		if err != nil {
+			applogger.Warnf("查询对账任务 %s 失败,跳过自愈: %v", j.jobName, err)
 			continue
 		}
 
-		nextMinute := time.Now().Add(5 * time.Minute)
-		newJob := &models.Job{
-			JobName:        j.jobName,
-			JobGroup:       "RECONCILIATION",
-			InvokeTarget:   invokeTarget,
-			CronExpression: j.cronExpression,
-			MisfirePolicy:  1, // MisfirePolicyImmediately
-			Status:         0, // 0=启用
-			NextRunTime:    &nextMinute,
-			Remark:         &j.remark,
+		// 状态 2/3: 存在 → 检查是否需要自愈
+		updates := map[string]interface{}{}
+
+		// 自愈 a: cron 命中历史脏值黑名单(运维手动改的自定义 cron 不在 map 内,不动)
+		if newCron, ok := legacyCronOverrides[existing.CronExpression]; ok {
+			updates["cron_expression"] = newCron
+			applogger.Warnf("[reconciliation] 自愈: job=%s cron '%s' → '%s' (历史脏值)",
+				j.jobName, existing.CronExpression, newCron)
 		}
-		if err := db.Create(newJob).Error; err != nil {
-			applogger.Warnf("创建对账任务 %s 失败: %v", j.jobName, err)
+		// 自愈 b: JobGroup 大小写不一致(此前兜底 INSERT 用过 "RECONCILIATION" 大写)
+		if existing.JobGroup != reconciliationJobGroup {
+			updates["job_group"] = reconciliationJobGroup
+			applogger.Warnf("[reconciliation] 自愈: job=%s job_group '%s' → '%s'",
+				j.jobName, existing.JobGroup, reconciliationJobGroup)
+		}
+		// 自愈 c: InvokeTarget 漂移(兜底防备:target 错了 taskType 路由就废了)
+		if existing.InvokeTarget != fullInvokeTarget {
+			updates["invoke_target"] = fullInvokeTarget
+			applogger.Warnf("[reconciliation] 自愈: job=%s invoke_target '%s' → '%s'",
+				j.jobName, existing.InvokeTarget, fullInvokeTarget)
+		}
+
+		if len(updates) > 0 {
+			if uErr := db.Model(&models.Job{}).Where("id = ?", existing.ID).Updates(updates).Error; uErr != nil {
+				applogger.Warnf("自愈对账任务 %s 失败: %v", j.jobName, uErr)
+			}
 		} else {
-			applogger.Infof("对账任务 %s 已创建", j.jobName)
+			applogger.Debugf("对账任务 %s 已存在且无需自愈", j.jobName)
 		}
 	}
 }
@@ -320,32 +334,11 @@ func cleanupExpiredExceptionsDirect(ctx context.Context, db *gorm.DB, now time.T
 	return result.RowsAffected, nil
 }
 
-// jobNameToInvokeTarget 把中文 job name 映射到 InvokeTarget 字符串
+// jobNameToInvokeTarget 已于 2026-07-05 修订移除。
 //
-// migration_169/171 seed 写入 sys_job 时用的是以下格式: reconciliation:refreshView 等。
-// 这里保持完全一致,否则 JobExecutor 找不到对应 handler。
-func jobNameToInvokeTarget(jobName string) string {
-	switch jobName {
-	case "对账-物化视图刷新":
-		return "reconciliation:refreshView"
-	case "对账-Layer3检测":
-		return "reconciliation:detectLayer3"
-	case "对账-静默期重检测":
-		return "reconciliation:detectExpiredSilence"
-	case "对账-例外规则清理":
-		return "reconciliation:cleanupExpiredExceptions"
-	case "对账-自动转工单critical":
-		return "reconciliation:createWorkorderCritical"
-	case "对账-自动转工单high":
-		return "reconciliation:createWorkorderHigh"
-	case "对账-修复建议生成":
-		return "reconciliation:generateFixSuggestions"
-	case "对账-误修复率监控":
-		return "reconciliation:monitorFixSuggestionMisFix"
-	default:
-		return ""
-	}
-}
+// 此前 cron/InvokeTarget 用 name → target 的 switch 映射,导致权威源分散(常量 slice
+// + 此 switch + migration_169 seed 三份)。InvokeTarget 现作为 reconJobs slice 字段
+// 直接引用 reconciliation_crons.go 的常量,单一权威源,无需映射函数。
 
 // checkPortStatusDrift 每日检测 sys_device_port_status.device_id 与
 // ops_info_points.device_id 漂移(Phase 45 R5 数据治理 2026-06-30, 2026-07-01 修订)

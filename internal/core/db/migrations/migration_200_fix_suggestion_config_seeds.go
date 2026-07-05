@@ -211,6 +211,14 @@ func seedFixSuggestionMenus(db *gorm.DB) error {
 }
 
 // seedFixSuggestionSysJobs seed 1 条 sys_job
+//
+// Deprecated: 此函数自 260704-ne5 后不再启动期调用(database.go 已删除
+// migrations.MigrateNNN(d.DB) 启动调用块)。sys_job 的 seed 与 cron 自愈已收口到
+// internal/scheduler/reconciliation_tasks.go (reconJobs slice 引用
+// reconciliation_crons.go 常量 + legacyCronOverrides 黑名单自愈)。
+//
+// 本函数仅作历史归档保留,手动调用不会破坏数据(existingCount > 0 跳过),
+// 但 cron 值可能滞后于代码常量 —— 新部署不应依赖此函数。
 func seedFixSuggestionSysJobs(db *gorm.DB) error {
 	jobs := []struct {
 		jobName        string

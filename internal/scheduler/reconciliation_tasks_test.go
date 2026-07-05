@@ -13,6 +13,7 @@ import (
 	"context"
 	"database/sql"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -180,4 +181,94 @@ func mustReadReconTasksSrc(t *testing.T) string {
 	data, err := os.ReadFile("reconciliation_tasks.go")
 	require.NoError(t, err, "must read reconciliation_tasks.go")
 	return string(data)
+}
+
+// ==================== 2026-07-05 cron 基建收口回归守护 ====================
+//
+// incident 260705-fix-suggestion-flood 根因之一:cron 表达式硬编码内联在 reconJobs
+// slice,代码 5-field vs DB 6-field 不一致。下列测试锁定:
+//  1. 非 descriptor cron 必须 6-field(scheduler 用 cron.WithSeconds)
+//  2. 历史脏值必须在 legacyCronOverrides 自愈黑名单
+//  3. reconciliation_crons.go 是唯一权威源(reconJobs 不再内联 cron 字面量)
+
+// TestReconCronsAreSixField 锁定:scheduler 用 cron.WithSeconds() (cron.go:186),
+// 非 descriptor 表达式必须 6-field(秒分时日月周)。5-field 会被 parser 误解析。
+func TestReconCronsAreSixField(t *testing.T) {
+	nonDescriptor := []struct {
+		name string
+		expr string
+	}{
+		{"detectExpiredSilence", reconCronDetectExpiredSilence},
+		{"cleanupExpiredExceptions", reconCronCleanupExpiredExceptions},
+		{"monitorFixSuggestionMisFix", reconCronMonitorFixSuggestionMisFix},
+	}
+	for _, c := range nonDescriptor {
+		fields := strings.Fields(c.expr)
+		assert.Lenf(t, fields, 6,
+			"%s cron 必须是 6-field (秒分时日月周),scheduler 用 cron.WithSeconds() 解析;当前 %d field: %q",
+			c.name, len(fields), c.expr)
+	}
+
+	// descriptor 表达式(@every / @daily / ...)不归 6-field 约束,但必须以 @ 开头
+	descriptors := []struct {
+		name string
+		expr string
+	}{
+		{"refreshView", reconCronRefreshView},
+		{"detectLayer3", reconCronDetectLayer3},
+		{"createWorkorderCritical", reconCronCreateWorkorderCritical},
+		{"createWorkorderHigh", reconCronCreateWorkorderHigh},
+		{"generateFixSuggestions", reconCronGenerateFixSuggestions},
+	}
+	for _, d := range descriptors {
+		assert.Truef(t, strings.HasPrefix(d.expr, "@"),
+			"%s cron 应是 descriptor 表达式(以 @ 开头): %q", d.name, d.expr)
+	}
+}
+
+// TestReconJobGroupLowercase 锁定:JobGroup 统一小写,防再次出现 RECONCILIATION 大小写分裂。
+func TestReconJobGroupLowercase(t *testing.T) {
+	assert.Equal(t, "reconciliation", reconciliationJobGroup,
+		"JobGroup 必须小写 'reconciliation'(与 migration_169 历史一致)")
+}
+
+// TestLegacyCronOverridesContainsKnownDirtyValue 守护:incident 260705 的 5-field 脏值
+// 必须在自愈黑名单。任何删 map 项的改动立即失败。
+func TestLegacyCronOverridesContainsKnownDirtyValue(t *testing.T) {
+	assert.Contains(t, legacyCronOverrides, "7,17,27,37,47,57 * * * *",
+		"历史脏 cron (5-field monitor) 必须留在 legacyCronOverrides 自愈黑名单")
+	assert.Equal(t, reconCronMonitorFixSuggestionMisFix,
+		legacyCronOverrides["7,17,27,37,47,57 * * * *"],
+		"脏值必须映射到权威 6-field cron")
+}
+
+// TestReconJobsNoInlineCronLiteral 守护:reconJobs slice 不应再内联 cron 字面量,
+// 必须引用 reconCronXxx 常量(单一权威源,防双轨漂移)。
+func TestReconJobsNoInlineCronLiteral(t *testing.T) {
+	src := mustReadReconTasksSrc(t)
+	// 这些是历史上内联过的字面量,现应消失(改引用常量)
+	bannedLiterals := []string{
+		`cronExpression: "@every`,
+		`cronExpression: "0 0 2`,
+		`cronExpression: "0 0 3`,
+		`cronExpression: "0 7,17,27,37,47,57`,
+		`cronExpression: "7,17,27,37,47,57`, // incident 260705 脏值
+	}
+	for _, lit := range bannedLiterals {
+		assert.NotContains(t, src, lit,
+			"reconJobs 不应含内联 cron 字面量 %q(应引用 reconciliation_crons.go 常量)", lit)
+	}
+	// 应出现常量引用
+	assert.Contains(t, src, "reconCronRefreshView",
+		"reconJobs 必须引用 reconCronXxx 常量")
+	assert.Contains(t, src, "reconciliationJobGroup",
+		"reconJobs JobGroup 必须引用 reconciliationJobGroup 常量")
+}
+
+// TestJobNameToInvokeTargetRemoved 守护:jobNameToInvokeTarget switch 函数已删除。
+// InvokeTarget 改为 reconJobs slice 字段直接引用常量。
+func TestJobNameToInvokeTargetRemoved(t *testing.T) {
+	src := mustReadReconTasksSrc(t)
+	assert.NotContains(t, src, "func jobNameToInvokeTarget(",
+		"jobNameToInvokeTarget 函数应已删除(InvokeTarget 改为 slice 字段引用常量)")
 }
