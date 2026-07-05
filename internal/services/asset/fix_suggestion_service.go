@@ -360,7 +360,23 @@ func (s *fixSuggestionServiceImpl) Stats(ctx context.Context, windowDays int) (*
 		}
 	}
 	result.Threshold = threshold
-	result.ThresholdBreached = result.MisFixRate > threshold
+
+	// MinSampleSize:最小样本量门槛(W-2026-07-05 修订)
+	//
+	// 背景: 7d 内若仅有 1 条 applied + 1 条 rolledBack,misFixRate=100%,单点回滚
+	// 触发阈值告警属于小样本假阳性(参考 incident 260705-fix-suggestion-flood)。
+	// 任意 n=1 时只要发生回滚 → 误报 100%,违反"显著性"原则。
+	//
+	// 策略: applied < MinSampleSize 时直接返回 ThresholdBreached=false,前端
+	// StatsResponse.Applied/RolledBack/MisFixRate 仍正常返回,只是不再触发告警。
+	// MinSampleSize 固定 5(典型 A/B 测试最小样本);若产品后续要参数化可加
+	// sys_config 'asset.reconciliation.fix.min_sample_size'。
+	const minSampleSize int64 = 5
+	if result.Applied < minSampleSize {
+		result.ThresholdBreached = false
+	} else {
+		result.ThresholdBreached = result.MisFixRate > threshold
+	}
 
 	// TrendSeries(dialect-aware):date_trunc + FILTER(PG)/strftime + CASE(SQLite)
 	result.TrendSeries = s.statsTrend(ctx, windowDays)
