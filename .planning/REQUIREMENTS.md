@@ -19,11 +19,11 @@ created: 2026-07-06
 ### SSH — SSH 写命令基础设施
 
 - [x] **SSH-01**: 系统能通过 `scrapli/scrapligo v1.3.3` 的 `SendConfig` 接口在配置模式下向 Huawei VRP / H3C Comware / Ruijie RGOS 设备下发命令
-- [ ] **SSH-02**: 系统能解析 `SendConfig` 返回结果中的 `% Error:` / `Unrecognized command` / `Illegal` 标记，区分 `transport_error` 与 `device_rejected`，并把错误信息回传前端
-- [ ] **SSH-03**: 系统能复用 `PooledConnection.GetConnection` + `defer conn.ReleaseRef()` 模式管理 SSH 连接生命周期（per-port Acquire/Release，不 per-batch）
-- [ ] **SSH-04**: 系统能在批处理中使用脱离 HTTP 请求上下文的 30 分钟超时 context（避免 `Core.Close()` 30s 截止陷阱）
+- [x] **SSH-02**: 系统能解析 `SendConfig` 返回结果中的 `% Error:` / `Unrecognized command` / `Illegal` 标记，区分 `transport_error` 与 `device_rejected`，并把错误信息回传前端
+- [x] **SSH-03**: 系统能复用 `PooledConnection.GetConnection` + `defer conn.ReleaseRef()` 模式管理 SSH 连接生命周期（per-port Acquire/Release，不 per-batch）
+- [x] **SSH-04**: 系统能在批处理中使用脱离 HTTP 请求上下文的 30 分钟超时 context（避免 `Core.Close()` 30s 截止陷阱）
 - [x] **SSH-05**: 系统能维护硬编码 `vendor → action → command_sequence` 映射（落地为先，后续 phase 抽象数据库）
-- [ ] **SSH-06**: 系统能通过 `DeviceCredentialHelper` 解析 device_id → 凭据（默认 fallback 策略沿用 v1.18）
+- [x] **SSH-06**: 系统能通过 `DeviceCredentialHelper` 解析 device_id → 凭据（默认 fallback 策略沿用 v1.18）
 
 ### PORT — 端口操作（单端口精确）
 
@@ -32,14 +32,14 @@ created: 2026-07-06
 - [ ] **PORT-03**: 运维能在 Web 端对单个端口设置 `description`（端口描述，≤ 80 字符）
 - [ ] **PORT-04**: 运维能在 Web 端对单个端口开启 `dot1x`（Huawei/H3C: `dot1x enable`；Ruijie: `dot1x port-control auto`）
 - [ ] **PORT-05**: 运维能在 Web 端对单个端口关闭 `dot1x`（Huawei/H3C: `undo dot1x enable`；Ruijie: `no dot1x port-control`）
-- [ ] **PORT-06**: 系统能在写命令执行前读取端口当前 `admin_status` / `dot1x_enabled`，对已处于目标状态的端口提示"无需操作"
+- [x] **PORT-06**: 系统能在写命令执行前读取端口当前 `admin_status` / `dot1x_enabled`，对已处于目标状态的端口提示"无需操作"
 
 ### BATCH — 批量操作
 
 - [ ] **BATCH-01**: 运维能在 Web 端一次性选中多端口（同设备）并对所有端口执行同一操作
-- [ ] **BATCH-02**: 系统能以串行 + 失败即停（fail-fast）方式执行批量操作，第一条失败立即停止并回传失败点
-- [ ] **BATCH-03**: 系统能返回部分执行结果 `{succeeded: [...], failed: [...], skipped: [...]}`，明确每端口状态 + 失败原因
-- [ ] **BATCH-04**: 系统能限制批量操作最大端口数为 50（硬上限），超过时前端警告 + 后端拒绝
+- [x] **BATCH-02**: 系统能以串行 + 失败即停（fail-fast）方式执行批量操作，第一条失败立即停止并回传失败点
+- [x] **BATCH-03**: 系统能返回部分执行结果 `{succeeded: [...], failed: [...], skipped: [...]}`，明确每端口状态 + 失败原因
+- [x] **BATCH-04**: 系统能限制批量操作最大端口数为 50（硬上限），超过时前端警告 + 后端拒绝
 - [ ] **BATCH-05**: 系统能在批量操作执行期间为前端提供进度反馈（已完成 / 总数 / 当前操作端口）
 
 ### AUDIT — 审计
@@ -47,7 +47,7 @@ created: 2026-07-06
 - [ ] **AUDIT-01**: 系统能在每个写操作成功路径末尾、`response.Success()` 之前调用 `operlog.Record(...)` 写入操作日志（module=`端口管理`，OperType 见下表）
 - [ ] **AUDIT-02**: 系统能为每条写操作记录关键操作参数：`device_id` / `port_id` / `action` / `description` / `operator` / `result_status`
 - [ ] **AUDIT-03**: 系统能新建 `sys_port_write_audit` 表，存储每次写操作的 `before_value` / `after_value` / `command_sent` / `device_response` / `status` / `failure_reason`，支持后续合规追溯（operlog 会被 11 个敏感关键词脱敏，此表为未脱敏真相源）
-- [ ] **AUDIT-04**: 系统能在写操作成功 1-2 秒后通过 `DeviceInfoCollectionService.Enqueue(deviceID)` 触发该设备端口信息采集（复用 v1.18 D-09 dedup 防队列重复）
+- [x] **AUDIT-04**: 系统能在写操作成功 1-2 秒后通过 `DeviceInfoCollectionService.Enqueue(deviceID)` 触发该设备端口信息采集（复用 v1.18 D-09 dedup 防队列重复）
 
 ### UI — 前端
 

@@ -153,7 +153,7 @@ previous_update: 2026-07-04 after v1.18 milestone close (Phase 48 shipped: 1 pha
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 50. W1 Vendor Templates + Unit Tests | 1/1 | Complete    | 2026-07-06 |
-| 51. W2 PortWriteService + Batch + Mock Tests | 0/1-2 | Not started | — |
+| 51. W2 PortWriteService + Batch + Mock Tests | 1/1 | Complete   | 2026-07-06 |
 | 52. W3 Router/Handler/Operlog/Permission/Migration | 0/2 | Not started | — |
 | 53. W4 Frontend Drawer + Progress Dialog + API Wrappers | 0/1-2 | Not started | — |
 | 54. W5 E2E + Real-Device UAT + Documentation | 0/1 | Not started | — |
