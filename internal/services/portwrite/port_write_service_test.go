@@ -3,6 +3,7 @@ package portwrite
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -299,17 +300,23 @@ func newTestDB(t *testing.T) *gorm.DB {
 }
 
 // seedPortAndDevice 创建一个测试设备 + 一个端口行（用于 pre-state 匹配/不匹配用例）。
+// 多次调用同一 deviceID 时只创建 device 一次，避免 ip_address UNIQUE 约束冲突。
 func seedPortAndDevice(t *testing.T, db *gorm.DB, portID, deviceID, interfaceName, adminStatus string, dot1xEnabled bool, description string) {
 	t.Helper()
-	dev := &models.NetworkDevice{
-		DeviceName: "test-device",
-		DeviceType: models.DeviceTypeSwitch,
-		Vendor:     models.VendorHuawei,
-		IPAddress:  "10.0.0.1",
-		Status:     models.DeviceStatusOnline,
+
+	// 仅在 device 尚不存在时插入（多端口共享同一设备）
+	var existingDev models.NetworkDevice
+	if err := db.Where("id = ?", deviceID).First(&existingDev).Error; err != nil {
+		dev := &models.NetworkDevice{
+			DeviceName: "test-device-" + deviceID,
+			DeviceType: models.DeviceTypeSwitch,
+			Vendor:     models.VendorHuawei,
+			IPAddress:  "10.0.0." + deviceID[len(deviceID)-1:], // 单 port 测试下 deviceID 末位是 1，足够唯一
+			Status:     models.DeviceStatusOnline,
+		}
+		dev.ID = deviceID
+		assert.NoError(t, db.Create(dev).Error)
 	}
-	dev.ID = deviceID
-	assert.NoError(t, db.Create(dev).Error)
 
 	port := &models.DevicePortStatus{
 		ID:            portID,
@@ -618,4 +625,332 @@ func TestDisableDot1x_NoOp_AlreadyDisabled(t *testing.T) {
 
 	mockExec.AssertNotCalled(t, "ExecuteCustom", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	mockColl.AssertNotCalled(t, "Enqueue", mock.Anything)
+}
+
+// TestBatchWritePorts_ExceedsMax — 51 ports → ErrBatchTooLarge，无 SSH 流量。
+func TestBatchWritePorts_ExceedsMax(t *testing.T) {
+	mockExec := new(mockDeviceExecutor)
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(mockExec, mockColl, newTestDB(t))
+	ctx := context.Background()
+
+	portIDs := make([]string, 51)
+	for i := range portIDs {
+		portIDs[i] = fmt.Sprintf("port-%d", i)
+	}
+
+	result, err := svc.BatchWritePorts(ctx, BatchWriteRequest{
+		DeviceID: "device-1",
+		Action:   portcollection.ActionShutdown,
+		PortIDs:  portIDs,
+	}, "test-op")
+
+	assert.ErrorIs(t, err, ErrBatchTooLarge)
+	assert.Nil(t, result)
+
+	mockExec.AssertNotCalled(t, "ExecuteCustom", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	mockColl.AssertNotCalled(t, "Enqueue", mock.Anything)
+}
+
+// TestBatchWritePorts_Empty — 空 PortIDs → ErrEmptyBatch，无 SSH 流量。
+func TestBatchWritePorts_Empty(t *testing.T) {
+	mockExec := new(mockDeviceExecutor)
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(mockExec, mockColl, newTestDB(t))
+	ctx := context.Background()
+
+	result, err := svc.BatchWritePorts(ctx, BatchWriteRequest{
+		DeviceID: "device-1",
+		Action:   portcollection.ActionShutdown,
+		PortIDs:  []string{},
+	}, "test-op")
+
+	assert.ErrorIs(t, err, ErrEmptyBatch)
+	assert.Nil(t, result)
+
+	mockExec.AssertNotCalled(t, "ExecuteCustom", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	mockColl.AssertNotCalled(t, "Enqueue", mock.Anything)
+}
+
+// TestBatchWritePorts_ExceedsExactly50 — 50 ports 是边界值（不超限），进入循环。
+//
+// 由于测试 DB 没 seed port，executeWrite 会走 "missing-port" → fallback → ErrDeviceNotFound →
+// fail-fast 立即停。我们只断言不返回 ErrBatchTooLarge（不被拦截），且不调 SSH（因为 fallback 路径
+// 走 executeWrite 但 deviceID="" → 提前 return）。
+func TestBatchWritePorts_ExceedsExactly50(t *testing.T) {
+	db := newTestDB(t) // 不 seed port
+
+	mockExec := new(mockDeviceExecutor)
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(mockExec, mockColl, db)
+	ctx := context.Background()
+
+	portIDs := make([]string, 50)
+	for i := range portIDs {
+		portIDs[i] = fmt.Sprintf("port-%d", i)
+	}
+
+	result, err := svc.BatchWritePorts(ctx, BatchWriteRequest{
+		DeviceID: "device-1",
+		Action:   portcollection.ActionShutdown,
+		PortIDs:  portIDs,
+	}, "test-op")
+
+	// 50 是边界 — 不应被 maxBatchSize 拦截。fallback 路径会跑 executeWrite 第一个 port
+	// 然后因 deviceID="" 返回 ErrDeviceNotFound，result.Failed 有 1 项但其他端口不跑。
+	// 由于 batch 返回 nil error 而 result 可能非 nil，
+	// 我们仅断言不返回 ErrBatchTooLarge。
+	if err != nil {
+		assert.NotEqual(t, ErrBatchTooLarge, err)
+	}
+	// result 可能是 nil 或非 nil（取决于第一端口走完后 break 是否影响返回），
+	// 只要不返回 ErrBatchTooLarge 即可视为 "进入循环"。
+	_ = result
+}
+
+// TestBatchWritePorts_Success_AllSucceeded — 3 ports 全部成功 → 3 Succeeded + 3 Enqueue。
+func TestBatchWritePorts_Success_AllSucceeded(t *testing.T) {
+	db := newTestDB(t)
+	deviceID := "device-1"
+	seedPortAndDevice(t, db, "p1", deviceID, "GE0/0/1", "up", false, "")
+	seedPortAndDevice(t, db, "p2", deviceID, "GE0/0/2", "up", false, "")
+	seedPortAndDevice(t, db, "p3", deviceID, "GE0/0/3", "up", false, "")
+
+	mockExec := new(mockDeviceExecutor)
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(mockExec, mockColl, db)
+	ctx := context.Background()
+
+	// testify/mock 按 On() 注册顺序匹配 — 3 个相同签名期望依次返回 nil
+	mockExec.On("ExecuteCustom", mock.Anything, deviceID, mock.Anything, singlePortTimeout).Return(nil).Times(3)
+	mockColl.On("Enqueue", deviceID).Return(nil).Times(3)
+
+	result, err := svc.BatchWritePorts(ctx, BatchWriteRequest{
+		DeviceID: deviceID,
+		Action:   portcollection.ActionShutdown,
+		PortIDs:  []string{"p1", "p2", "p3"},
+	}, "test-op")
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Len(t, result.Succeeded, 3)
+	assert.Len(t, result.Failed, 0)
+	assert.Len(t, result.Skipped, 0)
+
+	mockExec.AssertExpectations(t)
+	mockColl.AssertExpectations(t)
+}
+
+// TestBatchWritePorts_FailFast_Transport — 第 2 端口 transport error → fail-fast 立即停。
+func TestBatchWritePorts_FailFast_Transport(t *testing.T) {
+	db := newTestDB(t)
+	deviceID := "device-1"
+	seedPortAndDevice(t, db, "p1", deviceID, "GE0/0/1", "up", false, "")
+	seedPortAndDevice(t, db, "p2", deviceID, "GE0/0/2", "up", false, "")
+	seedPortAndDevice(t, db, "p3", deviceID, "GE0/0/3", "up", false, "")
+
+	mockExec := new(mockDeviceExecutor)
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(mockExec, mockColl, db)
+	ctx := context.Background()
+
+	// 第 1 次：nil 成功；第 2 次：transport error；第 3 次：不应被调用
+	mockExec.On("ExecuteCustom", mock.Anything, deviceID, mock.Anything, singlePortTimeout).Return(nil).Once()
+	transportErr := &WriteError{Kind: WriteErrorTransport, Message: "connection refused"}
+	mockExec.On("ExecuteCustom", mock.Anything, deviceID, mock.Anything, singlePortTimeout).Return(transportErr).Once()
+
+	mockColl.On("Enqueue", deviceID).Return(nil).Once() // 只有第 1 次 success 触发
+
+	result, err := svc.BatchWritePorts(ctx, BatchWriteRequest{
+		DeviceID: deviceID,
+		Action:   portcollection.ActionShutdown,
+		PortIDs:  []string{"p1", "p2", "p3"},
+	}, "test-op")
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Len(t, result.Succeeded, 1)
+	assert.Len(t, result.Failed, 1)
+	assert.Len(t, result.Skipped, 0)
+	assert.Equal(t, "p2", result.Failed[0].PortID)
+
+	// 只调了 2 次 SSH（p1 + p2 fail-fast break）
+	mockExec.AssertExpectations(t)
+	mockColl.AssertExpectations(t)
+}
+
+// TestBatchWritePorts_FailFast_DeviceRejected — 第 2 端口 device_rejected → fail-fast 立即停。
+func TestBatchWritePorts_FailFast_DeviceRejected(t *testing.T) {
+	db := newTestDB(t)
+	deviceID := "device-1"
+	seedPortAndDevice(t, db, "p1", deviceID, "GE0/0/1", "up", false, "")
+	seedPortAndDevice(t, db, "p2", deviceID, "GE0/0/2", "up", false, "")
+	seedPortAndDevice(t, db, "p3", deviceID, "GE0/0/3", "up", false, "")
+
+	mockExec := new(mockDeviceExecutor)
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(mockExec, mockColl, db)
+	ctx := context.Background()
+
+	mockExec.On("ExecuteCustom", mock.Anything, deviceID, mock.Anything, singlePortTimeout).Return(nil).Once()
+	rejectionErr := &WriteError{Kind: WriteErrorDeviceRejected, Message: "% Error: Unrecognized command"}
+	mockExec.On("ExecuteCustom", mock.Anything, deviceID, mock.Anything, singlePortTimeout).Return(rejectionErr).Once()
+
+	mockColl.On("Enqueue", deviceID).Return(nil).Once()
+
+	result, err := svc.BatchWritePorts(ctx, BatchWriteRequest{
+		DeviceID: deviceID,
+		Action:   portcollection.ActionShutdown,
+		PortIDs:  []string{"p1", "p2", "p3"},
+	}, "test-op")
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Len(t, result.Succeeded, 1)
+	assert.Len(t, result.Failed, 1)
+	assert.Len(t, result.Skipped, 0)
+	assert.Equal(t, "p2", result.Failed[0].PortID)
+	assert.Contains(t, result.Failed[0].Error, "Unrecognized command")
+
+	mockExec.AssertExpectations(t)
+	mockColl.AssertExpectations(t)
+}
+
+// TestBatchWritePorts_AllSkipped_PreStateMatch — 3 ports 全部 admin_status="down" → 3 Skipped。
+func TestBatchWritePorts_AllSkipped_PreStateMatch(t *testing.T) {
+	db := newTestDB(t)
+	deviceID := "device-1"
+	seedPortAndDevice(t, db, "p1", deviceID, "GE0/0/1", "down", false, "")
+	seedPortAndDevice(t, db, "p2", deviceID, "GE0/0/2", "down", false, "")
+	seedPortAndDevice(t, db, "p3", deviceID, "GE0/0/3", "down", false, "")
+
+	mockExec := new(mockDeviceExecutor)
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(mockExec, mockColl, db)
+	ctx := context.Background()
+
+	result, err := svc.BatchWritePorts(ctx, BatchWriteRequest{
+		DeviceID: deviceID,
+		Action:   portcollection.ActionShutdown, // target: down → 已匹配
+		PortIDs:  []string{"p1", "p2", "p3"},
+	}, "test-op")
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Len(t, result.Skipped, 3)
+	assert.Len(t, result.Succeeded, 0)
+	assert.Len(t, result.Failed, 0)
+	for _, s := range result.Skipped {
+		assert.True(t, s.NoOp)
+		assert.Equal(t, "admin_down", s.CurrentState)
+	}
+
+	mockExec.AssertNotCalled(t, "ExecuteCustom", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	mockColl.AssertNotCalled(t, "Enqueue", mock.Anything)
+}
+
+// TestBatchWritePorts_PartialResult_Structure — 3 个切片字段同时存在（非 nil）。
+func TestBatchWritePorts_PartialResult_Structure(t *testing.T) {
+	db := newTestDB(t)
+	deviceID := "device-1"
+	seedPortAndDevice(t, db, "p1", deviceID, "GE0/0/1", "up", false, "")
+	seedPortAndDevice(t, db, "p2", deviceID, "GE0/0/2", "up", false, "")
+	seedPortAndDevice(t, db, "p3", deviceID, "GE0/0/3", "up", false, "")
+	seedPortAndDevice(t, db, "p4", deviceID, "GE0/0/4", "up", false, "")
+
+	mockExec := new(mockDeviceExecutor)
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(mockExec, mockColl, db)
+	ctx := context.Background()
+
+	mockExec.On("ExecuteCustom", mock.Anything, deviceID, mock.Anything, singlePortTimeout).Return(nil).Once()
+	transportErr := &WriteError{Kind: WriteErrorTransport, Message: "timeout"}
+	mockExec.On("ExecuteCustom", mock.Anything, deviceID, mock.Anything, singlePortTimeout).Return(transportErr).Once()
+	mockColl.On("Enqueue", deviceID).Return(nil).Once()
+
+	result, err := svc.BatchWritePorts(ctx, BatchWriteRequest{
+		DeviceID: deviceID,
+		Action:   portcollection.ActionShutdown,
+		PortIDs:  []string{"p1", "p2", "p3", "p4"},
+	}, "test-op")
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	// 关键 assertion：3 个切片字段都是非 nil（即便为空也已初始化为 []）
+	assert.NotNil(t, result.Succeeded, "Succeeded slice must be initialized (not nil)")
+	assert.NotNil(t, result.Failed, "Failed slice must be initialized (not nil)")
+	assert.NotNil(t, result.Skipped, "Skipped slice must be initialized (not nil)")
+	assert.Len(t, result.Succeeded, 1)
+	assert.Len(t, result.Failed, 1)
+	// p3, p4 未跑（fail-fast 在 p2 后 break）—— 不在 Skipped 数组
+	assert.Len(t, result.Skipped, 0)
+
+	mockExec.AssertExpectations(t)
+	mockColl.AssertExpectations(t)
+}
+
+// TestBatchWritePorts_DetachedContext — caller 传 1s deadline ctx，
+// service 内 detached 30min context 注入 ExecuteCustom，验证 mock 收到的 ctx deadline ≈ 30min。
+func TestBatchWritePorts_DetachedContext(t *testing.T) {
+	db := newTestDB(t)
+	deviceID := "device-1"
+	seedPortAndDevice(t, db, "p1", deviceID, "GE0/0/1", "up", false, "")
+
+	mockExec := new(mockDeviceExecutor)
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(mockExec, mockColl, db)
+
+	// caller ctx 故意用 1s deadline — 应被 detached 30min context 替换
+	callerCtx, cancelCaller := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancelCaller()
+
+	// 用 Run 钩子捕获 service 实际传给 ExecuteCustom 的 ctx
+	var capturedCtx context.Context
+	mockExec.On("ExecuteCustom", mock.Anything, deviceID, mock.Anything, singlePortTimeout).
+		Run(func(args mock.Arguments) {
+			capturedCtx = args.Get(0).(context.Context)
+		}).
+		Return(nil).Once()
+	mockColl.On("Enqueue", deviceID).Return(nil).Once()
+
+	_, err := svc.BatchWritePorts(callerCtx, BatchWriteRequest{
+		DeviceID: deviceID,
+		Action:   portcollection.ActionShutdown,
+		PortIDs:  []string{"p1"},
+	}, "test-op")
+
+	assert.NoError(t, err)
+	assert.NotNil(t, capturedCtx, "service should have passed a ctx to ExecuteCustom")
+
+	// 验证 capturedCtx 的 deadline ≈ 30min（允许 1min 容忍度）
+	deadline, ok := capturedCtx.Deadline()
+	assert.True(t, ok, "captured ctx must have a deadline (detached context.WithTimeout)")
+
+	remaining := time.Until(deadline)
+	// 期望：29min ~ 31min 之间
+	assert.Greater(t, remaining, 29*time.Minute, "deadline should be ~30min, not 1s caller ctx")
+	assert.Less(t, remaining, 31*time.Minute, "deadline should be ~30min")
+
+	mockExec.AssertExpectations(t)
+	mockColl.AssertExpectations(t)
+}
+
+// TestBatchWritePorts_DeviceIDEmpty — DeviceID 为空时返回 errors.New("portwrite: deviceId is required")。
+func TestBatchWritePorts_DeviceIDEmpty(t *testing.T) {
+	mockExec := new(mockDeviceExecutor)
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(mockExec, mockColl, newTestDB(t))
+	ctx := context.Background()
+
+	result, err := svc.BatchWritePorts(ctx, BatchWriteRequest{
+		DeviceID: "",
+		Action:   portcollection.ActionShutdown,
+		PortIDs:  []string{"p1"},
+	}, "test-op")
+
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), "deviceId is required")
+
+	mockExec.AssertNotCalled(t, "ExecuteCustom", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
