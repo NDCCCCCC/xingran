@@ -1,0 +1,19 @@
+<CX-WH-RUITONG-26F-SWL3-HW-S8700>dis device elabel brief
+Equipment SN(ESN): 102599861598
+License ESN: 102599861598
+----------------------------------------------------------------------------------
+SlotID     Sub    Type                     SN                       P/N
+----------------------------------------------------------------------------------
+--         --     BackPlane                102599861598             02116318
+1          --     LSG7G48VX1E0             102599806091             03050DLX
+2          --     LSG7G48VX1E0             102599806086             03050DLX
+3          --     LSG7G48VX1E0             102599806085             03050DLX
+4          --     LSG7G48VX1E0             102599806090             03050DLX
+5          --     LSG7SRUEX1C0             102599806032             03050CTT-001
+6          --     LSG7SRUEX1C0             102599806033             03050CTT-001
+FAN1       --     FAN-240SM-B              5B2599001775             02122824
+FAN2       --     FAN-240SM-B              5B2599001780             02122824
+PWR1       --     PAC3KS54-DF              2102312TCAJVR8000929     02312TCA
+PWR2       --     PAC3KS54-DF              2102312TCAJVR8000642     02312TCA
+PWR3       --     PAC3KS54-DF              2102312TCAJVR8000918     02312TCA
+PWR4       --     PAC3KS54-DF              2102312TCAJVR8000925     02312TCA

@@ -2,6 +2,7 @@ package component_collector
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/templates"
 )
@@ -10,6 +11,9 @@ import (
 // ENTITY-MIB cannot supply on its own (D-09):
 //
 //   - display device esn                — chassis ESN cross-verification
+//   - display device elabel brief       — chassis ESN fallback (V600R024C00+)
+//                                         + per-slot/per-board/per-fan/per-power SN
+//                                         (D-12: replaces deferred ENTITY-MIB board path)
 //   - display interface status          — D-10 up-interface pre-filter
 //   - display interface transceiver     — optical-module SN + DDM
 //
@@ -32,6 +36,7 @@ type HuaweiCliCollector struct {
 // be overridden in tests if necessary.
 type huaweiTemplatePaths struct {
 	esn         string
+	elabelBrief string
 	status      string
 	transceiver string
 }
@@ -41,6 +46,7 @@ type huaweiTemplatePaths struct {
 func DefaultHuaweiTemplatePaths() huaweiTemplatePaths {
 	return huaweiTemplatePaths{
 		esn:         "templates/huawei_vrp_display_device_esn.textfsm",
+		elabelBrief: "templates/huawei_vrp_display_device_elabel_brief.textfsm",
 		status:      "templates/huawei_vrp_display_interface_status.textfsm",
 		transceiver: "templates/huawei_vrp_display_interface_transceiver.textfsm",
 	}
@@ -76,6 +82,92 @@ func (h *HuaweiCliCollector) ParseDisplayDeviceEsn(raw string) ([]Component, err
 		})
 	}
 	return out, nil
+}
+
+// ParseDisplayDeviceElabelBrief parses the output of
+// `display device elabel brief` and returns one Component per row
+// (BackPlane chassis, business card, engine, fan tray, power supply).
+//
+// Phase 49-D-12: this is the consolidated board/fan/power SN source
+// for Huawei VRP. Replaces the deferred D-08 ENTITY-MIB board path
+// for devices that have `display device elabel brief` (most S5700+
+// running V200R003 or later). For legacy devices without this
+// command, ParseDisplayDeviceEsn still covers chassis SN and the
+// pipeline silently skips board collection (same D-14 tolerance as
+// before).
+//
+// Returns:
+//   - chassis row (BackPlane, SLOTID="--") → ComponentTypeChassis, dropped
+//     by the caller to avoid duplicating ParseDisplayDeviceEsn's chassis row
+//   - numeric slot + TYPE matches SRU/MPU/SFU model → ComponentTypeEngine
+//   - numeric slot + other TYPE                 → ComponentTypeCard
+//   - SLOTID prefix FAN                         → ComponentTypeFan
+//   - SLOTID prefix PWR                         → ComponentTypePower
+//   - table header row (SLOTID literal "SlotID") → silently skipped
+//
+// Pitfall: the textual table header line
+//   `SlotID     Sub    Type                     SN                       P/N`
+// matches the data row template (SLOTID="SlotID" TYPE="Type" SN="SN" PN="P/N")
+// because each "value" is a non-space token. The header detection is
+// done here (SLOTID == "SlotID") rather than in the textfsm template
+// to keep the template focused on real data rows.
+func (h *HuaweiCliCollector) ParseDisplayDeviceElabelBrief(raw string) ([]Component, error) {
+	records, err := parseWithTemplate(h.tmplPath.elabelBrief, raw)
+	if err != nil {
+		return nil, fmt.Errorf("huawei elabel brief: %w", err)
+	}
+	out := make([]Component, 0, len(records))
+	for _, r := range records {
+		slotID := strings.TrimSpace(r["SLOTID"])
+		typ := strings.TrimSpace(r["TYPE"])
+		sn := strings.TrimSpace(r["SN"])
+		if slotID == "" || sn == "" {
+			continue
+		}
+		// Skip textual table header (the column-name row).
+		if slotID == "SlotID" || slotID == "Slot" {
+			continue
+		}
+		// Skip BackPlane (chassis) — already handled by ParseDisplayDeviceEsn
+		// (and emitting it here would double-count when both commands run).
+		if slotID == "--" || typ == "BackPlane" {
+			continue
+		}
+		out = append(out, Component{
+			ComponentType: huaweiElabelComponentType(slotID, typ),
+			Slot:          fmt.Sprintf("Slot %s", slotID),
+			SerialNumber:  sn,
+			Model:         typ,
+			Source:        SourceHuaweiCLI,
+		})
+	}
+	return out, nil
+}
+
+// huaweiElabelComponentType maps a (SLOTID, TYPE) pair from
+// `display device elabel brief` to a ComponentType. Heuristics:
+//
+//   - "FAN*" → fan   (fan tray slots)
+//   - "PWR*" → power (PSU slots)
+//   - numeric + TYPE contains SRU/MPU/SFU → engine
+//     (HUAWEI main control / switch fabric units; e.g. S8700 LSG7SRUEX1C0)
+//   - numeric + other TYPE → card (business line card)
+//
+// The TYPE→engine detection is intentionally substring-based: SRU
+// (Switch Route Unit) covers S5700/S6700/S7700/S8700/S9700 chassis;
+// MPU (Main Processing Unit) covers modular chassis like S9300/S9306;
+// SFU (Switch Fabric Unit) covers some chassis' fabric modules.
+func huaweiElabelComponentType(slotID, typ string) string {
+	switch {
+	case strings.HasPrefix(slotID, "FAN"):
+		return ComponentTypeFan
+	case strings.HasPrefix(slotID, "PWR"):
+		return ComponentTypePower
+	case strings.Contains(typ, "SRU"), strings.Contains(typ, "MPU"), strings.Contains(typ, "SFU"):
+		return ComponentTypeEngine
+	default:
+		return ComponentTypeCard
+	}
 }
 
 // ParseInterfaceStatus extracts the list of "up" interface names from

@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -352,8 +353,11 @@ func (s *DeviceInfoCollectionService) getCommandsByVendor(vendor models.DeviceVe
 	switch vendor {
 	case models.VendorHuawei, models.VendorH3C:
 		// Phase 49-01 Gap 3: 加入 "display device esn" 用于 chassis SN 采集。
-		// 该命令在部分 Huawei V600R024C00 机型上已退役 → 解析器返回空切片+nil err(非错误)。
-		return []string{"display version", "display device", "display device esn"}
+		// Phase 49-D-12: 加入 "display device elabel brief" 用于板卡/风扇/电源 SN
+		// 采集(替代 D-08 deferred 的 ENTITY-MIB 板卡路径),同时作为 chassis SN
+		// 的 fallback(老固件 V600R024C00 退役了 display device esn 时,
+		// elabel brief 第一行 "Equipment SN(ESN):" 仍可拿到 chassis ESN)。
+		return []string{"display version", "display device", "display device esn", "display device elabel brief"}
 	case models.VendorRuijie, models.VendorMaipu:
 		// Phase 49-D-11: manuinfo 必须放在 show version 之前(only-if-empty 守卫的语义)。
 		return []string{"show manuinfo", "show version"}
@@ -367,10 +371,12 @@ func (s *DeviceInfoCollectionService) getCommandsByVendor(vendor models.DeviceVe
 // Phase 49-D-11: 锐捷 chassis SN 命令从 "show version" 切到 "show manuinfo"。
 // show version 的 "System serial number" 是活动 M1 主控板的 SN,不是真机箱 SN。
 // show manuinfo Device 1 / Location: Chassis 才是物理机箱 SN 的权威来源。
+// Phase 49-D-12: 华为 chassis SN 备选源加入 "display device elabel brief"
+// (V600R024C00+ 退役 display device esn 时的 fallback)。
 func isChassisSNCommand(vendor models.DeviceVendor, cmd string) bool {
 	switch vendor {
 	case models.VendorHuawei, models.VendorH3C:
-		return cmd == "display device esn"
+		return cmd == "display device esn" || cmd == "display device elabel brief"
 	case models.VendorRuijie, models.VendorMaipu:
 		return cmd == "show manuinfo"
 	default:
@@ -420,6 +426,17 @@ func (s *DeviceInfoCollectionService) enrichChassisSerial(cmd string, vendor mod
 		// 过滤为 "show manuinfo",show version 走 legacy parseDeviceInfo 不经此处。
 		components, err = component_collector.NewRuijieCliCollector().ParseShowManuinfo(raw)
 	case models.VendorHuawei, models.VendorH3C:
+		// Phase 49-D-12: 华为 chassis SN 双源。
+		//   - "display device esn"        → ParseDisplayDeviceEsn (主)
+		//   - "display device elabel brief" → regex 抓 "Equipment SN(ESN):" 行
+		//     (V600R024C00+ 退役了 esn 命令时的 fallback,elabel brief 仍报 ESN)
+		if cmd == "display device elabel brief" {
+			esn := huaweiElabelChassisESN(raw)
+			if esn != "" {
+				info.SerialNumber = esn
+			}
+			return
+		}
 		components, err = component_collector.NewHuaweiCliCollector().ParseDisplayDeviceEsn(raw)
 	default:
 		return
@@ -874,9 +891,13 @@ func (s *DeviceInfoCollectionService) collectComponentInfo(ctx context.Context, 
 //     (M1/1-5/M2) are appended. Note: M1's SN on real hardware may equal
 //     chassis SN (Ruijie main-control-board reuse), but M1's ComponentType
 //     is ComponentTypeEngine — independent of the dropped chassis row.
-//   - Huawei: NO module command (board collection is via ENTITY-MIB SNMP,
-//     deferred per D-08 in this environment). 49-01 already handles huawei
-//     chassis SN writeback to sys_network_device — no duplication here.
+//   - Huawei (Phase 49-D-12): parses `display device elabel brief` via
+//     NewHuaweiCliCollector().ParseDisplayDeviceElabelBrief. Replaces the
+//     D-08 deferred ENTITY-MIB board path for devices that have elabel
+//     brief (V200R003+ S5700/S6700/S7700/S8700/S9700). chassis row
+//     (BackPlane SLOTID="--") is dropped by the parser itself
+//     (ParseDisplayDeviceElabelBrief). card/engine/fan/power rows are
+//     appended.
 //   - Out-of-scope vendor (H3C/Maipu/unknown): no-op.
 //
 // D-14 fault tolerance: command execution errors are logged + swallowed
@@ -888,13 +909,23 @@ func collectBoardsInto(device *models.NetworkDevice, runner commandRunner, set *
 	if device == nil || runner == nil || set == nil {
 		return nil
 	}
-	if device.Vendor != models.VendorRuijie {
-		// Huawei board collection is via ENTITY-MIB SNMP (D-08 deferred);
+	switch device.Vendor {
+	case models.VendorRuijie, models.VendorMaipu:
+		return collectRuijieBoardsInto(device, runner, set)
+	case models.VendorHuawei:
+		// H3C shares the huawei VRP-style CLI on most models but Phase 49-D-12
+		// has not yet verified elabel brief output for H3C. Stay opt-in for
+		// vendor=Huawei only; H3C continues to no-op (same as pre-D-12).
+		return collectHuaweiBoardsInto(device, runner, set)
+	default:
 		// H3C/Maipu/unknown out of scope. No-op, not an error.
 		return nil
 	}
+}
 
-	// Ruijie board path: `show version` → ParseShowVersionModules.
+// collectRuijieBoardsInto runs the Ruijie board path: `show version` →
+// ParseShowVersionModules → drop chassis row → append engine/card.
+func collectRuijieBoardsInto(device *models.NetworkDevice, runner commandRunner, set *component_collector.ComponentSet) error {
 	raw, err := runner("show version")
 	if err != nil {
 		// D-14: don't block the transceiver pipeline on a command failure.
@@ -920,6 +951,61 @@ func collectBoardsInto(device *models.NetworkDevice, runner commandRunner, set *
 		set.Components = append(set.Components, c)
 	}
 	return nil
+}
+
+// collectHuaweiBoardsInto runs the Huawei board path (Phase 49-D-12):
+// `display device elabel brief` → ParseDisplayDeviceElabelBrief →
+// append card/engine/fan/power (chassis row already dropped by parser).
+//
+// The Huawei collector's parser also tolerates the
+// "Error: Unrecognized command" path (V100R005 and earlier / some
+// fixed-form switches) by returning an empty slice — the transceiver
+// pipeline still runs in that case per D-14.
+func collectHuaweiBoardsInto(device *models.NetworkDevice, runner commandRunner, set *component_collector.ComponentSet) error {
+	const elabelCmd = "display device elabel brief"
+	raw, err := runner(elabelCmd)
+	if err != nil {
+		applogger.Infof("板卡命令执行失败 [设备=%s, cmd=%s]: %v", device.DeviceName, elabelCmd, err)
+		return nil
+	}
+	components, err := component_collector.NewHuaweiCliCollector().ParseDisplayDeviceElabelBrief(raw)
+	if err != nil {
+		applogger.Infof("板卡解析失败 [设备=%s, cmd=%s]: %v", device.DeviceName, elabelCmd, err)
+		return nil
+	}
+
+	for _, c := range components {
+		// Belt-and-suspenders: even though ParseDisplayDeviceElabelBrief drops
+		// the BackPlane row, also drop any chassis row that somehow leaked
+		// (matches BLOCKER-2 invariant for the ruijie branch).
+		if c.ComponentType == component_collector.ComponentTypeChassis {
+			continue
+		}
+		set.Components = append(set.Components, c)
+	}
+	return nil
+}
+
+// huaweiElabelChassisESN extracts the chassis ESN from the
+// `display device elabel brief` output via a simple regex on the
+// "Equipment SN(ESN): <esn>" header line. Returns "" if the line
+// is missing (e.g. very old firmware that uses a different header).
+//
+// Used by enrichChassisSerial as a chassis SN fallback when
+// `display device esn` was retired by V600R024C00+ — elabel brief
+// reports the same ESN in its first header line.
+//
+// Phase 49-D-12: keep this regex local (not in textfsm) because the
+// ESN line is a single header row outside the tabular data, and a
+// 1-line regex is clearer than a separate textfsm template.
+func huaweiElabelChassisESN(raw string) string {
+	// Multi-line match (^) on the first "Equipment SN(ESN):" row.
+	re := regexp.MustCompile(`(?m)^Equipment\s+SN\(ESN\):\s*(\S+)`)
+	m := re.FindStringSubmatch(raw)
+	if len(m) < 2 {
+		return ""
+	}
+	return strings.TrimSpace(m[1])
 }
 
 // runDeviceCommand wraps the existing connection pool to issue a single

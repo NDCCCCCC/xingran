@@ -101,6 +101,69 @@ func TestCollectDeviceInfo_HuaweiEsn_UnrecognizedCommand(t *testing.T) {
 	}
 }
 
+// TestCollectDeviceInfo_HuaweiElabelBriefChassisESN 锁死 Phase 49-D-12
+// 的 chassis SN 兜底:当 `display device esn` 被 V600R024C00+ 退役时,
+// `display device elabel brief` 第一行 "Equipment SN(ESN): <esn>" 仍可
+// 拿到 chassis ESN,enrichChassisSerial 必须正确提取。
+//
+// 真机 S8700 输出(templates/samples/huawei_CX-WH-RUITONG-26F-SWL3-HW-S8700
+// _display_device_elabel_brief.txt)首行:Equipment SN(ESN): 102599861598
+func TestCollectDeviceInfo_HuaweiElabelBriefChassisESN(t *testing.T) {
+	raw := loadSampleFixture(t, "huawei_CX-WH-RUITONG-26F-SWL3-HW-S8700_display_device_elabel_brief.txt")
+
+	svc := &DeviceInfoCollectionService{}
+	info := &DeviceInfo{}
+	svc.enrichChassisSerial("display device elabel brief", models.VendorHuawei, raw, info)
+
+	if info.SerialNumber != "102599861598" {
+		t.Fatalf("huawei elabel brief chassis ESN: expected 102599861598, got %q", info.SerialNumber)
+	}
+}
+
+// TestHuaweiElabelChassisESN_RegexVariants 直接打 helper regex 边界:
+// 真实输出 / 缩进变体 / 多余空行 / 缺 ESN 行 / 命令 echo 行。
+func TestHuaweiElabelChassisESN_RegexVariants(t *testing.T) {
+	cases := []struct {
+		name string
+		raw  string
+		want string
+	}{
+		{
+			"real S8700 output (first 2 lines)",
+			"Equipment SN(ESN): 102599861598\nLicense ESN: 102599861598\n",
+			"102599861598",
+		},
+		{
+			"leading hostname prompt line",
+			"<CX-WH-RUITONG-26F-SWL3-HW-S8700>dis device elabel brief\nEquipment SN(ESN): 102599861598\n",
+			"102599861598",
+		},
+		{
+			"multiple blank lines between",
+			"Equipment SN(ESN):    2102311ABCDEF\n\n\nLicense ESN: 2102311ABCDEF\n",
+			"2102311ABCDEF",
+		},
+		{
+			"no ESN line at all (old firmware)",
+			"Some other text\nLicense ESN: 2102311ABCDEF\n",
+			"",
+		},
+		{
+			"empty input",
+			"",
+			"",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := huaweiElabelChassisESN(c.raw)
+			if got != c.want {
+				t.Errorf("huaweiElabelChassisESN(...) = %q, want %q", got, c.want)
+			}
+		})
+	}
+}
+
 // TestCollectDeviceInfo_ChassisSN_DoesNotOverwriteExisting asserts the
 // only-if-empty semantic: when info.SerialNumber is already populated
 // (e.g. by an earlier command in the loop), enrichChassisSerial MUST NOT

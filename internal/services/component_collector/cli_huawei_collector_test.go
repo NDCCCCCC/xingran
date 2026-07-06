@@ -145,3 +145,159 @@ func TestHuaweiTransceiverFiltersDownPorts(t *testing.T) {
 		}
 	}
 }
+
+// TestHuaweiCliParseDisplayDeviceElabelBrief loads the real
+// CX-WH-RUITONG-26F-SWL3-HW-S8700 `display device elabel brief`
+// fixture (Phase 49-D-12) and asserts:
+//   - 12 component rows are parsed (1 BackPlane dropped, 4 cards, 2 engines,
+//     2 fans, 4 power supplies) — chassis row is intentionally NOT returned
+//     (ParseDisplayDeviceEsn already covers it).
+//   - Each row's ComponentType is mapped correctly per (SLOTID, TYPE):
+//     FANn→fan, PWRn→power, numeric+SRU/MPU/SFU→engine, numeric+other→card.
+//   - Model field is populated from the TYPE column (so the frontend
+//     "型号" column can show e.g. "锐捷 M8600E-48GT-ED" — Phase 49 D-07).
+//   - The textual table header row ("SlotID ... Sub ... Type ... SN ... P/N")
+//     is silently skipped (it would otherwise leak as a fake record with
+//     SlotID="SlotID" TYPE="Type" SN="SN" PN="P/N").
+func TestHuaweiCliParseDisplayDeviceElabelBrief(t *testing.T) {
+	c := NewHuaweiCliCollector()
+
+	raw, err := LoadFixture("huawei_CX-WH-RUITONG-26F-SWL3-HW-S8700_display_device_elabel_brief.txt")
+	if err != nil {
+		t.Fatalf("LoadFixture error: %v", err)
+	}
+	comps, err := c.ParseDisplayDeviceElabelBrief(raw)
+	if err != nil {
+		t.Fatalf("ParseDisplayDeviceElabelBrief error: %v", err)
+	}
+
+	// Expected: 4 cards (slots 1-4) + 2 engines (slots 5-6 LSG7SRUEX1C0)
+	//           + 2 fans (FAN1/2) + 4 power (PWR1-4) = 12 rows.
+	// BackPlane row (SLOTID="--") and the table header are dropped.
+	if len(comps) != 12 {
+		names := make([]string, 0, len(comps))
+		for _, c := range comps {
+			names = append(names, c.Slot)
+		}
+		t.Fatalf("expected 12 components (4 cards + 2 engines + 2 fans + 4 power), got %d: %v", len(comps), names)
+	}
+
+	// Index by slot for per-slot assertions.
+	bySlot := make(map[string]Component, len(comps))
+	for _, comp := range comps {
+		bySlot[comp.Slot] = comp
+	}
+
+	// 4 cards (slots 1-4, LSG7G48VX1E0)
+	for _, slot := range []string{"Slot 1", "Slot 2", "Slot 3", "Slot 4"} {
+		c, ok := bySlot[slot]
+		if !ok {
+			t.Errorf("missing card %s", slot)
+			continue
+		}
+		if c.ComponentType != ComponentTypeCard {
+			t.Errorf("%s: expected ComponentType=%s, got %s", slot, ComponentTypeCard, c.ComponentType)
+		}
+		if c.Model != "LSG7G48VX1E0" {
+			t.Errorf("%s: expected Model=LSG7G48VX1E0, got %s", slot, c.Model)
+		}
+	}
+
+	// 2 engines (slots 5-6, LSG7SRUEX1C0 — TYPE contains "SRU" → engine)
+	for _, slot := range []string{"Slot 5", "Slot 6"} {
+		c, ok := bySlot[slot]
+		if !ok {
+			t.Errorf("missing engine %s", slot)
+			continue
+		}
+		if c.ComponentType != ComponentTypeEngine {
+			t.Errorf("%s: expected ComponentType=%s (TYPE contains SRU), got %s", slot, ComponentTypeEngine, c.ComponentType)
+		}
+		if c.Model != "LSG7SRUEX1C0" {
+			t.Errorf("%s: expected Model=LSG7SRUEX1C0, got %s", slot, c.Model)
+		}
+		if c.SerialNumber != "102599806032" && c.SerialNumber != "102599806033" {
+			t.Errorf("%s: unexpected SN %s", slot, c.SerialNumber)
+		}
+	}
+
+	// 2 fans (FAN1-2, FAN-240SM-B)
+	for _, slot := range []string{"Slot FAN1", "Slot FAN2"} {
+		c, ok := bySlot[slot]
+		if !ok {
+			t.Errorf("missing fan %s", slot)
+			continue
+		}
+		if c.ComponentType != ComponentTypeFan {
+			t.Errorf("%s: expected ComponentType=%s, got %s", slot, ComponentTypeFan, c.ComponentType)
+		}
+		if c.Model != "FAN-240SM-B" {
+			t.Errorf("%s: expected Model=FAN-240SM-B, got %s", slot, c.Model)
+		}
+	}
+
+	// 4 power supplies (PWR1-4, PAC3KS54-DF)
+	for _, slot := range []string{"Slot PWR1", "Slot PWR2", "Slot PWR3", "Slot PWR4"} {
+		c, ok := bySlot[slot]
+		if !ok {
+			t.Errorf("missing power %s", slot)
+			continue
+		}
+		if c.ComponentType != ComponentTypePower {
+			t.Errorf("%s: expected ComponentType=%s, got %s", slot, ComponentTypePower, c.ComponentType)
+		}
+		if c.Model != "PAC3KS54-DF" {
+			t.Errorf("%s: expected Model=PAC3KS54-DF, got %s", slot, c.Model)
+		}
+	}
+
+	// Defensive: no BackPlane (chassis) row leaked, no header row leaked.
+	for _, c := range comps {
+		if c.ComponentType == ComponentTypeChassis {
+			t.Errorf("BackPlane/chassis row leaked: slot=%s sn=%s", c.Slot, c.SerialNumber)
+		}
+		if c.Slot == "Slot SlotID" || c.Slot == "Slot --" {
+			t.Errorf("non-data row leaked: slot=%s sn=%s", c.Slot, c.SerialNumber)
+		}
+	}
+
+	// Defensive: Source must be the huawei CLI marker (D-09 invariant).
+	for _, c := range comps {
+		if c.Source != SourceHuaweiCLI {
+			t.Errorf("%s: expected Source=%s, got %s", c.Slot, SourceHuaweiCLI, c.Source)
+		}
+	}
+}
+
+// TestHuaweiElabelComponentType_TypeVariants 锁死 (SLOTID, TYPE) →
+// ComponentType 映射的边界场景(不依赖 fixture,直接打单元表)。
+func TestHuaweiElabelComponentType_TypeVariants(t *testing.T) {
+	cases := []struct {
+		name   string
+		slotID string
+		typ    string
+		want   string
+	}{
+		{"fan FAN1", "FAN1", "FAN-240SM-B", ComponentTypeFan},
+		{"fan FAN2 (case-insensitive prefix)", "FAN12", "FAN-X", ComponentTypeFan},
+		{"power PWR1", "PWR1", "PAC3KS54-DF", ComponentTypePower},
+		{"power PWR4", "PWR4", "PAC3KS54-DF", ComponentTypePower},
+		{"engine SRU (S8700)", "5", "LSG7SRUEX1C0", ComponentTypeEngine},
+		{"engine MPU (S9300/S9306)", "1", "MPU-100", ComponentTypeEngine},
+		{"engine SFU (fabric module)", "3", "SFU-200", ComponentTypeEngine},
+		{"card default numeric", "1", "LSG7G48VX1E0", ComponentTypeCard},
+		{"card default numeric (S5700)", "2", "ES5D21X04S00", ComponentTypeCard},
+		// Pathological: TYPE contains "SRU" but it's not actually a route unit
+		// (model with "SRU" substring). Spec keeps the substring heuristic —
+		// false-positive is preferable to over-fitting to specific model IDs.
+		{"engine via SRU substring (heuristic)", "1", "LSG7SRUECARD", ComponentTypeEngine},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := huaweiElabelComponentType(c.slotID, c.typ)
+			if got != c.want {
+				t.Errorf("huaweiElabelComponentType(%q, %q) = %s, want %s", c.slotID, c.typ, got, c.want)
+			}
+		})
+	}
+}
