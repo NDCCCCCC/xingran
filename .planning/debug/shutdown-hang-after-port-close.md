@@ -1,7 +1,7 @@
 ---
 gsd_state_version: 1.0
 slug: shutdown-hang-after-port-close
-status: awaiting_human_verify
+status: resolved
 created: 2026-07-06
 updated: 2026-07-06
 trigger: 后端关闭流程卡住,关了好半天还在运行 (端口已停但日志还在输出)
@@ -88,6 +88,7 @@ trigger: 后端关闭流程卡住,关了好半天还在运行 (端口已停但�
   - `TestStop_NoopWhenNotRunning` — PASS(立即返回)
   - `TestCollectDeviceInfo_*` (5 个) — 全部 PASS,无回归
 - **awaiting**: 用户本地真实环境验证(启动 + cron 触发 + Ctrl+C 观察 < 15s 干净退出)
+  - ✅ **RESOLVED 2026-07-06 + 池满 follow-up**: 扩展为 24/20 池满调查,定位到 3 处 refCount 泄漏反模式(用户正确指出是 release bug 非容量),合并 fix @ 0b5bfd81 落地
 - **tdd_checkpoint**:
   - test_file: internal/services/device_info_collection_service_test.go
   - test_names: TestStop_TimesOutWhenWorkerHangs, TestStop_NoopWhenNotRunning
