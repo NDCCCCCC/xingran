@@ -1,10 +1,35 @@
 ---
-last_updated: 2026-06-27
-update_trigger: start of milestone v1.17 (asset reconciliation)
-previous_update: 2026-06-26 after v1.16 milestone close (Phase 40/41 + 13 gap closure shipped)
+last_updated: 2026-07-06
+update_trigger: start of milestone v1.19 (network device write operations)
+previous_update: 2026-07-04 after v1.18 milestone close (Phase 48 shipped: 1 phase / 3 plans / 3 waves)
 ---
 
-## Current Milestone: v1.17 资产对账 (Asset Reconciliation)
+## Current Milestone: v1.19 网络设备写命令 (Network Device Write Operations)
+
+**Goal:** 补全网络设备"读+写"闭环——Web 端通过 SSH 直接对目标设备下发端口配置命令（启停/描述/dot1x），成功后立即采集一次端口信息回填审计。
+
+**Target features / 工作池:**
+- SSH 写命令基础设施（基于 Scrapli + 厂商命令模板映射）
+- 多厂商命令模板：Huawei + H3C + 锐捷（Cisco 后续 phase）
+- Web UI：端口列表 + 设备详情 + 批量操作对话框（单 + 批量）
+- 改后采集触发链路（复用 v1.18 DeviceInfoCollectionService）
+- 操作审计（operlog.Record 强制约定 + 操作结果回传前端）
+- 权限控制（perms 命名空间 network:port:write）
+- MVP 范围：端口启停（shutdown/undo shutdown）、端口描述（description）、dot1x 启停
+- 批量执行：串行失败即停（避免大批量配置错误）
+
+**锁定决策 (v1.19 init):**
+- 策略：device_id 直连（复用现有凭据库），不引入 device_ip 临时建连
+- 命令模板：硬编码 vendor→template map（落地为先，后续 phase 抽象为数据库）
+- 厂商支持：Huawei / H3C / 锐捷（MVP），Cisco 后续
+- 改后采集：复用 DeviceInfoCollectionService.enqueue（v1.18 资产）
+- 操作回滚：MVP 仅"失败即停 + 回传失败点"，暂不实现自动回滚配置
+
+**与 v1.18 关系：** v1.18（已 ship）补"读"——板卡/chassis/elabel/接口状态采集；v1.19 补"写"——端口配置下发。两者一起构成网络设备"读+写"完整闭环。
+
+**Replaces v1.19 原候选范围：** 真机 site-visit UAT 闭环 / 残余 deferred debug / VDI 22C/22D 推后到 v1.19+ follow-up phase。
+
+## Active: v1.17 资产对账 (Asset Reconciliation) — SHIPPED 2026-07-03
 
 **Goal:** 建立"实物层 vs 声明层"对账引擎，使资产系统数据保持与实际情况相符。
 
