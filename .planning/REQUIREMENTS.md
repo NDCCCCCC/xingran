@@ -18,11 +18,11 @@ created: 2026-07-06
 
 ### SSH — SSH 写命令基础设施
 
-- [ ] **SSH-01**: 系统能通过 `scrapli/scrapligo v1.3.3` 的 `SendConfig` 接口在配置模式下向 Huawei VRP / H3C Comware / Ruijie RGOS 设备下发命令
+- [x] **SSH-01**: 系统能通过 `scrapli/scrapligo v1.3.3` 的 `SendConfig` 接口在配置模式下向 Huawei VRP / H3C Comware / Ruijie RGOS 设备下发命令
 - [ ] **SSH-02**: 系统能解析 `SendConfig` 返回结果中的 `% Error:` / `Unrecognized command` / `Illegal` 标记，区分 `transport_error` 与 `device_rejected`，并把错误信息回传前端
 - [ ] **SSH-03**: 系统能复用 `PooledConnection.GetConnection` + `defer conn.ReleaseRef()` 模式管理 SSH 连接生命周期（per-port Acquire/Release，不 per-batch）
 - [ ] **SSH-04**: 系统能在批处理中使用脱离 HTTP 请求上下文的 30 分钟超时 context（避免 `Core.Close()` 30s 截止陷阱）
-- [ ] **SSH-05**: 系统能维护硬编码 `vendor → action → command_sequence` 映射（落地为先，后续 phase 抽象数据库）
+- [x] **SSH-05**: 系统能维护硬编码 `vendor → action → command_sequence` 映射（落地为先，后续 phase 抽象数据库）
 - [ ] **SSH-06**: 系统能通过 `DeviceCredentialHelper` 解析 device_id → 凭据（默认 fallback 策略沿用 v1.18）
 
 ### PORT — 端口操作（单端口精确）
