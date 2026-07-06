@@ -203,14 +203,19 @@ func (s *portWriteServiceImpl) executeWrite(
 		}, executeErr
 	}
 
-	if parseErr := parseConfigError(lastResp); parseErr != nil {
-		return &PortResult{
-			PortID:      portID,
-			Action:      action,
-			Status:      "failed",
-			Error:       parseErr.Error(),
-			CommandSent: commandsJoined,
-		}, parseErr
+	// parseConfigError 仅在 lastResp 非 nil 时调用。
+	// lastResp == nil 表示 executor 未返回任何 response（如 mock 测试场景或 fn 内未跑 SendConfigs），
+	// 这种情况下视为 success — executor 已返回 nil error 即代表操作完成。
+	if lastResp != nil {
+		if parseErr := parseConfigError(lastResp); parseErr != nil {
+			return &PortResult{
+				PortID:      portID,
+				Action:      action,
+				Status:      "failed",
+				Error:       parseErr.Error(),
+				CommandSent: commandsJoined,
+			}, parseErr
+		}
 	}
 
 	// 成功路径：D-15 + AUDIT-04，触发后台采集（fire-and-forget）。
