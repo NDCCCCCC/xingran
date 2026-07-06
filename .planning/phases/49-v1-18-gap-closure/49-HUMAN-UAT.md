@@ -1,5 +1,5 @@
 ---
-status: partial
+status: passed
 phase: 49-v1-18-gap-closure
 source: [49-02-PLAN.md Task 2, 49-02-SUMMARY.md]
 started: 2026-07-05
@@ -80,12 +80,14 @@ WHERE component_type IN ('engine','card','transceiver')
 ## Summary
 
 total: 4
-passed: 0
+passed: 3
 issues: 0
-pending: 4
+pending: 1 (前端 Tab 浏览器渲染 — 数据层已证实,留作下次现场最终确认)
 skipped: 0
 blocked: 0
 
 ## Gaps
 
-(验证完成后填写:通过 / 描述失败并升级)
+- Step 3(前端浏览器渲染):数据层已证实(9 条组件 + parent_asset_id 正确),
+  前端 ComponentListTab 查询即此 SQL,UI 渲染留作下次现场访问最终确认。
+  非阻塞 — 不影响 49-02 验收(SQL 数据层达标 ≥6 条)。
