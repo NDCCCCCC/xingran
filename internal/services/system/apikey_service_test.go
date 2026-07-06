@@ -120,6 +120,69 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	`).Error
 	require.NoError(t, err)
 
+	// 创建角色表 (sys_role) 及其多对多关联表 — 用于 role_service_apperrors_test.go
+	// role test 同包共享此 setupTestDB,缺这三张表会导致 SELECT sys_role / INSERT sys_role_menu 报 "no such table"。
+	// 列定义对齐 models.Role/RoleMenu/RoleDept 的 GORM tags (size / default / type:uuid / uniqueIndex)。
+	err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS sys_role (
+			id TEXT PRIMARY KEY,
+			created_at DATETIME,
+			updated_at DATETIME,
+			deleted_at DATETIME,
+			created_by TEXT,
+			updated_by TEXT,
+			version INTEGER,
+			role_name TEXT NOT NULL UNIQUE,
+			role_key TEXT NOT NULL UNIQUE,
+			role_sort INTEGER DEFAULT 0,
+			data_scope INTEGER DEFAULT 1,
+			menu_check_strictly BOOLEAN DEFAULT 1,
+			dept_check_strictly BOOLEAN DEFAULT 1,
+			status INTEGER DEFAULT 0,
+			remark TEXT
+		)
+	`).Error
+	require.NoError(t, err)
+
+	err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS sys_role_menu (
+			role_id TEXT NOT NULL,
+			menu_id TEXT NOT NULL,
+			PRIMARY KEY (role_id, menu_id)
+		)
+	`).Error
+	require.NoError(t, err)
+
+	err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS sys_role_dept (
+			role_id TEXT NOT NULL,
+			dept_id TEXT NOT NULL,
+			PRIMARY KEY (role_id, dept_id)
+		)
+	`).Error
+	require.NoError(t, err)
+
+	// 创建用户-角色 / 用户-岗位 多对多关联表 — 角色/用户 service 测试共用此 helper。
+	// 列定义对齐 models.UserRole / UserPost (无 BaseModel, 复合主键)。
+	// 与 pkg/middleware/permission_inherit_test.go:90 风格保持一致。
+	err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS sys_user_role (
+			user_id TEXT NOT NULL,
+			role_id TEXT NOT NULL,
+			PRIMARY KEY (user_id, role_id)
+		)
+	`).Error
+	require.NoError(t, err)
+
+	err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS sys_user_post (
+			user_id TEXT NOT NULL,
+			post_id TEXT NOT NULL,
+			PRIMARY KEY (user_id, post_id)
+		)
+	`).Error
+	require.NoError(t, err)
+
 	return db
 }
 
