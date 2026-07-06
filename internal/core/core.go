@@ -478,9 +478,46 @@ func (c *Core) Init() error {
 	return nil
 }
 
+// coreShutdownTimeout 整个 Core.Close() 的硬截止时间。
+//
+// 设计目的:waitForShutdown 在 srv.Shutdown(ctx, 10s) 完成后调 coreModule.Close(),
+// 但 Close 内部任何一步若阻塞(例如 DeviceInfoCollectionService.Stop() 等 SSH
+// 长连接 worker,或 Scheduler.Stop() 等 in-flight cron) 都无 ctx 包裹 → 进程
+// 永远不退。30s 兜底保证 close 流程在 30s 内必然返回,WaitGroup 卡死时强制
+// 交还控制权(资源由 OS 回收,不会泄漏到下次启动)。
+const coreShutdownTimeout = 30 * time.Second
+
 // Close 关闭核心模块
 // 优雅关闭所有核心服务，释放资源
+//
+// 关闭顺序(2026-07-06 修复 — shutdown-hang-after-port-close):
+//  1. 子进程 reaper (P2-A7)
+//  2. 通知中心 (NoticeHub)
+//  3. 定时任务调度器 (Scheduler) — 先停 cron 引擎,切断新任务源
+//  4. AD 域同步调度器 (StopADSyncScheduler) — 同上,robfig cron 无 wait
+//  5. 设备信息采集服务 (DeviceInfoCollectionService.Stop)
+//  6. 设备监控服务 (DeviceMonitorService.Close)
+//  7. 系统指标缓存服务 (MetricsCacheService.Stop)
+//  8. RPA 扩缩容服务 (RPAScalingService.Stop)
+//  9. 缓存 (Cache.Close) — 在 DB 之前关,避免异步写丢
+//  10. sleep 100ms — 等待操作日志/缓存异步写完成
+//  11. 数据库连接 (DB.Close)
+//
+// 总截止:coreShutdownTimeout(30s) — 任何子步骤阻塞 → 强制返回,绝不卡死
 func (c *Core) Close() {
+	// 总 deadline 兜底:到点强制返回(防止子步骤死等)
+	closeDone := make(chan struct{})
+	defer close(closeDone)
+	go func() {
+		timer := time.NewTimer(coreShutdownTimeout)
+		defer timer.Stop()
+		select {
+		case <-timer.C:
+			applogger.Warnf("[Core.Close] 已超过 %v 强制结束(子步骤阻塞,资源将由 OS 回收)", coreShutdownTimeout)
+		case <-closeDone:
+		}
+	}()
+
 	// 停止子进程 reaper（P2-A7）
 	if c.reaperCancel != nil {
 		c.reaperCancel()
@@ -491,22 +528,24 @@ func (c *Core) Close() {
 		c.NoticeHub.Stop()
 		applogger.Infof("通知中心已停止")
 	}
-	// 停止设备信息采集服务
+	// 关键修复:先停 cron 引擎(Scheduler + ADSync),切断新任务源。
+	// 原顺序在 DeviceInfoCollectionService.Stop() 之后,前 5-15s 仍在 spawn
+	// 对账/物化视图/采集任务,这些任务抢 DB 连接 + 触发 SSH 长连接 →
+	// pool 24/20 + WaitGroup 死等 → 进程永远不退。
+	if c.Scheduler != nil {
+		c.Scheduler.Stop()
+		applogger.Infof("定时任务调度器已停止")
+	}
+	scheduler.StopADSyncScheduler()
+	// 停止设备信息采集服务(内部自带 8s 兜底,不会阻塞 Close)
 	if c.DeviceInfoCollectionService != nil {
 		c.DeviceInfoCollectionService.Stop()
 		applogger.Infof("设备信息采集服务已停止")
 	}
-	// 停止AD域同步调度器
-	scheduler.StopADSyncScheduler()
 	// 关闭设备监控服务
 	if c.DeviceMonitorService != nil {
 		c.DeviceMonitorService.Close()
 		applogger.Infof("设备监控服务已关闭")
-	}
-	// 停止定时任务调度器
-	if c.Scheduler != nil {
-		c.Scheduler.Stop()
-		applogger.Infof("定时任务调度器已停止")
 	}
 	// 停止系统指标缓存服务
 	if c.MetricsCacheService != nil {

@@ -18,6 +18,16 @@ import (
 const (
 	defaultDeviceInfoQueueSize = 1000
 	defaultDeviceInfoWorkers   = 5
+
+	// deviceInfoStopTimeout DeviceInfoCollectionService.Stop() 等待 worker 退出的兜底超时。
+	//
+	// 设计目的(2026-07-06 修复 — shutdown-hang-after-port-close):
+	//  worker.processTask 调 wrapper.SendCommand (SSH) 阻塞,无 per-task timeout;
+	//  若 SSH 设备 hang,worker 永远不退出 → wg.Wait 永不返回 → core.Close 卡死。
+	//  8s 足够健康 worker 完成收尾(dequeue 当前 task + markTaskSuccess/Failed),
+	//  超时则丢弃等待继续返回,不让 Close 流程被 SSH 卡死拖累。
+	//  资源由 SSH 连接池 / DB pool 在 OS 退出时回收。
+	deviceInfoStopTimeout = 8 * time.Second
 )
 
 // DeviceInfoCollectionService 设备信息采集服务
@@ -86,6 +96,10 @@ func (s *DeviceInfoCollectionService) Start(ctx context.Context) error {
 }
 
 // Stop 停止服务
+//
+// 2026-07-06 修复(shutdown-hang-after-port-close):wg.Wait 改为 select + time.After
+// 兜底 8s,防止 SSH 长连接 / DB 查询卡死的 worker 拖累 core.Close 整个流程。
+// 超时仅 log 警告继续返回,资源由 OS 退出时回收。
 func (s *DeviceInfoCollectionService) Stop() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -96,7 +110,19 @@ func (s *DeviceInfoCollectionService) Stop() {
 
 	applogger.Infof("正在停止设备信息采集服务...")
 	close(s.stopChan)
-	s.wg.Wait()
+
+	waitDone := make(chan struct{})
+	go func() {
+		s.wg.Wait()
+		close(waitDone)
+	}()
+
+	select {
+	case <-waitDone:
+		applogger.Infof("设备信息采集 worker 已全部退出")
+	case <-time.After(deviceInfoStopTimeout):
+		applogger.Warnf("设备信息采集 worker 未在 %v 内全部退出,强制返回(资源由 OS 回收)", deviceInfoStopTimeout)
+	}
 	s.isRunning = false
 	applogger.Infof("设备信息采集服务已停止")
 }
@@ -246,6 +272,10 @@ func (s *DeviceInfoCollectionService) processTask(ctx context.Context, deviceID 
 	// 更新设备信息（4个字段）
 	s.updateDeviceInfo(&device, info)
 
+	// Ruijie Gap 2 自动同步: 把 ops_asset.chassis.devicesn 与 sys_network_device.serial_number
+	// 保持 lock-step。仅当 serial_number 实际变更(M1 SN → 真 chassis SN)时触发。
+	s.syncOpsAssetChassisSN(&device, info)
+
 	// Phase 48 Wave 3 D-12/D-14: 组件采集 hook。
 	// 故障不记 operlog: D-13 范围仅限 UPDATE 路径(由 OpsAssetWriter 内部 RecordBackground),
 	// 失败用 applogger.Warnf 信令(应用日志层,非审计层)。
@@ -275,10 +305,11 @@ func (s *DeviceInfoCollectionService) CollectDeviceInfo(ctx context.Context, dev
 		return nil, fmt.Errorf("获取设备连接失败: %w", err)
 	}
 
-	if !conn.Acquire() {
-		return nil, fmt.Errorf("无法获取连接锁")
-	}
-	defer conn.Release()
+	// F-14 Phase 31 修复 (2026-07-06 复查):GetConnection 内部已完成 refCount +1,
+	// 不能再 Acquire() (会双 +1) + Release() (仅 -1) 导致 refCount 永远停在 1,
+	// IsIdle() 永不为 true,清理 goroutine 永远不删该连接 → 24/20 池满。
+	// 正确配对: defer conn.ReleaseRef()
+	defer conn.ReleaseRef()
 
 	wrapper := conn.GetWrapper()
 
@@ -305,6 +336,11 @@ func (s *DeviceInfoCollectionService) CollectDeviceInfo(ctx context.Context, dev
 }
 
 // getCommandsByVendor 根据厂商获取命令列表
+//
+// Phase 49-D-11: 锐捷 chassis SN 改走 "show manuinfo"(Device 1 / Location: Chassis)
+// 作为权威来源 —— "show version" 的 "System serial number" 行实为活动主控板
+// M1 的 SN,不是真机箱 SN。该命令顺序保证 manuinfo 先跑,enrichChassisSerial 的
+// only-if-empty 守卫让真 chassis SN 先填入,后续 show version 跳过,避免 M1 SN 覆盖。
 func (s *DeviceInfoCollectionService) getCommandsByVendor(vendor models.DeviceVendor) []string {
 	switch vendor {
 	case models.VendorHuawei, models.VendorH3C:
@@ -312,7 +348,8 @@ func (s *DeviceInfoCollectionService) getCommandsByVendor(vendor models.DeviceVe
 		// 该命令在部分 Huawei V600R024C00 机型上已退役 → 解析器返回空切片+nil err(非错误)。
 		return []string{"display version", "display device", "display device esn"}
 	case models.VendorRuijie, models.VendorMaipu:
-		return []string{"show version"}
+		// Phase 49-D-11: manuinfo 必须放在 show version 之前(only-if-empty 守卫的语义)。
+		return []string{"show manuinfo", "show version"}
 	default:
 		return []string{"show version"}
 	}
@@ -320,25 +357,35 @@ func (s *DeviceInfoCollectionService) getCommandsByVendor(vendor models.DeviceVe
 
 // isChassisSNCommand 返回 cmd 是否是用于提取 chassis SN 的厂商命令。
 // Phase 49-01 Gap 3: 仅 chassis SN 命令走解析器路径(避免重复解析无关输出)。
+// Phase 49-D-11: 锐捷 chassis SN 命令从 "show version" 切到 "show manuinfo"。
+// show version 的 "System serial number" 是活动 M1 主控板的 SN,不是真机箱 SN。
+// show manuinfo Device 1 / Location: Chassis 才是物理机箱 SN 的权威来源。
 func isChassisSNCommand(vendor models.DeviceVendor, cmd string) bool {
 	switch vendor {
 	case models.VendorHuawei, models.VendorH3C:
 		return cmd == "display device esn"
 	case models.VendorRuijie, models.VendorMaipu:
-		return cmd == "show version"
+		return cmd == "show manuinfo"
 	default:
 		return false
 	}
 }
 
 // enrichChassisSerial 复用 component_collector 已经过单测验证的解析器
-// (ParseShowVersionModules / ParseDisplayDeviceEsn) 从 chassis SN 命令的
-// 原始输出中提取 chassis SN,回填到 info.SerialNumber。
+// (ParseShowManuinfo / ParseShowVersionModules / ParseDisplayDeviceEsn)
+// 从 chassis SN 命令的原始输出中提取 chassis SN,回填到 info.SerialNumber。
 //
 // Phase 49-01 Gap 3: 修复 sys_network_device.serial_number 在 ruijie/huawei
 // 在线设备上 100% 为空的问题。现有 parseRuijieDeviceInfo/parseHuaweiDeviceInfo
 // 字符串关键字解析过于脆弱(无法匹配生产输出格式),本方法叠加(非替换)使用
 // 已验证的解析器作为 chassis SN 的真实来源。
+//
+// Phase 49-D-11: 锐捷 chassis SN 解析源由 ParseShowVersionModules 切到
+// ParseShowManuinfo,因 "show version" 的 "System serial number" 实为活动 M1
+// 主控板的 SN,不是物理机箱 SN。getCommandsByVendor 把 "show manuinfo" 排在
+// "show version" 之前,manuinfo 先跑 → 真 chassis SN 先填 → 后续 show version
+// 触发 only-if-empty 守卫跳过,M1 SN 不再覆盖(若被 manuinfo 错过则从 M1 槽位
+// 推断 — 见下方 fall-through)。
 //
 // 语义:
 //   - 仅当 info.SerialNumber 当前为空时写入(only-if-empty,沿用 updateDeviceInfo 语义)
@@ -361,7 +408,10 @@ func (s *DeviceInfoCollectionService) enrichChassisSerial(cmd string, vendor mod
 	var err error
 	switch vendor {
 	case models.VendorRuijie, models.VendorMaipu:
-		components, err = component_collector.NewRuijieCliCollector().ParseShowVersionModules(raw)
+		// Phase 49-D-11: ruijie chassis SN 权威来源是 show manuinfo(物理机箱 SN),
+		// 而不是 show version(活动 M1 主控板 SN)。此处 cmd 已被 isChassisSNCommand
+		// 过滤为 "show manuinfo",show version 走 legacy parseDeviceInfo 不经此处。
+		components, err = component_collector.NewRuijieCliCollector().ParseShowManuinfo(raw)
 	case models.VendorHuawei, models.VendorH3C:
 		components, err = component_collector.NewHuaweiCliCollector().ParseDisplayDeviceEsn(raw)
 	default:
@@ -384,6 +434,17 @@ func (s *DeviceInfoCollectionService) enrichChassisSerial(cmd string, vendor mod
 }
 
 // updateDeviceInfo 更新设备信息（仅更新空字段，保留现有数据）
+//
+// Ruijie 特殊处理(Gap 2 自动同步前奏):
+//   - Ruijie 的 chassis SN 来源是 `show manuinfo`(设备机框 SN),不是 `show version` 的
+//     System serial number(那是主控板 M1 的 SN)。如果导入 chassis 资产时使用了 M1 SN
+//     作为 devicesn,sys_network_device.serial_number 与 ops_asset.chassis.devicesn 失配,
+//     Gap 2 关联断裂 → 组件 Tab parent_asset_id 全空。
+//   - 因此对 ruijie 设备:除了原 only-if-empty 守卫,允许 serial_number 从 M1 SN 覆写为
+//     真 chassis SN(info.SerialNumber != "" && device.SerialNumber != info.SerialNumber)。
+//     仅 ruijie 走这条路径;huawei 等其他厂商保持原 only-if-empty 行为。
+//   - 实际的两表同步(ops_asset.chassis.devicesn)由 processTask 后续的
+//     syncOpsAssetChassisSN 完成(基于本函数内的 device.SerialNumber 旧值做精确 UPDATE)。
 func (s *DeviceInfoCollectionService) updateDeviceInfo(device *models.NetworkDevice, info *DeviceInfo) {
 	updates := map[string]interface{}{}
 
@@ -392,6 +453,10 @@ func (s *DeviceInfoCollectionService) updateDeviceInfo(device *models.NetworkDev
 		updates["model"] = info.Model
 	}
 	if info.SerialNumber != "" && device.SerialNumber == "" {
+		updates["serial_number"] = info.SerialNumber
+	} else if device.Vendor == models.VendorRuijie && info.SerialNumber != "" && device.SerialNumber != info.SerialNumber {
+		// Ruijie 特殊: 允许覆写(从 M1 SN → 真 chassis SN 的过渡)。
+		// 仅 ruijie;huawei 等厂商仍走 only-if-empty 保持向后兼容。
 		updates["serial_number"] = info.SerialNumber
 	}
 	if info.SoftwareVersion != "" && device.SoftwareVersion == "" {
@@ -407,6 +472,39 @@ func (s *DeviceInfoCollectionService) updateDeviceInfo(device *models.NetworkDev
 		if err := s.db.Model(device).Updates(updates).Error; err != nil {
 			applogger.Infof("更新设备信息失败: %v", err)
 		}
+	}
+}
+
+// syncOpsAssetChassisSN 同步 ops_asset.chassis.devicesn 至 sys_network_device.serial_number。
+//
+// 仅对 ruijie 设备生效,且仅当 serial_number 实际变更时触发(从 M1 SN → 真 chassis SN 过渡)。
+// 必须使用 device.SerialNumber 旧值作为 locator (1:1 唯一);不能用 source_device_id
+// (该列在 chassis 行上未填充,见 debug session ruijie-chassis-sn-manuinfo)。
+// 不修改板卡行(component_type IN ('engine','card','transceiver'))的 devicesn —— 板卡的
+// devicesn 是板卡自己的 SN,不是 chassis SN,Gap 2 关联走 parent_asset_id 而非 devicesn。
+func (s *DeviceInfoCollectionService) syncOpsAssetChassisSN(device *models.NetworkDevice, info *DeviceInfo) {
+	if device == nil || info == nil {
+		return
+	}
+	if device.Vendor != models.VendorRuijie {
+		return
+	}
+	oldSN := device.SerialNumber // updateDeviceInfo 不回写本地变量,此处仍为旧值
+	newSN := info.SerialNumber
+	if oldSN == "" || newSN == "" || oldSN == newSN {
+		return
+	}
+	res := s.db.Model(&models.Asset{}).
+		Where("devicesn = ? AND component_type IS NULL AND deleted_at IS NULL", oldSN).
+		UpdateColumn("devicesn", newSN)
+	if res.Error != nil {
+		applogger.Warnf("同步 ops_asset.chassis.devicesn 失败 [设备=%s, old=%s, new=%s]: %v",
+			device.DeviceName, oldSN, newSN, res.Error)
+		return
+	}
+	if res.RowsAffected > 0 {
+		applogger.Infof("同步 ops_asset.chassis.devicesn [设备=%s, old=%s → new=%s, 受影响行=%d]",
+			device.DeviceName, oldSN, newSN, res.RowsAffected)
 	}
 }
 
@@ -823,10 +921,8 @@ func (s *DeviceInfoCollectionService) runDeviceCommand(ctx context.Context, devi
 	if err != nil {
 		return "", fmt.Errorf("获取设备连接失败: %w", err)
 	}
-	if !conn.Acquire() {
-		return "", fmt.Errorf("无法获取连接锁")
-	}
-	defer conn.Release()
+	// F-14 修复 (2026-07-06 复查):同 CollectDeviceInfo,改 ReleaseRef
+	defer conn.ReleaseRef()
 
 	wrapper := conn.GetWrapper()
 	resp, err := wrapper.SendCommand(cmd, true)

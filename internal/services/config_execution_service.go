@@ -269,15 +269,9 @@ func (s *ConfigExecutionService) executeConfigOnDevice(ctx context.Context, exec
 		return result
 	}
 
-	if !conn.Acquire() {
-		result.Status = models.ExecutionStatusFailed
-		result.ErrorMessage = "无法获取连接锁"
-		detail.Status = models.ExecutionStatusFailed
-		detail.ErrorMessage = result.ErrorMessage
-		s.db.Save(detail)
-		return result
-	}
-	defer conn.Release()
+	// F-14 Phase 31 修复 (2026-07-06 复查):GetConnection 已 refCount +1,
+	// 不能再 Acquire() + Release() 会双 +1 永不清零。改 defer ReleaseRef。
+	defer conn.ReleaseRef()
 
 	wrapper := conn.GetWrapper()
 	response, err := wrapper.SendConfig(config)

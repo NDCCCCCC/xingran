@@ -165,3 +165,59 @@ func TestPooledConnection_GetConnection_InternalRefCount_Pattern(t *testing.T) {
 		t.Fatal("caller ReleaseRef 后应回到 idle 允许 cleanup")
 	}
 }
+
+// TestPooledConnection_AntiPattern_AcquireAfterGetConnection 回归测试 (2026-07-06):
+//
+// 锁定 2026-07-06 pool 泄漏 bug — `连接池已满: 当前=24, 最大=20` 根因。
+//
+// 旧错误模式 (pre-F-14 残留,在 config_execution_service.go / device_info_collection_service.go
+// 的 3 处出现):
+//   conn, _ := pool.GetConnection(ctx, deviceID)  // refCount=1
+//   conn.Acquire()                                // +1 → refCount=2
+//   defer conn.Release()                          // -1 → refCount=1, mu.Unlock
+//   // 失败: refCount 停在 1,IsIdle()=false,cleanup 永不清除 → pool 满
+//
+// 正确模式 (F-14 协议):
+//   conn, _ := pool.GetConnection(ctx, deviceID)  // refCount=1
+//   defer conn.ReleaseRef()                       // -1 → refCount=0
+//
+// 本测试直接对 refCount 字段做算术(绕开 Acquire/Release 的 mu.Lock 副作用,
+// 因为 wrapper=nil 时 Acquire 会早退),断言两种模式的最终 refCount 状态:
+// - 错误模式: 1+1-1=1,IsIdle=false (cleanup 永不清除 — 正是 24/20 bug)
+// - 正确模式: 1-1=0,IsIdle=true  (cleanup 正常清理)
+func TestPooledConnection_AntiPattern_AcquireAfterGetConnection(t *testing.T) {
+	// --- 错误模式: GetConnection(+1) + Acquire(+1) + Release(-1) = 1 ---
+	wrong := &PooledConnection{
+		wrapper:  nil,
+		refCount: 1, // GetConnection 内部 +1
+		lastUsed: time.Now(),
+		deviceID: "dev-wrong",
+		mu:       &sync.Mutex{},
+	}
+	atomic.AddInt32(&wrong.refCount, 1) // 模拟 Acquire 的 +1
+	atomic.AddInt32(&wrong.refCount, -1) // 模拟 Release 的 -1
+	if got := atomic.LoadInt32(&wrong.refCount); got != 1 {
+		t.Fatalf("错误模式算术后 refCount 应停在 1, 实际 %d", got)
+	}
+	if wrong.IsIdle() {
+		t.Fatal("错误模式下 IsIdle() 应为 false,cleanup 永不清理(24/20 池满根因)")
+	}
+	t.Logf("错误模式: refCount=1, IsIdle=false → cleanup 永不删除")
+
+	// --- 正确模式: GetConnection(+1) + ReleaseRef(-1) = 0 ---
+	right := &PooledConnection{
+		wrapper:  nil,
+		refCount: 1, // GetConnection 内部 +1
+		lastUsed: time.Now(),
+		deviceID: "dev-right",
+		mu:       &sync.Mutex{},
+	}
+	atomic.AddInt32(&right.refCount, -1) // 模拟 ReleaseRef 的 -1
+	if got := atomic.LoadInt32(&right.refCount); got != 0 {
+		t.Fatalf("正确模式算术后 refCount 应归零, 实际 %d", got)
+	}
+	if !right.IsIdle() {
+		t.Fatal("正确模式下 IsIdle() 应为 true,允许 cleanup 删除")
+	}
+	t.Logf("正确模式: refCount=0, IsIdle=true → cleanup 正常清理")
+}
