@@ -218,7 +218,7 @@ The full history of Phases 1-39 is preserved below. See also:
 
 **Requirements**: TBD (源自 49-CONTEXT.md 的 3 个连锁缺口 + 端到端验证目标,无正式 REQ-ID)
 **Depends on:** Phase 48
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 **Wave 1**
@@ -227,7 +227,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 49-02-PLAN.md — Gap 1+2 collectComponentInfo 接入板卡+chassis 解析器,合并 ComponentSet 喂 Pipeline.Run + E2E 验证
+- [x] 49-02-PLAN.md — Gap 1+2 collectComponentInfo 接入板卡+chassis 解析器,合并 ComponentSet 喂 Pipeline.Run + E2E 验证
 
 ---
 
