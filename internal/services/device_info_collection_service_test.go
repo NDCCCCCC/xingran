@@ -166,23 +166,38 @@ func TestParseRuijieDeviceInfo_DoesNotCaptureShowManuinfoNumberColon(t *testing.
 	}
 }
 
-// TestParseRuijieDeviceInfo_KeepsShowVersionChassisSN 验证 legacy
-// 收紧后仍能从 show version 的 "System serial number" 行兜底抓出 chassis SN
-// (用于无法跑 manuinfo 的老固件,典型 case-insensitive 输入)。
-func TestParseRuijieDeviceInfo_KeepsShowVersionChassisSN(t *testing.T) {
+// TestParseRuijieDeviceInfo_LegacyDoesNotWriteSerialNumber 锁死
+// Phase 49-D-11 第二次修复:legacy 完全不再写 info.SerialNumber ——
+// 之前第一轮修复让 legacy 用 HasPrefix("system serial") 抓 show version
+// 的 "System serial number" 行,看似兜底,实际抓到的是 M1 engine SN
+// (show version "System serial number" = 活动 M1 主控板 SN,不是物理
+// 机箱 SN),而 chassis SN 走 show manuinfo Device 1 / Location: Chassis,
+// 顺序 [show manuinfo, show version] 下 legacy 把 manuinfo 真值覆盖成
+// M1 SN,enrichChassisSerial 的 only-if-empty 守卫又无法修复。
+//
+// 第二次修复:legacy 删掉所有 SN 抓取,info.SerialNumber 100% 由
+// enrichChassisSerial 走 textfsm 填充。本测试断言 legacy 在 show
+// version 的 chassis / slot SN 行上 MUST NOT 写 info.SerialNumber。
+func TestParseRuijieDeviceInfo_LegacyDoesNotWriteSerialNumber(t *testing.T) {
 	svc := &DeviceInfoCollectionService{}
 
-	// show version 实际格式(case-insensitive)
-	cases := []struct{ line, want string }{
-		{"System serial number    : G1M9140000175", "G1M9140000175"},
-		{"system serial number    : G1M9140000175", "G1M9140000175"},
+	cases := []struct{ name, line string }{
+		{"show version System serial number (chassis-level, but actually M1 SN)",
+			"System serial number    : G1M9140000175"},
+		{"show version System serial number lowercase",
+			"system serial number    : G1M9140000175"},
+		{"show version Slot Serial number (per-slot SN)",
+			"    Serial number       : G1MA11N00053A"},
+		{"show manuinfo Device Serial Number",
+			"    Device Serial Number:        G1M913U000351"},
 	}
 	for _, c := range cases {
 		info := &DeviceInfo{}
 		svc.parseDeviceInfo(c.line, models.VendorRuijie, info)
-		if info.SerialNumber != c.want {
-			t.Errorf("legacy parser should capture show version chassis SN from %q: got %q, want %q",
-				c.line, info.SerialNumber, c.want)
+		if info.SerialNumber != "" {
+			t.Errorf("legacy parser MUST NOT write SerialNumber (chassis SN owned by enrichChassisSerial/textfsm); "+
+				"%s: line=%q got %q, want empty",
+				c.name, c.line, info.SerialNumber)
 		}
 	}
 }

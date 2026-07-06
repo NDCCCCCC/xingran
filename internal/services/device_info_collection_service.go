@@ -668,32 +668,23 @@ func (s *DeviceInfoCollectionService) parseRuijieDeviceInfo(line string, info *D
 
 	// 解析序列号
 	//
-	// Phase 49-D-11 修复:show version 的 "System serial number" 行才是 chassis 级
-	// SN 的来源。"Device Serial Number"(show manuinfo per-slot / per-chassis)和
-	// "Slot N ... Serial number"(show version per-slot)必须从 legacy 路径跳过,
-	// 否则 strings.Fields 把 "Device Serial Number:   G1M913U000351" 切出
-	// ["Device","Serial","Number:","G1M913U000351"],legacy 命中第一个 "Serial"
-	// 后把 fields[i+1]="Number:" 当成 SN(因为 != ":" 检查无法识别 "Number:" 里嵌
-	// 的冒号),真 chassis SN 被 corrupt → enrichChassisSerial 的 only-if-empty
-	// 守卫阻止修复,DB 落 "Number:"。
+	// Phase 49-D-11 第二次修复:legacy chassis SN 抓取整体废弃,只保留 Model /
+	// SoftwareVersion / Uptime 的解析。原因:show version "System serial number"
+	// 实为活动 M1 主控板的 SN,不是物理机箱 SN(真机箱 SN 只在 show manuinfo
+	// Device 1 / Location: Chassis 行)。Phase 49-D-11 第一次修复只把"Device
+	// Serial Number"行(per-slot/per-chassis of manuinfo)从 legacy 排除,但
+	// "System serial number"行(per-chassis of show version)仍被 legacy 命中
+	// → show manuinfo 已经把真 chassis SN 写进 info.SerialNumber,接着
+	// show version 又被 legacy 抓 M1 SN 覆盖 → enrichChassisSerial 的
+	// only-if-empty 守卫反而成了"manuinfo 被污染后无法修复"的陷阱。
 	//
-	// show manuinfo 的 chassis/per-slot SN 改走 enrichChassisSerial(ParseShowManuinfo),
-	// show version 的 slot SN 改走 ParseShowVersionModules,legacy 只保留
-	// "System serial number" 这一行的 chassis-level 兜底(用于无法跑 manuinfo 的
-	// 老固件,典型 case-insensitive)。
-	if strings.HasPrefix(strings.ToLower(line), "system serial") {
-		fields := strings.Fields(line)
-		for i, f := range fields {
-			if (f == "Number" || f == "number") && i+1 < len(fields) {
-				if fields[i+1] != ":" {
-					info.SerialNumber = fields[i+1]
-				} else if i+2 < len(fields) {
-					info.SerialNumber = fields[i+2]
-				}
-				break
-			}
-		}
-	}
+	// 修法:legacy 完全不再写 info.SerialNumber,chassis SN 100% 走
+	// enrichChassisSerial → textfsm 解析(show manuinfo 的 chassis 行,或
+	// huawei "display device esn" 的 chassis esn 行)。老固件无法跑 manuinfo
+	// 的情况:info.SerialNumber 留空(同 Phase 49-01 Gap 3 修复前的行为,优于
+	// 落"Number:" 之类的脏值)。
+	_ = line // legacy chassis SN 抓取已废弃,见上方 Phase 49-D-11 注释
+	_ = info
 
 	// 解析运行时间
 	if strings.Contains(line, "uptime") || strings.Contains(line, "Uptime") {
