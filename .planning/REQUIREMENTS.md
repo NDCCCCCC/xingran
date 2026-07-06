@@ -113,14 +113,52 @@ created: 2026-07-06
 
 ---
 
-## Traceability (to be filled by roadmap)
+## Traceability
 
 | Requirement | Phase | Plan | Status |
 |-------------|-------|------|--------|
-| (pending — roadmap will populate) | | | |
+| SSH-01 | 50 | 50-01 (template+SendConfig contract) | Pending |
+| SSH-02 | 51 | 51-01 (parseConfigError) | Pending |
+| SSH-03 | 51 | 51-01 (per-port Acquire/ReleaseRef) | Pending |
+| SSH-04 | 51 | 51-01 (detached 30min context) | Pending |
+| SSH-05 | 50 | 50-01 (vendor→template map) | Pending |
+| SSH-06 | 51 | 51-01 (DeviceCredentialHelper) | Pending |
+| PORT-01 | 52 | 52-01 (shutdown handler + endpoint) | Pending |
+| PORT-02 | 52 | 52-01 (undo shutdown handler + endpoint) | Pending |
+| PORT-03 | 52 | 52-01 (description handler + endpoint) | Pending |
+| PORT-04 | 52 | 52-01 (dot1x enable handler + endpoint) | Pending |
+| PORT-05 | 52 | 52-01 (dot1x disable handler + endpoint) | Pending |
+| PORT-06 | 51 | 51-01 (pre-state check) | Pending |
+| BATCH-01 | 52 | 52-01 (batch handler + endpoint) | Pending |
+| BATCH-02 | 51 | 51-01 (serial fail-fast) | Pending |
+| BATCH-03 | 51 | 51-01 (partial result struct) | Pending |
+| BATCH-04 | 51 | 51-01 (maxBatchSize=50) | Pending |
+| BATCH-05 | 53 | 53-01/02 (BulkWriteDrawer progress bar) | Pending |
+| AUDIT-01 | 52 | 52-01 (operlog.Record on success) | Pending |
+| AUDIT-02 | 52 | 52-01 (operlog fields) | Pending |
+| AUDIT-03 | 52 | 52-02 (sys_port_write_audit table) | Pending |
+| AUDIT-04 | 51 | 51-01 (collectionSvc.Enqueue) | Pending |
+| UI-01 | 53 | 53-01 (port list/detail action menu) | Pending |
+| UI-02 | 53 | 53-01 (5 single-port modals) | Pending |
+| UI-03 | 53 | 53-02 (BulkWriteDrawer) | Pending |
+| UI-04 | 53 | 53-01/02 (Toast + audit log link) | Pending |
+| UI-05 | 53 | 53-02 (disable refresh during batch) | Pending |
+| UI-06 | 53 | 53-01 (networkApi.ts 6 wrapped POSTs) | Pending |
+| PERM-01 | 52 | 52-01 (NetworkPortWrite constant) | Pending |
+| PERM-02 | 52 | 52-01 (RequirePermissions middleware) | Pending |
+| PERM-03 | 52 | 52-02 (menu seed + GrantNewMenuToRolesHavingParent) | Pending |
+| INFRA-01 | 52 | 52-02 (migration_2XX_port_write_audit) | Pending |
+| INFRA-02 | 52 | 52-01 (route /network/ports/write) | Pending |
+| INFRA-03 | 52 | 52-02 (cache_keys PortWriteResult / PortWriteBatch) | Pending |
+| CONV-01 | 52 | 52-01 (shutdown→OperTypeStatus) | Pending |
+| CONV-02 | 52 | 52-01 (description→OperTypeUpdate) | Pending |
+| CONV-03 | 52 | 52-01 (dot1x→OperTypeStatus) | Pending |
+| CONV-04 | 52 | 52-01 (batch→OperTypeBatch) | Pending |
+
+**Total: 36 MVP requirements across 8 categories mapped 100% to Phase 50-54.** (Note: prompt mentioned "28 MVP" but REQUIREMENTS.md enumerates 36 — all 36 covered.)
 
 ---
 
 *Requirements locked: 2026-07-06*
-*Status: planning — awaiting roadmap*
-*Total: 28 MVP requirements across 7 categories (SSH=6, PORT=6, BATCH=5, AUDIT=4, UI=6, PERM=3, INFRA=3, CONV=4) + 10 future requirements + 12 out-of-scope items*
+*Status: planning — roadmap drafted (Phases 50-54); awaiting /gsd:plan-phase 50*
+*Total: 36 MVP requirements across 8 categories (SSH=6, PORT=6, BATCH=5, AUDIT=4, UI=6, PERM=3, INFRA=3, CONV=4) + 10 future requirements + 12 out-of-scope items*

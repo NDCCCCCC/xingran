@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.19
 milestone_name: 网络设备写命令 (Network Device Write Operations)
 status: planning
-last_updated: "2026-07-06T09:08:36.175Z"
+last_updated: "2026-07-06T09:30:00.000Z"
 last_activity: 2026-07-06
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
-  total_plans: 0
+  total_plans: 5
   completed_plans: 0
   percent: 0
 ---
@@ -17,24 +17,15 @@ progress:
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: 🚢 Phase 46/47/48 dropdown governance shipped — branch `worktree-feat-dropdown-governance` pushed, MR pending
-**Last activity**: 2026-06-29 - Phase 46-48 Dropdown 反模式全量治理:
-
-  - 4 atomic commits on branch `worktree-feat-dropdown-governance`
-  - 7 个后端 dropdown-options 端点 (building/floor/workstation/infoPoint/serverRoom/dedicatedLine/roomDevice)
-  - 27 个前端文件重构 (pageSize 1000→50, searchOptions + onSearch debounce)
-  - 100+ 文件 ESLint 规则升级 (245 violations → 0)
-  - 计划文件: C:\Users\CPIC\.claude\plans\happy-waddling-wand.md (107 行)
-
-**See**: `.planning/milestones/20260616-state-sync-report.md` for the
-        reconciliation report that motivated this state update.
+**Status**: v1.19 ROADMAP drafted — Phases 50-54 planned in 5-wave build order (W1 templates → W2 service → W3 HTTP+audit+perm → W4 frontend → W5 e2e+UAT+docs)
+**Last activity**: 2026-07-06 — v1.19 ROADMAP drafted
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 50 (planning)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-06 — Milestone v1.19 started
+Status: Roadmap drafted, awaiting /gsd:plan-phase 50
+Last activity: 2026-07-06 — v1.19 milestone started, ROADMAP/STATE/REQUIREMENTS written
 
 ## Project Reference
 
@@ -44,15 +35,17 @@ Last activity: 2026-07-06 — Milestone v1.19 started
 - Excel 驱动的批量管理(导入/导出含 dept-name → UUID 自动解析)
 - 单一可信 IT 资产系统
 
-**v1.16 目标**: 把 v1.15 累积的 22 个 deferred debug 会话 + 6 个 audit 数据质量问题集中处理,让系统回到"无遗留债务"状态,audit-open 中 debug_sessions < 5
+**v1.19 目标**: 补全网络设备"读+写"闭环——Web 端通过 SSH 直接对目标设备下发端口配置命令（启停/描述/dot1x），成功后立即采集一次端口信息回填审计。MVP 范围：3 厂商 × 5 操作 + 批量 + 完整审计 + 权限隔离。
 
-## Phase Status (v1.16)
+## Phase Status (v1.19)
 
 | Phase | Name | Status | Progress |
 |-------|------|--------|----------|
-| 40 | Tech-Debt Cleanup | ✅ Complete | 3/3 plans |
-| 41 | Debug Session Gap Closure | ✅ Complete | 4/4 plans |
-| 13 | Query Layer Trajectory (Gap Closure) | ✅ Complete | 4/4 gap plans (10/10 incl. baseline) |
+| 50 | W1: Vendor Templates + Unit Tests | 📋 Planned | 0/1 plans |
+| 51 | W2: PortWriteService + Batch + Mock Tests | 📋 Planned | 0/1-2 plans |
+| 52 | W3: Router/Handler/Operlog/Permission/Migration | 📋 Planned | 0/2 plans |
+| 53 | W4: Frontend Drawer + Progress Dialog + API Wrappers | 📋 Planned | 0/1-2 plans |
+| 54 | W5: E2E + Real-Device UAT + Documentation | 📋 Planned | 0/1 plan |
 
 ## Completed Milestones
 
@@ -72,7 +65,9 @@ Last activity: 2026-07-06 — Milestone v1.19 started
 - ✅ **v1.14 全局列自定义** (2026-06-09) — 1 phase (27), 1 plan
 - ✅ **v1.15 工位设备关联** (2026-06-10) — 1 phase (28), 4 plans
 - ✅ **Phase 39 工位部门物理位置映射** (2026-06-25) — 1 phase (39), 8 plans
-- ✅ **v1.16 技术债清理 (Tech-Debt Cleanup)** (2026-06-26) — 2 phases (40 + 41), 8 plans (39 commits, audit-open 29→0, verify_phase40.sh [ALL PASS])
+- ✅ **v1.16 技术债清理 (Tech-Debt Cleanup)** (2026-06-26) — 2 phases (40 + 41), 8 plans
+- ✅ **v1.17 资产对账 (Asset Reconciliation)** (2026-07-03) — 5 phases (42-46), 14 plans + Phase 47 root-cause fix (2 plans)
+- ✅ **v1.18 网络设备硬件清单 (Device Component Serials)** (2026-07-04) — Phase 48, 3 plans + Phase 49 gap closure (2 plans)
 
 ## Session History
 
@@ -83,79 +78,81 @@ Last activity: 2026-07-06 — Milestone v1.19 started
 | 2026-06-22 | Phase 37 完成 (前端部门选择组件统一收敛) - 6/6 plans | 37 |
 | 2026-06-23 | Phase 38 Plan 01 完成 (Wave 1 前置 DI 脚手架) - 8 服务 struct 注入 AccountPool | 38 |
 | 2026-06-25 | Milestone v1.16 started — ROADMAP drafted (Phase 40: tech-debt-cleanup) | 40 |
-| 2026-06-26 | Phase 41 Plan 03 complete — 10 Cohort B backend/auth sessions closed (1 fix(41) + 9 docs(41), 2 skip_audit) | 41 |
-| 2026-06-26 | Phase 41 Plan 02 complete — 6 Cohort B frontend sessions closed (2 fix(41) + 4 docs(41), 4 skip_audit); 1 HELD for browser verify | 41 |
-| 2026-06-26 | Phase 41 Plan 04 Task 2 complete — STATE/ROADMAP/REQUIREMENTS updated, v1.16 milestone closed (audit-open debug_sessions=0, verify_phase40.sh [ALL PASS], validator 100%); user approved + 暂不 push | 41 |
-| 2026-06-26 | Phase 13 gap closure complete — 4 plans (13-07/08/09/10) shipped, 5/5 code gaps fixed (CR-01/CR-02/CR-03/W4-vendor/W5-echarts), VERIFICATION.md status:passed score:18/18, 8 atomic commits | 13 |
+| 2026-06-26 | Phase 41 Plan 03 complete — 10 Cohort B backend/auth sessions closed | 41 |
+| 2026-06-26 | Phase 41 Plan 02 complete — 6 Cohort B frontend sessions closed | 41 |
+| 2026-06-26 | Phase 41 Plan 04 Task 2 complete — v1.16 milestone closed | 41 |
+| 2026-07-03 | v1.17 SHIPPED — Phases 42-46 + Phase 47 root-cause fix | 42-47 |
+| 2026-07-04 | v1.18 SHIPPED — Phase 48 (3/3 plans) | 48 |
+| 2026-07-05 | Phase 49 v1.18 gap closure complete (2/2 plans) | 49 |
+| 2026-07-06 | v1.19 ROADMAP drafted — Phases 50-54 planned | 50 |
 
 ## Quick Tasks Completed (recent)
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
-| 260623-batch-sync | 用户导入后 AD 批量同步（BatchSyncUsersToAD）：复用单 LDAP 连接 + errgroup 信号量 | 2026-06-23 | - | [260623-batch-sync-optimize](./quick/20260623-batch-sync-optimize/) |
-| 260622-lv9 | 系统用户 Excel 导入功能 + 性别默认值改保密 + 导入后触发 AD 域同步 | 2026-06-22 | 5d872a5,cc2a77d,7d40b32,4758d36 | [260622-lv9-xlsx-email](./quick/260622-lv9-xlsx-email/) |
-| 260622-u8n | 从 sys_dept.leader 批量同步用户 AD manager 属性 | 2026-06-22 | - | [260622-u8n-ad-manager-leader-ad](./quick/260622-u8n-ad-manager-leader-ad/) |
-| 260626-dai | 工位 Excel 导出补充所属部门/人员名称 + 设备序列号/名称/型号（新增 WorkstationQueryBuilder，镜像 List JOIN） | 2026-06-26 | 212f73fb | [260626-dai-workstation-export-fields](./quick/260626-dai-workstation-export-fields/) |
-| 260626-lbd | 工位管理主表添加"主设备序列号"列（后端子查询严格 is_primary=true + 前端列，设主设备才显示） | 2026-06-26 | - | [260626-workstation-primary-device-serial](./quick/260626-workstation-primary-device-serial/) |
-| 260630-sort | 信息点查询等 16 个前端列表页补齐服务端排序(useServerSort + useTableManager.sorterMetas),含 1 处 params-drop bug 修复 + 5 处后端 ApplySort 白名单补全 | 2026-06-30 | 0cd7ddb0..bb8f4dc9 (18 commits) | [260630-server-sort-promote-16-pages](./quick/20260630-server-sort-promote-16-pages/) |
-| 260630-mac-tree | mac 地址页接口列排序 + 左侧 DeptSidebar + 部门联动(后端 deptId JOIN 一处过滤,弃用前端 deviceIds 中间层;含 migration_181 验证修复) | 2026-06-30 | 2f2894d2 | [20260630-mac-page-dept-tree](./quick/20260630-mac-page-dept-tree/) |
-| 260630-startup-flow | 启动流程分类文档化: docs/启动流程清单.md(7 阶段 × 3 分类:🔴每次必跑/🟢一次性/🟡混合幂等),含核心.Init() 19+ 步骤 + AutoMigrate/InitData 全表 + 风险清单 + setup/start 拆分建议 | 2026-06-30 | - | [20260630-startup-flow-classify](./quick/20260630-startup-flow-classify/) |
-| 260630-skip-setup | 启动流程优化 - 加 SERVER_SKIP_SETUP 开关: config.ServerConfig.SkipSetup + SERVER_SKIP_SETUP 环境变量 + core.Init() 条件化跳过 InitData/默认角色菜单 + cmd/main.go 条件化跳过 MAC retention/OUI seed;docs/启动流程清单.md §6 同步 | 2026-06-30 | (待提交) | [20260630-skip-setup-impl](./quick/20260630-skip-setup-impl/) |
-| 260701-iface-sort | 端口采集接口名称列数值排序(速率前缀 + 板卡/子卡/接口号;PG regexp_matches int 数组,dialect-aware 降级 sqlite);修正 GE0/10<GE0/2 字典序;query.go interfaceNameSortExpr + GetList 特殊分支,4 新测试全绿 | 2026-07-01 | (待提交) | [260701-iface-sort](./quick/260701-iface-sort/) |
-| 260702-148 | 对账看板"例外规则管理"链接跳仪表盘(三轮: ①d033e510 href 改错(component当路由) ②607da270 migration_195 补种菜单(菜单确未seed) ③a63e1fdf href 改回真实路由 /assets/exception-rules;真根因双重: 菜单未seed + component≠route path;DB实查确认) | 2026-07-02 | d033e510,607da270,a63e1fdf | [260702-148-fix-dashboard-exception-rules-link](./quick/260702-148-fix-dashboard-exception-rules-link/) |
-| 260703-dkc | 重写资产列表 columns 数组 — 4 假列全删(错 key/title/dataIndex/render: deptName key 占 deviceTypeName 字符串当 status 数字 Tag 渲染、mac1 key 占 nbfStatus 渲染日期、remark key 占 machineUptime)+ 15 visible 列补齐(deviceModelName/deptName/machineIp/mac1/assetLocation/buildingName/floorName/signOrgnoName/nowUserName/nowUserDeptCode/status/nbfStatus/drawingDate/machineUptime/lastInventoryDate)+ defaultAssetColumns order=10 删(后端无 recipientName;真领取人是 deviceUserName);type-check 0 / lint 8 pre-existing unchanged | 2026-07-03 | 97b49ea7 | [260703-dkc-ruoyi-react-frontend-src-pages-operation](./quick/260703-dkc-ruoyi-react-frontend-src-pages-operation/) |
-| 260703-eaj | 实施 B 方案(前后端 schema 单一真理源): columnsSchema.ts 新建 + index.tsx 改 import + sync-columns-schema.mjs(bracket-match + new Function 解析)+ package.json 加 sync-columns-schema + prebuild 钩子 + 后端 //go:embed asset_columns_schema.json 替换 43 列硬编码 → 3 原子提交(43ecb291/1f2e4d21/69ef4161),type-check 0 / sync 51 列 / go build 0 / go test 1 pre-existing;user/role/dept 同模式待推广 | 2026-07-03 | 43ecb291,1f2e4d21,69ef4161 | [260703-eaj-b-schema-embed-ruoyi-react-frontend-src-](./quick/260703-eaj-b-schema-embed-ruoyi-react-frontend-src-/) |
-| 260704-ne5 | database.go AutoMigrate() 精简:删除 200+ 启动期 idempotent noop migration 调用 + dropDependentMaterializedViews() + migrateCredentialModel();保留 GORM AutoMigrate(model) + cleanupOldConstraints();新增 scripts/db/snapshot.sh 一键导出 schema/seed snapshot(白名单 key 循环加载 .env 避免密码特殊字符);新部署从"跑 200+ migration"改为"两次 psql -f 导入";启动期 ~30s→~2s,日志噪音 250 行→3 行 | 2026-07-04 | 0e3430ab,361a1ecd | [260704-ne5-database-go-migration-schema-seed-snapsh](./quick/260704-ne5-database-go-migration-schema-seed-snapsh/) |
+| 260630-sort | 信息点查询等 16 个前端列表页补齐服务端排序 | 2026-06-30 | 0cd7ddb0..bb8f4dc9 (18 commits) | [260630-server-sort-promote-16-pages](./quick/20260630-server-sort-promote-16-pages/) |
+| 260630-mac-tree | mac 地址页接口列排序 + 左侧 DeptSidebar + 部门联动 | 2026-06-30 | 2f2894d2 | [20260630-mac-page-dept-tree](./quick/20260630-mac-page-dept-tree/) |
+| 260630-startup-flow | 启动流程分类文档化 | 2026-06-30 | - | [20260630-startup-flow-classify](./quick/20260630-startup-flow-classify/) |
+| 260701-iface-sort | 端口采集接口名称列数值排序 | 2026-07-01 | (待提交) | [260701-iface-sort](./quick/202701-iface-sort/) |
+| 260702-148 | 对账看板"例外规则管理"链接跳仪表盘 | 2026-07-02 | d033e510,607da270,a63e1fdf | [260702-148-fix-dashboard-exception-rules-link](./quick/260702-148-fix-dashboard-exception-rules-link/) |
+| 260703-dkc | 重写资产列表 columns 数组 | 2026-07-03 | 97b49ea7 | [260703-dkc-ruoyi-react-frontend-src-pages-operation](./quick/260703-dkc-ruoyi-react-frontend-src-pages-operation/) |
+| 260703-eaj | 实施 B 方案(前后端 schema 单一真理源) | 2026-07-03 | 43ecb291,1f2e4d21,69ef4161 | [260703-eaj-b-schema-embed-ruoyi-react-frontend-src-](./quick/260703-eaj-b-schema-embed-ruoyi-react-frontend-src-/) |
+| 260704-ne5 | database.go AutoMigrate() 精简 | 2026-07-04 | 0e3430ab,361a1ecd | [260704-ne5-database-go-migration-schema-seed-snapsh](./quick/260704-ne5-database-go-migration-schema-seed-snapsh/) |
 
 ## Accumulated Context
 
-### v1.16 Tech-Debt Cleanup 范围
+### v1.19 Network Device Write Operations — Critical Decisions
 
-**22 个 deferred debug 会话** (frontmatter `deferred_to: v1.16-tech-debt`):
+**Locked (v1.19 init):**
+- Strategy: device_id 直连 (leverage existing credential vault), no device_ip temp-connection
+- Command templates: hardcoded vendor→template map (ship first, abstract to DB later)
+- Vendor scope: Huawei / H3C / 锐捷 (MVP); Cisco deferred
+- Post-write collection: reuse `DeviceInfoCollectionService.Enqueue` (v1.18)
+- OperType mapping: status changes = `OperTypeStatus`, description = `OperTypeUpdate`, batch = `OperTypeBatch`
+- Permissions: new `network:port:write` separate from existing `network:port:query`
+- Audit: new `sys_port_write_audit` table (unmasked detail) alongside operlog (high-level summary)
+- Batch: serial fail-fast, max 50 ports, detached 30min context (avoid Core.Close 30s trap)
+- Real-device UAT: deferred per v1.18 Phase 48 precedent; mock SSH e2e in W5
 
-- 16 个 `root_cause_found`(AD 域控 6 + VDI 2 + infopoint/captcha/permission/api-key 等 8)
-- 5 个 `awaiting_human_verify`(workstation-device-build-errors、workstation-expand-device-load-empty、reset-theme-hardcoded-colors、user-filter-lost-after-edit、vite-hmr-token-blank-page)
-- 1 个 `root-cause-found`(apikey-route-path-duplication,连字符变体状态值)
+### Critical Pitfalls → Mitigation Map
 
-**6 个 audit 数据质量问题**:
+| # | Pitfall | Mitigation | Phase |
+|---|---------|------------|-------|
+| 1 | SSH transport success ≠ device acceptance | `parseConfigError` distinguishes transport_error vs device_rejected | 51 |
+| 2 | No before/after state snapshot | `sys_port_write_audit` table with full detail | 52 |
+| 3 | Vendor command syntax subtlety breaks silently | Hardcoded Go map + per-vendor unit tests | 50 |
+| 4 | Operlog over-masking hides audit value | `sys_port_write_audit.CommandSent` unmasked source of truth | 52 |
+| 5 | Batch execution exceeds 30s Core.Close deadline | Detached context `context.WithTimeout(context.Background(), 30*time.Minute)` | 51 |
+| 6 | Connection pool exhaustion | Per-port `Acquire/ReleaseRef` (NOT per-batch), `defer conn.ReleaseRef()` | 51 |
+| 7 | No batch size cap | Hard cap `maxBatchSize = 50`, soft warning at 20 | 51 |
 
-- `login-400-bad-request` / `ops-asset-constraint-uni-ops-asset-devicesn-not-exist` — 缺标准 YAML frontmatter
-- `knowledge-base` — 非 debug 会话,需移出 audit 范围
-- `info-point-type-null-import` / `sys-mac-filter-rules-relation-does-not-exist` — 实际已 resolved,frontmatter 需统一
+### 5-Phase Build Order Rationale
 
-**验收指标**:
-
-- `gsd-sdk query audit-open` → `debug_sessions < 5`(从当前 57 大幅下降)
-- `.planning/debug/*.md` → 100% 标准 YAML frontmatter
+- W1 first: zero-dep template contract, catches vendor syntax early with table-driven tests
+- W2 before W3: service signature is what HTTP binds to; mocks cheapest
+- W3 before W4: API contract must be stable for frontend
+- W5 last: real-device UAT only meaningful after W1-W4 land
 
 ### Roadmap Evolution
 
-- ✅ v1.0–v1.15 完成 (Phases 1-39, 137 plans + 8 gap-closure)
-- 🚧 v1.16 规划中: Tech-Debt Cleanup (Phase 40, 5 TECH requirements)
-- 🔧 Phase 49 added: v1.18 组件采集 gap closure —— 修 Phase 48 plan 48-02/48-03 标 [x] 但实际未接入运行时的 3 个连锁缺口(板卡采集 dead code + chassis SN 全空 + 资产关联断裂)
+- ✅ v1.0–v1.18 complete (Phases 1-49, 142 plans)
+- 🚧 v1.19 planning: Phases 50-54 drafted (5 phases, 5-7 plans, vendor→template → service → HTTP+audit → UI → e2e)
 
 ### Known Risks & Mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| 22 个 debug 会话修复可能引入回归 | Medium | 按 root_cause_found / awaiting_human_verify 分批,每批独立 commit,逐步验证 |
-| 5 个 awaiting_human_verify 需在 dev 环境复现 | Low | dev 环境启动后逐个 case 复现,验证修复有效 |
-| `knowledge-base` 改名可能影响其他工具 | Low | 优先选择 `skip_audit: true` 注释,避免破坏引用 |
+| Mock SSH e2e cannot fully cover real device firmware quirks | Medium | W5 site-visit UAT deferred but recorded; vendor template unit tests in W1 catch syntax drift |
+| `Enqueue` triggered collection races with user-initiated batch refresh | Low | Phase 53 disables refresh button during batch (UI-05) |
+| `sys_port_write_audit` schema migration conflicts with existing migration sequence | Low | Use `migration_2XX` (after 201 from v1.18) + introspection verification |
 
 ## Next Steps
 
-**v1.18 网络设备硬件清单 (Device Component Serials) — milestone_complete (2026-07-04)**
+**v1.19 Next Action**: `/gsd:plan-phase 50` (W1 vendor templates)
 
-- 1 phase (Phase 48) / 3 plans / 3 waves (schema → collectors → pipeline+operlog+frontend)
-- 44 files / 4,712 insertions / 19 commits / 0 critical regressions
-- 14/14 D-id 覆盖 + 3 项 site-visit UAT 推迟到下次现场 (S8700/RS8607E 真机)
+**v1.18 闭环 (2026-07-04)** — Phase 48, 3/3 plans, 0 critical regressions, 14/14 D-id 覆盖 + 3 site-visit UAT 推迟
 
-**下一 milestone 规划** —— v1.19 候选范围:
-
-- 真机 site-visit UAT (S8700 + RS8607E) 闭环
-- VDI 22C / 22D(依赖 v1.11 生产稳定性观察)
-- 残余 deferred debug session 清理
-- 新功能(mobile app / AI features) — 待业务决策
+**v1.19 范围确认** — 5 阶段(50-54) / 5-7 计划 / 5 周顺序(W1 模板 → W2 服务 → W3 HTTP+审计+权限+迁移 → W4 前端 → W5 e2e+真机 UAT 推迟 + 文档)
 
 ## Deferred Items
 
@@ -171,67 +168,39 @@ Items acknowledged and deferred at milestone v1.18 close on 2026-07-04:
 
 详见 `.planning/phases/48-device-component-serials-planned/48-HUMAN-UAT.md`。
 
-### Phase 48 实施期发现的 pre-existing 测试失败 (11 个,non-regression)
+### v1.19 自身 deferred items (W5 记录)
 
-| Test | File | Category |
-|------|------|----------|
-| TestValidator_ValidateFloor/存在的楼层 | internal/services/operations/validation_helper_test.go:73 | pre-existing (sqlite fixture) |
-| TestValidator_ValidateWall/存在的墙体 | validation_helper_test.go:124 | pre-existing |
-| TestValidator_ValidateDoor/存在的门 | validation_helper_test.go:173 | pre-existing |
-| TestReferenceResolver_ResolveSingle | reference_resolver_test.go:144 | pre-existing |
-| TestBatchUpsert_Update / Mixed / CamelCaseFields | batch_upserter_test.go | pre-existing (sqlite fixture) |
-| TestExtractPagination / ClampPageSize / ClampPageSizeMath / PageSizeConstants | pagination_helper_test.go | pre-existing |
-| TestReferenceResolver_ResolveBatch | reference_resolver_test.go | pre-existing (sqlite) |
-| TestRoleService_Create_RoleNameExists | system/role_service_apperrors_test.go:27 | pre-existing (fixture/seed) |
+| Item | Category | Deferred to | Owner |
+|------|----------|-------------|-------|
+| 真机 SSH 写命令验证 (Huawei S5700/S5735 + H3C + Ruijie RS8607E 各 shutdown + description + dot1x) | device_needed | 50-HUMAN-UAT.md site visit | 现场运维 |
+| 跨固件版本命令差异 (Huawei V200R005 vs V600R024C00) | device_needed | follow-up | 现场运维 |
+| Real-device SSH 往返延迟测量 (batching + per-port timeout calibration) | device_needed | follow-up | 现场运维 |
 
-✅ 在 commit `b8fd2f45` (Phase 48 改动前) baseline 跑过这些测试,确认 fail 状态 pre-exist;Phase 48 未引入回归。详见 `.planning/phases/48-device-component-serials-planned/deferred-items.md`。
+(详细 28 v1.19 项 MVP 需求已锁在 `.planning/REQUIREMENTS.md`,目前 28 项全部映射到 Phase 50-54,见 traceability 表。)
 
-### Historical audit-open items (与 v1.18 无关)
+### Historical audit-open items (与 v1.19 独立)
 
-- `audit-open` 输出 18 debug_sessions + 60 quick_tasks 等历史债务项,均为 v1.17 之前的累积,与 v1.18 增量代码无关。
+- `audit-open` 输出 18 debug_sessions + 60 quick_tasks 等历史债务项,均为 v1.17 之前的累积,与 v1.18 / v1.19 增量代码无关。
 - 计划在 v1.19+ 推进清理 (Phase 41 已闭环 29 个,但仍残留 18 个新出现的 investigating 项目,以及 quick_tasks 区域扩大)。
-
-## Phase 48 真机 UAT deferred 声明
-
-**声明时间**: 2026-07-04
-**Phase**: 48 (网络设备硬件清单 / Device Component Serials)
-**Milestone**: v1.18
-
-按 `.planning/phases/48-device-component-serials-planned/48-RESEARCH.md` §Environment Availability 的显式声明,本执行环境无可用于真机验证的华为 S8700 / 锐捷 RS8607E 设备。**Phase 48 真机 UAT 推迟到下次现场访问**,推迟范围:
-
-- 真机 SNMP ENTITY-MIB (S8700 / RS8607E) 采集路径
-- 真机 CLI 解析 (`display device esn` / `show version modules` / `display interface transceiver` / `show interface transceiver` / DDM)
-- D-10 真机两步流水线 (status → transceiver) 在 Huawei S8700 `10GE5/0/4` 实际 up 接口下走通
-
-**已通过的 UAT 自动化部分** (本环境执行, 2026-07-04):
-
-- psql schema introspection (远程 PG `10.62.10.34/ruoyi`): `ops_asset` 4 新列全部 OK, `sys_data_reconciliation.recon_category` OK, 索引 `uniq_recon_asset_type_cat_open` PRESENT + 旧 `uniq_recon_asset_type_open` MISSING (替换正确), 字典 `asset_reconciliation_recon_category` rows=2 seed OK
-- `go build ./...` clean (post-merge of 48-01+48-02+48-03)
-- `cd ruoyi-react-frontend && npm run build` exit 0 (1m 40s, vendor-react 775 kB gzip 基线与 Phase 48 前一致)
-- `tsc --noEmit` clean
-- collector-package 21 tests, 5 D-10 pipeline tests, 3 handler tests, operlog regression 不回归
-
-**手动 UAT** (dev server 启动 + 浏览器渲染层): deferred 到 dev environment。
-**owner**: 现场访问时由运维同事携带 S8700 / RS8607E 接入,跑 `collectComponentInfo` cron + 前端 `ComponentListTab` 实测。
 
 ## Performance Metrics
 
 | Phase Plan | Duration | Tasks | Files |
 |------------|----------|-------|-------|
 | Phase 43-r2 P01 | ~12 min | 2 tasks | 6 files |
-| Phase 43-r2 P01 | 720 | 2 tasks | 6 files |
 | Phase 43 P03 | 9 | 2 tasks | 7 files |
 | Phase 44 P01 | 50 | 8 tasks | 20 files |
 | Phase 44 P02 | 25 | 4 tasks | 14 files |
 
 ## Session Continuity
 
-Last session: 2026-07-03T07:57:33.163Z
-Stopped at: Phase 46 context gathered
-Resume file: .planning/phases/46-r5/46-CONTEXT.md
+Last session: 2026-07-06T09:30:00.000Z
+Stopped at: v1.19 ROADMAP drafted (Phases 50-54)
+Resume file: .planning/phases/50-port-write-network-ports-planned/50-PLAN.md (TBD after /gsd:plan-phase 50)
 
-**Milestone status:** v1.16 技术债清理 — milestone_complete (2026-06-26), 2 phases (40+41), 8 plans, 39 phase-41 commits + 3 phase-40 plans. **Phase 13 retroactive gap closure** — 4/4 plans (13-07/08/09/10), 8 atomic commits on main, 5/5 code gaps fixed. v1.17 规划待启动。
+**Milestone status:** v1.18 网络设备硬件清单 — milestone_complete (2026-07-04), Phase 48 + Phase 49 gap closure. **v1.19 ROADMAP drafted 2026-07-06** — 5 phases (50-54) in 5-wave build order.
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Run `/gsd:plan-phase 50` to begin W1 vendor templates execution
+- Or `/gsd:discuss-phase 50` if W1 contract needs refinement
