@@ -276,6 +276,13 @@ func (s *DeviceInfoCollectionService) processTask(ctx context.Context, deviceID 
 	// 保持 lock-step。仅当 serial_number 实际变更(M1 SN → 真 chassis SN)时触发。
 	s.syncOpsAssetChassisSN(&device, info)
 
+	// 同步 device.SerialNumber 本地变量到 DB 新值,确保后续 collectComponentInfo 用
+	// 正确的 chassis SN 查找 parent_asset_id(否则会用陈旧的 M1 SN 找 chassis,找不到 →
+	// parent_asset_id 为空 → 板卡变孤儿 → 组件 Tab 空)。
+	if info.SerialNumber != "" && device.SerialNumber != info.SerialNumber {
+		device.SerialNumber = info.SerialNumber
+	}
+
 	// Phase 48 Wave 3 D-12/D-14: 组件采集 hook。
 	// 故障不记 operlog: D-13 范围仅限 UPDATE 路径(由 OpsAssetWriter 内部 RecordBackground),
 	// 失败用 applogger.Warnf 信令(应用日志层,非审计层)。
@@ -660,10 +667,24 @@ func (s *DeviceInfoCollectionService) parseRuijieDeviceInfo(line string, info *D
 	}
 
 	// 解析序列号
-	if strings.Contains(line, "System Serial") || strings.Contains(line, "Serial Number") {
+	//
+	// Phase 49-D-11 修复:show version 的 "System serial number" 行才是 chassis 级
+	// SN 的来源。"Device Serial Number"(show manuinfo per-slot / per-chassis)和
+	// "Slot N ... Serial number"(show version per-slot)必须从 legacy 路径跳过,
+	// 否则 strings.Fields 把 "Device Serial Number:   G1M913U000351" 切出
+	// ["Device","Serial","Number:","G1M913U000351"],legacy 命中第一个 "Serial"
+	// 后把 fields[i+1]="Number:" 当成 SN(因为 != ":" 检查无法识别 "Number:" 里嵌
+	// 的冒号),真 chassis SN 被 corrupt → enrichChassisSerial 的 only-if-empty
+	// 守卫阻止修复,DB 落 "Number:"。
+	//
+	// show manuinfo 的 chassis/per-slot SN 改走 enrichChassisSerial(ParseShowManuinfo),
+	// show version 的 slot SN 改走 ParseShowVersionModules,legacy 只保留
+	// "System serial number" 这一行的 chassis-level 兜底(用于无法跑 manuinfo 的
+	// 老固件,典型 case-insensitive)。
+	if strings.HasPrefix(strings.ToLower(line), "system serial") {
 		fields := strings.Fields(line)
 		for i, f := range fields {
-			if (f == "Number" || f == "Serial") && i+1 < len(fields) {
+			if (f == "Number" || f == "number") && i+1 < len(fields) {
 				if fields[i+1] != ":" {
 					info.SerialNumber = fields[i+1]
 				} else if i+2 < len(fields) {

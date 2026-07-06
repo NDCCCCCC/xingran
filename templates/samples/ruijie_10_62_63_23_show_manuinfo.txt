@@ -1,0 +1,49 @@
+Device 1
+  Location: Chassis
+  Device name: System
+  Device Serial Number: G1M913U000351
+  Hardware Version: 1.03
+  Software Version: S8600E_RGOS 11.0(4)B8P3
+  Mac Address: 00D0.F822.3344
+Device 2
+  Location: Slot-1
+  Device name: M8600E-24GT20SFP4XS-ED
+  Device Serial Number: G1P7293000128
+  Hardware Version: 1.60
+  Software Version: S8600E_RGOS 11.0(4)B8P3
+  Mac Address: 00D0.F822.3345
+Device 3
+  Location: Slot-2
+  Device name: M8600E-48GT-P-ED
+  Device Serial Number: G1N20U4000019
+  Hardware Version: 1.60
+  Software Version: S8600E_RGOS 11.0(4)B8P3
+  Mac Address: 00D0.F822.3346
+Device 4
+  Location: Slot-3
+  Device name: M8600E-48GT-P-ED
+  Device Serial Number: G1NRBA0000017
+  Hardware Version: 1.30
+  Software Version: S8600E_RGOS 11.0(4)B8P3
+  Mac Address: 00D0.F822.3347
+Device 5
+  Location: Slot-4
+  Device name: M8600E-48GT-P-ED
+  Device Serial Number: G1MV41U000045
+  Hardware Version: 1.00
+  Software Version: S8600E_RGOS 11.0(4)B8P3
+  Mac Address: 00D0.F822.3348
+Device 6
+  Location: Slot-5
+  Device name: M8600E-48GT-P-ED
+  Device Serial Number: G1MV41U000046
+  Hardware Version: 1.00
+  Software Version: S8600E_RGOS 11.0(4)B8P3
+  Mac Address: 00D0.F822.3349
+Device 7
+  Location: Slot-M1
+  Device name: M8600E-CM
+  Device Serial Number: G1M9140000175
+  Hardware Version: 1.03
+  Software Version: S8600E_RGOS 11.0(4)B8P3
+  Mac Address: 00D0.F822.334A

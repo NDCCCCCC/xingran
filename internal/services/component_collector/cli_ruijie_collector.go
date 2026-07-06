@@ -8,7 +8,11 @@ import (
 // RuijieCliCollector parses the three Ruijie RGOS CLI outputs that
 // ENTITY-MIB cannot supply on its own (D-09):
 //
-//   - show version              — chassis SN + 7 module slot SNs (one-shot)
+//   - show version              — per-slot module SNs (Slot M1/M2/1..N)
+//   - show manuinfo             — physical chassis SN + per-slot SNs
+//                                 (D-11: show version "System serial number"
+//                                 is the active M1 engine's SN, NOT the
+//                                 chassis SN — see ParseShowManuinfo doc)
 //   - show interfaces status    — D-10 up-interface pre-filter
 //   - show interface transceiver — optical-module Vendor SN + DDM
 //
@@ -24,9 +28,10 @@ type RuijieCliCollector struct {
 	tmplPath ruijieTemplatePaths
 }
 
-// ruijieTemplatePaths groups the three Ruijie template paths.
+// ruijieTemplatePaths groups the Ruijie template paths.
 type ruijieTemplatePaths struct {
 	version     string
+	manuinfo    string
 	status      string
 	transceiver string
 }
@@ -35,6 +40,7 @@ type ruijieTemplatePaths struct {
 func DefaultRuijieTemplatePaths() ruijieTemplatePaths {
 	return ruijieTemplatePaths{
 		version:     "templates/ruijie_os_show_version_modules.textfsm",
+		manuinfo:    "templates/ruijie_os_show_manuinfo.textfsm",
 		status:      "templates/ruijie_os_show_interfaces_status.textfsm",
 		transceiver: "templates/ruijie_os_show_interfaces_transceiver_ddm.textfsm",
 	}
@@ -46,8 +52,17 @@ func NewRuijieCliCollector() *RuijieCliCollector {
 }
 
 // ParseShowVersionModules parses `show version` output, returning one
-// chassis Component plus one Component per populated module slot. Slot
-// "M1"/"M2" → ComponentTypeEngine; numeric slots → ComponentTypeCard.
+// Component per populated module slot (engine or card). It DOES NOT
+// emit the chassis row — see ParseShowManuinfo for that.
+//
+// Phase 49-D-11 history: this method previously also emitted a
+// ComponentTypeChassis row sourced from the "System serial number"
+// line. That field is actually the active M1 routing-engine SN, not
+// the physical chassis SN (verified on RS8607E-03 10.62.63.23: System
+// serial = G1M9140000175 == Slot M1 SN, while the real chassis SN
+// G1M913U000351 lives only in `show manuinfo` Device 1 / Chassis).
+// The chassis row was removed from this output to prevent downstream
+// code from continuing to write the M1 SN into sys_network_device.serial_number.
 func (r *RuijieCliCollector) ParseShowVersionModules(raw string) ([]Component, error) {
 	records, err := parseWithTemplate(r.tmplPath.version, raw)
 	if err != nil {
@@ -55,15 +70,11 @@ func (r *RuijieCliCollector) ParseShowVersionModules(raw string) ([]Component, e
 	}
 	out := make([]Component, 0, len(records))
 	for _, rec := range records {
-		// Chassis row — emitted by the first Start rule capturing
-		// System serial number.
+		// Phase 49-D-11: ignore the chassis row emitted by the
+		// version template — "System serial number" is the M1
+		// engine SN, not the chassis SN. Use ParseShowManuinfo
+		// for the chassis row.
 		if chassisSN := rec["CHASSIS_SN"]; chassisSN != "" && rec["SLOT"] == "" {
-			out = append(out, Component{
-				ComponentType: ComponentTypeChassis,
-				Slot:          "chassis",
-				SerialNumber:  chassisSN,
-				Source:        SourceRuijieCLI,
-			})
 			continue
 		}
 		sn := rec["SN"]
@@ -79,6 +90,64 @@ func (r *RuijieCliCollector) ParseShowVersionModules(raw string) ([]Component, e
 			Model:         moduleType,
 			Source:        SourceRuijieCLI,
 		})
+	}
+	return out, nil
+}
+
+// ParseShowManuinfo parses `show manuinfo` output, returning one
+// chassis Component (Location="Chassis") plus one Component per
+// populated module slot (Location="Slot-N" / "Slot-M1" / "Slot-M2").
+//
+// Phase 49-D-11: this is the authoritative source for the PHYSICAL
+// chassis serial number on Ruijie RGOS. `show version` is misleading
+// — its "System serial number" line reports the active M1 routing
+// engine's SN, which equals Slot M1's SN. The physical chassis SN
+// only appears here as Device 1 / Location: Chassis / Device Serial
+// Number.
+//
+// Slot mapping (D-11):
+//   - "Slot-M1" / "Slot-M2" → ComponentTypeEngine
+//   - "Slot-N" (numeric N)  → ComponentTypeCard
+//   - "Chassis"             → ComponentTypeChassis (one per device)
+func (r *RuijieCliCollector) ParseShowManuinfo(raw string) ([]Component, error) {
+	records, err := parseWithTemplate(r.tmplPath.manuinfo, raw)
+	if err != nil {
+		return nil, fmt.Errorf("ruijie manuinfo: %w", err)
+	}
+	out := make([]Component, 0, len(records))
+	for _, rec := range records {
+		location := strings.TrimSpace(rec["LOCATION"])
+		sn := strings.TrimSpace(rec["SN"])
+		if location == "" || sn == "" {
+			continue
+		}
+		switch {
+		case location == "Chassis":
+			out = append(out, Component{
+				ComponentType: ComponentTypeChassis,
+				Slot:          "chassis",
+				SerialNumber:  sn,
+				Source:        SourceRuijieCLI,
+			})
+		case strings.HasPrefix(location, "Slot-"):
+			// Strip the "Slot-" prefix to recover the bare slot
+			// identifier ("M1", "M2", "1", "2", ...) used by
+			// slotToComponentType.
+			bareSlot := strings.TrimPrefix(location, "Slot-")
+			out = append(out, Component{
+				ComponentType: slotToComponentType(bareSlot),
+				Slot:          fmt.Sprintf("Slot %s", bareSlot),
+				SerialNumber:  sn,
+				Model:         strings.TrimSpace(rec["DEVICE_NAME"]),
+				Source:        SourceRuijieCLI,
+			})
+		default:
+			// Unknown location tag — ignore rather than fabricate
+			// a ComponentType. Audit log via returned error so the
+			// caller can surface it; per D-14 we keep collecting
+			// the rest of the records.
+			continue
+		}
 	}
 	return out, nil
 }

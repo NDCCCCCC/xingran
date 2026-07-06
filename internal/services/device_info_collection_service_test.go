@@ -139,6 +139,68 @@ func TestCollectDeviceInfo_LegacyParseStillRuns(t *testing.T) {
 	}
 }
 
+// TestParseRuijieDeviceInfo_DoesNotCaptureShowManuinfoNumberColon 锁死
+// Phase 49-D-11 bug: legacy parseRuijieDeviceInfo 之前用
+// `strings.Contains(line, "Serial Number")` 太宽,show manuinfo 的
+// "Device Serial Number:        G1M913U000351" 行被命中后,strings.Fields
+// 切出 ["Device","Serial","Number:","G1M913U000351"],legacy 抓到第一个
+// "Serial" 后取 fields[i+1]="Number:" 当 SN(因为 != ":" 检查无法识别
+// "Number:" 里嵌的冒号),随后 enrichChassisSerial 的 only-if-empty 守卫
+// 阻止修复 → DB 落 "Number:"。
+//
+// 修复:legacy 只匹配 "system serial" 前缀(show version chassis-level 兜底),
+// "Device Serial Number"(show manuinfo)和 "Slot N ... Serial number"
+// (show version per-slot)都从 legacy 跳过 — 这两类行的 SN 由 textfsm 解析器
+// (enrichChassisSerial → ParseShowManuinfo / ParseShowVersionModules)负责。
+func TestParseRuijieDeviceInfo_DoesNotCaptureShowManuinfoNumberColon(t *testing.T) {
+	svc := &DeviceInfoCollectionService{}
+
+	// 喂 show manuinfo 的 Device Serial Number 行(真生产 RS8607E-03 Device 1)
+	info := &DeviceInfo{}
+	svc.parseDeviceInfo("    Device Serial Number:        G1M913U000351", models.VendorRuijie, info)
+	if info.SerialNumber != "" {
+		t.Fatalf("legacy parser corrupt show manuinfo SN: got %q (must be empty, textfsm path owns it)", info.SerialNumber)
+	}
+	if info.SerialNumber == "Number:" {
+		t.Fatalf("D-11 regression: legacy parser captured literal %q from show manuinfo Device Serial Number row", info.SerialNumber)
+	}
+}
+
+// TestParseRuijieDeviceInfo_KeepsShowVersionChassisSN 验证 legacy
+// 收紧后仍能从 show version 的 "System serial number" 行兜底抓出 chassis SN
+// (用于无法跑 manuinfo 的老固件,典型 case-insensitive 输入)。
+func TestParseRuijieDeviceInfo_KeepsShowVersionChassisSN(t *testing.T) {
+	svc := &DeviceInfoCollectionService{}
+
+	// show version 实际格式(case-insensitive)
+	cases := []struct{ line, want string }{
+		{"System serial number    : G1M9140000175", "G1M9140000175"},
+		{"system serial number    : G1M9140000175", "G1M9140000175"},
+	}
+	for _, c := range cases {
+		info := &DeviceInfo{}
+		svc.parseDeviceInfo(c.line, models.VendorRuijie, info)
+		if info.SerialNumber != c.want {
+			t.Errorf("legacy parser should capture show version chassis SN from %q: got %q, want %q",
+				c.line, info.SerialNumber, c.want)
+		}
+	}
+}
+
+// TestParseRuijieDeviceInfo_SkipsShowVersionSlotSN 锁死 legacy 不再污染
+// show version 的 per-slot "Serial number" 行(否则会把 slot SN 错装到
+// info.SerialNumber,enrichChassisSerial 又会跳过 textfsm 真值)。
+func TestParseRuijieDeviceInfo_SkipsShowVersionSlotSN(t *testing.T) {
+	svc := &DeviceInfoCollectionService{}
+
+	// show version Slot M1 的 Serial number 行 — 是板卡 SN,不是 chassis
+	info := &DeviceInfo{}
+	svc.parseDeviceInfo("    Serial number       : G1MA11N00053A", models.VendorRuijie, info)
+	if info.SerialNumber != "" {
+		t.Fatalf("legacy parser should skip show version per-slot SN row: got %q (must be empty, ParseShowVersionModules owns it)", info.SerialNumber)
+	}
+}
+
 // TestStop_TimesOutWhenWorkerHangs 锁死 shutdown-hang-after-port-close 修复。
 //
 // 模拟 worker 内部死循环(Simulate 持有 wg 不 Done),验证 Stop() 在

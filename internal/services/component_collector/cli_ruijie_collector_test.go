@@ -8,9 +8,15 @@ import (
 )
 
 // TestRuijieCliParseShowVersionModules loads the real Ruijie RS8607E
-// show_version fixture and asserts the chassis + 7 module slots are
-// extracted with correct SNs. The fixture has Slot M1 (engine), Slot 1
-// through Slot 5 (cards), and Slot M2 (engine).
+// show_version fixture and asserts the 7 module slots are extracted
+// with correct SNs. The fixture has Slot M1 (engine), Slot 1 through
+// Slot 5 (cards), and Slot M2 (engine).
+//
+// Phase 49-D-11: the chassis row is intentionally NOT asserted here.
+// `show version`'s "System serial number" line is the active M1
+// routing-engine SN, NOT the physical chassis SN — see
+// ParseShowManuinfo and TestRuijieCliParseShowManuinfo for the
+// chassis SN path.
 func TestRuijieCliParseShowVersionModules(t *testing.T) {
 	c := NewRuijieCliCollector()
 	raw, err := LoadFixture("ruijie_10_62_63_21_show_version.txt")
@@ -21,22 +27,23 @@ func TestRuijieCliParseShowVersionModules(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseShowVersionModules error: %v", err)
 	}
-	if len(comps) < 7 {
-		t.Fatalf("expected at least 7 components (1 chassis + M1/M2/1-5 modules), got %d", len(comps))
+	if len(comps) != 7 {
+		t.Fatalf("expected exactly 7 components (M1/M2 + 5 numeric slots), got %d", len(comps))
+	}
+
+	// D-11 guard: parseShowVersionModules must NOT emit a chassis row
+	// — that path is owned by ParseShowManuinfo.
+	for _, comp := range comps {
+		if comp.ComponentType == ComponentTypeChassis {
+			t.Errorf("ParseShowVersionModules must not emit chassis row (D-11); got Slot=%q SN=%q",
+				comp.Slot, comp.SerialNumber)
+		}
 	}
 
 	// Build a slot→SN lookup for assertion.
 	bySlot := map[string]Component{}
-	chassisSN := ""
 	for _, comp := range comps {
-		if comp.ComponentType == ComponentTypeChassis {
-			chassisSN = comp.SerialNumber
-			continue
-		}
 		bySlot[comp.Slot] = comp
-	}
-	if chassisSN != "G1HLC0R000096" {
-		t.Errorf("chassis SN: expected G1HLC0R000096, got %s", chassisSN)
 	}
 	// Real-machine SN assertions (RQ-001 table).
 	wantSlots := map[string]string{
@@ -73,6 +80,115 @@ func TestRuijieCliParseShowVersionModules(t *testing.T) {
 			t.Errorf("slot %s: expected Source=%s, got %s",
 				slot, SourceRuijieCLI, comp.Source)
 		}
+	}
+}
+
+// TestRuijieCliParseShowManuinfo loads the real Ruijie RS8607E-03
+// (10.62.63.23) `show manuinfo` fixture and asserts that:
+//
+//  1. The chassis row carries the PHYSICAL chassis SN G1M913U000351
+//     (NOT the M1 engine SN G1M9140000175 from `show version`).
+//  2. Slot-M1 row carries the M1 engine SN.
+//  3. Five numeric slot rows are emitted as cards.
+//
+// This test is the regression guard for Phase 49-D-11: a previous
+// implementation wrote the M1 SN into sys_network_device.serial_number
+// because it sourced the chassis SN from `show version`'s "System
+// serial number" line, which on Ruijie RGOS is the active M1 engine's
+// SN, not the chassis SN. The chassis SN only lives in `show manuinfo`
+// Device 1 / Location: Chassis.
+func TestRuijieCliParseShowManuinfo(t *testing.T) {
+	c := NewRuijieCliCollector()
+	raw, err := LoadFixture("ruijie_10_62_63_23_show_manuinfo.txt")
+	if err != nil {
+		t.Fatalf("LoadFixture error: %v", err)
+	}
+	comps, err := c.ParseShowManuinfo(raw)
+	if err != nil {
+		t.Fatalf("ParseShowManuinfo error: %v", err)
+	}
+
+	// Expected shape: 1 chassis + 1 engine (Slot M1) + 5 cards = 7 rows.
+	if len(comps) != 7 {
+		t.Fatalf("expected exactly 7 components (1 chassis + 1 engine + 5 cards), got %d", len(comps))
+	}
+
+	// Index by Slot for assertion.
+	bySlot := map[string]Component{}
+	for _, comp := range comps {
+		bySlot[comp.Slot] = comp
+	}
+
+	// 1. Chassis row — the physical chassis SN G1M913U000351.
+	chassis, ok := bySlot["chassis"]
+	if !ok {
+		t.Fatalf("expected chassis row in output, not found")
+	}
+	if chassis.SerialNumber != "G1M913U000351" {
+		t.Errorf("chassis SN: expected G1M913U000351, got %s", chassis.SerialNumber)
+	}
+	if chassis.ComponentType != ComponentTypeChassis {
+		t.Errorf("chassis row: expected ComponentType=%s, got %s",
+			ComponentTypeChassis, chassis.ComponentType)
+	}
+	if chassis.Source != SourceRuijieCLI {
+		t.Errorf("chassis row: expected Source=%s, got %s",
+			SourceRuijieCLI, chassis.Source)
+	}
+
+	// 2. Slot-M1 row — the active engine SN G1M9140000175.
+	// This is what `show version` "System serial number" reports.
+	// Verify the two paths agree on the engine SN while disagreeing
+	// on the chassis SN (the bug we're fixing).
+	m1, ok := bySlot["Slot M1"]
+	if !ok {
+		t.Fatalf("expected Slot M1 in output, not found")
+	}
+	if m1.SerialNumber != "G1M9140000175" {
+		t.Errorf("Slot M1 SN: expected G1M9140000175, got %s", m1.SerialNumber)
+	}
+	if m1.ComponentType != ComponentTypeEngine {
+		t.Errorf("Slot M1: expected ComponentType=%s, got %s",
+			ComponentTypeEngine, m1.ComponentType)
+	}
+	if m1.Source != SourceRuijieCLI {
+		t.Errorf("Slot M1: expected Source=%s, got %s",
+			SourceRuijieCLI, m1.Source)
+	}
+
+	// 3. Five numeric slot rows (cards).
+	wantSlots := map[string]string{
+		"Slot 1": "G1P7293000128",
+		"Slot 2": "G1N20U4000019",
+		"Slot 3": "G1NRBA0000017",
+		"Slot 4": "G1MV41U000045",
+		"Slot 5": "G1MV41U000046",
+	}
+	for slot, wantSN := range wantSlots {
+		comp, ok := bySlot[slot]
+		if !ok {
+			t.Errorf("expected slot %s in output, not found", slot)
+			continue
+		}
+		if comp.SerialNumber != wantSN {
+			t.Errorf("slot %s SN: expected %s, got %s", slot, wantSN, comp.SerialNumber)
+		}
+		if comp.ComponentType != ComponentTypeCard {
+			t.Errorf("slot %s: expected ComponentType=%s, got %s",
+				slot, ComponentTypeCard, comp.ComponentType)
+		}
+		if comp.Source != SourceRuijieCLI {
+			t.Errorf("slot %s: expected Source=%s, got %s",
+				slot, SourceRuijieCLI, comp.Source)
+		}
+	}
+
+	// D-11 regression: chassis SN must NOT equal Slot M1 SN. If they
+	// ever match in production, the manuinfo parser is mis-reading
+	// "Device 1 / Chassis" as if it were the active engine row.
+	if chassis.SerialNumber == m1.SerialNumber {
+		t.Errorf("D-11 regression: chassis SN == Slot M1 SN (%s) — parser is reading the wrong row as chassis",
+			chassis.SerialNumber)
 	}
 }
 
