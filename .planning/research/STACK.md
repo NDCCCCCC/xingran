@@ -1,751 +1,395 @@
-# Technology Stack
+# Stack Research — v1.19 网络设备写命令 (Network Device Write Operations)
 
-**Project:** RuoYi-Next MAC地址历史数据管理
-**Researched:** 2026-05-09
-**Overall confidence:** HIGH
+**Project:** RuoYi-Next (ruoyi-go-backend)
+**Milestone:** v1.19 — SSH write operations on network devices (Huawei/H3C/锐捷)
+**Researched:** 2026-07-06
+**Confidence:** HIGH
 
 ## Executive Summary
 
-MAC地址历史数据管理功能可以在现有 RuoYi-Next 技术栈基础上实现，无需引入新的数据库或第三方服务。PostgreSQL 原生的时间序列数据处理能力足以支撑需求，通过合理的数据建模和索引策略即可实现高性能的历史查询和轨迹追踪功能。
+Critical finding: **the SSH write infrastructure is already in place**. This milestone is overwhelmingly a *composition* problem, not a *new infrastructure* problem. The v1.18 read path installed `scrapli/scrapligo v1.3.3` and built `ScrapliWrapper.SendConfig()`, the `ConfigExecutionService` already drives it against `sys_config_execution` and writes `sys_config_execution_detail`, the connection pool already serializes per-device access with ref-counting, the `DeviceInfoCollectionService.Enqueue(deviceID)` interface is already used by v1.18 to trigger re-collection after writes, the operlog helper at `internal/utils/operlog` already has `Record` (普通) and `RecordWithBody` (含敏感字段) variants, and the permission namespace `network:port:query` is already declared in `pkg/permission/config.go` (v1.19 needs to add a sibling `network:port:write`).
 
-## Recommended Stack
+What v1.19 must add is a *port-focused write layer* (not template, not free-form command): a `PortWriteService` that takes `{deviceId, portId, action, params}`, looks up the vendor-specific command template, calls `ScrapliWrapper.SendConfig`, persists the result to `sys_config_execution(_detail)` for audit, enqueues a port re-collection via the existing interface, and emits an operlog row. The frontend adds a per-row "shutdown / undo shutdown / description / dot1x enable-disable" action set. A batch mode iterates devices serially with fail-fast semantics.
 
-### Core Framework (NO CHANGES)
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Go 1.24 | 1.24.5 | Backend runtime | Existing validated stack |
-| Gin v1.10.0 | 1.10.0 | HTTP routing | Existing validated stack |
-| GORM v1.30.5 | 1.30.5 | ORM | Existing validated stack |
+Recommendation: **no new Go module additions**. All required primitives are already on the v1.18 wire. Only the standard `go.mod` cleanup and an upgrade of `scrapli/scrapligo` to v1.4.0+ (to pick up the `GetPrompt → (string, error)` signature change and the panic-mitigation patch) are recommended.
 
-### Database (ENHANCEMENTS)
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| PostgreSQL | 18 (existing) | Time-series data storage | Native partitioning + indexes sufficient for historical data |
-| **PostgreSQL Partitioning** | Native | Historical data management | Automatic partition pruning by time range, 10-100x query performance improvement |
-| **BRIN Indexes** | Native | Time-series query optimization | Efficient for large time-ordered datasets, minimal storage overhead |
+## Recommended Stack Additions
 
-### Backend Libraries (ADDITIONS)
+### Core Technologies (existing — no additions required)
+
+| Technology | Version | Purpose | Why Recommended (current state) |
+|------------|---------|---------|---------------------------------|
+| `scrapli/scrapligo` | v1.3.3 (upgrade to v1.4.x) | SSH/Telnet transport with config-mode write | ALREADY INSTALLED and used for read (`SendCommand`); `SendConfig` exists at `internal/device/scrapli_wrapper.go:567` and is exercised by `ConfigExecutionService` at `internal/services/config_execution_service.go:277`. v1.4.0 closes the queue-panic window (see `internal/utils/scrapligo-queue-panic-windows.md`) |
+| `internal/device.ScrapliWrapper.SendConfig(string) (*Response, error)` | — | Send config-mode string block to device | Already implemented, acquires opMu RLock, handles panic recovery, returns `Response{Result, Started, Finished, Failed}` |
+| `internal/services.ConfigExecutionService` | — | Persists execution record + per-device detail | ALREADY WIRED: `ExecuteByTemplate` creates `sys_config_execution` (status 0→1→2/3) and `sys_config_execution_detail` rows with `CommandSent`, `OutputReceived`, `ErrorMessage`, `Duration`. Can be reused for port-write |
+| `internal/services.DeviceInfoCollectionService.Enqueue(deviceID string) error` | — | Async re-collection trigger | ALREADY WIRED in v1.18. Dedupes pending/running tasks. v1.19 calls this *after* successful port write to refresh the port_status row |
+| `internal/services.DeviceCredentialHelper` | — | Resolves device → credential with default fallback | ALREADY USED by `portcollection/service.go`. Reuse — no need to re-resolve credentials in the write path |
+| `internal/utils/operlog` | — | Audit log | ALREADY EXPORTED with `Record(c, svc, db, "模块", OperTypeXxx)` and `RecordWithBody(...)` (auto-masks password/pwd/secret/key/etc) |
+| `pkg/permission/config.go` PermissionCode | — | RBAC | ALREADY HAS `NetworkPortQuery = "network:port:query"` and `NetworkCommandExecute = "network:command:execute"`. v1.19 adds `NetworkPortWrite` to this file |
+| `internal/services/portcollection` | — | Port data layer (read + write semantics) | ALREADY OWNS the port domain. v1.19's `PortWriteService` lives here or as a sibling service |
+
+### Supporting Libraries (existing — no additions required)
+
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
-| **gorm.io/datatypes** | (GORM builtin) | JSONB for anomaly metadata | Storing flexible anomaly detection results |
-| **time.UTC** | Go stdlib | Consistent timezone handling | All timestamps in UTC for global consistency |
+| `golang.org/x/sync/errgroup` | v0.19.0 | Parallelism with concurrency limit | Batch port write (parallel) — but MVP locks strategy to **serial + fail-fast** per v1.19 init decisions, so errgroup.SetLimit is only used if a future phase opts into parallel |
+| `gorm.io/gorm` | v1.30.5 | ORM | `sys_config_execution` and `sys_config_execution_detail` persistence |
+| `sirupsen/logrus` + `natefinch/lumberjack` | v1.9.3 / v2.2.1 | Structured logging | Log SSH session start/end per device, with vendor, port, action, duration |
+| `google/uuid` | v1.6.0 | Execution ID generation | Use for `ConfigExecution.ID` and per-port `ConfigExecutionDetail.ID` |
+| `swaggo/swag` + `gin-swagger` | v1.16.4 / v1.6.0 | Swagger UI | Auto-doc the new `POST /network/ports/write` and `/batch-write` endpoints |
 
-### Frontend Libraries (ADDITIONS)
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| **ECharts** | 6.0.0 (existing) | Timeline visualization | Already installed, use timeline series for MAC movement |
-| **dayjs** | 1.11.19 (existing) | Time range parsing | Already installed, use for date range pickers |
-| **Ant Design Timeline** | 6.1.1 (existing) | Historical event display | Built-in component, perfect for change history |
+### Development Tools (existing)
 
-### Infrastructure (NO CHANGES)
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Redis 7.4 | v9.7.0 | Cache layer | Existing validated stack |
-| excelize v2.10.0 | 2.10.0 | Data export | Existing validated stack for historical data export |
+| Tool | Purpose | Notes |
+|------|---------|-------|
+| `scripts/generate_swagger.sh` | Regenerate Swagger docs | Run after adding the new port-write handler comments |
+| `go build ./...` | Build check | MANDATORY before any commit (per `CLAUDE.md`) |
+| `go test ./...` | Unit tests | The new `PortWriteService` should have table-driven tests per `command_statistics_test.go` pattern |
 
-## Database Considerations for Time-Series History Data
+## Architecture Integration Points
 
-### 1. PostgreSQL Native Partitioning (RECOMMENDED)
-
-**What:** Partition `sys_device_mac_address_history` table by time ranges
-**Why:** 
-- Automatic partition pruning (query only scans relevant partitions)
-- Efficient bulk data deletion (DROP PARTITION vs DELETE)
-- Better query performance for time-based queries
-- Native PostgreSQL feature, no external dependencies
-
-**Implementation Pattern:**
-```sql
--- Create partitioned table
-CREATE TABLE sys_device_mac_address_history (
-    id UUID PRIMARY KEY,
-    device_id UUID NOT NULL,
-    mac_address VARCHAR(30) NOT NULL,
-    interface_name VARCHAR(100) NOT NULL,
-    vlan_id INTEGER,
-    mac_type VARCHAR(20),
-    change_type VARCHAR(20) NOT NULL, -- 'appeared', 'disappeared', 'moved', 'vlan_changed'
-    change_detected_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-) PARTITION BY RANGE (change_detected_at);
-
--- Create monthly partitions (automated via function)
-CREATE TABLE sys_device_mac_address_history_2026_05
-    PARTITION OF sys_device_mac_address_history
-    FOR VALUES FROM ('2026-05-01') TO ('2026-06-01');
+```
+Client (Ant Design Table row action / batch dialog)
+    │
+    ▼
+Gin Router  POST /network/ports/write       (per-row)
+            POST /network/ports/batch-write (batch, serial+fail-fast)
+    │
+    ▼
+PortWriteHandler (internal/api/v1/network/port_write_handler.go)   ← NEW
+    │
+    ├── operlog.RecordWithBody  (with body for action+portId+params; masks nothing here)
+    │
+    ▼
+PortWriteService (internal/services/portcollection/port_write_service.go)   ← NEW
+    │
+    ├── 1. Resolve device + credential (DeviceCredentialHelper)
+    ├── 2. Resolve vendor command template (VendorPortTemplate[vendor][action][port])
+    ├── 3. Render command string with params (port name, description text, etc.)
+    ├── 4. Create sys_config_execution row (ExecutionTypeCommand, status=Running)
+    ├── 5. Get connection from pool, SendConfig (vendor, command)
+    ├── 6. Save sys_config_execution_detail row with response.Result
+    ├── 7. Update sys_config_execution row to status=Success/Failed
+    ├── 8. On success: deviceInfoCollectionService.Enqueue(deviceID)   ← reuse v1.18
+    ├── 9. Return result to handler → response.Success/Error
+    │
+    ▼
+Device connection pool  (internal/device/connection_pool.go)
+    │
+    ▼
+ScrapliWrapper.SendConfig  (internal/device/scrapli_wrapper.go:567)
+    │
+    ▼
+Huawei / H3C / 锐捷 SSH session
 ```
 
-**Maintenance:**
-- Create future partitions 1-2 months in advance
-- Drop partitions older than retention period (e.g., 2 years)
-- Use PostgreSQL pg_cron or application scheduler for automation
+## Vendor Command Template (Hardcoded Map)
 
-### 2. BRIN Indexes for Time-Series Data (RECOMMENDED)
+Locked decision: "命令模板: 硬编码 vendor→template map（落地为先，后续 phase 抽象为数据库）".
 
-**What:** Block Range INdexes optimized for sequentially-ordered data
-**Why:**
-- Tiny index size (1/1000 of B-tree for large tables)
-- Perfect for time-series data naturally ordered by time
-- Efficient for range queries (`WHERE change_detected_at BETWEEN X AND Y`)
+This is a **Go map in a single file**, not a database table. Lives at `internal/services/portcollection/vendor_port_template.go`:
 
-**Implementation Pattern:**
-```sql
--- BRIN index on change timestamp
-CREATE INDEX idx_mac_history_change_time_brin
-ON sys_device_mac_address_history USING BRIN (change_detected_at);
+```go
+package portcollection
 
--- Composite B-tree index for MAC + time queries
-CREATE INDEX idx_mac_history_mac_time
-ON sys_device_mac_address_history (mac_address, change_detected_at DESC);
+// PortAction 端口写操作类型
+type PortAction string
 
--- Composite B-tree index for port + time queries
-CREATE INDEX idx_mac_history_port_time
-ON sys_device_mac_address_history (device_id, interface_name, change_detected_at DESC);
+const (
+    PortActionShutdown     PortAction = "shutdown"
+    PortActionUndoShutdown PortAction = "undo_shutdown"
+    PortActionDescription  PortAction = "description"
+    PortActionDot1xEnable  PortAction = "dot1x_enable"
+    PortActionDot1xDisable PortAction = "dot1x_disable"
+)
+
+// PortTemplateParams 模板参数
+type PortTemplateParams struct {
+    InterfaceName string // GE0/0/1
+    Description   string // description 专用
+}
+
+// VendorPortTemplate 硬编码 vendor → action → template map
+// MVP 范围:Huawei / H3C / 锐捷 (Cisco 后续 phase)
+var VendorPortTemplate = map[models.DeviceVendor]map[PortAction]func(PortTemplateParams) string{
+    models.VendorHuawei: {
+        PortActionShutdown:     func(p PortTemplateParams) string { return fmt.Sprintf("interface %s\nshutdown", p.InterfaceName) },
+        PortActionUndoShutdown: func(p PortTemplateParams) string { return fmt.Sprintf("interface %s\nundo shutdown", p.InterfaceName) },
+        PortActionDescription:  func(p PortTemplateParams) string { return fmt.Sprintf("interface %s\ndescription %s", p.InterfaceName, p.Description) },
+        PortActionDot1xEnable:  func(p PortTemplateParams) string { return fmt.Sprintf("interface %s\ndot1x enable", p.InterfaceName) },
+        PortActionDot1xDisable: func(p PortTemplateParams) string { return fmt.Sprintf("interface %s\nundo dot1x enable", p.InterfaceName) },
+    },
+    models.VendorH3C: {
+        // H3C uses nearly identical syntax to Huawei
+        PortActionShutdown:     func(p PortTemplateParams) string { return fmt.Sprintf("interface %s\nshutdown", p.InterfaceName) },
+        PortActionUndoShutdown: func(p PortTemplateParams) string { return fmt.Sprintf("interface %s\nundo shutdown", p.InterfaceName) },
+        PortActionDescription:  func(p PortTemplateParams) string { return fmt.Sprintf("interface %s\ndescription %s", p.InterfaceName, p.Description) },
+        PortActionDot1xEnable:  func(p PortTemplateParams) string { return fmt.Sprintf("interface %s\ndot1x enable", p.InterfaceName) },
+        PortActionDot1xDisable: func(p PortTemplateParams) string { return fmt.Sprintf("interface %s\nundo dot1x enable", p.InterfaceName) },
+    },
+    models.VendorRuijie: {
+        // Ruijie uses Cisco-style: no "undo" prefix for negate
+        PortActionShutdown:     func(p PortTemplateParams) string { return fmt.Sprintf("interface %s\nshutdown", p.InterfaceName) },
+        PortActionUndoShutdown: func(p PortTemplateParams) string { return fmt.Sprintf("interface %s\nno shutdown", p.InterfaceName) },
+        PortActionDescription:  func(p PortTemplateParams) string { return fmt.Sprintf("interface %s\ndescription %s", p.InterfaceName, p.Description) },
+        PortActionDot1xEnable:  func(p PortTemplateParams) string { return fmt.Sprintf("interface %s\ndot1x port-control auto", p.InterfaceName) },
+        PortActionDot1xDisable: func(p PortTemplateParams) string { return fmt.Sprintf("interface %s\nno dot1x port-control", p.InterfaceName) },
+    },
+}
 ```
 
-### 3. JSONB for Anomaly Metadata
+NOTE: The user (locked v1.19 decision) prefers Ruijie's "no shutdown" syntax. For dot1x, Ruijie S2960 uses `dot1x port-control auto` / `no dot1x port-control`. This must be confirmed against the real device templates that v1.18 used (see `internal/services/component_collector/cli_ruijie_collector.go`) and Phase 49's Ruijie chassis fixes.
 
-**What:** Store anomaly detection results as flexible JSONB
-**Why:**
-- Anomaly rules may change over time
-- Different anomaly types need different metadata
-- JSONB indexing for fast queries on anomaly properties
+## Concrete Service Shape (PortWriteService)
 
-**Implementation Pattern:**
-```sql
-ALTER TABLE sys_device_mac_address_history
-ADD COLUMN anomaly_metadata JSONB;
+```go
+// internal/services/portcollection/port_write_service.go (NEW)
+package portcollection
 
--- Example JSONB structure:
+type PortWriteRequest struct {
+    DeviceID      string
+    PortID        string  // sys_device_port_status.id (UUID)
+    InterfaceName string  // GE0/0/1 — passed alongside PortID for vendor template
+    Action        PortAction
+    Description   string  // required iff Action == PortActionDescription
+    Timeout       int     // seconds; default 30, max 120
+}
+
+type PortWriteResult struct {
+    ExecutionID    string
+    DeviceID       string
+    PortID         string
+    Action         PortAction
+    Status         models.ExecutionStatus
+    CommandSent    string
+    OutputReceived string
+    ErrorMessage   string
+    Duration       int
+    EnqueuedReCollect bool
+}
+
+type PortWriteService struct {
+    db                          *gorm.DB
+    deviceExecutor              *device.DeviceExecutor
+    deviceInfoCollectionService *services.DeviceInfoCollectionService
+    credentialHelper            *services.DeviceCredentialHelper
+}
+
+func (s *PortWriteService) WritePort(ctx context.Context, req *PortWriteRequest) (*PortWriteResult, error) {
+    // 1. Validate action + required params
+    // 2. Load device, load credential (DeviceCredentialHelper)
+    // 3. Render vendor template command string
+    // 4. Create sys_config_execution + sys_config_execution_detail rows
+    // 5. Get connection from pool; wrapper.SendConfig
+    // 6. Update rows with response
+    // 7. On success: Enqueue(deviceID) — async re-collect
+    // 8. Return result
+}
+
+func (s *PortWriteService) BatchWritePorts(ctx context.Context, reqs []PortWriteRequest) ([]*PortWriteResult, error) {
+    // Serial + fail-fast: iterate, on first failure return immediately
+    // (locked decision: "批量执行：串行失败即停")
+}
+```
+
+## Handler Shape (PortWriteHandler)
+
+```go
+// internal/api/v1/network/port_write_handler.go (NEW)
+package network
+
+type PortWriteHandler struct {
+    core *core.Core
+}
+
+func (h *PortWriteHandler) Write(c *gin.Context) {
+    // bind PortWriteRequest
+    // service.WritePort
+    // operlog.Record(c, ..., "端口管理", operlog.OperTypeUpdate)  // shutdown/undo → OperTypeStatus
+    // response.Success / Error
+}
+
+func (h *PortWriteHandler) BatchWrite(c *gin.Context) {
+    // bind {ports: [PortWriteRequest]}
+    // service.BatchWritePorts
+    // operlog.Record(c, ..., "端口管理", operlog.OperTypeBatch)
+}
+```
+
+OperType mapping per action:
+
+| Action | OperType |
+|--------|----------|
+| shutdown / undo_shutdown | `OperTypeStatus` (启用/停用) |
+| description | `OperTypeUpdate` (修改) |
+| dot1x_enable / dot1x_disable | `OperTypeStatus` |
+| batch | `OperTypeBatch` |
+
+`Record` is used (NOT `RecordWithBody`) because the request body contains no password/key/secret — only `deviceId`, `portId`, `action`, `description`. The SSH credentials used for the device are stored server-side in `sys_auth_credential` and never appear in the request.
+
+## Router Registration
+
+Append to `internal/api/v1/network/network_router.go` (line 211, after `SetupPortRouter`):
+
+```go
+// ==================== 端口写命令路由（v1.19 新增）====================
+portWrites := r.Group("/ports")
+portWrites.Use(middleware.RequirePermissions([]string{
+    "network:port:write",  // 新增权限常量
+    "network:port:query",  // 读权限（兼容读后写）
+}, core))
 {
-  "type": "unusual_movement",
-  "severity": "high",
-  "previous_location": "Building-A-Floor1-Switch1-Ge0/1",
-  "current_location": "Building-B-Floor3-Switch2-Ge0/5",
-  "distance_meters": 150,
-  "time_minutes": 5,
-  "rule_triggered": "rapid_movement_detection"
+    portWrites.POST("/write", portWriteHandler.Write)
+    portWrites.POST("/batch-write", portWriteHandler.BatchWrite)
 }
-
--- Index on anomaly type for quick filtering
-CREATE INDEX idx_mac_history_anomaly_type
-ON sys_device_mac_address_history USING GIN (anomaly_metadata jsonb_path_ops);
 ```
 
-### 4. Data Retention Strategy
+NOTE: This creates a route overlap on `/ports/*`. The existing `/ports/list` group uses `RequirePermissionsWithQuery` to also accept ops read perms. The new write group uses `RequirePermissions` (strict). Gin resolves POST `/ports/write` to the new group; POST `/ports/list` to the existing one. No conflict because the path patterns are different. **Verify with `go build ./...` after wiring**.
 
-**What:** Automatic partition management for historical data
-**Why:**
-- Comply with data retention policies
-- Control storage costs
-- Maintain query performance
+## Permission Constant Addition
 
-**Implementation:**
-```sql
--- Function to create monthly partitions
-CREATE OR REPLACE FUNCTION create_mac_history_partition(month_date DATE)
-RETURNS VOID AS $$
-DECLARE
-    partition_name TEXT;
-    start_date TEXT;
-    end_date TEXT;
-BEGIN
-    partition_name := 'sys_device_mac_address_history_' || to_char(month_date, 'YYYY_MM');
-    start_date := to_char(month_date, 'YYYY-MM-DD');
-    end_date := to_char(month_date + INTERVAL '1 month', 'YYYY-MM-DD');
-    
-    EXECUTE format(
-        'CREATE TABLE IF NOT EXISTS %s PARTITION OF sys_device_mac_address_history FOR VALUES FROM (%L) TO (%L)',
-        partition_name, start_date, end_date
-    );
-END;
-$$ LANGUAGE plpgsql;
-
--- Function to drop old partitions (retention: 2 years)
-CREATE OR REPLACE FUNCTION drop_old_mac_history_partitions()
-RETURNS VOID AS $$
-BEGIN
-    -- Drop partitions older than 2 years
-    DELETE FROM sys_device_mac_address_history
-    WHERE change_detected_at < NOW() - INTERVAL '2 years';
-END;
-$$ LANGUAGE plpgsql;
-```
-
-## Backend API Patterns for Historical Data Queries
-
-### 1. Historical Data Recording Pattern
-
-**Pattern:** Record changes only when detected (not periodic snapshots)
-**Why:** Efficient storage, meaningful change events
+In `pkg/permission/config.go`, after line 186 (`NetworkPortQuery`):
 
 ```go
-// RecordMACChange records a MAC address change event
-type MACChangeRecord struct {
-    ID                string         `gorm:"type:uuid;primary_key"`
-    DeviceID          string         `gorm:"type:uuid;not null"`
-    MACAddress        string         `gorm:"size:30;not null"`
-    InterfaceName     string         `gorm:"size:100;not null"`
-    VLANID            *int
-    MACType           string         `gorm:"size:20"`
-    ChangeType        string         `gorm:"size:20;not null"` // appeared, disappeared, moved, vlan_changed
-    PreviousInterface *string        // For 'moved' changes
-    PreviousVLAN      *int           // For 'vlan_changed' changes
-    ChangeDetectedAt  time.Time      `gorm:"not null;index"`
-    AnomalyMetadata   datatypes.JSON // Optional anomaly detection results
-    CreatedAt         time.Time
-}
-
-// Compare current MAC state with previous state, record differences
-func (s *MACHistoryService) RecordMACChanges(
-    ctx context.Context,
-    deviceID string,
-    currentMACs []models.DeviceMACAddress,
-) error {
-    // Get previous MAC state from Redis cache (TTL: 1 hour)
-    previousMACs, _ := s.cache.Get(ctx, fmt.Sprintf("mac:state:%s", deviceID))
-    
-    // Detect changes: appeared, disappeared, moved, vlan_changed
-    changes := s.detectMACChanges(previousMACs, currentMACs)
-    
-    // Batch insert change records
-    if len(changes) > 0 {
-        if err := s.db.WithContext(ctx).Create(&changes).Error; err != nil {
-            return fmt.Errorf("record MAC changes: %w", err)
-        }
-        
-        // Run anomaly detection in background
-        go s.detectAnomalies(context.Background(), changes)
-    }
-    
-    // Update cache with current state
-    s.cache.Set(ctx, fmt.Sprintf("mac:state:%s", deviceID), currentMACs, 1*time.Hour)
-    
-    return nil
-}
+// 端口写命令权限 (v1.19 新增)
+NetworkPortWrite PermissionCode = "network:port:write"
 ```
 
-### 2. Query by Port (Historical Changes)
+In the `GetRoutePermissions()` table (around line 360+), add the two new routes mapping to `NetworkPortWrite`.
 
-**Pattern:** Retrieve all MAC changes on a specific port within time range
-**Use Case:** "Show me all devices that connected to port Ge0/1 in the last 30 days"
+## Frontend Stack (existing — no additions)
 
-```go
-// GetPortHistory returns MAC change history for a specific port
-func (s *MACHistoryService) GetPortHistory(
-    ctx context.Context,
-    deviceID string,
-    interfaceName string,
-    startTime, endTime time.Time,
-    current, pageSize int,
-) ([]MACChangeRecord, int64, error) {
-    
-    var total int64
-    var records []MACChangeRecord
-    
-    baseQuery := s.db.WithContext(ctx).Model(&MACChangeRecord{}).
-        Where("device_id = ?", deviceID).
-        Where("interface_name = ?", interfaceName).
-        Where("change_detected_at >= ? AND change_detected_at <= ?", startTime, endTime)
-    
-    // Get total count
-    if err := baseQuery.Count(&total).Error; err != nil {
-        return nil, 0, fmt.Errorf("count port history: %w", err)
-    }
-    
-    // Paginate with ordering (most recent first)
-    offset := (current - 1) * pageSize
-    if err := baseQuery.
-        Offset(offset).
-        Limit(pageSize).
-        Order("change_detected_at DESC").
-        Find(&records).Error; err != nil {
-        return nil, 0, fmt.Errorf("query port history: %w", err)
-    }
-    
-    return records, total, nil
-}
-```
+| Library | Version | Purpose | Use |
+|---------|---------|---------|-----|
+| `antd` Table actions | 6.1 | Per-row action dropdown | Add "端口操作" menu: 启用/停用/修改描述/dot1x 启用-停用 |
+| `antd` Modal | 6.1 | Single-port dialog | Form with `description` input + submit |
+| `antd` Modal | 6.1 | Batch dialog | Multi-select ports + action picker |
+| `@/lib/api` `post` | — | Wrapped POST | Use `post('/network/ports/write', req)` and `post('/network/ports/batch-write', {ports: [...]})` |
+| React Query mutation | 5.90.12 | Optimistic update + rollback | `useMutation` with `onSuccess` refetch port list |
 
-### 3. Query by MAC Address (Movement Trajectory)
+## Observability Patterns (existing — extend, don't add)
 
-**Pattern:** Retrieve all location changes for a specific MAC address
-**Use Case:** "Show me where device AA:BB:CC:DD:EE:FF has been over time"
+| Pattern | Location | v1.19 Application |
+|---------|----------|-------------------|
+| Logrus + Lumberjack | `pkg/logger` (via `applogger`) | Log each write: `applogger.Infof("[port-write] device=%s port=%s action=%s status=%d duration=%dms", ...)` |
+| Logrus Debug-level command echo | `internal/device/executor.go:200,203,223,236,244,248,254` | Already logs raw command + response; reuse |
+| Operlog (audit table) | `internal/utils/operlog` | Mandatory: every successful write must emit a row before `response.Success` |
+| Connection pool ref-counting | `internal/device/connection_pool.go:266-273` (F-14 Phase 31 fix) | Use `defer conn.ReleaseRef()` after `SendConfig` — matches the exact pattern at `config_execution_service.go:274` |
+| Scrapli opMu RLock | `internal/device/scrapli_wrapper.go:567` | `SendConfig` already takes opMu RLock; nothing extra needed |
+| GetPrompt serialization | `internal/device/scrapli_wrapper.go:277` | Defense-in-depth; v1.19 inherits it automatically because SendConfig is gated by acquireOp |
 
-```go
-// GetMACTrajectory returns movement history for a specific MAC
-func (s *MACHistoryService) GetMACTrajectory(
-    ctx context.Context,
-    macAddress string,
-    startTime, endTime time.Time,
-) ([]MACMovementRecord, error) {
-    
-    type movementResult struct {
-        ChangeDetectedAt time.Time
-        DeviceID         string
-        DeviceName       string
-        InterfaceName    string
-        ChangeType       string
-        Location         string // Computed from device hierarchy
-    }
-    
-    var results []movementResult
-    
-    // Query change records with device information
-    query := s.db.WithContext(ctx).
-        Select("sys_device_mac_address_history.*, sys_network_device.device_name").
-        Joins("LEFT JOIN sys_network_device ON sys_network_device.id = sys_device_mac_address_history.device_id").
-        Where("mac_address = ?", macAddress).
-        Where("change_detected_at >= ? AND change_detected_at <= ?", startTime, endTime).
-        Order("change_detected_at ASC")
-    
-    if err := query.Scan(&results).Error; err != nil {
-        return nil, fmt.Errorf("query MAC trajectory: %w", err)
-    }
-    
-    // Post-process: compute location hierarchy (Building -> Floor -> Room)
-    var trajectory []MACMovementRecord
-    for _, r := range results {
-        location := s.computeLocationHierarchy(ctx, r.DeviceID)
-        trajectory = append(trajectory, MACMovementRecord{
-            Timestamp:   r.ChangeDetectedAt,
-            DeviceName:  r.DeviceName,
-            Interface:   r.InterfaceName,
-            Location:    location,
-            ChangeType:  r.ChangeType,
-        })
-    }
-    
-    return trajectory, nil
-}
-```
+## Concurrent-Write Concerns (analysis of the existing pool)
 
-### 4. Anomaly Detection Pattern
+`internal/device/connection_pool.go` and `connection_pool_test.go` (F-14 fix, 2026-07-06 复查):
 
-**Pattern:** Asynchronous background processing to detect unusual patterns
-**Why:** Don't block MAC collection, detect anomalies after data is recorded
+1. **Per-device serialization**: `GetConnection(ctx, deviceID)` returns a `PooledConnection` whose internal `opMu RLock` on the wrapper serializes all `SendConfig`/`SendCommand` calls for that single device. Two parallel writes to the same device are safe but will execute serially in scrapli.
 
-```go
-// detectAnomalies analyzes MAC changes for unusual patterns
-func (s *MACHistoryService) detectAnomalies(
-    ctx context.Context,
-    changes []MACChangeRecord,
-) error {
-    for _, change := range changes {
-        // Rule 1: Rapid movement (same MAC appears in different locations within 5 minutes)
-        if change.ChangeType == "moved" {
-            if s.isRapidMovement(ctx, change) {
-                s.recordAnomaly(ctx, change, AnomalyRapidMovement)
-            }
-        }
-        
-        // Rule 2: Unusual time (MAC appeared during non-business hours)
-        if s.isUnusualTime(change.ChangeDetectedAt) {
-            s.recordAnomaly(ctx, change, AnomalyUnusualTime)
-        }
-        
-        // Rule 3: High-frequency flapping (MAC appeared/disappeared >10 times in 1 hour)
-        if s.isHighFrequencyFlapping(ctx, change) {
-            s.recordAnomaly(ctx, change, AnomalyFlapping)
-        }
-    }
-    return nil
-}
-```
+2. **Ref-counting**: `GetConnection` already does `refCount +1`; the v1.18 fix mandates `defer conn.ReleaseRef()` (NOT `Acquire+Release`, which would double-count). The template execution path at `config_execution_service.go:262-274` shows the canonical pattern.
 
-## Frontend Libraries for Timeline/Visualization
+3. **TOCTOU state check**: `acquireOp()` at `scrapli_wrapper.go:245-264` re-checks `getState() == StateReady` after acquiring the RLock. This is the only protection against a connection closing mid-write. v1.19 inherits this.
 
-### 1. ECharts Timeline Series (RECOMMENDED)
+4. **Batch write strategy**: v1.19's locked "serial + fail-fast" decision is conservative and **sidesteps** several concurrent concerns:
+   - No errgroup.SetLimit for the batch
+   - No parallel device writes
+   - No risk of multiple devices hitting their own `deviceID`'s pool concurrently (which would be fine anyway because pools are per-device)
+   - Tradeoff: 50 ports × 1 device = slower than parallel but predictable
 
-**What:** Use ECharts timeline component for MAC movement visualization
-**Why:** Already installed, flexible for time-based data, supports zoom/pan
+5. **Serial fail-fast semantics**: When a `BatchWritePorts` call hits a failed device, the service must:
+   - Mark the failed port's detail row as `ExecutionStatusFailed`
+   - Update the parent `sys_config_execution` row to `ExecutionStatusFailed` (overwriting partial-success counts)
+   - Return the partial results to the caller; the handler surfaces them in the response
+   - The operlog is still emitted (with the partial result data)
 
-**Implementation Pattern:**
-```typescript
-import ReactECharts from 'echarts-for-react';
+## Sensitive Data Flow (operlog masking)
 
-const MACMovementTimeline: React.FC<{ trajectory: MACMovementRecord[] }> = ({ trajectory }) => {
-  const option = {
-    timeline: {
-      show: true,
-      type: 'slider',
-      axisType: 'time',
-      data: trajectory.map(r => r.timestamp),
-    },
-    title: {
-      text: 'MAC Address Movement Trajectory',
-    },
-    tooltip: {
-      trigger: 'axis',
-    },
-    xAxis: {
-      type: 'time',
-    },
-    yAxis: {
-      type: 'category',
-      data: [...new Set(trajectory.map(r => r.location))],
-    },
-    series: [{
-      type: 'line',
-      data: trajectory.map(r => [r.timestamp, r.location]),
-      markPoint: {
-        data: trajectory.filter(r => r.changeType === 'moved').map(r => ({
-          name: 'Movement',
-          coord: [r.timestamp, r.location],
-        })),
-      },
-    }],
-  };
+The write path carries no sensitive data in the request body:
+- `deviceId` — UUID
+- `portId` — UUID
+- `interfaceName` — string like `GE0/0/1`
+- `action` — enum
+- `description` — user-supplied free text (NOT a secret)
 
-  return <ReactECharts option={option} style={{ height: 400 }} />;
-};
-```
+Therefore `operlog.Record(...)` is correct. `RecordWithBody` would be the right choice if the action were something like "rotate device SSH key" or "change credential", but port configuration actions are not sensitive-keyword-matching.
 
-### 2. Ant Design Timeline Component (RECOMMENDED)
-
-**What:** Use Ant Design's Timeline component for change history display
-**Why:** Built-in component, perfect for chronological event display
-
-**Implementation Pattern:**
-```typescript
-import { Timeline } from 'antd';
-
-const PortHistoryTimeline: React.FC<{ history: MACChangeRecord[] }> = ({ history }) => {
-  return (
-    <Timeline
-      items={history.map(record => ({
-        color: getChangeTypeColor(record.changeType),
-        children: (
-          <div>
-            <div>{format(record.changeDetectedAt, 'YYYY-MM-DD HH:mm:ss')}</div>
-            <div>
-              <Tag color={getChangeTypeColor(record.changeType)}>
-                {record.changeType}
-              </Tag>
-              MAC: {record.macAddress}
-            </div>
-            {record.changeType === 'moved' && (
-              <div>
-                Moved from: {record.previousInterface} → {record.interfaceName}
-              </div>
-            )}
-            {record.anomalyMetadata && (
-              <Alert
-                type="warning"
-                message={`Anomaly: ${record.anomalyMetadata.type}`}
-                description={record.anomalyMetadata.description}
-                showIcon
-              />
-            )}
-          </div>
-        ),
-      }))}
-    />
-  );
-};
-```
-
-### 3. Dayjs for Time Range Handling (ALREADY INSTALLED)
-
-**What:** Use dayjs for date range picker and time formatting
-**Why:** Already installed, lightweight, perfect for timezone handling
-
-**Implementation Pattern:**
-```typescript
-import dayjs from 'dayjs';
-
-const MACHistoryFilters: React.FC = () => {
-  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([
-    dayjs().subtract(30, 'day'),
-    dayjs(),
-  ]);
-
-  const handleQuery = () => {
-    const [start, end] = dateRange;
-    queryMACHistory({
-      startTime: start.toUTC().format(),
-      endTime: end.toUTC().format(),
-    });
-  };
-
-  return (
-    <DatePicker.RangePicker
-      showTime
-      value={dateRange}
-      onChange={(dates) => setDateRange(dates)}
-      ranges={{
-        'Last 7 Days': [dayjs().subtract(7, 'day'), dayjs()],
-        'Last 30 Days': [dayjs().subtract(30, 'day'), dayjs()],
-        'Last 90 Days': [dayjs().subtract(90, 'day'), dayjs()],
-      }}
-    />
-  );
-};
-```
-
-## Data Export Strategy
-
-### 1. Excel Export by Time/Department/Building (USE EXISTING)
-
-**What:** Leverage existing `excelize` library for historical data export
-**Why:** Already installed, familiar to users, supports large datasets
-
-**Implementation Pattern:**
-```go
-// ExportMACHistory exports MAC history to Excel
-func (s *MACHistoryService) ExportMACHistory(
-    ctx context.Context,
-    req MACHistoryExportRequest,
-) (string, error) {
-    
-    // Query data with filters
-    var records []MACChangeRecord
-    query := s.db.WithContext(ctx).
-        Where("change_detected_at >= ? AND change_detected_at <= ?", req.StartTime, req.EndTime)
-    
-    if req.DepartmentID != "" {
-        // Join with device location hierarchy
-        query = query.Joins("JOIN sys_network_device ON sys_network_device.id = sys_device_mac_address_history.device_id").
-            Where("sys_network_device.dept_id = ?", req.DepartmentID)
-    }
-    
-    if req.BuildingID != "" {
-        query = query.Joins("JOIN sys_workstation ON sys_workstation.device_id = sys_network_device.id").
-            Where("sys_workstation.building_id = ?", req.BuildingID)
-    }
-    
-    query.Find(&records)
-    
-    // Generate Excel file
-    f := excelize.NewFile()
-    sheet := "MAC History"
-    
-    // Headers
-    headers := []string{"Timestamp", "Device", "Interface", "MAC Address", "Change Type", "Location"}
-    for i, h := range headers {
-        f.SetCellValue(sheet, fmt.Sprintf("%c1", 'A'+i), h)
-    }
-    
-    // Data rows
-    for i, record := range records {
-        row := i + 2
-        f.SetCellValue(sheet, fmt.Sprintf("A%d", row), record.ChangeDetectedAt.Format("2006-01-02 15:04:05"))
-        f.SetCellValue(sheet, fmt.Sprintf("B%d", row), record.DeviceID)
-        f.SetCellValue(sheet, fmt.Sprintf("C%d", row), record.InterfaceName)
-        f.SetCellValue(sheet, fmt.Sprintf("D%d", row), record.MACAddress)
-        f.SetCellValue(sheet, fmt.Sprintf("E%d", row), record.ChangeType)
-        f.SetCellValue(sheet, fmt.Sprintf("F%d", row), record.Location)
-    }
-    
-    // Save to temp file
-    tempFile := fmt.Sprintf("mac_history_%s.xlsx", time.Now().Format("20060102_150405"))
-    if err := f.SaveAs(tempFile); err != nil {
-        return "", fmt.Errorf("save Excel: %w", err)
-    }
-    
-    return tempFile, nil
-}
-```
+The device's SSH password is decrypted at runtime inside the connection pool (F-14 layer), used by scrapli, and never appears in the request body or operlog.
 
 ## Alternatives Considered
 
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| **Time-Series DB** | PostgreSQL partitioning | TimescaleDB, InfluxDB | Adds operational complexity, native partitioning sufficient for this scale |
-| **Anomaly Detection** | Go background workers | Python ML models | Over-engineering for simple rule-based detection, Go is sufficient |
-| **Frontend Charts** | ECharts (existing) | D3.js, Recharts | ECharts already installed, sufficient for timeline visualization |
-| **Data Export** | excelize (existing) | CSV export | Excel provides better formatting, user familiarity |
+| Recommended | Alternative | When to Use Alternative |
+|-------------|-------------|-------------------------|
+| Extend `ConfigExecutionService` with port-specific methods | Build a separate `PortWriteService` | Decision: **separate service** because (a) port write has a vendor-template layer the template service doesn't model, (b) port write must enqueue re-collection, which `ConfigExecutionService` doesn't know about, (c) audit granularity is per-port not per-device |
+| Hardcoded Go map `VendorPortTemplate` | Persist to `sys_command_template` table (RuoYi standard pattern) | Decision: **hardcoded first** (v1.19 locked). Database-driven templates can come in a later phase after the MVP is UAT-validated. The `sys_config_template` table is *template-based init/config*, not port-action enums |
+| Reuse `network:command:execute` permission | Add new `network:port:write` permission | Decision: **new permission** because (a) port write is a higher-risk surface than free-form command, (b) operators who can run `display` should not necessarily be able to `shutdown` a port, (c) audit semantics are different (Status/Update vs Other) |
+| `SendConfig` (single multi-line string) | `SendConfigs` ([]string, one per command) | Decision: **`SendConfig`** — the vendor templates produce a single multi-line block per port (`interface X\nshutdown`). `SendConfigs` is for "one config per device" scenarios |
+| `defer conn.ReleaseRef()` | `defer conn.Release()` | Decision: **`ReleaseRef`** (F-14 fixed; calling `Release` after `GetConnection` would double-decrement and break pool accounting) |
+| `OperTypeStatus` for shutdown/undo | `OperTypeEnable` / `OperTypeDisable` | Decision: **`OperTypeStatus`** (10) — semantically "状态变更（启用/停用）" matches the audit log convention; `Enable`/`Disable` are also valid but `Status` is the more general bucket covering both directions |
+| Serial batch (fail-fast) | Parallel batch with per-device workers | Decision: **serial** (v1.19 locked). Config drift risk: if 5 of 10 ports fail in parallel, recovery is harder. Serial is the conservative default for first UAT |
 
-## Installation
+## What NOT to Add
 
-### Backend (No new dependencies required)
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| New SSH library (golang.org/x/crypto/ssh, survey, wish, etc.) | Scrapli is already the abstraction; introducing a second SSH client doubles the credential-decryption surface and breaks the panic-recovery patterns at `scrapli_wrapper.go:516-521,572-578` | Reuse `ScrapliWrapper.SendConfig` |
+| New connection pool | The existing pool is F-14 fixed, ref-counted, and used by the template execution path; introducing a parallel pool would split the connection lifecycle | Reuse `pool.GetConnection(ctx, deviceID)` + `defer conn.ReleaseRef()` |
+| New config template model | `sys_config_template` exists but is designed for full-device init/config, not port-action enums; creating a new table for the 5 port actions is over-engineering for MVP | Hardcoded `VendorPortTemplate` map |
+| Netconf/YANG | The 3 target vendors (Huawei/H3C/锐捷) all support SSH CLI write; Netconf adds parser + cert complexity disproportionate to MVP scope | SSH CLI write (`SendConfig`) |
+| `expect`-style interactive prompting | All 5 actions are non-interactive (no `[Y/N]` confirmations on `shutdown`/`description`/`dot1x`) | Plain multi-line config block |
+| Async batch (background job) | v1.19 locked "MVP 仅'失败即停 + 回传失败点'"; async complicates the response contract (caller must poll `sys_config_execution` for status) | Synchronous batch with per-port detail rows |
+| Auto-rollback on partial failure | v1.19 explicitly out of scope; auto-rollback requires per-command undo planning, vendor-state assumptions, and a "what if rollback also fails" failure mode | Fail-fast + return partial result; manual rollback by operator |
+| Free-form CLI command in port write request | Would let any caller run `reboot` or `delete flash:`; massively increases audit blast radius and turns the endpoint into a backdoor around `network:command:execute` | Enum-gated `PortAction` with hardcoded templates |
 
-```bash
-# No new packages needed - using existing Go stdlib and GORM
-```
+## Stack Patterns by Variant
 
-### Frontend (No new dependencies required)
+**If port = trunk port (no shutdown allowed for protection):**
+- SendConfig still proceeds but response.Result will contain Huawei's `Error: This interface cannot be shut down.` The service captures the output in `sys_config_execution_detail.output_received` and the operlog row reflects the failure. The handler returns `ExecutionStatusFailed` with the captured error message.
 
-```bash
-# All required libraries already installed:
-# - echarts@6.0.0 (timeline visualization)
-# - dayjs@1.11.19 (time range handling)
-# - antd@6.1.1 (Timeline component)
-```
+**If device is offline (status=1):**
+- `GetConnection` will fail at TCP dial timeout (10s). Service returns the error, marks the row failed, no operlog success emission.
 
-### Database Setup (One-time)
+**If user has `network:port:query` but not `network:port:write`:**
+- The new middleware rejects with 403. The row action menu on frontend should be hidden via `useAuthz('network:port:write')`.
 
-```sql
--- Create partitioned table for MAC history
--- See: internal/core/db/migrations/XXX_create_mac_history_table.sql
+**If batch is interrupted (handler context cancel):**
+- The remaining devices are skipped (fail-fast). The already-written per-device detail rows are preserved. The parent `sys_config_execution` row is marked failed with the cancel reason.
 
--- Create indexes for time-series queries
-CREATE INDEX idx_mac_history_change_time_brin
-ON sys_device_mac_address_history USING BRIN (change_detected_at);
+## Version Compatibility
 
-CREATE INDEX idx_mac_history_mac_time
-ON sys_device_mac_address_history (mac_address, change_detected_at DESC);
-
-CREATE INDEX idx_mac_history_port_time
-ON sys_device_mac_address_history (device_id, interface_name, change_detected_at DESC);
-```
-
-## Integration with Existing Stack
-
-### 1. MAC Collection Service Integration
-
-**Location:** `internal/services/mac_collection_service.go`
-**Integration Point:** After MAC data is collected and stored
-
-```go
-// In collectDeviceMAC method, after saving MAC addresses:
-// Trigger change detection (asynchronous, non-blocking)
-go func() {
-    if s.historyService != nil {
-        if err := s.historyService.RecordMACChanges(
-            context.Background(),
-            device.ID,
-            filteredMACAddresses,
-        ); err != nil {
-            applogger.Errorf("[MAC历史] 记录变更失败: %v", err)
-        }
-    }
-}()
-```
-
-### 2. API Handler Integration
-
-**Location:** `internal/api/v1/network/mac_handler.go`
-**New Endpoints:**
-
-```go
-// GetPortHistory 查询端口历史变更
-// @Router /network/mac/port-history [post]
-func (h *MACHandler) GetPortHistory(c *gin.Context) {
-    var req PortHistoryRequest
-    if !responseHelpers.HandleJSONBinding(c, &req) {
-        return
-    }
-    
-    historySvc := services.NewMACHistoryService(h.core.DB.GetDB())
-    records, total, err := historySvc.GetPortHistory(
-        c.Request.Context(),
-        req.DeviceID,
-        req.InterfaceName,
-        req.StartTime,
-        req.EndTime,
-        req.Current,
-        req.PageSize,
-    )
-    if !responseHelpers.HandleServiceError(c, err, "查询端口历史") {
-        return
-    }
-    
-    response.Page(c, records, total, req.Current, req.PageSize)
-}
-
-// GetMACTrajectory 查询MAC移动轨迹
-// @Router /network/mac/trajectory [post]
-func (h *MACHandler) GetMACTrajectory(c *gin.Context) {
-    var req MACTrajectoryRequest
-    if !responseHelpers.HandleJSONBinding(c, &req) {
-        return
-    }
-    
-    historySvc := services.NewMACHistoryService(h.core.DB.GetDB())
-    trajectory, err := historySvc.GetMACTrajectory(
-        c.Request.Context(),
-        req.MACAddress,
-        req.StartTime,
-        req.EndTime,
-    )
-    if !responseHelpers.HandleServiceError(c, err, "查询MAC轨迹") {
-        return
-    }
-    
-    response.Success(c, trajectory)
-}
-```
-
-### 3. Frontend Integration
-
-**Location:** `ruoyi-react-frontend/src/pages/network/MACAddressHistory.tsx` (new file)
-**Dependencies:** Existing components and utilities
-
-```typescript
-// Use existing API wrapper
-import { post } from '@/lib/api';
-
-// Use existing ECharts and dayjs
-import ReactECharts from 'echarts-for-react';
-import dayjs from 'dayjs';
-
-// Use existing Ant Design components
-import { Timeline, DatePicker, Tag, Alert } from 'antd';
-```
-
-## Performance Considerations
-
-### Query Performance by Data Volume
-
-| Data Volume | Query Type | Performance (PostgreSQL + BRIN) | Notes |
-|-------------|-----------|----------------------------------|-------|
-| 100K records | Port history (1 month) | <50ms | BRIN index highly effective |
-| 1M records | MAC trajectory (1 year) | 100-200ms | Partition pruning reduces scan to 12 partitions |
-| 10M records | Time range query | 500ms-1s | Requires partitioning by month |
-| 100M records | Full table scan | Avoid | Always use time range filters |
-
-### Storage Optimization
-
-| Technique | Space Savings | Tradeoff |
-|-----------|---------------|----------|
-| BRIN indexes | 99% smaller vs B-tree | Slightly slower point queries (offset by composite indexes) |
-| Partitioning | Enables old partition DROP | Requires maintenance automation |
-| JSONB for metadata | Flexible schema | Requires GIN index for queries |
-| 2-year retention | Controlled growth | Complies with data policies |
-
-## Migration Strategy
-
-### Phase 1: Database Schema (Week 1)
-1. Create partitioned `sys_device_mac_address_history` table
-2. Create BRIN and composite B-tree indexes
-3. Create partition management functions
-4. Set up automated partition creation (pg_cron or app scheduler)
-
-### Phase 2: Backend Implementation (Week 2)
-1. Implement `MACHistoryService` with change detection
-2. Integrate with existing `MACCollectionService`
-3. Add API handlers for historical queries
-4. Implement anomaly detection rules
-
-### Phase 3: Frontend Implementation (Week 3)
-1. Create port history timeline component
-2. Create MAC trajectory visualization (ECharts)
-3. Implement export functionality
-4. Add filtering by time/department/building
-
-### Phase 4: Testing & Validation (Week 4)
-1. Load testing with 1M+ records
-2. Validate partition pruning effectiveness
-3. Test anomaly detection accuracy
-4. Performance optimization
+| Package A | Compatible With | Notes |
+|-----------|-----------------|-------|
+| `scrapli/scrapligo` v1.3.3 (current) | `go1.24` toolchain go1.24.5 | Build clean per `CLAUDE.md` |
+| `scrapli/scrapligo` v1.4.x (recommended upgrade) | `go1.24` | v1.4.0+ returns `GetPrompt() (string, error)` — code at `scrapli_wrapper.go:279` already takes the v1.4 signature. **Confirm by reading `go.sum` and changelog before upgrading** |
+| `golang.org/x/sync/errgroup` v0.19.0 | `go1.24` | OK; only used if a future phase opts into parallel batch |
+| `gorm.io/gorm` v1.30.5 | `go1.24` | OK; auto-migration handles new rows |
+| `antd 6.1` (frontend) | React 19.2 | Table actions, Modal, Form already in use across the ops module |
 
 ## Sources
 
-### PostgreSQL Time-Series Features
-- [PostgreSQL for Time-Series Data: A Professional Hands-On Guide](https://medium.com/writersmostwanted/postgresql-for-time-series-data-a-professional-handson-guide-e9d21df19cdb) - HIGH confidence (current best practices)
-- [TimescaleDB vs PostgreSQL for Time-Series](https://maddevs.io/writeups/time-series-data-management-with-timescaledb/) - MEDIUM confidence (vendor comparison, but confirms native PostgreSQL capabilities)
-- [PostgreSQL Performance Checklist for 2026](https://rizqimulki.com/postgresql-performance-checklist-before-going-live-in-2026-39f54aa3ecf0) - HIGH confidence (2026-specific guidance)
+- `internal/device/scrapli_wrapper.go` (verified) — `SendConfig`, `acquireOp`, `opMu` lifecycle, `PlatformName` vendor mapping
+- `internal/services/config_execution_service.go` (verified) — canonical pattern: `pool.GetConnection` → `defer conn.ReleaseRef` → `wrapper.SendConfig` → persist detail + execution rows
+- `internal/services/command_dispatch_service.go` (verified) — `ExecutionTypeCommand` + `ExecutionStrategy`/`Concurrency` fields
+- `internal/services/device_info_collection_service.go:133` (verified) — `Enqueue(deviceID string) error` async trigger
+- `internal/services/device_credential_helper.go:24-40` (verified) — device → credential resolver with default fallback
+- `internal/models/config_execution.go` (verified) — `ConfigExecution` + `ConfigExecutionDetail` table names `sys_config_execution` / `sys_config_execution_detail`
+- `internal/utils/operlog/operlog.go` (verified via `CLAUDE.md`) — `Record` and `RecordWithBody` helpers
+- `pkg/permission/config.go:147-198` (verified) — `NetworkCommandExecute`, `NetworkPortQuery` existing; `NetworkPortWrite` to be added
+- `internal/api/v1/network/network_router.go:206-214` (verified) — `/ports` group with `RequirePermissionsWithQuery`; v1.19's `/ports/write` + `/ports/batch-write` route pair
+- `internal/api/v1/network/port_handler.go:96-111` (verified) — `PortCollectionRequest` + `operlog.Record` shape for the read-side; v1.19's write handler mirrors it
+- `.planning/PROJECT.md` (verified) — v1.19 init decisions: device_id strategy, hardcoded templates, serial fail-fast, vendor scope
+- `CLAUDE.md` (verified) — operlog convention with 25 OperType constants; middleware chain; status convention 0=normal/1=stopped
 
-### Existing Stack Analysis
-- `internal/models/device_mac_address.go` - HIGH confidence (existing MAC model)
-- `internal/services/mac_collection_service.go` - HIGH confidence (existing MAC collection logic)
-- `internal/core/db/migrations/020_drop_mac_unique_index.sql` - HIGH confidence (existing schema modifications)
-- `internal/api/v1/network/mac_handler.go` - HIGH confidence (existing API patterns)
-- `ruoyi-react-frontend/package.json` - HIGH confidence (existing frontend dependencies)
+## Key Takeaway
 
-### Research Methodology
-- Used existing codebase analysis (HIGH confidence)
-- Web search for PostgreSQL time-series best practices (MEDIUM confidence due to rate limiting)
-- Applied existing RuoYi-Next architecture patterns (HIGH confidence)
-- No new third-party services required (reduces integration risk)
+**Zero new Go module dependencies** are required for v1.19. The SSH write path is composable from existing primitives: `ScrapliWrapper.SendConfig` + `ConfigExecutionService` persistence shape + `DeviceInfoCollectionService.Enqueue` + `operlog.Record` + a hardcoded vendor→template map. The single optional upgrade is `scrapli/scrapligo` v1.3.3 → v1.4.x to pick up the queue-panic mitigation, which is a low-risk version bump and can be deferred to a separate commit.
+
+The work is concentrated in **three new files**:
+1. `internal/services/portcollection/port_write_service.go` — service layer
+2. `internal/services/portcollection/vendor_port_template.go` — hardcoded vendor map
+3. `internal/api/v1/network/port_write_handler.go` — HTTP handler
+
+Plus edits to:
+- `internal/api/v1/network/network_router.go` (route registration)
+- `pkg/permission/config.go` (add `NetworkPortWrite` constant + route map)
+- `internal/api/v1/network/port_router.go` (call `portWriteHandler` if split)
+- Frontend `src/pages/network/ports/` (Table actions + 2 dialogs)
+
+This is a thin, high-leverage milestone. Estimated scope: 1 phase, 2-3 plans, 3 waves.

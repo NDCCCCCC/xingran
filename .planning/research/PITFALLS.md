@@ -1,672 +1,1033 @@
-# Domain Pitfalls: MAC地址历史数据管理
+# Pitfalls Research: v1.19 网络设备写命令 (Network Device Write Operations)
 
-**Domain:** Network Monitoring - Historical MAC Address Tracking
-**Researched:** 2026-05-09
-**Context:** Adding historical tracking capabilities to existing RuoYi-Next MAC collection system
+**Domain:** Network Device Management — SSH Write Operations (port config push)
+**Researched:** 2026-07-06
+**Confidence:** HIGH (existing codebase patterns verified) / MEDIUM (vendor-specific write quirks from prior knowledge)
+**Milestone:** v1.19 — adding SSH write commands to extend the v1.18 "read" pipeline to "read+write" closure
+**Scope:** NEW pitfall surface (write path) on TOP of the already-shipped v1.18 read path. v1.18 pitfalls (chassis SN, OPS chassis write, M196 trigger, M198 cron, etc.) are NOT re-researched.
+
+---
 
 ## Executive Summary
 
-Adding historical MAC address tracking to an existing network monitoring system introduces unique challenges around data volume growth, query performance, and integration with existing collection workflows. The most critical pitfalls involve uncontrolled database growth from continuous collection, improper change detection logic that misses or duplicates events, and performance degradation from querying large historical datasets.
+Adding SSH write operations to a network management system is **not** a "use the same pool" exercise. Writes carry destructive semantics: a wrong command (`shutdown` on an uplink, `undo port-security` on a server farm port) can immediately cause user-visible outages, and the audit trail must be **recoverable** in a way that read pipelines never need. The v1.19 design is a fresh surface, but the underlying `DeviceConnectionPool` and `ScrapliWrapper` were validated for **read** concurrency — they were not validated for the much higher contention, session-lifetime, and error-rate shape of a write path.
 
-The existing MAC collection system (`mac_collection_service.go`) currently uses a "delete-and-replace" strategy that destroys historical data. Adding historical tracking requires careful architectural changes to preserve change events without disrupting the proven collection pipeline.
+The most critical pitfalls are:
+
+1. **No transactional boundary between "command sent" and "device accepted"** — the SSH write returns success at the network level (`% Sent successfully`) but the device may reject the command at the next prompt, leaving the operator with a "succeeded but didn't" record.
+2. **No pre/post state capture** — without reading the port state BEFORE issuing the write, the operlog only shows "the user wanted to disable GE0/0/1", not "the port WAS up, then user disabled it". Forensic investigations need both.
+3. **Concurrent write collision** — two operators opening the same port description at the same time get `last-write-wins` semantics, with no warning. The connection pool's per-device lock serialises commands, but the port-level intent is not locked.
+4. **Operlog masking leaks** — `description` body may legitimately contain words like "key", "password", or "secret" (e.g. "DMZ-port for key-service") that trip the sensitive-keyword filter and over-mask non-sensitive data. Worse: the masked command body hides what was actually sent, defeating audit purpose.
+5. **Vendor command subtlety breaks silently** — Huawei vs H3C vs Ruijie have non-obvious differences (e.g. Ruijie doesn't have `system-view`, it has `configure terminal`; Huawei uses `interface GigabitEthernet0/0/1`, H3C accepts both short and long form; dot1x command keywords differ). A hardcoded template map per vendor is the locked decision, but each entry must be testable per-vendor.
+
+The mitigations are concrete and specific — they involve new tables for `sys_port_write_audit` (with before/after snapshots), a new `network:port:write` permission namespace, structured result streaming for batches, and command-body masking rules that preserve audit readability.
+
+---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Uncontrolled Database Growth from Continuous Collection
+### Pitfall 1: SSH Write Succeeds at Transport Layer, Rejected at Device Layer
 
-**What goes wrong:** MAC address tables are collected frequently (often hourly) from hundreds of devices. Without proper retention policies and change detection, storing every collection cycle creates massive data volumes. A single device with 1000 MAC addresses collected hourly generates 8.7 million records per year.
+**What goes wrong:** Scrapli's `SendConfig` returns successfully if the SSH channel accepts the bytes. The device itself may immediately echo back `% Error: Unrecognized command found at '^' position.` and the next prompt is still the user-view prompt (not system-view). The operator sees `result.status = success` and the operlog records "操作成功", but the port is unchanged.
 
 **Why it happens:**
-- Existing `mac_collection_service.go` uses `DELETE` then `CREATE` strategy (line 201-206) which is incompatible with historical tracking
-- Default approach of storing all collected data without change detection
-- Lack of time-based partitioning or automated cleanup
-- Underestimation of MAC table sizes in enterprise networks
+- `ScrapliWrapper.SendConfig` (line 567-591 of `scrapli_wrapper.go`) returns `r.Result` text but does not parse for error markers (`%`, `Error:`, `^`, `Illegal`, `Wrong parameter`)
+- Huawei VRP returns success on the channel write but rejects commands inline in the response
+- The `acquireOp`/`releaseOp` lock guarantees connection safety but not command semantics
+- Vendor config-mode lockout: if a previous batch left the device in system-view (mid-config), a new `system-view` command gets "Error: System view is locked by user X" instead of a fresh prompt
 
 **Consequences:**
-- Database storage exhaustion (terabytes of historical MAC data)
-- Query performance degradation (scanning millions of records for simple searches)
-- Backup/restore operations become impractical
-- Increased infrastructure costs
+- Operlog shows "shutdown GE0/0/1 成功" but the port is still UP
+- Cascading "retry until device returns the right error" loops that compound the audit record noise
+- After 24h of being in a bad state, no one notices because the system says "succeeded"
 
 **Prevention:**
 ```go
-// ✅ CORRECT: Change-based insertion with deduplication
-func (s *MACHistoryService) RecordChanges(ctx context.Context, deviceID string, newMACs []MACEntry) error {
-    // 1. Get current state from previous collection
-    existingMACs, err := s.GetLatestMACs(ctx, deviceID)
-
-    // 2. Detect changes using hash comparison
-    changes := s.detectChanges(existingMACs, newMACs)
-
-    // 3. Only record actual changes (additions, removals, moves)
-    if len(changes) > 0 {
-        return s.CreateChangeEvents(ctx, changes)
+// ✅ CORRECT: Parse error markers from device response
+func parseConfigError(result string) error {
+    errMarkers := []string{
+        "% Error:",
+        "% Unrecognized command",
+        "Error:",
+        "Info: This operation may take a long time",
+        "Warning:",
     }
-
-    return nil // No changes = no database writes
-}
-
-// ✅ CORRECT: Automated retention policy
-func (s *MACHistoryService) CleanupOldRecords(ctx context.Context) error {
-    // Partition by month, drop partitions older than 13 months
-    // Or: DELETE WHERE collected_at < NOW() - INTERVAL '13 months'
-    return s.db.WithContext(ctx).
-        Where("collected_at < ?", time.Now().AddDate(0, -13, 0)).
-        Delete(&models.MACAddressHistory{}).Error
-}
-```
-
-**Detection:** Monitor database size growth rate (should be ~5-10% of total MAC count per collection, not 100%). Set alerts for `pg_database_size()` growth > 100GB/month.
-
-**Phase to address:** Phase 12 (Data Model & Collection Integration)
-
----
-
-### Pitfall 2: Broken Change Detection from MAC Address Flapping
-
-**What goes wrong:** MAC addresses frequently move between ports (especially in wireless networks, VMware environments, or with spanning tree topology changes). Poor change detection logic either misses moves (treating them as no-change) or creates excessive event noise (recording every flapping event).
-
-**Why it happens:**
-- Comparing only MAC address sets without tracking interface changes
-- Not accounting for VLAN changes on the same MAC
-- MAC address format inconsistencies between vendors and collections
-- Race conditions from concurrent collections
-
-**Consequences:**
-- Incomplete audit trails (security investigations miss device movements)
-- False change alerts (alarm fatigue from legitimate mobility)
-- Inability to distinguish between "device moved" vs "new device appeared"
-
-**Prevention:**
-```go
-// ✅ CORRECT: Composite key change detection
-type MACState struct {
-    MACAddress    string
-    InterfaceName string
-    VLANID        *int
-    MACType       models.MACType
-}
-
-func (s *MACHistoryService) detectChanges(oldMACs, newMACs []MACState) []MACChangeEvent {
-    oldMap := make(map[string]MACState) // key: normalized MAC+VLAN
-    for _, mac := range oldMACs {
-        key := fmt.Sprintf("%s:%d", mac.MACAddress, mac.VLANID)
-        oldMap[key] = mac
+    for _, m := range errMarkers {
+        if strings.Contains(result, m) {
+            // Strip the prompt tail and return the error line(s)
+            return fmt.Errorf("设备拒绝命令: %s",
+                strings.TrimSpace(result))
+        }
     }
-
-    var changes []MACChangeEvent
-    for _, newMAC := range newMACs {
-        key := fmt.Sprintf("%s:%d", newMAC.MACAddress, newMAC.VLANID)
-        oldMAC, exists := oldMap[key]
-
-        if !exists {
-            // New MAC appeared
-            changes = append(changes, MACChangeEvent{
-                Type: MACEventAppeared,
-                MAC: newMAC.MACAddress,
-                OldInterface: "",
-                NewInterface: newMAC.InterfaceName,
-            })
-        } else if oldMAC.InterfaceName != newMAC.InterfaceName {
-            // MAC moved between ports
-            changes = append(changes, MACChangeEvent{
-                Type: MACEventMoved,
-                MAC: newMAC.MACAddress,
-                OldInterface: oldMAC.InterfaceName,
-                NewInterface: newMAC.InterfaceName,
-            })
-        }
-        delete(oldMap, key)
-    }
-
-    // Remaining keys in oldMap are MACs that disappeared
-    for _, oldMAC := range oldMap {
-        changes = append(changes, MACChangeEvent{
-            Type: MACEventDisappeared,
-            MAC: oldMAC.MACAddress,
-            OldInterface: oldMAC.InterfaceName,
-            NewInterface: "",
-        })
-    }
-
-    return changes
-}
-
-// ✅ CORRECT: Normalize MAC addresses before comparison
-func normalizeMAC(mac string) string {
-    cleaned := strings.Map(func(r rune) rune {
-        if r >= 'a' && r <= 'f' {
-            return r
-        }
-        if r >= 'A' && r <= 'F' {
-            return r + ('a' - 'A')
-        }
-        if r >= '0' && r <= '9' {
-            return r
-        }
-        return -1 // Remove separators
-    }, mac)
-    return cleaned
-}
-```
-
-**Detection:** Unit tests with synthetic MAC flapping scenarios (same MAC appears on different ports in consecutive collections). Monitor "disappeared then reappeared" event rates.
-
-**Phase to address:** Phase 12 (Change Detection Logic)
-
----
-
-### Pitfall 3: Performance Collapse from Historical Query Scans
-
-**What goes wrong:** Historical MAC tracking queries (e.g., "show all movements for MAC AA:BB:CC:DD:EE:FF in the last 30 days") perform full table scans on unindexed datasets, causing timeout issues and database lock contention.
-
-**Why it happens:**
-- Missing composite indexes on (mac_address, collected_at) or (device_id, collected_at)
-- Using `LIKE %mac%` queries instead of normalized exact matches
-- No time-range partitioning for efficient pruning
-- N+1 query patterns when fetching related device information
-
-**Consequences:**
-- API timeouts (>30s) for historical searches
-- Database CPU spikes during query execution
-- Frontend UI freezes when loading historical timelines
-- Blocked collection cycles from database lock contention
-
-**Prevention:**
-```go
-// ✅ CORRECT: Composite indexes for common query patterns
-// In migration file:
-CREATE INDEX idx_mac_history_device_time
-ON sys_mac_address_history (device_id, collected_at DESC);
-
-CREATE INDEX idx_mac_history_mac_time
-ON sys_mac_address_history (mac_address, collected_at DESC);
-
-CREATE INDEX idx_mac_history_change_type
-ON sys_mac_address_history (change_type, collected_at DESC);
-
-// Partial index for active records (performance optimization)
-CREATE INDEX idx_mac_history_active
-ON sys_mac_address_history (mac_address, collected_at)
-WHERE collected_at > NOW() - INTERVAL '90 days';
-
-// ✅ CORRECT: Partitioned table structure (PostgreSQL 11+)
-CREATE TABLE sys_mac_address_history (
-    id UUID,
-    device_id UUID,
-    mac_address MACADDR,
-    collected_at TIMESTAMPTZ,
-    ...
-) PARTITION BY RANGE (collected_at);
-
--- Monthly partitions
-CREATE TABLE sys_mac_history_2025_01 PARTITION OF sys_mac_address_history
-    FOR VALUES FROM ('2025-01-01') TO ('2025-02-01');
-```
-
-**Detection:** Query performance monitoring using `pg_stat_statements`. Alert on queries with `mean_exec_time > 5000ms` or `calls > 1000/hour` on historical tables.
-
-**Phase to address:** Phase 13 (Query Optimization & Indexing)
-
----
-
-### Pitfall 4: Integration Race Conditions with Existing Collection
-
-**What goes wrong:** Historical tracking added to existing `mac_collection_service.go` creates race conditions where the history service reads "old" data while the collection service is mid-update, causing missed changes or duplicate event recording.
-
-**Why it happens:**
-- Existing collection uses `DELETE` + `CREATE` pattern (lines 201-243 in `mac_collection_service.go`)
-- History service queries `sys_device_mac_address` concurrently
-- No transactional isolation between collection and history recording
-- Timing-dependent logic that works in tests but fails in production
-
-**Consequences:**
-- Lost change events (history shows "no previous state" for moved MACs)
-- Duplicate events (same change recorded multiple times)
-- Inconsistent historical data (gaps in timeline)
-
-**Prevention:**
-```go
-// ✅ CORRECT: Transactional isolation with proper ordering
-func (s *MACCollectionService) CollectWithHistory(ctx context.Context, deviceID string) (*MACCollectionResult, error) {
-    // Step 1: Read current state BEFORE deletion (in transaction)
-    var existingMACs []models.DeviceMACAddress
-    err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-        if err := tx.Where("device_id = ?", deviceID).Find(&existingMACs).Error; err != nil {
-            return err
-        }
-
-        // Step 2: Collect new MACs from device
-        newMACs, err := s.collectFromDevice(ctx, deviceID)
-        if err != nil {
-            return err
-        }
-
-        // Step 3: Detect changes using in-memory comparison
-        changes := s.detectChanges(existingMACs, newMACs)
-
-        // Step 4: Delete old and insert new (existing pattern)
-        if err := tx.Where("device_id = ?", deviceID).Delete(&models.DeviceMACAddress{}).Error; err != nil {
-            return err
-        }
-        if err := tx.Create(&newMACs).Error; err != nil {
-            return err
-        }
-
-        // Step 5: Record history in same transaction
-        if len(changes) > 0 {
-            historyRecords := s.buildHistoryRecords(changes)
-            if err := tx.Create(&historyRecords).Error; err != nil {
-                return err
-            }
-        }
-
-        return nil
-    })
-
-    return &MACCollectionResult{SuccessCount: len(newMACs)}, err
-}
-
-// ✅ CORRECT: Use READ COMMITTED isolation level (PostgreSQL default)
-// This prevents "non-repeatable read" issues while allowing concurrent collections
-```
-
-**Detection:** Integration tests that simulate concurrent collection + history recording. Monitor for "gap" events where MAC disappears and reappears in same collection cycle.
-
-**Phase to address:** Phase 12 (Collection Integration)
-
----
-
-### Pitfall 5: MAC Address Format Inconsistencies Breaking Queries
-
-**What goes wrong:** Different network vendors report MAC addresses in different formats (Cisco uses `aaaa.bbbb.cccc`, Huawei uses `aaaa-bbbb-cccc`, standard is `aa:bb:cc:dd:ee:ff`). Queries fail to find matches because the database stores inconsistent formats.
-
-**Why it happens:**
-- Existing `mac_collector.go` has `normalizeMACAddress()` but it's not consistently applied
-- Direct database inserts bypass normalization
-- User searches use unnormalized input
-- Historical data imported from legacy systems
-
-**Consequences:**
-- "Missing" history for MAC addresses (stored in different format)
-- Duplicate MAC records (same device, different format representations)
-- Failed JOIN queries between historical and current tables
-- User frustration from "MAC not found" errors
-
-**Prevention:**
-```go
-// ✅ CORRECT: Enforce normalization at database layer
-// In model:
-type MACAddressHistory struct {
-    MACAddress string `gorm:"type:varchar(17);not null"`
-}
-
-func (m *MACAddressHistory) BeforeSave(tx *gorm.DB) error {
-    normalized, err := normalizeAndValidateMAC(m.MACAddress)
-    if err != nil {
-        return err
-    }
-    m.MACAddress = normalized
     return nil
 }
 
-// ✅ CORRECT: Use PostgreSQL MACADDR type for automatic validation
-CREATE TABLE sys_mac_address_history (
-    ...
-    mac_address MACADDR NOT NULL,  -- Enforces format and provides conversion functions
-    ...
-);
-
-// ✅ CORRECT: Normalize user input in search queries
-func (s *MACHistoryService) SearchByMAC(ctx context.Context, macInput string) ([]MACAddressHistory, error) {
-    normalized, err := normalizeMACAddress(macInput)
-    if err != nil {
-        return nil, fmt.Errorf("invalid MAC address format: %w", err)
-    }
-
-    var results []MACAddressHistory
-    // Use exact match on normalized field, not LIKE
-    err = s.db.WithContext(ctx).
-        Where("mac_address = ?", normalized).
-        Order("collected_at DESC").
-        Find(&results).Error
-
-    return results, err
+// Use AFTER SendConfig returns nil
+resp, err := wrapper.SendConfig("interface GigabitEthernet0/0/1\nshutdown")
+if err != nil {
+    return WriteResult{Status: "transport_error", Err: err}
+}
+if devErr := parseConfigError(resp.Result); devErr != nil {
+    return WriteResult{Status: "device_rejected", Err: devErr, Raw: resp.Result}
 }
 ```
 
-**Detection:** Data quality queries checking for format inconsistencies: `SELECT mac_address, COUNT(*) FROM sys_mac_address_history GROUP BY mac_address HAVING COUNT(*) > 1`.
+**Warning signs:**
+- Operlog shows N consecutive successes but the v1.18 collector (next enqueue) reports the port state didn't change
+- Syslog/sys_oper_log row contains `%` in the response field — flag in metrics
 
-**Phase to address:** Phase 12 (Data Normalization)
+**Phase to address:** Phase 50 (Write Command Service) — `internal/services/network_write/parser.go`
+
+**Code references:**
+- `internal/device/scrapli_wrapper.go:567` (SendConfig returns response, no error parsing)
+- `internal/services/portcollection/collection.go:1-80` (read-only use of same wrapper, never sees this problem)
 
 ---
 
-### Pitfall 6: Missing Device Context in Historical Events
+### Pitfall 2: No Before/After State Snapshot for Audit
 
-**What goes wrong:** Historical MAC events store only the device ID, but when devices are renamed or deleted, historical queries show "Unknown Device" or break entirely, losing critical context for forensic investigations.
+**What goes wrong:** Operlog shows "用户A 在 2026-07-06 14:23:01 修改端口 GE0/0/1 description 为 'Core-Switch-Uplink'". If 6 months later an operator needs to know what the description WAS before, the only evidence is the live device state — which has been overwritten by 1000 subsequent writes. The audit trail is write-only.
 
 **Why it happens:**
-- Using `device_id` foreign key without device name snapshot
-- No soft-delete pattern for network devices
-- JOIN queries on deleted devices return null
-- Not capturing device state at time of event
+- v1.18's collector does NOT store historical port state (no `sys_port_state_history` table)
+- Operlog's `oper_param` is the request body (the new value), not the current state
+- `sys_oper_log` does not have a column for "before_state" — adding it requires schema migration
+- The existing `sys_device_port_status` is a snapshot table that gets overwritten on each collection
 
 **Consequences:**
-- Useless historical data (cannot identify which device was involved)
-- Broken audit trails (device deleted before investigation)
-- Inability to reconstruct network topology changes over time
+- Failed forensic investigation: "why was this port renamed in March?"
+- Compliance audit gaps: many regulations require "what was the state at the time of the change"
+- Inability to "revert" — the previous value is lost the moment the new value is written
 
 **Prevention:**
 ```go
-// ✅ CORRECT: Snapshot device context at time of event
-type MACAddressHistory struct {
+// ✅ CORRECT: Read port state BEFORE writing, persist both in audit table
+type PortWriteAudit struct {
     ID            string    `gorm:"type:uuid;primary_key"`
     DeviceID      string    `gorm:"type:uuid;not null;index"`
-    DeviceName    string    `gorm:"size:100;not null"`    // Snapshot, not FK
-    IPAddress     string    `gorm:"size:50"`              // Snapshot
-    MACAddress    string    `gorm:"size:17;not null;index"`
-    InterfaceName string    `gorm:"size:100;not null"`
-    VLANID        *int
-    EventType     string    `gorm:"size:20;index"`  // appeared/moved/disappeared
-    CollectedAt   time.Time `gorm:"not null;index"`
-    CreatedAt     time.Time `gorm:"not null"`
+    InterfaceName string    `gorm:"size:64;not null;index"`
+    Operation     string    `gorm:"size:32;not null"`         // shutdown/description/dot1x
+    BeforeValue   string    `gorm:"type:text"`                // captured state BEFORE write
+    AfterValue    string    `gorm:"type:text"`                // captured state AFTER write (from next collect)
+    CommandSent   string    `gorm:"type:text"`                // exact SSH command bytes
+    DeviceResponse string   `gorm:"type:text"`                // raw device response
+    Status        string    `gorm:"size:32;not null;index"`   // transport_error/device_rejected/success
+    ErrorMessage  string    `gorm:"type:text"`
+    OperatorID    string    `gorm:"type:uuid;index"`
+    OperatorName  string    `gorm:"size:64"`
+    ClientIP      string    `gorm:"size:64"`
+    StartedAt     time.Time `gorm:"not null;index"`
+    CompletedAt   *time.Time
+    DurationMs    int64
 }
 
-// ✅ CORRECT: Populate snapshots during collection
-func (s *MACCollectionService) buildHistoryRecords(device *models.NetworkDevice, changes []MACChange) []MACAddressHistory {
-    records := make([]MACAddressHistory, len(changes))
-    for i, change := range changes {
-        records[i] = MACAddressHistory{
-            DeviceID:      device.ID,
-            DeviceName:    device.DeviceName,  // Snapshot current name
-            IPAddress:     device.IPAddress,   // Snapshot current IP
-            MACAddress:    change.MACAddress,
-            InterfaceName: change.NewInterface,
-            EventType:     change.Type,
-            CollectedAt:   time.Now(),
-        }
+// In the write service:
+func (s *WriteService) WriteOnePort(ctx context.Context, req *WriteRequest) (*PortWriteAudit, error) {
+    audit := &PortWriteAudit{
+        DeviceID:      req.DeviceID,
+        InterfaceName: req.InterfaceName,
+        Operation:     req.Operation,
+        OperatorID:    req.OperatorID,
+        StartedAt:     time.Now(),
     }
-    return records
+    // 1. Capture BEFORE state via v1.18 collector's query path
+    if before, err := s.queryPortState(ctx, req.DeviceID, req.InterfaceName); err == nil {
+        audit.BeforeValue = before
+    }
+    // 2. Issue the write
+    resp, devErr := s.issueWrite(ctx, req)
+    if devErr != nil {
+        audit.Status = "device_rejected"
+        audit.ErrorMessage = devErr.Error()
+    } else {
+        audit.Status = "success"
+    }
+    audit.CommandSent = req.RenderCommand()
+    audit.DeviceResponse = resp.Result
+    // 3. Persist audit (even on failure — that's the whole point)
+    s.db.Create(audit)
+    return audit, devErr
 }
-
-// ✅ CONVENTION: Historical tables use denormalized snapshots
-// Rule: Historical data = immutable snapshots, not live references
 ```
 
-**Detection:** Query tests after device rename/delete to verify historical data remains readable. Alert on "DeviceID not found" rates in historical queries.
+**Warning signs:**
+- Incident review reveals the audit table only contains "what was requested", not "what was there before"
+- Cannot answer "did this change cause the outage?" without re-reading the device
 
-**Phase to address:** Phase 12 (Data Model Design)
+**Phase to address:** Phase 50 — `sys_port_write_audit` migration + write service integration
+
+**Code references:**
+- `internal/services/portcollection/query.go` (existing read query, can be reused for before-state)
+- `internal/utils/operlog/operlog.go:215-263` (operlog.Record is write-only; no before-state field)
 
 ---
 
-### Pitfall 7: No Audit Trail for Security Investigations
+### Pitfall 3: Vendor Command Syntax Subtlety Breaks Silently
 
-**What goes wrong:** When security teams need to investigate "which device was connected to port X at time Y", the historical data lacks sufficient context (who triggered the collection, was there an alert, what was the configuration state).
+**What goes wrong:** Huawei and H3C share a VRP-derived CLI but H3C accepts the shorthand `interface GE0/0/1` while Huawei only accepts `interface GigabitEthernet0/0/1` (some firmware). Ruijie uses Cisco-style `configure terminal` and `interface GigabitEthernet 0/0/1` (with a SPACE, not slash). A hardcoded `vendor: command` map gets one entry wrong and the wrong device silently does nothing.
 
 **Why it happens:**
-- Historical tables only store MAC + interface + timestamp
-- No link to collection job ID or scheduled task
-- Missing correlation with alert events
-- No user activity context (manual vs automatic collection)
+- Different vendors parse the same words differently
+- Even within a vendor, firmware version matters: VRP V200 vs V600 differ in some keywords
+- The `GetCommandForVendor` function in `scrapli_wrapper.go:682-728` is read-only and doesn't have an equivalent write map yet
+- The `huawei_vrp.yaml` / `hp_comware.yaml` / `ruijie_rjos.yaml` platform definitions in scrapligo handle the READ path's prompt handling but do NOT inject write-mode commands
 
 **Consequences:**
-- Failed security audits (cannot prove compliance)
-- Incomplete incident response (missing context)
-- Inability to correlate with other system events (syslogs, alerts)
+- Wrong device reads `interface GigabitEthernet 0/0/1` as "create VLAN 0/0/1" on Ruijie (if the string is mishandled)
+- `shutdown` on Huawei VRP uses no `undo`, while Cisco/IOS uses `no shutdown` — same intent, opposite keyword
+- H3C's `dot1x port-control` vs Huawei's `dot1x port-control auto` — same effect, but the helper function name differs by vendor
 
 **Prevention:**
 ```go
-// ✅ CORRECT: Rich event context for forensic analysis
-type MACAddressHistory struct {
-    // ... basic fields ...
-
-    // Collection context
-    CollectionJobID *string    `gorm:"type:uuid"`      // Link to scheduled job
-    CollectionType  string     `gorm:"size:20"`        // manual/scheduled/on_demand
-    TriggeredBy     *string    `gorm:"type:uuid"`      // User ID (if manual)
-
-    // State snapshots for context
-    DeviceType      string     `gorm:"size:50"`        // Router/Switch/etc
-    SiteName        string     `gorm:"size:100"`       // Location context
-    ConfigVersion   *string    `gorm:"size:50"`        // Device config hash
-
-    // Correlation
-    CorrelationID   string     `gorm:"type:uuid;index"` // Link to alerts/logs
+// ✅ CORRECT: Vendor-specific command template registry
+type WriteOp struct {
+    Operation string  // "shutdown", "description", "dot1x"
+    HuaweiCmd func(iface, value string) []string
+    H3CCmd    func(iface, value string) []string
+    RuijieCmd func(iface, value string) []string
 }
 
-// ✅ CORRECT: Populate context from collection trigger
-func (s *MACCollectionService) CollectWithHistory(ctx context.Context, deviceID string, trigger CollectionTrigger) error {
-    // Enrich history with collection context
-    history.CollectionJobID = trigger.JobID
-    history.CollectionType = trigger.Type
-    history.TriggeredBy = trigger.UserID
-
-    // Capture device state snapshots
-    history.DeviceType = device.DeviceType
-    history.SiteName = device.SiteName
-
-    return s.CreateHistory(ctx, history)
+var writeTemplates = map[string]WriteOp{
+    "shutdown": {
+        HuaweiCmd: func(i, _ string) []string {
+            return []string{"system-view", "interface " + i, "shutdown"}
+        },
+        H3CCmd: func(i, _ string) []string {
+            return []string{"system-view", "interface " + i, "shutdown"}
+        },
+        // Ruijie: Cisco-style, no system-view
+        RuijieCmd: func(i, _ string) []string {
+            return []string{"configure terminal", "interface GigabitEthernet " + i, "shutdown", "end", "write"}
+        },
+    },
+    "description": {
+        HuaweiCmd: func(i, v string) []string {
+            return []string{"system-view", "interface " + i, "description " + v, "commit", "quit", "quit"}
+        },
+        // H3C: accepts both forms; long form is safer
+        H3CCmd: func(i, v string) []string {
+            return []string{"system-view", "interface GigabitEthernet" + strings.TrimPrefix(i, "GE"), "description " + v, "quit", "quit"}
+        },
+        // Ruijie: NO commit (auto-save), but requires "end" to apply
+        RuijieCmd: func(i, v string) []string {
+            return []string{"configure terminal", "interface GigabitEthernet " + i, "description " + v, "end"}
+        },
+    },
+    "dot1x_enable": {
+        HuaweiCmd: func(i, _ string) []string {
+            return []string{"system-view", "interface " + i, "dot1x enable", "dot1x port-control auto", "quit", "quit"}
+        },
+        H3CCmd: func(i, _ string) []string {
+            return []string{"system-view", "interface GigabitEthernet" + strings.TrimPrefix(i, "GE"), "dot1x", "dot1x port-control auto", "quit", "quit"}
+        },
+        RuijieCmd: func(i, _ string) []string {
+            return []string{"configure terminal", "interface GigabitEthernet " + i, "dot1x port-control auto", "end"}
+        },
+    },
 }
 ```
 
-**Detection:** Review security team use cases. Test "reconstruct incident at specific timestamp" scenarios.
+**Warning signs:**
+- Same operation on identical port names produces different results across devices
+- Operlog `CommandSent` field shows "configure terminal" on Huawei (H3C-ism leak)
+- Vendor mapping errors only surface during UAT on real devices, not in unit tests
 
-**Phase to address:** Phase 14 (Security & Compliance Features)
+**Phase to address:** Phase 50 — `internal/services/network_write/templates.go` with full per-vendor coverage
+
+**Code references:**
+- `internal/device/scrapli_wrapper.go:682-728` (read-only `GetCommandForVendor` template pattern to mirror)
+- `internal/services/device_info_collection_service.go:352-367` (per-vendor command list pattern)
+
+---
+
+### Pitfall 4: Concurrent Write Collision — Two Operators, Same Port, Last-Write-Wins
+
+**What goes wrong:** Operator A is mid-batch on `GE0/0/1-24` (changing descriptions). Operator B opens the same `GE0/0/1` description in a single-port modal. Both writes succeed at the transport layer, but the audit trail shows two successful writes with the second's `CommandSent` value winning. No one sees that they overwrote each other.
+
+**Why it happens:**
+- `DeviceConnectionPool` (`connection_pool.go`) has per-device locks — but only at the SSH session level, not the port-intent level
+- The `acquireOp` lock is held for the duration of ONE command sequence (system-view → interface X → description), not the whole port write
+- Two operators' transactions can interleave between commands (Operator A is at `interface GE0/0/1`, Operator B is at `interface GE0/0/2`) — they don't actually collide on the device, but their audit trail is now ambiguous about which was first
+- No `sys_port_lock` table exists for "operator X is currently editing this port"
+
+**Consequences:**
+- Audit ambiguity: "who changed GE0/0/1 description at 14:23?"
+- Last-write-wins: if A's "uplink" is overwritten by B's "server-farm" mid-batch, A's audit row shows "success" but the actual state matches B's intent
+- No conflict resolution: there is no "your changes conflict with another operator's session" UI
+
+**Prevention:**
+```go
+// ✅ CORRECT: Port-level intent lock via DB table (advisory, not mutex)
+type PortWriteLock struct {
+    DeviceID      string    `gorm:"type:uuid;primaryKey"`
+    InterfaceName string    `gorm:"size:64;primaryKey"`
+    OperatorID    string    `gorm:"type:uuid;not null"`
+    OperatorName  string    `gorm:"size:64"`
+    Operation     string    `gorm:"size:32;not null"`  // shutdown/description/dot1x/batch
+    AcquiredAt    time.Time `gorm:"not null"`
+    ExpiresAt     time.Time `gorm:"not null;index"`    // TTL: 5min default
+}
+
+func (s *WriteService) AcquirePortLock(ctx context.Context, deviceID, iface, op, operatorID, opName string) (*PortWriteLock, error) {
+    now := time.Now()
+    lock := &PortWriteLock{
+        DeviceID:      deviceID,
+        InterfaceName: iface,
+        Operation:     op,
+        OperatorID:    operatorID,
+        OperatorName:  opName,
+        AcquiredAt:    now,
+        ExpiresAt:     now.Add(5 * time.Minute),
+    }
+    // Upsert with WHERE expires_at < now (steal expired locks)
+    result := s.db.Clauses(clause.OnConflict{
+        Columns: []clause.Column{{Name: "device_id"}, {Name: "interface_name"}},
+        DoUpdates: clause.Assignments(map[string]interface{}{
+            "operator_id":   operatorID,
+            "operator_name": opName,
+            "operation":     op,
+            "acquired_at":   now,
+            "expires_at":    now.Add(5 * time.Minute),
+        }),
+    }).Create(lock)
+    if result.Error != nil {
+        return nil, result.Error
+    }
+    // Return current holder (may not be us if not expired)
+    var current PortWriteLock
+    s.db.Where("device_id = ? AND interface_name = ?", deviceID, iface).First(&current)
+    if current.OperatorID != operatorID && current.ExpiresAt.After(now) {
+        return &current, fmt.Errorf("端口 %s 正在被 %s 编辑中(操作: %s, 剩余 %v)",
+            iface, current.OperatorName, current.Operation,
+            current.ExpiresAt.Sub(now).Round(time.Second))
+    }
+    return &current, nil
+}
+```
+
+**Warning signs:**
+- Operlog shows two "success" rows for the same `device_id+interface_name+operation` within 5 minutes
+- No "conflict" or "denied" rows in the audit table (all writes succeed)
+- User reports "my change didn't apply" but audit shows success
+
+**Phase to address:** Phase 50 — `sys_port_write_lock` table + `AcquiredBy` in audit row
+
+**Code references:**
+- `internal/device/connection_pool.go:159-318` (existing per-device SSH lock, not port-aware)
+- `internal/services/addomain/account_pool.go` (existing `SELECT FOR UPDATE` row-lock pattern to mirror)
+
+---
+
+### Pitfall 5: Operlog Sensitive-Keyword Masking Hides the Audit Value
+
+**What goes wrong:** The 11 mandatory sensitive keywords (`password`, `pwd`, `secret`, `token`, `key`, `salt`, `privateKey`, `oldPassword`, `macKey`, `sm4Key`, `sm2Key`, etc. — see `internal/utils/operlog/operlog.go:135-170`) match by contiguous-substring on `"<key>":"<value>"` JSON. A legitimate port description like `DMZ-port-for-key-service` or `HR-system-api-token-endpoint` will have its VALUE masked to `******`, even though the field is a non-sensitive description. Worse: if the user enters a description that contains the literal text `password X` (e.g. "Reset password hint"), the entire description is masked, leaving the audit log useless.
+
+**Why it happens:**
+- The `FilterSensitiveParams` function masks by JSON key name, not by semantic field
+- Operlog's `RecordWithBody` reads the request body once, filters, and stores — there's no per-field policy
+- The 11 keywords were designed for API key / credential bodies, not for free-form network config commands
+- The locked `regression_test.go:188-207` "mandatorySensitiveKeywords" test prevents adding exceptions to the keyword list
+
+**Consequences:**
+- Audit log shows `description: ******` when the operator typed `DMZ-port-for-key-service` — no record of what was actually written
+- Compliance review finds the operlog "redacts too much" and either disables masking (regression) or rejects the audit trail entirely
+- Forensic investigation cannot determine "what was the description before?" because the AfterValue is also masked
+
+**Prevention:**
+```go
+// ✅ CORRECT: Use dedicated, unmasked audit table for write operations
+// Don't rely on operlog.Record for port write details — use sys_port_write_audit instead.
+// Operlog still records "操作类型 + 设备 + 端口" but the actual command body
+// lives in sys_port_write_audit (Pitfall 2) where it can be selectively redacted
+// (only the password/secret VALUES if a write operation actually contains them,
+// which shutdown/description/dot1x never do for port config commands).
+
+// For commands that DO contain credentials (e.g. setting SNMP community string):
+func maskCommandBody(cmd string) string {
+    // Pattern: only mask known sensitive PATTERNS, not free text
+    sensitivePatterns := []struct{ re *regexp.Regexp }{
+        {regexp.MustCompile(`(?i)snmp-agent\s+community\s+read\s+(\S+)`)},
+        {regexp.MustCompile(`(?i)snmp-server\s+community\s+(\S+)`)},
+        {regexp.MustCompile(`(?i)(local-user|user)\s+\S+\s+password\s+(?:cipher\s+)?(\S+)`)},
+    }
+    masked := cmd
+    for _, p := range sensitivePatterns {
+        masked = p.re.ReplaceAllString(masked, "$1******")
+    }
+    return masked
+}
+
+// In the write service:
+audit.CommandSent = maskCommandBody(req.RenderCommand())  // masked only when needed
+audit.RawCommandSent = req.RenderCommand()                // full text, for admin redaction
+```
+
+**Warning signs:**
+- Operlog shows `description: ******` for a port whose actual config has a non-sensitive description
+- Audit log volume drops by 90% after v1.19 ships (over-masking broke operator trust in the log)
+- User complains "I can see the operlog row but not what was actually written"
+
+**Phase to address:** Phase 50 — `sys_port_write_audit.CommandSent` is a separate column with targeted regex masking; operlog is used for the high-level "user X changed port Y" entry only
+
+**Code references:**
+- `internal/utils/operlog/operlog.go:135-170` (the 11 mandatory sensitive keywords)
+- `internal/utils/operlog/regression_test.go:188-207` (locked keyword set, no exceptions possible)
+- `internal/api/v1/network/command_handler.go:74` (existing read-only QuickCommand uses operlog for audit)
+
+---
+
+### Pitfall 6: Batch Execution Exceeds 30s Core Shutdown Deadline
+
+**What goes wrong:** A batch of 50 ports × 3 SSH commands each = 150 commands × ~2s each = 5 minutes total. The Gin handler's `c.Request.Context()` is bound to the HTTP request lifetime, but the connection pool's `cleanupTicker` (1-minute interval in `connection_pool.go:459`) can race the batch. More importantly, the `Core.Close()` 30s shutdown deadline (`core.go:488`) can fire mid-batch — the connection pool is forcibly closed while a write is still issuing, leaving the device in a half-configured state (e.g. description was set but `quit` was never sent, so the operator is "still in system-view").
+
+**Why it happens:**
+- `c.Request.Context()` is the standard Gin pattern but has no extension mechanism
+- SSH `SendConfig` calls don't carry a sub-context with longer timeout
+- The 30s `coreShutdownTimeout` in `core.go:488` is non-negotiable (process must exit)
+- Per-port timeouts in `portCollectionDeviceTimeout = 10*time.Minute` are read-only — they don't apply to writes
+- The "write failed because the connection was closed mid-config" is silently swallowed by `acquireOp`'s `state != StateReady` check
+
+**Consequences:**
+- Half-configured devices: GE0/0/1 description is set, but `quit` was never sent → next operator session on the device starts in system-view (not user-view) → next command "succeeds" but is operating in a weird context
+- Operlog shows "成功" but the device state is partial
+- On service restart, all in-flight batches are abandoned with no operator notification
+
+**Prevention:**
+```go
+// ✅ CORRECT: Detach batch execution from HTTP request lifetime
+// Use a separate background context with a longer deadline (e.g. 30min),
+// but still keep operlog.Record in the HTTP handler so the operator's
+// request is tied to the audit row.
+
+func (h *PortWriteHandler) BatchWrite(c *gin.Context) {
+    var req BatchWriteRequest
+    if !responseHelpers.HandleJSONBinding(c, &req) { return }
+
+    // Cap batch size: 50 ports max (Pitfall 11)
+    if len(req.Ports) > 50 {
+        response.Error(c, http.StatusBadRequest, "单次批量操作最多 50 个端口")
+        return
+    }
+
+    // Detached context with longer deadline, NOT c.Request.Context()
+    batchCtx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+    defer cancel()
+
+    // Submit to the same DeviceInfoCollectionService.enqueue-style background queue
+    batchID := uuid.New().String()
+    go s.writeQueue.Submit(batchCtx, batchID, &req)
+
+    // Return batch ID immediately, operator polls for progress
+    response.Success(c, gin.H{
+        "batchId": batchID,
+        "status":  "queued",
+        "totalPorts": len(req.Ports),
+    })
+}
+
+// Poll endpoint for progress:
+func (h *PortWriteHandler) GetBatchStatus(c *gin.Context) {
+    batchID := c.Param("batchId")
+    progress, _ := s.writeQueue.GetProgress(batchID)
+    response.Success(c, progress)
+}
+```
+
+**Warning signs:**
+- `Core.Close` logs `[Core.Close] 已超过 30s 强制结束` during or after a batch
+- Operlog shows 50 rows of "成功" but a device audit trail shows only 30 commands landed
+- Next v1.18 collection shows port state inconsistent with operlog "success" rows
+
+**Phase to address:** Phase 50 — Detach batch context, introduce `sys_port_write_batch` (progress tracking table)
+
+**Code references:**
+- `internal/core/core.go:488-520` (30s shutdown timeout, hard cap)
+- `internal/services/device_info_collection_service.go:75-130` (existing background worker pattern with detached context)
+- `internal/services/device_info_collection_service.go:101-129` (Stop() with timeout — pattern to mirror)
+
+---
+
+### Pitfall 7: Connection Pool Exhaustion Holding the Pool for the Whole Batch
+
+**What goes wrong:** A 50-port batch holds the SSH connection to the device for 5 minutes. The pool's `maxConnections=50` (in `connection_pool.go:184`) means a single batch can hold 1/50 of the pool for 5 minutes. If 3 operators each run a 50-port batch on different devices simultaneously, 3/50 of the pool is held. If a v1.18 collection cron triggers at the same time, the collector's `Enqueue` (in `device_info_collection_service.go:133-163`) returns "任务队列已满" (queue full at 1000 entries) but the underlying SSH pool is also blocked.
+
+**Why it happens:**
+- The connection pool locks are per-device, but the pool itself has a global count
+- PooledConnection.Acquire (line 45-75) holds the device lock for the duration of `Execute`'s callback
+- Long-running batches lock the connection even when no command is in flight (between iterations)
+- The pool's `cleanupTicker` skips connections with `refCount > 0`, so a held batch prevents the connection from being cleaned up
+- `maxConnections=50` was set when only the v1.18 collector used it (5 workers × N devices) — not sized for concurrent write batches
+
+**Consequences:**
+- "连接池已满" errors when concurrent batches + cron collision
+- v1.18 collector cron fails to collect from devices whose connections are held by an in-flight batch
+- Frontend shows "批量写入中" forever if the pool's acquire fails — no recovery path
+
+**Prevention:**
+```go
+// ✅ CORRECT: Release the connection between commands, not across the batch
+func (s *WriteService) WriteBatch(ctx context.Context, req *BatchWriteRequest) error {
+    for i, port := range req.Ports {
+        // Check context cancellation BETWEEN ports (not just at the top)
+        if err := ctx.Err(); err != nil {
+            return fmt.Errorf("batch cancelled at port %d: %w", i, err)
+        }
+        // Per-port write uses its OWN Acquire/Release cycle
+        if err := s.writeOnePort(ctx, req.DeviceID, port); err != nil {
+            // Failed: continue to next port, log this one's failure
+            s.recordPortFailure(i, port, err)
+            continue
+        }
+    }
+    return nil
+}
+
+func (s *WriteService) writeOnePort(ctx context.Context, deviceID string, port PortRef) error {
+    conn, err := s.pool.GetConnection(ctx, deviceID)
+    if err != nil {
+        return err
+    }
+    defer conn.ReleaseRef()  // Release after THIS port's commands, not after the batch
+
+    wrapper := conn.GetWrapper()
+    // Per-port context with 30s timeout
+    portCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+    defer cancel()
+    return s.issueWrite(portCtx, wrapper, port)
+}
+```
+
+**Warning signs:**
+- `GetStats()` reports `active_connections` close to `max_connections` (50)
+- v1.18 cron `EnqueueAllOnlineDevices` log shows "加入队列失败"
+- Operlog for write operations shows latency > 30s
+
+**Phase to address:** Phase 50 — `writeOnePort` boundary; Phase 51 — pool size config (move to `sys_config`)
+
+**Code references:**
+- `internal/device/connection_pool.go:184-208` (DefaultPoolConfig, hardcoded 50)
+- `internal/device/connection_pool.go:159-318` (GetConnection returns pc with refCount=1; cleanup skipped)
+- `internal/services/device_info_collection_service.go:133-163` (existing enqueue with full-queue rejection)
+
+---
+
+### Pitfall 8: Frontend Optimistic Update Race vs Slow Batch Result
+
+**What goes wrong:** Operator clicks "批量关闭 GE0/0/1-24" with optimistic UI update (port shows red/disabled immediately). The batch takes 90 seconds. The actual device result is 23 success + 1 failure (GE0/0/17 is "stuck" in err-disabled state and won't accept shutdown). The optimistic UI shows all 24 as "已禁用" for 90s, then the partial result arrives and 1 of them flips back to "实际状态: enabled". The operator may have already left the page or made decisions based on the wrong state.
+
+**Why it happens:**
+- React Query's optimistic update pattern (`onMutate` + `onError` rollback) is per-mutation, not per-batch
+- TanStack React Query doesn't have native batched mutation with partial rollback
+- The existing `port_handler.go:96-111` Collect endpoint is per-device (synchronous), not batched
+- Long-running batch results arrive AFTER the operator's click, not before the operator's next action
+
+**Consequences:**
+- Operator makes a follow-up decision ("I disabled it, let me also disable GE0/0/25") based on stale optimistic state
+- The rollback (1 port going from "disabled" back to "enabled") is hidden under the batch progress overlay
+- If the operator navigates away, the partial result is lost (state in React Query cache is the only source of truth)
+
+**Prevention:**
+```typescript
+// ✅ CORRECT: Use a batch progress dialog state, not optimistic row updates
+// In the ports list page:
+const [batchProgress, setBatchProgress] = useState<BatchProgress | null>(null);
+
+const batchWriteMutation = useMutation({
+  mutationFn: (req: BatchWriteRequest) => post('/network/port/write-batch', req),
+  onSuccess: (res) => {
+    setBatchProgress({ batchId: res.data.batchId, totalPorts: res.data.totalPorts, completed: 0 });
+    // Do NOT optimistically update rows — show a dialog instead
+  },
+});
+
+useEffect(() => {
+  if (!batchProgress) return;
+  const poll = setInterval(async () => {
+    const res = await post('/network/port/write-batch/status', { batchId: batchProgress.batchId });
+    setBatchProgress(res.data);
+    if (res.data.status === 'completed' || res.data.status === 'failed') {
+      clearInterval(poll);
+      // NOW invalidate the ports query to refetch real state
+      queryClient.invalidateQueries(['ports', res.data.deviceId]);
+    }
+  }, 2000);
+  return () => clearInterval(poll);
+}, [batchProgress]);
+```
+
+**Warning signs:**
+- Operlog and visible port state diverge (UI says "disabled", operlog says "failed")
+- React Query DevTools shows `isStale: true` for ports while batch is in-flight
+- `port_handler.go` List endpoint returns "enabled" for a port that the batch said was "successfully disabled"
+
+**Phase to address:** Phase 52 (Frontend) — BatchProgressDialog component with poll-based progress, no row-level optimistic updates
+
+**Code references:**
+- `ruoyi-react-frontend/src/lib/opsApi.ts` (existing opsApi pattern for batch operations)
+- `ruoyi-react-frontend/src/pages/network/port/index.tsx` (to be created in v1.19)
+
+---
+
+### Pitfall 9: Operlog.RecordBackground Required for Post-Write Enqueue Audit
+
+**What goes wrong:** After a write succeeds, v1.19 enqueues a v1.18 collection (via `DeviceInfoCollectionService.Enqueue`) to refresh the port state. The collection runs in a background worker, NOT in the HTTP request context. The collection's pipeline writes to `sys_oper_log` via `OpsAssetWriter` (per Phase 48 D-13). If the writer uses the regular `operlog.Record` (which reads `*gin.Context` for operator name), the row is dropped silently (defensive `if c == nil` in `operlog.go:229`). The audit trail of "port state was refreshed after write" is missing.
+
+**Why it happens:**
+- Phase 48 D-13 explicitly introduced `operlog.RecordBackground` for this exact reason — `operlog.go:265-321` — but the documentation in `operlog.go:280-281` notes "D-13 scope is the UPDATE path only. Failure-path events from cron pipelines use applogger.Warnf"
+- The post-write enqueue is a NEW caller that needs `RecordBackground` but might be wired with `Record` (using the now-stale request context that returns nil)
+- The `c.Request.Context()` of a completed write handler is already Done — passing it to a background worker triggers "context canceled" immediately
+
+**Consequences:**
+- `sys_oper_log` is missing rows for the post-write collection step
+- Compliance audit shows the write, but not the verification step
+- Debugging "why is the port state stale?" requires correlating to `applogger` (debug) output, not `sys_oper_log`
+
+**Prevention:**
+```go
+// ✅ CORRECT: Use RecordBackground for the post-write enqueue's audit
+func (s *WriteService) EnqueuePostWriteCollection(ctx context.Context, deviceID string, writeAuditID string) error {
+    // Enqueue the collection (v1.18 path)
+    if err := s.deviceInfoService.Enqueue(deviceID); err != nil {
+        applogger.Warnf("[端口写入] 触发改后采集失败 [deviceID=%s, writeAuditID=%s]: %v",
+            deviceID, writeAuditID, err)
+        return err
+    }
+    // Audit the enqueue event using RecordBackground (no gin.Context)
+    operlog.RecordBackground(
+        s.core.OperLogService,
+        s.core.GetDB(),
+        "端口写入",
+        operlog.OperTypeSync,  // Sync = 改后同步采集
+        "system-port-write",   // operator name sentinel
+        map[string]interface{}{
+            "deviceId":   deviceID,
+            "writeAuditId": writeAuditID,
+            "trigger":    "post_write_collection",
+        },
+    )
+    return nil
+}
+```
+
+**Warning signs:**
+- `sys_oper_log` shows the write row but no following "改后采集" row
+- Search by `device_id + operUrl contains /network/port/write` returns 1 row, not 2
+- Phase 48 D-13 documentation in `.planning/notes/` is followed but the new caller forgot to use `RecordBackground`
+
+**Phase to address:** Phase 50 — `EnqueuePostWriteCollection` service method with `RecordBackground`
+
+**Code references:**
+- `internal/utils/operlog/operlog.go:265-321` (RecordBackground signature)
+- `internal/services/device_info_collection_service.go:265-300` (processTask path, no gin.Context)
+- `internal/services/component_collector/ops_asset_writer.go` (Phase 48 D-13 RecordBackground example)
+
+---
+
+### Pitfall 10: Device Unreachable Mid-Batch — Half-Executed, No Reconnect
+
+**What goes wrong:** Batch starts, ports 1-15 succeed, port 16's SSH command times out (device rebooted, network blip, or device CPU spiked). The connection pool marks the wrapper as `StateClosed` (per `scrapli_wrapper.go:526-530` `containsEOF`/`containsConnectionError` check). The batch continues to port 17, calls `pool.GetConnection()`, gets a NEW connection (the old one is gone), and the new connection works — but the device might still be rebooting, and the new command silently enters user-view (not system-view) on the rebooting device, producing a `% Unknown command` for `system-view` (because the device is in pre-boot state).
+
+**Why it happens:**
+- `ScrapliWrapper.SendConfig` does not retry on connection error
+- `DeviceConnectionPool.removeConnection` (line 427-455) is called only when `IsReady()` returns false in `GetConnection` — but if the connection WAS ready and then broke mid-command, the pool doesn't proactively remove it
+- The 30s `core.go:469` (refresh view) and similar 30s timeouts are for background tasks, not the write path's per-command timeout
+- No "post-error reconnect" logic — the next port's `GetConnection` may or may not get a fresh connection depending on whether the cleanup ticker has fired
+
+**Consequences:**
+- Mid-batch state corruption: ports 16-50 are written against a device in an unknown state
+- Operlog shows mixed success/failure with no operator-friendly "device unreachable at port 16" message
+- Operator has to manually investigate each port's state (no easy "re-run the failed portion only")
+
+**Prevention:**
+```go
+// ✅ CORRECT: Proactive health check + per-port reconnect + batch resume
+func (s *WriteService) WriteBatchWithResume(ctx context.Context, batchID string, req *BatchWriteRequest) {
+    var failedPorts []PortRef
+    for i, port := range req.Ports {
+        if ctx.Err() != nil { return }
+
+        // Capture pre-port health check
+        if err := s.healthCheckDevice(ctx, req.DeviceID); err != nil {
+            applogger.Warnf("[批量写入] 设备健康检查失败 [deviceID=%s, port=%s, 已完成=%d/%d]: %v",
+                req.DeviceID, port.InterfaceName, i, len(req.Ports), err)
+            failedPorts = append(failedPorts, port)
+            s.updateBatchProgress(batchID, i+1, "device_unreachable")
+            continue
+        }
+
+        if err := s.writeOnePort(ctx, req.DeviceID, port); err != nil {
+            // Distinguish: device_unreachable (retry next batch) vs device_rejected (don't retry)
+            if isDeviceUnreachable(err) {
+                failedPorts = append(failedPorts, port)
+                s.updateBatchProgress(batchID, i+1, "device_unreachable")
+                // Wait 5s before next attempt to let device recover
+                time.Sleep(5 * time.Second)
+            } else {
+                s.recordPortFailure(i, port, err)
+                s.updateBatchProgress(batchID, i+1, "device_rejected")
+            }
+            continue
+        }
+        s.updateBatchProgress(batchID, i+1, "success")
+    }
+    // Resume endpoint can re-run failedPorts
+    s.markBatchCompleted(batchID, failedPorts)
+}
+```
+
+**Warning signs:**
+- Operlog shows a sequence like `[success × 15, device_rejected, success × 34]` with no obvious boundary
+- Port state on device doesn't match operlog "success" rows
+- v1.18 collection after the batch shows half the ports have new state, half have old state
+
+**Phase to address:** Phase 50 — health check + resume support; Phase 51 — `failed_ports` JSON column in `sys_port_write_batch`
+
+**Code references:**
+- `internal/device/scrapli_wrapper.go:526-530` (EOF/connection error → state=Closed, no proactive removal)
+- `internal/device/connection_pool.go:427-455` (removeConnection requires explicit IsReady=false check)
+
+---
+
+### Pitfall 11: No Batch Size Cap — Operator Initiates 1000-Port Batch, Pool Starves
+
+**What goes wrong:** No MVP design constraint is placed on batch size. An operator selects 1000 ports (e.g. "disable all unused ports on this device"). The batch holds the connection for 1000 × 2s = 33 minutes, exceeding the 30-minute detached context deadline. The pool's maxConnections=50 is overwhelmed by similar concurrent batches, and v1.18 collection cron starts failing.
+
+**Why it happens:**
+- v1.19 scope says "批量执行：串行失败即停" but doesn't specify a cap
+- Frontend's Ant Design Table row selection supports unlimited selection by default
+- No per-operator or per-device rate limit exists at the handler layer
+- The pool's `maxConnections=50` is a soft cap, not a per-batch limit
+
+**Consequences:**
+- Batch exceeds 30min context, the whole batch is abandoned with partial results
+- Concurrent batches from different operators all share the pool's 50-connection budget
+- v1.18 collection cron fails to schedule new tasks (queue full from operator batches)
+
+**Prevention:**
+```go
+// ✅ CORRECT: Hard cap + soft warning + automatic chunking
+const (
+    maxBatchSizeHardCap     = 50    // absolute limit per batch
+    maxBatchSizeSoftWarning = 20    // warn operator if > 20 ports
+    maxConcurrentBatches    = 5     // per-operator concurrent limit
+)
+
+// In the handler:
+func (h *PortWriteHandler) BatchWrite(c *gin.Context) {
+    var req BatchWriteRequest
+    if !responseHelpers.HandleJSONBinding(c, &req) { return }
+
+    if len(req.Ports) == 0 {
+        response.Error(c, http.StatusBadRequest, "请选择至少一个端口")
+        return
+    }
+    if len(req.Ports) > maxBatchSizeHardCap {
+        response.Error(c, http.StatusBadRequest,
+            fmt.Sprintf("单次批量操作最多 %d 个端口(已选 %d 个),请分批执行",
+                maxBatchSizeHardCap, len(req.Ports)))
+        return
+    }
+    if len(req.Ports) > maxBatchSizeSoftWarning {
+        // Return a warning header but proceed
+        c.Header("X-Batch-Warning",
+            fmt.Sprintf("批量操作 %d 个端口,建议分批执行", len(req.Ports)))
+    }
+    // ... continue
+}
+```
+
+**Warning signs:**
+- `sys_port_write_batch` has rows with `total_ports > 50`
+- Operlog shows writes with `DurationMs > 600000` (10 minutes)
+- Pool stats show `active_connections == max_connections` for sustained periods
+
+**Phase to address:** Phase 50 — hard cap constant + handler validation; Phase 52 (Frontend) — Ant Design Table selection warning
+
+**Code references:**
+- `internal/services/portcollection/collection.go:65-80` (existing per-device loop pattern, no per-port cap)
+- `internal/services/config_execution_service.go:50-100` (existing batch template execution, may have similar issue)
 
 ---
 
 ## Moderate Pitfalls
 
-### Pitfall 8: Timezone Issues in Timestamp Comparisons
+### Pitfall 12: Privilege Escalation — Operator User Role Can Disable Critical Uplinks
 
-**What goes wrong:** Collection timestamps stored in UTC but queries use local time, causing "missing" events or incorrect time ranges in historical reports.
+**What goes wrong:** The new `network:port:write` permission grants ALL operators the ability to issue `shutdown` on any port, including uplink ports (GE0/0/47-48 on an access switch) that would knock out the entire building's network access. There is no per-port or per-port-role policy ("operator can manage access ports but not uplinks").
 
 **Prevention:**
-- Always store `collected_at` as `TIMESTAMPTZ` (PostgreSQL timezone-aware type)
-- Convert user input to UTC before queries: `WHERE collected_at >= '2025-01-01 00:00:00+00'::timestamptz`
-- Display timestamps in user's timezone in UI layer only
+- Add a `sys_port_write_policy` table: `(device_id, interface_pattern, allowed_roles)` — e.g. `GE0/0/4[0-7]$` is restricted to `role:network-admin`
+- Default MVP policy: any port ending in `47|48` requires `network:port:write:critical` perm
+- The locked decision in PROJECT.md only mentions `network:port:write` (single perm); consider a follow-up v1.19+ for `network:port:write:critical`
+
+**Warning signs:** Incident report shows operator disabled uplink port; no policy blocked it
+
+**Phase to address:** Phase 50 (MVP) / Phase 53 (v1.19+ follow-up)
 
 ---
 
-### Pitfall 9: Bulk Export Performance Issues
+### Pitfall 13: Auto-Collection Race with Operator's Manual Refresh
 
-**What goes wrong:** Exporting 90 days of historical MAC changes for all devices causes memory exhaustion or API timeouts due to unbounded result sets.
+**What goes wrong:** Operator clicks "Refresh ports" while the post-write enqueue is mid-collection. Both reads hit the same `sys_device_port_status` table, the v1.18 collector may overwrite a row the operator's manual refresh is about to display.
 
-**Prevention:**
-- Implement streaming export using server-sent events or chunked responses
-- Require time range + device filters for exports (max 30 days, 10 devices per export)
-- Use background job generation with download links (like existing batch export in Phase 10)
+**Prevention:** Use `find()` with `Order("collected_at DESC").First()` and a 1-second staleness window; the UI should not refresh individual rows during an in-flight write batch.
+
+**Warning signs:** UI shows port state changing every 1-2 seconds during a write batch
+
+**Phase to address:** Phase 52 (Frontend) — disable manual refresh while batch in-flight
 
 ---
 
-### Pitfall 10: No API Rate Limiting Causing Database Overload
+### Pitfall 14: Test Coverage Gap — No Mock SSH Server for Real Vendor Prompts
 
-**What goes wrong:** Historical search APIs allow unlimited queries, causing database overload from automated scripts or aggressive user queries.
+**What goes wrong:** Unit tests pass with mock `ScrapliWrapper` returning canned responses, but production failures (Huawei V200R005 vs V600R024 different `% Error: Unrecognized command` wording) are not caught until UAT on real devices.
 
 **Prevention:**
-- Implement per-user rate limiting on historical search endpoints
-- Require time range filters (max 90 days for non-admin users)
-- Cache frequent queries (last 24h MAC movements for top 100 devices)
+- Add a `internal/device/test_server.go` that runs a real `ssh.NewServer` (golang.org/x/crypto/ssh) with canned prompt handling for each vendor
+- Run integration tests against this server: `TestHuaweiShutdownCommand`, `TestH3CDescriptionWithSpace`, `TestRuijieConfigureTerminalError`
+- Wire to `make test-integration` so they're not silently skipped
+
+**Warning signs:** Unit tests pass, UAT on real devices finds syntax errors; no pre-deploy integration test failure
+
+**Phase to address:** Phase 50 (test infrastructure) / Phase 54 (full integration test suite)
+
+**Code references:**
+- `internal/device/connection_pool_test.go` (existing test pattern using mocks)
+- `internal/services/portcollection/collection_test.go` (existing read-only integration test)
+
+---
+
+### Pitfall 15: Rollback Strategy Missing — Write Succeeds, Operator Wants Undo
+
+**What goes wrong:** Operator disables GE0/0/1 by accident. There's no "undo" button. They have to remember what the previous description was and manually re-issue a write. The v1.19 PROJECT.md explicitly defers auto-rollback ("MVP 仅'失败即停 + 回传失败点'"), but the OPERATOR EXPECTATION is different — they assume a "single-port undo" exists.
+
+**Prevention:**
+- The `sys_port_write_audit.BeforeValue` (from Pitfall 2) makes undo trivial: re-issue a write with `value=BeforeValue`
+- Frontend's "操作历史" tab can show "revert" button for any audit row
+- No automatic rollback (explicitly out of MVP scope per PROJECT.md lock), but make the data available
+
+**Warning signs:** Operator reports "I want to undo this" and the only path is manual SSH
+
+**Phase to address:** Phase 52 (Frontend) — "Revert" action reading from `sys_port_write_audit`
 
 ---
 
 ## Minor Pitfalls
 
-### Pitfall 11: Inconsistent Event Type Naming
+### Pitfall 16: Cache Prefix Pollution When Adding Port Write Cache Invalidation
 
-**Prevention:** Define standardized event types in code: `MACEventAppeared`, `MACEventDisappeared`, `MACEventMoved`, `MACEventVLANChanged`. Use constants, not string literals.
+**What goes wrong:** The Redis prefix is `ruoyi:` (`core.go:342`); all cache keys must be added with the prefix implicitly via the cache interface, not by hardcoding `ruoyi:port:write:status`. If the write service hardcodes the prefix in a cache key like `cache.Set(ctx, "ruoyi:port:status:device-123", ...)`, the actual stored key becomes `ruoyi:ruoyi:port:status:device-123` — broken.
 
-### Pitfall 12: Missing Data Validation Before Inserts
+**Prevention:** Use a helper function `GetPortStatusKey(deviceID) string` that returns `"port:status:" + deviceID` (no prefix), and let the cache layer add `ruoyi:`. Strip prefix on read (`strings.TrimPrefix(key, "ruoyi:")`) when accepting user input from the cache monitor UI.
 
-**Prevention:** Add `BeforeCreate` hooks to validate MAC address format, ensure `device_id` exists, verify `collected_at` is not in future.
+**Warning signs:** Cache monitor shows keys with double prefix; cache invalidation never hits the right key
+
+**Phase to address:** Phase 50 — `cache_keys.go` for port write audit cache
+
+**Code references:**
+- `internal/core/core.go:342` (prefix hardcoded)
+- `internal/services/cache_keys.go` (existing helper pattern)
+
+---
+
+### Pitfall 17: Operlog Module Name Inconsistency — "端口管理" vs "网络设备" vs "端口写入"
+
+**What goes wrong:** Three different modules exist for related operations: existing `端口管理` (port collect/list), `网络设备` (device CRUD), and a new `端口写入` (port write). A query "all operations on GE0/0/1" must search 2-3 different module names.
+
+**Prevention:** Use a single module name `端口管理` for all port-related operations (consistent with the existing `port_handler.go` convention), and use `OperType` (Write=Update, BatchWrite=Batch) to distinguish. The new "端口写入" module name is redundant.
+
+**Warning signs:** Audit search returns 3 separate module rows for one user action
+
+**Phase to address:** Phase 50 — use existing module name `端口管理` with `OperTypeUpdate` / `OperTypeBatch` / `OperTypeStatus`
+
+**Code references:**
+- `internal/api/v1/network/port_handler.go:109` (existing `端口管理` convention)
+- `internal/utils/operlog/operlog.go:35-67` (25 OperType constants cover this)
+
+---
+
+### Pitfall 18: UUID Validation for Device/Port Parameters
+
+**What goes wrong:** v1.19 introduces `device_id` (UUID) and `interface_name` (string, not UUID) in write requests. Hand-written validation may accept malformed UUIDs, leading to GORM SQLSTATE 42703 or 22P02 on PostgreSQL.
+
+**Prevention:** Use the same UUID regex as `building_service.go validateOrg()`: `^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`. For `interface_name`, validate against `^[A-Za-z]+[A-Za-z0-9/\-\.]+$` to reject shell-injection patterns.
+
+**Warning signs:** SQLSTATE 22P02 in handler logs; PostgreSQL "invalid input syntax for type uuid"
+
+**Phase to address:** Phase 50 — request struct binding tags + manual validation in handler
+
+**Code references:**
+- `internal/services/operations/building_service.go validateOrg()` (existing UUID pattern)
+- `internal/services/portcollection/collection.go:30-40` (existing pattern, no UUID validation because the IDs come from query)
 
 ---
 
 ## Phase-Specific Warnings
 
-| Phase Topic | Likely Pitfall | Mitigation |
-|-------------|---------------|------------|
-| **Phase 12: Data Model** | Pitfall 1 (uncontrolled growth), Pitfall 6 (missing context) | Implement change detection + device snapshots, add retention policy |
-| **Phase 12: Collection Integration** | Pitfall 2 (change detection), Pitfall 4 (race conditions) | Use transactional isolation, composite key comparison, in-memory change detection |
-| **Phase 13: Query Layer** | Pitfall 3 (performance collapse), Pitfall 5 (format inconsistency) | Add composite indexes, use MACADDR type, enforce normalization in model layer |
-| **Phase 14: Security Features** | Pitfall 7 (missing audit trail) | Add collection context, correlation IDs, device state snapshots |
-| **Phase 15: Export & Reports** | Pitfall 9 (bulk export issues) | Implement streaming exports, require time/device filters, background job generation |
+| Phase | Likely Pitfall | Mitigation |
+|-------|---------------|------------|
+| **Phase 50: Write Command Service** | Pitfall 1, 3, 4, 5, 6, 7, 9, 10, 11 | Hard cap, vendor templates, port lock, separate audit table, RecordBackground, health check |
+| **Phase 51: Audit & Operlog Integration** | Pitfall 2, 5, 9 | `sys_port_write_audit` table; targeted regex masking; RecordBackground for cron-path enqueue |
+| **Phase 52: Frontend Batch Dialog** | Pitfall 8, 15, 17 | BatchProgressDialog (poll-based, no row optimistic updates); Revert button using audit BeforeValue; single module name `端口管理` |
+| **Phase 53: Permission Policy (v1.19+)** | Pitfall 12 | `sys_port_write_policy` table + `network:port:write:critical` permission |
+| **Phase 54: Test Infrastructure** | Pitfall 14 | Mock SSH server for vendor-specific prompt tests |
 
 ---
 
-## Integration Pitfalls with Existing MAC Collection
+## "Looks Done But Isn't" Checklist
 
-### 1. Breaking the "Delete-Replace" Pattern
-
-**Current Code (lines 201-243 in `mac_collection_service.go`):**
-```go
-// ❌ This destroys historical data
-if err := s.db.WithContext(ctx).
-    Where("device_id = ?", device.ID).
-    Delete(&models.DeviceMACAddress{}).Error; err != nil {
-    return err
-}
-```
-
-**Required Change:**
-```go
-// ✅ Preserve historical state before deletion
-var existingMACs []models.DeviceMACAddress
-s.db.WithContext(ctx).Where("device_id = ?", device.ID).Find(&existingMACs)
-
-// Detect changes
-changes := s.detectChanges(existingMACs, newMACs)
-
-// Store to history BEFORE deletion
-if len(changes) > 0 {
-    s.db.Create(&s.buildHistoryRecords(changes))
-}
-
-// Now safe to delete and replace
-s.db.Where("device_id = ?", device.ID).Delete(&models.DeviceMACAddress{})
-```
-
-### 2. Concurrent Collection Conflicts
-
-**Issue:** Existing code uses goroutines with semaphore for concurrent device collection (lines 69-91). Historical tracking must handle multiple concurrent writes to the same device's history.
-
-**Solution:** Use `INSERT ... ON CONFLICT DO NOTHING` for idempotent history inserts, or partition history writes by device ID to avoid lock contention.
-
-### 3. Filter Rules Integration
-
-**Existing:** MAC collection applies LLDP and count-based filtering (lines 164-190). Historical tracking must record both "filtered" and "unfiltered" states for audit purposes.
-
-**Solution:** Add `filtered_reason` field to history table to track why MACs were excluded (LLDP neighbor, high count, etc.).
+- [ ] **Audit completeness:** `sys_port_write_audit` captures BOTH `BeforeValue` AND `AfterValue` (not just the command sent)
+- [ ] **Error parsing:** `SendConfig` results are checked for `% Error:` / `Unrecognized command` markers, not just transport errors
+- [ ] **Vendor coverage:** All 3 vendors (Huawei / H3C / Ruijie) have tested templates for `shutdown` / `description` / `dot1x` — verify by running `TestVendorWriteTemplate` for each
+- [ ] **Port lock:** Concurrent writes to the same port from different operators return a "locked by X" error, not last-write-wins
+- [ ] **Batch detach:** `c.Request.Context()` is NOT used for the batch execution; the context outlives the HTTP request
+- [ ] **Post-write collection:** `Enqueue(deviceID)` is called after write success AND the enqueue itself is audited via `RecordBackground` (not `Record`)
+- [ ] **Sensitive masking:** `description` body is NOT auto-masked (the field is not sensitive), but commands containing `snmp community / password / secret` are regex-masked
+- [ ] **Module name consistency:** All port write operlog rows use `端口管理` (not a new `端口写入` module)
+- [ ] **Cache prefix:** Port write cache keys use the helper function (no hardcoded `ruoyi:` prefix in the key string)
+- [ ] **Batch cap:** 50-port hard cap is enforced at the handler; >20-port soft warning is visible in the UI
+- [ ] **Health check:** Device unreachable during batch results in `failed_ports` array, not silent skip
+- [ ] **Revert support:** Audit `BeforeValue` is stored long-term (no auto-purge) so "revert" is always possible
 
 ---
 
-## Data Retention and Cleanup Strategies
+## Recovery Strategies
 
-### Strategy 1: Partition-Based Retention (Recommended for High Volume)
-
-**Implementation:**
-- Partition `sys_mac_address_history` by month on `collected_at`
-- Automated job drops partitions older than N months (configurable, default 13 months)
-- Benefits: Instant cleanup (`DROP PARTITION`), query pruning by time range
-- Tradeoff: Requires PostgreSQL partitioning (v11+)
-
-### Strategy 2: Scheduled Cleanup Job
-
-**Implementation:**
-```go
-// Run daily at 2 AM
-func (s *MACHistoryService) ScheduledCleanup(ctx context.Context) error {
-    retentionMonths := s.getRetentionConfig() // from sys_config table
-    cutoff := time.Now().AddDate(0, -retentionMonths, 0)
-
-    result := s.db.WithContext(ctx).
-        Where("collected_at < ?", cutoff).
-        Delete(&models.MACAddressHistory{})
-
-    if result.Error != nil {
-        return fmt.Errorf("cleanup failed: %w", result.Error)
-    }
-
-    applogger.Infof("[MAC History] Cleaned %d old records (cutoff: %s)",
-        result.RowsAffected, cutoff)
-    return nil
-}
-```
-
-**Configuration:**
-- Add `mac.history.retention_months` to `sys_config` table (default: 13)
-- Add scheduler job in `internal/scheduler/` to run cleanup daily
-- Monitor cleanup execution time (should be < 5 minutes for 100M records)
-
-### Strategy 3: Tiered Storage for Archive
-
-**Implementation:**
-- Move records older than 3 months to archive table (unindexed, compressed)
-- Use PostgreSQL table inheritance or separate archive database
-- Archive queries available but slower and admin-only
-
-**Recommended:** Start with Strategy 2, implement Strategy 1 if data volume exceeds 10M records/month.
+| Pitfall | Recovery Cost | Recovery Steps |
+|---------|---------------|----------------|
+| 1. SSH write silent rejection | MEDIUM | Run `display current-configuration interface GE0/0/X` on the device to verify state; if mismatched, re-run the write |
+| 2. Missing before-state in audit | HIGH | Cannot recover historical state; future writes now have it, but past writes are write-only |
+| 3. Vendor syntax wrong | LOW | Update template map; re-run failed ports from the failed_ports list |
+| 4. Concurrent write collision | MEDIUM | Re-apply the LATER operator's intent (last-write-wins is the current semantics; manually re-issue if it was the earlier one's intent that mattered) |
+| 5. Over-masked audit | MEDIUM | Cannot recover; sys_oper_log row is permanently masked. Re-issue writes with `sys_port_write_audit.CommandSent` (which is unmasked) as the source of truth |
+| 6. Batch exceeds 30s shutdown | LOW | Core.Close already handles this (Pitfall 6 prevention); recovery is automatic |
+| 7. Pool exhaustion | LOW | Pool self-recovers when batches complete; temporary "连接池已满" errors are user-actionable (retry) |
+| 8. Optimistic UI race | LOW | React Query cache invalidation after batch completion (Pitfall 8 prevention) |
+| 9. Missing post-write enqueue audit | LOW | Re-query sys_oper_log with broader filter; future batches will have the row |
+| 10. Device unreachable mid-batch | LOW | Re-run `failed_ports` from the batch status response |
+| 11. Batch size overflow | LOW | Operator chunks the batch manually; UI shows soft warning |
+| 12. Privilege escalation | HIGH | Manually re-enable the port; review policy; future writes need the critical permission |
+| 13. Auto-collection race | LOW | UI clears after batch completes; no persistent damage |
+| 14. Test coverage gap | HIGH | Add mock SSH server; rebuild + redeploy; no in-place fix |
+| 15. Rollback missing | LOW | `sys_port_write_audit.BeforeValue` enables manual revert (just re-issue a write with the old value) |
+| 16. Cache prefix pollution | MEDIUM | `cache.DeleteByPattern("ruoyi:port:status:*")` to clean polluted keys; fix helper function |
+| 17. Module name inconsistency | LOW | Update module name in new handlers; no data migration needed |
+| 18. UUID validation missing | LOW | Add binding tag; failed requests get 400 instead of 500 |
 
 ---
 
-## Testing Strategy to Avoid Pitfalls
+## Pitfall-to-Phase Mapping
 
-### Unit Tests
-- **Change Detection:** Synthetic MAC flapping scenarios (move same MAC across 5 ports)
-- **Normalization:** MAC format variants (Cisco, Huawei, standard, mixed case)
-- **Deduplication:** Insert same event twice, verify only one record created
-
-### Integration Tests
-- **Concurrent Collection:** 10 goroutines collecting same device simultaneously
-- **Transaction Rollback:** Simulate collection failure, verify no partial history written
-- **Device Delete:** Delete device after recording history, verify historical data preserved
-
-### Performance Tests
-- **Query Performance:** 10M historical records, query last 30 days for specific MAC (< 2s)
-- **Insert Throughput:** 100K change events per collection cycle (< 30s)
-- **Cleanup Speed:** Delete 1M records older than 13 months (< 5 minutes)
-
-### Data Quality Tests
-- **Format Consistency:** Query for invalid MAC formats, should return 0 rows
-- **Gap Detection:** Find time ranges with no collections for active devices
-- **Orphan Detection:** Find history records referencing deleted device IDs (expected, not error)
+| Pitfall | Prevention Phase | Verification |
+|---------|------------------|--------------|
+| 1. SSH silent rejection | Phase 50 | Unit test: `SendConfig` with mock returning `% Error: Unrecognized command` → service returns `device_rejected` |
+| 2. No before/after snapshot | Phase 50 + 51 | Integration test: `BeforeValue` field is populated before write, `AfterValue` is populated by next v1.18 collect |
+| 3. Vendor syntax subtlety | Phase 50 | Integration test: `TestHuaweiShutdownCommand`, `TestH3CDescriptionWithSpace`, `TestRuijieConfigureTerminalError` against mock SSH server |
+| 4. Concurrent write collision | Phase 50 | Concurrency test: 2 goroutines writing same port → second returns `ErrPortLocked` |
+| 5. Operlog masking | Phase 51 | Unit test: `description: DMZ-port-for-key-service` → `sys_port_write_audit.CommandSent` shows full text, `sys_oper_log.oper_param` shows only high-level summary |
+| 6. Batch 30s shutdown | Phase 50 | Load test: 50-port batch with mock 100s-per-command SSH → context timeout cancels batch cleanly |
+| 7. Pool exhaustion | Phase 50 + 51 | Load test: 5 concurrent 50-port batches + 1 cron enqueue → cron succeeds (no "连接池已满") |
+| 8. Frontend optimistic UI | Phase 52 | Manual test: click batch, navigate away, navigate back → batch progress dialog persists in URL state |
+| 9. RecordBackground for post-write | Phase 50 | Unit test: post-write enqueue → `sys_oper_log` row with `method=BACKGROUND` exists |
+| 10. Device unreachable mid-batch | Phase 50 | Integration test: kill SSH server after 15 ports → `failed_ports` array contains 16-50, status=failed |
+| 11. Batch size cap | Phase 50 | Manual test: select 100 ports → 400 error "单次批量操作最多 50 个端口" |
+| 12. Privilege escalation | Phase 53 (v1.19+) | Manual UAT: operator role tries to disable uplink port → 403 forbidden |
+| 13. Auto-collection race | Phase 52 | Manual test: click batch + manual refresh simultaneously → no flicker |
+| 14. Test coverage gap | Phase 54 | CI: `make test-integration` runs vendor-specific tests; green check required for merge |
+| 15. Rollback missing | Phase 52 | Manual test: "Revert" button reads from `sys_port_write_audit.BeforeValue` and re-issues a write |
+| 16. Cache prefix | Phase 50 | Unit test: `GetPortStatusKey("uuid")` returns `"port:status:uuid"` (no `ruoyi:` prefix) |
+| 17. Module name | Phase 50 | Query test: `SELECT title FROM sys_oper_log WHERE title IN ('端口管理', '网络设备', '端口写入') AND url LIKE '/network/port/write%'` → returns ONLY `端口管理` rows |
+| 18. UUID validation | Phase 50 | Unit test: invalid UUID in request body → 400 error, not 500 |
 
 ---
 
 ## Sources
 
-- **HIGH Confidence**: Existing codebase analysis (`mac_collection_service.go`, `mac_collector.go`, `DeviceMACAddress` model)
-- **HIGH Confidence**: PostgreSQL documentation on partitioning and indexing strategies
-- **MEDIUM Confidence**: Industry best practices for network monitoring data retention (Cisco Prime, SolarWinds patterns)
-- **MEDIUM Confidence**: Common historical database patterns (temporal tables, event sourcing)
-- **LOW Confidence**: Specific enterprise MAC table volume statistics (needs validation from target environment)
+- **HIGH Confidence (codebase-verified):**
+  - `internal/device/scrapli_wrapper.go:567-617` (SendConfig/SendConfigs do not parse device error markers)
+  - `internal/device/connection_pool.go:1-583` (DefaultPoolConfig maxConnections=50, per-device lock, no per-port lock)
+  - `internal/utils/operlog/operlog.go:135-170` (11 mandatory sensitive keywords, locked by regression_test.go)
+  - `internal/utils/operlog/operlog.go:265-321` (RecordBackground signature for cron-path audit)
+  - `internal/services/device_info_collection_service.go:75-130` (existing background queue + 8s shutdown timeout pattern)
+  - `internal/services/device_info_collection_service.go:133-163` (existing enqueue with queue-full rejection)
+  - `internal/core/core.go:469, 488` (30s shutdown deadlines, non-negotiable)
+  - `internal/api/v1/network/port_handler.go:1-203` (existing port management handler pattern, no write endpoints yet)
+  - `internal/api/v1/network/command_handler.go:74, 106` (existing read-only QuickCommand uses operlog with OperTypeOther)
+  - `internal/services/portcollection/collection.go:17, 72` (portCollectionDeviceTimeout=10min, per-device context)
+  - `internal/services/portcollection/parser.go` (existing parser abstraction to mirror for write)
+  - `internal/services/component_collector/ops_asset_writer.go` (Phase 48 D-13 RecordBackground example)
+  - `internal/services/addomain/account_pool.go` (existing SELECT FOR UPDATE row-lock pattern to mirror)
+  - `internal/services/operations/building_service.go validateOrg()` (UUID validation pattern)
+  - `internal/services/cache_keys.go` (cache key helper pattern, no `ruoyi:` prefix in key string)
+  - `.planning/PROJECT.md:7-30` (v1.19 locked decisions: vendor template hardcoded, MVP single device + batch, no auto-rollback, post-write enqueue via DeviceInfoCollectionService)
+
+- **MEDIUM Confidence (vendor knowledge):**
+  - Huawei VRP V200/V600 command syntax differences (shutdown vs undo, system-view semantics)
+  - H3C Comware 7 command compatibility with Huawei (shared VRP heritage, subtle differences)
+  - Ruijie RGOS Cisco-IOS-XE-style syntax (configure terminal, end, write, interface NAME NUMBER)
+  - dot1x command keyword differences across vendors
+  - commit/quit semantics (Huawei VRP auto-commit, Ruijie requires end, H3C similar to Huawei)
+
+- **MEDIUM Confidence (community patterns):**
+  - SSH keepalive / ServerAliveInterval (Go x/crypto/ssh default 0 = disabled)
+  - Scrapli community patterns for error marker parsing (`%`, `Error:`, `^`, `Illegal`)
+  - Industry patterns for "before/after state capture" (Ansible, Salt, NAPALM)
+
+- **LOW Confidence (assumed):**
+  - Exact 30s Core.Close deadline impact on write batches (depends on actual SSH round-trip times in production)
+  - Actual user expectation of "revert" button (depends on v1.19+ UAT)
+  - Specific firmware version differences (Huawei V600R024C00 chassis SN retirement, but write command syntax version sensitivity not directly verified)
 
 ---
 
 ## Open Questions Requiring Phase-Specific Research
 
-1. **Data Volume Baseline**: What is the actual MAC address table size distribution in the target network? (needed for retention policy tuning)
-2. **Query Patterns**: Which historical queries are most common for security teams? (needed for index optimization)
-3. **Compliance Requirements**: Are there regulatory requirements for MAC history retention duration? (needed for cleanup policy)
-4. **Vendor Output Variations**: Do all supported network vendors (Huawei, H3C, Ruijie, Maipu) provide consistent MAC address table formats? (needed for robust parsing)
-5. **Collection Frequency**: What is the planned MAC collection interval in production? (affects growth rate estimation)
+1. **Vendor command coverage for firmware variants:** Do we need to support multiple command variants per vendor for different firmware (e.g. Huawei V200R005 vs V600R024C00)? The MVP scope says "硬编码 vendor→template map", but a single map per vendor may not cover all deployments. **Answer via Phase 50 UAT on real devices.**
+2. **Batch resume semantics:** If a batch fails at port 30/50 due to "device unreachable", should the resume endpoint re-run from port 30, or re-run only the failed ports? This is a UX question requiring user feedback. **Answer via Phase 52 UAT.**
+3. **Auto-rollback policy:** If write N+1 of a batch fails, should the service automatically issue `undo` commands for writes 1..N? PROJECT.md says "MVP 仅失败即停", but the auto-rollback question is a v1.19+ follow-up. **Answer via Phase 51 hardening (deferred).**
+4. **Critical port policy granularity:** Should the `sys_port_write_policy` be by `interface_name` regex, by `port_role` (uplink/access/server), or by `device_tag`? **Answer via Phase 53 (v1.19+ follow-up).**
+5. **Operlog `oper_param` size for command bodies:** The 8192-byte cap (`operlog.go:71`) is fine for single-command writes, but a batch of 50 commands × ~80 chars = 4000 chars — within cap, but a 100-port description batch (deferred but possible) would be 8000+ chars. **Answer via Phase 50 (use `sys_port_write_audit` for the full body, operlog only has the high-level summary).**
+6. **Sensitive keyword "key" in port descriptions:** The "key" keyword matches `description: "Key-Service-VLAN-10"` and over-masks. Should the masking be opt-out for `description` specifically? Or should the audit row use `sys_port_write_audit` (which has targeted regex) and not rely on operlog masking for descriptions? **Answer: use `sys_port_write_audit` (decision locked).**
 
 ---
 
 ## Conclusion
 
-Adding MAC address historical tracking to an existing network monitoring system requires careful architectural changes to the current "delete-and-replace" collection pattern. The most critical risks are uncontrolled database growth from continuous collection and race conditions between existing collection workflows and new history recording.
+Adding SSH write operations to RuoYi-Next's network management system is a **fundamentally different** engineering challenge than the v1.18 read path. Reads are idempotent and lossless; writes are destructive, require state capture, and have vendor-specific semantics that the existing v1.18 code did not need to handle.
 
-**Success criteria:**
-- Historical queries return in < 2 seconds for 90-day lookups
-- Database growth rate is < 10% of total MAC count per collection (not 100%)
-- Zero lost change events under concurrent collection scenarios
-- Historical data remains readable after device rename/delete operations
+The critical risks are:
+
+1. **Silent device rejection** (Pitfall 1) — SSH transport success ≠ device acceptance; the parser must check for `% Error:` markers
+2. **Missing audit before-state** (Pitfall 2) — without `BeforeValue`, compliance investigations fail
+3. **Vendor syntax subtlety** (Pitfall 3) — Huawei/H3C/Ruijie have non-obvious differences; a hardcoded template map must be tested against each vendor's actual output
+4. **Concurrent write collision** (Pitfall 4) — the connection pool's per-device lock is not port-aware; a separate `sys_port_write_lock` table is needed
+5. **Operlog masking leaks** (Pitfall 5) — the 11 sensitive keywords over-mask port descriptions; `sys_port_write_audit` is the right home for the full body
+6. **30s shutdown deadline** (Pitfall 6) — batches must detach from the HTTP request context
+7. **Pool exhaustion** (Pitfall 7) — per-port release, not per-batch release
+8. **Frontend optimistic UI race** (Pitfall 8) — use a batch progress dialog, not row-level optimistic updates
+9. **RecordBackground for cron-path audit** (Pitfall 9) — `operlog.Record` from background fails silently
+10. **Device unreachable mid-batch** (Pitfall 10) — health check + per-port retry with `failed_ports` array
+11. **No batch size cap** (Pitfall 11) — 50-port hard cap + 20-port soft warning
+
+**Success criteria for v1.19:**
+- All 11 critical pitfall mitigations are implemented and verified
+- `sys_port_write_audit` table is populated for every write attempt (success or failure)
+- Operlog rows for port writes use module name `端口管理` (not `端口写入`)
+- Pool stats show no `active_connections == max_connections` sustained condition
+- Frontend batch dialog polls for progress; no row-level optimistic updates
+- UAT on real devices: at least 1 successful batch per vendor, with `failed_ports` correctly handling device_unreachable vs device_rejected
+- All Phase 50-52 plans have a "pitfall verification" step that references one of the pitfalls above
 
 **Recommended approach:**
-1. Phase 12: Implement change detection and transaction-safe collection integration
-2. Phase 13: Add composite indexes and partitioning for query performance
-3. Phase 14: Build security-focused features with rich audit context
-4. Phase 15: Implement tiered storage and automated cleanup policies
+1. Phase 50: SSH write service + `sys_port_write_audit` + `sys_port_write_lock` + vendor templates + RecordBackground integration
+2. Phase 51: Operlog integration (high-level only) + cache invalidation + batch progress tracking
+3. Phase 52: Frontend batch dialog + Revert button + manual refresh suppression during batch
+4. Phase 53 (v1.19+): Privilege policy table for critical ports
+5. Phase 54 (v1.19+): Mock SSH server for vendor-specific integration tests
 
-By addressing these pitfalls proactively, the historical MAC tracking system will provide valuable forensic capabilities without degrading the performance and reliability of the existing network monitoring platform.
+By addressing these pitfalls proactively, v1.19 will add destructive write capability to the network management system **without** compromising the read-path reliability established in v1.18, and **without** compromising the audit trail integrity that Phase 34 (operlog) established as a non-negotiable invariant.
+
+---
+
+*Pitfalls research for: v1.19 网络设备写命令 (Network Device Write Operations)*
+*Researched: 2026-07-06*
