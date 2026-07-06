@@ -86,17 +86,19 @@ var rejectionMarkers = []string{
 //  1. nil resp → WriteErrorTransport（连接未建立）
 //  2. resp.Failed == true → WriteErrorTransport（scrapligo 标记执行失败，无 cause 可传）
 //  3. resp.Result == "" → nil（真空 = 成功）
-//  4. 顺序匹配 transportMarkers（小写子串）→ WriteErrorTransport
-//  5. 顺序匹配 rejectionMarkers（区分大小写子串）→ WriteErrorDeviceRejected
+//  4. 顺序匹配 rejectionMarkers（区分大小写子串）→ WriteErrorDeviceRejected
+//  5. 顺序匹配 transportMarkers（小写子串）→ WriteErrorTransport
 //  6. 默认（"Info:" / "OK" 等）→ nil
 //
-// 步骤 4 必须先于步骤 5：transport markers 包含的 "timeout" / "EOF" 等词可能与
-// 设备错误原文 "% Error: ..." 交叉（边界用例 percent_error_with_timeout_substring
-// 锁定）。
+// 步骤 4 必须先于步骤 5（rejectionMarkers 优先于 transportMarkers — Pitfall #3 反向）：
+// 设备原文若以 "% Error:" 开头（rejection 命中）则即使文本中含 "timeout" / "EOF"
+// 等 transport 子串（transport markers），也应分类为 DeviceRejected ——
+// 设备命令拒绝的语义优先于可能巧合出现的 transport 关键词。
+// 边界用例 percent_error_with_timeout_substring 锁定此行为。
 //
 // 注意：device.Response struct 实际字段为 {Result, Started, Finished, Failed}，
 // 没有 Err error 字段（deviation from plan D-16 step 2 — 用 Failed bool 替代）。
-// transport-layer cause 信息丢失（scrapligo 内部错误被吃掉），但 scrape.executeWithRetry
+// transport-layer cause 信息丢失（scrapligo 内部错误被吃掉），但 executeWithRetry
 // 已经会先 retry 3 次后才填 Failed=true（executor.go:197-260），所以绝大多数 transport
 // 错误通过 scrapligo 内部 retry 已被消化，到 parseConfigError 这层时 Failed=true 通常
 // 表示连接已无法恢复的硬错（timeout / EOF / refused）。
@@ -111,15 +113,16 @@ func parseConfigError(resp *device.Response) error {
 		return nil
 	}
 
+	for _, m := range rejectionMarkers {
+		if strings.Contains(resp.Result, m) {
+			return &WriteError{Kind: WriteErrorDeviceRejected, Message: resp.Result}
+		}
+	}
+
 	lower := strings.ToLower(resp.Result)
 	for _, m := range transportMarkers {
 		if strings.Contains(lower, strings.ToLower(m)) {
 			return &WriteError{Kind: WriteErrorTransport, Message: resp.Result}
-		}
-	}
-	for _, m := range rejectionMarkers {
-		if strings.Contains(resp.Result, m) {
-			return &WriteError{Kind: WriteErrorDeviceRejected, Message: resp.Result}
 		}
 	}
 	return nil
