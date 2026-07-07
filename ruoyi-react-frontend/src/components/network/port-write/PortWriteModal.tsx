@@ -36,8 +36,11 @@ import {
 } from "./constants";
 
 const REASON_CUSTOM_SENTINEL = "__custom__";
-/** D-10 审计跳转 URL — route path 是 /monitor/logs (非 /monitor/operlog), module= 后为中文模块名 */
-const AUDIT_LOG_PATH = "/monitor/logs?module=" + encodeURIComponent("端口管理");
+/**
+ * D-10 审计跳转 URL — route path 是 /monitor/logs (非 /monitor/operlog),
+ * module= 后为中文模块名 (URL-encoded)。BulkWriteDrawer 复用同一路径。
+ */
+export const AUDIT_LOG_PATH = "/monitor/logs?module=" + encodeURIComponent("端口管理");
 
 export interface PortWriteModalProps {
   open: boolean;
