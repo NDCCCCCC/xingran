@@ -56,9 +56,15 @@ const REASON_CUSTOM_SENTINEL = "__custom__";
 
 type DrawerPhase = "select" | "executing" | "result";
 
-const ACTION_OPTIONS: { label: string; value: PortWriteAction }[] = (
-  Object.keys(ACTION_TITLE) as PortWriteAction[]
-).map((key) => ({ label: ACTION_TITLE[key], value: key }));
+// WR-04: 显式列出 5 个 action, 与 PortWriteAction 联合类型一一对应 (编译期捕获不一致,
+// 避免 Object.keys() as 断言在新增 ACTION_TITLE key 时静默失同步)
+const ACTION_OPTIONS: { label: string; value: PortWriteAction }[] = [
+  { label: ACTION_TITLE.shutdown, value: "shutdown" },
+  { label: ACTION_TITLE.undo_shutdown, value: "undo_shutdown" },
+  { label: ACTION_TITLE.description, value: "description" },
+  { label: ACTION_TITLE.dot1x_enable, value: "dot1x_enable" },
+  { label: ACTION_TITLE.dot1x_disable, value: "dot1x_disable" },
+];
 
 export interface BulkWriteDrawerProps {
   open: boolean;
@@ -91,9 +97,15 @@ export function BulkWriteDrawer({
   const navigate = useNavigate();
   const [phase, setPhase] = useState<DrawerPhase>("select");
   const [batchResult, setBatchResult] = useState<BatchResult | null>(null);
-  /** 保留上次提交的 action/description, 用于失败重试沿用 (D-06) */
+  /** 保留上次提交的 action/description/deviceId/interfaceMap, 用于失败重试沿用 (D-06)
+   * CR-01/CR-02: deviceId 必须在首次提交时快照, retry 时用缓存值 —— 不能从 selectedPorts 重读,
+   *   否则 onSuccess 触发父级 loadPortStatus 后 selectedPorts 引用漂移, deviceId 错位会让
+   *   后端 batch_orchestrator fallback 用错误 deviceId 走 SSH (跨设备误操作风险)。
+   * WR-03: interfaceMap 同理快照, result 视图失败明细表的接口名不随父级刷新失真。 */
   const [lastAction, setLastAction] = useState<PortWriteAction>("shutdown");
   const [lastDescription, setLastDescription] = useState<string | undefined>(undefined);
+  const [lastDeviceId, setLastDeviceId] = useState<string>("");
+  const [lastInterfaceMap, setLastInterfaceMap] = useState<Map<string, string>>(new Map());
 
   // open 变 false 时 reset phase + batchResult, 防下次打开残留
   // CLAUDE.md useEffect 纪律: deps 全稳定 (open/phase/onExecutingChange 原始值或稳定 setter)
@@ -119,13 +131,16 @@ export function BulkWriteDrawer({
 
   const isMixedDevices = uniqueDeviceIds.length > 1;
 
-  /** 组装 BatchWriteRequest (T-53-07: 白名单字段, 不 spread 整个 port record) */
+  /** 组装 BatchWriteRequest (T-53-07: 白名单字段, 不 spread 整个 port record)
+   * CR-01: deviceId 改为显式参数 —— 首次提交传当前 uniqueDeviceIds[0], retry 传缓存的 lastDeviceId,
+   *   杜绝从漂移的 selectedPorts 快照重读 deviceId。 */
   const buildRequest = (
+    deviceId: string,
     action: PortWriteAction,
     portIds: string[],
     description?: string
   ): BatchWriteRequest => ({
-    deviceId: uniqueDeviceIds[0] ?? "",
+    deviceId,
     action,
     portIds,
     ...(action === "description" && description !== undefined ? { description } : {}),
@@ -135,7 +150,8 @@ export function BulkWriteDrawer({
   const handleRetryFailed = async (): Promise<void> => {
     if (!batchResult || batchResult.failed.length === 0) return;
     const failedIds = batchResult.failed.map((p) => p.portId);
-    const req = buildRequest(lastAction, failedIds, lastDescription);
+    // CR-01/CR-02: retry 用首次提交时缓存的 lastDeviceId, 不从 selectedPorts 重读
+    const req = buildRequest(lastDeviceId, lastAction, failedIds, lastDescription);
     setPhase("executing");
     try {
       // LANDMINE #3: batchWritePorts 失败是正常 resolve, 不用 .catch 分类
@@ -161,8 +177,11 @@ export function BulkWriteDrawer({
     try {
       values = await form.validateFields();
     } catch (err) {
+      // validateFields 校验失败抛含 errorFields 的对象, antd 自动标红字段, 直接 return
       if (err && typeof err === "object" && "errorFields" in err) return;
-      throw err;
+      // WR-01: 非预期校验异常不再 throw 冒泡到 antd onOk/onClick 形成未处理 Promise rejection
+      console.error("[BulkWriteDrawer] validateFields unexpected error:", err);
+      return;
     }
 
     const action = values.action as PortWriteAction;
@@ -176,10 +195,17 @@ export function BulkWriteDrawer({
     }
 
     const portIds = selectedPorts.map((p) => p.id);
-    const req = buildRequest(action, portIds, description);
+    const deviceId = uniqueDeviceIds[0] ?? "";
+    // CR-01/WR-03: 提交时快照 deviceId + interfaceMap, 后续 retry/result 全部基于快照,
+    // 不受 onSuccess 触发的父级 loadPortStatus 刷新导致的 selectedPorts 引用漂移影响
+    const interfaceMap = new Map<string, string>();
+    selectedPorts.forEach((p) => interfaceMap.set(p.id, p.interfaceName));
+    const req = buildRequest(deviceId, action, portIds, description);
 
     setLastAction(action);
     setLastDescription(description);
+    setLastDeviceId(deviceId);
+    setLastInterfaceMap(interfaceMap);
     setPhase("executing");
     try {
       // LANDMINE #3: batchWritePorts HTTP 200 + status:failed 是正常 resolve
@@ -235,7 +261,8 @@ export function BulkWriteDrawer({
       {phase === "result" && batchResult && (
         <ResultView
           result={batchResult}
-          selectedPorts={selectedPorts}
+          // WR-03: 用提交时快照的 interfaceMap, 不随父级 selectedPorts 漂移失真
+          interfaceMap={lastInterfaceMap}
           onRetry={handleRetryFailed}
         />
       )}
@@ -358,18 +385,13 @@ function SelectView({
 
 interface ResultViewProps {
   result: BatchResult;
-  selectedPorts: DevicePortStatus[];
+  /** WR-03: 提交时快照的 portId → interfaceName 映射 (父组件 setLastInterfaceMap 缓存),
+   * 不随父级 selectedPorts 引用漂移失真。 */
+  interfaceMap: Map<string, string>;
   onRetry: () => Promise<void>;
 }
 
-function ResultView({ result, selectedPorts, onRetry }: ResultViewProps) {
-  // portId → interfaceName 映射, 用于失败明细 Table 展示接口名 (PortResult 只含 portId, 无 interfaceName)
-  const portIdToInterfaceName = useMemo(() => {
-    const map = new Map<string, string>();
-    selectedPorts.forEach((p) => map.set(p.id, p.interfaceName));
-    return map;
-  }, [selectedPorts]);
-
+function ResultView({ result, interfaceMap, onRetry }: ResultViewProps) {
   return (
     <div>
       {/* 三 Statistic 卡片: ✓ 成功 / ⚠ 跳过 / ✗ 失败 */}
@@ -430,7 +452,7 @@ function ResultView({ result, selectedPorts, onRetry }: ResultViewProps) {
                 key: "interfaceName",
                 width: 150,
                 render: (_, port) =>
-                  portIdToInterfaceName.get(port.portId) ?? port.portId,
+                  interfaceMap.get(port.portId) ?? port.portId,
               },
               {
                 title: "错误原因",
@@ -456,7 +478,7 @@ function ResultView({ result, selectedPorts, onRetry }: ResultViewProps) {
                 <ul style={{ margin: 0, paddingLeft: 20 }}>
                   {result.skipped.map((p) => (
                     <li key={p.portId}>
-                      {portIdToInterfaceName.get(p.portId) ?? p.portId}
+                      {interfaceMap.get(p.portId) ?? p.portId}
                       {p.currentState ? ` — 当前态: ${p.currentState}` : ""}
                     </li>
                   ))}

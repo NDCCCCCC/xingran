@@ -15,7 +15,7 @@
  * 来源: 53-02-PLAN.md Task 1, 53-PATTERNS.md line 122-198 骨架代码
  */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Modal, Form, Select, Input, App } from "antd";
 import type { MessageInstance } from "antd/es/message/interface";
 import { Link, useNavigate } from "react-router-dom";
@@ -131,6 +131,8 @@ export function PortWriteModal({
   const [form] = Form.useForm();
   const { message } = App.useApp();
   const navigate = useNavigate();
+  // IN-03: submitting 防写操作重复提交 (wrapper await 期间用户可重复点"确认执行")
+  const [submitting, setSubmitting] = useState(false);
 
   // action 变化时 reset 表单 (防上次 reason/description 残留)
   // deps 全稳定: open/action 原始值, form 来自 useForm 稳定 ref — CLAUDE.md useEffect 纪律满足
@@ -139,43 +141,50 @@ export function PortWriteModal({
   }, [open, action, form]);
 
   const handleOk = async (): Promise<void> => {
-    let values: Record<string, unknown>;
+    setSubmitting(true);
     try {
-      values = await form.validateFields();
-    } catch (err) {
-      // validateFields 失败抛 errorFields, antd 自动标红字段, 不需 Toast
-      if (err && typeof err === "object" && "errorFields" in err) return;
-      throw err;
+      let values: Record<string, unknown>;
+      try {
+        values = await form.validateFields();
+      } catch (err) {
+        // validateFields 失败抛 errorFields, antd 自动标红字段, 不需 Toast
+        if (err && typeof err === "object" && "errorFields" in err) return;
+        // WR-01: 非预期校验异常不再 throw 冒泡到 antd onOk 形成未处理 Promise rejection
+        console.error("[PortWriteModal] validateFields unexpected error:", err);
+        return;
+      }
+
+      // 组装最终 reason (预设项直接用 value; custom 项用 reasonText)
+      const reason = composeReason(values.reasonSelect, values.reasonText);
+
+      if (!portRecord) {
+        // 防御性: portRecord 应永远非空 (ActionButtons onClick 一定带 record)
+        return;
+      }
+
+      // 按 action 分支调对应 wrapper (LANDMINE #5: 不传 errorMessage / 不 message.error, post() 拦截器已弹)
+      if (action === "shutdown") {
+        await writeShutdown(portRecord.id, reason ?? "");
+      } else if (action === "undo_shutdown") {
+        await writeUndoShutdown(portRecord.id, reason ?? "");
+      } else if (action === "description") {
+        const description = typeof values.description === "string" ? values.description : "";
+        await writeDescription(portRecord.id, description, reason ?? undefined);
+      } else if (action === "dot1x_enable") {
+        await writeDot1xEnable(portRecord.id, reason ?? "");
+      } else if (action === "dot1x_disable") {
+        await writeDot1xDisable(portRecord.id, reason ?? "");
+      }
+
+      // D-10 成功 Toast 含"查看审计日志"链接
+      showAuditLinkToast(message, navigate);
+
+      form.resetFields();
+      onSuccess();
+      onClose();
+    } finally {
+      setSubmitting(false);
     }
-
-    // 组装最终 reason (预设项直接用 value; custom 项用 reasonText)
-    const reason = composeReason(values.reasonSelect, values.reasonText);
-
-    if (!portRecord) {
-      // 防御性: portRecord 应永远非空 (ActionButtons onClick 一定带 record)
-      return;
-    }
-
-    // 按 action 分支调对应 wrapper (LANDMINE #5: 不传 errorMessage / 不 message.error, post() 拦截器已弹)
-    if (action === "shutdown") {
-      await writeShutdown(portRecord.id, reason ?? "");
-    } else if (action === "undo_shutdown") {
-      await writeUndoShutdown(portRecord.id, reason ?? "");
-    } else if (action === "description") {
-      const description = typeof values.description === "string" ? values.description : "";
-      await writeDescription(portRecord.id, description, reason ?? undefined);
-    } else if (action === "dot1x_enable") {
-      await writeDot1xEnable(portRecord.id, reason ?? "");
-    } else if (action === "dot1x_disable") {
-      await writeDot1xDisable(portRecord.id, reason ?? "");
-    }
-
-    // D-10 成功 Toast 含"查看审计日志"链接
-    showAuditLinkToast(message, navigate);
-
-    form.resetFields();
-    onSuccess();
-    onClose();
   };
 
   const reasonRules =
@@ -193,7 +202,7 @@ export function PortWriteModal({
       width={520}
       okText="确认执行"
       cancelText="取消"
-      okButtonProps={{ loading: false }}
+      okButtonProps={{ loading: submitting }}
     >
       <Form form={form} layout="vertical">
         {/* D-03 description action 特例 — 显示"新描述"必填输入框 */}
