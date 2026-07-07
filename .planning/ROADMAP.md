@@ -107,11 +107,11 @@ previous_update: 2026-07-04 after v1.18 milestone close (Phase 48 shipped: 1 pha
 Plans:
 **Wave 1**
 
-- [ ] 52-01-PLAN.md — Wave 1: NetworkPortWrite 常量 + PortWriteAudit model(Path X) + cache_keys 占位 + 6 handler + /network/ports/write/* 路由组 + 组级 2-arg RequirePermissions + network_router.go 注册 (PORT-01..05, BATCH-01, PERM-01/02, AUDIT-01/02, CONV-01..04, INFRA-02/03)
+- [x] 52-01-PLAN.md — Wave 1: NetworkPortWrite 常量 + PortWriteAudit model(Path X) + cache_keys 占位 + 6 handler + /network/ports/write/* 路由组 + 组级 2-arg RequirePermissions + network_router.go 注册 (PORT-01..05, BATCH-01, PERM-01/02, AUDIT-01/02, CONV-01..04, INFRA-02/03) — Shipped 2026-07-07 (3 commits: 44980bea / ec7a34ad / 88af87f7)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 52-02-PLAN.md — Wave 2 (depends on 52-01): PortWriteAudit 加入 database.go AutoMigrate + postgres 分支显式调 Migrate202PortWriteAudit + menu_grant_helpers.go 幂等授权 helper + migration_202_port_write_audit.go(复合索引 + 菜单 seed + helper 调用) (AUDIT-03, INFRA-01, PERM-03)
+- [x] 52-02-PLAN.md — Wave 2 (depends on 52-01): PortWriteAudit 加入 database.go AutoMigrate + postgres 分支显式调 Migrate202PortWriteAudit + menu_grant_helpers.go 幂等授权 helper + migration_202_port_write_audit.go(复合索引 + 菜单 seed + helper 调用) (AUDIT-03, INFRA-01, PERM-03) — Shipped 2026-07-07 (4 commits: e6911127 / 6b833b80 / 8dd54d16 / d75e58af)
 
 **UI hint**: no
 

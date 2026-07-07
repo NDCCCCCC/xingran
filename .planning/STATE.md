@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.19
 milestone_name: 网络设备写命令 (Network Device Write Operations)
 status: executing
-stopped_at: Phase 52 Plan 01 (Wave 1) complete; Plan 02 (Wave 2) pending
-last_updated: "2026-07-07T02:55:00.000Z"
-last_activity: 2026-07-07 -- Phase 52 Plan 01 Wave 1 shipped
+stopped_at: Phase 52 Plan 02 (Wave 2) complete; Phase 52 fully shipped
+last_updated: "2026-07-07T03:22:00.000Z"
+last_activity: 2026-07-07 -- Phase 52 Plan 02 Wave 2 shipped
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 2
-  percent: 40
+  completed_phases: 3
+  total_plans: 5
+  completed_plans: 3
+  percent: 60
 ---
 
 # Project State
@@ -23,10 +23,10 @@ progress:
 
 ## Current Position
 
-Phase: 52 (w3-router-handler-operlog-permission-migration) — EXECUTING (Plan 01 Wave 1 SHIPPED)
-Plan: 2 of 2 (Plan 01 Wave 1 complete; Plan 02 Wave 2 pending)
-Status: Phase 52 Plan 01 Wave 1 shipped — ready for Plan 02 (migration_202 + menu seed '端口配置' + GrantNewMenuToRolesHavingParent helper + database.go AutoMigrate 注册)
-Last activity: 2026-07-07 -- Phase 52 Plan 01 Wave 1 shipped (3 atomic commits: 44980bea / ec7a34ad / 88af87f7)
+Phase: 52 (w3-router-handler-operlog-permission-migration) — SHIPPED (Plan 01 Wave 1 + Plan 02 Wave 2 both complete)
+Plan: 2 of 2 (Plan 01 Wave 1 + Plan 02 Wave 2 SHIPPED)
+Status: Phase 52 fully shipped — 19 requirement IDs complete (PERM-01/02/03, INFRA-01/02/03, AUDIT-01/02/03, CONV-01..04, PORT-01..05, BATCH-01). Next: Phase 53 (W4 frontend BulkWriteDrawer + API wrappers).
+Last activity: 2026-07-07 -- Phase 52 Plan 02 Wave 2 shipped (3 atomic commits: e6911127 / 6b833b80 / 8dd54d16 + docs d75e58af)
 
 ## Project Reference
 
@@ -44,7 +44,7 @@ Last activity: 2026-07-07 -- Phase 52 Plan 01 Wave 1 shipped (3 atomic commits: 
 |-------|------|--------|----------|
 | 50 | W1: Vendor Templates + Unit Tests | 📋 Planned | 0/1 plans |
 | 51 | W2: PortWriteService + Batch + Mock Tests | 📋 Planned | 0/1-2 plans |
-| 52 | W3: Router/Handler/Operlog/Permission/Migration | 📋 Planned | 0/2 plans |
+| 52 | W3: Router/Handler/Operlog/Permission/Migration | ✅ Complete | 2/2 plans |
 | 53 | W4: Frontend Drawer + Progress Dialog + API Wrappers | 📋 Planned | 0/1-2 plans |
 | 54 | W5: E2E + Real-Device UAT + Documentation | 📋 Planned | 0/1 plan |
 
@@ -87,6 +87,7 @@ Last activity: 2026-07-07 -- Phase 52 Plan 01 Wave 1 shipped (3 atomic commits: 
 | 2026-07-05 | Phase 49 v1.18 gap closure complete (2/2 plans) | 49 |
 | 2026-07-06 | v1.19 ROADMAP drafted — Phases 50-54 planned | 50 |
 | 2026-07-07 | Phase 52 Plan 01 (Wave 1) shipped — 3 atomic commits, 6 HTTP endpoints + Path C audit + Path X model + 2-arg RequirePermissions | 52 |
+| 2026-07-07 | Phase 52 Plan 02 (Wave 2) shipped — 3 atomic commits, Migrate202 + 端口配置 menu seed + GrantNewMenuToRolesHavingParent helper + database.go AutoMigrate 注册 | 52 |
 
 ## Quick Tasks Completed (recent)
 
