@@ -1,0 +1,14 @@
+<Huawei>
+screen-length 0 temporary
+<Huawei>
+system-view
+[Huawei]
+interface GE0/0/1
+[Huawei-GE0/0/1]
+shutdown
+% Error: too many parameters at '^'.
+[Huawei-GE0/0/1]
+quit
+[Huawei]
+return
+<Huawei>

@@ -170,3 +170,383 @@ func contains(haystack, needle string) bool {
 	}
 	return false
 }
+
+// =============================================================================
+// Task 2 / Sub-stage 2.1: 4 additional single happy paths
+// =============================================================================
+
+// TestE2E_UndoShutdown_Huawei_HappyPath mirrors Shutdown happy path with
+// `undo shutdown` cmds. The fixture contains the same scene minus the
+// echo of "shutdown" itself.
+func TestE2E_UndoShutdown_Huawei_HappyPath(t *testing.T) {
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "down", false, "")
+
+	exec := &fileTransportExecutor{
+		fixtureProvider: singleFixture(e2eFixturePath(t, "huawei_undo_shutdown_success.fixture")),
+	}
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(exec, mockColl, db)
+	ctx := context.Background()
+
+	mockColl.On("Enqueue", "device-1").Return(nil)
+
+	result, err := svc.UndoShutdown(ctx, "port-1", "e2e-op")
+	if err != nil {
+		t.Fatalf("UndoShutdown returned err: %v", err)
+	}
+	if result.Status != "succeeded" {
+		t.Fatalf("status = %q, want succeeded; result=%+v", result.Status, result)
+	}
+	if result.NoOp {
+		t.Fatal("NoOp must be false")
+	}
+	if !contains(result.CommandSent, "undo shutdown") {
+		t.Fatalf("CommandSent %q missing 'undo shutdown'", result.CommandSent)
+	}
+
+	mockColl.AssertExpectations(t)
+}
+
+// TestE2E_Description_Huawei_HappyPath — SetDescription issues two cmds
+// (interface GE0/0/1 + description uplink); the fixture echoes both so the
+// SendConfigs loop returns two responses. parseConfigError is called on the
+// last one (the `description` cmd) which is empty after prompt strip → nil.
+func TestE2E_Description_Huawei_HappyPath(t *testing.T) {
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", false, "")
+
+	exec := &fileTransportExecutor{
+		fixtureProvider: singleFixture(e2eFixturePath(t, "huawei_description_success.fixture")),
+	}
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(exec, mockColl, db)
+	ctx := context.Background()
+
+	mockColl.On("Enqueue", "device-1").Return(nil)
+
+	result, err := svc.SetDescription(ctx, "port-1", "uplink", "e2e-op")
+	if err != nil {
+		t.Fatalf("SetDescription returned err: %v", err)
+	}
+	if result.Status != "succeeded" {
+		t.Fatalf("status = %q, want succeeded; result=%+v", result.Status, result)
+	}
+	if result.NoOp {
+		t.Fatal("NoOp must be false")
+	}
+	// CommandSent joins both cmds with " | " — verify both substrings appear
+	// in the joined form so the assertion holds regardless of join order.
+	if !contains(result.CommandSent, "interface") {
+		t.Fatalf("CommandSent %q missing 'interface'", result.CommandSent)
+	}
+	if !contains(result.CommandSent, "description") {
+		t.Fatalf("CommandSent %q missing 'description'", result.CommandSent)
+	}
+
+	mockColl.AssertExpectations(t)
+}
+
+// TestE2E_Dot1xEnable_Huawei_HappyPath — single `dot1x enable` cmd path.
+func TestE2E_Dot1xEnable_Huawei_HappyPath(t *testing.T) {
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", false, "")
+
+	exec := &fileTransportExecutor{
+		fixtureProvider: singleFixture(e2eFixturePath(t, "huawei_dot1x_enable_success.fixture")),
+	}
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(exec, mockColl, db)
+	ctx := context.Background()
+
+	mockColl.On("Enqueue", "device-1").Return(nil)
+
+	result, err := svc.EnableDot1x(ctx, "port-1", "e2e-op")
+	if err != nil {
+		t.Fatalf("EnableDot1x returned err: %v", err)
+	}
+	if result.Status != "succeeded" {
+		t.Fatalf("status = %q, want succeeded; result=%+v", result.Status, result)
+	}
+	if result.NoOp {
+		t.Fatal("NoOp must be false")
+	}
+	if !contains(result.CommandSent, "dot1x enable") {
+		t.Fatalf("CommandSent %q missing 'dot1x enable'", result.CommandSent)
+	}
+
+	mockColl.AssertExpectations(t)
+}
+
+// TestE2E_Dot1xDisable_Huawei_HappyPath — single `undo dot1x enable` cmd path.
+func TestE2E_Dot1xDisable_Huawei_HappyPath(t *testing.T) {
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", true, "")
+
+	exec := &fileTransportExecutor{
+		fixtureProvider: singleFixture(e2eFixturePath(t, "huawei_dot1x_disable_success.fixture")),
+	}
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(exec, mockColl, db)
+	ctx := context.Background()
+
+	mockColl.On("Enqueue", "device-1").Return(nil)
+
+	result, err := svc.DisableDot1x(ctx, "port-1", "e2e-op")
+	if err != nil {
+		t.Fatalf("DisableDot1x returned err: %v", err)
+	}
+	if result.Status != "succeeded" {
+		t.Fatalf("status = %q, want succeeded; result=%+v", result.Status, result)
+	}
+	if result.NoOp {
+		t.Fatal("NoOp must be false")
+	}
+	if !contains(result.CommandSent, "undo dot1x enable") {
+		t.Fatalf("CommandSent %q missing 'undo dot1x enable'", result.CommandSent)
+	}
+
+	mockColl.AssertExpectations(t)
+}
+
+// =============================================================================
+// Task 2 / Sub-stage 2.2: batch happy + 2 error paths
+// =============================================================================
+
+// TestE2E_Batch_Huawei_HappyPath — 3 ports × same device × same action.
+// All three ports share the same fixture file: fileTransportExecutor opens a
+// fresh FileTransport driver per ExecuteCustom call, so the same fixture
+// path can be replayed linearly across the batch.
+//
+// Expected: Succeeded=3, Failed=0, Skipped=0.
+func TestE2E_Batch_Huawei_HappyPath(t *testing.T) {
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", false, "")
+	seedPortAndDevice(t, db, "port-2", "device-1", "GE0/0/2", "up", false, "")
+	seedPortAndDevice(t, db, "port-3", "device-1", "GE0/0/3", "up", false, "")
+
+	fp := e2eFixturePath(t, "huawei_shutdown_success.fixture")
+	exec := &fileTransportExecutor{
+		fixtureProvider: singleFixture(fp),
+	}
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(exec, mockColl, db)
+	ctx := context.Background()
+
+	mockColl.On("Enqueue", "device-1").Return(nil).Times(3)
+
+	result, err := svc.BatchWritePorts(ctx, BatchWriteRequest{
+		DeviceID: "device-1",
+		Action:   portcollection.ActionShutdown,
+		PortIDs:  []string{"port-1", "port-2", "port-3"},
+	}, "e2e-op")
+	if err != nil {
+		t.Fatalf("BatchWritePorts returned err: %v", err)
+	}
+	if len(result.Succeeded) != 3 {
+		t.Fatalf("Succeeded = %d, want 3; result=%+v", len(result.Succeeded), result)
+	}
+	if len(result.Failed) != 0 {
+		t.Fatalf("Failed = %d, want 0; failed=%+v", len(result.Failed), result.Failed)
+	}
+	if len(result.Skipped) != 0 {
+		t.Fatalf("Skipped = %d, want 0; skipped=%+v", len(result.Skipped), result.Skipped)
+	}
+
+	mockColl.AssertExpectations(t)
+}
+
+// TestE2E_DeviceRejected — fixture contains `% Error: Unrecognized command`
+// which is the first entry in parseConfigError.rejectionMarkers. The
+// parseError mapping must classify this as WriteErrorDeviceRejected, not
+// WriteErrorTransport (rejectionMarkers precede transportMarkers in
+// parseConfigError step 4).
+//
+// Why the percent-prefix matters: huawei_vrp.yaml's `failed-when-contains`
+// also matches `Error: Unrecognized command` (no percent prefix) and would
+// mark resp.Failed=true — that path goes through parseConfigError step 2
+// and produces WriteErrorTransport. Using the percent prefix bypasses the
+// platform YAML and hits the service-layer rejection markers, which is the
+// more discriminating path (it proves parseConfigError classifies device
+// rejection independently of scrapligo's auto-fail).
+func TestE2E_DeviceRejected(t *testing.T) {
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", false, "")
+
+	exec := &fileTransportExecutor{
+		fixtureProvider: singleFixture(e2eFixturePath(t, "huawei_device_rejected.fixture")),
+	}
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(exec, mockColl, db)
+	ctx := context.Background()
+
+	result, err := svc.Shutdown(ctx, "port-1", "e2e-op")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if result == nil {
+		t.Fatal("expected non-nil PortResult even on failure")
+	}
+	var we *WriteError
+	if !errorsAs(err, &we) {
+		t.Fatalf("err is not *WriteError: %v", err)
+	}
+	if we.Kind != WriteErrorDeviceRejected {
+		t.Fatalf("err.Kind = %v, want WriteErrorDeviceRejected", we.Kind)
+	}
+	if result.Status != "failed" {
+		t.Fatalf("result.Status = %q, want failed", result.Status)
+	}
+
+	// Pitfall #6: failed path must not trigger Enqueue.
+	mockColl.AssertNotCalled(t, "Enqueue", mockAnyString)
+}
+
+// errorsAs is a tiny errors.As helper that avoids pulling the errors import
+// just for one call site.
+func errorsAs(err error, target interface{}) bool {
+	type unwrapper interface{ Unwrap() error }
+	for err != nil {
+		if w, ok := target.(**WriteError); ok {
+			if we, ok := err.(*WriteError); ok {
+				*w = we
+				return true
+			}
+		}
+		uw, ok := err.(unwrapper)
+		if !ok {
+			return false
+		}
+		err = uw.Unwrap()
+	}
+	return false
+}
+
+// mockAnyString is the testify-mock compatible matcher: any string arg.
+func mockAnyString(_ string) bool { return true }
+
+// TestE2E_TransportError — uses a fixture path that does not exist on disk.
+// FileTransport.Open does os.Open(F) and returns the os.PathError directly.
+// fileTransportExecutor wraps this into a generic error; service
+// translateErr treats all non-WriteError returns from the executor path as
+// transport-level. We assert the result is failed with a transport-style
+// error message.
+func TestE2E_TransportError(t *testing.T) {
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", false, "")
+
+	exec := &fileTransportExecutor{
+		fixtureProvider: singleFixture(e2eFixturePath(t, "definitely-not-a-real-fixture.fixture")),
+	}
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(exec, mockColl, db)
+	ctx := context.Background()
+
+	result, err := svc.Shutdown(ctx, "port-1", "e2e-op")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if result == nil {
+		t.Fatal("expected non-nil PortResult even on transport failure")
+	}
+	if result.Status != "failed" {
+		t.Fatalf("result.Status = %q, want failed", result.Status)
+	}
+	if !contains(err.Error(), "driver.Open") && !contains(err.Error(), "no such") {
+		t.Fatalf("expected driver.Open or no such error, got: %v", err)
+	}
+	mockColl.AssertNotCalled(t, "Enqueue", mockAnyString)
+}
+
+// =============================================================================
+// Task 2 / Sub-stage 2.3: batch fail-fast + noop + regression
+// =============================================================================
+
+// TestE2E_Batch_FailFast — port-1 succeeds, port-2 device_rejected →
+// fail-fast break, port-3 must not be attempted (Skipped=[], Succeeded=[port-1],
+// Failed=[port-2]).
+func TestE2E_Batch_FailFast(t *testing.T) {
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", false, "")
+	seedPortAndDevice(t, db, "port-2", "device-1", "GE0/0/2", "up", false, "")
+	seedPortAndDevice(t, db, "port-3", "device-1", "GE0/0/3", "up", false, "")
+
+	fixtureByCall := []string{
+		e2eFixturePath(t, "huawei_shutdown_success.fixture"), // port-1: success
+		e2eFixturePath(t, "huawei_device_rejected.fixture"),  // port-2: device_rejected
+		// port-3: never invoked (fail-fast break before iteration)
+	}
+	exec := &fileTransportExecutor{
+		fixtureProvider: func(idx int) string {
+			if idx >= len(fixtureByCall) {
+				t.Fatalf("fileTransportExecutor invoked %d times; expected ≤ %d (fail-fast broken)", idx+1, len(fixtureByCall))
+			}
+			return fixtureByCall[idx]
+		},
+	}
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(exec, mockColl, db)
+	ctx := context.Background()
+
+	mockColl.On("Enqueue", "device-1").Return(nil).Once()
+
+	result, err := svc.BatchWritePorts(ctx, BatchWriteRequest{
+		DeviceID: "device-1",
+		Action:   portcollection.ActionShutdown,
+		PortIDs:  []string{"port-1", "port-2", "port-3"},
+	}, "e2e-op")
+	if err != nil {
+		t.Fatalf("BatchWritePorts returned err: %v", err)
+	}
+	if len(result.Succeeded) != 1 || result.Succeeded[0].PortID != "port-1" {
+		t.Fatalf("Succeeded = %+v, want exactly [port-1]", result.Succeeded)
+	}
+	if len(result.Failed) != 1 || result.Failed[0].PortID != "port-2" {
+		t.Fatalf("Failed = %+v, want exactly [port-2]", result.Failed)
+	}
+	if len(result.Skipped) != 0 {
+		t.Fatalf("Skipped = %+v, want [] (fail-fast break must not append port-3 to any array)", result.Skipped)
+	}
+
+	// Enqueue must have fired exactly once (port-1 success only).
+	mockColl.AssertExpectations(t)
+}
+
+// TestE2E_NoOp_AlreadyDown — pre-state check (PORT-06) returns NoOp=true
+// without invoking the device executor. Critical: fileTransportExecutor
+// must NOT be called, so its fixture path is irrelevant.
+func TestE2E_NoOp_AlreadyDown(t *testing.T) {
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "down", false, "")
+
+	// fixtureProvider panics if invoked — guards against the e2e ever
+	// skipping the pre-state check.
+	exec := &fileTransportExecutor{
+		fixtureProvider: func(_ int) string {
+			t.Fatal("fileTransportExecutor.ExecuteCustom invoked; NoOp path must not touch device executor")
+			return ""
+		},
+	}
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(exec, mockColl, db)
+	ctx := context.Background()
+
+	result, err := svc.Shutdown(ctx, "port-1", "e2e-op")
+	if err != nil {
+		t.Fatalf("NoOp path returned err: %v", err)
+	}
+	if result == nil {
+		t.Fatal("result is nil")
+	}
+	if result.Status != "skipped" {
+		t.Fatalf("status = %q, want skipped", result.Status)
+	}
+	if !result.NoOp {
+		t.Fatal("NoOp must be true")
+	}
+	if result.CurrentState != "admin_down" {
+		t.Fatalf("CurrentState = %q, want admin_down", result.CurrentState)
+	}
+
+	mockColl.AssertNotCalled(t, "Enqueue", mockAnyString)
+}
