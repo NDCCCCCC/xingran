@@ -1,6 +1,6 @@
 ---
-last_updated: 2026-07-06
-update_trigger: start of milestone v1.19 (network device write operations)
+last_updated: 2026-07-07
+update_trigger: Phase 53 planning complete (W4 frontend split into 2 plans / 2 waves)
 previous_update: 2026-07-04 after v1.18 milestone close (Phase 48 shipped: 1 phase / 3 plans / 3 waves)
 ---
 
@@ -133,7 +133,18 @@ Plans:
   6. Port list "刷新" button disabled (loading state) during batch operation to avoid race with `Enqueue` triggered collection
   7. `npm run type-check` exits 0; `npm run build` exits 0 without vendor bundle regression > 50 kB gzip (vendor-react baseline 776 kB gzip from Phase 48 reference)
 
-**Plans**: 1-2 plans (53-01-PLAN.md API wrappers + modals; 53-02-PLAN.md BulkWriteDrawer if split)
+> **Note on Criteria #2 and #4:** Per 53-CONTEXT.md binding decisions, #2's "X/Y ports" is superseded by D-05 (indeterminate spinner + final result panel — honest progress, no fake X/Y) and #4's `useAuthStore` is superseded by D-09 (`useMenuStore` — corrects the typo; `authStore` only holds tokens, not permissions). Both corrections are encoded in 53-02-PLAN.md acceptance_criteria.
+
+**Plans**: 2 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 53-01-PLAN.md — Wave 1 (foundation): types/network.ts 追加 PortResult/BatchResult/BatchWriteRequest 三 interface（镜像后端 portwrite Go struct JSON tag，LANDMINE #1 types 入 network.ts 非 index.ts）+ networkApi.ts 扩展 6 个 wrapper（writeShutdown/writeUndoShutdown/writeDescription/writeDot1xEnable/writeDot1xDisable/batchWritePorts，URL 全 kebab 对齐 Phase 52 路由，不 try/catch 不重复弹 Toast LANDMINE #5）+ port-write/constants.ts 新建（PRESET_REASONS/ACTION_TITLE/REASON_MIN=5/REASON_MAX=200/DESCRIPTION_MAX=80）(UI-06, BATCH-05 wrapper-layer)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 53-02-PLAN.md — Wave 2 (depends on 53-01): PortWriteModal.tsx（统一单端口 Modal，action prop 切 5 操作 D-01，reason Select+TextArea D-02，description 特例 D-03，Toast 审计链接 D-10）+ BulkWriteDrawer.tsx（select→executing→result 状态机，indeterminate Spin 不伪造 X/Y D-05/ROADMAP #2 纠正，结果读 body 不读 catch LANDMINE #3，onExecutingChange 上抛 D-07，重试只取 failed D-06）+ ports/index.tsx 改造（useMenuStore canWrite gating D-09/ROADMAP #4 纠正，操作列 D-01，批量配置按钮 D-04，batchInProgress 禁刷新+采集 LANDMINE #4）+ monitor/logs/index.tsx 改造（useSearchParams 读 module query 预填 title D-10/LANDMINE #2）(UI-01, UI-02, UI-03, UI-04, UI-05)
 
 **UI hint**: yes (frontend modals, BulkWriteDrawer with progress, port list action menu)
 
@@ -166,7 +177,7 @@ Plans:
 | 50. W1 Vendor Templates + Unit Tests | 1/1 | Complete    | 2026-07-06 |
 | 51. W2 PortWriteService + Batch + Mock Tests | 1/1 | Complete   | 2026-07-06 |
 | 52. W3 Router/Handler/Operlog/Permission/Migration | 2/2 | Complete    | 2026-07-07 |
-| 53. W4 Frontend Drawer + Progress Dialog + API Wrappers | 0/1-2 | Not started | — |
+| 53. W4 Frontend Drawer + Progress Dialog + API Wrappers | 0/2 | Planned | — |
 | 54. W5 E2E + Real-Device UAT + Documentation | 0/1 | Not started | — |
 
 ---
@@ -246,7 +257,7 @@ See [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md) for details.
 - ✓ Phases 12-15 — v1.5 MAC地址历史数据管理 (26/26 plans)
 - ✓ Phase 16 — v1.6 API密钥管理 (10/10 plans)
 - ✓ Phase 17 — v1.7 加密配置同步 (6/6 plans)
-- ✓ Phase 18 — v1.8 登录端点加密 (4/4 plans)
+- ✓ Phase 18 — v1.8 登录端加密 (4/4 plans)
 - ✓ Phases 19-20 — v1.9 AD域控集成 (11/11 plans)
 - ✓ Phase 21 — v1.10 网络设备权限 (1/1 plan)
 - ✓ Phases 22A/22B — v1.12 深信服 VDI (6/6 plans)
@@ -276,4 +287,4 @@ See [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md) for details.
 
 ---
 
-*Last updated: 2026-07-06 — v1.19 网络设备写命令 roadmap drafted; Phases 50-54 planned in 5-wave build order (W1 templates → W2 service → W3 HTTP+audit+perm → W4 frontend → W5 e2e+UAT+docs). Awaiting `/gsd:plan-phase 50` to begin execution.*
+*Last updated: 2026-07-07 — Phase 53 planning complete (2 plans / 2 waves: 53-01 foundation types+wrappers+constants → 53-02 UI components+page integration). Phases 50-52 already shipped; v1.19 build order W1→W2→W3→W4→W5 on track. Awaiting `/gsd:execute-phase 53` to begin W4 execution.*
