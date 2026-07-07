@@ -1,8 +1,10 @@
 ---
 last_updated: 2026-07-07
-update_trigger: Phase 53 complete (W4: frontend drawer + progress dialog + API wrappers)
-previous_update: 2026-07-07 after Phase 52 (W3) complete
+update_trigger: Phase 54 complete (W5: e2e + UAT deferral + docs) — v1.19 milestone SHIPPED
+previous_update: 2026-07-07 after Phase 53 (W4 frontend) complete
 ---
+
+**Phase 54 (2026-07-07)**: W5 收尾验证 phase — scrapligo `transport.NewFileTransport()` e2e 闭环 Phase 51 fn-never-called 漏洞 (10 TestE2E_*) + 5 处文档更新 (API响应规范 + 加密设计 + CHANGELOG 新建 + README 能力扩展 + MILESTONES v1.19 条目 + STATE deferred 同步) + 54-HUMAN-UAT.md 创建 (7 pending: 6 SSH + 1 WR-02) + 全量回归三绿 (vendor-react 零回归 774.96 kB + operlog regression 不回归)。代码审查 5 Info / 0 Critical / 0 Warning;**v1.19 网络设备写命令 milestone SHIPPED**。
 
 **Phase 53 (2026-07-07)**: W4 frontend layer complete — 6 port-write API wrappers (`networkApi.ts`) + 3 TS types mirroring backend `portwrite` Go structs (`types/network.ts`) + shared constants (`port-write/constants.ts`) + `PortWriteModal` (5 single-port actions, reason Select+TextArea, description special-case, audit-link Toast) + `BulkWriteDrawer` (select→executing→result state machine, indeterminate Spin per D-05, three Statistic cards, retry-only-failed per D-06) + `ports/index.tsx` wiring (`useMenuStore` canWrite gating per D-09, operation column, batch-config button, `batchInProgress` disables refresh+collect per D-07/LANDMINE #4) + `monitor/logs` URL query `?module=` prefetch. 8/8 must-haves verified, zero gaps. Code review found 2 BLOCKERs (CR-01/CR-02: BulkWriteDrawer retry `deviceId` snapshot drift → potential cross-device write) — fixed in commit `9b01cc68` (cache `lastDeviceId` + `lastInterfaceMap` at submit). WR-02 (custom-reason validator signature) deferred to Phase 54 UAT. Real-device/browser UAT deferred to Phase 54 (W5) per v1.18 Phase 48 site-visit precedent. `npm run build` exit 0, vendor-react gzip 774.96 kB (zero regression vs Phase 48 baseline 776 kB).
 
@@ -152,6 +154,19 @@ estate.
   - Wave 3 Pipeline+Audit+UI：OpsAssetWriter UPDATE-only + ReconciliationEmitter (component_serial recon_category) + DeviceInfoCollectionService cron hook + operlog.RecordBackground (cron-path) + GET /ops/asset/components + ComponentListTab expandable row
 
 ### Active
+
+## Current Milestone: v1.19 网络设备写命令 (Network Device Write Operations) — SHIPPED 2026-07-07
+
+**v1.19 已闭环** — 5 phases (50-54) / 7 plans / 5 waves / 28+ MVP 需求 ship。闭环分析:
+- Phase 50 (W1 厂商模板) → Phase 51 (W2 service + batch + mock) → Phase 52 (W3 router/handler/operlog/permission/migration) → Phase 53 (W4 frontend drawer + API wrappers) → Phase 54 (W5 e2e + UAT + docs)
+- Phase 54 关键动作: scrapligo `transport.NewFileTransport()` + 手写 Huawei VRP fixture 闭环 Phase 51 mockDeviceExecutor 漏掉的 fn 闭包漏洞(service.executeWrite → SendConfigs → parseConfigError 链路首次集成层执行) — 10 TestE2E_* 测试全绿(5 single happy + 1 batch happy + device_rejected + transport_error + batch_failfast + noop)
+- 文档同步: API响应规范.md (网络设备端口写操作小节) + 加密设计.md (SSH vs HTTP 两层加密正交) + 新建 CHANGELOG.md + README.md 核心特性扩展 + MILESTONES.md v1.19 条目
+- UAT 推迟: 6 项 SSH verification (Huawei/H3C/Ruijie × shutdown/description/dot1x) + 1 项 WR-02 custom-reason 观察 → 54-HUMAN-UAT.md (推迟到下次现场访问, owner = 现场运维同事); 7 项全 `pending`, 全 `verifier_status: human_needed`
+- Pre-existing 测试失败 (login_encryption_test.go:235 / pkg/errors/errors_test.go / operations 子树) 均先于 Phase 54 6 周-5 个月, Phase 54 diff 为空, 不算 Phase 54 缺陷
+
+**Phase 54 must-not-break 全部守住**: SC#6 三绿 (go test ./internal/services/portwrite/ + npm build vendor-react gzip 774.96 kB 与 Phase 53 baseline 零回归 + npm type-check); SC#7 operlog regression_test.go (25 OperType + 11 keyword + Record 5 参签名); SC#3 加密配置实证 (config.yaml exclude_paths 不含 /network/ports/write/*, D-04 lock)。
+
+**Phase 55 依赖**: WR-02 观察结果 (54-HUMAN-UAT 第 7 项) 驱动 Phase 55 PortWriteModal custom-reason validator 签名修复决策。
 
 ## Current Milestone: v1.18 SHIPPED 2026-07-04 — awaiting v1.19 planning
 
@@ -343,4 +358,4 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 - ✓ Phase 44 R3 IP 例外规则引擎 (v1.17 资产对账) (2026-06-28) — 2 plans, CIDR GiST 引擎 + Layer 3.5 拦截 + 例外 CRUD/命中测试 + cron 过期清理 + 转单 no_workorder 过滤 + 降噪基线 + Excel 导入导出; VERIFICATION 10/10 passed, 1 CR-03 gap-closure fix (baseline 路由权限), 4 硬化债 BLOCKER 跟踪
 
 ---
-*Last updated: 2026-07-07 after Phase 53 (W4 frontend) complete — 2/2 plans, 8/8 must-haves verified, 2 code-review BLOCKERs fixed, real-device UAT deferred to Phase 54 (W5) per v1.18 Phase 48 site-visit precedent*
+*Last updated: 2026-07-07 after Phase 54 (W5 e2e + docs) complete — 1/1 plan, 7/7 SC PASS, 0 critical regression (Phase 51 fn-closure gap closed via scrapligo FileTransport), 7 site-visit UAT deferred to 54-HUMAN-UAT.md, **v1.19 网络设备写命令 milestone SHIPPED***
