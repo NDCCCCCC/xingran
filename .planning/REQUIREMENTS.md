@@ -46,7 +46,7 @@ created: 2026-07-06
 
 - [ ] **AUDIT-01**: 系统能在每个写操作成功路径末尾、`response.Success()` 之前调用 `operlog.Record(...)` 写入操作日志（module=`端口管理`，OperType 见下表）
 - [ ] **AUDIT-02**: 系统能为每条写操作记录关键操作参数：`device_id` / `port_id` / `action` / `description` / `operator` / `result_status`
-- [ ] **AUDIT-03**: 系统能新建 `sys_port_write_audit` 表，存储每次写操作的 `before_value` / `after_value` / `command_sent` / `device_response` / `status` / `failure_reason`，支持后续合规追溯（operlog 会被 11 个敏感关键词脱敏，此表为未脱敏真相源）
+- [x] **AUDIT-03**: 系统能新建 `sys_port_write_audit` 表，存储每次写操作的 `before_value` / `after_value` / `command_sent` / `device_response` / `status` / `failure_reason`，支持后续合规追溯（operlog 会被 11 个敏感关键词脱敏，此表为未脱敏真相源）
 - [x] **AUDIT-04**: 系统能在写操作成功 1-2 秒后通过 `DeviceInfoCollectionService.Enqueue(deviceID)` 触发该设备端口信息采集（复用 v1.18 D-09 dedup 防队列重复）
 
 ### UI — 前端
@@ -62,11 +62,11 @@ created: 2026-07-06
 
 - [ ] **PERM-01**: 系统能在 `pkg/permission/config.go` 新增 `NetworkPortWrite = "network:port:write"` 权限常量（与 `network:port:query` 区分）
 - [ ] **PERM-02**: 系统能在所有 6 个写端点（5 个单端口 + 1 个批量）上加 `RequirePermissions(["network:port:write"])` 中间件
-- [ ] **PERM-03**: 系统能在 migration 中 seed "端口配置" 子菜单到 "端口管理" 父菜单下，并通过 `GrantNewMenuToRolesHavingParent(db, "端口管理", newMenuID)` 精准授权父已关联角色（避免 antd 父子联动视觉陷阱）
+- [x] **PERM-03**: 系统能在 migration 中 seed "端口配置" 子菜单到 "端口管理" 父菜单下，并通过 `GrantNewMenuToRolesHavingParent(db, "端口管理", newMenuID)` 精准授权父已关联角色（避免 antd 父子联动视觉陷阱）
 
 ### INFRA — 基础设施
 
-- [ ] **INFRA-01**: 系统能创建 `sys_port_write_audit` 表（migration_2XX），含 `device_id` / `port_id` / `action` / `before_value` / `after_value` / `command_sent` / `device_response` / `status` / `failure_reason` / `operator` / `created_at`，按 `(device_id, port_id, created_at)` 建索引
+- [x] **INFRA-01**: 系统能创建 `sys_port_write_audit` 表（migration_2XX），含 `device_id` / `port_id` / `action` / `before_value` / `after_value` / `command_sent` / `device_response` / `status` / `failure_reason` / `operator` / `created_at`，按 `(device_id, port_id, created_at)` 建索引
 - [ ] **INFRA-02**: 系统能注册新菜单路由 `/network/ports/write`，前端可通过 `DynamicRoutes` 动态加载（routeGenerator 拼接路径）
 - [ ] **INFRA-03**: 系统能定义 `internal/services/portcollection/cache_keys.go` 中新增 `CacheKeyPortWriteResult = "port:write:result:{port_id}"`（如需要缓存单端口最近一次写结果）+ `CacheKeyPortWriteBatch = "port:write:batch:{batch_id}"`（batch 进度缓存）
 
