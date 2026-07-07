@@ -270,3 +270,64 @@ export interface DeviceDiscovery {
   createdAt: string;
   updatedAt: string;
 }
+
+// ==================== 端口写操作 (Phase 53) ====================
+
+/**
+ * 端口写操作 action 字面量联合类型 (Phase 53)
+ *
+ * 与后端 portcollection.PortAction 字面量集合一一对应,编译期锁定 5 个 action,
+ * 防 typo 引入第 4 态导致 BulkWriteDrawer 结果分区漏判 (LANDMINE #3 / T-53-04)。
+ */
+export type PortWriteAction =
+  | "shutdown"
+  | "undo_shutdown"
+  | "description"
+  | "dot1x_enable"
+  | "dot1x_disable";
+
+/**
+ * 单端口写操作结果 (Phase 53, 镜像后端 portwrite.PortResult)
+ *
+ * Source: internal/services/portwrite/port_write_service.go:34-42
+ *
+ * status 字段用字面量联合 "succeeded" | "failed" | "skipped" (不是 string),
+ * 编译期锁定三态防 typo。
+ */
+export interface PortResult {
+  portId: string;
+  action: PortWriteAction;
+  status: "succeeded" | "failed" | "skipped";
+  noOp: boolean;
+  currentState?: string;
+  error?: string;
+  commandSent?: string;
+}
+
+/**
+ * 批量写请求 (Phase 53, 镜像后端 portwrite.BatchWriteRequest)
+ *
+ * Source: internal/services/portwrite/port_write_service.go:45-50
+ *
+ * action 复用 PortWriteAction 联合类型;description 仅 action="description" 时使用。
+ */
+export interface BatchWriteRequest {
+  deviceId: string;
+  action: PortWriteAction;
+  portIds: string[];
+  description?: string;
+}
+
+/**
+ * 批量写结果 (Phase 53, 镜像后端 portwrite.BatchResult)
+ *
+ * Source: internal/services/portwrite/batch_orchestrator.go:15-19
+ *
+ * 后端保证三个切片即使为空也初始化为 []PortResult{}(非 nil),
+ * JSON 序列化输出 [] 而非 null — 前端无需做 null 守卫。
+ */
+export interface BatchResult {
+  succeeded: PortResult[];
+  failed: PortResult[];
+  skipped: PortResult[];
+}
