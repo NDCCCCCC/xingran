@@ -326,6 +326,7 @@ func (d *Database) AutoMigrate() error {
 		&models.ConfigBackup{},
 		&models.DeviceMACAddress{},
 		&models.DevicePortStatus{},
+		&models.PortWriteAudit{},  // Phase 52: 端口写审计 append-only 表
 		&models.DeviceDiscovery{},
 		&models.DeviceEnrichmentTask{},
 		// 通知公告相关模型（增强版）
@@ -414,6 +415,10 @@ func (d *Database) AutoMigrate() error {
 		}
 		if err := migrations.Migrate176ReconciliationPhysicalMV(d.DB); err != nil {
 			applogger.Errorf("reconciliation_normalized MV 重建失败 (非阻断,留待下次启动): %v", err)
+		}
+		// Phase 52: 端口写审计表(由 AutoMigrate 建表) + 菜单 seed + 角色授权
+		if err := migrations.Migrate202PortWriteAudit(d.DB); err != nil {
+			applogger.Errorf("端口写审计迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 	}
 
