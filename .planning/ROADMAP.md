@@ -140,7 +140,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 53-01-PLAN.md — Wave 1 (foundation): types/network.ts 追加 PortResult/BatchResult/BatchWriteRequest 三 interface（镜像后端 portwrite Go struct JSON tag，LANDMINE #1 types 入 network.ts 非 index.ts）+ networkApi.ts 扩展 6 个 wrapper（writeShutdown/writeUndoShutdown/writeDescription/writeDot1xEnable/writeDot1xDisable/batchWritePorts，URL 全 kebab 对齐 Phase 52 路由，不 try/catch 不重复弹 Toast LANDMINE #5）+ port-write/constants.ts 新建（PRESET_REASONS/ACTION_TITLE/REASON_MIN=5/REASON_MAX=200/DESCRIPTION_MAX=80）(UI-06, BATCH-05 wrapper-layer)
+- [x] 53-01-PLAN.md — Wave 1 (foundation): types/network.ts 追加 PortResult/BatchResult/BatchWriteRequest 三 interface（镜像后端 portwrite Go struct JSON tag，LANDMINE #1 types 入 network.ts 非 index.ts）+ networkApi.ts 扩展 6 个 wrapper（writeShutdown/writeUndoShutdown/writeDescription/writeDot1xEnable/writeDot1xDisable/batchWritePorts，URL 全 kebab 对齐 Phase 52 路由，不 try/catch 不重复弹 Toast LANDMINE #5）+ port-write/constants.ts 新建（PRESET_REASONS/ACTION_TITLE/REASON_MIN=5/REASON_MAX=200/DESCRIPTION_MAX=80）(UI-06, BATCH-05 wrapper-layer)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -177,7 +177,7 @@ Plans:
 | 50. W1 Vendor Templates + Unit Tests | 1/1 | Complete    | 2026-07-06 |
 | 51. W2 PortWriteService + Batch + Mock Tests | 1/1 | Complete   | 2026-07-06 |
 | 52. W3 Router/Handler/Operlog/Permission/Migration | 2/2 | Complete    | 2026-07-07 |
-| 53. W4 Frontend Drawer + Progress Dialog + API Wrappers | 0/2 | Planned | — |
+| 53. W4 Frontend Drawer + Progress Dialog + API Wrappers | 1/2 | In Progress|  |
 | 54. W5 E2E + Real-Device UAT + Documentation | 0/1 | Not started | — |
 
 ---
