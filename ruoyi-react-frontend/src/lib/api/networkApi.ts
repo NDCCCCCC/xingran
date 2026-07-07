@@ -1,6 +1,7 @@
 import axios, { type AxiosInstance } from "axios";
 import { post } from "../api";
 import { getAccessToken } from "@/utils/authHelpers";
+import type { PortResult, BatchResult, BatchWriteRequest } from "@/types/network";
 
 /**
  * 专用于 Blob/文件下载的 axios 实例(本文件内私有)
@@ -238,9 +239,126 @@ export const batchExport = async (
   return filename;
 };
 
+// ==================== 端口写操作 wrapper (Phase 53, D-08) ====================
+//
+// 6 个 wrapper 覆盖 Phase 52 落地的 6 个 kebab 端点
+// (internal/api/v1/network/port_write_router.go:42-47):
+//   POST /network/ports/write/shutdown         body={portId,reason}            resp=PortResult
+//   POST /network/ports/write/undo-shutdown    body={portId,reason}            resp=PortResult
+//   POST /network/ports/write/description      body={portId,description,reason?} resp=PortResult
+//   POST /network/ports/write/dot1x-enable     body={portId,reason}            resp=PortResult
+//   POST /network/ports/write/dot1x-disable    body={portId,reason}            resp=PortResult
+//   POST /network/ports/write/batch            body={deviceId,action,portIds[],description?} resp=BatchResult
+//
+// 关键约束 (LANDMINE #5 / T-53-02 / D-08):
+//   - wrapper 函数体不 try/catch (post() 拦截器已统一处理 reject)
+//   - 不调 message.error / getAppMessage (post() 非 0 code 路径已弹 Toast, 防双重 Toast)
+//   - 不翻译 sentinel error 为中文 (后端 52 handler 已翻译, 前端透传)
+//   - 用 post<T>(url, body) + result.data! 模式, 与 queryMACHistory 同风格
+
+/**
+ * 关闭端口 (shutdown)
+ * - 端点: POST /network/ports/write/shutdown
+ */
+export const writeShutdown = async (
+  portId: string,
+  reason: string
+): Promise<PortResult> => {
+  const result = await post<PortResult>("/network/ports/write/shutdown", {
+    portId,
+    reason,
+  });
+  return result.data!;
+};
+
+/**
+ * 取消关闭端口 (undo shutdown)
+ * - 端点: POST /network/ports/write/undo-shutdown
+ */
+export const writeUndoShutdown = async (
+  portId: string,
+  reason: string
+): Promise<PortResult> => {
+  const result = await post<PortResult>("/network/ports/write/undo-shutdown", {
+    portId,
+    reason,
+  });
+  return result.data!;
+};
+
+/**
+ * 修改端口描述 (description)
+ * - 端点: POST /network/ports/write/description
+ * - reason 参数可选: D-03 action=description 时 reason 可空 (新描述本身已说明意图)
+ */
+export const writeDescription = async (
+  portId: string,
+  description: string,
+  reason?: string
+): Promise<PortResult> => {
+  const result = await post<PortResult>("/network/ports/write/description", {
+    portId,
+    description,
+    reason,
+  });
+  return result.data!;
+};
+
+/**
+ * 启用 802.1X (dot1x enable)
+ * - 端点: POST /network/ports/write/dot1x-enable
+ */
+export const writeDot1xEnable = async (
+  portId: string,
+  reason: string
+): Promise<PortResult> => {
+  const result = await post<PortResult>("/network/ports/write/dot1x-enable", {
+    portId,
+    reason,
+  });
+  return result.data!;
+};
+
+/**
+ * 停用 802.1X (dot1x disable)
+ * - 端点: POST /network/ports/write/dot1x-disable
+ */
+export const writeDot1xDisable = async (
+  portId: string,
+  reason: string
+): Promise<PortResult> => {
+  const result = await post<PortResult>("/network/ports/write/dot1x-disable", {
+    portId,
+    reason,
+  });
+  return result.data!;
+};
+
+/**
+ * 批量写端口配置
+ * - 端点: POST /network/ports/write/batch
+ * - 后端串行 fail-fast,单设备 50 端口上限,30min detached context
+ * - 返回 BatchResult 三切片 (succeeded/failed/skipped),即使为空也是 [] 非 null
+ * - 注意: HTTP 200 + status='failed' 路径走 resolve (不走 reject),
+ *   BulkWriteDrawer 必须读 result.failed/succeeded/skipped 数组分区, 不能靠 catch
+ */
+export const batchWritePorts = async (
+  req: BatchWriteRequest
+): Promise<BatchResult> => {
+  const result = await post<BatchResult>("/network/ports/write/batch", req);
+  return result.data!;
+};
+
 export default {
   queryMACHistory,
   getMACEvents,
   exportMACHistory,
   batchExport,
+  // Phase 53 端口写操作
+  writeShutdown,
+  writeUndoShutdown,
+  writeDescription,
+  writeDot1xEnable,
+  writeDot1xDisable,
+  batchWritePorts,
 };
