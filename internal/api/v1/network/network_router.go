@@ -211,6 +211,8 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	}, middleware.OpsSelectorReadPerms, core))
 	{
 		SetupPortRouter(ports, core, exportHandler)
+		// Phase 52: 写操作子组 /network/ports/write/* + 组级 RequirePermissions([network:port:write])
+		SetupPortWriteRouter(ports, core)
 	}
 
 	// ==================== 批量导出路由（所有实体类型通用） ====================
