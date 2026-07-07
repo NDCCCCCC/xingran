@@ -224,6 +224,17 @@ Phase 52 W3 (52-02) Wave 2 — migration + menu seed + RBAC grant 全部就绪:
 - Phase 34 operlog + Phase 51 portwrite + Wave 1 network regression locks intact
 - 4 源 grep 守卫通过(IsFrame/IsCache absent / CREATE TABLE absent / portStatus present / portMgmt absent)
 
+### Final Commit Hashes (verified via git log)
+
+| Hash | Type | Subject |
+|------|------|---------|
+| e6911127 | feat | GrantNewMenuToRolesHavingParent helper for precise role-menu grant |
+| 6b833b80 | feat | migration_202 — defensive indexes + 端口配置 menu seed + grant helper |
+| 8dd54d16 | feat | database.go — register PortWriteAudit AutoMigrate + explicit Migrate202 call |
+| d75e58af | docs | Wave 2 plan SUMMARY + deferred-items |
+| 50759d21 | docs | STATE + ROADMAP wave 2 annotations |
+| cc0a70c3 | docs | SDK handler updates (requirements mark-complete + state record) |
+
 ## Files of Interest (absolute paths)
 
 - `D:\code\ClaudeCode\ruoyi-go-backend\internal\core\db\migrations\menu_grant_helpers.go`
