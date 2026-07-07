@@ -1,8 +1,11 @@
 ---
-last_updated: 2026-07-06
-update_trigger: start of milestone v1.19 (network device write operations)
-previous_update: 2026-07-04 after v1.18 milestone close (Phase 48 shipped: 1 phase / 3 plans / 3 waves)
+last_updated: 2026-07-07
+update_trigger: Phase 52 complete (W3: router/handler/operlog/permission/migration)
+previous_update: 2026-07-06 after v1.19 ROADMAP drafted
 ---
+
+**Phase 52 (2026-07-07)**: W3 wiring layer complete — 6 port-write HTTP endpoints exposed (`/network/ports/write/{shutdown,undo-shutdown,description,dot1x-enable,dot1x-disable,batch}`) with 2-arg `RequirePermissions(["network:port:write"], core)`, `PortWriteAudit` 12-col GORM model + composite indexes via GORM AutoMigrate (Path A), 端口配置 F-type menu seeded under parent 端口状态 (D-07) with precise idempotent role-grant helper. Path C strictly enforced (audit_id embedded via operlog.WithOperParam; audit.oper_log_id stays NULL; operlog package unmodified). 16/17 must-haves verified, 1 ACCEPTED_AS_KNOWN_LIMITATION (WR-05: NetworkPortWrite not yet in GetRoutePermissions, discoverability-only). Human verification deferred to PG dev DB + Phase 53 frontend.
+
 
 ## Current Milestone: v1.19 网络设备写命令 (Network Device Write Operations)
 
