@@ -85,7 +85,7 @@ export function BulkWriteDrawer({
   onClose,
   onSuccess,
   onExecutingChange,
-}: BulkWriteDrawerProps): JSX.Element {
+}: BulkWriteDrawerProps) {
   const [form] = Form.useForm();
   const { message } = App.useApp();
   const navigate = useNavigate();
@@ -259,7 +259,7 @@ function SelectView({
   uniqueDeviceCount,
   isMixedDevices,
   onSubmit,
-}: SelectViewProps): JSX.Element {
+}: SelectViewProps) {
   return (
     <Form form={form} layout="vertical">
       {/* 只读汇总: 已选 N 端口 / 唯一设备数 */}
@@ -362,7 +362,7 @@ interface ResultViewProps {
   onRetry: () => Promise<void>;
 }
 
-function ResultView({ result, selectedPorts, onRetry }: ResultViewProps): JSX.Element {
+function ResultView({ result, selectedPorts, onRetry }: ResultViewProps) {
   // portId → interfaceName 映射, 用于失败明细 Table 展示接口名 (PortResult 只含 portId, 无 interfaceName)
   const portIdToInterfaceName = useMemo(() => {
     const map = new Map<string, string>();

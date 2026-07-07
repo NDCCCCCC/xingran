@@ -25,6 +25,7 @@ import {
   ArrowLeftOutlined,
 } from "@ant-design/icons";
 import type { DevicePortStatus, NetworkDevice } from "@/types";
+import type { PortWriteAction } from "@/types/network";
 import { post, get } from "@/lib/api";
 import { batchExport } from "@/lib/api/networkApi";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -35,8 +36,12 @@ import { formatDateTime } from "@/utils/datetime";
 import { usePagination } from "@/hooks/usePagination";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
-import { DownloadOutlined } from "@ant-design/icons";
+import ActionButtons, { type ActionButton } from "@/components/shared/ActionButtons";
+import { DownloadOutlined, SettingOutlined } from "@ant-design/icons";
 import { createSorterMeta } from "@/utils/tableHelpers";
+import { useMenuStore } from "@/store/menuStore";
+import { PortWriteModal } from "@/components/network/port-write/PortWriteModal";
+import { BulkWriteDrawer } from "@/components/network/port-write/BulkWriteDrawer";
 
 const { Option } = Select;
 
@@ -49,6 +54,26 @@ const PortStatusPage: FC = () => {
 
   const [devices, setDevices] = useState<NetworkDevice[]>([]);
   const [collecting, setCollecting] = useState(false);
+
+  // D-09: 权限源 menu store (非 auth store, ROADMAP #4 笔误纠正) — 后端 RequirePermissions 是真相源
+  const menuPermissions = useMenuStore((s) => s.permissions);
+  const hasPermission = (perm: string) => menuPermissions.includes(perm);
+  const canWrite = hasPermission("network:port:write");
+
+  // Phase 53 W4: 单端口写 Modal + 批量 Drawer state
+  const [writeModalOpen, setWriteModalOpen] = useState(false);
+  const [writeModalAction, setWriteModalAction] = useState<PortWriteAction>("shutdown");
+  const [writeModalRecord, setWriteModalRecord] = useState<DevicePortStatus | null>(null);
+  const [bulkWriteDrawerOpen, setBulkWriteDrawerOpen] = useState(false);
+  // D-07: batchInProgress 由 BulkWriteDrawer onExecutingChange 上抛, 禁刷新+采集 (LANDMINE #4 同类竞态)
+  const [batchInProgress, setBatchInProgress] = useState(false);
+
+  // 单端口操作入口 (ActionButtons onClick → openWriteModal(action, record))
+  const openWriteModal = (action: PortWriteAction, record: DevicePortStatus) => {
+    setWriteModalAction(action);
+    setWriteModalRecord(record);
+    setWriteModalOpen(true);
+  };
 
   // 统计数据
   const [statistics, setStatistics] = useState({
@@ -303,6 +328,24 @@ const PortStatusPage: FC = () => {
       sortOrder: getColumnSortOrder("collectedAt"),
       render: (date: string) => date ? formatDateTime(date) : "-",
     },
+    // Phase 53 W4: 操作列 (D-01, canWrite gating — D-09/ROADMAP #4 笔误纠正)
+    // 5 action 全调 openWriteModal, 共用 PortWriteModal 切 action prop
+    ...(canWrite ? [{
+      title: "操作",
+      key: "portWriteAction",
+      fixed: "right" as const,
+      width: 100,
+      render: (_: unknown, record: DevicePortStatus) => {
+        const actions: ActionButton[] = [
+          { key: "shutdown", label: "关闭端口", onClick: () => openWriteModal("shutdown", record) },
+          { key: "undo_shutdown", label: "取消关闭", onClick: () => openWriteModal("undo_shutdown", record) },
+          { key: "description", label: "修改描述", onClick: () => openWriteModal("description", record) },
+          { key: "dot1x_enable", label: "启用 802.1X", onClick: () => openWriteModal("dot1x_enable", record) },
+          { key: "dot1x_disable", label: "停用 802.1X", onClick: () => openWriteModal("dot1x_disable", record) },
+        ];
+        return <ActionButtons actions={actions} />;
+      },
+    }] : []),
   ];
 
   return (
@@ -403,7 +446,7 @@ const PortStatusPage: FC = () => {
               <Space>
                 <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>查询</Button>
                 <Button icon={<ReloadOutlined />} onClick={handleReset}>重置</Button>
-                <Button icon={<ReloadOutlined />} onClick={handleRefresh}>刷新</Button>
+                <Button icon={<ReloadOutlined />} onClick={handleRefresh} disabled={batchInProgress}>刷新</Button>
               </Space>
             </Form.Item>
           </Form>
@@ -425,11 +468,20 @@ const PortStatusPage: FC = () => {
               current={paginationProps.current}
               pageSize={paginationProps.pageSize}
             />
-            <Button icon={<CloudSyncOutlined />} onClick={handleCollectAll} loading={collecting}>
+            <Button icon={<CloudSyncOutlined />} onClick={handleCollectAll} loading={collecting} disabled={batchInProgress}>
               采集所有设备
             </Button>
             <Button icon={<DeleteOutlined />} onClick={handleBatchDelete} disabled={selectedRowKeys.length === 0} style={{ color: "var(--theme-error, #ff4d4f)" }}>
               批量删除 ({selectedRowKeys.length})
+            </Button>
+            {/* Phase 53 W4 D-04: 批量配置入口 — 与批量删除 UX 一致, 额外加 !canWrite 防 */}
+            <Button
+              icon={<SettingOutlined />}
+              onClick={() => setBulkWriteDrawerOpen(true)}
+              disabled={selectedRowKeys.length === 0 || !canWrite}
+              type="primary"
+            >
+              批量配置 ({selectedRowKeys.length})
             </Button>
           </Space>{/* 批量导出 Modal */}
 
@@ -484,6 +536,22 @@ const PortStatusPage: FC = () => {
           }}
         />
       </Card>
+
+      {/* Phase 53 W4: 单端口写 Modal + 批量 Drawer (D-01 / D-04) */}
+      <PortWriteModal
+        open={writeModalOpen}
+        action={writeModalAction}
+        portRecord={writeModalRecord}
+        onClose={() => setWriteModalOpen(false)}
+        onSuccess={() => { loadPortStatus(); loadStatistics(); }}
+      />
+      <BulkWriteDrawer
+        open={bulkWriteDrawerOpen}
+        selectedPorts={portStatus.filter(p => selectedRowKeys.includes(p.id))}
+        onClose={() => setBulkWriteDrawerOpen(false)}
+        onSuccess={() => { loadPortStatus(); loadStatistics(); }}
+        onExecutingChange={setBatchInProgress}
+      />
     </div>
   );
 };

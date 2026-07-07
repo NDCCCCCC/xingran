@@ -127,7 +127,7 @@ export function PortWriteModal({
   portRecord,
   onClose,
   onSuccess,
-}: PortWriteModalProps): JSX.Element {
+}: PortWriteModalProps) {
   const [form] = Form.useForm();
   const { message } = App.useApp();
   const navigate = useNavigate();

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
   Card,
@@ -91,6 +91,7 @@ const loadLoginLogs = async (params: any): Promise<{ list: LoginLog[]; total: nu
 const LogMonitor: React.FC = () => {
   const { message } = App.useApp();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = usePersistedStateController<"oper" | "login">({
     keyPrefix: location.pathname,
     keySuffix: "activeTab",
@@ -153,6 +154,19 @@ const LogMonitor: React.FC = () => {
     // 仅在 activeTab 切换时重新加载;manager 引用变化不应触发
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
+
+  // Phase 53 W4 D-10/LANDMINE #2: mount-only 读 URL ?module=xxx 预填 title 字段并触发查询。
+  // 来源: 端口写操作 Toast 的"查看审计日志"链接 navigate('/monitor/logs?module=端口管理')。
+  // 后端 sys_oper_log.title 列对应 PortWrite handler 的 ModulePortWrite 常量, LIKE 过滤无需后端改动。
+  // CLAUDE.md useEffect 纪律: mount-only [] deps, eslint-disable exhaustive-deps (参考 reconciliation/exceptions:172)
+  useEffect(() => {
+    const moduleFromUrl = searchParams.get("module");
+    if (moduleFromUrl && activeTab === "oper") {
+      operLogManager.searchForm.setFieldsValue({ title: moduleFromUrl });
+      operLogManager.handleSearch();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 查看详情
   const handleViewDetail = useCallback((log: OperLog | LoginLog) => {
