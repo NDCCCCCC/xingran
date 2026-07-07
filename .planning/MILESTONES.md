@@ -1,5 +1,29 @@
 # Milestones
 
+## v1.19 网络设备写命令 (Network Device Port Write Operations) — ✅ SHIPPED 2026-07-07
+
+**Phases**: 5 (Phases 50-54) | **Plans**: 7 (50-01 / 51-01 / 51-02 / 52-01 / 52-02 / 53-01 / 53-02 / 54-01) | **Waves**: 5 (vendor templates → service+batch → router+handler+operlog+permission → frontend Drawer+API wrappers → e2e+docs)
+
+**Delivered**: 补全网络设备"读+写"闭环——Web 端通过 SSH 直接对目标设备下发端口配置命令（启停/描述/dot1x），成功后立即采集一次端口信息回填审计。MVP 范围：3 厂商 × 5 操作 + 批量 + 完整审计 + 权限隔离。
+
+**Key Accomplishments**:
+
+1. ✅ **Vendor × Action 命令模板 (50-01 / W1)** — `internal/services/portcollection` vendorPortTemplate 派发表覆盖 Huawei / H3C / Ruijie 3 厂商 × 5 操作；H3C 复用华为 VRP 模板（D-08 同源），Ruijie 走 Cisco 风格 dot1x；description 操作自动产出 `interface X` + `description Y` 2 cmds；vendorPortTemplate_RenderCommand 15 case 单元测试 + description 长度 ≤80 校验
+2. ✅ **PortWriteService + Batch Orchestrator (51-01/02 / W2)** — `internal/services/portwrite/port_write_service.go` 5 单端口方法 + BatchWritePorts 批量；fail-fast serial loop（D-17）+ detached 30min context（Pitfall #5 兜底 Core.Close 30s）+ per-port Acquire/ReleaseRef 连接池隔离；BatchResult 三数组 succeeded/failed/skipped 编排；Phase 51 mockDeviceExecutor + Phase 54 FileTransport e2e 双层覆盖
+3. ✅ **HTTP + Operlog + Permission + Migration (52-01/02 / W3)** — 6 HTTP POST 端点 `POST /network/ports/write/{shutdown,undo-shutdown,description,dot1x-enable,dot1x-disable,batch}`；PortWriteRequest schema + 6 handler；sys_port_write_audit 表真相源 + sys_oper_log 高层摘要（OperType 25 常量映射 CONV-01..04）；权限 `network:port:write` 与 `network:port:query` 隔离；migration_202 加表 + 端口配置菜单 seed + GrantNewMenuToRolesHavingParent helper
+4. ✅ **Frontend Drawer + Progress + API Wrappers (53-01/02 / W4)** — types/network.ts + 4 类型 + networkApi.ts + 6 wrapper + port-write/constants.ts 5 const；PortWriteModal 5 操作 × custom reason 审计；BulkWriteDrawer 多端口选择 + indeterminate spinner MVP（BATCH-05 实时进度 v1.19.x deferred）；ports/logs 页面改造；vendor-react gzip 775 kB 基线（前端 bundle size 防回归）
+5. ✅ **E2E + Real-Device UAT Deferral + Documentation (54-01 / W5)** — `internal/services/portwrite/port_write_e2e_test.go` 10 个 TestE2E_*（5 single happy + 1 batch happy + 4 类错误路径：device_rejected / transport_error / batch_failfast / noop），使用 scrapligo FileTransport 跑真实 SendConfigs + parseConfigError 链路（Phase 51 mockDeviceExecutor 不调 fn 漏洞闭环）；API/加密/CHANGELOG/README/MILESTONES 文档同步；54-HUMAN-UAT.md 7 项 site-visit deferred（6 项真机 SSH + 1 项 WR-02 观察驱动 Phase 55 决策）
+
+**Comms**:
+- 14 commits 主仓(50-01: 3 / 51-01: 2 / 51-02: 1 / 52-01: 3 / 52-02: 3 / 53-01: 3 / 53-02: 3 / 54-01: 2)
+- 28/28 D-id 全覆盖（51 个 MVP 需求 SSH/PORT/BATCH/AUDIT/UI/PERM/INFRA/CONV 28+ 全映射），54-VALIDATION.md Test Map 锁定
+- 0 critical regression（Phase 51 mock + Phase 54 e2e 全绿，operlog 25 OperType + 11 敏感关键词 regression_test.go 不回归，vendor-react gzip 与 Phase 53 baseline 零回归）
+- ~60 文件 / ~3,500 insertions（含 fixtures + e2e + 文档 + handler/service/menu/permission/migration）
+
+**Known deferred items at close**: 7 项 site-visit UAT 推迟（6 项真机 SSH transport verification：Huawei/H3C/Ruijie × shutdown/description/dot1x；1 项 WR-02 custom-reason 频率观察驱动 Phase 55 WR-02 修复决策）— 详见 `.planning/phases/54-w5-e2e-real-device-uat-documentation/54-HUMAN-UAT.md`；3 厂商 e2e fixture 全覆盖 / HTTP handler 层 e2e / 跨固件版本命令差异 / Real-device SSH 往返延迟测量 / BATCH-05 实时进度 / sys_port_write_audit 详情查看 UI 推迟到 v1.19.x+
+
+---
+
 ## v1.18 网络设备硬件清单 (Device Component Serials) — ✅ SHIPPED 2026-07-04
 
 **Phases**: 1 (Phase 48) | **Plans**: 3 (48-01 / 48-02 / 48-03) | **Waves**: 3 (schema → collectors → pipeline+operlog+frontend)

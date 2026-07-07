@@ -180,7 +180,7 @@ Items acknowledged and deferred at milestone v1.18 close on 2026-07-04:
 
 | Item | Category | Deferred to | Owner |
 |------|----------|-------------|-------|
-| 真机 SSH 写命令验证 (Huawei S5700/S5735 + H3C + Ruijie RS8607E 各 shutdown + description + dot1x) | device_needed | 50-HUMAN-UAT.md site visit | 现场运维 |
+| 真机 SSH 写命令验证 (Huawei S5700/S5735 + H3C + Ruijie RS8607E 各 shutdown + description + dot1x) | device_needed | 54-HUMAN-UAT.md site visit | 现场运维 |
 | 跨固件版本命令差异 (Huawei V200R005 vs V600R024C00) | device_needed | follow-up | 现场运维 |
 | Real-device SSH 往返延迟测量 (batching + per-port timeout calibration) | device_needed | follow-up | 现场运维 |
 

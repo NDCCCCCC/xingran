@@ -9,7 +9,7 @@ RuoYi-Next 是基于若依 (RuoYi) 开源管理系统的全新重构版本，采
 - **用户/角色/菜单/部门/岗位/字典/通知/参数**：完整的 RBAC 权限与基础数据治理
 - **3D 楼宇/楼层/机房可视化**：基于 Three.js + react-three/fiber 的 CAD 风格平面编辑器与三维场景
 - **工位/设备/资产/网段管理**：Excel 批量导入导出、百度地图地理编码、部门/用户自动关联
-- **网络设备纳管**：Scrapli (SSH/Telnet) + SNMP + TextFSM 模板解析，支持端口采集、MAC 历史、LLDP 拓扑
+- **网络设备纳管**：Scrapli (SSH/Telnet) + SNMP + TextFSM 模板解析，支持端口采集、MAC 历史、LLDP 拓扑、端口写命令（shutdown / undo shutdown / description / dot1x 启停）+ 批量配置 + 完整审计（sys_port_write_audit）
 - **AD 域集成**：LDAP 连接池、定时组同步、OU 管理、用户密码变更
 - **RPA 自动化**：Worker 自动扩缩容 (Docker)、AI 生成脚本与视觉 Agent 降级
 - **VDI 桌面云**：深信服 VDI 接口对接、虚拟机生命周期管理

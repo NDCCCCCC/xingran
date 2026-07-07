@@ -223,6 +223,76 @@
 }
 ```
 
+### 网络设备端口写操作
+
+v1.19 网络设备写命令（Network Device Port Write Operations）通过 6 个 POST 端点下发，前缀 `/network/ports/write/`，要求 `network:port:write` 权限 + SM2+SM4 请求体加密（D-04 保持加密）。
+
+| 路径 | 方法 | 操作 | OperType 常量 |
+|------|------|------|---------------|
+| `/network/ports/write/shutdown` | POST | 关闭端口 | `OperTypeStatus (10)` |
+| `/network/ports/write/undo-shutdown` | POST | 取消关闭 | `OperTypeStatus (10)` |
+| `/network/ports/write/description` | POST | 修改端口描述 | `OperTypeUpdate (2)` |
+| `/network/ports/write/dot1x-enable` | POST | 启用 802.1X | `OperTypeStatus (10)` |
+| `/network/ports/write/dot1x-disable` | POST | 停用 802.1X | `OperTypeStatus (10)` |
+| `/network/ports/write/batch` | POST | 批量写 | `OperTypeBatch (16)` |
+
+请求体（单端口）：
+
+```go
+type PortWriteRequest struct {
+    PortID      string `json:"portId" binding:"required"`      // 必填，UUID 字符串
+    Description string `json:"description,omitempty"`           // 可选，≤80 字符，仅 description action 使用
+    Reason      string `json:"reason,omitempty"`                // 可选，UI-02 操作原因（审计字段）
+}
+```
+
+响应（单端口）：
+
+```go
+type PortResult struct {
+    PortID       string `json:"portId"`
+    Action       string `json:"action"`                         // shutdown | undo_shutdown | description | dot1x_enable | dot1x_disable
+    Status       string `json:"status"`                         // succeeded | failed | skipped
+    NoOp         bool   `json:"noOp"`                           // pre-state 已匹配目标态（PORT-06）
+    CurrentState string `json:"currentState,omitempty"`         // admin_up / admin_down / dot1x_enabled / dot1x_disabled
+    Error        string `json:"error,omitempty"`                // 失败时填入
+    CommandSent  string `json:"commandSent,omitempty"`          // 审计真相源，下发命令原文，不脱敏
+}
+```
+
+注意：`commandSent` 字段在 operlog 中被 `OperlogRecord` 自动脱敏（password / secret 等关键词），但 HTTP 响应体的 `commandSent` 是**未脱敏**真相源 — 调用方可信赖。`sys_port_write_audit` 表保存完整命令原文以供合规审计。
+
+批量端点请求：
+
+```go
+type BatchWriteRequest struct {
+    DeviceID    string   `json:"deviceId"`                      // 必填，UUID
+    Action      string   `json:"action"`                        // 同单端口 action 枚举
+    PortIDs     []string `json:"portIds"`                       // 必填，1-50 个
+    Description string   `json:"description,omitempty"`         // 仅 description action 使用
+}
+```
+
+批量响应（三数组同时存在，即便为空也输出 `[]` 而非 `null`）：
+
+```go
+type BatchResult struct {
+    Succeeded []PortResult `json:"succeeded"`                   // 完全成功的端口
+    Failed    []PortResult `json:"failed"`                      // 任一错误类型失败的端口
+    Skipped   []PortResult `json:"skipped"`                     // pre-state NoOp 跳过的端口
+}
+```
+
+批量语义与现有"批量操作响应"（`success_count`/`failed_count` 结构）**不同**——本端点采用"三数组"分类，明确区分 succeeded / failed / skipped 三种终态。`failed` 中端口的 `error` 字段区分 SSH transport 错误（连接失败/超时/EOF）与设备命令拒绝（语法错/参数非法），前者触发 fail-fast 立即停止剩余端口（BATCH-02），后者亦 fail-fast；任一 fail 后剩余端口**不进**任何数组。
+
+fail-fast 行为：
+
+- 任一端口 SSH transport 错误或设备命令拒绝 → 立即停止后续端口
+- 剩余端口**不**出现在 `succeeded`/`failed`/`skipped` 任一数组中
+- 前端响应需提示"已执行 X/Y 个端口"，剩余 Y-X 端口需用户主动发起二次请求
+
+成功路径自动触发 `DeviceInfoCollectionService.Enqueue` 后台采集（fire-and-forget），1-2s 内回填端口最新状态至 `sys_device_port_status` 表。失败路径**不**触发采集（避免 Enqueue 风暴 + 无意义的后台轮询，参见 Pitfall #6）。
+
 ## 前端调用规范
 
 ### API调用函数使用
