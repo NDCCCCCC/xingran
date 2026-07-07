@@ -40,7 +40,7 @@ created: 2026-07-06
 - [x] **BATCH-02**: 系统能以串行 + 失败即停（fail-fast）方式执行批量操作，第一条失败立即停止并回传失败点
 - [x] **BATCH-03**: 系统能返回部分执行结果 `{succeeded: [...], failed: [...], skipped: [...]}`，明确每端口状态 + 失败原因
 - [x] **BATCH-04**: 系统能限制批量操作最大端口数为 50（硬上限），超过时前端警告 + 后端拒绝
-- [ ] **BATCH-05**: 系统能在批量操作执行期间为前端提供进度反馈（已完成 / 总数 / 当前操作端口）
+- [x] **BATCH-05**: 系统能在批量操作执行期间为前端提供进度反馈（已完成 / 总数 / 当前操作端口）
 
 ### AUDIT — 审计
 
@@ -56,7 +56,7 @@ created: 2026-07-06
 - [ ] **UI-03**: 系统能在批量操作时弹出 `BulkWriteDrawer`，显示已选端口列表 + 操作类型 + 进度条 + 失败明细
 - [ ] **UI-04**: 系统能在操作完成后通过 antd Toast 反馈成功 / 失败，并提供"查看审计日志"跳转链接到 `sys_oper_log` 详情
 - [ ] **UI-05**: 系统能在批量操作进行时禁用端口列表的"刷新"按钮（避免与 `Enqueue` 后台采集竞态）
-- [ ] **UI-06**: 系统能在 `src/lib/api/networkApi.ts` 提供 5 个 wrapped POST 函数（`writeShutdown` / `writeUndoShutdown` / `writeDescription` / `writeDot1xEnable` / `writeDot1xDisable`）+ 1 个 batch 函数（`batchWritePorts`）
+- [x] **UI-06**: 系统能在 `src/lib/api/networkApi.ts` 提供 5 个 wrapped POST 函数（`writeShutdown` / `writeUndoShutdown` / `writeDescription` / `writeDot1xEnable` / `writeDot1xDisable`）+ 1 个 batch 函数（`batchWritePorts`）
 
 ### PERM — 权限 + 菜单
 
