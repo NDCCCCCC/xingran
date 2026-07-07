@@ -51,11 +51,11 @@ created: 2026-07-06
 
 ### UI — 前端
 
-- [ ] **UI-01**: 系统能在端口列表 / 端口详情页提供"端口操作"入口（按钮 / 右键菜单），按端口状态显示"启停" / "修改描述" / "dot1x 启停"操作项
-- [ ] **UI-02**: 系统能在单端口操作时弹出二次确认 Modal（必须输入"操作原因" 5-200 字符），确认后下发
-- [ ] **UI-03**: 系统能在批量操作时弹出 `BulkWriteDrawer`，显示已选端口列表 + 操作类型 + 进度条 + 失败明细
-- [ ] **UI-04**: 系统能在操作完成后通过 antd Toast 反馈成功 / 失败，并提供"查看审计日志"跳转链接到 `sys_oper_log` 详情
-- [ ] **UI-05**: 系统能在批量操作进行时禁用端口列表的"刷新"按钮（避免与 `Enqueue` 后台采集竞态）
+- [x] **UI-01**: 系统能在端口列表 / 端口详情页提供"端口操作"入口（按钮 / 右键菜单），按端口状态显示"启停" / "修改描述" / "dot1x 启停"操作项
+- [x] **UI-02**: 系统能在单端口操作时弹出二次确认 Modal（必须输入"操作原因" 5-200 字符），确认后下发
+- [x] **UI-03**: 系统能在批量操作时弹出 `BulkWriteDrawer`，显示已选端口列表 + 操作类型 + 进度条 + 失败明细
+- [x] **UI-04**: 系统能在操作完成后通过 antd Toast 反馈成功 / 失败，并提供"查看审计日志"跳转链接到 `sys_oper_log` 详情
+- [x] **UI-05**: 系统能在批量操作进行时禁用端口列表的"刷新"按钮（避免与 `Enqueue` 后台采集竞态）
 - [x] **UI-06**: 系统能在 `src/lib/api/networkApi.ts` 提供 5 个 wrapped POST 函数（`writeShutdown` / `writeUndoShutdown` / `writeDescription` / `writeDot1xEnable` / `writeDot1xDisable`）+ 1 个 batch 函数（`batchWritePorts`）
 
 ### PERM — 权限 + 菜单
@@ -138,11 +138,11 @@ created: 2026-07-06
 | AUDIT-02 | 52 | 52-01 (operlog fields) | Pending |
 | AUDIT-03 | 52 | 52-02 (sys_port_write_audit table) | Pending |
 | AUDIT-04 | 51 | 51-01 (collectionSvc.Enqueue) | Pending |
-| UI-01 | 53 | 53-01 (port list/detail action menu) | Pending |
-| UI-02 | 53 | 53-01 (5 single-port modals) | Pending |
-| UI-03 | 53 | 53-02 (BulkWriteDrawer) | Pending |
-| UI-04 | 53 | 53-01/02 (Toast + audit log link) | Pending |
-| UI-05 | 53 | 53-02 (disable refresh during batch) | Pending |
+| UI-01 | 53 | 53-02 (ports/index.tsx 操作列 ActionButtons) | Complete |
+| UI-02 | 53 | 53-02 (PortWriteModal reason 5-200 字符) | Complete |
+| UI-03 | 53 | 53-02 (BulkWriteDrawer) | Complete |
+| UI-04 | 53 | 53-01/02 (Toast + audit log link) | Complete |
+| UI-05 | 53 | 53-02 (disable refresh+collect during batch) | Complete |
 | UI-06 | 53 | 53-01 (networkApi.ts 6 wrapped POSTs) | Pending |
 | PERM-01 | 52 | 52-01 (NetworkPortWrite constant) | Pending |
 | PERM-02 | 52 | 52-01 (RequirePermissions middleware) | Pending |
