@@ -285,6 +285,24 @@ See [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md) for details.
 
 </details>
 
+### Phase 55: 技术债清理 Phase 53 leftover sweep
+
+**Goal:** 清理 Phase 53 code review (53-REVIEW.md) 与 verification (53-VERIFICATION.md) 记录的可执行遗留代码项。范围（5 项）：
+1. **WR-02** — `PortWriteModal.tsx` / `BulkWriteDrawer.tsx` custom-reason validator 签名修复：antd validator 只传 `(rule, value)`，`reasonText` 恒 undefined，需改 `Form.useWatch` 跨字段校验（前端 TS）。是否修复取决于 Phase 54 UAT 观察到的 custom-reason 实际使用频率。
+2. **IN-01** — `pages/network/ports/index.tsx` handleBatchExport `error: any` → `instanceof Error` 安全取 message（pre-existing，非 53 引入）。
+3. **IN-02** — `pages/network/ports/index.tsx` mount-only useEffect 补 `// eslint-disable-next-line react-hooks/exhaustive-deps`（pre-existing）。
+4. **CR-02 后端防御** — `internal/services/portwrite/batch_orchestrator.go` fallback 路径校验 port 真实 deviceID 与 `req.DeviceID` 一致，不一致归入 `Failed`（"port does not belong to device"）不调 SSH（跨层防御，Go；前端 CR-01 已修但后端兜底建议）。
+5. **HealthCard.test.tsx** — 排查/修复既有失败测试（`src/components/reconciliation/__tests__/`，reconciliation 模块，疑似环境/时序，112s import time 异常；与 Phase 53 无关）。
+
+**不在本阶段范围**（已记录到他处）：8 项真机/浏览器 UAT → Phase 54 HUMAN-UAT；Security 审计 → `/gsd:secure-phase 53`；commits push → git 操作。
+
+**Requirements**: TBD (无新功能需求，纯技术债)
+**Depends on:** Phase 54 (WR-02 修复决策由 W5 UAT 观察驱动)
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 55 to break down)
+
 ---
 
-*Last updated: 2026-07-07 — Phase 53 planning complete (2 plans / 2 waves: 53-01 foundation types+wrappers+constants → 53-02 UI components+page integration). Phases 50-52 already shipped; v1.19 build order W1→W2→W3→W4→W5 on track. Awaiting `/gsd:execute-phase 53` to begin W4 execution.*
+*Last updated: 2026-07-07 — Phase 53 (W4 frontend) shipped: 2/2 plans, 8/8 must-haves verified, 2 code-review BLOCKERs fixed (commit 9b01cc68), real-device UAT deferred to Phase 54. Phase 55 (tech-debt cleanup) added for Phase 53 leftover sweep (WR-02/IN-01/IN-02/CR-02/HealthCard). v1.19 build order W1→W2→W3→W4 ✓ → W5 (54) → cleanup (55).*

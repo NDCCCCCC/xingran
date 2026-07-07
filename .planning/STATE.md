@@ -144,6 +144,7 @@ Last activity: 2026-07-07
 
 - ✅ v1.0–v1.18 complete (Phases 1-49, 142 plans)
 - 🚧 v1.19 planning: Phases 50-54 drafted (5 phases, 5-7 plans, vendor→template → service → HTTP+audit → UI → e2e)
+- ➕ Phase 55 added: 技术债清理 Phase 53 leftover sweep (WR-02 / IN-01 / IN-02 / CR-02 后端防御 / HealthCard 测试，depends on Phase 54 — WR-02 修复决策由 W5 UAT 驱动)
 
 ### Known Risks & Mitigations
 
