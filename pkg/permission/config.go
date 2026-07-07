@@ -185,6 +185,9 @@ const (
 	// 端口状态查询权限
 	NetworkPortQuery PermissionCode = "network:port:query"
 
+	// 端口写操作权限（Phase 52: shutdown/undo_shutdown/description/dot1x_enable/dot1x_disable/batch）
+	NetworkPortWrite PermissionCode = "network:port:write"
+
 	// 网络设备模块权限
 	Network           PermissionCode = "network"
 	NetworkDevice     PermissionCode = "network:device"
