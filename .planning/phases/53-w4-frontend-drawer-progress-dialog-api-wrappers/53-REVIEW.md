@@ -17,6 +17,7 @@ findings:
   info: 3
   total: 9
 status: issues_found
+resolution_commit: 9b01cc68
 ---
 
 # Phase 53: Code Review Report
@@ -322,3 +323,23 @@ okButtonProps={{ loading: submitting }}
 _Reviewed: 2026-07-07_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+
+## Post-Review Resolution (commit 9b01cc68)
+
+由 orchestrator 在 execute-phase 流程内手动处置（未重跑 reviewer，故 status 仍为 issues_found）：
+
+| Finding | Severity | Disposition |
+|---------|----------|-------------|
+| CR-01 retry 路径 deviceId 取自漂移快照 | critical | ✅ Fixed — `lastDeviceId` 缓存 + `buildRequest` 显式 deviceId 参数 |
+| CR-02 retry 错位 deviceId 触发后端 fallback 跨设备写入 | critical | ✅ Fixed — 同 CR-01 根因修复（后端 batch_orchestrator 防御属跨层建议，不在 53 scope） |
+| WR-01 validateFields `throw err` 未处理 rejection | warning | ✅ Fixed — 两组件改 `console.error + return` |
+| WR-02 description action reason 校验跨组件不一致 | warning | ⏸ Deferred — 现有 validator 签名 `(_, reasonSelect, reasonText)` 在 antd `(rule, value)` 调用下 reasonText 恒 undefined，需 Phase 54 UAT 验证 custom reason 行为后再设计跨文件抽取，避免传播缺陷 |
+| WR-03 result 视图 interfaceName 随父级刷新失真 | warning | ✅ Fixed — `lastInterfaceMap` 快照，ResultView 改用 prop |
+| WR-04 `Object.keys(ACTION_TITLE) as` 类型断言不安全 | warning | ✅ Fixed — 显式 5-action 列表 |
+| IN-01 ports/index.tsx `error: any` (handleBatchExport) | info | ⏸ Left — 函数体不在 53 改动 hunks 内（pre-existing），交后续清理 phase |
+| IN-02 ports/index.tsx mount effect 缺 eslint-disable | info | ⏸ Left — pre-existing useEffect，非 53 引入 |
+| IN-03 PortWriteModal okButtonProps 永远 loading:false（可重复提交） | info | ✅ Fixed — `submitting` state + `okButtonProps={{ loading: submitting }}` |
+
+**修复后验证：** `npm run type-check` exit 0；`npm run build` exit 0，vendor-react gzip 774.96 kB（与修复前一致 = 零回归）。
+
+**遗留：** WR-02 + IN-01 + IN-02 记录在案，建议 Phase 54 UAT 后并入清理。CR-02 后端防御（batch_orchestrator fallback 校验 port 归属 device）建议作为跨层加固单独评估，不阻塞 53 完成。
