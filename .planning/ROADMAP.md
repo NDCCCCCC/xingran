@@ -49,6 +49,7 @@ previous_update: 2026-07-04 after v1.18 milestone close (Phase 48 shipped: 1 pha
 **Requirements**: SSH-05 (vendor→action→command map), SSH-01 (SendConfig call signature contract)
 
 **Success Criteria** (what must be TRUE):
+
   1. 3 vendors × 5 actions = 15 templates implemented in `internal/services/portcollection/vendor_port_template.go` (Huawei VRP, H3C Comware, Ruijie RGOS × shutdown / undo shutdown / description / dot1x enable / dot1x disable)
   2. 12+ unit tests in `vendor_port_template_test.go` covering each (vendor, action) combination, including negative cases (missing vendor, unsupported action)
   3. `PortAction` and `PortTemplateParams` types defined as exported named types; `RenderCommand(vendor, action, params) ([]string, error)` public function signature locked
@@ -68,6 +69,7 @@ previous_update: 2026-07-04 after v1.18 milestone close (Phase 48 shipped: 1 pha
 **Requirements**: SSH-02 (parse transport_error vs device_rejected), SSH-03 (per-port Acquire/ReleaseRef), SSH-04 (detached context, 30min timeout), SSH-06 (DeviceCredentialHelper), PORT-06 (pre-state check admin_status / dot1x_enabled), BATCH-02 (serial fail-fast), BATCH-03 (partial result struct), BATCH-04 (maxBatchSize=50 cap), AUDIT-04 (collectionSvc.Enqueue after success)
 
 **Success Criteria** (what must be TRUE):
+
   1. `PortWriteService` interface + private `portWriteServiceImpl` + DI (`db`, `deviceExecutor`, `collectionSvc`)
   2. Per-port `Acquire`/`ReleaseRef` cycle (NOT per-batch) wrapped via `defer conn.ReleaseRef()` to avoid pool starvation
   3. Detached context via `context.WithTimeout(context.Background(), 30*time.Minute)` for batch operations, avoiding `Core.Close()` 30s shutdown deadline
@@ -90,6 +92,7 @@ previous_update: 2026-07-04 after v1.18 milestone close (Phase 48 shipped: 1 pha
 **Requirements**: AUDIT-01 (operlog.Record before response.Success), AUDIT-02 (operlog records device_id/port_id/action/description/operator/result_status), AUDIT-03 (sys_port_write_audit table), PERM-01 (NetworkPortWrite constant), PERM-02 (RequirePermissions middleware on all 6 endpoints), PERM-03 (menu seed + GrantNewMenuToRolesHavingParent), INFRA-01 (audit table migration), INFRA-02 (route registration /network/ports/write), INFRA-03 (cache_keys for port write results), CONV-01 (shutdown/undo → OperTypeStatus), CONV-02 (description → OperTypeUpdate), CONV-03 (dot1x → OperTypeStatus), CONV-04 (batch → OperTypeBatch), PORT-01 (shutdown endpoint), PORT-02 (undo shutdown endpoint), PORT-03 (description endpoint), PORT-04 (dot1x enable endpoint), PORT-05 (dot1x disable endpoint), BATCH-01 (batch endpoint)
 
 **Success Criteria** (what must be TRUE):
+
   1. 6 endpoints registered (5 single-port + 1 batch) under `/network/ports/write` group in `port_write_router.go` and wired in `network_router.go`
   2. `RequirePermissions(["network:port:write"])` middleware applied to all 6 endpoints
   3. `operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "端口管理", ...)` called before `response.Success(...)` on each endpoint with OperType mapping per CONV-01/02/03/04
@@ -102,7 +105,12 @@ previous_update: 2026-07-04 after v1.18 milestone close (Phase 48 shipped: 1 pha
 **Plans**: 2 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 52-01-PLAN.md — Wave 1: NetworkPortWrite 常量 + PortWriteAudit model(Path X) + cache_keys 占位 + 6 handler + /network/ports/write/* 路由组 + 组级 2-arg RequirePermissions + network_router.go 注册 (PORT-01..05, BATCH-01, PERM-01/02, AUDIT-01/02, CONV-01..04, INFRA-02/03)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 52-02-PLAN.md — Wave 2 (depends on 52-01): PortWriteAudit 加入 database.go AutoMigrate + postgres 分支显式调 Migrate202PortWriteAudit + menu_grant_helpers.go 幂等授权 helper + migration_202_port_write_audit.go(复合索引 + 菜单 seed + helper 调用) (AUDIT-03, INFRA-01, PERM-03)
 
 **UI hint**: no
@@ -116,6 +124,7 @@ Plans:
 **Requirements**: UI-01 (port list/detail entry points with action menu), UI-02 (single-port confirm modal 5-200 char reason), UI-03 (BulkWriteDrawer with progress bar + failure list), UI-04 (antd Toast success/failure + audit log link), UI-05 (disable refresh during batch), UI-06 (6 wrapped POST functions in networkApi.ts)
 
 **Success Criteria** (what must be TRUE):
+
   1. 5 single-port operation modals (shutdown / undo shutdown / description / dot1x enable / dot1x disable) all require "操作原因" input with 5-200 char validation
   2. `BulkWriteDrawer.tsx` provides selected ports list + operation type selector + progress bar (X/Y ports) + failure detail panel showing per-port error reason
   3. `src/lib/api/networkApi.ts` exports 6 wrapped POST functions: `writeShutdown` / `writeUndoShutdown` / `writeDescription` / `writeDot1xEnable` / `writeDot1xDisable` / `batchWritePorts`
@@ -137,6 +146,7 @@ Plans:
 **Requirements**: All 28+ v1.19 MVP requirements (validation only — no new functionality; deferred real-device UAT recorded in `50-HUMAN-UAT.md` per v1.18 48-HUMAN-UAT.md pattern)
 
 **Success Criteria** (what must be TRUE):
+
   1. Mock SSH server e2e test (`port_write_e2e_test.go` using a `scrapligo` Connect target against an in-process mock sshd) exercises all 5 single-port + 1 batch endpoint paths, exits 0
   2. `docs/API响应规范.md` updated with the 6 new endpoint signatures, request schemas, and response shapes
   3. `docs/安全和认证设计（国密）.md` (or equivalent) confirms write endpoints respect encryption exemption list (no SM2+SM4 wrap on SSH-derived paths)
