@@ -58,15 +58,6 @@ import { showAuditLinkToast } from "./PortWriteModal";
 
 type DrawerPhase = "select" | "executing" | "result";
 
-/** 同 D-02: reasonSelect + reasonText 合并, 返回 null 表示未填
- *  55-01 WR-02: 实现下沉到 ./constants, BulkWriteDrawer 仅引用。 */
-// function composeReason(reasonSelect: unknown, reasonText: unknown): string | null {
-//   if (reasonSelect === REASON_CUSTOM_SENTINEL) {
-//     const text = typeof reasonText === "string" ? reasonText.trim() : "";
-//     return text.length > 0 ? text : null;
-//   }
-//   return typeof reasonSelect === "string" && reasonSelect.length > 0 ? reasonSelect : null;
-// }
 // 避免 Object.keys() as 断言在新增 ACTION_TITLE key 时静默失同步)
 const ACTION_OPTIONS: { label: string; value: PortWriteAction }[] = [
   { label: ACTION_TITLE.shutdown, value: "shutdown" },
