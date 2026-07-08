@@ -33,9 +33,11 @@ import {
   REASON_MIN,
   REASON_MAX,
   DESCRIPTION_MAX,
+  REASON_CUSTOM_SENTINEL,
+  composeReason,
+  validateReasonOptional,
+  validateReasonRequired,
 } from "./constants";
-
-const REASON_CUSTOM_SENTINEL = "__custom__";
 /**
  * D-10 审计跳转 URL — route path 是 /monitor/logs (非 /monitor/operlog),
  * module= 后为中文模块名 (URL-encoded)。BulkWriteDrawer 复用同一路径。
@@ -69,50 +71,6 @@ export function showAuditLinkToast(message: MessageInstance, navigate: (path: st
       </span>
     ),
   });
-}
-
-/**
- * D-02 reason 字段 reasonSelect + reasonText 合并出最终 reason 值。
- *
- * - 选预设项 (value !== __custom__): 直接用预设字符串
- * - 选"其他...": 用 reasonText TextArea 输入值
- *
- * 返回 null 表示未填 (description action 可空场景)。
- */
-function composeReason(reasonSelect: unknown, reasonText: unknown): string | null {
-  if (reasonSelect === REASON_CUSTOM_SENTINEL) {
-    const text = typeof reasonText === "string" ? reasonText.trim() : "";
-    return text.length > 0 ? text : null;
-  }
-  return typeof reasonSelect === "string" && reasonSelect.length > 0 ? reasonSelect : null;
-}
-
-/** D-03 description action 时 reason 可空 — 若填了则校验长度 */
-function validateReasonOptional(_: unknown, reasonSelect: unknown, reasonText: unknown): Promise<void> {
-  const reason = composeReason(reasonSelect, reasonText);
-  if (reason === null) return Promise.resolve();
-  if (reason.length < REASON_MIN) {
-    return Promise.reject(new Error(`操作原因至少 ${REASON_MIN} 个字符`));
-  }
-  if (reason.length > REASON_MAX) {
-    return Promise.reject(new Error(`操作原因不超过 ${REASON_MAX} 个字符`));
-  }
-  return Promise.resolve();
-}
-
-/** D-03 其他 4 action 时 reason 必填 + 长度 5-200 */
-function validateReasonRequired(_: unknown, reasonSelect: unknown, reasonText: unknown): Promise<void> {
-  const reason = composeReason(reasonSelect, reasonText);
-  if (reason === null || reason.length === 0) {
-    return Promise.reject(new Error("请选择或输入操作原因"));
-  }
-  if (reason.length < REASON_MIN) {
-    return Promise.reject(new Error(`操作原因至少 ${REASON_MIN} 个字符`));
-  }
-  if (reason.length > REASON_MAX) {
-    return Promise.reject(new Error(`操作原因不超过 ${REASON_MAX} 个字符`));
-  }
-  return Promise.resolve();
 }
 
 /**
@@ -189,8 +147,19 @@ export function PortWriteModal({
 
   const reasonRules =
     action === "description"
-      ? [{ validator: validateReasonOptional }]
-      : [{ required: true, validator: validateReasonRequired }];
+      ? [
+          {
+            validator: (rule: unknown, value: unknown) =>
+              validateReasonOptional(rule, value, form),
+          },
+        ]
+      : [
+          {
+            required: true,
+            validator: (rule: unknown, value: unknown) =>
+              validateReasonRequired(rule, value, form),
+          },
+        ];
 
   return (
     <Modal
