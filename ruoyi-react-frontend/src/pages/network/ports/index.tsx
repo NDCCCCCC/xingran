@@ -172,6 +172,7 @@ const PortStatusPage: FC = () => {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     // 如果从设备页面跳转过来，初始化表单的 deviceId
     if (isFromDevice && deviceIdFromUrl) {
