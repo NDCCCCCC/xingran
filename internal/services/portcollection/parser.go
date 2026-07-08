@@ -138,19 +138,21 @@ func parseInterfaceDescriptions(wrapper *device.ScrapliWrapper, vendor models.De
 			desc.OriginalName = trimmedName
 		}
 
-		// 华为/H3C设备使用PHY和PROTOCOL字段
-		if phy, ok := record["PHY"]; ok {
-			desc.OperStatus = strings.ToLower(phy)
-		} else if status, ok := record["STATUS"]; ok {
-			// 锐捷等设备使用STATUS字段
-			desc.OperStatus = strings.ToLower(status)
-		}
-
-		if protocol, ok := record["PROTOCOL"]; ok {
-			desc.AdminStatus = strings.ToLower(protocol)
-		} else if admin, ok := record["ADMINISTRATIVE"]; ok {
-			// 锐捷等设备使用ADMINISTRATIVE字段
-			desc.AdminStatus = strings.ToLower(admin)
+		// 状态字段映射（厂商分支）：
+		// 华为/H3C：PHY 带 `*` 前缀表示 administratively down。
+		//   - AdminStatus 由 `*` 前缀推断：`*down`→down，其余→up
+		//   - OperStatus = PHY 去掉 `*` 前缀的小写值（up/down）
+		//   PROTOCOL（数据链路层协议状态）不参与 AdminStatus 计算，避免与锐捷语义错位。
+		// 锐捷/迈普：STATUS→OperStatus，ADMINISTRATIVE→AdminStatus（已是正确语义，作为统一基准）。
+		if vendor == models.VendorHuawei || vendor == models.VendorH3C {
+			desc.AdminStatus, desc.OperStatus = normalizeHuaweiPHYStatus(record["PHY"])
+		} else {
+			if status, ok := record["STATUS"]; ok {
+				desc.OperStatus = strings.ToLower(status)
+			}
+			if admin, ok := record["ADMINISTRATIVE"]; ok {
+				desc.AdminStatus = strings.ToLower(admin)
+			}
 		}
 
 		if description, ok := record["DESCRIPTION"]; ok {
@@ -169,6 +171,29 @@ func parseInterfaceDescriptions(wrapper *device.ScrapliWrapper, vendor models.De
 
 	applogger.Debugf("[parseInterfaceDescriptions] 共解析到 %d 条接口描述", len(descriptions))
 	return descriptions, nil
+}
+
+// normalizeHuaweiPHYStatus 把华为/H3C 的 PHY 字段（来自 display interface description）
+// 归一化为统一的 (AdminStatus, OperStatus)，语义对齐锐捷基准：
+//
+//   - 手动 shutdown：PHY=`*down` → admin=down, oper=down
+//   - 去 shutdown + 无网线：PHY=`down`  → admin=up,   oper=down
+//   - 连网线：             PHY=`up`    → admin=up,   oper=up
+//
+// `*` 前缀表示 administratively down（管理关闭），由 AdminStatus 承载；
+// 去掉 `*` 后的 up/down 为物理链路状态，由 OperStatus 承载。
+// PROTOCOL 字段（数据链路层协议状态）不参与计算，避免与锐捷语义错位。
+//
+// 空 PHY 返回两个空串（与原行为一致，由调用方决定如何处理）。
+func normalizeHuaweiPHYStatus(phy string) (adminStatus, operStatus string) {
+	normalizedPHY := strings.ToLower(strings.TrimSpace(phy))
+	if normalizedPHY == "" {
+		return "", ""
+	}
+	if strings.HasPrefix(normalizedPHY, "*") {
+		return "down", strings.TrimPrefix(normalizedPHY, "*")
+	}
+	return "up", normalizedPHY
 }
 
 // getAllDot1xStatus 批量获取所有端口的802.1X状态
