@@ -165,8 +165,22 @@ func (h *PortWriteHandler) execSinglePort(
 		log.Printf("port_write audit insert failed portID=%s action=%s: %v", req.PortID, action, createErr)
 	}
 
+	// 查 device_name + interface_name 用于 oper_param 可读性（UUID 不便阅读）；
+	// 查询失败用 deviceID/PortID fallback，不阻塞响应。
+	deviceName := deviceID
+	if deviceID != "" {
+		var dev models.NetworkDevice
+		if err := h.core.GetDB().Select("device_name").Where("id = ?", deviceID).First(&dev).Error; err == nil && dev.DeviceName != "" {
+			deviceName = dev.DeviceName
+		}
+	}
+	interfaceName := port.InterfaceName
+	if interfaceName == "" {
+		interfaceName = req.PortID // fallback：端口行不存在
+	}
+
 	// Path C 第 2 步：把 audit_id 嵌 operlog oper_param（audit.oper_log_id 列保持 NULL）
-	operParam := buildSinglePortOperParam(auditRow.ID, deviceID, req.PortID, string(action), operator, result.Status)
+	operParam := buildSinglePortOperParam(auditRow.ID, deviceName, interfaceName, string(action), operator, result.Status)
 	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), ModulePortWrite, operType,
 		operlog.WithOperParam(operParam))
 
@@ -236,12 +250,22 @@ func (h *PortWriteHandler) BatchWrite(c *gin.Context) {
 		auditIDs = append(auditIDs, auditRow.ID)
 	}
 
-	// Path C：汇总 operlog 行 oper_param 含 audit_ids 完整列表
+	// 查 device_name + portID→interface_name 用于 oper_param 可读性（UUID 不便阅读）；
+	// 查询失败用 deviceID/PortID fallback，不阻塞响应。
+	deviceName := req.DeviceID
+	var dev models.NetworkDevice
+	if err := h.core.GetDB().Select("device_name").Where("id = ?", req.DeviceID).First(&dev).Error; err == nil && dev.DeviceName != "" {
+		deviceName = dev.DeviceName
+	}
+	portNames := loadPortInterfaceNames(h.core.GetDB(), req.PortIDs)
+
+	// Path C：汇总 operlog 行 oper_param 含 device_name + 各分类接口名 + audit_ids 完整列表
 	batchSummary := buildBatchSummaryOperParam(
 		string(req.Action),
 		len(req.PortIDs),
 		result,
-		req.DeviceID,
+		deviceName,
+		portNames,
 		auditIDs,
 	)
 	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), ModulePortWrite, operlog.OperTypeBatch,
@@ -357,33 +381,75 @@ func buildAuditRow(pr *portwrite.PortResult, beforeValue json.RawMessage, device
 
 // buildSinglePortOperParam 拼接单端口 operlog.oper_param JSON (AUDIT-02 + Path C)
 //
-// 字段：{audit_ids:[auditID], device_id, port_id, action, operator, result_status}
-func buildSinglePortOperParam(auditID, deviceID, portID, action, operator, resultStatus string) string {
+// 字段：{audit_ids:[auditID], device_name, interface_name, action, operator, result_status}
+//
+// 2026-07-09 可读性优化：device_id/port_id (UUID) 换成 device_name/interface_name，
+// 便于审计日志直接阅读；audit_ids 保留用于关联 PortWriteAudit 详情。
+func buildSinglePortOperParam(auditID, deviceName, interfaceName, action, operator, resultStatus string) string {
 	b, _ := json.Marshal(map[string]interface{}{
-		"audit_ids":     []string{auditID},
-		"device_id":     deviceID,
-		"port_id":       portID,
-		"action":        action,
-		"operator":      operator,
-		"result_status": resultStatus,
+		"audit_ids":      []string{auditID},
+		"device_name":    deviceName,
+		"interface_name": interfaceName,
+		"action":         action,
+		"operator":       operator,
+		"result_status":  resultStatus,
 	})
 	return string(b)
 }
 
 // buildBatchSummaryOperParam 拼接 batch operlog.oper_param JSON (CONV-04)
 //
-// 字段：{action, batch_size, succeeded_count, failed_count, skipped_count, device_id, audit_ids:[...]}
-func buildBatchSummaryOperParam(action string, batchSize int, result *portwrite.BatchResult, deviceID string, auditIDs []string) string {
+// 字段：{device_name, action, batch_size, succeeded/failed/skipped_count,
+//
+//	succeeded/failed/skipped_interfaces:[...], audit_ids:[...]}
+//
+// 2026-07-09 可读性优化：device_id 换成 device_name，新增各分类接口名列表
+// （succeeded_interfaces 等），便于审计日志直接阅读；audit_ids 保留关联详情。
+func buildBatchSummaryOperParam(action string, batchSize int, result *portwrite.BatchResult, deviceName string, portNames map[string]string, auditIDs []string) string {
 	b, _ := json.Marshal(map[string]interface{}{
-		"action":          action,
-		"batch_size":      batchSize,
-		"succeeded_count": len(result.Succeeded),
-		"failed_count":    len(result.Failed),
-		"skipped_count":   len(result.Skipped),
-		"device_id":       deviceID,
-		"audit_ids":       auditIDs,
+		"device_name":          deviceName,
+		"action":               action,
+		"batch_size":           batchSize,
+		"succeeded_count":      len(result.Succeeded),
+		"failed_count":         len(result.Failed),
+		"skipped_count":        len(result.Skipped),
+		"succeeded_interfaces": collectInterfaceNames(result.Succeeded, portNames),
+		"failed_interfaces":    collectInterfaceNames(result.Failed, portNames),
+		"skipped_interfaces":   collectInterfaceNames(result.Skipped, portNames),
+		"audit_ids":            auditIDs,
 	})
 	return string(b)
+}
+
+// collectInterfaceNames 从 PortResult 列表提取接口名（portNames 映射缺失时 fallback PortID）。
+func collectInterfaceNames(results []portwrite.PortResult, portNames map[string]string) []string {
+	names := make([]string, 0, len(results))
+	for _, r := range results {
+		if name, ok := portNames[r.PortID]; ok && name != "" {
+			names = append(names, name)
+		} else {
+			names = append(names, r.PortID) // fallback：端口行不存在时用 UUID
+		}
+	}
+	return names
+}
+
+// loadPortInterfaceNames 一次 SELECT 取齐 portID → interface_name 映射（oper_param 可读性用）。
+//
+// 端口行不存在时不出现在 map 中（caller fallback 到 PortID）。
+func loadPortInterfaceNames(db *gorm.DB, portIDs []string) map[string]string {
+	out := make(map[string]string, len(portIDs))
+	if len(portIDs) == 0 {
+		return out
+	}
+	var ports []models.DevicePortStatus
+	if err := db.Where("id IN ?", portIDs).Find(&ports).Error; err != nil {
+		return out
+	}
+	for _, p := range ports {
+		out[p.ID] = p.InterfaceName
+	}
+	return out
 }
 
 // preloadBeforeValues 一次 SELECT 取齐 batch 中所有端口的 before_value（按 portID 索引）

@@ -202,6 +202,10 @@ func TestPortWriteHandler_Shutdown_Success(t *testing.T) {
 	if err := sqlDB.Create(port).Error; err != nil {
 		t.Fatalf("seed port: %v", err)
 	}
+	// 预置 device 行用于 oper_param device_name 可读性
+	if err := sqlDB.Create(&models.NetworkDevice{BaseModel: models.BaseModel{ID: "dev-001"}, DeviceName: "测试设备-001"}).Error; err != nil {
+		t.Fatalf("seed device: %v", err)
+	}
 
 	mockSvc.shutdownResult = &portwrite.PortResult{
 		PortID: "port-001", Action: portcollection.ActionShutdown,
@@ -241,10 +245,11 @@ func TestPortWriteHandler_Shutdown_Success(t *testing.T) {
 	assert.Equal(t, 1, mockOperLog.recordAsyncCalls)
 	assert.Equal(t, "端口管理", mockOperLog.lastTitle)
 	assert.Equal(t, 13, mockOperLog.lastBusinessType)
-	// oper_param 含 audit_ids
+	// oper_param 含 audit_ids + 可读名称（device_name + interface_name）
 	assert.NotNil(t, mockOperLog.lastOperParam)
 	assert.Contains(t, *mockOperLog.lastOperParam, audit.ID)
-	assert.Contains(t, *mockOperLog.lastOperParam, "port-001")
+	assert.Contains(t, *mockOperLog.lastOperParam, "测试设备-001") // device_name
+	assert.Contains(t, *mockOperLog.lastOperParam, "GE0/0/1")    // interface_name
 }
 
 // TestPortWriteHandler_Shutdown_NoOp_AlreadyDown service 返 skipped → 响应 200 + audit 行 status=skipped
@@ -376,7 +381,10 @@ func TestPortWriteHandler_SetDescription(t *testing.T) {
 func TestPortWriteHandler_Batch(t *testing.T) {
 	h, mockSvc, mockOperLog, sqlDB := newTestHandler(t)
 
-	// 预置 3 个端口
+	// 预置 device + 3 个端口
+	if err := sqlDB.Create(&models.NetworkDevice{BaseModel: models.BaseModel{ID: "bdev-1"}, DeviceName: "批量测试设备"}).Error; err != nil {
+		t.Fatalf("seed device: %v", err)
+	}
 	for i, pid := range []string{"bp-1", "bp-2", "bp-3"} {
 		port := &models.DevicePortStatus{
 			ID: pid, DeviceID: "bdev-1", InterfaceName: "GE0/0/" + string(rune('1'+i)),
@@ -424,6 +432,13 @@ func TestPortWriteHandler_Batch(t *testing.T) {
 	assert.Equal(t, float64(1), param["succeeded_count"])
 	assert.Equal(t, float64(1), param["failed_count"])
 	assert.Equal(t, float64(1), param["skipped_count"])
+	// 可读性字段：device_name + 各分类接口名（2026-07-09 优化）
+	assert.Equal(t, "批量测试设备", param["device_name"])
+	succeededIfaces, _ := param["succeeded_interfaces"].([]interface{})
+	assert.Len(t, succeededIfaces, 1)
+	assert.Equal(t, "GE0/0/1", succeededIfaces[0]) // bp-1 的接口名
+	failedIfaces, _ := param["failed_interfaces"].([]interface{})
+	assert.Equal(t, "GE0/0/2", failedIfaces[0]) // bp-2 的接口名
 
 	// response body 含 BatchResult 三切片
 	var resp struct {
