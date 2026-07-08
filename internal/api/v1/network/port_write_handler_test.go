@@ -465,10 +465,11 @@ func TestPortWriteHandler_Batch_ExceedsMax(t *testing.T) {
 }
 
 // TestPortWriteHandler_WithOperID_NotAdded Path C 守卫：handler 文件不含 WithOperID / WithJsonResult
+// (negative source-grep assertion). readFile helper lives in port_write_router_test.go (same package).
 func TestPortWriteHandler_WithOperID_NotAdded(t *testing.T) {
-	// 用 t.Skip 不合适 — 这是源断言，用 grep 走源文件检查（更稳）
-	// 这里直接用 Read 不行，转用 source-aware test 通过 go:embed？最简方式是测试中走 source Grep 不便；
-	// 替代：让本测试只是占位，Path C 守卫走 plan verify 脚本（go test 之外的 bash grep）。
-	// 为避免 skip 被认为失败，改用断言校验编译产物 + 让 verify script grep 守卫。
-	t.Skip("Path C source guards (WithOperID/WithJsonResult) enforced via plan verify script grep, not runtime test")
+	src := readFile(t, "port_write_handler.go")
+	assert.NotContains(t, src, "operlog.WithOperID",
+		"handler 文件禁止使用 operlog.WithOperID（Path C invariant）")
+	assert.NotContains(t, src, "operlog.WithJsonResult",
+		"handler 文件禁止使用 operlog.WithJsonResult（Path C invariant）")
 }
