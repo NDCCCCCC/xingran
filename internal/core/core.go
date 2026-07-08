@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/config"
@@ -38,6 +39,43 @@ const fallbackMemoryCacheSize = 1000
 // fallbackMemoryCacheCleanup 核心初始化失败时使用的内存缓存清理间隔 fallback
 // 在Redis不可用或配置缺失时作为L1缓存的兜底清理周期
 const fallbackMemoryCacheCleanup = 10 * time.Minute
+
+// loadConnectionPoolConfig 从 sys_config 读取网络设备连接池配置 (web 可配)。
+// 任一项缺失/解析失败均用默认值兜底, 保证启动不崩溃。
+//
+//	- network.connection_pool.max_connections (默认 50)
+//	- network.connection_pool.max_idle_seconds (默认 300)
+//
+// 历史: core.go 曾硬编码 MaxConnections=20 (避 scrapligo panic); 设备数 >20 时池满导致
+// 间歇性端口采集跳过, 已移入 sys_config 可配 (migration 203 seed)。修改后需重启后端生效。
+func loadConnectionPoolConfig(db *gorm.DB) device.PoolConfig {
+	const (
+		defaultMaxConnections = 50
+		defaultMaxIdleSeconds = 300
+	)
+	cfg := device.PoolConfig{
+		MaxConnections: defaultMaxConnections,
+		MaxIdle:        time.Duration(defaultMaxIdleSeconds) * time.Second,
+	}
+
+	readInt := func(key string, fallback int) int {
+		var v string
+		if err := db.Raw("SELECT config_value FROM sys_config WHERE config_key = ? AND deleted_at IS NULL", key).Scan(&v).Error; err != nil || v == "" {
+			return fallback
+		}
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			return fallback
+		}
+		return n
+	}
+
+	cfg.MaxConnections = readInt("network.connection_pool.max_connections", defaultMaxConnections)
+	cfg.MaxIdle = time.Duration(readInt("network.connection_pool.max_idle_seconds", defaultMaxIdleSeconds)) * time.Second
+
+	applogger.Infof("[连接池] 配置加载: MaxConnections=%d, MaxIdle=%v", cfg.MaxConnections, cfg.MaxIdle)
+	return cfg
+}
 
 // rpaScalingService RPA扩缩容服务最小接口
 // 在 core 包内定义以避免循环依赖，rpa.ScalingService 自动满足此接口
@@ -254,12 +292,9 @@ func (c *Core) Init() error {
 	applogger.Infof("系统指标缓存服务初始化完成")
 
 	// 8. 初始化网络设备管理器（新架构）
-	// 8.1 创建连接池
-	poolConfig := &device.PoolConfig{
-		MaxIdle:        5 * time.Minute,
-		MaxConnections: 20, // 降低并发连接数，减少 scrapligo panic 问题
-	}
-	connectionPool := device.NewDeviceConnectionPool(c.GetDB(), c.SM4Cipher, poolConfig)
+	// 8.1 创建连接池 (容量/空闲时长从 sys_config 读取, web 可配, 默认 50/300s)
+	poolConfig := loadConnectionPoolConfig(c.GetDB())
+	connectionPool := device.NewDeviceConnectionPool(c.GetDB(), c.SM4Cipher, &poolConfig)
 	// 8.2 创建任务调度器
 	schedulerConfig := &device.SchedulerConfig{
 		TaskTimeout: 5 * time.Minute,

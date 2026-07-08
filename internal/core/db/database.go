@@ -420,6 +420,10 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate202PortWriteAudit(d.DB); err != nil {
 			applogger.Errorf("端口写审计迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// 连接池配置 sys_config seed (max_connections / max_idle_seconds, web 可配, 默认 50/300s)
+		if err := migrations.Migrate203ConnectionPoolSysConfig(d.DB); err != nil {
+			applogger.Errorf("连接池配置 seed 失败 (非阻断,留待下次启动): %v", err)
+		}
 	}
 
 	return nil

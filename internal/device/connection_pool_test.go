@@ -221,3 +221,60 @@ func TestPooledConnection_AntiPattern_AcquireAfterGetConnection(t *testing.T) {
 	}
 	t.Logf("正确模式: refCount=0, IsIdle=true → cleanup 正常清理")
 }
+
+// TestOldestIdleConnectionLocked_PicksOldestIdle_SkipsActive 锁定 GetConnection LRU 退让的核心选择逻辑
+// (2026-07-08 连接池满修复):
+//   - 池满时 GetConnection 调 oldestIdleConnectionLocked 找一条 idle 连接淘汰腾位。
+//   - 必须跳过活跃连接 (refCount>0), 只在 idle (refCount<=0) 中选 lastUsed 最老的。
+// 不依赖真实 SSH, 直接构造 connections map 测选择语义。
+func TestOldestIdleConnectionLocked_PicksOldestIdle_SkipsActive(t *testing.T) {
+	base := time.Now()
+	pool := &DeviceConnectionPool{
+		connections: map[string]*PooledConnection{
+			"dev-active-old":  {refCount: 1, lastUsed: base.Add(-10 * time.Minute), deviceID: "dev-active-old", mu: &sync.Mutex{}},
+			"dev-idle-mid":    {refCount: 0, lastUsed: base.Add(-3 * time.Minute), deviceID: "dev-idle-mid", mu: &sync.Mutex{}},
+			"dev-idle-newest": {refCount: 0, lastUsed: base.Add(-1 * time.Minute), deviceID: "dev-idle-newest", mu: &sync.Mutex{}},
+			"dev-idle-oldest": {refCount: 0, lastUsed: base.Add(-5 * time.Minute), deviceID: "dev-idle-oldest", mu: &sync.Mutex{}},
+		},
+	}
+
+	id, pc := pool.oldestIdleConnectionLocked()
+	if id != "dev-idle-oldest" {
+		t.Fatalf("应选 lastUsed 最老的 idle 连接 dev-idle-oldest, 实际 %s", id)
+	}
+	if pc == nil {
+		t.Fatal("应返回非 nil 连接")
+	}
+	if atomic.LoadInt32(&pc.refCount) != 0 {
+		t.Fatalf("选中连接应为 idle (refCount=0), 实际 %d", atomic.LoadInt32(&pc.refCount))
+	}
+	t.Logf("LRU 选中 %s (lastUsed 最老的 idle), 正确跳过活跃的 dev-active-old", id)
+}
+
+// TestOldestIdleConnectionLocked_NoIdleReturnsNil 锁定"全活跃则拒绝"路径:
+// 池满且全部活跃时 oldestIdleConnectionLocked 返回 nil, GetConnection 据此返回
+// "连接池已满且无 idle 连接可退让" 错误 (而非死等或破坏活跃连接)。
+func TestOldestIdleConnectionLocked_NoIdleReturnsNil(t *testing.T) {
+	base := time.Now()
+	pool := &DeviceConnectionPool{
+		connections: map[string]*PooledConnection{
+			"dev-a": {refCount: 1, lastUsed: base.Add(-10 * time.Minute), mu: &sync.Mutex{}},
+			"dev-b": {refCount: 2, lastUsed: base.Add(-3 * time.Minute), mu: &sync.Mutex{}},
+		},
+	}
+	id, pc := pool.oldestIdleConnectionLocked()
+	if id != "" || pc != nil {
+		t.Fatalf("全部活跃时应返回 ('', nil), 实际 id=%s pc=%v", id, pc)
+	}
+}
+
+// TestOldestIdleConnectionLocked_EmptyPool 空池返回 nil。
+func TestOldestIdleConnectionLocked_EmptyPool(t *testing.T) {
+	pool := &DeviceConnectionPool{
+		connections: map[string]*PooledConnection{},
+	}
+	id, pc := pool.oldestIdleConnectionLocked()
+	if id != "" || pc != nil {
+		t.Fatalf("空池应返回 ('', nil), 实际 id=%s pc=%v", id, pc)
+	}
+}

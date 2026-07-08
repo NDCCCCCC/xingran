@@ -158,6 +158,7 @@ func (pc *PooledConnection) GetWrapper() *ScrapliWrapper {
 // DeviceConnectionPool 设备连接池
 type DeviceConnectionPool struct {
 	connections    map[string]*PooledConnection // deviceID -> PooledConnection
+	connecting     map[string]struct{}          // deviceID -> 建连中占位 (防 TOCTOU: 容量检查计入此项)
 	deviceLocks    map[string]*sync.Mutex       // deviceID -> 设备锁
 	poolLock       sync.RWMutex                 // 保护 connections 和 deviceLocks
 	db             *gorm.DB                     // 数据库（用于查询设备和凭证）
@@ -191,6 +192,7 @@ func NewDeviceConnectionPool(db *gorm.DB, passwordCipher addomain.PasswordCipher
 
 	pool := &DeviceConnectionPool{
 		connections:    make(map[string]*PooledConnection),
+		connecting:     make(map[string]struct{}),
 		deviceLocks:    make(map[string]*sync.Mutex),
 		db:             db,
 		passwordCipher: passwordCipher,
@@ -223,17 +225,25 @@ func (p *DeviceConnectionPool) IsEnabled() bool {
 }
 
 // GetConnection 获取设备连接（线程安全）
+//
+// 并发安全设计 (2026-07-08 修复 TOCTOU + LRU 退让):
+//   - connecting 占位 map: 容量计数 = len(connections) + len(connecting), 占位在 poolLock 内原子完成,
+//     防止并发下多个 goroutine 同时通过容量检查导致实际连接数超限 (历史 24/20 bug 根因之一)。
+//   - LRU 退让: 池满时淘汰 lastUsed 最老的 idle 连接腾位 (只动 refCount<=0 的, 不影响活跃连接),
+//     兼顾复用 (idle 仍留池等用) 与"设备数 > 池容量"时的自愈。
+//   - createConnection (耗时 SSH 握手) 在 poolLock 外执行, 不阻塞其他设备建连, 也不死锁
+//     (createConnection 不反向获取 poolLock/deviceLock)。
 func (p *DeviceConnectionPool) GetConnection(ctx context.Context, deviceID string) (*PooledConnection, error) {
 	// 如果连接池未启用，返回错误（让调用方使用旧模式）
 	if !p.IsEnabled() {
 		return nil, fmt.Errorf("连接池未启用")
 	}
 
-	// 获取设备级锁
+	// 获取设备级锁 (同 deviceID 的 GetConnection 串行)
 	deviceLock := p.getDeviceLock(deviceID)
 	deviceLock.Lock()
 
-	// 检查池中是否已有连接
+	// 复用路径: 池中已有该设备的可用连接
 	p.poolLock.RLock()
 	pc, exists := p.connections[deviceID]
 	p.poolLock.RUnlock()
@@ -245,7 +255,7 @@ func (p *DeviceConnectionPool) GetConnection(ctx context.Context, deviceID strin
 			// F-14 fix: 在持有 deviceLock 时直接 +1 refCount,
 			// 阻止 cleanup goroutine 在 unlock 与 caller-use 之间关闭连接。
 			// refCount > 0 是 cleanupIdleConnections 跳过的条件 (见 IsIdle)。
-			// caller 不再需要调用 pc.Acquire(),用完调 pc.Release() 即可。
+			// caller 不再需要调用 pc.Acquire(),用完调 pc.ReleaseRef() 即可。
 			atomic.AddInt32(&pc.refCount, 1)
 			pc.lastUsed = time.Now()
 			deviceLock.Unlock()
@@ -262,18 +272,49 @@ func (p *DeviceConnectionPool) GetConnection(ctx context.Context, deviceID strin
 		deviceLock.Lock()
 	}
 
-	// 检查连接数限制
-	p.poolLock.RLock()
-	currentCount := len(p.connections)
-	p.poolLock.RUnlock()
-
-	if currentCount >= p.maxConnections {
+	// 新建路径: 占位 + 容量检查 + LRU 退让 (全程 poolLock 写锁保护, 原子)
+	p.poolLock.Lock()
+	// 复查: 等锁期间可能有别的 goroutine 已为同设备建好连接 (稳妥起见 double-check)
+	if existing, ok := p.connections[deviceID]; ok && existing.wrapper != nil && existing.wrapper.IsReady() {
+		atomic.AddInt32(&existing.refCount, 1)
+		existing.lastUsed = time.Now()
+		p.poolLock.Unlock()
 		deviceLock.Unlock()
-		return nil, fmt.Errorf("连接池已满: 当前=%d, 最大=%d", currentCount, p.maxConnections)
+		return existing, nil
 	}
 
-	// 创建新连接
+	inUse := len(p.connections) + len(p.connecting)
+	if inUse >= p.maxConnections {
+		// LRU 退让: 淘汰 lastUsed 最老的 idle 连接 (只动 refCount<=0 的, 不动 connecting 中的)
+		victimID, victimPC := p.oldestIdleConnectionLocked()
+		if victimPC != nil {
+			if victimPC.wrapper != nil {
+				victimPC.wrapper.Close()
+			}
+			delete(p.connections, victimID)
+			applogger.Infof("[连接池] LRU 退让: 淘汰 idle 连接 %s 腾位给 %s (当前=%d, 最大=%d)",
+				victimID, deviceID, len(p.connections), p.maxConnections)
+		} else {
+			// 全部活跃, 真正拒绝
+			currentCount := len(p.connections)
+			p.poolLock.Unlock()
+			deviceLock.Unlock()
+			return nil, fmt.Errorf("连接池已满且无 idle 连接可退让: 当前=%d, 最大=%d", currentCount, p.maxConnections)
+		}
+	}
+
+	// 占位 (防 TOCTOU: 释放锁后其他 goroutine 的容量检查会计入此项)
+	p.connecting[deviceID] = struct{}{}
+	p.poolLock.Unlock()
+
+	// 锁外建连 (耗时 SSH 握手 + DB 查询, 不阻塞其他设备, 不死锁)
 	wrapper, err := p.createConnection(ctx, deviceID)
+
+	// 无论成功失败都先清占位
+	p.poolLock.Lock()
+	delete(p.connecting, deviceID)
+	p.poolLock.Unlock()
+
 	if err != nil {
 		deviceLock.Unlock()
 		return nil, fmt.Errorf("创建连接失败: %w", err)
@@ -311,10 +352,28 @@ func (p *DeviceConnectionPool) GetConnection(ctx context.Context, deviceID strin
 	p.connections[deviceID] = pc
 	p.poolLock.Unlock()
 
-	// F-14: 已在 pc 创建时 refCount=1,caller 拿到 pc 不需 Acquire,用完调 Release
+	// F-14: 已在 pc 创建时 refCount=1,caller 拿到 pc 不需 Acquire,用完调 ReleaseRef
 	deviceLock.Unlock()
 
 	return pc, nil
+}
+
+// oldestIdleConnectionLocked 返回 lastUsed 最老的 idle (refCount<=0) 连接的 deviceID 与指针。
+// 调用方必须持有 poolLock 写锁。返回 nil 表示池中无 idle 连接可退让。
+// 抽成独立方法便于单元测试 LRU 选择逻辑 (无需真实 SSH 连接)。
+func (p *DeviceConnectionPool) oldestIdleConnectionLocked() (string, *PooledConnection) {
+	var oldestID string
+	var oldestPC *PooledConnection
+	for id, c := range p.connections {
+		if !c.IsIdle() {
+			continue
+		}
+		if oldestPC == nil || c.lastUsed.Before(oldestPC.lastUsed) {
+			oldestID = id
+			oldestPC = c
+		}
+	}
+	return oldestID, oldestPC
 }
 
 // getDeviceLock 获取设备级锁
