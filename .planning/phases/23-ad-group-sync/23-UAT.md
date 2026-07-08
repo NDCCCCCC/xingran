@@ -3,7 +3,8 @@ status: partial
 phase: 23-ad-group-sync
 source: 23-06-SUMMARY.md, 23-08-SUMMARY.md, 23-09-SUMMARY.md, 23-10-SUMMARY.md, 23-11-SUMMARY.md, 23-12-SUMMARY.md, 23-13-SUMMARY.md, 23-14-SUMMARY.md, 23-16-SUMMARY.md
 started: 2026-05-26T12:30:00Z
-updated: 2026-06-26T16:00:00Z
+updated: 2026-07-08T00:00:00Z
+closed_by_audit: .planning/reports/uat-audit-2026-07-08.md
 ---
 
 ## Current Test
@@ -24,60 +25,55 @@ severity: major
 
 ### 3. Create Department-Group Mapping
 expected: Click "Create Mapping" button. Dialog opens with form fields for department selection, AD group DN, AD config, mapping type (auto/manual), and sync toggle. Submit creates new mapping and refreshes table.
-result: blocked
-blocked_by: release-build
-reason: "前端UI组件已创建（23-16-SUMMARY.md）但未集成到应用路由中。用户报告：'没有创建映射按钮'。需要：1) 添加路由到App.tsx 2) 添加菜单项到Sidebar.tsx"
+result: deferred
+reason: UAT 审计 2026-07-08 判定 build_needed,根因双重: (a) 前端 UI 已创建(23-16)但未集成到 App.tsx/Sidebar.tsx;(b) 依赖 T5 的 SM4 解密修复。v1.19 归档前主动 defer 到后续 AD 重构 phase,验收门槛 = 集成路由 + 菜单 seed + SM4 修复。
 
 ### 4. Auto-Map Departments
 expected: Click "Auto-Map" button. System scans departments and AD groups, automatically creates mappings for groups matching "cxhub-{dept}" pattern (with "部" suffix removed), and shows count of mappings created.
-result: blocked
-blocked_by: release-build
-reason: "前端UI未集成，依赖测试3的映射管理页面"
+result: deferred
+reason: UAT 审计 2026-07-08 判定 build_needed,依赖 T3 映射管理页面,随之 defer。
 
 ### 5. Sync Department Members to AD Group
 expected: Select a mapping and click "Sync Members". System displays sync status (in-progress), then shows result: total members, added count, removed count, and execution time.
-result: blocked
-blocked_by: third-party
-reason: "SM4解密失败：'cipher: message authentication failed'。AD配置中的密码无法解密，导致同步API返回500错误。需要：1) 重新加密AD密码 2) 或修复SM4密钥配置"
+result: deferred
+reason: UAT 审计 2026-07-08 判定 third_party。SM4 解密失败 `cipher: message authentication failed`,根因详见 Gaps 段(encryptPassword() 在 cipher 为 nil 时返回明文,decryptPassword() 后续按 SM4-GCM 解密明文导致 auth 失败)。修复项列入 Gaps 但 v1.19 归档前不实施,active defer 到 AD 重构 phase。
 
 ### 6. Sync All Members for AD Configuration
 expected: Navigate to sync monitoring page. Click "Sync All" button for an AD configuration. System syncs all active mappings sequentially and displays batch results with per-department details.
-result: blocked
-blocked_by: third-party
-reason: "与测试5相同的SM4解密问题"
+result: deferred
+reason: UAT 审计 2026-07-08 判定 third_party,根因同 T5 SM4,active defer。
 
 ### 7. View Sync Logs
 expected: Navigate to sync monitoring page. Table displays sync log entries with timestamp, department name, group name, members added/removed, status, and duration. Logs are filterable by department and date range.
-result: blocked
-blocked_by: release-build
-reason: "前端UI未集成，同步监控页面组件未创建"
+result: deferred
+reason: UAT 审计 2026-07-08 判定 build_needed。同步监控页面组件未创建,active defer。
 
 ### 8. Scheduled Sync Execution
 expected: Wait for 15-minute scheduled sync (or trigger manually). Cron job executes sync for all active mappings, updates last_sync_at timestamps, and creates log entries. No errors in application logs.
-result: blocked
-blocked_by: third-party
-reason: "与测试5相同的SM4解密问题，定时同步也会失败"
+result: deferred
+reason: UAT 审计 2026-07-08 判定 third_party。Cron 受 SM4 失败影响,active defer。
 
 ### 9. MemberOUDN Configuration
 expected: Navigate to AD configuration page. Edit a configuration and set "Member OU DN" field (e.g., "OU=本部部门分组,DC=example,DC=com"). Save succeeds and field persists to database.
-result: blocked
-blocked_by: third-party
-reason: "AD配置页面受SM4解密问题影响，编辑功能可能无法正常工作"
+result: deferred
+reason: UAT 审计 2026-07-08 判定 third_party。AD 配置页面编辑受 SM4 影响,active defer。
 
 ### 10. Department Change Handling
 expected: Change a user's department assignment in system. Sync detects change, removes user from old department's AD group, and adds to new department's AD group. Audit log records the change.
-result: blocked
-blocked_by: third-party
-reason: "依赖同步功能，受SM4解密问题影响"
+result: deferred
+reason: UAT 审计 2026-07-08 判定 third_party。依赖同步功能,active defer。
 
 ## Summary
 
 total: 10
 passed: 1
-issues: 2
+issues: 1
 pending: 0
 skipped: 0
-blocked: 7
+blocked: 0
+deferred: 8
+deferred_at: 2026-07-08
+deferred_reason: 8 项 blocked 全部 defer 到后续 AD 重构 phase(原因为 SM4 解密失败 + 前端 UI 集成缺失);T2 issue 已修复但保留 issue 标记直至回归;详见 .planning/reports/uat-audit-2026-07-08.md
 
 ## Gaps
 
