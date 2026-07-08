@@ -263,6 +263,14 @@ func GetRoutePermissions() []RoutePermission {
 		{"/system/workstations/:id/update", "POST", WorkstationEdit, "编辑工位"},
 		{"/system/workstations/:id/delete", "POST", WorkstationRemove, "删除工位"},
 		{"/system/workstations/batch-delete", "POST", WorkstationRemove, "批量删除工位"},
+
+		// 网络端口写操作（Phase 52: shutdown/undo-shutdown/description/dot1x-enable/dot1x-disable/batch）
+		{"/network/ports/write/shutdown", "POST", NetworkPortWrite, "关闭端口"},
+		{"/network/ports/write/undo-shutdown", "POST", NetworkPortWrite, "撤销关闭端口"},
+		{"/network/ports/write/description", "POST", NetworkPortWrite, "修改端口描述"},
+		{"/network/ports/write/dot1x-enable", "POST", NetworkPortWrite, "启用端口802.1X认证"},
+		{"/network/ports/write/dot1x-disable", "POST", NetworkPortWrite, "关闭端口802.1X认证"},
+		{"/network/ports/write/batch", "POST", NetworkPortWrite, "批量端口写操作"},
 	}
 }
 
