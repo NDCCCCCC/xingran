@@ -49,14 +49,24 @@ import {
   REASON_MIN,
   REASON_MAX,
   DESCRIPTION_MAX,
+  REASON_CUSTOM_SENTINEL,
+  composeReason,
+  validateReasonOptional,
+  validateReasonRequired,
 } from "./constants";
 import { showAuditLinkToast } from "./PortWriteModal";
 
-const REASON_CUSTOM_SENTINEL = "__custom__";
-
 type DrawerPhase = "select" | "executing" | "result";
 
-// WR-04: 显式列出 5 个 action, 与 PortWriteAction 联合类型一一对应 (编译期捕获不一致,
+/** 同 D-02: reasonSelect + reasonText 合并, 返回 null 表示未填
+ *  55-01 WR-02: 实现下沉到 ./constants, BulkWriteDrawer 仅引用。 */
+// function composeReason(reasonSelect: unknown, reasonText: unknown): string | null {
+//   if (reasonSelect === REASON_CUSTOM_SENTINEL) {
+//     const text = typeof reasonText === "string" ? reasonText.trim() : "";
+//     return text.length > 0 ? text : null;
+//   }
+//   return typeof reasonSelect === "string" && reasonSelect.length > 0 ? reasonSelect : null;
+// }
 // 避免 Object.keys() as 断言在新增 ACTION_TITLE key 时静默失同步)
 const ACTION_OPTIONS: { label: string; value: PortWriteAction }[] = [
   { label: ACTION_TITLE.shutdown, value: "shutdown" },
@@ -74,15 +84,6 @@ export interface BulkWriteDrawerProps {
   onSuccess: () => void;
   /** D-07: 上抛 batchInProgress 给父组件, 父组件禁用刷新+采集按钮 (LANDMINE #4) */
   onExecutingChange?: (inProgress: boolean) => void;
-}
-
-/** 同 D-02: reasonSelect + reasonText 合并, 返回 null 表示未填 */
-function composeReason(reasonSelect: unknown, reasonText: unknown): string | null {
-  if (reasonSelect === REASON_CUSTOM_SENTINEL) {
-    const text = typeof reasonText === "string" ? reasonText.trim() : "";
-    return text.length > 0 ? text : null;
-  }
-  return typeof reasonSelect === "string" && reasonSelect.length > 0 ? reasonSelect : null;
 }
 
 export function BulkWriteDrawer({
@@ -287,6 +288,11 @@ function SelectView({
   isMixedDevices,
   onSubmit,
 }: SelectViewProps) {
+  // 55-01 WR-02: 用 Form.useWatch 实时跟踪当前 action, 给 reasonSelect.rules 动态选择
+  // validateReasonOptional (description) 或 validateReasonRequired (其他 4 action)。
+  // SelectView 本就因 getFieldValue 在 shouldUpdate 重渲染, useWatch 不引入额外开销。
+  const action = Form.useWatch("action", form) as PortWriteAction | undefined;
+
   return (
     <Form form={form} layout="vertical">
       {/* 只读汇总: 已选 N 端口 / 唯一设备数 */}
@@ -340,20 +346,46 @@ function SelectView({
         }
       </Form.Item>
 
-      <Form.Item name="reasonSelect" label="操作原因">
+      {/* 55-01 WR-02: reasonSelect.rules 按 action 动态选择 validator,
+          从 form 参数跨字段读取 reasonText, 触发完整长度校验 (含 REASON_MIN=5 下限) */}
+      <Form.Item
+        name="reasonSelect"
+        label="操作原因"
+        rules={
+          action === "description"
+            ? [
+                {
+                  validator: (rule: unknown, value: unknown) =>
+                    validateReasonOptional(rule, value, form),
+                },
+              ]
+            : [
+                {
+                  required: true,
+                  validator: (rule: unknown, value: unknown) =>
+                    validateReasonRequired(rule, value, form),
+                },
+              ]
+        }
+      >
         <Select
           placeholder="请选择操作原因"
           options={PRESET_REASONS.map((opt) => ({ label: opt.label, value: opt.value }))}
         />
       </Form.Item>
 
+      {/* 55-01 WR-02: reasonText.rules 同时含 REASON_MIN 下限 (此前只有 max),
+          与 PRESET_REASONS value 字符数 ≥ REASON_MIN 自洽约束一致 */}
       <Form.Item shouldUpdate noStyle>
         {({ getFieldValue }) =>
           getFieldValue("reasonSelect") === REASON_CUSTOM_SENTINEL ? (
             <Form.Item
               name="reasonText"
               label="自定义原因"
-              rules={[{ max: REASON_MAX, message: `操作原因不超过 ${REASON_MAX} 个字符` }]}
+              rules={[
+                { min: REASON_MIN, message: `操作原因至少 ${REASON_MIN} 个字符` },
+                { max: REASON_MAX, message: `操作原因不超过 ${REASON_MAX} 个字符` },
+              ]}
             >
               <Input.TextArea
                 rows={2}
