@@ -172,7 +172,6 @@ const PortStatusPage: FC = () => {
     }
   };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     // 如果从设备页面跳转过来，初始化表单的 deviceId
     if (isFromDevice && deviceIdFromUrl) {
@@ -180,6 +179,7 @@ const PortStatusPage: FC = () => {
     }
     Promise.all([loadStatistics(), loadDevices()]);
     loadPortStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 采集所有设备端口状态
