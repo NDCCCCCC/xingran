@@ -82,6 +82,25 @@ func wrapInterface(p PortTemplateParams, cmd string) ([]string, error) {
 	return []string{fmt.Sprintf("interface %s", p.InterfaceName), cmd}, nil
 }
 
+// VendorExitViewCmd 返回厂商"退一级 view"命令，用于批量端口写每端口前回 (config)# 顶层。
+//
+// 2026-07-08 dump 实测：锐捷 RGOS 不支持在 (config-if-X)# 下直接 interface Y
+// （返回 `% Unknown command.`），与 Cisco IOS 行为不同。批量场景复用 SSH 连接时，
+// 设备停在上端口的 (config-if-X)# 视图，本端口 interface 命令被拒、action 落到错接口。
+// 每端口前发 exit/quit 退一级回 (config)#，再 interface Y 进新视图。
+//
+// exit/quit 只退一级（end 会退到 privileged EXEC 破坏 scrapli priv 跟踪）。
+// scrapli SendConfig 发 exit/quit 时 AcquirePriv 总先确保在 configuration priv，
+// 故首端口即使在 privileged exec 也不会断连（先 escalate 进 config 再退一级）。
+func VendorExitViewCmd(vendor models.DeviceVendor) string {
+	switch vendor {
+	case models.VendorHuawei, models.VendorH3C:
+		return "quit"
+	default: // VendorRuijie / 思科风格
+		return "exit"
+	}
+}
+
 // RenderCommand 公共入口：vendor × action → 命令序列。
 //
 // Phase 51 PortWriteService 直接消费返回 []string；多命令时通过 scrapli.SendConfigs

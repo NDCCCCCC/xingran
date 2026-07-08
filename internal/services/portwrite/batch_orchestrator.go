@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
 // BatchResult 批量写操作结果（D-14 + BATCH-03 + DB-REFRESH）。
@@ -71,6 +72,9 @@ func (s *portWriteServiceImpl) BatchWritePorts(ctx context.Context, req BatchWri
 		return nil, errors.New("portwrite: deviceId is required")
 	}
 
+	applogger.Infof("[portwrite-batch] 收到批量请求 deviceID=%s action=%s portCount=%d portIDs=%v",
+		req.DeviceID, req.Action, len(req.PortIDs), req.PortIDs)
+
 	// D-13 批量 pre-state 查询（1 次 DB round-trip 拿全部）
 	var ports []models.DevicePortStatus
 	if err := s.db.WithContext(ctx).
@@ -90,7 +94,8 @@ func (s *portWriteServiceImpl) BatchWritePorts(ctx context.Context, req BatchWri
 	}
 
 	// D-17 serial fail-fast loop
-	for _, portID := range req.PortIDs {
+	for idx, portID := range req.PortIDs {
+		applogger.Infof("[portwrite-batch] (%d/%d) 处理 portID=%s", idx+1, len(req.PortIDs), portID)
 		port, exists := preStateMap[portID]
 
 		if !exists {
@@ -157,6 +162,9 @@ func (s *portWriteServiceImpl) BatchWritePorts(ctx context.Context, req BatchWri
 		}
 		result.Succeeded = append(result.Succeeded, *writeResult)
 	}
+
+	applogger.Infof("[portwrite-batch] 循环结束 succeeded=%d failed=%d skipped=%d",
+		len(result.Succeeded), len(result.Failed), len(result.Skipped))
 
 	// 2026-07-08 端口刷新：批次内所有写操作完成后，对 req.DeviceID 触发一次性
 	// portcollection.CollectDevice —— 后台 goroutine fire-and-forget，HTTP response

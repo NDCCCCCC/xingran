@@ -242,26 +242,43 @@ func (s *portWriteServiceImpl) executeWrite(
 	}
 
 	commandsJoined := strings.Join(cmds, " | ")
+	applogger.Infof("[portwrite] executeWrite 下发 portID=%s deviceID=%s vendor=%s interfaceName=%q cmds=%v",
+		portID, deviceID, dev.Vendor, interfaceName, cmds)
 
-	var lastResp *device.Response
+	var allResponses []*device.Response
 	executeErr := s.deviceExecutor.ExecuteCustom(ctx, deviceID, func(execCtx context.Context, pc *device.PooledConnection) error {
 		wrapper := pc.GetWrapper()
-		// cmds = [interface X, <action>]，依赖三家厂商（锐捷/华为/H3C）均支持的
-		// 嵌套 interface view + ruijie_rgos_patched.yaml 的 prompt pattern 修补，
-		// 跨 ExecuteCustom 复用 SSH 连接时 scrapli 能正确跟踪 view 切换，无需
-		// 任何退出/cleanup 前缀（详见函数头 V6 修正注释）。
-		responses, sendErr := wrapper.SendConfigs(cmds)
+		// V7 后置 exit（2026-07-08 批量假成功真因）：cmds 末尾追加厂商"退一级 view"
+		// 命令（锐捷 exit / 华为 H3C quit），每端口执行后回 (config)# 顶层。实测锐捷
+		// RGOS 不支持在 (config-if-X)# 下直接 interface Y（% Unknown command.），批量
+		// 复用连接时设备停在上端口 config-if 视图，致本端口 interface 被拒、action 落
+		// 到错接口。后置 exit 让下一端口复用时在 config 顶层直接 interface。
+		// 选后置而非前置/GetPrompt 探针：首端口正常进 config-if 执行 action，末尾 exit
+		// 退 config；对 e2e FileTransport 友好（消费 fixture 末尾 quit 段，不破坏读取顺序，
+		// 不像 GetPrompt 探针会消费中间内容致错位）。exit/quit 只退一级（不像 end 退
+		// privileged EXEC 破坏 scrapli priv 跟踪）。
+		fullCmds := cmds
+		if exitCmd := portcollection.VendorExitViewCmd(dev.Vendor); exitCmd != "" {
+			fullCmds = append(append([]string{}, cmds...), exitCmd)
+		}
+		responses, sendErr := wrapper.SendConfigs(fullCmds)
 		if sendErr != nil {
 			return sendErr
 		}
-		if len(responses) > 0 {
-			// cmds 最后一条即业务写命令（shutdown / no shutdown / undo shutdown /
-			// description / dot1x），其 response 用于 parseConfigError 判定设备
-			// 是否真的执行成功。
-			lastResp = responses[len(responses)-1]
+		allResponses = responses
+		// 诊断：dump 每条 cmd 的设备实际回显（fullCmds 末尾含 exit cleanup）
+		for i, r := range responses {
+			cmd := ""
+			if i < len(fullCmds) {
+				cmd = fullCmds[i]
+			}
+			applogger.Infof("[portwrite] SendConfigs resp[%d] portID=%s cmd=%q failed=%v result=%q",
+				i, portID, cmd, r.Failed, strings.TrimSpace(r.Result))
 		}
 		return nil
 	}, singlePortTimeout)
+
+	applogger.Infof("[portwrite] executeWrite ExecuteCustom 返回 portID=%s err=%v", portID, executeErr)
 
 	if executeErr != nil {
 		return &PortResult{
@@ -274,11 +291,30 @@ func (s *portWriteServiceImpl) executeWrite(
 		}, executeErr
 	}
 
-	// parseConfigError 仅在 lastResp 非 nil 时调用。
-	// lastResp == nil 表示 executor 未返回任何 response（如 mock 测试场景或 fn 内未跑 SendConfigs），
-	// 这种情况下视为 success — executor 已返回 nil error 即代表操作完成。
-	if lastResp != nil {
-		if parseErr := parseConfigError(lastResp); parseErr != nil {
+	// V7 修复：检查所有业务 response（不只最后一条）。任一 failed=true 或命中错误
+	// marker 即判失败 —— 防止 "interface 命令被设备拒绝（failed=true）但末条 action
+	// 在错视图被静默接受（failed=false）" 的假成功（2026-07-08 dump 实测真因）。
+	// allResponses 为空（mock 测试 ExecuteCustom 不调 fn）时跳过循环，直接 success。
+	for i, r := range allResponses {
+		if r == nil {
+			continue
+		}
+		if i >= len(cmds) {
+			break // 跳过末尾 exit cleanup（fullCmds 比 cmds 多一条 exit，非业务命令不参与失败判定）
+		}
+		cmd := cmds[i]
+		if r.Failed {
+			errMsg := fmt.Sprintf("命令 %q 被设备拒绝: %s", cmd, strings.TrimSpace(r.Result))
+			return &PortResult{
+				PortID:      portID,
+				DeviceID:    deviceID,
+				Action:      action,
+				Status:      "failed",
+				Error:       errMsg,
+				CommandSent: commandsJoined,
+			}, fmt.Errorf("%s", errMsg)
+		}
+		if parseErr := parseConfigError(r); parseErr != nil {
 			return &PortResult{
 				PortID:      portID,
 				DeviceID:    deviceID,
