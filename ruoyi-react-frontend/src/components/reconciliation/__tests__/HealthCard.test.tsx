@@ -124,7 +124,9 @@ describe("HealthCard", () => {
     });
 
     render(<HealthCard workstationId="ws-1" />);
-    expect(screen.getByText("该工位暂无关联资产。")).toBeInTheDocument();
+    // 55-01 HealthCard-test-fix: HealthCard 把"对账健康度:"前缀与消息渲染在同一文本节点
+    // (整个 <div> 内容是一个 text node), 精确 getByText 找不到。改 regex 容忍前缀。
+    expect(screen.getByText(/该工位暂无关联资产/)).toBeInTheDocument();
   });
 
   it("calls onApplyException when 申请例外 button is clicked", () => {
