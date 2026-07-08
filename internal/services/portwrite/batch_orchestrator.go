@@ -70,7 +70,31 @@ func (s *portWriteServiceImpl) BatchWritePorts(ctx context.Context, req BatchWri
 		port, exists := preStateMap[portID]
 
 		if !exists {
-			// 端口"消失"（D-13 fallback）— 直接下发
+			// CR-02 跨层防御（Phase 55 leftover sweep）：
+			// fallback 路径下前端 req.DeviceID 可能错位（CR-01 根因已修但兜底双保险），
+			// 先查 port 真实 deviceID，与 req.DeviceID 不一致则归 Failed 不调 SSH。
+			// 正常路径已有 preStateMap 的 WHERE device_id = ? AND id IN ? 隔离零开销。
+			var actualPort models.DevicePortStatus
+			if err := s.db.WithContext(ctx).
+				Where("id = ?", portID).
+				First(&actualPort).Error; err != nil {
+				// DB 查不到该 port（可能已软删/物理删）— 归 Failed，继续校验下一个
+				result.Failed = append(result.Failed, PortResult{
+					PortID: portID,
+					Error:  fmt.Sprintf("port not found: %v", err),
+				})
+				continue
+			}
+			if actualPort.DeviceID != req.DeviceID {
+				// port 真实 deviceID 与请求 deviceID 不一致 — 拒绝 SSH 下发
+				result.Failed = append(result.Failed, PortResult{
+					PortID: portID,
+					Error:  "port does not belong to device",
+				})
+				continue
+			}
+
+			// 校验通过 — 端口"消失"（D-13 fallback）但归属正确，直接下发
 			writeResult, werr := s.executeWrite(ctx, portID, req.DeviceID, req.Action, req.Description, operator, "")
 			if werr != nil {
 				if writeResult != nil {
