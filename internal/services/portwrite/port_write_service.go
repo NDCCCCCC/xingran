@@ -381,9 +381,10 @@ func (s *portWriteServiceImpl) refreshPortStatus(_ context.Context, deviceID str
 //
 // 采集时 normalize.InterfaceName 把设备全名折叠成大写短名（GE4/18）入库；但写命令需设备 CLI
 // 认的原始全名，否则设备返回 "% Unknown command"。
-//   - 锐捷 RGOS / 华为 VRP：接口类型与编号间带空格（interface GigabitEthernet 1/0/1）
+//   - 锐捷 RGOS：接口类型与编号间带空格（interface GigabitEthernet 1/0/1，display 用全称）
+//   - 华为 VRP：用归一化短名（interface GE1/0/0，display 用缩写 GE，不展开全称）
 //   - H3C Comware：连写无空格（interface GigabitEthernet1/0/1）
-//   2026-07-09 真机验证：华为 VRP 拒绝连写（Error: Wrong parameter found at '^' position）。
+//   2026-07-09 真机验证：华为 S8700 拒绝全称 GigabitEthernet 1/0/0，接受缩写 GE1/0/0（与 display 一致）。
 //
 // 未识别前缀（Vlan/Loopback 等逻辑接口）原样返回。
 // 与 normalize.InterfaceName（正向、采集用）分离，避免反向展开污染采集链路
@@ -402,11 +403,16 @@ func expandInterfaceName(name string, vendor models.DeviceVendor) string {
 		{"GE", "GigabitEthernet"},
 		{"FE", "FastEthernet"},
 	}
+	// 华为 VRP：直接用归一化短名（GE1/0/0），不展开全称。S8700 真机拒绝全称
+	// GigabitEthernet 1/0/0（Wrong parameter），接受缩写 GE1/0/0（与 display 输出一致）。
+	// 2026-07-09 真机验证。
+	if vendor == models.VendorHuawei {
+		return name
+	}
 	upper := strings.ToUpper(name)
 	sep := ""
-	// 锐捷 RGOS / 华为 VRP 接口类型与编号间带空格；H3C Comware 连写。
-	// 2026-07-09 真机验证华为 VRP 连写被拒（Wrong parameter at '^'）。
-	if vendor == models.VendorRuijie || vendor == models.VendorHuawei {
+	// 锐捷 RGOS 接口类型与编号间带空格（display 用全称 GigabitEthernet 1/23）；H3C 连写。
+	if vendor == models.VendorRuijie {
 		sep = " "
 	}
 	for _, r := range reps {
