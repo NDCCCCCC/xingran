@@ -35,7 +35,15 @@ export class ComponentLoader {
   // 同时匹配 index.tsx（列表页）和 detail.tsx（详情子页）—— 详情页路径由 DynamicRoutes.tsx
   // 的静态 Route 显式注册（例如 /system/notice/:id、/my-notices/:id），不走菜单动态生成。
   public static componentModules = import.meta.glob<{ default: ComponentType }>(
-    ["/src/pages/**/{index,detail}.tsx", "!**/login/**"],
+    [
+      "/src/pages/**/{index,detail}.tsx",
+      "!**/login/**",
+      // 以下两个详情页在 DynamicRoutes.tsx 中静态导入（无对应 sys_menu 节点，走静态 Route 兜底，
+      // 见 DynamicRoutes.tsx 的 /system/notice/:id 与 /my-notices/:id），需从 glob 懒加载排除，
+      // 否则 Vite 报 "dynamically imported but also statically imported"（与 login 同理）
+      "!/src/pages/system/notice/detail.tsx",
+      "!/src/pages/my-notices/detail.tsx",
+    ],
     {
       eager: false,
     }
