@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 
@@ -20,10 +21,9 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// setupOwnershipTestDB creates an in-memory SQLite DB with the
-// sys_device_port_status table, mirroring the production schema enough
-// to exercise the ownership-clash GORM query path.
-func setupOwnershipTestDB(t *testing.T) *gorm.DB {
+// setupPortStatusTestDB 创建内存 SQLite,带复合唯一键 (device_id, interface_name),
+// 模拟 migration_177 的 uniq_device_interface 约束,用于守护多设备同名端口共存的不变量。
+func setupPortStatusTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
@@ -48,144 +48,75 @@ func setupOwnershipTestDB(t *testing.T) *gorm.DB {
 			max_mac_count INTEGER,
 			current_mac_count INTEGER,
 			collected_at DATETIME NOT NULL,
-			created_at DATETIME
+			created_at DATETIME,
+			UNIQUE (device_id, interface_name)
 		);
 	`).Error)
 
 	return db
 }
 
-// insertPort helper inserts one row.
-func insertPort(t *testing.T, db *gorm.DB, deviceID, iface string) {
-	t.Helper()
-	port := &models.DevicePortStatus{
-		DeviceID:      deviceID,
-		InterfaceName: iface,
-		CollectedAt:   time.Now(),
-	}
-	require.NoError(t, db.Create(port).Error)
-}
-
-// TestOwnershipClashCheck_FindIntoAnonStruct locks down the F-45-R5-onwards
-// port-collection ownership clash query path.
+// TestMultiDeviceSameInterfaceNameCoexist 守护修复后的核心不变量:
 //
-// Bug history (2026-06-30 port-collection window 10:00:06->10:00:23):
-// the function issued the query:
+//	不同设备各自拥有同名 interface_name (如每台交换机都有 GE0/0/1、Vlanif26、NULL0)
+//	是合法场景。复合唯一键 (device_id, interface_name) + OnConflict 应让它们共存,
+//	并按设备各自 UPSERT 刷新,绝不因"别的设备也有同名"而互相覆盖或跳过。
 //
-//	db.Model(&models.DevicePortStatus{}).
-//	   Select("interface_name, device_id").
-//	   Where("interface_name IN ? AND device_id <> ?", ifaceNames, device.ID).
-//	   Find(&conflictIfaces)              // <-- BUG: conflictIfaces := make(map[string]string)
-//
-// `Find` into a `map[string]string` is not a supported GORM destination.
-// Internally GORM took the Rows() path and called rows.Scan() without
-// iterating rows.Next() first, producing the continuous runtime errors:
-//
-//	ERRO [GORM错误] SELECT interface_name, device_id FROM "sys_device_port_status"
-//	     WHERE interface_name IN (...) AND device_id <> '...'
-//	     | 错误: sql: Scan called without calling Next
-//	WARN [PortCollection] <device>: check ownership clash failed: sql: Scan called without calling Next
-//
-// The fix scans into an anonymous-struct slice, then builds the map
-// locally. This test asserts that the fix shape:
-//  1. compiles and runs without error against a real GORM backend,
-//  2. returns the conflicting interface names + their owning device IDs,
-//  3. correctly ignores rows belonging to the queried device (the
-//     `device_id <> ?` half of the WHERE),
-//  4. populates the lookup map used to skip conflicting ports.
-func TestOwnershipClashCheck_FindIntoAnonStruct(t *testing.T) {
-	db := setupOwnershipTestDB(t)
+// 回归背景: 历史 [C-fix] ownership clash 逻辑 (collection.go, 2026-06-30 由
+// 0b95834a 引入,已于本次修复移除) 曾查询"别的设备是否也有同名 interface"并 skip,
+// 导致除首采设备外,所有设备的 GE/Vlanif/NULL 等通用接口名端口永远无法更新,
+// collected_at 停在首次写入时间。本测试锁定正确行为,防止该逻辑被重新引入。
+func TestMultiDeviceSameInterfaceNameCoexist(t *testing.T) {
+	db := setupPortStatusTestDB(t)
 	defer func() {
 		sqlDB, _ := db.DB()
 		_ = sqlDB.Close()
 	}()
 	ctx := context.Background()
 
-	// The device being collected in this run
-	ownDevice := uuid.NewString()
-	// Other devices that "own" ports with the same interface names
-	otherDeviceA := uuid.NewString()
-	otherDeviceB := uuid.NewString()
+	deviceA := uuid.NewString()
+	deviceB := uuid.NewString()
 
-	// 1) a port belonging to our device (should be filtered by `device_id <> ?`)
-	insertPort(t, db, ownDevice, "GE0/0/1")
-	// 2) ports owned by other devices (these are the conflicts)
-	insertPort(t, db, otherDeviceA, "GE0/0/2")
-	insertPort(t, db, otherDeviceA, "GE0/0/3")
-	insertPort(t, db, otherDeviceB, "GE0/0/4")
-	insertPort(t, db, otherDeviceB, "XGE1/0/1")
-
-	// Names we are about to upsert for ownDevice.
-	ifaceNames := []string{
-		"GE0/0/1",  // exists but belongs to ownDevice — NOT a conflict
-		"GE0/0/2",  // belongs to otherDeviceA — conflict
-		"GE0/0/3",  // belongs to otherDeviceA — conflict
-		"GE0/0/4",  // belongs to otherDeviceB — conflict
-		"GE0/0/5",  // not in DB at all — not a conflict (empty row)
-		"XGE1/0/1", // belongs to otherDeviceB — conflict
+	// 两台设备都有 GE0/0/1 (交换机间普遍重复的接口名),各自状态不同。
+	firstBatch := []*models.DevicePortStatus{
+		{DeviceID: deviceA, InterfaceName: "GE0/0/1", OperStatus: "down", CollectedAt: time.Now()},
+		{DeviceID: deviceB, InterfaceName: "GE0/0/1", OperStatus: "up", CollectedAt: time.Now()},
 	}
 
-	// ==== the FIX shape (verbatim from collection.go) ====
-	conflictIfaces := make(map[string]string)
-	var conflicts []struct {
-		InterfaceName string
-		DeviceID      string
-	}
-	err := db.WithContext(ctx).
-		Model(&models.DevicePortStatus{}).
-		Select("interface_name, device_id").
-		Where("interface_name IN ? AND device_id <> ?", ifaceNames, ownDevice).
-		Find(&conflicts).Error
-	require.NoError(t, err, "Find() into anon-struct slice must not return 'Scan called without calling Next'")
-	for _, c := range conflicts {
-		conflictIfaces[c.InterfaceName] = c.DeviceID
-	}
+	// 复刻 collection.go 的批量 UPSERT 语义 (复合键 device_id + interface_name)。
+	err := db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "device_id"}, {Name: "interface_name"}},
+		DoUpdates: clause.AssignmentColumns([]string{"oper_status", "collected_at"}),
+	}).Create(&firstBatch).Error
+	require.NoError(t, err, "两台设备同名 interface 必须能共存 (复合唯一键 device_id+interface_name)")
 
-	// 4 conflicts expected (everything except GE0/0/5 and GE0/0/1)
-	assert.Len(t, conflictIfaces, 4)
-	assert.Equal(t, otherDeviceA, conflictIfaces["GE0/0/2"])
-	assert.Equal(t, otherDeviceA, conflictIfaces["GE0/0/3"])
-	assert.Equal(t, otherDeviceB, conflictIfaces["GE0/0/4"])
-	assert.Equal(t, otherDeviceB, conflictIfaces["XGE1/0/1"])
-	_, hasOwn := conflictIfaces["GE0/0/1"]
-	assert.False(t, hasOwn, "ports belonging to ownDevice must not appear in conflict map (device_id <> ?)")
-}
-
-// TestOwnershipClashCheck_NoConflicts documents the empty-result path:
-// a list of iface names with NO matching rows must return cleanly
-// (no error, empty map, no row iteration surprises). The pre-fix bug
-// would have produced "Scan called without calling Next" on this path
-// for any device with a non-empty IN list, regardless of actual matches.
-func TestOwnershipClashCheck_NoConflicts(t *testing.T) {
-	db := setupOwnershipTestDB(t)
-	defer func() {
-		sqlDB, _ := db.DB()
-		_ = sqlDB.Close()
-	}()
-	ctx := context.Background()
-
-	deviceID := uuid.NewString()
-	ifaceNames := []string{
-		"GE0/0/1", "GE0/0/2", "GE0/0/3",
-		"XGE1/0/1", "XGE1/0/2", "XGE1/0/3",
-		"FE0/0/1", "FE0/0/2", "FE0/0/3",
+	// 断言两行独立存在,互不覆盖。
+	var rows []models.DevicePortStatus
+	require.NoError(t, db.WithContext(ctx).Find(&rows).Error)
+	assert.Len(t, rows, 2)
+	operByDevice := map[string]string{}
+	for _, r := range rows {
+		operByDevice[r.DeviceID] = r.OperStatus
 	}
-	// (no inserts - empty table)
+	assert.Equal(t, "down", operByDevice[deviceA])
+	assert.Equal(t, "up", operByDevice[deviceB])
 
-	conflictIfaces := make(map[string]string)
-	var conflicts []struct {
-		InterfaceName string
-		DeviceID      string
+	// 再次采集 deviceA 的 GE0/0/1 (状态 down→up) → 应 UPSERT 更新 deviceA 那行,
+	// 绝不影响 deviceB 的行,也不应新增第三行。
+	rerun := []*models.DevicePortStatus{
+		{DeviceID: deviceA, InterfaceName: "GE0/0/1", OperStatus: "up", CollectedAt: time.Now()},
 	}
-	err := db.WithContext(ctx).
-		Model(&models.DevicePortStatus{}).
-		Select("interface_name, device_id").
-		Where("interface_name IN ? AND device_id <> ?", ifaceNames, deviceID).
-		Find(&conflicts).Error
-	require.NoError(t, err, "empty IN-list match must not trigger Scan-without-Next")
-	for _, c := range conflicts {
-		conflictIfaces[c.InterfaceName] = c.DeviceID
+	require.NoError(t, db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "device_id"}, {Name: "interface_name"}},
+		DoUpdates: clause.AssignmentColumns([]string{"oper_status", "collected_at"}),
+	}).Create(&rerun).Error)
+
+	require.NoError(t, db.WithContext(ctx).Find(&rows).Error)
+	assert.Len(t, rows, 2, "再次采集仍应只有两行 (UPSERT 而非 INSERT 新行)")
+	operByDevice = map[string]string{}
+	for _, r := range rows {
+		operByDevice[r.DeviceID] = r.OperStatus
 	}
-	assert.Empty(t, conflictIfaces)
-	assert.Empty(t, conflicts)
+	assert.Equal(t, "up", operByDevice[deviceA], "deviceA 的端口状态应被刷新")
+	assert.Equal(t, "up", operByDevice[deviceB], "deviceB 的端口不应受 deviceA 采集影响")
 }

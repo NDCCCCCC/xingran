@@ -517,26 +517,49 @@ func (s *NetworkDeviceService) GetDeviceStatistics(ctx context.Context) (map[str
 	s.db.WithContext(ctx).Model(&models.NetworkDevice{}).Where("status = ?", models.DeviceStatusUnknown).Count(&stats.UnknownDevices)
 
 	// 按类型统计
-	stats.ByType = make(map[string]int64)
+	// GORM 不支持把双列结果 (device_type, count) Scan 进 map[string]int64,
+	// 会报 "expected 2 destination arguments in Scan, not 1";改用匿名 struct 切片接收再转 map。
+	var typeRows []struct {
+		DeviceType string
+		Count      int64
+	}
 	s.db.WithContext(ctx).Model(&models.NetworkDevice{}).
 		Select("device_type, COUNT(*) as count").
 		Group("device_type").
-		Scan(&stats.ByType)
+		Scan(&typeRows)
+	stats.ByType = make(map[string]int64, len(typeRows))
+	for _, r := range typeRows {
+		stats.ByType[r.DeviceType] = r.Count
+	}
 
 	// 按厂商统计
-	stats.ByVendor = make(map[string]int64)
+	var vendorRows []struct {
+		Vendor string
+		Count  int64
+	}
 	s.db.WithContext(ctx).Model(&models.NetworkDevice{}).
 		Select("vendor, COUNT(*) as count").
 		Group("vendor").
-		Scan(&stats.ByVendor)
+		Scan(&vendorRows)
+	stats.ByVendor = make(map[string]int64, len(vendorRows))
+	for _, r := range vendorRows {
+		stats.ByVendor[r.Vendor] = r.Count
+	}
 
-	// 按部门统计
-	stats.ByDept = make(map[string]int64)
+	// 按部门统计 (部门表是 sys_dept, 非 sys_department; 见 models.Department.TableName)
+	var deptRows []struct {
+		DeptName string
+		Count    int64
+	}
 	s.db.WithContext(ctx).Table("sys_network_device").
 		Select("dept.dept_name, COUNT(*) as count").
-		Joins("LEFT JOIN sys_department dept ON dept.id = sys_network_device.dept_id").
+		Joins("LEFT JOIN sys_dept dept ON dept.id = sys_network_device.dept_id").
 		Group("dept.dept_name").
-		Scan(&stats.ByDept)
+		Scan(&deptRows)
+	stats.ByDept = make(map[string]int64, len(deptRows))
+	for _, r := range deptRows {
+		stats.ByDept[r.DeptName] = r.Count
+	}
 
 	return map[string]interface{}{
 		"totalDevices":   stats.TotalDevices,

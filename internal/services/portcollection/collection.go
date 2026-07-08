@@ -257,56 +257,11 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 		return result
 	}
 
-	// [C-fix] 防同名异物冲突:
-	// 如果DB中已存在同interface_name但不同device_id的端口,说明该端口名
-	// 在两台设备上独立存在。修复:对此次采集的每个interface_name,先检查DB是否已有不同device_id的同名端口,
-	// 有则跳过该端口(不UPSERT),避免覆盖另一台设备的端口记录。
-	{
-		conflictIfaces := make(map[string]string)
-		ifaceNames := make([]string, len(portStatuses))
-		for i, p := range portStatuses {
-			ifaceNames[i] = p.InterfaceName
-		}
-		// GORM 不支持 Find(&map[string]string) (会触发 'sql: Scan called without
-		// calling Next'),只能 Find 进 struct 切片然后本地组 map。
-		// 这里只用 interface_name + device_id 两个字段,加 anon struct 避免引入新 model。
-		var conflicts []struct {
-			InterfaceName string
-			DeviceID      string
-		}
-		if err := s.db.WithContext(ctx).
-			Model(&models.DevicePortStatus{}).
-			Select("interface_name, device_id").
-			Where("interface_name IN ? AND device_id <> ?", ifaceNames, device.ID).
-			Find(&conflicts).Error; err != nil {
-			applogger.Warnf("[PortCollection] %s: check ownership clash failed: %v", device.DeviceName, err)
-		} else {
-			for _, c := range conflicts {
-				conflictIfaces[c.InterfaceName] = c.DeviceID
-			}
-		}
-		if len(conflictIfaces) > 0 {
-			filtered := portStatuses[:0]
-			for _, p := range portStatuses {
-				if conflictDevID, exists := conflictIfaces[p.InterfaceName]; exists {
-					applogger.Warnf("[PortCollection] %s: skip iface %s (already owned by device %s, ownership clash)",
-						device.DeviceName, p.InterfaceName, conflictDevID)
-					result.FailedCount++
-					continue
-				}
-				filtered = append(filtered, p)
-			}
-			if len(filtered) == 0 {
-				applogger.Warnf("[PortCollection] %s: all ports have ownership clashes, skip batch save", device.DeviceName)
-				result.SuccessCount = 0
-				if result.ErrorMessage == "" {
-					result.ErrorMessage = "all ports have ownership clashes"
-				}
-				return result
-			}
-			portStatuses = filtered
-		}
-	}
+	// 多设备同名接口 (如每台交换机都有 GE4/0/1、Vlanif26、NULL0) 是合法场景:
+	// 唯一约束为复合键 (device_id, interface_name) (见 migration_177 + model uniqueIndex tag),
+	// 下方 OnConflict{device_id, interface_name} 会按设备各自 UPSERT,互不覆盖。
+	// 历史的 [C-fix] ownership clash 检查基于"interface_name 跨设备唯一"的错误前提,
+	// 误杀所有非首采设备的通用接口名端口,已移除。勿重新引入跨设备同名拦截。
 
 	err = s.db.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "device_id"}, {Name: "interface_name"}},
