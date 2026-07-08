@@ -9,7 +9,6 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -19,11 +18,11 @@ import (
 
 // Compile-time interface satisfaction assertions - lock the mockability contract.
 //
-// 如果 portWriteServiceImpl.deviceExecutor / collectionSvc 字段类型未来漂移
+// 如果 portWriteServiceImpl.deviceExecutor / portCollectionSvc 字段类型未来漂移
 // 偏离这些 interface 形状（D-18 architectural adjustment），本测试文件无法编译，
 // 在 build 时捕获 regression 而非 runtime mock 注入时才发现。
 var _ portWriteExecutor = (*device.DeviceExecutor)(nil)
-var _ portWriteCollectionSvc = (*services.DeviceInfoCollectionService)(nil)
+var _ portWritePortCollectionSvc = (*portcollection.CollectionService)(nil)
 
 // mockDeviceExecutor 嵌入 mock.Mock，实现 portWriteExecutor.ExecuteCustom 单方法。
 //
@@ -95,14 +94,63 @@ func (m *mockDeviceExecutor) ExecuteCustom(
 	return args.Error(0)
 }
 
-// mockCollectionSvc 嵌入 mock.Mock，实现 portWriteCollectionSvc.Enqueue 单方法。
+// mockCollectionSvc 嵌入 mock.Mock，实现 portWritePortCollectionSvc.CollectDevice 单方法。
+//
+// 2026-07-08 修复：原 mockCollectionSvc.Enqueue(deviceID) 模拟 DeviceInfoCollectionService 行为，
+// 现替换为 CollectDevice(ctx, deviceID) 模拟 portcollection.CollectionService 同步刷新端口表。
+//
+// 2026-07-08 修复页面空白 bug：refreshPortStatus 改为 fire-and-forget（后台 goroutine）。
+// 测试需要在 AssertExpectations 之前等 goroutine 实际跑一次（否则 mock 未被调用，断言失败）。
+// mock 用全局 collectNotif channel 通知 + waitCollectedCalls(n) helper 等待，规避 sleep。
 type mockCollectionSvc struct {
 	mock.Mock
 }
 
-func (m *mockCollectionSvc) Enqueue(deviceID string) error {
-	args := m.Called(deviceID)
-	return args.Error(0)
+// collectNotif 全局通知 channel：mockCollectionSvc.CollectDevice 每次被调 send 一次，
+// 等待方按预期调用次数读 n 次。容量 64 防阻塞（batch 50 上限）。
+var collectNotif = make(chan struct{}, 64)
+
+// resetCollectNotif 排空 channel 残留（每个 test 在 setup 阶段调一次，避免上一个 test 信号污染）。
+func resetCollectNotif() {
+	for {
+		select {
+		case <-collectNotif:
+		default:
+			return
+		}
+	}
+}
+
+// waitCollectedCalls 阻塞直到 CollectDevice 至少被调用 n 次（最多等 2s）。
+//
+// 用于 fire-and-forget 路径的测试：service.BatchWritePorts() / Shutdown() 返回后，
+// goroutine 还在跑；调此方法确保 mock 已被打中再 AssertExpectations。
+func waitCollectedCalls(t *testing.T, n int) {
+	t.Helper()
+	if n <= 0 {
+		return
+	}
+	deadline := time.After(2 * time.Second)
+	for i := 0; i < n; i++ {
+		select {
+		case <-collectNotif:
+		case <-deadline:
+			t.Fatalf("waitCollectedCalls: expected %d CollectDevice call(s), got %d within 2s", n, i)
+		}
+	}
+}
+
+func (m *mockCollectionSvc) CollectDevice(ctx context.Context, deviceID string) (*portcollection.CollectionResult, error) {
+	args := m.Called(ctx, deviceID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	// 通知等待方（fire-and-forget 路径必备；非阻塞，buffer 64 防 lost wakeup）
+	select {
+	case collectNotif <- struct{}{}:
+	default:
+	}
+	return args.Get(0).(*portcollection.CollectionResult), args.Error(1)
 }
 
 // TestParseConfigError 表驱动测试，覆盖 D-16 marker 优先级（12+ 用例）。
@@ -279,11 +327,20 @@ func TestErrorKindName(t *testing.T) {
 }
 
 // newTestService 构造最小可用 *portWriteServiceImpl（task 6+ 复用）。
-func newTestService(exec portWriteExecutor, coll portWriteCollectionSvc, db *gorm.DB) *portWriteServiceImpl {
+func newTestService(exec portWriteExecutor, coll portWritePortCollectionSvc, db *gorm.DB) *portWriteServiceImpl {
 	return &portWriteServiceImpl{
-		db:             db,
-		deviceExecutor: exec,
-		collectionSvc:  coll,
+		db:                db,
+		deviceExecutor:    exec,
+		portCollectionSvc: coll,
+	}
+}
+
+// newSuccessCollectionResult 给 mockCollectionSvc.CollectDevice 返回用的最小
+// 成功 CollectionResult（零值零字段 OK，service 不读 .SuccessCount 等字段做判定）。
+func newSuccessCollectionResult(deviceID string) *portcollection.CollectionResult {
+	return &portcollection.CollectionResult{
+		DeviceID:       deviceID,
+		CollectionTime: time.Now(),
 	}
 }
 
@@ -332,6 +389,7 @@ func seedPortAndDevice(t *testing.T, db *gorm.DB, portID, deviceID, interfaceNam
 
 // TestShutdown_Success 完整成功路径：mock executor 返回 nil + Enqueue 触发 1 次。
 func TestShutdown_Success(t *testing.T) {
+	resetCollectNotif()
 	db := newTestDB(t)
 	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", false, "")
 
@@ -341,7 +399,7 @@ func TestShutdown_Success(t *testing.T) {
 	ctx := context.Background()
 
 	mockExec.On("ExecuteCustom", mock.Anything, "device-1", mock.Anything, singlePortTimeout).Return(nil)
-	mockColl.On("Enqueue", "device-1").Return(nil)
+	mockColl.On("CollectDevice", mock.Anything, "device-1").Return(newSuccessCollectionResult("device-1"), nil)
 
 	result, err := svc.Shutdown(ctx, "port-1", "test-op")
 	assert.NoError(t, err)
@@ -351,9 +409,78 @@ func TestShutdown_Success(t *testing.T) {
 	assert.False(t, result.NoOp)
 	assert.Contains(t, result.CommandSent, "shutdown")
 
+	// fire-and-forget: 等后台 goroutine 实际跑 CollectDevice 一次
+	waitCollectedCalls(t, 1)
+
 	mockExec.AssertExpectations(t)
 	mockColl.AssertExpectations(t)
 }
+
+// TestShutdown_RefreshByDevice_NotByPort_Invariant — 2026-07-08 端口刷新不变式守护：
+//
+// 写后端口状态刷新**只**按 deviceID 粒度（不针对单个端口）。
+// 网络设备 SSH 端口采集命令集对单端口和全设备是一样的（display interface description +
+// display interface brief + dot1x/port-security 命令不论查几个端口都要发），
+// 实际是 1 次 SSH 连接 + 固定几条命令；"只刷 1 个端口"反而需要客户端 filter 输出，得不偿失。
+//
+// 用 mock Run 钩子捕获 CollectDevice 实际入参：
+//   - deviceID 必须是 "device-1"（**绝对不能**是 "port-1" 等端口 id）
+//   - ctx 是 detached context.Background() + 30s timeout（不是 caller ctx ——
+//     2026-07-08 改 fire-and-forget 后，caller 断开不影响后台 SSH 采集）
+func TestShutdown_RefreshByDevice_NotByPort_Invariant(t *testing.T) {
+	resetCollectNotif()
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", false, "")
+
+	mockExec := new(mockDeviceExecutor)
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(mockExec, mockColl, db)
+	callerCtx := context.WithValue(context.Background(), ctxKeyInvariant(), "caller-marker")
+
+	mockExec.On("ExecuteCustom", mock.Anything, "device-1", mock.Anything, singlePortTimeout).Return(nil)
+
+	var (
+		capturedCtx   context.Context
+		capturedDevID string
+		collectCalled int
+	)
+	mockColl.On("CollectDevice", mock.Anything, "device-1").
+		Run(func(args mock.Arguments) {
+			collectCalled++
+			capturedCtx = args.Get(0).(context.Context)
+			capturedDevID = args.Get(1).(string)
+		}).
+		Return(newSuccessCollectionResult("device-1"), nil).Once()
+
+	_, err := svc.Shutdown(callerCtx, "port-1", "test-op")
+	assert.NoError(t, err)
+
+	// fire-and-forget: 等 goroutine 实际跑一次（最多 2s）
+	waitCollectedCalls(t, 1)
+
+	// 不变式 1：恰好调 1 次（不是每端口 1 次）
+	assert.Equal(t, 1, collectCalled, "CollectDevice must fire exactly 1 time per write")
+
+	// 不变式 2：deviceID 是设备 id，不是端口 id
+	assert.Equal(t, "device-1", capturedDevID, "CollectDevice must be called with DEVICE id, not port id")
+
+	// 不变式 3：ctx 是 detached（不是 callerCtx —— callerCtx 携带 marker，但后台 ctx 是
+	// context.Background() + 30s timeout，与 caller 无关，caller 断开不影响后台 SSH 采集）
+	assert.NotEqual(t, callerCtx, capturedCtx, "single-port refresh must use detached ctx, not caller ctx (fire-and-forget pattern)")
+	capturedDeadline, hasDeadline := capturedCtx.Deadline()
+	assert.True(t, hasDeadline, "detached ctx must have a deadline (30s timeout)")
+	remaining := time.Until(capturedDeadline)
+	assert.Greater(t, remaining, 25*time.Second, "deadline should be ~30s")
+	assert.Less(t, remaining, 31*time.Second, "deadline should be ~30s")
+
+	mockExec.AssertExpectations(t)
+	mockColl.AssertExpectations(t)
+}
+
+// ctxKeyInvariant 私有 ctx key 类型，防止与项目内其他 ctx 冲突。
+type ctxKeyType struct{}
+
+func ctxKeyInvariant() ctxKeyType { return ctxKeyType{} }
 
 // TestShutdown_TransportError Executor 返回 transport error：结果 failed + Enqueue 不触发。
 func TestShutdown_TransportError(t *testing.T) {
@@ -378,7 +505,7 @@ func TestShutdown_TransportError(t *testing.T) {
 
 	mockExec.AssertExpectations(t)
 	// Pitfall #6: failed 路径 Enqueue 不得触发
-	mockColl.AssertNotCalled(t, "Enqueue", mock.Anything)
+	mockColl.AssertNotCalled(t, "CollectDevice", mock.Anything, mock.Anything)
 }
 
 // TestShutdown_DeviceRejected 设备返回 "% Error: ..." — 通过 Run 回调模拟 fn 内 lastResp 捕获。
@@ -410,7 +537,7 @@ func TestShutdown_DeviceRejected(t *testing.T) {
 	assert.NotEmpty(t, result.Error)
 
 	mockExec.AssertExpectations(t)
-	mockColl.AssertNotCalled(t, "Enqueue", mock.Anything)
+	mockColl.AssertNotCalled(t, "CollectDevice", mock.Anything, mock.Anything)
 }
 
 // TestShutdown_NoOp_AlreadyDown pre-state 已匹配：admin_status="down" 时 Shutdown 返回 NoOp。
@@ -432,7 +559,7 @@ func TestShutdown_NoOp_AlreadyDown(t *testing.T) {
 
 	// pre-state NoOp 路径：mock executor 不应被调用，Enqueue 也不应触发
 	mockExec.AssertNotCalled(t, "ExecuteCustom", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
-	mockColl.AssertNotCalled(t, "Enqueue", mock.Anything)
+	mockColl.AssertNotCalled(t, "CollectDevice", mock.Anything, mock.Anything)
 }
 
 // TestShutdown_DBRecordNotFound_Fallback DB 行不存在时走 fallback（deviceID="" → ErrDeviceNotFound）。
@@ -451,11 +578,12 @@ func TestShutdown_DBRecordNotFound_Fallback(t *testing.T) {
 	assert.Nil(t, result)
 
 	mockExec.AssertNotCalled(t, "ExecuteCustom", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
-	mockColl.AssertNotCalled(t, "Enqueue", mock.Anything)
+	mockColl.AssertNotCalled(t, "CollectDevice", mock.Anything, mock.Anything)
 }
 
 // TestUndoShutdown_Success — happy path 镜像 TestShutdown_Success。
 func TestUndoShutdown_Success(t *testing.T) {
+	resetCollectNotif()
 	db := newTestDB(t)
 	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "down", false, "")
 
@@ -465,13 +593,15 @@ func TestUndoShutdown_Success(t *testing.T) {
 	ctx := context.Background()
 
 	mockExec.On("ExecuteCustom", mock.Anything, "device-1", mock.Anything, singlePortTimeout).Return(nil)
-	mockColl.On("Enqueue", "device-1").Return(nil)
+	mockColl.On("CollectDevice", mock.Anything, "device-1").Return(newSuccessCollectionResult("device-1"), nil)
 
 	result, err := svc.UndoShutdown(ctx, "port-1", "test-op")
 	assert.NoError(t, err)
 	assert.Equal(t, "succeeded", result.Status)
 	assert.Equal(t, Action(portcollection.ActionUndoShutdown), result.Action)
 	assert.Contains(t, result.CommandSent, "undo shutdown")
+
+	waitCollectedCalls(t, 1)
 
 	mockExec.AssertExpectations(t)
 	mockColl.AssertExpectations(t)
@@ -494,11 +624,12 @@ func TestUndoShutdown_NoOp_AlreadyUp(t *testing.T) {
 	assert.Equal(t, "admin_up", result.CurrentState)
 
 	mockExec.AssertNotCalled(t, "ExecuteCustom", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
-	mockColl.AssertNotCalled(t, "Enqueue", mock.Anything)
+	mockColl.AssertNotCalled(t, "CollectDevice", mock.Anything, mock.Anything)
 }
 
 // TestSetDescription_Success — happy path。
 func TestSetDescription_Success(t *testing.T) {
+	resetCollectNotif()
 	db := newTestDB(t)
 	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", false, "")
 
@@ -508,7 +639,7 @@ func TestSetDescription_Success(t *testing.T) {
 	ctx := context.Background()
 
 	mockExec.On("ExecuteCustom", mock.Anything, "device-1", mock.Anything, singlePortTimeout).Return(nil)
-	mockColl.On("Enqueue", "device-1").Return(nil)
+	mockColl.On("CollectDevice", mock.Anything, "device-1").Return(newSuccessCollectionResult("device-1"), nil)
 
 	result, err := svc.SetDescription(ctx, "port-1", "uplink-to-core", "test-op")
 	assert.NoError(t, err)
@@ -516,6 +647,8 @@ func TestSetDescription_Success(t *testing.T) {
 	assert.Equal(t, Action(portcollection.ActionDescription), result.Action)
 	assert.Contains(t, result.CommandSent, "description")
 	assert.Contains(t, result.CommandSent, "uplink-to-core")
+
+	waitCollectedCalls(t, 1)
 
 	mockExec.AssertExpectations(t)
 	mockColl.AssertExpectations(t)
@@ -538,11 +671,12 @@ func TestSetDescription_NoOp_DescriptionMatches(t *testing.T) {
 	assert.Equal(t, "description_match", result.CurrentState)
 
 	mockExec.AssertNotCalled(t, "ExecuteCustom", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
-	mockColl.AssertNotCalled(t, "Enqueue", mock.Anything)
+	mockColl.AssertNotCalled(t, "CollectDevice", mock.Anything, mock.Anything)
 }
 
 // TestEnableDot1x_Success — happy path。
 func TestEnableDot1x_Success(t *testing.T) {
+	resetCollectNotif()
 	db := newTestDB(t)
 	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", false, "")
 
@@ -552,13 +686,15 @@ func TestEnableDot1x_Success(t *testing.T) {
 	ctx := context.Background()
 
 	mockExec.On("ExecuteCustom", mock.Anything, "device-1", mock.Anything, singlePortTimeout).Return(nil)
-	mockColl.On("Enqueue", "device-1").Return(nil)
+	mockColl.On("CollectDevice", mock.Anything, "device-1").Return(newSuccessCollectionResult("device-1"), nil)
 
 	result, err := svc.EnableDot1x(ctx, "port-1", "test-op")
 	assert.NoError(t, err)
 	assert.Equal(t, "succeeded", result.Status)
 	assert.Equal(t, Action(portcollection.ActionDot1xEnable), result.Action)
-	assert.Contains(t, result.CommandSent, "dot1x enable")
+	assert.Contains(t, result.CommandSent, "authentication-profile dot1x")
+
+	waitCollectedCalls(t, 1)
 
 	mockExec.AssertExpectations(t)
 	mockColl.AssertExpectations(t)
@@ -581,11 +717,12 @@ func TestEnableDot1x_NoOp_AlreadyEnabled(t *testing.T) {
 	assert.Equal(t, "dot1x_enabled", result.CurrentState)
 
 	mockExec.AssertNotCalled(t, "ExecuteCustom", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
-	mockColl.AssertNotCalled(t, "Enqueue", mock.Anything)
+	mockColl.AssertNotCalled(t, "CollectDevice", mock.Anything, mock.Anything)
 }
 
 // TestDisableDot1x_Success — happy path。
 func TestDisableDot1x_Success(t *testing.T) {
+	resetCollectNotif()
 	db := newTestDB(t)
 	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", true, "")
 
@@ -595,13 +732,15 @@ func TestDisableDot1x_Success(t *testing.T) {
 	ctx := context.Background()
 
 	mockExec.On("ExecuteCustom", mock.Anything, "device-1", mock.Anything, singlePortTimeout).Return(nil)
-	mockColl.On("Enqueue", "device-1").Return(nil)
+	mockColl.On("CollectDevice", mock.Anything, "device-1").Return(newSuccessCollectionResult("device-1"), nil)
 
 	result, err := svc.DisableDot1x(ctx, "port-1", "test-op")
 	assert.NoError(t, err)
 	assert.Equal(t, "succeeded", result.Status)
 	assert.Equal(t, Action(portcollection.ActionDot1xDisable), result.Action)
-	assert.Contains(t, result.CommandSent, "undo dot1x enable")
+	assert.Contains(t, result.CommandSent, "undo authentication-profile dot1x")
+
+	waitCollectedCalls(t, 1)
 
 	mockExec.AssertExpectations(t)
 	mockColl.AssertExpectations(t)
@@ -624,7 +763,7 @@ func TestDisableDot1x_NoOp_AlreadyDisabled(t *testing.T) {
 	assert.Equal(t, "dot1x_disabled", result.CurrentState)
 
 	mockExec.AssertNotCalled(t, "ExecuteCustom", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
-	mockColl.AssertNotCalled(t, "Enqueue", mock.Anything)
+	mockColl.AssertNotCalled(t, "CollectDevice", mock.Anything, mock.Anything)
 }
 
 // TestBatchWritePorts_ExceedsMax — 51 ports → ErrBatchTooLarge，无 SSH 流量。
@@ -649,7 +788,7 @@ func TestBatchWritePorts_ExceedsMax(t *testing.T) {
 	assert.Nil(t, result)
 
 	mockExec.AssertNotCalled(t, "ExecuteCustom", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
-	mockColl.AssertNotCalled(t, "Enqueue", mock.Anything)
+	mockColl.AssertNotCalled(t, "CollectDevice", mock.Anything, mock.Anything)
 }
 
 // TestBatchWritePorts_Empty — 空 PortIDs → ErrEmptyBatch，无 SSH 流量。
@@ -669,7 +808,7 @@ func TestBatchWritePorts_Empty(t *testing.T) {
 	assert.Nil(t, result)
 
 	mockExec.AssertNotCalled(t, "ExecuteCustom", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
-	mockColl.AssertNotCalled(t, "Enqueue", mock.Anything)
+	mockColl.AssertNotCalled(t, "CollectDevice", mock.Anything, mock.Anything)
 }
 
 // TestBatchWritePorts_ExceedsExactly50 — 50 ports 是边界值（不超限），进入循环。
@@ -709,7 +848,13 @@ func TestBatchWritePorts_ExceedsExactly50(t *testing.T) {
 }
 
 // TestBatchWritePorts_Success_AllSucceeded — 3 ports 全部成功 → 3 Succeeded + 3 Enqueue。
+//
+// 2026-07-08 Bug #2 修复后，3 端口 batch 会触发 5 次 ExecuteCustom：
+//   - 3 次单端口写（p1/p2/p3 的 SendConfigs）
+//   - 2 次端口间清理（p1→p2、p2→p3 的 SendConfigs(["quit"])）
+//   - 末尾端口 p3 不清理（portIdx=2 == totalPorts-1）
 func TestBatchWritePorts_Success_AllSucceeded(t *testing.T) {
+	resetCollectNotif()
 	db := newTestDB(t)
 	deviceID := "device-1"
 	seedPortAndDevice(t, db, "p1", deviceID, "GE0/0/1", "up", false, "")
@@ -721,9 +866,9 @@ func TestBatchWritePorts_Success_AllSucceeded(t *testing.T) {
 	svc := newTestService(mockExec, mockColl, db)
 	ctx := context.Background()
 
-	// testify/mock 按 On() 注册顺序匹配 — 3 个相同签名期望依次返回 nil
+	// V6：3 端口各 1 次 ExecuteCustom（移除 cleanup，依赖厂商嵌套 interface view）
 	mockExec.On("ExecuteCustom", mock.Anything, deviceID, mock.Anything, singlePortTimeout).Return(nil).Times(3)
-	mockColl.On("Enqueue", deviceID).Return(nil).Times(3)
+	mockColl.On("CollectDevice", mock.Anything, deviceID).Return(newSuccessCollectionResult(deviceID), nil).Once()
 
 	result, err := svc.BatchWritePorts(ctx, BatchWriteRequest{
 		DeviceID: deviceID,
@@ -737,12 +882,19 @@ func TestBatchWritePorts_Success_AllSucceeded(t *testing.T) {
 	assert.Len(t, result.Failed, 0)
 	assert.Len(t, result.Skipped, 0)
 
+	// fire-and-forget: 等后台 goroutine 实际跑 1 次
+	waitCollectedCalls(t, 1)
+
 	mockExec.AssertExpectations(t)
 	mockColl.AssertExpectations(t)
 }
 
 // TestBatchWritePorts_FailFast_Transport — 第 2 端口 transport error → fail-fast 立即停。
+//
+// 2026-07-08 Bug #2 修复后，p1 成功后会触发 1 次 quit cleanup → p2 → p2 fail-fast break → p3 不尝试。
+// 总计 ExecuteCustom 调用：p1 写(1) + p1→p2 quit(1) + p2 写(1) = 3 次。
 func TestBatchWritePorts_FailFast_Transport(t *testing.T) {
+	resetCollectNotif()
 	db := newTestDB(t)
 	deviceID := "device-1"
 	seedPortAndDevice(t, db, "p1", deviceID, "GE0/0/1", "up", false, "")
@@ -754,12 +906,12 @@ func TestBatchWritePorts_FailFast_Transport(t *testing.T) {
 	svc := newTestService(mockExec, mockColl, db)
 	ctx := context.Background()
 
-	// 第 1 次：nil 成功；第 2 次：transport error；第 3 次：不应被调用
+	// V6：p1 写成功(1) + p2 写 transport error(1) = 2 次（移除 cleanup）
 	mockExec.On("ExecuteCustom", mock.Anything, deviceID, mock.Anything, singlePortTimeout).Return(nil).Once()
 	transportErr := &WriteError{Kind: WriteErrorTransport, Message: "connection refused"}
 	mockExec.On("ExecuteCustom", mock.Anything, deviceID, mock.Anything, singlePortTimeout).Return(transportErr).Once()
 
-	mockColl.On("Enqueue", deviceID).Return(nil).Once() // 只有第 1 次 success 触发
+	mockColl.On("CollectDevice", mock.Anything, deviceID).Return(newSuccessCollectionResult(deviceID), nil).Once() // 批次成功 1 次 refresh
 
 	result, err := svc.BatchWritePorts(ctx, BatchWriteRequest{
 		DeviceID: deviceID,
@@ -774,13 +926,19 @@ func TestBatchWritePorts_FailFast_Transport(t *testing.T) {
 	assert.Len(t, result.Skipped, 0)
 	assert.Equal(t, "p2", result.Failed[0].PortID)
 
-	// 只调了 2 次 SSH（p1 + p2 fail-fast break）
+	waitCollectedCalls(t, 1)
+
+	// 总 3 次 SSH（p1 写 + p1→p2 quit + p2 写 fail-fast break）
 	mockExec.AssertExpectations(t)
 	mockColl.AssertExpectations(t)
 }
 
 // TestBatchWritePorts_FailFast_DeviceRejected — 第 2 端口 device_rejected → fail-fast 立即停。
+//
+// 2026-07-08 Bug #2 修复后，p1 成功后会触发 1 次 quit cleanup → p2 → p2 device_rejected → fail-fast break。
+// 总计 ExecuteCustom 调用：p1 写(1) + p1→p2 quit(1) + p2 写(1) = 3 次。
 func TestBatchWritePorts_FailFast_DeviceRejected(t *testing.T) {
+	resetCollectNotif()
 	db := newTestDB(t)
 	deviceID := "device-1"
 	seedPortAndDevice(t, db, "p1", deviceID, "GE0/0/1", "up", false, "")
@@ -792,11 +950,12 @@ func TestBatchWritePorts_FailFast_DeviceRejected(t *testing.T) {
 	svc := newTestService(mockExec, mockColl, db)
 	ctx := context.Background()
 
+	// V6：p1 写成功(1) + p2 写 device_rejected(1) = 2 次（移除 cleanup）
 	mockExec.On("ExecuteCustom", mock.Anything, deviceID, mock.Anything, singlePortTimeout).Return(nil).Once()
 	rejectionErr := &WriteError{Kind: WriteErrorDeviceRejected, Message: "% Error: Unrecognized command"}
 	mockExec.On("ExecuteCustom", mock.Anything, deviceID, mock.Anything, singlePortTimeout).Return(rejectionErr).Once()
 
-	mockColl.On("Enqueue", deviceID).Return(nil).Once()
+	mockColl.On("CollectDevice", mock.Anything, deviceID).Return(newSuccessCollectionResult(deviceID), nil).Once()
 
 	result, err := svc.BatchWritePorts(ctx, BatchWriteRequest{
 		DeviceID: deviceID,
@@ -811,6 +970,8 @@ func TestBatchWritePorts_FailFast_DeviceRejected(t *testing.T) {
 	assert.Len(t, result.Skipped, 0)
 	assert.Equal(t, "p2", result.Failed[0].PortID)
 	assert.Contains(t, result.Failed[0].Error, "Unrecognized command")
+
+	waitCollectedCalls(t, 1)
 
 	mockExec.AssertExpectations(t)
 	mockColl.AssertExpectations(t)
@@ -846,11 +1007,12 @@ func TestBatchWritePorts_AllSkipped_PreStateMatch(t *testing.T) {
 	}
 
 	mockExec.AssertNotCalled(t, "ExecuteCustom", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
-	mockColl.AssertNotCalled(t, "Enqueue", mock.Anything)
+	mockColl.AssertNotCalled(t, "CollectDevice", mock.Anything, mock.Anything)
 }
 
 // TestBatchWritePorts_PartialResult_Structure — 3 个切片字段同时存在（非 nil）。
 func TestBatchWritePorts_PartialResult_Structure(t *testing.T) {
+	resetCollectNotif()
 	db := newTestDB(t)
 	deviceID := "device-1"
 	seedPortAndDevice(t, db, "p1", deviceID, "GE0/0/1", "up", false, "")
@@ -863,10 +1025,11 @@ func TestBatchWritePorts_PartialResult_Structure(t *testing.T) {
 	svc := newTestService(mockExec, mockColl, db)
 	ctx := context.Background()
 
+	// V6：p1 写成功(1) + p2 写 transport error(1) = 2 次（移除 cleanup）
 	mockExec.On("ExecuteCustom", mock.Anything, deviceID, mock.Anything, singlePortTimeout).Return(nil).Once()
 	transportErr := &WriteError{Kind: WriteErrorTransport, Message: "timeout"}
 	mockExec.On("ExecuteCustom", mock.Anything, deviceID, mock.Anything, singlePortTimeout).Return(transportErr).Once()
-	mockColl.On("Enqueue", deviceID).Return(nil).Once()
+	mockColl.On("CollectDevice", mock.Anything, deviceID).Return(newSuccessCollectionResult(deviceID), nil).Once()
 
 	result, err := svc.BatchWritePorts(ctx, BatchWriteRequest{
 		DeviceID: deviceID,
@@ -885,6 +1048,8 @@ func TestBatchWritePorts_PartialResult_Structure(t *testing.T) {
 	// p3, p4 未跑（fail-fast 在 p2 后 break）—— 不在 Skipped 数组
 	assert.Len(t, result.Skipped, 0)
 
+	waitCollectedCalls(t, 1)
+
 	mockExec.AssertExpectations(t)
 	mockColl.AssertExpectations(t)
 }
@@ -892,6 +1057,7 @@ func TestBatchWritePorts_PartialResult_Structure(t *testing.T) {
 // TestBatchWritePorts_DetachedContext — caller 传 1s deadline ctx，
 // service 内 detached 30min context 注入 ExecuteCustom，验证 mock 收到的 ctx deadline ≈ 30min。
 func TestBatchWritePorts_DetachedContext(t *testing.T) {
+	resetCollectNotif()
 	db := newTestDB(t)
 	deviceID := "device-1"
 	seedPortAndDevice(t, db, "p1", deviceID, "GE0/0/1", "up", false, "")
@@ -911,7 +1077,7 @@ func TestBatchWritePorts_DetachedContext(t *testing.T) {
 			capturedCtx = args.Get(0).(context.Context)
 		}).
 		Return(nil).Once()
-	mockColl.On("Enqueue", deviceID).Return(nil).Once()
+	mockColl.On("CollectDevice", mock.Anything, deviceID).Return(newSuccessCollectionResult(deviceID), nil).Once()
 
 	_, err := svc.BatchWritePorts(callerCtx, BatchWriteRequest{
 		DeviceID: deviceID,
@@ -921,6 +1087,9 @@ func TestBatchWritePorts_DetachedContext(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.NotNil(t, capturedCtx, "service should have passed a ctx to ExecuteCustom")
+
+	// fire-and-forget: 等后台 goroutine 跑完
+	waitCollectedCalls(t, 1)
 
 	// 验证 capturedCtx 的 deadline ≈ 30min（允许 1min 容忍度）
 	deadline, ok := capturedCtx.Deadline()
@@ -953,4 +1122,77 @@ func TestBatchWritePorts_DeviceIDEmpty(t *testing.T) {
 	assert.Contains(t, err.Error(), "deviceId is required")
 
 	mockExec.AssertNotCalled(t, "ExecuteCustom", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
+// TestBatchWritePorts_RefreshOnceAtEnd_Invariant — 2026-07-08 端口刷新关键不变式：
+//
+// 批次内多个端口全部成功时，CollectDevice 只在批次末尾被调用 1 次（**绝对不能**每端口 1 次）——
+// 否则 50 端口会触发 50 次单设备 SSH 采集（每采 5-15s），就是几分钟级别的灾难。
+//
+// 锁定：mockColl.On(...) 用 .Once() 严格限制；测试用 mock.Called 计数手动核对。
+func TestBatchWritePorts_RefreshOnceAtEnd_Invariant(t *testing.T) {
+	resetCollectNotif()
+	db := newTestDB(t)
+	deviceID := "device-1"
+	seedPortAndDevice(t, db, "p1", deviceID, "GE0/0/1", "up", false, "")
+	seedPortAndDevice(t, db, "p2", deviceID, "GE0/0/2", "up", false, "")
+	seedPortAndDevice(t, db, "p3", deviceID, "GE0/0/3", "up", false, "")
+
+	mockExec := new(mockDeviceExecutor)
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(mockExec, mockColl, db)
+	ctx := context.Background()
+
+	mockExec.On("ExecuteCustom", mock.Anything, deviceID, mock.Anything, singlePortTimeout).Return(nil).Times(3)
+	// 关键：只允许 1 次（.Once()）。如果 batchRequiresRefresh 逻辑漂移或被错误地内嵌到 executeWrite，
+	// 此断言会立即失败 —— 守护性能不变式。
+	mockColl.On("CollectDevice", mock.Anything, deviceID).Return(newSuccessCollectionResult(deviceID), nil).Once()
+
+	result, err := svc.BatchWritePorts(ctx, BatchWriteRequest{
+		DeviceID: deviceID,
+		Action:   portcollection.ActionShutdown,
+		PortIDs:  []string{"p1", "p2", "p3"},
+	}, "test-op")
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Len(t, result.Succeeded, 3)
+
+	// fire-and-forget: 等后台 goroutine 跑完
+	waitCollectedCalls(t, 1)
+
+	mockExec.AssertExpectations(t)
+	mockColl.AssertExpectations(t)
+
+	// 双重守护：直接读 mockCalls 计数确认恰好 1 次
+	assert.Equal(t, 1, len(mockColl.Calls), "CollectDevice must fire EXACTLY 1 time per batch (not per-port)")
+}
+
+// TestBatchWritePorts_NoRefresh_WhenAllSkipped — pre-state 全部已匹配 → 整个批次 0 SSH 流量 →
+// CollectDevice 不得触发（避免无意义的 SSH 往返）。
+func TestBatchWritePorts_NoRefresh_WhenAllSkipped(t *testing.T) {
+	db := newTestDB(t)
+	deviceID := "device-1"
+	seedPortAndDevice(t, db, "p1", deviceID, "GE0/0/1", "down", false, "")
+	seedPortAndDevice(t, db, "p2", deviceID, "GE0/0/2", "down", false, "")
+	seedPortAndDevice(t, db, "p3", deviceID, "GE0/0/3", "down", false, "")
+
+	mockExec := new(mockDeviceExecutor)
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(mockExec, mockColl, db)
+	ctx := context.Background()
+
+	result, err := svc.BatchWritePorts(ctx, BatchWriteRequest{
+		DeviceID: deviceID,
+		Action:   portcollection.ActionShutdown, // target: down → 已匹配
+		PortIDs:  []string{"p1", "p2", "p3"},
+	}, "test-op")
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Len(t, result.Skipped, 3)
+
+	mockExec.AssertNotCalled(t, "ExecuteCustom", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	// 关键不变式：全部 NoOp 跳过 → batchRequiresRefresh 返回 false → CollectDevice 不触发
+	mockColl.AssertNotCalled(t, "CollectDevice", mock.Anything, mock.Anything)
 }

@@ -2,6 +2,7 @@ package device
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net"
 	"strings"
@@ -79,6 +80,23 @@ func PlatformName(vendor models.DeviceVendor) string {
 	}
 }
 
+//go:embed assets/ruijie_rgos_patched.yaml
+var ruijiePatchedYAML []byte
+
+// platformIdentifier 返回 scrapli platform 标识（string 内置平台名 或 []byte 自定义 yaml）。
+//
+// 锐捷用 patched yaml：scrapli 内置 ruijie_rjos.yaml 的 configuration prompt pattern 字符类
+// [\+\w.\-@/:+] 不含空格，而锐捷接口名带空格（如 GigabitEthernet 4/18），导致接口视图 prompt
+// `Ruijie(config-if-GigabitEthernet 4/18)#` 不匹配 → SendConfig 等不到 prompt 超时。
+// patched yaml 在 pattern 加空格 + 扩容长度。scrapli platform 是 embedded assets 无法文件覆盖，
+// 故用 platform.NewPlatform([]byte, ...) 注入（loadPlatformDefinitionFromBytes）。
+func platformIdentifier(vendor models.DeviceVendor) interface{} {
+	if vendor == models.VendorRuijie {
+		return ruijiePatchedYAML
+	}
+	return PlatformName(vendor)
+}
+
 // checkDeviceReachable 检查设备是否可达（TCP 连接测试）
 func checkDeviceReachable(host string, port int, timeout time.Duration) error {
 	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", host, port), timeout)
@@ -96,7 +114,7 @@ func NewScrapliWrapper(device *models.NetworkDevice, username, password string, 
 	}
 
 	// 获取平台名称
-	platformName := PlatformName(device.Vendor)
+	platformName := platformIdentifier(device.Vendor)
 
 	// 创建基础选项
 	opts := []util.Option{
@@ -159,7 +177,7 @@ func NewScrapliWrapperWithPort(device *models.NetworkDevice, username, password 
 	}
 
 	// 获取平台名称
-	platformName := PlatformName(device.Vendor)
+	platformName := platformIdentifier(device.Vendor)
 
 	// 创建基础选项
 	opts := []util.Option{

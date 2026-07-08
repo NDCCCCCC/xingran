@@ -66,7 +66,7 @@ type PortWriteRequest struct {
 
 // Shutdown 关闭端口 (POST /network/ports/write/shutdown)
 func (h *PortWriteHandler) Shutdown(c *gin.Context) {
-	h.execSinglePort(c, portcollection.ActionShutdown, operlog.OperTypeStatus,
+	h.execSinglePort(c, portcollection.ActionShutdown, operlog.OperTypeDisable,
 		func(ctx context.Context, portID, operator, desc string) (*portwrite.PortResult, error) {
 			return h.service.Shutdown(ctx, portID, operator)
 		})
@@ -74,7 +74,7 @@ func (h *PortWriteHandler) Shutdown(c *gin.Context) {
 
 // UndoShutdown 取消关闭 (POST /network/ports/write/undo-shutdown)
 func (h *PortWriteHandler) UndoShutdown(c *gin.Context) {
-	h.execSinglePort(c, portcollection.ActionUndoShutdown, operlog.OperTypeStatus,
+	h.execSinglePort(c, portcollection.ActionUndoShutdown, operlog.OperTypeEnable,
 		func(ctx context.Context, portID, operator, desc string) (*portwrite.PortResult, error) {
 			return h.service.UndoShutdown(ctx, portID, operator)
 		})
@@ -90,7 +90,7 @@ func (h *PortWriteHandler) SetDescription(c *gin.Context) {
 
 // EnableDot1x 启用 802.1X (POST /network/ports/write/dot1x-enable)
 func (h *PortWriteHandler) EnableDot1x(c *gin.Context) {
-	h.execSinglePort(c, portcollection.ActionDot1xEnable, operlog.OperTypeStatus,
+	h.execSinglePort(c, portcollection.ActionDot1xEnable, operlog.OperTypeEnable,
 		func(ctx context.Context, portID, operator, desc string) (*portwrite.PortResult, error) {
 			return h.service.EnableDot1x(ctx, portID, operator)
 		})
@@ -98,7 +98,7 @@ func (h *PortWriteHandler) EnableDot1x(c *gin.Context) {
 
 // DisableDot1x 停用 802.1X (POST /network/ports/write/dot1x-disable)
 func (h *PortWriteHandler) DisableDot1x(c *gin.Context) {
-	h.execSinglePort(c, portcollection.ActionDot1xDisable, operlog.OperTypeStatus,
+	h.execSinglePort(c, portcollection.ActionDot1xDisable, operlog.OperTypeDisable,
 		func(ctx context.Context, portID, operator, desc string) (*portwrite.PortResult, error) {
 			return h.service.DisableDot1x(ctx, portID, operator)
 		})

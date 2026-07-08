@@ -342,7 +342,7 @@ const PortStatusPage: FC = () => {
       render: (_: unknown, record: DevicePortStatus) => {
         const actions: ActionButton[] = [
           { key: "shutdown", label: "关闭端口", onClick: () => openWriteModal("shutdown", record) },
-          { key: "undo_shutdown", label: "取消关闭", onClick: () => openWriteModal("undo_shutdown", record) },
+          { key: "undo_shutdown", label: "启用端口", onClick: () => openWriteModal("undo_shutdown", record) },
           { key: "description", label: "修改描述", onClick: () => openWriteModal("description", record) },
           { key: "dot1x_enable", label: "启用 802.1X", onClick: () => openWriteModal("dot1x_enable", record) },
           { key: "dot1x_disable", label: "停用 802.1X", onClick: () => openWriteModal("dot1x_disable", record) },

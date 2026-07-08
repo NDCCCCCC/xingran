@@ -18,20 +18,20 @@ func TestRenderCommand_VendorActionMatrix(t *testing.T) {
 		params   PortTemplateParams
 		expected []string
 	}{
-		// Huawei VRP (5)
+		// Huawei VRP (5) — shutdown/undo/dot1x 必须显式进 interface view
 		{
 			name:     "huawei_shutdown",
 			vendor:   models.VendorHuawei,
 			action:   ActionShutdown,
 			params:   PortTemplateParams{InterfaceName: "GE0/0/1"},
-			expected: []string{"shutdown"},
+			expected: []string{"interface GE0/0/1", "shutdown"},
 		},
 		{
 			name:     "huawei_undo_shutdown",
 			vendor:   models.VendorHuawei,
 			action:   ActionUndoShutdown,
 			params:   PortTemplateParams{InterfaceName: "GE0/0/1"},
-			expected: []string{"undo shutdown"},
+			expected: []string{"interface GE0/0/1", "undo shutdown"},
 		},
 		{
 			name:     "huawei_description",
@@ -45,30 +45,30 @@ func TestRenderCommand_VendorActionMatrix(t *testing.T) {
 			vendor:   models.VendorHuawei,
 			action:   ActionDot1xEnable,
 			params:   PortTemplateParams{InterfaceName: "GE0/0/1"},
-			expected: []string{"dot1x enable"},
+			expected: []string{"interface GE0/0/1", "authentication-profile dot1x"},
 		},
 		{
 			name:     "huawei_dot1x_disable",
 			vendor:   models.VendorHuawei,
 			action:   ActionDot1xDisable,
 			params:   PortTemplateParams{InterfaceName: "GE0/0/1"},
-			expected: []string{"undo dot1x enable"},
+			expected: []string{"interface GE0/0/1", "undo authentication-profile dot1x"},
 		},
 
-		// H3C Comware (5) — 与 Huawei VRP 命令同源 (D-08)
+		// H3C Comware (5) — 与 Huawei VRP 命令同源 (D-08)，shutdown/undo/dot1x 进 interface view
 		{
 			name:     "h3c_shutdown",
 			vendor:   models.VendorH3C,
 			action:   ActionShutdown,
 			params:   PortTemplateParams{InterfaceName: "GE0/0/1"},
-			expected: []string{"shutdown"},
+			expected: []string{"interface GE0/0/1", "shutdown"},
 		},
 		{
 			name:     "h3c_undo_shutdown",
 			vendor:   models.VendorH3C,
 			action:   ActionUndoShutdown,
 			params:   PortTemplateParams{InterfaceName: "GE0/0/1"},
-			expected: []string{"undo shutdown"},
+			expected: []string{"interface GE0/0/1", "undo shutdown"},
 		},
 		{
 			name:     "h3c_description",
@@ -82,30 +82,30 @@ func TestRenderCommand_VendorActionMatrix(t *testing.T) {
 			vendor:   models.VendorH3C,
 			action:   ActionDot1xEnable,
 			params:   PortTemplateParams{InterfaceName: "GE0/0/1"},
-			expected: []string{"dot1x enable"},
+			expected: []string{"interface GE0/0/1", "dot1x enable"},
 		},
 		{
 			name:     "h3c_dot1x_disable",
 			vendor:   models.VendorH3C,
 			action:   ActionDot1xDisable,
 			params:   PortTemplateParams{InterfaceName: "GE0/0/1"},
-			expected: []string{"undo dot1x enable"},
+			expected: []string{"interface GE0/0/1", "undo dot1x enable"},
 		},
 
-		// Ruijie RGOS (5) — Cisco 风格 dot1x / description (D-07)
+		// Ruijie RGOS (5) — shutdown/undo 同样需进 interface view（dot1x/description 已有前缀）
 		{
 			name:     "ruijie_shutdown",
 			vendor:   models.VendorRuijie,
 			action:   ActionShutdown,
 			params:   PortTemplateParams{InterfaceName: "GigabitEthernet0/0/1"},
-			expected: []string{"shutdown"},
+			expected: []string{"interface GigabitEthernet0/0/1", "shutdown"},
 		},
 		{
 			name:     "ruijie_undo_shutdown",
 			vendor:   models.VendorRuijie,
 			action:   ActionUndoShutdown,
 			params:   PortTemplateParams{InterfaceName: "GigabitEthernet0/0/1"},
-			expected: []string{"no shutdown"},
+			expected: []string{"interface GigabitEthernet0/0/1", "no shutdown"},
 		},
 		{
 			name:     "ruijie_description",

@@ -1,8 +1,15 @@
 <Huawei>
-<Huawei>screen-length 0 temporary
-<Huawei>system-view
-[Huawei]interface GE0/0/1
-[Huawei-GE0/0/1]undo dot1x enable
-[Huawei-GE0/0/1]quit
-[Huawei]return
+screen-length 0 temporary
+<Huawei>
+system-view
+[Huawei]
+interface GigabitEthernet0/0/1
+[Huawei-GigabitEthernet0/0/1]
+[Huawei-GigabitEthernet0/0/1]
+undo authentication-profile dot1x
+[Huawei-GigabitEthernet0/0/1]
+[Huawei-GigabitEthernet0/0/1]
+quit
+[Huawei]
+return
 <Huawei>

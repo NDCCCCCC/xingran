@@ -46,26 +46,40 @@ var (
 // D-07: 锐捷 dot1x / description 走 Cisco 风格显式进 interface view。
 var vendorPortTemplate = map[models.DeviceVendor]map[PortAction]func(PortTemplateParams) ([]string, error){
 	models.VendorHuawei: {
-		ActionShutdown:     func(p PortTemplateParams) ([]string, error) { return []string{"shutdown"}, nil },
-		ActionUndoShutdown: func(p PortTemplateParams) ([]string, error) { return []string{"undo shutdown"}, nil },
+		ActionShutdown:     func(p PortTemplateParams) ([]string, error) { return wrapInterface(p, "shutdown") },
+		ActionUndoShutdown: func(p PortTemplateParams) ([]string, error) { return wrapInterface(p, "undo shutdown") },
 		ActionDescription:  renderH3CDescription,
-		ActionDot1xEnable:  func(p PortTemplateParams) ([]string, error) { return []string{"dot1x enable"}, nil },
-		ActionDot1xDisable: func(p PortTemplateParams) ([]string, error) { return []string{"undo dot1x enable"}, nil },
+		// 华为 VRP 模板式 802.1X：接口下应用 authentication-profile（profile 名约定为 dot1x）。
+		// 不同于早期版本接口下的 dot1x enable，VRP 新版本统一走 authentication-profile 模板，
+		// profile 名需与设备上预配置的 authentication-profile 名称一致（本系统约定 dot1x）。
+		ActionDot1xEnable:  func(p PortTemplateParams) ([]string, error) { return wrapInterface(p, "authentication-profile dot1x") },
+		ActionDot1xDisable: func(p PortTemplateParams) ([]string, error) { return wrapInterface(p, "undo authentication-profile dot1x") },
 	},
 	models.VendorH3C: {
-		ActionShutdown:     func(p PortTemplateParams) ([]string, error) { return []string{"shutdown"}, nil },
-		ActionUndoShutdown: func(p PortTemplateParams) ([]string, error) { return []string{"undo shutdown"}, nil },
+		ActionShutdown:     func(p PortTemplateParams) ([]string, error) { return wrapInterface(p, "shutdown") },
+		ActionUndoShutdown: func(p PortTemplateParams) ([]string, error) { return wrapInterface(p, "undo shutdown") },
 		ActionDescription:  renderH3CDescription,
-		ActionDot1xEnable:  func(p PortTemplateParams) ([]string, error) { return []string{"dot1x enable"}, nil },
-		ActionDot1xDisable: func(p PortTemplateParams) ([]string, error) { return []string{"undo dot1x enable"}, nil },
+		ActionDot1xEnable:  func(p PortTemplateParams) ([]string, error) { return wrapInterface(p, "dot1x enable") },
+		ActionDot1xDisable: func(p PortTemplateParams) ([]string, error) { return wrapInterface(p, "undo dot1x enable") },
 	},
 	models.VendorRuijie: {
-		ActionShutdown:     func(p PortTemplateParams) ([]string, error) { return []string{"shutdown"}, nil },
-		ActionUndoShutdown: func(p PortTemplateParams) ([]string, error) { return []string{"no shutdown"}, nil },
+		ActionShutdown:     func(p PortTemplateParams) ([]string, error) { return wrapInterface(p, "shutdown") },
+		ActionUndoShutdown: func(p PortTemplateParams) ([]string, error) { return wrapInterface(p, "no shutdown") },
 		ActionDescription:  renderRuijieDescription,
 		ActionDot1xEnable:  renderRuijieDot1xEnable,
 		ActionDot1xDisable: renderRuijieDot1xDisable,
 	},
+}
+
+// wrapInterface 在指定接口视图下下发单条命令。
+//
+// 华为 VRP / H3C Comware / 锐捷 RGOS 的 shutdown / dot1x 等命令都必须在 interface view
+// 下执行；scrapli SendConfig 仅进入系统视图（config mode），必须显式下发 `interface <name>`
+// 进入接口视图后命令才会被设备接受。缺少此前缀会导致设备返回 "Unrecognized command" 而
+// 端口状态不变 —— 这是端口写命令"必超时 + 端口无变化"的根因（shutdown/undo/dot1x 早期
+// 模板漏写 interface 前缀，仅 description/锐捷 dot1x 写了）。
+func wrapInterface(p PortTemplateParams, cmd string) ([]string, error) {
+	return []string{fmt.Sprintf("interface %s", p.InterfaceName), cmd}, nil
 }
 
 // RenderCommand 公共入口：vendor × action → 命令序列。

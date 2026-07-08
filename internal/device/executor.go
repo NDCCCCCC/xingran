@@ -149,8 +149,18 @@ func (e *DeviceExecutor) ExecuteMultipleOnDevice(ctx context.Context, deviceID s
 }
 
 // ExecuteCustom 执行自定义任务
+//
+// 任务完成信号（修复端口写操作 30s 必超时 bug）：
+// executeFunc 返回后 scheduler 会调用 task.Callback（成功传 nil，失败传 err），
+// 本函数在 Callback 内 close(done) 作为"任务已结束"信号，select 命中 <-done 立即返回 taskErr。
+//
+// 早期实现仅用 ticker 轮询 `taskErr != nil`（只覆盖失败路径），成功时 taskErr 恒为 nil，
+// 导致循环空转到 waitCtx.Done()（timeout + 1min buffer ≈ 90s）才返回；
+// 而前端 networkApi axios timeout=30s 先于后端返回，触发 ECONNABORTED "请求超时"。
+// 此处与 SubmitAndWait 的 resultCh + select 模式对齐。
 func (e *DeviceExecutor) ExecuteCustom(ctx context.Context, deviceID string, executeFunc func(context.Context, *PooledConnection) error, timeout time.Duration) error {
 	var taskErr error
+	done := make(chan struct{})
 
 	// 创建任务
 	task := &DeviceTask{
@@ -160,6 +170,7 @@ func (e *DeviceExecutor) ExecuteCustom(ctx context.Context, deviceID string, exe
 		Execute:  executeFunc,
 		Callback: func(err error) {
 			taskErr = err
+			close(done)
 		},
 	}
 
@@ -168,23 +179,16 @@ func (e *DeviceExecutor) ExecuteCustom(ctx context.Context, deviceID string, exe
 		return err
 	}
 
-	// 等待任务完成
+	// 等待任务完成：成功/失败立即返回（<-done），超时由 timeout+buffer 兜底
 	waitCtx, cancel := context.WithTimeout(ctx, timeout+deviceExecutorTimeoutBuffer)
 	defer cancel()
 
-	// 使用 ticker 进行轮询
-	ticker := time.NewTicker(100 * time.Millisecond)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-waitCtx.Done():
-			return fmt.Errorf("任务执行超时: taskID=%s", task.ID)
-		case <-ticker.C:
-			if taskErr != nil {
-				return taskErr
-			}
-		}
+	select {
+	case <-waitCtx.Done():
+		return fmt.Errorf("任务执行超时: taskID=%s", task.ID)
+	case <-done:
+		// 任务已结束（Callback 已设 taskErr：成功=nil，失败=err）
+		return taskErr
 	}
 }
 

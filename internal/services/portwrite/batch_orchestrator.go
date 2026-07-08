@@ -8,7 +8,7 @@ import (
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 )
 
-// BatchResult 批量写操作结果（D-14 + BATCH-03）。
+// BatchResult 批量写操作结果（D-14 + BATCH-03 + DB-REFRESH）。
 //
 // 三个切片同时存在（即便为空也初始化为 []PortResult{} 而非 nil），
 // 保证 JSON 序列化输出 [] 而非 null — 前端无需做 null 守卫。
@@ -16,6 +16,15 @@ type BatchResult struct {
 	Succeeded []PortResult `json:"succeeded"`
 	Failed    []PortResult `json:"failed"`
 	Skipped   []PortResult `json:"skipped"`
+}
+
+// batchRequiresRefresh 判断批量结果是否需要触发端口状态刷新（2026-07-08 新增）。
+//
+// 只在有端口确实完成写操作（Succeeded 非空）时刷新 —— fail-fast 全部失败、pre-state
+// 全部 NoOp 跳过、empty 路径都不消耗 SSH 流量，无需触碰设备。
+// 失败/跳过路径不刷新可避免无意义的 SSH 往返（如果 SSH 已因前面成功连接池活跃）。
+func batchRequiresRefresh(result *BatchResult) bool {
+	return result != nil && len(result.Succeeded) > 0
 }
 
 // BatchWritePorts 批量写主入口（D-12 + D-17）。
@@ -31,6 +40,21 @@ type BatchResult struct {
 //
 // D-17 fail-fast：任意端口 executeWrite 返回 transport/device_rejected 错误，立即 break。
 // 剩余未执行端口不进任何数组，前端可二次发起。
+//
+// ★ 2026-07-08 移除 sendInterfaceExitCleanup（Bug #2 假成功真凶）：
+// 此前每个非末尾端口后插入 `quit` cleanup cmd 让设备从 (config-if-<X>)# 退到 (config)#，
+// 本意是解决"锐捷拒绝嵌套 interface view"假说。实测：quit 命令与设备内部状态机有 race，
+// cleanup 期间致后续 2/3 端口的 SendConfigs 假成功（scrapli 看到 prompt 继续，但实际
+// shutdown 命令在错 view 上下文里被忽略，设备 admin_status 仍 up）。
+//
+// 单端口测试对照（GE4/27, 19:48:50 admin=down 真成功）证明 scrapli 本身无问题 —
+// 单独 `interface X | shutdown` 一条 SendConfigs 完美生效。batch 假成功 100% 来自
+// cleanup 副作用，不是嵌套本身。
+//
+// 经用户确认 Ruijie RS8607E 实际支持连续 `interface X | action | interface Y | action`
+// 嵌套（与 Cisco/H3C/华为一致）— 不再需要 cleanup。本轮直接删 sendInterfaceExitCleanup
+// 全部代码，每 port 一次独立 ExecuteCustom + SendConfigs([interface X, action])，
+// scrapli 自动处理 prompt 切换 + 跨 ExecuteCustom 复用 SSH 连接池的 view 状态。
 func (s *portWriteServiceImpl) BatchWritePorts(ctx context.Context, req BatchWriteRequest, operator string) (*BatchResult, error) {
 	// D-12 detached 30min context (Pitfall #5 mitigation)
 	ctx, cancel := context.WithTimeout(context.Background(), batchDetachedTimeout)
@@ -132,6 +156,14 @@ func (s *portWriteServiceImpl) BatchWritePorts(ctx context.Context, req BatchWri
 			continue
 		}
 		result.Succeeded = append(result.Succeeded, *writeResult)
+	}
+
+	// 2026-07-08 端口刷新：批次内所有写操作完成后，对 req.DeviceID 触发一次性
+	// portcollection.CollectDevice —— 后台 goroutine fire-and-forget，HTTP response
+	// 不被 5-15s 采集阻塞；详见 refreshPortStatus 注释。失败仅日志不影响返回。
+	// 仅有 Succeeded > 0 才刷新（fail-fast 全部失败、pre-state 全部 NoOp 跳过无需触碰设备）。
+	if batchRequiresRefresh(result) && req.DeviceID != "" {
+		s.refreshPortStatus(ctx, req.DeviceID)
 	}
 
 	return result, nil

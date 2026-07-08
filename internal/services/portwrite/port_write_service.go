@@ -9,8 +9,8 @@ import (
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
-	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
+	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -28,11 +28,16 @@ var (
 // Action 是 Phase 50 PortAction 的别名，避免双 import 路径冲突。
 type Action = portcollection.PortAction
 
-// PortResult 单端口写操作结果（D-14 + D-15）。
+// PortResult 单端口写操作结果（D-14 + D-15 + DB-REFRESH）。
+//
+// DeviceID 字段用于写后端口状态刷新（refreshPortStatus）：把 writeSinglePort 拿到的 deviceID
+// 透传到 caller,使单端口 5 个方法在执行成功后能精确知道要触发哪个设备的 portcollection.CollectDevice。
+// 批次路径不需要这个字段（BatchWritePorts 自己持有 req.DeviceID）。
 //
 // CommandSent 不脱敏（audit 真相源），Phase 52 handler 负责在 HTTP 响应中按字段过滤。
 type PortResult struct {
 	PortID       string `json:"portId"`
+	DeviceID     string `json:"deviceId,omitempty"`
 	Action       Action `json:"action"`
 	Status       string `json:"status"` // "succeeded" | "failed" | "skipped"
 	NoOp         bool   `json:"noOp"`
@@ -59,7 +64,7 @@ const (
 
 // 内部接口（D-18 + RESEARCH Open Questions #1+#2 — 为 testify/mock 提供注入点）。
 //
-// 工厂函数 NewPortWriteService 接受 *device.DeviceExecutor / *services.DeviceInfoCollectionService
+// 工厂函数 NewPortWriteService 接受 *device.DeviceExecutor / *portcollection.CollectionService
 // concrete 指针（Phase 52 router 兼容），内部赋值给 interface 字段。
 
 // portWriteExecutor 暴露 DeviceExecutor.ExecuteCustom 单方法（其余 ExecuteOnDevice/ExecuteMultipleOnDevice 不被本 service 使用）。
@@ -67,9 +72,17 @@ type portWriteExecutor interface {
 	ExecuteCustom(ctx context.Context, deviceID string, fn func(context.Context, *device.PooledConnection) error, timeout time.Duration) error
 }
 
-// portWriteCollectionSvc 暴露 DeviceInfoCollectionService.Enqueue 单方法。
-type portWriteCollectionSvc interface {
-	Enqueue(deviceID string) error
+// portWritePortCollectionSvc 暴露 portcollection.CollectionService.CollectDevice 单方法。
+//
+// 设计变更（2026-07-08 portwrite-shutdown-db-refresh bug 修复）：
+// 原先 PortWriteService 注入的是 *services.DeviceInfoCollectionService.Enqueue(deviceID)，
+// 但该服务只采集设备级元信息（Model/SN/板卡/光模块），**不更新 sys_device_port_status**，
+// 致 shutdown 成功后 DB 行 admin_status 一直保持 "up"，前端 loadPortStatus() 拉到陈旧数据。
+//
+// 正确服务是 portcollection.CollectionService.CollectDevice(ctx, deviceID) —— 同步阻塞
+// 单设备端口采集（5-15s），完成后 sys_device_port_status 行已反映最新设备状态。
+type portWritePortCollectionSvc interface {
+	CollectDevice(ctx context.Context, deviceID string) (*portcollection.CollectionResult, error)
 }
 
 // PortWriteService 端口写 service 接口（6 方法 — 5 单端口 + 1 批量）。
@@ -84,48 +97,72 @@ type PortWriteService interface {
 
 // portWriteServiceImpl 私有实现。字段类型为 interface 以启用 testify/mock（D-18）。
 type portWriteServiceImpl struct {
-	db             *gorm.DB
-	deviceExecutor portWriteExecutor
-	collectionSvc  portWriteCollectionSvc
+	db                *gorm.DB
+	deviceExecutor    portWriteExecutor
+	portCollectionSvc portWritePortCollectionSvc
 }
 
-// NewPortWriteService 工厂函数：Phase 52 router 通过 *device.DeviceExecutor / *services.DeviceInfoCollectionService
+// NewPortWriteService 工厂函数：Phase 52 router 通过 *device.DeviceExecutor / *portcollection.CollectionService
 // concrete 类型注入；内部赋值给 interface 字段。
+//
+// 第三个参数原先是 *services.DeviceInfoCollectionService（采集设备级元信息）——
+// 但 4 层 bug 修复后仍无法刷新 sys_device_port_status。2026-07-08 修复：替换为
+// portcollection.CollectionService，让 writeSinglePort 成功后调用 CollectDevice(ctx, deviceID)
+// 同步刷新端口表，前端 loadPortStatus() 能拉到最新 admin_status/oper_status。
 func NewPortWriteService(
 	db *gorm.DB,
 	deviceExecutor *device.DeviceExecutor,
-	collectionSvc *services.DeviceInfoCollectionService,
+	portCollectionSvc *portcollection.CollectionService,
 ) PortWriteService {
 	return &portWriteServiceImpl{
-		db:             db,
-		deviceExecutor: deviceExecutor,
-		collectionSvc:  collectionSvc,
+		db:                db,
+		deviceExecutor:    deviceExecutor,
+		portCollectionSvc: portCollectionSvc,
 	}
 }
 
 // Shutdown 关闭单端口。
 func (s *portWriteServiceImpl) Shutdown(ctx context.Context, portID string, operator string) (*PortResult, error) {
-	return s.writeSinglePort(ctx, portID, portcollection.ActionShutdown, "", operator)
+	return s.writeAndRefresh(ctx, portID, portcollection.ActionShutdown, "", operator)
 }
 
 // UndoShutdown 取消关闭。
 func (s *portWriteServiceImpl) UndoShutdown(ctx context.Context, portID string, operator string) (*PortResult, error) {
-	return s.writeSinglePort(ctx, portID, portcollection.ActionUndoShutdown, "", operator)
+	return s.writeAndRefresh(ctx, portID, portcollection.ActionUndoShutdown, "", operator)
 }
 
 // SetDescription 设置端口描述（desc 由 RenderCommand 入口校验长度 ≤ 80）。
 func (s *portWriteServiceImpl) SetDescription(ctx context.Context, portID string, desc string, operator string) (*PortResult, error) {
-	return s.writeSinglePort(ctx, portID, portcollection.ActionDescription, desc, operator)
+	return s.writeAndRefresh(ctx, portID, portcollection.ActionDescription, desc, operator)
 }
 
 // EnableDot1x 启用 802.1X。
 func (s *portWriteServiceImpl) EnableDot1x(ctx context.Context, portID string, operator string) (*PortResult, error) {
-	return s.writeSinglePort(ctx, portID, portcollection.ActionDot1xEnable, "", operator)
+	return s.writeAndRefresh(ctx, portID, portcollection.ActionDot1xEnable, "", operator)
 }
 
 // DisableDot1x 停用 802.1X。
 func (s *portWriteServiceImpl) DisableDot1x(ctx context.Context, portID string, operator string) (*PortResult, error) {
-	return s.writeSinglePort(ctx, portID, portcollection.ActionDot1xDisable, "", operator)
+	return s.writeAndRefresh(ctx, portID, portcollection.ActionDot1xDisable, "", operator)
+}
+
+// writeAndRefresh 单端口方法的公共外壳：writeSinglePort → 成功后调 refreshPortStatus。
+//
+// 2026-07-08 修复关键设计：原 executeWrite 内部调 s.collectionSvc.Enqueue(deviceID)，
+// 触发的是 DeviceInfoCollectionService（采设备级，不碰 sys_device_port_status）——
+// 写后 DB 不更新致前端看到 stale 数据。改为 writeAndRefresh 包一层，成功后调
+// portcollection.CollectDevice 刷新端口表（后台 goroutine，fire-and-forget，HTTP
+// response 不会被 5-15s 的采集阻塞；详见 refreshPortStatus 注释）。
+//
+// 批次路径走 BatchWritePorts 内部循环 + 末尾一次性 refresh，避免 50 次重复采集同设备。
+func (s *portWriteServiceImpl) writeAndRefresh(
+	ctx context.Context, portID string, action Action, desc, operator string,
+) (*PortResult, error) {
+	result, err := s.writeSinglePort(ctx, portID, action, desc, operator)
+	if err == nil && result != nil && result.Status == "succeeded" && result.DeviceID != "" {
+		s.refreshPortStatus(ctx, result.DeviceID)
+	}
+	return result, err
 }
 
 // writeSinglePort 公共单端口路径：DB 预查询 → PORT-06 pre-state 检测 → executeWrite。
@@ -154,10 +191,36 @@ func (s *portWriteServiceImpl) writeSinglePort(
 	return s.executeWrite(ctx, port.ID, port.DeviceID, action, desc, operator, port.InterfaceName)
 }
 
-// executeWrite 实际下发写命令：RenderCommand → ExecuteCustom → parseConfigError → success-only Enqueue。
+// executeWrite 实际下发写命令：RenderCommand → ExecuteCustom → parseConfigError。
 //
-// Pitfall #6：Enqueue 仅在成功路径触发；executeErr != nil 或 parseErr != nil 都直接返回，
-// 不触发采集（避免 Enqueue 风暴 + 1-2s 后无意义的后台轮询）。
+// 关键变更（2026-07-08 portwrite-shutdown-db-refresh bug 修复）：
+// 原 success path 调 `s.collectionSvc.Enqueue(deviceID)` 触发 DeviceInfoCollectionService，
+// 但该服务只采设备级信息（Model/SN/板卡/光模块），不碰 sys_device_port_status——
+// 致前端 loadPortStatus() 拉到陈旧 admin_status。
+//
+// 新方案：executeWrite 不再调任何 refresh。刷新由调用者（writeAndRefresh 单端口方法 /
+// BatchWritePorts 批次末尾）通过 refreshPortStatus 集中触发，共享同一设备只采一次。
+//
+// ★ 2026-07-08 V6 修正：移除 V5 错误的 `end` prefix。
+//
+//	V5 基于错误假设"设备拒绝嵌套 interface view，需 end 强制回 (config)# 顶层"，
+//	且注释误称"华为/H3C 用 quit，Ruijie end 通杀"。经用户三次纠正，真相：
+//	  - 锐捷 RGOS 退出 view 用 `exit`（退一级），华为 VRP / H3C Comware 用 `quit`；
+//	  - `end` 在三家都会从 config 子视图直接退到 privileged EXEC（#），破坏 scrapli
+//	    跨 ExecuteCustom 的 priv 状态跟踪 —— SendConfigs 假设目标 priv=configuration，
+//	    发完 end 实际掉到 privileged EXEC，后续 cmd 在错 priv 下执行；
+//	  - 锐捷 / 华为 / H3C / 思科 IOS 均支持连续 `interface X | action | interface Y`
+//	    嵌套（在 (config-if-X)# 下发 interface Y 直接切换到新接口视图），无需任何
+//	    cleanup / 退出前缀。
+//
+//	真实修复在 ruijie_rgos_patched.yaml：configuration priv 的 prompt pattern 加空格
+//	+ 扩容长度（[\+\w.\-@/:+ ]{0,64}），匹配 `Ruijie(config-if-GigabitEthernet 4/18)#`
+//	（接口名带空格）。prompt 识别正确后，scrapli 跨 ExecuteCustom 复用 SSH 连接时能
+//	正确跟踪 view 切换，连续 interface 嵌套天然成立。
+//
+//	V5 测试 17/17 真实 shutdown 能通过，是因为 scrapli SendConfigs 前的 AcquirePriv
+//	在 end 掉到 privileged EXEC 后会自动 escalate 回 configuration（多一次来回开销），
+//	表面 work 但每 port 多 2 条 SSH 命令 + priv 状态抖动，非正确解法。
 func (s *portWriteServiceImpl) executeWrite(
 	ctx context.Context, portID, deviceID string, action Action, desc, operator, interfaceName string,
 ) (*PortResult, error) {
@@ -171,7 +234,7 @@ func (s *portWriteServiceImpl) executeWrite(
 	}
 
 	cmds, err := portcollection.RenderCommand(dev.Vendor, action, portcollection.PortTemplateParams{
-		InterfaceName: interfaceName,
+		InterfaceName: expandInterfaceName(interfaceName, dev.Vendor),
 		Description:   desc,
 	})
 	if err != nil {
@@ -183,11 +246,18 @@ func (s *portWriteServiceImpl) executeWrite(
 	var lastResp *device.Response
 	executeErr := s.deviceExecutor.ExecuteCustom(ctx, deviceID, func(execCtx context.Context, pc *device.PooledConnection) error {
 		wrapper := pc.GetWrapper()
+		// cmds = [interface X, <action>]，依赖三家厂商（锐捷/华为/H3C）均支持的
+		// 嵌套 interface view + ruijie_rgos_patched.yaml 的 prompt pattern 修补，
+		// 跨 ExecuteCustom 复用 SSH 连接时 scrapli 能正确跟踪 view 切换，无需
+		// 任何退出/cleanup 前缀（详见函数头 V6 修正注释）。
 		responses, sendErr := wrapper.SendConfigs(cmds)
 		if sendErr != nil {
 			return sendErr
 		}
 		if len(responses) > 0 {
+			// cmds 最后一条即业务写命令（shutdown / no shutdown / undo shutdown /
+			// description / dot1x），其 response 用于 parseConfigError 判定设备
+			// 是否真的执行成功。
 			lastResp = responses[len(responses)-1]
 		}
 		return nil
@@ -196,6 +266,7 @@ func (s *portWriteServiceImpl) executeWrite(
 	if executeErr != nil {
 		return &PortResult{
 			PortID:      portID,
+			DeviceID:    deviceID,
 			Action:      action,
 			Status:      "failed",
 			Error:       executeErr.Error(),
@@ -210,6 +281,7 @@ func (s *portWriteServiceImpl) executeWrite(
 		if parseErr := parseConfigError(lastResp); parseErr != nil {
 			return &PortResult{
 				PortID:      portID,
+				DeviceID:    deviceID,
 				Action:      action,
 				Status:      "failed",
 				Error:       parseErr.Error(),
@@ -218,15 +290,91 @@ func (s *portWriteServiceImpl) executeWrite(
 		}
 	}
 
-	// 成功路径：D-15 + AUDIT-04，触发后台采集（fire-and-forget）。
-	if s.collectionSvc != nil {
-		_ = s.collectionSvc.Enqueue(deviceID)
-	}
-
+	// 成功路径：仅返回状态，**不**触发采集（避免 50 端口批次重复采集同设备）。
+	// 刷新责任由 caller 承担（writeAndRefresh 末尾或 BatchWritePorts 整体结束）。
 	return &PortResult{
 		PortID:      portID,
+		DeviceID:    deviceID,
 		Action:      action,
 		Status:      "succeeded",
 		CommandSent: commandsJoined,
 	}, nil
+}
+
+// refreshPortStatus 写后端口状态同步刷新（2026-07-08 新增，2026-07-08 改 fire-and-forget）。
+//
+// 按设备粒度刷新（端口写入的不变式，2026-07-08 用户确认）：
+//
+//	网络设备 SSH 端口采集的开销 = 1 次 SSH 连接 + 固定几条命令
+//	（display interface description / display interface brief + dot1x / port-security），
+//	不论只查 1 个端口还是查 N 个端口命令集完全一样；查"1 个端口"反而需要 filter 输出，
+//	得不偿失。所以本函数**不**接受 portID 形参，只以 deviceID 为粒度整设备刷新，
+//	DB 里 sys_device_port_status 该 device 全部端口行都会被同步更新。
+//
+// ★ 2026-07-08 修复页面空白 bug 时改为 fire-and-forget：调
+// portcollection.CollectionService.CollectDevice 在后台 goroutine 中跑，
+// HTTP response 立即返回，**不再被 5-15s 的 SSH 采集阻塞**。
+//
+//   - 用 context.Background() + 30s timeout 替代请求 ctx（detached 模式），
+//     HTTP 断开不影响后台刷新继续完成，对齐 BatchWritePorts batchDetachedTimeout
+//     模式（同文件 batch_orchestrator.go:45-46）。
+//   - 失败仅日志，不影响 PortResult。失败兜底：下次 cron 'port_collection' (5min) 兜底。
+//   - 调用方：writeAndRefresh 单端口方法 / BatchWritePorts 批次末尾。**调用方不要
+//     await** —— 本函数立即返回；CollectDevice 在后台跑完即结束。
+//
+// ⚠ 反模式告警：本函数签名只收 deviceID，请勿扩展为 (ctx, deviceID, portIDs) 等"精准刷新"形态。
+//
+// ctx 参数保留仅为接口兼容性（caller 现状传请求 ctx）；fire-and-forget 后实际**不**用 ctx，
+// 内部 detached 30s context 由 context.Background() 派生。
+func (s *portWriteServiceImpl) refreshPortStatus(_ context.Context, deviceID string) {
+	if s.portCollectionSvc == nil || deviceID == "" {
+		return
+	}
+	// detached context：30s 超时（典型单设备端口采集 5-15s 留足余量），不继承 HTTP ctx
+	// 防止 client disconnect 导致 SSH 采集被中途取消
+	refreshCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	go func() {
+		defer cancel()
+		if _, err := s.portCollectionSvc.CollectDevice(refreshCtx, deviceID); err != nil {
+			applogger.Warnf("[portwrite] 写后端口状态刷新失败 [deviceID=%s]: %v", deviceID, err)
+		}
+	}()
+}
+
+// expandInterfaceName 把归一化短名还原成设备 CLI 全名（NormalizeInterfaceName 的反向，仅写命令用）。
+//
+// 采集时 normalize.InterfaceName 把设备全名折叠成大写短名（GE4/18）入库；但写命令需设备 CLI
+// 认的原始全名，否则设备返回 "% Unknown command"。
+//   - 锐捷 RGOS：接口名带空格（GigabitEthernet 4/18）—— 采集 show display 输出带空格
+//   - 华为 VRP / H3C Comware：无空格（GigabitEthernet4/18）
+//
+// 未识别前缀（Vlan/Loopback 等逻辑接口）原样返回。
+// 与 normalize.InterfaceName（正向、采集用）分离，避免反向展开污染采集链路
+// （memory normalize-iface-reverse-expand-trap 警告的陷阱）。
+func expandInterfaceName(name string, vendor models.DeviceVendor) string {
+	if name == "" {
+		return name
+	}
+	type rep struct{ short, full string }
+	// 长/易冲突前缀优先（XGE 在 GE 前），避免短前缀误匹配
+	reps := []rep{
+		{"XGE", "TenGigabitEthernet"},
+		{"HGE", "HundredGigE"},
+		{"TWE", "TwentyFiveGigE"},
+		{"FOE", "FortyGigE"},
+		{"GE", "GigabitEthernet"},
+		{"FE", "FastEthernet"},
+	}
+	upper := strings.ToUpper(name)
+	sep := ""
+	if vendor == models.VendorRuijie {
+		sep = " " // 锐捷接口名带空格
+	}
+	for _, r := range reps {
+		if strings.HasPrefix(upper, r.short) {
+			rest := name[len(r.short):] // 数字部分，保留原值
+			return r.full + sep + rest
+		}
+	}
+	return name
 }

@@ -47,7 +47,7 @@ export const ACTION_TITLE: Record<
   string
 > = {
   shutdown: "关闭端口",
-  undo_shutdown: "取消关闭",
+  undo_shutdown: "启用端口",
   description: "修改描述",
   dot1x_enable: "启用 802.1X",
   dot1x_disable: "停用 802.1X",

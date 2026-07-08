@@ -18,7 +18,7 @@
 import { useEffect, useState } from "react";
 import { Modal, Form, Select, Input, App } from "antd";
 import type { MessageInstance } from "antd/es/message/interface";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import type { DevicePortStatus, PortWriteAction } from "@/types/network";
 import {
   writeShutdown,
@@ -55,19 +55,36 @@ export interface PortWriteModalProps {
 /**
  * D-10 审计跳转 Toast helper (单端口 + 批量共用)
  *
- * antd message.success 不支持链接, 用 message.open({ content: <ReactNode> }) + <Link> onClick navigate。
+ * antd message.success 不支持链接, 用 message.open({ content: <ReactNode> }) + 链接 onClick navigate。
  * 端口管理是 Phase 52 handler ModulePortWrite 常量 (port_write_handler.go:25), 与 sys_oper_log.title 列匹配。
+ *
+ * ★ 2026-07-08 Bug #1 修复:
+ * 原实现用 react-router <Link to=...> + onClick navigate。antd message 用 React Portal 把
+ * content 渲染到 document.body（不在 React Router 树内），<Link> 内部 useContext(RouterContext)
+ * 拿到 null → throw 'Cannot destructure basename of null useContext' → React 整树 unmount
+ * → 整个端口管理页空白（地址栏 URL 正确但页面 unmounted）。
+ *
+ * 改用原生 <a href> + onClick 拦截:
+ *   - <a> 不依赖任何 React Context，portal 渲染安全
+ *   - e.preventDefault() 阻止浏览器硬跳转
+ *   - message.destroy() 路由切换前关 toast，避免 portal 在另一个路由下残留 DOM
+ *   - navigate() 走 SPA history.pushState，页面不刷新
  */
 export function showAuditLinkToast(message: MessageInstance, navigate: (path: string) => void): void {
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>): void => {
+    e.preventDefault();
+    message.destroy();
+    navigate(AUDIT_LOG_PATH);
+  };
   message.open({
     type: "success",
     duration: 5,
     content: (
       <span>
         操作成功，
-        <Link to={AUDIT_LOG_PATH} onClick={() => navigate(AUDIT_LOG_PATH)}>
+        <a href={AUDIT_LOG_PATH} onClick={handleClick}>
           查看审计日志
-        </Link>
+        </a>
       </span>
     ),
   });

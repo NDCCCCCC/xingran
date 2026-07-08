@@ -236,10 +236,11 @@ func TestPortWriteHandler_Shutdown_Success(t *testing.T) {
 	_ = json.Unmarshal(audit.AfterValue, &after)
 	assert.Equal(t, "down", after["admin_status"])
 
-	// operlog.Record 被调用一次，module="端口管理"，OperType=OperTypeStatus(10)
+	// operlog.Record 被调用一次，module="端口管理"，OperType=OperTypeDisable(13)
+	// (Shutdown 关闭端口语义上是 Disable, 比 OperTypeStatus(10) 通用状态变更更精确)
 	assert.Equal(t, 1, mockOperLog.recordAsyncCalls)
 	assert.Equal(t, "端口管理", mockOperLog.lastTitle)
-	assert.Equal(t, 10, mockOperLog.lastBusinessType)
+	assert.Equal(t, 13, mockOperLog.lastBusinessType)
 	// oper_param 含 audit_ids
 	assert.NotNil(t, mockOperLog.lastOperParam)
 	assert.Contains(t, *mockOperLog.lastOperParam, audit.ID)
