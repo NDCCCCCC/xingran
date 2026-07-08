@@ -143,16 +143,26 @@ func (h *PortWriteHandler) execSinglePort(
 
 	result, err := serviceCall(c.Request.Context(), req.PortID, operator, req.Description)
 	if err != nil {
-		// sentinel 路径：4xx/500，不写 audit、不调 operlog（RESEARCH §3.3 + acceptance）
+		// sentinel 路径（端口/设备不存在）：4xx，不写 audit、不调 operlog
 		switch {
 		case errors.Is(err, portwrite.ErrPortNotFound):
 			response.Error(c, http.StatusNotFound, "端口不存在")
+			return
 		case errors.Is(err, portwrite.ErrDeviceNotFound):
 			response.Error(c, http.StatusNotFound, "设备不存在")
-		default:
-			response.Error(c, http.StatusInternalServerError, err.Error())
+			return
 		}
-		return
+		// 非 sentinel error：设备执行失败（拒绝/transport）或系统错误（DB/RenderCommand）。
+		// 有 failed result → fall through 走 audit + 200（handler 设计：Status==failed
+		//   记审计后返回，前端能看到失败原因 + 审计可追溯）。
+		//   同时修复 response.Error(c, int, ...) 的 int→400 陷阱：toAppError 的 case int
+		//   强制 HTTPStatus=BadRequest，传 500 整数会变 400（2026-07-09 华为 failed 400 真因）。
+		// 无 result → 系统错误，500（传 err 作 error 类型，走 toAppError error 分支→500）
+		if result == nil || result.Status != "failed" {
+			response.Error(c, err, err.Error())
+			return
+		}
+		// result.Status == "failed"：fall through 到下方 audit + operlog + 200
 	}
 
 	// 关键分支：result.Status=="failed" 不走 response.Error，继续 audit + operlog + 200

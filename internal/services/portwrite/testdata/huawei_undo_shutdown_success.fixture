@@ -3,7 +3,7 @@ screen-length 0 temporary
 <Huawei>
 system-view
 [Huawei]
-interface GigabitEthernet0/0/1
+interface GigabitEthernet 0/0/1
 [Huawei-GigabitEthernet0/0/1]
 [Huawei-GigabitEthernet0/0/1]
 undo shutdown
