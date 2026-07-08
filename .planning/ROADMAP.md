@@ -174,7 +174,7 @@ Plans:
 - [x] 54-01-PLAN.md — Wave 0 (Task 1): internal/device/e2e_helpers.go NewPooledConnectionForTesting test-only 工厂 (A1 锁定) + huawei_shutdown_success.fixture + TestE2E_Shutdown_Huawei_HappyPath 验证 A1+A2 假设 (huawei_vrp.yaml platform 加载 + channel strip prompt) → Wave 1 (Task 2): 7 fixture + 5 single happy + 1 batch + 4 错误路径 (transport_error/device_rejected/batch fail-fast/PORT-06 NoOp) e2e 全覆盖，fileTransportExecutor 真调 fn 补 Phase 51 mock 漏洞 (SC#1)
 **Wave 2** (docs + UAT, blocked on Wave 1)
 
-- [ ] 54-01-PLAN.md — Wave 2 (Task 3+4): 文档批次 (API响应规范 端口写小节 D-06 + 安全设计 SC#3 加密行为 D-04 + CHANGELOG.md 新建 D-05 + README 核心特性 D-07 + MILESTONES.md v1.19 + STATE.md 50→54 D-08) + 54-HUMAN-UAT.md 新建 (D-08 路径，7 项 pending: 6 SSH + 1 WR-02 D-09) + SC#6 三绿 + SC#7 operlog regression 全量闸门 (SC#2/3/4/5/6/7)
+- [x] 54-01-PLAN.md — Wave 2 (Task 3+4): 文档批次 (API响应规范 端口写小节 D-06 + 安全设计 SC#3 加密行为 D-04 + CHANGELOG.md 新建 D-05 + README 核心特性 D-07 + MILESTONES.md v1.19 + STATE.md 50→54 D-08) + 54-HUMAN-UAT.md 新建 (D-08 路径，7 项 pending: 6 SSH + 1 WR-02 D-09) + SC#6 三绿 + SC#7 operlog regression 全量闸门 (SC#2/3/4/5/6/7)
 
 **UI hint**: no
 
@@ -186,7 +186,7 @@ Plans:
 | 51. W2 PortWriteService + Batch + Mock Tests | 1/1 | Complete   | 2026-07-06 |
 | 52. W3 Router/Handler/Operlog/Permission/Migration | 2/2 | Complete    | 2026-07-07 |
 | 53. W4 Frontend Drawer + Progress Dialog + API Wrappers | 2/2 | Complete    | 2026-07-07 |
-| 54. W5 E2E + Real-Device UAT + Documentation | 1/1 | Complete   | 2026-07-07 |
+| 54. W5 E2E + Real-Device UAT + Documentation | 1/1 | Complete    | 2026-07-07 |
 
 ---
 
@@ -306,10 +306,11 @@ See [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md) for details.
 
 **Requirements**: TBD (无新功能需求，纯技术债)
 **Depends on:** Phase 54 (WR-02 修复决策由 W5 UAT 观察驱动)
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 55 to break down)
+- [ ] 55-01: 前端 Phase 53 leftover tech-debt sweep (WR-02 + IN-01 + IN-02 + HealthCard) — 7 tasks, 5 files (frontend)
+- [ ] 55-02: 后端 batch_orchestrator.go fallback 路径 port 归属跨层防御 (CR-02) — 2 tasks, 1 file (backend Go)
 
 ---
 
