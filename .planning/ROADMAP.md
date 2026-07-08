@@ -306,7 +306,7 @@ See [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md) for details.
 
 **Requirements**: TBD (无新功能需求，纯技术债)
 **Depends on:** Phase 54 (WR-02 修复决策由 W5 UAT 观察驱动)
-**Plans:** 2/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 55-01: 前端 Phase 53 leftover tech-debt sweep (WR-02 + IN-01 + IN-02 + HealthCard) — 7 tasks, 5 files (frontend)
