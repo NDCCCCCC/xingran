@@ -1,7 +1,7 @@
 ---
-last_updated: 2026-07-07
-update_trigger: Phase 53 planning complete (W4 frontend split into 2 plans / 2 waves)
-previous_update: 2026-07-04 after v1.18 milestone close (Phase 48 shipped: 1 phase / 3 plans / 3 waves)
+last_updated: 2026-07-08
+update_trigger: v1.19 milestone closed (Phases 50-55: 6 phases / 9 plans / 5 build waves + 1 cleanup)
+previous_update: 2026-07-07 after Phase 54 (W5) shipped
 ---
 
 # Roadmap: RuoYi-Next 运维管理系统
@@ -28,165 +28,25 @@ previous_update: 2026-07-04 after v1.18 milestone close (Phase 48 shipped: 1 pha
 - ✅ **v1.16 技术债清理 (Tech-Debt Cleanup)** — Phases 40-41 (shipped 2026-06-26)
 - ✅ **v1.17 资产对账 (Asset Reconciliation)** — Phases 42-46 (shipped 2026-07-03) — see [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md)
 - ✅ **v1.18 网络设备硬件清单 (Device Component Serials)** — Phase 48 (shipped 2026-07-04) — see [milestones/v1.18-ROADMAP.md](milestones/v1.18-ROADMAP.md)
-- 🚧 **v1.19 网络设备写命令 (Network Device Write Operations)** — Phases 50-54 (planning — see below)
+- ✅ **v1.19 网络设备写命令 (Network Device Port Write Operations)** — Phases 50-55 (shipped 2026-07-08) — see [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md) | [audit](milestones/v1.19-MILESTONE-AUDIT.md)
 
 ---
 
 ## Phases (v1.19)
 
-- [ ] **Phase 50** — W1: Vendor Templates + Unit Tests
-- [ ] **Phase 51** — W2: PortWriteService + Batch Orchestrator + Mock Tests
-- [ ] **Phase 52** — W3: Router/Handler/Operlog/Permission/Migration
-- [ ] **Phase 53** — W4: Frontend Drawer + Progress Dialog + API Wrappers
-- [ ] **Phase 54** — W5: E2E + Real-Device UAT + Documentation
+<details>
+<summary>✅ v1.19 网络设备写命令 (Phases 50-54) — SHIPPED 2026-07-08</summary>
 
-### Phase 50: W1 — Vendor Templates + Unit Tests (Vendor → Action → Command Map)
+- [x] Phase 50: W1 Vendor Templates + Unit Tests — 1/1 plan — completed 2026-07-06
+- [x] Phase 51: W2 PortWriteService + Batch + Mock Tests — 1/1 plan — completed 2026-07-06
+- [x] Phase 52: W3 Router/Handler/Operlog/Permission/Migration — 2/2 plans — completed 2026-07-07
+- [x] Phase 53: W4 Frontend Drawer + Progress Dialog + API Wrappers — 2/2 plans — completed 2026-07-07
+- [x] Phase 54: W5 E2E + Real-Device UAT + Documentation — 1/1 plan — completed 2026-07-07
+- [x] Phase 55: Tech-Debt Cleanup (Phase 53 leftover sweep) — 2/2 plans — completed 2026-07-08
 
-**Goal**: Lock the vendor→action→command contract before any HTTP/DB wiring. Lock one entry per `(vendor, action)` pair across Huawei VRP / H3C Comware / Ruijie RGOS, with table-driven unit tests that catch vendor syntax drift early.
+See [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md) for archived details (108 files / 25,224 insertions / 3,152 deletions / 1.7 days / 37/37 requirements). 7 site-visit SSH verifications + 6 v1.19.x+ follow-ups deferred per `.planning/phases/54-w5-e2e-real-device-uat-documentation/54-HUMAN-UAT.md` and `v1.19-REQUIREMENTS.md` §Future Requirements / §Tech Debt sections.
 
-**Depends on**: Nothing (pure Go map + tests; zero external dependencies)
-
-**Requirements**: SSH-05 (vendor→action→command map), SSH-01 (SendConfig call signature contract)
-
-**Success Criteria** (what must be TRUE):
-
-  1. 3 vendors × 5 actions = 15 templates implemented in `internal/services/portcollection/vendor_port_template.go` (Huawei VRP, H3C Comware, Ruijie RGOS × shutdown / undo shutdown / description / dot1x enable / dot1x disable)
-  2. 12+ unit tests in `vendor_port_template_test.go` covering each (vendor, action) combination, including negative cases (missing vendor, unsupported action)
-  3. `PortAction` and `PortTemplateParams` types defined as exported named types; `RenderCommand(vendor, action, params) ([]string, error)` public function signature locked
-  4. Huawei and H3C share command shape (VRP heritage); Ruijie uses Cisco-style with `dot1x port-control auto` / `no dot1x port-control`
-  5. `go test ./internal/services/portcollection/...` exits 0 with all vendor template tests passing
-
-**Plans**: 1 plan (50-01-PLAN.md) — vendor template skeleton + table-driven tests + RenderCommand contract
-
-**UI hint**: no
-
-### Phase 51: W2 — PortWriteService + Batch Orchestrator + Mock Tests
-
-**Goal**: Implement the service layer with SSH connection lifecycle management and serial fail-fast batch semantics, fully unit-testable via mocks (no real SSH).
-
-**Depends on**: Phase 50 (vendor templates contract locked)
-
-**Requirements**: SSH-02 (parse transport_error vs device_rejected), SSH-03 (per-port Acquire/ReleaseRef), SSH-04 (detached context, 30min timeout), SSH-06 (DeviceCredentialHelper), PORT-06 (pre-state check admin_status / dot1x_enabled), BATCH-02 (serial fail-fast), BATCH-03 (partial result struct), BATCH-04 (maxBatchSize=50 cap), AUDIT-04 (collectionSvc.Enqueue after success)
-
-**Success Criteria** (what must be TRUE):
-
-  1. `PortWriteService` interface + private `portWriteServiceImpl` + DI (`db`, `deviceExecutor`, `collectionSvc`)
-  2. Per-port `Acquire`/`ReleaseRef` cycle (NOT per-batch) wrapped via `defer conn.ReleaseRef()` to avoid pool starvation
-  3. Detached context via `context.WithTimeout(context.Background(), 30*time.Minute)` for batch operations, avoiding `Core.Close()` 30s shutdown deadline
-  4. `parseConfigError(result)` distinguishes `transport_error` from `device_rejected` via `% Error:` / `Unrecognized command` / `Illegal` markers
-  5. `maxBatchSize = 50` hard cap enforced in service layer; >50 returns validation error before any SSH traffic
-  6. Batch result struct: `{succeeded: []PortResult, failed: []PortResult, skipped: []PortResult}` with per-port status + failure reason
-  7. Service tests use mocks (`mockDeviceExecutor`, `mockCollectionSvc`) — no real SSH calls
-  8. `AUDIT-04`: `collectionSvc.Enqueue(deviceID)` invoked within 1-2s after successful port write (fire-and-forget)
-
-**Plans**: 1-2 plans (51-01-PLAN.md service skeleton + batch orchestrator; 51-02-PLAN.md mock tests if split)
-
-**UI hint**: no
-
-### Phase 52: W3 — Router/Handler/Operlog/Permission/Migration
-
-**Goal**: HTTP wiring with audit logging, permission gating, and menu seed. Wire all 6 endpoints under `/network/ports/write` group; create `sys_port_write_audit` table; seed "端口配置" submenu under "端口管理" parent and grant to existing parent-associated roles.
-
-**Depends on**: Phase 51 (service contract stable)
-
-**Requirements**: AUDIT-01 (operlog.Record before response.Success), AUDIT-02 (operlog records device_id/port_id/action/description/operator/result_status), AUDIT-03 (sys_port_write_audit table), PERM-01 (NetworkPortWrite constant), PERM-02 (RequirePermissions middleware on all 6 endpoints), PERM-03 (menu seed + GrantNewMenuToRolesHavingParent), INFRA-01 (audit table migration), INFRA-02 (route registration /network/ports/write), INFRA-03 (cache_keys for port write results), CONV-01 (shutdown/undo → OperTypeStatus), CONV-02 (description → OperTypeUpdate), CONV-03 (dot1x → OperTypeStatus), CONV-04 (batch → OperTypeBatch), PORT-01 (shutdown endpoint), PORT-02 (undo shutdown endpoint), PORT-03 (description endpoint), PORT-04 (dot1x enable endpoint), PORT-05 (dot1x disable endpoint), BATCH-01 (batch endpoint)
-
-**Success Criteria** (what must be TRUE):
-
-  1. 6 endpoints registered (5 single-port + 1 batch) under `/network/ports/write` group in `port_write_router.go` and wired in `network_router.go`
-  2. `RequirePermissions(["network:port:write"])` middleware applied to all 6 endpoints
-  3. `operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "端口管理", ...)` called before `response.Success(...)` on each endpoint with OperType mapping per CONV-01/02/03/04
-  4. `NetworkPortWrite = "network:port:write"` constant added to `pkg/permission/config.go` (distinct from `NetworkPortQuery`)
-  5. `sys_port_write_audit` table created via `migration_2XX_port_write_audit.go` with `(device_id, port_id, created_at)` index, all 11 columns (device_id/port_id/action/before_value/after_value/command_sent/device_response/status/failure_reason/operator/created_at)
-  6. `sys_menu` seed in migration adds "端口配置" child menu under existing "端口管理" parent, calls `GrantNewMenuToRolesHavingParent(db, "端口管理", newMenuID)` to precisely grant only parent-associated roles (antd父子联动 visual trap 防御)
-  7. `pkg/permission.NetworkPortWrite` referenced from `port_write_handler.go` and not hardcoded string
-  8. `go build ./...` exits 0; `go test ./...` exits 0 (operlog regression lock intact, no Phase 51 mock test regression)
-
-**Plans**: 2 plans
-
-Plans:
-**Wave 1**
-
-- [x] 52-01-PLAN.md — Wave 1: NetworkPortWrite 常量 + PortWriteAudit model(Path X) + cache_keys 占位 + 6 handler + /network/ports/write/* 路由组 + 组级 2-arg RequirePermissions + network_router.go 注册 (PORT-01..05, BATCH-01, PERM-01/02, AUDIT-01/02, CONV-01..04, INFRA-02/03) — Shipped 2026-07-07 (3 commits: 44980bea / ec7a34ad / 88af87f7)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 52-02-PLAN.md — Wave 2 (depends on 52-01): PortWriteAudit 加入 database.go AutoMigrate + postgres 分支显式调 Migrate202PortWriteAudit + menu_grant_helpers.go 幂等授权 helper + migration_202_port_write_audit.go(复合索引 + 菜单 seed + helper 调用) (AUDIT-03, INFRA-01, PERM-03) — Shipped 2026-07-07 (4 commits: e6911127 / 6b833b80 / 8dd54d16 / d75e58af)
-
-**UI hint**: no
-
-### Phase 53: W4 — Frontend Drawer + Progress Dialog + API Wrappers
-
-**Goal**: User-facing UI for single-port operations + batch operations. 5 single-port modals with required reason input; BulkWriteDrawer with progress bar + failure list; permission-gated API wrappers.
-
-**Depends on**: Phase 52 (HTTP API contract stable)
-
-**Requirements**: UI-01 (port list/detail entry points with action menu), UI-02 (single-port confirm modal 5-200 char reason), UI-03 (BulkWriteDrawer with progress bar + failure list), UI-04 (antd Toast success/failure + audit log link), UI-05 (disable refresh during batch), UI-06 (6 wrapped POST functions in networkApi.ts)
-
-**Success Criteria** (what must be TRUE):
-
-  1. 5 single-port operation modals (shutdown / undo shutdown / description / dot1x enable / dot1x disable) all require "操作原因" input with 5-200 char validation
-  2. `BulkWriteDrawer.tsx` provides selected ports list + operation type selector + progress bar (X/Y ports) + failure detail panel showing per-port error reason
-  3. `src/lib/api/networkApi.ts` exports 6 wrapped POST functions: `writeShutdown` / `writeUndoShutdown` / `writeDescription` / `writeDot1xEnable` / `writeDot1xDisable` / `batchWritePorts`
-  4. Permission gating via `useAuthStore` — UI entries hidden if user lacks `network:port:write` permission
-  5. antd Toast feedback on completion (success or failure) with "查看审计日志" link to `sys_oper_log` filtered by module=`端口管理`
-  6. Port list "刷新" button disabled (loading state) during batch operation to avoid race with `Enqueue` triggered collection
-  7. `npm run type-check` exits 0; `npm run build` exits 0 without vendor bundle regression > 50 kB gzip (vendor-react baseline 776 kB gzip from Phase 48 reference)
-
-> **Note on Criteria #2 and #4:** Per 53-CONTEXT.md binding decisions, #2's "X/Y ports" is superseded by D-05 (indeterminate spinner + final result panel — honest progress, no fake X/Y) and #4's `useAuthStore` is superseded by D-09 (`useMenuStore` — corrects the typo; `authStore` only holds tokens, not permissions). Both corrections are encoded in 53-02-PLAN.md acceptance_criteria.
-
-**Plans**: 2 plans
-
-Plans:
-**Wave 1**
-
-- [x] 53-01-PLAN.md — Wave 1 (foundation): types/network.ts 追加 PortResult/BatchResult/BatchWriteRequest 三 interface（镜像后端 portwrite Go struct JSON tag，LANDMINE #1 types 入 network.ts 非 index.ts）+ networkApi.ts 扩展 6 个 wrapper（writeShutdown/writeUndoShutdown/writeDescription/writeDot1xEnable/writeDot1xDisable/batchWritePorts，URL 全 kebab 对齐 Phase 52 路由，不 try/catch 不重复弹 Toast LANDMINE #5）+ port-write/constants.ts 新建（PRESET_REASONS/ACTION_TITLE/REASON_MIN=5/REASON_MAX=200/DESCRIPTION_MAX=80）(UI-06, BATCH-05 wrapper-layer)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 53-02-PLAN.md — Wave 2 (depends on 53-01): PortWriteModal.tsx（统一单端口 Modal，action prop 切 5 操作 D-01，reason Select+TextArea D-02，description 特例 D-03，Toast 审计链接 D-10）+ BulkWriteDrawer.tsx（select→executing→result 状态机，indeterminate Spin 不伪造 X/Y D-05/ROADMAP #2 纠正，结果读 body 不读 catch LANDMINE #3，onExecutingChange 上抛 D-07，重试只取 failed D-06）+ ports/index.tsx 改造（useMenuStore canWrite gating D-09/ROADMAP #4 纠正，操作列 D-01，批量配置按钮 D-04，batchInProgress 禁刷新+采集 LANDMINE #4）+ monitor/logs/index.tsx 改造（useSearchParams 读 module query 预填 title D-10/LANDMINE #2）(UI-01, UI-02, UI-03, UI-04, UI-05)
-
-**UI hint**: yes (frontend modals, BulkWriteDrawer with progress, port list action menu)
-
-### Phase 54: W5 — E2E + Real-Device UAT + Documentation
-
-**Goal**: Validate v1.19 end-to-end against a mock SSH server (always runnable), defer real-device UAT to the next site visit (per v1.18 Phase 48 precedent), and update project documentation.
-
-**Depends on**: Phase 50, 51, 52, 53 (all shipped)
-
-**Requirements**: All 28+ v1.19 MVP requirements (validation only — no new functionality; deferred real-device UAT recorded in `50-HUMAN-UAT.md` per v1.18 48-HUMAN-UAT.md pattern)
-
-**Success Criteria** (what must be TRUE):
-
-  1. Mock SSH server e2e test (`port_write_e2e_test.go` using a `scrapligo` Connect target against an in-process mock sshd) exercises all 5 single-port + 1 batch endpoint paths, exits 0
-  2. `docs/API响应规范.md` updated with the 6 new endpoint signatures, request schemas, and response shapes
-  3. `docs/安全和认证设计（国密）.md` (or equivalent) confirms write endpoints respect encryption exemption list (no SM2+SM4 wrap on SSH-derived paths)
-  4. `.planning/phases/50-port-write-network-ports-planned/50-HUMAN-UAT.md` created with sections marked `pending` for the 6 SSH transport verifications (Huawei S5700/S5735 shutdown + description + dot1x, H3C equivalent, Ruijie RS8607E equivalent), explicitly deferred to next site visit with owner = 现场运维同事
-  5. README + CHANGELOG updated with v1.19 entry; milestone entry in `.planning/MILESTONES.md`
-  6. `go test ./...` + `npm run build` + `npm run type-check` all exit 0 from clean checkout
-  7. No regression to operlog regression_test.go (25 OperType constants, 11 sensitive keywords, Record signature)
-
-**Plans**: 1 plan
-
-Plans:
-**Wave 1** (e2e + Wave 0 helper, tdd)
-
-- [x] 54-01-PLAN.md — Wave 0 (Task 1): internal/device/e2e_helpers.go NewPooledConnectionForTesting test-only 工厂 (A1 锁定) + huawei_shutdown_success.fixture + TestE2E_Shutdown_Huawei_HappyPath 验证 A1+A2 假设 (huawei_vrp.yaml platform 加载 + channel strip prompt) → Wave 1 (Task 2): 7 fixture + 5 single happy + 1 batch + 4 错误路径 (transport_error/device_rejected/batch fail-fast/PORT-06 NoOp) e2e 全覆盖，fileTransportExecutor 真调 fn 补 Phase 51 mock 漏洞 (SC#1)
-**Wave 2** (docs + UAT, blocked on Wave 1)
-
-- [x] 54-01-PLAN.md — Wave 2 (Task 3+4): 文档批次 (API响应规范 端口写小节 D-06 + 安全设计 SC#3 加密行为 D-04 + CHANGELOG.md 新建 D-05 + README 核心特性 D-07 + MILESTONES.md v1.19 + STATE.md 50→54 D-08) + 54-HUMAN-UAT.md 新建 (D-08 路径，7 项 pending: 6 SSH + 1 WR-02 D-09) + SC#6 三绿 + SC#7 operlog regression 全量闸门 (SC#2/3/4/5/6/7)
-
-**UI hint**: no
-
-### Progress Table
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 50. W1 Vendor Templates + Unit Tests | 1/1 | Complete    | 2026-07-06 |
-| 51. W2 PortWriteService + Batch + Mock Tests | 1/1 | Complete   | 2026-07-06 |
-| 52. W3 Router/Handler/Operlog/Permission/Migration | 2/2 | Complete    | 2026-07-07 |
-| 53. W4 Frontend Drawer + Progress Dialog + API Wrappers | 2/2 | Complete    | 2026-07-07 |
-| 54. W5 E2E + Real-Device UAT + Documentation | 1/1 | Complete    | 2026-07-07 |
+</details>
 
 ---
 
@@ -312,6 +172,8 @@ Plans:
 - [x] 55-01: 前端 Phase 53 leftover tech-debt sweep (WR-02 + IN-01 + IN-02 + HealthCard) — 7 tasks, 5 files (frontend)
 - [x] 55-02: 后端 batch_orchestrator.go fallback 路径 port 归属跨层防御 (CR-02) — 2 tasks, 1 file (backend Go) — commit 4f357dae
 
+✅ **v1.19 milestone closed**: Phase 55 (cleanup) shipped 2026-07-08. v1.19 整体 6 phases / 9 plans / 5 build waves + 1 cleanup all closed. See [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md) for archived detail.
+
 ---
 
-*Last updated: 2026-07-08 — Phase 55 (tech-debt cleanup) shipped: 2/2 plans complete. CR-02 后端 fallback 防御加固 + WR-02/IN-01/IN-02 前端 TS 清理 + HealthCard 断言修复。v1.19 build order W1→W2→W3→W4 → W5 (54) → cleanup (55) all closed.*
+*Last updated: 2026-07-08 — v1.19 网络设备写命令 milestone closed (Phases 50-55 shipped: 5 build phases + 1 cleanup).*

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.19
 milestone_name: 网络设备写命令 (Network Device Write Operations)
 status: milestone_complete
-stopped_at: Milestone complete (Phase 55 was final phase)
-last_updated: 2026-07-08T01:37:38.943Z
+stopped_at: v1.19 milestone archived 2026-07-08 (Phases 50-55 closed: 5 build + 1 cleanup)
+last_updated: 2026-07-08T01:40:00.000Z
 last_activity: 2026-07-08
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 7
-  completed_plans: 193
+  total_phases: 6
+  completed_phases: 6
+  total_plans: 9
+  completed_plans: 9
   percent: 100
 ---
 
@@ -18,8 +18,8 @@ progress:
 
 **Project**: RuoYi-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: Phase 53 complete — PortWriteModal + BulkWriteDrawer + ports/logs 改造 shipped, ready for Phase 54 (E2E + Real-Device UAT)
-**Last activity**: 2026-07-07 — Phase 53 Plan 02 shipped, Phase 53 closed
+**Status**: v1.19 网络设备写命令 milestone CLOSED & ARCHIVED — awaiting next milestone planning
+**Last activity**: 2026-07-08 — v1.19 archived, MILESTONES.md + ROADMAP.md + PROJECT.md + RETROSPECTIVE.md synchronized
 
 ## Current Position
 
@@ -160,38 +160,78 @@ Last activity: 2026-07-08
 
 ## Next Steps
 
-**v1.19 SHIPPED (2026-07-07)** — Phases 50-54 (5/5), 7 plans, 28+ MVP 需求 all closed. Phase 54 plan 01 (10 TestE2E_* + 7 site-visit UAT deferred + docs sync + operlog/vendor-react gzip regression guards all green). v1.19 milestone closed.
+**v1.19 SHIPPED & ARCHIVED (2026-07-08)** — Phases 50-55 (6 phases / 9 plans / 5 build waves + 1 cleanup), 37/37 MVP requirements addressed, 108 files / 25,224 insertions / 3,152 deletions in 1.7 days. Phase 55 tech-debt cleanup (WR-02 + IN-01 + IN-02 + HealthCard + CR-02) closed last gap.
 
-**Phase 55 触发**: WR-02 观察结果（54-HUMAN-UAT.md 第 7 项）+ IN-01 / IN-02 / CR-02 / HealthCard 技术债 → Phase 55 independent phase
+**Audit status**: ✅ PASSED (37/37 requirements, 6/6 phases, 20/20 integration wires, 7/7 E2E flows, all build/test gates green)
+
+**Next Milestone Candidates** (per `milestones/v1.19-REQUIREMENTS.md` §Future Requirements + §Tech Debt Incurred):
+
+**v1.20 candidates**:
+- 真机 SSH transport site-visit verification (Huawei S5700/S5735 + H3C + Ruijie RS8607E × shutdown + description + dot1x) — owner = 现场运维同事
+- BATCH-05 real-time progress (SSE/WS) — MVP uses indeterminate Spin per D-05
+- 3-vendor e2e fixture full coverage (Huawei done; H3C + Ruijie 待补)
+- HTTP handler-layer e2e (gin test engine + 6 路由)
+
+To start the next milestone cycle:
+
+```
+/clear
+/gsd:new-milestone
+```
 
 ## Deferred Items
 
-Items acknowledged and deferred at milestone v1.18 close on 2026-07-04:
+Items acknowledged and deferred at milestone v1.19 close on 2026-07-08:
 
-### Phase 48 真机 UAT deferred (3 项 site-visit, owner: 现场访问运维同事)
+### v1.19 site-visit UAT deferred (7 项, owner: 现场运维同事)
+
+See `.planning/phases/54-w5-e2e-real-device-uat-documentation/54-HUMAN-UAT.md`:
 
 | Testable | Category | Result | Owner | Addressed in |
 |----------|----------|--------|-------|--------------|
-| 真机 Huawei S8700 SNMP ENTITY-MIB 单 GET 路径 (D-08) | device_needed | pending | 现场运维 | 下次现场访问 |
-| 真机 Ruijie RS8607E SNMP 627 行含 352 `temprature*` 噪声过滤 (D-11) | device_needed | pending | 现场运维 | 下次现场访问 |
-| 真机 D-10 两步流水线 (Huawei S8700 `10GE5/0/4` up interface) | device_needed | pending | 现场运维 | 下次现场访问 |
+| 真机 SSH 验证 — Huawei S5700 shutdown + description + dot1x | device_needed | pending | 现场运维 | 下次现场访问 |
+| 真机 SSH 验证 — Huawei S5735 shutdown + description + dot1x | device_needed | pending | 现场运维 | 下次现场访问 |
+| 真机 SSH 验证 — H3C Comware shutdown + description + dot1x | device_needed | pending | 现场运维 | 下次现场访问 |
+| 真机 SSH 验证 — Ruijie RS8607E shutdown + description + dot1x | device_needed | pending | 现场运维 | 下次现场访问 |
+| WR-02 custom-reason validator 频率观察 | UI observation | RESOLVED | — | Phase 55 closed |
+| 跨固件版本命令差异 (Huawei V200R005 vs V600R024C00) | device_needed | pending | 现场运维 | follow-up |
+| Real-device SSH 往返延迟测量 | device_needed | pending | 现场运维 | follow-up |
 
-详见 `.planning/phases/48-device-component-serials-planned/48-HUMAN-UAT.md`。
+### v1.19.x+ follow-ups (Future Requirements + Tech Debt)
 
-### v1.19 自身 deferred items (W5 记录)
+Per `milestones/v1.19-REQUIREMENTS.md` §Future Requirements:
 
-| Item | Category | Deferred to | Owner |
-|------|----------|-------------|-------|
-| 真机 SSH 写命令验证 (Huawei S5700/S5735 + H3C + Ruijie RS8607E 各 shutdown + description + dot1x) | device_needed | 54-HUMAN-UAT.md site visit | 现场运维 |
-| 跨固件版本命令差异 (Huawei V200R005 vs V600R024C00) | device_needed | follow-up | 现场运维 |
-| Real-device SSH 往返延迟测量 (batching + per-port timeout calibration) | device_needed | follow-up | 现场运维 |
+- FUTURE-01~10: Cisco IOS / port-security / 速率/VLAN/dry-run UI / 操作历史查看 UI / 批量冲突解决 / 设备不可达预检 / 自动回滚 / 多用户互斥
+- FUTURE-11: BATCH-05 real-time progress (SSE/WS)
+- FUTURE-12: HTTP handler 层 e2e 测试
+- FUTURE-13: 3-vendor e2e fixture 全覆盖
+- FUTURE-14: `sys_port_write_audit` 详情查看 UI
 
-(详细 28 v1.19 项 MVP 需求已锁在 `.planning/REQUIREMENTS.md`,目前 28 项全部映射到 Phase 50-54,见 traceability 表。)
+Per `milestones/v1.19-REQUIREMENTS.md` §Tech Debt:
 
-### Historical audit-open items (与 v1.19 独立)
+- WR-01: Batch handler writes N audit rows outside transaction
+- WR-03: Operator field has no index
+- WR-04: `TestPortWriteHandler_WithOperID_NotAdded` is `t.Skip`
+- WR-05: `NetworkPortWrite` not in `GetRoutePermissions()`
 
-- `audit-open` 输出 18 debug_sessions + 60 quick_tasks 等历史债务项,均为 v1.17 之前的累积,与 v1.18 / v1.19 增量代码无关。
-- 计划在 v1.19+ 推进清理 (Phase 41 已闭环 29 个,但仍残留 18 个新出现的 investigating 项目,以及 quick_tasks 区域扩大)。
+### Historical deferred items (closed-out or further down backlog)
+
+- **Phase 48 v1.18 真机 UAT deferred (3 项)** — `.planning/phases/48-device-component-serials-planned/48-HUMAN-UAT.md` (Huawei S8700 / Ruijie RS8607E / D-10 两步流水线). Owner = 现场运维同事, next site visit
+- **Historical audit-open items** — `audit-open` 历史债务项 18 debug_sessions + 60 quick_tasks 等,与 v1.19 增量代码无关
+
+## Performance Metrics
+
+| Phase Plan | Duration | Tasks | Files |
+|------------|----------|-------|-------|
+| Phase 50 P01 | ~10 min | 3 tasks | 2 files |
+| Phase 51 P01 | ~25 min | 8 tasks | 5 files |
+| Phase 52 P01 | ~30 min | 3 tasks | 8 files (6 created + 2 modified) |
+| Phase 52 P02 | 25min | 3 tasks | 5 files |
+| Phase 53 P01 | 8min | 3 tasks | 3 files |
+| Phase 53 P02 | 11 min | 3 tasks | 4 files |
+| Phase 54 P01 | ~4 commits | 4 tasks | ~13 files |
+| Phase 55 P01 | ~14 min | 6 tasks | 5 files |
+| Phase 55 P02 | ~5 min | 2 tasks | 1 file |
 
 ## Performance Metrics
 
@@ -209,13 +249,13 @@ Items acknowledged and deferred at milestone v1.18 close on 2026-07-04:
 
 ## Session Continuity
 
-Last session: 2026-07-08T01:16:21.113Z
-Stopped at: Phase 55 context gathered
+Last session: 2026-07-08T01:40:00.000Z
+Stopped at: v1.19 milestone archived (milestones/v1.19-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md)
 Resume file: None
 
-**Milestone status:** v1.18 网络设备硬件清单 — milestone_complete (2026-07-04), Phase 48 + Phase 49 gap closure. **v1.19 ROADMAP drafted 2026-07-06** — 5 phases (50-54) in 5-wave build order.
+**Milestone status:** v1.19 网络设备写命令 (Network Device Port Write Operations) — milestone_complete (2026-07-08), Phases 50-55 closed (5 build + 1 cleanup). v1.19 ARCHIVED to milestones/v1.19-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md. Ready for `/gsd:new-milestone` to start next cycle.
 
 ## Operator Next Steps
 
-- Run `/gsd:plan-phase 50` to begin W1 vendor templates execution
-- Or `/gsd:discuss-phase 50` if W1 contract needs refinement
+- `/clear` then `/gsd:new-milestone` to start next milestone (v1.20 candidates: 真机 SSH UAT closure / BATCH-05 SSE-WS / 3-vendor fixtures)
+- Or `/gsd:audit-open` to triage historical audit-open items if housekeeping is preferred

@@ -1,7 +1,7 @@
 ---
-last_updated: 2026-07-07
-update_trigger: Phase 54 complete (W5: e2e + UAT deferral + docs) — v1.19 milestone SHIPPED
-previous_update: 2026-07-07 after Phase 53 (W4 frontend) complete
+last_updated: 2026-07-08
+update_trigger: v1.19 milestone CLOSED — Phases 50-55 (core + tech-debt cleanup) all archived
+previous_update: 2026-07-07 after Phase 54 (W5 e2e + docs) complete
 ---
 
 **Phase 54 (2026-07-07)**: W5 收尾验证 phase — scrapligo `transport.NewFileTransport()` e2e 闭环 Phase 51 fn-never-called 漏洞 (10 TestE2E_*) + 5 处文档更新 (API响应规范 + 加密设计 + CHANGELOG 新建 + README 能力扩展 + MILESTONES v1.19 条目 + STATE deferred 同步) + 54-HUMAN-UAT.md 创建 (7 pending: 6 SSH + 1 WR-02) + 全量回归三绿 (vendor-react 零回归 774.96 kB + operlog regression 不回归)。代码审查 5 Info / 0 Critical / 0 Warning;**v1.19 网络设备写命令 milestone SHIPPED**。
@@ -152,21 +152,36 @@ estate.
   - Wave 1 Schema：migration_201 给 `ops_asset` 加 4 列 (parent_asset_id / source_device_id / component_type / component_slot) + `sys_data_reconciliation.recon_category`
   - Wave 2 Collectors：`internal/services/component_collector/` 17 文件包,SNMP ENTITY-MIB 单 GET + Ruijie `temprature*` 噪声过滤 + Huawei dual-class 去重 + OwnerResolver stack containtedIn tree + Huawei/Ruijie CLI 双厂商 + 6 TextFSM 模板
   - Wave 3 Pipeline+Audit+UI：OpsAssetWriter UPDATE-only + ReconciliationEmitter (component_serial recon_category) + DeviceInfoCollectionService cron hook + operlog.RecordBackground (cron-path) + GET /ops/asset/components + ComponentListTab expandable row
+- ✓ **v1.19 网络设备写命令 (Network Device Port Write Operations)** — Phases 50-55 — 2026-07-08 (6 phases / 9 plans / 5 build waves + 1 cleanup phase, 37/37 MVP requirements, 108 files / 25,224 insertions / 3,152 deletions in 1.7 days)
+  - W1 Vendor Templates: `internal/services/portcollection/vendor_port_template.go` 15 (vendor, action) templates (Huawei/H3C VRP heritage + Ruijie Cisco-style) + 20 table-driven tests
+  - W2 PortWriteService + Batch: `internal/services/portwrite/` 5-file package — parseConfigError 5-step priority scan + checkPreState NoOp detector + BatchWritePorts detached 30min context + serial fail-fast; 28 mock unit tests
+  - W3 Router/Handler/Operlog/Permission/Migration: 6 kebab POST 端点 `/network/ports/write/{shutdown,undo-shutdown,description,dot1x-enable,dot1x-disable,batch}` + `NetworkPortWrite = "network:port:write"` 组级 2-arg RequirePermissions + `sys_port_write_audit` Path A (AutoMigrate) + `GrantNewMenuToRolesHavingParent("端口状态")` 精准授权 + Path C audit↔operlog 关联 (audit_ids 嵌 operlog.oper_param; audit.oper_log_id 保持 NULL)
+  - W4 Frontend: PortWriteModal 5-action unified Modal + BulkWriteDrawer select→executing→result 状态机 (D-05 indeterminate Spin 不伪造 X/Y) + ports/logs 页 useMenuStore canWrite gating + audit-link Toast + monitor/logs URL query 预填 + vendor-react gzip 774.96 kB 零回归
+  - W5 E2E + UAT Deferral + Docs: scrapligo FileTransport 10 TestE2E_* (闭环 Phase 51 mockDeviceExecutor 不调 fn 漏洞) + API响应规范 + 安全设计 + CHANGELOG/README/MILESTONES/STATE 文档同步 + 54-HUMAN-UAT.md 7 项 deferred (owner = 现场运维同事)
+  - Phase 55 Tech-Debt Cleanup: WR-02 antd validator 3-param signature + IN-01 instanceof Error narrowing + IN-02 eslint-disable placement 修正 (Lesson: directive 紧贴 `}, []);` 而非 useEffect 开头) + HealthCard.test.tsx regex match + CR-02 后端 batch_orchestrator.go fallback port 归属跨层防御 (纵深双保险)
 
 ### Active
 
-## Current Milestone: v1.19 网络设备写命令 (Network Device Write Operations) — SHIPPED 2026-07-07
+## Current Milestone: v1.19 网络设备写命令 (Network Device Port Write Operations) — SHIPPED 2026-07-08
 
-**v1.19 已闭环** — 5 phases (50-54) / 7 plans / 5 waves / 28+ MVP 需求 ship。闭环分析:
-- Phase 50 (W1 厂商模板) → Phase 51 (W2 service + batch + mock) → Phase 52 (W3 router/handler/operlog/permission/migration) → Phase 53 (W4 frontend drawer + API wrappers) → Phase 54 (W5 e2e + UAT + docs)
-- Phase 54 关键动作: scrapligo `transport.NewFileTransport()` + 手写 Huawei VRP fixture 闭环 Phase 51 mockDeviceExecutor 漏掉的 fn 闭包漏洞(service.executeWrite → SendConfigs → parseConfigError 链路首次集成层执行) — 10 TestE2E_* 测试全绿(5 single happy + 1 batch happy + device_rejected + transport_error + batch_failfast + noop)
-- 文档同步: API响应规范.md (网络设备端口写操作小节) + 加密设计.md (SSH vs HTTP 两层加密正交) + 新建 CHANGELOG.md + README.md 核心特性扩展 + MILESTONES.md v1.19 条目
-- UAT 推迟: 6 项 SSH verification (Huawei/H3C/Ruijie × shutdown/description/dot1x) + 1 项 WR-02 custom-reason 观察 → 54-HUMAN-UAT.md (推迟到下次现场访问, owner = 现场运维同事); 7 项全 `pending`, 全 `verifier_status: human_needed`
-- Pre-existing 测试失败 (login_encryption_test.go:235 / pkg/errors/errors_test.go / operations 子树) 均先于 Phase 54 6 周-5 个月, Phase 54 diff 为空, 不算 Phase 54 缺陷
+**v1.19 已闭环** — 6 phases (50-54 build + 55 cleanup) / 9 plans / 5 build waves + 1 cleanup / 37 MVP requirements all addressed (35 fully satisfied + 2 PARTIAL BATCH-05/UI-03 + 1 adjusted PERM-03 D-07 父菜单名). 闭环分析:
+- **Build (W1-W5)**: Phase 50 (vendor templates) → Phase 51 (service + batch + mock) → Phase 52 (router/handler/operlog/permission/migration) → Phase 53 (frontend drawer + API wrappers) → Phase 54 (e2e + UAT deferral + docs)
+- **Cleanup**: Phase 55 (tech-debt cleanup of Phase 53 leftovers — WR-02 custom-reason validator + IN-01 instanceof Error + IN-02 eslint-disable placement + HealthCard.test.tsx + CR-02 后端 batch_orchestrator 跨层防御)
+- **Tech Debt Zero-regression**: Phase 51 mock + Phase 54 e2e 全绿(28+35 tests), operlog 25 OperType + 11 敏感关键词 regression_test.go 不回归, vendor-react gzip 774.96 kB 与 Phase 53 baseline 零回归
+- **Phase 51 mock 漏洞 闭环**: scrapligo `transport.NewFileTransport()` 真实 SendConfigs + parseConfigError 链路, 10 TestE2E_* 测试全绿(5 single happy + 1 batch happy + device_rejected + transport_error + batch_failfast + noop)
+- **文档同步**: API响应规范.md (网络设备端口写操作小节) + 加密设计.md (SSH vs HTTP 两层加密正交) + 新建 CHANGELOG.md + README.md 核心特性扩展 + MILESTONES.md v1.19 条目
+- **UAT 推迟**: 6 项 SSH verification (Huawei/H3C/Ruijie × shutdown/description/dot1x) → 54-HUMAN-UAT.md (推迟到下次现场访问, owner = 现场运维同事); 7 项全 `pending`, 全 `verifier_status: human_needed`
+- **Pre-existing 测试失败** (login_encryption_test.go:235 / pkg/errors/errors_test.go / operations 子树) 均先于 Phase 51-54 6 周-5 个月, git diff empty for these files, 不算 v1.19 缺陷
 
-**Phase 54 must-not-break 全部守住**: SC#6 三绿 (go test ./internal/services/portwrite/ + npm build vendor-react gzip 774.96 kB 与 Phase 53 baseline 零回归 + npm type-check); SC#7 operlog regression_test.go (25 OperType + 11 keyword + Record 5 参签名); SC#3 加密配置实证 (config.yaml exclude_paths 不含 /network/ports/write/*, D-04 lock)。
+**Phase 54 must-not-break 全部守住**: SC#6 三绿 (go test portwrite + npm build vendor-react gzip 774.96 kB 与 Phase 53 baseline 零回归 + npm type-check); SC#7 operlog regression_test.go (25 OperType + 11 keyword + Record 5 参签名); SC#3 加密配置实证 (config.yaml exclude_paths 不含 /network/ports/write/*, D-04 lock)。
 
-**Phase 55 依赖**: WR-02 观察结果 (54-HUMAN-UAT 第 7 项) 驱动 Phase 55 PortWriteModal custom-reason validator 签名修复决策。
+**🔜 Next Milestone (v1.19.x+ follow-up candidates)**:
+
+参见 `milestones/v1.19-ROADMAP.md` §Tech Debt Incurred + `milestones/v1.19-REQUIREMENTS.md` §Future Requirements 列出的 14 项 future work + 5 项 tech debt（WR-01 / WR-03 / WR-04 / WR-05 + BATCH-05 real-time progress）。优先 candidates:
+- **BATCH-05 real-time progress via SSE/WS** (MVP 用 indeterminate Spin) — `internal/services/portwrite/` 进度通道 + `BulkWriteDrawer` 改造为真实 X/Y 进度
+- **3-vendor e2e fixture 全覆盖** (Huawei done; H3C + Ruijie 待补)
+- **6 site-visit SSH verification** (Huawei S5700/S5735/H3C/Ruijie × shutdown/description/dot1x) — owner = 现场运维同事
+- **WR-01..05 + IN-XX** remaining tech-debt items
 
 ## Current Milestone: v1.18 SHIPPED 2026-07-04 — awaiting v1.19 planning
 
@@ -312,6 +327,13 @@ See `.planning/ROADMAP.md` for current state + `.planning/MILESTONES.md` for shi
 | OperTypeUnlock = 24 新增 (P34 review) | 解锁是独立审计动作 | ✓ Good |
 | sensitiveKeys 34 条 camelCase/snake_case 全覆盖 (P34 review) | 修复 substring-search 不匹配 camelCase 字段的 critical bug | ✓ Good (CR-001) |
 | 工位设备关联子表格: Ant Design Table expandable (P28) | 复用现有 Table 组件 | ✓ Good |
+| Vendor 命令模板硬编码 Go map (v1.19 W1) | 落地为先，后续 phase 抽象 DB | ✓ Good |
+| Path C audit↔operlog 关联 (v1.19 W3) | handler 先 INSERT audit → operlog.Record(WithOperParam(audit_ids)); audit.oper_log_id 列保持 NULL；不入 operlog 包 | ✓ Good |
+| detached 30min context (v1.19 W2) | batch 入口 `context.WithTimeout(context.Background(), 30*time.Minute)` 规避 `Core.Close()` 30s 截止 | ✓ Good |
+| menu_grant_helpers.go 精准授权 (v1.19 W3) | `INSERT INTO sys_role_menu SELECT...WHERE m.menu_name=parent...ON CONFLICT DO NOTHING` 解决 antd 父子联动陷阱 | ✓ Good (memory `migration-grant-new-menu-precision-helper`) |
+| BATCH-05 indeterminate Spin MVP (v1.19 W4 D-05) | 诚实进度，不伪造 X/Y；批量同步阻塞无后端推送 | ⚠ Revisit (FUTURE-11 SSE/WS) |
+| execSinglePort DRY helper (v1.19 W3) | 5 单端口 handler 公共流程合并；operlog.Record 物理调用点 6→2，语义等价 | ✓ Good |
+| eslint-disable placement 教训 (v1.19 W4 Phase 55) | directive 紧贴 `}, []);` 而非 `useEffect(` 开头 | — Pending (Pattern doc) |
 
 ## Constraints
 
@@ -358,4 +380,4 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 - ✓ Phase 44 R3 IP 例外规则引擎 (v1.17 资产对账) (2026-06-28) — 2 plans, CIDR GiST 引擎 + Layer 3.5 拦截 + 例外 CRUD/命中测试 + cron 过期清理 + 转单 no_workorder 过滤 + 降噪基线 + Excel 导入导出; VERIFICATION 10/10 passed, 1 CR-03 gap-closure fix (baseline 路由权限), 4 硬化债 BLOCKER 跟踪
 
 ---
-*Last updated: 2026-07-07 after Phase 54 (W5 e2e + docs) complete — 1/1 plan, 7/7 SC PASS, 0 critical regression (Phase 51 fn-closure gap closed via scrapligo FileTransport), 7 site-visit UAT deferred to 54-HUMAN-UAT.md, **v1.19 网络设备写命令 milestone SHIPPED***
+*Last updated: 2026-07-08 after v1.19 milestone closed — 6 phases / 9 plans / 5 build waves + 1 cleanup phase (Phase 55 tech-debt sweep), 37/37 MVP requirements addressed (35 fully + 2 PARTIAL BATCH-05/UI-03 + 1 adjusted PERM-03), 108 files / 25,224 insertions / 3,152 deletions in 1.7 days, 7 site-visit UAT deferred to 54-HUMAN-UAT.md. **v1.19 网络设备写命令 milestone SHIPPED & ARCHIVED**. *

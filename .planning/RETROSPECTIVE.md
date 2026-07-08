@@ -2,6 +2,107 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v1.19 — 网络设备写命令 (Network Device Port Write Operations)
+
+**Shipped:** 2026-07-08 (Phase 55 close)
+**Phases:** 6 (Phases 50-55; 50-54 = core MVP, 55 = tech-debt cleanup) | **Plans:** 9
+**Sessions:** yolo mode sequential (5 build phases ~6 hours wall-clock + 1 cleanup ~20 min)
+
+### What Was Built
+
+- **`internal/services/portcollection/vendor_port_template.go`** — PortAction type + 5 const + 5 sentinel errors + 15 (vendor, action) command templates + 4 renderers (Phase 50 W1)
+- **`internal/services/portwrite/`** 5-file package — parse_error / pre_state_check / port_write_service / batch_orchestrator + 28 mock tests (Phase 51 W2)
+- **6 kebab POST 端点** `/network/ports/write/{shutdown,undo-shutdown,description,dot1x-enable,dot1x-disable,batch}` + `NetworkPortWrite` permission + `sys_port_write_audit` Path A (Phase 52 W3)
+- **`GrantNewMenuToRolesHavingParent` helper** — INSERT-SELECT-FROM-ON-CONFLICT-DO-NOTHING 精准授权 (antd 父子联动陷阱根除)
+- **`PortWriteModal` + `BulkWriteDrawer` + 端口页改造** — types/network.ts 4 类型 + networkApi.ts 6 wrappers + port-write/constants.ts 5 const + select→executing→result 状态机 (D-05 indeterminate Spin 不伪造 X/Y) (Phase 53 W4)
+- **scrapligo FileTransport e2e** — 10 TestE2E_* 闭环 Phase 51 mockDeviceExecutor 不调 fn 漏洞 + CHANGELOG/README/API/加密/MILESTONES 文档同步 + 54-HUMAN-UAT.md 7 项 deferred (Phase 54 W5)
+- **Tech-debt cleanup** — WR-02 reason validator 3-param signature + IN-01 instanceof Error + IN-02 eslint-disable 修正 + HealthCard.test.tsx regex match + CR-02 后端 batch_orchestrator.go fallback port 归属跨层防御 (Phase 55)
+
+### What Worked
+
+- **5-phase build order (W1→W2→W3→W4→W5) 严格执行** — Zero-dep 模板契约先行 → 服务签名带 mock → HTTP/audit/permission/migration 并发 → 前端批量 → e2e+docs。W1 table-driven tests 提前捕获厂商语法漂移；W2 mock cheapest；W3 API contract 稳定后前端才能建 Modal/Drawer；W5 mock SSH e2e 在 W1-W4 全 ship 后才有意义。每 wave 可独立 commit，无 cross-cutting regression
+- **Path C audit↔operlog 关联不动 operlog 包** — handler 先 INSERT audit 拿 audit_id → `operlog.Record(..., WithOperParam(jsonWithAuditIDs))`；`audit.oper_log_id` 列保持 NULL。零侵入 operlog 包意味着 Phase 34 regression_test.go (25 OperType + 11 敏感关键词 + Record 5 参签名) 锁保持绿色，避免循环依赖
+- **menu_grant_helpers.go 精准授权 根治 antd 父子联动陷阱** — INSERT INTO sys_role_menu SELECT rm.role_id, newMenuID FROM sys_role_menu rm JOIN sys_menu m ON rm.menu_id=m.id WHERE m.menu_name=parentMenuName ON CONFLICT DO NOTHING。比对所有子菜单自动带动父只动真正父已授权的角色
+- **execSinglePort DRY helper** — 5 单端口 handler 公共流程合并，operlog.Record 物理调用点 6→2，semantically equivalent + 减少 ~200 行重复模板。Plan <verify> count 由 ≥6 调整为 ≥2 (Rule 3 — 不破坏语义的代码结构 cleanup)
+- **Milestone audit 早跑** — `v1.19-MILESTONE-AUDIT.md` 在 Phase 55 完成后即跑，3-source 交叉验证 (REQUIREMENTS.md + Phase VERIFICATION.md + SUMMARY.md frontmatter requirements-completed) 全过；6/6 phases, 20/20 integration wires, 7/7 E2E flows PASSED
+- **Pre-existing test failure baseline** — `tests/integration/login_encryption_test.go`、`pkg/errors/errors_test.go`、`internal/services/operations/...` 均先于 v1.19 6 周~5 个月，git diff empty，避免被误判为回归。沿用 v1.16 Phase 40/41 + v1.18 Phase 48 的兜底动作
+- **Phase 51 mock 漏洞被 Phase 54 FileTransport 闭环** — `df04c6dd` 的 mockDeviceExecutor 简化 (不调 fn) + executeWrite nil-guard 让 mock-based test 干净通过；但 service.executeWrite → wrapper.SendConfigs → lastResp → parseConfigError 链路从未在集成层执行。Phase 54 用 scrapligo `transport.NewFileTransport()` + 6 fixture 真实闭环。这是 wall-clock 上的一个 lesson：mock 简化便宜，但 service code path 闭环必须 integration 层验证
+
+### What Was Inefficient
+
+- **Plan verification gate 与 doc 注释字面字符串冲突 (Phase 52)** — Plan `<verify>` `grep -q 'IsFrame\|IsCache'` 不带 `grep -v '//'`，但 plan `<read_first>` 鼓励 doc 注释解释"为什么不能加 IsFrame/IsCache" — 两件事直接冲突。doc 注释含 `IsFrame` 字面字符串触发 grep 误报。两层修复：① 测试改用 `go/parser + ast.Inspect` 跳过 `*ast.Comment` 节点；② doc 注释改用通用表述（"Java sys_menu 风格的 frame/cache 字段"）
+- **`response.Error(c, int, msg)` 项目惯例被测试断言误用** — `int` 是 business code，HTTPStatus 固定 400（pkg/response/response.go:160-162）。测试断言走 `body.code == 404` 而非 `w.Code == http.StatusNotFound`。Rule 3 纠正
+- **eslint-disable directive 初版位置错位 (Phase 55 IN-02)** — Plan 写 directive 紧贴 `useEffect(() => {` 开头，但 `react-hooks/exhaustive-deps` 规则实际在 `}, []);` 行触发。c17da02e 初版错位，adce5799 修正。Lesson: ESLint 规则触发行 ≠ 函数声明行。Codebase 内有 4 个 reference (App.tsx, MatchTestPanel, templates, exceptions) 走 directive-before-`}, []);` 模式；新人需要 awareness
+- **PortResult.PortName optional field in PLAN.md 实际不存在 (Phase 55-02)** — 计划写 `PortName: actualPort.InterfaceName`(可选便于审计追踪)，但实际 `PortResult` struct (`port_write_service.go:34-42`) 无 `PortName` 字段。D-04 Scope Constrainment 严格锁定只改 batch_orchestrator.go 一处，移除可选 PortName 字段填入
+- **d.Close() hangs on FileTransport (Phase 54)** — `Driver.Close()` 跑 `network-on-close` (acquire-priv + channel.write 'quit' + channel.return) 需要更多 bytes，但 FileTransport 的 `select{}` 在空 content 上 deadlock。E2e harness 故意 skip `defer d.Close()`; Go GC reap on test exit
+- **2-cmd fixture needs double prompt lines (Phase 54)** — `SendConfigs` loops `SendConfig(cfg)` per cmd；each `SendConfig` calls `SendConfigs([cfg])` which calls `AcquirePriv("configuration")` via `GetPrompt`。第一次 cmd consumes bytes up to prompt，第二次 cmd 的 `GetPrompt` 需要 find current prompt still queued。`huawei_description_success.fixture` 使用 double prompt lines 让 second cmd's `AcquirePriv` 始终 find a current prompt
+- **device_rejected fixture text matters (Phase 54)** — `% Error: Unrecognized command` 触发 scrapligo `huawei_vrp.yaml` `failed-when-contains` → `resp.Failed=true` → `parseConfigError` step 2 → `WriteErrorTransport` (错路径)。改用 `% Error: too many parameters` 触发 `parseConfigError.rejectionMarkers[0]='% Error:'` priority (over `failed-when-contains`) → `WriteErrorDeviceRejected` (correct SSH-02 path)
+
+### Patterns Established
+
+- **Detached context first line of batch entry** — `context.WithTimeout(context.Background(), 30*time.Minute)` 规避 `Core.Close()` 30s 截止陷阱。任何 batch 操作入口第一行 (Pitfall #5)
+- **Internal mockable interface fields** — service impl fields 是 interfaces (`portWriteExecutor` / `portWriteCollectionSvc`) 而非 concrete pointers；factory 仍接受 concrete pointer (`*device.DeviceExecutor`) — testify/mock injection without router code changes
+- **Rejection markers scan BEFORE transport markers in parseConfigError** — device rejection semantics priority over coincidental substring matches in error text
+- **execSinglePort DRY helper** — 5 单端口 handler 通过 serviceCall 闭包传入差异，公共流程 (operlog.Record + response.Success) 提取 single call site
+- **Path C audit↔operlog 关联** — handler 先 INSERT audit → operlog.Record(WithOperParam(audit_ids)); audit.oper_log_id 列保持 NULL；不动 operlog 包接口 (无 WithOperID / 无 WithJsonResult)
+- **menu_grant_helpers.go::GrantNewMenuToRolesHavingParent** — INSERT-SELECT-FROM-ON-CONFLICT-DO-NOTHING 精准授权 (antd 父子联动陷阱根除)
+- **eslint-disable placement** — directive 紧贴 `}, []);` 而非 `useEffect(` 开头 (codebase precedent: App.tsx, MatchTestPanel.tsx, templates, exceptions)
+- **scrapligo FileTransport for e2e** — 真实 `SendConfigs` + `parseConfigError` 链路集成层闭环；mock 简化便宜但 service code path 必须 integration 层验证
+- **Site-visit UAT 在 plan 阶段显式声明 deferred** — `.planning/phases/<phase>/<phase>-HUMAN-UAT.md` 创建在 W5，含 pending items，owner = 现场运维同事，`verifier_status: human_needed`
+- **Document comment 字面字符串与 plan <verify> grep 冲突** — 用 `go/parser + ast.Inspect` 跳 `*ast.Comment` 节点只扫 `*ast.Ident + *ast.BasicLit`
+
+### Key Lessons
+
+1. **Phase 54 e2e 闭环 Phase 51 mock 漏洞 = mock 简化便宜但 service code path 必须 integration 层验证** — `mockDeviceExecutor.ExecuteCustom` 简化不调 fn 让 mock test 干净通过；但 service.executeWrite → wrapper.SendConfigs → lastResp → parseConfigError 链路从未在集成层执行。这个 Phase 51 done 的 plan verification 漏掉了真正的 transport layer 测试。Phase 54 必须 exist 作为 "后期补交" 来闭环 — Future milestones 在 mock-based service test 阶段 plan 中需明确 "Phase X+1 = integration e2e"
+2. **Path C 关联的 operator_log 列保持 NULL 是 invariant** — audit.oper_log_id 列必须 schema definition 时 `gorm:"->;-:migration"`，否则 GORM AutoMigrate 推 `audit.oper_log_id = ?` → DB column 不存在 SQLSTATE 42703
+3. **Vendor 模板硬编码 + table-driven tests 是 Phase 1 优先级** — 任何 multi-vendor SSH write op 在 Phase 1 必须有 vendor × action 派发表 + per-vendor unit tests，无 then 才进 service 集成层
+4. **operlog regression_test.go 锁不可破** — OperType 25 常量 + 11 敏感关键词 + Record 5 参签名 是 Phase 34 invariant；任何新 endpoint 必须用现有 OperType 值（共 25 个，不允许 OperTypeOther 兜底）
+5. **Pre-existing test failure baseline 在 milestone close 前必查** — 任何新 milestone 实施前后在 baseline commit 跑同一组测试 (v1.16 Phase 40/41 + v1.18 Phase 48 共验证)。v1.19 验证了 3 处 pre-existing 失败 (login_encryption / pkg/errors / operations)
+6. **Permission 命名空间 split 必须 migration 时同时 seed 菜单 + grant helper** — 新权限 `network:port:write` 与原 `network:port:query` 拆分时，菜单 seed 必须配合 GrantNewMenuToRolesHavingParent 精准授权父已关联角色，避免 antd 父子联动陷阱
+7. **scrapligo FileTransport 的 quirks** — ① d.Close() needs more bytes → skip defer in e2e harness, Go GC reaps；② 2-cmd fixture needs double prompt lines；③ device_rejected fixture text must NOT trigger platform's failed-when-contains
+8. **eslint-disable directive placement 教训** — directive must immediately precede the rule-firing line (e.g., `}, [])`), not the function signature line. ESLint 规则触发行 ≠ 函数声明行
+9. **JSX.Element 显式返回类型 = tsc -b 严格模式 fail** — React 19 + tsconfig configuration, `tsc -b` strict mode rejects global JSX namespace。Switch to type inference. Standalone `tsc --noEmit` works but `tsc -b` (build path) fails
+
+### Cost Observations
+
+- Model mix: yolo mode sequential, single session 主线 + gsd-ai-researcher 仅做 Phase 54 立项 RESEARCH (3 sources)，无多 subagent 派发
+- Sessions: 1 main session (Phase 50-55 sequential) + 1 audit-milestone session
+- Notable: 整个 milestone 主体在 1.7 工作日内单 session 完成 (06 → 08)。yolo mode + sequential phases 让 wall-clock 紧凑。Phase 54 4 atomic commits (A1+A2 unlock → 全覆盖 → docs → UAT) 各 ~25min
+- Tech-debt cleanup (Phase 55) ~20min wall-clock (前端 14min + 后端 5min + verification 1min) — 清扫力度与 v1.18 Phase 49 (gap closure ~30min) 相近
+
+---
+
+## Cross-Milestone Trends
+
+### Process Evolution
+
+| Milestone | Sessions | Phases | Key Change |
+|-----------|----------|--------|------------|
+| v1.16 Tech-Debt | ~5 | 2 (40/41) | TECH-05/06 闭环 + validator 100% pass |
+| v1.17 Recon | ~8 | 5 (42-46) + Phase 47 | observe-only 对账引擎 + 5 R-rounds 演进 + UAT 9/10 PASS |
+| v1.18 Components | 1 | 1 (48) | 3-wave 隔离 + D-id 全覆盖 + site-visit UAT 推迟 |
+| v1.19 Port Write | 1 main + 1 audit | 6 (50-54 + 55) | 5-phase build order + Phase 51 mock 漏洞 Phase 54 闭环 + Phase 55 tech-deb 闭环 |
+
+### Cumulative Quality
+
+| Milestone | Tests | Coverage | Zero-Dep Additions |
+|-----------|-------|----------|-------------------|
+| v1.16 | validator 165/165 pass | n/a | n/a |
+| v1.17 | recon 5-layer test set | n/a | 6 backend recon 端点 + 4 frontend drawer + R5 state machine |
+| v1.18 | 21 collector + 5 pipeline + 3 handler + 5 operlog regression | n/a | 1 pkg + 6 textfsm + 1 cron helper + 1 endpoint + 1 tab |
+| v1.19 | 28 mock + 10 e2e + 7 handler + 5 router + 11 migration + 25 operlog + 64 vitest | n/a | 1 pkg + 15 template + 1 menu helper + 1 model + 1 migration + 6 endpoint + 2 component + 6 wrapper + 1 constants |
+
+### Top Lessons (Verified Across Milestones)
+
+1. **Pre-existing test failure 兜底 (Phase 40/41 + 48 + v1.19 共验证)** — 每个 phase 实施前在 baseline commit 跑同组测试，规避假回归指控
+2. **Migration layered idempotency (Phase 33/44/48 共验证)** — DROP IF EXISTS 在 GORM AutoMigrate 上不工作，改用 `pg_indexes` 探测 + count-then-insert
+3. **operlog module/chinese-name 双轨 (Phase 34 + 48 + v1.19 共验证)** — 强制使用 ops asset 中文常量，避免 module 字段在审计回路漂移；v1.19 operlog module = "端口管理" (AUDIT-01)，menu parent name = "端口状态" (D-07)，两者解耦独立
+4. **基线审计后允许部分 deferred (Phase 41 29→ + Phase 48 3 site-visit + v1.19 7 site-visit)** — observe-only 策略延续，真机/外部依赖类 UAT 显式 partial 而非阻塞代码合入
+5. **CR + Lint 在 phase 末尾加入，不在开头 (Phase 32 P1+P2 + 48 + v1.19 共验证)** — 实施期先跑通，review 期 catch 全，避免过度返工。v1.19 特别：Phase 53 review 抓出 WR-02/IN-01/IN-02/CR-01/CR-02 → Phase 55 集中清理
+6. **mock-based service test 与 service code path integration 之间有 gap (v1.19 unique lesson)** — mock 简化便宜 + service nil-guard 让 unit test 干净，但 service.executeWrite → transport layer → parseConfigError 链路只走 mock 而从未在 integration 层执行。Phase 54 e2e 闭环该 gap。Future milestones 在 mock-based service test 阶段 plan 中需明确 "Phase X+1 = integration e2e"
+
+---
+
 ## Milestone: v1.18 — 网络设备硬件清单 (Device Component Serials)
 
 **Shipped:** 2026-07-04
