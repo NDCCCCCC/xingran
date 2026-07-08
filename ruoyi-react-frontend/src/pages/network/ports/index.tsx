@@ -229,8 +229,11 @@ const PortStatusPage: FC = () => {
       const filename = await batchExport(entityTypes, {}); // 可以根据需要添加筛选条件
       message.success(`批量导出成功，文件: ${filename}`);
       setBatchModalVisible(false);
-    } catch (error: any) {
-      message.error(`批量导出失败：${error.message}`);
+    } catch (error) {
+      // 55-01 IN-01: 项目 TS 严格风格 — 用 instanceof Error 收窄, 避免非 Error reject
+      // 时显示 "undefined"
+      const msg = error instanceof Error ? error.message : String(error);
+      message.error(`批量导出失败：${msg}`);
     } finally {
       setBatchExporting(false);
     }
