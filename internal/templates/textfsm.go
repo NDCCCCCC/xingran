@@ -2,8 +2,11 @@ package templates
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -43,41 +46,81 @@ type Rule struct {
 	NextState    string
 }
 
-// ParseTemplate 从文件解析 textfsm 模板
-// 支持相对路径（相对于项目根目录）和绝对路径
+// ParseTemplate 从 embed.FS 或本地文件系统解析 textfsm 模板。
+//
+// 查找顺序：
+//  1. 嵌入的 templatesFS（生产部署不需要本地 templates/ 目录）
+//  2. 本地文件系统（dev 模式或自定义模板路径）
+//
+// 支持的输入格式：
+//   - "templates/huawei_xxx.textfsm"             → embedded/templates/huawei_xxx.textfsm
+//   - "templates/lldp/lldp_ruijie.textfsm"       → embedded/templates/lldp/lldp_ruijie.textfsm
+//   - "lldp/lldp_ruijie.textfsm"                 → embedded/templates/lldp/lldp_ruijie.textfsm
+//   - "huawei_xxx.textfsm"                       → embedded/templates/huawei_xxx.textfsm
+//   - 绝对路径（开发测试用）：跳过 embed，走本地文件系统
 func ParseTemplate(filename string) (*FSM, error) {
-	var content []byte
-	var err error
-
-	// 如果是相对路径，需要找到项目根目录
-	if !filepath.IsAbs(filename) {
-		// 尝试获取当前工作目录并向上搜索 go.mod
-		cwd, err := os.Getwd()
-		if err != nil {
-			return nil, fmt.Errorf("无法获取当前工作目录: %w", err)
-		}
-
-		// 从当前目录向上搜索项目根目录（包含 go.mod 的目录）
-		projectRoot := findProjectRoot(cwd)
-		if projectRoot == "" {
-			// 如果找不到 go.mod，使用当前目录
-			projectRoot = cwd
-		}
-
-		// 使用项目根目录作为基础路径
-		fullPath := filepath.Join(projectRoot, filename)
-		content, err = os.ReadFile(fullPath)
-		if err != nil {
-			return nil, fmt.Errorf("读取模板文件失败 %s (尝试路径: %s): %w", filename, fullPath, err)
-		}
-	} else {
-		// 绝对路径直接读取
-		content, err = os.ReadFile(filename)
+	// 绝对路径：直接读本地文件系统（兼容 dev 测试用例）
+	if filepath.IsAbs(filename) {
+		content, err := os.ReadFile(filename)
 		if err != nil {
 			return nil, fmt.Errorf("读取模板文件失败: %w", err)
 		}
+		return parseTemplateContent(filename, content)
 	}
 
+	// 1) 尝试从 embed.FS 读取（生产路径）
+	if embedPath, ok := resolveEmbedPath(filename); ok {
+		data, err := fs.ReadFile(embeddedTemplatesRoot(), embedPath)
+		if err == nil {
+			return parseTemplateContent(filename, data)
+		}
+		if !errors.Is(err, fs.ErrNotExist) {
+			return nil, fmt.Errorf("读取嵌入模板失败 %s -> %s: %w", filename, embedPath, err)
+		}
+		// embed 里没有（理论上不应该），fallback 到本地文件系统
+	}
+
+	// 2) Fallback: 本地文件系统（dev 模式无 go:embed 的版本，或自定义模板）
+	return parseTemplateFromFilesystem(filename)
+}
+
+// resolveEmbedPath 把用户传入的相对路径映射到 embed.FS 内的真实路径。
+// 返回值 ok=false 表示输入不解析为模板路径（如 ../escape 或禁止字符）。
+func resolveEmbedPath(filename string) (string, bool) {
+	clean := path.Clean(filename)
+	if clean == "." || clean == "/" || strings.HasPrefix(clean, "..") {
+		return "", false
+	}
+
+	// 统一路径分隔符，embed.FS 用正斜杠
+	clean = filepath.ToSlash(clean)
+
+	// 已有 "templates/" 前缀：去掉前缀直接作为 fs 路径
+	if strings.HasPrefix(clean, "templates/") {
+		return "embedded/" + clean, true
+	}
+
+	// "lldp/xxx" 或 "huawei_xxx.textfsm"：拼到 templates/ 下
+	return "embedded/templates/" + clean, true
+}
+
+// parseTemplateFromFilesystem 解析本地文件系统模板，保留 dev 模式兼容。
+func parseTemplateFromFilesystem(filename string) (*FSM, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("无法获取当前工作目录: %w", err)
+	}
+
+	projectRoot := findProjectRoot(cwd)
+	if projectRoot == "" {
+		projectRoot = cwd
+	}
+
+	fullPath := filepath.Join(projectRoot, filename)
+	content, err := os.ReadFile(fullPath)
+	if err != nil {
+		return nil, fmt.Errorf("读取模板文件失败 %s (尝试路径: %s): %w", filename, fullPath, err)
+	}
 	return parseTemplateContent(filename, content)
 }
 
