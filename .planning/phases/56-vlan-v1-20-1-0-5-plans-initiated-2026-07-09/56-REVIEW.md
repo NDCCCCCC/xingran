@@ -1,6 +1,7 @@
 ---
 phase: 56-vlan-v1-20-1-0-5
 reviewed: 2026-07-09T00:00:00Z
+reviewed_followup: 2026-07-09T07:00:00Z
 depth: standard
 files_reviewed: 13
 files_reviewed_list:
@@ -18,11 +19,21 @@ files_reviewed_list:
   - ruoyi-react-frontend/src/pages/network/ports/index.tsx
   - ruoyi-react-frontend/src/types/network.ts
 findings:
-  critical: 4
+  critical: 0
   warning: 6
   info: 5
-  total: 15
-status: issues_found
+  total: 11
+fixes_applied:
+  - commit: 415005be
+    resolves: [CR-01, CR-04]
+    summary: "share 4 v1.20.1 validators (validateVlanIdRange/validateBindOp/validateIPAddress/validateMACAddress) across SetAccessVlan/PortBinding + BatchWritePorts; add gin binding tags to BatchWriteRequest"
+  - commit: 2460f65e
+    resolves: [CR-02]
+    summary: "include vlan field in buildBeforeValue for ActionSetAccessVLAN (skipped path audit completeness)"
+  - commit: 58692dfb
+    resolves: [CR-03, WR-05]
+    summary: "SetAccessVlanModal + PortBindingModal use form.setFieldsValue on open to preserve vlanId pre-fill"
+status: clean
 ---
 
 # Phase 56: Code Review Report
