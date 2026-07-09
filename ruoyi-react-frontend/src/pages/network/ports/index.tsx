@@ -42,6 +42,8 @@ import { createSorterMeta } from "@/utils/tableHelpers";
 import { useMenuStore } from "@/store/menuStore";
 import { PortWriteModal } from "@/components/network/port-write/PortWriteModal";
 import { BulkWriteDrawer } from "@/components/network/port-write/BulkWriteDrawer";
+import { SetAccessVlanModal } from "@/components/network/port-write/SetAccessVlanModal";
+import { PortBindingModal } from "@/components/network/port-write/PortBindingModal";
 
 const { Option } = Select;
 
@@ -68,11 +70,27 @@ const PortStatusPage: FC = () => {
   // D-07: batchInProgress 由 BulkWriteDrawer onExecutingChange 上抛, 禁刷新+采集 (LANDMINE #4 同类竞态)
   const [batchInProgress, setBatchInProgress] = useState(false);
 
+  // Phase 56 W4: set_access_vlan + port_binding 单端口 Modal state (v1.20.1)
+  const [vlanModalOpen, setVlanModalOpen] = useState(false);
+  const [vlanModalRecord, setVlanModalRecord] = useState<DevicePortStatus | null>(null);
+  const [bindModalOpen, setBindModalOpen] = useState(false);
+  const [bindModalRecord, setBindModalRecord] = useState<DevicePortStatus | null>(null);
+
   // 单端口操作入口 (ActionButtons onClick → openWriteModal(action, record))
   const openWriteModal = (action: PortWriteAction, record: DevicePortStatus) => {
     setWriteModalAction(action);
     setWriteModalRecord(record);
     setWriteModalOpen(true);
+  };
+
+  // Phase 56 W4: 2 个新 action 的单端口 Modal opener (独立 Modal 因字段差异大)
+  const openVlanModal = (record: DevicePortStatus): void => {
+    setVlanModalRecord(record);
+    setVlanModalOpen(true);
+  };
+  const openBindModal = (record: DevicePortStatus): void => {
+    setBindModalRecord(record);
+    setBindModalOpen(true);
   };
 
   // 统计数据
@@ -346,6 +364,9 @@ const PortStatusPage: FC = () => {
           { key: "description", label: "修改描述", onClick: () => openWriteModal("description", record) },
           { key: "dot1x_enable", label: "启用 802.1X", onClick: () => openWriteModal("dot1x_enable", record) },
           { key: "dot1x_disable", label: "停用 802.1X", onClick: () => openWriteModal("dot1x_disable", record) },
+          // v1.20.1: 2 个新 action (5 → 7), 独立 Modal 因字段差异大 (参 SetAccessVlanModal / PortBindingModal)
+          { key: "set_access_vlan", label: "修改 access VLAN", onClick: () => openVlanModal(record) },
+          { key: "port_binding", label: "端口绑定", onClick: () => openBindModal(record) },
         ];
         return <ActionButtons actions={actions} />;
       },
@@ -547,6 +568,19 @@ const PortStatusPage: FC = () => {
         action={writeModalAction}
         portRecord={writeModalRecord}
         onClose={() => setWriteModalOpen(false)}
+        onSuccess={() => { loadPortStatus(); loadStatistics(); }}
+      />
+      {/* Phase 56 W4: v1.20.1 2 个新单端口 Modal (set_access_vlan + port_binding) */}
+      <SetAccessVlanModal
+        open={vlanModalOpen}
+        portRecord={vlanModalRecord}
+        onClose={() => setVlanModalOpen(false)}
+        onSuccess={() => { loadPortStatus(); loadStatistics(); }}
+      />
+      <PortBindingModal
+        open={bindModalOpen}
+        portRecord={bindModalRecord}
+        onClose={() => setBindModalOpen(false)}
         onSuccess={() => { loadPortStatus(); loadStatistics(); }}
       />
       <BulkWriteDrawer
