@@ -65,7 +65,7 @@ Plans:
 
 **Wave 3 (router + handler) — depends on 56-02**
 
-- [ ] 56-03-PLAN.md — port_write_router.go 新增 2 kebab 端点 + port_write_handler.go 新增 2 handler (复用 execSinglePort DRY 模式) + operlog OperType 映射 (Update/Create/Delete) + 复用 `network:port:write` 权限（VLAN-01, BIND-01, BIND-02, INFRA-02, INFRA-03, INFRA-04)
+- [x] 56-03-PLAN.md — port_write_router.go 新增 2 kebab 端点 + port_write_handler.go 新增 2 handler (复用 execSinglePort DRY 模式) + operlog OperType 映射 (Update/Create/Delete) + 复用 `network:port:write` 权限（VLAN-01, BIND-01, BIND-02, INFRA-02, INFRA-03, INFRA-04)
 
 **Wave 4 (前端) — depends on 56-03**
 
