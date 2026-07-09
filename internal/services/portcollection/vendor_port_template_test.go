@@ -128,6 +128,96 @@ func TestRenderCommand_VendorActionMatrix(t *testing.T) {
 			params:   PortTemplateParams{InterfaceName: "GigabitEthernet0/0/1"},
 			expected: []string{"interface GigabitEthernet0/0/1", "no dot1x port-control"},
 		},
+
+		// Phase 56 v1.20.1 新增 — set_access_vlan (3 vendors)
+		// RISK-03 关键字分歧：Huawei=`port default vlan`，H3C=`port access vlan`，Ruijie=`switchport access vlan`。
+		{
+			name:     "huawei_set_access_vlan",
+			vendor:   models.VendorHuawei,
+			action:   ActionSetAccessVLAN,
+			params:   PortTemplateParams{InterfaceName: "GE0/0/1", VLANID: 100},
+			expected: []string{"interface GE0/0/1", "port link-type access", "port default vlan 100"},
+		},
+		{
+			name:     "h3c_set_access_vlan",
+			vendor:   models.VendorH3C,
+			action:   ActionSetAccessVLAN,
+			params:   PortTemplateParams{InterfaceName: "GE0/0/1", VLANID: 100},
+			expected: []string{"interface GE0/0/1", "port link-type access", "port access vlan 100"},
+		},
+		{
+			name:     "ruijie_set_access_vlan",
+			vendor:   models.VendorRuijie,
+			action:   ActionSetAccessVLAN,
+			params:   PortTemplateParams{InterfaceName: "GigabitEthernet0/0/1", VLANID: 100},
+			expected: []string{"interface GigabitEthernet0/0/1", "switchport mode access", "switchport access vlan 100"},
+		},
+
+		// Phase 56 v1.20.1 新增 — port_binding (3 vendors x add/remove × with/without MAC)
+		// RISK-01: H3C 省略 `static`；RISK-02: Ruijie 用 Cisco 风格 MAC `aabb.ccdd.eeff`。
+		{
+			name:     "huawei_port_binding_add",
+			vendor:   models.VendorHuawei,
+			action:   ActionPortBinding,
+			params:   PortTemplateParams{InterfaceName: "GE0/0/1", BindOp: "add", IPAddress: "10.62.25.5"},
+			expected: []string{"interface GE0/0/1", "user-bind static ip-address 10.62.25.5"},
+		},
+		{
+			name:     "huawei_port_binding_add_with_mac",
+			vendor:   models.VendorHuawei,
+			action:   ActionPortBinding,
+			params:   PortTemplateParams{InterfaceName: "GE0/0/1", BindOp: "add", IPAddress: "10.62.25.5", MACAddress: "AA:BB:CC:DD:EE:FF"},
+			expected: []string{"interface GE0/0/1", "user-bind static ip-address 10.62.25.5 mac-address AA-BB-CC-DD-EE-FF"},
+		},
+		{
+			name:     "huawei_port_binding_remove",
+			vendor:   models.VendorHuawei,
+			action:   ActionPortBinding,
+			params:   PortTemplateParams{InterfaceName: "GE0/0/1", BindOp: "remove", IPAddress: "10.62.25.5", MACAddress: "AA:BB:CC:DD:EE:FF"},
+			expected: []string{"interface GE0/0/1", "undo user-bind static ip-address 10.62.25.5 mac-address AA-BB-CC-DD-EE-FF"},
+		},
+		{
+			name:     "h3c_port_binding_add",
+			vendor:   models.VendorH3C,
+			action:   ActionPortBinding,
+			params:   PortTemplateParams{InterfaceName: "GE0/0/1", BindOp: "add", IPAddress: "10.62.25.5"},
+			expected: []string{"interface GE0/0/1", "user-bind ip-address 10.62.25.5"},
+		},
+		{
+			name:     "h3c_port_binding_remove",
+			vendor:   models.VendorH3C,
+			action:   ActionPortBinding,
+			params:   PortTemplateParams{InterfaceName: "GE0/0/1", BindOp: "remove", IPAddress: "10.62.25.5"},
+			expected: []string{"interface GE0/0/1", "undo user-bind ip-address 10.62.25.5"},
+		},
+		{
+			name:     "h3c_port_binding_remove_with_mac",
+			vendor:   models.VendorH3C,
+			action:   ActionPortBinding,
+			params:   PortTemplateParams{InterfaceName: "GE0/0/1", BindOp: "remove", IPAddress: "10.62.25.5", MACAddress: "AA:BB:CC:DD:EE:FF"},
+			expected: []string{"interface GE0/0/1", "undo user-bind ip-address 10.62.25.5 mac-address AA-BB-CC-DD-EE-FF"},
+		},
+		{
+			name:     "ruijie_port_binding_add",
+			vendor:   models.VendorRuijie,
+			action:   ActionPortBinding,
+			params:   PortTemplateParams{InterfaceName: "GigabitEthernet0/0/1", BindOp: "add", IPAddress: "10.62.25.5", MACAddress: "AA:BB:CC:DD:EE:FF"},
+			expected: []string{"interface GigabitEthernet0/0/1", "switchport port-security binding aabb.ccdd.eeff 10.62.25.5"},
+		},
+		{
+			name:     "ruijie_port_binding_add_no_mac",
+			vendor:   models.VendorRuijie,
+			action:   ActionPortBinding,
+			params:   PortTemplateParams{InterfaceName: "GigabitEthernet0/0/1", BindOp: "add", IPAddress: "10.62.25.5"},
+			expected: []string{"interface GigabitEthernet0/0/1", "switchport port-security binding 10.62.25.5"},
+		},
+		{
+			name:     "ruijie_port_binding_remove",
+			vendor:   models.VendorRuijie,
+			action:   ActionPortBinding,
+			params:   PortTemplateParams{InterfaceName: "GigabitEthernet0/0/1", BindOp: "remove", IPAddress: "10.62.25.5", MACAddress: "AA:BB:CC:DD:EE:FF"},
+			expected: []string{"interface GigabitEthernet0/0/1", "no switchport port-security binding aabb.ccdd.eeff 10.62.25.5"},
+		},
 	}
 
 	for _, tt := range tests {
