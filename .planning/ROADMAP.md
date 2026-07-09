@@ -29,6 +29,53 @@ previous_update: 2026-07-07 after Phase 54 (W5) shipped
 - ✅ **v1.17 资产对账 (Asset Reconciliation)** — Phases 42-46 (shipped 2026-07-03) — see [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md)
 - ✅ **v1.18 网络设备硬件清单 (Device Component Serials)** — Phase 48 (shipped 2026-07-04) — see [milestones/v1.18-ROADMAP.md](milestones/v1.18-ROADMAP.md)
 - ✅ **v1.19 网络设备写命令 (Network Device Port Write Operations)** — Phases 50-55 (shipped 2026-07-08) — see [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md) | [audit](milestones/v1.19-MILESTONE-AUDIT.md)
+- 🚧 **v1.20 网络设备 VLAN + 端口绑定 (Network Device VLAN + Port Binding)** — Phase 56 (initiated 2026-07-09) — see [REQUIREMENTS.md](REQUIREMENTS.md) | [design doc](../docs/plans/2026-07-09-v1.20.1-design.md)
+
+---
+
+## Phases (v1.20)
+
+### Phase 56: 网络设备 VLAN + 端口绑定 (v1.20.1) — 0/5 plans, initiated 2026-07-09
+
+**Goal:** 在 v1.19 端口写命令 MVP 基础上扩展 2 个新写命令：① 修改 access VLAN ② IP+MAC+Port 静态绑定。复用 v1.19 vendor 模板 / operlog / 权限 / 批量 / e2e 全套基建。
+
+**Depends on:** **v1.19 端口写命令 MVP (Phases 50-55)** — 复用 vendorPortTemplate + pre_state_check + port_write_service + execSinglePort + PortWriteModal + BulkWriteDrawer 全套基建
+
+**Requirements**: 22 (VLAN-01~06, BIND-01~07, INFRA-01~04, UI-01~06, TEST-01~05)
+
+**Success Criteria** (目标, 5 phase 完成时全部自动化验证通过):
+1. `go test ./internal/services/portcollection/...` — 12+ 新 vendor template 用例 + 5 已有 PASS (零回归)
+2. `go test ./internal/services/portwrite/...` — 6+ 新 pre_state_check 用例 + 10+ 新 TestE2E_* + 35 已有 PASS (零回归)
+3. `go build ./...` exit 0
+4. `npm run type-check` exit 0
+5. `npm run build` exit 0 (vendor-react gzip 与 Phase 48 baseline 776 kB 容差内, 零回归)
+6. operlog regression_test.go (25 OperType + 11 敏感关键词 + 5-参 Record 签名) PASS
+7. `56-HUMAN-UAT.md` 创建，6+ site-visit SSH verification 项目（owner = 现场运维同事）
+
+**Plans**: 5 plans (5 waves, 沿用 v1.19 W1~W5 模式)
+
+Plans:
+**Wave 1 (vendor 模板) — depends on nothing**
+
+- [ ] 56-01-PLAN.md — vendor 模板新增 (set_access_vlan + port_binding × 3 vendors) + 12+ 单元测试 (VLAN-02, BIND-03, BIND-04, TEST-01)
+
+**Wave 2 (service + pre-state) — depends on 56-01**
+
+- [ ] 56-02-PLAN.md — pre_state_check.go 新增 2 action handler + port_write_service.go 新增 2 方法 + 校验器（VLAN ID 范围 / IP regex / MAC regex）+ 6+ 单元测试 + audit row JSONB 写入（VLAN-01, VLAN-03, VLAN-05, VLAN-06, BIND-05, BIND-07, INFRA-01, TEST-02）
+
+**Wave 3 (router + handler) — depends on 56-02**
+
+- [ ] 56-03-PLAN.md — port_write_router.go 新增 2 kebab 端点 + port_write_handler.go 新增 2 handler (复用 execSinglePort DRY 模式) + operlog OperType 映射 (Update/Create/Delete) + 复用 `network:port:write` 权限（VLAN-01, BIND-01, BIND-02, INFRA-02, INFRA-03, INFRA-04)
+
+**Wave 4 (前端) — depends on 56-03**
+
+- [ ] 56-04-PLAN.md — types/network.ts 新增 2 type + networkApi.ts 新增 2 wrapper + SetAccessVlanModal.tsx + PortBindingModal.tsx + ports/index.tsx 菜单接入 + BulkWriteDrawer 零改动支持（VLAN-04, BIND-06, UI-01~06）
+
+**Wave 5 (e2e + 文档) — depends on 56-04**
+
+- [ ] 56-05-PLAN.md — 6+ fixture 文件 + 10+ TestE2E_* 测试 + 56-HUMAN-UAT.md 创建 + 文档同步 (CHANGELOG + MILESTONES + API响应规范 + 加密设计) (TEST-03, TEST-04, TEST-05)
+
+**UI hint**: yes (SetAccessVlanModal + PortBindingModal + ports/index.tsx menu integration + BulkWriteDrawer reuse)
 
 ---
 
