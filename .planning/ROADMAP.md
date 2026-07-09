@@ -61,7 +61,7 @@ Plans:
 
 **Wave 2 (service + pre-state) — depends on 56-01**
 
-- [ ] 56-02-PLAN.md — pre_state_check.go 新增 2 action handler + port_write_service.go 新增 2 方法 + 校验器（VLAN ID 范围 / IP regex / MAC regex）+ 6+ 单元测试 + audit row JSONB 写入（VLAN-01, VLAN-03, VLAN-05, VLAN-06, BIND-05, BIND-07, INFRA-01, TEST-02）
+- [x] 56-02-PLAN.md — pre_state_check.go 新增 2 action handler + port_write_service.go 新增 2 方法 + 校验器（VLAN ID 范围 / IP regex / MAC regex）+ 6+ 单元测试 + audit row JSONB 写入（VLAN-01, VLAN-03, VLAN-05, VLAN-06, BIND-05, BIND-07, INFRA-01, TEST-02）
 
 **Wave 3 (router + handler) — depends on 56-02**
 
