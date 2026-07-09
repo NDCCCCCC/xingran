@@ -69,7 +69,7 @@ Plans:
 
 **Wave 4 (前端) — depends on 56-03**
 
-- [ ] 56-04-PLAN.md — types/network.ts 新增 2 type + networkApi.ts 新增 2 wrapper + SetAccessVlanModal.tsx + PortBindingModal.tsx + ports/index.tsx 菜单接入 + BulkWriteDrawer 零改动支持（VLAN-04, BIND-06, UI-01~06）
+- [x] 56-04-PLAN.md — types/network.ts 新增 2 type + networkApi.ts 新增 2 wrapper + SetAccessVlanModal.tsx + PortBindingModal.tsx + ports/index.tsx 菜单接入 + BulkWriteDrawer 零改动支持（VLAN-04, BIND-06, UI-01~06）
 
 **Wave 5 (e2e + 文档) — depends on 56-04**
 
