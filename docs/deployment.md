@@ -10,7 +10,7 @@
 
 ```
 /app/szh/
-├── ruoyi-backend              # Go 编译产物（构建自 cmd/main.go）
+├── ruoyi-backend              # Go 编译产物（构建自 cmd/main.go；TextFSM 模板 + 前端皆已嵌入二进制）
 ├── ruoyi-react-frontend/      # 前端构建产物（可选，embed 构建已嵌入二进制）
 ├── configs/
 │   └── config.yaml            # 应用配置（非敏感，由 git 管理）
@@ -20,6 +20,8 @@
 ```
 
 > **重要**：`configs/config.yaml` **不含任何密钥**——所有敏感值通过系统环境变量注入（见 §3）。
+>
+> **重要**：网络设备的 TextFSM 模板（`templates/` 目录下 ~200 个 `.textfsm` 文件 + `lldp/` 子目录）已通过 `go:embed` 嵌入 `ruoyi-backend` 二进制，**不需要也不应该**单独部署 `templates/` 目录到 `/app/szh/`。如果服务日志出现 `no such file or directory templates/...`，请检查 binary 是否包含模板（`strings /app/szh/ruoyi-backend | grep huawei_vrp` 应有命中）。
 
 ---
 

@@ -8,10 +8,8 @@ import (
 
 // fixturesRoot returns the absolute path to the templates/samples directory.
 //
-// The directory is resolved relative to the project root (the directory
-// containing go.mod), so the function works regardless of which package
-// directory `go test` was invoked from. This mirrors the
-// templates.ParseTemplate resolution strategy.
+// templates/ 现位于 internal/templates/embedded/templates（与 go:embed 同包约束）。
+// fixturesRoot 从项目根目录出发定位该子目录，兼容从任意包目录运行 go test。
 func fixturesRoot() (string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -20,7 +18,7 @@ func fixturesRoot() (string, error) {
 	dir := cwd
 	for {
 		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return filepath.Join(dir, "templates", "samples"), nil
+			return filepath.Join(dir, "internal", "templates", "embedded", "templates", "samples"), nil
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
