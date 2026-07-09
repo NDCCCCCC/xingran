@@ -57,7 +57,7 @@ previous_update: 2026-07-07 after Phase 54 (W5) shipped
 Plans:
 **Wave 1 (vendor 模板) — depends on nothing**
 
-- [ ] 56-01-PLAN.md — vendor 模板新增 (set_access_vlan + port_binding × 3 vendors) + 12+ 单元测试 (VLAN-02, BIND-03, BIND-04, TEST-01)
+- [x] 56-01-PLAN.md — vendor 模板新增 (set_access_vlan + port_binding × 3 vendors) + 12+ 单元测试 (VLAN-02, BIND-03, BIND-04, TEST-01)
 
 **Wave 2 (service + pre-state) — depends on 56-01**
 
