@@ -73,7 +73,7 @@ Plans:
 
 **Wave 5 (e2e + 文档) — depends on 56-04**
 
-- [ ] 56-05-PLAN.md — 6+ fixture 文件 + 10+ TestE2E_* 测试 + 56-HUMAN-UAT.md 创建 + 文档同步 (CHANGELOG + MILESTONES + API响应规范 + 加密设计) (TEST-03, TEST-04, TEST-05)
+- [x] 56-05-PLAN.md — 6+ fixture 文件 + 10+ TestE2E_* 测试 + 56-HUMAN-UAT.md 创建 + 文档同步 (CHANGELOG + MILESTONES + API响应规范 + 加密设计) (TEST-03, TEST-04, TEST-05)
 
 **UI hint**: yes (SetAccessVlanModal + PortBindingModal + ports/index.tsx menu integration + BulkWriteDrawer reuse)
 
