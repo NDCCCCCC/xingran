@@ -57,11 +57,22 @@ export function SetAccessVlanModal({
   // IN-03: submitting 防写操作重复提交 (wrapper await 期间用户可重复点"确认执行")
   const [submitting, setSubmitting] = useState(false);
 
-  // open 变化时 reset 表单 (防上次 vlanId/reason 残留)
-  // deps 全稳定: open 原始值, form 来自 useForm 稳定 ref — CLAUDE.md useEffect 纪律满足
+  // CR-03 (2026-07-09 修复): 用 setFieldsValue 替代 resetFields,保留 initialValues
+  // 预填的当前 port vlan (D-02 设计契约)。原版 resetFields() 会把 vlanId 字段
+  // 清回 undefined,加上 destroyOnHidden Form 每次重挂载 → 用户打开 Modal
+  // 永远看到空 VLAN 输入框,违背 D-02 pre-fill 目的。
+  // deps 全稳定: open 原始值, form 来自 useForm 稳定 ref, portRecord 来自
+  // parent — 但因为外层 destroyOnHidden 触发 component re-mount,这里用
+  // 完整 portRecord 引用作为依赖触发 on-open 重设。
   useEffect(() => {
-    if (open) form.resetFields();
-  }, [open, form]);
+    if (open) {
+      form.setFieldsValue({
+        vlanId: portRecord?.vlan ?? 1,
+        reasonSelect: undefined,
+        reasonText: undefined,
+      });
+    }
+  }, [open, portRecord, form]);
 
   const handleOk = async (): Promise<void> => {
     setSubmitting(true);

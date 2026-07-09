@@ -63,10 +63,22 @@ export function PortBindingModal({
   // IN-03: submitting 防写操作重复提交 (wrapper await 期间用户可重复点"确认执行")
   const [submitting, setSubmitting] = useState(false);
 
-  // open 变化时 reset 表单 (防上次 op/ip/mac/reason 残留)
+  // WR-05 (2026-07-09 修复): 用 setFieldsValue 替代 resetFields,与 CR-03
+  // SetAccessVlanModal 修复一致 — resetFields() 会清空 op/ip/mac 字段到 undefined,
+  // 加上 destroyOnHidden Form 每次重挂载 → 用户每次重开 Modal 看到空表单
+  // (op Radio.Group 无选中、ip/mac 输入框空),需手动重填。
+  // 这里 op 默认 "add" 是显式默认值(BIND_OPS[0]),与原 initialValues 一致。
   // deps 全稳定: open 原始值, form 来自 useForm 稳定 ref — CLAUDE.md useEffect 纪律满足
   useEffect(() => {
-    if (open) form.resetFields();
+    if (open) {
+      form.setFieldsValue({
+        op: "add",
+        ipAddress: "",
+        macAddress: undefined,
+        reasonSelect: undefined,
+        reasonText: undefined,
+      });
+    }
   }, [open, form]);
 
   const handleOk = async (): Promise<void> => {
