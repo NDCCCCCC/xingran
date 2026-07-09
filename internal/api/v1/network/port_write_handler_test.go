@@ -38,6 +38,11 @@ type mockPortWriteService struct {
 	disableDot1xErr    error
 	batchResult        *portwrite.BatchResult
 	batchErr           error
+	// v1.20.1 set_access_vlan + port_binding mock outputs (Phase 56 W3)
+	setAccessVlanOut *portwrite.PortResult
+	setAccessVlanErr error
+	portBindingOut   *portwrite.PortResult
+	portBindingErr   error
 
 	shutdownCalls     int
 	undoCalls         int
@@ -103,13 +108,18 @@ func (m *mockPortWriteService) BatchWritePorts(ctx context.Context, req portwrit
 
 // v1.20.1 新增:set_access_vlan + port_binding 2 个 mock 方法 (Phase 56 W2)。
 //
-// 2 个方法在本测试文件中没真实调用场景(本 plan 只测 handler 的 wiring 与 audit / operlog,
-// 不直接触发 service 中 2 个 action 的成功路径),只需满足 portwrite.PortWriteService 接口,
-// 返回合理 zero-value PortResult 即可。W3 handler 集成后会写专门的执行路径测试覆盖真实调用。
+// W3 扩展：增加可选 result/err 字段，便于 handler 集成测试覆盖
+// 成功 / sentinel / failed 三条路径（不设置时返 zero-value succeeded PortResult）。
 func (m *mockPortWriteService) SetAccessVlan(ctx context.Context, portID string, vlanId int, operator string) (*portwrite.PortResult, error) {
+	if m.setAccessVlanOut != nil || m.setAccessVlanErr != nil {
+		return m.setAccessVlanOut, m.setAccessVlanErr
+	}
 	return &portwrite.PortResult{PortID: portID, Action: portcollection.ActionSetAccessVLAN, Status: "succeeded"}, nil
 }
 func (m *mockPortWriteService) PortBinding(ctx context.Context, portID string, op string, ipAddress string, macAddress string, operator string) (*portwrite.PortResult, error) {
+	if m.portBindingOut != nil || m.portBindingErr != nil {
+		return m.portBindingOut, m.portBindingErr
+	}
 	return &portwrite.PortResult{PortID: portID, Action: portcollection.ActionPortBinding, Status: "succeeded"}, nil
 }
 
@@ -500,4 +510,224 @@ func TestPortWriteHandler_WithOperID_NotAdded(t *testing.T) {
 		"handler 文件禁止使用 operlog.WithOperID（Path C invariant）")
 	assert.NotContains(t, src, "operlog.WithJsonResult",
 		"handler 文件禁止使用 operlog.WithJsonResult（Path C invariant）")
+}
+
+// ===== v1.20.1 handler tests (Phase 56 W3) =====
+//
+// 覆盖 2 新 handler (SetAccessVlan / PortBinding) 的 4 关键路径:
+// 1. binding 失败 (400) - vlanId 越界 / op 非 oneof
+// 2. service sentinel 失败 (400) - ErrVlanIdOutOfRange / ErrBindOpInvalid
+// 3. 成功路径 - audit after_value 从 PortResult.Extra 取，operlog 调用
+// 4. 源码 grep - 4 新 sentinel 翻译存在 + buildAfterValue 接收 PortResult
+
+// TestPortWriteHandler_SetAccessVlan_BindingRejectsOutOfRangeVlanId
+// binding tag min=1,max=4094 在 handler 入口拦截 vlanId=0 / vlanId=4095 → 400，不调 service。
+func TestPortWriteHandler_SetAccessVlan_BindingRejectsOutOfRangeVlanId(t *testing.T) {
+	h, _, mockOperLog, sqlDB := newTestHandler(t)
+
+	for _, vlan := range []int{0, 4095, 10000} {
+		w := invokeWithCtx("SetAccessVlan", h.SetAccessVlan, SetAccessVlanRequest{PortID: "p1", VLANID: vlan}, nil)
+		var resp struct {
+			Code int `json:"code"`
+		}
+		_ = json.Unmarshal(w.Body.Bytes(), &resp)
+		assert.Equal(t, http.StatusBadRequest, resp.Code, "vlanId=%d should be rejected by binding tag", vlan)
+	}
+
+	// audit 表无新行 + operlog 未调用
+	var count int64
+	sqlDB.Model(&models.PortWriteAudit{}).Count(&count)
+	assert.Equal(t, int64(0), count, "binding-fail path must NOT write audit")
+	assert.Equal(t, 0, mockOperLog.recordAsyncCalls, "binding-fail path must NOT call operlog")
+	// mock service 未被调用（mockSvc 仍是零值，若被调用会返默认 succeeded；这里靠 audit count 验证未走 service 成功路径）
+}
+
+// TestPortWriteHandler_SetAccessVlan_ServiceSentinelReturns400
+// service 返 ErrVlanIdOutOfRange → handler 翻译为 400，不写 audit / 不调 operlog。
+func TestPortWriteHandler_SetAccessVlan_ServiceSentinelReturns400(t *testing.T) {
+	h, mockSvc, mockOperLog, sqlDB := newTestHandler(t)
+	mockSvc.setAccessVlanErr = portwrite.ErrVlanIdOutOfRange
+
+	w := invokeWithCtx("SetAccessVlan", h.SetAccessVlan, SetAccessVlanRequest{PortID: "p1", VLANID: 100}, nil)
+	var resp struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+	}
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
+	assert.Equal(t, "VLAN ID 必须在 1-4094 之间", resp.Message)
+
+	// audit 表无新行 + operlog 未调用
+	var count int64
+	sqlDB.Model(&models.PortWriteAudit{}).Count(&count)
+	assert.Equal(t, int64(0), count, "sentinel path must NOT write audit")
+	assert.Equal(t, 0, mockOperLog.recordAsyncCalls, "sentinel path must NOT call operlog")
+}
+
+// TestPortWriteHandler_SetAccessVlan_SuccessExtraPopulatesAfterValue
+// service 返 succeeded + Extra={vlanId:100} → audit after_value 含 vlanId=100 + operlog(OperTypeUpdate=2)。
+func TestPortWriteHandler_SetAccessVlan_SuccessExtraPopulatesAfterValue(t *testing.T) {
+	h, mockSvc, mockOperLog, sqlDB := newTestHandler(t)
+	port := &models.DevicePortStatus{ID: "vlan-p1", DeviceID: "dev-v", InterfaceName: "GE0/0/10", AdminStatus: "up"}
+	if err := sqlDB.Create(port).Error; err != nil {
+		t.Fatalf("seed port: %v", err)
+	}
+
+	mockSvc.setAccessVlanOut = &portwrite.PortResult{
+		PortID:     "vlan-p1",
+		Action:     portcollection.ActionSetAccessVLAN,
+		Status:     "succeeded",
+		CommandSent: "system-view | interface GE0/0/10 | port link-type access | port default vlan 100",
+		Extra:      map[string]interface{}{"vlanId": 100},
+	}
+
+	w := invokeWithCtx("SetAccessVlan", h.SetAccessVlan, SetAccessVlanRequest{PortID: "vlan-p1", VLANID: 100}, nil)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var audit models.PortWriteAudit
+	if err := sqlDB.First(&audit, "port_id = ?", "vlan-p1").Error; err != nil {
+		t.Fatalf("audit row not found: %v", err)
+	}
+	assert.Equal(t, "succeeded", audit.Status)
+	// after_value 含 vlanId=100（来自 PortResult.Extra，由 buildAfterValue 读出）
+	var after map[string]interface{}
+	_ = json.Unmarshal(audit.AfterValue, &after)
+	assert.Equal(t, float64(100), after["vlanId"], "after_value should contain vlanId=100 from PortResult.Extra; got=%s", string(audit.AfterValue))
+
+	// operlog 调用一次，OperType=OperTypeUpdate(=2)
+	assert.Equal(t, 1, mockOperLog.recordAsyncCalls)
+	assert.Equal(t, "端口管理", mockOperLog.lastTitle)
+	assert.Equal(t, 2, mockOperLog.lastBusinessType, "SetAccessVlan → OperTypeUpdate=2")
+}
+
+// TestPortWriteHandler_PortBinding_OperTypeBranching
+// op=add → OperTypeCreate(1); op=remove → OperTypeDelete(3)。绑定 oneof 拒绝其他值。
+func TestPortWriteHandler_PortBinding_OperTypeBranching(t *testing.T) {
+	t.Run("op_add_OperTypeCreate", func(t *testing.T) {
+		h, mockSvc, mockOperLog, sqlDB := newTestHandler(t)
+		sqlDB.Create(&models.DevicePortStatus{ID: "bnd-p1", DeviceID: "bnd-dev", InterfaceName: "GE0/0/20", AdminStatus: "up"})
+		sqlDB.Create(&models.NetworkDevice{BaseModel: models.BaseModel{ID: "bnd-dev"}, DeviceName: "绑定测试设备"})
+
+		mockSvc.portBindingOut = &portwrite.PortResult{
+			PortID: "bnd-p1", Action: portcollection.ActionPortBinding, Status: "succeeded",
+			Extra: map[string]interface{}{"bindOp": "add", "ipAddress": "10.62.25.5", "macAddress": "AA:BB:CC:DD:EE:FF"},
+		}
+		w := invokeWithCtx("PortBinding", h.PortBinding, PortBindingRequest{
+			PortID: "bnd-p1", Op: "add", IPAddress: "10.62.25.5", MACAddress: "AA:BB:CC:DD:EE:FF",
+		}, nil)
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, 1, mockOperLog.recordAsyncCalls)
+		assert.Equal(t, "端口管理", mockOperLog.lastTitle)
+		assert.Equal(t, 1, mockOperLog.lastBusinessType, "op=add → OperTypeCreate=1")
+
+		// audit after_value 含 ipAddress / macAddress / bindOp（来自 PortResult.Extra）
+		var audit models.PortWriteAudit
+		if err := sqlDB.First(&audit, "port_id = ?", "bnd-p1").Error; err != nil {
+			t.Fatalf("audit row not found: %v", err)
+		}
+		var after map[string]interface{}
+		_ = json.Unmarshal(audit.AfterValue, &after)
+		assert.Equal(t, "10.62.25.5", after["ipAddress"])
+		assert.Equal(t, "AA:BB:CC:DD:EE:FF", after["macAddress"])
+		assert.Equal(t, "add", after["bindOp"])
+	})
+	t.Run("op_remove_OperTypeDelete", func(t *testing.T) {
+		h, mockSvc, mockOperLog, sqlDB := newTestHandler(t)
+		sqlDB.Create(&models.DevicePortStatus{ID: "bnd-p2", DeviceID: "bnd-dev2", InterfaceName: "GE0/0/21", AdminStatus: "up"})
+		sqlDB.Create(&models.NetworkDevice{BaseModel: models.BaseModel{ID: "bnd-dev2"}, DeviceName: "绑定测试设备2"})
+
+		mockSvc.portBindingOut = &portwrite.PortResult{
+			PortID: "bnd-p2", Action: portcollection.ActionPortBinding, Status: "succeeded",
+			Extra: map[string]interface{}{"bindOp": "remove", "ipAddress": "10.62.25.6"},
+		}
+		w := invokeWithCtx("PortBinding", h.PortBinding, PortBindingRequest{
+			PortID: "bnd-p2", Op: "remove", IPAddress: "10.62.25.6",
+		}, nil)
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, 1, mockOperLog.recordAsyncCalls)
+		assert.Equal(t, 3, mockOperLog.lastBusinessType, "op=remove → OperTypeDelete=3")
+
+		// audit after_value 含 bindOp=remove + ipAddress（无 macAddress，因请求未传）
+		var audit models.PortWriteAudit
+		if err := sqlDB.First(&audit, "port_id = ?", "bnd-p2").Error; err != nil {
+			t.Fatalf("audit row not found: %v", err)
+		}
+		var after map[string]interface{}
+		_ = json.Unmarshal(audit.AfterValue, &after)
+		assert.Equal(t, "remove", after["bindOp"])
+		assert.Equal(t, "10.62.25.6", after["ipAddress"])
+		_, hasMac := after["macAddress"]
+		assert.False(t, hasMac, "macAddress should be absent when Extra has no macAddress")
+	})
+	t.Run("op_invalid_rejected_by_binding", func(t *testing.T) {
+		h, _, _, _ := newTestHandler(t)
+		w := invokeWithCtx("PortBinding", h.PortBinding, PortBindingRequest{
+			PortID: "bnd-x", Op: "DELETE", IPAddress: "10.62.25.5",
+		}, nil)
+		var resp struct{ Code int }
+		_ = json.Unmarshal(w.Body.Bytes(), &resp)
+		assert.Equal(t, http.StatusBadRequest, resp.Code, "op=DELETE should be rejected by oneof binding tag")
+	})
+}
+
+// TestPortWriteHandler_PortBinding_ServiceSentinelsReturn400
+// service 返 ErrBindOpInvalid / ErrIPAddressInvalid / ErrMACAddressInvalid → 翻译为对应中文 400。
+func TestPortWriteHandler_PortBinding_ServiceSentinelsReturn400(t *testing.T) {
+	cases := []struct {
+		name    string
+		err     error
+		message string
+	}{
+		{"bind_op_invalid", portwrite.ErrBindOpInvalid, "绑定操作必须是 add 或 remove"},
+		{"ip_invalid", portwrite.ErrIPAddressInvalid, "IP 地址格式不合法"},
+		{"mac_invalid", portwrite.ErrMACAddressInvalid, "MAC 地址格式不合法"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			h, mockSvc, mockOperLog, sqlDB := newTestHandler(t)
+			mockSvc.portBindingErr = tc.err
+			w := invokeWithCtx("PortBinding", h.PortBinding, PortBindingRequest{
+				PortID: "p1", Op: "add", IPAddress: "10.62.25.5",
+			}, nil)
+			var resp struct {
+				Code    int    `json:"code"`
+				Message string `json:"message"`
+			}
+			_ = json.Unmarshal(w.Body.Bytes(), &resp)
+			assert.Equal(t, http.StatusBadRequest, resp.Code)
+			assert.Equal(t, tc.message, resp.Message)
+			var count int64
+			sqlDB.Model(&models.PortWriteAudit{}).Count(&count)
+			assert.Equal(t, int64(0), count, "sentinel path must NOT write audit")
+			assert.Equal(t, 0, mockOperLog.recordAsyncCalls, "sentinel path must NOT call operlog")
+		})
+	}
+}
+
+// TestPortWriteHandler_V1201_SourceAssertions locks v1.20.1 wiring via source grep:
+//   - 4 new sentinel→HTTP-400 translations present
+//   - buildAfterValue signature takes *PortResult (so it can read Extra)
+func TestPortWriteHandler_V1201_SourceAssertions(t *testing.T) {
+	src := readFile(t, "port_write_handler.go")
+	// 4 sentinel 翻译
+	assert.Contains(t, src, `errors.Is(err, portwrite.ErrVlanIdOutOfRange)`)
+	assert.Contains(t, src, `errors.Is(err, portwrite.ErrBindOpInvalid)`)
+	assert.Contains(t, src, `errors.Is(err, portwrite.ErrIPAddressInvalid)`)
+	assert.Contains(t, src, `errors.Is(err, portwrite.ErrMACAddressInvalid)`)
+	// buildAfterValue 签名扩展（接收 *PortResult）
+	assert.Contains(t, src, "func buildAfterValue(action portcollection.PortAction, pr *portwrite.PortResult) json.RawMessage")
+	// 2 新 case
+	assert.Contains(t, src, "case portcollection.ActionSetAccessVLAN:")
+	assert.Contains(t, src, "case portcollection.ActionPortBinding:")
+	// 2 新 request struct
+	assert.Contains(t, src, "type SetAccessVlanRequest struct")
+	assert.Contains(t, src, "type PortBindingRequest struct")
+	// 2 新 handler methods
+	assert.Contains(t, src, "func (h *PortWriteHandler) SetAccessVlan(c *gin.Context)")
+	assert.Contains(t, src, "func (h *PortWriteHandler) PortBinding(c *gin.Context)")
+	// OperType 分流（design.md §6）
+	assert.Contains(t, src, "operType := operlog.OperTypeCreate")
+	assert.Contains(t, src, "operType = operlog.OperTypeDelete")
+	// 禁止引入敏感关键词处理（IP/MAC 非敏感）
+	assert.NotContains(t, src, "RecordWithBody")
 }
