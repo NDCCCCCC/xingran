@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/core"
@@ -62,11 +64,42 @@ type PortWriteRequest struct {
 	Reason      string `json:"reason,omitempty"`
 }
 
+// SetAccessVlanRequest 修改端口 access VLAN 请求 (v1.20.1)。
+//
+//   - PortID：必填，目标端口 UUID
+//   - VLANID：必填，1-4094 (binding 双重防线；service 仍校验为真相源)
+//   - Reason：UI-02 操作原因，后端仅记录不校验
+type SetAccessVlanRequest struct {
+	PortID string `json:"portId" binding:"required"`
+	VLANID int    `json:"vlanId" binding:"required,min=1,max=4094"`
+	Reason string `json:"reason,omitempty"`
+}
+
+// PortBindingRequest 端口绑定请求 (v1.20.1)。
+//
+//   - PortID：必填，目标端口 UUID
+//   - Op：必填，"add" 或 "remove" (oneof tag 双重防线；service 仍校验)
+//   - IPAddress：必填，IPv4 地址 (service 层正则校验为真相源)
+//   - MACAddress：可选，MAC 地址 (service 层 NormalizeMACAddress 校验，仅 op=add 时有意义)
+//   - Reason：UI-02 操作原因，后端仅记录不校验
+type PortBindingRequest struct {
+	PortID     string `json:"portId" binding:"required"`
+	Op         string `json:"op" binding:"required,oneof=add remove"`
+	IPAddress  string `json:"ipAddress" binding:"required"`
+	MACAddress string `json:"macAddress,omitempty"`
+	Reason     string `json:"reason,omitempty"`
+}
+
 // ====================== 单端口 handler ======================
 
 // Shutdown 关闭端口 (POST /network/ports/write/shutdown)
 func (h *PortWriteHandler) Shutdown(c *gin.Context) {
-	h.execSinglePort(c, portcollection.ActionShutdown, operlog.OperTypeDisable,
+	var req PortWriteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+	h.execSinglePort(c, portcollection.ActionShutdown, operlog.OperTypeDisable, req.PortID, req.Description,
 		func(ctx context.Context, portID, operator, desc string) (*portwrite.PortResult, error) {
 			return h.service.Shutdown(ctx, portID, operator)
 		})
@@ -74,7 +107,12 @@ func (h *PortWriteHandler) Shutdown(c *gin.Context) {
 
 // UndoShutdown 取消关闭 (POST /network/ports/write/undo-shutdown)
 func (h *PortWriteHandler) UndoShutdown(c *gin.Context) {
-	h.execSinglePort(c, portcollection.ActionUndoShutdown, operlog.OperTypeEnable,
+	var req PortWriteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+	h.execSinglePort(c, portcollection.ActionUndoShutdown, operlog.OperTypeEnable, req.PortID, req.Description,
 		func(ctx context.Context, portID, operator, desc string) (*portwrite.PortResult, error) {
 			return h.service.UndoShutdown(ctx, portID, operator)
 		})
@@ -82,7 +120,12 @@ func (h *PortWriteHandler) UndoShutdown(c *gin.Context) {
 
 // SetDescription 设置端口描述 (POST /network/ports/write/description)
 func (h *PortWriteHandler) SetDescription(c *gin.Context) {
-	h.execSinglePort(c, portcollection.ActionDescription, operlog.OperTypeUpdate,
+	var req PortWriteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+	h.execSinglePort(c, portcollection.ActionDescription, operlog.OperTypeUpdate, req.PortID, req.Description,
 		func(ctx context.Context, portID, operator, desc string) (*portwrite.PortResult, error) {
 			return h.service.SetDescription(ctx, portID, desc, operator)
 		})
@@ -90,7 +133,12 @@ func (h *PortWriteHandler) SetDescription(c *gin.Context) {
 
 // EnableDot1x 启用 802.1X (POST /network/ports/write/dot1x-enable)
 func (h *PortWriteHandler) EnableDot1x(c *gin.Context) {
-	h.execSinglePort(c, portcollection.ActionDot1xEnable, operlog.OperTypeEnable,
+	var req PortWriteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+	h.execSinglePort(c, portcollection.ActionDot1xEnable, operlog.OperTypeEnable, req.PortID, req.Description,
 		func(ctx context.Context, portID, operator, desc string) (*portwrite.PortResult, error) {
 			return h.service.EnableDot1x(ctx, portID, operator)
 		})
@@ -98,16 +146,66 @@ func (h *PortWriteHandler) EnableDot1x(c *gin.Context) {
 
 // DisableDot1x 停用 802.1X (POST /network/ports/write/dot1x-disable)
 func (h *PortWriteHandler) DisableDot1x(c *gin.Context) {
-	h.execSinglePort(c, portcollection.ActionDot1xDisable, operlog.OperTypeDisable,
+	var req PortWriteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+	h.execSinglePort(c, portcollection.ActionDot1xDisable, operlog.OperTypeDisable, req.PortID, req.Description,
 		func(ctx context.Context, portID, operator, desc string) (*portwrite.PortResult, error) {
 			return h.service.DisableDot1x(ctx, portID, operator)
 		})
 }
 
-// execSinglePort 单端口 handler 公共流程 (5 个方法共用)。
+// SetAccessVlan 修改端口 access VLAN (POST /network/ports/write/set-access-vlan)。
+//
+// OperType=Update(=2) per design.md §6：修改现有端口配置（与 description 同类）。
+//
+// 绑定 SetAccessVlanRequest 在 execSinglePort 之外（PATTERNS.md Option A），
+// 校验 vlanId 1-4094 (binding 双重防线，service 仍校验为真相源)。
+// serviceCall 闭包捕获 req.VLANID 并传给 service.SetAccessVlan。
+func (h *PortWriteHandler) SetAccessVlan(c *gin.Context) {
+	var req SetAccessVlanRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+	h.execSinglePort(c, portcollection.ActionSetAccessVLAN, operlog.OperTypeUpdate, req.PortID, "",
+		func(ctx context.Context, portID, operator, desc string) (*portwrite.PortResult, error) {
+			return h.service.SetAccessVlan(ctx, portID, req.VLANID, operator)
+		})
+}
+
+// PortBinding 端口绑定 (POST /network/ports/write/port-binding)。
+//
+// OperType 分流 (design.md §6)：
+//   - op=add    → OperTypeCreate(=1)  新增静态绑定记录
+//   - op=remove → OperTypeDelete(=3)  删除已有绑定记录
+//
+// 绑定 PortBindingRequest 在 execSinglePort 之外（PATTERNS.md Option A），
+// 校验 op ∈ {add, remove} (oneof tag 双重防线，service 仍校验)。
+// serviceCall 闭包捕获 req.Op/IPAddress/MACAddress 并传给 service.PortBinding。
+func (h *PortWriteHandler) PortBinding(c *gin.Context) {
+	var req PortBindingRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+	operType := operlog.OperTypeCreate
+	if req.Op == "remove" {
+		operType = operlog.OperTypeDelete
+	}
+	h.execSinglePort(c, portcollection.ActionPortBinding, operType, req.PortID, "",
+		func(ctx context.Context, portID, operator, desc string) (*portwrite.PortResult, error) {
+			return h.service.PortBinding(ctx, portID, req.Op, req.IPAddress, req.MACAddress, operator)
+		})
+}
+
+// execSinglePort 单端口 handler 公共流程 (5 个 v1.19 方法 + 2 个 v1.20.1 方法共用)。
 //
 // 步骤 (PATTERNS.md §4c + RESEARCH §3.3 sentinel→HTTP 表)：
-//  1. c.ShouldBindJSON → 400 if fail
+//  1. （绑定已由 caller 在进入本函数前完成 — v1.19 5 方法绑定 PortWriteRequest；
+//     v1.20.1 SetAccessVlan/PortBinding 绑定各自专用 struct。caller 传 portID + description 进来）
 //  2. operator := utils.GetUsername(c)
 //  3. D-02 预 SELECT DevicePortStatus → 拼 before_value JSON（端口行不存在 → {}）
 //  4. 调 service 方法 (serviceCall) → sentinel err 用 errors.Is 翻译成 4xx/500，**不写 audit**
@@ -117,39 +215,53 @@ func (h *PortWriteHandler) DisableDot1x(c *gin.Context) {
 //  8. response.Success(c, result)
 //
 // serviceCall 接收 description 参数（仅 SetDescription handler 用；其他 handler 忽略）。
+//
+// v1.20.1 重构：原本 execSinglePort 内部调 c.ShouldBindJSON(&PortWriteRequest{})，
+// 但 SetAccessVlan/PortBinding handler 已经绑定过各自 struct（PATTERNS.md Option A：
+// bind outside DRY）。两次 ShouldBindJSON 会让第二次读到 EOF。改为由 caller 绑定并
+// 传 portID + description 作为参数；v1.19 5 方法在各自 handler 顶部绑定 PortWriteRequest
+// 后再调 execSinglePort。
 func (h *PortWriteHandler) execSinglePort(
 	c *gin.Context,
 	action portcollection.PortAction,
 	operType int,
+	portID string,
+	description string,
 	serviceCall func(ctx context.Context, portID, operator, desc string) (*portwrite.PortResult, error),
 ) {
-	var req PortWriteRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
-		return
-	}
-
 	operator := utils.GetUsername(c)
 
 	// D-02 预 SELECT before_value（端口行不存在 → {}, 不阻塞流程）
 	var port models.DevicePortStatus
 	beforeValue := json.RawMessage([]byte("{}"))
 	deviceID := ""
-	portFindErr := h.core.GetDB().Where("id = ?", req.PortID).First(&port).Error
+	portFindErr := h.core.GetDB().Where("id = ?", portID).First(&port).Error
 	if portFindErr == nil {
 		deviceID = port.DeviceID
 		beforeValue = buildBeforeValue(&port)
 	}
 
-	result, err := serviceCall(c.Request.Context(), req.PortID, operator, req.Description)
+	result, err := serviceCall(c.Request.Context(), portID, operator, description)
 	if err != nil {
-		// sentinel 路径（端口/设备不存在）：4xx，不写 audit、不调 operlog
+		// sentinel 路径（端口/设备不存在 + v1.20.1 入参校验）：4xx，不写 audit、不调 operlog
 		switch {
 		case errors.Is(err, portwrite.ErrPortNotFound):
 			response.Error(c, http.StatusNotFound, "端口不存在")
 			return
 		case errors.Is(err, portwrite.ErrDeviceNotFound):
 			response.Error(c, http.StatusNotFound, "设备不存在")
+			return
+		case errors.Is(err, portwrite.ErrVlanIdOutOfRange):
+			response.Error(c, http.StatusBadRequest, "VLAN ID 必须在 1-4094 之间")
+			return
+		case errors.Is(err, portwrite.ErrBindOpInvalid):
+			response.Error(c, http.StatusBadRequest, "绑定操作必须是 add 或 remove")
+			return
+		case errors.Is(err, portwrite.ErrIPAddressInvalid):
+			response.Error(c, http.StatusBadRequest, "IP 地址格式不合法")
+			return
+		case errors.Is(err, portwrite.ErrMACAddressInvalid):
+			response.Error(c, http.StatusBadRequest, "MAC 地址格式不合法")
 			return
 		}
 		// 非 sentinel error：设备执行失败（拒绝/transport）或系统错误（DB/RenderCommand）。
@@ -172,7 +284,7 @@ func (h *PortWriteHandler) execSinglePort(
 	auditRow := buildAuditRow(result, beforeValue, deviceID, operator)
 	if createErr := h.core.GetDB().Create(auditRow).Error; createErr != nil {
 		// audit 写入失败不阻塞响应（与 batch 路径一致），但记录告警。
-		log.Printf("port_write audit insert failed portID=%s action=%s: %v", req.PortID, action, createErr)
+		log.Printf("port_write audit insert failed portID=%s action=%s: %v", portID, action, createErr)
 	}
 
 	// 查 device_name + interface_name 用于 oper_param 可读性（UUID 不便阅读）；
@@ -186,7 +298,7 @@ func (h *PortWriteHandler) execSinglePort(
 	}
 	interfaceName := port.InterfaceName
 	if interfaceName == "" {
-		interfaceName = req.PortID // fallback：端口行不存在
+		interfaceName = portID // fallback：端口行不存在
 	}
 
 	// Path C 第 2 步：把 audit_id 嵌 operlog oper_param（audit.oper_log_id 列保持 NULL）
@@ -300,21 +412,24 @@ func buildBeforeValue(port *models.DevicePortStatus) json.RawMessage {
 	return b
 }
 
-// buildAfterValue 拼接 D-03 after_value 目标态快照（按 action 分支）
+// buildAfterValue 拼接 D-03 after_value 目标态快照（按 action 分支）。
 //
-// shutdown → {"admin_status":"down"}
-// undo_shutdown → {"admin_status":"up"}
-// dot1x_enable → {"dot1x_enabled":true}
-// dot1x_disable → {"dot1x_enabled":false}
-// description → {"description":"<desc>"}
+// v1.19 actions (固定态)：
+//
+//	shutdown → {"admin_status":"down"}
+//	undo_shutdown → {"admin_status":"up"}
+//	dot1x_enable → {"dot1x_enabled":true}
+//	dot1x_disable → {"dot1x_enabled":false}
+//	description → caller 在 buildAuditRow 里用 PortResult.CurrentState 覆盖
+//
+// v1.20.1 actions (动态态，从 PortResult.Extra 读取 service 注入的 vlanId / bindOp / ipAddress / macAddress)：
+//
+//	set_access_vlan → {"vlanId":100}
+//	port_binding    → {"ipAddress":"...","macAddress":"...","bindOp":"add"} (macAddress 可选)
 //
 // skipped（NoOp）路径：caller 会在 buildAuditRow 里覆盖为 before_value。
-// buildAfterValue 不接受 description 参数 — description action 的目标态在 buildAuditRow
-// 里用 PortResult.CommandSent 反推不出来（CommandSent 是命令串，非目标描述），
-// 所以 description 路径的目标态 JSON 由 caller (buildAuditRow) 从 PortResult.CurrentState
-// 或 req.Description 获取 — 本函数仅按 action 返一个最小态，description action 时
-// caller 通过 buildAuditRowForDescription 覆盖。
-func buildAfterValue(action portcollection.PortAction) json.RawMessage {
+// pr 参数为 nil 或 pr.Extra 为 nil 时，v1.20.1 两个 action 返空 `{}` 兜底（向后兼容 v1.19 callers）。
+func buildAfterValue(action portcollection.PortAction, pr *portwrite.PortResult) json.RawMessage {
 	switch action {
 	case portcollection.ActionShutdown:
 		return json.RawMessage([]byte(`{"admin_status":"down"}`))
@@ -324,6 +439,32 @@ func buildAfterValue(action portcollection.PortAction) json.RawMessage {
 		return json.RawMessage([]byte(`{"dot1x_enabled":true}`))
 	case portcollection.ActionDot1xDisable:
 		return json.RawMessage([]byte(`{"dot1x_enabled":false}`))
+	case portcollection.ActionSetAccessVLAN:
+		// v1.20.1: 从 PortResult.Extra 读 vlanId（W2 service 在成功路径写入）
+		if pr != nil && pr.Extra != nil {
+			if v, ok := pr.Extra["vlanId"]; ok {
+				return json.RawMessage([]byte(fmt.Sprintf(`{"vlanId":%v}`, v)))
+			}
+		}
+		return json.RawMessage([]byte(`{}`))
+	case portcollection.ActionPortBinding:
+		// v1.20.1: 从 PortResult.Extra 读 bindOp / ipAddress / macAddress（W2 service 在成功路径写入）
+		if pr != nil && pr.Extra != nil {
+			parts := make([]string, 0, 3)
+			if ip, ok := pr.Extra["ipAddress"].(string); ok && ip != "" {
+				parts = append(parts, fmt.Sprintf(`"ipAddress":%q`, ip))
+			}
+			if mac, ok := pr.Extra["macAddress"].(string); ok && mac != "" {
+				parts = append(parts, fmt.Sprintf(`"macAddress":%q`, mac))
+			}
+			if op, ok := pr.Extra["bindOp"].(string); ok && op != "" {
+				parts = append(parts, fmt.Sprintf(`"bindOp":%q`, op))
+			}
+			if len(parts) > 0 {
+				return json.RawMessage([]byte("{" + strings.Join(parts, ",") + "}"))
+			}
+		}
+		return json.RawMessage([]byte(`{}`))
 	default:
 		// description：target 态在 caller 处用具体值覆盖（这里给空 placeholder）
 		return json.RawMessage([]byte(`{}`))
@@ -336,7 +477,8 @@ func buildAfterValue(action portcollection.PortAction) json.RawMessage {
 //   - skipped (NoOp) → after_value = before_value（无变化）
 //   - description action → after_value = {"description": result.CurrentState or ""}
 //     （注：PortResult.CurrentState 由 Phase 51 service 在 description 路径填目标态描述）
-//   - 其他 action → buildAfterValue(action)
+//   - 其他 action → buildAfterValue(action, pr)
+//     v1.20.1 set_access_vlan / port_binding 的 after_value 由 buildAfterValue 从 pr.Extra 读出
 //
 // device_response 填值（RESEARCH A5，Phase 51 service 不暴露原始响应文本）：
 //   - succeeded → "OK"
@@ -347,7 +489,7 @@ func buildAfterValue(action portcollection.PortAction) json.RawMessage {
 //
 // OperLogID：nil（Path C 强制，audit.oper_log_id 列保持 NULL）
 func buildAuditRow(pr *portwrite.PortResult, beforeValue json.RawMessage, deviceID, operator string) *models.PortWriteAudit {
-	afterValue := buildAfterValue(pr.Action)
+	afterValue := buildAfterValue(pr.Action, pr)
 	if pr.Status == "skipped" {
 		afterValue = beforeValue
 	}
