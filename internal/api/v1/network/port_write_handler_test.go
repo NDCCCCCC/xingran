@@ -101,6 +101,18 @@ func (m *mockPortWriteService) BatchWritePorts(ctx context.Context, req portwrit
 	return &portwrite.BatchResult{Succeeded: []portwrite.PortResult{}, Failed: []portwrite.PortResult{}, Skipped: []portwrite.PortResult{}}, nil
 }
 
+// v1.20.1 新增:set_access_vlan + port_binding 2 个 mock 方法 (Phase 56 W2)。
+//
+// 2 个方法在本测试文件中没真实调用场景(本 plan 只测 handler 的 wiring 与 audit / operlog,
+// 不直接触发 service 中 2 个 action 的成功路径),只需满足 portwrite.PortWriteService 接口,
+// 返回合理 zero-value PortResult 即可。W3 handler 集成后会写专门的执行路径测试覆盖真实调用。
+func (m *mockPortWriteService) SetAccessVlan(ctx context.Context, portID string, vlanId int, operator string) (*portwrite.PortResult, error) {
+	return &portwrite.PortResult{PortID: portID, Action: portcollection.ActionSetAccessVLAN, Status: "succeeded"}, nil
+}
+func (m *mockPortWriteService) PortBinding(ctx context.Context, portID string, op string, ipAddress string, macAddress string, operator string) (*portwrite.PortResult, error) {
+	return &portwrite.PortResult{PortID: portID, Action: portcollection.ActionPortBinding, Status: "succeeded"}, nil
+}
+
 // ===== Mock OperLogService =====
 
 // mockOperLogService 实现 services.OperLogService，仅 RecordAsync 真实被调（其他方法 panic/不调）。
