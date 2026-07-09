@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -1195,4 +1196,338 @@ func TestBatchWritePorts_NoRefresh_WhenAllSkipped(t *testing.T) {
 	mockExec.AssertNotCalled(t, "ExecuteCustom", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	// 关键不变式：全部 NoOp 跳过 → batchRequiresRefresh 返回 false → CollectDevice 不触发
 	mockColl.AssertNotCalled(t, "CollectDevice", mock.Anything, mock.Anything)
+}
+
+// TestSetAccessVlan_Validation 验证 VLAN ID 范围 1-4094 边界（VLAN-05），其他任意值拒绝。
+//
+// 7 个表驱动用例覆盖关键边界：越下界 (0)、上界内 (1/100/4094)、越上界 (4095/99999/负数)。
+// accept 用例 validator 通过后会继续走 writeSinglePort → DB 查询；空 DB 返回 ErrPortNotFound
+// 或 ErrDeviceNotFound（fallback 路径），都是 validator 通过后的下游错误，符合预期。
+func TestSetAccessVlan_Validation(t *testing.T) {
+	tests := []struct {
+		name    string
+		vlanId  int
+		wantErr error
+	}{
+		{"vlanId_zero_reject", 0, ErrVlanIdOutOfRange},
+		{"vlanId_one_accept", 1, nil},
+		{"vlanId_hundred_accept", 100, nil},
+		{"vlanId_4094_accept", 4094, nil},
+		{"vlanId_4095_reject", 4095, ErrVlanIdOutOfRange},
+		{"vlanId_99999_reject", 99999, ErrVlanIdOutOfRange},
+		{"vlanId_negative_reject", -1, ErrVlanIdOutOfRange},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := newTestService(new(mockDeviceExecutor), new(mockCollectionSvc), newTestDB(t))
+			result, err := svc.SetAccessVlan(context.Background(), "port-1", tt.vlanId, "test-op")
+			if tt.wantErr == nil {
+				// accept: validator 通过；下游 DB 查不到 port → ErrPortNotFound 或 fallback → ErrDeviceNotFound
+				if err != nil && !errors.Is(err, ErrPortNotFound) && !errors.Is(err, ErrDeviceNotFound) {
+					t.Fatalf("expected validator to pass (acceptable downstream errors: ErrPortNotFound/ErrDeviceNotFound), got unexpected err: %v", err)
+				}
+				_ = result
+			} else {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("expected error %v, got %v", tt.wantErr, err)
+				}
+			}
+		})
+	}
+}
+
+// TestPortBinding_Validation 验证 op / IP / MAC 3 套 validator + 15 个边界用例（BIND-07）。
+//
+//   - op: add/remove 接受；invalid/empty 拒绝 (ErrBindOpInvalid)
+//   - ip: 严格 IPv4 regex 校验；越界段 (256.x.x.x) / shell 注入字符（;/|空格）/
+//     非数字 (10.0.0.a) / 多余点号 都拒绝 (ErrIPAddressInvalid);
+//     0.0.0.0 / 255.255.255.255 是 RFC 合法的 IPv4 地址,regex 允许 —
+//     device 端发包会 reject 自身协议层,service 层不预先拒绝这些合法数字形式。
+//   - mac: 空接受（可选）；null MAC / 非法 hex / ;reboot 注入拒绝 (ErrMACAddressInvalid)；
+//     AA-BB- / aabb.ccdd.eeff / AABBCCDDEEFF 等多种格式接受
+func TestPortBinding_Validation(t *testing.T) {
+	tests := []struct {
+		name    string
+		op      string
+		ip      string
+		mac     string
+		wantErr error
+	}{
+		{"op_add_ip_valid_no_mac", "add", "10.62.25.5", "", nil},
+		{"op_remove_ip_valid_no_mac", "remove", "10.62.25.5", "", nil},
+		{"op_invalid_reject", "invalid", "10.62.25.5", "", ErrBindOpInvalid},
+		{"op_empty_reject", "", "10.62.25.5", "", ErrBindOpInvalid},
+		{"ip_256_reject", "add", "256.1.1.1", "", ErrIPAddressInvalid},
+		{"ip_with_semicolon_reject", "add", "10.0.0.1;reboot", "", ErrIPAddressInvalid},
+		{"ip_with_space_reject", "add", "10.0.0.1 reboot", "", ErrIPAddressInvalid},
+		{"ip_with_pipe_reject", "add", "10.0.0.1|quit", "", ErrIPAddressInvalid},
+		{"ip_alpha_reject", "add", "10.0.0.a", "", ErrIPAddressInvalid},
+		{"ip_trailing_dot_reject", "add", "10.0.0.1.", "", ErrIPAddressInvalid},
+		{"mac_null_reject", "add", "10.62.25.5", "00:00:00:00:00:00", ErrMACAddressInvalid},
+		{"mac_normalized_to_null_reject", "add", "10.62.25.5", "00-00-00-00-00-00", ErrMACAddressInvalid},
+		{"mac_with_semicolon_reject", "add", "10.62.25.5", "AA:BB:CC:DD:EE:FF;quit", ErrMACAddressInvalid},
+		{"mac_valid_canonical_accept", "add", "10.62.25.5", "AA:BB:CC:DD:EE:FF", nil},
+		{"mac_valid_hyphen_format_accept", "add", "10.62.25.5", "AA-BB-CC-DD-EE-FF", nil},
+		{"mac_valid_cisco_format_accept", "add", "10.62.25.5", "aabb.ccdd.eeff", nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := newTestService(new(mockDeviceExecutor), new(mockCollectionSvc), newTestDB(t))
+			result, err := svc.PortBinding(context.Background(), "port-1", tt.op, tt.ip, tt.mac, "test-op")
+			if tt.wantErr == nil {
+				if err != nil && !errors.Is(err, ErrPortNotFound) && !errors.Is(err, ErrDeviceNotFound) {
+					t.Fatalf("expected validator to pass (acceptable downstream: ErrPortNotFound/ErrDeviceNotFound), got: %v", err)
+				}
+				_ = result
+			} else {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("expected error %v, got %v", tt.wantErr, err)
+				}
+			}
+		})
+	}
+}
+
+// TestSetAccessVlan_Success 完整 set_access_vlan 成功路径：mock executor 返回 nil +
+// 断言命令含有 `port default vlan <N>` 华为关键字 + `port link-type access` 通用前缀。
+func TestSetAccessVlan_Success(t *testing.T) {
+	resetCollectNotif()
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", false, "")
+	// seedPortAndDevice 不设置 VLAN;直接 Update 列(Port 已有 VLAN *int 字段)
+	vlan100 := 100
+	if err := db.Model(&models.DevicePortStatus{}).Where("id = ?", "port-1").Update("vlan", &vlan100).Error; err != nil {
+		t.Fatalf("set VLAN: %v", err)
+	}
+
+	mockExec := new(mockDeviceExecutor)
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(mockExec, mockColl, db)
+	ctx := context.Background()
+
+	mockExec.On("ExecuteCustom", mock.Anything, "device-1", mock.Anything, singlePortTimeout).Return(nil)
+	mockColl.On("CollectDevice", mock.Anything, "device-1").Return(newSuccessCollectionResult("device-1"), nil)
+
+	// 目标 vlanId=200 (≠ DB 100) → 触发 SSH executeWrite(non-NoOp 路径)
+	result, err := svc.SetAccessVlan(ctx, "port-1", 200, "test-op")
+	if err != nil {
+		t.Fatalf("SetAccessVlan returned err: %v", err)
+	}
+	if result.Status != "succeeded" {
+		t.Fatalf("status = %q, want succeeded", result.Status)
+	}
+	if result.NoOp {
+		t.Fatal("NoOp must be false (vlanId 200 != DB 100)")
+	}
+	if !substrContains(result.CommandSent, "port default vlan 200") {
+		t.Fatalf("CommandSent %q missing 'port default vlan 200' (Huawei VLID keyword)", result.CommandSent)
+	}
+	if !substrContains(result.CommandSent, "port link-type access") {
+		t.Fatalf("CommandSent %q missing 'port link-type access' (RISK-03 universal prefix)", result.CommandSent)
+	}
+	// INFRA-01: Extra 必须携带 vlanId
+	if got, ok := result.Extra["vlanId"]; !ok || got != 200 {
+		t.Fatalf("Extra[vlanId] = %v, want 200 (INFRA-01 audit carrier)", got)
+	}
+
+	waitCollectedCalls(t, 1)
+
+	mockExec.AssertExpectations(t)
+	mockColl.AssertExpectations(t)
+}
+
+// TestSetAccessVlan_NoOp_VlanMatch 验证 pre-state NoOp 短路:DB VLAN == 目标 vlanId → 跳过 SSH,
+// 立即返回 Status=skipped, NoOp=true, CurrentState="vlan_match"。mock executor/collector 不被调用。
+func TestSetAccessVlan_NoOp_VlanMatch(t *testing.T) {
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", false, "")
+	vlan100 := 100
+	if err := db.Model(&models.DevicePortStatus{}).Where("id = ?", "port-1").Update("vlan", &vlan100).Error; err != nil {
+		t.Fatalf("set VLAN: %v", err)
+	}
+
+	mockExec := new(mockDeviceExecutor) // 无 mock 预期 — pre-state NoOp 短路前不调 SSH
+	mockColl := new(mockCollectionSvc)  // 无 mock 预期 — NoOp 不触发 refresh
+	svc := newTestService(mockExec, mockColl, db)
+
+	result, err := svc.SetAccessVlan(context.Background(), "port-1", 100, "test-op")
+	if err != nil {
+		t.Fatalf("SetAccessVlan returned err: %v", err)
+	}
+	if result.Status != "skipped" {
+		t.Fatalf("status = %q, want skipped", result.Status)
+	}
+	if !result.NoOp {
+		t.Fatal("NoOp must be true (vlanId match DB VLAN)")
+	}
+	if result.CurrentState != "vlan_match" {
+		t.Fatalf("CurrentState = %q, want vlan_match", result.CurrentState)
+	}
+	// Extra 仍携带 vlanId(INFRA-01 一致性)—— pre-state match 也是有效结果
+	if got, ok := result.Extra["vlanId"]; !ok || got != 100 {
+		t.Fatalf("Extra[vlanId] = %v, want 100", got)
+	}
+
+	mockExec.AssertNotCalled(t, "ExecuteCustom", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	mockColl.AssertNotCalled(t, "CollectDevice", mock.Anything, mock.Anything)
+}
+
+// TestSetAccessVlan_NoOp_VlanNil pre-state 防御性 NoOp:DB VLAN == nil(端口尚未被 cron 采集)→
+// 不能 panic,nil guard 工作正常;SSH 路径正常落入 success。
+func TestSetAccessVlan_NoOp_VlanNil(t *testing.T) {
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", false, "")
+	// 不设置 VLAN — 默认零值 nil *int
+
+	mockExec := new(mockDeviceExecutor)
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(mockExec, mockColl, db)
+
+	mockExec.On("ExecuteCustom", mock.Anything, "device-1", mock.Anything, singlePortTimeout).Return(nil)
+	mockColl.On("CollectDevice", mock.Anything, "device-1").Return(newSuccessCollectionResult("device-1"), nil)
+
+	result, err := svc.SetAccessVlan(context.Background(), "port-1", 100, "test-op")
+	if err != nil {
+		t.Fatalf("SetAccessVlan returned err: %v", err)
+	}
+	// port.VLAN == nil → nil guard 失败 → 走 SSH success
+	if result.Status != "succeeded" {
+		t.Fatalf("status = %q, want succeeded (nil VLAN falls through)", result.Status)
+	}
+	if result.NoOp {
+		t.Fatal("NoOp must be false (VLAN nil → SSH execute)")
+	}
+
+	waitCollectedCalls(t, 1)
+
+	mockExec.AssertExpectations(t)
+	mockColl.AssertExpectations(t)
+}
+
+// TestPortBinding_Success 完整 port_binding add + MAC 成功路径:华为 user-bind static 命令。
+func TestPortBinding_Success(t *testing.T) {
+	resetCollectNotif()
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", false, "")
+
+	mockExec := new(mockDeviceExecutor)
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(mockExec, mockColl, db)
+	ctx := context.Background()
+
+	mockExec.On("ExecuteCustom", mock.Anything, "device-1", mock.Anything, singlePortTimeout).Return(nil)
+	mockColl.On("CollectDevice", mock.Anything, "device-1").Return(newSuccessCollectionResult("device-1"), nil)
+
+	result, err := svc.PortBinding(ctx, "port-1", "add", "10.62.25.5", "AA:BB:CC:DD:EE:FF", "test-op")
+	if err != nil {
+		t.Fatalf("PortBinding returned err: %v", err)
+	}
+	if result.Status != "succeeded" {
+		t.Fatalf("status = %q, want succeeded", result.Status)
+	}
+	if result.NoOp {
+		t.Fatal("NoOp must be false")
+	}
+	// 华为 user-bind static IP 关键字
+	if !substrContains(result.CommandSent, "user-bind static ip-address 10.62.25.5") {
+		t.Fatalf("CommandSent %q missing 'user-bind static ip-address 10.62.25.5'", result.CommandSent)
+	}
+	// 华为 MAC 格式 AA-BB-CC-DD-EE-FF(归一后 hyphenated)
+	if !substrContains(result.CommandSent, "mac-address AA-BB-CC-DD-EE-FF") {
+		t.Fatalf("CommandSent %q missing 'mac-address AA-BB-CC-DD-EE-FF' (Huawei MAC format)", result.CommandSent)
+	}
+	// INFRA-01: Extra 必须携带 bindOp + ipAddress + macAddress 三个键
+	if got := result.Extra["bindOp"]; got != "add" {
+		t.Fatalf("Extra[bindOp] = %v, want 'add'", got)
+	}
+	if got := result.Extra["ipAddress"]; got != "10.62.25.5" {
+		t.Fatalf("Extra[ipAddress] = %v, want '10.62.25.5'", got)
+	}
+	if got := result.Extra["macAddress"]; got != "AA:BB:CC:DD:EE:FF" {
+		t.Fatalf("Extra[macAddress] = %v, want 'AA:BB:CC:DD:EE:FF'", got)
+	}
+
+	waitCollectedCalls(t, 1)
+
+	mockExec.AssertExpectations(t)
+	mockColl.AssertExpectations(t)
+}
+
+// TestPortBinding_Remove_Success 验证 remove 路径:无 MAC 时仅 IP-only 形式,
+// 命令前缀为 undo user-bind static(IP 模式)。
+func TestPortBinding_Remove_Success(t *testing.T) {
+	resetCollectNotif()
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", false, "")
+
+	mockExec := new(mockDeviceExecutor)
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(mockExec, mockColl, db)
+	ctx := context.Background()
+
+	mockExec.On("ExecuteCustom", mock.Anything, "device-1", mock.Anything, singlePortTimeout).Return(nil)
+	mockColl.On("CollectDevice", mock.Anything, "device-1").Return(newSuccessCollectionResult("device-1"), nil)
+
+	result, err := svc.PortBinding(ctx, "port-1", "remove", "10.62.25.5", "", "test-op")
+	if err != nil {
+		t.Fatalf("PortBinding returned err: %v", err)
+	}
+	if result.Status != "succeeded" {
+		t.Fatalf("status = %q, want succeeded", result.Status)
+	}
+	if !substrContains(result.CommandSent, "undo user-bind static ip-address 10.62.25.5") {
+		t.Fatalf("CommandSent %q missing 'undo user-bind static ip-address 10.62.25.5' (Huawei remove)", result.CommandSent)
+	}
+	// MAC 为空 → 命令不该有 mac-address 段
+	if substrContains(result.CommandSent, "mac-address") {
+		t.Fatalf("CommandSent %q should NOT contain 'mac-address' (empty MAC)", result.CommandSent)
+	}
+
+	waitCollectedCalls(t, 1)
+
+	mockExec.AssertExpectations(t)
+	mockColl.AssertExpectations(t)
+}
+
+// TestCheckPreState_BindSkip 验证 Pitfall 6:ActionPortBinding 永不返回 NoOp,永远返回 nil 让
+// caller 走 executeWrite SSH 路径(DB 没有 binding 缓存,SSh 实时查表代价太大)。
+func TestCheckPreState_BindSkip(t *testing.T) {
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", false, "")
+	vlan100 := 100
+	if err := db.Model(&models.DevicePortStatus{}).Where("id = ?", "port-1").Update("vlan", &vlan100).Error; err != nil {
+		t.Fatalf("set VLAN: %v", err)
+	}
+
+	svc := newTestService(new(mockDeviceExecutor), new(mockCollectionSvc), db)
+
+	// 通过 PortBinding 触发:即使目标 IP/MAC 看起来"匹配",pre-state 仍应跳过(返回走 SSH 路径)
+	mockExec := new(mockDeviceExecutor)
+	mockExec.On("ExecuteCustom", mock.Anything, "device-1", mock.Anything, singlePortTimeout).Return(nil)
+	mockColl := new(mockCollectionSvc)
+	mockColl.On("CollectDevice", mock.Anything, "device-1").Return(newSuccessCollectionResult("device-1"), nil)
+
+	// 注意:这里重设 service 的 exec/coll(因为上面 newTestService 后另创建 mock)
+	svc.deviceExecutor = mockExec
+	svc.portCollectionSvc = mockColl
+
+	result, err := svc.PortBinding(context.Background(), "port-1", "add", "10.62.25.5", "AA:BB:CC:DD:EE:FF", "test-op")
+	if err != nil {
+		t.Fatalf("PortBinding returned err: %v", err)
+	}
+	// BIND-05 + Pitfall 6:pre-state 对 port_binding 返回 nil → SSH executeWrite
+	// → mockExecutor 返回 nil → result.Status = succeeded(不是 skipped)
+	if result.Status != "succeeded" {
+		t.Fatalf("status = %q, want succeeded (port_binding pre-state is skipped per Pitfall 6)", result.Status)
+	}
+	if result.NoOp {
+		t.Fatal("NoOp must be false (port_binding never NoOps)")
+	}
+	// SSH 必须被调(预状态检查返回 nil → 走 SSH)
+	mockExec.AssertCalled(t, "ExecuteCustom", mock.Anything, "device-1", mock.Anything, singlePortTimeout)
+}
+
+// substrContains 子串判定 helper(简化 assert.Contains 的可读性;与 e2e_test.go 局部 contains 区分)。
+func substrContains(s, substr string) bool {
+	return strings.Contains(s, substr)
 }

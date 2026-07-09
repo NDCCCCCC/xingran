@@ -124,7 +124,7 @@ func (s *portWriteServiceImpl) BatchWritePorts(ctx context.Context, req BatchWri
 			}
 
 			// 校验通过 — 端口"消失"（D-13 fallback）但归属正确，直接下发
-			writeResult, werr := s.executeWrite(ctx, portID, req.DeviceID, req.Action, req.Description, operator, "")
+			writeResult, werr := s.executeWrite(ctx, portID, req.DeviceID, req.Action, req.Description, operator, "", req.VLANID, req.BindOp, req.IPAddress, req.MACAddress)
 			if werr != nil {
 				if writeResult != nil {
 					result.Failed = append(result.Failed, *writeResult)
@@ -140,13 +140,13 @@ func (s *portWriteServiceImpl) BatchWritePorts(ctx context.Context, req BatchWri
 		}
 
 		// pre-state 检测
-		if noopResult := s.checkPreState(&port, req.Action, req.Description); noopResult != nil {
+		if noopResult := s.checkPreState(&port, req.Action, req.Description, req.VLANID, req.BindOp, req.IPAddress, req.MACAddress); noopResult != nil {
 			result.Skipped = append(result.Skipped, *noopResult)
 			continue
 		}
 
 		// 实际下发
-		writeResult, werr := s.executeWrite(ctx, port.ID, port.DeviceID, req.Action, req.Description, operator, port.InterfaceName)
+		writeResult, werr := s.executeWrite(ctx, port.ID, port.DeviceID, req.Action, req.Description, operator, port.InterfaceName, req.VLANID, req.BindOp, req.IPAddress, req.MACAddress)
 		if werr != nil {
 			if writeResult != nil {
 				result.Failed = append(result.Failed, *writeResult)
