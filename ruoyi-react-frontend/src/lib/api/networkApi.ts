@@ -1,7 +1,13 @@
 import axios, { type AxiosInstance } from "axios";
 import { post } from "../api";
 import { getAccessToken } from "@/utils/authHelpers";
-import type { PortResult, BatchResult, BatchWriteRequest } from "@/types/network";
+import type {
+  PortResult,
+  BatchResult,
+  BatchWriteRequest,
+  SetAccessVlanRequest,
+  PortBindingRequest,
+} from "@/types/network";
 
 /**
  * 专用于 Blob/文件下载的 axios 实例(本文件内私有)
@@ -335,6 +341,50 @@ export const writeDot1xDisable = async (
 };
 
 /**
+ * 修改端口 access VLAN (set_access_vlan) — v1.20.1 Phase 56 W3
+ * - 端点: POST /network/ports/write/set-access-vlan
+ * - vlanId: 1-4094 (前端 InputNumber min/max, 后端 service ErrVlanIdOutOfRange 二次校验)
+ * - wrapper 遵守 LANDMINE #5: 无 try/catch, 无 message.error (post() 拦截器统一弹 Toast)
+ */
+export const writeSetAccessVlan = async (
+  portId: string,
+  vlanId: number,
+  reason: string
+): Promise<PortResult> => {
+  const result = await post<PortResult>("/network/ports/write/set-access-vlan", {
+    portId,
+    vlanId,
+    reason,
+  });
+  return result.data!;
+};
+
+/**
+ * 端口绑定 (port_binding) — v1.20.1 Phase 56 W3
+ * - 端点: POST /network/ports/write/port-binding
+ * - op=add 创建静态绑定; op=remove 删除已有绑定
+ * - ipAddress: 严格 IPv4 regex (后端 service 二次校验)
+ * - macAddress: 可选 MAC (Huawei/H3C 用, Ruijie 接受); undefined 表示仅 IP 绑定
+ * - wrapper 遵守 LANDMINE #5: 无 try/catch, 无 message.error
+ */
+export const writePortBinding = async (
+  portId: string,
+  op: "add" | "remove",
+  ipAddress: string,
+  macAddress: string | undefined,
+  reason: string
+): Promise<PortResult> => {
+  const result = await post<PortResult>("/network/ports/write/port-binding", {
+    portId,
+    op,
+    ipAddress,
+    macAddress,
+    reason,
+  });
+  return result.data!;
+};
+
+/**
  * 批量写端口配置
  * - 端点: POST /network/ports/write/batch
  * - 后端串行 fail-fast,单设备 50 端口上限,30min detached context
@@ -361,4 +411,7 @@ export default {
   writeDot1xEnable,
   writeDot1xDisable,
   batchWritePorts,
+  // Phase 56 v1.20.1 端口写操作扩展
+  writeSetAccessVlan,
+  writePortBinding,
 };
