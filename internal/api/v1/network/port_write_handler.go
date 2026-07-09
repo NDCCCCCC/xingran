@@ -410,15 +410,26 @@ func (h *PortWriteHandler) BatchWrite(c *gin.Context) {
 
 // buildBeforeValue 拼接 D-02 before_value JSON 快照
 //
-// 字段结构固定：{"admin_status":..., "dot1x_enabled":..., "description":...}
+// 字段结构固定：{"admin_status":..., "dot1x_enabled":..., "description":..., "interface_name":..., "vlan":...}
 // （便于审计完整快照，description action 之外的 action 也带 description）
+//
+// CR-02 (2026-07-09 修复)：
+// v1.20.1 set_access_vlan 的 skipped 路径 (NoOp short-circuit) 会让 after_value 被
+// 覆盖为 before_value (buildAuditRow:493-495),而 set_access_vlan 审计的核心字段
+// 就是 vlan — 原版 buildBeforeValue 不带 vlan 字段导致审计行 before/after 都无
+// vlan 信息,审计员无法回答"这个端口的 vlan 当前值是什么"。
+// port.VLAN 是 *int (nullable),nil 跳过（端口尚未被 cron 采集）。
 func buildBeforeValue(port *models.DevicePortStatus) json.RawMessage {
-	b, _ := json.Marshal(map[string]interface{}{
+	snapshot := map[string]interface{}{
 		"admin_status":   port.AdminStatus,
 		"dot1x_enabled":  port.Dot1xEnabled,
 		"description":    port.Description,
 		"interface_name": port.InterfaceName,
-	})
+	}
+	if port.VLAN != nil {
+		snapshot["vlan"] = *port.VLAN
+	}
+	b, _ := json.Marshal(snapshot)
 	return b
 }
 

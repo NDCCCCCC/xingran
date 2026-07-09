@@ -731,3 +731,78 @@ func TestPortWriteHandler_V1201_SourceAssertions(t *testing.T) {
 	// 禁止引入敏感关键词处理（IP/MAC 非敏感）
 	assert.NotContains(t, src, "RecordWithBody")
 }
+
+// TestBuildBeforeValue_IncludesVlan (CR-02 2026-07-09 修复守护)
+//
+// set_access_vlan 的 skipped 路径会让 after_value 覆盖为 before_value,
+// buildBeforeValue 必须包含 vlan 字段,否则审计行丢失审计核心字段。
+// 表驱动覆盖 3 种 VLAN 状态：已采集 (*int 100) / 未采集 (nil) / 零值 (*int 0)。
+func TestBuildBeforeValue_IncludesVlan(t *testing.T) {
+	tests := []struct {
+		name        string
+		vlan        *int
+		wantVlanSet bool
+		wantVlan    int
+	}{
+		{"vlan_collected", ptrInt(100), true, 100},
+		{"vlan_nil_uncroned", nil, false, 0},
+		{"vlan_zero_value", ptrInt(0), true, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			port := &models.DevicePortStatus{
+				InterfaceName: "GE0/0/1",
+				AdminStatus:   "up",
+				Dot1xEnabled:  false,
+				Description:   "uplink",
+				VLAN:         tt.vlan,
+			}
+			raw := buildBeforeValue(port)
+			var got map[string]interface{}
+			assert.NoError(t, json.Unmarshal(raw, &got))
+			if tt.wantVlanSet {
+				// JSON unmarshal 把 number 解为 float64
+				assert.Equal(t, float64(tt.wantVlan), got["vlan"], "vlan field must be present in before_value")
+			} else {
+				_, has := got["vlan"]
+				assert.False(t, has, "vlan field must be omitted when port.VLAN is nil")
+			}
+		})
+	}
+}
+
+// TestBuildAuditRow_SkippedSetAccessVlan_ContainsVlan (CR-02 集成守护)
+//
+// buildAuditRow 对 skipped set_access_vlan 必须保留 vlan 字段(after_value=before_value
+// 覆盖后,both sides 都应含 vlan)。这是审计员诊断 "为什么 vlan 没变化" 的唯一线索。
+func TestBuildAuditRow_SkippedSetAccessVlan_ContainsVlan(t *testing.T) {
+	vlan100 := 100
+	port := &models.DevicePortStatus{
+		InterfaceName: "GE0/0/1",
+		AdminStatus:   "up",
+		VLAN:         &vlan100,
+	}
+	beforeValue := buildBeforeValue(port)
+
+	pr := &portwrite.PortResult{
+		PortID:       "port-1",
+		Action:       portcollection.ActionSetAccessVLAN,
+		Status:       "skipped", // pre-state NoOp: vlan_id already matches
+		NoOp:         true,
+		CurrentState: "vlan_match",
+	}
+
+	row := buildAuditRow(pr, beforeValue, "device-1", "test-op")
+	assert.Equal(t, "skipped", row.Status)
+
+	// 关键：after_value == before_value(覆盖路径),但 vlan 字段必须在场
+	var before, after map[string]interface{}
+	assert.NoError(t, json.Unmarshal(beforeValue, &before))
+	assert.NoError(t, json.Unmarshal(row.AfterValue, &after))
+	assert.Equal(t, float64(100), before["vlan"], "before_value must contain vlan=100")
+	assert.Equal(t, float64(100), after["vlan"], "after_value must contain vlan=100 (CR-02 regression)")
+	assert.Equal(t, beforeValue, row.AfterValue, "skipped path: after_value == before_value")
+}
+
+// ptrInt 辅助构造 *int 字面量。
+func ptrInt(i int) *int { return &i }
