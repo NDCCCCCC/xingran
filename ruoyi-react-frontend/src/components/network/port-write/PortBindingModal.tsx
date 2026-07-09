@@ -141,7 +141,7 @@ export function PortBindingModal({
         >
           <Radio.Group
             buttonStyle="solid"
-            options={BIND_OPS as Array<{ label: string; value: string }>}
+            options={BIND_OPS as unknown as Array<{ label: string; value: string }>}
           />
         </Form.Item>
 
