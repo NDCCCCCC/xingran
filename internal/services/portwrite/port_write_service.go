@@ -74,15 +74,22 @@ type PortResult struct {
 //   - BindOp：仅 port_binding 使用（必须是 "add" 或 "remove"，service 层 400 拦截）
 //   - IPAddress：仅 port_binding 使用（严格 IPv4 正则校验）
 //   - MACAddress：仅 port_binding 使用（可选；空允许，非空时 null MAC 拒绝）
+//
+// 2026-07-09 防御性绑定标签（CR-01/CR-04 修复）：
+//   - DeviceID/Action/PortIDs binding:"required" 在 gin 入口兜底非法请求
+//   - VLANID binding:"omitempty,min=1,max=4094" 双层防护（service 仍为真相源）
+//   - BindOp binding:"omitempty,oneof=add remove" 防止 "delete" 等 typo 静默触发
+//     渲染器 "conservative default → remove" 分支（vendor_port_template.go:73-78）
+//   - IPAddress / MACAddress 无法用 gin binding tag 做正则，仍依赖 service 层 validator
 type BatchWriteRequest struct {
-	DeviceID    string   `json:"deviceId"`
-	Action      Action   `json:"action"`
-	PortIDs     []string `json:"portIds"`
+	DeviceID    string   `json:"deviceId" binding:"required"`
+	Action      Action   `json:"action" binding:"required"`
+	PortIDs     []string `json:"portIds" binding:"required,min=1,max=50"`
 	Description string   `json:"description,omitempty"` // 仅 ActionDescription 使用
 	// v1.20.1 set_access_vlan 字段
-	VLANID int `json:"vlanId,omitempty"`
+	VLANID int `json:"vlanId,omitempty" binding:"omitempty,min=1,max=4094"`
 	// v1.20.1 port_binding 字段
-	BindOp     string `json:"bindOp,omitempty"`
+	BindOp     string `json:"bindOp,omitempty" binding:"omitempty,oneof=add remove"`
 	IPAddress  string `json:"ipAddress,omitempty"`
 	MACAddress string `json:"macAddress,omitempty"`
 }
@@ -182,6 +189,54 @@ func (s *portWriteServiceImpl) DisableDot1x(ctx context.Context, portID string, 
 	return s.writeAndRefresh(ctx, portID, portcollection.ActionDot1xDisable, "", operator, 0, "", "", "")
 }
 
+// validateVlanIdRange 校验 vlanId ∈ [1, 4094]（VLAN-05 + CR-01 共享入口）。
+//
+// 返回 nil 表示通过；返回 ErrVlanIdOutOfRange 包装具体值供 caller log 友好。
+// 单独抽函数便于单端口 SetAccessVlan 与批量 BatchWritePorts 共用同一份校验语义。
+func validateVlanIdRange(vlanId int) error {
+	if vlanId < 1 || vlanId > 4094 {
+		return fmt.Errorf("%w: %d (must be 1-4094)", ErrVlanIdOutOfRange, vlanId)
+	}
+	return nil
+}
+
+// validateBindOp 校验 op ∈ {"add", "remove"}（BIND-07 + CR-01 共享入口）。
+//
+// 防止 "delete" 等 typo 静默触发渲染器 "conservative default → remove" 分支
+// （vendor_port_template.go:73-78）,避免误删用户 binding。
+func validateBindOp(op string) error {
+	if op != "add" && op != "remove" {
+		return fmt.Errorf("%w: %q (must be add|remove)", ErrBindOpInvalid, op)
+	}
+	return nil
+}
+
+// validateIPAddress 严格 IPv4 regex 校验（BIND-07 + CR-01 共享入口）。
+//
+// 拒绝越界段 (256.x.x.x) / shell 注入字符（;|空格） / 非数字 / 多余点号。
+// 注意 0.0.0.0 / 255.255.255.255 是 RFC 合法的 IPv4 地址,regex 允许通过 —
+// device 端会 reject 自身协议层,service 层不预先拒绝这些合法数字形式。
+func validateIPAddress(ip string) error {
+	if !ipv4Pattern.MatchString(ip) {
+		return fmt.Errorf("%w: %q", ErrIPAddressInvalid, ip)
+	}
+	return nil
+}
+
+// validateMACAddress 非空 MAC 归一 + 拒绝 null MAC / 12-hex-char 不匹配注入串。
+//
+// BIND-07 + CR-01 共享入口;空字符串通过（IP-only binding 允许）。
+func validateMACAddress(mac string) error {
+	if mac == "" {
+		return nil
+	}
+	normalized := services.NormalizeMACAddress(mac)
+	if normalized == "" || normalized == "00:00:00:00:00:00" {
+		return fmt.Errorf("%w: %q", ErrMACAddressInvalid, mac)
+	}
+	return nil
+}
+
 // SetAccessVlan 设置 access 端口 PVID（v1.20.1 新增）。
 //
 // VLAN-05: service 层 validator（前端 InputNumber min/max 是 UX hint,后端为真相源）。
@@ -191,8 +246,8 @@ func (s *portWriteServiceImpl) DisableDot1x(ctx context.Context, portID string, 
 // sys_port_write_audit.after_value JSON(vlan 真实值的唯一 carrier)。
 func (s *portWriteServiceImpl) SetAccessVlan(ctx context.Context, portID string, vlanId int, operator string) (*PortResult, error) {
 	// VLAN-05 validator: 防御性范围校验,任何越界值在入口处直接拒绝
-	if vlanId < 1 || vlanId > 4094 {
-		return nil, fmt.Errorf("%w: %d (must be 1-4094)", ErrVlanIdOutOfRange, vlanId)
+	if err := validateVlanIdRange(vlanId); err != nil {
+		return nil, err
 	}
 	result, err := s.writeAndRefresh(ctx, portID, portcollection.ActionSetAccessVLAN, "", operator, vlanId, "", "", "")
 	if err != nil {
@@ -221,19 +276,16 @@ func (s *portWriteServiceImpl) SetAccessVlan(ctx context.Context, portID string,
 // 写入 sys_port_write_audit.after_value JSON(binding tuple carrier)。
 func (s *portWriteServiceImpl) PortBinding(ctx context.Context, portID string, op string, ipAddress string, macAddress string, operator string) (*PortResult, error) {
 	// BIND-07 validator #1: op 必须 add|remove
-	if op != "add" && op != "remove" {
-		return nil, fmt.Errorf("%w: %q (must be add|remove)", ErrBindOpInvalid, op)
+	if err := validateBindOp(op); err != nil {
+		return nil, err
 	}
 	// BIND-07 validator #2: 严格 IPv4 regex
-	if !ipv4Pattern.MatchString(ipAddress) {
-		return nil, fmt.Errorf("%w: %q", ErrIPAddressInvalid, ipAddress)
+	if err := validateIPAddress(ipAddress); err != nil {
+		return nil, err
 	}
 	// BIND-07 validator #3: 非空 MAC 先归一再校验 null MAC / 12-hex-char
-	if macAddress != "" {
-		normalized := services.NormalizeMACAddress(macAddress)
-		if normalized == "" || normalized == "00:00:00:00:00:00" {
-			return nil, fmt.Errorf("%w: %q", ErrMACAddressInvalid, macAddress)
-		}
+	if err := validateMACAddress(macAddress); err != nil {
+		return nil, err
 	}
 	result, err := s.writeAndRefresh(ctx, portID, portcollection.ActionPortBinding, "", operator, 0, op, ipAddress, macAddress)
 	if err != nil {

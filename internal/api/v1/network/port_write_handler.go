@@ -345,6 +345,16 @@ func (h *PortWriteHandler) BatchWrite(c *gin.Context) {
 			response.Error(c, http.StatusNotFound, "端口不存在")
 		case errors.Is(err, portwrite.ErrDeviceNotFound):
 			response.Error(c, http.StatusNotFound, "设备不存在")
+		// CR-04 (2026-07-09): batch 路径也必须把 v1.20.1 4 个 validator sentinel 翻译为 400,
+		// 否则 service 即使 emit sentinel,handler fall through default:500。
+		case errors.Is(err, portwrite.ErrVlanIdOutOfRange):
+			response.Error(c, http.StatusBadRequest, "VLAN ID 必须在 1-4094 之间")
+		case errors.Is(err, portwrite.ErrBindOpInvalid):
+			response.Error(c, http.StatusBadRequest, "绑定操作必须是 add 或 remove")
+		case errors.Is(err, portwrite.ErrIPAddressInvalid):
+			response.Error(c, http.StatusBadRequest, "IP 地址格式不合法")
+		case errors.Is(err, portwrite.ErrMACAddressInvalid):
+			response.Error(c, http.StatusBadRequest, "MAC 地址格式不合法")
 		default:
 			response.Error(c, http.StatusInternalServerError, err.Error())
 		}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 )
 
@@ -70,6 +71,30 @@ func (s *portWriteServiceImpl) BatchWritePorts(ctx context.Context, req BatchWri
 	}
 	if req.DeviceID == "" {
 		return nil, errors.New("portwrite: deviceId is required")
+	}
+
+	// CR-01 + CR-04 共享入口校验（2026-07-09 修复）：
+	// 批量路径必须与单端口方法走同一套 4 个 v1.20.1 validator,避免：
+	//   - 渲染器 fmt.Sprintf("ip-address %s", p.IPAddress) 被 ";reboot" 等注入
+	//   - bindOp="delete" typo 静默触发 "conservative default → remove" 分支
+	//   - vlanId 越界落入 per-port Failed[] 而非 entry-rejection 4xx
+	// 顺序与单端口 SetAccessVlan / PortBinding 保持一致：vlan → bindOp → IP → MAC。
+	// action-specific：仅当 action 匹配时才校验对应字段（其他 action 的字段留空合法）。
+	switch req.Action {
+	case portcollection.ActionSetAccessVLAN:
+		if err := validateVlanIdRange(req.VLANID); err != nil {
+			return nil, err
+		}
+	case portcollection.ActionPortBinding:
+		if err := validateBindOp(req.BindOp); err != nil {
+			return nil, err
+		}
+		if err := validateIPAddress(req.IPAddress); err != nil {
+			return nil, err
+		}
+		if err := validateMACAddress(req.MACAddress); err != nil {
+			return nil, err
+		}
 	}
 
 	applogger.Infof("[portwrite-batch] 收到批量请求 deviceID=%s action=%s portCount=%d portIDs=%v",

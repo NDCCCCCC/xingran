@@ -1531,3 +1531,121 @@ func TestCheckPreState_BindSkip(t *testing.T) {
 func substrContains(s, substr string) bool {
 	return strings.Contains(s, substr)
 }
+
+// TestBatchWritePorts_BindingCmdInjectionRejected (CR-01 2026-07-09 修复守护)
+//
+// 批量端口 binding 操作携带 shell 注入字符的 IP (如 "10.0.0.1;reboot") 时,
+// BatchWritePorts 入口必须立即返回 ErrIPAddressInvalid,绝不调 SSH,绝不让注入
+// 字符串通过 fmt.Sprintf("ip-address %s", p.IPAddress) 落到设备 CLI。
+func TestBatchWritePorts_BindingCmdInjectionRejected(t *testing.T) {
+	mockExec := new(mockDeviceExecutor)
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(mockExec, mockColl, newTestDB(t))
+
+	result, err := svc.BatchWritePorts(context.Background(), BatchWriteRequest{
+		DeviceID:  "device-1",
+		Action:    portcollection.ActionPortBinding,
+		PortIDs:   []string{"p1"},
+		BindOp:    "add",
+		IPAddress: "10.0.0.1;reboot",
+	}, "test-op")
+
+	assert.ErrorIs(t, err, ErrIPAddressInvalid)
+	assert.Nil(t, result)
+
+	// 关键不变式:绝不允许注入字符穿越 validator 调 SSH
+	mockExec.AssertNotCalled(t, "ExecuteCustom", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	mockColl.AssertNotCalled(t, "CollectDevice", mock.Anything, mock.Anything)
+}
+
+// TestBatchWritePorts_VlanOutOfRangeRejected (CR-01 2026-07-09 修复守护)
+//
+// 批量 set_access_vlan 携带越界 vlanId=99999 时,BatchWritePorts 入口必须立即返回
+// ErrVlanIdOutOfRange (entry-rejection 4xx),绝不允许落入 per-port Failed[] 触发 200。
+func TestBatchWritePorts_VlanOutOfRangeRejected(t *testing.T) {
+	mockExec := new(mockDeviceExecutor)
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(mockExec, mockColl, newTestDB(t))
+
+	result, err := svc.BatchWritePorts(context.Background(), BatchWriteRequest{
+		DeviceID: "device-1",
+		Action:   portcollection.ActionSetAccessVLAN,
+		PortIDs:  []string{"p1"},
+		VLANID:   99999,
+	}, "test-op")
+
+	assert.ErrorIs(t, err, ErrVlanIdOutOfRange)
+	assert.Nil(t, result)
+
+	mockExec.AssertNotCalled(t, "ExecuteCustom", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	mockColl.AssertNotCalled(t, "CollectDevice", mock.Anything, mock.Anything)
+}
+
+// TestBatchWritePorts_BadBindOpRejected (CR-04 2026-07-09 修复守护)
+//
+// 批量 port_binding 携带 "delete" typo 时,BatchWritePorts 入口必须立即返回 ErrBindOpInvalid,
+// 绝不允许渲染器 "conservative default → remove" 分支静默删除用户 binding。
+func TestBatchWritePorts_BadBindOpRejected(t *testing.T) {
+	mockExec := new(mockDeviceExecutor)
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(mockExec, mockColl, newTestDB(t))
+
+	result, err := svc.BatchWritePorts(context.Background(), BatchWriteRequest{
+		DeviceID:  "device-1",
+		Action:    portcollection.ActionPortBinding,
+		PortIDs:   []string{"p1"},
+		BindOp:    "delete", // typo for "remove"
+		IPAddress: "10.62.25.5",
+	}, "test-op")
+
+	assert.ErrorIs(t, err, ErrBindOpInvalid)
+	assert.Nil(t, result)
+
+	mockExec.AssertNotCalled(t, "ExecuteCustom", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	mockColl.AssertNotCalled(t, "CollectDevice", mock.Anything, mock.Anything)
+}
+
+// TestBatchWritePorts_BindMacRejected (CR-01 2026-07-09 修复守护)
+//
+// 批量 port_binding 携带 null MAC 时,BatchWritePorts 入口必须立即返回 ErrMACAddressInvalid。
+func TestBatchWritePorts_BindMacRejected(t *testing.T) {
+	mockExec := new(mockDeviceExecutor)
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(mockExec, mockColl, newTestDB(t))
+
+	result, err := svc.BatchWritePorts(context.Background(), BatchWriteRequest{
+		DeviceID:   "device-1",
+		Action:     portcollection.ActionPortBinding,
+		PortIDs:    []string{"p1"},
+		BindOp:     "add",
+		IPAddress:  "10.62.25.5",
+		MACAddress: "00:00:00:00:00:00",
+	}, "test-op")
+
+	assert.ErrorIs(t, err, ErrMACAddressInvalid)
+	assert.Nil(t, result)
+
+	mockExec.AssertNotCalled(t, "ExecuteCustom", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	mockColl.AssertNotCalled(t, "CollectDevice", mock.Anything, mock.Anything)
+}
+
+// TestBatchWritePorts_ValidatorsAreActionSpecific (CR-01 2026-07-09 修复守护)
+//
+// action-specific 校验:shutdown 等无关 action 即使携带空 vlanId/IP/bindOp 也必须通过 validator
+// (空串是合法 "字段未使用" 状态,不是入口错误)。
+func TestBatchWritePorts_ValidatorsAreActionSpecific(t *testing.T) {
+	mockExec := new(mockDeviceExecutor)
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(mockExec, mockColl, newTestDB(t))
+
+	// Shutdown action + 空 vlanId/bindOp/IP/MAC — 应当通过 validator,继续走 DB 查询
+	_, err := svc.BatchWritePorts(context.Background(), BatchWriteRequest{
+		DeviceID: "device-1",
+		Action:   portcollection.ActionShutdown,
+		PortIDs:  []string{"p1"},
+	}, "test-op")
+
+	// validator 通过,继续走 DB 查询(无 seed) → 端口不存在 → result.Failed 有 1 项
+	// err 应为 nil(仅 result.Failed 有内容,err 来自 service 是 nil)
+	assert.NoError(t, err, "shutdown action with empty vlanId/IP/bindOp should pass entry validator (action-specific)")
+}
