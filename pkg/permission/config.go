@@ -271,6 +271,9 @@ func GetRoutePermissions() []RoutePermission {
 		{"/network/ports/write/dot1x-enable", "POST", NetworkPortWrite, "启用端口802.1X认证"},
 		{"/network/ports/write/dot1x-disable", "POST", NetworkPortWrite, "关闭端口802.1X认证"},
 		{"/network/ports/write/batch", "POST", NetworkPortWrite, "批量端口写操作"},
+		// v1.20.1 端口写命令扩展（Phase 56 W3: set_access_vlan + port_binding，复用同一权限）
+		{"/network/ports/write/set-access-vlan", "POST", NetworkPortWrite, "修改端口 access VLAN"},
+		{"/network/ports/write/port-binding", "POST", NetworkPortWrite, "端口绑定（IP/MAC/Port 静态绑定）"},
 	}
 }
 

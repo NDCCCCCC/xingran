@@ -71,6 +71,22 @@ func TestSetupPortWriteRouter_Registers6KebabEndpoints(t *testing.T) {
 	}
 }
 
+// TestSetupPortWriteRouter_RegistersV1201KebabEndpoints router 注册 v1.20.1 (Phase 56 W3)
+// 新增的 2 个 kebab 端点：set-access-vlan + port-binding。
+//
+// 这 2 个端点必须复用 v1.19 的组级 RequirePermissions([network:port:write], core)
+// 中间件，不引入新 perm constant（design.md §5）。
+func TestSetupPortWriteRouter_RegistersV1201KebabEndpoints(t *testing.T) {
+	src := readFile(t, "port_write_router.go")
+	expected := []string{
+		`write.POST("/set-access-vlan"`,
+		`write.POST("/port-binding"`,
+	}
+	for _, w := range expected {
+		assert.Contains(t, src, w, "router 缺少 v1.20.1 端点注册：%s", w)
+	}
+}
+
 // TestNetworkRouter_RegistersSetupPortWriteRouter network_router.go 含
 // SetupPortWriteRouter(ports, core) 调用（在 SetupPortRouter 之后）
 func TestNetworkRouter_RegistersSetupPortWriteRouter(t *testing.T) {
