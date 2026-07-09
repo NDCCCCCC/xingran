@@ -3,12 +3,12 @@ screen-length 0 temporary
 <Ruijie>
 system-view
 [Ruijie]
-interface GigabitEthernet1/0/1
-[Ruijie-GigabitEthernet1/0/1]
-[Ruijie-GigabitEthernet1/0/1]
+interface GigabitEthernet 1/0/1
+[Ruijie]
+[Ruijie]
 switchport port-security binding aabb.ccdd.eeff 10.62.25.5
-[Ruijie-GigabitEthernet1/0/1]
-[Ruijie-GigabitEthernet1/0/1]
+[Ruijie]
+[Ruijie]
 exit
 [Ruijie]
 return

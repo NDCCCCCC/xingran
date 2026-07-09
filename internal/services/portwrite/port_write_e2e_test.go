@@ -20,11 +20,13 @@ import (
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 	"github.com/scrapli/scrapligo/driver/options"
 	"github.com/scrapli/scrapligo/platform"
 	"github.com/scrapli/scrapligo/transport"
 	"github.com/stretchr/testify/mock"
+	"gorm.io/gorm"
 )
 
 // fileTransportExecutor is the production-DeviceExecutor stand-in used by
@@ -574,6 +576,484 @@ func TestE2E_NoOp_AlreadyDown(t *testing.T) {
 	}
 	if result.CurrentState != "admin_down" {
 		t.Fatalf("CurrentState = %q, want admin_down", result.CurrentState)
+	}
+
+	mockColl.AssertNotCalled(t, "CollectDevice", mock.Anything, mock.Anything)
+}
+
+// =============================================================================
+// Phase 56 (W5) v1.20.1 e2e tests: set_access_vlan + port_binding
+//
+// 复用 v1.19 fileTransportExecutor + e2eFixturePath + newTestService +
+// mockCollectionSvc 基建(无新基建)。10 个 TestE2E_* 测试覆盖:
+//   - 2 actions (set_access_vlan + port_binding) × 2 vendors (Huawei + Ruijie)
+//   - port_binding 变体:add/remove × with/without MAC
+//
+// MAC 格式锁定 (per vendor_port_template.go W1 输出):
+//   - Huawei/H3C: AA-BB-CC-DD-EE-FF (per-byte hyphenated)
+//   - Ruijie:     aabb.ccdd.eeff     (Cisco H.H.H 3-pair dotted lowercase)
+//
+// Ruijie 接口名说明: fileTransportExecutor 硬编码 huawei_vrp 平台,其 prompt
+// 正则 `^[[\w.\-@/:]{1,63}]$` 不匹配空格 —— 故 Ruijie fixture 的 prompt 使用
+// 无空格形式 [Ruijie-GigabitEthernet1/0/1](DB seed 接口名也无空格,使渲染命令
+// `interface GigabitEthernet1/0/1` 与 prompt 一致)。生产真机 prompt 带空格,真机
+// 验证由 56-HUMAN-UAT.md site-visit 项覆盖。
+// =============================================================================
+
+// seedDeviceVendor 把已 seed 的设备 vendor 改为指定值(Ruijie 测试用)。
+// seedPortAndDevice 默认创建 VendorHuawei 设备;Ruijie 测试通过此 helper 覆写。
+func seedDeviceVendor(t *testing.T, db *gorm.DB, deviceID string, vendor string) {
+	t.Helper()
+	if err := db.Model(&models.NetworkDevice{}).Where("id = ?", deviceID).Update("vendor", vendor).Error; err != nil {
+		t.Fatalf("set vendor=%s for device %s: %v", vendor, deviceID, err)
+	}
+}
+
+// TestE2E_SetAccessVlan_Huawei_Success — Huawei VRP set_access_vlan 3-cmd 链路:
+//
+//	interface GE0/0/1 | port link-type access | port default vlan 100
+//
+// FileTransport 回放 fixture 后,SendConfigs 返回 3 responses(全空 Result),
+// parseConfigError 判 nil → success。
+func TestE2E_SetAccessVlan_Huawei_Success(t *testing.T) {
+	resetCollectNotif()
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", false, "")
+
+	exec := &fileTransportExecutor{
+		fixtureProvider: singleFixture(e2eFixturePath(t, "huawei_set_access_vlan_success.fixture")),
+	}
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(exec, mockColl, db)
+	ctx := context.Background()
+
+	mockColl.On("CollectDevice", mock.Anything, "device-1").Return(newSuccessCollectionResult("device-1"), nil)
+
+	result, err := svc.SetAccessVlan(ctx, "port-1", 100, "e2e-op")
+	if err != nil {
+		t.Fatalf("SetAccessVlan returned err: %v", err)
+	}
+	if result == nil {
+		t.Fatal("result is nil")
+	}
+	if result.Status != "succeeded" {
+		t.Fatalf("status = %q, want succeeded; result=%+v", result.Status, result)
+	}
+	if result.NoOp {
+		t.Fatal("NoOp must be false")
+	}
+	if !contains(result.CommandSent, "port link-type access") {
+		t.Fatalf("CommandSent %q missing 'port link-type access' (RISK-03 universal prefix)", result.CommandSent)
+	}
+	if !contains(result.CommandSent, "port default vlan 100") {
+		t.Fatalf("CommandSent %q missing 'port default vlan 100' (Huawei VLAN keyword)", result.CommandSent)
+	}
+	// INFRA-01: Extra 必须携带 vlanId 供 W3 handler 写 audit after_value
+	if got, ok := result.Extra["vlanId"]; !ok || got != 100 {
+		t.Fatalf("Extra[vlanId] = %v, want 100 (INFRA-01 audit carrier)", got)
+	}
+
+	waitCollectedCalls(t, 1)
+	mockColl.AssertExpectations(t)
+}
+
+// TestE2E_SetAccessVlan_Ruijie_Success — Ruijie RGOS set_access_vlan 3-cmd 链路:
+//
+//	interface GigabitEthernet1/0/1 | switchport mode access | switchport access vlan 100
+//
+// 设备 vendor 改为 VendorRuijie;接口名用无空格 GigabitEthernet1/0/1
+// (fileTransportExecutor huawei_vrp 平台限制)。
+func TestE2E_SetAccessVlan_Ruijie_Success(t *testing.T) {
+	resetCollectNotif()
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE1/0/1", "up", false, "")
+	seedDeviceVendor(t, db, "device-1", string(models.VendorRuijie))
+
+	exec := &fileTransportExecutor{
+		fixtureProvider: singleFixture(e2eFixturePath(t, "ruijie_set_access_vlan_success.fixture")),
+	}
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(exec, mockColl, db)
+	ctx := context.Background()
+
+	mockColl.On("CollectDevice", mock.Anything, "device-1").Return(newSuccessCollectionResult("device-1"), nil)
+
+	result, err := svc.SetAccessVlan(ctx, "port-1", 100, "e2e-op")
+	if err != nil {
+		t.Fatalf("SetAccessVlan returned err: %v", err)
+	}
+	if result.Status != "succeeded" {
+		t.Fatalf("status = %q, want succeeded; result=%+v", result.Status, result)
+	}
+	if result.NoOp {
+		t.Fatal("NoOp must be false")
+	}
+	if !contains(result.CommandSent, "switchport mode access") {
+		t.Fatalf("CommandSent %q missing 'switchport mode access' (Ruijie Cisco-style)", result.CommandSent)
+	}
+	if !contains(result.CommandSent, "switchport access vlan 100") {
+		t.Fatalf("CommandSent %q missing 'switchport access vlan 100' (Ruijie VLAN keyword)", result.CommandSent)
+	}
+	if got, ok := result.Extra["vlanId"]; !ok || got != 100 {
+		t.Fatalf("Extra[vlanId] = %v, want 100", got)
+	}
+
+	waitCollectedCalls(t, 1)
+	mockColl.AssertExpectations(t)
+}
+
+// TestE2E_PortBinding_Huawei_Add_Success — Huawei user-bind IP-only (no MAC):
+//
+//	interface GE0/0/1 | user-bind static ip-address 10.62.25.5
+func TestE2E_PortBinding_Huawei_Add_Success(t *testing.T) {
+	resetCollectNotif()
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", false, "")
+
+	exec := &fileTransportExecutor{
+		fixtureProvider: singleFixture(e2eFixturePath(t, "huawei_port_binding_add_success.fixture")),
+	}
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(exec, mockColl, db)
+	ctx := context.Background()
+
+	mockColl.On("CollectDevice", mock.Anything, "device-1").Return(newSuccessCollectionResult("device-1"), nil)
+
+	result, err := svc.PortBinding(ctx, "port-1", "add", "10.62.25.5", "", "e2e-op")
+	if err != nil {
+		t.Fatalf("PortBinding returned err: %v", err)
+	}
+	if result.Status != "succeeded" {
+		t.Fatalf("status = %q, want succeeded; result=%+v", result.Status, result)
+	}
+	if result.NoOp {
+		t.Fatal("NoOp must be false")
+	}
+	if !contains(result.CommandSent, "user-bind static ip-address 10.62.25.5") {
+		t.Fatalf("CommandSent %q missing 'user-bind static ip-address 10.62.25.5'", result.CommandSent)
+	}
+	if contains(result.CommandSent, "mac-address") {
+		t.Fatalf("CommandSent %q should NOT contain 'mac-address' (IP-only binding)", result.CommandSent)
+	}
+	// INFRA-01: Extra 必须有 bindOp + ipAddress,且无 macAddress
+	if got := result.Extra["bindOp"]; got != "add" {
+		t.Fatalf("Extra[bindOp] = %v, want 'add'", got)
+	}
+	if got := result.Extra["ipAddress"]; got != "10.62.25.5" {
+		t.Fatalf("Extra[ipAddress] = %v, want '10.62.25.5'", got)
+	}
+	if _, ok := result.Extra["macAddress"]; ok {
+		t.Fatal("Extra[macAddress] should not exist for IP-only binding")
+	}
+
+	waitCollectedCalls(t, 1)
+	mockColl.AssertExpectations(t)
+}
+
+// TestE2E_PortBinding_Huawei_Add_WithMac_Success — Huawei user-bind with MAC:
+//
+//	interface GE0/0/1 | user-bind static ip-address 10.62.25.5 mac-address AA-BB-CC-DD-EE-FF
+//
+// MAC 输入 AA:BB:CC:DD:EE:FF (冒号),渲染为 AA-BB-CC-DD-EE-FF (华为 hyphen 格式)。
+func TestE2E_PortBinding_Huawei_Add_WithMac_Success(t *testing.T) {
+	resetCollectNotif()
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", false, "")
+
+	exec := &fileTransportExecutor{
+		fixtureProvider: singleFixture(e2eFixturePath(t, "huawei_port_binding_add_with_mac_success.fixture")),
+	}
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(exec, mockColl, db)
+	ctx := context.Background()
+
+	mockColl.On("CollectDevice", mock.Anything, "device-1").Return(newSuccessCollectionResult("device-1"), nil)
+
+	result, err := svc.PortBinding(ctx, "port-1", "add", "10.62.25.5", "AA:BB:CC:DD:EE:FF", "e2e-op")
+	if err != nil {
+		t.Fatalf("PortBinding returned err: %v", err)
+	}
+	if result.Status != "succeeded" {
+		t.Fatalf("status = %q, want succeeded; result=%+v", result.Status, result)
+	}
+	if result.NoOp {
+		t.Fatal("NoOp must be false")
+	}
+	if !contains(result.CommandSent, "user-bind static ip-address 10.62.25.5 mac-address AA-BB-CC-DD-EE-FF") {
+		t.Fatalf("CommandSent %q missing Huawei MAC format AA-BB-CC-DD-EE-FF", result.CommandSent)
+	}
+	if got := result.Extra["bindOp"]; got != "add" {
+		t.Fatalf("Extra[bindOp] = %v, want 'add'", got)
+	}
+	if got := result.Extra["macAddress"]; got != "AA:BB:CC:DD:EE:FF" {
+		t.Fatalf("Extra[macAddress] = %v, want 'AA:BB:CC:DD:EE:FF' (original input form)", got)
+	}
+
+	waitCollectedCalls(t, 1)
+	mockColl.AssertExpectations(t)
+}
+
+// TestE2E_PortBinding_Huawei_Remove_Success — Huawei undo user-bind IP-only:
+//
+//	interface GE0/0/1 | undo user-bind static ip-address 10.62.25.5
+func TestE2E_PortBinding_Huawei_Remove_Success(t *testing.T) {
+	resetCollectNotif()
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", false, "")
+
+	exec := &fileTransportExecutor{
+		fixtureProvider: singleFixture(e2eFixturePath(t, "huawei_port_binding_remove_success.fixture")),
+	}
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(exec, mockColl, db)
+	ctx := context.Background()
+
+	mockColl.On("CollectDevice", mock.Anything, "device-1").Return(newSuccessCollectionResult("device-1"), nil)
+
+	result, err := svc.PortBinding(ctx, "port-1", "remove", "10.62.25.5", "", "e2e-op")
+	if err != nil {
+		t.Fatalf("PortBinding returned err: %v", err)
+	}
+	if result.Status != "succeeded" {
+		t.Fatalf("status = %q, want succeeded; result=%+v", result.Status, result)
+	}
+	if !contains(result.CommandSent, "undo user-bind static ip-address 10.62.25.5") {
+		t.Fatalf("CommandSent %q missing 'undo user-bind static ip-address 10.62.25.5'", result.CommandSent)
+	}
+	if contains(result.CommandSent, "mac-address") {
+		t.Fatalf("CommandSent %q should NOT contain 'mac-address' (IP-only remove)", result.CommandSent)
+	}
+	if got := result.Extra["bindOp"]; got != "remove" {
+		t.Fatalf("Extra[bindOp] = %v, want 'remove'", got)
+	}
+
+	waitCollectedCalls(t, 1)
+	mockColl.AssertExpectations(t)
+}
+
+// TestE2E_PortBinding_Huawei_Remove_WithMac_Success — Huawei undo user-bind with MAC:
+//
+//	interface GE0/0/1 | undo user-bind static ip-address 10.62.25.5 mac-address AA-BB-CC-DD-EE-FF
+func TestE2E_PortBinding_Huawei_Remove_WithMac_Success(t *testing.T) {
+	resetCollectNotif()
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", false, "")
+
+	exec := &fileTransportExecutor{
+		fixtureProvider: singleFixture(e2eFixturePath(t, "huawei_port_binding_remove_with_mac_success.fixture")),
+	}
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(exec, mockColl, db)
+	ctx := context.Background()
+
+	mockColl.On("CollectDevice", mock.Anything, "device-1").Return(newSuccessCollectionResult("device-1"), nil)
+
+	result, err := svc.PortBinding(ctx, "port-1", "remove", "10.62.25.5", "AA:BB:CC:DD:EE:FF", "e2e-op")
+	if err != nil {
+		t.Fatalf("PortBinding returned err: %v", err)
+	}
+	if result.Status != "succeeded" {
+		t.Fatalf("status = %q, want succeeded; result=%+v", result.Status, result)
+	}
+	if !contains(result.CommandSent, "undo user-bind static ip-address 10.62.25.5 mac-address AA-BB-CC-DD-EE-FF") {
+		t.Fatalf("CommandSent %q missing Huawei MAC format on remove", result.CommandSent)
+	}
+	if got := result.Extra["bindOp"]; got != "remove" {
+		t.Fatalf("Extra[bindOp] = %v, want 'remove'", got)
+	}
+
+	waitCollectedCalls(t, 1)
+	mockColl.AssertExpectations(t)
+}
+
+// TestE2E_PortBinding_Ruijie_Add_Success — Ruijie switchport port-security binding with MAC:
+//
+//	interface GigabitEthernet1/0/1 | switchport port-security binding aabb.ccdd.eeff 10.62.25.5
+//
+// MAC 输入 AA:BB:CC:DD:EE:FF,渲染为 aabb.ccdd.eeff (Ruijie Cisco H.H.H 格式)。
+func TestE2E_PortBinding_Ruijie_Add_Success(t *testing.T) {
+	resetCollectNotif()
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE1/0/1", "up", false, "")
+	seedDeviceVendor(t, db, "device-1", string(models.VendorRuijie))
+
+	exec := &fileTransportExecutor{
+		fixtureProvider: singleFixture(e2eFixturePath(t, "ruijie_port_binding_add_success.fixture")),
+	}
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(exec, mockColl, db)
+	ctx := context.Background()
+
+	mockColl.On("CollectDevice", mock.Anything, "device-1").Return(newSuccessCollectionResult("device-1"), nil)
+
+	result, err := svc.PortBinding(ctx, "port-1", "add", "10.62.25.5", "AA:BB:CC:DD:EE:FF", "e2e-op")
+	if err != nil {
+		t.Fatalf("PortBinding returned err: %v", err)
+	}
+	if result.Status != "succeeded" {
+		t.Fatalf("status = %q, want succeeded; result=%+v", result.Status, result)
+	}
+	if !contains(result.CommandSent, "switchport port-security binding aabb.ccdd.eeff 10.62.25.5") {
+		t.Fatalf("CommandSent %q missing Ruijie MAC format aabb.ccdd.eeff", result.CommandSent)
+	}
+	if got := result.Extra["bindOp"]; got != "add" {
+		t.Fatalf("Extra[bindOp] = %v, want 'add'", got)
+	}
+	if got := result.Extra["macAddress"]; got != "AA:BB:CC:DD:EE:FF" {
+		t.Fatalf("Extra[macAddress] = %v, want 'AA:BB:CC:DD:EE:FF'", got)
+	}
+
+	waitCollectedCalls(t, 1)
+	mockColl.AssertExpectations(t)
+}
+
+// TestE2E_PortBinding_Ruijie_Add_NoMac_Success — Ruijie IP-only port-security binding:
+//
+//	interface GigabitEthernet1/0/1 | switchport port-security binding 10.62.25.5
+func TestE2E_PortBinding_Ruijie_Add_NoMac_Success(t *testing.T) {
+	resetCollectNotif()
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE1/0/1", "up", false, "")
+	seedDeviceVendor(t, db, "device-1", string(models.VendorRuijie))
+
+	exec := &fileTransportExecutor{
+		fixtureProvider: singleFixture(e2eFixturePath(t, "ruijie_port_binding_add_no_mac_success.fixture")),
+	}
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(exec, mockColl, db)
+	ctx := context.Background()
+
+	mockColl.On("CollectDevice", mock.Anything, "device-1").Return(newSuccessCollectionResult("device-1"), nil)
+
+	result, err := svc.PortBinding(ctx, "port-1", "add", "10.62.25.5", "", "e2e-op")
+	if err != nil {
+		t.Fatalf("PortBinding returned err: %v", err)
+	}
+	if result.Status != "succeeded" {
+		t.Fatalf("status = %q, want succeeded; result=%+v", result.Status, result)
+	}
+	if !contains(result.CommandSent, "switchport port-security binding 10.62.25.5") {
+		t.Fatalf("CommandSent %q missing IP-only Ruijie binding", result.CommandSent)
+	}
+	if contains(result.CommandSent, "aabb.ccdd.eeff") {
+		t.Fatalf("CommandSent %q should NOT contain MAC (IP-only)", result.CommandSent)
+	}
+
+	waitCollectedCalls(t, 1)
+	mockColl.AssertExpectations(t)
+}
+
+// TestE2E_PortBinding_Ruijie_Remove_Success — Ruijie no switchport port-security binding with MAC:
+//
+//	interface GigabitEthernet1/0/1 | no switchport port-security binding aabb.ccdd.eeff 10.62.25.5
+func TestE2E_PortBinding_Ruijie_Remove_Success(t *testing.T) {
+	resetCollectNotif()
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE1/0/1", "up", false, "")
+	seedDeviceVendor(t, db, "device-1", string(models.VendorRuijie))
+
+	exec := &fileTransportExecutor{
+		fixtureProvider: singleFixture(e2eFixturePath(t, "ruijie_port_binding_remove_success.fixture")),
+	}
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(exec, mockColl, db)
+	ctx := context.Background()
+
+	mockColl.On("CollectDevice", mock.Anything, "device-1").Return(newSuccessCollectionResult("device-1"), nil)
+
+	result, err := svc.PortBinding(ctx, "port-1", "remove", "10.62.25.5", "AA:BB:CC:DD:EE:FF", "e2e-op")
+	if err != nil {
+		t.Fatalf("PortBinding returned err: %v", err)
+	}
+	if result.Status != "succeeded" {
+		t.Fatalf("status = %q, want succeeded; result=%+v", result.Status, result)
+	}
+	if !contains(result.CommandSent, "no switchport port-security binding aabb.ccdd.eeff 10.62.25.5") {
+		t.Fatalf("CommandSent %q missing Ruijie no-binding MAC format", result.CommandSent)
+	}
+	if got := result.Extra["bindOp"]; got != "remove" {
+		t.Fatalf("Extra[bindOp] = %v, want 'remove'", got)
+	}
+
+	waitCollectedCalls(t, 1)
+	mockColl.AssertExpectations(t)
+}
+
+// TestE2E_PortBinding_Ruijie_Remove_NoMac_Success — Ruijie IP-only no-binding:
+//
+//	interface GigabitEthernet1/0/1 | no switchport port-security binding 10.62.25.5
+func TestE2E_PortBinding_Ruijie_Remove_NoMac_Success(t *testing.T) {
+	resetCollectNotif()
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE1/0/1", "up", false, "")
+	seedDeviceVendor(t, db, "device-1", string(models.VendorRuijie))
+
+	exec := &fileTransportExecutor{
+		fixtureProvider: singleFixture(e2eFixturePath(t, "ruijie_port_binding_remove_no_mac_success.fixture")),
+	}
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(exec, mockColl, db)
+	ctx := context.Background()
+
+	mockColl.On("CollectDevice", mock.Anything, "device-1").Return(newSuccessCollectionResult("device-1"), nil)
+
+	result, err := svc.PortBinding(ctx, "port-1", "remove", "10.62.25.5", "", "e2e-op")
+	if err != nil {
+		t.Fatalf("PortBinding returned err: %v", err)
+	}
+	if result.Status != "succeeded" {
+		t.Fatalf("status = %q, want succeeded; result=%+v", result.Status, result)
+	}
+	if !contains(result.CommandSent, "no switchport port-security binding 10.62.25.5") {
+		t.Fatalf("CommandSent %q missing IP-only Ruijie no-binding", result.CommandSent)
+	}
+	if contains(result.CommandSent, "aabb.ccdd.eeff") {
+		t.Fatalf("CommandSent %q should NOT contain MAC (IP-only remove)", result.CommandSent)
+	}
+
+	waitCollectedCalls(t, 1)
+	mockColl.AssertExpectations(t)
+}
+
+// TestE2E_SetAccessVlan_Huawei_PreStateMatch_NoOp — pre-state VLAN 匹配 → NoOp,
+// fileTransportExecutor 不被调用(pre-state 短路在 SSH 之前)。
+//
+// 这是集成层 pre-state 证明(W2 单元层在 TestSetAccessVlan_NoOp_VlanMatch 已覆盖)。
+func TestE2E_SetAccessVlan_Huawei_PreStateMatch_NoOp(t *testing.T) {
+	db := newTestDB(t)
+	seedPortAndDevice(t, db, "port-1", "device-1", "GE0/0/1", "up", false, "")
+	// DB VLAN = 100(与目标 vlanId 一致)→ pre-state 短路
+	vlan100 := 100
+	if err := db.Model(&models.DevicePortStatus{}).Where("id = ?", "port-1").Update("vlan", &vlan100).Error; err != nil {
+		t.Fatalf("set VLAN: %v", err)
+	}
+
+	// fixtureProvider panic 守护: pre-state 短路必须不触 SSH
+	exec := &fileTransportExecutor{
+		fixtureProvider: func(_ int) string {
+			t.Fatal("fileTransportExecutor invoked; NoOp path must not touch device executor")
+			return ""
+		},
+	}
+	mockColl := new(mockCollectionSvc)
+	svc := newTestService(exec, mockColl, db)
+
+	result, err := svc.SetAccessVlan(context.Background(), "port-1", 100, "e2e-op")
+	if err != nil {
+		t.Fatalf("SetAccessVlan returned err: %v", err)
+	}
+	if result.Status != "skipped" {
+		t.Fatalf("status = %q, want skipped", result.Status)
+	}
+	if !result.NoOp {
+		t.Fatal("NoOp must be true (VLAN match)")
+	}
+	if result.CurrentState != "vlan_match" {
+		t.Fatalf("CurrentState = %q, want vlan_match", result.CurrentState)
+	}
+	// Extra 仍携带 vlanId(INFRA-01 一致性,pre-state 也是有效结果)
+	if got, ok := result.Extra["vlanId"]; !ok || got != 100 {
+		t.Fatalf("Extra[vlanId] = %v, want 100", got)
 	}
 
 	mockColl.AssertNotCalled(t, "CollectDevice", mock.Anything, mock.Anything)
