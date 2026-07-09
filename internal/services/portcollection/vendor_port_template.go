@@ -158,6 +158,16 @@ func localNormalizeMACAddress(input string) string {
 // localIsHexOnlyMACPattern 12 位 hex 字符中间态校验，与 parent services 保持一致。
 var localIsHexOnlyMACPattern = regexp.MustCompile(`^[0-9A-F]{12}$`)
 
+// toRuijieMACFormat 把已归一为大写冒号格式的 MAC 转成 Ruijie / Cisco `H.H.H` 形式，
+// 即 `aabb.ccdd.eeff`（3 组 4 位 hex 字符 + 点分隔，全小写）。
+//
+// 输入必须是 localNormalizeMACAddress 已成功归一的 17 字符串 `AA:BB:CC:DD:EE:FF`。
+func toRuijieMACFormat(normalized string) string {
+	// 去掉冒号，截 4-4-4 拼为 aabb.ccdd.eeff
+	hex := strings.ToLower(strings.ReplaceAll(normalized, ":", ""))
+	return hex[0:4] + "." + hex[4:8] + "." + hex[8:12]
+}
+
 // VendorExitViewCmd 返回厂商"退一级 view"命令，用于批量端口写每端口前回 (config)# 顶层。
 //
 // 2026-07-08 dump 实测：锐捷 RGOS 不支持在 (config-if-X)# 下直接 interface Y
@@ -357,7 +367,7 @@ func renderRuijiePortBindingAdd(p PortTemplateParams) ([]string, error) {
 	if normalized == "" {
 		return nil, fmt.Errorf("portcollection: invalid mac for ruijie binding: %q", p.MACAddress)
 	}
-	mac := strings.ReplaceAll(strings.ToLower(normalized), ":", ".")
+	mac := toRuijieMACFormat(normalized)
 	return []string{
 		fmt.Sprintf("interface %s", p.InterfaceName),
 		fmt.Sprintf("switchport port-security binding %s %s", mac, p.IPAddress),
@@ -422,7 +432,7 @@ func renderRuijiePortBindingRemove(p PortTemplateParams) ([]string, error) {
 	if normalized == "" {
 		return nil, fmt.Errorf("portcollection: invalid mac for ruijie binding remove: %q", p.MACAddress)
 	}
-	mac := strings.ReplaceAll(strings.ToLower(normalized), ":", ".")
+	mac := toRuijieMACFormat(normalized)
 	return []string{
 		fmt.Sprintf("interface %s", p.InterfaceName),
 		fmt.Sprintf("no switchport port-security binding %s %s", mac, p.IPAddress),
