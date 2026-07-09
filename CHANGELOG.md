@@ -5,6 +5,50 @@ All notable changes to RuoYi-Next are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.20.1] - 2026-07-09 — 网络设备 VLAN + 端口绑定 (Network Device VLAN + Port Binding)
+
+### Added
+
+**Backend**
+
+- 2 new port write actions: `set_access_vlan`（修改 access 端口 PVID，VLAN ID 1-4094）+ `port_binding`（add/remove IP + 可选 MAC 静态绑定）
+- 2 new HTTP POST 端点（`POST /network/ports/write/{set-access-vlan,port-binding}`），复用 v1.19 `network:port:write` 权限 + SM2+SM4 请求体加密 + `sys_port_write_audit` JSONB 审计真相源
+- 3 vendors × 2 new actions = 6 vendor-specific 命令模板（Huawei `port default vlan` / H3C `port access vlan` / Ruijie `switchport access vlan`；Huawei/H3C `user-bind static`/`user-bind`，Ruijie `switchport port-security binding`）
+- 4 new sentinel validators（VLAN range / bind op / IPv4 严格 regex / MAC 归一 + null MAC 拒绝）— service 层为真相源，handler binding tag 为双重防线
+- `PortResult.Extra` 字段（v1.20.1 新增）携带 audit 上下文（vlanId / bindOp / ipAddress / macAddress）供 `sys_port_write_audit.after_value` JSON 写入（INFRA-01）
+- OperType 映射：set_access_vlan → `OperTypeUpdate (2)`；port_binding op=add → `OperTypeCreate (1)`；op=remove → `OperTypeDelete (3)`
+
+**Frontend**
+
+- 2 new single-port Modals（`SetAccessVlanModal` + `PortBindingModal`）— vlanId InputNumber 1-4094 / op Radio.Group / ipAddress IPV4_REGEX / macAddress MAC_REGEX（可选）/ reason Select + TextArea（`validateReasonRequired` 跨字段）
+- 2 new networkApi wrappers（`writeSetAccessVlan` + `writePortBinding`）— LANDMINE #5 合规（无 try/catch，无 message.error，post() 拦截器统一处理）
+- `PortWriteAction` union +2 literals + `BatchWriteRequest` +4 optional fields（为 FUTURE-BATCH-05 批量路径预留）
+- ports/index.tsx ActionButtons 菜单 5 → 7 items（`修改 access VLAN` + `端口绑定`，`canWrite` gating 继承）
+
+**Testing**
+
+- 11 new `TestE2E_*` e2e 测试 via scrapligo FileTransport（Huawei + Ruijie × set_access_vlan + port_binding × variants），复用 v1.19 `fileTransportExecutor` 基建（无新基建）
+- 10 new test fixtures（5 Huawei + 5 Ruijie）覆盖 2 actions × variants
+- W2 service 层 7 个 VLAN validator + 16 个 binding validator 表驱动单测全绿
+
+**Documentation**
+
+- `docs/API响应规范.md` 新增 v1.20.1 扩展小节（2 端点签名 + SetAccessVlanRequest/PortBindingRequest schema + 4 sentinel 错误码 + 3 vendors × 2 actions 命令模板矩阵）
+- `56-HUMAN-UAT.md` 12 项 site-visit SSH 验证推迟（Huawei S8700 × 6 + Ruijie RS8607E × 4 + H3C × 2 conditional）
+
+### Phases
+
+- Phase 56 (5 waves: W1 vendor template / W2 service+validators / W3 handler+router+audit / W4 frontend 2 Modals / W5 e2e+UAT+docs)
+
+### Deferred
+
+- 真机 SSH 验证（12 项 site-visit UAT，owner = 现场运维同事，下次现场访问）— 详见 `.planning/phases/56-vlan-v1-20-1-0-5-plans-initiated-2026-07-09/56-HUMAN-UAT.md`
+- 跨固件版本命令差异（Huawei V200R005 vs V200R022+ `port link-type access` 前置必要性）→ site-visit 覆盖
+- Ruijie 真机 port-security binding 表 MAC 列显示（用户实采输出无 MAC 列，RISK-02）→ site-visit 覆盖
+- H3C Comware V7 `user-bind` 无 `static` 关键字验证（RISK-01）→ site-visit 覆盖（视现场 H3C 设备情况）
+- 批量路径（`set_access_vlan` / `port_binding` 多端口）→ FUTURE-BATCH-05 推迟（v1.20.1 单端口 only）
+- vendor-react bundle gzip: 774.95 kB（与 v1.19 baseline 一致，零回归）
+
 ## [v1.19] - 2026-07-07 — 网络设备写命令 (Network Device Port Write Operations)
 
 ### Added

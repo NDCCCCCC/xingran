@@ -293,6 +293,111 @@ fail-fast 行为：
 
 成功路径自动触发 `DeviceInfoCollectionService.Enqueue` 后台采集（fire-and-forget），1-2s 内回填端口最新状态至 `sys_device_port_status` 表。失败路径**不**触发采集（避免 Enqueue 风暴 + 无意义的后台轮询，参见 Pitfall #6）。
 
+### v1.20.1 扩展：set_access_vlan + port_binding
+
+v1.20.1 在 v1.19 的 6 个端口写端点基础上新增 2 个端点，沿用 `network:port:write` 权限 + SM2+SM4 请求体加密 + `sys_port_write_audit` JSONB 审计真相源。请求体不再用通用 `PortWriteRequest`，而是各自的专用 struct（PATTERNS.md Option A：handler 显式绑定 action-specific request，避免通用 struct 字段越权）。
+
+**端点（2 个新增）：**
+
+| 路径 | 方法 | 操作 | OperType 常量 |
+|------|------|------|---------------|
+| `/network/ports/write/set-access-vlan` | POST | 修改端口 access VLAN（PVID） | `OperTypeUpdate (2)` |
+| `/network/ports/write/port-binding` | POST | 端口绑定 add/remove（IP + 可选 MAC） | `op=add` → `OperTypeCreate (1)`；`op=remove` → `OperTypeDelete (3)` |
+
+**SetAccessVlanRequest 请求体：**
+
+```go
+type SetAccessVlanRequest struct {
+    PortID string `json:"portId" binding:"required"`                    // 必填，目标端口 UUID
+    VLANID int    `json:"vlanId" binding:"required,min=1,max=4094"`     // 必填，VLAN 1-4094（0/4095 保留，binding 双重防线；service 仍校验为真相源）
+    Reason string `json:"reason,omitempty"`                             // 可选，UI-02 操作原因
+}
+```
+
+**PortBindingRequest 请求体：**
+
+```go
+type PortBindingRequest struct {
+    PortID     string `json:"portId" binding:"required"`                // 必填，目标端口 UUID
+    Op         string `json:"op" binding:"required,oneof=add remove"`   // 必填，add 或 remove
+    IPAddress  string `json:"ipAddress" binding:"required"`             // 必填，IPv4（service 严格 regex 校验）
+    MACAddress string `json:"macAddress,omitempty"`                     // 可选，MAC（仅 op=add 时有意义；空=IP-only binding）
+    Reason     string `json:"reason,omitempty"`                         // 可选，UI-02 操作原因
+}
+```
+
+**错误码（sentinel → HTTP 400）：**
+
+| 错误 sentinel | HTTP code | 用户提示 |
+|--------------|-----------|----------|
+| `portwrite: vlanId out of range 1-4094` | 400 | VLAN ID 必须在 1-4094 之间 |
+| `portwrite: bind op must be add or remove` | 400 | 绑定操作必须是 add 或 remove |
+| `portwrite: invalid ipv4 address` | 400 | IP 地址格式不合法 |
+| `portwrite: invalid mac address` | 400 | MAC 地址格式不合法 |
+
+**请求示例（set_access_vlan）：**
+
+```json
+POST /network/ports/write/set-access-vlan
+{
+  "portId": "f1e2d3c4-b5a6-9876-5432-10fedcba9876",
+  "vlanId": 100,
+  "reason": "业务变更需要"
+}
+```
+
+**请求示例（port_binding add with MAC）：**
+
+```json
+POST /network/ports/write/port-binding
+{
+  "portId": "f1e2d3c4-b5a6-9876-5432-10fedcba9876",
+  "op": "add",
+  "ipAddress": "10.62.25.5",
+  "macAddress": "AA:BB:CC:DD:EE:FF",
+  "reason": "安全合规要求"
+}
+```
+
+**响应（与 v1.19 端点一致，复用 `PortResult` schema，新增 `extra` 字段携带 audit 上下文）：**
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "portId": "f1e2d3c4-b5a6-9876-5432-10fedcba9876",
+    "deviceId": "a1b2c3d4-...",
+    "action": "set_access_vlan",
+    "status": "succeeded",
+    "noOp": false,
+    "commandSent": "interface GE0/0/1 | port link-type access | port default vlan 100 | quit",
+    "extra": {
+      "vlanId": 100
+    }
+  },
+  "timestamp": 1766380800,
+  "request_id": "uuid-string"
+}
+```
+
+`extra` 字段（v1.20.1 新增）携带 audit 上下文供 `sys_port_write_audit.after_value` JSON 写入（INFRA-01）：
+
+- `set_access_vlan`：`{"vlanId": <int>}`
+- `port_binding`：`{"bindOp": "add"|"remove", "ipAddress": "<ipv4>", "macAddress": "<original-input>"}`（`macAddress` 仅在非空时出现）
+
+**审计**：复用 `sys_port_write_audit` JSONB 字段；`commandSent` 不脱敏（审计真相源，与 v1.19 一致）。OperType 按 op 分流（add=Create / remove=Delete / set_access_vlan=Update），便于 `sys_oper_log` 按业务类型过滤。
+
+**厂商命令模板（3 厂商 × 2 actions × variants）：**
+
+| 厂商 | set_access_vlan | port_binding add (IP-only) | port_binding add (with MAC) | port_binding remove |
+|------|----------------|----------------------------|----------------------------|---------------------|
+| Huawei VRP | `port link-type access` + `port default vlan <N>` | `user-bind static ip-address <IP>` | `user-bind static ip-address <IP> mac-address <AA-BB-CC-DD-EE-FF>` | `undo user-bind static ip-address <IP> [mac-address ...]` |
+| H3C Comware | `port link-type access` + `port access vlan <N>` | `user-bind ip-address <IP>` | `user-bind ip-address <IP> mac-address <AA-BB-CC-DD-EE-FF>` | `undo user-bind ip-address <IP> [mac-address ...]` |
+| Ruijie RGOS | `switchport mode access` + `switchport access vlan <N>` | `switchport port-security binding <IP>` | `switchport port-security binding <aabb.ccdd.eeff> <IP>` | `no switchport port-security binding [<mac>] <IP>` |
+
+**MAC 格式**（per vendor CLI 规范）：Huawei/H3C = `AA-BB-CC-DD-EE-FF`（per-byte hyphenated）；Ruijie = `aabb.ccdd.eeff`（Cisco H.H.H 3-pair dotted lowercase）。service 层 `NormalizeMACAddress` 接受冒号/连字符/无分隔/cisco 点多种输入格式，归一后按厂商转换。
+
 ## 前端调用规范
 
 ### API调用函数使用
