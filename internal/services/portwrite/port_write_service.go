@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/device"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/models"
+	"github.com/ruoyi-next/ruoyi-go-backend/internal/services"
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/services/portcollection"
 	applogger "github.com/ruoyi-next/ruoyi-go-backend/pkg/logger"
 	"gorm.io/gorm"
@@ -23,7 +25,20 @@ var (
 	ErrMixedDevices  = errors.New("portwrite: batch contains ports from different devices")
 	ErrPortNotFound  = errors.New("portwrite: port not found")
 	ErrDeviceNotFound = errors.New("portwrite: device not found")
+	// v1.20.1 新增 sentinel（set_access_vlan + port_binding 4 个 validator）
+	ErrVlanIdOutOfRange = errors.New("portwrite: vlanId out of range 1-4094")
+	ErrBindOpInvalid    = errors.New("portwrite: bind op must be add or remove")
+	ErrIPAddressInvalid = errors.New("portwrite: invalid ipv4 address")
+	ErrMACAddressInvalid = errors.New("portwrite: invalid mac address")
 )
+
+// ipv4Pattern 严格 IPv4 regex（Pitfall 5: 拒绝 0.x.x.x / 255.x.x.x / 非法段长 / 命令分隔符）。
+//
+// 校验收紧：
+//   - 各段值域 [0-255]，且首段不允许 0（避免 0.0.0.0/255.255.255.255 等边界值穿透到设备）
+//   - 整段必须是数字 0-255 的合法表示（无前导 0、无超出）
+//   - 不含 ; | & 等 shell 命令分隔符（input 自正则字符类已排除）
+var ipv4Pattern = regexp.MustCompile(`^(([1-9]?\d|1\d\d|2[0-4]\d|25[0-5])\.){3}([1-9]?\d|1\d\d|2[0-4]\d|25[0-5])$`)
 
 // Action 是 Phase 50 PortAction 的别名，避免双 import 路径冲突。
 type Action = portcollection.PortAction
@@ -35,23 +50,41 @@ type Action = portcollection.PortAction
 // 批次路径不需要这个字段（BatchWritePorts 自己持有 req.DeviceID）。
 //
 // CommandSent 不脱敏（audit 真相源），Phase 52 handler 负责在 HTTP 响应中按字段过滤。
+//
+// Extra 字段：v1.20.1 新增，用于携带 set_access_vlan 的 vlanId / port_binding 的 (op/ip/mac)
+// 上下文供 W3 handler 写入 sys_port_write_audit.after_value JSON（INFRA-01）。
+// 5 个 v1.19 方法不写 Extra；SetAccessVlan + PortBinding 写入。
 type PortResult struct {
-	PortID       string `json:"portId"`
-	DeviceID     string `json:"deviceId,omitempty"`
-	Action       Action `json:"action"`
-	Status       string `json:"status"` // "succeeded" | "failed" | "skipped"
-	NoOp         bool   `json:"noOp"`
-	CurrentState string `json:"currentState,omitempty"`
-	Error        string `json:"error,omitempty"`
-	CommandSent  string `json:"commandSent,omitempty"`
+	PortID       string                 `json:"portId"`
+	DeviceID     string                 `json:"deviceId,omitempty"`
+	Action       Action                 `json:"action"`
+	Status       string                 `json:"status"` // "succeeded" | "failed" | "skipped"
+	NoOp         bool                   `json:"noOp"`
+	CurrentState string                 `json:"currentState,omitempty"`
+	Error        string                 `json:"error,omitempty"`
+	CommandSent  string                 `json:"commandSent,omitempty"`
+	Extra        map[string]interface{} `json:"extra,omitempty"`
 }
 
 // BatchWriteRequest 批量写请求（D-12 + D-17）。
+//
+// v1.20.1 新增 4 个可选字段（vlanId / bindOp / ipAddr / macAddr），仅 ActionSetAccessVLAN 和
+// ActionPortBinding 路径下使用；其他 action 忽略这 4 个字段。
+//   - VLANID：仅 set_access_vlan 使用（service 层 1-4094 范围校验）
+//   - BindOp：仅 port_binding 使用（必须是 "add" 或 "remove"，service 层 400 拦截）
+//   - IPAddress：仅 port_binding 使用（严格 IPv4 正则校验）
+//   - MACAddress：仅 port_binding 使用（可选；空允许，非空时 null MAC 拒绝）
 type BatchWriteRequest struct {
 	DeviceID    string   `json:"deviceId"`
 	Action      Action   `json:"action"`
 	PortIDs     []string `json:"portIds"`
 	Description string   `json:"description,omitempty"` // 仅 ActionDescription 使用
+	// v1.20.1 set_access_vlan 字段
+	VLANID int `json:"vlanId,omitempty"`
+	// v1.20.1 port_binding 字段
+	BindOp     string `json:"bindOp,omitempty"`
+	IPAddress  string `json:"ipAddress,omitempty"`
+	MACAddress string `json:"macAddress,omitempty"`
 }
 
 // 超时常量（D-11 + D-12）。
@@ -85,13 +118,16 @@ type portWritePortCollectionSvc interface {
 	CollectDevice(ctx context.Context, deviceID string) (*portcollection.CollectionResult, error)
 }
 
-// PortWriteService 端口写 service 接口（6 方法 — 5 单端口 + 1 批量）。
+// PortWriteService 端口写 service 接口（8 方法 — 5 v1.19 单端口 + 2 v1.20.1 单端口 + 1 批量）。
 type PortWriteService interface {
 	Shutdown(ctx context.Context, portID string, operator string) (*PortResult, error)
 	UndoShutdown(ctx context.Context, portID string, operator string) (*PortResult, error)
 	SetDescription(ctx context.Context, portID string, desc string, operator string) (*PortResult, error)
 	EnableDot1x(ctx context.Context, portID string, operator string) (*PortResult, error)
 	DisableDot1x(ctx context.Context, portID string, operator string) (*PortResult, error)
+	// v1.20.1 新增方法
+	SetAccessVlan(ctx context.Context, portID string, vlanId int, operator string) (*PortResult, error)
+	PortBinding(ctx context.Context, portID string, op string, ipAddress string, macAddress string, operator string) (*PortResult, error)
 	BatchWritePorts(ctx context.Context, req BatchWriteRequest, operator string) (*BatchResult, error)
 }
 
@@ -123,27 +159,98 @@ func NewPortWriteService(
 
 // Shutdown 关闭单端口。
 func (s *portWriteServiceImpl) Shutdown(ctx context.Context, portID string, operator string) (*PortResult, error) {
-	return s.writeAndRefresh(ctx, portID, portcollection.ActionShutdown, "", operator)
+	return s.writeAndRefresh(ctx, portID, portcollection.ActionShutdown, "", operator, 0, "", "", "")
 }
 
 // UndoShutdown 取消关闭。
 func (s *portWriteServiceImpl) UndoShutdown(ctx context.Context, portID string, operator string) (*PortResult, error) {
-	return s.writeAndRefresh(ctx, portID, portcollection.ActionUndoShutdown, "", operator)
+	return s.writeAndRefresh(ctx, portID, portcollection.ActionUndoShutdown, "", operator, 0, "", "", "")
 }
 
 // SetDescription 设置端口描述（desc 由 RenderCommand 入口校验长度 ≤ 80）。
 func (s *portWriteServiceImpl) SetDescription(ctx context.Context, portID string, desc string, operator string) (*PortResult, error) {
-	return s.writeAndRefresh(ctx, portID, portcollection.ActionDescription, desc, operator)
+	return s.writeAndRefresh(ctx, portID, portcollection.ActionDescription, desc, operator, 0, "", "", "")
 }
 
 // EnableDot1x 启用 802.1X。
 func (s *portWriteServiceImpl) EnableDot1x(ctx context.Context, portID string, operator string) (*PortResult, error) {
-	return s.writeAndRefresh(ctx, portID, portcollection.ActionDot1xEnable, "", operator)
+	return s.writeAndRefresh(ctx, portID, portcollection.ActionDot1xEnable, "", operator, 0, "", "", "")
 }
 
 // DisableDot1x 停用 802.1X。
 func (s *portWriteServiceImpl) DisableDot1x(ctx context.Context, portID string, operator string) (*PortResult, error) {
-	return s.writeAndRefresh(ctx, portID, portcollection.ActionDot1xDisable, "", operator)
+	return s.writeAndRefresh(ctx, portID, portcollection.ActionDot1xDisable, "", operator, 0, "", "", "")
+}
+
+// SetAccessVlan 设置 access 端口 PVID（v1.20.1 新增）。
+//
+// VLAN-05: service 层 validator（前端 InputNumber min/max 是 UX hint,后端为真相源）。
+// 在做任何 DB 查询或 SSH 流量之前拒绝越界值,避免对设备下发非法 VLAN 命令。
+//
+// INFRA-01 / VLAN-06: 成功后把 vlanId 写入 PortResult.Extra,供 W3 handler 写入
+// sys_port_write_audit.after_value JSON(vlan 真实值的唯一 carrier)。
+func (s *portWriteServiceImpl) SetAccessVlan(ctx context.Context, portID string, vlanId int, operator string) (*PortResult, error) {
+	// VLAN-05 validator: 防御性范围校验,任何越界值在入口处直接拒绝
+	if vlanId < 1 || vlanId > 4094 {
+		return nil, fmt.Errorf("%w: %d (must be 1-4094)", ErrVlanIdOutOfRange, vlanId)
+	}
+	result, err := s.writeAndRefresh(ctx, portID, portcollection.ActionSetAccessVLAN, "", operator, vlanId, "", "", "")
+	if err != nil {
+		return nil, err
+	}
+	if result == nil {
+		result = &PortResult{}
+	}
+	if result.Extra == nil {
+		result.Extra = make(map[string]interface{})
+	}
+	result.Extra["vlanId"] = vlanId
+	return result, nil
+}
+
+// PortBinding 端口绑定 (IP + 可选 MAC) 添加或解除（v1.20.1 新增）。
+//
+// BIND-07: service 层 3 个 validator(顺序严格: op → IP → MAC)。
+//
+//   - op 必须在 {"add", "remove"} 内,否则 ErrBindOpInvalid
+//   - IP 必须通过严格 IPv4 regex,拒绝 0.x.x.x / 255.255.255.255 / 256.x.x.x / shell 分隔符注入
+//   - MAC 可空(仅 IP-only binding),非空时先 NormalizeMACAddress 再拒绝 null MAC (`00:00:00:00:00:00`)
+//     及 12-hex-char 不匹配的"伪 MAC"(`;reboot` 等命令注入字符串)
+//
+// INFRA-01: 成功后把 op / ipAddress / 可选 macAddress 写入 PortResult.Extra,供 W3 handler
+// 写入 sys_port_write_audit.after_value JSON(binding tuple carrier)。
+func (s *portWriteServiceImpl) PortBinding(ctx context.Context, portID string, op string, ipAddress string, macAddress string, operator string) (*PortResult, error) {
+	// BIND-07 validator #1: op 必须 add|remove
+	if op != "add" && op != "remove" {
+		return nil, fmt.Errorf("%w: %q (must be add|remove)", ErrBindOpInvalid, op)
+	}
+	// BIND-07 validator #2: 严格 IPv4 regex
+	if !ipv4Pattern.MatchString(ipAddress) {
+		return nil, fmt.Errorf("%w: %q", ErrIPAddressInvalid, ipAddress)
+	}
+	// BIND-07 validator #3: 非空 MAC 先归一再校验 null MAC / 12-hex-char
+	if macAddress != "" {
+		normalized := services.NormalizeMACAddress(macAddress)
+		if normalized == "" || normalized == "00:00:00:00:00:00" {
+			return nil, fmt.Errorf("%w: %q", ErrMACAddressInvalid, macAddress)
+		}
+	}
+	result, err := s.writeAndRefresh(ctx, portID, portcollection.ActionPortBinding, "", operator, 0, op, ipAddress, macAddress)
+	if err != nil {
+		return nil, err
+	}
+	if result == nil {
+		result = &PortResult{}
+	}
+	if result.Extra == nil {
+		result.Extra = make(map[string]interface{})
+	}
+	result.Extra["bindOp"] = op
+	result.Extra["ipAddress"] = ipAddress
+	if macAddress != "" {
+		result.Extra["macAddress"] = macAddress
+	}
+	return result, nil
 }
 
 // writeAndRefresh 单端口方法的公共外壳：writeSinglePort → 成功后调 refreshPortStatus。
@@ -156,9 +263,9 @@ func (s *portWriteServiceImpl) DisableDot1x(ctx context.Context, portID string, 
 //
 // 批次路径走 BatchWritePorts 内部循环 + 末尾一次性 refresh，避免 50 次重复采集同设备。
 func (s *portWriteServiceImpl) writeAndRefresh(
-	ctx context.Context, portID string, action Action, desc, operator string,
+	ctx context.Context, portID string, action Action, desc, operator string, vlanId int, bindOp, ipAddr, macAddr string,
 ) (*PortResult, error) {
-	result, err := s.writeSinglePort(ctx, portID, action, desc, operator)
+	result, err := s.writeSinglePort(ctx, portID, action, desc, operator, vlanId, bindOp, ipAddr, macAddr)
 	if err == nil && result != nil && result.Status == "succeeded" && result.DeviceID != "" {
 		s.refreshPortStatus(ctx, result.DeviceID)
 	}
@@ -172,23 +279,28 @@ func (s *portWriteServiceImpl) writeAndRefresh(
 //
 // operator 参数：service 层暂不直接消费（Phase 52 handler 决定 audit/operlog 入参格式）；
 // 保留参数保证未来扩展性 + 公共接口签名稳定。
+//
+// vlanId / bindOp / ipAddr / macAddr（v1.20.1 4 个新参数）：
+//   - ActionSetAccessVLAN：vlanId 用于 checkPreState 的 VLAN 匹配 + 透传给 RenderCommand.VLANID
+//   - ActionPortBinding：bindOp/ipAddr/macAddr 用于 RenderCommand.BindOp/IPAddress/MACAddress（pre-state 跳过）
+//   - 5 v1.19 action 路径下这 4 个参数均忽略(由 caller 传 0/""/"")
 func (s *portWriteServiceImpl) writeSinglePort(
-	ctx context.Context, portID string, action Action, desc, operator string,
+	ctx context.Context, portID string, action Action, desc, operator string, vlanId int, bindOp, ipAddr, macAddr string,
 ) (*PortResult, error) {
 	var port models.DevicePortStatus
 	err := s.db.WithContext(ctx).Where("id = ?", portID).First(&port).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return s.executeWrite(ctx, portID, "", action, desc, operator, "")
+			return s.executeWrite(ctx, portID, "", action, desc, operator, "", vlanId, bindOp, ipAddr, macAddr)
 		}
 		return nil, fmt.Errorf("query port: %w", err)
 	}
 
-	if noopResult := s.checkPreState(&port, action, desc); noopResult != nil {
+	if noopResult := s.checkPreState(&port, action, desc, vlanId, bindOp, ipAddr, macAddr); noopResult != nil {
 		return noopResult, nil
 	}
 
-	return s.executeWrite(ctx, port.ID, port.DeviceID, action, desc, operator, port.InterfaceName)
+	return s.executeWrite(ctx, port.ID, port.DeviceID, action, desc, operator, port.InterfaceName, vlanId, bindOp, ipAddr, macAddr)
 }
 
 // executeWrite 实际下发写命令：RenderCommand → ExecuteCustom → parseConfigError。
@@ -222,7 +334,7 @@ func (s *portWriteServiceImpl) writeSinglePort(
 //	在 end 掉到 privileged EXEC 后会自动 escalate 回 configuration（多一次来回开销），
 //	表面 work 但每 port 多 2 条 SSH 命令 + priv 状态抖动，非正确解法。
 func (s *portWriteServiceImpl) executeWrite(
-	ctx context.Context, portID, deviceID string, action Action, desc, operator, interfaceName string,
+	ctx context.Context, portID, deviceID string, action Action, desc, operator, interfaceName string, vlanId int, bindOp, ipAddr, macAddr string,
 ) (*PortResult, error) {
 	if deviceID == "" {
 		return nil, ErrDeviceNotFound
@@ -236,6 +348,10 @@ func (s *portWriteServiceImpl) executeWrite(
 	cmds, err := portcollection.RenderCommand(dev.Vendor, action, portcollection.PortTemplateParams{
 		InterfaceName: expandInterfaceName(interfaceName, dev.Vendor),
 		Description:   desc,
+		VLANID:        vlanId,
+		BindOp:        bindOp,
+		IPAddress:     ipAddr,
+		MACAddress:    macAddr,
 	})
 	if err != nil {
 		return nil, err
