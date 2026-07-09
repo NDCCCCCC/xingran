@@ -1,5 +1,28 @@
 # Milestones
 
+## v1.20.1 网络设备 VLAN + 端口绑定 (Network Device VLAN + Port Binding) — ✅ SHIPPED 2026-07-09
+
+**Phases**: 1 (Phase 56) | **Plans**: 5 (56-01 / 56-02 / 56-03 / 56-04 / 56-05) | **Waves**: 5 (W1 vendor template / W2 service+validators / W3 handler+router+audit / W4 frontend 2 Modals / W5 e2e+UAT+docs)
+
+**Delivered**: 在 v1.19 网络设备写命令基础上新增 2 个端口写操作（`set_access_vlan` 修改 access 端口 PVID + `port_binding` add/remove IP+可选 MAC 静态绑定），3 厂商命令模板全覆盖 + 前端 2 个独立 Modal + 11 e2e 测试 + 文档同步。复用 v1.19 全部基建（权限 / 审计 / 加密 / scrapligo FileTransport / fire-and-forget refresh）。
+
+**Key Accomplishments**:
+
+1. ✅ **Vendor Template Extension (56-01 / W1)** — `internal/services/portcollection/vendor_port_template.go` +6 entries（3 vendors × 2 actions）+ 9 render 函数；MAC 格式锁定（Huawei/H3C = `AA-BB-CC-DD-EE-FF`，Ruijie = `aabb.ccdd.eeff`）；`localNormalizeMACAddress` 本地副本避免 import cycle；dispatch closure by BindOp（add/remove 路由）；12 locked subtests
+2. ✅ **Service + 4 Validators + Pre-state (56-02 / W2)** — `port_write_service.go` +2 methods（`SetAccessVlan` + `PortBinding`）+ 4 sentinel validators（VLAN range / bind op / IPv4 regex / MAC normalize+null reject）+ VLAN pre-state NoOp 短路（Pitfall 6: port_binding 永不 NoOp）+ `PortResult.Extra` audit carrier（INFRA-01）；23 表驱动单测
+3. ✅ **Handler + Router + Audit (56-03 / W3)** — 2 HTTP POST 端点 + `SetAccessVlanRequest`/`PortBindingRequest` 专用 struct（PATTERNS.md Option A）+ OperType 分流（set_access_vlan=Update / op=add=Create / op=remove=Delete）+ `sys_port_write_audit.after_value` JSON 写入 Extra 字段
+4. ✅ **Frontend 2 Modals (56-04 / W4)** — `SetAccessVlanModal`（vlanId InputNumber 1-4094）+ `PortBindingModal`（op Radio.Group + IPV4_REGEX + MAC_REGEX + reason cross-field）+ 2 networkApi wrappers（LANDMINE #5 合规）+ ports/index.tsx ActionButtons 5 → 7 items；vendor-react gzip 774.95 kB（≤ 776 kB baseline，零回归）
+5. ✅ **E2E + UAT Deferral + Documentation (56-05 / W5)** — 11 new `TestE2E_*` via scrapligo FileTransport（复用 v1.19 `fileTransportExecutor` 基建，无新基建）+ 10 new fixtures（5 Huawei + 5 Ruijie）+ `56-HUMAN-UAT.md` 12 项 site-visit 推迟 + API响应规范/CHANGELOG/MILESTONES 文档同步
+
+**Comms**:
+- 0 critical regression（v1.19 e2e 10 + v1.20.1 e2e 11 = 21 e2e 全绿；operlog 25 OperType + 11 敏感关键词 regression_test.go 不回归；vendor-react gzip 与 v1.19 baseline 零回归）
+- 12/12 site-visit UAT 推迟（Huawei S8700 × 6 + Ruijie RS8607E × 4 + H3C × 2 conditional，owner = 现场运维同事）— 详见 `.planning/phases/56-vlan-v1-20-1-0-5-plans-initiated-2026-07-09/56-HUMAN-UAT.md`
+- Risk mitigations: H3C `user-bind` no `static` (RISK-01), Ruijie full MAC+IP syntax (RISK-02), Huawei `port link-type access` universal prefix (RISK-03)
+
+**Known deferred items at close**: 12 项 site-visit UAT 推迟（真机 SSH 验证：Huawei S8700 set_access_vlan/port_binding × 6 + Ruijie RS8607E × 4 + H3C × 2 conditional）— 详见 `56-HUMAN-UAT.md`；批量路径（`set_access_vlan` / `port_binding` 多端口）→ FUTURE-BATCH-05 推迟（v1.20.1 单端口 only，`BatchWriteRequest` 已预留 4 字段）
+
+---
+
 ## v1.19 网络设备写命令 (Network Device Port Write Operations) — ✅ SHIPPED 2026-07-08
 
 **Phases**: 6 (Phases 50-54 = core MVP; Phase 55 = tech-debt cleanup) | **Plans**: 9 (50-01 / 51-01 / 52-01+02 / 53-01+02 / 54-01 / 55-01+02) | **Waves**: 5 build phases + 1 cleanup phase
