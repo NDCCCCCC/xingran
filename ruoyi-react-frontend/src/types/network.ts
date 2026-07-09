@@ -284,7 +284,9 @@ export type PortWriteAction =
   | "undo_shutdown"
   | "description"
   | "dot1x_enable"
-  | "dot1x_disable";
+  | "dot1x_disable"
+  | "set_access_vlan" // v1.20.1 VLAN-01
+  | "port_binding"; // v1.20.1 BIND-01/02
 
 /**
  * 单端口写操作结果 (Phase 53, 镜像后端 portwrite.PortResult)
@@ -316,6 +318,43 @@ export interface BatchWriteRequest {
   action: PortWriteAction;
   portIds: string[];
   description?: string;
+  // v1.20.1 batch extensions (4 optional fields)
+  // 与 W2 batch_orchestrator.go + W3 handler BatchWriteRequest 字段对齐。
+  vlanId?: number; // action === "set_access_vlan" 时使用, 1-4094
+  op?: "add" | "remove"; // action === "port_binding" 时使用
+  ipAddress?: string; // action === "port_binding" 时使用, IPv4
+  macAddress?: string; // action === "port_binding" 时使用, optional
+  reason?: string;
+}
+
+/**
+ * 修改 access VLAN 请求 (v1.20.1 VLAN-01)
+ *
+ * Source: internal/services/portwrite/port_write_service.go (W2 SetAccessVlan)
+ *
+ * vlanId: 1-4094 (前端 InputNumber min/max + 后端 service ErrVlanIdOutOfRange 二次校验)。
+ */
+export interface SetAccessVlanRequest {
+  portId: string;
+  vlanId: number; // 1-4094
+  reason: string;
+}
+
+/**
+ * 端口绑定请求 (v1.20.1 BIND-01/02)
+ *
+ * Source: internal/services/portwrite/port_write_service.go (W2 PortBinding)
+ *
+ * op=add 创建静态绑定; op=remove 删除已有绑定。
+ * ipAddress: 严格 IPv4 regex (后端 service 二次校验)。
+ * macAddress: 可选 MAC (Huawei/H3C 用, Ruijie 接受); undefined 表示仅 IP 绑定。
+ */
+export interface PortBindingRequest {
+  portId: string;
+  op: "add" | "remove";
+  ipAddress: string; // IPv4 regex
+  macAddress?: string; // MAC regex (optional)
+  reason: string;
 }
 
 /**
