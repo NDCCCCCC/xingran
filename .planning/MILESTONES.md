@@ -1,5 +1,19 @@
 # Milestones
 
+## v1.20 网络设备 VLAN + 端口绑定 (Shipped: 2026-07-10)
+
+**Phases completed:** 1 phases, 5 plans, 23 tasks
+
+**Key accomplishments:**
+
+- 1. [Rule 1 - Bug] Corrected MAC format in test expectations
+- Extended v1.19 PortWriteService with SetAccessVlan + PortBinding methods, 4 validator sentinels, Extra-map audit carrier, and checkPreState NoOp/skip logic — 31 new subtests, zero v1.19 regression
+- Wired 2 new kebab HTTP endpoints (set-access-vlan + port-binding) through v1.19's execSinglePort DRY, refactored execSinglePort to receive bound portID/description (fixes double-BindJSON EOF trap), extended buildAfterValue to read PortResult.Extra for v1.20.1 audit after_value, and added 12 new subtests + 3 permission tests — zero v1.19 regression.
+- 1. [Rule 1 - Bug] Fixed PortBindingModal BIND_OPS readonly cast for `tsc -b`
+- 1. [Rule 1 - Bug] Fixed Huawei MAC format in fixtures (AABB-CCDD-EEFF → AA-BB-CC-DD-EE-FF)
+
+---
+
 ## v1.20.1 网络设备 VLAN + 端口绑定 (Network Device VLAN + Port Binding) — ✅ SHIPPED 2026-07-09
 
 **Phases**: 1 (Phase 56) | **Plans**: 5 (56-01 / 56-02 / 56-03 / 56-04 / 56-05) | **Waves**: 5 (W1 vendor template / W2 service+validators / W3 handler+router+audit / W4 frontend 2 Modals / W5 e2e+UAT+docs)
@@ -15,6 +29,7 @@
 5. ✅ **E2E + UAT Deferral + Documentation (56-05 / W5)** — 11 new `TestE2E_*` via scrapligo FileTransport（复用 v1.19 `fileTransportExecutor` 基建，无新基建）+ 10 new fixtures（5 Huawei + 5 Ruijie）+ `56-HUMAN-UAT.md` 12 项 site-visit 推迟 + API响应规范/CHANGELOG/MILESTONES 文档同步
 
 **Comms**:
+
 - 0 critical regression（v1.19 e2e 10 + v1.20.1 e2e 11 = 21 e2e 全绿；operlog 25 OperType + 11 敏感关键词 regression_test.go 不回归；vendor-react gzip 与 v1.19 baseline 零回归）
 - 12/12 site-visit UAT 推迟（Huawei S8700 × 6 + Ruijie RS8607E × 4 + H3C × 2 conditional，owner = 现场运维同事）— 详见 `.planning/phases/56-vlan-v1-20-1-0-5-plans-initiated-2026-07-09/56-HUMAN-UAT.md`
 - Risk mitigations: H3C `user-bind` no `static` (RISK-01), Ruijie full MAC+IP syntax (RISK-02), Huawei `port link-type access` universal prefix (RISK-03)
@@ -43,6 +58,7 @@
 6. ✅ **Tech-Debt Cleanup (55-01/02)** — Phase 53 leftover sweep：WR-02 reason validator signature 修复（antd `(rule, value, form)` 3-param helpers extracted to constants.ts）+ IN-01 `instanceof Error` narrowing + IN-02 mount-only useEffect eslint-disable placement 修正（Lesson: directive 必须紧贴 `}, []);` 而非 useEffect 开头）+ HealthCard.test.tsx empty-state assertion regex match + CR-02 后端 batch_orchestrator.go fallback 路径 port 归属跨层防御（纵深双保险）
 
 **Comms**:
+
 - 98 commits 主仓 (35 code commits + 63 docs/state commits)
 - 37/37 requirements addressed (35 fully satisfied + 2 PARTIAL BATCH-05 / UI-03 + 1 adjusted PERM-03 D-07); 54-VALIDATION.md Test Map 锁定
 - 0 critical regression（Phase 51 mock + Phase 54 e2e 全绿，operlog 25 OperType + 11 敏感关键词 regression_test.go 不回归，vendor-react gzip 与 Phase 53 baseline 零回归）
@@ -69,6 +85,7 @@
 6. ✅ **真机 UAT 推迟声明(为 P0 完成让路)** — 3 项 site-visit(S8700 SNMP 单 GET / RS8607E 627 行噪声过滤 / D-10 S8700 `10GE5/0/4` 两步流水线)按 RESEARCH §Environment Availability 显式推迟到下次现场访问;自动化 UAT 全绿(go build / 21 collector tests / 5 D-10 流水线测试 / 3 handler tests / 5 operlog regression 不回归 / tsc / vite build 1m40s vendor-react 775kB gzip 基线与 Phase 48 前一致 / 远程 PG schema introspection)
 
 **Comms**:
+
 - 6 commits 主仓 + 13 merge 嵌套(`9157be4a` `b8fd2f45`→`6a25596c`),19 commits GitHub-style 紧凑统计上 commit-log 范围
 - 14/14 D-id 全覆盖(代码 + 测试证据),48-VERIFICATION.md `score: 13/14` + 3 项 site-visit(human_needed informational, 非失败)
 - 0 critical regression(11 pre-existing operations/system 测试失败详见 `deferred-items.md`,在 `b8fd2f45` baseline 跑过确认非 Phase 48 引入)

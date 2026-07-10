@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.20
 milestone_name: 网络设备 VLAN + 端口绑定
-status: milestone_complete
-stopped_at: Milestone complete (Phase 56 was final phase)
-last_updated: 2026-07-09T08:12:24.944Z
-last_activity: 2026-07-09 -- Phase 56 execution started
+status: Awaiting next milestone
+stopped_at: v1.19 milestone archived (milestones/v1.19-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md)
+last_updated: "2026-07-10T00:38:22.474Z"
+last_activity: 2026-07-10 — Milestone v1.20 completed and archived
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
-  completed_plans: 198
-  percent: 0
+  completed_plans: 5
+  percent: 100
 ---
 
 # Project State
@@ -23,10 +23,34 @@ progress:
 
 ## Current Position
 
-Phase: 56
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-07-09
+Phase: Milestone v1.20 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-10 — Milestone v1.20 completed and archived
+
+## Deferred Items
+
+Items acknowledged and deferred at v1.20 milestone close on 2026-07-10:
+
+| Category | Item | Status |
+|----------|------|--------|
+| uat_gap | Huawei S8700 set_access_vlan PVID 切换验证 (56-HUMAN-UAT.md#huawei-s8700) | deferred (site-visit) |
+| uat_gap | Huawei S8700 set_access_vlan 老固件 V200R005 兼容性 | deferred (site-visit) |
+| uat_gap | Huawei S8700 set_access_vlan V200R022+ 兼容性 | deferred (site-visit) |
+| uat_gap | Huawei S8700 port_binding add (IP only) | deferred (site-visit) |
+| uat_gap | Huawei S8700 port_binding add (with MAC) | deferred (site-visit) |
+| uat_gap | Huawei S8700 port_binding remove | deferred (site-visit) |
+| uat_gap | Ruijie RS8607E set_access_vlan switchport 验证 | deferred (site-visit) |
+| uat_gap | Ruijie RS8607E port_binding add (with MAC) | deferred (site-visit) |
+| uat_gap | Ruijie RS8607E port_binding add (IP only) | deferred (site-visit) |
+| uat_gap | Ruijie RS8607E port_binding remove | deferred (site-visit) |
+| uat_gap | H3C Comware V7 user-bind (no static) 验证 | deferred (site-conditional) |
+| uat_gap | H3C Comware V7 set_access_vlan port access vlan 验证 | deferred (site-conditional) |
+| requirement | VLAN-04 (批量 set_access_vlan) | deferred to FUTURE-BATCH-05 |
+| requirement | BIND-06 (批量 port_binding) | deferred to FUTURE-BATCH-05 |
+| requirement | UI-06 (BulkWriteDrawer v1.20.1 actions) | deferred to FUTURE-BATCH-05 |
+
+**Note**: 88 other open items (19 debug sessions / 60 quick tasks / 2 todos / 7 verification_gaps) are pre-existing technical debt from earlier milestones (v1.14-v1.19), unrelated to v1.20 close.
 
 ## Project Reference
 
@@ -259,5 +283,4 @@ Resume file: None
 
 ## Operator Next Steps
 
-- `/clear` then `/gsd:new-milestone` to start next milestone (v1.20 candidates: 真机 SSH UAT closure / BATCH-05 SSE-WS / 3-vendor fixtures)
-- Or `/gsd:audit-open` to triage historical audit-open items if housekeeping is preferred
+- Start the next milestone with /gsd-new-milestone

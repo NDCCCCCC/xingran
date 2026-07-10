@@ -1,7 +1,7 @@
 ---
-last_updated: 2026-07-08
-update_trigger: v1.19 milestone closed (Phases 50-55: 6 phases / 9 plans / 5 build waves + 1 cleanup)
-previous_update: 2026-07-07 after Phase 54 (W5) shipped
+last_updated: 2026-07-10
+update_trigger: v1.20 milestone closed (Phase 56: 1 phase / 5 plans / 5 waves; 12 site-visit UAT deferred)
+previous_update: 2026-07-08 after v1.19 milestone closed
 ---
 
 # Roadmap: RuoYi-Next 运维管理系统
@@ -29,13 +29,16 @@ previous_update: 2026-07-07 after Phase 54 (W5) shipped
 - ✅ **v1.17 资产对账 (Asset Reconciliation)** — Phases 42-46 (shipped 2026-07-03) — see [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md)
 - ✅ **v1.18 网络设备硬件清单 (Device Component Serials)** — Phase 48 (shipped 2026-07-04) — see [milestones/v1.18-ROADMAP.md](milestones/v1.18-ROADMAP.md)
 - ✅ **v1.19 网络设备写命令 (Network Device Port Write Operations)** — Phases 50-55 (shipped 2026-07-08) — see [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md) | [audit](milestones/v1.19-MILESTONE-AUDIT.md)
-- 🚧 **v1.20 网络设备 VLAN + 端口绑定 (Network Device VLAN + Port Binding)** — Phase 56 (initiated 2026-07-09) — see [REQUIREMENTS.md](REQUIREMENTS.md) | [design doc](../docs/plans/2026-07-09-v1.20.1-design.md)
+- ✅ **v1.20 网络设备 VLAN + 端口绑定 (Network Device VLAN + Port Binding)** — Phase 56 (shipped 2026-07-10) — see [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.md) | [requirements](milestones/v1.20-REQUIREMENTS.md) | [design doc](../docs/plans/2026-07-09-v1.20.1-design.md)
 
 ---
 
-## Phases (v1.20)
+## Phases (v1.20) — SHIPPED
 
-### Phase 56: 网络设备 VLAN + 端口绑定 (v1.20.1) — 0/5 plans, initiated 2026-07-09
+<details>
+<summary>✅ v1.20 网络设备 VLAN + 端口绑定 (Phase 56) — SHIPPED 2026-07-10</summary>
+
+### Phase 56: 网络设备 VLAN + 端口绑定 (v1.20.1) — 5/5 plans, completed 2026-07-10
 
 **Goal:** 在 v1.19 端口写命令 MVP 基础上扩展 2 个新写命令：① 修改 access VLAN ② IP+MAC+Port 静态绑定。复用 v1.19 vendor 模板 / operlog / 权限 / 批量 / e2e 全套基建。
 
@@ -76,6 +79,8 @@ Plans:
 - [x] 56-05-PLAN.md — 6+ fixture 文件 + 10+ TestE2E_* 测试 + 56-HUMAN-UAT.md 创建 + 文档同步 (CHANGELOG + MILESTONES + API响应规范 + 加密设计) (TEST-03, TEST-04, TEST-05)
 
 **UI hint**: yes (SetAccessVlanModal + PortBindingModal + ports/index.tsx menu integration + BulkWriteDrawer reuse)
+
+</details>
 
 ---
 
