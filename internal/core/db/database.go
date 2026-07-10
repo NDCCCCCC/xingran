@@ -424,6 +424,10 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate203ConnectionPoolSysConfig(d.DB); err != nil {
 			applogger.Errorf("连接池配置 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
+		// 锐捷 dot1x default-user-limit 缓存列 (enable 必须显式恢复 N)
+		if err := migrations.Migrate204AddDot1xUserLimit(d.DB); err != nil {
+			applogger.Errorf("dot1x_user_limit 列迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 	}
 
 	return nil

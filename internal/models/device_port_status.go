@@ -45,6 +45,11 @@ type DevicePortStatus struct {
 	// 802.1X 状态
 	Dot1xEnabled    bool            `gorm:"default:false" json:"dot1xEnabled"`
 	Dot1xPortStatus Dot1xPortStatus `gorm:"size:20" json:"dot1xPortStatus,omitempty"`
+	// Dot1xUserLimit 锐捷 dot1x default-user-limit 缓存。
+	// 采集链路写入 `show dot1x port-control` MAX_USER 字段；
+	// nil = 设备侧 unlimited 或尚未采集；write 路径用 1 兜底。
+	// 往返对称：disable 时设备自动清 limit，enable 时必须显式恢复该值。
+	Dot1xUserLimit *int `gorm:"default:0" json:"dot1xUserLimit,omitempty"`
 
 	// 端口安全配置
 	PortSecurityEnabled bool             `gorm:"default:false" json:"portSecurityEnabled"`
