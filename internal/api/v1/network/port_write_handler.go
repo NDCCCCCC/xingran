@@ -457,7 +457,15 @@ func buildAfterValue(action portcollection.PortAction, pr *portwrite.PortResult)
 	case portcollection.ActionUndoShutdown:
 		return json.RawMessage([]byte(`{"admin_status":"up"}`))
 	case portcollection.ActionDot1xEnable:
-		return json.RawMessage([]byte(`{"dot1x_enabled":true}`))
+		// dot1x_user_limit 由 W2 service 写入 pr.Extra["dot1xUserLimit"] (Renderer 实际下发的 limit 值)。
+		// 缺值兜底为 1 (renderer 写入逻辑),handler 不假设。
+		parts := []string{`"dot1x_enabled":true`}
+		if pr != nil && pr.Extra != nil {
+			if v, ok := pr.Extra["dot1xUserLimit"]; ok {
+				parts = append(parts, fmt.Sprintf(`"dot1x_user_limit":%v`, v))
+			}
+		}
+		return json.RawMessage([]byte("{" + strings.Join(parts, ",") + "}"))
 	case portcollection.ActionDot1xDisable:
 		return json.RawMessage([]byte(`{"dot1x_enabled":false}`))
 	case portcollection.ActionSetAccessVLAN:

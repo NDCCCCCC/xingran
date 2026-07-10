@@ -166,27 +166,56 @@ func NewPortWriteService(
 
 // Shutdown 关闭单端口。
 func (s *portWriteServiceImpl) Shutdown(ctx context.Context, portID string, operator string) (*PortResult, error) {
-	return s.writeAndRefresh(ctx, portID, portcollection.ActionShutdown, "", operator, 0, "", "", "")
+	return s.writeAndRefresh(ctx, portID, portcollection.ActionShutdown, "", operator, 0, "", "", "", nil)
 }
 
 // UndoShutdown 取消关闭。
 func (s *portWriteServiceImpl) UndoShutdown(ctx context.Context, portID string, operator string) (*PortResult, error) {
-	return s.writeAndRefresh(ctx, portID, portcollection.ActionUndoShutdown, "", operator, 0, "", "", "")
+	return s.writeAndRefresh(ctx, portID, portcollection.ActionUndoShutdown, "", operator, 0, "", "", "", nil)
 }
 
 // SetDescription 设置端口描述（desc 由 RenderCommand 入口校验长度 ≤ 80）。
 func (s *portWriteServiceImpl) SetDescription(ctx context.Context, portID string, desc string, operator string) (*PortResult, error) {
-	return s.writeAndRefresh(ctx, portID, portcollection.ActionDescription, desc, operator, 0, "", "", "")
+	return s.writeAndRefresh(ctx, portID, portcollection.ActionDescription, desc, operator, 0, "", "", "", nil)
 }
 
 // EnableDot1x 启用 802.1X。
+//
+// 往返不对称 (Disable/Enable 对 default-user-limit 的处理非对称): disable 自动清除 limit,
+// enable 不会自动恢复 → 必须从采集缓存读 limit 值渲染命令,避免 limit 漂成设备默认。
+//
+// dot1x_user_limit 在本入口从 DB 单字段查询 (避免扩张其他 7 个 action 的方法签名),
+// 然后透传到 RenderCommand.PortTemplateParams.Dot1xUserLimit; nil 兜底为 1。
 func (s *portWriteServiceImpl) EnableDot1x(ctx context.Context, portID string, operator string) (*PortResult, error) {
-	return s.writeAndRefresh(ctx, portID, portcollection.ActionDot1xEnable, "", operator, 0, "", "", "")
+	limit, err := s.loadPortDot1xUserLimit(ctx, portID)
+	if err != nil {
+		applogger.Warnf("[portwrite] EnableDot1x 读取 dot1x_user_limit 失败 (portID=%s) → 兜底 1: %v", portID, err)
+		limit = nil
+	}
+	return s.writeAndRefresh(ctx, portID, portcollection.ActionDot1xEnable, "", operator, 0, "", "", "", limit)
 }
 
 // DisableDot1x 停用 802.1X。
 func (s *portWriteServiceImpl) DisableDot1x(ctx context.Context, portID string, operator string) (*PortResult, error) {
-	return s.writeAndRefresh(ctx, portID, portcollection.ActionDot1xDisable, "", operator, 0, "", "", "")
+	return s.writeAndRefresh(ctx, portID, portcollection.ActionDot1xDisable, "", operator, 0, "", "", "", nil)
+}
+
+// loadPortDot1xUserLimit 从 sys_device_port_status 单字段读取 dot1x_user_limit。
+//
+// 仅 EnableDot1x 调用:disable 不需要 limit(设备自动清);enable 必须显式恢复 limit。
+// nil/ErrRecordNotFound 都返回 nil(兜底由 renderer fallback 到 1)。
+func (s *portWriteServiceImpl) loadPortDot1xUserLimit(ctx context.Context, portID string) (*int, error) {
+	if portID == "" {
+		return nil, fmt.Errorf("portID empty")
+	}
+	var limit *int
+	err := s.db.WithContext(ctx).
+		Raw(`SELECT dot1x_user_limit FROM sys_device_port_status WHERE id = ?`, portID).
+		Scan(&limit).Error
+	if err != nil {
+		return nil, err
+	}
+	return limit, nil
 }
 
 // validateVlanIdRange 校验 vlanId ∈ [1, 4094]（VLAN-05 + CR-01 共享入口）。
@@ -249,7 +278,7 @@ func (s *portWriteServiceImpl) SetAccessVlan(ctx context.Context, portID string,
 	if err := validateVlanIdRange(vlanId); err != nil {
 		return nil, err
 	}
-	result, err := s.writeAndRefresh(ctx, portID, portcollection.ActionSetAccessVLAN, "", operator, vlanId, "", "", "")
+	result, err := s.writeAndRefresh(ctx, portID, portcollection.ActionSetAccessVLAN, "", operator, vlanId, "", "", "", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -287,7 +316,7 @@ func (s *portWriteServiceImpl) PortBinding(ctx context.Context, portID string, o
 	if err := validateMACAddress(macAddress); err != nil {
 		return nil, err
 	}
-	result, err := s.writeAndRefresh(ctx, portID, portcollection.ActionPortBinding, "", operator, 0, op, ipAddress, macAddress)
+	result, err := s.writeAndRefresh(ctx, portID, portcollection.ActionPortBinding, "", operator, 0, op, ipAddress, macAddress, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -315,9 +344,9 @@ func (s *portWriteServiceImpl) PortBinding(ctx context.Context, portID string, o
 //
 // 批次路径走 BatchWritePorts 内部循环 + 末尾一次性 refresh，避免 50 次重复采集同设备。
 func (s *portWriteServiceImpl) writeAndRefresh(
-	ctx context.Context, portID string, action Action, desc, operator string, vlanId int, bindOp, ipAddr, macAddr string,
+	ctx context.Context, portID string, action Action, desc, operator string, vlanId int, bindOp, ipAddr, macAddr string, dot1xUserLimit *int,
 ) (*PortResult, error) {
-	result, err := s.writeSinglePort(ctx, portID, action, desc, operator, vlanId, bindOp, ipAddr, macAddr)
+	result, err := s.writeSinglePort(ctx, portID, action, desc, operator, vlanId, bindOp, ipAddr, macAddr, dot1xUserLimit)
 	if err == nil && result != nil && result.Status == "succeeded" && result.DeviceID != "" {
 		s.refreshPortStatus(ctx, result.DeviceID)
 	}
@@ -337,13 +366,13 @@ func (s *portWriteServiceImpl) writeAndRefresh(
 //   - ActionPortBinding：bindOp/ipAddr/macAddr 用于 RenderCommand.BindOp/IPAddress/MACAddress（pre-state 跳过）
 //   - 5 v1.19 action 路径下这 4 个参数均忽略(由 caller 传 0/""/"")
 func (s *portWriteServiceImpl) writeSinglePort(
-	ctx context.Context, portID string, action Action, desc, operator string, vlanId int, bindOp, ipAddr, macAddr string,
+	ctx context.Context, portID string, action Action, desc, operator string, vlanId int, bindOp, ipAddr, macAddr string, dot1xUserLimit *int,
 ) (*PortResult, error) {
 	var port models.DevicePortStatus
 	err := s.db.WithContext(ctx).Where("id = ?", portID).First(&port).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return s.executeWrite(ctx, portID, "", action, desc, operator, "", vlanId, bindOp, ipAddr, macAddr)
+			return s.executeWrite(ctx, portID, "", action, desc, operator, "", vlanId, bindOp, ipAddr, macAddr, dot1xUserLimit)
 		}
 		return nil, fmt.Errorf("query port: %w", err)
 	}
@@ -352,7 +381,7 @@ func (s *portWriteServiceImpl) writeSinglePort(
 		return noopResult, nil
 	}
 
-	return s.executeWrite(ctx, port.ID, port.DeviceID, action, desc, operator, port.InterfaceName, vlanId, bindOp, ipAddr, macAddr)
+	return s.executeWrite(ctx, port.ID, port.DeviceID, action, desc, operator, port.InterfaceName, vlanId, bindOp, ipAddr, macAddr, dot1xUserLimit)
 }
 
 // executeWrite 实际下发写命令：RenderCommand → ExecuteCustom → parseConfigError。
@@ -386,7 +415,7 @@ func (s *portWriteServiceImpl) writeSinglePort(
 //	在 end 掉到 privileged EXEC 后会自动 escalate 回 configuration（多一次来回开销），
 //	表面 work 但每 port 多 2 条 SSH 命令 + priv 状态抖动，非正确解法。
 func (s *portWriteServiceImpl) executeWrite(
-	ctx context.Context, portID, deviceID string, action Action, desc, operator, interfaceName string, vlanId int, bindOp, ipAddr, macAddr string,
+	ctx context.Context, portID, deviceID string, action Action, desc, operator, interfaceName string, vlanId int, bindOp, ipAddr, macAddr string, dot1xUserLimit *int,
 ) (*PortResult, error) {
 	if deviceID == "" {
 		return nil, ErrDeviceNotFound
@@ -398,12 +427,13 @@ func (s *portWriteServiceImpl) executeWrite(
 	}
 
 	cmds, err := portcollection.RenderCommand(dev.Vendor, action, portcollection.PortTemplateParams{
-		InterfaceName: expandInterfaceName(interfaceName, dev.Vendor),
-		Description:   desc,
-		VLANID:        vlanId,
-		BindOp:        bindOp,
-		IPAddress:     ipAddr,
-		MACAddress:    macAddr,
+		InterfaceName:  expandInterfaceName(interfaceName, dev.Vendor),
+		Description:    desc,
+		VLANID:         vlanId,
+		BindOp:         bindOp,
+		IPAddress:      ipAddr,
+		MACAddress:     macAddr,
+		Dot1xUserLimit: dot1xUserLimit,
 	})
 	if err != nil {
 		return nil, err
@@ -496,13 +526,29 @@ func (s *portWriteServiceImpl) executeWrite(
 
 	// 成功路径：仅返回状态，**不**触发采集（避免 50 端口批次重复采集同设备）。
 	// 刷新责任由 caller 承担（writeAndRefresh 末尾或 BatchWritePorts 整体结束）。
-	return &PortResult{
+	result := &PortResult{
 		PortID:      portID,
 		DeviceID:    deviceID,
 		Action:      action,
 		Status:      "succeeded",
 		CommandSent: commandsJoined,
-	}, nil
+	}
+
+	// W2 dot1x_enable: 把真正下发的 limit 注入 Extra,handler buildAfterValue
+	// 写入 audit.after_value(JSON),供事后审计与对账。nil (设备unlimited)
+	// 也写入,显式记录而非漏字段 —— 守 "禁默默吞错"。
+	if action == portcollection.ActionDot1xEnable {
+		limitForAudit := 1
+		if dot1xUserLimit != nil && *dot1xUserLimit > 0 {
+			limitForAudit = *dot1xUserLimit
+		}
+		if result.Extra == nil {
+			result.Extra = make(map[string]interface{})
+		}
+		result.Extra["dot1xUserLimit"] = limitForAudit
+	}
+
+	return result, nil
 }
 
 // refreshPortStatus 写后端口状态同步刷新（2026-07-08 新增，2026-07-08 改 fire-and-forget）。

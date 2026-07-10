@@ -149,7 +149,7 @@ func (s *portWriteServiceImpl) BatchWritePorts(ctx context.Context, req BatchWri
 			}
 
 			// 校验通过 — 端口"消失"（D-13 fallback）但归属正确，直接下发
-			writeResult, werr := s.executeWrite(ctx, portID, req.DeviceID, req.Action, req.Description, operator, "", req.VLANID, req.BindOp, req.IPAddress, req.MACAddress)
+			writeResult, werr := s.executeWrite(ctx, portID, req.DeviceID, req.Action, req.Description, operator, "", req.VLANID, req.BindOp, req.IPAddress, req.MACAddress, nil)
 			if werr != nil {
 				if writeResult != nil {
 					result.Failed = append(result.Failed, *writeResult)
@@ -171,7 +171,7 @@ func (s *portWriteServiceImpl) BatchWritePorts(ctx context.Context, req BatchWri
 		}
 
 		// 实际下发
-		writeResult, werr := s.executeWrite(ctx, port.ID, port.DeviceID, req.Action, req.Description, operator, port.InterfaceName, req.VLANID, req.BindOp, req.IPAddress, req.MACAddress)
+		writeResult, werr := s.executeWrite(ctx, port.ID, port.DeviceID, req.Action, req.Description, operator, port.InterfaceName, req.VLANID, req.BindOp, req.IPAddress, req.MACAddress, nil)
 		if werr != nil {
 			if writeResult != nil {
 				result.Failed = append(result.Failed, *writeResult)
