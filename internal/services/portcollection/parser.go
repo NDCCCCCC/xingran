@@ -254,6 +254,7 @@ func getAllDot1xStatus(wrapper *device.ScrapliWrapper, vendor models.DeviceVendo
 			result[ifaceName] = Dot1xInfo{
 				Enabled:     true,
 				PortStatus:  portStatus,
+				MaxUser:     record["MAX_USER"], // 未采集(unlimited)留空,由 buildPortStatus 决定是否置 nil
 				CurrentUser: record["DYNAMIC_USER"],
 			}
 		}

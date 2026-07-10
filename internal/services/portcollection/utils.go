@@ -1,6 +1,7 @@
 package portcollection
 
 import (
+	"strconv"
 	"strings"
 	"time"
 
@@ -47,7 +48,18 @@ func buildPortStatus(deviceID, interfaceName string, iface InterfaceInfo, adminS
 		default:
 			portStatus.Dot1xPortStatus = models.Dot1xStatusUnknown
 		}
-		applogger.Debugf("接口 %s 匹配到dot1x数据: Enabled=%v, Status=%s", interfaceName, dot1x.Enabled, dot1x.PortStatus)
+		// 锐捷 MAX_USER 写入缓存 (enable 路径必读):
+		//   - "unlimited" / 空 → nil (不写入或清零,语义等价)
+		//   - 合法数字 → *int
+		// 往返不对称: disable 自动清 limit,enable 必须显式恢复 → 必须先采集写 DB。
+		maxUser := strings.TrimSpace(dot1x.MaxUser)
+		if maxUser != "" && maxUser != "unlimited" {
+			if n, convErr := strconv.Atoi(maxUser); convErr == nil && n > 0 {
+				v := n
+				portStatus.Dot1xUserLimit = &v
+			}
+		}
+		applogger.Debugf("接口 %s 匹配到dot1x数据: Enabled=%v, Status=%s, MaxUser=%s", interfaceName, dot1x.Enabled, dot1x.PortStatus, maxUser)
 	} else {
 		applogger.Debugf("接口 %s 没有匹配到dot1x数据", interfaceName)
 	}

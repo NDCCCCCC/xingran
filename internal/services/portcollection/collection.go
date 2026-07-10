@@ -265,7 +265,7 @@ func (s *CollectionService) collectDevicePort(ctx context.Context, device *model
 
 	err = s.db.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "device_id"}, {Name: "interface_name"}},
-		DoUpdates: clause.AssignmentColumns([]string{"admin_status", "oper_status", "description", "vlan", "duplex", "speed", "port_type", "dot1x_enabled", "dot1x_port_status", "collected_at"}),
+		DoUpdates: clause.AssignmentColumns([]string{"admin_status", "oper_status", "description", "vlan", "duplex", "speed", "port_type", "dot1x_enabled", "dot1x_port_status", "dot1x_user_limit", "collected_at"}),
 	}).Create(&portStatuses).Error
 	if err != nil {
 		applogger.Warnf("[端口采集] %s (%s): 批量保存失败: %v", device.DeviceName, device.IPAddress, err)

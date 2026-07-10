@@ -43,6 +43,7 @@ func setupPortStatusTestDB(t *testing.T) *gorm.DB {
 			port_type TEXT,
 			dot1x_enabled INTEGER DEFAULT 0,
 			dot1x_port_status TEXT,
+			dot1x_user_limit INTEGER NOT NULL DEFAULT 0,
 			port_security_enabled INTEGER DEFAULT 0,
 			port_security_mode TEXT,
 			max_mac_count INTEGER,
