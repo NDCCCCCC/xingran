@@ -204,13 +204,19 @@ func (s *portWriteServiceImpl) DisableDot1x(ctx context.Context, portID string, 
 //
 // 仅 EnableDot1x 调用:disable 不需要 limit(设备自动清);enable 必须显式恢复 limit。
 // nil/ErrRecordNotFound 都返回 nil(兜底由 renderer fallback 到 1)。
+//
+// 用 GORM Model + Select + Where 保持与 codebase 一致(裸 SQL 仅在多表 JOIN 等
+// 复杂场景使用),Scan 到 *int 自然处理 NULL → nil。migration_204 未跑时仍会
+// SQLSTATE 42703,但 EnableDot1x 已有 err → limit=nil → fallback 1 兜底。
 func (s *portWriteServiceImpl) loadPortDot1xUserLimit(ctx context.Context, portID string) (*int, error) {
 	if portID == "" {
 		return nil, fmt.Errorf("portID empty")
 	}
 	var limit *int
 	err := s.db.WithContext(ctx).
-		Raw(`SELECT dot1x_user_limit FROM sys_device_port_status WHERE id = ?`, portID).
+		Model(&models.DevicePortStatus{}).
+		Select("dot1x_user_limit").
+		Where("id = ?", portID).
 		Scan(&limit).Error
 	if err != nil {
 		return nil, err

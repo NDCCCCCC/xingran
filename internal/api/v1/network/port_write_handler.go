@@ -458,11 +458,13 @@ func buildAfterValue(action portcollection.PortAction, pr *portwrite.PortResult)
 		return json.RawMessage([]byte(`{"admin_status":"up"}`))
 	case portcollection.ActionDot1xEnable:
 		// dot1x_user_limit 由 W2 service 写入 pr.Extra["dot1xUserLimit"] (Renderer 实际下发的 limit 值)。
-		// 缺值兜底为 1 (renderer 写入逻辑),handler 不假设。
+		// 类型断言 int: 防御非 int 类型(避免 %v 输出 "<nil>" 等异常值),失败则降级不加字段。
 		parts := []string{`"dot1x_enabled":true`}
 		if pr != nil && pr.Extra != nil {
 			if v, ok := pr.Extra["dot1xUserLimit"]; ok {
-				parts = append(parts, fmt.Sprintf(`"dot1x_user_limit":%v`, v))
+				if n, ok := v.(int); ok {
+					parts = append(parts, fmt.Sprintf(`"dot1x_user_limit":%d`, n))
+				}
 			}
 		}
 		return json.RawMessage([]byte("{" + strings.Join(parts, ",") + "}"))

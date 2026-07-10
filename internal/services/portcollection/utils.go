@@ -51,12 +51,15 @@ func buildPortStatus(deviceID, interfaceName string, iface InterfaceInfo, adminS
 		// 锐捷 MAX_USER 写入缓存 (enable 路径必读):
 		//   - "unlimited" / 空 → nil (不写入或清零,语义等价)
 		//   - 合法数字 → *int
+		//   - 非数字 (异常设备输出) → nil + warn,enable 路径兜底 1,排障留痕
 		// 往返不对称: disable 自动清 limit,enable 必须显式恢复 → 必须先采集写 DB。
 		maxUser := strings.TrimSpace(dot1x.MaxUser)
 		if maxUser != "" && maxUser != "unlimited" {
 			if n, convErr := strconv.Atoi(maxUser); convErr == nil && n > 0 {
 				v := n
 				portStatus.Dot1xUserLimit = &v
+			} else if convErr != nil {
+				applogger.Warnf("接口 %s MAX_USER 非数字 %q → enable 兜底 1: %v", interfaceName, maxUser, convErr)
 			}
 		}
 		applogger.Debugf("接口 %s 匹配到dot1x数据: Enabled=%v, Status=%s, MaxUser=%s", interfaceName, dot1x.Enabled, dot1x.PortStatus, maxUser)
