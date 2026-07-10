@@ -119,14 +119,37 @@ func TestRenderCommand_VendorActionMatrix(t *testing.T) {
 			vendor:   models.VendorRuijie,
 			action:   ActionDot1xEnable,
 			params:   PortTemplateParams{InterfaceName: "GigabitEthernet0/0/1"},
-			expected: []string{"interface GigabitEthernet0/0/1", "dot1x port-control auto"},
+			expected: []string{"interface GigabitEthernet0/0/1", "dot1x port-control auto", "dot1x default-user-limit 1"},
+		},
+		{
+			// 采集缓存 dot1x_user_limit=2 → 下发 default-user-limit 2
+			// 关键回归: 非 1 端口不再被硬编码 1 错置
+			name:   "ruijie_dot1x_enable_with_limit_2",
+			vendor: models.VendorRuijie,
+			action: ActionDot1xEnable,
+			params: PortTemplateParams{
+				InterfaceName:  "GigabitEthernet0/0/1",
+				Dot1xUserLimit: intPtr(2),
+			},
+			expected: []string{"interface GigabitEthernet0/0/1", "dot1x port-control auto", "dot1x default-user-limit 2"},
+		},
+		{
+			// nil (设备 "unlimited" 或未采集) → 兜底 1,完全向后兼容历史硬编码行为
+			name:   "ruijie_dot1x_enable_limit_nil_fallback",
+			vendor: models.VendorRuijie,
+			action: ActionDot1xEnable,
+			params: PortTemplateParams{
+				InterfaceName:  "GigabitEthernet0/0/1",
+				Dot1xUserLimit: nil,
+			},
+			expected: []string{"interface GigabitEthernet0/0/1", "dot1x port-control auto", "dot1x default-user-limit 1"},
 		},
 		{
 			name:     "ruijie_dot1x_disable",
 			vendor:   models.VendorRuijie,
 			action:   ActionDot1xDisable,
 			params:   PortTemplateParams{InterfaceName: "GigabitEthernet0/0/1"},
-			expected: []string{"interface GigabitEthernet0/0/1", "no dot1x port-control"},
+			expected: []string{"interface GigabitEthernet0/0/1", "no dot1x port-control auto"},
 		},
 
 		// Phase 56 v1.20.1 新增 — set_access_vlan (3 vendors)
@@ -261,3 +284,6 @@ func TestRenderCommand_DescriptionTooLong(t *testing.T) {
 	_, err := RenderCommand(models.VendorHuawei, ActionDescription, PortTemplateParams{InterfaceName: "GE0/0/1", Description: longDesc})
 	assert.ErrorIs(t, err, ErrDescriptionTooLong)
 }
+
+// intPtr 取地址简写 —— 测试夹具中构造 *int 字面量的快捷方式。
+func intPtr(v int) *int { return &v }

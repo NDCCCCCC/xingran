@@ -29,19 +29,24 @@ func (a PortAction) String() string { return string(a) }
 
 // PortTemplateParams 模板渲染参数。
 //
-// InterfaceName 所有 action 必填（RenderCommand 入口校验）。
-// Description   仅 ActionDescription 使用；其他 action 忽略。
-// VLANID        仅 ActionSetAccessVLAN 使用（1-4094；renderer 做防御性范围校验）。
-// BindOp        仅 ActionPortBinding 使用（"add" 或 "remove"；service 层是 400 拦截源）。
-// IPAddress     仅 ActionPortBinding 使用。
-// MACAddress    仅 ActionPortBinding 使用（可选；Huawei/H3C 用，Ruijie 接受）。
+// InterfaceName  所有 action 必填（RenderCommand 入口校验）。
+// Description    仅 ActionDescription 使用；其他 action 忽略。
+// VLANID         仅 ActionSetAccessVLAN 使用（1-4094；renderer 做防御性范围校验）。
+// BindOp         仅 ActionPortBinding 使用（"add" 或 "remove"；service 层是 400 拦截源）。
+// IPAddress      仅 ActionPortBinding 使用。
+// MACAddress     仅 ActionPortBinding 使用（可选；Huawei/H3C 用，Ruijie 接受）。
+// Dot1xUserLimit 仅 Ruijie.ActionDot1xEnable 使用；从采集缓存读出 (MAX_USER)，
+//
+//	nil (设备 "unlimited" 或尚未采集) 时兜底 1。保证 disable → enable 往返
+//	对称：锐捷 disable 自动清除 default-user-limit，enable 必须显式恢复。
 type PortTemplateParams struct {
-	InterfaceName string
-	Description   string
-	VLANID        int
-	BindOp        string
-	IPAddress     string
-	MACAddress    string
+	InterfaceName  string
+	Description    string
+	VLANID         int
+	BindOp         string
+	IPAddress      string
+	MACAddress     string
+	Dot1xUserLimit *int
 }
 
 // 哨兵错误（Phase 51 service 翻译为 HTTP 400 / 404 / 422 等业务码）。
@@ -240,18 +245,37 @@ func renderRuijieDescription(p PortTemplateParams) ([]string, error) {
 }
 
 // renderRuijieDot1xEnable 锐捷 dot1x enable：Cisco 风格显式进 interface view 后下发。
+//
+// 往返不对称 (Disable/Enable 对 default-user-limit 的处理非对称):
+//   - disable (`no dot1x port-control auto`): 设备自动清除同视图下的
+//     `dot1x default-user-limit N`,无需额外命令;
+//   - enable  (`dot1x port-control auto`):   设备**不会**自动恢复 limit,
+//     必须显式下发,否则 limit 漂成设备默认 (unlimited) 或被错置为 1。
+//
+// 因此 enable 命令序列固定为 2 条:
+//   - `dot1x port-control auto`
+//   - `dot1x default-user-limit N`    ← N 来自采集缓存 (p.Dot1xUserLimit),nil/0 时兜底 1
+//
+// 历史端口 dot1x_user_limit=0 时启用行为 = 硬编码 1,完全向后兼容。
 func renderRuijieDot1xEnable(p PortTemplateParams) ([]string, error) {
+	limit := 1
+	if p.Dot1xUserLimit != nil && *p.Dot1xUserLimit > 0 {
+		limit = *p.Dot1xUserLimit
+	}
 	return []string{
 		fmt.Sprintf("interface %s", p.InterfaceName),
 		"dot1x port-control auto",
+		fmt.Sprintf("dot1x default-user-limit %d", limit),
 	}, nil
 }
 
 // renderRuijieDot1xDisable 锐捷 dot1x disable：Cisco 风格显式进 interface view 后下发。
+// `no dot1x port-control auto` 执行后,设备自动清除同视图下的 `dot1x default-user-limit N`,
+// 无需额外下发清除命令。disable 路径因此固定 2 条,与 enable 往返对称 (清 + 不恢复 = 期望)。
 func renderRuijieDot1xDisable(p PortTemplateParams) ([]string, error) {
 	return []string{
 		fmt.Sprintf("interface %s", p.InterfaceName),
-		"no dot1x port-control",
+		"no dot1x port-control auto",
 	}, nil
 }
 
