@@ -164,6 +164,52 @@
 
 ---
 
+## Milestone: v1.20 — 网络设备 VLAN + 端口绑定
+
+**Shipped:** 2026-07-10
+**Phases:** 1 (Phase 56) | **Plans:** 5
+
+### What Was Built
+
+1. Vendor Template 扩展 — `vendor_port_template.go` +6 entries (3 vendors × 2 actions), 9 render functions, MAC 格式锁定 (Huawei/H3C = `AA-BB-CC-DD-EE-FF`, Ruijie = `aabb.ccdd.eeff`)
+2. PortWriteService + 4 validators + Extra-map audit carrier — `SetAccessVlan` + `PortBinding` + 4 sentinels + VLAN pre-state NoOp 短路 + `PortResult.Extra`
+3. Handler + Router + Audit — 2 kebab HTTP endpoints + 4 sentinel→HTTP-400 + buildAfterValue 读 Extra + 2 permission registry rows
+4. Frontend 2 Modals — `SetAccessVlanModal` + `PortBindingModal` + 2 networkApi wrappers + types 扩展
+5. E2E + UAT Deferral + Docs — 11 new `TestE2E_*` + 10 fixtures + `56-HUMAN-UAT.md` 12 项 site-visit 推迟 + 3 文档同步
+
+### What Worked
+
+- **100% 复用 v1.19 基建** — vendorPortTemplate + pre_state_check + execSinglePort + PortWriteModal 全套无修改;5 phases 都基于既有模式延伸,zero new infra
+- **plan revision 1 在 Wave 0 抓 3 BLOCKERS** — after_value via Extra / batch path / Wave 0 DB verification,避免 Wave 1-5 中途发现架构漏洞
+- **scrapligo FileTransport mock SSH** — 11 e2e 测试完整覆盖 3-vendor × 2-action × variants,无真机依赖,CI 内可跑
+- **Code review 在 Wave 0 后发现 4 CRITICAL** — shell injection (CR-01 batch path 绕过 validator)、bindOp 静默删除 (CR-04)、audit vlan 字段缺失 (CR-02)、modal pre-fill 丢失 (CR-03),fixer agent 一次解决
+
+### What Was Inefficient
+
+- **Wave 2 executor 撞 429 quota** — 中断后 code commit 已完成但 SUMMARY.md 未写;orchestrator 手动恢复(合并 + 验证 + 补写 SUMMARY)
+- **build-linux.bat 误改后回滚** — 我擅自加 Step 7 verification,引入 LF/CRLF/bash 查找/findstr 嵌套问题链,最终用户提示后回滚;**未来不动已能工作的脚本**
+- **Reviewer 在隔离 worktree 内偶发"工作区反还原"事件** — 看起来是 git checkout HEAD~3 之类操作未完成 HEAD restore;需要 investigation 但未影响最终结果
+
+### Patterns Established
+
+- **Validator 抽取为可共享函数** — single-port 和 batch path 调用同一份 `validateVlanIdRange` / `validateBindOp` / `validateIPAddress` / `validateMACAddress`,gin binding tag 作为入口第一道防线
+- **`PortResult.Extra map` audit carrier** — 新 action 方法写 Extra,v1.19 方法留空;buildAfterValue 消费 Extra 写 after_value
+- **batch path 必须在 service 层调 validator,不能只在 handler** — handler 端的 sentinel→HTTP-400 翻译是双路(single + batch),service 层加 validator 才堵住 shell injection
+
+### Key Lessons
+
+1. **Don't add verification to a working build script** — v1.20.1 binary 实际是好的,加 Step 7 verification 是无中生有
+2. **Wave 2 配额中断恢复模式** — `git log worktree-branch` 看 commits + 检查 SUMMARY.md → 决定 merge-and-author-SUMMARY 还是 skip-and-retry
+3. **Plan revision 1 在 Wave 0 必做** — BatchWriteRequest 4 字段 + audit Extra + DB 验证,这 3 项都是后期发现会扩散的
+
+### Cost Observations
+
+- Model mix: yolo mode, executor default model + 1 opus verification + 1 opus code-fix
+- Sessions: 1 主 session 跨 6+ hours (含 2 次 sleep/wait 中断 + Wave 5 上下文长)
+- Notable: Wave 1-5 sequential (parallelization=false) × 5 waves = wall-clock 主导;worktree 隔离在 cleanup merge 阶段加速,但 Wave 2 配额中断抵消了部分 gain
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution

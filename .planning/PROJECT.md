@@ -1,7 +1,7 @@
 ---
-last_updated: 2026-07-09
-update_trigger: v1.20 milestone INITIATED — v1.19.x follow-up (VLAN + port_binding) starting Phases 56+
-previous_update: 2026-07-08 after v1.19 milestone archived (Phases 50-55 closed)
+last_updated: 2026-07-10
+update_trigger: v1.20 milestone SHIPPED + ARCHIVED (Phase 56 / 5 plans / 5 waves / 1 day; 12 site-visit UAT deferred)
+previous_update: 2026-07-09 v1.20 milestone INITIATED
 ---
 
 **Phase 54 (2026-07-07)**: W5 收尾验证 phase — scrapligo `transport.NewFileTransport()` e2e 闭环 Phase 51 fn-never-called 漏洞 (10 TestE2E_*) + 5 处文档更新 (API响应规范 + 加密设计 + CHANGELOG 新建 + README 能力扩展 + MILESTONES v1.19 条目 + STATE deferred 同步) + 54-HUMAN-UAT.md 创建 (7 pending: 6 SSH + 1 WR-02) + 全量回归三绿 (vendor-react 零回归 774.96 kB + operlog regression 不回归)。代码审查 5 Info / 0 Critical / 0 Warning;**v1.19 网络设备写命令 milestone SHIPPED**。
@@ -380,41 +380,36 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 - ✓ Phase 44 R3 IP 例外规则引擎 (v1.17 资产对账) (2026-06-28) — 2 plans, CIDR GiST 引擎 + Layer 3.5 拦截 + 例外 CRUD/命中测试 + cron 过期清理 + 转单 no_workorder 过滤 + 降噪基线 + Excel 导入导出; VERIFICATION 10/10 passed, 1 CR-03 gap-closure fix (baseline 路由权限), 4 硬化债 BLOCKER 跟踪
 
 ---
-## Current Milestone: v1.20 网络设备 VLAN + 端口绑定 (Network Device VLAN + Port Binding) — 🚧 INITIATED 2026-07-09
+## Current Milestone: v1.20 网络设备 VLAN + 端口绑定 (Network Device VLAN + Port Binding) — ✅ SHIPPED 2026-07-10
 
 **Goal:** 在 v1.19 端口写命令 MVP 基础上扩展 2 个新写命令：① 修改 access VLAN ② IP+MAC+Port 静态绑定。复用 v1.19 vendor 模板 / operlog / 权限 / 批量 / e2e 全套基建，最小化新基建引入。
 
-**Target features / 工作池:**
-- **set_access_vlan** (single + batch): 修改端口 access VLAN ID (1-4094)
-  - Huawei VRP: `port default vlan <id>` (V200R003 兼容 `port link-type access` 前缀)
-  - H3C Comware V7: `port access vlan <id>` (独立关键字)
-  - Ruijie RGOS 11.4: `switchport mode access` + `switchport access vlan <id>`
-- **port_binding** (single + batch): IP+MAC+Port 静态绑定（基于 user-bind / port-security binding）
-  - Huawei: `user-bind static ip-address <IP> [mac-address <MAC>] interface <iface>`
-  - H3C: 复用 Huawei 模板结构（关键字待现场 UAT 验证）
-  - Ruijie: `switchport port-security binding <IP>` (实采输出无 MAC 参数支持)
-  - op = add / remove 复用 1 action
-- **5 厂商覆盖** (3 vendors × 2 actions) + **pre-state check** (PVID / binding 表查询)
-- **3 e2e fixtures** × 2 actions × 2-3 cases + 真机 UAT 推迟到 56-HUMAN-UAT.md
+**Status:** SHIPPED (Phase 56 / 5 plans / 5 waves). 45 commits / 51 files / +10,961/-104 LOC in 2 days.
 
-**5-phase plan (从 Phase 56 续编)**:
-- Phase 56 W1: vendor 模板新增 (set_access_vlan + port_binding × 3 vendors) + 单元测试
-- Phase 56 W2: PreState check + port_write_service 新增 2 方法 + 单元测试
-- Phase 56 W3: Router/Handler 新增 2 端点 + operlog 适配 (复用 `network:port:write` 权限)
-- Phase 56 W4: 前端 Modal + API wrapper + ports/index.tsx 接入
-- Phase 56 W5: E2E test (scrapligo FileTransport) + fixture + 文档 + HUMAN-UAT.md
+**Delivered:**
+- 3 vendors × 2 actions 全覆盖（Huawei VRP / H3C Comware V7 / Ruijie RGOS 11.4）
+- 2 new kebab HTTP 端点: `POST /network/ports/write/set-access-vlan` + `/port-binding`
+- 4 sentinel validators (VLAN 1-4094 range / bind op add|remove / IPv4 regex / null-MAC reject)
+- PortResult.Extra map 携带 audit after_value
+- 2 前端 Modal + 2 networkApi wrapper + types/network.ts 扩展
+- 11 new TestE2E_* via scrapligo FileTransport + 10 new fixtures
+- vendor-react bundle gzip 774.96 kB (≤776 kB baseline, zero regression)
+- Code review clean after fixing 4 CRITICAL (CR-01/04 batch path validator 共享、CR-02 vlan field、CR-03 modal pre-fill)
 
-**锁定决策 (v1.20 init):**
-- 策略：完全复用 v1.19 vendor template 模式 (vendor → action → command_sequence 硬编码 map)
-- 厂商支持：Huawei / H3C / 锐捷（同 v1.19；Cisco 留 FUTURE-08）
-- 权限：单一 `network:port:write` 覆盖新 2 actions（与 v1.19 一致）
-- Audit：复用 `sys_port_write_audit` JSONB before/after 字段（零 schema 变更）
-- operlog OperType: VLAN → Update (=2); binding add → Create (=1); binding remove → Delete (=3)
-- Pre-state check: set_access_vlan 读 PVID; port_binding 读 user-bind 表; 一致则 NoOp
-- 真实 SSH transport 验证推迟到下次现场访问（per v1.19 Phase 54 / v1.18 Phase 48 site-visit precedent）
+**Locked decisions (validated):**
+- 复用 v1.19 vendor template 模式 + 新增 2 actions (set_access_vlan + port_binding) ✓
+- 权限：单一 `network:port:write` 覆盖新 2 actions ✓
+- Audit：`sys_port_write_audit.after_value` JSONB 写 PortResult.Extra ✓
+- operlog OperType: VLAN → Update (=2); binding add → Create (=1); binding remove → Delete (=3) ✓
+- Pre-state check: set_access_vlan 读 PVID NoOp 短路; port_binding 不 NoOp（Pitfall 6） ✓
+- MAC 格式锁定：Huawei/H3C = `AA-BB-CC-DD-EE-FF` (per-byte hyphenated); Ruijie = `aabb.ccdd.eeff` (Cisco 3-pair) ✓
+- IPv4 regex 仅做 shell-injection 防御，不验证 segment range（RFC 0.0.0.0/255.255.255.255 合法） ✓
 
-**Out of scope (deferred to v1.20.x+)**:
-- **FUTURE-01 剩余部分**: port-security enable / disable / max-mac-num / sticky MAC
+**Deferred (acknowledged at close):**
+- **12 site-visit UAT items** (Huawei S8700 × 6 + Ruijie RS8607E × 4 + H3C × 2 conditional) — 详见 `.planning/phases/56-vlan-v1-20-1-0-5-plans-initiated-2026-07-09/56-HUMAN-UAT.md`，沿用 v1.19/v1.18 deferral 模式
+- **VLAN-04 / BIND-06 / UI-06** (批量端口写) — 显式 defer 到 FUTURE-BATCH-05；`BatchWriteRequest` 已预留 4 字段（VLANID/BindOp/IPAddress/MACAddress）
+
+**Archived:** `.planning/milestones/v1.20-ROADMAP.md` + `.planning/milestones/v1.20-REQUIREMENTS.md`
 - **FUTURE-03 剩余部分**: trunk VLAN / hybrid VLAN / 多 VLAN list
 - **FUTURE-04~14**: dry-run / 操作历史查看 UI / 批量冲突自动解决 / 设备不可达预检 / Cisco IOS-XE/XR / 自动回滚 / 多用户并发互斥 / HTTP handler e2e / 3-vendor fixture 全覆盖 / 跨固件命令差异 / BATCH-05 实时进度
 
