@@ -4,8 +4,8 @@ milestone: v1.20
 milestone_name: 网络设备 VLAN + 端口绑定
 status: Awaiting next milestone
 stopped_at: v1.19 milestone archived (milestones/v1.19-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md)
-last_updated: "2026-07-10T00:38:22.474Z"
-last_activity: 2026-07-10 — Milestone v1.20 completed and archived
+last_updated: "2026-07-12T14:55:00.000Z"
+last_activity: 2026-07-12 — Completed quick task 260712-vpj: 端口管理页面展开行 MAC/历史MAC 展示
 progress:
   total_phases: 1
   completed_phases: 1
@@ -133,6 +133,7 @@ Items acknowledged and deferred at v1.20 milestone close on 2026-07-10:
 | 260703-eaj | 实施 B 方案(前后端 schema 单一真理源) | 2026-07-03 | 43ecb291,1f2e4d21,69ef4161 | [260703-eaj-b-schema-embed-ruoyi-react-frontend-src-](./quick/260703-eaj-b-schema-embed-ruoyi-react-frontend-src-/) |
 | 260704-ne5 | database.go AutoMigrate() 精简 | 2026-07-04 | 0e3430ab,361a1ecd | [260704-ne5-database-go-migration-schema-seed-snapsh](./quick/260704-ne5-database-go-migration-schema-seed-snapsh/) |
 | 260708-iia | 给所有定时任务日志添加方便识别的前缀 [cron:英文\|中文] | 2026-07-08 | (待提交) | [260708-iia-cron-log-prefix](./quick/260708-iia-cron-log-prefix/) |
+| 260712-vpj | 端口管理页面展开行展示当前 MAC + 历史 MAC fallback(懒加载,零后端改动) | 2026-07-12 | be99597b,bc26f5c4 (merge 1780a914) | [260712-vpj-mac-mac](./quick/260712-vpj-mac-mac/) |
 
 ## Accumulated Context
 
