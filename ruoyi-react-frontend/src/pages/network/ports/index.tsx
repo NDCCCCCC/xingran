@@ -12,6 +12,9 @@ import {
   Col,
   Statistic,
   App,
+  Empty,
+  Skeleton,
+  Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -27,7 +30,11 @@ import {
 import type { DevicePortStatus, NetworkDevice } from "@/types";
 import type { PortWriteAction } from "@/types/network";
 import { post, get } from "@/lib/api";
-import { batchExport } from "@/lib/api/networkApi";
+import {
+  batchExport,
+  getPortMACBundle,
+  type PortMACBundle,
+} from "@/lib/api/networkApi";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 import { useTableManager } from "@/hooks/useTableManager";
@@ -35,7 +42,10 @@ import { withErrorHandling } from "@/utils/errorHandler";
 import { formatDateTime } from "@/utils/datetime";
 import { usePagination } from "@/hooks/usePagination";
 import NetworkExport from "@/components/shared/NetworkExport";
-import { BatchExportModal } from "@/components/shared";
+import {
+  BatchExportModal,
+  ErrorAlertWithRetry,
+} from "@/components/shared";
 import ActionButtons, { type ActionButton } from "@/components/shared/ActionButtons";
 import { DownloadOutlined, SettingOutlined } from "@ant-design/icons";
 import { createSorterMeta } from "@/utils/tableHelpers";
@@ -44,8 +54,89 @@ import { PortWriteModal } from "@/components/network/port-write/PortWriteModal";
 import { BulkWriteDrawer } from "@/components/network/port-write/BulkWriteDrawer";
 import { SetAccessVlanModal } from "@/components/network/port-write/SetAccessVlanModal";
 import { PortBindingModal } from "@/components/network/port-write/PortBindingModal";
+import {
+  EVENT_LABEL,
+  EVENT_TAG_COLOR,
+  type MACEventType,
+} from "@/components/network/macEventMeta";
 
 const { Option } = Select;
+
+// ==================== PortMACPanel (quick 260712-vpj, D-05/D-06) ====================
+//
+// 单端口 MAC 展示子组件,集成到 ports 页 expandedRowRender 内。
+// - bundle 由父组件的 macBundleCache(Record<portId, PortMACBundle>)提供
+// - bundle === undefined 表示未展开过,显示 Skeleton
+// - current.length > 0 展示当前 MAC 区(每条 Tag + VLAN Tag)
+// - current 空且端口 down 时 fallback 展示最近一条历史 MAC(单条 + 事件 Tag + 时间)
+// - current 空且端口 up 时展示 Empty
+//
+// 不调 message.error(getPortMACBundle 已把 error 收集到 bundle.error, 此处仅渲染)。
+
+interface PortMACPanelProps {
+  portId: string;
+  deviceId: string;
+  interfaceName: string;
+  adminStatus: string;
+  operStatus: string;
+  bundle?: PortMACBundle;
+  load: () => void;
+}
+
+const PortMACPanel: FC<PortMACPanelProps> = ({
+  bundle,
+  adminStatus,
+  operStatus,
+  load,
+}) => {
+  if (bundle === undefined) {
+    return <Skeleton active paragraph={{ rows: 2 }} />;
+  }
+
+  if (bundle.error && bundle.current.length === 0 && !bundle.recentHistory) {
+    return <ErrorAlertWithRetry error={bundle.error} onRetry={load} />;
+  }
+
+  const isDown = adminStatus === "down" || operStatus === "down";
+
+  if (bundle.current.length > 0) {
+    return (
+      <Space direction="vertical" size={8} style={{ width: "100%" }}>
+        <Typography.Text strong>
+          当前 MAC 地址({bundle.current.length})
+        </Typography.Text>
+        <Space size={[8, 8]} wrap>
+          {bundle.current.map((m) => (
+            <Space key={m.id} size={4}>
+              <Tag color="blue">{m.macAddress}</Tag>
+              {m.vlanId != null && <Tag>VLAN {m.vlanId}</Tag>}
+            </Space>
+          ))}
+        </Space>
+      </Space>
+    );
+  }
+
+  if (isDown && bundle.recentHistory) {
+    const recent = bundle.recentHistory;
+    const eventType = (recent.eventType ?? "appeared") as MACEventType;
+    return (
+      <Space direction="vertical" size={8} style={{ width: "100%" }}>
+        <Typography.Text strong>最近一次出现过的 MAC</Typography.Text>
+        <Space size={8} wrap>
+          <Tag color="blue">{recent.macAddress}</Tag>
+          <Tag color={EVENT_TAG_COLOR[eventType]}>{EVENT_LABEL[eventType]}</Tag>
+          <Typography.Text type="secondary">
+            {formatDateTime(recent.firstSeen)}
+          </Typography.Text>
+          {recent.vlanId != null && <Tag>VLAN {recent.vlanId}</Tag>}
+        </Space>
+      </Space>
+    );
+  }
+
+  return <Empty description="该端口暂无 MAC 数据" />;
+};
 
 const PortStatusPage: FC = () => {
   const { message } = App.useApp();
@@ -103,6 +194,25 @@ const PortStatusPage: FC = () => {
 
   const [batchModalVisible, setBatchModalVisible] = useState(false);
   const [batchExporting, setBatchExporting] = useState(false);
+
+  // quick 260712-vpj D-05: 展开行 MAC bundle 懒加载缓存
+  // - 首次展开才 fetch,折叠再展开命中缓存不重发请求
+  // - 普通 Record 即可(端口列表分页最多 10-100 条,无需 LRU)
+  const [macBundleCache, setMacBundleCache] = useState<
+    Record<string, PortMACBundle>
+  >({});
+  const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
+
+  // 按需加载某端口的 MAC bundle(命中 cache 直接返回;否则 fetch 并写入 cache)
+  const loadPortMACBundle = async (
+    portId: string,
+    deviceId: string,
+    interfaceName: string
+  ): Promise<void> => {
+    if (macBundleCache[portId]) return;
+    const bundle = await getPortMACBundle(deviceId, interfaceName);
+    setMacBundleCache((prev) => ({ ...prev, [portId]: bundle }));
+  };
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -541,6 +651,18 @@ const PortStatusPage: FC = () => {
           pagination={paginationProps}
           onChange={handleTableChange}
           expandable={{
+            expandedRowKeys,
+            onExpand: (expanded, record) => {
+              if (expanded) {
+                setExpandedRowKeys((prev) =>
+                  prev.includes(record.id) ? prev : [...prev, record.id]
+                );
+                // 命中 cache 不重发(quick 260712-vpj D-05)
+                void loadPortMACBundle(record.id, record.deviceId, record.interfaceName);
+              } else {
+                setExpandedRowKeys((prev) => prev.filter((k) => k !== record.id));
+              }
+            },
             expandedRowRender: (record) => (
               <div style={{ padding: 16, background: "#fafafa" }}>
                 <p><strong>接口详情:</strong></p>
@@ -556,6 +678,24 @@ const PortStatusPage: FC = () => {
                     <p>当前MAC数: {record.currentMACCount || 0}</p>
                   </>
                 )}
+                {/* quick 260712-vpj D-05/D-06: 端口 MAC 展示(懒加载,折叠再展开命中 cache) */}
+                <div style={{ marginTop: 12 }}>
+                  <PortMACPanel
+                    portId={record.id}
+                    deviceId={record.deviceId}
+                    interfaceName={record.interfaceName}
+                    adminStatus={record.adminStatus}
+                    operStatus={record.operStatus}
+                    bundle={macBundleCache[record.id]}
+                    load={() => {
+                      void loadPortMACBundle(
+                        record.id,
+                        record.deviceId,
+                        record.interfaceName
+                      );
+                    }}
+                  />
+                </div>
               </div>
             ),
           }}

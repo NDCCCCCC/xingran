@@ -399,6 +399,97 @@ export const batchWritePorts = async (
   return result.data!;
 };
 
+// ==================== 端口 MAC bundle (quick 260712-vpj, D-01/D-04) ====================
+//
+// 并行拉取单端口的"当前 MAC"+"最近一条历史 MAC",供 ports 页 expandedRowRender 使用。
+// 两个端点互不阻塞:任一失败不影响另一个,error 收集到 bundle.error 让组件按字段粒度区分展示。
+//
+// 后端端点(零改动):
+//   POST /network/mac/list    -> 当前 MAC (sys_device_mac_address), MACAddressResponse[]
+//   POST /network/history/port -> 历史 MAC (sys_device_mac_history), MACHistoryRecord[]
+//
+// 接口名归一化(D-02):后端 BeforeCreate 钩子强制归一为大写短名(如 GE0/0/1),
+//   mac_history_query_service.go:328-330 对 interface_name = ? 走精确匹配。
+//   前端直接传 record.interfaceName 即可,不再调 normalize.InterfaceName。
+//
+// wrapper 遵守 LANDMINE #5: 无 message.error / getAppMessage (post() 拦截器统一弹 Toast)。
+
+/**
+ * 当前 MAC 条目(单端口) — 对应后端 MACAddressResponse
+ * (internal/services/mac_collection_service.go:592-603)
+ */
+export interface PortCurrentMAC {
+  id: string;
+  deviceId: string;
+  deviceName: string;
+  macAddress: string;
+  interfaceName: string;
+  vlanId?: number | null;
+  macType?: string;
+  collectedAt: string;
+  createdAt: string;
+}
+
+/**
+ * 单端口 MAC bundle(展开行展示数据源)
+ * - current: 端口当前 MAC 列表(端口安全开启时可能多条)
+ * - recentHistory: 最近一条历史 MAC(null 表示无历史)
+ * - error: 任一端点失败时收集(供组件按字段粒度区分, 不上抛)
+ */
+export interface PortMACBundle {
+  current: PortCurrentMAC[];
+  recentHistory: MACHistoryRecord | null;
+  error: Error | null;
+}
+
+/**
+ * 并行拉取单端口的"当前 MAC"+"最近一条历史 MAC"
+ * - 端点复用: /network/mac/list(pageSize=50) + /network/history/port(pageSize=1)
+ * - 任一失败不互阻塞:各自 try/catch 收集到 bundle.error
+ * - 不调用 message.error(post() 拦截器已统一 Toast)
+ */
+export const getPortMACBundle = async (
+  deviceId: string,
+  interfaceName: string
+): Promise<PortMACBundle> => {
+  const fetchCurrent = async (): Promise<PortCurrentMAC[]> => {
+    const result = await post<{ list: PortCurrentMAC[] }>("/network/mac/list", {
+      current: 1,
+      pageSize: 50,
+      deviceId,
+      interfaceName,
+    });
+    return result.data?.list ?? [];
+  };
+
+  const fetchRecent = async (): Promise<MACHistoryRecord | null> => {
+    const result = await post<{ list: MACHistoryRecord[] }>(
+      "/network/history/port",
+      { deviceId, interfaceName, current: 1, pageSize: 1 }
+    );
+    return result.data?.list?.[0] ?? null;
+  };
+
+  const [currentResult, historyResult] = await Promise.allSettled([
+    fetchCurrent(),
+    fetchRecent(),
+  ]);
+
+  const current =
+    currentResult.status === "fulfilled" ? currentResult.value : [];
+  const recentHistory =
+    historyResult.status === "fulfilled" ? historyResult.value : null;
+  // 优先展示 current 的错误(展示顺序更靠前);仅 current 失败时 fallback 到 history 的错误
+  const error =
+    currentResult.status === "rejected"
+      ? (currentResult.reason as Error)
+      : historyResult.status === "rejected"
+        ? (historyResult.reason as Error)
+        : null;
+
+  return { current, recentHistory, error };
+};
+
 export default {
   queryMACHistory,
   getMACEvents,
@@ -414,4 +505,6 @@ export default {
   // Phase 56 v1.20.1 端口写操作扩展
   writeSetAccessVlan,
   writePortBinding,
+  // quick 260712-vpj 端口 MAC bundle
+  getPortMACBundle,
 };
