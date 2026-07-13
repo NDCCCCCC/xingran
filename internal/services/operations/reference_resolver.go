@@ -38,6 +38,7 @@ type referenceResolverImpl struct {
 // tablesWithoutSoftDelete 不支持软删除的表名列表（没有deleted_at列）
 var tablesWithoutSoftDelete = map[string]bool{
 	"sys_device_port_status": true, // 设备端口状态表（实时采集数据，无需软删除）
+	"sys_dept":                true, // 部门表（无 deleted_at 列，部门管理走 status 字段软启用/停用）
 }
 
 // ResolveBatch 批量解析引用值
