@@ -145,8 +145,15 @@ var ExcelConfigs = map[string]ExcelConfig{
 			{Field: "floorName", Header: "所属楼层名称", Required: true, MaxLength: 100, Reference: "ops_floors.name", DBField: "floor_id", DependsOn: "buildingName"}, // 依赖 buildingName 的解析结果
 			{Field: "workstationType", Header: "工位类型", DBField: "workstation_type", Options: map[interface{}]string{int(models.WorkstationTypeFixed): "固定工位", int(models.WorkstationTypeHotDesk): "灵活工位", int(models.WorkstationTypeManager): "管理工位"}},
 			{Field: "status", Header: "状态", Options: map[interface{}]string{int(models.WorkstationStatusAvailable): "空闲", int(models.WorkstationStatusOccupied): "占用", int(models.WorkstationStatusMaintain): "维护"}},
+			// 部门代码：按 sys_dept.dept_code 解析为 dept_id；与既有 deptName 共存时以本字段为准；
+			// 本字段为空且 deptName 非空时走名称匹配回退，向后兼容老模板。
+			{Field: "deptCode", Header: "部门代码", MaxLength: 100, Reference: "sys_dept.dept_code", DBField: "dept_id"},
 			{Field: "deptName", Header: "所属部门", Reference: "sys_dept.dept_name", DBField: "dept_id"},
 			{Field: "userName", Header: "所属用户", Reference: "sys_user.username", DBField: "user_id"},
+			// 主设备序列号：跨表特殊处理，无 DBField → prepareRecordsForUpsert 跳过不写 sys_workstation；
+			// 由 ExcelService.ImportData post-import hook 调用 WorkstationDeviceService.SetPrimaryAndSaveBySerial
+			// 写入 ops_workstation_device 表（IsPrimary=true，字段值由 AD/Asset 合并填充）。
+			{Field: "deviceSerial", Header: "主设备序列号", MaxLength: 200},
 			{Field: "remark", Header: "备注", MaxLength: 500, DBField: "description"},
 		},
 	},

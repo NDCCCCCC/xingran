@@ -52,7 +52,11 @@ func SetupExcelRouter(r *gin.RouterGroup, entityType string, core *core.Core) {
 func getExcelService(core *core.Core) *opsServices.ExcelService {
 	cacheProvider := system.NewCacheAdapter(core.Cache)
 	geocodingService := opsServices.NewGeocodingService(core.Config.Baidu.MapAK)
-	return opsServices.NewExcelService(core.DB.GetDB(), core.PwdManager, cacheProvider, geocodingService)
+	// 工位导入 post-import hook 需要按 deviceSerial 调 SetPrimaryAndSaveBySerial
+	// 同步主设备;构造 ExcelService 时一并注入(可选,缺少时跳过不阻断)。
+	deviceService := opsServices.NewWorkstationDeviceService(core.DB.GetDB())
+	return opsServices.NewExcelService(core.DB.GetDB(), core.PwdManager, cacheProvider, geocodingService).
+		WithDeviceService(deviceService)
 }
 
 func generateExcelFilename(entityType, fileSuffix string) string {

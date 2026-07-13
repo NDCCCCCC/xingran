@@ -26,6 +26,9 @@ type ExcelService struct {
 	cacheInvalidator  *CacheInvalidator
 	cache             system.CacheProvider
 	geocoding         *GeocodingService
+	// deviceService 可选注入,用于 Excel 工位导入 post-import hook 调用 SetPrimaryAndSaveBySerial。
+	// nil 时跳过(测试场景或构造时未注入),不阻断主流程。
+	deviceService WorkstationDeviceService
 
 	// P1-C6 修复: validateUniqueness N+1 防御 — 按 tableName 缓存每个唯一列
 	// 的"已存在值集合",首次调用时单次 IN 查询一次性加载,后续 per-row 调用
@@ -46,6 +49,13 @@ func NewExcelService(db *gorm.DB, pwdManager *security.PasswordManager, cache sy
 		uniqueValueCache:  make(map[string]map[string]map[string]struct{}),
 		uniqueValueLoaded: make(map[string]bool),
 	}
+}
+
+// WithDeviceService 注入设备服务(post-import 主设备同步)。
+// 单独 setter 模式避免构造函数参数膨胀,且兼容旧调用。
+func (s *ExcelService) WithDeviceService(svc WorkstationDeviceService) *ExcelService {
+	s.deviceService = svc
+	return s
 }
 
 type ImportError struct {
@@ -489,7 +499,99 @@ func (s *ExcelService) ImportData(ctx context.Context, entityType string, file *
 		}
 	}
 
+	// post-import hook: 工位导入若含 deviceSerial 列,对每行触发主设备同步。
+	// 失败计入 result.Failed/Errors,但不阻断整体导入流程(内部 hook 调用,无 operlog)。
+	if entityType == "workstation" {
+		s.postImportWorkstationPrimaryDevice(ctx, validRecords, result)
+	}
+
 	return result, nil
+}
+
+// postImportWorkstationPrimaryDevice 遍历工位导入记录,对含非空 deviceSerial 的行
+// 调用 SetPrimaryAndSaveBySerial 同步主设备。失败计入 result.Failed/Errors,不阻断循环。
+//
+// 设计要点:
+//   - 不写 operlog: 这是 service 层内部 hook,CLAUDE.md operlog 约定仅 HTTP handler 入口必记
+//   - 不阻断: 设备同步失败不影响工位主体数据已成功 upsert 的事实
+//   - 通过 (floor_id, workstation_name) 反查 workstation_id,因为 validRecords 来自
+//     prepareRecordsForUpsert 之前的数据,不含 DB 生成的主键 id
+func (s *ExcelService) postImportWorkstationPrimaryDevice(ctx context.Context, validRecords []map[string]any, result *ImportResult) {
+	if s.deviceService == nil {
+		// 未注入时静默跳过 — 与现有 batchGeocodeBuildings 中 s.geocoding != nil 守卫一致。
+		return
+	}
+
+	for i, rec := range validRecords {
+		serial, _ := rec["deviceSerial"].(string)
+		if serial == "" {
+			continue
+		}
+
+		floorID, _ := rec["floor_id"].(string)
+		name, _ := rec["name"].(string)
+		if floorID == "" || name == "" {
+			logger.Warnf("[WorkstationImport] 跳过主设备同步,缺少 floor_id 或 name - serial: %s", serial)
+			result.Failed++
+			result.Errors = append(result.Errors, ImportError{
+				Row:   configStartRowOrDefault(result, i),
+				Field: "主设备序列号",
+				Value: serial,
+				Error: "缺少工位定位信息(floor_id 或 workstation_name 为空),无法同步主设备",
+			})
+			continue
+		}
+
+		// 通过 (floor_id, workstation_name) 反查 workstation_id。
+		var workstationID string
+		if err := s.db.WithContext(ctx).
+			Table("sys_workstation").
+			Select("id").
+			Where("floor_id = ? AND workstation_name = ? AND deleted_at IS NULL", floorID, name).
+			Scan(&workstationID).Error; err != nil {
+			logger.Warnf("[WorkstationImport] 查找工位ID失败 floorID=%s name=%s: %v", floorID, name, err)
+			result.Failed++
+			result.Errors = append(result.Errors, ImportError{
+				Row:   configStartRowOrDefault(result, i),
+				Field: "主设备序列号",
+				Value: serial,
+				Error: fmt.Sprintf("查找工位失败: %v", err),
+			})
+			continue
+		}
+		if workstationID == "" {
+			logger.Warnf("[WorkstationImport] 未找到工位 floorID=%s name=%s (可能 upsert 失败)", floorID, name)
+			result.Failed++
+			result.Errors = append(result.Errors, ImportError{
+				Row:   configStartRowOrDefault(result, i),
+				Field: "主设备序列号",
+				Value: serial,
+				Error: "工位未找到,跳过主设备同步(请确认工位本体已成功 upsert)",
+			})
+			continue
+		}
+
+		if err := s.deviceService.SetPrimaryAndSaveBySerial(ctx, workstationID, serial, nil); err != nil {
+			logger.Warnf("[WorkstationImport] 主设备同步失败 workstationID=%s serial=%s: %v", workstationID, serial, err)
+			result.Failed++
+			result.Errors = append(result.Errors, ImportError{
+				Row:   configStartRowOrDefault(result, i),
+				Field: "主设备序列号",
+				Value: serial,
+				Error: fmt.Sprintf("主设备同步失败: %v", err),
+			})
+			continue
+		}
+
+		logger.Infof("[WorkstationImport] 主设备同步成功 workstationID=%s serial=%s", workstationID, serial)
+	}
+}
+
+// configStartRowOrDefault 推算 Excel 行号: 配置的 StartRow + 索引 i + 1(表头偏移)。
+// postImportWorkstationPrimaryDevice 不持有 ExcelConfig,这里用经验默认 StartRow=2
+// + i + 1(行号 1-based)。result 已使用 Inserted/Updated/Failed 计数。
+func configStartRowOrDefault(_ *ImportResult, i int) int {
+	return 2 + i + 1
 }
 
 func (s *ExcelService) extractReferenceRequests(
