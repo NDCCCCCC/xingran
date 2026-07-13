@@ -399,6 +399,23 @@ export const excelApi = {
   },
 };
 
+// ==================== 部门映射表下载 (quick 260713-df0) ====================
+//
+// 工位导入辅助端点: 后端 GET /ops/workstation/dept-mapping-template 返回
+// sys_dept 全部启用部门的 dept_name | dept_code 映射表, 用户在 Excel 中填写
+// 部门代码时不必再翻部门列表查 dept_code。
+//
+// 复用 excelApi 同款 downloadFile 链路(blobAxios + triggerBrowserDownload),
+// 无需新写 fetch/blob/URL.createObjectURL。
+export const deptApi = {
+  exportMapping: async () => {
+    await downloadFile(
+      "/ops/workstation/dept-mapping-template",
+      `dept_mapping_${Date.now()}.xlsx`
+    );
+  },
+};
+
 // ==================== 墙体管理（CAD平面图） ====================
 
 export interface Wall {

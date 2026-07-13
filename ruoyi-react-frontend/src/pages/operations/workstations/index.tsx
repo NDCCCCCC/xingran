@@ -18,7 +18,7 @@ import {
   PlusOutlined, SearchOutlined, ReloadOutlined, CheckCircleOutlined,
   StopOutlined, AppstoreOutlined, TableOutlined, ImportOutlined,
   ExportOutlined, DeleteOutlined, BgColorsOutlined, DesktopOutlined,
-  SettingOutlined,
+  SettingOutlined, DownloadOutlined,
 } from "@ant-design/icons";
 import type { WorkstationOps } from "@/types";
 import { useTableManager } from "@/hooks/useTableManager";
@@ -42,7 +42,7 @@ import { STATUS_OPTIONS } from "./constants";
 import type { FloorOption, UserOption, DeptTreeNode } from "./types";
 // ❌ 移除：import { workstationApi } from '@/lib/opsApi';
 // ✅ 优化：直接导入具体 API，避免 barrel 文件 (bundle-barrel-imports)
-import { buildingApi, floorApi, workstationApi } from "@/lib/opsApi";
+import { buildingApi, floorApi, workstationApi, deptApi } from "@/lib/opsApi";
 import WorkstationDeviceTable from "@/components/operations/WorkstationDeviceTable";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { useMenuStore } from "@/store/menuStore";
@@ -736,6 +736,14 @@ const WorkstationManagement: FC = () => {
               </Radio.Group>
               <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>
                 导入
+              </Button>
+              {/* quick 260713-df0: 工位导入辅助 — 下载 sys_dept dept_name|code 映射表,
+                  用户填 Excel 时不必再翻部门列表查 dept_code */}
+              <Button
+                icon={<DownloadOutlined />}
+                onClick={() => deptApi.exportMapping()}
+              >
+                下载部门映射表
               </Button>
               <Button icon={<ExportOutlined />} onClick={() => {
                 setExportFilters(buildSearchParams({ searchForm }));
