@@ -614,6 +614,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 
 			// Excel导入导出
 			operations.SetupExcelRouter(workstations, "workstation", core)
+			// 部门名称↔代码映射表 (quick 260713-df0, 工位导入辅助)
+			workstations.GET("/dept-mapping-template", operations.DownloadDeptMappingTemplate(core))
 		}
 
 		// 工位部门物理位置映射 (Phase 39)

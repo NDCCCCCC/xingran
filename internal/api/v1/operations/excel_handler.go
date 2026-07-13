@@ -183,6 +183,102 @@ func downloadTemplate(entityType string, core *core.Core) gin.HandlerFunc {
 	}
 }
 
+// DownloadDeptMappingTemplate 下载部门名称↔代码映射表 (xlsx)
+//
+// quick 260713-df0 工位导入的辅助端点: 用户在 Excel 中填写 deptName 容易拼错,
+// 提供一份 sys_dept 全量映射表(dept_name | dept_code 两列), 方便按代码填写或校对。
+//
+// 数据范围: WHERE deleted_at IS NULL AND status = 0(只含启用部门)。
+// 排序: dept_code ASC, 方便用户按代码区间检索。
+//
+// 端点路径: GET /api/v1/ops/workstation/dept-mapping-template
+// 继承 workstations 路由组的 ops:workstation:* 权限, 与 /import /template 保持一致。
+// operlog: 记 1 条 部门管理 / OperTypeDownload 日志(独立于工位导入的 Import 日志)。
+func DownloadDeptMappingTemplate(core *core.Core) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 查询 sys_dept 中所有启用部门, 按 dept_code 升序
+		type deptRow struct {
+			DeptName string `gorm:"column:dept_name"`
+			DeptCode string `gorm:"column:dept_code"`
+		}
+		var rows []deptRow
+		if err := core.DB.GetDB().WithContext(c.Request.Context()).
+			Table("sys_dept").
+			Select("dept_name, dept_code").
+			Where("deleted_at IS NULL AND status = 0").
+			Order("dept_code ASC").
+			Scan(&rows).Error; err != nil {
+			response.Error(c, response.ErrServerError, fmt.Sprintf("查询部门映射失败: %v", err))
+			return
+		}
+
+		// 创建 xlsx, sheet 名 部门映射, 表头 dept_name | dept_code
+		f := excelize.NewFile()
+		sheetName := "部门映射"
+		index, err := f.NewSheet(sheetName)
+		if err != nil {
+			response.Error(c, response.ErrServerError, fmt.Sprintf("创建工作表失败: %v", err))
+			return
+		}
+		f.SetActiveSheet(index)
+		_ = f.DeleteSheet("Sheet1")
+
+		headerStyle, err := f.NewStyle(&excelize.Style{
+			Font:      &excelize.Font{Bold: true, Size: 11},
+			Fill:      excelize.Fill{Type: "pattern", Color: []string{"#E0E0E0"}},
+			Alignment: &excelize.Alignment{Horizontal: "center", Vertical: "center"},
+			Border: []excelize.Border{
+				{Type: "left", Color: "#000000", Style: 1},
+				{Type: "top", Color: "#000000", Style: 1},
+				{Type: "bottom", Color: "#000000", Style: 1},
+				{Type: "right", Color: "#000000", Style: 1},
+			},
+		})
+		if err != nil {
+			response.Error(c, response.ErrServerError, fmt.Sprintf("创建表头样式失败: %v", err))
+			return
+		}
+
+		// 表头
+		if err := f.SetCellValue(sheetName, "A1", "dept_name"); err != nil {
+			response.Error(c, response.ErrServerError, err.Error())
+			return
+		}
+		if err := f.SetCellValue(sheetName, "B1", "dept_code"); err != nil {
+			response.Error(c, response.ErrServerError, err.Error())
+			return
+		}
+		_ = f.SetCellStyle(sheetName, "A1", "B1", headerStyle)
+
+		// 数据行(从第 2 行开始)
+		for i, row := range rows {
+			cellName, _ := excelize.CoordinatesToCellName(1, i+2)
+			_ = f.SetCellValue(sheetName, cellName, row.DeptName)
+			cellCode, _ := excelize.CoordinatesToCellName(2, i+2)
+			_ = f.SetCellValue(sheetName, cellCode, row.DeptCode)
+		}
+
+		// 列宽
+		_ = f.SetColWidth(sheetName, "A", "A", 30)
+		_ = f.SetColWidth(sheetName, "B", "B", 20)
+
+		// 冻结表头
+		_ = f.SetPanes(sheetName, &excelize.Panes{
+			Freeze: true,
+			YSplit: 1,
+		})
+
+		// 记录 operlog (部门管理 / Download)
+		operlog.Record(c, core.OperLogService, core.GetDB(), "部门管理", operlog.OperTypeDownload)
+
+		// 文件名带时间戳,便于区分多次下载
+		filename := fmt.Sprintf("dept_mapping_%s.xlsx", time.Now().Format("20060102_150405"))
+		if err := writeExcelResponse(c, f, filename); err != nil {
+			response.Error(c, response.ErrServerError, err.Error())
+		}
+	}
+}
+
 // BatchOperationRequest 批量操作请求
 type BatchOperationRequest struct {
 	Action string                   `json:"action" binding:"required"` // create, update, delete
