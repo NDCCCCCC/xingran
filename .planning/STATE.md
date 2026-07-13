@@ -4,8 +4,8 @@ milestone: v1.20
 milestone_name: 网络设备 VLAN + 端口绑定
 status: Awaiting next milestone
 stopped_at: v1.19 milestone archived (milestones/v1.19-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md)
-last_updated: "2026-07-12T14:55:00.000Z"
-last_activity: 2026-07-12 — Completed quick task 260712-vpj: 端口管理页面展开行 MAC/历史MAC 展示
+last_updated: "2026-07-13T02:10:00.000Z"
+last_activity: 2026-07-13 — Completed quick task 260713-df0: 工位导入扩展 - 部门代码/用户名/主设备SN + 部门映射表下载
 progress:
   total_phases: 1
   completed_phases: 1
@@ -119,6 +119,8 @@ Items acknowledged and deferred at v1.20 milestone close on 2026-07-10:
 | 2026-07-07 | Phase 54 plan 01 complete (1/1 plan) — W5 闭环, 10 TestE2E_* + 7 site-visit UAT deferred + 文档同步 + operlog/vendor-react gzip 全绿 | 54 |
 | 2026-07-08 | Phase 55 plan 01 complete (1/2 plans) — 前端 WR-02 + IN-01 + IN-02 + HealthCard 5 文件 tech-debt cleanup | 55 |
 | 2026-07-08 | Phase 55 plan 02 complete (2/2 plans) — 后端 batch_orchestrator.go fallback CR-02 防御加固, commit 4f357dae | 55 |
+| 2026-07-12 | Quick 260712-vpj shipped — 端口管理展开行 MAC + 历史MAC (2 commits + merge) | — |
+| 2026-07-13 | Quick 260713-df0 shipped — 工位导入扩展 (deptCode/deviceSerial 跨表 + 部门映射表下载) | — |
 
 ## Quick Tasks Completed (recent)
 
@@ -134,6 +136,7 @@ Items acknowledged and deferred at v1.20 milestone close on 2026-07-10:
 | 260704-ne5 | database.go AutoMigrate() 精简 | 2026-07-04 | 0e3430ab,361a1ecd | [260704-ne5-database-go-migration-schema-seed-snapsh](./quick/260704-ne5-database-go-migration-schema-seed-snapsh/) |
 | 260708-iia | 给所有定时任务日志添加方便识别的前缀 [cron:英文\|中文] | 2026-07-08 | (待提交) | [260708-iia-cron-log-prefix](./quick/260708-iia-cron-log-prefix/) |
 | 260712-vpj | 端口管理页面展开行展示当前 MAC + 历史 MAC fallback(懒加载,零后端改动) | 2026-07-12 | be99597b,bc26f5c4 (merge 1780a914) | [260712-vpj-mac-mac](./quick/260712-vpj-mac-mac/) |
+| 260713-df0 | 工位导入扩展: deptCode(deviceSerial 跨表) + SetPrimaryAndSaveBySerial(共用 mergeBySerial) + 部门映射表下载端点 + 工位页导入 modal "下载部门映射表" 按钮 | 2026-07-13 | 41c4ff05, 25ac6ebd, ad0ac2f9, 4b11f0f6 | [260713-df0-username](./quick/260713-df0-username/) |
 
 ## Accumulated Context
 
@@ -276,8 +279,8 @@ Per `milestones/v1.19-REQUIREMENTS.md` §Tech Debt:
 
 ## Session Continuity
 
-Last session: 2026-07-08T02:53:10.660Z
-Stopped at: v1.19 milestone archived (milestones/v1.19-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md)
+Last session: 2026-07-13T02:10:00.000Z
+Stopped at: Quick task 260713-df0 complete — 工位导入扩展 (deptCode + deviceSerial 跨表同步 + 部门映射表下载)。Awaiting next milestone planning.
 Resume file: None
 
 **Milestone status:** v1.19 网络设备写命令 (Network Device Port Write Operations) — milestone_complete (2026-07-08), Phases 50-55 closed (5 build + 1 cleanup). v1.19 ARCHIVED to milestones/v1.19-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md. Ready for `/gsd:new-milestone` to start next cycle.
