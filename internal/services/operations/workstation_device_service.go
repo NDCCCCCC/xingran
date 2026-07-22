@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/ruoyi-next/ruoyi-go-backend/internal/constants"
@@ -27,6 +28,17 @@ type WorkstationDeviceService interface {
 	// GetPhysicalDevices 实时查询物理链路设备（不保存到数据库）
 	// Phase 45 R5: MAC→port→infoPoint→workstation 反推链汇总
 	GetPhysicalDevices(ctx context.Context, workstationID string) ([]*models.WorkstationDevice, error)
+
+	// GetADDevicesByWorkstations 批量查询多工位的 AD 设备 (Phase 35: 导出优化)
+	// 返回 map[workstationID][]*WorkstationDevice; 工位无 AD 设备时返回空切片 (不报错)
+	// 内部使用 ~3 次批量 SQL 而非 N 次单工位 SQL, 工位数 100+ 时性能差异显著
+	GetADDevicesByWorkstations(ctx context.Context, workstationIDs []string) (map[string][]*models.WorkstationDevice, error)
+
+	// GetAssetDevicesByWorkstations 批量查询多工位的资产设备 (Phase 35: 导出优化)
+	GetAssetDevicesByWorkstations(ctx context.Context, workstationIDs []string) (map[string][]*models.WorkstationDevice, error)
+
+	// GetPhysicalDevicesByWorkstations 批量查询多工位的物理链路设备 (Phase 35: 导出优化)
+	GetPhysicalDevicesByWorkstations(ctx context.Context, workstationIDs []string) (map[string][]*models.WorkstationDevice, error)
 
 	// GetADDevicesByUser 获取用户的域控设备
 	GetADDevicesByUser(ctx context.Context, userID string) ([]*ADDeviceMatch, error)
@@ -303,20 +315,24 @@ func (s *workstationDeviceService) GetAssetDevices(ctx context.Context, workstat
 
 // GetPhysicalDevices 实时查询物理链路设备（不保存到数据库）
 //
-// Phase 45 R5: 按 MAC→port→infoPoint→workstation 反推链路,找到该工位用户实际接入的设备
+// Phase 45 R5: 按 MAC→port→infoPoint→workstation 反推链路,得到该工位物理接入的设备。
 //
 // 链路(同 reconciliation_physical_chain 物化视图):
 //   asset.mac1/mac2 → sys_device_mac_address → sys_device_port_status
-//     → ops_info_points.workstation_id → sys_workstation.user_id (= 工位绑定用户)
+//     → ops_info_points.workstation_id → sys_workstation.id
+//
+// 注意: 物理链路是客观事实, 与工位是否绑定 user_id 无关。
+// (2026-07-21 工位 3f130 排查:B-3f130-2026-07-21 修正了 user_id 早退耦合)
 //
 // 字段合并策略(用户要求"以资产为准"):
 //   - DeviceName / DeviceModel / DeviceType / ResponsibleUser / IP: 优先取 ops_asset
 //   - MAC: 优先 ops_asset.mac1,缺失时回退 ad_computer.mac_address
 //   - AD 字段(ComputerName / OperatingSystem): 用 ad_computer 补全,但不覆盖资产字段
 //
-// 退化场景(与 GetAssetDevicesByUser 双策略同款):
-//   - 工位未绑定 user_id → 返回空(不擅自用工作站 IP 反查)
-//   - MAC 未采集 → 无设备返回
+// 退化场景(纯物理事实链,与 user_id 无关):
+//   - 工位不存在 → 返回错误
+//   - info_point 未绑定到工位 / 软删除 / status ≠ 0 → 无设备返回(空数组)
+//   - MAC 未采集 → 无设备返回(空数组)
 func (s *workstationDeviceService) GetPhysicalDevices(ctx context.Context, workstationID string) ([]*models.WorkstationDevice, error) {
 	if workstationID == "" {
 		return nil, apperrors.ParamMissing("工位ID")
@@ -326,7 +342,7 @@ func (s *workstationDeviceService) GetPhysicalDevices(ctx context.Context, works
 		return nil, apperrors.ParamInvalid("工位ID")
 	}
 
-	// 1. 获取工位信息以查找绑定的用户
+	// 1. 工位存在性校验(物理链路查询不依赖 user_id, 只依赖工位本身)
 	var workstation models.Workstation
 	err := s.db.WithContext(ctx).
 		Where("id = ? AND deleted_at IS NULL", workstationID).
@@ -335,13 +351,7 @@ func (s *workstationDeviceService) GetPhysicalDevices(ctx context.Context, works
 		return nil, fmt.Errorf("工位不存在: %w", err)
 	}
 
-	// 工位未绑定用户时返回空数组(对齐 AD/资产设备行为)
-	if workstation.UserID == nil || *workstation.UserID == "" {
-		return []*models.WorkstationDevice{}, nil
-	}
-	userID := *workstation.UserID
-
-	logger.Infof("[GetPhysicalDevices] 工位 %s 绑定用户: %s", workstationID, userID)
+	logger.Infof("[GetPhysicalDevices] 工位 %s 物理链路查询开始", workstationID)
 
 	// 2. 走 MAC→port→infoPoint→workstation→user 反推链
 	//    反推逻辑:
@@ -562,7 +572,9 @@ SELECT DISTINCT ON (COALESCE(a.devicesn, COALESCE(mac.mac_address, hist.mac_addr
 			MACAddress:        row.MACAddress,
 			IPAddress:         row.IPAddress,
 			ResponsibleUser:   row.ResponsibleUser,
-			ResponsibleUserID: &userID,
+			// 2026-07-21 B-3f130: 不再硬编码 &userID; 工位未绑定用户时为 nil。
+			// 物理链路与 user_id 解耦, 但有 user_id 时仍继承工位绑定的责任人语义。
+			ResponsibleUserID: workstation.UserID,
 			Status:            0,
 			IsPrimary:         false,
 			Priority:          0,
@@ -1367,4 +1379,567 @@ func (s *workstationDeviceService) mergeBySerial(ctx context.Context, workstatio
 	}
 
 	return r
+}
+
+// macIDFragment 从可选 MAC 地址生成稳定的 ID 片段 (避免 *string 在 fmt 中类型不匹配)
+func macIDFragment(mac *string) string {
+	if mac == nil {
+		return "nil"
+	}
+	return *mac
+}
+
+// safePrefix 安全截取前 N 字符, 不足时返回整个字符串 (避免 panic)
+func safePrefix(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n]
+}
+
+// =========================================================================
+// Phase 35: 批量查询 (供 Excel 导出等 N+1 场景使用)
+// =========================================================================
+//
+// 设计要点:
+//   - 替代循环调用 GetADDevices/GetAssetDevices/GetPhysicalDevices, 减少 717 次 → 3 次 SQL
+//   - 工位无 user_id 时返回空切片 (不报错), 与单工位方法行为一致
+//   - AD LIKE 多 username 拼 OR 由代码层生成, 避免 PG 参数数量上限问题
+//   - 返回 map[wsID][]*WorkstationDevice, 调用方按需取
+
+// GetADDevicesByWorkstations 批量查询多工位的 AD 设备
+//
+// 实现路径 (5 次批量 SQL, 替代 239 单工位 = ~717 次 SQL):
+//   1. sys_workstation 批量查 wsID → userID
+//   2. sys_user 批量查 userID → username
+//   3. sys_ad_user 批量查 username → user_dn
+//   4. sys_ad_computer 批量查 (managed_by IN user_dns OR description LIKE 任意 username)
+//   5. 代码层映射: computer → user_dn/username → userID → wsID
+//
+// 实现要点: 所有 Scan 用 map[string]interface{} 而非 struct, 规避 GORM struct 扫描丢失中文字段的问题
+func (s *workstationDeviceService) GetADDevicesByWorkstations(
+	ctx context.Context,
+	workstationIDs []string,
+) (map[string][]*models.WorkstationDevice, error) {
+	result := make(map[string][]*models.WorkstationDevice, len(workstationIDs))
+	for _, id := range workstationIDs {
+		result[id] = []*models.WorkstationDevice{}
+	}
+	if len(workstationIDs) == 0 {
+		return result, nil
+	}
+
+	// 1. 批量查工位 → wsID → userID (用 map 避免 struct 扫描丢失字段)
+	var wsRows []map[string]interface{}
+	if err := s.db.WithContext(ctx).
+		Table("sys_workstation").
+		Select("id, user_id").
+		Where("id IN ? AND deleted_at IS NULL", workstationIDs).
+		Scan(&wsRows).Error; err != nil {
+		return result, fmt.Errorf("批量查询 sys_workstation 失败: %w", err)
+	}
+
+	userIDSet := make(map[string]bool)
+	wsToUser := make(map[string]string)
+	for _, w := range wsRows {
+		uid := stringFromMap(w, "user_id")
+		wsid := stringFromMap(w, "id")
+		if uid == "" || wsid == "" {
+			continue
+		}
+		userIDSet[uid] = true
+		wsToUser[wsid] = uid
+	}
+	if len(userIDSet) == 0 {
+		return result, nil
+	}
+	userIDs := make([]string, 0, len(userIDSet))
+	for id := range userIDSet {
+		userIDs = append(userIDs, id)
+	}
+
+	// 2. 批量查 sys_user → username
+	var userRows []map[string]interface{}
+	if err := s.db.WithContext(ctx).
+		Table("sys_user").
+		Select("id, username").
+		Where("id IN ? AND deleted_at IS NULL", userIDs).
+		Scan(&userRows).Error; err != nil {
+		return result, fmt.Errorf("批量查询 sys_user 失败: %w", err)
+	}
+	userIDToName := make(map[string]string, len(userRows))
+	nameToUserID := make(map[string]string, len(userRows))
+	for _, u := range userRows {
+		uid := stringFromMap(u, "id")
+		uname := stringFromMap(u, "username")
+		if uid == "" {
+			continue
+		}
+		userIDToName[uid] = uname
+		nameToUserID[uname] = uid
+	}
+
+	// 3. 批量查 sys_ad_user → user_dn
+	usernames := make([]string, 0)
+	for _, uname := range userIDToName {
+		if uname != "" {
+			usernames = append(usernames, uname)
+		}
+	}
+	var adUserRows []map[string]interface{}
+	if err := s.db.WithContext(ctx).
+		Table("sys_ad_user").
+		Select("username, user_dn").
+		Where("username IN ? AND deleted_at IS NULL", usernames).
+		Scan(&adUserRows).Error; err != nil {
+		return result, fmt.Errorf("批量查询 sys_ad_user 失败: %w", err)
+	}
+	nameToDN := make(map[string]string, len(adUserRows))
+	dnToName := make(map[string]string, len(adUserRows))
+	for _, au := range adUserRows {
+		uname := stringFromMap(au, "username")
+		udn := stringFromMap(au, "user_dn")
+		if uname == "" {
+			continue
+		}
+		nameToDN[uname] = udn
+		dnToName[udn] = uname
+	}
+	if len(nameToDN) == 0 {
+		return result, nil
+	}
+
+	// 4. 批量查 sys_ad_computer
+	userDNs := make([]string, 0, len(nameToDN))
+	for _, dn := range nameToDN {
+		userDNs = append(userDNs, dn)
+	}
+	tx := s.db.WithContext(ctx).
+		Table("sys_ad_computer").
+		Select("id, serial_number, computer_name, mac_address, ip_address, operating_system, managed_by, original_description").
+		Where("deleted_at IS NULL").
+		Where("managed_by IN ?", userDNs)
+	for _, uname := range usernames {
+		tx = tx.Or("original_description LIKE ?", "%|"+uname+"|%")
+	}
+	var adComputerRows []map[string]interface{}
+	if err := tx.Scan(&adComputerRows).Error; err != nil {
+		return result, fmt.Errorf("批量查询 sys_ad_computer 失败: %w", err)
+	}
+
+	// 5. 代码层映射
+	for _, comp := range adComputerRows {
+		managedBy := stringFromMap(comp, "managed_by")
+		desc := stringFromMap(comp, "original_description")
+		var ownerUsername string
+		if dn, ok := dnToName[managedBy]; ok {
+			ownerUsername = dn
+		} else if desc != "" {
+			for _, uname := range usernames {
+				if strings.Contains(desc, "|"+uname+"|") {
+					ownerUsername = uname
+					break
+				}
+			}
+		}
+		if ownerUsername == "" {
+			continue
+		}
+		ownerUserID := nameToUserID[ownerUsername]
+		if ownerUserID == "" {
+			continue
+		}
+
+		adID := stringFromMap(comp, "id")
+		sn := stringFromMap(comp, "serial_number")
+		cn := stringFromMap(comp, "computer_name")
+		mac := stringFromMap(comp, "mac_address")
+		ip := stringFromMap(comp, "ip_address")
+		_ = stringFromMap(comp, "operating_system") // OS 字段未放入 WorkstationDevice
+
+		for _, wsID := range workstationIDs {
+			if wsToUser[wsID] != ownerUserID {
+				continue
+			}
+			result[wsID] = append(result[wsID], &models.WorkstationDevice{
+				BaseModel:     models.BaseModel{ID: fmt.Sprintf("ad-%s-%s", safePrefix(wsID, 8), safePrefix(adID, 8))},
+				WorkstationID: wsID,
+				DeviceSource:  models.DeviceSourceAD,
+				ADComputerID:  &adID,
+				DeviceSerial:  &sn,
+				DeviceName:    &cn,
+				MACAddress:    &mac,
+				IPAddress:     &ip,
+				Status:        0,
+				IsPrimary:     false,
+				Priority:      0,
+			})
+		}
+	}
+
+	return result, nil
+}
+
+func (s *workstationDeviceService) GetAssetDevicesByWorkstations(
+	ctx context.Context,
+	workstationIDs []string,
+) (map[string][]*models.WorkstationDevice, error) {
+	result := make(map[string][]*models.WorkstationDevice, len(workstationIDs))
+	for _, id := range workstationIDs {
+		result[id] = []*models.WorkstationDevice{}
+	}
+	if len(workstationIDs) == 0 {
+		return result, nil
+	}
+
+	// 1. 批量查工位 → wsID → userID
+	type wsRow struct {
+		ID     string
+		UserID *string
+	}
+	var wsRows []wsRow
+	if err := s.db.WithContext(ctx).
+		Table("sys_workstation").
+		Select("id, user_id").
+		Where("id IN ? AND deleted_at IS NULL", workstationIDs).
+		Scan(&wsRows).Error; err != nil {
+		return result, fmt.Errorf("批量查询 sys_workstation 失败: %w", err)
+	}
+
+	userIDSet := make(map[string]bool)
+	wsToUser := make(map[string]string)
+	for _, w := range wsRows {
+		if w.UserID != nil && *w.UserID != "" {
+			userIDSet[*w.UserID] = true
+			wsToUser[w.ID] = *w.UserID
+		}
+	}
+	if len(userIDSet) == 0 {
+		return result, nil
+	}
+	userIDs := make([]string, 0, len(userIDSet))
+	for id := range userIDSet {
+		userIDs = append(userIDs, id)
+	}
+
+	// 2. 批量查 sys_user → (id, nickname, dept_id) (用 map 避免 GORM struct 扫描丢失字段)
+	var userRows []map[string]interface{}
+	if err := s.db.WithContext(ctx).
+		Table("sys_user").
+		Select("id, nickname, dept_id").
+		Where("id IN ? AND deleted_at IS NULL", userIDs).
+		Scan(&userRows).Error; err != nil {
+		return result, fmt.Errorf("批量查询 sys_user 失败: %w", err)
+	}
+
+	// userID → nickname, nickname → userID
+	userIDToNick := make(map[string]string, len(userRows))
+	nickToUserID := make(map[string]string, len(userRows))
+	nicknames := make([]string, 0, len(userRows))
+	for _, u := range userRows {
+		uid := stringFromMap(u, "id")
+		nick := stringFromMap(u, "nickname")
+		if uid == "" || nick == "" {
+			continue
+		}
+		userIDToNick[uid] = nick
+		nickToUserID[nick] = uid
+		nicknames = append(nicknames, nick)
+	}
+	if len(nicknames) == 0 {
+		return result, nil
+	}
+
+	// 3. 批量查 ops_asset → nowuser_name IN nicknames AND deleted_at IS NULL
+	var assetRows []map[string]interface{}
+	if err := s.db.WithContext(ctx).
+		Table("ops_asset").
+		Select("id, devicesn, device_model_name, device_type_name, mac1, nowuser_name").
+		Where("nowuser_name IN ? AND deleted_at IS NULL", nicknames).
+		Scan(&assetRows).Error; err != nil {
+		return result, fmt.Errorf("批量查询 ops_asset 失败: %w", err)
+	}
+
+	// 4. 代码层映射: asset → nickname → userID → wsID
+	for _, a := range assetRows {
+		nowUser := stringFromMap(a, "nowuser_name")
+		if nowUser == "" {
+			continue
+		}
+		ownerUserID := nickToUserID[nowUser]
+		if ownerUserID == "" {
+			continue
+		}
+		for _, wsID := range workstationIDs {
+			if wsToUser[wsID] != ownerUserID {
+				continue
+			}
+			id := stringFromMap(a, "id")
+			sn := stringFromMap(a, "devicesn")
+			modelName := stringFromMap(a, "device_model_name")
+			typeName := stringFromMap(a, "device_type_name")
+			mac := stringFromMap(a, "mac1")
+			result[wsID] = append(result[wsID], &models.WorkstationDevice{
+				BaseModel:     models.BaseModel{ID: fmt.Sprintf("asset-%s-%s", safePrefix(wsID, 8), safePrefix(id, 8))},
+				WorkstationID: wsID,
+				DeviceSource:  models.DeviceSourceAsset,
+				AssetID:       &id,
+				DeviceSerial:  &sn,
+				DeviceModel:   strPtr(modelName),
+				DeviceType:    strPtr(typeName),
+				MACAddress:    strPtr(mac),
+				ResponsibleUser: strPtr(nowUser),
+				Status:    0,
+				IsPrimary: false,
+				Priority:  0,
+			})
+		}
+	}
+
+	return result, nil
+}
+
+// stringFromMap 安全地从 map[string]interface{} 取字符串值 (nil/非字符串返回 "")
+func stringFromMap(m map[string]interface{}, key string) string {
+	if m == nil {
+		return ""
+	}
+	v, ok := m[key]
+	if !ok || v == nil {
+		return ""
+	}
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return fmt.Sprintf("%v", v)
+}
+
+// strPtr 安全地把字符串转为 *string (空字符串返回 nil)
+func strPtr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+// GetPhysicalDevicesByWorkstations 批量查询多工位的物理链路设备
+//
+// 实现路径:
+//   - 在原 GetPhysicalDevices 的 SQL 中, 把 workstation_ports CTE 的
+//     `WHERE ip.workstation_id = ?` 改为 `WHERE ip.workstation_id IN (?)`,
+//     并在主 SELECT 中加入 `wp.workstation_id` 用于结果按工位分组
+//   - 1 次 SQL, 替代 239 次单工位查询
+//   - (2026-07-22 B-3f130-fix) 误用 ANY(?) 触发 PG syntax error (ANY(?) 期望数组),
+//     改为 IN (?) 兼容 GORM 自动展开 []string → ?,?,?
+//
+// 与单工位方法 GetPhysicalDevices 行为差异:
+//   - 单工位返回 1 个 wsID 的设备, 本方法返回多 wsID 的 map[wsID][]devices
+//   - 单工位需要先 SELECT sys_workstation 取 userID (因 ResponsibleUserID 字段),
+//     批量版本为节省 SQL 改为按需查 (如有 wsID 仍需 userID, 走 batch enrichment)
+func (s *workstationDeviceService) GetPhysicalDevicesByWorkstations(
+	ctx context.Context,
+	workstationIDs []string,
+) (map[string][]*models.WorkstationDevice, error) {
+	result := make(map[string][]*models.WorkstationDevice, len(workstationIDs))
+	for _, id := range workstationIDs {
+		result[id] = []*models.WorkstationDevice{}
+	}
+	if len(workstationIDs) == 0 {
+		return result, nil
+	}
+
+	// 批量查 sys_workstation 取 user_id (用于 ResponsibleUserID 字段, 与单工位方法语义一致)
+	type wsRow struct {
+		ID     string
+		UserID *string
+	}
+	var wsRows []wsRow
+	if err := s.db.WithContext(ctx).
+		Table("sys_workstation").
+		Select("id, user_id").
+		Where("id IN ? AND deleted_at IS NULL", workstationIDs).
+		Scan(&wsRows).Error; err != nil {
+		return result, fmt.Errorf("批量查询 sys_workstation 失败: %w", err)
+	}
+	wsUserMap := make(map[string]*string, len(wsRows))
+	for _, w := range wsRows {
+		wsUserMap[w.ID] = w.UserID
+	}
+
+	// 修改后的 SQL: workstation_id IN (?), 并加入 wp.workstation_id
+	// (注意: ANY(?) 在 PG 中需要数组形式, GORM 展开 []string 为 ?,?,? 会报 syntax error;
+	//        改用 IN (?) 兼容性更好)
+	rawSQL := `
+WITH workstation_ports AS (
+    SELECT DISTINCT port.id AS port_id,
+           port.interface_name,
+           ip.device_id AS effective_device_id,
+           ip.name AS info_point_name,
+           ip.workstation_id,
+           REGEXP_REPLACE(
+               REGEXP_REPLACE(LOWER(port.interface_name), '\s+', '', 'g'),
+               '^(gigabitethernet|gigabitether|ge|gi)', 'ge'
+           ) AS norm_iface
+      FROM ops_info_points ip
+      JOIN sys_device_port_status port
+        ON port.id::text = ip.port_id
+     WHERE ip.workstation_id IN (?)
+       AND ip.deleted_at IS NULL
+       AND ip.status = 0
+       AND EXISTS (SELECT 1 FROM sys_network_device WHERE id::text = ip.device_id)
+),
+latest_mac AS (
+    SELECT DISTINCT ON (m.mac_address, m.device_id, m.interface_name)
+        m.mac_address, m.device_id, m.interface_name,
+        REGEXP_REPLACE(
+            REGEXP_REPLACE(LOWER(m.interface_name), '\s+', '', 'g'),
+            '^(gigabitethernet|gigabitether|ge|gi)', 'ge'
+        ) AS norm_iface,
+        LOWER(REGEXP_REPLACE(COALESCE(m.mac_address, ''), '[.:\-]', '', 'g')) AS norm_mac
+      FROM sys_device_mac_address m
+     ORDER BY m.mac_address, m.device_id, m.interface_name, m.collected_at DESC NULLS LAST
+),
+latest_mac_history AS (
+    SELECT DISTINCT ON (h.mac_address, h.device_id, h.interface_name)
+        h.mac_address, h.device_id, h.interface_name, h.last_seen,
+        REGEXP_REPLACE(
+            REGEXP_REPLACE(LOWER(h.interface_name), '\s+', '', 'g'),
+            '^(gigabitethernet|gigabitether|ge|gi)', 'ge'
+        ) AS norm_iface,
+        LOWER(REGEXP_REPLACE(COALESCE(h.mac_address, ''), '[.:\-]', '', 'g')) AS norm_mac
+      FROM sys_device_mac_history h
+     ORDER BY h.mac_address, h.device_id, h.interface_name, h.last_seen DESC NULLS LAST
+),
+ad_devices AS (
+    SELECT DISTINCT ON (LOWER(REGEXP_REPLACE(COALESCE(ad.mac_address, ''), '[.:\-]', '', 'g')))
+        ad.id, ad.mac_address, ad.serial_number, ad.computer_name, ad.ip_address, ad.operating_system,
+        LOWER(REGEXP_REPLACE(COALESCE(ad.mac_address, ''), '[.:\-]', '', 'g')) AS norm_mac
+      FROM sys_ad_computer ad
+     WHERE ad.deleted_at IS NULL
+     ORDER BY LOWER(REGEXP_REPLACE(COALESCE(ad.mac_address, ''), '[.:\-]', '', 'g')),
+              ad.updated_at DESC NULLS LAST
+)
+SELECT wp.workstation_id                                                   AS ws_id,
+       a.id                                                                AS asset_id,
+       a.devicesn                                                          AS device_serial,
+       a.device_model_name                                                 AS device_model,
+       a.device_type_name                                                  AS device_type,
+       COALESCE(a.mac1, mac.mac_address, hist.mac_address)                 AS mac_address,
+       a.machine_ip                                                        AS ip_address,
+       a.nowuser_name                                                      AS responsible_user,
+       wp.interface_name                                                   AS port_name,
+       wp.info_point_name                                                  AS info_point_name,
+       hist.last_seen                                                      AS history_last_seen,
+       CASE WHEN mac.mac_address IS NOT NULL THEN 1.0
+            WHEN hist.mac_address IS NOT NULL THEN 0.5
+            ELSE 0.0 END                                                    AS confidence,
+       ad_devices.id                                                       AS ad_computer_id,
+       ad_devices.computer_name                                            AS ad_device_name,
+       ad_devices.operating_system                                         AS ad_operating_system
+  FROM workstation_ports wp
+  LEFT JOIN latest_mac mac
+       ON mac.norm_iface = wp.norm_iface AND mac.device_id::text = wp.effective_device_id::text
+  LEFT JOIN latest_mac_history hist
+       ON hist.norm_iface = wp.norm_iface AND hist.device_id::text = wp.effective_device_id::text
+  LEFT JOIN ops_asset a
+       ON a.deleted_at IS NULL
+      AND (LOWER(REGEXP_REPLACE(COALESCE(a.mac1, ''), '[.:\-]', '', 'g')) = COALESCE(mac.norm_mac, hist.norm_mac)
+        OR LOWER(REGEXP_REPLACE(COALESCE(a.mac2, ''), '[.:\-]', '', 'g')) = COALESCE(mac.norm_mac, hist.norm_mac))
+  LEFT JOIN ad_devices
+       ON ad_devices.norm_mac = COALESCE(mac.norm_mac, hist.norm_mac)
+       OR (ad_devices.serial_number IS NOT NULL AND ad_devices.serial_number = a.devicesn)
+ ORDER BY wp.workstation_id,
+          COALESCE(a.devicesn, COALESCE(mac.mac_address, hist.mac_address, '')),
+          confidence DESC NULLS LAST,
+          wp.interface_name NULLS LAST;
+`
+
+	type physicalRow struct {
+		WSID              string  `gorm:"column:ws_id"`
+		AssetID           *string `gorm:"column:asset_id"`
+		DeviceSerial      *string `gorm:"column:device_serial"`
+		DeviceModel       *string `gorm:"column:device_model"`
+		DeviceType        *string `gorm:"column:device_type"`
+		MACAddress        *string `gorm:"column:mac_address"`
+		IPAddress         *string `gorm:"column:ip_address"`
+		ResponsibleUser   *string `gorm:"column:responsible_user"`
+		PortName          *string `gorm:"column:port_name"`
+		InfoPointName     *string `gorm:"column:info_point_name"`
+		HistoryLastSeen   *time.Time `gorm:"column:history_last_seen"`
+		Confidence        *float64 `gorm:"column:confidence"`
+		ADComputerID      *string `gorm:"column:ad_computer_id"`
+		ADDeviceName      *string `gorm:"column:ad_device_name"`
+		ADOperatingSystem *string `gorm:"column:ad_operating_system"`
+	}
+	var rows []physicalRow
+	if err := s.db.WithContext(ctx).Raw(rawSQL, workstationIDs).Scan(&rows).Error; err != nil {
+		return result, fmt.Errorf("批量查询物理链路设备失败: %w", err)
+	}
+
+	// 按 wsID 分组并构造 WorkstationDevice
+	for _, row := range rows {
+		wsID := row.WSID
+
+		var deviceName *string
+		if row.ADDeviceName != nil && *row.ADDeviceName != "" {
+			deviceName = row.ADDeviceName
+		} else if row.DeviceModel != nil && *row.DeviceModel != "" {
+			dm := *row.DeviceModel
+			deviceName = &dm
+		}
+		if deviceName == nil && row.MACAddress != nil && *row.MACAddress != "" {
+			mn := fmt.Sprintf("设备 (%s)", *row.MACAddress)
+			deviceName = &mn
+		}
+		if deviceName == nil && row.PortName != nil && *row.PortName != "" {
+			pn := fmt.Sprintf("端口 %s", *row.PortName)
+			deviceName = &pn
+		}
+
+		var portDesc *string
+		if row.PortName != nil {
+			pd := fmt.Sprintf("端口 %s", *row.PortName)
+			portDesc = &pd
+			if row.InfoPointName != nil && *row.InfoPointName != "" {
+				pdv := fmt.Sprintf("端口 %s (信息点 %s)", *row.PortName, *row.InfoPointName)
+				portDesc = &pdv
+			}
+		}
+		if row.Confidence != nil && *row.Confidence < 1.0 && row.HistoryLastSeen != nil && !row.HistoryLastSeen.IsZero() {
+			hint := fmt.Sprintf("\n历史关联 (最后上线时间: %s)", row.HistoryLastSeen.Format("2006-01-02 15:04:05"))
+			if portDesc == nil {
+				pd := hint
+				portDesc = &pd
+			} else {
+				pdv := *portDesc + hint
+				portDesc = &pdv
+			}
+		}
+
+		result[wsID] = append(result[wsID], &models.WorkstationDevice{
+			BaseModel:        models.BaseModel{ID: fmt.Sprintf("physical-%s-%s", safePrefix(wsID, 8), macIDFragment(row.MACAddress))},
+			WorkstationID:    wsID,
+			DeviceSource:     models.DeviceSourcePhysical,
+			AssetID:          row.AssetID,
+			ADComputerID:     row.ADComputerID,
+			DeviceSerial:     row.DeviceSerial,
+			DeviceName:       deviceName,
+			DeviceModel:      row.DeviceModel,
+			DeviceType:       row.DeviceType,
+			MACAddress:       row.MACAddress,
+			IPAddress:        row.IPAddress,
+			ResponsibleUser:  row.ResponsibleUser,
+			ResponsibleUserID: wsUserMap[wsID],
+			Status:            0,
+			IsPrimary:         false,
+			Priority:          0,
+			Description:       portDesc,
+			Confidence:        row.Confidence,
+			HistoryLastSeen:   row.HistoryLastSeen,
+		})
+	}
+
+	logger.Infof("[GetPhysicalDevicesByWorkstations] 批量查询命中 %d 行, 覆盖 %d 工位",
+		len(rows), len(workstationIDs))
+	return result, nil
 }

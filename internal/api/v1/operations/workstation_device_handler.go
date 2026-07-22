@@ -138,8 +138,8 @@ func (h *WorkstationDeviceHandler) GetAssetDevices(c *gin.Context) {
 
 // GetPhysicalDevices 实时查询物理链路设备
 // @Summary 实时查询工位关联的物理链路设备
-// @Description 通过工位绑定的用户反查物理链路 MAC→port→infoPoint→workstation→user
-// 解析出该工位用户实际接入的设备，资产字段与域控字段合并时资产优先
+// @Description 通过工位绑定的信息点反查物理链路 MAC→port→infoPoint→workstation
+// 解析出该工位物理接入的设备（与工位是否绑定用户无关），资产字段与域控字段合并时资产优先
 // （不保存到数据库）。
 // @Tags 运维管理
 // @Accept json

@@ -1,6 +1,7 @@
 package operations
 
 import (
+	"context"
 	"regexp"
 	"strings"
 	"testing"
@@ -233,4 +234,51 @@ func TestGetPhysicalDevices_InvalidDeviceId(t *testing.T) {
 
 	macs, _, _ := physicalJoin(db, "ws-3")
 	require.Equal(t, 0, len(macs), "ip.device_id 是 orphan 时 EXISTS 过滤应返回 0 条")
+}
+
+// TestGetPhysicalDevices_UserIDEmpty (B-3f130-2026-07-21 回归守护):
+// 验证工位未绑定 user_id 时, 服务不再因 user_id 早退而返回空数组。
+//
+// 修复前: workstation_device_service.go:339 早退分支 (workstation.UserID == nil)
+//   导致工位未绑定用户时返回 ([]WorkstationDevice{}, nil), 即使端口有 MAC 也"看似空"。
+// 修复后: 物理链路是客观事实, 与 user_id 无关, 服务越过 user_id 校验进入物理链路 CTE。
+//
+// 测试方法 (适配 SQLite 测试环境):
+//   - 本测试仅建 sys_workstation 表, 不建 CTE 依赖的 ops_info_points 等表
+//   - 修复前: service 在 line 339 早退, 返回 err=nil, devices=空数组 (测试 FAIL: 期望 err != nil)
+//   - 修复后: service 越过 user_id 检查, 进入物理链路 CTE, 因缺表/PG 语法报错 (测试 PASS: 实际收到 err)
+//   - 关键断言: err != nil, 这恰好证明 service 已越过 user_id 早退分支
+//
+// 业务背景:
+//   工位 3f130 信息点绑定了网络端口 CX-WH-WH-04F-FL-RS8607E-01 GE2/6 (有 MAC),
+//   但工位 user_id = NULL。修复前前端"物理链路设备(N 台)"为空;修复后能正常显示。
+//
+// 注意: 完整链路返回的端到端验证需要在 PG 环境执行 (现有 CTE 使用 ::text/REGEXP_REPLACE/NULLS LAST),
+// 此处只守护 user_id 早退 BUG 不复发。
+func TestGetPhysicalDevices_UserIDEmpty(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+
+	// 仅建 sys_workstation 表, 故意不建 CTE 依赖的 ops_info_points 等表
+	// 这样 service 越过 user_id 检查后, 进入 CTE 阶段必然报错
+	require.NoError(t, db.Exec(`
+		CREATE TABLE sys_workstation (id TEXT PRIMARY KEY, workstation_name TEXT, status INTEGER DEFAULT 0, user_id TEXT, deleted_at DATETIME)
+	`).Error)
+
+	// 工位 ws-3f130 未绑定 user_id (user_id = NULL, 模拟真实业务)
+	workstationUUID := "00000000-0000-0000-0000-000000000130"
+	require.NoError(t, db.Exec(
+		`INSERT INTO sys_workstation VALUES (?, '3f130', 0, NULL, NULL)`, workstationUUID,
+	).Error)
+
+	svc := NewWorkstationDeviceService(db)
+	devices, err := svc.GetPhysicalDevices(context.Background(), workstationUUID)
+
+	// 核心断言: 服务不应因 user_id=NULL 而早退返回成功。
+	// 修复前: err == nil, devices == [] (BUG: 早退)
+	// 修复后: err != nil (CTE 阶段因缺表/PG 语法报错, 证明已越过 user_id 检查)
+	require.Error(t, err,
+		"service 必须越过 user_id 早退检查, 进入物理链路 CTE 查询 (B-3f130-2026-07-21 修复生效)")
+	require.Empty(t, devices,
+		"修复不应返回任何 device (因为 CTE 缺表未真正执行)")
 }
