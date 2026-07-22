@@ -153,7 +153,8 @@ var ExcelConfigs = map[string]ExcelConfig{
 			// 主设备序列号：跨表特殊处理，无 DBField → prepareRecordsForUpsert 跳过不写 sys_workstation；
 			// 由 ExcelService.ImportData post-import hook 调用 WorkstationDeviceService.SetPrimaryAndSaveBySerial
 			// 写入 ops_workstation_device 表（IsPrimary=true，字段值由 AD/Asset 合并填充）。
-			{Field: "deviceSerial", Header: "主设备序列号", MaxLength: 200},
+			// 加 Reference:"skip" 使 shouldSkipFromUpdate 跳过，避免 device_serial 进入 ON CONFLICT DO UPDATE SET。
+			{Field: "deviceSerial", Header: "主设备序列号", MaxLength: 200, Reference: "skip"},
 			{Field: "remark", Header: "备注", MaxLength: 500, DBField: "description"},
 		},
 	},

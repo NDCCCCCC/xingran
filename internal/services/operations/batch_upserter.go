@@ -465,12 +465,17 @@ func (b *BatchUpsert) buildConflictColumns() []clause.Column {
 func (b *BatchUpsert) buildUpdateColumns() []string {
 	conflictFields := b.collectConflictFields()
 	var updateColumns []string
+	seen := make(map[string]bool) // 去重：同名 DBField 只出现一次
 
 	for _, col := range b.config.Columns {
 		dbField := b.getDBFieldName(col)
 		if dbField == "" {
 			continue
 		}
+		if seen[dbField] {
+			continue // 跳过重复的 DBField（如 deptCode 和 deptName 都映射到 dept_id）
+		}
+		seen[dbField] = true
 		if b.shouldSkipFromUpdate(dbField, col, conflictFields) {
 			continue
 		}
