@@ -77,6 +77,15 @@ func GetExportConfig(entityType string) (ExcelExportConfig, bool) {
 						As:          "parentName",
 					},
 				},
+				// parentPath: 完整父级链路("根 → … → 当前"),由 DepartmentQueryBuilder 的
+				// PostgreSQL recursive CTE 一次性算好注入到结果集,不走 resolveAssociations Join。
+				// 解决同名部门(例如多个"个人营销业务销售部")在不同市州中心支公司下无法区分的问题。
+				// 必须在 parentName 之后追加,避免影响前端 column_config_service.go:206 的列顺序契约。
+				{
+					Field:   "parentPath",
+					Header:  "上级部门链路(根 → 当前)",
+					DBField: "parent_path",
+				},
 				{
 					Field:   "phone",
 					Header:  "联系电话",

@@ -242,6 +242,12 @@ func (s *excelExportServiceImpl) formatExportCellValue(
 		value = row[col.Field]
 	}
 
+	// GORM 在 Find(&[]map[string]interface{}) 路径下,对**子查询别名列**(例: 本次新增
+	// 的 parent_path,由相关子查询生成)会把值包装为 *interface{}; 对普通表列(dept_name
+	// / id 等)直接置为 string/int64. 这里统一解包,避免 fmt.Sprintf("%v", *interface{})
+	// 把指针地址当字符串写到 xlsx.
+	value = unwrapInterface(value)
+
 	if value == nil {
 		return ""
 	}
@@ -269,6 +275,27 @@ func (s *excelExportServiceImpl) formatExportCellValue(
 	}
 
 	return fmt.Sprintf("%v", value)
+}
+
+// unwrapInterface 递归解包 GORM 在 Find(&mapSlice) 下产生的指针包装.
+//
+// 递归深度 ≤ 2 (GORM 最多包装一次; 我们也只额外解一层防极端情况).
+// 不解包非 interface{} 指针(如 *string),那是用户代码的真实数据.
+func unwrapInterface(v interface{}) interface{} {
+	for i := 0; i < 2; i++ {
+		if v == nil {
+			return nil
+		}
+		if ptr, ok := v.(*interface{}); ok {
+			if ptr == nil {
+				return nil
+			}
+			v = *ptr
+			continue
+		}
+		return v
+	}
+	return v
 }
 
 func calculateColumnWidth(text string) float64 {
