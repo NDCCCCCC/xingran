@@ -1448,7 +1448,24 @@ func (s *ExcelService) ensureUniqueValueCacheLoaded(ctx context.Context, config 
 func (s *ExcelService) ExportData(ctx context.Context, entityType string, params map[string]any) (*excelize.File, error) {
 	if _, exists := GetExportConfig(entityType); exists {
 		exportService := NewExcelExportService(s.db)
-		return exportService.ExportData(ctx, entityType, params)
+		f, err := exportService.ExportData(ctx, entityType, params)
+		if err != nil {
+			return nil, err
+		}
+		// 工位管理 (Phase 35 增强): 追加 3 类设备 sheet
+		// - AD设备: 域控 (ComputerName/OS/MAC/Serial/LastLogon)
+		// - 资产设备: 资产管理 (DeviceName/Model/Type/IP/ResponsibleUser)
+		// - 物理链路设备: MAC→port→infoPoint→workstation (MAC/Port/InfoPoint/LastSeen/Confidence)
+		// 失败不阻断主流程, 仅记录 warning。
+		if entityType == "workstation" {
+			impl, _ := exportService.(*excelExportServiceImpl)
+			if impl != nil {
+				if appendErr := s.appendWorkstationDeviceSheets(ctx, f, impl, params); appendErr != nil {
+					logger.Warnf("[ExcelExport] 工位导出追加设备 sheet 失败: %v", appendErr)
+				}
+			}
+		}
+		return f, nil
 	}
 
 	config, exists := GetExcelConfig(entityType)
@@ -2015,4 +2032,407 @@ func (s *ExcelService) ensureDeptExists(ctx context.Context, db *gorm.DB, code, 
 	}
 
 	return db.WithContext(ctx).Table("sys_dept").Create(dept).Error
+}
+
+// =========================================================================
+// Phase 35: 工位导出增强 — 追加 3 类设备 sheet
+// =========================================================================
+//
+// 工位管理导出时,除 Sheet 1 (工位列表) 外,还追加 3 个设备 sheet:
+//   - AD设备:        域控 (ComputerName / OS / MAC / Serial / LastLogon)
+//   - 资产设备:      资产管理 (DeviceName / Model / Type / IP / ResponsibleUser)
+//   - 物理链路设备:  MAC→port→infoPoint→workstation (MAC / Port / InfoPoint / LastSeen / Confidence)
+//
+// 设计决策:
+//   - 每个工位在 3 个设备 sheet 中占 0~N 行 (基于 GetADDevices / GetAssetDevices / GetPhysicalDevices)
+//   - 始终生成 sheet + 表头 (即使无数据,便于用户知道有这个数据维度)
+//   - batch enrichment: workstation_name / sys_ad_computer (OS+LastLogon) / ops_asset (IP)
+//   - 物理 Port/InfoPoint 从 WorkstationDevice.Description 正则解析,避免新增 JOIN
+//     Description 格式: "端口 GE2/6 (信息点 WH-04F-130)" 或附加历史关联提示
+//
+// 失败不阻断主流程, 调用方 (ExportData) 仅记录 warning。
+func (s *ExcelService) appendWorkstationDeviceSheets(
+	ctx context.Context,
+	f *excelize.File,
+	exportService *excelExportServiceImpl,
+	params map[string]any,
+) error {
+	logger.Infof("[ExcelExport] appendWorkstationDeviceSheets 入口: deviceService=%v params=%v",
+		s.deviceService != nil, params)
+
+	if s.deviceService == nil {
+		return fmt.Errorf("deviceService 未注入, 跳过工位设备 sheet 追加")
+	}
+
+	// 1. 提取当前过滤条件下的工位 ID 列表 (复用 exportService 的 queryBuilder)
+	workstationIDs, err := s.queryWorkstationIDsForExport(ctx, exportService, params)
+	if err != nil {
+		return fmt.Errorf("查询工位 ID 失败: %w", err)
+	}
+	logger.Infof("[ExcelExport] 查询到 %d 个工位 ID", len(workstationIDs))
+	if len(workstationIDs) == 0 {
+		logger.Infof("[ExcelExport] 当前过滤条件下无工位, 跳过设备 sheet 追加")
+		return nil
+	}
+
+	// 2. 真批量查询 3 类设备 (Phase 35 优化)
+	// 关键性能点: 用真批量方法 (GetADDevicesByWorkstations 等), 把 717 次 SQL 降到 ~3 次
+	// 内部使用独立的超时 context (避免 HTTP 请求 ctx 在中途被取消)
+	deviceCtx, deviceCancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer deviceCancel()
+
+	adMap, adErr := s.deviceService.GetADDevicesByWorkstations(deviceCtx, workstationIDs)
+	if adErr != nil {
+		logger.Warnf("[ExcelExport] 批量查询 AD 设备失败: %v", adErr)
+		adMap = make(map[string][]*models.WorkstationDevice)
+	}
+	assetMap, assetErr := s.deviceService.GetAssetDevicesByWorkstations(deviceCtx, workstationIDs)
+	if assetErr != nil {
+		logger.Warnf("[ExcelExport] 批量查询资产设备失败: %v", assetErr)
+		assetMap = make(map[string][]*models.WorkstationDevice)
+	}
+	physMap, physErr := s.deviceService.GetPhysicalDevicesByWorkstations(deviceCtx, workstationIDs)
+	if physErr != nil {
+		logger.Warnf("[ExcelExport] 批量查询物理链路设备失败: %v", physErr)
+		physMap = make(map[string][]*models.WorkstationDevice)
+	}
+
+	// 扁平化: map[wsID] → []WorkstationDevice
+	var adDevices, assetDevices, physicalDevices []*models.WorkstationDevice
+	for _, wsID := range workstationIDs {
+		adDevices = append(adDevices, adMap[wsID]...)
+		assetDevices = append(assetDevices, assetMap[wsID]...)
+		physicalDevices = append(physicalDevices, physMap[wsID]...)
+	}
+	logger.Infof("[ExcelExport] 设备收集完成: AD=%d 资产=%d 物理=%d",
+		len(adDevices), len(assetDevices), len(physicalDevices))
+
+	// 3. 批量 enrichment (workstation_name / ad_computer OS+LastLogon / asset IP)
+	wsNameMap := s.batchGetWorkstationNames(ctx, workstationIDs)
+	adEnrichment := s.batchGetADEnrichment(ctx, adDevices)
+	assetEnrichment := s.batchGetAssetEnrichment(ctx, assetDevices)
+
+	// 4. 写入 3 个 sheet
+	if err := s.writeDeviceSheet(f, "AD设备",
+		[]string{"工位名称", "ComputerName", "OS", "MAC", "Serial", "LastLogon"},
+		adDevices,
+		func(d *models.WorkstationDevice) []string {
+			os := ""
+			lastLogon := ""
+			if d.ADComputerID != nil {
+				if e, ok := adEnrichment[*d.ADComputerID]; ok {
+					os = e.os
+					lastLogon = e.lastLogon
+				}
+			}
+			return []string{
+				wsNameMap[d.WorkstationID],
+				stringValueOrEmpty(d.DeviceName),
+				os,
+				stringValueOrEmpty(d.MACAddress),
+				stringValueOrEmpty(d.DeviceSerial),
+				lastLogon,
+			}
+		}); err != nil {
+		return fmt.Errorf("写 AD sheet 失败: %w", err)
+	}
+
+	if err := s.writeDeviceSheet(f, "资产设备",
+		[]string{"工位名称", "DeviceName", "Model", "Type", "IP", "ResponsibleUser"},
+		assetDevices,
+		func(d *models.WorkstationDevice) []string {
+			ip := ""
+			if d.AssetID != nil {
+				ip = assetEnrichment[*d.AssetID]
+			}
+			return []string{
+				wsNameMap[d.WorkstationID],
+				stringValueOrEmpty(d.DeviceName),
+				stringValueOrEmpty(d.DeviceModel),
+				stringValueOrEmpty(d.DeviceType),
+				ip,
+				stringValueOrEmpty(d.ResponsibleUser),
+			}
+		}); err != nil {
+		return fmt.Errorf("写资产 sheet 失败: %w", err)
+	}
+
+	if err := s.writeDeviceSheet(f, "物理链路设备",
+		[]string{"工位名称", "设备名称", "序列号", "型号", "类型", "MAC", "IP地址", "责任人", "Port", "InfoPoint", "LastSeen", "Confidence"},
+		physicalDevices,
+		func(d *models.WorkstationDevice) []string {
+			port, infoPoint := parsePhysicalPortInfo(d.Description)
+			lastSeen := ""
+			if d.HistoryLastSeen != nil && !d.HistoryLastSeen.IsZero() {
+				lastSeen = d.HistoryLastSeen.Format("2006-01-02 15:04:05")
+			}
+			confidence := ""
+			if d.Confidence != nil {
+				confidence = fmt.Sprintf("%.2f", *d.Confidence)
+			}
+			return []string{
+				wsNameMap[d.WorkstationID],
+				stringValueOrEmpty(d.DeviceName),
+				stringValueOrEmpty(d.DeviceSerial),
+				stringValueOrEmpty(d.DeviceModel),
+				stringValueOrEmpty(d.DeviceType),
+				stringValueOrEmpty(d.MACAddress),
+				stringValueOrEmpty(d.IPAddress),
+				stringValueOrEmpty(d.ResponsibleUser),
+				port,
+				infoPoint,
+				lastSeen,
+				confidence,
+			}
+		}); err != nil {
+		return fmt.Errorf("写物理链路 sheet 失败: %w", err)
+	}
+
+	logger.Infof("[ExcelExport] 工位导出追加设备 sheet 完成: AD=%d 资产=%d 物理=%d 工位数=%d",
+		len(adDevices), len(assetDevices), len(physicalDevices), len(workstationIDs))
+	return nil
+}
+
+// queryWorkstationIDsForExport 提取当前过滤条件下的工位 ID 列表。
+//
+// 实现策略:
+//   - 不复用 WorkstationQueryBuilder (其带 ops_floors/ops_buildings LEFT JOIN 与 ::uuid 强制类型转换,
+//     在 floor_id/building_id 为空字符串时会导致整个 query 失败, 进而本函数无返回)
+//   - 改用直接 sys_workstation 表查询 + 同源 FilterMapping, 避免 JOIN 副作用
+//   - Pluck 到 *[]string 在 PG/SQLite 上对非空 UUID 列均安全
+func (s *ExcelService) queryWorkstationIDsForExport(
+	ctx context.Context,
+	exportService *excelExportServiceImpl,
+	params map[string]any,
+) ([]string, error) {
+	config, exists := GetExportConfig("workstation")
+	if !exists {
+		return nil, fmt.Errorf("工位导出配置缺失")
+	}
+	_ = exportService // 当前实现不再依赖 exportService, 保留形参以兼容调用方
+
+	// 直接查询 sys_workstation 表, 应用 FilterMapping 过滤 (避免 JOIN 副作用)
+	query := s.db.WithContext(ctx).
+		Table("sys_workstation").
+		Where("deleted_at IS NULL")
+
+	for paramKey, paramValue := range params {
+		if paramValue == nil || paramValue == "" {
+			continue
+		}
+		dbField, hasMapping := config.FilterMapping[paramKey]
+		if !hasMapping {
+			dbField = paramKey
+		}
+		// FilterMapping 中的字段不带表前缀, 补 sys_workstation.
+		if !strings.Contains(dbField, ".") {
+			dbField = "sys_workstation." + dbField
+		}
+		switch v := paramValue.(type) {
+		case string:
+			query = query.Where(dbField+" LIKE ?", "%"+v+"%")
+		case int, int64, float64:
+			query = query.Where(dbField+" = ?", v)
+		case bool:
+			query = query.Where(dbField+" = ?", v)
+		case []interface{}:
+			if len(v) > 0 {
+				query = query.Where(dbField+" IN ?", v)
+			}
+		}
+	}
+
+	var wsIDs []string
+	if err := query.Pluck("sys_workstation.id", &wsIDs).Error; err != nil {
+		return nil, fmt.Errorf("查询 sys_workstation.id 失败: %w", err)
+	}
+	return wsIDs, nil
+}
+
+// adEnrichmentInfo AD 设备的 enrichment 数据 (OS + LastLogon)。
+type adEnrichmentInfo struct {
+	os        string
+	lastLogon string
+}
+
+// batchGetWorkstationNames 按 ID 批量获取工位名称映射 (sys_workstation.workstation_name)。
+func (s *ExcelService) batchGetWorkstationNames(ctx context.Context, ids []string) map[string]string {
+	result := make(map[string]string, len(ids))
+	if len(ids) == 0 {
+		return result
+	}
+	var rows []struct {
+	 ID              string
+	 WorkstationName string
+	}
+	if err := s.db.WithContext(ctx).
+		Table("sys_workstation").
+		Select("id, workstation_name").
+		Where("id IN ? AND deleted_at IS NULL", ids).
+		Scan(&rows).Error; err != nil {
+		logger.Warnf("[ExcelExport] 批量获取工位名称失败: %v", err)
+		return result
+	}
+	for _, r := range rows {
+		result[r.ID] = r.WorkstationName
+	}
+	return result
+}
+
+// batchGetADEnrichment 按 ADComputerID 批量获取 sys_ad_computer 的 OS + LastLogon。
+func (s *ExcelService) batchGetADEnrichment(ctx context.Context, devices []*models.WorkstationDevice) map[string]adEnrichmentInfo {
+	result := make(map[string]adEnrichmentInfo)
+	if len(devices) == 0 {
+		return result
+	}
+	idSet := make(map[string]bool)
+	ids := make([]string, 0)
+	for _, d := range devices {
+		if d.ADComputerID != nil && *d.ADComputerID != "" && !idSet[*d.ADComputerID] {
+			idSet[*d.ADComputerID] = true
+			ids = append(ids, *d.ADComputerID)
+		}
+	}
+	if len(ids) == 0 {
+		return result
+	}
+	var rows []struct {
+	 ID              string
+	 OperatingSystem string
+	 LastLogon       *time.Time
+	}
+	if err := s.db.WithContext(ctx).
+		Table("sys_ad_computer").
+		Select("id, operating_system, last_logon").
+		Where("id IN ?", ids).
+		Scan(&rows).Error; err != nil {
+		logger.Warnf("[ExcelExport] 批量获取 AD enrichment 失败: %v", err)
+		return result
+	}
+	for _, r := range rows {
+		lastLogon := ""
+		if r.LastLogon != nil && !r.LastLogon.IsZero() {
+			lastLogon = r.LastLogon.Format("2006-01-02 15:04:05")
+		}
+		result[r.ID] = adEnrichmentInfo{os: r.OperatingSystem, lastLogon: lastLogon}
+	}
+	return result
+}
+
+// batchGetAssetEnrichment 按 AssetID 批量获取 ops_asset 的 IP 地址。
+func (s *ExcelService) batchGetAssetEnrichment(ctx context.Context, devices []*models.WorkstationDevice) map[string]string {
+	result := make(map[string]string)
+	if len(devices) == 0 {
+		return result
+	}
+	idSet := make(map[string]bool)
+	ids := make([]string, 0)
+	for _, d := range devices {
+		if d.AssetID != nil && *d.AssetID != "" && !idSet[*d.AssetID] {
+			idSet[*d.AssetID] = true
+			ids = append(ids, *d.AssetID)
+		}
+	}
+	if len(ids) == 0 {
+		return result
+	}
+	var rows []struct {
+	 ID        string
+	 IPAddress string
+	}
+	if err := s.db.WithContext(ctx).
+		Table("ops_asset").
+		Select("id, ip_address").
+		Where("id IN ? AND deleted_at IS NULL", ids).
+		Scan(&rows).Error; err != nil {
+		logger.Warnf("[ExcelExport] 批量获取资产 IP enrichment 失败: %v", err)
+		return result
+	}
+	for _, r := range rows {
+		result[r.ID] = r.IPAddress
+	}
+	return result
+}
+
+// writeDeviceSheet 写入设备 sheet (固定格式: 1 行表头 + N 行数据)。
+func (s *ExcelService) writeDeviceSheet(
+	f *excelize.File,
+	sheetName string,
+	headers []string,
+	devices []*models.WorkstationDevice,
+	rowMapper func(*models.WorkstationDevice) []string,
+) error {
+	index, err := f.NewSheet(sheetName)
+	if err != nil {
+		return fmt.Errorf("创建 sheet %s 失败: %w", sheetName, err)
+	}
+	f.SetActiveSheet(index)
+
+	headerStyle, err := createHeaderStyle(f)
+	if err != nil {
+		return fmt.Errorf("创建表头样式失败: %w", err)
+	}
+
+	// 写表头
+	for i, h := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		_ = f.SetCellValue(sheetName, cell, h)
+		_ = f.SetCellStyle(sheetName, cell, cell, headerStyle)
+	}
+
+	// 列宽
+	for i, h := range headers {
+		colName, _ := excelize.ColumnNumberToName(i + 1)
+		_ = f.SetColWidth(sheetName, colName, colName, calculateColumnWidth(h))
+	}
+
+	// 写数据行 (允许 devices 为空, 表头保留)
+	for i, d := range devices {
+		row := rowMapper(d)
+		for j, val := range row {
+			cell, _ := excelize.CoordinatesToCellName(j+1, i+2)
+			_ = f.SetCellValue(sheetName, cell, val)
+		}
+	}
+
+	_ = f.SetPanes(sheetName, &excelize.Panes{
+		Freeze: true,
+		XSplit: 1,
+		YSplit: 1,
+	})
+
+	return nil
+}
+
+// parsePhysicalPortInfo 从 WorkstationDevice.Description 解析 Port + InfoPoint。
+//
+// Description 格式:
+//   - "端口 GE2/6 (信息点 WH-04F-130)"
+//   - "端口 GE2/6"
+//   - "端口 GE2/6 (信息点 WH-04F-130)\n历史关联 (最后上线时间: 2026-07-21 12:00:00)"
+//
+// 返回值: port (如 "GE2/6"), infoPoint (如 "WH-04F-130"), 无匹配时为空字符串。
+func parsePhysicalPortInfo(desc *string) (port, infoPoint string) {
+	if desc == nil {
+		return "", ""
+	}
+	// 匹配 "端口 <port>" (直到空白 / 左括号 / 换行)
+	portRe := regexp.MustCompile(`端口\s+([^\s(\n]+)`)
+	if m := portRe.FindStringSubmatch(*desc); len(m) > 1 {
+		port = m[1]
+	}
+	// 匹配 "信息点 <name>" (直到右括号 / 换行)
+	infoRe := regexp.MustCompile(`信息点\s+([^)\n]+)`)
+	if m := infoRe.FindStringSubmatch(*desc); len(m) > 1 {
+		infoPoint = m[1]
+	}
+	return port, infoPoint
+}
+
+// stringValueOrEmpty 把 *string 安全转为字符串 (nil 返回空)。
+func stringValueOrEmpty(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
