@@ -2108,9 +2108,17 @@ func (s *ExcelService) appendWorkstationDeviceSheets(
 		len(adDevices), len(assetDevices), len(physicalDevices))
 
 	// 3. 批量 enrichment (workstation_name / ad_computer OS+LastLogon / asset IP)
-	wsNameMap := s.batchGetWorkstationNames(ctx, workstationIDs)
-	adEnrichment := s.batchGetADEnrichment(ctx, adDevices)
-	assetEnrichment := s.batchGetAssetEnrichment(ctx, assetDevices)
+	//
+	// 关键: enrichment 必须复用 deviceCtx (与本函数第 2 步真批量设备查询一致),
+	// 而非上层 ctx. 上层 ctx 来自 gin.Request.Context(), 客户端断开 (browser / proxy
+	// 超时) 会立即 cancel, 导致三个 enrichment 查询全部报 context canceled,
+	// 但 deviceCtx 是 context.Background() + 60s timeout, 不受 HTTP 客户端断影响.
+	//
+	// 借用 deviceCtx 也是安全的: enrichment 阶段所有数据已经从 deviceCtx 步骤取出,
+	// 这里只是再补 3 个字典级查询, 数据量小 (UUID 列表 648/1643/1662), 60s 之内必完成.
+	wsNameMap := s.batchGetWorkstationNames(deviceCtx, workstationIDs)
+	adEnrichment := s.batchGetADEnrichment(deviceCtx, adDevices)
+	assetEnrichment := s.batchGetAssetEnrichment(deviceCtx, assetDevices)
 
 	// 4. 写入 3 个 sheet
 	if err := s.writeDeviceSheet(f, "AD设备",
@@ -2320,6 +2328,10 @@ func (s *ExcelService) batchGetADEnrichment(ctx context.Context, devices []*mode
 }
 
 // batchGetAssetEnrichment 按 AssetID 批量获取 ops_asset 的 IP 地址。
+//
+// 关键: ops_asset 表实际只有 `machine_ip` 列(对应 Asset.MachineIP 字段,语义"加域IP"),
+// 没有 `ip_address` 列 (SQLSTATE 42703). 早期实现误用 `ip_address` → 被前面
+// 三轮 enrichment context canceled 掩盖,2026-07-24 context cancel 修复后才浮出.
 func (s *ExcelService) batchGetAssetEnrichment(ctx context.Context, devices []*models.WorkstationDevice) map[string]string {
 	result := make(map[string]string)
 	if len(devices) == 0 {
@@ -2338,18 +2350,18 @@ func (s *ExcelService) batchGetAssetEnrichment(ctx context.Context, devices []*m
 	}
 	var rows []struct {
 	 ID        string
-	 IPAddress string
+	 MachineIP string
 	}
 	if err := s.db.WithContext(ctx).
 		Table("ops_asset").
-		Select("id, ip_address").
+		Select("id, machine_ip").
 		Where("id IN ? AND deleted_at IS NULL", ids).
 		Scan(&rows).Error; err != nil {
 		logger.Warnf("[ExcelExport] 批量获取资产 IP enrichment 失败: %v", err)
 		return result
 	}
 	for _, r := range rows {
-		result[r.ID] = r.IPAddress
+		result[r.ID] = r.MachineIP
 	}
 	return result
 }

@@ -133,7 +133,7 @@ func setupEnrichmentTestDB(t *testing.T) *gorm.DB {
 		CREATE TABLE ops_asset (
 			id TEXT PRIMARY KEY,
 			devicesn TEXT,
-			ip_address TEXT,
+			machine_ip TEXT,
 			deleted_at DATETIME
 		)
 	`).Error)
