@@ -19,7 +19,7 @@ import type {
  */
 const blobAxios: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "/api/v1",
-  timeout: 30000,
+  timeout: 300000,  // 5 min — 文件下载（xlsx/zip）可能 10MB+，30s 默认 timeout 极易命中
   headers: {
     "Content-Type": "application/json",
   },

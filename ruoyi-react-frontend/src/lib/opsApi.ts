@@ -311,9 +311,12 @@ export const infoPointApi = createCrudApi<InfoPoint>({ basePath: "/ops/infoPoint
 // - 复用与主 API 客户端相同的 baseURL（去掉硬编码 /api/v1/ 前缀）
 // - 不挂载响应拦截器，因为响应是 Blob 二进制流，无法 JSON 解析
 // - 请求拦截器只做 Token 注入，行为与其他 CRUD 保持一致
+// - 工位导出 1643 工位 + ~6000 行设备数据 → xlsx ~5-10 MB → 默认 30s timeout 易中招
+//   (尤其 dev 环境 Vite proxy 转发增加额外间接,网络抖动会被放大)
+//   改 5min 给足缓冲;普通 CRUD 不走 blobAxios 不会受影响
 const blobAxios: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "/api/v1",
-  timeout: 30000,
+  timeout: 300000,
 });
 
 blobAxios.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
