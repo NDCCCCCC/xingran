@@ -1,10 +1,12 @@
 ---
 slug: login-export-dual-spinner
-status: diagnosed
+status: resolved
 trigger: 系统登录或 Excel 导出时页面上同时显示两个 loading 圈叠加（一个白边框淡蓝空心圈 + 一个青色实心深色圈），用户期望只显示一个等待指示。
-goal: find_root_cause_only
+goal: find_root_cause_and_fix
 created: 2026-07-24T00:00:00+08:00
-updated: 2026-07-24T10:30:00+08:00
+updated: 2026-07-24T11:00:00+08:00
+resolved_at: 2026-07-24T11:00:00+08:00
+fix_commit: 658042e8
 tdd_mode: false
 ---
 
@@ -146,3 +148,46 @@ tdd_mode: false
    - 若只有 `.ant-btn-loading` 插入 → 双圈是 CSS 视觉叠加伪影（z-index / stacking context），方向改为检查 `index.css`。
 2. 临时把 `hashed: true` 改为 `false` 重启 dev server 验证是否消失。
 3. **不要在未确认前修改代码**。
+
+## Resolution（2026-07-24）
+
+### 第一次假设（推翻）
+
+> `hashed: true` + 双层 `<ConfigProvider>` + `<App>` 嵌套 → antd v6 cssVar 模式下 Button.loading 内部 `<Spin>` 与 `.ant-btn-loading::before` 双渲染。
+
+**验证结果：不成立**。把 `AntdThemeBridge.tsx:93` 的 `hashed: true` 改为 `hashed: false`，用户实测双圈仍存在。已还原为 `hashed: true`。
+
+### 真实根因
+
+> **`src/index.css:801-813` 自定义 `.ant-btn-loading::before` 伪元素（白边框旋转动画） + antd v6 Button.loading 内部渲染的 `<Spin>` 节点 → 两个动画叠加 = 双圈。**
+
+证据链：
+
+1. `src/index.css:801-813` 显式定义 `border: 2px solid var(--theme-text-inverse); border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite;` —— 正是白边框空心圈的来源。
+2. antd v6 (`^6.1.1`) Button.loading 内部自动挂载 `<Spin>` 节点 —— 青色实心深色点来自 `.ant-spin-dot-item { background: var(--theme-primary) !important; }`（`index.css:1435-1437`）。
+3. `@keyframes spin` 检索确认只在 `::before` 一处使用，其他 spin 动画（logo-spin / base-widget-spin / grid-item-spin）命名不同，无依赖。
+4. git log 显示 `::before` 块是某次 commit 主动加入的项目 CSS（推测 antd v4/v5 时期 Button.loading 内部无 Spin 节点，项目手动补的 loading 视觉；升级 v6 后未清理）。
+
+### 修复
+
+**文件 1：`src/index.css`** — 删除项目自定义 `::before` 块和 `@keyframes spin`，仅保留 `.ant-btn-loading { position: relative; pointer-events: none; }` 维持禁用点击语义。
+
+**文件 2：`src/design-system/components/AntdThemeBridge.tsx:93`** — 还原 `hashed: true`（与本 bug 无关）+ 注释更新记录真正根因，避免下次误判。
+
+### 验证
+
+- ✅ `npm run type-check` 通过
+- ✅ `npm run build` 通过（50.37s）
+- ✅ 用户浏览器手动验证：登录按钮 / Excel 导出按钮 loading 双圈消失，仅保留 antd v6 内置单圈
+- ✅ 主题切换回归验证：明/暗模式切换无颜色残留（hashed: true 还原生效）
+
+### Commit
+
+- `658042e8` fix(frontend): 修复登录/Excel 导出按钮双圈 loading 问题
+  - 改动 3 个文件：index.css（核心修复）、AntdThemeBridge.tsx（注释还原）、.planning/debug/login-export-dual-spinner.md
+  - 未推送，等待用户决定 push 时机
+
+### 教训
+
+1. **第一轮诊断过度归因于 antd 主题配置**：未第一时间检查 `index.css` 自定义 CSS。修复类 CSS bug 应先 grep `.ant-btn`、`.ant-spin` 项目侧覆盖，再考虑框架层。
+2. **CSS 升级审计**：升级 antd 主版本（v5→v6）时，应有 checklist 主动审计项目自定义 CSS 是否与新版本 antd 组件库提供的视觉效果重复。本 bug 即是 antd v4/v5 时期自定义 `::before` 在 v6 Button.loading 内部 Spin 渲染升级后未清理导致。
