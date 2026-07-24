@@ -90,6 +90,8 @@ const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
 			},
 			algorithm: algorithms,
 			// 主题变更时改变 hashed 标识，强制 AntD 重新生成 CSS（防止主题切换残留）
+			// 注: 双圈 Loading 问题由 src/index.css 的 .ant-btn-loading::before 与
+			// antd v6 内置 Spin 重复渲染导致, 与 hashed 配置无关, 修复见 index.css.
 			hashed: true,
 		};
 	}, [customColors?.primary, customColors?.sidebar, themeMode, density, appliedTheme]);
