@@ -37,17 +37,6 @@ func (b *CollectorBase) CleanOldRecords(ctx context.Context, model interface{}, 
 	return result.RowsAffected, result.Error
 }
 
-// GetOnlineDevices 返回所有在线的网络设备列表。
-//
-// 供 CollectAllDevices 等方法复用的基础查询。
-func (b *CollectorBase) GetOnlineDevices(ctx context.Context) ([]models.NetworkDevice, error) {
-	var devices []models.NetworkDevice
-	err := b.DB.WithContext(ctx).
-		Where("status = ?", models.DeviceStatusOnline).
-		Find(&devices).Error
-	return devices, err
-}
-
 // CollectAllDevices 通用的"遍历所有在线设备 → 逐个采集"逻辑。
 //
 // 由于 Go 不允许在非泛型类型的方法上使用类型参数，此函数为包级泛型函数。
