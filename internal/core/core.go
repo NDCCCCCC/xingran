@@ -636,30 +636,48 @@ const coreShutdownTimeout = 30 * time.Second
 //  7. 系统指标缓存服务 (MetricsCacheService.Stop)
 //  8. RPA 扩缩容服务 (RPAScalingService.Stop)
 //  9. 缓存 (Cache.Close) — 在 DB 之前关,避免异步写丢
-//  10. sleep 100ms — 等待操作日志/缓存异步写完成
+//  10. sleep 100ms — 等待操作日志异步写完成(详见函数内注释)
 //  11. 数据库连接 (DB.Close)
 //
 // 总截止:coreShutdownTimeout(30s) — 任何子步骤阻塞 → 强制返回,绝不卡死
+//
+// C1 可取消的优雅关闭(谨慎两步法,本次落地第一步):
+//   - 第一步(本次):建立 shutdownCtx (context.WithTimeout, 等于 coreShutdownTimeout) 作为
+//     总 deadline,并把监视 goroutine 改为 select shutdownCtx.Done() — 单一 deadline 来源,
+//     同时为 ctx-aware 子服务预留接入点。当前各子服务 Stop()/Close() 签名均不接受 ctx
+//     (Scheduler.Stop / DeviceInfoCollectionService.Stop / DeviceMonitorService.Close /
+//     MetricsCacheService.Stop / RPAScalingService.Stop / NoticeHub.Stop / Cache.Close /
+//     Database.Close 均为无参或仅返回 error),不强行改签名以避免回归。
+//   - 第二步(未来):当子服务升级为接受 context.Context 时,直接将 shutdownCtx 传入
+//     对应 Stop(ctx) / Close(ctx) 调用,即可实现"deadline 触发即取消子调用"的真正语义。
 func (c *Core) Close() {
-	// 总 deadline 兜底:到点强制返回(防止子步骤死等)
+	// shutdownCtx 是整个 Close() 流程的总 deadline。各子服务目前不接受 ctx,
+	// 此 ctx 暂仅驱动下方 deadline 监视 goroutine;待子服务签名升级后即可注入。
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), coreShutdownTimeout)
+	defer cancel()
+
+	// deadline 监视 goroutine:到点仅 log 警告(Close 无法主动中断已无 ctx 包裹的子调用,
+	// 资源由 OS 回收,不会泄漏到下次启动)。
+	// closeDone 让 goroutine 在 Close() 正常返回时静默退出,避免 cancel() 触发的
+	// shutdownCtx.Done() 产生误报 warn(Err() == DeadlineExceeded 才是真超时)。
 	closeDone := make(chan struct{})
 	defer close(closeDone)
 	go func() {
-		timer := time.NewTimer(coreShutdownTimeout)
-		defer timer.Stop()
 		select {
-		case <-timer.C:
-			applogger.Warnf("[Core.Close] 已超过 %v 强制结束(子步骤阻塞,资源将由 OS 回收)", coreShutdownTimeout)
+		case <-shutdownCtx.Done():
+			if shutdownCtx.Err() == context.DeadlineExceeded {
+				applogger.Warnf("[Core.Close] 已超过 %v 强制结束(子步骤阻塞,资源将由 OS 回收)", coreShutdownTimeout)
+			}
 		case <-closeDone:
 		}
 	}()
 
-	// 停止子进程 reaper（P2-A7）
+	// 停止子进程 reaper（P2-A7）— reaperCancel 是 context.CancelFunc,立即返回,无需 ctx
 	if c.reaperCancel != nil {
 		c.reaperCancel()
 		applogger.Infof("子进程 reaper 已停止")
 	}
-	// 停止通知中心
+	// 停止通知中心 — NoticeHub.Stop() 当前不接受 ctx,内部为同步清理
 	if c.NoticeHub != nil {
 		c.NoticeHub.Stop()
 		applogger.Infof("通知中心已停止")
@@ -668,40 +686,52 @@ func (c *Core) Close() {
 	// 原顺序在 DeviceInfoCollectionService.Stop() 之后,前 5-15s 仍在 spawn
 	// 对账/物化视图/采集任务,这些任务抢 DB 连接 + 触发 SSH 长连接 →
 	// pool 24/20 + WaitGroup 死等 → 进程永远不退。
+	// Scheduler.Stop() 当前不接受 ctx(robfig cron 无 ctx 集成),由总 deadline 兜底
 	if c.Scheduler != nil {
 		c.Scheduler.Stop()
 		applogger.Infof("定时任务调度器已停止")
 	}
 	scheduler.StopADSyncScheduler()
-	// 停止设备信息采集服务(内部自带 8s 兜底,不会阻塞 Close)
+	// 停止设备信息采集服务(内部自带 8s 兜底,不会阻塞 Close)。
+	// DeviceInfoCollectionService.Stop() 当前不接受 ctx,内部 goroutine 通过 channel close 退出
 	if c.DeviceInfoCollectionService != nil {
 		c.DeviceInfoCollectionService.Stop()
 		applogger.Infof("设备信息采集服务已停止")
 	}
-	// 关闭设备监控服务
+	// 关闭设备监控服务 — DeviceMonitorService.Close() 当前不接受 ctx,返回 error 沿用原行为忽略
 	if c.DeviceMonitorService != nil {
 		c.DeviceMonitorService.Close()
 		applogger.Infof("设备监控服务已关闭")
 	}
-	// 停止系统指标缓存服务
+	// 停止系统指标缓存服务 — MetricsCacheService.Stop() 当前不接受 ctx
 	if c.MetricsCacheService != nil {
 		c.MetricsCacheService.Stop()
 		applogger.Infof("系统指标缓存服务已停止")
 	}
-	// 停止 RPA 扩缩容服务
+	// 停止 RPA 扩缩容服务 — RPAScalingService.Stop() 受 rpaScalingService 接口约束,当前不接受 ctx
 	if c.RPAScalingService != nil {
 		c.RPAScalingService.Stop()
 		applogger.Infof("RPA 扩缩容服务已停止")
 	}
-	// 关闭缓存（必须在数据库之前关闭，因为缓存可能有异步写入操作）
+	// 关闭缓存（必须在数据库之前关闭，因为缓存可能有异步写入操作）。
+	// MultiLevelCache.Close() 内部已通过 L2WriteWriter.Stop() 的 wg.Wait() 确定性等待
+	// 所有 L2 异步写完成(pkg/cache/l2_writer.go:181) — 这里无需额外同步原语。
+	// Cache.Close() 当前不接受 ctx。
 	if c.Cache != nil {
 		c.Cache.Close()
 		applogger.Infof("缓存已关闭")
 	}
-	// 等待一小段时间，确保所有异步操作完成
-	// 这包括：操作日志异步写入、缓存异步写入等
+	// 等待操作日志异步写入完成(heuristic 兜底)。
+	//
+	// operlog.RecordAsync / operLogService.RecordAsync 均为 fire-and-forget goroutine
+	// (internal/services/oper_log_service.go:67 `go func() { db.Create(operLog) }`),
+	// **无暴露的 WaitGroup/Flush 原语**,因此无法用确定性 sync.WaitGroup 替代 sleep
+	// (C1 spec: "if a given call has no clean WaitGroup target, keep current behavior
+	// and add a brief comment noting why")。
+	// 100ms 是经验值,覆盖 DB.Create 的往返延迟。如未来 operlog 服务暴露 Flush()/Wait(),
+	// 应改为确定性等待(DB.Close 之前需确保异步审计写已落盘,避免丢失审计记录)。
 	time.Sleep(100 * time.Millisecond)
-	// 最后关闭数据库连接
+	// 最后关闭数据库连接 — Database.Close() 不接受 ctx,内部 sqlDB.Close() 由 database/sql 自管超时
 	if c.DB != nil {
 		c.DB.Close()
 		applogger.Infof("数据库连接已关闭")
