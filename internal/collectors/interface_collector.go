@@ -3,6 +3,7 @@ package collectors
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -104,7 +105,10 @@ func (c *InterfaceCollector) CollectDevice(ctx context.Context, deviceID string)
 			OutputErrors:  iface.OutputErrors,
 			CollectedAt:   time.Now(),
 		}
-		c.DB.WithContext(ctx).Create(interfaceRecord)
+		if err := c.DB.WithContext(ctx).Create(interfaceRecord).Error; err != nil {
+			log.Printf("[Interface] 保存接口记录失败 deviceID=%s name=%s: %v",
+				device.ID, iface.Name, err)
+		}
 	}
 
 	result.Success = true
@@ -261,20 +265,30 @@ func (c *InterfaceCollector) GetInterfaceStats(ctx context.Context) (map[string]
 		CollectedRecently int64
 	}
 
-	c.DB.WithContext(ctx).Model(&models.DeviceInterface{}).Count(&stats.TotalInterfaces)
-	c.DB.WithContext(ctx).Model(&models.DeviceInterface{}).Where("oper_status = ?", "up").Count(&stats.UpInterfaces)
-	c.DB.WithContext(ctx).Model(&models.DeviceInterface{}).Where("oper_status = ?", "down").Count(&stats.DownInterfaces)
+	if err := c.DB.WithContext(ctx).Model(&models.DeviceInterface{}).Count(&stats.TotalInterfaces).Error; err != nil {
+		return nil, fmt.Errorf("统计接口总数失败: %w", err)
+	}
+	if err := c.DB.WithContext(ctx).Model(&models.DeviceInterface{}).Where("oper_status = ?", "up").Count(&stats.UpInterfaces).Error; err != nil {
+		return nil, fmt.Errorf("统计up接口数失败: %w", err)
+	}
+	if err := c.DB.WithContext(ctx).Model(&models.DeviceInterface{}).Where("oper_status = ?", "down").Count(&stats.DownInterfaces).Error; err != nil {
+		return nil, fmt.Errorf("统计down接口数失败: %w", err)
+	}
 
 	// 最近24小时采集的接口数量
 	since := time.Now().Add(-24 * time.Hour)
-	c.DB.WithContext(ctx).Model(&models.DeviceInterface{}).Where("collected_at > ?", since).Count(&stats.CollectedRecently)
+	if err := c.DB.WithContext(ctx).Model(&models.DeviceInterface{}).Where("collected_at > ?", since).Count(&stats.CollectedRecently).Error; err != nil {
+		return nil, fmt.Errorf("统计最近24小时接口数失败: %w", err)
+	}
 
 	// 按设备统计
 	stats.ByDevice = make(map[string]int64)
-	c.DB.WithContext(ctx).Model(&models.DeviceInterface{}).
+	if err := c.DB.WithContext(ctx).Model(&models.DeviceInterface{}).
 		Select("device_id, COUNT(*) as count").
 		Group("device_id").
-		Scan(&stats.ByDevice)
+		Scan(&stats.ByDevice).Error; err != nil {
+		return nil, fmt.Errorf("按设备统计接口失败: %w", err)
+	}
 
 	return map[string]interface{}{
 		"totalInterfaces":   stats.TotalInterfaces,

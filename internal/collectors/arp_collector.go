@@ -3,6 +3,7 @@ package collectors
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"strings"
 	"time"
@@ -92,7 +93,10 @@ func (c *ARPCollector) CollectDevice(ctx context.Context, deviceID string) (*ARP
 			VLAN:        entry.VLAN,
 			CollectedAt: time.Now(),
 		}
-		c.DB.WithContext(ctx).Create(arpRecord)
+		if err := c.DB.WithContext(ctx).Create(arpRecord).Error; err != nil {
+			log.Printf("[ARP] 保存ARP条目失败 deviceID=%s ip=%s mac=%s: %v",
+				device.ID, entry.IPAddress, entry.MACAddress, err)
+		}
 	}
 
 	result.Success = true
@@ -263,25 +267,33 @@ func (c *ARPCollector) GetARPStats(ctx context.Context) (map[string]interface{},
 		CollectedRecently int64
 	}
 
-	c.DB.WithContext(ctx).Model(&models.DeviceARPEntry{}).Count(&stats.TotalEntries)
+	if err := c.DB.WithContext(ctx).Model(&models.DeviceARPEntry{}).Count(&stats.TotalEntries).Error; err != nil {
+		return nil, fmt.Errorf("统计ARP总条数失败: %w", err)
+	}
 
 	// 按设备统计
 	stats.ByDevice = make(map[string]int64)
-	c.DB.WithContext(ctx).Model(&models.DeviceARPEntry{}).
+	if err := c.DB.WithContext(ctx).Model(&models.DeviceARPEntry{}).
 		Select("device_id, COUNT(*) as count").
 		Group("device_id").
-		Scan(&stats.ByDevice)
+		Scan(&stats.ByDevice).Error; err != nil {
+		return nil, fmt.Errorf("按设备统计ARP失败: %w", err)
+	}
 
 	// 按类型统计
 	stats.ByType = make(map[string]int64)
-	c.DB.WithContext(ctx).Model(&models.DeviceARPEntry{}).
+	if err := c.DB.WithContext(ctx).Model(&models.DeviceARPEntry{}).
 		Select("type, COUNT(*) as count").
 		Group("type").
-		Scan(&stats.ByType)
+		Scan(&stats.ByType).Error; err != nil {
+		return nil, fmt.Errorf("按类型统计ARP失败: %w", err)
+	}
 
 	// 最近24小时采集的条目数
 	since := time.Now().Add(-24 * time.Hour)
-	c.DB.WithContext(ctx).Model(&models.DeviceARPEntry{}).Where("collected_at > ?", since).Count(&stats.CollectedRecently)
+	if err := c.DB.WithContext(ctx).Model(&models.DeviceARPEntry{}).Where("collected_at > ?", since).Count(&stats.CollectedRecently).Error; err != nil {
+		return nil, fmt.Errorf("统计最近24小时ARP失败: %w", err)
+	}
 
 	return map[string]interface{}{
 		"totalEntries":      stats.TotalEntries,

@@ -3,6 +3,7 @@ package collectors
 import (
 	"context"
 	"fmt"
+	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -117,7 +118,10 @@ func (c *AssetCollector) CollectDevice(ctx context.Context, deviceID string) (*A
 		CPUUsage:          assetInfo.CPUUsage,
 		CollectedAt:       time.Now(),
 	}
-	c.DB.WithContext(ctx).Create(assetRecord)
+	if err := c.DB.WithContext(ctx).Create(assetRecord).Error; err != nil {
+		log.Printf("[Asset] 保存资产记录失败 deviceID=%s serial=%s: %v",
+			device.ID, assetInfo.SerialNumber, err)
+	}
 
 	result.Success = true
 	result.Asset = assetInfo
@@ -393,34 +397,44 @@ func (c *AssetCollector) GetAssetStats(ctx context.Context) (map[string]interfac
 		AvgMemoryUsage    float64
 	}
 
-	c.DB.WithContext(ctx).Model(&models.DeviceAsset{}).Count(&stats.TotalDevices)
+	if err := c.DB.WithContext(ctx).Model(&models.DeviceAsset{}).Count(&stats.TotalDevices).Error; err != nil {
+		return nil, fmt.Errorf("统计资产设备总数失败: %w", err)
+	}
 
 	// 按软件版本统计
 	stats.BySoftwareVersion = make(map[string]int64)
-	c.DB.WithContext(ctx).Model(&models.DeviceAsset{}).
+	if err := c.DB.WithContext(ctx).Model(&models.DeviceAsset{}).
 		Select("software_version, COUNT(*) as count").
 		Group("software_version").
-		Scan(&stats.BySoftwareVersion)
+		Scan(&stats.BySoftwareVersion).Error; err != nil {
+		return nil, fmt.Errorf("按软件版本统计资产失败: %w", err)
+	}
 
 	// 按产品型号统计
 	stats.ByProduct = make(map[string]int64)
-	c.DB.WithContext(ctx).Model(&models.DeviceAsset{}).
+	if err := c.DB.WithContext(ctx).Model(&models.DeviceAsset{}).
 		Select("product_name, COUNT(*) as count").
 		Group("product_name").
-		Scan(&stats.ByProduct)
+		Scan(&stats.ByProduct).Error; err != nil {
+		return nil, fmt.Errorf("按产品型号统计资产失败: %w", err)
+	}
 
 	// 平均CPU使用率
 	var avgCPU, avgMem float64
-	c.DB.WithContext(ctx).Model(&models.DeviceAsset{}).
+	if err := c.DB.WithContext(ctx).Model(&models.DeviceAsset{}).
 		Select("AVG(cpu_usage)").
-		Scan(&avgCPU)
+		Scan(&avgCPU).Error; err != nil {
+		return nil, fmt.Errorf("统计平均CPU使用率失败: %w", err)
+	}
 	stats.AvgCPUUsage = avgCPU
 
 	// 平均内存使用率
-	c.DB.WithContext(ctx).Model(&models.DeviceAsset{}).
+	if err := c.DB.WithContext(ctx).Model(&models.DeviceAsset{}).
 		Where("total_memory > 0").
 		Select("AVG((total_memory - free_memory) * 100.0 / total_memory)").
-		Scan(&avgMem)
+		Scan(&avgMem).Error; err != nil {
+		return nil, fmt.Errorf("统计平均内存使用率失败: %w", err)
+	}
 	stats.AvgMemoryUsage = avgMem
 
 	return map[string]interface{}{
