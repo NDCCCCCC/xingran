@@ -3,18 +3,8 @@ package operations
 import (
 	"math"
 
+	"github.com/xingran-next/xingran-go-backend/internal/constants"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
-)
-
-const (
-	// DefaultCurrent 默认当前页码
-	DefaultCurrent = 1
-	// DefaultPageSize 默认每页数量
-	DefaultPageSize = 10
-	// MinPageSize 最小每页数量
-	MinPageSize = 10
-	// MaxPageSize 最大每页数量（用于统计数据等场景）
-	MaxPageSize = 10000
 )
 
 // PaginationParams 分页参数
@@ -33,8 +23,8 @@ type PageResult struct {
 
 // extractPagination 从参数中提取分页信息
 func extractPagination(params map[string]interface{}) PaginationParams {
-	current := extractIntParam(params, "current", DefaultCurrent)
-	pageSize := extractIntParam(params, "pageSize", DefaultPageSize)
+	current := extractIntParam(params, "current", constants.DefaultCurrent)
+	pageSize := extractIntParam(params, "pageSize", constants.DefaultPageSize)
 	pageSize = clampPageSize(pageSize)
 
 	return PaginationParams{
@@ -48,8 +38,8 @@ func extractPagination(params map[string]interface{}) PaginationParams {
 // orderByColumn/isAsc 会随 map 透传到这里。
 func extractSortRequest(params map[string]interface{}) base.BaseListRequest {
 	req := base.BaseListRequest{
-		Current:       extractIntParam(params, "current", DefaultCurrent),
-		PageSize:      extractIntParam(params, "pageSize", DefaultPageSize),
+		Current:       extractIntParam(params, "current", constants.DefaultCurrent),
+		PageSize:      extractIntParam(params, "pageSize", constants.DefaultPageSize),
 		OrderByColumn: extractStringParam(params, "orderByColumn"),
 	}
 	if isAsc, ok := params["isAsc"].(bool); ok {
@@ -77,9 +67,13 @@ func extractStringParam(params map[string]interface{}, key string) string {
 	return ""
 }
 
-// clampPageSize 限制 pageSize 在有效范围内
+// clampPageSize 限制 pageSize 在有效范围内。
+//
+// operations 模块同时服务表格 list 与下拉全集,故使用 MaxOptionsPageSize
+// (10000)作为上限,保持现有运行时行为;若未来拆分 options 端点,可改用
+// MaxListPageSize。
 func clampPageSize(pageSize int) int {
-	return int(math.Max(float64(MinPageSize), math.Min(float64(MaxPageSize), float64(pageSize))))
+	return int(math.Max(float64(constants.MinPageSize), math.Min(float64(constants.MaxOptionsPageSize), float64(pageSize))))
 }
 
 // calculateOffset 计算偏移量

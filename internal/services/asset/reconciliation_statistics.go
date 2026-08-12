@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/xingran-next/xingran-go-backend/internal/constants"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"gorm.io/gorm"
 )
@@ -477,6 +478,7 @@ func (s *reconciliationStatisticsImpl) ExceptionRuleStats(ctx context.Context) (
 	return result, nil
 }
 
-// MaxPageSize 与 operations/pagination_helper.go:MaxPageSize 同值;
-// 这里独立 const 避免 import cycle(operations → asset 不允许反向依赖)。
-const MaxPageSize = 10000
+// MaxPageSize 资产对账统计的分页上限。
+// 引用 constants.MaxOptionsPageSize 以与 operations 模块保持同值,消除取值分叉
+// (constants 是叶子包,asset → constants 无循环依赖)。
+const MaxPageSize = constants.MaxOptionsPageSize

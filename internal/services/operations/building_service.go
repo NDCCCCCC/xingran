@@ -62,7 +62,7 @@ func NewBuildingService(db *gorm.DB) BuildingService {
 	return &buildingService{
 		db:            db,
 		codeGenerator: NewCodeGenerator(db),
-		uuidValidator: constants.UuidPattern,
+		uuidValidator: constants.UUIDPattern,
 	}
 }
 

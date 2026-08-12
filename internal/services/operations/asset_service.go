@@ -51,7 +51,7 @@ type assetService struct {
 func NewAssetService(db *gorm.DB) AssetService {
 	return &assetService{
 		db:            db,
-		uuidValidator: constants.UuidPattern,
+		uuidValidator: constants.UUIDPattern,
 	}
 }
 

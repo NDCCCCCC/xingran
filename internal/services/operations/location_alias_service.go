@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/xingran-next/xingran-go-backend/internal/constants"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"gorm.io/gorm"
 )
@@ -93,10 +94,10 @@ func NewLocationAliasService(db *gorm.DB) LocationAliasService {
 // List 查询 alias 列表(分页 + JOIN sys_dept 取 dept_name)
 func (s *locationAliasServiceImpl) List(ctx context.Context, pageNum, pageSize int) (*PageResult, error) {
 	if pageNum <= 0 {
-		pageNum = DefaultCurrent
+		pageNum = constants.DefaultCurrent
 	}
 	if pageSize <= 0 {
-		pageSize = DefaultPageSize
+		pageSize = constants.DefaultPageSize
 	}
 	pageSize = clampPageSize(pageSize)
 

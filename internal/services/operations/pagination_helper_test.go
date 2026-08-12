@@ -3,6 +3,8 @@ package operations
 import (
 	"math"
 	"testing"
+
+	"github.com/xingran-next/xingran-go-backend/internal/constants"
 )
 
 func TestExtractPagination(t *testing.T) {
@@ -44,9 +46,9 @@ func TestExtractPagination(t *testing.T) {
 			name: "PageSize 大于最大值",
 			params: map[string]interface{}{
 				"current":  1,
-				"pageSize": 200,
+				"pageSize": 20000,
 			},
-			expected: PaginationParams{Current: 1, PageSize: 100},
+			expected: PaginationParams{Current: 1, PageSize: 10000},
 		},
 		{
 			name: "混合类型参数",
@@ -175,39 +177,30 @@ func TestClampPageSize(t *testing.T) {
 	}
 }
 
-func TestPageSizeConstants(t *testing.T) {
-	// 验证常量定义
-	if DefaultCurrent != 1 {
-		t.Errorf("DefaultCurrent = %v, want 1", DefaultCurrent)
-	}
-	if DefaultPageSize != 10 {
-		t.Errorf("DefaultPageSize = %v, want 10", DefaultPageSize)
-	}
-	if MinPageSize != 10 {
-		t.Errorf("MinPageSize = %v, want 10", MinPageSize)
-	}
-	if MaxPageSize != 100 {
-		t.Errorf("MaxPageSize = %v, want 100", MaxPageSize)
-	}
-}
-
 func TestClampPageSizeMath(t *testing.T) {
-	// 验证数学计算逻辑
+	// 验证 clampPageSize 的数学计算逻辑(引用 constants 统一定义)。
+	// operations 模块 clamp 上限为 MaxOptionsPageSize(10000)。
 	pageSize := 50
-	min := float64(MinPageSize)
-	max := float64(MaxPageSize)
+	min := float64(constants.MinPageSize)        // 10
+	max := float64(constants.MaxOptionsPageSize) // 10000
 	clamped := int(math.Max(min, math.Min(max, float64(pageSize))))
 
 	if clamped != 50 {
 		t.Errorf("math clamp calculation failed: got %v, want 50", clamped)
 	}
 
-	// 测试边界值
+	// 测试边界值:下限 clamp 到 MinPageSize
 	if int(math.Max(min, math.Min(max, 5))) != 10 {
 		t.Error("lower bound clamp failed")
 	}
 
-	if int(math.Max(min, math.Min(max, 200))) != 100 {
+	// 200 在 [10, 10000] 范围内,不应被 clamp
+	if int(math.Max(min, math.Min(max, 200))) != 200 {
+		t.Error("in-range value should not be clamped")
+	}
+
+	// 超过 MaxOptionsPageSize 才 clamp 到上界
+	if int(math.Max(min, math.Min(max, 50000))) != 10000 {
 		t.Error("upper bound clamp failed")
 	}
 }
