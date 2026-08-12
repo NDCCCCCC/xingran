@@ -7,7 +7,7 @@
  */
 
 import { get } from "@/lib/api";
-import { hexToBase64, bytesToHex, base64ToHex } from "./encoding";
+import { hexToBase64, base64ToHex } from "./encoding";
 
 // SM2 模块接口定义（与 sm-crypto 实际签名匹配）
 interface SM2Module {
@@ -22,6 +22,8 @@ interface SM2Module {
 
 // SM2 公钥缓存（十六进制格式）
 let cachedPublicKeyHex: string = "";
+// 防止较早发起、较晚返回的请求覆盖更新后的公钥缓存
+let publicKeyCacheGeneration = 0;
 
 // sm2 模块缓存
 let sm2Module: SM2Module | null = null;
@@ -48,15 +50,22 @@ async function getSM2(): Promise<SM2Module> {
  * @param forceRefresh 是否强制刷新缓存
  */
 export async function fetchPublicKey(forceRefresh = false): Promise<string> {
-  if (!forceRefresh && cachedPublicKeyHex) {
+  if (forceRefresh) {
+    publicKeyCacheGeneration += 1;
+    cachedPublicKeyHex = "";
+  } else if (cachedPublicKeyHex) {
     return cachedPublicKeyHex;
   }
 
+  const requestGeneration = publicKeyCacheGeneration;
   const result = await get<{ publicKey: string }>("/system/auth/public-key");
 
   if (result.code === 0 && result.data?.publicKey) {
-    cachedPublicKeyHex = result.data.publicKey;
-    return cachedPublicKeyHex;
+    const publicKeyHex = result.data.publicKey;
+    if (requestGeneration === publicKeyCacheGeneration) {
+      cachedPublicKeyHex = publicKeyHex;
+    }
+    return publicKeyHex;
   }
 
   throw new Error("获取公钥失败: " + (result.message || "未知错误"));
@@ -105,6 +114,7 @@ export async function decryptWithSM2(cipherText: string, privateKeyRaw: string):
  * 清除公钥缓存
  */
 export function clearPublicKeyCache(): void {
+  publicKeyCacheGeneration += 1;
   cachedPublicKeyHex = "";
 }
 

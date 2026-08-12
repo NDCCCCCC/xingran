@@ -13,6 +13,7 @@ export interface CaptchaModalProps {
   captchaType: CaptchaEnabled;
   onSuccess: (data: CaptchaSuccessData) => void;
   onCancel: () => void;
+  onError?: (error: string) => void;
 }
 
 export interface CaptchaSuccessData {
@@ -26,11 +27,12 @@ const CaptchaModal: FC<CaptchaModalProps> = ({
   captchaType,
   onSuccess,
   onCancel,
+  onError,
 }) => {
   const { message } = App.useApp();
   const [captchaValue, setCaptchaValue] = useState("");
   const [captchaId, setCaptchaId] = useState("");
-  const [sliderVerified, setSliderVerified] = useState(false);
+  const [, setSliderVerified] = useState(false);
 
   // 当模态框打开时，重置验证码状态
   useEffect(() => {
@@ -89,9 +91,12 @@ const CaptchaModal: FC<CaptchaModalProps> = ({
     console.error("[CaptchaModal] 验证码错误:", error);
 
     if (error === "CAPTCHA_TYPE_MISMATCH") {
-      // 验证码类型不匹配，关闭模态框
-      message.error("验证码类型错误");
-      onCancel();
+      message.info("验证码配置已变化，正在自动更新");
+      if (onError) {
+        onError(error);
+      } else {
+        onCancel();
+      }
     }
   };
 

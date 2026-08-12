@@ -137,8 +137,9 @@ export async function initEncryptionConfig(): Promise<void> {
  * 刷新加密配置
  * 供配置更新页面调用，清除缓存并重新加载配置
  * 使用 rawAxios 避免拦截器循环依赖
+ * @returns 是否成功获取并应用后端最新配置；失败时保留当前设置
  */
-export async function refreshEncryptionConfig(): Promise<void> {
+export async function refreshEncryptionConfig(): Promise<boolean> {
 	// 清除前端缓存
 	clearEncryptionConfigCache();
 
@@ -150,10 +151,15 @@ export async function refreshEncryptionConfig(): Promise<void> {
 
 		if (response.data && response.data.code === 0) {
 			ENABLE_REQUEST_ENCRYPTION = response.data.data.enabled;
+			return true;
 		}
+
+		console.error("[Encryption Config] 刷新配置失败：服务端返回非成功码，保持当前设置");
+		return false;
 	} catch (error) {
 		console.error("[Encryption Config] 刷新配置失败，保持当前设置:", error);
 		// 失败时不改变当前设置
+		return false;
 	}
 }
 

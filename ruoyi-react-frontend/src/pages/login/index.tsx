@@ -8,6 +8,7 @@ import { useMenuStore } from "@/store/menuStore";
 import { TextCaptcha } from "@/components/captcha";
 import CaptchaModal, { type CaptchaSuccessData } from "@/components/captcha/CaptchaModal";
 import { getCaptchaConfig } from "@/services/captcha";
+import { submitLoginPreflight } from "@/lib/loginPreflight";
 import { DASHBOARD } from "@/constants/routes";
 import type { LoginRequest } from "@/types";
 import type { CaptchaEnabled } from "@/types/captcha";
@@ -95,24 +96,37 @@ const Login: FC = () => {
   };
 
   const handleFinish = async (values: LoginRequest) => {
-    // 用户重新提交时清除旧错误提示
+    // 登录页可能已长时间停留，提交前先同步加密开关、SM2 公钥和验证码类型。
     setLoginError("");
+    setLoading(true);
+
+    const preflight = await submitLoginPreflight();
+    if (!preflight.ok) {
+      setLoginError(preflight.friendlyMessage);
+      setLoading(false);
+      return;
+    }
+
+    setCaptchaEnabled(preflight.captchaEnabled);
+
     const loginData: LoginRequest = {
       username: values.username,
       password: values.password,
     };
 
-    // 如果启用了验证码，根据类型处理
-    if (captchaEnabled !== "disabled") {
-      if (captchaEnabled === "slider") {
+    // 使用本次预检得到的验证码类型，不依赖页面挂载时的旧状态。
+    if (preflight.captchaEnabled !== "disabled") {
+      if (preflight.captchaEnabled === "slider") {
         // 滑动验证码：先显示模态框，验证成功后再提交
         setPendingLoginData(loginData);
         setCaptchaModalVisible(true);
+        setLoading(false);
         return;
       } else {
         // 数字验证码：直接在表单中输入验证码
         if (!captchaValue) {
           message.warning("请输入验证码");
+          setLoading(false);
           return;
         }
         loginData.captcha = captchaValue;
@@ -155,11 +169,24 @@ const Login: FC = () => {
     setCaptchaId(id);
   };
 
-  const handleCaptchaError = (error: string) => {
-    if (error === "CAPTCHA_TYPE_MISMATCH") {
-      // 验证码类型不匹配，重新加载配置
-      window.location.reload();
+  const handleCaptchaError = async (error: string) => {
+    if (error !== "CAPTCHA_TYPE_MISMATCH") {
+      return;
     }
+
+    // 验证码类型在页面停留期间发生变化时局部同步，不丢失用户已填写的账号密码。
+    const preflight = await submitLoginPreflight();
+    if (!preflight.ok) {
+      setLoginError(preflight.friendlyMessage);
+      return;
+    }
+
+    setCaptchaModalVisible(false);
+    setPendingLoginData(null);
+    setCaptchaEnabled(preflight.captchaEnabled);
+    setCaptchaValue("");
+    setCaptchaId("");
+    setLoginError("验证码配置已更新，请重新验证");
   };
 
   return (
@@ -205,7 +232,7 @@ const Login: FC = () => {
             type="error"
             showIcon
             closable
-            message={loginError}
+            title={loginError}
             onClose={() => setLoginError("")}
             style={{ marginBottom: 16 }}
           />
@@ -272,6 +299,7 @@ const Login: FC = () => {
         captchaType={captchaEnabled}
         onSuccess={handleCaptchaModalSuccess}
         onCancel={handleCaptchaModalCancel}
+        onError={handleCaptchaError}
       />
     </div>
   );
