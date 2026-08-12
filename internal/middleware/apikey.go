@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
 	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
@@ -142,39 +143,24 @@ func isIPAllowed(clientIP string, whitelist []string) bool {
 }
 
 // setUserContextForAPIKey 设置API Key认证的用户上下文（私有函数）
-// apiKey 参数的类型是 *models.APIKey，使用 interface{} 避免循环导入
-func setUserContextForAPIKey(c *gin.Context, apiKey interface{}, scopes []string) {
-	// 通过类型断言访问 apiKey 的字段
-	// models.APIKey 结构: ID, Name, UserID, User, InheritPerms
-	type apiKeyType struct {
-		ID           string
-		Name         string
-		UserID       *string
-		InheritPerms bool
-		User         *interface{}
+func setUserContextForAPIKey(c *gin.Context, apiKey *models.APIKey, scopes []string) {
+	userID := ""
+	if apiKey.UserID != nil {
+		userID = *apiKey.UserID
 	}
 
-	if ak, ok := apiKey.(apiKeyType); ok {
-		userID := ""
-		username := ak.Name
+	// 设置上下文
+	c.Set("user_id", userID)
+	c.Set("username", apiKey.Name) // D-04: 语义保留 (Name=密钥名, 非 username)
+	c.Set("nickname", "")          // API Key 认证没有用户昵称
+	c.Set("api_key_id", apiKey.ID)
+	c.Set("scopes", scopes)
+	c.Set("auth_type", "api_key")
 
-		if ak.UserID != nil {
-			userID = *ak.UserID
-		}
-
-		// 设置上下文
-		c.Set("user_id", userID)
-		c.Set("username", username)
-		c.Set("nickname", "") // API Key 认证没有用户昵称
-		c.Set("api_key_id", ak.ID)
-		c.Set("scopes", scopes)
-		c.Set("auth_type", "api_key")
-
-		// 如果继承权限且有关联用户，加载用户角色
-		if ak.InheritPerms && ak.User != nil {
-			// User 角色会在需要时从数据库加载
-			c.Set("inherit_perms", true)
-		}
+	// 如果继承权限且有关联用户，加载用户角色
+	if apiKey.InheritPerms && apiKey.User != nil {
+		// User 角色会在需要时从数据库加载
+		c.Set("inherit_perms", true)
 	}
 }
 
@@ -220,14 +206,12 @@ func RequireScope(requiredScope string) gin.HandlerFunc {
 
 // RequireAPIKeyResourcePermission API Key资源权限验证中间件
 // 根据资源和操作映射到相应的作用域
+//
+// D-03: 注册期算 scope + 直接 return RequireScope(...)，由 gin 正常挂载。
+// resource 参数暂未使用（Phase 61 AUTH-04 资源级权限矩阵落地时引入）。
 func RequireAPIKeyResourcePermission(resource string, action string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// 确定所需作用域
-		requiredScope := getRequiredScope(action)
-
-		// 调用作用域验证
-		RequireScope(requiredScope)(c)
-	}
+	requiredScope := getRequiredScope(action)
+	return RequireScope(requiredScope)
 }
 
 // getRequiredScope 根据操作获取所需作用域（私有函数）
