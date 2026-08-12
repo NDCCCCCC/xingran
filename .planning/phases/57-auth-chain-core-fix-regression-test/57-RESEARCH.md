@@ -556,17 +556,19 @@ type BaseModel struct {
 
 **说明:** 其余所有claim 均 `[VERIFIED: codebase]`（直接读源码）或 `[CITED]`（引用 CONTEXT.md 锁定决策）。本 phase 无需 `[ASSUMED]` 标记的库/API claim——所有库（gin/testify/gorm）均为项目既有依赖且用法已在 18 个测试文件中印证。
 
-## Open Questions
+## Open Questions (RESOLVED — 落点见 57-01-PLAN.md)
 
 1. **`RequireAPIKeyResourcePermission` 重写选哪种写法?**
    - What we know: 两种都满足 D-03（最小委托 vs 显式 helper 内联）。
    - What's unclear: Phase 61 是否需要 `hasRequiredScope` helper 复用。
    - Recommendation: 用最小委托写法（`return RequireScope(getRequiredScope(action))`）；Phase 61 若需 helper 再提取。CONTEXT.md 已把此裁量留给 Claude。
+   - **RESOLVED:** Plan `57-01-PLAN.md` Task 1 §AUTH-02 已采纳最小委托写法（`return RequireScope(getRequiredScope(action))`）。
 
 2. **D-02 的 `NewUsageLogger(db)` 是否需完整 setupUsageLoggerTestDB?**
    - What we know: `NewUsageLogger` 只把 db 存进 struct，不立即用。
    - What's unclear: 测试是否要建表。
    - Recommendation: 复制既有 helper 建表最安全（与 `usage_logger_test.go` 一致）；但若只证明"构造函数可调用 + 类型兼容"，一个 `sqlite.Open` 出来的不 nil `*gorm.DB` 即足够（LogUsage 是 fire-and-forget goroutine，测试结束前不一定执行）。
+   - **RESOLVED:** Plan `57-01-PLAN.md` Task 2 已采纳"复制既有 helper 建表（verbatim）"方案（最安全，与 `usage_logger_test.go` 一致）。
 
 ## Environment Availability
 
