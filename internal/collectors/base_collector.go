@@ -25,7 +25,10 @@ type CollectorBase struct {
 
 // CleanOldRecords 删除指定天数之前的历史采集记录。
 //
-// 各采集器的 CleanOldRecords 方法应调用此实现，避免重复的删除逻辑。
+// 各采集器的同名 CleanOldRecords 方法必须显式通过 c.CollectorBase.CleanOldRecords
+// 委托到此实现，原因不是简单的"复用删除逻辑"，而是：子结构体已通过嵌入获得
+// CollectorBase 的同名方法，若直接调用 c.CleanOldRecords(...) 会触发自身递归
+// （Go 嵌入遮蔽），必须用限定路径绕过。
 // model 必须是 GORM 模型（如 &models.DeviceARPEntry{}），用于指定删除目标表。
 //
 // 	// 子结构体中的调用示例:
