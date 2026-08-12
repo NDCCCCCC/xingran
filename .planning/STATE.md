@@ -5,9 +5,9 @@ milestone_name: Milestone History
 status: "ROADMAP ready, awaiting `/gsd:plan-phase 57`"
 stopped_at: context exhaustion at 78% (2026-08-12)
 last_updated: "2026-08-12T15:57:14.000Z"
-last_activity: 2026-08-12 — v1.21 ROADMAP drafted; quick task 260812-wu5 constants cleanup committed (759a65a)
+last_activity: 2026-08-12 — v1.21 re-planned: Phase 61 added (资源级权限矩阵 + 限流调优); FUTURE-APIKEY-01/02 → v1 AUTH-04/QUAL-03; quick task 260812-wu5 constants cleanup committed (759a65a)
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -18,7 +18,7 @@ progress:
 
 **Project**: XingRan-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.21 API Key 认证链修复 milestone INITIATED — ROADMAP drafted (Phases 57-60), ready for Phase 57 planning
+**Status**: v1.21 API Key 认证链修复 + 能力补全 milestone INITIATED — ROADMAP drafted (Phases 57-61; 61 conditional on Phase 60 AUTH-03=启用), ready for Phase 57 planning
 **Last activity**: 2026-08-12 — quick task 260812-wu5 (constants dead-code cleanup + pagination unification via 方案 B) committed 759a65a; v1.21 ROADMAP/REQUIREMENTS/STATE synchronized
 
 ## Project Reference
@@ -31,12 +31,12 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-12)
 
 ## Current Position
 
-Phase: 57 of 60 (认证链核心修复 + 回归测试) — ready to plan
+Phase: 57 of 61 (认证链核心修复 + 回归测试) — ready to plan
 Plan: — (TBD, plan-phase not yet run)
 Status: ROADMAP ready, awaiting `/gsd:plan-phase 57`
-Last activity: 2026-08-12 — v1.21 ROADMAP drafted (4 phases / 11 requirements / 100% coverage)
+Last activity: 2026-08-12 — v1.21 re-planned (5 phases / 13 requirements / 100% coverage); Phase 61 added (conditional on P60 AUTH-03=启用)
 
-Progress: [░░░░░░░░░░] 0% (0/4 phases, 0 plans)
+Progress: [░░░░░░░░░░] 0% (0/5 phases, 0 plans)
 
 ## Accumulated Context
 
@@ -45,8 +45,9 @@ Progress: [░░░░░░░░░░] 0% (0/4 phases, 0 plans)
 - **Scope**: 全修复 + 就绪 — 修复全部 P0/P1/P2 确定性缺陷,MultiAuth 代码修好可接入;「是否在生产路由挂载 MultiAuth」作为 Phase 60 discuss 决策点(含安全影响评估)
 - **Regression nature**: 对 v1.6「API 密钥管理系统」(Phase 16 / 2026-05-19 / 10 plans) 的回归修复,非新功能
 - **Research skipped**: 回归修复场景,代码与问题均已调查清楚(`.planning/research/` 不存在)
-- **Phase numbering**: 从 v1.20 末尾 Phase 56 续编(57-60)
-- **Granularity**: standard(项目配置),4 phases 为本 milestone 自然交付边界
+- **Phase numbering**: 从 v1.20 末尾 Phase 56 续编(57-61)
+- **Granularity**: standard(项目配置),5 phases (57-61) 为本 milestone 自然交付边界;Phase 61 为 2026-08-12 重规划新增(能力补全,conditional)
+- **Scope evolution (2026-08-12 re-plan)**: 原"全修复 + 就绪"扩展为"全修复 + 就绪 + 能力补全"——FUTURE-APIKEY-01/02 升级为 v1 AUTH-04/QUAL-03 归 Phase 61(资源级权限矩阵 + 限流生产调优),仅在 Phase 60 AUTH-03=启用 后执行
 
 ### v1.21 — 根因调查结论(ground-truth 已验证)
 
@@ -71,9 +72,11 @@ Phase 57 (认证链核心修复 + 回归测试)
    ├─→ Phase 59 (可观测性 / 使用日志修复) [depends on 57]
    │      │
    │      └─→ Phase 60 (安全加固与启用决策) [depends on 57 + 59]
+   │             │
+   │             └─→ Phase 61 (资源级权限矩阵 + 限流生产调优) [depends on 60 AUTH-03=启用]
 ```
 
-Phase 58 可与 Phase 59 并行(两者依赖仅 Phase 57);Phase 60 必须最后(启用决策需要可观测基础)。
+Phase 58 可与 Phase 59 并行(两者依赖仅 Phase 57);Phase 60 必须在 59 后(启用决策需要可观测基础);Phase 61 仅在 Phase 60 AUTH-03 决策=启用 时执行,否则 defer。
 
 ### Pending Decisions (defer to phase-internal discuss)
 
@@ -83,7 +86,7 @@ Phase 58 可与 Phase 59 并行(两者依赖仅 Phase 57);Phase 60 必须最后(
 
 ### Blockers/Concerns
 
-None currently. Roadblock risk: Phase 60 AUTH-03 启用决策若选"启用"会扩大 phase scope(需在 router.go 实际挂载并补权限矩阵测试)——已通过 discuss-mode 控制范围。
+None currently. Roadblock risk: Phase 60 AUTH-03 启用决策若选"启用",会触发 Phase 61(资源级权限矩阵 + 限流调优)执行——已通过 2026-08-12 重规划将该项独立为 Phase 61,避免污染 Phase 60 决策型 scope。
 
 ## Quick Tasks Completed
 

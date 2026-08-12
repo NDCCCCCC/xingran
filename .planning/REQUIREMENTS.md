@@ -13,6 +13,7 @@
 - [ ] **AUTH-01**: API Key 认证时 `setUserContextForAPIKey` 能正确把 `user_id` / `api_key_id` / `scopes` / `auth_type` 写入 gin context(修复 P0-2 类型断言恒 false — `*models.APIKey` 指针被断言为局部值类型 `apiKeyType`,消除"用 interface{} 避免循环导入"的误判,改为直接 import models 包)
 - [ ] **AUTH-02**: `MultiAuth` 及其下游 `RequireScope` / `RequireAPIKeyResourcePermission` / `RateLimitByScope` 不再是死代码 — 类型签名、参数传递、作用域匹配逻辑经审查正确,具备被路由挂载的条件(P0-1);`NewUsageLogger` / `NewRateLimiter` 在代码库中有真实实例化路径
 - [ ] **AUTH-03**: 完成 MultiAuth 路由挂载的启用决策与安全评估 — 通过 phase 内 discuss 明确"是否在生产路由挂载 MultiAuth 使 X-API-Key 认证真正生效",产出决策记录(含作用域继承、IP 白名单、与 JWT 的优先级/回退关系等安全影响)
+- [ ] **AUTH-04** (ex-FUTURE-APIKEY-01, Phase 61): `RequireAPIKeyResourcePermission(resource, action)` 的 `resource` 参数真实生效 — resource→permission 映射接入,继承权限 (InheritPerms) 下的细粒度资源校验经测试覆盖(仅在 Phase 60 AUTH-03=启用 后执行)
 
 ### CONTRACT — 前后端路由契约
 
@@ -33,6 +34,7 @@
 
 - [ ] **QUAL-01**: `RateLimitByScope` 的限流响应头 `X-RateLimit-Limit` / `X-RateLimit-Remaining` 用 `strconv.Itoa` 序列化,而非 `string(rune(int))` 编码错误(P2)
 - [ ] **QUAL-02**: 为 `MultiAuth` / `setUserContextForAPIKey` / `RequireScope` 补充集成测试,覆盖"API Key 认证 → 上下文写入 → 作用域校验"链路,防止 P0-2 类型断言回归(当前 `apikey_test.go` 仅测 3 个纯函数,无集成覆盖)
+- [ ] **QUAL-03** (ex-FUTURE-APIKEY-02, Phase 61): `RateLimitByScope` 随 MultiAuth 生产挂载全量接入生产路由的配置与调优 — 多 scope key 的限流作用域选择逻辑正确(不再任意只取首个 scope);仅在 Phase 60 AUTH-03=启用 后执行
 
 ## v2 Requirements (Future)
 
@@ -40,8 +42,8 @@
 
 ### API Key 治理扩展
 
-- **FUTURE-APIKEY-01**: `RequireAPIKeyResourcePermission` 资源级细粒度权限的完整接入与生产化测试(继承权限的细粒度资源校验)
-- **FUTURE-APIKEY-02**: 作用域限流 `RateLimitByScope` 随 MultiAuth 启用后全量接入生产路由的配置与调优
+> **FUTURE-APIKEY-01 / FUTURE-APIKEY-02 已于 2026-08-12 升级为 v1 需求 `AUTH-04` / `QUAL-03`,归 Phase 61(资源级权限矩阵 + 限流生产调优),条件:Phase 60 AUTH-03=启用。**
+
 - **FUTURE-APIKEY-03**: 密钥轮换(rotation)与吊销列表机制
 - **FUTURE-APIKEY-04**: 使用配额告警与异常调用检测
 
@@ -70,10 +72,12 @@ Phase 映射(由 `.planning/ROADMAP.md` v1.21 确认;phase 从 v1.20 末尾 Phas
 | SEC-01 | Phase 60 | Pending |
 | SEC-02 | Phase 60 | Pending |
 | QUAL-01 | Phase 60 | Pending |
+| AUTH-04 | Phase 61 | Pending (conditional on P60 AUTH-03=启用) |
+| QUAL-03 | Phase 61 | Pending (conditional on P60 AUTH-03=启用) |
 
 **Coverage:**
-- v1 requirements: 11 total
-- Mapped to phases: 11
+- v1 requirements: 13 total
+- Mapped to phases: 13
 - Unmapped: 0 ✓
 - Orphans: 0 ✓
 - Duplicates: 0 ✓ (each requirement mapped to exactly one phase)
@@ -83,7 +87,8 @@ Phase 映射(由 `.planning/ROADMAP.md` v1.21 确认;phase 从 v1.20 末尾 Phas
 - **Phase 58** (CONTRACT-01): 前后端契约层独立,与中间件修复解耦
 - **Phase 59** (OBSERV-01/02/03): 三项都触及使用日志观测请求生命周期,自然耦合
 - **Phase 60** (AUTH-03 + SEC-01/02 + QUAL-01): 启用/哈希两项 discuss 决策 + 两项直接硬化项(索引 + 限流头)
+- **Phase 61** (AUTH-04 + QUAL-03, ex-FUTURE-APIKEY-01/02): MultiAuth 启用后的能力补全 — 资源级权限矩阵 + 限流生产调优;独立 phase 因属实施型工作(区别于 Phase 60 的决策型),且依赖 AUTH-03=启用
 
 ---
 *Requirements defined: 2026-08-12*
-*Last updated: 2026-08-12 — ROADMAP.md v1.21 drafted, traceability phase column confirmed (4 phases / 11 requirements / 100% coverage)*
+*Last updated: 2026-08-12 — Phase 61 added (资源级权限矩阵 + 限流生产调优); FUTURE-APIKEY-01/02 升级为 v1 AUTH-04/QUAL-03 (Phase 61, conditional on Phase 60 AUTH-03=启用). Now 5 phases (57-61) / 13 requirements / 100% coverage.*

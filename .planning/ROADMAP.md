@@ -29,7 +29,7 @@ previous_update: 2026-07-10 after v1.20 milestone SHIPPED + ARCHIVED
 - ✅ **v1.18 网络设备硬件清单 (Device Component Serials)** — Phase 48 + Phase 49 gap closure (shipped 2026-07-04)
 - ✅ **v1.19 网络设备写命令 (Network Device Port Write Operations)** — Phases 50-55 (shipped 2026-07-08) — see [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md)
 - ✅ **v1.20 网络设备 VLAN + 端口绑定** — Phase 56 (shipped 2026-07-10) — see [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.md)
-- 🚧 **v1.21 API Key 认证链修复 (API Key Auth Chain Repair)** — Phases 57-60 (in planning, regression fix)
+- 🚧 **v1.21 API Key 认证链修复 + 能力补全 (API Key Auth Chain Repair + Feature Completion)** — Phases 57-61 (in planning; regression fix 57-60 + post-enable feature completion 61)
 
 ---
 
@@ -50,12 +50,13 @@ previous_update: 2026-07-10 after v1.20 milestone SHIPPED + ARCHIVED
 | P2-c | API Key `Key` 字段明文存储 | apikey_service.go / migration_085 | SEC |
 | P3 | migration_085 `idx_api_keys_key` 与 `uniqueIndex` 重复 | migration_085 | SEC |
 
-**Phase Numbering:** 从 v1.20 末尾 Phase 56 续编 (57-60)。整数 phase 为计划里程碑工作;小数 phase (如 57.1) 为紧急插入。
+**Phase Numbering:** 从 v1.20 末尾 Phase 56 续编 (57-61)。整数 phase 为计划里程碑工作;小数 phase (如 57.1) 为紧急插入。
 
 - [ ] **Phase 57: 认证链核心修复 + 回归测试** - 修复 setUserContextForAPIKey 类型断言 (P0-2),消除 MultiAuth 下游死代码 (P0-1),用集成测试锁住认证链防止 P0-2 回归
 - [ ] **Phase 58: 前后端路由契约对齐** - 修复前端 getAPIKey/updateAPIKey/deleteAPIKey 三个操作 404 (P1-1),与后端 POST 路由方法对齐
 - [ ] **Phase 59: 可观测性 / 使用日志修复** - 修复使用日志记录时机 (P1-2),让 successRate 可信 (P1-2 连锁),消除 ctx 取消竞态 (P2-b)
 - [ ] **Phase 60: 安全加固与启用决策** - MultiAuth 启用决策 + 安全评估,密钥哈希存储决策,移除重复索引,修复限流头编码 (P2-a)
+- [ ] **Phase 61: 资源级权限矩阵 + 限流生产调优** - MultiAuth 启用后落地 RequireAPIKeyResourcePermission 的 resource 参数真实生效 (AUTH-04, ex-FUTURE-APIKEY-01) + RateLimitByScope 生产接入与调优 (QUAL-03, ex-FUTURE-APIKEY-02);仅在 Phase 60 AUTH-03=启用 时执行
 
 ---
 
@@ -136,10 +137,29 @@ previous_update: 2026-07-10 after v1.20 milestone SHIPPED + ARCHIVED
 
 ---
 
+### Phase 61: 资源级权限矩阵 + 限流生产调优
+
+**Goal**: MultiAuth 生产启用后,落地 API Key 资源级细粒度权限(`RequireAPIKeyResourcePermission` 的 `resource` 参数真实生效,含 resource→permission 映射与继承权限下的资源校验)与 `RateLimitByScope` 生产接入与调优,使 API Key 的权限控制与限流按设计真实生效。
+
+**Depends on**: Phase 60 (AUTH-03 启用决策=启用;本 phase 仅在 MultiAuth 生产挂载后执行,若 AUTH-03=推迟则本 phase 随之 defer)
+
+**Requirements**: AUTH-04 (ex-FUTURE-APIKEY-01), QUAL-03 (ex-FUTURE-APIKEY-02)
+
+**Success Criteria** (what must be TRUE):
+1. `RequireAPIKeyResourcePermission(resource, action)` 的 `resource` 参数不再被忽略——resource→permission 映射接入,继承权限 (InheritPerms) 下的细粒度资源校验经测试覆盖验证(有效 key 有资源权限→通过 / 无资源权限→403)
+2. `RateLimitByScope` 在 MultiAuth 已挂载的生产路由上接入,限流按作用域生效;`X-RateLimit-Limit` / `X-RateLimit-Remaining` 可被标准工具解析为整数(衔接 Phase 60 QUAL-01 的 strconv.Itoa 修复);多 scope key 的限流作用域选择逻辑正确(不再任意只取首个 scope)
+3. 资源权限矩阵 + 限流配置均有测试覆盖;`go test ./...` 全绿
+
+**Plans**: TBD
+
+**Conditional**: 本 phase 仅在 Phase 60 AUTH-03 决策=启用 时执行;若决策=推迟启用,本 phase 随之 defer(记录触发条件与再次评估时机)。
+
+---
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 57 → 58 → 59 → 60
+Phases execute in numeric order: 57 → 58 → 59 → 60 → 61 (Phase 61 conditional on Phase 60 AUTH-03=启用)
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -147,12 +167,13 @@ Phases execute in numeric order: 57 → 58 → 59 → 60
 | 58. 前后端路由契约对齐 | v1.21 | 0/TBD | Not started | - |
 | 59. 可观测性 / 使用日志修复 | v1.21 | 0/TBD | Not started | - |
 | 60. 安全加固与启用决策 | v1.21 | 0/TBD | Not started | - |
+| 61. 资源级权限矩阵 + 限流生产调优 | v1.21 | 0/TBD | Not started (conditional on P60) | - |
 
 ---
 
 ## Coverage Map
 
-11/11 v1 requirements mapped to exactly one phase (0 orphans, 0 duplicates):
+13/13 v1 requirements mapped to exactly one phase (0 orphans, 0 duplicates):
 
 | Requirement | Phase | Category |
 |-------------|-------|----------|
@@ -167,6 +188,8 @@ Phases execute in numeric order: 57 → 58 → 59 → 60
 | SEC-01 | Phase 60 | SEC (P2-c 决策) |
 | SEC-02 | Phase 60 | SEC (P3) |
 | QUAL-01 | Phase 60 | QUAL (P2-a) |
+| AUTH-04 | Phase 61 | AUTH (资源级权限, ex-FUTURE-APIKEY-01) |
+| QUAL-03 | Phase 61 | QUAL (限流调优, ex-FUTURE-APIKEY-02) |
 
 ---
 
@@ -205,4 +228,4 @@ Phases execute in numeric order: 57 → 58 → 59 → 60
 
 ---
 
-*Last updated: 2026-08-12 — v1.21 API Key 认证链修复 milestone INITIATED. Phases 57-60 drafted (4 phases / 11 requirements / regression fix for v1.6 Phase 16). v1.20 网络设备 VLAN + 端口绑定 SHIPPED + ARCHIVED 2026-07-10 (Phase 56 / 5 plans).*
+*Last updated: 2026-08-12 — v1.21 re-planned: Phase 61 added (资源级权限矩阵 + 限流生产调优, conditional on Phase 60 AUTH-03=启用); FUTURE-APIKEY-01/02 pulled into v1 as AUTH-04/QUAL-03. Now 5 phases (57-61) / 13 requirements. Core regression fix = Phases 57-60; Phase 61 = post-enable feature completion. v1.20 网络设备 VLAN + 端口绑定 SHIPPED + ARCHIVED 2026-07-10 (Phase 56 / 5 plans).*
