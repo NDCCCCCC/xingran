@@ -79,7 +79,7 @@ previous_update: 2026-07-10 after v1.20 milestone SHIPPED + ARCHIVED
 **Plans**: 1 plan (single-wave, fix-then-test)
 
 Plans:
-- [ ] 57-01-PLAN.md — 修复 setUserContextForAPIKey 类型断言 (AUTH-01/P0-2) + 重写 RequireAPIKeyResourcePermission 反模式 (AUTH-02/P0-1) + 创建集成测试锁住三路径链路 (QUAL-02) + D-02 构造函数证据
+- [x] 57-01-PLAN.md — 修复 setUserContextForAPIKey 类型断言 (AUTH-01/P0-2) + 重写 RequireAPIKeyResourcePermission 反模式 (AUTH-02/P0-1) + 创建集成测试锁住三路径链路 (QUAL-02) + D-02 构造函数证据
 
 ---
 
@@ -166,7 +166,7 @@ Phases execute in numeric order: 57 → 58 → 59 → 60 → 61 (Phase 61 condit
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 57. 认证链核心修复 + 回归测试 | v1.21 | 0/TBD | Not started | - |
+| 57. 认证链核心修复 + 回归测试 | v1.21 | 1/1 | Complete   | 2026-08-12 |
 | 58. 前后端路由契约对齐 | v1.21 | 0/TBD | Not started | - |
 | 59. 可观测性 / 使用日志修复 | v1.21 | 0/TBD | Not started | - |
 | 60. 安全加固与启用决策 | v1.21 | 0/TBD | Not started | - |
