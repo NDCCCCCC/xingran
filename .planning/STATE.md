@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: Milestone History
 status: "ROADMAP ready, awaiting `/gsd:plan-phase 57`"
-stopped_at: context exhaustion at 78% (2026-08-12)
-last_updated: "2026-08-12T15:57:14.000Z"
-last_activity: 2026-08-12 — v1.21 re-planned: Phase 61 added (资源级权限矩阵 + 限流调优); FUTURE-APIKEY-01/02 → v1 AUTH-04/QUAL-03; quick task 260812-wu5 constants cleanup committed (759a65a)
+stopped_at: Phase 57 context gathered (4 areas decided + v1.21 re-plan Phase 61)
+last_updated: "2026-08-12T16:03:45.341Z"
+last_activity: 2026-08-12 — v1.21 re-planned (5 phases / 13 requirements / 100% coverage); Phase 61 added (conditional on P60 AUTH-03=启用)
 progress:
   total_phases: 5
   completed_phases: 0
@@ -135,9 +135,9 @@ Full deferred detail in [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-12T15:52:20.524Z
-Stopped at: context exhaustion at 78% (2026-08-12)
-Resume file: None
+Last session: 2026-08-12T16:03:45.327Z
+Stopped at: Phase 57 context gathered (4 areas decided + v1.21 re-plan Phase 61)
+Resume file: .planning/phases/57-auth-chain-core-fix-regression-test/57-CONTEXT.md
 
 **Milestone status:** v1.21 INITIATED — ROADMAP ready, awaiting `/gsd:plan-phase 57` to begin Phase 57 (认证链核心修复 + 回归测试).
 
