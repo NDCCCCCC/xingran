@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/xingran-next/xingran-go-backend/internal/constants"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
 )
 
@@ -68,5 +69,5 @@ func (s *tokenBlacklistService) RemoveFromBlacklist(ctx context.Context, token s
 
 // getBlacklistKey 获取黑名单键
 func (s *tokenBlacklistService) getBlacklistKey(token string) string {
-	return "token:blacklist:" + token
+	return fmt.Sprintf(constants.TokenBlacklistKeyFormat, token)
 }

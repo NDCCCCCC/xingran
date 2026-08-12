@@ -1,6 +1,6 @@
 ---
 quick_id: 260812-wu5
-status: partial
+status: completed
 date: 2026-08-12
 ---
 
@@ -16,12 +16,15 @@ date: 2026-08-12
 ## 唯一行为变化
 - `utils.ParsePagination` 默认 pageSize 20→10(统一全项目默认值),仅 `file_handler` 文件列表受影响(用户不传 pageSize 时每页 10 条而非 20 条)。
 
-## 未完成(follow-up,resume 处理)
-- **task4 cache key 接入**:`cache.go` 已保留 `TokenBlacklistKeyFormat`/`LoginLockKeyFormat`/`CaptchaVerifiedKeyFormat`,但内联点尚未改用:
-  - `internal/services/token_blacklist_service.go:71`(`"token:blacklist:"+token`)
-  - `internal/api/v1/system/user_unlock_handler.go:43`(`"login:lock:"+req.Username`)
-  - `internal/core/captcha.go:485,506`(`login:lock:%s`)、`:379,444`(`captcha:verified:%s`)
-- `user_statistics_test.go:18` 注释残留旧名 `constants.MaxPageSize`(低优,注释不影响编译)。
+## 已完成(task4 follow-up,2026-08-13)
+- **task4 cache key 接入**:`cache.go` 的 `TokenBlacklistKeyFormat`/`LoginLockKeyFormat`/`CaptchaVerifiedKeyFormat` 已接入全部 5 个内联点,常量值与原内联字面量完全相同 → 运行时行为零变化:
+  - `internal/services/token_blacklist_service.go`(getBlacklistKey → `fmt.Sprintf(constants.TokenBlacklistKeyFormat, token)`)
+  - `internal/api/v1/system/user_unlock_handler.go`(lockKey → `fmt.Sprintf(constants.LoginLockKeyFormat, req.Username)`)
+  - `internal/core/captcha.go`(2× `CaptchaVerifiedKeyFormat` + 2× `LoginLockKeyFormat`)
+- 验证:`go build ./...` 通过;受影响包(`constants`/`core`/`services`/`api/v1/system`)`go vet` 通过;`constants`/`api/v1/system` `go test` 通过。注:`core` 包 `TestCoreSplit_NewConstructorPopulatesInfraAndServices` 失败为既有问题(stash 回退后基线同样失败,`New()` 构造器 infra nil),与本次改动无关。
+
+## 未完成(低优,可选)
+- `user_statistics_test.go:18` 注释残留旧名 `constants.MaxPageSize`(纯注释,不影响编译)。
 
 ## 验证
 - `go build ./...` → exit 0
