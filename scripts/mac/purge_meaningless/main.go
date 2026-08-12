@@ -55,7 +55,11 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		applogger.Debugf("[mac_purge] .env 未加载: %v", err)
 	}
-	cfg := config.Load()
+	cfg, err := config.Load(context.Background())
+	if err != nil {
+		applogger.Errorf("[mac_purge_meaningless] 配置加载失败: %v", err)
+		os.Exit(1)
+	}
 	applogger.Info("=================================================================")
 	applogger.Info("= mac_purge_meaningless 启动")
 	if cfg.Database.Host != "" {

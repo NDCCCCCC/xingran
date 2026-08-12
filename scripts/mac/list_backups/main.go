@@ -15,7 +15,11 @@ import (
 
 func main() {
 	_ = godotenv.Load()
-	cfg := config.Load()
+	cfg, err := config.Load(context.Background())
+	if err != nil {
+		applogger.Errorf("[mac_list_backups] 配置加载失败: %v", err)
+		os.Exit(1)
+	}
 	dbConn, err := db.NewDatabase(&cfg.Database)
 	if err != nil {
 		applogger.Errorf("[list] DB 连接失败: %v", err)

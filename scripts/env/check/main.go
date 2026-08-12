@@ -4,7 +4,9 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"os"
 
 	"github.com/joho/godotenv"
 	"github.com/xingran-next/xingran-go-backend/internal/config"
@@ -17,7 +19,11 @@ func main() {
 	}
 	fmt.Println("✅ .env 加载成功")
 
-	cfg := config.Load()
+	cfg, err := config.Load(context.Background())
+	if err != nil {
+		fmt.Printf("❌ 配置加载失败: %v\n", err)
+		os.Exit(1)
+	}
 
 	fmt.Println()
 	fmt.Println("=== 配置加载结果 ===")
