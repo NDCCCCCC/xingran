@@ -15,15 +15,16 @@ import (
 
 // ARPCollector ARP表采集器
 type ARPCollector struct {
-	db       *gorm.DB
-	executor *device.DeviceExecutor
+	CollectorBase
 }
 
 // NewARPCollector 创建ARP表采集器
 func NewARPCollector(db *gorm.DB, executor *device.DeviceExecutor) *ARPCollector {
 	return &ARPCollector{
-		db:       db,
-		executor: executor,
+		CollectorBase: CollectorBase{
+			DB:       db,
+			Executor: executor,
+		},
 	}
 }
 
@@ -50,7 +51,7 @@ type ARPCollectionResult struct {
 // CollectDevice 采集单个设备的ARP表
 func (c *ARPCollector) CollectDevice(ctx context.Context, deviceID string) (*ARPCollectionResult, error) {
 	var device models.NetworkDevice
-	if err := c.db.WithContext(ctx).Where("id = ?", deviceID).First(&device).Error; err != nil {
+	if err := c.DB.WithContext(ctx).Where("id = ?", deviceID).First(&device).Error; err != nil {
 		return nil, fmt.Errorf("查询设备失败: %w", err)
 	}
 
@@ -65,7 +66,7 @@ func (c *ARPCollector) CollectDevice(ctx context.Context, deviceID string) (*ARP
 	cmd := c.getARPCommand(device.Vendor)
 
 	// 使用 executor 执行命令
-	output, err := c.executor.ExecuteOnDevice(ctx, device.ID, cmd, true)
+	output, err := c.Executor.ExecuteOnDevice(ctx, device.ID, cmd, true)
 	if err != nil {
 		result.Success = false
 		result.Error = err.Error()
@@ -91,7 +92,7 @@ func (c *ARPCollector) CollectDevice(ctx context.Context, deviceID string) (*ARP
 			VLAN:        entry.VLAN,
 			CollectedAt: time.Now(),
 		}
-		c.db.WithContext(ctx).Create(arpRecord)
+		c.DB.WithContext(ctx).Create(arpRecord)
 	}
 
 	result.Success = true
@@ -101,35 +102,12 @@ func (c *ARPCollector) CollectDevice(ctx context.Context, deviceID string) (*ARP
 
 // CollectAllDevices 采集所有设备的ARP表
 func (c *ARPCollector) CollectAllDevices(ctx context.Context) ([]*ARPCollectionResult, error) {
-	var devices []models.NetworkDevice
-	c.db.WithContext(ctx).Where("status = ?", models.DeviceStatusOnline).Find(&devices)
-
-	var results []*ARPCollectionResult
-
-	for _, device := range devices {
-		result, err := c.CollectDevice(ctx, device.ID)
-		if err != nil {
-			results = append(results, result)
-		} else {
-			results = append(results, result)
-		}
-	}
-
-	return results, nil
+	return CollectAllDevices(ctx, c.DB, c.CollectDevice)
 }
 
 // getARPCommand 获取ARP表命令
 func (c *ARPCollector) getARPCommand(vendor models.DeviceVendor) string {
-	commands := map[models.DeviceVendor]string{
-		models.VendorHuawei: "display arp",
-		models.VendorH3C:    "display arp",
-		models.VendorRuijie: "show arp",
-		models.VendorMaipu:  "show arp",
-	}
-	if cmd, ok := commands[vendor]; ok {
-		return cmd
-	}
-	return "display arp"
+	return vendorCommand(vendor, "display arp", "show arp", "display arp")
 }
 
 // parseARPOutput 解析ARP表输出
@@ -285,25 +263,25 @@ func (c *ARPCollector) GetARPStats(ctx context.Context) (map[string]interface{},
 		CollectedRecently int64
 	}
 
-	c.db.WithContext(ctx).Model(&models.DeviceARPEntry{}).Count(&stats.TotalEntries)
+	c.DB.WithContext(ctx).Model(&models.DeviceARPEntry{}).Count(&stats.TotalEntries)
 
 	// 按设备统计
 	stats.ByDevice = make(map[string]int64)
-	c.db.WithContext(ctx).Model(&models.DeviceARPEntry{}).
+	c.DB.WithContext(ctx).Model(&models.DeviceARPEntry{}).
 		Select("device_id, COUNT(*) as count").
 		Group("device_id").
 		Scan(&stats.ByDevice)
 
 	// 按类型统计
 	stats.ByType = make(map[string]int64)
-	c.db.WithContext(ctx).Model(&models.DeviceARPEntry{}).
+	c.DB.WithContext(ctx).Model(&models.DeviceARPEntry{}).
 		Select("type, COUNT(*) as count").
 		Group("type").
 		Scan(&stats.ByType)
 
 	// 最近24小时采集的条目数
 	since := time.Now().Add(-24 * time.Hour)
-	c.db.WithContext(ctx).Model(&models.DeviceARPEntry{}).Where("collected_at > ?", since).Count(&stats.CollectedRecently)
+	c.DB.WithContext(ctx).Model(&models.DeviceARPEntry{}).Where("collected_at > ?", since).Count(&stats.CollectedRecently)
 
 	return map[string]interface{}{
 		"totalEntries":      stats.TotalEntries,
@@ -315,15 +293,13 @@ func (c *ARPCollector) GetARPStats(ctx context.Context) (map[string]interface{},
 
 // CleanOldRecords 清理旧的ARP记录
 func (c *ARPCollector) CleanOldRecords(ctx context.Context, days int) (int64, error) {
-	cutoffTime := time.Now().AddDate(0, 0, -days)
-	result := c.db.WithContext(ctx).Where("collected_at < ?", cutoffTime).Delete(&models.DeviceARPEntry{})
-	return result.RowsAffected, result.Error
+	return c.CollectorBase.CleanOldRecords(ctx, &models.DeviceARPEntry{}, days)
 }
 
 // SearchByIP 按IP地址搜索ARP条目
 func (c *ARPCollector) SearchByIP(ctx context.Context, ipAddress string) ([]models.DeviceARPEntry, error) {
 	var entries []models.DeviceARPEntry
-	err := c.db.WithContext(ctx).
+	err := c.DB.WithContext(ctx).
 		Where("ip_address LIKE ?", "%"+ipAddress+"%").
 		Order("collected_at DESC").
 		Find(&entries).Error
@@ -337,7 +313,7 @@ func (c *ARPCollector) SearchByMAC(ctx context.Context, macAddress string) ([]mo
 	macAddress = services.NormalizeMACAddress(macAddress)
 
 	var entries []models.DeviceARPEntry
-	err := c.db.WithContext(ctx).
+	err := c.DB.WithContext(ctx).
 		Where("mac_address LIKE ?", "%"+macAddress+"%").
 		Order("collected_at DESC").
 		Find(&entries).Error

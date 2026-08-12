@@ -37,6 +37,24 @@ func (b *CollectorBase) CleanOldRecords(ctx context.Context, model interface{}, 
 	return result.RowsAffected, result.Error
 }
 
+// vendorCommand 根据设备厂商返回对应的采集命令字串。
+//
+// 华为/H3C 使用 display 前缀命令，锐捷/迈普使用 show 前缀命令，
+// 未知厂商使用 fallback。display / show / fallback 三者由调用方按业务传入。
+//
+// 	// 调用示例:
+// 	cmd := vendorCommand(device.Vendor, "display arp", "show arp", "display arp")
+func vendorCommand(vendor models.DeviceVendor, display, show, fallback string) string {
+	switch vendor {
+	case models.VendorHuawei, models.VendorH3C:
+		return display
+	case models.VendorRuijie, models.VendorMaipu:
+		return show
+	default:
+		return fallback
+	}
+}
+
 // CollectAllDevices 通用的"遍历所有在线设备 → 逐个采集"逻辑。
 //
 // 由于 Go 不允许在非泛型类型的方法上使用类型参数，此函数为包级泛型函数。

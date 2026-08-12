@@ -15,15 +15,16 @@ import (
 
 // InterfaceCollector 接口信息采集器
 type InterfaceCollector struct {
-	db       *gorm.DB
-	executor *device.DeviceExecutor
+	CollectorBase
 }
 
 // NewInterfaceCollector 创建接口信息采集器
 func NewInterfaceCollector(db *gorm.DB, executor *device.DeviceExecutor) *InterfaceCollector {
 	return &InterfaceCollector{
-		db:       db,
-		executor: executor,
+		CollectorBase: CollectorBase{
+			DB:       db,
+			Executor: executor,
+		},
 	}
 }
 
@@ -56,7 +57,7 @@ type InterfaceCollectionResult struct {
 // CollectDevice 采集单个设备的接口信息
 func (c *InterfaceCollector) CollectDevice(ctx context.Context, deviceID string) (*InterfaceCollectionResult, error) {
 	var device models.NetworkDevice
-	if err := c.db.WithContext(ctx).Where("id = ?", deviceID).First(&device).Error; err != nil {
+	if err := c.DB.WithContext(ctx).Where("id = ?", deviceID).First(&device).Error; err != nil {
 		return nil, fmt.Errorf("查询设备失败: %w", err)
 	}
 
@@ -71,7 +72,7 @@ func (c *InterfaceCollector) CollectDevice(ctx context.Context, deviceID string)
 	cmd := c.getInterfaceCommand(device.Vendor)
 
 	// 使用 executor 执行命令
-	output, err := c.executor.ExecuteOnDevice(ctx, device.ID, cmd, true)
+	output, err := c.Executor.ExecuteOnDevice(ctx, device.ID, cmd, true)
 	if err != nil {
 		result.Success = false
 		result.Error = err.Error()
@@ -103,7 +104,7 @@ func (c *InterfaceCollector) CollectDevice(ctx context.Context, deviceID string)
 			OutputErrors:  iface.OutputErrors,
 			CollectedAt:   time.Now(),
 		}
-		c.db.WithContext(ctx).Create(interfaceRecord)
+		c.DB.WithContext(ctx).Create(interfaceRecord)
 	}
 
 	result.Success = true
@@ -113,35 +114,12 @@ func (c *InterfaceCollector) CollectDevice(ctx context.Context, deviceID string)
 
 // CollectAllDevices 采集所有设备的接口信息
 func (c *InterfaceCollector) CollectAllDevices(ctx context.Context) ([]*InterfaceCollectionResult, error) {
-	var devices []models.NetworkDevice
-	c.db.WithContext(ctx).Where("status = ?", models.DeviceStatusOnline).Find(&devices)
-
-	var results []*InterfaceCollectionResult
-
-	for _, device := range devices {
-		result, err := c.CollectDevice(ctx, device.ID)
-		if err != nil {
-			results = append(results, result)
-		} else {
-			results = append(results, result)
-		}
-	}
-
-	return results, nil
+	return CollectAllDevices(ctx, c.DB, c.CollectDevice)
 }
 
 // getInterfaceCommand 获取接口信息命令
 func (c *InterfaceCollector) getInterfaceCommand(vendor models.DeviceVendor) string {
-	commands := map[models.DeviceVendor]string{
-		models.VendorHuawei: "display interface",
-		models.VendorH3C:    "display interface",
-		models.VendorRuijie: "show interface",
-		models.VendorMaipu:  "show interface",
-	}
-	if cmd, ok := commands[vendor]; ok {
-		return cmd
-	}
-	return "display interface"
+	return vendorCommand(vendor, "display interface", "show interface", "display interface")
 }
 
 // parseInterfaceOutput 解析接口信息输出
@@ -283,17 +261,17 @@ func (c *InterfaceCollector) GetInterfaceStats(ctx context.Context) (map[string]
 		CollectedRecently int64
 	}
 
-	c.db.WithContext(ctx).Model(&models.DeviceInterface{}).Count(&stats.TotalInterfaces)
-	c.db.WithContext(ctx).Model(&models.DeviceInterface{}).Where("oper_status = ?", "up").Count(&stats.UpInterfaces)
-	c.db.WithContext(ctx).Model(&models.DeviceInterface{}).Where("oper_status = ?", "down").Count(&stats.DownInterfaces)
+	c.DB.WithContext(ctx).Model(&models.DeviceInterface{}).Count(&stats.TotalInterfaces)
+	c.DB.WithContext(ctx).Model(&models.DeviceInterface{}).Where("oper_status = ?", "up").Count(&stats.UpInterfaces)
+	c.DB.WithContext(ctx).Model(&models.DeviceInterface{}).Where("oper_status = ?", "down").Count(&stats.DownInterfaces)
 
 	// 最近24小时采集的接口数量
 	since := time.Now().Add(-24 * time.Hour)
-	c.db.WithContext(ctx).Model(&models.DeviceInterface{}).Where("collected_at > ?", since).Count(&stats.CollectedRecently)
+	c.DB.WithContext(ctx).Model(&models.DeviceInterface{}).Where("collected_at > ?", since).Count(&stats.CollectedRecently)
 
 	// 按设备统计
 	stats.ByDevice = make(map[string]int64)
-	c.db.WithContext(ctx).Model(&models.DeviceInterface{}).
+	c.DB.WithContext(ctx).Model(&models.DeviceInterface{}).
 		Select("device_id, COUNT(*) as count").
 		Group("device_id").
 		Scan(&stats.ByDevice)
@@ -309,7 +287,5 @@ func (c *InterfaceCollector) GetInterfaceStats(ctx context.Context) (map[string]
 
 // CleanOldRecords 清理旧的接口记录
 func (c *InterfaceCollector) CleanOldRecords(ctx context.Context, days int) (int64, error) {
-	cutoffTime := time.Now().AddDate(0, 0, -days)
-	result := c.db.WithContext(ctx).Where("collected_at < ?", cutoffTime).Delete(&models.DeviceInterface{})
-	return result.RowsAffected, result.Error
+	return c.CollectorBase.CleanOldRecords(ctx, &models.DeviceInterface{}, days)
 }

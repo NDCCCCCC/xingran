@@ -15,15 +15,16 @@ import (
 
 // AssetCollector 资产信息采集器
 type AssetCollector struct {
-	db       *gorm.DB
-	executor *device.DeviceExecutor
+	CollectorBase
 }
 
 // NewAssetCollector 创建资产信息采集器
 func NewAssetCollector(db *gorm.DB, executor *device.DeviceExecutor) *AssetCollector {
 	return &AssetCollector{
-		db:       db,
-		executor: executor,
+		CollectorBase: CollectorBase{
+			DB:       db,
+			Executor: executor,
+		},
 	}
 }
 
@@ -57,7 +58,7 @@ type AssetCollectionResult struct {
 // CollectDevice 采集单个设备的资产信息
 func (c *AssetCollector) CollectDevice(ctx context.Context, deviceID string) (*AssetCollectionResult, error) {
 	var device models.NetworkDevice
-	if err := c.db.WithContext(ctx).Where("id = ?", deviceID).First(&device).Error; err != nil {
+	if err := c.DB.WithContext(ctx).Where("id = ?", deviceID).First(&device).Error; err != nil {
 		return nil, fmt.Errorf("查询设备失败: %w", err)
 	}
 
@@ -72,7 +73,7 @@ func (c *AssetCollector) CollectDevice(ctx context.Context, deviceID string) (*A
 	vendor := device.Vendor
 
 	// 直接使用连接池获取连接
-	pool := c.executor.GetScheduler().GetConnectionPool()
+	pool := c.Executor.GetScheduler().GetConnectionPool()
 	conn, err := pool.GetConnection(ctx, deviceID)
 	if err != nil {
 		result.Success = false
@@ -116,7 +117,7 @@ func (c *AssetCollector) CollectDevice(ctx context.Context, deviceID string) (*A
 		CPUUsage:          assetInfo.CPUUsage,
 		CollectedAt:       time.Now(),
 	}
-	c.db.WithContext(ctx).Create(assetRecord)
+	c.DB.WithContext(ctx).Create(assetRecord)
 
 	result.Success = true
 	result.Asset = assetInfo
@@ -125,49 +126,17 @@ func (c *AssetCollector) CollectDevice(ctx context.Context, deviceID string) (*A
 
 // CollectAllDevices 采集所有设备的资产信息
 func (c *AssetCollector) CollectAllDevices(ctx context.Context) ([]*AssetCollectionResult, error) {
-	var devices []models.NetworkDevice
-	c.db.WithContext(ctx).Where("status = ?", models.DeviceStatusOnline).Find(&devices)
-
-	var results []*AssetCollectionResult
-
-	for _, device := range devices {
-		result, err := c.CollectDevice(ctx, device.ID)
-		if err != nil {
-			results = append(results, result)
-		} else {
-			results = append(results, result)
-		}
-	}
-
-	return results, nil
+	return CollectAllDevices(ctx, c.DB, c.CollectDevice)
 }
 
 // getVersionCommand 获取版本信息命令
 func (c *AssetCollector) getVersionCommand(vendor models.DeviceVendor) string {
-	commands := map[models.DeviceVendor]string{
-		models.VendorHuawei: "display version",
-		models.VendorH3C:    "display version",
-		models.VendorRuijie: "show version",
-		models.VendorMaipu:  "show version",
-	}
-	if cmd, ok := commands[vendor]; ok {
-		return cmd
-	}
-	return "display version"
+	return vendorCommand(vendor, "display version", "show version", "display version")
 }
 
 // getDeviceCommand 获取设备信息命令
 func (c *AssetCollector) getDeviceCommand(vendor models.DeviceVendor) string {
-	commands := map[models.DeviceVendor]string{
-		models.VendorHuawei: "display device",
-		models.VendorH3C:    "display device",
-		models.VendorRuijie: "show system",
-		models.VendorMaipu:  "show system",
-	}
-	if cmd, ok := commands[vendor]; ok {
-		return cmd
-	}
-	return "display device"
+	return vendorCommand(vendor, "display device", "show system", "display device")
 }
 
 // parseVersionInfo 解析版本信息
@@ -424,31 +393,31 @@ func (c *AssetCollector) GetAssetStats(ctx context.Context) (map[string]interfac
 		AvgMemoryUsage    float64
 	}
 
-	c.db.WithContext(ctx).Model(&models.DeviceAsset{}).Count(&stats.TotalDevices)
+	c.DB.WithContext(ctx).Model(&models.DeviceAsset{}).Count(&stats.TotalDevices)
 
 	// 按软件版本统计
 	stats.BySoftwareVersion = make(map[string]int64)
-	c.db.WithContext(ctx).Model(&models.DeviceAsset{}).
+	c.DB.WithContext(ctx).Model(&models.DeviceAsset{}).
 		Select("software_version, COUNT(*) as count").
 		Group("software_version").
 		Scan(&stats.BySoftwareVersion)
 
 	// 按产品型号统计
 	stats.ByProduct = make(map[string]int64)
-	c.db.WithContext(ctx).Model(&models.DeviceAsset{}).
+	c.DB.WithContext(ctx).Model(&models.DeviceAsset{}).
 		Select("product_name, COUNT(*) as count").
 		Group("product_name").
 		Scan(&stats.ByProduct)
 
 	// 平均CPU使用率
 	var avgCPU, avgMem float64
-	c.db.WithContext(ctx).Model(&models.DeviceAsset{}).
+	c.DB.WithContext(ctx).Model(&models.DeviceAsset{}).
 		Select("AVG(cpu_usage)").
 		Scan(&avgCPU)
 	stats.AvgCPUUsage = avgCPU
 
 	// 平均内存使用率
-	c.db.WithContext(ctx).Model(&models.DeviceAsset{}).
+	c.DB.WithContext(ctx).Model(&models.DeviceAsset{}).
 		Where("total_memory > 0").
 		Select("AVG((total_memory - free_memory) * 100.0 / total_memory)").
 		Scan(&avgMem)
@@ -465,15 +434,13 @@ func (c *AssetCollector) GetAssetStats(ctx context.Context) (map[string]interfac
 
 // CleanOldRecords 清理旧的资产记录
 func (c *AssetCollector) CleanOldRecords(ctx context.Context, days int) (int64, error) {
-	cutoffTime := time.Now().AddDate(0, 0, -days)
-	result := c.db.WithContext(ctx).Where("collected_at < ?", cutoffTime).Delete(&models.DeviceAsset{})
-	return result.RowsAffected, result.Error
+	return c.CollectorBase.CleanOldRecords(ctx, &models.DeviceAsset{}, days)
 }
 
 // GetLatestAsset 获取设备最新资产信息
 func (c *AssetCollector) GetLatestAsset(ctx context.Context, deviceID string) (*models.DeviceAsset, error) {
 	var asset models.DeviceAsset
-	err := c.db.WithContext(ctx).
+	err := c.DB.WithContext(ctx).
 		Where("device_id = ?", deviceID).
 		Order("collected_at DESC").
 		First(&asset).Error
