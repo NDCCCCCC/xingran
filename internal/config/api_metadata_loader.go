@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"gopkg.in/yaml.v3"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // APIMetadataConfig API 元数据配置。
@@ -44,12 +45,10 @@ type EndpointMeta struct {
 	ExampleParams    map[string]string `yaml:"exampleParams"`
 }
 
-// endpointIndexKey 生成索引键。
-//
-// HTTP method 统一大写(GET/POST);Route 由 normalize() 规范化后已带前导 /、
-// 无尾部 /。 直接拼接即可。
+// endpointIndexKey 生成索引键,统一规范化 method + route,保证存储侧(buildIndex)
+// 与查询侧(GetEndpointByRoute)键构造对称——即便入参未经过 normalize() 也能命中同一键。
 func (c *APIMetadataConfig) endpointIndexKey(method, route string) string {
-	return method + " " + route
+	return normalizeMethod(method) + " " + normalizeRoute(route)
 }
 
 // buildIndex 懒加载端点索引。
@@ -63,29 +62,42 @@ func (c *APIMetadataConfig) buildIndex() {
 	for i := range c.Metadata {
 		for j := range c.Metadata[i].Endpoints {
 			ep := &c.Metadata[i].Endpoints[j]
-			c.index[c.endpointIndexKey(ep.Method, ep.Route)] = ep
+			key := c.endpointIndexKey(ep.Method, ep.Route)
+			// 规范化后键重复(YAML 里同路由 "get" 与 "GET" 等)会静默后写覆盖,
+			// 行为从旧的"首匹配"变为"末匹配"。记录告警,避免元数据歧义被无声吞掉。
+			if existing, dup := c.index[key]; dup {
+				applogger.Warnf("[config] API 元数据索引键重复 %q,后者(%q)覆盖前者(%q)",
+					key, ep.DisplayName, existing.DisplayName)
+			}
+			c.index[key] = ep
 		}
 	}
 }
 
-// normalize 规范化所有端点的 Method / Route,消除大小写和前后缀差异,
-//
-//	避免索引键重复。
-//
-// 规则:
-//   - Method:  trim 后 ToUpper(GET / POST / ...)
-//   - Route:   trim 后剥离前后多余 /,再加单个前导 /
-//
+// normalizeMethod 规范化 HTTP method:去首尾空白 + 转大写(GET / POST / ...)。
+// 存储侧(normalize)与查询侧(GetEndpointByRoute)共用,保证索引键对称。
+func normalizeMethod(method string) string {
+	return strings.ToUpper(strings.TrimSpace(method))
+}
+
+// normalizeRoute 规范化路由:去首尾空白 + 剥离首尾多余 / + 补单个前导 /。
+// 存储侧(normalize)与查询侧(GetEndpointByRoute)共用,保证索引键对称。
+// 例:"system/users/list/"、"/system/users/list"、"  /system/users/list  " → "/system/users/list"。
+func normalizeRoute(route string) string {
+	route = strings.TrimSpace(route)
+	route = strings.TrimLeft(route, "/")
+	route = strings.TrimRight(route, "/")
+	return "/" + route
+}
+
+// normalize 规范化所有端点的 Method / Route,消除大小写和前后缀差异,避免索引键重复。
 // 在 LoadAPIMetadata 解析完成后调用一次,buildIndex() 看到的就是规范化后的字段。
 func (c *APIMetadataConfig) normalize() {
 	for i := range c.Metadata {
 		for j := range c.Metadata[i].Endpoints {
 			ep := &c.Metadata[i].Endpoints[j]
-			ep.Method = strings.ToUpper(strings.TrimSpace(ep.Method))
-			route := strings.TrimSpace(ep.Route)
-			route = strings.TrimLeft(route, "/")
-			route = strings.TrimRight(route, "/")
-			ep.Route = "/" + route
+			ep.Method = normalizeMethod(ep.Method)
+			ep.Route = normalizeRoute(ep.Route)
 		}
 	}
 }
@@ -135,9 +147,25 @@ func LoadAPIMetadata(ctx context.Context, path string) (*APIMetadataConfig, erro
 //
 // 性能:首次调用 O(N*M) 构建索引,之后每次 O(1) 哈希查找。
 // 多 goroutine 并发安全。
+// GetEndpointByRoute 根据路由和方法获取端点元数据。
+//
+// 返回 nil 表示未找到,调用方需要处理 nil(典型用法:降级到默认权限)。
+//
+// method 与 route 入参均会规范化(大写 / 前导 / / 无尾斜杠),因此查询
+// "/system/users/list/"、"system/users/list"、"  POST  " 也能命中。
+//
+// 返回的是 EndpointMeta 的值拷贝,调用方修改返回值不会影响内部状态
+// (保持"加载后只读"不变量)。
+//
+// 性能:首次调用 O(N*M) 构建索引,之后每次 O(1) 哈希查找。多 goroutine 并发安全。
 func (c *APIMetadataConfig) GetEndpointByRoute(route, method string) *EndpointMeta {
 	c.indexOnce.Do(c.buildIndex)
-	return c.index[c.endpointIndexKey(strings.ToUpper(strings.TrimSpace(method)), route)]
+	ep := c.index[c.endpointIndexKey(method, route)]
+	if ep == nil {
+		return nil
+	}
+	cp := *ep // 值拷贝:返回独立副本,避免调用方写返回值污染内部状态(WR-3)
+	return &cp
 }
 
 // GetAllEndpoints 获取所有端点元数据(按模块分组)。

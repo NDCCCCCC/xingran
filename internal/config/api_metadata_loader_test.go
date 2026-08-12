@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -141,11 +142,15 @@ metadata:
 		method string
 		wantOK bool
 	}{
-		{"小写 method → 命中", "/system/users/list", "post", true},
-		{"带尾部斜杠 → 命中", "/system/users/list", "POST", true},
-		{"前后空格 method → 命中", "/system/users/list", "  POST  ", true},
-		{"前后空格 route → 命中", "/system/users/list", "POST", true},
-		{"查询大小写 method → 命中", "/system/users/list", "post", true},
+		// 查询侧 method 规范化(ToUpper + TrimSpace)
+		{"查询小写 method → 命中", "/system/users/list", "post", true},
+		{"查询带空白 method → 命中", "/system/users/list", "  POST  ", true},
+		// 查询侧 route 规范化(WR-1:与存储侧 normalize 对称,handler 直传用户 query 也能命中)
+		{"查询带尾斜杠 route → 命中", "/system/users/list/", "POST", true},
+		{"查询无前导斜杠 route → 命中", "system/users/list", "POST", true},
+		{"查询带前后空白 route → 命中", "  /system/users/list  ", "POST", true},
+		// 未命中
+		{"查询不存在的 route → miss", "/system/users/notfound", "POST", false},
 	}
 
 	for _, tt := range tests {
@@ -153,6 +158,9 @@ metadata:
 			ep := cfg.GetEndpointByRoute(tt.route, tt.method)
 			if tt.wantOK && ep == nil {
 				t.Fatalf("期望命中,实际 nil")
+			}
+			if !tt.wantOK && ep != nil {
+				t.Fatalf("期望未命中,实际返回 %+v", ep)
 			}
 		})
 	}
@@ -242,6 +250,36 @@ func TestGetEndpointByRoute_Concurrent(t *testing.T) {
 	}
 }
 
+// TestGetEndpointByRoute_ReturnsCopy 验证 WR-3:GetEndpointByRoute 返回值拷贝,
+// 调用方修改返回值不影响内部 Metadata(保持"加载后只读"不变量)。
+func TestGetEndpointByRoute_ReturnsCopy(t *testing.T) {
+	cfg, err := LoadAPIMetadata(context.Background(), writeYAML(t, validYAML))
+	if err != nil {
+		t.Fatalf("测试准备失败: %v", err)
+	}
+
+	ep := cfg.GetEndpointByRoute("/system/users/list", "POST")
+	if ep == nil {
+		t.Fatal("期望命中")
+	}
+	originalRoute := ep.Route
+
+	// 改写返回值,不应污染内部状态。
+	ep.Route = "/tampered"
+	ep.Method = "DELETE"
+
+	ep2 := cfg.GetEndpointByRoute("/system/users/list", "POST")
+	if ep2 == nil {
+		t.Fatal("改写返回值后再次查询仍应命中;若 nil 说明索引被污染")
+	}
+	if ep2.Route != originalRoute {
+		t.Errorf("内部 Route 应仍为 %q,实际 %q(返回值非独立拷贝)", originalRoute, ep2.Route)
+	}
+	if ep2.Method != "POST" {
+		t.Errorf("内部 Method 应仍为 POST,实际 %q", ep2.Method)
+	}
+}
+
 // TestGetAllEndpoints 验证返回浅拷贝切片(WR-4 修复)。
 //
 // 语义说明:GetAllEndpoints 不再返回内部切片的引用;
@@ -287,7 +325,7 @@ func BenchmarkGetEndpointByRoute(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = cfg.GetEndpointByRoute("/system/users/list", "POST")
+		_ = cfg.GetEndpointByRoute("/bench/m0/endpoint0", "POST")
 	}
 }
 
@@ -303,7 +341,7 @@ func BenchmarkGetEndpointByRoute_Linear(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		for m := range cfg.Metadata {
 			for j := range cfg.Metadata[m].Endpoints {
-				if cfg.Metadata[m].Endpoints[j].Route == "/system/users/list" &&
+				if cfg.Metadata[m].Endpoints[j].Route == "/bench/m0/endpoint0" &&
 					cfg.Metadata[m].Endpoints[j].Method == "POST" {
 					_ = cfg.Metadata[m].Endpoints[j]
 					break
@@ -323,7 +361,7 @@ func largeYAML() string {
 		sb.WriteString("    icon: icon\n")
 		sb.WriteString("    endpoints:\n")
 		for e := 0; e < 20; e++ {
-			sb.WriteString("      - route: /bench/m0/endpoint0\n")
+			fmt.Fprintf(&sb, "      - route: /bench/m%d/endpoint%d\n", m, e)
 			sb.WriteString("        method: POST\n")
 			sb.WriteString("        displayName: bench\n")
 		}
