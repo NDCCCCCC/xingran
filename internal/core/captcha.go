@@ -251,17 +251,22 @@ func (s *CaptchaService) GenerateCaptcha(ctx context.Context, clientIP string) (
 	var err error
 
 	// 尝试使用原子操作（IncrementWithExpire）确保TTL正确设置
-	if redisCache, ok := s.cache.(interface{ IncrementWithExpire(context.Context, string, time.Duration) (int64, error) }); ok {
+	if redisCache, ok := s.cache.(cache.RateLimitCache); ok {
 		count, err = redisCache.IncrementWithExpire(ctx, rateLimitKey, 1*time.Minute)
 		if err != nil {
 			applogger.Errorf("[Captcha] Rate limit check failed for IP %s: %v", clientIP, err)
-			// 限流检查失败时，为安全起见允许请求继续，但记录错误
-			count = 0 // 重置计数器，允许请求通过
+			// fail-close：限流基础设施不可用时拒绝，避免被绕过
+			return nil, fmt.Errorf("服务繁忙，请稍后再试")
 		}
 	} else {
 		// 降级到普通Increment + Expire（旧逻辑）
 		count, err = s.cache.Increment(ctx, rateLimitKey)
-		if err == nil && count == 1 {
+		if err != nil {
+			applogger.Errorf("[Captcha] Rate limit check failed for IP %s: %v", clientIP, err)
+			// fail-close：限流基础设施不可用时拒绝，避免被绕过
+			return nil, fmt.Errorf("服务繁忙，请稍后再试")
+		}
+		if count == 1 {
 			_ = s.cache.Expire(ctx, rateLimitKey, 1*time.Minute)
 		}
 	}
@@ -447,7 +452,7 @@ func (s *CaptchaService) VerifySliderCaptcha(ctx context.Context, captchaID stri
 	// to ensure immediate availability for subsequent login verification
 	// L2Writer queues writes asynchronously, causing race condition where
 	// Exists check happens before Redis write completes
-	if mlCache, ok := s.cache.(interface{ GetL2Cache() cache.Cache }); ok {
+	if mlCache, ok := s.cache.(cache.L2ExposingCache); ok {
 		// Bypass L2Writer - write directly to L2 (Redis) for immediate availability
 		l2Cache := mlCache.GetL2Cache()
 		err = l2Cache.Set(ctx, verifiedKey, "1", 5*time.Minute)

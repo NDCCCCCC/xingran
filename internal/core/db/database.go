@@ -3,9 +3,10 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"regexp"
 	"time"
 
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 	"github.com/xingran-next/xingran-go-backend/internal/config"
 	"github.com/xingran-next/xingran-go-backend/internal/core/db/migrations"
 	"github.com/xingran-next/xingran-go-backend/internal/core/security"
@@ -43,10 +44,6 @@ func NewDatabase(cfg *config.DatabaseConfig) (*Database, error) {
 		if err != nil {
 			return nil, fmt.Errorf("连接SQLite失败: %w", err)
 		}
-	}
-
-	if err := configureGORM(db); err != nil {
-		return nil, fmt.Errorf("配置GORM失败: %w", err)
 	}
 
 	return &Database{
@@ -126,11 +123,6 @@ func configureConnectionPool(sqlDB *sql.DB, cfg *config.DatabaseConfig) {
 	sqlDB.SetMaxOpenConns(cfg.MaxOpenConns)
 	sqlDB.SetMaxIdleConns(cfg.MaxIdleConns)
 	sqlDB.SetConnMaxLifetime(time.Duration(cfg.MaxLifetime) * time.Second)
-}
-
-// configureGORM 配置GORM
-func configureGORM(_ *gorm.DB) error {
-	return nil
 }
 
 // Close 关闭数据库连接
@@ -395,9 +387,6 @@ func (d *Database) AutoMigrate() error {
 	}
 
 	applogger.Infof("所有表迁移成功")
-
-	// 所有迁移完成后,审计约束命名是否一致,提前暴露潜在 AutoMigrate 冲突
-	d.auditConstraintNaming()
 
 	// 所有迁移完成后,审计约束命名是否一致,提前暴露潜在 AutoMigrate 冲突
 	d.auditConstraintNaming()
@@ -776,8 +765,16 @@ func createUserRoleRelations(db *gorm.DB) error {
 	return nil
 }
 
+// dbIdentRe 校验 PG 数据库标识符,防止 CREATE DATABASE 拼接时注入非法字符
+var dbIdentRe = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+
 // createDatabaseIfNotExists 如果数据库不存在则创建
 func createDatabaseIfNotExists(adminDSN, dbName string) error {
+	// CREATE DATABASE 不支持 $1 占位符,必须拼接标识符,故先校验 dbName 合法性
+	if !dbIdentRe.MatchString(dbName) {
+		return fmt.Errorf("非法数据库名 %q（仅允许 [a-zA-Z_][a-zA-Z0-9_]*）", dbName)
+	}
+
 	db, err := sql.Open("postgres", adminDSN)
 	if err != nil {
 		return fmt.Errorf("连接管理员数据库失败: %w", err)
@@ -794,7 +791,7 @@ func createDatabaseIfNotExists(adminDSN, dbName string) error {
 
 	// 如果数据库不存在，则创建
 	if !exists {
-		createQuery := fmt.Sprintf("CREATE DATABASE %s", dbName)
+		createQuery := fmt.Sprintf("CREATE DATABASE %s", pq.QuoteIdentifier(dbName))
 		_, err = db.Exec(createQuery)
 		if err != nil {
 			return fmt.Errorf("创建数据库失败: %w", err)

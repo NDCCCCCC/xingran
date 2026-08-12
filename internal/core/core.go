@@ -15,8 +15,8 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/device"
 	"github.com/xingran-next/xingran-go-backend/internal/scheduler"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
-	assetSvc "github.com/xingran-next/xingran-go-backend/internal/services/asset"
 	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
+	assetSvc "github.com/xingran-next/xingran-go-backend/internal/services/asset"
 	"github.com/xingran-next/xingran-go-backend/internal/services/rpa"
 	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/xingran-next/xingran-go-backend/internal/services/vdi"
@@ -43,8 +43,8 @@ const fallbackMemoryCacheCleanup = 10 * time.Minute
 // loadConnectionPoolConfig 从 sys_config 读取网络设备连接池配置 (web 可配)。
 // 任一项缺失/解析失败均用默认值兜底, 保证启动不崩溃。
 //
-//	- network.connection_pool.max_connections (默认 50)
-//	- network.connection_pool.max_idle_seconds (默认 300)
+//   - network.connection_pool.max_connections (默认 50)
+//   - network.connection_pool.max_idle_seconds (默认 300)
 //
 // 历史: core.go 曾硬编码 MaxConnections=20 (避 scrapligo panic); 设备数 >20 时池满导致
 // 间歇性端口采集跳过, 已移入 sys_config 可配 (migration 203 seed)。修改后需重启后端生效。
@@ -85,18 +85,18 @@ type rpaScalingService interface {
 
 // warmUpServices 缓存预热所需的服务集合（仅在初始化期间使用）
 type warmUpServices struct {
-	UserService     system.UserService
-	RoleService     system.RoleService
-	MenuService     system.MenuService
-	DeptService     system.DepartmentService
-	PostService     system.PostService
+	UserService system.UserService
+	RoleService system.RoleService
+	MenuService system.MenuService
+	DeptService system.DepartmentService
+	PostService system.PostService
 }
 
 // Core 核心模块管理器
 // 负责管理系统的所有核心服务组件，包括数据库连接、缓存、JWT管理、密码加密等。
 //
 // 通过嵌入 *CoreInfra 和 *CoreServices 保持向后兼容的字段访问语法
-//（core.DB、core.Cache、core.UserService、core.NoticeHub 等仍可直接访问 — 字段提升）。
+// （core.DB、core.Cache、core.UserService、core.NoticeHub 等仍可直接访问 — 字段提升）。
 //
 // 字段分组：
 //   - 基础设施层：见 core_infra.go（Config、DB、Cache、JWT、Pwd、SM4、Scheduler、验证码、指标缓存、认证工厂）
@@ -158,11 +158,12 @@ func New(cfg *config.Config) (*Core, error) {
 //   - SM4_KEY 是仓库默认值 dGVzdC1zZWNyZXQxNiEhIQ== → ⚠️ **仅 ERROR 日志,允许启动**
 //     原因: 数据库里可能已用默认值加密大量数据,硬性中止会让所有历史数据无法读取
 //     建议: 生成新 key (openssl rand -base64 16) → 用 migrate-sm4-key 命令迁移
-//           数据 → 切换到新 key → 移除默认值
+//     数据 → 切换到新 key → 移除默认值
 //   - 密钥错误无法创建 cipher → 启动中止
 //
 // ⚠️ SM4 加密的是持久化数据（设备密码/AD 凭据/RPA 凭证）,
-//   启动后**不能**动态生成,否则重启后历史加密数据永久不可解密
+//
+//	启动后**不能**动态生成,否则重启后历史加密数据永久不可解密
 func initSM4Cipher(sm4Key string) (addomain.PasswordCipher, error) {
 	if sm4Key == "" {
 		return nil, fmt.Errorf("SM4_KEY 未配置 — AD 域密码加解密将不可用,启动中止 (通过环境变量 SM4_KEY 注入)")
@@ -185,7 +186,6 @@ func initSM4Cipher(sm4Key string) (addomain.PasswordCipher, error) {
 	applogger.Infof("SM4 加密器初始化成功")
 	return cipher, nil
 }
-
 
 // Init 初始化核心模块
 // 按顺序初始化数据库、基础数据、权限服务和缓存系统
@@ -315,7 +315,7 @@ func (c *Core) Init() error {
 	c.DeviceDiscoveryService = services.NewDeviceDiscoveryService(c.GetDB())
 	applogger.Infof("设备发现服务初始化完成")
 
-	// 9. 初始化设备信息采集服务（后台异步，统一处理设备创建和定时任务）
+	// 9.1. 初始化设备信息采集服务（后台异步，统一处理设备创建和定时任务）
 	c.DeviceInfoCollectionService = services.NewDeviceInfoCollectionService(c.GetDB(), c.DeviceExecutor)
 	if err := c.DeviceInfoCollectionService.Start(context.Background()); err != nil {
 		applogger.Warnf("启动设备信息采集服务失败: %v", err)
@@ -405,21 +405,21 @@ func (c *Core) Init() error {
 
 		// 启动AD域同步调度器（每5分钟检查需要同步的配置）
 		if c.SM4Cipher != nil {
-				scheduler.SetADSM4Cipher(c.SM4Cipher)
-			}
-			scheduler.StartADSyncScheduler(c.GetDB())
+			scheduler.SetADSM4Cipher(c.SM4Cipher)
+		}
+		scheduler.StartADSyncScheduler(c.GetDB())
 
-			// 初始化VDI虚拟机服务并注入到调度器
-			vdiVMService := vdi.NewVMServiceWithDynamicClient(c.GetDB())
-			scheduler.SetVDIVMService(vdiVMService)
-			applogger.Infof("VDI虚拟机服务初始化完成")
+		// 初始化VDI虚拟机服务并注入到调度器
+		vdiVMService := vdi.NewVMServiceWithDynamicClient(c.GetDB())
+		scheduler.SetVDIVMService(vdiVMService)
+		applogger.Infof("VDI虚拟机服务初始化完成")
 
-			scheduler.RegisterVDISyncTasks(c.Scheduler)
-			applogger.Infof("VDI同步定时任务注册完成")
+		scheduler.RegisterVDISyncTasks(c.Scheduler)
+		applogger.Infof("VDI同步定时任务注册完成")
 
-			// 注册部门到AD同步定时任务
-			scheduler.RegisterDeptSyncTasks(c.Scheduler)
-			applogger.Infof("部门到AD同步定时任务注册完成")
+		// 注册部门到AD同步定时任务
+		scheduler.RegisterDeptSyncTasks(c.Scheduler)
+		applogger.Infof("部门到AD同步定时任务注册完成")
 
 		// 设置全局数据库访问器，供定时任务使用（必须在同步周期性工单任务之前）
 		scheduler.SetDB(c)
@@ -717,8 +717,8 @@ func (c *Core) initAuthFactory() {
 	c.AuthFactory = security.NewAuthStrategyFactory(c.GetDB(), c.PwdManager, c.SM4Cipher)
 
 	// 初始化用户同步服务并注入到工厂
-		mapper := addomain.NewDeptOUmapper(c.GetDB())
-		userSyncService := system.NewUserSyncService(c.GetDB(), c.PwdManager, mapper)
+	mapper := addomain.NewDeptOUmapper(c.GetDB())
+	userSyncService := system.NewUserSyncService(c.GetDB(), c.PwdManager, mapper)
 	c.AuthFactory.SetUserSyncer(userSyncService)
 
 	// Phase 36: 注入 AD 账号池（多账号故障切换）
@@ -788,7 +788,24 @@ func (c *Core) initSystemServicesForWarmUp() *warmUpServices {
 
 // performCacheWarmUp 执行缓存预热
 func (c *Core) performCacheWarmUp(ctx context.Context, svcs *warmUpServices) {
-	time.Sleep(2 * time.Second)
+	// 等待 DB 就绪（替代硬编码 sleep）：短轮询 Ping，带总超时，慢机等够、快机不白等
+	readyCtx, readyCancel := context.WithTimeout(ctx, 10*time.Second)
+	defer readyCancel()
+	for {
+		if c.GetDB() != nil {
+			if sqlDB, err := c.GetDB().DB(); err == nil {
+				if err := sqlDB.PingContext(readyCtx); err == nil {
+					break
+				}
+			}
+		}
+		select {
+		case <-readyCtx.Done():
+			applogger.Warnf("缓存预热：等待 DB 就绪超时，放弃本轮预热")
+			return
+		case <-time.After(200 * time.Millisecond):
+		}
+	}
 
 	applogger.Infof("开始执行缓存预热...")
 
