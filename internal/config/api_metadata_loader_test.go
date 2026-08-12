@@ -280,11 +280,10 @@ func TestGetEndpointByRoute_ReturnsCopy(t *testing.T) {
 	}
 }
 
-// TestGetAllEndpoints 验证返回浅拷贝切片(WR-4 修复)。
+// TestGetAllEndpoints 验证返回深拷贝切片(WR-4 修复:顶层 + 嵌套 Endpoints 均拷贝)。
 //
-// 语义说明:GetAllEndpoints 不再返回内部切片的引用;
-//  1. 调用方修改顶层切片元素(append / 索引赋值)不影响 cfg.Metadata
-//  2. 浅拷贝的 ModuleMetadata 仍含指针字段,EndpointMeta 内部不可改
+// 语义说明:GetAllEndpoints 返回独立快照,调用方修改任意层级值字段都不影响 cfg.Metadata。
+// 注意:EndpointMeta 内的切片/映射字段(SupportedWidgets 等)仍共享底层数据,不应修改。
 func TestGetAllEndpoints(t *testing.T) {
 	cfg, err := LoadAPIMetadata(context.Background(), writeYAML(t, validYAML))
 	if err != nil {
@@ -299,10 +298,16 @@ func TestGetAllEndpoints(t *testing.T) {
 		t.Errorf("第一个模块应为 system,实际 %q", all[0].Module)
 	}
 
-	// 修改返回值不应该影响 cfg.Metadata。
+	// 修改返回值顶层字段不应该影响 cfg.Metadata。
 	all[0].Module = "tampered"
 	if cfg.Metadata[0].Module == "tampered" {
-		t.Error("GetAllEndpoints 返回的是内部引用,违反浅拷贝语义")
+		t.Error("GetAllEndpoints 返回的是内部引用,违反深拷贝语义")
+	}
+
+	// 嵌套 Endpoints 切片也应独立(WR-4:原浅拷贝共享底层数组,会污染内部)。
+	all[0].Endpoints[0].Route = "/tampered"
+	if cfg.Metadata[0].Endpoints[0].Route == "/tampered" {
+		t.Error("GetAllEndpoints 嵌套 Endpoints 仍共享内部底层数组,违反深拷贝语义")
 	}
 
 	// nil Metadata 应返回空切片(便于调用方 len() == 0 判断)。

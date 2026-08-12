@@ -168,13 +168,20 @@ func (c *APIMetadataConfig) GetEndpointByRoute(route, method string) *EndpointMe
 	return &cp
 }
 
-// GetAllEndpoints 获取所有端点元数据(按模块分组)。
+// GetAllEndpoints 获取所有端点元数据的深拷贝快照(按模块分组)。
 //
-// 返回浅拷贝切片,调用方可以安全地 append 或修改元素,不会影响内部状态。
-// 指针字段(*EndpointMeta)仍指向内部,不可修改其内容。
-// nil Metadata 时返回空切片(而非 nil),便于调用方 len() == 0 判断。
+// 返回独立切片:顶层 ModuleMetadata 与嵌套 Endpoints 切片均为拷贝,
+// 调用方修改任意层级的值字段(Route/Method/Module 等)不影响内部状态。
+// 注意:EndpointMeta 内的切片/映射字段(SupportedWidgets/Permissions/ExampleParams)
+// 仍共享底层数据,不应修改。
+// nil Metadata 时返回空切片(而非 nil),便于 len() == 0 判断。
 func (c *APIMetadataConfig) GetAllEndpoints() []ModuleMetadata {
 	snapshot := make([]ModuleMetadata, len(c.Metadata))
-	copy(snapshot, c.Metadata)
+	for i := range c.Metadata {
+		snapshot[i] = c.Metadata[i]
+		eps := make([]EndpointMeta, len(c.Metadata[i].Endpoints))
+		copy(eps, c.Metadata[i].Endpoints)
+		snapshot[i].Endpoints = eps
+	}
 	return snapshot
 }
