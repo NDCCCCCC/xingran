@@ -76,7 +76,10 @@ previous_update: 2026-07-10 after v1.20 milestone SHIPPED + ARCHIVED
 3. 新增集成测试覆盖完整链路三条路径:① 有效 key + 正确 scope → 通过;② 有效 key + 缺失 scope → 403;③ 无效 key → 401;且原 `apikey_test.go` 3 个纯函数测试与全量 `go test ./...` 不回归
 4. `go build ./...` 退出码 0,无 "interface{} 避免循环导入" 型 workaround 残留注释
 
-**Plans**: TBD
+**Plans**: 1 plan (single-wave, fix-then-test)
+
+Plans:
+- [ ] 57-01-PLAN.md — 修复 setUserContextForAPIKey 类型断言 (AUTH-01/P0-2) + 重写 RequireAPIKeyResourcePermission 反模式 (AUTH-02/P0-1) + 创建集成测试锁住三路径链路 (QUAL-02) + D-02 构造函数证据
 
 ---
 
