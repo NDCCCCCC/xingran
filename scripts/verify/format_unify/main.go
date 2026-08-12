@@ -180,8 +180,8 @@ func checkARPTableExists(ctx context.Context, g *gorm.DB) {
 		)
 	`).Scan(&tableExists)
 
-	// 预期 false(DeviceARPEntry 未在 AutoMigrate)
-	// 若 true 则说明有人手动建表或 AutoMigrate 已添加
+	// 预期 false(该表对应 model 已删除,不会进入 AutoMigrate)
+	// 若 true 则说明有人手动建表
 	addCheck("M185", "sys_device_arp_entry 不存在(预期)", !tableExists,
 		fmt.Sprintf("实际存在=%v(若=true请检查 database.go AutoMigrate)", tableExists))
 
