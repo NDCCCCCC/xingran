@@ -1,0 +1,11 @@
+Value SLOT_ID (\w+)
+Value SLOT_NAME ([\w-]+)
+Value CPU_5_SEC ([\d\.]+)
+Value CPU_1_MIN ([\d\.]+)
+Value CPU_5_MIN ([\d\.]+)
+
+Start
+  ^\[Slot\s+${SLOT_ID}:\s+${SLOT_NAME}(?:,\s+Cpu\s+\d+)?\]
+  ^CPU\s+utilization\s+in\s+five\s+seconds\s*:\s*${CPU_5_SEC}%
+  ^CPU\s+utilization\s+in\s+one\s+minute\s*:\s*${CPU_1_MIN}%
+  ^CPU\s+utilization\s+in\s+five\s+minutes\s*:\s*${CPU_5_MIN}% -> Record

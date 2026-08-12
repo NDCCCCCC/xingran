@@ -1,0 +1,55 @@
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(to bottom right, var(--color-blue-50), var(--color-indigo-100));
+}
+
+.login-card {
+  width: 100%;
+  max-width: 28rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* 密码输入框容器样式 - 添加边框以匹配用户名输入框 */
+.login-card .ant-input-affix-wrapper {
+  border: 1px solid var(--theme-border-primary) !important;
+  background: #fff !important;
+}
+
+.login-card .ant-input-affix-wrapper:focus,
+.login-card .ant-input-affix-wrapper-focused {
+  border: 1px solid var(--theme-border-primary) !important;
+  box-shadow: none !important;
+}
+
+.login-card .ant-input-affix-wrapper .ant-input {
+  border: none !important;
+  background: transparent !important;
+}
+
+/* 认证模式选择器样式 */
+.auth-mode-selector .ant-radio-wrapper {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px;
+  margin-bottom: 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  transition: all 0.3s;
+}
+
+.auth-mode-selector .ant-radio-wrapper:hover {
+  border-color: var(--theme-info, #1890ff);
+  background-color: #f0f7ff;
+}
+
+.auth-mode-selector .ant-radio-wrapper-checked {
+  border-color: var(--theme-info, #1890ff);
+  background-color: #e6f7ff;
+}
+
+.auth-mode-selector .ant-radio {
+  margin-top: 2px;
+}

@@ -1,0 +1,54 @@
+# Frontend build gate — mirrors the local `npm run verify` script so that
+# "passes CI" is the same as "passes locally". Sequential cheap-to-expensive
+# order so the easiest-to-fix problems surface first and CI minutes aren't
+# burned on a build when lint or type-check would have failed anyway.
+#
+# This is the last-resort safety net for the "dev passes, build fails"
+# pattern: pre-push should catch it first, IDE should surface it inline,
+# and only if both are bypassed does CI catch it.
+
+name: frontend-build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: xingran-react-frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Pin to current LTS. Never use 'latest' — non-reproducible CI
+          # is a CI smell. Bump in a deliberate commit when EOL approaches.
+          node-version: '22'
+          # Caches ~/.npm keyed on package-lock.json. Do NOT cache
+          # node_modules directly — it is architecture-dependent and not
+          # safely cacheable across runners.
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build

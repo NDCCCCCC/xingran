@@ -1,0 +1,20 @@
+{
+  "doc_path": "docs/代码简化优化总结.md",
+  "claims_checked": 49,
+  "claims_passed": 47,
+  "claims_failed": 2,
+  "failures": [
+    {
+      "line": 109,
+      "claim": "internal/api/v1/handler_helper.go",
+      "expected": "file exists (referenced as a section heading for an optimized/replaced file)",
+      "actual": "file not found at internal/api/v1/handler_helper.go; no such file ever existed in the codebase. The doc presents this as a 'replaced' file but it is a phantom reference - readers will not find any prior version of this file to compare against."
+    },
+    {
+      "line": 34,
+      "claim": "system/file_handler.go 中的 `setPaginationDefaults` 函数",
+      "expected": "setPaginationDefaults previously existed in internal/api/v1/system/file_handler.go and was removed",
+      "actual": "claim is unverifiable from filesystem alone: the current file does not contain setPaginationDefaults, but no git history of prior versions is checked. The function does still exist elsewhere in the codebase (internal/api/v1/rpa/handler_helpers.go and internal/api/v1/monitor/cache_handler.go), so the doc's framing that this was a unique function in system/file_handler.go is misleading."
+    }
+  ]
+}

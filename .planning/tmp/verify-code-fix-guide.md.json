@@ -1,0 +1,38 @@
+{
+  "doc_path": "docs/code-fix-guide.md",
+  "claims_checked": 67,
+  "claims_passed": 62,
+  "claims_failed": 5,
+  "failures": [
+    {
+      "line": 42,
+      "claim": "internal/services/operations/workstation_service.go:107-110",
+      "expected": "validation call at lines 107-110; whitelist function at lines 19-28",
+      "actual": "validateTableName function spans lines 20-28 (not 19-28); validation call spans lines 105-110 (not just 107-110); doc example shows whitelist with only 'ops_floors' and 'sys_floors' but actual whitelist contains 'ops_buildings', 'sys_buildings', 'ops_floors', 'sys_floors'"
+    },
+    {
+      "line": 291,
+      "claim": "system 模块完整迁移（8 个模块：User, Role, Menu, Department, Post, Dict, Config, Notice）with request files user_requests.go, role_requests.go, menu_requests.go, department_requests.go, post_requests.go, dict_requests.go, config_requests.go, notice_requests.go",
+      "expected": "8 system module request files exist",
+      "actual": "No system module request files found. Glob returns no files matching internal/api/v1/system/requests/*.go, internal/services/system/requests/*.go, or internal/api/v1/system/*_requests.go. The system module request files claimed by the doc do not exist"
+    },
+    {
+      "line": 706,
+      "claim": "src/test/setup.ts - 测试设置",
+      "expected": "src/test/setup.ts file exists",
+      "actual": "File does not exist. Glob with patterns xingran-react-frontend/src/test/**/* and xingran-react-frontend/src/test* both return no files. The vitest.config.ts references './src/test/setup.ts' (line 10) but the actual setup file is missing"
+    },
+    {
+      "line": 715,
+      "claim": "src/utils/sm4.test.ts - SM4 加密测试 (12 个测试)",
+      "expected": "sm4.test.ts file exists",
+      "actual": "File not found. Glob with pattern **/sm4.test.ts returns no files. The test file claimed in the doc does not exist"
+    },
+    {
+      "line": 716,
+      "claim": "src/utils/errorHandler.test.ts - 错误处理测试 (1 个测试)",
+      "expected": "errorHandler.test.ts file exists",
+      "actual": "File not found. Glob with pattern **/errorHandler.test.ts returns no files. The test file claimed in the doc does not exist"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "doc_path": "docs/上传下载功能设计.md",
+  "claims_checked": 14,
+  "claims_passed": 11,
+  "claims_failed": 3,
+  "failures": [
+    {
+      "line": 312,
+      "claim": "internal/services/file_service.go",
+      "expected": "file exists",
+      "actual": "file not found at internal/services/file_service.go; actual location is internal/services/system/file_service.go"
+    },
+    {
+      "line": 315,
+      "claim": "internal/api/v1/file_handler.go",
+      "expected": "file exists",
+      "actual": "file not found at internal/api/v1/file_handler.go; actual location is internal/api/v1/system/file_handler.go"
+    },
+    {
+      "line": 181,
+      "claim": "GET /ops/{entity}/export",
+      "expected": "GET route definition in codebase",
+      "actual": "export endpoint is implemented as POST, not GET; in internal/api/v1/operations/excel_handler.go line 22: r.POST(\"/export\", exportData(entityType, core))"
+    }
+  ]
+}

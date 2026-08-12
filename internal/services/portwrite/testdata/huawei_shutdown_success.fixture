@@ -1,0 +1,15 @@
+<Huawei>
+screen-length 0 temporary
+<Huawei>
+system-view
+[Huawei]
+interface GE0/0/1
+[Huawei-GigabitEthernet0/0/1]
+[Huawei-GigabitEthernet0/0/1]
+shutdown
+[Huawei-GigabitEthernet0/0/1]
+[Huawei-GigabitEthernet0/0/1]
+quit
+[Huawei]
+return
+<Huawei>

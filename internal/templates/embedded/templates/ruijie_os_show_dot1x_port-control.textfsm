@@ -1,0 +1,13 @@
+Value Required INTERFACE (\S+)
+Value MODE (\S+)
+Value DYNAMIC_USER (\d+)
+Value STATIC_USER (\d+)
+Value MAX_USER (\d+|unlimited)
+Value AUTHENED (yes|no)
+Value MAB (active|disable)
+
+Start
+  # 跳过表头行和分隔线
+  ^Interface\s+Mode\s+Dynamic-User\s+Static-User\s+Max-User\s+Authened\s+MAB -> Next
+  ^-+\s+-+\s+-+\s+-+\s+-+\s+-+\s+-+ -> Next
+  ^${INTERFACE}\s+${MODE}\s+${DYNAMIC_USER}\s+${STATIC_USER}\s+${MAX_USER}\s+${AUTHENED}\s+${MAB}\s -> Record

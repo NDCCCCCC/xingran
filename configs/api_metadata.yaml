@@ -1,0 +1,330 @@
+version: "1.0"
+metadata:
+  # 工单管理模块
+  - module: workorder
+    category: 工单管理
+    icon: FileTextOutlined
+    endpoints:
+      - route: /workorder/orders/list
+        method: POST
+        displayName: 工单列表
+        description: 查询所有工单，支持按状态、优先级筛选
+        dataType: paginated
+        dataPath: data.list
+        supportedWidgets: [table, stat-card]
+        permissions: [workorder:order:list]
+        exampleParams:
+          status: "0"
+          priority: "1"
+
+      - route: /workorder/statistics
+        method: GET
+        displayName: 工单统计
+        description: 获取工单统计数据（按状态、优先级分类）
+        dataType: single
+        dataPath: data
+        supportedWidgets: [stat-card, chart]
+        permissions: [workorder:order:list]
+
+  # 网络设备模块
+  - module: network
+    category: 网络设备
+    icon: CloudServerOutlined
+    endpoints:
+      - route: /network/devices/list
+        method: POST
+        displayName: 设备列表
+        description: 查询所有网络设备及其状态
+        dataType: paginated
+        dataPath: data.list
+        supportedWidgets: [table, stat-card]
+        permissions: [network:device:list]
+
+      - route: /network/devices/statistics
+        method: GET
+        displayName: 设备统计
+        description: 获取设备统计数据（按类型、状态分类）
+        dataType: single
+        dataPath: data
+        supportedWidgets: [stat-card, chart]
+        permissions: [network:device:list]
+
+      - route: /network/credentials/list
+        method: POST
+        displayName: 设备凭证列表
+        description: 查询设备登录凭证配置
+        dataType: paginated
+        dataPath: data.list
+        supportedWidgets: [table]
+        permissions: [network:credential:list]
+
+  # 系统监控模块
+  - module: monitor
+    category: 系统监控
+    icon: MonitorOutlined
+    endpoints:
+      - route: /monitor/server
+        method: GET
+        displayName: 服务器监控
+        description: 获取CPU、内存、磁盘使用率
+        dataType: single
+        dataPath: data
+        supportedWidgets: [stat-card, progress]
+        permissions: [monitor:server:view]
+
+      - route: /monitor/cache/stats/list
+        method: POST
+        displayName: 缓存统计
+        description: 获取Redis缓存统计数据
+        dataType: paginated
+        dataPath: data.list
+        supportedWidgets: [stat-card, chart]
+        permissions: [monitor:cache:list]
+
+      - route: /monitor/cache/monitor
+        method: POST
+        displayName: 缓存监控
+        description: 获取缓存实时监控数据
+        dataType: single
+        dataPath: data
+        supportedWidgets: [stat-card, progress]
+        permissions: [monitor:cache:list]
+
+  # 用户管理模块
+  - module: user
+    category: 用户管理
+    icon: UserOutlined
+    endpoints:
+      - route: /system/users/list
+        method: POST
+        displayName: 用户列表
+        description: 查询系统用户列表
+        dataType: paginated
+        dataPath: data.list
+        supportedWidgets: [table]
+        permissions: [system:user:list]
+
+      - route: /workorder/orders/list
+        method: POST
+        displayName: 工单列表
+        description: 查询所有工单，支持按状态、优先级筛选（测试用）
+        dataType: paginated
+        dataPath: data.total
+        supportedWidgets: [stat-card, chart]
+        permissions: [workorder:order:list]
+        exampleParams:
+          status: "0"
+          current: 1
+          pageSize: 10
+
+  # 部门管理模块
+  - module: dept
+    category: 部门管理
+    icon: ApartmentOutlined
+    endpoints:
+      - route: /departments/list
+        method: POST
+        displayName: 部门列表
+        description: 查询部门列表
+        dataType: paginated
+        dataPath: data.list
+        supportedWidgets: [table]
+        permissions: [system:dept:list]
+
+      - route: /departments/tree
+        method: GET
+        displayName: 部门树
+        description: 获取部门树形结构
+        dataType: single
+        dataPath: data
+        supportedWidgets: [table, chart]
+        permissions: [system:dept:list]
+
+  # 角色管理模块
+  - module: role
+    category: 角色管理
+    icon: TeamOutlined
+    endpoints:
+      - route: /system/role/list
+        method: POST
+        displayName: 角色列表
+        description: 查询角色列表
+        dataType: paginated
+        dataPath: data.list
+        supportedWidgets: [table]
+        permissions: [system:role:list]
+
+  # 菜单管理模块
+  - module: menu
+    category: 菜单管理
+    icon: MenuOutlined
+    endpoints:
+      - route: /menus/list
+        method: POST
+        displayName: 菜单列表
+        description: 查询菜单列表
+        dataType: paginated
+        dataPath: data.list
+        supportedWidgets: [table]
+        permissions: [system:menu:list]
+
+      - route: /menus/tree-select
+        method: GET
+        displayName: 菜单树
+        description: 获取菜单树形结构
+        dataType: single
+        dataPath: data
+        supportedWidgets: [table]
+        permissions: [system:menu:list]
+
+  # 字典管理模块
+  - module: dict
+    category: 字典管理
+    icon: BookOutlined
+    endpoints:
+      - route: /dicts/types/list
+        method: POST
+        displayName: 字典类型列表
+        description: 查询字典类型列表
+        dataType: paginated
+        dataPath: data.list
+        supportedWidgets: [table]
+        permissions: [system:dict:list]
+
+      - route: /dicts/data/list
+        method: POST
+        displayName: 字典数据列表
+        description: 查询字典数据列表
+        dataType: paginated
+        dataPath: data.list
+        supportedWidgets: [table]
+        permissions: [system:dict:list]
+
+  # 通知公告模块
+  - module: notice
+    category: 通知公告
+    icon: BellOutlined
+    endpoints:
+      - route: /notices/list
+        method: POST
+        displayName: 通知列表
+        description: 查询通知公告列表
+        dataType: paginated
+        dataPath: data.list
+        supportedWidgets: [table, stat-card]
+        permissions: [system:notice:list]
+
+      - route: /system/notices/latest
+        method: GET
+        displayName: 最新通知
+        description: 获取最新通知公告
+        dataType: single
+        dataPath: data
+        supportedWidgets: [list, stat-card]
+        permissions: [system:notice:list]
+
+  # 登录日志模块
+  - module: loginlog
+    category: 登录日志
+    icon: LoginOutlined
+    endpoints:
+      - route: /login-logs/list
+        method: POST
+        displayName: 登录日志列表
+        description: 查询用户登录日志
+        dataType: paginated
+        dataPath: data.list
+        supportedWidgets: [table]
+        permissions: [system:loginlog:list]
+
+      - route: /login-logs/statistics
+        method: GET
+        displayName: 登录统计
+        description: 获取登录统计数据
+        dataType: single
+        dataPath: data
+        supportedWidgets: [stat-card, chart]
+        permissions: [system:loginlog:list]
+
+  # 操作日志模块
+  - module: operlog
+    category: 操作日志
+    icon: FileSearchOutlined
+    endpoints:
+      - route: /oper-logs/list
+        method: POST
+        displayName: 操作日志列表
+        description: 查询用户操作日志
+        dataType: paginated
+        dataPath: data.list
+        supportedWidgets: [table]
+        permissions: [system:operlog:list]
+
+      - route: /oper-logs/statistics
+        method: GET
+        displayName: 操作统计
+        description: 获取操作统计数据
+        dataType: single
+        dataPath: data
+        supportedWidgets: [stat-card, chart]
+        permissions: [system:operlog:list]
+
+  # 定时任务模块
+  - module: job
+    category: 定时任务
+    icon: ClockCircleOutlined
+    endpoints:
+      - route: /system/jobs/list
+        method: POST
+        displayName: 任务列表
+        description: 查询定时任务列表
+        dataType: paginated
+        dataPath: data.list
+        supportedWidgets: [table]
+        permissions: [system:job:list]
+
+      - route: /system/jobs/statistics
+        method: GET
+        displayName: 任务统计
+        description: 获取定时任务统计数据
+        dataType: single
+        dataPath: data
+        supportedWidgets: [stat-card, chart]
+        permissions: [system:job:list]
+
+  # 系统配置模块
+  - module: config
+    category: 系统配置
+    icon: SettingOutlined
+    endpoints:
+      - route: /configs/list
+        method: POST
+        displayName: 配置列表
+        description: 查询系统配置列表
+        dataType: paginated
+        dataPath: data.list
+        supportedWidgets: [table]
+        permissions: [system:config:list]
+
+  # 在线用户模块
+  - module: online
+    category: 在线用户
+    icon: UsergroupAddOutlined
+    endpoints:
+      - route: /online-users/list
+        method: POST
+        displayName: 在线用户列表
+        description: 查询当前在线用户
+        dataType: paginated
+        dataPath: data.list
+        supportedWidgets: [table, stat-card]
+        permissions: [monitor:online:list]
+
+      - route: /online-users/statistics
+        method: GET
+        displayName: 在线统计
+        description: 获取在线用户统计
+        dataType: single
+        dataPath: data
+        supportedWidgets: [stat-card, chart]
+        permissions: [monitor:online:list]

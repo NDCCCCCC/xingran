@@ -1,0 +1,59 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-06-18T11:56:01+08:00",
+  "phase": null,
+  "phase_name": null,
+  "phase_dir": null,
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": 1, "name": "回滚 Phase C 前端 10 文件(到 d0ecfa3)", "status": "done", "commit": "e215e3b"},
+    {"id": 2, "name": "增强 useTableManager.ts(加 sorterMetas/filtersRef/handleTableChange/getColumnSortOrder/applyFilters)", "status": "done", "commit": "e215e3b"},
+    {"id": 3, "name": "改造 system/user 验证页面", "status": "done", "commit": "e215e3b"},
+    {"id": 4, "name": "改造 system/role 验证页面(useRoleData 瘦身)", "status": "done", "commit": "e215e3b"},
+    {"id": 5, "name": "诊断 user 排序无效:GORM 链式调用 ApplySort 必须在 Select/Joins 之前(user_service.go)", "status": "done", "commit": "未提交(待批)"},
+    {"id": 6, "name": "修复 user_cache_impl.buildListCacheKey 加入 orderByColumn/isAsc + 全部筛选字段", "status": "done", "commit": "未提交(待批)"},
+    {"id": 7, "name": "修复 role_cache_impl.buildListCacheKey 加入 orderByColumn/isAsc", "status": "done", "commit": "未提交(待批)"},
+    {"id": 8, "name": "改造 5 个代表页面启用排序(post/building/floor/workstation/network_device)", "status": "done", "commit": "未提交(待批)"}
+  ],
+  "remaining_tasks": [
+    {"id": 9, "name": "浏览器 UAT 验证 5 页面排序(需后端重启 + 缓存清理)", "status": "not_started", "blocking": "确认修复有效 + 模板正确后再推广"},
+    {"id": 10, "name": "git commit 后端 3 修复(user_service.go + user_cache_impl.go + role_cache_impl.go) + 5 页面前端改造", "status": "not_started", "blocking": "UAT 通过后提交"},
+    {"id": 11, "name": "推广剩下 12 个 useTableManager 页面传 sorterMetas(monitor/logs, network/{credentials,mac,ports}, operations/{assets,dedicated-lines,info-points,room-devices,rpa/{executions,tasks,workers},server-rooms}, system/config)", "status": "not_started", "blocking": "5 页面模板确认后"},
+    {"id": 12, "name": "模式 C/D 页面迁移到 useTableManager(45% 页面用 usePagination 手写)", "status": "not_started", "severity": "advisory"}
+  ],
+  "blockers": [
+    {"description": "后端可能未重启(用户 '点击排序不出现日志' 提示有缓存层 user_cache_service 命中,可能后端还没用最新 user_service.go 代码;也可能已重启但缓存没清)", "type": "human_action", "workaround": "重启后端 + 访问系统监控的缓存清理或重启 Redis/L1"},
+    {"description": "user username 升序排序不生效(请求体 orderByColumn=username&isAsc:true,响应是物理顺序)— 已通过 ApplySort 移到 Select 前 + 缓存 key 加 orderByColumn 修复,需要 UAT 验证", "type": "verification_pending", "workaround": null},
+    {"description": "role roleSort 排序在之前 UAT 中 '工作' 是巧合(只有 4 条数据,roleSort asc 缓存被重复使用),desc 实际上未生效过— 缓存 key 修复后需重新 UAT 验证 asc/desc", "type": "verification_pending", "workaround": null}
+  ],
+  "human_actions_pending": [
+    {"action": "重启后端服务(xingran-backend.exe)", "context": "加载 user_service.go ApplySort 修复 + 缓存 key 修复", "blocking": true},
+    {"action": "清理后端缓存(系统监控 → 缓存清理,或重启 Redis)", "context": "缓存 key 已变,旧缓存需清空让新 key 生效", "blocking": true},
+    {"action": "在浏览器硬刷新(Ctrl+Shift+R)user/role/post/building/floor/workstation/network_device 7 页面", "context": "Vite HMR + 缓存双重保险", "blocking": false},
+    {"action": "点击每个页面的列头,验证:1)请求带 orderByColumn 2)响应按对应字段排序 3)翻页排序保持 4)高亮落所点列", "context": "UAT 验证", "blocking": true}
+  ],
+  "decisions": [
+    {"decision": "新建独立 useServerTable 改为增强 useTableManager", "rationale": "useTableManager 已是 19 页面既定标准(30%+ 采用率),增强它=19 页面零迁移即获排序;新建 useServerTable 需迁移 19+2 页面,风险/成本巨大。Plan agent 建议偏理论,未充分考虑 19 页面既定采用的迁移成本", "phase": "设计阶段"},
+    {"decision": "排序传后端实现(后端 ORDER BY)而非纯客户端", "rationale": "用户原始需求:'对全部页数据按字段排序,跨页连贯一致'— 纯客户端只能当前页排序,换页回归原顺序", "phase": "需求阶段"},
+    {"decision": "buildListCacheKey 修复用枚举 BaseListRequest + 全部 params 字段而非 hash 整个 struct", "rationale": "fmt.Sprintf 字段化更易读/可调试,未来加新字段需明确加入", "phase": "缓存 key 修复"},
+    {"decision": "5 代表页面验证策略(post/building/floor/workstation/network_device)", "rationale": "覆盖:简单(post)/viewMode+deptId(building)/viewMode+外部 columns(floor)/最复杂+Cascader+useTableQuery(workstation)/快速创建+详情+批量导出(network)", "phase": "推广阶段"},
+    {"decision": "5 页面改造不动 viewMode/CRUD/Excel/Cascader 等业务逻辑,只加 sorterMetas + 列 sorter + handleTableChange", "rationale": "最小改动,降低风险,模板可复用", "phase": "推广阶段"}
+  ],
+  "uncommitted_files": [
+    "internal/services/system/user_service.go",
+    "internal/services/system/user_cache_impl.go",
+    "internal/services/system/role_cache_impl.go",
+    "xingran-react-frontend/src/pages/system/post/index.tsx",
+    "xingran-react-frontend/src/pages/operations/buildings/index.tsx",
+    "xingran-react-frontend/src/pages/operations/floors/index.tsx",
+    "xingran-react-frontend/src/pages/operations/floors/components/FloorTableColumns.tsx",
+    "xingran-react-frontend/src/pages/operations/workstations/index.tsx",
+    "xingran-react-frontend/src/pages/operations/workstations/columns.tsx",
+    "xingran-react-frontend/src/pages/network/devices/index.tsx"
+  ],
+  "next_action": "Step 1: 重启后端(加载 user_service.go + user_cache_impl.go + role_cache_impl.go 修复)。Step 2: 清理后端缓存。Step 3: 浏览器硬刷新 user 页面,点击「用户名」列头,确认 SQL 有 ORDER BY sys_user.username ASC 且数据按 username 升序。Step 4: 验证其他 5 页面(post/building/floor/workstation/network_device)的排序。Step 5: UAT 全部通过后,git add 这 10 文件 + commit('fix(table): 修复 user 排序失效(ApplySort 顺序 + 缓存 key) + 推广 5 页面排序')",
+  "context_notes": "核心发现链:1)前端 useTableManager 增强正确发 orderByColumn;2)后端 user_service ApplySort 在 Select+Joins 之后,GORM 链式调用丢失 OrderBuilds;3)user_cache_impl/role_cache_impl buildListCacheKey 漏 BaseListRequest 排序参数,不同排序命中同一缓存返回错数据。role 之前 '工作' 是巧合(4 条数据 + 缓存)。修复三处后,user/role + 5 页面排序端到端打通。17 剩余 useTableManager 页面待推广。"
+}

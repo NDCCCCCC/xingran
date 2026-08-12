@@ -1,0 +1,104 @@
+{
+  "doc_path": "docs/code-review-report.md",
+  "claims_checked": 25,
+  "claims_passed": 9,
+  "claims_failed": 16,
+  "failures": [
+    {
+      "line": 60,
+      "claim": "internal/services/operations/workstation_service.go:89 - SQL injection table name concat",
+      "expected": "Vulnerable table-name concat at line 89",
+      "actual": "List() function starts at line 92; the table-name concat is at line 110 and is now guarded by validateTableName() (line 107). Line 89 is the closing brace of the previous function. Line number is off and claim is stale post-fix."
+    },
+    {
+      "line": 136,
+      "claim": "src/lib/opsApi.ts: 6 处 console.log",
+      "expected": "6 console.log in opsApi.ts",
+      "actual": "PASS - 6 console.log found in opsApi.ts"
+    },
+    {
+      "line": 137,
+      "claim": "src/utils/baiduMapCache.ts: 8 处 console.log",
+      "expected": "baiduMapCache.ts exists with 8 console.log",
+      "actual": "File does not exist; renamed to src/utils/dualLevelCache.ts which has only 3 console.log. Claim references removed file path."
+    },
+    {
+      "line": 138,
+      "claim": "src/utils/cacheStats.ts: 5 处 console.log",
+      "expected": "cacheStats.ts exists with 5 console.log",
+      "actual": "File does not exist; was deleted per update log. Claim references removed file path."
+    },
+    {
+      "line": 139,
+      "claim": "src/hooks/useRealtimeUpdates.ts: 3 处 console.log",
+      "expected": "3 console.log in useRealtimeUpdates.ts",
+      "actual": "File exists but has 0 console.log occurrences. Claim is incorrect."
+    },
+    {
+      "line": 129,
+      "claim": "前端 226+ 处 console.log 未清理 (分布在 92 个前端文件中)",
+      "expected": "226+ console.log in 92 files",
+      "actual": "Actual: 61 console.log occurrences in 17 files. Claim significantly overstates the count."
+    },
+    {
+      "line": 232,
+      "claim": "pkg/middleware/permission.go:280, 288 - raw query error ignored",
+      "expected": "Raw queries with ignored .Scan() errors at lines 280, 288",
+      "actual": "Line 280 is closing brace of ProcessDataScope function; the only raw query is at lines 286-291 and .Error is properly checked via `err := ... .Scan(&dataScope).Error`. The claim's specific lines and the vulnerability are stale - the code now handles errors."
+    },
+    {
+      "line": 254,
+      "claim": "internal/core/security/jwt.go:58, 63, 72 - panic on key init failure",
+      "expected": "panic() at those lines",
+      "actual": "Lines 58, 63, 72 now return `nil, fmt.Errorf(...)` (fix in place per update log). The panic claim is stale - code returns errors rather than panicking."
+    },
+    {
+      "line": 281,
+      "claim": "cache_handler.go 文件过长 (1010 行)",
+      "expected": "cache_handler.go is 1010 lines",
+      "actual": "File is 639 lines, not 1010. The file has been split (cache_enhanced_handler.go now exists alongside)."
+    },
+    {
+      "line": 299,
+      "claim": "CADFloorPlanEditor.tsx 组件过于复杂 (1291 行)",
+      "expected": "CADFloorPlanEditor.tsx is 1291 lines",
+      "actual": "File is 1421 lines, not 1291. The 1291 figure is outdated."
+    },
+    {
+      "line": 326,
+      "claim": "internal/api/v1/auth.go:215 - TODO 登出逻辑",
+      "expected": "TODO at line 215 for logout",
+      "actual": "Line 215 is `var roleIds []string` inside Login function. No TODO at that line. Logout is implemented at line 316. Claim is stale post-fix."
+    },
+    {
+      "line": 403,
+      "claim": "internal/api/v1/monitor/cache_handler.go (5处重复) + cache_helpers.go with normalizeCacheKey",
+      "expected": "5 occurrences of duplicate prefix-stripping code with cache_helpers.go containing normalizeCacheKey()",
+      "actual": "No cache_helpers.go file found in monitor module. Only one occurrence of 'xingran:' pattern (line 544). No `strings.HasPrefix(... \"xingran\" ...)` code exists. Claim is stale post-refactor."
+    },
+    {
+      "line": 426,
+      "claim": "src/utils/cacheStats.ts (已标记 @deprecated)",
+      "expected": "cacheStats.ts file exists with @deprecated marker",
+      "actual": "File does not exist; was deleted. Claim references removed file path."
+    },
+    {
+      "line": 427,
+      "claim": "src/utils/baiduMapCache.ts",
+      "expected": "baiduMapCache.ts file exists",
+      "actual": "File does not exist; was renamed to dualLevelCache.ts. Claim references old path."
+    },
+    {
+      "line": 487,
+      "claim": "internal/api/v1/monitor/login_log_handler.go:179 - 用户解锁",
+      "expected": "TODO at line 179 for unlock logic",
+      "actual": "TODO is at line 178 (off by 1). The TODO is still present and unlock is NOT implemented despite the update log claiming completion. Either the update log is inaccurate or the fix was not applied."
+    },
+    {
+      "line": 489,
+      "claim": "internal/services/system/config_service.go:227 - 缓存刷新",
+      "expected": "TODO at line 227 for cache refresh",
+      "actual": "File is only 214 lines; line 227 does not exist. Claim references a line outside the file's actual length."
+    }
+  ]
+}

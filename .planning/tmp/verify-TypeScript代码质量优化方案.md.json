@@ -1,0 +1,272 @@
+{
+  "doc_path": "docs/TypeScript代码质量优化方案.md",
+  "claims_checked": 110,
+  "claims_passed": 68,
+  "claims_failed": 42,
+  "failures": [
+    {
+      "line": 509,
+      "claim": "src/pages/operations/building/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/operations/building/index.tsx (actual path is src/pages/operations/buildings/index.tsx)"
+    },
+    {
+      "line": 510,
+      "claim": "src/pages/operations/floor/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/operations/floor/index.tsx (actual path is src/pages/operations/floors/index.tsx)"
+    },
+    {
+      "line": 511,
+      "claim": "src/pages/operations/workstation/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/operations/workstation/index.tsx (actual path is src/pages/operations/workstations/index.tsx)"
+    },
+    {
+      "line": 512,
+      "claim": "src/pages/operations/serverroom/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/operations/serverroom/index.tsx (actual path is src/pages/operations/server-rooms/index.tsx)"
+    },
+    {
+      "line": 513,
+      "claim": "src/pages/operations/infopoint/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/operations/infopoint/index.tsx (actual path is src/pages/operations/info-points/index.tsx)"
+    },
+    {
+      "line": 514,
+      "claim": "src/pages/operations/line/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/operations/line/index.tsx (actual path is src/pages/operations/dedicated-lines/index.tsx)"
+    },
+    {
+      "line": 515,
+      "claim": "src/pages/operations/port/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/operations/port/index.tsx (actual path is src/pages/network/ports/index.tsx)"
+    },
+    {
+      "line": 516,
+      "claim": "src/pages/operations/devicelist/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/operations/devicelist/index.tsx (no equivalent found in operations module)"
+    },
+    {
+      "line": 517,
+      "claim": "src/pages/operations/devicecollection/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/operations/devicecollection/index.tsx (no equivalent found)"
+    },
+    {
+      "line": 518,
+      "claim": "src/pages/operations/excel-import/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/operations/excel-import/index.tsx (no equivalent found)"
+    },
+    {
+      "line": 524,
+      "claim": "src/pages/network/devicemanager/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/network/devicemanager/index.tsx (actual path is src/pages/network/devices/index.tsx)"
+    },
+    {
+      "line": 526,
+      "claim": "src/pages/network/template/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/network/template/index.tsx (actual path is src/pages/network/templates/index.tsx)"
+    },
+    {
+      "line": 527,
+      "claim": "src/pages/network/vendor/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/network/vendor/index.tsx"
+    },
+    {
+      "line": 528,
+      "claim": "src/pages/network/category/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/network/category/index.tsx"
+    },
+    {
+      "line": 529,
+      "claim": "src/pages/network/interface/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/network/interface/index.tsx"
+    },
+    {
+      "line": 530,
+      "claim": "src/pages/network/configbackup/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/network/configbackup/index.tsx (actual path is src/pages/network/backups/index.tsx)"
+    },
+    {
+      "line": 531,
+      "claim": "src/pages/network/configrestore/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/network/configrestore/index.tsx"
+    },
+    {
+      "line": 532,
+      "claim": "src/pages/network/commandlog/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/network/commandlog/index.tsx"
+    },
+    {
+      "line": 533,
+      "claim": "src/pages/network/terminal/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/network/terminal/index.tsx"
+    },
+    {
+      "line": 539,
+      "claim": "src/pages/workorder/my/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/workorder/my/index.tsx"
+    },
+    {
+      "line": 540,
+      "claim": "src/pages/workorder/all/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/workorder/all/index.tsx"
+    },
+    {
+      "line": 541,
+      "claim": "src/pages/workorder/create/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/workorder/create/index.tsx"
+    },
+    {
+      "line": 542,
+      "claim": "src/pages/workorder/detail/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/workorder/detail/index.tsx"
+    },
+    {
+      "line": 548,
+      "claim": "src/pages/duty/roster/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/duty/roster/index.tsx"
+    },
+    {
+      "line": 549,
+      "claim": "src/pages/duty/schedule/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/duty/schedule/index.tsx (actual path is src/pages/duty/schedules/index.tsx)"
+    },
+    {
+      "line": 550,
+      "claim": "src/pages/duty/calendar/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/duty/calendar/index.tsx"
+    },
+    {
+      "line": 551,
+      "claim": "src/pages/duty/swap/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/duty/swap/index.tsx"
+    },
+    {
+      "line": 552,
+      "claim": "src/pages/duty/history/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/duty/history/index.tsx"
+    },
+    {
+      "line": 560,
+      "claim": "src/pages/monitor/online/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/monitor/online/index.tsx"
+    },
+    {
+      "line": 561,
+      "claim": "src/pages/monitor/log/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/monitor/log/index.tsx (actual path is src/pages/monitor/logs/index.tsx)"
+    },
+    {
+      "line": 562,
+      "claim": "src/pages/scheduler/job/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/scheduler/job/index.tsx (actual path is src/pages/monitor/job/index.tsx)"
+    },
+    {
+      "line": 563,
+      "claim": "src/pages/scheduler/log/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/scheduler/log/index.tsx"
+    },
+    {
+      "line": 564,
+      "claim": "src/pages/knowledge/category/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/knowledge/category/index.tsx"
+    },
+    {
+      "line": 565,
+      "claim": "src/pages/knowledge/article/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/knowledge/article/index.tsx (actual path is src/pages/knowledge/articles/index.tsx)"
+    },
+    {
+      "line": 566,
+      "claim": "src/pages/dashboard/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/dashboard/index.tsx (actual path is src/pages/dashboard-system/index.tsx)"
+    },
+    {
+      "line": 567,
+      "claim": "src/pages/dashboard/analysis/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/dashboard/analysis/index.tsx"
+    },
+    {
+      "line": 569,
+      "claim": "src/components/dashboard/WorkBench.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/components/dashboard/WorkBench.tsx"
+    },
+    {
+      "line": 613,
+      "claim": "src/hooks/useAuthStore.ts",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/hooks/useAuthStore.ts (auth store is src/store/authStore.ts)"
+    },
+    {
+      "line": 617,
+      "claim": "src/components/scheduler/CronSelector.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/components/scheduler/CronSelector.tsx (actual path is src/components/CronSelector/index.tsx)"
+    },
+    {
+      "line": 1222,
+      "claim": "src/types/baidu-map.d.ts",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/types/baidu-map.d.ts"
+    },
+    {
+      "line": 568,
+      "claim": "src/pages/login/index.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/pages/login/index.tsx (no equivalent found)"
+    },
+    {
+      "line": 570,
+      "claim": "src/components/layout/ClassicLayout.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/components/layout/ClassicLayout.tsx"
+    },
+    {
+      "line": 571,
+      "claim": "src/components/layout/HybridLayout.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/components/layout/HybridLayout.tsx"
+    },
+    {
+      "line": 572,
+      "claim": "src/components/layout/InnovativeLayout.tsx",
+      "expected": "file exists",
+      "actual": "file not found at xingran-react-frontend/src/components/layout/InnovativeLayout.tsx"
+    }
+  ]
+}

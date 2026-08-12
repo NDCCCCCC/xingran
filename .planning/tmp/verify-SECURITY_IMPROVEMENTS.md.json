@@ -1,0 +1,56 @@
+{
+  "doc_path": "docs/SECURITY_IMPROVEMENTS.md",
+  "claims_checked": 18,
+  "claims_passed": 10,
+  "claims_failed": 8,
+  "failures": [
+    {
+      "line": 11,
+      "claim": "index.html contains an active Content-Security-Policy meta tag",
+      "expected": "index.html contains an uncommented <meta http-equiv=\"Content-Security-Policy\" ... /> tag",
+      "actual": "index.html line 11 only contains the CSP meta tag inside an HTML comment (commented out). The file explicitly notes '暂时禁用 CSP 以便调试' (temporarily disabled CSP for debugging). The claim is FALSE: CSP is not active."
+    },
+    {
+      "line": 42,
+      "claim": "src/store/menuStore.ts was modified to use partialize removing permissions from localStorage",
+      "expected": "partialize config in menuStore.ts that excludes permissions",
+      "actual": "menuStore.ts has been refactored to use TTLMenuCache; no 'partialize' configuration exists. The doc's described '改进前'/'改进后' partialize code blocks do not match the current implementation."
+    },
+    {
+      "line": 53,
+      "claim": "改进后 code block showing partialize without permissions in menuStore.ts",
+      "expected": "partialize: (state) => ({ menus: state.menus }) pattern in menuStore.ts",
+      "actual": "menuStore.ts does not use Zustand persist or partialize at all - it uses TTLMenuCache for in-memory caching instead."
+    },
+    {
+      "line": 64,
+      "claim": "fetchPermissions method uses getUserPermissions() and on failure sets permissions to [] and rethrows",
+      "expected": "fetchPermissions: async () => { try { ... set({ permissions: [] }); throw error; } catch { ... } }",
+      "actual": "fetchPermissions exists but signature differs - it accepts (forceRefresh = false) parameter, uses TTLMenuCache, and on error simply sets error state via set({ error: error as Error }) without explicitly setting permissions to []."
+    },
+    {
+      "line": 159,
+      "claim": "menuStore.ts integrates SecureStorage with sanitizeObject for menus",
+      "expected": "createJSONStorage wrapping SecureStorage.getItem/setItem with sanitizeObject(parsed.state.menus) in menuStore.ts",
+      "actual": "menuStore.ts does not use SecureStorage at all. SecureStorage is only defined in security.ts and not imported anywhere in the codebase (grep returned no matches outside security.ts)."
+    },
+    {
+      "line": 184,
+      "claim": "menuStore.ts has version: 1 for 'menu-storage' name in persist config",
+      "expected": "name: 'menu-storage' with version: 1 in persist configuration",
+      "actual": "No persist configuration with 'menu-storage' name exists in menuStore.ts. The store uses TTLMenuCache, not Zustand persist."
+    },
+    {
+      "line": 207,
+      "claim": "index.html contains <meta http-equiv=\"X-Content-Type-Options\" content=\"nosniff\" />",
+      "expected": "X-Content-Type-Options meta tag exists in index.html",
+      "actual": "Tag exists on line 15 - PASS (note: doc line 207 shows the tag content but doc line 206-208 actually contains the meta tags; the claim is correct)."
+    },
+    {
+      "line": 213,
+      "claim": "index.html adds '<meta http-equiv=\"X-Frame-Options\" content=\"DENY\" />' (per Improvement 4)",
+      "expected": "index.html contains <meta http-equiv=\"X-Frame-Options\" content=\"DENY\" />",
+      "actual": "index.html does NOT include the X-Frame-Options meta tag. Line 14 contains a comment stating '注意: X-Frame-Options 需要通过 HTTP 头设置，meta 标签无效' (X-Frame-Options must be set via HTTP header, meta tag is ineffective). The doc lists this as an 'added' security header, but it was deliberately not added."
+    }
+  ]
+}

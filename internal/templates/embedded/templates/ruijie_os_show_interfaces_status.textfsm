@@ -1,0 +1,26 @@
+# 锐捷设备 show interfaces status 命令解析模板
+# 获取端口名称、状态(up/down)、VLAN、双工模式、速率、类型
+# 支持所有接口类型：FastEthernet, GigabitEthernet, TenGigE, VLAN, Loopback 等
+# 示例输出：
+# Interface                                Status    Vlan   Duplex   Speed     Type
+# ---------------------------------------- --------  ----   -------  --------- ------
+# GigabitEthernet 1/1                      down      318    Unknown  Unknown   copper
+# GigabitEthernet 1/2                      up        318    Full     10M       copper
+#
+# Phase 48 D-10 (RESEARCH Pitfall 5): the up-interface list extracted
+# from this template feeds the transceiver collector's pre-filter so
+# that empty SFP cages are skipped. STATUS was previously discarded as
+# `\S+` (skipped group); it is now a captured variable so the Go-side
+# collector can filter `status=="up"` rows.
+
+Value Required INTERFACE (\S+(?:\s+[\d/]+)?)
+Value STATUS (up|down)
+Value VLAN (\d+|--)
+Value DUPLEX (\S+|--)
+Value SPEED (\S+|--)
+Value TYPE (.*|--)
+
+Start
+  ^Interface\s+Status\s+Vlan\s+Duplex\s+Speed\s+Type
+  ^-+\s+-+\s+-+\s+-+\s+-+\s+-+
+  ^${INTERFACE}\s+${STATUS}\s+${VLAN}\s+${DUPLEX}\s+${SPEED}\s+${TYPE} -> Record

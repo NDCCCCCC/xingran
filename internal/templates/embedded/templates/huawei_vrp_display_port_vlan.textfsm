@@ -1,0 +1,15 @@
+Value Required INTERFACE ([\w\.\/\-]+)
+Value LINK_TYPE (trunk|access|auto|hybrid|desirable)
+Value VLAN_ID (\d+)
+Value List TRUNK_VLAN_LIST (\d+\-\d+|\d+|-)
+
+Start
+  ^<\w+>.*$$ -> Start
+  ^\s*$$ -> Start
+  ^Port\s+Link\s+Type.*$$ -> Data
+  ^-+$$ -> Data
+  ^. -> Error
+
+Data
+  ^\s*$$ -> Start
+  ^\s*${INTERFACE}\s+${LINK_TYPE}\s+${VLAN_ID}\s+${TRUNK_VLAN_LIST}\s*$$ -> Record

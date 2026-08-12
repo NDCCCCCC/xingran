@@ -1,0 +1,14 @@
+{
+  "doc_path": "docs/RPA系统完整性检查清单.md",
+  "claims_checked": 84,
+  "claims_passed": 83,
+  "claims_failed": 1,
+  "failures": [
+    {
+      "line": 73,
+      "claim": "xingran-backend-test.exe",
+      "expected": "file exists at xingran-backend-test.exe",
+      "actual": "file not found at D:\\CODE\\ClaudeCode\\xingran-go-backend\\xingran-backend-test.exe"
+    }
+  ]
+}

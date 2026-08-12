@@ -1,0 +1,9 @@
+Value List LOCAL_INTERFACE (\S+)
+Value List NEIGHBOR_ID (\S+)
+Value List NEIGHBOR_PORT (\S+)
+Value List NEIGHBOR_NAME (\S+)
+Value List CAPABILITIES (\S+)
+
+Start
+  ^\s*${LOCAL_INTERFACE}\s+${NEIGHBOR_ID}\s+${NEIGHBOR_PORT}\s+\S+\s+\S+\s+${CAPABILITIES}.* -> Record
+  ^\s*-+$$ -> Start

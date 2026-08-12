@@ -1,0 +1,53 @@
+/**
+ * ProgressWidget 样式
+ *
+ * 进度条 Widget 样式
+ */
+
+.progress-widget {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+}
+
+.progress-widget--multiple .progress-widget {
+	display: block;
+}
+
+.progress-widget-item {
+	width: 100%;
+}
+
+.progress-widget-item__label {
+	margin-bottom: 8px;
+	font-size: 12px;
+	color: rgba(0, 0, 0, 0.65);
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+	.progress-widget-item__label {
+		font-size: 11px;
+	}
+}
+
+/* 暗色主题适配 */
+@media (prefers-color-scheme: dark) {
+	.progress-widget-item__label {
+		color: rgba(255, 255, 255, 0.65);
+	}
+}
+
+/* MetricWidget 特有样式 */
+.metric-widget-value {
+	font-size: 18px;
+	font-weight: 600;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+	.metric-widget-value {
+		font-size: 16px;
+	}
+}

@@ -1,0 +1,43 @@
+# Ruijie RGOS `show manuinfo` parser (Phase 49-D-11).
+#
+# Sample input (templates/samples/ruijie_10_62_63_23_show_manuinfo.txt):
+#   Device 1
+#     Location: Chassis
+#     Device name: System
+#     Device Serial Number: G1M913U000351
+#     ...
+#   Device 2
+#     Location: Slot-1
+#     Device Serial Number: G1P7293000128
+#     ...
+#
+# Field semantics:
+#   DEVICE_ID         — Ruijie internal device index (1 = chassis, 2..N = slots)
+#   LOCATION          — chassis (Location: Chassis) or Slot-N (Location: Slot-1 ...)
+#   DEVICE_NAME       — module model string for slot rows; "System" for chassis
+#   SN                — vendor-issued serial number for this physical entity
+#
+# Strategy: emit ONE record per physical entity (chassis or slot). The
+# project's homegrown textfsm parser (internal/templates/textfsm.go)
+# applies strings.TrimSpace to each line BEFORE rule matching, so the
+# rule patterns should NOT use leading \s+ — they must match against
+# already-trimmed text. Each Device block ends with a "Mac Address:"
+# line; we attach `-> Record` there to flush the previous block before
+# the next `Device N` line overwrites DEVICE_ID.
+
+Value DEVICE_ID (\d+)
+Value LOCATION (\S.*?)
+Value DEVICE_NAME (\S.*?)
+Value SN (\S.*?)
+Value HARDWARE_VERSION (\S.*?)
+Value SOFTWARE_VERSION (\S.*?)
+Value MAC_ADDR (\S.*?)
+
+Start
+  ^Device\s+${DEVICE_ID}\s*$$
+  ^Location:\s+${LOCATION}\s*$$
+  ^Device\s+name:\s+${DEVICE_NAME}\s*$$
+  ^Device\s+Serial\s+Number:\s+${SN}\s*$$
+  ^Hardware\s+Version:\s+${HARDWARE_VERSION}\s*$$
+  ^Software\s+Version:\s+${SOFTWARE_VERSION}\s*$$
+  ^Mac\s+Address:\s+${MAC_ADDR}\s*$$ -> Record

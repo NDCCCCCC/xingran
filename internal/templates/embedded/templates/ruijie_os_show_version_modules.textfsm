@@ -1,0 +1,37 @@
+# Ruijie RGOS show version Module information parser.
+#
+# Sample input (templates/samples/ruijie_10_62_63_21_show_version.txt):
+#   System serial number    : G1HLC0R000096
+#   Module information:
+#     Slot M1 : M8600E-CM
+#       Hardware version    : 1.03
+#       Boot version        : 1.2.25
+#       Software version    : S8600E_RGOS 11.0(4)B8P3
+#       Serial number       : G1HLC0R000096
+#     Slot 1 : M8600E-24GT20SFP4XS-ED
+#       ...
+#       Serial number       : G1P7286000129
+#
+# Field semantics:
+#   SLOT       — slot identifier (M1, M2, 1, 2, 3, 4, 5).
+#   MODULETYPE — vendor module model string (M8600E-CM, ...).
+#   SN         — vendor-issued serial number for the module.
+#
+# Strategy: Start captures the top-level System serial number (chassis).
+# When the parser hits the 'Module information:' marker it transitions
+# to the Modules state. Modules state matches each 'Slot <SLOT> : <TYPE>'
+# line and captures the slot's serial number on the following
+# 'Serial number' line, recording once per slot.
+
+Value CHASSIS_SN (\S+)
+Value SLOT (\S+)
+Value MODULETYPE (\S+)
+Value SN (\S+)
+
+Start
+  ^System\s+serial\s+number\s*:\s*${CHASSIS_SN}\s*$$ -> Record
+  ^Module\s+information:\s*$$ -> Modules
+
+Modules
+  ^\s*Slot\s+${SLOT}\s+:\s+${MODULETYPE}\s*$$
+  ^\s*Serial\s+number\s*:\s*${SN}\s*$$ -> Record

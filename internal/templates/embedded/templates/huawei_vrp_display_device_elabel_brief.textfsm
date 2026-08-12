@@ -1,0 +1,44 @@
+# Huawei VRP `display device elabel brief` parser (Phase 49-D-12).
+#
+# Sample input (templates/samples/huawei_CX-WH-RUITONG-26F-SWL3-HW-S8700_display_device_elabel_brief.txt):
+#   Equipment SN(ESN): 102599861598
+#   License ESN: 102599861598
+#   ----- (header rule) -----
+#   SlotID     Sub    Type                     SN                       P/N
+#   ----- (header rule) -----
+#   --         --     BackPlane                102599861598             02116318
+#   1          --     LSG7G48VX1E0             102599806091             03050DLX
+#   5          --     LSG7SRUEX1C0             102599806032             03050CTT-001
+#   FAN1       --     FAN-240SM-B              5B2599001775             02122824
+#   PWR1       --     PAC3KS54-DF              2102312TCAJVR8000929     02312TCA
+#
+# Field semantics:
+#   SLOTID  — physical identifier: "--" (BackPlane) | numeric slot (1..N) | "FANn" | "PWRn"
+#   TYPE    — module model string (BackPlane / LSG7G48VX1E0 / LSG7SRUEX1C0 / FAN-240SM-B / PAC3KS54-DF)
+#   SN      — vendor-issued serial number for this physical entity
+#   PN      — vendor part number (P/N column)
+#
+# Strategy: emit ONE record per data row. The chassis ESN (from
+# "Equipment SN(ESN):" line) is parsed separately by enrichChassisSerial
+# via a regex — keeping textfsm focused on the tabular data.
+#
+# The project's homegrown textfsm parser (internal/templates/textfsm.go)
+# applies strings.TrimSpace to each line BEFORE rule matching, so
+# rule patterns should NOT use leading \s+. The Sub column is
+# always "--" on the S8700 but the pattern tolerates any non-space
+# token (e.g. "1" for stacked sub-slots) to support future models.
+#
+# Component type mapping (handled in collector, not template):
+#   - SLOTID == "--"          → skip (BackPlane = chassis, handled by ParseDisplayDeviceEsn)
+#   - SLOTID starts "FAN"     → ComponentTypeFan
+#   - SLOTID starts "PWR"     → ComponentTypePower
+#   - numeric + TYPE contains "SRU"/"MPU"/"SFU" → ComponentTypeEngine
+#   - numeric + other TYPE    → ComponentTypeCard
+
+Value SLOTID (\S+)
+Value TYPE (\S+)
+Value SN (\S+)
+Value PN (\S+)
+
+Start
+  ^${SLOTID}\s+\S+\s+${TYPE}\s+${SN}\s+${PN}\s*$$ -> Record

@@ -1,0 +1,12 @@
+Value Required INTERFACE (Gi\d+/\d+|FastEthernet\d+/\d+)
+Value MODE (\S+)
+Value DYNAMIC_USER (\d+)
+Value STATIC_USER (\d+)
+Value MAX_USER (\d+|unlimited)
+Value AUTHENED (yes|no)
+Value MAB (active|disable)
+
+Start
+  ^Interface\s+Mode\s+Dynamic-User.*MAB -> Continue
+  ^-+\s+-+\s+-+\s+-+\s+-+\s+-+\s+-+
+  ^${INTERFACE}\s+${MODE}\s+${DYNAMIC_USER}\s+${STATIC_USER}\s+${MAX_USER}\s+${AUTHENED}\s+${MAB} -> Record

@@ -1,0 +1,8 @@
+Value STATUS (\w+)
+Value STRATUM (\d+)
+Value REFERENCE (\d+\.\d+\.\d+\.\d+)
+
+Start
+  ^Clock\s+is\s+${STATUS},\s+stratum\s+${STRATUM},\s+reference\s+is\s+${REFERENCE} -> EOF
+  # for no syncronization
+  ^Clock\s+is\s+${STATUS} -> Record

@@ -1,0 +1,376 @@
+/* 楼宇空间3D可视化样式 */
+
+/* 页面容器 */
+.buildingSpacesPage {
+  padding: 24px;
+  background: #f0f2f5;
+  min-height: 100vh;
+}
+
+/* 统计卡片 */
+.statCard {
+  text-align: center;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.statCard:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+/* 楼宇卡片网格 */
+.buildingGrid {
+  margin-top: 24px;
+}
+
+/* 楼宇卡片 */
+.buildingCard {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  padding: 24px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.buildingCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.buildingCard:hover {
+  transform: translateY(-8px) rotateX(5deg) rotateY(5deg);
+  box-shadow: 0 20px 40px rgba(102, 126, 234, 0.4);
+}
+
+.buildingCard:hover::before {
+  opacity: 1;
+}
+
+.buildingCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.buildingIcon {
+  font-size: 32px;
+}
+
+.buildingTitle {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.buildingCode {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-top: 4px;
+}
+
+.buildingAddress {
+  font-size: 13px;
+  opacity: 0.9;
+  margin-bottom: 16px;
+}
+
+.buildingStats {
+  display: flex;
+  justify-content: space-around;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.buildingStat {
+  text-align: center;
+}
+
+.buildingStatValue {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.buildingStatLabel {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-top: 4px;
+}
+
+/* 模态框 */
+.buildingModal :global(.ant-modal-wrap) {
+  z-index: 1000;
+}
+
+.buildingModal :global(.ant-modal-content) {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.buildingModal :global(.ant-modal-header) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  padding: 20px 24px;
+}
+
+.buildingModal :global(.ant-modal-title) {
+  color: white;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.buildingModal :global(.ant-modal-close) {
+  color: white;
+  opacity: 0.8;
+}
+
+.buildingModal :global(.ant-modal-close:hover) {
+  opacity: 1;
+}
+
+.buildingModalContent {
+  display: flex;
+  min-height: 600px;
+}
+
+/* 3D场景容器 */
+.scene {
+  perspective: 1200px;
+  perspective-origin: 50% 30%;
+  transform-style: preserve-3d;
+  width: 100%;
+  height: 100%;
+}
+
+/* 楼层堆叠容器 */
+.floorStack {
+  position: relative;
+  width: 280px;
+  height: 400px;
+  margin: 40px auto;
+  transform-style: preserve-3d;
+  transform: rotateX(15deg);
+  transition: transform 0.6s ease;
+}
+
+/* 楼层卡片 */
+.floorCard {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  transform-style: preserve-3d;
+  transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: pointer;
+  color: white;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 楼层堆叠偏移 - 支持10层 */
+.floorCard[data-index="0"] {
+  transform: translateZ(0px) translateY(0px);
+  z-index: 10;
+}
+.floorCard[data-index="1"] {
+  transform: translateZ(-30px) translateY(-8px);
+  z-index: 9;
+}
+.floorCard[data-index="2"] {
+  transform: translateZ(-60px) translateY(-16px);
+  z-index: 8;
+}
+.floorCard[data-index="3"] {
+  transform: translateZ(-90px) translateY(-24px);
+  z-index: 7;
+}
+.floorCard[data-index="4"] {
+  transform: translateZ(-120px) translateY(-32px);
+  z-index: 6;
+}
+.floorCard[data-index="5"] {
+  transform: translateZ(-150px) translateY(-40px);
+  z-index: 5;
+}
+.floorCard[data-index="6"] {
+  transform: translateZ(-180px) translateY(-48px);
+  z-index: 4;
+}
+.floorCard[data-index="7"] {
+  transform: translateZ(-210px) translateY(-56px);
+  z-index: 3;
+}
+.floorCard[data-index="8"] {
+  transform: translateZ(-240px) translateY(-64px);
+  z-index: 2;
+}
+.floorCard[data-index="9"] {
+  transform: translateZ(-270px) translateY(-72px);
+  z-index: 1;
+}
+
+/* 选中状态 */
+.floorCard.selected {
+  transform: translateZ(80px) translateY(-30px) scale(1.1) !important;
+  box-shadow: 0 30px 60px rgba(102, 126, 234, 0.6);
+  z-index: 100 !important;
+}
+
+.floorCard:hover {
+  transform: translateZ(20px) scale(1.05) !important;
+}
+
+/* 3D厚度效果 */
+.floorCard::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 5px;
+  right: 5px;
+  height: 20px;
+  background: linear-gradient(to bottom,
+    rgba(102, 126, 234, 0.8),
+    rgba(118, 75, 162, 0.4)
+  );
+  transform-origin: top;
+  transform: rotateX(-90deg);
+  border-radius: 0 0 12px 12px;
+}
+
+/* 楼层编号侧边 */
+.floorCard::after {
+  content: attr(data-floor);
+  position: absolute;
+  right: -20px;
+  top: 50%;
+  transform: translateY(-50%) rotateY(90deg);
+  transform-origin: left;
+  width: 20px;
+  height: 80px;
+  background: linear-gradient(to right,
+    rgba(102, 126, 234, 0.7),
+    rgba(118, 75, 162, 0.5)
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  border-radius: 0 8px 8px 0;
+}
+
+.floorCardNumber {
+  font-size: 48px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.floorCardName {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.floorCardStats {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+/* 左右面板布局 */
+.modalLeftPanel {
+  width: 400px;
+  background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+  border-right: 1px solid #dee2e6;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.modalRightPanel {
+  flex: 1;
+  padding: 24px;
+  background: #ffffff;
+}
+
+/* 返回按钮 */
+.backButton {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 工位平面图容器 */
+.workstationView {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 600px;
+}
+
+.workstationView :global(.floor-plan-editor) {
+  flex: 1;
+  min-height: 0;
+}
+
+/* 加载状态 */
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+/* 空状态 */
+.emptyState {
+  text-align: center;
+  padding: 60px 24px;
+  color: #6c757d;
+}
+
+.emptyStateIcon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.emptyStateText {
+  font-size: 16px;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .buildingModalContent {
+    flex-direction: column;
+  }
+
+  .modalLeftPanel {
+    width: 100%;
+    height: 300px;
+  }
+
+  .floorStack {
+    width: 200px;
+    height: 280px;
+  }
+}

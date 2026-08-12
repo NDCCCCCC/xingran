@@ -1,0 +1,227 @@
+{
+  "canonical_queue": [
+    {
+      "type": "readme",
+      "resolved_path": "README.md",
+      "mode": "update",
+      "preservation_mode": "regenerate",
+      "wave": 1,
+      "status": "completed",
+      "lines": 270,
+      "agent_id": "a4c4557815c46c7fd"
+    }
+  ],
+  "review_queue": [
+    {
+      "path": "AGENTS.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "QUICK_FIX_PATCH.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/安全和认证设计（国密）.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/部署和运维文档.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/代码简化和优化建议.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/代码简化优化完成报告.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/代码简化优化总结.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/缓存架构演进说明.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/缓存重试机制使用指南.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/开发规范.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/上传下载功能设计.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/时间工具函数使用说明.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/数据库设计.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/统一错误处理实施总结.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/网络设备连接状态机设计文档.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/网络设备批量管理功能实施计划.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/项目概述和架构设计.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/项目验证报告.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/API响应规范.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/cache_usage.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/CODE_OPTIMIZATION_SUMMARY.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/code-fix-guide.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/code-review-report.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/EXCEL_IMPORT_GUIDE.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/gormutil工具说明.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/interface-type-safe-migration-guide.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/RPA-数据格式规范.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/RPA-Worker-完成报告.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/RPA-Worker-API认证方案-待办.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/RPA系统开发进度.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/RPA系统设计方案.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/RPA系统完成状态报告.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/RPA系统完整性检查清单.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/SECURITY_IMPROVEMENTS.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/Swagger文档实施总结.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/TypeScript代码质量优化方案.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/user_service_N+1优化报告.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/agent-test-plan.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/deployment/login-encryption-deployment.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/encryption-config-sync.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    },
+    {
+      "path": "docs/security/login-encryption-security.md",
+      "type": "hand-written",
+      "status": "pending_review"
+    }
+  ],
+  "gap_queue": [],
+  "user_decisions": {
+    "readme": "regenerate",
+    "duplicate_strategy": "skip_non_readme_canonical"
+  },
+  "created_at": "2026-06-12T11:22:00+08:00"
+}

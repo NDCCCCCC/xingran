@@ -1,0 +1,44 @@
+{
+  "doc_path": "docs/deployment/login-encryption-deployment.md",
+  "claims_checked": 26,
+  "claims_passed": 20,
+  "claims_failed": 6,
+  "failures": [
+    {
+      "line": 84,
+      "claim": "configs/config.dev.yaml",
+      "expected": "file exists with request_encryption configuration section",
+      "actual": "file exists but does NOT contain request_encryption section (only contains server/database/redis/jwt/log/generator)"
+    },
+    {
+      "line": 84,
+      "claim": "configs/config.prod.yaml",
+      "expected": "file exists with request_encryption configuration section",
+      "actual": "file exists but does NOT contain request_encryption section (only contains server/database/redis/jwt/log/generator)"
+    },
+    {
+      "line": 221,
+      "claim": "go test ./tests/integration/ -run TestLoginEncryption",
+      "expected": "test function TestLoginEncryption exists in tests/integration",
+      "actual": "no TestLoginEncryption function found; integration tests are named TestPublicKeyEndpoint, TestPublicKeyConsistency, TestTimestampValidationConcept, TestEncryptedRequestStructure, TestNonceFormat, TestResponseHeaders, TestRequestMethodValidation, TestEncryptedRequestWithMissingFields"
+    },
+    {
+      "line": 267,
+      "claim": "npm run test:e2e",
+      "expected": "script 'test:e2e' in xingran-react-frontend/package.json",
+      "actual": "script not found in package.json; only test, test:ui, test:coverage scripts exist"
+    },
+    {
+      "line": 349,
+      "claim": "./scripts/rolling-restart.sh",
+      "expected": "script file exists at scripts/rolling-restart.sh",
+      "actual": "file not found at scripts/rolling-restart.sh"
+    },
+    {
+      "line": 358,
+      "claim": "./scripts/deploy-frontend.sh",
+      "expected": "script file exists at scripts/deploy-frontend.sh",
+      "actual": "file not found at scripts/deploy-frontend.sh (also referenced at line 421)"
+    }
+  ]
+}

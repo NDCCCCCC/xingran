@@ -1,0 +1,20 @@
+{
+  "doc_path": "docs/encryption-config-sync.md",
+  "claims_checked": 18,
+  "claims_passed": 16,
+  "claims_failed": 2,
+  "failures": [
+    {
+      "line": 675,
+      "claim": "npm run test -- encryptionConfig.test.ts",
+      "expected": "test file src/services/encryptionConfig.test.ts exists",
+      "actual": "file not found - glob 'xingran-react-frontend/src/services/encryptionConfig.test.ts' returned no matches"
+    },
+    {
+      "line": 689,
+      "claim": "Tests 28 passed (28) for encryptionConfig.test.ts",
+      "expected": "frontend test file exists with 28 tests",
+      "actual": "no encryptionConfig.test.ts file exists in xingran-react-frontend/src/services/ - claimed test results cannot be verified"
+    }
+  ]
+}

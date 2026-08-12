@@ -1,0 +1,120 @@
+# 编译生成的二进制文件
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+xingran-backend-embedded*
+
+# 嵌入式前端构建产物（复制到 internal/server 用于 embed）
+internal/server/xingran-react-frontend/
+
+# 临时工具脚本（避免编译冲突）
+scripts/tools/
+
+# 临时文件
+*.tmp
+*.temp
+tmpclaude-*
+.cache/
+
+# Claude 并行 agent worktree 快照（临时状态，不应入库）
+.claude/worktrees/
+
+# Claude 个人 settings（每台机器不同，不入公开仓）
+# 真实配置复制到 .claude/settings.local.json,本地覆盖
+.claude/settings.local.json
+
+# 环境变量文件
+.env
+.env.local
+.env.*.local
+
+# IDE 和编辑器生成的文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 日志文件
+logs/
+*.log
+
+# Go 构建缓存
+build/
+*.a
+*.o
+
+# Go 依赖管理
+go.work.sum
+
+# 测试覆盖率文件
+coverage.out
+coverage.html
+
+# 数据库文件（如果有）
+*.db
+*.sqlite
+*.sqlite3
+
+# 密码和密钥文件
+*.pem
+*.key
+*.crt
+
+# 备份文件
+*.bak
+*.backup
+
+# ----------------------------------------------------------------------------
+# 配置文件管理（重要）
+# ----------------------------------------------------------------------------
+# 真实环境配置（可能含密钥、内网地址）不提交到仓库
+# 模板以 .example.yaml 后缀入库，开发者从模板 cp 出真实 config.yaml
+# config.go:Load() 只加载 configs/config.yaml
+#
+# 例外（仍追踪）：configs/config.example.yaml, configs/config.prod.example.yaml
+# ----------------------------------------------------------------------------
+configs/config.yaml
+configs/config.dev.yaml
+configs/config.prod.yaml
+configs/configbs.yaml       # 服务器下载的旧版备份（防止误提交）
+configs/config*.local.yaml  # 本地覆盖
+configs/config*.bak         # 备份副本
+
+# 旧的错误条目清理
+configs/config.prod.yamlnul
+
+# Git Worktree 目录
+.worktrees/
+
+# 代码分析和优化报告
+CODE_OPTIMIZATION_REPORT.md
+COMMIT_GUIDE.md
+cleanup_temp_files.ps1
+cleanup_temp_files.sh
+
+# SQL 修复脚本（临时）
+fix_*.sql
+
+# 数据目录
+数据/
+*.xlsx
+*.png
+.trae/
+
+# 调试残留归档（debug_*.js / temp-fix.sh 等临时脚本的归档，不入仓）
+.archive/
+
+# 运行时用户上传文件
+uploads/
+
+# 前端测试覆盖率输出
+xingran-react-frontend/coverage/
+
+# RPA Worker 运行时配置（含明文 Redis 密码 / 内网地址）
+# 模板请使用 rpa-worker/configs/config.example.yaml
+rpa-worker/configs/config.yaml

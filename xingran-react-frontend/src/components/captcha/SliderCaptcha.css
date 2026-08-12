@@ -1,0 +1,145 @@
+/* 滑动拼图验证码组件样式 */
+
+.slider-captcha-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.slider-canvas-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--theme-bg-tertiary, #f0f0f0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.slider-bg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.slider-bg:hover {
+  opacity: 0.95;
+}
+
+.slider-piece {
+  position: absolute;
+  width: 20%;
+  height: 53.33%;
+  max-width: 80px;
+  max-height: 80px;
+  object-fit: contain;
+  pointer-events: none;
+  transition: left 0.05s ease-out;
+  cursor: grab;
+}
+
+.slider-piece:active {
+  cursor: grabbing;
+}
+
+.slider-success-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(82, 196, 26, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.success-icon {
+  font-size: 36px;
+  margin-bottom: 8px;
+}
+
+/* 右上角刷新按钮 */
+.refresh-btn-overlay {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.refresh-btn-overlay:hover {
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transform: scale(1.05);
+}
+
+.refresh-btn-overlay:active {
+  transform: scale(0.95);
+}
+
+.slider-track {
+  position: relative;
+  width: 100%;
+  height: 40px;
+  background: var(--theme-bg-tertiary, #f0f0f0);
+  border-radius: 20px;
+  border: 1px solid var(--input-border, #d9d9d9);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.slider-button {
+  position: absolute;
+  top: 2px;
+  width: 50px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--theme-primary, #1890ff), var(--theme-primary-hover, #096dd9));
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: grab;
+  user-select: none;
+  /* 关键修复：禁用默认触摸手势（平移/缩放），让 Pointer Events 持续接收 pointermove，
+     避免触屏设备上拖动被浏览器滚动手势抢占（与桌面端 preventDefault/draggable=false 对应） */
+  touch-action: none;
+  transition: background 0.3s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.slider-button:hover {
+  background: linear-gradient(135deg, var(--input-border-focus, #40a9ff), var(--theme-primary, #1890ff));
+}
+
+.slider-button.dragging {
+  cursor: grabbing;
+  background: linear-gradient(135deg, var(--theme-primary-hover, #096dd9), #0050b3);
+}
+
+.slider-button.verified {
+  background: linear-gradient(135deg, var(--theme-success, #52c41a), #389e0d);
+  cursor: default;
+}

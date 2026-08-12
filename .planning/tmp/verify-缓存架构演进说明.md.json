@@ -1,0 +1,26 @@
+{
+  "doc_path": "docs/缓存架构演进说明.md",
+  "claims_checked": 17,
+  "claims_passed": 14,
+  "claims_failed": 3,
+  "failures": [
+    {
+      "line": 45,
+      "claim": "internal/services/system/dict_type_service.go",
+      "expected": "file exists",
+      "actual": "file not found at internal/services/system/dict_type_service.go (actual file is dict_service.go)"
+    },
+    {
+      "line": 96,
+      "claim": "NewDataCacheAdapter",
+      "expected": "function 'NewDataCacheAdapter' in codebase",
+      "actual": "no definition found - actual function is system.NewCacheProvider (used in internal/core/core.go:562)"
+    },
+    {
+      "line": 67,
+      "claim": "type CacheProvider interface",
+      "expected": "interface has only GetOrSet/Delete/DeleteByPattern methods",
+      "actual": "interface has 9 methods (GetOrSet, Delete, DeleteByPattern, MGet, MDelete, Exists, SetTTL, GetTTL, GetStats) - doc example is incomplete"
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+/**
+ * 主题相关全局样式
+ * Theme-related global styles
+ *
+ * 此文件包含需要使用主题 CSS 变量的样式规则
+ * These styles use theme CSS variables defined in theme system
+ */
+
+/* ========================================
+ * Sidebar Menu Styles
+ * ======================================== */
+
+/* 选中的菜单项 */
+.ant-menu-item-selected {
+	background-color: var(--theme-brand-alpha-10) !important;
+	color: var(--theme-brand) !important;
+}
+
+.ant-menu-item-selected .ant-menu-title-content,
+.ant-menu-item-selected .anticon {
+	color: var(--theme-brand) !important;
+}
+
+/* 展开的子菜单标题（父菜单）样式 */
+.ant-menu-submenu-selected > .ant-menu-submenu-title,
+.ant-menu-submenu-active > .ant-menu-submenu-title {
+	color: var(--theme-brand) !important;
+}
+
+.ant-menu-submenu-selected > .ant-menu-submenu-title .anticon,
+.ant-menu-submenu-active > .ant-menu-submenu-title .anticon {
+	color: var(--theme-brand) !important;
+}
+
+/* ========================================
+ * Tab Bar Styles
+ * ======================================== */
+
+/* 激活的标签页 */
+.ant-tabs-tab-active .ant-tabs-tab-btn {
+	color: var(--theme-brand) !important;
+}
+
+/* 标签页下划线指示器 */
+.ant-tabs-ink-bar {
+	background-color: var(--theme-brand) !important;
+}
+
+/* ========================================
+ * Layout Component Styles
+ * ======================================== */
+
+/* Sidebar container */
+.layout-sidebar {
+	background: var(--sidebar-bg, #ffffff);
+	border-right: 1px solid var(--theme-border-primary, #e5e7eb);
+	transition: all var(--theme-transition-base, 0.3s ease);
+}
+
+/* Header container */
+.layout-header {
+	background: var(--theme-bg-surface, #ffffff);
+	color: var(--theme-text-primary, #1f2937);
+	border-bottom: 1px solid var(--theme-border-primary, #e5e7eb);
+	transition: var(--theme-transition-base, 0.3s ease);
+}
+
+/* Tab bar container */
+.layout-tab-bar {
+	color: var(--theme-text-primary, #1f2937);
+	background: var(--theme-bg-surface, #ffffff);
+	border-color: var(--theme-border-primary, #e5e7eb);
+}
+
+/* Tab scroll buttons */
+.tab-scroll-button {
+	border: none;
+	background: transparent;
+	color: var(--theme-text-secondary, #6b7280);
+	transition: color var(--theme-transition-fast, 0.15s ease);
+}
+
+.tab-scroll-button:hover:not(:disabled) {
+	color: var(--theme-brand, #3b82f6);
+}
+
+.tab-scroll-button:disabled {
+	opacity: 0.3;
+	cursor: not-allowed;
+}
+
+/* Tabs scroll container */
+.tabs-scroll-container {
+	overflow: hidden;
+	flex: 1;
+	min-width: 0;
+}

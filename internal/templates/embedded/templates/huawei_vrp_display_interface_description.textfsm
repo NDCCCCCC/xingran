@@ -1,0 +1,22 @@
+Value INTERFACE (\S+)
+Value PHY (\S+)
+Value PROTOCOL (\S+)
+Value DESCRIPTION (.*)
+
+Start
+  ^<[^>]+>.*$$ -> Start
+  ^PHY:\s+.*$$ -> Start
+  ^\*down:\s+.*$$ -> Start
+  ^#\s*down:\s+.*$$ -> Start
+  ^\([a-z]+\):\s+.*$$ -> Start
+  ^InUti/OutUti:\s+.*$$ -> Start
+  ^\s*$$ -> Start
+  ^Interface\s+PHY\s+Protocol\s+Description$$ -> Begin
+  ^Interface\s+.*$$ -> Begin
+  ^. -> Error
+
+Begin
+  ^\s*${INTERFACE}\s+${PHY}\s+${PROTOCOL}\s+${DESCRIPTION}\s*$$ -> Record
+  ^\s*${INTERFACE}\s+${PHY}\s+${PROTOCOL}\s*$$ -> Record
+  ^\s*$$ -> Begin
+  ^. -> Error

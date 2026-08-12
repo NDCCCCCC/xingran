@@ -1,0 +1,18 @@
+Value Required INTERFACE ([\w\.\/\-]+)
+Value DOT1X_ENABLED (Enabled|Disabled)
+Value CURRENT_USERS (\d+)
+
+Start
+  ^<\w+>.*$$ -> Start
+  ^\s*$$ -> Start
+  ^Max users:.*$$ -> Start
+  ^Current users:.*$$ -> Start
+  ^Global default domain.*$$ -> Start
+  ^Dot1x abnormal-track.*$$ -> Start
+  ^Quiet function is.*$$ -> Start
+  ^Mc-trigger port-up-send.*$$ -> Start
+  ^Parameter set:.*$$ -> Start
+  ^Dot1x URL:.*$$ -> Start
+  ^${INTERFACE}\s+status:\s+\w+\s+802\.1x\s+protocol\s+is\s+${DOT1X_ENABLED}.*$$ -> Record
+  ^Return.*$$ -> Start
+  ^. -> Error

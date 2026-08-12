@@ -1,0 +1,98 @@
+{
+  "doc_path": "docs/RPA系统设计方案.md",
+  "claims_checked": 55,
+  "claims_passed": 40,
+  "claims_failed": 15,
+  "failures": [
+    {
+      "line": 105,
+      "claim": "POST /api/v1/rpa/workers/{id}/progress",
+      "expected": "route definition in codebase",
+      "actual": "no route definition found; actual endpoint is POST /api/v1/rpa/workers/progress (no {id} segment)"
+    },
+    {
+      "line": 108,
+      "claim": "POST /api/v1/rpa/executions/{id}/complete",
+      "expected": "route definition in codebase",
+      "actual": "no route definition found; the execution router has /list, /:id, /:id/cancel, /:id/logs, /:id/download, /:id/batch-report, /:id/human-intervention but no /:id/complete"
+    },
+    {
+      "line": 162,
+      "claim": "POST /api/v1/rpa/workers/{id}/progress",
+      "expected": "route definition in codebase",
+      "actual": "no route definition found; actual endpoint is POST /api/v1/rpa/workers/progress (no {id} segment)"
+    },
+    {
+      "line": 178,
+      "claim": "POST /api/v1/rpa/ai/explain",
+      "expected": "route definition in codebase",
+      "actual": "no route definition found; AI router has /generate, /optimize, /decide, /analyze-failure, /suggest-fix, /classify-error, /selector/* but no /explain"
+    },
+    {
+      "line": 183,
+      "claim": "POST /api/v1/rpa/ai/capture-state",
+      "expected": "route definition in codebase",
+      "actual": "no route definition found in AI router"
+    },
+    {
+      "line": 194,
+      "claim": "GenerateScriptFromDescription",
+      "expected": "function 'GenerateScriptFromDescription' in codebase",
+      "actual": "no definition found; actual function is GenerateScript(ctx, *AIScriptGenerateRequest)"
+    },
+    {
+      "line": 216,
+      "claim": "AgentAction",
+      "expected": "type 'AgentAction' in codebase",
+      "actual": "no definition found; actual type is AIAgentAction"
+    },
+    {
+      "line": 283,
+      "claim": "HybridExecutor",
+      "expected": "type 'HybridExecutor' in codebase",
+      "actual": "no definition found; executor uses Go (Engine in executor/engine.go) not TypeScript"
+    },
+    {
+      "line": 315,
+      "claim": "executeWithRetry",
+      "expected": "function 'executeWithRetry' in codebase",
+      "actual": "no definition found in rpa-worker; Engine uses executeAction/executeTask instead"
+    },
+    {
+      "line": 363,
+      "claim": "requestAIHelp",
+      "expected": "function 'requestAIHelp' in codebase",
+      "actual": "no definition found in rpa-worker"
+    },
+    {
+      "line": 542,
+      "claim": "readFromRedis",
+      "expected": "function 'readFromRedis' in codebase",
+      "actual": "no definition found; rpa-worker uses ConsumeTasks in redis_client.go"
+    },
+    {
+      "line": 751,
+      "claim": "rpa-worker/Dockerfile",
+      "expected": "file exists",
+      "actual": "file not found at rpa-worker/Dockerfile; actual location is rpa-worker/deployments/Dockerfile"
+    },
+    {
+      "line": 752,
+      "claim": "rpa-worker/docker-compose.yml",
+      "expected": "file exists",
+      "actual": "file not found at rpa-worker/docker-compose.yml; actual location is rpa-worker/deployments/docker-compose.yml"
+    },
+    {
+      "line": 753,
+      "claim": "rpa-worker/src/main.go",
+      "expected": "file exists",
+      "actual": "file not found at rpa-worker/src/main.go; actual location is rpa-worker/cmd/main.go"
+    },
+    {
+      "line": 754,
+      "claim": "rpa-worker/src/worker/RPAWorker.ts",
+      "expected": "file exists",
+      "actual": "file not found; rpa-worker is Go-based (internal/worker/worker.go), not TypeScript"
+    }
+  ]
+}

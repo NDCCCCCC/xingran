@@ -1,0 +1,18 @@
+<Ruijie>
+screen-length 0 temporary
+<Ruijie>
+system-view
+[Ruijie]
+interface GigabitEthernet 1/0/1
+[Ruijie]
+[Ruijie]
+switchport mode access
+[Ruijie]
+[Ruijie]
+switchport access vlan 100
+[Ruijie]
+[Ruijie]
+exit
+[Ruijie]
+return
+<Ruijie>

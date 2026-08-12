@@ -1,0 +1,260 @@
+# ============================================================================
+# XingRan-Next 生产环境配置模板
+# ============================================================================
+#
+# 【重要】此文件是生产环境部署的参考模板，**不要直接使用**
+# 部署时请复制为 config.yaml 后通过环境变量注入敏感值
+#
+#   1) 复制模板
+#        cp configs/config.prod.example.yaml configs/config.yaml
+#   2) 生成密钥（一次性）
+#        JWT_SECRET=$(openssl rand -hex 32)
+#        SM4_KEY=$(openssl rand -base64 16)
+#        DB_PASSWORD=$(openssl rand -hex 16)
+#        REDIS_PASSWORD=$(openssl rand -hex 16)
+#        # SM2 密钥对：用工具生成，**绝不能复用仓库内的 d8d9a3e6...**
+#   3) 启动时注入（参考 docs/部署和运维文档.md）
+#
+# 【强制安全要求】生产部署前必须检查：
+#   - [ ] jwt.secret_key 必须是 openssl rand 生成的随机串（不能用 please-change）
+#   - [ ] jwt.sm2_private_key 必须是新生成的私钥（不能用仓库默认 d8d9a3e6...）
+#   - [ ] security.sm4_key 必须是新生成的 base64（不能用 test-secret16!!!）
+#   - [ ] database.password 不能写死为空字符串或明文
+#   - [ ] cache.password 同上
+#   - [ ] config.yaml 不在 git 追踪内（已在 .gitignore 排除）
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# 服务器配置
+# ----------------------------------------------------------------------------
+server:
+  name: "XingRan-Next"
+  host: "0.0.0.0"
+  port: 9000
+  mode: release  # 生产环境必须 release（关闭 gin debug 路由/堆栈泄漏）
+
+# ----------------------------------------------------------------------------
+# 数据库配置 - PostgreSQL
+# ----------------------------------------------------------------------------
+# 环境变量覆盖: DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, DB_SSLMODE
+# 安全提示: password 留空, 必须通过环境变量 DB_PASSWORD 注入
+#           (见 internal/config/config.go overrideFromEnv)
+database:
+  host: "10.62.10.34"
+  port: 5432
+  user: "postgres"
+  password: ""                # ⚠️ 必须通过 DB_PASSWORD 注入
+  dbname: "xingran"
+  sslmode: "disable"          # 内网可达时建议改为 "require"; 跨网段用 "verify-full"
+  max_open_conns: 50          # 生产环境按并发调整（参考 PG max_connections）
+  max_idle_conns: 10
+  max_lifetime: 1800          # 连接最大生命周期（秒）
+
+# ----------------------------------------------------------------------------
+# 缓存配置 - Redis
+# ----------------------------------------------------------------------------
+# 环境变量覆盖: REDIS_HOST, REDIS_PORT, REDIS_PASSWORD
+# 安全提示: password 留空, 必须通过环境变量 REDIS_PASSWORD 注入
+cache:
+  type: "redis"               # redis, memory
+  host: "10.62.10.34"
+  port: 6379
+  password: ""                # ⚠️ 必须通过 REDIS_PASSWORD 注入
+  db: 0
+  pool_size: 50               # 生产环境调大（与并发请求数匹配）
+  max_size: 10000
+  cleanup_time: 600
+  warm_up_enabled: false      # 生产环境关闭缓存预热（启动期间会拉高 DB）
+  # L2缓存写入Worker Pool配置
+  l2_writer:
+    worker_count: 5
+    queue_size: 5000
+    enqueue_timeout: 1s
+    write_timeout: 5s
+    fallback_write_timeout: 3s
+  # L2缓存写入重试配置
+  retry_enabled: true
+  retry_max_retries: 3
+  retry_initial_delay: 50
+  retry_max_delay: 2000
+  retry_backoff_factor: 2.0
+  retry_worker_count: 3
+
+# ----------------------------------------------------------------------------
+# JWT 配置（高危：所有密钥必须独立生成）
+# ----------------------------------------------------------------------------
+# 环境变量覆盖: JWT_SECRET, XINGRAN_JWT_SM2_PRIVATE_KEY, XINGRAN_JWT_SM2_PUBLIC_KEY
+jwt:
+  # ⚠️ 注意：use_sm2=true 时,jwt.secret_key 实际不被使用（HS256 备选方案）。
+  # 但启动校验仍要求非空,所以保留为 env 注入。
+  secret_key: ""              # ⚠️ 必须通过 JWT_SECRET 注入；启动时强制校验非空且非弱默认值
+  access_key_expire: 7200     # 2 小时
+  refresh_key_expire: 604800  # 7 天
+  issuer: "XingRan-Next"
+  use_sm2: true               # 必须启用 SM2 国密签名（生产强制要求）
+  # SM2 密钥对 — 真正用于 JWT 签名的密钥
+  # 私钥必须新生成，**绝不能使用仓库默认值 d8d9a3e6...**
+  # 部署期通过环境变量 XINGRAN_JWT_SM2_PRIVATE_KEY / XINGRAN_JWT_SM2_PUBLIC_KEY 注入
+  sm2_private_key: ""         # ⚠️ 必须通过 env 注入；**绝不能留空**（留空会触发"动态生成"分支，
+                              #   每次重启都换密钥,旧 token 全部失效,所有用户被强制登出）
+  sm2_public_key: ""          # 通过 XINGRAN_JWT_SM2_PUBLIC_KEY 注入；公钥可对外（嵌入前端、APP）
+
+# ----------------------------------------------------------------------------
+# 日志配置
+# ----------------------------------------------------------------------------
+log:
+  level: "info"                # 生产环境用 info，关闭 debug 减少日志量
+  log_dir: "logs"
+  max_size: 100                # MB
+  max_backups: 30
+  max_age: 90
+  compress: true
+
+# ----------------------------------------------------------------------------
+# 安全配置
+# ----------------------------------------------------------------------------
+security:
+  # SM4 加密密钥（16字节，Base64编码）
+  # 用于：设备密码、AD 管理员密码、RPA 凭证等所有敏感数据加密
+  # 默认值: dGVzdC1zZWNyZXQxNiEhIQ== 解码后为 "test-secret16!!!" (16字节) — **绝不能用于生产**
+  # 生成: export SM4_KEY="$(openssl rand -base64 16)"
+  sm4_key: ""                 # ⚠️ 必须通过 SM4_KEY 注入
+
+  # 加密请求时间戳容差(秒),±N。P1 fix (P1-S2): 从 hardcoded 120s 收紧到可配置 60s,
+  # 平衡 NTP 时钟漂移(±60s 是 NTP-managed 客户端的合理基线)与抗重放强度。
+  # nonce 清理周期会随之联动 (清理阈值 = 2 * replay_window_sec)。
+  # 设置为 0 或不设置 = 使用代码默认值 60s。
+  replay_window_sec: 60
+
+  # 请求体加密配置
+  request_encryption:
+    enabled: true             # 生产环境必须开启
+    exclude_paths:
+      - "/api/v1/system/auth/public-key"   # 公钥接口必须排除
+      - "/api/v1/system/auth/test-sm2"      # SM2 测试接口
+      - "/api/v1/upload/*"                  # 文件上传
+      - "/api/v1/captcha/*"                 # 验证码
+      - "/api/v1/rpa/workers/register"      # RPA Worker 注册
+      - "/api/v1/rpa/workers/*/heartbeat"   # RPA Worker 心跳
+      - "/api/v1/rpa/workers/progress"      # RPA Worker 进度上报
+    require_encryption: true   # 生产环境建议强制（先 false 灰度，验证后改 true）
+
+  # 响应加密配置
+  response_encryption:
+    enabled: true              # 生产环境建议开启（默认 false 向后兼容）
+    exclude_paths:
+      - "/api/v1/system/auth/public-key"
+      - "/api/v1/system/auth/test-sm2"
+      - "/api/v1/upload/*"
+      - "/api/v1/captcha/*"
+      - "/api/v1/rpa/workers/register"
+      - "/api/v1/rpa/workers/*/heartbeat"
+      - "/api/v1/rpa/workers/progress"
+    # 注意：响应加密与请求加密使用相同的数据库配置键 (sys.request.encryption.enabled)
+    # 中间件会从数据库动态读取配置，此处的 enabled 仅用于初始化检查
+    # 实际开关由参数管理中的 "sys.request.encryption.enabled" 控制
+
+# ----------------------------------------------------------------------------
+# 操作日志配置
+# ----------------------------------------------------------------------------
+# exclude_paths: 排除写入 sys_oper_log 的请求路径（filepath.Match + /* 后缀通配，
+# 与 security.request_encryption.exclude_paths 语义完全一致）。
+# 默认排除 heartbeat（30s/Worker 高频心跳写入会淹没日志表）。
+# progress（任务进度审计）与 register（生命周期事件）**保留**，便于追溯任务执行。
+operlog:
+  exclude_paths:
+    - "/api/v1/rpa/workers/*/heartbeat"
+
+# ----------------------------------------------------------------------------
+# 百度地图配置
+# ----------------------------------------------------------------------------
+# 环境变量覆盖: BAIDU_MAP_AK
+baidu:
+  map_ak: ""                  # ⚠️ 通过 BAIDU_MAP_AK 注入
+
+# 注: AD 域控组同步配置（ad_group_sync）已从本模板移除
+# 实际配置通过 sys_config 表或 API 管理,代码不读取配置文件
+# 详情: docs/deployment/secret-management.md 第 4 节 "AD 组同步启用方式"
+
+# ----------------------------------------------------------------------------
+# RPA 配置
+# ----------------------------------------------------------------------------
+rpa:
+  enabled: true
+
+  # AI 配置（混合模式）
+  ai:
+    # 脚本生成模型（文本模型）
+    generator:
+      enabled: true
+      api_key: ""             # ⚠️ 通过 RPA_AI_GENERATOR_KEY 注入
+      base_url: ""            # 通过 RPA_AI_GENERATOR_URL 注入（OpenAI 兼容 API）
+      model: "gpt-4o-mini"    # 推荐: 快速便宜
+      max_tokens: 4000
+
+    # AI Agent 模型（视觉模型，必需）
+    agent:
+      enabled: true
+      api_key: ""             # ⚠️ 通过 RPA_AI_AGENT_KEY 注入
+      base_url: ""            # 通过 RPA_AI_AGENT_URL 注入（支持 Vision）
+      model: "gpt-4o"         # 推荐: gpt-4o, claude-3-5-sonnet-20241022
+      max_tokens: 8000
+      # 备选模型: claude-3-5-sonnet-20241022, gemini-2.0-flash
+
+    # 降级策略
+    fallback:
+      max_retries: 3
+      enable_agent: true
+      timeout: 30s
+
+  # Worker 配置
+  worker:
+    min_workers: 2
+    max_workers: 10
+    heartbeat_interval: 30s
+    task_timeout: 300s
+
+  # 自动扩缩容配置
+  scaling:
+    enabled: true
+    check_interval: 30s
+    min_workers: 2
+    max_workers: 10
+    scale_up_threshold: 0.7
+    scale_down_cooldown: 5m
+    scale_up_limit: 3
+    enable_mock_docker: false  # ⚠️ 生产环境必须设为 false（启用真实 Docker API）
+    docker:
+      docker_host: ""          # 留空使用 localhost
+      docker_port: 2375
+      container_name: "rpa-worker"
+      image_name: "rpa-worker:latest"
+      network_name: "bridge"
+
+  # 存储配置
+  storage:
+    downloads_dir: "./uploads/rpa/downloads"
+    screenshots_dir: "./uploads/rpa/screenshots"
+    max_retained_days: 7
+
+# ----------------------------------------------------------------------------
+# VDI 配置（已迁移到参数管理页面 sys_config 表）
+# ----------------------------------------------------------------------------
+# VDI 服务器信息请通过参数管理界面配置
+# 配置键格式：vdi.server.{index}.{field} (如: vdi.server.0.endpoint)
+
+# ----------------------------------------------------------------------------
+# VDI 客户端 TLS 证书校验开关
+# ----------------------------------------------------------------------------
+# 当前部署 VDI 服务器未使用 TLS，故保持 true（跳过证书校验）
+# 若未来 VDI 启用 TLS，需将此项改为 false 启用严格校验，避免 MITM 攻击
+vdi:
+  tls_skip_verify: true       # ⚠️ VDI 无 TLS，保持 true；启用 TLS 后改 false
+
+# ----------------------------------------------------------------------------
+# AD/LDAP 客户端 TLS 证书校验开关
+# ----------------------------------------------------------------------------
+# 当前部署 AD 域控未使用 TLS（ldap://），故保持 true（跳过证书校验）
+# 若未来 AD 启用 LDAPS，需将此项改为 false 启用严格校验，避免 AD 凭据被窃取
+ad:
+  tls_skip_verify: true       # ⚠️ AD 无 TLS，保持 true；启用 LDAPS 后改 false

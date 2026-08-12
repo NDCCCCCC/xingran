@@ -1,0 +1,50 @@
+/* 数字字母验证码组件样式 */
+
+.text-captcha-container {
+  width: 100%;
+}
+
+.captcha-input-wrapper {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.captcha-input {
+  flex: 1;
+  height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--input-border, #d9d9d9);
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.captcha-input:focus {
+  border-color: var(--input-border-focus, #1890ff);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.captcha-image-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.captcha-image {
+  height: 40px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+
+.captcha-image:hover {
+  opacity: 0.8;
+}
+
+.refresh-btn {
+  padding: 4px 8px;
+  height: 32px;
+}

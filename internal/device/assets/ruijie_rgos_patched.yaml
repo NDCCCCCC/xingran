@@ -1,0 +1,73 @@
+---
+# ruijie_rgos_patched.yaml — 基于 scrapli ruijie_rjos.yaml，唯一改动：
+# configuration priv 的 prompt pattern 字符类加空格 + 扩容长度，
+# 以匹配锐捷接口视图 prompt "Ruijie(config-if-GigabitEthernet 4/18)#"（接口名带空格）。
+#
+# 原始 pattern: '(?im)^[\w.\-@/:]{1,63}\([\+\w.\-@/:+]{0,32}\)#$'
+#   字符类 [\+\w.\-@/:+] 不含空格 → 接口名含空格时 prompt 不匹配 → SendConfig 等不到 prompt 超时
+# 修补 pattern: '(?im)^[\w.\-@/:]{1,63}\([\+\w.\-@/:+ ]{0,64}\)#$'
+#   加空格 + {0,64}（容纳 "config-if-GigabitEthernet 4/18" 长度）
+#
+# scrapli platform 是 embedded assets（platform/definition.go:88 assets.Assets.ReadFile），
+# 无法用项目文件覆盖，故在 scrapli_wrapper.go 用 platform.NewPlatform([]byte, ...) 注入本 yaml。
+platform-type: 'ruijie_rgos'
+default:
+  driver-type: 'network'
+  privilege-levels:
+    exec:
+      name: 'exec'
+      pattern: '(?im)^[\w.\-@/:]{1,63}>$'
+      previous-priv:
+      deescalate:
+      escalate:
+      escalate-auth: false
+      escalate-prompt:
+    privilege-exec:
+      name: 'privilege-exec'
+      pattern: '(?im)^[\w.\-@/:]{1,63}#$'
+      previous-priv: 'exec'
+      deescalate: 'disable'
+      escalate: 'enable'
+      escalate-auth: true
+      escalate-prompt: '(?im)^(?:enable\s){0,1}password:\s?$'
+    configuration:
+      name: 'configuration'
+      pattern: '(?im)^[\w.\-@/:]{1,63}\([\+\w.\-@/:+ ]{0,64}\)#$'
+      not-contains:
+        - 'tcl)'
+      previous-priv: 'privilege-exec'
+      deescalate: 'end'
+      escalate: 'configure terminal'
+      escalate-auth: false
+      escalate-prompt:
+    tclsh:
+      name: 'tclsh'
+      pattern: '(?im)^([\w.\-@/+>:]+\(tcl\)[>#]|\+>)$'
+      previous-priv: 'privilege-exec'
+      deescalate: 'tclquit'
+      escalate: 'tclsh'
+      escalate-auth: false
+      escalate-prompt:
+  default-desired-privilege-level: 'privilege-exec'
+  failed-when-contains:
+    - '% Ambiguous command'
+    - '% Incomplete command'
+    - '% Invalid input detected'
+    - '% Unknown command'
+    # 2026-07-08: Ruijie 拒绝嵌套 interface view 时回 % Error: ...
+    # （如 "Can't find interface" / "Unrecognized command"），yaml 默认 4 个
+    # marker 都不覆盖 → scrapli 误判 success → batch 后续 cmd 在错 view 执行
+    # → device 实际未 shutdown 但 Succeeded=[...]。补 % Error: 一行覆盖
+    # 所有 RGOS % Error 前缀错误（华为/H3C/Cisco 用 % ^ 不用 %, 但 scrapli
+    # 对各平台 yaml 是分文件加载，% Error 只对 Ruijie patch 生效）。
+    - '% Error:'
+  textfsm-platform: ''
+  network-on-open:
+    - operation: 'acquire-priv'
+    - operation: 'driver.send-command'
+      command: 'terminal length 0'
+  network-on-close:
+    - operation: 'acquire-priv'
+    - operation: 'channel.write'
+      input: 'exit'
+    - operation: 'channel.return'

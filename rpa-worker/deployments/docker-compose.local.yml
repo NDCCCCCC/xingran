@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # RPA Worker 服务 - 本地构建版
+  rpa-worker:
+    image: rpa-worker:latest
+    container_name: rpa-worker
+    # 如果没有镜像，使用本地 Dockerfile.local 构建
+    build:
+      context: ..
+      dockerfile: deployments/Dockerfile.local
+    ports:
+      - "9001:8080"
+      - "9222:9222"
+    volumes:
+      - ../configs/config.yaml:/app/configs/config.yaml:ro
+      - chrome-cache:/home/chrome/.cache
+      - chrome-downloads:/home/chrome/Downloads
+      - ./screenshots:/app/screenshots
+      # /dev/shm 挂载（Chrome 需要）
+      - /dev/shm:/dev/shm
+    environment:
+      - WORKER_ID=${WORKER_ID:-worker-1}
+      - WORKER_NAME=${WORKER_NAME:-rpa-worker-1}
+      - MAX_CONCURRENCY=${MAX_CONCURRENCY:-5}
+      - BACKEND_URL=${BACKEND_URL:-http://10.62.10.33:9000/api/v1}
+      - WORKER_TOKEN=${WORKER_TOKEN:-}
+      - REDIS_ADDR=10.62.10.34:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-})(PO09po}
+      - REDIS_DB=0
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - SHM_SIZE=2gb
+      - XDG_CACHE_HOME=/home/chrome/.cache
+      - HOME=/home/chrome
+    # DNS 配置（解决容器内网络访问问题）
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+      - 114.114.114.114
+    # Chrome 容器所需权限
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - seccomp:unconfined
+    restart: unless-stopped
+    networks:
+      - rpa-network
+    shm_size: 2gb
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+volumes:
+  chrome-cache:
+    driver: local
+  chrome-downloads:
+    driver: local
+
+networks:
+  rpa-network:
+    driver: bridge

@@ -1,0 +1,38 @@
+# Huawei VRP display interface transceiver parser.
+#
+# Sample input (templates/samples/huawei_10_62_25_253_display_interface_transceiver.txt):
+#   10GE5/0/4 transceiver information:
+#   -------------------------------------------------------------------
+#    Common information:
+#      Transceiver Type                      :1000BASE_SX
+#      ...
+#    Manufacture information:
+#      Manu. Serial Number                   :8000012000082
+#      Manufacturing Date                    :2025-2-20
+#
+# Field semantics:
+#   INTERFACE — device interface name (e.g. 10GE5/0/4).
+#   SN        — vendor manufacturing serial number (Manu. Serial Number).
+#
+# Strategy: every block starts with `<INTERFACE> transceiver information:`.
+# The parser captures INTERFACE without recording, then matches the
+# Manu. Serial Number line later and triggers Record there. Variables
+# without Filldown keyword persist across lines within the in-progress
+# record because the parser does not reset CurrentRecord between matches.
+#
+# The homegrown textfsm parser (internal/templates/textfsm.go) only
+# recognises the `-> Record` / `-> Continue` / `-> Error` / `-> State`
+# transitions; the `Continue.Record` style used by some templates is a
+# no-op and is intentionally not used here.
+#
+# D-10 (RESEARCH Pitfall 5): the Wave 2 collector filters transceiver
+# rows by the up-interface list produced by display interface status
+# BEFORE parsing this template. The template itself just extracts every
+# transceiver block; the Go collector applies the up-filter post-parse.
+
+Value INTERFACE (\S+)
+Value SN (\S+)
+
+Start
+  ^\s*${INTERFACE}\s+transceiver\s+information:\s*$$
+  ^\s*Manu\.\s+Serial\s+Number\s*:\s*${SN}\s*$$ -> Record

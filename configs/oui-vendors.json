@@ -1,0 +1,78 @@
+[
+  {
+    "oui_prefix": "000000",
+    "vendor_name": "Xerox Corporation"
+  },
+  {
+    "oui_prefix": "000001",
+    "vendor_name": "Xerox Corporation"
+  },
+  {
+    "oui_prefix": "000002",
+    "vendor_name": "Xerox Corporation"
+  },
+  {
+    "oui_prefix": "000003",
+    "vendor_name": "Xerox Corporation"
+  },
+  {
+    "oui_prefix": "000005",
+    "vendor_name": "Xerox Corporation"
+  },
+  {
+    "oui_prefix": "000006",
+    "vendor_name": "Xerox Corporation"
+  },
+  {
+    "oui_prefix": "000007",
+    "vendor_name": "Xerox Corporation"
+  },
+  {
+    "oui_prefix": "000008",
+    "vendor_name": "Xerox Corporation"
+  },
+  {
+    "oui_prefix": "000009",
+    "vendor_name": "Xerox Corporation"
+  },
+  {
+    "oui_prefix": "00000A",
+    "vendor_name": "Xerox Corporation"
+  },
+  {
+    "oui_prefix": "00000B",
+    "vendor_name": "Xerox Corporation"
+  },
+  {
+    "oui_prefix": "00000C",
+    "vendor_name": "Xerox Corporation"
+  },
+  {
+    "oui_prefix": "00000D",
+    "vendor_name": "Xerox Corporation"
+  },
+  {
+    "oui_prefix": "00000E",
+    "vendor_name": "Xerox Corporation"
+  },
+  {
+    "oui_prefix": "00000F",
+    "vendor_name": "Xerox Corporation"
+  },
+  {
+    "oui_prefix": "000010",
+    "vendor_name": "Xerox Corporation"
+  },
+  {
+    "oui_prefix": "00111A",
+    "vendor_name": "Apple, Inc."
+  },
+  {
+    "oui_prefix": "AABBCC",
+    "vendor_name": "Example Vendor Inc"
+  },
+  {
+    "oui_prefix": "DDEEFF",
+    "vendor_name": "Test Corporation"
+  }
+]

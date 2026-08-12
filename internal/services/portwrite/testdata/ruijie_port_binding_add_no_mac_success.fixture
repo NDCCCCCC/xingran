@@ -1,0 +1,15 @@
+<Ruijie>
+screen-length 0 temporary
+<Ruijie>
+system-view
+[Ruijie]
+interface GigabitEthernet 1/0/1
+[Ruijie]
+[Ruijie]
+switchport port-security binding 10.62.25.5
+[Ruijie]
+[Ruijie]
+exit
+[Ruijie]
+return
+<Ruijie>

@@ -1,0 +1,92 @@
+{
+  "doc_path": "docs/安全和认证设计（国密）.md",
+  "claims_checked": 24,
+  "claims_passed": 10,
+  "claims_failed": 14,
+  "failures": [
+    {
+      "line": 70,
+      "claim": "pkg/crypto/sm2.go",
+      "expected": "file exists",
+      "actual": "file not found at pkg/crypto/sm2.go (actual file is pkg/crypto/sm2_jwt.go)"
+    },
+    {
+      "line": 172,
+      "claim": "src/utils/crypto/sm2.js",
+      "expected": "file exists",
+      "actual": "file not found at src/utils/crypto/sm2.js (actual frontend path is xingran-react-frontend/src/utils/sm2.ts)"
+    },
+    {
+      "line": 227,
+      "claim": "pkg/crypto/sm3.go",
+      "expected": "file exists",
+      "actual": "file not found at pkg/crypto/sm3.go"
+    },
+    {
+      "line": 462,
+      "claim": "pkg/auth/jwt.go",
+      "expected": "file exists",
+      "actual": "file not found at pkg/auth/jwt.go (actual file is internal/core/security/jwt.go)"
+    },
+    {
+      "line": 727,
+      "claim": "pkg/auth/password.go",
+      "expected": "file exists",
+      "actual": "file not found at pkg/auth/password.go (actual file is internal/core/security/password.go)"
+    },
+    {
+      "line": 918,
+      "claim": "pkg/crypto/encryption.go",
+      "expected": "file exists",
+      "actual": "file not found at pkg/crypto/encryption.go"
+    },
+    {
+      "line": 1074,
+      "claim": "pkg/crypto/masking.go",
+      "expected": "file exists",
+      "actual": "file not found at pkg/crypto/masking.go"
+    },
+    {
+      "line": 1224,
+      "claim": "pkg/tls/gmtls.go",
+      "expected": "file exists",
+      "actual": "file not found at pkg/tls/gmtls.go (pkg/tls/ directory does not exist)"
+    },
+    {
+      "line": 1379,
+      "claim": "pkg/auth/rbac.go",
+      "expected": "file exists",
+      "actual": "file not found at pkg/auth/rbac.go (pkg/auth/ directory does not exist; permission service is at pkg/permission/service.go)"
+    },
+    {
+      "line": 1647,
+      "claim": "pkg/audit/security.go",
+      "expected": "file exists",
+      "actual": "file not found at pkg/audit/security.go (pkg/audit/ directory does not exist)"
+    },
+    {
+      "line": 1897,
+      "claim": "config/security.yaml",
+      "expected": "file exists",
+      "actual": "file not found at config/security.yaml; configs/ directory exists but no security.yaml"
+    },
+    {
+      "line": 90,
+      "claim": "GenerateSM2KeyPair",
+      "expected": "function 'GenerateSM2KeyPair' in codebase",
+      "actual": "function not found; actual implementation uses GenerateKeyPair() in pkg/crypto/sm2_jwt.go"
+    },
+    {
+      "line": 103,
+      "claim": "SM2Encrypt",
+      "expected": "function 'SM2Encrypt' in codebase",
+      "actual": "function not found; actual implementation uses EncryptWithSM2() in pkg/crypto/sm2_jwt.go"
+    },
+    {
+      "line": 117,
+      "claim": "SM2Decrypt",
+      "expected": "function 'SM2Decrypt' in codebase",
+      "actual": "function not found; actual implementation uses DecryptWithSM2() in pkg/crypto/sm2_jwt.go"
+    }
+  ]
+}

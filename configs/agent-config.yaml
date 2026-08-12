@@ -1,0 +1,28 @@
+# XingRan VDI Agent Configuration Template
+# IMPORTANT: Enable TLS for production deployments
+
+# Backend Configuration
+backend_url: "https://xingran-backend.example.com"
+agent_id: ""  # Leave empty for auto-registration
+vm_id: ""      # Leave empty for auto-registration
+
+# Security Configuration
+jwt_secret: ""  # Leave empty for auto-generation
+tls_enabled: true  # MUST be true for production
+verify_certificates: true  # MUST be true for production
+tls_cert_file: "/etc/xingran-agent/tls/server.crt"
+tls_key_file: "/etc/xingran-agent/tls/server.key"
+ca_file: "/etc/xingran-agent/tls/ca.crt"  # Optional: for self-signed certs
+
+# HTTP Server
+listen_addr: ":8443"
+
+# Heartbeat
+heartbeat_interval: 30s
+
+# Logging
+log_level: "info"
+log_path: "/var/log/xingran-agent"
+
+# Platform (auto-detected, usually don't set manually)
+platform: "linux"  # or "windows"

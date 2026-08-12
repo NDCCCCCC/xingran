@@ -1,0 +1,20 @@
+{
+  "doc_path": "docs/API响应规范.md",
+  "claims_checked": 14,
+  "claims_passed": 12,
+  "claims_failed": 2,
+  "failures": [
+    {
+      "line": 123,
+      "claim": "1009 - 数据已存在",
+      "expected": "AppError with code 1009 and message '数据已存在'",
+      "actual": "pkg/response/response.go:52 defines ErrRecordExists with code 1009 and message '记录已存在' (not '数据已存在')"
+    },
+    {
+      "line": 124,
+      "claim": "1010 - 数据不存在",
+      "expected": "AppError with code 1010 and message '数据不存在'",
+      "actual": "pkg/response/response.go:53 defines ErrRecordNotFound with code 1010 and message '记录不存在' (not '数据不存在')"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "doc_path": "docs/部署和运维文档.md",
+  "claims_checked": 7,
+  "claims_passed": 5,
+  "claims_failed": 2,
+  "failures": [
+    {
+      "line": 285,
+      "claim": "{\"code\":0,\"msg\":\"success\"}",
+      "expected": "Health endpoint returns {\"code\":0,\"msg\":\"success\"}",
+      "actual": "Health endpoint at cmd/main.go:151 returns {\"status\": \"ok\", \"time\": \"<RFC3339 timestamp>\"} (gin.H map), not the standard response wrapper"
+    },
+    {
+      "line": 526,
+      "claim": "curl http://localhost:9000/health",
+      "expected": "GET /health endpoint returns success response",
+      "actual": "Endpoint exists as GET /health in cmd/main.go:151 but returns {\"status\":\"ok\",\"time\":\"...\"} format, not the standard {code, msg} response wrapper"
+    }
+  ]
+}

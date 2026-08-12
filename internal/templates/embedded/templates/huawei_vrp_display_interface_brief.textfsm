@@ -1,0 +1,37 @@
+Value INTERFACE (\S+)
+Value PHY (down|[\*\^]down|up|up\(\w+\))
+Value PROTOCOL (down|[\*\^]down|up|up\(\w+\))
+Value INUTI (\d*\.?\d*%|\-\-)
+Value OUTUTI (\d*\.?\d*%|\-\-)
+Value INERRORS (\d+)
+Value OUTERRORS (\d+)
+
+
+Start
+  # 跳过命令提示符行
+  ^<[^>]+>.*$$ -> Start
+  # 首先处理特殊端口行，如观察端口
+  ^\s*\([a-zA-Z]\):\s+Observe-port\s+forwarding\s+.* -> Continue
+  ^\s*\([a-zA-Z]\):\s+.+ -> Continue
+  # 然后处理常规接口
+  ^\s*${INTERFACE}\s+${PHY}\s+${PROTOCOL}\s+${INUTI}\s+${OUTUTI}\s+${INERRORS}\s+${OUTERRORS} -> Record
+  # 处理其他信息行
+  ^\s*PHY:\s+Physical\s*$$
+  ^\s*\*down:\s+administratively\s+down\s*$$
+  ^\s*\^down:\s+standby\s*$$
+  ^\s*#down:\s+LBDT\s+down\s*$$
+  ^\s*\(l\):\s+loopback\s*$$
+  ^\s*\(s\):\s+spoofing\s*$$
+  ^\s*\(E\):\s+E-Trunk\s+down\s*$$
+  ^\s*\(b\):\s+BFD\s+down\s*$$
+  ^\s*\(B\):\s+Bit-error-detection\s+down\s*$$
+  ^\s*\(e\):\s+ETHOAM\s+down\s*$$
+  ^\s*\(dl\):\s+DLDP\s+down\s*$$
+  ^\s*\(lb\):\s+LBDT\s+block\s*$$
+  ^\s*\(d\):\s+Dampening\s+Suppressed\s*$$
+  ^\s*\(v\):\s+VirtualPort\s*$$
+  ^\s*\(o\):\s+Observe-port\s+forwarding\s+down\s*$$
+  ^\s*InUti/OutUti:\s+input\s+utility/output\s+utility\s*$$
+  ^\s*Interface\s+PHY\s+Protocol\s+.*$$
+  # 最后处理无法匹配的行
+  ^. -> Continue
