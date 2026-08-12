@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/device"
@@ -81,6 +82,7 @@ func CollectAllDevices[T any](
 	for _, d := range devices {
 		r, err := collectOne(ctx, d.ID)
 		if err != nil && r == nil {
+			log.Printf("[CollectAllDevices] 跳过设备: deviceID=%s err=%v", d.ID, err)
 			continue
 		}
 		results = append(results, r)
