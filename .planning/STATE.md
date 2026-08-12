@@ -4,8 +4,8 @@ milestone: v1.21
 milestone_name: Milestone History
 status: executing
 stopped_at: Phase 57 context gathered (4 areas decided + v1.21 re-plan Phase 61)
-last_updated: "2026-08-12T16:30:25.160Z"
-last_activity: 2026-08-12 -- Phase 57 planning complete
+last_updated: "2026-08-12T16:35:53.984Z"
+last_activity: 2026-08-12 -- Phase 57 execution started
 progress:
   total_phases: 5
   completed_phases: 0
@@ -31,10 +31,10 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-12)
 
 ## Current Position
 
-Phase: 57 of 61 (认证链核心修复 + 回归测试) — ready to plan
-Plan: — (TBD, plan-phase not yet run)
-Status: Ready to execute
-Last activity: 2026-08-12 -- Phase 57 planning complete
+Phase: 57 (auth-chain-core-fix-regression-test) — EXECUTING
+Plan: 1 of 1
+Status: Executing Phase 57
+Last activity: 2026-08-12 -- Phase 57 execution started
 
 Progress: [░░░░░░░░░░] 0% (0/5 phases, 0 plans)
 
