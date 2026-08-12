@@ -23,8 +23,8 @@ date: 2026-08-12
   - `internal/core/captcha.go`(2× `CaptchaVerifiedKeyFormat` + 2× `LoginLockKeyFormat`)
 - 验证:`go build ./...` 通过;受影响包(`constants`/`core`/`services`/`api/v1/system`)`go vet` 通过;`constants`/`api/v1/system` `go test` 通过。注:`core` 包 `TestCoreSplit_NewConstructorPopulatesInfraAndServices` 失败为既有问题(stash 回退后基线同样失败,`New()` 构造器 infra nil),与本次改动无关。
 
-## 未完成(低优,可选)
-- `user_statistics_test.go:18` 注释残留旧名 `constants.MaxPageSize`(纯注释,不影响编译)。
+## 全部完成
+- `user_statistics_test.go` 注释旧名 `constants.MaxPageSize` / `MaxPageSize=100` → 统一为 `MaxListPageSize`(2026-08-13);纯注释,无运行时影响。本 quick 任务收尾,无遗留。
 
 ## 验证
 - `go build ./...` → exit 0
