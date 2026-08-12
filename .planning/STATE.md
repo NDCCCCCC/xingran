@@ -1,10 +1,11 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.21
-milestone_name: API Key 认证链修复
-status: planning
-last_updated: "2026-08-12T16:00:00.000Z"
-last_activity: 2026-08-12
+milestone_name: Milestone History
+status: "ROADMAP ready, awaiting `/gsd:plan-phase 57`"
+stopped_at: context exhaustion at 78% (2026-08-12)
+last_updated: "2026-08-12T15:57:14.000Z"
+last_activity: 2026-08-12 — v1.21 ROADMAP drafted; quick task 260812-wu5 constants cleanup committed (759a65a)
 progress:
   total_phases: 4
   completed_phases: 0
@@ -18,7 +19,7 @@ progress:
 **Project**: XingRan-Next 运维管理系统
 **Created**: 2026-04-16
 **Status**: v1.21 API Key 认证链修复 milestone INITIATED — ROADMAP drafted (Phases 57-60), ready for Phase 57 planning
-**Last activity**: 2026-08-12 — ROADMAP.md / REQUIREMENTS.md traceability / STATE.md synchronized for v1.21
+**Last activity**: 2026-08-12 — quick task 260812-wu5 (constants dead-code cleanup + pagination unification via 方案 B) committed 759a65a; v1.21 ROADMAP/REQUIREMENTS/STATE synchronized
 
 ## Project Reference
 
@@ -84,6 +85,12 @@ Phase 58 可与 Phase 59 并行(两者依赖仅 Phase 57);Phase 60 必须最后(
 
 None currently. Roadblock risk: Phase 60 AUTH-03 启用决策若选"启用"会扩大 phase scope(需在 router.go 实际挂载并补权限矩阵测试)——已通过 discuss-mode 控制范围。
 
+## Quick Tasks Completed
+
+| Quick ID | Description | Date | Commit | Plan |
+|----------|-------------|------|--------|------|
+| 260812-wu5 | clean constants dead code and unify pagination constants | 2026-08-12 | 759a65a | [260812-wu5-clean-constants-dead-code-and-unify-pagi](./quick/260812-wu5-clean-constants-dead-code-and-unify-pagi/) |
+
 ## Deferred Items
 
 Items acknowledged and carried forward from previous milestone closes (non-v1.21 work):
@@ -125,8 +132,8 @@ Full deferred detail in [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-12
-Stopped at: v1.21 ROADMAP drafted (Phases 57-60), REQUIREMENTS.md traceability confirmed, STATE.md updated
+Last session: 2026-08-12T15:52:20.524Z
+Stopped at: context exhaustion at 78% (2026-08-12)
 Resume file: None
 
 **Milestone status:** v1.21 INITIATED — ROADMAP ready, awaiting `/gsd:plan-phase 57` to begin Phase 57 (认证链核心修复 + 回归测试).
