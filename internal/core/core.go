@@ -190,6 +190,9 @@ func initSM4Cipher(sm4Key string) (addomain.PasswordCipher, error) {
 // Init 初始化核心模块
 // 按顺序初始化数据库、基础数据、权限服务和缓存系统
 // 如果某个模块初始化失败，会记录警告但不会中断服务启动
+//
+// 本函数仅为编排层:每个步骤的具体实现下沉到 initXxx 私有方法,保留原本的
+// 执行顺序与 fail-fast / warn-continue 策略。详见各 initXxx 方法的 doc 注释。
 func (c *Core) Init() error {
 	// 0. 设置 AD 域全局 SM4 cipher（FIX-01: 支持 SM4 密码加密）
 	if c.SM4Cipher != nil {
@@ -199,6 +202,60 @@ func (c *Core) Init() error {
 		applogger.Warnf("AD 域 SM4 加密器未设置，密码将使用 AES-legacy 回退")
 	}
 
+	// 1-4. 数据库连接 / 迁移 / 基础数据 / 默认角色与菜单
+	if err := c.initDBAndData(); err != nil {
+		return err
+	}
+
+	// 5-6. 缓存系统 + 缓存服务 + 异步预热
+	if err := c.initCacheAndWarmUp(); err != nil {
+		return err
+	}
+
+	// 7. 系统指标缓存服务
+	c.initMetrics()
+
+	// 8-9.5. 设备连接池 / 执行器 / 发现 / 信息采集 / MAC 分区
+	c.initDeviceServices()
+
+	// 10-12. 调度器 + 所有定时任务注册 + 设备监控服务
+	if err := c.initSchedulerAndTasks(); err != nil {
+		return err
+	}
+
+	// 13-14.1. 验证码服务 + 背景图服务
+	c.initCaptchaServices()
+
+	// 15-16.5. 操作日志 + 令牌黑名单 + 认证策略工厂
+	c.initLogsAndAuth()
+
+	// 17-19. RPA + API 端点元数据 + 子进程 reaper
+	c.initRPAAndAPIAndReaper()
+
+	// 20. Phase 42 R1: 启动时刷新 reconciliation_normalized 物化视图 (D-02 冷启兜底)
+	// 避免 0-5min 数据为空(用户首次访问 dashboard 不会看到 0 资产)。goroutine + 30s 超时,不阻断启动;
+	// 失败仅 log 警告 — 与 cron 调度一致(D-02 设计)。
+	go func() {
+		refreshCtx, refreshCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer refreshCancel()
+		if err := assetSvc.StartupRefreshView(refreshCtx, c.GetDB()); err != nil {
+			applogger.Errorf("Phase 42 R1 startup RefreshView failed (D-02 仅 log): %v", err)
+			return
+		}
+		applogger.Infof("Phase 42 R1 startup RefreshView succeeded (D-02 冷启兜底)")
+	}()
+
+	return nil
+}
+
+// initDBAndData 初始化数据库连接、表结构迁移、基础数据、默认角色与菜单权限。
+//
+// 对应原 Init() 步骤 1-4。fail-fast / warn-continue 策略与原实现完全一致:
+//   - 步骤 1 (DB 连接): 失败必须终止启动 (F-15) — 否则后续所有 DB 操作 panic
+//   - 步骤 2 (AutoMigrate): 失败必须终止启动 (P0 #16) — 表结构是所有 GORM 操作的基础
+//   - 步骤 3 (InitData): 失败仅警告(不影响启动)
+//   - 步骤 4 (默认角色/菜单): 失败仅警告
+func (c *Core) initDBAndData() error {
 	// 1. 初始化数据库连接
 	var err error
 	c.DB, err = db.NewDatabase(&c.Config.Database)
@@ -248,9 +305,20 @@ func (c *Core) Init() error {
 		}
 	}
 
+	return nil
+}
+
+// initCacheAndWarmUp 初始化缓存系统、缓存服务,并按配置启动异步缓存预热。
+//
+// 对应原 Init() 步骤 5-6。fail-fast / warn-continue 策略与原实现完全一致:
+//   - 步骤 5 (Cache 系统): 失败必须终止启动 (P0 #16) — 大量服务通过 CacheProvider 依赖缓存,
+//     无缓存状态下静默退化会导致性能崩溃
+//   - 步骤 6 (CacheConfigService / DataCacheService / CacheManager / 预热 goroutine): 无 fail-fast
+func (c *Core) initCacheAndWarmUp() error {
 	// 5. 初始化缓存系统
 	// P0 #16: 大量系统服务通过 CacheProvider 接口依赖缓存。审查报告明确要求
 	// Cache 失败应终止启动，避免服务在无缓存状态下静默退化/性能崩溃。
+	var err error
 	c.Cache, err = c.initCache()
 	if err != nil {
 		return fmt.Errorf("初始化缓存系统失败: %w", err)
@@ -287,10 +355,26 @@ func (c *Core) Init() error {
 		}
 	}
 
+	return nil
+}
+
+// initMetrics 初始化系统指标缓存服务。
+//
+// 对应原 Init() 步骤 7。无 fail-fast。
+func (c *Core) initMetrics() {
 	// 7. 初始化系统指标缓存服务
 	c.MetricsCacheService = NewMetricsCacheService(c)
 	applogger.Infof("系统指标缓存服务初始化完成")
+}
 
+// initDeviceServices 初始化网络设备相关服务:连接池、任务调度器、执行器、设备发现、
+// 设备信息采集、MAC 历史分区管理。
+//
+// 对应原 Init() 步骤 8-9.5。无 fail-fast:
+//   - 步骤 9.1 (DeviceInfoCollectionService.Start): 失败仅警告
+//   - 步骤 9.5 (PartitionService.EnsurePartitionsExist): 失败仅警告
+//     (不阻断应用启动,分区创建可稍后手动执行)
+func (c *Core) initDeviceServices() {
 	// 8. 初始化网络设备管理器（新架构）
 	// 8.1 创建连接池 (容量/空闲时长从 sys_config 读取, web 可配, 默认 50/300s)
 	poolConfig := loadConnectionPoolConfig(c.GetDB())
@@ -332,7 +416,17 @@ func (c *Core) Init() error {
 	} else {
 		applogger.Infof("MAC历史分区管理服务初始化完成")
 	}
+}
 
+// initSchedulerAndTasks 初始化定时任务调度器、注册所有 cron 任务处理器,
+// 并初始化设备监控服务。
+//
+// 对应原 Init() 步骤 10-12。fail-fast / warn-continue 策略与原实现完全一致:
+//   - 步骤 10 (Scheduler.Start): 失败必须终止启动 (F-16 部分) — 所有 cron 任务依赖它,
+//     调度器静默失败会导致后台业务全部停摆而管理员无任何感知
+//   - 步骤 11 (Register*Tasks / VDI / ADSync / SyncPeriodicWorkOrderJobs 等): 失败仅警告
+//   - 步骤 12 (DeviceMonitorService 装配): 无 fail-fast
+func (c *Core) initSchedulerAndTasks() error {
 	// 10. 初始化定时任务调度器
 	// F-16 (部分): Scheduler.Start 失败必须终止启动 —
 	// 所有 cron 任务(AD 同步/工单/MAC清理/VDI 等)都依赖它,
@@ -442,6 +536,15 @@ func (c *Core) Init() error {
 	scheduler.SetDeviceInfoCollectionService(c.DeviceInfoCollectionService)
 	applogger.Infof("设备监控服务初始化完成")
 
+	return nil
+}
+
+// initCaptchaServices 初始化验证码服务、验证码背景图服务,并确保存储目录存在。
+//
+// 对应原 Init() 步骤 13-14.1。无 fail-fast:
+//   - 步骤 13 (CaptchaService.LoadConfig): 失败仅警告
+//   - 步骤 14.1 (MkdirAll 存储目录): 失败仅警告
+func (c *Core) initCaptchaServices() {
 	// 13. 初始化验证码服务
 	c.CaptchaService = NewCaptchaService(c.DB, c.Cache)
 	if err := c.CaptchaService.LoadConfig(context.Background()); err != nil {
@@ -464,7 +567,12 @@ func (c *Core) Init() error {
 	}
 
 	applogger.Infof("验证码背景图服务初始化完成")
+}
 
+// initLogsAndAuth 初始化操作日志服务、令牌黑名单服务、认证策略工厂。
+//
+// 对应原 Init() 步骤 15-16.5。无 fail-fast。
+func (c *Core) initLogsAndAuth() {
 	// 15. 初始化操作日志服务
 	c.OperLogService = services.NewOperLogService()
 	applogger.Infof("操作日志服务初始化完成")
@@ -475,7 +583,15 @@ func (c *Core) Init() error {
 	// 16.5 初始化认证策略工厂
 	c.initAuthFactory()
 	applogger.Infof("认证策略工厂初始化完成")
+}
 
+// initRPAAndAPIAndReaper 初始化 RPA 服务、API 端点元数据服务,并启动子进程 reaper。
+//
+// 对应原 Init() 步骤 17-19。无 fail-fast:
+//   - 步骤 17 (RPA): 失败仅警告
+//   - 步骤 18 (APIEndpointService): 失败仅警告
+//   - 步骤 19 (子进程 reaper): 无错误路径
+func (c *Core) initRPAAndAPIAndReaper() {
 	// 17. 初始化RPA服务
 	if c.Config.RPA.Enabled {
 		if err := c.initRPAServices(&c.Config.RPA); err != nil {
@@ -496,21 +612,6 @@ func (c *Core) Init() error {
 	c.reaperCtx, c.reaperCancel = context.WithCancel(context.Background())
 	c.startSubprocessReaper(c.reaperCtx)
 	applogger.Infof("子进程 reaper 已启动")
-
-	// 20. Phase 42 R1: 启动时刷新 reconciliation_normalized 物化视图 (D-02 冷启兜底)
-	// 避免 0-5min 数据为空(用户首次访问 dashboard 不会看到 0 资产)。goroutine + 30s 超时,不阻断启动;
-	// 失败仅 log 警告 — 与 cron 调度一致(D-02 设计)。
-	go func() {
-		refreshCtx, refreshCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer refreshCancel()
-		if err := assetSvc.StartupRefreshView(refreshCtx, c.GetDB()); err != nil {
-			applogger.Errorf("Phase 42 R1 startup RefreshView failed (D-02 仅 log): %v", err)
-			return
-		}
-		applogger.Infof("Phase 42 R1 startup RefreshView succeeded (D-02 冷启兜底)")
-	}()
-
-	return nil
 }
 
 // coreShutdownTimeout 整个 Core.Close() 的硬截止时间。
