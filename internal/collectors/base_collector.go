@@ -32,7 +32,7 @@ type CollectorBase struct {
 // 	func (c *ARPCollector) CleanOldRecords(ctx context.Context, days int) (int64, error) {
 // 	    return c.CollectorBase.CleanOldRecords(ctx, &models.DeviceARPEntry{}, days)
 // 	}
-func (b *CollectorBase) CleanOldRecords(ctx context.Context, model interface{}, days int) (int64, error) {
+func (b *CollectorBase) CleanOldRecords(ctx context.Context, model any, days int) (int64, error) {
 	cutoff := time.Now().AddDate(0, 0, -days)
 	result := b.DB.WithContext(ctx).Where("collected_at < ?", cutoff).Delete(model)
 	return result.RowsAffected, result.Error
