@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -173,8 +174,8 @@ func TestGetDSN_URLEscape(t *testing.T) {
 // 这是 dev 工作流的关键场景 —— 刚 clone 仓库、还没复制 config.example.yaml 的开发
 // 不应该被启动错误挡在门外。
 //
-// WR-1 修复后,viper 状态在 Load() 入口已 Reset,这里无需再依赖"package 级
-// 并行默认关闭"的隐含约定。
+// WR-2 修复后,Load() 使用独立 viper 实例,不存在跨用例的全局状态污染,
+// 这里无需再依赖"package 级并行默认关闭"的隐含约定。
 func TestLoad_NoConfigFile(t *testing.T) {
 	// 在临时目录隔离 viper 工作目录,确保找不到 config.yaml。
 	t.Setenv("HOME", t.TempDir()) // viper 在部分平台会回退 $HOME
@@ -224,10 +225,14 @@ func TestLoad_EnvOverride(t *testing.T) {
 	}
 }
 
-// TestLoad_ResetState 验证 WR-1 修复:多次调用 Load() 不会污染 viper 状态。
+// TestLoad_ResetState 验证 WR-2 修复:多次调用 Load() 不会互相污染。
 //
-// 复现方案: 第一次 Load() 设 SERVER_PORT=12345,第二次不设 env,期望第二次
-// 拿到的 Port 是默认值 8080(说明 Reset() 清空了第一次的 BindEnv)。
+// 机制: 每次 Load() 创建独立 viper 实例(WR-2),不存在共享全局状态。
+// 复现方案: 第一次 Load() 设 SERVER_PORT=12345,第二次清空该 env,
+// 期望第二次拿到默认值 8080(说明第一次的 BindEnv 没有泄漏到第二次)。
+//
+// IN-2: 断言从弱判定(!=12345)收紧为强判定(==8080),确保第二次确实回归
+// 默认值,而不是落到一个无效的零值 Port=0。
 func TestLoad_ResetState(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("USERPROFILE", t.TempDir())
@@ -243,13 +248,47 @@ func TestLoad_ResetState(t *testing.T) {
 		t.Fatalf("第一次 Port 应为 12345,实际 %d", cfg1.Server.Port)
 	}
 
-	// 第二次:不再设 SERVER_PORT,期望 Reset() 已清空,走默认 8080。
+	// 第二次:清空 SERVER_PORT,期望走默认 8080(独立实例,无第一次状态泄漏)。
 	t.Setenv("SERVER_PORT", "")
 	cfg2, err := Load(context.Background())
 	if err != nil {
 		t.Fatalf("第二次 Load 失败: %v", err)
 	}
-	if cfg2.Server.Port == 12345 {
-		t.Errorf("第二次 Load Port 仍为 12345,viper.Reset() 未生效或 SERVER_PORT 空串被当作 12345")
+	if cfg2.Server.Port != 8080 {
+		t.Errorf("第二次 Load Port 应回归默认 8080,实际 %d(独立 viper 实例未生效或默认值缺失)", cfg2.Server.Port)
+	}
+}
+
+// TestLoad_ConcurrentNoRace 锁定 WR-2 的并发不变量:多个 goroutine 同时调用
+// Load() 不应触发 data race。
+//
+// 背景: 旧实现依赖全局 viper 单例,VDI(sync.Once)与 AD(另一个 sync.Once)
+// 并发首次访问会触发两次 Load() 在无 mutex 保护的全局 viper map 上 race。
+// WR-2 改用独立 viper 实例后,每次 Load 互不干扰。本测试在 -race 下运行即可
+// 抓到任何回退到全局状态的改动。
+//
+// 注: 不能在并发 goroutine 内调用 t.Setenv(非并发安全),因此所有 env 在
+// 启动 goroutine 前预设好;Load 内部只读 env,并发安全。
+func TestLoad_ConcurrentNoRace(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", t.TempDir())
+	t.Setenv("SM4_KEY", "concurrentTest==")
+
+	const n = 16
+	var wg sync.WaitGroup
+	errs := make([]error, n)
+	wg.Add(n)
+	for i := 0; i < n; i++ {
+		go func(idx int) {
+			defer wg.Done()
+			_, errs[idx] = Load(context.Background())
+		}(i)
+	}
+	wg.Wait()
+
+	for i, err := range errs {
+		if err != nil {
+			t.Errorf("goroutine %d Load 失败: %v", i, err)
+		}
 	}
 }

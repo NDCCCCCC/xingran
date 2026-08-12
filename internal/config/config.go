@@ -255,26 +255,35 @@ type envBinding struct {
 // 新增配置字段时,在 bindEnvVars() 中显式声明 env 变量名(裸名优先),
 // 同时 AutomaticEnv 会自动提供 XINGRAN_<KEY> 作为兜底。
 //
-// ctx 当前用于: 文档化"配置加载可被取消"的意图。viper.ReadInConfig 本身
-// 不支持 ctx(磁盘读阻塞时间通常 < 100ms),但保留参数让未来切换到可中断
-// 的 reader 时不需要改 API。
+// 并发安全(WR-2 修复):每次调用都通过 viper.New() 创建独立实例,所有
+// SetDefault / BindEnv / ReadInConfig / Unmarshal 都在私有实例上完成,
+// 不再触碰进程级全局 viper。这样 VDI(sync.Once 懒加载)与 AD(另一个
+// sync.Once)首次请求并发触发 Load() 时,各自操作独立的 viper 实例,
+// 消除了旧实现"全局 viper + viper.Reset()"的 data race。
+//
+// ctx 当前为 placeholder(IN-1):viper.ReadInConfig 是阻塞磁盘读、不支持
+// ctx 取消,传 context.WithTimeout 并不能限制 Load 的阻塞时间(磁盘读通常
+// < 100ms)。参数仅为未来切换到可中断 reader 时保持 API 稳定而保留,当前
+// 不影响任何行为。
 func Load(ctx context.Context) (*Config, error) {
-	_ = ctx // 当前 viper 不支持 ctx 取消,保留参数为未来扩展。
+	_ = ctx // placeholder,详见上方 doc
 
-	// WR-1 修复:viper 是进程级全局单例,多次调用 Load() 会累积 AddConfigPath /
-	// BindEnv / SetDefault 状态(测试 reload / 集成测试场景)。Reset() 清空全部。
-	viper.Reset()
+	// WR-2 修复:独立 viper 实例,彻底隔离全局状态。旧实现依赖全局 viper 单例 +
+	// viper.Reset() 清空,但 VDI / AD 两个独立 sync.Once 懒加载并发首次访问时,
+	// 两次 Load() 会在无 mutex 保护的全局 viper map 上 data race(B 的 Reset 可能
+	// 清掉 A 刚 SetDefault 的状态)。独立实例让每次 Load 互不干扰,Reset 也不再必要。
+	v := viper.New()
 
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath("./configs")
-	viper.AddConfigPath(".")
+	v.SetConfigName("config")
+	v.SetConfigType("yaml")
+	v.AddConfigPath("./configs")
+	v.AddConfigPath(".")
 
 	// 设置默认值
-	setDefaults()
+	setDefaults(v)
 
 	// 读取配置文件
-	if err := viper.ReadInConfig(); err != nil {
+	if err := v.ReadInConfig(); err != nil {
 		var notFound viper.ConfigFileNotFoundError
 		if errors.As(err, &notFound) {
 			applogger.Info("配置文件未找到，使用默认配置")
@@ -284,18 +293,18 @@ func Load(ctx context.Context) (*Config, error) {
 	}
 
 	// 设置环境变量前缀 + 自动绑定(提供 XINGRAN_<KEY> 兜底)
-	viper.SetEnvPrefix("XINGRAN")
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	viper.AutomaticEnv()
+	v.SetEnvPrefix("XINGRAN")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
 
 	// 显式绑定"裸名"环境变量,优先级高于 AutomaticEnv 自动绑定
 	// (后注册的 env 在 viper 中优先级更高)
-	if err := bindEnvVars(); err != nil {
+	if err := bindEnvVars(v); err != nil {
 		return nil, fmt.Errorf("绑定环境变量失败: %w", err)
 	}
 
 	var config Config
-	if err := viper.Unmarshal(&config); err != nil {
+	if err := v.Unmarshal(&config); err != nil {
 		return nil, fmt.Errorf("解析配置失败: %w", err)
 	}
 
@@ -319,7 +328,7 @@ func Load(ctx context.Context) (*Config, error) {
 //     会赢过 AutomaticEnv 自动绑定的 XINGRAN_<KEY>
 //
 // 新增配置字段需要从 env 注入时,在下表追加一行即可。
-func bindEnvVars() error {
+func bindEnvVars(v *viper.Viper) error {
 	bindings := []envBinding{
 		// 数据库
 		{"database.host", "DB_HOST"},
@@ -361,7 +370,7 @@ func bindEnvVars() error {
 	}
 
 	for _, b := range bindings {
-		if err := viper.BindEnv(b.key, b.env); err != nil {
+		if err := v.BindEnv(b.key, b.env); err != nil {
 			// WR-5 修复:BindEnv 在参数非法时会返回 error,这里聚合返回。
 			return fmt.Errorf("绑定 %s→%s 失败: %w", b.env, b.key, err)
 		}
@@ -440,53 +449,53 @@ func warnSecurityRisks(c *Config) {
 }
 
 // setDefaults 设置默认配置。
-func setDefaults() {
+func setDefaults(v *viper.Viper) {
 	// 服务器默认配置
-	viper.SetDefault("server.name", "Xingran-Next")
-	viper.SetDefault("server.host", "0.0.0.0")
-	viper.SetDefault("server.port", 8080)
-	viper.SetDefault("server.mode", "debug")
+	v.SetDefault("server.name", "Xingran-Next")
+	v.SetDefault("server.host", "0.0.0.0")
+	v.SetDefault("server.port", 8080)
+	v.SetDefault("server.mode", "debug")
 
 	// 数据库默认配置
-	viper.SetDefault("database.host", "localhost")
-	viper.SetDefault("database.port", 5432)
-	viper.SetDefault("database.user", "postgres")
+	v.SetDefault("database.host", "localhost")
+	v.SetDefault("database.port", 5432)
+	v.SetDefault("database.user", "postgres")
 	// database.password 默认值已删除(F-04 同源):
 	// 历史上默认值 "postgres" 是 Postgres 镜像出厂密码,部署到生产忘了改会变成公开已知弱口令。
 	// dev 环境靠 configs/config.dev.yaml 显式注入;生产环境必须从 env (DB_PASSWORD) 注入。
 	// Validate() 在 release 模式下会强制校验非空。
-	viper.SetDefault("database.dbname", "xingran_next")
-	viper.SetDefault("database.sslmode", "disable")
-	viper.SetDefault("database.max_open_conns", 100)
-	viper.SetDefault("database.max_idle_conns", 10)
-	viper.SetDefault("database.max_lifetime", 3600)
+	v.SetDefault("database.dbname", "xingran_next")
+	v.SetDefault("database.sslmode", "disable")
+	v.SetDefault("database.max_open_conns", 100)
+	v.SetDefault("database.max_idle_conns", 10)
+	v.SetDefault("database.max_lifetime", 3600)
 
 	// 缓存默认配置
-	viper.SetDefault("cache.type", "memory")
-	viper.SetDefault("cache.host", "localhost")
-	viper.SetDefault("cache.port", 6379)
-	viper.SetDefault("cache.password", "")
-	viper.SetDefault("cache.db", 0)
-	viper.SetDefault("cache.pool_size", 10)
-	viper.SetDefault("cache.max_size", 1000)
-	viper.SetDefault("cache.cleanup_time", 600)
+	v.SetDefault("cache.type", "memory")
+	v.SetDefault("cache.host", "localhost")
+	v.SetDefault("cache.port", 6379)
+	v.SetDefault("cache.password", "")
+	v.SetDefault("cache.db", 0)
+	v.SetDefault("cache.pool_size", 10)
+	v.SetDefault("cache.max_size", 1000)
+	v.SetDefault("cache.cleanup_time", 600)
 
 	// JWT默认配置
 	// F-04: 不再设置硬编码默认密钥 "xingran-next-secret-key" —
 	// 该默认值若被部署进生产,任何人都能用公开已知字符串伪造 JWT。
 	// 启动时由 NewJWTManager 强制校验:必须从 env 或 config 注入非空且非弱默认值。
-	viper.SetDefault("jwt.secret_key", "")
-	viper.SetDefault("jwt.access_key_expire", 7200)
-	viper.SetDefault("jwt.refresh_key_expire", 604800)
-	viper.SetDefault("jwt.issuer", "Xingran-Next")
+	v.SetDefault("jwt.secret_key", "")
+	v.SetDefault("jwt.access_key_expire", 7200)
+	v.SetDefault("jwt.refresh_key_expire", 604800)
+	v.SetDefault("jwt.issuer", "Xingran-Next")
 
 	// 日志默认配置
-	viper.SetDefault("log.level", "info")
-	viper.SetDefault("log.log_dir", "logs")
-	viper.SetDefault("log.max_size", 100)   // 100MB
-	viper.SetDefault("log.max_backups", 30) // 保留30个备份
-	viper.SetDefault("log.max_age", 90)     // 保留90天
-	viper.SetDefault("log.compress", true)  // 压缩旧日志
+	v.SetDefault("log.level", "info")
+	v.SetDefault("log.log_dir", "logs")
+	v.SetDefault("log.max_size", 100)   // 100MB
+	v.SetDefault("log.max_backups", 30) // 保留30个备份
+	v.SetDefault("log.max_age", 90)     // 保留90天
+	v.SetDefault("log.compress", true)  // 压缩旧日志
 
 	// 安全默认配置(注意:生产环境必须从环境变量设置)
 	// SM4 密钥必须是 16 字节(Base64 编码)。
@@ -494,13 +503,13 @@ func setDefaults() {
 	// 该值是公开已知字符串,任何人都能解密用它加密的 SM4 数据(设备密码、AD 密码、RPA 凭据)。
 	// dev 环境靠 configs/config.dev.yaml 显式注入;生产必须从 env (SM4_KEY) 注入。
 	// Validate() 强制校验非空。
-	viper.SetDefault("security.sm4_key", "")
+	v.SetDefault("security.sm4_key", "")
 
 	// VDI/AD TLS 证书校验开关默认 true(跳过校验)
 	// 原因:VDI/AD 服务器在内网部署时常使用自签名证书,跳过校验以保持向后兼容。
 	// 生产环境部署时应在 configs/config.yaml 中显式设为 false,启用严格证书校验,避免 MITM 攻击。
-	viper.SetDefault("vdi.tls_skip_verify", true)
-	viper.SetDefault("ad.tls_skip_verify", true)
+	v.SetDefault("vdi.tls_skip_verify", true)
+	v.SetDefault("ad.tls_skip_verify", true)
 }
 
 // GetDSN 获取数据库连接字符串(URL 格式)。
