@@ -1,90 +1,55 @@
 {
   "version": "1.0",
-  "timestamp": "2026-08-13T05:03:50.000Z",
-  "phase": 58,
+  "timestamp": "2026-08-13T08:37:15.000Z",
+  "phase": "58",
   "phase_name": "route-contract-alignment",
-  "phase_dir": ".planning/phases/58-route-contract-alignment/",
+  "phase_dir": ".planning/phases/58-route-contract-alignment",
   "plan": 1,
   "task": 3,
   "total_tasks": 3,
   "status": "paused",
   "completed_tasks": [
-    {
-      "id": 1,
-      "name": "apikey.ts three CRUD ops align to POST routes",
-      "status": "done",
-      "commit": "1978935"
-    },
-    {
-      "id": 2,
-      "name": "apikey types + index.tsx field names snake→camelCase",
-      "status": "done",
-      "commit": "6a4c772"
-    }
+    {"id": 1, "name": "apikey.ts three CRUD ops align to POST routes (CONTRACT-01)", "status": "done", "commit": "1978935"},
+    {"id": 2, "name": "types/apikey.ts + index.tsx field names snake→camelCase (CONTRACT-02)", "status": "done", "commit": "6a4c772"},
+    {"id": 3, "name": "checkpoint:human-verify SC#1-SC#4 + 排序", "status": "in_progress", "progress": "DB schema + seed 已修复; backend :9000 LISTENING 仍 hang 在 createRequestEncryptionToggleConfig 之后,Supabase pooler 阻塞 runtime test"}
   ],
   "remaining_tasks": [
-    {
-      "id": 3,
-      "name": "human-verify checkpoint (SC#1-SC#4 + 排序 + Go 回归)",
-      "status": "blocked_human_action",
-      "progress": "自动化门全绿 (type-check/lint/9/9 Go subtests), 后端 localhost:9000 不可达 → 4 项 human-verify 待人工或环境就绪后确认",
-      "subtasks": [
-        "SC#1 编辑回填: getAPIKey POST /:id 拉取详情, 表单所有字段正确回填",
-        "SC#2 DB ip_whitelist 非零值: 修改 API Key 属性保存后, DB 中 IP 白名单复合字段持久化非空",
-        "SC#3 重复删除 code:1001: 删除后再次删除/访问返回 '密钥不存在' (code:1001) 而非 404",
-        "排序 orderByColumn camelCase: 状态/过期时间/最后使用 三列排序生效"
-      ]
-    }
+    {"id": 4, "name": "Phase 58 58-01-SUMMARY.md 编写", "status": "not_started", "blocked_by": "Task 3 human-verify"}
   ],
   "blockers": [
     {
-      "description": "后端 localhost:9000 不可达 — 计划文件 §降级策略 应用 (skip curl/psql, keep automated gates)",
-      "type": "external",
-      "workaround": "Supabase (DB) + Upstash Redis (cache) dev 环境就绪后, 重新跑 curl/psql/UI 验证脚本"
+      "description": "Backend 启动 hang 在 createRequestEncryptionToggleConfig 之后,GORM session 在 Supabase Session pooler 多次写后失活",
+      "type": "technical",
+      "workaround": "切 Transaction pooler (6543) + 加连接 keepalive/retry,或 init_data 拆批"
     },
     {
-      "description": "Supabase DB 凭证 (DB_HOST/DB_PASSWORD/DB_NAME/DB_USER) 尚未提供 — .env 不完整",
+      "description": "未 commit 改动需决策: commit 进独立 quick task 还是 revert",
       "type": "human_action",
-      "workaround": "用户从 Supabase 项目控制台获取 connection string 注入 .env"
+      "blocking": false
     }
   ],
   "human_actions_pending": [
-    {
-      "action": "提供 Supabase 项目凭证 (DB_HOST/DB_USER/DB_PASSWORD/DB_NAME) 用于 .env",
-      "context": "Upstash Redis 凭证已提供; Supabase 凭证仍缺失, 后端 go run 无法连接 DB",
-      "blocking": true
-    },
-    {
-      "action": "Supabase+Upstash+TLS dev 环境就绪后, 跑 Phase 58 §4 human-verify 验证项 (SC#1-SC#4 + 排序)",
-      "context": "Phase 58 Task 3 是 blocking checkpoint, 自动化门全绿但需人工 E2E 确认",
-      "blocking": true
-    }
+    {"action": "决定 SKIP_AUTOMIGRATE/BootstrapMissingTables/AutoMigrate 列表补漏等 dev 改动是否 commit", "context": "10+ 行未 commit 改动,影响 Phase 58 backend-zero-changes 不变量", "blocking": false},
+    {"action": "考虑升级 Supabase pooler plan 或切 Transaction mode", "context": "Session pooler 在 AutoMigrate + init_data 后段 hang,可能外部连接数限制", "blocking": true}
   ],
   "decisions": [
-    {
-      "decision": "CONTRACT-01 选 Option A (前端改 POST 对齐 v1.6 Router Pattern)",
-      "rationale": "后端零改动, 改动范围最小, 与 Phase 16/2026-05-19 v1.6 API Key 系统既定模式一致",
-      "phase": 58
-    },
-    {
-      "decision": "CONTRACT-02 改前端 types+index.tsx 字段名 camelCase 对齐后端 json tag",
-      "rationale": "后端无 snake↔camel 转换层, encoding/json 静默丢弃字段; 前端单一改动解决",
-      "phase": 58
-    },
-    {
-      "decision": "Phase 58 dev 环境搭建作为独立 quick task, 不污染 Phase 58 backend-zero-changes 不变量",
-      "rationale": "TLS 代码改动 + config.yaml + .env 属 dev 基础设施, 与 CONTRACT-01/02 无关",
-      "phase": 58
-    },
-    {
-      "decision": "Dev DB 选 Supabase (hosted Postgres), Cache 选 Upstash Redis (TLS-required)",
-      "rationale": "用户偏好; SQLite 被否决 (internal/models/api_key.go jsonb 不兼容); 本地 Postgres/Redis 部署成本高",
-      "phase": "dev_env_setup"
-    }
+    {"decision": "CONTRACT-01 选 Option A (前端改 POST 对齐 v1.6 Router Pattern)", "rationale": "后端零改动,改动范围最小", "phase": "58"},
+    {"decision": "CONTRACT-02 改前端 types+index.tsx 字段名 camelCase 对齐后端 json tag", "rationale": "后端无 snake↔camel 转换层", "phase": "58"},
+    {"decision": "Dev DB 选 Supabase (hosted Postgres)", "rationale": "用户偏好; SQLite 被否决 (jsonb 不兼容)", "phase": "58"},
+    {"decision": "Dev Cache 选 Upstash Redis (TLS-required)", "rationale": "用户偏好", "phase": "58"},
+    {"decision": "Supabase pooler 选 Session mode (5432)", "rationale": "Transaction mode (6543) 有 EAUTHTIMEOUT 风险", "phase": "58"},
+    {"decision": "SKIP_AUTOMIGRATE + BootstrapMissingTables 作为 dev 工具", "rationale": "临时绕过 Supabase pooler 上 GORM AutoMigrate hang", "phase": "58"},
+    {"decision": "AutoMigrate 注册列表补 models.APIKey/APIKeyUsageLog/Config", "rationale": "新部署/clean DB 必备,Phase 60 SEC-01 + AUTH-03 依赖 sys_api_keys", "phase": "60"}
   ],
   "uncommitted_files": [
-    ".planning/STATE.md (用户手动推进 Current Position 至 Phase 60, 未提交)"
+    "internal/core/db/database.go",
+    "internal/core/core.go",
+    "pkg/logger/logger.go",
+    "scripts/dbbootstrap/main.go",
+    "scripts/seedmain/main.go",
+    "xingran-react-frontend/src/components/layout/InnovativeLayout.tsx",
+    "xingran-react-frontend/src/pages/login/index.tsx"
   ],
-  "next_action": "resume 时: (1) git status 检查 STATE.md 是否需先提交; (2) /gsd-execute-phase 58 续接 Task 3 human-verify (需要 Supabase+Upstash dev 环境就绪); (3) dev 环境搭建作为独立 quick task: 改动 1=TLS 代码 (internal/config/config.go CacheConfig 加 TLS bool + pkg/cache/redis.go:30 加 conditional TLSConfig), 改动 2=configs/config.yaml gitignored (Supabase+Upstash tls:true, secrets via env), 改动 3=.env gitignored (Upstash REDIS_HOST/REDIS_PORT/REDIS_PASSWORD 已就绪, 等待 Supabase DB_* 凭证); (4) go build ./... 验证 TLS 代码编译",
-  "context_notes": "Phase 58 工作流: Task 1+2 全绿 (1978935+6a4c772), Task 3 human-verify 是 blocking checkpoint. dev 环境搭建 (TLS + configs + .env) 用户已选 Option A 但因 context 77% 警告未执行, 待 resume 后续执行. Phase 60 AUTH-03 启用决策是 Phase 58 不涉及范围. STATE.md 中 Current Position 由用户手动推到 Phase 60, 但实际未启动 planning; /gsd-execute-phase 58 会从 Phase 58 Task 3 checkpoint 续接."
+  "next_action": "1) 读 .continue-here.md + STATE.md + 58-01-PLAN.md §4  2) 决定未 commit 改动去留  3) 试 Transaction pooler (DB_PORT=6543)  4) 若 :9000 达成则跑 human-verify  5) 若仍 hang 则标注 Phase 58 半成品关闭并启动 Phase 61 规划",
+  "context_notes": "DB schema + seed 全修复完成(75 表 + sys_api_keys + sys_config + admin + 36 menus),后端 :9000 LISTENING 仍未达成。Phase 60 已完成。Phase 61 (AUTH-04 + QUAL-03) 随时可启动。Context 77% critical 时暂停。"
 }
