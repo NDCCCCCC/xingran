@@ -439,4 +439,4 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 
 ---
 
-*Last updated: 2026-08-13 — Phase 57「认证链核心修复 + 回归测试」COMPLETE (1/1 plan, AUTH-01/02 + QUAL-02 验证 8/8 must-haves passed; 交付于分支 refactor/config-ctx-and-viper-cleanup, 含 flaky 测试修复 commit 408dd44)。v1.21 API Key 认证链修复 milestone 进行中 (Phase 58-61 待执行)。v1.20 网络设备 VLAN + 端口绑定 SHIPPED 2026-07-10 (Phase 56 / 5 plans / 5 waves). v1.19 网络设备写命令 SHIPPED 2026-07-08 (Phases 50-55, 6 phases / 9 plans, 37/37 MVP requirements).*
+*Last updated: 2026-08-13 — Phase 59「可观测性 / 使用日志修复」COMPLETE (2/2 plans, OBSERV-01/02/03 验证 8/8 must-haves passed; 7 commits e0f4611/2dcb041/e4c80fa/c35e675/7643578/10e5bb1/644bc94 + tracking 66a3d34)。v1.21 API Key 认证链修复 milestone 进行中 (Phase 60-61 待执行)。Phase 58 (CONTRACT-01 前后端路由方法对齐) 已 commit 1978935。v1.20 网络设备 VLAN + 端口绑定 SHIPPED 2026-07-10 (Phase 56 / 5 plans / 5 waves). v1.19 网络设备写命令 SHIPPED 2026-07-08 (Phases 50-55, 6 phases / 9 plans, 37/37 MVP requirements).*
