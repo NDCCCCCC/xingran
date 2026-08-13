@@ -6,6 +6,12 @@
  * - 自动重连（指数退避策略）
  * - 消息发送和接收
  * - 连接状态管理
+ *
+ * 修复历史:
+ *   - P0-4 (前端审查): connect 依赖 reconnectAttempts state,onclose 里
+ *     currentAttempts = reconnectAttempts + 1 读闭包旧值,指数退避失效。
+ *     且 connect 每次重连都因 setReconnectAttempts 重建,语义脆弱。
+ *     现将重连次数移入 ref,connect 读 ref 自增,不再依赖 state。
  */
 
 import { useState, useRef, useCallback, useEffect } from "react";
@@ -65,6 +71,12 @@ export function useWebSocket(options?: UseWebSocketOptions): UseWebSocketReturn 
 	const wsRef = useRef<WebSocket | null>(null);
 	const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const isManualDisconnectRef = useRef(false);
+	// P0-4: 重连次数用 ref 跟踪真实值,避免闭包旧值; state 仅用于 UI 展示
+	const reconnectAttemptsRef = useRef(0);
+
+	// 用 ref 保存所有回调/配置,使 connect 的依赖最小化,避免因回调引用变化触发重建
+	const optsRef = useRef({ url, onMessage, onOpen, onClose, onError, reconnect, reconnectInterval, maxReconnectAttempts });
+	optsRef.current = { url, onMessage, onOpen, onClose, onError, reconnect, reconnectInterval, maxReconnectAttempts };
 
 	// 清理重连定时器
 	const clearReconnectTimeout = useCallback(() => {
@@ -74,8 +86,9 @@ export function useWebSocket(options?: UseWebSocketOptions): UseWebSocketReturn 
 		}
 	}, []);
 
-	// 建立连接
+	// 建立连接 — 用 ref 读取配置和重连次数,自身引用稳定(空依赖)
 	const connect = useCallback(() => {
+		const opts = optsRef.current;
 		// 如果已经连接或正在连接，不重复连接
 		if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) {
 			return;
@@ -85,18 +98,19 @@ export function useWebSocket(options?: UseWebSocketOptions): UseWebSocketReturn 
 		setStatus("connecting");
 
 		try {
-			const ws = new WebSocket(url);
+			const ws = new WebSocket(opts.url);
 
 			ws.onopen = () => {
-				setStatus("connected");
+				reconnectAttemptsRef.current = 0;
 				setReconnectAttempts(0);
-				onOpen?.();
+				setStatus("connected");
+				opts.onOpen?.();
 			};
 
 			ws.onmessage = (event) => {
 				try {
 					const data = JSON.parse(event.data);
-					onMessage(data);
+					opts.onMessage(data);
 				} catch (error) {
 					console.error("Failed to parse WebSocket message:", error);
 				}
@@ -105,17 +119,19 @@ export function useWebSocket(options?: UseWebSocketOptions): UseWebSocketReturn 
 			ws.onclose = () => {
 				setStatus("disconnected");
 				wsRef.current = null;
-				onClose?.();
+				opts.onClose?.();
 
 				// 自动重连（非手动断开时）
-				if (reconnect && !isManualDisconnectRef.current) {
-					const currentAttempts = reconnectAttempts + 1;
-					if (currentAttempts < maxReconnectAttempts) {
+				if (opts.reconnect && !isManualDisconnectRef.current) {
+					// P0-4: 读 ref 自增,不再依赖闭包里的 state
+					const currentAttempts = reconnectAttemptsRef.current + 1;
+					if (currentAttempts < opts.maxReconnectAttempts) {
+						reconnectAttemptsRef.current = currentAttempts;
+						setReconnectAttempts(currentAttempts);
 						// 指数退避：延迟 = interval * 2^attempts，最大 30 秒
-						const delay = Math.min(reconnectInterval * Math.pow(2, currentAttempts), 30000);
+						const delay = Math.min(opts.reconnectInterval * Math.pow(2, currentAttempts), 30000);
 
 						reconnectTimeoutRef.current = setTimeout(() => {
-							setReconnectAttempts(currentAttempts);
 							connect();
 						}, delay);
 					} else {
@@ -127,7 +143,7 @@ export function useWebSocket(options?: UseWebSocketOptions): UseWebSocketReturn 
 			ws.onerror = (error) => {
 				setStatus("error");
 				console.error("WebSocket error:", error);
-				onError?.(error);
+				opts.onError?.(error);
 			};
 
 			wsRef.current = ws;
@@ -135,12 +151,13 @@ export function useWebSocket(options?: UseWebSocketOptions): UseWebSocketReturn 
 			setStatus("error");
 			console.error("Failed to create WebSocket connection:", error);
 		}
-	}, [url, onMessage, onOpen, onClose, onError, reconnect, reconnectInterval, maxReconnectAttempts, reconnectAttempts]);
+	}, []);
 
 	// 断开连接
 	const disconnect = useCallback(() => {
 		isManualDisconnectRef.current = true;
 		clearReconnectTimeout();
+		reconnectAttemptsRef.current = 0;
 
 		if (wsRef.current) {
 			wsRef.current.close();

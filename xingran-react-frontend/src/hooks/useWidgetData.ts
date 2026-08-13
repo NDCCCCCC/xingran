@@ -2,6 +2,12 @@
  * useWidgetData - Widget数据Hook
  *
  * 获取和管理Widget数据
+ *
+ * 修复历史:
+ *   - P1-H1 (前端审查): fetchData 无 AbortController, 组件卸载后异步回调
+ *     仍会 setState 导致内存泄漏。加 mountedRef 守卫。
+ *   - P0-3 (前端审查): useBatchWidgetData 的 widgets 数组依赖不稳定,
+ *     用 ref + length 稳定化。
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
@@ -47,6 +53,15 @@ export function useWidgetData<T = unknown>(
 	const [error, setError] = useState<string | null>(null);
 	const [isRefreshing, setIsRefreshing] = useState(false);
 
+	// P1-H1: mounted 守卫,组件卸载后不再 setState
+	const mountedRef = useRef(true);
+	useEffect(() => {
+		mountedRef.current = true;
+		return () => {
+			mountedRef.current = false;
+		};
+	}, []);
+
 	// 使用ref存储最新的值，避免闭包陷阱
 	const widgetRef = useRef(widget);
 	const optionsRef = useRef(options ?? {});
@@ -84,13 +99,18 @@ export function useWidgetData<T = unknown>(
 			// 尝试从缓存获取
 			const cached = getCachedWidgetData(currentWidget.id);
 			if (cached && !showLoading) {
-				setData(cached as T);
-				setIsRefreshing(false);
+				if (mountedRef.current) {
+					setData(cached as T);
+					setIsRefreshing(false);
+				}
 				return;
 			}
 
 			// 从数据源获取
 			const result = await dataFetcher.fetch<T>(currentWidget.dataSource);
+
+			// P1-H1: 卸载后丢弃结果,不再 setState
+			if (!mountedRef.current) return;
 
 			if (result.error) {
 				setError(result.error);
@@ -100,10 +120,14 @@ export function useWidgetData<T = unknown>(
 				cacheWidgetData(currentWidget.id, result.data);
 			}
 		} catch (err) {
-			setError((err as Error).message);
+			if (mountedRef.current) {
+				setError((err as Error).message);
+			}
 		} finally {
-			setLoading(false);
-			setIsRefreshing(false);
+			if (mountedRef.current) {
+				setLoading(false);
+				setIsRefreshing(false);
+			}
 		}
 	}, [getCachedWidgetData, cacheWidgetData]);
 
@@ -149,6 +173,19 @@ export function useBatchWidgetData(
 	const [dataMap, setDataMap] = useState<Record<string, unknown>>({});
 	const [loading, setLoading] = useState(true);
 
+	// P0-3: 用 ref 保存最新的 widgets 数组,避免数组引用抖动导致 effect 反复重建
+	const widgetsRef = useRef(widgets);
+	widgetsRef.current = widgets;
+	// P1-H1: mounted 守卫
+	const mountedRef = useRef(true);
+
+	useEffect(() => {
+		mountedRef.current = true;
+		return () => {
+			mountedRef.current = false;
+		};
+	}, []);
+
 	useEffect(() => {
 		if (options?.disabled) return;
 
@@ -157,7 +194,7 @@ export function useBatchWidgetData(
 			const results: Record<string, unknown> = {};
 
 			await Promise.all(
-				widgets.map(async (widget) => {
+				widgetsRef.current.map(async (widget) => {
 					try {
 						const result = await dataFetcher.fetch(widget.dataSource);
 						results[widget.id] = result.data;
@@ -167,14 +204,16 @@ export function useBatchWidgetData(
 				})
 			);
 
+			// P1-H1: 卸载后丢弃结果
+			if (!mountedRef.current) return;
 			setDataMap(results);
 			setLoading(false);
 		};
 
 		fetchAll();
 
-		// 自动刷新
-		const interval = widgets.reduce((min, w) => {
+		// 自动刷新 — 用 ref 计算最小间隔,不依赖 widgets 数组引用
+		const interval = widgetsRef.current.reduce((min, w) => {
 			const wi = w.refreshInterval ?? 60;
 			return wi < min ? wi : min;
 		}, 60) * 1000;
@@ -183,7 +222,8 @@ export function useBatchWidgetData(
 			const timer = setInterval(fetchAll, interval);
 			return () => clearInterval(timer);
 		}
-	}, [widgets, options?.disabled]);
+		// 依赖 widgets.length 而非 widgets 引用; 内容变化由 ref 捕获
+	}, [widgets.length, options?.disabled]);
 
 	return { dataMap, loading };
 }

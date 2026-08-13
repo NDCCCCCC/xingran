@@ -198,70 +198,64 @@ export const useLayoutStore = create<LayoutStore>()(
 		},
 
 		// 运行时切换侧边栏（临时，不保存）
+		// P1-M2: applyToDOM 必须在 set 提交后调用,否则 get() 返回旧状态导致 DOM 错位一帧
 		toggleSidebar: () => {
 			set((state) => {
 				const newCollapsed = !state.sidebarCollapsed;
-				const newConfig = {
-					...state.configuration,
-					sidebar: {
-						...state.configuration.sidebar,
-						collapsed: newCollapsed,
-					},
-				};
-				get().applyToDOM();
 				return {
 					sidebarCollapsed: newCollapsed,
-					configuration: newConfig,
+					configuration: {
+						...state.configuration,
+						sidebar: {
+							...state.configuration.sidebar,
+							collapsed: newCollapsed,
+						},
+					},
 				};
 			});
+			get().applyToDOM();
 		},
 
 		// 运行时设置侧边栏折叠状态（临时，不保存）
+		// P1-M2: applyToDOM 在 set 之外调用
 		setSidebarCollapsed: (collapsed) => {
-			set((state) => {
-				const newConfig = {
+			set((state) => ({
+				sidebarCollapsed: collapsed,
+				configuration: {
 					...state.configuration,
 					sidebar: {
 						...state.configuration.sidebar,
 						collapsed,
 					},
-				};
-				get().applyToDOM();
-				return {
-					sidebarCollapsed: collapsed,
-					configuration: newConfig,
-				};
-			});
+				},
+			}));
+			get().applyToDOM();
 		},
 
 		// 运行时设置密度模式（临时，不保存）
+		// P1-M2: applyToDOM 在 set 之外调用
 		setDensity: (density) => {
-			set((state) => {
-				const newConfig = {
+			set((state) => ({
+				density,
+				configuration: {
 					...state.configuration,
 					density,
-				};
-				get().applyToDOM();
-				return {
-					density,
-					configuration: newConfig,
-				};
-			});
+				},
+			}));
+			get().applyToDOM();
 		},
 
 		// 运行时设置布局类型（临时，不保存）
+		// P1-M2: applyToDOM 在 set 之外调用
 		setLayout: (layout) => {
-			set((state) => {
-				const newConfig = {
+			set((state) => ({
+				currentLayout: layout,
+				configuration: {
 					...state.configuration,
 					type: layout,
-				};
-				get().applyToDOM();
-				return {
-					currentLayout: layout,
-					configuration: newConfig,
-				};
-			});
+				},
+			}));
+			get().applyToDOM();
 		},
 
 		// 保存当前状态到 SettingsStore

@@ -127,12 +127,15 @@ export const useThemeStore = create<ThemeStore>()(
 );
 
 // 监听 SettingsStore 变化
+// P1-M3: 命名函数 + 先移除再注册,防止 Vite HMR 重复注册导致回调触发 N 次
+function handleSettingsChangedForTheme(event: Event) {
+	const preferences = (event as CustomEvent).detail;
+	const syncTheme = useThemeStore.getState().syncFromSettings;
+	syncTheme(preferences.theme);
+}
 if (typeof window !== "undefined") {
-	window.addEventListener("settings-changed", ((event: CustomEvent) => {
-		const preferences = event.detail;
-		const syncTheme = useThemeStore.getState().syncFromSettings;
-		syncTheme(preferences.theme);
-	}) as EventListener);
+	window.removeEventListener("settings-changed", handleSettingsChangedForTheme);
+	window.addEventListener("settings-changed", handleSettingsChangedForTheme);
 }
 
 /**

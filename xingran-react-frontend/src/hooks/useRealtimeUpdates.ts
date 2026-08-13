@@ -2,6 +2,13 @@
  * useRealtimeUpdates - 实时更新Hook
  *
  * 通过WebSocket实现实时数据更新
+ *
+ * 修复历史:
+ *   - P0-3 (前端审查): connect 依赖整个 options 对象,父组件内联 options 每次
+ *     渲染都触发 WebSocket 断开重连,配合 5s 自动重连形成连接风暴。
+ *   - P1-H2 (前端审查): onclose 读闭包旧 options?.enabled,enabled 切 false
+ *     后仍重连; disconnect 与异步 onclose 竞态。
+ *     现将 options/widgets 移入 ref,connect 读 ref,引用稳定。
  */
 
 import { useEffect, useCallback, useRef } from "react";
@@ -51,6 +58,14 @@ export function useRealtimeUpdates(
 	const wsRef = useRef<WebSocket | null>(null);
 	const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const subscribedChannelsRef = useRef<Set<string>>(new Set());
+	// P1-H2: 标记是否已主动断开,防止 onclose 里的自动重连
+	const isManualDisconnectRef = useRef(false);
+
+	// P0-3: 用 ref 保存最新的 widgets / options,避免它们进 connect 依赖数组
+	const widgetsRef = useRef(widgets);
+	widgetsRef.current = widgets;
+	const optionsRef = useRef(options);
+	optionsRef.current = options;
 
 	// 获取WebSocket URL
 	const getWsUrl = useCallback(() => {
@@ -60,20 +75,23 @@ export function useRealtimeUpdates(
 		return `${protocol}//${host}${basePath}/dashboard`;
 	}, []);
 
-	// 连接WebSocket
+	// 连接WebSocket — 读 ref,自身引用稳定(仅依赖 getWsUrl)
 	const connect = useCallback(() => {
 		if (wsRef.current?.readyState === WebSocket.OPEN) {
 			return;
 		}
 
+		isManualDisconnectRef.current = false;
+
 		try {
 			const ws = new WebSocket(getWsUrl());
+			const opts = optionsRef.current;
 
 			ws.onopen = () => {
-				options?.onConnectionChange?.(true);
+				opts?.onConnectionChange?.(true);
 
 				// 订阅所有WebSocket数据源的Widget
-				widgets.forEach((widget) => {
+				widgetsRef.current.forEach((widget) => {
 					if (isWebSocketDataSource(widget.dataSource)) {
 						const channel = widget.dataSource.channel;
 						if (!subscribedChannelsRef.current.has(channel)) {
@@ -96,7 +114,7 @@ export function useRealtimeUpdates(
 						// 更新缓存
 						cacheWidgetData(widgetId, data);
 						// 触发回调
-						options?.onMessage?.(widgetId, data);
+						optionsRef.current?.onMessage?.(widgetId, data);
 					}
 				} catch (error) {
 					console.error("[Dashboard WebSocket] Message parse error:", error);
@@ -105,16 +123,16 @@ export function useRealtimeUpdates(
 
 			ws.onerror = (error) => {
 				console.error("[Dashboard WebSocket] Error:", error);
-				options?.onError?.(error);
-				options?.onConnectionChange?.(false);
+				optionsRef.current?.onError?.(error);
+				optionsRef.current?.onConnectionChange?.(false);
 			};
 
 			ws.onclose = () => {
-				options?.onConnectionChange?.(false);
+				optionsRef.current?.onConnectionChange?.(false);
 				subscribedChannelsRef.current.clear();
 
-				// 自动重连
-				if (options?.enabled !== false) {
+				// P1-H2: 主动断开时不重连; 读 ref 拿最新 enabled
+				if (!isManualDisconnectRef.current && optionsRef.current?.enabled !== false) {
 					reconnectTimerRef.current = setTimeout(() => {
 						connect();
 					}, 5000);
@@ -125,10 +143,12 @@ export function useRealtimeUpdates(
 		} catch (error) {
 			console.error("[Dashboard WebSocket] Connection error:", error);
 		}
-	}, [widgets, options, getWsUrl, cacheWidgetData]);
+	}, [getWsUrl, cacheWidgetData]);
 
 	// 断开连接
 	const disconnect = useCallback(() => {
+		isManualDisconnectRef.current = true;
+
 		if (reconnectTimerRef.current) {
 			clearTimeout(reconnectTimerRef.current);
 			reconnectTimerRef.current = null;
@@ -142,10 +162,10 @@ export function useRealtimeUpdates(
 		subscribedChannelsRef.current.clear();
 	}, []);
 
-	// 手动刷新订阅
+	// 手动刷新订阅 — 读 ref
 	const refreshSubscriptions = useCallback(() => {
 		if (wsRef.current?.readyState === WebSocket.OPEN) {
-			widgets.forEach((widget) => {
+			widgetsRef.current.forEach((widget) => {
 				if (isWebSocketDataSource(widget.dataSource)) {
 					const channel = widget.dataSource.channel;
 					wsRef.current?.send(JSON.stringify({
@@ -156,9 +176,9 @@ export function useRealtimeUpdates(
 				}
 			});
 		}
-	}, [widgets]);
+	}, []);
 
-	// 初始化和清理
+	// 初始化和清理 — 依赖 connect/disconnect(已稳定) + enabled
 	useEffect(() => {
 		if (options?.enabled === false) {
 			return;
@@ -176,7 +196,8 @@ export function useRealtimeUpdates(
 		return () => {
 			disconnect();
 		};
-	}, [widgets, options?.enabled, connect, disconnect]);
+		// widgets.length 作为基本类型依赖避免数组引用抖动; connect/disconnect 已稳定
+	}, [widgets.length, options?.enabled, connect, disconnect]);
 
 	return {
 		connect,
