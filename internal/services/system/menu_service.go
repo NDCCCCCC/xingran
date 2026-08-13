@@ -261,42 +261,83 @@ func (s *menuService) UpdateStatus(ctx context.Context, id string, status int) e
 
 // ==================== 私有辅助方法 ====================
 
-// appendAncestorMenuIDs 递归获取所有祖先菜单ID，确保子菜单能正确显示
-// 即使只有二级菜单权限，也会自动包含其一级父菜单
+// appendAncestorMenuIDs 收集所有祖先菜单ID，确保子菜单能正确显示
+// 即使只有二级菜单权限，也会自动包含其一级父菜单。
+//
+// 性能 (2026-08-14 quick-260814-164 修复 N+1):
+//   - 旧实现对每个入参 menuID 经 collectAncestors 逐层 SELECT id, parent_id
+//     FROM sys_menu WHERE id=? —— N 个起点 × 每条链 K 层 = O(N·K) 次主键查询,
+//     叠加 dev DB 单查询慢, 累计超请求超时 → my-menus 系列接口 500 / context canceled。
+//   - 新实现一次性 Select("id, parent_id").Find 全表(menu 表通常几十~几百行)载入内存,
+//     然后纯内存上溯, 总查询数从 O(N·K) 降为 1。
+//
+// 语义保持:
+//   - 终止条件与原 collectAncestors 一致 —— parent_id 为 nil / 空串 / key 不存在(已被软删)则停止该链。
+//   - GORM Find 自动带 deleted_at IS NULL 软删除过滤, 与原 .First() 软删除语义一致。
+//   - 查询失败时降级返回原始 menuIDs(与原 collectAncestors “查询出错即 return 停止”容错语义一致, 不阻断主流程)。
+//   - visited 防御潜在环路(菜单树理论无环, 防御无害)。
 func (s *menuService) appendAncestorMenuIDs(ctx context.Context, menuIDs []string) []string {
-	result := make(map[string]bool)
+	if len(menuIDs) == 0 {
+		return []string{}
+	}
+
+	// 一次性批量加载全表 id + parent_id(单次查询, 消除 N+1)
+	type menuAncestor struct {
+		ID       string  `gorm:"column:id"`
+		ParentID *string `gorm:"column:parent_id"`
+	}
+	var rows []menuAncestor
+	if err := s.db.WithContext(ctx).
+		Model(&models.Menu{}).
+		Select("id, parent_id").
+		Find(&rows).Error; err != nil {
+		// 查询失败: 降级返回原始 menuIDs, 不阻断主流程(与原 collectAncestors 容错语义一致)
+		return menuIDs
+	}
+
+	// 归一为 map: id → parentID(用于内存上溯)
+	parentOf := make(map[string]*string, len(rows))
+	for i := range rows {
+		parentOf[rows[i].ID] = rows[i].ParentID
+	}
+
+	// 结果集(含入参自身)
+	result := make(map[string]bool, len(menuIDs))
 	for _, id := range menuIDs {
 		result[id] = true
 	}
 
-	// 递归查找所有祖先菜单
-	for _, id := range menuIDs {
-		s.collectAncestors(ctx, id, result)
+	// 对每个入参 menuID 在 map 上向上追溯
+	for _, startID := range menuIDs {
+		// 每条链独立 visited, 防御环路(菜单树理论无环, 防御无害)
+		visited := map[string]bool{startID: true}
+		current := startID
+		for {
+			parentID, ok := parentOf[current]
+			if !ok {
+				// key 不存在(节点已被软删): 停止该链
+				break
+			}
+			if parentID == nil || *parentID == "" {
+				// nil / 空串: 已到根, 停止该链
+				break
+			}
+			if visited[*parentID] {
+				// 命中 visited: 检测到环路, 终止防死循环
+				break
+			}
+			visited[*parentID] = true
+			result[*parentID] = true
+			current = *parentID
+		}
 	}
 
-	// 转换为切片
-	var ids []string
+	// 收集为切片返回
+	ids := make([]string, 0, len(result))
 	for id := range result {
 		ids = append(ids, id)
 	}
 	return ids
-}
-
-// collectAncestors 递归收集祖先菜单ID
-func (s *menuService) collectAncestors(ctx context.Context, menuID string, result map[string]bool) {
-	var menu models.Menu
-	if err := s.db.WithContext(ctx).Select("id, parent_id").Where("id = ?", menuID).First(&menu).Error; err != nil {
-		// 菜单不存在或已被删除，停止递归
-		return
-	}
-
-	// 如果有父菜单，递归收集
-	if menu.ParentID != nil && *menu.ParentID != "" {
-		if !result[*menu.ParentID] {
-			result[*menu.ParentID] = true
-			s.collectAncestors(ctx, *menu.ParentID, result)
-		}
-	}
 }
 
 // buildMenuTree 构建菜单树
