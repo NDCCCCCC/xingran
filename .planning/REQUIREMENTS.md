@@ -13,7 +13,7 @@
 - [x] **AUTH-01**: API Key 认证时 `setUserContextForAPIKey` 能正确把 `user_id` / `api_key_id` / `scopes` / `auth_type` 写入 gin context(修复 P0-2 类型断言恒 false — `*models.APIKey` 指针被断言为局部值类型 `apiKeyType`,消除"用 interface{} 避免循环导入"的误判,改为直接 import models 包)
 - [x] **AUTH-02**: `MultiAuth` 及其下游 `RequireScope` / `RequireAPIKeyResourcePermission` / `RateLimitByScope` 不再是死代码 — 类型签名、参数传递、作用域匹配逻辑经审查正确,具备被路由挂载的条件(P0-1);`NewUsageLogger` / `NewRateLimiter` 在代码库中有真实实例化路径
 - [x] **AUTH-03**: 完成 MultiAuth 路由挂载的启用决策与安全评估 — 通过 phase 内 discuss 明确"是否在生产路由挂载 MultiAuth 使 X-API-Key 认证真正生效",产出决策记录(含作用域继承、IP 白名单、与 JWT 的优先级/回退关系等安全影响)
-- [ ] **AUTH-04** (ex-FUTURE-APIKEY-01, Phase 61): `RequireAPIKeyResourcePermission(resource, action)` 的 `resource` 参数真实生效 — resource→permission 映射接入,继承权限 (InheritPerms) 下的细粒度资源校验经测试覆盖(仅在 Phase 60 AUTH-03=启用 后执行)
+- [x] **AUTH-04** (ex-FUTURE-APIKEY-01, Phase 61): `RequireAPIKeyResourcePermission(resource, action)` 的 `resource` 参数真实生效 — resource→permission 映射接入,继承权限 (InheritPerms) 下的细粒度资源校验经测试覆盖(仅在 Phase 60 AUTH-03=启用 后执行)
 
 ### CONTRACT — 前后端路由契约
 
