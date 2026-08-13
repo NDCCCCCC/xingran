@@ -459,6 +459,57 @@ func TestLogUsageErrorHandling(t *testing.T) {
 	})
 }
 
+// --- Phase 59 Plan 02: SC#4 (D-02 detached ctx 防回归) ---
+
+// waitForUsageLog 用 require.Eventually 轮询 DB 行数, 替代既有 time.Sleep flaky 反模式。
+// 形态镜像 RESEARCH.md §异步写入可测试性机制 — 同形副本落本文件因 Go 测试包隔离
+// (无法跨包导入 middleware 包内的同名 helper)。
+func waitForUsageLog(t *testing.T, db *gorm.DB, apiKeyID string, want int64) {
+	t.Helper()
+	require.Eventually(t, func() bool {
+		var count int64
+		db.Model(&models.APIKeyUsageLog{}).Where("api_key_id = ?", apiKeyID).Count(&count)
+		return count >= want
+	}, 2*time.Second, 10*time.Millisecond,
+		"usage log for key=%s not persisted within 2s", apiKeyID)
+}
+
+// TestLogUsageCancelledCtxStillWrites_D02 SC#4 (D-02 detached ctx 防回归):
+// 调用方 ctx 预取消后, logUsageAsync 必须仍用独立 detached ctx 写 DB, 不被调用方 cancel 影响。
+//
+// 修复前 (Plan 01 前): logUsageAsync 复用 ctx → WithContext(ctx) 失败 → _ = err 吞错 → 行永不出现 → 超时失败。
+// 修复后 (Plan 01 后): logUsageAsync 用 detachedCtx → 忽略 cancel → 行落库 → require.Eventually 成功。
+func TestLogUsageCancelledCtxStillWrites_D02(t *testing.T) {
+	db := setupUsageLoggerTestDB(t)
+	logger := NewUsageLogger(db)
+
+	// 预取消 ctx — 模拟 P2-b 场景 (请求结束 ctx.Canceled)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	req := &LogUsageRequest{
+		APIKeyID:   "cancel-race-key",
+		UserID:     "u1",
+		Method:     "GET",
+		Path:       "/test",
+		StatusCode: 200,
+		Success:    true,
+		Duration:   10,
+	}
+
+	err := logger.LogUsage(ctx, req)
+	require.NoError(t, err)
+
+	// 等待异步落库 — 修复后即使 ctx 已 cancel, 行仍写入
+	waitForUsageLog(t, db, "cancel-race-key", 1)
+
+	// DB 行实证 (SC#4)
+	var log models.APIKeyUsageLog
+	require.NoError(t, db.Where("api_key_id = ?", "cancel-race-key").First(&log).Error)
+	assert.Equal(t, 200, log.StatusCode)
+	assert.True(t, log.Success)
+}
+
 // TestLogUsagePerformance 测试性能
 func TestLogUsagePerformance(t *testing.T) {
 	db := setupUsageLoggerTestDB(t)
