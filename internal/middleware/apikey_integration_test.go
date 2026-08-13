@@ -68,13 +68,35 @@ func (f *fakeAPIKeyService) GetUsageLogSummary(ctx context.Context, apiKeyID str
 }
 
 // fakeUsageLogger 实现 services.UsageLogger 单方法接口 (usage_logger.go:12-17)。
+//
+// done channel 用于同步: MultiAuth 的使用日志是 fire-and-forget 异步 goroutine
+// (apikey.go:62-74), 测试断言 logged 前必须等待 goroutine 完成, 否则在
+// `go test ./...` 高并行负载下偶发失败 (flaky)。生产代码 goroutine 仍在请求
+// 结束后访问 gin.Context 属 P59 数据竞态范围 (P1-2/P2-b), 本测试不覆盖 -race 行为。
 type fakeUsageLogger struct {
 	logged bool
+	done   chan struct{}
+}
+
+func newFakeUsageLogger() *fakeUsageLogger {
+	return &fakeUsageLogger{done: make(chan struct{})}
 }
 
 func (f *fakeUsageLogger) LogUsage(ctx context.Context, req *services.LogUsageRequest) error {
 	f.logged = true
+	close(f.done)
 	return nil
+}
+
+// waitForLog 等待异步 LogUsage 完成, 消除 fire-and-forget goroutine 带来的竞态/flaky。
+// channel close 建立 happens-before: LogUsage 内 `logged=true` 对断言可见。
+func (f *fakeUsageLogger) waitForLog(t *testing.T) {
+	t.Helper()
+	select {
+	case <-f.done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("MultiAuth 未在 2s 内调用 usage logger (异步日志 goroutine 未触发)")
+	}
 }
 
 // --- helpers ---
@@ -140,7 +162,7 @@ func TestMultiAuthIntegration(t *testing.T) {
 				IsActive:  true,
 			},
 		}
-		fakeLogger := &fakeUsageLogger{}
+		fakeLogger := newFakeUsageLogger()
 
 		router := gin.New()
 		router.Use(MultiAuth(fakeSvc, fakeLogger))
@@ -158,6 +180,7 @@ func TestMultiAuthIntegration(t *testing.T) {
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
+		fakeLogger.waitForLog(t) // 等待异步日志 goroutine 完成, 消除 flaky
 		assert.Equal(t, 200, w.Code, "有效 key + 正确 scope 应 200")
 		assert.True(t, fakeLogger.logged, "MultiAuth 应异步记录使用日志")
 	})
@@ -171,7 +194,7 @@ func TestMultiAuthIntegration(t *testing.T) {
 				IsActive:  true,
 			},
 		}
-		fakeLogger := &fakeUsageLogger{}
+		fakeLogger := newFakeUsageLogger()
 
 		router := gin.New()
 		router.Use(MultiAuth(fakeSvc, fakeLogger))
@@ -184,6 +207,7 @@ func TestMultiAuthIntegration(t *testing.T) {
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
+		fakeLogger.waitForLog(t) // 有效 key 路径仍触发异步日志 goroutine, 等待其完成避免跨子测试竞态
 		assert.Equal(t, 403, w.Code, "有效 key + 缺失 scope 应 403 (response.ErrForbidden.HTTPStatus)")
 	})
 
@@ -191,7 +215,7 @@ func TestMultiAuthIntegration(t *testing.T) {
 		fakeSvc := &fakeAPIKeyService{
 			validateErr: errors.New("密钥不存在或已禁用"),
 		}
-		fakeLogger := &fakeUsageLogger{}
+		fakeLogger := newFakeUsageLogger()
 
 		router := gin.New()
 		router.Use(MultiAuth(fakeSvc, fakeLogger))
