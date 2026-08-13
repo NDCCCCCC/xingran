@@ -28,7 +28,7 @@ func NewVMService(db *gorm.DB, vdiClient VDIClientExtended) VMService {
 	return &vmServiceImpl{
 		db:            db,
 		vdiClient:     vdiClient,
-		uuidValidator: constants.UuidPattern,
+		uuidValidator: constants.UUIDPattern,
 	}
 }
 
@@ -37,7 +37,7 @@ func NewVMServiceWithDynamicClient(db *gorm.DB) VMService {
 	return &vmServiceImpl{
 		db:            db,
 		vdiClient:     nil, // 将动态加载
-		uuidValidator: constants.UuidPattern,
+		uuidValidator: constants.UUIDPattern,
 	}
 }
 

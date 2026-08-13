@@ -27,7 +27,11 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		applogger.Debugf("[cleanup] .env 未加载: %v", err)
 	}
-	cfg := config.Load()
+	cfg, err := config.Load(context.Background())
+	if err != nil {
+		applogger.Errorf("[cleanup_status] 配置加载失败: %v", err)
+		os.Exit(1)
+	}
 
 	dbConn, err := db.NewDatabase(&cfg.Database)
 	if err != nil {

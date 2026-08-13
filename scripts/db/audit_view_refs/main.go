@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -53,7 +54,10 @@ var referencedColumns = map[string][]string{
 
 func main() {
 	loadEnvWhitelist(".env", []string{"DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_SSLMODE"})
-	cfg := config.Load()
+	cfg, err := config.Load(context.Background())
+	if err != nil {
+		log.Fatalf("[audit_view_refs] 配置加载失败: %v", err)
+	}
 	d, err := db.NewDatabase(&cfg.Database)
 	if err != nil {
 		log.Fatal(err)

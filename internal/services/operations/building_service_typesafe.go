@@ -32,7 +32,7 @@ type buildingServiceTypeSafe struct {
 func NewBuildingServiceTypeSafe(db *gorm.DB) BuildingServiceTypeSafe {
 	return &buildingServiceTypeSafe{
 		db:            db,
-		uuidValidator: constants.UuidPattern,
+		uuidValidator: constants.UUIDPattern,
 	}
 }
 

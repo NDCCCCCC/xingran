@@ -9,7 +9,7 @@ import (
 
 // isValidUUID 验证字符串是否符合UUID格式
 func isValidUUID(id string) bool {
-	return constants.UuidPattern.MatchString(id)
+	return constants.UUIDPattern.MatchString(id)
 }
 
 // ApplyVMDataScopeFilter 应用虚拟机数据范围过滤

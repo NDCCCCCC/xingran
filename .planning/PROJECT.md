@@ -4,6 +4,23 @@ update_trigger: v1.20 milestone SHIPPED + ARCHIVED (Phase 56 / 5 plans / 5 waves
 previous_update: 2026-07-09 v1.20 milestone INITIATED
 ---
 
+## Current Milestone: v1.21 API Key 认证链修复 (API Key Auth Chain Repair)
+
+**Goal:** 修复 API Key 认证系统的 P0/P1/P2 缺陷,回归 v1.6「API 密钥管理系统」(Phase 16)的可用性与可观测性,并让 MultiAuth 认证链代码就绪可启用。
+
+**Target features / 修复项:**
+- 修复 `setUserContextForAPIKey` 类型断言恒 false(P0-2)— API Key 上下文无法写入 gin context
+- 消除 `MultiAuth`/`RequireScope`/`RequireAPIKeyResourcePermission`/`RateLimitByScope` 死代码,使认证链代码就绪(P0-1)
+- 修复前端 `getAPIKey`/`updateAPIKey`/`deleteAPIKey` 与后端 POST 路由契约不匹配导致的 404(P1-1)
+- 修复使用日志记录时机导致 `successRate` 永久失真(P1-2)— 在 `c.Next()` 前记录致 Success/StatusCode/Duration 全零值
+- 修 P2:限流响应头 `string(rune(int))` 编码错误、使用日志 ctx 取消竞态、密钥明文存储评估、`idx_api_keys_key` 与 uniqueIndex 重复索引
+
+**范围边界(用户决策 v1.21 init):** **全修复 + 就绪** — 修复全部 P0/P1/P2 确定性缺陷,MultiAuth 代码修好可接入;「是否在生产路由挂载 MultiAuth(即 X-API-Key 认证是否真正生效)」作为 phase 内 discuss 决策点,含安全影响评估。研究阶段跳过(回归修复,代码与问题均已调查清楚)。
+
+**回归性质:** 对 v1.6「API 密钥管理系统」(Phase 16 / 2026-05-19 / 10 plans)的回归修复,非新能力。涉及文件:`internal/middleware/apikey.go`、`internal/api/router.go`、`internal/api/v1/system/apikey_router.go`、`internal/services/usage_logger.go`、`internal/services/rate_limiter.go`、`internal/services/system/apikey_service.go`、前端 `src/api/apikey.ts`、migration `migration_085_api_keys.go`。
+
+**Phase 编号:** 从 v1.20 末尾 Phase 56 续编(57+)。
+
 **Phase 54 (2026-07-07)**: W5 收尾验证 phase — scrapligo `transport.NewFileTransport()` e2e 闭环 Phase 51 fn-never-called 漏洞 (10 TestE2E_*) + 5 处文档更新 (API响应规范 + 加密设计 + CHANGELOG 新建 + README 能力扩展 + MILESTONES v1.19 条目 + STATE deferred 同步) + 54-HUMAN-UAT.md 创建 (7 pending: 6 SSH + 1 WR-02) + 全量回归三绿 (vendor-react 零回归 774.96 kB + operlog regression 不回归)。代码审查 5 Info / 0 Critical / 0 Warning;**v1.19 网络设备写命令 milestone SHIPPED**。
 
 **Phase 53 (2026-07-07)**: W4 frontend layer complete — 6 port-write API wrappers (`networkApi.ts`) + 3 TS types mirroring backend `portwrite` Go structs (`types/network.ts`) + shared constants (`port-write/constants.ts`) + `PortWriteModal` (5 single-port actions, reason Select+TextArea, description special-case, audit-link Toast) + `BulkWriteDrawer` (select→executing→result state machine, indeterminate Spin per D-05, three Statistic cards, retry-only-failed per D-06) + `ports/index.tsx` wiring (`useMenuStore` canWrite gating per D-09, operation column, batch-config button, `batchInProgress` disables refresh+collect per D-07/LANDMINE #4) + `monitor/logs` URL query `?module=` prefetch. 8/8 must-haves verified, zero gaps. Code review found 2 BLOCKERs (CR-01/CR-02: BulkWriteDrawer retry `deviceId` snapshot drift → potential cross-device write) — fixed in commit `9b01cc68` (cache `lastDeviceId` + `lastInterfaceMap` at submit). WR-02 (custom-reason validator signature) deferred to Phase 54 UAT. Real-device/browser UAT deferred to Phase 54 (W5) per v1.18 Phase 48 site-visit precedent. `npm run build` exit 0, vendor-react gzip 774.96 kB (zero regression vs Phase 48 baseline 776 kB).
@@ -422,4 +439,4 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 
 ---
 
-*Last updated: 2026-07-09 — v1.20 网络设备 VLAN + 端口绑定 milestone INITIATED (Phase 56+). v1.19 SHIPPED 2026-07-08 (Phases 50-55, 6 phases / 9 plans / 5 build waves + 1 cleanup, 37/37 MVP requirements, 108 files / 25,224 insertions / 3,152 deletions in 1.7 days, 7 site-visit UAT deferred).*
+*Last updated: 2026-08-13 — Phase 57「认证链核心修复 + 回归测试」COMPLETE (1/1 plan, AUTH-01/02 + QUAL-02 验证 8/8 must-haves passed; 交付于分支 refactor/config-ctx-and-viper-cleanup, 含 flaky 测试修复 commit 408dd44)。v1.21 API Key 认证链修复 milestone 进行中 (Phase 58-61 待执行)。v1.20 网络设备 VLAN + 端口绑定 SHIPPED 2026-07-10 (Phase 56 / 5 plans / 5 waves). v1.19 网络设备写命令 SHIPPED 2026-07-08 (Phases 50-55, 6 phases / 9 plans, 37/37 MVP requirements).*

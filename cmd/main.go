@@ -82,7 +82,11 @@ func setTimeZone() {
 // @name Authorization
 // @description Bearer token
 func main() {
-	cfg := config.Load()
+	cfg, err := config.Load(context.Background())
+	if err != nil {
+		fmt.Printf("配置加载失败: %v\n", err)
+		os.Exit(1)
+	}
 
 	initializeLogger(cfg)
 	logStartupInfo(cfg)

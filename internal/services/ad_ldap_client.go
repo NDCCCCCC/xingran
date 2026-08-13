@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"strings"
@@ -21,9 +22,16 @@ var (
 )
 
 // loadADTLSSkipVerify 懒加载 AD TLS 跳过校验开关
+//
+// 启动期配置错误是致命问题:Load() 失败时必须终止进程,不能让 AD 模块
+// 静默使用零值(默认 TLSSkipVerify=false → 严格校验,可能在某些自签证书
+// 环境下导致 LDAP 绑定失败,掩盖真实配置错误)。
 func loadADTLSSkipVerify() bool {
 	adTLSSkipVerifyOnce.Do(func() {
-		cfg := config.Load()
+		cfg, err := config.Load(context.Background())
+		if err != nil {
+			panic(fmt.Sprintf("[ad_ldap] 配置加载失败: %v", err))
+		}
 		adTLSSkipVerify = cfg.AD.TLSSkipVerify
 	})
 	return adTLSSkipVerify

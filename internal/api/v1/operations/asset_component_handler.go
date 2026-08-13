@@ -40,7 +40,7 @@ func (h *AssetComponentHandler) WithCore(core *core.Core) *AssetComponentHandler
 
 // ListComponents returns the subordinate component list for one parent
 // asset. Query parameter parentAssetId is required and must be a valid
-// UUID (constants.UuidPattern).
+// UUID (constants.UUIDPattern).
 //
 // Response shape (response.Success wrapper):
 //
@@ -61,7 +61,7 @@ func (h *AssetComponentHandler) ListComponents(c *gin.Context) {
 		response.Error(c, http.StatusBadRequest, "parentAssetId 参数必填")
 		return
 	}
-	if !constants.UuidPattern.MatchString(parentAssetID) {
+	if !constants.UUIDPattern.MatchString(parentAssetID) {
 		response.Error(c, http.StatusBadRequest, "parentAssetId 必须是有效的 UUID")
 		return
 	}

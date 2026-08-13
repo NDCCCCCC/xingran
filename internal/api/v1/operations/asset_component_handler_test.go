@@ -80,7 +80,7 @@ func TestListComponentsHappyPath(t *testing.T) {
 	// We didn't insert parent-uuid-1 as a UUID (test uses string IDs
 	// directly because sqlite doesn't enforce UUID type); set the query
 	// to match the string we used in fixtures but in UUID form so the
-	// UuidPattern check passes.
+	// UUIDPattern check passes.
 	c.Request.URL.RawQuery = "parentAssetId=11111111-1111-1111-1111-111111111111"
 
 	// Adjust the inserted parent_asset_id to be the valid UUID so the

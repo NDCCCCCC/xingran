@@ -822,9 +822,13 @@ func (c *Core) initCache() (cache.Cache, error) {
 }
 
 // initAPIEndpointService 初始化API端点元数据服务
+//
+// 启动期配置加载,使用 background ctx(API元数据 < 100KB,阻塞时间通常 < 10ms,
+// 不需要可取消语义)。与 services/vdi/config.go / services/ad_ldap_client.go
+// 的 config.Load 模式保持一致。
 func (c *Core) initAPIEndpointService() error {
 	// 加载API元数据配置
-	metadata, err := config.LoadAPIMetadata("./configs/api_metadata.yaml")
+	metadata, err := config.LoadAPIMetadata(context.Background(), "./configs/api_metadata.yaml")
 	if err != nil {
 		return err
 	}

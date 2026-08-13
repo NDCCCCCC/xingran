@@ -10,6 +10,7 @@ import (
 	"time"
 
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/internal/constants"
 	"github.com/xingran-next/xingran-go-backend/internal/core/db"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
@@ -381,7 +382,7 @@ func (s *CaptchaService) VerifyCaptcha(ctx context.Context, captchaID, input str
 
 	case captcha.CaptchaTypeSlider:
 		// 验证滑动拼图验证码 - 检查"验证通过"标记
-		verifiedKey := fmt.Sprintf("captcha:verified:%s", captchaID)
+		verifiedKey := fmt.Sprintf(constants.CaptchaVerifiedKeyFormat, captchaID)
 		verified, err := s.cache.Exists(ctx, verifiedKey)
 		if err != nil || !verified {
 			return fmt.Errorf("滑动验证码未通过验证或已过期，请重新验证")
@@ -446,7 +447,7 @@ func (s *CaptchaService) VerifySliderCaptcha(ctx context.Context, captchaID stri
 	}
 
 	// 验证成功，设置"验证通过"标记（用于后续登录验证）
-	verifiedKey := fmt.Sprintf("captcha:verified:%s", captchaID)
+	verifiedKey := fmt.Sprintf(constants.CaptchaVerifiedKeyFormat, captchaID)
 
 	// CRITICAL: Write verified marker directly to Redis (bypass L2Writer async worker pool)
 	// to ensure immediate availability for subsequent login verification
@@ -487,7 +488,7 @@ func abs(x int) int {
 
 // CheckLoginLock 检查账号是否被锁定
 func (s *CaptchaService) CheckLoginLock(ctx context.Context, username string) error {
-	lockKey := fmt.Sprintf("login:lock:%s", username)
+	lockKey := fmt.Sprintf(constants.LoginLockKeyFormat, username)
 	locked, _ := s.cache.Exists(ctx, lockKey)
 	if locked {
 		ttl, _ := s.cache.TTL(ctx, lockKey)
@@ -508,7 +509,7 @@ func (s *CaptchaService) RecordLoginFailure(ctx context.Context, username string
 
 	if count >= int64(s.config.LoginMaxRetry) {
 		// 锁定账号
-		lockKey := fmt.Sprintf("login:lock:%s", username)
+		lockKey := fmt.Sprintf(constants.LoginLockKeyFormat, username)
 		lockDuration := time.Duration(s.config.LoginLockTime) * time.Minute
 		_ = s.cache.Set(ctx, lockKey, "1", lockDuration)
 		_ = s.cache.Delete(ctx, failKey)

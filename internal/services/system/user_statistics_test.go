@@ -11,11 +11,11 @@ import (
 )
 
 // TestUserStatistics_CountExceedsPageSizeCap
-// 回归测试:用户数超过 list 端点 MaxPageSize(100) 时,Statistics 必须返回真实总数,
+// 回归测试:用户数超过 list 端点 MaxListPageSize(100) 时,Statistics 必须返回真实总数,
 // 而不是被分页上限截断的 100。
 //
 // 背景:统计卡片原先调用 /system/users/list(pageSize:1000)拉全量、用 list.length 当总数,
-// 但后端 user list 的 pageSize 上限为 100(constants.MaxPageSize),导致 1196 用户时
+// 但后端 user list 的 pageSize 上限为 100(constants.MaxListPageSize),导致 1196 用户时
 // 卡片错误显示 100。改用专用 Statistics(COUNT 聚合)后应返回真实计数。
 // 这里种入 150 用户,断言 total=150(>100)、active/inactive 分别正确,且软删除行被排除。
 func TestUserStatistics_CountExceedsPageSizeCap(t *testing.T) {
@@ -34,7 +34,7 @@ func TestUserStatistics_CountExceedsPageSizeCap(t *testing.T) {
 	`).Error)
 
 	now := "2024-01-01 00:00:00"
-	// 100 个正常用户(status=0)+ 50 个停用用户(status=1)= 150,远超 MaxPageSize=100
+	// 100 个正常用户(status=0)+ 50 个停用用户(status=1)= 150,远超 MaxListPageSize=100
 	for i := 0; i < 100; i++ {
 		require.NoError(t, db.Exec(
 			`INSERT INTO sys_user (id, username, status, created_at, updated_at, deleted_at) VALUES (?, ?, 0, ?, ?, NULL)`,

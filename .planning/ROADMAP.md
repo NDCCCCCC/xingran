@@ -1,7 +1,7 @@
 ---
-last_updated: 2026-07-10
-update_trigger: v1.20 milestone closed (Phase 56: 1 phase / 5 plans / 5 waves; 12 site-visit UAT deferred)
-previous_update: 2026-07-08 after v1.19 milestone closed
+last_updated: 2026-08-12
+update_trigger: v1.21 milestone INITIATED — ROADMAP drafted (Phases 57-60, regression fix for v1.6 Phase 16)
+previous_update: 2026-07-10 after v1.20 milestone SHIPPED + ARCHIVED
 ---
 
 # Roadmap: XingRan-Next 运维管理系统
@@ -13,219 +13,222 @@ previous_update: 2026-07-08 after v1.19 milestone closed
 - ✅ **v1.2 可配置仪表盘生产级改造** — Phases 4-7 (shipped 2026-04-21)
 - ✅ **v1.3 技术债清理** — Phases 8-10 (shipped 2026-04-27)
 - ✅ **v1.4 MAC地址采集优化** — Phase 11 (shipped 2026-05-09)
-- ✅ **v1.5 MAC地址历史数据管理** — Phases 12-15 (shipped 2026-06-15; Phase 13 gap closure retroactive 2026-06-26)
-- ✅ **v1.6 API密钥管理系统** — Phase 16 (shipped 2026-05-19)
+- ✅ **v1.5 MAC地址历史数据管理** — Phases 12-15 (shipped 2026-06-15)
+- ✅ **v1.6 API密钥管理系统** — Phase 16 (shipped 2026-05-19) ← **本里程碑回归对象**
 - ✅ **v1.7 前后端加密配置同步** — Phase 17 (shipped 2026-05-20)
 - ✅ **v1.8 登录端点加密增强** — Phase 18 (shipped 2026-05-21)
 - ✅ **v1.9 AD域控集成扩展** — Phases 19-20 (shipped 2026-05-24)
 - ✅ **v1.10 网络设备权限修复** — Phase 21 (shipped 2026-05-24)
 - ✅ **v1.11 AD组自动同步系统** — Phase 23 (shipped 2026-05-26)
+- ✅ **v1.12 深信服桌面云集成 (22A+22B)** — Phases 22A/22B (shipped 2026-06-02)
 - ✅ **v1.13 资产管理模块** — Phase 26 (shipped 2026-06-08)
 - ✅ **v1.14 全局列自定义** — Phase 27 (shipped 2026-06-09)
-- ✅ **v1.15 工位设备关联** — Phase 28 (shipped 2026-06-10)
-- ✅ **v1.12 深信服桌面云集成 (22A+22B)** — Phases 22A/22B (shipped 2026-06-02)
-- ✅ **v1.15 部门物理位置映射** — Phase 39 (shipped 2026-06-25)
+- ✅ **v1.15 工位设备关联 + 部门物理位置映射** — Phases 28 + 39 (shipped 2026-06-10 / 2026-06-25)
 - ✅ **v1.16 技术债清理 (Tech-Debt Cleanup)** — Phases 40-41 (shipped 2026-06-26)
-- ✅ **v1.17 资产对账 (Asset Reconciliation)** — Phases 42-46 (shipped 2026-07-03) — see [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md)
-- ✅ **v1.18 网络设备硬件清单 (Device Component Serials)** — Phase 48 (shipped 2026-07-04) — see [milestones/v1.18-ROADMAP.md](milestones/v1.18-ROADMAP.md)
-- ✅ **v1.19 网络设备写命令 (Network Device Port Write Operations)** — Phases 50-55 (shipped 2026-07-08) — see [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md) | [audit](milestones/v1.19-MILESTONE-AUDIT.md)
-- ✅ **v1.20 网络设备 VLAN + 端口绑定 (Network Device VLAN + Port Binding)** — Phase 56 (shipped 2026-07-10) — see [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.md) | [requirements](milestones/v1.20-REQUIREMENTS.md) | [design doc](../docs/plans/2026-07-09-v1.20.1-design.md)
+- ✅ **v1.17 资产对账 (Asset Reconciliation)** — Phases 42-46 + Phase 47 root-cause (shipped 2026-07-03)
+- ✅ **v1.18 网络设备硬件清单 (Device Component Serials)** — Phase 48 + Phase 49 gap closure (shipped 2026-07-04)
+- ✅ **v1.19 网络设备写命令 (Network Device Port Write Operations)** — Phases 50-55 (shipped 2026-07-08) — see [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md)
+- ✅ **v1.20 网络设备 VLAN + 端口绑定** — Phase 56 (shipped 2026-07-10) — see [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.md)
+- 🚧 **v1.21 API Key 认证链修复 + 能力补全 (API Key Auth Chain Repair + Feature Completion)** — Phases 57-61 (in planning; regression fix 57-60 + post-enable feature completion 61)
 
 ---
 
-## Phases (v1.20) — SHIPPED
+## Phases (v1.21) — IN PLANNING
 
-<details>
-<summary>✅ v1.20 网络设备 VLAN + 端口绑定 (Phase 56) — SHIPPED 2026-07-10</summary>
+**Milestone Goal:** 修复 API Key 认证系统的 P0/P1/P2 缺陷,回归 v1.6「API 密钥管理系统」(Phase 16)的可用性与可观测性,让 MultiAuth 认证链代码就绪可启用,使用日志真实反映请求结果。
 
-### Phase 56: 网络设备 VLAN + 端口绑定 (v1.20.1) — 5/5 plans, completed 2026-07-10
+**Regression scope (调查已确认的根因):**
 
-**Goal:** 在 v1.19 端口写命令 MVP 基础上扩展 2 个新写命令：① 修改 access VLAN ② IP+MAC+Port 静态绑定。复用 v1.19 vendor 模板 / operlog / 权限 / 批量 / e2e 全套基建。
+| 缺陷 ID | 根因 | 文件:行 | 类别 |
+|---------|------|---------|------|
+| P0-1 | MultiAuth 及下游中间件未挂载(死代码) | router.go / apikey.go | AUTH |
+| P0-2 | `setUserContextForAPIKey` 把 `*models.APIKey` 断言为局部值类型 `apiKeyType`,恒 false | apikey.go:146-179 | AUTH |
+| P1-1 | 前端 GET/PUT/DELETE vs 后端 POST 路由契约不匹配 → 404 | apikey_router.go / apikey.ts | CONTRACT |
+| P1-2 | 使用日志 goroutine 在 `c.Next()` 前记录,StatusCode/Duration/Success 全零 → successRate≈0% | apikey.go:60-75 | OBSERV |
+| P2-a | `RateLimitByScope` 响应头 `string(rune(int))` 编码错误 (Limit=100 → "d") | apikey.go:274-275 | QUAL |
+| P2-b | 使用日志 goroutine 复用 `c.Request.Context()`,请求结束 → ctx.Canceled,记录丢弃 | apikey.go:66 | OBSERV |
+| P2-c | API Key `Key` 字段明文存储 | apikey_service.go / migration_085 | SEC |
+| P3 | migration_085 `idx_api_keys_key` 与 `uniqueIndex` 重复 | migration_085 | SEC |
 
-**Depends on:** **v1.19 端口写命令 MVP (Phases 50-55)** — 复用 vendorPortTemplate + pre_state_check + port_write_service + execSinglePort + PortWriteModal + BulkWriteDrawer 全套基建
+**Phase Numbering:** 从 v1.20 末尾 Phase 56 续编 (57-61)。整数 phase 为计划里程碑工作;小数 phase (如 57.1) 为紧急插入。
 
-**Requirements**: 22 (VLAN-01~06, BIND-01~07, INFRA-01~04, UI-01~06, TEST-01~05)
+- [ ] **Phase 57: 认证链核心修复 + 回归测试** - 修复 setUserContextForAPIKey 类型断言 (P0-2),消除 MultiAuth 下游死代码 (P0-1),用集成测试锁住认证链防止 P0-2 回归
+- [ ] **Phase 58: 前后端路由契约对齐** - 修复前端 getAPIKey/updateAPIKey/deleteAPIKey 三个操作 404 (P1-1),与后端 POST 路由方法对齐
+- [ ] **Phase 59: 可观测性 / 使用日志修复** - 修复使用日志记录时机 (P1-2),让 successRate 可信 (P1-2 连锁),消除 ctx 取消竞态 (P2-b)
+- [ ] **Phase 60: 安全加固与启用决策** - MultiAuth 启用决策 + 安全评估,密钥哈希存储决策,移除重复索引,修复限流头编码 (P2-a)
+- [ ] **Phase 61: 资源级权限矩阵 + 限流生产调优** - MultiAuth 启用后落地 RequireAPIKeyResourcePermission 的 resource 参数真实生效 (AUTH-04, ex-FUTURE-APIKEY-01) + RateLimitByScope 生产接入与调优 (QUAL-03, ex-FUTURE-APIKEY-02);仅在 Phase 60 AUTH-03=启用 时执行
 
-**Success Criteria** (目标, 5 phase 完成时全部自动化验证通过):
-1. `go test ./internal/services/portcollection/...` — 12+ 新 vendor template 用例 + 5 已有 PASS (零回归)
-2. `go test ./internal/services/portwrite/...` — 6+ 新 pre_state_check 用例 + 10+ 新 TestE2E_* + 35 已有 PASS (零回归)
-3. `go build ./...` exit 0
-4. `npm run type-check` exit 0
-5. `npm run build` exit 0 (vendor-react gzip 与 Phase 48 baseline 776 kB 容差内, 零回归)
-6. operlog regression_test.go (25 OperType + 11 敏感关键词 + 5-参 Record 签名) PASS
-7. `56-HUMAN-UAT.md` 创建，6+ site-visit SSH verification 项目（owner = 现场运维同事）
+---
 
-**Plans**: 5 plans (5 waves, 沿用 v1.19 W1~W5 模式)
+## Phase Details
+
+### Phase 57: 认证链核心修复 + 回归测试
+
+**Goal**: API Key 认证链代码功能正确——`setUserContextForAPIKey` 真实把上下文写入 gin context (修复 P0-2 类型断言恒 false),MultiAuth 及其下游 `RequireScope` / `RequireAPIKeyResourcePermission` / `RateLimitByScope` 类型签名、参数传递、作用域匹配逻辑经审查正确且具备被路由挂载的条件 (消除 P0-1 死代码),并由集成测试锁住"API Key 认证 → 上下文写入 → 作用域校验"完整链路,防止 P0-2 类型断言回归。
+
+**Depends on**: Nothing (本 milestone 第一个 phase,所有后续 phase 依赖认证链代码就绪)
+
+**Requirements**: AUTH-01, AUTH-02, QUAL-02
+
+**Success Criteria** (what must be TRUE):
+1. 携带有效 API Key 的请求经过 MultiAuth → `setUserContextForAPIKey` 后,gin context 中 `user_id` / `api_key_id` / `scopes` / `auth_type="api_key"` 四个键被下游 handler 成功读取且值非空(由新增集成测试断言,而非手工打印);P0-2 恒 false 分支消除(直接 import `internal/models` 包,无 `interface{}` workaround 残留)
+2. `MultiAuth` / `RequireScope` / `RequireAPIKeyResourcePermission` / `RateLimitByScope` 四个中间件经类型签名与调用路径审查无死代码缺陷,`services.NewUsageLogger` 与 `services.NewRateLimiter` 在代码库内有真实实例化调用点(`grep -rn` 证据,而非仅定义)
+3. 新增集成测试覆盖完整链路三条路径:① 有效 key + 正确 scope → 通过;② 有效 key + 缺失 scope → 403;③ 无效 key → 401;且原 `apikey_test.go` 3 个纯函数测试与全量 `go test ./...` 不回归
+4. `go build ./...` 退出码 0,无 "interface{} 避免循环导入" 型 workaround 残留注释
+
+**Plans**: 1 plan (single-wave, fix-then-test)
 
 Plans:
-**Wave 1 (vendor 模板) — depends on nothing**
-
-- [x] 56-01-PLAN.md — vendor 模板新增 (set_access_vlan + port_binding × 3 vendors) + 12+ 单元测试 (VLAN-02, BIND-03, BIND-04, TEST-01)
-
-**Wave 2 (service + pre-state) — depends on 56-01**
-
-- [x] 56-02-PLAN.md — pre_state_check.go 新增 2 action handler + port_write_service.go 新增 2 方法 + 校验器（VLAN ID 范围 / IP regex / MAC regex）+ 6+ 单元测试 + audit row JSONB 写入（VLAN-01, VLAN-03, VLAN-05, VLAN-06, BIND-05, BIND-07, INFRA-01, TEST-02）
-
-**Wave 3 (router + handler) — depends on 56-02**
-
-- [x] 56-03-PLAN.md — port_write_router.go 新增 2 kebab 端点 + port_write_handler.go 新增 2 handler (复用 execSinglePort DRY 模式) + operlog OperType 映射 (Update/Create/Delete) + 复用 `network:port:write` 权限（VLAN-01, BIND-01, BIND-02, INFRA-02, INFRA-03, INFRA-04)
-
-**Wave 4 (前端) — depends on 56-03**
-
-- [x] 56-04-PLAN.md — types/network.ts 新增 2 type + networkApi.ts 新增 2 wrapper + SetAccessVlanModal.tsx + PortBindingModal.tsx + ports/index.tsx 菜单接入 + BulkWriteDrawer 零改动支持（VLAN-04, BIND-06, UI-01~06）
-
-**Wave 5 (e2e + 文档) — depends on 56-04**
-
-- [x] 56-05-PLAN.md — 6+ fixture 文件 + 10+ TestE2E_* 测试 + 56-HUMAN-UAT.md 创建 + 文档同步 (CHANGELOG + MILESTONES + API响应规范 + 加密设计) (TEST-03, TEST-04, TEST-05)
-
-**UI hint**: yes (SetAccessVlanModal + PortBindingModal + ports/index.tsx menu integration + BulkWriteDrawer reuse)
-
-</details>
+- [x] 57-01-PLAN.md — 修复 setUserContextForAPIKey 类型断言 (AUTH-01/P0-2) + 重写 RequireAPIKeyResourcePermission 反模式 (AUTH-02/P0-1) + 创建集成测试锁住三路径链路 (QUAL-02) + D-02 构造函数证据
 
 ---
 
-## Phases (v1.19)
+### Phase 58: 前后端路由契约对齐
 
-<details>
-<summary>✅ v1.19 网络设备写命令 (Phases 50-54) — SHIPPED 2026-07-08</summary>
+**Goal**: 前端 API Key 管理页对单条记录的查询、更新、删除三个操作不再返回 404,前后端路由方法与路径完全对齐,操作真实生效。
 
-- [x] Phase 50: W1 Vendor Templates + Unit Tests — 1/1 plan — completed 2026-07-06
-- [x] Phase 51: W2 PortWriteService + Batch + Mock Tests — 1/1 plan — completed 2026-07-06
-- [x] Phase 52: W3 Router/Handler/Operlog/Permission/Migration — 2/2 plans — completed 2026-07-07
-- [x] Phase 53: W4 Frontend Drawer + Progress Dialog + API Wrappers — 2/2 plans — completed 2026-07-07
-- [x] Phase 54: W5 E2E + Real-Device UAT + Documentation — 1/1 plan — completed 2026-07-07
-- [x] Phase 55: Tech-Debt Cleanup (Phase 53 leftover sweep) — 2/2 plans — completed 2026-07-08
+**Depends on**: Phase 57 (认证链就绪后再校验契约,避免与 P0 修复交叉污染)
 
-See [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md) for archived details (108 files / 25,224 insertions / 3,152 deletions / 1.7 days / 37/37 requirements). 7 site-visit SSH verifications + 6 v1.19.x+ follow-ups deferred per `.planning/milestones/v1.19-phases/54-w5-e2e-real-device-uat-documentation/54-HUMAN-UAT.md` and `v1.19-REQUIREMENTS.md` §Future Requirements / §Tech Debt sections.
+**Requirements**: CONTRACT-01
 
-</details>
+**Success Criteria** (what must be TRUE):
+1. 前端 API Key 管理页点击单条记录的"编辑"操作,前端能成功拉取该 key 的当前详情字段(返回码 `code:0`,无 404;表单字段完整回填)
+2. 前端修改 API Key 属性(如名称、作用域、IP 白名单)并保存后,后端持久化成功,列表刷新展示更新后的值(返回码 `code:0`,无 404;数据库行 `updated_at` 刷新)
+3. 前端对单条 API Key 执行"删除"操作后,记录从列表中消失(软删除生效),重复删除或再访问返回明确错误而非 404 路由缺失
+4. 前后端方法/路径对齐方向由 phase 内 discuss 决策并落记录(选项 A: 改前端用 POST 对齐 v1.6 后端既有模式;选项 B: 后端补 RESTful GET/PUT/DELETE),决策与 `apikey_router.go` 当前注册路径一致或显式迁移
 
----
+**Plans**: TBD
 
-## Phases (v1.18)
-
-<details>
-<summary>✅ v1.18 网络设备硬件清单 (Phase 48) — SHIPPED 2026-07-04</summary>
-
-### Phase 48: 网络设备组件序列号采集 (Device Component Serials) — 3/3 plans, shipped 2026-07-04
-
-**Goal**: 支持"一机多序列号"——将网络设备的板卡/引擎卡、电源、风扇、光模块各自的序列号**作为资产设备纳入资产系统 `ops_asset`**（每个组件一条记录，`DeviceSN`=组件序列号），保存组件对交换机/路由的从属关系并在前端展示。
-
-**Depends on**: **v1.17 对账底座（Phase 42-46）** — Phase 48 是 R2 物理层对账的组件序列号形态，需对账引擎先就位
-
-**Requirements**: 14 D-ids (D-01~D-14) 覆盖,源自 48-CONTEXT.md,无正式 REQ-ID
-
-**Success Criteria**: 16 项全部通过自动化 UAT(schema introspection / go build / 21 collector tests / 5 D-10 流水线测试 / 3 handler tests / 5 operlog regression / tsc / vite build)。3 项 site-visit 真机 UAT(S8700/RS8607E)按 RESEARCH §Environment Availability 显式推迟到下次现场访问。
-
-**Plans**: 3 plans
-
-Plans:
-**Wave 1**
-
-- [x] 48-01-PLAN.md — Schema 迁移(migration_201) + Asset/Reconciliation model 扩展 + asset_service List/Statistics 默认 component_type IS NULL 过滤 (D-01, D-05, D-06, D-07)
-
-**Wave 2** (depends on 48-01)
-
-- [x] 48-02-PLAN.md — component_collector 包(SNMP ENTITY-MIB 单 GET 收集器 + 锐捷 temprature* 过滤 + 华为 dual-class 去重 + OwnerResolver stack 接口 + 4 TextFSM 模板 + CLI 收集器) (D-08, D-09, D-10, D-11, D-12)
-
-**Wave 3** (depends on 48-01 + 48-02)
-
-- [x] 48-03-PLAN.md — OpsAssetWriter(UPDATE-only + D-04 父缺失降级) + ReconciliationEmitter(conflict_type=F + recon_category=component_serial) + Pipeline + DeviceInfoCollectionService cron hook + operlog + 后端 list 端点 + 前端组件清单 Tab + UAT 推迟声明 (D-02, D-03, D-04, D-06, D-07, D-13, D-14)
-
-**UI hint**: yes (前端组件清单 Tab,asset 详情 expandable)
-
-See [milestones/v1.18-ROADMAP.md](milestones/v1.18-ROADMAP.md) for archived details. 3 项 site-visit UAT 待现场闭环,详见 `.planning/milestones/v1.18-phases/48-device-component-serials-planned/48-HUMAN-UAT.md`。
-
-</details>
-
-## Phases (v1.17)
-
-<details>
-<summary>✅ v1.17 资产对账 (Phases 42-46) — SHIPPED 2026-07-03</summary>
-
-- [x] Phase 42: 资产对账观测底座 (R1) — 5/6 plans (42-03 skeleton superseded by R3)
-- [x] Phase 43: 告警 + 工单闭环 (R2) — 3/3 plans
-- [x] Phase 44: 置信度评分 + IP 段例外 (R3) — 2/2 plans
-- [x] Phase 45: 工位详情整合 (R4) — 2/2 plans
-- [x] Phase 46: 半自动修复 (R5, 可选) — 2/2 plans (UAT 9/10 PASS)
-
-See [milestones/v1.17-ROADMAP.md](milestones/v1.17-ROADMAP.md) for details.
-
-</details>
-
-### Progress Table
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 42. 资产对账观测底座 (R1) | 5/6 | Complete | 2026-06-27 |
-| 43. 告警 + 工单闭环 (R2) | 3/3 | Complete    | 2026-06-27 |
-| 44. 置信度评分 + IP 段例外 (R3) | 2/2 | Complete    | 2026-06-28 |
-| 45. 工位详情整合 (R4) | 2/2 | Complete | 2026-06-28 |
-| 46. 半自动修复 (R5, 可选) | 2/2 | Complete | 2026-07-03 |
-| 47. 修復資產對賬系統根因 | 2/2 | Complete | 2026-07-03 |
+**UI hint**: yes (前端 API Key 管理页面编辑/删除交互流程,涉及 `src/api/apikey.ts` + 列表/表单组件)
 
 ---
 
-## Archive: Pre-v1.17 Phase History (Phases 1-46 preserved)
+### Phase 59: 可观测性 / 使用日志修复
+
+**Goal**: API Key 使用日志真实反映请求结果——记录时机移到请求处理完成之后,`StatusCode` / `Duration` / `Success` 取真实值,`successRate` 聚合可信,异步 goroutine 不被请求生命周期取消竞态污染。
+
+**Depends on**: Phase 57 (修复必须基于已就绪的认证链,日志记录点在 MultiAuth goroutine 内)
+
+**Requirements**: OBSERV-01, OBSERV-02, OBSERV-03
+
+**Success Criteria** (what must be TRUE):
+1. 发起一次成功的 API Key 请求(2xx 响应)后,`sys_api_key_usage_log` 表对应记录的 `StatusCode` 落在 2xx,`Duration > 0`,`Success = true`(数据库行实证,而非代码推断)
+2. 发起一次失败的 API Key 请求(权限不足 403 / 错误 key 401 / 限流 429)后,对应记录的 `Success = false`,`StatusCode` 为真实错误码
+3. `GetUsageLogSummary` 返回的 `successRate` 在混合成功/失败请求后落入 (0%, 100%) 开区间内可信值,不再恒 ≈ 0%(P1-2 连锁消除)
+4. 客户端主动断开连接或请求 context 取消后,使用日志记录仍能完整写入数据库——异步 goroutine 使用独立的、不被请求生命周期取消的 `context.Background()` 派生 context(P2-b 消除;新增测试模拟请求取消,断言记录已入库)
+5. `go test ./internal/middleware/... ./internal/services/...` 全绿,新增"记录时机"与"独立 context"用例覆盖 P1-2 与 P2-b 防回归
+
+**Plans**: TBD
+
+---
+
+### Phase 60: 安全加固与启用决策
+
+**Goal**: 完成 MultiAuth 路由挂载启用与 API Key 哈希存储两项安全决策(产出决策记录),落地可直接执行的硬化项(限流响应头编码修复、重复索引移除),使认证链具备生产启用条件或在显式理由下推迟启用。
+
+**Depends on**: Phase 57 (MultiAuth 代码就绪)、Phase 59 (使用日志可信,为启用决策提供可观测基础)
+
+**Requirements**: AUTH-03, SEC-01, SEC-02, QUAL-01
+
+**Success Criteria** (what must be TRUE):
+1. **AUTH-03**: phase 内 discuss 完成 MultiAuth 路由挂载启用决策并产出决策记录,内容含:作用域继承 (`InheritPerms`) 行为、IP 白名单语义、与 JWT 中间件的优先级与回退关系、对现有认证链的安全影响评估;决策为"启用"则附挂载点清单与权限校验矩阵,为"推迟"则附触发条件与再次评估时机
+2. **SEC-01**: phase 内 discuss 完成 API Key 存储方式决策并产出决策记录(明文 vs SM3 / argon2id 哈希);若决定迁移,含平滑过渡方案(兼容期双读、回填脚本)与回滚方案;若保留明文,含接受理由与补偿控制(如 DB at-rest 加密、访问审计、轮换流程)
+3. **SEC-02**: migration 中 `idx_api_keys_key` 冗余索引被移除,`key` 字段仅保留一个 `uniqueIndex`;数据库 schema introspection (或迁移脚本 idempotent 验证) 证实索引已收敛
+4. **QUAL-01**: 触发限流(或单元测试构造 `result.Limit=100` / `result.Remaining=99`)后,响应头 `X-RateLimit-Limit` / `X-RateLimit-Remaining` 为数字字面量字符串 `"100"` / `"99"`(用 `strconv.Itoa`),不再是 `string(rune(100))` 产生的 `"d"` 单字符;curl 或 httpie 验证可被标准工具解析为整数
+
+**Plans**: TBD
+
+---
+
+### Phase 61: 资源级权限矩阵 + 限流生产调优
+
+**Goal**: MultiAuth 生产启用后,落地 API Key 资源级细粒度权限(`RequireAPIKeyResourcePermission` 的 `resource` 参数真实生效,含 resource→permission 映射与继承权限下的资源校验)与 `RateLimitByScope` 生产接入与调优,使 API Key 的权限控制与限流按设计真实生效。
+
+**Depends on**: Phase 60 (AUTH-03 启用决策=启用;本 phase 仅在 MultiAuth 生产挂载后执行,若 AUTH-03=推迟则本 phase 随之 defer)
+
+**Requirements**: AUTH-04 (ex-FUTURE-APIKEY-01), QUAL-03 (ex-FUTURE-APIKEY-02)
+
+**Success Criteria** (what must be TRUE):
+1. `RequireAPIKeyResourcePermission(resource, action)` 的 `resource` 参数不再被忽略——resource→permission 映射接入,继承权限 (InheritPerms) 下的细粒度资源校验经测试覆盖验证(有效 key 有资源权限→通过 / 无资源权限→403)
+2. `RateLimitByScope` 在 MultiAuth 已挂载的生产路由上接入,限流按作用域生效;`X-RateLimit-Limit` / `X-RateLimit-Remaining` 可被标准工具解析为整数(衔接 Phase 60 QUAL-01 的 strconv.Itoa 修复);多 scope key 的限流作用域选择逻辑正确(不再任意只取首个 scope)
+3. 资源权限矩阵 + 限流配置均有测试覆盖;`go test ./...` 全绿
+
+**Plans**: TBD
+
+**Conditional**: 本 phase 仅在 Phase 60 AUTH-03 决策=启用 时执行;若决策=推迟启用,本 phase 随之 defer(记录触发条件与再次评估时机)。
+
+---
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 57 → 58 → 59 → 60 → 61 (Phase 61 conditional on Phase 60 AUTH-03=启用)
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 57. 认证链核心修复 + 回归测试 | v1.21 | 1/1 | Complete    | 2026-08-13 |
+| 58. 前后端路由契约对齐 | v1.21 | 0/TBD | Not started | - |
+| 59. 可观测性 / 使用日志修复 | v1.21 | 0/TBD | Not started | - |
+| 60. 安全加固与启用决策 | v1.21 | 0/TBD | Not started | - |
+| 61. 资源级权限矩阵 + 限流生产调优 | v1.21 | 0/TBD | Not started (conditional on P60) | - |
+
+---
+
+## Coverage Map
+
+13/13 v1 requirements mapped to exactly one phase (0 orphans, 0 duplicates):
+
+| Requirement | Phase | Category |
+|-------------|-------|----------|
+| AUTH-01 | Phase 57 | AUTH (P0-2) |
+| AUTH-02 | Phase 57 | AUTH (P0-1) |
+| QUAL-02 | Phase 57 | QUAL |
+| CONTRACT-01 | Phase 58 | CONTRACT (P1-1) |
+| OBSERV-01 | Phase 59 | OBSERV (P1-2) |
+| OBSERV-02 | Phase 59 | OBSERV (P1-2 连锁) |
+| OBSERV-03 | Phase 59 | OBSERV (P2-b) |
+| AUTH-03 | Phase 60 | AUTH (启用决策) |
+| SEC-01 | Phase 60 | SEC (P2-c 决策) |
+| SEC-02 | Phase 60 | SEC (P3) |
+| QUAL-01 | Phase 60 | QUAL (P2-a) |
+| AUTH-04 | Phase 61 | AUTH (资源级权限, ex-FUTURE-APIKEY-01) |
+| QUAL-03 | Phase 61 | QUAL (限流调优, ex-FUTURE-APIKEY-02) |
+
+---
+
+## Archive: Pre-v1.21 Milestone History
 
 <details>
-<summary>Earlier phase history (v1.0–v1.16) preserved for reference</summary>
+<summary>✅ Earlier milestone phase history (v1.0–v1.20) preserved for reference</summary>
 
-### Phase Summary (cumulative)
-
-- ✓ Phases 1-11 — v1.0–v1.4 基础功能 (27/27 plans)
-- ✓ Phases 12-15 — v1.5 MAC地址历史数据管理 (26/26 plans)
-- ✓ Phase 16 — v1.6 API密钥管理 (10/10 plans)
-- ✓ Phase 17 — v1.7 加密配置同步 (6/6 plans)
-- ✓ Phase 18 — v1.8 登录端加密 (4/4 plans)
-- ✓ Phases 19-20 — v1.9 AD域控集成 (11/11 plans)
-- ✓ Phase 21 — v1.10 网络设备权限 (1/1 plan)
-- ✓ Phases 22A/22B — v1.12 深信服 VDI (6/6 plans)
-- ✓ Phase 23 — v1.11 AD组自动同步 (6/7 plans, 23-13 superseded)
-- ✓ Phase 24 — UUID一致性优化 (2/2 plans)
-- ✓ Phase 25 — VM 数据范围权限 (5/5 plans)
-- ✓ Phase 26 — v1.13 资产管理 (6/6 plans)
-- ✓ Phase 27 — v1.14 全局列自定义 (1/1 plan)
-- ✓ Phase 28 — v1.15 工位设备关联 (4/4 plans)
-- ✓ Phase 30 — 前端性能优化 (5/5 plans, 25/25 must-haves)
-- ✓ Phase 31 — P0 收尾 (5/5 plans, F-14 + F-17)
-- ✓ Phase 32 — v1.14 P1 重构 + P2 架构优化 (7/7 waves, 15 P1 + 8 P2)
-- ✓ Phase 33 — Vercel React Best Practices (4/4 waves, 26 defects)
-- ✓ Phase 34 — 操作日志全模块集成 (11/10 plans, 100% coverage 298/298)
-- ✓ Phase 37 — 前端部门选择组件统一收敛 (6/6 plans, 10 migration points)
-- ✓ Phase 38 — AD 账号池统一 (4/4 plans)
-- ✓ Phase 39 — v1.15 部门物理位置映射 (8/8 plans)
+- ✓ Phases 1-2 — v1.0 工位导入部门/用户关联 (7 plans)
+- ✓ Phase 3 — v1.1 信息点导入设备端口关联 (1 plan)
+- ✓ Phases 4-7 — v1.2 可配置仪表盘 (11 plans)
+- ✓ Phases 8-10 — v1.3 技术债清理 (9 plans)
+- ✓ Phase 11 — v1.4 MAC地址采集优化 (4 plans)
+- ✓ Phases 12-15 — v1.5 MAC地址历史数据 (26 plans)
+- ✓ Phase 16 — v1.6 API密钥管理 (10 plans) ← **v1.21 回归对象**
+- ✓ Phase 17 — v1.7 加密配置同步 (6 plans)
+- ✓ Phase 18 — v1.8 登录端加密 (4 plans)
+- ✓ Phases 19-20 — v1.9 AD域控集成 (11 plans)
+- ✓ Phase 21 — v1.10 网络设备权限 (1 plan)
+- ✓ Phases 22A/22B — v1.12 深信服 VDI (6 plans)
+- ✓ Phase 23 — v1.11 AD组自动同步 (18 plans)
+- ✓ Phase 26 — v1.13 资产管理 (6 plans)
+- ✓ Phase 27 — v1.14 全局列自定义 (1 plan)
+- ✓ Phase 28 — v1.15 工位设备关联 (4 plans)
+- ✓ Phases 30-34 — 前端性能/P0收尾/P1P2/React best practices/操作日志全模块集成 (~40 plans)
+- ✓ Phases 37-39 — 前端部门选择统一/AD账号池统一/部门物理位置映射
 - ✓ Phases 40-41 — v1.16 技术债清理 (8 plans)
-- ✓ Phases 42-46 — v1.17 资产对账 (14/16 plans, 42-03 superseded)
-- ✓ Phase 47 — 资产对账根因修复 (2/2 plans)
-- ✓ Phase 48 — v1.18 网络设备组件 (3/3 plans)
-- ✓ Phase 49 — v1.18 gap closure (2/2 plans)
+- ✓ Phases 42-47 — v1.17 资产对账 + 根因修复 (16 plans)
+- ✓ Phase 48-49 — v1.18 网络设备硬件清单 + gap closure (5 plans)
+- ✓ Phases 50-55 — v1.19 网络设备写命令 (9 plans, 5 build + 1 cleanup) — see [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md)
+- ✓ Phase 56 — v1.20 网络设备 VLAN + 端口绑定 (5 plans) — see [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.md)
 
-**Total shipped**: 142 plans across 39 phases (Phases 1-49), 8 gap-closure plans
+**Total shipped through v1.20**: 156 plans across 49 phases (Phases 1-49 + 50-56).
 
 </details>
 
-### Phase 55: 技术债清理 Phase 53 leftover sweep
-
-**Goal:** 清理 Phase 53 code review (53-REVIEW.md) 与 verification (53-VERIFICATION.md) 记录的可执行遗留代码项。范围（5 项）：
-1. **WR-02** — `PortWriteModal.tsx` / `BulkWriteDrawer.tsx` custom-reason validator 签名修复：antd validator 只传 `(rule, value)`，`reasonText` 恒 undefined，需改 `Form.useWatch` 跨字段校验（前端 TS）。是否修复取决于 Phase 54 UAT 观察到的 custom-reason 实际使用频率。
-2. **IN-01** — `pages/network/ports/index.tsx` handleBatchExport `error: any` → `instanceof Error` 安全取 message（pre-existing，非 53 引入）。
-3. **IN-02** — `pages/network/ports/index.tsx` mount-only useEffect 补 `// eslint-disable-next-line react-hooks/exhaustive-deps`（pre-existing）。
-4. **CR-02 后端防御** — `internal/services/portwrite/batch_orchestrator.go` fallback 路径校验 port 真实 deviceID 与 `req.DeviceID` 一致，不一致归入 `Failed`（"port does not belong to device"）不调 SSH（跨层防御，Go；前端 CR-01 已修但后端兜底建议）。
-5. **HealthCard.test.tsx** — 排查/修复既有失败测试（`src/components/reconciliation/__tests__/`，reconciliation 模块，疑似环境/时序，112s import time 异常；与 Phase 53 无关）。
-
-**不在本阶段范围**（已记录到他处）：8 项真机/浏览器 UAT → Phase 54 HUMAN-UAT；Security 审计 → `/gsd:secure-phase 53`；commits push → git 操作。
-
-**Requirements**: TBD (无新功能需求，纯技术债)
-**Depends on:** Phase 54 (WR-02 修复决策由 W5 UAT 观察驱动)
-**Plans:** 2/2 plans complete
-
-Plans:
-- [x] 55-01: 前端 Phase 53 leftover tech-debt sweep (WR-02 + IN-01 + IN-02 + HealthCard) — 7 tasks, 5 files (frontend)
-- [x] 55-02: 后端 batch_orchestrator.go fallback 路径 port 归属跨层防御 (CR-02) — 2 tasks, 1 file (backend Go) — commit 4f357dae
-
-✅ **v1.19 milestone closed**: Phase 55 (cleanup) shipped 2026-07-08. v1.19 整体 6 phases / 9 plans / 5 build waves + 1 cleanup all closed. See [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md) for archived detail.
-
 ---
 
-*Last updated: 2026-07-08 — v1.19 网络设备写命令 milestone closed (Phases 50-55 shipped: 5 build phases + 1 cleanup).*
+*Last updated: 2026-08-12 — v1.21 re-planned: Phase 61 added (资源级权限矩阵 + 限流生产调优, conditional on Phase 60 AUTH-03=启用); FUTURE-APIKEY-01/02 pulled into v1 as AUTH-04/QUAL-03. Now 5 phases (57-61) / 13 requirements. Core regression fix = Phases 57-60; Phase 61 = post-enable feature completion. v1.20 网络设备 VLAN + 端口绑定 SHIPPED + ARCHIVED 2026-07-10 (Phase 56 / 5 plans).*

@@ -155,7 +155,7 @@ type workstationDeviceService struct {
 func NewWorkstationDeviceService(db *gorm.DB) WorkstationDeviceService {
 	return &workstationDeviceService{
 		db:            db,
-		uuidValidator: constants.UuidPattern,
+		uuidValidator: constants.UUIDPattern,
 	}
 }
 

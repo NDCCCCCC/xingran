@@ -1,10 +1,6 @@
 package utils
 
-const (
-	DefaultPage     = 1
-	DefaultPageSize = 20
-	MaxPageSize     = 100
-)
+import "github.com/xingran-next/xingran-go-backend/internal/constants"
 
 // PaginationParams 分页参数
 type PaginationParams struct {
@@ -12,16 +8,19 @@ type PaginationParams struct {
 	PageSize int
 }
 
-// ParsePagination 解析分页参数
+// ParsePagination 解析分页参数。
+//
+// 默认值与上限统一引用 internal/constants,避免与本项目其它分页实现
+// (operations/pagination_helper.go)取值分叉。
 func ParsePagination(page, pageSize int) PaginationParams {
 	if page <= 0 {
-		page = DefaultPage
+		page = constants.DefaultCurrent
 	}
 	if pageSize <= 0 {
-		pageSize = DefaultPageSize
+		pageSize = constants.DefaultPageSize
 	}
-	if pageSize > MaxPageSize {
-		pageSize = MaxPageSize
+	if pageSize > constants.MaxListPageSize {
+		pageSize = constants.MaxListPageSize
 	}
 	return PaginationParams{
 		Page:     page,
