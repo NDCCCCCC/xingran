@@ -74,13 +74,51 @@ func Init(cfg *Config) error {
 	fileLogger = createFileLogger(level, fileWriter)
 
 	if cfg.ConsoleOutput {
-		// 控制台日志：仅写 stdout（Text 格式，方便人类阅读）
-		// 修复 bug：之前用 MultiWriter 把 Text 格式同时写到文件，导致文件不是 JSON
-		log = createConsoleLogger(level)
+		// 控制台日志：写 stdout（Text 格式，方便人类阅读）。
+		// 同时通过 hook 镜像到 JSON 文件 logger，避免 fileLogger 孤立
+		// （早期用 MultiWriter 把 Text 也写进文件导致文件非 JSON，已用 hook 方案规避）。
+		console := createConsoleLogger(level)
+		console.AddHook(&fileMirrorHook{fileLogger: fileLogger})
+		log = console
 	} else {
 		log = fileLogger
 	}
 
+	return nil
+}
+
+// fileMirrorHook 将日志条目镜像写入 JSON 文件 logger，
+// 使 ConsoleOutput=true 时文件日志（logs/app.log）同时落盘。
+// fileLogger 自身无 hook，不会递归。
+type fileMirrorHook struct {
+	fileLogger *logrus.Logger
+}
+
+func (h *fileMirrorHook) Levels() []logrus.Level {
+	return logrus.AllLevels
+}
+
+func (h *fileMirrorHook) Fire(entry *logrus.Entry) error {
+	if h.fileLogger == nil {
+		return nil
+	}
+	fileEntry := h.fileLogger.WithFields(entry.Data)
+	switch entry.Level {
+	case logrus.PanicLevel:
+		fileEntry.Panic(entry.Message)
+	case logrus.FatalLevel:
+		fileEntry.Fatal(entry.Message)
+	case logrus.ErrorLevel:
+		fileEntry.Error(entry.Message)
+	case logrus.WarnLevel:
+		fileEntry.Warn(entry.Message)
+	case logrus.InfoLevel:
+		fileEntry.Info(entry.Message)
+	case logrus.DebugLevel:
+		fileEntry.Debug(entry.Message)
+	case logrus.TraceLevel:
+		fileEntry.Trace(entry.Message)
+	}
 	return nil
 }
 
@@ -213,8 +251,22 @@ func Fatal(args ...interface{}) {
 }
 
 // Fatalf 记录格式化致命错误日志并退出程序
+//
+// 关键修补:logrus.Fatal/Fatalf 走 os.Exit(1),不等 hook 刷盘,导致 fileMirrorHook
+// 的镜像日志丢失。手动写一条带 Fatal level 的镜像 + sync(确保文件落盘)再 exit。
 func Fatalf(format string, args ...interface{}) {
-	GetLogger().Fatalf(format, args...)
+	msg := fmt.Sprintf(format, args...)
+	// 直接写一条 Fatal 到 fileLogger(绕过 stdout logger 的 hook 链路,避免 os.Exit
+	// 在 hook 执行前切断 flush 时机)。
+	if fileLogger != nil {
+		fileLogger.Fatal(msg)
+	}
+	// 同时写 stdout,保留原终端输出格式
+	GetLogger().Error(msg)
+	if fileWriter != nil {
+		_ = fileWriter.Close()
+	}
+	os.Exit(1)
 }
 
 // Panic 记录恐慌日志并触发panic
