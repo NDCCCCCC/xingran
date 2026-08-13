@@ -15,7 +15,11 @@ import (
 	agentV1 "github.com/xingran-next/xingran-go-backend/internal/api/v1/agent"
 	workorderV1 "github.com/xingran-next/xingran-go-backend/internal/api/v1/workorder"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
+	// AUTH-03 / D-01: MultiAuth + RateLimitByScope 位于 internal/middleware,
+	// 与下方 pkg/middleware（别名 middleware）同 package 名，故取别名 internalmw。
+	internalmw "github.com/xingran-next/xingran-go-backend/internal/middleware"
 	"github.com/xingran-next/xingran-go-backend/internal/scheduler"
+	"github.com/xingran-next/xingran-go-backend/internal/services"
 	"github.com/xingran-next/xingran-go-backend/internal/services/asset"
 	opsServices "github.com/xingran-next/xingran-go-backend/internal/services/operations"
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
@@ -234,18 +238,28 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 				// 新架构：结构体Handler + Service层
 				systemV1.SetupPostRouter(posts, core)
 			}
-				// API密钥管理
-				apikeys := authorized.Group("/apikeys")
-				apikeys.Use(middleware.RequirePermissions([]string{
-					"system:apikey:list",
-					"system:apikey:add",
-					"system:apikey:edit",
-					"system:apikey:delete",
-				}, core))
-				{
-					// 新架构：结构体Handler + Service层
-					systemV1.SetupAPIKeyRouter(apikeys, core)
-				}
+			// API密钥管理
+			apikeys := authorized.Group("/apikeys")
+			apikeys.Use(middleware.RequirePermissions([]string{
+				"system:apikey:list",
+				"system:apikey:add",
+				"system:apikey:edit",
+				"system:apikey:delete",
+			}, core))
+			// AUTH-03 / D-01: 启用 X-API-Key 认证链（挂载范围严格限定本管理面路由组，D-02）。
+			// 顺序: RequirePermissions → MultiAuth → RateLimitByScope。
+			// D-03: 无 X-API-Key 头时 MultiAuth 直接 c.Next() 跳过，由上游 JWT 中间件接管（router 层不加 fallback 分支）。
+			// D-04: IP 白名单严格拒绝沿用 internal/middleware/apikey.go 既有 isIPAllowed（本处不改中间件代码）。
+			// 决策记录: .planning/notes/260813-auth03-enable-decision.md
+			apikeys.Use(internalmw.MultiAuth(
+				systemServices.NewAPIKeyService(core.GetDB()),
+				services.NewUsageLogger(core.GetDB()),
+			))
+			apikeys.Use(internalmw.RateLimitByScope(services.NewRateLimiter()))
+			{
+				// 新架构：结构体Handler + Service层
+				systemV1.SetupAPIKeyRouter(apikeys, core)
+			}
 
 			// 字典管理
 			dicts := authorized.Group("/dicts")
