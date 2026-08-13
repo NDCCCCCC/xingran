@@ -159,7 +159,7 @@ Plans:
 
 Plans:
 
-- [ ] 60-01-PLAN.md — AUTH-03 router MultiAuth + RateLimitByScope 挂载 + 4 维度决策记录 + QUAL-01 apikey.go strconv.Itoa 修复 + TestRateLimitHeaderEncoding(单测) + TestRateLimitHeadersInResponse(集成测)
+- [x] 60-01-PLAN.md — AUTH-03 router MultiAuth + RateLimitByScope 挂载 + 4 维度决策记录 + QUAL-01 apikey.go strconv.Itoa 修复 + TestRateLimitHeaderEncoding(单测) + TestRateLimitHeadersInResponse(集成测)
 - [ ] 60-02-PLAN.md — SEC-01 models/api_key.go schema 三列替换 + apikey_service.go 三函数改造 + hashAPIKey/generateSalt helper + apikey_service_test.go 按新 schema 重写 + SEC-02 手动 SQL (DROP INDEX IF EXISTS) + 双 dialect 验证查询
 
 ---
@@ -199,7 +199,7 @@ Phases execute in numeric order: 57 → 58 → 59 → 60 → 61 (Phase 61 condit
 | 57. 认证链核心修复 + 回归测试 | v1.21 | 1/1 | Complete    | 2026-08-13 |
 | 58. 前后端路由契约对齐 | v1.21 | 0/TBD | Not started | - |
 | 59. 可观测性 / 使用日志修复 | v1.21 | 2/2 | Complete    | 2026-08-13 |
-| 60. 安全加固与启用决策 | v1.21 | 0/2 | Not started | - |
+| 60. 安全加固与启用决策 | v1.21 | 1/2 | In Progress|  |
 | 61. 资源级权限矩阵 + 限流生产调优 | v1.21 | 0/TBD | Not started (conditional on P60) | - |
 
 ---
