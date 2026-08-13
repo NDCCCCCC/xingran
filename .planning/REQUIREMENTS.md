@@ -28,8 +28,8 @@
 
 ### SEC — 安全
 
-- [ ] **SEC-01**: API Key 存储方式决策与(可选)迁移 — 评估并决定是否将 `Key` 字段从明文改为哈希存储(SM3 或 argon2id),`ValidateAPIKey` 从明文 `WHERE key = ?` 改为哈希比对;若迁移,提供平滑过渡与回滚方案(P2,discuss 决策)
-- [ ] **SEC-02**: 移除 migration 085 中与 `key` 字段 `uniqueIndex` 重复的冗余索引 `idx_api_keys_key`(P3)
+- [x] **SEC-01**: API Key 存储方式决策与(可选)迁移 — 评估并决定是否将 `Key` 字段从明文改为哈希存储(SM3 或 argon2id),`ValidateAPIKey` 从明文 `WHERE key = ?` 改为哈希比对;若迁移,提供平滑过渡与回滚方案(P2,discuss 决策)
+- [x] **SEC-02**: 移除 migration 085 中与 `key` 字段 `uniqueIndex` 重复的冗余索引 `idx_api_keys_key`(P3)
 
 ### QUAL — 代码质量与回归防护
 
@@ -71,8 +71,8 @@ Phase 映射(由 `.planning/ROADMAP.md` v1.21 确认;phase 从 v1.20 末尾 Phas
 | OBSERV-02 | Phase 59 | Complete |
 | OBSERV-03 | Phase 59 | Complete |
 | AUTH-03 | Phase 60 | Complete |
-| SEC-01 | Phase 60 | Pending |
-| SEC-02 | Phase 60 | Pending |
+| SEC-01 | Phase 60 | Complete |
+| SEC-02 | Phase 60 | Complete |
 | QUAL-01 | Phase 60 | Complete |
 | AUTH-04 | Phase 61 | Pending (conditional on P60 AUTH-03=启用) |
 | QUAL-03 | Phase 61 | Pending (conditional on P60 AUTH-03=启用) |
