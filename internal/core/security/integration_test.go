@@ -22,7 +22,7 @@ func setupSecurityTestDB(t *testing.T) *gorm.DB {
 	require.NoError(t, err, "Failed to open test database")
 
 	// Create sys_user table
-	// GORM maps ADDN -> "addn" (all lowercase snake_case), so column must be "addn"
+	// AD 列名须与 User 模型 gorm tag 一致: ad_dn / ad_ou_dn / ad_synced_at (见 user.go:34-36)
 	err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS sys_user (
 			id TEXT PRIMARY KEY,
@@ -52,7 +52,9 @@ func setupSecurityTestDB(t *testing.T) *gorm.DB {
 			remark TEXT DEFAULT '',
 			auth_source TEXT NOT NULL DEFAULT 'local',
 			ad_username TEXT,
-			addn TEXT
+			ad_dn TEXT,
+			ad_ou_dn TEXT,
+			ad_synced_at DATETIME
 		)
 	`).Error
 	require.NoError(t, err, "Failed to create sys_user table")

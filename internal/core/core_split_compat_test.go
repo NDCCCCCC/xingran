@@ -84,7 +84,8 @@ func TestCoreSplit_FieldPromotionMatchesCoreInfra(t *testing.T) {
 }
 
 // minimalTestConfig 返回一个能让 New() 成功执行的最小配置
-// New() 内部会调用 security.NewJWTManager,该函数要求 SecretKey ≥16 字节
+// New() 内部会调用 security.NewJWTManager (要求 SecretKey ≥16 字节) 与
+// initSM4Cipher (要求 SM4Key 为 base64 编码的 16 字节,空值会中止启动)。
 func minimalTestConfig() *config.Config {
 	return &config.Config{
 		JWT: config.JWTConfig{
@@ -92,6 +93,10 @@ func minimalTestConfig() *config.Config {
 			AccessKeyExpire:  3600,
 			RefreshKeyExpire: 86400,
 			Issuer:           "test",
+		},
+		Security: config.SecurityConfig{
+			// base64("test-key-16-byte") — 16 字节,非仓库默认值以避免 SECURITY WARNING 刷屏
+			SM4Key: "dGVzdC1rZXktMTYtYnl0ZQ==",
 		},
 	}
 }
