@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: Milestone History
 status: planning
-stopped_at: context exhaustion at 75% (2026-08-13)
-last_updated: "2026-08-13T02:47:02.621Z"
+stopped_at: Phase 59 context gathered
+last_updated: "2026-08-13T03:06:43.022Z"
 last_activity: 2026-08-13
 progress:
   total_phases: 5
@@ -135,9 +135,9 @@ Full deferred detail in [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-13T02:47:02.613Z
-Stopped at: context exhaustion at 75% (2026-08-13)
-Resume file: None
+Last session: 2026-08-13T03:06:43.014Z
+Stopped at: Phase 59 context gathered
+Resume file: .planning/phases/59-observability-usage-log-fix/59-CONTEXT.md
 
 **Milestone status:** v1.21 IN PROGRESS — Phase 57 complete; Phase 58 context gathered (CONTRACT-01 + discuss-new CONTRACT-02 字段命名), awaiting `/gsd:plan-phase 58`.
 
