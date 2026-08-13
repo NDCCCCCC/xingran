@@ -3,7 +3,7 @@
  * 根据后端菜单数据动态生成路由配置
  */
 
-import { useMemo, Suspense, useEffect, useRef, useState } from "react";
+import { useMemo, Suspense, useEffect, useState } from "react";
 import { Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { useMenuStore } from "@/store/menuStore";
 import { useAuthStore } from "@/store/authStore";
@@ -109,10 +109,6 @@ export function DynamicRoutes() {
   const { isAuthenticated, initialized } = useAuthStore();
   const location = useLocation();
 
-  // 路由缓存 (使用 useRef,避免模块级可变状态)
-  const cachedRoutesRef = useRef<MenuRouteConfig[] | null>(null);
-  const cachedMenusCountRef = useRef(0);
-
   // 使用 state 来保存上次访问的路径
   const [lastPath, setLastPath] = useState<string | null>(() => getLastPath());
 
@@ -144,7 +140,8 @@ export function DynamicRoutes() {
   }, [isAuthenticated, initialized, allMenus.length, fetchAll]);
 
   // P0-1: 菜单变化时初始化 routeConfigManager(routeMap)
-  // 放在独立 effect 而非 useMemo 内,避免 React Compiler 推断到副作用
+  // 为其他消费者(useTabSync 等)提供 routeTitle/breadcrumb 服务。
+  // 本组件的权限检查走 inline 逻辑(见下方的 useMemo), 不依赖该单例。
   useEffect(() => {
     if (allMenus.length > 0) {
       routeConfigManager.initialize(allMenus);
@@ -156,27 +153,23 @@ export function DynamicRoutes() {
       return [];
     }
 
-    const cachedRoutes = cachedRoutesRef.current;
-    const configs = cachedRoutes && cachedMenusCountRef.current === allMenus.length
-      ? cachedRoutes
-      : RouteGenerator.generate(allMenus);
+    const configs = RouteGenerator.generate(allMenus);
 
-    if (!cachedRoutes || cachedMenusCountRef.current !== allMenus.length) {
-      cachedRoutesRef.current = configs;
-      cachedMenusCountRef.current = allMenus.length;
-    }
-
-    // P0-1: 前端路由权限第二层防线
+    // P0-1: 前端路由权限第二层防线 (inline 避免调用模块级单例)
     // 后端已按角色 RBAC 过滤 allMenus(第一层), 此处对 menu.meta.permissions
     // 做细粒度二次校验。meta.permissions 为空的路由直接放行(向后兼容)。
     return configs
       .map((route) => {
-        const check = routeConfigManager.hasPermission(route.path, permissions);
-        if (check.hasPermission) {
+        const requiredPerms = route.meta?.permissions;
+        const allowed =
+          !requiredPerms || requiredPerms.length === 0 ||
+          requiredPerms.some((p: string) => permissions.includes(p));
+        if (allowed) {
           return createLazyRoute(route);
         }
         // 无权限的路由重定向到 dashboard (避免空白页)
-        console.warn(`[RouteGuard] ${route.path} 无权限,缺少: ${check.missingPermissions?.join(", ")}`);
+        const missing = requiredPerms.filter((p: string) => !permissions.includes(p));
+        console.warn(`[RouteGuard] ${route.path} 无权限,缺少: ${missing.join(", ")}`);
         return (
           <Route
             key={route.path}
@@ -186,7 +179,10 @@ export function DynamicRoutes() {
         );
       })
       .filter(Boolean);
-  }, [allMenus.length, permissions]);
+    // permissions 是从 store 读取的, 变化时 zustand 会触发 re-render,
+    // 此处显式声明让它作为依赖, 避免 React Compiler 误报
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allMenus, permissions]);
 
   // 保存当前路径到 sessionStorage
   useEffect(() => {
