@@ -86,6 +86,13 @@ const (
 	SystemConfig PermissionCode = "system:config"
 	SystemNotice PermissionCode = "system:notice"
 
+	// API Key 管理权限(Phase 61 / AUTH-04 — 由 resource_action_map.go 引用)
+	APIKeyList   PermissionCode = "system:apikey:list"
+	APIKeyView   PermissionCode = "system:apikey:view"
+	APIKeyAdd    PermissionCode = "system:apikey:add"
+	APIKeyEdit   PermissionCode = "system:apikey:edit"
+	APIKeyRemove PermissionCode = "system:apikey:remove"
+
 	// 通知公告权限
 	NoticeList   PermissionCode = "system:notice:list"
 	NoticeView   PermissionCode = "system:notice:view"
