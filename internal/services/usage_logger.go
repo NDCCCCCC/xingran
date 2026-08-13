@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -52,6 +53,14 @@ func (s *usageLoggerImpl) LogUsage(ctx context.Context, req *LogUsageRequest) er
 
 // logUsageAsync 异步执行日志记录
 func (s *usageLoggerImpl) logUsageAsync(ctx context.Context, req *LogUsageRequest) {
+	// D-02 / OBSERV-03: 用独立 ctx 写 DB, 忽略调用方 ctx 的取消信号。
+	// 调用方 ctx (c.Request.Context()) 仅用于传递请求范围值, 不用于取消控制。
+	// 超时兜底防 DB 挂起泄漏 goroutine (单条 INSERT 量级 ~10s)。
+	// 先例: pkg/cache/redis.go:601-605 (detached ctx)。
+	detachedCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_ = ctx // 显式标注: 调用方 ctx 不用于本次 DB 写入取消控制
+
 	// 创建使用日志记录
 	usageLog := models.APIKeyUsageLog{
 		APIKeyID:   req.APIKeyID,
@@ -67,9 +76,10 @@ func (s *usageLoggerImpl) logUsageAsync(ctx context.Context, req *LogUsageReques
 	}
 
 	// 插入数据库
-	if err := s.db.WithContext(ctx).Create(&usageLog).Error; err != nil {
-		// 记录错误但不阻塞主流程
-		// 这里可以集成日志系统
-		_ = err
+	if err := s.db.WithContext(detachedCtx).Create(&usageLog).Error; err != nil {
+		// D-04: 替换 _ = err 静默吞错; 用 applogger 暴露写入失败 (升级 severity 为 Errorf)。
+		// 先例: internal/services/config_backup_service.go:247 (applogger 调用模式)。
+		// 安全: 仅记录 apiKeyID (UUID) + Path + err, 无 key 明文/密码/token 字段。
+		applogger.Errorf("[USAGE_LOG] 写入失败 key=%s path=%s: %v", req.APIKeyID, req.Path, err)
 	}
 }
