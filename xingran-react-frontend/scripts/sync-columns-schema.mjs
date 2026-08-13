@@ -106,7 +106,7 @@ function parseColumns(arrayLiteral) {
     .replace(/,(\s*)$/, "$1") // 数组末尾 trailing comma
     .replace(/,(\s*[}\]])/g, "$1"); // 嵌套 trailing comma
   try {
-    // eslint-disable-next-line no-new-func
+     
     const parsed = new Function(`return [${cleaned}];`)();
     if (!Array.isArray(parsed)) {
       throw new Error("parsed value is not an array");

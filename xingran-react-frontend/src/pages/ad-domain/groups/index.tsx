@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from "react";
 import {
   Card,
   Table,
@@ -13,15 +13,15 @@ import {
   Drawer,
   Descriptions,
   Tooltip,
-} from 'antd';
+} from "antd";
 import {
   ReloadOutlined,
   PlusOutlined,
   MinusCircleOutlined,
   SyncOutlined,
   InfoCircleOutlined,
-} from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+} from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
 import {
   getADGroupList,
   getADGroupMembers,
@@ -36,12 +36,12 @@ import {
   type ADUser,
   type ADOUNode,
   type ADGroupSyncStatus,
-} from '@/lib/adDomainApi';
-import { useADConfigs } from '@/hooks/useADConfigs';
-import type { ADConfig } from '@/lib/adDomainApi';
+} from "@/lib/adDomainApi";
+import { useADConfigs } from "@/hooks/useADConfigs";
+import type { ADConfig } from "@/lib/adDomainApi";
 
-import type { FC } from 'react';
-import { usePagination } from '@/hooks/usePagination';
+import type { FC } from "react";
+import { usePagination } from "@/hooks/usePagination";
 
 const ADGroupPage: FC = () => {
   const [form] = Form.useForm();
@@ -56,7 +56,7 @@ const ADGroupPage: FC = () => {
   const [groupLoading, setGroupLoading] = useState(false);
 
   // 排序状态
-  const [orderByColumn, setOrderByColumn] = useState<string>('');
+  const [orderByColumn, setOrderByColumn] = useState<string>("");
   const [isAsc, setIsAsc] = useState<boolean>(true);
 
   // 使用全局分页 hook
@@ -107,7 +107,7 @@ const ADGroupPage: FC = () => {
           setOUList(flattened);
 
           // 默认选择"本部部门分组"
-          const defaultOU = flattened.find(ou => ou.name === '本部部门分组');
+          const defaultOU = flattened.find(ou => ou.name === "本部部门分组");
           if (defaultOU) {
             setSelectedOUDN(defaultOU.dn);
           }
@@ -143,7 +143,7 @@ const ADGroupPage: FC = () => {
         setSearchGroupName(groupName);
       }
     } catch {
-      message.error('获取用户组列表失败');
+      message.error("获取用户组列表失败");
     } finally {
       setGroupLoading(false);
     }
@@ -186,14 +186,14 @@ const ADGroupPage: FC = () => {
         fetchSyncStatus();
       }
     } catch {
-      message.error('组同步失败');
+      message.error("组同步失败");
     } finally {
       setSyncLoading(false);
     }
   };
 
   const handleSearch = () => {
-    const groupName = form.getFieldValue('groupName');
+    const groupName = form.getFieldValue("groupName");
     setCurrent(1);
     fetchGroups(groupName);
   };
@@ -206,8 +206,8 @@ const ADGroupPage: FC = () => {
   // 表格排序双向关联
   const handleTableChange = (pagination: any, _filters: any, sorter: any) => {
     // 用 local const 持有新值传 fetchGroups，规避 React 18 setState 异步时序
-    const newCol = sorter?.field || '';
-    const newAsc = sorter?.order === 'ascend';
+    const newCol = sorter?.field || "";
+    const newAsc = sorter?.order === "ascend";
     setOrderByColumn(newCol);
     setIsAsc(newAsc);
     fetchGroups(searchGroupName, newCol, newAsc);
@@ -233,7 +233,7 @@ const ADGroupPage: FC = () => {
         setMemberTotal(res.data?.total ?? 0);
       }
     } catch {
-      message.error('获取组成员失败');
+      message.error("获取组成员失败");
     } finally {
       setMemberLoading(false);
     }
@@ -254,11 +254,11 @@ const ADGroupPage: FC = () => {
     try {
       const values = await form.validateFields();
       await updateADGroup(editingGroup.id, selectedConfig, values);
-      message.success('更新成功');
+      message.success("更新成功");
       setEditModalVisible(false);
       fetchGroups();
     } catch (error) {
-      message.error((error as Error).message || '更新失败');
+      message.error((error as Error).message || "更新失败");
     }
   };
 
@@ -272,7 +272,7 @@ const ADGroupPage: FC = () => {
       }
       setAddMemberVisible(true);
     } catch {
-      message.error('获取用户列表失败');
+      message.error("获取用户列表失败");
     }
   };
 
@@ -281,11 +281,11 @@ const ADGroupPage: FC = () => {
 
     try {
       await addADGroupMember(selectedGroup.id, selectedConfig, userDn);
-      message.success('添加成员成功');
+      message.success("添加成员成功");
       setAddMemberVisible(false);
       fetchMembers(selectedGroup.groupDn);
     } catch (error) {
-      message.error((error as Error).message || '添加成员失败');
+      message.error((error as Error).message || "添加成员失败");
     }
   };
 
@@ -294,63 +294,63 @@ const ADGroupPage: FC = () => {
 
     try {
       await removeADGroupMember(selectedGroup.id, selectedConfig, userDn);
-      message.success('移除成员成功');
+      message.success("移除成员成功");
       fetchMembers(selectedGroup.groupDn);
     } catch (error) {
-      message.error((error as Error).message || '移除成员失败');
+      message.error((error as Error).message || "移除成员失败");
     }
   };
 
   const groupColumns: ColumnsType<ADGroup> = [
     {
-      title: '组名称',
-      dataIndex: 'groupName',
-      key: 'groupName',
+      title: "组名称",
+      dataIndex: "groupName",
+      key: "groupName",
       sorter: true,
     },
     {
-      title: '描述',
-      dataIndex: 'description',
-      key: 'description',
+      title: "描述",
+      dataIndex: "description",
+      key: "description",
       ellipsis: true,
       sorter: true,
     },
     {
-      title: '成员数',
-      dataIndex: 'memberCount',
-      key: 'memberCount',
+      title: "成员数",
+      dataIndex: "memberCount",
+      key: "memberCount",
       width: 100,
       sorter: true,
       render: (count: number) => <Tag color="blue">{count}</Tag>,
     },
     {
-      title: '作用域',
-      dataIndex: 'groupScope',
-      key: 'groupScope',
+      title: "作用域",
+      dataIndex: "groupScope",
+      key: "groupScope",
       width: 120,
-      render: (scope: string) => scope ? <Tag>{scope}</Tag> : '-',
+      render: (scope: string) => scope ? <Tag>{scope}</Tag> : "-",
     },
     {
-      title: '类型',
-      dataIndex: 'groupType',
-      key: 'groupType',
+      title: "类型",
+      dataIndex: "groupType",
+      key: "groupType",
       width: 100,
       render: (type: number) => {
         if (type === 1) return <Tag color="blue">安全组</Tag>;
         if (type === 2) return <Tag color="default">分发组</Tag>;
-        return '-';
+        return "-";
       },
     },
     {
-      title: '最后同步',
-      dataIndex: 'lastSyncAt',
-      key: 'lastSyncAt',
+      title: "最后同步",
+      dataIndex: "lastSyncAt",
+      key: "lastSyncAt",
       width: 170,
       render: (val: string) => val ? new Date(val).toLocaleString() : <Tag color="warning">未同步</Tag>,
     },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       width: 180,
       render: (_: unknown, record: ADGroup) => (
         <Space>
@@ -367,28 +367,28 @@ const ADGroupPage: FC = () => {
 
   const memberColumns: ColumnsType<ADUser> = [
     {
-      title: '用户名',
-      dataIndex: 'username',
-      key: 'username',
+      title: "用户名",
+      dataIndex: "username",
+      key: "username",
     },
     {
-      title: '显示名',
-      dataIndex: 'displayName',
-      key: 'displayName',
+      title: "显示名",
+      dataIndex: "displayName",
+      key: "displayName",
     },
     {
-      title: '邮箱',
-      dataIndex: 'email',
-      key: 'email',
+      title: "邮箱",
+      dataIndex: "email",
+      key: "email",
     },
     {
-      title: '部门',
-      dataIndex: 'department',
-      key: 'department',
+      title: "部门",
+      dataIndex: "department",
+      key: "department",
     },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       render: (_: unknown, record: ADUser) => (
         <Button
           type="link"
@@ -397,9 +397,9 @@ const ADGroupPage: FC = () => {
           icon={<MinusCircleOutlined />}
           onClick={() => {
             Modal.confirm({
-              title: '确定移除该成员吗？',
-              okText: '确定',
-              cancelText: '取消',
+              title: "确定移除该成员吗？",
+              okText: "确定",
+              cancelText: "取消",
               okButtonProps: { danger: true },
               onOk: () => handleRemoveMember(record.userDn),
             });
@@ -413,7 +413,7 @@ const ADGroupPage: FC = () => {
 
   return (
     <Card>
-      <Space orientation="vertical" style={{ width: '100%' }} size="large">
+      <Space orientation="vertical" style={{ width: "100%" }} size="large">
         {/* 搜索栏 */}
         <Form form={form} layout="inline">
           <Form.Item label="AD配置">
@@ -468,7 +468,7 @@ const ADGroupPage: FC = () => {
                   `未同步: ${syncStatus.neverSynced} | ` +
                   `成员关系: ${syncStatus.totalMemberRelations}`
                 }>
-                  <Tag color={syncStatus.neverSynced > 0 ? 'orange' : 'green'} style={{ cursor: 'pointer' }}>
+                  <Tag color={syncStatus.neverSynced > 0 ? "orange" : "green"} style={{ cursor: "pointer" }}>
                     <InfoCircleOutlined /> 同步状态
                   </Tag>
                 </Tooltip>
@@ -483,7 +483,7 @@ const ADGroupPage: FC = () => {
             <Descriptions.Item label="总组数">{syncStatus.totalGroups}</Descriptions.Item>
             <Descriptions.Item label="最近同步">{syncStatus.recentlySynced}</Descriptions.Item>
             <Descriptions.Item label="未同步">
-              <Tag color={syncStatus.neverSynced > 0 ? 'warning' : 'success'}>
+              <Tag color={syncStatus.neverSynced > 0 ? "warning" : "success"}>
                 {syncStatus.neverSynced}
               </Tag>
             </Descriptions.Item>
@@ -509,7 +509,7 @@ const ADGroupPage: FC = () => {
         open={drawerVisible}
         onClose={() => setDrawerVisible(false)}
       >
-        <Space orientation="vertical" style={{ width: '100%' }} size="middle">
+        <Space orientation="vertical" style={{ width: "100%" }} size="middle">
           <Space>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAddMember}>
               添加成员
@@ -526,7 +526,7 @@ const ADGroupPage: FC = () => {
               total: memberTotal,
               showTotal: (t) => `共 ${t} 条`,
               onChange: (page) => {
-                fetchMembers(selectedGroup?.groupDn || '', page);
+                fetchMembers(selectedGroup?.groupDn || "", page);
               },
             }}
           />
@@ -560,11 +560,11 @@ const ADGroupPage: FC = () => {
       >
         <Table
           columns={[
-            { title: '用户名', dataIndex: 'username', key: 'username' },
-            { title: '显示名', dataIndex: 'displayName', key: 'displayName' },
+            { title: "用户名", dataIndex: "username", key: "username" },
+            { title: "显示名", dataIndex: "displayName", key: "displayName" },
             {
-              title: '操作',
-              key: 'action',
+              title: "操作",
+              key: "action",
               render: (_: unknown, record: ADUser) => (
                 <Button
                   type="link"

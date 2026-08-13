@@ -2,7 +2,7 @@
  * Cache 缓存管理页面
  */
 
-import { useState, useEffect, useCallback, useMemo, type FC } from 'react';
+import { useState, useEffect, useCallback, useMemo, type FC } from "react";
 import {
   Card,
   Table,
@@ -21,7 +21,7 @@ import {
   App,
   Divider,
   Popconfirm
-} from 'antd';
+} from "antd";
 import {
   SearchOutlined,
   ReloadOutlined,
@@ -33,29 +33,29 @@ import {
   ExportOutlined,
   ExclamationCircleOutlined,
   DatabaseOutlined
-} from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import { post, get } from '@/lib/api';
-import ActionButtons from '@/components/shared/ActionButtons';
-import { usePagination } from '@/hooks/usePagination';
-import type { BaseResponse, PageResponse } from '@/types';
-import { formatDateTime } from '@/utils/datetime';
+} from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
+import { post, get } from "@/lib/api";
+import ActionButtons from "@/components/shared/ActionButtons";
+import { usePagination } from "@/hooks/usePagination";
+import type { BaseResponse, PageResponse } from "@/types";
+import { formatDateTime } from "@/utils/datetime";
 
 // 导入提取的文件
-import type { CacheInfo, CacheMonitor, CacheSearchForm } from './types';
+import type { CacheInfo, CacheMonitor, CacheSearchForm } from "./types";
 import {
   TYPE_OPTIONS,
   OPERATION_OPTIONS,
   LEVEL_OPTIONS,
   LEVEL_TAG_CONFIG,
-} from './constants';
+} from "./constants";
 import {
   formatMemorySize,
   formatTTL,
   formatDateTime as cacheFormatDateTime,
   exportCacheAsJson,
-} from './utils';
-import { createSorter } from '@/utils/tableHelpers';
+} from "./utils";
+import { createSorter } from "@/utils/tableHelpers";
 
 const { TextArea } = Input;
 
@@ -73,30 +73,30 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
 
   return [
     {
-      title: '缓存键',
-      dataIndex: 'key',
-      key: 'key',
+      title: "缓存键",
+      dataIndex: "key",
+      key: "key",
       width: 300,
       ellipsis: true,
-      sorter: createSorter<CacheInfo>('key', 'string'),
+      sorter: createSorter<CacheInfo>("key", "string"),
       render: (text: string) => (
         <code className="bg-gray-100 px-2 py-1 rounded text-xs">{text}</code>
       ),
     },
     {
-      title: '缓存类型',
-      dataIndex: 'type',
-      key: 'type',
+      title: "缓存类型",
+      dataIndex: "type",
+      key: "type",
       width: 100,
-      sorter: createSorter<CacheInfo>('type', 'string'),
+      sorter: createSorter<CacheInfo>("type", "string"),
       render: (type: string) => <Tag color="blue">{type}</Tag>,
     },
     {
-      title: '层级',
-      dataIndex: 'location',
-      key: 'location',
+      title: "层级",
+      dataIndex: "location",
+      key: "location",
       width: 120,
-      sorter: createSorter<CacheInfo>('location', 'string'),
+      sorter: createSorter<CacheInfo>("location", "string"),
       render: (location: string) => {
         const config = LEVEL_TAG_CONFIG[location];
         if (config) {
@@ -106,64 +106,64 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
       },
     },
     {
-      title: 'TTL',
-      dataIndex: 'ttl',
-      key: 'ttl',
+      title: "TTL",
+      dataIndex: "ttl",
+      key: "ttl",
       width: 120,
-      sorter: createSorter<CacheInfo>('ttl', 'number'),
+      sorter: createSorter<CacheInfo>("ttl", "number"),
       render: (ttl: number) => (
-        <Tag color={ttl > 0 ? 'green' : 'default'}>
+        <Tag color={ttl > 0 ? "green" : "default"}>
           {formatTTL(ttl)}
         </Tag>
       ),
     },
     {
-      title: '大小',
-      dataIndex: 'size',
-      key: 'size',
+      title: "大小",
+      dataIndex: "size",
+      key: "size",
       width: 100,
-      sorter: createSorter<CacheInfo>('size', 'number'),
+      sorter: createSorter<CacheInfo>("size", "number"),
       render: (size: number) => formatMemorySize(size),
     },
     {
-      title: '创建时间',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
+      title: "创建时间",
+      dataIndex: "createdAt",
+      key: "createdAt",
       width: 180,
-      sorter: createSorter<CacheInfo>('createdAt', 'date'),
+      sorter: createSorter<CacheInfo>("createdAt", "date"),
       render: (value: string) => cacheFormatDateTime(value),
     },
     {
-      title: '更新时间',
-      dataIndex: 'updatedAt',
-      key: 'updatedAt',
+      title: "更新时间",
+      dataIndex: "updatedAt",
+      key: "updatedAt",
       width: 180,
-      sorter: createSorter<CacheInfo>('updatedAt', 'date'),
+      sorter: createSorter<CacheInfo>("updatedAt", "date"),
       render: (value: string) => cacheFormatDateTime(value),
     },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       width: 200,
       render: (_, record: CacheInfo) => {
         const actions = [
           {
-            key: 'view',
-            label: '查看详情',
+            key: "view",
+            label: "查看详情",
             icon: <EyeOutlined />,
             onClick: () => handleViewDetail(record.key),
           },
           {
-            key: 'delete',
-            label: '删除',
+            key: "delete",
+            label: "删除",
             icon: <DeleteOutlined />,
             danger: true,
             render: () => (
               <Popconfirm
                 title="确定要删除这个缓存吗？"
-                onConfirm={() => handleBatchOperate('del', [record.key])}
+                onConfirm={() => handleBatchOperate("del", [record.key])}
               >
-                <Button type="link" icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} size="small">
+                <Button type="link" icon={<DeleteOutlined />} style={{ color: "#ff4d4f" }} size="small">
                   删除
                 </Button>
               </Popconfirm>
@@ -185,14 +185,14 @@ const CacheManager: FC = () => {
   const [monitor, setMonitor] = useState<CacheMonitor | null>(null);
   const [loading, setLoading] = useState(false);
   const [searchForm, setSearchForm] = useState<CacheSearchForm>({
-    key: '',
-    type: '',
-    level: 'all'
+    key: "",
+    type: "",
+    level: "all"
   });
   const [operateModalVisible, setOperateModalVisible] = useState(false);
   const [statsModalVisible, setStatsModalVisible] = useState(false);
   const [form] = Form.useForm();
-  const [orderByColumn, setOrderByColumn] = useState('createdAt');
+  const [orderByColumn, setOrderByColumn] = useState("createdAt");
   const [isAsc, setIsAsc] = useState(false);
 
   // 使用全局分页 hook
@@ -203,7 +203,7 @@ const CacheManager: FC = () => {
   const fetchCaches = useCallback(async (sortCol?: string, sortAsc?: boolean) => {
     setLoading(true);
     try {
-      const result = await post<PageResponse<CacheInfo>>('/monitor/cache/list', {
+      const result = await post<PageResponse<CacheInfo>>("/monitor/cache/list", {
         ...searchForm,
         current: paginationProps.current,
         pageSize: paginationProps.pageSize,
@@ -214,8 +214,8 @@ const CacheManager: FC = () => {
       setCaches(result.data?.list || []);
       setTotal(result.data?.total || 0);
     } catch (error) {
-      console.error('获取缓存列表失败:', error);
-      message.error('网络错误，请稍后重试');
+      console.error("获取缓存列表失败:", error);
+      message.error("网络错误，请稍后重试");
     } finally {
       setLoading(false);
     }
@@ -223,11 +223,11 @@ const CacheManager: FC = () => {
 
   const fetchMonitor = useCallback(async () => {
     try {
-      const result = await post<CacheMonitor>('/monitor/cache/monitor', {});
+      const result = await post<CacheMonitor>("/monitor/cache/monitor", {});
       setMonitor(result.data || null);
     } catch (error) {
-      console.error('获取监控数据失败:', error);
-      message.error('获取监控数据失败');
+      console.error("获取监控数据失败:", error);
+      message.error("获取监控数据失败");
     }
   }, []);
 
@@ -236,54 +236,54 @@ const CacheManager: FC = () => {
   const handleOperate = useCallback(async () => {
     try {
       const values = await form.validateFields();
-      await post<unknown>('/monitor/cache/operate', {
+      await post<unknown>("/monitor/cache/operate", {
         ...values,
         ttl: values.ttl || undefined
       });
 
-      message.success('操作成功');
+      message.success("操作成功");
       setOperateModalVisible(false);
       form.resetFields();
       // fetchCaches 内部用 orderByColumn/isAsc state 兜底，无需重传
       fetchCaches();
     } catch (error) {
-      console.error('操作失败:', error);
-      message.error('操作失败');
+      console.error("操作失败:", error);
+      message.error("操作失败");
     }
   }, [form, fetchCaches]);
 
   const handleBatchOperate = useCallback(async (operation: string, keys?: string[]) => {
     try {
-      await post<unknown>('/monitor/cache/batch', {
+      await post<unknown>("/monitor/cache/batch", {
         keys: keys || [],
         operation
       });
 
-      message.success('批量操作成功');
+      message.success("批量操作成功");
       // fetchCaches 内部用 orderByColumn/isAsc state 兜底，无需重传
       fetchCaches();
     } catch (error) {
-      console.error('批量操作失败:', error);
-      message.error('批量操作失败');
+      console.error("批量操作失败:", error);
+      message.error("批量操作失败");
     }
   }, [fetchCaches]);
 
   const handleClearAll = useCallback(() => {
     Modal.confirm({
-      title: '确认清空',
+      title: "确认清空",
       icon: <ExclamationCircleOutlined />,
-      content: '确定要清空所有缓存吗？此操作不可恢复！',
+      content: "确定要清空所有缓存吗？此操作不可恢复！",
       onOk: async () => {
         try {
-          await post('/monitor/cache/clear', {});
+          await post("/monitor/cache/clear", {});
 
-          message.success('清空成功');
+          message.success("清空成功");
           // fetchCaches 内部用 orderByColumn/isAsc state 兜底，无需重传
           fetchCaches();
           fetchMonitor();
         } catch (error) {
-          console.error('清空失败:', error);
-          message.error('清空失败');
+          console.error("清空失败:", error);
+          message.error("清空失败");
         }
       }
     });
@@ -291,15 +291,15 @@ const CacheManager: FC = () => {
 
   const handleExport = useCallback(async () => {
     try {
-      const result = await post<unknown[]>('/monitor/cache/export', {
+      const result = await post<unknown[]>("/monitor/cache/export", {
         ...searchForm
       });
 
       exportCacheAsJson(result.data || []);
-      message.success('导出成功');
+      message.success("导出成功");
     } catch (error) {
-      console.error('导出失败:', error);
-      message.error('导出失败');
+      console.error("导出失败:", error);
+      message.error("导出失败");
     }
   }, [searchForm]);
 
@@ -308,25 +308,25 @@ const CacheManager: FC = () => {
       const result = await get<CacheInfo>(`/monitor/cache/${key}`);
 
       Modal.info({
-        title: '缓存详情',
+        title: "缓存详情",
         width: 600,
         content: (
           <div>
             <p><strong>键名：</strong>{result.data?.key}</p>
             <p><strong>值：</strong></p>
             <pre className="bg-gray-100 p-3 rounded">
-              {JSON.stringify(JSON.parse(result.data?.value || '{}'), null, 2)}
+              {JSON.stringify(JSON.parse(result.data?.value || "{}"), null, 2)}
             </pre>
             <p><strong>类型：</strong>{result.data?.type}</p>
             <p><strong>大小：</strong>{(result.data?.size || 0).toLocaleString()} 字节</p>
             <p><strong>TTL：</strong>{formatTTL(result.data?.ttl || -1)}</p>
-            <p><strong>创建时间：</strong>{result.data?.createdAt ? formatDateTime(result.data.createdAt) : '-'}</p>
+            <p><strong>创建时间：</strong>{result.data?.createdAt ? formatDateTime(result.data.createdAt) : "-"}</p>
           </div>
         )
       });
     } catch (error) {
-      console.error('获取缓存详情失败:', error);
-      message.error('获取缓存详情失败');
+      console.error("获取缓存详情失败:", error);
+      message.error("获取缓存详情失败");
     }
   }, [formatTTL]);
 
@@ -339,9 +339,9 @@ const CacheManager: FC = () => {
 
   const handleReset = useCallback(() => {
     setSearchForm({
-      key: '',
-      type: '',
-      level: 'all'
+      key: "",
+      type: "",
+      level: "all"
     });
     setCurrent(1);
   }, []);
@@ -354,12 +354,12 @@ const CacheManager: FC = () => {
   const handleTableChange = useCallback((pagination: any, _filters: Record<string, any>, sorter: any) => {
     if (sorter && sorter.field) {
       setOrderByColumn(sorter.field);
-      setIsAsc(sorter.order === 'ascend');
+      setIsAsc(sorter.order === "ascend");
     }
     setCurrent(pagination.current);
     setPageSize(pagination.pageSize);
     const sortField = sorter && sorter.field ? sorter.field : undefined;
-    const sortAsc = sorter && sorter.field ? sorter.order === 'ascend' : undefined;
+    const sortAsc = sorter && sorter.field ? sorter.order === "ascend" : undefined;
     fetchCaches(sortField, sortAsc);
   }, [fetchCaches, setCurrent, setPageSize, setOrderByColumn, setIsAsc]);
 
@@ -399,7 +399,7 @@ const CacheManager: FC = () => {
                 title="键数量"
                 value={monitor?.l1?.stats?.keyCount || 0}
                 prefix={<DatabaseOutlined />}
-                styles={{ content: { fontSize: '20px' } }}
+                styles={{ content: { fontSize: "20px" } }}
               />
               <div className="mt-2">
                 <small className="text-gray-500">
@@ -416,7 +416,7 @@ const CacheManager: FC = () => {
                 title="键数量"
                 value={monitor?.l2?.stats?.keyCount || 0}
                 prefix={<DatabaseOutlined />}
-                styles={{ content: { fontSize: '20px' } }}
+                styles={{ content: { fontSize: "20px" } }}
               />
               <div className="mt-2">
                 <small className="text-gray-500">
@@ -434,7 +434,7 @@ const CacheManager: FC = () => {
                 value={monitor?.l1?.stats?.hitRate || 0}
                 precision={1}
                 suffix="%"
-                styles={{ content: { fontSize: '20px', color: '#3f8600' } }}
+                styles={{ content: { fontSize: "20px", color: "#3f8600" } }}
               />
               <Divider className="my-2" />
               <Statistic
@@ -442,7 +442,7 @@ const CacheManager: FC = () => {
                 value={monitor?.l2?.stats?.hitRate || 0}
                 precision={1}
                 suffix="%"
-                styles={{ content: { fontSize: '16px', color: '#1890ff' } }}
+                styles={{ content: { fontSize: "16px", color: "#1890ff" } }}
               />
             </Card>
           </Col>
@@ -453,14 +453,14 @@ const CacheManager: FC = () => {
               <Space orientation="vertical" className="w-full">
                 <div className="flex justify-between items-center">
                   <span>L1状态:</span>
-                  <Tag color={monitor?.l1?.status?.connected ? 'success' : 'error'}>
-                    {monitor?.l1?.status?.connected ? '正常' : '异常'}
+                  <Tag color={monitor?.l1?.status?.connected ? "success" : "error"}>
+                    {monitor?.l1?.status?.connected ? "正常" : "异常"}
                   </Tag>
                 </div>
                 <div className="flex justify-between items-center">
                   <span>L2状态:</span>
-                  <Tag color={monitor?.l2?.status?.connected ? 'success' : 'error'}>
-                    {monitor?.l2?.status?.connected ? '正常' : '异常'}
+                  <Tag color={monitor?.l2?.status?.connected ? "success" : "error"}>
+                    {monitor?.l2?.status?.connected ? "正常" : "异常"}
                   </Tag>
                 </div>
               </Space>
@@ -488,7 +488,7 @@ const CacheManager: FC = () => {
                 onChange={(value) =>    setSearchForm({ ...searchForm, type: value })}
                 allowClear
                 className="user-form-input"
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
                 options={TYPE_OPTIONS}
                onSearch={() => {}}/>
             </Col>
@@ -499,7 +499,7 @@ const CacheManager: FC = () => {
                 onChange={(value) =>    setSearchForm({ ...searchForm, level: value })}
                 allowClear
                 className="user-form-input"
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
                 options={LEVEL_OPTIONS}
                onSearch={() => {}}/>
             </Col>
@@ -525,7 +525,7 @@ const CacheManager: FC = () => {
                 <Button icon={<ExportOutlined />} onClick={handleExport}>
                   导出
                 </Button>
-                <Button icon={<DeleteOutlined />} style={{ color: '#ff4d4f' }} onClick={handleClearAll}>
+                <Button icon={<DeleteOutlined />} style={{ color: "#ff4d4f" }} onClick={handleClearAll}>
                   清空
                 </Button>
               </Space>
@@ -538,7 +538,7 @@ const CacheManager: FC = () => {
         defaultActiveKey="list"
         items={[
           {
-            key: 'list',
+            key: "list",
             label: (
               <span>
                 <DatabaseOutlined />
@@ -557,7 +557,7 @@ const CacheManager: FC = () => {
             ),
           },
           {
-            key: 'stats',
+            key: "stats",
             label: (
               <span>
                 <BarChartOutlined />
@@ -572,7 +572,7 @@ const CacheManager: FC = () => {
                       <Statistic
                         title="内存使用"
                         value={formatMemorySize(monitor?.l1?.stats?.usedMemory || 0)}
-                        styles={{ content: { fontSize: '18px' } }}
+                        styles={{ content: { fontSize: "18px" } }}
                       />
                     </Card>
                   </Col>
@@ -581,7 +581,7 @@ const CacheManager: FC = () => {
                       <Statistic
                         title="内存使用"
                         value={formatMemorySize(monitor?.l2?.stats?.usedMemory || 0)}
-                        styles={{ content: { fontSize: '18px' } }}
+                        styles={{ content: { fontSize: "18px" } }}
                       />
                     </Card>
                   </Col>
@@ -594,7 +594,7 @@ const CacheManager: FC = () => {
                         value={monitor?.l1?.stats?.hitRate || 0}
                         precision={2}
                         suffix="%"
-                        styles={{ content: { color: '#3f8600' } }}
+                        styles={{ content: { color: "#3f8600" } }}
                       />
                       <Divider className="my-2" />
                       <Row gutter={8}>
@@ -602,14 +602,14 @@ const CacheManager: FC = () => {
                           <Statistic
                             title="命中"
                             value={monitor?.l1?.stats?.hitCount || 0}
-                            styles={{ content: { fontSize: '16px', color: '#3f8600' } }}
+                            styles={{ content: { fontSize: "16px", color: "#3f8600" } }}
                           />
                         </Col>
                         <Col span={12}>
                           <Statistic
                             title="未命中"
                             value={monitor?.l1?.stats?.missCount || 0}
-                            styles={{ content: { fontSize: '16px', color: '#cf1322' } }}
+                            styles={{ content: { fontSize: "16px", color: "#cf1322" } }}
                           />
                         </Col>
                       </Row>
@@ -621,7 +621,7 @@ const CacheManager: FC = () => {
                         value={monitor?.l2?.stats?.hitRate || 0}
                         precision={2}
                         suffix="%"
-                        styles={{ content: { color: '#1890ff' } }}
+                        styles={{ content: { color: "#1890ff" } }}
                       />
                       <Divider className="my-2" />
                       <Row gutter={8}>
@@ -629,14 +629,14 @@ const CacheManager: FC = () => {
                           <Statistic
                             title="命中"
                             value={monitor?.l2?.stats?.hitCount || 0}
-                            styles={{ content: { fontSize: '16px', color: '#3f8600' } }}
+                            styles={{ content: { fontSize: "16px", color: "#3f8600" } }}
                           />
                         </Col>
                         <Col span={12}>
                           <Statistic
                             title="未命中"
                             value={monitor?.l2?.stats?.missCount || 0}
-                            styles={{ content: { fontSize: '16px', color: '#cf1322' } }}
+                            styles={{ content: { fontSize: "16px", color: "#cf1322" } }}
                           />
                         </Col>
                       </Row>
@@ -661,30 +661,30 @@ const CacheManager: FC = () => {
           <Form.Item
             label="缓存键"
             name="key"
-            rules={[{ required: true, message: '请输入缓存键' }]}
+            rules={[{ required: true, message: "请输入缓存键" }]}
           >
             <Input placeholder="请输入缓存键" />
           </Form.Item>
           <Form.Item
             label="操作类型"
             name="operation"
-            rules={[{ required: true, message: '请选择操作类型' }]}
+            rules={[{ required: true, message: "请选择操作类型" }]}
           >
             <Select options={OPERATION_OPTIONS}  onSearch={() => {}}/>
           </Form.Item>
           <Form.Item
             label="缓存值"
             name="value"
-            dependencies={['operation']}
+            dependencies={["operation"]}
             rules={[
               {
                 required: true,
-                message: '请输入缓存值',
+                message: "请输入缓存值",
               },
               ({ getFieldValue }) => ({
                 validator: (_, value) => {
-                  if (getFieldValue('operation') === 'set' && !value) {
-                  return Promise.reject(new Error('请输入缓存值'));
+                  if (getFieldValue("operation") === "set" && !value) {
+                  return Promise.reject(new Error("请输入缓存值"));
                   }
                   return Promise.resolve();
                 },
@@ -699,12 +699,12 @@ const CacheManager: FC = () => {
           <Form.Item
             label="过期时间(秒)"
             name="ttl"
-            dependencies={['operation']}
+            dependencies={["operation"]}
           >
             <InputNumber
               placeholder="留空表示永不过期"
               min={1}
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
             />
           </Form.Item>
         </Form>
@@ -725,7 +725,7 @@ const CacheManager: FC = () => {
               <Statistic
                 title="键数量"
                 value={monitor?.l1?.stats?.keyCount || 0}
-                styles={{ content: { fontSize: '24px' } }}
+                styles={{ content: { fontSize: "24px" } }}
               />
               <Divider className="my-2" />
               <Row gutter={8}>
@@ -733,14 +733,14 @@ const CacheManager: FC = () => {
                   <Statistic
                     title="命中次数"
                     value={monitor?.l1?.stats?.hitCount || 0}
-                    valueStyle={{ fontSize: '18px', color: '#3f8600' }}
+                    valueStyle={{ fontSize: "18px", color: "#3f8600" }}
                   />
                 </Col>
                 <Col span={12}>
                   <Statistic
                     title="未命中次数"
                     value={monitor?.l1?.stats?.missCount || 0}
-                    valueStyle={{ fontSize: '18px', color: '#cf1322' }}
+                    valueStyle={{ fontSize: "18px", color: "#cf1322" }}
                   />
                 </Col>
               </Row>
@@ -750,7 +750,7 @@ const CacheManager: FC = () => {
                 value={monitor?.l1?.stats?.hitRate || 0}
                 precision={2}
                 suffix="%"
-                styles={{ content: { fontSize: '20px', color: '#1890ff' } }}
+                styles={{ content: { fontSize: "20px", color: "#1890ff" } }}
               />
               <Divider className="my-2" />
               <Statistic
@@ -766,7 +766,7 @@ const CacheManager: FC = () => {
               <Statistic
                 title="键数量"
                 value={monitor?.l2?.stats?.keyCount || 0}
-                styles={{ content: { fontSize: '24px' } }}
+                styles={{ content: { fontSize: "24px" } }}
               />
               <Divider className="my-2" />
               <Row gutter={8}>
@@ -774,14 +774,14 @@ const CacheManager: FC = () => {
                   <Statistic
                     title="命中次数"
                     value={monitor?.l2?.stats?.hitCount || 0}
-                    valueStyle={{ fontSize: '18px', color: '#3f8600' }}
+                    valueStyle={{ fontSize: "18px", color: "#3f8600" }}
                   />
                 </Col>
                 <Col span={12}>
                   <Statistic
                     title="未命中次数"
                     value={monitor?.l2?.stats?.missCount || 0}
-                    valueStyle={{ fontSize: '18px', color: '#cf1322' }}
+                    valueStyle={{ fontSize: "18px", color: "#cf1322" }}
                   />
                 </Col>
               </Row>
@@ -791,7 +791,7 @@ const CacheManager: FC = () => {
                 value={monitor?.l2?.stats?.hitRate || 0}
                 precision={2}
                 suffix="%"
-                styles={{ content: { fontSize: '20px', color: '#1890ff' } }}
+                styles={{ content: { fontSize: "20px", color: "#1890ff" } }}
               />
               <Divider className="my-2" />
               <Statistic

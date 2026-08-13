@@ -4,7 +4,7 @@
  */
 
 import { Modal, Button, Table } from "antd";
-import { createSorter } from '@/utils/tableHelpers';
+import { createSorter } from "@/utils/tableHelpers";
 
 export interface VariableRow {
   key: string;
@@ -32,9 +32,9 @@ export function TemplateVariablesModal({ open, variables, onClose }: TemplateVar
     { title: "变量名", dataIndex: "key", key: "key" },
     { title: "描述", dataIndex: "description", key: "description" },
     { title: "默认值", dataIndex: "defaultValue", key: "defaultValue" },
-    { title: '变量名', dataIndex: 'key', key: 'key', sorter: createSorter<VariableRow>('key', 'string') },
-    { title: '描述', dataIndex: 'description', key: 'description', sorter: createSorter<VariableRow>('description', 'string') },
-    { title: '默认值', dataIndex: 'defaultValue', key: 'defaultValue', sorter: createSorter<VariableRow>('defaultValue', 'string') },
+    { title: "变量名", dataIndex: "key", key: "key", sorter: createSorter<VariableRow>("key", "string") },
+    { title: "描述", dataIndex: "description", key: "description", sorter: createSorter<VariableRow>("description", "string") },
+    { title: "默认值", dataIndex: "defaultValue", key: "defaultValue", sorter: createSorter<VariableRow>("defaultValue", "string") },
   ];
 
   return (

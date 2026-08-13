@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from "react";
 import {
   Table,
   Button,
@@ -13,7 +13,7 @@ import {
   Row,
   Col,
   Tooltip
-} from 'antd';
+} from "antd";
 import {
   PlusOutlined,
   ReloadOutlined,
@@ -22,9 +22,9 @@ import {
   StopOutlined,
   CheckCircleOutlined,
   DeleteOutlined
-} from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import type { FC } from 'react';
+} from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
+import type { FC } from "react";
 import {
   listADServiceAccounts,
   createADServiceAccount,
@@ -36,14 +36,14 @@ import {
   getADServiceAccountStats,
   type ADServiceAccount,
   type ADServiceAccountStats
-} from '@/lib/adDomainApi';
-import { formatDateTime } from '@/utils/datetime';
+} from "@/lib/adDomainApi";
+import { formatDateTime } from "@/utils/datetime";
 
 // 状态映射
 const STATUS_MAP: Record<number, { color: string; text: string }> = {
-  0: { color: 'green', text: '可用' },
-  1: { color: 'default', text: '已停用' },
-  2: { color: 'orange', text: '熔断中' },
+  0: { color: "green", text: "可用" },
+  1: { color: "default", text: "已停用" },
+  2: { color: "orange", text: "熔断中" },
 };
 
 // Props: 接收 configId（来自父组件 AD 配置）
@@ -74,7 +74,7 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
 
   // Unlock Modal
   const [unlockModalVisible, setUnlockModalVisible] = useState(false);
-  const [unlockingId, setUnlockingId] = useState<string>('');
+  const [unlockingId, setUnlockingId] = useState<string>("");
   const [unlockForm] = Form.useForm();
 
   // 加载账号列表
@@ -91,10 +91,10 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
         setList(res.data.list);
         setTotal(res.data.total);
       } else {
-        message.error(res.message || '加载失败');
+        message.error(res.message || "加载失败");
       }
     } catch (e) {
-      message.error('加载账号列表失败');
+      message.error("加载账号列表失败");
     } finally {
       setLoading(false);
     }
@@ -151,16 +151,16 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
         }
         const res = await updateADServiceAccount(updateData);
         if (res.code === 0) {
-          message.success('更新成功');
+          message.success("更新成功");
           setEditModalVisible(false);
           loadList();
           loadStats();
         } else {
-          message.error(res.message || '更新失败');
+          message.error(res.message || "更新失败");
         }
       } else {
         if (!values.password) {
-          message.error('请输入密码');
+          message.error("请输入密码");
           return;
         }
         const res = await createADServiceAccount({
@@ -170,12 +170,12 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
           remark: values.remark,
         });
         if (res.code === 0) {
-          message.success('创建成功');
+          message.success("创建成功");
           setEditModalVisible(false);
           loadList();
           loadStats();
         } else {
-          message.error(res.message || '创建失败');
+          message.error(res.message || "创建失败");
         }
       }
     } catch (e) {
@@ -188,14 +188,14 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
     try {
       const res = await deleteADServiceAccount(id);
       if (res.code === 0) {
-        message.success('删除成功');
+        message.success("删除成功");
         loadList();
         loadStats();
       } else {
-        message.error(res.message || '删除失败');
+        message.error(res.message || "删除失败");
       }
     } catch (e) {
-      message.error('删除失败');
+      message.error("删除失败");
     }
   };
 
@@ -205,14 +205,14 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
     try {
       const res = await action(record.id);
       if (res.code === 0) {
-        message.success(record.status === 1 ? '已启用' : '已停用');
+        message.success(record.status === 1 ? "已启用" : "已停用");
         loadList();
         loadStats();
       } else {
-        message.error(res.message || '操作失败');
+        message.error(res.message || "操作失败");
       }
     } catch (e) {
-      message.error('操作失败');
+      message.error("操作失败");
     }
   };
 
@@ -227,17 +227,17 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
     try {
       const values = await unlockForm.validateFields();
       if (values.reason.length < 10) {
-        message.error('解锁原因至少 10 字符');
+        message.error("解锁原因至少 10 字符");
         return;
       }
       const res = await unlockADServiceAccount({ id: unlockingId, reason: values.reason });
       if (res.code === 0) {
-        message.success('解锁成功');
+        message.success("解锁成功");
         setUnlockModalVisible(false);
         loadList();
         loadStats();
       } else {
-        message.error(res.message || '解锁失败');
+        message.error(res.message || "解锁失败");
       }
     } catch (e) {
       // 校验失败
@@ -247,67 +247,67 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
   // 表格列定义
   const columns: ColumnsType<ADServiceAccount> = [
     {
-      title: '账号',
-      dataIndex: 'username',
-      key: 'username',
+      title: "账号",
+      dataIndex: "username",
+      key: "username",
       width: 200,
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
       width: 100,
       render: (status: number) => (
-        <Tag color={STATUS_MAP[status]?.color || 'default'}>
-          {STATUS_MAP[status]?.text || '未知'}
+        <Tag color={STATUS_MAP[status]?.color || "default"}>
+          {STATUS_MAP[status]?.text || "未知"}
         </Tag>
       ),
     },
     {
-      title: '失败次数',
-      dataIndex: 'failureCount',
-      key: 'failureCount',
+      title: "失败次数",
+      dataIndex: "failureCount",
+      key: "failureCount",
       width: 100,
     },
     {
-      title: '上次失败原因',
-      dataIndex: 'lastFailureReason',
-      key: 'lastFailureReason',
+      title: "上次失败原因",
+      dataIndex: "lastFailureReason",
+      key: "lastFailureReason",
       ellipsis: true,
       render: (text?: string) =>
         text ? (
           <Tooltip title={text}>
-            <span>{text.length > 30 ? text.slice(0, 30) + '...' : text}</span>
+            <span>{text.length > 30 ? text.slice(0, 30) + "..." : text}</span>
           </Tooltip>
         ) : (
-          '-'
+          "-"
         ),
     },
     {
-      title: '上次成功',
-      dataIndex: 'lastSuccessAt',
-      key: 'lastSuccessAt',
+      title: "上次成功",
+      dataIndex: "lastSuccessAt",
+      key: "lastSuccessAt",
       width: 160,
-      render: (t?: string) => (t ? formatDateTime(t) : '从未'),
+      render: (t?: string) => (t ? formatDateTime(t) : "从未"),
     },
     {
-      title: '熔断到期',
-      dataIndex: 'circuitBreakerUntil',
-      key: 'circuitBreakerUntil',
+      title: "熔断到期",
+      dataIndex: "circuitBreakerUntil",
+      key: "circuitBreakerUntil",
       width: 160,
-      render: (t?: string) => (t ? formatDateTime(t) : '-'),
+      render: (t?: string) => (t ? formatDateTime(t) : "-"),
     },
     {
-      title: '备注',
-      dataIndex: 'remark',
-      key: 'remark',
+      title: "备注",
+      dataIndex: "remark",
+      key: "remark",
       ellipsis: true,
     },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       width: 280,
-      fixed: 'right',
+      fixed: "right",
       render: (_, record) => (
         <Space size="small">
           <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
@@ -329,7 +329,7 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
             icon={record.status === 1 ? <CheckCircleOutlined /> : <StopOutlined />}
             onClick={() => handleToggleEnabled(record)}
           >
-            {record.status === 1 ? '启用' : '停用'}
+            {record.status === 1 ? "启用" : "停用"}
           </Button>
           <Popconfirm
             title="确认删除？"
@@ -354,16 +354,16 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
             <Statistic title="账号总数" value={stats.total} />
           </Col>
           <Col span={4}>
-            <Statistic title="可用" value={stats.available} valueStyle={{ color: '#3f8600' }} />
+            <Statistic title="可用" value={stats.available} valueStyle={{ color: "#3f8600" }} />
           </Col>
           <Col span={4}>
             <Statistic title="已停用" value={stats.disabled} />
           </Col>
           <Col span={4}>
-            <Statistic title="熔断中" value={stats.circuitBroken} valueStyle={{ color: '#cf1322' }} />
+            <Statistic title="熔断中" value={stats.circuitBroken} valueStyle={{ color: "#cf1322" }} />
           </Col>
           <Col span={8}>
-            <Statistic title="当前活跃账号" value={stats.currentAccount || '无'} />
+            <Statistic title="当前活跃账号" value={stats.currentAccount || "无"} />
           </Col>
         </Row>
       )}
@@ -397,7 +397,7 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
 
       {/* 新增/编辑 Modal */}
       <Modal
-        title={editing ? '编辑账号' : '新增账号'}
+        title={editing ? "编辑账号" : "新增账号"}
         open={editModalVisible}
         onCancel={() => setEditModalVisible(false)}
         onOk={handleSubmit}
@@ -407,14 +407,14 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
           <Form.Item
             name="username"
             label="账号（UPN 或 sAMAccountName）"
-            rules={[{ required: true, message: '请输入账号' }]}
+            rules={[{ required: true, message: "请输入账号" }]}
           >
             <Input placeholder="如 svc-01@corp.local" disabled={!!editing} />
           </Form.Item>
           <Form.Item
             name="password"
-            label={editing ? '新密码（留空 = 不修改）' : '密码'}
-            rules={editing ? [] : [{ required: true, message: '请输入密码' }]}
+            label={editing ? "新密码（留空 = 不修改）" : "密码"}
+            rules={editing ? [] : [{ required: true, message: "请输入密码" }]}
           >
             <Input.Password placeholder="SM4 加密后传输" />
           </Form.Item>
@@ -437,8 +437,8 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
             name="reason"
             label="解锁原因（至少 10 字符，会记录到操作日志）"
             rules={[
-              { required: true, message: '请填写解锁原因' },
-              { min: 10, message: '解锁原因至少 10 字符' },
+              { required: true, message: "请填写解锁原因" },
+              { min: 10, message: "解锁原因至少 10 字符" },
             ]}
           >
             <Input.TextArea

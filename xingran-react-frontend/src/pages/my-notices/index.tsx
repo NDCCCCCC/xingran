@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import type { FC } from 'react';
+import { useState, useEffect, useCallback } from "react";
+import type { FC } from "react";
 import {
   App,
   Card,
@@ -9,23 +9,23 @@ import {
   Space,
   Tabs,
   Tooltip,
-} from 'antd';
-import { CheckOutlined, CheckSquareOutlined, EyeOutlined } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import { useNavigate } from 'react-router-dom';
-import { useNoticeStore } from '@/store/noticeStore';
-import { getMyNotices, markNoticeAsRead, markAllNoticesAsRead } from '@/lib/noticeApi';
-import { usePagination } from '@/hooks/usePagination';
-import type { Notice } from '@/types/notice';
-import { PRIORITY_COLORS, PRIORITY_LABELS, NOTICE_TYPE_COLORS, NOTICE_TYPE_LABELS } from '@/types/notice';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import 'dayjs/locale/zh-cn';
-import { formatDateTime } from '@/utils/datetime';
-import { createSorter } from '@/utils/tableHelpers';
+} from "antd";
+import { CheckOutlined, CheckSquareOutlined, EyeOutlined } from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
+import { useNavigate } from "react-router-dom";
+import { useNoticeStore } from "@/store/noticeStore";
+import { getMyNotices, markNoticeAsRead, markAllNoticesAsRead } from "@/lib/noticeApi";
+import { usePagination } from "@/hooks/usePagination";
+import type { Notice } from "@/types/notice";
+import { PRIORITY_COLORS, PRIORITY_LABELS, NOTICE_TYPE_COLORS, NOTICE_TYPE_LABELS } from "@/types/notice";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+import "dayjs/locale/zh-cn";
+import { formatDateTime } from "@/utils/datetime";
+import { createSorter } from "@/utils/tableHelpers";
 
 dayjs.extend(relativeTime);
-dayjs.locale('zh-cn');
+dayjs.locale("zh-cn");
 
 /**
  * 用户通知中心页面
@@ -40,7 +40,7 @@ const MyNoticesPage: FC = () => {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [total, setTotal] = useState(0);
   const [allTotal, setAllTotal] = useState(0); // 全部通知总数（用于标签显示）
-  const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'read'>('all');
+  const [activeTab, setActiveTab] = useState<"all" | "unread" | "read">("all");
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize } = usePagination();
@@ -49,7 +49,7 @@ const MyNoticesPage: FC = () => {
   const loadNotices = useCallback(async () => {
     setLoading(true);
     try {
-      const status = activeTab === 'all' ? undefined : activeTab;
+      const status = activeTab === "all" ? undefined : activeTab;
       const response = await getMyNotices({ current: paginationProps.current, pageSize: paginationProps.pageSize, status });
       const data = response.data;
       if (data) {
@@ -57,7 +57,7 @@ const MyNoticesPage: FC = () => {
         setTotal(data.total);
 
         // 如果是"全部" tab，更新 allTotal
-        if (activeTab === 'all') {
+        if (activeTab === "all") {
           setAllTotal(data.total);
         }
 
@@ -66,8 +66,8 @@ const MyNoticesPage: FC = () => {
         setUnreadCount(unreadCount);
       }
     } catch (error) {
-      console.error('加载通知列表失败:', error);
-      message.error('加载失败，请稍后重试');
+      console.error("加载通知列表失败:", error);
+      message.error("加载失败，请稍后重试");
     } finally {
       setLoading(false);
     }
@@ -82,7 +82,7 @@ const MyNoticesPage: FC = () => {
           setAllTotal(response.data.total);
         }
       } catch (error) {
-        console.error('获取全部通知数量失败:', error);
+        console.error("获取全部通知数量失败:", error);
       }
     };
     initAllTotal();
@@ -99,7 +99,7 @@ const MyNoticesPage: FC = () => {
           prev.map((n) => (n.id === notice.id ? { ...n, isRead: true } : n))
         );
       } catch (error) {
-        console.error('标记已读失败:', error);
+        console.error("标记已读失败:", error);
       }
     }
     navigate(`/my-notices/${notice.id}`);
@@ -111,11 +111,11 @@ const MyNoticesPage: FC = () => {
     try {
       await markNoticeAsRead(notice.id);
       markAsRead(notice.id);
-      message.success('已标记为已读');
+      message.success("已标记为已读");
       loadNotices();
     } catch (error) {
-      console.error('标记已读失败:', error);
-      message.error('操作失败，请稍后重试');
+      console.error("标记已读失败:", error);
+      message.error("操作失败，请稍后重试");
     }
   };
 
@@ -124,17 +124,17 @@ const MyNoticesPage: FC = () => {
     try {
       await markAllNoticesAsRead();
       markAllAsRead();
-      message.success('已全部标记为已读');
+      message.success("已全部标记为已读");
       loadNotices();
     } catch (error) {
-      console.error('标记全部已读失败:', error);
-      message.error('操作失败，请稍后重试');
+      console.error("标记全部已读失败:", error);
+      message.error("操作失败，请稍后重试");
     }
   };
 
   // 切换标签页
   const handleTabChange = (key: string) => {
-    setActiveTab(key as 'all' | 'unread' | 'read');
+    setActiveTab(key as "all" | "unread" | "read");
     setCurrent(1);
     loadNotices();
   };
@@ -142,34 +142,34 @@ const MyNoticesPage: FC = () => {
   // 表格列定义
   const columns: ColumnsType<Notice> = [
     {
-      title: '标题',
-      dataIndex: 'noticeTitle',
-      key: 'noticeTitle',
+      title: "标题",
+      dataIndex: "noticeTitle",
+      key: "noticeTitle",
       ellipsis: true,
-      sorter: createSorter<Notice>('noticeTitle', 'string'),
+      sorter: createSorter<Notice>("noticeTitle", "string"),
       render: (text: string, record: Notice) => (
         <Space>
           {!record.isRead && <div className="w-2 h-2 rounded-full bg-blue-500" />}
-          <span className={!record.isRead ? 'font-medium' : ''}>{text}</span>
+          <span className={!record.isRead ? "font-medium" : ""}>{text}</span>
         </Space>
       ),
     },
     {
-      title: '类型',
-      dataIndex: 'noticeType',
-      key: 'noticeType',
+      title: "类型",
+      dataIndex: "noticeType",
+      key: "noticeType",
       width: 80,
-      sorter: createSorter<Notice>('noticeType', 'string'),
+      sorter: createSorter<Notice>("noticeType", "string"),
       render: (type: string) => (
-        <Tag color={NOTICE_TYPE_COLORS[type as '1' | '2']}>{NOTICE_TYPE_LABELS[type as '1' | '2']}</Tag>
+        <Tag color={NOTICE_TYPE_COLORS[type as "1" | "2"]}>{NOTICE_TYPE_LABELS[type as "1" | "2"]}</Tag>
       ),
     },
     {
-      title: '优先级',
-      dataIndex: 'priority',
-      key: 'priority',
+      title: "优先级",
+      dataIndex: "priority",
+      key: "priority",
       width: 80,
-      sorter: createSorter<Notice>('priority', 'number'),
+      sorter: createSorter<Notice>("priority", "number"),
       render: (priority: number) => {
         if (priority === 0) return <span className="text-gray-400">-</span>;
         return (
@@ -178,11 +178,11 @@ const MyNoticesPage: FC = () => {
       },
     },
     {
-      title: '发布时间',
-      dataIndex: 'publishTime',
-      key: 'publishTime',
+      title: "发布时间",
+      dataIndex: "publishTime",
+      key: "publishTime",
       width: 180,
-      sorter: createSorter<Notice>('publishTime', 'date'),
+      sorter: createSorter<Notice>("publishTime", "date"),
       render: (time: string, record: Notice) => (
         <Tooltip title={formatDateTime(time || record.createdAt)}>
           <span className="text-gray-500">{dayjs(time || record.createdAt).fromNow()}</span>
@@ -190,20 +190,20 @@ const MyNoticesPage: FC = () => {
       ),
     },
     {
-      title: '状态',
-      dataIndex: 'isRead',
-      key: 'isRead',
+      title: "状态",
+      dataIndex: "isRead",
+      key: "isRead",
       width: 80,
-      sorter: createSorter<Notice>('isRead', 'boolean'),
+      sorter: createSorter<Notice>("isRead", "boolean"),
       render: (isRead: boolean) => (
-        <Tag color={isRead ? 'default' : 'blue'}>{isRead ? '已读' : '未读'}</Tag>
+        <Tag color={isRead ? "default" : "blue"}>{isRead ? "已读" : "未读"}</Tag>
       ),
     },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       width: 180,
-      fixed: 'right',
+      fixed: "right",
       render: (_, record: Notice) => (
         <Space size="small">
           <Button
@@ -234,9 +234,9 @@ const MyNoticesPage: FC = () => {
   }, [activeTab, paginationProps.current, paginationProps.pageSize, loadNotices]);
 
   const tabItems = [
-    { key: 'all', label: `全部通知 (${allTotal})` },
-    { key: 'unread', label: `未读 (${unreadCount})` },
-    { key: 'read', label: '已读' },
+    { key: "all", label: `全部通知 (${allTotal})` },
+    { key: "unread", label: `未读 (${unreadCount})` },
+    { key: "read", label: "已读" },
   ];
 
   return (
@@ -273,7 +273,7 @@ const MyNoticesPage: FC = () => {
             loadNotices();
           }}
           onRow={(record) => ({
-            className: !record.isRead ? 'bg-blue-50' : '',
+            className: !record.isRead ? "bg-blue-50" : "",
           })}
         />
       </Card>

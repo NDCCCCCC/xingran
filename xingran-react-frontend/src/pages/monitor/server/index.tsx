@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import type { FC } from 'react';
+import { useState, useEffect } from "react";
+import type { FC } from "react";
 import {
   Card,
   Table,
@@ -15,21 +15,21 @@ import {
   Drawer,
   Descriptions,
   App
-} from 'antd';
+} from "antd";
 import {
   SearchOutlined,
   ReloadOutlined,
   EyeOutlined,
   ClusterOutlined,
   CloudServerOutlined
-} from '@ant-design/icons';
-import { post } from '@/lib/api';
-import { usePagination } from '@/hooks/usePagination';
-import type { ColumnsType } from 'antd/es/table';
-import type { BaseResponse, PageResponse } from '@/types';
-import ActionButtons from '@/components/shared/ActionButtons';
-import { formatDateTime } from '@/utils/datetime';
-import { createSorter } from '@/utils/tableHelpers';
+} from "@ant-design/icons";
+import { post } from "@/lib/api";
+import { usePagination } from "@/hooks/usePagination";
+import type { ColumnsType } from "antd/es/table";
+import type { BaseResponse, PageResponse } from "@/types";
+import ActionButtons from "@/components/shared/ActionButtons";
+import { formatDateTime } from "@/utils/datetime";
+import { createSorter } from "@/utils/tableHelpers";
 
 interface ServerInfo {
   id: string;
@@ -63,12 +63,12 @@ const ServerMonitor: FC = () => {
   const [servers, setServers] = useState<ServerInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchForm, setSearchForm] = useState({
-    hostName: '',
+    hostName: "",
     status: undefined
   });
   const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
   const [selectedServer, setSelectedServer] = useState<ServerInfo | null>(null);
-  const [orderByColumn, setOrderByColumn] = useState('timestamp');
+  const [orderByColumn, setOrderByColumn] = useState("timestamp");
   const [isAsc, setIsAsc] = useState(false);
 
   // 使用全局分页 hook
@@ -78,7 +78,7 @@ const ServerMonitor: FC = () => {
   const fetchServers = async (sortCol?: string, sortAsc?: boolean) => {
     setLoading(true);
     try {
-      const result = await post<PageResponse<ServerInfo>>('/monitor/server-info/list', {
+      const result = await post<PageResponse<ServerInfo>>("/monitor/server-info/list", {
         ...searchForm,
         current: paginationProps.current,
         pageSize: paginationProps.pageSize,
@@ -89,8 +89,8 @@ const ServerMonitor: FC = () => {
       setServers(result.data?.list || []);
       setTotal(result.data?.total || 0);
     } catch (error) {
-      console.error('获取服务器列表失败:', error);
-      message.error('网络错误，请稍后重试');
+      console.error("获取服务器列表失败:", error);
+      message.error("网络错误，请稍后重试");
     } finally {
       setLoading(false);
     }
@@ -100,7 +100,7 @@ const ServerMonitor: FC = () => {
   const fetchServerDetail = async (server: ServerInfo) => {
     try {
       // 获取历史指标数据
-      const result = await post<PageResponse<ServerMetrics>>('/monitor/server-metrics/history', {
+      const result = await post<PageResponse<ServerMetrics>>("/monitor/server-metrics/history", {
         serverId: server.id,
         startTime: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 最近24小时
         endTime: new Date().toISOString(),
@@ -110,7 +110,7 @@ const ServerMonitor: FC = () => {
 
       // 历史指标数据已获取但暂未使用
     } catch (error) {
-      console.error('获取服务器指标历史失败:', error);
+      console.error("获取服务器指标历史失败:", error);
     }
   };
 
@@ -131,7 +131,7 @@ const ServerMonitor: FC = () => {
   // 重置
   const handleReset = () => {
     setSearchForm({
-      hostName: '',
+      hostName: "",
       status: undefined
     });
     setCurrent(1);
@@ -146,18 +146,18 @@ const ServerMonitor: FC = () => {
   const handleTableChange = (pagination: any, _filters: Record<string, any>, sorter: any) => {
     if (sorter && sorter.field) {
       setOrderByColumn(sorter.field);
-      setIsAsc(sorter.order === 'ascend');
+      setIsAsc(sorter.order === "ascend");
     }
     setCurrent(pagination.current);
     setPageSize(pagination.pageSize);
     const sortField = sorter && sorter.field ? sorter.field : undefined;
-    const sortAsc = sorter && sorter.field ? sorter.order === 'ascend' : undefined;
+    const sortAsc = sorter && sorter.field ? sorter.order === "ascend" : undefined;
     fetchServers(sortField, sortAsc);
   };
 
   // 格式化内存大小
   const formatMemorySize = (bytes: number): string => {
-    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const units = ["B", "KB", "MB", "GB", "TB"];
     let size = bytes;
     let unitIndex = 0;
 
@@ -171,7 +171,7 @@ const ServerMonitor: FC = () => {
 
   // 格式化网络流量
   const formatNetworkSpeed = (bytes: number): string => {
-    const units = ['B', 'KB', 'MB', 'GB'];
+    const units = ["B", "KB", "MB", "GB"];
     let size = bytes;
     let unitIndex = 0;
 
@@ -190,12 +190,12 @@ const ServerMonitor: FC = () => {
 
   const columns: ColumnsType<ServerInfo> = [
     {
-      title: '主机名',
-      dataIndex: 'hostName',
-      key: 'hostName',
+      title: "主机名",
+      dataIndex: "hostName",
+      key: "hostName",
       width: 160,
       minWidth: 140,
-      sorter: createSorter<ServerInfo>('hostName', 'string'),
+      sorter: createSorter<ServerInfo>("hostName", "string"),
       render: (text: string) => (
         <Space>
           <CloudServerOutlined />
@@ -204,43 +204,43 @@ const ServerMonitor: FC = () => {
       ),
     },
     {
-      title: '操作系统',
-      dataIndex: 'os',
-      key: 'os',
+      title: "操作系统",
+      dataIndex: "os",
+      key: "os",
       width: 140,
       minWidth: 120,
-      sorter: createSorter<ServerInfo>('os', 'string'),
+      sorter: createSorter<ServerInfo>("os", "string"),
     },
     {
-      title: '架构',
-      dataIndex: 'arch',
-      key: 'arch',
+      title: "架构",
+      dataIndex: "arch",
+      key: "arch",
       width: 80,
       minWidth: 70,
-      sorter: createSorter<ServerInfo>('arch', 'string'),
+      sorter: createSorter<ServerInfo>("arch", "string"),
     },
     {
-      title: 'CPU核心',
-      dataIndex: 'cpuCount',
-      key: 'cpuCount',
+      title: "CPU核心",
+      dataIndex: "cpuCount",
+      key: "cpuCount",
       width: 100,
       minWidth: 90,
-      sorter: createSorter<ServerInfo>('cpuCount', 'number'),
+      sorter: createSorter<ServerInfo>("cpuCount", "number"),
       render: (count: number) => (
         <Statistic
           value={count}
-          styles={{ content: { fontSize: '14px' } }}
+          styles={{ content: { fontSize: "14px" } }}
           prefix={<ClusterOutlined />}
         />
       ),
     },
     {
-      title: '内存',
-      dataIndex: 'totalMemory',
-      key: 'totalMemory',
+      title: "内存",
+      dataIndex: "totalMemory",
+      key: "totalMemory",
       width: 180,
       minWidth: 160,
-      sorter: createSorter<ServerInfo>('totalMemory', 'number'),
+      sorter: createSorter<ServerInfo>("totalMemory", "number"),
       render: (total: number, record: ServerInfo) => (
         <div>
           <div>总计: {formatMemorySize(total)}</div>
@@ -256,12 +256,12 @@ const ServerMonitor: FC = () => {
       ),
     },
     {
-      title: '磁盘',
-      dataIndex: 'diskTotal',
-      key: 'diskTotal',
+      title: "磁盘",
+      dataIndex: "diskTotal",
+      key: "diskTotal",
       width: 180,
       minWidth: 160,
-      sorter: createSorter<ServerInfo>('diskTotal', 'number'),
+      sorter: createSorter<ServerInfo>("diskTotal", "number"),
       render: (total: number, record: ServerInfo) => (
         <div>
           <div>总计: {formatMemorySize(total)}</div>
@@ -277,39 +277,39 @@ const ServerMonitor: FC = () => {
       ),
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
       width: 80,
       minWidth: 70,
-      align: 'center' as const,
-      sorter: createSorter<ServerInfo>('status', 'number'),
+      align: "center" as const,
+      sorter: createSorter<ServerInfo>("status", "number"),
       render: (status: number) => (
-        <Tag color={status === 0 ? 'success' : 'error'}>
-          {status === 0 ? '正常' : '异常'}
+        <Tag color={status === 0 ? "success" : "error"}>
+          {status === 0 ? "正常" : "异常"}
         </Tag>
       ),
     },
     {
-      title: '最后活跃时间',
-      dataIndex: 'lastActiveAt',
-      key: 'lastActiveAt',
+      title: "最后活跃时间",
+      dataIndex: "lastActiveAt",
+      key: "lastActiveAt",
       width: 170,
       minWidth: 160,
-      sorter: createSorter<ServerInfo>('lastActiveAt', 'date'),
+      sorter: createSorter<ServerInfo>("lastActiveAt", "date"),
       render: (time: string) => formatDateTime(time),
     },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       width: 100,
       minWidth: 80,
-      fixed: 'right' as const,
+      fixed: "right" as const,
       render: (_, record: ServerInfo) => {
         const actions = [
           {
-            key: 'detail',
-            label: '详情',
+            key: "detail",
+            label: "详情",
             icon: <EyeOutlined />,
             onClick: () => handleViewDetail(record),
           },
@@ -343,10 +343,10 @@ const ServerMonitor: FC = () => {
                 onChange={(value) =>    setSearchForm({ ...searchForm, status: value })}
                 allowClear
                 className="user-form-input"
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
                 options={[
-                  { label: '正常', value: 0 },
-                  { label: '异常', value: 1 }
+                  { label: "正常", value: 0 },
+                  { label: "异常", value: 1 }
                 ]}
                onSearch={() => {}}/>
             </Col>
@@ -407,8 +407,8 @@ const ServerMonitor: FC = () => {
                   {formatMemorySize(selectedServer.diskAvailable)}
                 </Descriptions.Item>
                 <Descriptions.Item label="状态">
-                  <Tag color={selectedServer.status === 0 ? 'success' : 'error'}>
-                    {selectedServer.status === 0 ? '正常' : '异常'}
+                  <Tag color={selectedServer.status === 0 ? "success" : "error"}>
+                    {selectedServer.status === 0 ? "正常" : "异常"}
                   </Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="最后活跃时间">
@@ -426,7 +426,7 @@ const ServerMonitor: FC = () => {
                     value={75.2}
                     precision={1}
                     suffix="%"
-                    styles={{ content: { color: '#cf1322' } }}
+                    styles={{ content: { color: "#cf1322" } }}
                   />
                   <Progress percent={75.2} className="mt-2" />
                 </Col>
@@ -436,7 +436,7 @@ const ServerMonitor: FC = () => {
                     value={68.5}
                     precision={1}
                     suffix="%"
-                    styles={{ content: { color: '#3f8600' } }}
+                    styles={{ content: { color: "#3f8600" } }}
                   />
                   <Progress percent={68.5} className="mt-2" />
                 </Col>
@@ -446,7 +446,7 @@ const ServerMonitor: FC = () => {
                     value={45.8}
                     precision={1}
                     suffix="%"
-                    styles={{ content: { color: '#3f8600' } }}
+                    styles={{ content: { color: "#3f8600" } }}
                   />
                   <Progress percent={45.8} className="mt-2" />
                 </Col>
@@ -470,7 +470,7 @@ const ServerMonitor: FC = () => {
                     value={1234.56}
                     precision={2}
                     suffix="MB/s"
-                    styles={{ content: { color: '#1890ff' } }}
+                    styles={{ content: { color: "#1890ff" } }}
                   />
                 </Col>
                 <Col span={12}>
@@ -479,7 +479,7 @@ const ServerMonitor: FC = () => {
                     value={987.32}
                     precision={2}
                     suffix="MB/s"
-                    styles={{ content: { color: '#52c41a' } }}
+                    styles={{ content: { color: "#52c41a" } }}
                   />
                 </Col>
               </Row>

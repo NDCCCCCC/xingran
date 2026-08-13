@@ -4,8 +4,8 @@
  * 显示用户可访问的仪表盘列表，支持创建、编辑、删除等操作
  */
 
-import { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
 	App,
 	Card,
@@ -17,8 +17,8 @@ import {
 	Input,
 	Row,
 	Col,
-} from 'antd';
-import { DASHBOARD } from '@/constants/routes';
+} from "antd";
+import { DASHBOARD } from "@/constants/routes";
 import {
 	PlusOutlined,
 	EditOutlined,
@@ -28,12 +28,12 @@ import {
 	EyeOutlined,
 	SearchOutlined,
 	ArrowLeftOutlined,
-} from '@ant-design/icons';
-import { useDashboardStore } from '@/store/dashboardStore';
-import { TemplateSelector } from '@/components/dashboard/layout/TemplateSelector';
-import type { Dashboard } from '@/types/dashboard';
-import type { ColumnsType } from 'antd/es/table';
-import { createSorter } from '@/utils/tableHelpers';
+} from "@ant-design/icons";
+import { useDashboardStore } from "@/store/dashboardStore";
+import { TemplateSelector } from "@/components/dashboard/layout/TemplateSelector";
+import type { Dashboard } from "@/types/dashboard";
+import type { ColumnsType } from "antd/es/table";
+import { createSorter } from "@/utils/tableHelpers";
 
 interface DashboardListProps {
 	onNavigateToView?: (id: string) => void;
@@ -46,7 +46,7 @@ const DashboardList: React.FC<DashboardListProps> = ({
 }) => {
 	const { message } = App.useApp();
 	const navigate = useNavigate();
-	const [searchKeyword, setSearchKeyword] = useState('');
+	const [searchKeyword, setSearchKeyword] = useState("");
 	const [showTemplateSelector, setShowTemplateSelector] = useState(false);
 
 	const {
@@ -91,7 +91,7 @@ const DashboardList: React.FC<DashboardListProps> = ({
 				layout: { widgets: [], columns: { desktop: 24, tablet: 12, mobile: 6 }, rowHeight: 60, margin: [16, 16], draggable: true, resizable: true },
 				refreshInterval: 60,
 			});
-			message.success('创建成功');
+			message.success("创建成功");
 			if (onNavigateToEdit) {
 				onNavigateToEdit(dashboard.id);
 			} else {
@@ -106,7 +106,7 @@ const DashboardList: React.FC<DashboardListProps> = ({
 	const handleDelete = async (id: string) => {
 		try {
 			await deleteDashboard(id);
-			message.success('删除成功');
+			message.success("删除成功");
 			handleRefresh();
 		} catch (error) {
 			message.error(`删除失败: ${(error as Error).message}`);
@@ -117,7 +117,7 @@ const DashboardList: React.FC<DashboardListProps> = ({
 	const handleDuplicate = async (id: string) => {
 		try {
 			await duplicateDashboard(id);
-			message.success('复制成功');
+			message.success("复制成功");
 			handleRefresh();
 		} catch (error) {
 			message.error(`复制失败: ${(error as Error).message}`);
@@ -128,7 +128,7 @@ const DashboardList: React.FC<DashboardListProps> = ({
 	const handleSetDefault = async (id: string) => {
 		try {
 			await setDefaultDashboard(id);
-			message.success('设置成功');
+			message.success("设置成功");
 			handleRefresh();
 		} catch (error) {
 			message.error(`设置失败: ${(error as Error).message}`);
@@ -159,11 +159,11 @@ const DashboardList: React.FC<DashboardListProps> = ({
 			return <Tag color="blue">系统</Tag>;
 		}
 		switch (record.scope) {
-			case 'private':
+			case "private":
 				return <Tag>私有</Tag>;
-			case 'dept':
+			case "dept":
 				return <Tag color="green">部门</Tag>;
-			case 'global':
+			case "global":
 				return <Tag color="blue">全局</Tag>;
 			default:
 				return <Tag>私有</Tag>;
@@ -173,36 +173,36 @@ const DashboardList: React.FC<DashboardListProps> = ({
 	// 表格列配置
 	const columns: ColumnsType<Dashboard> = useMemo(() => [
 		{
-			title: '名称',
-			dataIndex: 'name',
-			key: 'name',
+			title: "名称",
+			dataIndex: "name",
+			key: "name",
 			width: 200,
-			sorter: createSorter<Dashboard>('name', 'string'),
+			sorter: createSorter<Dashboard>("name", "string"),
 		},
 		{
-			title: '描述',
-			dataIndex: 'description',
-			key: 'description',
+			title: "描述",
+			dataIndex: "description",
+			key: "description",
 			width: 250,
 			ellipsis: true,
-			sorter: createSorter<Dashboard>('description', 'string'),
+			sorter: createSorter<Dashboard>("description", "string"),
 		},
 		{
-			title: '可见范围',
-			key: 'scope',
+			title: "可见范围",
+			key: "scope",
 			width: 100,
 			render: (_, record) => scopeRender(record),
 		},
 		{
-			title: 'Widget数',
-			key: 'widgetCount',
+			title: "Widget数",
+			key: "widgetCount",
 			width: 100,
-			sorter: createSorter<Dashboard>('widgetCount', 'number'),
+			sorter: createSorter<Dashboard>("widgetCount", "number"),
 			render: (_, record) => record.layout.widgets.length,
 		},
 		{
-			title: '类型',
-			key: 'type',
+			title: "类型",
+			key: "type",
 			width: 120,
 			render: (_, record) => (
 				<Space size="small">
@@ -212,22 +212,22 @@ const DashboardList: React.FC<DashboardListProps> = ({
 			),
 		},
 		{
-			title: '状态',
-			dataIndex: 'status',
-			key: 'status',
+			title: "状态",
+			dataIndex: "status",
+			key: "status",
 			width: 80,
-			sorter: createSorter<Dashboard>('status', 'number'),
+			sorter: createSorter<Dashboard>("status", "number"),
 			render: (status) => (
-				<Tag color={status === 0 ? 'green' : 'red'}>
-					{status === 0 ? '正常' : '停用'}
+				<Tag color={status === 0 ? "green" : "red"}>
+					{status === 0 ? "正常" : "停用"}
 				</Tag>
 			),
 		},
 		{
-			title: '操作',
-			key: 'actions',
+			title: "操作",
+			key: "actions",
 			width: 240,
-			fixed: 'right' as const,
+			fixed: "right" as const,
 			render: (_, record) => (
 				<Space size="small" wrap>
 					<Button
@@ -287,7 +287,7 @@ const DashboardList: React.FC<DashboardListProps> = ({
 	return (
 		<div className="dashboard-list-page">
 			<div className="dashboard-list-page__header" style={{ marginBottom: 16 }}>
-				<Space style={{ width: '100%', justifyContent: 'space-between' }}>
+				<Space style={{ width: "100%", justifyContent: "space-between" }}>
 					<Space>
 						<Button
 							icon={<ArrowLeftOutlined />}
