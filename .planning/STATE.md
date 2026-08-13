@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: Milestone History
-status: executing
+status: verifying
 stopped_at: Completed 61-01-PLAN.md
-last_updated: "2026-08-13T08:55:14Z"
+last_updated: "2026-08-13T09:47:41.675Z"
 last_activity: 2026-08-13
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 8
-  completed_plans: 6
-  percent: 75
+  completed_plans: 7
+  percent: 80
 ---
 
 # Project State
@@ -27,16 +27,16 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-12)
 
 **Core value**: 端到端运维可观测与审计能力——每个写操作产生可追溯记录(who/when/what/from-where/before-after-state),敏感字段自动脱敏。API Key 作为 JWT 之外的第二条认证通道,其认证链、作用域校验、使用日志必须真实生效且可观测;Phase 61 落地资源级权限矩阵与限流生产调优。
 
-**Current focus**: v1.21 Phase 61 Plan 02 — RateLimitByScope 生产调优(QUAL-03)
+**Current focus**: v1.21 Phase 61 — 两 plan 全部完成(AUTH-04 + QUAL-03),待 phase verification
 
 ## Current Position
 
 Phase: 61 (resource-permission-matrix-and-rate-limit-tuning) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-13
 
-Progress: [████████░░] 75%
+Progress: [█████████░] 88%
 
 ## Accumulated Context
 
@@ -60,6 +60,16 @@ Progress: [████████░░] 75%
 - **D-09**: User 权限加载失败(DB error / UserID nil / service error) → 401 fail-closed
 - **D-10**: `c.Set("username", apiKey.User.Username)` + `c.Set("nickname", apiKey.User.Nickname)`(ValidateAPIKey 已 `Preload("User")`)
 - **D-20/D-21**: 三层测试(单元 + 中间件单元 + 集成),无 gomock,真实 `permission.Service` + sqlite in-memory
+
+### Phase 61 Plan 02 Locked Decisions (QUAL-03)
+
+- **D-11**: `RateLimitByScope(rateLimiter, action string)` 新增 action 参数,注册期 `requiredScope := getRequiredScope(action)` 闭包捕获;`getRequiredScope` 扩展 `list → read`
+- **D-12**: 多 scope 选择 action-aware 严格语义 — 精确匹配 requiredScope → admin 覆盖 → 403 fail-closed(无 fallback);提取纯函数 `SelectScope(scopes, inheritPerms, action)` 直接可单测,不新增 context 中转键
+- **D-13**: `InheritPerms=true` 短路走 default 限额(细粒度 permission code 不参与 action 匹配)
+- **D-14**: `RequireScope` 硬鉴权 / `RateLimitByScope` 精细限流职责分工,两中间件保留
+- **D-15/D-16/D-17**: 12 个 `rate_limit.{read|write|admin|default}.{per_minute|per_hour|per_day}` 配置键复用 CacheConfigService(独立 rateLimits map,次数语义),默认值与既有硬编码一致,Min/Max 范围校验
+- **D-18**: `RateLimiter` 移除硬编码 limits map,改 `RateLimitProvider` 接口注入;`NewRateLimiter(nil)` 兜底 staticRateLimitProvider;router.go 用 `core.CacheConfigService` 字段(非 getter)
+- **D-19**: reload 后新阈值仅对新请求生效,在途滑动窗口保留旧阈值
 
 ### v1.21 — 根因调查结论(ground-truth 已验证)
 
@@ -147,9 +157,9 @@ Full deferred detail in [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-13T08:55:14Z
+Last session: 2026-08-13T09:45:30.356Z
 Stopped at: Completed 61-01-PLAN.md
-Resume file: .planning/phases/61-resource-permission-matrix-and-rate-limit-tuning/61-01-SUMMARY.md
+Resume file: None
 
 **Milestone status:** v1.21 IN PROGRESS — **Phase 61 Plan 01 COMPLETE** (commits c55a3c5 + cba12ce + 1eae873 + 3a71c11): Task 1 创建 `pkg/permission/resource_action_map.go` 静态 map 覆盖 system:* 11 资源 59 组合 + 单元测试; Task 2 改造 `MultiAuth`/`setUserContextForAPIKey`/`RequireAPIKeyResourcePermission` + `internal/api/router.go` 调用形态,实现 D-06/D-07/D-09/D-10; Task 3 新增 8 个 `RequireAPIKeyResourcePermission` 中间件单测 + 5 个 `InheritPerms` sqlite 集成测。`go build ./...` exit 0,核心包测试 PASS,既有 Phase 57/59/60 回归锚 PASS。
 

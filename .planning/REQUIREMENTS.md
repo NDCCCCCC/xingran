@@ -35,7 +35,7 @@
 
 - [x] **QUAL-01**: `RateLimitByScope` 的限流响应头 `X-RateLimit-Limit` / `X-RateLimit-Remaining` 用 `strconv.Itoa` 序列化,而非 `string(rune(int))` 编码错误(P2)
 - [x] **QUAL-02**: 为 `MultiAuth` / `setUserContextForAPIKey` / `RequireScope` 补充集成测试,覆盖"API Key 认证 → 上下文写入 → 作用域校验"链路,防止 P0-2 类型断言回归(当前 `apikey_test.go` 仅测 3 个纯函数,无集成覆盖)
-- [ ] **QUAL-03** (ex-FUTURE-APIKEY-02, Phase 61): `RateLimitByScope` 随 MultiAuth 生产挂载全量接入生产路由的配置与调优 — 多 scope key 的限流作用域选择逻辑正确(不再任意只取首个 scope);仅在 Phase 60 AUTH-03=启用 后执行
+- [x] **QUAL-03** (ex-FUTURE-APIKEY-02, Phase 61): `RateLimitByScope` 随 MultiAuth 生产挂载全量接入生产路由的配置与调优 — 多 scope key 的限流作用域选择逻辑正确(不再任意只取首个 scope);仅在 Phase 60 AUTH-03=启用 后执行
 
 ## v2 Requirements (Future)
 
