@@ -58,22 +58,31 @@ func MultiAuth(apiKeyService system.APIKeyService, usageLogger services.UsageLog
 		// 设置用户上下文（GORM已自动反序列化Scopes为[]string）
 		setUserContextForAPIKey(c, apiKey, apiKey.Scopes)
 
-		// 异步记录使用日志
-		go func() {
-			userID := ""
-			if apiKey.UserID != nil {
-				userID = *apiKey.UserID
-			}
-			usageLogger.LogUsage(c.Request.Context(), &services.LogUsageRequest{
-				APIKeyID: apiKey.ID,
-				UserID:   userID,
-				Method:   c.Request.Method,
-				Path:     c.Request.URL.Path,
-				ClientIP: c.ClientIP(),
-			})
-		}()
+		// OBSERV-01: 计时前置，c.Next() 后捕获真实响应结果。
+		// 先例: pkg/middleware/logger.go:19-28 + :47-49（gin 标准记录模式）。
+		start := time.Now()
+		c.Next() // 下游 handler / RequireScope / RateLimitByScope 执行完毕
 
-		c.Next()
+		// c.Next() 返回后: 真实状态码 / 耗时此刻才可用 (OBSERV-01)
+		statusCode := c.Writer.Status()
+		duration := time.Since(start).Milliseconds()
+
+		userID := ""
+		if apiKey.UserID != nil {
+			userID = *apiKey.UserID
+		}
+
+		// D-02a: middleware 不再包外层 go func; LogUsage 内部已 go logUsageAsync()。
+		usageLogger.LogUsage(c.Request.Context(), &services.LogUsageRequest{
+			APIKeyID:   apiKey.ID,
+			UserID:     userID,
+			Method:     c.Request.Method,
+			Path:       c.Request.URL.Path,
+			ClientIP:   c.ClientIP(),
+			StatusCode: statusCode,                            // 新填 (OBSERV-01)
+			Duration:   int(duration),                         // 新填 (OBSERV-01)
+			Success:    statusCode >= 200 && statusCode < 300, // 新填 (D-01)
+		})
 	}
 }
 
