@@ -305,6 +305,7 @@ func MigrateModelList() []interface{} {
 		&models.ConfigBackup{},
 		&models.DeviceMACAddress{},
 		&models.DevicePortStatus{},
+		&models.LLDPNeighborInfo{}, // LLDP 邻居信息(拓扑发现)
 		&models.PortWriteAudit{}, // Phase 52: 端口写审计 append-only 表
 		&models.DeviceDiscovery{},
 		&models.DeviceEnrichmentTask{},
@@ -355,17 +356,21 @@ func MigrateModelList() []interface{} {
 		&models.ADSyncLog{},
 		// OU组映射相关模型（替代旧的部门组映射）
 		&models.OUGroupMapping{},
+		&models.OUGroupMappingSyncLog{}, // OU 组映射同步日志
 		// VDI虚拟化相关模型
 		&models.VDIVirtualMachine{},
 		&models.VDIServer{},
 		&models.VDIResourceGroup{},
 		&models.VDIUserBinding{},
+		&models.VDISyncLog{},
 		// 运维管理相关模型（Workstation 复用系统已有的 sys_workstation）
 		&operations.OpsBuilding{},
 		&operations.OpsFloor{},
 		&operations.OpsServerRoom{},
 		&operations.OpsDedicatedLine{},
 		&operations.OpsRoomDevice{},
+		&operations.OpsRoomNetworkDevice{},
+		&operations.OpsRoomPhoto{},
 		&operations.OpsInfoPoint{},
 		&models.Asset{},
 		// 仪表盘系统相关模型
@@ -373,6 +378,9 @@ func MigrateModelList() []interface{} {
 		&models.DashboardVersion{},
 		// Phase 46 R5: 半自动修复建议表
 		&models.SysReconciliationFixSuggestion{},
+		// 对账异常表(原 migration_174 带 GiST 索引, 归档于 archive/applied 不自动跑;
+		// 此处补注册进 AutoMigrate 建表, GiST 索引可选 — 不影响功能, 仅 IP 匹配性能)
+		&models.SysReconciliationException{},
 	}
 }
 
