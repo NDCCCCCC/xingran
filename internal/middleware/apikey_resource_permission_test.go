@@ -77,6 +77,22 @@ func TestRequireAPIKeyResourcePermission_MissingScope(t *testing.T) {
 	assert.Equal(t, 403, w.Code, "edit 需要 write, scopes=[read] 应 403")
 }
 
+// TestRequireAPIKeyResourcePermission_WriteActionReadScopeDenied WR-04/BL-01 回归锚:
+// map 真实词汇表(D-04)中的写 action(remove)+ scopes=["read"] 必须 403。
+// BL-01 修复前 getRequiredScope("remove") 兜底 "read",只读 key 可借粗粒度支路
+// 通过写操作校验(权限提升)。修复后 remove → write,read scope 不再命中。
+func TestRequireAPIKeyResourcePermission_WriteActionReadScopeDenied(t *testing.T) {
+	w := runProbeWithScopes(t, "system:user", "remove", []string{"read"})
+	assert.Equal(t, 403, w.Code, "remove 是写 action, scopes=[read] 应 403 (BL-01 回归锚)")
+}
+
+// TestRequireAPIKeyResourcePermission_WriteActionWriteScopeAllowed WR-04 对照:
+// 写 action(remove)+ scopes=["write"] → 200,确认 fail-closed 不误伤合法写 key。
+func TestRequireAPIKeyResourcePermission_WriteActionWriteScopeAllowed(t *testing.T) {
+	w := runProbeWithScopes(t, "system:user", "remove", []string{"write"})
+	assert.Equal(t, 200, w.Code, "remove + scopes=[write] 应通过")
+}
+
 // TestRequireAPIKeyResourcePermission_UnmappedResource monitor:* 不在 map (D-02
 // 范围限定),即使 admin 也必须 403 (D-03 fail-closed)。
 func TestRequireAPIKeyResourcePermission_UnmappedResource(t *testing.T) {

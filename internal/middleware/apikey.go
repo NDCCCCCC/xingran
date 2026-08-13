@@ -325,10 +325,13 @@ func RequireAPIKeyResourcePermission(resource string, action string) gin.Handler
 		}
 
 		// 三种形式 union 匹配: admin 通配 / 细粒度 PermissionCode / 粗粒度 scope
-		requiredScope := getRequiredScope(action)
+		// BL-01 修复: 粗粒度支路仅在 action 属于已知词汇表(actionScopeMap)时参与
+		// 匹配;未知 action 不再兜底 "read" — 粗粒度支路直接不匹配(fail-closed,
+		// 与 D-03/D-12 一致),只剩 admin 通配 / 细粒度 PermissionCode 两支路可放行。
+		requiredScope, actionKnown := actionScopeMap[action]
 		hasPerm := false
 		for _, scope := range userScopes {
-			if scope == "admin" || scope == string(permCode) || scope == requiredScope {
+			if scope == "admin" || scope == string(permCode) || (actionKnown && scope == requiredScope) {
 				hasPerm = true
 				break
 			}
@@ -343,20 +346,33 @@ func RequireAPIKeyResourcePermission(resource string, action string) gin.Handler
 	}
 }
 
-// getRequiredScope 根据操作获取所需作用域（私有函数）
-// 映射规则：view/create/edit/delete -> read/write, list -> read (Phase 61 QUAL-03 D-11)
-func getRequiredScope(action string) string {
-	// 操作到作用域的映射
-	scopeMap := map[string]string{
-		"list":   "read", // Phase 61 QUAL-03 D-11: list 操作映射到 read
-		"view":   "read",
-		"create": "write",
-		"edit":   "write",
-		"delete": "write",
-	}
+// actionScopeMap action → 所需 scope 词汇表(包级唯一真相源)。
+//
+// BL-01 修复(Phase 61 review): 与 pkg/permission/resource_action_map.go 的
+// D-04 action 词汇表对齐 — list/view/add/edit/remove/export/import/resetPwd
+// 全覆盖;create/delete 为历史别名保留(create≡add, delete≡remove,
+// 见 resource_action_map.go 头注「remove 是 system:* 约定, delete 是 network:* 约定」)。
+// export 归为 read(只读导出,不修改数据)。
+var actionScopeMap = map[string]string{
+	"list":     "read",
+	"view":     "read",
+	"add":      "write",
+	"edit":     "write",
+	"remove":   "write",
+	"create":   "write", // 历史别名, 同 add
+	"delete":   "write", // 历史别名, 同 remove
+	"export":   "read",  // 只读导出
+	"import":   "write",
+	"resetPwd": "write",
+}
 
-	// 如果操作不在映射中，默认为 read
-	if scope, ok := scopeMap[action]; ok {
+// getRequiredScope 根据操作获取所需作用域（私有函数）
+// 映射规则: 见 actionScopeMap(BL-01 修复后与 resource_action_map D-04 词汇表对齐)。
+// 未知 action 兜底 "read" — 仅 RateLimitByScope/SelectScope 限流路径使用(D-11);
+// RequireAPIKeyResourcePermission 鉴权路径对未知 action fail-closed(见该函数内
+// actionKnown 判断),不经过本兜底。
+func getRequiredScope(action string) string {
+	if scope, ok := actionScopeMap[action]; ok {
 		return scope
 	}
 	return "read"

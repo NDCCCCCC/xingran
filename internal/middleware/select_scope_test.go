@@ -58,6 +58,24 @@ func TestSelectScope_DefaultReadFallback(t *testing.T) {
 	assert.True(t, allowed)
 }
 
+// TestSelectScope_WriteActionReadScopeDenied WR-04/BL-01 回归锚:
+// map 真实词汇表(D-04)中的写 action(remove)+ scopes=["read"] → fail-closed。
+// BL-01 修复前 remove 兜底 read → 返回 ("read", true);修复后 remove → write,
+// scopes 不含 write 且无 admin → ("", false)。
+func TestSelectScope_WriteActionReadScopeDenied(t *testing.T) {
+	scope, allowed := SelectScope([]string{"read"}, false, "remove")
+	assert.Equal(t, "", scope)
+	assert.False(t, allowed, "remove 是写 action, scopes=[read] 应 fail-closed (BL-01 回归锚)")
+}
+
+// TestSelectScope_WriteActionWriteScopeAllowed WR-04 对照:
+// 写 action(add)+ scopes=["write"] → ("write", true),确认词汇表扩展后正常命中。
+func TestSelectScope_WriteActionWriteScopeAllowed(t *testing.T) {
+	scope, allowed := SelectScope([]string{"write"}, false, "add")
+	assert.Equal(t, "write", scope)
+	assert.True(t, allowed, "add 是写 action, scopes=[write] 应精确命中")
+}
+
 // TestSelectScope_MultiScopeNotFirst D-12 核心: 多 scope 时选 action 匹配的
 // (list → read),而非任意 scopes[0]=admin — 替代原 getScopeFromContext 的 scopes[0] 语义
 func TestSelectScope_MultiScopeNotFirst(t *testing.T) {

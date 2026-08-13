@@ -148,6 +148,22 @@ func TestRateLimitByScope_MultiScope_SelectsMatchingNotFirst(t *testing.T) {
 	assert.True(t, probe.allowed)
 }
 
+// TestRateLimitByScope_ActionRemoveRequiresWrite WR-04/BL-01 回归锚:
+// action=remove(写 action)需要 write,scopes=["read"] → 403 fail-closed。
+// BL-01 修复前 remove 经 getRequiredScope 兜底 read,只读 key 的写请求会被
+// 按 read 档限流放行;修复后按 write 档校验,read scope 直接 403。
+func TestRateLimitByScope_ActionRemoveRequiresWrite(t *testing.T) {
+	probe := &scopeProbe{}
+	router := newRateLimitTestRouter("remove", map[string]interface{}{
+		"scopes":    []string{"read"},
+		"auth_type": "api_key",
+	}, probe)
+
+	w := servePing(router)
+	assert.Equal(t, 403, w.Code, "remove 是写 action, scopes=[read] 应 403 (BL-01 回归锚)")
+	assert.False(t, probe.called, "403 拒绝路径不应进入下游 handler")
+}
+
 // TestRateLimitByScope_NotAPIKeyAuth_Skip 既有行为保留: 非 API Key 认证(jwt)
 // 跳过限流,handler 继续执行,不写 X-RateLimit-* 响应头
 func TestRateLimitByScope_NotAPIKeyAuth_Skip(t *testing.T) {
