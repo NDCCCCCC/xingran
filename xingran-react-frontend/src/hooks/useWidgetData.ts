@@ -175,7 +175,6 @@ export function useBatchWidgetData(
 
 	// P0-3: 用 ref 保存最新的 widgets 数组,避免数组引用抖动导致 effect 反复重建
 	const widgetsRef = useRef(widgets);
-	widgetsRef.current = widgets;
 	// P1-H1: mounted 守卫
 	const mountedRef = useRef(true);
 
@@ -198,7 +197,7 @@ export function useBatchWidgetData(
 					try {
 						const result = await dataFetcher.fetch(widget.dataSource);
 						results[widget.id] = result.data;
-					} catch (error) {
+					} catch (_error) {
 						results[widget.id] = null;
 					}
 				})

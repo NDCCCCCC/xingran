@@ -24,7 +24,7 @@ import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
   Table, Button, Space, Form, Input, InputNumber, Select,
-  Tag, Card, DatePicker, List, Grid, Spin, Tooltip, Skeleton,
+  Tag, Card, DatePicker, List, Grid, Tooltip, Skeleton,
   Typography, App,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";

@@ -17,7 +17,6 @@
 
 import { useEffect, useState } from "react";
 import { Modal, Form, Select, Input, InputNumber, App } from "antd";
-import type { MessageInstance } from "antd/es/message/interface";
 import { useNavigate } from "react-router-dom";
 import type { DevicePortStatus } from "@/types/network";
 import { writeSetAccessVlan } from "@/lib/api/networkApi";

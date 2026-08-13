@@ -3,7 +3,7 @@
  * 工位卡片视图
  */
 
-import { Row, Col, Card, Tag, Popconfirm, Button } from "antd";
+import { Row, Col, Card, Tag, Popconfirm } from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { WorkstationOps } from "@/types";
 import { getWorkstationTypeText, getWorkstationStatusText, getWorkstationStatusColor } from "../constants";

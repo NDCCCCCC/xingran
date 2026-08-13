@@ -3,7 +3,7 @@
  * 部门数据管理 Hook
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import type { Department } from "@/types";
 import { post, get } from "@/lib/api";
 import type { DeptStatistics, DeptUser, ParentOption } from "../types";

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 系统菜单管理页面
  * System Menu Management Page
  */
@@ -39,8 +39,8 @@ import IconSelect from "@/components/IconSelect";
 import { formatDateTime } from "@/utils/datetime";
 
 // 导入提取的模块
-import { MENU_TYPE_OPTIONS, MENU_STATUS_OPTIONS, getMenuIcon, getMenuTypeTag, DEFAULT_FORM_VALUES } from "./constants";
-import { flattenTree, buildParentOptions, renderTreeData, renderMenuName, type ParentOption } from "./utils";
+import { MENU_TYPE_OPTIONS, MENU_STATUS_OPTIONS, getMenuTypeTag, DEFAULT_FORM_VALUES } from "./constants";
+import { renderTreeData, renderMenuName } from "./utils";
 import { useMenuData, useMenuActions } from "./hooks";
 
 const { Option } = Select;

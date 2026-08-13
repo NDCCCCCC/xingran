@@ -26,7 +26,6 @@ import {
   ClockCircleOutlined,
 } from "@ant-design/icons";
 
-import type { JobInfo } from "./types";
 import { STATUS_OPTIONS, MISFIRE_POLICY_OPTIONS, DEFAULT_FORM_VALUES, DEFAULT_SEARCH_FORM } from "./constants";
 import { getJobColumns, getJobLogColumns } from "./columns";
 import { useJobData, useJobActions } from "./hooks";

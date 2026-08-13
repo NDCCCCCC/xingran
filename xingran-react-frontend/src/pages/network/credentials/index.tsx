@@ -1,4 +1,4 @@
-﻿import type { FC } from "react";
+import type { FC } from "react";
 import {
   Table,
   Button,
@@ -24,9 +24,8 @@ import {
   ReloadOutlined,
   KeyOutlined,
   ApiOutlined,
-  ExportOutlined,
 } from "@ant-design/icons";
-import type { AuthCredential, BaseResponse, PageResponse } from "@/types";
+import type { AuthCredential, PageResponse } from "@/types";
 import { formatDateTime } from "@/utils/datetime";
 import { post } from "@/lib/api";
 import { batchExport } from "@/lib/api/networkApi";
@@ -37,7 +36,6 @@ import { useState, useEffect, useMemo } from "react";
 import ActionButtons from "@/components/shared/ActionButtons";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
-import { DownloadOutlined } from "@ant-design/icons";
 import { usePagination } from "@/hooks/usePagination";
 
 const { Option } = Select;

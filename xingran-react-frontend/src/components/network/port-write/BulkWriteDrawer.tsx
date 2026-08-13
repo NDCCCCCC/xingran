@@ -39,7 +39,6 @@ import {
   Typography,
   App,
 } from "antd";
-import type { MessageInstance } from "antd/es/message/interface";
 import { useNavigate } from "react-router-dom";
 import type { DevicePortStatus, PortResult, PortWriteAction, BatchWriteRequest, BatchResult } from "@/types/network";
 import { batchWritePorts } from "@/lib/api/networkApi";

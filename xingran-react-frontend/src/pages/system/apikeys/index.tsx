@@ -44,8 +44,7 @@ import {
   deleteAPIKey,
   toggleAPIKeyStatus,
 } from "@/api/apikey";
-import type { APIKey, CreateAPIKeyRequest, UpdateAPIKeyRequest, APIKeyListParams } from "@/types/apikey";
-import type { PageData } from "@/types/apikey";
+import type { APIKey, CreateAPIKeyRequest, UpdateAPIKeyRequest } from "@/types/apikey";
 import { formatDateTime } from "@/utils/datetime";
 import LogsModal from "./LogsModal";
 

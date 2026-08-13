@@ -1,4 +1,4 @@
-﻿import type { FC } from "react";
+import type { FC } from "react";
 import {
   Table,
   Button,
@@ -47,7 +47,7 @@ import {
   ErrorAlertWithRetry,
 } from "@/components/shared";
 import ActionButtons, { type ActionButton } from "@/components/shared/ActionButtons";
-import { DownloadOutlined, SettingOutlined } from "@ant-design/icons";
+import { SettingOutlined } from "@ant-design/icons";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { useMenuStore } from "@/store/menuStore";
 import { PortWriteModal } from "@/components/network/port-write/PortWriteModal";

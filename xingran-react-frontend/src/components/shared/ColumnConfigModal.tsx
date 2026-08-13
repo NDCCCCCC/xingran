@@ -5,7 +5,6 @@ import {
   Input,
   InputNumber,
   Button,
-  Space,
 } from "antd";
 import { SearchOutlined, HolderOutlined } from "@ant-design/icons";
 import { DndContext, closestCenter } from "@dnd-kit/core";

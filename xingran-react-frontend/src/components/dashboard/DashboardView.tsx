@@ -9,7 +9,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { App, notification, Badge, Tooltip, Spin, Alert, Result, Button, Empty } from "antd";
-import { WifiOutlined, DisconnectOutlined, ReloadOutlined, SyncOutlined, WarningOutlined, ReloadOutlined as RefreshIcon } from "@ant-design/icons";
+import { WifiOutlined, DisconnectOutlined, SyncOutlined, WarningOutlined, ReloadOutlined as RefreshIcon } from "@ant-design/icons";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useWidgetPolling } from "@/hooks/useWidgetPolling";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";

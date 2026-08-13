@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { FC } from "react";
 import {
   Table,
@@ -31,12 +31,11 @@ import { batchExport } from "@/lib/api/networkApi";
 import type { FormInstance } from "antd/es/form";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
-import { DownloadOutlined } from "@ant-design/icons";
 import { usePagination } from "@/hooks/usePagination";
 import { useServerSort } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { isFormValidationError } from "@/utils/errorHandler";
-import type { DeviceDiscovery, NetworkDevice } from "@/types";
+import type { DeviceDiscovery } from "@/types";
 
 const { Option } = Select;
 

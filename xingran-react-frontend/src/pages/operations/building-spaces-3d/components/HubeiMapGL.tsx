@@ -6,7 +6,6 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { App, Spin, Badge, List, Tag, Button } from "antd";
 import {
-  ApartmentOutlined,
   EyeOutlined,
   EyeInvisibleOutlined,
   CompressOutlined,
@@ -14,7 +13,7 @@ import {
 } from "@ant-design/icons";
 import type { BuildingItem } from "../types";
 import { useVisualizationStore } from "@/store/visualizationStore";
-import { loadBaiduMapGLScript, isBaiduMapGLLoaded } from "./BaiduMapScript";
+import { loadBaiduMapGLScript } from "./BaiduMapScript";
 import {
   BAIDU_MAP_AK,
   MAP_CONFIG,
@@ -40,7 +39,7 @@ import {
   filterBuildingsByZoom,
   animateViewTransition,
 } from "../utils";
-import { getBMapGL, type BMapGLNamespace, type BMapMap, type BMapMapGL, type BMapMarker, type BMapInfoWindow, type BMapPolygon } from "@/types/baidu-map";
+import { getBMapGL, type BMapGLNamespace, type BMapMapGL, type BMapMarker, type BMapInfoWindow, type BMapPolygon } from "@/types/baidu-map";
 
 // ============ 类型定义 ============
 

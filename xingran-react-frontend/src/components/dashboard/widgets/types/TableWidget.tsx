@@ -9,7 +9,6 @@ import { Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { TableDisplayConfig, WidgetConfig } from "@/types/dashboard";
 import { BaseWidget } from "../base/BaseWidget";
-import type { BaseWidgetProps } from "../base/BaseWidget";
 import { useWidgetData } from "@/hooks/useWidgetData";
 
 interface TableWidgetProps {

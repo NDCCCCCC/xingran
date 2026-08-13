@@ -13,10 +13,9 @@ import { fetchPublicKey, encryptWithSM2, clearPublicKeyCache } from "@/utils/sm2
 import {
 	handleHttpResponseError,
 	handleNetworkError,
-	handleParseError,
 } from "@/utils/errorHandler";
 import type { BaseResponse } from "@/types/base";
-import { getCachedEncryptionConfig, clearEncryptionConfigCache } from "@/services/encryptionConfig";
+import { clearEncryptionConfigCache } from "@/services/encryptionConfig";
 import { LOGIN } from "@/constants/routes";
 
 // 工具函数：生成请求ID

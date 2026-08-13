@@ -21,11 +21,8 @@ import {
 import {
 	SunOutlined,
 	MoonOutlined,
-	BgColorsOutlined,
-	MenuOutlined,
 } from "@ant-design/icons";
 import { useSettingsStore } from "@/store/settingsStore";
-import type { UserPreferences } from "@/types/config";
 import { themePresets } from "@/design-system/themes";
 import type { ColorPickerProps } from "antd";
 import { applyPrimaryColor, applySidebarBackgroundColor } from "@/design-system/themes";

@@ -3,7 +3,6 @@
  */
 
 import { Modal, Form, Select, DatePicker, App } from "antd";
-import type { FormInstance } from "antd/es/form";
 import { BATCH_HOLIDAY_NAME_OPTIONS, MAX_BATCH_DAYS } from "../constants";
 import type { BatchHolidayFormValues } from "../types";
 

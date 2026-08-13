@@ -8,8 +8,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { App, Table, Button, Space, Tag, Popconfirm, Modal, Form, Input, Alert, Collapse, Tooltip } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined, StarOutlined, HistoryOutlined, CheckCircleOutlined } from "@ant-design/icons";
-import type { WorkstationDevice, DeviceFormData, DeviceSource, Asset } from "@/types";
-import { DEVICE_SOURCE_LABELS } from "@/types/operations";
+import type { WorkstationDevice, DeviceFormData, Asset } from "@/types";
 import { workstationDeviceApi, assetApi } from "@/lib/opsApi";
 import { HealthBadge } from "@/components/reconciliation";
 

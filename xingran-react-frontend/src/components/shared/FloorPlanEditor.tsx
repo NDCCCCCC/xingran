@@ -19,7 +19,7 @@ import "./FloorPlanEditor.less";
 
 // 导入提取的类型、常量和 Hooks
 import type { WorkstationNode, FloorPlanEditorProps } from "./FloorPlanEditor.types";
-import { GRID_SIZE, TOOLBAR_HEIGHT, ZOOM_LEVELS } from "./FloorPlanEditor.constants";
+import { GRID_SIZE, TOOLBAR_HEIGHT } from "./FloorPlanEditor.constants";
 import { usePanZoom } from "./FloorPlanEditor.panZoom";
 import { useWorkstationDrag } from "./FloorPlanEditor.hooks";
 

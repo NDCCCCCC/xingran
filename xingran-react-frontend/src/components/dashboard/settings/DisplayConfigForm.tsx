@@ -5,9 +5,8 @@
  * 支持 stat-card、chart、table、list、progress 五种类型
  */
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { Form, Input, InputNumber, Select, Switch, ColorPicker, Space, Divider } from "antd";
-import { QuestionCircleOutlined } from "@ant-design/icons";
 import type {
 	DisplayConfig,
 	WidgetType,

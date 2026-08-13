@@ -8,7 +8,6 @@ import {
   Button,
   Table,
   Tag,
-  Progress
 } from "antd";
 import { ReloadOutlined, PlayCircleOutlined } from "@ant-design/icons";
 import { post } from "@/lib/api";

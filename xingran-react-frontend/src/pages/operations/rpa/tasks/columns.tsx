@@ -6,7 +6,7 @@ import type { ColumnsType } from "antd/es/table";
 import { PlayCircleOutlined } from "@ant-design/icons";
 import type { Task } from "@/types/rpa";
 import ActionButtons from "@/components/shared/ActionButtons";
-import { renderTriggerTypeTag, renderTaskStatusTag } from "../constants";
+import { renderTaskStatusTag } from "../constants";
 import { createDateTimeColumn } from "@/utils/tableHelpers";
 
 export interface TaskColumnsParams {

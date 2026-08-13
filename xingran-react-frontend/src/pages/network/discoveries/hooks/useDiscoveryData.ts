@@ -3,9 +3,9 @@
  * 设备发现数据管理 Hook
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { App } from "antd";
-import type { DeviceDiscovery, Department, BaseResponse, PageResponse } from "@/types";
+import type { DeviceDiscovery, Department, PageResponse } from "@/types";
 import { post } from "@/lib/api";
 import type { DiscoveryStatistics, ModalState } from "../types";
 

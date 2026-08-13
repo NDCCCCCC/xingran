@@ -1,4 +1,4 @@
-﻿import type { FC } from "react";
+import type { FC } from "react";
 import {
   Table,
   Button,
@@ -22,7 +22,6 @@ import {
   SearchOutlined,
   ReloadOutlined,
   DeleteOutlined,
-  CloudServerOutlined,
   AppleOutlined,
   ApartmentOutlined,
 } from "@ant-design/icons";
@@ -42,7 +41,6 @@ import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { MACEventsTimeline } from "@/components/network";
-import { DownloadOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
 const { Content } = Layout;

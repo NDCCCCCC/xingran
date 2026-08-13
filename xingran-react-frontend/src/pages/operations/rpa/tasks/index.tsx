@@ -8,7 +8,7 @@ import {
   App, Table, Button, Space, Form, Input, Select, Card, Modal, Layout,
 } from "antd";
 import {
-  PlusOutlined, SearchOutlined, ReloadOutlined, PlayCircleOutlined,
+  PlusOutlined, SearchOutlined, ReloadOutlined,
 } from "@ant-design/icons";
 import type { Task } from "@/types/rpa";
 import type { PageResponse } from "@/types/base";
@@ -19,7 +19,6 @@ import { usePagination } from "@/hooks/usePagination";
 import { handleSuccess as showSuccessMessage } from "@/utils/errorHandler";
 import { getTaskColumns } from "./columns";
 import { TaskEditModal } from "./modals";
-import { TASK_STATUS_OPTIONS } from "../constants";
 import { post } from "@/lib/api";
 
 const { Option } = Select;

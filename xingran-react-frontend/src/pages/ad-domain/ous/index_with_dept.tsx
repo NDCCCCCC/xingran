@@ -34,8 +34,7 @@ import {
   type ADGroup
 } from "@/lib/adDomainApi";
 import { useADConfigs } from "@/hooks/useADConfigs";
-import type { ADConfig } from "@/lib/adDomainApi";
-import { getDeptTree, type SimpleDept } from "@/lib/dutyApi";
+import { getDeptTree } from "@/lib/dutyApi";
 import { createSorter } from "@/utils/tableHelpers";
 
 import type { FC } from "react";

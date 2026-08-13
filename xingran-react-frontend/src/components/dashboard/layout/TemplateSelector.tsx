@@ -5,7 +5,7 @@
  * 支持模板预览功能
  */
 
-import { useState, useEffect, useLayoutEffect } from "react";
+import { useState, useLayoutEffect } from "react";
 import { App, Modal, Card, Row, Col, Button, Tag, Space, Tooltip } from "antd";
 import {
 	AppstoreOutlined,
@@ -17,7 +17,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import type { PresetTemplateType, Dashboard } from "@/types/dashboard";
 import { presetDashboardTemplates } from "@/components/dashboard/templates/presets";
-import { dashboardService } from "@/services/dashboardService";
 import TemplatePreview from "./TemplatePreview";
 
 import "./TemplateSelector.css";

@@ -38,7 +38,6 @@ import {
   type ADGroupSyncStatus,
 } from "@/lib/adDomainApi";
 import { useADConfigs } from "@/hooks/useADConfigs";
-import type { ADConfig } from "@/lib/adDomainApi";
 
 import type { FC } from "react";
 import { usePagination } from "@/hooks/usePagination";

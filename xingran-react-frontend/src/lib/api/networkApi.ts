@@ -5,8 +5,6 @@ import type {
   PortResult,
   BatchResult,
   BatchWriteRequest,
-  SetAccessVlanRequest,
-  PortBindingRequest,
 } from "@/types/network";
 
 /**

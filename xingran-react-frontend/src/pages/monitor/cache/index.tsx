@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Cache 缓存管理页面
  */
 
@@ -38,7 +38,7 @@ import type { ColumnsType } from "antd/es/table";
 import { post, get } from "@/lib/api";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { usePagination } from "@/hooks/usePagination";
-import type { BaseResponse, PageResponse } from "@/types";
+import type { PageResponse } from "@/types";
 import { formatDateTime } from "@/utils/datetime";
 
 // 导入提取的文件

@@ -39,7 +39,6 @@ import {
   ClockCircleOutlined,
   FolderOpenOutlined,
   FileTextOutlined,
-  ExportOutlined,
 } from "@ant-design/icons";
 import type { ConfigBackup } from "@/types";
 import type { DeviceBackupGroup, DiffLine } from "./types";

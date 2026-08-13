@@ -15,7 +15,6 @@ import { DashboardHome } from "./components/DashboardHome";
 import DashboardList from "./components/DashboardList";
 import { DashboardView } from "./components/DashboardView";
 import { DashboardEdit } from "./components/DashboardEdit";
-import { Spin } from "antd";
 
 const DashboardPage: React.FC = () => {
 	// 手动解析路径参数，因为 dashboard/* 通配符路由无法使用 useParams

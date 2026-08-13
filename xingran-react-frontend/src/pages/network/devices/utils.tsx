@@ -2,7 +2,6 @@
  * NetworkDevice 工具函数
  */
 
-import dayjs from "dayjs";
 import type { SelectOption } from "./constants";
 
 // 统一时间格式化函数从 @/utils/datetime 导入

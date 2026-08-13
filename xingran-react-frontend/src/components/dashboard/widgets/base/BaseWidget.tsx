@@ -12,7 +12,6 @@ import {
 	ReloadOutlined,
 	CloseOutlined,
 	DragOutlined,
-	WarningOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import type { WidgetConfig } from "@/types/dashboard";

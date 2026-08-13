@@ -6,7 +6,6 @@
 import { useState, useCallback } from "react";
 import type { Menu } from "@/types";
 import { post } from "@/lib/api";
-import { refreshMenuCache } from "@/store/menuStore";
 import { flattenTree, buildParentOptions, calculateStatistics, type MenuStatistics, type ParentOption } from "../utils";
 
 export interface UseMenuDataReturn {

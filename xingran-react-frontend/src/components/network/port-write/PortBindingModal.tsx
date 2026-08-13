@@ -20,7 +20,6 @@
 
 import { useEffect, useState } from "react";
 import { Modal, Form, Select, Input, Radio, App } from "antd";
-import type { MessageInstance } from "antd/es/message/interface";
 import { useNavigate } from "react-router-dom";
 import type { DevicePortStatus } from "@/types/network";
 import { writePortBinding } from "@/lib/api/networkApi";

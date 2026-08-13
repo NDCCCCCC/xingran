@@ -4,11 +4,8 @@
  */
 
 import type { UploadFile } from "antd";
-import type { UploadProps } from "antd";
 import type {
   CaptchaBackground,
-  PieceShape,
-  DifficultyLevel,
 } from "@/types/captcha";
 
 // 统计数据

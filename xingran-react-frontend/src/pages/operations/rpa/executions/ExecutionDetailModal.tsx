@@ -9,7 +9,7 @@ import {
   Typography, Spin, Empty, Button, Tabs,
 } from "antd";
 import {
-  FileTextOutlined, CameraOutlined, LoadingOutlined, CheckCircleOutlined,
+  FileTextOutlined, CameraOutlined, CheckCircleOutlined,
   CloseCircleOutlined, ClockCircleOutlined, DownloadOutlined,
 } from "@ant-design/icons";
 import type { Execution, ExecutionLog } from "@/types/rpa";

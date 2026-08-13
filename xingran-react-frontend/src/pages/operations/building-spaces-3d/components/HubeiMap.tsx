@@ -8,7 +8,6 @@ import { useRef, useState, useEffect } from "react";
 import { App, Spin, Badge, List, Tag } from "antd";
 import type { BuildingItem } from "../types";
 import { useVisualizationStore } from "@/store/visualizationStore";
-import { getMapMarkerColor } from "@/utils/three/colors";
 import { loadBaiduMapScript } from "./BaiduMapScript";
 import { getBMap, type BMapNamespace, type BMapMap, type BMapMarker, type BMapInfoWindow, type BMapPolygon, type BMapPoint } from "@/types/baidu-map";
 

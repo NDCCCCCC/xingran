@@ -5,8 +5,8 @@
  * 用户可以在预览中点击"使用此模板"创建仪表盘
  */
 
-import { useState, useEffect } from "react";
-import { Modal, Button, Spin, Empty, Space } from "antd";
+import { useState } from "react";
+import { Modal, Button, Spin, Empty } from "antd";
 import { CloseOutlined, CheckOutlined, ReloadOutlined } from "@ant-design/icons";
 import { dashboardService } from "@/services/dashboardService";
 import { DashboardGrid } from "../layout/DashboardGrid";

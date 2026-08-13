@@ -7,7 +7,7 @@ import { useState, useCallback } from "react";
 import { App } from "antd";
 import type { FormInstance } from "antd/es/form";
 import type { JobInfo, SearchFormState } from "../types";
-import { post, put, del, postLongRequest } from "@/lib/api";
+import { post, postLongRequest } from "@/lib/api";
 
 export interface UseJobActionsParams {
   fetchJobs: () => Promise<void>;

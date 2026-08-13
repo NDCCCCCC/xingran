@@ -10,7 +10,7 @@ import { useVisualizationStore } from "@/store/visualizationStore";
 import { floorApi, workstationApi, buildingApi } from "@/lib/opsApi";
 import type { Floor } from "@/types/operations";
 import { handleApiError } from "@/utils/errorHandler";
-import { convertApiWorkstations, calculateWorkstationStats } from "../utils";
+import { convertApiWorkstations } from "../utils";
 import BuildingModel3D from "./BuildingModel3D";
 import FloorPlan3D from "./FloorPlan3D";
 

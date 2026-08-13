@@ -26,7 +26,7 @@ import {
 import { post } from "@/lib/api";
 import { usePagination } from "@/hooks/usePagination";
 import type { ColumnsType } from "antd/es/table";
-import type { BaseResponse, PageResponse } from "@/types";
+import type { PageResponse } from "@/types";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { formatDateTime } from "@/utils/datetime";
 import { createSorter } from "@/utils/tableHelpers";

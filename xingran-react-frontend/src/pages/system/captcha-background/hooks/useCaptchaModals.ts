@@ -9,8 +9,6 @@ import type { UploadFile, UploadProps } from "antd";
 import type { FormInstance } from "antd/es/form";
 import type { CaptchaBackground, CaptchaBackgroundUpdateRequest, PieceShape, DifficultyLevel, CaptchaBackgroundStatus } from "@/types/captcha";
 import * as captchaService from "@/services/captcha";
-import { SHAPE_OPTIONS } from "../constants";
-import type { UnknownError } from "@/types/common";
 
 // 表单字段类型
 interface UploadFormValues {

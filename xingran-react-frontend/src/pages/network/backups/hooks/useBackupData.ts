@@ -3,7 +3,7 @@
  */
 
 import { useState, useCallback } from "react";
-import type { ConfigBackup, BaseResponse, PageResponse } from "@/types";
+import type { ConfigBackup, PageResponse } from "@/types";
 import type { FormInstance } from "antd/es/form";
 import type { DeviceBackupGroup, BackupStatistics } from "../types";
 import { groupBackupsByDevice } from "../utils";

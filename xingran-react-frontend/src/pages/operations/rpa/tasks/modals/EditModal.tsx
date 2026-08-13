@@ -4,13 +4,13 @@
 
 import { useLayoutEffect, useState, useCallback } from "react";
 import {
-  App, Modal, Form, Input, InputNumber, Switch, Tabs, Space, Button,
-  Card, Row, Col, Tag, Divider, Select,
+  App, Modal, Form, Input, InputNumber, Switch, Tabs, Button,
+  Card, Row, Col, Select,
 } from "antd";
 import { PlusOutlined, DeleteOutlined, RobotOutlined } from "@ant-design/icons";
 import type { FormInstance } from "antd/es/form";
 import type { Task, Action } from "@/types/rpa";
-import { TASK_STATUS_OPTIONS, ACTION_TYPE_OPTIONS, ACTION_TYPE_TEXT_MAP } from "../../constants";
+import { ACTION_TYPE_OPTIONS } from "../../constants";
 import { AIScriptEditor } from "./AIScriptEditor";
 
 const { TextArea } = Input;

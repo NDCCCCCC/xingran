@@ -3,7 +3,7 @@
  */
 
 import { useState, useCallback } from "react";
-import type { ConfigBackup, BaseResponse } from "@/types";
+import type { ConfigBackup } from "@/types";
 import type { FormInstance } from "antd/es/form";
 import type { DeviceBackupGroup } from "../types";
 import { post } from "@/lib/api";

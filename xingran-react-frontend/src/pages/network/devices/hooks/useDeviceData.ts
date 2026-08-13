@@ -6,7 +6,7 @@ import { useState, useCallback } from "react";
 import { post } from "@/lib/api";
 import { handleApiError } from "@/utils/errorHandler";
 import { useDeptTree } from "@/hooks/useDeptTree";
-import type { AuthCredential, BaseResponse, PageResponse } from "@/types";
+import type { AuthCredential, PageResponse } from "@/types";
 
 export interface DeviceStatistics {
   total: number;

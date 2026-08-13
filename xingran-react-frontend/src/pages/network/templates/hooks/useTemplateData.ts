@@ -5,7 +5,7 @@
 
 import { useState, useCallback } from "react";
 import { App } from "antd";
-import type { ConfigTemplate, BaseResponse, PageResponse } from "@/types";
+import type { ConfigTemplate, PageResponse } from "@/types";
 import type { FormInstance } from "antd/es/form";
 import { post } from "@/lib/api";
 import type { TemplateStatistics } from "../types";

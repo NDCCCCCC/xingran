@@ -6,14 +6,13 @@
  * 支持完整的数据源配置（API/WebSocket/Static）和显示配置
  */
 
-import { useState, useCallback, useEffect } from "react";
-import { Modal, Card, Col, Row, Input, Button, Form, Select, Divider, Tabs } from "antd";
+import { useState, useEffect } from "react";
+import { Modal, Card, Col, Row, Input, Button, Form, Select, Divider } from "antd";
 import { widgetRegistry, getWidgetTypes } from "../widgets/configs/widgetRegistry";
-import EndpointSelector from "./EndpointSelector";
-import ParamsEditor from "./ParamsEditor";
+
 import DataSourceForm from "./DataSourceForm";
 import DisplayConfigForm from "./DisplayConfigForm";
-import type { WidgetType, WidgetConfig, ApiDataSourceConfig, EndpointDetail, StatCardDisplayConfig, ChartDisplayConfig, TableDisplayConfig, ListDisplayConfig, ProgressDisplayConfig, DataSourceConfig, DisplayConfig } from "@/types/dashboard";
+import type { WidgetType, WidgetConfig, ApiDataSourceConfig, EndpointDetail, DataSourceConfig, DisplayConfig } from "@/types/dashboard";
 import { widgetDefaultSizes } from "@/types/dashboard";
 
 interface WidgetSelectorProps {

@@ -20,12 +20,9 @@ import {
   TeamOutlined,
   ApartmentOutlined,
   EditOutlined,
-  PlusOutlined,
-  DeleteOutlined
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { DataNode } from "antd/es/tree";
-import type { TransferProps } from "antd/es/transfer";
 import {
   getADOUTree,
   getADUserList,
@@ -42,7 +39,6 @@ import {
   type OUDeptMappingResponse
 } from "@/lib/adDomainApi";
 import { useADConfigs } from "@/hooks/useADConfigs";
-import type { ADConfig } from "@/lib/adDomainApi";
 import { useDeptTree, type DeptTreeNode } from "@/hooks/useDeptTree";
 import { createSorter } from "@/utils/tableHelpers";
 

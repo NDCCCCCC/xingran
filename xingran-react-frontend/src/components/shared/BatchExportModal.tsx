@@ -5,8 +5,7 @@
 
 import { useState, useMemo, type FC } from "react";
 import { App, Modal, Checkbox, Space, Button } from "antd";
-import { DownloadOutlined, CheckOutlined, CloseOutlined } from "@ant-design/icons";
-import { getAccessToken } from "@/utils/authHelpers";
+import { DownloadOutlined } from "@ant-design/icons";
 
 export interface EntityType {
   key: string;

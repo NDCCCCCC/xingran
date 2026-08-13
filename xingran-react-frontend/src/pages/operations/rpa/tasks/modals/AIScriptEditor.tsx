@@ -9,7 +9,7 @@ import {
   Divider, Typography,
 } from "antd";
 import {
-  RobotOutlined, ThunderboltOutlined, CheckOutlined, CloseOutlined,
+  RobotOutlined, ThunderboltOutlined, CheckOutlined,
   LoadingOutlined,
 } from "@ant-design/icons";
 import type { Action } from "@/types/rpa";

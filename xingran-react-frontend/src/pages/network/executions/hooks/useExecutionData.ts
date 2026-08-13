@@ -3,9 +3,9 @@
  * 配置执行数据管理 Hook
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { App } from "antd";
-import type { ConfigExecution, NetworkDevice, ConfigTemplate, BaseResponse, PageResponse } from "@/types";
+import type { ConfigExecution, NetworkDevice, ConfigTemplate, PageResponse } from "@/types";
 import { post } from "@/lib/api";
 import type { ExecutionStatistics, ExecutionDataState } from "../types";
 

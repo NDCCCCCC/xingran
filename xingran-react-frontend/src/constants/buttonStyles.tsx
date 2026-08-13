@@ -5,7 +5,6 @@
 
 import React from "react";
 import {
-  DeleteOutlined,
   StopOutlined,
   CheckCircleOutlined,
 } from "@ant-design/icons";

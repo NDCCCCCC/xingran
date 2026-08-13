@@ -10,7 +10,6 @@ import {
   Button,
   Space,
   Form,
-  Input,
   Select,
   Card,
   Row,
@@ -26,12 +25,11 @@ import {
   CloseCircleOutlined,
   ClockCircleOutlined,
   ApiOutlined,
-  ExportOutlined,
 } from "@ant-design/icons";
 import type { ConfigExecution, ConfigExecutionDetail, NetworkDevice } from "@/types";
 import { batchExport } from "@/lib/api/networkApi";
 import { useCommandData, useCommandModals } from "./hooks";
-import { getExecutionColumns, deviceColumns } from "./columns";
+import { getExecutionColumns } from "./columns";
 import { CommandDispatchModal, CommandDetailDrawer } from "./modals";
 import { STATUS_OPTIONS } from "./constants";
 import { usePagination } from "@/hooks/usePagination";
@@ -39,7 +37,6 @@ import { useServerSort } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
-import { DownloadOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
 

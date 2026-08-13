@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Form, Select, Input, InputNumber, Space, Alert } from "antd";
+import { Form, Select, Input, Alert } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import EndpointSelector from "./EndpointSelector";
 import ParamsEditor from "./ParamsEditor";

@@ -23,7 +23,6 @@ import {
 } from "@ant-design/icons";
 import { listUsageLogs, getUsageSummary } from "@/api/apikey";
 import type { APIKeyUsageLog, UsageSummary } from "@/types/apikey";
-import type { PageData } from "@/types/apikey";
 import { formatDateTime } from "@/utils/datetime";
 
 // ==================== 组件属性 ====================

@@ -3,7 +3,7 @@
  * 知识文章数据管理 Hook
  */
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { App } from "antd";
 import {
   getKnowledgeArticleList,

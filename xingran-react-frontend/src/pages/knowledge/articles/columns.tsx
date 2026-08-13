@@ -4,7 +4,7 @@
  */
 
 import type { ColumnsType } from "antd/es/table";
-import { Button, Space, Tag, Modal } from "antd";
+import { Space, Tag, Modal } from "antd";
 import { EyeOutlined, LikeOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { KnowledgeArticle } from "@/lib/knowledgeApi";
 import { KnowledgeArticleStatus } from "@/lib/knowledgeApi";
@@ -12,7 +12,6 @@ import { STATUS_CONFIG } from "./constants";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { formatDateTime } from "@/utils/datetime";
 import type { SorterMeta } from "@/utils/tableHelpers";
-import { createSorterMeta } from "@/utils/tableHelpers";
 
 export interface ArticleColumnsParams {
   handlePreview: (record: KnowledgeArticle) => void;

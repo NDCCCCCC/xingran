@@ -1,4 +1,4 @@
-﻿/**
+/**
  * NetworkDevice 设备管理页面
  */
 
@@ -43,7 +43,7 @@ import {
   HistoryOutlined,
 } from "@ant-design/icons";
 import type { NetworkDevice } from "@/types";
-import type { BaseResponse, PageResponse } from "@/types";
+import type { PageResponse } from "@/types";
 import { post } from "@/lib/api";
 import { batchExport } from "@/lib/api/networkApi";
 import DeptTree from "@/components/DeptTree";
@@ -54,7 +54,6 @@ import ActionButtons from "@/components/shared/ActionButtons";
 import { DepartmentTreeSelect } from "@/components/shared";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
-import { DownloadOutlined } from "@ant-design/icons";
 import { usePagination } from "@/hooks/usePagination";
 import { useMenuStore } from "@/store/menuStore";
 import { createSorterMeta } from "@/utils/tableHelpers";

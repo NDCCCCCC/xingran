@@ -21,7 +21,6 @@ import {
   CloseCircleOutlined,
   ClockCircleOutlined,
   ApiOutlined,
-  ExportOutlined,
 } from "@ant-design/icons";
 import { useExecutionData, useExecutionModals } from "./hooks";
 import { getExecutionColumns, getDetailColumns } from "./columns";
@@ -32,7 +31,6 @@ import { useServerSort } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
-import { DownloadOutlined } from "@ant-design/icons";
 import type { ConfigExecution } from "@/types";
 
 const { Option } = Select;

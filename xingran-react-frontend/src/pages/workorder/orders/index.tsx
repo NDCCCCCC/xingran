@@ -1,8 +1,8 @@
-﻿/**
+/**
  * WorkOrder 工单管理页面
  */
 
-import { useState, useEffect, useCallback, useMemo, type FC } from "react";
+import { useState, useCallback, useMemo, type FC } from "react";
 import {
   Button,
   Form,
@@ -37,7 +37,6 @@ import {
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 
 import {
-  getWorkOrderList,
   createWorkOrder,
   updateWorkOrder,
   deleteWorkOrder,
@@ -53,16 +52,7 @@ import {
   WorkOrderPriority,
   WorkOrderType,
 } from "@/lib/workorderApi";
-import {
-  getEnabledWorkOrderCategories,
-  type WorkOrderCategory,
-} from "@/lib/workorderApi";
-import {
-  getUserList,
-  getDeptList,
-  type SimpleUser,
-  type SimpleDept,
-} from "@/lib/workorderApi";
+
 import ActionButtons from "@/components/shared/ActionButtons";
 
 // 导入提取的常量、工具和 Hook

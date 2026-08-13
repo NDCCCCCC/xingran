@@ -3,8 +3,6 @@
  * 用于运行时类型检查和类型缩小
  */
 
-import type { UnknownError } from "@/types/common";
-
 /**
  * 检查是否为 Error 对象
  */

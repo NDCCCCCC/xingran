@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 值班排班管理页面
  * Duty Schedule Management Page
  */
@@ -38,7 +38,7 @@ import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
 
-import type { DutySchedule, DutyPool, SimpleUser, MonthlyDutyMember } from "@/lib/dutyApi";
+import type { DutySchedule } from "@/lib/dutyApi";
 
 // 导入提取的模块
 import { DUTY_TYPE_OPTIONS, DUTY_STATUS_CONFIG, getDutyTypeColor, getDutyTypeText } from "./constants";

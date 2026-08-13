@@ -37,12 +37,10 @@ import {
   batchSyncADUsersDirect,
   type ADUser,
   type ADOUNode,
-  type BatchSyncResult,
 } from "@/lib/adDomainApi";
 import type { UnknownError } from "@/types/common";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { useADConfigs } from "@/hooks/useADConfigs";
-import type { ADConfig } from "@/lib/adDomainApi";
 
 import type { FC } from "react";
 import { usePagination } from "@/hooks/usePagination";

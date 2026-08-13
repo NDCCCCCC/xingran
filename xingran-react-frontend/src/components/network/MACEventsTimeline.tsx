@@ -15,7 +15,7 @@
  *   vlan_changed → #1890ff (蓝色) + TagOutlined
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Timeline, Empty, Skeleton, Tag, Card, Space, Typography, Button } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { DownOutlined } from "@ant-design/icons";

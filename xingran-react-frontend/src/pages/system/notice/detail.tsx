@@ -9,7 +9,6 @@ import {
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { getNoticeDetail } from "@/lib/noticeApi";
 import type { Notice } from "@/types/notice";
-import { formatDateTime } from "@/utils/datetime";
 import NoticeDetailContent from "@/components/NoticeDetail/NoticeDetailContent";
 
 /**

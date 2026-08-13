@@ -10,7 +10,6 @@ import { ArrowLeftOutlined } from "@ant-design/icons";
 import { getMyNoticeDetail, markNoticeAsRead } from "@/lib/noticeApi";
 import { useNoticeStore } from "@/store/noticeStore";
 import type { Notice } from "@/types/notice";
-import { formatDateTime } from "@/utils/datetime";
 import NoticeDetailContent from "@/components/NoticeDetail/NoticeDetailContent";
 import { USER_NOTICES } from "@/constants/routes";
 
