@@ -137,10 +137,8 @@ func (h *APIKeyHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	// 脱敏处理：key字段仅保留前12位
-	maskedKey := maskKey(apiKey.Key)
-	apiKey.Key = maskedKey
-
+	// Phase 60 / SEC-01: 明文 key 不再存储，无完整密钥可脱敏。
+	// 响应仅暴露 KeyPrefix（json:"keyPrefix"，明文前 12 字符），KeyHash/Salt 由 json:"-" 隐藏。
 	response.Success(c, apiKey)
 }
 
@@ -311,32 +309,27 @@ func (h *APIKeyHandler) GetUsageSummary(c *gin.Context) {
 	response.Success(c, summary)
 }
 
-// maskKey 脱敏处理密钥（仅保留前12位）
-func maskKey(key string) string {
-	if len(key) <= 12 {
-		return key
-	}
-	return key[:12] + "..."
-}
-
 // maskAPIKeys 批量脱敏处理密钥列表
+//
+// Phase 60 / SEC-01: 明文 key 不再存储，列表仅暴露 KeyPrefix（明文前 12 字符）。
+// KeyHash/Salt 不出现在响应中。函数名沿用「mask」前缀（历史命名），实际已是字段裁剪而非遮蔽。
 func maskAPIKeys(keys []models.APIKey) []map[string]interface{} {
 	result := make([]map[string]interface{}, len(keys))
 	for i, key := range keys {
 		result[i] = map[string]interface{}{
-			"id":            key.ID,
-			"name":          key.Name,
-			"key":           maskKey(key.Key),
-			"userId":        key.UserID,
-			"expiresAt":     key.ExpiresAt,
-			"lastUsedAt":    key.LastUsedAt,
-			"isActive":      key.IsActive,
-			"scopes":        key.Scopes,
-			"ipWhitelist":   key.IPWhitelist,
-			"description":   key.Description,
-			"inheritPerms":  key.InheritPerms,
-			"createdAt":     key.CreatedAt,
-			"updatedAt":     key.UpdatedAt,
+			"id":           key.ID,
+			"name":         key.Name,
+			"keyPrefix":    key.KeyPrefix,
+			"userId":       key.UserID,
+			"expiresAt":    key.ExpiresAt,
+			"lastUsedAt":   key.LastUsedAt,
+			"isActive":     key.IsActive,
+			"scopes":       key.Scopes,
+			"ipWhitelist":  key.IPWhitelist,
+			"description":  key.Description,
+			"inheritPerms": key.InheritPerms,
+			"createdAt":    key.CreatedAt,
+			"updatedAt":    key.UpdatedAt,
 		}
 	}
 	return result

@@ -3,10 +3,12 @@ package system
 import (
 	"context"
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
 	"time"
 
+	"github.com/tjfoc/gmsm/sm3"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
@@ -125,39 +127,73 @@ func generateKey() (string, error) {
 	return fmt.Sprintf("%s%s", KeyPrefix, hexStr), nil
 }
 
+// apiKeySaltLen API Key 盐值字节长度（16 字节 = 128-bit，hex 编码后 32 字符）。
+// 与 DefaultPasswordConfig.SaltLength 一致，但这里不复用 PasswordManager —
+// API Key 用单次 SM3（非 PBKDF2 迭代），格式无 $sm3$ 前缀，避免与密码哈希格式混淆。
+const apiKeySaltLen = 16
+
+// hashAPIKey 用 SM3 单次哈希计算 key+salt 的摘要（hex 编码，64 字符）。
+// 单次哈希对 256-bit 熵的 API Key 足够（无字典攻击面），不可逆，且不依赖 SM4_KEY 保护。
+func hashAPIKey(key, salt string) string {
+	h := sm3.New()
+	h.Write([]byte(key))
+	h.Write([]byte(salt))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+// generateSalt 生成随机盐值（hex 编码，32 字符）。
+func generateSalt() (string, error) {
+	salt := make([]byte, apiKeySaltLen)
+	if _, err := rand.Read(salt); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(salt), nil
+}
+
 // ValidateAPIKey 验证API密钥
+//
+// Phase 60 / SEC-01: 明文 key 不再落库。先按 KeyPrefix（明文前 12 字符）缩窄候选
+// 行，再对每个候选行用 SM3(key+salt) 重算哈希并恒定时间比对 (subtle.ConstantTimeCompare)，
+// 杜绝明文 WHERE key = ? 查询路径与侧信道时序泄漏。Prefix 缩窄使得候选集极小
+// (前缀碰撞罕见)，循环成本可忽略。
 func (s *apiKeyServiceImpl) ValidateAPIKey(ctx context.Context, keyStr string) (*models.APIKey, error) {
 	// 验证密钥格式
 	if !isValidKeyFormat(keyStr) {
 		return nil, apperrors.Wrap(nil, apperrors.CodeParamError, "无效的密钥格式")
 	}
 
-	// 查询数据库
-	var apiKey models.APIKey
+	// 按 KeyPrefix 缩窄候选行（明文前 12 字符）
+	var candidates []models.APIKey
 	err := s.db.WithContext(ctx).
 		Preload("User").
-		Where("key = ? AND is_active = ?", keyStr, true).
-		First(&apiKey).Error
-
+		Where("key_prefix = ? AND is_active = ?", keyStr[:12], true).
+		Find(&candidates).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, apperrors.Wrap(nil, apperrors.CodeUnauthorized, "密钥不存在或已禁用")
-		}
 		return nil, apperrors.DatabaseError(err)
 	}
 
-	// 验证过期时间
-	if isKeyExpired(apiKey.ExpiresAt) {
-		return nil, apperrors.Wrap(nil, apperrors.CodeUnauthorized, "密钥已过期")
+	// 逐候选恒定时间比对 SM3(key+salt)
+	for i := range candidates {
+		computedHash := hashAPIKey(keyStr, candidates[i].Salt)
+		if subtle.ConstantTimeCompare([]byte(computedHash), []byte(candidates[i].KeyHash)) == 1 {
+			apiKey := candidates[i]
+			// 验证过期时间
+			if isKeyExpired(apiKey.ExpiresAt) {
+				return nil, apperrors.Wrap(nil, apperrors.CodeUnauthorized, "密钥已过期")
+			}
+
+			// 异步更新最后使用时间
+			go func() {
+				now := time.Now()
+				s.db.Model(&apiKey).Update("last_used_at", now)
+			}()
+
+			return &apiKey, nil
+		}
 	}
 
-	// 异步更新最后使用时间
-	go func() {
-		now := time.Now()
-		s.db.Model(&apiKey).Update("last_used_at", now)
-	}()
-
-	return &apiKey, nil
+	// 无候选命中（前缀无匹配或哈希不匹配）
+	return nil, apperrors.Wrap(nil, apperrors.CodeUnauthorized, "密钥不存在或已禁用")
 }
 
 // CreateAPIKey 创建API密钥
@@ -186,6 +222,14 @@ func (s *apiKeyServiceImpl) CreateAPIKey(ctx context.Context, userID string, req
 		return nil, apperrors.Wrap(err, apperrors.CodeServerError, "密钥生成失败")
 	}
 
+	// Phase 60 / SEC-01: 生成随机盐并计算 SM3(key+salt) 哈希。
+	// 明文 key 仅通过 *string 一次性返回给调用方（Create handler），DB 仅存 KeyHash/Salt/KeyPrefix。
+	salt, err := generateSalt()
+	if err != nil {
+		return nil, apperrors.Wrap(err, apperrors.CodeServerError, "密钥盐生成失败")
+	}
+	keyHash := hashAPIKey(key, salt)
+
 	// 验证作用域
 	if err := validateScopes(req.Scopes); err != nil {
 		return nil, err
@@ -204,7 +248,9 @@ func (s *apiKeyServiceImpl) CreateAPIKey(ctx context.Context, userID string, req
 	// 创建APIKey记录
 	apiKey := models.APIKey{
 		Name:         req.Name,
-		Key:          key,
+		KeyHash:      keyHash,
+		Salt:         salt,
+		KeyPrefix:    key[:12],
 		UserID:       &userID,
 		Scopes:       req.Scopes,
 		IPWhitelist:  req.IPWhitelist,
@@ -234,16 +280,14 @@ func (s *apiKeyServiceImpl) ListAPIKeys(ctx context.Context, userID string, para
 	}
 
 	// 添加筛选条件
-	// 注:生产用 PostgreSQL(LEFT() / @> JSONB),测试用 SQLite 需要 dialect 兼容分支
+	// 注:生产用 PostgreSQL(@> JSONB),测试用 SQLite 需要 dialect 兼容分支。
+	// Phase 60 / SEC-01 (D-07): Keyword 搜索不再依赖 dialect 分支——key_prefix 现在是
+	// 真实列,name LIKE / key_prefix LIKE 在 SQLite 与 PostgreSQL 上一致命中。
+	// (Scope 搜索仍保留 dialect 分支:本 phase 范围限定,仅 KeyPrefix 项收敛。)
 	isSQLite := s.db.Dialector.Name() == "sqlite"
 	if params.Keyword != nil && *params.Keyword != "" {
 		keyword := "%" + *params.Keyword + "%"
-		if isSQLite {
-			// SQLite 用 substr() 替代 LEFT(),取 key 前 12 字符匹配
-			query = query.Where("name LIKE ? OR substr(key, 1, 12) LIKE ?", keyword, keyword)
-		} else {
-			query = query.Where("name LIKE ? OR LEFT(key, 12) LIKE ?", keyword, keyword)
-		}
+		query = query.Where("name LIKE ? OR key_prefix LIKE ?", keyword, keyword)
 	}
 	if params.Status != nil {
 		query = query.Where("is_active = ?", *params.Status)
