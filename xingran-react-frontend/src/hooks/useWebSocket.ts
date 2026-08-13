@@ -69,14 +69,21 @@ export function useWebSocket(options?: UseWebSocketOptions): UseWebSocketReturn 
 	const [reconnectAttempts, setReconnectAttempts] = useState(0);
 
 	const wsRef = useRef<WebSocket | null>(null);
+	// P0-4: connect 函数 ref, 让 setTimeout 回调能引用最新 closure
+	// 避免 React Compiler 静态分析 "accessed before declared" 误报
+	const connectRef = useRef<() => void>(() => {});
 	const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const isManualDisconnectRef = useRef(false);
 	// P0-4: 重连次数用 ref 跟踪真实值,避免闭包旧值; state 仅用于 UI 展示
 	const reconnectAttemptsRef = useRef(0);
 
 	// 用 ref 保存所有回调/配置,使 connect 的依赖最小化,避免因回调引用变化触发重建
+	// 注意: 不在 render 期间读 optsRef.current, 因为 React Compiler 静态分析
+	// 会报 "Cannot access refs during render"。
 	const optsRef = useRef({ url, onMessage, onOpen, onClose, onError, reconnect, reconnectInterval, maxReconnectAttempts });
-	optsRef.current = { url, onMessage, onOpen, onClose, onError, reconnect, reconnectInterval, maxReconnectAttempts };
+	useEffect(() => {
+		optsRef.current = { url, onMessage, onOpen, onClose, onError, reconnect, reconnectInterval, maxReconnectAttempts };
+	}, [url, onMessage, onOpen, onClose, onError, reconnect, reconnectInterval, maxReconnectAttempts]);
 
 	// 清理重连定时器
 	const clearReconnectTimeout = useCallback(() => {
@@ -132,7 +139,7 @@ export function useWebSocket(options?: UseWebSocketOptions): UseWebSocketReturn 
 						const delay = Math.min(opts.reconnectInterval * Math.pow(2, currentAttempts), 30000);
 
 						reconnectTimeoutRef.current = setTimeout(() => {
-							connect();
+							connectRef.current();
 						}, delay);
 					} else {
 						console.warn("WebSocket max reconnect attempts reached");
@@ -152,6 +159,12 @@ export function useWebSocket(options?: UseWebSocketOptions): UseWebSocketReturn 
 			console.error("Failed to create WebSocket connection:", error);
 		}
 	}, []);
+
+	// P0-4: 同步 connect 到 ref, 让 setTimeout 回调能引用最新 closure
+	// (useEffect 而非 render 直接赋值, 避免 React Compiler "Cannot update ref during render")
+	useEffect(() => {
+		connectRef.current = connect;
+	}, [connect]);
 
 	// 断开连接
 	const disconnect = useCallback(() => {
