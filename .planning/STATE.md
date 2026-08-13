@@ -3,23 +3,23 @@ gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: Milestone History
 status: milestone_complete
-stopped_at: Milestone complete (Phase 61 was final phase)
-last_updated: 2026-08-13T10:08:42.500Z
-last_activity: 2026-08-13
+stopped_at: Milestone complete — Phases 57-61 all code-complete (Phase 58 SC#1-SC#4 E2E deferred: dev DB perf)
+last_updated: 2026-08-13T14:30:00.000Z
+last_activity: 2026-08-13 — Phase 58 marked code-complete (58-01-SUMMARY), backend startup-hang fixed (7c821d7), dev env SM2/login unblocked
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 8
-  completed_plans: 7
-  percent: 80
+  completed_plans: 8
+  percent: 100
 ---
 
 # Project State
 
 **Project**: XingRan-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.21 API Key 认证链修复 + 能力补全 milestone INITIATED — ROADMAP drafted (Phases 57-61; 61 conditional on Phase 60 AUTH-03=启用), ready for Phase 57 planning
-**Last activity**: 2026-08-12 — quick task 260812-wu5 (constants dead-code cleanup + pagination unification via 方案 B) committed 759a65a; v1.21 ROADMAP/REQUIREMENTS/STATE synchronized
+**Status**: v1.21 API Key 认证链修复 + 能力补全 milestone COMPLETE — Phases 57-61 全部代码完成。Phase 58 SC#1-SC#4 端到端验证因 dev DB(Supabase pooler)性能延期(见 58-01-SUMMARY §Deferred),代码契约修复已提交且自动化门全绿。
+**Last activity**: 2026-08-13 — Phase 58 标记 code-complete + 58-01-SUMMARY;本次会话另修后端启动 hang(config.go keepalive `7c821d7`)、dev 环境 SM2 登录链路(config.yaml use_sm2)、MV/分区补建(dbprobe `26e93fd`)、logger 镜像修复(`7901248`)、WIP 清理(dev 工具 + rebrand)。
 
 ## Project Reference
 
@@ -27,16 +27,16 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-12)
 
 **Core value**: 端到端运维可观测与审计能力——每个写操作产生可追溯记录(who/when/what/from-where/before-after-state),敏感字段自动脱敏。API Key 作为 JWT 之外的第二条认证通道,其认证链、作用域校验、使用日志必须真实生效且可观测;Phase 61 落地资源级权限矩阵与限流生产调优。
 
-**Current focus**: v1.21 Phase 61 — 两 plan 全部完成(AUTH-04 + QUAL-03),待 phase verification
+**Current focus**: v1.21 milestone COMPLETE(5/5 phases, 8/8 plans)。唯一遗留:Phase 58 SC#1-SC#4 端到端验证延期(待更快 dev DB)。
 
 ## Current Position
 
-Phase: 61
-Plan: Not started
+Phase: 61(milestone 末 phase)—— 全部 57-61 代码完成
+Plan: 8/8 complete
 Status: Milestone complete
 Last activity: 2026-08-13
 
-Progress: [█████████░] 88%
+Progress: [██████████] 100%
 
 ## Accumulated Context
 

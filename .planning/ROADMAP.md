@@ -53,11 +53,11 @@ previous_update: 2026-07-10 after v1.20 milestone SHIPPED + ARCHIVED
 
 **Phase Numbering:** 从 v1.20 末尾 Phase 56 续编 (57-61)。整数 phase 为计划里程碑工作;小数 phase (如 57.1) 为紧急插入。
 
-- [ ] **Phase 57: 认证链核心修复 + 回归测试** - 修复 setUserContextForAPIKey 类型断言 (P0-2),消除 MultiAuth 下游死代码 (P0-1),用集成测试锁住认证链防止 P0-2 回归
-- [ ] **Phase 58: 前后端路由契约对齐** - 修复前端 getAPIKey/updateAPIKey/deleteAPIKey 三个操作 404 (P1-1),与后端 POST 路由方法对齐;+ 修复字段命名契约断裂(CONTRACT-02,前端 snake→camelCase,Create/Update 不再静默丢字段、List/详情复合字段正常显示)
-- [ ] **Phase 59: 可观测性 / 使用日志修复** - 修复使用日志记录时机 (P1-2),让 successRate 可信 (P1-2 连锁),消除 ctx 取消竞态 (P2-b)
-- [ ] **Phase 60: 安全加固与启用决策** - MultiAuth 启用决策 + 安全评估,密钥哈希存储决策,移除重复索引,修复限流头编码 (P2-a)
-- [ ] **Phase 61: 资源级权限矩阵 + 限流生产调优** - MultiAuth 启用后落地 RequireAPIKeyResourcePermission 的 resource 参数真实生效 (AUTH-04, ex-FUTURE-APIKEY-01) + RateLimitByScope 生产接入与调优 (QUAL-03, ex-FUTURE-APIKEY-02);仅在 Phase 60 AUTH-03=启用 时执行
+- [x] **Phase 57: 认证链核心修复 + 回归测试** - 修复 setUserContextForAPIKey 类型断言 (P0-2),消除 MultiAuth 下游死代码 (P0-1),用集成测试锁住认证链防止 P0-2 回归
+- [x] **Phase 58: 前后端路由契约对齐** - 修复前端 getAPIKey/updateAPIKey/deleteAPIKey 三个操作 404 (P1-1),与后端 POST 路由方法对齐;+ 修复字段命名契约断裂(CONTRACT-02,前端 snake→camelCase,Create/Update 不再静默丢字段、List/详情复合字段正常显示) — code-complete,SC#1-SC#4 E2E 延期(dev DB 性能,见 58-01-SUMMARY)
+- [x] **Phase 59: 可观测性 / 使用日志修复** - 修复使用日志记录时机 (P1-2),让 successRate 可信 (P1-2 连锁),消除 ctx 取消竞态 (P2-b)
+- [x] **Phase 60: 安全加固与启用决策** - MultiAuth 启用决策 + 安全评估,密钥哈希存储决策,移除重复索引,修复限流头编码 (P2-a)
+- [x] **Phase 61: 资源级权限矩阵 + 限流生产调优** - MultiAuth 启用后落地 RequireAPIKeyResourcePermission 的 resource 参数真实生效 (AUTH-04, ex-FUTURE-APIKEY-01) + RateLimitByScope 生产接入与调优 (QUAL-03, ex-FUTURE-APIKEY-02);仅在 Phase 60 AUTH-03=启用 时执行
 
 ---
 
@@ -105,7 +105,7 @@ Plans:
 
 Plans:
 
-- [ ] 58-01-PLAN.md — 前端 apikey.ts 三函数改 POST 对齐 (CONTRACT-01/D-01) + types/apikey.ts & index.tsx 字段命名 snake→camelCase 对齐 (CONTRACT-02/D-02/D-03/D-04/D-05) + 端到端 SC#1-SC#4 验证 checkpoint (D-06)
+- [x] 58-01-PLAN.md — 前端 apikey.ts 三函数改 POST 对齐 (CONTRACT-01/D-01) + types/apikey.ts & index.tsx 字段命名 snake→camelCase 对齐 (CONTRACT-02/D-02/D-03/D-04/D-05) + 端到端 SC#1-SC#4 验证 checkpoint (D-06) — code-complete;Task 1+2 已提交 1978935/6a4c772,自动化门全绿;SC#1-SC#4 E2E 延期(dev DB 性能,见 58-01-SUMMARY)
 
 **UI hint**: yes (前端 API Key 管理页面编辑/删除交互流程,涉及 `src/api/apikey.ts` + 列表/表单组件)
 
