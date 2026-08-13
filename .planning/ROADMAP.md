@@ -1,6 +1,7 @@
 ---
 last_updated: 2026-08-13
-update_trigger: v1.21 milestone INITIATED — ROADMAP drafted (Phases 57-60, regression fix for v1.6 Phase 16)
+update_trigger: v1.21 milestone INITIATED — ROADMAP drafted (Phases 57-61, regression fix for v1.6 Phase 16; Phase 61 conditional on Phase 60 AUTH-03=启用)
+last_plan_update: 2026-08-13 — Phase 60 plans finalized (2 plans, Wave 1 parallel)
 previous_update: 2026-07-10 after v1.20 milestone SHIPPED + ARCHIVED
 ---
 
@@ -154,7 +155,12 @@ Plans:
 3. **SEC-02**: migration 中 `idx_api_keys_key` 冗余索引被移除,`key` 字段仅保留一个 `uniqueIndex`;数据库 schema introspection (或迁移脚本 idempotent 验证) 证实索引已收敛
 4. **QUAL-01**: 触发限流(或单元测试构造 `result.Limit=100` / `result.Remaining=99`)后,响应头 `X-RateLimit-Limit` / `X-RateLimit-Remaining` 为数字字面量字符串 `"100"` / `"99"`(用 `strconv.Itoa`),不再是 `string(rune(100))` 产生的 `"d"` 单字符;curl 或 httpie 验证可被标准工具解析为整数
 
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1, parallel;互不耦合)
+
+Plans:
+
+- [ ] 60-01-PLAN.md — AUTH-03 router MultiAuth + RateLimitByScope 挂载 + 4 维度决策记录 + QUAL-01 apikey.go strconv.Itoa 修复 + TestRateLimitHeaderEncoding(单测) + TestRateLimitHeadersInResponse(集成测)
+- [ ] 60-02-PLAN.md — SEC-01 models/api_key.go schema 三列替换 + apikey_service.go 三函数改造 + hashAPIKey/generateSalt helper + apikey_service_test.go 按新 schema 重写 + SEC-02 手动 SQL (DROP INDEX IF EXISTS) + 双 dialect 验证查询
 
 ---
 
@@ -172,7 +178,12 @@ Plans:
 2. `RateLimitByScope` 在 MultiAuth 已挂载的生产路由上接入,限流按作用域生效;`X-RateLimit-Limit` / `X-RateLimit-Remaining` 可被标准工具解析为整数(衔接 Phase 60 QUAL-01 的 strconv.Itoa 修复);多 scope key 的限流作用域选择逻辑正确(不再任意只取首个 scope)
 3. 资源权限矩阵 + 限流配置均有测试覆盖;`go test ./...` 全绿
 
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1, parallel;互不耦合)
+
+Plans:
+
+- [ ] 60-01-PLAN.md — AUTH-03 router MultiAuth + RateLimitByScope 挂载 + 4 维度决策记录 + QUAL-01 apikey.go strconv.Itoa 修复 + TestRateLimitHeaderEncoding(单测) + TestRateLimitHeadersInResponse(集成测)
+- [ ] 60-02-PLAN.md — SEC-01 models/api_key.go schema 三列替换 + apikey_service.go 三函数改造 + hashAPIKey/generateSalt helper + apikey_service_test.go 按新 schema 重写 + SEC-02 手动 SQL (DROP INDEX IF EXISTS) + 双 dialect 验证查询
 
 **Conditional**: 本 phase 仅在 Phase 60 AUTH-03 决策=启用 时执行;若决策=推迟启用,本 phase 随之 defer(记录触发条件与再次评估时机)。
 
@@ -188,7 +199,7 @@ Phases execute in numeric order: 57 → 58 → 59 → 60 → 61 (Phase 61 condit
 | 57. 认证链核心修复 + 回归测试 | v1.21 | 1/1 | Complete    | 2026-08-13 |
 | 58. 前后端路由契约对齐 | v1.21 | 0/TBD | Not started | - |
 | 59. 可观测性 / 使用日志修复 | v1.21 | 2/2 | Complete    | 2026-08-13 |
-| 60. 安全加固与启用决策 | v1.21 | 0/TBD | Not started | - |
+| 60. 安全加固与启用决策 | v1.21 | 0/2 | Not started | - |
 | 61. 资源级权限矩阵 + 限流生产调优 | v1.21 | 0/TBD | Not started (conditional on P60) | - |
 
 ---
