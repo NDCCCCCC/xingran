@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: Milestone History
-status: ready_to_plan
-stopped_at: Phase 60 complete (2/2) — ready to discuss Phase 61
-last_updated: 2026-08-13T07:10:48.118Z
-last_activity: 2026-08-13 — Plan 01 SUMMARY + STATE + ROADMAP + REQUIREMENTS committed (c7d3144)
+status: planning
+stopped_at: Phase 61 context gathered
+last_updated: "2026-08-13T07:51:12.044Z"
+last_activity: 2026-08-13
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 6
   completed_plans: 5
-  percent: 40
+  percent: 60
 ---
 
 # Project State
@@ -135,9 +135,9 @@ Full deferred detail in [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-13T06:02:41.420Z
-Stopped at: Phase 60 Plan 01 (AUTH-03 mount + QUAL-01 fix) committed (6324e45 + 6891936 + c7d3144); ready for Plan 02
-Resume file: None
+Last session: 2026-08-13T07:51:12.020Z
+Stopped at: Phase 61 context gathered
+Resume file: .planning/phases/61-resource-permission-matrix-and-rate-limit-tuning/61-CONTEXT.md
 
 **Milestone status:** v1.21 IN PROGRESS — **Phase 60 Plan 01 COMPLETE** (commits 6324e45 + 6891936 + c7d3144): Task 1 (AUTH-03) `internal/api/router.go:241-262` 真实挂载 MultiAuth + RateLimitByScope 到 /system/apikeys/* 管理面 8 路由 + `.planning/notes/260813-auth03-enable-decision.md` 5 维度决策记录 (挂载范围 / 认证优先级 / IP 白名单 / JWT 回退 / InheritPerms scope-boundary); Task 2 (QUAL-01) P2-a 限流响应头 `string(rune(int))` → `strconv.Itoa` 修复 + TestRateLimitHeaderEncoding 单测 + TestRateLimitHeadersInResponse 集成测 (防御性 ≠ "d"); TestMultiAuthIntegration 三路径 + TestMultiAuthUsageLogTiming/Failure + TestIsIPAllowed 9 子测试零回归。AUTH-03=启用 → Phase 61 无条件执行 (不再 conditional); Plan 02 (SEC-01 SM3 单向哈希 + SEC-02 冗余索引手动 SQL) 待执行。
 
