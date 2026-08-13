@@ -8,7 +8,6 @@ import { Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { useMenuStore } from "@/store/menuStore";
 import { useAuthStore } from "@/store/authStore";
 import { RouteGenerator } from "./routeGenerator";
-import { routeConfigManager } from "./routeConfigManager";
 import { createLazyComponent } from "./componentLoader";
 import type { MenuRouteConfig } from "@/types/menu";
 import Layout from "@/components/layout";
@@ -106,7 +105,7 @@ function InitializingFallback() {
 }
 
 export function DynamicRoutes() {
-  const { allMenus, fetchAll, permissions } = useMenuStore();
+  const { allMenus, fetchAll } = useMenuStore();
   const { isAuthenticated, initialized } = useAuthStore();
   const location = useLocation();
 
@@ -144,6 +143,14 @@ export function DynamicRoutes() {
     }
   }, [isAuthenticated, initialized, allMenus.length, fetchAll]);
 
+  // P0-1: 菜单变化时初始化 routeConfigManager(routeMap)
+  // 放在独立 effect 而非 useMemo 内,避免 React Compiler 推断到副作用
+  useEffect(() => {
+    if (allMenus.length > 0) {
+      routeConfigManager.initialize(allMenus);
+    }
+  }, [allMenus]);
+
   const routeElements = useMemo(() => {
     if (allMenus.length === 0) {
       return [];
@@ -157,8 +164,6 @@ export function DynamicRoutes() {
     if (!cachedRoutes || cachedMenusCountRef.current !== allMenus.length) {
       cachedRoutesRef.current = configs;
       cachedMenusCountRef.current = allMenus.length;
-      // P0-1: 初始化 routeConfigManager, 使 hasPermission/getRouteTitle 可用
-      routeConfigManager.initialize(allMenus);
     }
 
     // P0-1: 前端路由权限第二层防线
