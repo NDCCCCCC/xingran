@@ -1,4 +1,4 @@
-// dbprobe: 针对 debug session backend-hang-on-automigrate 的远端 dev DB 补建工具。
+// dbprobe: 针对 debug session backend-hang-on-automigrate 的远端 dev DB 补建/诊断工具。
 //
 // 背景: SKIP_AUTOMIGRATE=true 旁路后, 两类对象在该 dev Supabase 库中缺失 (启动 WARN):
 //   1. sys_device_mac_history 父表 (PARTITION BY RANGE first_seen) 未建 → 月度分区创建失败 (42P01)。
@@ -6,6 +6,7 @@
 //      迁移已归档丢失。此处按 model 定义 + 分区键重建 (CREATE IF NOT EXISTS, 幂等, 表空无 corruption 风险)。
 //   2. reconciliation_physical_chain (VIEW, 175) / reconciliation_normalized (MV, 176) 未建 →
 //      Phase 42 启动 RefreshView + cron "对账-物化视图刷新" 报 42P01。直接调用 migration_175/176。
+//   3. APIKey unique 约束归一化: 验证 cleanupOldConstraints 修复 (sys_api_keys 命名冲突 42704)。
 //
 // 连接: 复用 internal/config.Load + DatabaseConfig.GetDSN() —— 自动带上本次修复的
 // connect_timeout + keepalive。每条操作带 60s ctx 超时 + 最多 5 次重试 (吸收链路随机 stall)。
@@ -28,6 +29,7 @@ import (
 
 	"github.com/xingran-next/xingran-go-backend/internal/config"
 	"github.com/xingran-next/xingran-go-backend/internal/core/db/migrations"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // macHistoryParentDDL 重建 sys_device_mac_history 父表。
@@ -57,6 +59,10 @@ var reconDeps = []string{
 	"ops_info_points", "sys_workstation", "sys_user", "sys_dept",
 }
 
+type conRow struct {
+	Name string `gorm:"column:conname"`
+}
+
 func main() {
 	_ = godotenv.Load() // 加载 .env (与 cmd/main.go 一致)
 	cfg, err := config.Load(context.Background())
@@ -64,8 +70,7 @@ func main() {
 		die("加载配置失败: %v", err)
 	}
 
-	// 用 GORM postgres driver (与 backend 同款, pgx 底层, GetDSN 自带 keepalive)
- gdb, err := gorm.Open(postgres.Open(cfg.Database.GetDSN()), &gorm.Config{
+	gdb, err := gorm.Open(postgres.Open(cfg.Database.GetDSN()), &gorm.Config{
 		Logger:                                   gormlogger.Default.LogMode(gormlogger.Silent),
 		DisableForeignKeyConstraintWhenMigrating: true,
 		SkipDefaultTransaction:                   true,
@@ -83,10 +88,9 @@ func main() {
 	fmt.Println("\n=== INVENTORY ===")
 	has := func(name string) bool {
 		var ok bool
-		err := withRetry(gdb, func(tx *gorm.DB) error {
+		_ = withRetry(gdb, func(tx *gorm.DB) error {
 			return tx.Raw("SELECT to_regclass(?) IS NOT NULL", name).Scan(&ok).Error
 		})
-		_ = err
 		return ok
 	}
 	fmt.Printf("sys_device_mac_history (parent): %v\n", has("sys_device_mac_history"))
@@ -107,7 +111,6 @@ func main() {
 		fmt.Printf("!! 创建 sys_device_mac_history 父表失败: %v\n", err)
 	} else {
 		fmt.Println("ok: sys_device_mac_history 父表就位")
-		// 补当月 + 未来 2 个月分区 (与 PartitionService.EnsurePartitionsExist 逻辑一致)
 		now := time.Now()
 		for i := 0; i <= 2; i++ {
 			td := now.AddDate(0, i, 0)
@@ -142,6 +145,37 @@ func main() {
 		} else {
 			fmt.Println("ok: Migrate176 (reconciliation_normalized MV)")
 		}
+	}
+
+	// === 3.5 APIKey unique 约束归一化 ===
+	// 验证 cleanupOldConstraints 修复 (database.go): sys_api_keys.key_hash 命名冲突。
+	// 现状: BootstrapMissingTables 用 inline UNIQUE → PG 自动名 sys_api_keys_key_hash_key;
+	//      models.APIKey.KeyHash 标 uniqueIndex → GORM 期望 uni_sys_api_keys_key_hash。
+	// 不带 bypass 启动时 AutoMigrate DROP CONSTRAINT uni_...(无 IF EXISTS) → 42704 FATA。
+	// 本段先列出现状, 模拟 cleanupOldConstraints 清理两命名, 隔离跑 AutoMigrate(APIKey) 验证不再 42704。
+	fmt.Println("\n=== APIKEY CONSTRAINT NORMALIZE ===")
+	if !has("sys_api_keys") {
+		fmt.Println("(sys_api_keys 表不存在, 跳过)")
+	} else {
+		listCons := func() []conRow {
+			var rows []conRow
+			_ = withRetry(gdb, func(tx *gorm.DB) error {
+				return tx.Raw("SELECT conname FROM pg_constraint WHERE conrelid='sys_api_keys'::regclass AND contype='u'").Scan(&rows).Error
+			})
+			return rows
+		}
+		fmt.Printf("current unique constraints: %v\n", listCons())
+		// 模拟 cleanupOldConstraints (与启动期一致): 两命名都 DROP IF EXISTS
+		for _, cname := range []string{"uni_sys_api_keys_key_hash", "sys_api_keys_key_hash_key"} {
+			_ = withRetryExec(gdb, fmt.Sprintf("ALTER TABLE sys_api_keys DROP CONSTRAINT IF EXISTS %s", cname))
+		}
+		// 隔离跑 APIKey AutoMigrate (PrepareStmt=false, 与启动期同款)
+		if err := withRetry(gdb, func(tx *gorm.DB) error { return tx.Migrator().AutoMigrate(&models.APIKey{}) }); err != nil {
+			fmt.Printf("!! AutoMigrate(APIKey) 失败: %v\n", err)
+		} else {
+			fmt.Println("ok: AutoMigrate(APIKey) 成功 (无 42704)")
+		}
+		fmt.Printf("post unique constraints: %v\n", listCons())
 	}
 
 	// === 4. 复核 ===

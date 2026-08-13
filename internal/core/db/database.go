@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	"regexp"
 	"time"
 
@@ -95,6 +96,10 @@ func createPostgresConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 		NowFunc:                                  func() time.Time { return time.Now().Local() },
 		DisableForeignKeyConstraintWhenMigrating: true,
 		SkipDefaultTransaction:                   true,
+		// Supabase Pooler(Supavisor)兼容:pooler(Transaction/Session)不支持
+		// 跨连接的 prepared statement 缓存,GORM 默认 PrepareStmt=true 会在 pooler 上
+		// 反复 prepare/失败重试,导致 AutoMigrate(80+ DDL)卡死。设为 false 走 simple protocol。
+		PrepareStmt: false,
 	}
 
 	db, err := gorm.Open(postgres.Open(dsn), gormConfig)
@@ -170,6 +175,12 @@ func (d *Database) cleanupOldConstraints() {
 		// models.Asset.DeviceSN 标 uniqueIndex → GORM 期望 uni_ops_asset_devicesn
 		{"ops_asset", "uni_ops_asset_devicesn"},
 		{"ops_asset", "ops_asset_devicesn_key"},
+		// === API Key (Phase 58/60) ===
+		// BootstrapMissingTables 用 inline `key_hash ... UNIQUE` → PG 自动名 sys_api_keys_key_hash_key;
+		// models.APIKey.KeyHash 标 uniqueIndex → GORM 期望 uni_sys_api_keys_key_hash。
+		// 不带 bypass 启动时 AutoMigrate 会 DROP CONSTRAINT uni_...(无 IF EXISTS)→ 42704 FATA。
+		{"sys_api_keys", "uni_sys_api_keys_key_hash"},
+		{"sys_api_keys", "sys_api_keys_key_hash_key"},
 		// === VDI (128_create_vdi_tables.sql 多个 inline UNIQUE) ===
 		{"sys_vdi_virtual_machines", "sys_vdi_virtual_machines_vm_id_key"},
 		{"sys_vdi_virtual_machines", "uni_sys_vdi_virtual_machines_vm_id"},
@@ -259,44 +270,13 @@ func (d *Database) dropDependentMaterializedViews() {
 		"如需恢复 DROP,见 internal/core/db/database.go 历史 commit。")
 }
 
-// AutoMigrate 自动迁移所有模型
+// MigrateModelList 返回 AutoMigrate 注册的完整模型列表。
 //
-// 设计变更 (260704-ne5): 启动期不再调用 200+ migration 函数 ——
-//
-//   1. 所有迁移(Migrate033/117/143~201)都是 schema 演进期一次性脚本,生产 DB 已全部应用过,
-//      每次启动都是 idempotent noop,但累计产生 ~30s 启动开销 + 250 行启动日志噪音。
-//
-//   2. 新部署流程改为:
-//        a) 用 scripts/db/snapshot.sh 从生产 DB 导出 schema-{date}.sql + seed-{date}.sql
-//        b) 新机 psql -f schema-snapshot.sql && psql -f seed-snapshot.sql 一次性导入
-//        c) ./xingran-backend 启动
-//
-//   3. GORM AutoMigrate(model) 仍保留 — 它是 model 加新字段时的安全网(ALTER TABLE ADD COLUMN)。
-//      启动期只跑 ~2s,日志 1 行 "所有表迁移成功"。
-//
-//   4. cleanupOldConstraints() 仍保留 — 清理 GORM uniqueIndex 与 SQL inline UNIQUE 命名冲突,
-//      ~5ms,无日志噪音。
-//
-//   5. dropDependentMaterializedViews() 已恢复(260704-ne5-regression-fix)——
-//      GORM AutoMigrate 仍会 ALTER sys_ad_user.username 等被 MV 引用的列,导致 PG SQLSTATE 0A000 FATA。
-//      前置 DROP 引用业务表的 MV,AutoMigrate 完成后由 migrations.Migrate176ReconciliationPhysicalMV
-//      重建 reconciliation_normalized(MV 重建 ~10s 是 R5 双源+物理链路版本的固有开销)。
-//
-//   6. migrateCredentialModel() 已删除 — 凭证模型已在生产迁移完成(protocol_type 列已存在)。
-//
-// 所有 migrations.MigrateNNN 函数定义仍保留在 internal/core/db/migrations/,仅不再启动期调用。
-// 如需重放某次迁移,手动跑对应函数(d.DB)即可。
-func (d *Database) AutoMigrate() error {
-	// 先清理可能存在的旧约束。dropDependentMaterializedViews() 当前 noop,
-	// 保留调用便于将来 model tag 漂移时回退 (260704-regression-fix-5)。
-	if d.Type == "postgres" {
-		d.cleanupOldConstraints()
-		d.dropDependentMaterializedViews()
-	}
-
-	// 禁用外键约束的自动创建，避免类型不匹配的问题
-	// 外键约束已通过 SQL 脚本手动创建
-	err := d.DB.Migrator().AutoMigrate(
+// 抽取为独立函数的原因 (2026-08-13, debug backend-hang-on-automigrate):
+// scripts/dbprovision 一次性补建工具复用同一列表(仅对缺失表 CREATE),
+// 保持单一事实源,避免两处列表漂移再次出现 "表永不会被建" 的问题。
+func MigrateModelList() []interface{} {
+	return []interface{}{
 		&models.User{},
 		&models.UserRole{},
 		&models.Department{},
@@ -317,7 +297,7 @@ func (d *Database) AutoMigrate() error {
 		&models.ConfigBackup{},
 		&models.DeviceMACAddress{},
 		&models.DevicePortStatus{},
-		&models.PortWriteAudit{},  // Phase 52: 端口写审计 append-only 表
+		&models.PortWriteAudit{}, // Phase 52: 端口写审计 append-only 表
 		&models.DeviceDiscovery{},
 		&models.DeviceEnrichmentTask{},
 		// 通知公告相关模型（增强版）
@@ -329,6 +309,11 @@ func (d *Database) AutoMigrate() error {
 		// 通知配置相关模型
 		&models.EmailConfig{},
 		&models.APINotificationConfig{},
+		// API Key 管理 (Phase 58/60 修复: AutoMigrate 缺漏导致 sys_api_keys 永不会被建)
+		&models.APIKey{},
+		&models.APIKeyUsageLog{},
+		// 系统参数配置 sys_config (init_data.go 写入,缺则 seed 中途失败)
+		&models.Config{},
 		// 验证码背景图相关模型
 		&models.CaptchaBackground{},
 		// 值班管理相关模型
@@ -380,7 +365,55 @@ func (d *Database) AutoMigrate() error {
 		&models.DashboardVersion{},
 		// Phase 46 R5: 半自动修复建议表
 		&models.SysReconciliationFixSuggestion{},
-	)
+	}
+}
+
+// AutoMigrate 自动迁移所有模型
+//
+// 设计变更 (260704-ne5): 启动期不再调用 200+ migration 函数 ——
+//
+//   1. 所有迁移(Migrate033/117/143~201)都是 schema 演进期一次性脚本,生产 DB 已全部应用过,
+//      每次启动都是 idempotent noop,但累计产生 ~30s 启动开销 + 250 行启动日志噪音。
+//
+//   2. 新部署流程改为:
+//        a) 用 scripts/db/snapshot.sh 从生产 DB 导出 schema-{date}.sql + seed-{date}.sql
+//        b) 新机 psql -f schema-snapshot.sql && psql -f seed-snapshot.sql 一次性导入
+//        c) ./xingran-backend 启动
+//
+//   3. GORM AutoMigrate(model) 仍保留 — 它是 model 加新字段时的安全网(ALTER TABLE ADD COLUMN)。
+//      启动期只跑 ~2s,日志 1 行 "所有表迁移成功"。
+//
+//   4. cleanupOldConstraints() 仍保留 — 清理 GORM uniqueIndex 与 SQL inline UNIQUE 命名冲突,
+//      ~5ms,无日志噪音。
+//
+//   5. dropDependentMaterializedViews() 已恢复(260704-ne5-regression-fix)——
+//      GORM AutoMigrate 仍会 ALTER sys_ad_user.username 等被 MV 引用的列,导致 PG SQLSTATE 0A000 FATA。
+//      前置 DROP 引用业务表的 MV,AutoMigrate 完成后由 migrations.Migrate176ReconciliationPhysicalMV
+//      重建 reconciliation_normalized(MV 重建 ~10s 是 R5 双源+物理链路版本的固有开销)。
+//
+//   6. migrateCredentialModel() 已删除 — 凭证模型已在生产迁移完成(protocol_type 列已存在)。
+//
+// 所有 migrations.MigrateNNN 函数定义仍保留在 internal/core/db/migrations/,仅不再启动期调用。
+// 如需重放某次迁移,手动跑对应函数(d.DB)即可。
+func (d *Database) AutoMigrate() error {
+	// SKIP_AUTOMIGRATE=true: dev/调试旁路,跳过 cleanup + dropDependent + AutoMigrate,
+	// 仅执行 BootstrapMissingTables(在 core.go initDBAndData 中分支调用)。
+	// Supabase pooler 上 cleanupOldConstraints 也会卡死,故一并跳过。
+	if os.Getenv("SKIP_AUTOMIGRATE") == "true" {
+		applogger.Warnf("[SKIP_AUTOMIGRATE=true] 跳过 cleanup/dropDependent/AutoMigrate,改由 BootstrapMissingTables 补建")
+		return nil
+	}
+
+	// 先清理可能存在的旧约束。dropDependentMaterializedViews() 当前 noop,
+	// 保留调用便于将来 model tag 漂移时回退 (260704-regression-fix-5)。
+	if d.Type == "postgres" {
+		d.cleanupOldConstraints()
+		d.dropDependentMaterializedViews()
+	}
+
+	// 禁用外键约束的自动创建，避免类型不匹配的问题
+	// 外键约束已通过 SQL 脚本手动创建
+	err := d.DB.Migrator().AutoMigrate(MigrateModelList()...)
 	if err != nil {
 		return err
 	}
@@ -479,6 +512,71 @@ func (d *Database) auditConstraintNaming() {
 func (d *Database) InitData() error {
 	// 两种数据库都使用相同的初始化逻辑
 	return initData(d.DB)
+}
+
+// BootstrapMissingTables 在跳过 AutoMigrate 时,直接用 raw SQL 补建缺失表。
+//
+// 设计原因: Supabase pooler (Session mode 5432) 上 GORM AutoMigrate(80+ DDL)
+// 会卡死在 dropDependent 之后,所有表都在但 sys_api_keys + sys_api_key_usage_logs
+// 永远建不出来 (database.go AutoMigrate 注册列表里也没加 &models.APIKey{})。
+// 本函数用 d.DB.Exec() 走 simple protocol 单条 DDL,避开 GORM AutoMigrate 的批量
+// statement 优化路径 —— 在 pooler 上更稳定。
+//
+// 安全: CREATE TABLE / INDEX IF NOT EXISTS,幂等。
+// 适用: dev/调试;生产不应绕过 AutoMigrate。
+func (d *Database) BootstrapMissingTables() error {
+	ddl := []string{
+		// Phase 58 SC#1-SC#4 + Phase 60 AUTH-03 + SEC-01 都依赖此表
+		`CREATE TABLE IF NOT EXISTS public.sys_api_keys (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ,
+    deleted_at TIMESTAMPTZ,
+    created_by VARCHAR(255),
+    updated_by VARCHAR(255),
+    version BIGINT,
+    name VARCHAR(100) NOT NULL,
+    key_hash VARCHAR(64) NOT NULL UNIQUE,
+    salt VARCHAR(32) NOT NULL,
+    key_prefix VARCHAR(12) NOT NULL,
+    user_id UUID,
+    expires_at TIMESTAMPTZ,
+    last_used_at TIMESTAMPTZ,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    scopes JSONB NOT NULL DEFAULT '[]'::jsonb,
+    ip_whitelist JSONB NOT NULL DEFAULT '[]'::jsonb,
+    description VARCHAR(500),
+    inherit_perms BOOLEAN NOT NULL DEFAULT FALSE
+)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON public.sys_api_keys(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_keys_key_prefix ON public.sys_api_keys(key_prefix)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_keys_deleted_at ON public.sys_api_keys(deleted_at)`,
+		`CREATE TABLE IF NOT EXISTS public.sys_api_key_usage_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    api_key_id UUID NOT NULL,
+    user_id UUID NOT NULL,
+    method VARCHAR(10),
+    path VARCHAR(500),
+    status_code INTEGER,
+    client_ip VARCHAR(50),
+    user_agent TEXT,
+    duration INTEGER,
+    success BOOLEAN,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_key_logs_api_key_id ON public.sys_api_key_usage_logs(api_key_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_key_logs_created_at ON public.sys_api_key_usage_logs(created_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_key_logs_user_id ON public.sys_api_key_usage_logs(user_id)`,
+	}
+
+	for i, stmt := range ddl {
+		applogger.Infof("[BootstrapMissingTables] executing %d/%d", i+1, len(ddl))
+		if err := d.DB.Exec(stmt).Error; err != nil {
+			return fmt.Errorf("DDL[%d] failed: %w", i+1, err)
+		}
+	}
+	applogger.Infof("[BootstrapMissingTables] %d statements OK", len(ddl))
+	return nil
 }
 
 // dbIdentRe 校验 PG 数据库标识符,防止 CREATE DATABASE 拼接时注入非法字符
