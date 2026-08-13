@@ -465,6 +465,11 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate204AddDot1xUserLimit(d.DB); err != nil {
 			applogger.Errorf("dot1x_user_limit 列迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// RPA Worker id 列补 DEFAULT gen_random_uuid()
+		// (Register 原生 SQL 路径绕过 BeforeCreate, 列需自带 DEFAULT 与全库 UUID 惯例对齐, 防 23502)
+		if err := migrations.Migrate205RpaWorkerIdDefault(d.DB); err != nil {
+			applogger.Errorf("sys_rpa_workers.id DEFAULT 迁移失败 (非阻断,留待下次启动): %v", err)
+		}
 	}
 
 	return nil
