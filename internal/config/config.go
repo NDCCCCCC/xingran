@@ -539,6 +539,16 @@ func (c *DatabaseConfig) GetDSN() string {
 	q := u.Query()
 	q.Set("sslmode", c.SSLMode)
 	q.Set("timezone", "Asia/Shanghai")
+	// 连接健壮性(debug backend-hang-on-automigrate):握手超时 + TCP keepalive。
+	// 底层走 pgx(pgx.ParseConfig),解析器把这些 libpq 关键字映射到 net.Dialer。
+	// Supabase 新加坡 pooler 链路存在随机 TCP 黑洞:server 端确认无锁无 active
+	// query,查询在网络层被静默丢弃,无 keepalive 时被丢弃连接上的 Read 永久阻塞
+	// => 启动挂死在 AutoMigrate 内省 / InitData seed。配置后 idle 10s 探测,每 5s
+	// 一次,3 次无 ACK 判死(~25s)返回 error,把无限挂起转化为有界错误。
+	q.Set("connect_timeout", "20")
+	q.Set("keepalive_idle", "10")
+	q.Set("keepalive_interval", "5")
+	q.Set("keepalive_count", "3")
 	u.RawQuery = q.Encode()
 	return u.String()
 }
