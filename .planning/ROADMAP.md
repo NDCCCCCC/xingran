@@ -205,7 +205,7 @@ Phases execute in numeric order: 57 → 58 → 59 → 60 → 61 (Phase 61 condit
 | 58. 前后端路由契约对齐 | v1.21 | 0/TBD | Not started | - |
 | 59. 可观测性 / 使用日志修复 | v1.21 | 2/2 | Complete    | 2026-08-13 |
 | 60. 安全加固与启用决策 | v1.21 | 2/2 | Complete    | 2026-08-13 |
-| 61. 资源级权限矩阵 + 限流生产调优 | v1.21 | 0/TBD | Not started (conditional on P60) | - |
+| 61. 资源级权限矩阵 + 限流生产调优 | v1.21 | 1/2 | In progress | 2026-08-13 |
 
 ---
 

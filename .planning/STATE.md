@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: Milestone History
 status: executing
-stopped_at: Phase 61 context gathered
-last_updated: "2026-08-13T08:26:56.239Z"
-last_activity: 2026-08-13 -- Phase 61 planning complete
+stopped_at: Completed 61-01-PLAN.md
+last_updated: "2026-08-13T08:55:14Z"
+last_activity: 2026-08-13
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 8
-  completed_plans: 5
-  percent: 60
+  completed_plans: 6
+  percent: 75
 ---
 
 # Project State
@@ -25,29 +25,41 @@ progress:
 
 See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-12)
 
-**Core value**: 端到端运维可观测与审计能力——每个写操作产生可追溯记录(who/when/what/from-where/before-after-state),敏感字段自动脱敏。API Key 作为 JWT 之外的第二条认证通道,其认证链、作用域校验、使用日志必须真实生效且可观测。
+**Core value**: 端到端运维可观测与审计能力——每个写操作产生可追溯记录(who/when/what/from-where/before-after-state),敏感字段自动脱敏。API Key 作为 JWT 之外的第二条认证通道,其认证链、作用域校验、使用日志必须真实生效且可观测;Phase 61 落地资源级权限矩阵与限流生产调优。
 
-**Current focus**: v1.21 Phase 60 — 安全加固与启用决策
+**Current focus**: v1.21 Phase 61 Plan 02 — RateLimitByScope 生产调优(QUAL-03)
 
 ## Current Position
 
-Phase: 61
-Plan: Not started
+Phase: 61 (resource-permission-matrix-and-rate-limit-tuning) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-08-13 -- Phase 61 planning complete
+Last activity: 2026-08-13
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 75%
 
 ## Accumulated Context
 
 ### v1.21 Milestone — Critical Decisions (locked at init)
 
-- **Scope**: 全修复 + 就绪 — 修复全部 P0/P1/P2 确定性缺陷,MultiAuth 代码修好可接入;「是否在生产路由挂载 MultiAuth」作为 Phase 60 discuss 决策点(含安全影响评估)
+- **Scope**: 全修复 + 就绪 + 能力补全 — 修复全部 P0/P1/P2 确定性缺陷,MultiAuth 代码修好并已挂载;Phase 61 落地 AUTH-04 资源级权限矩阵与 QUAL-03 限流生产调优
 - **Regression nature**: 对 v1.6「API 密钥管理系统」(Phase 16 / 2026-05-19 / 10 plans) 的回归修复,非新功能
 - **Research skipped**: 回归修复场景,代码与问题均已调查清楚(`.planning/research/` 不存在)
 - **Phase numbering**: 从 v1.20 末尾 Phase 56 续编(57-61)
 - **Granularity**: standard(项目配置),5 phases (57-61) 为本 milestone 自然交付边界;Phase 61 为 2026-08-12 重规划新增(能力补全,conditional)
 - **Scope evolution (2026-08-12 re-plan)**: 原"全修复 + 就绪"扩展为"全修复 + 就绪 + 能力补全"——FUTURE-APIKEY-01/02 升级为 v1 AUTH-04/QUAL-03 归 Phase 61(资源级权限矩阵 + 限流生产调优),仅在 Phase 60 AUTH-03=启用 后执行
+
+### Phase 61 Plan 01 Locked Decisions (AUTH-04)
+
+- **D-02**: 资源权限矩阵仅覆盖 `system:*` 11 资源(user/role/menu/dept/post/workstation/dict/config/captchaBackground/notice/apikey),共 59 个 (resource, action) 组合;`monitor:*` / `network:*` / `tool:*` / `operations:*` 不纳入
+- **D-03**: 资源/操作未命中 map → 403 fail-closed,新增 resource 必须显式补 entry
+- **D-05**: `RequireAPIKeyResourcePermission` 本 phase 仍为公共 helper,不挂载到 `apikey_router.go`
+- **D-06**: `InheritPerms=true` 实时加载 User 权限代码,与 API Key scopes 取并集写入 `c.scopes`
+- **D-07**: 每请求一次 DB 查询加载 User 权限,不引入缓存
+- **D-08**: `InheritPerms=false` 行为不变,仅校验 API Key 自带 scopes
+- **D-09**: User 权限加载失败(DB error / UserID nil / service error) → 401 fail-closed
+- **D-10**: `c.Set("username", apiKey.User.Username)` + `c.Set("nickname", apiKey.User.Nickname)`(ValidateAPIKey 已 `Preload("User")`)
+- **D-20/D-21**: 三层测试(单元 + 中间件单元 + 集成),无 gomock,真实 `permission.Service` + sqlite in-memory
 
 ### v1.21 — 根因调查结论(ground-truth 已验证)
 
@@ -135,13 +147,12 @@ Full deferred detail in [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-13T07:51:12.020Z
-Stopped at: Phase 61 context gathered
-Resume file: .planning/phases/61-resource-permission-matrix-and-rate-limit-tuning/61-CONTEXT.md
+Last session: 2026-08-13T08:55:14Z
+Stopped at: Completed 61-01-PLAN.md
+Resume file: .planning/phases/61-resource-permission-matrix-and-rate-limit-tuning/61-01-SUMMARY.md
 
-**Milestone status:** v1.21 IN PROGRESS — **Phase 60 Plan 01 COMPLETE** (commits 6324e45 + 6891936 + c7d3144): Task 1 (AUTH-03) `internal/api/router.go:241-262` 真实挂载 MultiAuth + RateLimitByScope 到 /system/apikeys/* 管理面 8 路由 + `.planning/notes/260813-auth03-enable-decision.md` 5 维度决策记录 (挂载范围 / 认证优先级 / IP 白名单 / JWT 回退 / InheritPerms scope-boundary); Task 2 (QUAL-01) P2-a 限流响应头 `string(rune(int))` → `strconv.Itoa` 修复 + TestRateLimitHeaderEncoding 单测 + TestRateLimitHeadersInResponse 集成测 (防御性 ≠ "d"); TestMultiAuthIntegration 三路径 + TestMultiAuthUsageLogTiming/Failure + TestIsIPAllowed 9 子测试零回归。AUTH-03=启用 → Phase 61 无条件执行 (不再 conditional); Plan 02 (SEC-01 SM3 单向哈希 + SEC-02 冗余索引手动 SQL) 待执行。
+**Milestone status:** v1.21 IN PROGRESS — **Phase 61 Plan 01 COMPLETE** (commits c55a3c5 + cba12ce + 1eae873 + 3a71c11): Task 1 创建 `pkg/permission/resource_action_map.go` 静态 map 覆盖 system:* 11 资源 59 组合 + 单元测试; Task 2 改造 `MultiAuth`/`setUserContextForAPIKey`/`RequireAPIKeyResourcePermission` + `internal/api/router.go` 调用形态,实现 D-06/D-07/D-09/D-10; Task 3 新增 8 个 `RequireAPIKeyResourcePermission` 中间件单测 + 5 个 `InheritPerms` sqlite 集成测。`go build ./...` exit 0,核心包测试 PASS,既有 Phase 57/59/60 回归锚 PASS。
 
 ## Operator Next Steps
 
-- `/gsd:execute-phase 60` — execute Phase 60 Plan 02 (SEC-01 SM3 hash migration + SEC-02 manual SQL)
-- After Plan 02: Phase 61 (AUTH-04 资源级权限矩阵 + QUAL-03 限流生产调优) unconditional
+- `/gsd:execute-phase 61` — continue with Phase 61 Plan 02 (QUAL-03: RateLimitByScope action-aware tuning + rate_limit.* config + RateLimiter config-driven)
