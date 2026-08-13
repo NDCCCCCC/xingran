@@ -541,9 +541,9 @@ HTTP/1.1 400 Bad Request
 
 **注：** Go json 行为、路由注册、字段 json tag、行号、调用方数、not-found 错误码、加密逻辑——这些核心技术事实均已 `[VERIFIED]`（codebase grep + 实证 Go 程序），不在假设表内。
 
-## Open Questions
+## Open Questions (RESOLVED — 58-01-PLAN.md 已采纳推荐)
 
-1. **Form.Item name 是否一并改 camelCase（类别 D）？**
+1. **Form.Item name 是否一并改 camelCase（类别 D）？** — RESOLVED: 采纳推荐（是），plan Task 2 类别 D 全改 camelCase。
    - What we know: Form.Item name 是前端内部约定，不直接接触 wire format（wire 字段在类别 C 的 data 构建处决定）。理论上可只改类别 A/B/C + 类别 D 的 record.X 读取，保留 Form.Item name 为 snake 并在构造时映射。
    - What's unclear: 哪种策略更不易出错。
    - Recommendation: **全改 camelCase（含 Form.Item name）**。理由：(a) 页面已在多处编辑，一次性统一最清晰；(b) 避免 `values.inherit_perms`（snake）↔ `inheritPerms: values.inherit_perms`（camel 构造）的认知负担；(c) Form.Item name 改 camel 后 `values.inheritPerms` 直接赋给 `data.inheritPerms`，零映射。属 Claude's Discretion，planner 可定。
@@ -620,10 +620,10 @@ HTTP/1.1 400 Bad Request
 | 改动面测绘 | HIGH | index.tsx 全文读取，25 处分类列出 |
 | 验证策略 | HIGH | type-check 契约门 + curl SC 断言 + 既有 Go 单测 |
 
-### Open Questions
-- Q1: Form.Item name 是否一并改 camelCase（推荐：是，Claude's Discretion）
-- Q2: 是否补 vitest 单测（推荐：可选低优先，Claude's Discretion）
-- Q3: UpdateAPIKeyRequest 是否补 expiresAt（推荐：否，超 scope）
+### Open Questions (RESOLVED — 见 58-01-PLAN.md)
+- Q1: Form.Item name 是否一并改 camelCase — RESOLVED: 采纳推荐（是），plan 类别 D 全改 camel
+- Q2: 是否补 vitest 单测 — RESOLVED: 采纳推荐（否），type-check 为天然契约门
+- Q3: UpdateAPIKeyRequest 是否补 expiresAt — RESOLVED: 采纳推荐（否），超 scope
 
 ### Ready for Planning
 研究完成，决策 D-01..D-06 技术前提全部验证成立，改动面逐字段/逐行测绘完毕。Planner 可直接据「前端字段映射」三表 + 「index.tsx 字段访问改动清单」四类别创建 PLAN.md，无需再做源码探索。
