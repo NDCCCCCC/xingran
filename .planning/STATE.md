@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: Milestone History
 status: planning
-stopped_at: context exhaustion at 75% (2026-08-13)
-last_updated: "2026-08-13T04:30:00.102Z"
+stopped_at: context exhaustion at 77% (2026-08-13)
+last_updated: "2026-08-13T04:59:17.191Z"
 last_activity: 2026-08-13
 progress:
   total_phases: 5
@@ -135,11 +135,11 @@ Full deferred detail in [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-13T04:30:00.092Z
-Stopped at: context exhaustion at 75% (2026-08-13)
-Resume file: None
+Last session: 2026-08-13T05:30:00.000Z
+Stopped at: Phase 60 discuss-phase complete; CONTEXT.md committed (5cf8f2c); ready for plan-phase
+Resume file: .planning/phases/60-security-hardening-and-enable-decision/60-CONTEXT.md
 
-**Milestone status:** v1.21 IN PROGRESS — Phase 58 execution: Task 1 (apikey.ts POST alignment, commit 1978935) + Task 2 (types/apikey.ts + index.tsx camelCase, commit 6a4c772) committed; Task 3 (端到端 SC#1-SC#4 + 排序 + Go 回归) at human-verify checkpoint, 自动化门全绿 (type-check/lint/9/9 Go subtests),后端 localhost:9000 不可达 → 4 项 human-verify (SC#1 编辑回填 / SC#2 DB ip_whitelist 非零值 / SC#3 重复删除 code:1001 / 排序 orderByColumn camelCase) 待人工或环境就绪后确认。
+**Milestone status:** v1.21 IN PROGRESS — Phase 58 execution: Task 1 (apikey.ts POST alignment, commit 1978935) + Task 2 (types/apikey.ts + index.tsx camelCase, commit 6a4c772) committed; Task 3 (端到端 SC#1-SC#4 + 排序 + Go 回归) at human-verify checkpoint, 自动化门全绿 (type-check/lint/9/9 Go subtests),后端 localhost:9000 不可达 → 4 项 human-verify (SC#1 编辑回填 / SC#2 DB ip_whitelist 非零值 / SC#3 重复删除 code:1001 / 排序 orderByColumn camelCase) 待人工或环境就绪后确认。**Phase 60 discuss-phase COMPLETE** (commit 5cf8f2c): 13 个决策落地,4 区域全讨论 (AUTH-03 启用+挂载范围+优先级+IP白名单, SEC-01 SM3单向哈希+KeyPrefix保留+无迁移+一次性返回明文, SEC-02 手动SQL+文档+验证查询, QUAL-01 strconv.Itoa+单测+集成测试); AUTH-03=启用 → Phase 61 立即执行 (不再 conditional)。
 
 ## Operator Next Steps
 
