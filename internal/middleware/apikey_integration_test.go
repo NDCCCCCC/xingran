@@ -233,6 +233,45 @@ func TestMultiAuthIntegration(t *testing.T) {
 	})
 }
 
+// --- WR-03 回归锚: InheritPerms=true + permSvc/db 未注入 → 401 fail-closed(非 panic) ---
+
+// TestMultiAuth_InheritPermsNilService WR-03(Phase 61 review):
+// MultiAuth(fakeSvc, logger, nil, nil) 且 key 开 InheritPerms=true 时,
+// 修复前在 permSvc.GetUserPermissions 处 nil 接口解引用 panic;
+// 修复后防御性 401 "用户权限加载失败"(D-09 fail-closed),handler 不可达。
+func TestMultiAuth_InheritPermsNilService(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	uid := "11111111-2222-3333-4444-555555555555"
+	fakeSvc := &fakeAPIKeyService{
+		validKey: &models.APIKey{
+			BaseModel:    models.BaseModel{ID: "ak-nil-permsvc"},
+			Name:         "nil-permsvc-key",
+			UserID:       &uid, // UserID 非 nil — 单独隔离 permSvc/db nil 路径
+			Scopes:       []string{"read"},
+			InheritPerms: true, // 关键: 打开继承权限,触发 permSvc 调用路径
+			IsActive:     true,
+		},
+	}
+	fakeLogger := newFakeUsageLogger()
+
+	router := gin.New()
+	router.Use(gin.Recovery()) // 防御: 若修复回退,panic 被 recovery 吞为 500 而非 crash 测试进程
+	router.Use(MultiAuth(fakeSvc, fakeLogger, nil, nil))
+	router.GET("/probe", func(c *gin.Context) {
+		c.JSON(200, gin.H{"ok": true})
+	})
+
+	req := httptest.NewRequest("GET", "/probe", nil)
+	req.Header.Set("X-API-Key", "rec_"+hex64())
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, 401, w.Code,
+		"InheritPerms=true 但 permSvc/db 为 nil 应 401 fail-closed (WR-03), 不得 panic/500")
+	assert.Contains(t, w.Body.String(), "用户权限加载失败")
+}
+
 // --- QUAL-01 / D-12 集成测试: 限流响应头跨 gin.Engine + 中间件链路实证 ---
 
 // TestRateLimitHeadersInResponse 用真实 gin.Engine + 真实 services.NewRateLimiter +

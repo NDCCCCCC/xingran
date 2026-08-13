@@ -214,6 +214,15 @@ func setUserContextForAPIKey(c *gin.Context, apiKey *models.APIKey, scopes []str
 			return
 		}
 
+		// WR-03 (Phase 61 review): permSvc/db 未注入(InheritPerms=true 但调用方传 nil)
+		// 会在 GetUserPermissions 处 nil 接口解引用 panic。D-09 fail-closed 要求 401 而非 panic。
+		if permSvc == nil || db == nil {
+			applogger.Errorf("[API_KEY] InheritPerms=true 但 permSvc/db 未注入: apiKeyID=%s", apiKey.ID)
+			response.Error(c, response.ErrUnauthorized, "用户权限加载失败")
+			c.Abort()
+			return
+		}
+
 		// 加载 User 权限代码 (每请求一次 DB, 无缓存 D-07)
 		userPerms, err := permSvc.GetUserPermissions(db, *apiKey.UserID)
 		if err != nil {
