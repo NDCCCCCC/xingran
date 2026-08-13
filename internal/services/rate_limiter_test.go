@@ -518,3 +518,36 @@ func TestRateLimiter_ConfigDrivenRead(t *testing.T) {
 	allowed, _ := limiter.Check("key", "read")
 	assert.False(t, allowed, "6th request should be denied (provider 配置 5/min)")
 }
+
+// TestCalculateResetWindowAware WR-02 回归锚(Phase 61 review):
+// calculateReset 必须按真实窗口时长计算 ResetAt — 小时超限不得声称 1 分钟后重置。
+func TestCalculateResetWindowAware(t *testing.T) {
+	limiter := NewRateLimiter(newMockRateLimitProvider())
+	now := time.Now()
+
+	t.Run("分钟窗口_加1分钟", func(t *testing.T) {
+		times := []time.Time{now.Add(-30 * time.Second), now.Add(-10 * time.Second)}
+		reset := limiter.calculateReset(times, time.Minute)
+		assert.WithinDuration(t, now.Add(30*time.Second), reset, 2*time.Second,
+			"分钟窗口 ResetAt = 最早时间戳 + 1分钟")
+	})
+
+	t.Run("小时窗口_加1小时", func(t *testing.T) {
+		times := []time.Time{now.Add(-30 * time.Minute), now.Add(-5 * time.Minute)}
+		reset := limiter.calculateReset(times, time.Hour)
+		assert.WithinDuration(t, now.Add(30*time.Minute), reset, 2*time.Second,
+			"小时窗口 ResetAt = 最早时间戳 + 1小时(不得是 +1分钟, WR-02)")
+	})
+
+	t.Run("天窗口_加24小时", func(t *testing.T) {
+		times := []time.Time{now.Add(-12 * time.Hour), now.Add(-1 * time.Hour)}
+		reset := limiter.calculateReset(times, 24*time.Hour)
+		assert.WithinDuration(t, now.Add(12*time.Hour), reset, 2*time.Second,
+			"天窗口 ResetAt = 最早时间戳 + 24小时(不得是 +1分钟, WR-02)")
+	})
+
+	t.Run("空窗口_返回当前时间", func(t *testing.T) {
+		reset := limiter.calculateReset(nil, time.Minute)
+		assert.WithinDuration(t, time.Now(), reset, 2*time.Second)
+	})
+}

@@ -142,7 +142,7 @@ func (rl *RateLimiter) Check(key string, scope string) (bool, *RateLimitResult) 
 		result := &RateLimitResult{
 			Allowed:   false,
 			Remaining: 0,
-			ResetAt:   rl.calculateReset(window.minute),
+			ResetAt:   rl.calculateReset(window.minute, time.Minute),
 			Limit:     limit.PerMinute,
 		}
 		return false, result
@@ -153,7 +153,7 @@ func (rl *RateLimiter) Check(key string, scope string) (bool, *RateLimitResult) 
 		result := &RateLimitResult{
 			Allowed:   false,
 			Remaining: 0,
-			ResetAt:   rl.calculateReset(window.hour),
+			ResetAt:   rl.calculateReset(window.hour, time.Hour),
 			Limit:     limit.PerHour,
 		}
 		return false, result
@@ -164,7 +164,7 @@ func (rl *RateLimiter) Check(key string, scope string) (bool, *RateLimitResult) 
 		result := &RateLimitResult{
 			Allowed:   false,
 			Remaining: 0,
-			ResetAt:   rl.calculateReset(window.day),
+			ResetAt:   rl.calculateReset(window.day, 24*time.Hour),
 			Limit:     limit.PerDay,
 		}
 		return false, result
@@ -242,12 +242,17 @@ func (rl *RateLimiter) calculateRemaining(limit RateLimit, minuteCount, hourCoun
 }
 
 // calculateReset 计算重置时间（私有方法）
-// 返回最早过期时间
-func (rl *RateLimiter) calculateReset(times []time.Time) time.Time {
+// 返回窗口内最早时间戳 + window 窗口时长 — 即该窗口最早一条记录滑出窗口的时刻。
+//
+// WR-02 修复(Phase 61 review): 原实现无条件 times[0].Add(time.Minute),对
+// hour/day 超限路径返回错误的 ResetAt(声称约 1 分钟后重置,实际窗口要
+// 1 小时/24 小时才滑动),严重误导客户端重试节奏。现按真实窗口时长计算:
+// 分钟路径传 time.Minute,小时路径传 time.Hour,天路径传 24*time.Hour。
+func (rl *RateLimiter) calculateReset(times []time.Time, window time.Duration) time.Time {
 	if len(times) == 0 {
 		return time.Now()
 	}
 
-	// 返回最早的时间点 + 1分钟（因为分钟窗口的清理时间是1分钟）
-	return times[0].Add(time.Minute)
+	// 返回最早的时间点 + 对应窗口时长(窗口内最早记录滑出的时刻)
+	return times[0].Add(window)
 }

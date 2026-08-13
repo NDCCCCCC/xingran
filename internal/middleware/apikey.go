@@ -427,7 +427,13 @@ func RateLimitByScope(rateLimiter *services.RateLimiter, action string) gin.Hand
 
 		if !allowed {
 			// 超过速率限制，返回429
-			c.Header("Retry-After", "60") // 建议60秒后重试
+			// WR-02 修复(Phase 61 review): Retry-After 不再硬编码 60,改由真实
+			// ResetAt 动态计算(分钟/小时/天窗口各自正确),下限 1 秒防 0/负值。
+			retryAfter := int(time.Until(result.ResetAt).Seconds())
+			if retryAfter < 1 {
+				retryAfter = 1
+			}
+			c.Header("Retry-After", strconv.Itoa(retryAfter))
 			response.Error(c, 429, "请求过于频繁，请稍后再试")
 			c.Abort()
 			return
