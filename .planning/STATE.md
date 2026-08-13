@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: Milestone History
 status: executing
-stopped_at: context exhaustion at 77% (2026-08-13)
-last_updated: "2026-08-13T03:50:43.384Z"
-last_activity: 2026-08-13 -- Phase 59 planning complete
+stopped_at: context exhaustion at 75% (2026-08-13)
+last_updated: "2026-08-13T04:11:14.000Z"
+last_activity: 2026-08-13 -- Phase 58 execution: Task 1+2 committed, Task 3 at human-verify checkpoint (backend not reachable — 降级策略 applied)
 progress:
   total_phases: 5
   completed_phases: 1
@@ -32,9 +32,9 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-12)
 ## Current Position
 
 Phase: 58 (route-contract-alignment) — EXECUTING
-Plan: 1 of 1
-Status: Ready to execute
-Last activity: 2026-08-13 -- Phase 59 planning complete
+Plan: 58-01 / 1 of 1 (Task 3 at human-verify checkpoint)
+Status: Executing Phase 58
+Last activity: 2026-08-13 -- Phase 58 execution: Task 1+2 committed, Task 3 at human-verify checkpoint (backend not reachable — 降级策略 applied)
 
 Progress: [░░░░░░░░░░] 0% (0/5 phases, 0 plans)
 
@@ -135,11 +135,11 @@ Full deferred detail in [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-13T03:38:41.174Z
-Stopped at: context exhaustion at 77% (2026-08-13)
+Last session: 2026-08-13T04:11:14.000Z
+Stopped at: context exhaustion at 75% (2026-08-13)
 Resume file: None
 
-**Milestone status:** v1.21 IN PROGRESS — Phase 57 complete; Phase 58 context gathered (CONTRACT-01 + discuss-new CONTRACT-02 字段命名), awaiting `/gsd:plan-phase 58`.
+**Milestone status:** v1.21 IN PROGRESS — Phase 58 execution: Task 1 (apikey.ts POST alignment, commit 1978935) + Task 2 (types/apikey.ts + index.tsx camelCase, commit 6a4c772) committed; Task 3 (端到端 SC#1-SC#4 + 排序 + Go 回归) at human-verify checkpoint, 自动化门全绿 (type-check/lint/9/9 Go subtests),后端 localhost:9000 不可达 → 4 项 human-verify (SC#1 编辑回填 / SC#2 DB ip_whitelist 非零值 / SC#3 重复删除 code:1001 / 排序 orderByColumn camelCase) 待人工或环境就绪后确认。
 
 ## Operator Next Steps
 
