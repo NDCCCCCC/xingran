@@ -1,7 +1,5 @@
 import { getAppMessage } from "@/utils/antdMessage";
-import { useAuthStore } from "@/store/authStore";
 import { clearPublicKeyCache } from "./sm2";
-import { LOGIN } from "@/constants/routes";
 
 // ============================================================================
 // 向后兼容性重新导出
@@ -276,17 +274,6 @@ function getErrorTypeByStatus(status: number): HttpErrorType {
   };
 
   return statusToTypeMap[status] ?? HttpErrorType.INTERNAL_ERROR;
-}
-
-/**
- * 处理未授权错误（登出逻辑）
- */
-async function handleUnauthorized(): Promise<void> {
-  // 清除 auth store 状态（内部已调用 tokenManager.clearTokens() 清理 sessionStorage 中的加密 token）
-  await useAuthStore.getState().logout();
-
-  // 跳转到登录页
-  window.location.href = LOGIN;
 }
 
 // ==================== 类型安全的异步操作包装 ====================

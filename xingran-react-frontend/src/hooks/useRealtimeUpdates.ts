@@ -15,11 +15,6 @@ import { useEffect, useCallback, useRef } from "react";
 import { useDashboardStore } from "@/store/dashboardStore";
 import type { WidgetConfig, WebSocketDataSourceConfig, DataSourceConfig } from "@/types/dashboard";
 
-// 类型守卫：检查 dataSource 是否有直接的 type 属性
-function hasDataSourceType(ds: DataSourceConfig): ds is WebSocketDataSourceConfig {
-	return "type" in ds && (ds as { type: string }).type === "websocket";
-}
-
 // 类型守卫：检查是否为 WebSocket 数据源
 function isWebSocketDataSource(ds: DataSourceConfig): ds is WebSocketDataSourceConfig {
 	if ("type" in ds) {
@@ -86,6 +81,8 @@ export function useRealtimeUpdates(
 		try {
 			const ws = new WebSocket(getWsUrl());
 			const opts = optionsRef.current;
+			// 立即赋值 wsRef,避免 React Compiler 抱怨"未声明的变量被引用"
+			wsRef.current = ws;
 
 			ws.onopen = () => {
 				opts?.onConnectionChange?.(true);
@@ -138,8 +135,6 @@ export function useRealtimeUpdates(
 					}, 5000);
 				}
 			};
-
-			wsRef.current = ws;
 		} catch (error) {
 			console.error("[Dashboard WebSocket] Connection error:", error);
 		}
@@ -197,6 +192,8 @@ export function useRealtimeUpdates(
 			disconnect();
 		};
 		// widgets.length 作为基本类型依赖避免数组引用抖动; connect/disconnect 已稳定
+		// ref 现在处理了 widgets 引用捕获, 这里禁用 lint 误报
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [widgets.length, options?.enabled, connect, disconnect]);
 
 	return {
