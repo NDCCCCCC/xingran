@@ -5,7 +5,7 @@ milestone_name: Milestone History
 status: milestone_complete
 stopped_at: Milestone complete — Phases 57-61 all code-complete (Phase 58 SC#1-SC#4 E2E deferred: dev DB perf)
 last_updated: 2026-08-13T14:30:00.000Z
-last_activity: 2026-08-13 — Phase 58 marked code-complete (58-01-SUMMARY), backend startup-hang fixed (7c821d7), dev env SM2/login unblocked
+last_activity: 2026-08-14 — quick-260814-164: 修复 RPA Worker 注册主键 NULL(23502) + 菜单接口 N+1(context canceled 500)
 progress:
   total_phases: 5
   completed_phases: 5
@@ -19,7 +19,7 @@ progress:
 **Project**: XingRan-Next 运维管理系统
 **Created**: 2026-04-16
 **Status**: v1.21 API Key 认证链修复 + 能力补全 milestone COMPLETE — Phases 57-61 全部代码完成。Phase 58 SC#1-SC#4 端到端验证因 dev DB(Supabase pooler)性能延期(见 58-01-SUMMARY §Deferred),代码契约修复已提交且自动化门全绿。
-**Last activity**: 2026-08-13 — Phase 58 标记 code-complete + 58-01-SUMMARY;本次会话另修后端启动 hang(config.go keepalive `7c821d7`)、dev 环境 SM2 登录链路(config.yaml use_sm2)、MV/分区补建(dbprobe `26e93fd`)、logger 镜像修复(`7901248`)、WIP 清理(dev 工具 + rebrand)。
+**Last activity**: 2026-08-13 — Phase 58 标记 code-complete + 58-01-SUMMARY;本次会话另修后端启动 hang(config.go keepalive `7c821d7`)、dev 环境 SM2 登录链路(config.yaml use_sm2)、MV/分区补建(dbprobe `26e93fd`)、logger 镜像修复(`7901248`)、WIP 清理(dev 工具 + rebrand)。2026-08-14 quick-260814-164: 修复 RPA Worker 注册主键 NULL + 菜单接口 N+1。
 
 ## Project Reference
 
@@ -115,6 +115,7 @@ None currently. Roadblock risk: Phase 60 AUTH-03 启用决策若选"启用",会�
 | Quick ID | Description | Date | Commit | Plan |
 |----------|-------------|------|--------|------|
 | 260812-wu5 | clean constants dead code and unify pagination constants | 2026-08-12 | 759a65a | [260812-wu5-clean-constants-dead-code-and-unify-pagi](./quick/260812-wu5-clean-constants-dead-code-and-unify-pagi/) |
+| 260814-164 | 修复 RPA Worker 注册主键 NULL(23502) + 菜单接口 N+1(context canceled 500) | 2026-08-14 | f0d0a1f / 4c2a900 | [260814-164-fix-rpa-pk-menu-n1](./quick/260814-164-fix-rpa-pk-menu-n1/) |
 
 ## Deferred Items
 
