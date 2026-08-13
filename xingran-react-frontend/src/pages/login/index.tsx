@@ -216,13 +216,13 @@ const Login: FC = () => {
             className="text-3xl font-bold"
             style={{ color: "var(--theme-text-primary)" }}
           >
-            产险湖北数智化平台
+            星苒
           </h1>
           <p
             className="mt-2"
             style={{ color: "var(--theme-text-secondary)" }}
           >
-            企业级权限管理系统
+            光启万物，荫庇四方
           </p>
         </div>
 

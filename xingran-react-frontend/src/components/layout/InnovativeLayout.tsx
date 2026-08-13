@@ -235,7 +235,7 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
                 color: "var(--theme-text-secondary)",
               }}
             >
-              产险湖北数智化平台
+              XingRan
             </span>
           </Space>
 
