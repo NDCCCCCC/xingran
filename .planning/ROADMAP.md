@@ -182,7 +182,12 @@ Plans:
 
 Plans:
 
+**Wave 1**
+
 - [ ] 61-01-PLAN.md (Wave 1) — AUTH-04: pkg/permission/resource_action_map.go 静态 map(D-01/D-02/D-03/D-04)+ MultiAuth+setUserContextForAPIKey InheritPerms 加载(D-06/D-07/D-09)+ username/nickname 修正(D-10)+ RequireAPIKeyResourcePermission 接入 map(D-03)+ router.go 调用形态变更 + map 单测 + 5 个 ResourcePermission 中间件单测 + 5 个 InheritPerms sqlite 集成测
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 61-02-PLAN.md (Wave 2, depends_on: ["61-01"]) — QUAL-03: RateLimitByScope 接收 action 参数(D-11)+ getRequiredScope 扩展 list→read(D-11)+ 提取纯函数 SelectScope(D-12)+ getScopeFromContext 薄壳包装 SelectScope(D-12)+ CacheConfigService 新增 12 个 rate_limit.* 配置键(D-15/D-16/D-17,拆分为两次单占位符查询沿用既有 pattern)+ RateLimiter 改造为配置驱动接收 RateLimitProvider(D-18)+ reload race 语义(D-19)+ router.go 调用形态变更(`core.CacheConfigService` 字段访问,**非** getter)+ modify existing rate_limiter_test.go(449 行,7 个既有测试函数迁移到 `NewRateLimiter(provider)`,移除 `limiter.limits` 断言)+ 既有 TestRateLimitHeadersInResponse 签名更新 + 9 个 SelectScope 纯函数单测 + 7 个 RateLimitByScope 中间件单测 + 7 个 RateLimiter 配置驱动单测 + 5 个 CacheConfigService rate_limit 单测
 
 **Conditional**: 本 phase 仅在 Phase 60 AUTH-03 决策=启用 时执行;若决策=推迟启用,本 phase 随之 defer(记录触发条件与再次评估时机)。
