@@ -1247,3 +1247,77 @@ func TestGetUsageLogSummary(t *testing.T) {
 		cleanupTestData(t, db)
 	})
 }
+
+// --- Phase 59 Plan 02: SC#3 (OBSERV-02 successRate 连锁防回归) ---
+
+// TestGetUsageLogSummaryMixed SC#3: 混合 Success=true/false 行后, GetUsageLogSummary 必须返回
+// successRate ∈ (0,100) 开区间, 不恒 ≈ 0% (修复前 Success 永远 false → 聚合恒 0%)。
+//
+// 直接 seed 真实 DB 行 (不经 middleware 异步链), 纯聚合逻辑防回归锚。
+// 2 Success=true + 2 Success=false → 2/4 = 50% 精确锚。
+func TestGetUsageLogSummaryMixed(t *testing.T) {
+	db := setupTestDB(t)
+	service := NewAPIKeyService(db)
+	ctx := context.Background()
+	user := createTestUser(t, db)
+	apiKey := createTestAPIKey(t, db, user.ID, true)
+
+	// 混合 seed: 2 Success=true + 2 Success=false (下游 403/429, 非 pre-auth 401)
+	logs := []models.APIKeyUsageLog{
+		{
+			APIKeyID:   apiKey.ID,
+			UserID:     user.ID,
+			Method:     "GET",
+			Path:       "/api/v1/success-1",
+			StatusCode: 200,
+			ClientIP:   "127.0.0.1",
+			Duration:   50,
+			Success:    true, // 2xx → Success=true (OBSERV-01 修复后)
+		},
+		{
+			APIKeyID:   apiKey.ID,
+			UserID:     user.ID,
+			Method:     "POST",
+			Path:       "/api/v1/success-2",
+			StatusCode: 204,
+			ClientIP:   "127.0.0.1",
+			Duration:   30,
+			Success:    true, // 2xx → Success=true (OBSERV-01 修复后)
+		},
+		{
+			APIKeyID:   apiKey.ID,
+			UserID:     user.ID,
+			Method:     "GET",
+			Path:       "/api/v1/forbidden",
+			StatusCode: 403, // 下游 RequireScope 失败
+			ClientIP:   "127.0.0.1",
+			Duration:   20,
+			Success:    false, // D-01: 4xx → Success=false
+		},
+		{
+			APIKeyID:   apiKey.ID,
+			UserID:     user.ID,
+			Method:     "GET",
+			Path:       "/api/v1/ratelimit",
+			StatusCode: 429, // 下游 RateLimitByScope 失败
+			ClientIP:   "127.0.0.1",
+			Duration:   10,
+			Success:    false, // D-01: 4xx → Success=false
+		},
+	}
+	for _, log := range logs {
+		require.NoError(t, db.Create(&log).Error)
+	}
+
+	// 调聚合
+	summary, err := service.GetUsageLogSummary(ctx, apiKey.ID)
+	require.NoError(t, err)
+	require.NotNil(t, summary)
+
+	// SC#3 防回归三道断言: successRate ∈ (0,100) 开区间, 精确锚 50%
+	assert.Greater(t, summary.SuccessRate, 0.0, "SuccessRate 必须 > 0 (不恒 ≈ 0%)")
+	assert.Less(t, summary.SuccessRate, 100.0, "SuccessRate 必须 < 100 (不全成功)")
+	assert.InDelta(t, 50.0, summary.SuccessRate, 0.1, "2/4 = 50% 精确锚")
+
+	cleanupTestData(t, db)
+}
