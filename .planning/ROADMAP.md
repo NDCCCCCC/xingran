@@ -97,7 +97,10 @@ Plans:
 3. 前端对单条 API Key 执行"删除"操作后,记录从列表中消失(软删除生效),重复删除或再访问返回明确错误而非 404 路由缺失
 4. 前后端方法/路径对齐方向由 phase 内 discuss 决策并落记录(选项 A: 改前端用 POST 对齐 v1.6 后端既有模式;选项 B: 后端补 RESTful GET/PUT/DELETE),决策与 `apikey_router.go` 当前注册路径一致或显式迁移
 
-**Plans**: TBD
+**Plans**: 1 plan (single-wave; CONTRACT-01 路由方法对齐 + CONTRACT-02 字段命名 camelCase 对齐, 3 个前端文件, 后端零改动)
+
+Plans:
+- [ ] 58-01-PLAN.md — 前端 apikey.ts 三函数改 POST 对齐 (CONTRACT-01/D-01) + types/apikey.ts & index.tsx 字段命名 snake→camelCase 对齐 (CONTRACT-02/D-02/D-03/D-04/D-05) + 端到端 SC#1-SC#4 验证 checkpoint (D-06)
 
 **UI hint**: yes (前端 API Key 管理页面编辑/删除交互流程,涉及 `src/api/apikey.ts` + 列表/表单组件)
 
