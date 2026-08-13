@@ -240,11 +240,14 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			}
 			// API密钥管理
 			apikeys := authorized.Group("/apikeys")
+			// WR-01 修复(Phase 61 review): 删除权限词汇统一为 system:* 模块的 remove
+			// 约定(与 pkg/permission/config.go APIKeyRemove 常量 + resource_action_map
+			// D-04 一致)。历史值 "system:apikey:delete" 无菜单授权来源,永不命中。
 			apikeys.Use(middleware.RequirePermissions([]string{
 				"system:apikey:list",
 				"system:apikey:add",
 				"system:apikey:edit",
-				"system:apikey:delete",
+				"system:apikey:remove",
 			}, core))
 			// AUTH-03 / D-01: 启用 X-API-Key 认证链（挂载范围严格限定本管理面路由组，D-02）。
 			// 顺序: RequirePermissions → MultiAuth → RateLimitByScope。

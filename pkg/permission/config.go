@@ -87,6 +87,11 @@ const (
 	SystemNotice PermissionCode = "system:notice"
 
 	// API Key 管理权限(Phase 61 / AUTH-04 — 由 resource_action_map.go 引用)
+	// 词汇约定(WR-01): 删除权限统一为 remove(system:* 模块约定, D-04)。
+	// router.go apikeys 组级检查已从历史字面量 "system:apikey:delete" 对齐到
+	// "system:apikey:remove"(v1.6 旧约定无菜单授权来源,永不命中)。
+	// 注意: 菜单种子仅播种 system:apikey:list/logs, add/edit/remove 细粒度授权
+	// 需由后续 migration 或 admin 手动授权补充(见 61-REVIEW.md WR-01)。
 	APIKeyList   PermissionCode = "system:apikey:list"
 	APIKeyView   PermissionCode = "system:apikey:view"
 	APIKeyAdd    PermissionCode = "system:apikey:add"
