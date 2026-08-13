@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -80,19 +81,54 @@ const (
 	CacheConfigNetworkDeviceCredential = "cache.network_device.credential" // 凭证设备列表缓存时间（分钟）
 )
 
+// 限流阈值配置 (Phase 61 QUAL-03 / D-16)
+// 键形态: rate_limit.{read|write|admin|default}.{per_minute|per_hour|per_day}
+// 值语义: 请求次数(整数),非分钟;默认值与既有 rate_limiter.go 硬编码一致(D-17)
+//
+// 12 键清单(D-16):
+//   rate_limit.read.per_minute     rate_limit.read.per_hour     rate_limit.read.per_day
+//   rate_limit.write.per_minute    rate_limit.write.per_hour    rate_limit.write.per_day
+//   rate_limit.admin.per_minute    rate_limit.admin.per_hour    rate_limit.admin.per_day
+//   rate_limit.default.per_minute  rate_limit.default.per_hour  rate_limit.default.per_day
+const (
+	RateLimitReadPerMinute    = "rate_limit.read.per_minute"    // 默认 30,   Min 1, Max 10000
+	RateLimitReadPerHour      = "rate_limit.read.per_hour"      // 默认 500,  Min 1, Max 100000
+	RateLimitReadPerDay       = "rate_limit.read.per_day"       // 默认 5000, Min 1, Max 1000000
+	RateLimitWritePerMinute   = "rate_limit.write.per_minute"   // 默认 100,  Min 1, Max 10000
+	RateLimitWritePerHour     = "rate_limit.write.per_hour"     // 默认 1500, Min 1, Max 100000
+	RateLimitWritePerDay      = "rate_limit.write.per_day"      // 默认 15000,Min 1, Max 1000000
+	RateLimitAdminPerMinute   = "rate_limit.admin.per_minute"   // 默认 200,  Min 1, Max 10000
+	RateLimitAdminPerHour     = "rate_limit.admin.per_hour"     // 默认 5000, Min 1, Max 100000
+	RateLimitAdminPerDay      = "rate_limit.admin.per_day"      // 默认 50000,Min 1, Max 1000000
+	RateLimitDefaultPerMinute = "rate_limit.default.per_minute" // 默认 120,  Min 1, Max 10000
+	RateLimitDefaultPerHour   = "rate_limit.default.per_hour"   // 默认 2000, Min 1, Max 100000
+	RateLimitDefaultPerDay    = "rate_limit.default.per_day"    // 默认 20000,Min 1, Max 1000000
+)
+
+// RateLimitProvider 限流配置提供者接口 (Phase 61 QUAL-03 / D-18 解耦 RateLimiter)
+// *CacheConfigService 自动实现该接口(Go duck typing)
+type RateLimitProvider interface {
+	GetRateLimit(key string, defaultValue int) int
+}
+
 // CacheConfigService 缓存配置服务
 // 从数据库读取缓存时间配置，支持动态调整缓存时间
+//
+// Phase 61 QUAL-03: 新增 rate_limit.* 配置项,与 cache.* 共存于同一 service(D-15);
+// 遵循既有 LoadConfigs → setDefaultsIfNeeded → ReloadConfig 启动加载 + 手动刷新模式。
 type CacheConfigService struct {
-	db      *gorm.DB
-	configs map[string]time.Duration
-	mu      sync.RWMutex
+	db         *gorm.DB
+	configs    map[string]time.Duration // cache.* 缓存时间配置
+	rateLimits map[string]int           // rate_limit.* 限流阈值配置(次数语义, D-16)
+	mu         sync.RWMutex
 }
 
 // NewCacheConfigService 创建缓存配置服务
 func NewCacheConfigService(db *gorm.DB) *CacheConfigService {
 	service := &CacheConfigService{
-		db:      db,
-		configs: make(map[string]time.Duration),
+		db:         db,
+		configs:    make(map[string]time.Duration),
+		rateLimits: make(map[string]int),
 	}
 
 	// 加载配置
@@ -108,19 +144,61 @@ func (s *CacheConfigService) LoadConfigs(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	var configs []models.Config
-	if err := s.db.Where("config_key LIKE ?", "cache.%").Find(&configs).Error; err != nil {
+	var cacheConfigs []models.Config
+	if err := s.db.Where("config_key LIKE ?", "cache.%").Find(&cacheConfigs).Error; err != nil {
 		return fmt.Errorf("查询缓存配置失败: %w", err)
 	}
 
+	// Phase 61 QUAL-03 / D-15: 沿用单占位符 LIKE 模式单独查询 rate_limit.*,
+	// 与项目其他 sys_config 查询保持一致,失败错误信息分别报告
+	var rateLimitConfigs []models.Config
+	if err := s.db.Where("config_key LIKE ?", "rate_limit.%").Find(&rateLimitConfigs).Error; err != nil {
+		return fmt.Errorf("查询限流配置失败: %w", err)
+	}
+	configs := append(cacheConfigs, rateLimitConfigs...)
+
 	// 清空旧配置
 	s.configs = make(map[string]time.Duration)
+	s.rateLimits = make(map[string]int)
 
 	// 获取配置信息（包含最小值、最大值、默认值）
 	configInfo := s.GetConfigInfo()
 
 	// 解析配置
 	for _, config := range configs {
+		// Phase 61 QUAL-03 / D-16: rate_limit.* 值是「次数」整数,无需 * time.Minute 转换
+		if strings.HasPrefix(config.ConfigKey, "rate_limit.") {
+			count, err := strconv.Atoi(config.ConfigValue)
+			if err != nil {
+				logger.Warnf("[CACHE_CONFIG] 解析限流配置失败 [%s=%s]: %v，将使用默认值", config.ConfigKey, config.ConfigValue, err)
+				if info, ok := configInfo[config.ConfigKey]; ok {
+					s.rateLimits[config.ConfigKey] = info.Default
+					// 修复数据库中的值
+					s.db.Model(&models.Config{}).Where("config_key = ?", config.ConfigKey).
+						Update("config_value", strconv.Itoa(info.Default))
+					logger.Infof("[CACHE_CONFIG] 修复限流配置: %s = %d 次", config.ConfigKey, info.Default)
+				}
+				continue
+			}
+
+			// 验证配置值是否在有效范围内
+			if info, ok := configInfo[config.ConfigKey]; ok {
+				if count < info.Min || count > info.Max {
+					logger.Warnf("[CACHE_CONFIG] 限流配置值超出范围 [%s=%d]，范围：%d-%d，将重置为默认值",
+						config.ConfigKey, count, info.Min, info.Max)
+					s.rateLimits[config.ConfigKey] = info.Default
+					// 修复数据库中的值
+					s.db.Model(&models.Config{}).Where("config_key = ?", config.ConfigKey).
+						Update("config_value", strconv.Itoa(info.Default))
+					continue
+				}
+			}
+
+			s.rateLimits[config.ConfigKey] = count
+			logger.Infof("[CACHE_CONFIG] 加载限流配置: %s = %d 次", config.ConfigKey, count)
+			continue
+		}
+
 		// 尝试解析为整数
 		minutes, err := strconv.Atoi(config.ConfigValue)
 		if err != nil {
@@ -180,7 +258,7 @@ func (s *CacheConfigService) LoadConfigs(ctx context.Context) error {
 	// 如果配置为空，使用默认值并写入数据库
 	s.setDefaultsIfNeeded(ctx)
 
-	logger.Infof("[CACHE_CONFIG] 配置加载完成，共 %d 项", len(s.configs))
+	logger.Infof("[CACHE_CONFIG] 配置加载完成，共 %d 项 cache + %d 项 rate_limit", len(s.configs), len(s.rateLimits))
 	return nil
 }
 
@@ -255,6 +333,46 @@ func (s *CacheConfigService) setDefaultsIfNeeded(_ context.Context) {
 			}
 		}
 	}
+
+	// Phase 61 QUAL-03 / D-16/D-17: rate_limit.* 默认值与既有 rate_limiter.go
+	// 硬编码一致(read=30/500/5000, write=100/1500/15000, admin=200/5000/50000,
+	// default=120/2000/20000);值语义为次数(非分钟),独立写入 s.rateLimits
+	rateLimitDefaults := map[string]int{
+		RateLimitReadPerMinute:    30,
+		RateLimitReadPerHour:      500,
+		RateLimitReadPerDay:       5000,
+		RateLimitWritePerMinute:   100,
+		RateLimitWritePerHour:     1500,
+		RateLimitWritePerDay:      15000,
+		RateLimitAdminPerMinute:   200,
+		RateLimitAdminPerHour:     5000,
+		RateLimitAdminPerDay:      50000,
+		RateLimitDefaultPerMinute: 120,
+		RateLimitDefaultPerHour:   2000,
+		RateLimitDefaultPerDay:    20000,
+	}
+
+	for key, count := range rateLimitDefaults {
+		if _, exists := s.rateLimits[key]; !exists {
+			s.rateLimits[key] = count
+
+			// 同时写入数据库
+			var cnt int64
+			s.db.Model(&models.Config{}).Where("config_key = ?", key).Count(&cnt)
+			if cnt == 0 {
+				config := models.Config{
+					ConfigName:  s.getConfigName(key),
+					ConfigKey:   key,
+					ConfigValue: strconv.Itoa(count),
+					ConfigType:  "Y",
+					IsSystem:    1,
+					Remark:      s.getConfigRemark(key),
+				}
+				s.db.Create(&config)
+				logger.Infof("[CACHE_CONFIG] 创建默认限流配置: %s = %d 次", key, count)
+			}
+		}
+	}
 }
 
 // GetDuration 获取缓存时间配置
@@ -280,6 +398,20 @@ func (s *CacheConfigService) GetDurationWithDefault(configKey string, defaultDur
 	}
 
 	return defaultDuration
+}
+
+// GetRateLimit 获取限流阈值配置 (Phase 61 QUAL-03 / D-18)
+// key 形态: rate_limit.{scope}.{per_minute|per_hour|per_day};缺省返回 defaultValue
+// 实现 RateLimitProvider 接口,供 RateLimiter 运行时读取(不缓存到 RateLimiter 内部,
+// reload 后新请求即读到新阈值,D-19)
+func (s *CacheConfigService) GetRateLimit(key string, defaultValue int) int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if v, ok := s.rateLimits[key]; ok {
+		return v
+	}
+	return defaultValue
 }
 
 // ReloadConfig 重新加载配置
@@ -637,6 +769,115 @@ func (s *CacheConfigService) GetConfigInfo() map[string]ConfigInfo {
 			Max:         15,
 			Default:     5,
 		},
+		// Phase 61 QUAL-03 / D-16: 限流阈值配置(次数语义,非分钟)
+		RateLimitReadPerMinute: {
+			Key:         RateLimitReadPerMinute,
+			Name:        "读作用域每分钟限流",
+			Description: "API Key 读作用域每分钟请求数限制（次）",
+			Category:    "限流配置",
+			Min:         1,
+			Max:         10000,
+			Default:     30,
+		},
+		RateLimitReadPerHour: {
+			Key:         RateLimitReadPerHour,
+			Name:        "读作用域每小时限流",
+			Description: "API Key 读作用域每小时请求数限制（次）",
+			Category:    "限流配置",
+			Min:         1,
+			Max:         100000,
+			Default:     500,
+		},
+		RateLimitReadPerDay: {
+			Key:         RateLimitReadPerDay,
+			Name:        "读作用域每天限流",
+			Description: "API Key 读作用域每天请求数限制（次）",
+			Category:    "限流配置",
+			Min:         1,
+			Max:         1000000,
+			Default:     5000,
+		},
+		RateLimitWritePerMinute: {
+			Key:         RateLimitWritePerMinute,
+			Name:        "写作用域每分钟限流",
+			Description: "API Key 写作用域每分钟请求数限制（次）",
+			Category:    "限流配置",
+			Min:         1,
+			Max:         10000,
+			Default:     100,
+		},
+		RateLimitWritePerHour: {
+			Key:         RateLimitWritePerHour,
+			Name:        "写作用域每小时限流",
+			Description: "API Key 写作用域每小时请求数限制（次）",
+			Category:    "限流配置",
+			Min:         1,
+			Max:         100000,
+			Default:     1500,
+		},
+		RateLimitWritePerDay: {
+			Key:         RateLimitWritePerDay,
+			Name:        "写作用域每天限流",
+			Description: "API Key 写作用域每天请求数限制（次）",
+			Category:    "限流配置",
+			Min:         1,
+			Max:         1000000,
+			Default:     15000,
+		},
+		RateLimitAdminPerMinute: {
+			Key:         RateLimitAdminPerMinute,
+			Name:        "管理员作用域每分钟限流",
+			Description: "API Key 管理员作用域每分钟请求数限制（次）",
+			Category:    "限流配置",
+			Min:         1,
+			Max:         10000,
+			Default:     200,
+		},
+		RateLimitAdminPerHour: {
+			Key:         RateLimitAdminPerHour,
+			Name:        "管理员作用域每小时限流",
+			Description: "API Key 管理员作用域每小时请求数限制（次）",
+			Category:    "限流配置",
+			Min:         1,
+			Max:         100000,
+			Default:     5000,
+		},
+		RateLimitAdminPerDay: {
+			Key:         RateLimitAdminPerDay,
+			Name:        "管理员作用域每天限流",
+			Description: "API Key 管理员作用域每天请求数限制（次）",
+			Category:    "限流配置",
+			Min:         1,
+			Max:         1000000,
+			Default:     50000,
+		},
+		RateLimitDefaultPerMinute: {
+			Key:         RateLimitDefaultPerMinute,
+			Name:        "默认作用域每分钟限流",
+			Description: "API Key 默认作用域（InheritPerms 或无 scope）每分钟请求数限制（次）",
+			Category:    "限流配置",
+			Min:         1,
+			Max:         10000,
+			Default:     120,
+		},
+		RateLimitDefaultPerHour: {
+			Key:         RateLimitDefaultPerHour,
+			Name:        "默认作用域每小时限流",
+			Description: "API Key 默认作用域（InheritPerms 或无 scope）每小时请求数限制（次）",
+			Category:    "限流配置",
+			Min:         1,
+			Max:         100000,
+			Default:     2000,
+		},
+		RateLimitDefaultPerDay: {
+			Key:         RateLimitDefaultPerDay,
+			Name:        "默认作用域每天限流",
+			Description: "API Key 默认作用域（InheritPerms 或无 scope）每天请求数限制（次）",
+			Category:    "限流配置",
+			Min:         1,
+			Max:         1000000,
+			Default:     20000,
+		},
 	}
 }
 
@@ -664,6 +905,10 @@ func (s *CacheConfigService) getConfigName(key string) string {
 func (s *CacheConfigService) getConfigRemark(key string) string {
 	configInfo := s.GetConfigInfo()
 	if info, ok := configInfo[key]; ok {
+		// Phase 61 QUAL-03: rate_limit.* 值语义为次数,非分钟
+		if strings.HasPrefix(key, "rate_limit.") {
+			return fmt.Sprintf("%s，默认%d次，范围%d-%d次", info.Description, info.Default, info.Min, info.Max)
+		}
 		return fmt.Sprintf("%s，默认%d分钟，范围%d-%d分钟", info.Description, info.Default, info.Min, info.Max)
 	}
 	return "缓存配置"
