@@ -103,6 +103,12 @@ func TestIsIPAllowed(t *testing.T) {
 
 // TestGetRequiredScope 测试操作到作用域的映射
 func TestGetRequiredScope(t *testing.T) {
+	t.Run("list操作映射到read", func(t *testing.T) {
+		// Phase 61 QUAL-03 / D-11: list 操作扩展映射到 read
+		scope := getRequiredScope("list")
+		assert.Equal(t, "read", scope)
+	})
+
 	t.Run("view操作映射到read", func(t *testing.T) {
 		scope := getRequiredScope("view")
 		assert.Equal(t, "read", scope)

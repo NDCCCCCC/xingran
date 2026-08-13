@@ -260,7 +260,7 @@ func TestRateLimitHeadersInResponse(t *testing.T) {
 
 	router := gin.New()
 	router.Use(MultiAuth(fakeSvc, fakeLogger, nil, nil))
-	router.Use(RateLimitByScope(rl))
+	router.Use(RateLimitByScope(rl, "list")) // Phase 61 / D-11: 新增 action 参数
 	router.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"ok": true})
 	})
@@ -309,7 +309,7 @@ func TestConstructorsCallable_D02(t *testing.T) {
 
 	rl := services.NewRateLimiter()
 	assert.NotNil(t, rl)
-	_ = RateLimitByScope(rl) // 编译通过即证明 RateLimitByScope 第 1 参接受 *services.RateLimiter
+	_ = RateLimitByScope(rl, "list") // 编译通过即证明 RateLimitByScope 第 1 参接受 *services.RateLimiter, 第 2 参接受 action (Phase 61 / D-11)
 }
 
 // --- Phase 59 Plan 02: SC#1 / SC#2 DB 行实证 (Wave 2 回归锚) ---

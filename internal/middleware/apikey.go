@@ -344,10 +344,11 @@ func RequireAPIKeyResourcePermission(resource string, action string) gin.Handler
 }
 
 // getRequiredScope 根据操作获取所需作用域（私有函数）
-// 映射规则：view/create/edit/delete -> read/write
+// 映射规则：view/create/edit/delete -> read/write, list -> read (Phase 61 QUAL-03 D-11)
 func getRequiredScope(action string) string {
 	// 操作到作用域的映射
 	scopeMap := map[string]string{
+		"list":   "read", // Phase 61 QUAL-03 D-11: list 操作映射到 read
 		"view":   "read",
 		"create": "write",
 		"edit":   "write",
@@ -364,7 +365,17 @@ func getRequiredScope(action string) string {
 // RateLimitByScope 基于作用域的速率限制中间件
 // 根据API Key的作用域动态调整速率限制
 // 符合 RFC 6585 规范（429 Too Many Requests）
-func RateLimitByScope(rateLimiter *services.RateLimiter) gin.HandlerFunc {
+//
+// Phase 61 / D-11/D-12/D-14 改造:
+//   - D-11: 新增 action 参数,注册期计算 requiredScope 闭包捕获(每请求零查表开销)
+//   - D-12: 多 scope 选择改 action-aware — 委托 getScopeFromContext → SelectScope
+//     纯函数;scopes 不含 required scope 且无 admin → 403 fail-closed(无 fallback),
+//     不进入限流检查
+//   - D-14: 与 RequireScope 职责分工 — RequireScope 做硬鉴权(不感知 action),
+//     RateLimitByScope 做精细限流(感知 action 选择限额档位),两个中间件都保留
+func RateLimitByScope(rateLimiter *services.RateLimiter, action string) gin.HandlerFunc {
+	// D-11: 注册期计算 requiredScope,闭包捕获
+	requiredScope := getRequiredScope(action)
 	return func(c *gin.Context) {
 		// 检查是否为API Key认证
 		authType, exists := c.Get("auth_type")
@@ -374,8 +385,15 @@ func RateLimitByScope(rateLimiter *services.RateLimiter) gin.HandlerFunc {
 			return
 		}
 
-		// 确定作用域
-		scope := getScopeFromContext(c)
+		// D-12: action-aware 多 scope 选择,fail-closed
+		scope, allowed := getScopeFromContext(c, action)
+		if !allowed {
+			applogger.Warnf("[API_KEY] 限流作用域不足: action=%s required_scope=%s path=%s",
+				action, requiredScope, c.Request.URL.Path)
+			response.Error(c, response.ErrForbidden, "权限作用域不足")
+			c.Abort()
+			return
+		}
 
 		// 获取唯一标识符
 		identifier := getIdentifier(c)
@@ -404,26 +422,16 @@ func RateLimitByScope(rateLimiter *services.RateLimiter) gin.HandlerFunc {
 }
 
 // getScopeFromContext 从上下文获取作用域（私有函数）
-// 如果没有作用域或继承权限，使用 "default" 作用域
-func getScopeFromContext(c *gin.Context) string {
-	// 检查是否继承权限
-	if inheritPerms, exists := c.Get("inherit_perms"); exists && inheritPerms == true {
-		return "default"
-	}
-
-	// 获取作用域
-	scopes, exists := c.Get("scopes")
-	if !exists {
-		return "default"
-	}
-
-	userScopes, ok := scopes.([]string)
-	if !ok || len(userScopes) == 0 {
-		return "default"
-	}
-
-	// 返回第一个作用域
-	return userScopes[0]
+//
+// Phase 61 / D-12/D-13 改造: 薄壳包装 SelectScope 纯函数(select_scope.go),
+// 从既有 context 键 inherit_perms / scopes 读取(Phase 57 D-04 既有 7 键,
+// 不新增内部中转键),返回 (scope, allowed) 供调用方 fail-closed 处理。
+func getScopeFromContext(c *gin.Context, action string) (string, bool) {
+	inheritRaw, exists := c.Get("inherit_perms")
+	inheritPerms, _ := inheritRaw.(bool)
+	scopesRaw, _ := c.Get("scopes")
+	scopes, _ := scopesRaw.([]string)
+	return SelectScope(scopes, inheritPerms && exists, action)
 }
 
 // getIdentifier 获取客户端唯一标识符（私有函数）
