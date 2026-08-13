@@ -184,6 +184,20 @@ None - no external service configuration required.
 - Plan 02 (QUAL-03) 可继续:RateLimitByScope 接收 action 参数、扩展 `getRequiredScope` (list→read)、提取 `SelectScope` 纯函数、`CacheConfigService` 新增 `rate_limit.*` 配置项、`RateLimiter` 配置化改造
 - Plan 02 需要修改 `internal/middleware/apikey.go` 中的 `getRequiredScope`/`RateLimitByScope`/`getScopeFromContext` 及 `internal/services/rate_limiter.go`,不影响本次 Plan 01 成果
 
+## Self-Check: PASSED
+
+- [x] `pkg/permission/resource_action_map.go` exists
+- [x] `pkg/permission/resource_action_map_test.go` exists
+- [x] `internal/middleware/apikey_resource_permission_test.go` exists
+- [x] `internal/middleware/apikey_inherit_integration_test.go` exists
+- [x] Commit `c55a3c5` (Task 1) exists in history
+- [x] Commit `cba12ce` (Task 2) exists in history
+- [x] Commit `1eae873` (Task 3) exists in history
+- [x] Commit `3a71c11` (SUMMARY) exists in history
+- [x] Commit `5020ac5` (STATE/ROADMAP) exists in history
+- [x] `go build ./...` exit 0
+- [x] `go test ./pkg/permission/... ./internal/middleware/...` PASS
+
 ---
 *Phase: 61-resource-permission-matrix-and-rate-limit-tuning*
 *Plan: 01*
