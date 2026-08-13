@@ -22,9 +22,9 @@
 
 ### OBSERV — 可观测性 / 使用日志
 
-- [ ] **OBSERV-01**: API Key 使用日志在请求处理完成(`c.Next()` 之后)记录,`StatusCode` / `Duration` / `Success` 取真实值(修复 P1-2 — 当前在 `c.Next()` 前异步记录导致全零值)
-- [ ] **OBSERV-02**: `GetUsageLogSummary` 的 `successRate` 基于真实的 `Success` 字段聚合,不再恒 ≈ 0%(P1-2 连锁)
-- [ ] **OBSERV-03**: 使用日志异步 goroutine 使用独立的、不被请求生命周期取消的 context,消除复用 `c.Request.Context()` 的取消竞态(P2)
+- [x] **OBSERV-01**: API Key 使用日志在请求处理完成(`c.Next()` 之后)记录,`StatusCode` / `Duration` / `Success` 取真实值(修复 P1-2 — 当前在 `c.Next()` 前异步记录导致全零值)
+- [x] **OBSERV-02**: `GetUsageLogSummary` 的 `successRate` 基于真实的 `Success` 字段聚合,不再恒 ≈ 0%(P1-2 连锁)
+- [x] **OBSERV-03**: 使用日志异步 goroutine 使用独立的、不被请求生命周期取消的 context,消除复用 `c.Request.Context()` 的取消竞态(P2)
 
 ### SEC — 安全
 
@@ -67,9 +67,9 @@ Phase 映射(由 `.planning/ROADMAP.md` v1.21 确认;phase 从 v1.20 末尾 Phas
 | QUAL-02 | Phase 57 | Complete |
 | CONTRACT-01 | Phase 58 | Pending |
 | CONTRACT-02 | Phase 58 | Pending (discuss 新增 2026-08-13) |
-| OBSERV-01 | Phase 59 | Pending |
-| OBSERV-02 | Phase 59 | Pending |
-| OBSERV-03 | Phase 59 | Pending |
+| OBSERV-01 | Phase 59 | Complete |
+| OBSERV-02 | Phase 59 | Complete |
+| OBSERV-03 | Phase 59 | Complete |
 | AUTH-03 | Phase 60 | Pending |
 | SEC-01 | Phase 60 | Pending |
 | SEC-02 | Phase 60 | Pending |

@@ -131,11 +131,11 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 59-01-PLAN.md — 源码修复: apikey.go 记录点后移到 c.Next() 之后 + 填 StatusCode/Duration/Success + 去冗余 goroutine (D-01/D-02a/OBSERV-01) + usage_logger.go logUsageAsync 改 detached context + applogger 替换 _ = err (D-02/D-04/OBSERV-03)
+- [x] 59-01-PLAN.md — 源码修复: apikey.go 记录点后移到 c.Next() 之后 + 填 StatusCode/Duration/Success + 去冗余 goroutine (D-01/D-02a/OBSERV-01) + usage_logger.go logUsageAsync 改 detached context + applogger 替换 _ = err (D-02/D-04/OBSERV-03)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 59-02-PLAN.md — 测试验证: SC#1/#2 真实 DB 时序/失败集成测试 + SC#4 cancel-race 单元测试 + SC#3 混合 successRate 聚合测试 + waitForUsageLog helper (require.Eventually) + D-03 真实 sqlite 文件 DB + D-03a 既有 fake 测试原样保留
+- [x] 59-02-PLAN.md — 测试验证: SC#1/#2 真实 DB 时序/失败集成测试 + SC#4 cancel-race 单元测试 + SC#3 混合 successRate 聚合测试 + waitForUsageLog helper (require.Eventually) + D-03 真实 sqlite 文件 DB + D-03a 既有 fake 测试原样保留
 
 ---
 
@@ -187,7 +187,7 @@ Phases execute in numeric order: 57 → 58 → 59 → 60 → 61 (Phase 61 condit
 |-------|-----------|----------------|--------|-----------|
 | 57. 认证链核心修复 + 回归测试 | v1.21 | 1/1 | Complete    | 2026-08-13 |
 | 58. 前后端路由契约对齐 | v1.21 | 0/TBD | Not started | - |
-| 59. 可观测性 / 使用日志修复 | v1.21 | 0/2 | Planned | - |
+| 59. 可观测性 / 使用日志修复 | v1.21 | 2/2 | Complete    | 2026-08-13 |
 | 60. 安全加固与启用决策 | v1.21 | 0/TBD | Not started | - |
 | 61. 资源级权限矩阵 + 限流生产调优 | v1.21 | 0/TBD | Not started (conditional on P60) | - |
 
