@@ -254,6 +254,8 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			apikeys.Use(internalmw.MultiAuth(
 				systemServices.NewAPIKeyService(core.GetDB()),
 				services.NewUsageLogger(core.GetDB()),
+				permission.NewService(),
+				core.GetDB(),
 			))
 			apikeys.Use(internalmw.RateLimitByScope(services.NewRateLimiter()))
 			{

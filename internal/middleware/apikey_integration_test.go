@@ -166,7 +166,7 @@ func TestMultiAuthIntegration(t *testing.T) {
 		fakeLogger := newFakeUsageLogger()
 
 		router := gin.New()
-		router.Use(MultiAuth(fakeSvc, fakeLogger))
+		router.Use(MultiAuth(fakeSvc, fakeLogger, nil, nil))
 		router.GET("/ping", RequireScope("read"), func(c *gin.Context) {
 			// SC#1: 断言 setUserContextForAPIKey 写入的 4 个 context 键 (AUTH-01 修复证据)
 			assert.NotEmpty(t, c.GetString("user_id"), "user_id 应非空")
@@ -198,7 +198,7 @@ func TestMultiAuthIntegration(t *testing.T) {
 		fakeLogger := newFakeUsageLogger()
 
 		router := gin.New()
-		router.Use(MultiAuth(fakeSvc, fakeLogger))
+		router.Use(MultiAuth(fakeSvc, fakeLogger, nil, nil))
 		router.GET("/write-only", RequireScope("write"), func(c *gin.Context) {
 			c.JSON(200, gin.H{"ok": true})
 		})
@@ -219,7 +219,7 @@ func TestMultiAuthIntegration(t *testing.T) {
 		fakeLogger := newFakeUsageLogger()
 
 		router := gin.New()
-		router.Use(MultiAuth(fakeSvc, fakeLogger))
+		router.Use(MultiAuth(fakeSvc, fakeLogger, nil, nil))
 		router.GET("/ping", func(c *gin.Context) {
 			c.JSON(200, gin.H{"ok": true})
 		})
@@ -259,7 +259,7 @@ func TestRateLimitHeadersInResponse(t *testing.T) {
 	rl := services.NewRateLimiter() // Pitfall 4: 不能传 nil
 
 	router := gin.New()
-	router.Use(MultiAuth(fakeSvc, fakeLogger))
+	router.Use(MultiAuth(fakeSvc, fakeLogger, nil, nil))
 	router.Use(RateLimitByScope(rl))
 	router.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"ok": true})
@@ -305,7 +305,7 @@ func TestConstructorsCallable_D02(t *testing.T) {
 	db := setupUsageLoggerTestDB(t)
 	logger := services.NewUsageLogger(db)
 	assert.NotNil(t, logger)
-	_ = MultiAuth(&fakeAPIKeyService{}, logger) // 编译通过即证明 MultiAuth 第 2 参接受 services.UsageLogger
+	_ = MultiAuth(&fakeAPIKeyService{}, logger, nil, nil) // 编译通过即证明 MultiAuth 第 2 参接受 services.UsageLogger
 
 	rl := services.NewRateLimiter()
 	assert.NotNil(t, rl)
@@ -344,7 +344,7 @@ func TestMultiAuthUsageLogTiming(t *testing.T) {
 	}
 
 	router := gin.New()
-	router.Use(MultiAuth(fakeSvc, realLogger))
+	router.Use(MultiAuth(fakeSvc, realLogger, nil, nil))
 	router.GET("/ok", RequireScope("read"), func(c *gin.Context) {
 		// 微小 sleep 确保 Duration 字段 > 0ms (time.Since().Milliseconds() 取整)
 		time.Sleep(time.Millisecond)
@@ -386,7 +386,7 @@ func TestMultiAuthUsageLogFailure(t *testing.T) {
 	}
 
 	router := gin.New()
-	router.Use(MultiAuth(fakeSvc, realLogger))
+	router.Use(MultiAuth(fakeSvc, realLogger, nil, nil))
 	// key 仅 read scope, RequireScope("write") 在 c.Next() 下游 abort 403
 	router.GET("/write-only", RequireScope("write"), func(c *gin.Context) {
 		c.JSON(200, gin.H{"ok": true})
