@@ -8,6 +8,7 @@ import { Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { useMenuStore } from "@/store/menuStore";
 import { useAuthStore } from "@/store/authStore";
 import { RouteGenerator } from "./routeGenerator";
+import { routeConfigManager } from "./routeConfigManager";
 import { createLazyComponent } from "./componentLoader";
 import type { MenuRouteConfig } from "@/types/menu";
 import Layout from "@/components/layout";
@@ -105,7 +106,7 @@ function InitializingFallback() {
 }
 
 export function DynamicRoutes() {
-  const { allMenus, fetchAll } = useMenuStore();
+  const { allMenus, fetchAll, permissions } = useMenuStore();
   const { isAuthenticated, initialized } = useAuthStore();
   const location = useLocation();
 
@@ -156,10 +157,31 @@ export function DynamicRoutes() {
     if (!cachedRoutes || cachedMenusCountRef.current !== allMenus.length) {
       cachedRoutesRef.current = configs;
       cachedMenusCountRef.current = allMenus.length;
+      // P0-1: 初始化 routeConfigManager, 使 hasPermission/getRouteTitle 可用
+      routeConfigManager.initialize(allMenus);
     }
 
-    return configs.map(createLazyRoute).filter(Boolean);
-  }, [allMenus.length]);
+    // P0-1: 前端路由权限第二层防线
+    // 后端已按角色 RBAC 过滤 allMenus(第一层), 此处对 menu.meta.permissions
+    // 做细粒度二次校验。meta.permissions 为空的路由直接放行(向后兼容)。
+    return configs
+      .map((route) => {
+        const check = routeConfigManager.hasPermission(route.path, permissions);
+        if (check.hasPermission) {
+          return createLazyRoute(route);
+        }
+        // 无权限的路由重定向到 dashboard (避免空白页)
+        console.warn(`[RouteGuard] ${route.path} 无权限,缺少: ${check.missingPermissions?.join(", ")}`);
+        return (
+          <Route
+            key={route.path}
+            path={route.path}
+            element={<Navigate to="/dashboard" replace />}
+          />
+        );
+      })
+      .filter(Boolean);
+  }, [allMenus.length, permissions]);
 
   // 保存当前路径到 sessionStorage
   useEffect(() => {
