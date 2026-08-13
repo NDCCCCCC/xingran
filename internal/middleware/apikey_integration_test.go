@@ -247,3 +247,100 @@ func TestConstructorsCallable_D02(t *testing.T) {
 	assert.NotNil(t, rl)
 	_ = RateLimitByScope(rl) // 编译通过即证明 RateLimitByScope 第 1 参接受 *services.RateLimiter
 }
+
+// --- Phase 59 Plan 02: SC#1 / SC#2 DB 行实证 (Wave 2 回归锚) ---
+
+// waitForUsageLog 用 require.Eventually 轮询 DB 行数, 替代既有 time.Sleep flaky 反模式。
+// 形态镜像 RESEARCH.md §异步写入可测试性机制 — 同形副本落本文件因 Go 测试包隔离。
+func waitForUsageLog(t *testing.T, db *gorm.DB, apiKeyID string, want int64) {
+	t.Helper()
+	require.Eventually(t, func() bool {
+		var count int64
+		db.Model(&models.APIKeyUsageLog{}).Where("api_key_id = ?", apiKeyID).Count(&count)
+		return count >= want
+	}, 2*time.Second, 10*time.Millisecond,
+		"usage log for key=%s not persisted within 2s", apiKeyID)
+}
+
+// TestMultiAuthUsageLogTiming SC#1: 2xx 请求后日志行 StatusCode=200 / Duration>0 / Success=true。
+// 真实 services.NewUsageLogger + 真实 gin.Engine + 真实 sqlite DB 行断言 (非 fake)。
+// D-03 落实: 用既有 setupUsageLoggerTestDB (per-test 独立文件 DB) 复用, 不另起 AutoMigrate。
+func TestMultiAuthUsageLogTiming(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	db := setupUsageLoggerTestDB(t)
+	realLogger := services.NewUsageLogger(db) // 真实 logger,非 fake
+	fakeSvc := &fakeAPIKeyService{
+		validKey: &models.APIKey{
+			BaseModel: models.BaseModel{ID: "ak-sc1"},
+			Name:      "sc1-key",
+			Scopes:    []string{"read"},
+			IsActive:  true,
+		},
+	}
+
+	router := gin.New()
+	router.Use(MultiAuth(fakeSvc, realLogger))
+	router.GET("/ok", RequireScope("read"), func(c *gin.Context) {
+		// 微小 sleep 确保 Duration 字段 > 0ms (time.Since().Milliseconds() 取整)
+		time.Sleep(time.Millisecond)
+		c.JSON(200, gin.H{"ok": true})
+	})
+
+	req := httptest.NewRequest("GET", "/ok", nil)
+	req.Header.Set("X-API-Key", "rec_"+hex64())
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, 200, w.Code, "2xx 请求应 200")
+
+	// 等待异步落库 (替代 time.Sleep flaky)
+	waitForUsageLog(t, db, "ak-sc1", 1)
+
+	// DB 行实证 (SC#1)
+	var log models.APIKeyUsageLog
+	require.NoError(t, db.Where("api_key_id = ?", "ak-sc1").First(&log).Error)
+	assert.Equal(t, 200, log.StatusCode)
+	assert.Greater(t, log.Duration, 0)
+	assert.True(t, log.Success) // D-01: 2xx → Success=true
+}
+
+// TestMultiAuthUsageLogFailure SC#2: 下游 RequireScope→403 → StatusCode=403 / Success=false。
+// Pitfall 3 规避: 用 RequireScope→403 走下游 c.Next() (非 pre-auth 401, pre-auth 在 c.Next() 前 abort 不写行)。
+func TestMultiAuthUsageLogFailure(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	db := setupUsageLoggerTestDB(t)
+	realLogger := services.NewUsageLogger(db)
+	fakeSvc := &fakeAPIKeyService{
+		validKey: &models.APIKey{
+			BaseModel: models.BaseModel{ID: "ak-fail"},
+			Name:      "fail-key",
+			Scopes:    []string{"read"}, // 仅 read scope
+			IsActive:  true,
+		},
+	}
+
+	router := gin.New()
+	router.Use(MultiAuth(fakeSvc, realLogger))
+	// key 仅 read scope, RequireScope("write") 在 c.Next() 下游 abort 403
+	router.GET("/write-only", RequireScope("write"), func(c *gin.Context) {
+		c.JSON(200, gin.H{"ok": true})
+	})
+
+	req := httptest.NewRequest("GET", "/write-only", nil)
+	req.Header.Set("X-API-Key", "rec_"+hex64())
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, 403, w.Code, "下游 RequireScope 失败应 403")
+
+	// 等待异步落库
+	waitForUsageLog(t, db, "ak-fail", 1)
+
+	// DB 行实证 (SC#2)
+	var log models.APIKeyUsageLog
+	require.NoError(t, db.Where("api_key_id = ?", "ak-fail").First(&log).Error)
+	assert.Equal(t, 403, log.StatusCode)
+	assert.False(t, log.Success) // D-01: 4xx → Success=false
+}
