@@ -1,7 +1,7 @@
 ---
 last_updated: 2026-08-13
 update_trigger: v1.21 milestone INITIATED — ROADMAP drafted (Phases 57-61, regression fix for v1.6 Phase 16; Phase 61 conditional on Phase 60 AUTH-03=启用)
-last_plan_update: 2026-08-13 — Phase 60 plans finalized (2 plans, Wave 1 parallel)
+last_plan_update: 2026-08-13 — Phase 61 plans finalized after plan-checker revision (2 plans, Wave 1 Plan 01 / Wave 2 Plan 02 sequential)
 previous_update: 2026-07-10 after v1.20 milestone SHIPPED + ARCHIVED
 ---
 
@@ -178,12 +178,12 @@ Plans:
 2. `RateLimitByScope` 在 MultiAuth 已挂载的生产路由上接入,限流按作用域生效;`X-RateLimit-Limit` / `X-RateLimit-Remaining` 可被标准工具解析为整数(衔接 Phase 60 QUAL-01 的 strconv.Itoa 修复);多 scope key 的限流作用域选择逻辑正确(不再任意只取首个 scope)
 3. 资源权限矩阵 + 限流配置均有测试覆盖;`go test ./...` 全绿
 
-**Plans**: 2 plans (Wave 1, parallel;互不耦合)
+**Plans**: 2 plans (Wave 1: Plan 01; Wave 2: Plan 02 — sequential; Plan 02 依赖 Plan 01,因两者都修改 `internal/middleware/apikey.go`,sequential 消除 parallel write race)
 
 Plans:
 
-- [x] 60-01-PLAN.md — AUTH-03 router MultiAuth + RateLimitByScope 挂载 + 4 维度决策记录 + QUAL-01 apikey.go strconv.Itoa 修复 + TestRateLimitHeaderEncoding(单测) + TestRateLimitHeadersInResponse(集成测)
-- [x] 60-02-PLAN.md — SEC-01 models/api_key.go schema 三列替换 + apikey_service.go 三函数改造 + hashAPIKey/generateSalt helper + apikey_service_test.go 按新 schema 重写 + SEC-02 手动 SQL (DROP INDEX IF EXISTS) + 双 dialect 验证查询
+- [ ] 61-01-PLAN.md (Wave 1) — AUTH-04: pkg/permission/resource_action_map.go 静态 map(D-01/D-02/D-03/D-04)+ MultiAuth+setUserContextForAPIKey InheritPerms 加载(D-06/D-07/D-09)+ username/nickname 修正(D-10)+ RequireAPIKeyResourcePermission 接入 map(D-03)+ router.go 调用形态变更 + map 单测 + 5 个 ResourcePermission 中间件单测 + 5 个 InheritPerms sqlite 集成测
+- [ ] 61-02-PLAN.md (Wave 2, depends_on: ["61-01"]) — QUAL-03: RateLimitByScope 接收 action 参数(D-11)+ getRequiredScope 扩展 list→read(D-11)+ 提取纯函数 SelectScope(D-12)+ getScopeFromContext 薄壳包装 SelectScope(D-12)+ CacheConfigService 新增 12 个 rate_limit.* 配置键(D-15/D-16/D-17,拆分为两次单占位符查询沿用既有 pattern)+ RateLimiter 改造为配置驱动接收 RateLimitProvider(D-18)+ reload race 语义(D-19)+ router.go 调用形态变更(`core.CacheConfigService` 字段访问,**非** getter)+ modify existing rate_limiter_test.go(449 行,7 个既有测试函数迁移到 `NewRateLimiter(provider)`,移除 `limiter.limits` 断言)+ 既有 TestRateLimitHeadersInResponse 签名更新 + 9 个 SelectScope 纯函数单测 + 7 个 RateLimitByScope 中间件单测 + 7 个 RateLimiter 配置驱动单测 + 5 个 CacheConfigService rate_limit 单测
 
 **Conditional**: 本 phase 仅在 Phase 60 AUTH-03 决策=启用 时执行;若决策=推迟启用,本 phase 随之 defer(记录触发条件与再次评估时机)。
 
@@ -242,7 +242,7 @@ Phases execute in numeric order: 57 → 58 → 59 → 60 → 61 (Phase 61 condit
 - ✓ Phase 17 — v1.7 加密配置同步 (6 plans)
 - ✓ Phase 18 — v1.8 登录端加密 (4 plans)
 - ✓ Phases 19-20 — v1.9 AD域控集成 (11 plans)
-- ✓ Phase 21 — v1.10 网络设备权限 (1 plan)
+- ✓ Phase 21 — v1.10 网络设备权限修复 (1 plan)
 - ✓ Phases 22A/22B — v1.12 深信服 VDI (6 plans)
 - ✓ Phase 23 — v1.11 AD组自动同步 (18 plans)
 - ✓ Phase 26 — v1.13 资产管理 (6 plans)
@@ -262,4 +262,4 @@ Phases execute in numeric order: 57 → 58 → 59 → 60 → 61 (Phase 61 condit
 
 ---
 
-*Last updated: 2026-08-13 — Phase 59 planned (2 plans / Wave 1 source fix + Wave 2 test validation; D-01~D-04 全部覆盖、3 pitfalls 规避、SC#1-5 全部锚定). Phase 58 discuss 新增 CONTRACT-02(字段命名契约对齐:前端 snake→camelCase,后端零改动;UsageLog/UsageSummary 留 Phase 59). Now 5 phases (57-61) / 14 requirements. v1.21 re-planned 2026-08-12: Phase 61 added (资源级权限矩阵 + 限流生产调优, conditional on Phase 60 AUTH-03=启用); FUTURE-APIKEY-01/02 pulled into v1 as AUTH-04/QUAL-03. Core regression fix = Phases 57-60; Phase 61 = post-enable feature completion. v1.20 网络设备 VLAN + 端口绑定 SHIPPED + ARCHIVED 2026-07-10 (Phase 56 / 5 plans).*
+*Last updated: 2026-08-13 — Phase 61 planned (2 plans / Wave 1 Plan 01 + Wave 2 Plan 02 sequential; D-01~D-21 全部覆盖、4 层测试策略 [unit+integration+pure-function+migration]、SC#1-3 全部锚定). Phase 60 已完成(2 plans / Wave 1 parallel). Now 5 phases (57-61) / 14 requirements. v1.21 re-planned 2026-08-12: Phase 61 added (资源级权限矩阵 + 限流生产调优, conditional on Phase 60 AUTH-03=启用); FUTURE-APIKEY-01/02 pulled into v1 as AUTH-04/QUAL-03. Core regression fix = Phases 57-60; Phase 61 = post-enable feature completion. Plan-checker revision 2026-08-13: 3 BLOCKERs + 3 WARNINGs 全部修复;Plan 02 改为 Wave 2 依赖 Plan 01,SelectScope 提取为纯函数,既有 rate_limiter_test.go 449 行迁移而非新建,CacheConfigService 12 配置键用单占位符两次查询. v1.20 网络设备 VLAN + 端口绑定 SHIPPED + ARCHIVED 2026-07-10 (Phase 56 / 5 plans).*
