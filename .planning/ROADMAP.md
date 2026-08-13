@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-08-12
+last_updated: 2026-08-13
 update_trigger: v1.21 milestone INITIATED — ROADMAP drafted (Phases 57-60, regression fix for v1.6 Phase 16)
 previous_update: 2026-07-10 after v1.20 milestone SHIPPED + ARCHIVED
 ---
@@ -71,6 +71,7 @@ previous_update: 2026-07-10 after v1.20 milestone SHIPPED + ARCHIVED
 **Requirements**: AUTH-01, AUTH-02, QUAL-02
 
 **Success Criteria** (what must be TRUE):
+
 1. 携带有效 API Key 的请求经过 MultiAuth → `setUserContextForAPIKey` 后,gin context 中 `user_id` / `api_key_id` / `scopes` / `auth_type="api_key"` 四个键被下游 handler 成功读取且值非空(由新增集成测试断言,而非手工打印);P0-2 恒 false 分支消除(直接 import `internal/models` 包,无 `interface{}` workaround 残留)
 2. `MultiAuth` / `RequireScope` / `RequireAPIKeyResourcePermission` / `RateLimitByScope` 四个中间件经类型签名与调用路径审查无死代码缺陷,`services.NewUsageLogger` 与 `services.NewRateLimiter` 在代码库内有真实实例化调用点(`grep -rn` 证据,而非仅定义)
 3. 新增集成测试覆盖完整链路三条路径:① 有效 key + 正确 scope → 通过;② 有效 key + 缺失 scope → 403;③ 无效 key → 401;且原 `apikey_test.go` 3 个纯函数测试与全量 `go test ./...` 不回归
@@ -79,6 +80,7 @@ previous_update: 2026-07-10 after v1.20 milestone SHIPPED + ARCHIVED
 **Plans**: 1 plan (single-wave, fix-then-test)
 
 Plans:
+
 - [x] 57-01-PLAN.md — 修复 setUserContextForAPIKey 类型断言 (AUTH-01/P0-2) + 重写 RequireAPIKeyResourcePermission 反模式 (AUTH-02/P0-1) + 创建集成测试锁住三路径链路 (QUAL-02) + D-02 构造函数证据
 
 ---
@@ -92,6 +94,7 @@ Plans:
 **Requirements**: CONTRACT-01, CONTRACT-02 (CONTRACT-02 为 2026-08-13 discuss 审计发现的字段命名断裂,同属契约层故同 phase 吸收)
 
 **Success Criteria** (what must be TRUE):
+
 1. 前端 API Key 管理页点击单条记录的"编辑"操作,前端能成功拉取该 key 的当前详情字段(返回码 `code:0`,无 404;表单字段完整回填)
 2. 前端修改 API Key 属性(如名称、作用域、IP 白名单)并保存后,后端持久化成功,列表刷新展示更新后的值(返回码 `code:0`,无 404;数据库行 `updated_at` 刷新)
 3. 前端对单条 API Key 执行"删除"操作后,记录从列表中消失(软删除生效),重复删除或再访问返回明确错误而非 404 路由缺失
@@ -100,6 +103,7 @@ Plans:
 **Plans**: 1 plan (single-wave; CONTRACT-01 路由方法对齐 + CONTRACT-02 字段命名 camelCase 对齐, 3 个前端文件, 后端零改动)
 
 Plans:
+
 - [ ] 58-01-PLAN.md — 前端 apikey.ts 三函数改 POST 对齐 (CONTRACT-01/D-01) + types/apikey.ts & index.tsx 字段命名 snake→camelCase 对齐 (CONTRACT-02/D-02/D-03/D-04/D-05) + 端到端 SC#1-SC#4 验证 checkpoint (D-06)
 
 **UI hint**: yes (前端 API Key 管理页面编辑/删除交互流程,涉及 `src/api/apikey.ts` + 列表/表单组件)
@@ -115,13 +119,23 @@ Plans:
 **Requirements**: OBSERV-01, OBSERV-02, OBSERV-03
 
 **Success Criteria** (what must be TRUE):
+
 1. 发起一次成功的 API Key 请求(2xx 响应)后,`sys_api_key_usage_log` 表对应记录的 `StatusCode` 落在 2xx,`Duration > 0`,`Success = true`(数据库行实证,而非代码推断)
 2. 发起一次失败的 API Key 请求(权限不足 403 / 错误 key 401 / 限流 429)后,对应记录的 `Success = false`,`StatusCode` 为真实错误码
 3. `GetUsageLogSummary` 返回的 `successRate` 在混合成功/失败请求后落入 (0%, 100%) 开区间内可信值,不再恒 ≈ 0%(P1-2 连锁消除)
 4. 客户端主动断开连接或请求 context 取消后,使用日志记录仍能完整写入数据库——异步 goroutine 使用独立的、不被请求生命周期取消的 `context.Background()` 派生 context(P2-b 消除;新增测试模拟请求取消,断言记录已入库)
 5. `go test ./internal/middleware/... ./internal/services/...` 全绿,新增"记录时机"与"独立 context"用例覆盖 P1-2 与 P2-b 防回归
 
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1 源码修复 + Wave 2 测试验证)
+
+Plans:
+**Wave 1**
+
+- [ ] 59-01-PLAN.md — 源码修复: apikey.go 记录点后移到 c.Next() 之后 + 填 StatusCode/Duration/Success + 去冗余 goroutine (D-01/D-02a/OBSERV-01) + usage_logger.go logUsageAsync 改 detached context + applogger 替换 _ = err (D-02/D-04/OBSERV-03)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 59-02-PLAN.md — 测试验证: SC#1/#2 真实 DB 时序/失败集成测试 + SC#4 cancel-race 单元测试 + SC#3 混合 successRate 聚合测试 + waitForUsageLog helper (require.Eventually) + D-03 真实 sqlite 文件 DB + D-03a 既有 fake 测试原样保留
 
 ---
 
@@ -134,6 +148,7 @@ Plans:
 **Requirements**: AUTH-03, SEC-01, SEC-02, QUAL-01
 
 **Success Criteria** (what must be TRUE):
+
 1. **AUTH-03**: phase 内 discuss 完成 MultiAuth 路由挂载启用决策并产出决策记录,内容含:作用域继承 (`InheritPerms`) 行为、IP 白名单语义、与 JWT 中间件的优先级与回退关系、对现有认证链的安全影响评估;决策为"启用"则附挂载点清单与权限校验矩阵,为"推迟"则附触发条件与再次评估时机
 2. **SEC-01**: phase 内 discuss 完成 API Key 存储方式决策并产出决策记录(明文 vs SM3 / argon2id 哈希);若决定迁移,含平滑过渡方案(兼容期双读、回填脚本)与回滚方案;若保留明文,含接受理由与补偿控制(如 DB at-rest 加密、访问审计、轮换流程)
 3. **SEC-02**: migration 中 `idx_api_keys_key` 冗余索引被移除,`key` 字段仅保留一个 `uniqueIndex`;数据库 schema introspection (或迁移脚本 idempotent 验证) 证实索引已收敛
@@ -152,6 +167,7 @@ Plans:
 **Requirements**: AUTH-04 (ex-FUTURE-APIKEY-01), QUAL-03 (ex-FUTURE-APIKEY-02)
 
 **Success Criteria** (what must be TRUE):
+
 1. `RequireAPIKeyResourcePermission(resource, action)` 的 `resource` 参数不再被忽略——resource→permission 映射接入,继承权限 (InheritPerms) 下的细粒度资源校验经测试覆盖验证(有效 key 有资源权限→通过 / 无资源权限→403)
 2. `RateLimitByScope` 在 MultiAuth 已挂载的生产路由上接入,限流按作用域生效;`X-RateLimit-Limit` / `X-RateLimit-Remaining` 可被标准工具解析为整数(衔接 Phase 60 QUAL-01 的 strconv.Itoa 修复);多 scope key 的限流作用域选择逻辑正确(不再任意只取首个 scope)
 3. 资源权限矩阵 + 限流配置均有测试覆盖;`go test ./...` 全绿
@@ -171,7 +187,7 @@ Phases execute in numeric order: 57 → 58 → 59 → 60 → 61 (Phase 61 condit
 |-------|-----------|----------------|--------|-----------|
 | 57. 认证链核心修复 + 回归测试 | v1.21 | 1/1 | Complete    | 2026-08-13 |
 | 58. 前后端路由契约对齐 | v1.21 | 0/TBD | Not started | - |
-| 59. 可观测性 / 使用日志修复 | v1.21 | 0/TBD | Not started | - |
+| 59. 可观测性 / 使用日志修复 | v1.21 | 0/2 | Planned | - |
 | 60. 安全加固与启用决策 | v1.21 | 0/TBD | Not started | - |
 | 61. 资源级权限矩阵 + 限流生产调优 | v1.21 | 0/TBD | Not started (conditional on P60) | - |
 
@@ -235,4 +251,4 @@ Phases execute in numeric order: 57 → 58 → 59 → 60 → 61 (Phase 61 condit
 
 ---
 
-*Last updated: 2026-08-13 — Phase 58 discuss 新增 CONTRACT-02(字段命名契约对齐:前端 snake→camelCase,后端零改动;UsageLog/UsageSummary 留 Phase 59). Now 5 phases (57-61) / 14 requirements. v1.21 re-planned 2026-08-12: Phase 61 added (资源级权限矩阵 + 限流生产调优, conditional on Phase 60 AUTH-03=启用); FUTURE-APIKEY-01/02 pulled into v1 as AUTH-04/QUAL-03. Core regression fix = Phases 57-60; Phase 61 = post-enable feature completion. v1.20 网络设备 VLAN + 端口绑定 SHIPPED + ARCHIVED 2026-07-10 (Phase 56 / 5 plans).*
+*Last updated: 2026-08-13 — Phase 59 planned (2 plans / Wave 1 source fix + Wave 2 test validation; D-01~D-04 全部覆盖、3 pitfalls 规避、SC#1-5 全部锚定). Phase 58 discuss 新增 CONTRACT-02(字段命名契约对齐:前端 snake→camelCase,后端零改动;UsageLog/UsageSummary 留 Phase 59). Now 5 phases (57-61) / 14 requirements. v1.21 re-planned 2026-08-12: Phase 61 added (资源级权限矩阵 + 限流生产调优, conditional on Phase 60 AUTH-03=启用); FUTURE-APIKEY-01/02 pulled into v1 as AUTH-04/QUAL-03. Core regression fix = Phases 57-60; Phase 61 = post-enable feature completion. v1.20 网络设备 VLAN + 端口绑定 SHIPPED + ARCHIVED 2026-07-10 (Phase 56 / 5 plans).*
