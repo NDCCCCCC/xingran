@@ -1,59 +1,90 @@
 {
   "version": "1.0",
-  "timestamp": "2026-06-18T11:56:01+08:00",
-  "phase": null,
-  "phase_name": null,
-  "phase_dir": null,
-  "plan": null,
-  "task": null,
-  "total_tasks": null,
+  "timestamp": "2026-08-13T05:03:50.000Z",
+  "phase": 58,
+  "phase_name": "route-contract-alignment",
+  "phase_dir": ".planning/phases/58-route-contract-alignment/",
+  "plan": 1,
+  "task": 3,
+  "total_tasks": 3,
   "status": "paused",
   "completed_tasks": [
-    {"id": 1, "name": "回滚 Phase C 前端 10 文件(到 d0ecfa3)", "status": "done", "commit": "e215e3b"},
-    {"id": 2, "name": "增强 useTableManager.ts(加 sorterMetas/filtersRef/handleTableChange/getColumnSortOrder/applyFilters)", "status": "done", "commit": "e215e3b"},
-    {"id": 3, "name": "改造 system/user 验证页面", "status": "done", "commit": "e215e3b"},
-    {"id": 4, "name": "改造 system/role 验证页面(useRoleData 瘦身)", "status": "done", "commit": "e215e3b"},
-    {"id": 5, "name": "诊断 user 排序无效:GORM 链式调用 ApplySort 必须在 Select/Joins 之前(user_service.go)", "status": "done", "commit": "未提交(待批)"},
-    {"id": 6, "name": "修复 user_cache_impl.buildListCacheKey 加入 orderByColumn/isAsc + 全部筛选字段", "status": "done", "commit": "未提交(待批)"},
-    {"id": 7, "name": "修复 role_cache_impl.buildListCacheKey 加入 orderByColumn/isAsc", "status": "done", "commit": "未提交(待批)"},
-    {"id": 8, "name": "改造 5 个代表页面启用排序(post/building/floor/workstation/network_device)", "status": "done", "commit": "未提交(待批)"}
+    {
+      "id": 1,
+      "name": "apikey.ts three CRUD ops align to POST routes",
+      "status": "done",
+      "commit": "1978935"
+    },
+    {
+      "id": 2,
+      "name": "apikey types + index.tsx field names snake→camelCase",
+      "status": "done",
+      "commit": "6a4c772"
+    }
   ],
   "remaining_tasks": [
-    {"id": 9, "name": "浏览器 UAT 验证 5 页面排序(需后端重启 + 缓存清理)", "status": "not_started", "blocking": "确认修复有效 + 模板正确后再推广"},
-    {"id": 10, "name": "git commit 后端 3 修复(user_service.go + user_cache_impl.go + role_cache_impl.go) + 5 页面前端改造", "status": "not_started", "blocking": "UAT 通过后提交"},
-    {"id": 11, "name": "推广剩下 12 个 useTableManager 页面传 sorterMetas(monitor/logs, network/{credentials,mac,ports}, operations/{assets,dedicated-lines,info-points,room-devices,rpa/{executions,tasks,workers},server-rooms}, system/config)", "status": "not_started", "blocking": "5 页面模板确认后"},
-    {"id": 12, "name": "模式 C/D 页面迁移到 useTableManager(45% 页面用 usePagination 手写)", "status": "not_started", "severity": "advisory"}
+    {
+      "id": 3,
+      "name": "human-verify checkpoint (SC#1-SC#4 + 排序 + Go 回归)",
+      "status": "blocked_human_action",
+      "progress": "自动化门全绿 (type-check/lint/9/9 Go subtests), 后端 localhost:9000 不可达 → 4 项 human-verify 待人工或环境就绪后确认",
+      "subtasks": [
+        "SC#1 编辑回填: getAPIKey POST /:id 拉取详情, 表单所有字段正确回填",
+        "SC#2 DB ip_whitelist 非零值: 修改 API Key 属性保存后, DB 中 IP 白名单复合字段持久化非空",
+        "SC#3 重复删除 code:1001: 删除后再次删除/访问返回 '密钥不存在' (code:1001) 而非 404",
+        "排序 orderByColumn camelCase: 状态/过期时间/最后使用 三列排序生效"
+      ]
+    }
   ],
   "blockers": [
-    {"description": "后端可能未重启(用户 '点击排序不出现日志' 提示有缓存层 user_cache_service 命中,可能后端还没用最新 user_service.go 代码;也可能已重启但缓存没清)", "type": "human_action", "workaround": "重启后端 + 访问系统监控的缓存清理或重启 Redis/L1"},
-    {"description": "user username 升序排序不生效(请求体 orderByColumn=username&isAsc:true,响应是物理顺序)— 已通过 ApplySort 移到 Select 前 + 缓存 key 加 orderByColumn 修复,需要 UAT 验证", "type": "verification_pending", "workaround": null},
-    {"description": "role roleSort 排序在之前 UAT 中 '工作' 是巧合(只有 4 条数据,roleSort asc 缓存被重复使用),desc 实际上未生效过— 缓存 key 修复后需重新 UAT 验证 asc/desc", "type": "verification_pending", "workaround": null}
+    {
+      "description": "后端 localhost:9000 不可达 — 计划文件 §降级策略 应用 (skip curl/psql, keep automated gates)",
+      "type": "external",
+      "workaround": "Supabase (DB) + Upstash Redis (cache) dev 环境就绪后, 重新跑 curl/psql/UI 验证脚本"
+    },
+    {
+      "description": "Supabase DB 凭证 (DB_HOST/DB_PASSWORD/DB_NAME/DB_USER) 尚未提供 — .env 不完整",
+      "type": "human_action",
+      "workaround": "用户从 Supabase 项目控制台获取 connection string 注入 .env"
+    }
   ],
   "human_actions_pending": [
-    {"action": "重启后端服务(xingran-backend.exe)", "context": "加载 user_service.go ApplySort 修复 + 缓存 key 修复", "blocking": true},
-    {"action": "清理后端缓存(系统监控 → 缓存清理,或重启 Redis)", "context": "缓存 key 已变,旧缓存需清空让新 key 生效", "blocking": true},
-    {"action": "在浏览器硬刷新(Ctrl+Shift+R)user/role/post/building/floor/workstation/network_device 7 页面", "context": "Vite HMR + 缓存双重保险", "blocking": false},
-    {"action": "点击每个页面的列头,验证:1)请求带 orderByColumn 2)响应按对应字段排序 3)翻页排序保持 4)高亮落所点列", "context": "UAT 验证", "blocking": true}
+    {
+      "action": "提供 Supabase 项目凭证 (DB_HOST/DB_USER/DB_PASSWORD/DB_NAME) 用于 .env",
+      "context": "Upstash Redis 凭证已提供; Supabase 凭证仍缺失, 后端 go run 无法连接 DB",
+      "blocking": true
+    },
+    {
+      "action": "Supabase+Upstash+TLS dev 环境就绪后, 跑 Phase 58 §4 human-verify 验证项 (SC#1-SC#4 + 排序)",
+      "context": "Phase 58 Task 3 是 blocking checkpoint, 自动化门全绿但需人工 E2E 确认",
+      "blocking": true
+    }
   ],
   "decisions": [
-    {"decision": "新建独立 useServerTable 改为增强 useTableManager", "rationale": "useTableManager 已是 19 页面既定标准(30%+ 采用率),增强它=19 页面零迁移即获排序;新建 useServerTable 需迁移 19+2 页面,风险/成本巨大。Plan agent 建议偏理论,未充分考虑 19 页面既定采用的迁移成本", "phase": "设计阶段"},
-    {"decision": "排序传后端实现(后端 ORDER BY)而非纯客户端", "rationale": "用户原始需求:'对全部页数据按字段排序,跨页连贯一致'— 纯客户端只能当前页排序,换页回归原顺序", "phase": "需求阶段"},
-    {"decision": "buildListCacheKey 修复用枚举 BaseListRequest + 全部 params 字段而非 hash 整个 struct", "rationale": "fmt.Sprintf 字段化更易读/可调试,未来加新字段需明确加入", "phase": "缓存 key 修复"},
-    {"decision": "5 代表页面验证策略(post/building/floor/workstation/network_device)", "rationale": "覆盖:简单(post)/viewMode+deptId(building)/viewMode+外部 columns(floor)/最复杂+Cascader+useTableQuery(workstation)/快速创建+详情+批量导出(network)", "phase": "推广阶段"},
-    {"decision": "5 页面改造不动 viewMode/CRUD/Excel/Cascader 等业务逻辑,只加 sorterMetas + 列 sorter + handleTableChange", "rationale": "最小改动,降低风险,模板可复用", "phase": "推广阶段"}
+    {
+      "decision": "CONTRACT-01 选 Option A (前端改 POST 对齐 v1.6 Router Pattern)",
+      "rationale": "后端零改动, 改动范围最小, 与 Phase 16/2026-05-19 v1.6 API Key 系统既定模式一致",
+      "phase": 58
+    },
+    {
+      "decision": "CONTRACT-02 改前端 types+index.tsx 字段名 camelCase 对齐后端 json tag",
+      "rationale": "后端无 snake↔camel 转换层, encoding/json 静默丢弃字段; 前端单一改动解决",
+      "phase": 58
+    },
+    {
+      "decision": "Phase 58 dev 环境搭建作为独立 quick task, 不污染 Phase 58 backend-zero-changes 不变量",
+      "rationale": "TLS 代码改动 + config.yaml + .env 属 dev 基础设施, 与 CONTRACT-01/02 无关",
+      "phase": 58
+    },
+    {
+      "decision": "Dev DB 选 Supabase (hosted Postgres), Cache 选 Upstash Redis (TLS-required)",
+      "rationale": "用户偏好; SQLite 被否决 (internal/models/api_key.go jsonb 不兼容); 本地 Postgres/Redis 部署成本高",
+      "phase": "dev_env_setup"
+    }
   ],
   "uncommitted_files": [
-    "internal/services/system/user_service.go",
-    "internal/services/system/user_cache_impl.go",
-    "internal/services/system/role_cache_impl.go",
-    "xingran-react-frontend/src/pages/system/post/index.tsx",
-    "xingran-react-frontend/src/pages/operations/buildings/index.tsx",
-    "xingran-react-frontend/src/pages/operations/floors/index.tsx",
-    "xingran-react-frontend/src/pages/operations/floors/components/FloorTableColumns.tsx",
-    "xingran-react-frontend/src/pages/operations/workstations/index.tsx",
-    "xingran-react-frontend/src/pages/operations/workstations/columns.tsx",
-    "xingran-react-frontend/src/pages/network/devices/index.tsx"
+    ".planning/STATE.md (用户手动推进 Current Position 至 Phase 60, 未提交)"
   ],
-  "next_action": "Step 1: 重启后端(加载 user_service.go + user_cache_impl.go + role_cache_impl.go 修复)。Step 2: 清理后端缓存。Step 3: 浏览器硬刷新 user 页面,点击「用户名」列头,确认 SQL 有 ORDER BY sys_user.username ASC 且数据按 username 升序。Step 4: 验证其他 5 页面(post/building/floor/workstation/network_device)的排序。Step 5: UAT 全部通过后,git add 这 10 文件 + commit('fix(table): 修复 user 排序失效(ApplySort 顺序 + 缓存 key) + 推广 5 页面排序')",
-  "context_notes": "核心发现链:1)前端 useTableManager 增强正确发 orderByColumn;2)后端 user_service ApplySort 在 Select+Joins 之后,GORM 链式调用丢失 OrderBuilds;3)user_cache_impl/role_cache_impl buildListCacheKey 漏 BaseListRequest 排序参数,不同排序命中同一缓存返回错数据。role 之前 '工作' 是巧合(4 条数据 + 缓存)。修复三处后,user/role + 5 页面排序端到端打通。17 剩余 useTableManager 页面待推广。"
+  "next_action": "resume 时: (1) git status 检查 STATE.md 是否需先提交; (2) /gsd-execute-phase 58 续接 Task 3 human-verify (需要 Supabase+Upstash dev 环境就绪); (3) dev 环境搭建作为独立 quick task: 改动 1=TLS 代码 (internal/config/config.go CacheConfig 加 TLS bool + pkg/cache/redis.go:30 加 conditional TLSConfig), 改动 2=configs/config.yaml gitignored (Supabase+Upstash tls:true, secrets via env), 改动 3=.env gitignored (Upstash REDIS_HOST/REDIS_PORT/REDIS_PASSWORD 已就绪, 等待 Supabase DB_* 凭证); (4) go build ./... 验证 TLS 代码编译",
+  "context_notes": "Phase 58 工作流: Task 1+2 全绿 (1978935+6a4c772), Task 3 human-verify 是 blocking checkpoint. dev 环境搭建 (TLS + configs + .env) 用户已选 Option A 但因 context 77% 警告未执行, 待 resume 后续执行. Phase 60 AUTH-03 启用决策是 Phase 58 不涉及范围. STATE.md 中 Current Position 由用户手动推到 Phase 60, 但实际未启动 planning; /gsd-execute-phase 58 会从 Phase 58 Task 3 checkpoint 续接."
 }
