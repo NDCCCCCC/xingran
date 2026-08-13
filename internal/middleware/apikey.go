@@ -293,8 +293,13 @@ func RequireScope(requiredScope string) gin.HandlerFunc {
 //     check 路径;未命中 → 403 "资源权限未定义" + abort(不 c.Next())
 //   - D-05: 本函数仍为公共 helper,本 phase 不挂载到 apikey_router.go(仅做
 //     单元测试 + 文档化),最小爆炸半径
-//   - 命中后再检查 c.Get("scopes") 是否含 PermissionCode 或 admin 通配;
-//     不含 → 403 "资源权限不足"
+//   - 命中后 scopes 检查接受三种形式(union 语义):
+//     ① admin 通配 — admin 含所有权限
+//     ② 细粒度 PermissionCode — D-06 InheritPerms=true 路径下 User 权限代码
+//        合并入 scopes,例如 "system:user:list"
+//     ③ 粗粒度 scope(read/write) — D-13 非 InheritPerms 路径下 API Key 自带
+//        scope 通过 getRequiredScope(action) 映射(view→read, edit→write)
+//   - 不命中 → 403 "资源权限不足: <permCode>"
 func RequireAPIKeyResourcePermission(resource string, action string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// D-03: 第一步 — 查静态 map。未命中 → fail-closed 403
@@ -319,10 +324,11 @@ func RequireAPIKeyResourcePermission(resource string, action string) gin.Handler
 			return
 		}
 
-		// admin 通配 + PermissionCode 直接匹配(细粒度 system:user:list 也接受)
+		// 三种形式 union 匹配: admin 通配 / 细粒度 PermissionCode / 粗粒度 scope
+		requiredScope := getRequiredScope(action)
 		hasPerm := false
 		for _, scope := range userScopes {
-			if scope == "admin" || scope == string(permCode) {
+			if scope == "admin" || scope == string(permCode) || scope == requiredScope {
 				hasPerm = true
 				break
 			}
