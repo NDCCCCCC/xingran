@@ -181,6 +181,14 @@ func (d *Database) cleanupOldConstraints() {
 		// 不带 bypass 启动时 AutoMigrate 会 DROP CONSTRAINT uni_...(无 IF EXISTS)→ 42704 FATA。
 		{"sys_api_keys", "uni_sys_api_keys_key_hash"},
 		{"sys_api_keys", "sys_api_keys_key_hash_key"},
+		// === 系统配置 sys_config (2026-08-13 远端 DB 实测, 同类 42704) ===
+		// sys_config 早期由 inline `config_key ... UNIQUE` 建表 → PG 自动名 sys_config_config_key_key
+		// (pg_constraint contype=u); models.Config.ConfigKey 标 uniqueIndex → GORM 期望 uni_sys_config_config_key。
+		// AutoMigrate 走 DropConstraint(无 IF EXISTS)→ 42704 FATA(实测 2026-08-13 21:53 部署期)。
+		// 远端 pg_constraint contype=u 实测仅此一例 constraint 级冲突; user/role/post/dept/dict 等是
+		// index 级 idx_* 与 GORM uni_* 共存(GORM CREATE 不报错, 非致命), 仅 sys_config 是 constraint 级致命。
+		{"sys_config", "uni_sys_config_config_key"},
+		{"sys_config", "sys_config_config_key_key"},
 		// === VDI (128_create_vdi_tables.sql 多个 inline UNIQUE) ===
 		{"sys_vdi_virtual_machines", "sys_vdi_virtual_machines_vm_id_key"},
 		{"sys_vdi_virtual_machines", "uni_sys_vdi_virtual_machines_vm_id"},
