@@ -12,7 +12,7 @@ import { widgetRegistry, getWidgetTypes } from "../widgets/configs/widgetRegistr
 
 import DataSourceForm from "./DataSourceForm";
 import DisplayConfigForm from "./DisplayConfigForm";
-import type { WidgetType, WidgetConfig, ApiDataSourceConfig, EndpointDetail, DataSourceConfig, DisplayConfig } from "@/types/dashboard";
+import type { WidgetType, WidgetConfig, EndpointDetail, DataSourceConfig, DisplayConfig } from "@/types/dashboard";
 import { widgetDefaultSizes } from "@/types/dashboard";
 
 interface WidgetSelectorProps {
