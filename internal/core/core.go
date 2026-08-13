@@ -752,6 +752,7 @@ func (c *Core) initCache() (cache.Cache, error) {
 			Password: c.Config.Cache.Password,
 			DB:       c.Config.Cache.DB,
 			PoolSize: c.Config.Cache.PoolSize,
+			TLS:      c.Config.Cache.TLS,
 		}
 
 		// 创建Redis缓存实例作为L2缓存

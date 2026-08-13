@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -27,6 +28,13 @@ type RedisCache struct {
 
 // NewRedisCache 创建Redis缓存实例
 func NewRedisCache(config *CacheConfig, keyPrefix string) (*RedisCache, error) {
+	tlsCfg := (*tls.Config)(nil)
+	if config.TLS {
+		// 托管 Redis (Upstash 等) 强制 TLS;InsecureSkipVerify 与现有 LDAPS 路径一致,
+		// 待生产化时统一替换为受信 CA 池 — 单独跟踪,不在本 quick task scope。
+		tlsCfg = &tls.Config{InsecureSkipVerify: true}
+	}
+
 	rdb := redis.NewClient(&redis.Options{
 		Addr:            fmt.Sprintf("%s:%d", config.Host, config.Port),
 		Password:        config.Password,
@@ -39,6 +47,7 @@ func NewRedisCache(config *CacheConfig, keyPrefix string) (*RedisCache, error) {
 		ReadTimeout:     readTimeout,
 		WriteTimeout:    writeTimeout,
 		PoolTimeout:     poolTimeout,
+		TLSConfig:       tlsCfg,
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)

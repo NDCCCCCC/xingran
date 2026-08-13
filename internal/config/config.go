@@ -87,6 +87,7 @@ type CacheConfig struct {
 	Password      string `mapstructure:"password"`
 	DB            int    `mapstructure:"db"`
 	PoolSize      int    `mapstructure:"pool_size"`
+	TLS           bool   `mapstructure:"tls"` // 托管 Redis (Upstash 等) 需要 true (本地 Redis 留 false)
 	MaxSize       int    `mapstructure:"max_size"`
 	CleanupTime   int    `mapstructure:"cleanup_time"`
 	WarmUpEnabled bool   `mapstructure:"warm_up_enabled"` // 是否启用缓存预热

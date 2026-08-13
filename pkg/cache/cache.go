@@ -85,6 +85,7 @@ type CacheConfig struct {
 	Password string `yaml:"password"`
 	DB       int    `yaml:"db"`
 	PoolSize int    `yaml:"pool_size"`
+	TLS      bool   `yaml:"tls"` // 托管 Redis (Upstash 等) 需要 true (本地 Redis 留 false)
 
 	// 内存缓存配置
 	MaxSize     int           `yaml:"max_size"`
