@@ -26,6 +26,9 @@ tmpclaude-*
 # 真实配置复制到 .claude/settings.local.json,本地覆盖
 .claude/settings.local.json
 
+# Claude Code MCP 配置（含个人 Supabase project_ref 等本地连接，不入仓）
+.mcp.json
+
 # 环境变量文件
 .env
 .env.local

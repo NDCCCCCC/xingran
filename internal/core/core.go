@@ -270,7 +270,16 @@ func (c *Core) initDBAndData() error {
 	// 2. 自动迁移数据库表结构
 	// P0 #16: 表结构是所有 GORM 操作的基础，迁移失败会导致后续业务在缺失的
 	// 表/列上 panic。fail-fast 比静默继续更安全（审查报告 #16）。
-	if err := c.DB.AutoMigrate(); err != nil {
+	//
+	// SKIP_AUTOMIGRATE=true 旁路开关:Supabase pooler 上 GORM AutoMigrate(80+ DDL)
+	// 会卡死在 dropDependent 之后;此时用 inline DDL 补建缺失表(sys_api_keys +
+	// sys_api_key_usage_logs)。dev 环境应急,生产不应使用。
+	if os.Getenv("SKIP_AUTOMIGRATE") == "true" {
+		applogger.Warnf("[SKIP_AUTOMIGRATE=true] 跳过 AutoMigrate,改用 inline DDL 补建")
+		if err := c.DB.BootstrapMissingTables(); err != nil {
+			return fmt.Errorf("BootstrapMissingTables 失败: %w", err)
+		}
+	} else if err := c.DB.AutoMigrate(); err != nil {
 		return fmt.Errorf("数据库迁移失败: %w", err)
 	}
 	applogger.Infof("数据库表结构迁移完成")
