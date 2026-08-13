@@ -18,6 +18,7 @@
 ### CONTRACT — 前后端路由契约
 
 - [ ] **CONTRACT-01**: 前端 `getAPIKey` / `updateAPIKey` / `deleteAPIKey` 三个操作不再 404 — 与后端 `apikey_router.go` 注册的路由方法/路径对齐(修复 P1-1;前端 GET/PUT/DELETE vs 后端 POST 的不匹配,由 discuss 决定统一方向:改前端用 POST,或后端补 RESTful 方法)
+- [ ] **CONTRACT-02** (Phase 58 discuss 新增,2026-08-13): 前后端**字段命名契约对齐** — 后端 camelCase(`ipWhitelist`/`inheritPerms`/`isActive`/`expiresAt`)与前端 snake_case(`ip_whitelist`/`inherit_perms`/`is_active`/`expires_at`)不一致,且 `api.ts` 无 snake↔camel 转换层。后果:① Create/Update 绑定静默丢弃复合字段(取零值);② List/详情/编辑表单复合字段显示 undefined。修复方向=前端 `types/apikey.ts` + `index.tsx` → camelCase(审计确认后端 camelCase 是全项目约定,FE snake 是孤例),后端零改动。范围限定 API Key 管理 CRUD 类型;`APIKeyUsageLog`/`UsageSummary` 留 Phase 59。
 
 ### OBSERV — 可观测性 / 使用日志
 
@@ -65,6 +66,7 @@ Phase 映射(由 `.planning/ROADMAP.md` v1.21 确认;phase 从 v1.20 末尾 Phas
 | AUTH-02 | Phase 57 | Complete |
 | QUAL-02 | Phase 57 | Complete |
 | CONTRACT-01 | Phase 58 | Pending |
+| CONTRACT-02 | Phase 58 | Pending (discuss 新增 2026-08-13) |
 | OBSERV-01 | Phase 59 | Pending |
 | OBSERV-02 | Phase 59 | Pending |
 | OBSERV-03 | Phase 59 | Pending |
@@ -76,19 +78,19 @@ Phase 映射(由 `.planning/ROADMAP.md` v1.21 确认;phase 从 v1.20 末尾 Phas
 | QUAL-03 | Phase 61 | Pending (conditional on P60 AUTH-03=启用) |
 
 **Coverage:**
-- v1 requirements: 13 total
-- Mapped to phases: 13
+- v1 requirements: 14 total
+- Mapped to phases: 14
 - Unmapped: 0 ✓
 - Orphans: 0 ✓
 - Duplicates: 0 ✓ (each requirement mapped to exactly one phase)
 
 **Phase grouping rationale:**
 - **Phase 57** (AUTH-01 + AUTH-02 + QUAL-02): P0 修复 + 回归测试同 phase,fix-then-lock 模式
-- **Phase 58** (CONTRACT-01): 前后端契约层独立,与中间件修复解耦
+- **Phase 58** (CONTRACT-01 + CONTRACT-02): 前后端契约层独立(路由方法 + 字段命名),与中间件修复解耦;CONTRACT-02 为 2026-08-13 discuss 审计发现的字段命名断裂,与 CONTRACT-01 同属契约层故同 phase 吸收
 - **Phase 59** (OBSERV-01/02/03): 三项都触及使用日志观测请求生命周期,自然耦合
 - **Phase 60** (AUTH-03 + SEC-01/02 + QUAL-01): 启用/哈希两项 discuss 决策 + 两项直接硬化项(索引 + 限流头)
 - **Phase 61** (AUTH-04 + QUAL-03, ex-FUTURE-APIKEY-01/02): MultiAuth 启用后的能力补全 — 资源级权限矩阵 + 限流生产调优;独立 phase 因属实施型工作(区别于 Phase 60 的决策型),且依赖 AUTH-03=启用
 
 ---
 *Requirements defined: 2026-08-12*
-*Last updated: 2026-08-12 — Phase 61 added (资源级权限矩阵 + 限流生产调优); FUTURE-APIKEY-01/02 升级为 v1 AUTH-04/QUAL-03 (Phase 61, conditional on Phase 60 AUTH-03=启用). Now 5 phases (57-61) / 13 requirements / 100% coverage.*
+*Last updated: 2026-08-13 — CONTRACT-02 added (字段命名契约对齐,Phase 58 discuss 审计发现并吸收;前端→camelCase,后端零改动;UsageLog/UsageSummary 留 Phase 59). Now 5 phases (57-61) / 14 requirements / 100% coverage.*

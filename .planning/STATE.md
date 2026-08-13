@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: Milestone History
-status: ready_to_plan
-stopped_at: Phase 57 complete (1/1) — ready to discuss Phase 58
-last_updated: 2026-08-13T01:40:08.236Z
-last_activity: 2026-08-13 — Phase 57 finalization paused at context 69%; 57-01 verified healthy (build 0, tests green); cleanup done (deleted merged branch refactor/core-review-fixes; now on refactor/config-ctx-and-viper-cleanup)
+status: planning
+stopped_at: context exhaustion at 75% (2026-08-13)
+last_updated: "2026-08-13T02:47:02.621Z"
+last_activity: 2026-08-13
 progress:
   total_phases: 5
   completed_phases: 1
@@ -135,11 +135,11 @@ Full deferred detail in [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-12T16:03:45.327Z
-Stopped at: Phase 57 context gathered (4 areas decided + v1.21 re-plan Phase 61)
-Resume file: .planning/phases/57-auth-chain-core-fix-regression-test/57-CONTEXT.md
+Last session: 2026-08-13T02:47:02.613Z
+Stopped at: context exhaustion at 75% (2026-08-13)
+Resume file: None
 
-**Milestone status:** v1.21 INITIATED — ROADMAP ready, awaiting `/gsd:plan-phase 57` to begin Phase 57 (认证链核心修复 + 回归测试).
+**Milestone status:** v1.21 IN PROGRESS — Phase 57 complete; Phase 58 context gathered (CONTRACT-01 + discuss-new CONTRACT-02 字段命名), awaiting `/gsd:plan-phase 58`.
 
 ## Operator Next Steps
 

@@ -53,7 +53,7 @@ previous_update: 2026-07-10 after v1.20 milestone SHIPPED + ARCHIVED
 **Phase Numbering:** 从 v1.20 末尾 Phase 56 续编 (57-61)。整数 phase 为计划里程碑工作;小数 phase (如 57.1) 为紧急插入。
 
 - [ ] **Phase 57: 认证链核心修复 + 回归测试** - 修复 setUserContextForAPIKey 类型断言 (P0-2),消除 MultiAuth 下游死代码 (P0-1),用集成测试锁住认证链防止 P0-2 回归
-- [ ] **Phase 58: 前后端路由契约对齐** - 修复前端 getAPIKey/updateAPIKey/deleteAPIKey 三个操作 404 (P1-1),与后端 POST 路由方法对齐
+- [ ] **Phase 58: 前后端路由契约对齐** - 修复前端 getAPIKey/updateAPIKey/deleteAPIKey 三个操作 404 (P1-1),与后端 POST 路由方法对齐;+ 修复字段命名契约断裂(CONTRACT-02,前端 snake→camelCase,Create/Update 不再静默丢字段、List/详情复合字段正常显示)
 - [ ] **Phase 59: 可观测性 / 使用日志修复** - 修复使用日志记录时机 (P1-2),让 successRate 可信 (P1-2 连锁),消除 ctx 取消竞态 (P2-b)
 - [ ] **Phase 60: 安全加固与启用决策** - MultiAuth 启用决策 + 安全评估,密钥哈希存储决策,移除重复索引,修复限流头编码 (P2-a)
 - [ ] **Phase 61: 资源级权限矩阵 + 限流生产调优** - MultiAuth 启用后落地 RequireAPIKeyResourcePermission 的 resource 参数真实生效 (AUTH-04, ex-FUTURE-APIKEY-01) + RateLimitByScope 生产接入与调优 (QUAL-03, ex-FUTURE-APIKEY-02);仅在 Phase 60 AUTH-03=启用 时执行
@@ -89,7 +89,7 @@ Plans:
 
 **Depends on**: Phase 57 (认证链就绪后再校验契约,避免与 P0 修复交叉污染)
 
-**Requirements**: CONTRACT-01
+**Requirements**: CONTRACT-01, CONTRACT-02 (CONTRACT-02 为 2026-08-13 discuss 审计发现的字段命名断裂,同属契约层故同 phase 吸收)
 
 **Success Criteria** (what must be TRUE):
 1. 前端 API Key 管理页点击单条记录的"编辑"操作,前端能成功拉取该 key 的当前详情字段(返回码 `code:0`,无 404;表单字段完整回填)
@@ -176,7 +176,7 @@ Phases execute in numeric order: 57 → 58 → 59 → 60 → 61 (Phase 61 condit
 
 ## Coverage Map
 
-13/13 v1 requirements mapped to exactly one phase (0 orphans, 0 duplicates):
+14/14 v1 requirements mapped to exactly one phase (0 orphans, 0 duplicates):
 
 | Requirement | Phase | Category |
 |-------------|-------|----------|
@@ -184,6 +184,7 @@ Phases execute in numeric order: 57 → 58 → 59 → 60 → 61 (Phase 61 condit
 | AUTH-02 | Phase 57 | AUTH (P0-1) |
 | QUAL-02 | Phase 57 | QUAL |
 | CONTRACT-01 | Phase 58 | CONTRACT (P1-1) |
+| CONTRACT-02 | Phase 58 | CONTRACT (字段命名,discuss 新增) |
 | OBSERV-01 | Phase 59 | OBSERV (P1-2) |
 | OBSERV-02 | Phase 59 | OBSERV (P1-2 连锁) |
 | OBSERV-03 | Phase 59 | OBSERV (P2-b) |
@@ -231,4 +232,4 @@ Phases execute in numeric order: 57 → 58 → 59 → 60 → 61 (Phase 61 condit
 
 ---
 
-*Last updated: 2026-08-12 — v1.21 re-planned: Phase 61 added (资源级权限矩阵 + 限流生产调优, conditional on Phase 60 AUTH-03=启用); FUTURE-APIKEY-01/02 pulled into v1 as AUTH-04/QUAL-03. Now 5 phases (57-61) / 13 requirements. Core regression fix = Phases 57-60; Phase 61 = post-enable feature completion. v1.20 网络设备 VLAN + 端口绑定 SHIPPED + ARCHIVED 2026-07-10 (Phase 56 / 5 plans).*
+*Last updated: 2026-08-13 — Phase 58 discuss 新增 CONTRACT-02(字段命名契约对齐:前端 snake→camelCase,后端零改动;UsageLog/UsageSummary 留 Phase 59). Now 5 phases (57-61) / 14 requirements. v1.21 re-planned 2026-08-12: Phase 61 added (资源级权限矩阵 + 限流生产调优, conditional on Phase 60 AUTH-03=启用); FUTURE-APIKEY-01/02 pulled into v1 as AUTH-04/QUAL-03. Core regression fix = Phases 57-60; Phase 61 = post-enable feature completion. v1.20 网络设备 VLAN + 端口绑定 SHIPPED + ARCHIVED 2026-07-10 (Phase 56 / 5 plans).*
