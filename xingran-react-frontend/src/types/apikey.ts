@@ -14,14 +14,14 @@ export interface APIKey {
   name: string;
   key: string; // 脱敏显示（前12位）
   scopes: string[]; // read, write, admin
-  ip_whitelist: string[];
-  inherit_perms: boolean;
-  expires_at?: string;
-  last_used_at?: string;
-  is_active: boolean;
+  ipWhitelist: string[];
+  inheritPerms: boolean;
+  expiresAt?: string;
+  lastUsedAt?: string;
+  isActive: boolean;
   description?: string;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /**
@@ -31,9 +31,9 @@ export interface CreateAPIKeyRequest {
   name: string;
   description?: string;
   scopes: string[];
-  inherit_perms: boolean;
-  ip_whitelist?: string[];
-  expires_at?: string;
+  inheritPerms: boolean;
+  ipWhitelist?: string[];
+  expiresAt?: string;
 }
 
 /**
@@ -43,9 +43,9 @@ export interface UpdateAPIKeyRequest {
   name?: string;
   description?: string;
   scopes?: string[];
-  inherit_perms?: boolean;
-  ip_whitelist?: string[];
-  is_active?: boolean;
+  inheritPerms?: boolean;
+  ipWhitelist?: string[];
+  isActive?: boolean;
 }
 
 /**

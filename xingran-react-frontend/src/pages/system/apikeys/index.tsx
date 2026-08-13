@@ -206,7 +206,7 @@ const APIKeyManagement: FC = () => {
     setCreatedKey(null);
     form.resetFields();
     form.setFieldsValue({
-      inherit_perms: true,
+      inheritPerms: true,
       scopes: ["read"],
     });
     setModalVisible(true);
@@ -223,8 +223,8 @@ const APIKeyManagement: FC = () => {
       name: record.name,
       description: record.description,
       scopes: record.scopes,
-      inherit_perms: record.inherit_perms,
-      ip_whitelist: record.ip_whitelist?.join(", "),
+      inheritPerms: record.inheritPerms,
+      ipWhitelist: record.ipWhitelist?.join(", "),
     });
     setModalVisible(true);
   }, [form]);
@@ -241,14 +241,14 @@ const APIKeyManagement: FC = () => {
           <p><strong>名称：</strong>{record.name}</p>
           <p><strong>密钥：</strong>{maskKey(record.key)}</p>
           <p><strong>作用域：</strong>{renderScopeTags(record.scopes)}</p>
-          <p><strong>继承权限：</strong>{record.inherit_perms ? "是" : "否"}</p>
-          {record.ip_whitelist && record.ip_whitelist.length > 0 && (
-            <p><strong>IP 白名单：</strong>{record.ip_whitelist.join(", ")}</p>
+          <p><strong>继承权限：</strong>{record.inheritPerms ? "是" : "否"}</p>
+          {record.ipWhitelist && record.ipWhitelist.length > 0 && (
+            <p><strong>IP 白名单：</strong>{record.ipWhitelist.join(", ")}</p>
           )}
           {record.description && <p><strong>描述：</strong>{record.description}</p>}
-          <p><strong>过期时间：</strong>{record.expires_at ? formatDateTime(record.expires_at) : "永不过期"}</p>
-          <p><strong>最后使用：</strong>{record.last_used_at ? formatDateTime(record.last_used_at) : "未使用"}</p>
-          <p><strong>创建时间：</strong>{formatDateTime(record.created_at)}</p>
+          <p><strong>过期时间：</strong>{record.expiresAt ? formatDateTime(record.expiresAt) : "永不过期"}</p>
+          <p><strong>最后使用：</strong>{record.lastUsedAt ? formatDateTime(record.lastUsedAt) : "未使用"}</p>
+          <p><strong>创建时间：</strong>{formatDateTime(record.createdAt)}</p>
         </div>
       ),
     });
@@ -274,7 +274,7 @@ const APIKeyManagement: FC = () => {
   const handleToggleStatus = useCallback(async (record: APIKey) => {
     try {
       await toggleAPIKeyStatus(record.id);
-      message.success(`${record.is_active ? "禁用" : "启用"}成功`);
+      message.success(`${record.isActive ? "禁用" : "启用"}成功`);
       fetchData();
     } catch (error) {
       console.error("切换状态失败:", error);
@@ -291,8 +291,8 @@ const APIKeyManagement: FC = () => {
 
       // 处理 IP 白名单
       let ipWhitelist: string[] | undefined;
-      if (values.ip_whitelist) {
-        ipWhitelist = values.ip_whitelist
+      if (values.ipWhitelist) {
+        ipWhitelist = values.ipWhitelist
           .split(",")
           .map((s: string) => s.trim())
           .filter((s: string) => s.length > 0);
@@ -304,9 +304,9 @@ const APIKeyManagement: FC = () => {
           name: values.name,
           description: values.description,
           scopes: values.scopes,
-          inherit_perms: values.inherit_perms,
-          ip_whitelist: ipWhitelist,
-          expires_at: values.expires_at ? values.expires_at.toISOString() : undefined,
+          inheritPerms: values.inheritPerms,
+          ipWhitelist: ipWhitelist,
+          expiresAt: values.expiresAt ? values.expiresAt.toISOString() : undefined,
         };
 
         const result = await createAPIKey(createData);
@@ -318,8 +318,8 @@ const APIKeyManagement: FC = () => {
           name: values.name,
           description: values.description,
           scopes: values.scopes,
-          inherit_perms: values.inherit_perms,
-          ip_whitelist: ipWhitelist,
+          inheritPerms: values.inheritPerms,
+          ipWhitelist: ipWhitelist,
         };
 
         await updateAPIKey(editingRecord!.id, updateData);
@@ -433,8 +433,8 @@ const APIKeyManagement: FC = () => {
     },
     {
       title: "继承权限",
-      dataIndex: "inherit_perms",
-      key: "inherit_perms",
+      dataIndex: "inheritPerms",
+      key: "inheritPerms",
       width: 100,
       align: "center" as const,
       render: (inherit: boolean) => (
@@ -445,8 +445,8 @@ const APIKeyManagement: FC = () => {
     },
     {
       title: "IP 白名单",
-      dataIndex: "ip_whitelist",
-      key: "ip_whitelist",
+      dataIndex: "ipWhitelist",
+      key: "ipWhitelist",
       width: 150,
       ellipsis: true,
       render: (whitelist: string[]) => {
@@ -462,12 +462,12 @@ const APIKeyManagement: FC = () => {
     },
     {
       title: "状态",
-      dataIndex: "is_active",
-      key: "is_active",
+      dataIndex: "isActive",
+      key: "isActive",
       width: 80,
       align: "center" as const,
       sorter: true,
-      sortOrder: sortField === "is_active" ? sortOrder : undefined,
+      sortOrder: sortField === "isActive" ? sortOrder : undefined,
       render: (active: boolean) => (
         <Tag color={active ? "green" : "red"}>
           {active ? "启用" : "禁用"}
@@ -476,11 +476,11 @@ const APIKeyManagement: FC = () => {
     },
     {
       title: "过期时间",
-      dataIndex: "expires_at",
-      key: "expires_at",
+      dataIndex: "expiresAt",
+      key: "expiresAt",
       width: 160,
       sorter: true,
-      sortOrder: sortField === "expires_at" ? sortOrder : undefined,
+      sortOrder: sortField === "expiresAt" ? sortOrder : undefined,
       render: (text) => {
         if (!text) {
           return <span style={{ color: "var(--theme-text-tertiary, #999)" }}>永不过期</span>;
@@ -497,11 +497,11 @@ const APIKeyManagement: FC = () => {
     },
     {
       title: "最后使用",
-      dataIndex: "last_used_at",
-      key: "last_used_at",
+      dataIndex: "lastUsedAt",
+      key: "lastUsedAt",
       width: 160,
       sorter: true,
-      sortOrder: sortField === "last_used_at" ? sortOrder : undefined,
+      sortOrder: sortField === "lastUsedAt" ? sortOrder : undefined,
       render: (text) => {
         if (!text) {
           return <span style={{ color: "var(--theme-text-tertiary, #999)" }}>未使用</span>;
@@ -532,11 +532,11 @@ const APIKeyManagement: FC = () => {
               onClick={() => handleEdit(record)}
             />
           </Tooltip>
-          <Tooltip title={record.is_active ? "禁用" : "启用"}>
+          <Tooltip title={record.isActive ? "禁用" : "启用"}>
             <Button
               type="text"
               size="small"
-              icon={record.is_active ? <LockOutlined /> : <UnlockOutlined />}
+              icon={record.isActive ? <LockOutlined /> : <UnlockOutlined />}
               onClick={() => handleToggleStatus(record)}
             />
           </Tooltip>
@@ -728,7 +728,7 @@ const APIKeyManagement: FC = () => {
           </Form.Item>
 
           <Form.Item
-            name="inherit_perms"
+            name="inheritPerms"
             label="继承权限"
             valuePropName="checked"
           >
@@ -736,7 +736,7 @@ const APIKeyManagement: FC = () => {
           </Form.Item>
 
           <Form.Item
-            name="ip_whitelist"
+            name="ipWhitelist"
             label="IP 白名单"
             extra="支持单个 IP 或 CIDR 格式，多个用逗号分隔，留空表示不限制"
           >
@@ -746,7 +746,7 @@ const APIKeyManagement: FC = () => {
 
           {modalType === "create" && (
             <Form.Item
-              name="expires_at"
+              name="expiresAt"
               label="过期时间"
             >
               <Input type="datetime-local" />
