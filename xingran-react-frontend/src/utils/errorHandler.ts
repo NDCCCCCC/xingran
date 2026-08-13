@@ -210,10 +210,11 @@ export function handleHttpResponseError(
     clearPublicKeyCache();
   }
 
-  // 特殊处理 401 未授权 - 自动登出
-  if (status === 401) {
-    handleUnauthorized();
-  }
+  // P1-S3: 401 未授权的自动登出已由 api.ts 响应拦截器完整处理
+  // (L387-451, 含 login 短路/refresh 短路/刷新队列/失败跳转),
+  // 该拦截器对所有 401 响应在到达此处之前已 return, 故此分支不可达。
+  // 移除原 handleUnauthorized() 调用以消除死代码, 避免未来误以为
+  // 这里是 401 处理的入口。
 
   // 显示错误消息
   getAppMessage().error(errorMessage);
