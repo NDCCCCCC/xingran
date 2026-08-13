@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -230,6 +231,69 @@ func TestMultiAuthIntegration(t *testing.T) {
 
 		assert.Equal(t, 401, w.Code, "无效 key 应 401 (response.ErrUnauthorized.HTTPStatus)")
 	})
+}
+
+// --- QUAL-01 / D-12 集成测试: 限流响应头跨 gin.Engine + 中间件链路实证 ---
+
+// TestRateLimitHeadersInResponse 用真实 gin.Engine + 真实 services.NewRateLimiter +
+// MultiAuth→RateLimitByScope 完整链路,断言 X-RateLimit-* 响应头是可被 strconv.Atoi
+// 反解析的数字字面量 (D-11 修复 P2-a: string(rune(int)) → strconv.Itoa)。
+//
+// 与 apikey_test.go:TestRateLimitHeaderEncoding 的分工: 后者锁编码函数语义(纯单测),
+// 本测试锁「中间件真的把该值写进了响应头」(跨 HTTP 边界的端到端证据)。
+//
+// Pitfall 4 防御: rateLimiter 必须传真实 services.NewRateLimiter() —— 传 nil 会在
+// rateLimiter.Check 处 nil-pointer panic。
+func TestRateLimitHeadersInResponse(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	fakeSvc := &fakeAPIKeyService{
+		validKey: &models.APIKey{
+			BaseModel: models.BaseModel{ID: "ak-ratelimit"},
+			Name:      "rl-key",
+			Scopes:    []string{"read"}, // read 档: PerMinute=30 (rate_limiter.go:48)
+			IsActive:  true,
+		},
+	}
+	fakeLogger := newFakeUsageLogger()
+	rl := services.NewRateLimiter() // Pitfall 4: 不能传 nil
+
+	router := gin.New()
+	router.Use(MultiAuth(fakeSvc, fakeLogger))
+	router.Use(RateLimitByScope(rl))
+	router.GET("/ping", func(c *gin.Context) {
+		c.JSON(200, gin.H{"ok": true})
+	})
+
+	req := httptest.NewRequest("GET", "/ping", nil)
+	req.Header.Set("X-API-Key", "rec_"+hex64())
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	fakeLogger.waitForLog(t) // 等待异步使用日志 goroutine, 消除跨测试竞态
+	assert.Equal(t, 200, w.Code, "首个请求未触限流, 应 200")
+
+	limitHeader := w.Header().Get("X-RateLimit-Limit")
+	remainingHeader := w.Header().Get("X-RateLimit-Remaining")
+	resetHeader := w.Header().Get("X-RateLimit-Reset")
+
+	// 核心断言 (SC#4): 限流头可被标准工具反解析
+	n, err := strconv.Atoi(limitHeader)
+	assert.NoError(t, err, "X-RateLimit-Limit 必须是数字字符串, 实际=%q", limitHeader)
+	assert.Greater(t, n, 0, "X-RateLimit-Limit 应为正整数")
+
+	n2, err := strconv.Atoi(remainingHeader)
+	assert.NoError(t, err, "X-RateLimit-Remaining 必须是数字字符串, 实际=%q", remainingHeader)
+	assert.GreaterOrEqual(t, n2, 0, "X-RateLimit-Remaining 应为非负整数")
+	assert.Less(t, n2, n, "消耗 1 次配额后 Remaining 应小于 Limit")
+
+	// 防御性断言: P2-a 的 string(rune(100))=="d" 不得再出现
+	assert.NotEqual(t, "d", limitHeader, "P2-a 回归: 限流头不得是 rune 字面量 \"d\"")
+	assert.NotEqual(t, "c", remainingHeader, "P2-a 回归: 限流头不得是 rune 字面量 \"c\"")
+
+	// Reset 头本就是 RFC3339 字符串 (D-11 明确不动), 顺带确认未被误改
+	_, resetErr := time.Parse(time.RFC3339, resetHeader)
+	assert.NoError(t, resetErr, "X-RateLimit-Reset 应保持 RFC3339 时间字符串, 实际=%q", resetHeader)
 }
 
 // --- D-02 构造函数证据 (SC#2 / AUTH-02) ---

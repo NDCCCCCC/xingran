@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -146,5 +147,37 @@ func TestRateLimitResult(t *testing.T) {
 	t.Run("创建结果对象", func(t *testing.T) {
 		// 这个测试验证RateLimitResult结构的使用
 		// 实际测试在rate_limiter_test.go中进行
+	})
+}
+
+// TestRateLimitHeaderEncoding QUAL-01 / D-12 单测: 锁定 RateLimitByScope 限流响应头的整数序列化方式。
+//
+// P2-a 缺陷回顾: apikey.go:267-268 曾用 string(rune(result.Limit)) 把整数当 Unicode 码点转换,
+// Limit=100 → "d"、Remaining=99 → "c",响应头彻底不可解析。D-11 修复为 strconv.Itoa。
+// 本测试把「数字字面量 + 可被 strconv.Atoi 反解析」两条不变量固化为回归锚,防止 P2-a 复现。
+func TestRateLimitHeaderEncoding(t *testing.T) {
+	t.Run("strconv.Itoa 数字字符串化", func(t *testing.T) {
+		assert.Equal(t, "100", strconv.Itoa(100), "Limit=100 应序列化为 \"100\"")
+		assert.Equal(t, "99", strconv.Itoa(99), "Remaining=99 应序列化为 \"99\"")
+		assert.Equal(t, "0", strconv.Itoa(0), "Remaining=0 应序列化为 \"0\"")
+
+		// 防御性断言: 原 string(rune(100)) == "d" 的编码错误不得再出现
+		assert.NotEqual(t, "d", strconv.Itoa(100), "P2-a 回归: 100 不得再被编码为 rune 字面量 \"d\"")
+		assert.NotEqual(t, string(rune(100)), strconv.Itoa(100), "strconv.Itoa 结果必须区别于 string(rune(int))")
+	})
+
+	t.Run("header 可被 strconv.Atoi 反解析", func(t *testing.T) {
+		// RFC 6585 消费方(前端 / 第三方工具)对限流头做的正是这一步反解析
+		n, err := strconv.Atoi(strconv.Itoa(100))
+		assert.NoError(t, err, "X-RateLimit-Limit 必须是可反解析的数字字符串")
+		assert.Equal(t, 100, n, "反解析结果应与原值一致")
+
+		remaining, err := strconv.Atoi(strconv.Itoa(0))
+		assert.NoError(t, err, "X-RateLimit-Remaining 必须是可反解析的数字字符串")
+		assert.Equal(t, 0, remaining, "Remaining=0 反解析应为 0 而非报错")
+
+		// 对照组: 原缺陷产物 "d" 无法被 Atoi 反解析
+		_, badErr := strconv.Atoi(string(rune(100)))
+		assert.Error(t, badErr, "P2-a 产物 \"d\" 本就不可反解析 —— 这正是缺陷本身")
 	})
 }

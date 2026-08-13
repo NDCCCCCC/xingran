@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net"
+	"strconv"
 	"strings"
 	"time"
 
@@ -264,8 +265,11 @@ func RateLimitByScope(rateLimiter *services.RateLimiter) gin.HandlerFunc {
 		allowed, result := rateLimiter.Check(identifier, scope)
 
 		// 设置速率限制响应头（RFC 6585）
-		c.Header("X-RateLimit-Limit", string(rune(result.Limit)))
-		c.Header("X-RateLimit-Remaining", string(rune(result.Remaining)))
+		// QUAL-01 / D-11: 修复 P2-a —— 原 string(rune(int)) 把整数当 Unicode 码点转换
+		// (Limit=100 → "d")，改用 strconv.Itoa 输出数字字面量 ("100")，前端 / 第三方
+		// 工具可用标准 parseInt / strconv.Atoi 反解析。
+		c.Header("X-RateLimit-Limit", strconv.Itoa(result.Limit))
+		c.Header("X-RateLimit-Remaining", strconv.Itoa(result.Remaining))
 		c.Header("X-RateLimit-Reset", result.ResetAt.Format(time.RFC3339))
 
 		if !allowed {
