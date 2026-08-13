@@ -1,6 +1,7 @@
 package services
 
 import (
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -8,33 +9,68 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// mockRateLimitProvider 测试用 RateLimitProvider 实现(Phase 61 QUAL-03 / D-18)
+// 预填值与既有硬编码一致(D-17),保证既有测试语义不变
+type mockRateLimitProvider struct {
+	limits map[string]RateLimit
+}
+
+func newMockRateLimitProvider() *mockRateLimitProvider {
+	return &mockRateLimitProvider{
+		limits: map[string]RateLimit{
+			"read":    {PerMinute: 30, PerHour: 500, PerDay: 5000},
+			"write":   {PerMinute: 100, PerHour: 1500, PerDay: 15000},
+			"admin":   {PerMinute: 200, PerHour: 5000, PerDay: 50000},
+			"default": {PerMinute: 120, PerHour: 2000, PerDay: 20000},
+		},
+	}
+}
+
+// GetRateLimit 实现 RateLimitProvider 接口
+// key 形态: rate_limit.<scope>.<per_minute|per_hour|per_day>
+func (m *mockRateLimitProvider) GetRateLimit(key string, defaultValue int) int {
+	parts := strings.Split(key, ".")
+	if len(parts) != 3 {
+		return defaultValue
+	}
+	if l, ok := m.limits[parts[1]]; ok {
+		switch parts[2] {
+		case "per_minute":
+			return l.PerMinute
+		case "per_hour":
+			return l.PerHour
+		case "per_day":
+			return l.PerDay
+		}
+	}
+	return defaultValue
+}
+
 // TestNewRateLimiter 测试初始化
 func TestNewRateLimiter(t *testing.T) {
-	limiter := NewRateLimiter()
+	provider := newMockRateLimitProvider()
+	limiter := NewRateLimiter(provider)
 
 	assert.NotNil(t, limiter)
-	assert.NotNil(t, limiter.limits)
 	// 避免 sync.Map 的 noCopy 检查: 通过 Load 验证初始化
 	_, loaded := limiter.windows.Load("never-set-key")
 	assert.False(t, loaded, "未设置的 key 应返回 loaded=false")
 
-	// 验证默认限制配置
-	assert.Contains(t, limiter.limits, "read")
-	assert.Contains(t, limiter.limits, "write")
-	assert.Contains(t, limiter.limits, "admin")
+	// D-18: 验证 config 已注入(limits map 字段已移除)
+	assert.NotNil(t, limiter.config)
 
-	// 验证限制值
-	readLimit := limiter.limits["read"]
+	// 通过 getLimit 间接验证 provider 默认档位(D-17 与既有硬编码一致)
+	readLimit := limiter.getLimit("read")
 	assert.Equal(t, 30, readLimit.PerMinute)
 	assert.Equal(t, 500, readLimit.PerHour)
 	assert.Equal(t, 5000, readLimit.PerDay)
 
-	writeLimit := limiter.limits["write"]
+	writeLimit := limiter.getLimit("write")
 	assert.Equal(t, 100, writeLimit.PerMinute)
 	assert.Equal(t, 1500, writeLimit.PerHour)
 	assert.Equal(t, 15000, writeLimit.PerDay)
 
-	adminLimit := limiter.limits["admin"]
+	adminLimit := limiter.getLimit("admin")
 	assert.Equal(t, 200, adminLimit.PerMinute)
 	assert.Equal(t, 5000, adminLimit.PerHour)
 	assert.Equal(t, 50000, adminLimit.PerDay)
@@ -42,7 +78,7 @@ func TestNewRateLimiter(t *testing.T) {
 
 // TestRateLimiter_Check 测试速率限制检查
 func TestRateLimiter_Check(t *testing.T) {
-	limiter := NewRateLimiter()
+	limiter := NewRateLimiter(newMockRateLimitProvider())
 
 	t.Run("正常请求_未超限", func(t *testing.T) {
 		key := "test-key-1"
@@ -140,7 +176,7 @@ func TestRateLimiter_Check(t *testing.T) {
 
 // TestRateLimiter_SlidingWindow 测试滑动窗口
 func TestRateLimiter_SlidingWindow(t *testing.T) {
-	limiter := NewRateLimiter()
+	limiter := NewRateLimiter(newMockRateLimitProvider())
 
 	t.Run("分钟级窗口", func(t *testing.T) {
 		key := "minute-window"
@@ -247,7 +283,7 @@ func TestRateLimiter_SlidingWindow(t *testing.T) {
 
 // TestRateLimiter_Cleanup 测试自动清理过期条目
 func TestRateLimiter_Cleanup(t *testing.T) {
-	limiter := NewRateLimiter()
+	limiter := NewRateLimiter(newMockRateLimitProvider())
 
 	t.Run("自动清理过期条目", func(t *testing.T) {
 		key := "cleanup-key"
@@ -307,7 +343,7 @@ func TestRateLimiter_Cleanup(t *testing.T) {
 
 // TestRateLimiter_MultipleKeys 测试不同密钥独立计数
 func TestRateLimiter_MultipleKeys(t *testing.T) {
-	limiter := NewRateLimiter()
+	limiter := NewRateLimiter(newMockRateLimitProvider())
 
 	t.Run("不同密钥独立计数", func(t *testing.T) {
 		key1 := "user-1"
@@ -357,7 +393,7 @@ func TestRateLimiter_MultipleKeys(t *testing.T) {
 
 // TestRateLimiter_Reset 测试窗口重置
 func TestRateLimiter_Reset(t *testing.T) {
-	limiter := NewRateLimiter()
+	limiter := NewRateLimiter(newMockRateLimitProvider())
 
 	t.Run("窗口重置后重新计数", func(t *testing.T) {
 		key := "reset-window-key"
@@ -406,7 +442,7 @@ func TestRateLimiter_Reset(t *testing.T) {
 
 // TestRateLimiter_EdgeCases 测试边界情况
 func TestRateLimiter_EdgeCases(t *testing.T) {
-	limiter := NewRateLimiter()
+	limiter := NewRateLimiter(newMockRateLimitProvider())
 
 	t.Run("空key", func(t *testing.T) {
 		allowed, result := limiter.Check("", "read")
@@ -446,4 +482,39 @@ func TestRateLimiter_EdgeCases(t *testing.T) {
 		allowed, _ = limiter.Check(key, scope)
 		assert.False(t, allowed)
 	})
+}
+
+// TestRateLimiter_NilProviderFallback D-18: NewRateLimiter(nil) 不 panic,
+// 兜底 staticRateLimitProvider(默认值与既有硬编码一致,D-17)
+func TestRateLimiter_NilProviderFallback(t *testing.T) {
+	limiter := NewRateLimiter(nil)
+	assert.NotNil(t, limiter)
+	assert.NotNil(t, limiter.config, "nil provider 应被替换为 staticRateLimitProvider")
+
+	// static fallback: read 档 30/分钟
+	for i := 0; i < 30; i++ {
+		allowed, _ := limiter.Check("key", "read")
+		assert.True(t, allowed, "Request %d should be allowed (static fallback)", i+1)
+	}
+	allowed, _ := limiter.Check("key", "read")
+	assert.False(t, allowed, "31st request should be denied (static fallback 30/min)")
+}
+
+// TestRateLimiter_ConfigDrivenRead D-18: Check 从 RateLimitProvider 读限额,
+// 自定义 provider 阈值(5/分钟)真实生效,不再硬编码
+func TestRateLimiter_ConfigDrivenRead(t *testing.T) {
+	provider := &mockRateLimitProvider{
+		limits: map[string]RateLimit{
+			"read": {PerMinute: 5, PerHour: 100, PerDay: 1000},
+		},
+	}
+	limiter := NewRateLimiter(provider)
+
+	for i := 0; i < 5; i++ {
+		allowed, result := limiter.Check("key", "read")
+		assert.True(t, allowed, "Request %d should be allowed", i+1)
+		assert.Equal(t, 5, result.Limit, "Limit 应来自 provider 配置而非硬编码")
+	}
+	allowed, _ := limiter.Check("key", "read")
+	assert.False(t, allowed, "6th request should be denied (provider 配置 5/min)")
 }

@@ -23,7 +23,7 @@ type scopeProbe struct {
 // handler 内直接调用 SelectScope 验证推导结果(D-20 测试可观测性)
 func newRateLimitTestRouter(action string, setters map[string]interface{}, probe *scopeProbe) *gin.Engine {
 	gin.SetMode(gin.TestMode)
-	rl := services.NewRateLimiter()
+	rl := services.NewRateLimiter(nil) // nil → staticRateLimitProvider 兜底(默认值与既有硬编码一致)
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		for k, v := range setters {

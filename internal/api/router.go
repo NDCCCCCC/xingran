@@ -257,7 +257,9 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 				permission.NewService(),
 				core.GetDB(),
 			))
-			apikeys.Use(internalmw.RateLimitByScope(services.NewRateLimiter(), "list")) // Phase 61 / D-11: action 参数(Plan 02 Task 3 将接入 core.CacheConfigService)
+			// Phase 61 / D-11/D-18: action 参数("list" → read 档) + RateLimiter 配置驱动,
+			// 从 core.CacheConfigService 字段(非 getter)读 sys_config rate_limit.* 阈值。
+			apikeys.Use(internalmw.RateLimitByScope(services.NewRateLimiter(core.CacheConfigService), "list"))
 			{
 				// 新架构：结构体Handler + Service层
 				systemV1.SetupAPIKeyRouter(apikeys, core)

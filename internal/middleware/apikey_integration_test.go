@@ -256,7 +256,7 @@ func TestRateLimitHeadersInResponse(t *testing.T) {
 		},
 	}
 	fakeLogger := newFakeUsageLogger()
-	rl := services.NewRateLimiter() // Pitfall 4: 不能传 nil
+	rl := services.NewRateLimiter(nil) // Pitfall 4: 不能传 nil *RateLimiter;Phase 61 起 NewRateLimiter 接收 provider,nil provider → static 兜底
 
 	router := gin.New()
 	router.Use(MultiAuth(fakeSvc, fakeLogger, nil, nil))
@@ -307,7 +307,7 @@ func TestConstructorsCallable_D02(t *testing.T) {
 	assert.NotNil(t, logger)
 	_ = MultiAuth(&fakeAPIKeyService{}, logger, nil, nil) // 编译通过即证明 MultiAuth 第 2 参接受 services.UsageLogger
 
-	rl := services.NewRateLimiter()
+	rl := services.NewRateLimiter(nil)
 	assert.NotNil(t, rl)
 	_ = RateLimitByScope(rl, "list") // 编译通过即证明 RateLimitByScope 第 1 参接受 *services.RateLimiter, 第 2 参接受 action (Phase 61 / D-11)
 }
