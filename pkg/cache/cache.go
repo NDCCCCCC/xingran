@@ -60,6 +60,23 @@ type CacheStrategy interface {
 	ShouldRefresh(data interface{}) bool
 }
 
+// RateLimitCache 提供原子自增并设置 TTL 的限流能力（由 RedisCache 实现）。
+// 限流场景（如 captcha）通过类型断言到该具名接口，避免隐式匿名接口在实现改名后静默走 fallback。
+type RateLimitCache interface {
+	IncrementWithExpire(ctx context.Context, key string, ttl time.Duration) (int64, error)
+}
+
+// 编译期保证 *RedisCache 实现 RateLimitCache：方法改名/签名变更将立即编译失败而非静默降级。
+var _ RateLimitCache = (*RedisCache)(nil)
+
+// L2ExposingCache 暴露底层 L2（Redis）缓存，用于绕过异步 L2Writer 直接读写（由 MultiLevelCache 实现）。
+type L2ExposingCache interface {
+	GetL2Cache() Cache
+}
+
+// 编译期保证 *MultiLevelCache 实现 L2ExposingCache。
+var _ L2ExposingCache = (*MultiLevelCache)(nil)
+
 // CacheConfig 缓存配置
 type CacheConfig struct {
 	Type     string `yaml:"type"` // redis, memory

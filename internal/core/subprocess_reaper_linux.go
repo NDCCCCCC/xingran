@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // startSubprocessReaper starts a goroutine that periodically reaps zombie
@@ -19,11 +19,11 @@ func (c *Core) startSubprocessReaper(ctx context.Context) {
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
 
-		logrus.Info("subprocess reaper started")
+		applogger.Info("subprocess reaper started")
 		for {
 			select {
 			case <-ctx.Done():
-				logrus.Info("subprocess reaper stopped")
+				applogger.Info("subprocess reaper stopped")
 				return
 			case <-ticker.C:
 				// Reap all available zombie children in a batch
@@ -33,7 +33,7 @@ func (c *Core) startSubprocessReaper(ctx context.Context) {
 					if err != nil || pid <= 0 {
 						break
 					}
-					logrus.Debugf("reaper: collected zombie process pid=%d", pid)
+					applogger.Debugf("reaper: collected zombie process pid=%d", pid)
 				}
 			}
 		}

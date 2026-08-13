@@ -4,8 +4,8 @@ milestone: v1.20
 milestone_name: milestone
 status: Awaiting next milestone
 stopped_at: context exhaustion at 75% (2026-08-12)
-last_updated: "2026-08-12T06:03:14.174Z"
-last_activity: 2026-07-10 — Milestone v1.20 completed and archived
+last_updated: "2026-08-12T17:32:20.000Z"
+last_activity: 2026-08-13 — Quick 260813-1nj: internal/core 审查修复批次6 (Q3/Q4/C1 P3 重构) on refactor/core-review-fixes
 progress:
   total_phases: 1
   completed_phases: 1
@@ -19,7 +19,7 @@ progress:
 **Project**: XingRan-Next 运维管理系统
 **Created**: 2026-04-16
 **Status**: v1.19 网络设备写命令 milestone CLOSED & ARCHIVED — awaiting next milestone planning
-**Last activity**: 2026-07-08 — v1.19 archived, MILESTONES.md + ROADMAP.md + PROJECT.md + RETROSPECTIVE.md synchronized
+**Last activity**: 2026-08-13 — Quick 260813-1nj: internal/core 审查修复批次6 (Q3 database.go 拆分 / Q4 Init() 拆分 / C1 可取消优雅关闭), 3 commits 7a113cf..f2364a0 on refactor/core-review-fixes
 
 ## Current Position
 
@@ -137,6 +137,7 @@ Items acknowledged and deferred at v1.20 milestone close on 2026-07-10:
 | 260708-iia | 给所有定时任务日志添加方便识别的前缀 [cron:英文\|中文] | 2026-07-08 | (待提交) | [260708-iia-cron-log-prefix](./quick/260708-iia-cron-log-prefix/) |
 | 260712-vpj | 端口管理页面展开行展示当前 MAC + 历史 MAC fallback(懒加载,零后端改动) | 2026-07-12 | be99597b,bc26f5c4 (merge 1780a914) | [260712-vpj-mac-mac](./quick/260712-vpj-mac-mac/) |
 | 260713-df0 | 工位导入扩展: deptCode(deviceSerial 跨表) + SetPrimaryAndSaveBySerial(共用 mergeBySerial) + 部门映射表下载端点 + 工位页导入 modal "下载部门映射表" 按钮 | 2026-07-13 | 41c4ff05, 25ac6ebd, ad0ac2f9, 4b11f0f6 | [260713-df0-username](./quick/260713-df0-username/) |
+| 260813-1nj | internal/core 审查修复批次6 — Q3 database.go 拆分(init_data.go) / Q4 Init() god function 拆分(8 方法) / C1 可取消优雅关闭(shutdownCtx); 纯重构零逻辑改动, 续批次1-5 `1451fc3` | 2026-08-13 | 7a113cf, 56ab9ca, f2364a0 | [CORE-REVIEW-FIXES](./quick/CORE-REVIEW-FIXES-PLAN.md) |
 
 ## Accumulated Context
 
