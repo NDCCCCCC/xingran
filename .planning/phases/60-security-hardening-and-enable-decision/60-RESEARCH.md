@@ -643,32 +643,19 @@ apikeys.Use(middleware.RateLimitByScope(services.NewRateLimiter()))
 
 **Assumptions table empty after A1-A10:** All LOW risk, recycled from upstream phases.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **`KeyPrefix` 在响应中是否暴露？**
-   - What we know: CONTEXT.md D-06+D-07 提到 `KeyPrefix` 用于 List 搜索，未明确 JSON 行为
-   - What's unclear: 前端是否需要 `keyPrefix` 字段做 UI 展示
-   - Recommendation: **暴露** `keyPrefix` 字段（仅前 12 字符 + `rec_` 前缀），前端可显示给用户「密钥前缀」做 UI 提示，类似 AWS/GitHub API Key 卡片
+> Phase 60 plans 采纳全部 5 项 Recommendation；标记 RESOLVED 以满足 Dimension 11 形式要求。
 
-2. **operlog 创建日志是否记录 `KeyPrefix`？**
-   - What we know: 请求体不含 `KeyPrefix`（后端生成），operlog 读 `c.GetRawData()`
-   - What's unclear: 是否需在 `APIKey` 表的 `KeyPrefix` 字段写入后，由 service 层显式记录
-   - Recommendation: 不记录（请求体本就无 KeyPrefix，operlog 不可见）
+1. **`KeyPrefix` 在响应中是否暴露？** ✅ **RESOLVED 2026-08-13** — 暴露 `keyPrefix` 字段（仅前 12 字符），前端做 UI 提示，类 AWS/GitHub 风格。60-02 Task 1 schema 字段已规划 `KeyPrefix string \`gorm:"size:12;index;not null" json:"keyPrefix"\``。
 
-3. **Phase 60 完成后是否需要 Phase 61 立即启动？**
-   - What we know: D-01 触发 Phase 61 立即执行
-   - What's unclear: GSD workflow 是否自动串接 Phase 60 → 61
-   - Recommendation: Phase 60 plan 完成后由 operator 手动 `/gsd:plan-phase 61`
+2. **operlog 创建日志是否记录 `KeyPrefix`？** ✅ **RESOLVED 2026-08-13** — 不记录（请求体本就无 KeyPrefix，后端生成字段不入 operlog `RecordWithBody` 抓取范围）。operlog 仅记「API密钥管理 / OperTypeCreate」事件名 + mask 后的请求字段。
 
-4. **SEC-02 验证查询是否提供 SQL 函数封装？**
-   - What we know: notes 手动列出 PG/SQLite 两段
-   - What's unclear: 是否提供 Go introspection helper
-   - Recommendation: **不**做（避免 Go migration 化），notes 是 sole 交付物
+3. **Phase 60 完成后是否需要 Phase 61 立即启动？** ✅ **RESOLVED 2026-08-13** — Phase 60 plan 完成后由 operator 手动 `/gsd:plan-phase 61` 触发，GSD workflow 不自动串接。Phase 61 因 AUTH-03=启用决策落地（D-01 follow-up note）已**从 conditional 升为 unconditional**。
 
-5. **`MultiAuth` 注册的 `apiKeyService` 是否缓存 instance？**
-   - What we know: `systemServices.NewAPIKeyService(core.GetDB())` 每次调用新建实例
-   - What's unclear: 是否有必要在 Core 持有单例
-   - Recommendation: **不**改（现有架构 `apikeyHandler.NewAPIKeyHandler(apiKeyService).WithCore(coreCore)` 每次新建 router 调用已存在），middleware 闭包捕获 `apiKeyService` 不影响性能
+4. **SEC-02 验证查询是否提供 SQL 函数封装？** ✅ **RESOLVED 2026-08-13** — 不做 Go introspection helper（避免 Go migration 化，违反 D-10 用户决策）。`docs/operations/sql/2026-08-13-drop-idx-api-keys-key.sql` + `.planning/notes/260813-sec02-redundant-index-removal.md` 双 dialect 验证查询是 sole 交付物。
+
+5. **`MultiAuth` 注册的 `apiKeyService` 是否缓存 instance？** ✅ **RESOLVED 2026-08-13** — 不改。现有架构 `apikeyHandler.NewAPIKeyHandler(apiKeyService)` 每次 router setup 时新建，middleware 闭包捕获 `apiKeyService` 不影响性能。Phase 60 仅在 `router.go:238-248` `apikeys` 路由组顺序追加中间件，不动 Core 单例。
 
 ## Environment Availability
 
