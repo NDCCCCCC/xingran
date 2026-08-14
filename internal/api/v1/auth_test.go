@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
@@ -11,7 +12,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/xingran-next/xingran-go-backend/pkg/crypto"
 	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 // TestRecordLoginLog_ErrorLogging 测试登录日志错误处理
@@ -393,8 +397,23 @@ func TestLoginWithDualLayerEncryption(t *testing.T) {
 func TestLoginWithInvalidEncryptedRequest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// 创建测试路由器
+	// 与生产一致：登录路由挂载 RequestDecryption 中间件
+	// (pkg/middleware/request_decryption.go，由 internal/api/router.go
+	// setupEncryptionMiddlewares 全局挂载到 /api/v1)。
+	// sqlite 内存库无 sys_config 表 → getConfigFromDB 回退到静态配置 Enabled=true。
+	testDB, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+
+	// 三个用例都在时间戳校验阶段被拒绝（早于 SM2 解密），nil 密钥对安全。
+	encryptor := crypto.NewRequestEncryptor(nil, nil)
+
 	router := gin.New()
+	router.POST("/login",
+		middleware.RequestDecryption(encryptor, &middleware.RequestDecryptionConfig{
+			Enabled: true,
+		}, testDB),
+		func(c *gin.Context) { c.Status(http.StatusOK) },
+	)
 
 	testCases := []struct {
 		name    string
@@ -406,7 +425,8 @@ func TestLoginWithInvalidEncryptedRequest(t *testing.T) {
 			request: map[string]interface{}{
 				"encrypted": true,
 			},
-			expectError: "缺少必需字段",
+			// F-06: 中间件对解密/校验失败统一返回通用错误，不泄露细节
+			expectError: "解密失败",
 		},
 		{
 			name: "空时间戳",
@@ -418,7 +438,7 @@ func TestLoginWithInvalidEncryptedRequest(t *testing.T) {
 				"timestamp": 0,
 				"nonce":     "invalid",
 			},
-			expectError: "时间戳无效",
+			expectError: "解密失败",
 		},
 		{
 			name: "过期时间戳（>300秒）",
@@ -430,16 +450,18 @@ func TestLoginWithInvalidEncryptedRequest(t *testing.T) {
 				"timestamp": time.Now().Unix() - 400,
 				"nonce":     "invalid",
 			},
-			expectError: "时间戳无效",
+			expectError: "解密失败",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Simulate actual request validation
+			bodyBytes, err := json.Marshal(tc.request)
+			require.NoError(t, err)
+
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest("POST", "/login", nil)
-			// Add request body with tc.request
+			req, _ := http.NewRequest("POST", "/login", bytes.NewBuffer(bodyBytes))
+			req.Header.Set("Content-Type", "application/json")
 
 			router.ServeHTTP(w, req)
 
