@@ -99,6 +99,10 @@ const (
 	CacheKeyMenuTree     = "menu:tree"    // 菜单树: menu:tree
 	CacheKeyMenuRouter   = "menu:router"  // 菜单路由: menu:router
 	CacheKeyMenuAll      = "menu:all"     // 所有菜单: menu:all
+	// user-scoped 菜单缓存（按 userID 隔离，所有者和失效方是 menu 服务，故置于 menu: 命名空间）
+	CacheKeyMenuUserMenus       = "menu:user:menus"  // 用户菜单树: menu:user:menus:{userID}
+	CacheKeyMenuUserAllMenus    = "menu:user:all"    // 用户全部菜单(含隐藏): menu:user:all:{userID}
+	CacheKeyMenuUserPermissions = "menu:user:perms"  // 用户权限标识: menu:user:perms:{userID}
 
 	// 部门相关
 	CacheKeyDeptByID     = "dept:id"       // 部门详情: dept:id:{uuid}
@@ -338,4 +342,26 @@ func GetUserRolesKey(userID string) string {
 // 返回：user:permissions:{userID}
 func GetUserPermissionsKey(userID string) string {
 	return "user:permissions:" + userID
+}
+
+// GetMenuUserMenusKey 根据 userID 构建用户菜单树缓存键
+// 参数：userID 用户ID
+// 返回：menu:user:menus:{userID}
+func GetMenuUserMenusKey(userID string) string {
+	return CacheKeyMenuUserMenus + ":" + userID
+}
+
+// GetMenuUserAllMenusKey 根据 userID 构建用户全部菜单(含隐藏)缓存键
+// 参数：userID 用户ID
+// 返回：menu:user:all:{userID}
+func GetMenuUserAllMenusKey(userID string) string {
+	return CacheKeyMenuUserAllMenus + ":" + userID
+}
+
+// GetMenuUserPermissionsKey 根据 userID 构建用户权限标识缓存键
+// 命名加 Menu 前缀以与既有 GetUserPermissionsKey（user:permissions:{id}，user 模块命名空间，未被缓存层使用）区分
+// 参数：userID 用户ID
+// 返回：menu:user:perms:{userID}
+func GetMenuUserPermissionsKey(userID string) string {
+	return CacheKeyMenuUserPermissions + ":" + userID
 }
