@@ -375,6 +375,7 @@ const ADConfigPage: FC = () => {
             name="serverAddress"
             rules={[{ required: true, message: "请输入AD服务器地址" }]}
           >
+            {/* eslint-disable-next-line no-restricted-syntax -- placeholder 示例 IP, 仅 UI 提示 */}
             <Input placeholder="如: ad.example.com 或 192.168.1.100" />
           </Form.Item>
 

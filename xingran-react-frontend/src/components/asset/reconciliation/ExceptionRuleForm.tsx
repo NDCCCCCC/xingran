@@ -162,8 +162,10 @@ const ExceptionRuleForm: React.FC<ExceptionRuleFormProps> = ({
           label="IP段 (CIDR)"
           name="ipRange"
           rules={[{ required: true, message: "请输入 CIDR" }]}
+          // eslint-disable-next-line no-restricted-syntax -- placeholder 仅作 UI 提示, 非真实 IP 配置
           extra="支持 IPv4/IPv6,如 192.168.0.0/16 或 2001:db8::/32"
         >
+          {/* eslint-disable-next-line no-restricted-syntax -- placeholder 仅作 UI 提示 */}
           <Input placeholder="192.168.0.0/16" />
         </Form.Item>
 

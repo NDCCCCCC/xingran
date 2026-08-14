@@ -172,6 +172,7 @@ const MatchTestPanel: React.FC<MatchTestPanelProps> = ({ embedded }) => {
             label="IP"
             rules={[{ required: true, message: "请输入 IP" }]}
           >
+            {/* eslint-disable-next-line no-restricted-syntax -- placeholder 示例 IP, 仅 UI 提示 */}
             <Input placeholder="192.168.0.10" style={{ width: 200 }} />
           </Form.Item>
           <Form.Item name="userId" label="User ID">

@@ -164,10 +164,12 @@ export function PortBindingModal({
             { required: true, message: "请输入 IP 地址" },
             {
               pattern: IPV4_REGEX,
+              // eslint-disable-next-line no-restricted-syntax -- 错误提示示例 IP, 仅 UI 文本
               message: "请输入合法 IPv4 地址（如 10.62.25.5）",
             },
           ]}
         >
+          {/* eslint-disable-next-line no-restricted-syntax -- placeholder 示例 IP, 仅 UI 提示 */}
           <Input placeholder="例如 10.62.25.5" allowClear />
         </Form.Item>
 
