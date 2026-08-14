@@ -1,0 +1,14 @@
+[
+  {
+    "name": "main bundle (min+gzip)",
+    "path": "dist/assets/index-*.js",
+    "limit": "1 MB",
+    "gzip": true
+  },
+  {
+    "name": "total bundle (min+gzip)",
+    "path": "dist/assets/*.js",
+    "limit": "2 MB",
+    "gzip": true
+  }
+]
