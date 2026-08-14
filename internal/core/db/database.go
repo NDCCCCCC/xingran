@@ -36,6 +36,13 @@ func NewDatabase(cfg *config.DatabaseConfig) (*Database, error) {
 	var db *gorm.DB
 	var dbType string
 
+	// OC-M-SQLITE:Host 已设但 Port<=0 时静默回退 SQLite 会掩盖配置错误(typo、未设 port)。
+	// 启动期显式 WARN 明示,运维可据此核对意图;函数提取为可单测的纯函数。
+	if cfg.Host != "" && cfg.Port <= 0 {
+		applogger.Warnf("[配置告警] database.host 已设置为 %q 但 port=%d,正静默回退 SQLite;若本意使用 PostgreSQL 请检查 database.port 配置",
+			cfg.Host, cfg.Port)
+	}
+
 	if cfg.Host != "" && cfg.Port > 0 {
 		dbType = "postgres"
 		var err error
@@ -58,10 +65,19 @@ func NewDatabase(cfg *config.DatabaseConfig) (*Database, error) {
 	}, nil
 }
 
-// sqliteFallbackWarning 占位实现 (Phase 62-04 Task 1 commit):返回空串。
-// Phase 62-04 Task 2 将填充:Host 非空 + Port<=0 时返回告警文案(OC-M-SQLITE 修复)。
+// sqliteFallbackWarning 纯函数:在配置语义不一致(Host 非空 + Port<=0)时返回告警字符串;
+// 否则返回空串。提取为独立函数便于单测。
+//
+// OC-M-SQLITE:配置 Host 但 Port==0 (typo / 未设 / 默认值) 时方言语义不明确,
+// 直接走 SQLite 会把数据写到错误后端(运维以为在 PG)。返回告警给 NewDatabase 上层打 WARN。
 func sqliteFallbackWarning(cfg *config.DatabaseConfig) string {
-	_ = cfg
+	if cfg == nil {
+		return ""
+	}
+	if cfg.Host != "" && cfg.Port <= 0 {
+		return fmt.Sprintf("[配置告警] database.host 已设置为 %q 但 port=%d,正静默回退 SQLite;若本意使用 PostgreSQL 请检查 database.port 配置",
+			cfg.Host, cfg.Port)
+	}
 	return ""
 }
 
@@ -74,9 +90,10 @@ func createSQLiteConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 
 	gormConfig := &gorm.Config{
 		Logger: createFilteredLogger(),
-		NowFunc: func() time.Time {
-			return time.Now().Local()
-		},
+		// CDX-M-UTC:全项目 UTC 一致性,与 SQL DEFAULT NOW() 语义对齐。
+		// 历史本地时区行由 timestamptz 规范化(timestamptz 列按会话时区规范化存储,
+		// 混合期查询按 timestamptz 语义正确;naive timestamp 列若有则存在解释漂移)。
+		NowFunc: func() time.Time { return time.Now().UTC() },
 	}
 
 	db, err := gorm.Open(sqlite.Open(dbPath), gormConfig)
@@ -109,7 +126,10 @@ func createPostgresConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 
 	gormConfig := &gorm.Config{
 		Logger:                                   createFilteredLogger(),
-		NowFunc:                                  func() time.Time { return time.Now().Local() },
+		// CDX-M-UTC:全项目 UTC 一致性,与 SQL DEFAULT NOW() 语义对齐。
+		// 历史本地时区行由 timestamptz 规范化(timestamptz 列按会话时区规范化存储,
+		// 混合期查询按 timestamptz 语义正确;naive timestamp 列若有则存在解释漂移)。
+		NowFunc:                                  func() time.Time { return time.Now().UTC() },
 		DisableForeignKeyConstraintWhenMigrating: true,
 		SkipDefaultTransaction:                   true,
 		// Supabase Pooler(Supavisor)兼容:pooler(Transaction/Session)不支持
