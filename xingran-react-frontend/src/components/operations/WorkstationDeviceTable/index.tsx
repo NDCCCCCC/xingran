@@ -6,8 +6,28 @@
  */
 
 import React, { useState, useEffect, useCallback } from "react";
-import { App, Table, Button, Space, Tag, Popconfirm, Modal, Form, Input, Alert, Collapse, Tooltip } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, StarOutlined, HistoryOutlined, CheckCircleOutlined } from "@ant-design/icons";
+import {
+  App,
+  Table,
+  Button,
+  Space,
+  Tag,
+  Popconfirm,
+  Modal,
+  Form,
+  Input,
+  Alert,
+  Collapse,
+  Tooltip,
+} from "antd";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  StarOutlined,
+  HistoryOutlined,
+  CheckCircleOutlined,
+} from "@ant-design/icons";
 import type { WorkstationDevice, DeviceFormData, DeviceSource, Asset } from "@/types";
 import { DEVICE_SOURCE_LABELS } from "@/types/operations";
 import { workstationDeviceApi, assetApi } from "@/lib/opsApi";
@@ -335,7 +355,10 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       key: "status",
       width: 50,
       render: (status: number) => (
-        <Tag color={status === 0 ? "success" : "error"} style={{ margin: 0, fontSize: 10, padding: "0 4px", lineHeight: "16px" }}>
+        <Tag
+          color={status === 0 ? "success" : "error"}
+          style={{ margin: 0, fontSize: 10, padding: "0 4px", lineHeight: "16px" }}
+        >
           {status === 0 ? "正常" : "停用"}
         </Tag>
       ),
@@ -373,7 +396,13 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
                   <Tag
                     icon={<HistoryOutlined />}
                     color="warning"
-                    style={{ margin: 0, fontSize: 10, padding: "0 4px", lineHeight: "16px", cursor: "help" }}
+                    style={{
+                      margin: 0,
+                      fontSize: 10,
+                      padding: "0 4px",
+                      lineHeight: "16px",
+                      cursor: "help",
+                    }}
                   >
                     历史关联
                   </Tag>
@@ -406,9 +435,10 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       key: "isPrimary",
       width: 50,
       align: "center" as const,
-      render: (isPrimary: boolean) => (
-        isPrimary ? <StarOutlined style={{ color: "var(--theme-warning, #faad14)", fontSize: 11 }} /> : null
-      ),
+      render: (isPrimary: boolean) =>
+        isPrimary ? (
+          <StarOutlined style={{ color: "var(--theme-warning, #faad14)", fontSize: 11 }} />
+        ) : null,
     },
     {
       title: "操作",
@@ -472,12 +502,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
   return (
     <div style={{ padding: "4px 8px", backgroundColor: "#fafafa" }}>
       <Space style={{ marginBottom: 4 }} size="small">
-        <Button
-          type="primary"
-          size="small"
-          icon={<PlusOutlined />}
-          onClick={handleAdd}
-        >
+        <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleAdd}>
           手动添加
         </Button>
       </Space>
@@ -579,10 +604,10 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
                 />
               ) : (
                 <div style={{ fontSize: 11, color: "var(--text-secondary)", padding: "4px 0" }}>
-                  该工位暂无通过 MAC→port→infoPoint 反推到的设备。
-                  请确认工位下是否已配置 ops_info_points 关联到网络设备端口。
+                  该工位暂无通过 MAC→port→infoPoint 反推到的设备。 请确认工位下是否已配置
+                  ops_info_points 关联到网络设备端口。
                 </div>
-              )
+              ),
           },
         ]}
       />
@@ -600,7 +625,13 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
             name="deviceSerial"
             label="序列号"
             rules={[{ required: true, message: "请输入序列号" }]}
-            extra={searchingSerial ? "正在查询资产信息..." : autoFilledAsset ? "已从资产系统自动匹配" : "未在资产系统中找到"}
+            extra={
+              searchingSerial
+                ? "正在查询资产信息..."
+                : autoFilledAsset
+                  ? "已从资产系统自动匹配"
+                  : "未在资产系统中找到"
+            }
           >
             <Input
               placeholder="请输入设备序列号"

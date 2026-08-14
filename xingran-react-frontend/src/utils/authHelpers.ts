@@ -4,10 +4,7 @@
  */
 
 import { getTokenManager } from "@/store/authStore";
-import {
-  getCachedEncryptionConfig,
-  clearEncryptionConfigCache,
-} from "@/services/encryptionConfig";
+import { getCachedEncryptionConfig, clearEncryptionConfigCache } from "@/services/encryptionConfig";
 import type { EncryptionConfig } from "@/services/encryptionConfig";
 
 /**
@@ -17,7 +14,7 @@ import type { EncryptionConfig } from "@/services/encryptionConfig";
 export async function getAuthHeaders(): Promise<Record<string, string>> {
   const tokenManager = getTokenManager();
   const token = await tokenManager.getAccessToken();
-  return token ? { "Authorization": `Bearer ${token}` } : {};
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 /**
@@ -35,10 +32,7 @@ export async function getAccessToken(): Promise<string> {
  * @param options - fetch 选项（可选）
  * @returns 添加了认证头的 fetch 选项
  */
-export async function withAuth(
-  url: string,
-  options?: RequestInit
-): Promise<[string, RequestInit]> {
+export async function withAuth(url: string, options?: RequestInit): Promise<[string, RequestInit]> {
   const headers = await getAuthHeaders();
   const mergedOptions: RequestInit = {
     ...options,

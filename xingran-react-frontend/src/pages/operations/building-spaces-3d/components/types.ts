@@ -24,7 +24,7 @@ export interface FloorData {
   floorNo: string;
   buildingName?: string;
   buildingId?: string;
-  workstationCount: number;  // 改为必需
+  workstationCount: number; // 改为必需
   status: number; // 0=正常, 1=停用
 }
 

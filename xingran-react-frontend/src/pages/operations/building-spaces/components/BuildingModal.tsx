@@ -83,18 +83,13 @@ const BuildingModal: React.FC<BuildingModalProps> = ({ building, visible, onClos
         {/* 左侧:楼层堆叠视图 */}
         {modalView === "floors" && (
           <div className={styles.modalLeftPanel}>
-            <h3 style={{ marginBottom: 16, textAlign: "center" }}>
-              楼层列表
-            </h3>
+            <h3 style={{ marginBottom: 16, textAlign: "center" }}>楼层列表</h3>
             {loadingFloors ? (
               <div style={{ textAlign: "center", padding: 48 }}>
                 <Spin size="large" />
               </div>
             ) : (
-              <FloorStack
-                floors={floors}
-                onFloorClick={handleFloorClick}
-              />
+              <FloorStack floors={floors} onFloorClick={handleFloorClick} />
             )}
           </div>
         )}
@@ -102,10 +97,7 @@ const BuildingModal: React.FC<BuildingModalProps> = ({ building, visible, onClos
         {/* 右侧:工位平面图(WorkstationView 自身懒加载工位) */}
         {modalView === "workstation" && selectedFloor && (
           <div className={styles.modalRightPanel}>
-            <WorkstationView
-              floor={selectedFloor}
-              onBack={handleBackToFloors}
-            />
+            <WorkstationView floor={selectedFloor} onBack={handleBackToFloors} />
           </div>
         )}
       </div>

@@ -46,7 +46,7 @@ export function useDepartmentData() {
   const deptMap = useMemo(() => {
     const map = new Map<string, string>();
     const flattenDeptsToMap = (nodes: DepartmentOption[]) => {
-      nodes.forEach(node => {
+      nodes.forEach((node) => {
         map.set(node.id, node.deptName);
         if ((node.children?.length ?? 0) > 0) {
           flattenDeptsToMap(node.children!);
@@ -58,10 +58,13 @@ export function useDepartmentData() {
   }, [departments]);
 
   // 获取所属机构名称
-  const getOrgName = useCallback((orgId?: string): string => {
-    if (!orgId) return "-";
-    return deptMap.get(orgId) || "-";
-  }, [deptMap]);
+  const getOrgName = useCallback(
+    (orgId?: string): string => {
+      if (!orgId) return "-";
+      return deptMap.get(orgId) || "-";
+    },
+    [deptMap]
+  );
 
   return {
     departments,

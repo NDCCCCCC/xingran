@@ -23,16 +23,35 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
-  Table, Button, Space, Form, Input, InputNumber, Select,
-  Tag, Card, DatePicker, List, Grid, Spin, Tooltip, Skeleton,
-  Typography, App,
+  Table,
+  Button,
+  Space,
+  Form,
+  Input,
+  InputNumber,
+  Select,
+  Tag,
+  Card,
+  DatePicker,
+  List,
+  Grid,
+  Spin,
+  Tooltip,
+  Skeleton,
+  Typography,
+  App,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
 type RangePickerOnChange = React.ComponentProps<typeof DatePicker.RangePicker>["onChange"];
 import {
-  SearchOutlined, ReloadOutlined, AppstoreOutlined, TableOutlined,
-  CopyOutlined, EyeOutlined, DownloadOutlined,
+  SearchOutlined,
+  ReloadOutlined,
+  AppstoreOutlined,
+  TableOutlined,
+  CopyOutlined,
+  EyeOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
@@ -40,15 +59,9 @@ import type { Dayjs } from "dayjs";
 import { useTableQuery } from "@/hooks/useTableQuery";
 import { useColumnConfig, type ColumnConfig } from "@/hooks/useColumnConfig";
 import { queryMACHistory, exportMACHistory } from "@/lib/api/networkApi";
-import type {
-  MACHistoryRecord,
-  MACHistoryQueryParams,
-} from "@/lib/api/networkApi";
+import type { MACHistoryRecord, MACHistoryQueryParams } from "@/lib/api/networkApi";
 import { MACEventsTimeline } from "@/components/network";
-import {
-  EmptyStateWithAction,
-  ErrorAlertWithRetry,
-} from "@/components/shared";
+import { EmptyStateWithAction, ErrorAlertWithRetry } from "@/components/shared";
 import { useMenuStore } from "@/store/menuStore";
 import { EVENT_LABEL, EVENT_TAG_COLOR } from "@/components/network/macEventMeta";
 
@@ -118,15 +131,13 @@ const MACHistoryPage: React.FC = () => {
   const [exporting, setExporting] = useState<boolean>(false);
 
   // 计算当前时间范围(ISO 字符串)用于查询
-  const [timeRange, setTimeRange] = useState<{ startTime: string; endTime: string }>(
-    () => {
-      const preset = PRESETS.find((p) => p.key === "7d")!;
-      return {
-        startTime: dayjs().subtract(preset.amount, preset.unit).toISOString(),
-        endTime: dayjs().toISOString(),
-      };
-    }
-  );
+  const [timeRange, setTimeRange] = useState<{ startTime: string; endTime: string }>(() => {
+    const preset = PRESETS.find((p) => p.key === "7d")!;
+    return {
+      startTime: dayjs().subtract(preset.amount, preset.unit).toISOString(),
+      endTime: dayjs().toISOString(),
+    };
+  });
 
   // URL 参数注入(D-17)
   useEffect(() => {
@@ -151,39 +162,33 @@ const MACHistoryPage: React.FC = () => {
   }, [searchParams, form]);
 
   // 切换预设
-  const handlePresetClick = useCallback(
-    (preset: Preset) => {
-      if (preset.key === "custom") {
-        setActivePreset("custom");
-        setCustomRange(null);
-        return;
-      }
-      setActivePreset(preset.key);
+  const handlePresetClick = useCallback((preset: Preset) => {
+    if (preset.key === "custom") {
+      setActivePreset("custom");
       setCustomRange(null);
-      const start = dayjs().subtract(preset.amount, preset.unit).toISOString();
-      const end = dayjs().toISOString();
-      setTimeRange({ startTime: start, endTime: end });
-      setCurrent(1);
-    },
-    []
-  );
+      return;
+    }
+    setActivePreset(preset.key);
+    setCustomRange(null);
+    const start = dayjs().subtract(preset.amount, preset.unit).toISOString();
+    const end = dayjs().toISOString();
+    setTimeRange({ startTime: start, endTime: end });
+    setCurrent(1);
+  }, []);
 
   // 切换自定义 RangePicker
-  const handleCustomRangeChange = useCallback<NonNullable<RangePickerOnChange>>(
-    (values) => {
-      const arr = values as [Dayjs, Dayjs] | null;
-      setCustomRange(arr);
-      if (arr && arr[0] && arr[1]) {
-        setActivePreset("custom");
-        setTimeRange({
-          startTime: arr[0].toISOString(),
-          endTime: arr[1].toISOString(),
-        });
-        setCurrent(1);
-      }
-    },
-    []
-  );
+  const handleCustomRangeChange = useCallback<NonNullable<RangePickerOnChange>>((values) => {
+    const arr = values as [Dayjs, Dayjs] | null;
+    setCustomRange(arr);
+    if (arr && arr[0] && arr[1]) {
+      setActivePreset("custom");
+      setTimeRange({
+        startTime: arr[0].toISOString(),
+        endTime: arr[1].toISOString(),
+      });
+      setCurrent(1);
+    }
+  }, []);
 
   // 搜索参数(交给 useTableQuery)
   const filters = useMemo<Partial<MACHistoryQueryParams>>(
@@ -259,7 +264,9 @@ const MACHistoryPage: React.FC = () => {
         key: "eventType",
         width: 110,
         render: (_: unknown, record: MACHistoryRecord) => (
-          <Tag color={EVENT_TAG_COLOR[record.eventType as keyof typeof EVENT_TAG_COLOR] ?? "default"}>
+          <Tag
+            color={EVENT_TAG_COLOR[record.eventType as keyof typeof EVENT_TAG_COLOR] ?? "default"}
+          >
             {EVENT_LABEL[record.eventType as keyof typeof EVENT_LABEL] ?? record.eventType}
           </Tag>
         ),
@@ -268,8 +275,7 @@ const MACHistoryPage: React.FC = () => {
         title: "VLAN",
         key: "vlan",
         width: 80,
-        render: (_: unknown, record: MACHistoryRecord) =>
-          record.vlanId ?? "-",
+        render: (_: unknown, record: MACHistoryRecord) => record.vlanId ?? "-",
       },
       status: {
         title: "状态",
@@ -403,12 +409,7 @@ const MACHistoryPage: React.FC = () => {
     // 首次加载(无数据 + isLoading)— 用 Skeleton 占位,不渲染 Table(D-19)
     if (isLoading && list.length === 0) {
       return (
-        <Skeleton
-          active
-          paragraph={{ rows: 3 }}
-          title={false}
-          style={{ padding: "24px 12px" }}
-        />
+        <Skeleton active paragraph={{ rows: 3 }} title={false} style={{ padding: "24px 12px" }} />
       );
     }
     return (
@@ -436,9 +437,7 @@ const MACHistoryPage: React.FC = () => {
         expandedRowKeys={expandedRowKeys}
         onExpand={(expanded, record) => {
           setExpandedRowKeys((prev) =>
-            expanded
-              ? [...prev, record.id]
-              : prev.filter((k) => k !== record.id)
+            expanded ? [...prev, record.id] : prev.filter((k) => k !== record.id)
           );
         }}
         expandedRowRender={(record) => (
@@ -467,12 +466,7 @@ const MACHistoryPage: React.FC = () => {
   const renderCardList = () => {
     if (isLoading && list.length === 0) {
       return (
-        <Skeleton
-          active
-          paragraph={{ rows: 3 }}
-          title={false}
-          style={{ padding: "24px 12px" }}
-        />
+        <Skeleton active paragraph={{ rows: 3 }} title={false} style={{ padding: "24px 12px" }} />
       );
     }
     if (list.length === 0) {
@@ -523,10 +517,16 @@ const MACHistoryPage: React.FC = () => {
                       type="text"
                       size="small"
                       icon={<CopyOutlined />}
-                      onClick={() => { void copyMAC(record.macAddress); }}
+                      onClick={() => {
+                        void copyMAC(record.macAddress);
+                      }}
                     />
                   </Tooltip>
-                  <Tag color={EVENT_TAG_COLOR[record.eventType as keyof typeof EVENT_TAG_COLOR] ?? "default"}>
+                  <Tag
+                    color={
+                      EVENT_TAG_COLOR[record.eventType as keyof typeof EVENT_TAG_COLOR] ?? "default"
+                    }
+                  >
                     {EVENT_LABEL[record.eventType as keyof typeof EVENT_LABEL] ?? record.eventType}
                   </Tag>
                   <Tag color={record.status === 0 ? "green" : "red"}>
@@ -620,17 +620,9 @@ const MACHistoryPage: React.FC = () => {
           </div>
         )}
 
-        <Form
-          form={form}
-          layout={isMobile ? "vertical" : "inline"}
-          onFinish={handleSearch}
-        >
+        <Form form={form} layout={isMobile ? "vertical" : "inline"} onFinish={handleSearch}>
           <Form.Item name="mac" label="MAC 地址">
-            <Input
-              placeholder="AA:BB:CC:DD:EE:FF"
-              style={{ width: 180 }}
-              allowClear
-            />
+            <Input placeholder="AA:BB:CC:DD:EE:FF" style={{ width: 180 }} allowClear />
           </Form.Item>
           <Form.Item name="deviceId" label="设备 ID">
             <Input placeholder="设备 UUID" style={{ width: 220 }} allowClear />
@@ -649,7 +641,8 @@ const MACHistoryPage: React.FC = () => {
                 { value: "disappeared", label: "消失" },
                 { value: "vlan_changed", label: "VLAN 变更" },
               ]}
-             onSearch={() => {}}/>
+              onSearch={() => {}}
+            />
           </Form.Item>
           <Form.Item name="vlanId" label="VLAN">
             <InputNumber min={0} max={4094} placeholder="VLAN" style={{ width: 100 }} />
@@ -663,15 +656,12 @@ const MACHistoryPage: React.FC = () => {
                 { value: 0, label: "正常" },
                 { value: 1, label: "停用" },
               ]}
-             onSearch={() => {}}/>
+              onSearch={() => {}}
+            />
           </Form.Item>
           <Form.Item>
             <Space wrap>
-              <Button
-                type="primary"
-                icon={<SearchOutlined />}
-                onClick={handleSearch}
-              >
+              <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
                 查询
               </Button>
               <Button icon={<ReloadOutlined />} onClick={handleReset}>
@@ -714,11 +704,7 @@ const MACHistoryPage: React.FC = () => {
         title={
           <Space>
             <span>查询结果</span>
-            {!isLoading && (
-              <Typography.Text type="secondary">
-                共 {total} 条
-              </Typography.Text>
-            )}
+            {!isLoading && <Typography.Text type="secondary">共 {total} 条</Typography.Text>}
           </Space>
         }
         extra={

@@ -18,7 +18,17 @@ export const flat2Light: ThemeConfig = {
     primary: ["#93c5fd", "#60a5fa", "#3b82f6", "#2563eb", "#1d4ed8"],
     secondary: ["#c4b5fd", "#a78bfa", "#8b5cf6", "#7c3aed", "#6d28d9"],
     accent: ["#f472b6", "#ec4899", "#db2777"],
-    neutral: ["#f8fafc", "#f1f5f9", "#e2e8f0", "#cbd5e1", "#94a3b8", "#64748b", "#475569", "#334155", "#1e293b"],
+    neutral: [
+      "#f8fafc",
+      "#f1f5f9",
+      "#e2e8f0",
+      "#cbd5e1",
+      "#94a3b8",
+      "#64748b",
+      "#475569",
+      "#334155",
+      "#1e293b",
+    ],
 
     // 功能色：鲜艳
     success: ["#4ade80", "#22c55e", "#16a34a"],

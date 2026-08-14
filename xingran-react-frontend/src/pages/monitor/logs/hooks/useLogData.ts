@@ -33,12 +33,7 @@ export interface UseLogDataReturn {
 }
 
 export function useLogData(params: UseLogDataParams): UseLogDataReturn {
-  const {
-    searchForm,
-    loginSearchForm,
-    current,
-    pageSize,
-  } = params;
+  const { searchForm, loginSearchForm, current, pageSize } = params;
   const { message } = App.useApp();
 
   const [operLogs, setOperLogs] = useState<OperLog[]>([]);
@@ -47,60 +42,69 @@ export function useLogData(params: UseLogDataParams): UseLogDataReturn {
   const [total, setTotal] = useState(0);
 
   // 获取操作日志
-  const fetchOperLogs = useCallback(async (params: any = {}) => {
-    setLoading(true);
-    try {
-      const requestParams: any = {
-        ...searchForm,
-        current: params.current || current,
-        pageSize: params.pageSize || pageSize,
-      };
+  const fetchOperLogs = useCallback(
+    async (params: any = {}) => {
+      setLoading(true);
+      try {
+        const requestParams: any = {
+          ...searchForm,
+          current: params.current || current,
+          pageSize: params.pageSize || pageSize,
+        };
 
-      // 处理时间范围
-      if (searchForm.timeRange && searchForm.timeRange.length === 2) {
-        requestParams.startTime = searchForm.timeRange[0].toISOString();
-        requestParams.endTime = searchForm.timeRange[1].toISOString();
+        // 处理时间范围
+        if (searchForm.timeRange && searchForm.timeRange.length === 2) {
+          requestParams.startTime = searchForm.timeRange[0].toISOString();
+          requestParams.endTime = searchForm.timeRange[1].toISOString();
+        }
+
+        const result = await post<PageResponse<OperLog>>("/monitor/oper-logs/list", requestParams);
+
+        setOperLogs(result.data?.list || []);
+        setTotal(result.data?.total || 0);
+      } catch (error) {
+        console.error("获取操作日志失败:", error);
+        message.error("网络错误，请稍后重试");
+      } finally {
+        setLoading(false);
       }
-
-      const result = await post<PageResponse<OperLog>>("/monitor/oper-logs/list", requestParams);
-
-      setOperLogs(result.data?.list || []);
-      setTotal(result.data?.total || 0);
-    } catch (error) {
-      console.error("获取操作日志失败:", error);
-      message.error("网络错误，请稍后重试");
-    } finally {
-      setLoading(false);
-    }
-  }, [searchForm, current, pageSize, message]);
+    },
+    [searchForm, current, pageSize, message]
+  );
 
   // 获取登录日志
-  const fetchLoginLogs = useCallback(async (params: any = {}) => {
-    setLoading(true);
-    try {
-      const requestParams: any = {
-        ...loginSearchForm,
-        current: params.current || current,
-        pageSize: params.pageSize || pageSize,
-      };
+  const fetchLoginLogs = useCallback(
+    async (params: any = {}) => {
+      setLoading(true);
+      try {
+        const requestParams: any = {
+          ...loginSearchForm,
+          current: params.current || current,
+          pageSize: params.pageSize || pageSize,
+        };
 
-      // 处理时间范围
-      if (loginSearchForm.timeRange && loginSearchForm.timeRange.length === 2) {
-        requestParams.startTime = loginSearchForm.timeRange[0].toISOString();
-        requestParams.endTime = loginSearchForm.timeRange[1].toISOString();
+        // 处理时间范围
+        if (loginSearchForm.timeRange && loginSearchForm.timeRange.length === 2) {
+          requestParams.startTime = loginSearchForm.timeRange[0].toISOString();
+          requestParams.endTime = loginSearchForm.timeRange[1].toISOString();
+        }
+
+        const result = await post<PageResponse<LoginLog>>(
+          "/monitor/login-logs/list",
+          requestParams
+        );
+
+        setLoginLogs(result.data?.list || []);
+        setTotal(result.data?.total || 0);
+      } catch (error) {
+        console.error("获取登录日志失败:", error);
+        message.error("网络错误，请稍后重试");
+      } finally {
+        setLoading(false);
       }
-
-      const result = await post<PageResponse<LoginLog>>("/monitor/login-logs/list", requestParams);
-
-      setLoginLogs(result.data?.list || []);
-      setTotal(result.data?.total || 0);
-    } catch (error) {
-      console.error("获取登录日志失败:", error);
-      message.error("网络错误，请稍后重试");
-    } finally {
-      setLoading(false);
-    }
-  }, [loginSearchForm, current, pageSize, message]);
+    },
+    [loginSearchForm, current, pageSize, message]
+  );
 
   return {
     operLogs,

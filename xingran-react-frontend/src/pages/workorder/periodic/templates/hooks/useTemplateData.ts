@@ -13,18 +13,9 @@ import {
   type PeriodicWorkOrderTemplate,
   type PeriodicWorkOrderLog,
 } from "@/lib/workorderApi";
-import {
-  getEnabledWorkOrderCategories,
-  type WorkOrderCategory,
-} from "@/lib/workorderApi";
-import {
-  getUserList,
-  type SimpleUser,
-} from "@/lib/workorderApi";
-import {
-  getDutyPoolList,
-  type DutyPool,
-} from "@/lib/dutyApi";
+import { getEnabledWorkOrderCategories, type WorkOrderCategory } from "@/lib/workorderApi";
+import { getUserList, type SimpleUser } from "@/lib/workorderApi";
+import { getDutyPoolList, type DutyPool } from "@/lib/dutyApi";
 
 export interface TemplateStatistics {
   total: number;
@@ -54,7 +45,11 @@ export interface UseTemplateDataReturn {
   setSelectedTemplate: (template: PeriodicWorkOrderTemplate | null) => void;
 }
 
-export function useTemplateData(searchForm: FormInstance<unknown>, current: number, pageSize: number): UseTemplateDataReturn {
+export function useTemplateData(
+  searchForm: FormInstance<unknown>,
+  current: number,
+  pageSize: number
+): UseTemplateDataReturn {
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<PeriodicWorkOrderTemplate[]>([]);
@@ -88,27 +83,30 @@ export function useTemplateData(searchForm: FormInstance<unknown>, current: numb
   }, []);
 
   // 获取列表数据
-  const fetchList = useCallback(async (page?: number, pageSize?: number) => {
-    setLoading(true);
-    try {
-      const values = searchForm.getFieldsValue() as { title?: string; isEnabled?: boolean };
-      const result = await getPeriodicTemplateList({
-        current: page ?? current,
-        pageSize: pageSize ?? pageSize,
-        title: values.title,
-        isEnabled: values.isEnabled,
-      });
-      setDataSource(result.data?.list ?? []);
-      setTotal(result.data?.total ?? 0);
+  const fetchList = useCallback(
+    async (page?: number, pageSize?: number) => {
+      setLoading(true);
+      try {
+        const values = searchForm.getFieldsValue() as { title?: string; isEnabled?: boolean };
+        const result = await getPeriodicTemplateList({
+          current: page ?? current,
+          pageSize: pageSize ?? pageSize,
+          title: values.title,
+          isEnabled: values.isEnabled,
+        });
+        setDataSource(result.data?.list ?? []);
+        setTotal(result.data?.total ?? 0);
 
-      // 列表加载后顺带刷新统计（全局 COUNT）；搜索/分页/增删改均经 fetchList，统计始终为真实全局计数。
-      fetchStats();
-    } catch {
-      message.error("获取模板列表失败");
-    } finally {
-      setLoading(false);
-    }
-  }, [current, pageSize, searchForm, message, fetchStats]);
+        // 列表加载后顺带刷新统计（全局 COUNT）；搜索/分页/增删改均经 fetchList，统计始终为真实全局计数。
+        fetchStats();
+      } catch {
+        message.error("获取模板列表失败");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [current, pageSize, searchForm, message, fetchStats]
+  );
 
   // 获取分类列表
   const fetchCategories = useCallback(async () => {

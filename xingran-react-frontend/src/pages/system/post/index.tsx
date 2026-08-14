@@ -83,7 +83,9 @@ const PostManagement: FC = () => {
     handleTableChange,
   } = useTableManager<Post>(
     async (params) => {
-      const result = await post("/system/posts/list", params) as { data: { list: Post[]; total: number } };
+      const result = (await post("/system/posts/list", params)) as {
+        data: { list: Post[]; total: number };
+      };
       return { list: result.data.list || [], total: result.data.total || 0 };
     },
     {
@@ -101,7 +103,9 @@ const PostManagement: FC = () => {
   // 加载统计数据(专用 COUNT 端点,不受 MaxPageSize=100 钳制)
   const loadStatistics = useCallback(async () => {
     try {
-      const result = await post<{ total: number; active: number; inactive: number }>("/system/posts/statistics");
+      const result = await post<{ total: number; active: number; inactive: number }>(
+        "/system/posts/statistics"
+      );
       setStatistics(result.data ?? { total: 0, active: 0, inactive: 0 });
     } catch (error) {
       handleApiError(error, "加载统计数据", false);
@@ -177,12 +181,48 @@ const PostManagement: FC = () => {
 
   // 表格列定义
   const columns: ColumnsType<Post> = [
-    { title: "岗位编码", dataIndex: "postCode", key: "postCode", width: 150, sorter: true, sortOrder: getColumnSortOrder("postCode") },
-    { title: "岗位名称", dataIndex: "postName", key: "postName", width: 150, sorter: true, sortOrder: getColumnSortOrder("postName") },
-    { title: "显示排序", dataIndex: "postSort", key: "postSort", width: 100, sorter: true, sortOrder: getColumnSortOrder("postSort") },
-    createStatusColumn("status", { width: 100, sorter: true, sortOrder: getColumnSortOrder("status") }),
-    { title: "备注", dataIndex: "remark", key: "remark", ellipsis: true, sorter: true, sortOrder: getColumnSortOrder("remark") },
-    createDateTimeColumn("createdAt", { width: 180, sorter: true, sortOrder: getColumnSortOrder("createdAt") }),
+    {
+      title: "岗位编码",
+      dataIndex: "postCode",
+      key: "postCode",
+      width: 150,
+      sorter: true,
+      sortOrder: getColumnSortOrder("postCode"),
+    },
+    {
+      title: "岗位名称",
+      dataIndex: "postName",
+      key: "postName",
+      width: 150,
+      sorter: true,
+      sortOrder: getColumnSortOrder("postName"),
+    },
+    {
+      title: "显示排序",
+      dataIndex: "postSort",
+      key: "postSort",
+      width: 100,
+      sorter: true,
+      sortOrder: getColumnSortOrder("postSort"),
+    },
+    createStatusColumn("status", {
+      width: 100,
+      sorter: true,
+      sortOrder: getColumnSortOrder("status"),
+    }),
+    {
+      title: "备注",
+      dataIndex: "remark",
+      key: "remark",
+      ellipsis: true,
+      sorter: true,
+      sortOrder: getColumnSortOrder("remark"),
+    },
+    createDateTimeColumn("createdAt", {
+      width: 180,
+      sorter: true,
+      sortOrder: getColumnSortOrder("createdAt"),
+    }),
     {
       title: "操作",
       key: "action",
@@ -206,7 +246,12 @@ const PostManagement: FC = () => {
                 okText="确定"
                 cancelText="取消"
               >
-                <Button type="link" icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }} size="small">
+                <Button
+                  type="link"
+                  icon={<DeleteOutlined />}
+                  style={{ color: "var(--theme-error, #ff4d4f)" }}
+                  size="small"
+                >
                   删除
                 </Button>
               </Popconfirm>
@@ -258,16 +303,40 @@ const PostManagement: FC = () => {
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
+        >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="postCode" label="岗位编码">
-              <Input placeholder="请输入岗位编码" allowClear className="user-form-input" style={{ width: 150 }} />
+              <Input
+                placeholder="请输入岗位编码"
+                allowClear
+                className="user-form-input"
+                style={{ width: 150 }}
+              />
             </Form.Item>
             <Form.Item name="postName" label="岗位名称">
-              <Input placeholder="请输入岗位名称" allowClear className="user-form-input" style={{ width: 150 }} />
+              <Input
+                placeholder="请输入岗位名称"
+                allowClear
+                className="user-form-input"
+                style={{ width: 150 }}
+              />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
+              <Select
+                placeholder="请选择状态"
+                allowClear
+                className="user-form-input"
+                style={{ width: 120 }}
+                onSearch={() => {}}
+              >
                 <Option value={0}>正常</Option>
                 <Option value={1}>停用</Option>
               </Select>
@@ -278,7 +347,13 @@ const PostManagement: FC = () => {
                   搜索
                 </Button>
                 <Button onClick={handleReset}>重置</Button>
-                <Button icon={<ReloadOutlined />} onClick={() => { loadPosts(); loadStatistics(); }}>
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={() => {
+                    loadPosts();
+                    loadStatistics();
+                  }}
+                >
                   刷新
                 </Button>
               </Space>
@@ -287,7 +362,8 @@ const PostManagement: FC = () => {
           <Space>
             {selectedRowKeys.length > 0 && (
               <Button
-                icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }}
+                icon={<DeleteOutlined />}
+                style={{ color: "var(--theme-error, #ff4d4f)" }}
                 onClick={handleBatchDelete}
               >
                 批量删除 ({selectedRowKeys.length})
@@ -341,17 +417,37 @@ const PostManagement: FC = () => {
         title={editingPost ? "编辑岗位" : "新增岗位"}
         open={modalVisible}
         onOk={handleCreate}
-        onCancel={() => { setModalVisible(false); postForm.resetFields(); setEditingPost(null); }}
+        onCancel={() => {
+          setModalVisible(false);
+          postForm.resetFields();
+          setEditingPost(null);
+        }}
         width={600}
       >
         <Form form={postForm} layout="horizontal" labelCol={{ span: 4 }} wrapperCol={{ span: 20 }}>
-          <Form.Item name="postCode" label="岗位编码" rules={[{ required: true, message: "请输入岗位编码" }]}>
-            <Input placeholder="请输入岗位编码" disabled={!!editingPost} className="user-form-input" />
+          <Form.Item
+            name="postCode"
+            label="岗位编码"
+            rules={[{ required: true, message: "请输入岗位编码" }]}
+          >
+            <Input
+              placeholder="请输入岗位编码"
+              disabled={!!editingPost}
+              className="user-form-input"
+            />
           </Form.Item>
-          <Form.Item name="postName" label="岗位名称" rules={[{ required: true, message: "请输入岗位名称" }]}>
+          <Form.Item
+            name="postName"
+            label="岗位名称"
+            rules={[{ required: true, message: "请输入岗位名称" }]}
+          >
             <Input placeholder="请输入岗位名称" className="user-form-input" />
           </Form.Item>
-          <Form.Item name="postSort" label="显示排序" rules={[{ required: true, message: "请输入显示排序" }]}>
+          <Form.Item
+            name="postSort"
+            label="显示排序"
+            rules={[{ required: true, message: "请输入显示排序" }]}
+          >
             <InputNumber min={0} style={{ width: "100%" }} placeholder="请输入显示排序" />
           </Form.Item>
           <Form.Item name="status" label="状态" rules={[{ required: true, message: "请选择状态" }]}>
@@ -370,4 +466,3 @@ const PostManagement: FC = () => {
 };
 
 export default PostManagement;
-

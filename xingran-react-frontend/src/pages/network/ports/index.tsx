@@ -30,11 +30,7 @@ import {
 import type { DevicePortStatus, NetworkDevice } from "@/types";
 import type { PortWriteAction } from "@/types/network";
 import { post, get } from "@/lib/api";
-import {
-  batchExport,
-  getPortMACBundle,
-  type PortMACBundle,
-} from "@/lib/api/networkApi";
+import { batchExport, getPortMACBundle, type PortMACBundle } from "@/lib/api/networkApi";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 import { useTableManager } from "@/hooks/useTableManager";
@@ -42,10 +38,7 @@ import { withErrorHandling } from "@/utils/errorHandler";
 import { formatDateTime } from "@/utils/datetime";
 import { usePagination } from "@/hooks/usePagination";
 import NetworkExport from "@/components/shared/NetworkExport";
-import {
-  BatchExportModal,
-  ErrorAlertWithRetry,
-} from "@/components/shared";
+import { BatchExportModal, ErrorAlertWithRetry } from "@/components/shared";
 import ActionButtons, { type ActionButton } from "@/components/shared/ActionButtons";
 import { DownloadOutlined, SettingOutlined } from "@ant-design/icons";
 import { createSorterMeta } from "@/utils/tableHelpers";
@@ -54,11 +47,7 @@ import { PortWriteModal } from "@/components/network/port-write/PortWriteModal";
 import { BulkWriteDrawer } from "@/components/network/port-write/BulkWriteDrawer";
 import { SetAccessVlanModal } from "@/components/network/port-write/SetAccessVlanModal";
 import { PortBindingModal } from "@/components/network/port-write/PortBindingModal";
-import {
-  EVENT_LABEL,
-  EVENT_TAG_COLOR,
-  type MACEventType,
-} from "@/components/network/macEventMeta";
+import { EVENT_LABEL, EVENT_TAG_COLOR, type MACEventType } from "@/components/network/macEventMeta";
 
 const { Option } = Select;
 
@@ -83,12 +72,7 @@ interface PortMACPanelProps {
   load: () => void;
 }
 
-const PortMACPanel: FC<PortMACPanelProps> = ({
-  bundle,
-  adminStatus,
-  operStatus,
-  load,
-}) => {
+const PortMACPanel: FC<PortMACPanelProps> = ({ bundle, adminStatus, operStatus, load }) => {
   if (bundle === undefined) {
     return <Skeleton active paragraph={{ rows: 2 }} />;
   }
@@ -102,9 +86,7 @@ const PortMACPanel: FC<PortMACPanelProps> = ({
   if (bundle.current.length > 0) {
     return (
       <Space direction="vertical" size={8} style={{ width: "100%" }}>
-        <Typography.Text strong>
-          当前 MAC 地址({bundle.current.length})
-        </Typography.Text>
+        <Typography.Text strong>当前 MAC 地址({bundle.current.length})</Typography.Text>
         <Space size={[8, 8]} wrap>
           {bundle.current.map((m) => (
             <Space key={m.id} size={4}>
@@ -126,9 +108,7 @@ const PortMACPanel: FC<PortMACPanelProps> = ({
         <Space size={8} wrap>
           <Tag color="blue">{recent.macAddress}</Tag>
           <Tag color={EVENT_TAG_COLOR[eventType]}>{EVENT_LABEL[eventType]}</Tag>
-          <Typography.Text type="secondary">
-            {formatDateTime(recent.firstSeen)}
-          </Typography.Text>
+          <Typography.Text type="secondary">{formatDateTime(recent.firstSeen)}</Typography.Text>
           {recent.vlanId != null && <Tag>VLAN {recent.vlanId}</Tag>}
         </Space>
       </Space>
@@ -198,9 +178,7 @@ const PortStatusPage: FC = () => {
   // quick 260712-vpj D-05: 展开行 MAC bundle 懒加载缓存
   // - 首次展开才 fetch,折叠再展开命中缓存不重发请求
   // - 普通 Record 即可(端口列表分页最多 10-100 条,无需 LRU)
-  const [macBundleCache, setMacBundleCache] = useState<
-    Record<string, PortMACBundle>
-  >({});
+  const [macBundleCache, setMacBundleCache] = useState<Record<string, PortMACBundle>>({});
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
 
   // 按需加载某端口的 MAC bundle(命中 cache 直接返回;否则 fetch 并写入 cache)
@@ -247,7 +225,7 @@ const PortStatusPage: FC = () => {
     async (params) => {
       const formValues = searchForm.getFieldsValue();
       const values = formValues as Record<string, unknown>;
-      const result = await post("/network/ports/list", {
+      const result = (await post("/network/ports/list", {
         current: params.current ?? paginationProps.current ?? 1,
         pageSize: params.pageSize ?? paginationProps.pageSize ?? 10,
         ...values,
@@ -255,8 +233,10 @@ const PortStatusPage: FC = () => {
         ...(isFromDevice ? { deviceId: deviceIdFromUrl } : {}),
         // useTableManager 内部通过 params 已带 current/pageSize;排序由其内部 ref
         // 写入 params.orderByColumn/isAsc(随 sorterMetas 启用后),这里显式展开保证不被覆盖
-        ...(params.orderByColumn ? { orderByColumn: params.orderByColumn, isAsc: params.isAsc } : {}),
-      }) as { data: { list: DevicePortStatus[]; total: number } };
+        ...(params.orderByColumn
+          ? { orderByColumn: params.orderByColumn, isAsc: params.isAsc }
+          : {}),
+      })) as { data: { list: DevicePortStatus[]; total: number } };
       return result.data;
     },
     {
@@ -274,7 +254,14 @@ const PortStatusPage: FC = () => {
   // 加载统计数据
   const loadStatistics = async () => {
     try {
-      const result = await get("/network/ports/statistics") as { data?: { totalRecords?: number; upPortsCount?: number; downPortsCount?: number; dot1xEnabledCount?: number } };
+      const result = (await get("/network/ports/statistics")) as {
+        data?: {
+          totalRecords?: number;
+          upPortsCount?: number;
+          downPortsCount?: number;
+          dot1xEnabledCount?: number;
+        };
+      };
       const stats = result.data || {};
       setStatistics({
         total: stats.totalRecords || 0,
@@ -290,10 +277,10 @@ const PortStatusPage: FC = () => {
   // 加载设备列表
   const loadDevices = async () => {
     try {
-      const result = await post("/network/devices/list", {
+      const result = (await post("/network/devices/list", {
         current: 1,
         pageSize: 50,
-      }) as { data?: { list: NetworkDevice[] } };
+      })) as { data?: { list: NetworkDevice[] } };
       setDevices(result.data?.list || []);
     } catch (error) {
       console.error("加载设备列表失败:", error);
@@ -370,7 +357,14 @@ const PortStatusPage: FC = () => {
 
   // 表格列
   const columns: ColumnsType<DevicePortStatus> = [
-    { title: "接口名称", dataIndex: "interfaceName", key: "interfaceName", width: 150, sorter: true, sortOrder: getColumnSortOrder("interfaceName") },
+    {
+      title: "接口名称",
+      dataIndex: "interfaceName",
+      key: "interfaceName",
+      width: 150,
+      sorter: true,
+      sortOrder: getColumnSortOrder("interfaceName"),
+    },
     {
       title: "描述",
       dataIndex: "description",
@@ -458,29 +452,57 @@ const PortStatusPage: FC = () => {
       width: 180,
       sorter: true,
       sortOrder: getColumnSortOrder("collectedAt"),
-      render: (date: string) => date ? formatDateTime(date) : "-",
+      render: (date: string) => (date ? formatDateTime(date) : "-"),
     },
     // Phase 53 W4: 操作列 (D-01, canWrite gating — D-09/ROADMAP #4 笔误纠正)
     // 5 action 全调 openWriteModal, 共用 PortWriteModal 切 action prop
-    ...(canWrite ? [{
-      title: "操作",
-      key: "portWriteAction",
-      fixed: "right" as const,
-      width: 100,
-      render: (_: unknown, record: DevicePortStatus) => {
-        const actions: ActionButton[] = [
-          { key: "shutdown", label: "关闭端口", onClick: () => openWriteModal("shutdown", record) },
-          { key: "undo_shutdown", label: "启用端口", onClick: () => openWriteModal("undo_shutdown", record) },
-          { key: "description", label: "修改描述", onClick: () => openWriteModal("description", record) },
-          { key: "dot1x_enable", label: "启用 802.1X", onClick: () => openWriteModal("dot1x_enable", record) },
-          { key: "dot1x_disable", label: "停用 802.1X", onClick: () => openWriteModal("dot1x_disable", record) },
-          // v1.20.1: 2 个新 action (5 → 7), 独立 Modal 因字段差异大 (参 SetAccessVlanModal / PortBindingModal)
-          { key: "set_access_vlan", label: "修改 access VLAN", onClick: () => openVlanModal(record) },
-          { key: "port_binding", label: "端口绑定", onClick: () => openBindModal(record) },
-        ];
-        return <ActionButtons actions={actions} />;
-      },
-    }] : []),
+    ...(canWrite
+      ? [
+          {
+            title: "操作",
+            key: "portWriteAction",
+            fixed: "right" as const,
+            width: 100,
+            render: (_: unknown, record: DevicePortStatus) => {
+              const actions: ActionButton[] = [
+                {
+                  key: "shutdown",
+                  label: "关闭端口",
+                  onClick: () => openWriteModal("shutdown", record),
+                },
+                {
+                  key: "undo_shutdown",
+                  label: "启用端口",
+                  onClick: () => openWriteModal("undo_shutdown", record),
+                },
+                {
+                  key: "description",
+                  label: "修改描述",
+                  onClick: () => openWriteModal("description", record),
+                },
+                {
+                  key: "dot1x_enable",
+                  label: "启用 802.1X",
+                  onClick: () => openWriteModal("dot1x_enable", record),
+                },
+                {
+                  key: "dot1x_disable",
+                  label: "停用 802.1X",
+                  onClick: () => openWriteModal("dot1x_disable", record),
+                },
+                // v1.20.1: 2 个新 action (5 → 7), 独立 Modal 因字段差异大 (参 SetAccessVlanModal / PortBindingModal)
+                {
+                  key: "set_access_vlan",
+                  label: "修改 access VLAN",
+                  onClick: () => openVlanModal(record),
+                },
+                { key: "port_binding", label: "端口绑定", onClick: () => openBindModal(record) },
+              ];
+              return <ActionButtons actions={actions} />;
+            },
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -500,11 +522,7 @@ const PortStatusPage: FC = () => {
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
           <Card>
-            <Statistic
-              title="端口总数"
-              value={statistics.total}
-              prefix={<ApiOutlined />}
-            />
+            <Statistic title="端口总数" value={statistics.total} prefix={<ApiOutlined />} />
           </Card>
         </Col>
         <Col span={6}>
@@ -541,47 +559,104 @@ const PortStatusPage: FC = () => {
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
+        >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="deviceId" label="设备">
-              <Select placeholder="请选择设备" allowClear className="user-form-input" style={{ width: 200 }} showSearch optionFilterProp="label" onSearch={() => {}}>
-                {devices.map(device => (
-                  <Option key={device.id} value={device.id} label={device.deviceName}>{device.deviceName}</Option>
+              <Select
+                placeholder="请选择设备"
+                allowClear
+                className="user-form-input"
+                style={{ width: 200 }}
+                showSearch
+                optionFilterProp="label"
+                onSearch={() => {}}
+              >
+                {devices.map((device) => (
+                  <Option key={device.id} value={device.id} label={device.deviceName}>
+                    {device.deviceName}
+                  </Option>
                 ))}
               </Select>
             </Form.Item>
             <Form.Item name="interfaceName" label="接口">
-              <Input placeholder="请输入接口名称" allowClear className="user-form-input" style={{ width: 150 }} />
+              <Input
+                placeholder="请输入接口名称"
+                allowClear
+                className="user-form-input"
+                style={{ width: 150 }}
+              />
             </Form.Item>
             <Form.Item name="adminStatus" label="管理状态">
-              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
+              <Select
+                placeholder="请选择状态"
+                allowClear
+                className="user-form-input"
+                style={{ width: 120 }}
+                onSearch={() => {}}
+              >
                 <Option value="up">UP</Option>
                 <Option value="down">DOWN</Option>
               </Select>
             </Form.Item>
             <Form.Item name="operStatus" label="操作状态">
-              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
+              <Select
+                placeholder="请选择状态"
+                allowClear
+                className="user-form-input"
+                style={{ width: 120 }}
+                onSearch={() => {}}
+              >
                 <Option value="up">UP</Option>
                 <Option value="down">DOWN</Option>
               </Select>
             </Form.Item>
             <Form.Item name="dot1xEnabled" label="802.1X状态">
-              <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
+              <Select
+                placeholder="请选择"
+                allowClear
+                className="user-form-input"
+                style={{ width: 120 }}
+                onSearch={() => {}}
+              >
                 <Option value={true}>已启用</Option>
                 <Option value={false}>未启用</Option>
               </Select>
             </Form.Item>
             <Form.Item name="portSecurityEnabled" label="端口安全">
-              <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
+              <Select
+                placeholder="请选择"
+                allowClear
+                className="user-form-input"
+                style={{ width: 120 }}
+                onSearch={() => {}}
+              >
                 <Option value={true}>已启用</Option>
                 <Option value={false}>未启用</Option>
               </Select>
             </Form.Item>
             <Form.Item>
               <Space>
-                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>查询</Button>
-                <Button icon={<ReloadOutlined />} onClick={handleReset}>重置</Button>
-                <Button icon={<ReloadOutlined />} onClick={handleRefresh} disabled={batchInProgress}>刷新</Button>
+                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                  查询
+                </Button>
+                <Button icon={<ReloadOutlined />} onClick={handleReset}>
+                  重置
+                </Button>
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={handleRefresh}
+                  disabled={batchInProgress}
+                >
+                  刷新
+                </Button>
               </Space>
             </Form.Item>
           </Form>
@@ -592,7 +667,7 @@ const PortStatusPage: FC = () => {
               filters={(() => {
                 const values = searchForm.getFieldsValue() as Record<string, unknown>;
                 const filtered: Record<string, unknown> = {};
-                Object.keys(values).forEach(key => {
+                Object.keys(values).forEach((key) => {
                   const value = values[key];
                   if (value !== undefined && value !== null && value !== "") {
                     filtered[key] = value;
@@ -603,10 +678,20 @@ const PortStatusPage: FC = () => {
               current={paginationProps.current}
               pageSize={paginationProps.pageSize}
             />
-            <Button icon={<CloudSyncOutlined />} onClick={handleCollectAll} loading={collecting} disabled={batchInProgress}>
+            <Button
+              icon={<CloudSyncOutlined />}
+              onClick={handleCollectAll}
+              loading={collecting}
+              disabled={batchInProgress}
+            >
               采集所有设备
             </Button>
-            <Button icon={<DeleteOutlined />} onClick={handleBatchDelete} disabled={selectedRowKeys.length === 0} style={{ color: "var(--theme-error, #ff4d4f)" }}>
+            <Button
+              icon={<DeleteOutlined />}
+              onClick={handleBatchDelete}
+              disabled={selectedRowKeys.length === 0}
+              style={{ color: "var(--theme-error, #ff4d4f)" }}
+            >
               批量删除 ({selectedRowKeys.length})
             </Button>
             {/* Phase 53 W4 D-04: 批量配置入口 — 与批量删除 UX 一致, 额外加 !canWrite 防 */}
@@ -618,21 +703,18 @@ const PortStatusPage: FC = () => {
             >
               批量配置 ({selectedRowKeys.length})
             </Button>
-          </Space>{/* 批量导出 Modal */}
+          </Space>
+          {/* 批量导出 Modal */}
 
-        <BatchExportModal
+          <BatchExportModal
+            visible={batchModalVisible}
 
-          visible={batchModalVisible}
+            onConfirm={handleBatchExport}
 
-          onConfirm={handleBatchExport}
+            onCancel={() => setBatchModalVisible(false)}
 
-          onCancel={() => setBatchModalVisible(false)}
-
-          loading={batchExporting}
-
-        />
-
-
+            loading={batchExporting}
+          />
         </div>
       </Card>
 
@@ -665,12 +747,12 @@ const PortStatusPage: FC = () => {
             },
             expandedRowRender: (record) => (
               <div style={{ padding: 16, background: "#fafafa" }}>
-                <p><strong>接口详情:</strong></p>
+                <p>
+                  <strong>接口详情:</strong>
+                </p>
                 <p>管理状态: {record.adminStatus?.toUpperCase() || "-"}</p>
                 <p>操作状态: {record.operStatus?.toUpperCase() || "-"}</p>
-                {record.dot1xEnabled && (
-                  <p>802.1X状态: {record.dot1xPortStatus}</p>
-                )}
+                {record.dot1xEnabled && <p>802.1X状态: {record.dot1xPortStatus}</p>}
                 {record.portSecurityEnabled && (
                   <>
                     <p>安全模式: {record.portSecurityMode || "未设置"}</p>
@@ -688,11 +770,7 @@ const PortStatusPage: FC = () => {
                     operStatus={record.operStatus}
                     bundle={macBundleCache[record.id]}
                     load={() => {
-                      void loadPortMACBundle(
-                        record.id,
-                        record.deviceId,
-                        record.interfaceName
-                      );
+                      void loadPortMACBundle(record.id, record.deviceId, record.interfaceName);
                     }}
                   />
                 </div>
@@ -708,26 +786,38 @@ const PortStatusPage: FC = () => {
         action={writeModalAction}
         portRecord={writeModalRecord}
         onClose={() => setWriteModalOpen(false)}
-        onSuccess={() => { loadPortStatus(); loadStatistics(); }}
+        onSuccess={() => {
+          loadPortStatus();
+          loadStatistics();
+        }}
       />
       {/* Phase 56 W4: v1.20.1 2 个新单端口 Modal (set_access_vlan + port_binding) */}
       <SetAccessVlanModal
         open={vlanModalOpen}
         portRecord={vlanModalRecord}
         onClose={() => setVlanModalOpen(false)}
-        onSuccess={() => { loadPortStatus(); loadStatistics(); }}
+        onSuccess={() => {
+          loadPortStatus();
+          loadStatistics();
+        }}
       />
       <PortBindingModal
         open={bindModalOpen}
         portRecord={bindModalRecord}
         onClose={() => setBindModalOpen(false)}
-        onSuccess={() => { loadPortStatus(); loadStatistics(); }}
+        onSuccess={() => {
+          loadPortStatus();
+          loadStatistics();
+        }}
       />
       <BulkWriteDrawer
         open={bulkWriteDrawerOpen}
-        selectedPorts={portStatus.filter(p => selectedRowKeys.includes(p.id))}
+        selectedPorts={portStatus.filter((p) => selectedRowKeys.includes(p.id))}
         onClose={() => setBulkWriteDrawerOpen(false)}
-        onSuccess={() => { loadPortStatus(); loadStatistics(); }}
+        onSuccess={() => {
+          loadPortStatus();
+          loadStatistics();
+        }}
         onExecutingChange={setBatchInProgress}
       />
     </div>

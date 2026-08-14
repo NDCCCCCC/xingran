@@ -51,43 +51,49 @@ export function useWorkstationData(
   // canonical 部门树 hook:共享 ['dept','tree'] 缓存(5min stale, 30min gc, refetchOnWindowFocus:false)
   const { data: rawDept = [] } = useDeptTree();
 
-  const loadStatistics = useCallback(async (orgId?: string) => {
-    try {
-      // 专用统计端点(1 次请求替代此前 4 次 list 拼 total),支持 orgId 部门筛选
-      const params: Record<string, unknown> = { ...(orgId ? { orgId } : {}) };
-      const result = await workstationApi.statistics(params);
-      setStatistics({
-        total: result.total || 0,
-        available: result.available || 0,
-        occupied: result.occupied || 0,
-        maintain: result.maintain || 0,
-      });
-    } catch (error) {
-      handleApiError(error, "加载统计数据", false);
-    }
-  }, [setStatistics]);
+  const loadStatistics = useCallback(
+    async (orgId?: string) => {
+      try {
+        // 专用统计端点(1 次请求替代此前 4 次 list 拼 total),支持 orgId 部门筛选
+        const params: Record<string, unknown> = { ...(orgId ? { orgId } : {}) };
+        const result = await workstationApi.statistics(params);
+        setStatistics({
+          total: result.total || 0,
+          available: result.available || 0,
+          occupied: result.occupied || 0,
+          maintain: result.maintain || 0,
+        });
+      } catch (error) {
+        handleApiError(error, "加载统计数据", false);
+      }
+    },
+    [setStatistics]
+  );
 
-  const loadFloorOptions = useCallback(async (orgId?: string, keyword = "") => {
-    try {
-      // 使用专用 searchOptions 端点(LIMIT 50),替代 pageSize:1000 + filterOption 反模式
-      const opts = await floorApi.searchOptions({
-        ...(orgId ? { orgId } : {}),
-        ...(keyword ? { name: keyword } : {}),
-      });
-      // 注:searchOptions 只返回 id+name,丢失了 buildingName/buildingCode 等上下文。
-      // 如需显示 "楼宇 - 楼层" 复合 label,需用 workstationApi.list({pageSize:50, orgId})
-      // 或后端扩展 dropdown DTO。这里保持 label=楼层名,够 filter 面板辨识。
-      setFloorOptions(
-        opts.map((o) => ({
-          id: o.value,
-          code: o.value, // dropdown-options 不返回 floorNo,前端用 id 兜底
-          name: o.label,
-        }))
-      );
-    } catch (error) {
-      handleApiError(error, "加载楼层选项", false);
-    }
-  }, [setFloorOptions]);
+  const loadFloorOptions = useCallback(
+    async (orgId?: string, keyword = "") => {
+      try {
+        // 使用专用 searchOptions 端点(LIMIT 50),替代 pageSize:1000 + filterOption 反模式
+        const opts = await floorApi.searchOptions({
+          ...(orgId ? { orgId } : {}),
+          ...(keyword ? { name: keyword } : {}),
+        });
+        // 注:searchOptions 只返回 id+name,丢失了 buildingName/buildingCode 等上下文。
+        // 如需显示 "楼宇 - 楼层" 复合 label,需用 workstationApi.list({pageSize:50, orgId})
+        // 或后端扩展 dropdown DTO。这里保持 label=楼层名,够 filter 面板辨识。
+        setFloorOptions(
+          opts.map((o) => ({
+            id: o.value,
+            code: o.value, // dropdown-options 不返回 floorNo,前端用 id 兜底
+            name: o.label,
+          }))
+        );
+      } catch (error) {
+        handleApiError(error, "加载楼层选项", false);
+      }
+    },
+    [setFloorOptions]
+  );
 
   // 加载部门选项:
   // - 数据源由 useDeptTree 提供(本组件顶层调用)。
@@ -113,55 +119,71 @@ export function useWorkstationData(
     setDeptTreeData(fullPath);
   }, [rawDept, setDeptTreeData]);
 
-  const loadUserOptions = useCallback(async (deptId?: string) => {
-    try {
-      // 使用 recursiveDeptId 而非 deptId,后端会扩展为该部门+所有子部门的用户。
-      // 原 deptId 单值语义在工位模态框里不够用——用户通常需要看到整个部门树下的人。
-      // Phase 46: pageSize 1000 → 50,虽然 system MaxPageSize=100 仍允许 100,
-      // 但前端 Select 仅渲染 ≤50 行,vDOM 节点数可控。
-      const params = {
-        current: 1,
-        pageSize: 50,
-        ...(deptId && { recursiveDeptId: deptId }),
-      };
-      const result = await post("/system/users/list", params) as { data?: { list: Record<string, unknown>[] } };
-      const users = result.data?.list || [];
-      setUserOptions(
-        users.map((u: Record<string, unknown>) => ({
-          id: String(u.id),
-          username: String(u.username),
-          nickname: u.nickname ? String(u.nickname) : undefined,
-        }))
-      );
-    } catch (error) {
-      handleApiError(error, "加载用户选项", false);
-    }
-  }, [setUserOptions]);
+  const loadUserOptions = useCallback(
+    async (deptId?: string) => {
+      try {
+        // 使用 recursiveDeptId 而非 deptId,后端会扩展为该部门+所有子部门的用户。
+        // 原 deptId 单值语义在工位模态框里不够用——用户通常需要看到整个部门树下的人。
+        // Phase 46: pageSize 1000 → 50,虽然 system MaxPageSize=100 仍允许 100,
+        // 但前端 Select 仅渲染 ≤50 行,vDOM 节点数可控。
+        const params = {
+          current: 1,
+          pageSize: 50,
+          ...(deptId && { recursiveDeptId: deptId }),
+        };
+        const result = (await post("/system/users/list", params)) as {
+          data?: { list: Record<string, unknown>[] };
+        };
+        const users = result.data?.list || [];
+        setUserOptions(
+          users.map((u: Record<string, unknown>) => ({
+            id: String(u.id),
+            username: String(u.username),
+            nickname: u.nickname ? String(u.nickname) : undefined,
+          }))
+        );
+      } catch (error) {
+        handleApiError(error, "加载用户选项", false);
+      }
+    },
+    [setUserOptions]
+  );
 
-  const loadFloorPlanWorkstations = useCallback(async (floorCode: string): Promise<WorkstationOps[]> => {
-    if (!floorCode) {
-      return [];
-    }
-    try {
-      const result = await workstationApi.list({ floorCode, current: 1, pageSize: 1000 });
-      return result.data?.list || [];
-    } catch (error) {
-      handleApiError(error, "加载平面图数据", false);
-      return [];
-    }
-  }, []);
+  const loadFloorPlanWorkstations = useCallback(
+    async (floorCode: string): Promise<WorkstationOps[]> => {
+      if (!floorCode) {
+        return [];
+      }
+      try {
+        const result = await workstationApi.list({ floorCode, current: 1, pageSize: 1000 });
+        return result.data?.list || [];
+      } catch (error) {
+        handleApiError(error, "加载平面图数据", false);
+        return [];
+      }
+    },
+    []
+  );
 
   // 注入式兜底(2026-06-30):同 info-points 模式,若用户 id 已在列表中则保持原引用。
   // setUserOptions 列入 deps 以满足 React Compiler 推断(setState 引用稳定,不影响实际行为)。
-  const ensureUser = useCallback((user: { id: string; username?: string; nickname?: string }) => {
-    setUserOptions(prev =>
-      prev.find(u => u.id === user.id) ? prev : [...prev, {
-        id: user.id,
-        username: user.username || "未命名用户",
-        nickname: user.nickname,
-      }]
-    );
-  }, [setUserOptions]);
+  const ensureUser = useCallback(
+    (user: { id: string; username?: string; nickname?: string }) => {
+      setUserOptions((prev) =>
+        prev.find((u) => u.id === user.id)
+          ? prev
+          : [
+              ...prev,
+              {
+                id: user.id,
+                username: user.username || "未命名用户",
+                nickname: user.nickname,
+              },
+            ]
+      );
+    },
+    [setUserOptions]
+  );
 
   return {
     loadStatistics,

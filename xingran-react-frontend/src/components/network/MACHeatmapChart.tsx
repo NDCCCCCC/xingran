@@ -91,7 +91,9 @@ const MACHeatmapChart: React.FC<MACHeatmapChartProps> = ({
           type: "heatmap",
           data: points,
           label: { show: false },
-          emphasis: { itemStyle: { borderColor: "var(--theme-neutral-900, #000)", borderWidth: 1 } },
+          emphasis: {
+            itemStyle: { borderColor: "var(--theme-neutral-900, #000)", borderWidth: 1 },
+          },
         },
       ],
     };
@@ -111,9 +113,7 @@ const MACHeatmapChart: React.FC<MACHeatmapChartProps> = ({
 
   if (isMobile) {
     // 移动端: Top-20 端口列表 + 颜色卡片
-    const topPorts = [...data.cells]
-      .sort((a, b) => b.changeCount - a.changeCount)
-      .slice(0, 20);
+    const topPorts = [...data.cells].sort((a, b) => b.changeCount - a.changeCount).slice(0, 20);
     const maxCount = Math.max(...topPorts.map((c) => c.changeCount), 1);
 
     return (
@@ -129,11 +129,11 @@ const MACHeatmapChart: React.FC<MACHeatmapChartProps> = ({
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <div style={{ fontWeight: 500 }}>{cell.deviceNameSnapshot}</div>
-                <div style={{ fontSize: 12, color: "var(--theme-text-tertiary, #999)" }}>{cell.interfaceName}</div>
+                <div style={{ fontSize: 12, color: "var(--theme-text-tertiary, #999)" }}>
+                  {cell.interfaceName}
+                </div>
               </div>
-              <Tag color={getHeatColor(cell.changeCount, maxCount)}>
-                {cell.changeCount} 次
-              </Tag>
+              <Tag color={getHeatColor(cell.changeCount, maxCount)}>{cell.changeCount} 次</Tag>
             </div>
           </Card>
         ))}

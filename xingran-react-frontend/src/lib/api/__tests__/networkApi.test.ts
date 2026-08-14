@@ -73,10 +73,10 @@ describe("networkApi port-write wrappers (Phase 53 — UI-06)", () => {
 
       const result = await writeUndoShutdown("port-1", "业务变更需要");
 
-      expect(mockPost).toHaveBeenCalledWith(
-        "/network/ports/write/undo-shutdown",
-        { portId: "port-1", reason: "业务变更需要" }
-      );
+      expect(mockPost).toHaveBeenCalledWith("/network/ports/write/undo-shutdown", {
+        portId: "port-1",
+        reason: "业务变更需要",
+      });
       expect(result).toEqual(PORT_RESULT_FIXTURE);
     });
   });
@@ -113,10 +113,10 @@ describe("networkApi port-write wrappers (Phase 53 — UI-06)", () => {
 
       await writeDot1xEnable("port-1", "临时测试验证");
 
-      expect(mockPost).toHaveBeenCalledWith(
-        "/network/ports/write/dot1x-enable",
-        { portId: "port-1", reason: "临时测试验证" }
-      );
+      expect(mockPost).toHaveBeenCalledWith("/network/ports/write/dot1x-enable", {
+        portId: "port-1",
+        reason: "临时测试验证",
+      });
     });
   });
 
@@ -126,10 +126,10 @@ describe("networkApi port-write wrappers (Phase 53 — UI-06)", () => {
 
       await writeDot1xDisable("port-1", "故障排查处理");
 
-      expect(mockPost).toHaveBeenCalledWith(
-        "/network/ports/write/dot1x-disable",
-        { portId: "port-1", reason: "故障排查处理" }
-      );
+      expect(mockPost).toHaveBeenCalledWith("/network/ports/write/dot1x-disable", {
+        portId: "port-1",
+        reason: "故障排查处理",
+      });
     });
   });
 

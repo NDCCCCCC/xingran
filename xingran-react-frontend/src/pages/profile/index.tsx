@@ -120,7 +120,7 @@ const ProfilePage: FC = () => {
         try {
           await useAuthStore.getState().logout();
           // 等待 React 状态更新完成
-          await new Promise(resolve => setTimeout(resolve, 0));
+          await new Promise((resolve) => setTimeout(resolve, 0));
           window.location.href = LOGIN;
         } catch (error) {
           console.error("自动登出失败:", error);
@@ -155,10 +155,14 @@ const ProfilePage: FC = () => {
   // 获取值班类型颜色
   const getDutyTypeColor = (type: string) => {
     switch (type) {
-      case "weekday": return "blue";
-      case "weekend": return "orange";
-      case "holiday": return "red";
-      default: return "default";
+      case "weekday":
+        return "blue";
+      case "weekend":
+        return "orange";
+      case "holiday":
+        return "red";
+      default:
+        return "default";
     }
   };
 
@@ -173,11 +177,7 @@ const ProfilePage: FC = () => {
           <Card title="个人头像" className="text-center">
             <Avatar size={120} src={profile.avatar} icon={<UserOutlined />} />
             <div className="mt-4">
-              <Upload
-                beforeUpload={handleUploadAvatar}
-                showUploadList={false}
-                accept="image/*"
-              >
+              <Upload beforeUpload={handleUploadAvatar} showUploadList={false} accept="image/*">
                 <Button icon={<UploadOutlined />}>更换头像</Button>
               </Upload>
             </div>
@@ -211,7 +211,9 @@ const ProfilePage: FC = () => {
               </Descriptions.Item>
               <Descriptions.Item label="最后登录IP">{profile.loginIp || "-"}</Descriptions.Item>
               <Descriptions.Item label="最后登录时间">{profile.loginTime || "-"}</Descriptions.Item>
-              <Descriptions.Item label="密码修改时间">{profile.pwdUpdateTime || "-"}</Descriptions.Item>
+              <Descriptions.Item label="密码修改时间">
+                {profile.pwdUpdateTime || "-"}
+              </Descriptions.Item>
               <Descriptions.Item label="备注" span={2}>
                 {profile.remark || "-"}
               </Descriptions.Item>
@@ -238,9 +240,7 @@ const ProfilePage: FC = () => {
             }
             extra={
               <Link to={DUTY_MY_DUTY}>
-                <Button type="link">
-                  查看详情 →
-                </Button>
+                <Button type="link">查看详情 →</Button>
               </Link>
             }
             loading={dutyStatsLoading}
@@ -251,26 +251,28 @@ const ProfilePage: FC = () => {
                   <Statistic
                     title="今日状态"
                     value={dutyStats.isOnDutyToday ? "值班中" : "休息"}
-                    styles={{ content: { color: dutyStats.isOnDutyToday ? "var(--theme-success, #3f8600)" : "var(--theme-text-tertiary, #8c8c8c)" } }}
+                    styles={{
+                      content: {
+                        color: dutyStats.isOnDutyToday
+                          ? "var(--theme-success, #3f8600)"
+                          : "var(--theme-text-tertiary, #8c8c8c)",
+                      },
+                    }}
                   />
                 </Col>
                 <Col xs={12} sm={6}>
-                  <Statistic
-                    title="本月次数"
-                    value={dutyStats.thisMonthCount}
-                    suffix="次"
-                  />
+                  <Statistic title="本月次数" value={dutyStats.thisMonthCount} suffix="次" />
                 </Col>
                 <Col xs={12} sm={6}>
-                  <Statistic
-                    title="累计值班"
-                    value={dutyStats.totalCount}
-                    suffix="次"
-                  />
+                  <Statistic title="累计值班" value={dutyStats.totalCount} suffix="次" />
                 </Col>
                 <Col xs={12} sm={6}>
                   <div>
-                    <div style={{ fontSize: "14px", color: "rgba(0,0,0,0.45)", marginBottom: "4px" }}>下次值班</div>
+                    <div
+                      style={{ fontSize: "14px", color: "rgba(0,0,0,0.45)", marginBottom: "4px" }}
+                    >
+                      下次值班
+                    </div>
                     <div style={{ fontSize: "20px", fontWeight: 500 }}>
                       {dutyStats.nextDutyDate ? (
                         <Space>
@@ -280,7 +282,9 @@ const ProfilePage: FC = () => {
                           )}
                         </Space>
                       ) : (
-                        <span style={{ color: "var(--theme-text-tertiary, #8c8c8c)" }}>暂无排班</span>
+                        <span style={{ color: "var(--theme-text-tertiary, #8c8c8c)" }}>
+                          暂无排班
+                        </span>
                       )}
                     </div>
                   </div>
@@ -289,18 +293,26 @@ const ProfilePage: FC = () => {
             )}
 
             {/* 今日值班详情 */}
-            {dutyStats?.isOnDutyToday && dutyStats.todayDutyRecords && dutyStats.todayDutyRecords.length > 0 && (
-              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
-                <div style={{ fontWeight: "bold", marginBottom: "8px" }}>今日值班任务</div>
-                <Space wrap>
-                  {dutyStats.todayDutyRecords.map((record, index) => (
-                    <Tag key={index} color={getDutyTypeColor(record.dutyType)}>
-                      {record.poolName} ({record.dutyType === "weekday" ? "工作日" : record.dutyType === "weekend" ? "周末" : "节假日"})
-                    </Tag>
-                  ))}
-                </Space>
-              </div>
-            )}
+            {dutyStats?.isOnDutyToday &&
+              dutyStats.todayDutyRecords &&
+              dutyStats.todayDutyRecords.length > 0 && (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
+                  <div style={{ fontWeight: "bold", marginBottom: "8px" }}>今日值班任务</div>
+                  <Space wrap>
+                    {dutyStats.todayDutyRecords.map((record, index) => (
+                      <Tag key={index} color={getDutyTypeColor(record.dutyType)}>
+                        {record.poolName} (
+                        {record.dutyType === "weekday"
+                          ? "工作日"
+                          : record.dutyType === "weekend"
+                            ? "周末"
+                            : "节假日"}
+                        )
+                      </Tag>
+                    ))}
+                  </Space>
+                </div>
+              )}
           </Card>
         </Col>
       </Row>
@@ -338,11 +350,7 @@ const ProfilePage: FC = () => {
             <Input placeholder="请输入手机号" />
           </Form.Item>
 
-          <Form.Item
-            label="性别"
-            name="gender"
-            initialValue={0}
-          >
+          <Form.Item label="性别" name="gender" initialValue={0}>
             <Select onSearch={() => {}}>
               <Option value={0}>未知</Option>
               <Option value={1}>男</Option>

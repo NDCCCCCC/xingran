@@ -22,15 +22,7 @@
  */
 
 import { useEffect, useState } from "react";
-import {
-  Form,
-  Input,
-  Select,
-  DatePicker,
-  Radio,
-  Modal,
-  App,
-} from "antd";
+import { Form, Input, Select, DatePicker, Radio, Modal, App } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 
 const { TextArea } = Input;
@@ -167,11 +159,7 @@ const ExceptionRuleForm: React.FC<ExceptionRuleFormProps> = ({
           <Input placeholder="192.168.0.0/16" />
         </Form.Item>
 
-        <Form.Item
-          label="冲突类型"
-          name="conflictTypes"
-          extra="留空 = 匹配全部 B-F 类型"
-        >
+        <Form.Item label="冲突类型" name="conflictTypes" extra="留空 = 匹配全部 B-F 类型">
           <Select mode="multiple" allowClear placeholder="选择类型,留空匹配全部">
             {CONFLICT_TYPE_OPTIONS.map((o) => (
               <Select.Option key={o.value} value={o.value}>
@@ -205,9 +193,7 @@ const ExceptionRuleForm: React.FC<ExceptionRuleFormProps> = ({
         </Form.Item>
 
         <Form.Item label="范围类型" name="scopeType">
-          <Radio.Group
-            onChange={(e) => setScopeType(e.target.value)}
-          >
+          <Radio.Group onChange={(e) => setScopeType(e.target.value)}>
             <Radio value="global">global 全局</Radio>
             <Radio value="dept">dept 部门</Radio>
             <Radio value="user">user 用户</Radio>
@@ -247,7 +233,12 @@ const ExceptionRuleForm: React.FC<ExceptionRuleFormProps> = ({
           ]}
           extra="强制 ≥10 字符,降低 0.0.0.0/0 silence 误配风险(T-44-04)"
         >
-          <TextArea rows={3} maxLength={500} showCount placeholder="说明该规则的业务背景,如:研发部测试网段误报高,确认无生产数据" />
+          <TextArea
+            rows={3}
+            maxLength={500}
+            showCount
+            placeholder="说明该规则的业务背景,如:研发部测试网段误报高,确认无生产数据"
+          />
         </Form.Item>
       </Form>
     </Modal>

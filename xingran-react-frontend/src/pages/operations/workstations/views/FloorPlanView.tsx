@@ -8,7 +8,11 @@ import { CloseOutlined, BgColorsOutlined, DesktopOutlined } from "@ant-design/ic
 import type { WorkstationOps } from "@/types";
 import type { WorkstationNode } from "@/components/shared/FloorPlanEditor.types";
 import FloorPlanEditor from "@/components/shared/FloorPlanEditor";
-import { getWorkstationTypeText, getWorkstationStatusText, getWorkstationStatusColor } from "../constants";
+import {
+  getWorkstationTypeText,
+  getWorkstationStatusText,
+  getWorkstationStatusColor,
+} from "../constants";
 import type { FloorOption } from "../types";
 
 const { Option } = Select;
@@ -19,7 +23,9 @@ export interface WorkstationFloorPlanViewProps {
   floorPlanWorkstations: WorkstationNode[];
   allWorkstations: WorkstationOps[];
   onFloorChange: (floorId: string) => void;
-  onPositionUpdate: (items: { id: string; positionX: number; positionY: number; rotation?: number }[]) => Promise<void>;
+  onPositionUpdate: (
+    items: { id: string; positionX: number; positionY: number; rotation?: number }[]
+  ) => Promise<void>;
   onEdit: (workstation: WorkstationNode) => void;
   onCloseFloorPlan: () => void;
 }
@@ -40,7 +46,13 @@ export function WorkstationFloorPlanView({
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         {/* 楼层选择器 */}
         <div
-          style={{ marginBottom: 12, padding: "12px", background: "#f5f5f5", borderRadius: "4px", flexShrink: 0 }}
+          style={{
+            marginBottom: 12,
+            padding: "12px",
+            background: "#f5f5f5",
+            borderRadius: "4px",
+            flexShrink: 0,
+          }}
         >
           <Space wrap>
             <span>选择楼层：</span>
@@ -50,7 +62,8 @@ export function WorkstationFloorPlanView({
               value={selectedFloorForPlan}
               onChange={onFloorChange}
               allowClear
-             onSearch={() => {}}>
+              onSearch={() => {}}
+            >
               {floorOptions.map((f) => (
                 <Option key={f.code} value={f.code}>
                   {f.name}
@@ -63,7 +76,12 @@ export function WorkstationFloorPlanView({
               </Tag>
             )}
             <Tag color="cyan">工位数：{floorPlanWorkstations.length}</Tag>
-            <Button type="default" icon={<CloseOutlined />} onClick={onCloseFloorPlan} size="middle">
+            <Button
+              type="default"
+              icon={<CloseOutlined />}
+              onClick={onCloseFloorPlan}
+              size="middle"
+            >
               关闭平面图
             </Button>
           </Space>
@@ -122,7 +140,15 @@ export function WorkstationFloorPlanView({
       >
         <div style={{ padding: "8px" }}>
           {floorPlanWorkstations.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "20px", color: "var(--theme-text-tertiary, #999)" }}>暂无工位数据</div>
+            <div
+              style={{
+                textAlign: "center",
+                padding: "20px",
+                color: "var(--theme-text-tertiary, #999)",
+              }}
+            >
+              暂无工位数据
+            </div>
           ) : (
             <Space orientation="vertical" style={{ width: "100%" }} size={[8, 8]}>
               {floorPlanWorkstations.map((ws) => {
@@ -137,7 +163,14 @@ export function WorkstationFloorPlanView({
                     onClick={() => ws && onEdit(ws)}
                     bodyStyle={{ padding: "12px" }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: 8,
+                      }}
+                    >
                       <span style={{ fontWeight: "bold", fontSize: 14 }}>{ws.name}</span>
                       <Tag color={getWorkstationStatusColor(ws.status)} style={{ margin: 0 }}>
                         {getWorkstationStatusText(ws.status)}

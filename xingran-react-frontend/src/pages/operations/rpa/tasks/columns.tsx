@@ -73,7 +73,11 @@ export function getTaskColumns(params: TaskColumnsParams): ColumnsType<Task> {
       width: 180,
       render: (text) => text || "-",
     },
-    createDateTimeColumn("createdAt", { width: 180, sorter: true, sortOrder: getSortOrder?.("createdAt") }),
+    createDateTimeColumn("createdAt", {
+      width: 180,
+      sorter: true,
+      sortOrder: getSortOrder?.("createdAt"),
+    }),
     {
       title: "操作",
       key: "action",

@@ -35,10 +35,16 @@ export interface UseDictActionsReturn {
   // 操作方法
   handleCreateType: (typeForm: FormInstance) => Promise<void>;
   handleDeleteType: (id: string) => Promise<void>;
-  handleBatchDeleteType: (selectedRowKeys: Key[], setSelectedRowKeys: (keys: Key[]) => void) => Promise<void>;
+  handleBatchDeleteType: (
+    selectedRowKeys: Key[],
+    setSelectedRowKeys: (keys: Key[]) => void
+  ) => Promise<void>;
   handleCreateData: (dataForm: FormInstance) => Promise<void>;
   handleDeleteData: (id: string) => Promise<void>;
-  handleBatchDeleteData: (selectedRowKeys: Key[], setSelectedRowKeys: (keys: Key[]) => void) => Promise<void>;
+  handleBatchDeleteData: (
+    selectedRowKeys: Key[],
+    setSelectedRowKeys: (keys: Key[]) => void
+  ) => Promise<void>;
   handleRefreshCache: () => Promise<void>;
   openTypeModal: (record: DictType | undefined, typeForm: FormInstance) => void;
   openDataModal: (record: DictData | undefined, dataForm: FormInstance) => void;
@@ -46,13 +52,8 @@ export interface UseDictActionsReturn {
 
 export function useDictActions(params: UseDictActionsParams): UseDictActionsReturn {
   const { message } = App.useApp();
-  const {
-    selectedType,
-    loadDictTypes,
-    loadDictData,
-    loadTypeStatistics,
-    loadDataStatistics,
-  } = params;
+  const { selectedType, loadDictTypes, loadDictData, loadTypeStatistics, loadDataStatistics } =
+    params;
 
   const [editingType, setEditingType] = useState<DictType | null>(null);
   const [editingData, setEditingData] = useState<DictData | null>(null);
@@ -66,116 +67,134 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
   }, [qc]);
 
   // 创建/更新字典类型
-  const handleCreateType = useCallback(async (typeForm: FormInstance) => {
-    try {
-      const values = await typeForm.validateFields();
-      if (editingType) {
-        await post(`/system/dicts/types/${editingType.id}/update`, values);
-        handleSuccess("更新");
-      } else {
-        await post("/system/dicts/types", values);
-        handleSuccess("创建");
+  const handleCreateType = useCallback(
+    async (typeForm: FormInstance) => {
+      try {
+        const values = await typeForm.validateFields();
+        if (editingType) {
+          await post(`/system/dicts/types/${editingType.id}/update`, values);
+          handleSuccess("更新");
+        } else {
+          await post("/system/dicts/types", values);
+          handleSuccess("创建");
+        }
+        setTypeModalVisible(false);
+        typeForm.resetFields();
+        setEditingType(null);
+        loadDictTypes();
+        loadTypeStatistics();
+        invalidateAllDicts();
+      } catch (error: unknown) {
+        if (error && typeof error === "object" && "errorFields" in error) {
+          return;
+        }
+        handleApiError(error, "操作");
       }
-      setTypeModalVisible(false);
-      typeForm.resetFields();
-      setEditingType(null);
-      loadDictTypes();
-      loadTypeStatistics();
-      invalidateAllDicts();
-    } catch (error: unknown) {
-      if (error && typeof error === "object" && "errorFields" in error) {
-        return;
-      }
-      handleApiError(error, "操作");
-    }
-  }, [editingType, loadDictTypes, loadTypeStatistics, invalidateAllDicts]);
+    },
+    [editingType, loadDictTypes, loadTypeStatistics, invalidateAllDicts]
+  );
 
   // 删除字典类型
-  const handleDeleteType = useCallback(async (id: string) => {
-    try {
-      await post(`/system/dicts/types/${id}/delete`, {});
-      handleSuccess("删除");
-      loadDictTypes();
-      loadTypeStatistics();
-      invalidateAllDicts();
-    } catch (error) {
-      handleApiError(error, "删除");
-    }
-  }, [loadDictTypes, loadTypeStatistics, invalidateAllDicts]);
+  const handleDeleteType = useCallback(
+    async (id: string) => {
+      try {
+        await post(`/system/dicts/types/${id}/delete`, {});
+        handleSuccess("删除");
+        loadDictTypes();
+        loadTypeStatistics();
+        invalidateAllDicts();
+      } catch (error) {
+        handleApiError(error, "删除");
+      }
+    },
+    [loadDictTypes, loadTypeStatistics, invalidateAllDicts]
+  );
 
   // 批量删除字典类型
-  const handleBatchDeleteType = useCallback(async (selectedRowKeys: Key[], setSelectedRowKeys: (keys: Key[]) => void) => {
-    if (selectedRowKeys.length === 0) {
-      message.warning("请选择要删除的数据");
-      return;
-    }
-    try {
-      await post("/system/dicts/types/batch-delete", { ids: selectedRowKeys });
-      handleSuccess("批量删除");
-      setSelectedRowKeys([]);
-      loadDictTypes();
-      loadTypeStatistics();
-      invalidateAllDicts();
-    } catch (error) {
-      handleApiError(error, "批量删除");
-    }
-  }, [loadDictTypes, loadTypeStatistics, invalidateAllDicts]);
-
-  // 创建/更新字典数据
-  const handleCreateData = useCallback(async (dataForm: FormInstance) => {
-    try {
-      const values = await dataForm.validateFields();
-      if (editingData) {
-        await post(`/system/dicts/data/${editingData.id}/update`, values);
-        handleSuccess("更新");
-      } else {
-        await post("/system/dicts/data", { ...values, dictType: selectedType });
-        handleSuccess("创建");
-      }
-      setDataModalVisible(false);
-      dataForm.resetFields();
-      setEditingData(null);
-      loadDictData();
-      loadDataStatistics();
-      invalidateAllDicts();
-    } catch (error: unknown) {
-      if (error && typeof error === "object" && "errorFields" in error) {
+  const handleBatchDeleteType = useCallback(
+    async (selectedRowKeys: Key[], setSelectedRowKeys: (keys: Key[]) => void) => {
+      if (selectedRowKeys.length === 0) {
+        message.warning("请选择要删除的数据");
         return;
       }
-      handleApiError(error, "操作");
-    }
-  }, [editingData, selectedType, loadDictData, loadDataStatistics, invalidateAllDicts]);
+      try {
+        await post("/system/dicts/types/batch-delete", { ids: selectedRowKeys });
+        handleSuccess("批量删除");
+        setSelectedRowKeys([]);
+        loadDictTypes();
+        loadTypeStatistics();
+        invalidateAllDicts();
+      } catch (error) {
+        handleApiError(error, "批量删除");
+      }
+    },
+    [loadDictTypes, loadTypeStatistics, invalidateAllDicts]
+  );
+
+  // 创建/更新字典数据
+  const handleCreateData = useCallback(
+    async (dataForm: FormInstance) => {
+      try {
+        const values = await dataForm.validateFields();
+        if (editingData) {
+          await post(`/system/dicts/data/${editingData.id}/update`, values);
+          handleSuccess("更新");
+        } else {
+          await post("/system/dicts/data", { ...values, dictType: selectedType });
+          handleSuccess("创建");
+        }
+        setDataModalVisible(false);
+        dataForm.resetFields();
+        setEditingData(null);
+        loadDictData();
+        loadDataStatistics();
+        invalidateAllDicts();
+      } catch (error: unknown) {
+        if (error && typeof error === "object" && "errorFields" in error) {
+          return;
+        }
+        handleApiError(error, "操作");
+      }
+    },
+    [editingData, selectedType, loadDictData, loadDataStatistics, invalidateAllDicts]
+  );
 
   // 删除字典数据
-  const handleDeleteData = useCallback(async (id: string) => {
-    try {
-      await post(`/system/dicts/data/${id}/delete`, {});
-      handleSuccess("删除");
-      loadDictData();
-      loadDataStatistics();
-      invalidateAllDicts();
-    } catch (error) {
-      handleApiError(error, "删除");
-    }
-  }, [loadDictData, loadDataStatistics, invalidateAllDicts]);
+  const handleDeleteData = useCallback(
+    async (id: string) => {
+      try {
+        await post(`/system/dicts/data/${id}/delete`, {});
+        handleSuccess("删除");
+        loadDictData();
+        loadDataStatistics();
+        invalidateAllDicts();
+      } catch (error) {
+        handleApiError(error, "删除");
+      }
+    },
+    [loadDictData, loadDataStatistics, invalidateAllDicts]
+  );
 
   // 批量删除字典数据
-  const handleBatchDeleteData = useCallback(async (selectedRowKeys: Key[], setSelectedRowKeys: (keys: Key[]) => void) => {
-    if (selectedRowKeys.length === 0) {
-      message.warning("请选择要删除的数据");
-      return;
-    }
-    try {
-      await post("/system/dicts/data/batch-delete", { ids: selectedRowKeys });
-      handleSuccess("批量删除");
-      setSelectedRowKeys([]);
-      loadDictData();
-      loadDataStatistics();
-      invalidateAllDicts();
-    } catch (error) {
-      handleApiError(error, "批量删除");
-    }
-  }, [loadDictData, loadDataStatistics, invalidateAllDicts]);
+  const handleBatchDeleteData = useCallback(
+    async (selectedRowKeys: Key[], setSelectedRowKeys: (keys: Key[]) => void) => {
+      if (selectedRowKeys.length === 0) {
+        message.warning("请选择要删除的数据");
+        return;
+      }
+      try {
+        await post("/system/dicts/data/batch-delete", { ids: selectedRowKeys });
+        handleSuccess("批量删除");
+        setSelectedRowKeys([]);
+        loadDictData();
+        loadDataStatistics();
+        invalidateAllDicts();
+      } catch (error) {
+        handleApiError(error, "批量删除");
+      }
+    },
+    [loadDictData, loadDataStatistics, invalidateAllDicts]
+  );
 
   // 刷新缓存
   const handleRefreshCache = useCallback(async () => {
@@ -202,21 +221,24 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
   }, []);
 
   // 打开数据编辑模态框
-  const openDataModal = useCallback((record: DictData | undefined, dataForm: FormInstance) => {
-    if (!selectedType) {
-      message.warning("请先选择字典类型");
-      return;
-    }
-    if (record) {
-      setEditingData(record);
-      dataForm.setFieldsValue(record);
-    } else {
-      setEditingData(null);
-      dataForm.resetFields();
-      dataForm.setFieldsValue({ dictSort: 0, status: 0, isDefault: false });
-    }
-    setDataModalVisible(true);
-  }, [selectedType]);
+  const openDataModal = useCallback(
+    (record: DictData | undefined, dataForm: FormInstance) => {
+      if (!selectedType) {
+        message.warning("请先选择字典类型");
+        return;
+      }
+      if (record) {
+        setEditingData(record);
+        dataForm.setFieldsValue(record);
+      } else {
+        setEditingData(null);
+        dataForm.resetFields();
+        dataForm.setFieldsValue({ dictSort: 0, status: 0, isDefault: false });
+      }
+      setDataModalVisible(true);
+    },
+    [selectedType]
+  );
 
   return {
     editingType,

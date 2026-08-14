@@ -45,20 +45,11 @@ vi.mock("@/components/captcha", () => ({
 }));
 
 vi.mock("@/components/captcha/CaptchaModal", () => ({
-  default: ({
-    visible,
-    onError,
-  }: {
-    visible: boolean;
-    onError?: (error: string) => void;
-  }) =>
+  default: ({ visible, onError }: { visible: boolean; onError?: (error: string) => void }) =>
     visible ? (
       <div role="dialog">
         滑动验证码
-        <button
-          type="button"
-          onClick={() => onError?.("CAPTCHA_TYPE_MISMATCH")}
-        >
+        <button type="button" onClick={() => onError?.("CAPTCHA_TYPE_MISMATCH")}>
           模拟滑块类型不匹配
         </button>
       </div>
@@ -108,9 +99,7 @@ describe("登录页安全配置预检", () => {
     submitCredentials();
 
     expect(
-      await screen.findByText(
-        "登录安全配置已过期，自动更新失败，请检查网络后重试"
-      )
+      await screen.findByText("登录安全配置已过期，自动更新失败，请检查网络后重试")
     ).toBeInTheDocument();
     expect(mockLogin).not.toHaveBeenCalled();
   });
@@ -130,10 +119,7 @@ describe("登录页安全配置预检", () => {
   });
 
   it("快速重复提交时只启动一次预检", async () => {
-    let resolvePreflight!: (value: {
-      ok: true;
-      captchaEnabled: "disabled";
-    }) => void;
+    let resolvePreflight!: (value: { ok: true; captchaEnabled: "disabled" }) => void;
     mockSubmitLoginPreflight.mockImplementation(
       () =>
         new Promise((resolve) => {
@@ -169,13 +155,9 @@ describe("登录页安全配置预检", () => {
     renderLogin();
     submitCredentials();
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: "模拟滑块类型不匹配" })
-    );
+    fireEvent.click(await screen.findByRole("button", { name: "模拟滑块类型不匹配" }));
 
-    expect(
-      await screen.findByText("验证码配置已更新，请重新验证")
-    ).toBeInTheDocument();
+    expect(await screen.findByText("验证码配置已更新，请重新验证")).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(mockSubmitLoginPreflight).toHaveBeenCalledTimes(2);
   });
@@ -188,14 +170,9 @@ describe("登录页安全配置预检", () => {
     });
     renderLogin();
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: "模拟验证码类型不匹配" })
-    );
+    fireEvent.click(await screen.findByRole("button", { name: "模拟验证码类型不匹配" }));
 
-    expect(
-      await screen.findByText("验证码配置已更新，请重新验证")
-    ).toBeInTheDocument();
+    expect(await screen.findByText("验证码配置已更新，请重新验证")).toBeInTheDocument();
     expect(mockSubmitLoginPreflight).toHaveBeenCalledTimes(1);
   });
 });
-

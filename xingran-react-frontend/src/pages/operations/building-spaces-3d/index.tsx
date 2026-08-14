@@ -42,18 +42,20 @@ const BuildingSpaces3D: React.FC = () => {
       const result = await buildingApi.list({ current: 1, pageSize: PAGE_SIZE });
       // 后端返回的 Building 类型转换为 BuildingItem，补充缺失字段
       const buildingList = result.data?.list || [];
-      setBuildings(buildingList.map(b => ({
-        id: b.id,
-        name: b.name,
-        code: b.code,
-        cityCode: "",
-        cityName: "",
-        address: b.address || "",
-        longitude: b.longitude,
-        latitude: b.latitude,
-        level: 2 as const,
-        status: b.status,
-      })));
+      setBuildings(
+        buildingList.map((b) => ({
+          id: b.id,
+          name: b.name,
+          code: b.code,
+          cityCode: "",
+          cityName: "",
+          address: b.address || "",
+          longitude: b.longitude,
+          latitude: b.latitude,
+          level: 2 as const,
+          status: b.status,
+        }))
+      );
     } catch (error) {
       handleApiError(error, "加载楼宇数据");
     } finally {
@@ -69,7 +71,14 @@ const BuildingSpaces3D: React.FC = () => {
   const renderView = () => {
     if (loading) {
       return (
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: FULL_VH }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: FULL_VH,
+          }}
+        >
           <Spin size="large" indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />} />
           <div style={{ marginLeft: 16, fontSize: 16 }}>加载地图数据中...</div>
         </div>
@@ -99,7 +108,9 @@ const BuildingSpaces3D: React.FC = () => {
     return (
       <div style={MAP_SWITCH_STYLE}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 14, fontWeight: "bold", color: "var(--theme-text-accent, #1890ff)" }}>
+          <span
+            style={{ fontSize: 14, fontWeight: "bold", color: "var(--theme-text-accent, #1890ff)" }}
+          >
             🗺️ 地图版本
           </span>
           <Switch
@@ -127,7 +138,13 @@ const BuildingSpaces3D: React.FC = () => {
           description="请先在楼宇管理中添加楼宇信息"
           type="info"
           showIcon
-          style={{ position: "absolute", top: 16, left: "50%", transform: "translateX(-50%)", zIndex: 1000 }}
+          style={{
+            position: "absolute",
+            top: 16,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 1000,
+          }}
         />
       )}
     </div>

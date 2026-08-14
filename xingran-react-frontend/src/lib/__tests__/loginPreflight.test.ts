@@ -55,9 +55,10 @@ describe("submitLoginPreflight", () => {
   it("并发刷新加密开关、公钥和验证码配置", async () => {
     let resolveEncryption!: (value: boolean) => void;
     mockRefreshEncryptionConfig.mockImplementation(
-      () => new Promise<boolean>((resolve) => {
-        resolveEncryption = resolve;
-      })
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveEncryption = resolve;
+        })
     );
 
     const pending = submitLoginPreflight();

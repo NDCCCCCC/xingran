@@ -37,7 +37,7 @@ const TextCaptcha: FC<CaptchaProps> = ({ value, onChange, onError }) => {
   }, [onChange, onError]);
 
   // 只在组件挂载时加载验证码
-   
+
   useEffect(() => {
     loadCaptcha();
   }, []);

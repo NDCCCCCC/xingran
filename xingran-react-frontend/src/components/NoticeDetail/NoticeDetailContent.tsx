@@ -4,14 +4,7 @@
  */
 
 import type { FC } from "react";
-import {
-  Card,
-  Tag,
-  Space,
-  Descriptions,
-  Divider,
-  Button,
-} from "antd";
+import { Card, Tag, Space, Descriptions, Divider, Button } from "antd";
 import { CheckCircleOutlined } from "@ant-design/icons";
 import type { Notice, NoticeAttachment } from "@/types/notice";
 import {
@@ -26,9 +19,9 @@ import { formatDateTime } from "@/utils/datetime";
 
 export interface NoticeDetailContentProps {
   notice: Notice;
-  showReadStatus?: boolean;      // 是否显示阅读状态（用户端）
-  showPublishStatus?: boolean;    // 是否显示发布状态（管理端）
-  showCreator?: boolean;          // 是否显示创建人（管理端）
+  showReadStatus?: boolean; // 是否显示阅读状态（用户端）
+  showPublishStatus?: boolean; // 是否显示发布状态（管理端）
+  showCreator?: boolean; // 是否显示创建人（管理端）
   showMarkAsReadButton?: boolean; // 是否显示"标记为已读"按钮
   onMarkAsRead?: () => Promise<void>;
 }
@@ -58,9 +51,7 @@ const NoticeDetailContent: FC<NoticeDetailContentProps> = ({
               {NOTICE_TYPE_LABELS[notice.noticeType as "1" | "2"]}
             </Tag>
             {notice.priority > 0 && (
-              <Tag color={PRIORITY_COLORS[notice.priority]}>
-                {PRIORITY_LABELS[notice.priority]}
-              </Tag>
+              <Tag color={PRIORITY_COLORS[notice.priority]}>{PRIORITY_LABELS[notice.priority]}</Tag>
             )}
             {showPublishStatus && (
               <Tag color={PUBLISH_STATUS_COLORS[notice.publishStatus]}>
@@ -82,17 +73,11 @@ const NoticeDetailContent: FC<NoticeDetailContentProps> = ({
           </Descriptions.Item>
         )}
         <Descriptions.Item label={showCreator ? "创建时间" : "发布人"}>
-          {showCreator
-            ? formatDateTime(notice.createdAt)
-            : (notice.createdByName || "系统管理员")
-          }
+          {showCreator ? formatDateTime(notice.createdAt) : notice.createdByName || "系统管理员"}
         </Descriptions.Item>
         {showPublishStatus ? (
           <Descriptions.Item label="发布时间">
-            {notice.publishTime
-              ? formatDateTime(notice.publishTime)
-              : "尚未发布"
-            }
+            {notice.publishTime ? formatDateTime(notice.publishTime) : "尚未发布"}
           </Descriptions.Item>
         ) : showReadStatus ? (
           <Descriptions.Item label="发布时间">
@@ -101,11 +86,7 @@ const NoticeDetailContent: FC<NoticeDetailContentProps> = ({
         ) : null}
         {showReadStatus && (
           <Descriptions.Item label="阅读状态">
-            {notice.isRead ? (
-              <Tag color="default">已读</Tag>
-            ) : (
-              <Tag color="blue">未读</Tag>
-            )}
+            {notice.isRead ? <Tag color="default">已读</Tag> : <Tag color="blue">未读</Tag>}
           </Descriptions.Item>
         )}
       </Descriptions>
@@ -154,11 +135,7 @@ const NoticeDetailContent: FC<NoticeDetailContentProps> = ({
       {/* 底部操作栏 */}
       <div className="flex justify-end">
         {showMarkAsReadButton && !notice.isRead && onMarkAsRead && (
-          <Button
-            type="primary"
-            icon={<CheckCircleOutlined />}
-            onClick={handleMarkAsReadClick}
-          >
+          <Button type="primary" icon={<CheckCircleOutlined />} onClick={handleMarkAsReadClick}>
             标记为已读
           </Button>
         )}

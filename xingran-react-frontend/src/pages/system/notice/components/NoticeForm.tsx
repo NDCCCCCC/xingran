@@ -1,5 +1,17 @@
 import React from "react";
-import { Form, Input, Select, Button, Modal, Row, Col, Radio, Switch, DatePicker, Checkbox } from "antd";
+import {
+  Form,
+  Input,
+  Select,
+  Button,
+  Modal,
+  Row,
+  Col,
+  Radio,
+  Switch,
+  DatePicker,
+  Checkbox,
+} from "antd";
 import type { FormInstance } from "antd/es/form";
 import { MarkdownEditor as MDEditor } from "@/components/markdown/MarkdownEditor";
 import "@uiw/react-md-editor/markdown-editor.css";
@@ -127,12 +139,24 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
         {/* 第一行：标题、类型 */}
         <Row>
           <Col span={12}>
-            <Form.Item name="noticeTitle" label="标题" labelCol={{ span: 10 }} wrapperCol={{ span: 14 }} rules={[{ required: true, message: "请输入公告标题" }]}>
+            <Form.Item
+              name="noticeTitle"
+              label="标题"
+              labelCol={{ span: 10 }}
+              wrapperCol={{ span: 14 }}
+              rules={[{ required: true, message: "请输入公告标题" }]}
+            >
               <Input placeholder="请输入公告标题" />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="noticeType" label="类型" labelCol={{ span: 10 }} wrapperCol={{ span: 14 }} rules={[{ required: true, message: "请选择公告类型" }]}>
+            <Form.Item
+              name="noticeType"
+              label="类型"
+              labelCol={{ span: 10 }}
+              wrapperCol={{ span: 14 }}
+              rules={[{ required: true, message: "请选择公告类型" }]}
+            >
               <Select onSearch={() => {}}>
                 <Option value="1">公告</Option>
                 <Option value="2">警告</Option>
@@ -144,7 +168,13 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
         {/* 第二行：优先级、状态 */}
         <Row>
           <Col span={12}>
-            <Form.Item name="priority" label="优先级" labelCol={{ span: 10 }} wrapperCol={{ span: 14 }} initialValue={0}>
+            <Form.Item
+              name="priority"
+              label="优先级"
+              labelCol={{ span: 10 }}
+              wrapperCol={{ span: 14 }}
+              initialValue={0}
+            >
               <Select onSearch={() => {}}>
                 <Option value={0}>普通</Option>
                 <Option value={1}>重要</Option>
@@ -153,7 +183,13 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="status" label="状态" labelCol={{ span: 10 }} wrapperCol={{ span: 14 }} initialValue={0}>
+            <Form.Item
+              name="status"
+              label="状态"
+              labelCol={{ span: 10 }}
+              wrapperCol={{ span: 14 }}
+              initialValue={0}
+            >
               <Select onSearch={() => {}}>
                 <Option value={0}>正常</Option>
                 <Option value={1}>关闭</Option>
@@ -184,17 +220,33 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
         <Row>
           <Col span={12}>
             {executionType === "once" ? (
-              <Form.Item name="publishTime" label="发布时间" labelCol={{ span: 10 }} wrapperCol={{ span: 14 }}>
+              <Form.Item
+                name="publishTime"
+                label="发布时间"
+                labelCol={{ span: 10 }}
+                wrapperCol={{ span: 14 }}
+              >
                 <DatePicker showTime format="YYYY-MM-DD HH:mm:ss" className="w-full" />
               </Form.Item>
             ) : (
-              <Form.Item name={["recurrenceConfig", "endDate"]} label="结束时间" labelCol={{ span: 10 }} wrapperCol={{ span: 14 }}>
+              <Form.Item
+                name={["recurrenceConfig", "endDate"]}
+                label="结束时间"
+                labelCol={{ span: 10 }}
+                wrapperCol={{ span: 14 }}
+              >
                 <DatePicker format="YYYY-MM-DD HH:mm:ss" className="w-full" showTime />
               </Form.Item>
             )}
           </Col>
           <Col span={12}>
-            <Form.Item name="isMarkdown" label="Markdown" labelCol={{ span: 10 }} wrapperCol={{ span: 14 }} valuePropName="checked">
+            <Form.Item
+              name="isMarkdown"
+              label="Markdown"
+              labelCol={{ span: 10 }}
+              wrapperCol={{ span: 14 }}
+              valuePropName="checked"
+            >
               <Switch />
             </Form.Item>
           </Col>
@@ -303,21 +355,29 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
         {selectedChannels.includes("api") && (
           <Row>
             <Col span={24}>
-              <Form.Item name="apiConfigId" label="企微配置" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
+              <Form.Item
+                name="apiConfigId"
+                label="企微配置"
+                labelCol={{ span: 5 }}
+                wrapperCol={{ span: 19 }}
+              >
                 <Select
                   placeholder="请选择企微机器人配置"
                   loading={loadingAPIConfigs}
                   allowClear
-                  onChange={(value) =>    {
+                  onChange={(value) => {
                     form.setFieldValue("apiConfigId", value);
                   }}
-                 onSearch={() => {}}>
-                  {apiConfigs.filter((config) => config.id != null).map((config) => (
-                    <Option key={config.id} value={config.id}>
-                      {config.configName}
-                      {config.configType === "webhook" && ` (${config.apiMethod})`}
-                    </Option>
-                  ))}
+                  onSearch={() => {}}
+                >
+                  {apiConfigs
+                    .filter((config) => config.id != null)
+                    .map((config) => (
+                      <Option key={config.id} value={config.id}>
+                        {config.configName}
+                        {config.configType === "webhook" && ` (${config.apiMethod})`}
+                      </Option>
+                    ))}
                 </Select>
               </Form.Item>
             </Col>
@@ -328,7 +388,12 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
         {selectedChannels.includes("email") && (
           <Row>
             <Col span={24}>
-              <Form.Item name="customEmails" label="自定义邮箱" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
+              <Form.Item
+                name="customEmails"
+                label="自定义邮箱"
+                labelCol={{ span: 5 }}
+                wrapperCol={{ span: 19 }}
+              >
                 <Input
                   placeholder="多个邮箱用逗号分隔，如: user1@example.com, user2@example.com"
                   allowClear
@@ -342,11 +407,13 @@ export const NoticeForm: React.FC<NoticeFormProps> = ({
         {selectedChannels.includes("api") && (
           <Row>
             <Col span={24}>
-              <Form.Item name="customWeComUsers" label="企微用户" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
-                <Input
-                  placeholder="多个用户代码用逗号分隔，如: USER001, USER002"
-                  allowClear
-                />
+              <Form.Item
+                name="customWeComUsers"
+                label="企微用户"
+                labelCol={{ span: 5 }}
+                wrapperCol={{ span: 19 }}
+              >
+                <Input placeholder="多个用户代码用逗号分隔，如: USER001, USER002" allowClear />
               </Form.Item>
             </Col>
           </Row>

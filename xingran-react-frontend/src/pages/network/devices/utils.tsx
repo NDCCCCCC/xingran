@@ -11,8 +11,11 @@ export { formatDateTime } from "@/utils/datetime";
 /**
  * 根据值获取选项标签
  */
-export function getOptionLabel(options: SelectOption[], value: string | number): string | undefined {
-  return options.find(o => o.value === value)?.label;
+export function getOptionLabel(
+  options: SelectOption[],
+  value: string | number
+): string | undefined {
+  return options.find((o) => o.value === value)?.label;
 }
 
 /**

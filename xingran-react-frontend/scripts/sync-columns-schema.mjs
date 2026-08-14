@@ -28,10 +28,7 @@ const SCHEMA_PATH = resolve(
   projectRoot,
   "xingran-react-frontend/src/pages/operations/assets/columnsSchema.ts"
 );
-const OUTPUT_PATH = resolve(
-  projectRoot,
-  "internal/services/system/asset_columns_schema.json"
-);
+const OUTPUT_PATH = resolve(projectRoot, "internal/services/system/asset_columns_schema.json");
 const PAGE_KEY = "asset.list";
 
 /**
@@ -42,9 +39,7 @@ function extractArrayLiteral(src) {
   const marker = "export const defaultAssetColumns: AssetColumnConfig[] = [";
   const startIdx = src.indexOf(marker);
   if (startIdx < 0) {
-    throw new Error(
-      `[sync-columns-schema] marker "${marker}" not found in ${SCHEMA_PATH}`
-    );
+    throw new Error(`[sync-columns-schema] marker "${marker}" not found in ${SCHEMA_PATH}`);
   }
   const arrayStart = startIdx + marker.length;
 
@@ -80,9 +75,7 @@ function extractArrayLiteral(src) {
   }
 
   if (endIdx < 0) {
-    throw new Error(
-      "[sync-columns-schema] failed to locate end of defaultAssetColumns array"
-    );
+    throw new Error("[sync-columns-schema] failed to locate end of defaultAssetColumns array");
   }
   return src.slice(arrayStart, endIdx);
 }
@@ -113,9 +106,7 @@ function parseColumns(arrayLiteral) {
     }
     return parsed;
   } catch (err) {
-    throw new Error(
-      `[sync-columns-schema] failed to evaluate array literal: ${err.message}`
-    );
+    throw new Error(`[sync-columns-schema] failed to evaluate array literal: ${err.message}`);
   }
 }
 
@@ -134,9 +125,7 @@ function main() {
   mkdirSync(dirname(OUTPUT_PATH), { recursive: true });
   writeFileSync(OUTPUT_PATH, JSON.stringify(output, null, 2) + "\n", "utf8");
 
-  console.log(
-    `[sync-columns-schema] Wrote ${columns.length} columns to ${OUTPUT_PATH}`
-  );
+  console.log(`[sync-columns-schema] Wrote ${columns.length} columns to ${OUTPUT_PATH}`);
 }
 
 main();

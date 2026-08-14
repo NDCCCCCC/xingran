@@ -36,13 +36,13 @@ export interface DutyConfigValues {
 /** 节假日 Excel 行数据 */
 export interface HolidayExcelRow {
   "日期(YYYY-MM-DD)"?: string;
-  "日期"?: string;
-  "名称"?: string;
-  "节假日名称"?: string;
+  日期?: string;
+  名称?: string;
+  节假日名称?: string;
   "类型(legal/workday/custom)"?: string;
-  "类型"?: string;
+  类型?: string;
   "是否休息(true/false)"?: boolean;
-  "备注"?: string;
+  备注?: string;
 }
 
 /** 导入选项 */

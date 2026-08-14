@@ -58,7 +58,9 @@ const RoleManagement: FC = () => {
 
   // 角色列表加载函数
   const fetchRoles = useCallback(async (params: Record<string, unknown>) => {
-    const result = await post("/system/roles/list", params) as { data: { list: Role[]; total: number } };
+    const result = (await post("/system/roles/list", params)) as {
+      data: { list: Role[]; total: number };
+    };
     return { list: result.data?.list || [], total: result.data?.total || 0 };
   }, []);
 
@@ -121,7 +123,9 @@ const RoleManagement: FC = () => {
     loadingMenusRef.current.add(roleId);
 
     try {
-      const result = await post(`/system/menus/role-menu-tree-select/${roleId}`) as { data: { checkedKeys: string[] } };
+      const result = (await post(`/system/menus/role-menu-tree-select/${roleId}`)) as {
+        data: { checkedKeys: string[] };
+      };
       const checkedKeys = result.data.checkedKeys || [];
       return checkedKeys;
     } catch (error) {
@@ -148,7 +152,9 @@ const RoleManagement: FC = () => {
     console.log("[loadRoleDepts] 开始加载角色部门权限:", roleId);
 
     try {
-      const result = await post(`/system/departments/role-dept-tree-select/${roleId}`) as { data: { checkedKeys: string[] } };
+      const result = (await post(`/system/departments/role-dept-tree-select/${roleId}`)) as {
+        data: { checkedKeys: string[] };
+      };
       const checkedKeys = result.data.checkedKeys || [];
       console.log("[loadRoleDepts] 加载完成，权限数量:", checkedKeys.length, "roleId:", roleId);
       return checkedKeys;
@@ -259,7 +265,15 @@ const RoleManagement: FC = () => {
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
+        >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="roleName" label="角色名称">
               <Input placeholder="请输入角色名称" />
@@ -268,9 +282,16 @@ const RoleManagement: FC = () => {
               <Input placeholder="请输入权限字符" />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" style={{ width: 120 }} allowClear onSearch={() => {}}>
-                {STATUS_OPTIONS.map(opt => (
-                  <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+              <Select
+                placeholder="请选择状态"
+                style={{ width: 120 }}
+                allowClear
+                onSearch={() => {}}
+              >
+                {STATUS_OPTIONS.map((opt) => (
+                  <Option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </Option>
                 ))}
               </Select>
             </Form.Item>
@@ -292,7 +313,8 @@ const RoleManagement: FC = () => {
             </Button>
             {selectedRowKeys.length > 0 && (
               <Button
-                icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }}
+                icon={<DeleteOutlined />}
+                style={{ color: "var(--theme-error, #ff4d4f)" }}
                 onClick={() => handleBatchDelete(selectedRowKeys)}
               >
                 批量删除 ({selectedRowKeys.length})
@@ -362,13 +384,12 @@ const RoleManagement: FC = () => {
                 </Form.Item>
               </Col>
               <Col span={12}>
-                <Form.Item
-                  name="status"
-                  label="状态"
-                >
+                <Form.Item name="status" label="状态">
                   <Select onSearch={() => {}}>
-                    {STATUS_OPTIONS.map(opt => (
-                      <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+                    {STATUS_OPTIONS.map((opt) => (
+                      <Option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </Option>
                     ))}
                   </Select>
                 </Form.Item>
@@ -393,12 +414,18 @@ const RoleManagement: FC = () => {
                     checkable
                     checkedKeys={checkedMenuKeys}
                     onCheck={(keys) => {
-                      const keyArray = (keys as unknown) as Key[];
+                      const keyArray = keys as unknown as Key[];
                       setCheckedMenuKeys(keyArray);
                       editForm.setFieldsValue({ menuIds: keyArray });
                     }}
                     treeData={menuTree}
-                    style={{ background: "#f5f5f5", padding: "8px", borderRadius: "4px", maxHeight: "400px", overflowY: "auto" }}
+                    style={{
+                      background: "#f5f5f5",
+                      padding: "8px",
+                      borderRadius: "4px",
+                      maxHeight: "400px",
+                      overflowY: "auto",
+                    }}
                   />
                 </Form.Item>
               </Card>
@@ -407,13 +434,15 @@ const RoleManagement: FC = () => {
             {/* 右侧：数据权限 */}
             <Col span={12}>
               <Card title="数据权限" size="small">
-                <Form.Item
-                  name="dataScope"
-                  label="数据范围"
-                >
-                  <Select onChange={(value) => handleDataScopeChange(value, editForm)} onSearch={() => {}}>
-                    {DATA_SCOPE_OPTIONS.map(opt => (
-                      <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+                <Form.Item name="dataScope" label="数据范围">
+                  <Select
+                    onChange={(value) => handleDataScopeChange(value, editForm)}
+                    onSearch={() => {}}
+                  >
+                    {DATA_SCOPE_OPTIONS.map((opt) => (
+                      <Option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </Option>
                     ))}
                   </Select>
                 </Form.Item>
@@ -428,12 +457,18 @@ const RoleManagement: FC = () => {
                       checkable
                       checkedKeys={checkedDeptKeys}
                       onCheck={(keys) => {
-                        const keyArray = (keys as unknown) as Key[];
+                        const keyArray = keys as unknown as Key[];
                         setCheckedDeptKeys(keyArray);
                         editForm.setFieldsValue({ deptIds: keyArray });
                       }}
                       treeData={deptTree}
-                      style={{ background: "#f5f5f5", padding: "8px", borderRadius: "4px", maxHeight: "400px", overflowY: "auto" }}
+                      style={{
+                        background: "#f5f5f5",
+                        padding: "8px",
+                        borderRadius: "4px",
+                        maxHeight: "400px",
+                        overflowY: "auto",
+                      }}
                     />
                   </Form.Item>
                 )}
@@ -447,4 +482,3 @@ const RoleManagement: FC = () => {
 };
 
 export default RoleManagement;
-

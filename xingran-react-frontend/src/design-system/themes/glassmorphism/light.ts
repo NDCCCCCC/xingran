@@ -18,7 +18,17 @@ export const glassmorphismLight: ThemeConfig = {
     primary: ["#a5b4fc", "#818cf8", "#6366f1", "#4f46e5", "#4338ca"],
     secondary: ["#f3e8ff", "#e9d5ff", "#d8b4fe", "#c084fc", "#a855f7"],
     accent: ["#c084fc", "#a855f7", "#9333ea"],
-    neutral: ["#faf5ff", "#f3e8ff", "#e9d5ff", "#d8b4fe", "#a78bfa", "#8b5cf6", "#7c3aed", "#6d28d9", "#5b21b6"],
+    neutral: [
+      "#faf5ff",
+      "#f3e8ff",
+      "#e9d5ff",
+      "#d8b4fe",
+      "#a78bfa",
+      "#8b5cf6",
+      "#7c3aed",
+      "#6d28d9",
+      "#5b21b6",
+    ],
 
     // 功能色（柔和版）
     success: ["#86efac", "#22c55e", "#16a34a"],

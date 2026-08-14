@@ -39,7 +39,7 @@ const CHAIR_DIMENSIONS = {
   armrestWidth: 5,
   armrestDepth: 10,
   deskOffset: 12,
-  lShapedRotation: 135 * Math.PI / 180,
+  lShapedRotation: (135 * Math.PI) / 180,
 } as const;
 
 // 工位类型
@@ -179,13 +179,19 @@ export function WorkstationElement({
     function toWorldRect(localRect: Point[]): Point[] {
       let rect = localRect;
       if (isLShaped) {
-        rect = localRect.map(p => rotateChairLocal(p.x, p.y));
+        rect = localRect.map((p) => rotateChairLocal(p.x, p.y));
       }
-      return rect.map(p => rotatePoint(p.x, p.y));
+      return rect.map((p) => rotatePoint(p.x, p.y));
     }
 
     // 椅子矩形
-    const { width: chairW, depth: chairD, backrestHeight, armrestWidth, armrestDepth } = CHAIR_DIMENSIONS;
+    const {
+      width: chairW,
+      depth: chairD,
+      backrestHeight,
+      armrestWidth,
+      armrestDepth,
+    } = CHAIR_DIMENSIONS;
     const chairRectLocal: Point[] = [
       { x: chairCenterX - chairW / 2, y: chairCenterY - chairD / 2 },
       { x: chairCenterX + chairW / 2, y: chairCenterY - chairD / 2 },
@@ -248,8 +254,18 @@ export function WorkstationElement({
       leftPartition = [];
       rightPartition = [];
     } else {
-      leftPartition = createRotatedRect(-halfDeskW - partitionWidth / 2, 0, partitionWidth, deskDepth);
-      rightPartition = createRotatedRect(halfDeskW + partitionWidth / 2, 0, partitionWidth, deskDepth);
+      leftPartition = createRotatedRect(
+        -halfDeskW - partitionWidth / 2,
+        0,
+        partitionWidth,
+        deskDepth
+      );
+      rightPartition = createRotatedRect(
+        halfDeskW + partitionWidth / 2,
+        0,
+        partitionWidth,
+        deskDepth
+      );
     }
 
     // 标签和状态指示器位置
@@ -278,7 +294,17 @@ export function WorkstationElement({
       statusIndicatorX: statusPos.x,
       statusIndicatorY: statusPos.y,
     };
-  }, [workstation.x, workstation.y, workstation.width, workstation.height, workstation.rotation, workstation.type, deskWidth, deskDepth, isLShaped]);
+  }, [
+    workstation.x,
+    workstation.y,
+    workstation.width,
+    workstation.height,
+    workstation.rotation,
+    workstation.type,
+    deskWidth,
+    deskDepth,
+    isLShaped,
+  ]);
 
   const handleMouseEnter = useCallback(() => {
     onHover?.(true);
@@ -289,7 +315,7 @@ export function WorkstationElement({
   }, [onHover]);
 
   // 生成多边形路径字符串的辅助函数
-  const toPointsString = function(points: Point[]): string {
+  const toPointsString = function (points: Point[]): string {
     return points.map((p) => `${p.x},${p.y}`).join(" ");
   };
 
@@ -311,7 +337,9 @@ export function WorkstationElement({
     "cad-workstation",
     selected && "cad-workstation-selected",
     hovered && "cad-workstation-hovered",
-  ].filter(Boolean).join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <g
@@ -525,5 +553,3 @@ export function WorkstationElement({
     </g>
   );
 }
-
-

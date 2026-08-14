@@ -26,7 +26,7 @@ const Header: FC = () => {
     try {
       await logout();
       // 等待 React 状态更新完成
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
       window.location.href = LOGIN;
     } catch (error) {
       console.error("登出失败:", error);
@@ -68,8 +68,7 @@ const Header: FC = () => {
       }}
     >
       {/* 左侧留空，保持布局平衡 */}
-      <div className="flex items-center gap-4">
-      </div>
+      <div className="flex items-center gap-4"></div>
 
       <Space size="middle">
         {/* 通知铃铛 */}
@@ -86,7 +85,8 @@ const Header: FC = () => {
             src={user?.avatar}
             className="cursor-pointer shadow-md border-2"
             style={{
-              background: "linear-gradient(135deg, var(--theme-brand, #3b82f6) 0%, var(--theme-brand-dark, #2563eb) 100%)",
+              background:
+                "linear-gradient(135deg, var(--theme-brand, #3b82f6) 0%, var(--theme-brand-dark, #2563eb) 100%)",
               color: "var(--theme-text-inverse)",
               borderColor: `rgba(255, 255, 255, ${AVATAR_BORDER_OPACITY})`,
               transition: "var(--theme-transition-base)",

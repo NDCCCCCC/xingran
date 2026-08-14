@@ -4,7 +4,13 @@
  */
 
 import { useState, useCallback } from "react";
-import type { ConfigExecution, ConfigExecutionDetail, NetworkDevice, BaseResponse, PageResponse } from "@/types";
+import type {
+  ConfigExecution,
+  ConfigExecutionDetail,
+  NetworkDevice,
+  BaseResponse,
+  PageResponse,
+} from "@/types";
 import { post } from "@/lib/api";
 import type { CommandStatistics } from "../types";
 
@@ -26,7 +32,9 @@ export interface UseCommandDataReturn {
   loadExecutions: (params?: Record<string, unknown>) => Promise<void>;
   loadStatistics: () => Promise<void>;
   loadDevices: () => Promise<NetworkDevice[]>;
-  loadExecutionDetails: (executionId: string) => Promise<{ execution: ConfigExecution; details: ConfigExecutionDetail[] }>;
+  loadExecutionDetails: (
+    executionId: string
+  ) => Promise<{ execution: ConfigExecution; details: ConfigExecutionDetail[] }>;
 }
 
 export function useCommandData(
@@ -97,11 +105,13 @@ export function useCommandData(
   }, []);
 
   const loadExecutionDetails = useCallback(
-    async (executionId: string): Promise<{ execution: ConfigExecution; details: ConfigExecutionDetail[] }> => {
+    async (
+      executionId: string
+    ): Promise<{ execution: ConfigExecution; details: ConfigExecutionDetail[] }> => {
       try {
         const result = await post<ConfigExecution>(`/network/command/${executionId}`, {});
         return {
-          execution: result.data || {} as ConfigExecution,
+          execution: result.data || ({} as ConfigExecution),
           details: result.data?.details || [],
         };
       } catch (error) {

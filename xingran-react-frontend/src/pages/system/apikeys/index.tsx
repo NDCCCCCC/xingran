@@ -44,7 +44,12 @@ import {
   deleteAPIKey,
   toggleAPIKeyStatus,
 } from "@/api/apikey";
-import type { APIKey, CreateAPIKeyRequest, UpdateAPIKeyRequest, APIKeyListParams } from "@/types/apikey";
+import type {
+  APIKey,
+  CreateAPIKeyRequest,
+  UpdateAPIKeyRequest,
+  APIKeyListParams,
+} from "@/types/apikey";
 import type { PageData } from "@/types/apikey";
 import { formatDateTime } from "@/utils/datetime";
 import LogsModal from "./LogsModal";
@@ -81,7 +86,10 @@ function maskKey(key: string): string {
 /**
  * 复制文本到剪贴板
  */
-async function copyToClipboard(text: string, message: { success: (msg: string) => void; error: (msg: string) => void }): Promise<boolean> {
+async function copyToClipboard(
+  text: string,
+  message: { success: (msg: string) => void; error: (msg: string) => void }
+): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
     message.success("已复制到剪贴板");
@@ -166,7 +174,15 @@ const APIKeyManagement: FC = () => {
       // 服务端排序透传（避坑：详见 memory server-sort-loadfunc-param-drop）
       ...(sortField && { orderByColumn: sortField, isAsc: sortOrder === "ascend" }),
     };
-  }, [pagination.current, pagination.pageSize, searchKeyword, filterStatus, filterScope, sortField, sortOrder]);
+  }, [
+    pagination.current,
+    pagination.pageSize,
+    searchKeyword,
+    filterStatus,
+    filterScope,
+    sortField,
+    sortOrder,
+  ]);
 
   /**
    * 加载 API 密钥列表
@@ -215,19 +231,22 @@ const APIKeyManagement: FC = () => {
   /**
    * 打开编辑密钥 Modal
    */
-  const handleEdit = useCallback((record: APIKey) => {
-    setModalType("edit");
-    setEditingRecord(record);
-    setCreatedKey(null);
-    form.setFieldsValue({
-      name: record.name,
-      description: record.description,
-      scopes: record.scopes,
-      inheritPerms: record.inheritPerms,
-      ipWhitelist: record.ipWhitelist?.join(", "),
-    });
-    setModalVisible(true);
-  }, [form]);
+  const handleEdit = useCallback(
+    (record: APIKey) => {
+      setModalType("edit");
+      setEditingRecord(record);
+      setCreatedKey(null);
+      form.setFieldsValue({
+        name: record.name,
+        description: record.description,
+        scopes: record.scopes,
+        inheritPerms: record.inheritPerms,
+        ipWhitelist: record.ipWhitelist?.join(", "),
+      });
+      setModalVisible(true);
+    },
+    [form]
+  );
 
   /**
    * 查看密钥详情
@@ -238,17 +257,46 @@ const APIKeyManagement: FC = () => {
       width: 600,
       content: (
         <div style={{ marginTop: 16 }}>
-          <p><strong>名称：</strong>{record.name}</p>
-          <p><strong>密钥：</strong>{maskKey(record.key)}</p>
-          <p><strong>作用域：</strong>{renderScopeTags(record.scopes)}</p>
-          <p><strong>继承权限：</strong>{record.inheritPerms ? "是" : "否"}</p>
+          <p>
+            <strong>名称：</strong>
+            {record.name}
+          </p>
+          <p>
+            <strong>密钥：</strong>
+            {maskKey(record.key)}
+          </p>
+          <p>
+            <strong>作用域：</strong>
+            {renderScopeTags(record.scopes)}
+          </p>
+          <p>
+            <strong>继承权限：</strong>
+            {record.inheritPerms ? "是" : "否"}
+          </p>
           {record.ipWhitelist && record.ipWhitelist.length > 0 && (
-            <p><strong>IP 白名单：</strong>{record.ipWhitelist.join(", ")}</p>
+            <p>
+              <strong>IP 白名单：</strong>
+              {record.ipWhitelist.join(", ")}
+            </p>
           )}
-          {record.description && <p><strong>描述：</strong>{record.description}</p>}
-          <p><strong>过期时间：</strong>{record.expiresAt ? formatDateTime(record.expiresAt) : "永不过期"}</p>
-          <p><strong>最后使用：</strong>{record.lastUsedAt ? formatDateTime(record.lastUsedAt) : "未使用"}</p>
-          <p><strong>创建时间：</strong>{formatDateTime(record.createdAt)}</p>
+          {record.description && (
+            <p>
+              <strong>描述：</strong>
+              {record.description}
+            </p>
+          )}
+          <p>
+            <strong>过期时间：</strong>
+            {record.expiresAt ? formatDateTime(record.expiresAt) : "永不过期"}
+          </p>
+          <p>
+            <strong>最后使用：</strong>
+            {record.lastUsedAt ? formatDateTime(record.lastUsedAt) : "未使用"}
+          </p>
+          <p>
+            <strong>创建时间：</strong>
+            {formatDateTime(record.createdAt)}
+          </p>
         </div>
       ),
     });
@@ -257,30 +305,36 @@ const APIKeyManagement: FC = () => {
   /**
    * 删除密钥
    */
-  const handleDelete = useCallback(async (id: string) => {
-    try {
-      await deleteAPIKey(id);
-      message.success("删除成功");
-      fetchData();
-    } catch (error) {
-      console.error("删除 API 密钥失败:", error);
-      message.error("删除失败，请稍后重试");
-    }
-  }, [fetchData]);
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        await deleteAPIKey(id);
+        message.success("删除成功");
+        fetchData();
+      } catch (error) {
+        console.error("删除 API 密钥失败:", error);
+        message.error("删除失败，请稍后重试");
+      }
+    },
+    [fetchData]
+  );
 
   /**
    * 切换密钥状态
    */
-  const handleToggleStatus = useCallback(async (record: APIKey) => {
-    try {
-      await toggleAPIKeyStatus(record.id);
-      message.success(`${record.isActive ? "禁用" : "启用"}成功`);
-      fetchData();
-    } catch (error) {
-      console.error("切换状态失败:", error);
-      message.error("操作失败，请稍后重试");
-    }
-  }, [fetchData]);
+  const handleToggleStatus = useCallback(
+    async (record: APIKey) => {
+      try {
+        await toggleAPIKeyStatus(record.id);
+        message.success(`${record.isActive ? "禁用" : "启用"}成功`);
+        fetchData();
+      } catch (error) {
+        console.error("切换状态失败:", error);
+        message.error("操作失败，请稍后重试");
+      }
+    },
+    [fetchData]
+  );
 
   /**
    * 提交表单（创建或更新）
@@ -390,184 +444,179 @@ const APIKeyManagement: FC = () => {
 
   // ==================== 表格列定义 ====================
 
-  const columns: ColumnsType<APIKey> = useMemo(() => [
-    {
-      title: "名称",
-      dataIndex: "name",
-      key: "name",
-      width: 150,
-      sorter: true,
-      sortOrder: sortField === "name" ? sortOrder : undefined,
-      render: (text, record) => (
-        <Space>
-          <KeyOutlined />
-          {text}
-        </Space>
-      ),
-    },
-    {
-      title: "密钥",
-      dataIndex: "key",
-      key: "key",
-      width: 200,
-      render: (text) => (
-        <Space>
-          <code style={{ fontSize: 12 }}>{maskKey(text)}</code>
-          <Tooltip title="复制密钥">
-            <Button
-              type="text"
-              size="small"
-              icon={<CopyOutlined />}
-              onClick={() => copyToClipboard(text, message)}
-            />
-          </Tooltip>
-        </Space>
-      ),
-    },
-    {
-      title: "作用域",
-      dataIndex: "scopes",
-      key: "scopes",
-      width: 150,
-      render: (scopes: string[]) => renderScopeTags(scopes),
-    },
-    {
-      title: "继承权限",
-      dataIndex: "inheritPerms",
-      key: "inheritPerms",
-      width: 100,
-      align: "center" as const,
-      render: (inherit: boolean) => (
-        <Tag color={inherit ? "green" : "default"}>
-          {inherit ? "是" : "否"}
-        </Tag>
-      ),
-    },
-    {
-      title: "IP 白名单",
-      dataIndex: "ipWhitelist",
-      key: "ipWhitelist",
-      width: 150,
-      ellipsis: true,
-      render: (whitelist: string[]) => {
-        if (!whitelist || whitelist.length === 0) {
-          return <span style={{ color: "var(--theme-text-tertiary, #999)" }}>-</span>;
-        }
-        return (
-          <Tooltip title={whitelist.join(", ")}>
-            <span>{whitelist[0]}{whitelist.length > 1 ? "..." : ""}</span>
-          </Tooltip>
-        );
+  const columns: ColumnsType<APIKey> = useMemo(
+    () => [
+      {
+        title: "名称",
+        dataIndex: "name",
+        key: "name",
+        width: 150,
+        sorter: true,
+        sortOrder: sortField === "name" ? sortOrder : undefined,
+        render: (text, record) => (
+          <Space>
+            <KeyOutlined />
+            {text}
+          </Space>
+        ),
       },
-    },
-    {
-      title: "状态",
-      dataIndex: "isActive",
-      key: "isActive",
-      width: 80,
-      align: "center" as const,
-      sorter: true,
-      sortOrder: sortField === "isActive" ? sortOrder : undefined,
-      render: (active: boolean) => (
-        <Tag color={active ? "green" : "red"}>
-          {active ? "启用" : "禁用"}
-        </Tag>
-      ),
-    },
-    {
-      title: "过期时间",
-      dataIndex: "expiresAt",
-      key: "expiresAt",
-      width: 160,
-      sorter: true,
-      sortOrder: sortField === "expiresAt" ? sortOrder : undefined,
-      render: (text) => {
-        if (!text) {
-          return <span style={{ color: "var(--theme-text-tertiary, #999)" }}>永不过期</span>;
-        }
-        const date = new Date(text);
-        const now = new Date();
-        const isExpired = date < now;
-        return (
-          <span style={{ color: isExpired ? "#ff4d4f" : undefined }}>
-            {formatDateTime(text)}
-          </span>
-        );
-      },
-    },
-    {
-      title: "最后使用",
-      dataIndex: "lastUsedAt",
-      key: "lastUsedAt",
-      width: 160,
-      sorter: true,
-      sortOrder: sortField === "lastUsedAt" ? sortOrder : undefined,
-      render: (text) => {
-        if (!text) {
-          return <span style={{ color: "var(--theme-text-tertiary, #999)" }}>未使用</span>;
-        }
-        return formatDateTime(text);
-      },
-    },
-    {
-      title: "操作",
-      key: "action",
-      width: 220,
-      fixed: "right" as const,
-      render: (_, record) => (
-        <Space size="small">
-          <Tooltip title="查看详情">
-            <Button
-              type="text"
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => handleView(record)}
-            />
-          </Tooltip>
-          <Tooltip title="编辑">
-            <Button
-              type="text"
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-            />
-          </Tooltip>
-          <Tooltip title={record.isActive ? "禁用" : "启用"}>
-            <Button
-              type="text"
-              size="small"
-              icon={record.isActive ? <LockOutlined /> : <UnlockOutlined />}
-              onClick={() => handleToggleStatus(record)}
-            />
-          </Tooltip>
-          <Tooltip title="使用日志">
-            <Button
-              type="text"
-              size="small"
-              icon={<FileTextOutlined />}
-              onClick={() => handleViewLogs(record)}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="确定要删除这个密钥吗？"
-            onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
-            okButtonProps={{ danger: true }}
-          >
-            <Tooltip title="删除">
+      {
+        title: "密钥",
+        dataIndex: "key",
+        key: "key",
+        width: 200,
+        render: (text) => (
+          <Space>
+            <code style={{ fontSize: 12 }}>{maskKey(text)}</code>
+            <Tooltip title="复制密钥">
               <Button
                 type="text"
                 size="small"
-                danger
-                icon={<DeleteOutlined />}
+                icon={<CopyOutlined />}
+                onClick={() => copyToClipboard(text, message)}
               />
             </Tooltip>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ], [handleView, handleEdit, handleToggleStatus, handleViewLogs, handleDelete, sortField, sortOrder]);
+          </Space>
+        ),
+      },
+      {
+        title: "作用域",
+        dataIndex: "scopes",
+        key: "scopes",
+        width: 150,
+        render: (scopes: string[]) => renderScopeTags(scopes),
+      },
+      {
+        title: "继承权限",
+        dataIndex: "inheritPerms",
+        key: "inheritPerms",
+        width: 100,
+        align: "center" as const,
+        render: (inherit: boolean) => (
+          <Tag color={inherit ? "green" : "default"}>{inherit ? "是" : "否"}</Tag>
+        ),
+      },
+      {
+        title: "IP 白名单",
+        dataIndex: "ipWhitelist",
+        key: "ipWhitelist",
+        width: 150,
+        ellipsis: true,
+        render: (whitelist: string[]) => {
+          if (!whitelist || whitelist.length === 0) {
+            return <span style={{ color: "var(--theme-text-tertiary, #999)" }}>-</span>;
+          }
+          return (
+            <Tooltip title={whitelist.join(", ")}>
+              <span>
+                {whitelist[0]}
+                {whitelist.length > 1 ? "..." : ""}
+              </span>
+            </Tooltip>
+          );
+        },
+      },
+      {
+        title: "状态",
+        dataIndex: "isActive",
+        key: "isActive",
+        width: 80,
+        align: "center" as const,
+        sorter: true,
+        sortOrder: sortField === "isActive" ? sortOrder : undefined,
+        render: (active: boolean) => (
+          <Tag color={active ? "green" : "red"}>{active ? "启用" : "禁用"}</Tag>
+        ),
+      },
+      {
+        title: "过期时间",
+        dataIndex: "expiresAt",
+        key: "expiresAt",
+        width: 160,
+        sorter: true,
+        sortOrder: sortField === "expiresAt" ? sortOrder : undefined,
+        render: (text) => {
+          if (!text) {
+            return <span style={{ color: "var(--theme-text-tertiary, #999)" }}>永不过期</span>;
+          }
+          const date = new Date(text);
+          const now = new Date();
+          const isExpired = date < now;
+          return (
+            <span style={{ color: isExpired ? "#ff4d4f" : undefined }}>{formatDateTime(text)}</span>
+          );
+        },
+      },
+      {
+        title: "最后使用",
+        dataIndex: "lastUsedAt",
+        key: "lastUsedAt",
+        width: 160,
+        sorter: true,
+        sortOrder: sortField === "lastUsedAt" ? sortOrder : undefined,
+        render: (text) => {
+          if (!text) {
+            return <span style={{ color: "var(--theme-text-tertiary, #999)" }}>未使用</span>;
+          }
+          return formatDateTime(text);
+        },
+      },
+      {
+        title: "操作",
+        key: "action",
+        width: 220,
+        fixed: "right" as const,
+        render: (_, record) => (
+          <Space size="small">
+            <Tooltip title="查看详情">
+              <Button
+                type="text"
+                size="small"
+                icon={<EyeOutlined />}
+                onClick={() => handleView(record)}
+              />
+            </Tooltip>
+            <Tooltip title="编辑">
+              <Button
+                type="text"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => handleEdit(record)}
+              />
+            </Tooltip>
+            <Tooltip title={record.isActive ? "禁用" : "启用"}>
+              <Button
+                type="text"
+                size="small"
+                icon={record.isActive ? <LockOutlined /> : <UnlockOutlined />}
+                onClick={() => handleToggleStatus(record)}
+              />
+            </Tooltip>
+            <Tooltip title="使用日志">
+              <Button
+                type="text"
+                size="small"
+                icon={<FileTextOutlined />}
+                onClick={() => handleViewLogs(record)}
+              />
+            </Tooltip>
+            <Popconfirm
+              title="确定要删除这个密钥吗？"
+              onConfirm={() => handleDelete(record.id)}
+              okText="确定"
+              cancelText="取消"
+              okButtonProps={{ danger: true }}
+            >
+              <Tooltip title="删除">
+                <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+              </Tooltip>
+            </Popconfirm>
+          </Space>
+        ),
+      },
+    ],
+    [handleView, handleEdit, handleToggleStatus, handleViewLogs, handleDelete, sortField, sortOrder]
+  );
 
   // ==================== 渲染 ====================
 
@@ -592,7 +641,8 @@ const APIKeyManagement: FC = () => {
                 onChange={setFilterStatus}
                 style={{ width: 120 }}
                 allowClear
-               onSearch={() => {}}>
+                onSearch={() => {}}
+              >
                 <Option value={true}>启用</Option>
                 <Option value={false}>禁用</Option>
               </Select>
@@ -602,33 +652,25 @@ const APIKeyManagement: FC = () => {
                 onChange={setFilterScope}
                 style={{ width: 120 }}
                 allowClear
-               onSearch={() => {}}>
-                {SCOPE_OPTIONS.map(opt => (
-                  <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+                onSearch={() => {}}
+              >
+                {SCOPE_OPTIONS.map((opt) => (
+                  <Option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </Option>
                 ))}
               </Select>
-              <Button
-                type="primary"
-                icon={<SearchOutlined />}
-                onClick={handleSearch}
-              >
+              <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
                 搜索
               </Button>
               <Button onClick={handleReset}>重置</Button>
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={handleRefresh}
-              >
+              <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
                 刷新
               </Button>
             </Space>
           </Col>
           <Col>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={handleAdd}
-            >
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
               创建密钥
             </Button>
           </Col>
@@ -690,12 +732,7 @@ const APIKeyManagement: FC = () => {
           />
         ) : null}
 
-        <Form
-          form={form}
-          layout="horizontal"
-          labelCol={{ span: 5 }}
-          wrapperCol={{ span: 19 }}
-        >
+        <Form form={form} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
           <Form.Item
             name="name"
             label="密钥名称"
@@ -724,14 +761,11 @@ const APIKeyManagement: FC = () => {
               mode="multiple"
               placeholder="请选择作用域"
               options={SCOPE_OPTIONS}
-             onSearch={() => {}}/>
+              onSearch={() => {}}
+            />
           </Form.Item>
 
-          <Form.Item
-            name="inheritPerms"
-            label="继承权限"
-            valuePropName="checked"
-          >
+          <Form.Item name="inheritPerms" label="继承权限" valuePropName="checked">
             <Switch checkedChildren="是" unCheckedChildren="否" />
           </Form.Item>
 
@@ -745,10 +779,7 @@ const APIKeyManagement: FC = () => {
           </Form.Item>
 
           {modalType === "create" && (
-            <Form.Item
-              name="expiresAt"
-              label="过期时间"
-            >
+            <Form.Item name="expiresAt" label="过期时间">
               <Input type="datetime-local" />
             </Form.Item>
           )}

@@ -18,12 +18,10 @@ export const dedicatedLineApi = {
   delete: (id: string) => post(`/ops/dedicated-lines/${id}/delete`),
 
   // 批量删除
-  batchDelete: (ids: string[]) =>
-    post("/ops/dedicated-lines/batch", { ids, action: "delete" }),
+  batchDelete: (ids: string[]) => post("/ops/dedicated-lines/batch", { ids, action: "delete" }),
 
   // 导出
-  export: (params: PageParams) =>
-    post("/ops/dedicated-lines/export", params),
+  export: (params: PageParams) => post("/ops/dedicated-lines/export", params),
 
   // 导入
   import: (file: File) => {
@@ -33,6 +31,5 @@ export const dedicatedLineApi = {
   },
 
   // 下载模板
-  downloadTemplate: () =>
-    post("/ops/dedicated-lines/template", {}),
+  downloadTemplate: () => post("/ops/dedicated-lines/template", {}),
 };

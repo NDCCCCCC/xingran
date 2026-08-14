@@ -31,7 +31,7 @@ import { useThemeStore } from "@/store/themeStore";
 import { setAppMessageInstance } from "@/utils/antdMessage";
 
 interface AntdThemeBridgeProps {
-	children: ReactNode;
+  children: ReactNode;
 }
 
 /**
@@ -47,68 +47,64 @@ const DEFAULT_ANTD_PRIMARY = "#1677ff";
  * 模块作用域代码共享同一 context-aware 实例（见 @/utils/antdMessage）。
  */
 const MessageContextInjector: FC<{ children: ReactNode }> = ({ children }) => {
-	const { message } = App.useApp();
-	useEffect(() => {
-		setAppMessageInstance(message);
-		return () => setAppMessageInstance(null);
-	}, [message]);
-	return <>{children}</>;
+  const { message } = App.useApp();
+  useEffect(() => {
+    setAppMessageInstance(message);
+    return () => setAppMessageInstance(null);
+  }, [message]);
+  return <>{children}</>;
 };
 
 const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
-	// 订阅 settingsStore 的主题与布局配置
-	const customColors = useSettingsStore((state) => state.preferences.theme.customColors);
-	const themeMode = useSettingsStore((state) => state.preferences.theme.mode);
-	const density = useSettingsStore((state) => state.preferences.layout.density);
+  // 订阅 settingsStore 的主题与布局配置
+  const customColors = useSettingsStore((state) => state.preferences.theme.customColors);
+  const themeMode = useSettingsStore((state) => state.preferences.theme.mode);
+  const density = useSettingsStore((state) => state.preferences.layout.density);
 
-	// 触发 themeStore 同步到 DOM（CSS 变量），保证 --theme-primary 实时更新
-	const appliedTheme = useThemeStore((state) => state.appliedTheme);
+  // 触发 themeStore 同步到 DOM（CSS 变量），保证 --theme-primary 实时更新
+  const appliedTheme = useThemeStore((state) => state.appliedTheme);
 
-	const antdThemeConfig = useMemo<ThemeConfig>(() => {
-		// 主色：优先使用 customColors.primary（如果存在且是字符串），否则回退到默认
-		const primary =
-			typeof customColors?.primary === "string" && customColors.primary
-				? customColors.primary
-				: DEFAULT_ANTD_PRIMARY;
+  const antdThemeConfig = useMemo<ThemeConfig>(() => {
+    // 主色：优先使用 customColors.primary（如果存在且是字符串），否则回退到默认
+    const primary =
+      typeof customColors?.primary === "string" && customColors.primary
+        ? customColors.primary
+        : DEFAULT_ANTD_PRIMARY;
 
-		// 模式：dark 模式使用 darkAlgorithm
-		const algorithm =
-			themeMode === "dark"
-				? antdTheme.darkAlgorithm
-				: antdTheme.defaultAlgorithm;
+    // 模式：dark 模式使用 darkAlgorithm
+    const algorithm = themeMode === "dark" ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm;
 
-		// 密度：compact 模式叠加 compactAlgorithm
-		const algorithms =
-			density === "compact" ? [algorithm, antdTheme.compactAlgorithm] : algorithm;
+    // 密度：compact 模式叠加 compactAlgorithm
+    const algorithms = density === "compact" ? [algorithm, antdTheme.compactAlgorithm] : algorithm;
 
-		// 把主色同时写入 colorInfo 和 colorLink，保证 Info / Link 类组件也跟随主题
-		return {
-			token: {
-				colorPrimary: primary,
-				colorInfo: primary,
-				colorLink: primary,
-			},
-			algorithm: algorithms,
-			// 主题变更时改变 hashed 标识，强制 AntD 重新生成 CSS（防止主题切换残留）
-			// 注: 双圈 Loading 问题由 src/index.css 的 .ant-btn-loading::before 与
-			// antd v6 内置 Spin 重复渲染导致, 与 hashed 配置无关, 修复见 index.css.
-			hashed: true,
-		};
-	}, [customColors?.primary, customColors?.sidebar, themeMode, density, appliedTheme]);
+    // 把主色同时写入 colorInfo 和 colorLink，保证 Info / Link 类组件也跟随主题
+    return {
+      token: {
+        colorPrimary: primary,
+        colorInfo: primary,
+        colorLink: primary,
+      },
+      algorithm: algorithms,
+      // 主题变更时改变 hashed 标识，强制 AntD 重新生成 CSS（防止主题切换残留）
+      // 注: 双圈 Loading 问题由 src/index.css 的 .ant-btn-loading::before 与
+      // antd v6 内置 Spin 重复渲染导致, 与 hashed 配置无关, 修复见 index.css.
+      hashed: true,
+    };
+  }, [customColors?.primary, customColors?.sidebar, themeMode, density, appliedTheme]);
 
-	return (
-		<ConfigProvider locale={zhCN} theme={antdThemeConfig}>
-			{/*
+  return (
+    <ConfigProvider locale={zhCN} theme={antdThemeConfig}>
+      {/*
 				antd v6 默认启用 cssVar(CSS 变量模式), <App> 需要一个真实 DOM 节点挂载 CSS
 				变量作用域。component={false} 不渲染节点, 会触发 warning:
 				"[antd: App] When using cssVar, ensure `component` is assigned a valid React component string."
 				故移除 component={false}, 使用 antd <App> 默认的 div 包裹。
 			*/}
-			<App>
-				<MessageContextInjector>{children}</MessageContextInjector>
-			</App>
-		</ConfigProvider>
-	);
+      <App>
+        <MessageContextInjector>{children}</MessageContextInjector>
+      </App>
+    </ConfigProvider>
+  );
 };
 
 export default AntdThemeBridge;

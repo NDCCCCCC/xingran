@@ -34,9 +34,10 @@ export function getLoginLogColumns(params: GetLoginLogColumnsParams): ColumnsTyp
       sortOrder: getColumnSortOrder("userName"),
       render: (_: unknown, record: LoginLog) => {
         // 优先显示 nickname（username），fallback 到 username
-        const display = record.nickname && record.nickname !== record.userName
-          ? `${record.nickname}（${record.userName}）`
-          : record.userName || "-";
+        const display =
+          record.nickname && record.nickname !== record.userName
+            ? `${record.nickname}（${record.userName}）`
+            : record.userName || "-";
         return (
           <Space>
             <UserOutlined />

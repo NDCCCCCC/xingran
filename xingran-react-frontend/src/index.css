@@ -20,34 +20,34 @@
 /* 核心颜色变量 */
 :root {
   /* ===== 主色调 - 靛蓝专业色系 ===== */
-  --theme-primary: #4F46E5;          /* 靛蓝主色 */
-  --theme-primary-hover: #4338CA;    /* 悬停深色 */
-  --theme-primary-light: #EEF2FF;    /* 浅色背景 */
-  --theme-primary-lighter: #E0E7FF;  /* 更浅背景 */
-  --theme-primary-subtle: #C7D2FE;   /* 柔和边框 */
+  --theme-primary: #4f46e5; /* 靛蓝主色 */
+  --theme-primary-hover: #4338ca; /* 悬停深色 */
+  --theme-primary-light: #eef2ff; /* 浅色背景 */
+  --theme-primary-lighter: #e0e7ff; /* 更浅背景 */
+  --theme-primary-subtle: #c7d2fe; /* 柔和边框 */
 
   /* ===== 中性色 - 精心调配的灰度 ===== */
-  --theme-neutral-white: #FFFFFF;
-  --theme-neutral-50: #F8FAFC;
-  --theme-neutral-100: #F1F5F9;
-  --theme-neutral-200: #E2E8F0;
-  --theme-neutral-300: #CBD5E1;
-  --theme-neutral-400: #94A3B8;
-  --theme-neutral-500: #64748B;
+  --theme-neutral-white: #ffffff;
+  --theme-neutral-50: #f8fafc;
+  --theme-neutral-100: #f1f5f9;
+  --theme-neutral-200: #e2e8f0;
+  --theme-neutral-300: #cbd5e1;
+  --theme-neutral-400: #94a3b8;
+  --theme-neutral-500: #64748b;
   --theme-neutral-600: #475569;
   --theme-neutral-700: #334155;
-  --theme-neutral-800: #1E293B;
-  --theme-neutral-900: #0F172A;
+  --theme-neutral-800: #1e293b;
+  --theme-neutral-900: #0f172a;
 
   /* ===== 侧边栏专用色 ===== */
-  --sidebar-bg: #1E293B;
-  --sidebar-bg-hover: #2D3748;
+  --sidebar-bg: #1e293b;
+  --sidebar-bg-hover: #2d3748;
   --sidebar-bg-active: #334155;
   --sidebar-border: #334155;
-  --sidebar-text: #F1F5F9;
-  --sidebar-text-hover: #FFFFFF;
-  --sidebar-text-active: #FFFFFF;
-  --sidebar-accent: #3B82F6;
+  --sidebar-text: #f1f5f9;
+  --sidebar-text-hover: #ffffff;
+  --sidebar-text-active: #ffffff;
+  --sidebar-accent: #3b82f6;
 
   /* ===== 背景色系统 ===== */
   --theme-bg-primary: var(--theme-neutral-white);
@@ -72,13 +72,13 @@
   --theme-border-accent: var(--theme-primary-subtle);
 
   /* ===== 功能色系统 ===== */
-  --theme-success: #10B981;
-  --theme-success-bg: #D1FAE5;
-  --theme-warning: #F59E0B;
-  --theme-warning-bg: #FEF3C7;
-  --theme-error: #EF4444;
-  --theme-error-bg: #FEE2E2;
-  --theme-info: #3B82F6;
+  --theme-success: #10b981;
+  --theme-success-bg: #d1fae5;
+  --theme-warning: #f59e0b;
+  --theme-warning-bg: #fef3c7;
+  --theme-error: #ef4444;
+  --theme-error-bg: #fee2e2;
+  --theme-info: #3b82f6;
 
   /* ===== 间距系统 ===== */
   --theme-spacing-xs: 4px;
@@ -94,7 +94,8 @@
   --theme-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
   --theme-shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -1px rgba(15, 23, 42, 0.04);
   --theme-shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.04);
-  --theme-shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 10px 10px -5px rgba(15, 23, 42, 0.04);
+  --theme-shadow-xl:
+    0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 10px 10px -5px rgba(15, 23, 42, 0.04);
 
   /* ===== 圆角系统 ===== */
   --theme-radius-sm: 4px;
@@ -110,8 +111,9 @@
   --theme-transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
 
   /* ===== 字体系统 ===== */
-  --theme-font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
-  --theme-font-mono: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+  --theme-font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+  --theme-font-mono: "SF Mono", "Menlo", "Monaco", "Courier New", monospace;
 
   /* ===== 布局变量 ===== */
   --sidebar-width: 200px;
@@ -124,41 +126,41 @@
    ======================================== */
 [data-color-mode="light"] {
   /* 浅色模式侧边栏 */
-  --sidebar-bg: #FFFFFF;
-  --sidebar-bg-hover: #F1F5F9;
-  --sidebar-bg-active: #E2E8F0;
-  --sidebar-border: #E2E8F0;
+  --sidebar-bg: #ffffff;
+  --sidebar-bg-hover: #f1f5f9;
+  --sidebar-bg-active: #e2e8f0;
+  --sidebar-border: #e2e8f0;
   --sidebar-text: #000000;
-  --sidebar-text-hover: #1E293B;
-  --sidebar-text-active: #4F46E5;
+  --sidebar-text-hover: #1e293b;
+  --sidebar-text-active: #4f46e5;
 
   /* 背景层 */
-  --bg-base: #FFFFFF;
-  --bg-surface: #F8FAFC;
-  --bg-elevated: #F1F5F9;
-  --bg-overlay: #FFFFFF;
-  --bg-overlay-hover: #F1F5F9;
+  --bg-base: #ffffff;
+  --bg-surface: #f8fafc;
+  --bg-elevated: #f1f5f9;
+  --bg-overlay: #ffffff;
+  --bg-overlay-hover: #f1f5f9;
 
   /* 文字 */
-  --text-primary: #0F172A;
+  --text-primary: #0f172a;
   --text-secondary: #475569;
-  --text-tertiary: #94A3B8;
-  --text-disabled: #CBD5E1;
+  --text-tertiary: #94a3b8;
+  --text-disabled: #cbd5e1;
 
   /* 边框 */
-  --border-base: #E2E8F0;
-  --border-subtle: #F1F5F9;
+  --border-base: #e2e8f0;
+  --border-subtle: #f1f5f9;
 
   /* 组件背景 */
-  --component-bg: #FFFFFF;
-  --component-bg-hover: #F8FAFC;
+  --component-bg: #ffffff;
+  --component-bg-hover: #f8fafc;
 
   /* 输入框 */
-  --input-bg: #FFFFFF;
-  --input-border: #E2E8F0;
-  --input-border-hover: #CBD5E1;
-  --input-text: #0F172A;
-  --input-placeholder: #94A3B8;
+  --input-bg: #ffffff;
+  --input-border: #e2e8f0;
+  --input-border-hover: #cbd5e1;
+  --input-text: #0f172a;
+  --input-placeholder: #94a3b8;
 }
 
 /* ========================================
@@ -168,137 +170,137 @@
    ======================================== */
 [data-color-mode="dark"] {
   /* ===== 背景层系统 - 6层深度层次 ===== */
-  --bg-base: #0A0E1A;           /* Level 0 - 主背景 - 深邃海军炭 */
-  --bg-surface: #0D101F;        /* Level 1 - 表面层 - 微升 */
-  --bg-elevated: #121624;       /* Level 2 - 悬浮层 - 卡片基础 */
-  --bg-overlay: #1A1D2D;        /* Level 3 - 覆盖层 - 弹窗/抽屉 */
-  --bg-overlay-hover: #252A3F;  /* Level 4 - 悬停层 - 交互反馈 */
-  --bg-overlay-active: #2D3247; /* Level 5 - 激活层 - 最高优先级 */
+  --bg-base: #0a0e1a; /* Level 0 - 主背景 - 深邃海军炭 */
+  --bg-surface: #0d101f; /* Level 1 - 表面层 - 微升 */
+  --bg-elevated: #121624; /* Level 2 - 悬浮层 - 卡片基础 */
+  --bg-overlay: #1a1d2d; /* Level 3 - 覆盖层 - 弹窗/抽屉 */
+  --bg-overlay-hover: #252a3f; /* Level 4 - 悬停层 - 交互反馈 */
+  --bg-overlay-active: #2d3247; /* Level 5 - 激活层 - 最高优先级 */
 
   /* ===== 背景色映射到主题系统 ===== */
-  --theme-bg-primary: #0A0E1A;
-  --theme-bg-secondary: #0D101F;
+  --theme-bg-primary: #0a0e1a;
+  --theme-bg-secondary: #0d101f;
   --theme-bg-tertiary: #121624;
   --theme-bg-surface: #121624;
-  --theme-bg-elevated: #1A1D2D;
+  --theme-bg-elevated: #1a1d2d;
 
   /* ===== 文字系统 - 5级对比度层次 ===== */
-  --text-primary: #FFFFFF;       /* Level 1 - 主文字 - 纯白 (21:1) */
-  --text-secondary: #E2E8F0;     /* Level 2 - 次要 - 蓝白 (16:1) */
-  --text-tertiary: #CBD5E1;      /* Level 3 - 辅助 - 银灰 (12:1) */
-  --text-quaternary: #94A3B8;    /* Level 4 - 描述 - 中灰 (7:1) */
-  --text-disabled: #64748B;      /* Level 5 - 禁用 - 深灰 (4.5:1) */
-  --text-inverse: #0A0E1A;       /* 反色文字 - 深邃背景 */
+  --text-primary: #ffffff; /* Level 1 - 主文字 - 纯白 (21:1) */
+  --text-secondary: #e2e8f0; /* Level 2 - 次要 - 蓝白 (16:1) */
+  --text-tertiary: #cbd5e1; /* Level 3 - 辅助 - 银灰 (12:1) */
+  --text-quaternary: #94a3b8; /* Level 4 - 描述 - 中灰 (7:1) */
+  --text-disabled: #64748b; /* Level 5 - 禁用 - 深灰 (4.5:1) */
+  --text-inverse: #0a0e1a; /* 反色文字 - 深邃背景 */
 
   /* ===== 文字色映射到主题系统 ===== */
-  --theme-text-primary: #FFFFFF;
-  --theme-text-secondary: #E2E8F0;
-  --theme-text-tertiary: #CBD5E1;
-  --theme-text-disabled: #64748B;
+  --theme-text-primary: #ffffff;
+  --theme-text-secondary: #e2e8f0;
+  --theme-text-tertiary: #cbd5e1;
+  --theme-text-disabled: #64748b;
 
   /* ===== 边框系统 - 4级微妙界定 ===== */
-  --border-base: #1E293B;        /* Level 1 - 主边框 - 柔和界定 */
-  --border-subtle: #0F172A;      /* Level 2 - 次边框 - 极其微妙 */
-  --border-strong: #334155;      /* Level 3 - 强调边框 - 清晰突出 */
-  --border-focus: #4F46E5;       /* Level 4 - 聚焦边框 - 主色强调 */
+  --border-base: #1e293b; /* Level 1 - 主边框 - 柔和界定 */
+  --border-subtle: #0f172a; /* Level 2 - 次边框 - 极其微妙 */
+  --border-strong: #334155; /* Level 3 - 强调边框 - 清晰突出 */
+  --border-focus: #4f46e5; /* Level 4 - 聚焦边框 - 主色强调 */
 
   /* ===== 边框色映射到主题系统 ===== */
-  --theme-border-primary: #1E293B;
-  --theme-border-secondary: #0F172A;
-  --theme-border-divider: #1E293B;
+  --theme-border-primary: #1e293b;
+  --theme-border-secondary: #0f172a;
+  --theme-border-divider: #1e293b;
 
   /* ===== 组件背景系统 ===== */
-  --component-bg: #121624;       /* 组件基础背景 */
-  --component-bg-hover: #1A1D2D; /* 组件悬停背景 */
-  --component-bg-active: #252A3F;/* 组件激活背景 */
-  --component-bg-disabled: #0A0E1A; /* 组件禁用背景 */
+  --component-bg: #121624; /* 组件基础背景 */
+  --component-bg-hover: #1a1d2d; /* 组件悬停背景 */
+  --component-bg-active: #252a3f; /* 组件激活背景 */
+  --component-bg-disabled: #0a0e1a; /* 组件禁用背景 */
 
   /* ===== 输入框系统 - 深邃可读 ===== */
-  --input-bg: #0A0E1A;          /* 输入背景 - 与主背景融合 */
-  --input-bg-hover: #0D101F;    /* 输入悬停背景 */
-  --input-bg-focus: #0A0E1A;    /* 输入聚焦背景 */
-  --input-bg-disabled: #070912;  /* 输入禁用背景 */
+  --input-bg: #0a0e1a; /* 输入背景 - 与主背景融合 */
+  --input-bg-hover: #0d101f; /* 输入悬停背景 */
+  --input-bg-focus: #0a0e1a; /* 输入聚焦背景 */
+  --input-bg-disabled: #070912; /* 输入禁用背景 */
 
-  --input-border: #1E293B;       /* 输入边框 - 柔和界定 */
+  --input-border: #1e293b; /* 输入边框 - 柔和界定 */
   --input-border-hover: #334155; /* 悬停边框 - 清晰提示 */
-  --input-border-focus: #4F46E5; /* 聚焦边框 - 主色强调 */
-  --input-border-error: #F87171; /* 错误边框 - 红色警示 */
-  --input-border-disabled: #0F172A; /* 禁用边框 */
+  --input-border-focus: #4f46e5; /* 聚焦边框 - 主色强调 */
+  --input-border-error: #f87171; /* 错误边框 - 红色警示 */
+  --input-border-disabled: #0f172a; /* 禁用边框 */
 
-  --input-text: #E2E8F0;         /* 输入文字 - 高对比 */
-  --input-text-placeholder: #64748B; /* 占位符 - 柔和提示 */
+  --input-text: #e2e8f0; /* 输入文字 - 高对比 */
+  --input-text-placeholder: #64748b; /* 占位符 - 柔和提示 */
   --input-text-disabled: #475569; /* 禁用文字 */
 
   /* ===== 侧边栏系统 - 独立深色调 ===== */
-  --sidebar-bg: #0F121D;         /* 侧边栏背景 - 深邃 */
-  --sidebar-bg-hover: #1A1D2D;   /* 侧边栏悬停 */
-  --sidebar-bg-active: #252A3F;  /* 侧边栏激活 */
-  --sidebar-bg-disabled: #0A0E1A; /* 侧边栏禁用 */
+  --sidebar-bg: #0f121d; /* 侧边栏背景 - 深邃 */
+  --sidebar-bg-hover: #1a1d2d; /* 侧边栏悬停 */
+  --sidebar-bg-active: #252a3f; /* 侧边栏激活 */
+  --sidebar-bg-disabled: #0a0e1a; /* 侧边栏禁用 */
 
-  --sidebar-border: #1E293B;     /* 侧边栏边框 */
+  --sidebar-border: #1e293b; /* 侧边栏边框 */
   --sidebar-border-hover: #334155; /* 侧边栏悬停边框 */
 
-  --sidebar-text: #CBD5E1;       /* 侧边栏文字 */
-  --sidebar-text-hover: #FFFFFF; /* 侧边栏悬停文字 */
-  --sidebar-text-active: #FFFFFF; /* 侧边栏激活文字 */
-  --sidebar-text-disabled: #64748B; /* 侧边栏禁用文字 */
+  --sidebar-text: #cbd5e1; /* 侧边栏文字 */
+  --sidebar-text-hover: #ffffff; /* 侧边栏悬停文字 */
+  --sidebar-text-active: #ffffff; /* 侧边栏激活文字 */
+  --sidebar-text-disabled: #64748b; /* 侧边栏禁用文字 */
 
-  --sidebar-accent: #4F46E5;     /* 侧边栏强调色 */
+  --sidebar-accent: #4f46e5; /* 侧边栏强调色 */
   --sidebar-accent-glow: rgba(79, 70, 229, 0.3); /* 侧边栏发光 */
 
   /* ===== 按钮系统 ===== */
-  --btn-primary-bg: #4F46E5;     /* 主按钮背景 */
-  --btn-primary-hover: #4338CA;  /* 主按钮悬停 */
-  --btn-primary-active: #3730A3; /* 主按钮激活 */
-  --btn-primary-text: #FFFFFF;   /* 主按钮文字 */
+  --btn-primary-bg: #4f46e5; /* 主按钮背景 */
+  --btn-primary-hover: #4338ca; /* 主按钮悬停 */
+  --btn-primary-active: #3730a3; /* 主按钮激活 */
+  --btn-primary-text: #ffffff; /* 主按钮文字 */
 
-  --btn-default-bg: #1A1D2D;     /* 默认按钮背景 */
-  --btn-default-hover: #252A3F;  /* 默认按钮悬停 */
-  --btn-default-active: #2D3247; /* 默认按钮激活 */
+  --btn-default-bg: #1a1d2d; /* 默认按钮背景 */
+  --btn-default-hover: #252a3f; /* 默认按钮悬停 */
+  --btn-default-active: #2d3247; /* 默认按钮激活 */
   --btn-default-border: #334155; /* 默认按钮边框 */
-  --btn-default-text: #E2E8F0;   /* 默认按钮文字 */
+  --btn-default-text: #e2e8f0; /* 默认按钮文字 */
 
-  --btn-ghost-bg: transparent;   /* 幽灵按钮背景 */
+  --btn-ghost-bg: transparent; /* 幽灵按钮背景 */
   --btn-ghost-hover: rgba(255, 255, 255, 0.05); /* 幽灵按钮悬停 */
-  --btn-ghost-text: #CBD5E1;     /* 幽灵按钮文字 */
+  --btn-ghost-text: #cbd5e1; /* 幽灵按钮文字 */
 
-  --btn-danger-bg: #DC2626;      /* 危险按钮背景 */
-  --btn-danger-hover: #EF4444;   /* 危险按钮悬停 */
-  --btn-danger-text: #FFFFFF;    /* 危险按钮文字 */
+  --btn-danger-bg: #dc2626; /* 危险按钮背景 */
+  --btn-danger-hover: #ef4444; /* 危险按钮悬停 */
+  --btn-danger-text: #ffffff; /* 危险按钮文字 */
 
-  --btn-success-bg: #059669;     /* 成功按钮背景 */
-  --btn-success-hover: #10B981;  /* 成功按钮悬停 */
-  --btn-success-text: #FFFFFF;   /* 成功按钮文字 */
+  --btn-success-bg: #059669; /* 成功按钮背景 */
+  --btn-success-hover: #10b981; /* 成功按钮悬停 */
+  --btn-success-text: #ffffff; /* 成功按钮文字 */
 
   /* ===== 功能色系统 - 暗色优化高对比度 ===== */
   /* 成功色 - 绿色系 */
-  --success-bg: rgba(16, 185, 129, 0.15);     /* 成功背景 */
+  --success-bg: rgba(16, 185, 129, 0.15); /* 成功背景 */
   --success-bg-hover: rgba(16, 185, 129, 0.25); /* 成功悬停背景 */
-  --success-text: #34D399;                   /* 成功文字 - 高亮绿 */
-  --success-border: #059669;                 /* 成功边框 */
+  --success-text: #34d399; /* 成功文字 - 高亮绿 */
+  --success-border: #059669; /* 成功边框 */
 
   /* 警告色 - 橙色系 */
-  --warning-bg: rgba(245, 158, 11, 0.15);     /* 警告背景 */
+  --warning-bg: rgba(245, 158, 11, 0.15); /* 警告背景 */
   --warning-bg-hover: rgba(245, 158, 11, 0.25); /* 警告悬停背景 */
-  --warning-text: #FBBF24;                   /* 警告文字 - 高亮橙 */
-  --warning-border: #D97706;                 /* 警告边框 */
+  --warning-text: #fbbf24; /* 警告文字 - 高亮橙 */
+  --warning-border: #d97706; /* 警告边框 */
 
   /* 错误色 - 红色系 */
-  --error-bg: rgba(239, 68, 68, 0.15);        /* 错误背景 */
-  --error-bg-hover: rgba(239, 68, 68, 0.25);  /* 错误悬停背景 */
-  --error-text: #F87171;                     /* 错误文字 - 高亮红 */
-  --error-border: #DC2626;                   /* 错误边框 */
+  --error-bg: rgba(239, 68, 68, 0.15); /* 错误背景 */
+  --error-bg-hover: rgba(239, 68, 68, 0.25); /* 错误悬停背景 */
+  --error-text: #f87171; /* 错误文字 - 高亮红 */
+  --error-border: #dc2626; /* 错误边框 */
 
   /* 信息色 - 蓝色系 */
-  --info-bg: rgba(59, 130, 246, 0.15);        /* 信息背景 */
-  --info-bg-hover: rgba(59, 130, 246, 0.25);  /* 信息悬停背景 */
-  --info-text: #60A5FA;                      /* 信息文字 - 高亮蓝 */
-  --info-border: #3B82F6;                    /* 信息边框 */
+  --info-bg: rgba(59, 130, 246, 0.15); /* 信息背景 */
+  --info-bg-hover: rgba(59, 130, 246, 0.25); /* 信息悬停背景 */
+  --info-text: #60a5fa; /* 信息文字 - 高亮蓝 */
+  --info-border: #3b82f6; /* 信息边框 */
 
   /* 处理中色 - 青色系 */
-  --processing-bg: rgba(22, 163, 74, 0.15);   /* 处理中背景 */
-  --processing-text: #4ADE80;                /* 处理中文字 */
-  --processing-border: #16A34A;              /* 处理中边框 */
+  --processing-bg: rgba(22, 163, 74, 0.15); /* 处理中背景 */
+  --processing-text: #4ade80; /* 处理中文字 */
+  --processing-border: #16a34a; /* 处理中边框 */
 
   /* ===== 阴影系统 - 暗色环境优化 ===== */
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -315,31 +317,31 @@
   --glow-strong: 0 0 40px rgba(79, 70, 229, 0.15);
 
   /* ===== 链接颜色 ===== */
-  --link-color: #60A5FA;         /* 链接色 - 明亮蓝 */
-  --link-hover: #93C5FD;         /* 链接悬停 */
-  --link-active: #3B82F6;        /* 链接激活 */
-  --link-visited: #A78BFA;       /* 链接访问过 */
+  --link-color: #60a5fa; /* 链接色 - 明亮蓝 */
+  --link-hover: #93c5fd; /* 链接悬停 */
+  --link-active: #3b82f6; /* 链接激活 */
+  --link-visited: #a78bfa; /* 链接访问过 */
 
   /* ===== 代码块颜色 ===== */
-  --code-bg: #0D1117;            /* 代码背景 */
-  --code-text: #C9D1D9;          /* 代码文字 */
-  --code-border: #21262D;        /* 代码边框 */
+  --code-bg: #0d1117; /* 代码背景 */
+  --code-text: #c9d1d9; /* 代码文字 */
+  --code-border: #21262d; /* 代码边框 */
   --code-inline-bg: rgba(110, 118, 129, 0.2); /* 行内代码背景 */
 
   /* ===== 滚动条颜色 ===== */
-  --scrollbar-track: #0A0E1A;    /* 滚动条轨道 */
-  --scrollbar-thumb: #334155;     /* 滚动条滑块 */
+  --scrollbar-track: #0a0e1a; /* 滚动条轨道 */
+  --scrollbar-thumb: #334155; /* 滚动条滑块 */
   --scrollbar-thumb-hover: #475569; /* 滚动条悬停 */
 
   /* ===== 选中文本颜色 ===== */
   --selection-bg: rgba(79, 70, 229, 0.3); /* 选中背景 */
-  --selection-text: #FFFFFF;     /* 选中文字 */
+  --selection-text: #ffffff; /* 选中文字 */
 
   /* ===== 禁用状态 ===== */
-  --disabled-bg: #0A0E1A;        /* 禁用背景 */
-  --disabled-border: #1E293B;    /* 禁用边框 */
-  --disabled-text: #64748B;      /* 禁用文字 */
-  --disabled-opacity: 0.5;       /* 禁用透明度 */
+  --disabled-bg: #0a0e1a; /* 禁用背景 */
+  --disabled-border: #1e293b; /* 禁用边框 */
+  --disabled-text: #64748b; /* 禁用文字 */
+  --disabled-opacity: 0.5; /* 禁用透明度 */
 }
 
 /* ========================================
@@ -353,7 +355,9 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background var(--theme-transition-base), color var(--theme-transition-base);
+  transition:
+    background var(--theme-transition-base),
+    color var(--theme-transition-base);
 }
 
 [data-color-mode="dark"] body {
@@ -420,7 +424,7 @@ body {
 }
 
 .ant-menu-dark .ant-menu-item-selected::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   top: 50%;
@@ -587,7 +591,7 @@ body {
 }
 
 .ant-card.statistic-card::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -639,7 +643,9 @@ body {
 }
 
 [data-color-mode="dark"] .ant-btn-primary:hover {
-  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.4), 0 0 20px rgba(79, 70, 229, 0.2) !important;
+  box-shadow:
+    0 4px 16px rgba(79, 70, 229, 0.4),
+    0 0 20px rgba(79, 70, 229, 0.2) !important;
 }
 
 .ant-btn-primary:focus {
@@ -673,7 +679,7 @@ body {
 [data-color-mode="dark"] .ant-btn-default:hover {
   background: var(--btn-default-hover) !important;
   border-color: var(--sidebar-accent) !important;
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 /* 幽灵按钮 */
@@ -705,8 +711,8 @@ body {
 }
 
 .ant-btn-dangerous:hover {
-  background: #DC2626 !important;
-  border-color: #DC2626 !important;
+  background: #dc2626 !important;
+  border-color: #dc2626 !important;
   box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25) !important;
 }
 
@@ -717,8 +723,8 @@ body {
 }
 
 [data-color-mode="dark"] .ant-btn-dangerous:hover {
-  background: #F87171 !important;
-  border-color: #F87171 !important;
+  background: #f87171 !important;
+  border-color: #f87171 !important;
   box-shadow: 0 4px 16px rgba(248, 113, 113, 0.4) !important;
 }
 
@@ -742,8 +748,8 @@ body {
 }
 
 [data-color-mode="dark"] .ant-btn-success:hover {
-  background: #34D399 !important;
-  border-color: #34D399 !important;
+  background: #34d399 !important;
+  border-color: #34d399 !important;
   box-shadow: 0 4px 16px rgba(52, 211, 153, 0.4) !important;
 }
 
@@ -828,7 +834,9 @@ body {
 [data-color-mode="dark"] .ant-input:focus,
 [data-color-mode="dark"] .ant-input-number:focus,
 [data-color-mode="dark"] .ant-select-focused .ant-select-selector {
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15), 0 0 12px rgba(79, 70, 229, 0.1) !important;
+  box-shadow:
+    0 0 0 2px rgba(79, 70, 229, 0.15),
+    0 0 12px rgba(79, 70, 229, 0.1) !important;
 }
 
 .ant-input::placeholder {
@@ -854,7 +862,9 @@ body {
 }
 
 [data-color-mode="dark"] .ant-input-affix-wrapper-focused {
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15), 0 0 12px rgba(79, 70, 229, 0.1) !important;
+  box-shadow:
+    0 0 0 2px rgba(79, 70, 229, 0.15),
+    0 0 12px rgba(79, 70, 229, 0.1) !important;
 }
 
 /* ========================================
@@ -979,7 +989,7 @@ body {
 }
 
 .status-badge::before {
-  content: '';
+  content: "";
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -1121,7 +1131,7 @@ body {
 /* 状态标签 */
 .ant-tag-success {
   background: var(--theme-success-bg) !important;
-  border-color: #A7F3D0 !important;
+  border-color: #a7f3d0 !important;
   color: var(--theme-success) !important;
 }
 
@@ -1133,7 +1143,7 @@ body {
 
 .ant-tag-error {
   background: var(--theme-error-bg) !important;
-  border-color: #FECACA !important;
+  border-color: #fecaca !important;
   color: var(--theme-error) !important;
 }
 
@@ -1145,7 +1155,7 @@ body {
 
 .ant-tag-warning {
   background: var(--theme-warning-bg) !important;
-  border-color: #FDE68A !important;
+  border-color: #fde68a !important;
   color: var(--theme-warning) !important;
 }
 
@@ -1327,7 +1337,7 @@ body {
    ======================================== */
 .ant-alert-success {
   background: var(--theme-success-bg) !important;
-  border: 1px solid #A7F3D0 !important;
+  border: 1px solid #a7f3d0 !important;
 }
 
 [data-color-mode="dark"] .ant-alert-success {
@@ -1338,7 +1348,7 @@ body {
 
 .ant-alert-warning {
   background: var(--theme-warning-bg) !important;
-  border: 1px solid #FDE68A !important;
+  border: 1px solid #fde68a !important;
 }
 
 [data-color-mode="dark"] .ant-alert-warning {
@@ -1349,7 +1359,7 @@ body {
 
 .ant-alert-error {
   background: var(--theme-error-bg) !important;
-  border: 1px solid #FECACA !important;
+  border: 1px solid #fecaca !important;
 }
 
 [data-color-mode="dark"] .ant-alert-error {
@@ -1562,7 +1572,12 @@ body {
 
 [data-color-mode="dark"] .ant-skeleton-content .ant-skeleton-title,
 [data-color-mode="dark"] .ant-skeleton-content .ant-skeleton-paragraph > li {
-  background: linear-gradient(90deg, var(--border-base) 25%, var(--border-subtle) 50%, var(--border-base) 75%) !important;
+  background: linear-gradient(
+    90deg,
+    var(--border-base) 25%,
+    var(--border-subtle) 50%,
+    var(--border-base) 75%
+  ) !important;
 }
 
 /* ========================================
@@ -1727,14 +1742,7 @@ body {
 *,
 *::before,
 *::after {
-  transition-property:
-    background-color,
-    background,
-    color,
-    border-color,
-    box-shadow,
-    fill,
-    stroke;
+  transition-property: background-color, background, color, border-color, box-shadow, fill, stroke;
   transition-duration: var(--theme-transition-base);
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -1827,7 +1835,7 @@ body {
 }
 
 .layout-tab-bar .ant-tabs-tab-active::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 0;
   left: 0;
@@ -2118,7 +2126,8 @@ body {
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -2206,7 +2215,9 @@ html, body {
 [data-color-mode="dark"] .ant-input-affix-wrapper:focus,
 [data-color-mode="dark"] .ant-input-affix-wrapper-focused {
   border-color: var(--input-border-focus) !important;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15), 0 0 12px rgba(79, 70, 229, 0.1) !important;
+  box-shadow:
+    0 0 0 2px rgba(79, 70, 229, 0.15),
+    0 0 12px rgba(79, 70, 229, 0.1) !important;
 }
 
 /* 暗色模式：Select 选择器 */
@@ -2280,7 +2291,7 @@ html, body {
 
 [data-color-mode="dark"] .ant-picker-cell-selected .ant-picker-cell-inner {
   background-color: var(--sidebar-accent) !important;
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 /* 暗色模式：Table 表格 */
@@ -2365,7 +2376,7 @@ html, body {
 [data-color-mode="dark"] .ant-btn-default:hover {
   background-color: var(--btn-default-hover) !important;
   border-color: var(--sidebar-accent) !important;
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 /* 暗色模式：Dropdown 下拉菜单 */
@@ -2490,33 +2501,33 @@ html, body {
 [data-color-mode="dark"] .ant-menu-item .anticon,
 [data-color-mode="dark"] .ant-menu-submenu-title .anticon,
 [data-color-mode="dark"] .ant-layout-sider .anticon {
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 [data-color-mode="dark"] .ant-menu-dark .ant-menu-item-selected .anticon,
 [data-color-mode="dark"] .ant-menu-dark .ant-menu-item-active .anticon {
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 /* 暗色模式：Sidebar 折叠/展开按钮 */
 [data-color-mode="dark"] .ant-layout-sider-trigger {
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 [data-color-mode="dark"] .ant-layout-sider-trigger .anticon {
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 /* 暗色模式：子菜单展开/折叠箭头 */
 [data-color-mode="dark"] .ant-menu-submenu-arrow,
 [data-color-mode="dark"] .ant-menu-submenu-expand-icon,
 [data-color-mode="dark"] .ant-menu-submenu .ant-menu-submenu-arrow {
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 [data-color-mode="dark"] .ant-menu-submenu-arrow .anticon,
 [data-color-mode="dark"] .ant-menu-submenu-expand-icon .anticon {
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 /* 暗色模式：Body 背景 */
@@ -2612,7 +2623,7 @@ html, body {
 [data-color-mode="dark"] .ant-radio-button-wrapper:hover {
   background-color: var(--component-bg-hover) !important;
   border-color: var(--sidebar-accent) !important;
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 [data-color-mode="dark"] .ant-radio-button-wrapper-checked {
@@ -2631,13 +2642,13 @@ html, body {
 .ant-radio-button-wrapper-checked {
   background-color: var(--theme-primary) !important;
   border-color: var(--theme-primary) !important;
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 .ant-radio-button-wrapper-checked:hover {
   background-color: var(--theme-primary-hover) !important;
   border-color: var(--theme-primary-hover) !important;
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 .ant-radio-button-wrapper-checked::before {
@@ -2647,7 +2658,7 @@ html, body {
 /* 浅色模式：Segmented 选中态跟随主色 */
 .ant-segmented-item-selected {
   color: var(--theme-primary) !important;
-  background-color: #FFFFFF !important;
+  background-color: #ffffff !important;
   border-color: var(--theme-primary) !important;
 }
 
@@ -2712,18 +2723,22 @@ html, body {
 }
 
 [data-color-mode="dark"] .ant-pagination-item-active a {
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 /* ========================================
    Premium Glow Effects - 暗色模式专属
    ======================================== */
 [data-color-mode="dark"] .ant-btn-primary:hover {
-  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.4), 0 0 24px rgba(79, 70, 229, 0.2) !important;
+  box-shadow:
+    0 4px 16px rgba(79, 70, 229, 0.4),
+    0 0 24px rgba(79, 70, 229, 0.2) !important;
 }
 
 [data-color-mode="dark"] .ant-btn-primary:focus {
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3), 0 0 20px rgba(79, 70, 229, 0.15) !important;
+  box-shadow:
+    0 0 0 3px rgba(79, 70, 229, 0.3),
+    0 0 20px rgba(79, 70, 229, 0.15) !important;
 }
 
 [data-color-mode="dark"] .ant-table-tbody > tr:hover > td {
@@ -2731,7 +2746,9 @@ html, body {
 }
 
 [data-color-mode="dark"] .ant-card:hover {
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.05) !important;
 }
 
 /* ========================================
@@ -2761,12 +2778,12 @@ html, body {
    ======================================== */
 [data-color-mode="dark"] ::selection {
   background: rgba(79, 70, 229, 0.3) !important;
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 [data-color-mode="dark"] ::-moz-selection {
   background: rgba(79, 70, 229, 0.3) !important;
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 /* ========================================
@@ -2826,11 +2843,21 @@ html, body {
    Skeleton 骨架屏暗色模式
    ======================================== */
 [data-color-mode="dark"] .ant-skeleton {
-  background: linear-gradient(90deg, var(--border-base) 25%, var(--border-subtle) 50%, var(--border-base) 75%) !important;
+  background: linear-gradient(
+    90deg,
+    var(--border-base) 25%,
+    var(--border-subtle) 50%,
+    var(--border-base) 75%
+  ) !important;
 }
 
 [data-color-mode="dark"] .ant-skeleton-active {
-  background: linear-gradient(90deg, var(--border-base) 25%, var(--border-subtle) 37%, var(--border-base) 63%) !important;
+  background: linear-gradient(
+    90deg,
+    var(--border-base) 25%,
+    var(--border-subtle) 37%,
+    var(--border-base) 63%
+  ) !important;
 }
 
 /* ========================================
@@ -2936,13 +2963,15 @@ html, body {
 
 [data-color-mode="dark"] .ant-slider-handle {
   background-color: var(--theme-primary) !important;
-  border: 2px solid #FFFFFF !important;
+  border: 2px solid #ffffff !important;
   box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3) !important;
 }
 
 [data-color-mode="dark"] .ant-slider-handle:hover,
 [data-color-mode="dark"] .ant-slider-handle:focus {
-  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.4), 0 2px 12px rgba(79, 70, 229, 0.3) !important;
+  box-shadow:
+    0 0 0 4px rgba(79, 70, 229, 0.4),
+    0 2px 12px rgba(79, 70, 229, 0.3) !important;
 }
 
 /* ========================================
@@ -3071,7 +3100,7 @@ html, body {
 
 [data-color-mode="dark"] .ant-picker-cell-selected .ant-picker-cell-inner {
   background: var(--sidebar-accent) !important;
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 [data-color-mode="dark"] .ant-picker-today .ant-picker-cell-inner {
@@ -3146,7 +3175,7 @@ html, body {
    QRCode 二维码暗色模式
    ======================================== */
 [data-color-mode="dark"] .ant-qrcode {
-  background-color: #FFFFFF !important;
+  background-color: #ffffff !important;
   border-color: var(--border-base) !important;
   padding: 4px !important;
 }
@@ -3300,7 +3329,9 @@ html, body {
 [data-color-mode="dark"] .ant-float-btn:hover {
   background-color: var(--bg-overlay-hover) !important;
   border-color: var(--sidebar-accent) !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--sidebar-accent) !important;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.3),
+    0 0 0 1px var(--sidebar-accent) !important;
 }
 
 /* ========================================
@@ -3345,7 +3376,7 @@ html, body {
 }
 
 [data-color-mode="dark"] .ant-switch-checked .ant-switch-handle {
-  background-color: #FFFFFF !important;
+  background-color: #ffffff !important;
   border-color: var(--sidebar-accent) !important;
 }
 
@@ -3370,7 +3401,7 @@ html, body {
 
 [data-color-mode="dark"] .ant-picker-time-panel-cell-selected .ant-picker-time-panel-cell-inner {
   background: var(--sidebar-accent) !important;
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 [data-color-mode="dark"] .ant-picker-toolbar {
@@ -3468,7 +3499,7 @@ html, body {
 }
 
 [data-color_mode="dark"] .ant-popconfirm .ant-popconfirm-buttons .ant-btn-primary {
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 /* ========================================
@@ -3485,7 +3516,9 @@ html, body {
 
 [data-color-mode="dark"] .ant-captcha-input:focus {
   border-color: var(--input-border-focus) !important;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15), 0 0 12px rgba(79, 70, 229, 0.1) !important;
+  box-shadow:
+    0 0 0 2px rgba(79, 70, 229, 0.15),
+    0 0 12px rgba(79, 70, 229, 0.1) !important;
 }
 
 /* ========================================
@@ -3553,7 +3586,9 @@ html, body {
 [data-color-mode="dark"] .ant-btn-primary:hover {
   background: var(--btn-primary-hover) !important;
   border-color: var(--btn-primary-hover) !important;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4), var(--glow-subtle) !important;
+  box-shadow:
+    0 4px 12px rgba(79, 70, 229, 0.4),
+    var(--glow-subtle) !important;
 }
 
 [data-color-mode="dark"] .ant-btn-primary:active {
@@ -3570,7 +3605,7 @@ html, body {
 [data-color-mode="dark"] .ant-btn-default:hover {
   background: var(--btn-default-hover) !important;
   border-color: var(--sidebar-accent) !important;
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 [data-color-mode="dark"] .ant-btn-ghost {
@@ -3581,7 +3616,7 @@ html, body {
 
 [data-color-mode="dark"] .ant-btn-ghost:hover {
   background: var(--btn-ghost-hover) !important;
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 [data-color-mode="dark"] .ant-btn-dangerous {
@@ -3630,7 +3665,9 @@ html, body {
 [data-color-mode="dark"] .ant-input:focus {
   background: var(--input-bg-focus) !important;
   border-color: var(--input-border-focus) !important;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15), var(--glow-subtle) !important;
+  box-shadow:
+    0 0 0 2px rgba(79, 70, 229, 0.15),
+    var(--glow-subtle) !important;
 }
 
 [data-color-mode="dark"] .ant-input[disabled] {
@@ -3651,7 +3688,9 @@ html, body {
 [data-color-mode="dark"] .ant-input-affix-wrapper-focused {
   background: var(--input-bg-focus) !important;
   border-color: var(--input-border-focus) !important;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15), var(--glow-subtle) !important;
+  box-shadow:
+    0 0 0 2px rgba(79, 70, 229, 0.15),
+    var(--glow-subtle) !important;
 }
 
 [data-color-mode="dark"] .ant-input-number {
@@ -3661,7 +3700,9 @@ html, body {
 
 [data-color-mode="dark"] .ant-input-number:focus {
   border-color: var(--input-border-focus) !important;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15), var(--glow-subtle) !important;
+  box-shadow:
+    0 0 0 2px rgba(79, 70, 229, 0.15),
+    var(--glow-subtle) !important;
 }
 
 [data-color-mode="dark"] .ant-input-number-handler-wrap {
@@ -3825,7 +3866,9 @@ html, body {
 
 [data-color-mode="dark"] .ant-select-focused .ant-select-selector {
   border-color: var(--input-border-focus) !important;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15), var(--glow-subtle) !important;
+  box-shadow:
+    0 0 0 2px rgba(79, 70, 229, 0.15),
+    var(--glow-subtle) !important;
 }
 
 [data-color-mode="dark"] .ant-select-dropdown {
@@ -4058,7 +4101,7 @@ html, body {
 }
 
 [data-color-mode="dark"] .ant-pagination-item-active a {
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 /* Divider / Breadcrumb */
@@ -4136,7 +4179,9 @@ html, body {
 
 [data-color-mode="dark"] .ant-picker-focused {
   border-color: var(--input-border-focus) !important;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15), var(--glow-subtle) !important;
+  box-shadow:
+    0 0 0 2px rgba(79, 70, 229, 0.15),
+    var(--glow-subtle) !important;
 }
 
 [data-color-mode="dark"] .ant-picker-dropdown {
@@ -4322,7 +4367,7 @@ html, body {
 
 [data-color-mode="dark"] .ant-ribbon {
   background: var(--sidebar-accent) !important;
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 /* 自定义组件 */
@@ -4345,7 +4390,7 @@ html, body {
 [data-color-mode="dark"] .cron-selector-day.selected {
   background: var(--sidebar-accent) !important;
   border-color: var(--sidebar-accent) !important;
-  color: #FFFFFF !important;
+  color: #ffffff !important;
 }
 
 [data-color-mode="dark"] .data-card {

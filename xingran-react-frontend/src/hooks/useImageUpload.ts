@@ -30,12 +30,7 @@ export interface UseImageUploadReturn {
 const DEFAULT_MAX_SIZE = MAX_IMAGE_SIZE;
 
 export function useImageUpload(options: UseImageUploadOptions = {}): UseImageUploadReturn {
-  const {
-    businessType = "image",
-    maxSize = DEFAULT_MAX_SIZE,
-    onSuccess,
-    onError,
-  } = options;
+  const { businessType = "image", maxSize = DEFAULT_MAX_SIZE, onSuccess, onError } = options;
 
   const { message } = App.useApp();
   const [uploading, setUploading] = useState(false);
@@ -51,19 +46,25 @@ export function useImageUpload(options: UseImageUploadOptions = {}): UseImageUpl
     }
   }, []);
 
-  const handleUploadSuccess = useCallback((file: UploadFile, response: FileUploadResponse) => {
-    setUploading(false);
-    setImageId(response.id);
-    setImageUrl(`/uploads/${response.storagePath || ""}`);
-    message.success("图片上传成功");
-    onSuccess?.(response.id, `/uploads/${response.storagePath || ""}`);
-  }, [onSuccess]);
+  const handleUploadSuccess = useCallback(
+    (file: UploadFile, response: FileUploadResponse) => {
+      setUploading(false);
+      setImageId(response.id);
+      setImageUrl(`/uploads/${response.storagePath || ""}`);
+      message.success("图片上传成功");
+      onSuccess?.(response.id, `/uploads/${response.storagePath || ""}`);
+    },
+    [onSuccess]
+  );
 
-  const handleUploadError = useCallback((_file: UploadFile, error: unknown) => {
-    setUploading(false);
-    message.error("图片上传失败");
-    onError?.(error instanceof Error ? error : new Error(String(error)));
-  }, [onError]);
+  const handleUploadError = useCallback(
+    (_file: UploadFile, error: unknown) => {
+      setUploading(false);
+      message.error("图片上传失败");
+      onError?.(error instanceof Error ? error : new Error(String(error)));
+    },
+    [onError]
+  );
 
   const resetUpload = useCallback(() => {
     setFileList([]);
@@ -79,13 +80,15 @@ export function useImageUpload(options: UseImageUploadOptions = {}): UseImageUpl
     setImageUrl(fileUrl);
 
     if (fileUrl) {
-      setFileList([{
-        uid: fileId,
-        name: "平面图",
-        status: "done",
-        url: fileUrl,
-        response: { id: fileId, storagePath: fileUrl.replace("/uploads/", "") },
-      }]);
+      setFileList([
+        {
+          uid: fileId,
+          name: "平面图",
+          status: "done",
+          url: fileUrl,
+          response: { id: fileId, storagePath: fileUrl.replace("/uploads/", "") },
+        },
+      ]);
     } else {
       setFileList([]);
     }

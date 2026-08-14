@@ -73,13 +73,15 @@ function extractErrorMessage(error: unknown): string {
 
   if (error && typeof error === "object") {
     const err = error as ErrorResponse;
-    return err?.response?.data?.message
-      ?? err?.response?.data?.msg
-      ?? err?.response?.data?.error
-      ?? err?.message
-      ?? err?.msg
-      ?? err?.error
-      ?? "操作失败";
+    return (
+      err?.response?.data?.message ??
+      err?.response?.data?.msg ??
+      err?.response?.data?.error ??
+      err?.message ??
+      err?.msg ??
+      err?.error ??
+      "操作失败"
+    );
   }
 
   return "操作失败";
@@ -197,10 +199,7 @@ const DEFAULT_ERROR_MESSAGES: Record<HttpErrorType, string> = {
  * @param responseData 响应数据
  * @returns Error 对象
  */
-export function handleHttpResponseError(
-  status: number,
-  responseData?: ApiResponseData
-): Error {
+export function handleHttpResponseError(status: number, responseData?: ApiResponseData): Error {
   const errorType = getErrorTypeByStatus(status);
   const errorMessage = responseData?.message || DEFAULT_ERROR_MESSAGES[errorType];
 
@@ -230,9 +229,10 @@ export function handleHttpResponseError(
  * @returns Error 对象
  */
 export function handleNetworkError(error: unknown): Error {
-  const errorMessage = (error as { code?: string })?.code === "ECONNABORTED"
-    ? "请求超时，请检查网络连接"
-    : "网络异常，请检查网络连接";
+  const errorMessage =
+    (error as { code?: string })?.code === "ECONNABORTED"
+      ? "请求超时，请检查网络连接"
+      : "网络异常，请检查网络连接";
 
   getAppMessage().error(errorMessage);
 
@@ -294,9 +294,7 @@ async function handleUnauthorized(): Promise<void> {
  * 异步操作结果类型
  * 用于替代 try-catch 的类型安全错误处理
  */
-export type AsyncResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: Error };
+export type AsyncResult<T> = { success: true; data: T } | { success: false; error: Error };
 
 /**
  * 将未知错误转换为 Error 对象
@@ -323,9 +321,7 @@ function toError(error: unknown): Error {
  *   console.error(result.error); // error 是 Error 类型
  * }
  */
-export async function safeAsync<T>(
-  operation: () => Promise<T>
-): Promise<AsyncResult<T>> {
+export async function safeAsync<T>(operation: () => Promise<T>): Promise<AsyncResult<T>> {
   try {
     const data = await operation();
     return { success: true, data };
@@ -343,9 +339,7 @@ export async function safeAsync<T>(
  *   console.log(result.data); // 类型安全的 data
  * }
  */
-export function safeSync<T>(
-  operation: () => T
-): AsyncResult<T> {
+export function safeSync<T>(operation: () => T): AsyncResult<T> {
   try {
     const data = operation();
     return { success: true, data };

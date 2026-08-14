@@ -102,7 +102,7 @@ export interface BuildingListParams extends PageParams {
   name?: string;
   code?: string;
   status?: number;
-  orgId?: string;  // 所属机构ID，用于按部门筛选
+  orgId?: string; // 所属机构ID，用于按部门筛选
 }
 
 export const buildingApi = createCrudApi<Building>({ basePath: "/ops/building" });
@@ -114,7 +114,7 @@ export interface FloorListParams extends PageParams {
   floorNo?: string;
   name?: string;
   status?: number;
-  orgId?: string;  // 所属机构ID，用于按部门筛选
+  orgId?: string; // 所属机构ID，用于按部门筛选
 }
 
 const floorCrudApi = createCrudApi<Floor>({ basePath: "/ops/floor" });
@@ -134,7 +134,7 @@ export interface WorkstationListParams extends PageParams {
   workstationCode?: string;
   name?: string;
   status?: number;
-  orgId?: string;  // 所属机构ID，用于按部门筛选
+  orgId?: string; // 所属机构ID，用于按部门筛选
 }
 
 const workstationCrudApi = createCrudApi<WorkstationOps>({ basePath: "/ops/workstation" });
@@ -233,7 +233,7 @@ export const roomPhotoApi = {
     const formData = new FormData();
     formData.append("roomId", roomId);
     formData.append("primaryIndex", primaryIndex.toString());
-    files.forEach(file => {
+    files.forEach((file) => {
       formData.append("files", file);
     });
 
@@ -376,29 +376,30 @@ export const excelApi = {
   import: async (entityType: string, file: File) => {
     const formData = new FormData();
     formData.append("file", file);
-    return await postFormData<BaseResponse<Record<string, unknown>>>(`/ops/${entityType}/import`, formData);
+    return await postFormData<BaseResponse<Record<string, unknown>>>(
+      `/ops/${entityType}/import`,
+      formData
+    );
   },
 
   export: async (entityType: string, params: Record<string, unknown> = {}) => {
-    const response = await blobAxios.post<Blob>(
-      `/ops/${entityType}/export`,
-      params,
-      { responseType: "blob" }
-    );
+    const response = await blobAxios.post<Blob>(`/ops/${entityType}/export`, params, {
+      responseType: "blob",
+    });
 
     if (response.status < 200 || response.status >= 300) {
       throw new Error("导出失败");
     }
 
-    const filename = extractFilenameFromBlobResponse(
-      response,
-      `${entityType}_${Date.now()}.xlsx`
-    );
+    const filename = extractFilenameFromBlobResponse(response, `${entityType}_${Date.now()}.xlsx`);
     triggerBrowserDownload(response.data, filename);
   },
 
   getStatusOptions: async (entityType: string) => {
-    return await post<Array<{ label: string; value: number }>>(`/ops/${entityType}/status-options`, {});
+    return await post<Array<{ label: string; value: number }>>(
+      `/ops/${entityType}/status-options`,
+      {}
+    );
   },
 };
 
@@ -412,10 +413,7 @@ export const excelApi = {
 // 无需新写 fetch/blob/URL.createObjectURL。
 export const deptApi = {
   exportMapping: async () => {
-    await downloadFile(
-      "/ops/workstation/dept-mapping-template",
-      `dept_mapping_${Date.now()}.xlsx`
-    );
+    await downloadFile("/ops/workstation/dept-mapping-template", `dept_mapping_${Date.now()}.xlsx`);
   },
 };
 
@@ -662,7 +660,10 @@ export const assetApi = {
 
   // 资产统计(专用 COUNT 端点,真实 status/nbf_status 计数)
   statistics: async () => {
-    const res = await post<{ total: number; normal: number; stopped: number; nbf: number }>("/ops/asset/statistics", {});
+    const res = await post<{ total: number; normal: number; stopped: number; nbf: number }>(
+      "/ops/asset/statistics",
+      {}
+    );
     return res.data;
   },
   // Excel导入导出通过 SetupExcelRouter 注册在 /ops/asset 路由组下：
@@ -682,11 +683,9 @@ export const assetApi = {
     },
 
     export: async (params: AssetListParams & Record<string, unknown>) => {
-      const response = await blobAxios.post<Blob>(
-        "/ops/asset/export",
-        params,
-        { responseType: "blob" }
-      );
+      const response = await blobAxios.post<Blob>("/ops/asset/export", params, {
+        responseType: "blob",
+      });
 
       if (response.status < 200 || response.status >= 300) {
         throw new Error("导出失败");
@@ -709,10 +708,9 @@ export const componentApi = {
   // 列出某父交换机下的所有从属组件(板卡/引擎/电源/风扇/光模块)。
   // 返回 Asset[] 数组(后端已加 component_type IS NOT NULL 过滤)。
   list: async (parentAssetId: string) => {
-    const res = await get<{ list: Asset[]; total: number }>(
-      "/ops/asset/components",
-      { parentAssetId }
-    );
+    const res = await get<{ list: Asset[]; total: number }>("/ops/asset/components", {
+      parentAssetId,
+    });
     return res;
   },
 };

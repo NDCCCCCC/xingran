@@ -20,10 +20,10 @@ export function useAPIConfig(): UseAPIConfigResult {
   const loadAPIConfigs = useCallback(async () => {
     setLoadingAPIConfigs(true);
     try {
-      const result = await getAPINotificationConfigList({
+      const result = (await getAPINotificationConfigList({
         page: 1,
         pageSize: 100,
-      }) as { data: { list: APINotificationConfig[] } };
+      })) as { data: { list: APINotificationConfig[] } };
       // 只显示状态为正常(0)的配置
       setApiConfigs(result.data.list.filter((c: APINotificationConfig) => c.status === 0));
     } catch (error) {

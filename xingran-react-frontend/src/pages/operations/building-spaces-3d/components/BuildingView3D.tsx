@@ -187,10 +187,7 @@ const BuildingView3D: React.FC = () => {
 
   const statusColor = selectedBuilding.status === 0 ? "success" : "default";
   const statusText = selectedBuilding.status === 0 ? "正常" : "停用";
-  const totalWorkstations = floors.reduce(
-    (sum, f) => sum + (f.workstationCount || 0),
-    0
-  );
+  const totalWorkstations = floors.reduce((sum, f) => sum + (f.workstationCount || 0), 0);
 
   return (
     <div style={styles.container}>
@@ -242,9 +239,7 @@ interface NoBuildingSelectedAlertProps {
   onBackToMap: () => void;
 }
 
-const NoBuildingSelectedAlert: React.FC<NoBuildingSelectedAlertProps> = ({
-  onBackToMap,
-}) => (
+const NoBuildingSelectedAlert: React.FC<NoBuildingSelectedAlertProps> = ({ onBackToMap }) => (
   <div style={styles.centerContainer}>
     <Alert
       message="未选择楼宇"
@@ -346,11 +341,12 @@ const BuildingPanel: React.FC<BuildingPanelProps> = ({
               placeholder="选择楼宇"
               value={currentBuilding?.id}
               onChange={onBuildingChange}
-              options={buildings.map((b) =>    ({
+              options={buildings.map((b) => ({
                 label: b.name,
                 value: b.id,
               }))}
-             onSearch={() => {}}/>
+              onSearch={() => {}}
+            />
           </>
         )}
       </Space>
@@ -373,19 +369,13 @@ interface FloorPlanPanelProps {
   loading: boolean;
 }
 
-const FloorPlanPanel: React.FC<FloorPlanPanelProps> = ({
-  floor,
-  workstations,
-  loading,
-}) => (
+const FloorPlanPanel: React.FC<FloorPlanPanelProps> = ({ floor, workstations, loading }) => (
   <div style={styles.floorPlanPanel}>
     {/* 平面图标题 */}
     <div style={styles.panelHeader}>
       <Space>
         <DesktopOutlined style={{ color: "var(--theme-text-accent, #1890ff)" }} />
-        <span style={styles.panelTitle}>
-          {floor.name || floor.floorNo} - 工位平面图
-        </span>
+        <span style={styles.panelTitle}>{floor.name || floor.floorNo} - 工位平面图</span>
         <Tag color="blue">{workstations.length} 个工位</Tag>
       </Space>
     </div>
@@ -410,9 +400,7 @@ const LoadingView: React.FC<{ message?: string }> = ({ message }) => (
     <Spin size="large">
       <div style={{ minHeight: 120 }} />
     </Spin>
-    {message && (
-      <div style={{ marginTop: 8, color: "rgba(0, 0, 0, 0.45)" }}>{message}</div>
-    )}
+    {message && <div style={{ marginTop: 8, color: "rgba(0, 0, 0, 0.45)" }}>{message}</div>}
   </div>
 );
 

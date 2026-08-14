@@ -7,13 +7,23 @@
  */
 
 import { get } from "@/lib/api";
-import { hexToBase64, base64ToHex, arrayBufferToHex, hexToArrayBuffer, generateRandomHex } from "./encoding";
+import {
+  hexToBase64,
+  base64ToHex,
+  arrayBufferToHex,
+  hexToArrayBuffer,
+  generateRandomHex,
+} from "./encoding";
 import { decryptWithSM2, fetchPublicKey } from "./sm2";
 
 // SM4 模块接口定义
 interface SM4Module {
-	encrypt: (msg: string, key: string, options?: { mode: "cbc" | "ecb"; iv?: string }) => string;
-	decrypt: (cipherHex: string, key: string, options?: { mode: "cbc" | "ecb"; iv?: string }) => string;
+  encrypt: (msg: string, key: string, options?: { mode: "cbc" | "ecb"; iv?: string }) => string;
+  decrypt: (
+    cipherHex: string,
+    key: string,
+    options?: { mode: "cbc" | "ecb"; iv?: string }
+  ) => string;
 }
 
 // sm4 模块缓存
@@ -72,7 +82,11 @@ export function generateSM4KeyBytes(): string {
  * @param ivHex 初始化向量（十六进制，32字符）
  * @returns 密文（十六进制字符串）
  */
-export async function encryptSM4CBC(plaintext: string, keyHex: string, ivHex: string): Promise<string> {
+export async function encryptSM4CBC(
+  plaintext: string,
+  keyHex: string,
+  ivHex: string
+): Promise<string> {
   if (!plaintext) {
     return "";
   }
@@ -92,7 +106,11 @@ export async function encryptSM4CBC(plaintext: string, keyHex: string, ivHex: st
  * @param ivHex 初始化向量（十六进制，32字符）
  * @returns 明文字符串
  */
-export async function decryptSM4CBC(cipherHex: string, keyHex: string, ivHex: string): Promise<string> {
+export async function decryptSM4CBC(
+  cipherHex: string,
+  keyHex: string,
+  ivHex: string
+): Promise<string> {
   if (!cipherHex) {
     return "";
   }
@@ -113,7 +131,11 @@ export async function decryptSM4CBC(cipherHex: string, keyHex: string, ivHex: st
  * @param ivHex 初始化向量（十六进制，32字符）
  * @returns 加密后的密文（十六进制字符串）
  */
-export async function encryptRequestBody(data: Record<string, unknown>, keyHex: string, ivHex: string): Promise<string> {
+export async function encryptRequestBody(
+  data: Record<string, unknown>,
+  keyHex: string,
+  ivHex: string
+): Promise<string> {
   const jsonStr = JSON.stringify(data);
   return encryptSM4CBC(jsonStr, keyHex, ivHex);
 }
@@ -127,7 +149,11 @@ export async function encryptRequestBody(data: Record<string, unknown>, keyHex: 
  * @param ivHex 初始化向量（十六进制，32字符）
  * @returns 解密后的数据对象
  */
-export async function decryptRequestBody(cipherHex: string, keyHex: string, ivHex: string): Promise<Record<string, unknown>> {
+export async function decryptRequestBody(
+  cipherHex: string,
+  keyHex: string,
+  ivHex: string
+): Promise<Record<string, unknown>> {
   const jsonStr = await decryptSM4CBC(cipherHex, keyHex, ivHex);
   return JSON.parse(jsonStr);
 }
@@ -216,4 +242,3 @@ export async function fetchSM4KeyForPassword(): Promise<string> {
 
 // 重新导出编码转换函数，保持向后兼容
 export { hexToBase64, base64ToHex, arrayBufferToHex, hexToArrayBuffer };
-

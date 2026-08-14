@@ -41,23 +41,18 @@ import {
   Switch,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import type {
-  TablePaginationConfig,
-  FilterValue,
-  SorterResult,
-} from "antd/es/table/interface";
-import {
-  SearchOutlined,
-  ReloadOutlined,
-  LinkOutlined,
-  CheckOutlined,
-} from "@ant-design/icons";
+import type { TablePaginationConfig, FilterValue, SorterResult } from "antd/es/table/interface";
+import { SearchOutlined, ReloadOutlined, LinkOutlined, CheckOutlined } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { useExceptionList } from "@/hooks/useExceptionList";
 import { useDict } from "@/hooks/useDict";
 import { useServerSort, resolveSorter } from "@/hooks/useServerSort";
 import { createSorterMeta, createSorter } from "@/utils/tableHelpers";
-import { reconciliationApi, type ExceptionListItem, type ExceptionListParams } from "@/lib/assetApi";
+import {
+  reconciliationApi,
+  type ExceptionListItem,
+  type ExceptionListParams,
+} from "@/lib/assetApi";
 import { queryKeys } from "@/lib/queryKeys";
 import { useMenuStore } from "@/store/menuStore";
 
@@ -304,7 +299,10 @@ const Exceptions = () => {
         render: (_: unknown, record: ExceptionListItem) => {
           if (!canResolve) return null;
           // resolvedAt 字段在 list 返回里通常为 null 或时间戳;空/null 视为未解决
-          const resolved = record.resolvedAt !== null && record.resolvedAt !== undefined && record.resolvedAt !== "";
+          const resolved =
+            record.resolvedAt !== null &&
+            record.resolvedAt !== undefined &&
+            record.resolvedAt !== "";
           return (
             <Button
               type="link"
@@ -360,41 +358,41 @@ const Exceptions = () => {
   );
 
   // 提交"标记已解决" Modal
-//
-// 流程:
-//   1. validate Form(resolutionNote 可选,但提供就 trim 校验)
-//   2. 调 reconciliationApi.exceptionResolve(id, { resolutionNote })
-//   3. 成功后 message.success + queryClient.invalidateQueries(reconciliation)
-//   4. 关闭 Modal,清空状态
-//   5. 失败 message.error + 保留 Modal
-//
-// 后端 handler 调 operlog.Record(OperTypeUpdate) → 写 sys_oper_log(WORKORDER-02)
-const handleResolveSubmit = useCallback(async () => {
-  if (!resolveModal.exceptionId) return;
-  try {
-    const values = await resolveForm.validateFields();
-    setResolveModal((prev) => ({ ...prev, submitting: true }));
-    await reconciliationApi.exceptionResolve(resolveModal.exceptionId, {
-      resolutionNote: values.resolutionNote?.trim() || undefined,
-    });
-    message.success("已标记为已解决");
-    // 触发 dashboard + 异常列表 query 重新拉取(7d 静默期也自动生效)
-    queryClient.invalidateQueries({ queryKey: queryKeys.reconciliation.all });
-    setResolveModal({ open: false, exceptionId: null, note: "", submitting: false });
-    resolveForm.resetFields();
-  } catch (err) {
-    // 后端返回 400 "该异常已标记为已解决" 时,同步 invalidate 让 UI 刷新
-    const errMsg = (err as Error)?.message ?? "标记失败";
-    if (errMsg.includes("已解决")) {
+  //
+  // 流程:
+  //   1. validate Form(resolutionNote 可选,但提供就 trim 校验)
+  //   2. 调 reconciliationApi.exceptionResolve(id, { resolutionNote })
+  //   3. 成功后 message.success + queryClient.invalidateQueries(reconciliation)
+  //   4. 关闭 Modal,清空状态
+  //   5. 失败 message.error + 保留 Modal
+  //
+  // 后端 handler 调 operlog.Record(OperTypeUpdate) → 写 sys_oper_log(WORKORDER-02)
+  const handleResolveSubmit = useCallback(async () => {
+    if (!resolveModal.exceptionId) return;
+    try {
+      const values = await resolveForm.validateFields();
+      setResolveModal((prev) => ({ ...prev, submitting: true }));
+      await reconciliationApi.exceptionResolve(resolveModal.exceptionId, {
+        resolutionNote: values.resolutionNote?.trim() || undefined,
+      });
+      message.success("已标记为已解决");
+      // 触发 dashboard + 异常列表 query 重新拉取(7d 静默期也自动生效)
       queryClient.invalidateQueries({ queryKey: queryKeys.reconciliation.all });
+      setResolveModal({ open: false, exceptionId: null, note: "", submitting: false });
+      resolveForm.resetFields();
+    } catch (err) {
+      // 后端返回 400 "该异常已标记为已解决" 时,同步 invalidate 让 UI 刷新
+      const errMsg = (err as Error)?.message ?? "标记失败";
+      if (errMsg.includes("已解决")) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.reconciliation.all });
+      }
+      message.error(errMsg);
+      setResolveModal((prev) => ({ ...prev, submitting: false }));
     }
-    message.error(errMsg);
-    setResolveModal((prev) => ({ ...prev, submitting: false }));
-  }
-}, [resolveModal.exceptionId, resolveForm, message, queryClient]);
+  }, [resolveModal.exceptionId, resolveForm, message, queryClient]);
 
-// Table.onChange 集成分页 + 排序(per useTableManager 模式)
-const onTableChange = useCallback(
+  // Table.onChange 集成分页 + 排序(per useTableManager 模式)
+  const onTableChange = useCallback(
     (
       pagination: TablePaginationConfig,
       _filters: Record<string, FilterValue | null>,
@@ -406,19 +404,14 @@ const onTableChange = useCallback(
       setCurrent(newPage);
       setPageSize(newSize);
       // 同步新排序到下一次 query
-      const { orderByColumn: newOrderBy, isAsc: newIsAsc } = resolveSorter(
-        sorter,
-        [
-          createSorterMeta<ExceptionListItem>("detectedAt", "date"),
-          createSorterMeta<ExceptionListItem>("conflictType"),
-          createSorterMeta<ExceptionListItem>("severity"),
-          createSorterMeta<ExceptionListItem>("assetCode"),
-        ]
-      );
+      const { orderByColumn: newOrderBy, isAsc: newIsAsc } = resolveSorter(sorter, [
+        createSorterMeta<ExceptionListItem>("detectedAt", "date"),
+        createSorterMeta<ExceptionListItem>("conflictType"),
+        createSorterMeta<ExceptionListItem>("severity"),
+        createSorterMeta<ExceptionListItem>("assetCode"),
+      ]);
       if (newOrderBy) {
-        message.success(
-          `已按 ${newOrderBy} ${newIsAsc ? "升序" : "降序"} 排序`
-        );
+        message.success(`已按 ${newOrderBy} ${newIsAsc ? "升序" : "降序"} 排序`);
       } else {
         message.info("已清空排序");
       }
@@ -474,10 +467,7 @@ const onTableChange = useCallback(
             <Input placeholder="请输入资产编号" allowClear style={{ width: 200 }} />
           </Form.Item>
           <Form.Item name="detectedAt" label="检测时间">
-            <RangePicker
-              style={{ width: 280 }}
-              placeholder={["开始日期", "结束日期"]}
-            />
+            <RangePicker style={{ width: 280 }} placeholder={["开始日期", "结束日期"]} />
           </Form.Item>
           {/* R3 / D-R3-A1-01 — 显示已静默(silence)记录开关,默认 false 隐藏 */}
           <Form.Item name="showSilenced" label="显示已静默" valuePropName="checked">

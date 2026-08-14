@@ -42,8 +42,8 @@ export type ExecutionType = "once" | "recurring";
  * 周期性配置
  */
 export interface RecurrenceConfig {
-  cronExpression: string;  // Cron 表达式
-  endDate?: string;        // 结束日期（可选）
+  cronExpression: string; // Cron 表达式
+  endDate?: string; // 结束日期（可选）
 }
 
 /**
@@ -91,21 +91,21 @@ export interface Notice {
   noticeTitle: string;
   noticeType: NoticeType;
   noticeContent: string;
-  status: 0 | 1;           // 0:正常 1:关闭
+  status: 0 | 1; // 0:正常 1:关闭
   priority: NoticePriority;
   publishTime?: string;
   publishStatus: PublishStatus;
   targetType: TargetType;
   createdByName?: string;
   isMarkdown: boolean;
-  endDate?: string;       // 周期性通知结束时间
+  endDate?: string; // 周期性通知结束时间
   createdAt: string;
   updatedAt: string;
   // 关联数据
   targets?: NoticeTarget[];
   reads?: NoticeRead[];
   attachments?: NoticeAttachment[];
-  channels?: NoticeChannelRequest[];  // 渠道配置
+  channels?: NoticeChannelRequest[]; // 渠道配置
   // 用户端扩展字段
   isRead?: boolean;
   readAt?: string;
@@ -195,7 +195,8 @@ export interface UserNoticeListParams {
 /**
  * WebSocket 消息类型
  */
-export type WebSocketMessageType = "new_notice" | "ping" | "pong" | "rpa_progress" | "rpa_completed" | "rpa_failed";
+export type WebSocketMessageType =
+  "new_notice" | "ping" | "pong" | "rpa_progress" | "rpa_completed" | "rpa_failed";
 
 /**
  * WebSocket 通知消息
@@ -248,13 +249,13 @@ export interface NoticeCenterState {
 export const PRIORITY_LABELS: Record<NoticePriority, string> = {
   0: "普通",
   1: "重要",
-  2: "紧急"
+  2: "紧急",
 };
 
 export const PRIORITY_COLORS: Record<NoticePriority, string> = {
   0: "default",
   1: "warning",
-  2: "error"
+  2: "error",
 };
 
 /**
@@ -262,12 +263,12 @@ export const PRIORITY_COLORS: Record<NoticePriority, string> = {
  */
 export const NOTICE_TYPE_LABELS: Record<NoticeType, string> = {
   "1": "公告",
-  "2": "警告"
+  "2": "警告",
 };
 
 export const NOTICE_TYPE_COLORS: Record<NoticeType, string> = {
   "1": "blue",
-  "2": "orange"
+  "2": "orange",
 };
 
 /**
@@ -277,14 +278,14 @@ export const PUBLISH_STATUS_LABELS: Record<PublishStatus, string> = {
   0: "草稿",
   1: "已发布",
   2: "定时发布中",
-  3: "已撤回"
+  3: "已撤回",
 };
 
 export const PUBLISH_STATUS_COLORS: Record<PublishStatus, string> = {
   0: "default",
   1: "success",
   2: "processing",
-  3: "warning"
+  3: "warning",
 };
 
 /**
@@ -294,7 +295,7 @@ export const TARGET_TYPE_LABELS: Record<TargetType, string> = {
   0: "全部用户",
   1: "指定部门",
   2: "指定角色",
-  3: "指定用户"
+  3: "指定用户",
 };
 
 /**

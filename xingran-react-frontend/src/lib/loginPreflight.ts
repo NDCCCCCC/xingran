@@ -4,12 +4,10 @@ import type { CaptchaEnabled } from "@/types/captcha";
 import { clearPublicKeyCache, fetchPublicKey } from "@/utils/sm2";
 
 const PREFLIGHT_TIMEOUT_MS = 5000;
-const PREFLIGHT_FRIENDLY_ERROR =
-  "登录安全配置已过期，自动更新失败，请检查网络后重试";
+const PREFLIGHT_FRIENDLY_ERROR = "登录安全配置已过期，自动更新失败，请检查网络后重试";
 
 export type LoginPreflightResult =
-  | { ok: true; captchaEnabled: CaptchaEnabled }
-  | { ok: false; friendlyMessage: string };
+  { ok: true; captchaEnabled: CaptchaEnabled } | { ok: false; friendlyMessage: string };
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -40,12 +38,11 @@ async function refreshPublicKey(): Promise<void> {
  * 三项请求互不依赖，并发执行以保证总等待时间不超过 5 秒。
  */
 export async function submitLoginPreflight(): Promise<LoginPreflightResult> {
-  const [encryptionResult, publicKeyResult, captchaResult] =
-    await Promise.allSettled([
-      withTimeout(refreshEncryptionConfig(), PREFLIGHT_TIMEOUT_MS),
-      withTimeout(refreshPublicKey(), PREFLIGHT_TIMEOUT_MS),
-      withTimeout(getCaptchaConfig(), PREFLIGHT_TIMEOUT_MS),
-    ]);
+  const [encryptionResult, publicKeyResult, captchaResult] = await Promise.allSettled([
+    withTimeout(refreshEncryptionConfig(), PREFLIGHT_TIMEOUT_MS),
+    withTimeout(refreshPublicKey(), PREFLIGHT_TIMEOUT_MS),
+    withTimeout(getCaptchaConfig(), PREFLIGHT_TIMEOUT_MS),
+  ]);
 
   const encryptionFailed =
     encryptionResult.status === "rejected" || encryptionResult.value !== true;

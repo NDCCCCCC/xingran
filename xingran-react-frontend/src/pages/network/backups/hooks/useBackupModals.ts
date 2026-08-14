@@ -33,9 +33,7 @@ interface UseBackupModalsReturn {
   handleRestore: () => Promise<void>;
 }
 
-export function useBackupModals(
-  options: UseBackupModalsOptions
-): UseBackupModalsReturn {
+export function useBackupModals(options: UseBackupModalsOptions): UseBackupModalsReturn {
   const { onLoad } = options;
 
   const [backupModalVisible, setBackupModalVisible] = useState(false);
@@ -104,24 +102,27 @@ export function useBackupModals(
   }, []);
 
   // 创建备份
-  const handleBackup = useCallback(async (form: FormInstance<unknown>) => {
-    try {
-      const values = await form.validateFields() as Record<string, unknown>;
-      // 调用批量备份端点，添加 backupType 字段
-      await post("/network/backups/batch", {
-        deviceIds: values.deviceIds,
-        backupType: "manual",
-        changeReason: values.changeReason,
-      });
-      closeBackupModal(form);
-      onLoad();
-    } catch (error: unknown) {
-      if ((error as { errorFields?: unknown }).errorFields) {
-        return;
+  const handleBackup = useCallback(
+    async (form: FormInstance<unknown>) => {
+      try {
+        const values = (await form.validateFields()) as Record<string, unknown>;
+        // 调用批量备份端点，添加 backupType 字段
+        await post("/network/backups/batch", {
+          deviceIds: values.deviceIds,
+          backupType: "manual",
+          changeReason: values.changeReason,
+        });
+        closeBackupModal(form);
+        onLoad();
+      } catch (error: unknown) {
+        if ((error as { errorFields?: unknown }).errorFields) {
+          return;
+        }
+        console.error("创建备份失败:", (error as Error).message);
       }
-      console.error("创建备份失败:", (error as Error).message);
-    }
-  }, [closeBackupModal, onLoad]);
+    },
+    [closeBackupModal, onLoad]
+  );
 
   // 恢复备份
   const handleRestore = useCallback(async () => {

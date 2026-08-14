@@ -5,11 +5,25 @@
 
 import { useState, useCallback } from "react";
 import {
-  App, Modal, Form, Input, Button, Steps, Card, Space, Alert, Spin, Tag,
-  Divider, Typography,
+  App,
+  Modal,
+  Form,
+  Input,
+  Button,
+  Steps,
+  Card,
+  Space,
+  Alert,
+  Spin,
+  Tag,
+  Divider,
+  Typography,
 } from "antd";
 import {
-  RobotOutlined, ThunderboltOutlined, CheckOutlined, CloseOutlined,
+  RobotOutlined,
+  ThunderboltOutlined,
+  CheckOutlined,
+  CloseOutlined,
   LoadingOutlined,
 } from "@ant-design/icons";
 import type { Action } from "@/types/rpa";
@@ -86,7 +100,7 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
       // setGeneratedActions(result.data.script.actions);
 
       // 模拟 API 调用
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 1500));
       setGeneratedActions(mockGeneratedActions);
       message.success("AI 生成脚本成功！");
     } catch (error) {

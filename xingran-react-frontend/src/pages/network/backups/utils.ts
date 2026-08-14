@@ -15,7 +15,9 @@ export function computeDiff(content1: string, content2: string): DiffResult {
   // 使用动态规划计算最长公共子序列
   const m = lines1.length;
   const n = lines2.length;
-  const dp: number[][] = Array(m + 1).fill(0).map(() => Array(n + 1).fill(0));
+  const dp: number[][] = Array(m + 1)
+    .fill(0)
+    .map(() => Array(n + 1).fill(0));
 
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
@@ -30,7 +32,8 @@ export function computeDiff(content1: string, content2: string): DiffResult {
   // 回溯生成差异
   const leftLines: DiffLine[] = [];
   const rightLines: DiffLine[] = [];
-  let i = m, j = n;
+  let i = m,
+    j = n;
 
   while (i > 0 || j > 0) {
     if (i > 0 && j > 0 && lines1[i - 1] === lines2[j - 1]) {
@@ -69,7 +72,7 @@ export function groupBackupsByDevice(backups: ConfigBackup[]): DeviceBackupGroup
   const groupMap = new Map<string, ConfigBackup[]>();
 
   // 按设备ID分组
-  backups.forEach(backup => {
+  backups.forEach((backup) => {
     if (!groupMap.has(backup.deviceId)) {
       groupMap.set(backup.deviceId, []);
     }
@@ -83,8 +86,8 @@ export function groupBackupsByDevice(backups: ConfigBackup[]): DeviceBackupGroup
     deviceBackups.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     const latestBackup = deviceBackups[0];
-    const autoCount = deviceBackups.filter(b => b.backupType === "auto").length;
-    const manualCount = deviceBackups.filter(b => b.backupType === "manual").length;
+    const autoCount = deviceBackups.filter((b) => b.backupType === "auto").length;
+    const manualCount = deviceBackups.filter((b) => b.backupType === "manual").length;
 
     groups.push({
       deviceId,

@@ -3,11 +3,7 @@
  * 周期性工单模板常量定义
  */
 
-import {
-  PeriodicAssignType,
-  WorkOrderPriority,
-  WorkOrderType,
-} from "@/lib/workorderApi";
+import { PeriodicAssignType, WorkOrderPriority, WorkOrderType } from "@/lib/workorderApi";
 
 /** 优先级配置 */
 export const PRIORITY_CONFIG = {

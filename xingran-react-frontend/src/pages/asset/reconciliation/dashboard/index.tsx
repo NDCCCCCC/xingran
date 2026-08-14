@@ -53,14 +53,8 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { message } = App.useApp();
   const queryClient = useQueryClient();
-  const {
-    summary,
-    byConflictType,
-    bySeverity,
-    healthTrend,
-    isLoading,
-    isError,
-  } = useDashboard(DEFAULT_WINDOW_DAYS);
+  const { summary, byConflictType, bySeverity, healthTrend, isLoading, isError } =
+    useDashboard(DEFAULT_WINDOW_DAYS);
 
   // Phase 43 R2: 订阅 critical 异常/工单 WS 事件
   // 收到事件后 hook 自动 queryClient.invalidateQueries,这里 onCriticalEvent
@@ -314,9 +308,7 @@ const Dashboard = () => {
               <div className="flex items-center gap-3">
                 <TrophyOutlined style={{ fontSize: 32, color: "#722ed1" }} />
                 <div>
-                  <div className="text-2xl font-bold">
-                    {summary.data?.topConflictType || "—"}
-                  </div>
+                  <div className="text-2xl font-bold">{summary.data?.topConflictType || "—"}</div>
                   <div className="text-gray-500">
                     Top1 冲突类型 ({summary.data?.topConflictCount ?? 0})
                   </div>
@@ -328,15 +320,21 @@ const Dashboard = () => {
       </Spin>
 
       {/* Phase 44 R3 / Plan 44-02 Task 3 — 降噪效果卡片(SC 8 ≥60% 降噪量化验证)
-          * 前置:运维必须先在 /assets/exception-rules 点"记录当前为基线"按钮记录 R2 末期基线
-          * 无 baseline 时 compare 返回 400 → 显示 Alert 引导(BLOCKER-3 可观察条件)
-          * 有 baseline 时显示 3 个下降% Statistic, ≥60% 绿色达标 + Tag, <60% 橙色未达标 */}
+       * 前置:运维必须先在 /assets/exception-rules 点"记录当前为基线"按钮记录 R2 末期基线
+       * 无 baseline 时 compare 返回 400 → 显示 Alert 引导(BLOCKER-3 可观察条件)
+       * 有 baseline 时显示 3 个下降% Statistic, ≥60% 绿色达标 + Tag, <60% 橙色未达标 */}
       <Card
         title="降噪效果(SC 8 ≥60% 降噪验证)"
         style={{ marginTop: 16 }}
         extra={
           reductions && (
-            <Tag color={reductions.excPct >= 60 && reductions.woPct >= 60 && reductions.critPct >= 60 ? "success" : "warning"}>
+            <Tag
+              color={
+                reductions.excPct >= 60 && reductions.woPct >= 60 && reductions.critPct >= 60
+                  ? "success"
+                  : "warning"
+              }
+            >
               {reductions.excPct >= 60 && reductions.woPct >= 60 && reductions.critPct >= 60
                 ? "达标"
                 : "未达标"}
@@ -354,9 +352,8 @@ const Dashboard = () => {
             message="请先到例外规则管理页记录基线"
             description={
               <>
-                R3 部署前 + R2 数据保留期内必须调用 Snapshot 记录 R2 末期基线,否则 SC 8
-                ≥60% 降噪不可量化验证。前往{" "}
-                <Link to="/assets/exception-rules">例外规则管理</Link>{" "}
+                R3 部署前 + R2 数据保留期内必须调用 Snapshot 记录 R2 末期基线,否则 SC 8 ≥60%
+                降噪不可量化验证。前往 <Link to="/assets/exception-rules">例外规则管理</Link>{" "}
                 点击"记录当前为基线"按钮。
               </>
             }
@@ -372,8 +369,8 @@ const Dashboard = () => {
                 valueStyle={{ color: reductions.excPct >= 60 ? "#52c41a" : "#faad14" }}
               />
               <small style={{ color: "var(--theme-text-secondary, #888)" }}>
-                baseline {baselineCompareQuery.data?.baseline?.total_exceptions ?? 0} →{" "}
-                current {baselineCompareQuery.data?.current?.total_exceptions ?? 0}
+                baseline {baselineCompareQuery.data?.baseline?.total_exceptions ?? 0} → current{" "}
+                {baselineCompareQuery.data?.current?.total_exceptions ?? 0}
               </small>
             </Col>
             <Col xs={24} sm={8}>
@@ -385,8 +382,8 @@ const Dashboard = () => {
                 valueStyle={{ color: reductions.woPct >= 60 ? "#52c41a" : "#faad14" }}
               />
               <small style={{ color: "var(--theme-text-secondary, #888)" }}>
-                baseline {baselineCompareQuery.data?.baseline?.total_workorders ?? 0} →{" "}
-                current {baselineCompareQuery.data?.current?.total_workorders ?? 0}
+                baseline {baselineCompareQuery.data?.baseline?.total_workorders ?? 0} → current{" "}
+                {baselineCompareQuery.data?.current?.total_workorders ?? 0}
               </small>
             </Col>
             <Col xs={24} sm={8}>
@@ -398,8 +395,8 @@ const Dashboard = () => {
                 valueStyle={{ color: reductions.critPct >= 60 ? "#52c41a" : "#faad14" }}
               />
               <small style={{ color: "var(--theme-text-secondary, #888)" }}>
-                baseline {baselineCompareQuery.data?.baseline?.critical_exceptions ?? 0} →{" "}
-                current {baselineCompareQuery.data?.current?.critical_exceptions ?? 0}
+                baseline {baselineCompareQuery.data?.baseline?.critical_exceptions ?? 0} → current{" "}
+                {baselineCompareQuery.data?.current?.critical_exceptions ?? 0}
               </small>
             </Col>
           </Row>

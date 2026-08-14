@@ -23,9 +23,7 @@ const FloorCard3D: React.FC<FloorCard3DProps> = ({ floor, index, isSelected, onC
     >
       <div className={styles.floorCardNumber}>{floor.floorNo}</div>
       <div className={styles.floorCardName}>{floor.name}</div>
-      <div className={styles.floorCardStats}>
-        {floor.workstationCount ?? 0} 个工位
-      </div>
+      <div className={styles.floorCardStats}>{floor.workstationCount ?? 0} 个工位</div>
     </div>
   );
 };

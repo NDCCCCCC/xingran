@@ -63,22 +63,10 @@ const createLazyRoute = (route: MenuRouteConfig) => {
   );
 
   if (route.path === DASHBOARD_PATH) {
-    return (
-      <Route
-        key={route.path}
-        path={`${DASHBOARD_PATH}/*`}
-        element={element}
-      />
-    );
+    return <Route key={route.path} path={`${DASHBOARD_PATH}/*`} element={element} />;
   }
 
-  return (
-    <Route
-      key={route.path}
-      path={route.path}
-      element={element}
-    />
-  );
+  return <Route key={route.path} path={route.path} element={element} />;
 };
 
 function UploadsFallback() {
@@ -89,15 +77,17 @@ function UploadsFallback() {
 
 function InitializingFallback() {
   return (
-    <div style={{
-      display: "flex",
-      flexDirection: "column",
-      justifyContent: "center",
-      alignItems: "center",
-      height: "100vh",
-      fontSize: "16px",
-      color: "var(--theme-text-tertiary, #999)"
-    }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+        fontSize: "16px",
+        color: "var(--theme-text-tertiary, #999)",
+      }}
+    >
       <Spin size="large" />
       <div style={{ marginTop: 16 }}>加载中...</div>
     </div>
@@ -149,9 +139,10 @@ export function DynamicRoutes() {
     }
 
     const cachedRoutes = cachedRoutesRef.current;
-    const configs = cachedRoutes && cachedMenusCountRef.current === allMenus.length
-      ? cachedRoutes
-      : RouteGenerator.generate(allMenus);
+    const configs =
+      cachedRoutes && cachedMenusCountRef.current === allMenus.length
+        ? cachedRoutes
+        : RouteGenerator.generate(allMenus);
 
     if (!cachedRoutes || cachedMenusCountRef.current !== allMenus.length) {
       cachedRoutesRef.current = configs;
@@ -205,14 +196,15 @@ export function DynamicRoutes() {
       <Route path="/login" element={<Navigate to="/" replace />} />
       <Route
         path="/"
-        element={
-          <Navigate
-            to={lastPath && lastPath !== "/" ? lastPath : "/dashboard"}
-            replace
-          />
-        }
+        element={<Navigate to={lastPath && lastPath !== "/" ? lastPath : "/dashboard"} replace />}
       />
-      <Route element={<Layout><Outlet /></Layout>}>
+      <Route
+        element={
+          <Layout>
+            <Outlet />
+          </Layout>
+        }
+      >
         {routeElements}
         {/* 通知公告详情: 静态子路由,详情页无对应 sys_menu 节点,无法走 RouteGenerator */}
         <Route path="system/notice/:id" element={<AdminNoticeDetailPage />} />

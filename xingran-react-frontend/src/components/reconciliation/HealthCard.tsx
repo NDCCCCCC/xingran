@@ -31,7 +31,6 @@ const HealthCardInner: React.FC<HealthCardProps> = ({ workstationId, onApplyExce
   const visible = useReconciliationVisibility();
   const { data, isLoading, isError, refetch } = useWorkstationHealth(workstationId);
 
-  
   // 静默降级(D-A1-03)
   if (!visible) {
     return null;

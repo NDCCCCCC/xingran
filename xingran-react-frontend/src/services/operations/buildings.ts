@@ -7,23 +7,19 @@ export const buildingApi = {
   list: (params: PageParams) => post<PageData<Building>>("/ops/buildings/list", params),
 
   // 创建
-  create: (data: Omit<Building, "id" | "createdAt" | "updatedAt">) =>
-    post("/ops/buildings", data),
+  create: (data: Omit<Building, "id" | "createdAt" | "updatedAt">) => post("/ops/buildings", data),
 
   // 更新
-  update: (id: string, data: Partial<Building>) =>
-    post(`/ops/buildings/${id}/update`, data),
+  update: (id: string, data: Partial<Building>) => post(`/ops/buildings/${id}/update`, data),
 
   // 删除
   delete: (id: string) => post(`/ops/buildings/${id}/delete`),
 
   // 批量删除
-  batchDelete: (ids: string[]) =>
-    post("/ops/buildings/batch", { ids, action: "delete" }),
+  batchDelete: (ids: string[]) => post("/ops/buildings/batch", { ids, action: "delete" }),
 
   // 导出
-  export: (params: PageParams) =>
-    post("/ops/buildings/export", params),
+  export: (params: PageParams) => post("/ops/buildings/export", params),
 
   // 导入
   import: (file: File) => {
@@ -33,6 +29,5 @@ export const buildingApi = {
   },
 
   // 下载模板
-  downloadTemplate: () =>
-    post("/ops/buildings/template", {}),
+  downloadTemplate: () => post("/ops/buildings/template", {}),
 };

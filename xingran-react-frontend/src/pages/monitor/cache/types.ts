@@ -8,7 +8,7 @@ export interface CacheInfo {
   ttl: number;
   size: number;
   type: string;
-  location: string;  // "l1", "l2", "both"
+  location: string; // "l1", "l2", "both"
   createdAt: string;
   updatedAt: string;
 }
@@ -47,5 +47,5 @@ export interface CacheMonitor {
 export interface CacheSearchForm {
   key: string;
   type: string;
-  level: string;  // "all", "l1", "l2"
+  level: string; // "all", "l1", "l2"
 }

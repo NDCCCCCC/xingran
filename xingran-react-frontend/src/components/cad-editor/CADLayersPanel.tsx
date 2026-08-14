@@ -118,7 +118,9 @@ export const CADLayersPanel = function CADLayersPanel({
             layer={layer}
             onVisibilityChange={(visible) => handleVisibilityChange(layer.id, visible)}
             onLockChange={(locked) => handleLockChange(layer.id, locked)}
-            onOpacityChange={onLayerOpacityChange ? (opacity) => handleOpacityChange(layer.id, opacity) : undefined}
+            onOpacityChange={
+              onLayerOpacityChange ? (opacity) => handleOpacityChange(layer.id, opacity) : undefined
+            }
           />
         ))}
       </Space>

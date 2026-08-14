@@ -1,18 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import type { FC } from "react";
 import { batchExport } from "@/lib/api/networkApi";
-import {
-  Table,
-  Button,
-  Space,
-  Form,
-  Select,
-  Card,
-  Row,
-  Col,
-  Statistic,
-  App,
-} from "antd";
+import { Table, Button, Space, Form, Select, Card, Row, Col, Statistic, App } from "antd";
 import {
   PlayCircleOutlined,
   SearchOutlined,
@@ -57,7 +46,12 @@ const ConfigExecutionPage: FC = () => {
     ],
     []
   );
-  const { orderByColumn, isAsc, handleTableChange: handleNetExecSortChange, sortOrder: netExecSortOrder } = useServerSort<ConfigExecution>({
+  const {
+    orderByColumn,
+    isAsc,
+    handleTableChange: handleNetExecSortChange,
+    sortOrder: netExecSortOrder,
+  } = useServerSort<ConfigExecution>({
     sorterMetas,
   });
 
@@ -117,7 +111,10 @@ const ConfigExecutionPage: FC = () => {
       getExecutionColumns({
         handleViewDetail,
         handleCancelExecution,
-        getSortOrder: (field) => (orderByColumn === field ? (netExecSortOrder ?? null) as "ascend" | "descend" | null : null),
+        getSortOrder: (field) =>
+          orderByColumn === field
+            ? ((netExecSortOrder ?? null) as "ascend" | "descend" | null)
+            : null,
       }),
     [handleViewDetail, handleCancelExecution, orderByColumn, netExecSortOrder]
   );
@@ -150,11 +147,7 @@ const ConfigExecutionPage: FC = () => {
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={5}>
           <Card>
-            <Statistic
-              title="执行总数"
-              value={statistics.total}
-              prefix={<ApiOutlined />}
-            />
+            <Statistic title="执行总数" value={statistics.total} prefix={<ApiOutlined />} />
           </Card>
         </Col>
         <Col span={5}>
@@ -201,7 +194,15 @@ const ConfigExecutionPage: FC = () => {
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
+        >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item label="状态">
               <Select
@@ -209,11 +210,12 @@ const ConfigExecutionPage: FC = () => {
                 allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
-                onChange={() =>    {
+                onChange={() => {
                   loadExecutions();
                   loadStatistics();
                 }}
-               onSearch={() => {}}>
+                onSearch={() => {}}
+              >
                 {STATUS_OPTIONS.map((opt) => (
                   <Option key={opt.value} value={opt.value}>
                     {opt.label}
@@ -252,26 +254,25 @@ const ConfigExecutionPage: FC = () => {
               entityType="executions"
               entityName="配置执行"
               filters={Object.fromEntries(
-                Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null && v !== "")
+                Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
+                  ([, v]) => v !== undefined && v !== null && v !== ""
+                )
               )}
               current={paginationProps?.current ?? 1}
               pageSize={paginationProps?.pageSize ?? 10}
             />
-          </Space>{/* 批量导出 Modal */}
+          </Space>
+          {/* 批量导出 Modal */}
 
-        <BatchExportModal
+          <BatchExportModal
+            visible={batchModalVisible}
 
-          visible={batchModalVisible}
+            onConfirm={handleBatchExport}
 
-          onConfirm={handleBatchExport}
+            onCancel={() => setBatchModalVisible(false)}
 
-          onCancel={() => setBatchModalVisible(false)}
-
-          loading={batchExporting}
-
-        />
-
-
+            loading={batchExporting}
+          />
         </div>
       </Card>
 
@@ -294,7 +295,7 @@ const ConfigExecutionPage: FC = () => {
               pageSize: pagination.pageSize ?? 10,
               ...(orderByColumn ? { orderByColumn, isAsc } : {}),
             };
-            Object.keys(formValues).forEach(key => {
+            Object.keys(formValues).forEach((key) => {
               const value = formValues[key];
               if (value !== undefined && value !== null && value !== "") {
                 searchParams[key] = value;

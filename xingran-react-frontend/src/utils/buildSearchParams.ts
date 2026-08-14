@@ -22,7 +22,7 @@ export function buildSearchParams(opts: BuildSearchParamsOptions): Record<string
 
   if (searchForm) {
     const values = searchForm.getFieldsValue() as Record<string, unknown>;
-    Object.keys(values).forEach(key => {
+    Object.keys(values).forEach((key) => {
       const value = values[key];
       if (value !== undefined && value !== null && value !== "") {
         params[key] = value;

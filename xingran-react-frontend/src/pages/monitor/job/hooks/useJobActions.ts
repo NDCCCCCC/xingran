@@ -36,7 +36,11 @@ export interface UseJobActionsReturn {
   handleToggleStatus: (record: JobInfo) => Promise<void>;
   handleExecute: (record: JobInfo) => Promise<void>;
   handleViewLogs: (record: JobInfo) => void;
-  handleReset: (setSearchForm: React.Dispatch<React.SetStateAction<SearchFormState>>, setCurrent: (page: number) => void, fetchJobs: () => Promise<void>) => void;
+  handleReset: (
+    setSearchForm: React.Dispatch<React.SetStateAction<SearchFormState>>,
+    setCurrent: (page: number) => void,
+    fetchJobs: () => Promise<void>
+  ) => void;
 }
 
 export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn {
@@ -63,7 +67,7 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
         misfirePolicy: record.misfirePolicy,
         concurrent: record.concurrent,
         status: record.status,
-        remark: record.remark || ""
+        remark: record.remark || "",
       });
     } else {
       setIsEdit(false);
@@ -72,91 +76,109 @@ export function useJobActions(params: UseJobActionsParams): UseJobActionsReturn 
       form.setFieldsValue({
         misfirePolicy: 1,
         concurrent: false,
-        status: 0
+        status: 0,
       });
     }
     setModalVisible(true);
   }, []);
 
   // 提交表单
-  const handleSubmit = useCallback(async (form: FormInstance<unknown>) => {
-    try {
-      const values = await form.validateFields() as { id?: string } & Record<string, unknown>;
+  const handleSubmit = useCallback(
+    async (form: FormInstance<unknown>) => {
+      try {
+        const values = (await form.validateFields()) as { id?: string } & Record<string, unknown>;
 
-      if (isEdit) {
-        await post(`/monitor/jobs/${values.id}/update`, values);
-      } else {
-        await post("/monitor/jobs", values);
+        if (isEdit) {
+          await post(`/monitor/jobs/${values.id}/update`, values);
+        } else {
+          await post("/monitor/jobs", values);
+        }
+
+        message.success(isEdit ? "更新成功" : "新增成功");
+        setModalVisible(false);
+        fetchJobs();
+      } catch (error) {
+        console.error("提交失败:", error);
       }
-
-      message.success(isEdit ? "更新成功" : "新增成功");
-      setModalVisible(false);
-      fetchJobs();
-    } catch (error) {
-      console.error("提交失败:", error);
-    }
-  }, [isEdit, fetchJobs, message]);
+    },
+    [isEdit, fetchJobs, message]
+  );
 
   // 删除任务
-  const handleDelete = useCallback(async (record: JobInfo) => {
-    try {
-      await post(`/monitor/jobs/${record.id}/delete`);
-      message.success("删除成功");
-      fetchJobs();
-    } catch (error) {
-      console.error("删除失败:", error);
-    }
-  }, [fetchJobs, message]);
+  const handleDelete = useCallback(
+    async (record: JobInfo) => {
+      try {
+        await post(`/monitor/jobs/${record.id}/delete`);
+        message.success("删除成功");
+        fetchJobs();
+      } catch (error) {
+        console.error("删除失败:", error);
+      }
+    },
+    [fetchJobs, message]
+  );
 
   // 启动/停止任务
-  const handleToggleStatus = useCallback(async (record: JobInfo) => {
-    try {
-      await post(`/monitor/jobs/${record.id}/status`, {
-        status: record.status === 0 ? 1 : 0
-      });
+  const handleToggleStatus = useCallback(
+    async (record: JobInfo) => {
+      try {
+        await post(`/monitor/jobs/${record.id}/status`, {
+          status: record.status === 0 ? 1 : 0,
+        });
 
-      message.success(record.status === 0 ? "暂停成功" : "启动成功");
-      fetchJobs();
-    } catch (error) {
-      console.error("操作失败:", error);
-    }
-  }, [fetchJobs, message]);
+        message.success(record.status === 0 ? "暂停成功" : "启动成功");
+        fetchJobs();
+      } catch (error) {
+        console.error("操作失败:", error);
+      }
+    },
+    [fetchJobs, message]
+  );
 
   // 立即执行任务
-  const handleExecute = useCallback(async (record: JobInfo) => {
-    try {
-      // 使用长时间请求函数（5分钟超时），因为设备监控任务可能耗时较长
-      await postLongRequest(`/monitor/jobs/${record.id}/execute`, {});
-      message.success("执行成功");
-      if (selectedJob?.id === record.id) {
-        fetchJobLogs(record.jobName, record.jobGroup);
+  const handleExecute = useCallback(
+    async (record: JobInfo) => {
+      try {
+        // 使用长时间请求函数（5分钟超时），因为设备监控任务可能耗时较长
+        await postLongRequest(`/monitor/jobs/${record.id}/execute`, {});
+        message.success("执行成功");
+        if (selectedJob?.id === record.id) {
+          fetchJobLogs(record.jobName, record.jobGroup);
+        }
+      } catch (error) {
+        console.error("执行失败:", error);
       }
-    } catch (error) {
-      console.error("执行失败:", error);
-    }
-  }, [selectedJob, fetchJobLogs, message]);
+    },
+    [selectedJob, fetchJobLogs, message]
+  );
 
   // 查看日志
-  const handleViewLogs = useCallback((record: JobInfo) => {
-    setSelectedJob(record);
-    setLogDrawerVisible(true);
-    fetchJobLogs(record.jobName, record.jobGroup);
-  }, [fetchJobLogs]);
+  const handleViewLogs = useCallback(
+    (record: JobInfo) => {
+      setSelectedJob(record);
+      setLogDrawerVisible(true);
+      fetchJobLogs(record.jobName, record.jobGroup);
+    },
+    [fetchJobLogs]
+  );
 
   // 重置
-  const handleReset = useCallback((
-    setSearchForm: React.Dispatch<React.SetStateAction<SearchFormState>>,
-    setCurrent: (page: number) => void,
-    fetchJobs: () => Promise<void>
-  ) => {
-    setSearchForm({
-      jobName: "",
-      jobGroup: "",
-      status: undefined
-    });
-    setCurrent(1);
-    fetchJobs();
-  }, []);
+  const handleReset = useCallback(
+    (
+      setSearchForm: React.Dispatch<React.SetStateAction<SearchFormState>>,
+      setCurrent: (page: number) => void,
+      fetchJobs: () => Promise<void>
+    ) => {
+      setSearchForm({
+        jobName: "",
+        jobGroup: "",
+        status: undefined,
+      });
+      setCurrent(1);
+      fetchJobs();
+    },
+    []
+  );
 
   return {
     modalVisible,

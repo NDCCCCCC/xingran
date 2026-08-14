@@ -29,10 +29,10 @@ const WorkstationView: React.FC<WorkstationViewProps> = ({ floor, onBack }) => {
         const result = await workstationApi.list({
           floorCode: floor.floorNo || floor.id,
           current: 1,
-          pageSize: 1000
+          pageSize: 1000,
         });
 
-        const nodes: WorkstationNode[] = (result.data?.list || []).map(ws => ({
+        const nodes: WorkstationNode[] = (result.data?.list || []).map((ws) => ({
           id: ws.id,
           code: ws.name || ws.id,
           name: ws.name || "",
@@ -58,7 +58,9 @@ const WorkstationView: React.FC<WorkstationViewProps> = ({ floor, onBack }) => {
   }, [floor.id]);
 
   // 更新工位位置
-  const handleUpdatePosition = async (items: { id: string; positionX: number; positionY: number; rotation?: number }[]) => {
+  const handleUpdatePosition = async (
+    items: { id: string; positionX: number; positionY: number; rotation?: number }[]
+  ) => {
     try {
       await workstationApi.updatePositions(items);
     } catch (error) {
@@ -75,16 +77,14 @@ const WorkstationView: React.FC<WorkstationViewProps> = ({ floor, onBack }) => {
 
   return (
     <div className={styles.workstationView}>
-      <Button
-        icon={<ArrowLeftOutlined />}
-        onClick={onBack}
-        className={styles.backButton}
-      >
+      <Button icon={<ArrowLeftOutlined />} onClick={onBack} className={styles.backButton}>
         返回楼层列表
       </Button>
 
       <div style={{ marginBottom: 16 }}>
-        <h3>{floor.name} ({floor.floorNo}F)</h3>
+        <h3>
+          {floor.name} ({floor.floorNo}F)
+        </h3>
         <p style={{ color: "var(--theme-text-tertiary, #666)", margin: 0 }}>
           共 {workstations.length} 个工位
         </p>

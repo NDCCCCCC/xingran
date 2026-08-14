@@ -10,11 +10,11 @@ export type CaptchaEnabled = "disabled" | "normal" | "slider";
 export interface CaptchaResponse {
   captchaId: string;
   captchaType: CaptchaType;
-  captchaImg?: string;  // 文字验证码图片 (base64)
-  sliderImg?: string;   // 滑动底图 (base64)
-  pieceImg?: string;    // 拼图块 (base64)
-  yPos?: number;        // 拼图块Y坐标
-  token?: string;       // 验证token (滑动类型)
+  captchaImg?: string; // 文字验证码图片 (base64)
+  sliderImg?: string; // 滑动底图 (base64)
+  pieceImg?: string; // 拼图块 (base64)
+  yPos?: number; // 拼图块Y坐标
+  token?: string; // 验证token (滑动类型)
 }
 
 // 滑动验证码验证请求
@@ -34,9 +34,9 @@ export interface SliderVerifyResponse {
 // 验证码配置
 export interface CaptchaConfig {
   enabled: CaptchaEnabled;
-  type: number;         // 文字验证码长度
-  expireTime: number;   // 有效期(分钟)
-  maxAttempts: number;  // 最大验证次数
+  type: number; // 文字验证码长度
+  expireTime: number; // 有效期(分钟)
+  maxAttempts: number; // 最大验证次数
 }
 
 // 验证码组件Props
@@ -53,10 +53,10 @@ export interface CaptchaProps {
 export type PieceShape = "circle" | "square" | "star" | "heart";
 
 // 难度级别
-export type DifficultyLevel = 1 | 2 | 3;  // 1:简单 2:中等 3:困难
+export type DifficultyLevel = 1 | 2 | 3; // 1:简单 2:中等 3:困难
 
 // 背景图状态
-export type CaptchaBackgroundStatus = 0 | 1;  // 0:禁用 1:启用
+export type CaptchaBackgroundStatus = 0 | 1; // 0:禁用 1:启用
 
 // 验证码背景图
 export interface CaptchaBackground {

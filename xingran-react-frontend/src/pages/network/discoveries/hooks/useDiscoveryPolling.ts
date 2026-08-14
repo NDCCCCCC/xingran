@@ -15,11 +15,11 @@ export function useDiscoveryPolling({ discoveries, onPoll }: UseDiscoveryPolling
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    const runningTasks = discoveries.filter(d => d.status === "running");
+    const runningTasks = discoveries.filter((d) => d.status === "running");
 
     if (runningTasks.length > 0 && !pollingTimerRef.current) {
       const timer = setInterval(() => {
-        const currentRunning = discoveries.filter(d => d.status === "running");
+        const currentRunning = discoveries.filter((d) => d.status === "running");
         if (currentRunning.length === 0) {
           if (pollingTimerRef.current) {
             clearInterval(pollingTimerRef.current);

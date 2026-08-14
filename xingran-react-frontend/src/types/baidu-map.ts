@@ -292,7 +292,10 @@ export interface BMapMapConstructor {
 
 /** 地图 GL 构造函数 */
 export interface BMapMapGLConstructor {
-  new (container: string | HTMLElement, opts?: BMapMapOptions & { showControls?: boolean }): BMapMapGL;
+  new (
+    container: string | HTMLElement,
+    opts?: BMapMapOptions & { showControls?: boolean }
+  ): BMapMapGL;
 }
 
 /** 缩放控件配置 */

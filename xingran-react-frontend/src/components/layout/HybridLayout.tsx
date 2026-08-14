@@ -74,7 +74,7 @@ const HybridLayout: FC<HybridLayoutProps> = ({ children }) => {
     if (isDashboardPath(location.pathname)) {
       const title = getDashboardTitle();
       const state = useTabsStore.getState();
-      const existingTab = state.tabs.find(t => t.key === DASHBOARD_KEY);
+      const existingTab = state.tabs.find((t) => t.key === DASHBOARD_KEY);
 
       if (existingTab) {
         if (existingTab.title !== title) {
@@ -115,7 +115,7 @@ const HybridLayout: FC<HybridLayoutProps> = ({ children }) => {
   // 初始化时修复仪表盘标签状态
   useEffect(() => {
     const state = useTabsStore.getState();
-    const dashboardTab = state.tabs.find(t => t.key === DASHBOARD_KEY);
+    const dashboardTab = state.tabs.find((t) => t.key === DASHBOARD_KEY);
 
     // 强制修复仪表盘标签状态，确保始终固定且不可关闭
     if (dashboardTab && (dashboardTab.closable || !dashboardTab.pinned)) {
@@ -145,7 +145,7 @@ const HybridLayout: FC<HybridLayoutProps> = ({ children }) => {
 
     const state = useTabsStore.getState();
 
-    state.tabs.forEach(tab => {
+    state.tabs.forEach((tab) => {
       // 跳过仪表盘标签，其状态已在初始化时强制设置
       if (tab.key === DASHBOARD_KEY) return;
 
@@ -168,7 +168,10 @@ const HybridLayout: FC<HybridLayoutProps> = ({ children }) => {
   return (
     <AntLayout className="h-screen" style={{ background: "var(--theme-bg-secondary)" }}>
       <Sidebar />
-      <AntLayout className="h-full" style={{ background: "var(--theme-bg-secondary)", position: "relative" }}>
+      <AntLayout
+        className="h-full"
+        style={{ background: "var(--theme-bg-secondary)", position: "relative" }}
+      >
         <Header />
         <TabBar />
         <Content

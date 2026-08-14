@@ -21,7 +21,8 @@ vi.mock("../hooks/useReconciliationVisibility", () => ({
 }));
 
 vi.mock("../hooks/useWorkstationHealth", () => ({
-  useWorkstationHealth: (_workstationId: string) => mockUseWorkstationHealth() as ReturnType<typeof vi.fn>,
+  useWorkstationHealth: (_workstationId: string) =>
+    mockUseWorkstationHealth() as ReturnType<typeof vi.fn>,
 }));
 
 // mock ReactECharts 避免引入 zrender/jsdom 复杂依赖

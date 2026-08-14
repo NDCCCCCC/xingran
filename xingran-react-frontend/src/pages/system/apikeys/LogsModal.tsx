@@ -3,17 +3,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, type FC } from "react";
-import {
-  Modal,
-  Table,
-  Statistic,
-  Card,
-  Row,
-  Col,
-  Tag,
-  Descriptions,
-  Progress,
-} from "antd";
+import { Modal, Table, Statistic, Card, Row, Col, Tag, Descriptions, Progress } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
   FileTextOutlined,
@@ -91,10 +81,13 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
   });
 
   // ==================== 稳定的查询参数 ====================
-  const queryParams = useMemo(() => ({
-    current: pagination.current,
-    pageSize: pagination.pageSize,
-  }), [pagination.current, pagination.pageSize]);
+  const queryParams = useMemo(
+    () => ({
+      current: pagination.current,
+      pageSize: pagination.pageSize,
+    }),
+    [pagination.current, pagination.pageSize]
+  );
 
   // ==================== 数据加载 ====================
 
@@ -162,68 +155,69 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
 
   // ==================== 表格列定义 ====================
 
-  const columns: ColumnsType<APIKeyUsageLog> = useMemo(() => [
-    {
-      title: "时间",
-      dataIndex: "created_at",
-      key: "created_at",
-      width: 160,
-      render: (text) => formatDateTime(text),
-    },
-    {
-      title: "方法",
-      dataIndex: "method",
-      key: "method",
-      width: 80,
-      align: "center" as const,
-      render: (method: string) => renderMethodTag(method),
-    },
-    {
-      title: "路径",
-      dataIndex: "path",
-      key: "path",
-      width: 200,
-      ellipsis: true,
-    },
-    {
-      title: "状态码",
-      dataIndex: "status_code",
-      key: "status_code",
-      width: 100,
-      align: "center" as const,
-      render: (statusCode: number) => (
-        <Tag color={getStatusTagColor(statusCode)}>
-          {statusCode}
-        </Tag>
-      ),
-    },
-    {
-      title: "成功",
-      dataIndex: "success",
-      key: "success",
-      width: 80,
-      align: "center" as const,
-      render: (success: boolean) => (
-        <Tag color={success ? "success" : "error"} style={{ fontWeight: "bold" }}>
-          {success ? "是" : "否"}
-        </Tag>
-      ),
-    },
-    {
-      title: "客户端 IP",
-      dataIndex: "client_ip",
-      key: "client_ip",
-      width: 140,
-    },
-    {
-      title: "耗时",
-      dataIndex: "duration",
-      key: "duration",
-      width: 100,
-      align: "right" as const,
-      render: (duration: number) => `${duration}ms`,
-    },
-  ], []);
+  const columns: ColumnsType<APIKeyUsageLog> = useMemo(
+    () => [
+      {
+        title: "时间",
+        dataIndex: "created_at",
+        key: "created_at",
+        width: 160,
+        render: (text) => formatDateTime(text),
+      },
+      {
+        title: "方法",
+        dataIndex: "method",
+        key: "method",
+        width: 80,
+        align: "center" as const,
+        render: (method: string) => renderMethodTag(method),
+      },
+      {
+        title: "路径",
+        dataIndex: "path",
+        key: "path",
+        width: 200,
+        ellipsis: true,
+      },
+      {
+        title: "状态码",
+        dataIndex: "status_code",
+        key: "status_code",
+        width: 100,
+        align: "center" as const,
+        render: (statusCode: number) => (
+          <Tag color={getStatusTagColor(statusCode)}>{statusCode}</Tag>
+        ),
+      },
+      {
+        title: "成功",
+        dataIndex: "success",
+        key: "success",
+        width: 80,
+        align: "center" as const,
+        render: (success: boolean) => (
+          <Tag color={success ? "success" : "error"} style={{ fontWeight: "bold" }}>
+            {success ? "是" : "否"}
+          </Tag>
+        ),
+      },
+      {
+        title: "客户端 IP",
+        dataIndex: "client_ip",
+        key: "client_ip",
+        width: 140,
+      },
+      {
+        title: "耗时",
+        dataIndex: "duration",
+        key: "duration",
+        width: 100,
+        align: "right" as const,
+        render: (duration: number) => `${duration}ms`,
+      },
+    ],
+    []
+  );
 
   // ==================== 渲染 ====================
 
@@ -257,10 +251,23 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                   suffix="%"
                   styles={{
                     content: {
-                      color: summary.success_rate >= 0.95 ? "var(--theme-success, #3f8600)" : summary.success_rate >= 0.8 ? "var(--theme-warning, #faad14)" : "var(--theme-error, #cf1322)",
+                      color:
+                        summary.success_rate >= 0.95
+                          ? "var(--theme-success, #3f8600)"
+                          : summary.success_rate >= 0.8
+                            ? "var(--theme-warning, #faad14)"
+                            : "var(--theme-error, #cf1322)",
                     },
                   }}
-                  prefix={summary.success_rate >= 0.95 ? <CheckCircleOutlined /> : summary.success_rate >= 0.8 ? <ClockCircleOutlined /> : <CloseCircleOutlined />}
+                  prefix={
+                    summary.success_rate >= 0.95 ? (
+                      <CheckCircleOutlined />
+                    ) : summary.success_rate >= 0.8 ? (
+                      <ClockCircleOutlined />
+                    ) : (
+                      <CloseCircleOutlined />
+                    )
+                  }
                 />
               </Card>
             </Col>
@@ -272,7 +279,12 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                   suffix="ms"
                   styles={{
                     content: {
-                      color: summary.avg_duration < 100 ? "var(--theme-success, #3f8600)" : summary.avg_duration < 500 ? "var(--theme-warning, #faad14)" : "var(--theme-error, #cf1322)",
+                      color:
+                        summary.avg_duration < 100
+                          ? "var(--theme-success, #3f8600)"
+                          : summary.avg_duration < 500
+                            ? "var(--theme-warning, #faad14)"
+                            : "var(--theme-error, #cf1322)",
                     },
                   }}
                 />
@@ -282,7 +294,10 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
               <Card>
                 <Statistic
                   title="错误数"
-                  value={summary.total_requests - Math.floor(summary.total_requests * summary.success_rate)}
+                  value={
+                    summary.total_requests -
+                    Math.floor(summary.total_requests * summary.success_rate)
+                  }
                   styles={{
                     content: {
                       color: "var(--theme-error, #cf1322)",
@@ -310,7 +325,13 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                   ))}
                 </Descriptions>
                 {Object.keys(summary.requests_by_method).length === 0 && (
-                  <div style={{ textAlign: "center", color: "var(--theme-text-tertiary, #999)", padding: "8px 0" }}>
+                  <div
+                    style={{
+                      textAlign: "center",
+                      color: "var(--theme-text-tertiary, #999)",
+                      padding: "8px 0",
+                    }}
+                  >
                     暂无数据
                   </div>
                 )}
@@ -330,13 +351,19 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
 
                       return (
                         <div key={path} style={{ marginBottom: 12 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                            <span style={{ fontSize: 12, color: "var(--theme-text-tertiary, #666)" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              marginBottom: 4,
+                            }}
+                          >
+                            <span
+                              style={{ fontSize: 12, color: "var(--theme-text-tertiary, #666)" }}
+                            >
                               {index + 1}. {path.length > 30 ? `${path.slice(0, 30)}...` : path}
                             </span>
-                            <span style={{ fontSize: 12, fontWeight: "bold" }}>
-                              {count} 次
-                            </span>
+                            <span style={{ fontSize: 12, fontWeight: "bold" }}>{count} 次</span>
                           </div>
                           <Progress
                             percent={percentage}
@@ -349,7 +376,13 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                       );
                     })}
                   {Object.keys(summary.requests_by_path).length === 0 && (
-                    <div style={{ textAlign: "center", color: "var(--theme-text-tertiary, #999)", padding: "8px 0" }}>
+                    <div
+                      style={{
+                        textAlign: "center",
+                        color: "var(--theme-text-tertiary, #999)",
+                        padding: "8px 0",
+                      }}
+                    >
                       暂无数据
                     </div>
                   )}
@@ -365,14 +398,18 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                     .sort(([, a], [, b]) => (b as number) - (a as number))
                     .map(([status, count]) => (
                       <div key={status} style={{ marginBottom: 8 }}>
-                        <Tag color={getStatusTagColor(parseInt(status))}>
-                          {status}
-                        </Tag>
+                        <Tag color={getStatusTagColor(parseInt(status))}>{status}</Tag>
                         <span style={{ marginLeft: 8 }}>{count} 次</span>
                       </div>
                     ))}
                   {Object.keys(summary.errors_by_status).length === 0 && (
-                    <div style={{ textAlign: "center", color: "var(--theme-text-tertiary, #999)", padding: "8px 0" }}>
+                    <div
+                      style={{
+                        textAlign: "center",
+                        color: "var(--theme-text-tertiary, #999)",
+                        padding: "8px 0",
+                      }}
+                    >
                       暂无错误
                     </div>
                   )}

@@ -41,7 +41,13 @@ import {
 } from "antd";
 import type { MessageInstance } from "antd/es/message/interface";
 import { useNavigate } from "react-router-dom";
-import type { DevicePortStatus, PortResult, PortWriteAction, BatchWriteRequest, BatchResult } from "@/types/network";
+import type {
+  DevicePortStatus,
+  PortResult,
+  PortWriteAction,
+  BatchWriteRequest,
+  BatchResult,
+} from "@/types/network";
 import { batchWritePorts } from "@/lib/api/networkApi";
 import {
   PRESET_REASONS,
@@ -393,9 +399,7 @@ function SelectView({
         <Button
           type="primary"
           onClick={onSubmit}
-          disabled={
-            selectedPorts.length === 0 || isMixedDevices
-          }
+          disabled={selectedPorts.length === 0 || isMixedDevices}
         >
           开始批量配置
         </Button>
@@ -474,8 +478,7 @@ function ResultView({ result, interfaceMap, onRetry }: ResultViewProps) {
                 title: "接口名",
                 key: "interfaceName",
                 width: 150,
-                render: (_, port) =>
-                  interfaceMap.get(port.portId) ?? port.portId,
+                render: (_, port) => interfaceMap.get(port.portId) ?? port.portId,
               },
               {
                 title: "错误原因",
@@ -514,11 +517,7 @@ function ResultView({ result, interfaceMap, onRetry }: ResultViewProps) {
 
       {/* D-06 重试按钮 — 只取 batchResult.failed (上面 dataSource 同源), disabled 当 failed.length === 0 */}
       <Space>
-        <Button
-          type="primary"
-          disabled={result.failed.length === 0}
-          onClick={onRetry}
-        >
+        <Button type="primary" disabled={result.failed.length === 0} onClick={onRetry}>
           重试失败端口 ({result.failed.length})
         </Button>
       </Space>

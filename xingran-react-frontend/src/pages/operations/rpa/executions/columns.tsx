@@ -90,7 +90,7 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
       dataIndex: "duration",
       key: "duration",
       width: 120,
-      render: (duration) => duration ? `${Math.round(duration / 1000)}s` : "-",
+      render: (duration) => (duration ? `${Math.round(duration / 1000)}s` : "-"),
     },
     {
       title: "错误信息",
@@ -98,13 +98,20 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
       key: "error",
       width: 200,
       ellipsis: true,
-      render: (text) => text ? (
-        <span title={text} style={{ color: "var(--theme-error, #ff4d4f)" }}>
-          {text}
-        </span>
-      ) : "-",
+      render: (text) =>
+        text ? (
+          <span title={text} style={{ color: "var(--theme-error, #ff4d4f)" }}>
+            {text}
+          </span>
+        ) : (
+          "-"
+        ),
     },
-    createDateTimeColumn("createdAt", { width: 180, sorter: true, sortOrder: getSortOrder?.("createdAt") }),
+    createDateTimeColumn("createdAt", {
+      width: 180,
+      sorter: true,
+      sortOrder: getSortOrder?.("createdAt"),
+    }),
     {
       title: "操作",
       key: "action",

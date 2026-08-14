@@ -48,7 +48,11 @@ function fieldConfigToCronPart(fieldConfig: CronFieldConfig, fieldType: CronFiel
   }
 
   // 范围 - 使用连字符，如 5-10
-  if (periodType === "range" && fieldConfig.rangeStart !== undefined && fieldConfig.rangeEnd !== undefined) {
+  if (
+    periodType === "range" &&
+    fieldConfig.rangeStart !== undefined &&
+    fieldConfig.rangeEnd !== undefined
+  ) {
     return `${fieldConfig.rangeStart}-${fieldConfig.rangeEnd}`;
   }
 
@@ -135,7 +139,7 @@ function parseCronPart(part: string, fieldType: CronFieldType): CronFieldConfig 
 
   // 逗号 - 指定多个值，如 0,5,10 或 MON,WED,FRI
   if (part.includes(",")) {
-    const values = part.split(",").map(v => parseFieldValue(v, fieldType));
+    const values = part.split(",").map((v) => parseFieldValue(v, fieldType));
     return { type: fieldType, periodType: "specific", specific: values };
   }
 
@@ -163,7 +167,20 @@ function parseFieldValue(value: string, fieldType: CronFieldType): number {
 
   // 处理月份缩写（JAN, FEB...）
   if (fieldType === "month") {
-    const monthIndex = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"].indexOf(value.toUpperCase());
+    const monthIndex = [
+      "JAN",
+      "FEB",
+      "MAR",
+      "APR",
+      "MAY",
+      "JUN",
+      "JUL",
+      "AUG",
+      "SEP",
+      "OCT",
+      "NOV",
+      "DEC",
+    ].indexOf(value.toUpperCase());
     if (monthIndex !== -1) {
       return monthIndex + 1;
     }
@@ -283,7 +300,11 @@ export function cronToChinese(expression: string): string {
       const start = config.hour.cycleStart ?? 0;
       const interval = config.hour.cycleInterval ?? 1;
       parts.push(`从${start}点开始每${interval}小时`);
-    } else if (config.hour.periodType === "specific" && config.hour.specific && config.hour.specific.length > 1) {
+    } else if (
+      config.hour.periodType === "specific" &&
+      config.hour.specific &&
+      config.hour.specific.length > 1
+    ) {
       parts.push(`${config.hour.specific.join("、")}点`);
     }
 
@@ -299,8 +320,12 @@ export function cronToChinese(expression: string): string {
     }
 
     // 处理周
-    if (config.week.periodType === "specific" && config.week.specific && config.week.specific.length > 0) {
-      const days = config.week.specific.map(d => WEEK_DAY_NAMES[d - 1] || d).join("、");
+    if (
+      config.week.periodType === "specific" &&
+      config.week.specific &&
+      config.week.specific.length > 0
+    ) {
+      const days = config.week.specific.map((d) => WEEK_DAY_NAMES[d - 1] || d).join("、");
       parts.push(`每${days}`);
     }
 

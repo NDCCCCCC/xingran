@@ -20,19 +20,7 @@
  */
 
 import { useMemo, useState } from "react";
-import {
-  Form,
-  Input,
-  Button,
-  Card,
-  Table,
-  Tag,
-  Badge,
-  Alert,
-  Space,
-  Empty,
-  App,
-} from "antd";
+import { Form, Input, Button, Card, Table, Tag, Badge, Alert, Space, Empty, App } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { ExperimentOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
@@ -127,7 +115,9 @@ const MatchTestPanel: React.FC<MatchTestPanelProps> = ({ embedded }) => {
       render: (actions?: string[]) => (
         <Space size={4} wrap>
           {(actions ?? []).map((a) => (
-            <Tag key={a} color={actionColor(a)}>{a}</Tag>
+            <Tag key={a} color={actionColor(a)}>
+              {a}
+            </Tag>
           ))}
         </Space>
       ),
@@ -167,11 +157,7 @@ const MatchTestPanel: React.FC<MatchTestPanelProps> = ({ embedded }) => {
       {/* 输入区 */}
       <Card title="输入" size="small" style={{ marginBottom: 12 }}>
         <Form form={form} layout="inline">
-          <Form.Item
-            name="ip"
-            label="IP"
-            rules={[{ required: true, message: "请输入 IP" }]}
-          >
+          <Form.Item name="ip" label="IP" rules={[{ required: true, message: "请输入 IP" }]}>
             <Input placeholder="192.168.0.10" style={{ width: 200 }} />
           </Form.Item>
           <Form.Item name="userId" label="User ID">
@@ -221,7 +207,9 @@ const MatchTestPanel: React.FC<MatchTestPanelProps> = ({ embedded }) => {
                 <span style={{ color: "#999" }}>(无)</span>
               ) : (
                 mergedActions.map((a) => (
-                  <Tag key={a} color={actionColor(a)}>{a}</Tag>
+                  <Tag key={a} color={actionColor(a)}>
+                    {a}
+                  </Tag>
                 ))
               )}
             </div>
@@ -252,31 +240,40 @@ const MatchTestPanel: React.FC<MatchTestPanelProps> = ({ embedded }) => {
       )}
 
       {/* 初始空态 */}
-      {!testInput.ip && (
-        <Empty description="输入 IP 后点击测试" />
-      )}
+      {!testInput.ip && <Empty description="输入 IP 后点击测试" />}
     </div>
   );
 };
 
 function actionColor(action: string): string {
   switch (action) {
-    case "silence": return "red";
-    case "no_alert": return "orange";
-    case "no_notice": return "gold";
-    case "no_workorder": return "purple";
-    case "skip_severity": return "blue";
-    default: return "default";
+    case "silence":
+      return "red";
+    case "no_alert":
+      return "orange";
+    case "no_notice":
+      return "gold";
+    case "no_workorder":
+      return "purple";
+    case "skip_severity":
+      return "blue";
+    default:
+      return "default";
   }
 }
 
 function severityColor(sev: string): string {
   switch (sev) {
-    case "critical": return "red";
-    case "high": return "volcano";
-    case "medium": return "orange";
-    case "low": return "green";
-    default: return "default";
+    case "critical":
+      return "red";
+    case "high":
+      return "volcano";
+    case "medium":
+      return "orange";
+    case "low":
+      return "green";
+    default:
+      return "default";
   }
 }
 

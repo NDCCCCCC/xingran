@@ -5,12 +5,28 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import type { FC } from "react";
 import {
-  Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic,
-  Tag, Alert, Progress, Layout,
+  Table,
+  Button,
+  Space,
+  Form,
+  Input,
+  Select,
+  Card,
+  Row,
+  Col,
+  Statistic,
+  Tag,
+  Alert,
+  Progress,
+  Layout,
 } from "antd";
 import {
-  SearchOutlined, ReloadOutlined, CloudServerOutlined,
-  CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined,
+  SearchOutlined,
+  ReloadOutlined,
+  CloudServerOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ClockCircleOutlined,
   LoadingOutlined,
 } from "@ant-design/icons";
 import type { Worker } from "@/types/rpa";
@@ -76,7 +92,12 @@ const WorkerMonitor: FC = () => {
     ],
     []
   );
-  const { orderByColumn, isAsc, handleTableChange: handleWorkerSortChange, sortOrder: workerSortOrder } = useServerSort<Worker>({
+  const {
+    orderByColumn,
+    isAsc,
+    handleTableChange: handleWorkerSortChange,
+    sortOrder: workerSortOrder,
+  } = useServerSort<Worker>({
     sorterMetas,
   });
 
@@ -128,179 +149,188 @@ const WorkerMonitor: FC = () => {
   }, [loadWorkers]);
 
   const columns = useMemo(
-  () => getWorkerColumns({
-    getSortOrder: (field) => (orderByColumn === field ? (workerSortOrder ?? null) as "ascend" | "descend" | null : null),
-  }),
-  [orderByColumn, workerSortOrder]
-);
+    () =>
+      getWorkerColumns({
+        getSortOrder: (field) =>
+          orderByColumn === field
+            ? ((workerSortOrder ?? null) as "ascend" | "descend" | null)
+            : null,
+      }),
+    [orderByColumn, workerSortOrder]
+  );
 
   // 容量使用率(基于专用统计端点的全局容量,不再用当前页 reduce)
-  const capacityUsagePercent = statistics.totalCapacity > 0
-    ? (statistics.usedCapacity / statistics.totalCapacity) * 100
-    : 0;
+  const capacityUsagePercent =
+    statistics.totalCapacity > 0 ? (statistics.usedCapacity / statistics.totalCapacity) * 100 : 0;
 
   return (
     <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
       <Content style={{ background: "#fff", padding: 16 }}>
-      {/* 统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={4}>
-          <Card>
-            <Statistic
-              title="Worker 总数"
-              value={statistics.total}
-              prefix={<CloudServerOutlined />}
-              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
-            />
-          </Card>
-        </Col>
-        <Col span={5}>
-          <Card>
-            <Statistic
-              title="在线"
-              value={statistics.online}
-              prefix={<CheckCircleOutlined />}
-              styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
-            />
-          </Card>
-        </Col>
-        <Col span={5}>
-          <Card>
-            <Statistic
-              title="忙碌"
-              value={statistics.busy}
-              prefix={<LoadingOutlined />}
-              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
-            />
-          </Card>
-        </Col>
-        <Col span={5}>
-          <Card>
-            <Statistic
-              title="离线"
-              value={statistics.offline}
-              prefix={<ClockCircleOutlined />}
-              styles={{ content: { color: "var(--theme-text-tertiary, #8c8c8c)" } }}
-            />
-          </Card>
-        </Col>
-        <Col span={5}>
-          <Card>
-            <Statistic
-              title="错误"
-              value={statistics.error}
-              prefix={<CloseCircleOutlined />}
-              styles={{ content: { color: "var(--theme-error, #ff4d4f)" } }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* 容量使用率 */}
-      <Card style={{ marginBottom: 16 }}>
-        <Row gutter={16}>
-          <Col span={18}>
-            <div style={{ marginBottom: 8 }}>
-              <Space>
-                <span>总容量使用率</span>
-                <Tag color="blue">{statistics.usedCapacity}/{statistics.totalCapacity}</Tag>
-              </Space>
-            </div>
-            <Progress
-              percent={Math.round(capacityUsagePercent)}
-              status={capacityUsagePercent > 80 ? "exception" : "active"}
-            />
+        {/* 统计卡片 */}
+        <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Col span={4}>
+            <Card>
+              <Statistic
+                title="Worker 总数"
+                value={statistics.total}
+                prefix={<CloudServerOutlined />}
+                styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
+              />
+            </Card>
           </Col>
-          <Col span={6}>
-            <Statistic
-              title="可用容量"
-              value={statistics.totalCapacity - statistics.usedCapacity}
-              suffix="个任务"
-            />
+          <Col span={5}>
+            <Card>
+              <Statistic
+                title="在线"
+                value={statistics.online}
+                prefix={<CheckCircleOutlined />}
+                styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
+              />
+            </Card>
+          </Col>
+          <Col span={5}>
+            <Card>
+              <Statistic
+                title="忙碌"
+                value={statistics.busy}
+                prefix={<LoadingOutlined />}
+                styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
+              />
+            </Card>
+          </Col>
+          <Col span={5}>
+            <Card>
+              <Statistic
+                title="离线"
+                value={statistics.offline}
+                prefix={<ClockCircleOutlined />}
+                styles={{ content: { color: "var(--theme-text-tertiary, #8c8c8c)" } }}
+              />
+            </Card>
+          </Col>
+          <Col span={5}>
+            <Card>
+              <Statistic
+                title="错误"
+                value={statistics.error}
+                prefix={<CloseCircleOutlined />}
+                styles={{ content: { color: "var(--theme-error, #ff4d4f)" } }}
+              />
+            </Card>
           </Col>
         </Row>
-      </Card>
 
-      {/* 筛选条件 */}
-      <Card style={{ marginBottom: 16 }}>
-        <Form form={searchForm} layout="inline">
-          <Form.Item name="name" label="Worker 名称">
-            <Input placeholder="请输入Worker名称" allowClear style={{ width: 200 }} />
-          </Form.Item>
-          <Form.Item name="status" label="状态">
-            <Select placeholder="请选择" allowClear style={{ width: 150 }} onSearch={() => {}}>
-              {WORKER_STATUS_OPTIONS.map((opt) => (
-                <Option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item>
-            <Space>
-              <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
-                搜索
-              </Button>
-              <Button onClick={handleReset}>重置</Button>
-              <Button icon={<ReloadOutlined />} onClick={refreshData}>
-                刷新
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Card>
+        {/* 容量使用率 */}
+        <Card style={{ marginBottom: 16 }}>
+          <Row gutter={16}>
+            <Col span={18}>
+              <div style={{ marginBottom: 8 }}>
+                <Space>
+                  <span>总容量使用率</span>
+                  <Tag color="blue">
+                    {statistics.usedCapacity}/{statistics.totalCapacity}
+                  </Tag>
+                </Space>
+              </div>
+              <Progress
+                percent={Math.round(capacityUsagePercent)}
+                status={capacityUsagePercent > 80 ? "exception" : "active"}
+              />
+            </Col>
+            <Col span={6}>
+              <Statistic
+                title="可用容量"
+                value={statistics.totalCapacity - statistics.usedCapacity}
+                suffix="个任务"
+              />
+            </Col>
+          </Row>
+        </Card>
 
-      {/* Worker 列表 */}
-      <Card>
-        {statistics.offline > 0 && statistics.offline === statistics.total && (
-          <Alert
-            message="所有 Worker 离线"
-            description="请检查 Worker 服务是否正常运行，以及网络连接是否正常"
-            type="warning"
-            showIcon
-            style={{ marginBottom: 16 }}
+        {/* 筛选条件 */}
+        <Card style={{ marginBottom: 16 }}>
+          <Form form={searchForm} layout="inline">
+            <Form.Item name="name" label="Worker 名称">
+              <Input placeholder="请输入Worker名称" allowClear style={{ width: 200 }} />
+            </Form.Item>
+            <Form.Item name="status" label="状态">
+              <Select placeholder="请选择" allowClear style={{ width: 150 }} onSearch={() => {}}>
+                {WORKER_STATUS_OPTIONS.map((opt) => (
+                  <Option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item>
+              <Space>
+                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                  搜索
+                </Button>
+                <Button onClick={handleReset}>重置</Button>
+                <Button icon={<ReloadOutlined />} onClick={refreshData}>
+                  刷新
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
+        </Card>
+
+        {/* Worker 列表 */}
+        <Card>
+          {statistics.offline > 0 && statistics.offline === statistics.total && (
+            <Alert
+              message="所有 Worker 离线"
+              description="请检查 Worker 服务是否正常运行，以及网络连接是否正常"
+              type="warning"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
+          {statistics.error > 0 && (
+            <Alert
+              message={`${statistics.error} 个 Worker 处于错误状态`}
+              description="请查看 Worker 日志获取详细错误信息"
+              type="error"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
+          <Table
+            columns={columns}
+            dataSource={workers}
+            loading={loading}
+            rowKey="id"
+            pagination={paginationProps}
+            onChange={(pagination, _filters, sorter) => {
+              handleWorkerSortChange(pagination, _filters, sorter);
+              const newPage = pagination.current ?? 1;
+              const newPageSize = pagination.pageSize ?? 10;
+              setCurrent(newPage);
+              setPageSize(newPageSize);
+              const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
+              const searchParams: Record<string, unknown> = {
+                current: newPage,
+                pageSize: newPageSize,
+                ...(orderByColumn ? { orderByColumn, isAsc } : {}),
+              };
+              Object.keys(formValues).forEach((key) => {
+                const value = formValues[key];
+                if (value !== undefined && value !== null && value !== "") {
+                  searchParams[key] = value;
+                }
+              });
+              loadWorkers(searchParams);
+            }}
+            rowClassName={(record) => {
+              if (record.status === "offline") return "row-offline";
+              if (record.status === "error") return "row-error";
+              return "";
+            }}
           />
-        )}
-        {statistics.error > 0 && (
-          <Alert
-            message={`${statistics.error} 个 Worker 处于错误状态`}
-            description="请查看 Worker 日志获取详细错误信息"
-            type="error"
-            showIcon
-            style={{ marginBottom: 16 }}
-          />
-        )}
-        <Table
-          columns={columns}
-          dataSource={workers}
-          loading={loading}
-          rowKey="id"
-          pagination={paginationProps}
-          onChange={(pagination, _filters, sorter) => {
-            handleWorkerSortChange(pagination, _filters, sorter);
-            const newPage = pagination.current ?? 1;
-            const newPageSize = pagination.pageSize ?? 10;
-            setCurrent(newPage);
-            setPageSize(newPageSize);
-            const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
-            const searchParams: Record<string, unknown> = { current: newPage, pageSize: newPageSize, ...(orderByColumn ? { orderByColumn, isAsc } : {}) };
-            Object.keys(formValues).forEach(key => {
-              const value = formValues[key];
-              if (value !== undefined && value !== null && value !== "") {
-                searchParams[key] = value;
-              }
-            });
-            loadWorkers(searchParams);
-          }}
-          rowClassName={(record) => {
-            if (record.status === "offline") return "row-offline";
-            if (record.status === "error") return "row-error";
-            return "";
-          }}
-        />
-      </Card>
+        </Card>
 
-      <style>{`
+        <style>{`
         .row-offline {
           background-color: #fafafa;
         }

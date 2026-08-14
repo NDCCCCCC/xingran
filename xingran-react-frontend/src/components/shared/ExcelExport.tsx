@@ -5,14 +5,7 @@
 
 import { useState, useCallback } from "react";
 import type { FC } from "react";
-import {
-  App,
-  Button,
-  Space,
-  Modal,
-  Alert,
-  Descriptions,
-} from "antd";
+import { App, Button, Space, Modal, Alert, Descriptions } from "antd";
 import { ExportOutlined } from "@ant-design/icons";
 import { getAuthHeaders } from "@/utils/authHelpers";
 import { excelApi } from "@/lib/opsApi";
@@ -81,7 +74,9 @@ const ExcelExport: FC<ExcelExportProps> = ({
       onCancel={onClose}
       footer={
         <Space>
-          <Button onClick={onClose} disabled={exporting}>取消</Button>
+          <Button onClick={onClose} disabled={exporting}>
+            取消
+          </Button>
           <Button
             type="primary"
             icon={<ExportOutlined />}

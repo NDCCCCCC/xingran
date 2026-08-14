@@ -7,7 +7,11 @@ import { useState, useEffect } from "react";
 import { App, Form, Select, Button, Card, Space, Divider, ColorPicker } from "antd";
 import { BgColorsOutlined, SyncOutlined, SaveOutlined } from "@ant-design/icons";
 import type { ThemeConfiguration } from "@/types/config";
-import { getDefaultThemeConfig, setDefaultThemeConfig, syncUserThemeToDefault } from "@/lib/defaultThemeApi";
+import {
+  getDefaultThemeConfig,
+  setDefaultThemeConfig,
+  syncUserThemeToDefault,
+} from "@/lib/defaultThemeApi";
 import { useSettingsStore } from "@/store/settingsStore";
 
 /**
@@ -146,10 +150,7 @@ const DefaultThemePage: React.FC = () => {
       title="默认主题配置"
       extra={
         <Space>
-          <Button
-            icon={<SyncOutlined />}
-            onClick={handleSyncFromCurrentSettings}
-          >
+          <Button icon={<SyncOutlined />} onClick={handleSyncFromCurrentSettings}>
             从当前设置加载
           </Button>
           <Button
@@ -164,17 +165,13 @@ const DefaultThemePage: React.FC = () => {
         </Space>
       }
     >
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={handleSave}
-      >
+      <Form form={form} layout="vertical" onFinish={handleSave}>
         <Form.Item
           label="主题模式"
           name="mode"
           rules={[{ required: true, message: "请选择主题模式" }]}
         >
-          <Select options={MODE_OPTIONS} placeholder="请选择主题模式"  onSearch={() => {}}/>
+          <Select options={MODE_OPTIONS} placeholder="请选择主题模式" onSearch={() => {}} />
         </Form.Item>
 
         <Form.Item
@@ -182,38 +179,25 @@ const DefaultThemePage: React.FC = () => {
           name="style"
           rules={[{ required: true, message: "请选择主题风格" }]}
         >
-          <Select options={STYLE_OPTIONS} placeholder="请选择主题风格"  onSearch={() => {}}/>
+          <Select options={STYLE_OPTIONS} placeholder="请选择主题风格" onSearch={() => {}} />
         </Form.Item>
 
         <Divider>自定义颜色（可选）</Divider>
 
-        <Form.Item
-          label="主色调"
-          name="primaryColor"
-        >
+        <Form.Item label="主色调" name="primaryColor">
           <ColorPicker showText />
         </Form.Item>
 
-        <Form.Item
-          label="侧边栏颜色"
-          name="sidebarColor"
-        >
+        <Form.Item label="侧边栏颜色" name="sidebarColor">
           <ColorPicker showText />
         </Form.Item>
 
         <Form.Item style={{ marginTop: 24 }}>
           <Space>
-            <Button
-              type="primary"
-              htmlType="submit"
-              icon={<SaveOutlined />}
-              loading={loading}
-            >
+            <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={loading}>
               保存配置
             </Button>
-            <Button onClick={() => form.resetFields()}>
-              重置
-            </Button>
+            <Button onClick={() => form.resetFields()}>重置</Button>
           </Space>
         </Form.Item>
       </Form>

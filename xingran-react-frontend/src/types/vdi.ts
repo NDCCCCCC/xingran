@@ -17,22 +17,22 @@ export interface VirtualMachine {
   ip_address?: string;
   mac_address?: string;
   os_type?: string;
-  cpu_number?: number;      // CPU颗数
-  cpu_core?: number;        // 每颗CPU的核数
-  cpu_per?: number;         // CPU使用率
+  cpu_number?: number; // CPU颗数
+  cpu_core?: number; // 每颗CPU的核数
+  cpu_per?: number; // CPU使用率
   memory?: number;
-  memory_per?: number;      // 内存使用率
+  memory_per?: number; // 内存使用率
   disk?: number;
-  disk_per?: number;        // 磁盘使用率
+  disk_per?: number; // 磁盘使用率
   bound_user_id?: string;
   bound_user_name?: string;
   policy_group_id?: string;
   // 网络配置信息
-  ip_type?: string;             // IP类型：STATIC/DHCP
-  subnet_mask?: string;          // 子网掩码
-  default_gateway?: string;      // 默认网关
-  name_server?: string;          // DNS服务器
-  assign_ip?: string;            // 分配的IP地址
+  ip_type?: string; // IP类型：STATIC/DHCP
+  subnet_mask?: string; // 子网掩码
+  default_gateway?: string; // 默认网关
+  name_server?: string; // DNS服务器
+  assign_ip?: string; // 分配的IP地址
   last_sync_at?: string;
   vdi_server_id: string;
   created_at: string;
@@ -59,18 +59,18 @@ export interface CreateVMRequest {
   resource_id: string;
   resource_group_id?: string; // 资源组 ID
   vdi_server_id: string;
-  cpu_number?: number;    // CPU颗数
-  cpu_core?: number;      // 每颗CPU的核数
+  cpu_number?: number; // CPU颗数
+  cpu_core?: number; // 每颗CPU的核数
   memory?: number;
   disk?: number;
   // VDI API specific fields
-  vtp_id?: number;         // VTP platform ID
-  host_id?: string;       // Host position ID (father_id)
+  vtp_id?: number; // VTP platform ID
+  host_id?: string; // Host position ID (father_id)
   run_position_id?: string; // Run position ID (empty if id == father_id)
-  disk_id?: string;       // Personal disk ID
-  storage_id?: string;    // Storage location ID
-  network_id?: string;    // Network interface ID
-  count?: number;         // Number of VMs to create
+  disk_id?: string; // Personal disk ID
+  storage_id?: string; // Storage location ID
+  network_id?: string; // Network interface ID
+  count?: number; // Number of VMs to create
 }
 
 /**

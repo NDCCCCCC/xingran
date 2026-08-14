@@ -1,28 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
-import {
-  App,
-  Card,
-  Table,
-  Tag,
-  Space,
-  Button,
-  Select
-} from "antd";
+import { App, Card, Table, Tag, Space, Button, Select } from "antd";
 import {
   ReloadOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  LoadingOutlined
+  LoadingOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import {
-  getADSyncLogs,
-  getADConfigList,
-  type ADSyncLog,
-  type ADConfig
-} from "@/lib/adDomainApi";
+import { getADSyncLogs, getADConfigList, type ADSyncLog, type ADConfig } from "@/lib/adDomainApi";
 
 const ADSyncLogsPage: React.FC = () => {
   const { message } = App.useApp();
@@ -62,7 +49,7 @@ const ADSyncLogsPage: React.FC = () => {
     try {
       const res = await getADSyncLogs(selectedConfigId ?? "", {
         current,
-        pageSize
+        pageSize,
       });
       if (res.code === 0) {
         setLogs(res.data?.list ?? []);
@@ -78,11 +65,23 @@ const ADSyncLogsPage: React.FC = () => {
   const getStatusTag = (status: string) => {
     switch (status) {
       case "running":
-        return <Tag icon={<LoadingOutlined />} color="processing">运行中</Tag>;
+        return (
+          <Tag icon={<LoadingOutlined />} color="processing">
+            运行中
+          </Tag>
+        );
       case "success":
-        return <Tag icon={<CheckCircleOutlined />} color="success">成功</Tag>;
+        return (
+          <Tag icon={<CheckCircleOutlined />} color="success">
+            成功
+          </Tag>
+        );
       case "failed":
-        return <Tag icon={<CloseCircleOutlined />} color="error">失败</Tag>;
+        return (
+          <Tag icon={<CloseCircleOutlined />} color="error">
+            失败
+          </Tag>
+        );
       default:
         return <Tag>{status}</Tag>;
     }
@@ -105,70 +104,69 @@ const ADSyncLogsPage: React.FC = () => {
       dataIndex: "syncType",
       key: "syncType",
       width: 100,
-      render: (type: string) => getSyncTypeTag(type)
+      render: (type: string) => getSyncTypeTag(type),
     },
     {
       title: "同步状态",
       dataIndex: "syncStatus",
       key: "syncStatus",
       width: 100,
-      render: (status: string) => getStatusTag(status)
+      render: (status: string) => getStatusTag(status),
     },
     {
       title: "开始时间",
       dataIndex: "startTime",
       key: "startTime",
       width: 180,
-      render: (text: string) => new Date(text).toLocaleString("zh-CN")
+      render: (text: string) => new Date(text).toLocaleString("zh-CN"),
     },
     {
       title: "结束时间",
       dataIndex: "endTime",
       key: "endTime",
       width: 180,
-      render: (text: string | undefined) => text ? new Date(text).toLocaleString("zh-CN") : "-"
+      render: (text: string | undefined) => (text ? new Date(text).toLocaleString("zh-CN") : "-"),
     },
     {
       title: "耗时(秒)",
       dataIndex: "duration",
       key: "duration",
       width: 100,
-      render: (duration: number | undefined) => duration ? `${duration}s` : "-"
+      render: (duration: number | undefined) => (duration ? `${duration}s` : "-"),
     },
     {
       title: "OU数量",
       dataIndex: "ouCount",
       key: "ouCount",
-      width: 80
+      width: 80,
     },
     {
       title: "用户组数量",
       dataIndex: "groupCount",
       key: "groupCount",
-      width: 100
+      width: 100,
     },
     {
       title: "用户数量",
       dataIndex: "userCount",
       key: "userCount",
-      width: 80
+      width: 80,
     },
     {
       title: "错误数量",
       dataIndex: "errorCount",
       key: "errorCount",
       width: 80,
-      render: (count: number) => (
-        <Tag color={count > 0 ? "error" : "default"}>{count}</Tag>
-      )
+      render: (count: number) => <Tag color={count > 0 ? "error" : "default"}>{count}</Tag>,
     },
     {
       title: "错误信息",
       dataIndex: "errorMessage",
       key: "errorMessage",
       ellipsis: true,
-      render: (msg: string | undefined) => msg ? <span style={{ color: "#ff4d4f" }}>{msg}</span> : "-"
-    }
+      render: (msg: string | undefined) =>
+        msg ? <span style={{ color: "#ff4d4f" }}>{msg}</span> : "-",
+    },
   ];
 
   return (
@@ -181,8 +179,9 @@ const ADSyncLogsPage: React.FC = () => {
             allowClear
             value={selectedConfigId}
             onChange={setSelectedConfigId}
-           onSearch={() => {}}>
-            {configs.map(config => (
+            onSearch={() => {}}
+          >
+            {configs.map((config) => (
               <Select.Option key={config.id} value={config.id}>
                 {config.configName}
               </Select.Option>
@@ -208,7 +207,7 @@ const ADSyncLogsPage: React.FC = () => {
           onChange: (page, size) => {
             setCurrent(page);
             setPageSize(size);
-          }
+          },
         }}
       />
     </Card>

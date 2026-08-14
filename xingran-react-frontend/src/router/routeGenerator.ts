@@ -7,20 +7,9 @@
 import type { Menu } from "@/types";
 import type { MenuRouteConfig, RouteMeta } from "@/types/menu";
 
-const DANGEROUS_PATH_PATTERNS = [
-  /\.\./,
-  /\\/,
-  /\.html$/i,
-  /\.js$/i,
-];
+const DANGEROUS_PATH_PATTERNS = [/\.\./, /\\/, /\.html$/i, /\.js$/i];
 
-const XSS_PATTERNS = [
-  /<script/i,
-  /javascript:/i,
-  /onerror=/i,
-  /onload=/i,
-  /onclick=/i,
-];
+const XSS_PATTERNS = [/<script/i, /javascript:/i, /onerror=/i, /onload=/i, /onclick=/i];
 
 const ALLOWED_COMPONENT_PREFIXES = ["pages/", "components/"];
 
@@ -154,16 +143,20 @@ export class RouteGenerator {
       normalizedComponent = normalizedComponent.slice(6);
     }
 
-    if (!normalizedComponent.endsWith("/index") &&
-        !normalizedComponent.includes("/index.") &&
-        !normalizedComponent.match(/\/index\.\w+$/)) {
+    if (
+      !normalizedComponent.endsWith("/index") &&
+      !normalizedComponent.includes("/index.") &&
+      !normalizedComponent.match(/\/index\.\w+$/)
+    ) {
       if (!normalizedComponent.match(/\.\w+$/)) {
         normalizedComponent = `${normalizedComponent}/index`;
       }
     }
 
-    if (!normalizedComponent.startsWith("pages/") &&
-        !normalizedComponent.startsWith("components/")) {
+    if (
+      !normalizedComponent.startsWith("pages/") &&
+      !normalizedComponent.startsWith("components/")
+    ) {
       normalizedComponent = `pages/${normalizedComponent}`;
     }
 

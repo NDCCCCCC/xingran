@@ -22,7 +22,12 @@ const DayField: FC<DayFieldProps> = ({ value, onChange }) => {
 
   return (
     <div>
-      <Radio.Group value={periodType} onChange={(e: RadioChangeEvent) => onChange({ ...value, periodType: e.target.value as PeriodType })}>
+      <Radio.Group
+        value={periodType}
+        onChange={(e: RadioChangeEvent) =>
+          onChange({ ...value, periodType: e.target.value as PeriodType })
+        }
+      >
         <Space orientation="vertical" style={{ width: "100%" }}>
           <Radio value="every">每日</Radio>
 
@@ -33,8 +38,10 @@ const DayField: FC<DayFieldProps> = ({ value, onChange }) => {
                 mode="multiple"
                 style={{ width: 300 }}
                 value={value.specific || [1]}
-                onChange={(values: number[]) => onChange({ ...value, periodType: "specific", specific: values })}
-                options={options.map(v => ({ label: `${v}号`, value: v }))}
+                onChange={(values: number[]) =>
+                  onChange({ ...value, periodType: "specific", specific: values })
+                }
+                options={options.map((v) => ({ label: `${v}号`, value: v }))}
                 placeholder="选择日期"
               />
             </Space>
@@ -47,18 +54,30 @@ const DayField: FC<DayFieldProps> = ({ value, onChange }) => {
               <Select
                 style={{ width: 80 }}
                 value={value.cycleStart ?? 1}
-                onChange={(cycleStart: number) => onChange({ ...value, periodType: "cycle", cycleStart })}
-               onSearch={() => {}}>
-                {options.map(v => <Select.Option key={v} value={v}>{v}</Select.Option>)}
+                onChange={(cycleStart: number) =>
+                  onChange({ ...value, periodType: "cycle", cycleStart })
+                }
+                onSearch={() => {}}
+              >
+                {options.map((v) => (
+                  <Select.Option key={v} value={v}>
+                    {v}
+                  </Select.Option>
+                ))}
               </Select>
               <span>号开始，每</span>
               <Select
                 style={{ width: 80 }}
                 value={value.cycleInterval ?? 1}
-                onChange={(cycleInterval: number) => onChange({ ...value, periodType: "cycle", cycleInterval })}
-               onSearch={() => {}}>
-                {Array.from({ length: 15 }, (_, i) => i + 1).map(v => (
-                  <Select.Option key={v} value={v}>{v}</Select.Option>
+                onChange={(cycleInterval: number) =>
+                  onChange({ ...value, periodType: "cycle", cycleInterval })
+                }
+                onSearch={() => {}}
+              >
+                {Array.from({ length: 15 }, (_, i) => i + 1).map((v) => (
+                  <Select.Option key={v} value={v}>
+                    {v}
+                  </Select.Option>
                 ))}
               </Select>
               <span>天</span>
@@ -72,17 +91,31 @@ const DayField: FC<DayFieldProps> = ({ value, onChange }) => {
               <Select
                 style={{ width: 80 }}
                 value={value.rangeStart ?? 1}
-                onChange={(rangeStart: number) => onChange({ ...value, periodType: "range", rangeStart })}
-               onSearch={() => {}}>
-                {options.map(v => <Select.Option key={v} value={v}>{v}</Select.Option>)}
+                onChange={(rangeStart: number) =>
+                  onChange({ ...value, periodType: "range", rangeStart })
+                }
+                onSearch={() => {}}
+              >
+                {options.map((v) => (
+                  <Select.Option key={v} value={v}>
+                    {v}
+                  </Select.Option>
+                ))}
               </Select>
               <span>到</span>
               <Select
                 style={{ width: 80 }}
                 value={value.rangeEnd ?? 31}
-                onChange={(rangeEnd: number) => onChange({ ...value, periodType: "range", rangeEnd })}
-               onSearch={() => {}}>
-                {options.map(v => <Select.Option key={v} value={v}>{v}</Select.Option>)}
+                onChange={(rangeEnd: number) =>
+                  onChange({ ...value, periodType: "range", rangeEnd })
+                }
+                onSearch={() => {}}
+              >
+                {options.map((v) => (
+                  <Select.Option key={v} value={v}>
+                    {v}
+                  </Select.Option>
+                ))}
               </Select>
               <span>号</span>
             </Space>

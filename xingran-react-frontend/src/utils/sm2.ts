@@ -11,13 +11,13 @@ import { hexToBase64, base64ToHex } from "./encoding";
 
 // SM2 模块接口定义（与 sm-crypto 实际签名匹配）
 interface SM2Module {
-	doEncrypt: (msg: string, publicKey: string, cipherMode: 0 | 1) => string;
-	doDecrypt: (encryptData: string, privateKey: string, cipherMode: 0 | 1) => string;
-	doSignature: (msg: string, privateKey: string, hash?: boolean) => string;
-	doVerifySignature: (msg: string, signHex: string, publicKey: string, hash?: boolean) => boolean;
-	generateKeyPairHex: () => { publicKey: string; privateKey: string };
-	verifyPublicKey: (publicKey: string) => boolean;
-	comparePublicKeyHex: (publicKey1: string, publicKey2: string) => number;
+  doEncrypt: (msg: string, publicKey: string, cipherMode: 0 | 1) => string;
+  doDecrypt: (encryptData: string, privateKey: string, cipherMode: 0 | 1) => string;
+  doSignature: (msg: string, privateKey: string, hash?: boolean) => string;
+  doVerifySignature: (msg: string, signHex: string, publicKey: string, hash?: boolean) => boolean;
+  generateKeyPairHex: () => { publicKey: string; privateKey: string };
+  verifyPublicKey: (publicKey: string) => boolean;
+  comparePublicKeyHex: (publicKey1: string, publicKey2: string) => number;
 }
 
 // SM2 公钥缓存（十六进制格式）
@@ -167,7 +167,7 @@ export async function generateSM2KeyPair(): Promise<{ privateKey: string; public
   const keyPair = sm2.generateKeyPairHex();
   return {
     privateKey: keyPair.privateKey, // 私钥（十六进制）
-    publicKey: keyPair.publicKey,   // 公钥（十六进制）
+    publicKey: keyPair.publicKey, // 公钥（十六进制）
   };
 }
 

@@ -105,7 +105,8 @@ export function DeptEditModal({
             optionFilterProp="label"
             onChange={onLeaderChange}
             notFoundContent={loadingUsers ? "加载中..." : "请先选择上级部门"}
-           onSearch={() => {}}>
+            onSearch={() => {}}
+          >
             {deptUsers.map((user) => (
               <Option
                 key={user.id}
@@ -115,7 +116,9 @@ export function DeptEditModal({
                 <Space>
                   <UserOutlined />
                   {user.nickname || user.username}
-                  <span style={{ color: "var(--theme-text-tertiary, #999)" }}>({user.username})</span>
+                  <span style={{ color: "var(--theme-text-tertiary, #999)" }}>
+                    ({user.username})
+                  </span>
                 </Space>
               </Option>
             ))}
@@ -135,14 +138,18 @@ export function DeptEditModal({
         >
           <Select onSearch={() => {}}>
             {EXTERNAL_ORG_OPTIONS.map((opt) => (
-              <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+              <Option key={opt.value} value={opt.value}>
+                {opt.label}
+              </Option>
             ))}
           </Select>
         </Form.Item>
         <Form.Item name="status" label="状态" initialValue={0}>
           <Select onSearch={() => {}}>
             {STATUS_OPTIONS.map((opt) => (
-              <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+              <Option key={opt.value} value={opt.value}>
+                {opt.label}
+              </Option>
             ))}
           </Select>
         </Form.Item>

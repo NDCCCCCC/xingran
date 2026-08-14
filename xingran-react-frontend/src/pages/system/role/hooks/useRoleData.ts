@@ -104,7 +104,8 @@ export function useRoleData(): UseRoleDataReturn {
           key: node.key || node.id || "",
           title: node.title || node.menuName || "",
           value: node.value || node.id || "",
-          children: node.children && node.children.length > 0 ? processTreeData(node.children) : undefined,
+          children:
+            node.children && node.children.length > 0 ? processTreeData(node.children) : undefined,
         }));
       };
       setMenuTree(processTreeData(result.data || []));
@@ -122,7 +123,8 @@ export function useRoleData(): UseRoleDataReturn {
           key: node.key || node.id || "",
           title: node.title || node.deptName || "",
           value: node.value || node.id || "",
-          children: node.children && node.children.length > 0 ? processTreeData(node.children) : undefined,
+          children:
+            node.children && node.children.length > 0 ? processTreeData(node.children) : undefined,
         }));
       };
       setDeptTree(processTreeData(result.data || []));

@@ -7,14 +7,34 @@ import type { FC } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
-  Table, Button, Space, Modal, Form, Input, Select,
-  Tag, Card, Row, Col, Alert, Radio, Layout,
+  Table,
+  Button,
+  Space,
+  Modal,
+  Form,
+  Input,
+  Select,
+  Tag,
+  Card,
+  Row,
+  Col,
+  Alert,
+  Radio,
+  Layout,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
-  PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined,
-  CheckCircleOutlined, StopOutlined, AppstoreOutlined, TableOutlined,
-  ImportOutlined, ExportOutlined,
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  SearchOutlined,
+  ReloadOutlined,
+  CheckCircleOutlined,
+  StopOutlined,
+  AppstoreOutlined,
+  TableOutlined,
+  ImportOutlined,
+  ExportOutlined,
 } from "@ant-design/icons";
 import type { ServerRoom, Building, Floor } from "@/types";
 import { serverRoomApi, buildingApi, floorApi } from "@/lib/opsApi";
@@ -94,12 +114,26 @@ const ServerRoomManagement: FC = () => {
   );
 
   const {
-    loading, data: serverRooms, total, selectedRowKeys,
-    searchForm, editForm: serverRoomForm, editModalVisible: modalVisible,
-    editingItem: editingServerRoom, setSelectedRowKeys, setEditModalVisible: setModalVisible,
-    setEditingItem: setEditingServerRoom, handleSearch,
-    handleReset, handleAdd, handleEdit, handleModalClose, loadData: loadServerRooms, resetSelection,
-    setData, setLoading,
+    loading,
+    data: serverRooms,
+    total,
+    selectedRowKeys,
+    searchForm,
+    editForm: serverRoomForm,
+    editModalVisible: modalVisible,
+    editingItem: editingServerRoom,
+    setSelectedRowKeys,
+    setEditModalVisible: setModalVisible,
+    setEditingItem: setEditingServerRoom,
+    handleSearch,
+    handleReset,
+    handleAdd,
+    handleEdit,
+    handleModalClose,
+    loadData: loadServerRooms,
+    resetSelection,
+    setData,
+    setLoading,
     handleTableChange: handleServerRoomTableChange,
     getColumnSortOrder: getServerRoomColumnSortOrder,
   } = useTableManager<ServerRoom>(
@@ -148,11 +182,13 @@ const ServerRoomManagement: FC = () => {
       if (orgId) params.orgId = orgId;
       const result = await buildingApi.list(params);
       const buildings = result.data?.list || [];
-      setBuildingOptions(buildings.map((b: Building) => ({
-        id: b.id,
-        name: b.name,
-        orgId: b.orgId,
-      })));
+      setBuildingOptions(
+        buildings.map((b: Building) => ({
+          id: b.id,
+          name: b.name,
+          orgId: b.orgId,
+        }))
+      );
     } catch (error) {
       handleApiError(error, "加载楼宇选项", false);
     }
@@ -166,11 +202,13 @@ const ServerRoomManagement: FC = () => {
     try {
       const result = await floorApi.list({ current: 1, pageSize: 50, buildingId });
       const floors = result.data?.list || [];
-      setFloorOptions(floors.map((f: Floor) => ({
-        id: f.id,
-        name: f.name || "",
-        floorNo: String(f.floorNo),
-      })));
+      setFloorOptions(
+        floors.map((f: Floor) => ({
+          id: f.id,
+          name: f.name || "",
+          floorNo: String(f.floorNo),
+        }))
+      );
     } catch (error) {
       handleApiError(error, "加载楼层选项", false);
     }
@@ -198,7 +236,7 @@ const ServerRoomManagement: FC = () => {
 
   const handleSave = async () => {
     try {
-      const values = await serverRoomForm.validateFields() as Partial<ServerRoom>;
+      const values = (await serverRoomForm.validateFields()) as Partial<ServerRoom>;
       if (editingServerRoom) {
         await serverRoomApi.update(editingServerRoom.id, values);
         handleSuccess("更新");
@@ -246,7 +284,7 @@ const ServerRoomManagement: FC = () => {
       serverRoomForm.setFieldsValue({ status: 0 });
       setFloorOptions([]);
       if (selectedDeptId && buildingOptions.length > 0) {
-        const firstBuilding = buildingOptions.find(b => b.orgId === selectedDeptId);
+        const firstBuilding = buildingOptions.find((b) => b.orgId === selectedDeptId);
         if (firstBuilding) {
           serverRoomForm.setFieldValue("buildingId", firstBuilding.id);
           await loadFloorOptions(firstBuilding.id);
@@ -261,7 +299,14 @@ const ServerRoomManagement: FC = () => {
   };
 
   const columns: ColumnsType<ServerRoom> = [
-    { title: "机房名称", dataIndex: "name", key: "name", width: 150, sorter: true, sortOrder: getServerRoomColumnSortOrder("name") },
+    {
+      title: "机房名称",
+      dataIndex: "name",
+      key: "name",
+      width: 150,
+      sorter: true,
+      sortOrder: getServerRoomColumnSortOrder("name"),
+    },
     {
       title: "所在楼宇",
       dataIndex: "buildingName",
@@ -280,16 +325,28 @@ const ServerRoomManagement: FC = () => {
       sortOrder: getServerRoomColumnSortOrder("floorName"),
       render: (_, record) => record.floorName || record.floorNo || "-",
     },
-    createStatusColumn("status", { width: 100, sorter: true, sortOrder: getServerRoomColumnSortOrder("status") }),
+    createStatusColumn("status", {
+      width: 100,
+      sorter: true,
+      sortOrder: getServerRoomColumnSortOrder("status"),
+    }),
     { title: "描述", dataIndex: "remark", key: "remark", ellipsis: true },
-    createDateTimeColumn("createdAt", { width: 180, sorter: true, sortOrder: getServerRoomColumnSortOrder("createdAt") }),
+    createDateTimeColumn("createdAt", {
+      width: 180,
+      sorter: true,
+      sortOrder: getServerRoomColumnSortOrder("createdAt"),
+    }),
     {
-      title: "操作", key: "action",
+      title: "操作",
+      key: "action",
       render: (_, record) => {
         const actions = [
           { key: "edit", label: "编辑", icon: <EditOutlined />, onClick: () => openModal(record) },
           {
-            key: "delete", label: "删除", icon: <DeleteOutlined />, danger: true,
+            key: "delete",
+            label: "删除",
+            icon: <DeleteOutlined />,
+            danger: true,
             onClick: () => {
               Modal.confirm({
                 title: "确定要删除这个机房吗？",
@@ -307,7 +364,18 @@ const ServerRoomManagement: FC = () => {
   ];
 
   const renderCardView = () => {
-    if (serverRooms.length === 0) return <div style={{ textAlign: "center", padding: "40px", color: "var(--theme-text-tertiary, #999)" }}>暂无数据</div>;
+    if (serverRooms.length === 0)
+      return (
+        <div
+          style={{
+            textAlign: "center",
+            padding: "40px",
+            color: "var(--theme-text-tertiary, #999)",
+          }}
+        >
+          暂无数据
+        </div>
+      );
     return (
       <Row gutter={[16, 16]}>
         {serverRooms.map((room) => (
@@ -333,14 +401,25 @@ const ServerRoomManagement: FC = () => {
             >
               <Card.Meta
                 title={
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
                     <span>{room.name}</span>
-                    <Tag color={room.status === 0 ? "success" : "error"}>{room.status === 0 ? "正常" : "停用"}</Tag>
+                    <Tag color={room.status === 0 ? "success" : "error"}>
+                      {room.status === 0 ? "正常" : "停用"}
+                    </Tag>
                   </div>
                 }
                 description={
                   <div>
-                    <div><strong>位置：</strong>{room.buildingName || room.buildingId} {room.floorNo}层</div>
+                    <div>
+                      <strong>位置：</strong>
+                      {room.buildingName || room.buildingId} {room.floorNo}层
+                    </div>
                   </div>
                 }
               />
@@ -359,19 +438,38 @@ const ServerRoomManagement: FC = () => {
           show={total > 10}
           items={[
             { title: "总机房数", value: statistics.total, prefix: <CheckCircleOutlined /> },
-            { title: "正常机房", value: statistics.active, styles: { content: { color: "var(--theme-success, #3f8600)" } }, prefix: <CheckCircleOutlined /> },
-            { title: "停用机房", value: statistics.inactive, styles: { content: { color: "var(--theme-error, #cf1322)" } }, prefix: <StopOutlined /> },
+            {
+              title: "正常机房",
+              value: statistics.active,
+              styles: { content: { color: "var(--theme-success, #3f8600)" } },
+              prefix: <CheckCircleOutlined />,
+            },
+            {
+              title: "停用机房",
+              value: statistics.inactive,
+              styles: { content: { color: "var(--theme-error, #cf1322)" } },
+              prefix: <StopOutlined />,
+            },
           ]}
         />
         <Card style={{ marginBottom: 16 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              flexWrap: "wrap",
+              gap: "16px",
+            }}
+          >
             <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
               <Form.Item name="buildingId" label="所在楼宇">
                 <Select
                   placeholder="请先选择部门"
-                  options={buildingOptions.map(b =>    ({ label: b.name, value: b.id }))}
+                  options={buildingOptions.map((b) => ({ label: b.name, value: b.id }))}
                   disabled={!selectedDeptId}
-                 onSearch={() => {}}/>
+                  onSearch={() => {}}
+                />
               </Form.Item>
               <Form.Item name="floorNo" label="楼层">
                 <Input placeholder="请输入楼层" />
@@ -387,36 +485,84 @@ const ServerRoomManagement: FC = () => {
               </Form.Item>
               <Form.Item>
                 <Space>
-                  <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>搜索</Button>
+                  <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                    搜索
+                  </Button>
                   <Button onClick={handleReset}>重置</Button>
-                  <Button icon={<ReloadOutlined />} onClick={refreshData}>刷新</Button>
+                  <Button icon={<ReloadOutlined />} onClick={refreshData}>
+                    刷新
+                  </Button>
                 </Space>
               </Form.Item>
             </Form>
             <Space>
-              <Radio.Group value={viewMode} onChange={(e) => setViewMode(e.target.value)} buttonStyle="solid">
-                <Radio.Button value="table"><TableOutlined /> 表格</Radio.Button>
-                <Radio.Button value="card"><AppstoreOutlined /> 卡片</Radio.Button>
+              <Radio.Group
+                value={viewMode}
+                onChange={(e) => setViewMode(e.target.value)}
+                buttonStyle="solid"
+              >
+                <Radio.Button value="table">
+                  <TableOutlined /> 表格
+                </Radio.Button>
+                <Radio.Button value="card">
+                  <AppstoreOutlined /> 卡片
+                </Radio.Button>
               </Radio.Group>
-              <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>导入</Button>
-              <Button icon={<ExportOutlined />} onClick={() => {
-                // 获取当前筛选条件
-                const values = searchForm.getFieldsValue() as Record<string, unknown>;
-                const currentFilters: Record<string, unknown> = {};
-                Object.keys(values).forEach(key => {
-                  const value = values[key];
-                  if (value !== undefined && value !== null && value !== "") {
-                    currentFilters[key] = value;
-                  }
-                });
-                setExportFilters(currentFilters);
-                setExportVisible(true);
-              }}>导出</Button>
-              {selectedRowKeys.length > 0 && <Button icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }} onClick={handleBatchDelete}>批量删除 ({selectedRowKeys.length})</Button>}
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新增机房</Button>
+              <Button icon={<ImportOutlined />} onClick={() => setImportVisible(true)}>
+                导入
+              </Button>
+              <Button
+                icon={<ExportOutlined />}
+                onClick={() => {
+                  // 获取当前筛选条件
+                  const values = searchForm.getFieldsValue() as Record<string, unknown>;
+                  const currentFilters: Record<string, unknown> = {};
+                  Object.keys(values).forEach((key) => {
+                    const value = values[key];
+                    if (value !== undefined && value !== null && value !== "") {
+                      currentFilters[key] = value;
+                    }
+                  });
+                  setExportFilters(currentFilters);
+                  setExportVisible(true);
+                }}
+              >
+                导出
+              </Button>
+              {selectedRowKeys.length > 0 && (
+                <Button
+                  icon={<DeleteOutlined />}
+                  style={{ color: "var(--theme-error, #ff4d4f)" }}
+                  onClick={handleBatchDelete}
+                >
+                  批量删除 ({selectedRowKeys.length})
+                </Button>
+              )}
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
+                新增机房
+              </Button>
             </Space>
           </div>
-          {selectedRowKeys.length > 0 && <Alert title={<span>已选择 <strong>{selectedRowKeys.length}</strong> 个机房，<Button type="link" size="small" onClick={() => setSelectedRowKeys([])} style={{ padding: 0 }}>取消选择</Button></span>} type="info" showIcon style={{ marginTop: 12 }} />}
+          {selectedRowKeys.length > 0 && (
+            <Alert
+              title={
+                <span>
+                  已选择 <strong>{selectedRowKeys.length}</strong> 个机房，
+                  <Button
+                    type="link"
+                    size="small"
+                    onClick={() => setSelectedRowKeys([])}
+                    style={{ padding: 0 }}
+                  >
+                    取消选择
+                  </Button>
+                </span>
+              }
+              type="info"
+              showIcon
+              style={{ marginTop: 12 }}
+            />
+          )}
         </Card>
         <Card>
           {viewMode === "table" ? (
@@ -429,46 +575,104 @@ const ServerRoomManagement: FC = () => {
               pagination={paginationProps}
               onChange={handleServerRoomTableChange}
             />
-          ) : renderCardView()}
+          ) : (
+            renderCardView()
+          )}
         </Card>
-        <Modal title={editingServerRoom ? "编辑机房" : "新增机房"} open={modalVisible} onOk={handleSave} onCancel={() => { setModalVisible(false); serverRoomForm.resetFields(); setEditingServerRoom(null); setFloorOptions([]); }} width={600}>
-          <Form form={serverRoomForm} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
-            <Form.Item name="buildingId" label="所在楼宇" rules={[{ required: true, message: "请选择所在楼宇" }]}>
+        <Modal
+          title={editingServerRoom ? "编辑机房" : "新增机房"}
+          open={modalVisible}
+          onOk={handleSave}
+          onCancel={() => {
+            setModalVisible(false);
+            serverRoomForm.resetFields();
+            setEditingServerRoom(null);
+            setFloorOptions([]);
+          }}
+          width={600}
+        >
+          <Form
+            form={serverRoomForm}
+            layout="horizontal"
+            labelCol={{ span: 5 }}
+            wrapperCol={{ span: 19 }}
+          >
+            <Form.Item
+              name="buildingId"
+              label="所在楼宇"
+              rules={[{ required: true, message: "请选择所在楼宇" }]}
+            >
               <Select
                 placeholder="请选择所在楼宇"
                 className="user-form-input"
-                options={buildingOptions.map(b =>    ({ label: b.name, value: b.id }))}
+                options={buildingOptions.map((b) => ({ label: b.name, value: b.id }))}
                 onChange={(value) => {
                   loadFloorOptions(value);
                   serverRoomForm.setFieldValue("floorId", undefined);
                 }}
-               onSearch={() => {}}/>
+                onSearch={() => {}}
+              />
             </Form.Item>
-            <Form.Item name="floorId" label="楼层" rules={[{ required: true, message: "请选择楼层" }]}>
+            <Form.Item
+              name="floorId"
+              label="楼层"
+              rules={[{ required: true, message: "请选择楼层" }]}
+            >
               <Select
                 placeholder="请选择楼层"
                 className="user-form-input"
                 disabled={floorOptions.length === 0}
-                options={floorOptions.map(f =>    ({ label: `${f.floorNo} - ${f.name}`, value: f.id }))}
-               onSearch={() => {}}/>
+                options={floorOptions.map((f) => ({
+                  label: `${f.floorNo} - ${f.name}`,
+                  value: f.id,
+                }))}
+                onSearch={() => {}}
+              />
             </Form.Item>
-            <Form.Item name="name" label="机房名称" rules={[{ required: true, message: "请输入机房名称" }]}>
+            <Form.Item
+              name="name"
+              label="机房名称"
+              rules={[{ required: true, message: "请输入机房名称" }]}
+            >
               <Input placeholder="请输入机房名称" className="user-form-input" />
             </Form.Item>
-            <Form.Item name="status" label="状态" rules={[{ required: true, message: "请选择状态" }]}>
-              <Select placeholder="请选择状态" className="user-form-input" options={[{ label: "正常", value: 0 }, { label: "停用", value: 1 }]}  onSearch={() => {}}/>
+            <Form.Item
+              name="status"
+              label="状态"
+              rules={[{ required: true, message: "请选择状态" }]}
+            >
+              <Select
+                placeholder="请选择状态"
+                className="user-form-input"
+                options={[
+                  { label: "正常", value: 0 },
+                  { label: "停用", value: 1 },
+                ]}
+                onSearch={() => {}}
+              />
             </Form.Item>
             <Form.Item name="remark" label="描述">
               <TextArea rows={3} placeholder="请输入描述" className="user-form-input" />
             </Form.Item>
           </Form>
         </Modal>
-        <ExcelImport entityType="serverRoom" entityName="机房" visible={importVisible} onClose={() => setImportVisible(false)} onImportSuccess={handleImportSuccess} />
-        <ExcelExport entityType="serverRoom" entityName="机房" visible={exportVisible} onClose={() => setExportVisible(false)} filters={exportFilters} />
+        <ExcelImport
+          entityType="serverRoom"
+          entityName="机房"
+          visible={importVisible}
+          onClose={() => setImportVisible(false)}
+          onImportSuccess={handleImportSuccess}
+        />
+        <ExcelExport
+          entityType="serverRoom"
+          entityName="机房"
+          visible={exportVisible}
+          onClose={() => setExportVisible(false)}
+          filters={exportFilters}
+        />
       </Content>
     </Layout>
   );
 };
 
 export default ServerRoomManagement;
-

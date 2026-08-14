@@ -5,7 +5,13 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { App } from "antd";
-import type { ConfigExecution, NetworkDevice, ConfigTemplate, BaseResponse, PageResponse } from "@/types";
+import type {
+  ConfigExecution,
+  NetworkDevice,
+  ConfigTemplate,
+  BaseResponse,
+  PageResponse,
+} from "@/types";
 import { post } from "@/lib/api";
 import type { ExecutionStatistics, ExecutionDataState } from "../types";
 
@@ -74,7 +80,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
         pageSize: 50,
         status: 0, // 只显示在线设备
       });
-      setDataState(prev => ({ ...prev, devices: result.data?.list || [] }));
+      setDataState((prev) => ({ ...prev, devices: result.data?.list || [] }));
     } catch (error) {
       console.error("加载设备列表失败:", error);
     }
@@ -88,33 +94,36 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
         pageSize: 50,
         templateType: "config",
       });
-      setDataState(prev => ({ ...prev, templates: result.data?.list || [] }));
+      setDataState((prev) => ({ ...prev, templates: result.data?.list || [] }));
     } catch (error) {
       console.error("加载模板列表失败:", error);
     }
   }, []);
 
   // 加载执行记录列表
-  const loadExecutions = useCallback(async (params: Record<string, unknown> = {}) => {
-    setExecLoading(true);
-    try {
-      // 确保参数有有效值，避免 undefined 导致后端验证失败
-      const requestCurrent = params.current ?? execCurrent ?? 1;
-      const requestPageSize = params.pageSize ?? pageSize ?? 10;
+  const loadExecutions = useCallback(
+    async (params: Record<string, unknown> = {}) => {
+      setExecLoading(true);
+      try {
+        // 确保参数有有效值，避免 undefined 导致后端验证失败
+        const requestCurrent = params.current ?? execCurrent ?? 1;
+        const requestPageSize = params.pageSize ?? pageSize ?? 10;
 
-      const result = await post<PageResponse<ConfigExecution>>("/network/executions/list", {
-        ...params,
-        current: requestCurrent,
-        pageSize: requestPageSize,
-      });
-      setDataState(prev => ({ ...prev, executions: result.data?.list || [] }));
-      setExecTotal(result.data?.total || 0);
-    } catch (error) {
-      console.error("加载执行记录失败:", error);
-    } finally {
-      setExecLoading(false);
-    }
-  }, [execCurrent, pageSize]);
+        const result = await post<PageResponse<ConfigExecution>>("/network/executions/list", {
+          ...params,
+          current: requestCurrent,
+          pageSize: requestPageSize,
+        });
+        setDataState((prev) => ({ ...prev, executions: result.data?.list || [] }));
+        setExecTotal(result.data?.total || 0);
+      } catch (error) {
+        console.error("加载执行记录失败:", error);
+      } finally {
+        setExecLoading(false);
+      }
+    },
+    [execCurrent, pageSize]
+  );
 
   // 加载统计数据(专用端点 COUNT 聚合,不受分页影响)
   const loadStatistics = useCallback(async () => {
@@ -136,7 +145,7 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
   const loadExecutionDetails = useCallback(async (executionId: string) => {
     try {
       const result = await post<ConfigExecution>(`/network/executions/${executionId}`, {});
-      setDataState(prev => ({
+      setDataState((prev) => ({
         ...prev,
         currentExecution: result.data || null,
         executionDetails: result.data?.details || [],

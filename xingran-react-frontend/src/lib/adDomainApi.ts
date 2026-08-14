@@ -223,15 +223,15 @@ export interface ADGroupUpdateRequest {
 
 const DEFAULT_PAGINATION = { current: 1, pageSize: 10 };
 
-function withDefaultPagination<T extends { current?: number; pageSize?: number }>(
-  params: T
-): T {
+function withDefaultPagination<T extends { current?: number; pageSize?: number }>(params: T): T {
   return { ...DEFAULT_PAGINATION, ...params };
 }
 
 // ==================== AD配置 API ====================
 
-export function getADConfigList(params: ADConfigListRequest = {}): Promise<BaseResponse<PageResponse<ADConfig>>> {
+export function getADConfigList(
+  params: ADConfigListRequest = {}
+): Promise<BaseResponse<PageResponse<ADConfig>>> {
   return post("/ad-domain/configs/list", withDefaultPagination(params));
 }
 
@@ -243,7 +243,10 @@ export function getADConfig(id: string): Promise<BaseResponse<ADConfig>> {
   return get(`/ad-domain/configs/${id}`);
 }
 
-export function updateADConfig(id: string, data: ADConfigUpdateRequest): Promise<BaseResponse<{ message: string }>> {
+export function updateADConfig(
+  id: string,
+  data: ADConfigUpdateRequest
+): Promise<BaseResponse<{ message: string }>> {
   return post(`/ad-domain/configs/${id}/update`, data);
 }
 
@@ -255,7 +258,10 @@ export function testADConnection(id: string): Promise<BaseResponse<{ message: st
   return post(`/ad-domain/configs/${id}/test`, {});
 }
 
-export function syncADData(id: string, syncType: string = "full"): Promise<BaseResponse<{ message: string; result: ADSyncResult }>> {
+export function syncADData(
+  id: string,
+  syncType: string = "full"
+): Promise<BaseResponse<{ message: string; result: ADSyncResult }>> {
   return post(`/ad-domain/configs/${id}/sync`, { syncType });
 }
 
@@ -267,7 +273,9 @@ export function getADOUTree(configId: string): Promise<BaseResponse<ADOUNode[]>>
 
 // ==================== 用户组管理 API ====================
 
-export function getADGroupList(params: ADGroupListRequest): Promise<BaseResponse<PageResponse<ADGroup>>> {
+export function getADGroupList(
+  params: ADGroupListRequest
+): Promise<BaseResponse<PageResponse<ADGroup>>> {
   return post("/ad-domain/groups/list", withDefaultPagination(params));
 }
 
@@ -275,7 +283,11 @@ export function getADGroupDetail(id: string): Promise<BaseResponse<ADGroup>> {
   return get(`/ad-domain/groups/${id}`);
 }
 
-export function updateADGroup(id: string, configId: string, data: ADGroupUpdateRequest): Promise<BaseResponse<{ message: string }>> {
+export function updateADGroup(
+  id: string,
+  configId: string,
+  data: ADGroupUpdateRequest
+): Promise<BaseResponse<{ message: string }>> {
   return post(`/ad-domain/groups/${id}/update`, { configId, ...data });
 }
 
@@ -290,11 +302,19 @@ export function getADGroupMembers(
   });
 }
 
-export function addADGroupMember(id: string, configId: string, userDn: string): Promise<BaseResponse<{ message: string }>> {
+export function addADGroupMember(
+  id: string,
+  configId: string,
+  userDn: string
+): Promise<BaseResponse<{ message: string }>> {
   return post(`/ad-domain/groups/${id}/members/add`, { configId, userDn });
 }
 
-export function removeADGroupMember(id: string, configId: string, userDn: string): Promise<BaseResponse<{ message: string }>> {
+export function removeADGroupMember(
+  id: string,
+  configId: string,
+  userDn: string
+): Promise<BaseResponse<{ message: string }>> {
   return post(`/ad-domain/groups/${id}/members/remove`, { configId, userDn });
 }
 
@@ -326,7 +346,10 @@ export function syncADGroups(configId: string): Promise<BaseResponse<ADGroupSync
   return post(`/ad-domain/groups/sync-by-config/${configId}`, {});
 }
 
-export function syncADSingleGroup(configId: string, groupDn: string): Promise<BaseResponse<{ message: string }>> {
+export function syncADSingleGroup(
+  configId: string,
+  groupDn: string
+): Promise<BaseResponse<{ message: string }>> {
   return post("/ad-domain/groups/sync-single", { configId, groupDn });
 }
 
@@ -336,33 +359,47 @@ export function getADGroupSyncStatus(configId: string): Promise<BaseResponse<ADG
 
 // ==================== 用户管理 API ====================
 
-export function getADUserList(params: ADUserListRequest): Promise<BaseResponse<PageResponse<ADUser>>> {
-  return post("/ad-domain/users/list", withDefaultPagination(params))
+export function getADUserList(
+  params: ADUserListRequest
+): Promise<BaseResponse<PageResponse<ADUser>>> {
+  return post("/ad-domain/users/list", withDefaultPagination(params));
 }
 
-export function getADUserIds(
-  params: ADUserListRequest
-): Promise<BaseResponse<string[]>> {
-  return post("/ad-domain/users/ids", params)
+export function getADUserIds(params: ADUserListRequest): Promise<BaseResponse<string[]>> {
+  return post("/ad-domain/users/ids", params);
 }
 
 export function getADUserDetail(id: string, configId: string): Promise<BaseResponse<ADUser>> {
-  return post(`/ad-domain/users/${id}`, { configId })
+  return post(`/ad-domain/users/${id}`, { configId });
 }
 
-export function updateADUser(id: string, configId: string, data: ADUserUpdateRequest): Promise<BaseResponse<{ message: string }>> {
+export function updateADUser(
+  id: string,
+  configId: string,
+  data: ADUserUpdateRequest
+): Promise<BaseResponse<{ message: string }>> {
   return post(`/ad-domain/users/${id}/update`, { configId, update: data });
 }
 
-export function moveADUser(id: string, configId: string, newOuDn: string): Promise<BaseResponse<{ message: string }>> {
+export function moveADUser(
+  id: string,
+  configId: string,
+  newOuDn: string
+): Promise<BaseResponse<{ message: string }>> {
   return post(`/ad-domain/users/${id}/move`, { configId, move: { newOuDn } });
 }
 
-export function enableADUser(id: string, configId: string): Promise<BaseResponse<{ message: string }>> {
+export function enableADUser(
+  id: string,
+  configId: string
+): Promise<BaseResponse<{ message: string }>> {
   return post(`/ad-domain/users/${id}/enable`, { configId });
 }
 
-export function disableADUser(id: string, configId: string): Promise<BaseResponse<{ message: string }>> {
+export function disableADUser(
+  id: string,
+  configId: string
+): Promise<BaseResponse<{ message: string }>> {
   return post(`/ad-domain/users/${id}/disable`, { configId });
 }
 
@@ -380,11 +417,16 @@ export function getADSyncLogs(
 
 // ==================== 电脑设备管理 API ====================
 
-export function getADComputerList(params: ADComputerListRequest): Promise<BaseResponse<PageResponse<ADComputerDetail>>> {
+export function getADComputerList(
+  params: ADComputerListRequest
+): Promise<BaseResponse<PageResponse<ADComputerDetail>>> {
   return post("/ad-domain/computers/list", withDefaultPagination(params));
 }
 
-export function getADComputerDetail(configId: string, computerDn: string): Promise<BaseResponse<ADComputerDetail>> {
+export function getADComputerDetail(
+  configId: string,
+  computerDn: string
+): Promise<BaseResponse<ADComputerDetail>> {
   return post("/ad-domain/computers/detail", { configId, computerDn });
 }
 
@@ -437,7 +479,9 @@ export interface UpdateMappingRequest {
   syncEnabled?: boolean;
 }
 
-export function getMappingList(params: MappingListRequest): Promise<BaseResponse<MappingListResponse>> {
+export function getMappingList(
+  params: MappingListRequest
+): Promise<BaseResponse<MappingListResponse>> {
   return post("/ad-domain/mappings/list", withDefaultPagination(params));
 }
 
@@ -533,7 +577,9 @@ export interface OUGroupMappingUpdateRequest {
   status?: "active" | "inactive";
 }
 
-export function getOUGroupMappings(params: OUGroupMappingListRequest): Promise<BaseResponse<OUGroupMappingListResponse>> {
+export function getOUGroupMappings(
+  params: OUGroupMappingListRequest
+): Promise<BaseResponse<OUGroupMappingListResponse>> {
   return post("/ad-domain/ou-group-mappings/list", withDefaultPagination(params));
 }
 
@@ -541,11 +587,16 @@ export function getOUGroupMapping(id: string): Promise<BaseResponse<OUGroupMappi
   return get(`/ad-domain/ou-group-mappings/${id}`);
 }
 
-export function createOUGroupMapping(data: OUGroupMappingCreateRequest): Promise<BaseResponse<OUGroupMapping>> {
+export function createOUGroupMapping(
+  data: OUGroupMappingCreateRequest
+): Promise<BaseResponse<OUGroupMapping>> {
   return post("/ad-domain/ou-group-mappings", data);
 }
 
-export function updateOUGroupMapping(id: string, data: OUGroupMappingUpdateRequest): Promise<BaseResponse<{ message: string }>> {
+export function updateOUGroupMapping(
+  id: string,
+  data: OUGroupMappingUpdateRequest
+): Promise<BaseResponse<{ message: string }>> {
   return post(`/ad-domain/ou-group-mappings/${id}/update`, data);
 }
 
@@ -620,23 +671,32 @@ export interface ADServiceAccountStats {
 }
 
 // 列表（带分页）
-export function listADServiceAccounts(
-  data: { configId: string; page?: number; pageSize?: number; status?: number }
-): Promise<BaseResponse<ADServiceAccountListResponse>> {
+export function listADServiceAccounts(data: {
+  configId: string;
+  page?: number;
+  pageSize?: number;
+  status?: number;
+}): Promise<BaseResponse<ADServiceAccountListResponse>> {
   return post("/ad-domain/accounts/list", data);
 }
 
 // 新增
-export function createADServiceAccount(
-  data: { configId: string; username: string; password: string; remark?: string }
-): Promise<BaseResponse<{ id: string }>> {
+export function createADServiceAccount(data: {
+  configId: string;
+  username: string;
+  password: string;
+  remark?: string;
+}): Promise<BaseResponse<{ id: string }>> {
   return post("/ad-domain/accounts/create", data);
 }
 
 // 更新
-export function updateADServiceAccount(
-  data: { id: string; username?: string; password?: string; remark?: string }
-): Promise<BaseResponse<{ ok: boolean }>> {
+export function updateADServiceAccount(data: {
+  id: string;
+  username?: string;
+  password?: string;
+  remark?: string;
+}): Promise<BaseResponse<{ ok: boolean }>> {
   return post("/ad-domain/accounts/update", data);
 }
 
@@ -656,9 +716,10 @@ export function disableADServiceAccount(id: string): Promise<BaseResponse<{ ok: 
 }
 
 // 立即解锁（reason ≥10 字符）
-export function unlockADServiceAccount(
-  data: { id: string; reason: string }
-): Promise<BaseResponse<{ ok: boolean }>> {
+export function unlockADServiceAccount(data: {
+  id: string;
+  reason: string;
+}): Promise<BaseResponse<{ ok: boolean }>> {
   return post("/ad-domain/accounts/unlock", data);
 }
 

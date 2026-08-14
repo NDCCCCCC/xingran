@@ -19,18 +19,12 @@ export const EXTERNAL_ORG_OPTIONS = [
 
 /** 渲染状态标签 */
 export function renderStatusTag(status: number) {
-  return (
-    <Tag color={status === 0 ? "success" : "error"}>
-      {status === 0 ? "正常" : "停用"}
-    </Tag>
-  );
+  return <Tag color={status === 0 ? "success" : "error"}>{status === 0 ? "正常" : "停用"}</Tag>;
 }
 
 /** 渲染外部机构标签 */
 export function renderExternalOrgTag(isExternalOrg: number) {
   return (
-    <Tag color={isExternalOrg === 1 ? "blue" : "default"}>
-      {isExternalOrg === 1 ? "是" : "否"}
-    </Tag>
+    <Tag color={isExternalOrg === 1 ? "blue" : "default"}>{isExternalOrg === 1 ? "是" : "否"}</Tag>
   );
 }

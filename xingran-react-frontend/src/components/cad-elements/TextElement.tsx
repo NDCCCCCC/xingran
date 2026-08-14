@@ -35,15 +35,18 @@ export function CADTextElement({
   const fontSize = text.fontSize ?? DEFAULT_FONT_SIZE;
   const textColor = text.color ?? DEFAULT_FONT_COLOR;
 
-  const textStyle = useMemo(() => ({
-    fill: textColor,
-    fontSize,
-    fontFamily: text.fontFamily ?? DEFAULT_FONT_FAMILY,
-    fontWeight: text.fontWeight ?? "normal",
-    fontStyle: text.fontStyle ?? "normal",
-    cursor: "pointer",
-    userSelect: "none" as const,
-  }), [textColor, fontSize, text.fontFamily, text.fontWeight, text.fontStyle]);
+  const textStyle = useMemo(
+    () => ({
+      fill: textColor,
+      fontSize,
+      fontFamily: text.fontFamily ?? DEFAULT_FONT_FAMILY,
+      fontWeight: text.fontWeight ?? "normal",
+      fontStyle: text.fontStyle ?? "normal",
+      cursor: "pointer",
+      userSelect: "none" as const,
+    }),
+    [textColor, fontSize, text.fontFamily, text.fontWeight, text.fontStyle]
+  );
 
   const transform = useMemo(() => {
     if (!text.angle) return "";
@@ -62,7 +65,9 @@ export function CADTextElement({
     "cad-text",
     selected && "cad-text-selected",
     hovered && "cad-text-hovered",
-  ].filter(Boolean).join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   // 选中背景的尺寸计算
   const selectionBg = useMemo(() => {

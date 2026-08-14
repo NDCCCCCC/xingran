@@ -41,8 +41,22 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
   const { handleViewDetail, handleCancelExecution, getSortOrder } = params;
 
   return [
-    { title: "任务名称", dataIndex: "executionName", key: "executionName", width: 200, sorter: true, sortOrder: getSortOrder?.("executionName") },
-    { title: "模板名称", dataIndex: "templateName", key: "templateName", width: 150, sorter: true, sortOrder: getSortOrder?.("templateName") },
+    {
+      title: "任务名称",
+      dataIndex: "executionName",
+      key: "executionName",
+      width: 200,
+      sorter: true,
+      sortOrder: getSortOrder?.("executionName"),
+    },
+    {
+      title: "模板名称",
+      dataIndex: "templateName",
+      key: "templateName",
+      width: 150,
+      sorter: true,
+      sortOrder: getSortOrder?.("templateName"),
+    },
     {
       title: "状态",
       dataIndex: "status",
@@ -52,7 +66,11 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
       sortOrder: getSortOrder?.("status"),
       render: (status: string) => {
         const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
-        return <Tag color={config.color} icon={config.icon}>{config.text}</Tag>;
+        return (
+          <Tag color={config.color} icon={config.icon}>
+            {config.text}
+          </Tag>
+        );
       },
     },
     { title: "设备总数", dataIndex: "totalDevices", key: "totalDevices", width: 100 },
@@ -63,10 +81,17 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
       key: "progress",
       width: 150,
       render: (_, record) => {
-        const percent = record.totalDevices > 0
-          ? Math.round(((record.successCount + record.failureCount) / record.totalDevices) * 100)
-          : 0;
-        return <Progress percent={percent} size="small" status={record.status === "failed" ? "exception" : undefined} />;
+        const percent =
+          record.totalDevices > 0
+            ? Math.round(((record.successCount + record.failureCount) / record.totalDevices) * 100)
+            : 0;
+        return (
+          <Progress
+            percent={percent}
+            size="small"
+            status={record.status === "failed" ? "exception" : undefined}
+          />
+        );
       },
     },
     {
@@ -91,23 +116,25 @@ export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType
             icon: <EyeOutlined />,
             onClick: () => handleViewDetail(record),
           },
-          ...(record.status === "pending" || record.status === "running" ? [
-            {
-              key: "cancel",
-              label: "取消",
-              icon: <StopOutlined />,
-              danger: true,
-              onClick: () => {
-                Modal.confirm({
-                  title: "确认取消执行?",
-                  okText: "确定",
-                  cancelText: "取消",
-                  okButtonProps: { danger: true },
-                  onOk: () => handleCancelExecution(record.id),
-                });
-              },
-            },
-          ] : []),
+          ...(record.status === "pending" || record.status === "running"
+            ? [
+                {
+                  key: "cancel",
+                  label: "取消",
+                  icon: <StopOutlined />,
+                  danger: true,
+                  onClick: () => {
+                    Modal.confirm({
+                      title: "确认取消执行?",
+                      okText: "确定",
+                      cancelText: "取消",
+                      okButtonProps: { danger: true },
+                      onOk: () => handleCancelExecution(record.id),
+                    });
+                  },
+                },
+              ]
+            : []),
         ];
         return <ActionButtons actions={actions} />;
       },
@@ -138,13 +165,18 @@ export function getDetailColumns(params: DetailColumnsParams): ColumnsType<Confi
       title: "输出",
       key: "output",
       width: 100,
-      render: (_, record) => (
+      render: (_, record) =>
         record.outputReceived ? (
-          <Button type="link" size="small" onClick={() => handleViewOutput(record.outputReceived ?? "")}>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => handleViewOutput(record.outputReceived ?? "")}
+          >
             查看
           </Button>
-        ) : "-"
-      ),
+        ) : (
+          "-"
+        ),
     },
     { title: "开始时间", dataIndex: "startedAt", key: "startedAt", width: 180 },
     { title: "完成时间", dataIndex: "completedAt", key: "completedAt", width: 180 },
@@ -154,11 +186,14 @@ export function getDetailColumns(params: DetailColumnsParams): ColumnsType<Confi
       dataIndex: "errorMessage",
       key: "errorMessage",
       ellipsis: true,
-      render: (msg: string) => msg ? (
-        <Tooltip title={msg}>
-          <span style={{ color: "var(--theme-error, #ff4d4f)" }}>{msg}</span>
-        </Tooltip>
-      ) : "-",
+      render: (msg: string) =>
+        msg ? (
+          <Tooltip title={msg}>
+            <span style={{ color: "var(--theme-error, #ff4d4f)" }}>{msg}</span>
+          </Tooltip>
+        ) : (
+          "-"
+        ),
     },
   ];
 }

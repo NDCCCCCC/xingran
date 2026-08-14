@@ -26,13 +26,18 @@ export interface ExecutionColumnsParams {
   getSortOrder?: (field: string) => "ascend" | "descend" | null;
 }
 
-export function getExecutionColumns(
-  params: ExecutionColumnsParams
-): ColumnsType<ConfigExecution> {
+export function getExecutionColumns(params: ExecutionColumnsParams): ColumnsType<ConfigExecution> {
   const { handleViewDetail, handleCancel, getSortOrder } = params;
 
   return [
-    { title: "任务名称", dataIndex: "executionName", key: "executionName", width: 200, sorter: true, sortOrder: getSortOrder?.("executionName") },
+    {
+      title: "任务名称",
+      dataIndex: "executionName",
+      key: "executionName",
+      width: 200,
+      sorter: true,
+      sortOrder: getSortOrder?.("executionName"),
+    },
     {
       title: "状态",
       dataIndex: "status",

@@ -47,31 +47,39 @@ export function useJobData(params: UseJobDataParams): UseJobDataReturn {
   const [total, setTotal] = useState(0);
 
   // 获取任务列表
-  const fetchJobs = useCallback(async (overrideParams?: Partial<SearchFormState>) => {
-    setLoading(true);
-    try {
-      // 使用 overrideParams（如果提供）或 searchForm
-      const formData = overrideParams !== undefined ? { ...searchForm, ...overrideParams } : searchForm;
+  const fetchJobs = useCallback(
+    async (overrideParams?: Partial<SearchFormState>) => {
+      setLoading(true);
+      try {
+        // 使用 overrideParams（如果提供）或 searchForm
+        const formData =
+          overrideParams !== undefined ? { ...searchForm, ...overrideParams } : searchForm;
 
-      // 清理 undefined 字段，避免发送到后端
-      const cleanedParams = {
-        ...(formData.jobName !== undefined && formData.jobName !== "" ? { jobName: formData.jobName } : {}),
-        ...(formData.jobGroup !== undefined && formData.jobGroup !== "" ? { jobGroup: formData.jobGroup } : {}),
-        ...(formData.status !== undefined ? { status: formData.status } : {}),
-        current,
-        pageSize
-      };
+        // 清理 undefined 字段，避免发送到后端
+        const cleanedParams = {
+          ...(formData.jobName !== undefined && formData.jobName !== ""
+            ? { jobName: formData.jobName }
+            : {}),
+          ...(formData.jobGroup !== undefined && formData.jobGroup !== ""
+            ? { jobGroup: formData.jobGroup }
+            : {}),
+          ...(formData.status !== undefined ? { status: formData.status } : {}),
+          current,
+          pageSize,
+        };
 
-      const result = await post<PageResponse<JobInfo>>("/monitor/jobs/list", cleanedParams);
+        const result = await post<PageResponse<JobInfo>>("/monitor/jobs/list", cleanedParams);
 
-      setJobs(result.data?.list || []);
-      setTotal(result.data?.total || 0);
-    } catch (error) {
-      console.error("获取任务列表失败:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [searchForm, current, pageSize]);
+        setJobs(result.data?.list || []);
+        setTotal(result.data?.total || 0);
+      } catch (error) {
+        console.error("获取任务列表失败:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [searchForm, current, pageSize]
+  );
 
   // 获取任务日志统计（专用端点 COUNT 聚合，全局计数，不受 pageSize:50 截断）。
   // 旧实现用 jobLogs.length / .filter().length 算「总/成功/失败次数」,执行 >50 次时卡在 50。
@@ -92,22 +100,25 @@ export function useJobData(params: UseJobDataParams): UseJobDataReturn {
   }, []);
 
   // 获取任务日志
-  const fetchJobLogs = useCallback(async (jobName?: string, jobGroup?: string) => {
-    try {
-      const result = await post<PageResponse<JobLog>>("/monitor/jobs/logs/list", {
-        jobName: jobName || "",
-        jobGroup: jobGroup || "",
-        current: 1,
-        pageSize: 50
-      });
+  const fetchJobLogs = useCallback(
+    async (jobName?: string, jobGroup?: string) => {
+      try {
+        const result = await post<PageResponse<JobLog>>("/monitor/jobs/logs/list", {
+          jobName: jobName || "",
+          jobGroup: jobGroup || "",
+          current: 1,
+          pageSize: 50,
+        });
 
-      setJobLogs(result.data?.list || []);
-      // 顺带刷新统计（开抽屉 / 点刷新都覆盖）
-      fetchJobStats(jobName, jobGroup);
-    } catch (error) {
-      console.error("获取任务日志失败:", error);
-    }
-  }, [fetchJobStats]);
+        setJobLogs(result.data?.list || []);
+        // 顺带刷新统计（开抽屉 / 点刷新都覆盖）
+        fetchJobStats(jobName, jobGroup);
+      } catch (error) {
+        console.error("获取任务日志失败:", error);
+      }
+    },
+    [fetchJobStats]
+  );
 
   return {
     jobs,

@@ -28,11 +28,7 @@ interface ActionButtonsProps {
   size?: "small" | "middle" | "large";
 }
 
-const ActionButtons: FC<ActionButtonsProps> = ({
-  actions,
-  threshold = 3,
-  size = "small",
-}) => {
+const ActionButtons: FC<ActionButtonsProps> = ({ actions, threshold = 3, size = "small" }) => {
   if (actions.length === 0) {
     return null;
   }
@@ -73,11 +69,7 @@ const ActionButtons: FC<ActionButtonsProps> = ({
     if (action.render) {
       return {
         key: action.key,
-        label: (
-          <div onClick={(e) => e.stopPropagation()}>
-            {action.render()}
-          </div>
-        ),
+        label: <div onClick={(e) => e.stopPropagation()}>{action.render()}</div>,
       };
     }
 
@@ -157,9 +149,7 @@ export const createDeleteAction = <T extends string | number>(
  * @param render 自定义渲染函数
  * @returns 删除按钮 Action 配置
  */
-export const createCustomDeleteAction = (
-  render: () => React.ReactNode
-): ActionButton => ({
+export const createCustomDeleteAction = (render: () => React.ReactNode): ActionButton => ({
   key: "delete",
   label: "删除",
   icon: <DeleteOutlined />,

@@ -39,7 +39,9 @@ export function ResultModal({
       onCancel={onClose}
       width={900}
       footer={[
-        <Button key="close" onClick={onClose}>关闭</Button>,
+        <Button key="close" onClick={onClose}>
+          关闭
+        </Button>,
         <Button
           key="import"
           type="primary"

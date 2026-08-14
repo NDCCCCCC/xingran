@@ -90,8 +90,10 @@ export function HolidayEditModal({
           rules={[{ required: true, message: "请选择类型" }]}
         >
           <Select placeholder="请选择类型" onSearch={() => {}}>
-            {HOLIDAY_TYPE_OPTIONS.map(opt => (
-              <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+            {HOLIDAY_TYPE_OPTIONS.map((opt) => (
+              <Option key={opt.value} value={opt.value}>
+                {opt.label}
+              </Option>
             ))}
           </Select>
         </Form.Item>

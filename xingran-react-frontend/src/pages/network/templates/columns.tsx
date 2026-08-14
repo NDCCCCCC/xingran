@@ -5,12 +5,7 @@
 
 import type { ColumnsType } from "antd/es/table";
 import { Button, Space, Tag, Modal } from "antd";
-import {
-  EyeOutlined,
-  CopyOutlined,
-  EditOutlined,
-  DeleteOutlined,
-} from "@ant-design/icons";
+import { EyeOutlined, CopyOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ConfigTemplate } from "@/types";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { formatDateTime } from "@/utils/datetime";

@@ -21,7 +21,14 @@ export function getDiscoveryColumns(params: DiscoveryColumnsParams): ColumnsType
   const { handleViewResult, handleDelete, getSortOrder } = params;
 
   return [
-    { title: "任务名称", dataIndex: "taskName", key: "taskName", width: 200, sorter: true, sortOrder: getSortOrder?.("taskName") },
+    {
+      title: "任务名称",
+      dataIndex: "taskName",
+      key: "taskName",
+      width: 200,
+      sorter: true,
+      sortOrder: getSortOrder?.("taskName"),
+    },
     {
       title: "发现类型",
       dataIndex: "discoveryType",
@@ -30,7 +37,7 @@ export function getDiscoveryColumns(params: DiscoveryColumnsParams): ColumnsType
       sorter: true,
       sortOrder: getSortOrder?.("discoveryType"),
       render: (type: string) => {
-        const option = DISCOVERY_TYPE_OPTIONS.find(o => o.value === type);
+        const option = DISCOVERY_TYPE_OPTIONS.find((o) => o.value === type);
         return <Tag color="blue">{option?.label}</Tag>;
       },
     },
@@ -52,9 +59,8 @@ export function getDiscoveryColumns(params: DiscoveryColumnsParams): ColumnsType
           return <Progress percent={100} size="small" />;
         }
         if (record.status === "running") {
-          const percent = record.totalIPs > 0
-            ? Math.round((record.discoveredCount / record.totalIPs) * 100)
-            : 0;
+          const percent =
+            record.totalIPs > 0 ? Math.round((record.discoveredCount / record.totalIPs) * 100) : 0;
           return <Progress percent={percent} size="small" status="active" />;
         }
         return "-";
@@ -67,10 +73,25 @@ export function getDiscoveryColumns(params: DiscoveryColumnsParams): ColumnsType
       width: 100,
       sorter: true,
       sortOrder: getSortOrder?.("status"),
-      render: (status: string) => renderStatusTag(status as "pending" | "running" | "completed" | "failed"),
+      render: (status: string) =>
+        renderStatusTag(status as "pending" | "running" | "completed" | "failed"),
     },
-    { title: "开始时间", dataIndex: "startedAt", key: "startedAt", width: 180, sorter: true, sortOrder: getSortOrder?.("startedAt") },
-    { title: "完成时间", dataIndex: "completedAt", key: "completedAt", width: 180, sorter: true, sortOrder: getSortOrder?.("completedAt") },
+    {
+      title: "开始时间",
+      dataIndex: "startedAt",
+      key: "startedAt",
+      width: 180,
+      sorter: true,
+      sortOrder: getSortOrder?.("startedAt"),
+    },
+    {
+      title: "完成时间",
+      dataIndex: "completedAt",
+      key: "completedAt",
+      width: 180,
+      sorter: true,
+      sortOrder: getSortOrder?.("completedAt"),
+    },
     {
       title: "操作",
       key: "action",

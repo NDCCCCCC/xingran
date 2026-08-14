@@ -124,9 +124,7 @@ export async function downloadTemplate(): Promise<void> {
   const XLSX = await import("xlsx");
 
   // 创建模板数据（仅表头，不包含示例数据）
-  const template = [
-    ["日期", "名称", "类型", "是否休息", "年份", "备注"],
-  ];
+  const template = [["日期", "名称", "类型", "是否休息", "年份", "备注"]];
 
   // 创建工作簿
   const ws = XLSX.utils.aoa_to_sheet(template);

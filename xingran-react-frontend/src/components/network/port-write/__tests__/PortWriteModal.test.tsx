@@ -53,10 +53,7 @@ function Wrapper({ children }: { children: ReactNode }) {
 }
 
 /** antd Select helper (same as BulkWriteDrawer test) */
-async function selectOptionByLabel(
-  labelText: string,
-  optionText: string
-): Promise<void> {
+async function selectOptionByLabel(labelText: string, optionText: string): Promise<void> {
   const labelEl = screen.getByText(labelText);
   const formItem = labelEl.closest(".ant-form-item");
   if (!formItem) throw new Error(`Form.Item not found for label: ${labelText}`);
@@ -125,9 +122,7 @@ describe("PortWriteModal — Phase 53 W4 (UI-02 validation)", () => {
         />,
         { wrapper: Wrapper }
       );
-      expect(
-        screen.getByText(/关闭端口 - GigabitEthernet0\/1/)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/关闭端口 - GigabitEthernet0\/1/)).toBeInTheDocument();
     });
 
     it("renders '修改描述' for action=description", () => {
@@ -278,11 +273,7 @@ describe("PortWriteModal — Phase 53 W4 (UI-02 validation)", () => {
 
       // writeDescription 被调用 — reason 为 undefined (D-03 optional)
       await waitFor(() => {
-        expect(mockWriteDescription).toHaveBeenCalledWith(
-          "port-1",
-          "uplink-to-core",
-          undefined
-        );
+        expect(mockWriteDescription).toHaveBeenCalledWith("port-1", "uplink-to-core", undefined);
       });
       await waitFor(() => {
         expect(onSuccess).toHaveBeenCalledTimes(1);

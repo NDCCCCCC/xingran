@@ -1,6 +1,19 @@
 import { useState, useEffect } from "react";
 import type { FC } from "react";
-import { Card, Form, Switch, Input, TimePicker, Select, Button, App, Space, Alert, Divider, Descriptions } from "antd";
+import {
+  Card,
+  Form,
+  Switch,
+  Input,
+  TimePicker,
+  Select,
+  Button,
+  App,
+  Space,
+  Alert,
+  Divider,
+  Descriptions,
+} from "antd";
 import { SaveOutlined, ReloadOutlined, BellOutlined, SettingOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { getDutyConfig, updateDutyConfig, type DutyConfig } from "@/lib/dutyApi";
@@ -43,7 +56,9 @@ const DutyConfigPage: FC = () => {
       const data = {
         reminderEnabled: values.reminderEnabled,
         reminderTime: values.reminderTime.format("HH:mm"),
-        reminderChannels: Array.isArray(values.reminderChannels) ? values.reminderChannels.join(",") : values.reminderChannels,
+        reminderChannels: Array.isArray(values.reminderChannels)
+          ? values.reminderChannels.join(",")
+          : values.reminderChannels,
         beforeReminderMinutes: values.beforeReminderMinutes,
       };
       await updateDutyConfig(data);
@@ -107,7 +122,11 @@ const DutyConfigPage: FC = () => {
 
         <Divider />
 
-        <Form form={form} layout="vertical" initialValues={{ reminderEnabled: true, reminderChannels: ["websocket"] }}>
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{ reminderEnabled: true, reminderChannels: ["websocket"] }}
+        >
           <Form.Item label="启用值班提醒" name="reminderEnabled" valuePropName="checked">
             <Switch checkedChildren="启用" unCheckedChildren="禁用" />
           </Form.Item>
@@ -190,9 +209,11 @@ const DutyConfigPage: FC = () => {
           title="管理员操作指南"
           description={
             <div>
-              <p>系统使用定时任务来发送值班提醒，如需修改提醒时间，需要管理员在数据库中更新Job配置：</p>
+              <p>
+                系统使用定时任务来发送值班提醒，如需修改提醒时间，需要管理员在数据库中更新Job配置：
+              </p>
               <pre className="bg-gray-100 p-4 mt-4 rounded">
-{`-- 更新值班提醒任务时间（例如改为早上9点）
+                {`-- 更新值班提醒任务时间（例如改为早上9点）
 UPDATE sys_job
 SET cron_expression = '0 0 9 * * ?'
 WHERE job_name = '每日值班提醒';

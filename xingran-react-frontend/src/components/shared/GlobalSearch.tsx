@@ -141,43 +141,47 @@ const GlobalSearch: FC = () => {
   }, [searchValue]);
 
   // 处理结果点击
-  const handleResultClick = useCallback((result: SearchResult) => {
-    navigate(result.path);
-    setVisible(false);
-    setSearchValue("");
-  }, [navigate]);
+  const handleResultClick = useCallback(
+    (result: SearchResult) => {
+      navigate(result.path);
+      setVisible(false);
+      setSearchValue("");
+    },
+    [navigate]
+  );
 
   // 处理键盘事件
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    // Cmd+K or Ctrl+K
-    if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-      e.preventDefault();
-      setVisible((prev) => !prev);
-      setSearchValue("");
-      setSelectedIndex(0);
-    }
-
-    // 在搜索框打开时处理键盘导航
-    if (visible) {
-      if (e.key === "ArrowDown") {
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      // Cmd+K or Ctrl+K
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        setSelectedIndex((prev) =>
-          prev < filteredResults.length - 1 ? prev + 1 : prev
-        );
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : 0));
-      } else if (e.key === "Enter") {
-        e.preventDefault();
-        if (filteredResults[selectedIndex]) {
-          handleResultClick(filteredResults[selectedIndex]);
-        }
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        setVisible(false);
+        setVisible((prev) => !prev);
+        setSearchValue("");
+        setSelectedIndex(0);
       }
-    }
-  }, [visible, filteredResults.length, selectedIndex, handleResultClick, filteredResults]);
+
+      // 在搜索框打开时处理键盘导航
+      if (visible) {
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          setSelectedIndex((prev) => (prev < filteredResults.length - 1 ? prev + 1 : prev));
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          setSelectedIndex((prev) => (prev > 0 ? prev - 1 : 0));
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          if (filteredResults[selectedIndex]) {
+            handleResultClick(filteredResults[selectedIndex]);
+          }
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          setVisible(false);
+        }
+      }
+    },
+    [visible, filteredResults.length, selectedIndex, handleResultClick, filteredResults]
+  );
 
   // 注册键盘事件监听
   useEffect(() => {
@@ -240,14 +244,16 @@ const GlobalSearch: FC = () => {
         footer={null}
         centered
         width={600}
-        styles={{
-          body: { padding: "16px" },
-          content: {
-            background: "var(--theme-bg-surface)",
-            borderRadius: "var(--theme-radius-xl)",
-            border: "1px solid var(--theme-border-primary)",
-          },
-        } as Record<string, unknown>}
+        styles={
+          {
+            body: { padding: "16px" },
+            content: {
+              background: "var(--theme-bg-surface)",
+              borderRadius: "var(--theme-radius-xl)",
+              border: "1px solid var(--theme-border-primary)",
+            },
+          } as Record<string, unknown>
+        }
         closeIcon={null}
         style={{ top: 100 }}
       >
@@ -305,10 +311,7 @@ const GlobalSearch: FC = () => {
                   padding: "12px",
                   borderRadius: "var(--theme-radius-md)",
                   cursor: "pointer",
-                  background:
-                    index === selectedIndex
-                      ? "var(--theme-primary-50)"
-                      : "transparent",
+                  background: index === selectedIndex ? "var(--theme-primary-50)" : "transparent",
                   transition: "all var(--theme-transition-base)",
                   border:
                     index === selectedIndex

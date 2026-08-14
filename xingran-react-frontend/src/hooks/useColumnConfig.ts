@@ -44,10 +44,13 @@ const getFromLocalStorage = (pageKey: string): ColumnConfig[] | null => {
 const saveToLocalStorage = (pageKey: string, config: ColumnConfig[]) => {
   try {
     const key = `${CACHE_PREFIX}:${pageKey}`;
-    localStorage.setItem(key, JSON.stringify({
-      data: config,
-      timestamp: Date.now(),
-    }));
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        data: config,
+        timestamp: Date.now(),
+      })
+    );
   } catch (error) {
     console.error("Failed to save to localStorage:", error);
   }
@@ -63,11 +66,14 @@ const removeFromLocalStorage = (pageKey: string) => {
 };
 
 // 转换后端数据格式为前端格式
-const transformToColumnConfig = (userConfigs: UserColumnConfig[], defaultConfigs: ColumnConfig[]): ColumnConfig[] => {
+const transformToColumnConfig = (
+  userConfigs: UserColumnConfig[],
+  defaultConfigs: ColumnConfig[]
+): ColumnConfig[] => {
   const configMap = new Map<string, ColumnConfig>();
 
   // 首先添加默认配置（作为标签和分组的来源）
-  defaultConfigs.forEach(col => {
+  defaultConfigs.forEach((col) => {
     configMap.set(col.key, { ...col });
   });
 
@@ -104,11 +110,11 @@ export function useColumnConfig(options: UseColumnConfigOptions) {
       // 健全性检查：可见列数过少视为损坏配置，回退默认（防御被误清空的缓存/服务端数据）
       const minVisible = Math.max(
         1,
-        Math.floor(defaultColumns.filter(c => c.visible).length / 2)
+        Math.floor(defaultColumns.filter((c) => c.visible).length / 2)
       );
       const isConfigSane = (cfg: ColumnConfig[] | null | undefined): boolean => {
         if (!cfg || cfg.length === 0) return false;
-        const visibleCount = cfg.filter(c => c.visible).length;
+        const visibleCount = cfg.filter((c) => c.visible).length;
         return visibleCount >= minVisible;
       };
 
@@ -162,35 +168,38 @@ export function useColumnConfig(options: UseColumnConfigOptions) {
   }, [pageKey, defaultColumns, enableCache]);
 
   // 保存配置（防抖）
-  const saveConfig = useCallback(async (newConfig: ColumnConfig[]) => {
-    setSaving(true);
-    try {
-      const columnConfigs: ColumnConfigItem[] = newConfig.map((col, index) => ({
-        columnKey: col.key,
-        visible: col.visible,
-        width: col.width || 0,
-      }));
+  const saveConfig = useCallback(
+    async (newConfig: ColumnConfig[]) => {
+      setSaving(true);
+      try {
+        const columnConfigs: ColumnConfigItem[] = newConfig.map((col, index) => ({
+          columnKey: col.key,
+          visible: col.visible,
+          width: col.width || 0,
+        }));
 
-      await columnConfigApi.save({
-        pageKey,
-        columnConfigs,
-      });
+        await columnConfigApi.save({
+          pageKey,
+          columnConfigs,
+        });
 
-      setConfig(newConfig);
+        setConfig(newConfig);
 
-      if (enableCache) {
-        saveToLocalStorage(pageKey, newConfig);
+        if (enableCache) {
+          saveToLocalStorage(pageKey, newConfig);
+        }
+
+        message.success("列配置保存成功");
+      } catch (error) {
+        console.error("Failed to save column config:", error);
+        message.error("保存列配置失败，请稍后重试");
+        throw error;
+      } finally {
+        setSaving(false);
       }
-
-      message.success("列配置保存成功");
-    } catch (error) {
-      console.error("Failed to save column config:", error);
-      message.error("保存列配置失败，请稍后重试");
-      throw error;
-    } finally {
-      setSaving(false);
-    }
-  }, [pageKey, enableCache]);
+    },
+    [pageKey, enableCache]
+  );
 
   // 重置配置
   const resetConfig = useCallback(async () => {
@@ -216,16 +225,12 @@ export function useColumnConfig(options: UseColumnConfigOptions) {
 
   // 切换列可见性
   const toggleColumn = useCallback((key: string, visible: boolean) => {
-    setConfig(prev => prev.map(col =>
-      col.key === key ? { ...col, visible } : col
-    ));
+    setConfig((prev) => prev.map((col) => (col.key === key ? { ...col, visible } : col)));
   }, []);
 
   // 更新列宽度
   const updateColumnWidth = useCallback((key: string, width: number) => {
-    setConfig(prev => prev.map(col =>
-      col.key === key ? { ...col, width } : col
-    ));
+    setConfig((prev) => prev.map((col) => (col.key === key ? { ...col, width } : col)));
   }, []);
 
   // 更新列顺序
@@ -236,9 +241,7 @@ export function useColumnConfig(options: UseColumnConfigOptions) {
 
   // 获取可见列
   const visibleColumns = useMemo(() => {
-    return config
-      .filter(col => col.visible)
-      .sort((a, b) => a.order - b.order);
+    return config.filter((col) => col.visible).sort((a, b) => a.order - b.order);
   }, [config]);
 
   // 组件挂载时加载配置

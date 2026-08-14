@@ -4,11 +4,7 @@
 
 import { post } from "./api";
 import { getAuthHeaders } from "@/utils/authHelpers";
-import type {
-  BaseResponse,
-  PageParams,
-  PageResponse,
-} from "@/types/base";
+import type { BaseResponse, PageParams, PageResponse } from "@/types/base";
 import type {
   // 任务相关
   Task,
@@ -145,7 +141,9 @@ export const taskApi = {
    * 验证脚本
    */
   validateScript: async (script: Script) => {
-    return await post<{ valid: boolean; errors?: string[] }>("/rpa/tasks/validate-script", { script });
+    return await post<{ valid: boolean; errors?: string[] }>("/rpa/tasks/validate-script", {
+      script,
+    });
   },
 
   /**
@@ -208,10 +206,13 @@ export const scriptApi = {
    * 测试脚本动作
    */
   testAction: async (action: Action, url?: string) => {
-    return await post<{ success: boolean; result?: unknown; error?: string }>("/rpa/scripts/test-action", {
-      action,
-      url,
-    });
+    return await post<{ success: boolean; result?: unknown; error?: string }>(
+      "/rpa/scripts/test-action",
+      {
+        action,
+        url,
+      }
+    );
   },
 
   /**
@@ -282,13 +283,15 @@ export const workerApi = {
         avgDuration: number;
       }>(`/rpa/workers/${id}/statistics`, {});
     }
-    return await post<Array<{
-      workerId: string;
-      workerName: string;
-      currentTasks: number;
-      completedTasks: number;
-      failedTasks: number;
-    }>>("/rpa/workers/statistics", {});
+    return await post<
+      Array<{
+        workerId: string;
+        workerName: string;
+        currentTasks: number;
+        completedTasks: number;
+        failedTasks: number;
+      }>
+    >("/rpa/workers/statistics", {});
   },
 
   /**
@@ -730,11 +733,13 @@ export const statisticsApi = {
     startDate?: string;
     endDate?: string;
   }) => {
-    return await post<Array<{
-      date: string;
-      value: number;
-      label?: string;
-    }>>("/rpa/statistics/trends", params);
+    return await post<
+      Array<{
+        date: string;
+        value: number;
+        label?: string;
+      }>
+    >("/rpa/statistics/trends", params);
   },
 };
 

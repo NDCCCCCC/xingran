@@ -27,7 +27,9 @@ export async function getCaptchaConfig(): Promise<CaptchaConfig> {
 }
 
 // 验证滑动验证码
-export async function verifySliderCaptcha(data: SliderVerifyRequest): Promise<SliderVerifyResponse> {
+export async function verifySliderCaptcha(
+  data: SliderVerifyRequest
+): Promise<SliderVerifyResponse> {
   const response = await post<SliderVerifyResponse>("/system/auth/captcha/verify/slider", data);
   return response.data!;
 }
@@ -35,18 +37,26 @@ export async function verifySliderCaptcha(data: SliderVerifyRequest): Promise<Sl
 // ==================== 验证码背景图管理API ====================
 
 // 获取背景图列表
-export async function getCaptchaBackgroundList(params: CaptchaBackgroundListRequest): Promise<CaptchaBackgroundListResponse> {
-  const response = await post<CaptchaBackgroundListResponse>("/system/captcha-backgrounds/list", params);
+export async function getCaptchaBackgroundList(
+  params: CaptchaBackgroundListRequest
+): Promise<CaptchaBackgroundListResponse> {
+  const response = await post<CaptchaBackgroundListResponse>(
+    "/system/captcha-backgrounds/list",
+    params
+  );
   return response.data!;
 }
 
 // 上传背景图
-export async function uploadCaptchaBackground(file: File, params: {
-  pieceShape: string;
-  difficultyLevel: number;
-  allowedShapes?: string[];
-  remark?: string;
-}): Promise<CaptchaBackground> {
+export async function uploadCaptchaBackground(
+  file: File,
+  params: {
+    pieceShape: string;
+    difficultyLevel: number;
+    allowedShapes?: string[];
+    remark?: string;
+  }
+): Promise<CaptchaBackground> {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("pieceShape", params.pieceShape);
@@ -57,7 +67,10 @@ export async function uploadCaptchaBackground(file: File, params: {
   if (params.remark) {
     formData.append("remark", params.remark);
   }
-  const response = await postFormData<CaptchaBackground>("/system/captcha-backgrounds/upload", formData);
+  const response = await postFormData<CaptchaBackground>(
+    "/system/captcha-backgrounds/upload",
+    formData
+  );
   return response.data!;
 }
 
@@ -68,14 +81,22 @@ export async function getCaptchaBackground(id: string): Promise<CaptchaBackgroun
 }
 
 // 更新背景图
-export async function updateCaptchaBackground(id: string, data: CaptchaBackgroundUpdateRequest): Promise<CaptchaBackground> {
+export async function updateCaptchaBackground(
+  id: string,
+  data: CaptchaBackgroundUpdateRequest
+): Promise<CaptchaBackground> {
   const response = await post<CaptchaBackground>(`/system/captcha-backgrounds/${id}/update`, data);
   return response.data!;
 }
 
 // 删除背景图
-export async function deleteCaptchaBackground(id: string): Promise<{ success: boolean; message: string }> {
-  const response = await post<{ success: boolean; message: string }>(`/system/captcha-backgrounds/${id}/delete`, {});
+export async function deleteCaptchaBackground(
+  id: string
+): Promise<{ success: boolean; message: string }> {
+  const response = await post<{ success: boolean; message: string }>(
+    `/system/captcha-backgrounds/${id}/delete`,
+    {}
+  );
   return response.data!;
 }
 
@@ -93,7 +114,10 @@ export async function getCaptchaBackgroundStatistics(): Promise<StatisticsRespon
 
 // 预加载缓存
 export async function preloadCaptchaCache(): Promise<{ preloaded: number; message: string }> {
-  const response = await post<{ preloaded: number; message: string }>("/system/captcha-backgrounds/preload", {});
+  const response = await post<{ preloaded: number; message: string }>(
+    "/system/captcha-backgrounds/preload",
+    {}
+  );
   return response.data!;
 }
 

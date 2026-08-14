@@ -33,7 +33,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { locationAliasApi, type LocationAlias } from "@/lib/opsApi";
 import { queryKeys } from "@/lib/queryKeys";
 import { useDeptTree, useInvalidateDept } from "@/hooks/useDeptTree";
-import { dedupTreeByKey, filterExternalOrgDepts, toFullPathTree, trimTitleToLastSegment } from "@/utils/deptUtils";
+import {
+  dedupTreeByKey,
+  filterExternalOrgDepts,
+  toFullPathTree,
+  trimTitleToLastSegment,
+} from "@/utils/deptUtils";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
 import { useMenuStore } from "@/store/menuStore";
 import type { DeptTreeNode } from "./types";
@@ -61,7 +66,11 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
   const { data: deptTreeData = [] } = useDeptTree();
 
   // 数据:alias 分页列表
-  const { data: aliasPage, isLoading, refetch } = useQuery({
+  const {
+    data: aliasPage,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.locationAlias.list({ pageNum, pageSize }),
     queryFn: async () => {
       const res = await locationAliasApi.list({ pageNum, pageSize });
@@ -79,13 +88,16 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
   const fullDeptTreeData = useMemo(
     () =>
       dedupTreeByKey(
-        trimTitleToLastSegment(toFullPathTree(deptTreeData ?? [])),
+        trimTitleToLastSegment(toFullPathTree(deptTreeData ?? []))
       ) as unknown as DeptTreeNode[],
-    [deptTreeData],
+    [deptTreeData]
   );
   const locationTreeData: DeptTreeNode[] = useMemo(
-    () => dedupTreeByKey(filterExternalOrgDepts<DeptTreeNode>(fullDeptTreeData)) as unknown as DeptTreeNode[],
-    [fullDeptTreeData],
+    () =>
+      dedupTreeByKey(
+        filterExternalOrgDepts<DeptTreeNode>(fullDeptTreeData)
+      ) as unknown as DeptTreeNode[],
+    [fullDeptTreeData]
   );
 
   // 仅展开第一层(根节点),避免全树展开导致下拉太长难找部门。
@@ -147,22 +159,14 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
       key: "dept",
       ellipsis: true,
       render: (_: unknown, r: LocationAlias) =>
-        r.originDeptName ? (
-          <Text>{r.originDeptName}</Text>
-        ) : (
-          <Text code>{r.deptId}</Text>
-        ),
+        r.originDeptName ? <Text>{r.originDeptName}</Text> : <Text code>{r.deptId}</Text>,
     },
     {
       title: "物理位置",
       key: "location",
       ellipsis: true,
       render: (_: unknown, r: LocationAlias) =>
-        r.locationDeptName ? (
-          <Text>{r.locationDeptName}</Text>
-        ) : (
-          <Text code>{r.locationId}</Text>
-        ),
+        r.locationDeptName ? <Text>{r.locationDeptName}</Text> : <Text code>{r.locationId}</Text>,
     },
     {
       title: "备注",
@@ -222,11 +226,7 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
         </div>
 
         {showAddForm && (
-          <Form
-            form={form}
-            layout="vertical"
-            initialValues={{ scope: "workstation" }}
-          >
+          <Form form={form} layout="vertical" initialValues={{ scope: "workstation" }}>
             <Form.Item
               name="deptId"
               label="所属部门(全量)"
@@ -244,9 +244,7 @@ export function LocationAliasDrawer({ open, onClose }: LocationAliasDrawerProps)
             <Form.Item
               name="locationId"
               label="物理位置(仅外部机构)"
-              rules={[
-                { required: true, message: "请选择物理位置" },
-              ]}
+              rules={[{ required: true, message: "请选择物理位置" }]}
               extra="仅可选择 isExternalOrg=1 的外部机构子树下的节点"
             >
               <TreeSelect

@@ -33,24 +33,121 @@ const WorkOrderStatisticsPage: FC = () => {
     fetchStatistics();
   }, []);
 
-  const assigneeColumns: ColumnsType<{ assigneeName: string; assigneeId: string; totalCount: number; pendingCount: number; doneCount: number; avgProcessTime: number }> = [
-    { title: "处理人", dataIndex: "assigneeName", key: "assigneeName", sorter: createSorter<{ assigneeName: string; assigneeId: string; totalCount: number; pendingCount: number; doneCount: number; avgProcessTime: number }>('assigneeName', 'string') },
-    { title: "总工单", dataIndex: "totalCount", key: "totalCount", sorter: createSorter<{ assigneeName: string; assigneeId: string; totalCount: number; pendingCount: number; doneCount: number; avgProcessTime: number }>('totalCount', 'number') },
-    { title: "待处理", dataIndex: "pendingCount", key: "pendingCount", sorter: createSorter<{ assigneeName: string; assigneeId: string; totalCount: number; pendingCount: number; doneCount: number; avgProcessTime: number }>('pendingCount', 'number') },
-    { title: "已完成", dataIndex: "doneCount", key: "doneCount", sorter: createSorter<{ assigneeName: string; assigneeId: string; totalCount: number; pendingCount: number; doneCount: number; avgProcessTime: number }>('doneCount', 'number') },
+  const assigneeColumns: ColumnsType<{
+    assigneeName: string;
+    assigneeId: string;
+    totalCount: number;
+    pendingCount: number;
+    doneCount: number;
+    avgProcessTime: number;
+  }> = [
+    {
+      title: "处理人",
+      dataIndex: "assigneeName",
+      key: "assigneeName",
+      sorter: createSorter<{
+        assigneeName: string;
+        assigneeId: string;
+        totalCount: number;
+        pendingCount: number;
+        doneCount: number;
+        avgProcessTime: number;
+      }>("assigneeName", "string"),
+    },
+    {
+      title: "总工单",
+      dataIndex: "totalCount",
+      key: "totalCount",
+      sorter: createSorter<{
+        assigneeName: string;
+        assigneeId: string;
+        totalCount: number;
+        pendingCount: number;
+        doneCount: number;
+        avgProcessTime: number;
+      }>("totalCount", "number"),
+    },
+    {
+      title: "待处理",
+      dataIndex: "pendingCount",
+      key: "pendingCount",
+      sorter: createSorter<{
+        assigneeName: string;
+        assigneeId: string;
+        totalCount: number;
+        pendingCount: number;
+        doneCount: number;
+        avgProcessTime: number;
+      }>("pendingCount", "number"),
+    },
+    {
+      title: "已完成",
+      dataIndex: "doneCount",
+      key: "doneCount",
+      sorter: createSorter<{
+        assigneeName: string;
+        assigneeId: string;
+        totalCount: number;
+        pendingCount: number;
+        doneCount: number;
+        avgProcessTime: number;
+      }>("doneCount", "number"),
+    },
     {
       title: "平均处理时间",
       dataIndex: "avgProcessTime",
       key: "avgProcessTime",
-      sorter: createSorter<{ assigneeName: string; assigneeId: string; totalCount: number; pendingCount: number; doneCount: number; avgProcessTime: number }>('avgProcessTime', 'number'),
+      sorter: createSorter<{
+        assigneeName: string;
+        assigneeId: string;
+        totalCount: number;
+        pendingCount: number;
+        doneCount: number;
+        avgProcessTime: number;
+      }>("avgProcessTime", "number"),
       render: (time: number) => `${time.toFixed(1)} 小时`,
     },
   ];
 
-  const departmentColumns: ColumnsType<{ deptName: string; deptId: string; totalCount: number; doneCount: number }> = [
-    { title: "部门", dataIndex: "deptName", key: "deptName", sorter: createSorter<{ deptName: string; deptId: string; totalCount: number; doneCount: number }>('deptName', 'string') },
-    { title: "总工单", dataIndex: "totalCount", key: "totalCount", sorter: createSorter<{ deptName: string; deptId: string; totalCount: number; doneCount: number }>('totalCount', 'number') },
-    { title: "已完成", dataIndex: "doneCount", key: "doneCount", sorter: createSorter<{ deptName: string; deptId: string; totalCount: number; doneCount: number }>('doneCount', 'number') },
+  const departmentColumns: ColumnsType<{
+    deptName: string;
+    deptId: string;
+    totalCount: number;
+    doneCount: number;
+  }> = [
+    {
+      title: "部门",
+      dataIndex: "deptName",
+      key: "deptName",
+      sorter: createSorter<{
+        deptName: string;
+        deptId: string;
+        totalCount: number;
+        doneCount: number;
+      }>("deptName", "string"),
+    },
+    {
+      title: "总工单",
+      dataIndex: "totalCount",
+      key: "totalCount",
+      sorter: createSorter<{
+        deptName: string;
+        deptId: string;
+        totalCount: number;
+        doneCount: number;
+      }>("totalCount", "number"),
+    },
+    {
+      title: "已完成",
+      dataIndex: "doneCount",
+      key: "doneCount",
+      sorter: createSorter<{
+        deptName: string;
+        deptId: string;
+        totalCount: number;
+        doneCount: number;
+      }>("doneCount", "number"),
+    },
   ];
 
   const priorityConfig = {
@@ -133,35 +230,37 @@ const WorkOrderStatisticsPage: FC = () => {
         {/* 按优先级统计 */}
         <Col span={12}>
           <Card title="按优先级统计" loading={loading}>
-            {stats && Object.entries(stats.byPriority).map(([key, value]) => {
-              const priority = key as unknown as WorkOrderPriority;
-              return (
-                <div key={key} className="mb-4">
-                  <div className="flex justify-between items-center">
-                    <span>
-                      <Tag color={priorityConfig[priority]?.color}>
-                        {priorityConfig[priority]?.text}
-                      </Tag>
-                    </span>
-                    <Statistic value={Number(value)} />
+            {stats &&
+              Object.entries(stats.byPriority).map(([key, value]) => {
+                const priority = key as unknown as WorkOrderPriority;
+                return (
+                  <div key={key} className="mb-4">
+                    <div className="flex justify-between items-center">
+                      <span>
+                        <Tag color={priorityConfig[priority]?.color}>
+                          {priorityConfig[priority]?.text}
+                        </Tag>
+                      </span>
+                      <Statistic value={Number(value)} />
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
           </Card>
         </Col>
 
         {/* 按分类统计 */}
         <Col span={12}>
           <Card title="按分类统计" loading={loading}>
-            {stats && Object.entries(stats.byCategory).map(([key, value]) => (
-              <div key={key} className="mb-4">
-                <div className="flex justify-between items-center">
-                  <span>{key}</span>
-                  <Statistic value={Number(value)} />
+            {stats &&
+              Object.entries(stats.byCategory).map(([key, value]) => (
+                <div key={key} className="mb-4">
+                  <div className="flex justify-between items-center">
+                    <span>{key}</span>
+                    <Statistic value={Number(value)} />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
             {(!stats || Object.keys(stats.byCategory).length === 0) && (
               <p className="text-gray-400 text-center">暂无数据</p>
             )}

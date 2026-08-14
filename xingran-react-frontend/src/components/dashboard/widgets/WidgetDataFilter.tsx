@@ -14,49 +14,49 @@ import type { WidgetConfig, WidgetDataFilter } from "@/types/dashboard";
  * @returns 应用过滤后的参数
  */
 export const applyWidgetDataFilter = (
-	widget: WidgetConfig,
-	baseParams: Record<string, unknown>
+  widget: WidgetConfig,
+  baseParams: Record<string, unknown>
 ): Record<string, unknown> => {
-	if (!widget.dataFilter?.enabled) {
-		return baseParams;
-	}
+  if (!widget.dataFilter?.enabled) {
+    return baseParams;
+  }
 
-	const { filterType, filterConfig } = widget.dataFilter;
-	const user = useAuthStore.getState().user;
+  const { filterType, filterConfig } = widget.dataFilter;
+  const user = useAuthStore.getState().user;
 
-	if (!user) {
-		return baseParams;
-	}
+  if (!user) {
+    return baseParams;
+  }
 
-	switch (filterType) {
-		case "dept": {
-			// 按部门过滤
-			const field = filterConfig.field || "deptId";
-			return {
-				...baseParams,
-				[field]: user.deptId,
-			};
-		}
+  switch (filterType) {
+    case "dept": {
+      // 按部门过滤
+      const field = filterConfig.field || "deptId";
+      return {
+        ...baseParams,
+        [field]: user.deptId,
+      };
+    }
 
-		case "user": {
-			// 按用户过滤
-			const userField = filterConfig.field || "userId";
-			return {
-				...baseParams,
-				[userField]: user.id,
-			};
-		}
+    case "user": {
+      // 按用户过滤
+      const userField = filterConfig.field || "userId";
+      return {
+        ...baseParams,
+        [userField]: user.id,
+      };
+    }
 
-		case "custom":
-			// 自定义过滤
-			return {
-				...baseParams,
-				...filterConfig,
-			};
+    case "custom":
+      // 自定义过滤
+      return {
+        ...baseParams,
+        ...filterConfig,
+      };
 
-		default:
-			return baseParams;
-	}
+    default:
+      return baseParams;
+  }
 };
 
 /**
@@ -64,44 +64,44 @@ export const applyWidgetDataFilter = (
  * 返回用户可选择的过滤类型和默认配置
  */
 export const getAvailableDataFilters = (): Array<{
-	value: string;
-	label: string;
-	defaultConfig: Partial<WidgetDataFilter>;
+  value: string;
+  label: string;
+  defaultConfig: Partial<WidgetDataFilter>;
 }> => {
-	return [
-		{
-			value: "none",
-			label: "不过滤",
-			defaultConfig: { enabled: false, filterType: "dept", filterConfig: {} },
-		},
-		{
-			value: "dept",
-			label: "按部门过滤",
-			defaultConfig: {
-				enabled: true,
-				filterType: "dept",
-				filterConfig: { field: "deptId" },
-			},
-		},
-		{
-			value: "user",
-			label: "按用户过滤",
-			defaultConfig: {
-				enabled: true,
-				filterType: "user",
-				filterConfig: { field: "userId" },
-			},
-		},
-		{
-			value: "custom",
-			label: "自定义过滤",
-			defaultConfig: {
-				enabled: true,
-				filterType: "custom",
-				filterConfig: {},
-			},
-		},
-	];
+  return [
+    {
+      value: "none",
+      label: "不过滤",
+      defaultConfig: { enabled: false, filterType: "dept", filterConfig: {} },
+    },
+    {
+      value: "dept",
+      label: "按部门过滤",
+      defaultConfig: {
+        enabled: true,
+        filterType: "dept",
+        filterConfig: { field: "deptId" },
+      },
+    },
+    {
+      value: "user",
+      label: "按用户过滤",
+      defaultConfig: {
+        enabled: true,
+        filterType: "user",
+        filterConfig: { field: "userId" },
+      },
+    },
+    {
+      value: "custom",
+      label: "自定义过滤",
+      defaultConfig: {
+        enabled: true,
+        filterType: "custom",
+        filterConfig: {},
+      },
+    },
+  ];
 };
 
 export default { applyWidgetDataFilter, getAvailableDataFilters };

@@ -22,7 +22,17 @@ export const neumorphismLight: ThemeConfig = {
     primary: ["#e0e7ff", "#c7d2fe", "#a5b4fc", "#818cf8", "#6366f1"],
     secondary: ["#f5f3ff", "#ede9fe", "#ddd6fe", "#c4b5fd", "#a855f7"],
     accent: ["#818cf8", "#6366f1", "#4f46e5"],
-    neutral: ["#e0e5ec", "#d1d9e6", "#c3c9d2", "#94a3b8", "#64748b", "#475569", "#334155", "#1e293b", "#0f172a"],
+    neutral: [
+      "#e0e5ec",
+      "#d1d9e6",
+      "#c3c9d2",
+      "#94a3b8",
+      "#64748b",
+      "#475569",
+      "#334155",
+      "#1e293b",
+      "#0f172a",
+    ],
 
     // 功能色（柔和版）
     success: ["#bbf7d0", "#4ade80", "#22c55e"],
@@ -102,10 +112,10 @@ export const neumorphismLight: ThemeConfig = {
   },
 
   radius: {
-    sm: "12px",   // 圆润
-    md: "16px",   // 圆润
-    lg: "20px",   // 圆润
-    xl: "24px",   // 圆润
+    sm: "12px", // 圆润
+    md: "16px", // 圆润
+    lg: "20px", // 圆润
+    xl: "24px", // 圆润
     "2xl": "32px",
     full: "9999px",
   },

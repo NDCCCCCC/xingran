@@ -42,29 +42,32 @@ export function useScheduleData() {
   const [currentWeekStart, setCurrentWeekStart] = useState(dayjs().startOf("week"));
 
   // 获取排班列表
-  const fetchList = useCallback(async (page?: number, size?: number, options?: UseScheduleDataOptions) => {
-    setLoading(true);
-    try {
-      const result = await getDutyScheduleList({
-        current: page ?? current,
-        pageSize: size ?? pageSize,
-        poolId: options?.poolId,
-        userId: options?.userId,
-        startDate: options?.startDate,
-        endDate: options?.endDate,
-        dutyType: options?.dutyType,
-        expired: options?.expired,
-      });
-      setSchedules(result.data?.list ?? []);
-      setTotal(result.data?.total ?? 0);
-      if (result.data?.current) setCurrent(result.data.current);
-      if (result.data?.pageSize) setPageSize(result.data.pageSize);
-    } catch (error) {
-      message.error("获取排班列表失败");
-    } finally {
-      setLoading(false);
-    }
-  }, [current, pageSize]);
+  const fetchList = useCallback(
+    async (page?: number, size?: number, options?: UseScheduleDataOptions) => {
+      setLoading(true);
+      try {
+        const result = await getDutyScheduleList({
+          current: page ?? current,
+          pageSize: size ?? pageSize,
+          poolId: options?.poolId,
+          userId: options?.userId,
+          startDate: options?.startDate,
+          endDate: options?.endDate,
+          dutyType: options?.dutyType,
+          expired: options?.expired,
+        });
+        setSchedules(result.data?.list ?? []);
+        setTotal(result.data?.total ?? 0);
+        if (result.data?.current) setCurrent(result.data.current);
+        if (result.data?.pageSize) setPageSize(result.data.pageSize);
+      } catch (error) {
+        message.error("获取排班列表失败");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [current, pageSize]
+  );
 
   // 获取所有排班（用于调班）
   const fetchAllSchedules = useCallback(async () => {
@@ -116,94 +119,105 @@ export function useScheduleData() {
   }, []);
 
   // 生成排班
-  const generate = useCallback(async (data: Omit<GenerateScheduleRequest, "dutyType"> & { dutyType: string }) => {
-    try {
-      const result = await generateSchedule({
-        ...data,
-        dutyType: data.dutyType as DutyType,
-      });
-      message.success(`成功生成 ${result.data?.count || 0} 条排班记录`);
-      await fetchList();
-      await fetchWeeklyDuty(currentWeekStart);
-      return true;
-    } catch (error) {
-      message.error("生成排班失败");
-      return false;
-    }
-  }, [fetchList, fetchWeeklyDuty, currentWeekStart]);
+  const generate = useCallback(
+    async (data: Omit<GenerateScheduleRequest, "dutyType"> & { dutyType: string }) => {
+      try {
+        const result = await generateSchedule({
+          ...data,
+          dutyType: data.dutyType as DutyType,
+        });
+        message.success(`成功生成 ${result.data?.count || 0} 条排班记录`);
+        await fetchList();
+        await fetchWeeklyDuty(currentWeekStart);
+        return true;
+      } catch (error) {
+        message.error("生成排班失败");
+        return false;
+      }
+    },
+    [fetchList, fetchWeeklyDuty, currentWeekStart]
+  );
 
   // 调班
-  const swap = useCallback(async (data: {
-    fromScheduleId: string;
-    toScheduleId: string;
-    reason: string;
-  }) => {
-    try {
-      await swapDuty(data);
-      message.success("调班成功");
-      await fetchList();
-      await fetchWeeklyDuty(currentWeekStart);
-      return true;
-    } catch (error) {
-      message.error("调班失败");
-      return false;
-    }
-  }, [fetchList, fetchWeeklyDuty, currentWeekStart]);
+  const swap = useCallback(
+    async (data: { fromScheduleId: string; toScheduleId: string; reason: string }) => {
+      try {
+        await swapDuty(data);
+        message.success("调班成功");
+        await fetchList();
+        await fetchWeeklyDuty(currentWeekStart);
+        return true;
+      } catch (error) {
+        message.error("调班失败");
+        return false;
+      }
+    },
+    [fetchList, fetchWeeklyDuty, currentWeekStart]
+  );
 
   // 手动排班
-  const manual = useCallback(async (data: Omit<ManualDutyRequest, "dutyType"> & { dutyType: string }) => {
-    try {
-      await manualDuty({
-        ...data,
-        dutyType: data.dutyType as DutyType,
-      });
-      message.success("手动排班成功");
-      await fetchList();
-      await fetchWeeklyDuty(currentWeekStart);
-      return true;
-    } catch (error) {
-      message.error("手动排班失败");
-      return false;
-    }
-  }, [fetchList, fetchWeeklyDuty, currentWeekStart]);
+  const manual = useCallback(
+    async (data: Omit<ManualDutyRequest, "dutyType"> & { dutyType: string }) => {
+      try {
+        await manualDuty({
+          ...data,
+          dutyType: data.dutyType as DutyType,
+        });
+        message.success("手动排班成功");
+        await fetchList();
+        await fetchWeeklyDuty(currentWeekStart);
+        return true;
+      } catch (error) {
+        message.error("手动排班失败");
+        return false;
+      }
+    },
+    [fetchList, fetchWeeklyDuty, currentWeekStart]
+  );
 
   // 删除排班
-  const deleteOne = useCallback(async (id: string) => {
-    try {
-      await deleteDutySchedule(id);
-      message.success("删除成功");
-      // 计算正确的页码：如果当前页只有一条数据且不是第一页，则向前翻页
-      const newPage = schedules.length === 1 && current > 1 ? current - 1 : current;
-      await fetchList(newPage);
-      await fetchWeeklyDuty(currentWeekStart);
-      return true;
-    } catch (error) {
-      message.error("删除失败");
-      return false;
-    }
-  }, [schedules.length, current, fetchList, fetchWeeklyDuty, currentWeekStart]);
+  const deleteOne = useCallback(
+    async (id: string) => {
+      try {
+        await deleteDutySchedule(id);
+        message.success("删除成功");
+        // 计算正确的页码：如果当前页只有一条数据且不是第一页，则向前翻页
+        const newPage = schedules.length === 1 && current > 1 ? current - 1 : current;
+        await fetchList(newPage);
+        await fetchWeeklyDuty(currentWeekStart);
+        return true;
+      } catch (error) {
+        message.error("删除失败");
+        return false;
+      }
+    },
+    [schedules.length, current, fetchList, fetchWeeklyDuty, currentWeekStart]
+  );
 
   // 批量删除排班
-  const batchDelete = useCallback(async (ids: string[]) => {
-    if (ids.length === 0) {
-      message.warning("请先选择要删除的排班记录");
-      return false;
-    }
-    try {
-      await batchDeleteDutySchedules(ids);
-      message.success(`成功删除 ${ids.length} 条排班记录`);
-      setSelectedRowKeys([]);
-      // 如果删除了当前页的所有数据且不是第一页，则向前翻页
-      const isCurrentPageCleared = ids.length >= schedules.length;
-      const newPage = isCurrentPageCleared && current > 1 ? current - 1 : current;
-      await fetchList(newPage);
-      await fetchWeeklyDuty(currentWeekStart);
-      return true;
-    } catch (error) {
-      message.error("批量删除失败");
-      return false;
-    }
-  }, [schedules.length, current, fetchList, fetchWeeklyDuty, currentWeekStart]);
+  const batchDelete = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) {
+        message.warning("请先选择要删除的排班记录");
+        return false;
+      }
+      try {
+        await batchDeleteDutySchedules(ids);
+        message.success(`成功删除 ${ids.length} 条排班记录`);
+        setSelectedRowKeys([]);
+        // 如果删除了当前页的所有数据且不是第一页，则向前翻页
+        const isCurrentPageCleared = ids.length >= schedules.length;
+        const newPage = isCurrentPageCleared && current > 1 ? current - 1 : current;
+        await fetchList(newPage);
+        await fetchWeeklyDuty(currentWeekStart);
+        return true;
+      } catch (error) {
+        message.error("批量删除失败");
+        return false;
+      }
+    },
+    [schedules.length, current, fetchList, fetchWeeklyDuty, currentWeekStart]
+  );
 
   // 周视图导航
   const prevWeek = useCallback(() => {

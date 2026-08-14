@@ -182,9 +182,7 @@ const VDIServerConfig: React.FC = () => {
       key: "status",
       width: 100,
       render: (status: number) => (
-        <Tag color={status === 0 ? "success" : "default"}>
-          {status === 0 ? "正常" : "停用"}
-        </Tag>
+        <Tag color={status === 0 ? "success" : "default"}>{status === 0 ? "正常" : "停用"}</Tag>
       ),
     },
     {
@@ -192,14 +190,14 @@ const VDIServerConfig: React.FC = () => {
       dataIndex: "token_expiry",
       key: "token_expiry",
       width: 160,
-      render: (time: string) => time ? new Date(time).toLocaleString("zh-CN") : "-",
+      render: (time: string) => (time ? new Date(time).toLocaleString("zh-CN") : "-"),
     },
     {
       title: "最后同步",
       dataIndex: "lastSyncTime",
       key: "lastSyncTime",
       width: 160,
-      render: (time: string) => time ? new Date(time).toLocaleString("zh-CN") : "-",
+      render: (time: string) => (time ? new Date(time).toLocaleString("zh-CN") : "-"),
     },
     {
       title: "操作",
@@ -215,11 +213,7 @@ const VDIServerConfig: React.FC = () => {
           >
             测试连接
           </Button>
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
+          <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
             编辑
           </Button>
           <Popconfirm
@@ -311,7 +305,9 @@ const VDIServerConfig: React.FC = () => {
             name="password"
             rules={modalMode === "create" ? [{ required: true, message: "请输入密码" }] : []}
           >
-            <Input.Password placeholder={modalMode === "create" ? "VDI 管理员密码" : "留空表示不修改密码"} />
+            <Input.Password
+              placeholder={modalMode === "create" ? "VDI 管理员密码" : "留空表示不修改密码"}
+            />
           </Form.Item>
           <Form.Item
             label="租户 ID"
@@ -320,12 +316,7 @@ const VDIServerConfig: React.FC = () => {
           >
             <InputNumber min={1} style={{ width: "100%" }} placeholder="默认为 1" />
           </Form.Item>
-          <Form.Item
-            label="状态"
-            name="status"
-            valuePropName="checked"
-            initialValue={true}
-          >
+          <Form.Item label="状态" name="status" valuePropName="checked" initialValue={true}>
             <Switch checkedChildren="正常" unCheckedChildren="停用" />
           </Form.Item>
         </Form>

@@ -170,18 +170,17 @@ export function isRectIntersect(r1: Rect, r2: Rect): boolean {
 /**
  * 获取点到线段的最近点
  */
-export function getClosestPointOnLine(
-  point: Point,
-  lineStart: Point,
-  lineEnd: Point
-): Point {
+export function getClosestPointOnLine(point: Point, lineStart: Point, lineEnd: Point): Point {
   const dx = lineEnd.x - lineStart.x;
   const dy = lineEnd.y - lineStart.y;
   const lengthSq = dx * dx + dy * dy;
 
   if (lengthSq === 0) return lineStart;
 
-  const t = Math.max(0, Math.min(1, ((point.x - lineStart.x) * dx + (point.y - lineStart.y) * dy) / lengthSq));
+  const t = Math.max(
+    0,
+    Math.min(1, ((point.x - lineStart.x) * dx + (point.y - lineStart.y) * dy) / lengthSq)
+  );
 
   return {
     x: lineStart.x + t * dx,
@@ -233,8 +232,7 @@ export function isPointInPolygon(point: Point, polygon: Point[]): boolean {
     const yj = polygon[j].y;
 
     const intersect =
-      yi > point.y !== yj > point.y &&
-      point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi;
+      yi > point.y !== yj > point.y && point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi;
 
     if (intersect) inside = !inside;
   }
@@ -251,9 +249,7 @@ export function arePointsCollinear(
   p3: Point,
   tolerance = DEFAULT_TOLERANCE
 ): boolean {
-  const area = Math.abs(
-    (p2.x - p1.x) * (p3.y - p1.y) - (p3.x - p1.x) * (p2.y - p1.y)
-  );
+  const area = Math.abs((p2.x - p1.x) * (p3.y - p1.y) - (p3.x - p1.x) * (p2.y - p1.y));
   return area < tolerance;
 }
 

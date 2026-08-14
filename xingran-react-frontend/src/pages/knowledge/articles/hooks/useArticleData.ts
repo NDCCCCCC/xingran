@@ -15,14 +15,8 @@ import {
   type KnowledgeArticle,
   KnowledgeArticleStatus,
 } from "@/lib/knowledgeApi";
-import {
-  getKnowledgeCategoryList,
-  type KnowledgeCategory,
-} from "@/lib/knowledgeApi";
-import {
-  getAllKnowledgeTags,
-  type KnowledgeTag,
-} from "@/lib/knowledgeApi";
+import { getKnowledgeCategoryList, type KnowledgeCategory } from "@/lib/knowledgeApi";
+import { getAllKnowledgeTags, type KnowledgeTag } from "@/lib/knowledgeApi";
 import type { UnknownError } from "@/types/common";
 
 export interface ArticleStatistics {
@@ -51,13 +45,21 @@ export interface UseArticleDataReturn {
   setCategories: React.Dispatch<React.SetStateAction<KnowledgeCategory[]>>;
   setTags: React.Dispatch<React.SetStateAction<KnowledgeTag[]>>;
 
-  fetchList: (page?: number, pageSize?: number, orderByColumn?: string, isAsc?: boolean) => Promise<void>;
+  fetchList: (
+    page?: number,
+    pageSize?: number,
+    orderByColumn?: string,
+    isAsc?: boolean
+  ) => Promise<void>;
   fetchCategories: () => Promise<void>;
   fetchTags: () => Promise<void>;
   handleDelete: (id: string) => Promise<void>;
   handleLike: (id: string) => Promise<void>;
   handlePublish: (record: KnowledgeArticle) => Promise<void>;
-  handleSave: (editingRecord: KnowledgeArticle | null, values: Record<string, unknown>) => Promise<void>;
+  handleSave: (
+    editingRecord: KnowledgeArticle | null,
+    values: Record<string, unknown>
+  ) => Promise<void>;
 }
 
 export function useArticleData(params: UseArticleDataParams): UseArticleDataReturn {
@@ -110,26 +112,29 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
     }
   }, []);
 
-  const fetchList = useCallback(async (page?: number, pageSize?: number, orderByColumn?: string, isAsc?: boolean) => {
-    setLoading(true);
-    try {
-      const result = await getKnowledgeArticleList({
-        current: page ?? current,
-        pageSize: pageSize ?? pageSize,
-        ...(orderByColumn ? { orderByColumn, isAsc } : {}),
-      });
-      const list = result.data?.list ?? [];
-      setArticles(list);
-      setTotal(result.data?.total ?? 0);
+  const fetchList = useCallback(
+    async (page?: number, pageSize?: number, orderByColumn?: string, isAsc?: boolean) => {
+      setLoading(true);
+      try {
+        const result = await getKnowledgeArticleList({
+          current: page ?? current,
+          pageSize: pageSize ?? pageSize,
+          ...(orderByColumn ? { orderByColumn, isAsc } : {}),
+        });
+        const list = result.data?.list ?? [];
+        setArticles(list);
+        setTotal(result.data?.total ?? 0);
 
-      // 列表加载后顺带刷新统计（全局 COUNT）；搜索/分页/增删改均经 fetchList，统计始终为真实全局计数。
-      fetchStats();
-    } catch (error) {
-      message.error("获取文章列表失败");
-    } finally {
-      setLoading(false);
-    }
-  }, [current, pageSize, fetchStats]);
+        // 列表加载后顺带刷新统计（全局 COUNT）；搜索/分页/增删改均经 fetchList，统计始终为真实全局计数。
+        fetchStats();
+      } catch (error) {
+        message.error("获取文章列表失败");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [current, pageSize, fetchStats]
+  );
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -149,57 +154,69 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
     }
   }, []);
 
-  const handleDelete = useCallback(async (id: string) => {
-    try {
-      await deleteKnowledgeArticle(id);
-      message.success("删除成功");
-      fetchList();
-    } catch (error: unknown) {
-      const err = error as UnknownError;
-      message.error(err.message || "删除失败");
-    }
-  }, [fetchList]);
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        await deleteKnowledgeArticle(id);
+        message.success("删除成功");
+        fetchList();
+      } catch (error: unknown) {
+        const err = error as UnknownError;
+        message.error(err.message || "删除失败");
+      }
+    },
+    [fetchList]
+  );
 
-  const handleLike = useCallback(async (id: string) => {
-    try {
-      await likeKnowledgeArticle(id);
-      message.success("点赞成功");
-      fetchList();
-    } catch (error: unknown) {
-      const err = error as UnknownError;
-      message.error(err.message || "点赞失败");
-    }
-  }, [fetchList]);
+  const handleLike = useCallback(
+    async (id: string) => {
+      try {
+        await likeKnowledgeArticle(id);
+        message.success("点赞成功");
+        fetchList();
+      } catch (error: unknown) {
+        const err = error as UnknownError;
+        message.error(err.message || "点赞失败");
+      }
+    },
+    [fetchList]
+  );
 
-  const handlePublish = useCallback(async (record: KnowledgeArticle) => {
-    try {
-      await updateKnowledgeArticle(record.id, { status: KnowledgeArticleStatus.Published });
-      message.success("发布成功");
-      fetchList();
-    } catch (error: unknown) {
-      const err = error as UnknownError;
-      message.error(err.message || "发布失败");
-    }
-  }, [fetchList]);
+  const handlePublish = useCallback(
+    async (record: KnowledgeArticle) => {
+      try {
+        await updateKnowledgeArticle(record.id, { status: KnowledgeArticleStatus.Published });
+        message.success("发布成功");
+        fetchList();
+      } catch (error: unknown) {
+        const err = error as UnknownError;
+        message.error(err.message || "发布失败");
+      }
+    },
+    [fetchList]
+  );
 
-  const handleSave = useCallback(async (editingRecord: KnowledgeArticle | null, values: Record<string, unknown>) => {
-    const articleData = {
-      title: values.title as string,
-      content: values.content as string,
-      summary: values.summary as string | undefined,
-      categoryId: values.categoryId as string,
-      status: values.status as number | undefined,
-      tagIds: values.tagIds as string[] | undefined,
-    };
-    if (editingRecord) {
-      await updateKnowledgeArticle(editingRecord.id, articleData);
-      message.success("更新成功");
-    } else {
-      await createKnowledgeArticle(articleData);
-      message.success("创建成功");
-    }
-    fetchList();
-  }, [fetchList]);
+  const handleSave = useCallback(
+    async (editingRecord: KnowledgeArticle | null, values: Record<string, unknown>) => {
+      const articleData = {
+        title: values.title as string,
+        content: values.content as string,
+        summary: values.summary as string | undefined,
+        categoryId: values.categoryId as string,
+        status: values.status as number | undefined,
+        tagIds: values.tagIds as string[] | undefined,
+      };
+      if (editingRecord) {
+        await updateKnowledgeArticle(editingRecord.id, articleData);
+        message.success("更新成功");
+      } else {
+        await createKnowledgeArticle(articleData);
+        message.success("创建成功");
+      }
+      fetchList();
+    },
+    [fetchList]
+  );
 
   return {
     articles,

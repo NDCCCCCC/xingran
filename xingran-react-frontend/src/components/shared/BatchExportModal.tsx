@@ -43,16 +43,18 @@ const BatchExportModal: FC<BatchExportModalProps> = ({
 }) => {
   // 默认全选所有实体类型
   const { message } = App.useApp();
-  const [selectedTypes, setSelectedTypes] = useState<string[]>(DEFAULT_ENTITY_TYPES.map(e => e.key));
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(
+    DEFAULT_ENTITY_TYPES.map((e) => e.key)
+  );
 
   // 当 modal 打开时重置为全选
   const handleOpen = () => {
-    setSelectedTypes(DEFAULT_ENTITY_TYPES.map(e => e.key));
+    setSelectedTypes(DEFAULT_ENTITY_TYPES.map((e) => e.key));
   };
 
   // 全选
   const handleSelectAll = () => {
-    setSelectedTypes(availableEntityTypes.map(e => e.key));
+    setSelectedTypes(availableEntityTypes.map((e) => e.key));
   };
 
   // 清空
@@ -62,8 +64,8 @@ const BatchExportModal: FC<BatchExportModalProps> = ({
 
   // 切换单个选项
   const handleToggle = (key: string) => {
-    setSelectedTypes(prev =>
-      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    setSelectedTypes((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
   };
 
@@ -112,7 +114,7 @@ const BatchExportModal: FC<BatchExportModalProps> = ({
         disabled: selectedTypes.length === 0,
       }}
       cancelButtonProps={{ disabled: loading }}
-      afterOpenChange={open => open && handleOpen()}
+      afterOpenChange={(open) => open && handleOpen()}
       destroyOnHidden
     >
       <Space direction="vertical" style={{ width: "100%" }} size="middle">
@@ -130,7 +132,7 @@ const BatchExportModal: FC<BatchExportModalProps> = ({
         <div>
           <Checkbox
             indeterminate={isIndeterminate}
-            onChange={e => e.target.checked ? handleSelectAll() : handleClearAll()}
+            onChange={(e) => (e.target.checked ? handleSelectAll() : handleClearAll())}
             checked={isAllSelected}
             disabled={loading}
           >
@@ -139,13 +141,15 @@ const BatchExportModal: FC<BatchExportModalProps> = ({
         </div>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-          {availableEntityTypes.map(entity => (
+          {availableEntityTypes.map((entity) => (
             <Checkbox
               key={entity.key}
               checked={selectedTypes.includes(entity.key)}
               onChange={() => handleToggle(entity.key)}
               disabled={loading}
-              style={typeof window !== "undefined" && window.innerWidth < 576 ? { width: "100%" } : {}}
+              style={
+                typeof window !== "undefined" && window.innerWidth < 576 ? { width: "100%" } : {}
+              }
             >
               {entity.label}
             </Checkbox>

@@ -69,14 +69,15 @@ export function CADToolbar({
   );
 
   const toolButtons = useMemo(
-    () => DRAWING_TOOLS.map(tool => ({
-      ...tool,
-      disabled: readOnly,
-    })),
+    () =>
+      DRAWING_TOOLS.map((tool) => ({
+        ...tool,
+        disabled: readOnly,
+      })),
     [readOnly]
   );
 
-  const renderToolButton = function(tool: ToolButtonConfig & { disabled: boolean }) {
+  const renderToolButton = function (tool: ToolButtonConfig & { disabled: boolean }) {
     const isActive = mode === tool.key;
 
     return (
@@ -111,9 +112,7 @@ export function CADToolbar({
 
   return (
     <div className="cad-toolbar" style={toolbarStyle}>
-      <Space size="small">
-        {toolButtons.map(renderToolButton)}
-      </Space>
+      <Space size="small">{toolButtons.map(renderToolButton)}</Space>
 
       <div style={{ flex: 1 }} />
 
@@ -143,12 +142,7 @@ export function CADToolbar({
       <div style={dividerStyle} />
 
       <Tooltip title="保存 (Ctrl+S)">
-        <Button
-          type="primary"
-          icon={<SaveOutlined />}
-          disabled={readOnly}
-          onClick={onSave}
-        >
+        <Button type="primary" icon={<SaveOutlined />} disabled={readOnly} onClick={onSave}>
           保存
         </Button>
       </Tooltip>

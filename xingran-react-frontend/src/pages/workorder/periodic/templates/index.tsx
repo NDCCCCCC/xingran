@@ -62,8 +62,18 @@ interface TemplateTableColumnsProps {
   handleDelete: (id: string) => void;
 }
 
-function getTemplateTableColumns(props: TemplateTableColumnsProps): ColumnsType<PeriodicWorkOrderTemplate> {
-  const { current, pageSize, handleEdit, handleToggleEnabled, handleGenerateNow, handleViewLogs, handleDelete } = props;
+function getTemplateTableColumns(
+  props: TemplateTableColumnsProps
+): ColumnsType<PeriodicWorkOrderTemplate> {
+  const {
+    current,
+    pageSize,
+    handleEdit,
+    handleToggleEnabled,
+    handleGenerateNow,
+    handleViewLogs,
+    handleDelete,
+  } = props;
 
   return [
     {
@@ -98,7 +108,9 @@ function getTemplateTableColumns(props: TemplateTableColumnsProps): ColumnsType<
       key: "priority",
       width: 80,
       render: (priority: number) => (
-        <Tag color={PRIORITY_CONFIG[priority as keyof typeof PRIORITY_CONFIG]?.color}>{PRIORITY_CONFIG[priority as keyof typeof PRIORITY_CONFIG]?.text}</Tag>
+        <Tag color={PRIORITY_CONFIG[priority as keyof typeof PRIORITY_CONFIG]?.color}>
+          {PRIORITY_CONFIG[priority as keyof typeof PRIORITY_CONFIG]?.text}
+        </Tag>
       ),
     },
     {
@@ -112,7 +124,8 @@ function getTemplateTableColumns(props: TemplateTableColumnsProps): ColumnsType<
       dataIndex: "assignType",
       key: "assignType",
       width: 120,
-      render: (type: string) => ASSIGN_TYPE_CONFIG[type as keyof typeof ASSIGN_TYPE_CONFIG]?.text || type,
+      render: (type: string) =>
+        ASSIGN_TYPE_CONFIG[type as keyof typeof ASSIGN_TYPE_CONFIG]?.text || type,
     },
     {
       title: "下次执行",
@@ -202,7 +215,9 @@ function VariableHelp({ content }: VariableHelpProps) {
       <p className="font-semibold mb-2">{content.title}</p>
       <div className="grid grid-cols-2 gap-2">
         {content.variables.map((v, i) => (
-          <div key={i}><code>{v.code}</code> - {v.description}</div>
+          <div key={i}>
+            <code>{v.code}</code> - {v.description}
+          </div>
         ))}
       </div>
     </div>
@@ -321,10 +336,18 @@ const PeriodicTemplatePage: FC = () => {
               <Statistic title="总模板" value={statistics.total} />
             </Col>
             <Col span={6}>
-              <Statistic title="已启用" value={statistics.enabled} styles={{ content: { color: "var(--theme-success, #3f8600)" } }} />
+              <Statistic
+                title="已启用"
+                value={statistics.enabled}
+                styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
+              />
             </Col>
             <Col span={6}>
-              <Statistic title="已禁用" value={statistics.disabled} styles={{ content: { color: "var(--theme-error, #cf1322)" } }} />
+              <Statistic
+                title="已禁用"
+                value={statistics.disabled}
+                styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
+              />
             </Col>
             <Col span={6}>
               <Statistic title="已生成工单" value={statistics.totalGenerated} />
@@ -335,13 +358,32 @@ const PeriodicTemplatePage: FC = () => {
 
       {/* 筛选表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
+        >
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="title" label="模板名称">
-              <Input placeholder="请输入模板名称" allowClear className="user-form-input" style={{ width: 150 }} />
+              <Input
+                placeholder="请输入模板名称"
+                allowClear
+                className="user-form-input"
+                style={{ width: 150 }}
+              />
             </Form.Item>
             <Form.Item name="isEnabled" label="状态">
-              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}>
+              <Select
+                placeholder="请选择状态"
+                allowClear
+                className="user-form-input"
+                style={{ width: 100 }}
+                onSearch={() => {}}
+              >
                 <Option value={true}>已启用</Option>
                 <Option value={false}>已禁用</Option>
               </Select>
@@ -434,7 +476,11 @@ const PeriodicTemplatePage: FC = () => {
                 label="工单类型"
                 rules={[{ required: true, message: "请选择工单类型" }]}
               >
-                <Select placeholder="请选择工单类型" className="user-form-input" onSearch={() => {}}>
+                <Select
+                  placeholder="请选择工单类型"
+                  className="user-form-input"
+                  onSearch={() => {}}
+                >
                   {Object.entries(TYPE_CONFIG).map(([key, { text }]) => (
                     <Option key={key} value={key}>
                       {text}
@@ -475,7 +521,11 @@ const PeriodicTemplatePage: FC = () => {
                 label="分配类型"
                 rules={[{ required: true, message: "请选择分配类型" }]}
               >
-                <Select placeholder="请选择分配类型" className="user-form-input" onSearch={() => {}}>
+                <Select
+                  placeholder="请选择分配类型"
+                  className="user-form-input"
+                  onSearch={() => {}}
+                >
                   {Object.entries(ASSIGN_TYPE_CONFIG).map(([key, { text }]) => (
                     <Option key={key} value={key}>
                       {text}
@@ -485,13 +535,25 @@ const PeriodicTemplatePage: FC = () => {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => prevValues.assignType !== currentValues.assignType}>
+              <Form.Item
+                noStyle
+                shouldUpdate={(prevValues, currentValues) =>
+                  prevValues.assignType !== currentValues.assignType
+                }
+              >
                 {({ getFieldValue }) => {
                   const assignType = getFieldValue("assignType");
                   if (assignType === PeriodicAssignType.Manual) {
                     return (
                       <Form.Item name="assignTargetId" label="指定处理人">
-                        <Select placeholder="请选择处理人" allowClear showSearch optionFilterProp="children" className="user-form-input" onSearch={() => {}}>
+                        <Select
+                          placeholder="请选择处理人"
+                          allowClear
+                          showSearch
+                          optionFilterProp="children"
+                          className="user-form-input"
+                          onSearch={() => {}}
+                        >
                           {users.map((user) => (
                             <Option key={user.id} value={user.id}>
                               {user.nickName || user.username}
@@ -502,13 +564,26 @@ const PeriodicTemplatePage: FC = () => {
                     );
                   } else if (assignType === PeriodicAssignType.DutyPool) {
                     return (
-                      <Form.Item name="assignTargetId" label="选择值班池" rules={[{ required: true, message: "请选择值班池" }]}>
-                        <Select placeholder="请选择值班池" allowClear showSearch optionFilterProp="children" className="user-form-input" onSearch={() => {}}>
-                          {dutyPools.filter((p) => p.status === 0).map((pool) => (
-                            <Option key={pool.id} value={pool.id}>
-                              {pool.poolName} ({pool.members?.length || 0}人)
-                            </Option>
-                          ))}
+                      <Form.Item
+                        name="assignTargetId"
+                        label="选择值班池"
+                        rules={[{ required: true, message: "请选择值班池" }]}
+                      >
+                        <Select
+                          placeholder="请选择值班池"
+                          allowClear
+                          showSearch
+                          optionFilterProp="children"
+                          className="user-form-input"
+                          onSearch={() => {}}
+                        >
+                          {dutyPools
+                            .filter((p) => p.status === 0)
+                            .map((pool) => (
+                              <Option key={pool.id} value={pool.id}>
+                                {pool.poolName} ({pool.members?.length || 0}人)
+                              </Option>
+                            ))}
                         </Select>
                       </Form.Item>
                     );
@@ -539,18 +614,21 @@ const PeriodicTemplatePage: FC = () => {
       >
         {selectedTemplate && (
           <div>
-            <p><strong>模板名称：</strong>{selectedTemplate.templateName}</p>
-            <p><strong>已生成工单：</strong>{selectedTemplate.totalGenerated}</p>
+            <p>
+              <strong>模板名称：</strong>
+              {selectedTemplate.templateName}
+            </p>
+            <p>
+              <strong>已生成工单：</strong>
+              {selectedTemplate.totalGenerated}
+            </p>
 
             {logs.length === 0 ? (
               <p className="text-gray-400 mt-4">暂无执行记录</p>
             ) : (
               <Timeline className="mt-4">
                 {logs.map((log) => (
-                  <Timeline.Item
-                    key={log.id}
-                    color={log.status === "success" ? "green" : "red"}
-                  >
+                  <Timeline.Item key={log.id} color={log.status === "success" ? "green" : "red"}>
                     <div>
                       <strong>{formatDateTime(log.executedAt)}</strong>
                       <Tag color={log.status === "success" ? "green" : "red"} className="ml-2">
@@ -570,4 +648,3 @@ const PeriodicTemplatePage: FC = () => {
 };
 
 export default PeriodicTemplatePage;
-

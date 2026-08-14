@@ -23,11 +23,7 @@ const BuildingCard: React.FC<BuildingCardProps> = ({ building, onClick }) => {
         </div>
       </div>
 
-      {building.address && (
-        <div className={styles.buildingAddress}>
-          📍 {building.address}
-        </div>
-      )}
+      {building.address && <div className={styles.buildingAddress}>📍 {building.address}</div>}
 
       <div className={styles.buildingStats}>
         <div className={styles.buildingStat}>

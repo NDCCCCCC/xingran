@@ -37,7 +37,12 @@ export interface UseScheduleDataReturn {
   currentWeekStart: Dayjs;
 
   // 数据加载方法
-  fetchList: (page?: number, pageSize?: number, sortCol?: string, sortAsc?: boolean) => Promise<void>;
+  fetchList: (
+    page?: number,
+    pageSize?: number,
+    sortCol?: string,
+    sortAsc?: boolean
+  ) => Promise<void>;
   fetchAllSchedules: () => Promise<void>;
   fetchPools: () => Promise<void>;
   fetchUsers: () => Promise<void>;
@@ -59,36 +64,39 @@ export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataR
   const [currentWeekStart, setCurrentWeekStart] = useState<Dayjs>(dayjs().startOf("week"));
 
   // 获取排班列表
-  const fetchList = useCallback(async (page?: number, size?: number, sortCol?: string, sortAsc?: boolean) => {
-    setLoading(true);
-    try {
-      const values = searchForm.getFieldsValue() as {
-        poolId?: string;
-        userId?: string;
-        dateRange?: [Dayjs, Dayjs];
-        dutyType?: string;
-        expired?: number;
-      };
-      const result = await getDutyScheduleList({
-        current: page ?? current,
-        pageSize: size ?? pageSize,
-        poolId: values.poolId,
-        userId: values.userId,
-        startDate: values.dateRange?.[0]?.format("YYYY-MM-DD"),
-        endDate: values.dateRange?.[1]?.format("YYYY-MM-DD"),
-        dutyType: values.dutyType,
-        expired: values.expired,
-        // 服务端排序透传（避坑：详见 memory server-sort-loadfunc-param-drop）
-        ...(sortCol ? { orderByColumn: sortCol, isAsc: sortAsc } : {}),
-      });
-      setDataSource(result.data?.list ?? []);
-      setTotal(result.data?.total ?? 0);
-    } catch (error) {
-      message.error("获取排班列表失败");
-    } finally {
-      setLoading(false);
-    }
-  }, [current, pageSize, searchForm]);
+  const fetchList = useCallback(
+    async (page?: number, size?: number, sortCol?: string, sortAsc?: boolean) => {
+      setLoading(true);
+      try {
+        const values = searchForm.getFieldsValue() as {
+          poolId?: string;
+          userId?: string;
+          dateRange?: [Dayjs, Dayjs];
+          dutyType?: string;
+          expired?: number;
+        };
+        const result = await getDutyScheduleList({
+          current: page ?? current,
+          pageSize: size ?? pageSize,
+          poolId: values.poolId,
+          userId: values.userId,
+          startDate: values.dateRange?.[0]?.format("YYYY-MM-DD"),
+          endDate: values.dateRange?.[1]?.format("YYYY-MM-DD"),
+          dutyType: values.dutyType,
+          expired: values.expired,
+          // 服务端排序透传（避坑：详见 memory server-sort-loadfunc-param-drop）
+          ...(sortCol ? { orderByColumn: sortCol, isAsc: sortAsc } : {}),
+        });
+        setDataSource(result.data?.list ?? []);
+        setTotal(result.data?.total ?? 0);
+      } catch (error) {
+        message.error("获取排班列表失败");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [current, pageSize, searchForm]
+  );
 
   // 获取今日值班
   const fetchTodayDuty = useCallback(async () => {

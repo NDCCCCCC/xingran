@@ -6,12 +6,7 @@
 import { useEffect } from "react";
 import type { FC } from "react";
 import { Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic } from "antd";
-import {
-  PlusOutlined,
-  SearchOutlined,
-  ReloadOutlined,
-  UploadOutlined,
-} from "@ant-design/icons";
+import { PlusOutlined, SearchOutlined, ReloadOutlined, UploadOutlined } from "@ant-design/icons";
 import type { CaptchaBackground } from "@/types/captcha";
 import { useCaptchaData, useCaptchaModals } from "./hooks";
 import { getCaptchaColumns } from "./columns";
@@ -29,14 +24,8 @@ const CaptchaBackgroundManagement: FC = () => {
   // 使用全局分页 hook
   const { paginationProps, setTotal } = usePagination();
 
-  const {
-    backgrounds,
-    loading,
-    total,
-    statistics,
-    loadBackgrounds,
-    loadStatistics,
-  } = useCaptchaData(searchForm, setTotal);
+  const { backgrounds, loading, total, statistics, loadBackgrounds, loadStatistics } =
+    useCaptchaData(searchForm, setTotal);
 
   const {
     uploadModalVisible,
@@ -116,7 +105,13 @@ const CaptchaBackgroundManagement: FC = () => {
           <Input placeholder="请输入文件名" allowClear className="user-form-input" />
         </Form.Item>
         <Form.Item name="pieceShape" label="拼图形状">
-          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
+          <Select
+            placeholder="请选择"
+            allowClear
+            className="user-form-input"
+            style={{ width: 120 }}
+            onSearch={() => {}}
+          >
             {SHAPE_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -125,7 +120,13 @@ const CaptchaBackgroundManagement: FC = () => {
           </Select>
         </Form.Item>
         <Form.Item name="difficultyLevel" label="难度">
-          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}>
+          <Select
+            placeholder="请选择"
+            allowClear
+            className="user-form-input"
+            style={{ width: 100 }}
+            onSearch={() => {}}
+          >
             {DIFFICULTY_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -134,7 +135,13 @@ const CaptchaBackgroundManagement: FC = () => {
           </Select>
         </Form.Item>
         <Form.Item name="status" label="状态">
-          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}>
+          <Select
+            placeholder="请选择"
+            allowClear
+            className="user-form-input"
+            style={{ width: 100 }}
+            onSearch={() => {}}
+          >
             {STATUS_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>
                 {opt.label}

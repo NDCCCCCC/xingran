@@ -7,7 +7,13 @@ import { useState, useCallback } from "react";
 import type { Menu } from "@/types";
 import { post } from "@/lib/api";
 import { refreshMenuCache } from "@/store/menuStore";
-import { flattenTree, buildParentOptions, calculateStatistics, type MenuStatistics, type ParentOption } from "../utils";
+import {
+  flattenTree,
+  buildParentOptions,
+  calculateStatistics,
+  type MenuStatistics,
+  type ParentOption,
+} from "../utils";
 
 export interface UseMenuDataReturn {
   // 数据状态
@@ -35,7 +41,7 @@ export function useMenuData(): UseMenuDataReturn {
   const loadMenus = useCallback(async (searchParams?: Record<string, unknown>) => {
     setLoading(true);
     try {
-      const result = await post("/system/menus/tree", searchParams || {}) as { data: Menu[] };
+      const result = (await post("/system/menus/tree", searchParams || {})) as { data: Menu[] };
       const menuData = result.data || [];
       // 处理树形数据
       const flatMenus = flattenTree(menuData);

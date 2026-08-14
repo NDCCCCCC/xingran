@@ -24,8 +24,7 @@ export function CommandDetailDrawer({
     return null;
   }
 
-  const currentStep =
-    execution.status === "pending" ? 0 : execution.status === "running" ? 1 : 2;
+  const currentStep = execution.status === "pending" ? 0 : execution.status === "running" ? 1 : 2;
   const percent =
     execution.totalDevices > 0
       ? Math.round(
@@ -46,11 +45,7 @@ export function CommandDetailDrawer({
           current={currentStep}
           status={execution.status === "failed" ? "error" : undefined}
           size="small"
-          items={[
-            { title: "待执行" },
-            { title: "执行中" },
-            { title: "已完成" },
-          ]}
+          items={[{ title: "待执行" }, { title: "执行中" }, { title: "已完成" }]}
         />
         <div style={{ marginTop: 16 }}>
           <Progress
@@ -59,8 +54,12 @@ export function CommandDetailDrawer({
           />
           <div style={{ marginTop: 8, display: "flex", gap: 24 }}>
             <span>总设备: {execution.totalDevices}</span>
-            <span style={{ color: "var(--theme-success, #52c41a)" }}>成功: {execution.successCount}</span>
-            <span style={{ color: "var(--theme-error, #ff4d4f)" }}>失败: {execution.failureCount}</span>
+            <span style={{ color: "var(--theme-success, #52c41a)" }}>
+              成功: {execution.successCount}
+            </span>
+            <span style={{ color: "var(--theme-error, #ff4d4f)" }}>
+              失败: {execution.failureCount}
+            </span>
           </div>
         </div>
       </Card>

@@ -59,7 +59,7 @@ const DepartmentManagement: FC = () => {
   useEffect(() => {
     if (departments?.length > 0) {
       const treeData = renderTreeData(departments);
-      const rootKeys = treeData.map(d => d.key);
+      const rootKeys = treeData.map((d) => d.key);
       setExpandedRowKeys(rootKeys);
     } else {
       setExpandedRowKeys([]);
@@ -97,14 +97,17 @@ const DepartmentManagement: FC = () => {
       // 收窄到局部 const,避免 setState 闭包内 record.leaderName 仍为 string|undefined
       const leaderId: string = record.leader;
       const nickname: string = record.leaderName || "";
-      setDeptUsers(prev =>
-        prev.find(u => u.id === leaderId)
+      setDeptUsers((prev) =>
+        prev.find((u) => u.id === leaderId)
           ? prev
-          : [...prev, {
-              id: leaderId,
-              username: record.leaderUsername || record.leaderName || "未命名用户",
-              nickname,
-            }]
+          : [
+              ...prev,
+              {
+                id: leaderId,
+                username: record.leaderUsername || record.leaderName || "未命名用户",
+                nickname,
+              },
+            ]
       );
     }
   };
@@ -195,11 +198,7 @@ const DepartmentManagement: FC = () => {
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={8}>
           <Card>
-            <Statistic
-              title="总部门数"
-              value={statistics.total}
-              prefix={<ApartmentOutlined />}
-            />
+            <Statistic title="总部门数" value={statistics.total} prefix={<ApartmentOutlined />} />
           </Card>
         </Col>
         <Col span={8}>
@@ -239,7 +238,12 @@ const DepartmentManagement: FC = () => {
               <Input placeholder="请输入部门名称" />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" style={{ width: 120 }} allowClear onSearch={() => {}}>
+              <Select
+                placeholder="请选择状态"
+                style={{ width: 120 }}
+                allowClear
+                onSearch={() => {}}
+              >
                 {STATUS_OPTIONS.map((opt) => (
                   <Option key={opt.value} value={opt.value}>
                     {opt.label}
@@ -288,7 +292,7 @@ const DepartmentManagement: FC = () => {
               if (expanded) {
                 setExpandedRowKeys([...expandedRowKeys, recordKey]);
               } else {
-                setExpandedRowKeys(expandedRowKeys.filter(k => k !== recordKey));
+                setExpandedRowKeys(expandedRowKeys.filter((k) => k !== recordKey));
               }
             },
             childrenColumnName: "children",

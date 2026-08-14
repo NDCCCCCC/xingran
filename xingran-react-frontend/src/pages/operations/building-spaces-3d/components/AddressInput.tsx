@@ -35,34 +35,43 @@ const AddressInput: React.FC<AddressInputProps> = ({ value, onChange, disabled }
     }
   }, [value]);
 
-  const updateValue = useCallback((updates: Partial<AddressValue>) => {
-    const newValue: AddressValue = {
-      ...localValue,
-      ...updates,
-      longitude: updates.longitude ?? undefined,
-      latitude: updates.latitude ?? undefined,
-    };
-    setLocalValue(newValue);
-    onChange?.(newValue);
-  }, [localValue, onChange]);
+  const updateValue = useCallback(
+    (updates: Partial<AddressValue>) => {
+      const newValue: AddressValue = {
+        ...localValue,
+        ...updates,
+        longitude: updates.longitude ?? undefined,
+        latitude: updates.latitude ?? undefined,
+      };
+      setLocalValue(newValue);
+      onChange?.(newValue);
+    },
+    [localValue, onChange]
+  );
 
-  const handleCityChange = useCallback((cityCode: string) => {
-    const city = HUBEI_CITIES[cityCode as keyof typeof HUBEI_CITIES];
-    updateValue({
-      cityCode,
-      cityName: city?.name || "",
-      longitude: undefined,
-      latitude: undefined,
-    });
-  }, [updateValue]);
+  const handleCityChange = useCallback(
+    (cityCode: string) => {
+      const city = HUBEI_CITIES[cityCode as keyof typeof HUBEI_CITIES];
+      updateValue({
+        cityCode,
+        cityName: city?.name || "",
+        longitude: undefined,
+        latitude: undefined,
+      });
+    },
+    [updateValue]
+  );
 
-  const handleAddressChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    updateValue({
-      address: e.target.value,
-      longitude: undefined,
-      latitude: undefined,
-    });
-  }, [updateValue]);
+  const handleAddressChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      updateValue({
+        address: e.target.value,
+        longitude: undefined,
+        latitude: undefined,
+      });
+    },
+    [updateValue]
+  );
 
   const handleResolve = useCallback(async () => {
     if (!localValue.address?.trim()) {
@@ -102,7 +111,8 @@ const AddressInput: React.FC<AddressInputProps> = ({ value, onChange, disabled }
             showSearch
             optionFilterProp="children"
             options={cityOptions}
-           onSearch={() => {}}/>
+            onSearch={() => {}}
+          />
         </Space>
 
         {/* 地址输入 */}
@@ -132,13 +142,7 @@ const AddressInput: React.FC<AddressInputProps> = ({ value, onChange, disabled }
 
         {/* 错误提示 */}
         {error && (
-          <Alert
-            message="解析失败"
-            description={error.message}
-            type="error"
-            showIcon
-            closable
-          />
+          <Alert message="解析失败" description={error.message} type="error" showIcon closable />
         )}
 
         {/* 成功提示 */}
@@ -153,11 +157,16 @@ const AddressInput: React.FC<AddressInputProps> = ({ value, onChange, disabled }
             description={
               <div>
                 <div>
-                  经度：{localValue.longitude?.toFixed(6)}，
-                  纬度：{localValue.latitude?.toFixed(6)}
+                  经度：{localValue.longitude?.toFixed(6)}， 纬度：{localValue.latitude?.toFixed(6)}
                 </div>
                 {localValue.address && (
-                  <div style={{ fontSize: 12, color: "var(--theme-text-tertiary, #666)", marginTop: 4 }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "var(--theme-text-tertiary, #666)",
+                      marginTop: 4,
+                    }}
+                  >
                     {localValue.address}
                   </div>
                 )}

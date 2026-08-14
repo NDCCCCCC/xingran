@@ -5,10 +5,7 @@
 
 import { useState, useEffect } from "react";
 import { App } from "antd";
-import {
-  getADConfigList,
-  type ADConfig,
-} from "@/lib/adDomainApi";
+import { getADConfigList, type ADConfig } from "@/lib/adDomainApi";
 
 export interface UseADConfigsOptions {
   /** 是否只获取启用状态的配置，默认 true */
@@ -18,10 +15,7 @@ export interface UseADConfigsOptions {
 }
 
 export function useADConfigs(options: UseADConfigsOptions = {}) {
-  const {
-    enabledOnly = true,
-    autoSelectFirst = true,
-  } = options;
+  const { enabledOnly = true, autoSelectFirst = true } = options;
 
   const { message } = App.useApp();
   const [configs, setConfigs] = useState<ADConfig[]>([]);

@@ -30,24 +30,27 @@ export function useHolidayData(): UseHolidayDataReturn {
   const [availableYears, setAvailableYears] = useState<number[]>([]);
 
   // 加载节假日列表
-  const fetchList = useCallback(async (y?: number) => {
-    setLoading(true);
-    try {
-      const targetYear = y ?? year;
-      if (targetYear === undefined) {
+  const fetchList = useCallback(
+    async (y?: number) => {
+      setLoading(true);
+      try {
+        const targetYear = y ?? year;
+        if (targetYear === undefined) {
+          setLoading(false);
+          return;
+        }
+        const result = await getHolidayList(targetYear);
+        const data = result as { code: number; data: Holiday[] };
+        setDataSource(data.data);
+        if (y !== undefined) setYear(y);
+      } catch (error) {
+        message.error("获取节假日列表失败");
+      } finally {
         setLoading(false);
-        return;
       }
-      const result = await getHolidayList(targetYear);
-      const data = result as { code: number; data: Holiday[] };
-      setDataSource(data.data);
-      if (y !== undefined) setYear(y);
-    } catch (error) {
-      message.error("获取节假日列表失败");
-    } finally {
-      setLoading(false);
-    }
-  }, [year]);
+    },
+    [year]
+  );
 
   // 加载可用年份列表
   const fetchAvailableYears = useCallback(async () => {

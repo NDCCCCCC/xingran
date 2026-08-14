@@ -171,7 +171,8 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
             fontSize: "24px",
             fontWeight: "bold",
             marginBottom: "16px",
-            background: "linear-gradient(135deg, var(--theme-primary-500, #3b82f6) 0%, var(--theme-primary-600, #2563eb) 100%)",
+            background:
+              "linear-gradient(135deg, var(--theme-primary-500, #3b82f6) 0%, var(--theme-primary-600, #2563eb) 100%)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             backgroundClip: "text",
@@ -279,7 +280,7 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
           styles={{
             body: {
               padding: "24px",
-            }
+            },
           }}
         >
           {children}

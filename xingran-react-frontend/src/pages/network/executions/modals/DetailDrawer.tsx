@@ -36,26 +36,38 @@ export function DetailDrawer({
         <div>
           <Card size="small" style={{ marginBottom: 16 }}>
             <Steps
-              current={currentExecution.status === "pending" ? 0 : currentExecution.status === "running" ? 1 : 2}
+              current={
+                currentExecution.status === "pending"
+                  ? 0
+                  : currentExecution.status === "running"
+                    ? 1
+                    : 2
+              }
               status={currentExecution.status === "failed" ? "error" : undefined}
               size="small"
-              items={[
-                { title: "待执行" },
-                { title: "执行中" },
-                { title: "已完成" },
-              ]}
+              items={[{ title: "待执行" }, { title: "执行中" }, { title: "已完成" }]}
             />
             <Divider style={{ margin: "12px 0" }} />
             <Progress
-              percent={currentExecution.totalDevices > 0
-                ? Math.round(((currentExecution.successCount + currentExecution.failureCount) / currentExecution.totalDevices) * 100)
-                : 0}
+              percent={
+                currentExecution.totalDevices > 0
+                  ? Math.round(
+                      ((currentExecution.successCount + currentExecution.failureCount) /
+                        currentExecution.totalDevices) *
+                        100
+                    )
+                  : 0
+              }
               status={currentExecution.status === "failed" ? "exception" : undefined}
             />
             <div style={{ marginTop: 8, display: "flex", gap: 24 }}>
               <span>总设备: {currentExecution.totalDevices}</span>
-              <span style={{ color: "var(--theme-success, #52c41a)" }}>成功: {currentExecution.successCount}</span>
-              <span style={{ color: "var(--theme-error, #ff4d4f)" }}>失败: {currentExecution.failureCount}</span>
+              <span style={{ color: "var(--theme-success, #52c41a)" }}>
+                成功: {currentExecution.successCount}
+              </span>
+              <span style={{ color: "var(--theme-error, #ff4d4f)" }}>
+                失败: {currentExecution.failureCount}
+              </span>
             </div>
           </Card>
 

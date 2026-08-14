@@ -4,10 +4,7 @@
  */
 
 import { post } from "./api";
-import type {
-  BaseResponse,
-  PageResponse,
-} from "@/types";
+import type { BaseResponse, PageResponse } from "@/types";
 import type {
   VirtualMachine,
   VDIServer,

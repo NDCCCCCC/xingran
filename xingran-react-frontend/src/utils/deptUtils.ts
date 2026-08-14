@@ -52,9 +52,7 @@ export function getDeptNodeId(node: DeptLikeNode): string {
 export function filterExternalOrgDepts<T extends DeptLikeNode>(nodes: T[]): T[] {
   const walk = (list: T[]): T[] => {
     return list.reduce<T[]>((acc, node) => {
-      const keptChildren = node.children?.length
-        ? walk(node.children as T[])
-        : [];
+      const keptChildren = node.children?.length ? walk(node.children as T[]) : [];
       if (node.isExternalOrg === 1 || keptChildren.length > 0) {
         acc.push({
           ...node,
@@ -74,10 +72,7 @@ export function filterExternalOrgDepts<T extends DeptLikeNode>(nodes: T[]): T[] 
  *
  * 注意:返回的是原对象引用,不会克隆。修改返回值会影响原树。
  */
-export function findDeptNode<T extends DeptLikeNode>(
-  nodes: T[],
-  id: string
-): T | null {
+export function findDeptNode<T extends DeptLikeNode>(nodes: T[], id: string): T | null {
   for (const node of nodes) {
     if (getDeptNodeId(node) === id) return node;
     if (node.children?.length) {
@@ -92,10 +87,7 @@ export function findDeptNode<T extends DeptLikeNode>(
  * 收集某节点及其所有后代的 id(含自身)。
  * 通过 getDeptNodeId 兼容多种节点形状。未找到 id 时返回空数组。
  */
-export function collectDescendantIds<T extends DeptLikeNode>(
-  nodes: T[],
-  id: string
-): string[] {
+export function collectDescendantIds<T extends DeptLikeNode>(nodes: T[], id: string): string[] {
   const out: string[] = [];
   const walk = (list: T[]): boolean => {
     for (const n of list) {
@@ -142,17 +134,15 @@ export function collectDescendantIds<T extends DeptLikeNode>(
  *   //     { title: "C", children: [{ title: "D" }] }
  *   //   ]
  */
-export function trimTitleToLastSegment<
-  T extends { title?: string; children?: T[] },
->(nodes: T[]): T[] {
+export function trimTitleToLastSegment<T extends { title?: string; children?: T[] }>(
+  nodes: T[]
+): T[] {
   const walk = (list: T[]): T[] => {
     return list.map((n) => {
-      const nextChildren = n.children?.length
-        ? walk(n.children)
-        : n.children;
+      const nextChildren = n.children?.length ? walk(n.children) : n.children;
       const nextTitle =
         typeof n.title === "string" && n.title.includes(" / ")
-          ? n.title.split(" / ").pop() ?? n.title
+          ? (n.title.split(" / ").pop() ?? n.title)
           : n.title;
       return { ...n, title: nextTitle, children: nextChildren } as T;
     });
@@ -214,11 +204,9 @@ export type FullPathTreeNode<T> = Omit<T, "children"> & {
   children?: FullPathTreeNode<T>[];
 };
 
-export function toFullPathTree<
-  T extends DeptLikeNode & { deptName?: string },
->(
+export function toFullPathTree<T extends DeptLikeNode & { deptName?: string }>(
   nodes: T[],
-  opts?: { startFromLevel?: 1 | 2 },
+  opts?: { startFromLevel?: 1 | 2 }
 ): FullPathTreeNode<T>[] {
   const startFromLevel = opts?.startFromLevel ?? 1;
   // startFromLevel=k 意味着 ancestors[0..k-2] 全部丢弃,保留 ancestors[k-1..]
@@ -230,10 +218,7 @@ export function toFullPathTree<
     return (list ?? []).map((node) => {
       const name = node.deptName ?? "";
       const trimmedAncestors = ancestors.slice(ancestorKeepFrom);
-      const title =
-        trimmedAncestors.length === 0
-          ? name
-          : [...trimmedAncestors, name].join(" / ");
+      const title = trimmedAncestors.length === 0 ? name : [...trimmedAncestors, name].join(" / ");
       const id = getDeptNodeId(node);
       const nextChildren = node.children?.length
         ? build(node.children as T[], [...ancestors, name])
@@ -243,9 +228,7 @@ export function toFullPathTree<
         title,
         value: id,
         key: id,
-        ...(node.isExternalOrg !== undefined
-          ? { isExternalOrg: node.isExternalOrg }
-          : {}),
+        ...(node.isExternalOrg !== undefined ? { isExternalOrg: node.isExternalOrg } : {}),
         children: nextChildren,
       } as Out;
     });
@@ -287,9 +270,9 @@ export interface ShortNameDataNode {
   isLeaf?: boolean;
 }
 
-export function toShortNameDataNode<
-  T extends DeptLikeNode & { deptName?: string },
->(nodes: T[]): ShortNameDataNode[] {
+export function toShortNameDataNode<T extends DeptLikeNode & { deptName?: string }>(
+  nodes: T[]
+): ShortNameDataNode[] {
   const build = (list: T[]): ShortNameDataNode[] => {
     return (list ?? []).map((node) => {
       const id = getDeptNodeId(node);
@@ -315,9 +298,9 @@ export function toShortNameDataNode<
  * 本函数在前端兜底去重,保证喂给 TreeSelect 的 treeData 每个 value 唯一。
  * 对 TreeSelect 是安全的(同 value 的重复节点本就无法区分)。
  */
-export function dedupTreeByKey<
-  T extends { value?: string; key?: string; children?: T[] },
->(nodes: T[]): T[] {
+export function dedupTreeByKey<T extends { value?: string; key?: string; children?: T[] }>(
+  nodes: T[]
+): T[] {
   const seen = new Set<string>();
   const walk = (list: T[]): T[] => {
     const result: T[] = [];

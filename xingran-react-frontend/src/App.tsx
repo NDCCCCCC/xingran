@@ -33,7 +33,7 @@ function App() {
     if (allMenus.length > 0) {
       routeConfigManager.initialize(allMenus);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allMenus.length]);
 
   return (

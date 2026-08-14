@@ -22,7 +22,13 @@ import { DownOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { getMACEvents } from "@/lib/api/networkApi";
 import type { MACHistoryRecord } from "@/lib/api/networkApi";
-import { EVENT_COLORS, EVENT_ICON, EVENT_LABEL, EVENT_TAG_COLOR, type MACEventType } from "./macEventMeta";
+import {
+  EVENT_COLORS,
+  EVENT_ICON,
+  EVENT_LABEL,
+  EVENT_TAG_COLOR,
+  type MACEventType,
+} from "./macEventMeta";
 import { ErrorAlertWithRetry } from "@/components/shared";
 
 export interface MACEventsTimelineProps {
@@ -87,7 +93,12 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
   }, [mac, startTime, endTime]);
 
   // 首页查询(交给 useQuery 处理 loading / error / refetch)
-  const { data: firstPage, isLoading, error, refetch } = useQuery({
+  const {
+    data: firstPage,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["macEvents", mac, startTime, endTime, 1],
     queryFn: () => getMACEvents(mac, startTime, endTime, { current: 1, pageSize }),
     enabled: !!mac,
@@ -123,7 +134,12 @@ const MACEventsTimeline: React.FC<MACEventsTimelineProps> = ({
   if (error) {
     return (
       <Card size="small" title={`MAC 事件时间线 — ${mac}`} bordered={false}>
-        <ErrorAlertWithRetry error={error as Error} onRetry={() => { void refetch(); }} />
+        <ErrorAlertWithRetry
+          error={error as Error}
+          onRetry={() => {
+            void refetch();
+          }}
+        />
       </Card>
     );
   }

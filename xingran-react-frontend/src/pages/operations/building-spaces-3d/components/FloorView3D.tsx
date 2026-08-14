@@ -5,11 +5,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Card, Descriptions, Button, Space, Spin, Alert, Tag, Row, Col } from "antd";
-import {
-  ArrowLeftOutlined,
-  ApartmentOutlined,
-  DesktopOutlined,
-} from "@ant-design/icons";
+import { ArrowLeftOutlined, ApartmentOutlined, DesktopOutlined } from "@ant-design/icons";
 import { useVisualizationStore } from "@/store/visualizationStore";
 import { workstationApi } from "@/lib/opsApi";
 import { handleApiError } from "@/utils/errorHandler";
@@ -135,9 +131,7 @@ const FloorView3D: React.FC = () => {
                 // 工位点击事件处理
               }}
             />
-            {workstations.length > 0 && (
-              <WorkstationList workstations={workstations} />
-            )}
+            {workstations.length > 0 && <WorkstationList workstations={workstations} />}
           </>
         )}
       </Card>
@@ -151,9 +145,7 @@ interface NoFloorSelectedAlertProps {
   onBackToMap: () => void;
 }
 
-const NoFloorSelectedAlert: React.FC<NoFloorSelectedAlertProps> = ({
-  onBackToMap,
-}) => (
+const NoFloorSelectedAlert: React.FC<NoFloorSelectedAlertProps> = ({ onBackToMap }) => (
   <div style={styles.centerContainer}>
     <Alert
       message="未选择楼层"
@@ -203,20 +195,32 @@ interface WorkstationStatsCardProps {
  * 当前策略：将字面量提升为命名常量，便于后续统一替换为 token / CSS 变量。
  */
 const WORKSTATION_STAT_COLORS = {
-  primary: "var(--theme-info, #1890ff)",   // 总工位 - AntD colorPrimary
-  success: "var(--theme-success, #52c41a)",   // 空闲工位 - AntD colorSuccess
-  error: "#ff4d4f",     // 占用工位 - AntD colorError
-  purple: "var(--theme-purple, #722ed1)",    // 灵活工位 - AntD 紫色
+  primary: "var(--theme-info, #1890ff)", // 总工位 - AntD colorPrimary
+  success: "var(--theme-success, #52c41a)", // 空闲工位 - AntD colorSuccess
+  error: "#ff4d4f", // 占用工位 - AntD colorError
+  purple: "var(--theme-purple, #722ed1)", // 灵活工位 - AntD 紫色
 } as const;
 
 const WorkstationStatsCard: React.FC<WorkstationStatsCardProps> = ({ stats }) => (
-  <Card size="small" title={<><DesktopOutlined /> 工位统计</>} style={styles.statsCard}>
+  <Card
+    size="small"
+    title={
+      <>
+        <DesktopOutlined /> 工位统计
+      </>
+    }
+    style={styles.statsCard}
+  >
     <Row gutter={16}>
       <Col span={6}>
         <StatCard value={stats.total} label="总工位数" color={WORKSTATION_STAT_COLORS.primary} />
       </Col>
       <Col span={6}>
-        <StatCard value={stats.available} label="空闲工位" color={WORKSTATION_STAT_COLORS.success} />
+        <StatCard
+          value={stats.available}
+          label="空闲工位"
+          color={WORKSTATION_STAT_COLORS.success}
+        />
       </Col>
       <Col span={6}>
         <StatCard value={stats.occupied} label="占用工位" color={WORKSTATION_STAT_COLORS.error} />
@@ -279,9 +283,7 @@ const WorkstationCard: React.FC<WorkstationCardProps> = ({ workstation }) => {
         borderLeft: `4px solid ${statusColor}`,
       }}
     >
-      <div style={styles.workstationName}>
-        {workstation.name || `工位 ${workstation.code}`}
-      </div>
+      <div style={styles.workstationName}>{workstation.name || `工位 ${workstation.code}`}</div>
       <div style={styles.workstationStatus}>
         <Tag color={statusColor}>{statusText}</Tag>
       </div>

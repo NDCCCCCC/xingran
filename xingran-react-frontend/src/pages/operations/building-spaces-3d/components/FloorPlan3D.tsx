@@ -99,11 +99,7 @@ const Workstation3D: React.FC<Workstation3DProps> = ({
   useFrame(() => {
     if (groupRef.current) {
       const targetY = hovered || isSelected ? 0.05 : 0;
-      groupRef.current.position.y = THREE.MathUtils.lerp(
-        groupRef.current.position.y,
-        targetY,
-        0.1
-      );
+      groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, targetY, 0.1);
     }
   });
 
@@ -126,7 +122,12 @@ const Workstation3D: React.FC<Workstation3DProps> = ({
         />
 
         {/* 显示器 */}
-        <Monitor positionY={deskTopY} statusColor={statusColor} hovered={hovered} isSelected={isSelected} />
+        <Monitor
+          positionY={deskTopY}
+          statusColor={statusColor}
+          hovered={hovered}
+          isSelected={isSelected}
+        />
 
         {/* 键盘 */}
         <Keyboard positionY={deskTopY} />
@@ -138,14 +139,12 @@ const Workstation3D: React.FC<Workstation3DProps> = ({
         <Chair statusColor={statusColor} />
 
         {/* 选中高亮 */}
-        {(hovered || isSelected) && <SelectionHighlight positionY={deskTopY} statusColor={statusColor} />}
+        {(hovered || isSelected) && (
+          <SelectionHighlight positionY={deskTopY} statusColor={statusColor} />
+        )}
 
         {/* 工位标签 */}
-        <Text3D
-          position={[0, deskTopY + 1.1, 0]}
-          fontSize={0.15}
-          color="white"
-        >
+        <Text3D position={[0, deskTopY + 1.1, 0]} fontSize={0.15} color="white">
           {workstation.name || workstation.code}
         </Text3D>
 
@@ -202,7 +201,13 @@ interface DesktopProps {
   statusColor: number;
 }
 
-const Desktop: React.FC<DesktopProps> = ({ positionY, onClick, onPointerOver, onPointerOut, statusColor }) => {
+const Desktop: React.FC<DesktopProps> = ({
+  positionY,
+  onClick,
+  onPointerOver,
+  onPointerOut,
+  statusColor,
+}) => {
   const { DESK_WIDTH, DESK_DEPTH, DESK_HEIGHT } = WORKSTATION_DIMENSIONS;
 
   return (
@@ -262,11 +267,21 @@ const Monitor: React.FC<MonitorProps> = ({ positionY, statusColor, hovered, isSe
 
       <mesh position={[0, SCREEN_Y, 0]} castShadow>
         <boxGeometry args={[WIDTH, HEIGHT, THICKNESS]} />
-        <meshStandardMaterial color={MATERIAL_COLORS.MONITOR_SCREEN} roughness={0.3} metalness={0.8} />
+        <meshStandardMaterial
+          color={MATERIAL_COLORS.MONITOR_SCREEN}
+          roughness={0.3}
+          metalness={0.8}
+        />
       </mesh>
 
       <mesh position={[0, SCREEN_Y, 0]}>
-        <boxGeometry args={[WIDTH + BORDER_INCREMENT, HEIGHT + BORDER_HEIGHT_INCREMENT, THICKNESS + BORDER_THICKNESS_INCREMENT]} />
+        <boxGeometry
+          args={[
+            WIDTH + BORDER_INCREMENT,
+            HEIGHT + BORDER_HEIGHT_INCREMENT,
+            THICKNESS + BORDER_THICKNESS_INCREMENT,
+          ]}
+        />
         <meshStandardMaterial color={MATERIAL_COLORS.MONITOR_BORDER} />
       </mesh>
 
@@ -285,7 +300,8 @@ interface KeyboardProps {
 }
 
 const Keyboard: React.FC<KeyboardProps> = ({ positionY }) => {
-  const { WIDTH, DEPTH, HEIGHT, KEY_HEIGHT, KEY_WIDTH_REDUCTION, KEY_DEPTH_REDUCTION } = KEYBOARD_DIMENSIONS;
+  const { WIDTH, DEPTH, HEIGHT, KEY_HEIGHT, KEY_WIDTH_REDUCTION, KEY_DEPTH_REDUCTION } =
+    KEYBOARD_DIMENSIONS;
 
   return (
     <>
@@ -295,7 +311,9 @@ const Keyboard: React.FC<KeyboardProps> = ({ positionY }) => {
       </mesh>
 
       <mesh position={[0.1, positionY + 0.023, 0.15]}>
-        <boxGeometry args={[WIDTH - KEY_WIDTH_REDUCTION, KEY_HEIGHT, DEPTH - KEY_DEPTH_REDUCTION]} />
+        <boxGeometry
+          args={[WIDTH - KEY_WIDTH_REDUCTION, KEY_HEIGHT, DEPTH - KEY_DEPTH_REDUCTION]}
+        />
         <meshStandardMaterial color={MATERIAL_COLORS.KEYBOARD_KEY} />
       </mesh>
     </>
@@ -416,8 +434,17 @@ const WorkstationTooltip: React.FC<WorkstationTooltipProps> = ({
   type,
 }) => {
   const statusColor =
-    status === 0 ? "var(--theme-success, #52c41a)" : status === 1 ? "#ff4d4f" : "var(--theme-warning, #faad14)";
-  const typeColor = type === 0 ? "var(--theme-info, #1890ff)" : type === 1 ? "var(--theme-purple, #722ed1)" : "#13c2c2";
+    status === 0
+      ? "var(--theme-success, #52c41a)"
+      : status === 1
+        ? "#ff4d4f"
+        : "var(--theme-warning, #faad14)";
+  const typeColor =
+    type === 0
+      ? "var(--theme-info, #1890ff)"
+      : type === 1
+        ? "var(--theme-purple, #722ed1)"
+        : "#13c2c2";
 
   return (
     <div style={styles.tooltip}>
@@ -450,10 +477,7 @@ interface FloorPlanSceneProps {
   onWorkstationClick?: (workstation: WorkstationData) => void;
 }
 
-const FloorPlanScene: React.FC<FloorPlanSceneProps> = ({
-  workstations,
-  onWorkstationClick,
-}) => {
+const FloorPlanScene: React.FC<FloorPlanSceneProps> = ({ workstations, onWorkstationClick }) => {
   const groupRef = useRef<THREE.Group>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -484,11 +508,7 @@ const FloorPlanScene: React.FC<FloorPlanSceneProps> = ({
       <directionalLight position={[0, -10, 0]} intensity={0.3} />
 
       {/* 地面 */}
-      <mesh
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, FLOOR_CONFIG.Y, 0]}
-        receiveShadow
-      >
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, FLOOR_CONFIG.Y, 0]} receiveShadow>
         <planeGeometry args={[FLOOR_CONFIG.SIZE, FLOOR_CONFIG.SIZE]} />
         <meshStandardMaterial color={FLOOR_CONFIG.COLOR} opacity={1} transparent={false} />
       </mesh>
@@ -523,10 +543,7 @@ const FloorPlanScene: React.FC<FloorPlanSceneProps> = ({
 
 // ============ 主组件 ============
 
-const FloorPlan3D: React.FC<FloorPlan3DProps> = ({
-  workstations,
-  onWorkstationClick,
-}) => {
+const FloorPlan3D: React.FC<FloorPlan3DProps> = ({ workstations, onWorkstationClick }) => {
   if (workstations.length === 0) {
     return <EmptyView />;
   }
@@ -553,10 +570,7 @@ const FloorPlan3D: React.FC<FloorPlan3DProps> = ({
           maxDistance={CAMERA_CONFIG.MAX_DISTANCE}
         />
 
-        <FloorPlanScene
-          workstations={workstations}
-          onWorkstationClick={onWorkstationClick}
-        />
+        <FloorPlanScene workstations={workstations} onWorkstationClick={onWorkstationClick} />
       </Canvas>
 
       {/* 操作提示 */}

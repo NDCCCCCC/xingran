@@ -49,28 +49,31 @@ export function useNoticeData(): UseNoticeDataResult {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   // 加载通知列表
-  const loadNotices = useCallback(async (params: Partial<NoticeListParams> = {}) => {
-    setLoading(true);
-    try {
-      const requestParams: NoticeListParams = {
-        current: params.current || current,
-        pageSize: params.pageSize || pageSize,
-        noticeTitle: params.noticeTitle,
-        noticeType: params.noticeType,
-        // 服务端排序透传：调用方（如 index.tsx fetchList 经 handleTableChange）
-        // 携带的 orderByColumn/isAsc 必须透传到 getNoticeList，否则被丢弃导致排序失效。
-        orderByColumn: params.orderByColumn,
-        isAsc: params.isAsc,
-      };
-      const result = await getNoticeList(requestParams);
-      setNotices(result.data?.list || []);
-      setTotal(result.data?.total || 0);
-    } catch (error) {
-      console.error("加载通知公告失败:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [current, pageSize]);
+  const loadNotices = useCallback(
+    async (params: Partial<NoticeListParams> = {}) => {
+      setLoading(true);
+      try {
+        const requestParams: NoticeListParams = {
+          current: params.current || current,
+          pageSize: params.pageSize || pageSize,
+          noticeTitle: params.noticeTitle,
+          noticeType: params.noticeType,
+          // 服务端排序透传：调用方（如 index.tsx fetchList 经 handleTableChange）
+          // 携带的 orderByColumn/isAsc 必须透传到 getNoticeList，否则被丢弃导致排序失效。
+          orderByColumn: params.orderByColumn,
+          isAsc: params.isAsc,
+        };
+        const result = await getNoticeList(requestParams);
+        setNotices(result.data?.list || []);
+        setTotal(result.data?.total || 0);
+      } catch (error) {
+        console.error("加载通知公告失败:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [current, pageSize]
+  );
 
   // 创建通知
   const handleCreate = useCallback(async (request: CreateNoticeRequest) => {

@@ -111,8 +111,7 @@ export function WorkstationEditModal({
       // 走 trimTitleToLastSegment 保持与 baseTree title 收窄规则一致
       // (DeptOption.deptName 一般不含 " / ",函数会原样返回)
       const trimmed =
-        trimTitleToLastSegment([{ title: a.deptName, children: [] }])[0]?.title ??
-        a.deptName;
+        trimTitleToLastSegment([{ title: a.deptName, children: [] }])[0]?.title ?? a.deptName;
       return {
         title: `${trimmed} [映射]`, // D-01 锁定: 原名 + " [映射]" 后缀 (UAT 文本断言依赖)
         value: a.deptId,
@@ -143,7 +142,11 @@ export function WorkstationEditModal({
       width={700}
     >
       <Form form={form} layout="horizontal" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
-        <Form.Item name="orgId" label="所属机构" rules={[{ required: true, message: "请选择所属机构" }]}>
+        <Form.Item
+          name="orgId"
+          label="所属机构"
+          rules={[{ required: true, message: "请选择所属机构" }]}
+        >
           <TreeSelect
             treeData={orgTreeData}
             placeholder="请选择机构（仅外部机构）"
@@ -162,20 +165,37 @@ export function WorkstationEditModal({
             }}
           />
         </Form.Item>
-        <Form.Item name="floorId" label="所属楼层" rules={[{ required: true, message: "请选择所属楼层" }]}>
+        <Form.Item
+          name="floorId"
+          label="所属楼层"
+          rules={[{ required: true, message: "请选择所属楼层" }]}
+        >
           <Cascader
             options={cascaderOptions}
             loadData={handleCascaderLoadData}
             loading={loadingCascader}
             placeholder="请先选择楼宇，再选择楼层"
             changeOnSelect
-            showSearch={{ filter: (inputValue, path) => path.some(option => option.label?.toLowerCase().includes(inputValue.toLowerCase())) }}
+            showSearch={{
+              filter: (inputValue, path) =>
+                path.some((option) =>
+                  option.label?.toLowerCase().includes(inputValue.toLowerCase())
+                ),
+            }}
           />
         </Form.Item>
-        <Form.Item name="name" label="工位名称" rules={[{ required: true, message: "请输入工位名称" }]}>
+        <Form.Item
+          name="name"
+          label="工位名称"
+          rules={[{ required: true, message: "请输入工位名称" }]}
+        >
           <Input placeholder="请输入工位名称" />
         </Form.Item>
-        <Form.Item name="type" label="工位类型" rules={[{ required: true, message: "请选择工位类型" }]}>
+        <Form.Item
+          name="type"
+          label="工位类型"
+          rules={[{ required: true, message: "请选择工位类型" }]}
+        >
           <Select placeholder="请选择工位类型" onSearch={() => {}}>
             {TYPE_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>

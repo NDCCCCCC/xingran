@@ -22,9 +22,9 @@ describe("port-write constants self-consistency (Phase 53)", () => {
   describe("PRESET_REASONS", () => {
     it("every preset value.length >= REASON_MIN (avoids validation contradiction in 53-02)", () => {
       // Exclude __custom__ sentinel — its length is irrelevant (TextArea path)
-      const presetValues = PRESET_REASONS.filter(
-        (r) => r.value !== "__custom__"
-      ).map((r) => r.value);
+      const presetValues = PRESET_REASONS.filter((r) => r.value !== "__custom__").map(
+        (r) => r.value
+      );
 
       expect(presetValues.length).toBeGreaterThan(0);
       for (const v of presetValues) {
@@ -57,13 +57,7 @@ describe("port-write constants self-consistency (Phase 53)", () => {
     it("has exactly 5 keys: shutdown / undo_shutdown / description / dot1x_enable / dot1x_disable", () => {
       const keys = Object.keys(ACTION_TITLE).sort();
       expect(keys).toEqual(
-        [
-          "shutdown",
-          "undo_shutdown",
-          "description",
-          "dot1x_enable",
-          "dot1x_disable",
-        ].sort()
+        ["shutdown", "undo_shutdown", "description", "dot1x_enable", "dot1x_disable"].sort()
       );
     });
 

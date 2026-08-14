@@ -125,9 +125,7 @@ const FloorManagement: FC = () => {
     handleTableChange,
   } = useTableManager<Floor>(
     async (params) => {
-      const searchParams = selectedDeptId
-        ? { ...params, orgId: selectedDeptId }
-        : params;
+      const searchParams = selectedDeptId ? { ...params, orgId: selectedDeptId } : params;
       const result = await floorApi.list(searchParams);
       return {
         list: result.data?.list || [],
@@ -159,7 +157,7 @@ const FloorManagement: FC = () => {
 
   const handleSave = useCallback(async () => {
     try {
-      const values = await floorForm.validateFields() as Partial<Floor>;
+      const values = (await floorForm.validateFields()) as Partial<Floor>;
 
       if (editingFloor) {
         await floorApi.update(editingFloor.id, values);
@@ -221,12 +219,16 @@ const FloorManagement: FC = () => {
 
           if (building) {
             setModalDeptId(building.orgId);
-            const result = await buildingApi.list({ orgId: building.orgId, current: 1, pageSize: 50 });
+            const result = await buildingApi.list({
+              orgId: building.orgId,
+              current: 1,
+              pageSize: 50,
+            });
             let options = result.data?.list || [];
             // 楼宇兜底注入(2026-06-30,同 info-points):pageSize:50 可能不包含当前
             // buildingId → 模态框 Select 显示 raw UUID。buildingApi.get 已返回完整对象,
             // 用它注入一条临时 Option,确保 Select 一定能找到 label。
-            if (!options.find(b => b.id === building.id)) {
+            if (!options.find((b) => b.id === building.id)) {
               options = [...options, building];
             }
             setModalBuildingOptions(options);
@@ -240,7 +242,11 @@ const FloorManagement: FC = () => {
         if (selectedDeptId) {
           setModalDeptId(selectedDeptId);
           try {
-            const result = await buildingApi.list({ orgId: selectedDeptId, current: 1, pageSize: 50 });
+            const result = await buildingApi.list({
+              orgId: selectedDeptId,
+              current: 1,
+              pageSize: 50,
+            });
             setModalBuildingOptions(result.data?.list || []);
           } catch (error) {
             console.error("加载楼宇选项失败:", error);
@@ -325,24 +331,27 @@ const FloorManagement: FC = () => {
   }, []);
 
   // 加载指定楼宇的楼层选项（用于编辑器模式）
-  const loadFloorOptionsByBuilding = useCallback(async (buildingId: string): Promise<FloorOption[]> => {
-    try {
-      const result = await floorApi.list({ buildingId, current: 1, pageSize: 50 });
-      const floors = result.data?.list || [];
+  const loadFloorOptionsByBuilding = useCallback(
+    async (buildingId: string): Promise<FloorOption[]> => {
+      try {
+        const result = await floorApi.list({ buildingId, current: 1, pageSize: 50 });
+        const floors = result.data?.list || [];
 
-      const options = floors.map((f: Floor) => ({
-        id: f.id,
-        name: f.name || "",
-        floorNo: Number(f.floorNo) || 0,
-      }));
+        const options = floors.map((f: Floor) => ({
+          id: f.id,
+          name: f.name || "",
+          floorNo: Number(f.floorNo) || 0,
+        }));
 
-      setFloorOptions(options);
-      return options;
-    } catch (error) {
-      console.error("加载楼层选项失败:", error);
-      return [];
-    }
-  }, []);
+        setFloorOptions(options);
+        return options;
+      } catch (error) {
+        console.error("加载楼层选项失败:", error);
+        return [];
+      }
+    },
+    []
+  );
 
   // 编辑器模式：楼层变化
   const handleFloorChange = useCallback(
@@ -371,7 +380,7 @@ const FloorManagement: FC = () => {
 
       setSelectedBuildingId(buildingId);
 
-      const building = buildingOptionsByDept.find(b => b.id === buildingId);
+      const building = buildingOptionsByDept.find((b) => b.id === buildingId);
       if (building) {
         setSelectedBuildingName(building.name);
       }
@@ -492,8 +501,16 @@ const FloorManagement: FC = () => {
           show={total > 10}
           items={[
             { title: "总楼层数", value: statistics.total },
-            { title: "正常", value: statistics.active, styles: { content: { color: "var(--theme-success, #52c41a)" } } },
-            { title: "停用", value: statistics.inactive, styles: { content: { color: "var(--theme-error, #ff4d4f)" } } },
+            {
+              title: "正常",
+              value: statistics.active,
+              styles: { content: { color: "var(--theme-success, #52c41a)" } },
+            },
+            {
+              title: "停用",
+              value: statistics.inactive,
+              styles: { content: { color: "var(--theme-error, #ff4d4f)" } },
+            },
           ]}
         />
 
@@ -514,7 +531,7 @@ const FloorManagement: FC = () => {
             // 获取当前筛选条件
             const values = searchForm.getFieldsValue() as Record<string, unknown>;
             const currentFilters: Record<string, unknown> = {};
-            Object.keys(values).forEach(key => {
+            Object.keys(values).forEach((key) => {
               const value = values[key];
               if (value !== undefined && value !== null && value !== "") {
                 currentFilters[key] = value;
@@ -608,9 +625,7 @@ const FloorManagement: FC = () => {
     </Layout>
   );
 
-  return (
-    <div>{pageMode === "editor" ? renderFloorPlanEditor() : renderListView()}</div>
-  );
+  return <div>{pageMode === "editor" ? renderFloorPlanEditor() : renderListView()}</div>;
 };
 
 export default FloorManagement;

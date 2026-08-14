@@ -1,8 +1,27 @@
 ﻿import { useState, useEffect } from "react";
 import type { FC } from "react";
-import { Button, Form, Input, Modal, InputNumber, Select, Space, Tag, App, Card, Tree, Radio } from "antd";
+import {
+  Button,
+  Form,
+  Input,
+  Modal,
+  InputNumber,
+  Select,
+  Space,
+  Tag,
+  App,
+  Card,
+  Tree,
+  Radio,
+} from "antd";
 import type { DataNode } from "antd/es/tree";
-import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, FolderOutlined } from "@ant-design/icons";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  ReloadOutlined,
+  FolderOutlined,
+} from "@ant-design/icons";
 import {
   getWorkOrderCategoryList,
   createWorkOrderCategory,
@@ -61,7 +80,8 @@ const WorkOrderCategoryPage: FC = () => {
             </div>
           ),
           data: item,
-          children: item.children && item.children.length > 0 ? buildTree(item.children) : undefined,
+          children:
+            item.children && item.children.length > 0 ? buildTree(item.children) : undefined,
         }));
       };
 
@@ -210,7 +230,8 @@ const WorkOrderCategoryPage: FC = () => {
                   <Button
                     type="link"
                     size="small"
-                    icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }}
+                    icon={<DeleteOutlined />}
+                    style={{ color: "var(--theme-error, #ff4d4f)" }}
                     onClick={(e) => {
                       e.stopPropagation();
                       Modal.confirm({
@@ -269,11 +290,7 @@ const WorkOrderCategoryPage: FC = () => {
             <InputNumber min={0} placeholder="请输入排序" style={{ width: "100%" }} />
           </Form.Item>
 
-          <Form.Item
-            name="status"
-            label="状态"
-            rules={[{ required: true, message: "请选择状态" }]}
-          >
+          <Form.Item name="status" label="状态" rules={[{ required: true, message: "请选择状态" }]}>
             <Radio.Group>
               <Radio value={0}>启用</Radio>
               <Radio value={1}>停用</Radio>
@@ -290,4 +307,3 @@ const WorkOrderCategoryPage: FC = () => {
 };
 
 export default WorkOrderCategoryPage;
-

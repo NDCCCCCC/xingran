@@ -2,11 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { Form } from "antd";
 import { useLocation } from "react-router-dom";
 import type { FormInstance } from "antd/es/form";
-import type {
-  TablePaginationConfig,
-  FilterValue,
-  SorterResult,
-} from "antd/es/table/interface";
+import type { TablePaginationConfig, FilterValue, SorterResult } from "antd/es/table/interface";
 import { useServerSort, resolveSorter } from "@/hooks/useServerSort";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import { TABLE_STATE_PREFIX, sanitizePathForKey } from "@/constants/storage";
@@ -82,13 +78,16 @@ export interface TableManagerReturn<T> {
 /** 过滤掉 undefined / null / "" 的空值，避免污染请求参数 */
 function filterEmpty(values?: Record<string, unknown>): Record<string, unknown> {
   if (!values) return {};
-  return Object.keys(values).reduce((acc, key) => {
-    const value = values[key];
-    if (value !== undefined && value !== null && value !== "") {
-      acc[key] = value;
-    }
-    return acc;
-  }, {} as Record<string, unknown>);
+  return Object.keys(values).reduce(
+    (acc, key) => {
+      const value = values[key];
+      if (value !== undefined && value !== null && value !== "") {
+        acc[key] = value;
+      }
+      return acc;
+    },
+    {} as Record<string, unknown>
+  );
 }
 
 /**
@@ -171,16 +170,19 @@ export function useTableManager<T>(
   const filtersStorageKey = `${TABLE_STATE_PREFIX}${sanitizePathForKey(location.pathname)}_filters`;
   const filtersRef = useRef<Record<string, unknown>>(readInitialFilters(filtersStorageKey));
 
-  const persistFilters = useCallback((next: Record<string, unknown>) => {
-    filtersRef.current = next;
-    try {
-      if (typeof window !== "undefined") {
-        window.sessionStorage.setItem(filtersStorageKey, JSON.stringify(next));
+  const persistFilters = useCallback(
+    (next: Record<string, unknown>) => {
+      filtersRef.current = next;
+      try {
+        if (typeof window !== "undefined") {
+          window.sessionStorage.setItem(filtersStorageKey, JSON.stringify(next));
+        }
+      } catch {
+        // 隐私模式 / 配额溢出 — 静默
       }
-    } catch {
-      // 隐私模式 / 配额溢出 — 静默
-    }
-  }, [filtersStorageKey]);
+    },
+    [filtersStorageKey]
+  );
 
   const clearPersistedFilters = useCallback(() => {
     filtersRef.current = {};
@@ -285,11 +287,14 @@ export function useTableManager<T>(
     setEditModalVisible(true);
   }, [editForm]);
 
-  const handleEdit = useCallback((item: T) => {
-    setEditingItem(item);
-    editForm.setFieldsValue(item);
-    setEditModalVisible(true);
-  }, [editForm]);
+  const handleEdit = useCallback(
+    (item: T) => {
+      setEditingItem(item);
+      editForm.setFieldsValue(item);
+      setEditModalVisible(true);
+    },
+    [editForm]
+  );
 
   const handleModalClose = useCallback(() => {
     setEditModalVisible(false);

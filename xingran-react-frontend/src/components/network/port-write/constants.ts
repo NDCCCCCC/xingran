@@ -90,7 +90,8 @@ export const REASON_CUSTOM_SENTINEL = "__custom__";
  * - 客户端 regex 仅 UX hint, 后端 service 为真相源 (防绕过)
  * - 与 56-UI-SPEC §Copywriting Contract IPv4_REGEX 字面量严格一致
  */
-export const IPV4_REGEX = /^(([1-9]?\d|1\d\d|2[0-4]\d|25[0-5])\.){3}([1-9]?\d|1\d\d|2[0-4]\d|25[0-5])$/;
+export const IPV4_REGEX =
+  /^(([1-9]?\d|1\d\d|2[0-4]\d|25[0-5])\.){3}([1-9]?\d|1\d\d|2[0-4]\d|25[0-5])$/;
 
 /**
  * MAC 地址 regex (v1.20.1 BIND-07)

@@ -113,7 +113,11 @@
   top: 2px;
   width: 50px;
   height: 36px;
-  background: linear-gradient(135deg, var(--theme-primary, #1890ff), var(--theme-primary-hover, #096dd9));
+  background: linear-gradient(
+    135deg,
+    var(--theme-primary, #1890ff),
+    var(--theme-primary-hover, #096dd9)
+  );
   border-radius: 18px;
   display: flex;
   align-items: center;
@@ -131,7 +135,11 @@
 }
 
 .slider-button:hover {
-  background: linear-gradient(135deg, var(--input-border-focus, #40a9ff), var(--theme-primary, #1890ff));
+  background: linear-gradient(
+    135deg,
+    var(--input-border-focus, #40a9ff),
+    var(--theme-primary, #1890ff)
+  );
 }
 
 .slider-button.dragging {

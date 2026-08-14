@@ -54,10 +54,7 @@ export function DoorElement({
   onDoubleClick,
   style,
 }: DoorElementProps) {
-  const color = useMemo(
-    () => getDoorColor(door, selected, hovered),
-    [door, selected, hovered]
-  );
+  const color = useMemo(() => getDoorColor(door, selected, hovered), [door, selected, hovered]);
 
   const highlightColor = selected ? HIGHLIGHT_COLOR : hovered ? HOVER_COLOR : color;
 
@@ -122,9 +119,11 @@ export function DoorElement({
     "cad-door",
     selected && "cad-door-selected",
     hovered && "cad-door-hovered",
-  ].filter(Boolean).join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 
-  const renderDoorArc = function() {
+  const renderDoorArc = function () {
     if (door.type === "sliding") {
       // 推拉门 - 虚线箭头
       return (
@@ -146,7 +145,11 @@ export function DoorElement({
       );
     }
 
-    if (door.type === "double" && geometry.leafEndX2 !== undefined && geometry.leafEndY2 !== undefined) {
+    if (
+      door.type === "double" &&
+      geometry.leafEndX2 !== undefined &&
+      geometry.leafEndY2 !== undefined
+    ) {
       // 双开门
       const sweepFlag = door.direction === "left" ? 1 : 0;
       return (

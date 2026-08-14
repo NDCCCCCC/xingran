@@ -1,13 +1,5 @@
 import type { FC } from "react";
-import {
-  Button,
-  Table,
-  Card,
-  Space,
-  Select,
-  Alert,
-  Upload,
-} from "antd";
+import { Button, Table, Card, Space, Select, Alert, Upload } from "antd";
 import {
   PlusOutlined,
   ReloadOutlined,
@@ -24,13 +16,7 @@ const { Option } = Select;
 
 const DutyHolidayPage: FC = () => {
   // 数据管理
-  const {
-    loading,
-    dataSource,
-    year,
-    availableYears,
-    fetchList,
-  } = useHolidayData();
+  const { loading, dataSource, year, availableYears, fetchList } = useHolidayData();
 
   // 模态框和操作管理
   const {
@@ -73,10 +59,11 @@ const DutyHolidayPage: FC = () => {
           <Space>
             <Select
               value={year}
-              onChange={(y) =>    fetchList(y)}
+              onChange={(y) => fetchList(y)}
               style={{ width: 120 }}
               suffixIcon={null}
-             onSearch={() => {}}>
+              onSearch={() => {}}
+            >
               {availableYears.map((y) => (
                 <Option key={y} value={y}>
                   {y}年
@@ -102,11 +89,16 @@ const DutyHolidayPage: FC = () => {
           <Upload
             accept=".xlsx,.xls"
             showUploadList={false}
-            customRequest={(options) => handleExcelImport({
-              file: options.file as File,
-              onSuccess: options.onSuccess as (data: unknown) => void,
-              onError: options.onError as (error: Error) => void,
-            }, fetchList)}
+            customRequest={(options) =>
+              handleExcelImport(
+                {
+                  file: options.file as File,
+                  onSuccess: options.onSuccess as (data: unknown) => void,
+                  onError: options.onError as (error: Error) => void,
+                },
+                fetchList
+              )
+            }
           >
             <Button icon={<UploadOutlined />} type="primary">
               导入Excel

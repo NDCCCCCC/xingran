@@ -5,19 +5,17 @@
 import type { Menu as MenuType } from "@/types";
 
 interface MenuPathInfo {
-  topLevel: string;      // 所属一级菜单的key
-  level: number;          // 层级(1/2/3)
-  secondLevel?: string;   // 所属二级菜单的key(仅三级菜单需要)
-  fullPath: string;       // 完整路径
+  topLevel: string; // 所属一级菜单的key
+  level: number; // 层级(1/2/3)
+  secondLevel?: string; // 所属二级菜单的key(仅三级菜单需要)
+  fullPath: string; // 完整路径
 }
 
 /**
  * 构建菜单路径映射表
  * 用于快速查询任意菜单的父级菜单路径
  */
-export function buildMenuPathMap(
-  menuList: MenuType[]
-): Map<string, MenuPathInfo> {
+export function buildMenuPathMap(menuList: MenuType[]): Map<string, MenuPathInfo> {
   const pathMap = new Map<string, MenuPathInfo>();
 
   const traverse = (
@@ -42,14 +40,14 @@ export function buildMenuPathMap(
       const menuKey = menu.id;
 
       // 确定当前菜单的层级
-      const level = isTopLevel ? 1 : (topLevelKey && !secondLevelKey ? 2 : 3);
+      const level = isTopLevel ? 1 : topLevelKey && !secondLevelKey ? 2 : 3;
 
       // 构建菜单信息对象
       const menuInfo = {
         topLevel: topLevelKey || menuKey,
         level,
         secondLevel: level === 3 ? secondLevelKey : undefined,
-        fullPath: menuPath || menu.id
+        fullPath: menuPath || menu.id,
       };
 
       // 存储映射关系 - 支持多种 key 查找方式
@@ -70,13 +68,7 @@ export function buildMenuPathMap(
       // 递归处理子菜单
       if (menu.children && menu.children.length > 0) {
         const newSecondLevelKey = level === 2 ? menuKey : secondLevelKey;
-        traverse(
-          menu.children,
-          menuPath,
-          topLevelKey || menuKey,
-          newSecondLevelKey,
-          false
-        );
+        traverse(menu.children, menuPath, topLevelKey || menuKey, newSecondLevelKey, false);
       }
     }
   };

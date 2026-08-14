@@ -4,11 +4,7 @@
 
 import type { FC } from "react";
 import { Row, Col, Card, Tag, Popconfirm } from "antd";
-import {
-  EditOutlined,
-  BgColorsOutlined,
-  DeleteOutlined,
-} from "@ant-design/icons";
+import { EditOutlined, BgColorsOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { Floor } from "@/types";
 
 interface FloorCardViewProps {
@@ -26,7 +22,9 @@ export const FloorCardView: FC<FloorCardViewProps> = ({
 }) => {
   if (floors.length === 0) {
     return (
-      <div style={{ textAlign: "center", padding: "40px", color: "var(--theme-text-tertiary, #999)" }}>
+      <div
+        style={{ textAlign: "center", padding: "40px", color: "var(--theme-text-tertiary, #999)" }}
+      >
         暂无数据
       </div>
     );

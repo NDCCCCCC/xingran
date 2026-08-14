@@ -27,8 +27,9 @@ describe("useReconciliationVisibility", () => {
 
   it("returns true when useMenuStore.permissions includes 'asset:reconciliation:list'", () => {
     // mock selector: store.permissions 数组含目标 perm
-    mockUseMenuStore.mockImplementation((selector: (s: { permissions: string[] | undefined }) => unknown) =>
-      selector({ permissions: ["asset:reconciliation:list", "other:perm"] })
+    mockUseMenuStore.mockImplementation(
+      (selector: (s: { permissions: string[] | undefined }) => unknown) =>
+        selector({ permissions: ["asset:reconciliation:list", "other:perm"] })
     );
 
     const { result } = renderHook(() => useReconciliationVisibility());
@@ -36,8 +37,9 @@ describe("useReconciliationVisibility", () => {
   });
 
   it("returns false when useMenuStore.permissions is empty array", () => {
-    mockUseMenuStore.mockImplementation((selector: (s: { permissions: string[] | undefined }) => unknown) =>
-      selector({ permissions: [] })
+    mockUseMenuStore.mockImplementation(
+      (selector: (s: { permissions: string[] | undefined }) => unknown) =>
+        selector({ permissions: [] })
     );
 
     const { result } = renderHook(() => useReconciliationVisibility());
@@ -45,8 +47,9 @@ describe("useReconciliationVisibility", () => {
   });
 
   it("returns false when useMenuStore.permissions is undefined", () => {
-    mockUseMenuStore.mockImplementation((selector: (s: { permissions: string[] | undefined }) => unknown) =>
-      selector({ permissions: undefined })
+    mockUseMenuStore.mockImplementation(
+      (selector: (s: { permissions: string[] | undefined }) => unknown) =>
+        selector({ permissions: undefined })
     );
 
     const { result } = renderHook(() => useReconciliationVisibility());
@@ -54,8 +57,9 @@ describe("useReconciliationVisibility", () => {
   });
 
   it("returns false when useMenuStore.permissions lacks 'asset:reconciliation:list'", () => {
-    mockUseMenuStore.mockImplementation((selector: (s: { permissions: string[] | undefined }) => unknown) =>
-      selector({ permissions: ["other:perm:list", "yet:another:perm"] })
+    mockUseMenuStore.mockImplementation(
+      (selector: (s: { permissions: string[] | undefined }) => unknown) =>
+        selector({ permissions: ["other:perm:list", "yet:another:perm"] })
     );
 
     const { result } = renderHook(() => useReconciliationVisibility());

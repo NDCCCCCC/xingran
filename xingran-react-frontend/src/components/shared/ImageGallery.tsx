@@ -19,11 +19,7 @@ import {
   Row,
   Col,
 } from "antd";
-import {
-  DeleteOutlined,
-  EditOutlined,
-  StarFilled,
-} from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, StarFilled } from "@ant-design/icons";
 
 export interface Photo {
   id: string;
@@ -162,11 +158,7 @@ const ImageGallery: FC<ImageGalleryProps> = ({
       {editable && (
         <Space size="small" style={{ marginTop: 8 }}>
           {!photo.isPrimary && onSetPrimary && (
-            <Button
-              size="small"
-              icon={<StarFilled />}
-              onClick={() => handleSetPrimary(photo)}
-            >
+            <Button size="small" icon={<StarFilled />} onClick={() => handleSetPrimary(photo)}>
               设为主图
             </Button>
           )}
@@ -186,11 +178,7 @@ const ImageGallery: FC<ImageGalleryProps> = ({
               okText="确定"
               cancelText="取消"
             >
-              <Button
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-              >
+              <Button size="small" danger icon={<DeleteOutlined />}>
                 删除
               </Button>
             </Popconfirm>
@@ -200,9 +188,7 @@ const ImageGallery: FC<ImageGalleryProps> = ({
 
       {/* 描述 */}
       {photo.description && (
-        <div style={{ marginTop: 8, color: "#666", fontSize: 12 }}>
-          {photo.description}
-        </div>
+        <div style={{ marginTop: 8, color: "#666", fontSize: 12 }}>{photo.description}</div>
       )}
     </div>
   );
@@ -217,24 +203,17 @@ const ImageGallery: FC<ImageGalleryProps> = ({
               <Button type="primary" icon={<StarFilled />} onClick={onUpload}>
                 上传照片
               </Button>
-              {photos.length > 0 && (
-                <Tag>
-                  共 {photos.length} 张照片
-                </Tag>
-              )}
+              {photos.length > 0 && <Tag>共 {photos.length} 张照片</Tag>}
             </Space>
           </div>
         )}
 
         {/* 图片网格 */}
         {photos.length === 0 ? (
-          <Empty
-            description="暂无照片"
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-          />
+          <Empty description="暂无照片" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
           <Row gutter={[16, 16]}>
-            {photos.map(photo => (
+            {photos.map((photo) => (
               <Col key={photo.id} xs={24} sm={12} md={8} lg={6} xl={4}>
                 {renderPhotoCard(photo)}
               </Col>
@@ -276,4 +255,3 @@ const ImageGallery: FC<ImageGalleryProps> = ({
 };
 
 export default ImageGallery;
-

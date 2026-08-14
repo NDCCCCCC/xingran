@@ -136,7 +136,8 @@ const FixSuggestion = () => {
     responsibleDeptId?: string;
   }>(() => ({
     fixStatus: (searchParams.get("fixStatus") as FixStatus) || undefined,
-    conflictType: (searchParams.get("conflictType") as "A" | "B" | "C" | "D" | "E" | "F") || undefined,
+    conflictType:
+      (searchParams.get("conflictType") as "A" | "B" | "C" | "D" | "E" | "F") || undefined,
     responsibleDeptId: searchParams.get("deptId") || undefined,
   }));
 
@@ -156,7 +157,15 @@ const FixSuggestion = () => {
       p.isAsc = isAsc;
     }
     return p;
-  }, [current, pageSize, filterValues.fixStatus, filterValues.conflictType, filterValues.responsibleDeptId, orderByColumn, isAsc]);
+  }, [
+    current,
+    pageSize,
+    filterValues.fixStatus,
+    filterValues.conflictType,
+    filterValues.responsibleDeptId,
+    orderByColumn,
+    isAsc,
+  ]);
 
   // 5 KPI 卡片
   const { data: stats } = useQuery({
@@ -196,7 +205,9 @@ const FixSuggestion = () => {
       try {
         await fixSuggestionApi.accept(record.id);
         message.success("已接受建议");
-        queryClient.invalidateQueries({ queryKey: queryKeys.reconciliation.fixSuggestionList(listParams) });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.reconciliation.fixSuggestionList(listParams),
+        });
         queryClient.invalidateQueries({ queryKey: queryKeys.reconciliation.fixSuggestionStats(7) });
       } catch (err) {
         message.error((err as Error)?.message ?? "接受失败");
@@ -206,10 +217,13 @@ const FixSuggestion = () => {
   );
 
   // 打开 Reject Modal
-  const openReject = useCallback((record: FixSuggestionListItem) => {
-    setRejectModal({ open: true, suggestionId: record.id, submitting: false });
-    rejectForm.resetFields();
-  }, [rejectForm]);
+  const openReject = useCallback(
+    (record: FixSuggestionListItem) => {
+      setRejectModal({ open: true, suggestionId: record.id, submitting: false });
+      rejectForm.resetFields();
+    },
+    [rejectForm]
+  );
 
   // 提交 Reject
   const handleRejectSubmit = useCallback(async () => {
@@ -223,7 +237,9 @@ const FixSuggestion = () => {
       setRejectModal((prev) => ({ ...prev, submitting: true }));
       await fixSuggestionApi.reject(rejectModal.suggestionId, values.rejectionReason.trim());
       message.success("已拒绝建议");
-      queryClient.invalidateQueries({ queryKey: queryKeys.reconciliation.fixSuggestionList(listParams) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.reconciliation.fixSuggestionList(listParams),
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.reconciliation.fixSuggestionStats(7) });
       setRejectModal({ open: false, suggestionId: null, submitting: false });
       rejectForm.resetFields();
@@ -240,7 +256,9 @@ const FixSuggestion = () => {
       try {
         await fixSuggestionApi.apply(record.id);
         message.success("已应用修复");
-        queryClient.invalidateQueries({ queryKey: queryKeys.reconciliation.fixSuggestionList(listParams) });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.reconciliation.fixSuggestionList(listParams),
+        });
         queryClient.invalidateQueries({ queryKey: queryKeys.reconciliation.fixSuggestionStats(7) });
       } catch (err) {
         message.error((err as Error)?.message ?? "应用失败");
@@ -251,7 +269,12 @@ const FixSuggestion = () => {
 
   // 打开 Rollback Modal
   const openRollback = useCallback((record: FixSuggestionListItem) => {
-    setRollbackModal({ open: true, suggestionId: record.id, rollbackReason: "", submitting: false });
+    setRollbackModal({
+      open: true,
+      suggestionId: record.id,
+      rollbackReason: "",
+      submitting: false,
+    });
   }, []);
 
   // 提交 Rollback
@@ -267,20 +290,29 @@ const FixSuggestion = () => {
         await fixSuggestionApi.rollback(rollbackModal.suggestionId, reason.trim());
         message.success("已回滚修复");
         // 失效 list + stats + detail 三组 query
-        queryClient.invalidateQueries({ queryKey: queryKeys.reconciliation.fixSuggestionList(listParams) });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.reconciliation.fixSuggestionList(listParams),
+        });
         queryClient.invalidateQueries({ queryKey: queryKeys.reconciliation.fixSuggestionStats(7) });
         if (rollbackModal.suggestionId) {
           queryClient.invalidateQueries({
             queryKey: queryKeys.reconciliation.fixSuggestionDetail(rollbackModal.suggestionId),
           });
         }
-        setRollbackModal({ open: false, suggestionId: null, rollbackReason: "", submitting: false });
+        setRollbackModal({
+          open: false,
+          suggestionId: null,
+          rollbackReason: "",
+          submitting: false,
+        });
       } catch (err) {
         const errMsg = (err as Error)?.message ?? "回滚失败";
         message.error(errMsg);
         // 特定错误:窗口已过 → 刷新列表隐藏按钮
         if (errMsg.includes("回滚窗口已过")) {
-          queryClient.invalidateQueries({ queryKey: queryKeys.reconciliation.fixSuggestionList(listParams) });
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.reconciliation.fixSuggestionList(listParams),
+          });
         }
         setRollbackModal((prev) => ({ ...prev, submitting: false }));
       }
@@ -367,12 +399,23 @@ const FixSuggestion = () => {
           return (
             <Space size="small">
               {canAccept && (
-                <Button type="link" size="small" icon={<CheckOutlined />} onClick={() => handleAccept(record)}>
+                <Button
+                  type="link"
+                  size="small"
+                  icon={<CheckOutlined />}
+                  onClick={() => handleAccept(record)}
+                >
                   接受
                 </Button>
               )}
               {canReject && (
-                <Button type="link" size="small" danger icon={<CloseOutlined />} onClick={() => openReject(record)}>
+                <Button
+                  type="link"
+                  size="small"
+                  danger
+                  icon={<CloseOutlined />}
+                  onClick={() => openReject(record)}
+                >
                   拒绝
                 </Button>
               )}
@@ -381,14 +424,24 @@ const FixSuggestion = () => {
         }
         if (record.fixStatus === "accepted" && canAccept) {
           return (
-            <Button type="link" size="small" icon={<PlayCircleOutlined />} onClick={() => handleApply(record)}>
+            <Button
+              type="link"
+              size="small"
+              icon={<PlayCircleOutlined />}
+              onClick={() => handleApply(record)}
+            >
               应用
             </Button>
           );
         }
         if (record.fixStatus === "applied" && isWithin7d(record) && canRollback) {
           return (
-            <Button type="link" size="small" icon={<UndoOutlined />} onClick={() => openRollback(record)}>
+            <Button
+              type="link"
+              size="small"
+              icon={<UndoOutlined />}
+              onClick={() => openRollback(record)}
+            >
               回滚
             </Button>
           );
@@ -404,7 +457,11 @@ const FixSuggestion = () => {
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={5}>
           <Card>
-            <Statistic title="待处理" value={stats?.pendingAll ?? stats?.pending ?? 0} suffix="条" />
+            <Statistic
+              title="待处理"
+              value={stats?.pendingAll ?? stats?.pending ?? 0}
+              suffix="条"
+            />
           </Card>
         </Col>
         <Col span={5}>
@@ -414,7 +471,12 @@ const FixSuggestion = () => {
         </Col>
         <Col span={4}>
           <Card>
-            <Statistic title="7d 回滚" value={stats?.rolledBack ?? 0} suffix="条" valueStyle={{ color: stats?.rolledBack ? "red" : undefined }} />
+            <Statistic
+              title="7d 回滚"
+              value={stats?.rolledBack ?? 0}
+              suffix="条"
+              valueStyle={{ color: stats?.rolledBack ? "red" : undefined }}
+            />
           </Card>
         </Col>
         <Col span={5}>
@@ -454,7 +516,10 @@ const FixSuggestion = () => {
               style={{ width: 120 }}
               showSearch
               onSearch={() => undefined}
-              options={["A", "B", "C", "D", "E", "F"].map((v) => ({ value: v, label: `Type ${v}` }))}
+              options={["A", "B", "C", "D", "E", "F"].map((v) => ({
+                value: v,
+                label: `Type ${v}`,
+              }))}
             />
           </Form.Item>
           <Form.Item name="responsibleDeptId" label="责任部门">
@@ -533,7 +598,14 @@ const FixSuggestion = () => {
       <RollbackModal
         open={rollbackModal.open}
         submitting={rollbackModal.submitting}
-        onCancel={() => setRollbackModal({ open: false, suggestionId: null, rollbackReason: "", submitting: false })}
+        onCancel={() =>
+          setRollbackModal({
+            open: false,
+            suggestionId: null,
+            rollbackReason: "",
+            submitting: false,
+          })
+        }
         onSubmit={handleRollbackSubmit}
       />
     </div>

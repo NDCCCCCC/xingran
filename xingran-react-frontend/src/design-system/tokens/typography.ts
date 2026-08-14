@@ -33,25 +33,18 @@ export const fontFamily = {
   ].join(", "),
 
   // 衬线字体
-  serif: [
-    "ui-serif",
-    "Georgia",
-    "Cambria",
-    '"Times New Roman"',
-    "Times",
-    "serif",
-  ].join(", "),
+  serif: ["ui-serif", "Georgia", "Cambria", '"Times New Roman"', "Times", "serif"].join(", "),
 } as const;
 
 /**
  * 字体大小
  */
 export const fontSize = {
-  xs: "12px",   // 0.75rem
-  sm: "14px",   // 0.875rem
+  xs: "12px", // 0.75rem
+  sm: "14px", // 0.875rem
   base: "16px", // 1rem
-  lg: "18px",   // 1.125rem
-  xl: "20px",   // 1.25rem
+  lg: "18px", // 1.125rem
+  xl: "20px", // 1.25rem
   "2xl": "24px", // 1.5rem
   "3xl": "30px", // 1.875rem
   "4xl": "36px", // 2.25rem

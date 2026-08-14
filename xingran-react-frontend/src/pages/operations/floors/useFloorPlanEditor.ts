@@ -5,7 +5,13 @@
 import { useState, useCallback } from "react";
 import type { Floor } from "@/types";
 import { wallApi, doorApi, workstationApi, floorPlanTextApi } from "@/lib/opsApi";
-import type { FloorPlanData, Wall, Door, TextElement, WorkstationNode } from "@/components/cad-editor/types";
+import type {
+  FloorPlanData,
+  Wall,
+  Door,
+  TextElement,
+  WorkstationNode,
+} from "@/components/cad-editor/types";
 import { App } from "antd";
 import { processWorkstations, parseJsonField, stringifyJsonField, isNewElement } from "./utils";
 import { DEFAULT_FLOOR_PLAN_CONFIG } from "./constants";
@@ -43,88 +49,91 @@ export function useFloorPlanEditor(
     setIsEditMode(false);
   }, []);
 
-  const loadFloorPlanData = useCallback(async (floorId: string) => {
-    setFloorPlanLoading(true);
-    try {
-      const [wallsResult, doorsResult, workstationsResult] = await Promise.all([
-        wallApi.list({ floorId, current: 1, pageSize: 1000 }),
-        doorApi.list({ floorId, current: 1, pageSize: 1000 }),
-        workstationApi.list({ floorId, current: 1, pageSize: 1000 }),
-      ]);
-
-      const walls = wallsResult.data?.list || [];
-      const doors = doorsResult.data?.list || [];
-      const workstations = workstationsResult.data?.list || [];
-
-      let texts: unknown[] = [];
+  const loadFloorPlanData = useCallback(
+    async (floorId: string) => {
+      setFloorPlanLoading(true);
       try {
-        const textsResult = await floorPlanTextApi.list({ floorId, current: 1, pageSize: 1000 });
-        texts = textsResult.data?.list || [];
-      } catch (textError) {
-        console.warn("文本元素API不可用，可能需要重启后端服务:", textError);
+        const [wallsResult, doorsResult, workstationsResult] = await Promise.all([
+          wallApi.list({ floorId, current: 1, pageSize: 1000 }),
+          doorApi.list({ floorId, current: 1, pageSize: 1000 }),
+          workstationApi.list({ floorId, current: 1, pageSize: 1000 }),
+        ]);
+
+        const walls = wallsResult.data?.list || [];
+        const doors = doorsResult.data?.list || [];
+        const workstations = workstationsResult.data?.list || [];
+
+        let texts: unknown[] = [];
+        try {
+          const textsResult = await floorPlanTextApi.list({ floorId, current: 1, pageSize: 1000 });
+          texts = textsResult.data?.list || [];
+        } catch (textError) {
+          console.warn("文本元素API不可用，可能需要重启后端服务:", textError);
+        }
+
+        const parsedWalls = walls.map((wall) => {
+          return {
+            ...wall,
+            points: parseJsonField(wall.points),
+          } as unknown as Wall;
+        });
+
+        const parsedDoors = doors.map((door) => {
+          return {
+            ...door,
+            position: parseJsonField(door.position),
+          } as unknown as Door;
+        });
+
+        const parsedTexts = texts.map((text) => {
+          const t = text as Record<string, unknown>;
+          return {
+            ...t,
+            position: parseJsonField(t.position),
+          } as TextElement;
+        });
+
+        const processedWorkstations = processWorkstations(workstations);
+
+        setFloorPlanData({
+          floorId,
+          floorName: currentFloor?.name || `${currentFloor?.floorNo}层`,
+          width: DEFAULT_FLOOR_PLAN_CONFIG.CANVAS_WIDTH,
+          height: DEFAULT_FLOOR_PLAN_CONFIG.CANVAS_HEIGHT,
+          walls: parsedWalls,
+          doors: parsedDoors,
+          workstations: processedWorkstations,
+          texts: parsedTexts,
+          planImageId: currentFloor?.planImageId,
+          planImageUrl: currentFloor?.planImageUrl,
+          gridSize: DEFAULT_FLOOR_PLAN_CONFIG.GRID_SIZE,
+          showGrid: true,
+          snapToGrid: true,
+        });
+      } catch (error) {
+        console.error("加载平面图失败:", error);
+        message.error("加载平面图失败");
+        setFloorPlanData({
+          floorId,
+          floorName: currentFloor?.name || `${currentFloor?.floorNo}层`,
+          width: DEFAULT_FLOOR_PLAN_CONFIG.CANVAS_WIDTH,
+          height: DEFAULT_FLOOR_PLAN_CONFIG.CANVAS_HEIGHT,
+          walls: [],
+          doors: [],
+          workstations: [],
+          texts: [],
+          planImageId: currentFloor?.planImageId,
+          planImageUrl: currentFloor?.planImageUrl,
+          gridSize: DEFAULT_FLOOR_PLAN_CONFIG.GRID_SIZE,
+          showGrid: true,
+          snapToGrid: true,
+        });
+      } finally {
+        setFloorPlanLoading(false);
       }
-
-      const parsedWalls = walls.map((wall) => {
-        return {
-          ...wall,
-          points: parseJsonField(wall.points),
-        } as unknown as Wall;
-      });
-
-      const parsedDoors = doors.map((door) => {
-        return {
-          ...door,
-          position: parseJsonField(door.position),
-        } as unknown as Door;
-      });
-
-      const parsedTexts = texts.map((text) => {
-        const t = text as Record<string, unknown>;
-        return {
-          ...t,
-          position: parseJsonField(t.position),
-        } as TextElement;
-      });
-
-      const processedWorkstations = processWorkstations(workstations);
-
-      setFloorPlanData({
-        floorId,
-        floorName: currentFloor?.name || `${currentFloor?.floorNo}层`,
-        width: DEFAULT_FLOOR_PLAN_CONFIG.CANVAS_WIDTH,
-        height: DEFAULT_FLOOR_PLAN_CONFIG.CANVAS_HEIGHT,
-        walls: parsedWalls,
-        doors: parsedDoors,
-        workstations: processedWorkstations,
-        texts: parsedTexts,
-        planImageId: currentFloor?.planImageId,
-        planImageUrl: currentFloor?.planImageUrl,
-        gridSize: DEFAULT_FLOOR_PLAN_CONFIG.GRID_SIZE,
-        showGrid: true,
-        snapToGrid: true,
-      });
-    } catch (error) {
-      console.error("加载平面图失败:", error);
-      message.error("加载平面图失败");
-      setFloorPlanData({
-        floorId,
-        floorName: currentFloor?.name || `${currentFloor?.floorNo}层`,
-        width: DEFAULT_FLOOR_PLAN_CONFIG.CANVAS_WIDTH,
-        height: DEFAULT_FLOOR_PLAN_CONFIG.CANVAS_HEIGHT,
-        walls: [],
-        doors: [],
-        workstations: [],
-        texts: [],
-        planImageId: currentFloor?.planImageId,
-        planImageUrl: currentFloor?.planImageUrl,
-        gridSize: DEFAULT_FLOOR_PLAN_CONFIG.GRID_SIZE,
-        showGrid: true,
-        snapToGrid: true,
-      });
-    } finally {
-      setFloorPlanLoading(false);
-    }
-  }, [currentFloor]);
+    },
+    [currentFloor]
+  );
 
   const saveWalls = useCallback(async (walls: Wall[], floorId: string) => {
     for (const wall of walls) {
@@ -199,31 +208,34 @@ export function useFloorPlanEditor(
     }
   }, []);
 
-  const saveFloorPlan = useCallback(async (data: FloorPlanData, floor: Floor) => {
-    if (!floor) return;
+  const saveFloorPlan = useCallback(
+    async (data: FloorPlanData, floor: Floor) => {
+      if (!floor) return;
 
-    options?.onSaveStart?.();
+      options?.onSaveStart?.();
 
-    try {
-      const floorId = floor.id;
+      try {
+        const floorId = floor.id;
 
-      await Promise.all([
-        saveWalls(data.walls, floorId),
-        saveDoors(data.doors, floorId),
-        saveTexts(data.texts || [], floorId),
-      ]);
+        await Promise.all([
+          saveWalls(data.walls, floorId),
+          saveDoors(data.doors, floorId),
+          saveTexts(data.texts || [], floorId),
+        ]);
 
-      await saveWorkstations(data.workstations);
+        await saveWorkstations(data.workstations);
 
-      message.success("保存成功");
-      await loadFloorPlanData(floorId);
-    } catch (error) {
-      console.error("保存失败:", error);
-      message.error("保存失败");
-    } finally {
-      options?.onSaveEnd?.();
-    }
-  }, [loadFloorPlanData, saveWalls, saveDoors, saveTexts, saveWorkstations, options]);
+        message.success("保存成功");
+        await loadFloorPlanData(floorId);
+      } catch (error) {
+        console.error("保存失败:", error);
+        message.error("保存失败");
+      } finally {
+        options?.onSaveEnd?.();
+      }
+    },
+    [loadFloorPlanData, saveWalls, saveDoors, saveTexts, saveWorkstations, options]
+  );
 
   return {
     floorPlanData,

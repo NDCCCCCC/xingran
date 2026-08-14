@@ -87,7 +87,9 @@ const MACAddressPage: FC = () => {
   }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDeptChangeWithUrl = (
-    selectedKeys: Parameters<NonNullable<ReturnType<typeof useSidebarDeptFilter>["handleDeptSelect"]>>[0],
+    selectedKeys: Parameters<
+      NonNullable<ReturnType<typeof useSidebarDeptFilter>["handleDeptSelect"]>
+    >[0],
     info: Parameters<NonNullable<ReturnType<typeof useSidebarDeptFilter>["handleDeptSelect"]>>[1]
   ) => {
     handleDeptSelect(selectedKeys, info);
@@ -143,12 +145,12 @@ const MACAddressPage: FC = () => {
       // 在 re-render 后才触发 handleSearch → 此刻读到的 selectedDeptId 已最新,无 stale closure。
       // 后端 JOIN sys_network_device.dept_id 一处过滤,无需前端 deviceIds 中间层。
       const deptIdPayload = selectedDeptId ? { deptId: selectedDeptId } : {};
-      const result = await post("/network/mac/list", {
+      const result = (await post("/network/mac/list", {
         current: params.current ?? paginationProps.current ?? 1,
         pageSize: params.pageSize ?? paginationProps.pageSize ?? 10,
         ...deptIdPayload,
         ...values,
-      }) as { data: { list: DeviceMACAddress[]; total: number } };
+      })) as { data: { list: DeviceMACAddress[]; total: number } };
       loadStatistics();
       return result.data;
     },
@@ -167,7 +169,12 @@ const MACAddressPage: FC = () => {
   // 加载统计数据(专用端点 COUNT 聚合,不受分页/筛选影响)
   const loadStatistics = async () => {
     try {
-      const result = await get<{ totalRecords?: number; dynamic?: number; static?: number; secure?: number }>("/network/mac/statistics");
+      const result = await get<{
+        totalRecords?: number;
+        dynamic?: number;
+        static?: number;
+        secure?: number;
+      }>("/network/mac/statistics");
       const data = result.data || {};
       setStatistics({
         total: data.totalRecords ?? 0,
@@ -185,11 +192,11 @@ const MACAddressPage: FC = () => {
   // 不依赖本函数结果,故无 await 时序要求,可与 handleSearch 并行触发。
   const loadDevices = async (deptId?: string) => {
     try {
-      const result = await post("/network/devices/list", {
+      const result = (await post("/network/devices/list", {
         current: 1,
         pageSize: 50,
         ...(deptId ? { deptId } : {}),
-      }) as { data?: { list: NetworkDevice[] } };
+      })) as { data?: { list: NetworkDevice[] } };
       const list = result.data?.list || [];
       setDevices(list);
     } catch (error) {
@@ -295,7 +302,7 @@ const MACAddressPage: FC = () => {
       key: "macType",
       width: 100,
       render: (macType: string) => {
-        const option = macTypeOptions.find(o => o.value === macType);
+        const option = macTypeOptions.find((o) => o.value === macType);
         const color = macType === "dynamic" ? "blue" : macType === "static" ? "green" : "orange";
         return <Tag color={color}>{option?.label || macType}</Tag>;
       },
@@ -323,10 +330,7 @@ const MACAddressPage: FC = () => {
         {/* 移动端:Dept tree 折叠进 Drawer,通过按钮触发(与 workstations 同步) */}
         {isMobile && (
           <div style={{ marginBottom: 16 }}>
-            <Button
-              icon={<ApartmentOutlined />}
-              onClick={() => setDeptDrawerOpen(true)}
-            >
+            <Button icon={<ApartmentOutlined />} onClick={() => setDeptDrawerOpen(true)}>
               {selectedDeptId ? `已选部门:${selectedDeptId.slice(0, 8)}...` : "选择部门"}
             </Button>
             <Drawer
@@ -348,161 +352,193 @@ const MACAddressPage: FC = () => {
           </div>
         )}
         {/* 统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="MAC地址总数"
-              value={statistics.total}
-              prefix={<AppleOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="动态MAC"
-              value={statistics.dynamic}
-              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="静态MAC"
-              value={statistics.static}
-              styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="安全MAC"
-              value={statistics.secure}
-              styles={{ content: { color: "var(--theme-warning, #faad14)" } }}
-            />
-          </Card>
-        </Col>
-      </Row>
+        <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Col span={6}>
+            <Card>
+              <Statistic title="MAC地址总数" value={statistics.total} prefix={<AppleOutlined />} />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card>
+              <Statistic
+                title="动态MAC"
+                value={statistics.dynamic}
+                styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
+              />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card>
+              <Statistic
+                title="静态MAC"
+                value={statistics.static}
+                styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
+              />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card>
+              <Statistic
+                title="安全MAC"
+                value={statistics.secure}
+                styles={{ content: { color: "var(--theme-warning, #faad14)" } }}
+              />
+            </Card>
+          </Col>
+        </Row>
 
-      {/* 搜索表单和操作按钮 */}
-      <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
-          <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
-            <Form.Item name="deviceId" label="设备">
-              <Select
-                placeholder={selectedDeptId ? "请选择设备" : "请先选择部门"}
-                disabled={!selectedDeptId}
-                allowClear
-                className="user-form-input"
-                style={{ width: 200 }}
-                showSearch
-                optionFilterProp="deviceName"
-                onSearch={() => {}}
+        {/* 搜索表单和操作按钮 */}
+        <Card style={{ marginBottom: 16 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              flexWrap: "wrap",
+              gap: "16px",
+            }}
+          >
+            <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
+              <Form.Item name="deviceId" label="设备">
+                <Select
+                  placeholder={selectedDeptId ? "请选择设备" : "请先选择部门"}
+                  disabled={!selectedDeptId}
+                  allowClear
+                  className="user-form-input"
+                  style={{ width: 200 }}
+                  showSearch
+                  optionFilterProp="deviceName"
+                  onSearch={() => {}}
+                >
+                  {devices.map((device) => (
+                    <Option key={device.id} value={device.id}>
+                      {device.deviceName}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+              <Form.Item name="macAddress" label="MAC地址">
+                <Input
+                  placeholder="请输入MAC地址"
+                  allowClear
+                  className="user-form-input"
+                  style={{ width: 180 }}
+                />
+              </Form.Item>
+              <Form.Item name="interfaceName" label="接口">
+                <Input
+                  placeholder="请输入接口名称"
+                  allowClear
+                  className="user-form-input"
+                  style={{ width: 150 }}
+                />
+              </Form.Item>
+              <Form.Item name="vlanId" label="VLAN ID">
+                <InputNumber placeholder="VLAN ID" style={{ width: 120 }} />
+              </Form.Item>
+              <Form.Item name="macType" label="MAC类型">
+                <Select
+                  placeholder="请选择类型"
+                  allowClear
+                  className="user-form-input"
+                  style={{ width: 120 }}
+                  onSearch={() => {}}
+                >
+                  {macTypeOptions.map((opt) => (
+                    <Option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+              <Form.Item>
+                <Space>
+                  <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                    查询
+                  </Button>
+                  <Button icon={<ReloadOutlined />} onClick={handleReset}>
+                    重置
+                  </Button>
+                  <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                    刷新
+                  </Button>
+                </Space>
+              </Form.Item>
+            </Form>
+            <Space>
+              <NetworkExport
+                entityType="mac"
+                entityName="MAC地址"
+                filters={(() => {
+                  const values = searchForm.getFieldsValue() as Record<string, unknown>;
+                  const filtered: Record<string, unknown> = {};
+                  Object.keys(values).forEach((key) => {
+                    const value = values[key];
+                    if (value !== undefined && value !== null && value !== "") {
+                      filtered[key] = value;
+                    }
+                  });
+                  return filtered;
+                })()}
+                current={paginationProps.current}
+                pageSize={paginationProps.pageSize}
+              />
+              <Button
+                icon={<DeleteOutlined />}
+                onClick={handleBatchDelete}
+                disabled={selectedRowKeys.length === 0}
+                style={{ color: "var(--theme-error, #ff4d4f)" }}
               >
-                {devices.map(device => (
-                  <Option key={device.id} value={device.id}>{device.deviceName}</Option>
-                ))}
-              </Select>
-            </Form.Item>
-            <Form.Item name="macAddress" label="MAC地址">
-              <Input placeholder="请输入MAC地址" allowClear className="user-form-input" style={{ width: 180 }} />
-            </Form.Item>
-            <Form.Item name="interfaceName" label="接口">
-              <Input placeholder="请输入接口名称" allowClear className="user-form-input" style={{ width: 150 }} />
-            </Form.Item>
-            <Form.Item name="vlanId" label="VLAN ID">
-              <InputNumber placeholder="VLAN ID" style={{ width: 120 }} />
-            </Form.Item>
-            <Form.Item name="macType" label="MAC类型">
-              <Select placeholder="请选择类型" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
-                {macTypeOptions.map(opt => (
-                  <Option key={opt.value} value={opt.value}>{opt.label}</Option>
-                ))}
-              </Select>
-            </Form.Item>
-            <Form.Item>
-              <Space>
-                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>查询</Button>
-                <Button icon={<ReloadOutlined />} onClick={handleReset}>重置</Button>
-                <Button icon={<ReloadOutlined />} onClick={handleRefresh}>刷新</Button>
-              </Space>
-            </Form.Item>
-          </Form>
-          <Space>
-            <NetworkExport
-              entityType="mac"
-              entityName="MAC地址"
-              filters={(() => {
-                const values = searchForm.getFieldsValue() as Record<string, unknown>;
-                const filtered: Record<string, unknown> = {};
-                Object.keys(values).forEach(key => {
-                  const value = values[key];
-                  if (value !== undefined && value !== null && value !== "") {
-                    filtered[key] = value;
-                  }
-                });
-                return filtered;
-              })()}
-              current={paginationProps.current}
-              pageSize={paginationProps.pageSize}
+                批量删除 ({selectedRowKeys.length})
+              </Button>
+            </Space>
+            {/* 批量导出 Modal */}
+
+            <BatchExportModal
+              visible={batchModalVisible}
+
+              onConfirm={handleBatchExport}
+
+              onCancel={() => setBatchModalVisible(false)}
+
+              loading={batchExporting}
             />
-            <Button icon={<DeleteOutlined />} onClick={handleBatchDelete} disabled={selectedRowKeys.length === 0} style={{ color: "var(--theme-error, #ff4d4f)" }}>
-              批量删除 ({selectedRowKeys.length})
-            </Button>
-          </Space>{/* 批量导出 Modal */}
+          </div>
+        </Card>
 
-        <BatchExportModal
-
-          visible={batchModalVisible}
-
-          onConfirm={handleBatchExport}
-
-          onCancel={() => setBatchModalVisible(false)}
-
-          loading={batchExporting}
-
-        />
-
-
-        </div>
-      </Card>
-
-      {/* MAC地址表格 */}
-      <Card>
-        <Table
-          rowSelection={{
-            selectedRowKeys,
-            onChange: setSelectedRowKeys,
-          }}
-          columns={columns}
-          dataSource={macAddresses}
-          loading={loading}
-          rowKey="id"
-          scroll={{ x: 1200 }}
-          pagination={paginationProps}
-          onChange={handleMacTableChange}
-        />
-      </Card>
-
-      {/* MAC 事件时间线抽屉:点击 MAC 列 → 抽屉打开显示该 MAC 7d 范围内的事件 */}
-      <Drawer
-        title={timelineDrawerMac ? `MAC 事件时间线 — ${timelineDrawerMac}` : "MAC 事件时间线"}
-        open={timelineDrawerOpen}
-        onClose={() => setTimelineDrawerOpen(false)}
-        width={480}
-        destroyOnClose
-      >
-        {timelineDrawerMac && timelineDrawerRange && (
-          <MACEventsTimeline
-            mac={timelineDrawerMac}
-            startTime={timelineDrawerRange.startTime}
-            endTime={timelineDrawerRange.endTime}
+        {/* MAC地址表格 */}
+        <Card>
+          <Table
+            rowSelection={{
+              selectedRowKeys,
+              onChange: setSelectedRowKeys,
+            }}
+            columns={columns}
+            dataSource={macAddresses}
+            loading={loading}
+            rowKey="id"
+            scroll={{ x: 1200 }}
+            pagination={paginationProps}
+            onChange={handleMacTableChange}
           />
-        )}
-      </Drawer>
+        </Card>
+
+        {/* MAC 事件时间线抽屉:点击 MAC 列 → 抽屉打开显示该 MAC 7d 范围内的事件 */}
+        <Drawer
+          title={timelineDrawerMac ? `MAC 事件时间线 — ${timelineDrawerMac}` : "MAC 事件时间线"}
+          open={timelineDrawerOpen}
+          onClose={() => setTimelineDrawerOpen(false)}
+          width={480}
+          destroyOnClose
+        >
+          {timelineDrawerMac && timelineDrawerRange && (
+            <MACEventsTimeline
+              mac={timelineDrawerMac}
+              startTime={timelineDrawerRange.startTime}
+              endTime={timelineDrawerRange.endTime}
+            />
+          )}
+        </Drawer>
       </Content>
     </Layout>
   );

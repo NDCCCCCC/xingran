@@ -143,9 +143,7 @@ const VirtualMachineDetail: React.FC = () => {
       title: "操作系统",
       dataIndex: "os_type",
       key: "os_type",
-      render: (os: string) => (
-        <Tag color={os === "Windows" ? "blue" : "green"}>{os}</Tag>
-      ),
+      render: (os: string) => <Tag color={os === "Windows" ? "blue" : "green"}>{os}</Tag>,
     },
     {
       title: "管理员",
@@ -160,9 +158,7 @@ const VirtualMachineDetail: React.FC = () => {
       dataIndex: "is_enabled",
       key: "is_enabled",
       render: (enabled: boolean) => (
-        <Tag color={enabled ? "success" : "default"}>
-          {enabled ? "启用" : "禁用"}
-        </Tag>
+        <Tag color={enabled ? "success" : "default"}>{enabled ? "启用" : "禁用"}</Tag>
       ),
     },
     {
@@ -175,7 +171,10 @@ const VirtualMachineDetail: React.FC = () => {
           pending: { color: "warning", text: "待同步" },
           failed: { color: "error", text: "同步失败" },
         };
-        const { color, text } = config[status as keyof typeof config] || { color: "default", text: status };
+        const { color, text } = config[status as keyof typeof config] || {
+          color: "default",
+          text: status,
+        };
         return <Tag color={color}>{text}</Tag>;
       },
     },
@@ -216,10 +215,7 @@ const VirtualMachineDetail: React.FC = () => {
       <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         {/* 头部 */}
         <Space>
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate("/vdi/vm")}
-          >
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/vdi/vm")}>
             返回列表
           </Button>
           <Button icon={<ReloadOutlined />} onClick={loadVMDetail}>
@@ -228,22 +224,27 @@ const VirtualMachineDetail: React.FC = () => {
         </Space>
 
         {/* 标签页 */}
-        <Tabs
-          activeKey={activeTab}
-          onChange={(key) => setActiveTab(key)}
-        >
+        <Tabs activeKey={activeTab} onChange={(key) => setActiveTab(key)}>
           {/* 概览标签页 */}
           <Tabs.TabPane tab="概览" key="overview">
             <Descriptions title="虚拟机信息" bordered column={2}>
               <Descriptions.Item label="虚拟机 ID">{vm.vm_id}</Descriptions.Item>
               <Descriptions.Item label="名称">{vm.name}</Descriptions.Item>
               <Descriptions.Item label="电源状态">
-                <Tag color={
-                  vm.power_state === "in_use" ? "success" :
-                  vm.power_state === "stopped" ? "error" : "warning"
-                }>
-                  {vm.power_state === "in_use" ? "运行中" :
-                   vm.power_state === "stopped" ? "已关机" : "已休眠"}
+                <Tag
+                  color={
+                    vm.power_state === "in_use"
+                      ? "success"
+                      : vm.power_state === "stopped"
+                        ? "error"
+                        : "warning"
+                  }
+                >
+                  {vm.power_state === "in_use"
+                    ? "运行中"
+                    : vm.power_state === "stopped"
+                      ? "已关机"
+                      : "已休眠"}
                 </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="IP 地址">{vm.ip_address || "-"}</Descriptions.Item>
@@ -286,14 +287,26 @@ const VirtualMachineDetail: React.FC = () => {
 
           {/* 操作记录标签页 */}
           <Tabs.TabPane tab="操作记录" key="operations">
-            <div style={{ padding: "20px", textAlign: "center", color: "var(--theme-text-tertiary, #999)" }}>
+            <div
+              style={{
+                padding: "20px",
+                textAlign: "center",
+                color: "var(--theme-text-tertiary, #999)",
+              }}
+            >
               操作记录功能（未来实现）
             </div>
           </Tabs.TabPane>
 
           {/* 监控标签页 */}
           <Tabs.TabPane tab="监控" key="monitor">
-            <div style={{ padding: "20px", textAlign: "center", color: "var(--theme-text-tertiary, #999)" }}>
+            <div
+              style={{
+                padding: "20px",
+                textAlign: "center",
+                color: "var(--theme-text-tertiary, #999)",
+              }}
+            >
               监控数据功能（未来实现）
             </div>
           </Tabs.TabPane>
@@ -326,11 +339,7 @@ const VirtualMachineDetail: React.FC = () => {
           >
             <Input.Password placeholder="密码" />
           </Form.Item>
-          <Form.Item
-            label="操作系统类型"
-            name="os_type"
-            initialValue="Windows"
-          >
+          <Form.Item label="操作系统类型" name="os_type" initialValue="Windows">
             <Select onSearch={() => {}}>
               <Select.Option value="Windows">Windows</Select.Option>
               <Select.Option value="Linux">Linux</Select.Option>

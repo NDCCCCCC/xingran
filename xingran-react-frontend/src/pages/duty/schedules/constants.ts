@@ -42,6 +42,6 @@ export function getDutyTypeColor(type: DutyType | string): BadgeProps["color"] {
 
 /** 获取值班类型显示文本 */
 export function getDutyTypeText(type: DutyType | string): string {
-  const option = DUTY_TYPE_OPTIONS.find(opt => opt.value === type);
+  const option = DUTY_TYPE_OPTIONS.find((opt) => opt.value === type);
   return option?.label || type;
 }

@@ -42,7 +42,7 @@ const IconSelect: FC<IconSelectProps> = ({
     const result: Record<string, string[]> = {};
 
     for (const [category, icons] of Object.entries(iconCategories)) {
-      const filtered = icons.filter(icon => {
+      const filtered = icons.filter((icon) => {
         // 匹配图标名称
         if (icon.toLowerCase().includes(lowerSearch)) {
           return true;
@@ -128,7 +128,7 @@ const IconSelect: FC<IconSelectProps> = ({
           placeholder="搜索图标名称或描述..."
           prefix={<SearchOutlined />}
           value={searchText}
-          onChange={e => setSearchText(e.target.value)}
+          onChange={(e) => setSearchText(e.target.value)}
           style={{ marginBottom: 16 }}
           allowClear
         />
@@ -143,7 +143,13 @@ const IconSelect: FC<IconSelectProps> = ({
         {/* 图标分类展示 */}
         <div style={{ maxHeight: 400, overflowY: "auto" }}>
           {Object.keys(filteredCategories).length === 0 ? (
-            <div style={{ textAlign: "center", padding: 40, color: "var(--theme-text-tertiary, #999)" }}>
+            <div
+              style={{
+                textAlign: "center",
+                padding: 40,
+                color: "var(--theme-text-tertiary, #999)",
+              }}
+            >
               未找到匹配的图标
             </div>
           ) : (
@@ -160,7 +166,7 @@ const IconSelect: FC<IconSelectProps> = ({
                       gap: 12,
                     }}
                   >
-                    {icons.map(iconName => {
+                    {icons.map((iconName) => {
                       const isSelected = selectedIcon === iconName;
                       return (
                         <div

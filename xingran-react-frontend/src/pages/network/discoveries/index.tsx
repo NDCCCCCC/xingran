@@ -1,17 +1,6 @@
 ﻿import { useState, useEffect, useMemo } from "react";
 import type { FC } from "react";
-import {
-  Table,
-  Button,
-  Space,
-  Form,
-  Select,
-  Card,
-  Row,
-  Col,
-  Statistic,
-  App,
-} from "antd";
+import { Table, Button, Space, Form, Select, Card, Row, Col, Statistic, App } from "antd";
 import {
   SearchOutlined,
   ReloadOutlined,
@@ -56,7 +45,12 @@ const DeviceDiscoveryPage: FC = () => {
     ],
     []
   );
-  const { orderByColumn, isAsc, handleTableChange: handleDiscoverySortChange, sortOrder: discoverySortOrder } = useServerSort<DeviceDiscovery>({
+  const {
+    orderByColumn,
+    isAsc,
+    handleTableChange: handleDiscoverySortChange,
+    sortOrder: discoverySortOrder,
+  } = useServerSort<DeviceDiscovery>({
     sorterMetas,
   });
 
@@ -96,7 +90,7 @@ const DeviceDiscoveryPage: FC = () => {
     await loadDepartments();
     form.resetFields();
     form.setFieldsValue({ snmpPort: 161, discoveryType: "snmp" });
-    setModalState(prev => ({ ...prev, modalVisible: true }));
+    setModalState((prev) => ({ ...prev, modalVisible: true }));
   };
 
   // 创建发现任务
@@ -132,7 +126,7 @@ const DeviceDiscoveryPage: FC = () => {
 
       await post("/network/discoveries/create", requestData);
       message.success("发现任务已创建");
-      setModalState(prev => ({ ...prev, modalVisible: false }));
+      setModalState((prev) => ({ ...prev, modalVisible: false }));
       form.resetFields();
       loadDiscoveries();
       loadStatistics();
@@ -160,7 +154,7 @@ const DeviceDiscoveryPage: FC = () => {
   const handleViewResult = async (record: DeviceDiscovery) => {
     setCurrentDiscovery(record);
     await loadDiscoveryResults((record as DeviceDiscovery).id);
-    setModalState(prev => ({ ...prev, resultModalVisible: true }));
+    setModalState((prev) => ({ ...prev, resultModalVisible: true }));
   };
 
   // 导入发现的设备
@@ -169,7 +163,7 @@ const DeviceDiscoveryPage: FC = () => {
     try {
       await post(`/network/discoveries/${currentDiscovery.id}/import`, {});
       message.success("导入成功");
-      setModalState(prev => ({ ...prev, resultModalVisible: false }));
+      setModalState((prev) => ({ ...prev, resultModalVisible: false }));
       loadDiscoveries();
     } catch (error) {
       message.error("导入失败");
@@ -196,7 +190,10 @@ const DeviceDiscoveryPage: FC = () => {
       getDiscoveryColumns({
         handleViewResult,
         handleDelete,
-        getSortOrder: (field) => (orderByColumn === field ? (discoverySortOrder ?? null) as "ascend" | "descend" | null : null),
+        getSortOrder: (field) =>
+          orderByColumn === field
+            ? ((discoverySortOrder ?? null) as "ascend" | "descend" | null)
+            : null,
       }),
     [handleViewResult, handleDelete, orderByColumn, discoverySortOrder]
   );
@@ -212,11 +209,7 @@ const DeviceDiscoveryPage: FC = () => {
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={4}>
           <Card>
-            <Statistic
-              title="任务总数"
-              value={statistics.total}
-              prefix={<CloudServerOutlined />}
-            />
+            <Statistic title="任务总数" value={statistics.total} prefix={<CloudServerOutlined />} />
           </Card>
         </Col>
         <Col span={4}>
@@ -261,17 +254,22 @@ const DeviceDiscoveryPage: FC = () => {
         </Col>
         <Col span={4}>
           <Card>
-            <Statistic
-              title="发现设备"
-              value={statistics.totalDevices}
-            />
+            <Statistic title="发现设备" value={statistics.totalDevices} />
           </Card>
         </Col>
       </Row>
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
+        >
           <Form layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item label="状态">
               <Select
@@ -279,11 +277,12 @@ const DeviceDiscoveryPage: FC = () => {
                 allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
-                onChange={() =>    {
+                onChange={() => {
                   loadDiscoveries();
                   loadStatistics();
                 }}
-               onSearch={() => {}}>
+                onSearch={() => {}}
+              >
                 {STATUS_OPTIONS.map((opt) => (
                   <Option key={opt.value} value={opt.value}>
                     {opt.label}
@@ -325,21 +324,18 @@ const DeviceDiscoveryPage: FC = () => {
             <Button type="primary" icon={<PlusOutlined />} onClick={openModal}>
               创建发现任务
             </Button>
-          </Space>{/* 批量导出 Modal */}
+          </Space>
+          {/* 批量导出 Modal */}
 
-        <BatchExportModal
+          <BatchExportModal
+            visible={batchModalVisible}
 
-          visible={batchModalVisible}
+            onConfirm={handleBatchExport}
 
-          onConfirm={handleBatchExport}
+            onCancel={() => setBatchModalVisible(false)}
 
-          onCancel={() => setBatchModalVisible(false)}
-
-          loading={batchExporting}
-
-        />
-
-
+            loading={batchExporting}
+          />
         </div>
       </Card>
 
@@ -368,7 +364,7 @@ const DeviceDiscoveryPage: FC = () => {
         open={modalState.modalVisible}
         departments={departments}
         onOk={handleCreate}
-        onCancel={() => setModalState(prev => ({ ...prev, modalVisible: false }))}
+        onCancel={() => setModalState((prev) => ({ ...prev, modalVisible: false }))}
       />
 
       {/* 发现结果模态框 */}
@@ -377,7 +373,7 @@ const DeviceDiscoveryPage: FC = () => {
         currentDiscovery={currentDiscovery}
         discoveredDevices={discoveredDevices}
         onImport={handleImport}
-        onClose={() => setModalState(prev => ({ ...prev, resultModalVisible: false }))}
+        onClose={() => setModalState((prev) => ({ ...prev, resultModalVisible: false }))}
       />
     </div>
   );

@@ -153,7 +153,7 @@ class StorageCache<T> {
     try {
       // 清理所有带前缀的项
       const keys = Object.keys(localStorage);
-      keys.forEach(key => {
+      keys.forEach((key) => {
         if (key.startsWith(this.prefix)) {
           localStorage.removeItem(key);
         }
@@ -168,7 +168,7 @@ class StorageCache<T> {
     try {
       const now = Date.now();
       const keys = Object.keys(localStorage);
-      keys.forEach(storageKey => {
+      keys.forEach((storageKey) => {
         if (!storageKey.startsWith(this.prefix)) return;
 
         try {
@@ -203,10 +203,13 @@ export class GeocodingCache<T> {
     this.storageCache = new StorageCache<T>(finalConfig.storagePrefix, finalConfig.storageTTL);
 
     // 定期清理过期缓存（每5分钟）
-    this.cleanupTimer = setInterval(() => {
-      this.memoryCache.cleanup();
-      this.storageCache.cleanup();
-    }, 5 * 60 * 1000);
+    this.cleanupTimer = setInterval(
+      () => {
+        this.memoryCache.cleanup();
+        this.storageCache.cleanup();
+      },
+      5 * 60 * 1000
+    );
 
     // 初始化时清理一次过期缓存
     this.memoryCache.cleanup();
@@ -221,7 +224,7 @@ export class GeocodingCache<T> {
     // 将参数排序后生成键，确保相同参数生成相同键
     const sortedParams = Object.keys(params)
       .sort()
-      .map(key => `${key}=${params[key]}`)
+      .map((key) => `${key}=${params[key]}`)
       .join("&");
     return btoa(unescape(encodeURIComponent(sortedParams)));
   }

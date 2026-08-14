@@ -2,11 +2,7 @@
  * WorkOrder 常量定义
  */
 
-import {
-  WorkOrderStatus,
-  WorkOrderPriority,
-  WorkOrderType,
-} from "@/lib/workorderApi";
+import { WorkOrderStatus, WorkOrderPriority, WorkOrderType } from "@/lib/workorderApi";
 
 // 工单状态配置
 export const STATUS_CONFIG = {

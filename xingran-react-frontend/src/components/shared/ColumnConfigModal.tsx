@@ -1,12 +1,5 @@
 import React, { useState, useMemo } from "react";
-import {
-  Modal,
-  Checkbox,
-  Input,
-  InputNumber,
-  Button,
-  Space,
-} from "antd";
+import { Modal, Checkbox, Input, InputNumber, Button, Space } from "antd";
 import { SearchOutlined, HolderOutlined } from "@ant-design/icons";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import type { DragEndEvent } from "@dnd-kit/core";
@@ -26,14 +19,9 @@ const SortableColumnItem: React.FC<SortableColumnItemProps> = ({
   onToggleVisible,
   onWidthChange,
 }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: config.key });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: config.key,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -48,19 +36,12 @@ const SortableColumnItem: React.FC<SortableColumnItemProps> = ({
       className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded hover:bg-gray-50"
     >
       {/* 拖拽手柄 */}
-      <div
-        {...attributes}
-        {...listeners}
-        className="cursor-move text-gray-400 hover:text-gray-600"
-      >
+      <div {...attributes} {...listeners} className="cursor-move text-gray-400 hover:text-gray-600">
         <HolderOutlined />
       </div>
 
       {/* 复选框 */}
-      <Checkbox
-        checked={config.visible}
-        onChange={(e) => onToggleVisible(e.target.checked)}
-      >
+      <Checkbox checked={config.visible} onChange={(e) => onToggleVisible(e.target.checked)}>
         <span className="ml-2">{config.label}</span>
       </Checkbox>
 
@@ -114,27 +95,27 @@ export const ColumnConfigModal: React.FC<ColumnConfigModalProps> = ({
   const filteredConfig = useMemo(() => {
     if (!searchValue) return localConfig;
     const lowerSearch = searchValue.toLowerCase();
-    return localConfig.filter(col =>
-      col.label.toLowerCase().includes(lowerSearch) ||
-      col.key.toLowerCase().includes(lowerSearch)
+    return localConfig.filter(
+      (col) =>
+        col.label.toLowerCase().includes(lowerSearch) || col.key.toLowerCase().includes(lowerSearch)
     );
   }, [localConfig, searchValue]);
 
   // 全选/取消全选
-  const allChecked = localConfig.length > 0 && localConfig.every(c => c.visible);
-  const someChecked = localConfig.some(c => c.visible) && !allChecked;
+  const allChecked = localConfig.length > 0 && localConfig.every((c) => c.visible);
+  const someChecked = localConfig.some((c) => c.visible) && !allChecked;
 
   const handleToggleAll = (checked: boolean) => {
-    setLocalConfig(prev => prev.map(col => ({ ...col, visible: checked })));
+    setLocalConfig((prev) => prev.map((col) => ({ ...col, visible: checked })));
   };
 
   // 拖拽结束
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      setLocalConfig(prev => {
-        const oldIndex = prev.findIndex(col => col.key === active.id);
-        const newIndex = prev.findIndex(col => col.key === over.id);
+      setLocalConfig((prev) => {
+        const oldIndex = prev.findIndex((col) => col.key === active.id);
+        const newIndex = prev.findIndex((col) => col.key === over.id);
         const newConfig = [...prev];
         const [removed] = newConfig.splice(oldIndex, 1);
         newConfig.splice(newIndex, 0, removed);
@@ -177,12 +158,7 @@ export const ColumnConfigModal: React.FC<ColumnConfigModalProps> = ({
         <Button key="cancel" onClick={onClose}>
           取消
         </Button>,
-        <Button
-          key="save"
-          type="primary"
-          onClick={handleSave}
-          loading={saving}
-        >
+        <Button key="save" type="primary" onClick={handleSave} loading={saving}>
           确定
         </Button>,
       ]}
@@ -206,18 +182,15 @@ export const ColumnConfigModal: React.FC<ColumnConfigModalProps> = ({
           全选
         </Checkbox>
         <span className="ml-4 text-gray-400">
-          共 {localConfig.length} 列，显示 {localConfig.filter(c => c.visible).length} 列
+          共 {localConfig.length} 列，显示 {localConfig.filter((c) => c.visible).length} 列
         </span>
       </div>
 
       {/* 列配置列表 */}
       <div style={{ maxHeight: 400, overflowY: "auto" }}>
-        <DndContext
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
+        <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext
-            items={filteredConfig.map(c => c.key)}
+            items={filteredConfig.map((c) => c.key)}
             strategy={verticalListSortingStrategy}
           >
             {filteredConfig.map((col) => (
@@ -225,13 +198,13 @@ export const ColumnConfigModal: React.FC<ColumnConfigModalProps> = ({
                 key={col.key}
                 config={col}
                 onToggleVisible={(visible) =>
-                  setLocalConfig(prev =>
-                    prev.map(c => (c.key === col.key ? { ...c, visible } : c))
+                  setLocalConfig((prev) =>
+                    prev.map((c) => (c.key === col.key ? { ...c, visible } : c))
                   )
                 }
                 onWidthChange={(width) =>
-                  setLocalConfig(prev =>
-                    prev.map(c => (c.key === col.key ? { ...c, width: width || 0 } : c))
+                  setLocalConfig((prev) =>
+                    prev.map((c) => (c.key === col.key ? { ...c, width: width || 0 } : c))
                   )
                 }
               />
@@ -242,9 +215,7 @@ export const ColumnConfigModal: React.FC<ColumnConfigModalProps> = ({
 
       {/* 搜索无结果提示 */}
       {filteredConfig.length === 0 && (
-        <div className="text-center py-8 text-gray-400">
-          未找到匹配的列
-        </div>
+        <div className="text-center py-8 text-gray-400">未找到匹配的列</div>
       )}
     </Modal>
   );

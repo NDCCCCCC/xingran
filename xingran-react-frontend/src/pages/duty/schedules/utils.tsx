@@ -32,12 +32,19 @@ export function getWeekDays(weekStart: Dayjs): Dayjs[] {
   return days;
 }
 
-export function formatScheduleOptionLabel(schedule: { scheduleDate: string; user?: { nickname?: string; username?: string } }): string {
+export function formatScheduleOptionLabel(schedule: {
+  scheduleDate: string;
+  user?: { nickname?: string; username?: string };
+}): string {
   return `${formatDate(schedule.scheduleDate)} - ${schedule.user?.nickname || schedule.user?.username || ""}`;
 }
 
 export function formatScheduleOptionContent(
-  schedule: { scheduleDate: string; dutyType: string; user?: { nickname?: string; username?: string } },
+  schedule: {
+    scheduleDate: string;
+    dutyType: string;
+    user?: { nickname?: string; username?: string };
+  },
   getDutyTypeText: (type: string) => string
 ): string {
   return `${formatDate(schedule.scheduleDate)} (${getDutyTypeText(schedule.dutyType)}) - ${schedule.user?.nickname || schedule.user?.username || ""}`;

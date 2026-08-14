@@ -67,7 +67,13 @@ const SCOPE_COLOR: Record<string, string> = {
   user: "purple",
 };
 
-const ListInner: React.FC<ExceptionMatchListProps> = ({ rules, loading, assetIp, conflictType, onCreateRule }) => {
+const ListInner: React.FC<ExceptionMatchListProps> = ({
+  rules,
+  loading,
+  assetIp,
+  conflictType,
+  onCreateRule,
+}) => {
   // Plan 02 锁定(SC9): 申请例外按钮携带 assetIp + conflictType query 参数
   // (ReconciliationDrawer 顶部"申请例外"按钮携带 workstationId + assetIp + conflictType 三个参数,
   //  本组件的"去创建例外规则"按钮只携带 assetIp + conflictType 两个参数 — 因为本组件在例外规则 Tab,
@@ -118,9 +124,7 @@ const ListInner: React.FC<ExceptionMatchListProps> = ({ rules, loading, assetIp,
               ))}
             </Space>
             {rule.reason && (
-              <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>
-                {rule.reason}
-              </div>
+              <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>{rule.reason}</div>
             )}
             {rule.expiresAt && (
               <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>

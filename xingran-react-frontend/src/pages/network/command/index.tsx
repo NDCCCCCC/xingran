@@ -5,19 +5,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { FC } from "react";
-import {
-  Table,
-  Button,
-  Space,
-  Form,
-  Input,
-  Select,
-  Card,
-  Row,
-  Col,
-  Statistic,
-  App,
-} from "antd";
+import { Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic, App } from "antd";
 import {
   ThunderboltOutlined,
   SearchOutlined,
@@ -69,7 +57,12 @@ const CommandDispatch: FC = () => {
     ],
     []
   );
-  const { orderByColumn, isAsc, handleTableChange: handleCmdSortChange, sortOrder: cmdSortOrder } = useServerSort<ConfigExecution>({
+  const {
+    orderByColumn,
+    isAsc,
+    handleTableChange: handleCmdSortChange,
+    sortOrder: cmdSortOrder,
+  } = useServerSort<ConfigExecution>({
     sorterMetas,
   });
 
@@ -126,7 +119,8 @@ const CommandDispatch: FC = () => {
       getExecutionColumns({
         handleViewDetail,
         handleCancel: (id: string) => handleCancelExecution(id, handleSuccess),
-        getSortOrder: (field) => (orderByColumn === field ? (cmdSortOrder ?? null) as "ascend" | "descend" | null : null),
+        getSortOrder: (field) =>
+          orderByColumn === field ? ((cmdSortOrder ?? null) as "ascend" | "descend" | null) : null,
       }),
     [handleViewDetail, handleSuccess, orderByColumn, cmdSortOrder]
   );
@@ -206,10 +200,11 @@ const CommandDispatch: FC = () => {
                 allowClear
                 className="user-form-input"
                 style={{ width: 120 }}
-                onChange={() =>    {
+                onChange={() => {
                   handleSuccess();
                 }}
-               onSearch={() => {}}>
+                onSearch={() => {}}
+              >
                 {STATUS_OPTIONS.map((opt) => (
                   <Option key={opt.value} value={opt.value}>
                     {opt.label}
@@ -235,39 +230,34 @@ const CommandDispatch: FC = () => {
                 >
                   刷新
                 </Button>
-                <Button
-                  type="primary"
-                  icon={<ThunderboltOutlined />}
-                  onClick={openDispatchModal}
-                >
+                <Button type="primary" icon={<ThunderboltOutlined />} onClick={openDispatchModal}>
                   快速命令
                 </Button>
                 <NetworkExport
                   entityType="command"
                   entityName="命令分发"
                   filters={Object.fromEntries(
-                    Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null && v !== "")
+                    Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
+                      ([, v]) => v !== undefined && v !== null && v !== ""
+                    )
                   )}
                   current={paginationProps?.current ?? 1}
                   pageSize={paginationProps?.pageSize ?? 10}
                 />
               </Space>
             </Form.Item>
-          </Form>{/* 批量导出 Modal */}
+          </Form>
+          {/* 批量导出 Modal */}
 
-        <BatchExportModal
+          <BatchExportModal
+            visible={batchModalVisible}
 
-          visible={batchModalVisible}
+            onConfirm={handleBatchExport}
 
-          onConfirm={handleBatchExport}
+            onCancel={() => setBatchModalVisible(false)}
 
-          onCancel={() => setBatchModalVisible(false)}
-
-          loading={batchExporting}
-
-        />
-
-
+            loading={batchExporting}
+          />
         </div>
 
         <Table
@@ -287,7 +277,7 @@ const CommandDispatch: FC = () => {
               pageSize: pagination.pageSize ?? 10,
               ...(orderByColumn ? { orderByColumn, isAsc } : {}),
             };
-            Object.keys(formValues).forEach(key => {
+            Object.keys(formValues).forEach((key) => {
               const value = formValues[key];
               if (value !== undefined && value !== null && value !== "") {
                 searchParams[key] = value;

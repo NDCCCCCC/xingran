@@ -47,98 +47,126 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
   });
 
   const [batchState, setBatchState] = useState<BatchState>({
-    batchHolidays: [{ holidayDate: dayjs(), holidayName: "", isOffday: true, holidayType: "legal", year: new Date().getFullYear() }],
+    batchHolidays: [
+      {
+        holidayDate: dayjs(),
+        holidayName: "",
+        isOffday: true,
+        holidayType: "legal",
+        year: new Date().getFullYear(),
+      },
+    ],
   });
 
   const getDefaultYear = () => year ?? availableYears[0] ?? new Date().getFullYear();
 
   // 新增节假日
   const handleAdd = useCallback(() => {
-    setModalState(prev => ({ ...prev, editingRecord: null, modalVisible: true }));
+    setModalState((prev) => ({ ...prev, editingRecord: null, modalVisible: true }));
   }, []);
 
   // 编辑节假日
   const handleEdit = useCallback((record: Holiday) => {
-    setModalState(prev => ({ ...prev, editingRecord: record, modalVisible: true }));
+    setModalState((prev) => ({ ...prev, editingRecord: record, modalVisible: true }));
   }, []);
 
   // 删除节假日
-  const handleDelete = useCallback(async (id: string) => {
-    try {
-      await deleteHoliday(id);
-      message.success("删除成功");
-      fetchList();
-    } catch (error) {
-      message.error("删除失败");
-    }
-  }, [fetchList]);
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        await deleteHoliday(id);
+        message.success("删除成功");
+        fetchList();
+      } catch (error) {
+        message.error("删除失败");
+      }
+    },
+    [fetchList]
+  );
 
   // 保存节假日
-  const handleModalOk = useCallback(async (editForm: FormInstance<unknown>) => {
-    try {
-      const values = await editForm.validateFields() as {
-        holidayDate: dayjs.Dayjs;
-        holidayName: string;
-        isOffday: boolean;
-        holidayType: "legal" | "workday" | "custom";
-        year: number;
-        remark?: string;
-      };
-      const data = {
-        holidayDate: values.holidayDate.format("YYYY-MM-DD"),
-        holidayName: values.holidayName,
-        isOffday: values.isOffday,
-        holidayType: values.holidayType,
-        year: values.year,
-        remark: values.remark,
-      };
+  const handleModalOk = useCallback(
+    async (editForm: FormInstance<unknown>) => {
+      try {
+        const values = (await editForm.validateFields()) as {
+          holidayDate: dayjs.Dayjs;
+          holidayName: string;
+          isOffday: boolean;
+          holidayType: "legal" | "workday" | "custom";
+          year: number;
+          remark?: string;
+        };
+        const data = {
+          holidayDate: values.holidayDate.format("YYYY-MM-DD"),
+          holidayName: values.holidayName,
+          isOffday: values.isOffday,
+          holidayType: values.holidayType,
+          year: values.year,
+          remark: values.remark,
+        };
 
-      if (modalState.editingRecord) {
-        await updateHoliday(modalState.editingRecord.id, data);
-        message.success("更新成功");
-      } else {
-        await createHoliday(data);
-        message.success("创建成功");
+        if (modalState.editingRecord) {
+          await updateHoliday(modalState.editingRecord.id, data);
+          message.success("更新成功");
+        } else {
+          await createHoliday(data);
+          message.success("创建成功");
+        }
+
+        setModalState((prev) => ({ ...prev, modalVisible: false }));
+        fetchList();
+      } catch (error: unknown) {
+        if (error && typeof error === "object" && "errorFields" in error) return;
+        message.error(modalState.editingRecord ? "更新失败" : "创建失败");
       }
-
-      setModalState(prev => ({ ...prev, modalVisible: false }));
-      fetchList();
-    } catch (error: unknown) {
-      if (error && typeof error === "object" && "errorFields" in error) return;
-      message.error(modalState.editingRecord ? "更新失败" : "创建失败");
-    }
-  }, [modalState.editingRecord, fetchList]);
+    },
+    [modalState.editingRecord, fetchList]
+  );
 
   // 批量新增
   const handleBatchAdd = useCallback(() => {
     const defaultYear = getDefaultYear();
     setBatchState({
-      batchHolidays: [{ holidayDate: dayjs(), holidayName: "", isOffday: true, holidayType: "legal", year: defaultYear }],
+      batchHolidays: [
+        {
+          holidayDate: dayjs(),
+          holidayName: "",
+          isOffday: true,
+          holidayType: "legal",
+          year: defaultYear,
+        },
+      ],
     });
-    setModalState(prev => ({ ...prev, batchModalVisible: true }));
+    setModalState((prev) => ({ ...prev, batchModalVisible: true }));
   }, [year, availableYears]);
 
   // 添加批量行
   const addBatchRow = useCallback(() => {
     const defaultYear = getDefaultYear();
-    setBatchState(prev => ({
+    setBatchState((prev) => ({
       batchHolidays: [
         ...prev.batchHolidays,
-        { holidayDate: dayjs(), holidayName: "", isOffday: true, holidayType: "legal", year: defaultYear },
+        {
+          holidayDate: dayjs(),
+          holidayName: "",
+          isOffday: true,
+          holidayType: "legal",
+          year: defaultYear,
+        },
       ],
     }));
   }, [year, availableYears]);
 
   // 删除批量行
   const removeBatchRow = useCallback((index: number) => {
-    setBatchState(prev => ({
+    setBatchState((prev) => ({
       batchHolidays: prev.batchHolidays.filter((_, i) => i !== index),
     }));
   }, []);
 
   // 更新批量行
   const updateBatchRow = useCallback((index: number, field: string, value: unknown) => {
-    setBatchState(prev => {
+    setBatchState((prev) => {
       const newRows = [...prev.batchHolidays];
       newRows[index] = { ...newRows[index], [field]: value };
       return { batchHolidays: newRows };
@@ -171,7 +199,7 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
       await batchCreateHolidays(data);
       message.success(`成功创建 ${data.length} 条节假日记录`);
 
-      setModalState(prev => ({ ...prev, batchModalVisible: false }));
+      setModalState((prev) => ({ ...prev, batchModalVisible: false }));
       fetchList();
     } catch (error) {
       message.error("批量创建失败");
@@ -182,10 +210,12 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
     modalState,
     batchState,
 
-    setModalVisible: (visible: boolean) => setModalState(prev => ({ ...prev, modalVisible: visible })),
-    setBatchModalVisible: (visible: boolean) => setModalState(prev => ({ ...prev, batchModalVisible: visible })),
+    setModalVisible: (visible: boolean) =>
+      setModalState((prev) => ({ ...prev, modalVisible: visible })),
+    setBatchModalVisible: (visible: boolean) =>
+      setModalState((prev) => ({ ...prev, batchModalVisible: visible })),
     setBatchHolidays: (holidays: React.SetStateAction<BatchHolidayRow[]>) => {
-      setBatchState(prev => ({
+      setBatchState((prev) => ({
         batchHolidays: typeof holidays === "function" ? holidays(prev.batchHolidays) : holidays,
       }));
     },

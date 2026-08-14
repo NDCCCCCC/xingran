@@ -95,11 +95,7 @@ export function SetAccessVlanModal({
       if (!portRecord) return;
 
       // LANDMINE #5: wrapper reject 由 post() 拦截器统一弹 Toast, 本组件不再 message.error
-      await writeSetAccessVlan(
-        portRecord.id,
-        values.vlanId as number,
-        reason ?? ""
-      );
+      await writeSetAccessVlan(portRecord.id, values.vlanId as number, reason ?? "");
 
       // D-10 成功 Toast 含"查看审计日志"链接 (复用 PortWriteModal helper)
       showAuditLinkToast(message, navigate);
@@ -124,11 +120,7 @@ export function SetAccessVlanModal({
       cancelText="取消"
       okButtonProps={{ loading: submitting }}
     >
-      <Form
-        form={form}
-        layout="vertical"
-        initialValues={{ vlanId: portRecord?.vlan ?? 1 }}
-      >
+      <Form form={form} layout="vertical" initialValues={{ vlanId: portRecord?.vlan ?? 1 }}>
         {/* vlanId 主字段: InputNumber 1-4094 + 范围提示 */}
         <Form.Item
           name="vlanId"

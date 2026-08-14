@@ -12,9 +12,8 @@ import React from "react";
 function formatDateTime(date: string | Date | null | undefined): string {
   if (!date) return "-";
   // 移除时区后缀（Z 或 +08:00），将时间作为本地时间处理
-  const dateStr = typeof date === "string"
-    ? date.replace(/[Zz]$/, "").replace(/\+[0-9]{2}:[0-9]{2}$/, "")
-    : date;
+  const dateStr =
+    typeof date === "string" ? date.replace(/[Zz]$/, "").replace(/\+[0-9]{2}:[0-9]{2}$/, "") : date;
   try {
     return dayjs(dateStr).format("YYYY-MM-DD HH:mm:ss");
   } catch {
@@ -114,7 +113,7 @@ export function getWorkerColumns(options?: {
       dataIndex: "port",
       key: "port",
       width: 80,
-      render: (port) => port ? String(port) : "-",
+      render: (port) => (port ? String(port) : "-"),
     },
     {
       title: "最后心跳",

@@ -393,7 +393,7 @@ export class DualLevelCache<T> {
     console.table({
       "Memory Hits": stats.memoryHits,
       "Storage Hits": stats.storageHits,
-      "Misses": stats.misses,
+      Misses: stats.misses,
       "Total Hits": stats.totalHits,
       "Total Requests": stats.totalRequests,
       "Hit Rate": stats.hitRate,

@@ -40,7 +40,15 @@ import {
   filterBuildingsByZoom,
   animateViewTransition,
 } from "../utils";
-import { getBMapGL, type BMapGLNamespace, type BMapMap, type BMapMapGL, type BMapMarker, type BMapInfoWindow, type BMapPolygon } from "@/types/baidu-map";
+import {
+  getBMapGL,
+  type BMapGLNamespace,
+  type BMapMap,
+  type BMapMapGL,
+  type BMapMarker,
+  type BMapInfoWindow,
+  type BMapPolygon,
+} from "@/types/baidu-map";
 
 // ============ 类型定义 ============
 
@@ -200,9 +208,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
   };
 
   const addFallbackMask = (map: BMapMapGL, BMapGL: BMapGLNamespace) => {
-    const points = HUBEI_BOUNDARY.map(
-      (coord) => new BMapGL.Point(coord[0], coord[1])
-    );
+    const points = HUBEI_BOUNDARY.map((coord) => new BMapGL.Point(coord[0], coord[1]));
     const polygon = new BMapGL.Polygon(points, {
       strokeColor: "var(--theme-info, #1890ff)",
       strokeWeight: 4,
@@ -268,9 +274,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
 
     // 过滤楼宇
     const filteredBuildings = filterBuildingsByZoom(buildings, currentZoom);
-    const buildingsWithCoords = filteredBuildings.filter(
-      (b) => b.longitude && b.latitude
-    );
+    const buildingsWithCoords = filteredBuildings.filter((b) => b.longitude && b.latitude);
 
     // 聚类处理
     const clusterGroups: ClusterGroup[] = [];
@@ -286,17 +290,11 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
       const pixels: Array<{ x: number; y: number }> = [buildingPixel];
 
       buildingsWithCoords.forEach((otherBuilding) => {
-        if (
-          otherBuilding.id === building.id ||
-          processedBuildings.has(otherBuilding.id)
-        ) {
+        if (otherBuilding.id === building.id || processedBuildings.has(otherBuilding.id)) {
           return;
         }
 
-        const otherPoint = new BMapGL.Point(
-          otherBuilding.longitude!,
-          otherBuilding.latitude!
-        );
+        const otherPoint = new BMapGL.Point(otherBuilding.longitude!, otherBuilding.latitude!);
         const otherPixel = map.pointToOverlayPixel(otherPoint);
 
         const distance = pixelDistance(buildingPixel, otherPixel);
@@ -309,9 +307,10 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
       });
 
       const avgPixel = averagePixelPosition(pixels);
-      const centerPoint =
-        map.pixelToPoint?.(new BMapGL.Pixel(avgPixel.x, avgPixel.y)) ||
-        { lng: building.longitude!, lat: building.latitude! };
+      const centerPoint = map.pixelToPoint?.(new BMapGL.Pixel(avgPixel.x, avgPixel.y)) || {
+        lng: building.longitude!,
+        lat: building.latitude!,
+      };
 
       const cluster: ClusterGroup = {
         buildings: overlappedBuildings,
@@ -330,19 +329,14 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
     });
   }, [mapLoaded, buildings, currentZoom]);
 
-  const renderClusterMarker = (
-    cluster: ClusterGroup,
-    map: BMapMapGL,
-    BMapGL: BMapGLNamespace
-  ) => {
+  const renderClusterMarker = (cluster: ClusterGroup, map: BMapMapGL, BMapGL: BMapGLNamespace) => {
     const { buildings, clusterLng, clusterLat, centerPixel } = cluster;
     const isCluster = buildings.length > 1;
     const point = new BMapGL.Point(clusterLng, clusterLat);
 
     if (isCluster) {
       const size =
-        CLUSTER_MARKER_MIN_SIZE +
-        Math.min(buildings.length * 2, CLUSTER_MARKER_MAX_INCREMENT);
+        CLUSTER_MARKER_MIN_SIZE + Math.min(buildings.length * 2, CLUSTER_MARKER_MAX_INCREMENT);
       const clusterIcon = new BMapGL.Icon(
         "data:image/svg+xml;base64," +
           toBase64(`
@@ -434,12 +428,8 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
 
   const showBuildingInfo = (building: BuildingItem, map: BMapMapGL, BMapGL: BMapGLNamespace) => {
     const stopped = isBuildingStopped(building);
-    const statusColor = stopped
-      ? STATUS_TEXT_COLORS.STOPPED
-      : STATUS_TEXT_COLORS.NORMAL;
-    const statusBg = stopped
-      ? STATUS_TEXT_COLORS.STOPPED_BG
-      : STATUS_TEXT_COLORS.NORMAL_BG;
+    const statusColor = stopped ? STATUS_TEXT_COLORS.STOPPED : STATUS_TEXT_COLORS.NORMAL;
+    const statusBg = stopped ? STATUS_TEXT_COLORS.STOPPED_BG : STATUS_TEXT_COLORS.NORMAL_BG;
 
     const content = `
       <div style="padding: 12px; min-width: 260px;">
@@ -588,10 +578,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
 
       {/* 悬停提示 */}
       {hoveredBuildings.length > 0 && tooltipPosition && (
-        <TooltipPanel
-          buildings={hoveredBuildings}
-          position={tooltipPosition}
-        />
+        <TooltipPanel buildings={hoveredBuildings} position={tooltipPosition} />
       )}
 
       {/* 操作提示 */}
@@ -631,11 +618,7 @@ interface MapInfoPanelProps {
   currentTilt: number;
 }
 
-const MapInfoPanel: React.FC<MapInfoPanelProps> = ({
-  currentZoom,
-  is3DMode,
-  currentTilt,
-}) => (
+const MapInfoPanel: React.FC<MapInfoPanelProps> = ({ currentZoom, is3DMode, currentTilt }) => (
   <div
     style={{
       position: "absolute",
@@ -655,7 +638,11 @@ const MapInfoPanel: React.FC<MapInfoPanelProps> = ({
     </div>
     <div>
       缩放级别:{" "}
-      <Badge count={currentZoom} showZero style={{ backgroundColor: "var(--theme-info, #1890ff)" }} />
+      <Badge
+        count={currentZoom}
+        showZero
+        style={{ backgroundColor: "var(--theme-info, #1890ff)" }}
+      />
     </div>
     <div>
       3D 视角:
@@ -701,7 +688,13 @@ const TooltipPanel: React.FC<TooltipPanelProps> = ({ buildings, position }) => (
   >
     {buildings.length === 1 ? (
       <div>
-        <div style={{ fontWeight: "bold", color: "var(--theme-text-accent, #1890ff)", marginBottom: 4 }}>
+        <div
+          style={{
+            fontWeight: "bold",
+            color: "var(--theme-text-accent, #1890ff)",
+            marginBottom: 4,
+          }}
+        >
           {buildings[0].name}
         </div>
         <div style={{ fontSize: 11, color: "var(--theme-text-tertiary, #666)" }}>
@@ -755,8 +748,12 @@ const ControlHints: React.FC<ControlHintsProps> = ({ is3DMode }) => (
         <div style={{ fontSize: 11, color: "var(--theme-text-tertiary, #999)", marginTop: 4 }}>
           • 右键拖拽旋转视角
         </div>
-        <div style={{ fontSize: 11, color: "var(--theme-text-tertiary, #999)" }}>• 滚轮缩放地图</div>
-        <div style={{ fontSize: 11, color: "var(--theme-text-tertiary, #999)" }}>• 双击重置视角</div>
+        <div style={{ fontSize: 11, color: "var(--theme-text-tertiary, #999)" }}>
+          • 滚轮缩放地图
+        </div>
+        <div style={{ fontSize: 11, color: "var(--theme-text-tertiary, #999)" }}>
+          • 双击重置视角
+        </div>
       </>
     ) : (
       <>
@@ -793,11 +790,7 @@ interface ClusterSidebarProps {
   onBuildingClick: (building: BuildingItem) => void;
 }
 
-const ClusterSidebar: React.FC<ClusterSidebarProps> = ({
-  cluster,
-  onClose,
-  onBuildingClick,
-}) => (
+const ClusterSidebar: React.FC<ClusterSidebarProps> = ({ cluster, onClose, onBuildingClick }) => (
   <div
     style={{
       position: "absolute",
@@ -874,7 +867,11 @@ const ClusterSidebar: React.FC<ClusterSidebarProps> = ({
                 }}
               >
                 <div
-                  style={{ fontWeight: "bold", color: "var(--theme-text-accent, #1890ff)", fontSize: 14 }}
+                  style={{
+                    fontWeight: "bold",
+                    color: "var(--theme-text-accent, #1890ff)",
+                    fontSize: 14,
+                  }}
                 >
                   {building.name}
                 </div>
@@ -883,13 +880,13 @@ const ClusterSidebar: React.FC<ClusterSidebarProps> = ({
                 </Tag>
               </div>
 
-              <div style={{ fontSize: 12, color: "var(--theme-text-tertiary, #666)", lineHeight: 1.8 }}>
+              <div
+                style={{ fontSize: 12, color: "var(--theme-text-tertiary, #666)", lineHeight: 1.8 }}
+              >
                 <div>📌 {building.address || "暂无地址"}</div>
                 <div style={{ marginTop: 4 }}>
                   <span>🏢 {building.floorCount || 0} 层</span>
-                  <span style={{ marginLeft: 12 }}>
-                    🪑 {building.workstationCount || 0} 工位
-                  </span>
+                  <span style={{ marginLeft: 12 }}>🪑 {building.workstationCount || 0} 工位</span>
                 </div>
               </div>
 

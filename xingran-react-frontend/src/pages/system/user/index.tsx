@@ -75,7 +75,8 @@ interface UserTableColumnsProps {
 }
 
 function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
-  const { handleEdit, handleUpdateStatus, handleResetPassword, handleDelete, getColumnSortOrder } = props;
+  const { handleEdit, handleUpdateStatus, handleResetPassword, handleDelete, getColumnSortOrder } =
+    props;
 
   return [
     {
@@ -166,7 +167,8 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
         return (
           <Space size="small" wrap>
             {roles.map((role, index) => {
-              const roleName = typeof role === "string" ? role : role.roleName || role.roleKey || "-";
+              const roleName =
+                typeof role === "string" ? role : role.roleName || role.roleKey || "-";
               return (
                 <Tag key={index} color="blue">
                   {roleName}
@@ -322,19 +324,16 @@ const UserManagement: FC = () => {
     handleTableChange,
     applyFilters,
     handleReset: tableHandleReset,
-  } = useTableManager<User>(
-    fetchUsers,
-    {
-      externalPagination: {
-        current: paginationProps.current ?? 1,
-        pageSize: paginationProps.pageSize ?? 10,
-        setCurrent,
-        setPageSize,
-        setTotal,
-      },
-      sorterMetas,
-    }
-  );
+  } = useTableManager<User>(fetchUsers, {
+    externalPagination: {
+      current: paginationProps.current ?? 1,
+      pageSize: paginationProps.pageSize ?? 10,
+      setCurrent,
+      setPageSize,
+      setTotal,
+    },
+    sorterMetas,
+  });
 
   // ==================== 初始化 ====================
 
@@ -381,36 +380,51 @@ const UserManagement: FC = () => {
     editForm.setFieldsValue(defaultValues);
   }, [handleAdd, departments, roles, editForm]);
 
-  const handleModalOpenChange = useCallback((open: boolean) => {
-    if (open && editingUser) {
-      // 角色兜底注入(2026-06-30,同 info-points):loadRoles 是 init 阶段异步调用,
-      // 编辑打开模态框时若 roles 列表未到位 → 多选 Select 显示 raw UUID。
-      // 主动重触发 loadRoles,并用 record.roles(若带 roleName)注入兜底。
-      loadRoles().catch(() => {/* hook 内部已 handleApiError */});
-      if (Array.isArray(editingUser.roles)) {
-        // 兼容两种形态:string[] (UUID) 或 Array<{id, roleName, roleKey}>
-        // 用 unknown 显式声明谓词参数,绕开 TS2677(predicate 必须可赋给参数类型)。
-        const asObjects = (editingUser.roles as unknown[])
-          .filter((r): r is { id: string; roleName?: string; roleKey?: string } => typeof r === "object" && r !== null && "id" in r)
-          .map(r => ({ id: (r as { id: string }).id, roleName: r.roleName, roleKey: r.roleKey }));
-        if (asObjects.length > 0) {
-          ensureRoles(asObjects);
+  const handleModalOpenChange = useCallback(
+    (open: boolean) => {
+      if (open && editingUser) {
+        // 角色兜底注入(2026-06-30,同 info-points):loadRoles 是 init 阶段异步调用,
+        // 编辑打开模态框时若 roles 列表未到位 → 多选 Select 显示 raw UUID。
+        // 主动重触发 loadRoles,并用 record.roles(若带 roleName)注入兜底。
+        loadRoles().catch(() => {
+          /* hook 内部已 handleApiError */
+        });
+        if (Array.isArray(editingUser.roles)) {
+          // 兼容两种形态:string[] (UUID) 或 Array<{id, roleName, roleKey}>
+          // 用 unknown 显式声明谓词参数,绕开 TS2677(predicate 必须可赋给参数类型)。
+          const asObjects = (editingUser.roles as unknown[])
+            .filter(
+              (r): r is { id: string; roleName?: string; roleKey?: string } =>
+                typeof r === "object" && r !== null && "id" in r
+            )
+            .map((r) => ({
+              id: (r as { id: string }).id,
+              roleName: r.roleName,
+              roleKey: r.roleKey,
+            }));
+          if (asObjects.length > 0) {
+            ensureRoles(asObjects);
+          }
         }
+        editForm.setFieldsValue(editingUser);
       }
-      editForm.setFieldsValue(editingUser);
-    }
-  }, [editingUser, editForm, loadRoles, ensureRoles]);
+    },
+    [editingUser, editForm, loadRoles, ensureRoles]
+  );
 
-  const handleDelete = useCallback(async (id: string) => {
-    try {
-      await post(`/system/users/${id}/delete`);
-      handleSuccess("删除");
-      loadUsers();
-      loadStatistics();
-    } catch (error) {
-      handleApiError(error, "删除");
-    }
-  }, [loadUsers, loadStatistics]);
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        await post(`/system/users/${id}/delete`);
+        handleSuccess("删除");
+        loadUsers();
+        loadStatistics();
+      } catch (error) {
+        handleApiError(error, "删除");
+      }
+    },
+    [loadUsers, loadStatistics]
+  );
 
   const handleBatchDelete = useCallback(async () => {
     if (selectedRowKeys.length === 0) {
@@ -428,20 +442,23 @@ const UserManagement: FC = () => {
     }
   }, [selectedRowKeys, resetSelection, loadUsers, loadStatistics]);
 
-  const handleUpdateStatus = useCallback(async (id: string, status: number) => {
-    try {
-      await post(`/system/users/${id}/status`, { status });
-      handleSuccess(status === 0 ? "启用" : "禁用");
-      loadUsers();
-      loadStatistics();
-    } catch (error) {
-      handleApiError(error, "操作");
-    }
-  }, [loadUsers, loadStatistics]);
+  const handleUpdateStatus = useCallback(
+    async (id: string, status: number) => {
+      try {
+        await post(`/system/users/${id}/status`, { status });
+        handleSuccess(status === 0 ? "启用" : "禁用");
+        loadUsers();
+        loadStatistics();
+      } catch (error) {
+        handleApiError(error, "操作");
+      }
+    },
+    [loadUsers, loadStatistics]
+  );
 
   const handleSave = useCallback(async () => {
     try {
-      const values = await editForm.validateFields() as Record<string, unknown>;
+      const values = (await editForm.validateFields()) as Record<string, unknown>;
 
       if (values.gender !== undefined) {
         values.gender = Number(values.gender);
@@ -450,9 +467,7 @@ const UserManagement: FC = () => {
         values.status = Number(values.status);
       }
 
-      const url = editingUser
-        ? `/system/users/${editingUser.id}/update`
-        : "/system/users";
+      const url = editingUser ? `/system/users/${editingUser.id}/update` : "/system/users";
 
       await post(url, values);
       handleSuccess(editingUser ? "更新" : "创建");
@@ -469,7 +484,7 @@ const UserManagement: FC = () => {
 
   const handleSaveResetPassword = useCallback(async () => {
     try {
-      const values = await resetPasswordForm.validateFields() as { password: string };
+      const values = (await resetPasswordForm.validateFields()) as { password: string };
 
       await post(`/system/users/${resettingUser!.id}/reset-password`, {
         password: values.password,
@@ -484,15 +499,18 @@ const UserManagement: FC = () => {
 
   // 部门联动：applyFilters 合并 recursiveDeptId（部门+子部门递归），保留搜索框值与当前排序，回第 1 页
   // 用 recursiveDeptId 而非 deptId：左侧点父部门时要看到父+所有子部门的用户（与用户预期一致）。
-  const handleDeptSelect = useCallback((selectedKeys: Key[]) => {
-    if (selectedKeys.length > 0) {
-      setSelectedDeptId(selectedKeys[0] as string);
-      applyFilters({ recursiveDeptId: selectedKeys[0] });
-    } else {
-      setSelectedDeptId("");
-      applyFilters();
-    }
-  }, [applyFilters, setSelectedDeptId]);
+  const handleDeptSelect = useCallback(
+    (selectedKeys: Key[]) => {
+      if (selectedKeys.length > 0) {
+        setSelectedDeptId(selectedKeys[0] as string);
+        applyFilters({ recursiveDeptId: selectedKeys[0] });
+      } else {
+        setSelectedDeptId("");
+        applyFilters();
+      }
+    },
+    [applyFilters, setSelectedDeptId]
+  );
 
   // 表格列
   const columns = getUserTableColumns({
@@ -514,11 +532,12 @@ const UserManagement: FC = () => {
   return (
     <Layout style={{ display: "flex", alignItems: "stretch" }}>
       {/* 左侧部门树 */}
-      <Sider width={360} className="dept-list-sider" style={{ background: "#fff", padding: "0 16px 16px 0" }}>
-        <DeptTree
-          onSelect={handleDeptSelect}
-          selectedKeys={deptTreeSelectedKeys}
-        />
+      <Sider
+        width={360}
+        className="dept-list-sider"
+        style={{ background: "#fff", padding: "0 16px 16px 0" }}
+      >
+        <DeptTree onSelect={handleDeptSelect} selectedKeys={deptTreeSelectedKeys} />
       </Sider>
 
       {/* 右侧内容区 */}
@@ -528,11 +547,7 @@ const UserManagement: FC = () => {
           <Row gutter={16} style={{ marginBottom: 16 }}>
             <Col span={8}>
               <Card>
-                <Statistic
-                  title="总用户数"
-                  value={statistics.total}
-                  prefix={<TeamOutlined />}
-                />
+                <Statistic title="总用户数" value={statistics.total} prefix={<TeamOutlined />} />
               </Card>
             </Col>
             <Col span={8}>
@@ -559,7 +574,15 @@ const UserManagement: FC = () => {
 
           {/* 搜索表单和操作按钮 */}
           <Card style={{ marginBottom: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                flexWrap: "wrap",
+                gap: "16px",
+              }}
+            >
               <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
                 <Form.Item name="username" label="用户名">
                   <Input placeholder="请输入用户名" />
@@ -568,9 +591,16 @@ const UserManagement: FC = () => {
                   <Input placeholder="请输入昵称" />
                 </Form.Item>
                 <Form.Item name="status" label="状态">
-                  <Select placeholder="请选择状态" style={{ width: 120 }} allowClear onSearch={() => {}}>
-                    {STATUS_OPTIONS.map(opt => (
-                      <Option key={opt.value} value={String(opt.value)}>{opt.label}</Option>
+                  <Select
+                    placeholder="请选择状态"
+                    style={{ width: 120 }}
+                    allowClear
+                    onSearch={() => {}}
+                  >
+                    {STATUS_OPTIONS.map((opt) => (
+                      <Option key={opt.value} value={String(opt.value)}>
+                        {opt.label}
+                      </Option>
                     ))}
                   </Select>
                 </Form.Item>
@@ -704,16 +734,15 @@ const UserManagement: FC = () => {
           </Form.Item>
           <Form.Item name="gender" label="性别" initialValue={2}>
             <Select className="user-form-input" onSearch={() => {}}>
-              {GENDER_OPTIONS.map(opt => (
-                <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+              {GENDER_OPTIONS.map((opt) => (
+                <Option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </Option>
               ))}
             </Select>
           </Form.Item>
           <Form.Item name="deptId" label="部门">
-            <DepartmentTreeSelect
-              departments={departments}
-              className="user-form-input"
-            />
+            <DepartmentTreeSelect departments={departments} className="user-form-input" />
           </Form.Item>
           <Form.Item name="roleIds" label="角色">
             <Select
@@ -723,8 +752,9 @@ const UserManagement: FC = () => {
               optionFilterProp="label"
               showSearch
               className="user-form-input"
-             onSearch={() => {}}>
-              {roles.map(role => (
+              onSearch={() => {}}
+            >
+              {roles.map((role) => (
                 <Option key={role.id} value={role.id} label={role.roleName}>
                   {role.roleName}
                 </Option>
@@ -733,8 +763,10 @@ const UserManagement: FC = () => {
           </Form.Item>
           <Form.Item name="status" label="状态" initialValue={0}>
             <Select className="user-form-input" onSearch={() => {}}>
-              {STATUS_OPTIONS.map(opt => (
-                <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+              {STATUS_OPTIONS.map((opt) => (
+                <Option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </Option>
               ))}
             </Select>
           </Form.Item>

@@ -68,11 +68,7 @@ import {
   DEVICE_TYPE_TAG_COLOR,
   VENDOR_TAG_COLOR,
 } from "./constants";
-import {
-  formatDateTime,
-  getOptionLabel,
-  getStatusColor,
-} from "./utils";
+import { formatDateTime, getOptionLabel, getStatusColor } from "./utils";
 import { useDeviceData } from "./hooks/useDeviceData";
 import { useDeviceModals, type ProbeResult } from "./hooks/useDeviceModals";
 
@@ -94,7 +90,16 @@ interface DeviceTableColumnsProps {
 }
 
 function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<NetworkDevice> {
-  const { navigate, handleCollectPorts, openDetailModal, openModal, handleDelete, collectingDeviceId, canViewMACHistory, getColumnSortOrder } = props;
+  const {
+    navigate,
+    handleCollectPorts,
+    openDetailModal,
+    openModal,
+    handleDelete,
+    collectingDeviceId,
+    canViewMACHistory,
+    getColumnSortOrder,
+  } = props;
 
   return [
     {
@@ -216,8 +221,7 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
                   key: "mac-history",
                   label: "查看 MAC 历史",
                   icon: <HistoryOutlined />,
-                  onClick: () =>
-                    navigate(`/network/mac/history?deviceId=${record.id}`),
+                  onClick: () => navigate(`/network/mac/history?deviceId=${record.id}`),
                 },
               ]
             : []),
@@ -363,15 +367,18 @@ const DeviceManagement: FC = () => {
   // ==================== 数据操作 ====================
 
   // 部门树选择处理
-  const handleDeptSelect = useCallback((selectedKeys: React.Key[]) => {
-    if (selectedKeys.length > 0) {
-      setSelectedDeptId(selectedKeys[0] as string);
-      loadDevices({ deptId: selectedKeys[0] });
-    } else {
-      setSelectedDeptId("");
-      loadDevices();
-    }
-  }, [loadDevices]);
+  const handleDeptSelect = useCallback(
+    (selectedKeys: React.Key[]) => {
+      if (selectedKeys.length > 0) {
+        setSelectedDeptId(selectedKeys[0] as string);
+        loadDevices({ deptId: selectedKeys[0] });
+      } else {
+        setSelectedDeptId("");
+        loadDevices();
+      }
+    },
+    [loadDevices]
+  );
 
   // 探测设备
   const handleProbe = async () => {
@@ -519,7 +526,11 @@ const DeviceManagement: FC = () => {
   const handleCollectPorts = async (device: NetworkDevice) => {
     try {
       setCollectingDeviceId(device.id);
-      const result = await post<{ errorMessage?: string; successCount?: number; failedCount?: number }>("/network/ports/collect", { deviceId: device.id });
+      const result = await post<{
+        errorMessage?: string;
+        successCount?: number;
+        failedCount?: number;
+      }>("/network/ports/collect", { deviceId: device.id });
 
       const data = result.data;
       if (!data) {
@@ -527,7 +538,9 @@ const DeviceManagement: FC = () => {
       } else if (data.errorMessage) {
         handleApiError(data.errorMessage, "采集", false);
       } else if (data.successCount && data.successCount > 0) {
-        handleSuccess(`采集成功: 成功 ${data.successCount} 个端口${data.failedCount && data.failedCount > 0 ? `，失败 ${data.failedCount} 个` : ""}`);
+        handleSuccess(
+          `采集成功: 成功 ${data.successCount} 个端口${data.failedCount && data.failedCount > 0 ? `，失败 ${data.failedCount} 个` : ""}`
+        );
       } else {
         handleApiError("采集失败: 未获取到端口数据", "采集");
       }
@@ -572,7 +585,7 @@ const DeviceManagement: FC = () => {
   const handleSearch = () => {
     const values = searchForm.getFieldsValue();
     const searchParams: Record<string, unknown> = {};
-    Object.keys(values).forEach(key => {
+    Object.keys(values).forEach((key) => {
       const value = values[key];
       if (value !== undefined && value !== null && value !== "") {
         searchParams[key] = value;
@@ -625,7 +638,11 @@ const DeviceManagement: FC = () => {
   return (
     <Layout style={{ background: "#000", minHeight: "calc(100vh - 64px)" }}>
       {/* 左侧部门树 */}
-      <Sider width={360} className="dept-list-sider" style={{ background: "#fff", padding: "0 16px 16px 0", borderRight: "1px solid #f0f0f0" }}>
+      <Sider
+        width={360}
+        className="dept-list-sider"
+        style={{ background: "#fff", padding: "0 16px 16px 0", borderRight: "1px solid #f0f0f0" }}
+      >
         <DeptTree
           onSelect={(selectedKeys) => handleDeptSelect(selectedKeys)}
           selectedKeys={selectedDeptId ? [selectedDeptId] : []}
@@ -682,40 +699,88 @@ const DeviceManagement: FC = () => {
 
           {/* 搜索表单和操作按钮 */}
           <Card style={{ marginBottom: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                flexWrap: "wrap",
+                gap: "16px",
+              }}
+            >
               <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
                 <Form.Item name="deviceName" label="设备名称">
-                  <Input placeholder="请输入设备名称" allowClear className="user-form-input" style={{ width: 150 }} />
+                  <Input
+                    placeholder="请输入设备名称"
+                    allowClear
+                    className="user-form-input"
+                    style={{ width: 150 }}
+                  />
                 </Form.Item>
                 <Form.Item name="ipAddress" label="IP地址">
-                  <Input placeholder="请输入IP地址" allowClear className="user-form-input" style={{ width: 150 }} />
+                  <Input
+                    placeholder="请输入IP地址"
+                    allowClear
+                    className="user-form-input"
+                    style={{ width: 150 }}
+                  />
                 </Form.Item>
                 <Form.Item name="vendor" label="厂商">
-                  <Select placeholder="请选择厂商" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
-                    {VENDOR_OPTIONS.map(opt => (
-                      <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+                  <Select
+                    placeholder="请选择厂商"
+                    allowClear
+                    className="user-form-input"
+                    style={{ width: 120 }}
+                    onSearch={() => {}}
+                  >
+                    {VENDOR_OPTIONS.map((opt) => (
+                      <Option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </Option>
                     ))}
                   </Select>
                 </Form.Item>
                 <Form.Item name="deviceType" label="设备类型">
-                  <Select placeholder="请选择设备类型" allowClear className="user-form-input" style={{ width: 130 }} onSearch={() => {}}>
-                    {DEVICE_TYPE_OPTIONS.map(opt => (
-                      <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+                  <Select
+                    placeholder="请选择设备类型"
+                    allowClear
+                    className="user-form-input"
+                    style={{ width: 130 }}
+                    onSearch={() => {}}
+                  >
+                    {DEVICE_TYPE_OPTIONS.map((opt) => (
+                      <Option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </Option>
                     ))}
                   </Select>
                 </Form.Item>
                 <Form.Item name="status" label="状态">
-                  <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}>
-                    {STATUS_OPTIONS.map(opt => (
-                      <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+                  <Select
+                    placeholder="请选择状态"
+                    allowClear
+                    className="user-form-input"
+                    style={{ width: 100 }}
+                    onSearch={() => {}}
+                  >
+                    {STATUS_OPTIONS.map((opt) => (
+                      <Option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </Option>
                     ))}
                   </Select>
                 </Form.Item>
                 <Form.Item>
                   <Space>
-                    <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>查询</Button>
-                    <Button icon={<ReloadOutlined />} onClick={handleReset}>重置</Button>
-                    <Button icon={<ReloadOutlined />} onClick={handleRefresh}>刷新</Button>
+                    <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                      查询
+                    </Button>
+                    <Button icon={<ReloadOutlined />} onClick={handleReset}>
+                      重置
+                    </Button>
+                    <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                      刷新
+                    </Button>
                   </Space>
                 </Form.Item>
               </Form>
@@ -726,7 +791,7 @@ const DeviceManagement: FC = () => {
                   filters={(() => {
                     const values = searchForm.getFieldsValue() as Record<string, unknown>;
                     const filtered: Record<string, unknown> = {};
-                    Object.keys(values).forEach(key => {
+                    Object.keys(values).forEach((key) => {
                       const value = values[key];
                       if (value !== undefined && value !== null && value !== "") {
                         filtered[key] = value;
@@ -737,28 +802,37 @@ const DeviceManagement: FC = () => {
                   current={paginationProps.current}
                   pageSize={paginationProps.pageSize}
                 />
-                <Button type="primary" icon={<ThunderboltOutlined />} onClick={openQuickCreateModal}>快速创建</Button>
-                <Button type="default" icon={<PlusOutlined />} onClick={() => openModal()}>手动新增</Button>
+                <Button
+                  type="primary"
+                  icon={<ThunderboltOutlined />}
+                  onClick={openQuickCreateModal}
+                >
+                  快速创建
+                </Button>
+                <Button type="default" icon={<PlusOutlined />} onClick={() => openModal()}>
+                  手动新增
+                </Button>
                 {selectedRowKeys.length > 0 && (
-                  <Button icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }} onClick={handleBatchDelete}>
+                  <Button
+                    icon={<DeleteOutlined />}
+                    style={{ color: "var(--theme-error, #ff4d4f)" }}
+                    onClick={handleBatchDelete}
+                  >
                     批量删除 ({selectedRowKeys.length})
                   </Button>
                 )}
-              </Space>{/* 批量导出 Modal */}
+              </Space>
+              {/* 批量导出 Modal */}
 
-            <BatchExportModal
+              <BatchExportModal
+                visible={batchModalVisible}
 
-              visible={batchModalVisible}
+                onConfirm={handleBatchExport}
 
-              onConfirm={handleBatchExport}
+                onCancel={() => setBatchModalVisible(false)}
 
-              onCancel={() => setBatchModalVisible(false)}
-
-              loading={batchExporting}
-
-            />
-
-
+                loading={batchExporting}
+              />
             </div>
             {selectedRowKeys.length > 0 && (
               <Alert
@@ -806,7 +880,10 @@ const DeviceManagement: FC = () => {
         title="快速创建设备"
         open={quickCreateModalVisible}
         onOk={handleQuickCreate}
-        onCancel={() => { closeQuickCreateModal(); quickCreateForm.resetFields(); }}
+        onCancel={() => {
+          closeQuickCreateModal();
+          quickCreateForm.resetFields();
+        }}
         width={700}
         okText="创建设备"
         confirmLoading={creating}
@@ -820,20 +897,35 @@ const DeviceManagement: FC = () => {
         />
 
         <Form form={quickCreateForm} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
-          <Form.Item name="ipAddress" label="IP地址" rules={[{ required: true, message: "请输入IP地址" }]}>
+          <Form.Item
+            name="ipAddress"
+            label="IP地址"
+            rules={[{ required: true, message: "请输入IP地址" }]}
+          >
             <Input placeholder="请输入设备IP地址" />
           </Form.Item>
-          <Form.Item name="credentialId" label="授权凭证" rules={[{ required: true, message: "请选择授权凭证" }]}>
+          <Form.Item
+            name="credentialId"
+            label="授权凭证"
+            rules={[{ required: true, message: "请选择授权凭证" }]}
+          >
             <Select placeholder="请选择授权凭证" onSearch={() => {}}>
-              {credentials.map(cred => (
-                <Option key={cred.id} value={cred.id}>{cred.credentialName}</Option>
+              {credentials.map((cred) => (
+                <Option key={cred.id} value={cred.id}>
+                  {cred.credentialName}
+                </Option>
               ))}
             </Select>
           </Form.Item>
           <Form.Item label=" ">
             <Col offset={6}>
               <Space>
-                <Button type="primary" icon={<ApiOutlined />} onClick={handleProbe} loading={probing}>
+                <Button
+                  type="primary"
+                  icon={<ApiOutlined />}
+                  onClick={handleProbe}
+                  loading={probing}
+                >
                   探测设备
                 </Button>
                 <Button onClick={() => setProbeResult(null)}>清除结果</Button>
@@ -843,32 +935,46 @@ const DeviceManagement: FC = () => {
 
           {probeResult && (
             <>
-              <Divider orientationMargin={0} orientation={"left" as DividerProps["orientation"]}>探测结果</Divider>
-              <Alert
-                title="探测成功"
-                type="success"
-                style={{ marginBottom: 16 }}
-              />
+              <Divider orientationMargin={0} orientation={"left" as DividerProps["orientation"]}>
+                探测结果
+              </Divider>
+              <Alert title="探测成功" type="success" style={{ marginBottom: 16 }} />
               <Row gutter={16}>
                 <Col span={12}>
                   <Card size="small" title="设备信息">
-                    <p><strong>设备名称:</strong> {(probeResult.deviceName as string) || "-"}</p>
-                    <p><strong>设备类型:</strong> {(probeResult.deviceType as string) || "-"}</p>
-                    <p><strong>厂商:</strong> {(probeResult.vendor as string) || "-"}</p>
-                    <p><strong>型号:</strong> {(probeResult.model as string) || "-"}</p>
+                    <p>
+                      <strong>设备名称:</strong> {(probeResult.deviceName as string) || "-"}
+                    </p>
+                    <p>
+                      <strong>设备类型:</strong> {(probeResult.deviceType as string) || "-"}
+                    </p>
+                    <p>
+                      <strong>厂商:</strong> {(probeResult.vendor as string) || "-"}
+                    </p>
+                    <p>
+                      <strong>型号:</strong> {(probeResult.model as string) || "-"}
+                    </p>
                   </Card>
                 </Col>
                 <Col span={12}>
                   <Card size="small" title="系统信息">
-                    <p><strong>SysName:</strong> {(probeResult.sysName as string) || "-"}</p>
-                    <p><strong>SysDescr:</strong> {(probeResult.sysDescr as string)?.substring(0, 50) || "-"}{(probeResult.sysDescr as string)?.length > 50 ? "..." : ""}</p>
+                    <p>
+                      <strong>SysName:</strong> {(probeResult.sysName as string) || "-"}
+                    </p>
+                    <p>
+                      <strong>SysDescr:</strong>{" "}
+                      {(probeResult.sysDescr as string)?.substring(0, 50) || "-"}
+                      {(probeResult.sysDescr as string)?.length > 50 ? "..." : ""}
+                    </p>
                   </Card>
                 </Col>
               </Row>
             </>
           )}
 
-          <Divider orientationMargin={0} orientation={"left" as DividerProps["orientation"]}>其他信息（可选）</Divider>
+          <Divider orientationMargin={0} orientation={"left" as DividerProps["orientation"]}>
+            其他信息（可选）
+          </Divider>
           <Form.Item name="deptId" label="所属部门">
             <DepartmentTreeSelect departments={departments} />
           </Form.Item>
@@ -886,7 +992,10 @@ const DeviceManagement: FC = () => {
         title={editingDevice ? "编辑设备" : "手动新增设备"}
         open={modalVisible}
         onOk={handleCreate}
-        onCancel={() => { setEditModalVisible(false); editForm.resetFields(); }}
+        onCancel={() => {
+          setEditModalVisible(false);
+          editForm.resetFields();
+        }}
         width={700}
       >
         <Alert
@@ -898,54 +1007,80 @@ const DeviceManagement: FC = () => {
         />
 
         <Form form={editForm} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
-          <Form.Item name="deviceName" label="设备名称" rules={[{ required: true, message: "请输入设备名称" }]}>
+          <Form.Item
+            name="deviceName"
+            label="设备名称"
+            rules={[{ required: true, message: "请输入设备名称" }]}
+          >
             <Input placeholder="请输入设备名称" />
           </Form.Item>
-          <Form.Item name="deviceType" label="设备类型" rules={[{ required: true, message: "请选择设备类型" }]}>
+          <Form.Item
+            name="deviceType"
+            label="设备类型"
+            rules={[{ required: true, message: "请选择设备类型" }]}
+          >
             <Select placeholder="请选择设备类型" onSearch={() => {}}>
-              {DEVICE_TYPE_OPTIONS.map(opt => (
-                <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+              {DEVICE_TYPE_OPTIONS.map((opt) => (
+                <Option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </Option>
               ))}
             </Select>
           </Form.Item>
           <Form.Item name="vendor" label="厂商" rules={[{ required: true, message: "请选择厂商" }]}>
             <Select placeholder="请选择厂商" onSearch={() => {}}>
-              {VENDOR_OPTIONS.map(opt => (
-                <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+              {VENDOR_OPTIONS.map((opt) => (
+                <Option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </Option>
               ))}
             </Select>
           </Form.Item>
           <Form.Item name="model" label="型号">
             <Input placeholder="请输入设备型号" />
           </Form.Item>
-          <Form.Item name="ipAddress" label="IP地址" rules={[{ required: true, message: "请输入IP地址" }]}>
+          <Form.Item
+            name="ipAddress"
+            label="IP地址"
+            rules={[{ required: true, message: "请输入IP地址" }]}
+          >
             <Input placeholder="请输入IP地址" />
           </Form.Item>
-          <Form.Item name="port" label="SSH端口" rules={[{ required: true, message: "请输入SSH端口" }]}>
+          <Form.Item
+            name="port"
+            label="SSH端口"
+            rules={[{ required: true, message: "请输入SSH端口" }]}
+          >
             <InputNumber min={1} max={65535} style={{ width: "100%" }} />
           </Form.Item>
-          <Form.Item name="snmpPort" label="SNMP端口" rules={[{ required: true, message: "请输入SNMP端口" }]}>
+          <Form.Item
+            name="snmpPort"
+            label="SNMP端口"
+            rules={[{ required: true, message: "请输入SNMP端口" }]}
+          >
             <InputNumber min={1} max={65535} style={{ width: "100%" }} />
           </Form.Item>
           <Form.Item name="credentialId" label="授权凭证">
             <Select placeholder="请选择授权凭证" allowClear onSearch={() => {}}>
-              {credentials.map(cred => (
-                <Option key={cred.id} value={cred.id}>{cred.credentialName}</Option>
+              {credentials.map((cred) => (
+                <Option key={cred.id} value={cred.id}>
+                  {cred.credentialName}
+                </Option>
               ))}
             </Select>
           </Form.Item>
           <Form.Item name="deptId" label="所属部门">
-            <DepartmentTreeSelect
-              departments={departments}
-            />
+            <DepartmentTreeSelect departments={departments} />
           </Form.Item>
           <Form.Item name="location" label="位置">
             <Input placeholder="请输入位置" />
           </Form.Item>
           <Form.Item name="status" label="状态" rules={[{ required: true }]}>
             <Select onSearch={() => {}}>
-              {STATUS_OPTIONS.map(opt => (
-                <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+              {STATUS_OPTIONS.map((opt) => (
+                <Option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </Option>
               ))}
             </Select>
           </Form.Item>
@@ -977,48 +1112,93 @@ const DeviceManagement: FC = () => {
                 </Button>,
               ]
             : []),
-          <Button key="close" onClick={() => setDetailModalVisible(false)}>关闭</Button>,
+          <Button key="close" onClick={() => setDetailModalVisible(false)}>
+            关闭
+          </Button>,
         ]}
         width={800}
       >
         {viewingDevice && (
           <div>
-            <Divider orientationMargin={0} orientation={"left" as DividerProps["orientation"]}>基本信息</Divider>
+            <Divider orientationMargin={0} orientation={"left" as DividerProps["orientation"]}>
+              基本信息
+            </Divider>
             <Row gutter={16}>
               <Col span={12}>
-                <p><strong>设备名称:</strong> {viewingDevice.deviceName}</p>
-                <p><strong>设备类型:</strong> {getOptionLabel(DEVICE_TYPE_OPTIONS, viewingDevice.deviceType) || "-"}</p>
-                <p><strong>厂商:</strong> {getOptionLabel(VENDOR_OPTIONS, viewingDevice.vendor) || "-"}</p>
-                <p><strong>型号:</strong> {viewingDevice.model || "-"}</p>
-                <p><strong>IP地址:</strong> {viewingDevice.ipAddress}</p>
-                <p><strong>SSH端口:</strong> {viewingDevice.port}</p>
-                <p><strong>SNMP端口:</strong> {viewingDevice.snmpPort}</p>
+                <p>
+                  <strong>设备名称:</strong> {viewingDevice.deviceName}
+                </p>
+                <p>
+                  <strong>设备类型:</strong>{" "}
+                  {getOptionLabel(DEVICE_TYPE_OPTIONS, viewingDevice.deviceType) || "-"}
+                </p>
+                <p>
+                  <strong>厂商:</strong>{" "}
+                  {getOptionLabel(VENDOR_OPTIONS, viewingDevice.vendor) || "-"}
+                </p>
+                <p>
+                  <strong>型号:</strong> {viewingDevice.model || "-"}
+                </p>
+                <p>
+                  <strong>IP地址:</strong> {viewingDevice.ipAddress}
+                </p>
+                <p>
+                  <strong>SSH端口:</strong> {viewingDevice.port}
+                </p>
+                <p>
+                  <strong>SNMP端口:</strong> {viewingDevice.snmpPort}
+                </p>
               </Col>
               <Col span={12}>
-                <p><strong>状态:</strong> {getOptionLabel(STATUS_OPTIONS, viewingDevice.status) || "-"}</p>
-                <p><strong>所属部门:</strong> {viewingDevice.deptName || "-"}</p>
-                <p><strong>位置:</strong> {viewingDevice.location || "-"}</p>
-                <p><strong>授权凭证:</strong> {viewingDevice.credentialName || "-"}</p>
-                <p><strong>最后连接:</strong> {viewingDevice.lastSeenAt || "-"}</p>
-                <p><strong>创建时间:</strong> {viewingDevice.createdAt}</p>
+                <p>
+                  <strong>状态:</strong>{" "}
+                  {getOptionLabel(STATUS_OPTIONS, viewingDevice.status) || "-"}
+                </p>
+                <p>
+                  <strong>所属部门:</strong> {viewingDevice.deptName || "-"}
+                </p>
+                <p>
+                  <strong>位置:</strong> {viewingDevice.location || "-"}
+                </p>
+                <p>
+                  <strong>授权凭证:</strong> {viewingDevice.credentialName || "-"}
+                </p>
+                <p>
+                  <strong>最后连接:</strong> {viewingDevice.lastSeenAt || "-"}
+                </p>
+                <p>
+                  <strong>创建时间:</strong> {viewingDevice.createdAt}
+                </p>
               </Col>
             </Row>
 
-            <Divider orientationMargin={0} orientation={"left" as DividerProps["orientation"]}>设备详细信息（SSH采集）</Divider>
+            <Divider orientationMargin={0} orientation={"left" as DividerProps["orientation"]}>
+              设备详细信息（SSH采集）
+            </Divider>
             <Row gutter={16}>
               <Col span={12}>
-                <p><strong>型号:</strong> {viewingDevice.model || "-"}</p>
-                <p><strong>序列号:</strong> {viewingDevice.serialNumber || "-"}</p>
+                <p>
+                  <strong>型号:</strong> {viewingDevice.model || "-"}
+                </p>
+                <p>
+                  <strong>序列号:</strong> {viewingDevice.serialNumber || "-"}
+                </p>
               </Col>
               <Col span={12}>
-                <p><strong>软件版本:</strong> {viewingDevice.softwareVersion || "-"}</p>
-                <p><strong>运行时间:</strong> {viewingDevice.uptime || "-"}</p>
+                <p>
+                  <strong>软件版本:</strong> {viewingDevice.softwareVersion || "-"}
+                </p>
+                <p>
+                  <strong>运行时间:</strong> {viewingDevice.uptime || "-"}
+                </p>
               </Col>
             </Row>
 
             {viewingDevice.description && (
               <>
-                <Divider orientationMargin={0} orientation={"left" as DividerProps["orientation"]}>备注</Divider>
+                <Divider orientationMargin={0} orientation={"left" as DividerProps["orientation"]}>
+                  备注
+                </Divider>
                 <p>{viewingDevice.description}</p>
               </>
             )}
@@ -1030,4 +1210,3 @@ const DeviceManagement: FC = () => {
 };
 
 export default DeviceManagement;
-

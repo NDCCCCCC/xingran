@@ -56,9 +56,7 @@ const HealthBadgeInner: React.FC<HealthBadgeProps> = ({ assetId, conflictType, o
   }
 
   const hasConflict = Boolean(conflictType);
-  const tooltipText = conflictType
-    ? `${CONFLICT_TYPE_TOOLTIPS[conflictType] ?? ""}`
-    : "健康";
+  const tooltipText = conflictType ? `${CONFLICT_TYPE_TOOLTIPS[conflictType] ?? ""}` : "健康";
 
   const handleClick = () => {
     if (conflictType) onClick(assetId, conflictType);

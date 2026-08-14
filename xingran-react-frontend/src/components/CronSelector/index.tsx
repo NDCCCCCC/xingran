@@ -6,7 +6,14 @@
  * - 下方: 可视化配置(Tab切换秒/分/时/日/月/周)
  */
 
-import { useState, useLayoutEffect, useImperativeHandle, forwardRef, useRef, useEffect } from "react";
+import {
+  useState,
+  useLayoutEffect,
+  useImperativeHandle,
+  forwardRef,
+  useRef,
+  useEffect,
+} from "react";
 import { Input, Select, Tabs, Alert, Space, Row, Col } from "antd";
 import { InfoCircleOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import type { CronConfig, CronFieldType } from "./constants";
@@ -129,7 +136,10 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
     };
 
     // 处理配置对象变化
-    const handleConfigChange = (fieldKey: keyof CronConfig, fieldValue: CronConfig[keyof CronConfig]) => {
+    const handleConfigChange = (
+      fieldKey: keyof CronConfig,
+      fieldValue: CronConfig[keyof CronConfig]
+    ) => {
       const newConfig = { ...cronConfig, [fieldKey]: fieldValue };
       setCronConfig(newConfig);
       const newExpression = cronConfigToExpression(newConfig);
@@ -182,18 +192,25 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
           <Col style={{ width: 200 }}>
             <Select
               placeholder="选择预设"
-              value={CRON_PRESETS.find(p => p.value === cronExpression)?.value}
+              value={CRON_PRESETS.find((p) => p.value === cronExpression)?.value}
               onChange={handlePresetSelect}
               disabled={disabled}
               allowClear
               showSearch
               optionFilterProp="label"
               style={{ width: "100%" }}
-             onSearch={() => {}}>
-              {CRON_PRESETS.map(preset => (
+              onSearch={() => {}}
+            >
+              {CRON_PRESETS.map((preset) => (
                 <Select.Option key={preset.value} value={preset.value}>
                   {preset.label}
-                  <span style={{ color: "var(--theme-text-tertiary, #999)", fontSize: 12, marginLeft: 8 }}>
+                  <span
+                    style={{
+                      color: "var(--theme-text-tertiary, #999)",
+                      fontSize: 12,
+                      marginLeft: 8,
+                    }}
+                  >
                     ({preset.value})
                   </span>
                 </Select.Option>
@@ -214,7 +231,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
           activeKey={activeField}
           onChange={(key) => setActiveField(key as CronFieldType)}
           size="small"
-          items={FIELD_ORDER.map(fieldType => ({
+          items={FIELD_ORDER.map((fieldType) => ({
             key: fieldType,
             label: FIELD_LABELS[fieldType],
             children: renderField(fieldType),

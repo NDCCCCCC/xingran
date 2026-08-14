@@ -1,23 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef, type FC } from "react";
-import {
-  Table,
-  Button,
-  Form,
-  Input,
-  Select,
-  Card,
-  Row,
-  Col,
-  Statistic,
-  Space,
-  App,
-} from "antd";
-import {
-  PlusOutlined,
-  SearchOutlined,
-  ReloadOutlined,
-  FileTextOutlined,
-} from "@ant-design/icons";
+import { Table, Button, Form, Input, Select, Card, Row, Col, Statistic, Space, App } from "antd";
+import { PlusOutlined, SearchOutlined, ReloadOutlined, FileTextOutlined } from "@ant-design/icons";
 import { useArticleData } from "./hooks";
 import { getArticleColumns } from "./columns";
 import { EditModal, PreviewModal } from "./modals";
@@ -127,8 +110,18 @@ const KnowledgeArticlePage: FC = () => {
   // 搜索
   const handleSearch = () => {
     setCurrent(1);
-    const values = form.getFieldsValue() as { title?: string; categoryId?: string; tagId?: string; status?: number };
-    fetchList(1, paginationProps.pageSize ?? 10, sortRef.current.orderByColumn, sortRef.current.isAsc);
+    const values = form.getFieldsValue() as {
+      title?: string;
+      categoryId?: string;
+      tagId?: string;
+      status?: number;
+    };
+    fetchList(
+      1,
+      paginationProps.pageSize ?? 10,
+      sortRef.current.orderByColumn,
+      sortRef.current.isAsc
+    );
   };
 
   // 重置
@@ -164,7 +157,13 @@ const KnowledgeArticlePage: FC = () => {
 
   // 表格分页+排序变化
   const handleTableChange = useCallback(
-    (pagination: { current?: number; pageSize?: number }, _filters: Record<string, any>, sorter: import("antd/es/table/interface").SorterResult<KnowledgeArticle> | import("antd/es/table/interface").SorterResult<KnowledgeArticle>[]) => {
+    (
+      pagination: { current?: number; pageSize?: number },
+      _filters: Record<string, any>,
+      sorter:
+        | import("antd/es/table/interface").SorterResult<KnowledgeArticle>
+        | import("antd/es/table/interface").SorterResult<KnowledgeArticle>[]
+    ) => {
       const current = pagination.current ?? 1;
       const pageSize = pagination.pageSize ?? 10;
       setCurrent(current);
@@ -175,7 +174,12 @@ const KnowledgeArticlePage: FC = () => {
       const { orderByColumn, isAsc } = resolveSorter(sorter, sorterMetas);
       sortRef.current = { orderByColumn, isAsc };
       // 读搜索条件
-      const values = form.getFieldsValue() as { title?: string; categoryId?: string; tagId?: string; status?: number };
+      const values = form.getFieldsValue() as {
+        title?: string;
+        categoryId?: string;
+        tagId?: string;
+        status?: number;
+      };
       fetchList(current, pageSize, orderByColumn, isAsc);
     },
     [sort, sorterMetas, form, fetchList]
@@ -191,10 +195,18 @@ const KnowledgeArticlePage: FC = () => {
               <Statistic title="总文章" value={statistics.total} prefix={<FileTextOutlined />} />
             </Col>
             <Col span={5}>
-              <Statistic title="草稿" value={statistics.draft} styles={{ content: { color: "var(--theme-warning, #faad14)" } }} />
+              <Statistic
+                title="草稿"
+                value={statistics.draft}
+                styles={{ content: { color: "var(--theme-warning, #faad14)" } }}
+              />
             </Col>
             <Col span={5}>
-              <Statistic title="已发布" value={statistics.published} styles={{ content: { color: "var(--theme-success, #52c41a)" } }} />
+              <Statistic
+                title="已发布"
+                value={statistics.published}
+                styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
+              />
             </Col>
             <Col span={4}>
               <Statistic title="总浏览" value={statistics.totalViews} />
@@ -208,13 +220,32 @@ const KnowledgeArticlePage: FC = () => {
 
       {/* 筛选表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
+        >
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="title" label="标题">
-              <Input placeholder="请输入标题" allowClear className="user-form-input" style={{ width: 150 }} />
+              <Input
+                placeholder="请输入标题"
+                allowClear
+                className="user-form-input"
+                style={{ width: 150 }}
+              />
             </Form.Item>
             <Form.Item name="categoryId" label="分类">
-              <Select placeholder="请选择分类" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
+              <Select
+                placeholder="请选择分类"
+                allowClear
+                className="user-form-input"
+                style={{ width: 120 }}
+                onSearch={() => {}}
+              >
                 {flatCategories.map((cat) => (
                   <Option key={cat.id} value={cat.id}>
                     {cat.categoryName}
@@ -223,7 +254,13 @@ const KnowledgeArticlePage: FC = () => {
               </Select>
             </Form.Item>
             <Form.Item name="tagId" label="标签">
-              <Select placeholder="请选择标签" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
+              <Select
+                placeholder="请选择标签"
+                allowClear
+                className="user-form-input"
+                style={{ width: 120 }}
+                onSearch={() => {}}
+              >
                 {tags.map((tag) => (
                   <Option key={tag.id} value={tag.id}>
                     {tag.tagName}
@@ -232,7 +269,13 @@ const KnowledgeArticlePage: FC = () => {
               </Select>
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}>
+              <Select
+                placeholder="请选择状态"
+                allowClear
+                className="user-form-input"
+                style={{ width: 100 }}
+                onSearch={() => {}}
+              >
                 <Option value={KnowledgeArticleStatus.Draft}>草稿</Option>
                 <Option value={KnowledgeArticleStatus.Published}>已发布</Option>
               </Select>

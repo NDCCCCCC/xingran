@@ -8,7 +8,9 @@ import { GRID_SIZE } from "./FloorPlanEditor.constants";
 
 interface UseWorkstationDragOptions {
   workstations: WorkstationNode[];
-  onUpdatePosition: (items: {id: string; positionX: number; positionY: number; rotation?: number}[]) => Promise<void>;
+  onUpdatePosition: (
+    items: { id: string; positionX: number; positionY: number; rotation?: number }[]
+  ) => Promise<void>;
 }
 
 interface DragState {
@@ -22,16 +24,20 @@ interface DragState {
 
 interface UseWorkstationDragReturn {
   dragState: DragState;
-  draggedNodePos: {x: number; y: number} | null;
-  handleStartDrag: (workstationId: string, startX: number, startY: number, originalX: number, originalY: number) => void;
+  draggedNodePos: { x: number; y: number } | null;
+  handleStartDrag: (
+    workstationId: string,
+    startX: number,
+    startY: number,
+    originalX: number,
+    originalY: number
+  ) => void;
   handleDragMove: (clientX: number, clientY: number, scale: number) => void;
   handleEndDrag: () => Promise<void>;
   clearDraggedPos: () => void;
 }
 
-export function useWorkstationDrag(
-  options: UseWorkstationDragOptions
-): UseWorkstationDragReturn {
+export function useWorkstationDrag(options: UseWorkstationDragOptions): UseWorkstationDragReturn {
   const { workstations, onUpdatePosition } = options;
 
   const [dragState, setDragState] = useState<DragState>({
@@ -43,40 +49,46 @@ export function useWorkstationDrag(
     originalY: 0,
   });
 
-  const [draggedNodePos, setDraggedNodePos] = useState<{x: number; y: number} | null>(null);
+  const [draggedNodePos, setDraggedNodePos] = useState<{ x: number; y: number } | null>(null);
 
   // 开始拖拽
-  const handleStartDrag = useCallback((
-    workstationId: string,
-    startX: number,
-    startY: number,
-    originalX: number,
-    originalY: number
-  ) => {
-    setDragState({
-      isDragging: true,
-      workstationId,
-      startX,
-      startY,
-      originalX,
-      originalY,
-    });
-  }, []);
+  const handleStartDrag = useCallback(
+    (
+      workstationId: string,
+      startX: number,
+      startY: number,
+      originalX: number,
+      originalY: number
+    ) => {
+      setDragState({
+        isDragging: true,
+        workstationId,
+        startX,
+        startY,
+        originalX,
+        originalY,
+      });
+    },
+    []
+  );
 
   // 拖拽移动
-  const handleDragMove = useCallback((clientX: number, clientY: number, scale: number) => {
-    if (!dragState.isDragging || !dragState.workstationId) {
-      return;
-    }
+  const handleDragMove = useCallback(
+    (clientX: number, clientY: number, scale: number) => {
+      if (!dragState.isDragging || !dragState.workstationId) {
+        return;
+      }
 
-    const dx = (clientX - dragState.startX) / scale;
-    const dy = (clientY - dragState.startY) / scale;
+      const dx = (clientX - dragState.startX) / scale;
+      const dy = (clientY - dragState.startY) / scale;
 
-    setDraggedNodePos({
-      x: dragState.originalX + dx,
-      y: dragState.originalY + dy,
-    });
-  }, [dragState]);
+      setDraggedNodePos({
+        x: dragState.originalX + dx,
+        y: dragState.originalY + dy,
+      });
+    },
+    [dragState]
+  );
 
   // 结束拖拽
   const handleEndDrag = useCallback(async () => {
@@ -93,17 +105,19 @@ export function useWorkstationDrag(
       return;
     }
 
-    const workstation = workstations.find(w => w.id === dragState.workstationId);
+    const workstation = workstations.find((w) => w.id === dragState.workstationId);
     if (workstation) {
       // 网格吸附 - 使用临时位置
       const snappedX = Math.round(draggedNodePos.x / GRID_SIZE) * GRID_SIZE;
       const snappedY = Math.round(draggedNodePos.y / GRID_SIZE) * GRID_SIZE;
 
-      await onUpdatePosition([{
-        id: workstation.id,
-        positionX: snappedX,
-        positionY: snappedY,
-      }]);
+      await onUpdatePosition([
+        {
+          id: workstation.id,
+          positionX: snappedX,
+          positionY: snappedY,
+        },
+      ]);
     }
 
     // 清除临时拖拽位置并重置状态

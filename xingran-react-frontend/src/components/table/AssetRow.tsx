@@ -22,19 +22,10 @@ export interface AssetRowProps {
 function AssetRowImpl({ record, onEdit, onDelete }: AssetRowProps) {
   return (
     <Space size="small">
-      <Button
-        type="link"
-        size="small"
-        onClick={() => onEdit?.(record)}
-      >
+      <Button type="link" size="small" onClick={() => onEdit?.(record)}>
         编辑
       </Button>
-      <Button
-        type="link"
-        size="small"
-        danger
-        onClick={() => onDelete?.(record.id)}
-      >
+      <Button type="link" size="small" danger onClick={() => onDelete?.(record.id)}>
         删除
       </Button>
     </Space>

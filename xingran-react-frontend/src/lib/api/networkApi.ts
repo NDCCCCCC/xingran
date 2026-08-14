@@ -19,7 +19,7 @@ import type {
  */
 const blobAxios: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "/api/v1",
-  timeout: 300000,  // 5 min — 文件下载（xlsx/zip）可能 10MB+，30s 默认 timeout 极易命中
+  timeout: 300000, // 5 min — 文件下载（xlsx/zip）可能 10MB+，30s 默认 timeout 极易命中
   headers: {
     "Content-Type": "application/json",
   },
@@ -92,10 +92,7 @@ export interface MACHistoryPageResult {
 export const queryMACHistory = async (
   params: MACHistoryQueryParams
 ): Promise<MACHistoryPageResult> => {
-  const result = await post<MACHistoryPageResult>(
-    "/network/history/list",
-    params
-  );
+  const result = await post<MACHistoryPageResult>("/network/history/list", params);
   return result.data!;
 };
 
@@ -173,8 +170,9 @@ export const exportMACHistory = async (
       throw new Error(`导出失败:${response.status}`);
     }
   }
-  const contentDisposition = (response.headers as Record<string, string>)["content-disposition"]
-    || (response.headers as Record<string, string>)["Content-Disposition"];
+  const contentDisposition =
+    (response.headers as Record<string, string>)["content-disposition"] ||
+    (response.headers as Record<string, string>)["Content-Disposition"];
   let filename = `mac_history_${exportScope}_${Date.now()}.xlsx`;
   if (contentDisposition) {
     const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
@@ -234,8 +232,9 @@ export const batchExport = async (
       throw new Error(`导出失败:${response.status}`);
     }
   }
-  const contentDisposition = (response.headers as Record<string, string>)["content-disposition"]
-    || (response.headers as Record<string, string>)["Content-Disposition"];
+  const contentDisposition =
+    (response.headers as Record<string, string>)["content-disposition"] ||
+    (response.headers as Record<string, string>)["Content-Disposition"];
   let filename = fallbackFilename;
   if (contentDisposition) {
     const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
@@ -266,10 +265,7 @@ export const batchExport = async (
  * 关闭端口 (shutdown)
  * - 端点: POST /network/ports/write/shutdown
  */
-export const writeShutdown = async (
-  portId: string,
-  reason: string
-): Promise<PortResult> => {
+export const writeShutdown = async (portId: string, reason: string): Promise<PortResult> => {
   const result = await post<PortResult>("/network/ports/write/shutdown", {
     portId,
     reason,
@@ -281,10 +277,7 @@ export const writeShutdown = async (
  * 取消关闭端口 (undo shutdown)
  * - 端点: POST /network/ports/write/undo-shutdown
  */
-export const writeUndoShutdown = async (
-  portId: string,
-  reason: string
-): Promise<PortResult> => {
+export const writeUndoShutdown = async (portId: string, reason: string): Promise<PortResult> => {
   const result = await post<PortResult>("/network/ports/write/undo-shutdown", {
     portId,
     reason,
@@ -314,10 +307,7 @@ export const writeDescription = async (
  * 启用 802.1X (dot1x enable)
  * - 端点: POST /network/ports/write/dot1x-enable
  */
-export const writeDot1xEnable = async (
-  portId: string,
-  reason: string
-): Promise<PortResult> => {
+export const writeDot1xEnable = async (portId: string, reason: string): Promise<PortResult> => {
   const result = await post<PortResult>("/network/ports/write/dot1x-enable", {
     portId,
     reason,
@@ -329,10 +319,7 @@ export const writeDot1xEnable = async (
  * 停用 802.1X (dot1x disable)
  * - 端点: POST /network/ports/write/dot1x-disable
  */
-export const writeDot1xDisable = async (
-  portId: string,
-  reason: string
-): Promise<PortResult> => {
+export const writeDot1xDisable = async (portId: string, reason: string): Promise<PortResult> => {
   const result = await post<PortResult>("/network/ports/write/dot1x-disable", {
     portId,
     reason,
@@ -392,9 +379,7 @@ export const writePortBinding = async (
  * - 注意: HTTP 200 + status='failed' 路径走 resolve (不走 reject),
  *   BulkWriteDrawer 必须读 result.failed/succeeded/skipped 数组分区, 不能靠 catch
  */
-export const batchWritePorts = async (
-  req: BatchWriteRequest
-): Promise<BatchResult> => {
+export const batchWritePorts = async (req: BatchWriteRequest): Promise<BatchResult> => {
   const result = await post<BatchResult>("/network/ports/write/batch", req);
   return result.data!;
 };
@@ -463,22 +448,19 @@ export const getPortMACBundle = async (
   };
 
   const fetchRecent = async (): Promise<MACHistoryRecord | null> => {
-    const result = await post<{ list: MACHistoryRecord[] }>(
-      "/network/history/port",
-      { deviceId, interfaceName, current: 1, pageSize: 1 }
-    );
+    const result = await post<{ list: MACHistoryRecord[] }>("/network/history/port", {
+      deviceId,
+      interfaceName,
+      current: 1,
+      pageSize: 1,
+    });
     return result.data?.list?.[0] ?? null;
   };
 
-  const [currentResult, historyResult] = await Promise.allSettled([
-    fetchCurrent(),
-    fetchRecent(),
-  ]);
+  const [currentResult, historyResult] = await Promise.allSettled([fetchCurrent(), fetchRecent()]);
 
-  const current =
-    currentResult.status === "fulfilled" ? currentResult.value : [];
-  const recentHistory =
-    historyResult.status === "fulfilled" ? historyResult.value : null;
+  const current = currentResult.status === "fulfilled" ? currentResult.value : [];
+  const recentHistory = historyResult.status === "fulfilled" ? historyResult.value : null;
   // 优先展示 current 的错误(展示顺序更靠前);仅 current 失败时 fallback 到 history 的错误
   const error =
     currentResult.status === "rejected"

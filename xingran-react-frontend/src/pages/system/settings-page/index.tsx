@@ -22,24 +22,44 @@ const SystemSettingsPage: FC = () => {
   const tabItems = [
     {
       key: "email",
-      label: <span><MailOutlined />邮箱配置</span>,
-      children: <EmailConfigPage />
+      label: (
+        <span>
+          <MailOutlined />
+          邮箱配置
+        </span>
+      ),
+      children: <EmailConfigPage />,
     },
     {
       key: "api",
-      label: <span><ApiOutlined />API配置</span>,
-      children: <APIConfigPage />
+      label: (
+        <span>
+          <ApiOutlined />
+          API配置
+        </span>
+      ),
+      children: <APIConfigPage />,
     },
     {
       key: "captcha-background",
-      label: <span><PictureOutlined />验证码背景图</span>,
-      children: <CaptchaBackgroundSettingsPage />
+      label: (
+        <span>
+          <PictureOutlined />
+          验证码背景图
+        </span>
+      ),
+      children: <CaptchaBackgroundSettingsPage />,
     },
     {
       key: "default-theme",
-      label: <span><BgColorsOutlined />默认主题</span>,
-      children: <DefaultThemePage />
-    }
+      label: (
+        <span>
+          <BgColorsOutlined />
+          默认主题
+        </span>
+      ),
+      children: <DefaultThemePage />,
+    },
   ];
 
   return (

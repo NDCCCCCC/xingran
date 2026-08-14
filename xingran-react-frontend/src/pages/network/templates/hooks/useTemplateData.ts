@@ -16,12 +16,18 @@ export interface UseTemplateDataReturn {
   total: number;
   statistics: TemplateStatistics;
 
-  loadTemplates: (params?: Record<string, unknown>, searchValues?: Record<string, unknown>) => Promise<void>;
+  loadTemplates: (
+    params?: Record<string, unknown>,
+    searchValues?: Record<string, unknown>
+  ) => Promise<void>;
   loadStatistics: () => Promise<void>;
   handleApiError: (error: unknown, defaultMessage: string) => void;
 }
 
-export function useTemplateData(searchForm: FormInstance<unknown>, setTotal: (total: number) => void): UseTemplateDataReturn {
+export function useTemplateData(
+  searchForm: FormInstance<unknown>,
+  setTotal: (total: number) => void
+): UseTemplateDataReturn {
   const { message } = App.useApp();
   const [templates, setTemplates] = useState<ConfigTemplate[]>([]);
   const [loading, setLoading] = useState(false);

@@ -5,138 +5,138 @@
  */
 
 .template-selector {
-	min-height: 400px;
+  min-height: 400px;
 }
 
 .template-selector__templates {
-	margin-bottom: 24px;
+  margin-bottom: 24px;
 }
 
 /* 模板卡片样式 */
 .template-card {
-	position: relative;
-	border: 2px solid transparent;
-	transition: all 0.2s ease;
-	cursor: pointer;
-	height: 100%;
+  position: relative;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  height: 100%;
 }
 
 .template-card:hover {
-	transform: translateY(-2px);
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .template-card--selected {
-	border-color: var(--primary-color, #1890ff);
-	background: var(--template-selected-bg, #e6f7ff);
+  border-color: var(--primary-color, #1890ff);
+  background: var(--template-selected-bg, #e6f7ff);
 }
 
 .template-card__header {
-	margin-bottom: 12px;
+  margin-bottom: 12px;
 }
 
 .template-card__icon {
-	width: 40px;
-	height: 40px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-size: 20px;
-	color: var(--primary-color, #1890ff);
-	background: var(--template-icon-bg, #e6f7ff);
-	border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: var(--primary-color, #1890ff);
+  background: var(--template-icon-bg, #e6f7ff);
+  border-radius: 8px;
 }
 
 .template-card__title {
-	margin: 0;
-	font-size: 16px;
-	font-weight: 500;
-	color: var(--text-color, rgba(0, 0, 0, 0.85));
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-color, rgba(0, 0, 0, 0.85));
 }
 
 .template-card__tags {
-	margin-top: 4px;
+  margin-top: 4px;
 }
 
 .template-card__description {
-	margin: 0 0 12px 0;
-	font-size: 14px;
-	color: var(--text-color-secondary, rgba(0, 0, 0, 0.45));
-	line-height: 1.5;
-	min-height: 40px;
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: var(--text-color-secondary, rgba(0, 0, 0, 0.45));
+  line-height: 1.5;
+  min-height: 40px;
 }
 
 .template-card__footer {
-	display: flex;
-	justify-content: flex-end;
-	padding-top: 8px;
-	border-top: 1px solid var(--divider-color, #f0f0f0);
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid var(--divider-color, #f0f0f0);
 }
 
 /* 表单样式 */
 .template-selector__form {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	padding: 16px;
-	background: var(--form-bg, #fafafa);
-	border-radius: var(--border-radius-base, 4px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--form-bg, #fafafa);
+  border-radius: var(--border-radius-base, 4px);
 }
 
 .template-selector__label {
-	font-size: 14px;
-	font-weight: 500;
-	color: var(--text-color, rgba(0, 0, 0, 0.85));
-	white-space: nowrap;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-color, rgba(0, 0, 0, 0.85));
+  white-space: nowrap;
 }
 
 .template-selector__input {
-	flex: 1;
-	padding: 8px 12px;
-	font-size: 14px;
-	border: 1px solid var(--border-color, #d9d9d9);
-	border-radius: var(--border-radius-base, 4px);
-	outline: none;
-	transition: all 0.2s ease;
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid var(--border-color, #d9d9d9);
+  border-radius: var(--border-radius-base, 4px);
+  outline: none;
+  transition: all 0.2s ease;
 }
 
 .template-selector__input:focus {
-	border-color: var(--primary-color, #1890ff);
-	box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+  border-color: var(--primary-color, #1890ff);
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
 }
 
 .template-selector__input::placeholder {
-	color: var(--placeholder-color, #bfbfbf);
+  color: var(--placeholder-color, #bfbfbf);
 }
 
 /* 移动端适配 */
 @media (max-width: 768px) {
-	.template-selector__form {
-		flex-direction: column;
-		align-items: stretch;
-	}
+  .template-selector__form {
+    flex-direction: column;
+    align-items: stretch;
+  }
 
-	.template-selector__label {
-		margin-bottom: 4px;
-	}
+  .template-selector__label {
+    margin-bottom: 4px;
+  }
 
-	.template-card__description {
-		font-size: 13px;
-		min-height: 60px;
-	}
+  .template-card__description {
+    font-size: 13px;
+    min-height: 60px;
+  }
 }
 
 /* 暗色主题适配 */
 @media (prefers-color-scheme: dark) {
-	.template-card--selected {
-		--template-selected-bg: #111d2c;
-	}
+  .template-card--selected {
+    --template-selected-bg: #111d2c;
+  }
 
-	.template-card__icon {
-		--template-icon-bg: #111d2c;
-	}
+  .template-card__icon {
+    --template-icon-bg: #111d2c;
+  }
 
-	.template-selector__form {
-		--form-bg: #141414;
-	}
+  .template-selector__form {
+    --form-bg: #141414;
+  }
 }

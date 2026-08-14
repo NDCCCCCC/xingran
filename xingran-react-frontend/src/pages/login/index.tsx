@@ -76,10 +76,7 @@ const Login: FC = () => {
     try {
       await login(loginData);
       // 登录成功后获取用户菜单和权限
-      await Promise.all([
-        fetchMenus(),
-        fetchPermissions(),
-      ]);
+      await Promise.all([fetchMenus(), fetchPermissions()]);
       message.success("登录成功");
       navigate(DASHBOARD);
     } catch (error) {
@@ -212,16 +209,10 @@ const Login: FC = () => {
         }}
       >
         <div className="text-center mb-8">
-          <h1
-            className="text-3xl font-bold"
-            style={{ color: "var(--theme-text-primary)" }}
-          >
+          <h1 className="text-3xl font-bold" style={{ color: "var(--theme-text-primary)" }}>
             星苒
           </h1>
-          <p
-            className="mt-2"
-            style={{ color: "var(--theme-text-secondary)" }}
-          >
+          <p className="mt-2" style={{ color: "var(--theme-text-secondary)" }}>
             光启万物，荫庇四方
           </p>
         </div>
@@ -238,31 +229,13 @@ const Login: FC = () => {
           />
         )}
 
-        <Form
-          form={form}
-          name="login"
-          size="large"
-          onFinish={handleFinish}
-          autoComplete="off"
-        >
-          <Form.Item
-            name="username"
-            rules={[{ required: true, message: "请输入用户名" }]}
-          >
-            <Input
-              prefix={<UserOutlined />}
-              placeholder="用户名"
-            />
+        <Form form={form} name="login" size="large" onFinish={handleFinish} autoComplete="off">
+          <Form.Item name="username" rules={[{ required: true, message: "请输入用户名" }]}>
+            <Input prefix={<UserOutlined />} placeholder="用户名" />
           </Form.Item>
 
-          <Form.Item
-            name="password"
-            rules={[{ required: true, message: "请输入密码" }]}
-          >
-            <Input.Password
-              prefix={<LockOutlined />}
-              placeholder="密码"
-            />
+          <Form.Item name="password" rules={[{ required: true, message: "请输入密码" }]}>
+            <Input.Password prefix={<LockOutlined />} placeholder="密码" />
           </Form.Item>
 
           {/* 验证码 - 只显示数字验证码 */}
@@ -277,12 +250,7 @@ const Login: FC = () => {
           )}
 
           <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              className="w-full"
-              loading={loading}
-            >
+            <Button type="primary" htmlType="submit" className="w-full" loading={loading}>
               登录
             </Button>
           </Form.Item>

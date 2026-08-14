@@ -1,11 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import type { FC } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import {
-  App,
-  Button,
-  Spin,
-} from "antd";
+import { App, Button, Spin } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { getMyNoticeDetail, markNoticeAsRead } from "@/lib/noticeApi";
 import { useNoticeStore } from "@/store/noticeStore";

@@ -23,11 +23,14 @@ export function useUserModals(): UseUserModalsReturn {
   const [resetPasswordForm] = Form.useForm();
 
   // 打开重置密码模态框
-  const openResetPasswordModal = useCallback((user: User) => {
-    setResettingUser(user);
-    resetPasswordForm.resetFields();
-    setResetPasswordModalVisible(true);
-  }, [resetPasswordForm]);
+  const openResetPasswordModal = useCallback(
+    (user: User) => {
+      setResettingUser(user);
+      resetPasswordForm.resetFields();
+      setResetPasswordModalVisible(true);
+    },
+    [resetPasswordForm]
+  );
 
   // 关闭重置密码模态框
   const closeResetPasswordModal = useCallback(() => {

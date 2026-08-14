@@ -70,7 +70,10 @@ export interface PortWriteModalProps {
  *   - message.destroy() 路由切换前关 toast，避免 portal 在另一个路由下残留 DOM
  *   - navigate() 走 SPA history.pushState，页面不刷新
  */
-export function showAuditLinkToast(message: MessageInstance, navigate: (path: string) => void): void {
+export function showAuditLinkToast(
+  message: MessageInstance,
+  navigate: (path: string) => void
+): void {
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>): void => {
     e.preventDefault();
     message.destroy();
@@ -166,15 +169,13 @@ export function PortWriteModal({
     action === "description"
       ? [
           {
-            validator: (rule: unknown, value: unknown) =>
-              validateReasonOptional(rule, value, form),
+            validator: (rule: unknown, value: unknown) => validateReasonOptional(rule, value, form),
           },
         ]
       : [
           {
             required: true,
-            validator: (rule: unknown, value: unknown) =>
-              validateReasonRequired(rule, value, form),
+            validator: (rule: unknown, value: unknown) => validateReasonRequired(rule, value, form),
           },
         ];
 

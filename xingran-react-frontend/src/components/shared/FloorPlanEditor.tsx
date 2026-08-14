@@ -86,7 +86,7 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
     visible: false,
     x: 0,
     y: 0,
-    workstation: null
+    workstation: null,
   });
 
   // 监听容器尺寸变化
@@ -98,7 +98,7 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
       const rect = cardElement.getBoundingClientRect();
       setContainerSize({
         width: rect.width,
-        height: rect.height - TOOLBAR_HEIGHT
+        height: rect.height - TOOLBAR_HEIGHT,
       });
     };
 
@@ -150,7 +150,15 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
         window.removeEventListener("mouseup", handleMouseUp);
       };
     }
-  }, [dragState, draggedNodePos, viewState, handleDragMove, handleEndDrag, handlePanEnd, clearDraggedPos]);
+  }, [
+    dragState,
+    draggedNodePos,
+    viewState,
+    handleDragMove,
+    handleEndDrag,
+    handlePanEnd,
+    clearDraggedPos,
+  ]);
 
   // 键盘事件
   useEffect(() => {
@@ -183,29 +191,32 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
   /**
    * 处理鼠标按下 - 开始拖拽工位或平移画布
    */
-  const handleMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
-    const target = e.target as SVGElement;
-    const workstationEl = target.closest("[data-workstation-id]");
-    // 检查是否按下了空格键（通过全局状态或事件）
-    const spacePressed = (e.nativeEvent as MouseEvent & { code?: string }).code === "Space";
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent<SVGSVGElement>) => {
+      const target = e.target as SVGElement;
+      const workstationEl = target.closest("[data-workstation-id]");
+      // 检查是否按下了空格键（通过全局状态或事件）
+      const spacePressed = (e.nativeEvent as MouseEvent & { code?: string }).code === "Space";
 
-    if (workstationEl && !spacePressed) {
-      const workstationId = workstationEl.getAttribute("data-workstation-id");
-      const workstation = workstations.find(w => w.id === workstationId);
+      if (workstationEl && !spacePressed) {
+        const workstationId = workstationEl.getAttribute("data-workstation-id");
+        const workstation = workstations.find((w) => w.id === workstationId);
 
-      if (workstation && workstation.status === 0 && workstationId) {
-        handleStartDrag(workstationId, e.clientX, e.clientY, workstation.x, workstation.y);
-        setSelectedId(workstationId);
+        if (workstation && workstation.status === 0 && workstationId) {
+          handleStartDrag(workstationId, e.clientX, e.clientY, workstation.x, workstation.y);
+          setSelectedId(workstationId);
+        }
+      } else if (spacePressed || !workstationEl) {
+        handlePanStart(e.clientX, e.clientY);
+        if (!workstationEl) {
+          setSelectedId(null);
+        }
       }
-    } else if (spacePressed || !workstationEl) {
-      handlePanStart(e.clientX, e.clientY);
-      if (!workstationEl) {
-        setSelectedId(null);
-      }
-    }
 
-    setContextMenu(prev => ({ ...prev, visible: false }));
-  }, [workstations, handleStartDrag, handlePanStart]);
+      setContextMenu((prev) => ({ ...prev, visible: false }));
+    },
+    [workstations, handleStartDrag, handlePanStart]
+  );
 
   /**
    * 适应视图
@@ -213,9 +224,12 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
   const fitToView = useCallback(() => {
     if (workstations.length === 0) return;
 
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
 
-    workstations.forEach(w => {
+    workstations.forEach((w) => {
       minX = Math.min(minX, w.x);
       minY = Math.min(minY, w.y);
       maxX = Math.max(maxX, w.x + w.width);
@@ -244,18 +258,24 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
   /**
    * 处理工位点击
    */
-  const handleWorkstationClick = useCallback((workstation: WorkstationNode, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedId(workstation.id);
-  }, []);
+  const handleWorkstationClick = useCallback(
+    (workstation: WorkstationNode, e: React.MouseEvent) => {
+      e.stopPropagation();
+      setSelectedId(workstation.id);
+    },
+    []
+  );
 
   /**
    * 处理工位双击
    */
-  const handleWorkstationDoubleClick = useCallback((workstation: WorkstationNode, e: React.MouseEvent) => {
-    e.stopPropagation();
-    onEdit(workstation);
-  }, [onEdit]);
+  const handleWorkstationDoubleClick = useCallback(
+    (workstation: WorkstationNode, e: React.MouseEvent) => {
+      e.stopPropagation();
+      onEdit(workstation);
+    },
+    [onEdit]
+  );
 
   /**
    * 处理右键菜单
@@ -268,66 +288,77 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
       visible: true,
       x: e.clientX,
       y: e.clientY,
-      workstation
+      workstation,
     });
   }, []);
 
   /**
    * 菜单项操作
    */
-  const handleMenuAction = useCallback(async (action: string) => {
-    if (!contextMenu.workstation) return;
+  const handleMenuAction = useCallback(
+    async (action: string) => {
+      if (!contextMenu.workstation) return;
 
-    switch (action) {
-      case "edit":
-        onEdit(contextMenu.workstation);
-        break;
-      case "rotate-45":
-        await onUpdatePosition([{
-          id: contextMenu.workstation.id,
-          positionX: contextMenu.workstation.x,
-          positionY: contextMenu.workstation.y,
-          rotation: ((contextMenu.workstation.rotation || 0) + 45) % 360
-        }]);
-        message.success("工位已顺时针旋转45°");
-        break;
-      case "rotate-90":
-        await onUpdatePosition([{
-          id: contextMenu.workstation.id,
-          positionX: contextMenu.workstation.x,
-          positionY: contextMenu.workstation.y,
-          rotation: ((contextMenu.workstation.rotation || 0) + 90) % 360
-        }]);
-        message.success("工位已顺时针旋转90°");
-        break;
-      case "rotate-180":
-        await onUpdatePosition([{
-          id: contextMenu.workstation.id,
-          positionX: contextMenu.workstation.x,
-          positionY: contextMenu.workstation.y,
-          rotation: ((contextMenu.workstation.rotation || 0) + 180) % 360
-        }]);
-        message.success("工位已旋转180°");
-        break;
-      case "rotate-reset":
-        await onUpdatePosition([{
-          id: contextMenu.workstation.id,
-          positionX: contextMenu.workstation.x,
-          positionY: contextMenu.workstation.y,
-          rotation: 0
-        }]);
-        message.success("工位方向已重置");
-        break;
-      case "delete":
-        message.warning("删除功能待实现");
-        break;
-      case "copy":
-        message.warning("复制功能待实现");
-        break;
-    }
+      switch (action) {
+        case "edit":
+          onEdit(contextMenu.workstation);
+          break;
+        case "rotate-45":
+          await onUpdatePosition([
+            {
+              id: contextMenu.workstation.id,
+              positionX: contextMenu.workstation.x,
+              positionY: contextMenu.workstation.y,
+              rotation: ((contextMenu.workstation.rotation || 0) + 45) % 360,
+            },
+          ]);
+          message.success("工位已顺时针旋转45°");
+          break;
+        case "rotate-90":
+          await onUpdatePosition([
+            {
+              id: contextMenu.workstation.id,
+              positionX: contextMenu.workstation.x,
+              positionY: contextMenu.workstation.y,
+              rotation: ((contextMenu.workstation.rotation || 0) + 90) % 360,
+            },
+          ]);
+          message.success("工位已顺时针旋转90°");
+          break;
+        case "rotate-180":
+          await onUpdatePosition([
+            {
+              id: contextMenu.workstation.id,
+              positionX: contextMenu.workstation.x,
+              positionY: contextMenu.workstation.y,
+              rotation: ((contextMenu.workstation.rotation || 0) + 180) % 360,
+            },
+          ]);
+          message.success("工位已旋转180°");
+          break;
+        case "rotate-reset":
+          await onUpdatePosition([
+            {
+              id: contextMenu.workstation.id,
+              positionX: contextMenu.workstation.x,
+              positionY: contextMenu.workstation.y,
+              rotation: 0,
+            },
+          ]);
+          message.success("工位方向已重置");
+          break;
+        case "delete":
+          message.warning("删除功能待实现");
+          break;
+        case "copy":
+          message.warning("复制功能待实现");
+          break;
+      }
 
-    setContextMenu(prev => ({ ...prev, visible: false }));
-  }, [contextMenu.workstation, onEdit, onUpdatePosition]);
+      setContextMenu((prev) => ({ ...prev, visible: false }));
+    },
+    [contextMenu.workstation, onEdit, onUpdatePosition]
+  );
 
   /**
    * 渲染网格
@@ -345,11 +376,15 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
     const horizontalLines = [];
 
     for (let x = offsetX; x < width; x += gridSize) {
-      verticalLines.push(<line key={`v-${x}`} x1={x} y1={0} x2={x} y2={height} stroke="#e8e8e8" strokeWidth="1" />);
+      verticalLines.push(
+        <line key={`v-${x}`} x1={x} y1={0} x2={x} y2={height} stroke="#e8e8e8" strokeWidth="1" />
+      );
     }
 
     for (let y = offsetY; y < height; y += gridSize) {
-      horizontalLines.push(<line key={`h-${y}`} x1={0} y1={y} x2={width} y2={y} stroke="#e8e8e8" strokeWidth="1" />);
+      horizontalLines.push(
+        <line key={`h-${y}`} x1={0} y1={y} x2={width} y2={y} stroke="#e8e8e8" strokeWidth="1" />
+      );
     }
 
     return (
@@ -364,7 +399,7 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
    * 渲染工位
    */
   const renderWorkstations = () => {
-    return workstations.map(workstation => {
+    return workstations.map((workstation) => {
       const colors = getWorkstationColor(workstation.status);
       const statusColor = getWorkstationStatusColor(workstation.status);
       const typeColor = getWorkstationTypeColor(workstation.type);
@@ -383,16 +418,18 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
 
       const style: React.CSSProperties = {
         cursor: workstation.status === 0 ? "move" : "not-allowed",
-        filter: isHovered && workstation.status === 0 ? "drop-shadow(0 4px 8px rgba(0,0,0,0.15))" : undefined
+        filter:
+          isHovered && workstation.status === 0
+            ? "drop-shadow(0 4px 8px rgba(0,0,0,0.15))"
+            : undefined,
       };
 
-      const hoverTransform = isHovered && workstation.status === 0
-        ? `translate(${w / 2}, ${h / 2}) scale(1.05) translate(${-w / 2}, ${-h / 2})`
-        : "";
+      const hoverTransform =
+        isHovered && workstation.status === 0
+          ? `translate(${w / 2}, ${h / 2}) scale(1.05) translate(${-w / 2}, ${-h / 2})`
+          : "";
 
-      const rotationTransform = rotation !== 0
-        ? `rotate(${rotation}, ${w / 2}, ${h / 2})`
-        : "";
+      const rotationTransform = rotation !== 0 ? `rotate(${rotation}, ${w / 2}, ${h / 2})` : "";
 
       const combinedTransform = rotationTransform
         ? `${rotationTransform} ${hoverTransform}`.trim()
@@ -487,12 +524,54 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
               pointerEvents="none"
             />
             <g opacity={0.3} pointerEvents="none">
-              <rect x={w * 0.16} y={h * 0.59} width={w * 0.08} height={h * 0.03} fill="#1a1a1a" rx={0.5} />
-              <rect x={w * 0.25} y={h * 0.59} width={w * 0.08} height={h * 0.03} fill="#1a1a1a" rx={0.5} />
-              <rect x={w * 0.34} y={h * 0.59} width={w * 0.08} height={h * 0.03} fill="#1a1a1a" rx={0.5} />
-              <rect x={w * 0.16} y={h * 0.63} width={w * 0.08} height={h * 0.03} fill="#1a1a1a" rx={0.5} />
-              <rect x={w * 0.25} y={h * 0.63} width={w * 0.08} height={h * 0.03} fill="#1a1a1a" rx={0.5} />
-              <rect x={w * 0.34} y={h * 0.63} width={w * 0.08} height={h * 0.03} fill="#1a1a1a" rx={0.5} />
+              <rect
+                x={w * 0.16}
+                y={h * 0.59}
+                width={w * 0.08}
+                height={h * 0.03}
+                fill="#1a1a1a"
+                rx={0.5}
+              />
+              <rect
+                x={w * 0.25}
+                y={h * 0.59}
+                width={w * 0.08}
+                height={h * 0.03}
+                fill="#1a1a1a"
+                rx={0.5}
+              />
+              <rect
+                x={w * 0.34}
+                y={h * 0.59}
+                width={w * 0.08}
+                height={h * 0.03}
+                fill="#1a1a1a"
+                rx={0.5}
+              />
+              <rect
+                x={w * 0.16}
+                y={h * 0.63}
+                width={w * 0.08}
+                height={h * 0.03}
+                fill="#1a1a1a"
+                rx={0.5}
+              />
+              <rect
+                x={w * 0.25}
+                y={h * 0.63}
+                width={w * 0.08}
+                height={h * 0.03}
+                fill="#1a1a1a"
+                rx={0.5}
+              />
+              <rect
+                x={w * 0.34}
+                y={h * 0.63}
+                width={w * 0.08}
+                height={h * 0.03}
+                fill="#1a1a1a"
+                rx={0.5}
+              />
             </g>
             <ellipse
               cx={w * 0.7}
@@ -597,17 +676,17 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
       { key: "rotate-reset", label: "重置方向", icon: <InfoCircleOutlined /> },
       { type: "divider" },
       { key: "copy", label: "复制工位", icon: <InfoCircleOutlined /> },
-      { key: "delete", label: "删除工位", icon: <InfoCircleOutlined />, danger: true }
+      { key: "delete", label: "删除工位", icon: <InfoCircleOutlined />, danger: true },
     ];
 
     return (
       <Dropdown
         menu={{
           items: menuItems as MenuProps["items"],
-          onClick: ({ key }) => handleMenuAction(key)
+          onClick: ({ key }) => handleMenuAction(key),
         }}
         open={contextMenu.visible}
-        onOpenChange={(visible) => setContextMenu(prev => ({ ...prev, visible }))}
+        onOpenChange={(visible) => setContextMenu((prev) => ({ ...prev, visible }))}
         trigger={[]}
       >
         <div
@@ -617,14 +696,14 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
             top: contextMenu.y,
             width: 1,
             height: 1,
-            pointerEvents: "none"
+            pointerEvents: "none",
           }}
         />
       </Dropdown>
     );
   };
 
-  const selectedWorkstation = workstations.find(w => w.id === selectedId);
+  const selectedWorkstation = workstations.find((w) => w.id === selectedId);
   const width = containerSize.width;
   const height = containerSize.height;
 
@@ -636,7 +715,16 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
       style={{ height: "100%", overflow: "hidden" }}
     >
       {/* 工具栏 */}
-      <div className="floor-plan-toolbar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderBottom: "1px solid #f0f0f0" }}>
+      <div
+        className="floor-plan-toolbar"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "8px 12px",
+          borderBottom: "1px solid #f0f0f0",
+        }}
+      >
         <div className="toolbar-left">
           <Tooltip title="放大 (Ctrl+滚轮)">
             <Button
@@ -656,18 +744,10 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
           </Tooltip>
           <span className="zoom-level">{Math.round(viewState.scale * 100)}%</span>
           <Tooltip title="适应视图">
-            <Button
-              type="text"
-              icon={<CompressOutlined />}
-              onClick={fitToView}
-            />
+            <Button type="text" icon={<CompressOutlined />} onClick={fitToView} />
           </Tooltip>
           <Tooltip title="重置视图">
-            <Button
-              type="text"
-              icon={<ReloadOutlined />}
-              onClick={resetView}
-            />
+            <Button type="text" icon={<ReloadOutlined />} onClick={resetView} />
           </Tooltip>
           <Tooltip title={showGrid ? "隐藏网格" : "显示网格"}>
             <Button
@@ -697,7 +777,7 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
         style={{
           cursor: viewState.isDragging ? "grabbing" : "default",
           background: "#f5f5f5",
-          display: "block"
+          display: "block",
         }}
       >
         <defs>
@@ -721,13 +801,7 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
               fill="rgba(0, 0, 0, 0.75)"
               rx={4}
             />
-            <text
-              x={width / 2}
-              y={37}
-              textAnchor="middle"
-              fill="#fff"
-              fontSize={14}
-            >
+            <text x={width / 2} y={37} textAnchor="middle" fill="#fff" fontSize={14}>
               X: {Math.round(dragState.originalX)}, Y: {Math.round(dragState.originalY)}
             </text>
           </g>

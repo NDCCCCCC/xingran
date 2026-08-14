@@ -10,9 +10,7 @@
  */
 
 import React, { Suspense, lazy, useCallback, useMemo, useState } from "react";
-import {
-  Card, DatePicker, Space, Button, Form, Alert, Grid, Spin, Tag,
-} from "antd";
+import { Card, DatePicker, Space, Button, Form, Alert, Grid, Spin, Tag } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
@@ -49,7 +47,9 @@ const HeatmapPage: React.FC = () => {
   const screens = useBreakpoint();
   const isMobile = !screens.sm;
 
-  const [queryParams, setQueryParams] = useState<{ startTime: string; endTime: string } | null>(null);
+  const [queryParams, setQueryParams] = useState<{ startTime: string; endTime: string } | null>(
+    null
+  );
   const location = useLocation();
   const [activePreset, setActivePreset] = usePersistedStateController<PresetKey>({
     keyPrefix: location.pathname,
@@ -198,7 +198,9 @@ const HeatmapPage: React.FC = () => {
             }
           >
             <MACHeatmapChart
-              data={heatmapData ?? { cells: [], topN: 0, start: "", end: "", total: 0, snapshot: "" }}
+              data={
+                heatmapData ?? { cells: [], topN: 0, start: "", end: "", total: 0, snapshot: "" }
+              }
               loading={isLoading}
               isMobile={isMobile}
             />
@@ -207,8 +209,8 @@ const HeatmapPage: React.FC = () => {
 
         {heatmapData && heatmapData.cells.length > 0 && (
           <div style={{ marginTop: 16, fontSize: 12, color: "var(--theme-text-tertiary, #999)" }}>
-            数据快照: {heatmapData.snapshot} | TopN: {heatmapData.topN} | 总计:{" "}
-            {heatmapData.total} 条
+            数据快照: {heatmapData.snapshot} | TopN: {heatmapData.topN} | 总计: {heatmapData.total}{" "}
+            条
           </div>
         )}
       </Card>

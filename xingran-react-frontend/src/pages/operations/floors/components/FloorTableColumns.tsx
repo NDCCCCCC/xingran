@@ -21,8 +21,22 @@ export function createFloorTableColumns(callbacks: FloorTableColumnCallbacks): C
   const { onEdit, onEditFloorPlan, onDelete, getColumnSortOrder } = callbacks;
 
   return [
-    { title: "楼层名称", dataIndex: "name", key: "name", width: 150, sorter: true, sortOrder: getColumnSortOrder("name") },
-    { title: "楼层号", dataIndex: "floorNo", key: "floorNo", width: 100, sorter: true, sortOrder: getColumnSortOrder("floorNo") },
+    {
+      title: "楼层名称",
+      dataIndex: "name",
+      key: "name",
+      width: 150,
+      sorter: true,
+      sortOrder: getColumnSortOrder("name"),
+    },
+    {
+      title: "楼层号",
+      dataIndex: "floorNo",
+      key: "floorNo",
+      width: 100,
+      sorter: true,
+      sortOrder: getColumnSortOrder("floorNo"),
+    },
     {
       title: "所属楼宇",
       dataIndex: "buildingName",
@@ -41,9 +55,17 @@ export function createFloorTableColumns(callbacks: FloorTableColumnCallbacks): C
       sortOrder: getColumnSortOrder("area"),
       render: (value) => value || "-",
     },
-    createStatusColumn("status", { width: 100, sorter: true, sortOrder: getColumnSortOrder("status") }),
+    createStatusColumn("status", {
+      width: 100,
+      sorter: true,
+      sortOrder: getColumnSortOrder("status"),
+    }),
     { title: "描述", dataIndex: "description", key: "description", ellipsis: true },
-    createDateTimeColumn("createdAt", { width: 180, sorter: true, sortOrder: getColumnSortOrder("createdAt") }),
+    createDateTimeColumn("createdAt", {
+      width: 180,
+      sorter: true,
+      sortOrder: getColumnSortOrder("createdAt"),
+    }),
     {
       title: "操作",
       key: "action",

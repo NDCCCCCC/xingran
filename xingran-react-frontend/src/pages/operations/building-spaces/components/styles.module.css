@@ -39,7 +39,7 @@
 }
 
 .buildingCard::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -240,16 +240,13 @@
 
 /* 3D厚度效果 */
 .floorCard::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 100%;
   left: 5px;
   right: 5px;
   height: 20px;
-  background: linear-gradient(to bottom,
-    rgba(102, 126, 234, 0.8),
-    rgba(118, 75, 162, 0.4)
-  );
+  background: linear-gradient(to bottom, rgba(102, 126, 234, 0.8), rgba(118, 75, 162, 0.4));
   transform-origin: top;
   transform: rotateX(-90deg);
   border-radius: 0 0 12px 12px;
@@ -265,10 +262,7 @@
   transform-origin: left;
   width: 20px;
   height: 80px;
-  background: linear-gradient(to right,
-    rgba(102, 126, 234, 0.7),
-    rgba(118, 75, 162, 0.5)
-  );
+  background: linear-gradient(to right, rgba(102, 126, 234, 0.7), rgba(118, 75, 162, 0.5));
   display: flex;
   align-items: center;
   justify-content: center;

@@ -83,112 +83,127 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
   }, []);
 
   // 编辑角色
-  const handleEdit = useCallback(async (record: Role) => {
-    setEditingRole(record);
+  const handleEdit = useCallback(
+    async (record: Role) => {
+      setEditingRole(record);
 
-    // 加载角色的菜单和部门权限
-    const [menuIds, deptIds] = await Promise.all([
-      loadRoleMenus(record.id),
-      loadRoleDepts(record.id),
-    ]);
+      // 加载角色的菜单和部门权限
+      const [menuIds, deptIds] = await Promise.all([
+        loadRoleMenus(record.id),
+        loadRoleDepts(record.id),
+      ]);
 
-    // 保存待设置的表单数据
-    const formData = {
-      ...record,
-      menuIds,
-      deptIds,
-    };
-
-    // 同时更新 ref 和 state
-    // ref 更新是同步的，立即生效
-    // state 更新是异步的，用于触发重新渲染
-    pendingFormDataRef.current = formData;
-    setPendingFormData(formData);
-
-    setEditModalVisible(true);
-  }, [loadRoleMenus, loadRoleDepts]);
-
-  // 删除角色
-  const handleDelete = useCallback(async (id: string) => {
-    try {
-      await post(`/system/roles/${id}/delete`);
-      message.success("删除成功");
-      loadRoles();
-      loadStatistics();
-      invalidateAllRoles();
-    } catch (error) {
-      console.error("删除角色失败:", error);
-    }
-  }, [loadRoles, loadStatistics, invalidateAllRoles]);
-
-  // 批量删除
-  const handleBatchDelete = useCallback(async (keys: Key[]) => {
-    if (keys.length === 0) {
-      message.warning("请选择要删除的角色");
-      return;
-    }
-
-    try {
-      await post("/system/roles/batch-delete", { ids: keys });
-      message.success("批量删除成功");
-      setSelectedRowKeys([]);
-      loadRoles();
-      loadStatistics();
-      invalidateAllRoles();
-    } catch (error) {
-      console.error("批量删除失败:", error);
-    }
-  }, [loadRoles, loadStatistics, invalidateAllRoles]);
-
-  // 更新角色状态
-  const handleUpdateStatus = useCallback(async (id: string, status: number) => {
-    try {
-      await post(`/system/roles/${id}/status`, { status });
-      message.success(status === 0 ? "启用成功" : "停用成功");
-      loadRoles();
-      loadStatistics();
-      invalidateAllRoles();
-    } catch (error) {
-      console.error("更新角色状态失败:", error);
-    }
-  }, [loadRoles, loadStatistics, invalidateAllRoles]);
-
-  // 保存角色
-  const handleSave = useCallback(async (editForm: FormInstance<unknown>) => {
-    try {
-      const values = await editForm.validateFields() as Record<string, unknown>;
-
-      const roleData = {
-        roleName: values.roleName as string,
-        roleKey: values.roleKey as string,
-        roleSort: parseInt(String(values.roleSort)) || 0,
-        dataScope: (values.dataScope as number) || 1,
-        menuCheckStrictly: true,
-        deptCheckStrictly: true,
-        status: parseInt(String(values.status)) || 0,
-        remark: values.remark as string,
-        menuIds: (values.menuIds as string[]) || [],
-        deptIds: (values.deptIds as string[]) || [],
+      // 保存待设置的表单数据
+      const formData = {
+        ...record,
+        menuIds,
+        deptIds,
       };
 
-      if (editingRole) {
-        await post(`/system/roles/${editingRole.id}/update`, {
-          ...roleData,
-          id: editingRole.id,
-        });
-      } else {
-        await post("/system/roles", roleData);
+      // 同时更新 ref 和 state
+      // ref 更新是同步的，立即生效
+      // state 更新是异步的，用于触发重新渲染
+      pendingFormDataRef.current = formData;
+      setPendingFormData(formData);
+
+      setEditModalVisible(true);
+    },
+    [loadRoleMenus, loadRoleDepts]
+  );
+
+  // 删除角色
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        await post(`/system/roles/${id}/delete`);
+        message.success("删除成功");
+        loadRoles();
+        loadStatistics();
+        invalidateAllRoles();
+      } catch (error) {
+        console.error("删除角色失败:", error);
+      }
+    },
+    [loadRoles, loadStatistics, invalidateAllRoles]
+  );
+
+  // 批量删除
+  const handleBatchDelete = useCallback(
+    async (keys: Key[]) => {
+      if (keys.length === 0) {
+        message.warning("请选择要删除的角色");
+        return;
       }
 
-      message.success(editingRole ? "更新成功" : "创建成功");
-      setEditModalVisible(false);
-      loadRoles();
-      loadStatistics();
-      invalidateAllRoles();
-    } catch (error) {
-      console.error("保存角色失败:", error);
-    }
-  }, [editingRole, loadRoles, loadStatistics, invalidateAllRoles]);
+      try {
+        await post("/system/roles/batch-delete", { ids: keys });
+        message.success("批量删除成功");
+        setSelectedRowKeys([]);
+        loadRoles();
+        loadStatistics();
+        invalidateAllRoles();
+      } catch (error) {
+        console.error("批量删除失败:", error);
+      }
+    },
+    [loadRoles, loadStatistics, invalidateAllRoles]
+  );
+
+  // 更新角色状态
+  const handleUpdateStatus = useCallback(
+    async (id: string, status: number) => {
+      try {
+        await post(`/system/roles/${id}/status`, { status });
+        message.success(status === 0 ? "启用成功" : "停用成功");
+        loadRoles();
+        loadStatistics();
+        invalidateAllRoles();
+      } catch (error) {
+        console.error("更新角色状态失败:", error);
+      }
+    },
+    [loadRoles, loadStatistics, invalidateAllRoles]
+  );
+
+  // 保存角色
+  const handleSave = useCallback(
+    async (editForm: FormInstance<unknown>) => {
+      try {
+        const values = (await editForm.validateFields()) as Record<string, unknown>;
+
+        const roleData = {
+          roleName: values.roleName as string,
+          roleKey: values.roleKey as string,
+          roleSort: parseInt(String(values.roleSort)) || 0,
+          dataScope: (values.dataScope as number) || 1,
+          menuCheckStrictly: true,
+          deptCheckStrictly: true,
+          status: parseInt(String(values.status)) || 0,
+          remark: values.remark as string,
+          menuIds: (values.menuIds as string[]) || [],
+          deptIds: (values.deptIds as string[]) || [],
+        };
+
+        if (editingRole) {
+          await post(`/system/roles/${editingRole.id}/update`, {
+            ...roleData,
+            id: editingRole.id,
+          });
+        } else {
+          await post("/system/roles", roleData);
+        }
+
+        message.success(editingRole ? "更新成功" : "创建成功");
+        setEditModalVisible(false);
+        loadRoles();
+        loadStatistics();
+        invalidateAllRoles();
+      } catch (error) {
+        console.error("保存角色失败:", error);
+      }
+    },
+    [editingRole, loadRoles, loadStatistics, invalidateAllRoles]
+  );
 
   // 数据范围变更
   const handleDataScopeChange = useCallback((value: number, editForm: FormInstance<unknown>) => {
@@ -199,30 +214,33 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
   }, []);
 
   // Modal 打开后的回调 - 使用 ref 读取，避免 React 批处理延迟问题
-  const handleModalOpenChange = useCallback((open: boolean, editForm: FormInstance<unknown>) => {
-    if (open && pendingFormDataRef.current) {
-      const formData = pendingFormDataRef.current;
+  const handleModalOpenChange = useCallback(
+    (open: boolean, editForm: FormInstance<unknown>) => {
+      if (open && pendingFormDataRef.current) {
+        const formData = pendingFormDataRef.current;
 
-      // 1. 设置表单值
-      editForm.setFieldsValue(formData);
+        // 1. 设置表单值
+        editForm.setFieldsValue(formData);
 
-      // 2. 同步更新 Tree 组件的 checkedKeys 状态
-      const menuIds = Array.isArray(formData.menuIds) ? formData.menuIds : [];
-      const deptIds = Array.isArray(formData.deptIds) ? formData.deptIds : [];
+        // 2. 同步更新 Tree 组件的 checkedKeys 状态
+        const menuIds = Array.isArray(formData.menuIds) ? formData.menuIds : [];
+        const deptIds = Array.isArray(formData.deptIds) ? formData.deptIds : [];
 
-      setCheckedMenuKeys(menuIds);
-      setCheckedDeptKeys(deptIds);
+        setCheckedMenuKeys(menuIds);
+        setCheckedDeptKeys(deptIds);
 
-      // 3. 同时更新 dataScope
-      if (typeof formData.dataScope === "number") {
-        setCurrentDataScope(formData.dataScope);
+        // 3. 同时更新 dataScope
+        if (typeof formData.dataScope === "number") {
+          setCurrentDataScope(formData.dataScope);
+        }
+      } else if (!open) {
+        // Modal 关闭时清理状态和 ref
+        pendingFormDataRef.current = null;
+        setPendingFormData(null);
       }
-    } else if (!open) {
-      // Modal 关闭时清理状态和 ref
-      pendingFormDataRef.current = null;
-      setPendingFormData(null);
-    }
-  }, [pendingFormData, setCheckedMenuKeys, setCheckedDeptKeys, setCurrentDataScope]);
+    },
+    [pendingFormData, setCheckedMenuKeys, setCheckedDeptKeys, setCurrentDataScope]
+  );
 
   return {
     editingRole,

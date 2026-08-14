@@ -5,12 +5,30 @@
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import {
-  App, Modal, Descriptions, Steps, Card, Timeline, Image, Space, Tag, Alert,
-  Typography, Spin, Empty, Button, Tabs,
+  App,
+  Modal,
+  Descriptions,
+  Steps,
+  Card,
+  Timeline,
+  Image,
+  Space,
+  Tag,
+  Alert,
+  Typography,
+  Spin,
+  Empty,
+  Button,
+  Tabs,
 } from "antd";
 import {
-  FileTextOutlined, CameraOutlined, LoadingOutlined, CheckCircleOutlined,
-  CloseCircleOutlined, ClockCircleOutlined, DownloadOutlined,
+  FileTextOutlined,
+  CameraOutlined,
+  LoadingOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ClockCircleOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import type { Execution, ExecutionLog } from "@/types/rpa";
 import { renderExecutionStatusTag } from "../constants";
@@ -25,11 +43,7 @@ export interface ExecutionDetailModalProps {
   onClose: () => void;
 }
 
-export function ExecutionDetailModal({
-  open,
-  execution,
-  onClose,
-}: ExecutionDetailModalProps) {
+export function ExecutionDetailModal({ open, execution, onClose }: ExecutionDetailModalProps) {
   const { message } = App.useApp();
   const [logs, setLogs] = useState<ExecutionLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
@@ -51,7 +65,11 @@ export function ExecutionDetailModal({
   }, []);
 
   useEffect(() => {
-    if (open && execution?.id && (execution.status === "running" || execution.status === "pending")) {
+    if (
+      open &&
+      execution?.id &&
+      (execution.status === "running" || execution.status === "pending")
+    ) {
       loadLogs(execution.id);
       // 每3秒刷新一次日志
       const interval = setInterval(() => {
@@ -135,7 +153,15 @@ export function ExecutionDetailModal({
     return (
       <Steps
         current={execution.step ?? 0}
-        status={execution.status === "failed" ? "error" : execution.status === "completed" ? "finish" : execution.status === "running" ? "process" : "wait"}
+        status={
+          execution.status === "failed"
+            ? "error"
+            : execution.status === "completed"
+              ? "finish"
+              : execution.status === "running"
+                ? "process"
+                : "wait"
+        }
         items={steps}
       />
     );
@@ -165,7 +191,9 @@ export function ExecutionDetailModal({
               <Space direction="vertical" style={{ width: "100%" }}>
                 <Space>
                   <Text type="secondary">{log.timestamp}</Text>
-                  <Tag color={log.level === "error" ? "red" : log.level === "warn" ? "orange" : "blue"}>
+                  <Tag
+                    color={log.level === "error" ? "red" : log.level === "warn" ? "orange" : "blue"}
+                  >
                     {log.level.toUpperCase()}
                   </Tag>
                   {log.step !== undefined && <Tag>步骤 {log.step + 1}</Tag>}
@@ -178,11 +206,7 @@ export function ExecutionDetailModal({
                 )}
                 {log.screenshotUrl && (
                   <div>
-                    <Image
-                      width={200}
-                      src={log.screenshotUrl}
-                      style={{ marginTop: 8 }}
-                    />
+                    <Image width={200} src={log.screenshotUrl} style={{ marginTop: 8 }} />
                   </div>
                 )}
               </Space>
@@ -202,7 +226,7 @@ export function ExecutionDetailModal({
     }));
 
     const logScreenshots = logs
-      .filter(log => log.screenshotUrl)
+      .filter((log) => log.screenshotUrl)
       .map((log, index) => ({
         key: `log-${index}`,
         timestamp: log.timestamp,
@@ -245,7 +269,9 @@ export function ExecutionDetailModal({
       // 使用 fetch + Authorization 头获取 blob，避免 window.location.href 走 GET 缺失鉴权头
       const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
       const headers = await getAuthHeaders();
-      const response = await fetch(`${baseUrl}/rpa/executions/${execution.id}/download`, { headers });
+      const response = await fetch(`${baseUrl}/rpa/executions/${execution.id}/download`, {
+        headers,
+      });
 
       if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
@@ -333,11 +359,7 @@ export function ExecutionDetailModal({
                 <ClockCircleOutlined /> 步骤进度
               </span>
             ),
-            children: (
-              <div style={{ padding: "16px 0" }}>
-                {renderSteps()}
-              </div>
-            ),
+            children: <div style={{ padding: "16px 0" }}>{renderSteps()}</div>,
           },
           {
             key: "logs",

@@ -28,10 +28,13 @@ const CityMarkers: React.FC<CityMarkersProps> = ({
     setActiveWindow(null);
   }, []);
 
-  const handleMarkerClick = useCallback((city: CityGroup) => {
-    onCityClick(city.code);
-    setActiveWindow(city.code);
-  }, [onCityClick]);
+  const handleMarkerClick = useCallback(
+    (city: CityGroup) => {
+      onCityClick(city.code);
+      setActiveWindow(city.code);
+    },
+    [onCityClick]
+  );
 
   const handleBuildingMouseEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.currentTarget.style.background = "#f5f5f5";
@@ -51,9 +54,7 @@ const CityMarkers: React.FC<CityMarkersProps> = ({
 
         return (
           <div key={city.code}>
-            <CustomOverlay
-              position={{ lng: city.center[0], lat: city.center[1] }}
-            >
+            <CustomOverlay position={{ lng: city.center[0], lat: city.center[1] }}>
               <div
                 onClick={() => handleMarkerClick(city)}
                 style={{
@@ -70,7 +71,9 @@ const CityMarkers: React.FC<CityMarkersProps> = ({
                   transition: "all 0.3s",
                 }}
               >
-                <EnvironmentOutlined style={{ color: "var(--theme-text-inverse, #fff)", fontSize: 16 }} />
+                <EnvironmentOutlined
+                  style={{ color: "var(--theme-text-inverse, #fff)", fontSize: 16 }}
+                />
               </div>
             </CustomOverlay>
 
@@ -90,7 +93,13 @@ const CityMarkers: React.FC<CityMarkersProps> = ({
                   </div>
                   {city.buildings.length > 0 && (
                     <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #eee" }}>
-                      <div style={{ fontSize: 12, color: "var(--theme-text-tertiary, #999)", marginBottom: 8 }}>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: "var(--theme-text-tertiary, #999)",
+                          marginBottom: 8,
+                        }}
+                      >
                         主要楼宇：
                       </div>
                       {showMainBuildings.map((building) => (
@@ -110,7 +119,13 @@ const CityMarkers: React.FC<CityMarkersProps> = ({
                         </div>
                       ))}
                       {hasMoreBuildings && (
-                        <div style={{ fontSize: 12, color: "var(--theme-text-tertiary, #999)", marginTop: 4 }}>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: "var(--theme-text-tertiary, #999)",
+                            marginTop: 4,
+                          }}
+                        >
                           ...等 {city.buildings.length} 栋楼宇
                         </div>
                       )}

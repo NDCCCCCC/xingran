@@ -84,8 +84,9 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
               showSearch
               optionFilterProp="children"
               disabled={disabled || !selectedDeptId}
-              onChange={(value) =>    onBuildingChange?.(value)}
-             onSearch={() => {}}>
+              onChange={(value) => onBuildingChange?.(value)}
+              onSearch={() => {}}
+            >
               {buildingOptionsByDept.map((b) => (
                 <Option key={b.id} value={b.id}>
                   {b.name}
@@ -95,15 +96,34 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
           </Form.Item>
 
           <Form.Item name="floorNo" label="楼层号">
-            <Input placeholder="请输入楼层号" allowClear className="user-form-input" style={{ width: 120 }} disabled={disabled} />
+            <Input
+              placeholder="请输入楼层号"
+              allowClear
+              className="user-form-input"
+              style={{ width: 120 }}
+              disabled={disabled}
+            />
           </Form.Item>
 
           <Form.Item name="name" label="楼层名称">
-            <Input placeholder="请输入楼层名称" allowClear className="user-form-input" style={{ width: 150 }} disabled={disabled} />
+            <Input
+              placeholder="请输入楼层名称"
+              allowClear
+              className="user-form-input"
+              style={{ width: 150 }}
+              disabled={disabled}
+            />
           </Form.Item>
 
           <Form.Item name="status" label="状态">
-            <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 120 }} disabled={disabled} onSearch={() => {}}>
+            <Select
+              placeholder="请选择状态"
+              allowClear
+              className="user-form-input"
+              style={{ width: 120 }}
+              disabled={disabled}
+              onSearch={() => {}}
+            >
               {STATUS_OPTIONS.map((opt) => (
                 <Option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -123,7 +143,9 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
               >
                 搜索
               </Button>
-              <Button onClick={onReset} disabled={disabled}>重置</Button>
+              <Button onClick={onReset} disabled={disabled}>
+                重置
+              </Button>
               <Button icon={<ReloadOutlined />} onClick={onRefresh} loading={loading}>
                 刷新
               </Button>
@@ -151,7 +173,11 @@ export const FloorSearchForm: FC<FloorSearchFormProps> = ({
             导出
           </Button>
           {selectedCount > 0 && (
-            <Button icon={<DeleteOutlined />} onClick={onBatchDelete} style={{ color: "var(--theme-error, #ff4d4f)" }}>
+            <Button
+              icon={<DeleteOutlined />}
+              onClick={onBatchDelete}
+              style={{ color: "var(--theme-error, #ff4d4f)" }}
+            >
               批量删除 ({selectedCount})
             </Button>
           )}

@@ -20,10 +20,10 @@ function isValidHolidayType(value: string): value is HolidayType {
 const TEMPLATE_DATA = [
   {
     "日期(YYYY-MM-DD)": "2024-01-01",
-    "名称": "元旦",
+    名称: "元旦",
     "类型(legal/workday/custom)": "legal",
     "是否休息(true/false)": "true",
-    "备注": "法定节假日",
+    备注: "法定节假日",
   },
 ];
 
@@ -49,7 +49,9 @@ function getRowName(row: HolidayExcelRow, rowNum: number): string {
 function getRowType(row: HolidayExcelRow, rowNum: number): HolidayType {
   const holidayTypeRaw = row["类型(legal/workday/custom)"] || row["类型"] || "custom";
   if (!isValidHolidayType(holidayTypeRaw)) {
-    throw new Error(`第 ${rowNum} 行：类型值不正确 (${holidayTypeRaw})，应为 legal、workday 或 custom`);
+    throw new Error(
+      `第 ${rowNum} 行：类型值不正确 (${holidayTypeRaw})，应为 legal、workday 或 custom`
+    );
   }
   return holidayTypeRaw;
 }

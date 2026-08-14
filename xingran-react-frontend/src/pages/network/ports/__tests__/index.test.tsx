@@ -143,9 +143,7 @@ vi.mock("@/components/shared/NetworkExport", () => ({
 }));
 
 vi.mock("@/components/shared", async () => {
-  const actual = await vi.importActual<typeof import("@/components/shared")>(
-    "@/components/shared"
-  );
+  const actual = await vi.importActual<typeof import("@/components/shared")>("@/components/shared");
   return {
     ...actual,
     BatchExportModal: () => <div data-testid="batch-export-modal-mock" />,

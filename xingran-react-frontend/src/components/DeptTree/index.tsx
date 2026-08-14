@@ -5,11 +5,7 @@ import type { DataNode, EventDataNode } from "antd/es/tree";
 import { ApartmentOutlined, SearchOutlined } from "@ant-design/icons";
 import { useDeptTree } from "@/hooks/useDeptTree";
 import type { SimpleDept } from "@/lib/dutyApi";
-import {
-  filterExternalOrgDepts,
-  toShortNameDataNode,
-  type DeptLikeNode,
-} from "@/utils/deptUtils";
+import { filterExternalOrgDepts, toShortNameDataNode, type DeptLikeNode } from "@/utils/deptUtils";
 
 /**
  * 后端部门树接口实际返回的节点形状。
@@ -25,12 +21,15 @@ interface RawDept extends SimpleDept {
 }
 
 interface DeptTreeProps {
-  onSelect?: (selectedKeys: Key[], info: {
-    event: "select";
-    selected: boolean;
-    node: EventDataNode<DataNode>;
-    selectedNodes: DataNode[];
-  }) => void;
+  onSelect?: (
+    selectedKeys: Key[],
+    info: {
+      event: "select";
+      selected: boolean;
+      node: EventDataNode<DataNode>;
+      selectedNodes: DataNode[];
+    }
+  ) => void;
   selectedKeys?: Key[];
   style?: CSSProperties;
   externalOnly?: boolean;
@@ -62,7 +61,7 @@ const DeptTree: FC<DeptTreeProps> = ({
   const treeData = useMemo<DataNode[]>(() => {
     const filtered = externalOnly
       ? filterExternalOrgDepts<RawDept & DeptLikeNode>(
-          rawDeptTyped as unknown as Array<RawDept & DeptLikeNode>,
+          rawDeptTyped as unknown as Array<RawDept & DeptLikeNode>
         )
       : rawDeptTyped;
     // toShortNameDataNode 输出 { title, key, value, children?, isLeaf? }, 兼容 DataNode。
@@ -164,14 +163,16 @@ const DeptTree: FC<DeptTreeProps> = ({
 
     const filterFn = (data: DataNode[]): DataNode[] => {
       const lowerSearchValue = searchValue.toLowerCase();
-      return data.filter(node => {
-        const titleMatch = node.title?.toString().toLowerCase().includes(lowerSearchValue);
-        const childrenMatch = node.children ? filterFn(node.children).length > 0 : false;
-        return titleMatch || childrenMatch;
-      }).map(node => ({
-        ...node,
-        children: node.children ? filterFn(node.children) : undefined,
-      }));
+      return data
+        .filter((node) => {
+          const titleMatch = node.title?.toString().toLowerCase().includes(lowerSearchValue);
+          const childrenMatch = node.children ? filterFn(node.children).length > 0 : false;
+          return titleMatch || childrenMatch;
+        })
+        .map((node) => ({
+          ...node,
+          children: node.children ? filterFn(node.children) : undefined,
+        }));
     };
     return filterFn(treeData);
   }, [treeData, searchValue]);
@@ -202,7 +203,10 @@ const DeptTree: FC<DeptTreeProps> = ({
       />
 
       <Spin spinning={loading}>
-        <div className="dept-tree-container" style={{ maxHeight: "calc(100vh - 220px)", overflowX: "hidden" }}>
+        <div
+          className="dept-tree-container"
+          style={{ maxHeight: "calc(100vh - 220px)", overflowX: "hidden" }}
+        >
           <Tree
             showLine
             treeData={filteredTreeData}

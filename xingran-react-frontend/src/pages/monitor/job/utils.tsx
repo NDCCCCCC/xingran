@@ -51,5 +51,7 @@ export function renderExceptionInfo(info: string) {
     <Tooltip title={info}>
       <span className="text-red-500">查看错误</span>
     </Tooltip>
-  ) : "-";
+  ) : (
+    "-"
+  );
 }

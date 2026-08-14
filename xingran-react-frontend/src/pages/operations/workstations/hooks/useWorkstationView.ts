@@ -18,7 +18,9 @@ export interface UseWorkstationViewReturn {
   floorPlanWorkstations: WorkstationNode[];
 
   handleFloorChangeForPlan: (floorId: string) => void;
-  handlePositionUpdate: (items: { id: string; positionX: number; positionY: number; rotation?: number }[]) => Promise<void>;
+  handlePositionUpdate: (
+    items: { id: string; positionX: number; positionY: number; rotation?: number }[]
+  ) => Promise<void>;
   handleFloorPlanEdit: (workstation: WorkstationNode, openModal: () => void) => void;
 }
 

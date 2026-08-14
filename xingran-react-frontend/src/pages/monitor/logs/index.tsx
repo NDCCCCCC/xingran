@@ -181,7 +181,8 @@ const LogMonitor: React.FC = () => {
       content: `确定要清空${activeTab === "oper" ? "操作" : "登录"}日志吗？此操作不可恢复！`,
       onOk: async () => {
         try {
-          const endpoint = activeTab === "oper" ? "/monitor/oper-logs/clear" : "/monitor/login-logs/clear";
+          const endpoint =
+            activeTab === "oper" ? "/monitor/oper-logs/clear" : "/monitor/login-logs/clear";
           await post<BaseResponse<any>>(endpoint, {});
           message.success("清空成功");
           currentManager.handleRefresh();
@@ -199,8 +200,14 @@ const LogMonitor: React.FC = () => {
   }, [currentManager]);
 
   // 表格列
-  const operColumns = getOperLogColumns({ handleViewDetail, getColumnSortOrder: operLogManager.getColumnSortOrder });
-  const loginColumns = getLoginLogColumns({ handleViewDetail, getColumnSortOrder: loginLogManager.getColumnSortOrder });
+  const operColumns = getOperLogColumns({
+    handleViewDetail,
+    getColumnSortOrder: operLogManager.getColumnSortOrder,
+  });
+  const loginColumns = getLoginLogColumns({
+    handleViewDetail,
+    getColumnSortOrder: loginLogManager.getColumnSortOrder,
+  });
 
   // 搜索
   const handleSearch = useCallback(() => {
@@ -240,7 +247,8 @@ const LogMonitor: React.FC = () => {
                       className="user-form-input"
                       style={{ width: "100%" }}
                       options={BUSINESS_TYPE_OPTIONS}
-                     onSearch={() => {}}/>
+                      onSearch={() => {}}
+                    />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={8} md={6}>
@@ -251,7 +259,8 @@ const LogMonitor: React.FC = () => {
                       className="user-form-input"
                       style={{ width: "100%" }}
                       options={LOG_STATUS_OPTIONS}
-                     onSearch={() => {}}/>
+                      onSearch={() => {}}
+                    />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={8} md={6}>
@@ -310,7 +319,8 @@ const LogMonitor: React.FC = () => {
                       className="user-form-input"
                       style={{ width: "100%" }}
                       options={LOGIN_STATUS_OPTIONS}
-                     onSearch={() => {}}/>
+                      onSearch={() => {}}
+                    />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={16} md={6}>
@@ -373,7 +383,7 @@ const LogMonitor: React.FC = () => {
                   onChange={operLogManager.handleTableChange}
                   scroll={{ x: 1500 }}
                 />
-              )
+              ),
             },
             {
               key: "login",
@@ -400,8 +410,8 @@ const LogMonitor: React.FC = () => {
                   onChange={loginLogManager.handleTableChange}
                   scroll={{ x: 1400 }}
                 />
-              )
-            }
+              ),
+            },
           ]}
         />
       </Card>
@@ -420,32 +430,85 @@ const LogMonitor: React.FC = () => {
             <div className="mb-4 space-y-2">
               {activeTab === "oper" ? (
                 <>
-                  <div><strong>日志编号：</strong>{(selectedLog as OperLog).id}</div>
-                  <div><strong>操作模块：</strong>{(selectedLog as OperLog).title}</div>
-                  <div><strong>请求方式：</strong>{(selectedLog as OperLog).requestMethod}</div>
-                  <div><strong>操作人员：</strong>{(selectedLog as OperLog).operName}</div>
-                  <div><strong>部门名称：</strong>{(selectedLog as OperLog).deptName || "-"}</div>
-                  <div><strong>操作地址：</strong>{(selectedLog as OperLog).operUrl}</div>
-                  <div><strong>操作IP：</strong>{(selectedLog as OperLog).operIp}</div>
-                  <div><strong>操作地点：</strong>{(selectedLog as OperLog).operLocation}</div>
-                  <div><strong>操作状态：</strong>
+                  <div>
+                    <strong>日志编号：</strong>
+                    {(selectedLog as OperLog).id}
+                  </div>
+                  <div>
+                    <strong>操作模块：</strong>
+                    {(selectedLog as OperLog).title}
+                  </div>
+                  <div>
+                    <strong>请求方式：</strong>
+                    {(selectedLog as OperLog).requestMethod}
+                  </div>
+                  <div>
+                    <strong>操作人员：</strong>
+                    {(selectedLog as OperLog).operName}
+                  </div>
+                  <div>
+                    <strong>部门名称：</strong>
+                    {(selectedLog as OperLog).deptName || "-"}
+                  </div>
+                  <div>
+                    <strong>操作地址：</strong>
+                    {(selectedLog as OperLog).operUrl}
+                  </div>
+                  <div>
+                    <strong>操作IP：</strong>
+                    {(selectedLog as OperLog).operIp}
+                  </div>
+                  <div>
+                    <strong>操作地点：</strong>
+                    {(selectedLog as OperLog).operLocation}
+                  </div>
+                  <div>
+                    <strong>操作状态：</strong>
                     {renderLogStatusTag((selectedLog as OperLog).status, "oper")}
                   </div>
-                  <div><strong>操作时间：</strong>{formatLocalTime((selectedLog as OperLog).operTime)}</div>
+                  <div>
+                    <strong>操作时间：</strong>
+                    {formatLocalTime((selectedLog as OperLog).operTime)}
+                  </div>
                 </>
               ) : (
                 <>
-                  <div><strong>访问编号：</strong>{(selectedLog as LoginLog).id}</div>
-                  <div><strong>用户名称：</strong>{(selectedLog as LoginLog).userName}</div>
-                  <div><strong>登录IP：</strong>{(selectedLog as LoginLog).ipAddr}</div>
-                  <div><strong>登录地点：</strong>{(selectedLog as LoginLog).loginLocation}</div>
-                  <div><strong>浏览器：</strong>{(selectedLog as LoginLog).browser || "-"}</div>
-                  <div><strong>操作系统：</strong>{(selectedLog as LoginLog).os || "-"}</div>
-                  <div><strong>登录状态：</strong>
+                  <div>
+                    <strong>访问编号：</strong>
+                    {(selectedLog as LoginLog).id}
+                  </div>
+                  <div>
+                    <strong>用户名称：</strong>
+                    {(selectedLog as LoginLog).userName}
+                  </div>
+                  <div>
+                    <strong>登录IP：</strong>
+                    {(selectedLog as LoginLog).ipAddr}
+                  </div>
+                  <div>
+                    <strong>登录地点：</strong>
+                    {(selectedLog as LoginLog).loginLocation}
+                  </div>
+                  <div>
+                    <strong>浏览器：</strong>
+                    {(selectedLog as LoginLog).browser || "-"}
+                  </div>
+                  <div>
+                    <strong>操作系统：</strong>
+                    {(selectedLog as LoginLog).os || "-"}
+                  </div>
+                  <div>
+                    <strong>登录状态：</strong>
                     {renderLogStatusTag((selectedLog as LoginLog).status, "login")}
                   </div>
-                  <div><strong>操作信息：</strong>{(selectedLog as LoginLog).message}</div>
-                  <div><strong>登录时间：</strong>{formatLocalTime((selectedLog as LoginLog).loginTime)}</div>
+                  <div>
+                    <strong>操作信息：</strong>
+                    {(selectedLog as LoginLog).message}
+                  </div>
+                  <div>
+                    <strong>登录时间：</strong>
+                    {formatLocalTime((selectedLog as LoginLog).loginTime)}
+                  </div>
                 </>
               )}
             </div>

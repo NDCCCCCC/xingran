@@ -103,7 +103,10 @@ const CredentialManagement: FC = () => {
       if (formValues.searchProtocolType) {
         searchParams.protocolType = formValues.searchProtocolType;
       }
-      const result = await post<PageResponse<AuthCredential>>("/network/credentials/list", searchParams);
+      const result = await post<PageResponse<AuthCredential>>(
+        "/network/credentials/list",
+        searchParams
+      );
       return { list: result.data?.list || [], total: result.data?.total || 0 };
     },
     {
@@ -121,7 +124,9 @@ const CredentialManagement: FC = () => {
   // 加载统计数据(专用端点 COUNT 聚合,不受分页影响)
   const loadStatistics = async () => {
     try {
-      const result = await post<{ total: number; ssh: number; telnet: number }>("/network/credentials/statistics");
+      const result = await post<{ total: number; ssh: number; telnet: number }>(
+        "/network/credentials/statistics"
+      );
       setStatistics({
         total: result.data?.total ?? 0,
         ssh: result.data?.ssh ?? 0,
@@ -267,7 +272,14 @@ const CredentialManagement: FC = () => {
 
   // 表格列
   const columns: ColumnsType<AuthCredential> = [
-    { title: "凭证名称", dataIndex: "credentialName", key: "credentialName", width: 180, sorter: true, sortOrder: getCredColumnSortOrder("credentialName") },
+    {
+      title: "凭证名称",
+      dataIndex: "credentialName",
+      key: "credentialName",
+      width: 180,
+      sorter: true,
+      sortOrder: getCredColumnSortOrder("credentialName"),
+    },
     {
       title: "协议类型",
       dataIndex: "protocolType",
@@ -275,9 +287,7 @@ const CredentialManagement: FC = () => {
       width: 100,
       sorter: true,
       sortOrder: getCredColumnSortOrder("protocolType"),
-      render: (protocolType: string) => (
-        <Tag color="blue">{protocolType?.toUpperCase()}</Tag>
-      ),
+      render: (protocolType: string) => <Tag color="blue">{protocolType?.toUpperCase()}</Tag>,
     },
     { title: "用户名", dataIndex: "username", key: "username", width: 120 },
     {
@@ -285,18 +295,17 @@ const CredentialManagement: FC = () => {
       dataIndex: "password",
       key: "password",
       width: 100,
-      render: (password: string) => password ? "******" : "-",
+      render: (password: string) => (password ? "******" : "-"),
     },
     {
       title: "SNMP Communities",
       dataIndex: "snmpCommunities",
       key: "snmpCommunities",
       width: 200,
-      render: (snmpCommunities: string[]) => (
+      render: (snmpCommunities: string[]) =>
         snmpCommunities && snmpCommunities.length > 0
           ? snmpCommunities.map((c, i) => <Tag key={i}>{c}</Tag>)
-          : "-"
-      ),
+          : "-",
     },
     {
       title: "SNMP版本",
@@ -310,9 +319,7 @@ const CredentialManagement: FC = () => {
       dataIndex: "isDefault",
       key: "isDefault",
       width: 100,
-      render: (isDefault: boolean) => (
-        isDefault ? <Tag color="gold">默认</Tag> : <Tag>普通</Tag>
-      ),
+      render: (isDefault: boolean) => (isDefault ? <Tag color="gold">默认</Tag> : <Tag>普通</Tag>),
     },
     { title: "备注", dataIndex: "description", key: "description", width: 150, ellipsis: true },
     {
@@ -371,11 +378,7 @@ const CredentialManagement: FC = () => {
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={8}>
           <Card>
-            <Statistic
-              title="凭证总数"
-              value={statistics.total}
-              prefix={<KeyOutlined />}
-            />
+            <Statistic title="凭证总数" value={statistics.total} prefix={<KeyOutlined />} />
           </Card>
         </Col>
         <Col span={8}>
@@ -402,30 +405,63 @@ const CredentialManagement: FC = () => {
 
       {/* 搜索表单和操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
+        >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="searchCredentialName" label="凭证名称">
-              <Input placeholder="请输入凭证名称" allowClear className="user-form-input" style={{ width: 150 }} />
+              <Input
+                placeholder="请输入凭证名称"
+                allowClear
+                className="user-form-input"
+                style={{ width: 150 }}
+              />
             </Form.Item>
             <Form.Item name="searchProtocolType" label="协议类型">
-              <Select placeholder="请选择协议类型" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
-                {protocolTypeOptions.map(opt => (
-                  <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+              <Select
+                placeholder="请选择协议类型"
+                allowClear
+                className="user-form-input"
+                style={{ width: 120 }}
+                onSearch={() => {}}
+              >
+                {protocolTypeOptions.map((opt) => (
+                  <Option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </Option>
                 ))}
               </Select>
             </Form.Item>
             <Form.Item>
               <Space>
-                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>查询</Button>
-                <Button icon={<ReloadOutlined />} onClick={handleReset}>重置</Button>
-                <Button icon={<ReloadOutlined />} onClick={handleRefresh}>刷新</Button>
+                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                  查询
+                </Button>
+                <Button icon={<ReloadOutlined />} onClick={handleReset}>
+                  重置
+                </Button>
+                <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                  刷新
+                </Button>
               </Space>
             </Form.Item>
           </Form>
           <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+              新增
+            </Button>
             {selectedRowKeys.length > 0 && (
-              <Button icon={<DeleteOutlined />} style={{ color: "var(--theme-error, #ff4d4f)" }} onClick={handleBatchDelete}>
+              <Button
+                icon={<DeleteOutlined />}
+                style={{ color: "var(--theme-error, #ff4d4f)" }}
+                onClick={handleBatchDelete}
+              >
                 批量删除 ({selectedRowKeys.length})
               </Button>
             )}
@@ -433,26 +469,25 @@ const CredentialManagement: FC = () => {
               entityType="credentials"
               entityName="授权凭证"
               filters={Object.fromEntries(
-                Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null && v !== "")
+                Object.entries(searchForm.getFieldsValue() as Record<string, unknown>).filter(
+                  ([, v]) => v !== undefined && v !== null && v !== ""
+                )
               )}
               current={paginationProps?.current ?? 1}
               pageSize={paginationProps?.pageSize ?? 10}
             />
-          </Space>{/* 批量导出 Modal */}
+          </Space>
+          {/* 批量导出 Modal */}
 
-        <BatchExportModal
+          <BatchExportModal
+            visible={batchModalVisible}
 
-          visible={batchModalVisible}
+            onConfirm={handleBatchExport}
 
-          onConfirm={handleBatchExport}
+            onCancel={() => setBatchModalVisible(false)}
 
-          onCancel={() => setBatchModalVisible(false)}
-
-          loading={batchExporting}
-
-        />
-
-
+            loading={batchExporting}
+          />
         </div>
       </Card>
 
@@ -478,7 +513,11 @@ const CredentialManagement: FC = () => {
         title={editingCredential ? "编辑授权凭证" : "新增授权凭证"}
         open={editModalVisible}
         onOk={handleCreate}
-        onCancel={() => { handleModalClose(); setShowPassword(false); setShowEnablePassword(false); }}
+        onCancel={() => {
+          handleModalClose();
+          setShowPassword(false);
+          setShowEnablePassword(false);
+        }}
         width={600}
       >
         <Alert
@@ -489,19 +528,33 @@ const CredentialManagement: FC = () => {
           style={{ marginBottom: 16 }}
         />
         <Form form={editForm} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
-          <Form.Item name="credentialName" label="凭证名称" rules={[{ required: true, message: "请输入凭证名称" }]}>
+          <Form.Item
+            name="credentialName"
+            label="凭证名称"
+            rules={[{ required: true, message: "请输入凭证名称" }]}
+          >
             <Input placeholder="请输入凭证名称" />
           </Form.Item>
-          <Form.Item name="protocolType" label="协议类型" rules={[{ required: true, message: "请选择协议类型" }]}>
+          <Form.Item
+            name="protocolType"
+            label="协议类型"
+            rules={[{ required: true, message: "请选择协议类型" }]}
+          >
             <Select placeholder="请选择协议类型 (SSH 或 Telnet)" onSearch={() => {}}>
-              {protocolTypeOptions.map(opt => (
-                <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+              {protocolTypeOptions.map((opt) => (
+                <Option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </Option>
               ))}
             </Select>
           </Form.Item>
 
           {/* SSH/Telnet 字段 - 始终显示 */}
-          <Form.Item name="username" label="用户名" rules={[{ required: true, message: "请输入用户名" }]}>
+          <Form.Item
+            name="username"
+            label="用户名"
+            rules={[{ required: true, message: "请输入用户名" }]}
+          >
             <Input placeholder="请输入用户名" />
           </Form.Item>
           <Form.Item
@@ -519,7 +572,10 @@ const CredentialManagement: FC = () => {
             <Form.Item name="enablePassword" label="特权密码">
               <Input.Password
                 placeholder="请输入特权密码（可选）"
-                visibilityToggle={{ visible: showEnablePassword, onVisibleChange: setShowEnablePassword }}
+                visibilityToggle={{
+                  visible: showEnablePassword,
+                  onVisibleChange: setShowEnablePassword,
+                }}
               />
             </Form.Item>
           )}
@@ -534,13 +590,15 @@ const CredentialManagement: FC = () => {
               mode="tags"
               placeholder="请输入 SNMP Community，可添加多个"
               tokenSeparators={[","]}
-             onSearch={() => {}}>
-            </Select>
+              onSearch={() => {}}
+            ></Select>
           </Form.Item>
           <Form.Item name="snmpVersion" label="SNMP版本" rules={[{ required: true }]}>
             <Select onSearch={() => {}}>
-              {snmpVersionOptions.map(opt => (
-                <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+              {snmpVersionOptions.map((opt) => (
+                <Option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </Option>
               ))}
             </Select>
           </Form.Item>
@@ -555,4 +613,3 @@ const CredentialManagement: FC = () => {
 };
 
 export default CredentialManagement;
-

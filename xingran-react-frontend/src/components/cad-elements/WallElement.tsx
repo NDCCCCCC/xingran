@@ -29,17 +29,18 @@ export function WallElement({
   onDoubleClick,
   style,
 }: WallElementProps) {
-  const color = useMemo(
-    () => getWallColor(wall, selected, hovered),
-    [wall, selected, hovered]
-  );
+  const color = useMemo(() => getWallColor(wall, selected, hovered), [wall, selected, hovered]);
 
   const pathData = useMemo(() => {
     if (wall.points.length === 0) return "";
 
     const points = wall.points;
-    const path = `M ${points[0].x} ${points[0].y}` +
-      points.slice(1).map(p => ` L ${p.x} ${p.y}`).join("");
+    const path =
+      `M ${points[0].x} ${points[0].y}` +
+      points
+        .slice(1)
+        .map((p) => ` L ${p.x} ${p.y}`)
+        .join("");
 
     return path;
   }, [wall.points]);
@@ -56,7 +57,9 @@ export function WallElement({
     "cad-wall",
     selected && "cad-wall-selected",
     hovered && "cad-wall-hovered",
-  ].filter(Boolean).join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <g

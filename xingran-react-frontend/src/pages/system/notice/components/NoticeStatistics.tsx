@@ -20,11 +20,7 @@ export const NoticeStatisticsCard: React.FC<NoticeStatisticsCardProps> = ({ stat
     <Row gutter={16} style={{ marginBottom: 16 }}>
       <Col span={6}>
         <Card>
-          <Statistic
-            title="总公告数"
-            value={statistics.total}
-            prefix={<CheckCircleOutlined />}
-          />
+          <Statistic title="总公告数" value={statistics.total} prefix={<CheckCircleOutlined />} />
         </Card>
       </Col>
       <Col span={6}>

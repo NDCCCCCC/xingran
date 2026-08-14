@@ -26,10 +26,13 @@ const BuildingMarkers: React.FC<BuildingMarkersProps> = ({
     setActiveWindow(null);
   }, []);
 
-  const handleMarkerClick = useCallback((building: BuildingItem) => {
-    onBuildingClick(building);
-    setActiveWindow(building.id);
-  }, [onBuildingClick]);
+  const handleMarkerClick = useCallback(
+    (building: BuildingItem) => {
+      onBuildingClick(building);
+      setActiveWindow(building.id);
+    },
+    [onBuildingClick]
+  );
 
   // 过滤出有坐标的楼宇
   const buildingsWithCoords = buildings.filter((b) => b.longitude && b.latitude);
@@ -43,9 +46,7 @@ const BuildingMarkers: React.FC<BuildingMarkersProps> = ({
 
         return (
           <div key={building.id}>
-            <CustomOverlay
-              position={{ lng: building.longitude!, lat: building.latitude! }}
-            >
+            <CustomOverlay position={{ lng: building.longitude!, lat: building.latitude! }}>
               <div
                 onClick={() => handleMarkerClick(building)}
                 style={{
@@ -74,10 +75,14 @@ const BuildingMarkers: React.FC<BuildingMarkersProps> = ({
                 visible
               >
                 <div style={{ padding: "12px", minWidth: "250px" }}>
-                  <h3 style={{ margin: "0 0 8px 0", fontSize: 16 }}>
-                    {building.name}
-                  </h3>
-                  <div style={{ fontSize: 12, color: "var(--theme-text-tertiary, #666)", marginBottom: 4 }}>
+                  <h3 style={{ margin: "0 0 8px 0", fontSize: 16 }}>{building.name}</h3>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "var(--theme-text-tertiary, #666)",
+                      marginBottom: 4,
+                    }}
+                  >
                     <div>📍 {building.cityName}</div>
                     <div>📌 {building.address}</div>
                   </div>

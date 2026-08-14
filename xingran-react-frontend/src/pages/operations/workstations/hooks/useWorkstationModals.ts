@@ -28,14 +28,17 @@ export interface UseWorkstationModalsReturn {
 export function useWorkstationModals(
   loadUserOptions?: (deptId?: string) => Promise<void>
 ): UseWorkstationModalsReturn {
-  const openModal = useCallback(async (record?: WorkstationOps, _form?: FormInstance<unknown>) => {
-    // 编辑模式下，如果有部门ID，加载该部门的用户列表
-    // 返回 record 以便调用者使用
-    if (record?.deptId && loadUserOptions) {
-      await loadUserOptions(record.deptId);
-    }
-    return record;
-  }, [loadUserOptions]);
+  const openModal = useCallback(
+    async (record?: WorkstationOps, _form?: FormInstance<unknown>) => {
+      // 编辑模式下，如果有部门ID，加载该部门的用户列表
+      // 返回 record 以便调用者使用
+      if (record?.deptId && loadUserOptions) {
+        await loadUserOptions(record.deptId);
+      }
+      return record;
+    },
+    [loadUserOptions]
+  );
 
   const closeModal = useCallback((form?: FormInstance<unknown>) => {
     if (form) {

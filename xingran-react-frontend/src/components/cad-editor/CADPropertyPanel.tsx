@@ -169,7 +169,9 @@ export function CADPropertyPanel({
         typeof processedValues.color === "object" &&
         "toHexString" in processedValues.color
       ) {
-        processedValues.color = (processedValues.color as { toHexString: () => string }).toHexString();
+        processedValues.color = (
+          processedValues.color as { toHexString: () => string }
+        ).toHexString();
       }
 
       onUpdate(processedValues);
@@ -178,7 +180,7 @@ export function CADPropertyPanel({
   );
 
   // 渲染表单字段
-  const renderField = function(field: FieldConfig) {
+  const renderField = function (field: FieldConfig) {
     const commonProps = {
       disabled: readOnly,
       style: { width: "100%" },
@@ -196,9 +198,7 @@ export function CADPropertyPanel({
             />
           );
         }
-        return (
-          <Input key={String(field.name)} placeholder={field.placeholder} {...commonProps} />
-        );
+        return <Input key={String(field.name)} placeholder={field.placeholder} {...commonProps} />;
 
       case "number":
         return (
@@ -212,19 +212,10 @@ export function CADPropertyPanel({
         );
 
       case "select":
-        return (
-          <Select key={String(field.name)} options={field.options} {...commonProps} />
-        );
+        return <Select key={String(field.name)} options={field.options} {...commonProps} />;
 
       case "color":
-        return (
-          <ColorPicker
-            key={String(field.name)}
-            showText
-            disabled={readOnly}
-            format="hex"
-          />
-        );
+        return <ColorPicker key={String(field.name)} showText disabled={readOnly} format="hex" />;
 
       default:
         return null;
@@ -232,7 +223,7 @@ export function CADPropertyPanel({
   };
 
   // 获取字段配置
-  const getFields = function(): readonly FieldConfig[] {
+  const getFields = function (): readonly FieldConfig[] {
     switch (elementType) {
       case "wall":
         return WALL_FIELDS;
@@ -289,9 +280,7 @@ export function CADPropertyPanel({
         )}
 
         {/* 状态分隔线（工位有状态字段） */}
-        {elementType === "workstation" && (
-          <Divider titlePlacement="left">状态</Divider>
-        )}
+        {elementType === "workstation" && <Divider titlePlacement="left">状态</Divider>}
 
         {/* 备注字段（文本没有备注字段） */}
         {elementType !== "text" && (

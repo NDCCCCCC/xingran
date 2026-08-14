@@ -54,15 +54,17 @@ export interface UseWorkOrderDataReturn {
   users: SimpleUser[];
   depts: SimpleDept[];
   categories: WorkOrderCategory[];
-  fetchList: (page?: number, pageSize?: number, sortParams?: { orderByColumn?: string; isAsc?: boolean }) => Promise<void>;
+  fetchList: (
+    page?: number,
+    pageSize?: number,
+    sortParams?: { orderByColumn?: string; isAsc?: boolean }
+  ) => Promise<void>;
   fetchStats: () => Promise<void>;
   fetchUsers: () => Promise<void>;
   fetchCategories: () => Promise<void>;
 }
 
-export function useWorkOrderData(
-  options: UseWorkOrderDataOptions
-): UseWorkOrderDataReturn {
+export function useWorkOrderData(options: UseWorkOrderDataOptions): UseWorkOrderDataReturn {
   const { form } = options;
   const { message } = App.useApp();
 
@@ -103,40 +105,49 @@ export function useWorkOrderData(
   }, []);
 
   // 获取列表数据;sortParams 携带 orderByColumn/isAsc(由 useServerSort 注入)
-  const fetchList = useCallback(async (page?: number, size?: number, sortParams?: { orderByColumn?: string; isAsc?: boolean }) => {
-    setLoading(true);
-    try {
-      const values = form.getFieldsValue() as Record<string, unknown>;
-      const params: WorkOrderListParams = {
-        current: page ?? current,
-        pageSize: size ?? pageSize,
-        workOrderNo: values.workOrderNo as string,
-        title: values.title as string,
-        categoryId: values.categoryId as string,
-        type: values.type as string,
-        priority: values.priority as number,
-        status: values.status as number,
-        assigneeId: values.assigneeId as string,
-        deptId: values.deptId as string,
-        ...(sortParams?.orderByColumn ? { orderByColumn: sortParams.orderByColumn, isAsc: sortParams.isAsc } : {}),
-      };
+  const fetchList = useCallback(
+    async (
+      page?: number,
+      size?: number,
+      sortParams?: { orderByColumn?: string; isAsc?: boolean }
+    ) => {
+      setLoading(true);
+      try {
+        const values = form.getFieldsValue() as Record<string, unknown>;
+        const params: WorkOrderListParams = {
+          current: page ?? current,
+          pageSize: size ?? pageSize,
+          workOrderNo: values.workOrderNo as string,
+          title: values.title as string,
+          categoryId: values.categoryId as string,
+          type: values.type as string,
+          priority: values.priority as number,
+          status: values.status as number,
+          assigneeId: values.assigneeId as string,
+          deptId: values.deptId as string,
+          ...(sortParams?.orderByColumn
+            ? { orderByColumn: sortParams.orderByColumn, isAsc: sortParams.isAsc }
+            : {}),
+        };
 
-      const result = await getWorkOrderList(params);
-      const list = result.data?.list ?? [];
-      setDataSource(list);
-      setTotal(result.data?.total ?? 0);
-      setCurrent(result.data?.current ?? 1);
-      setPageSize(result.data?.pageSize ?? 10);
+        const result = await getWorkOrderList(params);
+        const list = result.data?.list ?? [];
+        setDataSource(list);
+        setTotal(result.data?.total ?? 0);
+        setCurrent(result.data?.current ?? 1);
+        setPageSize(result.data?.pageSize ?? 10);
 
-      // 列表加载后顺带刷新统计(全局 COUNT,不受分页/筛选影响)。
-      // 这样搜索/分页/增删改(均经 fetchList)都会保持统计卡片为真实全局计数。
-      fetchStats();
-    } catch (error) {
-      message.error("获取工单列表失败");
-    } finally {
-      setLoading(false);
-    }
-  }, [form, current, pageSize, message, fetchStats]);
+        // 列表加载后顺带刷新统计(全局 COUNT,不受分页/筛选影响)。
+        // 这样搜索/分页/增删改(均经 fetchList)都会保持统计卡片为真实全局计数。
+        fetchStats();
+      } catch (error) {
+        message.error("获取工单列表失败");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [form, current, pageSize, message, fetchStats]
+  );
 
   // 获取用户列表
   const fetchUsers = useCallback(async () => {

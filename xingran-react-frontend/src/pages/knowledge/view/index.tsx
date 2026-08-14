@@ -1,19 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
-import {
-  App,
-  Input,
-  Card,
-  Row,
-  Col,
-  Tag,
-  Space,
-  Empty,
-  Spin,
-  Drawer,
-  Button,
-} from "antd";
+import { App, Input, Card, Row, Col, Tag, Space, Empty, Spin, Drawer, Button } from "antd";
 import {
   EyeOutlined,
   LikeOutlined,
@@ -29,14 +17,8 @@ import {
 } from "@/lib/knowledgeApi";
 import { formatDateTime } from "@/utils/datetime";
 import type { UnknownError } from "@/types/common";
-import {
-  getKnowledgeCategoryList,
-  type KnowledgeCategory,
-} from "@/lib/knowledgeApi";
-import {
-  getAllKnowledgeTags,
-  type KnowledgeTag,
-} from "@/lib/knowledgeApi";
+import { getKnowledgeCategoryList, type KnowledgeCategory } from "@/lib/knowledgeApi";
+import { getAllKnowledgeTags, type KnowledgeTag } from "@/lib/knowledgeApi";
 
 const { Search } = Input;
 
@@ -163,7 +145,10 @@ const KnowledgeViewPage: FC = () => {
   }, [categories]);
 
   // 分类树项组件
-  const CategoryTreeItem: FC<{ category: KnowledgeCategory; level: number }> = ({ category, level }) => {
+  const CategoryTreeItem: FC<{ category: KnowledgeCategory; level: number }> = ({
+    category,
+    level,
+  }) => {
     const isSelected = selectedCategory === category.id;
     const hasChildren = category.children && category.children.length > 0;
 
@@ -182,7 +167,7 @@ const KnowledgeViewPage: FC = () => {
           </Space>
         </div>
         {hasChildren &&
-          category.children!.map(child => (
+          category.children!.map((child) => (
             <CategoryTreeItem key={child.id} category={child} level={level + 1} />
           ))}
       </div>
@@ -198,7 +183,11 @@ const KnowledgeViewPage: FC = () => {
             placeholder="搜索知识库文章..."
             allowClear
             className="user-form-input"
-            enterButton={<Button type="primary" icon={<SearchOutlined />}>搜索</Button>}
+            enterButton={
+              <Button type="primary" icon={<SearchOutlined />}>
+                搜索
+              </Button>
+            }
             size="large"
             onSearch={handleSearch}
             onChange={(e) => {
@@ -218,7 +207,7 @@ const KnowledgeViewPage: FC = () => {
                 <Empty description="暂无分类" image={Empty.PRESENTED_IMAGE_SIMPLE} />
               ) : (
                 <div>
-                  {categories.map(cat => (
+                  {categories.map((cat) => (
                     <CategoryTreeItem key={cat.id} category={cat} level={0} />
                   ))}
                 </div>
@@ -284,16 +273,23 @@ const KnowledgeViewPage: FC = () => {
                           )}
                           <div className="mb-2">
                             <Tag color="blue">{article.category?.categoryName}</Tag>
-                            {article.tags && article.tags.slice(0, 3).map((tag) => (
-                              <Tag key={tag.id} color="default">
-                                {tag.tagName}
-                              </Tag>
-                            ))}
+                            {article.tags &&
+                              article.tags.slice(0, 3).map((tag) => (
+                                <Tag key={tag.id} color="default">
+                                  {tag.tagName}
+                                </Tag>
+                              ))}
                           </div>
                           <div className="flex justify-between items-center text-gray-400 text-xs">
                             <Space>
-                              <span><EyeOutlined className="mr-1" />{article.viewCount || 0}</span>
-                              <span><LikeOutlined className="mr-1" />{article.likeCount || 0}</span>
+                              <span>
+                                <EyeOutlined className="mr-1" />
+                                {article.viewCount || 0}
+                              </span>
+                              <span>
+                                <LikeOutlined className="mr-1" />
+                                {article.likeCount || 0}
+                              </span>
                             </Space>
                             <span>{formatDateTime(article.createdAt, "YYYY-MM-DD")}</span>
                           </div>
@@ -324,15 +320,20 @@ const KnowledgeViewPage: FC = () => {
                   <div className="flex justify-between">
                     <Space>
                       <Tag color="blue">{selectedArticle.category?.categoryName}</Tag>
-                      {selectedArticle.tags && selectedArticle.tags.map((tag) => (
-                        <Tag key={tag.id}>{tag.tagName}</Tag>
-                      ))}
+                      {selectedArticle.tags &&
+                        selectedArticle.tags.map((tag) => <Tag key={tag.id}>{tag.tagName}</Tag>)}
                     </Space>
                   </div>
                   <div className="flex justify-between text-gray-400 text-sm">
                     <Space>
-                      <span><EyeOutlined className="mr-1" />浏览: {selectedArticle.viewCount || 0}</span>
-                      <span><LikeOutlined className="mr-1" />点赞: {selectedArticle.likeCount || 0}</span>
+                      <span>
+                        <EyeOutlined className="mr-1" />
+                        浏览: {selectedArticle.viewCount || 0}
+                      </span>
+                      <span>
+                        <LikeOutlined className="mr-1" />
+                        点赞: {selectedArticle.likeCount || 0}
+                      </span>
                     </Space>
                     <span>{formatDateTime(selectedArticle.createdAt, "YYYY-MM-DD HH:mm")}</span>
                   </div>

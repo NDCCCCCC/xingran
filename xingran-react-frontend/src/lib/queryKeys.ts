@@ -50,46 +50,37 @@ export const queryKeys = {
     byConflictType: (windowDays: number) =>
       ["reconciliation", "by-conflict-type", windowDays] as const,
     /** 按严重级别分组(low/medium/high/critical 4 keys) */
-    bySeverity: (windowDays: number) =>
-      ["reconciliation", "by-severity", windowDays] as const,
+    bySeverity: (windowDays: number) => ["reconciliation", "by-severity", windowDays] as const,
     /** 健康度趋势点序列(7d/30d/90d) */
-    healthTrend: (windowDays: number) =>
-      ["reconciliation", "health-trend", windowDays] as const,
+    healthTrend: (windowDays: number) => ["reconciliation", "health-trend", windowDays] as const,
     /** Top N 长期未解决异常(默认 limit=10) */
-    topUnresolved: (limit: number) =>
-      ["reconciliation", "top-unresolved", limit] as const,
+    topUnresolved: (limit: number) => ["reconciliation", "top-unresolved", limit] as const,
     /** 异常列表(分页 + 筛选 + 服务端排序) */
     exceptionList: (params: ExceptionListParams) =>
       ["reconciliation", "exception-list", params] as const,
     /** 异常详情(单条) */
-    exceptionDetail: (id: string) =>
-      ["reconciliation", "exception-detail", id] as const,
+    exceptionDetail: (id: string) => ["reconciliation", "exception-detail", id] as const,
     /** 例外规则命中统计(R3 启用后才有数据) */
     ruleStats: () => ["reconciliation", "rule-stats"] as const,
     /** 例外规则列表(admin 页,分页 + 筛选) */
-    ruleList: (params?: object) =>
-      ["reconciliation", "rule-list", params ?? {}] as const,
+    ruleList: (params?: object) => ["reconciliation", "rule-list", params ?? {}] as const,
     /** 例外规则详情(单条,编辑回填) */
-    ruleDetail: (id: string) =>
-      ["reconciliation", "rule-detail", id] as const,
+    ruleDetail: (id: string) => ["reconciliation", "rule-detail", id] as const,
     /** 命中测试结果(按 IP+userID+deptID 入参缓存) */
     matchTest: (params: { ip: string; userId?: string; deptId?: string }) =>
       ["reconciliation", "match-test", params] as const,
     /** 降噪基线对比结果(dashboard 降噪卡片) */
-    baselineCompare: () =>
-      ["reconciliation", "baseline-compare"] as const,
+    baselineCompare: () => ["reconciliation", "baseline-compare"] as const,
     /** Phase 45 R4 — 工位对账健康度(POST /asset/reconciliation/by-workstation) */
     workstationHealth: (workstationId: string) =>
       ["reconciliation", "workstation-health", workstationId] as const,
     /** Phase 45 R4 — 资产对账健康度(从 workstationHealth 切片,无独立端点) */
-    assetHealth: (assetId: string) =>
-      ["reconciliation", "asset-health", assetId] as const,
+    assetHealth: (assetId: string) => ["reconciliation", "asset-health", assetId] as const,
     /** Phase 46 R5 — 修复建议列表(分页 + 筛选) */
     fixSuggestionList: (params: FixSuggestionListParams) =>
       ["reconciliation", "fix-suggestion-list", params] as const,
     /** Phase 46 R5 — 修复建议详情 */
-    fixSuggestionDetail: (id: string) =>
-      ["reconciliation", "fix-suggestion-detail", id] as const,
+    fixSuggestionDetail: (id: string) => ["reconciliation", "fix-suggestion-detail", id] as const,
     /** Phase 46 R5 — 修复建议统计(7d KPI 卡片 + 误修复率) */
     fixSuggestionStats: (windowDays: number) =>
       ["reconciliation", "fix-suggestion-stats", windowDays] as const,

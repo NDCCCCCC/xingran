@@ -51,10 +51,7 @@ export function useTargetSelector(): UseTargetSelectorResult {
 
   // 派生 antd Tree 期望的 DataNode 形状 (短名 title + key + children)。
   // 旧实现透传 ...node 是冗余(TargetSelector 只读 title/key/children),此处等价。
-  const deptTree = useMemo<Target[]>(
-    () => toShortNameDataNode(rawDept) as Target[],
-    [rawDept]
-  );
+  const deptTree = useMemo<Target[]>(() => toShortNameDataNode(rawDept) as Target[], [rawDept]);
 
   // 加载角色列表
   const loadRoles = useCallback(async () => {
@@ -73,7 +70,10 @@ export function useTargetSelector(): UseTargetSelectorResult {
   const loadUsers = useCallback(async () => {
     setLoadingUsers(true);
     try {
-      const response = await post<{ list: Target[] }>("/system/users/list", { current: 1, pageSize: 100 });
+      const response = await post<{ list: Target[] }>("/system/users/list", {
+        current: 1,
+        pageSize: 100,
+      });
       setUsers(response.data?.list || []);
     } catch (error) {
       console.error("加载用户列表失败:", error);

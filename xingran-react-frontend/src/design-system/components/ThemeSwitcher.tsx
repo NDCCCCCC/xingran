@@ -25,9 +25,7 @@ const ThemeSwitcher: FC = () => {
           <span className="text-lg">{preset.icon}</span>
           <span>{preset.name}</span>
         </Space>
-        {theme === preset.id && (
-          <span className="text-blue-500">✓</span>
-        )}
+        {theme === preset.id && <span className="text-blue-500">✓</span>}
       </div>
     ),
     onClick: () => {
@@ -47,7 +45,11 @@ const ThemeSwitcher: FC = () => {
       <Tooltip title="切换主题">
         <Button
           type="text"
-          icon={<span style={{ fontSize: "16px" }}>{themePresets.find(p => p.id === theme)?.icon}</span>}
+          icon={
+            <span style={{ fontSize: "16px" }}>
+              {themePresets.find((p) => p.id === theme)?.icon}
+            </span>
+          }
           className="flex items-center gap-2"
           style={{
             transition: "var(--theme-transition-base)",

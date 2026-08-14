@@ -6,20 +6,20 @@ import { useMenuStore } from "@/store/menuStore";
 import { useLayoutStore } from "@/store/layoutStore";
 import type { Menu as MenuType } from "@/types";
 import {
-	buildMenuPathMap,
-	isSameTopLevelMenu,
-	getMenuLevel,
-	isSecondLevelMenu,
-	isTopLevelMenu,
+  buildMenuPathMap,
+  isSameTopLevelMenu,
+  getMenuLevel,
+  isSecondLevelMenu,
+  isTopLevelMenu,
 } from "./sidebar-helper";
 import { getIconComponent } from "@/utils/iconUtils";
 import { buildFullPath, findMenuById, findMenuByFullPath } from "./sidebar.utils";
 import {
-	DEFAULT_SIDEBAR_WIDTH,
-	HEADER_HEIGHT,
-	COLLAPSE_BUTTON_LEFT,
-	MENU_FONT_SIZE,
-	NAVIGATION_DELAY,
+  DEFAULT_SIDEBAR_WIDTH,
+  HEADER_HEIGHT,
+  COLLAPSE_BUTTON_LEFT,
+  MENU_FONT_SIZE,
+  NAVIGATION_DELAY,
 } from "./sidebar.constants";
 import "@/design-system/themes/theme-styles.css";
 
@@ -49,8 +49,8 @@ const convertToMenuItem = (menu: MenuType, parentPath: string = ""): MenuItem =>
 
   if (menu.children && menu.children.length > 0) {
     const validChildren = menu.children
-      .filter(child => child.menuType !== "F" && child.visible === 1)
-      .map(child => convertToMenuItem(child, menuPath))
+      .filter((child) => child.menuType !== "F" && child.visible === 1)
+      .map((child) => convertToMenuItem(child, menuPath))
       .filter((item): item is MenuItem => item !== null);
 
     if (validChildren.length > 0 || menu.menuType === "M") {
@@ -93,8 +93,8 @@ const Sidebar = () => {
   // 将后端菜单数据转换为 Ant Design Menu 组件所需的格式
   const menuItems: MenuItem[] = useMemo(() => {
     return menus
-      .filter(menu => menu.menuType !== "F" && menu.visible === 1)
-      .map(menu => convertToMenuItem(menu))
+      .filter((menu) => menu.menuType !== "F" && menu.visible === 1)
+      .map((menu) => convertToMenuItem(menu))
       .filter((item): item is MenuItem => item !== null);
   }, [menus]);
 
@@ -106,8 +106,11 @@ const Sidebar = () => {
    * 只返回父级菜单的 key，不包含当前页面路径
    * 因为当前页面可能是不可展开的菜单项（menuType === 'C'）
    */
-  function buildParentKeyChain(currentPath: string, menuPathMap: Map<string, { level: number; topLevel?: string; secondLevel?: string }>): string[] {
-    const normalizePath = (p: string): string => p.startsWith("/") ? p.slice(1) : p;
+  function buildParentKeyChain(
+    currentPath: string,
+    menuPathMap: Map<string, { level: number; topLevel?: string; secondLevel?: string }>
+  ): string[] {
+    const normalizePath = (p: string): string => (p.startsWith("/") ? p.slice(1) : p);
     const normalizedPathname = normalizePath(currentPath);
     const menuInfo = menuPathMap.get(normalizedPathname);
 
@@ -173,8 +176,7 @@ const Sidebar = () => {
     if (expectedOpenKeysRef.current) {
       const expected = expectedOpenKeysRef.current;
       const isExpectedChange =
-        keys.length === expected.length &&
-        keys.every(k => expected.includes(k));
+        keys.length === expected.length && keys.every((k) => expected.includes(k));
 
       if (isExpectedChange) {
         setOpenKeys(keys);
@@ -196,7 +198,7 @@ const Sidebar = () => {
       case undefined: {
         // 一级菜单或以 top_ 开头的菜单：应用手风琴效果
         // 保留新展开的一级菜单和所有非一级菜单，移除其他一级菜单
-        const nonTopLevelKeys = keys.filter(key => !isTopLevelMenu(key, menuPathMap));
+        const nonTopLevelKeys = keys.filter((key) => !isTopLevelMenu(key, menuPathMap));
         setOpenKeys([latestOpenKey, ...nonTopLevelKeys]);
         break;
       }
@@ -211,10 +213,10 @@ const Sidebar = () => {
         }
 
         // 保留所有一级菜单
-        const topLevelKeys = keys.filter(key => isTopLevelMenu(key, menuPathMap));
+        const topLevelKeys = keys.filter((key) => isTopLevelMenu(key, menuPathMap));
 
         // 找出所有与新展开的二级菜单属于同一一级菜单的其他已展开二级菜单
-        const sameTopLevelSecondKeys = openKeys.filter(key => {
+        const sameTopLevelSecondKeys = openKeys.filter((key) => {
           if (!isSecondLevelMenu(key, menuPathMap)) return false;
           return isSameTopLevelMenu(key, latestOpenKey, menuPathMap);
         });
@@ -222,10 +224,11 @@ const Sidebar = () => {
         // 构建新的openKeys
         const result = [
           ...topLevelKeys,
-          ...keys.filter(key =>
-            !sameTopLevelSecondKeys.includes(key) &&
-            (isSecondLevelMenu(key, menuPathMap) || key === latestOpenKey)
-          )
+          ...keys.filter(
+            (key) =>
+              !sameTopLevelSecondKeys.includes(key) &&
+              (isSecondLevelMenu(key, menuPathMap) || key === latestOpenKey)
+          ),
         ];
         setOpenKeys(result);
         break;
@@ -274,7 +277,6 @@ const Sidebar = () => {
         background: "#ffffff",
       }}
     >
-
       <div
         className="flex items-center relative"
         style={{
@@ -319,7 +321,8 @@ const Sidebar = () => {
         <h1
           className="text-xl font-bold"
           style={{
-            backgroundImage: "linear-gradient(135deg, var(--theme-brand, #3b82f6) 0%, #ffffff 100%)",
+            backgroundImage:
+              "linear-gradient(135deg, var(--theme-brand, #3b82f6) 0%, #ffffff 100%)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             backgroundClip: "text",

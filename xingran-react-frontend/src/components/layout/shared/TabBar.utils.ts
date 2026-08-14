@@ -23,7 +23,8 @@ export function checkScrollState(container: HTMLElement | null): ScrollState {
 
   const { scrollLeft, scrollWidth, clientWidth } = container;
   const canScrollLeft = scrollLeft > 0;
-  const canScrollRight = scrollWidth > clientWidth && scrollLeft < scrollWidth - clientWidth - SCROLL_TOLERANCE;
+  const canScrollRight =
+    scrollWidth > clientWidth && scrollLeft < scrollWidth - clientWidth - SCROLL_TOLERANCE;
 
   return { canScrollLeft, canScrollRight, scrollLeft };
 }
@@ -31,13 +32,17 @@ export function checkScrollState(container: HTMLElement | null): ScrollState {
 /**
  * 执行滚动操作
  */
-export function scrollContainer(container: HTMLElement | null, direction: "left" | "right", step: number): void {
+export function scrollContainer(
+  container: HTMLElement | null,
+  direction: "left" | "right",
+  step: number
+): void {
   if (!container) return;
 
   const currentScroll = container.scrollLeft;
   container.scrollTo({
     left: direction === "left" ? currentScroll - step : currentScroll + step,
-    behavior: "smooth"
+    behavior: "smooth",
   });
 }
 
@@ -45,5 +50,5 @@ export function scrollContainer(container: HTMLElement | null, direction: "left"
  * 设置延迟定时器
  */
 export function setupDelayedChecks(callback: () => void, delays: readonly number[]): number[] {
-  return delays.map(delay => setTimeout(callback, delay));
+  return delays.map((delay) => setTimeout(callback, delay));
 }

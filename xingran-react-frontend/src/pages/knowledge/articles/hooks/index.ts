@@ -4,4 +4,8 @@
 
 export { useArticleData } from "./useArticleData";
 
-export type { UseArticleDataParams, UseArticleDataReturn, ArticleStatistics } from "./useArticleData";
+export type {
+  UseArticleDataParams,
+  UseArticleDataReturn,
+  ArticleStatistics,
+} from "./useArticleData";

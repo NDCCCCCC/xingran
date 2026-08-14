@@ -48,10 +48,14 @@ export function getFloorStatusText(status: number): string {
  */
 export function getWorkstationStatusText(status: number): string {
   switch (status) {
-    case 0: return STATUS_TEXT.WORKSTATION.AVAILABLE;
-    case 1: return STATUS_TEXT.WORKSTATION.OCCUPIED;
-    case 2: return STATUS_TEXT.WORKSTATION.MAINTENANCE;
-    default: return "未知";
+    case 0:
+      return STATUS_TEXT.WORKSTATION.AVAILABLE;
+    case 1:
+      return STATUS_TEXT.WORKSTATION.OCCUPIED;
+    case 2:
+      return STATUS_TEXT.WORKSTATION.MAINTENANCE;
+    default:
+      return "未知";
   }
 }
 
@@ -60,10 +64,14 @@ export function getWorkstationStatusText(status: number): string {
  */
 export function getWorkstationTypeText(type: number): string {
   switch (type) {
-    case 0: return STATUS_TEXT.WORKSTATION.FIXED;
-    case 1: return STATUS_TEXT.WORKSTATION.FLEXIBLE;
-    case 2: return STATUS_TEXT.WORKSTATION.MANAGEMENT;
-    default: return "未知";
+    case 0:
+      return STATUS_TEXT.WORKSTATION.FIXED;
+    case 1:
+      return STATUS_TEXT.WORKSTATION.FLEXIBLE;
+    case 2:
+      return STATUS_TEXT.WORKSTATION.MANAGEMENT;
+    default:
+      return "未知";
   }
 }
 
@@ -140,10 +148,7 @@ export function calculatePixelDistance(
   p1: { x: number; y: number },
   p2: { x: number; y: number }
 ): number {
-  return Math.sqrt(
-    Math.pow(p1.x - p2.x, 2) +
-    Math.pow(p1.y - p2.y, 2)
-  );
+  return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
 }
 
 /**
@@ -157,9 +162,9 @@ export function generateClusterIconSVG(count: number, size: number): string {
           <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(255, 77, 79, 0.5)" flood-opacity="0.7"/>
         </filter>
       </defs>
-      <circle cx="${size/2}" cy="${size/2}" r="${size/2-1}" fill="rgba(255,77,79,0.1)"/>
-      <circle cx="${size/2}" cy="${size/2}" r="${size/2-4}" fill="#ff4d4f" stroke="#fff" stroke-width="3" filter="url(#clusterShadow)"/>
-      <text x="${size/2}" y="${size/2 + 8}" text-anchor="middle" fill="white" font-size="${size/3}" font-weight="bold">${count}</text>
+      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 1}" fill="rgba(255,77,79,0.1)"/>
+      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 4}" fill="#ff4d4f" stroke="#fff" stroke-width="3" filter="url(#clusterShadow)"/>
+      <text x="${size / 2}" y="${size / 2 + 8}" text-anchor="middle" fill="white" font-size="${size / 3}" font-weight="bold">${count}</text>
     </svg>
   `;
 }

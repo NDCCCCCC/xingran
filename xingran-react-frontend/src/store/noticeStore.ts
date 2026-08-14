@@ -81,9 +81,7 @@ export const useNoticeStore = create<NoticeState & NoticeActions>()((set, get) =
   markAsRead: (noticeId: string) => {
     const { notifications, unreadCount } = get();
     set({
-      notifications: notifications.map((n) =>
-        n.id === noticeId ? { ...n, isRead: true } : n
-      ),
+      notifications: notifications.map((n) => (n.id === noticeId ? { ...n, isRead: true } : n)),
       unreadCount: Math.max(0, unreadCount - 1),
     });
   },
@@ -142,7 +140,11 @@ export const useNoticeStore = create<NoticeState & NoticeActions>()((set, get) =
         // 尝试从 content 字段解析
         if (message.content) {
           progressData = JSON.parse(message.content);
-        } else if (message.data && typeof message.data === "object" && "executionId" in message.data) {
+        } else if (
+          message.data &&
+          typeof message.data === "object" &&
+          "executionId" in message.data
+        ) {
           // 从 data 字段解析
           progressData = message.data as unknown as RPAProgressMessage;
         } else {

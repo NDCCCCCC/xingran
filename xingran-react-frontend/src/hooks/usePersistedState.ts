@@ -78,7 +78,7 @@ function readInitial<T>(
   useSession: boolean,
   storageKey: string,
   defaultValue: T,
-  deserialize?: (raw: string) => T,
+  deserialize?: (raw: string) => T
 ): T {
   const raw = safeGet(useSession, storageKey);
   if (raw === null) return defaultValue;
@@ -96,7 +96,7 @@ function readInitial<T>(
  * `usePersistedState` 和 `usePersistedStateController` 都基于此。
  */
 function usePersistedStateInternal<T>(
-  options: UsePersistedStateOptions<T>,
+  options: UsePersistedStateOptions<T>
 ): UsePersistedStateController<T> {
   const {
     keyPrefix,
@@ -171,7 +171,7 @@ export function usePersistedState<T>(options: UsePersistedStateOptions<T>): T {
  * 需要在用户交互时更新持久化值时使用(setValue / reset 不必都使用,ESLint 视为 useState 风格豁免)。
  */
 export function usePersistedStateController<T>(
-  options: UsePersistedStateOptions<T>,
+  options: UsePersistedStateOptions<T>
 ): UsePersistedStateController<T> {
   return usePersistedStateInternal(options);
 }

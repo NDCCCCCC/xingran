@@ -18,11 +18,20 @@ export interface WorkstationColumnsParams {
   getColumnSortOrder: (field: string) => SortOrder | undefined;
 }
 
-export function getWorkstationColumns(params: WorkstationColumnsParams): ColumnsType<WorkstationOps> {
+export function getWorkstationColumns(
+  params: WorkstationColumnsParams
+): ColumnsType<WorkstationOps> {
   const { handleEdit, handleDelete, getColumnSortOrder } = params;
 
   return [
-    { title: "工位名称", dataIndex: "name", key: "name", width: 150, sorter: true, sortOrder: getColumnSortOrder("name") },
+    {
+      title: "工位名称",
+      dataIndex: "name",
+      key: "name",
+      width: 150,
+      sorter: true,
+      sortOrder: getColumnSortOrder("name"),
+    },
     {
       title: "所属楼宇",
       dataIndex: "buildingName",
@@ -92,8 +101,17 @@ export function getWorkstationColumns(params: WorkstationColumnsParams): Columns
       render: (status: number) => renderWorkstationStatusTag(status),
     },
     { title: "描述", dataIndex: "description", key: "description", ellipsis: true },
-    createDateTimeColumn("createdAt", { width: 180, sorter: true, sortOrder: getColumnSortOrder("createdAt") }),
-    createDateTimeColumn("updatedAt", { width: 180, title: "更新时间", sorter: true, sortOrder: getColumnSortOrder("updatedAt") }),
+    createDateTimeColumn("createdAt", {
+      width: 180,
+      sorter: true,
+      sortOrder: getColumnSortOrder("createdAt"),
+    }),
+    createDateTimeColumn("updatedAt", {
+      width: 180,
+      title: "更新时间",
+      sorter: true,
+      sortOrder: getColumnSortOrder("updatedAt"),
+    }),
     {
       title: "操作",
       key: "action",

@@ -11,10 +11,7 @@ interface WeeklyViewProps {
   weeklyDutyData: Record<string, MonthlyDutyMember[]>;
 }
 
-export const WeeklyView: React.FC<WeeklyViewProps> = ({
-  currentWeekStart,
-  weeklyDutyData,
-}) => {
+export const WeeklyView: React.FC<WeeklyViewProps> = ({ currentWeekStart, weeklyDutyData }) => {
   const getWeekRangeText = () => {
     const weekEnd = currentWeekStart.endOf("week");
     return `${currentWeekStart.format("YYYY年MM月DD日")} - ${weekEnd.format("YYYY年MM月DD日")}`;
@@ -43,7 +40,11 @@ export const WeeklyView: React.FC<WeeklyViewProps> = ({
         return "red";
       default:
         // 开发环境下警告未知的 dutyType (仅在控制台可见)
-        if (type && typeof window !== "undefined" && (window as Window & { __DEV__?: boolean }).__DEV__) {
+        if (
+          type &&
+          typeof window !== "undefined" &&
+          (window as Window & { __DEV__?: boolean }).__DEV__
+        ) {
           console.warn(`[WeeklyView] 未知的 dutyType 值: "${type}"`);
         }
         return "default";
@@ -53,7 +54,9 @@ export const WeeklyView: React.FC<WeeklyViewProps> = ({
   return (
     <Card variant="borderless">
       <div style={{ marginBottom: "16px" }}>
-        <Text strong style={{ fontSize: "14px" }}>{getWeekRangeText()}</Text>
+        <Text strong style={{ fontSize: "14px" }}>
+          {getWeekRangeText()}
+        </Text>
       </div>
       <Row gutter={[8, 8]}>
         {getWeekDays().map((day) => {
@@ -84,7 +87,13 @@ export const WeeklyView: React.FC<WeeklyViewProps> = ({
                     >
                       {getWeekdayText(day)}
                     </Text>
-                    <Text style={{ fontSize: "12px", color: "var(--theme-text-tertiary, #999)", display: "block" }}>
+                    <Text
+                      style={{
+                        fontSize: "12px",
+                        color: "var(--theme-text-tertiary, #999)",
+                        display: "block",
+                      }}
+                    >
                       {day.format("MM-DD")}
                     </Text>
                   </div>

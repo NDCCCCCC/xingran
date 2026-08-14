@@ -58,20 +58,13 @@ function Wrapper({ children }: { children: ReactNode }) {
  */
 interface HarnessProps {
   initialPorts: DevicePortStatus[];
-  setSelectedPortsRef: React.MutableRefObject<
-    ((ports: DevicePortStatus[]) => void) | null
-  >;
+  setSelectedPortsRef: React.MutableRefObject<((ports: DevicePortStatus[]) => void) | null>;
 }
 function Harness({ initialPorts, setSelectedPortsRef }: HarnessProps) {
   const [ports, setPorts] = useState<DevicePortStatus[]>(initialPorts);
   setSelectedPortsRef.current = setPorts;
   return (
-    <BulkWriteDrawer
-      open={true}
-      selectedPorts={ports}
-      onClose={vi.fn()}
-      onSuccess={vi.fn()}
-    />
+    <BulkWriteDrawer open={true} selectedPorts={ports} onClose={vi.fn()} onSuccess={vi.fn()} />
   );
 }
 
@@ -83,10 +76,7 @@ function Harness({ initialPorts, setSelectedPortsRef }: HarnessProps) {
  * is `.ant-select` (no longer `.ant-select-selector`); we trigger mouseDown on
  * the whole `.ant-select` container to open the dropdown.
  */
-async function selectOptionByLabel(
-  labelText: string,
-  optionText: string
-): Promise<void> {
+async function selectOptionByLabel(labelText: string, optionText: string): Promise<void> {
   const labelEl = screen.getByText(labelText);
   const formItem = labelEl.closest(".ant-form-item");
   if (!formItem) throw new Error(`Form.Item not found for label: ${labelText}`);
@@ -177,10 +167,7 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
   it("CR-01: retry uses cached lastDeviceId even when selectedPorts prop drifts to a different device", async () => {
     // 首次提交返回: 2 成功 + 1 失败 (port-a-3)
     const firstResult: BatchResult = {
-      succeeded: [
-        makePortResult("port-a-1", "succeeded"),
-        makePortResult("port-a-2", "succeeded"),
-      ],
+      succeeded: [makePortResult("port-a-1", "succeeded"), makePortResult("port-a-2", "succeeded")],
       failed: [makePortResult("port-a-3", "failed", "device timeout")],
       skipped: [],
     };
@@ -190,9 +177,7 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
       failed: [],
       skipped: [],
     };
-    mockBatchWritePorts
-      .mockResolvedValueOnce(firstResult)
-      .mockResolvedValueOnce(retryResult);
+    mockBatchWritePorts.mockResolvedValueOnce(firstResult).mockResolvedValueOnce(retryResult);
 
     // ★ Harness 模式: setSelectedPortsRef 让测试中途改 selectedPorts prop 而不重挂 Router
     const setSelectedPortsRef: React.MutableRefObject<
@@ -288,12 +273,7 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
 
     const callArg = mockBatchWritePorts.mock.calls[0][0] as Record<string, unknown>;
     // 仅允许 deviceId / action / portIds / description 4 个白名单字段
-    const allowedKeys = new Set([
-      "deviceId",
-      "action",
-      "portIds",
-      "description",
-    ]);
+    const allowedKeys = new Set(["deviceId", "action", "portIds", "description"]);
     const actualKeys = Object.keys(callArg);
     for (const key of actualKeys) {
       expect(allowedKeys.has(key)).toBe(true);
@@ -321,9 +301,7 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
       failed: [],
       skipped: [],
     };
-    mockBatchWritePorts
-      .mockResolvedValueOnce(firstResult)
-      .mockResolvedValueOnce(retryResult);
+    mockBatchWritePorts.mockResolvedValueOnce(firstResult).mockResolvedValueOnce(retryResult);
 
     render(
       <BulkWriteDrawer
@@ -342,9 +320,7 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
 
     // retry
     await act(async () => {
-      fireEvent.click(
-        screen.getByRole("button", { name: /重试失败端口/ })
-      );
+      fireEvent.click(screen.getByRole("button", { name: /重试失败端口/ }));
     });
 
     await waitFor(() => expect(mockBatchWritePorts).toHaveBeenCalledTimes(2));
@@ -379,9 +355,7 @@ describe("BulkWriteDrawer — Phase 53 W4 (UI-03/BATCH-05/CR-01 regression)", ()
     );
 
     // select 阶段: 提交按钮可见
-    expect(
-      screen.getByRole("button", { name: "开始批量配置" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "开始批量配置" })).toBeInTheDocument();
 
     await fillAndSubmit();
 

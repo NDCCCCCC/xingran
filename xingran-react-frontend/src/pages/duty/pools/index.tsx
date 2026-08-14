@@ -1,15 +1,38 @@
-﻿import { useState, useEffect } from 'react';
-import type { FC } from 'react';
-import { Button, Form, Input, Select, Table, Modal, InputNumber, Space, Tag, App, Card, Statistic, Row, Col } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import { formatDateTime } from '@/utils/datetime';
-import { createSorter } from '@/utils/tableHelpers';
+﻿import { useState, useEffect } from "react";
+import type { FC } from "react";
+import {
+  Button,
+  Form,
+  Input,
+  Select,
+  Table,
+  Modal,
+  InputNumber,
+  Space,
+  Tag,
+  App,
+  Card,
+  Statistic,
+  Row,
+  Col,
+} from "antd";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  SearchOutlined,
+  ReloadOutlined,
+  TeamOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
+import { formatDateTime } from "@/utils/datetime";
+import { createSorter } from "@/utils/tableHelpers";
 import { useQuery } from "@tanstack/react-query";
-import { usePagination } from '@/hooks/usePagination';
-import { useDeptTree } from '@/hooks/useDeptTree';
-import { queryKeys } from '@/lib/queryKeys';
-import { DepartmentTreeSelect } from '@/components/shared';
+import { usePagination } from "@/hooks/usePagination";
+import { useDeptTree } from "@/hooks/useDeptTree";
+import { queryKeys } from "@/lib/queryKeys";
+import { DepartmentTreeSelect } from "@/components/shared";
 import {
   getDutyPoolList,
   getDutyPoolStatistics,
@@ -20,8 +43,8 @@ import {
   type DutyPool,
   type DutyPoolCreateRequest,
   type DutyPoolUpdateRequest,
-} from '@/lib/dutyApi';
-import { isFormValidationError } from '@/utils/errorHandler';
+} from "@/lib/dutyApi";
+import { isFormValidationError } from "@/utils/errorHandler";
 
 const { Option } = Select;
 
@@ -37,10 +60,10 @@ const DutyPoolPage: FC = () => {
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   // 服务端排序状态（field 对应后端 dutyPoolAllowedSortFields 白名单 key）
-  const [sortField, setSortField] = useState<string>('');
-  const [sortOrder, setSortOrder] = useState<'ascend' | 'descend' | null>(null);
+  const [sortField, setSortField] = useState<string>("");
+  const [sortOrder, setSortOrder] = useState<"ascend" | "descend" | null>(null);
   // 列级 sortOrder：只对当前排序列返回方向，其余 undefined（受控高亮）
-  const getColumnSortOrder = (field: string): 'ascend' | 'descend' | undefined =>
+  const getColumnSortOrder = (field: string): "ascend" | "descend" | undefined =>
     sortField === field ? (sortOrder ?? undefined) : undefined;
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -51,7 +74,7 @@ const DutyPoolPage: FC = () => {
 
   // 统一错误处理
   const handleApiError = (error: unknown, defaultMessage: string) => {
-    if (error && typeof error === 'object' && 'message' in error) {
+    if (error && typeof error === "object" && "message" in error) {
       message.error(error.message as string);
     } else {
       message.error(defaultMessage);
@@ -70,9 +93,9 @@ const DutyPoolPage: FC = () => {
   // React Query 自动处理:去重(同 deptId 并发合并)+ 竞态(快速切换部门时最新 wins)+ 缓存(回切即时显示)。
   // 后端用 recursiveDeptId 按 sys_dept.ancestors 递归查询,不受全局 MaxPageSize=100 钳制
   // (见 memory stat-cards-from-list-length-capped-at-100)。
-  const watchedDeptId = Form.useWatch('deptId', editForm);
+  const watchedDeptId = Form.useWatch("deptId", editForm);
   const { data: filteredUsers = [], isLoading: memberUsersLoading } = useQuery({
-    queryKey: queryKeys.duty.poolMembers(watchedDeptId ?? ''),
+    queryKey: queryKeys.duty.poolMembers(watchedDeptId ?? ""),
     queryFn: async () => {
       const res = await getUserList({ status: 0, recursiveDeptId: watchedDeptId as string });
       return res.data?.list ?? [];
@@ -82,7 +105,12 @@ const DutyPoolPage: FC = () => {
     staleTime: 60_000, // 1min: 部门成员不常变,回切即时显示
   });
 
-  const fetchList = async (page?: number, pageSize?: number, sortCol?: string, sortAsc?: boolean) => {
+  const fetchList = async (
+    page?: number,
+    pageSize?: number,
+    sortCol?: string,
+    sortAsc?: boolean
+  ) => {
     setLoading(true);
     try {
       const values = form.getFieldsValue();
@@ -98,7 +126,7 @@ const DutyPoolPage: FC = () => {
       setDataSource(result.data?.list ?? []);
       setTotal(result.data?.total ?? 0);
     } catch (error) {
-      handleApiError(error, '获取值班池列表失败');
+      handleApiError(error, "获取值班池列表失败");
     } finally {
       setLoading(false);
     }
@@ -116,7 +144,7 @@ const DutyPoolPage: FC = () => {
         totalMembers: result.data?.totalMembers ?? 0,
       });
     } catch (error) {
-      console.error('获取值班池统计失败:', error);
+      console.error("获取值班池统计失败:", error);
     }
   };
 
@@ -164,11 +192,11 @@ const DutyPoolPage: FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await deleteDutyPool(id);
-      handleSuccess('删除成功');
+      handleSuccess("删除成功");
       fetchList(paginationProps.current, paginationProps.pageSize);
       fetchStats();
     } catch (error) {
-      handleApiError(error, '删除失败');
+      handleApiError(error, "删除失败");
     }
   };
 
@@ -184,7 +212,7 @@ const DutyPoolPage: FC = () => {
           memberIds: values.memberIds,
         };
         await updateDutyPool(editingRecord.id, updateData);
-        handleSuccess('更新成功');
+        handleSuccess("更新成功");
       } else {
         const createData: DutyPoolCreateRequest = {
           poolName: values.poolName,
@@ -194,7 +222,7 @@ const DutyPoolPage: FC = () => {
           memberIds: values.memberIds,
         };
         await createDutyPool(createData);
-        handleSuccess('创建成功');
+        handleSuccess("创建成功");
       }
       setModalVisible(false);
       fetchList(paginationProps.current, paginationProps.pageSize);
@@ -204,62 +232,63 @@ const DutyPoolPage: FC = () => {
         // 表单验证错误
         return;
       }
-      handleApiError(error, editingRecord ? '更新失败' : '创建失败');
+      handleApiError(error, editingRecord ? "更新失败" : "创建失败");
     }
   };
 
   const columns: ColumnsType<DutyPool> = [
     {
-      title: '序号',
-      key: 'index',
+      title: "序号",
+      key: "index",
       width: 60,
-      render: (_: unknown, __: unknown, index: number) => ((paginationProps.current ?? 1) - 1) * (paginationProps.pageSize ?? 10) + index + 1,
+      render: (_: unknown, __: unknown, index: number) =>
+        ((paginationProps.current ?? 1) - 1) * (paginationProps.pageSize ?? 10) + index + 1,
     },
     {
-      title: '值班池名称',
-      dataIndex: 'poolName',
-      key: 'poolName',
+      title: "值班池名称",
+      dataIndex: "poolName",
+      key: "poolName",
       width: 150,
       sorter: true,
-      sortOrder: getColumnSortOrder('poolName'),
+      sortOrder: getColumnSortOrder("poolName"),
     },
     {
-      title: '所属部门',
-      dataIndex: 'deptId',
-      key: 'deptId',
+      title: "所属部门",
+      dataIndex: "deptId",
+      key: "deptId",
       width: 120,
       sorter: true,
-      sortOrder: getColumnSortOrder('deptId'),
+      sortOrder: getColumnSortOrder("deptId"),
       render: (_: string, record: DutyPool) => {
-        return record.department?.deptName || '-';
+        return record.department?.deptName || "-";
       },
     },
     {
-      title: '成员数量',
-      key: 'memberCount',
+      title: "成员数量",
+      key: "memberCount",
       width: 100,
-      sorter: createSorter<DutyPool>('memberCount', 'number'),
+      sorter: createSorter<DutyPool>("memberCount", "number"),
       render: (_: unknown, record: DutyPool) => record.members?.length || 0,
     },
     {
-      title: '每日值班人数',
-      dataIndex: 'dailyCount',
-      key: 'dailyCount',
+      title: "每日值班人数",
+      dataIndex: "dailyCount",
+      key: "dailyCount",
       width: 120,
-      sorter: createSorter<DutyPool>('dailyCount', 'number'),
+      sorter: createSorter<DutyPool>("dailyCount", "number"),
       render: (count: number) => `${count} 人/天`,
     },
     {
-      title: '成员列表',
-      key: 'members',
+      title: "成员列表",
+      key: "members",
       width: 300,
       render: (_: unknown, record: DutyPool) => {
         const members = record.members || [];
-        if (members.length === 0) return '-';
+        if (members.length === 0) return "-";
         return (
           <Space size={[0, 4]} wrap>
             {members.map((m, i) => (
-              <Tag key={m.id} color={i < record.dailyCount ? 'blue' : 'default'}>
+              <Tag key={m.id} color={i < record.dailyCount ? "blue" : "default"}>
                 {m.user?.nickname || m.user?.username}
               </Tag>
             ))}
@@ -268,53 +297,58 @@ const DutyPoolPage: FC = () => {
       },
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
       width: 80,
       sorter: true,
-      sortOrder: getColumnSortOrder('status'),
+      sortOrder: getColumnSortOrder("status"),
       render: (status: number) => (
-        <Tag color={status === 0 ? 'green' : 'red'}>{status === 0 ? '启用' : '停用'}</Tag>
+        <Tag color={status === 0 ? "green" : "red"}>{status === 0 ? "启用" : "停用"}</Tag>
       ),
     },
     {
-      title: '描述',
-      dataIndex: 'description',
-      key: 'description',
+      title: "描述",
+      dataIndex: "description",
+      key: "description",
       width: 200,
       ellipsis: true,
-      sorter: createSorter<DutyPool>('description', 'string'),
+      sorter: createSorter<DutyPool>("description", "string"),
     },
     {
-      title: '创建时间',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
+      title: "创建时间",
+      dataIndex: "createdAt",
+      key: "createdAt",
       width: 160,
       sorter: true,
-      sortOrder: getColumnSortOrder('createdAt'),
-      render: (date: string) => formatDateTime(date, 'YYYY-MM-DD HH:mm'),
+      sortOrder: getColumnSortOrder("createdAt"),
+      render: (date: string) => formatDateTime(date, "YYYY-MM-DD HH:mm"),
     },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       width: 150,
-      fixed: 'right',
+      fixed: "right",
       render: (_: unknown, record: DutyPool) => (
         <Space>
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
+          <Button
+            type="link"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(record)}
+          >
             编辑
           </Button>
           <Button
             type="link"
             size="small"
             icon={<DeleteOutlined />}
-            style={{ color: '#ff4d4f' }}
+            style={{ color: "#ff4d4f" }}
             onClick={() => {
               Modal.confirm({
-                title: '确定要删除吗？',
-                okText: '确定',
-                cancelText: '取消',
+                title: "确定要删除吗？",
+                okText: "确定",
+                cancelText: "取消",
                 okButtonProps: { danger: true },
                 onOk: () => handleDelete(record.id),
               });
@@ -335,10 +369,18 @@ const DutyPoolPage: FC = () => {
             <Statistic title="总值班池" value={stats.total} prefix={<TeamOutlined />} />
           </Col>
           <Col span={6}>
-            <Statistic title="启用中" value={stats.enabled} styles={{ content: { color: '#3f8600' } }} />
+            <Statistic
+              title="启用中"
+              value={stats.enabled}
+              styles={{ content: { color: "#3f8600" } }}
+            />
           </Col>
           <Col span={6}>
-            <Statistic title="已停用" value={stats.disabled} styles={{ content: { color: '#cf1322' } }} />
+            <Statistic
+              title="已停用"
+              value={stats.disabled}
+              styles={{ content: { color: "#cf1322" } }}
+            />
           </Col>
           <Col span={6}>
             <Statistic title="总成员数" value={stats.totalMembers} prefix={<UserOutlined />} />
@@ -347,10 +389,23 @@ const DutyPoolPage: FC = () => {
       </Card>
 
       <Card title="值班池管理">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
+        >
           <Form form={form} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="poolName" label="值班池名称">
-              <Input placeholder="请输入值班池名称" allowClear className="user-form-input" style={{ width: 150 }} />
+              <Input
+                placeholder="请输入值班池名称"
+                allowClear
+                className="user-form-input"
+                style={{ width: 150 }}
+              />
             </Form.Item>
             <Form.Item name="deptId" label="所属部门">
               <DepartmentTreeSelect
@@ -361,7 +416,13 @@ const DutyPoolPage: FC = () => {
               />
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}>
+              <Select
+                placeholder="请选择状态"
+                allowClear
+                className="user-form-input"
+                style={{ width: 100 }}
+                onSearch={() => {}}
+              >
                 <Option value={0}>启用</Option>
                 <Option value={1}>停用</Option>
               </Select>
@@ -398,17 +459,17 @@ const DutyPoolPage: FC = () => {
             setPageSize(pageSize);
             // 排序：用 local const 持有新值传 fetchList，规避 React 18 setState 异步时序
             // （fetchList 不在 useMemo 依赖链，setState 后读 state 仍为旧值——commit 7ab1189 同类坑）
-            const field = sorter && !Array.isArray(sorter) ? (sorter.field as string) || '' : '';
+            const field = sorter && !Array.isArray(sorter) ? (sorter.field as string) || "" : "";
             const order = sorter && !Array.isArray(sorter) ? (sorter.order ?? null) : null;
             setSortField(field);
             setSortOrder(order);
-            fetchList(current, pageSize, field, order === 'ascend');
+            fetchList(current, pageSize, field, order === "ascend");
           }}
         />
       </Card>
 
       <Modal
-        title={editingRecord ? '编辑值班池' : '新增值班池'}
+        title={editingRecord ? "编辑值班池" : "新增值班池"}
         open={modalVisible}
         onOk={handleModalOk}
         afterOpenChange={handleModalOpenChange}
@@ -420,7 +481,7 @@ const DutyPoolPage: FC = () => {
           <Form.Item
             name="poolName"
             label="值班池名称"
-            rules={[{ required: true, message: '请输入值班池名称' }]}
+            rules={[{ required: true, message: "请输入值班池名称" }]}
           >
             <Input placeholder="请输入值班池名称" />
           </Form.Item>
@@ -431,7 +492,7 @@ const DutyPoolPage: FC = () => {
               onChange={() => {
                 // Form.Item 自动更新 deptId 字段 → Form.useWatch 触发 useQuery 自动加载新部门成员
                 // 这里只清空已选成员(部门已变,旧成员失效)
-                editForm.setFieldValue('memberIds', []);
+                editForm.setFieldValue("memberIds", []);
               }}
             />
           </Form.Item>
@@ -439,28 +500,38 @@ const DutyPoolPage: FC = () => {
           <Form.Item
             name="dailyCount"
             label="每日值班人数"
-            rules={[{ required: true, message: '请输入每日值班人数' }]}
+            rules={[{ required: true, message: "请输入每日值班人数" }]}
           >
-            <InputNumber min={1} max={10} placeholder="请输入每日值班人数" style={{ width: '100%' }} />
+            <InputNumber
+              min={1}
+              max={10}
+              placeholder="请输入每日值班人数"
+              style={{ width: "100%" }}
+            />
           </Form.Item>
 
           <Form.Item
             name="memberIds"
             label="值班成员"
-            rules={[{ required: true, message: '请选择值班成员' }]}
+            rules={[{ required: true, message: "请选择值班成员" }]}
           >
             <Select
               mode="multiple"
               showSearch
               optionFilterProp="children"
-              placeholder={filteredUsers.length === 0 ? '请先选择所属部门' : '请选择值班成员（可输入账号/昵称搜索）'}
+              placeholder={
+                filteredUsers.length === 0
+                  ? "请先选择所属部门"
+                  : "请选择值班成员（可输入账号/昵称搜索）"
+              }
               optionLabelProp="label"
               loading={memberUsersLoading}
               disabled={filteredUsers.length === 0 || memberUsersLoading}
-             onSearch={() => {}}>
+              onSearch={() => {}}
+            >
               {filteredUsers.map((user) => (
                 <Option key={user.id} value={user.id} label={user.nickname || user.username}>
-                  {user.username} - {user.nickname} {user.deptName ? `(${user.deptName})` : ''}
+                  {user.username} - {user.nickname} {user.deptName ? `(${user.deptName})` : ""}
                 </Option>
               ))}
             </Select>
@@ -476,4 +547,3 @@ const DutyPoolPage: FC = () => {
 };
 
 export default DutyPoolPage;
-

@@ -78,7 +78,11 @@ const CaptchaBackgroundSettingsPage: FC = () => {
   const [editingBg, setEditingBg] = useState<CaptchaBackground | null>(null);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [statistics, setStatistics] = useState<{ totalCount: number; enabledCount: number; disabledCount: number } | null>(null);
+  const [statistics, setStatistics] = useState<{
+    totalCount: number;
+    enabledCount: number;
+    disabledCount: number;
+  } | null>(null);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -323,11 +327,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
           >
             编辑
           </Button>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => handleToggle(record.id)}
-          >
+          <Button type="link" size="small" onClick={() => handleToggle(record.id)}>
             {record.status === 1 ? "禁用" : "启用"}
           </Button>
           <Button
@@ -387,7 +387,19 @@ const CaptchaBackgroundSettingsPage: FC = () => {
           </Col>
           <Col span={6}>
             <Card>
-              <Statistic title="总使用次数" value={(statistics as { totalCount: number; enabledCount: number; disabledCount: number; totalUsage?: number }).totalUsage ?? 0} />
+              <Statistic
+                title="总使用次数"
+                value={
+                  (
+                    statistics as {
+                      totalCount: number;
+                      enabledCount: number;
+                      disabledCount: number;
+                      totalUsage?: number;
+                    }
+                  ).totalUsage ?? 0
+                }
+              />
             </Card>
           </Col>
         </Row>
@@ -396,24 +408,49 @@ const CaptchaBackgroundSettingsPage: FC = () => {
       {/* 搜索表单 */}
       <Form form={searchForm} layout="inline" style={{ marginBottom: 16 }}>
         <Form.Item name="fileName" label="文件名">
-          <Input placeholder="请输入文件名" allowClear className="user-form-input" style={{ width: 150 }} />
+          <Input
+            placeholder="请输入文件名"
+            allowClear
+            className="user-form-input"
+            style={{ width: 150 }}
+          />
         </Form.Item>
         <Form.Item name="pieceShape" label="拼图形状">
-          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 120 }} onSearch={() => {}}>
-            {SHAPE_OPTIONS.map(opt => (
-              <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+          <Select
+            placeholder="请选择"
+            allowClear
+            className="user-form-input"
+            style={{ width: 120 }}
+            onSearch={() => {}}
+          >
+            {SHAPE_OPTIONS.map((opt) => (
+              <Option key={opt.value} value={opt.value}>
+                {opt.label}
+              </Option>
             ))}
           </Select>
         </Form.Item>
         <Form.Item name="difficultyLevel" label="难度">
-          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}>
+          <Select
+            placeholder="请选择"
+            allowClear
+            className="user-form-input"
+            style={{ width: 100 }}
+            onSearch={() => {}}
+          >
             <Option value={1}>简单</Option>
             <Option value={2}>中等</Option>
             <Option value={3}>困难</Option>
           </Select>
         </Form.Item>
         <Form.Item name="status" label="状态">
-          <Select placeholder="请选择" allowClear className="user-form-input" style={{ width: 100 }} onSearch={() => {}}>
+          <Select
+            placeholder="请选择"
+            allowClear
+            className="user-form-input"
+            style={{ width: 100 }}
+            onSearch={() => {}}
+          >
             <Option value={1}>启用</Option>
             <Option value={0}>禁用</Option>
           </Select>
@@ -423,7 +460,12 @@ const CaptchaBackgroundSettingsPage: FC = () => {
             <Button type="primary" onClick={() => loadBackgrounds()}>
               查询
             </Button>
-            <Button onClick={() => { searchForm.resetFields(); loadBackgrounds(); }}>
+            <Button
+              onClick={() => {
+                searchForm.resetFields();
+                loadBackgrounds();
+              }}
+            >
               重置
             </Button>
           </Space>
@@ -433,13 +475,23 @@ const CaptchaBackgroundSettingsPage: FC = () => {
       {/* 操作按钮 */}
       <div style={{ marginBottom: 16 }}>
         <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setUploadModalVisible(true)}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setUploadModalVisible(true)}
+          >
             上传背景图
           </Button>
           <Button icon={<PictureOutlined />} onClick={handlePreload}>
             预加载缓存
           </Button>
-          <Button icon={<ReloadOutlined />} onClick={() => { loadBackgrounds(); loadStatistics(); }}>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={() => {
+              loadBackgrounds();
+              loadStatistics();
+            }}
+          >
             刷新
           </Button>
         </Space>
@@ -489,14 +541,24 @@ const CaptchaBackgroundSettingsPage: FC = () => {
               )}
             </Upload>
           </Form.Item>
-          <Form.Item name="pieceShape" label="拼图形状" rules={[{ required: true, message: "请选择拼图形状" }]}>
+          <Form.Item
+            name="pieceShape"
+            label="拼图形状"
+            rules={[{ required: true, message: "请选择拼图形状" }]}
+          >
             <Select onSearch={() => {}}>
-              {SHAPE_OPTIONS.map(opt => (
-                <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+              {SHAPE_OPTIONS.map((opt) => (
+                <Option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </Option>
               ))}
             </Select>
           </Form.Item>
-          <Form.Item name="difficultyLevel" label="难度级别" rules={[{ required: true, message: "请选择难度" }]}>
+          <Form.Item
+            name="difficultyLevel"
+            label="难度级别"
+            rules={[{ required: true, message: "请选择难度" }]}
+          >
             <Select onSearch={() => {}}>
               <Option value={1}>简单</Option>
               <Option value={2}>中等</Option>
@@ -505,8 +567,10 @@ const CaptchaBackgroundSettingsPage: FC = () => {
           </Form.Item>
           <Form.Item name="allowedShapes" label="允许的形状">
             <Select mode="multiple" placeholder="不限制则默认使用当前形状" onSearch={() => {}}>
-              {SHAPE_OPTIONS.map(opt => (
-                <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+              {SHAPE_OPTIONS.map((opt) => (
+                <Option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </Option>
               ))}
             </Select>
           </Form.Item>
@@ -531,8 +595,10 @@ const CaptchaBackgroundSettingsPage: FC = () => {
         <Form form={editForm} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
           <Form.Item name="pieceShape" label="拼图形状" rules={[{ required: true }]}>
             <Select onSearch={() => {}}>
-              {SHAPE_OPTIONS.map(opt => (
-                <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+              {SHAPE_OPTIONS.map((opt) => (
+                <Option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </Option>
               ))}
             </Select>
           </Form.Item>
@@ -545,8 +611,10 @@ const CaptchaBackgroundSettingsPage: FC = () => {
           </Form.Item>
           <Form.Item name="allowedShapes" label="允许的形状">
             <Select mode="multiple" placeholder="不限制则使用默认" onSearch={() => {}}>
-              {SHAPE_OPTIONS.map(opt => (
-                <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+              {SHAPE_OPTIONS.map((opt) => (
+                <Option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </Option>
               ))}
             </Select>
           </Form.Item>

@@ -20,7 +20,9 @@ const tokenStorage = new SecureTokenStorageImpl();
 /**
  * 获取通知列表（管理端）
  */
-export function getNoticeList(params: NoticeListParams): Promise<BaseResponse<PageResponse<Notice>>> {
+export function getNoticeList(
+  params: NoticeListParams
+): Promise<BaseResponse<PageResponse<Notice>>> {
   return post("/system/notices/list", params);
 }
 
@@ -50,14 +52,19 @@ export function getNoticeDetail(id: string): Promise<BaseResponse<Notice>> {
 /**
  * 创建通知
  */
-export function createNotice(data: CreateNoticeRequest): Promise<BaseResponse<{ id: string; message: string }>> {
+export function createNotice(
+  data: CreateNoticeRequest
+): Promise<BaseResponse<{ id: string; message: string }>> {
   return post("/system/notices", data);
 }
 
 /**
  * 更新通知
  */
-export function updateNotice(id: string, data: UpdateNoticeRequest): Promise<BaseResponse<{ message: string }>> {
+export function updateNotice(
+  id: string,
+  data: UpdateNoticeRequest
+): Promise<BaseResponse<{ message: string }>> {
   return post(`/system/notices/${id}/update`, data);
 }
 
@@ -101,7 +108,9 @@ export function withdrawNotice(id: string): Promise<BaseResponse<{ message: stri
 /**
  * 获取用户可见的通知列表
  */
-export function getMyNotices(params: UserNoticeListParams = {}): Promise<BaseResponse<PageResponse<Notice>>> {
+export function getMyNotices(
+  params: UserNoticeListParams = {}
+): Promise<BaseResponse<PageResponse<Notice>>> {
   return get("/system/my-notices", params);
 }
 
@@ -150,10 +159,13 @@ export function getUnreadCount(): Promise<BaseResponse<{ count: number }>> {
 /**
  * 获取通知列表（用于铃铛下拉）
  */
-export function getNotificationList(params: { current?: number; pageSize?: number } = {}): Promise<
-  BaseResponse<PageResponse<NoticeListItem>>
-> {
-  return get("/system/my-notices", { current: params.current || 1, pageSize: params.pageSize || 10 });
+export function getNotificationList(
+  params: { current?: number; pageSize?: number } = {}
+): Promise<BaseResponse<PageResponse<NoticeListItem>>> {
+  return get("/system/my-notices", {
+    current: params.current || 1,
+    pageSize: params.pageSize || 10,
+  });
 }
 
 // ==================== WebSocket ====================
@@ -167,7 +179,8 @@ export function buildWebSocketUrl(): string {
   // 保持向后兼容，不再硬编码开发机 IP。
   const apiBaseURL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
   const wsBaseURL =
-    import.meta.env.VITE_WS_BASE_URL || apiBaseURL.replace(/\/api\/v\d+$/, "").replace(/^http/, "ws");
+    import.meta.env.VITE_WS_BASE_URL ||
+    apiBaseURL.replace(/\/api\/v\d+$/, "").replace(/^http/, "ws");
   const token = tokenStorage.getAccessToken();
 
   // 通过 query 参数传递 token

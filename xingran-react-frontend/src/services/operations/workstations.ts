@@ -18,12 +18,10 @@ export const workstationApi = {
   delete: (id: string) => post(`/ops/workstations/${id}/delete`),
 
   // 批量删除
-  batchDelete: (ids: string[]) =>
-    post("/ops/workstations/batch", { ids, action: "delete" }),
+  batchDelete: (ids: string[]) => post("/ops/workstations/batch", { ids, action: "delete" }),
 
   // 导出
-  export: (params: PageParams) =>
-    post("/ops/workstations/export", params),
+  export: (params: PageParams) => post("/ops/workstations/export", params),
 
   // 导入
   import: (file: File) => {
@@ -33,6 +31,5 @@ export const workstationApi = {
   },
 
   // 下载模板
-  downloadTemplate: () =>
-    post("/ops/workstations/template", {}),
+  downloadTemplate: () => post("/ops/workstations/template", {}),
 };

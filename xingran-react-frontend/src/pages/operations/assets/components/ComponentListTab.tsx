@@ -75,11 +75,7 @@ const ComponentListTab: FC<ComponentListTabProps> = ({ parentAssetId }) => {
       key: "componentType",
       width: 110,
       render: (t?: string) =>
-        t ? (
-          <Tag color="blue">{COMPONENT_TYPE_LABELS[t] ?? t}</Tag>
-        ) : (
-          <span>-</span>
-        ),
+        t ? <Tag color="blue">{COMPONENT_TYPE_LABELS[t] ?? t}</Tag> : <span>-</span>,
     },
     {
       title: "槽位/接口",

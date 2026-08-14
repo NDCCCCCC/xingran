@@ -63,10 +63,10 @@ const EmailConfigPage: FC = () => {
   const loadConfigs = async () => {
     setLoading(true);
     try {
-      const result = await getEmailConfigList({
+      const result = (await getEmailConfigList({
         page: paginationProps.current,
         pageSize: paginationProps.pageSize,
-      }) as { data: { list: EmailConfig[]; total: number } };
+      })) as { data: { list: EmailConfig[]; total: number } };
       setConfigs(result.data.list);
       setTotal(result.data.total);
     } catch (error) {
@@ -193,7 +193,11 @@ const EmailConfigPage: FC = () => {
       render: (_, record) => (
         <span>
           {record.host}:{record.port}
-          {record.useSsl && <Tag color="green" className="ml-2">SSL</Tag>}
+          {record.useSsl && (
+            <Tag color="green" className="ml-2">
+              SSL
+            </Tag>
+          )}
         </span>
       ),
     },
@@ -216,9 +220,7 @@ const EmailConfigPage: FC = () => {
       key: "status",
       width: 80,
       render: (status: number) => (
-        <Tag color={status === 0 ? "success" : "default"}>
-          {status === 0 ? "正常" : "停用"}
-        </Tag>
+        <Tag color={status === 0 ? "success" : "default"}>{status === 0 ? "正常" : "停用"}</Tag>
       ),
     },
     {
@@ -337,11 +339,7 @@ const EmailConfigPage: FC = () => {
             <Input placeholder="如：smtp.example.com" />
           </Form.Item>
 
-          <Form.Item
-            name="port"
-            label="端口"
-            rules={[{ required: true, message: "请输入端口" }]}
-          >
+          <Form.Item name="port" label="端口" rules={[{ required: true, message: "请输入端口" }]}>
             <InputNumber min={1} max={65535} className="w-full" placeholder="默认587" />
           </Form.Item>
 
@@ -373,7 +371,12 @@ const EmailConfigPage: FC = () => {
             <Switch />
           </Form.Item>
 
-          <Form.Item name="useStartTls" label="启用STARTTLS" valuePropName="checked" tooltip="当不使用SSL时，可选择是否使用STARTTLS升级为加密连接">
+          <Form.Item
+            name="useStartTls"
+            label="启用STARTTLS"
+            valuePropName="checked"
+            tooltip="当不使用SSL时，可选择是否使用STARTTLS升级为加密连接"
+          >
             <Switch />
           </Form.Item>
 

@@ -53,13 +53,25 @@ interface CountdownInfo {
 
 function calcCountdown(target: string | null): CountdownInfo {
   if (!target) {
-    return { remainingMs: 0, remainingDays: 0, remainingHours: 0, remainingMinutes: 0, isExpired: true };
+    return {
+      remainingMs: 0,
+      remainingDays: 0,
+      remainingHours: 0,
+      remainingMinutes: 0,
+      isExpired: true,
+    };
   }
   const t = new Date(target).getTime();
   const now = Date.now();
   const remainingMs = t - now;
   if (remainingMs <= 0) {
-    return { remainingMs: 0, remainingDays: 0, remainingHours: 0, remainingMinutes: 0, isExpired: true };
+    return {
+      remainingMs: 0,
+      remainingDays: 0,
+      remainingHours: 0,
+      remainingMinutes: 0,
+      isExpired: true,
+    };
   }
   const remainingDays = Math.floor(remainingMs / (24 * 60 * 60 * 1000));
   const remainingHours = Math.floor((remainingMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
@@ -87,13 +99,7 @@ export const FixSuggestionDetailDrawer = ({
   const sugg: FixSuggestionListItem | undefined = data?.suggestion;
 
   return (
-    <Drawer
-      title="修复建议详情"
-      open={open}
-      onClose={onClose}
-      width={720}
-      destroyOnClose
-    >
+    <Drawer title="修复建议详情" open={open} onClose={onClose} width={720} destroyOnClose>
       <Spin spinning={isLoading}>
         {sugg ? (
           <Tabs
@@ -117,9 +123,7 @@ export const FixSuggestionDetailDrawer = ({
                     <Descriptions.Item label="异常严重度">
                       {data?.exception?.severity ?? "-"}
                     </Descriptions.Item>
-                    <Descriptions.Item label="建议原因">
-                      {sugg.reason}
-                    </Descriptions.Item>
+                    <Descriptions.Item label="建议原因">{sugg.reason}</Descriptions.Item>
                   </Descriptions>
                 ),
               },
@@ -132,7 +136,9 @@ export const FixSuggestionDetailDrawer = ({
                       <Descriptions.Item label="当前 ops_asset.user_id">
                         {sugg.currentUserId ?? <span style={{ color: "#999" }}>-</span>}
                       </Descriptions.Item>
-                      <Descriptions.Item label="建议 user_id">{sugg.suggestedUserId}</Descriptions.Item>
+                      <Descriptions.Item label="建议 user_id">
+                        {sugg.suggestedUserId}
+                      </Descriptions.Item>
                       <Descriptions.Item label="建议人 username">
                         {sugg.suggestedUsername ?? "-"}
                       </Descriptions.Item>
@@ -153,10 +159,16 @@ export const FixSuggestionDetailDrawer = ({
                                 );
                               }
                               // 颜色:剩余 < 1d 红色紧急;< 3d 橙色;>= 3d 蓝色
-                              const color = cd.remainingDays < 1 ? "red" : cd.remainingDays < 3 ? "orange" : "blue";
+                              const color =
+                                cd.remainingDays < 1
+                                  ? "red"
+                                  : cd.remainingDays < 3
+                                    ? "orange"
+                                    : "blue";
                               return (
                                 <Tag color={color} style={{ marginLeft: 8 }}>
-                                  剩余 {cd.remainingDays}d {cd.remainingHours}h {cd.remainingMinutes}m 可回滚
+                                  剩余 {cd.remainingDays}d {cd.remainingHours}h{" "}
+                                  {cd.remainingMinutes}m 可回滚
                                 </Tag>
                               );
                             })()}
@@ -168,50 +180,58 @@ export const FixSuggestionDetailDrawer = ({
                     </Descriptions>
 
                     <Timeline
-                      items={[
-                        {
-                          color: "gray",
-                          children: (
-                            <>
-                              <div>创建建议</div>
-                              <div style={{ fontSize: 12, color: "#999" }}>{sugg.createdAt}</div>
-                            </>
-                          ),
-                        },
-                        sugg.acceptedAt
-                          ? {
-                              color: "blue",
-                              children: (
-                                <>
-                                  <div>接受</div>
-                                  <div style={{ fontSize: 12, color: "#999" }}>{sugg.acceptedAt}</div>
-                                </>
-                              ),
-                            }
-                          : null,
-                        sugg.appliedAt
-                          ? {
-                              color: "green",
-                              children: (
-                                <>
-                                  <div>应用</div>
-                                  <div style={{ fontSize: 12, color: "#999" }}>{sugg.appliedAt}</div>
-                                </>
-                              ),
-                            }
-                          : null,
-                        sugg.rolledBackAt
-                          ? {
-                              color: "magenta",
-                              children: (
-                                <>
-                                  <div>回滚</div>
-                                  <div style={{ fontSize: 12, color: "#999" }}>{sugg.rolledBackAt}</div>
-                                </>
-                              ),
-                            }
-                          : null,
-                      ].filter(Boolean) as Array<{ color: string; children: React.ReactNode }>}
+                      items={
+                        [
+                          {
+                            color: "gray",
+                            children: (
+                              <>
+                                <div>创建建议</div>
+                                <div style={{ fontSize: 12, color: "#999" }}>{sugg.createdAt}</div>
+                              </>
+                            ),
+                          },
+                          sugg.acceptedAt
+                            ? {
+                                color: "blue",
+                                children: (
+                                  <>
+                                    <div>接受</div>
+                                    <div style={{ fontSize: 12, color: "#999" }}>
+                                      {sugg.acceptedAt}
+                                    </div>
+                                  </>
+                                ),
+                              }
+                            : null,
+                          sugg.appliedAt
+                            ? {
+                                color: "green",
+                                children: (
+                                  <>
+                                    <div>应用</div>
+                                    <div style={{ fontSize: 12, color: "#999" }}>
+                                      {sugg.appliedAt}
+                                    </div>
+                                  </>
+                                ),
+                              }
+                            : null,
+                          sugg.rolledBackAt
+                            ? {
+                                color: "magenta",
+                                children: (
+                                  <>
+                                    <div>回滚</div>
+                                    <div style={{ fontSize: 12, color: "#999" }}>
+                                      {sugg.rolledBackAt}
+                                    </div>
+                                  </>
+                                ),
+                              }
+                            : null,
+                        ].filter(Boolean) as Array<{ color: string; children: React.ReactNode }>
+                      }
                     />
                   </>
                 ),
@@ -227,15 +247,21 @@ export const FixSuggestionDetailDrawer = ({
                         children: (
                           <>
                             <div>
-                              <Tag color={fixStatusColor[h.fixStatus]}>{fixStatusLabel[h.fixStatus]}</Tag>
+                              <Tag color={fixStatusColor[h.fixStatus]}>
+                                {fixStatusLabel[h.fixStatus]}
+                              </Tag>
                               <span style={{ color: "#999", fontSize: 12 }}>{h.id}</span>
                             </div>
                             <div style={{ fontSize: 12, color: "#999" }}>{h.createdAt}</div>
                             {h.rejectionReason && (
-                              <div style={{ fontSize: 12, color: "red" }}>拒绝原因:{h.rejectionReason}</div>
+                              <div style={{ fontSize: 12, color: "red" }}>
+                                拒绝原因:{h.rejectionReason}
+                              </div>
                             )}
                             {h.rollbackReason && (
-                              <div style={{ fontSize: 12, color: "red" }}>回滚原因:{h.rollbackReason}</div>
+                              <div style={{ fontSize: 12, color: "red" }}>
+                                回滚原因:{h.rollbackReason}
+                              </div>
                             )}
                           </>
                         ),

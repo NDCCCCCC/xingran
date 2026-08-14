@@ -169,10 +169,7 @@ export const reconciliationApi = {
    * @param days 统计窗口(默认 7d,R1 走 7d,handler/service 已 clamp 到 [1, 365])
    */
   summary: async (days: number = 7): Promise<SummaryResult> => {
-    const res = await post<SummaryResult>(
-      "/asset/reconciliation/statistics/summary",
-      { days }
-    );
+    const res = await post<SummaryResult>("/asset/reconciliation/statistics/summary", { days });
     return res.data as SummaryResult;
   },
 
@@ -191,10 +188,9 @@ export const reconciliationApi = {
    * 按严重级别分组(low/medium/high/critical 4 keys)
    */
   bySeverity: async (days: number = 7): Promise<Record<string, number>> => {
-    const res = await post<Record<string, number>>(
-      "/asset/reconciliation/statistics/by-severity",
-      { days }
-    );
+    const res = await post<Record<string, number>>("/asset/reconciliation/statistics/by-severity", {
+      days,
+    });
     return (res.data ?? {}) as Record<string, number>;
   },
 
@@ -203,10 +199,7 @@ export const reconciliationApi = {
    * 返回 TrendPoint[](date/openCount/criticalCount/newCount)
    */
   healthTrend: async (days: number = 7): Promise<TrendPoint[]> => {
-    const res = await post<TrendPoint[]>(
-      "/asset/reconciliation/statistics/health-trend",
-      { days }
-    );
+    const res = await post<TrendPoint[]>("/asset/reconciliation/statistics/health-trend", { days });
     return (res.data ?? []) as TrendPoint[];
   },
 
@@ -215,10 +208,9 @@ export const reconciliationApi = {
    * R4 工位详情页可能复用。
    */
   topUnresolved: async (limit: number = 10): Promise<ExceptionSummary[]> => {
-    const res = await post<ExceptionSummary[]>(
-      "/asset/reconciliation/statistics/top-unresolved",
-      { limit }
-    );
+    const res = await post<ExceptionSummary[]>("/asset/reconciliation/statistics/top-unresolved", {
+      limit,
+    });
     return (res.data ?? []) as ExceptionSummary[];
   },
 
@@ -236,26 +228,24 @@ export const reconciliationApi = {
   /**
    * 异常列表(带分页 + 筛选 + 服务端排序)
    */
-  exceptionList: async (
-    params: ExceptionListParams
-  ): Promise<PageResult<ExceptionListItem>> => {
+  exceptionList: async (params: ExceptionListParams): Promise<PageResult<ExceptionListItem>> => {
     const res = await post<PageResult<ExceptionListItem>>(
       "/asset/reconciliation/exception/list",
       params
     );
-    return (
-      (res.data ?? { list: [], total: 0, current: 1, pageSize: 20 }) as PageResult<ExceptionListItem>
-    );
+    return (res.data ?? {
+      list: [],
+      total: 0,
+      current: 1,
+      pageSize: 20,
+    }) as PageResult<ExceptionListItem>;
   },
 
   /**
    * 异常详情(单条)
    */
   exceptionGetByID: async (id: string): Promise<ExceptionListItem> => {
-    const res = await post<ExceptionListItem>(
-      `/asset/reconciliation/exception/${id}`,
-      {}
-    );
+    const res = await post<ExceptionListItem>(`/asset/reconciliation/exception/${id}`, {});
     return res.data as ExceptionListItem;
   },
 
@@ -270,11 +260,18 @@ export const reconciliationApi = {
     id: string,
     body: { resolutionNote?: string } = {}
   ): Promise<{ id: string; resolvedAt: string; resolvedBy: string; resolutionNote?: string }> => {
-    const res = await post<{ id: string; resolvedAt: string; resolvedBy: string; resolutionNote?: string }>(
-      `/asset/reconciliation/exception/${id}/resolve`,
-      body
-    );
-    return res.data as { id: string; resolvedAt: string; resolvedBy: string; resolutionNote?: string };
+    const res = await post<{
+      id: string;
+      resolvedAt: string;
+      resolvedBy: string;
+      resolutionNote?: string;
+    }>(`/asset/reconciliation/exception/${id}/resolve`, body);
+    return res.data as {
+      id: string;
+      resolvedAt: string;
+      resolvedBy: string;
+      resolutionNote?: string;
+    };
   },
 
   /**
@@ -287,13 +284,10 @@ export const reconciliationApi = {
     workstationId: string;
     window?: string;
   }): Promise<ByWorkstationResponse> => {
-    const res = await post<ByWorkstationResponse>(
-      "/asset/reconciliation/by-workstation",
-      {
-        workstationId: data.workstationId,
-        window: data.window ?? "7d",
-      }
-    );
+    const res = await post<ByWorkstationResponse>("/asset/reconciliation/by-workstation", {
+      workstationId: data.workstationId,
+      window: data.window ?? "7d",
+    });
     return res.data as ByWorkstationResponse;
   },
 
@@ -304,50 +298,24 @@ export const reconciliationApi = {
    * 权限命名空间:asset:reconciliation:exception:{list,create,update,delete,test}
    */
   exceptionRule: {
-    list: async <T = unknown>(
-      params: Record<string, unknown> = {}
-    ): Promise<PageResult<T>> => {
-      const res = await post<PageResult<T>>(
-        "/asset/reconciliation/exception-rule/list",
-        params
-      );
-      return (
-        (res.data ?? { list: [], total: 0, current: 1, pageSize: 20 }) as PageResult<T>
-      );
+    list: async <T = unknown>(params: Record<string, unknown> = {}): Promise<PageResult<T>> => {
+      const res = await post<PageResult<T>>("/asset/reconciliation/exception-rule/list", params);
+      return (res.data ?? { list: [], total: 0, current: 1, pageSize: 20 }) as PageResult<T>;
     },
-    getById: async <T = unknown>(
-      id: string
-    ): Promise<T> => {
-      const res = await post<T>(
-        `/asset/reconciliation/exception-rule/${id}`,
-        {}
-      );
+    getById: async <T = unknown>(id: string): Promise<T> => {
+      const res = await post<T>(`/asset/reconciliation/exception-rule/${id}`, {});
       return res.data as T;
     },
-    create: async <T = unknown>(
-      data: Record<string, unknown>
-    ): Promise<T> => {
-      const res = await post<T>(
-        "/asset/reconciliation/exception-rule/create",
-        data
-      );
+    create: async <T = unknown>(data: Record<string, unknown>): Promise<T> => {
+      const res = await post<T>("/asset/reconciliation/exception-rule/create", data);
       return res.data as T;
     },
-    update: async <T = unknown>(
-      id: string,
-      data: Record<string, unknown>
-    ): Promise<T> => {
-      const res = await post<T>(
-        `/asset/reconciliation/exception-rule/${id}/update`,
-        data
-      );
+    update: async <T = unknown>(id: string, data: Record<string, unknown>): Promise<T> => {
+      const res = await post<T>(`/asset/reconciliation/exception-rule/${id}/update`, data);
       return res.data as T;
     },
     delete: async <T = unknown>(id: string): Promise<T> => {
-      const res = await post<T>(
-        `/asset/reconciliation/exception-rule/${id}/delete`,
-        {}
-      );
+      const res = await post<T>(`/asset/reconciliation/exception-rule/${id}/delete`, {});
       return res.data as T;
     },
     test: async (data: {
@@ -368,21 +336,19 @@ export const reconciliationApi = {
         isSilence: boolean;
         needsUserDept: boolean;
       }>("/asset/reconciliation/exception-rule/test", data);
-      return (
-        (res.data ?? {
-          matchedRules: [],
-          mergedActions: [],
-          finalSeverity: "",
-          isSilence: false,
-          needsUserDept: false,
-        }) as {
-          matchedRules: unknown[];
-          mergedActions: string[];
-          finalSeverity: string;
-          isSilence: boolean;
-          needsUserDept: boolean;
-        }
-      );
+      return (res.data ?? {
+        matchedRules: [],
+        mergedActions: [],
+        finalSeverity: "",
+        isSilence: false,
+        needsUserDept: false,
+      }) as {
+        matchedRules: unknown[];
+        mergedActions: string[];
+        finalSeverity: string;
+        isSilence: boolean;
+        needsUserDept: boolean;
+      };
     },
   },
 
@@ -402,26 +368,52 @@ export const reconciliationApi = {
       return res.data as { snapshot_at: string };
     },
     compare: async (): Promise<{
-      baseline: { snapshot_at: string; total_exceptions: number; total_workorders: number; critical_exceptions: number };
+      baseline: {
+        snapshot_at: string;
+        total_exceptions: number;
+        total_workorders: number;
+        critical_exceptions: number;
+      };
       current: { total_exceptions: number; total_workorders: number; critical_exceptions: number };
       reductions: Record<string, number>;
     }> => {
       const res = await post<{
-        baseline: { snapshot_at: string; total_exceptions: number; total_workorders: number; critical_exceptions: number };
-        current: { total_exceptions: number; total_workorders: number; critical_exceptions: number };
+        baseline: {
+          snapshot_at: string;
+          total_exceptions: number;
+          total_workorders: number;
+          critical_exceptions: number;
+        };
+        current: {
+          total_exceptions: number;
+          total_workorders: number;
+          critical_exceptions: number;
+        };
         reductions: Record<string, number>;
       }>("/asset/reconciliation/baseline/compare", {});
-      return (
-        (res.data ?? {
-          baseline: { snapshot_at: "", total_exceptions: 0, total_workorders: 0, critical_exceptions: 0 },
-          current: { total_exceptions: 0, total_workorders: 0, critical_exceptions: 0 },
-          reductions: {},
-        }) as {
-          baseline: { snapshot_at: string; total_exceptions: number; total_workorders: number; critical_exceptions: number };
-          current: { total_exceptions: number; total_workorders: number; critical_exceptions: number };
-          reductions: Record<string, number>;
-        }
-      );
+      return (res.data ?? {
+        baseline: {
+          snapshot_at: "",
+          total_exceptions: 0,
+          total_workorders: 0,
+          critical_exceptions: 0,
+        },
+        current: { total_exceptions: 0, total_workorders: 0, critical_exceptions: 0 },
+        reductions: {},
+      }) as {
+        baseline: {
+          snapshot_at: string;
+          total_exceptions: number;
+          total_workorders: number;
+          critical_exceptions: number;
+        };
+        current: {
+          total_exceptions: number;
+          total_workorders: number;
+          critical_exceptions: number;
+        };
+        reductions: Record<string, number>;
+      };
     },
   },
   /**
@@ -453,13 +445,7 @@ export const reconciliationApi = {
 /**
  * 修复建议状态机 6 状态(D-B2 锁定)
  */
-export type FixStatus =
-  | "pending"
-  | "accepted"
-  | "rejected"
-  | "applied"
-  | "rolled_back"
-  | "failed";
+export type FixStatus = "pending" | "accepted" | "rejected" | "applied" | "rolled_back" | "failed";
 
 /**
  * 修复建议列表查询参数
@@ -558,26 +544,24 @@ export const fixSuggestionApi = {
   /**
    * 列表(分页 + 过滤 + 白名单排序)
    */
-  list: async (
-    params: FixSuggestionListParams
-  ): Promise<PageResult<FixSuggestionListItem>> => {
+  list: async (params: FixSuggestionListParams): Promise<PageResult<FixSuggestionListItem>> => {
     const res = await post<PageResult<FixSuggestionListItem>>(
       "/asset/reconciliation/fix-suggestion/list",
       params
     );
-    return (
-      (res.data ?? { list: [], total: 0, current: 1, pageSize: 20 }) as PageResult<FixSuggestionListItem>
-    );
+    return (res.data ?? {
+      list: [],
+      total: 0,
+      current: 1,
+      pageSize: 20,
+    }) as PageResult<FixSuggestionListItem>;
   },
 
   /**
    * 详情(单条 + 异常 + 历史)
    */
   getById: async (id: string): Promise<FixSuggestionDetail> => {
-    const res = await post<FixSuggestionDetail>(
-      `/asset/reconciliation/fix-suggestion/${id}`,
-      {}
-    );
+    const res = await post<FixSuggestionDetail>(`/asset/reconciliation/fix-suggestion/${id}`, {});
     return res.data as FixSuggestionDetail;
   },
 
@@ -654,21 +638,19 @@ export const fixSuggestionApi = {
       "/asset/reconciliation/fix-suggestion/stats",
       { windowDays }
     );
-    return (
-      (res.data ?? {
-        windowDays,
-        pending: 0,
-        pendingAll: 0,
-        accepted: 0,
-        rejected: 0,
-        applied: 0,
-        rolledBack: 0,
-        failed: 0,
-        misFixRate: 0,
-        threshold: 0.01,
-        thresholdBreached: false,
-        trendSeries: [],
-      }) as FixSuggestionStatsResponse
-    );
+    return (res.data ?? {
+      windowDays,
+      pending: 0,
+      pendingAll: 0,
+      accepted: 0,
+      rejected: 0,
+      applied: 0,
+      rolledBack: 0,
+      failed: 0,
+      misFixRate: 0,
+      threshold: 0.01,
+      thresholdBreached: false,
+      trendSeries: [],
+    }) as FixSuggestionStatsResponse;
   },
 };

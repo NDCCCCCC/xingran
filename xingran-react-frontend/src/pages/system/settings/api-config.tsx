@@ -64,11 +64,11 @@ const APIConfigPage: FC = () => {
   const loadConfigs = async () => {
     setLoading(true);
     try {
-      const result = await getAPINotificationConfigList({
+      const result = (await getAPINotificationConfigList({
         page: paginationProps.current,
         pageSize: paginationProps.pageSize,
         configType: configTypeFilter,
-      }) as { data: { list: APINotificationConfig[]; total: number } };
+      })) as { data: { list: APINotificationConfig[]; total: number } };
       setConfigs(result.data.list);
       setTotal(result.data.total);
     } catch (error) {
@@ -201,9 +201,7 @@ const APIConfigPage: FC = () => {
       key: "status",
       width: 80,
       render: (status: number) => (
-        <Tag color={status === 0 ? "success" : "default"}>
-          {status === 0 ? "正常" : "停用"}
-        </Tag>
+        <Tag color={status === 0 ? "success" : "default"}>{status === 0 ? "正常" : "停用"}</Tag>
       ),
     },
     {
@@ -269,8 +267,9 @@ const APIConfigPage: FC = () => {
               placeholder="筛选类型"
               allowClear
               style={{ width: 120 }}
-              onChange={(value) =>    setConfigTypeFilter(value)}
-             onSearch={() => {}}>
+              onChange={(value) => setConfigTypeFilter(value)}
+              onSearch={() => {}}
+            >
               <Option value={APIConfigTypes.SMS}>短信</Option>
               <Option value={APIConfigTypes.WEBHOOK}>Webhook</Option>
               <Option value={APIConfigTypes.PUSH}>推送</Option>
@@ -341,18 +340,15 @@ const APIConfigPage: FC = () => {
             <Input placeholder="请输入API调用地址" />
           </Form.Item>
 
-          <Form.Item
-            name="apiMethod"
-            label="请求方法"
-            rules={[{ required: true }]}
-          >
+          <Form.Item name="apiMethod" label="请求方法" rules={[{ required: true }]}>
             <Radio.Group>
               <Radio value="GET">GET</Radio>
               <Radio value="POST">POST</Radio>
             </Radio.Group>
           </Form.Item>
 
-          <Tabs defaultActiveKey="headers"
+          <Tabs
+            defaultActiveKey="headers"
             items={[
               {
                 key: "headers",
@@ -364,7 +360,7 @@ const APIConfigPage: FC = () => {
                       placeholder='JSON格式，如：{"Content-Type": "application/json"}'
                     />
                   </Form.Item>
-                )
+                ),
               },
               {
                 key: "template",
@@ -377,7 +373,7 @@ const APIConfigPage: FC = () => {
 示例：{"title": "{{title}}", "content": "{{content}}"}'
                     />
                   </Form.Item>
-                )
+                ),
               },
               {
                 key: "auth",
@@ -392,7 +388,10 @@ const APIConfigPage: FC = () => {
                         <Option value={AuthTypes.APIKEY}>API Key</Option>
                       </Select>
                     </Form.Item>
-                    <Form.Item noStyle shouldUpdate={(prev, curr) => prev.authType !== curr.authType}>
+                    <Form.Item
+                      noStyle
+                      shouldUpdate={(prev, curr) => prev.authType !== curr.authType}
+                    >
                       {({ getFieldValue }) => {
                         const authType = getFieldValue("authType");
                         if (authType === AuthTypes.BASIC) {
@@ -430,8 +429,8 @@ const APIConfigPage: FC = () => {
                       }}
                     </Form.Item>
                   </>
-                )
-              }
+                ),
+              },
             ]}
           />
 

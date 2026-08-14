@@ -35,19 +35,30 @@ export function CreateModal({ open, departments, onOk, onCancel }: CreateModalPr
       destroyOnHidden
     >
       <Form form={form} labelCol={{ span: 6 }} wrapperCol={{ span: 16 }}>
-        <Form.Item name="taskName" label="任务名称" rules={[{ required: true, message: "请输入任务名称" }]}>
+        <Form.Item
+          name="taskName"
+          label="任务名称"
+          rules={[{ required: true, message: "请输入任务名称" }]}
+        >
           <Input placeholder="请输入任务名称" />
         </Form.Item>
 
         <Form.Item name="discoveryType" label="发现类型" rules={[{ required: true }]}>
           <Select onSearch={() => {}}>
-            {DISCOVERY_TYPE_OPTIONS.map(opt => (
-              <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+            {DISCOVERY_TYPE_OPTIONS.map((opt) => (
+              <Option key={opt.value} value={opt.value}>
+                {opt.label}
+              </Option>
             ))}
           </Select>
         </Form.Item>
 
-        <Form.Item name="ipRanges" label="IP范围" rules={[{ required: true, message: "请输入IP范围" }]} extra="每行一个IP范围，支持CIDR格式">
+        <Form.Item
+          name="ipRanges"
+          label="IP范围"
+          rules={[{ required: true, message: "请输入IP范围" }]}
+          extra="每行一个IP范围，支持CIDR格式"
+        >
           <TextArea
             rows={4}
             placeholder={`示例：
@@ -59,7 +70,11 @@ export function CreateModal({ open, departments, onOk, onCancel }: CreateModalPr
 
         {discoveryType === "snmp" && (
           <>
-            <Form.Item name="snmpCommunity" label="SNMP Community" rules={[{ required: true, message: "请输入SNMP Community" }]}>
+            <Form.Item
+              name="snmpCommunity"
+              label="SNMP Community"
+              rules={[{ required: true, message: "请输入SNMP Community" }]}
+            >
               <Input placeholder="请输入SNMP Community，如：public" />
             </Form.Item>
             <Form.Item name="snmpPort" label="SNMP端口" rules={[{ required: true }]}>
@@ -70,13 +85,20 @@ export function CreateModal({ open, departments, onOk, onCancel }: CreateModalPr
 
         <Form.Item name="groupId" label="导入部门">
           <Select placeholder="请选择部门" allowClear onSearch={() => {}}>
-            {departments.map(dept => (
-              <Option key={dept.id} value={dept.id}>{dept.deptName}</Option>
+            {departments.map((dept) => (
+              <Option key={dept.id} value={dept.id}>
+                {dept.deptName}
+              </Option>
             ))}
           </Select>
         </Form.Item>
 
-        <Form.Item name="autoImport" label="自动导入" valuePropName="checked" extra="自动导入发现的设备到设备列表">
+        <Form.Item
+          name="autoImport"
+          label="自动导入"
+          valuePropName="checked"
+          extra="自动导入发现的设备到设备列表"
+        >
           <Switch />
         </Form.Item>
       </Form>

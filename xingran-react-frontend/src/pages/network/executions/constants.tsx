@@ -16,7 +16,10 @@ export const STATUS_OPTIONS = [
 ] as const;
 
 /** 执行状态配置 */
-export const STATUS_CONFIG: Record<ExecutionStatus, { color: string; icon: React.ReactNode; text: string }> = {
+export const STATUS_CONFIG: Record<
+  ExecutionStatus,
+  { color: string; icon: React.ReactNode; text: string }
+> = {
   pending: { color: "default", icon: <ClockCircleOutlined />, text: "待执行" },
   running: { color: "processing", icon: <ClockCircleOutlined />, text: "执行中" },
   success: { color: "success", icon: <CheckCircleOutlined />, text: "成功" },
@@ -26,7 +29,11 @@ export const STATUS_CONFIG: Record<ExecutionStatus, { color: string; icon: React
 /** 渲染执行状态标签 */
 export function renderStatusTag(status: ExecutionStatus) {
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
-  return <Tag color={config.color} icon={config.icon}>{config.text}</Tag>;
+  return (
+    <Tag color={config.color} icon={config.icon}>
+      {config.text}
+    </Tag>
+  );
 }
 
 /** 渲染简化执行状态标签（无图标） */

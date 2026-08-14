@@ -25,11 +25,7 @@ export interface UseLogActionsReturn {
 }
 
 export function useLogActions(params: UseLogActionsParams): UseLogActionsReturn {
-  const {
-    activeTab,
-    fetchOperLogs,
-    fetchLoginLogs,
-  } = params;
+  const { activeTab, fetchOperLogs, fetchLoginLogs } = params;
   const { message } = App.useApp();
 
   const [detailModalVisible, setDetailModalVisible] = useState(false);
@@ -46,14 +42,14 @@ export function useLogActions(params: UseLogActionsParams): UseLogActionsReturn 
     Modal.confirm({
       title: "确认清空",
       icon: <ExclamationCircleOutlined />,
-      content: activeTab === "oper"
-        ? "确定要清空所有操作日志吗？此操作不可恢复！"
-        : "确定要清空所有登录日志吗？此操作不可恢复！",
+      content:
+        activeTab === "oper"
+          ? "确定要清空所有操作日志吗？此操作不可恢复！"
+          : "确定要清空所有登录日志吗？此操作不可恢复！",
       onOk: async () => {
         try {
-          const url = activeTab === "oper"
-            ? "/monitor/oper-logs/clean"
-            : "/monitor/login-logs/clean";
+          const url =
+            activeTab === "oper" ? "/monitor/oper-logs/clean" : "/monitor/login-logs/clean";
 
           await post(url, {});
 
@@ -67,10 +63,9 @@ export function useLogActions(params: UseLogActionsParams): UseLogActionsReturn 
           console.error("清空日志失败:", error);
           message.error("网络错误，请稍后重试");
         }
-      }
+      },
     });
     // activeTab 仅为闭包读取,变化由调用方触发(handleClearLogs 依赖 activeTab)
-
   }, [activeTab, fetchOperLogs, fetchLoginLogs, message]);
 
   // 刷新
@@ -80,7 +75,6 @@ export function useLogActions(params: UseLogActionsParams): UseLogActionsReturn 
     } else {
       fetchLoginLogs();
     }
-     
   }, [activeTab, fetchOperLogs, fetchLoginLogs]);
 
   return {

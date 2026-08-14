@@ -24,7 +24,7 @@ export function formatTTL(seconds: number): string {
     { name: "秒", value: 60 },
     { name: "分钟", value: 60 },
     { name: "小时", value: 24 },
-    { name: "天", value: Infinity }
+    { name: "天", value: Infinity },
   ];
 
   let value = seconds;

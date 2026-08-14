@@ -25,7 +25,7 @@ export function toBase64(str: string): string {
  * @returns Promise
  */
 export function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // ============ 地图相关辅助函数 ============
@@ -71,10 +71,7 @@ export function pixelDistance(
   point1: { x: number; y: number },
   point2: { x: number; y: number }
 ): number {
-  return Math.sqrt(
-    Math.pow(point1.x - point2.x, 2) +
-    Math.pow(point1.y - point2.y, 2)
-  );
+  return Math.sqrt(Math.pow(point1.x - point2.x, 2) + Math.pow(point1.y - point2.y, 2));
 }
 
 /**
@@ -82,9 +79,10 @@ export function pixelDistance(
  * @param pixels 像素坐标数组
  * @returns 平均像素坐标
  */
-export function averagePixelPosition(
-  pixels: Array<{ x: number; y: number }>
-): { x: number; y: number } {
+export function averagePixelPosition(pixels: Array<{ x: number; y: number }>): {
+  x: number;
+  y: number;
+} {
   const sumX = pixels.reduce((sum, p) => sum + p.x, 0);
   const sumY = pixels.reduce((sum, p) => sum + p.y, 0);
   return {
@@ -137,13 +135,8 @@ export function getBuildingLabel(building: BuildingItem): string {
  * @param zoom 当前缩放级别
  * @returns 过滤后的楼宇数据
  */
-export function filterBuildingsByZoom(
-  buildings: BuildingItem[],
-  zoom: number
-): BuildingItem[] {
-  return zoom === 10
-    ? buildings
-    : buildings.filter((b) => b.level === 1);
+export function filterBuildingsByZoom(buildings: BuildingItem[], zoom: number): BuildingItem[] {
+  return zoom === 10 ? buildings : buildings.filter((b) => b.level === 1);
 }
 
 // ============ 工位相关辅助函数 ============
@@ -189,10 +182,7 @@ export function getWorkstationTypeText(type: number): string {
  * @param workstation 工位数据
  * @returns 颜色值（十六进制数字）
  */
-export function getWorkstationColor(workstation: {
-  status: number;
-  type: number;
-}): number {
+export function getWorkstationColor(workstation: { status: number; type: number }): number {
   if (workstation.status === 1) {
     return WORKSTATION_STATUS_COLORS.OCCUPIED;
   }
@@ -357,10 +347,12 @@ export function convertApiWorkstations(
  * @param workstations 工位数据数组
  * @returns 统计数据
  */
-export function calculateWorkstationStats(workstations: Array<{
-  status: number;
-  type: number;
-}>): {
+export function calculateWorkstationStats(
+  workstations: Array<{
+    status: number;
+    type: number;
+  }>
+): {
   total: number;
   available: number;
   occupied: number;

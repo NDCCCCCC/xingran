@@ -11,13 +11,11 @@ export const infoPointApi = {
     post("/ops/info-points", data),
 
   // 更新
-  update: (id: string, data: Partial<InfoPoint>) =>
-    post(`/ops/info-points/${id}/update`, data),
+  update: (id: string, data: Partial<InfoPoint>) => post(`/ops/info-points/${id}/update`, data),
 
   // 删除
   delete: (id: string) => post(`/ops/info-points/${id}/delete`),
 
   // 批量删除
-  batchDelete: (ids: string[]) =>
-    post("/ops/info-points/batch", { ids, action: "delete" }),
+  batchDelete: (ids: string[]) => post("/ops/info-points/batch", { ids, action: "delete" }),
 };

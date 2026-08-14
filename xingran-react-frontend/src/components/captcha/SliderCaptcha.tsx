@@ -145,30 +145,33 @@ const SliderCaptcha: FC<SliderCaptchaProps> = ({ onVerified, onError, active = t
     [verified]
   );
 
-  const handlePointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
-    if (!dragging || !sliderRef.current) return;
+  const handlePointerMove = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (!dragging || !sliderRef.current) return;
 
-    const rect = sliderRef.current.getBoundingClientRect();
-    // 动态计算可拖动范围：容器显示宽度 - 滑块按钮宽度
-    // （原硬编码 MAX_X=240 远小于实际容器宽度，导致滑块拖不到最右）
-    const maxDisplayX = Math.max(0, rect.width - SLIDER_BUTTON_WIDTH);
-    let x = e.clientX - rect.left;
-    x = Math.max(0, Math.min(x, maxDisplayX));
+      const rect = sliderRef.current.getBoundingClientRect();
+      // 动态计算可拖动范围：容器显示宽度 - 滑块按钮宽度
+      // （原硬编码 MAX_X=240 远小于实际容器宽度，导致滑块拖不到最右）
+      const maxDisplayX = Math.max(0, rect.width - SLIDER_BUTTON_WIDTH);
+      let x = e.clientX - rect.left;
+      x = Math.max(0, Math.min(x, maxDisplayX));
 
-    // 写入 ref（验证时读取），rAF 内统一 setState
-    dragStateRef.current.currentX = x;
-    pendingXRef.current = x;
+      // 写入 ref（验证时读取），rAF 内统一 setState
+      dragStateRef.current.currentX = x;
+      pendingXRef.current = x;
 
-    if (rafIdRef.current === null) {
-      rafIdRef.current = requestAnimationFrame(() => {
-        rafIdRef.current = null;
-        if (pendingXRef.current !== null) {
-          setCurrentX(pendingXRef.current);
-          pendingXRef.current = null;
-        }
-      });
-    }
-  }, [dragging]);
+      if (rafIdRef.current === null) {
+        rafIdRef.current = requestAnimationFrame(() => {
+          rafIdRef.current = null;
+          if (pendingXRef.current !== null) {
+            setCurrentX(pendingXRef.current);
+            pendingXRef.current = null;
+          }
+        });
+      }
+    },
+    [dragging]
+  );
 
   const handlePointerUp = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {

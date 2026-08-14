@@ -17,7 +17,11 @@ interface GeocodingFormState {
   geocodingWarning: string | null;
   handleGeocode: (address: string) => Promise<void>;
   resetGeocodingState: () => void;
-  setGeocodingResultFromRecord: (record: { longitude?: number; latitude?: number; address?: string }) => void;
+  setGeocodingResultFromRecord: (record: {
+    longitude?: number;
+    latitude?: number;
+    address?: string;
+  }) => void;
 }
 
 export function useGeocodingForm(): GeocodingFormState {
@@ -27,37 +31,40 @@ export function useGeocodingForm(): GeocodingFormState {
 
   const { geocode } = useGeocoding();
 
-  const handleGeocode = useCallback(async (address: string) => {
-    if (!address?.trim()) {
-      setGeocodingResult(null);
-      setGeocodingWarning(null);
-      return;
-    }
-
-    setGeocodingLoading(true);
-    setGeocodingWarning(null);
-
-    try {
-      const result = await geocode(address);
-
-      if (result) {
-        setGeocodingResult({
-          longitude: result.longitude,
-          latitude: result.latitude,
-          formattedAddress: result.formattedAddress,
-        });
-        setGeocodingWarning(null);
-      } else {
-        setGeocodingWarning("地址解析失败，将保存不含经纬度的信息");
+  const handleGeocode = useCallback(
+    async (address: string) => {
+      if (!address?.trim()) {
         setGeocodingResult(null);
+        setGeocodingWarning(null);
+        return;
       }
-    } catch (_error) {
-      setGeocodingWarning("地址解析出错，将保存不含经纬度的信息");
-      setGeocodingResult(null);
-    } finally {
-      setGeocodingLoading(false);
-    }
-  }, [geocode]);
+
+      setGeocodingLoading(true);
+      setGeocodingWarning(null);
+
+      try {
+        const result = await geocode(address);
+
+        if (result) {
+          setGeocodingResult({
+            longitude: result.longitude,
+            latitude: result.latitude,
+            formattedAddress: result.formattedAddress,
+          });
+          setGeocodingWarning(null);
+        } else {
+          setGeocodingWarning("地址解析失败，将保存不含经纬度的信息");
+          setGeocodingResult(null);
+        }
+      } catch (_error) {
+        setGeocodingWarning("地址解析出错，将保存不含经纬度的信息");
+        setGeocodingResult(null);
+      } finally {
+        setGeocodingLoading(false);
+      }
+    },
+    [geocode]
+  );
 
   const resetGeocodingState = useCallback(() => {
     setGeocodingResult(null);
@@ -65,14 +72,17 @@ export function useGeocodingForm(): GeocodingFormState {
     setGeocodingLoading(false);
   }, []);
 
-  const setGeocodingResultFromRecord = useCallback((record: { longitude?: number; latitude?: number; address?: string }) => {
-    if (record?.longitude && record?.latitude) {
-      setGeocodingResult({
-        longitude: record.longitude,
-        latitude: record.latitude,
-      });
-    }
-  }, []);
+  const setGeocodingResultFromRecord = useCallback(
+    (record: { longitude?: number; latitude?: number; address?: string }) => {
+      if (record?.longitude && record?.latitude) {
+        setGeocodingResult({
+          longitude: record.longitude,
+          latitude: record.latitude,
+        });
+      }
+    },
+    []
+  );
 
   return {
     geocodingLoading,

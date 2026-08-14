@@ -87,10 +87,18 @@ export function checkWorkstationCollisionForDrag(
     }
 
     // 检查与目标位置的碰撞
-    const targetCollision = checkRectCollision(targetWorkstation, ws, EDITOR_CONSTANTS.MIN_WORKSTATION_SPACING);
+    const targetCollision = checkRectCollision(
+      targetWorkstation,
+      ws,
+      EDITOR_CONSTANTS.MIN_WORKSTATION_SPACING
+    );
 
     // 检查原始位置是否已经与该工位碰撞
-    const originalCollision = checkRectCollision(originalWorkstation, ws, EDITOR_CONSTANTS.MIN_WORKSTATION_SPACING);
+    const originalCollision = checkRectCollision(
+      originalWorkstation,
+      ws,
+      EDITOR_CONSTANTS.MIN_WORKSTATION_SPACING
+    );
 
     // 如果目标位置碰撞，但原始位置没有碰撞，则阻止移动（新的碰撞）
     // 如果两者都碰撞，允许移动（从碰撞状态中移出）

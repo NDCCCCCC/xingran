@@ -58,14 +58,19 @@ export function ConfigExecuteModal({
           <Input placeholder="请输入任务名称" />
         </Form.Item>
 
-        <Form.Item name="templateId" label="选择模板" rules={[{ required: true, message: "请选择模板" }]}>
+        <Form.Item
+          name="templateId"
+          label="选择模板"
+          rules={[{ required: true, message: "请选择模板" }]}
+        >
           <Select
             placeholder="请选择配置模板"
             showSearch
             optionFilterProp="children"
             onChange={onTemplateChange}
-           onSearch={() => {}}>
-            {templates.map(t => (
+            onSearch={() => {}}
+          >
+            {templates.map((t) => (
               <Option key={t.id} value={t.id}>
                 {t.templateName} ({t.templateCode})
               </Option>
@@ -75,8 +80,18 @@ export function ConfigExecuteModal({
 
         {selectedTemplate && (
           <Card size="small" style={{ marginBottom: 16 }}>
-            <div><strong>模板预览:</strong></div>
-            <pre style={{ maxHeight: 200, overflow: "auto", background: "#fafafa", padding: 12, marginTop: 8 }}>
+            <div>
+              <strong>模板预览:</strong>
+            </div>
+            <pre
+              style={{
+                maxHeight: 200,
+                overflow: "auto",
+                background: "#fafafa",
+                padding: 12,
+                marginTop: 8,
+              }}
+            >
               {selectedTemplate.templateContent}
             </pre>
           </Card>
