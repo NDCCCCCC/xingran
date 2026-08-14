@@ -370,7 +370,7 @@ const DeviceManagement: FC = () => {
       setSelectedDeptId("");
       loadDevices();
     }
-  }, [loadDevices]);
+  }, [loadDevices, setSelectedDeptId]);
 
   // 探测设备
   const handleProbe = async () => {

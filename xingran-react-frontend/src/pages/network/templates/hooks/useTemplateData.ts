@@ -39,6 +39,7 @@ export function useTemplateData(searchForm: FormInstance<unknown>, setTotal: (to
     } else {
       message.error(defaultMessage);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   const loadTemplates = useCallback(

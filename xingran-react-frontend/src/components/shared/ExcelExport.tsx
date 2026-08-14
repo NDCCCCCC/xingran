@@ -72,6 +72,7 @@ const ExcelExport: FC<ExcelExportProps> = ({
     } finally {
       setExporting(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [exportUrl, entityType, entityName, onClose, filters]);
 
   return (

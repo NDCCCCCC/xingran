@@ -88,6 +88,7 @@ const SyncMonitor: React.FC = () => {
     fetchLogs();
     const interval = setInterval(fetchStatus, 10000); // 10秒轮询
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchStatus/fetchLogs are render-defined helpers; mount-only
   }, []);
 
   const statusColumns = [

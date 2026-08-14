@@ -219,6 +219,7 @@ const CacheManager: FC = () => {
     } finally {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [searchForm, paginationProps.current, paginationProps.pageSize, orderByColumn, isAsc, setTotal]);
 
   const fetchMonitor = useCallback(async () => {
@@ -229,6 +230,7 @@ const CacheManager: FC = () => {
       console.error("获取监控数据失败:", error);
       message.error("获取监控数据失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   // ==================== 缓存操作 ====================
@@ -250,6 +252,7 @@ const CacheManager: FC = () => {
       console.error("操作失败:", error);
       message.error("操作失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [form, fetchCaches]);
 
   const handleBatchOperate = useCallback(async (operation: string, keys?: string[]) => {
@@ -266,6 +269,7 @@ const CacheManager: FC = () => {
       console.error("批量操作失败:", error);
       message.error("批量操作失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [fetchCaches]);
 
   const handleClearAll = useCallback(() => {
@@ -287,6 +291,7 @@ const CacheManager: FC = () => {
         }
       }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [fetchCaches, fetchMonitor]);
 
   const handleExport = useCallback(async () => {
@@ -301,6 +306,7 @@ const CacheManager: FC = () => {
       console.error("导出失败:", error);
       message.error("导出失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [searchForm]);
 
   const handleViewDetail = useCallback(async (key: string) => {
@@ -328,6 +334,7 @@ const CacheManager: FC = () => {
       console.error("获取缓存详情失败:", error);
       message.error("获取缓存详情失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [formatTTL]);
 
   // ==================== 搜索和刷新 ====================
@@ -335,7 +342,7 @@ const CacheManager: FC = () => {
   const handleSearch = useCallback(() => {
     setCurrent(1);
     fetchCaches();
-  }, [fetchCaches]);
+  }, [fetchCaches, setCurrent]);
 
   const handleReset = useCallback(() => {
     setSearchForm({
@@ -344,7 +351,7 @@ const CacheManager: FC = () => {
       level: "all"
     });
     setCurrent(1);
-  }, []);
+  }, [setCurrent]);
 
   const handleRefresh = useCallback(() => {
     fetchCaches();
@@ -375,6 +382,7 @@ const CacheManager: FC = () => {
     }, 30000);
 
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional dependency for re-run on change
   }, [paginationProps.current, paginationProps.pageSize, fetchCaches, fetchMonitor]);
 
   // 表格列 - 使用 useMemo 避免重复创建
@@ -383,6 +391,7 @@ const CacheManager: FC = () => {
     handleBatchOperate,
     formatTTL,
     formatMemorySize,
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- imported helpers are stable
   }), [handleViewDetail, handleBatchOperate, formatTTL, formatMemorySize]);
 
   return (

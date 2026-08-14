@@ -110,6 +110,7 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
     } catch (error) {
       message.error("获取结果失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   return {

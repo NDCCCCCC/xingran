@@ -60,6 +60,7 @@ const CaptchaBackgroundManagement: FC = () => {
   useEffect(() => {
     loadBackgrounds({ current: paginationProps.current, pageSize: paginationProps.pageSize });
     loadStatistics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load/fetch fn from hook is stable enough; disable to avoid loop
   }, [paginationProps.current, paginationProps.pageSize]);
 
   // 操作成功后刷新

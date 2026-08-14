@@ -71,6 +71,7 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
     } catch (error) {
       message.error("删除失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [fetchList]);
 
   // 保存节假日
@@ -107,6 +108,7 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
       if (error && typeof error === "object" && "errorFields" in error) return;
       message.error(modalState.editingRecord ? "更新失败" : "创建失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [modalState.editingRecord, fetchList]);
 
   // 批量新增
@@ -116,6 +118,7 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
       batchHolidays: [{ holidayDate: dayjs(), holidayName: "", isOffday: true, holidayType: "legal", year: defaultYear }],
     });
     setModalState(prev => ({ ...prev, batchModalVisible: true }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getDefaultYear is render-defined; year/availableYears tracked
   }, [year, availableYears]);
 
   // 添加批量行
@@ -127,6 +130,7 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
         { holidayDate: dayjs(), holidayName: "", isOffday: true, holidayType: "legal", year: defaultYear },
       ],
     }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getDefaultYear is render-defined; year/availableYears tracked
   }, [year, availableYears]);
 
   // 删除批量行
@@ -176,6 +180,7 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
     } catch (error) {
       message.error("批量创建失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [batchState, fetchList]);
 
   return {

@@ -149,6 +149,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 			// 网络恢复后刷新数据
 			refresh();
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- message/notification from App.useApp() are stable
 	}, [isOnline, wasOffline, resetWasOffline, refresh]);
 
 	// 更新刷新状态

@@ -177,6 +177,7 @@ const GlobalSearch: FC = () => {
         setVisible(false);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- filteredResults.length is redundant with filteredResults
   }, [visible, filteredResults.length, selectedIndex, handleResultClick, filteredResults]);
 
   // 注册键盘事件监听

@@ -34,13 +34,14 @@ const TextCaptcha: FC<CaptchaProps> = ({ value, onChange, onError }) => {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [onChange, onError]);
 
   // 只在组件挂载时加载验证码
    
   useEffect(() => {
     loadCaptcha();
-  }, []);
+  }, [loadCaptcha]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;

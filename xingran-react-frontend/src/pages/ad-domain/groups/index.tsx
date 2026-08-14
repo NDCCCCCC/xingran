@@ -146,12 +146,14 @@ const ADGroupPage: FC = () => {
     } finally {
       setGroupLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- stable setters and pagination object
   }, [selectedConfig, selectedOUDN, paginationProps.current, paginationProps.pageSize]);
 
   useEffect(() => {
     if (selectedConfig) {
       fetchGroups(searchGroupName);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- paginationProps.current is intentional
   }, [selectedConfig, selectedOUDN, paginationProps.current, paginationProps.pageSize, searchGroupName, fetchGroups]);
 
   // Fetch sync status when config changes

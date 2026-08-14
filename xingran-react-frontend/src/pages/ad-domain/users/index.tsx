@@ -129,6 +129,7 @@ const ADUserPage: FC = () => {
       fetchOUTree();
       fetchUsers();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchOUTree/fetchUsers recreated each render; disable to avoid loop
   }, [selectedConfig, paginationProps.current, paginationProps.pageSize]);
 
   const fetchUsers = async (sortCol?: string, sortAsc?: boolean) => {
@@ -374,6 +375,7 @@ const ADUserPage: FC = () => {
     }));
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- buildTreeSelectData recreated each render; disable to avoid loop
   const treeSelectData = useMemo(() => buildTreeSelectData(ouTree), [ouTree]);
 
   const handleQuickOUSelect = (ouDn: string) => {

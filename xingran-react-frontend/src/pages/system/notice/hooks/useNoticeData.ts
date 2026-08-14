@@ -76,18 +76,21 @@ export function useNoticeData(): UseNoticeDataResult {
   const handleCreate = useCallback(async (request: CreateNoticeRequest) => {
     await createNotice(request);
     message.success("创建成功");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   // 更新通知
   const handleUpdate = useCallback(async (id: string, request: UpdateNoticeRequest) => {
     await updateNotice(id, request);
     message.success("更新成功");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   // 删除通知
   const handleDelete = useCallback(async (id: string) => {
     await deleteNotice(id);
     message.success("删除成功");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   // 批量删除
@@ -99,18 +102,21 @@ export function useNoticeData(): UseNoticeDataResult {
     await batchDeleteNotices(keys as string[]);
     message.success("批量删除成功");
     setSelectedRowKeys([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   // 发布通知
   const handlePublish = useCallback(async (id: string) => {
     await publishNotice(id);
     message.success("发布成功");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   // 撤回通知
   const handleWithdraw = useCallback(async (id: string) => {
     await withdrawNotice(id);
     message.success("撤回成功");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   return {

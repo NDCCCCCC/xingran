@@ -119,6 +119,7 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
     } catch (error) {
       handleApiError(error, "批量删除");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [loadDictTypes, loadTypeStatistics, invalidateAllDicts]);
 
   // 创建/更新字典数据
@@ -175,6 +176,7 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
     } catch (error) {
       handleApiError(error, "批量删除");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [loadDictData, loadDataStatistics, invalidateAllDicts]);
 
   // 刷新缓存
@@ -186,6 +188,7 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
     } catch {
       message.error("刷新缓存失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [invalidateAllDicts]);
 
   // 打开类型编辑模态框
@@ -216,6 +219,7 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
       dataForm.setFieldsValue({ dictSort: 0, status: 0, isDefault: false });
     }
     setDataModalVisible(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [selectedType]);
 
   return {

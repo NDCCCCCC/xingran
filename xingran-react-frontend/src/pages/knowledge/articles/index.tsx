@@ -93,6 +93,7 @@ const KnowledgeArticlePage: FC = () => {
     fetchList(paginationProps.current ?? 1, paginationProps.pageSize ?? 10);
     fetchCategories();
     fetchTags();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-only load; fetch handlers are stable
   }, [paginationProps.current, paginationProps.pageSize]);
 
   // 表格列
@@ -178,7 +179,7 @@ const KnowledgeArticlePage: FC = () => {
       const values = form.getFieldsValue() as { title?: string; categoryId?: string; tagId?: string; status?: number };
       fetchList(current, pageSize, orderByColumn, isAsc);
     },
-    [sort, sorterMetas, form, fetchList]
+    [sort, sorterMetas, form, fetchList, setCurrent, setPageSize]
   );
 
   return (

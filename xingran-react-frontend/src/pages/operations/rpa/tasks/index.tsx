@@ -120,6 +120,7 @@ const TaskManagement: FC = () => {
         }
       },
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [refreshData]);
 
   const handleModalOk = useCallback(async (values: Record<string, unknown>) => {

@@ -54,6 +54,7 @@ const SliderCaptcha: FC<SliderCaptchaProps> = ({ onVerified, onError, active = t
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [onError]);
 
   // 只在组件激活（模态框打开）时加载验证码
@@ -118,6 +119,7 @@ const SliderCaptcha: FC<SliderCaptchaProps> = ({ onVerified, onError, active = t
       message.error("验证失败");
       loadCaptcha();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [captchaData, onVerified, loadCaptcha]);
 
   // ---- 指针事件处理（Pointer Events + setPointerCapture 根治事件流抢占）----

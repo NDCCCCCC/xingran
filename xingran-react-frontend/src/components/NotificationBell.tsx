@@ -121,6 +121,7 @@ const NotificationBell: FC = () => {
       console.error("标记全部已读失败:", error);
       message.error("操作失败，请稍后重试");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [markAllAsRead]);
 
   // 删除通知（调用忽略API）
@@ -135,6 +136,7 @@ const NotificationBell: FC = () => {
       console.error("忽略通知失败:", error);
       message.error("操作失败，请稍后重试");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [removeNotification]);
 
   // 查看全部通知

@@ -94,6 +94,7 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [form]);
 
   const handleConfirm = useCallback(() => {
@@ -104,6 +105,7 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
     onConfirm(generatedActions);
     form.resetFields();
     setGeneratedActions([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [generatedActions, onConfirm, form]);
 
   const handleCancel = useCallback(() => {

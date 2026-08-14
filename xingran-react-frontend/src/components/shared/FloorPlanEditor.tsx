@@ -150,7 +150,7 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
         window.removeEventListener("mouseup", handleMouseUp);
       };
     }
-  }, [dragState, draggedNodePos, viewState, handleDragMove, handleEndDrag, handlePanEnd, clearDraggedPos]);
+  }, [dragState, draggedNodePos, viewState, handleDragMove, handlePanMove, handleEndDrag, handlePanEnd, clearDraggedPos]);
 
   // 键盘事件
   useEffect(() => {
@@ -327,6 +327,7 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
     }
 
     setContextMenu(prev => ({ ...prev, visible: false }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [contextMenu.workstation, onEdit, onUpdatePosition]);
 
   /**

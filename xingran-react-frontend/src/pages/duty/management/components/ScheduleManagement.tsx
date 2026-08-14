@@ -60,7 +60,7 @@ export const ScheduleManagement: React.FC<ScheduleManagementProps> = ({
   // 初始化默认值：只显示未过期的排班
   React.useEffect(() => {
     searchForm.setFieldsValue({ expired: 0 });
-  }, []);
+  }, [searchForm]);
 
   const getDutyTypeColor = (type: string) => {
     switch (type) {

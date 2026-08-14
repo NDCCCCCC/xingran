@@ -23,6 +23,7 @@ export function useDutyConfig() {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   // 保存配置
@@ -50,6 +51,7 @@ export function useDutyConfig() {
     } finally {
       setSaving(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [fetch]);
 
   // 获取表单初始值

@@ -278,7 +278,7 @@ export function WorkstationElement({
       statusIndicatorX: statusPos.x,
       statusIndicatorY: statusPos.y,
     };
-  }, [workstation.x, workstation.y, workstation.width, workstation.height, workstation.rotation, workstation.type, deskWidth, deskDepth, isLShaped]);
+  }, [workstation.x, workstation.y, workstation.width, workstation.height, workstation.rotation, workstation.type, deskWidth, deskDepth, isLShaped, rotation]);
 
   const handleMouseEnter = useCallback(() => {
     onHover?.(true);

@@ -190,6 +190,7 @@ export function useColumnConfig(options: UseColumnConfigOptions) {
     } finally {
       setSaving(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [pageKey, enableCache]);
 
   // 重置配置
@@ -212,6 +213,7 @@ export function useColumnConfig(options: UseColumnConfigOptions) {
     } finally {
       setSaving(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [pageKey, defaultColumns, enableCache]);
 
   // 切换列可见性

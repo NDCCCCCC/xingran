@@ -82,6 +82,7 @@ const NetworkExport: FC<NetworkExportProps> = ({
     } finally {
       setExporting(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [exportUrl, entityName, filters, current, pageSize]);
 
   const menuItems: MenuProps["items"] = [

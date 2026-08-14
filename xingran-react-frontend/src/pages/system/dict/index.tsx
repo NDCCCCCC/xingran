@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 系统字典管理页面
  * System Dictionary Management Page
  */
@@ -381,6 +381,7 @@ const DictManagement: FC = () => {
       });
       loadTypeStatistics();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional dependency for re-run on change
   }, [activeTab, paginationProps.current, paginationProps.pageSize, loadTypeStatistics, loadDictTypes]);
 
   useEffect(() => {
@@ -392,6 +393,7 @@ const DictManagement: FC = () => {
       });
       loadDataStatistics();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional dependency for re-run on change
   }, [activeTab, selectedType, paginationProps.current, paginationProps.pageSize, loadDataStatistics, loadDictData]);
 
   // 表格列

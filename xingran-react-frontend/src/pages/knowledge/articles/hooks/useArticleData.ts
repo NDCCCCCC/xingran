@@ -129,6 +129,7 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [current, pageSize, fetchStats]);
 
   const fetchCategories = useCallback(async () => {
@@ -158,6 +159,7 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
       const err = error as UnknownError;
       message.error(err.message || "删除失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [fetchList]);
 
   const handleLike = useCallback(async (id: string) => {
@@ -169,6 +171,7 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
       const err = error as UnknownError;
       message.error(err.message || "点赞失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [fetchList]);
 
   const handlePublish = useCallback(async (record: KnowledgeArticle) => {
@@ -180,6 +183,7 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
       const err = error as UnknownError;
       message.error(err.message || "发布失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [fetchList]);
 
   const handleSave = useCallback(async (editingRecord: KnowledgeArticle | null, values: Record<string, unknown>) => {
@@ -199,6 +203,7 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
       message.success("创建成功");
     }
     fetchList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [fetchList]);
 
   return {

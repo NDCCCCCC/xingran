@@ -165,6 +165,7 @@ const APIKeyManagement: FC = () => {
       // 服务端排序透传（避坑：详见 memory server-sort-loadfunc-param-drop）
       ...(sortField && { orderByColumn: sortField, isAsc: sortOrder === "ascend" }),
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- individual pagination fields are already tracked
   }, [pagination.current, pagination.pageSize, searchKeyword, filterStatus, filterScope, sortField, sortOrder]);
 
   /**
@@ -185,6 +186,7 @@ const APIKeyManagement: FC = () => {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [queryParams]);
 
   /**
@@ -265,6 +267,7 @@ const APIKeyManagement: FC = () => {
       console.error("删除 API 密钥失败:", error);
       message.error("删除失败，请稍后重试");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [fetchData]);
 
   /**
@@ -279,6 +282,7 @@ const APIKeyManagement: FC = () => {
       console.error("切换状态失败:", error);
       message.error("操作失败，请稍后重试");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [fetchData]);
 
   /**
@@ -335,6 +339,7 @@ const APIKeyManagement: FC = () => {
         message.error("操作失败，请稍后重试");
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [form, modalType, editingRecord, fetchData]);
 
   /**
@@ -352,6 +357,7 @@ const APIKeyManagement: FC = () => {
     setFilterStatus(undefined);
     setFilterScope(undefined);
     setPagination((prev) => ({ ...prev, current: 1 }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setters from useState are stable
   }, []);
 
   /**
@@ -566,6 +572,7 @@ const APIKeyManagement: FC = () => {
         </Space>
       ),
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   ], [handleView, handleEdit, handleToggleStatus, handleViewLogs, handleDelete, sortField, sortOrder]);
 
   // ==================== 渲染 ====================

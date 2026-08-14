@@ -201,6 +201,7 @@ export function TaskEditModal({
     setActions(generatedActions);
     setAiEditorVisible(false);
     message.success("AI 生成脚本成功！");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   const handleOk = useCallback(async () => {

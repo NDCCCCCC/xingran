@@ -117,7 +117,7 @@ const ConfigExecutionPage: FC = () => {
         handleCancelExecution,
         getSortOrder: (field) => (orderByColumn === field ? (netExecSortOrder ?? null) as "ascend" | "descend" | null : null),
       }),
-    [handleViewDetail, handleCancelExecution, orderByColumn, netExecSortOrder]
+    [handleViewDetail, handleCancelExecution, orderByColumn, netExecSortOrder] // eslint-disable-line react-hooks/exhaustive-deps -- handleViewDetail recreated each render
   );
 
   const detailColumns = getDetailColumns({
@@ -140,6 +140,7 @@ const ConfigExecutionPage: FC = () => {
 
   useEffect(() => {
     Promise.all([loadExecutions(), loadStatistics()]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- paginationProps.current is intentional
   }, [paginationProps.current, paginationProps.pageSize, loadExecutions, loadStatistics]);
 
   return (

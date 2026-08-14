@@ -212,6 +212,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
     };
 
     initMap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- addHubeiMask render-defined + message stable; init once
   }, []);
 
   // 渲染楼宇标记（使用聚类算法）
@@ -292,6 +293,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
     clusterGroups.forEach((cluster) => {
       renderClusterMarker(cluster, map, BMap);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- renderClusterMarker is render-defined
   }, [mapLoaded, buildings, currentZoom]);
 
   // 渲染聚类标记（单个楼宇或多个楼宇聚类）

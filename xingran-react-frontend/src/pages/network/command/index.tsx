@@ -93,6 +93,7 @@ const CommandDispatch: FC = () => {
 
   useEffect(() => {
     Promise.all([loadExecutions(), loadStatistics()]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional dependency for re-run on change
   }, [paginationProps.current, paginationProps.pageSize, loadExecutions, loadStatistics]);
 
   // 操作成功后刷新
@@ -125,6 +126,7 @@ const CommandDispatch: FC = () => {
         handleCancel: (id: string) => handleCancelExecution(id, handleSuccess),
         getSortOrder: (field) => (orderByColumn === field ? (cmdSortOrder ?? null) as "ascend" | "descend" | null : null),
       }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleCancelExecution from hook is stable enough
     [handleViewDetail, handleSuccess, orderByColumn, cmdSortOrder]
   );
 

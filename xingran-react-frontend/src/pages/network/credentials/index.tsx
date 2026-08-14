@@ -132,6 +132,7 @@ const CredentialManagement: FC = () => {
 
   useEffect(() => {
     Promise.all([loadCredentials(), loadStatistics()]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only fetch; loadCredentials/loadStatistics recreated each render
   }, []);
 
   // 创建/更新凭证

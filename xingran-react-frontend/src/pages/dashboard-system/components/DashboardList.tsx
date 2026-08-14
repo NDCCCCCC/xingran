@@ -282,6 +282,7 @@ const DashboardList: React.FC<DashboardListProps> = ({
 				</Space>
 			),
 		},
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- handleDelete/handleDuplicate/handleEdit/handleSetDefault are render-defined functions
 	], [onNavigateToView, onNavigateToEdit]);
 
 	return (

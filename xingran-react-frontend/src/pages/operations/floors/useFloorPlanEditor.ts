@@ -124,6 +124,7 @@ export function useFloorPlanEditor(
     } finally {
       setFloorPlanLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [currentFloor]);
 
   const saveWalls = useCallback(async (walls: Wall[], floorId: string) => {
@@ -223,6 +224,7 @@ export function useFloorPlanEditor(
     } finally {
       options?.onSaveEnd?.();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [loadFloorPlanData, saveWalls, saveDoors, saveTexts, saveWorkstations, options]);
 
   return {

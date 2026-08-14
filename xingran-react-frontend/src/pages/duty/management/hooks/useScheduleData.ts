@@ -64,6 +64,7 @@ export function useScheduleData() {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [current, pageSize]);
 
   // 获取所有排班（用于调班）
@@ -130,6 +131,7 @@ export function useScheduleData() {
       message.error("生成排班失败");
       return false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [fetchList, fetchWeeklyDuty, currentWeekStart]);
 
   // 调班
@@ -148,6 +150,7 @@ export function useScheduleData() {
       message.error("调班失败");
       return false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [fetchList, fetchWeeklyDuty, currentWeekStart]);
 
   // 手动排班
@@ -165,6 +168,7 @@ export function useScheduleData() {
       message.error("手动排班失败");
       return false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [fetchList, fetchWeeklyDuty, currentWeekStart]);
 
   // 删除排班
@@ -181,6 +185,7 @@ export function useScheduleData() {
       message.error("删除失败");
       return false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [schedules.length, current, fetchList, fetchWeeklyDuty, currentWeekStart]);
 
   // 批量删除排班
@@ -203,6 +208,7 @@ export function useScheduleData() {
       message.error("批量删除失败");
       return false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [schedules.length, current, fetchList, fetchWeeklyDuty, currentWeekStart]);
 
   // 周视图导航

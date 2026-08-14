@@ -34,6 +34,7 @@ export function useHolidayData() {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [holidayYear]);
 
   // 获取可用年份
@@ -64,6 +65,7 @@ export function useHolidayData() {
       message.error("创建失败");
       return false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [fetchList]);
 
   // 更新节假日
@@ -77,6 +79,7 @@ export function useHolidayData() {
       message.error("更新失败");
       return false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [fetchList]);
 
   // 删除节假日
@@ -90,6 +93,7 @@ export function useHolidayData() {
       message.error("删除失败");
       return false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [fetchList]);
 
   // 批量创建节假日
@@ -111,6 +115,7 @@ export function useHolidayData() {
       message.error("批量创建失败");
       return false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [fetchList, fetchYears]);
 
   return {

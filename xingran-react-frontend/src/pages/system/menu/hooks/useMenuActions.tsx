@@ -95,6 +95,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
       message.error(errorMsg);
       throw error; // 重新抛出错误以保持 Modal 打开
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [onLoad]);
 
   // 单个删除确认（带级联删除选项）
@@ -263,6 +264,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
         }
       },
     }) as unknown as ModalInstanceWithCheckbox;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [selectedRowKeys, onLoad, setSelectedRowKeys]);
 
   // 保存菜单
@@ -301,6 +303,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
     } catch (error) {
       console.error("保存菜单失败:", error);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [editingMenu, onLoad, onSaveSuccess]);
 
   return {

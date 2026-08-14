@@ -79,6 +79,7 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
       if (error && typeof error === "object" && "errorFields" in error) return;
       message.error("生成排班失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [generateForm, onLoad]);
 
   // 调班
@@ -98,6 +99,7 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
       if (error && typeof error === "object" && "errorFields" in error) return;
       message.error("调班失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [swapForm, onLoad]);
 
   // 手动排班
@@ -119,6 +121,7 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
       if (error && typeof error === "object" && "errorFields" in error) return;
       message.error("手动排班失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [manualForm, onLoad]);
 
   // 删除单条排班
@@ -130,6 +133,7 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
     } catch (error) {
       message.error("删除失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [onLoad]);
 
   // 批量删除排班
@@ -146,6 +150,7 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
     } catch (error) {
       message.error("批量删除失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [onLoad]);
 
   return {

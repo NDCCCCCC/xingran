@@ -145,6 +145,7 @@ const DeviceDiscoveryPage: FC = () => {
   };
 
   // 删除任务
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- render-defined function used by useMemo columns; disabling to avoid loop
   const handleDelete = async (id: string) => {
     try {
       await post(`/network/discoveries/${id}/delete`, {});
@@ -156,6 +157,7 @@ const DeviceDiscoveryPage: FC = () => {
   };
 
   // 查看发现结果
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- render-defined function used by useMemo columns; disabling to avoid loop
   const handleViewResult = async (record: DeviceDiscovery) => {
     setCurrentDiscovery(record);
     await loadDiscoveryResults((record as DeviceDiscovery).id);
@@ -197,12 +199,13 @@ const DeviceDiscoveryPage: FC = () => {
         handleDelete,
         getSortOrder: (field) => (orderByColumn === field ? (discoverySortOrder ?? null) as "ascend" | "descend" | null : null),
       }),
-    [handleViewResult, handleDelete, orderByColumn, discoverySortOrder]
+      [handleViewResult, handleDelete, orderByColumn, discoverySortOrder]
   );
 
   useEffect(() => {
     loadDiscoveries();
     loadStatistics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- paginationProps.current is intentionally stable
   }, [paginationProps.current, paginationProps.pageSize, loadDiscoveries, loadStatistics]);
 
   return (

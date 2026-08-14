@@ -37,6 +37,7 @@ export function useCommandModals(): UseCommandModalsReturn {
         message.error("分发失败");
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     []
   );
 
@@ -48,6 +49,7 @@ export function useCommandModals(): UseCommandModalsReturn {
     } catch (error) {
       message.error("取消失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   return {

@@ -174,6 +174,7 @@ const MenuManagement: FC = () => {
   // 初始化加载
   useEffect(() => {
     loadMenus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
   }, []);
 
   // 搜索

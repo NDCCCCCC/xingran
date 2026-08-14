@@ -88,6 +88,7 @@ export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataR
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [current, pageSize, searchForm]);
 
   // 获取今日值班

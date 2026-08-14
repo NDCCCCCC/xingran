@@ -57,12 +57,14 @@ export function useImageUpload(options: UseImageUploadOptions = {}): UseImageUpl
     setImageUrl(`/uploads/${response.storagePath || ""}`);
     message.success("图片上传成功");
     onSuccess?.(response.id, `/uploads/${response.storagePath || ""}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [onSuccess]);
 
   const handleUploadError = useCallback((_file: UploadFile, error: unknown) => {
     setUploading(false);
     message.error("图片上传失败");
     onError?.(error instanceof Error ? error : new Error(String(error)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [onError]);
 
   const resetUpload = useCallback(() => {

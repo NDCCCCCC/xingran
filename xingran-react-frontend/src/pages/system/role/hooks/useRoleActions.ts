@@ -119,6 +119,7 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
     } catch (error) {
       console.error("删除角色失败:", error);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [loadRoles, loadStatistics, invalidateAllRoles]);
 
   // 批量删除

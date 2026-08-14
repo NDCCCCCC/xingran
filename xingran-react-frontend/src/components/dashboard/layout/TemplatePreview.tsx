@@ -69,6 +69,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({
 			setPreviewData(new Map());
 			setError(null);
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- loadPreviewData defined in render
 	}, [visible, template]);
 
 	// 处理应用模板

@@ -88,7 +88,7 @@ const Sidebar = () => {
     if (menus.length === 0) {
       fetchMenus();
     }
-  }, []);
+  }, [fetchMenus, menus.length]);
 
   // 将后端菜单数据转换为 Ant Design Menu 组件所需的格式
   const menuItems: MenuItem[] = useMemo(() => {

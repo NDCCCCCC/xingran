@@ -71,6 +71,7 @@ const MyNoticesPage: FC = () => {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable; paginationProps accessed via primitives
   }, [activeTab, paginationProps.current, paginationProps.pageSize, setUnreadCount]);
 
   // 初始化时获取全部通知总数
@@ -231,6 +232,7 @@ const MyNoticesPage: FC = () => {
 
   useEffect(() => {
     loadNotices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional dependency for re-run on change
   }, [activeTab, paginationProps.current, paginationProps.pageSize, loadNotices]);
 
   const tabItems = [

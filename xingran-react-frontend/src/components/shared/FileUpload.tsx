@@ -103,6 +103,7 @@ const FileUpload: FC<FileUploadProps> = ({
     }
 
     return true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [maxSize, isFileTypeAccepted]);
 
   const handleUploadSuccess = useCallback((response: unknown, uploadFile: UploadFile) => {
@@ -110,12 +111,14 @@ const FileUpload: FC<FileUploadProps> = ({
     setUploadProgress(100);
     onUploadSuccess?.(uploadFile, response as FileUploadResponse);
     message.success("上传成功");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [onUploadSuccess]);
 
   const handleUploadError = useCallback((error: Error, uploadFile: UploadFile) => {
     setUploading(false);
     onUploadError?.(uploadFile, error);
     message.error("上传失败");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [onUploadError]);
 
   const customRequest = useCallback(async (options: UploadRequestOption) => {

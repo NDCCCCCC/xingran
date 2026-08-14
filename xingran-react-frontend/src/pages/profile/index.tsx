@@ -72,6 +72,7 @@ const ProfilePage: FC = () => {
   useEffect(() => {
     loadProfile();
     loadDutyStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-only load
   }, []);
 
   // 更新个人信息

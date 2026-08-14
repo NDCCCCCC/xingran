@@ -57,6 +57,7 @@ export function HolidayEditModal({
         });
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getDefaultYear defined in render
   }, [open, editingRecord, form, year, availableYears]);
 
   return (

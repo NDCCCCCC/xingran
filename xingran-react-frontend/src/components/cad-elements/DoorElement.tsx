@@ -108,6 +108,7 @@ export function DoorElement({
     }
 
     return result;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- door prop accessed via nested fields
   }, [door.position, door.width, door.length, door.angle, door.direction, door.type]);
 
   const handleMouseEnter = useCallback(() => {

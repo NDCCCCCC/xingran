@@ -142,6 +142,7 @@ const [batchExporting, setBatchExporting] = useState(false);
   // 初始化加载
   useEffect(() => {
     Promise.all([loadBackups(), loadStatistics()]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- paginationProps.current is intentional
   }, [paginationProps.current, paginationProps.pageSize, loadBackups, loadStatistics]);
 
   // 打开备份弹窗

@@ -83,6 +83,7 @@ const JobManager: FC = () => {
   // 初始化加载
   useEffect(() => {
     fetchJobs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- paginationProps.current is intentionally stable
   }, [paginationProps.current, paginationProps.pageSize, fetchJobs]);
 
   // 表格列

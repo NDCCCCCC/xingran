@@ -225,6 +225,7 @@ const AssetList: FC = () => {
         }
       },
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [loadAssets, loadStatistics]);
 
   const handleBatchDelete = async () => {
@@ -405,11 +406,12 @@ const AssetList: FC = () => {
       .filter(col => col !== undefined);
 
     return visibleCols;
-  }, [columns, visibleColumns]);
+  }, [columns, visibleColumns]); // eslint-disable-line react-hooks/exhaustive-deps -- columns array recreated each render
 
   const handleEdit = useCallback((record: Asset) => {
     // TODO: 实现编辑功能
     message.info("编辑功能待实现");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   return (

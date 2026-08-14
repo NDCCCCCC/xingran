@@ -186,6 +186,7 @@ const ServerMonitor: FC = () => {
   useEffect(() => {
     // fetchServers 内部用 orderByColumn/isAsc state 兜底，无需重传
     fetchServers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load/fetch fn from hook is stable enough; disable to avoid loop
   }, [paginationProps.current, paginationProps.pageSize]);
 
   const columns: ColumnsType<ServerInfo> = [

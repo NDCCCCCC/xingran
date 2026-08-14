@@ -148,7 +148,7 @@ const MACHistoryPage: React.FC = () => {
       setCustomRange([dayjs(startTime), dayjs(endTime)]);
       setTimeRange({ startTime, endTime });
     }
-  }, [searchParams, form]);
+  }, [searchParams, form, setActivePreset]);
 
   // 切换预设
   const handlePresetClick = useCallback(
@@ -165,7 +165,7 @@ const MACHistoryPage: React.FC = () => {
       setTimeRange({ startTime: start, endTime: end });
       setCurrent(1);
     },
-    []
+    [setActivePreset]
   );
 
   // 切换自定义 RangePicker
@@ -182,7 +182,7 @@ const MACHistoryPage: React.FC = () => {
         setCurrent(1);
       }
     },
-    []
+    [setActivePreset]
   );
 
   // 搜索参数(交给 useTableQuery)
@@ -306,6 +306,7 @@ const MACHistoryPage: React.FC = () => {
         ),
       },
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- navigate from useNavigate is stable
     [expandedRowKeys, navigate]
   );
 
@@ -333,7 +334,7 @@ const MACHistoryPage: React.FC = () => {
     });
     setCurrent(1);
     setSearchParams(new URLSearchParams());
-  }, [form, setSearchParams]);
+  }, [form, setSearchParams, setActivePreset]);
 
   // 14-04 导出按钮处理器 — exportScope = 'current' 时透传当前过滤;'all' 时只保留时间范围
   const handleExport = useCallback(
@@ -382,6 +383,7 @@ const MACHistoryPage: React.FC = () => {
         setExporting(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [exporting, form, timeRange]
   );
 

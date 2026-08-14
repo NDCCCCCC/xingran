@@ -96,6 +96,7 @@ const ADOUPage: FC = () => {
     if (selectedConfig) {
       fetchOUTree();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchOUTree recreated each render; disable to avoid loop
   }, [selectedConfig]);
 
   // 当选择OU时获取该OU下的用户、部门映射和用户组信息

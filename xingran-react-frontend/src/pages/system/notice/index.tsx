@@ -108,6 +108,7 @@ const NoticeManagement: FC = () => {
         ? { orderByColumn: sortRef.current.orderByColumn, isAsc: sortRef.current.isAsc }
         : {}),
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- paginationProps is an object; .current/.pageSize tracked as primitives
   }, [loadNotices, paginationProps.current, paginationProps.pageSize]);
 
   const { statistics, loadStatistics } = useNoticeStatistics();
@@ -348,6 +349,7 @@ const NoticeManagement: FC = () => {
       }
       message.error("操作失败: " + ((error as Error).message || "未知错误"));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [editForm, executionType, selectedChannels, editingNotice, handleCreate, handleUpdate, fetchList]);
 
   // 查看统计
@@ -363,6 +365,7 @@ const NoticeManagement: FC = () => {
     } finally {
       setStatisticsLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   // 删除通知（包含统计刷新）

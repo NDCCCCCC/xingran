@@ -34,6 +34,7 @@ const DutyConfigPage: FC = () => {
 
   useEffect(() => {
     fetchConfig();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load/fetch fn from hook is stable enough; disable to avoid loop
   }, []);
 
   const handleSubmit = async () => {
