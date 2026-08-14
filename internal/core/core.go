@@ -863,7 +863,12 @@ func (c *Core) initAuthFactory() {
 
 	// 初始化用户同步服务并注入到工厂
 	mapper := addomain.NewDeptOUmapper(c.GetDB())
-	userSyncService := system.NewUserSyncService(c.GetDB(), c.PwdManager, mapper)
+	userSyncService := system.NewUserSyncService(
+		c.GetDB(),
+		c.PwdManager,
+		mapper,
+		system.WithCacheProvider(system.NewCacheProvider(c.DataCacheService)), // L-02: 角色分配后失效 user-scoped 菜单缓存
+	)
 	c.AuthFactory.SetUserSyncer(userSyncService)
 
 	// Phase 36: 注入 AD 账号池（多账号故障切换）

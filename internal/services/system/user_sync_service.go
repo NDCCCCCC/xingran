@@ -34,15 +34,43 @@ type UserSyncService struct {
 	db         *gorm.DB
 	pwdManager PasswordManager
 	ouMapper   *addomain.DeptOUmapper // OU映射解析器
+	cache      CacheProvider          // 缓存提供者（可选，L-02 用于角色分配后失效 user-scoped 菜单缓存）
+}
+
+// UserSyncOption UserSyncService 可选注入项（functional options，避免构造函数签名连锁改动）
+type UserSyncOption func(*UserSyncService)
+
+// WithCacheProvider 注入缓存提供者（可选）。
+// 注入后，写 sys_user_role 成功路径会失效 user-scoped 菜单缓存（menu:user:*）。
+// 未注入或传 nil 时跳过失效逻辑，保持旧行为（测试/无缓存场景兼容）。
+func WithCacheProvider(cache CacheProvider) UserSyncOption {
+	return func(s *UserSyncService) {
+		s.cache = cache
+	}
 }
 
 // NewUserSyncService 创建用户同步服务
-func NewUserSyncService(db *gorm.DB, pwdManager PasswordManager, ouMapper *addomain.DeptOUmapper) *UserSyncService {
-	return &UserSyncService{
+func NewUserSyncService(db *gorm.DB, pwdManager PasswordManager, ouMapper *addomain.DeptOUmapper, opts ...UserSyncOption) *UserSyncService {
+	s := &UserSyncService{
 		db:         db,
 		pwdManager: pwdManager,
 		ouMapper:   ouMapper,
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
+}
+
+// invalidateUserMenuCache 失效 user-scoped 菜单缓存（L-02）。
+// sys_user_role 写入会改变用户可见菜单，需清 menu:user:* 前缀；
+// 未注入 CacheProvider 时跳过（nil-safe）。批量同步只需在整体成功后调用一次，
+// 不放入逐用户循环（InvalidateUserMenuCacheByProvider 清全部 menu:user:* 前缀）。
+func (s *UserSyncService) invalidateUserMenuCache(ctx context.Context) {
+	if s.cache == nil {
+		return
+	}
+	InvalidateUserMenuCacheByProvider(ctx, s.cache)
 }
 
 // SyncUserFromAD 从AD同步单个用户到sys_user表（首次AD登录路径使用）。
@@ -74,6 +102,12 @@ func (s *UserSyncService) SyncUserFromAD(ctx context.Context, adUser *ADUserInfo
 
 	if err != nil {
 		return nil, catNew, fmt.Errorf("同步AD用户失败: %w", err)
+	}
+
+	// L-02: 新建/恢复路径在事务内已写 sys_user_role（分配默认角色），
+	// 失效 user-scoped 菜单缓存；其余分类未写角色关联，无需失效。
+	if defaultRoleID != "" && (category == catNew || category == catSoftDeleted) {
+		s.invalidateUserMenuCache(ctx)
 	}
 
 	return &user, category, nil
@@ -632,6 +666,12 @@ func (s *UserSyncService) BatchSyncADUsers(
 		if err := s.assignRolesBatch(s.db.WithContext(ctx), newCreatedIDs, defaultRoleID); err != nil {
 			applogger.Warnf("[BatchSyncADUsers] 批量角色分配失败(不影响用户同步): %v", err)
 		}
+	}
+
+	// L-02: 本批已写 sys_user_role（阶段5c软删除恢复分配 + 阶段6新建批量分配），
+	// 整批只需失效一次 user-scoped 菜单缓存（全量清 menu:user:* 前缀）。
+	if defaultRoleID != "" && (len(newCreatedIDs) > 0 || len(plansByCat[catSoftDeleted]) > 0) {
+		s.invalidateUserMenuCache(ctx)
 	}
 
 	applogger.Infof("[BatchSyncADUsers] 完成: 成功=%d, 失败=%d, 跳过=%d, 总耗时=%.2fs",

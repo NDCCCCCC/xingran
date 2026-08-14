@@ -22,8 +22,13 @@ func NewADUserSyncHandler(core *core.Core) *ADUserSyncHandler {
 	mapper := addomain.NewDeptOUmapper(core.GetDB())
 
 	return &ADUserSyncHandler{
-		userSyncService: system.NewUserSyncService(core.GetDB(), core.PwdManager, mapper),
-		core:            core,
+		userSyncService: system.NewUserSyncService(
+			core.GetDB(),
+			core.PwdManager,
+			mapper,
+			system.WithCacheProvider(system.NewCacheProvider(core.DataCacheService)), // L-02: 角色分配后失效 user-scoped 菜单缓存
+		),
+		core: core,
 	}
 }
 
