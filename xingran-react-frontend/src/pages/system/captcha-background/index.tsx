@@ -32,7 +32,7 @@ const CaptchaBackgroundManagement: FC = () => {
   const {
     backgrounds,
     loading,
-    total,
+    total: _total,
     statistics,
     loadBackgrounds,
     loadStatistics,

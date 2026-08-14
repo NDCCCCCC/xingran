@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import type { FC } from "react";
 import { batchExport } from "@/lib/api/networkApi";
 import {
@@ -43,7 +43,7 @@ const ConfigExecutionPage: FC = () => {
   const [batchExporting, setBatchExporting] = useState(false);
 
   // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+  const { paginationProps, setCurrent, setPageSize } = usePagination();
 
   // 服务端排序:field 与 columns.dataIndex 对齐
   const sorterMetas = useMemo(
@@ -63,7 +63,6 @@ const ConfigExecutionPage: FC = () => {
   const {
     dataState,
     execLoading,
-    execTotal,
     statistics,
     loadDevices,
     loadTemplates,
@@ -104,10 +103,11 @@ const ConfigExecutionPage: FC = () => {
   };
 
   // 查看详情时加载执行详情
-  const handleViewDetail = async (record: ConfigExecution) => {
+  const handleViewDetail = useCallback(async (record: ConfigExecution) => {
     await loadExecutionDetails(record.id);
     handleViewDetailBase(record);
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleViewDetailBase is a stable modal handler
+  }, [loadExecutionDetails]);
 
   // 表格列
   const executionColumns = useMemo(
@@ -117,10 +117,10 @@ const ConfigExecutionPage: FC = () => {
         handleCancelExecution,
         getSortOrder: (field) => (orderByColumn === field ? (netExecSortOrder ?? null) as "ascend" | "descend" | null : null),
       }),
-    [handleViewDetail, handleCancelExecution, orderByColumn, netExecSortOrder] // eslint-disable-line react-hooks/exhaustive-deps -- handleViewDetail recreated each render
+    [handleViewDetail, handleCancelExecution, orderByColumn, netExecSortOrder]
   );
 
-  const detailColumns = getDetailColumns({
+  const _detailColumns = getDetailColumns({
     handleViewOutput,
   });
 

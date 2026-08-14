@@ -106,6 +106,7 @@ const ColorSwitcher: FC<ColorSwitcherProps> = ({
 		if (preferences.theme.customColors?.sidebar && typeof preferences.theme.customColors.sidebar === "string") {
 			applySidebarBackgroundColor(preferences.theme.customColors.sidebar);
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-only initialization
 	}, []);
 
 	/**

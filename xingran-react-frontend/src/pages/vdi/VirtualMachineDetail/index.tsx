@@ -48,7 +48,7 @@ const VirtualMachineDetail: React.FC = () => {
       if (result.data) {
         setVM(result.data);
       }
-    } catch (error) {
+    } catch (_error) {
       message.error("加载虚拟机详情失败");
     } finally {
       setLoading(false);
@@ -61,7 +61,7 @@ const VirtualMachineDetail: React.FC = () => {
     try {
       const result = await vmApi.listAccounts(id!);
       setAccounts(result.data?.list || []);
-    } catch (error) {
+    } catch (_error) {
       message.error("加载账号列表失败");
     } finally {
       setLoading(false);
@@ -75,6 +75,7 @@ const VirtualMachineDetail: React.FC = () => {
         loadAccounts();
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, activeTab]);
 
   // 创建账号
@@ -92,7 +93,7 @@ const VirtualMachineDetail: React.FC = () => {
       setCreateAccountModalVisible(false);
       form.resetFields();
       loadAccounts();
-    } catch (error) {
+    } catch (_error) {
       message.error("创建账号失败");
     } finally {
       setLoading(false);
@@ -111,7 +112,7 @@ const VirtualMachineDetail: React.FC = () => {
       setResetPasswordModalVisible(false);
       form.resetFields();
       loadAccounts();
-    } catch (error) {
+    } catch (_error) {
       message.error("密码重置失败");
     } finally {
       setLoading(false);
@@ -125,7 +126,7 @@ const VirtualMachineDetail: React.FC = () => {
       await vmApi.deleteAccount(id!, accountId);
       message.success("账号删除成功");
       loadAccounts();
-    } catch (error) {
+    } catch (_error) {
       message.error("删除账号失败");
     } finally {
       setLoading(false);

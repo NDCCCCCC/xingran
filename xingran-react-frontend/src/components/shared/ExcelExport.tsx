@@ -67,7 +67,7 @@ const ExcelExport: FC<ExcelExportProps> = ({
 
       message.success("导出成功");
       onClose?.();
-    } catch (error) {
+    } catch (_error) {
       message.error("导出失败");
     } finally {
       setExporting(false);

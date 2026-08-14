@@ -77,7 +77,7 @@ const BuildingManagement: FC = () => {
   );
 
   const {
-    loading, data: buildings, total, selectedRowKeys,
+    loading, data: buildings, total: _total, selectedRowKeys,
     searchForm, editForm: buildingForm, editModalVisible: modalVisible,
     editingItem: editingBuilding, setSelectedRowKeys, setEditModalVisible: setModalVisible,
     setEditingItem: setEditingBuilding, handleSearch: _tableHandleSearch,

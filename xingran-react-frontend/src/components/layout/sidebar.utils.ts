@@ -47,7 +47,7 @@ export function findMenuById(menuList: MenuType[], id: string): MenuType | null 
  * 通过完整路径查找菜单ID
  */
 export function findMenuByFullPath(menuList: MenuType[], fullPath: string): string | null {
-	const normalizePath = (path: string): string => {
+	const _normalizePath = (path: string): string => {
 		return path.startsWith("/") ? path.slice(1) : path;
 	};
 

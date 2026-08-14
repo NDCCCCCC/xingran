@@ -107,7 +107,7 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
     try {
       const result = await post<{ devices: Record<string, unknown>[] }>(`/network/discoveries/${id}/results`, {});
       setDiscoveredDevices(result.data?.devices || []);
-    } catch (error) {
+    } catch (_error) {
       message.error("获取结果失败");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable

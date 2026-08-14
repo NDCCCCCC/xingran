@@ -33,7 +33,7 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
 	editingWidget,
 }) => {
 	const [selectedType, setSelectedType] = useState<WidgetType | null>(null);
-	const [selectedEndpoint, setSelectedEndpoint] = useState<EndpointDetail | null>(null);
+	const [_selectedEndpoint, setSelectedEndpoint] = useState<EndpointDetail | null>(null);
 	const [dataSource, setDataSource] = useState<DataSourceConfig | undefined>(undefined);
 	const [displayConfig, setDisplayConfig] = useState<DisplayConfig | undefined>(undefined);
 	const [form] = Form.useForm();
@@ -43,6 +43,7 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
 	// 如果是编辑模式，初始化表单数据
 	useEffect(() => {
 		if (editingWidget && visible) {
+			// eslint-disable-next-line react-hooks/set-state-in-effect
 			setSelectedType(editingWidget.type);
 			setDataSource(editingWidget.dataSource);
 			setDisplayConfig(editingWidget.display);
@@ -71,7 +72,7 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
 	};
 
 	// 端点选择变化
-	const handleEndpointChange = (route: string, endpoint: EndpointDetail) => {
+	const _handleEndpointChange = (route: string, endpoint: EndpointDetail) => {
 		setSelectedEndpoint(endpoint);
 		// 自动填充请求方法和数据路径
 		form.setFieldsValue({

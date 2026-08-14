@@ -42,11 +42,12 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 	const [previewVisible, setPreviewVisible] = useState(false);
 	const [previewTemplate, setPreviewTemplate] = useState<Dashboard | null>(null);
 	const { message } = App.useApp();
-	const navigate = useNavigate();
+	const _navigate = useNavigate();
 
 	// 重置状态 - 使用 useLayoutEffect 避免级联渲染
 	useLayoutEffect(() => {
 		if (visible) {
+			// eslint-disable-next-line react-hooks/set-state-in-effect -- intentional reset on visibility change
 			setSelectedTemplate(null);
 			setDashboardName("");
 		}

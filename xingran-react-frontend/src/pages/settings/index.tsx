@@ -54,6 +54,7 @@ const SettingsPage: FC = () => {
 
 			// 同步颜色值到本地状态
 			if (typeof preferences.theme.customColors?.primary === "string") {
+				// eslint-disable-next-line react-hooks/set-state-in-effect
 				setPrimaryColor(preferences.theme.customColors.primary);
 			}
 			if (typeof preferences.theme.customColors?.sidebar === "string") {
@@ -81,7 +82,7 @@ const SettingsPage: FC = () => {
 
 			await updatePreferences(processedValues);
 			message.success("设置保存成功");
-		} catch (error) {
+		} catch (_error) {
 			message.error("设置保存失败");
 		}
 	};

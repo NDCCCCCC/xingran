@@ -49,7 +49,7 @@ export interface UseScheduleModalsReturn {
 }
 
 export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleModalsReturn {
-  const { onLoad, allSchedules, dataSource, current } = params;
+  const { onLoad, allSchedules: _allSchedules, dataSource: _dataSource, current: _current } = params;
   const { message } = App.useApp();
 
   const [generateModalVisible, setGenerateModalVisible] = useState(false);
@@ -130,7 +130,7 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
       await deleteDutySchedule(id);
       message.success("删除成功");
       onLoad?.();
-    } catch (error) {
+    } catch (_error) {
       message.error("删除失败");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
@@ -147,7 +147,7 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
       message.success(`成功删除 ${selectedRowKeys.length} 条排班记录`);
       setSelectedRowKeys([]);
       onLoad?.();
-    } catch (error) {
+    } catch (_error) {
       message.error("批量删除失败");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable

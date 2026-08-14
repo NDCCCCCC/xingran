@@ -131,7 +131,7 @@ export function useWorkOrderData(
       // 列表加载后顺带刷新统计(全局 COUNT,不受分页/筛选影响)。
       // 这样搜索/分页/增删改(均经 fetchList)都会保持统计卡片为真实全局计数。
       fetchStats();
-    } catch (error) {
+    } catch (_error) {
       message.error("获取工单列表失败");
     } finally {
       setLoading(false);

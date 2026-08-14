@@ -17,7 +17,7 @@ export function useDutyConfig() {
       const result = await getDutyConfig();
       setConfig(result.data || null);
       return result.data || null;
-    } catch (error) {
+    } catch (_error) {
       message.error("获取配置失败");
       return null;
     } finally {
@@ -45,7 +45,7 @@ export function useDutyConfig() {
       message.success("配置保存成功");
       await fetch();
       return true;
-    } catch (error) {
+    } catch (_error) {
       message.error("配置保存失败");
       return false;
     } finally {

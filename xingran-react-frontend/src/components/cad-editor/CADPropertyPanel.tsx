@@ -213,7 +213,10 @@ export function CADPropertyPanel({
 
       case "select":
         return (
-          <Select key={String(field.name)} options={field.options} {...commonProps} />
+          <>
+            {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
+            <Select key={String(field.name)} options={field.options} {...commonProps} />
+          </>
         );
 
       case "color":

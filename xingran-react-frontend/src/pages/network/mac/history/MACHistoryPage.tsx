@@ -212,7 +212,7 @@ const MACHistoryPage: React.FC = () => {
   const total = pageData?.total ?? 0;
 
   // 列配置(D-08)
-  const { visibleColumns, config } = useColumnConfig({
+  const { visibleColumns, config: _config } = useColumnConfig({
     pageKey: "mac.history.list",
     defaultColumns: defaultHistoryColumns,
     enableCache: true,

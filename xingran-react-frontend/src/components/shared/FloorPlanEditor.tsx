@@ -60,7 +60,7 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
     handlePanMove,
     handlePanEnd,
     handleWheel,
-    screenToSvg,
+    screenToSvg: _screenToSvg,
   } = usePanZoom({ containerRef });
 
   // 使用 WorkstationDrag Hook

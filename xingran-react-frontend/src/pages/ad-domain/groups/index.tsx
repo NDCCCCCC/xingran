@@ -59,7 +59,7 @@ const ADGroupPage: FC = () => {
   const [isAsc, setIsAsc] = useState<boolean>(true);
 
   // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+  const { paginationProps, setCurrent, setPageSize: _setPageSize, setTotal } = usePagination();
 
   const [selectedGroup, setSelectedGroup] = useState<ADGroup | null>(null);
   const [members, setMembers] = useState<ADUser[]>([]);

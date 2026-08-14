@@ -37,7 +37,7 @@ export function useSidebarDeptFilter(
   const [selectedDeptId, setSelectedDeptId] = useState<string>("");
 
   const handleDeptSelect = useCallback(
-    (selectedKeys: Key[], info: { selected: boolean; node: DataNode }) => {
+    (selectedKeys: Key[], _info: { selected: boolean; node: DataNode }) => {
       const deptId = selectedKeys.length > 0 ? (selectedKeys[0] as string) : "";
       setSelectedDeptId(deptId);
 

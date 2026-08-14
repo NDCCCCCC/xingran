@@ -127,7 +127,7 @@ export function WorkstationFloorPlanView({
             <Space orientation="vertical" style={{ width: "100%" }} size={[8, 8]}>
               {floorPlanWorkstations.map((ws) => {
                 const typeText = getWorkstationTypeText(ws.type);
-                const fullWorkstation = allWorkstations.find((w) => w.id === ws.id);
+                const _fullWorkstation = allWorkstations.find((w) => w.id === ws.id);
                 return (
                   <Card
                     key={ws.id}

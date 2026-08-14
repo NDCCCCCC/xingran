@@ -164,9 +164,9 @@ const RoleManagement: FC = () => {
   const {
     editingRole,
     editModalVisible,
-    pendingFormData,
+    pendingFormData: _pendingFormData,
     selectedRowKeys,
-    setEditingRole,
+    setEditingRole: _setEditingRole,
     setEditModalVisible,
     setSelectedRowKeys,
     handleAdd,

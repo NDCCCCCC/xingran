@@ -65,6 +65,7 @@ const DefaultThemePage: React.FC = () => {
     };
 
     loadConfig();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);
 
   // 保存默认主题配置

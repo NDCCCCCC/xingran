@@ -177,7 +177,7 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
       await captchaService.deleteCaptchaBackground(id);
       message.success("删除成功");
       onSuccess();
-    } catch (error) {
+    } catch (_error) {
       message.error("删除失败");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
@@ -188,7 +188,7 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
       await captchaService.toggleCaptchaBackgroundStatus(id);
       message.success("状态更新成功");
       onSuccess();
-    } catch (error) {
+    } catch (_error) {
       message.error("状态更新失败");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
@@ -198,7 +198,7 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
     try {
       await captchaService.preloadCaptchaCache();
       message.success("预加载成功");
-    } catch (error) {
+    } catch (_error) {
       message.error("预加载失败");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable

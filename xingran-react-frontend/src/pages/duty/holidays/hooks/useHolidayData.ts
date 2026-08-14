@@ -42,11 +42,12 @@ export function useHolidayData(): UseHolidayDataReturn {
       const data = result as { code: number; data: Holiday[] };
       setDataSource(data.data);
       if (y !== undefined) setYear(y);
-    } catch (error) {
+    } catch (_error) {
       message.error("获取节假日列表失败");
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year]);
 
   // 加载可用年份列表

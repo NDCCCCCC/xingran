@@ -83,7 +83,7 @@ const WorkerMonitor: FC = () => {
   const {
     loading,
     data: workers,
-    total,
+    total: _total,
     searchForm,
     loadData: loadWorkers,
     handleSearch,

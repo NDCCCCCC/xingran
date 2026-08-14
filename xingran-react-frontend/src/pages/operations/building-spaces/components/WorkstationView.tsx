@@ -55,6 +55,7 @@ const WorkstationView: React.FC<WorkstationViewProps> = ({ floor, onBack }) => {
     };
 
     loadWorkstations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [floor.id]);
 
   // 更新工位位置

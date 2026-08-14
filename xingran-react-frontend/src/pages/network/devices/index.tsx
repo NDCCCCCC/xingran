@@ -297,7 +297,7 @@ const DeviceManagement: FC = () => {
     creating,
     setQuickCreateModalVisible,
     setDetailModalVisible,
-    setViewingDevice,
+    setViewingDevice: _setViewingDevice,
     setProbeResult,
     setProbing,
     setCreating,

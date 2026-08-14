@@ -64,6 +64,7 @@ interface HarnessProps {
 }
 function Harness({ initialPorts, setSelectedPortsRef }: HarnessProps) {
   const [ports, setPorts] = useState<DevicePortStatus[]>(initialPorts);
+  // eslint-disable-next-line react-hooks/refs -- test harness deliberately exposes setState via ref
   setSelectedPortsRef.current = setPorts;
   return (
     <BulkWriteDrawer

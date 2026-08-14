@@ -7,11 +7,11 @@ import * as Icons from "@ant-design/icons";
 import type { ComponentType } from "react";
 
 // 动态图标访问的类型定义
-type IconName = keyof typeof Icons;
+type _IconName = keyof typeof Icons;
 type IconComponentMap = Record<string, ComponentType<unknown>>;
 
 // 过滤掉非组件的导出（如 createFromIconfontCN）
-const iconComponentKeys = Object.keys(Icons).filter(
+const _iconComponentKeys = Object.keys(Icons).filter(
   key => typeof (Icons as Record<string, unknown>)[key] === "function" || key !== "createFromIconfontCN"
 );
 

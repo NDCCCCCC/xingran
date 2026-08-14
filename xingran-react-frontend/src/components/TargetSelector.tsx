@@ -91,6 +91,7 @@ const TargetSelector: FC<TargetSelectorProps> = ({
       // 指定用户
       loadUsers();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetType]);
 
   // 部门树选中变化
@@ -184,6 +185,7 @@ const TargetSelector: FC<TargetSelectorProps> = ({
   return (
     <div className="space-y-4">
       <Form.Item label="接收范围" rules={[{ required: true, message: "请选择接收范围" }]}>
+        {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
         <Select
           value={targetType}
           onChange={onTargetTypeChange}

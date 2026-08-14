@@ -252,7 +252,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 				列配置
 			</Divider>
 			<Form.List name="columns">
-				{(fields, { add, remove }) => (
+				{(fields, { add, remove: _remove }) => (
 					<>
 						{fields.map(({ key, name, ...restField }) => (
 							<Space key={key} style={{ display: "flex", marginBottom: 8 }} align="baseline">
@@ -276,6 +276,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 							</Space>
 						))}
 						<Form.Item>
+							{/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
 							<Select
 								disabled={disabled}
 								placeholder="添加列..."
@@ -365,7 +366,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 				颜色阈值
 			</Divider>
 			<Form.List name="colorThresholds">
-				{(fields, { add, remove }) => (
+				{(fields, { add, remove: _remove }) => (
 					<>
 						{fields.map(({ key, name, ...restField }) => (
 							<Space key={key} style={{ display: "flex", marginBottom: 8 }} align="baseline">
@@ -378,6 +379,7 @@ export const DisplayConfigForm: React.FC<DisplayConfigFormProps> = ({
 							</Space>
 						))}
 						<Form.Item>
+							{/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
 							<Select
 								disabled={disabled}
 								placeholder="添加阈值..."

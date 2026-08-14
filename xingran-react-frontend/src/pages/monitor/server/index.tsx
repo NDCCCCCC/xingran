@@ -100,7 +100,7 @@ const ServerMonitor: FC = () => {
   const fetchServerDetail = async (server: ServerInfo) => {
     try {
       // 获取历史指标数据
-      const result = await post<PageResponse<ServerMetrics>>("/monitor/server-metrics/history", {
+      const _result = await post<PageResponse<ServerMetrics>>("/monitor/server-metrics/history", {
         serverId: server.id,
         startTime: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 最近24小时
         endTime: new Date().toISOString(),
@@ -170,7 +170,7 @@ const ServerMonitor: FC = () => {
   };
 
   // 格式化网络流量
-  const formatNetworkSpeed = (bytes: number): string => {
+  const _formatNetworkSpeed = (bytes: number): string => {
     const units = ["B", "KB", "MB", "GB"];
     let size = bytes;
     let unitIndex = 0;

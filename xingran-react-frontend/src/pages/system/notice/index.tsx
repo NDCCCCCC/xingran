@@ -42,7 +42,7 @@ const NoticeManagement: FC = () => {
   const [editForm] = Form.useForm();
 
   // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+  const { paginationProps, setCurrent: _setCurrent, setPageSize: _setPageSize, setTotal: _setTotal } = usePagination();
 
   // 使用自定义 Hooks
   const {

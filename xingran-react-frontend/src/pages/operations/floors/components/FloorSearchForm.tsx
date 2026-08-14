@@ -46,7 +46,7 @@ interface FloorSearchFormProps {
 
 export const FloorSearchForm: FC<FloorSearchFormProps> = ({
   form,
-  buildingOptions,
+  buildingOptions: _buildingOptions,
   viewMode,
   loading,
   buildingOptionsByDept,

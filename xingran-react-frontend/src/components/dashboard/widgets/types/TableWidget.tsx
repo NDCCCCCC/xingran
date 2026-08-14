@@ -34,6 +34,7 @@ export const TableWidget: React.FC<TableWidgetProps> = ({
 	// 使用useWidgetData直接获取数据
 	const { data, loading, error, refresh } = useWidgetData(widget);
 	// 构建表格列配置
+	// eslint-disable-next-line react-hooks/preserve-manual-memoization
 	const columns = useMemo<ColumnsType<Record<string, unknown>>>(() => {
 		// 如果配置了列，使用配置的列
 		if (display.columns && display.columns.length > 0) {

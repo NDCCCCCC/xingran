@@ -135,6 +135,7 @@ const DedicatedLineManagement: FC = () => {
 
   // 初始化加载
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     Promise.all([loadServerRooms(), loadStatistics()])
       .then(([_, stats]) => setStatistics(stats));
     loadLines();

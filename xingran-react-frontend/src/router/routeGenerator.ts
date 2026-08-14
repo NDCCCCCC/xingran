@@ -22,7 +22,7 @@ const XSS_PATTERNS = [
   /onclick=/i,
 ];
 
-const ALLOWED_COMPONENT_PREFIXES = ["pages/", "components/"];
+const _ALLOWED_COMPONENT_PREFIXES = ["pages/", "components/"];
 
 /**
  * 路由生成器

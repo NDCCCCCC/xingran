@@ -85,7 +85,7 @@ async function copyToClipboard(text: string, message: { success: (msg: string) =
     await navigator.clipboard.writeText(text);
     message.success("已复制到剪贴板");
     return true;
-  } catch (error) {
+  } catch (_error) {
     message.error("复制失败，请手动复制");
     return false;
   }
@@ -403,7 +403,7 @@ const APIKeyManagement: FC = () => {
       width: 150,
       sorter: true,
       sortOrder: sortField === "name" ? sortOrder : undefined,
-      render: (text, record) => (
+      render: (text, _record) => (
         <Space>
           <KeyOutlined />
           {text}

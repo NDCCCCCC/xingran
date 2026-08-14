@@ -79,7 +79,7 @@ const KnowledgeViewPage: FC = () => {
         tagId: selectedTag,
       });
       setArticles(result.data?.list || []);
-    } catch (error) {
+    } catch (_error) {
       message.error("搜索失败");
     } finally {
       setLoading(false);
@@ -110,6 +110,7 @@ const KnowledgeViewPage: FC = () => {
     fetchArticles();
     fetchCategories();
     fetchTags();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCategory, selectedTag, keyword]);
 
   const handleSearch = (value: string) => {

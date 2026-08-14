@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import {
   Button,
   Table,
@@ -60,8 +60,8 @@ const ADConfigPage: FC = () => {
   const [syncProgress, setSyncProgress] = useState<{ [key: string]: ADSyncResult }>({});
 
   // 排序状态
-  const [orderByColumn, setOrderByColumn] = useState<string>("createdAt");
-  const [isAsc, setIsAsc] = useState<boolean>(false);
+  const [_orderByColumn, setOrderByColumn] = useState<string>("createdAt");
+  const [_isAsc, setIsAsc] = useState<boolean>(false);
 
   // 统一错误处理
   const handleApiError = (error: unknown, defaultMessage: string) => {

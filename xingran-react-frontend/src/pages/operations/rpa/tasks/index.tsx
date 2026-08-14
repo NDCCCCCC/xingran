@@ -45,7 +45,7 @@ const TaskManagement: FC = () => {
   const {
     loading,
     data: tasks,
-    total,
+    total: _total,
     selectedRowKeys,
     searchForm,
     editForm: taskForm,
@@ -58,7 +58,7 @@ const TaskManagement: FC = () => {
     handleAdd,
     handleEdit,
     loadData: loadTasks,
-    resetSelection,
+    resetSelection: _resetSelection,
   } = useTableManager<Task>(
     async (params) => {
       const result = await post<PageResponse<Task>>("/rpa/tasks/list", {
@@ -113,7 +113,7 @@ const TaskManagement: FC = () => {
           await post(`/rpa/tasks/${id}/execute`, {});
           message.success("任务已提交执行");
           refreshData();
-        } catch (error) {
+        } catch (_error) {
           // 错误已在 errorHandler 中处理
         } finally {
           setExecuteLoading(false);

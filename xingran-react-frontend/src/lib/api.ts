@@ -277,7 +277,7 @@ api.interceptors.response.use(
 	async (response: AxiosResponse) => {
 		let { data } = response;
 
-		const url = response.config.url || "";
+		const _url = response.config.url || "";
 		const responseHeaders = response.headers || {};
 
 		// 检查后端响应加密标志

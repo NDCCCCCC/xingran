@@ -36,7 +36,7 @@ const DutyHolidayPage: FC = () => {
   const {
     modalState,
     batchState,
-    setBatchHolidays,
+    setBatchHolidays: _setBatchHolidays,
     setModalVisible,
     setBatchModalVisible,
     handleAdd,

@@ -395,12 +395,14 @@ const ExceptionRulesPage: React.FC = () => {
             <Input placeholder="模糊匹配" allowClear style={{ width: 200 }} />
           </Form.Item>
           <Form.Item name="isActive" label="状态">
+            {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
             <Select placeholder="全部" allowClear style={{ width: 120 }}>
               <Select.Option value={0}>启用</Select.Option>
               <Select.Option value={1}>停用</Select.Option>
             </Select>
           </Form.Item>
           <Form.Item name="scopeType" label="范围">
+            {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
             <Select placeholder="全部" allowClear style={{ width: 140 }}>
               <Select.Option value="global">global</Select.Option>
               <Select.Option value="dept">dept</Select.Option>

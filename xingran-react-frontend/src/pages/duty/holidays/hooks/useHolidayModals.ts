@@ -68,7 +68,7 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
       await deleteHoliday(id);
       message.success("删除成功");
       fetchList();
-    } catch (error) {
+    } catch (_error) {
       message.error("删除失败");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
@@ -177,7 +177,7 @@ export function useHolidayModals(params: UseHolidayModalsParams): UseHolidayModa
 
       setModalState(prev => ({ ...prev, batchModalVisible: false }));
       fetchList();
-    } catch (error) {
+    } catch (_error) {
       message.error("批量创建失败");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable

@@ -199,7 +199,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       message.success("删除成功");
       fetchAllDevices();
       onDeviceChange?.();
-    } catch (error) {
+    } catch (_error) {
       message.error("删除失败");
     }
   };
@@ -247,7 +247,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       message.success("设置成功");
       fetchAllDevices();
       onDeviceChange?.();
-    } catch (error) {
+    } catch (_error) {
       message.error("设置失败");
     }
   };
@@ -279,7 +279,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       setModalVisible(false);
       fetchAllDevices();
       onDeviceChange?.();
-    } catch (error) {
+    } catch (_error) {
       message.error(editingDevice ? "更新失败" : "添加失败");
     }
   };

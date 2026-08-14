@@ -29,6 +29,7 @@ const SecondField: FC<SecondFieldProps> = ({ value, onChange }) => {
           <Radio value="specific">
             <Space align="center">
               <span>指定:</span>
+{/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
               <Select
                 mode="multiple"
                 style={{ width: 300 }}

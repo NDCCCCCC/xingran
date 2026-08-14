@@ -63,7 +63,7 @@ const ADUserPage: FC = () => {
   const [isAsc, setIsAsc] = useState<boolean>(true);
 
   // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+  const { paginationProps, setCurrent, setTotal } = usePagination();
 
   const [ouTree, setOUTree] = useState<ADOUNode[]>([]);
   const [ouSelectVisible, setOUSelectVisible] = useState(false);
@@ -76,7 +76,7 @@ const ADUserPage: FC = () => {
 
   // Batch sync state
   const [selectedUsers, setSelectedUsers] = useState<ADUser[]>([]);
-  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [_selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [selectAllMode, setSelectAllMode] = useState(false);
   const [selectAllTotal, setSelectAllTotal] = useState(0);
   const [batchSyncLoading, setBatchSyncLoading] = useState(false);
@@ -277,7 +277,7 @@ const ADUserPage: FC = () => {
         setSelectAllTotal(allUserIds.length);
         message.success(`已选择所有 ${allUserIds.length} 个用户`);
       }
-    } catch (error) {
+    } catch (_error) {
       message.error("获取所有用户失败");
     } finally {
       setLoadingAllUserIds(false);
@@ -357,7 +357,7 @@ const ADUserPage: FC = () => {
             // 刷新用户列表
             fetchUsers();
           }
-        } catch (error) {
+        } catch (_error) {
           message.error("批量同步失败");
         } finally {
           setBatchSyncLoading(false);
@@ -420,7 +420,7 @@ const ADUserPage: FC = () => {
       key: "ouDn",
       width: 300,
       ellipsis: true,
-      render: (ouDn: string, record: ADUser) => {
+      render: (ouDn: string, _record: ADUser) => {
         if (!ouDn) return "-";
         // 获取当前配置的BaseDN
         const currentConfig = configs.find(c => c.id === selectedConfig);

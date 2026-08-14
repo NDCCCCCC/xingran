@@ -54,7 +54,7 @@ export interface UseTemplateDataReturn {
   setSelectedTemplate: (template: PeriodicWorkOrderTemplate | null) => void;
 }
 
-export function useTemplateData(searchForm: FormInstance<unknown>, current: number, pageSize: number): UseTemplateDataReturn {
+export function useTemplateData(searchForm: FormInstance<unknown>, current: number, _pageSize: number): UseTemplateDataReturn {
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<PeriodicWorkOrderTemplate[]>([]);
@@ -108,7 +108,7 @@ export function useTemplateData(searchForm: FormInstance<unknown>, current: numb
     } finally {
       setLoading(false);
     }
-  }, [current, pageSize, searchForm, message, fetchStats]);
+  }, [current, searchForm, message, fetchStats]);
 
   // 获取分类列表
   const fetchCategories = useCallback(async () => {

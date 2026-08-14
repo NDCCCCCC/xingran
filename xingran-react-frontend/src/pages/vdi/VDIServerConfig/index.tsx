@@ -43,7 +43,7 @@ const VDIServerConfig: React.FC = () => {
       const result = await vdiServerApi.list({ current, pageSize });
       setServers(result.data?.list || []);
       setTotal(result.data?.total || 0);
-    } catch (error) {
+    } catch (_error) {
       message.error("加载 VDI 服务器列表失败");
     } finally {
       setLoading(false);
@@ -52,6 +52,7 @@ const VDIServerConfig: React.FC = () => {
 
   useEffect(() => {
     loadServers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current, pageSize]);
 
   // 创建服务器
@@ -115,7 +116,7 @@ const VDIServerConfig: React.FC = () => {
       setModalVisible(false);
       form.resetFields();
       loadServers();
-    } catch (error) {
+    } catch (_error) {
       message.error(modalMode === "create" ? "创建服务器失败" : "更新服务器失败");
     } finally {
       setLoading(false);
@@ -129,7 +130,7 @@ const VDIServerConfig: React.FC = () => {
       await vdiServerApi.delete(id);
       message.success("删除成功");
       loadServers();
-    } catch (error) {
+    } catch (_error) {
       message.error("删除失败");
     } finally {
       setLoading(false);
@@ -142,7 +143,7 @@ const VDIServerConfig: React.FC = () => {
     try {
       await vdiServerApi.testConnection(id);
       message.success("连接测试成功");
-    } catch (error) {
+    } catch (_error) {
       message.error("连接测试失败");
     } finally {
       setLoading(false);

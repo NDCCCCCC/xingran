@@ -44,7 +44,7 @@ import { createSorter } from "@/utils/tableHelpers";
 
 import type { FC } from "react";
 
-interface Department extends DeptTreeNode {}
+type Department = DeptTreeNode;
 
 const ADOUPage: FC = () => {
   const { message } = App.useApp();
@@ -224,8 +224,8 @@ const ADOUPage: FC = () => {
 
   const handleGroupTransfer = async (
     targetKeys: React.Key[],
-    direction: "right" | "left",
-    moveKeys: React.Key[]
+    _direction: "right" | "left",
+    _moveKeys: React.Key[]
   ) => {
     if (!selectedOU) return;
 
@@ -293,13 +293,13 @@ const ADOUPage: FC = () => {
   };
 
   // 辅助函数：递归查找部门名称
-  const findDeptName = (depts: Department[], id: string): string => {
+  const _findDeptName = (depts: Department[], id: string): string => {
     for (const dept of depts) {
       if (dept.id === id) {
         return dept.deptName;
       }
       if (dept.children && dept.children.length > 0) {
-        const found = findDeptName(dept.children, id);
+        const found = _findDeptName(dept.children, id);
         if (found) return found;
       }
     }

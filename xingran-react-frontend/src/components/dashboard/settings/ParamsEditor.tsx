@@ -36,6 +36,7 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
 	form,
 	showExampleHint = true,
 }) => {
+	// eslint-disable-next-line react-hooks/exhaustive-deps
 	const exampleParams = endpoint?.exampleParams || {};
 
 	// 将示例参数转换为数组格式
@@ -53,6 +54,7 @@ export const ParamsEditor: React.FC<ParamsEditorProps> = ({
 			const examples = exampleParamsArray();
 			form.setFieldValue("params", examples);
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [endpoint, form, exampleParamsArray]);
 
 	// 加载示例参数按钮点击处理

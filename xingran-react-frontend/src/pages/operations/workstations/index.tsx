@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 工位管理页面
  *
  * 性能优化说明：
@@ -610,7 +610,7 @@ const WorkstationManagement: FC = () => {
                   workstationId={record.id}
                   conflictTypeMap={assetConflictMap}
                   onDeviceChange={refreshData}
-                  onBadgeClick={(assetId, conflictType) =>
+                  onBadgeClick={(assetId, _conflictType) =>
                     setDrawerState({
                       open: true,
                       assetId,

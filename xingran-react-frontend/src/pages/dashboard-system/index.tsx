@@ -20,7 +20,7 @@ const DashboardPage: React.FC = () => {
 	// 手动解析路径参数，因为 dashboard/* 通配符路由无法使用 useParams
 	const location = useLocation();
 	const [searchParams] = useSearchParams();
-	const navigate = useNavigate();
+	const _navigate = useNavigate();
 
 	// 从路径中提取 ID：/dashboard/:id 或 /dashboard/:id?mode=edit
 	const pathParts = location.pathname.split("/").filter(Boolean);

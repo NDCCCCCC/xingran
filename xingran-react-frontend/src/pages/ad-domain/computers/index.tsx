@@ -46,7 +46,7 @@ const ADComputerPage: FC = () => {
   });
 
   // 获取当前选择的配置对象
-  const currentConfig = useMemo(() => {
+  const _currentConfig = useMemo(() => {
     return configs.find(c => c.id === selectedConfig);
   }, [configs, selectedConfig]);
 
@@ -98,6 +98,7 @@ const ADComputerPage: FC = () => {
       fetchOUTree();
       fetchComputers();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchComputers/fetchOUTree are inline handlers
   }, [selectedConfig, paginationProps.current, paginationProps.pageSize]);
 
   // 服务端排序:field 与 columns.dataIndex 对齐(useServerSort 按 sorter.field 匹配)
@@ -153,7 +154,7 @@ const ADComputerPage: FC = () => {
         setSelectedComputer(res.data ?? null);
         setDetailModalVisible(true);
       }
-    } catch (error) {
+    } catch (_error) {
       message.error("获取电脑设备详情失败");
     }
   };
@@ -167,6 +168,7 @@ const ADComputerPage: FC = () => {
     }));
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- buildTreeSelectData is a stable pure helper
   const treeSelectData = useMemo(() => buildTreeSelectData(ouTree), [ouTree]);
 
   const handleQuickOUSelect = (ouDn: string) => {

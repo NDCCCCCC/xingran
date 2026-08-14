@@ -36,7 +36,7 @@ export function BatchHolidayModal({ visible, onOk, onCancel }: BatchHolidayModal
 
       await onOk(values);
       form.resetFields();
-    } catch (error) {
+    } catch (_error) {
       // 表单验证失败
     }
   };

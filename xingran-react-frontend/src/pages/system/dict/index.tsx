@@ -230,14 +230,13 @@ const DictManagement: FC = () => {
   });
 
   // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+  const { paginationProps, setCurrent, setPageSize } = usePagination();
 
   // 使用数据管理 Hook
   const {
     dictTypes,
     dictDataList,
     loading,
-    total,
     selectedType,
     typeStatistics,
     dataStatistics,

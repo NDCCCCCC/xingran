@@ -49,7 +49,7 @@ const JobManager: FC = () => {
     jobLogs,
     jobLogStats,
     loading,
-    total,
+    total: _total,
     fetchJobs,
     fetchJobLogs,
   } = useJobData({
@@ -62,7 +62,7 @@ const JobManager: FC = () => {
   const {
     modalVisible,
     modalTitle,
-    isEdit,
+    isEdit: _isEdit,
     logDrawerVisible,
     selectedJob,
     setModalVisible,
@@ -109,7 +109,7 @@ const JobManager: FC = () => {
   };
 
   // 分页变化
-  const handleTableChange = (pagination: { current?: number; pageSize?: number }) => {
+  const _handleTableChange = (pagination: { current?: number; pageSize?: number }) => {
     setCurrent(pagination.current ?? 1);
     setPageSize(pagination.pageSize ?? 10);
     fetchJobs();

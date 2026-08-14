@@ -49,7 +49,7 @@ function getStatusTagColor(statusCode: number): string {
 /**
  * 根据状态码获取标签文本
  */
-function getStatusTagLabel(statusCode: number): string {
+function _getStatusTagLabel(statusCode: number): string {
   if (statusCode >= 200 && statusCode < 300) return "成功";
   if (statusCode >= 300 && statusCode < 400) return "重定向";
   if (statusCode >= 400 && statusCode < 500) return "客户端错误";
@@ -93,6 +93,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
   const queryParams = useMemo(() => ({
     current: pagination.current,
     pageSize: pagination.pageSize,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [pagination.current, pagination.pageSize]);
 
   // ==================== 数据加载 ====================

@@ -41,8 +41,8 @@ export default function DutyManagement() {
     keySuffix: "activeTab",
     defaultValue: "weekly",
   });
-  const [pools, setPools] = useState<DutyPool[]>([]);
-  const [users, setUsers] = useState<SimpleUser[]>([]);
+  const [_pools, setPools] = useState<DutyPool[]>([]);
+  const [_users, setUsers] = useState<SimpleUser[]>([]);
 
   // 模态框状态
   const [holidayModalVisible, setHolidayModalVisible] = useState(false);
@@ -68,7 +68,7 @@ export default function DutyManagement() {
     try {
       const result = await getDutyPoolList({ current: 1, pageSize: 100 });
       setPools(result.data?.list || []);
-    } catch (error) {
+    } catch (_error) {
       Modal.error({ title: "获取值班池列表失败" });
     }
   };

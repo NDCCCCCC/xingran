@@ -201,6 +201,7 @@ export function PortBindingModal({
             },
           ]}
         >
+          {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
           <Select
             placeholder="请选择操作原因"
             options={PRESET_REASONS.map((opt) => ({

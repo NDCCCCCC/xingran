@@ -59,7 +59,7 @@ export function useScheduleData() {
       setTotal(result.data?.total ?? 0);
       if (result.data?.current) setCurrent(result.data.current);
       if (result.data?.pageSize) setPageSize(result.data.pageSize);
-    } catch (error) {
+    } catch (_error) {
       message.error("获取排班列表失败");
     } finally {
       setLoading(false);
@@ -127,7 +127,7 @@ export function useScheduleData() {
       await fetchList();
       await fetchWeeklyDuty(currentWeekStart);
       return true;
-    } catch (error) {
+    } catch (_error) {
       message.error("生成排班失败");
       return false;
     }
@@ -146,7 +146,7 @@ export function useScheduleData() {
       await fetchList();
       await fetchWeeklyDuty(currentWeekStart);
       return true;
-    } catch (error) {
+    } catch (_error) {
       message.error("调班失败");
       return false;
     }
@@ -164,7 +164,7 @@ export function useScheduleData() {
       await fetchList();
       await fetchWeeklyDuty(currentWeekStart);
       return true;
-    } catch (error) {
+    } catch (_error) {
       message.error("手动排班失败");
       return false;
     }
@@ -181,7 +181,7 @@ export function useScheduleData() {
       await fetchList(newPage);
       await fetchWeeklyDuty(currentWeekStart);
       return true;
-    } catch (error) {
+    } catch (_error) {
       message.error("删除失败");
       return false;
     }
@@ -204,7 +204,7 @@ export function useScheduleData() {
       await fetchList(newPage);
       await fetchWeeklyDuty(currentWeekStart);
       return true;
-    } catch (error) {
+    } catch (_error) {
       message.error("批量删除失败");
       return false;
     }

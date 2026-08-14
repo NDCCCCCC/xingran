@@ -42,7 +42,7 @@ const { Option } = Select;
 const DeviceDiscoveryPage: FC = () => {
   const { message } = App.useApp();
   // 使用全局分页 hook
-  const { paginationProps, setTotal } = usePagination();
+  const { paginationProps, setTotal: _setTotal } = usePagination();
 
   // 服务端排序:field 与 columns.dataIndex 对齐
   const sorterMetas = useMemo(
@@ -69,7 +69,7 @@ const DeviceDiscoveryPage: FC = () => {
     discoveredDevices,
     departments,
     loading,
-    total,
+    total: _total,
     statistics,
     modalState,
     currentDiscovery,
@@ -151,7 +151,7 @@ const DeviceDiscoveryPage: FC = () => {
       await post(`/network/discoveries/${id}/delete`, {});
       message.success("删除成功");
       loadDiscoveries();
-    } catch (error) {
+    } catch (_error) {
       message.error("删除失败");
     }
   };
@@ -172,7 +172,7 @@ const DeviceDiscoveryPage: FC = () => {
       message.success("导入成功");
       setModalState(prev => ({ ...prev, resultModalVisible: false }));
       loadDiscoveries();
-    } catch (error) {
+    } catch (_error) {
       message.error("导入失败");
     }
   };

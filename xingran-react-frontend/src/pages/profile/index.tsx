@@ -51,7 +51,7 @@ const ProfilePage: FC = () => {
     try {
       const data = await getProfileInfo();
       setProfile(data);
-    } catch (error) {
+    } catch (_error) {
       message.error("加载个人信息失败");
     }
   };
@@ -147,7 +147,7 @@ const ProfilePage: FC = () => {
       // 更新全局用户信息
       updateUser({ avatar: result.avatar });
       loadProfile();
-    } catch (error) {
+    } catch (_error) {
       message.error("头像上传失败");
     }
     return false; // 阻止默认上传行为

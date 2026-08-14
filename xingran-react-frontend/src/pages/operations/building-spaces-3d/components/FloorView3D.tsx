@@ -266,7 +266,7 @@ interface WorkstationCardProps {
 
 const WorkstationCard: React.FC<WorkstationCardProps> = ({ workstation }) => {
   const statusColor = getWorkstationStatusColorCSS(workstation.status);
-  const typeColor = getWorkstationTypeColorCSS(workstation.type);
+  const _typeColor = getWorkstationTypeColorCSS(workstation.type);
   const statusText = getWorkstationStatusText(workstation.status);
   const typeText = getWorkstationTypeText(workstation.type);
 

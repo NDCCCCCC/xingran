@@ -93,7 +93,7 @@ export interface ColumnConfigModalProps {
 export const ColumnConfigModal: React.FC<ColumnConfigModalProps> = ({
   visible,
   config,
-  defaultConfig,
+  defaultConfig: _defaultConfig,
   onSave,
   onReset,
   onClose,

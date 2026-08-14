@@ -80,6 +80,7 @@ export const LayoutToolbar: React.FC<LayoutToolbarProps> = ({
 				message.info("已切换到编辑模式");
 			}
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [dashboardId, navigate]); // 减少依赖，只保留必要的 dashboardId 和 navigate
 
 	// 保存仪表盘

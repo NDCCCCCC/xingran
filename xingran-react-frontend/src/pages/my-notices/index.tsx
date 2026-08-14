@@ -38,7 +38,7 @@ const MyNoticesPage: FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [notices, setNotices] = useState<Notice[]>([]);
-  const [total, setTotal] = useState(0);
+  const [_total, setTotal] = useState(0);
   const [allTotal, setAllTotal] = useState(0); // 全部通知总数（用于标签显示）
   const [activeTab, setActiveTab] = useState<"all" | "unread" | "read">("all");
 

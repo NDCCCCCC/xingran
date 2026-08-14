@@ -181,7 +181,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
       message.success("删除成功");
       loadBackgrounds();
       loadStatistics();
-    } catch (error) {
+    } catch (_error) {
       message.error("删除失败");
     }
   };
@@ -193,7 +193,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
       message.success("状态更新成功");
       loadBackgrounds();
       loadStatistics();
-    } catch (error) {
+    } catch (_error) {
       message.error("状态更新失败");
     }
   };
@@ -203,7 +203,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
     try {
       await captchaService.preloadCaptchaCache();
       message.success("预加载成功");
-    } catch (error) {
+    } catch (_error) {
       message.error("预加载失败");
     }
   };
@@ -355,6 +355,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
   useEffect(() => {
     loadBackgrounds();
     loadStatistics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paginationProps.current, paginationProps.pageSize]);
 
   return (

@@ -77,6 +77,7 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
 	useEffect(() => {
 		if (value) {
 			const type = getDataSourceType(value);
+			// eslint-disable-next-line react-hooks/set-state-in-effect
 			setDataSourceType(type);
 
 			if (type === "api") {
@@ -193,6 +194,7 @@ export const DataSourceForm: React.FC<DataSourceFormProps> = ({
 					tooltip="选择数据来源方式：API（REST接口）、WebSocket（实时推送）、Static（静态数据）"
 					initialValue={dataSourceType}
 				>
+					{/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
 					<Select
 						value={dataSourceType}
 						onChange={handleTypeChange}

@@ -102,7 +102,9 @@ export function BulkWriteDrawer({
   // CLAUDE.md useEffect 纪律: deps 全稳定 (open/phase/onExecutingChange 原始值或稳定 setter)
   useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPhase("select");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setBatchResult(null);
       form.resetFields();
     }
@@ -315,6 +317,7 @@ function SelectView({
         label="操作类型"
         rules={[{ required: true, message: "请选择操作类型" }]}
       >
+        {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
         <Select placeholder="请选择操作类型" options={ACTION_OPTIONS} />
       </Form.Item>
 
@@ -358,6 +361,7 @@ function SelectView({
               ]
         }
       >
+        {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
         <Select
           placeholder="请选择操作原因"
           options={PRESET_REASONS.map((opt) => ({ label: opt.label, value: opt.value }))}

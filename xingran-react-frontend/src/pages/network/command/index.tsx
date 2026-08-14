@@ -74,7 +74,7 @@ const CommandDispatch: FC = () => {
     executions,
     execTotal,
     statistics,
-    setExecTotal,
+    setExecTotal: _setExecTotal,
     loadExecutions,
     loadStatistics,
     loadDevices,

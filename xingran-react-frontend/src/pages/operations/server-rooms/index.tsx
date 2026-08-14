@@ -70,7 +70,7 @@ const ServerRoomManagement: FC = () => {
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   // 使用 useSidebarDeptFilter hook 管理部门筛选
-  const { selectedDeptId, handleDeptSelect, setSelectedDeptId } = useSidebarDeptFilter({
+  const { selectedDeptId, handleDeptSelect, setSelectedDeptId: _setSelectedDeptId } = useSidebarDeptFilter({
     searchForm: undefined, // 机房管理不需要清空搜索表单字段
     clearFieldNames: [],
   });
@@ -99,7 +99,7 @@ const ServerRoomManagement: FC = () => {
     editingItem: editingServerRoom, setSelectedRowKeys, setEditModalVisible: setModalVisible,
     setEditingItem: setEditingServerRoom, handleSearch,
     handleReset, handleAdd, handleEdit, handleModalClose, loadData: loadServerRooms, resetSelection,
-    setData, setLoading,
+    setData: _setData, setLoading: _setLoading,
     handleTableChange: handleServerRoomTableChange,
     getColumnSortOrder: getServerRoomColumnSortOrder,
   } = useTableManager<ServerRoom>(
@@ -193,6 +193,7 @@ const ServerRoomManagement: FC = () => {
     searchForm.setFieldValue("floorNo", undefined);
     searchForm.setFieldValue("name", undefined);
     searchForm.setFieldValue("status", undefined);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadBuildingOptions(selectedDeptId || undefined);
   }, [selectedDeptId, searchForm, loadBuildingOptions]);
 

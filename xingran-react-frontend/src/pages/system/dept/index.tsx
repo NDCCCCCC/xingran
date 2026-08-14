@@ -60,6 +60,7 @@ const DepartmentManagement: FC = () => {
     if (departments?.length > 0) {
       const treeData = renderTreeData(departments);
       const rootKeys = treeData.map(d => d.key);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional expansion on data load
       setExpandedRowKeys(rootKeys);
     } else {
       setExpandedRowKeys([]);

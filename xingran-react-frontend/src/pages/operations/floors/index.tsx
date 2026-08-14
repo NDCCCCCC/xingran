@@ -304,7 +304,7 @@ const FloorManagement: FC = () => {
 
   // 筛选楼宇变化处理
   const handleFilterBuildingChange = useCallback(
-    async (buildingId: string) => {
+    async (_buildingId: string) => {
       // 触发搜索以应用楼宇筛选
       handleSearch();
     },

@@ -28,7 +28,7 @@ export interface ArticleColumnsParams {
 }
 
 export function getArticleColumns(params: ArticleColumnsParams): ColumnsType<KnowledgeArticle> {
-  const { handlePreview, handleEdit, handlePublish, handleLike, handleDelete, current, pageSize, getColumnSortOrder, sorterMetas } = params;
+  const { handlePreview, handleEdit, handlePublish, handleLike, handleDelete, current, pageSize, getColumnSortOrder, sorterMetas: _sorterMetas } = params;
 
   return [
     {

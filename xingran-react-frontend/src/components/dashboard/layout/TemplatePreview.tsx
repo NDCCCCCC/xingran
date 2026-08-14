@@ -33,7 +33,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({
 	onApply,
 }) => {
 	const [loading, setLoading] = useState(false);
-	const [previewData, setPreviewData] = useState<Map<string, unknown>>(new Map());
+	const [_previewData, setPreviewData] = useState<Map<string, unknown>>(new Map());
 	const [error, setError] = useState<string | null>(null);
 
 	// 加载预览数据

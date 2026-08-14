@@ -142,7 +142,7 @@ const CredentialManagement: FC = () => {
         const formValues = await editForm.validateFields();
         const values = formValues as Record<string, unknown> & { confirmPassword?: string };
         // 移除确认密码字段
-        const { confirmPassword, ...data } = values;
+        const { confirmPassword: _confirmPassword, ...data } = values;
         if (editingCredential) {
           await post(`/network/credentials/${editingCredential.id}/update`, data);
           return "更新成功";
@@ -230,7 +230,7 @@ const CredentialManagement: FC = () => {
   };
 
   // 打开编辑模态框
-  const openModal = (record?: AuthCredential) => {
+  const _openModal = (record?: AuthCredential) => {
     if (record) {
       setEditingItem(record);
       editForm.setFieldsValue({

@@ -25,7 +25,7 @@ const DutyConfigPage: FC = () => {
         reminderChannels: configData.data.reminderChannels.split(","),
         beforeReminderMinutes: configData.data.beforeReminderMinutes,
       });
-    } catch (error) {
+    } catch (_error) {
       message.error("获取配置失败");
     } finally {
       setLoading(false);

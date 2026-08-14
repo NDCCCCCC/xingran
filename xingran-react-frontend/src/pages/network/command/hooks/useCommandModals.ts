@@ -46,7 +46,7 @@ export function useCommandModals(): UseCommandModalsReturn {
       await post(`/network/executions/${id}/cancel`, {});
       message.success("取消成功");
       onSuccess();
-    } catch (error) {
+    } catch (_error) {
       message.error("取消失败");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable

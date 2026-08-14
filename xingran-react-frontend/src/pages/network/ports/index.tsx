@@ -241,8 +241,8 @@ const PortStatusPage: FC = () => {
     handleSearch,
     handleReset,
     handleRefresh,
-    orderByColumn,
-    isAsc,
+    orderByColumn: _orderByColumn,
+    isAsc: _isAsc,
   } = useTableManager<DevicePortStatus>(
     async (params) => {
       const formValues = searchForm.getFieldsValue();

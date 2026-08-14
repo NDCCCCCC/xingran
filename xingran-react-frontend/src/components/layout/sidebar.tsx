@@ -142,6 +142,7 @@ const Sidebar = () => {
     const parentKeys = buildParentKeyChain(location.pathname, menuPathMap);
 
     expectedOpenKeysRef.current = parentKeys;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpenKeys(parentKeys);
 
     setTimeout(() => {

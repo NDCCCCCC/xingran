@@ -100,6 +100,7 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
 	// 首次加载完成后更新状态
 	useEffect(() => {
 		if (!loading && isFirstLoad) {
+			// eslint-disable-next-line react-hooks/set-state-in-effect
 			setIsFirstLoad(false);
 		}
 	}, [loading, isFirstLoad]);

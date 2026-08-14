@@ -29,7 +29,7 @@ export function useHolidayData() {
       const result = await getHolidayList(targetYear);
       setHolidays(result.data || []);
       if (year !== undefined) setHolidayYear(year);
-    } catch (error) {
+    } catch (_error) {
       message.error("获取节假日列表失败");
     } finally {
       setLoading(false);
@@ -61,7 +61,7 @@ export function useHolidayData() {
       message.success("创建成功");
       await fetchList();
       return true;
-    } catch (error) {
+    } catch (_error) {
       message.error("创建失败");
       return false;
     }
@@ -75,7 +75,7 @@ export function useHolidayData() {
       message.success("更新成功");
       await fetchList();
       return true;
-    } catch (error) {
+    } catch (_error) {
       message.error("更新失败");
       return false;
     }
@@ -89,7 +89,7 @@ export function useHolidayData() {
       message.success("删除成功");
       await fetchList();
       return true;
-    } catch (error) {
+    } catch (_error) {
       message.error("删除失败");
       return false;
     }
@@ -111,7 +111,7 @@ export function useHolidayData() {
       await fetchList();
       await fetchYears();
       return true;
-    } catch (error) {
+    } catch (_error) {
       message.error("批量创建失败");
       return false;
     }

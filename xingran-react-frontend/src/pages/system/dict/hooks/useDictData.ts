@@ -99,6 +99,7 @@ export function useDictData(searchForm: FormInstance<unknown>, dataSearchForm: F
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedType, current, pageSize, dataSearchForm]);
 
   // 加载字典类型统计数据(专用 COUNT 端点,不受 MaxPageSize=100 钳制)

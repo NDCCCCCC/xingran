@@ -154,8 +154,8 @@ const MenuManagement: FC = () => {
   // 使用操作管理 Hook
   const {
     editingMenu,
-    cascadeDelete,
-    setCascadeDelete,
+    cascadeDelete: _cascadeDelete,
+    setCascadeDelete: _setCascadeDelete,
     handleAdd,
     handleEdit,
     handleDeleteConfirm,

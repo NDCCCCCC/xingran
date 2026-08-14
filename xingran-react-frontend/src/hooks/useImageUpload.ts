@@ -31,8 +31,8 @@ const DEFAULT_MAX_SIZE = MAX_IMAGE_SIZE;
 
 export function useImageUpload(options: UseImageUploadOptions = {}): UseImageUploadReturn {
   const {
-    businessType = "image",
-    maxSize = DEFAULT_MAX_SIZE,
+    businessType: _businessType = "image",
+    maxSize: _maxSize = DEFAULT_MAX_SIZE,
     onSuccess,
     onError,
   } = options;

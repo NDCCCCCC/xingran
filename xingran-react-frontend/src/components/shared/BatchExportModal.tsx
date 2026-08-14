@@ -88,7 +88,7 @@ const BatchExportModal: FC<BatchExportModalProps> = ({
   );
 
   // 响应式列数配置
-  const checkboxColSpan = useMemo(() => {
+  const _checkboxColSpan = useMemo(() => {
     // 桌面 3 列，平板 2 列，移动 1 列
     if (typeof window !== "undefined") {
       if (window.innerWidth >= 992) return 8;

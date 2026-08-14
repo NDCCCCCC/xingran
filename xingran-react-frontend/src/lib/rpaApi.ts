@@ -51,7 +51,7 @@ import type {
 
 // ==================== 通用 CRUD 工厂函数 ====================
 
-interface CrudApiConfig<T> {
+interface CrudApiConfig<_T> {
   basePath: string;
 }
 

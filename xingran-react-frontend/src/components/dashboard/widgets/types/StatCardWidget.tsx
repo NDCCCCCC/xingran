@@ -20,13 +20,14 @@ interface StatCardWidgetProps {
 export const StatCardWidget: React.FC<StatCardWidgetProps> = ({
 	widget,
 	display,
-	onEdit,
-	onDelete,
+	onEdit: _onEdit,
+	onDelete: _onDelete,
 }) => {
 	// 使用useWidgetData直接获取数据
-	const { data, loading, error, refresh } = useWidgetData(widget);
+	const { data, loading, error, refresh: _refresh } = useWidgetData(widget);
 
 	// 提取数值
+	// eslint-disable-next-line react-hooks/preserve-manual-memoization
 	const { value, label, trend, icon, color } = useMemo(() => {
 		if (typeof data !== "object" || !data) {
 			return { value: "-", label: widget.title, trend: null, icon: null, color: display.iconColor };

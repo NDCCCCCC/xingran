@@ -37,7 +37,7 @@ const hasPermission = (permissions: string[], perm: string) => permissions.inclu
 
 const VirtualMachineList: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user: _user } = useAuthStore();
   // Use permissions from menuStore (loaded via /system/my-menus/permissions)
   // authStore user.permissions is NOT populated from the login API
   const menuPermissions = useMenuStore(state => state.permissions);
@@ -91,7 +91,7 @@ const VirtualMachineList: React.FC = () => {
 
   // VDI数据预加载状态
   const [vdiDataPreloaded, setVdiDataPreloaded] = useState(false);
-  const [vdiDataLoading, setVdiDataLoading] = useState(false);
+  const [_vdiDataLoading, setVdiDataLoading] = useState(false);
   const [preloadError, setPreloadError] = useState<string | null>(null);
 
   // Whether user has VM create permission (controls preload and toolbar buttons)
@@ -166,7 +166,8 @@ const VirtualMachineList: React.FC = () => {
     } finally {
       setVdiDataLoading(false);
     }
-  }, [canCreateVM]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canCreateVM, CACHE_DURATION]);
 
   // 加载虚拟机列表
   const loadVMs = async () => {
@@ -180,7 +181,7 @@ const VirtualMachineList: React.FC = () => {
       const result = await vmApi.list(params);
       setVMs(result.data?.list || []);
       setTotal(result.data?.total || 0);
-    } catch (error) {
+    } catch (_error) {
       message.error("加载虚拟机列表失败");
     } finally {
       setLoading(false);
@@ -189,6 +190,7 @@ const VirtualMachineList: React.FC = () => {
 
   useEffect(() => {
     loadVMs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current, pageSize, filters]);
 
   // 页面加载时预加载VDI配置数据（仅在用户有创建权限时）
@@ -202,7 +204,7 @@ const VirtualMachineList: React.FC = () => {
   // Watch form field changes for cascading dropdowns and auto-name
   const selectedServerId = Form.useWatch("vdi_server_id", form);
   const selectedResourceGroupId = Form.useWatch("resource_group_id", form);
-  const selectedResourceFieldId = Form.useWatch("resource_id", form);
+  const _selectedResourceFieldId = Form.useWatch("resource_id", form);
   const selectedVtpId = Form.useWatch("vtp_id", form);
 
   // Track previous createModalVisible value to prevent infinite loop
@@ -280,7 +282,7 @@ const VirtualMachineList: React.FC = () => {
     } else {
       setVtpPlatforms([]);
     }
-  }, [selectedServerId, createModalVisible, form]);
+  }, [selectedServerId, createModalVisible, form, CACHE_DURATION]);
 
   // Load run positions, storages, and networks when VTP platform is selected (带缓存更新)
   useEffect(() => {
@@ -294,7 +296,7 @@ const VirtualMachineList: React.FC = () => {
         (Date.now() - vdiDataCache.current.timestamp < CACHE_DURATION);
 
       // Load run positions
-      const loadPositions = () => {
+      const _loadPositions = () => {
         if (useCache && vdiDataCache.current!.runPositions.length > 0) {
           setRunPositions(vdiDataCache.current!.runPositions);
           positionsLoaded = true;
@@ -304,7 +306,7 @@ const VirtualMachineList: React.FC = () => {
       };
 
       // Load storages
-      const loadStorages = () => {
+      const _loadStorages = () => {
         if (useCache && vdiDataCache.current!.storages.length > 0) {
           setStorages(vdiDataCache.current!.storages);
           storagesLoaded = true;
@@ -314,7 +316,7 @@ const VirtualMachineList: React.FC = () => {
       };
 
       // Load networks
-      const loadNetworks = () => {
+      const _loadNetworks = () => {
         if (useCache && vdiDataCache.current!.networks.length > 0) {
           setNetworks(vdiDataCache.current!.networks);
           networksLoaded = true;
@@ -414,7 +416,7 @@ const VirtualMachineList: React.FC = () => {
         network_id: undefined,
       });
     }
-  }, [selectedVtpId, selectedServerId, createModalVisible, form, vtpPlatforms]);
+  }, [selectedVtpId, selectedServerId, createModalVisible, form, vtpPlatforms, CACHE_DURATION]);
 
   // Open create modal and load dropdown data (使用预加载数据)
   const openCreateModal = async () => {
@@ -489,7 +491,7 @@ const VirtualMachineList: React.FC = () => {
       setCreateModalVisible(false);
       form.resetFields();
       loadVMs();
-    } catch (error) {
+    } catch (_error) {
       message.error("创建虚拟机失败");
     } finally {
       setLoading(false);
@@ -510,11 +512,12 @@ const VirtualMachineList: React.FC = () => {
       message.success(`${action === "start" ? "开机" : action === "stop" ? "关机" : "重启"}操作已提交，VDI API 调用成功`);
       setSelectedRowKeys([]);
       loadVMs();
-    } catch (error) {
+    } catch (_error) {
       message.error("操作失败，VDI API 调用失败");
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRowKeys, loadVMs]);
 
   // 删除虚拟机（调用 VDI API）
@@ -524,11 +527,12 @@ const VirtualMachineList: React.FC = () => {
       await vmApi.delete(id);
       message.success("删除成功，VDI API 调用完成");
       loadVMs();
-    } catch (error) {
+    } catch (_error) {
       message.error("删除失败，VDI API 调用失败");
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadVMs]);
 
   // 同步虚拟机（调用 VDI API）
@@ -538,11 +542,12 @@ const VirtualMachineList: React.FC = () => {
       await vmApi.sync(id);
       message.success("同步成功，VDI 状态已更新");
       loadVMs();
-    } catch (error) {
+    } catch (_error) {
       message.error("同步失败");
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadVMs]);
 
   // 绑定用户操作
@@ -580,7 +585,7 @@ const VirtualMachineList: React.FC = () => {
       setBindUserModalVisible(false);
       bindUserForm.resetFields();
       loadVMs();
-    } catch (error) {
+    } catch (_error) {
       message.error("绑定用户失败，VDI API 调用失败");
     } finally {
       setLoading(false);
@@ -677,7 +682,7 @@ const VirtualMachineList: React.FC = () => {
       });
 
       message.success("快速创建配置加载成功！");
-    } catch (error) {
+    } catch (_error) {
       message.error("加载VDI配置失败，请检查网络连接和VDI服务器状态");
     }
   };
@@ -724,7 +729,7 @@ const VirtualMachineList: React.FC = () => {
       setQuickCreateModalVisible(false);
       quickCreateForm.resetFields();
       loadVMs();
-    } catch (error) {
+    } catch (_error) {
       message.error("创建虚拟机失败");
     } finally {
       setLoading(false);

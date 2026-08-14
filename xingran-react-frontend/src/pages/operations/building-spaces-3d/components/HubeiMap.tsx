@@ -116,7 +116,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
         map.addOverlay(polygon);
       });
 
-    } catch (error) {
+    } catch (_error) {
       addFallbackMask(map, BMap);
     }
   };
@@ -205,7 +205,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
 
         setMapLoaded(true);
         setLoading(false);
-      } catch (error) {
+      } catch (_error) {
         message.error("百度地图加载失败，请检查 AK 配置");
         setLoading(false);
       }

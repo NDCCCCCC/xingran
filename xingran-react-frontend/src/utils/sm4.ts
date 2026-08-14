@@ -8,7 +8,6 @@
 
 import { get } from "@/lib/api";
 import { hexToBase64, base64ToHex, arrayBufferToHex, hexToArrayBuffer, generateRandomHex } from "./encoding";
-import { decryptWithSM2, fetchPublicKey } from "./sm2";
 
 // SM4 模块接口定义
 interface SM4Module {

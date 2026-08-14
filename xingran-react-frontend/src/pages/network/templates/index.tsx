@@ -48,7 +48,7 @@ const TemplateManagement: FC = () => {
   const {
     templates,
     loading,
-    total,
+    total: _total,
     statistics,
     loadTemplates,
     loadStatistics,
@@ -72,7 +72,7 @@ const TemplateManagement: FC = () => {
     handleBatchDelete,
     handlePreview,
     handleClone,
-    handleGetVariables,
+    handleGetVariables: _handleGetVariables,
   } = useTemplateModals();
 
   const sorterMetas = useMemo<Array<SorterMeta<ConfigTemplate> | undefined>>(

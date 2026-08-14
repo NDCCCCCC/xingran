@@ -67,7 +67,7 @@ export const EndpointSelector: React.FC<EndpointSelectorProps> = ({
 }) => {
 	const [loading, setLoading] = useState(false);
 	const [categories, setCategories] = useState<EndpointCategory[]>([]);
-	const [selectedEndpoint, setSelectedEndpoint] = useState<EndpointDetail | null>(null);
+	const [_selectedEndpoint, setSelectedEndpoint] = useState<EndpointDetail | null>(null);
 
 	// 加载端点列表
 	const loadEndpoints = useCallback(async () => {

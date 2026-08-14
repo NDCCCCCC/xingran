@@ -217,13 +217,13 @@ const WorkOrderPage: FC = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize } = usePagination();
+  const { paginationProps, setCurrent: _setCurrent, setPageSize: _setPageSize } = usePagination();
 
   // 使用自定义 Hooks
   const {
     loading,
     dataSource,
-    total,
+    total: _total,
     stats,
     users,
     depts,
@@ -306,9 +306,10 @@ const WorkOrderPage: FC = () => {
       await deleteWorkOrder(id);
       message.success("删除成功");
       fetchList(paginationProps.current, paginationProps.pageSize);
-    } catch (error) {
+    } catch (_error) {
       message.error("删除失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchList, message]);
 
   const handleBatchDelete = useCallback(async () => {
@@ -321,18 +322,20 @@ const WorkOrderPage: FC = () => {
       message.success("批量删除成功");
       setSelectedRowKeys([]);
       fetchList(paginationProps.current, paginationProps.pageSize);
-    } catch (error) {
+    } catch (_error) {
       message.error("批量删除失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRowKeys, fetchList, message]);
 
   const handleAssignToTodayDuty = useCallback(async (id: string) => {
     try {
-      const result = await assignToTodayDuty(id);
+      const _result = await assignToTodayDuty(id);
       fetchList(paginationProps.current, paginationProps.pageSize);
     } catch (error: unknown) {
       console.error("分配失败:", error);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchList]);
 
   const handleModalOk = useCallback(async () => {
@@ -392,7 +395,7 @@ const WorkOrderPage: FC = () => {
 
       const commentsResult = await getWorkOrderComments(selectedRecord.id);
       setComments(commentsResult.data || []);
-    } catch (error) {
+    } catch (_error) {
       message.error("评论添加失败");
     }
   }, [commentForm, selectedRecord, commentInternal, setComments, message]);

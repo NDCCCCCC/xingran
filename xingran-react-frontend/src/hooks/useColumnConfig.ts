@@ -165,7 +165,7 @@ export function useColumnConfig(options: UseColumnConfigOptions) {
   const saveConfig = useCallback(async (newConfig: ColumnConfig[]) => {
     setSaving(true);
     try {
-      const columnConfigs: ColumnConfigItem[] = newConfig.map((col, index) => ({
+      const columnConfigs: ColumnConfigItem[] = newConfig.map((col, _index) => ({
         columnKey: col.key,
         visible: col.visible,
         width: col.width || 0,
