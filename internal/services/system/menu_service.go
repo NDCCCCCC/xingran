@@ -29,6 +29,7 @@ type MenuService interface {
 	GetTreeWithCache(ctx context.Context, includeHidden bool) ([]models.Menu, error)
 	GetRouterDataWithCache(ctx context.Context) ([]models.Menu, error)
 	InvalidateMenuCache(ctx context.Context) error
+	InvalidateUserMenuCache(ctx context.Context) error
 }
 
 // menuService 菜单服务实现
@@ -593,5 +594,10 @@ func (s *menuService) GetRouterDataWithCache(ctx context.Context) ([]models.Menu
 
 // InvalidateMenuCache 失效菜单缓存（无缓存版本，空操作）
 func (s *menuService) InvalidateMenuCache(ctx context.Context) error {
+	return nil
+}
+
+// InvalidateUserMenuCache 失效 user-scoped 菜单缓存（无缓存版本，空操作）
+func (s *menuService) InvalidateUserMenuCache(ctx context.Context) error {
 	return nil
 }

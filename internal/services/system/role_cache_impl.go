@@ -228,6 +228,9 @@ func (s *roleCacheService) Create(ctx context.Context, req *requests.RoleCreateR
 	if err := s.roleService.Create(ctx, req); err != nil {
 		return err
 	}
+	// 角色↔菜单关联(sys_role_menu)已写入，失效 user-scoped 菜单缓存（F-01）
+	// 新建角色尚无用户关联，此调用通常为空操作，保持「sys_role_menu 写后必失效」的统一语义
+	InvalidateUserMenuCacheByProvider(ctx, s.cache)
 	return s.InvalidateRoleCache(ctx, "")
 }
 
@@ -236,6 +239,9 @@ func (s *roleCacheService) Update(ctx context.Context, req *requests.RoleUpdateR
 	if err := s.roleService.Update(ctx, req); err != nil {
 		return err
 	}
+	// 角色↔菜单关联(sys_role_menu)已重写，失效 user-scoped 菜单缓存（F-01），
+	// 避免已关联用户最长 30min(TTL)看到陈旧菜单/权限标识
+	InvalidateUserMenuCacheByProvider(ctx, s.cache)
 	return s.InvalidateRoleCache(ctx, req.ID)
 }
 
@@ -244,6 +250,9 @@ func (s *roleCacheService) Delete(ctx context.Context, id string) error {
 	if err := s.roleService.Delete(ctx, id); err != nil {
 		return err
 	}
+	// 删除路径同样清理 sys_role_menu；虽有「未分配用户」前置校验，校验与删除
+	// 非同一事务存在竞态窗口，统一失效兜底（F-01）
+	InvalidateUserMenuCacheByProvider(ctx, s.cache)
 	return s.InvalidateRoleCache(ctx, id)
 }
 
@@ -254,6 +263,8 @@ func (s *roleCacheService) BatchDelete(ctx context.Context, ids []string) error 
 	}
 	// 清除所有角色相关缓存
 	InvalidateCacheByPattern(ctx, s.cache, []string{CacheKeyRoleAll + "*"}, "ROLE")
+	// 批量删除同样清理 sys_role_menu，统一失效 user-scoped 菜单缓存兜底竞态（F-01）
+	InvalidateUserMenuCacheByProvider(ctx, s.cache)
 	return nil
 }
 

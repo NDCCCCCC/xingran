@@ -167,6 +167,32 @@ func (s *menuCacheService) InvalidateMenuCache(ctx context.Context) error {
 	return nil
 }
 
+// userMenuCacheInvalidationPatterns user-scoped 菜单缓存键前缀列表。
+// 供 menuCacheService.InvalidateUserMenuCache 与 role/user 缓存服务复用，
+// 避免 3 个前缀在多处硬编码后漂移（F-01）。
+func userMenuCacheInvalidationPatterns() []string {
+	return []string{
+		CacheKeyMenuUserMenus + ":*",
+		CacheKeyMenuUserAllMenus + ":*",
+		CacheKeyMenuUserPermissions + ":*",
+	}
+}
+
+// InvalidateUserMenuCacheByProvider 失效 user-scoped 菜单缓存（包级 helper）。
+// role/user 缓存服务与 menu 服务在 core.go 中共享同一 CacheProvider，
+// 因此直接用各自持有的 provider 清这 3 个前缀即可，无需互相注入 service 依赖
+// （避免构造函数签名连锁改动）。
+func InvalidateUserMenuCacheByProvider(ctx context.Context, cache CacheProvider) {
+	InvalidateCacheByPattern(ctx, cache, userMenuCacheInvalidationPatterns(), "MENU-USER")
+}
+
+// InvalidateUserMenuCache 失效 user-scoped 菜单缓存（角色↔菜单 / 用户↔角色变更时调用）
+// 只清 menu:user:* 三个前缀，不动全局 menu:tree/router/all（菜单本体未变，无需连带失效）。
+func (s *menuCacheService) InvalidateUserMenuCache(ctx context.Context) error {
+	InvalidateUserMenuCacheByProvider(ctx, s.cache)
+	return nil
+}
+
 // Create 创建菜单（带缓存失效）
 func (s *menuCacheService) Create(ctx context.Context, req *requests.MenuCreateRequest) error {
 	if err := s.menuService.Create(ctx, req); err != nil {

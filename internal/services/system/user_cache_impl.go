@@ -286,6 +286,9 @@ func (s *userCacheService) Update(ctx context.Context, req *requests.UserUpdateR
 	if err := s.userService.Update(ctx, req); err != nil {
 		return err
 	}
+	// 用户↔角色关联(sys_user_role)已重写（先删后插），失效 user-scoped 菜单缓存（F-01），
+	// 避免该用户最长 30min(TTL)看到陈旧菜单/权限标识
+	InvalidateUserMenuCacheByProvider(ctx, s.cache)
 	return s.InvalidateUserCache(ctx, req.ID)
 }
 
@@ -294,6 +297,8 @@ func (s *userCacheService) Delete(ctx context.Context, id string) error {
 	if err := s.userService.Delete(ctx, id); err != nil {
 		return err
 	}
+	// 用户↔角色关联(sys_user_role)已删除，失效 user-scoped 菜单缓存（F-01）
+	InvalidateUserMenuCacheByProvider(ctx, s.cache)
 	return s.InvalidateUserCache(ctx, id)
 }
 
@@ -304,6 +309,8 @@ func (s *userCacheService) BatchDelete(ctx context.Context, ids []string) error 
 	}
 	// 清除所有用户相关缓存
 	InvalidateCacheByPattern(ctx, s.cache, []string{CacheKeyUserByID + "*"}, "USER")
+	// 批量删除同样清理 sys_user_role，失效 user-scoped 菜单缓存（F-01）
+	InvalidateUserMenuCacheByProvider(ctx, s.cache)
 	return nil
 }
 
