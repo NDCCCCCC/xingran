@@ -213,12 +213,22 @@ func (r *RedisCache) TTL(ctx context.Context, key string) (time.Duration, error)
 	return r.client.TTL(ctx, r.buildKey(key)).Result()
 }
 
-// Keys 模式匹配
+// Keys 模式匹配（SCAN 游标遍历，避免 KEYS 的 O(N) 阻塞主线程；F-02）
+// SCAN 的 MATCH 与 KEYS 使用完全相同的 glob 语义，调用方行为不变。
 func (r *RedisCache) Keys(ctx context.Context, pattern string) ([]string, error) {
 	builtPattern := r.buildKey(pattern)
-	keys, err := r.client.Keys(ctx, builtPattern).Result()
-	if err != nil {
-		return nil, err
+	keys := make([]string, 0)
+	var cursor uint64
+	for {
+		batch, next, err := r.client.Scan(ctx, cursor, builtPattern, 500).Result()
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, batch...)
+		if next == 0 {
+			break
+		}
+		cursor = next
 	}
 
 	if r.prefix != "" {
