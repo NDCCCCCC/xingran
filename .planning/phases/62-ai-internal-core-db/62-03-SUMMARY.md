@@ -132,3 +132,14 @@ None — no external service configuration required. The new env var `SYS_ADMIN_
 ---
 *Phase: 62-ai-internal-core-db*
 *Completed: 2026-08-14*
+
+## Self-Check: PASSED
+
+- `62-03-SUMMARY.md` exists at `.planning/phases/62-ai-internal-core-db/62-03-SUMMARY.md`
+- All 3 task commits present in git log:
+  - `bb2329e` feat(62-03): admin seed hardening (C2)
+  - `68119aa` feat(62-03): per-subtree dept idempotency (C5)
+  - `d93f024` feat(62-03): menu seed error paths + UserRole ORM
+- `546bc4a` docs(62-03): SUMMARY + STATE + ROADMAP commit
+- `go build ./...` exit 0
+- `go test ./internal/core/db/ -v` all 16 tests PASS (7 Phase 62-02 FilterLogger + 9 new for 62-03)
