@@ -202,6 +202,51 @@ func TestSqliteFallbackWarning(t *testing.T) {
 	}
 }
 
+// TestBootstrapMissingTablesModelDerived 源码断言:BootstrapMissingTables 不再含硬编码
+// CREATE TABLE DDL(APIKey schema 的第三份拷贝消除),表结构由 models.APIKey /
+// models.APIKeyUsageLog 经 gorm.Migrator().CreateTable 派生;六条显式索引语句保留。
+//
+// C7 修复:bootstrap DDL 与 model 漂移 → 旁路路径建出错误表结构;CreateTable 与
+// AutoMigrate 同源(MigrateModelList),单一事实源,天然防漂移。
+func TestBootstrapMissingTablesModelDerived(t *testing.T) {
+	src, err := os.ReadFile(filepath.Join(".", "database.go"))
+	if err != nil {
+		t.Fatalf("read database.go: %v", err)
+	}
+	s := string(src)
+
+	// 1) 硬编码 CREATE TABLE DDL 必须消除(两个表都不允许)
+	for _, banned := range []string{
+		"CREATE TABLE IF NOT EXISTS public.sys_api_keys",
+		"CREATE TABLE IF NOT EXISTS public.sys_api_key_usage_logs",
+	} {
+		if strings.Contains(s, banned) {
+			t.Fatalf("database.go must NOT contain hardcoded DDL %q (C7: third-copy elimination)", banned)
+		}
+	}
+
+	// 2) 必须经 gorm.Migrator().CreateTable 从 model 派生建表
+	for _, required := range []string{
+		"Migrator().CreateTable(&models.APIKey{})",
+		"Migrator().CreateTable(&models.APIKeyUsageLog{})",
+		// 先判定再补建(幂等)
+		"Migrator().HasTable(&models.APIKey{})",
+		"Migrator().HasTable(&models.APIKeyUsageLog{})",
+	} {
+		if !strings.Contains(s, required) {
+			t.Fatalf("database.go missing required fragment %q (C7: model-derived bootstrap)", required)
+		}
+	}
+
+	// 3) 六条 CREATE INDEX IF NOT EXISTS 显式索引语句全部保留(model tag 之外的索引面兜底)
+	idxCount := strings.Count(s, "CREATE INDEX IF NOT EXISTS idx_api_keys_") +
+		strings.Count(s, "CREATE INDEX IF NOT EXISTS idx_api_key_logs_")
+	if idxCount != 6 {
+		t.Fatalf("database.go must retain exactly 6 explicit CREATE INDEX IF NOT EXISTS statements "+
+			"(idx_api_keys_* + idx_api_key_logs_*), got %d", idxCount)
+	}
+}
+
 // TestNowFuncUtc 源码断言:database.go 不含 time.Now().Local();两处 NowFunc 均为
 // time.Now().UTC()(createSQLiteConnection + createPostgresConnection)。
 //
