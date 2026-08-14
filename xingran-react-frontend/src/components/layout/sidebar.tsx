@@ -327,7 +327,7 @@ const Sidebar = () => {
             display: sidebarCollapsed ? "none" : "inline-block",
           }}
         >
-          数智化平台
+          星苒
         </h1>
       </div>
 
