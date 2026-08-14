@@ -1,6 +1,14 @@
 /**
  * 动态路由组件
  * 根据后端菜单数据动态生成路由配置
+ *
+ * 设计要点:
+ *   - 路由权限过滤在生成阶段完成(不是渲染阶段), 避免 <Navigate> 跳转带来的
+ *     "路径泄露" (恶意用户能看到 URL 已被识别但被屏蔽).
+ *   - 静态详情路由(/system/notice/:id, /my-notices/:id) 通过 RouteGuard 包装,
+ *     提供权限点列表 + 后端兜底校验, 避免主验证漏洞.
+ *   - routeConfigManager.initialize() 移到 useMemo 之前, 消除之前 useEffect 调用
+ *     "未初始化" 单例的时序问题.
  */
 
 import { useMemo, Suspense, useEffect, useState } from "react";
@@ -9,6 +17,7 @@ import { useMenuStore } from "@/store/menuStore";
 import { useAuthStore } from "@/store/authStore";
 import { RouteGenerator } from "./routeGenerator";
 import { routeConfigManager } from "./routeConfigManager";
+import { RouteGuard } from "./RouteGuard";
 import { createLazyComponent } from "./componentLoader";
 import type { MenuRouteConfig } from "@/types/menu";
 import Layout from "@/components/layout";
@@ -47,9 +56,6 @@ export const clearLastPath = (): void => {
     // Ignore sessionStorage errors
   }
 };
-
-// 路由缓存（移入组件 useRef,避免模块级可变状态被组件改写）
-// 注意:这意味着每个 DynamicRoutes 实例有独立缓存;如需跨实例共享,需要提升到 store
 
 const DASHBOARD_PATH = "dashboard";
 
@@ -140,49 +146,25 @@ export function DynamicRoutes() {
     }
   }, [isAuthenticated, initialized, allMenus.length, fetchAll]);
 
-  // P0-1: 菜单变化时初始化 routeConfigManager(routeMap)
-  // 为其他消费者(useTabSync 等)提供 routeTitle/breadcrumb 服务。
-  // 本组件的权限检查走 inline 逻辑(见下方的 useMemo), 不依赖该单例。
-  useEffect(() => {
-    if (allMenus.length > 0) {
-      routeConfigManager.initialize(allMenus);
-    }
-  }, [allMenus]);
-
+  // P0-1 路由权限过滤:
+  // 1. routeConfigManager.initialize 在 useMemo 内同步执行, 消除之前 useEffect
+  //    调用未初始化单例的时序问题 (dev 验证捕到的 bug)
+  // 2. 过滤在路由生成阶段完成, 无权限路由根本不进入 React Router tree
+  //    (避免 <Navigate> 跳转时泄露路径存在性)
+  // 3. meta.permissions 为空的路由默认放行 (向后兼容)
   const routeElements = useMemo(() => {
     if (allMenus.length === 0) {
       return [];
     }
 
+    // 同步初始化 routeConfigManager (为 useTabSync 等其他消费者提供 routeTitle/breadcrumb)
+    routeConfigManager.initialize(allMenus);
+
     const configs = RouteGenerator.generate(allMenus);
 
-    // P0-1: 前端路由权限第二层防线 (inline 避免调用模块级单例)
-    // 后端已按角色 RBAC 过滤 allMenus(第一层), 此处对 menu.meta.permissions
-    // 做细粒度二次校验。meta.permissions 为空的路由直接放行(向后兼容)。
     return configs
-      .map((route) => {
-        const requiredPerms = route.meta?.permissions;
-        const allowed =
-          !requiredPerms || requiredPerms.length === 0 ||
-          requiredPerms.some((p: string) => permissions.includes(p));
-        if (allowed) {
-          return createLazyRoute(route);
-        }
-        // 无权限的路由重定向到 dashboard (避免空白页)
-        const missing = requiredPerms.filter((p: string) => !permissions.includes(p));
-        console.warn(`[RouteGuard] ${route.path} 无权限,缺少: ${missing.join(", ")}`);
-        return (
-          <Route
-            key={route.path}
-            path={route.path}
-            element={<Navigate to="/dashboard" replace />}
-          />
-        );
-      })
-      .filter(Boolean);
-    // permissions 是从 store 读取的, 变化时 zustand 会触发 re-render,
-    // 此处显式声明让它作为依赖, 避免 React Compiler 误报
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      .filter((route) => routeConfigManager.hasPermission(route.path, permissions).hasPermission)
+      .map(createLazyRoute);
   }, [allMenus, permissions]);
 
   // 保存当前路径到 sessionStorage
@@ -238,14 +220,34 @@ export function DynamicRoutes() {
       />
       <Route element={<Layout><Outlet /></Layout>}>
         {routeElements}
-        {/* 通知公告详情: 静态子路由,详情页无对应 sys_menu 节点,无法走 RouteGenerator */}
-        <Route path="system/notice/:id" element={<AdminNoticeDetailPage />} />
-        {/* 我的通知详情: 同上,NoticeBell + my-notices 列表查看按钮跳此处 */}
-        <Route path="my-notices/:id" element={<MyNoticeDetailPage />} />
+        {/* 静态详情路由: 走 RouteGuard 包装而非 RouteGenerator (无法走 menu 节点路径)
+         *  - AdminNoticeDetailPage 需 'system:notice:list' 权限 (列表权限隐含查看详情)
+         *  - MyNoticeDetailPage 不需服务端权限 (用户自己的通知)
+         *  - 后端 API 仍在校验数据归属, 客户端守卫仅 UX 优化 */}
+        <Route
+          path="system/notice/:id"
+          element={
+            <RouteGuard
+              permissions={["system:notice:list"]}
+              fallback="/system/notice"
+            >
+              <AdminNoticeDetailPage />
+            </RouteGuard>
+          }
+        />
+        <Route
+          path="my-notices/:id"
+          element={
+            <RouteGuard
+              permissions={[]}
+              fallback="/my-notices"
+            >
+              <MyNoticeDetailPage />
+            </RouteGuard>
+          }
+        />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>
   );
 }
-
-export default DynamicRoutes;
