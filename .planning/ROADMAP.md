@@ -265,6 +265,16 @@ Phases execute in numeric order: 57 → 58 → 59 → 60 → 61 (Phase 61 condit
 
 </details>
 
+### Phase 62: 数据库核心安全加固(跨AI评审修复): internal/core/db 迁移安全+种子凭据+并发保护
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 61
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 62 to break down)
+
 ---
 
 *Last updated: 2026-08-13 — Phase 61 planned (2 plans / Wave 1 Plan 01 + Wave 2 Plan 02 sequential; D-01~D-21 全部覆盖、4 层测试策略 [unit+integration+pure-function+migration]、SC#1-3 全部锚定). Phase 60 已完成(2 plans / Wave 1 parallel). Now 5 phases (57-61) / 14 requirements. v1.21 re-planned 2026-08-12: Phase 61 added (资源级权限矩阵 + 限流生产调优, conditional on Phase 60 AUTH-03=启用); FUTURE-APIKEY-01/02 pulled into v1 as AUTH-04/QUAL-03. Core regression fix = Phases 57-60; Phase 61 = post-enable feature completion. Plan-checker revision 2026-08-13: 3 BLOCKERs + 3 WARNINGs 全部修复;Plan 02 改为 Wave 2 依赖 Plan 01,SelectScope 提取为纯函数,既有 rate_limiter_test.go 449 行迁移而非新建,CacheConfigService 12 配置键用单占位符两次查询. v1.20 网络设备 VLAN + 端口绑定 SHIPPED + ARCHIVED 2026-07-10 (Phase 56 / 5 plans).*

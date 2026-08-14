@@ -40,6 +40,10 @@ Progress: [██████████] 100%
 
 ## Accumulated Context
 
+### Roadmap Evolution
+
+- Phase 62 added: 数据库核心安全加固(跨AI评审修复): internal/core/db 迁移安全+种子凭据+并发保护 — 来源 .planning/reviews/260814-internal-core-db-REVIEWS.md(codex + opencode 交叉评审,共识 C1-C7 + 单方高危项)
+
 ### v1.21 Milestone — Critical Decisions (locked at init)
 
 - **Scope**: 全修复 + 就绪 + 能力补全 — 修复全部 P0/P1/P2 确定性缺陷,MultiAuth 代码修好并已挂载;Phase 61 落地 AUTH-04 资源级权限矩阵与 QUAL-03 限流生产调优
