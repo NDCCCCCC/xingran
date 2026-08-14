@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/xingran-next/xingran-go-backend/internal/core/security"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
@@ -175,6 +176,14 @@ func createDefaultDept(db *gorm.DB) error {
 }
 
 // createDefaultUser 创建默认管理员用户
+//
+// C2 修复要点:
+//  1. 初始密码优先读取环境变量 SYS_ADMIN_BOOTSTRAP_PASSWORD(运维可控入口)
+//  2. 未设置时回退到 admin123,并在写入成功后输出 applogger.Warnf 大声告警,
+//     文案明确"立即登录修改 / 重建时设置 SYS_ADMIN_BOOTSTRAP_PASSWORD"
+//  3. Salt 字段置空串而非字面量 "default"——User.Salt 是遗留死字段,
+//     PasswordManager 的随机盐已嵌入 $sm3$iterations$salt$hash 哈希串,
+//     VerifyPassword 从哈希串解析盐,不读本字段
 func createDefaultUser(db *gorm.DB) error {
 	var count int64
 
@@ -187,17 +196,26 @@ func createDefaultUser(db *gorm.DB) error {
 	// 使用新的SM3密码管理器
 	pwdManager := security.NewPasswordManager(nil)
 
+	// 确定初始密码:env 覆盖优先,否则回退到 admin123
+	bootstrapPassword := os.Getenv("SYS_ADMIN_BOOTSTRAP_PASSWORD")
+	usingDefaultPassword := false
+	if bootstrapPassword == "" {
+		bootstrapPassword = "admin123"
+		usingDefaultPassword = true
+	}
+
 	// 生成密码哈希
-	passwordHash, err := pwdManager.HashPassword("admin123")
+	passwordHash, err := pwdManager.HashPassword(bootstrapPassword)
 	if err != nil {
 		return err
 	}
 
-	// 创建默认管理员用户
+	// 创建默认管理员用户(Salt 留空:该字段是死字段,
+	// 真实盐在 PasswordManager 哈希串内,见函数顶部注释)
 	user := models.User{
 		Username: "admin",
 		Password: passwordHash,
-		Salt:     "default",
+		Salt:     "",
 		Nickname: func() *string { s := "超级管理员"; return &s }(),
 		Email:    func() *string { s := "admin@xingran.com"; return &s }(),
 		Gender:   models.GenderMale,
@@ -208,6 +226,19 @@ func createDefaultUser(db *gorm.DB) error {
 
 	if err := db.Create(&user).Error; err != nil {
 		return fmt.Errorf("创建默认用户失败: %w", err)
+	}
+
+	if usingDefaultPassword {
+		// 大声告警:使用了出厂默认密码,运维必须立刻处理
+		// (密码值本身绝不出现在日志中)
+		applogger.Warnf("=========================================================")
+		applogger.Warnf("[安全告警] 管理员账户已使用出厂默认密码 admin123")
+		applogger.Warnf("  1) 请立即登录并修改管理员密码")
+		applogger.Warnf("  2) 或重建实例前设置环境变量 SYS_ADMIN_BOOTSTRAP_PASSWORD=<强密码>")
+		applogger.Warnf("  3) 完整方案(首登强制改密)已 deferred,需登录链路改动")
+		applogger.Warnf("=========================================================")
+	} else {
+		applogger.Infof("默认管理员密码已从 SYS_ADMIN_BOOTSTRAP_PASSWORD 环境变量读取")
 	}
 
 	applogger.Infof("创建默认管理员用户成功")
