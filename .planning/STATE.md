@@ -5,7 +5,7 @@ milestone_name: Milestone History
 status: milestone_complete
 stopped_at: Milestone complete — Phases 57-61 all code-complete (Phase 58 SC#1-SC#4 E2E deferred: dev DB perf)
 last_updated: 2026-08-13T14:30:00.000Z
-last_activity: 2026-08-14 — quick-260814-211: 修复 workstation/list uuid=text(42883) + dept.leader 非 uuid 查询防御(22P02)
+last_activity: 2026-08-14 — quick-260814-ehg: 旧库菜单去重导入 dev 库(保持层级, 239 菜单/10 顶级目录) + admin 全量授权
 progress:
   total_phases: 5
   completed_phases: 5
@@ -117,6 +117,7 @@ None currently. Roadblock risk: Phase 60 AUTH-03 启用决策若选"启用",会�
 | 260812-wu5 | clean constants dead code and unify pagination constants | 2026-08-12 | 759a65a | [260812-wu5-clean-constants-dead-code-and-unify-pagi](./quick/260812-wu5-clean-constants-dead-code-and-unify-pagi/) |
 | 260814-164 | 修复 RPA Worker 注册主键 NULL(23502) + 菜单接口 N+1(context canceled 500) | 2026-08-14 | f0d0a1f / 4c2a900 | [260814-164-fix-rpa-pk-menu-n1](./quick/260814-164-fix-rpa-pk-menu-n1/) |
 | 260814-211 | 修复 workstation/list uuid=text 类型错误(42883) + dept.leader 非 uuid 查询防御(22P02) | 2026-08-14 | c9ab875 / 08d97ed | [260814-211-fix-workstation-list-uuid-text-cast-dept](./quick/260814-211-fix-workstation-list-uuid-text-cast-dept/) |
+| 260814-ehg | 旧库菜单去重导入 dev 库(保持层级) + admin 全量授权(239 菜单/10 顶级目录) | 2026-08-14 | ef1ba87 / cb81443 / e02d837 | [260814-ehg-dedupe-and-import-legacy-menu-data-into-](./quick/260814-ehg-dedupe-and-import-legacy-menu-data-into-/) |
 
 ## Deferred Items
 
