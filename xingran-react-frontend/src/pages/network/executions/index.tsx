@@ -101,8 +101,8 @@ const ConfigExecutionPage: FC = () => {
     async (record: ConfigExecution) => {
       await loadExecutionDetails(record.id);
       handleViewDetailBase(record);
-      // eslint-disable-next-line react-hooks/exhaustive-deps -- handleViewDetailBase is a stable modal handler
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleViewDetailBase is a stable modal handler
     [loadExecutionDetails]
   );
 
