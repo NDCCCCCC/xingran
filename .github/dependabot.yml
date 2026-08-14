@@ -1,0 +1,30 @@
+version: 2
+
+updates:
+  - package-ecosystem: "npm"
+    directory: "/xingran-react-frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      production-dependencies:
+        dependency-type: "production"
+      development-dependencies:
+        dependency-type: "development"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "frontend"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "ci"
