@@ -640,68 +640,58 @@ func (d *Database) InitData() error {
 	return initData(d.DB)
 }
 
-// BootstrapMissingTables 在跳过 AutoMigrate 时,直接用 raw SQL 补建缺失表。
+// BootstrapMissingTables 在跳过 AutoMigrate 时,经 gorm.Migrator().CreateTable 从 model
+// 派生补建缺失表 + 显式索引兜底。
 //
 // 设计原因: Supabase pooler (Session mode 5432) 上 GORM AutoMigrate(80+ DDL)
 // 会卡死在 dropDependent 之后,所有表都在但 sys_api_keys + sys_api_key_usage_logs
-// 永远建不出来 (database.go AutoMigrate 注册列表里也没加 &models.APIKey{})。
-// 本函数用 d.DB.Exec() 走 simple protocol 单条 DDL,避开 GORM AutoMigrate 的批量
-// statement 优化路径 —— 在 pooler 上更稳定。
+// 永远建不出来。历史上本函数用硬编码 CREATE TABLE raw SQL 补建 —— 但那成了
+// APIKey schema 的第三份拷贝(model tag + MigrateModelList 之外),model 加列即漂移(C7)。
 //
-// 安全: CREATE TABLE / INDEX IF NOT EXISTS,幂等。
-// 适用: dev/调试;生产不应绕过 AutoMigrate。
+// C7 修复: 表结构改由 models.APIKey / models.APIKeyUsageLog 经
+// gorm.Migrator().CreateTable 派生 —— 与 AutoMigrate(MigrateModelList) 同一事实源,
+// 天然防漂移。CreateTable 在 PrepareStmt:false 连接上走 simple protocol,
+// 单表单条 DDL,无 AutoMigrate 80+ DDL 批量路径的 pooler 死锁(原硬编码 DDL 的存在理由),
+// 且不带 public. 硬编码 schema 前缀(跟随 search_path)。
+//
+// 索引: model tag 之外的索引面(usage log 的查询索引等)由六条显式
+// CREATE INDEX IF NOT EXISTS 兜底,幂等可重入。
+//
+// 适用: dev/调试;生产模式(mode=release)由 core.go initDBAndData 直接 fatal,
+// 不会走到本函数。
 func (d *Database) BootstrapMissingTables() error {
+	// 1) 表结构:model 派生,先判定再补建(幂等)
+	if !d.DB.Migrator().HasTable(&models.APIKey{}) {
+		applogger.Infof("[BootstrapMissingTables] sys_api_keys 缺失,经 CreateTable 从 model 派生补建")
+		if err := d.DB.Migrator().CreateTable(&models.APIKey{}); err != nil {
+			return fmt.Errorf("创建 sys_api_keys 失败: %w", err)
+		}
+	}
+	if !d.DB.Migrator().HasTable(&models.APIKeyUsageLog{}) {
+		applogger.Infof("[BootstrapMissingTables] sys_api_key_usage_logs 缺失,经 CreateTable 从 model 派生补建")
+		if err := d.DB.Migrator().CreateTable(&models.APIKeyUsageLog{}); err != nil {
+			return fmt.Errorf("创建 sys_api_key_usage_logs 失败: %w", err)
+		}
+	}
+
+	// 2) 索引兜底:model tag 未覆盖的索引面,显式 IF NOT EXISTS 幂等补建
 	ddl := []string{
 		// Phase 58 SC#1-SC#4 + Phase 60 AUTH-03 + SEC-01 都依赖此表
-		`CREATE TABLE IF NOT EXISTS public.sys_api_keys (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    created_at TIMESTAMPTZ,
-    updated_at TIMESTAMPTZ,
-    deleted_at TIMESTAMPTZ,
-    created_by VARCHAR(255),
-    updated_by VARCHAR(255),
-    version BIGINT,
-    name VARCHAR(100) NOT NULL,
-    key_hash VARCHAR(64) NOT NULL UNIQUE,
-    salt VARCHAR(32) NOT NULL,
-    key_prefix VARCHAR(12) NOT NULL,
-    user_id UUID,
-    expires_at TIMESTAMPTZ,
-    last_used_at TIMESTAMPTZ,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    scopes JSONB NOT NULL DEFAULT '[]'::jsonb,
-    ip_whitelist JSONB NOT NULL DEFAULT '[]'::jsonb,
-    description VARCHAR(500),
-    inherit_perms BOOLEAN NOT NULL DEFAULT FALSE
-)`,
-		`CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON public.sys_api_keys(user_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_api_keys_key_prefix ON public.sys_api_keys(key_prefix)`,
-		`CREATE INDEX IF NOT EXISTS idx_api_keys_deleted_at ON public.sys_api_keys(deleted_at)`,
-		`CREATE TABLE IF NOT EXISTS public.sys_api_key_usage_logs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    api_key_id UUID NOT NULL,
-    user_id UUID NOT NULL,
-    method VARCHAR(10),
-    path VARCHAR(500),
-    status_code INTEGER,
-    client_ip VARCHAR(50),
-    user_agent TEXT,
-    duration INTEGER,
-    success BOOLEAN,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-)`,
-		`CREATE INDEX IF NOT EXISTS idx_api_key_logs_api_key_id ON public.sys_api_key_usage_logs(api_key_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_api_key_logs_created_at ON public.sys_api_key_usage_logs(created_at)`,
-		`CREATE INDEX IF NOT EXISTS idx_api_key_logs_user_id ON public.sys_api_key_usage_logs(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON sys_api_keys(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_keys_key_prefix ON sys_api_keys(key_prefix)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_keys_deleted_at ON sys_api_keys(deleted_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_key_logs_api_key_id ON sys_api_key_usage_logs(api_key_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_key_logs_created_at ON sys_api_key_usage_logs(created_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_key_logs_user_id ON sys_api_key_usage_logs(user_id)`,
 	}
 
 	for i, stmt := range ddl {
-		applogger.Infof("[BootstrapMissingTables] executing %d/%d", i+1, len(ddl))
+		applogger.Infof("[BootstrapMissingTables] executing index %d/%d", i+1, len(ddl))
 		if err := d.DB.Exec(stmt).Error; err != nil {
 			return fmt.Errorf("DDL[%d] failed: %w", i+1, err)
 		}
 	}
-	applogger.Infof("[BootstrapMissingTables] %d statements OK", len(ddl))
+	applogger.Infof("[BootstrapMissingTables] tables model-derived, %d index statements OK", len(ddl))
 	return nil
 }
 
