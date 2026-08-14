@@ -100,7 +100,10 @@ func TestGrantNewMenuToRolesHavingParent_OnlyAffectsParentRoles(t *testing.T) {
 
 // TestGrantNewMenuToRolesHavingParent_ParameterizedOrControlled 源码 grep 断言:
 // helper SQL 含 INSERT INTO sys_role_menu + JOIN sys_menu m ON rm.menu_id = m.id +
-// WHERE m.menu_name = + ON CONFLICT DO NOTHING。
+// WHERE m.menu_name = + ON CONFLICT DO NOTHING + 参数化占位符 + 无 fmt.Sprintf。
+//
+// C6 修复:GrantNewMenuToRolesHavingParent 必须用 $1::uuid / $2 参数化绑定,
+// 消除任意输入的 SQL 注入面(原 fmt.Sprintf 拼接 SQL)。
 func TestGrantNewMenuToRolesHavingParent_ParameterizedOrControlled(t *testing.T) {
 	src, err := os.ReadFile(filepath.Join(".", "menu_grant_helpers.go"))
 	if err != nil {
@@ -113,11 +116,18 @@ func TestGrantNewMenuToRolesHavingParent_ParameterizedOrControlled(t *testing.T)
 		"JOIN sys_menu m ON rm.menu_id = m.id",
 		"WHERE m.menu_name =",
 		"ON CONFLICT DO NOTHING",
+		"$1::uuid",     // 参数化占位符(newMenuID, ::uuid cast)
+		"menu_name = $2", // 参数化占位符(parentMenuName)
 	}
 	for _, w := range want {
 		if !strings.Contains(s, w) {
 			t.Fatalf("helper source missing required SQL fragment: %q", w)
 		}
+	}
+
+	// C6 反向断言:源代码不得含 fmt.Sprintf(SQL 字符串插值已参数化)。
+	if strings.Contains(s, "fmt.Sprintf") {
+		t.Fatalf("helper source must NOT contain fmt.Sprintf (SQL must be parameterized, C6)")
 	}
 
 	// 守卫:SQLite 路径必须 return nil。
