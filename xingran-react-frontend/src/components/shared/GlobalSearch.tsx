@@ -180,6 +180,7 @@ const GlobalSearch: FC = () => {
         }
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- filteredResults.length is redundant with filteredResults
     [visible, filteredResults.length, selectedIndex, handleResultClick, filteredResults]
   );
 

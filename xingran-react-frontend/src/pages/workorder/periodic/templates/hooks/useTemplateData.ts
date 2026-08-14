@@ -48,7 +48,7 @@ export interface UseTemplateDataReturn {
 export function useTemplateData(
   searchForm: FormInstance<unknown>,
   current: number,
-  pageSize: number
+  _pageSize: number
 ): UseTemplateDataReturn {
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
@@ -105,7 +105,7 @@ export function useTemplateData(
         setLoading(false);
       }
     },
-    [current, pageSize, searchForm, message, fetchStats]
+    [current, searchForm, message, fetchStats]
   );
 
   // 获取分类列表

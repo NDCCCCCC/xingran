@@ -101,7 +101,7 @@ export const IPV4_REGEX =
  * - 后端 NormalizeMACAddress 会归一化为 AA:BB:CC:DD:EE:FF
  * - 客户端 regex 仅 UX hint, 后端 service 为真相源
  */
-export const MAC_REGEX = /^([0-9A-Fa-f]{2}[:\-]?){5}[0-9A-Fa-f]{2}$/;
+export const MAC_REGEX = /^([0-9A-Fa-f]{2}[:-]?){5}[0-9A-Fa-f]{2}$/;
 
 /**
  * 端口绑定 op 枚举 (v1.20.1 BIND-01/02)

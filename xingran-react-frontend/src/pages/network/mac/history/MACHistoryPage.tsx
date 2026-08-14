@@ -35,7 +35,6 @@ import {
   DatePicker,
   List,
   Grid,
-  Spin,
   Tooltip,
   Skeleton,
   Typography,
@@ -159,36 +158,42 @@ const MACHistoryPage: React.FC = () => {
       setCustomRange([dayjs(startTime), dayjs(endTime)]);
       setTimeRange({ startTime, endTime });
     }
-  }, [searchParams, form]);
+  }, [searchParams, form, setActivePreset]);
 
   // 切换预设
-  const handlePresetClick = useCallback((preset: Preset) => {
-    if (preset.key === "custom") {
-      setActivePreset("custom");
+  const handlePresetClick = useCallback(
+    (preset: Preset) => {
+      if (preset.key === "custom") {
+        setActivePreset("custom");
+        setCustomRange(null);
+        return;
+      }
+      setActivePreset(preset.key);
       setCustomRange(null);
-      return;
-    }
-    setActivePreset(preset.key);
-    setCustomRange(null);
-    const start = dayjs().subtract(preset.amount, preset.unit).toISOString();
-    const end = dayjs().toISOString();
-    setTimeRange({ startTime: start, endTime: end });
-    setCurrent(1);
-  }, []);
+      const start = dayjs().subtract(preset.amount, preset.unit).toISOString();
+      const end = dayjs().toISOString();
+      setTimeRange({ startTime: start, endTime: end });
+      setCurrent(1);
+    },
+    [setActivePreset]
+  );
 
   // 切换自定义 RangePicker
-  const handleCustomRangeChange = useCallback<NonNullable<RangePickerOnChange>>((values) => {
-    const arr = values as [Dayjs, Dayjs] | null;
-    setCustomRange(arr);
-    if (arr && arr[0] && arr[1]) {
-      setActivePreset("custom");
-      setTimeRange({
-        startTime: arr[0].toISOString(),
-        endTime: arr[1].toISOString(),
-      });
-      setCurrent(1);
-    }
-  }, []);
+  const handleCustomRangeChange = useCallback<NonNullable<RangePickerOnChange>>(
+    (values) => {
+      const arr = values as [Dayjs, Dayjs] | null;
+      setCustomRange(arr);
+      if (arr && arr[0] && arr[1]) {
+        setActivePreset("custom");
+        setTimeRange({
+          startTime: arr[0].toISOString(),
+          endTime: arr[1].toISOString(),
+        });
+        setCurrent(1);
+      }
+    },
+    [setActivePreset]
+  );
 
   // 搜索参数(交给 useTableQuery)
   const filters = useMemo<Partial<MACHistoryQueryParams>>(
@@ -217,7 +222,7 @@ const MACHistoryPage: React.FC = () => {
   const total = pageData?.total ?? 0;
 
   // 列配置(D-08)
-  const { visibleColumns, config } = useColumnConfig({
+  const { visibleColumns, config: _config } = useColumnConfig({
     pageKey: "mac.history.list",
     defaultColumns: defaultHistoryColumns,
     enableCache: true,
@@ -312,6 +317,7 @@ const MACHistoryPage: React.FC = () => {
         ),
       },
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- navigate from useNavigate is stable
     [expandedRowKeys, navigate]
   );
 
@@ -339,7 +345,7 @@ const MACHistoryPage: React.FC = () => {
     });
     setCurrent(1);
     setSearchParams(new URLSearchParams());
-  }, [form, setSearchParams]);
+  }, [form, setSearchParams, setActivePreset]);
 
   // 14-04 导出按钮处理器 — exportScope = 'current' 时透传当前过滤;'all' 时只保留时间范围
   const handleExport = useCallback(
@@ -388,6 +394,7 @@ const MACHistoryPage: React.FC = () => {
         setExporting(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [exporting, form, timeRange]
   );
 

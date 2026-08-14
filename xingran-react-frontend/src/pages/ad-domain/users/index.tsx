@@ -37,12 +37,10 @@ import {
   batchSyncADUsersDirect,
   type ADUser,
   type ADOUNode,
-  type BatchSyncResult,
 } from "@/lib/adDomainApi";
 import type { UnknownError } from "@/types/common";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { useADConfigs } from "@/hooks/useADConfigs";
-import type { ADConfig } from "@/lib/adDomainApi";
 
 import type { FC } from "react";
 import { usePagination } from "@/hooks/usePagination";
@@ -65,7 +63,7 @@ const ADUserPage: FC = () => {
   const [isAsc, setIsAsc] = useState<boolean>(true);
 
   // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+  const { paginationProps, setCurrent, setTotal } = usePagination();
 
   const [ouTree, setOUTree] = useState<ADOUNode[]>([]);
   const [ouSelectVisible, setOUSelectVisible] = useState(false);
@@ -78,7 +76,7 @@ const ADUserPage: FC = () => {
 
   // Batch sync state
   const [selectedUsers, setSelectedUsers] = useState<ADUser[]>([]);
-  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [_selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [selectAllMode, setSelectAllMode] = useState(false);
   const [selectAllTotal, setSelectAllTotal] = useState(0);
   const [batchSyncLoading, setBatchSyncLoading] = useState(false);
@@ -129,6 +127,7 @@ const ADUserPage: FC = () => {
       fetchOUTree();
       fetchUsers();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchOUTree/fetchUsers recreated each render; disable to avoid loop
   }, [selectedConfig, paginationProps.current, paginationProps.pageSize]);
 
   const fetchUsers = async (sortCol?: string, sortAsc?: boolean) => {
@@ -276,7 +275,7 @@ const ADUserPage: FC = () => {
         setSelectAllTotal(allUserIds.length);
         message.success(`已选择所有 ${allUserIds.length} 个用户`);
       }
-    } catch (error) {
+    } catch (_error) {
       message.error("获取所有用户失败");
     } finally {
       setLoadingAllUserIds(false);
@@ -356,7 +355,7 @@ const ADUserPage: FC = () => {
             // 刷新用户列表
             fetchUsers();
           }
-        } catch (error) {
+        } catch (_error) {
           message.error("批量同步失败");
         } finally {
           setBatchSyncLoading(false);
@@ -381,6 +380,7 @@ const ADUserPage: FC = () => {
     }));
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- buildTreeSelectData recreated each render; disable to avoid loop
   const treeSelectData = useMemo(() => buildTreeSelectData(ouTree), [ouTree]);
 
   const handleQuickOUSelect = (ouDn: string) => {
@@ -425,7 +425,7 @@ const ADUserPage: FC = () => {
       key: "ouDn",
       width: 300,
       ellipsis: true,
-      render: (ouDn: string, record: ADUser) => {
+      render: (ouDn: string, _record: ADUser) => {
         if (!ouDn) return "-";
         // 获取当前配置的BaseDN
         const currentConfig = configs.find((c) => c.id === selectedConfig);

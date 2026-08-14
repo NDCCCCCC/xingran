@@ -111,6 +111,7 @@ const FileUpload: FC<FileUploadProps> = ({
 
       return true;
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [maxSize, isFileTypeAccepted]
   );
 
@@ -121,6 +122,7 @@ const FileUpload: FC<FileUploadProps> = ({
       onUploadSuccess?.(uploadFile, response as FileUploadResponse);
       message.success("上传成功");
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [onUploadSuccess]
   );
 
@@ -130,6 +132,7 @@ const FileUpload: FC<FileUploadProps> = ({
       onUploadError?.(uploadFile, error);
       message.error("上传失败");
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [onUploadError]
   );
 

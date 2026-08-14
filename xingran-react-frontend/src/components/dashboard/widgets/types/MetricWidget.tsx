@@ -2,7 +2,6 @@ import { useMemo, memo } from "react";
 import { Progress } from "antd";
 import type { ProgressDisplayConfig, WidgetConfig } from "@/types/dashboard";
 import { BaseWidget } from "../base/BaseWidget";
-import type { BaseWidgetProps } from "../base/BaseWidget";
 import { useWidgetData } from "@/hooks/useWidgetData";
 
 interface MetricWidgetProps {

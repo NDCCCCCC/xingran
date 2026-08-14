@@ -26,7 +26,6 @@ import {
   ClockCircleOutlined,
 } from "@ant-design/icons";
 
-import type { JobInfo } from "./types";
 import {
   STATUS_OPTIONS,
   MISFIRE_POLICY_OPTIONS,
@@ -50,7 +49,15 @@ const JobManager: FC = () => {
   const { paginationProps, setCurrent, setPageSize } = usePagination();
 
   // 使用数据管理 Hook
-  const { jobs, jobLogs, jobLogStats, loading, total, fetchJobs, fetchJobLogs } = useJobData({
+  const {
+    jobs,
+    jobLogs,
+    jobLogStats,
+    loading,
+    total: _total,
+    fetchJobs,
+    fetchJobLogs,
+  } = useJobData({
     searchForm,
     current: paginationProps.current ?? 1,
     pageSize: paginationProps.pageSize ?? 10,
@@ -60,7 +67,7 @@ const JobManager: FC = () => {
   const {
     modalVisible,
     modalTitle,
-    isEdit,
+    isEdit: _isEdit,
     logDrawerVisible,
     selectedJob,
     setModalVisible,
@@ -81,6 +88,7 @@ const JobManager: FC = () => {
   // 初始化加载
   useEffect(() => {
     fetchJobs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- paginationProps.current is intentionally stable
   }, [paginationProps.current, paginationProps.pageSize, fetchJobs]);
 
   // 表格列
@@ -106,7 +114,7 @@ const JobManager: FC = () => {
   };
 
   // 分页变化
-  const handleTableChange = (pagination: { current?: number; pageSize?: number }) => {
+  const _handleTableChange = (pagination: { current?: number; pageSize?: number }) => {
     setCurrent(pagination.current ?? 1);
     setPageSize(pagination.pageSize ?? 10);
     fetchJobs();

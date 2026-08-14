@@ -6,7 +6,6 @@
 import { Space, Tag } from "antd";
 import { SafetyCertificateOutlined } from "@ant-design/icons";
 import type { TreeDataNode } from "antd";
-import type { Key } from "antd/es/table/interface";
 import { formatDateTime } from "@/utils/datetime";
 import { ModernTag } from "@/components/shared/ModernTag";
 

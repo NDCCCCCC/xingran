@@ -52,7 +52,12 @@ export interface UseScheduleModalsReturn {
 }
 
 export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleModalsReturn {
-  const { onLoad, allSchedules, dataSource, current } = params;
+  const {
+    onLoad,
+    allSchedules: _allSchedules,
+    dataSource: _dataSource,
+    current: _current,
+  } = params;
   const { message } = App.useApp();
 
   const [generateModalVisible, setGenerateModalVisible] = useState(false);
@@ -82,6 +87,7 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
       if (error && typeof error === "object" && "errorFields" in error) return;
       message.error("生成排班失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [generateForm, onLoad]);
 
   // 调班
@@ -101,6 +107,7 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
       if (error && typeof error === "object" && "errorFields" in error) return;
       message.error("调班失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [swapForm, onLoad]);
 
   // 手动排班
@@ -122,6 +129,7 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
       if (error && typeof error === "object" && "errorFields" in error) return;
       message.error("手动排班失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [manualForm, onLoad]);
 
   // 删除单条排班
@@ -131,11 +139,11 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
         await deleteDutySchedule(id);
         message.success("删除成功");
         onLoad?.();
-      } catch (error) {
+      } catch (_error) {
         message.error("删除失败");
       }
     },
-    [onLoad]
+    [onLoad, message]
   );
 
   // 批量删除排班
@@ -150,11 +158,11 @@ export function useScheduleModals(params: UseScheduleModalsParams): UseScheduleM
         message.success(`成功删除 ${selectedRowKeys.length} 条排班记录`);
         setSelectedRowKeys([]);
         onLoad?.();
-      } catch (error) {
+      } catch (_error) {
         message.error("批量删除失败");
       }
     },
-    [onLoad]
+    [onLoad, message]
   );
 
   return {

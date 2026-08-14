@@ -104,6 +104,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
         throw error; // 重新抛出错误以保持 Modal 打开
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [onLoad]
   );
 
@@ -113,7 +114,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
       const hasChildren = record.children && record.children.length > 0;
 
       // 创建一个可响应状态更新的确认框
-      let localCascade = false;
+      let _localCascade = false;
       let modalInstance: ModalInstanceWithCheckbox | null = null;
 
       const DeleteConfirmContent = () => {
@@ -126,7 +127,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
           const newValue = e.target.checked;
           setChecked(newValue);
           checkboxRef.current = newValue;
-          localCascade = newValue;
+          _localCascade = newValue;
         };
 
         // 将 checkboxRef 挂载到 modalInstance 上，供 onOk 访问
@@ -274,6 +275,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
         }
       },
     }) as unknown as ModalInstanceWithCheckbox;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [selectedRowKeys, onLoad, setSelectedRowKeys]);
 
   // 保存菜单
@@ -314,6 +316,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
         console.error("保存菜单失败:", error);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [editingMenu, onLoad, onSaveSuccess]
   );
 

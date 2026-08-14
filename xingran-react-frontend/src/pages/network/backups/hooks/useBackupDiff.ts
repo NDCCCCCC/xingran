@@ -3,7 +3,7 @@
  */
 
 import { useState, useCallback, useRef, type UIEvent } from "react";
-import type { ConfigBackup, BaseResponse } from "@/types";
+import type { ConfigBackup } from "@/types";
 import type { DiffResult } from "../types";
 import { computeDiff } from "../utils";
 import { post } from "@/lib/api";

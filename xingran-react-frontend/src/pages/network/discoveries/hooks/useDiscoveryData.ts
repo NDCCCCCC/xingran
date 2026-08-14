@@ -3,9 +3,9 @@
  * 设备发现数据管理 Hook
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { App } from "antd";
-import type { DeviceDiscovery, Department, BaseResponse, PageResponse } from "@/types";
+import type { DeviceDiscovery, Department, PageResponse } from "@/types";
 import { post } from "@/lib/api";
 import type { DiscoveryStatistics, ModalState } from "../types";
 
@@ -116,9 +116,10 @@ export function useDiscoveryData(params: UseDiscoveryDataParams): UseDiscoveryDa
         {}
       );
       setDiscoveredDevices(result.data?.devices || []);
-    } catch (error) {
+    } catch (_error) {
       message.error("获取结果失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   return {

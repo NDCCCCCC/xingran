@@ -24,7 +24,6 @@ import {
 import {
   FileTextOutlined,
   CameraOutlined,
-  LoadingOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   ClockCircleOutlined,
@@ -297,6 +296,7 @@ export function ExecutionDetailModal({ open, execution, onClose }: ExecutionDeta
       message.error("下载失败");
       console.error("下载执行产物失败:", error);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [execution?.id]);
 
   if (!execution) return null;

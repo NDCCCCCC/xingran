@@ -5,8 +5,7 @@
 
 import { useState, useMemo, type FC } from "react";
 import { App, Modal, Checkbox, Space, Button } from "antd";
-import { DownloadOutlined, CheckOutlined, CloseOutlined } from "@ant-design/icons";
-import { getAccessToken } from "@/utils/authHelpers";
+import { DownloadOutlined } from "@ant-design/icons";
 
 export interface EntityType {
   key: string;
@@ -91,7 +90,7 @@ const BatchExportModal: FC<BatchExportModalProps> = ({
   );
 
   // 响应式列数配置
-  const checkboxColSpan = useMemo(() => {
+  const _checkboxColSpan = useMemo(() => {
     // 桌面 3 列，平板 2 列，移动 1 列
     if (typeof window !== "undefined") {
       if (window.innerWidth >= 992) return 8;

@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { FC } from "react";
-import { Table, Button, Space, Form, Input, Select, Card, Row, Col, Statistic, App } from "antd";
+import { Table, Button, Space, Form, Select, Card, Row, Col, Statistic, App } from "antd";
 import {
   ThunderboltOutlined,
   SearchOutlined,
@@ -14,12 +14,11 @@ import {
   CloseCircleOutlined,
   ClockCircleOutlined,
   ApiOutlined,
-  ExportOutlined,
 } from "@ant-design/icons";
 import type { ConfigExecution, ConfigExecutionDetail, NetworkDevice } from "@/types";
 import { batchExport } from "@/lib/api/networkApi";
 import { useCommandData, useCommandModals } from "./hooks";
-import { getExecutionColumns, deviceColumns } from "./columns";
+import { getExecutionColumns } from "./columns";
 import { CommandDispatchModal, CommandDetailDrawer } from "./modals";
 import { STATUS_OPTIONS } from "./constants";
 import { usePagination } from "@/hooks/usePagination";
@@ -27,7 +26,6 @@ import { useServerSort } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
-import { DownloadOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
 
@@ -70,7 +68,7 @@ const CommandDispatch: FC = () => {
     executions,
     execTotal,
     statistics,
-    setExecTotal,
+    setExecTotal: _setExecTotal,
     loadExecutions,
     loadStatistics,
     loadDevices,
@@ -89,6 +87,7 @@ const CommandDispatch: FC = () => {
 
   useEffect(() => {
     Promise.all([loadExecutions(), loadStatistics()]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional dependency for re-run on change
   }, [paginationProps.current, paginationProps.pageSize, loadExecutions, loadStatistics]);
 
   // 操作成功后刷新
@@ -122,6 +121,7 @@ const CommandDispatch: FC = () => {
         getSortOrder: (field) =>
           orderByColumn === field ? ((cmdSortOrder ?? null) as "ascend" | "descend" | null) : null,
       }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleCancelExecution from hook is stable enough
     [handleViewDetail, handleSuccess, orderByColumn, cmdSortOrder]
   );
 

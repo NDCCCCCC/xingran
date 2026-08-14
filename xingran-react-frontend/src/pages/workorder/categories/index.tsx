@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import type { FC } from "react";
 import {
   Button,
@@ -94,6 +94,7 @@ const WorkOrderCategoryPage: FC = () => {
   useEffect(() => {
     // 使用 setTimeout 避免同步 setState
     setTimeout(() => fetchList(), 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAdd = (parentId?: string) => {

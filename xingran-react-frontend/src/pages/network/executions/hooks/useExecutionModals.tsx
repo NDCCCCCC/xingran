@@ -98,7 +98,7 @@ export function useExecutionModals(params: UseExecutionModalsParams): UseExecuti
         message.error("创建执行任务失败");
       }
     },
-    [selectedRowKeys, loadExecutions, setDataState]
+    [selectedRowKeys, loadExecutions, setDataState, message]
   );
 
   // 取消执行
@@ -108,15 +108,15 @@ export function useExecutionModals(params: UseExecutionModalsParams): UseExecuti
         await post(`/network/executions/${id}/cancel`, {});
         message.success("取消成功");
         loadExecutions();
-      } catch (error) {
+      } catch (_error) {
         message.error("取消失败");
       }
     },
-    [loadExecutions]
+    [loadExecutions, message]
   );
 
   // 查看执行详情
-  const handleViewDetail = useCallback(async (record: Record<string, unknown>) => {
+  const handleViewDetail = useCallback(async (_record: Record<string, unknown>) => {
     // This should be called from the main component with access to loadExecutionDetails
     setModalState((prev) => ({ ...prev, detailDrawerVisible: true }));
   }, []);

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 周期性工单模板管理页面
  * Periodic Work Order Template Management Page
  */
@@ -233,12 +233,12 @@ const PeriodicTemplatePage: FC = () => {
   const [logsDrawerVisible, setLogsDrawerVisible] = useState(false);
 
   // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize } = usePagination();
+  const { paginationProps, setCurrent: _setCurrent, setPageSize: _setPageSize } = usePagination();
 
   // 使用数据管理 Hook
   const {
     dataSource,
-    total,
+    total: _total,
     loading,
     categories,
     users,

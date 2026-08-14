@@ -44,13 +44,7 @@ import {
   deleteAPIKey,
   toggleAPIKeyStatus,
 } from "@/api/apikey";
-import type {
-  APIKey,
-  CreateAPIKeyRequest,
-  UpdateAPIKeyRequest,
-  APIKeyListParams,
-} from "@/types/apikey";
-import type { PageData } from "@/types/apikey";
+import type { APIKey, CreateAPIKeyRequest, UpdateAPIKeyRequest } from "@/types/apikey";
 import { formatDateTime } from "@/utils/datetime";
 import LogsModal from "./LogsModal";
 
@@ -94,7 +88,7 @@ async function copyToClipboard(
     await navigator.clipboard.writeText(text);
     message.success("已复制到剪贴板");
     return true;
-  } catch (error) {
+  } catch (_error) {
     message.error("复制失败，请手动复制");
     return false;
   }
@@ -174,6 +168,7 @@ const APIKeyManagement: FC = () => {
       // 服务端排序透传（避坑：详见 memory server-sort-loadfunc-param-drop）
       ...(sortField && { orderByColumn: sortField, isAsc: sortOrder === "ascend" }),
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- individual pagination fields are already tracked
   }, [
     pagination.current,
     pagination.pageSize,
@@ -202,6 +197,7 @@ const APIKeyManagement: FC = () => {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [queryParams]);
 
   /**
@@ -316,6 +312,7 @@ const APIKeyManagement: FC = () => {
         message.error("删除失败，请稍后重试");
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [fetchData]
   );
 
@@ -333,6 +330,7 @@ const APIKeyManagement: FC = () => {
         message.error("操作失败，请稍后重试");
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [fetchData]
   );
 
@@ -390,6 +388,7 @@ const APIKeyManagement: FC = () => {
         message.error("操作失败，请稍后重试");
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [form, modalType, editingRecord, fetchData]);
 
   /**
@@ -407,6 +406,7 @@ const APIKeyManagement: FC = () => {
     setFilterStatus(undefined);
     setFilterScope(undefined);
     setPagination((prev) => ({ ...prev, current: 1 }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setters from useState are stable
   }, []);
 
   /**
@@ -453,7 +453,7 @@ const APIKeyManagement: FC = () => {
         width: 150,
         sorter: true,
         sortOrder: sortField === "name" ? sortOrder : undefined,
-        render: (text, record) => (
+        render: (text, _record) => (
           <Space>
             <KeyOutlined />
             {text}
@@ -615,6 +615,7 @@ const APIKeyManagement: FC = () => {
         ),
       },
     ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [handleView, handleEdit, handleToggleStatus, handleViewLogs, handleDelete, sortField, sortOrder]
   );
 

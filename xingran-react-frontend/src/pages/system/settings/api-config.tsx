@@ -137,7 +137,7 @@ const APIConfigPage: FC = () => {
       await deleteAPINotificationConfig(id);
       message.success("删除成功");
       loadConfigs();
-    } catch (error) {
+    } catch (_error) {
       message.error("删除失败");
     }
   };
@@ -250,6 +250,7 @@ const APIConfigPage: FC = () => {
 
   useEffect(() => {
     loadConfigs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paginationProps.current, paginationProps.pageSize, configTypeFilter]);
 
   return (

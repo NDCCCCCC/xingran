@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from "react";
 import { App, Form, Select, Button, Card, Space, Divider, ColorPicker } from "antd";
-import { BgColorsOutlined, SyncOutlined, SaveOutlined } from "@ant-design/icons";
+import { SyncOutlined, SaveOutlined } from "@ant-design/icons";
 import type { ThemeConfiguration } from "@/types/config";
 import {
   getDefaultThemeConfig,
@@ -69,6 +69,7 @@ const DefaultThemePage: React.FC = () => {
     };
 
     loadConfig();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);
 
   // 保存默认主题配置

@@ -54,6 +54,7 @@ export function useADConfigs(options: UseADConfigsOptions = {}) {
   // 组件挂载时获取配置
   useEffect(() => {
     fetchConfigs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
   }, []);
 
   // 手动刷新配置列表

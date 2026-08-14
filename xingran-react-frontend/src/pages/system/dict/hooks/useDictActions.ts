@@ -128,6 +128,7 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
         handleApiError(error, "批量删除");
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [loadDictTypes, loadTypeStatistics, invalidateAllDicts]
   );
 
@@ -193,6 +194,7 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
         handleApiError(error, "批量删除");
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [loadDictData, loadDataStatistics, invalidateAllDicts]
   );
 
@@ -205,6 +207,7 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
     } catch {
       message.error("刷新缓存失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [invalidateAllDicts]);
 
   // 打开类型编辑模态框
@@ -237,6 +240,7 @@ export function useDictActions(params: UseDictActionsParams): UseDictActionsRetu
       }
       setDataModalVisible(true);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [selectedType]
   );
 

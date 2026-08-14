@@ -9,7 +9,6 @@ import { Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { TableDisplayConfig, WidgetConfig } from "@/types/dashboard";
 import { BaseWidget } from "../base/BaseWidget";
-import type { BaseWidgetProps } from "../base/BaseWidget";
 import { useWidgetData } from "@/hooks/useWidgetData";
 
 interface TableWidgetProps {
@@ -30,6 +29,7 @@ export const TableWidget: React.FC<TableWidgetProps> = ({ widget, display, onEdi
   // 使用useWidgetData直接获取数据
   const { data, loading, error, refresh } = useWidgetData(widget);
   // 构建表格列配置
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const columns = useMemo<ColumnsType<Record<string, unknown>>>(() => {
     // 如果配置了列，使用配置的列
     if (display.columns && display.columns.length > 0) {

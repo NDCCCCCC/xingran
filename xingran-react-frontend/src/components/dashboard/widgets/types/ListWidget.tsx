@@ -9,7 +9,6 @@ import { List } from "antd";
 import { ClockCircleOutlined } from "@ant-design/icons";
 import type { ListDisplayConfig, WidgetConfig } from "@/types/dashboard";
 import { BaseWidget } from "../base/BaseWidget";
-import type { BaseWidgetProps } from "../base/BaseWidget";
 import { useWidgetData } from "@/hooks/useWidgetData";
 
 interface ListWidgetProps {

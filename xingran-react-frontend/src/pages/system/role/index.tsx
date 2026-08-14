@@ -1,9 +1,9 @@
-﻿/**
+/**
  * 角色管理页面
  * Role Management Page
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo, type FC } from "react";
+import { useEffect, useCallback, useRef, useMemo, type FC } from "react";
 import {
   Table,
   Button,
@@ -170,9 +170,9 @@ const RoleManagement: FC = () => {
   const {
     editingRole,
     editModalVisible,
-    pendingFormData,
+    pendingFormData: _pendingFormData,
     selectedRowKeys,
-    setEditingRole,
+    setEditingRole: _setEditingRole,
     setEditModalVisible,
     setSelectedRowKeys,
     handleAdd,

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 系统字典管理页面
  * System Dictionary Management Page
  */
@@ -276,14 +276,13 @@ const DictManagement: FC = () => {
   });
 
   // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+  const { paginationProps, setCurrent, setPageSize } = usePagination();
 
   // 使用数据管理 Hook
   const {
     dictTypes,
     dictDataList,
     loading,
-    total,
     selectedType,
     typeStatistics,
     dataStatistics,
@@ -432,6 +431,7 @@ const DictManagement: FC = () => {
       });
       loadTypeStatistics();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional dependency for re-run on change
   }, [
     activeTab,
     paginationProps.current,
@@ -449,6 +449,7 @@ const DictManagement: FC = () => {
       });
       loadDataStatistics();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional dependency for re-run on change
   }, [
     activeTab,
     selectedType,

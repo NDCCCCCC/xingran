@@ -7,7 +7,6 @@ import { Modal, Form, Input, Select, Row, Col, Space } from "antd";
 import { EyeOutlined, LikeOutlined } from "@ant-design/icons";
 import type { FormInstance } from "antd/es/form";
 import type { KnowledgeArticle, KnowledgeCategory, KnowledgeTag } from "@/lib/knowledgeApi";
-import { KnowledgeArticleStatus } from "@/lib/knowledgeApi";
 import { STATUS_OPTIONS } from "../constants";
 
 const { Option } = Select;

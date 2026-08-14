@@ -92,6 +92,7 @@ export function useRoleData(): UseRoleDataReturn {
 
   // 初次挂载时加载统计;后续由 useRoleActions 在增删改后调用 loadStatistics 刷新。
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadStatistics();
   }, [loadStatistics]);
 

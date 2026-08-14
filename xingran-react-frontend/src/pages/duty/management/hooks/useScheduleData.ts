@@ -60,12 +60,13 @@ export function useScheduleData() {
         setTotal(result.data?.total ?? 0);
         if (result.data?.current) setCurrent(result.data.current);
         if (result.data?.pageSize) setPageSize(result.data.pageSize);
-      } catch (error) {
+      } catch (_error) {
         message.error("获取排班列表失败");
       } finally {
         setLoading(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [current, pageSize]
   );
 
@@ -130,11 +131,12 @@ export function useScheduleData() {
         await fetchList();
         await fetchWeeklyDuty(currentWeekStart);
         return true;
-      } catch (error) {
+      } catch (_error) {
         message.error("生成排班失败");
         return false;
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [fetchList, fetchWeeklyDuty, currentWeekStart]
   );
 
@@ -147,11 +149,12 @@ export function useScheduleData() {
         await fetchList();
         await fetchWeeklyDuty(currentWeekStart);
         return true;
-      } catch (error) {
+      } catch (_error) {
         message.error("调班失败");
         return false;
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [fetchList, fetchWeeklyDuty, currentWeekStart]
   );
 
@@ -167,11 +170,12 @@ export function useScheduleData() {
         await fetchList();
         await fetchWeeklyDuty(currentWeekStart);
         return true;
-      } catch (error) {
+      } catch (_error) {
         message.error("手动排班失败");
         return false;
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [fetchList, fetchWeeklyDuty, currentWeekStart]
   );
 
@@ -186,11 +190,12 @@ export function useScheduleData() {
         await fetchList(newPage);
         await fetchWeeklyDuty(currentWeekStart);
         return true;
-      } catch (error) {
+      } catch (_error) {
         message.error("删除失败");
         return false;
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [schedules.length, current, fetchList, fetchWeeklyDuty, currentWeekStart]
   );
 
@@ -211,11 +216,12 @@ export function useScheduleData() {
         await fetchList(newPage);
         await fetchWeeklyDuty(currentWeekStart);
         return true;
-      } catch (error) {
+      } catch (_error) {
         message.error("批量删除失败");
         return false;
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [schedules.length, current, fetchList, fetchWeeklyDuty, currentWeekStart]
   );
 

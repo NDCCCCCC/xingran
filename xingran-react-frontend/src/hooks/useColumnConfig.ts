@@ -172,7 +172,7 @@ export function useColumnConfig(options: UseColumnConfigOptions) {
     async (newConfig: ColumnConfig[]) => {
       setSaving(true);
       try {
-        const columnConfigs: ColumnConfigItem[] = newConfig.map((col, index) => ({
+        const columnConfigs: ColumnConfigItem[] = newConfig.map((col, _index) => ({
           columnKey: col.key,
           visible: col.visible,
           width: col.width || 0,
@@ -198,6 +198,7 @@ export function useColumnConfig(options: UseColumnConfigOptions) {
         setSaving(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [pageKey, enableCache]
   );
 
@@ -221,6 +222,7 @@ export function useColumnConfig(options: UseColumnConfigOptions) {
     } finally {
       setSaving(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [pageKey, defaultColumns, enableCache]);
 
   // 切换列可见性

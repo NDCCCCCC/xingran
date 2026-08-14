@@ -11,7 +11,7 @@ const DANGEROUS_PATH_PATTERNS = [/\.\./, /\\/, /\.html$/i, /\.js$/i];
 
 const XSS_PATTERNS = [/<script/i, /javascript:/i, /onerror=/i, /onload=/i, /onclick=/i];
 
-const ALLOWED_COMPONENT_PREFIXES = ["pages/", "components/"];
+const _ALLOWED_COMPONENT_PREFIXES = ["pages/", "components/"];
 
 /**
  * 路由生成器

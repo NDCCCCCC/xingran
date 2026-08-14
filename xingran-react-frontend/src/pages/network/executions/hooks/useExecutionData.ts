@@ -3,15 +3,9 @@
  * 配置执行数据管理 Hook
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { App } from "antd";
-import type {
-  ConfigExecution,
-  NetworkDevice,
-  ConfigTemplate,
-  BaseResponse,
-  PageResponse,
-} from "@/types";
+import type { ConfigExecution, NetworkDevice, ConfigTemplate, PageResponse } from "@/types";
 import { post } from "@/lib/api";
 import type { ExecutionStatistics, ExecutionDataState } from "../types";
 
@@ -48,7 +42,7 @@ export interface UseExecutionDataReturn {
 
 export function useExecutionData(params: UseExecutionDataParams): UseExecutionDataReturn {
   const { message } = App.useApp();
-  const { current, pageSize, execCurrent } = params;
+  const { current: _current, pageSize, execCurrent } = params;
 
   const [dataState, setDataState] = useState<ExecutionDataState>({
     devices: [],
@@ -150,9 +144,10 @@ export function useExecutionData(params: UseExecutionDataParams): UseExecutionDa
         currentExecution: result.data || null,
         executionDetails: result.data?.details || [],
       }));
-    } catch (error) {
+    } catch (_error) {
       message.error("加载执行明细失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   return {

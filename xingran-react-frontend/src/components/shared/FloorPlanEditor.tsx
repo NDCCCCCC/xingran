@@ -19,7 +19,7 @@ import "./FloorPlanEditor.less";
 
 // 导入提取的类型、常量和 Hooks
 import type { WorkstationNode, FloorPlanEditorProps } from "./FloorPlanEditor.types";
-import { GRID_SIZE, TOOLBAR_HEIGHT, ZOOM_LEVELS } from "./FloorPlanEditor.constants";
+import { GRID_SIZE, TOOLBAR_HEIGHT } from "./FloorPlanEditor.constants";
 import { usePanZoom } from "./FloorPlanEditor.panZoom";
 import { useWorkstationDrag } from "./FloorPlanEditor.hooks";
 
@@ -60,7 +60,7 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
     handlePanMove,
     handlePanEnd,
     handleWheel,
-    screenToSvg,
+    screenToSvg: _screenToSvg,
   } = usePanZoom({ containerRef });
 
   // 使用 WorkstationDrag Hook
@@ -155,6 +155,7 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
     draggedNodePos,
     viewState,
     handleDragMove,
+    handlePanMove,
     handleEndDrag,
     handlePanEnd,
     clearDraggedPos,
@@ -357,6 +358,7 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
 
       setContextMenu((prev) => ({ ...prev, visible: false }));
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [contextMenu.workstation, onEdit, onUpdatePosition]
   );
 

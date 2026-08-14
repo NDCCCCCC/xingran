@@ -39,6 +39,7 @@ export interface UseExceptionListReturn {
 export function useExceptionList(params: ExceptionListParams): UseExceptionListReturn {
   // JSON.stringify 稳定参数对象引用,避免 useQuery 误判 key 变化(CLAUDE.md)
   // 保持稳定的 queryKey 同时也保证 placeholderData 命中同一份缓存
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional stable serialization of params; complex expr kept inline by design
   const stableParams = useMemo(() => params, [JSON.stringify(params)]);
 
   const query: UseQueryResult<PageResult<ExceptionListItem>> = useQuery({

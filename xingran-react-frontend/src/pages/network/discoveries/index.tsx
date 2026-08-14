@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { FC } from "react";
 import { Table, Button, Space, Form, Select, Card, Row, Col, Statistic, App } from "antd";
 import {
@@ -20,19 +20,18 @@ import { batchExport } from "@/lib/api/networkApi";
 import type { FormInstance } from "antd/es/form";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
-import { DownloadOutlined } from "@ant-design/icons";
 import { usePagination } from "@/hooks/usePagination";
 import { useServerSort } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
 import { isFormValidationError } from "@/utils/errorHandler";
-import type { DeviceDiscovery, NetworkDevice } from "@/types";
+import type { DeviceDiscovery } from "@/types";
 
 const { Option } = Select;
 
 const DeviceDiscoveryPage: FC = () => {
   const { message } = App.useApp();
   // 使用全局分页 hook
-  const { paginationProps, setTotal } = usePagination();
+  const { paginationProps, setTotal: _setTotal } = usePagination();
 
   // 服务端排序:field 与 columns.dataIndex 对齐
   const sorterMetas = useMemo(
@@ -64,7 +63,7 @@ const DeviceDiscoveryPage: FC = () => {
     discoveredDevices,
     departments,
     loading,
-    total,
+    total: _total,
     statistics,
     modalState,
     currentDiscovery,
@@ -140,17 +139,19 @@ const DeviceDiscoveryPage: FC = () => {
   };
 
   // 删除任务
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- render-defined function used by useMemo columns; disabling to avoid loop
   const handleDelete = async (id: string) => {
     try {
       await post(`/network/discoveries/${id}/delete`, {});
       message.success("删除成功");
       loadDiscoveries();
-    } catch (error) {
+    } catch (_error) {
       message.error("删除失败");
     }
   };
 
   // 查看发现结果
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- render-defined function used by useMemo columns; disabling to avoid loop
   const handleViewResult = async (record: DeviceDiscovery) => {
     setCurrentDiscovery(record);
     await loadDiscoveryResults((record as DeviceDiscovery).id);
@@ -165,7 +166,7 @@ const DeviceDiscoveryPage: FC = () => {
       message.success("导入成功");
       setModalState((prev) => ({ ...prev, resultModalVisible: false }));
       loadDiscoveries();
-    } catch (error) {
+    } catch (_error) {
       message.error("导入失败");
     }
   };
@@ -201,6 +202,7 @@ const DeviceDiscoveryPage: FC = () => {
   useEffect(() => {
     loadDiscoveries();
     loadStatistics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- paginationProps.current is intentionally stable
   }, [paginationProps.current, paginationProps.pageSize, loadDiscoveries, loadStatistics]);
 
   return (

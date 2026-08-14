@@ -94,7 +94,11 @@ const RoomDeviceManagement: FC = () => {
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
   // 使用 useSidebarDeptFilter hook 管理部门筛选
-  const { selectedDeptId, handleDeptSelect, setSelectedDeptId } = useSidebarDeptFilter({
+  const {
+    selectedDeptId,
+    handleDeptSelect,
+    setSelectedDeptId: _setSelectedDeptId,
+  } = useSidebarDeptFilter({
     searchForm: undefined,
     clearFieldNames: ["roomId"],
   });
@@ -213,6 +217,7 @@ const RoomDeviceManagement: FC = () => {
   // 当部门变化时，重新加载数据和机房选项
   useEffect(() => {
     loadDevicesByDept();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadRoomOptions(selectedDeptId || undefined);
   }, [selectedDeptId, loadDevicesByDept, loadRoomOptions]);
 

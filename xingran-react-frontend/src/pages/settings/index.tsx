@@ -18,9 +18,8 @@ import {
   Row,
   Col,
 } from "antd";
-import { SunOutlined, MoonOutlined, BgColorsOutlined, MenuOutlined } from "@ant-design/icons";
+import { SunOutlined, MoonOutlined } from "@ant-design/icons";
 import { useSettingsStore } from "@/store/settingsStore";
-import type { UserPreferences } from "@/types/config";
 import { themePresets } from "@/design-system/themes";
 import type { ColorPickerProps } from "antd";
 import { applyPrimaryColor, applySidebarBackgroundColor } from "@/design-system/themes";
@@ -52,6 +51,7 @@ const SettingsPage: FC = () => {
 
       // 同步颜色值到本地状态
       if (typeof preferences.theme.customColors?.primary === "string") {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setPrimaryColor(preferences.theme.customColors.primary);
       }
       if (typeof preferences.theme.customColors?.sidebar === "string") {
@@ -79,7 +79,7 @@ const SettingsPage: FC = () => {
 
       await updatePreferences(processedValues);
       message.success("设置保存成功");
-    } catch (error) {
+    } catch (_error) {
       message.error("设置保存失败");
     }
   };

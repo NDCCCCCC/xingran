@@ -28,7 +28,6 @@ import { VENDOR_OPTIONS, TEMPLATE_TYPE_OPTIONS } from "./constants";
 import { usePagination } from "@/hooks/usePagination";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
-import { DownloadOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
 
@@ -42,10 +41,14 @@ const TemplateManagement: FC = () => {
   // 使用全局分页 hook
   const { paginationProps, setTotal } = usePagination();
 
-  const { templates, loading, total, statistics, loadTemplates, loadStatistics } = useTemplateData(
-    searchForm,
-    setTotal
-  );
+  const {
+    templates,
+    loading,
+    total: _total,
+    statistics,
+    loadTemplates,
+    loadStatistics,
+  } = useTemplateData(searchForm, setTotal);
 
   const {
     editModalVisible,
@@ -65,7 +68,7 @@ const TemplateManagement: FC = () => {
     handleBatchDelete,
     handlePreview,
     handleClone,
-    handleGetVariables,
+    handleGetVariables: _handleGetVariables,
   } = useTemplateModals();
 
   const sorterMetas = useMemo<Array<SorterMeta<ConfigTemplate> | undefined>>(
@@ -120,6 +123,7 @@ const TemplateManagement: FC = () => {
   useEffect(() => {
     loadTemplates({ current: paginationProps.current, pageSize: paginationProps.pageSize });
     loadStatistics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load/fetch fn from hook is stable enough; disable to avoid loop
   }, [paginationProps.current, paginationProps.pageSize]);
 
   // 搜索

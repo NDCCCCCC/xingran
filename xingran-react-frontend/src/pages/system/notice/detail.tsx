@@ -5,7 +5,6 @@ import { App, Button, Spin } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { getNoticeDetail } from "@/lib/noticeApi";
 import type { Notice } from "@/types/notice";
-import { formatDateTime } from "@/utils/datetime";
 import NoticeDetailContent from "@/components/NoticeDetail/NoticeDetailContent";
 
 /**
@@ -37,6 +36,7 @@ const AdminNoticeDetailPage: FC = () => {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [id, navigate]);
 
   useEffect(() => {

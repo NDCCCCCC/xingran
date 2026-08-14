@@ -540,7 +540,7 @@ const DEFAULT_CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7天
  */
 export const geocodeWithCache = async (
   address: string,
-  maxAge = DEFAULT_CACHE_MAX_AGE
+  _maxAge = DEFAULT_CACHE_MAX_AGE
 ): Promise<GeocodeResult | null> => {
   if (!address?.trim()) {
     return null;

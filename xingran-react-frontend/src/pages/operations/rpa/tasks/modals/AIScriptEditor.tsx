@@ -23,7 +23,6 @@ import {
   RobotOutlined,
   ThunderboltOutlined,
   CheckOutlined,
-  CloseOutlined,
   LoadingOutlined,
 } from "@ant-design/icons";
 import type { Action } from "@/types/rpa";
@@ -103,11 +102,12 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
       await new Promise((resolve) => setTimeout(resolve, 1500));
       setGeneratedActions(mockGeneratedActions);
       message.success("AI 生成脚本成功！");
-    } catch (error) {
+    } catch (_error) {
       message.error("AI 生成失败，请重试");
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [form]);
 
   const handleConfirm = useCallback(() => {
@@ -118,6 +118,7 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
     onConfirm(generatedActions);
     form.resetFields();
     setGeneratedActions([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [generatedActions, onConfirm, form]);
 
   const handleCancel = useCallback(() => {

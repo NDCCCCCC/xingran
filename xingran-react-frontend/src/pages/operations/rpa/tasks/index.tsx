@@ -5,12 +5,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import type { FC } from "react";
 import { App, Table, Button, Space, Form, Input, Select, Card, Modal, Layout } from "antd";
-import {
-  PlusOutlined,
-  SearchOutlined,
-  ReloadOutlined,
-  PlayCircleOutlined,
-} from "@ant-design/icons";
+import { PlusOutlined, SearchOutlined, ReloadOutlined } from "@ant-design/icons";
 import type { Task } from "@/types/rpa";
 import type { PageResponse } from "@/types/base";
 import { useTableManager } from "@/hooks/useTableManager";
@@ -20,7 +15,6 @@ import { usePagination } from "@/hooks/usePagination";
 import { handleSuccess as showSuccessMessage } from "@/utils/errorHandler";
 import { getTaskColumns } from "./columns";
 import { TaskEditModal } from "./modals";
-import { TASK_STATUS_OPTIONS } from "../constants";
 import { post } from "@/lib/api";
 
 const { Option } = Select;
@@ -52,7 +46,7 @@ const TaskManagement: FC = () => {
   const {
     loading,
     data: tasks,
-    total,
+    total: _total,
     selectedRowKeys,
     searchForm,
     editForm: taskForm,
@@ -65,7 +59,7 @@ const TaskManagement: FC = () => {
     handleAdd,
     handleEdit,
     loadData: loadTasks,
-    resetSelection,
+    resetSelection: _resetSelection,
   } = useTableManager<Task>(
     async (params) => {
       const result = await post<PageResponse<Task>>("/rpa/tasks/list", {
@@ -124,7 +118,7 @@ const TaskManagement: FC = () => {
             await post(`/rpa/tasks/${id}/execute`, {});
             message.success("任务已提交执行");
             refreshData();
-          } catch (error) {
+          } catch (_error) {
             // 错误已在 errorHandler 中处理
           } finally {
             setExecuteLoading(false);
@@ -132,6 +126,7 @@ const TaskManagement: FC = () => {
         },
       });
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [refreshData]
   );
 

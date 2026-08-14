@@ -4,13 +4,7 @@
  */
 
 import { useState, useCallback } from "react";
-import type {
-  ConfigExecution,
-  ConfigExecutionDetail,
-  NetworkDevice,
-  BaseResponse,
-  PageResponse,
-} from "@/types";
+import type { ConfigExecution, ConfigExecutionDetail, NetworkDevice, PageResponse } from "@/types";
 import { post } from "@/lib/api";
 import type { CommandStatistics } from "../types";
 

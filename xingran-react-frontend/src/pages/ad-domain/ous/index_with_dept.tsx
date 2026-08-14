@@ -21,8 +21,7 @@ import {
   type ADGroup,
 } from "@/lib/adDomainApi";
 import { useADConfigs } from "@/hooks/useADConfigs";
-import type { ADConfig } from "@/lib/adDomainApi";
-import { getDeptTree, type SimpleDept } from "@/lib/dutyApi";
+import { getDeptTree } from "@/lib/dutyApi";
 import { createSorter } from "@/utils/tableHelpers";
 
 import type { FC } from "react";
@@ -77,6 +76,7 @@ const ADOUPage: FC = () => {
     if (selectedConfig) {
       fetchOUTree();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchOUTree is render-defined; re-run on selectedConfig change
   }, [selectedConfig]);
 
   // 当选择OU时获取该OU下的用户和部门映射信息

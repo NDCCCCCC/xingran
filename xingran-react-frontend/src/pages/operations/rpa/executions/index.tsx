@@ -70,7 +70,7 @@ const ExecutionManagement: FC = () => {
   const {
     loading,
     data: executions,
-    total,
+    total: _total,
     searchForm,
     loadData: loadExecutions,
     handleSearch,

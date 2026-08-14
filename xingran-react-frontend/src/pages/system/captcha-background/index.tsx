@@ -24,8 +24,14 @@ const CaptchaBackgroundManagement: FC = () => {
   // 使用全局分页 hook
   const { paginationProps, setTotal } = usePagination();
 
-  const { backgrounds, loading, total, statistics, loadBackgrounds, loadStatistics } =
-    useCaptchaData(searchForm, setTotal);
+  const {
+    backgrounds,
+    loading,
+    total: _total,
+    statistics,
+    loadBackgrounds,
+    loadStatistics,
+  } = useCaptchaData(searchForm, setTotal);
 
   const {
     uploadModalVisible,
@@ -49,6 +55,7 @@ const CaptchaBackgroundManagement: FC = () => {
   useEffect(() => {
     loadBackgrounds({ current: paginationProps.current, pageSize: paginationProps.pageSize });
     loadStatistics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load/fetch fn from hook is stable enough; disable to avoid loop
   }, [paginationProps.current, paginationProps.pageSize]);
 
   // 操作成功后刷新

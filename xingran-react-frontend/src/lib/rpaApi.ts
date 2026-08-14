@@ -4,36 +4,28 @@
 
 import { post } from "./api";
 import { getAuthHeaders } from "@/utils/authHelpers";
-import type { BaseResponse, PageParams, PageResponse } from "@/types/base";
+import type { PageParams, PageResponse } from "@/types/base";
 import type {
   // 任务相关
   Task,
-  TaskListParams,
-  TaskFormData,
   Script,
   Action,
   // Worker相关
   Worker,
-  WorkerListParams,
   WorkerRegisterRequest,
   WorkerHeartbeatRequest,
   WorkerStatus,
   // 执行相关
   Execution,
-  ExecutionListParams,
   RPAExecutionStatus,
   ExecutionLog,
   ExecutionProgress,
   // 调度相关
   Schedule,
-  ScheduleListParams,
-  ScheduleConfig,
   // 变量相关
   Variable,
-  VariableListParams,
   // 模板相关
   Template,
-  TemplateListParams,
   TemplateCategory,
   // AI相关
   AIScriptGenerateRequest,
@@ -50,14 +42,13 @@ import type {
   CaptureStateResponse,
   // 通知相关
   NotificationConfig,
-  NotificationListParams,
   // 统计相关
   RPAStatistics,
 } from "@/types/rpa";
 
 // ==================== 通用 CRUD 工厂函数 ====================
 
-interface CrudApiConfig<T> {
+interface CrudApiConfig<_T> {
   basePath: string;
 }
 

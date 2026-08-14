@@ -73,7 +73,7 @@ const ImageGallery: FC<ImageGalleryProps> = ({
     try {
       await onSetPrimary(photo.id);
       message.success("已设置为主图");
-    } catch (error) {
+    } catch (_error) {
       message.error("设置主图失败");
     }
   };
@@ -92,7 +92,7 @@ const ImageGallery: FC<ImageGalleryProps> = ({
       await onUpdateDescription(editingPhoto.id, description);
       message.success("描述已更新");
       setModalVisible(false);
-    } catch (error) {
+    } catch (_error) {
       message.error("更新描述失败");
     }
   };
@@ -103,7 +103,7 @@ const ImageGallery: FC<ImageGalleryProps> = ({
     try {
       await onDelete(photo.id);
       message.success("删除成功");
-    } catch (error) {
+    } catch (_error) {
       message.error("删除失败");
     }
   };

@@ -17,13 +17,9 @@ import {
   base64ToHex,
 } from "@/utils/sm4";
 import { fetchPublicKey, encryptWithSM2, clearPublicKeyCache } from "@/utils/sm2";
-import {
-  handleHttpResponseError,
-  handleNetworkError,
-  handleParseError,
-} from "@/utils/errorHandler";
+import { handleHttpResponseError, handleNetworkError } from "@/utils/errorHandler";
 import type { BaseResponse } from "@/types/base";
-import { getCachedEncryptionConfig, clearEncryptionConfigCache } from "@/services/encryptionConfig";
+import { clearEncryptionConfigCache } from "@/services/encryptionConfig";
 import { LOGIN } from "@/constants/routes";
 
 // 工具函数：生成请求ID
@@ -291,7 +287,6 @@ api.interceptors.response.use(
   async (response: AxiosResponse) => {
     let { data } = response;
 
-    const url = response.config.url || "";
     const responseHeaders = response.headers || {};
 
     // 检查后端响应加密标志

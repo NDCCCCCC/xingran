@@ -11,19 +11,16 @@ import {
   InputNumber,
   Switch,
   Tabs,
-  Space,
   Button,
   Card,
   Row,
   Col,
-  Tag,
-  Divider,
   Select,
 } from "antd";
 import { PlusOutlined, DeleteOutlined, RobotOutlined } from "@ant-design/icons";
 import type { FormInstance } from "antd/es/form";
 import type { Task, Action } from "@/types/rpa";
-import { TASK_STATUS_OPTIONS, ACTION_TYPE_OPTIONS, ACTION_TYPE_TEXT_MAP } from "../../constants";
+import { ACTION_TYPE_OPTIONS } from "../../constants";
 import { AIScriptEditor } from "./AIScriptEditor";
 
 const { TextArea } = Input;
@@ -232,6 +229,7 @@ export function TaskEditModal({ open, form, editingTask, onOk, onCancel }: TaskE
     setActions(generatedActions);
     setAiEditorVisible(false);
     message.success("AI 生成脚本成功！");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   const handleOk = useCallback(async () => {

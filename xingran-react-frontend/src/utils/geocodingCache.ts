@@ -179,7 +179,7 @@ class StorageCache<T> {
           if (now > item.expiresAt) {
             localStorage.removeItem(storageKey);
           }
-        } catch (e) {
+        } catch (_e) {
           // 解析失败，删除该项
           localStorage.removeItem(storageKey);
         }

@@ -15,8 +15,6 @@ import type {
   CaptchaBackgroundStatus,
 } from "@/types/captcha";
 import * as captchaService from "@/services/captcha";
-import { SHAPE_OPTIONS } from "../constants";
-import type { UnknownError } from "@/types/common";
 
 // 表单字段类型
 interface UploadFormValues {
@@ -157,6 +155,7 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
         setUploading(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [closeUploadModal]
   );
 
@@ -190,6 +189,7 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
         message.error("更新失败");
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     []
   );
 
@@ -198,9 +198,10 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
       await captchaService.deleteCaptchaBackground(id);
       message.success("删除成功");
       onSuccess();
-    } catch (error) {
+    } catch (_error) {
       message.error("删除失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   const handleToggle = useCallback(async (id: string, onSuccess: () => void) => {
@@ -208,18 +209,20 @@ export function useCaptchaModals(): UseCaptchaModalsReturn {
       await captchaService.toggleCaptchaBackgroundStatus(id);
       message.success("状态更新成功");
       onSuccess();
-    } catch (error) {
+    } catch (_error) {
       message.error("状态更新失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   const handlePreload = useCallback(async () => {
     try {
       await captchaService.preloadCaptchaCache();
       message.success("预加载成功");
-    } catch (error) {
+    } catch (_error) {
       message.error("预加载失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   return {

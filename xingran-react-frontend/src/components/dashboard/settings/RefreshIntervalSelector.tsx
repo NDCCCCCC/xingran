@@ -79,6 +79,7 @@ export const RefreshIntervalSelector: React.FC<RefreshIntervalSelectorProps> = (
   // 当外部 value 变化时同步状态
   useEffect(() => {
     const custom = isCustomValue(value);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync on external value change
     setIsCustom(custom);
     if (custom && value) {
       // 尝试转换为合适的单位

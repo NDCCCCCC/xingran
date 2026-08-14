@@ -4,7 +4,7 @@
  */
 
 import { CustomOverlay, InfoWindow } from "@uiw/react-baidu-map";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import { EnvironmentOutlined, BuildOutlined } from "@ant-design/icons";
 import type { CityGroup, BuildingItem } from "./types";
 import { MARKER_COLORS } from "./constants";

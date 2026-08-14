@@ -6,7 +6,6 @@ import { ArrowLeftOutlined } from "@ant-design/icons";
 import { getMyNoticeDetail, markNoticeAsRead } from "@/lib/noticeApi";
 import { useNoticeStore } from "@/store/noticeStore";
 import type { Notice } from "@/types/notice";
-import { formatDateTime } from "@/utils/datetime";
 import NoticeDetailContent from "@/components/NoticeDetail/NoticeDetailContent";
 import { USER_NOTICES } from "@/constants/routes";
 
@@ -46,6 +45,7 @@ const NoticeDetailPage: FC = () => {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, navigate, markAsRead]);
 
   useEffect(() => {

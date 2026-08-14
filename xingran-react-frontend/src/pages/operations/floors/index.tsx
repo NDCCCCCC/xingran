@@ -148,6 +148,7 @@ const FloorManagement: FC = () => {
   useEffect(() => {
     Promise.all([loadStatistics(), loadBuildingOptions(), departmentData.loadDepartments()]);
     loadFloors();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- departmentData object recreated each render
   }, [loadFloors, loadStatistics, loadBuildingOptions, departmentData.loadDepartments]);
 
   useEffect(() => {
@@ -309,11 +310,11 @@ const FloorManagement: FC = () => {
 
   // 筛选楼宇变化处理
   const handleFilterBuildingChange = useCallback(
-    async (buildingId: string) => {
+    async (_buildingId: string) => {
       // 触发搜索以应用楼宇筛选
       handleSearch();
     },
-    [selectedDeptId, handleSearch]
+    [selectedDeptId, handleSearch] // eslint-disable-line react-hooks/exhaustive-deps -- selectedDeptId is intentional
   );
 
   // 加载指定部门的楼宇选项（用于编辑器模式）
@@ -439,7 +440,13 @@ const FloorManagement: FC = () => {
 
       await loadFloorPlanData(floor.id);
     },
-    [loadFloorPlanData, setEditMode, loadFloorOptionsByBuilding, loadBuildingOptionsByDept]
+    [
+      loadFloorPlanData,
+      setEditMode,
+      setPageMode,
+      loadFloorOptionsByBuilding,
+      loadBuildingOptionsByDept,
+    ]
   );
 
   const handleSaveFloorPlan = useCallback(
@@ -454,7 +461,7 @@ const FloorManagement: FC = () => {
     setPageMode("list");
     setCurrentFloor(null);
     resetFloorPlan();
-  }, [resetFloorPlan]);
+  }, [resetFloorPlan, setPageMode]);
 
   const columns = createFloorTableColumns({
     onEdit: openModal,

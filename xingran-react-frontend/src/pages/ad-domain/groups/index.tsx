@@ -38,7 +38,6 @@ import {
   type ADGroupSyncStatus,
 } from "@/lib/adDomainApi";
 import { useADConfigs } from "@/hooks/useADConfigs";
-import type { ADConfig } from "@/lib/adDomainApi";
 
 import type { FC } from "react";
 import { usePagination } from "@/hooks/usePagination";
@@ -60,7 +59,7 @@ const ADGroupPage: FC = () => {
   const [isAsc, setIsAsc] = useState<boolean>(true);
 
   // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+  const { paginationProps, setCurrent, setPageSize: _setPageSize, setTotal } = usePagination();
 
   const [selectedGroup, setSelectedGroup] = useState<ADGroup | null>(null);
   const [members, setMembers] = useState<ADUser[]>([]);
@@ -149,6 +148,7 @@ const ADGroupPage: FC = () => {
         setGroupLoading(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- stable setters and pagination object
     [selectedConfig, selectedOUDN, paginationProps.current, paginationProps.pageSize]
   );
 
@@ -156,6 +156,7 @@ const ADGroupPage: FC = () => {
     if (selectedConfig) {
       fetchGroups(searchGroupName);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- paginationProps.current is intentional
   }, [
     selectedConfig,
     selectedOUDN,

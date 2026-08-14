@@ -113,6 +113,7 @@ const ColorSwitcher: FC<ColorSwitcherProps> = ({ size = "middle", type = "dropdo
     ) {
       applySidebarBackgroundColor(preferences.theme.customColors.sidebar);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-only initialization
   }, []);
 
   /**

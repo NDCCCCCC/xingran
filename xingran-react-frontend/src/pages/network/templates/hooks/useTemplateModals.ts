@@ -50,10 +50,12 @@ export function useTemplateModals(): UseTemplateModalsReturn {
     } else {
       message.error(defaultMessage);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   const handleSuccess = useCallback((msg: string) => {
     message.success(msg);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   const openModal = useCallback((record?: ConfigTemplate, editForm?: FormInstance<unknown>) => {
@@ -139,6 +141,7 @@ export function useTemplateModals(): UseTemplateModalsReturn {
         handleApiError(error, "批量删除失败");
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [handleSuccess, handleApiError]
   );
 

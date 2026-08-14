@@ -84,7 +84,7 @@ const NetworkExport: FC<NetworkExportProps> = ({
         setExporting(false);
       }
     },
-    [exportUrl, entityName, filters, current, pageSize]
+    [exportUrl, entityName, filters, current, pageSize, message]
   );
 
   const menuItems: MenuProps["items"] = [

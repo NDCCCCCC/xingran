@@ -6,7 +6,7 @@ import { Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { JobLog } from "../types";
 import { formatDateTime } from "@/utils/datetime";
-import { formatDuration, renderJobStatusTag, renderExceptionInfo } from "../utils";
+import { formatDuration, renderExceptionInfo } from "../utils";
 import { createSorter } from "@/utils/tableHelpers";
 
 export function getJobLogColumns(): ColumnsType<JobLog> {

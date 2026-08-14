@@ -3,8 +3,6 @@
  * 设备发现页面类型定义
  */
 
-import type { DeviceDiscovery, NetworkDevice } from "@/types";
-
 /** IP 范围 */
 export interface IPRange {
   startIP: string;

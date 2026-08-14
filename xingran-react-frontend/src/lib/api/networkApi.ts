@@ -1,13 +1,7 @@
 import axios, { type AxiosInstance } from "axios";
 import { post } from "../api";
 import { getAccessToken } from "@/utils/authHelpers";
-import type {
-  PortResult,
-  BatchResult,
-  BatchWriteRequest,
-  SetAccessVlanRequest,
-  PortBindingRequest,
-} from "@/types/network";
+import type { PortResult, BatchResult, BatchWriteRequest } from "@/types/network";
 
 /**
  * 专用于 Blob/文件下载的 axios 实例(本文件内私有)

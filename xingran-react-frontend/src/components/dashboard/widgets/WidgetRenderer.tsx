@@ -8,7 +8,6 @@ import { Suspense } from "react";
 import { Spin } from "antd";
 import type { WidgetConfig } from "@/types/dashboard";
 import { widgetRegistry } from "./configs/widgetRegistry";
-import { BaseWidget } from "./base/BaseWidget";
 
 interface WidgetRendererProps {
   widget: WidgetConfig;

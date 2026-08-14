@@ -2,11 +2,10 @@
  * 定时任务表格列定义
  */
 
-import { Space, Button, Tooltip, Tag, Modal } from "antd";
+import { Space, Button, Tooltip, Modal } from "antd";
 import {
   PlayCircleOutlined,
   PauseCircleOutlined,
-  PlusOutlined,
   EditOutlined,
   DeleteOutlined,
   HistoryOutlined,

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Modal, Checkbox, Input, InputNumber, Button, Space } from "antd";
+import { Modal, Checkbox, Input, InputNumber, Button } from "antd";
 import { SearchOutlined, HolderOutlined } from "@ant-design/icons";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import type { DragEndEvent } from "@dnd-kit/core";
@@ -75,7 +75,7 @@ export interface ColumnConfigModalProps {
 export const ColumnConfigModal: React.FC<ColumnConfigModalProps> = ({
   visible,
   config,
-  defaultConfig,
+  defaultConfig: _defaultConfig,
   onSave,
   onReset,
   onClose,

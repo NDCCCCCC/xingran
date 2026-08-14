@@ -30,7 +30,12 @@ export interface UseImageUploadReturn {
 const DEFAULT_MAX_SIZE = MAX_IMAGE_SIZE;
 
 export function useImageUpload(options: UseImageUploadOptions = {}): UseImageUploadReturn {
-  const { businessType = "image", maxSize = DEFAULT_MAX_SIZE, onSuccess, onError } = options;
+  const {
+    businessType: _businessType = "image",
+    maxSize: _maxSize = DEFAULT_MAX_SIZE,
+    onSuccess,
+    onError,
+  } = options;
 
   const { message } = App.useApp();
   const [uploading, setUploading] = useState(false);
@@ -54,6 +59,7 @@ export function useImageUpload(options: UseImageUploadOptions = {}): UseImageUpl
       message.success("图片上传成功");
       onSuccess?.(response.id, `/uploads/${response.storagePath || ""}`);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [onSuccess]
   );
 
@@ -63,6 +69,7 @@ export function useImageUpload(options: UseImageUploadOptions = {}): UseImageUpl
       message.error("图片上传失败");
       onError?.(error instanceof Error ? error : new Error(String(error)));
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [onError]
   );
 

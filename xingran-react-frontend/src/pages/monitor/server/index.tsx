@@ -26,7 +26,7 @@ import {
 import { post } from "@/lib/api";
 import { usePagination } from "@/hooks/usePagination";
 import type { ColumnsType } from "antd/es/table";
-import type { BaseResponse, PageResponse } from "@/types";
+import type { PageResponse } from "@/types";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { formatDateTime } from "@/utils/datetime";
 import { createSorter } from "@/utils/tableHelpers";
@@ -100,14 +100,14 @@ const ServerMonitor: FC = () => {
   const fetchServerDetail = async (server: ServerInfo) => {
     try {
       // 获取历史指标数据
-      const result = await post<PageResponse<ServerMetrics>>("/monitor/server-metrics/history", {
+      // 历史指标数据已获取但暂未使用
+      const _result = await post<PageResponse<ServerMetrics>>("/monitor/server-metrics/history", {
         serverId: server.id,
         startTime: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 最近24小时
         endTime: new Date().toISOString(),
         current: 1,
         pageSize: 100,
       });
-
       // 历史指标数据已获取但暂未使用
     } catch (error) {
       console.error("获取服务器指标历史失败:", error);
@@ -170,7 +170,7 @@ const ServerMonitor: FC = () => {
   };
 
   // 格式化网络流量
-  const formatNetworkSpeed = (bytes: number): string => {
+  const _formatNetworkSpeed = (bytes: number): string => {
     const units = ["B", "KB", "MB", "GB"];
     let size = bytes;
     let unitIndex = 0;
@@ -186,6 +186,7 @@ const ServerMonitor: FC = () => {
   useEffect(() => {
     // fetchServers 内部用 orderByColumn/isAsc state 兜底，无需重传
     fetchServers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load/fetch fn from hook is stable enough; disable to avoid loop
   }, [paginationProps.current, paginationProps.pageSize]);
 
   const columns: ColumnsType<ServerInfo> = [

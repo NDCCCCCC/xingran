@@ -8,12 +8,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type {
-  UserPreferences,
-  ThemeConfiguration,
-  LayoutConfiguration,
-  DataConfiguration,
-} from "@/types/config";
+import type { UserPreferences, ThemeConfiguration, LayoutConfiguration } from "@/types/config";
 import { defaultUserPreferences } from "@/types/config";
 import { configService } from "@/services/configService";
 import { ZUSTAND_STORAGE_KEYS } from "@/constants/storage";

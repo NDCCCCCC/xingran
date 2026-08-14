@@ -4,7 +4,7 @@
  */
 
 import React from "react";
-import { DeleteOutlined, StopOutlined, CheckCircleOutlined } from "@ant-design/icons";
+import { StopOutlined, CheckCircleOutlined } from "@ant-design/icons";
 
 /**
  * 按钮类型枚举

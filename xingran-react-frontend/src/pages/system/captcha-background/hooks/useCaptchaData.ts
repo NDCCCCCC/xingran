@@ -50,7 +50,7 @@ export function useCaptchaData(
         setLoading(false);
       }
     },
-    [searchForm]
+    [searchForm, setTotal]
   );
 
   const loadStatistics = useCallback(async () => {

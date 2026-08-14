@@ -88,7 +88,7 @@ const Sidebar = () => {
     if (menus.length === 0) {
       fetchMenus();
     }
-  }, []);
+  }, [fetchMenus, menus.length]);
 
   // 将后端菜单数据转换为 Ant Design Menu 组件所需的格式
   const menuItems: MenuItem[] = useMemo(() => {
@@ -145,6 +145,7 @@ const Sidebar = () => {
     const parentKeys = buildParentKeyChain(location.pathname, menuPathMap);
 
     expectedOpenKeysRef.current = parentKeys;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpenKeys(parentKeys);
 
     setTimeout(() => {

@@ -37,6 +37,7 @@ const CaptchaModal: FC<CaptchaModalProps> = ({
   // 当模态框打开时，重置验证码状态
   useEffect(() => {
     if (visible) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional reset on visibility change
       setCaptchaValue("");
       setCaptchaId("");
       setSliderVerified(false);

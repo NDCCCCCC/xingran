@@ -75,6 +75,7 @@ export function useRPAProgress(options?: UseRPAProgressOptions) {
 
   // 处理 RPA 进度消息
   const handleRPAProgressMessage = useCallback(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     (message: RPAProgressMessage) => {
       const data: RPAProgressData = {
         executionId: message.executionId,

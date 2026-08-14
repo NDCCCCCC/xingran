@@ -6,7 +6,6 @@ import type { ColumnsType } from "antd/es/table";
 import type { Worker } from "@/types/rpa";
 import { renderWorkerStatusTag } from "../constants";
 import dayjs from "dayjs";
-import React from "react";
 
 // 格式化时间，处理后端返回的时区问题
 function formatDateTime(date: string | Date | null | undefined): string {

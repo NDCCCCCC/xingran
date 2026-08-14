@@ -212,6 +212,7 @@ export function CADPropertyPanel({
         );
 
       case "select":
+        // eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed
         return <Select key={String(field.name)} options={field.options} {...commonProps} />;
 
       case "color":

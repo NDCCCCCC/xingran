@@ -93,7 +93,7 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
       } else {
         message.error(res.message || "加载失败");
       }
-    } catch (e) {
+    } catch (_e) {
       message.error("加载账号列表失败");
     } finally {
       setLoading(false);
@@ -108,7 +108,7 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
       if (res.code === 0 && res.data) {
         setStats(res.data);
       }
-    } catch (e) {
+    } catch (_e) {
       // 静默
     }
   }, [configId]);
@@ -182,7 +182,7 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
           message.error(res.message || "创建失败");
         }
       }
-    } catch (e) {
+    } catch (_e) {
       // 校验失败
     }
   };
@@ -198,7 +198,7 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
       } else {
         message.error(res.message || "删除失败");
       }
-    } catch (e) {
+    } catch (_e) {
       message.error("删除失败");
     }
   };
@@ -215,7 +215,7 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
       } else {
         message.error(res.message || "操作失败");
       }
-    } catch (e) {
+    } catch (_e) {
       message.error("操作失败");
     }
   };
@@ -243,7 +243,7 @@ const AccountPoolTab: FC<AccountPoolTabProps> = ({ configId }) => {
       } else {
         message.error(res.message || "解锁失败");
       }
-    } catch (e) {
+    } catch (_e) {
       // 校验失败
     }
   };

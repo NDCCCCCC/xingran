@@ -1,5 +1,5 @@
 import { Tag, Button, Space } from "antd";
-import type { ColumnsType, ColumnType, ColumnGroupType } from "antd/es/table";
+import type { ColumnType, ColumnGroupType } from "antd/es/table";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { formatDateTime } from "@/utils/datetime";

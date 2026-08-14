@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Modal, Button, Spin, Empty, Space } from "antd";
+import { Modal, Button, Spin, Empty } from "antd";
 import { CloseOutlined, CheckOutlined, ReloadOutlined } from "@ant-design/icons";
 import { dashboardService } from "@/services/dashboardService";
 import { DashboardGrid } from "../layout/DashboardGrid";
@@ -33,7 +33,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({
   onApply,
 }) => {
   const [loading, setLoading] = useState(false);
-  const [previewData, setPreviewData] = useState<Map<string, unknown>>(new Map());
+  const [_previewData, setPreviewData] = useState<Map<string, unknown>>(new Map());
   const [error, setError] = useState<string | null>(null);
 
   // 加载预览数据
@@ -69,6 +69,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({
       setPreviewData(new Map());
       setError(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadPreviewData defined in render
   }, [visible, template]);
 
   // 处理应用模板

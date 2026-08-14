@@ -13,7 +13,6 @@ import {
 } from "@ant-design/icons";
 import { listUsageLogs, getUsageSummary } from "@/api/apikey";
 import type { APIKeyUsageLog, UsageSummary } from "@/types/apikey";
-import type { PageData } from "@/types/apikey";
 import { formatDateTime } from "@/utils/datetime";
 
 // ==================== 组件属性 ====================
@@ -40,7 +39,7 @@ function getStatusTagColor(statusCode: number): string {
 /**
  * 根据状态码获取标签文本
  */
-function getStatusTagLabel(statusCode: number): string {
+function _getStatusTagLabel(statusCode: number): string {
   if (statusCode >= 200 && statusCode < 300) return "成功";
   if (statusCode >= 300 && statusCode < 400) return "重定向";
   if (statusCode >= 400 && statusCode < 500) return "客户端错误";
@@ -86,6 +85,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
       current: pagination.current,
       pageSize: pagination.pageSize,
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- granular pagination fields avoid re-fetch on total changes
     [pagination.current, pagination.pageSize]
   );
 

@@ -28,8 +28,7 @@ import {
   HistoryOutlined,
   CheckCircleOutlined,
 } from "@ant-design/icons";
-import type { WorkstationDevice, DeviceFormData, DeviceSource, Asset } from "@/types";
-import { DEVICE_SOURCE_LABELS } from "@/types/operations";
+import type { WorkstationDevice, DeviceFormData, Asset } from "@/types";
 import { workstationDeviceApi, assetApi } from "@/lib/opsApi";
 import { HealthBadge } from "@/components/reconciliation";
 
@@ -137,6 +136,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [workstationId]);
 
   useEffect(() => {
@@ -219,7 +219,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       message.success("删除成功");
       fetchAllDevices();
       onDeviceChange?.();
-    } catch (error) {
+    } catch (_error) {
       message.error("删除失败");
     }
   };
@@ -267,7 +267,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       message.success("设置成功");
       fetchAllDevices();
       onDeviceChange?.();
-    } catch (error) {
+    } catch (_error) {
       message.error("设置失败");
     }
   };
@@ -299,7 +299,7 @@ export const WorkstationDeviceTable: React.FC<WorkstationDeviceTableProps> = ({
       setModalVisible(false);
       fetchAllDevices();
       onDeviceChange?.();
-    } catch (error) {
+    } catch (_error) {
       message.error(editingDevice ? "更新失败" : "添加失败");
     }
   };

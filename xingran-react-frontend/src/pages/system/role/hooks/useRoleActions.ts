@@ -53,11 +53,11 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
     loadStatistics,
     loadRoleMenus,
     loadRoleDepts,
-    checkedMenuKeys,
-    checkedDeptKeys,
+    checkedMenuKeys: _checkedMenuKeys,
+    checkedDeptKeys: _checkedDeptKeys,
     setCheckedMenuKeys,
     setCheckedDeptKeys,
-    currentDataScope,
+    currentDataScope: _currentDataScope,
     setCurrentDataScope,
   } = params;
 
@@ -124,6 +124,7 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
         console.error("删除角色失败:", error);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [loadRoles, loadStatistics, invalidateAllRoles]
   );
 
@@ -146,6 +147,7 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
         console.error("批量删除失败:", error);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [loadRoles, loadStatistics, invalidateAllRoles]
   );
 
@@ -162,6 +164,7 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
         console.error("更新角色状态失败:", error);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [loadRoles, loadStatistics, invalidateAllRoles]
   );
 
@@ -202,6 +205,7 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
         console.error("保存角色失败:", error);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [editingRole, loadRoles, loadStatistics, invalidateAllRoles]
   );
 
@@ -239,7 +243,7 @@ export function useRoleActions(params: UseRoleActionsParams): UseRoleActionsRetu
         setPendingFormData(null);
       }
     },
-    [pendingFormData, setCheckedMenuKeys, setCheckedDeptKeys, setCurrentDataScope]
+    [setCheckedMenuKeys, setCheckedDeptKeys, setCurrentDataScope]
   );
 
   return {

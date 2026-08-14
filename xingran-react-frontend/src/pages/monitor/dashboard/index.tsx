@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { FC } from "react";
 import { Card, Row, Col, Statistic, Table, Tag, Button } from "antd";
 import { ClusterOutlined, ReloadOutlined, DatabaseOutlined } from "@ant-design/icons";
 import { post } from "@/lib/api";
 import { formatDateTime } from "@/utils/datetime";
 import { createSorter } from "@/utils/tableHelpers";
-import type { BaseResponse, PageResponse } from "@/types";
+import type { PageResponse } from "@/types";
 
 interface ServerMetrics {
   cpuUsage: number;

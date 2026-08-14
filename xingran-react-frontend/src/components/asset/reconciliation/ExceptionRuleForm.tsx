@@ -154,12 +154,15 @@ const ExceptionRuleForm: React.FC<ExceptionRuleFormProps> = ({
           label="IP段 (CIDR)"
           name="ipRange"
           rules={[{ required: true, message: "请输入 CIDR" }]}
+          // eslint-disable-next-line no-restricted-syntax -- placeholder 仅作 UI 提示, 非真实 IP 配置
           extra="支持 IPv4/IPv6,如 192.168.0.0/16 或 2001:db8::/32"
         >
+          {/* eslint-disable-next-line no-restricted-syntax -- placeholder 仅作 UI 提示 */}
           <Input placeholder="192.168.0.0/16" />
         </Form.Item>
 
         <Form.Item label="冲突类型" name="conflictTypes" extra="留空 = 匹配全部 B-F 类型">
+          {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
           <Select mode="multiple" allowClear placeholder="选择类型,留空匹配全部">
             {CONFLICT_TYPE_OPTIONS.map((o) => (
               <Select.Option key={o.value} value={o.value}>
@@ -175,6 +178,7 @@ const ExceptionRuleForm: React.FC<ExceptionRuleFormProps> = ({
           rules={[{ required: true, message: "至少选择 1 个动作" }]}
           extra="可多选,多规则命中时取并集"
         >
+          {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
           <Select mode="multiple" placeholder="选择动作">
             {EXCEPTION_ACTION_OPTIONS.map((o) => (
               <Select.Option key={o.value} value={o.value}>
@@ -189,6 +193,7 @@ const ExceptionRuleForm: React.FC<ExceptionRuleFormProps> = ({
           name="severityOverride"
           extra="覆盖原始 severity(取最低);不含 critical(Pitfall 8)"
         >
+          {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
           <Select allowClear options={SEVERITY_OVERRIDE_OPTIONS} />
         </Form.Item>
 

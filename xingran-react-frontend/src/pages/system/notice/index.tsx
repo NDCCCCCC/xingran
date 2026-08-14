@@ -32,7 +32,12 @@ const NoticeManagement: FC = () => {
   const [editForm] = Form.useForm();
 
   // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+  const {
+    paginationProps,
+    setCurrent: _setCurrent,
+    setPageSize: _setPageSize,
+    setTotal: _setTotal,
+  } = usePagination();
 
   // 使用自定义 Hooks
   const {
@@ -100,6 +105,7 @@ const NoticeManagement: FC = () => {
           : {}),
       });
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- paginationProps is an object; .current/.pageSize tracked as primitives
     [loadNotices, paginationProps.current, paginationProps.pageSize]
   );
 
@@ -235,141 +241,145 @@ const NoticeManagement: FC = () => {
   );
 
   // 提交表单
-  const handleSubmit = useCallback(async () => {
-    try {
-      const values = await editForm.validateFields();
+  const handleSubmit = useCallback(
+    async () => {
+      try {
+        const values = await editForm.validateFields();
 
-      // 处理定时发布时间
-      let publishTimeStr: string | undefined = undefined;
-      if (values.publishTime) {
-        const offsetMinutes = new Date().getTimezoneOffset();
-        const offsetHours = Math.abs(Math.floor(offsetMinutes / 60));
-        const offsetMins = Math.abs(offsetMinutes % 60);
-        const offsetSign = offsetMinutes <= 0 ? "+" : "-";
-        const offsetStr = `${offsetSign}${String(offsetHours).padStart(2, "0")}:${String(offsetMins).padStart(2, "0")}`;
-        publishTimeStr = values.publishTime.format("YYYY-MM-DDTHH:mm:ss") + offsetStr;
-      }
-
-      // 处理执行类型和周期配置
-      let executionTypeValue: string | undefined = undefined;
-      let recurrenceConfigValue: { cronExpression?: string; endDate?: string } | undefined =
-        undefined;
-
-      if (executionType === "recurring") {
-        executionTypeValue = "recurring";
-        const cronExpression = values.recurrenceConfig?.cronExpression;
-
-        if (!cronExpression) {
-          message.error("请输入 Cron 表达式");
-          return;
+        // 处理定时发布时间
+        let publishTimeStr: string | undefined = undefined;
+        if (values.publishTime) {
+          const offsetMinutes = new Date().getTimezoneOffset();
+          const offsetHours = Math.abs(Math.floor(offsetMinutes / 60));
+          const offsetMins = Math.abs(offsetMinutes % 60);
+          const offsetSign = offsetMinutes <= 0 ? "+" : "-";
+          const offsetStr = `${offsetSign}${String(offsetHours).padStart(2, "0")}:${String(offsetMins).padStart(2, "0")}`;
+          publishTimeStr = values.publishTime.format("YYYY-MM-DDTHH:mm:ss") + offsetStr;
         }
 
-        recurrenceConfigValue = {
-          cronExpression: cronExpression,
+        // 处理执行类型和周期配置
+        let executionTypeValue: string | undefined = undefined;
+        let recurrenceConfigValue: { cronExpression?: string; endDate?: string } | undefined =
+          undefined;
+
+        if (executionType === "recurring") {
+          executionTypeValue = "recurring";
+          const cronExpression = values.recurrenceConfig?.cronExpression;
+
+          if (!cronExpression) {
+            message.error("请输入 Cron 表达式");
+            return;
+          }
+
+          recurrenceConfigValue = {
+            cronExpression: cronExpression,
+          };
+
+          if (values.recurrenceConfig?.endDate) {
+            recurrenceConfigValue.endDate =
+              values.recurrenceConfig.endDate.format("YYYY-MM-DDTHH:mm:ss");
+          }
+        }
+
+        const request: CreateNoticeRequest | UpdateNoticeRequest = {
+          ...values,
+          executionType: executionTypeValue,
+          recurrenceConfig: recurrenceConfigValue,
         };
 
-        if (values.recurrenceConfig?.endDate) {
-          recurrenceConfigValue.endDate =
-            values.recurrenceConfig.endDate.format("YYYY-MM-DDTHH:mm:ss");
+        if (executionType !== "recurring") {
+          (request as CreateNoticeRequest & { publishTime?: string }).publishTime = publishTimeStr;
+        } else {
+          delete (request as CreateNoticeRequest & { publishTime?: string }).publishTime;
         }
-      }
 
-      const request: CreateNoticeRequest | UpdateNoticeRequest = {
-        ...values,
-        executionType: executionTypeValue,
-        recurrenceConfig: recurrenceConfigValue,
-      };
+        // 处理发送渠道配置
+        const channels: NoticeChannelRequest[] = [];
 
-      if (executionType !== "recurring") {
-        (request as CreateNoticeRequest & { publishTime?: string }).publishTime = publishTimeStr;
-      } else {
-        delete (request as CreateNoticeRequest & { publishTime?: string }).publishTime;
-      }
+        // 站内信渠道
+        if (selectedChannels.includes("web")) {
+          channels.push({ channelType: "web" });
+        }
 
-      // 处理发送渠道配置
-      const channels: NoticeChannelRequest[] = [];
+        // 邮件通知渠道
+        if (selectedChannels.includes("email")) {
+          const emailRecipients = values.customEmails?.trim()
+            ? values.customEmails
+                .split(",")
+                .map((e: string) => e.trim())
+                .filter((e: string) => e)
+            : undefined;
+          channels.push({
+            channelType: "email",
+            ...(emailRecipients &&
+              emailRecipients.length > 0 && { customRecipients: emailRecipients }),
+          });
+        }
 
-      // 站内信渠道
-      if (selectedChannels.includes("web")) {
-        channels.push({ channelType: "web" });
-      }
+        // 企微机器人渠道
+        if (selectedChannels.includes("api")) {
+          const apiConfigId = values.apiConfigId;
+          if (!apiConfigId) {
+            message.error("请选择企微机器人配置");
+            return;
+          }
+          const weComRecipients = values.customWeComUsers?.trim()
+            ? values.customWeComUsers
+                .split(",")
+                .map((u: string) => u.trim())
+                .filter((u: string) => u)
+            : undefined;
+          channels.push({
+            channelType: "api",
+            apiConfigId: apiConfigId,
+            ...(weComRecipients &&
+              weComRecipients.length > 0 && { customRecipients: weComRecipients }),
+          });
+        }
 
-      // 邮件通知渠道
-      if (selectedChannels.includes("email")) {
-        const emailRecipients = values.customEmails?.trim()
-          ? values.customEmails
-              .split(",")
-              .map((e: string) => e.trim())
-              .filter((e: string) => e)
-          : undefined;
-        channels.push({
-          channelType: "email",
-          ...(emailRecipients &&
-            emailRecipients.length > 0 && { customRecipients: emailRecipients }),
-        });
-      }
+        // 短信渠道（预留）
+        if (selectedChannels.includes("sms")) {
+          channels.push({ channelType: "sms" });
+        }
 
-      // 企微机器人渠道
-      if (selectedChannels.includes("api")) {
-        const apiConfigId = values.apiConfigId;
-        if (!apiConfigId) {
-          message.error("请选择企微机器人配置");
+        if (channels.length > 0) {
+          (request as CreateNoticeRequest & { channels?: NoticeChannelRequest[] }).channels =
+            channels;
+        }
+
+        if (editingNotice) {
+          const updateRequest = request as UpdateNoticeRequest;
+          if (editingNotice.publishTime && !values.publishTime) {
+            updateRequest.clearPublishTime = true;
+            updateRequest.publishTime = undefined;
+          }
+          await handleUpdate(editingNotice.id, updateRequest);
+        } else {
+          await handleCreate(request as CreateNoticeRequest);
+        }
+
+        setModalVisible(false);
+        editForm.resetFields();
+        setEditingNotice(null);
+        fetchList();
+      } catch (error) {
+        if (error && typeof error === "object" && "errorFields" in error) {
           return;
         }
-        const weComRecipients = values.customWeComUsers?.trim()
-          ? values.customWeComUsers
-              .split(",")
-              .map((u: string) => u.trim())
-              .filter((u: string) => u)
-          : undefined;
-        channels.push({
-          channelType: "api",
-          apiConfigId: apiConfigId,
-          ...(weComRecipients &&
-            weComRecipients.length > 0 && { customRecipients: weComRecipients }),
-        });
+        message.error("操作失败: " + ((error as Error).message || "未知错误"));
       }
-
-      // 短信渠道（预留）
-      if (selectedChannels.includes("sms")) {
-        channels.push({ channelType: "sms" });
-      }
-
-      if (channels.length > 0) {
-        (request as CreateNoticeRequest & { channels?: NoticeChannelRequest[] }).channels =
-          channels;
-      }
-
-      if (editingNotice) {
-        const updateRequest = request as UpdateNoticeRequest;
-        if (editingNotice.publishTime && !values.publishTime) {
-          updateRequest.clearPublishTime = true;
-          updateRequest.publishTime = undefined;
-        }
-        await handleUpdate(editingNotice.id, updateRequest);
-      } else {
-        await handleCreate(request as CreateNoticeRequest);
-      }
-
-      setModalVisible(false);
-      editForm.resetFields();
-      setEditingNotice(null);
-      fetchList();
-    } catch (error) {
-      if (error && typeof error === "object" && "errorFields" in error) {
-        return;
-      }
-      message.error("操作失败: " + ((error as Error).message || "未知错误"));
-    }
-  }, [
-    editForm,
-    executionType,
-    selectedChannels,
-    editingNotice,
-    handleCreate,
-    handleUpdate,
-    fetchList,
-  ]);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
+    [
+      editForm,
+      executionType,
+      selectedChannels,
+      editingNotice,
+      handleCreate,
+      handleUpdate,
+      fetchList,
+    ]
+  );
 
   // 查看统计
   const handleViewStatistics = useCallback(async (notice: Notice) => {
@@ -384,6 +394,7 @@ const NoticeManagement: FC = () => {
     } finally {
       setStatisticsLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   // 删除通知（包含统计刷新）

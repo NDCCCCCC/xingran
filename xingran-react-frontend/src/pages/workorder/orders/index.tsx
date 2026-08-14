@@ -1,8 +1,8 @@
-﻿/**
+/**
  * WorkOrder 工单管理页面
  */
 
-import { useState, useEffect, useCallback, useMemo, type FC } from "react";
+import { useState, useCallback, useMemo, type FC } from "react";
 import {
   Button,
   Form,
@@ -37,7 +37,6 @@ import {
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 
 import {
-  getWorkOrderList,
   createWorkOrder,
   updateWorkOrder,
   deleteWorkOrder,
@@ -53,8 +52,6 @@ import {
   WorkOrderPriority,
   WorkOrderType,
 } from "@/lib/workorderApi";
-import { getEnabledWorkOrderCategories, type WorkOrderCategory } from "@/lib/workorderApi";
-import { getUserList, getDeptList, type SimpleUser, type SimpleDept } from "@/lib/workorderApi";
 import ActionButtons from "@/components/shared/ActionButtons";
 
 // 导入提取的常量、工具和 Hook
@@ -238,11 +235,19 @@ const WorkOrderPage: FC = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize } = usePagination();
+  const { paginationProps, setCurrent: _setCurrent, setPageSize: _setPageSize } = usePagination();
 
   // 使用自定义 Hooks
-  const { loading, dataSource, total, stats, users, depts, categories, fetchList } =
-    useWorkOrderData({ form });
+  const {
+    loading,
+    dataSource,
+    total: _total,
+    stats,
+    users,
+    depts,
+    categories,
+    fetchList,
+  } = useWorkOrderData({ form });
 
   const {
     modalVisible,
@@ -328,10 +333,11 @@ const WorkOrderPage: FC = () => {
         await deleteWorkOrder(id);
         message.success("删除成功");
         fetchList(paginationProps.current, paginationProps.pageSize);
-      } catch (error) {
+      } catch (_error) {
         message.error("删除失败");
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- paginationProps from usePagination is stable
     [fetchList, message]
   );
 
@@ -345,20 +351,22 @@ const WorkOrderPage: FC = () => {
       message.success("批量删除成功");
       setSelectedRowKeys([]);
       fetchList(paginationProps.current, paginationProps.pageSize);
-    } catch (error) {
+    } catch (_error) {
       message.error("批量删除失败");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRowKeys, fetchList, message]);
 
   const handleAssignToTodayDuty = useCallback(
     async (id: string) => {
       try {
-        const result = await assignToTodayDuty(id);
+        const _result = await assignToTodayDuty(id);
         fetchList(paginationProps.current, paginationProps.pageSize);
       } catch (error: unknown) {
         console.error("分配失败:", error);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- paginationProps from usePagination is stable
     [fetchList]
   );
 
@@ -419,7 +427,7 @@ const WorkOrderPage: FC = () => {
 
       const commentsResult = await getWorkOrderComments(selectedRecord.id);
       setComments(commentsResult.data || []);
-    } catch (error) {
+    } catch (_error) {
       message.error("评论添加失败");
     }
   }, [commentForm, selectedRecord, commentInternal, setComments, message]);

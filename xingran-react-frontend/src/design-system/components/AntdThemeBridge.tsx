@@ -90,6 +90,7 @@ const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
       // antd v6 内置 Spin 重复渲染导致, 与 hashed 配置无关, 修复见 index.css.
       hashed: true,
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- appliedTheme/customColors.sidebar are stable theme inputs
   }, [customColors?.primary, customColors?.sidebar, themeMode, density, appliedTheme]);
 
   return (

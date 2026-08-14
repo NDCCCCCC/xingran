@@ -89,17 +89,18 @@ export function useScheduleData(params: UseScheduleDataParams): UseScheduleDataR
         });
         setDataSource(result.data?.list ?? []);
         setTotal(result.data?.total ?? 0);
-      } catch (error) {
+      } catch (_error) {
         message.error("获取排班列表失败");
       } finally {
         setLoading(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [current, pageSize, searchForm]
   );
 
   // 获取今日值班
-  const fetchTodayDuty = useCallback(async () => {
+  const _fetchTodayDuty = useCallback(async () => {
     try {
       await getTodayDuty();
     } catch (error) {

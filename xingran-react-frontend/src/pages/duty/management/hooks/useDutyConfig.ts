@@ -17,12 +17,13 @@ export function useDutyConfig() {
       const result = await getDutyConfig();
       setConfig(result.data || null);
       return result.data || null;
-    } catch (error) {
+    } catch (_error) {
       message.error("获取配置失败");
       return null;
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   // 保存配置
@@ -47,13 +48,14 @@ export function useDutyConfig() {
         message.success("配置保存成功");
         await fetch();
         return true;
-      } catch (error) {
+      } catch (_error) {
         message.error("配置保存失败");
         return false;
       } finally {
         setSaving(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [fetch]
   );
 

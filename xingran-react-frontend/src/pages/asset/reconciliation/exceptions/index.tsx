@@ -329,7 +329,7 @@ const Exceptions = () => {
         key: "operlog_btn",
         width: 110,
         fixed: "right",
-        render: (_: unknown, record: ExceptionListItem) => (
+        render: (_: unknown, _record: ExceptionListItem) => (
           // R1 范围: 后端 sys_oper_log 表无 biz_id 列,无法按 reconciliation.id 过滤。
           // 链接到操作日志页(去掉 bizId),运维按操作时间/模块人工查找。
           // R2 接入 WebSocket 推送 + 转工单后,oper_log 会写入 business_type=RECONCILIATION
@@ -354,7 +354,14 @@ const Exceptions = () => {
         ),
       },
     ],
-    [getColumnSortOrder, conflictTypeMap, conflictTypeListClass, severityMap, canResolve]
+    [
+      getColumnSortOrder,
+      conflictTypeMap,
+      conflictTypeListClass,
+      severityMap,
+      canResolve,
+      resolveForm,
+    ]
   );
 
   // 提交"标记已解决" Modal
@@ -436,6 +443,7 @@ const Exceptions = () => {
       <Card className="mb-4">
         <Form form={form} layout="inline" onFinish={handleSearch}>
           <Form.Item name="conflictType" label="冲突类型">
+            {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
             <Select
               placeholder="请选择"
               allowClear
@@ -450,6 +458,7 @@ const Exceptions = () => {
             </Select>
           </Form.Item>
           <Form.Item name="severity" label="严重级别">
+            {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
             <Select
               placeholder="请选择"
               allowClear

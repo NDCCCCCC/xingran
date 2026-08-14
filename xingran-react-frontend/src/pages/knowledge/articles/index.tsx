@@ -19,7 +19,7 @@ const KnowledgeArticlePage: FC = () => {
   const [editForm] = Form.useForm();
 
   // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+  const { paginationProps, setCurrent, setPageSize, setTotal: _setTotal } = usePagination();
   const [modalVisible, setModalVisible] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<KnowledgeArticle | null>(null);
@@ -32,7 +32,7 @@ const KnowledgeArticlePage: FC = () => {
     flatCategories,
     tags,
     loading,
-    total,
+    total: _total,
     statistics,
     fetchList,
     fetchCategories,
@@ -76,6 +76,7 @@ const KnowledgeArticlePage: FC = () => {
     fetchList(paginationProps.current ?? 1, paginationProps.pageSize ?? 10);
     fetchCategories();
     fetchTags();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-only load; fetch handlers are stable
   }, [paginationProps.current, paginationProps.pageSize]);
 
   // 表格列
@@ -110,7 +111,7 @@ const KnowledgeArticlePage: FC = () => {
   // 搜索
   const handleSearch = () => {
     setCurrent(1);
-    const values = form.getFieldsValue() as {
+    const _values = form.getFieldsValue() as {
       title?: string;
       categoryId?: string;
       tagId?: string;
@@ -174,7 +175,7 @@ const KnowledgeArticlePage: FC = () => {
       const { orderByColumn, isAsc } = resolveSorter(sorter, sorterMetas);
       sortRef.current = { orderByColumn, isAsc };
       // 读搜索条件
-      const values = form.getFieldsValue() as {
+      const _values = form.getFieldsValue() as {
         title?: string;
         categoryId?: string;
         tagId?: string;
@@ -182,7 +183,7 @@ const KnowledgeArticlePage: FC = () => {
       };
       fetchList(current, pageSize, orderByColumn, isAsc);
     },
-    [sort, sorterMetas, form, fetchList]
+    [sort, sorterMetas, form, fetchList, setCurrent, setPageSize]
   );
 
   return (

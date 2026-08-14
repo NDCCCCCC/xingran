@@ -6,7 +6,6 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { App, Spin, Badge, List, Tag, Button } from "antd";
 import {
-  ApartmentOutlined,
   EyeOutlined,
   EyeInvisibleOutlined,
   CompressOutlined,
@@ -14,7 +13,7 @@ import {
 } from "@ant-design/icons";
 import type { BuildingItem } from "../types";
 import { useVisualizationStore } from "@/store/visualizationStore";
-import { loadBaiduMapGLScript, isBaiduMapGLLoaded } from "./BaiduMapScript";
+import { loadBaiduMapGLScript } from "./BaiduMapScript";
 import {
   BAIDU_MAP_AK,
   MAP_CONFIG,
@@ -43,7 +42,6 @@ import {
 import {
   getBMapGL,
   type BMapGLNamespace,
-  type BMapMap,
   type BMapMapGL,
   type BMapMarker,
   type BMapInfoWindow,
@@ -162,6 +160,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
     };
 
     initMap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- render-defined helpers are stable enough for one-time map init
   }, []);
 
   // ============ 地图控件 ============
@@ -327,6 +326,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
     clusterGroups.forEach((cluster) => {
       renderClusterMarker(cluster, map, BMapGL);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- renderClusterMarker is a render-defined helper
   }, [mapLoaded, buildings, currentZoom]);
 
   const renderClusterMarker = (cluster: ClusterGroup, map: BMapMapGL, BMapGL: BMapGLNamespace) => {

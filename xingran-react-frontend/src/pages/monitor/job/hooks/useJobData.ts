@@ -6,7 +6,7 @@
 import { useState, useCallback } from "react";
 import type { JobInfo, JobLog, SearchFormState } from "../types";
 import { post } from "@/lib/api";
-import type { BaseResponse, PageResponse } from "@/types";
+import type { PageResponse } from "@/types";
 
 export interface UseJobDataParams {
   searchForm: SearchFormState;

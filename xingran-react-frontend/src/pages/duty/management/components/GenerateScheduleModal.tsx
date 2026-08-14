@@ -39,7 +39,7 @@ export const GenerateScheduleModal: React.FC<GenerateScheduleModalProps> = ({
         form.resetFields();
       }
       return success;
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   };

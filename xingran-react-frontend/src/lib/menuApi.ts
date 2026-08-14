@@ -1,5 +1,5 @@
 import { post } from "./api";
-import type { Menu, BaseResponse } from "@/types";
+import type { Menu } from "@/types";
 
 /**
  * 获取当前用户的菜单树（不包含隐藏菜单，用于导航栏渲染）

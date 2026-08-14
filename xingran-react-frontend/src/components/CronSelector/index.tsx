@@ -84,6 +84,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
     // 同步外部value变化 - 使用 ref 避免依赖问题
     useLayoutEffect(() => {
       if (value !== cronExpression) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setCronExpression(value || DEFAULT_CRON_EXPRESSION);
         if (validateRef.current(value)) {
           setCronConfig(toConfigRef.current(value));
@@ -94,6 +95,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
     // 初始化时，如果没有外部值，使用默认值并触发onChange
     useLayoutEffect(() => {
       if (!initialized) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setInitialized(true);
         if (!value) {
           // 使用默认配置生成表达式

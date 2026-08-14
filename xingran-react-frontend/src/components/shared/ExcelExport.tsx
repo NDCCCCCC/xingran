@@ -60,11 +60,12 @@ const ExcelExport: FC<ExcelExportProps> = ({
 
       message.success("导出成功");
       onClose?.();
-    } catch (error) {
+    } catch (_error) {
       message.error("导出失败");
     } finally {
       setExporting(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [exportUrl, entityType, entityName, onClose, filters]);
 
   return (

@@ -17,7 +17,6 @@
 
 import { useEffect, useState } from "react";
 import { Modal, Form, Select, Input, InputNumber, App } from "antd";
-import type { MessageInstance } from "antd/es/message/interface";
 import { useNavigate } from "react-router-dom";
 import type { DevicePortStatus } from "@/types/network";
 import { writeSetAccessVlan } from "@/lib/api/networkApi";
@@ -157,6 +156,7 @@ export function SetAccessVlanModal({
             },
           ]}
         >
+          {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
           <Select
             placeholder="请选择操作原因"
             options={PRESET_REASONS.map((opt) => ({

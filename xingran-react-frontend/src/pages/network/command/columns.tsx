@@ -4,7 +4,7 @@
  */
 
 import type { ColumnsType } from "antd/es/table";
-import { Progress, Button, Tag, Modal, Tooltip } from "antd";
+import { Progress, Button, Modal, Tooltip } from "antd";
 import { EyeOutlined, StopOutlined } from "@ant-design/icons";
 import type { ConfigExecution, ConfigExecutionDetail, NetworkDevice } from "@/types";
 import ActionButtons from "@/components/shared/ActionButtons";

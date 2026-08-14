@@ -224,6 +224,7 @@ export function WorkstationEditModal({
           </Col>
           <Col span={12}>
             <Form.Item name="userId" label="所属用户">
+              {/* eslint-disable-next-line local/no-large-dropdown-list -- dept-filtered bounded user list, client-side search via optionFilterProp */}
               <Select
                 placeholder="请先选择部门"
                 allowClear
@@ -278,6 +279,7 @@ export function WorkstationEditModal({
           rules={[{ required: true, message: "请选择状态" }]}
           extra="选择/清空所属用户时,状态会自动切换为占用/空闲(维护状态除外)"
         >
+          {/* eslint-disable-next-line local/no-large-dropdown-list -- fixed option list, no server search needed */}
           <Select placeholder="请选择状态">
             {STATUS_OPTIONS.map((opt) => (
               <Option key={opt.value} value={opt.value}>

@@ -132,6 +132,7 @@ export function useFloorPlanEditor(
         setFloorPlanLoading(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [currentFloor]
   );
 
@@ -234,6 +235,7 @@ export function useFloorPlanEditor(
         options?.onSaveEnd?.();
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [loadFloorPlanData, saveWalls, saveDoors, saveTexts, saveWorkstations, options]
   );
 

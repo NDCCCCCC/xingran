@@ -1,4 +1,4 @@
-﻿import type { FC } from "react";
+import type { FC } from "react";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   App,
@@ -65,7 +65,7 @@ const ConfigManagement: FC = () => {
   const {
     loading,
     data: configs,
-    total,
+    total: _total,
     selectedRowKeys,
     setSelectedRowKeys,
     searchForm,
@@ -141,7 +141,7 @@ const ConfigManagement: FC = () => {
         // F-17 Phase 31: 后端 UpdateConfigRequest 现已接受 configKey 字段(可选)。
         // 显式传 configKey 让后端校验"系统内置参数键不可改",获得二次确认保护。
         // isSystem 仍移除(只读字段,不参与更新)。
-        const { isSystem, ...updateValues } = values;
+        const { isSystem: _isSystem, ...updateValues } = values;
         await post(`/system/configs/${editingConfig.id}/update`, updateValues);
 
         // 任何配置更新后都刷新加密配置（避免前后端加密开关状态脱同步 — 见 .planning/debug/login-400-bad-request.md）

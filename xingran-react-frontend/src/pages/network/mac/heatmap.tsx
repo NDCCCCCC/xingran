@@ -9,7 +9,7 @@
  *   - 空状态: 复用 EmptyStateWithAction
  */
 
-import React, { Suspense, lazy, useCallback, useMemo, useState } from "react";
+import React, { Suspense, lazy, useCallback, useState } from "react";
 import { Card, DatePicker, Space, Button, Form, Alert, Grid, Spin, Tag } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
@@ -85,7 +85,7 @@ const HeatmapPage: React.FC = () => {
       const end = dayjs();
       form.setFieldsValue({ dateRange: [start, end] });
     },
-    [form]
+    [form, setActivePreset]
   );
 
   // 自定义范围
@@ -94,6 +94,7 @@ const HeatmapPage: React.FC = () => {
     if (dates && dates[0] && dates[1]) {
       setActivePreset("custom");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setActivePreset from usePersistedStateController is stable
   }, []);
 
   // 应用查询

@@ -8,7 +8,6 @@ import { useRef, useState, useEffect } from "react";
 import { App, Spin, Badge, List, Tag } from "antd";
 import type { BuildingItem } from "../types";
 import { useVisualizationStore } from "@/store/visualizationStore";
-import { getMapMarkerColor } from "@/utils/three/colors";
 import { loadBaiduMapScript } from "./BaiduMapScript";
 import {
   getBMap,
@@ -138,7 +137,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
         });
         map.addOverlay(polygon);
       });
-    } catch (error) {
+    } catch (_error) {
       addFallbackMask(map, BMap);
     }
   };
@@ -227,13 +226,14 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
 
         setMapLoaded(true);
         setLoading(false);
-      } catch (error) {
+      } catch (_error) {
         message.error("百度地图加载失败，请检查 AK 配置");
         setLoading(false);
       }
     };
 
     initMap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- addHubeiMask render-defined + message stable; init once
   }, []);
 
   // 渲染楼宇标记（使用聚类算法）
@@ -316,6 +316,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
     clusterGroups.forEach((cluster) => {
       renderClusterMarker(cluster, map, BMap);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- renderClusterMarker is render-defined
   }, [mapLoaded, buildings, currentZoom]);
 
   // 渲染聚类标记（单个楼宇或多个楼宇聚类）

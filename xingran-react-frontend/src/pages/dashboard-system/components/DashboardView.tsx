@@ -4,7 +4,7 @@
  * 以只读模式查看仪表盘
  */
 
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { LayoutToolbar } from "@/components/dashboard/layout/LayoutToolbar";
 import {
   DashboardGrid,

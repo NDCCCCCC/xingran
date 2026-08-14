@@ -3,7 +3,6 @@
  * TabBar component utility functions
  */
 
-import type { RefObject } from "react";
 import { SCROLL_TOLERANCE } from "./TabBar.constants";
 
 /** 滚动状态 */

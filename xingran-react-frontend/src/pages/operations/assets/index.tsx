@@ -22,7 +22,6 @@ import { useTableManager } from "@/hooks/useTableManager";
 import { usePagination } from "@/hooks/usePagination";
 import { assetApi } from "@/lib/opsApi";
 import ExcelImport from "@/components/shared/ExcelImport";
-import { getAuthHeaders } from "@/utils/authHelpers";
 import { useColumnConfig } from "@/hooks/useColumnConfig";
 import { ColumnConfigModal } from "@/components/shared/ColumnConfigModal";
 import { AssetRow } from "@/components/table/AssetRow";
@@ -210,12 +209,13 @@ const AssetList: FC = () => {
             message.success("删除成功");
             loadAssets();
             loadStatistics();
-          } catch (error) {
+          } catch (_error) {
             message.error("删除失败");
           }
         },
       });
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [loadAssets, loadStatistics]
   );
 
@@ -235,7 +235,7 @@ const AssetList: FC = () => {
           resetSelection();
           loadAssets();
           loadStatistics();
-        } catch (error) {
+        } catch (_error) {
           message.error("批量删除失败");
         }
       },
@@ -254,13 +254,14 @@ const AssetList: FC = () => {
 
       await assetApi.excel.export(params as any);
       message.success("导出成功");
-    } catch (error) {
+    } catch (_error) {
       message.error("导出失败");
     } finally {
       setExporting(false);
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- columns array recreated each render; dependency array at tableColumns useMemo intentionally references it
   const columns: ColumnsType<Asset> = [
     // order=1
     {
@@ -577,9 +578,10 @@ const AssetList: FC = () => {
     return visibleCols;
   }, [columns, visibleColumns]);
 
-  const handleEdit = useCallback((record: Asset) => {
+  const handleEdit = useCallback((_record: Asset) => {
     // TODO: 实现编辑功能
     message.info("编辑功能待实现");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);
 
   return (

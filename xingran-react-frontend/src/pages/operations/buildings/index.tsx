@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useRef, useMemo, type FC, type Key } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, type FC, type Key } from "react";
 import { useLocation } from "react-router-dom";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import {
@@ -17,7 +17,6 @@ import {
   Statistic,
   Alert,
   Radio,
-  Spin,
   Layout,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
@@ -105,7 +104,7 @@ const BuildingManagement: FC = () => {
   const {
     loading,
     data: buildings,
-    total,
+    total: _total,
     selectedRowKeys,
     searchForm,
     editForm: buildingForm,

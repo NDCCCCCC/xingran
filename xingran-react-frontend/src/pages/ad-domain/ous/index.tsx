@@ -20,12 +20,9 @@ import {
   TeamOutlined,
   ApartmentOutlined,
   EditOutlined,
-  PlusOutlined,
-  DeleteOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { DataNode } from "antd/es/tree";
-import type { TransferProps } from "antd/es/transfer";
 import {
   getADOUTree,
   getADUserList,
@@ -42,13 +39,12 @@ import {
   type OUDeptMappingResponse,
 } from "@/lib/adDomainApi";
 import { useADConfigs } from "@/hooks/useADConfigs";
-import type { ADConfig } from "@/lib/adDomainApi";
 import { useDeptTree, type DeptTreeNode } from "@/hooks/useDeptTree";
 import { createSorter } from "@/utils/tableHelpers";
 
 import type { FC } from "react";
 
-interface Department extends DeptTreeNode {}
+type Department = DeptTreeNode;
 
 const ADOUPage: FC = () => {
   const { message } = App.useApp();
@@ -100,6 +96,7 @@ const ADOUPage: FC = () => {
     if (selectedConfig) {
       fetchOUTree();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchOUTree recreated each render; disable to avoid loop
   }, [selectedConfig]);
 
   // 当选择OU时获取该OU下的用户、部门映射和用户组信息
@@ -227,8 +224,8 @@ const ADOUPage: FC = () => {
 
   const handleGroupTransfer = async (
     targetKeys: React.Key[],
-    direction: "right" | "left",
-    moveKeys: React.Key[]
+    _direction: "right" | "left",
+    _moveKeys: React.Key[]
   ) => {
     if (!selectedOU) return;
 
@@ -298,13 +295,13 @@ const ADOUPage: FC = () => {
   };
 
   // 辅助函数：递归查找部门名称
-  const findDeptName = (depts: Department[], id: string): string => {
+  const _findDeptName = (depts: Department[], id: string): string => {
     for (const dept of depts) {
       if (dept.id === id) {
         return dept.deptName;
       }
       if (dept.children && dept.children.length > 0) {
-        const found = findDeptName(dept.children, id);
+        const found = _findDeptName(dept.children, id);
         if (found) return found;
       }
     }

@@ -2,7 +2,7 @@
  * RPA 系统相关类型定义
  */
 
-import type { Status, PageParams } from "./base";
+import type { PageParams } from "./base";
 
 // ==================== 任务相关 ====================
 

@@ -119,6 +119,7 @@ const MyDutyPage: FC = () => {
     loadStats();
     loadWorkOrders();
     loadSchedules();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadSchedules is render-defined; re-run on pagination change
   }, [paginationProps.current, paginationProps.pageSize]);
 
   // 搜索

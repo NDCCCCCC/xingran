@@ -3,7 +3,7 @@
  * 知识文章数据管理 Hook
  */
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { App } from "antd";
 import {
   getKnowledgeArticleList,
@@ -127,12 +127,13 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
 
         // 列表加载后顺带刷新统计（全局 COUNT）；搜索/分页/增删改均经 fetchList，统计始终为真实全局计数。
         fetchStats();
-      } catch (error) {
+      } catch (_error) {
         message.error("获取文章列表失败");
       } finally {
         setLoading(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [current, pageSize, fetchStats]
   );
 
@@ -165,6 +166,7 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
         message.error(err.message || "删除失败");
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [fetchList]
   );
 
@@ -179,6 +181,7 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
         message.error(err.message || "点赞失败");
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [fetchList]
   );
 
@@ -193,6 +196,7 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
         message.error(err.message || "发布失败");
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [fetchList]
   );
 
@@ -215,6 +219,7 @@ export function useArticleData(params: UseArticleDataParams): UseArticleDataRetu
       }
       fetchList();
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
     [fetchList]
   );
 

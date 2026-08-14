@@ -12,7 +12,6 @@ import { App, notification, Badge, Tooltip, Spin, Alert, Result, Button, Empty }
 import {
   WifiOutlined,
   DisconnectOutlined,
-  ReloadOutlined,
   SyncOutlined,
   WarningOutlined,
   ReloadOutlined as RefreshIcon,
@@ -53,12 +52,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const { message } = App.useApp();
   const {
     viewMode,
-    widgetDataCache,
+    widgetDataCache: _widgetDataCache,
     setWsStatus,
     setIsRefreshing,
     updateWidgetData,
-    wsStatus,
-    isRefreshing,
+    wsStatus: _wsStatus,
+    isRefreshing: _isRefreshing,
   } = useDashboardStore();
 
   // 内部状态
@@ -73,7 +72,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }, [dashboard]);
 
   // 轮询数据刷新
-  const { loading, refresh, isPaused, pause, resume } = useWidgetPolling({
+  const {
+    loading,
+    refresh,
+    isPaused,
+    pause: _pause,
+    resume: _resume,
+  } = useWidgetPolling({
     widgetIds,
     interval: dashboard?.refreshInterval || 300,
     enabled: isOnline && viewMode === "view" && !readonly,
@@ -166,6 +171,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       // 网络恢复后刷新数据
       refresh();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message/notification from App.useApp() are stable
   }, [isOnline, wasOffline, resetWasOffline, refresh]);
 
   // 更新刷新状态
@@ -212,7 +218,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   // 布局变更处理
-  const handleLayoutChange = useCallback((layouts: Array<{ id: string; position: unknown }>) => {
+  const handleLayoutChange = useCallback((_layouts: Array<{ id: string; position: unknown }>) => {
     // 布局变更处理
   }, []);
 

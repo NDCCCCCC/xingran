@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { BrowserRouter as Router } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import zhCN from "antd/locale/zh_CN";
 import { useMenuStore } from "@/store/menuStore";
 import { routeConfigManager } from "@/router/routeConfigManager";
 import { ThemeProvider } from "@/design-system/components/ThemeProvider";

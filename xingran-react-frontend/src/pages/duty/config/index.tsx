@@ -38,7 +38,7 @@ const DutyConfigPage: FC = () => {
         reminderChannels: configData.data.reminderChannels.split(","),
         beforeReminderMinutes: configData.data.beforeReminderMinutes,
       });
-    } catch (error) {
+    } catch (_error) {
       message.error("获取配置失败");
     } finally {
       setLoading(false);
@@ -47,6 +47,7 @@ const DutyConfigPage: FC = () => {
 
   useEffect(() => {
     fetchConfig();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load/fetch fn from hook is stable enough; disable to avoid loop
   }, []);
 
   const handleSubmit = async () => {

@@ -39,7 +39,6 @@ import {
   ClockCircleOutlined,
   FolderOpenOutlined,
   FileTextOutlined,
-  ExportOutlined,
 } from "@ant-design/icons";
 import type { ConfigBackup } from "@/types";
 import type { DeviceBackupGroup, DiffLine } from "./types";
@@ -74,7 +73,7 @@ const ConfigBackupPage: FC = () => {
   const [batchExporting, setBatchExporting] = useState(false);
 
   // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+  const { paginationProps, setCurrent, setPageSize, setTotal: _setTotal } = usePagination();
 
   // 服务端排序:field 与 columns.dataIndex 对齐(useServerSort 按 sorter.field 匹配)
   const sorterMetas = useMemo(
@@ -100,7 +99,7 @@ const ConfigBackupPage: FC = () => {
     deviceGroups,
     statistics,
     loading,
-    total,
+    total: _total,
     loadDevices,
     loadBackups,
     loadStatistics,
@@ -130,7 +129,7 @@ const ConfigBackupPage: FC = () => {
     versionListDrawerVisible,
     selectedBackup,
     selectedRestoreBackup,
-    selectedDeviceGroup: modalDeviceGroup,
+    selectedDeviceGroup: _modalDeviceGroup,
     backupContent,
     openBackupModal,
     closeBackupModal,
@@ -152,6 +151,7 @@ const ConfigBackupPage: FC = () => {
   // 初始化加载
   useEffect(() => {
     Promise.all([loadBackups(), loadStatistics()]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- paginationProps.current is intentional
   }, [paginationProps.current, paginationProps.pageSize, loadBackups, loadStatistics]);
 
   // 打开备份弹窗
@@ -224,7 +224,7 @@ const ConfigBackupPage: FC = () => {
           await post(`/network/backups/${backup.id}/restore`, {});
           message.success("恢复成功");
           loadBackups();
-        } catch (error) {
+        } catch (_error) {
           message.error("恢复失败");
         }
       },

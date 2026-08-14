@@ -1,4 +1,4 @@
-﻿import type { FC } from "react";
+import type { FC } from "react";
 import {
   Table,
   Button,
@@ -24,9 +24,8 @@ import {
   ReloadOutlined,
   KeyOutlined,
   ApiOutlined,
-  ExportOutlined,
 } from "@ant-design/icons";
-import type { AuthCredential, BaseResponse, PageResponse } from "@/types";
+import type { AuthCredential, PageResponse } from "@/types";
 import { formatDateTime } from "@/utils/datetime";
 import { post } from "@/lib/api";
 import { batchExport } from "@/lib/api/networkApi";
@@ -37,7 +36,6 @@ import { useState, useEffect, useMemo } from "react";
 import ActionButtons from "@/components/shared/ActionButtons";
 import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
-import { DownloadOutlined } from "@ant-design/icons";
 import { usePagination } from "@/hooks/usePagination";
 
 const { Option } = Select;
@@ -139,6 +137,7 @@ const CredentialManagement: FC = () => {
 
   useEffect(() => {
     Promise.all([loadCredentials(), loadStatistics()]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only fetch; loadCredentials/loadStatistics recreated each render
   }, []);
 
   // 创建/更新凭证
@@ -148,7 +147,7 @@ const CredentialManagement: FC = () => {
         const formValues = await editForm.validateFields();
         const values = formValues as Record<string, unknown> & { confirmPassword?: string };
         // 移除确认密码字段
-        const { confirmPassword, ...data } = values;
+        const { confirmPassword: _confirmPassword, ...data } = values;
         if (editingCredential) {
           await post(`/network/credentials/${editingCredential.id}/update`, data);
           return "更新成功";
@@ -236,7 +235,7 @@ const CredentialManagement: FC = () => {
   };
 
   // 打开编辑模态框
-  const openModal = (record?: AuthCredential) => {
+  const _openModal = (record?: AuthCredential) => {
     if (record) {
       setEditingItem(record);
       editForm.setFieldsValue({

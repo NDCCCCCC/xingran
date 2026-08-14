@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 值班排班管理页面
  * Duty Schedule Management Page
  */
@@ -38,7 +38,7 @@ import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
 
-import type { DutySchedule, DutyPool, SimpleUser, MonthlyDutyMember } from "@/lib/dutyApi";
+import type { DutySchedule } from "@/lib/dutyApi";
 
 // 导入提取的模块
 import {
@@ -227,12 +227,12 @@ function getDutyTableColumns(props: DutyTableColumnsProps): ColumnsType<DutySche
 // ==================== 主组件 ====================
 
 const DutySchedulePage: FC = () => {
-  const { message } = App.useApp();
+  const { message: _message } = App.useApp();
   const [form] = Form.useForm();
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
   // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize } = usePagination();
+  const { paginationProps, setCurrent: _setCurrent, setPageSize: _setPageSize } = usePagination();
 
   // 服务端排序状态（field 对应后端 dutyScheduleAllowedSortFields 白名单 key）
   const [sortField, setSortField] = useState<string>("");
@@ -244,7 +244,7 @@ const DutySchedulePage: FC = () => {
   // 使用数据管理 Hook
   const {
     dataSource,
-    total,
+    total: _total,
     allSchedules,
     pools,
     users,

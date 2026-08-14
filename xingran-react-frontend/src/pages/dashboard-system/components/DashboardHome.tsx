@@ -2,7 +2,7 @@
  * 默认仪表盘视图
  * 优先级：用户默认 > 系统仪表盘 > 欢迎页
  */
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { DashboardView } from "./DashboardView";

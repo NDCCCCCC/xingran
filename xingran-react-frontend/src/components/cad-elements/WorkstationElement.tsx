@@ -294,17 +294,7 @@ export function WorkstationElement({
       statusIndicatorX: statusPos.x,
       statusIndicatorY: statusPos.y,
     };
-  }, [
-    workstation.x,
-    workstation.y,
-    workstation.width,
-    workstation.height,
-    workstation.rotation,
-    workstation.type,
-    deskWidth,
-    deskDepth,
-    isLShaped,
-  ]);
+  }, [workstation.x, workstation.y, deskWidth, deskDepth, isLShaped, rotation]);
 
   const handleMouseEnter = useCallback(() => {
     onHover?.(true);
@@ -326,7 +316,7 @@ export function WorkstationElement({
   const backrestPoints = toPointsString(geometry.backrestRect);
   const leftArmrestPoints = toPointsString(geometry.leftArmrest);
   const rightArmrestPoints = toPointsString(geometry.rightArmrest);
-  const monitorPoints = toPointsString(geometry.monitorRect);
+  const _monitorPoints = toPointsString(geometry.monitorRect);
   const standPoints = toPointsString(geometry.standRect);
   const keyboardPoints = toPointsString(geometry.keyboardRect);
   const mousePoints = toPointsString(geometry.mouseRect);

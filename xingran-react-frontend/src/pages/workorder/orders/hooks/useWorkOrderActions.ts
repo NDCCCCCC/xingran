@@ -53,13 +53,13 @@ export function useWorkOrderActions(
 ): UseWorkOrderActionsReturn {
   const { fetchList, openDetailDrawer, selectedRecord } = options;
   const { message } = App.useApp();
-  const [actionLoading, setActionLoading] = useState(false);
+  const [actionLoading, _setActionLoading] = useState(false);
 
   const handleAdd = useCallback(() => {
     // 由 useWorkOrderModals 处理
   }, []);
 
-  const handleEdit = useCallback((record: WorkOrder) => {
+  const handleEdit = useCallback((_record: WorkOrder) => {
     // 由 useWorkOrderModals 处理
   }, []);
 
@@ -69,7 +69,7 @@ export function useWorkOrderActions(
         await deleteWorkOrder(id);
         message.success("删除成功");
         fetchList();
-      } catch (error) {
+      } catch (_error) {
         message.error("删除失败");
       }
     },
@@ -86,7 +86,7 @@ export function useWorkOrderActions(
         await batchDeleteWorkOrders(selectedRowKeys as string[]);
         message.success("批量删除成功");
         fetchList();
-      } catch (error) {
+      } catch (_error) {
         message.error("批量删除失败");
       }
     },
@@ -200,7 +200,7 @@ export function useWorkOrderActions(
         // 重新获取评论列表
         const commentsResult = await getWorkOrderComments(selectedRecord.id);
         setComments(commentsResult.data || []);
-      } catch (error) {
+      } catch (_error) {
         message.error("评论添加失败");
       }
     },

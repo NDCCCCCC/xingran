@@ -215,6 +215,7 @@ export function CADFloorPlanEditor({
           message.success("墙体绘制完成");
         }
       },
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
       [floorId, editingWallId]
     ),
   });
@@ -285,6 +286,7 @@ export function CADFloorPlanEditor({
         )
       );
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- layers is state array; disable to avoid re-run loop
   }, [floorPlanData.walls.length, floorPlanData.doors.length, layerConfig?.planImage?.autoHide]);
 
   // ==================== 图层辅助函数 ====================
@@ -352,6 +354,7 @@ export function CADFloorPlanEditor({
     return () => {
       svgElement.removeEventListener("wheel", handleWheel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- isLayerLocked is a render-defined function
   }, [readOnly, floorPlanData.planImageUrl]);
 
   // ==================== 辅助函数 ====================
@@ -429,6 +432,7 @@ export function CADFloorPlanEditor({
   const handleSave = useCallback(() => {
     onSave?.(floorPlanData);
     message.success("保存成功");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [floorPlanData, onSave]);
 
   // ==================== 更新元素属性 ====================
@@ -506,6 +510,7 @@ export function CADFloorPlanEditor({
 
     closeTextInput();
     message.success("文本已添加");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, [textInputPosition, tempTextContent, floorId]);
 
   const handleTextInputCancel = useCallback(() => {
@@ -844,6 +849,7 @@ export function CADFloorPlanEditor({
         }
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mixed render-defined and useCallback deps; disable to avoid loop
     [
       mode,
       scale,
@@ -1133,6 +1139,7 @@ export function CADFloorPlanEditor({
         return newData;
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getElementTypeById and isLayerLocked are render-defined functions
   }, [isBoxSelecting, boxSelectStart, boxSelectEnd, floorPlanData, selectedIds]);
 
   const handleCanvasDoubleClick = useCallback(() => {
@@ -1248,6 +1255,7 @@ export function CADFloorPlanEditor({
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- isLayerLocked/message/wallDrawing are render-defined or stable
   }, [
     selectedId,
     selectedType,

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 系统菜单管理页面
  * System Menu Management Page
  */
@@ -42,17 +42,10 @@ import { formatDateTime } from "@/utils/datetime";
 import {
   MENU_TYPE_OPTIONS,
   MENU_STATUS_OPTIONS,
-  getMenuIcon,
   getMenuTypeTag,
   DEFAULT_FORM_VALUES,
 } from "./constants";
-import {
-  flattenTree,
-  buildParentOptions,
-  renderTreeData,
-  renderMenuName,
-  type ParentOption,
-} from "./utils";
+import { renderTreeData, renderMenuName } from "./utils";
 import { useMenuData, useMenuActions } from "./hooks";
 
 const { Option } = Select;
@@ -159,8 +152,8 @@ const MenuManagement: FC = () => {
   // 使用操作管理 Hook
   const {
     editingMenu,
-    cascadeDelete,
-    setCascadeDelete,
+    cascadeDelete: _cascadeDelete,
+    setCascadeDelete: _setCascadeDelete,
     handleAdd,
     handleEdit,
     handleDeleteConfirm,
@@ -179,6 +172,7 @@ const MenuManagement: FC = () => {
   // 初始化加载
   useEffect(() => {
     loadMenus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
   }, []);
 
   // 搜索

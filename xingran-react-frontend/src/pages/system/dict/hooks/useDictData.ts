@@ -109,7 +109,7 @@ export function useDictData(
         setLoading(false);
       }
     },
-    [selectedType, current, pageSize, dataSearchForm]
+    [selectedType, current, pageSize, dataSearchForm, message]
   );
 
   // 加载字典类型统计数据(专用 COUNT 端点,不受 MaxPageSize=100 钳制)

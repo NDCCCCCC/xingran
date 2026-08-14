@@ -61,7 +61,7 @@ export const DashboardEdit: React.FC<DashboardEditProps> = ({ dashboardId }) => 
   };
 
   // 返回列表
-  const handleBackToList = () => {
+  const _handleBackToList = () => {
     navigate(`${DASHBOARD}?mode=list`);
   };
 

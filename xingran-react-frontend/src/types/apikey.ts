@@ -2,7 +2,7 @@
  * API 密钥管理相关类型
  */
 
-import type { Status, PageParams } from "./base";
+import type { PageParams } from "./base";
 
 // ==================== API 密钥相关 ====================
 

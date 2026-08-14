@@ -17,7 +17,12 @@ export interface CaptchaEditModalProps {
   onCancel: () => void;
 }
 
-export function CaptchaEditModal({ open, editingBg, onOk, onCancel }: CaptchaEditModalProps) {
+export function CaptchaEditModal({
+  open,
+  editingBg: _editingBg,
+  onOk,
+  onCancel,
+}: CaptchaEditModalProps) {
   const [form] = Form.useForm();
 
   return (

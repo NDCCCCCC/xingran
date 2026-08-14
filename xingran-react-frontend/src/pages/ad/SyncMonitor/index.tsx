@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { App, Card, Row, Col, Statistic, Button, Table, Tag, Progress } from "antd";
+import { App, Card, Row, Col, Statistic, Button, Table, Tag } from "antd";
 import { ReloadOutlined, PlayCircleOutlined } from "@ant-design/icons";
 import { post } from "@/lib/api";
 import { createSorter } from "@/utils/tableHelpers";
@@ -38,7 +38,7 @@ const SyncMonitor: React.FC = () => {
     try {
       const result = await post("/api/v1/ad/groups/sync/status", {});
       setStatus(result.data as SyncStatus);
-    } catch (error) {
+    } catch (_error) {
       message.error("获取状态失败");
     }
   };
@@ -52,7 +52,7 @@ const SyncMonitor: React.FC = () => {
         pageSize: 10,
       });
       setLogs((result.data as { list: SyncLog[] }).list);
-    } catch (error) {
+    } catch (_error) {
       message.error("获取日志失败");
     } finally {
       setLoading(false);
@@ -67,7 +67,7 @@ const SyncMonitor: React.FC = () => {
       message.success("同步已触发");
       fetchStatus();
       fetchLogs();
-    } catch (error) {
+    } catch (_error) {
       message.error("同步失败");
     } finally {
       setSyncing(false);
@@ -79,6 +79,7 @@ const SyncMonitor: React.FC = () => {
     fetchLogs();
     const interval = setInterval(fetchStatus, 10000); // 10秒轮询
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchStatus/fetchLogs are render-defined helpers; mount-only
   }, []);
 
   const statusColumns = [

@@ -5,7 +5,7 @@
  * 支持模板预览功能
  */
 
-import { useState, useEffect, useLayoutEffect } from "react";
+import { useState, useLayoutEffect } from "react";
 import { App, Modal, Card, Row, Col, Button, Tag, Space, Tooltip } from "antd";
 import {
   AppstoreOutlined,
@@ -17,7 +17,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import type { PresetTemplateType, Dashboard } from "@/types/dashboard";
 import { presetDashboardTemplates } from "@/components/dashboard/templates/presets";
-import { dashboardService } from "@/services/dashboardService";
 import TemplatePreview from "./TemplatePreview";
 
 import "./TemplateSelector.css";
@@ -43,11 +42,12 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<Dashboard | null>(null);
   const { message } = App.useApp();
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
 
   // 重置状态 - 使用 useLayoutEffect 避免级联渲染
   useLayoutEffect(() => {
     if (visible) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional reset on visibility change
       setSelectedTemplate(null);
       setDashboardName("");
     }

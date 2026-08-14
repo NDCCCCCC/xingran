@@ -4,10 +4,10 @@
  */
 
 import type { ColumnsType } from "antd/es/table";
-import { Button, Tag, Progress, Modal } from "antd";
+import { Tag, Progress, Modal } from "antd";
 import { EyeOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { DeviceDiscovery, NetworkDevice } from "@/types";
-import { DISCOVERY_TYPE_OPTIONS, STATUS_CONFIG, renderStatusTag } from "./constants";
+import { DISCOVERY_TYPE_OPTIONS, renderStatusTag } from "./constants";
 import ActionButtons from "@/components/shared/ActionButtons";
 
 export interface DiscoveryColumnsParams {
