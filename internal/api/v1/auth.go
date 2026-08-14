@@ -622,14 +622,14 @@ func parseUserAgent(userAgent string) (browser, os string) {
 	switch {
 	case utils.Contains(userAgent, "Windows"):
 		os = "Windows"
-	case utils.Contains(userAgent, "Mac OS X") || utils.Contains(userAgent, "Macintosh"):
-		os = "Mac OS X"
-	case utils.Contains(userAgent, "Linux"):
-		os = "Linux"
 	case utils.Contains(userAgent, "Android"):
 		os = "Android"
 	case utils.Contains(userAgent, "iOS") || utils.Contains(userAgent, "iPhone") || utils.Contains(userAgent, "iPad"):
 		os = "iOS"
+	case utils.Contains(userAgent, "Mac OS X") || utils.Contains(userAgent, "Macintosh"):
+		os = "Mac OS X"
+	case utils.Contains(userAgent, "Linux"):
+		os = "Linux"
 	default:
 		os = "Other"
 	}
