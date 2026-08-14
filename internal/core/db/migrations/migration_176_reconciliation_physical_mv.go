@@ -9,6 +9,30 @@ import (
 	"gorm.io/gorm"
 )
 
+// backfillOpsAssetPhysical 把 reconciliation_physical_chain 视图解析的物理链路持久化到
+// ops_asset_physical 表。失败时 applogger.Warnf 非致命(与既有迁移风格一致)。
+//
+// 调用场景:
+//   - 快路径:REFRESH CONCURRENTLY 完成后,补回历史物理链路(否则快路径永不回填)
+//   - 慢路径:DROP+CREATE MV + 建索引后,首次建立物理链路快照
+//
+// ON CONFLICT (asset_id) DO UPDATE 保证每次执行幂等地把当前视图解析结果覆盖到表里。
+func backfillOpsAssetPhysical(db *gorm.DB) {
+	backfillSQL := `
+INSERT INTO ops_asset_physical (asset_id, physical_user_id, physical_username, mac_join, last_refreshed_at)
+SELECT pc.asset_id, pc.physical_user_id::uuid, pc.physical_username, pc.mac_join, NOW()
+FROM reconciliation_physical_chain pc
+ON CONFLICT (asset_id) DO UPDATE
+   SET physical_user_id  = EXCLUDED.physical_user_id,
+       physical_username = EXCLUDED.physical_username,
+       mac_join          = EXCLUDED.mac_join,
+       last_refreshed_at = NOW();
+`
+	if err := db.Exec(backfillSQL).Error; err != nil {
+		applogger.Warnf("[迁移] R5 同步 ops_asset_physical 失败(非致命): %v", err)
+	}
+}
+
 // Migrate176ReconciliationPhysicalMV Phase 45 R5: 资产对账 — MV 重写接双源 declared + 真物理链路
 //
 // 业务背景:
@@ -43,7 +67,11 @@ import (
 //   - R4 HealthBadge contract 不变
 //
 // 历史 Type E 处理:
-//   - 不主动 UPDATE。按用户决定,让 DetectLayer3 自然重写。
+//   - 门控 UPDATE:仅在 ops_asset_physical 有数据(物理链路曾回填过)时执行,
+//
+//	说明 R5 已上线且物理链路已实际接入 → 历史 Type E 批量标记 resolved 是 R5 修复的必然后续步骤。
+//   - ops_asset_physical 无数据 → 跳过清理,认为 Type E 可能是真实告警,让 DetectLayer3 自然重写。
+//   - 每次执行以 applogger.Warnf 记录 RowsAffected(审计可见,非首次专用)。
 //   - 部署后运维/UAT 用 POST /asset/reconciliation/refresh 手动触发。
 func Migrate176ReconciliationPhysicalMV(db *gorm.DB) error {
 	log.Println("Running migration 176: Phase 45 R5 reconciliation_normalized MV 双源 declared + 真物理链路")
@@ -80,9 +108,49 @@ func Migrate176ReconciliationPhysicalMV(db *gorm.DB) error {
 		return fmt.Errorf("探测 MV 存在性失败: %w", err)
 	}
 
-	if mvExists.Exists {
+	// 2.4 MV schema 版本校验(C1 升级路径保护)
+	//
+	// 问题(R1/R2→R5 就地升级场景):
+	//   - 旧版本 MV 由 migration_168/173 创建,缺 R5 标记列(asset_username / physical_user_id /
+	//     last_resolved_at / mv_refreshed_at)
+	//   - 快路径仅检查 MV 存在性 → REFRESH CONCURRENTLY 刷新旧结构数据 → COUNT 验证通过
+	//   - 对账服务运行时读新列失败,migration 表面"成功"实则数据损坏
+	//
+	// 解决:information_schema.columns 查询 4 个 R5 标记列;任意缺失即视为旧结构,
+	//      走 DROP+CREATE 慢路径自愈升级,绝不静默 REFRESH 旧 schema。
+	type mvColumnRow struct {
+		ColumnName string `gorm:"column:column_name"`
+	}
+	var mvColumns []mvColumnRow
+	if err := db.Raw(`SELECT column_name FROM information_schema.columns
+		WHERE table_name = 'reconciliation_normalized'
+		  AND table_schema = current_schema()`).Scan(&mvColumns).Error; err != nil {
+		applogger.Errorf("[迁移 176] 探测 reconciliation_normalized 列集失败: %v", err)
+		return fmt.Errorf("探测 MV 列集失败: %w", err)
+	}
+	r5MarkerCols := map[string]bool{
+		"asset_username":   false,
+		"physical_user_id": false,
+		"last_resolved_at": false,
+		"mv_refreshed_at":  false,
+	}
+	for _, col := range mvColumns {
+		if _, ok := r5MarkerCols[col.ColumnName]; ok {
+			r5MarkerCols[col.ColumnName] = true
+		}
+	}
+	schemaOK := true
+	missingCols := make([]string, 0, len(r5MarkerCols))
+	for name, present := range r5MarkerCols {
+		if !present {
+			schemaOK = false
+			missingCols = append(missingCols, name)
+		}
+	}
+
+	if mvExists.Exists && schemaOK {
 		// ===== 快路径 (~10s, 不锁表) =====
-		applogger.Infof("[迁移] reconciliation_normalized 已存在,走 REFRESH CONCURRENTLY 快路径")
+		applogger.Infof("[迁移] reconciliation_normalized 已存在且 R5 schema 完整,走 REFRESH CONCURRENTLY 快路径")
 
 		// 2.1 兜底索引(防运维误删)
 		if err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_recon_norm_asset
@@ -98,15 +166,24 @@ func Migrate176ReconciliationPhysicalMV(db *gorm.DB) error {
 		}
 		applogger.Infof("[迁移] reconciliation_normalized REFRESH CONCURRENTLY 完成 (耗时 %v, 不锁表)", time.Since(start))
 
-		// 2.3 轻量验证
+		// 2.3 双路径回填:快路径也必须刷新 ops_asset_physical,否则历史物理链路永不回填
+		backfillOpsAssetPhysical(db)
+
+		// 2.3b 轻量验证
 		var mvCount int64
 		if err := db.Raw("SELECT COUNT(*) FROM reconciliation_normalized").Scan(&mvCount).Error; err != nil {
 			return fmt.Errorf("验证 reconciliation_normalized MV 失败: %w", err)
 		}
 		applogger.Infof("[迁移 176] 验证通过 (快路径): MV=%d 行", mvCount)
 
-		log.Println("Migration 176 completed (fast path: REFRESH CONCURRENTLY)")
+		log.Println("Migration 176 completed (fast path: REFRESH CONCURRENTLY + backfill)")
 		return nil
+	}
+
+	if mvExists.Exists && !schemaOK {
+		// MV 存在但缺 R5 标记列 → 旧版本 schema(R1/R2) → 自愈升级走 DROP+CREATE
+		applogger.Warnf("[迁移 176] 检测到旧版本 MV schema(缺 R5 标记列: %v),走 DROP+CREATE 升级路径",
+			missingCols)
 	}
 
 	// ===== 慢路径 (~10s, 首次启动 / 视图被外部删除) =====
@@ -219,19 +296,7 @@ CREATE INDEX IF NOT EXISTS idx_recon_norm_last_resolved
 
 	// 5. 同步回填 ops_asset_physical(物理链路持久化结果)
 	//    历史数据写入,新数据由 reconciliation:detectLayer3 触发时增量维护
-	backfillSQL := `
-INSERT INTO ops_asset_physical (asset_id, physical_user_id, physical_username, mac_join, last_refreshed_at)
-SELECT pc.asset_id, pc.physical_user_id::uuid, pc.physical_username, pc.mac_join, NOW()
-FROM reconciliation_physical_chain pc
-ON CONFLICT (asset_id) DO UPDATE
-   SET physical_user_id  = EXCLUDED.physical_user_id,
-       physical_username = EXCLUDED.physical_username,
-       mac_join          = EXCLUDED.mac_join,
-       last_refreshed_at = NOW();
-`
-	if err := db.Exec(backfillSQL).Error; err != nil {
-		applogger.Warnf("[迁移] R5 同步 ops_asset_physical 失败(非致命): %v", err)
-	}
+	backfillOpsAssetPhysical(db)
 
 	// 6. 验证 MV 可读 + 字段就位 + 抽样数据
 	var mvCount int64
@@ -260,7 +325,7 @@ ON CONFLICT (asset_id) DO UPDATE
 	applogger.Infof("[迁移] R5 reconciliation_normalized 验证通过: MV=%d 行, declared非空=%d 行, physical非空=%d 行",
 		mvCount, sampleCount, physicalCount)
 
-	// 7. 清理历史 Type E(R5 强制措施)
+	// 7. 清理历史 Type E(R5 强制措施,但带前置门控 + WARN)
 	//
 	// 背景: R1/R2 设计 partial unique index `uniq_recon_asset_type_open`
 	// `(asset_id, conflict_type) WHERE resolved_at IS NULL AND deleted_at IS NULL`
@@ -273,6 +338,27 @@ ON CONFLICT (asset_id) DO UPDATE
 	// 解决: 把所有 open Type E 记录批量标记为 resolved(带 R5 标记),
 	// 释放 partial unique index 的占用,让 DetectLayer3 下一轮自然重写为准确类型。
 	// 这是 R5 declared 双源修复的必然后续步骤。
+	//
+	// C1 修复:门控前置条件 + WARN 审计
+	//   - 仅当 ops_asset_physical 有数据(说明 R5 物理链路已实际接入过)时执行清理,
+	//     避免对未迁移环境的真实 Type E 告警静默关闭。
+	//   - 执行成功的 RowsAffected 走 applogger.Warnf,每次执行都记录(非首次专用),
+	//     提供审计可见性。
+	type physicalExistsRow struct {
+		Exists bool `gorm:"column:exists"`
+	}
+	var physicalHasData physicalExistsRow
+	if err := db.Raw(`SELECT EXISTS (SELECT 1 FROM ops_asset_physical LIMIT 1) AS exists`).Scan(&physicalHasData).Error; err != nil {
+		applogger.Errorf("[迁移 176] 探测 ops_asset_physical 前置条件失败(非致命,跳过 Type E 清理): %v", err)
+		log.Println("Migration 176 completed: slow path without Type E cleanup (physical gate probe failed)")
+		return nil
+	}
+	if !physicalHasData.Exists {
+		applogger.Infof("[迁移 176] ops_asset_physical 无数据,跳过 Type E 清理(R5 物理链路未接入,Type E 可能是真实告警)")
+		log.Println("Migration 176 completed: slow path without Type E cleanup (physical gate empty)")
+		return nil
+	}
+
 	cleanupSQL := `
 UPDATE sys_data_reconciliation
 SET resolved_at = NOW(),
@@ -285,7 +371,7 @@ WHERE conflict_type = 'E'
 	if res := db.Exec(cleanupSQL); res.Error != nil {
 		applogger.Errorf("[迁移 176] 清理历史 Type E 失败(非致命): %v", res.Error)
 	} else {
-		applogger.Infof("[迁移 176] 历史 Type E 已批量标记为 resolved,受影响行数: %d", res.RowsAffected)
+		applogger.Warnf("[迁移 176] 历史 Type E 已批量标记为 resolved,受影响行数: %d", res.RowsAffected)
 	}
 
 	log.Println("Migration 176 completed: R5 reconciliation_normalized MV + 双源 declared + 物理链路 ready")
