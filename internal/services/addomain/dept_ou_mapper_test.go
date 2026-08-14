@@ -32,6 +32,31 @@ func TestFindDeptByOUDN(t *testing.T) {
 	)`)
 	db.Exec(`CREATE INDEX idx_dept_ou_mapping_dn ON sys_dept_ou_mapping(ou_dn)`)
 
+	// Phase 40 修复后 FindDeptByOUDN JOIN sys_dept 过滤软删除，测试需补建该表
+	db.Exec(`CREATE TABLE sys_dept (
+		id TEXT PRIMARY KEY,
+		dept_name TEXT NOT NULL,
+		dept_code TEXT NOT NULL UNIQUE,
+		parent_id TEXT,
+		ancestors TEXT DEFAULT '',
+		order_num INTEGER DEFAULT 0,
+		leader TEXT,
+		leader_name TEXT,
+		leader_username TEXT,
+		phone TEXT,
+		email TEXT,
+		is_external_org INTEGER DEFAULT 0,
+		status INTEGER DEFAULT 0,
+		remark TEXT,
+		created_at DATETIME,
+		updated_at DATETIME,
+		deleted_at DATETIME,
+		created_by TEXT,
+		updated_by TEXT,
+		version INTEGER DEFAULT 0
+	)`)
+	db.Exec(`INSERT INTO sys_dept (id, dept_name, dept_code, status) VALUES ('dept-1', 'TestDept', 'TEST001', 0)`)
+
 	mapper := NewDeptOUmapper(db)
 
 	// 准备测试数据

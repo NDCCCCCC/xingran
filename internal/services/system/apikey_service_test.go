@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -28,6 +29,7 @@ var (
 	testTrackedAPIKeyIDs []string
 	testTrackedMu        sync.Mutex
 	testKeySeq           uint64
+	testDBSeq            uint64
 )
 
 // setupTestDB 创建测试数据库连接
@@ -35,10 +37,17 @@ var (
 // 让 Go bool 序列化为 1/0 (而非 "true"/"false"),与 GORM bool 字段语义一致,
 // 修复 is_active 等列在 Where("is_active = ?", true) 查询时不匹配的预存问题。
 func setupTestDB(t *testing.T) *gorm.DB {
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared&_enable_boolean=true"), &gorm.Config{
+	// 使用独立命名的内存库，避免跨 TestXxx / -count=N 共享同一个 cache=shared 库，
+	// 防止上一个测试的异步 goroutine 持有写锁导致 "database table is locked"。
+	// _busy_timeout=5000 进一步消解同库内异步 last_used_at 更新与后续查询的瞬态锁竞争。
+	dsn := fmt.Sprintf("file:memdb%d?mode=memory&cache=shared&_enable_boolean=true&_busy_timeout=5000", atomic.AddUint64(&testDBSeq, 1))
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true, // 禁用外键约束以避免SQLite兼容性问题
 	})
 	require.NoError(t, err)
+
+	// 显式设置 busy timeout，兼容 modernc.org/sqlite（DSN 参数不一定生效）
+	require.NoError(t, db.Exec("PRAGMA busy_timeout = 5000").Error)
 
 	// 手动创建表结构，避免PostgreSQL特定的函数
 	// 创建用户表
@@ -437,6 +446,9 @@ func TestValidateAPIKey(t *testing.T) {
 		assert.Equal(t, apiKey.ID, validated.ID)
 		assert.Equal(t, apiKey.Name, validated.Name)
 		assert.True(t, validated.IsActive)
+
+		// 给异步 last_used_at 更新 goroutine 留出完成时间，避免与后续子测试竞争 sys_api_keys 写锁
+		time.Sleep(150 * time.Millisecond)
 	})
 
 	t.Run("无效格式_无前缀", func(t *testing.T) {

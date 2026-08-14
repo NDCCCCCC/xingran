@@ -215,7 +215,7 @@ func TestFixSuggestionStatsPendingAllNoWindow(t *testing.T) {
 // TestFixSuggestionAcceptConcurrentPartialUnique 验证 D-B4 partial unique index
 func TestFixSuggestionAcceptConcurrentPartialUnique(t *testing.T) {
 	// migration 文件路径:internal/services/asset/ → ../../core/db/migrations/
-	mig, err := os.ReadFile("../../core/db/migrations/migration_199_fix_suggestion_unique_index.go")
+	mig, err := os.ReadFile("../../core/db/migrations/archive/applied/migration_199_fix_suggestion_unique_index.go")
 	require.NoError(t, err, "must read migration_199")
 	content := string(mig)
 
