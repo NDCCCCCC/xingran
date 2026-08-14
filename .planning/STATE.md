@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: Milestone History
 status: executing
-stopped_at: Completed 62-03-PLAN.md
-last_updated: "2026-08-14T11:20:02.832Z"
+stopped_at: Completed 62-04-PLAN.md
+last_updated: "2026-08-14T11:48:00.000Z"
 last_activity: 2026-08-14
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 13
-  completed_plans: 11
-  percent: 83
+  completed_plans: 12
+  percent: 92
 ---
 
 # Project State
@@ -32,11 +32,11 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-12)
 ## Current Position
 
 Phase: 62 (ai-internal-core-db) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-08-14
 
-Progress: [█████████░] 85%
+Progress: [█████████░] 92%
 
 ## Accumulated Context
 
@@ -81,6 +81,13 @@ Progress: [█████████░] 85%
 - **D-62-03-02 (C5 strategy)**: 全量 `db.Transaction` 包裹 initData 会与 core.go initDBAndData "失败仅警告不阻断启动" 策略冲突 → 选择逐条 check-and-create 细粒度幂等(ensureDept helper)
 - **D-62-03-03 (DeptCode population)**: 原 seed 在 dept_code 上留空,违反 uniqueIndex;not null(由 migration_080 添加)→ 填充 ROOT/SHENZHEN/CHANGSHA/RD/MARKET/TEST 唯一编码使首装种子真正生效(brand/leader/phone/email 按 plan 保持原样)
 - **D-62-03-04 (Test DSN cache mode)**: `file::memory:?cache=shared` 在多测试间共享 in-memory DB,导致 TestCreateDefaultUser_EnvOverride 写入的 admin 行污染 FallbackDefault → init_data_test.go 三个 DB helper 改用 `cache=private`
+
+### Phase 62 Plan 04 Locked Decisions (C3/CDX-H1/CDX-M-UTC/OC-M-SQLITE)
+
+- **D-62-04-01 (Advisory lock fail-safe)**: 未获锁 / 取锁失败 → `applogger.Warnf("[advisory-lock] 另一实例正在执行启动迁移,本实例跳过 175/176/202-205 迁移块")` + `return nil`。单实例部署锁永远可得,只有 HA/滚动重启异常路径才落到跳过;不 fail-deadly(`fail-safe 而非 fail-deadly`)
+- **D-62-04-02 (42P04 容忍 tradeoff)**: 理论上真正失败的 CREATE DATABASE 若恰好报 42P04 会被 WARN 放过——但 42P04 语义唯一即"已存在",后续 `gorm.Open` 真实验证连通性,风险可接受。提取 `isDuplicateDatabaseError(err error) bool` 私有 helper,`errors.As` 解包 `*pq.Error` 判 `Code == "42P04"`
+- **D-62-04-03 (UTC 切换 tradeoff)**: 历史 `created_at`/`updated_at` 是服务器本地时区,新写入为 UTC;PG `timestamptz` 列按会话时区规范化存储,混合期查询按 timestamptz 语义正确,仅 naive timestamp 列(若有)存在解释漂移。用户已锁定修复,接受该过渡期
+- **D-62-04-04 (Test commit 顺序)**: RED 测试覆盖两个 task 的所有断言(compile-time + source assertion + pure function),拆为 1 test commit + 2 feat commits 以保持每 commit 独立 build 通过——在 Task 1 commit 加 `sqliteFallbackWarning` stub(返回空串),Task 2 commit 替换为真实实现。`database_test.go` 跨 task 引用同 package-private 符号,必须合并 RED commit
 
 ### v1.21 — 根因调查结论(ground-truth 已验证)
 
@@ -173,12 +180,12 @@ Full deferred detail in [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-14T11:20:02.819Z
-Stopped at: Completed 62-03-PLAN.md
+Last session: 2026-08-14T11:39:13.279Z
+Stopped at: Completed 62-04-PLAN.md
 Resume file: None
 
-**Milestone status:** v1.21 IN PROGRESS — **Phase 62 Plan 03 COMPLETE** (commits bb2329e + 68119aa + d93f024): Task 1 (C2) admin 种子凭据加固——`createDefaultUser` 读 `SYS_ADMIN_BOOTSTRAP_PASSWORD` 环境变量覆盖默认密码,fallback 到 admin123 时输出多行 `applogger.Warnf` 大声告警(3 点恢复指引,密码值本身不入日志),`Salt: "default"` 死字段字面量清除并加注释说明真实盐在 PasswordManager 哈希串内;init_data_test.go 4 条 TestCreateDefaultUser_* 测试覆盖 env 路径/回退路径/无 default 字面盐/幂等;test DB 切到 cache=private 修复共享缓存导致的跨测试 row 污染(EnvOverride 行污染 FallbackDefault)。Task 2 (C5) 部门种子细粒度幂等——新 `ensureDept(db, dept, parentID)` helper 按 dept_name + parent_id (NULL 顶级) 语义查询,删除 `count > 0` 整体跳过;首次启动中途失败可在下次启动补齐缺失子树;同步给所有 6 行种子填 `DeptCode = ROOT/SHENZHEN/CHANGSHA/RD/MARKET/TEST` 满足 `uniqueIndex;not null`(原 seed 在唯一索引下根本不会成功);3 条 dept 测试 (FullSeed/PartialRecovers/FullyIdempotent) 全部 PASS。Task 3 (OC-M-MENUSEED + CDX-M-USERROLE) 菜单种子循环改 `errors.Is(err, gorm.ErrRecordNotFound)` 三分支(页面 + 按钮两个循环)消除 fallthrough Create 重复菜单,按钮循环加 `parentMenuID == ""` 守卫;`createUserRoleRelations` 用 `db.Create(&models.UserRole{...})` 取代硬编码 `db.Exec("INSERT INTO sys_user_role ...")` 消除表名漂移风险;源码断言测试 `TestSourceAssertions_MenuSeedErrorPaths` 守护三处契约(errors.Is 出现 ≥ 2、不含 INSERT INTO sys_user_role、含 models.UserRole{}、含 parentMenuID == "")。`go build ./...` exit 0,`go test ./internal/core/db/ -v` 全部 PASS(含 Phase 62-02 既有 FilterLogger/menu_grant_helpers 测试不回归)。2 处 Rule 2/3 自修正(详见 62-03-SUMMARY §Deviations)。
+**Milestone status:** v1.21 IN PROGRESS — **Phase 62 Plan 04 COMPLETE** (commits 07a8a8b + d2d9aea + 40c7301 + 6e45384): Task 1 (C3 + CDX-H1) 启动序列安全加固——`acquireMigrationAdvisoryLock`/`releaseMigrationAdvisoryLock` helpers 用专用 sql.Conn pinning 会话级 `pg_try_advisory_lock(hashtext('xingran-migrations'))` 包裹 AutoMigrate PG 迁移块(175/176/202-205),未获锁实例 WARN 跳过(fail-safe);`createPostgresConnection` 错误从 `applogger.Errorf` 后继续 → `return nil, fmt.Errorf("创建数据库失败: %w", err)` 启动 fail-fast 暴露真实根因;`createDatabaseIfNotExists` 加 10s `context.WithTimeout` + `PingContext` 防 admin PG 不可达启动挂死;`isDuplicateDatabaseError` helper `errors.As` 解包 `*pq.Error` 判 `Code == "42P04"` 容忍并发 bootstrap race(命中 → WARN + return nil);`migrationLockConn *sql.Conn` 私有字段承载专用连接,defer `pg_advisory_unlock` + `conn.Close` 释放。Task 2 (CDX-M-UTC + OC-M-SQLITE) `createSQLiteConnection` + `createPostgresConnection` 两处 NowFunc 从 `time.Now().Local()` → `time.Now().UTC()` 全项目 UTC 一致;`sqliteFallbackWarning(cfg *config.DatabaseConfig) string` 纯函数 + `NewDatabase` 内联 `applogger.Warnf("[配置告警] database.host 已设置为 %q 但 port=%d,正静默回退 SQLite;...")` 明示配置错。database_test.go 5 测试 (TestIsDuplicateDatabaseError + TestCreatePostgresConnectionErrorPropagates + TestAdvisoryLockConcurrentMigrationProtection + TestSqliteFallbackWarning + TestNowFuncUtc) 全部 PASS。`go build ./...` exit 0,`go test ./internal/core/db/ -v` 全部 PASS(含 Phase 62-01/02/03 既有测试不回归)。3 处偏差(详见 62-04-SUMMARY §Deviations):Rule 2 加 advisory lock fail-safe 错误路径 / Rule 2 加 sqliteFallbackWarning stub for incremental buildability / Rule 2 加 10s context 超时(opencode #10)。
 
 ## Operator Next Steps
 
-- `/gsd:execute-phase 62` — continue with Phase 62 Plan 04 / 05(C1 Migrate176 schema-version guard + C3 启动 advisory lock 是当前 plan 范围之外但被 reviewer 提出的高/中优先项)
+- `/gsd:execute-phase 62` — continue with Phase 62 Plan 05(C1 Migrate176 schema-version guard 是当前 plan 范围之外但被 reviewer 提出的高优先项,Phase 62-04 已落地 C3 advisory lock 部分)
