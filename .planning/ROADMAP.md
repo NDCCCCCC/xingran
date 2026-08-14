@@ -1,7 +1,7 @@
 ---
-last_updated: 2026-08-13
+last_updated: 2026-08-14
 update_trigger: v1.21 milestone INITIATED — ROADMAP drafted (Phases 57-61, regression fix for v1.6 Phase 16; Phase 61 conditional on Phase 60 AUTH-03=启用)
-last_plan_update: 2026-08-13 — Phase 61 plans finalized after plan-checker revision (2 plans, Wave 1 Plan 01 / Wave 2 Plan 02 sequential)
+last_plan_update: 2026-08-14 — Phase 62 plans created from cross-AI reviews (5 plans, Wave 1 ×4 parallel / Wave 2 ×1; C1-C7 + 单方 HIGH + 锁定 MEDIUM 全覆盖)
 previous_update: 2026-07-10 after v1.20 milestone SHIPPED + ARCHIVED
 ---
 
@@ -267,13 +267,24 @@ Phases execute in numeric order: 57 → 58 → 59 → 60 → 61 (Phase 61 condit
 
 ### Phase 62: 数据库核心安全加固(跨AI评审修复): internal/core/db 迁移安全+种子凭据+并发保护
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** internal/core/db 的跨AI评审(codex + opencode)发现全部清零——共识 C1-C7 修复(Migrate176 升级路径 schema 校验与破坏性 UPDATE 门控、默认 admin 凭据加固、advisory lock 并发保护、FilterLogger 慢查询实现、种子细粒度幂等、grant helper 参数化、BootstrapMissingTables 单一事实源),单方 HIGH(createDatabaseIfNotExists 吞错、SKIP_AUTOMIGRATE 生产半初始化)与锁定 MEDIUM(支撑索引、UTC NowFunc、SQLite 静默回退告警、菜单种子错误处理)一并落地,所有迁移保持幂等。
+
+**Requirements**: C1, C2, C3, C4, C5, C6, C7, CDX-H1, CDX-H2, CDX-M-UTC, CDX-M-IDX, OC-M-SQLITE, OC-M-MENUSEED, CDX-M-USERROLE(评审项 ID,来源 62-REVIEWS.md 共识 + 单方发现;phase_req_ids 为 null,评审项即需求集)
 **Depends on:** Phase 61
-**Plans:** 0 plans
+**Plans:** 5 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 62 to break down)
+
+**Wave 1** (4 plans 并行,文件零重叠)
+
+- [ ] 62-01-PLAN.md — Migrate176 加固(C1:快路径 R5 标记列校验回退慢路径 + 双路径回填 + Type E 门控 WARN)+ 支撑索引(CDX-M-IDX:idx_sys_user_nickname + idx_recon_resolved_asset_time)
+- [ ] 62-02-PLAN.md — FilterLogger 慢查询日志实现 + MinLevel 语义(C4)+ GrantNewMenuToRolesHavingParent 参数化(C6)
+- [ ] 62-03-PLAN.md — admin 种子凭据 env 覆盖 + 告警 + 死 salt 清除(C2)+ 部门种子细粒度幂等(C5)+ 菜单种子错误处理(OC-M-MENUSEED)+ UserRole 关联去原生 SQL(CDX-M-USERROLE)
+- [ ] 62-04-PLAN.md — advisory lock 并发保护(C3)+ createDatabaseIfNotExists 错误上抛 + 42P04 容忍(CDX-H1)+ NowFunc UTC(CDX-M-UTC)+ SQLite 回退告警(OC-M-SQLITE)
+
+**Wave 2** *(blocked on 62-04,共享 database.go)*
+
+- [ ] 62-05-PLAN.md — BootstrapMissingTables 改 gorm.Migrator().CreateTable(C7)+ SKIP_AUTOMIGRATE 生产模式 fatal 守卫(CDX-H2)
 
 ---
 
