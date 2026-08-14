@@ -271,7 +271,7 @@ Phases execute in numeric order: 57 → 58 → 59 → 60 → 61 (Phase 61 condit
 
 **Requirements**: C1, C2, C3, C4, C5, C6, C7, CDX-H1, CDX-H2, CDX-M-UTC, CDX-M-IDX, OC-M-SQLITE, OC-M-MENUSEED, CDX-M-USERROLE(评审项 ID,来源 62-REVIEWS.md 共识 + 单方发现;phase_req_ids 为 null,评审项即需求集)
 **Depends on:** Phase 61
-**Plans:** 4/5 plans executed
+**Plans:** 5/5 plans complete
 
 Plans:
 
@@ -284,7 +284,7 @@ Plans:
 
 **Wave 2** *(blocked on 62-04,共享 database.go)*
 
-- [ ] 62-05-PLAN.md — BootstrapMissingTables 改 gorm.Migrator().CreateTable(C7)+ SKIP_AUTOMIGRATE 生产模式 fatal 守卫(CDX-H2)
+- [x] 62-05-PLAN.md — BootstrapMissingTables 改 gorm.Migrator().CreateTable(C7)+ SKIP_AUTOMIGRATE 生产模式 fatal 守卫(CDX-H2)
 
 ---
 

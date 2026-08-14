@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: Milestone History
-status: executing
-stopped_at: Completed 62-04-PLAN.md
-last_updated: "2026-08-14T11:48:00.000Z"
+status: verifying
+stopped_at: Completed 62-05-PLAN.md (Phase 62 全部 5 plan 完成)
+last_updated: "2026-08-14T13:30:45.363Z"
 last_activity: 2026-08-14
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 13
-  completed_plans: 12
-  percent: 92
+  completed_plans: 13
+  percent: 100
 ---
 
 # Project State
@@ -33,10 +33,10 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-12)
 
 Phase: 62 (ai-internal-core-db) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-14
 
-Progress: [█████████░] 92%
+Progress: [██████████] 100%
 
 ## Accumulated Context
 
@@ -181,12 +181,13 @@ Full deferred detail in [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-14T11:39:13.279Z
-Stopped at: Completed 62-04-PLAN.md
+Last session: 2026-08-14T13:24:31.652Z
+Stopped at: Completed 62-05-PLAN.md (Phase 62 全部 5 plan 完成)
 Resume file: None
 
-**Milestone status:** v1.21 IN PROGRESS — **Phase 62 Plan 04 COMPLETE** (commits 07a8a8b + d2d9aea + 40c7301 + 6e45384): Task 1 (C3 + CDX-H1) 启动序列安全加固——`acquireMigrationAdvisoryLock`/`releaseMigrationAdvisoryLock` helpers 用专用 sql.Conn pinning 会话级 `pg_try_advisory_lock(hashtext('xingran-migrations'))` 包裹 AutoMigrate PG 迁移块(175/176/202-205),未获锁实例 WARN 跳过(fail-safe);`createPostgresConnection` 错误从 `applogger.Errorf` 后继续 → `return nil, fmt.Errorf("创建数据库失败: %w", err)` 启动 fail-fast 暴露真实根因;`createDatabaseIfNotExists` 加 10s `context.WithTimeout` + `PingContext` 防 admin PG 不可达启动挂死;`isDuplicateDatabaseError` helper `errors.As` 解包 `*pq.Error` 判 `Code == "42P04"` 容忍并发 bootstrap race(命中 → WARN + return nil);`migrationLockConn *sql.Conn` 私有字段承载专用连接,defer `pg_advisory_unlock` + `conn.Close` 释放。Task 2 (CDX-M-UTC + OC-M-SQLITE) `createSQLiteConnection` + `createPostgresConnection` 两处 NowFunc 从 `time.Now().Local()` → `time.Now().UTC()` 全项目 UTC 一致;`sqliteFallbackWarning(cfg *config.DatabaseConfig) string` 纯函数 + `NewDatabase` 内联 `applogger.Warnf("[配置告警] database.host 已设置为 %q 但 port=%d,正静默回退 SQLite;...")` 明示配置错。database_test.go 5 测试 (TestIsDuplicateDatabaseError + TestCreatePostgresConnectionErrorPropagates + TestAdvisoryLockConcurrentMigrationProtection + TestSqliteFallbackWarning + TestNowFuncUtc) 全部 PASS。`go build ./...` exit 0,`go test ./internal/core/db/ -v` 全部 PASS(含 Phase 62-01/02/03 既有测试不回归)。3 处偏差(详见 62-04-SUMMARY §Deviations):Rule 2 加 advisory lock fail-safe 错误路径 / Rule 2 加 sqliteFallbackWarning stub for incremental buildability / Rule 2 加 10s context 超时(opencode #10)。
+**Milestone status:** v1.21 IN PROGRESS — **Phase 62 Plan 05 COMPLETE — Phase 62 全部 5/5 plan 完成** (commits fb3cc70 + b774cc3 + 42ce9e4 + 94ddc9e, TDD 双门 test→feat × 2): Task 1 (C7) `BootstrapMissingTables` 重写——删除硬编码 `CREATE TABLE public.sys_api_keys/sys_api_key_usage_logs`(APIKey schema 第三份拷贝消除),改为 `Migrator().HasTable` 判定 + `Migrator().CreateTable(&models.APIKey{}/&models.APIKeyUsageLog{})` 从 model 派生建表(与 AutoMigrate/MigrateModelList 同一事实源,天然防漂移);CreateTable 在 PrepareStmt:false 连接走 simple protocol 无 pooler 死锁;硬编码 `public.` schema 前缀消除(跟随 search_path);六条 `CREATE INDEX IF NOT EXISTS idx_api_keys_*/idx_api_key_logs_*` 显式索引兜底原样保留;建表失败错误具体化。Task 2 (CDX-H2) `core.go initDBAndData` 的 SKIP_AUTOMIGRATE 分支最前面(Warnf 之前)插入生产守卫:`c.Config.Server.Mode == "release"` 时 `return fmt.Errorf`(文案含 `半初始化` 风险与"移除环境变量后重启"处置),启动 fail-fast;debug/非 release WARN 旁路 + BootstrapMissingTables 保留(dev 应急能力不丢)。新增 `core_skipautomigrate_test.go` 2 源码断言测试 + `database_test.go` 追加 TestBootstrapMissingTablesModelDerived。`go build ./...` exit 0;`go test ./internal/core/db/ + ./internal/core/` 全 PASS;`go test ./...` 全量 40 包 ok,唯一 FAIL 为预存在 `internal/api/v1/auth` TestADLoginWithOUProcessing(与 Phase 62 无关,记录于 phase 目录 deferred-items.md)。62-04 改动(advisory lock / UTC NowFunc / sqlite 回退告警 / createDatabase 错误上抛)完整性确认保留。执行期偏差:commitlint subject-case 改小写开头提交信息;主工作树并发 merge 干扰(用户侧 stash,等待恢复后确认 4 commit 完整落地)。
 
 ## Operator Next Steps
 
-- `/gsd:execute-phase 62` — continue with Phase 62 Plan 05(C1 Migrate176 schema-version guard 是当前 plan 范围之外但被 reviewer 提出的高优先项,Phase 62-04 已落地 C3 advisory lock 部分)
+- Phase 62 (ai-internal-core-db) 5/5 plan 全部完成 — 共识 C1-C7 + 锁定单方项清零,可运行 `/gsd:review-phase 62` 或验证关闭
+- 遗留 deferred 清单见 62-05-SUMMARY §Phase 62 全 phase Deferred 清单汇总(首登强制改密、LOW 项、schema_migrations 版本表、预存在 auth 测试失败)
