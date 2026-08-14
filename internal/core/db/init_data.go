@@ -1,6 +1,7 @@
 package db
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -322,6 +323,12 @@ func createDefaultRole(db *gorm.DB) error {
 }
 
 // createUserRoleRelations 创建用户角色关联
+//
+// CDX-M-USERROLE 修复:用 db.Create(&models.UserRole{...}) 取代硬编码表名
+// 的原生 SQL Exec(老代码用 db.Exec 拼字符串 + 硬编码 sys_user_role 表名,
+// 一旦 UserRole.TableName 改名就静默断裂)。UserRole 无 ID 字段,
+// BeforeCreate 钩子不影响,db.Create 行为等价。好处:消除表名漂移风险
+// (models.UserRole.TableName 改名后仍正确),接入 GORM hooks / 自动 UUID typing。
 func createUserRoleRelations(db *gorm.DB) error {
 	// 获取默认用户
 	var adminUser models.User
@@ -345,9 +352,11 @@ func createUserRoleRelations(db *gorm.DB) error {
 		return nil
 	}
 
-	// 创建用户角色关联
-	if err := db.Exec("INSERT INTO sys_user_role (user_id, role_id) VALUES (?, ?)",
-		adminUser.ID, adminRole.ID).Error; err != nil {
+	// 创建用户角色关联(走 GORM Create,不再硬编码表名)
+	if err := db.Create(&models.UserRole{
+		UserID: adminUser.ID,
+		RoleID: adminRole.ID,
+	}).Error; err != nil {
 		return fmt.Errorf("创建用户角色关联失败: %w", err)
 	}
 
@@ -792,6 +801,11 @@ func createOperationsManagementMenus(db *gorm.DB) error {
 			applogger.Infof("菜单 %s 已存在，跳过创建", pm.name)
 			continue
 		}
+		// OC-M-MENUSEED 修复:err != nil 时必须显式区分 ErrRecordNotFound,
+		// 真实 DB 错误直接 return,不再 fallthrough 到 Create 制造重复菜单。
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("查询菜单 %s 失败: %w", pm.name, err)
+		}
 
 		// 菜单不存在，创建新菜单
 		menu := models.Menu{
@@ -863,12 +877,21 @@ func createOperationsManagementMenus(db *gorm.DB) error {
 		// 检查按钮菜单是否已存在
 		var existingButton models.Menu
 		parentMenuID := menuIDs[bm.parent]
+		// OC-M-MENUSEED 修复:父菜单 ID 缺失(上层页面菜单未创建成功)
+		// 时直接报错,不再用空 parent_id 触发无效 UUID 插入。
+		if parentMenuID == "" {
+			return fmt.Errorf("按钮菜单 %s 的父菜单 %s 不存在", bm.name, bm.parent)
+		}
 		err := db.Where("menu_name = ? AND parent_id = ?", bm.name, parentMenuID).First(&existingButton).Error
 
 		if err == nil {
 			// 按钮已存在，跳过创建
 			applogger.Infof("按钮菜单 %s 已存在，跳过创建", bm.name)
 			continue
+		}
+		// OC-M-MENUSEED 修复:与页面循环一致,真实 DB 错误不再 fallthrough。
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("查询按钮菜单 %s 失败: %w", bm.name, err)
 		}
 
 		// 按钮不存在，创建新按钮
