@@ -1,7 +1,9 @@
 package db
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -23,6 +25,10 @@ import (
 type Database struct {
 	DB   *gorm.DB
 	Type string
+	// migrationLockConn 持有启动期 PG advisory lock 的专用 *sql.Conn。
+	// 仅 AutoMigrate 期间非空;releaseMigrationAdvisoryLock 后重置为 nil。
+	// 不导出,避免外部代码误关连接导致 pg_advisory_unlock noop。
+	migrationLockConn *sql.Conn
 }
 
 // NewDatabase 创建数据库连接
@@ -50,6 +56,13 @@ func NewDatabase(cfg *config.DatabaseConfig) (*Database, error) {
 		DB:   db,
 		Type: dbType,
 	}, nil
+}
+
+// sqliteFallbackWarning 占位实现 (Phase 62-04 Task 1 commit):返回空串。
+// Phase 62-04 Task 2 将填充:Host 非空 + Port<=0 时返回告警文案(OC-M-SQLITE 修复)。
+func sqliteFallbackWarning(cfg *config.DatabaseConfig) string {
+	_ = cfg
+	return ""
 }
 
 // createSQLiteConnection 创建SQLite连接
@@ -85,8 +98,11 @@ func createPostgresConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 	adminDSN := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=postgres sslmode=%s",
 		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.SSLMode)
 
+	// CDX-H1:createDatabaseIfNotExists 失败必须上抛而非吞错。
+	// 历史:applogger.Errorf 后继续 → gorm.Open 在 DB 不存在时报 "database does not exist"
+	// 而非真实根因(认证/网络/缺 postgres 维护库)。修复后启动 fail-fast 暴露真实原因。
 	if err := createDatabaseIfNotExists(adminDSN, cfg.DBName); err != nil {
-		applogger.Errorf("创建数据库失败: %v", err)
+		return nil, fmt.Errorf("创建数据库失败: %w", err)
 	}
 
 	dsn := cfg.GetDSN()
@@ -446,7 +462,20 @@ func (d *Database) AutoMigrate() error {
 	// 重建顺序固定:175 先建前置 VIEW → 176 再建 MV(MV 引用 175 的 VIEW)。
 	// migration_175 用 CREATE OR REPLACE VIEW,完全 idempotent;~5s。
 	// migration_176 用 DROP+CREATE MATERIALIZED VIEW,~10s(R5 双源 declared + 物理链路版本固有成本)。
+	//
+	// C3 修复:多副本/滚动重启下 REFRESH CONCURRENTLY 与 CREATE OR REPLACE VIEW 竞态失败
+	// ("tuple concurrently updated" / "CONCURRENTLY refresh in progress")。
+	// 用会话级 advisory lock 包裹整块迁移,未获锁实例 WARN 跳过(fail-safe 而非 fail-deadly):
+	// 单实例部署锁永远可得,只有 HA/滚动重启场景才落到跳过。
+	// SQLite 不需要此锁(d.Type guard 已排除);锁键 'xingran-migrations' 由 hashtext 哈希为 int4
+	// 走单参 pg_advisory_lock 变体。
 	if d.Type == "postgres" {
+		if !d.acquireMigrationAdvisoryLock() {
+			applogger.Warnf("[advisory-lock] 另一实例正在执行启动迁移,本实例跳过 175/176/202-205 迁移块")
+			return nil
+		}
+		defer d.releaseMigrationAdvisoryLock()
+
 		if err := migrations.Migrate175ReconciliationPhysicalLink(d.DB); err != nil {
 			applogger.Errorf("reconciliation 前置视图重建失败 (非阻断,留待下次启动): %v", err)
 		}
@@ -473,6 +502,62 @@ func (d *Database) AutoMigrate() error {
 	}
 
 	return nil
+}
+
+// acquireMigrationAdvisoryLock 获取 PG 会话级 advisory lock 用于启动期迁移块排他。
+// 返回 true 表示已获锁可执行迁移块;返回 false 表示其他实例正在迁移,本实例应跳过。
+// 必须配对调用 releaseMigrationAdvisoryLock 释放(在 defer 中)。
+//
+// 实现要点:
+//   - 专用 sql.Conn(pinning 单连接):advisory lock 是会话级,跨连接不生效
+//   - pg_try_advisory_lock(hashtext('xingran-migrations')) 返回 bool:
+//     true=获锁,false=其他会话已持锁(本实例跳过)
+//   - 取锁本身失败(conn 错误/查询错误)→ Errorf 后按"未获锁"处理(fail-safe)
+func (d *Database) acquireMigrationAdvisoryLock() bool {
+	sqlDB, err := d.DB.DB()
+	if err != nil {
+		applogger.Errorf("[advisory-lock] 获取 *sql.DB 失败: %v", err)
+		return false
+	}
+
+	conn, err := sqlDB.Conn(context.Background())
+	if err != nil {
+		applogger.Errorf("[advisory-lock] 获取专用连接失败: %v", err)
+		return false
+	}
+
+	var acquired bool
+	if err := conn.QueryRowContext(context.Background(),
+		"SELECT pg_try_advisory_lock(hashtext('xingran-migrations'))").Scan(&acquired); err != nil {
+		applogger.Errorf("[advisory-lock] 尝试获取锁失败: %v", err)
+		_ = conn.Close()
+		return false
+	}
+
+	if !acquired {
+		_ = conn.Close()
+		return false
+	}
+
+	// 保存 conn 到 d 上供 releaseMigrationAdvisoryLock 使用(嵌入结构体避免污染 Database 公共字段)
+	d.migrationLockConn = conn
+	return true
+}
+
+// releaseMigrationAdvisoryLock 释放 acquireMigrationAdvisoryLock 获取的会话级 lock。
+// 仅在 acquireMigrationAdvisoryLock 返回 true 时调用。
+func (d *Database) releaseMigrationAdvisoryLock() {
+	if d.migrationLockConn == nil {
+		return
+	}
+	// pg_advisory_unlock 与 pg_try_advisory_lock 用同样的 hashtext 锁键,
+	// 必须使用同一连接(pg_advisory_unlock 在已关闭连接上调用会静默 noop)。
+	if _, err := d.migrationLockConn.ExecContext(context.Background(),
+		"SELECT pg_advisory_unlock(hashtext('xingran-migrations'))"); err != nil {
+		applogger.Errorf("[advisory-lock] 释放锁失败: %v", err)
+	}
+	_ = d.migrationLockConn.Close()
+	d.migrationLockConn = nil
 }
 
 // auditConstraintNaming 启动期审计 unique 约束命名一致性
@@ -603,7 +688,33 @@ func (d *Database) BootstrapMissingTables() error {
 // dbIdentRe 校验 PG 数据库标识符,防止 CREATE DATABASE 拼接时注入非法字符
 var dbIdentRe = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 
-// createDatabaseIfNotExists 如果数据库不存在则创建
+// migrationAdvisoryLockKey 是迁移块 advisory lock 的字符串锁键,
+// 跨进程共享同一哈希值(hash key 在 pg_advisory_lock(int8, int4) 双参版本下用 int4)。
+const migrationAdvisoryLockKey = "xingran-migrations"
+
+// isDuplicateDatabaseError 判定 err 是否为 PG 42P04 (duplicate_database)。
+// errors.As 解包 *pq.Error 以覆盖 fmt.Errorf("...: %w", pqErr) 包装路径。
+//
+// CDX-H1 修复:并发 bootstrap 撞出的 42P04 容忍为 WARN(不致命)—— 语义就是"已存在",
+// 后续 gorm.Open 会真实验证连通性。理论上一个真正失败的 CREATE DATABASE 若恰好报 42P04
+// 会被 WARN 放过,但风险可接受(42P04 语义唯一即"已存在")。
+func isDuplicateDatabaseError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		return pqErr.Code == "42P04"
+	}
+	return false
+}
+
+// createDatabaseIfNotExists 如果数据库不存在则创建。
+//
+// CDX-H1 修复:
+//   - 错误真实上抛,启动 fail-fast 暴露根因(认证/网络/缺 postgres 维护库)
+//   - 容忍 42P04 (duplicate_database) 作为 WARN —— 并发 bootstrap 时另一实例已 CREATE 完毕
+//   - 存在性检查加 10s 超时(opencode #10),防 admin DB 不可达导致启动挂死
 func createDatabaseIfNotExists(adminDSN, dbName string) error {
 	// CREATE DATABASE 不支持 $1 占位符,必须拼接标识符,故先校验 dbName 合法性
 	if !dbIdentRe.MatchString(dbName) {
@@ -616,10 +727,17 @@ func createDatabaseIfNotExists(adminDSN, dbName string) error {
 	}
 	defer db.Close()
 
+	// 存在性检查加超时,防止 admin PG 不可达时启动挂死(opencode suggestion #10)
+	pingCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := db.PingContext(pingCtx); err != nil {
+		return fmt.Errorf("ping 管理员数据库失败: %w", err)
+	}
+
 	// 检查数据库是否存在
 	var exists bool
 	query := "SELECT EXISTS(SELECT datname FROM pg_catalog.pg_database WHERE datname = $1)"
-	err = db.QueryRow(query, dbName).Scan(&exists)
+	err = db.QueryRowContext(pingCtx, query, dbName).Scan(&exists)
 	if err != nil {
 		return fmt.Errorf("检查数据库是否存在失败: %w", err)
 	}
@@ -627,8 +745,13 @@ func createDatabaseIfNotExists(adminDSN, dbName string) error {
 	// 如果数据库不存在，则创建
 	if !exists {
 		createQuery := fmt.Sprintf("CREATE DATABASE %s", pq.QuoteIdentifier(dbName))
-		_, err = db.Exec(createQuery)
+		_, err = db.ExecContext(pingCtx, createQuery)
 		if err != nil {
+			// CDX-H1:42P04 duplicate_database 容忍为 WARN,其他错误上抛。
+			if isDuplicateDatabaseError(err) {
+				applogger.Warnf("数据库 %s 已被并发实例创建,继续", dbName)
+				return nil
+			}
 			return fmt.Errorf("创建数据库失败: %w", err)
 		}
 		applogger.Infof("数据库 %s 创建成功", dbName)
