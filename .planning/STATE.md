@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: Milestone History
 status: executing
-stopped_at: Completed 62-01-PLAN.md
-last_updated: "2026-08-14T10:36:21.356Z"
+stopped_at: Completed 62-02-PLAN.md
+last_updated: "2026-08-14T10:52:00.000Z"
 last_activity: 2026-08-14
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 14
-  completed_plans: 9
-  percent: 64
+  completed_plans: 10
+  percent: 71
 ---
 
 # Project State
@@ -32,11 +32,11 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-12)
 ## Current Position
 
 Phase: 62 (ai-internal-core-db) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-08-14
 
-Progress: [███████░░░] 69%
+Progress: [████████░░] 71%
 
 ## Accumulated Context
 
@@ -166,12 +166,12 @@ Full deferred detail in [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-14T10:36:21.343Z
-Stopped at: Completed 62-01-PLAN.md
+Last session: 2026-08-14T10:52:00.000Z
+Stopped at: Completed 62-02-PLAN.md
 Resume file: None
 
-**Milestone status:** v1.21 IN PROGRESS — **Phase 62 Plan 01 COMPLETE** (commits 5b57146 + 540e0af): Task 1 (C1) Migrate176 加固——快路径 information_schema.columns R5 标记列校验回退慢路径自愈升级 + backfillOpsAssetPhysical 双路径提取(Type E 门控 + 每次 Warnf RowsAffected 审计); Task 2 (CDX-M-IDX) 新增 idx_sys_user_nickname(175)+ idx_recon_resolved_asset_time(176)两个部分索引支撑高频标量子查询;新建 migration_176_reconciliation_physical_mv_test.go 含 8 个源码 grep + sqlite 双调幂等测试,既有 migration_202 / menu_grant 测试无回归。`go build ./...` exit 0,`go test ./internal/core/db/migrations/ -v` 全部 PASS。PG 功能路径(REFRESH / 列集校验 / Type E 门控 / 索引真实执行计划)由项目既有 "PG functional 由 dev 启动 / UAT 覆盖" 惯例负责。
+**Milestone status:** v1.21 IN PROGRESS — **Phase 62 Plan 02 COMPLETE** (commits 156c17b + 953f365 + 0412ee4 + 3a5f63f): Task 1 (C4) FilterLogger 死配置修复——Trace 实现 SlowThreshold 慢查询判定(elapsed >= SlowThreshold*ms 时 applogger.Warnf 输出耗时/行数/SQL,独立于 FilterTypes[LogTypeSQL]);Info/Warn 真实读取 MinLevel(GORM LogLevel: Silent=1/Info=4/Warn=3/Debug=5,MinLevel >= level 才输出);LogMode(level) 现在真实生效;新增 filter_logger_test.go 含 7 个单测(TestTrace_SlowQuery/FastQuery/ErrorNoRegression + TestSlowQuery_ZeroDisabled + TestInfoWarn_MinLevelSilent/Info + TestLogMode_RealLevelEffect)。Task 2 (C6) GrantNewMenuToRolesHavingParent 参数化——fmt.Sprintf SQL 拼接改为常量 SQL + `$1::uuid`/`$2` 参数化绑定,db.Exec 改 (sql, newMenuID, parentMenuName) 三参形态;移除 "fmt" import;menu_grant_helpers_test.go 强化 TestGrantNewMenuToRolesHavingParent_ParameterizedOrControlled 新增 3 条断言(源码含 $1::uuid、menu_name = $2、不含 fmt.Sprintf);既有 4 个 SQL 片段断言 + isPostgreSQL 守卫不回归。`go build ./...` exit 0,`go test ./internal/core/db/ ./internal/core/db/migrations/ -v` 全部 PASS(PG-only 测试无 `XINGRAN_PG_TEST_DSN` 时 skip)。Task 1 GREEN 因并行 agent race 误落入 953f365 (`ci(frontend): bump Node 22 → 24` 借用 commit 消息),代码变更正确;Task 2 GREEN 独立 commit 3a5f63f 无串台。
 
 ## Operator Next Steps
 
-- `/gsd:execute-phase 62` — continue with Phase 62 Plan 02 (C4: FilterLogger 慢查询日志实现 + MinLevel 语义 + C6: GrantNewMenuToRolesHavingParent 参数化)
+- `/gsd:execute-phase 62` — continue with Phase 62 Plan 03 (C2: admin 种子凭据 env 覆盖 + 告警 + 死 salt 清除 + C5: 部门种子细粒度幂等 + OC-M-MENUSEED: 菜单种子错误处理 + CDX-M-USERROLE: UserRole 关联去原生 SQL)

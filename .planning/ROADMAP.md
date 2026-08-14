@@ -271,14 +271,14 @@ Phases execute in numeric order: 57 → 58 → 59 → 60 → 61 (Phase 61 condit
 
 **Requirements**: C1, C2, C3, C4, C5, C6, C7, CDX-H1, CDX-H2, CDX-M-UTC, CDX-M-IDX, OC-M-SQLITE, OC-M-MENUSEED, CDX-M-USERROLE(评审项 ID,来源 62-REVIEWS.md 共识 + 单方发现;phase_req_ids 为 null,评审项即需求集)
 **Depends on:** Phase 61
-**Plans:** 1/5 plans executed
+**Plans:** 2/5 plans executed
 
 Plans:
 
 **Wave 1** (4 plans 并行,文件零重叠)
 
 - [x] 62-01-PLAN.md — Migrate176 加固(C1:快路径 R5 标记列校验回退慢路径 + 双路径回填 + Type E 门控 WARN)+ 支撑索引(CDX-M-IDX:idx_sys_user_nickname + idx_recon_resolved_asset_time)
-- [ ] 62-02-PLAN.md — FilterLogger 慢查询日志实现 + MinLevel 语义(C4)+ GrantNewMenuToRolesHavingParent 参数化(C6)
+- [x] 62-02-PLAN.md — FilterLogger 慢查询日志实现 + MinLevel 语义(C4)+ GrantNewMenuToRolesHavingParent 参数化(C6)
 - [ ] 62-03-PLAN.md — admin 种子凭据 env 覆盖 + 告警 + 死 salt 清除(C2)+ 部门种子细粒度幂等(C5)+ 菜单种子错误处理(OC-M-MENUSEED)+ UserRole 关联去原生 SQL(CDX-M-USERROLE)
 - [ ] 62-04-PLAN.md — advisory lock 并发保护(C3)+ createDatabaseIfNotExists 错误上抛 + 42P04 容忍(CDX-H1)+ NowFunc UTC(CDX-M-UTC)+ SQLite 回退告警(OC-M-SQLITE)
 
