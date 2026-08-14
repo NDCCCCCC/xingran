@@ -8,6 +8,7 @@ import { Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { useMenuStore } from "@/store/menuStore";
 import { useAuthStore } from "@/store/authStore";
 import { RouteGenerator } from "./routeGenerator";
+import { routeConfigManager } from "./routeConfigManager";
 import { createLazyComponent } from "./componentLoader";
 import type { MenuRouteConfig } from "@/types/menu";
 import Layout from "@/components/layout";
@@ -105,7 +106,7 @@ function InitializingFallback() {
 }
 
 export function DynamicRoutes() {
-  const { allMenus, fetchAll } = useMenuStore();
+  const { allMenus, fetchAll, permissions } = useMenuStore();
   const { isAuthenticated, initialized } = useAuthStore();
   const location = useLocation();
 
