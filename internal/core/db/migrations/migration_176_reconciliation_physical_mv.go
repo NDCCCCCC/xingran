@@ -83,6 +83,21 @@ func Migrate176ReconciliationPhysicalMV(db *gorm.DB) error {
 		return nil
 	}
 
+	// 1.5 支撑索引(CDX-M-IDX):MV last_resolved LATERAL 子查询的 ORDER BY resolved_at DESC LIMIT 1
+	//
+	// 背景:MV 定义里 LEFT JOIN LATERAL (SELECT ... FROM sys_data_reconciliation r
+	//        WHERE r.asset_id = a.id AND r.resolved_at IS NOT NULL AND r.deleted_at IS NULL
+	//        ORDER BY r.resolved_at DESC LIMIT 1) 每次 MV refresh 都要为每个资产扫描 sys_data_reconciliation。
+	// 6688 资产 × 全表排序 → O(N×M) → MV refresh wall-clock 随 reconciliation 历史线性增长。
+	//
+	// 索引:(asset_id, resolved_at DESC) 部分索引(仅 deleted_at IS NULL 行)精准支撑 ORDER BY DESC LIMIT 1。
+	// 失败非阻断:sys_data_reconciliation 在全新库可能尚未由上游建表,下次启动 IF NOT EXISTS 自愈。
+	if err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_recon_resolved_asset_time
+		ON sys_data_reconciliation (asset_id, resolved_at DESC)
+		WHERE deleted_at IS NULL`).Error; err != nil {
+		applogger.Warnf("[迁移 176] 兜底 idx_recon_resolved_asset_time 失败(非致命,可能 sys_data_reconciliation 尚未建表): %v", err)
+	}
+
 	// 2. 快路径检查: reconciliation_normalized MV 是否已存在?
 	//
 	// 优化动机 (260704-ne5-regression-fix-3):

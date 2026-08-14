@@ -123,3 +123,66 @@ func TestMigrate176_NoObsoleteDocstring(t *testing.T) {
 		t.Fatalf("migration_176 docstring must NOT contain obsolete phrase \"不主动 UPDATE\" (C1 fix: gate-controlled UPDATE replaces unconditional silent mark-as-resolved)")
 	}
 }
+
+// ===== Task 2 — CDX-M-IDX 支撑索引 =====
+
+// TestMigrate175_NicknamePartialIndex 源码断言:
+//   - migration_175 含 "idx_sys_user_nickname" 索引
+//   - 含 "ON sys_user (nickname)" 列定义
+//   - 含 "WHERE deleted_at IS NULL" 部分索引谓词
+//
+// 排除注释区(stripGoComments176)以避免顶部 docstring 引用字段名导致误命中。
+func TestMigrate175_NicknamePartialIndex(t *testing.T) {
+	s := stripGoComments176(t, filepath.Join(".", "migration_175_reconciliation_physical_link.go"))
+
+	wants := []string{
+		"idx_sys_user_nickname",
+		"ON sys_user (nickname)",
+		"WHERE deleted_at IS NULL",
+	}
+	for _, w := range wants {
+		if !strings.Contains(s, w) {
+			t.Fatalf("migration_175 must contain %q (CDX-M-IDX: nickname partial index for reconciliation_user_lookup scalar subquery)", w)
+		}
+	}
+}
+
+// TestMigrate176_ResolvedAssetTimeIndex 源码断言:
+//   - migration_176 含 "idx_recon_resolved_asset_time" 索引
+//   - 含 "sys_data_reconciliation (asset_id, resolved_at DESC)" 列定义
+func TestMigrate176_ResolvedAssetTimeIndex(t *testing.T) {
+	s := stripGoComments176(t, filepath.Join(".", "migration_176_reconciliation_physical_mv.go"))
+
+	wants := []string{
+		"idx_recon_resolved_asset_time",
+		"sys_data_reconciliation (asset_id, resolved_at DESC)",
+	}
+	for _, w := range wants {
+		if !strings.Contains(s, w) {
+			t.Fatalf("migration_176 must contain %q (CDX-M-IDX: partial index for MV last_resolved LATERAL subquery)", w)
+		}
+	}
+}
+
+// TestMigrate176_AllDDLIdempotent 源码守卫:
+// 176 新增的支撑索引 DDL 使用 IF NOT EXISTS,可在每次启动幂等执行。
+func TestMigrate176_AllDDLIdempotent(t *testing.T) {
+	s := stripGoComments176(t, filepath.Join(".", "migration_176_reconciliation_physical_mv.go"))
+
+	if !strings.Contains(s, "CREATE INDEX IF NOT EXISTS idx_recon_resolved_asset_time") {
+		t.Fatalf("migration_176 must use CREATE INDEX IF NOT EXISTS for idx_recon_resolved_asset_time (CDX-M-IDX)")
+	}
+}
+
+// TestMigrate175_SqliteDoubleInvocation 幂等性:
+// 在 sqlite 内存库上连续两次调用 Migrate175ReconciliationPhysicalLink,均返回 nil。
+func TestMigrate175_SqliteDoubleInvocation(t *testing.T) {
+	db := freshSQLiteDB176(t)
+
+	if err := Migrate175ReconciliationPhysicalLink(db); err != nil {
+		t.Fatalf("first Migrate175ReconciliationPhysicalLink on sqlite must return nil (isPostgreSQL guard), got: %v", err)
+	}
+	if err := Migrate175ReconciliationPhysicalLink(db); err != nil {
+		t.Fatalf("second Migrate175ReconciliationPhysicalLink on sqlite must return nil (idempotent by short-circuit), got: %v", err)
+	}
+}

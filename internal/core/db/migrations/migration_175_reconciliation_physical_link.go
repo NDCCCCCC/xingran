@@ -151,6 +151,21 @@ WHERE a.deleted_at IS NULL;
 	}
 	applogger.Infof("[迁移] reconciliation_user_lookup 视图已就位")
 
+	// 4.5 支撑索引(CDX-M-IDX):reconciliation_user_lookup 视图内 su.nickname 标量子查询
+	//
+	// 背景:视图里两个 SELECT su.id ... WHERE su.nickname = a.nowuser_name ... LIMIT 1
+	//       在 6688 资产 × sys_user 全表扫描 → 线性增长,MV refresh wall-clock 不可接受。
+	// 部分索引 sys_user(nickname) WHERE deleted_at IS NULL 精准支撑逐行标量查找。
+	//
+	// 失败处理:return fmt.Errorf 与 175 既有 DDL 失败风格一致;
+	//          database.go 调用方对 175 失败本身就是 Errorf 非阻断(不会阻塞启动)。
+	if err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_sys_user_nickname
+		ON sys_user (nickname)
+		WHERE deleted_at IS NULL`).Error; err != nil {
+		return fmt.Errorf("创建 idx_sys_user_nickname 部分索引失败: %w", err)
+	}
+	applogger.Infof("[迁移] idx_sys_user_nickname 部分索引已就位(支撑 reconciliation_user_lookup 标量子查询)")
+
 	// 5. 轻量验证 — LIMIT 1 而非 COUNT(*)
 	//
 	// 优化 (260704-ne5-regression-fix-4):
