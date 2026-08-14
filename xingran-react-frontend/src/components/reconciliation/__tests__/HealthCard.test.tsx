@@ -1,12 +1,12 @@
 /**
  * HealthCard 单元测试
  *
- * 锁定行为(UI-SPEC D-A1-01):
+ * 锁定行为(UI-SPEC D-A1-01, /gsd-fast 2026-06-30 单行紧凑版):
  *   - useReconciliationVisibility() === false → render null
  *   - isLoading=true → Skeleton 渲染
  *   - isError=true → Result status="error" + 重试按钮
  *   - data.healthScore.total === 0 → 空态 "该工位暂无关联资产。"
- *   - data 正常 → 5 KPI + score + 趋势图
+ *   - data 正常 → 彩色 score(75/100)+ 单行内联 KPI 摘要(无 Card 标题/Statistic/ECharts)
  *   - onApplyException 按钮被点击时调用 prop
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -87,7 +87,7 @@ describe("HealthCard", () => {
     expect(container.querySelector(".ant-skeleton")).toBeTruthy();
   });
 
-  it("renders 5 KPIs + score + trend when data is loaded", () => {
+  it("renders score + inline KPI summary when data is loaded (compact single-line layout)", () => {
     mockUseReconciliationVisibility.mockReturnValue(true);
     mockUseWorkstationHealth.mockReturnValue({
       data: SAMPLE_HEALTH_DATA,
@@ -98,18 +98,11 @@ describe("HealthCard", () => {
 
     render(<HealthCard workstationId="ws-1" />);
 
-    // Card title
-    expect(screen.getByText("对账健康度")).toBeInTheDocument();
-    // Score (75) — antd Statistic renders it as text
+    // Score (75) — score span 的唯一直接文本子节点是 "75"("/100" 在嵌套 span 内)
     expect(screen.getByText("75")).toBeInTheDocument();
-    // 5 KPI titles
-    expect(screen.getByText("正常")).toBeInTheDocument();
-    expect(screen.getByText("漂移")).toBeInTheDocument();
-    expect(screen.getByText("冲突")).toBeInTheDocument();
-    expect(screen.getByText("无数据")).toBeInTheDocument();
-    expect(screen.getByText("例外命中")).toBeInTheDocument();
-    // echarts 趋势图
-    expect(screen.getByTestId("echarts-mock")).toBeInTheDocument();
+    expect(screen.getByText("/100")).toBeInTheDocument();
+    // 单行内联 KPI 摘要(5 个 KPI 拼接在同一 span,空态段条件渲染)
+    expect(screen.getByText("正常 5 · 漂移 2 · 冲突 1 · 无数据 1 · 例外 1")).toBeInTheDocument();
   });
 
   it("renders empty state when total=0", () => {
