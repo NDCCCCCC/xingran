@@ -272,10 +272,18 @@ func (c *Core) initDBAndData() error {
 	// 表/列上 panic。fail-fast 比静默继续更安全（审查报告 #16）。
 	//
 	// SKIP_AUTOMIGRATE=true 旁路开关:Supabase pooler 上 GORM AutoMigrate(80+ DDL)
-	// 会卡死在 dropDependent 之后;此时用 inline DDL 补建缺失表(sys_api_keys +
-	// sys_api_key_usage_logs)。dev 环境应急,生产不应使用。
+	// 会卡死在 dropDependent 之后;此时经 gorm.Migrator().CreateTable 从 model 派生
+	// 补建缺失表(sys_api_keys + sys_api_key_usage_logs)。
+	// 生产模式(mode=release)下此开关 fatal(CDX-H2):BootstrapMissingTables 仅保证
+	// api key 两表,不跑 175/176/202-205 迁移,新库会得到半初始化系统 —— 属 dev 应急,
+	// 生产误设必须 fail-fast。
 	if os.Getenv("SKIP_AUTOMIGRATE") == "true" {
-		applogger.Warnf("[SKIP_AUTOMIGRATE=true] 跳过 AutoMigrate,改用 inline DDL 补建")
+		// CDX-H2 生产守卫:release 模式下旁路补建仅覆盖部分表,直接终止启动
+		if c.Config.Server.Mode == "release" {
+			return fmt.Errorf("SKIP_AUTOMIGRATE=true 禁止在生产模式(server.mode=release)使用:" +
+				"旁路补建仅覆盖部分表,会产生半初始化系统;请移除该环境变量后重启")
+		}
+		applogger.Warnf("[SKIP_AUTOMIGRATE=true] 跳过 AutoMigrate,改用 model 派生 DDL 补建(dev 旁路)")
 		if err := c.DB.BootstrapMissingTables(); err != nil {
 			return fmt.Errorf("BootstrapMissingTables 失败: %w", err)
 		}
