@@ -65,113 +65,145 @@ func initData(db *gorm.DB) error {
 	return nil
 }
 
-// createDefaultDept 创建默认部门
-func createDefaultDept(db *gorm.DB) error {
-	// 检查是否已有部门数据
-	var count int64
-	db.Model(&models.Department{}).Count(&count)
-	if count > 0 {
-		applogger.Infof("部门数据已存在，跳过初始化")
-		return nil
+// ensureDept 按 dept_name + parent_id 语义查询,已存在则把已存在行的 ID
+// 写回 dept.ID 并返回 nil;不存在则 db.Create。Count 查询的真实错误不再吞,
+// 用 fmt.Errorf 包装上抛。
+//
+// C5 修复:细粒度幂等的核心 helper——首次启动中途失败后,下次启动可逐棵子树
+// 补齐缺失部门,不再因 "count > 0 整体跳过" 永久遗留半成品。
+//
+// parentID 为 nil 时查询 parent_id IS NULL(顶级部门);
+// 非 nil 时查询 parent_id = ?。
+func ensureDept(db *gorm.DB, dept *models.Department, parentID *string) error {
+	var existing models.Department
+	q := db.Where("dept_name = ?", dept.DeptName)
+	if parentID == nil {
+		q = q.Where("parent_id IS NULL")
+	} else {
+		q = q.Where("parent_id = ?", *parentID)
 	}
 
-	// 创建顶级部门
-	topDept := models.Department{
+	if err := q.First(&existing).Error; err == nil {
+		// 已存在:把已存在行的 ID 写回(调用方需要 ID 建子树)
+		dept.ID = existing.ID
+		applogger.Infof("部门 %s 已存在，跳过创建", dept.DeptName)
+		return nil
+	} else if err != gorm.ErrRecordNotFound {
+		return fmt.Errorf("查询部门 %s 失败: %w", dept.DeptName, err)
+	}
+
+	if err := db.Create(dept).Error; err != nil {
+		return fmt.Errorf("创建部门 %s 失败: %w", dept.DeptName, err)
+	}
+	applogger.Infof("创建部门 %s 成功", dept.DeptName)
+	return nil
+}
+
+// createDefaultDept 创建默认部门
+//
+// C5 修复要点:消除原 "count > 0 整体跳过" 的粗粒度幂等——一旦任意部门
+// 已存在就永久跳过,导致首次启动中途失败后无法补齐缺失子树。
+// 改为逐棵子树独立 ensureDept:已存在的子树跳过,缺失的子树补齐。
+//
+// DeptCode 字段(模型 uniqueIndex;not null)在种子中填充唯一编码,使整个
+// 种子树在空库中能够完成首装(原代码留空会触发 UNIQUE 冲突)。
+func createDefaultDept(db *gorm.DB) error {
+	// 1. 顶级部门
+	topDept := &models.Department{
 		DeptName: "若依科技有限公司",
+		DeptCode: "ROOT",
 		OrderNum: 1,
 		Leader:   func() *string { s := "若依"; return &s }(),
 		Phone:    func() *string { s := "15888888888"; return &s }(),
 		Email:    func() *string { s := "xingran@qq.com"; return &s }(),
 		Status:   models.DeptStatusNormal,
-		Remark:   "",
+	}
+	if err := ensureDept(db, topDept, nil); err != nil {
+		return err
 	}
 
-	if err := db.Create(&topDept).Error; err != nil {
-		return fmt.Errorf("创建顶级部门失败: %w", err)
-	}
-
-	// 创建子部门
-	subDepts := []models.Department{
+	// 2. 一级子公司(深圳/长沙)
+	subDepts := []*models.Department{
 		{
 			DeptName:  "深圳总公司",
-			ParentID:  &topDept.ID,
+			DeptCode:  "SHENZHEN",
 			Ancestors: topDept.ID,
 			OrderNum:  1,
 			Leader:    func() *string { s := "若依"; return &s }(),
 			Phone:     func() *string { s := "15888888888"; return &s }(),
 			Email:     func() *string { s := "xingran@qq.com"; return &s }(),
 			Status:    models.DeptStatusNormal,
-			Remark:    "",
 		},
 		{
 			DeptName:  "长沙分公司",
-			ParentID:  &topDept.ID,
+			DeptCode:  "CHANGSHA",
 			Ancestors: topDept.ID,
 			OrderNum:  2,
 			Leader:    func() *string { s := "若依"; return &s }(),
 			Phone:     func() *string { s := "15888888888"; return &s }(),
 			Email:     func() *string { s := "xingran@qq.com"; return &s }(),
 			Status:    models.DeptStatusNormal,
-			Remark:    "",
 		},
 	}
-
-	var shenzhenDeptID string
 	for _, dept := range subDepts {
-		if err := db.Create(&dept).Error; err != nil {
-			return fmt.Errorf("创建部门 %s 失败: %w", dept.DeptName, err)
+		dept.ParentID = &topDept.ID
+		if err := ensureDept(db, dept, &topDept.ID); err != nil {
+			return err
 		}
-		if dept.DeptName == "深圳总公司" {
-			shenzhenDeptID = dept.ID
-		}
-		applogger.Infof("创建部门 %s 成功", dept.DeptName)
 	}
 
-	// 创建深圳总公司的子部门
-	shenzhenSubDepts := []models.Department{
+	// 3. 深圳总公司的子部门(研发/市场/测试)
+	shenzhenSubDepts := []*models.Department{
 		{
 			DeptName:  "研发部门",
-			ParentID:  &shenzhenDeptID,
-			Ancestors: topDept.ID + "," + shenzhenDeptID,
+			DeptCode:  "RD",
 			OrderNum:  1,
 			Leader:    func() *string { s := "若依"; return &s }(),
 			Phone:     func() *string { s := "15888888888"; return &s }(),
 			Email:     func() *string { s := "xingran@qq.com"; return &s }(),
 			Status:    models.DeptStatusNormal,
-			Remark:    "",
 		},
 		{
 			DeptName:  "市场部门",
-			ParentID:  &shenzhenDeptID,
-			Ancestors: topDept.ID + "," + shenzhenDeptID,
+			DeptCode:  "MARKET",
 			OrderNum:  2,
 			Leader:    func() *string { s := "若依"; return &s }(),
 			Phone:     func() *string { s := "15888888888"; return &s }(),
 			Email:     func() *string { s := "xingran@qq.com"; return &s }(),
 			Status:    models.DeptStatusNormal,
-			Remark:    "",
 		},
 		{
 			DeptName:  "测试部门",
-			ParentID:  &shenzhenDeptID,
-			Ancestors: topDept.ID + "," + shenzhenDeptID,
+			DeptCode:  "TEST",
 			OrderNum:  3,
 			Leader:    func() *string { s := "若依"; return &s }(),
 			Phone:     func() *string { s := "15888888888"; return &s }(),
 			Email:     func() *string { s := "xingran@qq.com"; return &s }(),
 			Status:    models.DeptStatusNormal,
-			Remark:    "",
 		},
 	}
 
-	for _, dept := range shenzhenSubDepts {
-		if err := db.Create(&dept).Error; err != nil {
-			return fmt.Errorf("创建部门 %s 失败: %w", dept.DeptName, err)
+	// 找到"深圳总公司"作为父级(ensureDept 已写回其 ID)
+	var shenzhen *models.Department
+	for _, dept := range subDepts {
+		if dept.DeptName == "深圳总公司" {
+			shenzhen = dept
+			break
 		}
-		applogger.Infof("创建部门 %s 成功", dept.DeptName)
+	}
+	if shenzhen == nil {
+		return fmt.Errorf("内部错误:未找到深圳总公司种子节点")
 	}
 
-	applogger.Infof("默认部门创建完成")
+	for _, dept := range shenzhenSubDepts {
+		dept.ParentID = &shenzhen.ID
+		dept.Ancestors = topDept.ID + "," + shenzhen.ID
+		if err := ensureDept(db, dept, &shenzhen.ID); err != nil {
+			return err
+		}
+	}
+
+	applogger.Infof("默认部门检查/创建完成")
 	return nil
 }
 
