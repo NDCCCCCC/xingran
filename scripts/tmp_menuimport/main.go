@@ -47,9 +47,7 @@ func loadAll() (menus []*MenuRow, roleMenus []*RoleMenuRow, roleCount int) {
 	return menus, roleMenus, roleCount
 }
 
-// runGen / runImport 将在 Task 2 (dedupe.go) / Task 3 (import.go) 实现。
-// 当前为占位 stub，保证 Task 1 可独立编译。
-func runGen()    { fail("-mode=gen not implemented yet (Task 2)") }
+// runImport 将在 Task 3 (import.go) 实现，当前为占位 stub。
 func runImport() { fail("-mode=import not implemented yet (Task 3)") }
 
 // runParse Task 1 验证：全量计数断言 + 抽样打印。
