@@ -138,6 +138,7 @@ None currently. Roadblock risk: Phase 60 AUTH-03 启用决策若选"启用",会�
 | 260814-ehg | 旧库菜单去重导入 dev 库(保持层级) + admin 全量授权(239 菜单/10 顶级目录) | 2026-08-14 | ef1ba87 / cb81443 / e02d837 | [260814-ehg-dedupe-and-import-legacy-menu-data-into-](./quick/260814-ehg-dedupe-and-import-legacy-menu-data-into-/) |
 | 260814-gor | assignAllMenusToAdmin 先删后插→增量幂等差集补全(消除丢权限炸弹+降载) | 2026-08-14 | a0ea57b | [260814-gor-fix-assignallmenustoadmin-delete-then-re](./quick/260814-gor-fix-assignallmenustoadmin-delete-then-re/) |
 | 260814-h0e | my-menus 系列接缓存(menuCacheService 补 GetOrSet 覆盖,消除慢库每次打DB) | 2026-08-14 | ba36b1b / f481c93 | [260814-h0e-cache-my-menus-series-via-menucacheservi](./quick/260814-h0e-cache-my-menus-series-via-menucacheservi/) |
+| 260814-wxb | 修复两个存量前端测试失败(ACTION_TITLE 7 key + HealthCard 紧凑版断言,零产品代码改动) | 2026-08-14 | 19ac4f6 / bbc5248 | [260814-wxb-port-write-constants-action-title-health](./quick/260814-wxb-port-write-constants-action-title-health/) |
 
 ## Deferred Items
 
