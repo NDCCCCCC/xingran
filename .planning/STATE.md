@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: Milestone History
 status: executing
-stopped_at: Completed 61-01-PLAN.md
-last_updated: "2026-08-14T10:05:27.085Z"
-last_activity: 2026-08-14 -- Phase 62 planning complete
+stopped_at: Completed 62-01-PLAN.md
+last_updated: "2026-08-14T10:36:21.356Z"
+last_activity: 2026-08-14
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 5
-  total_plans: 13
-  completed_plans: 8
-  percent: 62
+  total_plans: 14
+  completed_plans: 9
+  percent: 64
 ---
 
 # Project State
@@ -31,12 +31,12 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-12)
 
 ## Current Position
 
-Phase: 61(milestone 末 phase)—— 全部 57-61 代码完成
-Plan: 8/8 complete
+Phase: 62 (ai-internal-core-db) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-08-14 -- Phase 62 planning complete
+Last activity: 2026-08-14
 
-Progress: [██████████] 100%
+Progress: [███████░░░] 69%
 
 ## Accumulated Context
 
@@ -166,12 +166,12 @@ Full deferred detail in [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-13T09:45:30.356Z
-Stopped at: Completed 61-01-PLAN.md
+Last session: 2026-08-14T10:36:21.343Z
+Stopped at: Completed 62-01-PLAN.md
 Resume file: None
 
-**Milestone status:** v1.21 IN PROGRESS — **Phase 61 Plan 01 COMPLETE** (commits c55a3c5 + cba12ce + 1eae873 + 3a71c11): Task 1 创建 `pkg/permission/resource_action_map.go` 静态 map 覆盖 system:* 11 资源 59 组合 + 单元测试; Task 2 改造 `MultiAuth`/`setUserContextForAPIKey`/`RequireAPIKeyResourcePermission` + `internal/api/router.go` 调用形态,实现 D-06/D-07/D-09/D-10; Task 3 新增 8 个 `RequireAPIKeyResourcePermission` 中间件单测 + 5 个 `InheritPerms` sqlite 集成测。`go build ./...` exit 0,核心包测试 PASS,既有 Phase 57/59/60 回归锚 PASS。
+**Milestone status:** v1.21 IN PROGRESS — **Phase 62 Plan 01 COMPLETE** (commits 5b57146 + 540e0af): Task 1 (C1) Migrate176 加固——快路径 information_schema.columns R5 标记列校验回退慢路径自愈升级 + backfillOpsAssetPhysical 双路径提取(Type E 门控 + 每次 Warnf RowsAffected 审计); Task 2 (CDX-M-IDX) 新增 idx_sys_user_nickname(175)+ idx_recon_resolved_asset_time(176)两个部分索引支撑高频标量子查询;新建 migration_176_reconciliation_physical_mv_test.go 含 8 个源码 grep + sqlite 双调幂等测试,既有 migration_202 / menu_grant 测试无回归。`go build ./...` exit 0,`go test ./internal/core/db/migrations/ -v` 全部 PASS。PG 功能路径(REFRESH / 列集校验 / Type E 门控 / 索引真实执行计划)由项目既有 "PG functional 由 dev 启动 / UAT 覆盖" 惯例负责。
 
 ## Operator Next Steps
 
-- `/gsd:execute-phase 61` — continue with Phase 61 Plan 02 (QUAL-03: RateLimitByScope action-aware tuning + rate_limit.* config + RateLimiter config-driven)
+- `/gsd:execute-phase 62` — continue with Phase 62 Plan 02 (C4: FilterLogger 慢查询日志实现 + MinLevel 语义 + C6: GrantNewMenuToRolesHavingParent 参数化)
