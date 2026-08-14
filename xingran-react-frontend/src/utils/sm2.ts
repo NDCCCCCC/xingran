@@ -136,8 +136,13 @@ export async function getEncryptedLoginRequest(
       encryptedPassword: true,
     };
   } catch (error) {
+    // P1-S2: 生产环境绝不回退明文 — 密码明文传输是高危。
+    // 仅开发环境允许回退以便调试(与 api.ts 请求加密回退逻辑一致)。
+    if (import.meta.env.MODE === "production") {
+      console.error("[SM2] 生产环境加密失败,拒绝明文回退:", error);
+      throw new Error("密码加密失败,请检查网络或联系管理员");
+    }
     console.warn("SM2 加密失败，回退到明文传输（仅开发环境）:", error);
-    // 回退方案：如果 SM2 不可用，使用明文传输（仅开发环境）
     return {
       username,
       password,

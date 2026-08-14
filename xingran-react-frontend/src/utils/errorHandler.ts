@@ -1,7 +1,5 @@
 import { getAppMessage } from "@/utils/antdMessage";
-import { useAuthStore } from "@/store/authStore";
 import { clearPublicKeyCache } from "./sm2";
-import { LOGIN } from "@/constants/routes";
 
 // ============================================================================
 // 向后兼容性重新导出
@@ -209,10 +207,11 @@ export function handleHttpResponseError(status: number, responseData?: ApiRespon
     clearPublicKeyCache();
   }
 
-  // 特殊处理 401 未授权 - 自动登出
-  if (status === 401) {
-    handleUnauthorized();
-  }
+  // P1-S3: 401 未授权的自动登出已由 api.ts 响应拦截器完整处理
+  // (L387-451, 含 login 短路/refresh 短路/刷新队列/失败跳转),
+  // 该拦截器对所有 401 响应在到达此处之前已 return, 故此分支不可达。
+  // 移除原 handleUnauthorized() 调用以消除死代码, 避免未来误以为
+  // 这里是 401 处理的入口。
 
   // 显示错误消息
   getAppMessage().error(errorMessage);
@@ -275,17 +274,6 @@ function getErrorTypeByStatus(status: number): HttpErrorType {
   };
 
   return statusToTypeMap[status] ?? HttpErrorType.INTERNAL_ERROR;
-}
-
-/**
- * 处理未授权错误（登出逻辑）
- */
-async function handleUnauthorized(): Promise<void> {
-  // 清除 auth store 状态（内部已调用 tokenManager.clearTokens() 清理 sessionStorage 中的加密 token）
-  await useAuthStore.getState().logout();
-
-  // 跳转到登录页
-  window.location.href = LOGIN;
 }
 
 // ==================== 类型安全的异步操作包装 ====================

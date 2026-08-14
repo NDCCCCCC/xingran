@@ -6,12 +6,18 @@
  * - 缓存检查（避免重复请求）
  * - Page Visibility API 优化（页面不可见时暂停）
  * - 手动刷新
+ *
+ * 修复历史:
+ *   - P0-2/P0-3 (前端审查): 原实现主 effect 与 visibility effect 共用同一个
+ *     intervalRef, 互相覆盖句柄导致 interval 永远 clear 不掉(泄漏); 且
+ *     widgetIds 数组引用不稳定使 fetchData 频繁重建触发 effect 死循环。
+ *     现统一为单一 effect 管理 interval, visibility 通过 isTabVisible 状态
+ *     驱动, fetcher 用 ref 保持最新闭包避免依赖抖动。
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { dashboardService } from "@/services/dashboardService";
-import type { WidgetConfig } from "@/types/dashboard";
 
 export interface UseWidgetPollingOptions {
   /** 需要轮询的 Widget ID 列表 */
@@ -45,48 +51,55 @@ export interface UseWidgetPollingReturn {
 export function useWidgetPolling(options: UseWidgetPollingOptions): UseWidgetPollingReturn {
   const { widgetIds, interval, enabled = true, minCacheTime = 30 } = options;
 
-  const { cacheWidgetData, getCachedWidgetData, clearWidgetCache, currentDashboard } =
-    useDashboardStore();
+  const { cacheWidgetData, getCachedWidgetData, clearWidgetCache } = useDashboardStore();
 
   const [loading, setLoading] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
   const [isPaused, setIsPaused] = useState(false);
+  const [isTabVisible, setIsTabVisible] = useState(
+    typeof document !== "undefined" ? !document.hidden : true
+  );
 
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isFetchingRef = useRef(false);
 
   // 计算缓存过期时间（毫秒）
   const cacheExpiry = Math.max((interval / 2) * 1000, minCacheTime * 1000);
 
-  // 获取数据
+  // 用 ref 保存最新的 widgetIds / cacheExpiry / store actions,避免它们进入
+  // useCallback/fetchData 的依赖数组造成频繁重建(原 P0-3 根因)。
+  // widgetIds 是数组,调用方很可能每次渲染传新引用,放 ref 后 fetcher 只需建一次。
+  const widgetIdsRef = useRef(widgetIds);
+  widgetIdsRef.current = widgetIds;
+  const cacheExpiryRef = useRef(cacheExpiry);
+  cacheExpiryRef.current = cacheExpiry;
+
+  // 获取数据 — 空依赖,读 ref 拿最新值,保证引用永久稳定
   const fetchData = useCallback(
     async (forceRefresh = false) => {
-      if (widgetIds.length === 0 || isFetchingRef.current) return;
+      const ids = widgetIdsRef.current;
+      if (ids.length === 0 || isFetchingRef.current) return;
 
-      // 检查缓存，确定需要请求的 Widget
+      const expiry = cacheExpiryRef.current;
       const now = Date.now();
       const uncachedIds: string[] = [];
 
-      for (const id of widgetIds) {
+      for (const id of ids) {
         if (forceRefresh) {
-          // 强制刷新时清除缓存
           clearWidgetCache(id);
           uncachedIds.push(id);
         } else {
-          // 检查缓存是否过期
           const cached = getCachedWidgetData(id);
           if (
             !cached ||
             typeof cached !== "object" ||
             !("timestamp" in cached) ||
-            now - (cached as { timestamp: number }).timestamp > cacheExpiry
+            now - (cached as { timestamp: number }).timestamp > expiry
           ) {
             uncachedIds.push(id);
           }
         }
       }
 
-      // 如果所有数据都在缓存中且未过期，跳过请求
       if (uncachedIds.length === 0) return;
 
       isFetchingRef.current = true;
@@ -105,7 +118,7 @@ export function useWidgetPolling(options: UseWidgetPollingOptions): UseWidgetPol
         isFetchingRef.current = false;
       }
     },
-    [widgetIds, cacheExpiry, cacheWidgetData, getCachedWidgetData, clearWidgetCache]
+    [cacheWidgetData, getCachedWidgetData, clearWidgetCache]
   );
 
   // 手动刷新
@@ -116,10 +129,6 @@ export function useWidgetPolling(options: UseWidgetPollingOptions): UseWidgetPol
   // 暂停轮询
   const pause = useCallback(() => {
     setIsPaused(true);
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
   }, []);
 
   // 恢复轮询
@@ -127,54 +136,37 @@ export function useWidgetPolling(options: UseWidgetPollingOptions): UseWidgetPol
     setIsPaused(false);
   }, []);
 
-  // 设置轮询
+  // 监听页面可见性 — 仅更新状态,不直接操作 interval(原 P0-2 根因:
+  // 两个 effect 争抢 intervalRef)。interval 的创建/销毁全部交给下面的主 effect。
   useEffect(() => {
-    if (!enabled || isPaused || widgetIds.length === 0) return;
+    const handleVisibilityChange = () => {
+      setIsTabVisible(!document.hidden);
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
 
-    // 首次加载
+  // 单一的 interval 管理 effect — 唯一负责 setInterval/clearInterval 的地方。
+  // 当 enabled / isPaused / isTabVisible / interval 变化时重建,保证只有
+  // 一个活跃 interval,不会泄漏。
+  useEffect(() => {
+    if (!enabled || isPaused || !isTabVisible || widgetIds.length === 0) return;
+
     fetchData();
 
-    // 设置定时轮询
     const intervalMs = Math.max(interval, 30) * 1000; // 最小 30 秒
-    intervalRef.current = setInterval(() => {
+    const id = setInterval(() => {
       fetchData();
     }, intervalMs);
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
+      clearInterval(id);
     };
-  }, [enabled, isPaused, widgetIds, interval, fetchData]);
-
-  // Page Visibility API 优化
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        // 页面不可见时暂停轮询
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
-        }
-      } else {
-        // 页面可见时恢复轮询
-        if (enabled && !isPaused && widgetIds.length > 0) {
-          fetchData();
-          const intervalMs = Math.max(interval, 30) * 1000;
-          intervalRef.current = setInterval(() => {
-            fetchData();
-          }, intervalMs);
-        }
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [enabled, isPaused, widgetIds, interval, fetchData]);
+    // widgetIds.length 作为基本类型依赖(避免数组引用抖动); widgetIds 内容
+    // 变化由 fetcher 内部 widgetIdsRef 捕获,无需进依赖。
+  }, [enabled, isPaused, isTabVisible, interval, widgetIds.length, fetchData]);
 
   return {
     loading,

@@ -5,6 +5,11 @@ import type { RPAProgressMessage } from "@/types/rpa";
 // RPA 进度回调类型
 type RPAProgressCallback = (message: RPAProgressMessage) => void;
 
+// P1-M4: RPA 进度监听器集合放在模块级,不进入 Zustand 响应式 state。
+// 原实现把 Set 放进 state 且 onRPAProgress 直接 mutate 它,破坏不可变契约,
+// 且任何订阅 state 的组件会在无关 set 时被波及。
+const rpaProgressListeners = new Set<RPAProgressCallback>();
+
 interface NoticeState {
   // 未读数量
   unreadCount: number;
@@ -14,8 +19,6 @@ interface NoticeState {
   loading: boolean;
   // WebSocket 连接状态
   wsConnected: boolean;
-  // RPA 进度事件监听器集合
-  rpaProgressListeners: Set<RPAProgressCallback>;
 }
 
 interface NoticeActions {
@@ -48,7 +51,6 @@ const initialState: NoticeState = {
   notifications: [],
   loading: false,
   wsConnected: false,
-  rpaProgressListeners: new Set(),
 };
 
 export const useNoticeStore = create<NoticeState & NoticeActions>()((set, get) => ({
@@ -152,7 +154,7 @@ export const useNoticeStore = create<NoticeState & NoticeActions>()((set, get) =
         }
 
         // 触发所有 RPA 进度监听器
-        get().rpaProgressListeners.forEach((callback) => {
+        rpaProgressListeners.forEach((callback) => {
           try {
             callback(progressData);
           } catch (error) {
@@ -165,22 +167,18 @@ export const useNoticeStore = create<NoticeState & NoticeActions>()((set, get) =
     }
   },
 
-  // RPA 进度事件订阅
+  // RPA 进度事件订阅 — 使用模块级 Set (P1-M4)
   onRPAProgress: (callback: RPAProgressCallback) => {
-    const listeners = get().rpaProgressListeners;
-    listeners.add(callback);
+    rpaProgressListeners.add(callback);
 
     // 返回取消订阅函数
     return () => {
-      listeners.delete(callback);
+      rpaProgressListeners.delete(callback);
     };
   },
 
   // 重置状态
   reset: () => {
-    set({
-      ...initialState,
-      rpaProgressListeners: new Set(), // 保持空 Set 而不是重置引用
-    });
+    set(initialState);
   },
 }));
