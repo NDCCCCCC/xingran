@@ -136,8 +136,11 @@ func (s *menuCacheService) GetAllUserMenus(ctx context.Context, userID string) (
 
 // GetUserPermissions 获取用户的权限列表（覆盖基础方法，使用缓存）
 // 缓存键按 userID 隔离（GetMenuUserPermissionsKey），TTL 复用 CacheConfigMenuTree。
-// 注意：权限变更（角色撤销）本就需要等 JWT access_token 刷新（TTL 7200s=2h）才生效，
-// 缓存 TTL 30min < 2h，不引入新的权限陈旧窗口。如需更严格，role service 变更时调 InvalidateMenuCache。
+// 安全性说明：此缓存仅服务于 /system/my-menus/permissions 接口（前端按钮级 UI 控制）。
+// 后端 RBAC 权限校验走 pkg/permission/service.go 的实时未缓存路径
+// （pkg/middleware/permission.go、internal/middleware/apikey.go），不受此缓存影响，
+// 因此 30min TTL 只影响前端权限标识展示的时效，不构成提权窗口。
+// 角色↔菜单 / 用户↔角色变更时经 InvalidateUserMenuCache 主动失效（F-01），TTL 仅为兜底。
 func (s *menuCacheService) GetUserPermissions(ctx context.Context, userID string) ([]string, error) {
 	cacheKey := GetMenuUserPermissionsKey(userID)
 	var result []string
