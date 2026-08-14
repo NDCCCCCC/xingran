@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.21
 milestone_name: Milestone History
 status: executing
-stopped_at: Completed 62-02-PLAN.md
-last_updated: "2026-08-14T10:52:00.000Z"
+stopped_at: Completed 62-03-PLAN.md
+last_updated: "2026-08-14T11:20:02.832Z"
 last_activity: 2026-08-14
 progress:
-  total_phases: 7
+  total_phases: 6
   completed_phases: 5
-  total_plans: 14
-  completed_plans: 10
-  percent: 71
+  total_plans: 13
+  completed_plans: 11
+  percent: 83
 ---
 
 # Project State
@@ -32,11 +32,11 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-12)
 ## Current Position
 
 Phase: 62 (ai-internal-core-db) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-08-14
 
-Progress: [████████░░] 71%
+Progress: [█████████░] 85%
 
 ## Accumulated Context
 
@@ -74,6 +74,13 @@ Progress: [████████░░] 71%
 - **D-15/D-16/D-17**: 12 个 `rate_limit.{read|write|admin|default}.{per_minute|per_hour|per_day}` 配置键复用 CacheConfigService(独立 rateLimits map,次数语义),默认值与既有硬编码一致,Min/Max 范围校验
 - **D-18**: `RateLimiter` 移除硬编码 limits map,改 `RateLimitProvider` 接口注入;`NewRateLimiter(nil)` 兜底 staticRateLimitProvider;router.go 用 `core.CacheConfigService` 字段(非 getter)
 - **D-19**: reload 后新阈值仅对新请求生效,在途滑动窗口保留旧阈值
+
+### Phase 62 Plan 03 Locked Decisions (C2/C5/OC-M-MENUSEED/CDX-M-USERROLE)
+
+- **D-62-03-01 (C2 scope)**: 完整"首登强制改密"方案需改动 handler + 前端登录链路,超出本纯 db 修复 phase 范围 → 本 plan 落地 env 覆盖 + 大声 WARN + 死 salt 清除,完整方案 deferred
+- **D-62-03-02 (C5 strategy)**: 全量 `db.Transaction` 包裹 initData 会与 core.go initDBAndData "失败仅警告不阻断启动" 策略冲突 → 选择逐条 check-and-create 细粒度幂等(ensureDept helper)
+- **D-62-03-03 (DeptCode population)**: 原 seed 在 dept_code 上留空,违反 uniqueIndex;not null(由 migration_080 添加)→ 填充 ROOT/SHENZHEN/CHANGSHA/RD/MARKET/TEST 唯一编码使首装种子真正生效(brand/leader/phone/email 按 plan 保持原样)
+- **D-62-03-04 (Test DSN cache mode)**: `file::memory:?cache=shared` 在多测试间共享 in-memory DB,导致 TestCreateDefaultUser_EnvOverride 写入的 admin 行污染 FallbackDefault → init_data_test.go 三个 DB helper 改用 `cache=private`
 
 ### v1.21 — 根因调查结论(ground-truth 已验证)
 
@@ -166,12 +173,12 @@ Full deferred detail in [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-14T10:52:00.000Z
-Stopped at: Completed 62-02-PLAN.md
+Last session: 2026-08-14T11:20:02.819Z
+Stopped at: Completed 62-03-PLAN.md
 Resume file: None
 
-**Milestone status:** v1.21 IN PROGRESS — **Phase 62 Plan 02 COMPLETE** (commits 156c17b + 953f365 + 0412ee4 + 3a5f63f): Task 1 (C4) FilterLogger 死配置修复——Trace 实现 SlowThreshold 慢查询判定(elapsed >= SlowThreshold*ms 时 applogger.Warnf 输出耗时/行数/SQL,独立于 FilterTypes[LogTypeSQL]);Info/Warn 真实读取 MinLevel(GORM LogLevel: Silent=1/Info=4/Warn=3/Debug=5,MinLevel >= level 才输出);LogMode(level) 现在真实生效;新增 filter_logger_test.go 含 7 个单测(TestTrace_SlowQuery/FastQuery/ErrorNoRegression + TestSlowQuery_ZeroDisabled + TestInfoWarn_MinLevelSilent/Info + TestLogMode_RealLevelEffect)。Task 2 (C6) GrantNewMenuToRolesHavingParent 参数化——fmt.Sprintf SQL 拼接改为常量 SQL + `$1::uuid`/`$2` 参数化绑定,db.Exec 改 (sql, newMenuID, parentMenuName) 三参形态;移除 "fmt" import;menu_grant_helpers_test.go 强化 TestGrantNewMenuToRolesHavingParent_ParameterizedOrControlled 新增 3 条断言(源码含 $1::uuid、menu_name = $2、不含 fmt.Sprintf);既有 4 个 SQL 片段断言 + isPostgreSQL 守卫不回归。`go build ./...` exit 0,`go test ./internal/core/db/ ./internal/core/db/migrations/ -v` 全部 PASS(PG-only 测试无 `XINGRAN_PG_TEST_DSN` 时 skip)。Task 1 GREEN 因并行 agent race 误落入 953f365 (`ci(frontend): bump Node 22 → 24` 借用 commit 消息),代码变更正确;Task 2 GREEN 独立 commit 3a5f63f 无串台。
+**Milestone status:** v1.21 IN PROGRESS — **Phase 62 Plan 03 COMPLETE** (commits bb2329e + 68119aa + d93f024): Task 1 (C2) admin 种子凭据加固——`createDefaultUser` 读 `SYS_ADMIN_BOOTSTRAP_PASSWORD` 环境变量覆盖默认密码,fallback 到 admin123 时输出多行 `applogger.Warnf` 大声告警(3 点恢复指引,密码值本身不入日志),`Salt: "default"` 死字段字面量清除并加注释说明真实盐在 PasswordManager 哈希串内;init_data_test.go 4 条 TestCreateDefaultUser_* 测试覆盖 env 路径/回退路径/无 default 字面盐/幂等;test DB 切到 cache=private 修复共享缓存导致的跨测试 row 污染(EnvOverride 行污染 FallbackDefault)。Task 2 (C5) 部门种子细粒度幂等——新 `ensureDept(db, dept, parentID)` helper 按 dept_name + parent_id (NULL 顶级) 语义查询,删除 `count > 0` 整体跳过;首次启动中途失败可在下次启动补齐缺失子树;同步给所有 6 行种子填 `DeptCode = ROOT/SHENZHEN/CHANGSHA/RD/MARKET/TEST` 满足 `uniqueIndex;not null`(原 seed 在唯一索引下根本不会成功);3 条 dept 测试 (FullSeed/PartialRecovers/FullyIdempotent) 全部 PASS。Task 3 (OC-M-MENUSEED + CDX-M-USERROLE) 菜单种子循环改 `errors.Is(err, gorm.ErrRecordNotFound)` 三分支(页面 + 按钮两个循环)消除 fallthrough Create 重复菜单,按钮循环加 `parentMenuID == ""` 守卫;`createUserRoleRelations` 用 `db.Create(&models.UserRole{...})` 取代硬编码 `db.Exec("INSERT INTO sys_user_role ...")` 消除表名漂移风险;源码断言测试 `TestSourceAssertions_MenuSeedErrorPaths` 守护三处契约(errors.Is 出现 ≥ 2、不含 INSERT INTO sys_user_role、含 models.UserRole{}、含 parentMenuID == "")。`go build ./...` exit 0,`go test ./internal/core/db/ -v` 全部 PASS(含 Phase 62-02 既有 FilterLogger/menu_grant_helpers 测试不回归)。2 处 Rule 2/3 自修正(详见 62-03-SUMMARY §Deviations)。
 
 ## Operator Next Steps
 
-- `/gsd:execute-phase 62` — continue with Phase 62 Plan 03 (C2: admin 种子凭据 env 覆盖 + 告警 + 死 salt 清除 + C5: 部门种子细粒度幂等 + OC-M-MENUSEED: 菜单种子错误处理 + CDX-M-USERROLE: UserRole 关联去原生 SQL)
+- `/gsd:execute-phase 62` — continue with Phase 62 Plan 04 / 05(C1 Migrate176 schema-version guard + C3 启动 advisory lock 是当前 plan 范围之外但被 reviewer 提出的高/中优先项)
