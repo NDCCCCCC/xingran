@@ -213,14 +213,14 @@ func (r *RedisCache) TTL(ctx context.Context, key string) (time.Duration, error)
 	return r.client.TTL(ctx, r.buildKey(key)).Result()
 }
 
-// Keys 模式匹配（SCAN 游标遍历，避免 KEYS 的 O(N) 阻塞主线程；F-02）
-// SCAN 的 MATCH 与 KEYS 使用完全相同的 glob 语义，调用方行为不变。
-func (r *RedisCache) Keys(ctx context.Context, pattern string) ([]string, error) {
-	builtPattern := r.buildKey(pattern)
+// scanKeys 用 SCAN 游标遍历匹配 pattern 的键（COUNT=500）。
+// 避免 KEYS 的 O(N) 阻塞主线程；SCAN MATCH 与 KEYS 的 glob 语义完全一致。
+// Keys / DirectRedisKeys 共用（F-02 / L-01）。
+func scanKeys(ctx context.Context, client *redis.Client, pattern string) ([]string, error) {
 	keys := make([]string, 0)
 	var cursor uint64
 	for {
-		batch, next, err := r.client.Scan(ctx, cursor, builtPattern, 500).Result()
+		batch, next, err := client.Scan(ctx, cursor, pattern, 500).Result()
 		if err != nil {
 			return nil, err
 		}
@@ -229,6 +229,16 @@ func (r *RedisCache) Keys(ctx context.Context, pattern string) ([]string, error)
 			break
 		}
 		cursor = next
+	}
+	return keys, nil
+}
+
+// Keys 模式匹配（SCAN 游标遍历，避免 KEYS 的 O(N) 阻塞主线程；F-02）
+// SCAN 的 MATCH 与 KEYS 使用完全相同的 glob 语义，调用方行为不变。
+func (r *RedisCache) Keys(ctx context.Context, pattern string) ([]string, error) {
+	keys, err := scanKeys(ctx, r.client, r.buildKey(pattern))
+	if err != nil {
+		return nil, err
 	}
 
 	if r.prefix != "" {
@@ -989,13 +999,14 @@ type redisCacheInterface interface {
 }
 
 // DirectRedisKeys 直接查询 Redis 中的所有键（不使用前缀）
+// SCAN 游标遍历，避免 KEYS 的 O(N) 阻塞主线程（L-01）
 func (m *MultiLevelCache) DirectRedisKeys(ctx context.Context, pattern string) ([]string, error) {
 	if redisCache, ok := m.l2Cache.(redisCacheInterface); ok {
 		client := redisCache.getClient()
 		if client == nil {
 			return []string{}, nil
 		}
-		return client.Keys(ctx, pattern).Result()
+		return scanKeys(ctx, client, pattern)
 	}
 	return []string{}, nil
 }

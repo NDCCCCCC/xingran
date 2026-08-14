@@ -79,10 +79,20 @@ func (r *redisNonceStorage) Close() error {
 }
 
 // GetNonceCount 获取当前存储的 nonce 数量（用于监控）
+// SCAN 游标遍历计数，避免 KEYS 的 O(N) 阻塞主线程（L-01）
 func (r *redisNonceStorage) GetNonceCount() int {
-	keys, err := r.client.Keys(r.ctx, "nonce:*").Result()
-	if err != nil {
-		return 0
+	count := 0
+	var cursor uint64
+	for {
+		batch, next, err := r.client.Scan(r.ctx, cursor, "nonce:*", 500).Result()
+		if err != nil {
+			return 0
+		}
+		count += len(batch)
+		if next == 0 {
+			break
+		}
+		cursor = next
 	}
-	return len(keys)
+	return count
 }
