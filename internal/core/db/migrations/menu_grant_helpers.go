@@ -1,8 +1,6 @@
 package migrations
 
 import (
-	"fmt"
-
 	"gorm.io/gorm"
 )
 
@@ -20,8 +18,7 @@ import (
 //   - newMenuID: 新菜单 menu_id(UUID 字符串)
 //
 // 实现说明:
-//   - newMenuID / parentMenuName 均为 migration 内部受控值(非 HTTP 输入),无 SQL 注入面;
-//     与 migration_201 line 80-106 的 fmt.Sprintf SQL 风格一致(项目惯例)。
+//   - SQL 已参数化($1::uuid / $2),对任意输入安全,无 SQL 注入面。
 //   - ON CONFLICT DO NOTHING 依赖 sys_role_menu 的 (role_id, menu_id) 复合 PK / 唯一约束
 //     (migration_144 已依赖此约束做 dedup)。
 //   - SQLite 路径下 helper isPostgreSQL 守卫 return nil(SQLite 不支持 ::uuid cast +
@@ -33,21 +30,21 @@ func GrantNewMenuToRolesHavingParent(db *gorm.DB, parentMenuName string, newMenu
 		return nil
 	}
 
-	// D-08 锁定 SQL(52-PATTERNS.md §7 + 52-CONTEXT D-08):
+	// D-08 锁定 SQL(52-PATTERNS.md §7 + 52-CONTEXT D-08),参数化版本:
 	// INSERT INTO sys_role_menu (role_id, menu_id)
-	//   SELECT rm.role_id, '<newMenuID>'::uuid
+	//   SELECT rm.role_id, $1::uuid
 	//   FROM sys_role_menu rm
 	//   JOIN sys_menu m ON rm.menu_id = m.id
-	//   WHERE m.menu_name = '<parentMenuName>'
+	//   WHERE m.menu_name = $2
 	//   ON CONFLICT DO NOTHING
-	sql := fmt.Sprintf(`
+	const sql = `
 INSERT INTO sys_role_menu (role_id, menu_id)
-SELECT rm.role_id, '%s'::uuid
+SELECT rm.role_id, $1::uuid
 FROM sys_role_menu rm
 JOIN sys_menu m ON rm.menu_id = m.id
-WHERE m.menu_name = '%s'
+WHERE m.menu_name = $2
 ON CONFLICT DO NOTHING
-`, newMenuID, parentMenuName)
+`
 
-	return db.Exec(sql).Error
+	return db.Exec(sql, newMenuID, parentMenuName).Error
 }
