@@ -218,7 +218,6 @@ export function useTableManager<T>(
       searchForm.setFieldsValue(restored);
     }
     // 仅 mount 一次：searchForm 引用稳定
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchForm]);
 
   // loadData 读 ref 组装参数：current/pageSize + filters(持久化) + 排序。
