@@ -135,7 +135,14 @@ func TestReconciliationStatistics_Summary(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		conflictType := []string{"A", "B", "C", "D"}[i%4]
 		severity := []string{"low", "medium", "high", "critical"}[i%4]
-		detectedAt := now.Add(-time.Duration(i+1) * 24 * time.Hour) // i+1 天前
+		// i+1 天前；i=6 用 8 天前(而非恰好 7 天前),使 Last7dNew 的 7d 窗口
+		// 边界两侧留有余量 —— 测试的 now 与被测 Summary 内部 now 存在 µs~ms
+		// 采样差,恰好 7 天前的行会在边界两侧漂移导致 flaky(6↔7)。L-fix
+		daysAgo := i + 1
+		if i == 6 {
+			daysAgo = 8
+		}
+		detectedAt := now.Add(-time.Duration(daysAgo) * 24 * time.Hour)
 
 		var resolvedAt interface{}
 		if i < 2 {
@@ -180,7 +187,7 @@ func TestReconciliationStatistics_Summary(t *testing.T) {
 	require.Equal(t, int64(4), result.CriticalOpen, "CriticalOpen = 4 (i=3,7,11,15)")
 
 	// Last7dNew = detected_at >= 7d 内
-	//   i=0..5(6 条):detected_at 在 1-6 天前(i=6 是 7 天前,SQ 时间精度可能漂移排除)
+	//   i=0..5(6 条):detected_at 在 1-6 天前;i=6 已改为 8 天前,稳定排除在 7d 窗口外
 	require.Equal(t, int64(6), result.Last7dNew, "Last7dNew = 6 条严格 7d 内")
 
 	// TopConflictType: A/B/C/D 各 5 条 → 取字典序最小的 "A"
