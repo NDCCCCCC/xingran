@@ -1,55 +1,481 @@
+/* ============================================
+   登录页 v4 - 墨绿 + 琥珀金 + 米白
+   配色:
+   - 墨绿 #14532d → #166534 渐变(企业级稳重)
+   - 琥珀金 #d4a574(高级强调色)
+   - 米白 #faf7f2 / #f3efe8(背景)
+   - 极深墨 #1c1917(主文字)
+   字体:衬线标题 + 无衬线正文(高级感)
+   ============================================ */
+
 .login-container {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(to bottom right, var(--color-blue-50), var(--color-indigo-100));
+  background: linear-gradient(135deg, #faf7f2 0%, #f0ebe0 100%);
+  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", Roboto, sans-serif;
+  box-sizing: border-box;
 }
 
-.login-card {
+.login-container * {
+  box-sizing: border-box;
+}
+
+/* ---------- 左侧品牌面板 (墨绿渐变) ---------- */
+.login-brand {
+  position: relative;
+  flex: 1;
+  background: linear-gradient(135deg, #14532d 0%, #166534 60%, #1e6b3f 100%);
+  padding: 56px 48px;
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  color: #fef3c7;
+  overflow: hidden;
+  min-height: 640px;
+  border-radius: 20px 0 0 20px;
+  box-shadow:
+    0 25px 50px -12px rgba(20, 83, 45, 0.4),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
+@media (min-width: 1024px) {
+  .login-brand {
+    display: flex;
+  }
+}
+
+/* 装饰几何 - 琥珀金细线 */
+.login-brand__decor {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0.18;
+  color: #d4a574;
+}
+
+.login-brand__decor svg {
   width: 100%;
-  max-width: 28rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  height: 100%;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1;
 }
 
-/* 密码输入框容器样式 - 添加边框以匹配用户名输入框 */
-.login-card .ant-input-affix-wrapper {
-  border: 1px solid var(--theme-border-primary) !important;
-  background: #fff !important;
+.login-brand__decor--hex {
+  top: -10%;
+  right: -15%;
+  width: 380px;
+  height: 380px;
+  animation: login-brand-rotate 60s linear infinite;
 }
 
-.login-card .ant-input-affix-wrapper:focus,
-.login-card .ant-input-affix-wrapper-focused {
-  border: 1px solid var(--theme-border-primary) !important;
+.login-brand__decor--ring {
+  bottom: -25%;
+  left: -25%;
+  width: 480px;
+  height: 480px;
+  animation: login-brand-rotate 90s linear infinite reverse;
+}
+
+@keyframes login-brand-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 顶部 Logo */
+.login-brand__top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+  z-index: 1;
+}
+
+.login-brand__mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #d4a574 0%, #b8854c 100%);
+  box-shadow: 0 4px 12px rgba(212, 165, 116, 0.4);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  color: #14532d;
+}
+
+.login-brand__wordmark {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: #fef3c7;
+  font-family: "Georgia", "Songti SC", "Source Han Serif SC", serif;
+}
+
+/* 中部标题 */
+.login-brand__center {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  position: relative;
+  z-index: 1;
+}
+
+.login-brand__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(212, 165, 116, 0.12);
+  border: 1px solid rgba(212, 165, 116, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  color: #d4a574;
+  text-transform: uppercase;
+}
+
+.login-brand__eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #d4a574;
+  box-shadow: 0 0 8px #d4a574;
+  animation: login-pulse 2s ease-in-out infinite;
+}
+
+@keyframes login-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.85); }
+}
+
+.login-brand__title {
+  font-size: clamp(36px, 4vw, 52px);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: #fef3c7;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  font-family: "Georgia", "Songti SC", "Source Han Serif SC", serif;
+}
+
+.login-brand__title-sep {
+  color: #d4a574;
+  font-weight: 300;
+  margin: 0 0.2em;
+  font-size: 0.9em;
+}
+
+.login-brand__tagline {
+  font-size: 15px;
+  line-height: 1.7;
+  color: rgba(254, 243, 199, 0.75);
+  margin: 0;
+  max-width: 420px;
+  font-family: "Georgia", "Songti SC", serif;
+  font-style: italic;
+}
+
+.login-brand__features {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.login-brand__feature {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.login-brand__feature-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: rgba(212, 165, 116, 0.1);
+  border: 1px solid rgba(212, 165, 116, 0.3);
+  color: #d4a574;
+  font-size: 16px;
+}
+
+.login-brand__feature-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.login-brand__feature-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fef3c7;
+  letter-spacing: 0.02em;
+}
+
+.login-brand__feature-desc {
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(254, 243, 199, 0.6);
+}
+
+/* 底部 */
+.login-brand__footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+  font-size: 12px;
+}
+
+.login-brand__badge {
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: rgba(212, 165, 116, 0.1);
+  border: 1px solid rgba(212, 165, 116, 0.25);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: #d4a574;
+}
+
+.login-brand__copyright {
+  margin-left: auto;
+  color: rgba(254, 243, 199, 0.5);
+}
+
+/* ---------- 右侧表单面板 (米白) ---------- */
+.login-panel {
+  flex: 1;
+  padding: 56px 56px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: #ffffff;
+  min-height: 640px;
+  border-radius: 0 20px 20px 0;
+  box-shadow:
+    0 25px 50px -12px rgba(120, 100, 70, 0.18),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
+.login-form-card {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.login-header {
+  margin-bottom: 36px;
+}
+
+.login-header__title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1c1917;
+  letter-spacing: -0.02em;
+  margin: 0 0 10px;
+  line-height: 1.2;
+  font-family: "Georgia", "Songti SC", "Source Han Serif SC", serif;
+}
+
+.login-header__subtitle {
+  font-size: 15px;
+  color: #78716c;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ---------- 主容器并排(brand + panel) ---------- */
+@media (min-width: 1024px) {
+  .login-container {
+    padding: 0;
+  }
+
+  .login-brand,
+  .login-panel {
+    flex: 1 1 0;
+    max-width: 600px;
+  }
+}
+
+/* ---------- 表单元素 ---------- */
+.login-form .ant-form-item {
+  margin-bottom: 22px;
+}
+
+.login-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #44403c;
+  letter-spacing: 0.02em;
+}
+
+.login-form .ant-input,
+.login-form .ant-input-affix-wrapper {
+  height: 48px !important;
+  padding: 0 16px !important;
+  border-radius: 8px !important;
+  border: 1px solid #e7e5e4 !important;
+  background: #fafaf9 !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
   box-shadow: none !important;
 }
 
-.login-card .ant-input-affix-wrapper .ant-input {
-  border: none !important;
+.login-form .ant-input-affix-wrapper > input.ant-input {
+  font-size: 15px !important;
   background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  height: auto !important;
 }
 
-/* 认证模式选择器样式 */
-.auth-mode-selector .ant-radio-wrapper {
+.login-form .ant-input-affix-wrapper:hover:not(.ant-input-affix-wrapper-disabled) {
+  border-color: #d4a574 !important;
+  background: #ffffff !important;
+}
+
+.login-form .ant-input-affix-wrapper:focus,
+.login-form .ant-input-affix-wrapper-focused {
+  border-color: #d4a574 !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.15) !important;
+}
+
+.login-form .ant-input-prefix {
+  color: #a8a29e !important;
+  margin-right: 10px !important;
+  font-size: 16px !important;
+}
+
+.login-form .ant-input-affix-wrapper:focus .ant-input-prefix,
+.login-form .ant-input-affix-wrapper-focused .ant-input-prefix {
+  color: #d4a574 !important;
+}
+
+.login-form .ant-input-suffix .ant-input-password-icon {
+  color: #a8a29e !important;
+}
+
+.login-form .ant-input-affix-wrapper:focus .ant-input-suffix .ant-input-password-icon,
+.login-form .ant-input-affix-wrapper-focused .ant-input-suffix .ant-input-password-icon {
+  color: #d4a574 !important;
+}
+
+/* 错误提示 */
+.login-alert {
+  margin-bottom: 22px !important;
+  border-radius: 8px !important;
+  border: 1px solid #fecaca !important;
+  background: #fef2f2 !important;
+}
+
+/* 验证码 */
+.login-captcha-wrapper {
   display: flex;
-  align-items: flex-start;
-  padding: 12px;
-  margin-bottom: 8px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  transition: all 0.3s;
+  align-items: center;
+  gap: 12px;
 }
 
-.auth-mode-selector .ant-radio-wrapper:hover {
-  border-color: var(--theme-info, #1890ff);
-  background-color: #f0f7ff;
+.login-captcha-wrapper .ant-input-affix-wrapper {
+  flex: 1;
 }
 
-.auth-mode-selector .ant-radio-wrapper-checked {
-  border-color: var(--theme-info, #1890ff);
-  background-color: #e6f7ff;
+/* ---------- 提交按钮 (琥珀金) ---------- */
+.login-submit {
+  width: 100%;
+  height: 50px !important;
+  border-radius: 8px !important;
+  border: none !important;
+  background: linear-gradient(135deg, #d4a574 0%, #b8854c 100%) !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.05em !important;
+  color: #ffffff !important;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 4px 12px rgba(212, 165, 116, 0.35) !important;
 }
 
-.auth-mode-selector .ant-radio {
-  margin-top: 2px;
+.login-submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(212, 165, 116, 0.5) !important;
+}
+
+.login-submit:active {
+  transform: translateY(0);
+}
+
+.login-submit::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.3) 50%, transparent 60%);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.login-submit:hover::after {
+  transform: translateX(100%);
+}
+
+/* ---------- 页脚 ---------- */
+.login-footer {
+  margin-top: 32px;
+  padding-top: 22px;
+  border-top: 1px solid #f0ede8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #a8a29e;
+  letter-spacing: 0.05em;
+}
+
+/* ---------- 移动端响应 ---------- */
+@media (max-width: 1023px) {
+  .login-container {
+    padding: 0;
+    background: #ffffff;
+  }
+
+  .login-brand {
+    display: none;
+  }
+
+  .login-panel {
+    padding: 40px 28px;
+    min-height: 100vh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .login-header__title {
+    font-size: 28px;
+  }
+}
+
+/* ---------- 减弱动效偏好 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .login-brand__decor,
+  .login-brand__eyebrow-dot,
+  .login-submit::after {
+    animation: none !important;
+  }
 }

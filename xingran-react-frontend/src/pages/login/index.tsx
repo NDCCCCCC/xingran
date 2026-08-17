@@ -1,7 +1,13 @@
 import { useState, useEffect } from "react";
 import type { FC } from "react";
-import { App, Form, Input, Button, Card, Alert } from "antd";
-import { UserOutlined, LockOutlined } from "@ant-design/icons";
+import { App, Form, Input, Button, Alert } from "antd";
+import {
+  UserOutlined,
+  LockOutlined,
+  SafetyCertificateOutlined,
+  ApartmentOutlined,
+  ThunderboltOutlined,
+} from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import { useMenuStore } from "@/store/menuStore";
@@ -16,20 +22,15 @@ import "./login.css";
 
 /**
  * 从登录失败错误中提取用户可读的错误文案。
- * 兼容多种来源：
- * - 普通 Error（message 字段）—— 例如 api.ts 登录短路 reject 出来的 new Error(backendMessage)
- * - axios 错误（response.data.message / response.data.msg）—— 例如 403 账号锁定、验证码错误
  */
 function extractLoginErrorMessage(error: unknown): string {
   if (!error) return "登录失败，请重试";
-  // axios 风格错误
   const anyError = error as any;
   const respData = anyError?.response?.data;
   if (respData && typeof respData === "object") {
     if (typeof respData.message === "string" && respData.message) return respData.message;
     if (typeof respData.msg === "string" && respData.msg) return respData.msg;
   }
-  // 普通 Error
   if (typeof anyError?.message === "string" && anyError.message) {
     return anyError.message;
   }
@@ -47,45 +48,34 @@ const Login: FC = () => {
   const [captchaEnabled, setCaptchaEnabled] = useState<CaptchaEnabled>("disabled");
   const [captchaValue, setCaptchaValue] = useState("");
   const [captchaId, setCaptchaId] = useState("");
-
-  // 验证码模态框状态
   const [captchaModalVisible, setCaptchaModalVisible] = useState(false);
-
-  // 保存待提交的登录数据
   const [pendingLoginData, setPendingLoginData] = useState<LoginRequest | null>(null);
 
-  // 加载验证码配置
   useEffect(() => {
     const loadCaptchaConfig = async () => {
       try {
         const config = await getCaptchaConfig();
         setCaptchaEnabled(config.enabled);
       } catch (error) {
-        // 配置加载失败，默认不显示验证码
         console.error("加载验证码配置失败:", error);
       }
     };
     loadCaptchaConfig();
   }, []);
 
-  // 执行登录请求
   const performLogin = async (loginData: LoginRequest) => {
     setLoading(true);
-    // 每次发起登录前清除上一次的内联错误提示
     setLoginError("");
     try {
       await login(loginData);
-      // 登录成功后获取用户菜单和权限
       await Promise.all([fetchMenus(), fetchPermissions()]);
       message.success("登录成功");
       navigate(DASHBOARD);
     } catch (error) {
       console.error("登录失败:", error);
-      // 提取后端错误信息，显示为表单内联提示
       setLoginError(extractLoginErrorMessage(error));
-      // 登录失败后刷新验证码
       if (captchaEnabled !== "disabled") {
-        setCaptchaId(""); // 清空验证码ID，触发组件重新加载
+        setCaptchaId("");
       }
     } finally {
       setLoading(false);
@@ -93,7 +83,6 @@ const Login: FC = () => {
   };
 
   const handleFinish = async (values: LoginRequest) => {
-    // 登录页可能已长时间停留，提交前先同步加密开关、SM2 公钥和验证码类型。
     setLoginError("");
     setLoading(true);
 
@@ -111,16 +100,13 @@ const Login: FC = () => {
       password: values.password,
     };
 
-    // 使用本次预检得到的验证码类型，不依赖页面挂载时的旧状态。
     if (preflight.captchaEnabled !== "disabled") {
       if (preflight.captchaEnabled === "slider") {
-        // 滑动验证码：先显示模态框，验证成功后再提交
         setPendingLoginData(loginData);
         setCaptchaModalVisible(true);
         setLoading(false);
         return;
       } else {
-        // 数字验证码：直接在表单中输入验证码
         if (!captchaValue) {
           message.warning("请输入验证码");
           setLoading(false);
@@ -131,31 +117,22 @@ const Login: FC = () => {
       }
     }
 
-    // 执行登录
     await performLogin(loginData);
   };
 
-  // 验证码模态框验证成功回调
   const handleCaptchaModalSuccess = async (data: CaptchaSuccessData) => {
     setCaptchaModalVisible(false);
-
     if (pendingLoginData) {
-      // 添加验证码信息
       const loginDataWithCaptcha = {
         ...pendingLoginData,
         captcha: data.verified ? "verified" : data.captcha,
         captchaId: data.captchaId,
       };
-
-      // 执行登录
       await performLogin(loginDataWithCaptcha);
-
-      // 清空待提交数据
       setPendingLoginData(null);
     }
   };
 
-  // 验证码模态框取消回调
   const handleCaptchaModalCancel = () => {
     setCaptchaModalVisible(false);
     setPendingLoginData(null);
@@ -167,17 +144,12 @@ const Login: FC = () => {
   };
 
   const handleCaptchaError = async (error: string) => {
-    if (error !== "CAPTCHA_TYPE_MISMATCH") {
-      return;
-    }
-
-    // 验证码类型在页面停留期间发生变化时局部同步，不丢失用户已填写的账号密码。
+    if (error !== "CAPTCHA_TYPE_MISMATCH") return;
     const preflight = await submitLoginPreflight();
     if (!preflight.ok) {
       setLoginError(preflight.friendlyMessage);
       return;
     }
-
     setCaptchaModalVisible(false);
     setPendingLoginData(null);
     setCaptchaEnabled(preflight.captchaEnabled);
@@ -187,81 +159,157 @@ const Login: FC = () => {
   };
 
   return (
-    <div
-      className="login-container"
-      style={{
-        background: "var(--theme-bg-secondary)",
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        transition: "background var(--theme-transition-slow)",
-      }}
-    >
-      <Card
-        className="login-card"
-        style={{
-          background: "var(--theme-bg-surface)",
-          border: "1px solid var(--theme-border-primary)",
-          boxShadow: "var(--theme-shadow-xl)",
-          borderRadius: "var(--theme-radius-xl)",
-          transition: "all var(--theme-transition-base)",
-        }}
-      >
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold" style={{ color: "var(--theme-text-primary)" }}>
-            星苒
-          </h1>
-          <p className="mt-2" style={{ color: "var(--theme-text-secondary)" }}>
-            光启万物，荫庇四方
-          </p>
+    <div className="login-container">
+      {/* 左侧品牌面板 - 墨绿琥珀 */}
+      <aside className="login-brand" aria-label="品牌信息">
+        {/* 装饰几何 */}
+        <div className="login-brand__decor login-brand__decor--hex" aria-hidden="true">
+          <svg viewBox="0 0 100 100">
+            <polygon points="50,3 92,25 92,75 50,97 8,75 8,25" />
+          </svg>
+        </div>
+        <div className="login-brand__decor login-brand__decor--ring" aria-hidden="true">
+          <svg viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="46" />
+          </svg>
         </div>
 
-        {/* 登录失败内联提示 —— 仅当存在错误时显示 */}
-        {loginError && (
-          <Alert
-            type="error"
-            showIcon
-            closable
-            title={loginError}
-            onClose={() => setLoginError("")}
-            style={{ marginBottom: 16 }}
-          />
-        )}
+        <div className="login-brand__top">
+          <div className="login-brand__mark">星</div>
+          <span className="login-brand__wordmark">星苒 · XINGRAN</span>
+        </div>
 
-        <Form form={form} name="login" size="large" onFinish={handleFinish} autoComplete="off">
-          <Form.Item name="username" rules={[{ required: true, message: "请输入用户名" }]}>
-            <Input prefix={<UserOutlined />} placeholder="用户名" />
-          </Form.Item>
+        <div className="login-brand__center">
+          <span className="login-brand__eyebrow">
+            <span className="login-brand__eyebrow-dot" />
+            v1.0 · 国密级安全
+          </span>
 
-          <Form.Item name="password" rules={[{ required: true, message: "请输入密码" }]}>
-            <Input.Password prefix={<LockOutlined />} placeholder="密码" />
-          </Form.Item>
+          <h1 className="login-brand__title">
+            光启万物
+            <span className="login-brand__title-sep">·</span>
+            荫庇四方
+          </h1>
 
-          {/* 验证码 - 只显示数字验证码 */}
-          {captchaEnabled === "normal" && (
-            <Form.Item>
-              <TextCaptcha
-                value={captchaValue}
-                onChange={handleCaptchaChange}
-                onError={handleCaptchaError}
-              />
-            </Form.Item>
+          <p className="login-brand__tagline">
+            以国密算法为基座,融合自动化与 AI 调度,让每一次资源调度都可观测、可审计、可信赖。
+          </p>
+
+          <div className="login-brand__features">
+            <div className="login-brand__feature">
+              <div className="login-brand__feature-icon">
+                <SafetyCertificateOutlined />
+              </div>
+              <div className="login-brand__feature-text">
+                <span className="login-brand__feature-title">国密安全</span>
+                <span className="login-brand__feature-desc">SM2 / SM3 / SM4 端到端加密</span>
+              </div>
+            </div>
+
+            <div className="login-brand__feature">
+              <div className="login-brand__feature-icon">
+                <ApartmentOutlined />
+              </div>
+              <div className="login-brand__feature-text">
+                <span className="login-brand__feature-title">资产智能调度</span>
+                <span className="login-brand__feature-desc">楼宇、工位、机房全生命周期管理</span>
+              </div>
+            </div>
+
+            <div className="login-brand__feature">
+              <div className="login-brand__feature-icon">
+                <ThunderboltOutlined />
+              </div>
+              <div className="login-brand__feature-text">
+                <span className="login-brand__feature-title">实时监控告警</span>
+                <span className="login-brand__feature-desc">多维指标可视化与秒级异常响应</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="login-brand__footer">
+          <span className="login-brand__badge">SM2</span>
+          <span className="login-brand__badge">SM3</span>
+          <span className="login-brand__badge">SM4</span>
+          <span className="login-brand__copyright">© 2026 XingRan-Next</span>
+        </div>
+      </aside>
+
+      {/* 右侧登录表单 - 米白 + 琥珀金按钮 */}
+      <main className="login-panel">
+        <div className="login-form-card">
+          <div className="login-header">
+            <h2 className="login-header__title">欢迎回来</h2>
+            <p className="login-header__subtitle">请使用您的账号登录以访问运维控制台</p>
+          </div>
+
+          {loginError && (
+            <Alert
+              className="login-alert"
+              type="error"
+              showIcon
+              closable
+              message={loginError}
+              onClose={() => setLoginError("")}
+            />
           )}
 
-          <Form.Item>
-            <Button type="primary" htmlType="submit" className="w-full" loading={loading}>
-              登录
-            </Button>
-          </Form.Item>
-        </Form>
+          <Form
+            form={form}
+            name="login"
+            size="large"
+            onFinish={handleFinish}
+            autoComplete="off"
+            className="login-form"
+            layout="vertical"
+          >
+            <Form.Item
+              name="username"
+              label={<span className="login-label">账号</span>}
+              rules={[{ required: true, message: "请输入用户名" }]}
+            >
+              <Input prefix={<UserOutlined />} placeholder="用户名" autoComplete="username" />
+            </Form.Item>
 
-        <div className="text-center text-sm text-gray-500">
-          {/* <p>默认账号：admin / admin123</p> */}
+            <Form.Item
+              name="password"
+              label={<span className="login-label">密码</span>}
+              rules={[{ required: true, message: "请输入密码" }]}
+            >
+              <Input.Password
+                prefix={<LockOutlined />}
+                placeholder="密码"
+                autoComplete="current-password"
+              />
+            </Form.Item>
+
+            {captchaEnabled === "normal" && (
+              <Form.Item label={<span className="login-label">验证码</span>}>
+                <div className="login-captcha-wrapper">
+                  <TextCaptcha
+                    value={captchaValue}
+                    onChange={handleCaptchaChange}
+                    onError={handleCaptchaError}
+                  />
+                </div>
+              </Form.Item>
+            )}
+
+            <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
+              <Button type="primary" htmlType="submit" loading={loading} className="login-submit">
+                登录
+              </Button>
+            </Form.Item>
+          </Form>
+
+          <div className="login-footer">
+            <span>使用企业账号登录</span>
+            <span>v1.0.0</span>
+          </div>
         </div>
-      </Card>
+      </main>
 
-      {/* 验证码模态框 - 用于滑动验证码 */}
       <CaptchaModal
         visible={captchaModalVisible}
         captchaType={captchaEnabled}
