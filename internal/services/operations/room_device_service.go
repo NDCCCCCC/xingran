@@ -103,7 +103,7 @@ func (s *roomDeviceService) Delete(ctx context.Context, id string) error {
 func (s *roomDeviceService) GetByID(ctx context.Context, id string) (*operations.OpsRoomDevice, error) {
 	var device operations.OpsRoomDevice
 	err := s.db.WithContext(ctx).
-		Joins("LEFT JOIN ops_server_rooms ON ops_server_rooms.id = ops_room_devices.room_id::uuid").
+		Joins("LEFT JOIN ops_server_rooms ON CAST(ops_server_rooms.id AS TEXT) = ops_room_devices.room_id").
 		Select("ops_room_devices.*, ops_server_rooms.name as room_name").
 		Where("ops_room_devices.id = ?", id).
 		First(&device).Error
@@ -122,8 +122,8 @@ func (s *roomDeviceService) List(ctx context.Context, req requests.RoomDeviceLis
 
 	// 先 JOIN 机房表和楼宇表，便于后续筛选和显示机房名称
 	// 注意：server_rooms.building_id 是 varchar，需要转换为 uuid 才能与 buildings.id 比较
-	query = query.Joins("LEFT JOIN ops_server_rooms ON ops_server_rooms.id = ops_room_devices.room_id::uuid").
-		Joins("LEFT JOIN ops_buildings ON ops_buildings.id = ops_server_rooms.building_id::uuid")
+	query = query.Joins("LEFT JOIN ops_server_rooms ON CAST(ops_server_rooms.id AS TEXT) = ops_room_devices.room_id").
+		Joins("LEFT JOIN ops_buildings ON CAST(ops_buildings.id AS TEXT) = ops_server_rooms.building_id")
 
 	// 添加筛选条件 - 类型安全，无需类型断言
 	if req.Name != "" {

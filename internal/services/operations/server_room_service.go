@@ -134,8 +134,8 @@ func (s *serverRoomService) List(ctx context.Context, req requests.ServerRoomLis
 	// 必须在 Count 之前执行 JOIN，这样后面的条件才能使用 JOIN 的表
 	query = query.
 		Select("ops_server_rooms.*, b.name as building_name, f.name as floor_name, f.floor_no").
-		Joins("LEFT JOIN ops_buildings b ON b.id::text = ops_server_rooms.building_id").
-		Joins("LEFT JOIN ops_floors f ON f.id::text = ops_server_rooms.floor_id")
+		Joins("LEFT JOIN ops_buildings b ON CAST(b.id AS TEXT) = ops_server_rooms.building_id").
+		Joins("LEFT JOIN ops_floors f ON CAST(f.id AS TEXT) = ops_server_rooms.floor_id")
 
 	// 部门筛选（包含子部门）- 必须在 JOIN 之后添加
 	if req.OrgID != "" {
@@ -206,7 +206,7 @@ func (s *serverRoomService) SearchServerRoomOptions(ctx context.Context, params 
 	}
 	// orgId 部门筛选:机房 → 楼宇 → 部门(org_id 直接匹配)
 	if orgId := extractStringParam(params, "orgId"); orgId != "" {
-		query = query.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE b.id::text = ops_server_rooms.building_id AND b.org_id = ? AND b.deleted_at IS NULL)", orgId)
+		query = query.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE CAST(b.id AS TEXT) = ops_server_rooms.building_id AND b.org_id = ? AND b.deleted_at IS NULL)", orgId)
 	}
 
 	if err := query.Order("ops_server_rooms.name ASC").Find(&result).Error; err != nil {

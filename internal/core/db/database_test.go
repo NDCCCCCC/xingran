@@ -186,6 +186,11 @@ func TestNewDatabaseSQLite(t *testing.T) {
 		// 260817 reconciliation-table-missing-sqlite:历史由归档 migration_168 创建,
 		// 仅 sqlite 分支注册(否则 cron 对账-自动转工单 报 no such table):
 		"sys_data_reconciliation",
+		// 260818 ops-sqlite-tables-uuid-cast:运维列表页依赖的 6 张表同为归档 SQL 建表类
+		// (dbprovision 已注册但运行期 sqlite 分支缺漏),不注册则 ops 列表/字典接口
+		// 报 no such table:
+		"sys_workstation", "sys_dept_location_alias", "sys_dict_type", "sys_dict_data",
+		"ops_workstation_device", "sys_files",
 	} {
 		if !d.DB.Migrator().HasTable(table) {
 			t.Errorf("HasTable(%q) = false after AutoMigrate on sqlite, want true", table)

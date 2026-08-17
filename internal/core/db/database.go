@@ -19,6 +19,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
 	rpamodels "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
+	sysmodels "github.com/xingran-next/xingran-go-backend/internal/models/system"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -682,6 +683,29 @@ func (d *Database) AutoMigrate() error {
 		// uniq_recon_asset_type_open 不在 tag 中,sqlite 下不建 — 与
 		// SysReconciliationException 的 GiST 索引同级取舍(功能不受损,仅约束降级)。
 		migrateList = append(migrateList, &models.SysDataReconciliation{})
+		// ops-sqlite-tables-uuid-cast (2026-08-18): 运维模块列表页依赖的 6 张表
+		// 同为"历史由归档 SQL/迁移创建,运行期 sqlite 分支缺注册"缺漏类
+		// (dbprovision 已注册其中 5 个,但那只服务 PG 新部署):
+		//   - sys_workstation / sys_dept_location_alias / sys_dict_data(+sys_dict_type
+		//     同族一并注册): /ops/workstation/list|statistics、/ops/location-alias/list、
+		//     /system/dicts/data/list 报 "no such table"
+		//   - ops_workstation_device: workstation List/GetByID 的 joinSelect 子查询
+		//     (primary_device_serial)引用该表,缺表则列表仍 500
+		//   - sys_files: floor List/GetByID LEFT JOIN 取 plan_image_url,缺表则列表仍 500
+		// 六个模型 tag 已逐一核查:无函数式默认值/数组类型等 PG-only DDL 片段
+		// (SysFile.Metadata 的 type:jsonb 为合法 type-name,非 STRICT sqlite 表可接受,
+		// 与 SysDataReconciliation 的 jsonb 列同级);SysDeptLocationAlias 的 partial
+		// unique index(migration_165)不在 tag 中,sqlite 下不建 — 同 GiST 取舍。
+		// models.WorkstationDevice 虽带 3 个 GORM 关联指针,但本配置
+		// DisableForeignKeyConstraintWhenMigrating=true,不产生 FK/级联 DDL。
+		migrateList = append(migrateList,
+			&models.Workstation{},
+			&models.SysDeptLocationAlias{},
+			&models.DictType{},
+			&models.DictData{},
+			&models.WorkstationDevice{},
+			&sysmodels.SysFile{},
+		)
 	}
 	err := d.DB.Migrator().AutoMigrate(migrateList...)
 	if err != nil {

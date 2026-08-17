@@ -167,8 +167,8 @@ func (s *floorService) GetByID(ctx context.Context, id string) (*operations.OpsF
 	var floor operations.OpsFloor
 	err := s.db.WithContext(ctx).
 		Select("ops_floors.*, ops_buildings.name as building_name, '/uploads/' || sys_files.storage_path as plan_image_url").
-		Joins("LEFT JOIN ops_buildings ON ops_buildings.id = ops_floors.building_id::uuid").
-		Joins("LEFT JOIN sys_files ON sys_files.id = ops_floors.plan_image_id::uuid").
+		Joins("LEFT JOIN ops_buildings ON CAST(ops_buildings.id AS TEXT) = ops_floors.building_id").
+		Joins("LEFT JOIN sys_files ON CAST(sys_files.id AS TEXT) = ops_floors.plan_image_id").
 		Where("ops_floors.id = ?", id).
 		First(&floor).Error
 	if err != nil {
@@ -191,7 +191,7 @@ func (s *floorService) List(ctx context.Context, params map[string]interface{}) 
 	}
 	if orgId, ok := params["orgId"].(string); ok && orgId != "" {
 		// 通过关联楼宇的 orgId 筛选（使用 EXISTS 子查询避免 JOIN 冲突）
-		query = query.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE b.id::text = ops_floors.building_id AND b.org_id = ? AND b.deleted_at IS NULL)", orgId)
+		query = query.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE CAST(b.id AS TEXT) = ops_floors.building_id AND b.org_id = ? AND b.deleted_at IS NULL)", orgId)
 	}
 
 	// 状态筛选
@@ -226,8 +226,8 @@ func (s *floorService) List(ctx context.Context, params map[string]interface{}) 
 	offset := (current - 1) * pageSize
 	if err := query.
 		Select("ops_floors.*, ops_buildings.name as building_name, '/uploads/' || sys_files.storage_path as plan_image_url").
-		Joins("LEFT JOIN ops_buildings ON ops_buildings.id = ops_floors.building_id::uuid").
-		Joins("LEFT JOIN sys_files ON sys_files.id = ops_floors.plan_image_id::uuid").
+		Joins("LEFT JOIN ops_buildings ON CAST(ops_buildings.id AS TEXT) = ops_floors.building_id").
+		Joins("LEFT JOIN sys_files ON CAST(sys_files.id AS TEXT) = ops_floors.plan_image_id").
 		Offset(offset).
 		Limit(pageSize).
 		Find(&list).Error; err != nil {
@@ -261,7 +261,7 @@ func (s *floorService) SearchFloorOptions(ctx context.Context, params map[string
 		query = query.Where("ops_floors.building_id = ?", buildingId)
 	}
 	if orgId := extractStringParam(params, "orgId"); orgId != "" {
-		query = query.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE b.id::text = ops_floors.building_id AND b.org_id = ? AND b.deleted_at IS NULL)", orgId)
+		query = query.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE CAST(b.id AS TEXT) = ops_floors.building_id AND b.org_id = ? AND b.deleted_at IS NULL)", orgId)
 	}
 	if status := extractIntParam(params, "status", -1); status >= 0 {
 		query = query.Where("ops_floors.status = ?", status)

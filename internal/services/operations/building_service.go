@@ -150,7 +150,8 @@ func (s *buildingService) List(ctx context.Context, params map[string]interface{
 	}
 
 	// 附带工位计数(子查询,供 building-spaces 概览卡片;TotalFloors 为后端维护字段无需子查询)
-	query = query.Select(`ops_buildings.*, (SELECT COUNT(*) FROM sys_workstation ws JOIN ops_floors f ON f.id = ws.floor_id::uuid WHERE f.building_id::uuid = ops_buildings.id AND ws.deleted_at IS NULL AND f.deleted_at IS NULL) AS workstation_count`)
+	// uuid/varchar 混比用 CAST(... AS TEXT) 双方言写法(PG 专有 ::cast 在 SQLite 报语法错误)
+	query = query.Select(`ops_buildings.*, (SELECT COUNT(*) FROM sys_workstation ws JOIN ops_floors f ON CAST(f.id AS TEXT) = ws.floor_id WHERE CAST(ops_buildings.id AS TEXT) = f.building_id AND ws.deleted_at IS NULL AND f.deleted_at IS NULL) AS workstation_count`)
 	var list []operations.OpsBuilding
 	if err := query.Offset(offset).Limit(pagination.PageSize).Find(&list).Error; err != nil {
 		return nil, err

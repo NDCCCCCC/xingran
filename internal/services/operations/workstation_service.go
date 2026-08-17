@@ -14,7 +14,10 @@ const (
 	workstationTable      = "sys_workstation"
 	floorTable            = "ops_floors"
 	workstationJoinSelect = "sys_workstation.*, ops_floors.name as floor_name, ops_floors.floor_no as floor_code, ops_buildings.name as building_name, ops_buildings.id as building_id, sys_dept.dept_name as dept_name, sys_user.nickname as user_name, (SELECT device_serial FROM ops_workstation_device WHERE workstation_id = sys_workstation.id AND deleted_at IS NULL AND is_primary = true ORDER BY priority DESC, created_at ASC LIMIT 1) as primary_device_serial"
-	workstationJoinClause = "LEFT JOIN ops_floors ON ops_floors.id = sys_workstation.floor_id::uuid LEFT JOIN ops_buildings ON ops_buildings.id = ops_floors.building_id::uuid LEFT JOIN sys_dept ON sys_dept.id::text = sys_workstation.dept_id LEFT JOIN sys_user ON sys_user.id::text = sys_workstation.user_id"
+	// uuid 列(varchar 外键列对 uuid 主键)用标准 SQL CAST(... AS TEXT) 统一转 text 比较,
+	// PG/SQLite 双方言行为一致(PG 专有 ::uuid/::text 在 SQLite 报 unrecognized token ':')。
+	// 与 GetWorkstationDeptOptions / location_alias_service 的 CAST 范式一致。
+	workstationJoinClause = "LEFT JOIN ops_floors ON CAST(ops_floors.id AS TEXT) = sys_workstation.floor_id LEFT JOIN ops_buildings ON CAST(ops_buildings.id AS TEXT) = ops_floors.building_id LEFT JOIN sys_dept ON CAST(sys_dept.id AS TEXT) = sys_workstation.dept_id LEFT JOIN sys_user ON CAST(sys_user.id AS TEXT) = sys_workstation.user_id"
 )
 
 // validateTableName 验证表名是否在白名单中，防止 SQL 注入
@@ -66,7 +69,7 @@ func (s *workstationService) Statistics(ctx context.Context, params map[string]i
 	var result WorkstationStatisticsResult
 	query := s.db.WithContext(ctx).Model(&models.Workstation{})
 	if orgId := extractStringParam(params, "orgId"); orgId != "" {
-		query = query.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON b.id = f.building_id::uuid JOIN sys_dept d ON d.id::text = b.org_id WHERE f.id::text = sys_workstation.floor_id AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors = ?) AND b.deleted_at IS NULL)", orgId, "%,"+orgId, orgId)
+		query = query.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id JOIN sys_dept d ON CAST(d.id AS TEXT) = b.org_id WHERE CAST(f.id AS TEXT) = sys_workstation.floor_id AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors = ?) AND b.deleted_at IS NULL)", orgId, "%,"+orgId, orgId)
 	}
 	err := query.
 		Select(
@@ -252,7 +255,7 @@ func (s *workstationService) List(ctx context.Context, params map[string]interfa
 		if !validateTableName(floorTable) {
 			return nil, fmt.Errorf("invalid table name: %s", floorTable)
 		}
-		query = query.Where("EXISTS (SELECT 1 FROM "+floorTable+" WHERE "+floorTable+".id = sys_workstation.floor_id::uuid AND "+floorTable+".floor_no = ?)", floorCode)
+		query = query.Where("EXISTS (SELECT 1 FROM "+floorTable+" WHERE CAST("+floorTable+".id AS TEXT) = sys_workstation.floor_id AND "+floorTable+".floor_no = ?)", floorCode)
 	}
 	if status := extractIntParam(params, "status", -1); status >= 0 {
 		query = query.Where("sys_workstation.status = ?", status)
@@ -270,7 +273,7 @@ func (s *workstationService) List(ctx context.Context, params map[string]interfa
 		// - ops_buildings.org_id 是 varchar，sys_dept.id 是 uuid
 		// - 将两边都转为 text 进行比较，避免类型不匹配
 		// 查询该部门及其所有子部门：ancestors 包含该部门ID，或 ID 等于该部门ID
-		query = query.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON b.id = f.building_id::uuid JOIN sys_dept d ON d.id::text = b.org_id WHERE f.id::text = sys_workstation.floor_id AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors = ?) AND b.deleted_at IS NULL)", orgId, "%,"+orgId, orgId)
+		query = query.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id JOIN sys_dept d ON CAST(d.id AS TEXT) = b.org_id WHERE CAST(f.id AS TEXT) = sys_workstation.floor_id AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors = ?) AND b.deleted_at IS NULL)", orgId, "%,"+orgId, orgId)
 	}
 
 	// 分页
@@ -433,7 +436,7 @@ func (s *workstationService) SearchWorkstationOptions(ctx context.Context, param
 		if !validateTableName(floorTable) {
 			return nil, fmt.Errorf("invalid table name: %s", floorTable)
 		}
-		query = query.Where("EXISTS (SELECT 1 FROM "+floorTable+" WHERE "+floorTable+".id = sys_workstation.floor_id::uuid AND "+floorTable+".floor_no = ?)", floorCode)
+		query = query.Where("EXISTS (SELECT 1 FROM "+floorTable+" WHERE CAST("+floorTable+".id AS TEXT) = sys_workstation.floor_id AND "+floorTable+".floor_no = ?)", floorCode)
 	}
 	if status := extractIntParam(params, "status", -1); status >= 0 {
 		query = query.Where("sys_workstation.status = ?", status)
@@ -443,7 +446,7 @@ func (s *workstationService) SearchWorkstationOptions(ctx context.Context, param
 	}
 	// orgId 部门筛选含子部门:与 List 同款 EXISTS 子查询,避免类型转换问题
 	if orgId := extractStringParam(params, "orgId"); orgId != "" {
-		query = query.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON b.id = f.building_id::uuid JOIN sys_dept d ON d.id::text = b.org_id WHERE f.id::text = sys_workstation.floor_id AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors = ?) AND b.deleted_at IS NULL)", orgId, "%,"+orgId, orgId)
+		query = query.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id JOIN sys_dept d ON CAST(d.id AS TEXT) = b.org_id WHERE CAST(f.id AS TEXT) = sys_workstation.floor_id AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors = ?) AND b.deleted_at IS NULL)", orgId, "%,"+orgId, orgId)
 	}
 
 	if err := query.Order("sys_workstation.workstation_name ASC").Find(&result).Error; err != nil {

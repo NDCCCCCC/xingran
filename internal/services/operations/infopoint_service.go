@@ -130,9 +130,9 @@ func (s *infoPointService) GetByID(ctx context.Context, id string) (*operations.
 	var infoPoint operations.OpsInfoPoint
 	err := s.db.WithContext(ctx).
 		Select("ops_info_points.*, ops_floors.name as floor_name, ops_buildings.name as building_name, ops_buildings.id as building_id, sys_workstation.workstation_name").
-		Joins("LEFT JOIN sys_workstation ON sys_workstation.id::text = ops_info_points.workstation_id").
-		Joins("LEFT JOIN ops_floors ON ops_floors.id = sys_workstation.floor_id::uuid").
-		Joins("LEFT JOIN ops_buildings ON ops_buildings.id = sys_workstation.building_id::uuid").
+		Joins("LEFT JOIN sys_workstation ON CAST(sys_workstation.id AS TEXT) = ops_info_points.workstation_id").
+		Joins("LEFT JOIN ops_floors ON CAST(ops_floors.id AS TEXT) = sys_workstation.floor_id").
+		Joins("LEFT JOIN ops_buildings ON CAST(ops_buildings.id AS TEXT) = sys_workstation.building_id").
 		Where("ops_info_points.id = ?", id).
 		First(&infoPoint).Error
 	if err != nil {
@@ -179,10 +179,10 @@ func (s *infoPointService) List(ctx context.Context, req requests.InfoPointListR
 		query = query.Where(`
 			EXISTS (
 				SELECT 1 FROM sys_workstation w
-				JOIN ops_floors f ON f.id = w.floor_id::uuid
-				JOIN ops_buildings b ON b.id = f.building_id::uuid
-				JOIN sys_dept d ON d.id::text = b.org_id
-				WHERE w.id::text = ops_info_points.workstation_id
+				JOIN ops_floors f ON CAST(f.id AS TEXT) = w.floor_id
+				JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id
+				JOIN sys_dept d ON CAST(d.id AS TEXT) = b.org_id
+				WHERE CAST(w.id AS TEXT) = ops_info_points.workstation_id
 				AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors = ?)
 				AND w.deleted_at IS NULL
 				AND f.deleted_at IS NULL
@@ -209,9 +209,9 @@ func (s *infoPointService) List(ctx context.Context, req requests.InfoPointListR
 	}
 	if err := query.
 		Select("ops_info_points.*, ops_floors.name as floor_name, ops_buildings.name as building_name, ops_buildings.id as building_id, sys_workstation.workstation_name").
-		Joins("LEFT JOIN sys_workstation ON sys_workstation.id::text = ops_info_points.workstation_id").
-		Joins("LEFT JOIN ops_floors ON ops_floors.id = sys_workstation.floor_id::uuid").
-		Joins("LEFT JOIN ops_buildings ON ops_buildings.id = sys_workstation.building_id::uuid").
+		Joins("LEFT JOIN sys_workstation ON CAST(sys_workstation.id AS TEXT) = ops_info_points.workstation_id").
+		Joins("LEFT JOIN ops_floors ON CAST(ops_floors.id AS TEXT) = sys_workstation.floor_id").
+		Joins("LEFT JOIN ops_buildings ON CAST(ops_buildings.id AS TEXT) = sys_workstation.building_id").
 		Offset(offset).
 		Limit(pageSize).
 		Find(&list).Error; err != nil {
