@@ -2,7 +2,8 @@
  * 主题系统类型定义
  */
 
-export type ThemeType = "minimal" | "glassmorphism" | "neumorphism" | "flat2.0" | "luxury-quiet";
+export type ThemeType =
+  "minimal" | "glassmorphism" | "neumorphism" | "flat2.0" | "luxury-quiet" | "ink-amber";
 
 /**
  * 颜色模式
