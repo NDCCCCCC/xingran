@@ -232,9 +232,13 @@ func setupRoutes(engine *gin.Engine, cfg *config.Config, coreModule *core.Core, 
 
 // startServer 启动 HTTP 服务器
 func startServer(cfg *config.Config, engine *gin.Engine) *http.Server {
+	// Phase 62-DBG-01: 加 WriteTimeout=75s（前端 axios=60s，后端稍长以让前端先超时，
+	// 同时避免向已关闭 socket 长时间 block；为 cache-miss 长查询场景提供 fast-fail 路径）。
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler: engine,
+		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
+		Handler:      engine,
+		WriteTimeout: 75 * time.Second,
+		ReadTimeout:  75 * time.Second,
 	}
 
 	go func() {

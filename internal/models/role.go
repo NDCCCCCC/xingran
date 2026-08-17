@@ -20,8 +20,8 @@ type Role struct {
 
 // RoleMenu 角色菜单关联
 type RoleMenu struct {
-	RoleID string `gorm:"type:uuid;not null" json:"roleId"`
-	MenuID string `gorm:"type:uuid;not null" json:"menuId"`
+	RoleID string `gorm:"type:uuid;not null;index:idx_sys_role_menu_role_id_menu_id" json:"roleId"`
+	MenuID string `gorm:"type:uuid;not null;index:idx_sys_role_menu_role_id_menu_id" json:"menuId"`
 }
 
 // RoleDept 角色部门关联

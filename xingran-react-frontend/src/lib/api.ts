@@ -44,7 +44,7 @@ const encryptionKeyStore = new Map<string, { sm4KeyHex: string; ivHex: string }>
  */
 const rawAxios: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "/api/v1",
-  timeout: 30000,
+  timeout: 60000,
   headers: {
     "Content-Type": "application/json",
   },
@@ -186,7 +186,7 @@ function getTimeout(url: string): number {
   if (LONG_TIMEOUT_ENDPOINTS.some((endpoint) => url.includes(endpoint))) {
     return 35 * 60 * 1000;
   }
-  return 30000;
+  return 60000;
 }
 
 /**

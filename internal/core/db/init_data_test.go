@@ -4,9 +4,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/glebarez/sqlite"
 	"github.com/xingran-next/xingran-go-backend/internal/core/security"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -183,7 +183,7 @@ func TestCreateDefaultDept_PartialRecovers(t *testing.T) {
 
 	// 预先插入顶级部门,模拟"首次启动中途失败只完成了顶级"
 	topDept := models.Department{
-		DeptName: "若依科技有限公司",
+		DeptName: "总公司",
 		OrderNum: 1,
 		Status:   models.DeptStatusNormal,
 	}
@@ -204,7 +204,7 @@ func TestCreateDefaultDept_PartialRecovers(t *testing.T) {
 	}
 
 	var topCount int64
-	db.Model(&models.Department{}).Where("dept_name = ?", "若依科技有限公司").Count(&topCount)
+	db.Model(&models.Department{}).Where("dept_name = ?", "总公司").Count(&topCount)
 	if topCount != 1 {
 		t.Fatalf("expected exactly 1 top dept row, got %d (duplicate created — C5 regression)", topCount)
 	}
@@ -239,6 +239,63 @@ func TestCreateDefaultDept_FullyIdempotent(t *testing.T) {
 	}
 	if countAfter != 6 {
 		t.Fatalf("expected 6 dept rows after full seed, got %d", countAfter)
+	}
+}
+
+// TestCreateDefaultDept_ParentDriftRecovers 父行被带外物理删除后重建(ID 变化),
+// 子行 parent_id 悬挂在死 ID 上 — ensureDept 必须按 dept_code 命中已有孤儿行
+// 并领养其 ID,而非 INSERT 撞 idx_sys_dept_dept_code 唯一索引。
+// login-menu-timeout-20260817 Round 4 的真实事故场景回归守护。
+func TestCreateDefaultDept_ParentDriftRecovers(t *testing.T) {
+	db := freshDeptDB(t)
+
+	// 模拟事故现场: 完整的旧种子树(带 dept_code)
+	if err := createDefaultDept(db); err != nil {
+		t.Fatalf("initial seed: %v", err)
+	}
+
+	// 记录旧树 ID
+	var oldTop, oldShenzhen models.Department
+	if err := db.Where("dept_code = ?", "ROOT").First(&oldTop).Error; err != nil {
+		t.Fatalf("find old root: %v", err)
+	}
+	if err := db.Where("dept_code = ?", "SHENZHEN").First(&oldShenzhen).Error; err != nil {
+		t.Fatalf("find old shenzhen: %v", err)
+	}
+
+	// 带外物理删除旧根(Unscoped 模拟 Supabase 控制台/手工 SQL 的物理删除),
+	// 孤儿行的 parent_id 仍指向旧根 ID
+	if err := db.Unscoped().Where("id = ?", oldTop.ID).Delete(&models.Department{}).Error; err != nil {
+		t.Fatalf("physically delete old root: %v", err)
+	}
+
+	// 重启种子流程: 必须不报错(旧代码此处 23505),且新建根 + 领养孤儿,总行数仍为 6
+	if err := createDefaultDept(db); err != nil {
+		t.Fatalf("createDefaultDept after parent drift: %v", err)
+	}
+
+	var total int64
+	db.Model(&models.Department{}).Count(&total)
+	if total != 6 {
+		t.Fatalf("expected 6 dept rows after drift recovery, got %d (duplicate insert — regression)", total)
+	}
+
+	// 新根被创建(与旧根不同 ID)
+	var newTop models.Department
+	if err := db.Where("dept_code = ?", "ROOT").First(&newTop).Error; err != nil {
+		t.Fatalf("find new root: %v", err)
+	}
+	if newTop.ID == oldTop.ID {
+		t.Fatalf("expected new root with different ID after physical delete")
+	}
+
+	// 孤儿深圳总公司被按 dept_code 领养(ID 不变,不重复插入)
+	var shenzhen models.Department
+	if err := db.Where("dept_code = ?", "SHENZHEN").First(&shenzhen).Error; err != nil {
+		t.Fatalf("find shenzhen: %v", err)
+	}
+	if shenzhen.ID != oldShenzhen.ID {
+		t.Fatalf("expected orphaned shenzhen row to be adopted by dept_code (same ID), got new row")
 	}
 }
 

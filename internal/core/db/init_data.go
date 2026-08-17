@@ -66,17 +66,37 @@ func initData(db *gorm.DB) error {
 	return nil
 }
 
-// ensureDept 按 dept_name + parent_id 语义查询,已存在则把已存在行的 ID
-// 写回 dept.ID 并返回 nil;不存在则 db.Create。Count 查询的真实错误不再吞,
+// ensureDept 幂等落地一个种子部门,已存在则把已存在行的 ID 写回 dept.ID
+// 并返回 nil;不存在则 db.Create。Count 查询的真实错误不再吞,
 // 用 fmt.Errorf 包装上抛。
 //
 // C5 修复:细粒度幂等的核心 helper——首次启动中途失败后,下次启动可逐棵子树
 // 补齐缺失部门,不再因 "count > 0 整体跳过" 永久遗留半成品。
 //
-// parentID 为 nil 时查询 parent_id IS NULL(顶级部门);
-// 非 nil 时查询 parent_id = ?。
+// login-menu-timeout-20260817 Round 4 修复:DeptCode 非空时优先按 dept_code
+// 查询——唯一约束(uniqueIndex;not null)在 dept_code 上,而非
+// (dept_name, parent_id)。旧逻辑只按 (dept_name, parent_id) 查询,一旦
+// parent_id 漂移(如父行被带外物理删除后重建,ID 变化)就会查不到已有行,
+// INSERT 撞 idx_sys_dept_dept_code 唯一索引(23505)直接打断 initData。
+//
+// 查询顺序: 1) dept_code(真唯一业务键) → 2) dept_name + parent_id(兼容
+// 历史无 dept_code 的种子行,C5 部分恢复路径依赖此语义) → 3) 都未命中才 Create。
+// parentID 仅用于路径 2: nil 时查询 parent_id IS NULL(顶级部门)。
 func ensureDept(db *gorm.DB, dept *models.Department, parentID *string) error {
 	var existing models.Department
+
+	// 路径 1: 按唯一业务键 dept_code 查询(对 parent 漂移鲁棒)
+	if dept.DeptCode != "" {
+		if err := db.Where("dept_code = ?", dept.DeptCode).First(&existing).Error; err == nil {
+			dept.ID = existing.ID
+			applogger.Infof("部门 %s (dept_code: %s) 已存在，跳过创建", dept.DeptName, dept.DeptCode)
+			return nil
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("查询部门 %s (dept_code: %s) 失败: %w", dept.DeptName, dept.DeptCode, err)
+		}
+	}
+
+	// 路径 2: 按 dept_name + parent_id 语义查询(兼容历史无编码种子行)
 	q := db.Where("dept_name = ?", dept.DeptName)
 	if parentID == nil {
 		q = q.Where("parent_id IS NULL")
@@ -89,7 +109,7 @@ func ensureDept(db *gorm.DB, dept *models.Department, parentID *string) error {
 		dept.ID = existing.ID
 		applogger.Infof("部门 %s 已存在，跳过创建", dept.DeptName)
 		return nil
-	} else if err != gorm.ErrRecordNotFound {
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return fmt.Errorf("查询部门 %s 失败: %w", dept.DeptName, err)
 	}
 
@@ -111,10 +131,10 @@ func ensureDept(db *gorm.DB, dept *models.Department, parentID *string) error {
 func createDefaultDept(db *gorm.DB) error {
 	// 1. 顶级部门
 	topDept := &models.Department{
-		DeptName: "若依科技有限公司",
+		DeptName: "总公司",
 		DeptCode: "ROOT",
 		OrderNum: 1,
-		Leader:   func() *string { s := "若依"; return &s }(),
+		Leader:   func() *string { s := "星苒"; return &s }(),
 		Phone:    func() *string { s := "15888888888"; return &s }(),
 		Email:    func() *string { s := "xingran@qq.com"; return &s }(),
 		Status:   models.DeptStatusNormal,
@@ -130,7 +150,7 @@ func createDefaultDept(db *gorm.DB) error {
 			DeptCode:  "SHENZHEN",
 			Ancestors: topDept.ID,
 			OrderNum:  1,
-			Leader:    func() *string { s := "若依"; return &s }(),
+			Leader:    func() *string { s := "星苒"; return &s }(),
 			Phone:     func() *string { s := "15888888888"; return &s }(),
 			Email:     func() *string { s := "xingran@qq.com"; return &s }(),
 			Status:    models.DeptStatusNormal,
@@ -140,7 +160,7 @@ func createDefaultDept(db *gorm.DB) error {
 			DeptCode:  "CHANGSHA",
 			Ancestors: topDept.ID,
 			OrderNum:  2,
-			Leader:    func() *string { s := "若依"; return &s }(),
+			Leader:    func() *string { s := "星苒"; return &s }(),
 			Phone:     func() *string { s := "15888888888"; return &s }(),
 			Email:     func() *string { s := "xingran@qq.com"; return &s }(),
 			Status:    models.DeptStatusNormal,
@@ -156,31 +176,31 @@ func createDefaultDept(db *gorm.DB) error {
 	// 3. 深圳总公司的子部门(研发/市场/测试)
 	shenzhenSubDepts := []*models.Department{
 		{
-			DeptName:  "研发部门",
-			DeptCode:  "RD",
-			OrderNum:  1,
-			Leader:    func() *string { s := "若依"; return &s }(),
-			Phone:     func() *string { s := "15888888888"; return &s }(),
-			Email:     func() *string { s := "xingran@qq.com"; return &s }(),
-			Status:    models.DeptStatusNormal,
+			DeptName: "研发部门",
+			DeptCode: "RD",
+			OrderNum: 1,
+			Leader:   func() *string { s := "星苒"; return &s }(),
+			Phone:    func() *string { s := "15888888888"; return &s }(),
+			Email:    func() *string { s := "xingran@qq.com"; return &s }(),
+			Status:   models.DeptStatusNormal,
 		},
 		{
-			DeptName:  "市场部门",
-			DeptCode:  "MARKET",
-			OrderNum:  2,
-			Leader:    func() *string { s := "若依"; return &s }(),
-			Phone:     func() *string { s := "15888888888"; return &s }(),
-			Email:     func() *string { s := "xingran@qq.com"; return &s }(),
-			Status:    models.DeptStatusNormal,
+			DeptName: "市场部门",
+			DeptCode: "MARKET",
+			OrderNum: 2,
+			Leader:   func() *string { s := "星苒"; return &s }(),
+			Phone:    func() *string { s := "15888888888"; return &s }(),
+			Email:    func() *string { s := "xingran@qq.com"; return &s }(),
+			Status:   models.DeptStatusNormal,
 		},
 		{
-			DeptName:  "测试部门",
-			DeptCode:  "TEST",
-			OrderNum:  3,
-			Leader:    func() *string { s := "若依"; return &s }(),
-			Phone:     func() *string { s := "15888888888"; return &s }(),
-			Email:     func() *string { s := "xingran@qq.com"; return &s }(),
-			Status:    models.DeptStatusNormal,
+			DeptName: "测试部门",
+			DeptCode: "TEST",
+			OrderNum: 3,
+			Leader:   func() *string { s := "星苒"; return &s }(),
+			Phone:    func() *string { s := "15888888888"; return &s }(),
+			Email:    func() *string { s := "xingran@qq.com"; return &s }(),
+			Status:   models.DeptStatusNormal,
 		},
 	}
 
