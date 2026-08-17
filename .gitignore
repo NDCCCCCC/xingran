@@ -62,6 +62,7 @@ coverage.html
 *.db
 *.sqlite
 *.sqlite3
+data/
 
 # 密码和密钥文件
 *.pem

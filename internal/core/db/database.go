@@ -6,9 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
+	"sync"
 	"time"
 
+	"github.com/glebarez/sqlite"
 	"github.com/lib/pq"
 	"github.com/xingran-next/xingran-go-backend/internal/config"
 	"github.com/xingran-next/xingran-go-backend/internal/core/db/migrations"
@@ -16,9 +19,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	_ "modernc.org/sqlite"
 )
 
 // Database 数据库管理器
@@ -29,85 +30,186 @@ type Database struct {
 	// 仅 AutoMigrate 期间非空;releaseMigrationAdvisoryLock 后重置为 nil。
 	// 不导出,避免外部代码误关连接导致 pg_advisory_unlock noop。
 	migrationLockConn *sql.Conn
+	// keepaliveStop/keepaliveDone 连接保活 goroutine 的停止信号与完成信号。
+	// nil 表示保活未启动(如测试手工构造的 Database) — Close 必须 nil-guard。
+	keepaliveStop chan struct{}
+	keepaliveDone chan struct{}
 }
 
 // NewDatabase 创建数据库连接
+//
+// 2026-08-15:项目曾硬性切到 PostgreSQL(Supabase),删除旧 SQLite 回退路径。
+// 原因:`gorm.io/driver/sqlite` 传递性引入 `github.com/mattn/go-sqlite3`(CGO),
+// Windows 上无 gcc 时 `go run` 直接失败。
+//
+// 2026-08-17:以纯 Go 驱动 `github.com/glebarez/sqlite`(底层 modernc.org/sqlite,
+// 无需 CGO)恢复 sqlite 分支 — cfg.Type=="sqlite" 时连接本地文件库,用于 dev 环境
+// 摆脱 Supabase 跨国链路延迟。区别于已删除的旧 CGO 路径,CGO 驱动禁令由
+// TestNewDatabaseRequiresPostgresConfig 源码断言守护。
+//
+// 分支语义:
+//   - cfg.Type == "sqlite" → createSQLiteConnection(本地文件,不启动 pool keepalive)
+//   - 其他(含空字符串)→ 现有 PG 路径一字不动,Host==\"\" 或 Port<=0 时 fail-fast,
+//     运维可第一时间发现配置缺失。
 func NewDatabase(cfg *config.DatabaseConfig) (*Database, error) {
-	var db *gorm.DB
-	var dbType string
-
-	// OC-M-SQLITE:Host 已设但 Port<=0 时静默回退 SQLite 会掩盖配置错误(typo、未设 port)。
-	// 启动期显式 WARN 明示,运维可据此核对意图;函数提取为可单测的纯函数。
-	if cfg.Host != "" && cfg.Port <= 0 {
-		applogger.Warnf("[配置告警] database.host 已设置为 %q 但 port=%d,正静默回退 SQLite;若本意使用 PostgreSQL 请检查 database.port 配置",
-			cfg.Host, cfg.Port)
+	if cfg == nil {
+		return nil, fmt.Errorf("数据库配置缺失:database 配置不能为空")
 	}
 
-	if cfg.Host != "" && cfg.Port > 0 {
-		dbType = "postgres"
-		var err error
-		db, err = createPostgresConnection(cfg)
-		if err != nil {
-			return nil, fmt.Errorf("连接PostgreSQL失败: %w", err)
-		}
-	} else {
-		dbType = "sqlite"
-		var err error
-		db, err = createSQLiteConnection(cfg)
+	// SQLite 分支(dev 本地文件库,纯 Go 驱动,不访问远端 PG/Supabase)
+	if cfg.Type == "sqlite" {
+		db, err := createSQLiteConnection(cfg)
 		if err != nil {
 			return nil, fmt.Errorf("连接SQLite失败: %w", err)
 		}
+		return &Database{DB: db, Type: "sqlite"}, nil
 	}
 
-	return &Database{
+	if cfg.Host == "" || cfg.Port <= 0 {
+		return nil, fmt.Errorf("数据库配置缺失:database.host 与 database.port 必须显式配置(项目不再提供 SQLite 回退)")
+	}
+
+	dbType := "postgres"
+	db, err := createPostgresConnection(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("连接PostgreSQL失败: %w", err)
+	}
+
+	d := &Database{
 		DB:   db,
 		Type: dbType,
-	}, nil
+	}
+
+	// H6 缓解 (login-menu-timeout-20260817): Supabase pooler 上新建连接的
+	// TLS+auth 握手实测 ~4.7s;空闲连接被服务端回收后,下一个查询支付全价握手,
+	// 在低流量 dev 环境表现为间歇性慢查询。后台保活保持少量连接热备。
+	warmConns := cfg.MaxIdleConns
+	if warmConns > poolKeepaliveMaxConns {
+		warmConns = poolKeepaliveMaxConns
+	}
+	if warmConns > 0 {
+		d.startPoolKeepalive(warmConns)
+	}
+
+	return d, nil
 }
 
-// sqliteFallbackWarning 纯函数:在配置语义不一致(Host 非空 + Port<=0)时返回告警字符串;
-// 否则返回空串。提取为独立函数便于单测。
-//
-// OC-M-SQLITE:配置 Host 但 Port==0 (typo / 未设 / 默认值) 时方言语义不明确,
-// 直接走 SQLite 会把数据写到错误后端(运维以为在 PG)。返回告警给 NewDatabase 上层打 WARN。
-func sqliteFallbackWarning(cfg *config.DatabaseConfig) string {
-	if cfg == nil {
-		return ""
+// poolKeepaliveInterval 连接保活间隔。远短于 Supabase 空闲连接回收窗口,
+// 每个周期并发 ping N 次,保持 N 个空闲连接热备(消除 ~4.7s 冷握手)。
+const poolKeepaliveInterval = 30 * time.Second
+
+// poolKeepaliveMaxConns 保活连接数上限 — 保活是兜底机制,不应占用大量池配额。
+const poolKeepaliveMaxConns = 4
+
+// startPoolKeepalive 启动后台连接保活 goroutine(幂等)。
+func (d *Database) startPoolKeepalive(warmConns int) {
+	if d.keepaliveStop != nil {
+		return // 已启动
 	}
-	if cfg.Host != "" && cfg.Port <= 0 {
-		return fmt.Sprintf("[配置告警] database.host 已设置为 %q 但 port=%d,正静默回退 SQLite;若本意使用 PostgreSQL 请检查 database.port 配置",
-			cfg.Host, cfg.Port)
-	}
-	return ""
+	d.keepaliveStop = make(chan struct{})
+	d.keepaliveDone = make(chan struct{})
+	go d.poolKeepaliveLoop(warmConns)
+	applogger.Infof("[pool-keepalive] 已启动, 间隔=%v, 保活连接数=%d", poolKeepaliveInterval, warmConns)
 }
 
-// createSQLiteConnection 创建SQLite连接
-func createSQLiteConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
-	dbPath := cfg.Host
-	if dbPath == "" {
-		dbPath = "./data/xingran.db"
+func (d *Database) poolKeepaliveLoop(warmConns int) {
+	defer close(d.keepaliveDone)
+	ticker := time.NewTicker(poolKeepaliveInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-d.keepaliveStop:
+			return
+		case <-ticker.C:
+			d.pingPoolOnce(warmConns)
+		}
 	}
+}
 
-	gormConfig := &gorm.Config{
-		Logger: createFilteredLogger(),
-		// CDX-M-UTC:全项目 UTC 一致性,与 SQL DEFAULT NOW() 语义对齐。
-		// 历史本地时区行由 timestamptz 规范化(timestamptz 列按会话时区规范化存储,
-		// 混合期查询按 timestamptz 语义正确;naive timestamp 列若有则存在解释漂移)。
-		NowFunc: func() time.Time { return time.Now().UTC() },
-	}
-
-	db, err := gorm.Open(sqlite.Open(dbPath), gormConfig)
+// pingPoolOnce 并发 ping warmConns 次。database/sql 的 Ping 占用并归还一个连接,
+// 并发 N 次即保持 N 个不同连接热备;串行 ping 会复用同一连接,达不到目的。
+func (d *Database) pingPoolOnce(warmConns int) {
+	sqlDB, err := d.DB.DB()
 	if err != nil {
-		return nil, fmt.Errorf("连接SQLite失败: %w", err)
+		return
 	}
-
-	applogger.Infof("SQLite连接成功: %s", dbPath)
-	return db, nil
+	var wg sync.WaitGroup
+	for i := 0; i < warmConns; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := sqlDB.PingContext(ctx); err != nil {
+				applogger.Warnf("[pool-keepalive] ping 失败: %v", err)
+			}
+		}()
+	}
+	wg.Wait()
 }
 
 // createFilteredLogger 创建使用 FilterLogger 的 GORM 配置
 func createFilteredLogger() *FilterLogger {
 	return NewFilterLogger(DefaultLogFilterConfig)
+}
+
+// defaultSQLitePath 是 cfg.Path 为空时的兜底 SQLite 文件路径
+// (与 config 默认值 database.path 对齐)。
+const defaultSQLitePath = "data/xingran.db"
+
+// createSQLiteConnection 创建 SQLite 连接(纯 Go 驱动 glebarez/sqlite,底层
+// modernc.org/sqlite,无 CGO 依赖 — 严禁替换为 gorm.io/driver/sqlite)。
+//
+// 2026-08-17 恢复:dev 环境本地文件库,摆脱 Supabase 跨国链路延迟。
+// DSN 走 modernc `_pragma` 参数:busy_timeout 10s + WAL 日志模式 + 外键开启。
+//
+// dev-only 已知限制(不阻塞,见 plan 260817-hfl):
+//   - reconciliation 物化视图/普通 VIEW(175/176)、菜单 seed(202)、sys_config
+//     连接池 seed(203)等 PG-only 迁移块不执行(AutoMigrate 的 d.Type=="postgres" guard)
+//   - 个别 handler 原生 SQL 若含 PG 方言(::uuid cast / ILIKE / pg_catalog)在 SQLite
+//     下会运行期报错 — 按需后续修
+func createSQLiteConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
+	path := cfg.Path
+	if path == "" {
+		path = defaultSQLitePath
+	}
+
+	// 确保数据文件目录存在(相对路径 "." 时跳过)
+	if dir := filepath.Dir(path); dir != "." && dir != "" {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return nil, fmt.Errorf("创建SQLite数据目录失败: %w", err)
+		}
+	}
+
+	dsn := path + "?_pragma=busy_timeout(10000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(ON)"
+
+	gormConfig := &gorm.Config{
+		Logger:  createFilteredLogger(),
+		NowFunc: func() time.Time { return time.Now().UTC() },
+		DisableForeignKeyConstraintWhenMigrating: true,
+		SkipDefaultTransaction:                   true,
+		PrepareStmt:                              false, // 与 PG 路径对齐(simple protocol)
+	}
+
+	db, err := gorm.Open(sqlite.Open(dsn), gormConfig)
+	if err != nil {
+		return nil, fmt.Errorf("连接SQLite失败: %w", err)
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("获取数据库实例失败: %w", err)
+	}
+
+	// SQLite 单写者:WAL + busy_timeout 下小池即可,25 连接无意义。
+	sqlDB.SetMaxOpenConns(4)
+
+	if err := sqlDB.Ping(); err != nil {
+		return nil, fmt.Errorf("数据库连接测试失败: %w", err)
+	}
+
+	applogger.Infof("SQLite连接成功: %s", path)
+	return db, nil
 }
 
 // createPostgresConnection 创建PostgreSQL连接
@@ -167,6 +269,15 @@ func configureConnectionPool(sqlDB *sql.DB, cfg *config.DatabaseConfig) {
 
 // Close 关闭数据库连接
 func (d *Database) Close() error {
+	// 停止连接保活 goroutine(若已启动);测试手工构造的 Database 该字段为 nil。
+	if d.keepaliveStop != nil {
+		close(d.keepaliveStop)
+		select {
+		case <-d.keepaliveDone:
+		case <-time.After(3 * time.Second): // ping 进行中最多等 3s,避免 shutdown 卡死
+		}
+		d.keepaliveStop = nil
+	}
 	if d.DB != nil {
 		sqlDB, err := d.DB.DB()
 		if err != nil {
@@ -518,6 +629,10 @@ func (d *Database) AutoMigrate() error {
 		// (Register 原生 SQL 路径绕过 BeforeCreate, 列需自带 DEFAULT 与全库 UUID 惯例对齐, 防 23502)
 		if err := migrations.Migrate205RpaWorkerIdDefault(d.DB); err != nil {
 			applogger.Errorf("sys_rpa_workers.id DEFAULT 迁移失败 (非阻断,留待下次启动): %v", err)
+		}
+		// 登录菜单加载慢: 为关联表增加复合索引, 缓解远程 DB 全表扫描导致的超时
+		if err := migrations.Migrate206AddUserRoleRoleMenuIndexes(d.DB); err != nil {
+			applogger.Errorf("sys_user_role / sys_role_menu / sys_menu 索引迁移失败 (非阻断,留待下次启动): %v", err)
 		}
 	}
 

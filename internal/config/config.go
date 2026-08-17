@@ -68,6 +68,8 @@ type ServerConfig struct {
 
 // DatabaseConfig 数据库配置。
 type DatabaseConfig struct {
+	Type         string `mapstructure:"type"` // postgres | sqlite(缺省按 postgres 处理,行为与历史一致)
+	Path         string `mapstructure:"path"` // sqlite 文件路径,仅 type=sqlite 时生效(默认 data/xingran.db)
 	Host         string `mapstructure:"host"`
 	Port         int    `mapstructure:"port"`
 	User         string `mapstructure:"user"`
@@ -458,6 +460,10 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("server.mode", "debug")
 
 	// 数据库默认配置
+	// database.type: postgres(生产/默认) | sqlite(本地 dev 提速,纯 Go 驱动 glebarez/sqlite)。
+	// 缺省 postgres 与历史行为完全一致 — 不会因新增配置项静默切换数据库。
+	v.SetDefault("database.type", "postgres")
+	v.SetDefault("database.path", "data/xingran.db") // 仅 type=sqlite 时生效
 	v.SetDefault("database.host", "localhost")
 	v.SetDefault("database.port", 5432)
 	v.SetDefault("database.user", "postgres")
