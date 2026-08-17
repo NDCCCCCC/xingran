@@ -336,6 +336,21 @@ func (s *reconciliationServiceImpl) mvAvailable() bool {
 	return avail
 }
 
+// silenceExcludeFilter 返回 silence 默认过滤的 WHERE 片段(R3 / D-R3-A1-01)。
+//
+// 方言条件化 (2026-08-17, sqlite 缺表修复配套):
+//   - postgres:'silence' = ANY(text[]) 原生数组包含判定。
+//   - sqlite:无 ANY 函数(运行期报 "no such function: ANY");applied_actions 由
+//     sanitizeSQLiteModelDefaults 降为 text 列,pq.StringArray 以 "{a,b}" 字面量
+//     写入。等价判定:去花括号后逗号包裹 + LIKE '%,silence,%',避免子串误命中;
+//     NULL/空数组经 COALESCE 归一为 ',,' 不命中(正确:未 silence 的记录应显示)。
+func (s *reconciliationServiceImpl) silenceExcludeFilter() string {
+	if s.db != nil && s.db.Dialector.Name() == "sqlite" {
+		return "(',' || TRIM(COALESCE(sys_data_reconciliation.applied_actions, ''), '{}') || ',') NOT LIKE '%,silence,%'"
+	}
+	return "NOT ('silence' = ANY(sys_data_reconciliation.applied_actions))"
+}
+
 // exceptionListJoinSelect ListExceptions 的 SELECT 子句
 //
 // 关键设计:
@@ -452,11 +467,10 @@ func (s *reconciliationServiceImpl) ListExceptions(ctx context.Context, params *
 	// R3 / D-R3-A1-01 — silence 默认过滤(异常列表不显示 silence 记录)
 	//
 	// 用全限定列名 sys_data_reconciliation.applied_actions 避免 JOIN 时歧义;
-	// PG 原生 ANY() 数组操作符 + 'silence' = ANY(array) 在 PG 与 SQLite(text 列)
-	// 行为一致(SQLite 把 applied_actions 当 text,ANY 退化为子串匹配 — 实际测试
-	// 通过,因为 silence 值在数组里包含 'silence' 字符串)。
+	// ANY() 是 PG 数组方言,sqlite 下 applied_actions 为 text 列("{a,b}" 字面量),
+	// 需方言条件化(见 silenceExcludeFilter)。
 	if !params.ShowSilenced {
-		query = query.Where("NOT ('silence' = ANY(sys_data_reconciliation.applied_actions))")
+		query = query.Where(s.silenceExcludeFilter())
 	}
 
 	// Count(COUNT 不需要 JOIN 出来的列;基础查询 + 过滤已足够)
@@ -506,7 +520,7 @@ func (s *reconciliationServiceImpl) ListExceptions(ctx context.Context, params *
 		}
 		// R3 / D-R3-A1-01 — silence 默认过滤(fallback 路径同步)
 		if !params.ShowSilenced {
-			filterQuery = filterQuery.Where("NOT ('silence' = ANY(sys_data_reconciliation.applied_actions))")
+			filterQuery = filterQuery.Where(s.silenceExcludeFilter())
 		}
 		findQuery = filterQuery.
 			Select(exceptionListJoinSelectFallback).

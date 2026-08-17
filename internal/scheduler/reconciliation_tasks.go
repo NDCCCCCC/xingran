@@ -267,9 +267,20 @@ func RegisterReconciliationTasks(s *Scheduler, db *gorm.DB, cacheSvc cache.Cache
 //   - limit: 单次扫描上限(避免 cron 周期堆积)
 func createWorkorderBySeverity(ctx context.Context, db *gorm.DB, woSvc *asset.ReconciliationWorkorderService, severity string, limit int) error {
 	var exceptions []models.SysDataReconciliation
+	// BLOCKER-4:WHERE 强制含 applied_actions IS NULL 兜底(见函数 doc)。
+	// 方言注意:'no_workorder' != ANY(applied_actions) 是 PG 数组操作符;
+	// sqlite 下 applied_actions 由 sanitizeSQLiteModelDefaults 降为 text 列
+	// ("{a,b}" 字面量),sqlite 无 ANY 函数,直接执行报语法错误。
+	// sqlite 等价:数组文本去花括号后以逗号包裹,LIKE '%,no_workorder,%' 判定包含,
+	// 空数组 '{}' → ',,' 不命中(正确:无动作应转单),NULL 由 IS NULL 兜底。
+	whereClause := "severity = ? AND deleted_at IS NULL AND resolved_at IS NULL AND workorder_id IS NULL " +
+		"AND (applied_actions IS NULL OR 'no_workorder' != ANY(applied_actions))"
+	if db.Dialector.Name() == "sqlite" {
+		whereClause = "severity = ? AND deleted_at IS NULL AND resolved_at IS NULL AND workorder_id IS NULL " +
+			"AND (applied_actions IS NULL OR (',' || TRIM(applied_actions, '{}') || ',') NOT LIKE '%,no_workorder,%')"
+	}
 	if err := db.WithContext(ctx).
-		Where("severity = ? AND deleted_at IS NULL AND resolved_at IS NULL AND workorder_id IS NULL "+
-			"AND (applied_actions IS NULL OR 'no_workorder' != ANY(applied_actions))", severity).
+		Where(whereClause, severity).
 		Order("detected_at ASC").
 		Limit(limit).
 		Find(&exceptions).Error; err != nil {
@@ -364,8 +375,9 @@ func cleanupExpiredExceptionsDirect(ctx context.Context, db *gorm.DB, now time.T
 //   - drift == 0: info 健康, 基线归 0
 //   - 后续 PR 可在此处加企业微信/钉钉 webhook 推送告警
 func checkPortStatusDrift(ctx context.Context, db *gorm.DB) error {
-	var driftedCount int64
-	err := db.WithContext(ctx).Raw(`
+	// 方言感知(2026-08-17):`::text` 是 PG 专有 cast(SQLite 报 unrecognized token ":")。
+	// SQLite 下各 id/device_id 列均为文本,直接等值/不等比较即可;PG SQL 保持原文不变。
+	query := `
 SELECT COUNT(*)
   FROM sys_device_port_status port
   JOIN ops_info_points ip ON port.id::text = ip.port_id
@@ -375,7 +387,23 @@ SELECT COUNT(*)
    AND ip.device_id IS NOT NULL
    AND EXISTS (SELECT 1 FROM sys_network_device WHERE id::text = ip.device_id)
    AND EXISTS (SELECT 1 FROM sys_device_mac_address WHERE device_id::text = ip.device_id)
-`).Scan(&driftedCount).Error
+`
+	if db.Dialector.Name() != "postgres" {
+		query = `
+SELECT COUNT(*)
+  FROM sys_device_port_status port
+  JOIN ops_info_points ip ON port.id = ip.port_id
+ WHERE port.device_id != ip.device_id
+   AND ip.deleted_at IS NULL
+   AND ip.status = 0
+   AND ip.device_id IS NOT NULL
+   AND EXISTS (SELECT 1 FROM sys_network_device WHERE id = ip.device_id)
+   AND EXISTS (SELECT 1 FROM sys_device_mac_address WHERE device_id = ip.device_id)
+`
+	}
+
+	var driftedCount int64
+	err := db.WithContext(ctx).Raw(query).Scan(&driftedCount).Error
 
 	if err != nil {
 		return fmt.Errorf("查询 port_status 漂移失败: %w", err)

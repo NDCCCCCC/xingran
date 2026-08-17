@@ -179,7 +179,14 @@ func TestNewDatabaseSQLite(t *testing.T) {
 	if err := d.AutoMigrate(); err != nil {
 		t.Fatalf("AutoMigrate() on sqlite error = %v, want nil (PG-only schema fragments must be sanitized)", err)
 	}
-	for _, table := range []string{"sys_user", "ops_asset", "sys_api_key_usage_logs", "sys_reconciliation_exception", "sys_user_preference"} {
+	for _, table := range []string{
+		"sys_user", "ops_asset", "sys_api_key_usage_logs", "sys_reconciliation_exception", "sys_user_preference",
+		// sqlite-startup-pg-only-errors 修复的缺表(历史由归档 SQL 创建,仅 sqlite 分支注册):
+		"sys_rpa_workers", "sys_rpa_executions", "sys_mac_oui_vendor", "sys_oper_log", "sys_logininfor",
+		// 260817 reconciliation-table-missing-sqlite:历史由归档 migration_168 创建,
+		// 仅 sqlite 分支注册(否则 cron 对账-自动转工单 报 no such table):
+		"sys_data_reconciliation",
+	} {
 		if !d.DB.Migrator().HasTable(table) {
 			t.Errorf("HasTable(%q) = false after AutoMigrate on sqlite, want true", table)
 		}

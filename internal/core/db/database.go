@@ -18,6 +18,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/core/db/migrations"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
+	rpamodels "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -231,7 +232,13 @@ func createSQLiteConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 // (uuid.New()) 填充 ID;函数式默认剥离后该字段以应用值写入,PG 下行为等价
 // (非空 ID 直接 INSERT,DB 默认值仅对零值生效)。
 func (d *Database) sanitizeSQLiteModelDefaults() error {
-	for _, model := range MigrateModelList() {
+	modelsToSanitize := MigrateModelList()
+	// sys_data_reconciliation 仅在 sqlite 分支注册进 AutoMigrate(见 AutoMigrate
+	// sqlite 分支注释),不在 MigrateModelList 里;但其 tag 含 PG-only 片段
+	// (DetectedAt default:now() / AppliedActions type:text[]),必须一并净化,
+	// 否则 sqlite 建表报 "near \"(\": syntax error" / type-name 方括号语法错误。
+	modelsToSanitize = append(modelsToSanitize, &models.SysDataReconciliation{})
+	for _, model := range modelsToSanitize {
 		stmt := &gorm.Statement{DB: d.DB}
 		if err := stmt.Parse(model); err != nil {
 			return fmt.Errorf("解析模型 schema 失败(%T): %w", model, err)
@@ -633,6 +640,48 @@ func (d *Database) AutoMigrate() error {
 		// 会按 model tag 发起漂移 ALTER(DROP NOT NULL / 默认值 240→280 改写等),
 		// 生产语义必须零改动;PG 新部署由 scripts/dbprovision 建表。
 		migrateList = append(migrateList, &models.UserPreference{})
+		// sys_rpa_workers / sys_rpa_executions / sys_mac_oui_vendor 历史由归档 SQL
+		// (102_add_rpa_tables.sql / 033_create_mac_oui_vendor_table.up.sql)创建,
+		// PG 存量库已存在;仅 sqlite 分支注册进 AutoMigrate(全新文件库必须建表,
+		// 否则 RPA 扩缩容统计查询 / OUI 厂商导入报 "no such table")。
+		// PG 不注册的原因同上:避免 GORM 对存量表按 model tag 发起漂移 ALTER;
+		// PG 新部署由 scripts/dbprovision 建表(已含 MACOUIVendor)。
+		// 单一事实源:rpamodels.Worker/Execution(internal/models/rpa/,
+		// services/rpa 实际使用;internal/models/rpa.go 的 RPAWorker/RPAExecution
+		// 为无引用遗留定义,不注册)、models.MACOUIVendor。
+		// 三个模型 tag 均无 PG-only DDL 片段(无函数式默认值/数组类型),
+		// 无需经过 sanitizeSQLiteModelDefaults 净化。
+		migrateList = append(migrateList,
+			&rpamodels.Worker{},
+			&rpamodels.Execution{},
+			&models.MACOUIVendor{},
+		)
+		// sys_oper_log 历史由归档 SQL 创建,PG 存量库已存在;仅 sqlite 分支注册进
+		// AutoMigrate(全新文件库必须建表,否则 operlog.Record 写入报 "no such table")。
+		// PG 不注册的原因同上(零漂移);PG 新部署由 scripts/dbprovision 建表。
+		// models.OperLog tag 已核查:无函数式默认值/数组类型等 PG-only DDL 片段
+		// (BaseTimeLine 的 type:uuid 是合法 type-name,ID 由 BeforeCreate 钩子填充),
+		// 无需经过 sanitizeSQLiteModelDefaults 净化。
+		migrateList = append(migrateList, &models.OperLog{})
+		// sys_logininfor 历史由归档 SQL 创建,PG 存量库已存在;仅 sqlite 分支注册进
+		// AutoMigrate(全新文件库必须建表,否则登录成功后 auth.go 记录登录日志写入报
+		// "no such table: sys_logininfor")。PG 不注册的原因同上(零漂移);
+		// PG 新部署由 scripts/dbprovision 建表(已含 LoginLog)。
+		// models.LoginLog tag 已核查:无函数式默认值/数组类型等 PG-only DDL 片段
+		// (与 OperLog 同一 BaseTimeLine,type:uuid 合法 type-name,ID 由 BeforeCreate
+		// 钩子填充),无需经过 sanitizeSQLiteModelDefaults 净化。
+		migrateList = append(migrateList, &models.LoginLog{})
+		// sys_data_reconciliation 历史由归档 migration_168(archive/applied,启动期
+		// 不执行)创建,PG 存量库已存在;仅 sqlite 分支注册进 AutoMigrate(全新文件库
+		// 必须建表,否则 cron「对账-自动转工单critical/high」与异常列表查询报
+		// "no such table: sys_data_reconciliation")。PG 不注册的原因同上(零漂移);
+		// PG 新部署由 scripts/dbprovision 建表。
+		// 注意:该模型 tag 含 PG-only 片段(DetectedAt default:now() /
+		// AppliedActions type:text[]),已由 sanitizeSQLiteModelDefaults 一并净化
+		// (净化列表显式追加了本模型);migration_168 的 partial unique index
+		// uniq_recon_asset_type_open 不在 tag 中,sqlite 下不建 — 与
+		// SysReconciliationException 的 GiST 索引同级取舍(功能不受损,仅约束降级)。
+		migrateList = append(migrateList, &models.SysDataReconciliation{})
 	}
 	err := d.DB.Migrator().AutoMigrate(migrateList...)
 	if err != nil {
