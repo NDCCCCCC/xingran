@@ -12,11 +12,10 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 
 	// Pure-Go SQLite driver
-	_ "modernc.org/sqlite"
 )
 
 // TestSyncData_ConcurrentCallsDeduplicated verifies P1-C1 fix:

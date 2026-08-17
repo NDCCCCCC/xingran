@@ -8,12 +8,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
 	// 使用纯 Go 实现的 SQLite 驱动
-	_ "modernc.org/sqlite"
 )
 
 // setupTestDBForUpsert 创建用于Upsert测试的数据库

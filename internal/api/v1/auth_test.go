@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/xingran-next/xingran-go-backend/pkg/crypto"
 	"github.com/xingran-next/xingran-go-backend/pkg/middleware"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 

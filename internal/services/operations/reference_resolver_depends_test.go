@@ -8,9 +8,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
-	_ "modernc.org/sqlite"
 )
 
 // TestResolveBatchWithCondition_DeviceIdScope 验证 DependsOn 的 device_id 条件

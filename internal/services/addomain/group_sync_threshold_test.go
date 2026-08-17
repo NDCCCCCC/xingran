@@ -11,12 +11,11 @@ import (
 	"github.com/go-ldap/ldap/v3"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
 	// Pure-Go SQLite driver
-	_ "modernc.org/sqlite"
 )
 
 // setupGroupSyncTestDB creates an in-memory SQLite DB with the

@@ -11,10 +11,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	_ "modernc.org/sqlite" // 纯 Go SQLite 驱动,必须在使用前导入
 )
 
 // setupLocationAliasTestDB 创建内存 SQLite + AutoMigrate 建表

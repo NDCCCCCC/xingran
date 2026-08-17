@@ -11,14 +11,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 
 	// Pure-Go SQLite driver
-	_ "modernc.org/sqlite"
 )
 
 // setupPortStatusTestDB 创建内存 SQLite,带复合唯一键 (device_id, interface_name),
