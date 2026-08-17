@@ -15,7 +15,8 @@ export type ColorMode = "light" | "dark";
 /**
  * 主题风格类型
  */
-export type ThemeStyle = "minimal" | "glassmorphism" | "neumorphism" | "flat2.0" | "luxury-quiet";
+export type ThemeStyle =
+  "minimal" | "glassmorphism" | "neumorphism" | "flat2.0" | "luxury-quiet" | "ink-amber";
 
 /**
  * 主题配置
@@ -182,7 +183,14 @@ export const defaultUserPreferences: UserPreferences = {
  * 验证主题配置是否有效
  */
 export function isValidThemeStyle(style: string): style is ThemeStyle {
-  return ["minimal", "glassmorphism", "neumorphism", "flat2.0", "luxury-quiet"].includes(style);
+  return [
+    "minimal",
+    "glassmorphism",
+    "neumorphism",
+    "flat2.0",
+    "luxury-quiet",
+    "ink-amber",
+  ].includes(style);
 }
 
 /**

@@ -89,6 +89,7 @@ class ConfigService {
         "neumorphism",
         "flat2.0",
         "luxury-quiet",
+        "ink-amber",
       ];
       const themeStyle =
         legacyPrefs.themeStyle && validThemeStyles.includes(legacyPrefs.themeStyle as string)
@@ -151,7 +152,14 @@ class ConfigService {
    */
   private fromBackendFormat(backend: BackendUserPreferences): UserPreferences {
     // 验证主题样式是否有效，无效则使用默认值
-    const validThemeStyles = ["minimal", "glassmorphism", "neumorphism", "flat2.0", "luxury-quiet"];
+    const validThemeStyles = [
+      "minimal",
+      "glassmorphism",
+      "neumorphism",
+      "flat2.0",
+      "luxury-quiet",
+      "ink-amber",
+    ];
     const themeStyle =
       backend.themeStyle && validThemeStyles.includes(backend.themeStyle)
         ? (backend.themeStyle as ThemeStyle)

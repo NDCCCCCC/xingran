@@ -39,7 +39,7 @@ type UserPreference = models.UserPreference
 type UserPreferences struct {
 	// 主题
 	Theme      string `json:"theme" binding:"required,oneof=light dark"`
-	ThemeStyle string `json:"themeStyle" binding:"omitempty,oneof=minimal glassmorphism neumorphism flat2.0 luxury-quiet"`
+	ThemeStyle string `json:"themeStyle" binding:"omitempty,oneof=minimal glassmorphism neumorphism flat2.0 luxury-quiet ink-amber"`
 
 	// 布局
 	LayoutType            string `json:"layoutType" binding:"omitempty,oneof=classic hybrid innovative"`

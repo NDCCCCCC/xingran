@@ -12,6 +12,7 @@ import { getGlassmorphismTheme } from "./glassmorphism";
 import { getNeumorphismTheme } from "./neumorphism";
 import { getFlat2Theme } from "./flat2.0";
 import { getLuxuryQuietTheme } from "./luxury-quiet";
+import { getInkAmberTheme } from "./ink-amber";
 import {
   getLuminance,
   getContrastTextColor,
@@ -63,6 +64,8 @@ export function getTheme(type: ThemeType, mode: ColorMode = "light"): ThemeConfi
       return getFlat2Theme(mode);
     case "luxury-quiet":
       return getLuxuryQuietTheme(mode);
+    case "ink-amber":
+      return getInkAmberTheme(mode);
     default:
       return getMinimalTheme(mode);
   }
@@ -129,6 +132,16 @@ export const themePresets: Array<{
     preview: {
       light: "linear-gradient(135deg, #fafafa 0%, #f5f5f5 50%, #d4af37 100%)",
       dark: "linear-gradient(135deg, #0a0e12 0%, #1a1f26 50%, #d4af37 100%)",
+    },
+  },
+  {
+    id: "ink-amber",
+    name: "墨绿琥珀",
+    icon: "❖",
+    description: "墨绿基调配琥珀金点缀，源自登录页品牌配色",
+    preview: {
+      light: "linear-gradient(135deg, #14532d 0%, #d4a574 100%)",
+      dark: "linear-gradient(135deg, #0f1512 0%, #8a6534 100%)",
     },
   },
 ];

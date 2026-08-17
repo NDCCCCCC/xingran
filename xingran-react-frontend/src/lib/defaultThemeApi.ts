@@ -10,7 +10,7 @@ import { post, get } from "@/lib/api";
  */
 export interface ThemeConfiguration {
   mode: "light" | "dark" | "auto";
-  style: "minimal" | "glassmorphism" | "neumorphism" | "flat2.0" | "luxury-quiet";
+  style: "minimal" | "glassmorphism" | "neumorphism" | "flat2.0" | "luxury-quiet" | "ink-amber";
   customColors?: {
     primary?: string;
     sidebar?: string;

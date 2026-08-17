@@ -32,6 +32,7 @@ const STYLE_OPTIONS = [
   { label: "新拟态", value: "neumorphism" },
   { label: "扁平化 2.0", value: "flat2.0" },
   { label: "奢华静雅", value: "luxury-quiet" },
+  { label: "墨绿琥珀", value: "ink-amber" },
 ];
 
 const DefaultThemePage: React.FC = () => {

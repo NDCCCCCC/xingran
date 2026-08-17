@@ -12,7 +12,7 @@ import (
 // ThemeConfiguration 主题配置结构
 type ThemeConfiguration struct {
 	Mode         string         `json:"mode"`           // light, dark, auto
-	Style        string         `json:"style"`          // minimal, glassmorphism, neumorphism, flat2.0, luxury-quiet
+	Style        string         `json:"style"`          // minimal, glassmorphism, neumorphism, flat2.0, luxury-quiet, ink-amber
 	CustomColors map[string]string `json:"customColors,omitempty"` // 可选的自定义颜色
 }
 
@@ -90,6 +90,7 @@ func (s *defaultThemeService) SetDefaultThemeConfig(ctx context.Context, config 
 		"neumorphism": true,
 		"flat2.0": true,
 		"luxury-quiet": true,
+		"ink-amber": true,
 	}
 	if !validStyles[config.Style] {
 		return fmt.Errorf("无效的主题风格: %s", config.Style)

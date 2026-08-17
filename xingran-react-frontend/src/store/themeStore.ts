@@ -191,6 +191,7 @@ export function useTheme() {
     isNeumorphism: appliedTheme === "neumorphism",
     isFlat2: appliedTheme === "flat2.0",
     isLuxuryQuiet: appliedTheme === "luxury-quiet",
+    isInkAmber: appliedTheme === "ink-amber",
     isLight: appliedMode === "light",
     isDark: appliedMode === "dark",
   };
