@@ -741,6 +741,17 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate206AddUserRoleRoleMenuIndexes(d.DB); err != nil {
 			applogger.Errorf("sys_user_role / sys_role_menu / sys_menu 索引迁移失败 (非阻断,留待下次启动): %v", err)
 		}
+		// 规范菜单目录种子 (239 条, 幂等; debug admin-role-incomplete-menus 修复)
+		// 必须在 InitData 的 createOperationsManagementMenus 之前执行:
+		// 规范「运维管理」根就位后, Go 种子按 (name, parent) 查重自然全部跳过
+		if err := migrations.Migrate207SeedCanonicalMenuCatalog(d.DB); err != nil {
+			applogger.Errorf("规范菜单目录种子失败 (非阻断,留待下次启动): %v", err)
+		}
+	} else {
+		// sqlite 分支: 规范菜单目录种子 (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
+		if err := migrations.Migrate207SeedCanonicalMenuCatalog(d.DB); err != nil {
+			applogger.Errorf("规范菜单目录种子失败 (非阻断,留待下次启动): %v", err)
+		}
 	}
 
 	return nil
