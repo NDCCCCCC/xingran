@@ -14,6 +14,9 @@ export const inkAmberDark: ThemeConfig = {
   name: "墨绿琥珀 (Dark)",
   description: "墨绿炭黑背景配提亮绿与米金文字，源自登录页品牌配色",
 
+  // AntD 组件主色：琥珀金（暗底提亮，登录页暗面板同款点缀，= accent[1]）
+  antdPrimary: "#d4a574",
+
   colors: {
     // 主色：暗底下提亮绿保证对比度（索引 2 = 主题主色 #22c55e）
     primary: ["#052e16", "#14532d", "#22c55e", "#4ade80", "#86efac"],

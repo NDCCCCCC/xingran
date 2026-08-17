@@ -13,6 +13,9 @@ export const inkAmberLight: ThemeConfig = {
   name: "墨绿琥珀",
   description: "米白背景配墨绿主色与琥珀金点缀，源自登录页品牌配色",
 
+  // AntD 组件主色：墨绿（= primary[2]），未声明的主题回落默认蓝
+  antdPrimary: "#166534",
+
   colors: {
     // 主色：墨绿系列（索引 2 = 主题主色 #166534）
     primary: [

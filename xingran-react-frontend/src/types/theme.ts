@@ -159,6 +159,11 @@ export interface ThemeConfig {
   id: ThemeType;
   name: string;
   description: string;
+  /**
+   * AntD 组件主色（colorPrimary/colorInfo/colorLink）。
+   * 未声明时 AntdThemeBridge 回落默认蓝 #1677ff，保证既有主题行为不变。
+   */
+  antdPrimary?: string;
   colors: ColorTokens;
   spacing: SpacingTokens;
   typography: TypographyTokens;
