@@ -135,6 +135,57 @@ type errWrap struct {
 func (e errWrap) Error() string { return "wrapped: " + e.inner.Error() }
 func (e errWrap) Unwrap() error { return e.inner }
 
+// TestNewDatabaseSQLite 真实建库:Type="sqlite" 时 NewDatabase 经 glebarez/sqlite(纯 Go
+// 驱动)连接本地文件库,返回 d.Type=="sqlite",ping 通过,且不启动 PG pool keepalive
+// (d.keepaliveStop 为 nil — 本地文件无 TLS/auth 握手开销,保活无意义)。
+//
+// 2026-08-17:恢复 dev 环境 SQLite 支持(纯 Go 驱动,区别于已删除的旧 CGO 路径)。
+func TestNewDatabaseSQLite(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "t.db")
+
+	d, err := NewDatabase(&config.DatabaseConfig{Type: "sqlite", Path: dbPath})
+	if err != nil {
+		t.Fatalf("NewDatabase(sqlite) error = %v, want nil", err)
+	}
+	defer func() {
+		if cerr := d.Close(); cerr != nil {
+			t.Errorf("Close() error = %v", cerr)
+		}
+	}()
+
+	if d.Type != "sqlite" {
+		t.Errorf("d.Type = %q, want %q", d.Type, "sqlite")
+	}
+
+	// sqlite 分支不启动 pool keepalive(本地文件无握手开销)
+	if d.keepaliveStop != nil {
+		t.Errorf("d.keepaliveStop != nil, want nil (sqlite branch must not start pool keepalive)")
+	}
+
+	// ping 验证连接可用
+	sqlDB, err := d.DB.DB()
+	if err != nil {
+		t.Fatalf("d.DB.DB() error = %v", err)
+	}
+	if err := sqlDB.Ping(); err != nil {
+		t.Errorf("Ping() error = %v, want nil", err)
+	}
+}
+
+// TestNewDatabaseEmptyTypeFallsBackToPostgres 回归守护:database.type 缺省/为空时行为与
+// 恢复 sqlite 分支之前完全一致 — 按 postgres 处理,Host 缺失时报与现有一致的
+// fail-fast error,绝不静默落 SQLite。
+func TestNewDatabaseEmptyTypeFallsBackToPostgres(t *testing.T) {
+	_, err := NewDatabase(&config.DatabaseConfig{Type: "", Host: "", Port: 0})
+	if err == nil {
+		t.Fatalf("NewDatabase(empty type, missing host) error = nil, want fail-fast error")
+	}
+	if !strings.Contains(err.Error(), "数据库配置缺失") {
+		t.Fatalf("NewDatabase(empty type, missing host) error = %q, want to contain %q",
+			err.Error(), "数据库配置缺失")
+	}
+}
+
 // minInt 取最小值(避免引入 Go 1.21+ 内置 min 与老版本冲突)。
 func minInt(a, b int) int {
 	if a < b {
@@ -143,62 +194,41 @@ func minInt(a, b int) int {
 	return b
 }
 
-// TestSqliteFallbackWarning 纯函数:sqliteFallbackWarning(cfg) 在 Host 非空且 Port<=0 时
-// 返回非空告警字符串;Host=="" 或 Port>0 时返回空串。
+// TestNewDatabaseRequiresPostgresConfig 源码断言:NewDatabase 的 PG 分支在 Host==\"\" 或
+// Port<=0 时必须返回错误(type=postgres 或缺省时 fail-fast,不静默落 SQLite)。
 //
-// OC-M-SQLITE 修复:Host 已设但 Port==0 时静默回退 SQLite,需启动期 WARN 明示。
-func TestSqliteFallbackWarning(t *testing.T) {
-	cases := []struct {
-		name string
-		cfg  *config.DatabaseConfig
-		want string // want 非空时,只校验 contains(子串匹配)
-		empty bool // true 表示期望空串
-	}{
-		{
-			name:  "Host non-empty but Port==0 -> warning expected",
-			cfg:   &config.DatabaseConfig{Host: "db.example.com", Port: 0},
-			empty: false,
-			want:  "db.example.com",
-		},
-		{
-			name:  "Host non-empty but Port<0 -> warning expected",
-			cfg:   &config.DatabaseConfig{Host: "db.example.com", Port: -5},
-			empty: false,
-			want:  "db.example.com",
-		},
-		{
-			name:  "Host empty -> no warning (sqlite intentional)",
-			cfg:   &config.DatabaseConfig{Host: "", Port: 0},
-			empty: true,
-		},
-		{
-			name:  "Host empty Port positive -> no warning",
-			cfg:   &config.DatabaseConfig{Host: "", Port: 5432},
-			empty: true,
-		},
-		{
-			name:  "Host non-empty Port positive -> no warning (postgres path)",
-			cfg:   &config.DatabaseConfig{Host: "db.example.com", Port: 5432},
-			empty: true,
-		},
+// 2026-08-15:cgo-gcc-missing-on-run — 删除旧 CGO sqlite 路径(gorm.io/driver/sqlite →
+// mattn/go-sqlite3,Windows 无 gcc 时 go run 直接失败)。
+// 2026-08-17:以纯 Go 驱动 glebarez/sqlite(底层 modernc.org/sqlite,无需 CGO)恢复
+// sqlite 分支 — createSQLiteConnection 与 sqlite.Open( 重新合法;CGO 驱动禁令仍然有效,
+// 由下方 banned 列表守护。
+func TestNewDatabaseRequiresPostgresConfig(t *testing.T) {
+	src, err := os.ReadFile(filepath.Join(".", "database.go"))
+	if err != nil {
+		t.Fatalf("read database.go: %v", err)
+	}
+	s := string(src)
+
+	// 1) CGO sqlite 驱动必须消除(纯 Go glebarez/sqlite 是唯一合法 sqlite 路径)
+	for _, banned := range []string{
+		"func sqliteFallbackWarning(",
+		"_ \"modernc.org/sqlite\"",
+		"\"gorm.io/driver/sqlite\"",
+	} {
+		if strings.Contains(s, banned) {
+			t.Fatalf("database.go must NOT contain %q (CGO sqlite path banned; cgo-gcc-missing-on-run fix)", banned)
+		}
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			got := sqliteFallbackWarning(tc.cfg)
-			if tc.empty {
-				if got != "" {
-					t.Fatalf("sqliteFallbackWarning(%+v) = %q, want empty string", tc.cfg, got)
-				}
-				return
-			}
-			if got == "" {
-				t.Fatalf("sqliteFallbackWarning(%+v) = empty, want warning containing %q", tc.cfg, tc.want)
-			}
-			if !strings.Contains(got, tc.want) {
-				t.Fatalf("sqliteFallbackWarning(%+v) = %q, want containing %q", tc.cfg, got, tc.want)
-			}
-		})
+	// 2) NewDatabase 必须 fail-fast on Host==\"\" 或 Port<=0(PG 分支)
+	for _, required := range []string{
+		"cfg.Host == \"\"",
+		"cfg.Port <= 0",
+		"数据库配置缺失",
+	} {
+		if !strings.Contains(s, required) {
+			t.Fatalf("database.go missing required fragment %q (NewDatabase fail-fast)", required)
+		}
 	}
 }
 
@@ -247,8 +277,9 @@ func TestBootstrapMissingTablesModelDerived(t *testing.T) {
 	}
 }
 
-// TestNowFuncUtc 源码断言:database.go 不含 time.Now().Local();两处 NowFunc 均为
-// time.Now().UTC()(createSQLiteConnection + createPostgresConnection)。
+// TestNowFuncUtc 源码断言:database.go 不含 time.Now().Local();NowFunc 均为
+// time.Now().UTC()(createPostgresConnection 一处;2026-08-15 删除 createSQLiteConnection
+// 后仅保留 postgres NowFunc)。
 //
 // CDX-M-UTC 修复:NowFunc 全项目 UTC 一致性,与 SQL DEFAULT NOW() 语义对齐。
 func TestNowFuncUtc(t *testing.T) {
@@ -263,9 +294,9 @@ func TestNowFuncUtc(t *testing.T) {
 		t.Fatalf("database.go must NOT use time.Now().Local() (CDX-M-UTC): project-wide UTC")
 	}
 
-	// 正向断言:time.Now().UTC() 出现次数 >= 2(两处 NowFunc)
+	// 正向断言:time.Now().UTC() 出现次数 >= 1(postgres NowFunc 保留)
 	utcCount := strings.Count(s, "time.Now().UTC()")
-	if utcCount < 2 {
-		t.Fatalf("database.go must contain time.Now().UTC() >=2 times (sqlite + postgres NowFunc), got %d", utcCount)
+	if utcCount < 1 {
+		t.Fatalf("database.go must contain time.Now().UTC() >=1 times (postgres NowFunc), got %d", utcCount)
 	}
 }
