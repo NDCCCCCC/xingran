@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -96,6 +97,17 @@ type Asset struct {
 	SourceDeviceID *string `gorm:"size:64;index;column:source_device_id" json:"sourceDeviceId,omitempty"` // → sys_network_device.id(采集来源设备)
 	ComponentType  *string `gorm:"size:32;index;column:component_type" json:"componentType,omitempty"`    // chassis / card / engine / power / fan / transceiver
 	ComponentSlot  *string `gorm:"size:64;column:component_slot" json:"componentSlot,omitempty"`           // 槽位/接口位置(如 Slot 1 / GE1/0/24)
+}
+
+// BeforeCreate GORM钩子 - 创建前填充 UUID 主键(ID 为空时)。
+// PG 下列自带 default:gen_random_uuid() 兜底原生 SQL 路径;该钩子让 GORM Create
+// 应用层生成 ID,行为等价(非空 ID 直接 INSERT),同时兼容无函数式默认值的 SQLite
+// (quick-260817-hfl)。
+func (a *Asset) BeforeCreate(tx *gorm.DB) error {
+	if a.ID == "" {
+		a.ID = uuid.New().String()
+	}
+	return nil
 }
 
 // TableName 设置表名

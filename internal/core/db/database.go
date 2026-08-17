@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -210,6 +211,45 @@ func createSQLiteConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 
 	applogger.Infof("SQLite连接成功: %s", path)
 	return db, nil
+}
+
+// sanitizeSQLiteModelDefaults 净化 schema 缓存中 PG-only 的 DDL 片段,使 AutoMigrate /
+// CreateTable 能在 SQLite 下建表。仅 sqlite 分支调用;PG 路径零改动。
+//
+// 背景 (2026-08-17, quick-260817-hfl): 多个 model tag 携带 PG 专属片段 —
+//   - default:gen_random_uuid() (Asset / APIKeyUsageLog / VDISyncLog / OUGroupMapping 等):
+//     SQLite DDL 只允许常量默认值,函数调用触发 "near \"(\": syntax error"
+//   - type:text[] (AuthCredential.SNMPCommunities / SysReconciliationException):
+//     SQLite type-name 语法不接受方括号
+//
+// 实现: 经 gorm.Statement{DB: d.DB}.Parse 触发的 schema 解析会写入该 DB 实例共享的
+// cacheStore;此处就地修改缓存的 *schema.Schema,后续 Migrator().AutoMigrate /
+// CreateTable 的 Parse 命中同一缓存,拿到净化后的 schema(单一事实源仍是 model tag,
+// 净化是 sqlite 运行期的投影,不改 model 文件,不影响 PG 语义)。
+//
+// 配套: 被剥离 gen_random_uuid() 默认值的列,应用层由 model BeforeCreate 钩子
+// (uuid.New()) 填充 ID;函数式默认剥离后该字段以应用值写入,PG 下行为等价
+// (非空 ID 直接 INSERT,DB 默认值仅对零值生效)。
+func (d *Database) sanitizeSQLiteModelDefaults() error {
+	for _, model := range MigrateModelList() {
+		stmt := &gorm.Statement{DB: d.DB}
+		if err := stmt.Parse(model); err != nil {
+			return fmt.Errorf("解析模型 schema 失败(%T): %w", model, err)
+		}
+		for _, field := range stmt.Schema.Fields {
+			// 函数式默认值(gen_random_uuid()/now() 等)SQLite 不接受
+			if strings.Contains(field.DefaultValue, "(") {
+				field.DefaultValue = ""
+				field.HasDefaultValue = false
+			}
+			// PG 数组类型(text[] 等)SQLite type-name 语法不接受方括号;
+			// 降为 text — pq.StringArray 的 Valuer/Scan 走 "{a,b}" 字面量文本,可 roundtrip
+			if strings.Contains(string(field.DataType), "[") {
+				field.DataType = "text"
+			}
+		}
+	}
+	return nil
 }
 
 // createPostgresConnection 创建PostgreSQL连接
@@ -562,9 +602,18 @@ func (d *Database) AutoMigrate() error {
 	// SKIP_AUTOMIGRATE=true: dev/调试旁路,跳过 cleanup + dropDependent + AutoMigrate,
 	// 仅执行 BootstrapMissingTables(在 core.go initDBAndData 中分支调用)。
 	// Supabase pooler 上 cleanupOldConstraints 也会卡死,故一并跳过。
-	if os.Getenv("SKIP_AUTOMIGRATE") == "true" {
+	// 该旁路仅对 postgres 有意义;sqlite 无 pooler 问题且新文件库必须全量 AutoMigrate。
+	if os.Getenv("SKIP_AUTOMIGRATE") == "true" && d.Type == "postgres" {
 		applogger.Warnf("[SKIP_AUTOMIGRATE=true] 跳过 cleanup/dropDependent/AutoMigrate,改由 BootstrapMissingTables 补建")
 		return nil
+	}
+
+	// SQLite:净化 PG-only DDL 片段(gen_random_uuid() 默认值 / text[] 数组类型),
+	// 否则 AutoMigrate 在建 Asset/APIKeyUsageLog/AuthCredential 等表时报语法错误。
+	if d.Type == "sqlite" {
+		if err := d.sanitizeSQLiteModelDefaults(); err != nil {
+			return err
+		}
 	}
 
 	// 先清理可能存在的旧约束。dropDependentMaterializedViews() 当前 noop,
@@ -775,6 +824,14 @@ func (d *Database) InitData() error {
 // 适用: dev/调试;生产模式(mode=release)由 core.go initDBAndData 直接 fatal,
 // 不会走到本函数。
 func (d *Database) BootstrapMissingTables() error {
+	// 0) SQLite:净化 PG-only DDL 片段(同 AutoMigrate 路径;CreateTable 直接走
+	//    schema 缓存,不净化则 sys_api_key_usage_logs 的 gen_random_uuid() 报语法错误)
+	if d.Type == "sqlite" {
+		if err := d.sanitizeSQLiteModelDefaults(); err != nil {
+			return err
+		}
+	}
+
 	// 1) 表结构:model 派生,先判定再补建(幂等)
 	if !d.DB.Migrator().HasTable(&models.APIKey{}) {
 		applogger.Infof("[BootstrapMissingTables] sys_api_keys 缺失,经 CreateTable 从 model 派生补建")
