@@ -179,7 +179,7 @@ func TestNewDatabaseSQLite(t *testing.T) {
 	if err := d.AutoMigrate(); err != nil {
 		t.Fatalf("AutoMigrate() on sqlite error = %v, want nil (PG-only schema fragments must be sanitized)", err)
 	}
-	for _, table := range []string{"sys_user", "ops_asset", "sys_api_key_usage_logs", "sys_reconciliation_exception"} {
+	for _, table := range []string{"sys_user", "ops_asset", "sys_api_key_usage_logs", "sys_reconciliation_exception", "sys_user_preference"} {
 		if !d.DB.Migrator().HasTable(table) {
 			t.Errorf("HasTable(%q) = false after AutoMigrate on sqlite, want true", table)
 		}
