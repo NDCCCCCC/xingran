@@ -267,6 +267,54 @@ func TestL2WriteWorker_QueueFull(t *testing.T) {
 	t.Logf("队列满测试: 耗时=%v, 错误=%v", elapsed, err)
 }
 
+// TestL2WriteWorker_TaskSurvivesCallerCancel 回归测试 (login-menu-timeout-20260817 H8):
+// 调用方 ctx 在入队成功后取消(模拟 HTTP 请求结束/客户端中止),任务仍必须被执行。
+// 历史 bug: MultiLevelCache.Set 用 defer-cancel 的临时 ctx 入队,Set 返回即取消,
+// processTask 前置 task.ctx.Done() 检查 100% 丢弃任务 → menu 缓存永远写不进 L2。
+// 修复后 buildTask 内部 detach(WithoutCancel + 有界 TTL),任务随调用方 ctx 取消而存活。
+func TestL2WriteWorker_TaskSurvivesCallerCancel(t *testing.T) {
+	// 慢缓存: 让第一个任务占住唯一 worker,确保第二个任务在队列中等待时 ctx 已取消
+	slowCache := &mockCache{delay: 150 * time.Millisecond}
+	config := &L2WriterConfig{
+		WorkerCount:          1,
+		QueueSize:            10,
+		EnqueueTimeout:       100 * time.Millisecond,
+		WriteTimeout:         500 * time.Millisecond,
+		FallbackWriteTimeout: 100 * time.Millisecond,
+	}
+
+	worker := NewL2WriteWorker(config)
+	worker.Start()
+	defer worker.Stop()
+
+	// 任务1: 占住 worker(150ms 处理时间)
+	if err := worker.Enqueue(context.Background(), slowCache, "blocker", "v", time.Minute); err != nil {
+		t.Fatalf("blocker 入队失败: %v", err)
+	}
+	time.Sleep(20 * time.Millisecond) // 确保 blocker 已被 worker 取走
+
+	// 任务2: 模拟 MultiLevelCache.Set 的历史行为 — 入队成功后调用方 ctx 立即取消
+	ctx, cancel := context.WithCancel(context.Background())
+	if err := worker.Enqueue(ctx, slowCache, "menu:user:menus:u1", "v", time.Minute); err != nil {
+		t.Fatalf("victim 入队失败: %v", err)
+	}
+	cancel() // Set 返回 / 客户端中止
+
+	// 等待两个任务都处理完
+	time.Sleep(500 * time.Millisecond)
+
+	if got := slowCache.GetCount(); got != 2 {
+		t.Errorf("H8 回归: 调用方 ctx 取消后 L2 写入被丢弃, setCount=%d (期望 2)", got)
+	}
+	stats := worker.GetStats()
+	if stats["dropped"].(int64) != 0 {
+		t.Errorf("H8 回归: 任务被前置检查丢弃, dropped=%v (期望 0)", stats["dropped"])
+	}
+	if stats["completed"].(int64) != 2 {
+		t.Errorf("期望 completed=2, 实际=%v", stats["completed"])
+	}
+}
+
 // TestL2WriteWorker_ContextCancellation 测试上下文取消
 func TestL2WriteWorker_ContextCancellation(t *testing.T) {
 	slowCache := &mockCache{delay: 500 * time.Millisecond}

@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core/security"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
@@ -46,10 +47,14 @@ func JWTAuthWithBlacklist(jwtManager *security.JWTManager, blacklistSvc services
 		}
 
 		// 检查令牌是否在黑名单中
+		//
+		// Fail-open (login-menu-timeout-20260817 Round 4): 黑名单检查依赖远程
+		// Redis(Upstash TLS, poolTimeout=10s)。缓存故障时 fail-closed 会把整个
+		// 认证链路打成 500(实测: 网络退化窗口内 6 个并发请求中 1 个 10.010s 精确
+		// 命中 poolTimeout → 500)。缓存不可用 ≠ 令牌被拉黑,故障窗口内放行,
+		// 由 JWT 自身过期(7200s)兜底;黑名单强制力仅在缓存故障窗口内降级。
 		if blacklisted, err := blacklistSvc.IsBlacklisted(c.Request.Context(), token); err != nil {
-			response.Error(c, response.ErrServerError, "检查令牌状态失败")
-			c.Abort()
-			return
+			applogger.Warnf("[JWTAuthWithBlacklist] 令牌黑名单检查失败,放行请求(fail-open): %v", err)
 		} else if blacklisted {
 			response.Error(c, response.ErrUnauthorized, "令牌已失效，请重新登录")
 			c.Abort()

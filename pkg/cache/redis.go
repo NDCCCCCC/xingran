@@ -614,25 +614,29 @@ func (m *MultiLevelCache) Get(ctx context.Context, key string) (string, error) {
 		return "", err
 	}
 
-	_ = m.l1Cache.Set(ctx, key, value, 5*time.Minute)
+	// L1 回填与请求 ctx 解耦 (login-menu-timeout-20260817 H8 修复):
+	// 客户端中止不应阻止回填,否则下次请求继续打 L2/DB。
+	_ = m.l1Cache.Set(context.WithoutCancel(ctx), key, value, 5*time.Minute)
 	return value, nil
 }
 
 func (m *MultiLevelCache) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
-	// L1 缓存同步写入
-	if err := m.l1Cache.Set(ctx, key, value, 5*time.Minute); err != nil {
+	// L1 缓存同步写入 — 与请求 ctx 解耦 (login-menu-timeout-20260817 H8 修复):
+	// 客户端中止请求不应阻止缓存落盘,否则缓存永久 miss 形成恶性循环。
+	// WithoutCancel 保留 ctx values(tracing),仅剥离取消/截止时间信号。
+	if err := m.l1Cache.Set(context.WithoutCancel(ctx), key, value, 5*time.Minute); err != nil {
 		return err
 	}
 
 	// L2 缓存异步写入
 	if m.l2WriterEnabled && m.l2Writer != nil {
-		// 使用 Worker Pool 模式
-		// P1 fix: 不能用请求 ctx 去做 L2 异步入队 —— HTTP 请求 ctx 通常只有 5-30s 截止时间,
-		// 但 L2 写入是后台任务,应当独立于请求生命周期。改用独立 ctx 隔离,
-		// 真正的客户端取消不应阻塞 L2 异步刷盘。
-		enqueueCtx, cancelEnqueue := context.WithTimeout(context.Background(), m.l2Writer.GetFallbackTimeout())
-		defer cancelEnqueue()
-		if err := m.l2Writer.Enqueue(enqueueCtx, m.l2Cache, key, value, expiration); err != nil {
+		// 使用 Worker Pool 模式。
+		// H8 修复说明: 此前这里用 defer cancel 的临时 ctx 入队,Set 返回即取消,
+		// worker 前置 task.ctx.Done() 检查 100% 命中 → 几乎所有 L2 异步写被丢弃。
+		// 现在任务 ctx 由 L2WriteWorker.buildTask 内部统一 detach
+		// (WithoutCancel + 有界 TTL,cancel 随任务生命周期释放),此处直接透传调用方 ctx;
+		// 入队等待本身仍受 EnqueueTimeout(默认 1s)约束,不会无限阻塞。
+		if err := m.l2Writer.Enqueue(ctx, m.l2Cache, key, value, expiration); err != nil {
 			// 入队失败（队列满或超时），降级为同步写入以保证数据一致性
 			logger.Warnf("[MultiLevelCache] L2写入入队失败，降级为同步写入: key=%s, error=%v", key, err)
 
@@ -703,7 +707,16 @@ func (m *MultiLevelCache) Close() error {
 	return m.l2Cache.Close()
 }
 
+// Exists 检查键是否存在 — L1 前置 (login-menu-timeout-20260817 Round 4):
+// L1 命中可直接判定存在,免去一次远程 L2 往返(认证关键路径上的黑名单检查
+// 在 Upstash 网络退化时曾阻塞至 poolTimeout=10s → 500)。
+// 正确性: Set 同步先写 L1 再异步写 L2(L1 ⊇ 近 5min 内本进程写入),
+// Delete 先删 L1 再删 L2,故 L1 hit → 存在恒成立;L1 miss 仍回源 L2 判定,
+// 不产生假阴性。
 func (m *MultiLevelCache) Exists(ctx context.Context, key string) (bool, error) {
+	if exists, err := m.l1Cache.Exists(ctx, key); err == nil && exists {
+		return true, nil
+	}
 	return m.l2Cache.Exists(ctx, key)
 }
 

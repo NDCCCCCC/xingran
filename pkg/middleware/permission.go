@@ -2,6 +2,8 @@ package middleware
 
 import (
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
@@ -11,6 +13,64 @@ import (
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 	"gorm.io/gorm"
 )
+
+// ==================== 中间件权限结果短 TTL 缓存 (login-menu-timeout-20260817 H7 修复) ====================
+//
+// 背景: isSuperAdmin / checkUserPermission 此前对每个受保护请求都执行无缓存 SQL
+// (sys_user_role × sys_role / sys_role_menu × sys_menu JOIN)。在远程高延迟 DB 上,
+// 登录 + 首批页面加载会串行触发 10+ 条此类慢查询,是登录链路超时的核心放大器。
+//
+// 设计:
+//   - 进程内 sync.Map + 过期时间戳,TTL 30s,key 按 userID(及 permission)隔离。
+//   - 不用 core.Cache 的原因: MultiLevelCache.Set 的 L1 写入硬编码 5min TTL,
+//     会把 30s 语义静默放大到 5min;且权限判断是超热路径,进程内读零网络开销。
+//   - 多实例部署各实例独立缓存 30s,可接受。
+//
+// 陈旧性(已接受的 tradeoff, documented):
+//   - 角色/菜单权限变更后,最长 30s 内中间件可能返回旧结果(提权/降权窗口)。
+//   - 该窗口远小于 JWT access_token TTL(7200s),也小于 menuCacheService 的 30min
+//     菜单缓存,不引入新的语义。需要立即生效时调用 InvalidateMiddlewarePermCache。
+const mwPermCacheTTL = 30 * time.Second
+
+type mwPermCacheEntry struct {
+	allow     bool
+	expiresAt time.Time
+}
+
+var (
+	mwSuperAdminCache sync.Map // key: userID → mwPermCacheEntry
+	mwPermCheckCache  sync.Map // key: userID + "|" + permission → mwPermCacheEntry
+)
+
+// mwCacheLookup 查询缓存;命中且未过期返回 (allow, true)。过期条目惰性删除。
+func mwCacheLookup(c *sync.Map, key string) (bool, bool) {
+	if v, ok := c.Load(key); ok {
+		if entry, ok := v.(mwPermCacheEntry); ok {
+			if time.Now().Before(entry.expiresAt) {
+				return entry.allow, true
+			}
+			c.Delete(key) // 过期清理(惰性)
+		}
+	}
+	return false, false
+}
+
+func mwCacheStore(c *sync.Map, key string, allow bool) {
+	c.Store(key, mwPermCacheEntry{allow: allow, expiresAt: time.Now().Add(mwPermCacheTTL)})
+}
+
+// InvalidateMiddlewarePermCache 使指定用户的中间件权限缓存立即失效。
+// 供角色/用户角色变更路径调用;当前未接线 — 30s 短 TTL 陈旧已被接受(见上方注释)。
+func InvalidateMiddlewarePermCache(userID string) {
+	mwSuperAdminCache.Delete(userID)
+	prefix := userID + "|"
+	mwPermCheckCache.Range(func(k, _ interface{}) bool {
+		if key, ok := k.(string); ok && strings.HasPrefix(key, prefix) {
+			mwPermCheckCache.Delete(k)
+		}
+		return true
+	})
+}
 
 // 允许的数据权限字段白名单
 var allowedDataScopeFields = map[string]bool{
@@ -58,11 +118,22 @@ func Permission(permission string, core *core.Core) gin.HandlerFunc {
 	}
 }
 
-// checkUserPermission 检查用户权限
+// checkUserPermission 检查用户权限 (带 30s 短 TTL 缓存,见文件头 H7 修复说明)
 // 注意：只检查 status（停用），不检查 visible（隐藏）
 // - 隐藏的菜单（visible=0）：不显示在导航栏，但权限仍然有效，可通过直接URL访问
 // - 停用的菜单（status=1）：完全不可用，权限无效，即使知道URL也无法访问
 func checkUserPermission(core *core.Core, userID, permission string) bool {
+	cacheKey := userID + "|" + permission
+	if allow, hit := mwCacheLookup(&mwPermCheckCache, cacheKey); hit {
+		return allow
+	}
+	allow := checkUserPermissionUncached(core, userID, permission)
+	mwCacheStore(&mwPermCheckCache, cacheKey, allow)
+	return allow
+}
+
+// checkUserPermissionUncached 权限检查的原始实现(每次执行 DB 查询)。
+func checkUserPermissionUncached(core *core.Core, userID, permission string) bool {
 	// 超级管理员直接通过
 	if isSuperAdmin(core, userID) {
 		return true
@@ -172,8 +243,12 @@ func extractModulePermission(permission string) string {
 	return permission[:lastColon]
 }
 
-// isSuperAdmin 检查是否是超级管理员
+// isSuperAdmin 检查是否是超级管理员 (带 30s 短 TTL 缓存,见文件头 H7 修复说明)
 func isSuperAdmin(core *core.Core, userID string) bool {
+	if allow, hit := mwCacheLookup(&mwSuperAdminCache, userID); hit {
+		return allow
+	}
+
 	// 检查用户是否有超级管理员角色
 	var count int64
 	err := core.DB.GetDB().Raw(`
@@ -184,10 +259,12 @@ func isSuperAdmin(core *core.Core, userID string) bool {
 	`, userID, "admin").Scan(&count).Error
 
 	if err != nil {
-		return false
+		return false // DB 错误不缓存,下次请求重试
 	}
 
-	return count > 0
+	allow := count > 0
+	mwCacheStore(&mwSuperAdminCache, userID, allow)
+	return allow
 }
 
 // GetCurrentUserPermissions 获取当前用户所有权限
