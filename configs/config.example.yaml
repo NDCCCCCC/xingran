@@ -21,17 +21,25 @@ server:
   port: 9000
   mode: "debug"                # debug / release / test
 
-# 数据库配置 - PostgreSQL
+# 数据库配置
+# type 决定数据库后端:
+#   - postgres(默认/生产): 使用下方 host/port/user/... 键,对齐远端 schema
+#   - sqlite(本地 dev 提速): 纯 Go 驱动 glebarez/sqlite,数据文件见 path,
+#     首次启动自动建库建表+seed,不访问远端 PG
+# dev-only 已知限制(sqlite 模式): reconciliation MV/视图(175/176)与 202-206 迁移 seed
+# 不执行;个别含 PG 方言(::uuid/ILIKE/pg_catalog)的端点可能运行期报错。
 # 环境变量: DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
 database:
+  type: "postgres"           # postgres | sqlite
+  path: "data/xingran.db"    # sqlite 数据文件(仅 type=sqlite 生效)
   host: "localhost"
   port: 5432
   user: "postgres"
   password: ""                 # 留空,通过 DB_PASSWORD 注入
   dbname: "xingran_next"
   sslmode: "disable"
-  max_open_conns: 10
-  max_idle_conns: 5
+  max_open_conns: 25                              # Phase 62-DBG-01: 10→25 缓解 my-menus 池饥饿
+  max_idle_conns: 10                              # 跟随 max_open_conns 等比调整
   max_lifetime: 1800
 
 # 缓存配置 - Redis
