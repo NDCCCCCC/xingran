@@ -9,7 +9,7 @@ XingRan-Next 项目的全部技术文档索引。最后整理：2026-08-12。
 | 架构与设计 | [`architecture/`](architecture/) | 项目总览、数据库、安全国密、启动流程 |
 | 开发规范 | [`standards/`](standards/) | 开发规范、API 响应、权限选择器 |
 | 使用指南 | [`guides/`](guides/) | 缓存、Excel、加密、上传下载、安全改进等 How-to |
-| 部署运维 | [`deployment/`](deployment/) | 生产部署、密钥管理 |
+| 部署运维 | [`deployment/`](deployment/) | 生产部署、单机部署、Docker Compose、密钥管理、容量规划 |
 | 模块设计 | [`modules/`](modules/) | RPA 子模块、Agent 测试 |
 | 前瞻设计 | [`plans/`](plans/) | 下一版本设计草案 |
 | 外部参考 | [`reference/`](reference/) | 深信服 VDI 接口等第三方资料 |
@@ -43,10 +43,15 @@ XingRan-Next 项目的全部技术文档索引。最后整理：2026-08-12。
 - **`上传下载功能设计.md`** — FileService 统一文件服务 + Excel 导入导出
 - **`SECURITY_IMPROVEMENTS.md`** — 菜单存储 SHA-256 校验 + XSS 清理 + CSP
 
-### 🚀 deployment/ — 部署与运维（2 份）
+### 🚀 deployment/ — 部署与运维（5 份）
 
-- **`deployment.md`** — 生产环境部署指南（`/app/szh/`、systemd、密钥注入，**当前权威**）
-- **`secret-management.md`** — 部署期密钥管理（生成、轮转、泄漏处置）
+按"场景规模"选用：
+
+- **`single-machine-deployment.md`** — 单机全栈部署（硬件规格、OS、运行时、一条龙流程、踩坑清单；开发 / 试点 / 小型团队首选）
+- **`docker-compose.md`** — Docker Compose 一键编排（补齐 README 中标注缺失的容器化方案）
+- **`capacity-planning.md`** — 容量规划与硬件选型（按用户/工单/模块开关估算 PG/Redis/连接池）
+- **`deployment.md`** — 生产 systemd 部署指南（`/app/szh/`、内网 10.62.10.34、systemd 加固；**生产权威**）
+- **`secret-management.md`** — 部署期密钥管理（生成、轮转、泄漏处置；跨文档通用）
 
 ### 🧩 modules/ — 模块设计（4 份）
 
