@@ -625,7 +625,16 @@ func (d *Database) AutoMigrate() error {
 
 	// 禁用外键约束的自动创建，避免类型不匹配的问题
 	// 外键约束已通过 SQL 脚本手动创建
-	err := d.DB.Migrator().AutoMigrate(MigrateModelList()...)
+	migrateList := MigrateModelList()
+	if d.Type == "sqlite" {
+		// sys_user_preference 历史由归档 SQL(004/005/044)创建,PG 存量库已存在;
+		// 仅 sqlite 分支注册进 AutoMigrate(全新文件库必须建表,否则登录后首屏
+		// GET /system/settings/preferences 500)。PG 不注册的原因:GORM 对存量表
+		// 会按 model tag 发起漂移 ALTER(DROP NOT NULL / 默认值 240→280 改写等),
+		// 生产语义必须零改动;PG 新部署由 scripts/dbprovision 建表。
+		migrateList = append(migrateList, &models.UserPreference{})
+	}
+	err := d.DB.Migrator().AutoMigrate(migrateList...)
 	if err != nil {
 		return err
 	}

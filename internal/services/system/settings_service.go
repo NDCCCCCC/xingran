@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/google/uuid"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"gorm.io/gorm"
 )
 
@@ -30,44 +30,10 @@ func NewSettingsService(db *gorm.DB, configService ConfigService) SettingsServic
 }
 
 // UserPreference 用户个人设置模型（扩展版）
-type UserPreference struct {
-	ID     string `gorm:"primaryKey;type:uuid" json:"id"`
-	UserID string `gorm:"type:uuid;not null;uniqueIndex" json:"userId"`
-
-	// 主题配置
-	Theme      string `gorm:"size:20;default:light" json:"theme"`
-	ThemeStyle string `gorm:"size:20;default:minimal" json:"themeStyle"`
-
-	// 布局配置
-	LayoutType            string `gorm:"size:20;default:classic" json:"layoutType"`
-	LayoutDensity         string `gorm:"size:20;default:comfortable" json:"layoutDensity"`
-	SidebarWidth          int    `gorm:"default:280" json:"sidebarWidth"`
-	SidebarCollapsedWidth int    `gorm:"default:64" json:"sidebarCollapsedWidth"`
-	SidebarCollapsed      bool   `gorm:"default:false" json:"sidebarCollapsed"`
-
-	// 数据配置
-	PageSize int `gorm:"default:10" json:"pageSize"`
-
-	// 自定义颜色（JSON 格式存储）
-	CustomPrimaryColor string `gorm:"size:20" json:"customPrimaryColor,omitempty"`
-	CustomSidebarColor string `gorm:"size:20" json:"customSidebarColor,omitempty"`
-
-	// 语言
-	Language string `gorm:"size:10;default:zh-CN" json:"language"`
-}
-
-// TableName 指定表名
-func (UserPreference) TableName() string {
-	return "sys_user_preference"
-}
-
-// BeforeCreate GORM hook - 创建前生成UUID
-func (up *UserPreference) BeforeCreate(tx *gorm.DB) error {
-	if up.ID == "" {
-		up.ID = uuid.New().String()
-	}
-	return nil
-}
+//
+// 2026-08-17 (quick-260817-hfl): 模型本体迁移至 internal/models/user_preference.go
+// (schema 单一事实源,sqlite 分支 AutoMigrate 注册需要;此处 alias 保持全部调用点兼容)。
+type UserPreference = models.UserPreference
 
 // UserPreferences 用户个人设置请求/响应DTO
 type UserPreferences struct {
