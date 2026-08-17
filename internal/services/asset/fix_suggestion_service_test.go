@@ -11,7 +11,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -97,8 +97,12 @@ type configResult struct {
 
 // TestFixSuggestionListPagination 测试分页
 //
-// 注意:ListFixSuggestions 含 PG-specific `su.id::text` cast,SQLite 不支持。
-// 这里只验证基础 Service 接口(8 方法)可构造,实际分页逻辑由 PG 集成测试覆盖。
+// 注意:本测试 DB 仅建 sys_reconciliation_fix_suggestion 单表,ListFixSuggestions 的
+// LEFT JOIN 目标表(sys_data_reconciliation/ops_asset/sys_user)不存在,List 在本测试
+// DB 上会报 no such table。这里只验证基础 Service 接口(8 方法)可构造 +
+// BaseListRequest 嵌入正确,实际分页逻辑由 PG 集成测试覆盖。
+// (2026-08-17 前另有 PG-specific `su.id::text` cast 导致 SQLite 语法错误,
+// 已由 fix_suggestion_service.go userJoinOn() 方言 helper 修复。)
 func TestFixSuggestionListPagination(t *testing.T) {
 	db := setupFixSuggestionTestDB(t)
 	now := time.Now()
@@ -114,13 +118,13 @@ func TestFixSuggestionListPagination(t *testing.T) {
 	svc := NewFixSuggestionService(db, nil, nil, nil)
 	ctx := context.Background()
 
-	// 注意:在 SQLite 上 ListFixSuggestions 会因为 PG cast 失败,这是预期行为。
-	// 这里主要验证 svc 可构造 + BaseListRequest 嵌入正确。
+	// 本测试 DB 缺少 JOIN 目标表(sys_data_reconciliation/ops_asset/sys_user),
+	// List 会报 no such table(预期);这里主要验证 svc 可构造 + BaseListRequest 嵌入正确。
 	_, err := svc.ListFixSuggestions(ctx, &FixSuggestionListParams{
 		BaseListRequest: base.BaseListRequest{Current: 1, PageSize: 2},
 	})
 	if err != nil {
-		t.Logf("ListFixSuggestions 在 SQLite 上 PG cast 失败(预期): %v", err)
+		t.Logf("ListFixSuggestions 在本测试 DB 上缺 JOIN 目标表(预期): %v", err)
 	}
 
 	// 静态断言:BaseListRequest 必须被嵌入(避免后续重构成 BaseListParams)
@@ -174,23 +178,18 @@ func TestFixSuggestionStatsWindow(t *testing.T) {
 		VALUES ('rb-1', ?, ?, NULL, 0, 'exc-rb-1', 'rolled_back', 'B', 0.9, 'test', ?, ?)
 	`, now, now, now, now).Error)
 
-	// 由于 Stats 走原生 SQL "applied_at >= NOW() - ? * INTERVAL '1 day'" — SQLite
-	// 不识别 INTERVAL 语法,实际 Stats 会在 SQLite 上失败。这里用 nil config service
-	// 跳过 config 依赖,直接测 MisFixRate 计算逻辑(单元逻辑路径)。
+	// SQLite 适配后(2026-08-17):Stats 6 个 Count 在 SQLite 走应用层 cutoff 分支
+	// (fix_suggestion_service.go Stats 方言分支),可完整跑通 —— 直接断言统计值。
+	// nil config service → threshold 取默认 0.01。
 	svc := NewFixSuggestionService(db, nil, nil, nil)
 	ctx := context.Background()
 
-	// 在 SQLite 上 Stats 会因为 INTERVAL 报错 — 我们只验证 mock ConfigService 的可注入
-	cfg := &mockConfigSvc{values: map[string]string{
-		"asset.reconciliation.fix.mis_fix_threshold": "0.01",
-	}}
-	_ = cfg // cfg 通过 NewFixSuggestionService 注入,但 SQLite 上 Stats 仍会失败(预期)
-
-	// 静默测试:SQLite INTERVAL 不兼容,所以这里不强求 stats 跑通
-	_, err := svc.Stats(ctx, 7)
-	if err != nil {
-		t.Logf("Stats 在 SQLite 上返回预期错误(INTERVAL 语法不兼容): %v", err)
-	}
+	stats, err := svc.Stats(ctx, 7)
+	require.NoError(t, err, "Stats 在 SQLite 上应成功(应用层 cutoff 分支)")
+	assert.Equal(t, int64(10), stats.Applied, "7d 窗口内 applied 应为 10")
+	assert.Equal(t, int64(1), stats.RolledBack, "7d 窗口内 rolledBack 应为 1")
+	assert.InDelta(t, 0.1, stats.MisFixRate, 1e-9, "MisFixRate = rolledBack/applied = 1/10")
+	assert.True(t, stats.ThresholdBreached, "applied=10>=minSampleSize 且 0.1>0.01 默认阈值应触发")
 }
 
 // TestFixSuggestionStatsPendingAllNoWindow 测试 W-I3 修订

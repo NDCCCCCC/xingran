@@ -45,9 +45,21 @@ func NewPartitionService(db *gorm.DB) PartitionService {
 	return &partitionServiceImpl{db: db}
 }
 
+// isPostgres 判断当前数据库方言是否为 PostgreSQL。
+// 表分区(PARTITION OF / pg_inherits)是 PG 专属特性,SQLite 不支持;
+// sqlite 分支下分区管理整体跳过(数据写入普通单表,无分区概念)。
+func (s *partitionServiceImpl) isPostgres() bool {
+	return s.db.Dialector.Name() == "postgres"
+}
+
 // CreateMonthlyPartition 创建指定年月的月度分区
 // 分区名称格式: sys_device_mac_history_YYYY_MM (如 sys_device_mac_history_2025_01)
 func (s *partitionServiceImpl) CreateMonthlyPartition(ctx context.Context, year int, month int) error {
+	// SQLite 不支持表分区,直接跳过(由 EnsurePartitionsExist 的守卫兜底,此处双保险)
+	if !s.isPostgres() {
+		applogger.Debugf("非 PostgreSQL 数据库,跳过创建分区(分区为 PG 专属特性): %d-%02d", year, month)
+		return nil
+	}
 	// 验证年份和月份范围
 	if year < 2020 || year > 2100 {
 		return fmt.Errorf("无效的年份: %d，有效范围: 2020-2100", year)
@@ -95,6 +107,12 @@ func (s *partitionServiceImpl) CreateMonthlyPartition(ctx context.Context, year 
 // EnsurePartitionsExist 确保未来N个月的分区存在
 // monthsAhead: 未来月数（默认2）
 func (s *partitionServiceImpl) EnsurePartitionsExist(ctx context.Context, monthsAhead int) error {
+	// SQLite 不支持表分区(PARTITION OF 语法),跳过分区管理
+	if !s.isPostgres() {
+		applogger.Debugf("非 PostgreSQL 数据库,跳过 MAC 历史分区检查(分区为 PG 专属特性)")
+		return nil
+	}
+
 	if monthsAhead <= 0 {
 		monthsAhead = 2 // 默认创建未来2个月的分区
 	}
@@ -155,6 +173,12 @@ func (s *partitionServiceImpl) GetRetentionDays(ctx context.Context) int {
 // DropExpiredPartitions 删除过期的分区
 // 根据保留期配置，删除过期的完整月度分区
 func (s *partitionServiceImpl) DropExpiredPartitions(ctx context.Context) error {
+	// SQLite 不支持表分区,也无 pg_inherits 系统目录,跳过分区清理
+	if !s.isPostgres() {
+		applogger.Debugf("非 PostgreSQL 数据库,跳过 MAC 历史过期分区清理(分区为 PG 专属特性)")
+		return nil
+	}
+
 	retentionDays := s.GetRetentionDays(ctx)
 	applogger.Infof("开始清理过期的MAC历史表分区（保留期: %d 天）", retentionDays)
 

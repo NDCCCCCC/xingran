@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -207,11 +207,12 @@ func TestFixSuggestionApplyWritesOperLog(t *testing.T) {
 	svc := NewFixSuggestionService(db, nil, nil, nil)
 	ctx := context.Background()
 
-	// 1. 调 service.Apply — SQLite 不支持 INTERVAL,所以 Apply 会因 rollback_window_until 报错,
-	//    这里我们只验证状态字段被 update(Apply 前置操作不依赖 DB INTERVAL)
+	// 1. 调 service.Apply — 本测试 DB 未建 sys_data_reconciliation/ops_asset,
+	//    Apply 会在 step 2(查异常)失败回滚;这里只验证 operlog 写入路径,
+	//    手动模拟状态转换。(2026-08-17 前另有 rollback_window_until 的
+	//    DB-side INTERVAL 在 SQLite 报语法错误,已由 service 层
+	//    rollbackWindowValue() 方言 helper 修复。)
 	_ = svc.Apply(ctx, "sug-app-1", "user-test")
-	// 注:SQLite 上 Apply 的 rollback_window_until 表达式会失败,但 suggestedUserID 字段已确定
-	// 我们手动模拟状态转换(测试 operlog 写入路径)
 	db.Exec(`UPDATE sys_reconciliation_fix_suggestion SET fix_status='applied', pre_fix_user_id='old-user-id' WHERE id='sug-app-1'`)
 
 	// 2. 模拟 handler 写 operlog(D-C3 audit:Apply 用 OperTypeUpdate=2)
@@ -246,10 +247,11 @@ func TestFixSuggestionRollbackWritesOperLog(t *testing.T) {
 	svc := NewFixSuggestionService(db, nil, nil, nil)
 	ctx := context.Background()
 
-	// 1. 调 service.Rollback — SQLite 上 DB-side window check 会失败(INTERVAL 'NOW()'),
-	//    但 Go-side window check 通过。Go-side 在 service.Rollback 第一步 First() 之后检查,
-	//    SQLite 上 First() 是通的,window check 失败会回滚事务。
-	//    这里我们直接 UPDATE 状态模拟成功路径,验证 operlog 写入字段。
+	// 1. 调 service.Rollback — 本测试 DB 未建 sys_data_reconciliation,
+	//    Rollback 会在 step 4(反查异常)失败回滚;这里直接 UPDATE 状态模拟成功路径,
+	//    验证 operlog 写入字段。(2026-08-17 前另有 DB-side `> NOW()` 窗口检查在
+	//    SQLite 报 no such function,已改为仅 PG 执行 —— SQLite 单时钟下
+	//    step 2 的 Go-side 判定即权威。)
 	_ = svc.Rollback(ctx, "sug-rb-1", "user-test", "测试回滚原因超过十字符")
 	db.Exec(`UPDATE sys_reconciliation_fix_suggestion SET fix_status='rolled_back', rollback_reason='测试回滚原因超过十字符' WHERE id='sug-rb-1'`)
 

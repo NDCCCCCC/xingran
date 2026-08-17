@@ -146,6 +146,18 @@ func NewFixSuggestionService(db *gorm.DB, c cache.Cache, configSvc system.Config
 
 // ====================== 读端点 ======================
 
+// userJoinOn 返回方言感知的 sys_user JOIN 子句。
+//
+// PG: sys_user.id 是 uuid 而 suggested_user_id 是 varchar,必须 ::text 强转
+//     (PG 强类型不会自动 cast,SQLSTATE 42883)。
+// SQLite: 不支持 `::` cast(unrecognized token ":");两列均为文本,直接等值比较。
+func (s *fixSuggestionServiceImpl) userJoinOn() string {
+	if s.db.Dialector.Name() == "postgres" {
+		return "LEFT JOIN sys_user su ON su.id::text = sys_reconciliation_fix_suggestion.suggested_user_id AND su.deleted_at IS NULL"
+	}
+	return "LEFT JOIN sys_user su ON su.id = sys_reconciliation_fix_suggestion.suggested_user_id AND su.deleted_at IS NULL"
+}
+
 // ListFixSuggestions 列出修复建议
 func (s *fixSuggestionServiceImpl) ListFixSuggestions(ctx context.Context, params *FixSuggestionListParams) (*base.PageResult, error) {
 	if params == nil {
@@ -171,7 +183,7 @@ func (s *fixSuggestionServiceImpl) ListFixSuggestions(ctx context.Context, param
 		Where("sys_reconciliation_fix_suggestion.deleted_at IS NULL").
 		Joins("LEFT JOIN sys_data_reconciliation r ON r.id = sys_reconciliation_fix_suggestion.exception_id AND r.deleted_at IS NULL").
 		Joins("LEFT JOIN ops_asset a ON a.id = r.asset_id AND a.deleted_at IS NULL").
-		Joins("LEFT JOIN sys_user su ON su.id::text = sys_reconciliation_fix_suggestion.suggested_user_id AND su.deleted_at IS NULL").
+		Joins(s.userJoinOn()).
 		Select(`sys_reconciliation_fix_suggestion.*,
 			a.devicesn AS asset_code,
 			a.user_id AS current_user_id,
@@ -236,7 +248,7 @@ func (s *fixSuggestionServiceImpl) GetByID(ctx context.Context, id string) (*Fix
 			su.username AS suggested_username`).
 		Joins("LEFT JOIN sys_data_reconciliation r ON r.id = sys_reconciliation_fix_suggestion.exception_id AND r.deleted_at IS NULL").
 		Joins("LEFT JOIN ops_asset a ON a.id = r.asset_id AND a.deleted_at IS NULL").
-		Joins("LEFT JOIN sys_user su ON su.id::text = sys_reconciliation_fix_suggestion.suggested_user_id AND su.deleted_at IS NULL").
+		Joins(s.userJoinOn()).
 		Where("sys_reconciliation_fix_suggestion.id = ? AND sys_reconciliation_fix_suggestion.deleted_at IS NULL", id).
 		First(&sugg).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -263,7 +275,7 @@ func (s *fixSuggestionServiceImpl) GetByID(ctx context.Context, id string) (*Fix
 			su.username AS suggested_username`).
 		Joins("LEFT JOIN sys_data_reconciliation r ON r.id = sys_reconciliation_fix_suggestion.exception_id AND r.deleted_at IS NULL").
 		Joins("LEFT JOIN ops_asset a ON a.id = r.asset_id AND a.deleted_at IS NULL").
-		Joins("LEFT JOIN sys_user su ON su.id::text = sys_reconciliation_fix_suggestion.suggested_user_id AND su.deleted_at IS NULL").
+		Joins(s.userJoinOn()).
 		Where("sys_reconciliation_fix_suggestion.exception_id = ? AND sys_reconciliation_fix_suggestion.deleted_at IS NULL", sugg.ExceptionID).
 		Order("sys_reconciliation_fix_suggestion.created_at DESC").
 		Find(&history).Error; err != nil {
@@ -290,50 +302,98 @@ func (s *fixSuggestionServiceImpl) Stats(ctx context.Context, windowDays int) (*
 	}
 	// W-3 修订:统一用 DB-side INTERVAL 避免 app clock vs DB clock 漂移
 	// (GORM time 参数会从 app 端转 string,DATE_TRUNC 算时区也以 DB 为准)
+	//
+	// SQLite 适配(2026-08-17):SQLite 不支持 NOW()/INTERVAL(no such function /
+	// syntax error);in-process 部署 app 与 DB 同一时钟,W-3 时钟漂移论据不适用,
+	// 用应用层 cutoff 以参数传入(与 reconciliation_tasks.go now 参数化同一范式)。
 
 	result := &FixSuggestionStatsResponse{WindowDays: windowDays}
 
 	// 6 个独立 Count:统一按"动作发生时间"过滤
 	// pending/accepted/rejected/failed:created_at 过滤
-	if err := s.db.WithContext(ctx).
-		Model(&models.SysReconciliationFixSuggestion{}).
-		Where("deleted_at IS NULL AND fix_status = ? AND created_at >= NOW() - ? * INTERVAL '1 day'", "pending", windowDays).
-		Count(&result.Pending).Error; err != nil {
-		return nil, fmt.Errorf("统计 pending 失败: %w", err)
-	}
-	if err := s.db.WithContext(ctx).
-		Model(&models.SysReconciliationFixSuggestion{}).
-		Where("deleted_at IS NULL AND fix_status = ? AND created_at >= NOW() - ? * INTERVAL '1 day'", "accepted", windowDays).
-		Count(&result.Accepted).Error; err != nil {
-		return nil, fmt.Errorf("统计 accepted 失败: %w", err)
-	}
-	if err := s.db.WithContext(ctx).
-		Model(&models.SysReconciliationFixSuggestion{}).
-		Where("deleted_at IS NULL AND fix_status = ? AND created_at >= NOW() - ? * INTERVAL '1 day'", "rejected", windowDays).
-		Count(&result.Rejected).Error; err != nil {
-		return nil, fmt.Errorf("统计 rejected 失败: %w", err)
-	}
-	if err := s.db.WithContext(ctx).
-		Model(&models.SysReconciliationFixSuggestion{}).
-		Where("deleted_at IS NULL AND fix_status = ? AND created_at >= NOW() - ? * INTERVAL '1 day'", "failed", windowDays).
-		Count(&result.Failed).Error; err != nil {
-		return nil, fmt.Errorf("统计 failed 失败: %w", err)
-	}
+	if s.db.Dialector.Name() == "postgres" {
+		if err := s.db.WithContext(ctx).
+			Model(&models.SysReconciliationFixSuggestion{}).
+			Where("deleted_at IS NULL AND fix_status = ? AND created_at >= NOW() - ? * INTERVAL '1 day'", "pending", windowDays).
+			Count(&result.Pending).Error; err != nil {
+			return nil, fmt.Errorf("统计 pending 失败: %w", err)
+		}
+		if err := s.db.WithContext(ctx).
+			Model(&models.SysReconciliationFixSuggestion{}).
+			Where("deleted_at IS NULL AND fix_status = ? AND created_at >= NOW() - ? * INTERVAL '1 day'", "accepted", windowDays).
+			Count(&result.Accepted).Error; err != nil {
+			return nil, fmt.Errorf("统计 accepted 失败: %w", err)
+		}
+		if err := s.db.WithContext(ctx).
+			Model(&models.SysReconciliationFixSuggestion{}).
+			Where("deleted_at IS NULL AND fix_status = ? AND created_at >= NOW() - ? * INTERVAL '1 day'", "rejected", windowDays).
+			Count(&result.Rejected).Error; err != nil {
+			return nil, fmt.Errorf("统计 rejected 失败: %w", err)
+		}
+		if err := s.db.WithContext(ctx).
+			Model(&models.SysReconciliationFixSuggestion{}).
+			Where("deleted_at IS NULL AND fix_status = ? AND created_at >= NOW() - ? * INTERVAL '1 day'", "failed", windowDays).
+			Count(&result.Failed).Error; err != nil {
+			return nil, fmt.Errorf("统计 failed 失败: %w", err)
+		}
 
-	// applied(W-2 修订):applied_at 过滤
-	if err := s.db.WithContext(ctx).
-		Model(&models.SysReconciliationFixSuggestion{}).
-		Where("deleted_at IS NULL AND fix_status = ? AND applied_at >= NOW() - ? * INTERVAL '1 day'", "applied", windowDays).
-		Count(&result.Applied).Error; err != nil {
-		return nil, fmt.Errorf("统计 applied 失败: %w", err)
-	}
+		// applied(W-2 修订):applied_at 过滤
+		if err := s.db.WithContext(ctx).
+			Model(&models.SysReconciliationFixSuggestion{}).
+			Where("deleted_at IS NULL AND fix_status = ? AND applied_at >= NOW() - ? * INTERVAL '1 day'", "applied", windowDays).
+			Count(&result.Applied).Error; err != nil {
+			return nil, fmt.Errorf("统计 applied 失败: %w", err)
+		}
 
-	// rolledBack:rolled_back_at 过滤
-	if err := s.db.WithContext(ctx).
-		Model(&models.SysReconciliationFixSuggestion{}).
-		Where("deleted_at IS NULL AND fix_status = ? AND rolled_back_at >= NOW() - ? * INTERVAL '1 day'", "rolled_back", windowDays).
-		Count(&result.RolledBack).Error; err != nil {
-		return nil, fmt.Errorf("统计 rolledBack 失败: %w", err)
+		// rolledBack:rolled_back_at 过滤
+		if err := s.db.WithContext(ctx).
+			Model(&models.SysReconciliationFixSuggestion{}).
+			Where("deleted_at IS NULL AND fix_status = ? AND rolled_back_at >= NOW() - ? * INTERVAL '1 day'", "rolled_back", windowDays).
+			Count(&result.RolledBack).Error; err != nil {
+			return nil, fmt.Errorf("统计 rolledBack 失败: %w", err)
+		}
+	} else {
+		cutoff := time.Now().Add(-time.Duration(windowDays) * 24 * time.Hour)
+		if err := s.db.WithContext(ctx).
+			Model(&models.SysReconciliationFixSuggestion{}).
+			Where("deleted_at IS NULL AND fix_status = ? AND created_at >= ?", "pending", cutoff).
+			Count(&result.Pending).Error; err != nil {
+			return nil, fmt.Errorf("统计 pending 失败: %w", err)
+		}
+		if err := s.db.WithContext(ctx).
+			Model(&models.SysReconciliationFixSuggestion{}).
+			Where("deleted_at IS NULL AND fix_status = ? AND created_at >= ?", "accepted", cutoff).
+			Count(&result.Accepted).Error; err != nil {
+			return nil, fmt.Errorf("统计 accepted 失败: %w", err)
+		}
+		if err := s.db.WithContext(ctx).
+			Model(&models.SysReconciliationFixSuggestion{}).
+			Where("deleted_at IS NULL AND fix_status = ? AND created_at >= ?", "rejected", cutoff).
+			Count(&result.Rejected).Error; err != nil {
+			return nil, fmt.Errorf("统计 rejected 失败: %w", err)
+		}
+		if err := s.db.WithContext(ctx).
+			Model(&models.SysReconciliationFixSuggestion{}).
+			Where("deleted_at IS NULL AND fix_status = ? AND created_at >= ?", "failed", cutoff).
+			Count(&result.Failed).Error; err != nil {
+			return nil, fmt.Errorf("统计 failed 失败: %w", err)
+		}
+
+		// applied(W-2 修订):applied_at 过滤
+		if err := s.db.WithContext(ctx).
+			Model(&models.SysReconciliationFixSuggestion{}).
+			Where("deleted_at IS NULL AND fix_status = ? AND applied_at >= ?", "applied", cutoff).
+			Count(&result.Applied).Error; err != nil {
+			return nil, fmt.Errorf("统计 applied 失败: %w", err)
+		}
+
+		// rolledBack:rolled_back_at 过滤
+		if err := s.db.WithContext(ctx).
+			Model(&models.SysReconciliationFixSuggestion{}).
+			Where("deleted_at IS NULL AND fix_status = ? AND rolled_back_at >= ?", "rolled_back", cutoff).
+			Count(&result.RolledBack).Error; err != nil {
+			return nil, fmt.Errorf("统计 rolledBack 失败: %w", err)
+		}
 	}
 
 	// PendingAll:全量 pending(无 7d 窗口,W-I3 修订)
@@ -511,6 +571,22 @@ func (s *fixSuggestionServiceImpl) Reject(ctx context.Context, id, userID, reaso
 	return nil
 }
 
+// rollbackWindowValue 返回回滚窗口截止时间的方言感知取值(D-C2 7d 窗口)。
+//
+// PG: DB-side NOW() + INTERVAL '7 day'(W-3 修订:避免 app clock vs DB clock 漂移)。
+// SQLite: 不支持 NOW()/INTERVAL;in-process 部署 app 与 DB 同一时钟,
+//
+//	无漂移问题,Go 侧计算等值截止时间(now + 7d)。
+//
+// 注:本 helper 独立于 Apply 函数体,使 W-3 静态回归守护
+// (TestFixSuggestionDBIntervalUsed:Apply 体内不应有 Go-side 7d 计算)保持有效。
+func (s *fixSuggestionServiceImpl) rollbackWindowValue(now time.Time) interface{} {
+	if s.db.Dialector.Name() == "postgres" {
+		return gorm.Expr("NOW() + INTERVAL '7 day'")
+	}
+	return now.Add(7 * 24 * time.Hour)
+}
+
 // Apply 应用建议(accepted → applied,事务内 5 步)
 //
 // B-3 关键修复:必须同步写 sys_data_reconciliation.resolved_at = NOW(),
@@ -566,15 +642,14 @@ func (s *fixSuggestionServiceImpl) Apply(ctx context.Context, id, userID string)
 		return fmt.Errorf("更新 ops_asset.user_id 失败: %w", err)
 	}
 
-	// 5. UPDATE 建议状态 + pre_fix_user_id + DB-side INTERVAL '7 day' 回滚窗口
-	//    W-3 修订:用 DB-side INTERVAL 避免 app clock vs DB clock 漂移
+	// 5. UPDATE 建议状态 + pre_fix_user_id + 7d 回滚窗口(方言感知,见 rollbackWindowValue)
 	now := time.Now()
 	if err := tx.Model(&sugg).Updates(map[string]interface{}{
 		"fix_status":            "applied",
 		"applied_at":            now,
 		"applied_by":            userID,
 		"pre_fix_user_id":       preFixUserID,
-		"rollback_window_until": gorm.Expr("NOW() + INTERVAL '7 day'"),
+		"rollback_window_until": s.rollbackWindowValue(now),
 	}).Error; err != nil {
 		tx.Rollback()
 		return fmt.Errorf("更新建议 applied 状态失败: %w", err)
@@ -664,15 +739,21 @@ func (s *fixSuggestionServiceImpl) Rollback(ctx context.Context, id, userID, rea
 
 	// 5. DB-side 主判定(避免 app clock vs DB clock 漂移,W-3 修订通用原则)
 	//    即使 step 2 的 Go-side 判定通过,DB-side 仍可能拒绝(时钟漂移场景)
-	var stillInWindow bool
-	row := tx.Raw("SELECT (rollback_window_until > NOW()) AS in_window FROM sys_reconciliation_fix_suggestion WHERE id = ?", id).Row()
-	if err := row.Scan(&stillInWindow); err != nil {
-		tx.Rollback()
-		return fmt.Errorf("回滚窗口检查失败: %w", err)
-	}
-	if !stillInWindow {
-		tx.Rollback()
-		return errors.New("回滚窗口已过(7d),不允许回滚")
+	//
+	//    SQLite 适配(2026-08-17):SQLite 无 NOW() 函数(no such function);
+	//    in-process 部署 app 与 DB 同一时钟,step 2 的 Go-side 判定即权威,
+	//    跳过 DB-side 复查。
+	if tx.Dialector.Name() == "postgres" {
+		var stillInWindow bool
+		row := tx.Raw("SELECT (rollback_window_until > NOW()) AS in_window FROM sys_reconciliation_fix_suggestion WHERE id = ?", id).Row()
+		if err := row.Scan(&stillInWindow); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("回滚窗口检查失败: %w", err)
+		}
+		if !stillInWindow {
+			tx.Rollback()
+			return errors.New("回滚窗口已过(7d),不允许回滚")
+		}
 	}
 
 	// 6. 恢复 ops_asset.user_id = pre_fix_user_id(D-C1 粒度仅 user_id)

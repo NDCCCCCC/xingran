@@ -62,6 +62,15 @@ const reconciliationRefreshTimeout = 90 * time.Second
 // 用专用 *sql.Conn 保证 SET/REFRESH/RESET 落同一连接(REFRESH ... CONCURRENTLY 不能
 // 在事务块里,故不能用 SET LOCAL;专用连接避免 statement_timeout 泄漏到连接池其他查询)。
 func (s *reconciliationSnapshotServiceImpl) RefreshView(ctx context.Context) error {
+	// 物化视图 reconciliation_normalized 由 PG-only 迁移(migration_176)创建,
+	// SET statement_timeout / REFRESH MATERIALIZED VIEW 均为 PG 专属语法。
+	// SQLite 分支下视图不存在,直接跳过(启动/cron/handler 三路径统一由此兜底,
+	// PG 路径行为零改动)。
+	if s.db.Dialector.Name() != "postgres" {
+		log.Debug("RefreshView: 非 PostgreSQL 数据库,跳过物化视图刷新(PG 专属特性)")
+		return nil
+	}
+
 	// 1. Go 侧 timeout(与调用方 ctx 取交集:startup 的 30s 仍生效,cron 的无超时 ctx 被 90s 兜住)
 	refreshCtx, cancel := context.WithTimeout(ctx, reconciliationRefreshTimeout)
 	defer cancel()
