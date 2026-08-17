@@ -139,6 +139,9 @@ func (e errWrap) Unwrap() error { return e.inner }
 // 驱动)连接本地文件库,返回 d.Type=="sqlite",ping 通过,且不启动 PG pool keepalive
 // (d.keepaliveStop 为 nil — 本地文件无 TLS/auth 握手开销,保活无意义)。
 //
+// AutoMigrate 端到端:sqlite 下全量模型迁移必须成功 —— 回归守护 PG-only schema 片段
+// (default:gen_random_uuid() / type:text[] 等)在 sqlite DDL 下的兼容性净化。
+//
 // 2026-08-17:恢复 dev 环境 SQLite 支持(纯 Go 驱动,区别于已删除的旧 CGO 路径)。
 func TestNewDatabaseSQLite(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "t.db")
@@ -169,6 +172,17 @@ func TestNewDatabaseSQLite(t *testing.T) {
 	}
 	if err := sqlDB.Ping(); err != nil {
 		t.Errorf("Ping() error = %v, want nil", err)
+	}
+
+	// AutoMigrate 端到端:全量模型(含 default:gen_random_uuid() / text[] 的模型)
+	// 在 sqlite 下必须建表成功
+	if err := d.AutoMigrate(); err != nil {
+		t.Fatalf("AutoMigrate() on sqlite error = %v, want nil (PG-only schema fragments must be sanitized)", err)
+	}
+	for _, table := range []string{"sys_user", "ops_asset", "sys_api_key_usage_logs", "sys_reconciliation_exception"} {
+		if !d.DB.Migrator().HasTable(table) {
+			t.Errorf("HasTable(%q) = false after AutoMigrate on sqlite, want true", table)
+		}
 	}
 }
 
