@@ -39,6 +39,7 @@ jobs:
     outputs:
       version: ${{ steps.ver.outputs.version }}
       release_tag: ${{ steps.rel.outputs.release_tag }}
+      asset_url: ${{ steps.rel.outputs.asset_url }}
       archive_sha256: ${{ steps.pkg.outputs.sha256 }}
     steps:
       - uses: actions/checkout@v4
@@ -138,6 +139,11 @@ jobs:
             --notes "auto deploy artifact (sha: ${GITHUB_SHA::7})" \
             --prerelease
           echo "release_tag=$TAG" >> "$GITHUB_OUTPUT"
+          # 在 runner 侧解析 asset API URL,服务器侧 0 次 API 调用直接拉
+          # (避开 PAT rate limit — 服务器侧 lookup 计用户配额)
+          ASSET_URL=$(gh api "repos/${{ github.repository }}/releases/tags/$TAG" \
+            --jq '.assets[0].url')
+          echo "asset_url=$ASSET_URL" >> "$GITHUB_OUTPUT"
         id: rel
 
   deploy:
@@ -178,7 +184,7 @@ jobs:
               -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
             ubuntu@"${{ secrets.SSH_HOST }}" \
             'bash -s' -- "${{ needs.build.outputs.version }}" \
-                         "${{ needs.build.outputs.release_tag }}" \
+                         "${{ needs.build.outputs.asset_url }}" \
                          "${{ secrets.GH_RELEASE_TOKEN }}" \
                          "${{ needs.build.outputs.archive_sha256 }}" \
             < scripts/deploy/fetch-release-and-activate.sh

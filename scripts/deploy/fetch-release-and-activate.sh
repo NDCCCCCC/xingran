@@ -22,19 +22,18 @@ APP=/opt/xingran
 UPLOAD=$APP/upload
 NEW=$APP/xingran-backend.new
 UNIT_NEW=$APP/deploy/xingran.service.new
-REPO="NDCCCCCC/xingran"
 PROXY="https://gh-proxy.com"
 
 VERSION="${1:-}"
-RELEASE_TAG="${2:-}"
+ASSET_API_URL="${2:-}"   # runner 侧已解析,服务器 0 次 API 调用(避开 PAT rate limit)
 GH_TOKEN="${3:-}"
 EXPECTED_SHA="${4:-}"
 
 fail() { echo "!! $*" >&2; exit 1; }
 
-[ -n "$VERSION" ]     || fail "usage: $0 <version> <release_tag> <gh_token> <sha256>"
-[ -n "$RELEASE_TAG" ] || fail "missing release tag"
-[ -n "$GH_TOKEN" ]    || fail "missing gh token"
+[ -n "$VERSION" ]      || fail "usage: $0 <version> <asset_api_url> <gh_token> <sha256>"
+[ -n "$ASSET_API_URL" ] || fail "missing asset api url"
+[ -n "$GH_TOKEN" ]     || fail "missing gh token"
 [ -n "$EXPECTED_SHA" ] || fail "missing sha256"
 
 # 1. 磁盘预检（tar.gz ~22MB + 解压后 63MB + 备份 63MB）
@@ -45,20 +44,7 @@ sudo install -d -m 0755 "$UPLOAD"
 TARBALL="$UPLOAD/xingran-backend.tar.gz"
 rm -f "$TARBALL"
 
-# 2. 解析 release asset 的 API URL
-echo ">> resolving asset url for release $RELEASE_TAG"
-RELEASE_JSON=$(curl -fsSL --max-time 30 \
-  -H "Authorization: Bearer $GH_TOKEN" \
-  -H "Accept: application/vnd.github+json" \
-  "$PROXY/https://api.github.com/repos/$REPO/releases/tags/$RELEASE_TAG") \
-  || fail "release lookup failed"
-
-ASSET_API_URL=$(echo "$RELEASE_JSON" \
-  | grep -o '"url": *"[^"]*releases/assets/[^"]*"' \
-  | head -1 | sed 's/.*"\(https[^"]*\)".*/\1/')
-[ -n "$ASSET_API_URL" ] || fail "asset api url not found in release $RELEASE_TAG"
-
-# 3. 下载 asset（Accept: application/octet-stream 让 API 直接返回二进制）
+# 2. 直接下载 asset（Accept: application/octet-stream 让 API 直接返回二进制）
 echo ">> downloading asset via gh-proxy: $ASSET_API_URL"
 curl -fsSL --max-time 300 \
   -H "Authorization: Bearer $GH_TOKEN" \
