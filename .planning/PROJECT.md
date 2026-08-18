@@ -1,10 +1,37 @@
 ---
-last_updated: 2026-07-10
-update_trigger: v1.20 milestone SHIPPED + ARCHIVED (Phase 56 / 5 plans / 5 waves / 1 day; 12 site-visit UAT deferred)
-previous_update: 2026-07-09 v1.20 milestone INITIATED
+last_updated: 2026-08-18
+update_trigger: v1.22 milestone INITIATED (前端品牌化改造 · design-system 层)
+previous_update: 2026-07-10 v1.20 milestone SHIPPED + ARCHIVED
 ---
 
-## Current Milestone: v1.21 API Key 认证链修复 (API Key Auth Chain Repair)
+## Current Milestone: v1.22 前端品牌化改造 (Frontend Brand Design-System)
+
+**Goal:** 把 `brand-spec.md` 的像素实测品牌令牌（深绿 `#156031` × 铜金 `#C09058` × 奶油 `#F0ECE3`）固化进 `xingran-react-frontend/src/design-system/`，让后台内部组件与登录页品牌一致，53 屏业务页面自动继承样式。
+
+**Target features:**
+- 品牌令牌层：`tokens/colors.ts` 落地 XingRan 品牌色板（绿梯度 6 阶 / 铜金梯度 4 阶 / 奶油中性 6 阶），含 OKLch + WCAG 对比度注释
+- 全局替换：废弃 6 套主题（minimal / glassmorphism / neumorphism / flat2.0 / luxury-quiet / ink-amber）与 ThemeSwitcher / ColorSwitcher，单一品牌视觉
+- Antd 6 主题桥：`AntdThemeBridge.tsx` 的 token/component 覆盖全量接品牌令牌
+- 清除品牌冲突色：`#4F46E5` indigo 主按钮 → `--primary` 绿底白字；`#F1F5F9` 冷蓝灰表头 → `#E9EFEB` 绿灰淡彩；`#FEF3C7` 由按钮前景改回淡黄标签底
+- 侧边栏深绿化：现浅色 → `#14532D` 底 + `#E0E0B0` active 强调
+- 通用组件样式统一：表格（表头 / 斑马纹 / 边框）、表单、卡片、按钮体系（按钮纪律：铜金不做实心主按钮，`#C09058` 上白字仅 2.85:1 不达标）
+- 对比度门禁：关键前景/背景对满足 WCAG AA
+
+**素材来源:** `655aa291-9bfe-4e94-ad5d-b3c8b2d24984/` — `brand-spec.md`（像素实测令牌 + 对比度验证）、`admin-design-plan.md`（现状侦察 + 品牌化缺口定位）、53 张高保真 HTML 原型屏、`PROTOTYPE-VS-ACTUAL.md` 差异清单、`refs/` 真实系统截图。
+
+**范围边界（用户决策 v1.22 init）:** **仅 design-system 层**。业务页面自动继承样式，不逐屏改造 53 屏；`PROTOTYPE-VS-ACTUAL.md` 里的字段 / 表头 / 路由差异修正转 Future。
+
+**锁定决策 (v1.22 init):**
+- **D-01 主题策略**: 全局替换，不保留多主题 —— 品牌令牌直接写入 `tokens/` + `index.css` + `AntdThemeBridge`，移除主题切换能力（用户明确选择，不可逆）
+- **D-02 品牌基准**: `brand-spec.md` 为唯一色值来源，标注「实测」的直接采用，「推导」的可微调但需重跑对比度验证
+- **D-03 按钮纪律**: 主按钮一律 `--primary` 绿底白字（7.64:1）；铜金仅作点缀 / 描边 / 图标 / 图表系列，实心场景必须 `#B88850` + ≥16px 半粗体白字
+- **D-04 Phase 编号**: 从 v1.21 末尾 Phase 62 续编（63+）
+
+**Phase 编号:** 从 v1.21 末尾 Phase 62 续编（63+）。
+
+---
+
+## v1.21 API Key 认证链修复 (API Key Auth Chain Repair) — ✅ COMPLETE 2026-08-17
 
 **Goal:** 修复 API Key 认证系统的 P0/P1/P2 缺陷,回归 v1.6「API 密钥管理系统」(Phase 16)的可用性与可观测性,并让 MultiAuth 认证链代码就绪可启用。
 
