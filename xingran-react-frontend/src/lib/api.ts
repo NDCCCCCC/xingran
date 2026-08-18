@@ -27,6 +27,15 @@ function generateRequestId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substring(2);
 }
 
+declare module "axios" {
+  export interface AxiosRequestConfig {
+    /** 400"解密失败"单次重放标记（防止重试循环） */
+    __sm2DecryptRetried?: boolean;
+    /** 加密前的原始明文请求体（重放时恢复，由请求拦截器用新公钥重新加密） */
+    __originalPlainData?: unknown;
+  }
+}
+
 // 工具函数：生成随机 nonce（防重放）
 function generateNonce(): string {
   const array = new Uint8Array(16);
@@ -256,6 +265,11 @@ api.interceptors.request.use(
         const requestId = config.headers.get("X-Request-ID") as string;
         encryptionKeyStore.set(requestId, { sm4KeyHex, ivHex });
 
+        // 保留明文请求体：后端重启会更换 SM2 公钥（jwt.use_sm2=true 且配置密钥为空，
+        // 每次启动动态生成密钥对），本模块缓存的旧公钥加密的请求会被后端 400"解密失败"
+        // 拒绝；错误拦截器清公钥缓存后重放本请求时需恢复明文以便重新加密
+        config.__originalPlainData = config.data;
+
         config.data = {
           encrypted: true,
           data: hexToBase64(encryptedDataHex),
@@ -462,6 +476,35 @@ api.interceptors.response.use(
       } finally {
         isRefreshing = false;
       }
+    }
+
+    // 400"解密失败"自动恢复（单次重放）
+    // 根因：后端 SM2 密钥对为启动期动态生成（configs jwt.use_sm2=true 且密钥为空），
+    // 后端重启即更换公钥；SPA 长驻页签仍持有旧公钥内存缓存（sm2.ts cachedPublicKeyHex），
+    // 其首个加密请求会被 request_decryption 中间件以 400"解密失败"拒绝。
+    // 此处清公钥缓存并用新公钥重放一次，对齐上方 401 token 刷新重试模式。
+    if (
+      response?.status === 400 &&
+      config &&
+      !config.__sm2DecryptRetried &&
+      config.headers?.get?.("X-Request-Encrypted") === "true" &&
+      typeof response.data?.message === "string" &&
+      response.data.message.includes("解密")
+    ) {
+      config.__sm2DecryptRetried = true;
+      clearPublicKeyCache();
+
+      // 清理旧请求 ID 对应的密钥存储（重放会生成新 X-Request-ID，旧条目无人消费）
+      const staleRequestId = config.headers?.get?.("X-Request-ID");
+      if (staleRequestId) {
+        encryptionKeyStore.delete(staleRequestId);
+      }
+
+      // 恢复明文请求体，请求拦截器将用新公钥重新加密
+      if (config.__originalPlainData !== undefined) {
+        config.data = config.__originalPlainData;
+      }
+      return api(config);
     }
 
     // 其他错误处理
