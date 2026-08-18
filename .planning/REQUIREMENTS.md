@@ -40,9 +40,9 @@ update_trigger: v1.22 ROADMAP drafted (Phases 64-67) — traceability section fi
 
 ### THEME — 主题系统收敛
 
-- [ ] **THEME-01**: 彻底移除多主题能力 —— 删除 `design-system/themes/` 下 6 套主题目录、`ThemeSwitcher.tsx` / `ColorSwitcher.tsx` 组件、`themeStore` 的主题类型字段与 settings 页主题入口；清理全部 13 个消费方（`ConfigProvider` / `header` / `InnovativeLayout` / `TabBar` / `sidebar` / `ThemeProvider` / `main.tsx` / `settings/index.tsx` / `settingsStore` 等）的残留引用，无死代码、无 TS 错误
-- [ ] **THEME-02**: 保留 light / dark 双模式切换 —— 品牌色在暗色模式下有对应的深底推导（深绿底加深、铜金提亮受控、奶油转深灰纸感），暗色模式下关键前景/背景对同样满足 WCAG AA
-- [ ] **THEME-03**: `layoutStore` 的布局切换（ClassicLayout / HybridLayout / InnovativeLayout）与密度切换（classic / comfortable）完整保留且不回归 —— 本里程碑只动颜色，不动布局与间距结构
+- [x] **THEME-01**: 彻底移除多主题能力 —— 删除 `design-system/themes/` 下 6 套主题目录、`ThemeSwitcher.tsx` / `ColorSwitcher.tsx` 组件、`themeStore` 的主题类型字段与 settings 页主题入口；清理全部 13 个消费方（`ConfigProvider` / `header` / `InnovativeLayout` / `TabBar` / `sidebar` / `ThemeProvider` / `main.tsx` / `settings/index.tsx` / `settingsStore` 等）的残留引用，无死代码、无 TS 错误
+- [x] **THEME-02**: 保留 light / dark 双模式切换 —— 品牌色在暗色模式下有对应的深底推导（深绿底加深、铜金提亮受控、奶油转深灰纸感），暗色模式下关键前景/背景对同样满足 WCAG AA
+- [x] **THEME-03**: `layoutStore` 的布局切换（ClassicLayout / HybridLayout / InnovativeLayout）与密度切换（classic / comfortable）完整保留且不回归 —— 本里程碑只动颜色，不动布局与间距结构
 
 ### COMP — 通用组件样式
 
@@ -96,9 +96,9 @@ update_trigger: v1.22 ROADMAP drafted (Phases 64-67) — traceability section fi
 | TOKEN-03 | Phase 64 | Pending | TOKEN (AntdThemeBridge 全量映射) |
 | TOKEN-04 | Phase 64 | Pending | TOKEN (shadows/spacing/typography 调性对齐) |
 | QA-01 | Phase 64 | Pending | QA (对比度自动验证) |
-| THEME-01 | Phase 65 | Pending | THEME (6 套主题 + 切换器移除) |
-| THEME-02 | Phase 65 | Pending | THEME (light/dark 双模式保留) |
-| THEME-03 | Phase 65 | Pending | THEME (layout/density 不回归) |
+| THEME-01 | Phase 65 | Delivered (65-01, T9 视觉确认 pending) | THEME (6 套主题 + 切换器移除) |
+| THEME-02 | Phase 65 | Delivered (65-01, T9 视觉确认 pending) | THEME (light/dark 双模式保留) |
+| THEME-03 | Phase 65 | Delivered (65-01, T9 视觉确认 pending) | THEME (layout/density 不回归) |
 | COMP-01 | Phase 66 | Pending | COMP (侧边栏深绿化) |
 | COMP-02 | Phase 66 | Pending | COMP (表格/卡片 双层纸感) |
 | COMP-03 | Phase 66 | Pending | COMP (按钮体系 D-03 纪律) |

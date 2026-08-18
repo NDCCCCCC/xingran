@@ -102,7 +102,7 @@ previous_update: 2026-08-13 after v1.21 plans drafted (Phases 57-61) + Phase 62 
 **Plans:** 1 plan
 
 Plans:
-- [ ] 65-01-PLAN.md — 主题系统收敛:删除 6 套主题与切换器(T1-T6 机械清除,每任务独立 commit 常绿),THEME-02 暗色推导断言(T7),THEME-03 布局/密度边界验证 + 全量 QA 门 + bundle 对比(T8),视觉冒烟 checkpoint(T9)
+- [x] 65-01-PLAN.md — 主题系统收敛:删除 6 套主题与切换器(T1-T6 机械清除,每任务独立 commit 常绿),THEME-02 暗色推导断言(T7),THEME-03 布局/密度边界验证 + 全量 QA 门 + bundle 对比(T8),视觉冒烟 checkpoint(T9) — **T1-T8 COMPLETE (8 commits 57bdd51..b605d88, -4,357 行, SC#1-4 全过), T9 人工冒烟 PENDING USER CONFIRMATION**, 见 [65-01-SUMMARY.md](../phases/65-theme-system-consolidation/65-01-SUMMARY.md)
 
 **UI hint**: yes
 
