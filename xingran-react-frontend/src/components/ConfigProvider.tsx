@@ -50,22 +50,16 @@ export const ConfigProvider: FC<ConfigProviderProps> = ({ children }) => {
   }, [preferences, initialized, syncTheme, syncLayout]);
 
   // 监听保存事件
+  // （主题预览保存通道已随 themeStore preview 能力在 Phase 65 移除，仅保留布局）
   useEffect(() => {
-    const handleSaveTheme = (event: CustomEvent) => {
-      const { updateTheme } = useSettingsStore.getState();
-      updateTheme(event.detail);
-    };
-
     const handleSaveLayout = (event: CustomEvent) => {
       const { updateLayout } = useSettingsStore.getState();
       updateLayout(event.detail);
     };
 
-    window.addEventListener("save-theme-settings", handleSaveTheme as EventListener);
     window.addEventListener("save-layout-settings", handleSaveLayout as EventListener);
 
     return () => {
-      window.removeEventListener("save-theme-settings", handleSaveTheme as EventListener);
       window.removeEventListener("save-layout-settings", handleSaveLayout as EventListener);
     };
   }, []);
