@@ -34,8 +34,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: write   # create deploy release (temporary artifact channel)
     outputs:
       version: ${{ steps.ver.outputs.version }}
+      release_tag: ${{ steps.rel.outputs.release_tag }}
+      archive_sha256: ${{ steps.pkg.outputs.sha256 }}
     steps:
       - uses: actions/checkout@v4
 
@@ -93,10 +97,14 @@ jobs:
           echo "embed check OK ($size bytes)"
 
       - name: Package release archive
+        id: pkg
         run: |
           cp configs/config.prod.example.yaml deploy/xingran.service out/
-          tar -czf "out/xingran-backend-${{ steps.ver.outputs.version }}-linux-amd64.tar.gz" \
+          ARCHIVE="out/xingran-backend-${{ steps.ver.outputs.version }}-linux-amd64.tar.gz"
+          tar -czf "$ARCHIVE" \
             -C out xingran-backend config.prod.example.yaml xingran.service
+          echo "archive=$ARCHIVE" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(sha256sum "$ARCHIVE" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
@@ -113,33 +121,37 @@ jobs:
           path: out/*.tar.gz
           retention-days: 3
 
+      - name: Create deploy release
+        # Runner -> GitHub Release 是 GitHub 内网上传,速度不受限。
+        # 服务器侧经 gh-proxy.com 镜像拉取(实测 9.7MB/s),绕开
+        # runner -> 腾讯云 SSH 链路 ~10KB/s 的节流(deploy runs
+        # 32107499009/32113627075/32115683166/32118118412/32119924185
+        # 全部因 75MB 长流传输 15min 超时失败)。
+        # tag 用 deploy-<run_id> 保证并发/重跑唯一;临时 release 可定期清理。
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="deploy-${GITHUB_RUN_ID}"
+          gh release create "$TAG" "${{ steps.pkg.outputs.archive }}" \
+            --repo "${{ github.repository }}" \
+            --title "$TAG" \
+            --notes "auto deploy artifact (sha: ${GITHUB_SHA::7})" \
+            --prerelease
+          echo "release_tag=$TAG" >> "$GITHUB_OUTPUT"
+        id: rel
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: production   # deployment history; add reviewers later if wanted
     steps:
-      - uses: actions/checkout@v4   # fetches deploy-remote.sh + xingran.service
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: xingran-backend-linux-amd64
-          path: out
+      - uses: actions/checkout@v4   # fetches deploy scripts
 
       - name: Setup SSH
         # Pin host key from SSH_KNOWN_HOSTS secret instead of accept-new
-        # blind trust on first connect.
-        #
-        # Common failure mode (v1.22 first deploy run 32107499009): sshd offers
-        # the host's accepted public keys one-by-one; if ~/.ssh/id_ed25519 is
-        # rejected (wrong key / blank-trailing-newline in Secret), ssh silently
-        # moves on and the connection closes with no diagnostic. Two guards:
-        #   1. fingerprint self-check after writing — bail with clear error if
-        #      the on-disk private key does not match the expected SHA256
-        #      (catches trailing newline / wrong-key Secrets at install time,
-        #      before any ssh invocation hides the issue).
-        #   2. explicit -i + IdentitiesOnly=yes on every ssh/scp below, so the
-        #      runner's ambient keys can't interfere with auth order.
+        # blind trust on first connect. Fingerprint self-check catches
+        # wrong/trailing-newline Secrets before any ssh invocation.
         run: |
           install -m 700 -d ~/.ssh
           printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
@@ -149,42 +161,27 @@ jobs:
           echo "deploy key fingerprint: ${got_fp}"
           if [[ "${got_fp}" != "SHA256:9RrflpLM3hblmkElV/xRaMGqmGz5oikfVatiOl92PJ8" ]]; then
             echo "::error::deploy private key fingerprint mismatch — refusing to connect"
-            echo "::error::expected SHA256:9RrflpLM3hblmkElV/xRaMGqmGz5oikfVatiOl92PJ8"
             exit 1
           fi
 
-      - name: Upload systemd unit
-        # 1.3KB 秒传,沿用 scp 避免影响 upload-binary.sh 的 ssh 状态机
-        run: |
-          PORT="${{ vars.SSH_PORT || '22' }}"
-          scp -P "$PORT" -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes \
-              deploy/xingran.service \
-              ubuntu@"${{ secrets.SSH_HOST }}":/opt/xingran/deploy/xingran.service.new
-
-      - name: Upload binary via chunked scp
-        # 拆 75MB 为 ~127x500KB 短流(base64 文本每片 ~666KB),通过独立 scp
-        # 每次一开一关传一片。scp 单独短文件传输已验证 1.3KB 秒传,本链路
-        # 上 stdin 长流(单次 ssh cat >> file)即使拆 chunk 也仍是连续 pipe 长流,
-        # 改用 scp 自闭合短连接彻底规避
-        # (deploy runs 32107499009, 32112268319, 32113627075, 32115683166,
-        # 32118118412 全部因 75MB 长流卡死 15min)。server 端
-        # decode-and-activate.sh 按数字序 base64 -d 拼回 + sha256 校验 + exec
-        # 调 deploy-remote.sh 走原 activate 流程(零改动)。
-        env:
-          SSH_PORT: ${{ vars.SSH_PORT || '22' }}
-        run: bash scripts/deploy/upload-binary.sh "${{ secrets.SSH_HOST }}" ubuntu "${{ secrets.SSH_PRIVATE_KEY }}" "${{ secrets.SSH_KNOWN_HOSTS }}" "${{ needs.build.outputs.version }}"
-
-      - name: Activate (decode → backup → replace → restart → health → rollback)
-        # decode-and-activate.sh server 端: base64 -d 拼回 + sha256 校验 + chmod
-        # 然后 exec 调原本就位的 deploy-remote.sh (backup/replace/restart/health/rollback)。
-        # 替换 trigger 脚本而非改 deploy-remote.sh,保留 84 行原子替换 + 回滚逻辑零改动。
+      - name: Fetch release on server and activate
+        # 网络矩阵实测(2026-08-18):
+        #   runner -> server SSH 吞吐 ~10KB/s (75MB 传不完,5 次 15min 超时)
+        #   server -> GitHub 直连 0-1.6KB/s;server -> gh-proxy.com 9.7MB/s
+        # 故:build job 已把 tar.gz 传到临时 GitHub Release(GitHub 内网,快);
+        # 本步仅 ssh 触发服务器脚本,服务器自己经 gh-proxy 拉取 ~22MB tar.gz
+        # (约 3 秒),解压就位后 exec deploy-remote.sh 走原 activate 流程。
+        # GH_RELEASE_TOKEN 仅出现在 ssh 命令行,不落服务器磁盘。
         run: |
           PORT="${{ vars.SSH_PORT || '22' }}"
           ssh -p "$PORT" -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes \
               -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
             ubuntu@"${{ secrets.SSH_HOST }}" \
             'bash -s' -- "${{ needs.build.outputs.version }}" \
-            < scripts/deploy/decode-and-activate.sh
+                         "${{ needs.build.outputs.release_tag }}" \
+                         "${{ secrets.GH_RELEASE_TOKEN }}" \
+                         "${{ needs.build.outputs.archive_sha256 }}" \
+            < scripts/deploy/fetch-release-and-activate.sh
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
