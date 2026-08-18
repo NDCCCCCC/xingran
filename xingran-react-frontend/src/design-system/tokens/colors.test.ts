@@ -127,6 +127,11 @@ describe("xingranBrand WCAG contrast ratios", () => {
     expect(ratio).toBeGreaterThanOrEqual(15);
   });
 
+  it("xingranBrand.cream.fg (#101010) on xingranBrand.cream.headerBg (#E9EFEB) meets WCAG AA (≥ 12:1) — 表头文字 (COMP-02)", () => {
+    const ratio = contrastRatio(xingranBrand.cream.fg, xingranBrand.cream.headerBg);
+    expect(ratio).toBeGreaterThanOrEqual(12);
+  });
+
   // ---- 功能色 ----
 
   it("#FFFFFF on xingranBrand.functional.danger (#BA3630) meets WCAG AA (≥ 5.6:1) — 危险按钮", () => {
@@ -235,6 +240,39 @@ function loadIndexCss(): string {
   return readFileSync(resolve(here, "../../index.css"), "utf-8");
 }
 
+/**
+ * 读取 src/design-system/components/AntdThemeBridge.tsx 源文本
+ * （Phase 66 · Phase-64 UAT 四 Gap 的 theme 层令牌防回归）。
+ */
+function loadAntdThemeBridge(): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+
+  return readFileSync(resolve(here, "../components/AntdThemeBridge.tsx"), "utf-8");
+}
+
+/**
+ * 从 TS 对象字面量中切出指定 key 的花括号块（如 "Button: {"）。
+ * 与 extractCssBlock 同语义：花括号计数匹配第一个平衡块。
+ */
+function extractTsBlock(source: string, keyWithBrace: string): string {
+  const start = source.indexOf(keyWithBrace);
+  if (start === -1) {
+    throw new Error(`Component block not found: ${keyWithBrace}`);
+  }
+  const open = source.indexOf("{", start);
+  let depth = 0;
+  for (let i = open; i < source.length; i++) {
+    if (source[i] === "{") depth++;
+    else if (source[i] === "}") {
+      depth--;
+      if (depth === 0) {
+        return source.slice(open + 1, i);
+      }
+    }
+  }
+  throw new Error(`Unbalanced braces for block: ${keyWithBrace}`);
+}
+
 describe("dark-mode brand derivation (THEME-02)", () => {
   const css = loadIndexCss();
   const rootBlock = extractCssBlock(css, ":root {").toLowerCase();
@@ -310,5 +348,47 @@ describe("dark-mode brand derivation (THEME-02)", () => {
   it("#FFFFFF on #156031 primary button unchanged in dark mode meets WCAG AA (≥ 7.6:1)", () => {
     const ratio = contrastRatio("#FFFFFF", "#156031");
     expect(ratio).toBeGreaterThanOrEqual(7.6);
+  });
+});
+
+describe("phase-64 UAT gap tokens in AntdThemeBridge (COMP-02/03/04)", () => {
+  const source = loadAntdThemeBridge();
+
+  it("G4/COMP-03: Button locks primary text to xingranBrand.onDark.white (D-03 白字 7.64:1)", () => {
+    const block = extractTsBlock(source, "Button: {");
+    expect(block).toContain("primaryColor: xingranBrand.onDark.white");
+  });
+
+  it("G3/COMP-04: Tag default uses paleYellow bg + copper[500] text (SM2/SM3/SM4 品牌锚点配方)", () => {
+    const block = extractTsBlock(source, "Tag: {");
+    expect(block).toContain("defaultBg: xingranBrand.onDark.paleYellow");
+    expect(block).toContain("defaultColor: xingranBrand.copper[500]");
+  });
+
+  it("G2/COMP-04: Input focus ring is brand green 2px activeShadow + greenPrimary border", () => {
+    const block = extractTsBlock(source, "Input: {");
+    expect(block).toContain('activeShadow: "0 0 0 2px rgba(21, 96, 49, 0.15)"');
+    expect(block).toContain("activeBorderColor: xingranBrand.greenPrimary");
+    expect(block).toContain("hoverBorderColor: xingranBrand.greenPrimary");
+  });
+
+  it("G1/COMP-02: Table sort/filter/selected states use cream zebra/header tokens", () => {
+    const block = extractTsBlock(source, "Table: {");
+    expect(block).toContain("headerBg: xingranBrand.cream.headerBg");
+    expect(block).toContain("headerColor: xingranBrand.cream.fg");
+    expect(block).toContain("borderColor: xingranBrand.cream.border");
+    expect(block).toContain("headerSortActiveBg: xingranBrand.cream.zebraBg");
+    expect(block).toContain("headerFilterHoverBg: xingranBrand.cream.zebraBg");
+    expect(block).toContain("fixedHeaderSortActiveBg: xingranBrand.cream.zebraBg");
+    expect(block).toContain("rowSelectedBg: xingranBrand.cream.headerBg");
+    expect(block).toContain("rowSelectedHoverBg: xingranBrand.cream.zebraBg");
+  });
+
+  it("QA-02 hygiene: Menu.dark* tokens read from xingranBrand, not string literals", () => {
+    const block = extractTsBlock(source, "Menu: {");
+    expect(block).toContain("darkItemBg: xingranBrand.green[900]");
+    expect(block).toContain("darkItemSelectedBg: xingranBrand.greenPrimary");
+    expect(block).toContain("darkItemHoverBg: xingranBrand.greenPrimaryLight");
+    expect(block).not.toMatch(/#[0-9a-fA-F]{6}/);
   });
 });
