@@ -191,10 +191,45 @@ func TestNewDatabaseSQLite(t *testing.T) {
 		// 报 no such table:
 		"sys_workstation", "sys_dept_location_alias", "sys_dict_type", "sys_dict_data",
 		"ops_workstation_device", "sys_files",
+		// 260818 kb-tag-table-stats-400:归档 SQL(legacy 012)建表类,且 GORM AutoMigrate
+		// 的 many2many 级联不会建 sys_knowledge_tag(belongs-to 级联建 category 是巧合
+		// 而非保障),不注册则 /knowledge/tags/all 报 no such table:
+		"sys_knowledge_category", "sys_knowledge_tag",
+		// 260818 rpa-tasks-table-missing:与 sys_rpa_workers/executions 同一归档
+		// SQL(102_add_rpa_tables.sql)建表类,Worker/Execution 注册时漏了 Task,
+		// 不注册则 /rpa/tasks/list 报 no such table:
+		"sys_rpa_tasks",
 	} {
 		if !d.DB.Migrator().HasTable(table) {
 			t.Errorf("HasTable(%q) = false after AutoMigrate on sqlite, want true", table)
 		}
+	}
+
+	// 260818 sqlite-recon-normalized-view:sqlite 分支补建 reconciliation 三视图
+	// (PG 侧由 migration_175/176 创建,sqlite 不执行 PG-only 迁移;不补建则
+	// probeMaterializedView 诚实探测后 exception/list 走 fallback 降级 + 每请求 WARN)。
+	// HasTable 对 sqlite 只查 type='table',视图须直查 sqlite_master。
+	for _, view := range []string{
+		"reconciliation_user_lookup",
+		"reconciliation_physical_chain",
+		"reconciliation_normalized",
+	} {
+		var cnt int64
+		if err := d.DB.Raw(
+			"SELECT COUNT(*) FROM sqlite_master WHERE type = 'view' AND name = ?", view,
+		).Scan(&cnt).Error; err != nil {
+			t.Fatalf("query sqlite_master for view %q: %v", view, err)
+		}
+		if cnt != 1 {
+			t.Errorf("sqlite_master view %q count = %d after AutoMigrate on sqlite, want 1", view, cnt)
+		}
+	}
+
+	// 视图可查询性冒烟:sqlite 在 CREATE VIEW 时已解析引用,但再显式 SELECT 一次
+	// 证明 MV 路径查询(含窗口函数/CASE/关联子查询)在真实 AutoMigrated schema 上可执行。
+	var normalizedCount int64
+	if err := d.DB.Raw("SELECT COUNT(*) FROM reconciliation_normalized").Scan(&normalizedCount).Error; err != nil {
+		t.Errorf("SELECT COUNT(*) FROM reconciliation_normalized error = %v, want nil", err)
 	}
 }
 

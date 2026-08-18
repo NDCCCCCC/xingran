@@ -538,7 +538,9 @@ func MigrateModelList() []interface{} {
 		&models.PeriodicWorkOrderTemplate{},
 		&models.PeriodicWorkOrderLog{},
 		// 知识库相关模型（排除有约束问题的表）
-		// KnowledgeCategory, KnowledgeTag 已通过 SQL 迁移创建，不需要 AutoMigrate
+		// KnowledgeCategory, KnowledgeTag 已通过 SQL 迁移创建，PG 不需要 AutoMigrate;
+		// sqlite 分支在 AutoMigrate() 内显式补注册(归档 SQL 不执行,且 many2many
+		// 级联不会建 sys_knowledge_tag,详见下方 sqlite 分支注释)
 		&models.KnowledgeArticle{},
 		&models.KnowledgeArticleTag{},
 		// AD域管理相关模型
@@ -657,6 +659,17 @@ func (d *Database) AutoMigrate() error {
 			&rpamodels.Execution{},
 			&models.MACOUIVendor{},
 		)
+		// rpa-tasks-table-missing (2026-08-18): sys_rpa_tasks 与上块同族缺漏
+		// (同一归档 SQL 102_add_rpa_tables.sql 建表,PG 存量库已存在;上方注册
+		// Worker/Execution 时漏了 Task),sqlite 全新文件库不建表则
+		// /rpa/tasks/list 报 "no such table: sys_rpa_tasks"。仅 sqlite 分支注册,
+		// PG 不注册的原因同上(零漂移)。单一事实源同 rpamodels.Worker/Execution。
+		// rpamodels.Task tag 已核查:无函数式默认值/数组类型等 PG-only DDL 片段
+		// (type:jsonb 为合法 type-name,与 SysDataReconciliation 先例同级;
+		// default:300/5/0 为常量默认值),无需经过 sanitizeSQLiteModelDefaults 净化。
+		// sys_rpa_schedules/variables/templates 未注册:services/api 无任何运行期
+		// 查询引用,不在本症链路,避免无谓漂移。
+		migrateList = append(migrateList, &rpamodels.Task{})
 		// sys_oper_log 历史由归档 SQL 创建,PG 存量库已存在;仅 sqlite 分支注册进
 		// AutoMigrate(全新文件库必须建表,否则 operlog.Record 写入报 "no such table")。
 		// PG 不注册的原因同上(零漂移);PG 新部署由 scripts/dbprovision 建表。
@@ -705,6 +718,20 @@ func (d *Database) AutoMigrate() error {
 			&models.DictData{},
 			&models.WorkstationDevice{},
 			&sysmodels.SysFile{},
+		)
+		// kb-tag-table-stats-400 (2026-08-18): 知识库 sys_knowledge_tag 缺表同类缺漏。
+		// sys_knowledge_category / sys_knowledge_tag 历史由归档 SQL(legacy 012)创建,
+		// PG 存量库已存在;sqlite 分支此前依赖 GORM AutoMigrate 的关系级联"碰巧"建出
+		// sys_knowledge_category(Article.Category belongs-to 依赖在 ReorderModels
+		// valuesMap 存值前 append,级联生效),但 many2many 远端(Article.Tags→
+		// KnowledgeTag)的 append 位于 defer 闭包、map 存值后执行,slice 扩容后旧副本
+		// 丢失 → sys_knowledge_tag 永不建表,/knowledge/tags/all 报 "no such table"。
+		// 显式注册两模型,不再依赖 cascade 的未定义行为;PG 不注册的原因同上(零漂移)。
+		// 两模型 tag 已核查:无函数式默认值/数组类型等 PG-only DDL 片段(KnowledgeTag
+		// 的 ID 由 BeforeCreate 钩子填充),无需经过 sanitizeSQLiteModelDefaults 净化。
+		migrateList = append(migrateList,
+			&models.KnowledgeCategory{},
+			&models.KnowledgeTag{},
 		)
 	}
 	err := d.DB.Migrator().AutoMigrate(migrateList...)
@@ -775,6 +802,13 @@ func (d *Database) AutoMigrate() error {
 		// sqlite 分支: 规范菜单目录种子 (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
 		if err := migrations.Migrate207SeedCanonicalMenuCatalog(d.DB); err != nil {
 			applogger.Errorf("规范菜单目录种子失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
+		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only
+		// 迁移,此前 probeMaterializedView 诚实探测后走 fallback 降级 + 每请求 WARN)。
+		// 普通 VIEW 实时计算,dev 语义等价或更优;失败非阻断(仍有 fallback 兜底)。
+		if err := d.ensureSQLiteReconciliationViews(); err != nil {
+			applogger.Errorf("sqlite reconciliation 视图补建失败 (非阻断,exception/list 走 fallback 降级): %v", err)
 		}
 	}
 
