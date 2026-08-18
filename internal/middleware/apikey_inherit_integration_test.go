@@ -54,6 +54,7 @@ func setupInheritPermsTestDB(t *testing.T) *gorm.DB {
 		&models.Menu{},
 		&models.UserRole{},
 	)
+	require.NoError(t, err) // SA4006: AutoMigrate 失败必须立刻 fail,不能让测试后续踩空
 
 	return db
 }

@@ -57,8 +57,10 @@ func batchRequiresRefresh(result *BatchResult) bool {
 // 嵌套（与 Cisco/H3C/华为一致）— 不再需要 cleanup。本轮直接删 sendInterfaceExitCleanup
 // 全部代码，每 port 一次独立 ExecuteCustom + SendConfigs([interface X, action])，
 // scrapli 自动处理 prompt 切换 + 跨 ExecuteCustom 复用 SSH 连接池的 view 状态。
-func (s *portWriteServiceImpl) BatchWritePorts(ctx context.Context, req BatchWriteRequest, operator string) (*BatchResult, error) {
-	// D-12 detached 30min context (Pitfall #5 mitigation)
+func (s *portWriteServiceImpl) BatchWritePorts(_ context.Context, req BatchWriteRequest, operator string) (*BatchResult, error) {
+	// D-12 detached 30min context (Pitfall #5 mitigation): 入参 ctx 被替换为
+	// 后台 detached 上下文(避免上游 ctx 取消导致批量中断);命名上下文让 SA4009
+	// 闭嘴的同时保留意图说明 — 不用 `_` 单纯遮蔽,因为此处业务意图明确。
 	ctx, cancel := context.WithTimeout(context.Background(), batchDetachedTimeout)
 	defer cancel()
 

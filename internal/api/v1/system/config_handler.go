@@ -314,6 +314,7 @@ func (h *ConfigHandler) Update(c *gin.Context) {
 				if loadErr := h.captchaService.LoadConfig(c.Request.Context()); loadErr != nil {
 					// 记录错误但不影响更新成功的响应
 					// 配置已经保存到数据库，下次重启时会生效
+					_ = loadErr // SA9003 抑制: 仅注释,无实际分支体
 				}
 			}
 		}

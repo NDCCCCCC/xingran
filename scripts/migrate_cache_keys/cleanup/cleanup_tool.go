@@ -1,13 +1,13 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"strings"
 
 	"github.com/redis/go-redis/v9"
-	"golang.org/x/net/context"
 )
 
 // 缓存键迁移清理工具

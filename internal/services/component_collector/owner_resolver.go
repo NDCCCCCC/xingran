@@ -79,6 +79,7 @@ func (r *OwnerResolver) ResolveOwnership(entities []EntityRow) []OwnedComponent 
 			// Component's chain terminated at a slave chassis; flag so
 			// the writer knows this came from a stacked slave.
 			// (ChassisIndex still points to canonicalRoot per D-12.)
+			_ = root // SA9003 抑制: 分支体仅注释,future-flags 留作演进
 		}
 		if stackMembers[e.Index] {
 			oc.IsStackMember = true

@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -221,7 +222,7 @@ func (a *JWTAuthenticator) ValidateToken(tokenString string) (*jwtClaims, error)
 		return claims, nil
 	}
 
-	return nil, fmt.Errorf(errInvalidToken)
+	return nil, errors.New(errInvalidToken)
 }
 
 // GetCurrentToken 获取当前有效令牌（带读锁保护）
