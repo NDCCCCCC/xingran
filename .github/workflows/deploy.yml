@@ -99,11 +99,14 @@ jobs:
 
       - name: Package release archive
         id: pkg
+        # deploy-remote.sh 一并打包 — fetch 脚本解压后直接 exec 它,
+        # 服务器不依赖任何预置脚本(自包含部署包)
         run: |
           cp configs/config.prod.example.yaml deploy/xingran.service out/
+          cp scripts/deploy/deploy-remote.sh out/
           ARCHIVE="out/xingran-backend-${{ steps.ver.outputs.version }}-linux-amd64.tar.gz"
           tar -czf "$ARCHIVE" \
-            -C out xingran-backend config.prod.example.yaml xingran.service
+            -C out xingran-backend config.prod.example.yaml xingran.service deploy-remote.sh
           echo "archive=$ARCHIVE" >> "$GITHUB_OUTPUT"
           echo "sha256=$(sha256sum "$ARCHIVE" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 

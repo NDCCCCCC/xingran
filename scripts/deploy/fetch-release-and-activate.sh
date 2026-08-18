@@ -61,12 +61,14 @@ echo ">> sha256 verified"
 tar -xzf "$TARBALL" -C "$UPLOAD"
 [ -f "$UPLOAD/xingran-backend" ] || fail "xingran-backend not in tarball"
 [ -f "$UPLOAD/xingran.service" ] || fail "xingran.service not in tarball"
+[ -f "$UPLOAD/deploy-remote.sh" ] || fail "deploy-remote.sh not in tarball"
 
 sudo install -m 0755 "$UPLOAD/xingran-backend" "$NEW"
 install -m 0644 "$UPLOAD/xingran.service" "$UNIT_NEW"
+install -m 0755 "$UPLOAD/deploy-remote.sh" "$APP/deploy/deploy-remote.sh"
 
-rm -f "$TARBALL" "$UPLOAD/xingran-backend" "$UPLOAD/xingran.service"
+rm -f "$TARBALL" "$UPLOAD/xingran-backend" "$UPLOAD/xingran.service" "$UPLOAD/deploy-remote.sh"
 
 echo ">> files in place, activating version $VERSION"
-# 6. exec 原 activate 流程（84 行零改动）
+# 6. exec 原 activate 流程（备份/替换/重启/health/回滚,零改动）
 exec sudo -n bash "$APP/deploy/deploy-remote.sh" "$VERSION"
