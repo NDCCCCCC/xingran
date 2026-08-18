@@ -1,0 +1,77 @@
+# ============================================================================
+# XingRan-Next 部署配置模板 (sqlite + memory cache)
+# ============================================================================
+#
+# 用于：腾讯云轻量云等无外网依赖场景。sqlite DB 落盘在
+# WorkingDirectory/data/xingran.db（systemd unit ReadWritePaths 包含 data）。
+# Cache 走内存（重启后重建），适合单机/小规模部署。
+#
+# **生产部署前必须替换全部密钥为 openssl rand 输出：**
+#   JWT_SECRET=$(openssl rand -hex 32)
+#   SM4_KEY=$(openssl rand -base64 16)
+#   SM2_私钥对（绝对不能复用仓库默认值）
+#
+# 此文件覆盖 configs/config.prod.example.yaml 中与 sqlite/in-memory 不兼容
+# 的字段（database.type / database.path / cache.type）。其余字段（server、
+# jwt、log、security.request_encryption 等）保持与 config.prod.example.yaml 一致。
+
+server:
+  name: "XingRan-Next"
+  host: "0.0.0.0"
+  port: 9000
+  mode: release
+
+# sqlite — 无需外部数据库
+# path 相对 WorkingDirectory(/opt/xingran),systemd unit 配 ReadWritePaths=/opt/xingran/data
+database:
+  type: "sqlite"
+  path: "data/xingran.db"
+  max_open_conns: 50
+  max_idle_conns: 10
+  max_lifetime: 1800
+
+# 内存 cache — 无需 Redis
+cache:
+  type: "memory"
+  pool_size: 50
+  max_size: 10000
+  cleanup_time: 600
+  warm_up_enabled: false
+  l2_writer:
+    worker_count: 5
+    queue_size: 5000
+    enqueue_timeout: 1s
+    write_timeout: 5s
+    fallback_write_timeout: 3s
+  retry_enabled: true
+  retry_max_retries: 3
+  retry_initial_delay: 50
+  retry_max_delay: 2000
+  retry_backoff_factor: 2.0
+  retry_worker_count: 3
+
+jwt:
+  secret_key: ""              # ⚠️ 必须通过 JWT_SECRET 注入
+  access_key_expire: 7200
+  refresh_key_expire: 604800
+  issuer: "XingRan-Next"
+  use_sm2: true
+  sm2_private_key: ""         # ⚠️ 必须通过 XINGRAN_JWT_SM2_PRIVATE_KEY 注入
+  sm2_public_key: ""          # ⚠️ 必须通过 XINGRAN_JWT_SM2_PUBLIC_KEY 注入
+
+log:
+  level: "info"
+  log_dir: "logs"
+  max_size: 100
+  max_backups: 30
+  max_age: 90
+  compress: true
+
+security:
+  sm4_key: ""                 # ⚠️ 必须通过 SM4_KEY 注入
+  replay_window_sec: 60
+  request_encryption:
+    enabled: true
+    exclude_paths:
+      - "/api/v1/system/auth/public-key"
+      - "/api/v1/system/auth/test-sm2"
