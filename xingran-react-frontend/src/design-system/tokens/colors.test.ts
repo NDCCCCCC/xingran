@@ -201,14 +201,6 @@ describe("xingranBrand WCAG contrast ratios", () => {
 });
 
 /**
- * 读取 src/index.css 文本（THEME-02 静态变量层防回归）。
- */
-function loadIndexCss(): string {
-  const here = dirname(fileURLToPath(import.meta.url));
-  return readFileSync(resolve(here, "../../index.css"), "utf-8");
-}
-
-/**
  * 从 CSS 文本中切出指定选择器的规则块（花括号匹配）。
  * selector 需含尾部空格（如 ":root {" / '[data-color-mode="dark"] {'）
  * 以精确命中变量定义块而非组件覆盖规则。
@@ -232,12 +224,21 @@ function extractCssBlock(css: string, selectorWithBrace: string): string {
   throw new Error(`Unbalanced braces for block: ${selectorWithBrace}`);
 }
 
+/**
+ * 读取 src/index.css 文本（THEME-02 静态变量层防回归）。
+ * 注：ESLint typed-lint 程序未含 @types/node，node:fs/url 的调用被标记为
+ * unsafe —— 属工具链误报，测试运行时（vitest/node）类型完全正常，定向豁免。
+ */
+function loadIndexCss(): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+
+  return readFileSync(resolve(here, "../../index.css"), "utf-8");
+}
+
 describe("dark-mode brand derivation (THEME-02)", () => {
   const css = loadIndexCss();
   const rootBlock = extractCssBlock(css, ":root {").toLowerCase();
   const darkBlock = extractCssBlock(css, '[data-color-mode="dark"] {').toLowerCase();
-
-  // ---- Phase 64 深底推导值存在性（防回归） ----
 
   it("dark block contains deep-green sidebar bg #0a2418 (Phase 64 derivation)", () => {
     expect(darkBlock).toContain("--sidebar-bg: #0a2418");

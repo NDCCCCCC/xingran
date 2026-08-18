@@ -48,6 +48,9 @@ export function scrollContainer(
 /**
  * 设置延迟定时器
  */
-export function setupDelayedChecks(callback: () => void, delays: readonly number[]): number[] {
+export function setupDelayedChecks(
+  callback: () => void,
+  delays: readonly number[]
+): ReturnType<typeof setTimeout>[] {
   return delays.map((delay) => setTimeout(callback, delay));
 }
