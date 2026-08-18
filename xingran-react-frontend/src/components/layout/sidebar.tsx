@@ -274,7 +274,7 @@ const Sidebar = () => {
       trigger={null}
       className="layout-sidebar"
       style={{
-        background: "#ffffff",
+        background: "var(--sidebar-bg)",
       }}
     >
       <div
@@ -289,9 +289,9 @@ const Sidebar = () => {
         {/* 收缩按钮 */}
         <button
           onClick={toggleSidebar}
-          className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors absolute"
+          className="p-2 rounded hover:bg-[#1a6839] transition-colors absolute"
           style={{
-            color: "var(--theme-text-secondary)",
+            color: "var(--sidebar-text)",
             background: "transparent",
             border: "none",
             cursor: "pointer",
@@ -322,7 +322,7 @@ const Sidebar = () => {
           className="text-xl font-bold"
           style={{
             backgroundImage:
-              "linear-gradient(135deg, var(--theme-brand, #3b82f6) 0%, #ffffff 100%)",
+              "linear-gradient(135deg, var(--theme-brand, #156031) 0%, #ffffff 100%)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             backgroundClip: "text",
@@ -341,6 +341,7 @@ const Sidebar = () => {
       ) : (
         <Menu
           mode="inline"
+          theme="dark"
           selectedKeys={getSelectedKeys()}
           openKeys={openKeys}
           onOpenChange={handleOpenChange}
@@ -350,7 +351,7 @@ const Sidebar = () => {
           style={{
             background: "transparent",
             fontSize: `${MENU_FONT_SIZE}px`,
-            color: "var(--theme-text-primary)",
+            color: "var(--sidebar-text)",
           }}
         />
       )}

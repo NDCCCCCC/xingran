@@ -68,6 +68,10 @@
   --sidebar-text-active: #e0e0b0; /* 浅黄强调 (实测, 深绿底 5.62:1) */
   --sidebar-accent: #c09058; /* 铜金点缀 (实测) */
 
+  /* ===== 顶栏专用色 (Phase 66 · COMP-01 解耦) =====
+     顶栏必须与侧栏变量解耦, 否则 light 模式深绿侧栏会染绿 64px 白顶栏 */
+  --header-bg: #ffffff; /* 顶栏底 (light) */
+
   /* ===== 背景色系统 ===== */
   --theme-bg-primary: #f0ece3; /* 奶油画布 (实测) */
   --theme-bg-secondary: #f0ece3;
@@ -144,14 +148,16 @@
    明暗模式核心变量
    ======================================== */
 [data-color-mode="light"] {
-  /* 浅色模式侧边栏（Phase 65 收敛为单一品牌侧栏） */
-  --sidebar-bg: #ffffff;
-  --sidebar-bg-hover: #e9efeb;
-  --sidebar-bg-active: #e9efeb;
-  --sidebar-border: #dbd7ce;
-  --sidebar-text: #101010;
-  --sidebar-text-hover: #14532d;
-  --sidebar-text-active: #156031;
+  /* 浅色模式侧边栏（Phase 66 · COMP-01 深绿配方，brand-spec 实测）
+     hover 文字 #FFFFFF 深绿底 7.64:1, active 文字 #E0E0B0 深绿底 5.62:1 */
+  --sidebar-bg: #14532d;
+  --sidebar-bg-hover: #156031;
+  --sidebar-bg-active: #156031;
+  --sidebar-border: #1a6839;
+  --sidebar-text: #f0ece3;
+  --sidebar-text-hover: #ffffff;
+  --sidebar-text-active: #e0e0b0;
+  --sidebar-accent: #c09058;
 
   /* 背景层（奶油画布 + 白卡 surface） */
   --bg-base: #f0ece3;
@@ -263,6 +269,9 @@
   --sidebar-bg-hover: #14532d; /* 侧边栏悬停 */
   --sidebar-bg-active: #156031; /* 侧边栏激活 */
   --sidebar-bg-disabled: #0a1f12; /* 侧边栏禁用 */
+
+  /* 顶栏专用色 (Phase 66 · COMP-01 解耦) */
+  --header-bg: #0a2418; /* 顶栏底 (dark) 沿用深绿视觉 */
 
   --sidebar-border: #2d4d33; /* 侧边栏边框 */
   --sidebar-border-hover: #598e5e; /* 侧边栏悬停边框 */
@@ -396,7 +405,7 @@ body {
    Header 顶部导航
    ======================================== */
 .ant-layout-header {
-  background: var(--sidebar-bg) !important;
+  background: var(--header-bg) !important;
   border-bottom: 1px solid var(--border-base) !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
   height: var(--header-height) !important;
@@ -405,7 +414,7 @@ body {
 }
 
 [data-color-mode="dark"] .ant-layout-header {
-  background: var(--sidebar-bg) !important;
+  background: var(--header-bg) !important;
   border-bottom: 1px solid var(--border-base) !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
 }
