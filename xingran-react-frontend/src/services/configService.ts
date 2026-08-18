@@ -5,7 +5,7 @@
  * 负责用户配置的获取、更新、缓存和数据迁移
  */
 
-import type { UserPreferences, BackendUserPreferences, ThemeStyle } from "@/types/config";
+import type { UserPreferences, BackendUserPreferences } from "@/types/config";
 import {
   defaultUserPreferences,
   defaultThemeConfiguration,
@@ -82,20 +82,6 @@ class ConfigService {
 
     // 版本 1 → 版本 2（旧数据结构）
     if (version === 1) {
-      // 验证主题样式
-      const validThemeStyles = [
-        "minimal",
-        "glassmorphism",
-        "neumorphism",
-        "flat2.0",
-        "luxury-quiet",
-        "ink-amber",
-      ];
-      const themeStyle =
-        legacyPrefs.themeStyle && validThemeStyles.includes(legacyPrefs.themeStyle as string)
-          ? (legacyPrefs.themeStyle as string)
-          : defaultThemeConfiguration.style;
-
       // 验证布局类型
       const validLayoutTypes = ["classic", "hybrid", "innovative"];
       const layoutType =
@@ -112,9 +98,9 @@ class ConfigService {
 
       const partial: Partial<UserPreferences> = {
         version: 2,
+        // v1 旧数据的 themeStyle 字段随多主题移除而静默丢弃（Phase 65 · D-01）
         theme: {
           mode: legacyPrefs.theme === "dark" ? "dark" : "light",
-          style: themeStyle as ThemeStyle,
         },
         layout: {
           type: layoutType,
@@ -151,20 +137,6 @@ class ConfigService {
    * 从后端格式转换为前端格式
    */
   private fromBackendFormat(backend: BackendUserPreferences): UserPreferences {
-    // 验证主题样式是否有效，无效则使用默认值
-    const validThemeStyles = [
-      "minimal",
-      "glassmorphism",
-      "neumorphism",
-      "flat2.0",
-      "luxury-quiet",
-      "ink-amber",
-    ];
-    const themeStyle =
-      backend.themeStyle && validThemeStyles.includes(backend.themeStyle)
-        ? (backend.themeStyle as ThemeStyle)
-        : defaultThemeConfiguration.style;
-
     // 验证布局类型是否有效
     const validLayoutTypes: Array<"classic" | "hybrid" | "innovative"> = [
       "classic",
@@ -189,22 +161,12 @@ class ConfigService {
         ? (backend.layoutDensity as "compact" | "comfortable" | "spacious")
         : defaultLayoutConfiguration.density;
 
-    // 构建自定义颜色对象（只有存在时才添加）
-    const customColors: { primary?: string; sidebar?: string } = {};
-    if (backend.customPrimaryColor) {
-      customColors.primary = backend.customPrimaryColor;
-    }
-    if (backend.customSidebarColor) {
-      customColors.sidebar = backend.customSidebarColor;
-    }
-
     const partial: Partial<UserPreferences> = {
       version: 2,
+      // 后端 themeStyle / customPrimaryColor / customSidebarColor 为 @Deprecated
+      // 契约字段（Phase 65 · D-05 后端零改动），前端仅映射 mode，其余静默丢弃
       theme: {
         mode: backend.theme === "dark" ? "dark" : "light",
-        style: themeStyle,
-        // 只有存在自定义颜色时才添加
-        ...(Object.keys(customColors).length > 0 ? { customColors } : {}),
       },
       layout: {
         type: layoutType,
@@ -227,67 +189,14 @@ class ConfigService {
   }
 
   /**
-   * 从 ColorPicker 颜色对象中提取十六进制字符串
-   */
-  private extractColorString(
-    color:
-      | string
-      | {
-          cleared?: boolean;
-          metaColor?: { r: number; g: number; b: number };
-          toHexString?: () => string;
-        }
-      | null
-      | undefined
-  ): string | undefined {
-    if (!color) return undefined;
-
-    // 如果已经是字符串，直接返回
-    if (typeof color === "string") {
-      return color === "" ? undefined : color;
-    }
-
-    // 如果是对象，尝试提取颜色值
-    if (typeof color === "object") {
-      // 检查是否有 cleared 标记（ColorPicker 组件的标记）
-      if (color.cleared) {
-        return undefined;
-      }
-
-      // 尝试从 metaColor 中提取十六进制值
-      if (color.metaColor) {
-        const { r, g, b } = color.metaColor;
-        if (typeof r === "number" && typeof g === "number" && typeof b === "number") {
-          // 转换为十六进制
-          const toHex = (n: number) => {
-            const hex = Math.round(n).toString(16);
-            return hex.length === 1 ? "0" + hex : hex;
-          };
-          return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
-        }
-      }
-
-      // 尝试直接提取十六进制值
-      if (color.toHexString) {
-        return color.toHexString();
-      }
-    }
-
-    return undefined;
-  }
-
-  /**
    * 转换为后端格式
    */
   private toBackendFormat(prefs: UserPreferences): BackendUserPreferences {
-    // 提取颜色字符串
-    const primaryColor = this.extractColorString(prefs.theme?.customColors?.primary);
-    const sidebarColor = this.extractColorString(prefs.theme?.customColors?.sidebar);
-
     const result: BackendUserPreferences = {
       // 主题 - 确保有默认值
+      // （themeStyle / customPrimaryColor / customSidebarColor 已随 Phase 65
+      //  多主题移除不再发送；后端字段为 optional 可直接缺省）
       theme: prefs.theme?.mode || "light",
-      themeStyle: prefs.theme?.style || "minimal",
 
       // 布局
       layoutType: prefs.layout?.type || "classic",
@@ -298,10 +207,6 @@ class ConfigService {
 
       // 数据
       pageSize: prefs.data?.defaultPageSize || 10,
-
-      // 自定义颜色（可选）- 只在有值时发送
-      customPrimaryColor: primaryColor,
-      customSidebarColor: sidebarColor,
 
       // 语言 - 确保有默认值
       language: (prefs.language as "zh-CN" | "en-US") || "zh-CN",

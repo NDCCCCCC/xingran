@@ -13,26 +13,12 @@
 export type ColorMode = "light" | "dark";
 
 /**
- * 主题风格类型
- */
-export type ThemeStyle =
-  "minimal" | "glassmorphism" | "neumorphism" | "flat2.0" | "luxury-quiet" | "ink-amber";
-
-/**
- * 主题配置
+ * 主题配置（v1.22 Phase 65 · D-01 收窄版：仅明暗模式）
+ * 旧持久化数据中的 style / customColors 多余键运行时静默忽略。
  */
 export interface ThemeConfiguration {
   /** 颜色模式：light / dark */
   mode: ColorMode;
-
-  /** 设计风格 */
-  style: ThemeStyle;
-
-  /** 自定义颜色（可选） */
-  customColors?: {
-    primary?: string;
-    sidebar?: string;
-  };
 }
 
 // ============= 布局配置 =============
@@ -115,6 +101,8 @@ export interface UserPreferences {
 export interface BackendUserPreferences {
   // 主题
   theme: string;
+
+  /** @deprecated v1.22 Phase 65 多主题移除；后端契约保留，前端不再消费 */
   themeStyle?: string;
 
   // 布局
@@ -127,8 +115,10 @@ export interface BackendUserPreferences {
   // 数据
   pageSize: number;
 
-  // 自定义颜色（可选）
+  /** @deprecated v1.22 Phase 65 颜色自定义移除；后端契约保留，前端不再消费 */
   customPrimaryColor?: string;
+
+  /** @deprecated v1.22 Phase 65 颜色自定义移除；后端契约保留，前端不再消费 */
   customSidebarColor?: string;
 
   // 语言
@@ -142,7 +132,6 @@ export interface BackendUserPreferences {
  */
 export const defaultThemeConfiguration: ThemeConfiguration = {
   mode: "light",
-  style: "minimal",
 };
 
 /**
@@ -178,20 +167,6 @@ export const defaultUserPreferences: UserPreferences = {
 };
 
 // ============= 配置验证辅助函数 =============
-
-/**
- * 验证主题配置是否有效
- */
-export function isValidThemeStyle(style: string): style is ThemeStyle {
-  return [
-    "minimal",
-    "glassmorphism",
-    "neumorphism",
-    "flat2.0",
-    "luxury-quiet",
-    "ink-amber",
-  ].includes(style);
-}
 
 /**
  * 验证布局类型是否有效
