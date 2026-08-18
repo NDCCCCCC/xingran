@@ -139,10 +139,10 @@ jobs:
             --notes "auto deploy artifact (sha: ${GITHUB_SHA::7})" \
             --prerelease
           echo "release_tag=$TAG" >> "$GITHUB_OUTPUT"
-          # 在 runner 侧解析 asset API URL,服务器侧 0 次 API 调用直接拉
-          # (避开 PAT rate limit — 服务器侧 lookup 计用户配额)
+          # 在 runner 侧解析 browser_download_url,服务器侧匿名经 gh-proxy
+          # 直接拉(仓库已 public:实测 2.7MB/s;匿名 CDN 无 rate limit)
           ASSET_URL=$(gh api "repos/${{ github.repository }}/releases/tags/$TAG" \
-            --jq '.assets[0].url')
+            --jq '.assets[0].browser_download_url')
           echo "asset_url=$ASSET_URL" >> "$GITHUB_OUTPUT"
         id: rel
 
@@ -173,11 +173,11 @@ jobs:
       - name: Fetch release on server and activate
         # 网络矩阵实测(2026-08-18):
         #   runner -> server SSH 吞吐 ~10KB/s (75MB 传不完,5 次 15min 超时)
-        #   server -> GitHub 直连 0-1.6KB/s;server -> gh-proxy.com 9.7MB/s
+        #   server -> GitHub 直连 0-1.6KB/s;server -> gh-proxy 公开资产 2.7-9.7MB/s
         # 故:build job 已把 tar.gz 传到临时 GitHub Release(GitHub 内网,快);
-        # 本步仅 ssh 触发服务器脚本,服务器自己经 gh-proxy 拉取 ~22MB tar.gz
-        # (约 3 秒),解压就位后 exec deploy-remote.sh 走原 activate 流程。
-        # GH_RELEASE_TOKEN 仅出现在 ssh 命令行,不落服务器磁盘。
+        # 本步仅 ssh 触发服务器脚本,服务器自己匿名经 gh-proxy 拉取 ~22MB
+        # tar.gz(仓库已 public,实测 2.7MB/s),解压就位后 exec
+        # deploy-remote.sh 走原 activate 流程(零改动)。
         run: |
           PORT="${{ vars.SSH_PORT || '22' }}"
           ssh -p "$PORT" -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes \
@@ -185,7 +185,6 @@ jobs:
             ubuntu@"${{ secrets.SSH_HOST }}" \
             'bash -s' -- "${{ needs.build.outputs.version }}" \
                          "${{ needs.build.outputs.asset_url }}" \
-                         "${{ secrets.GH_RELEASE_TOKEN }}" \
                          "${{ needs.build.outputs.archive_sha256 }}" \
             < scripts/deploy/fetch-release-and-activate.sh
 

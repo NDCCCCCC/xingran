@@ -1,20 +1,19 @@
 #!/usr/bin/env bash
 # fetch-release-and-activate.sh — server 端（通过 ssh 'bash -s' 触发）
 #
-# 从 GitHub Release 经 gh-proxy.com 镜像拉取部署 tar.gz（解决 GitHub
-# runner ↔ 腾讯云国内机房双向链路被限速 ~10KB/s 的问题；实测服务器经
-# gh-proxy.com 拉 GitHub Release 达 9.7MB/s）。
+# 从 GitHub Release 经 gh-proxy.com 镜像匿名拉取部署 tar.gz。
+# 网络矩阵实测(2026-08-18): runner→server SSH ~10KB/s(不可用),
+# server→GitHub 直连 0-1.6KB/s(不可用), server→gh-proxy 公开资产 2.7-9.7MB/s。
+# 仓库已设为 public(用户决策),release 资产匿名可达,无 token / 无 rate limit。
 #
 # 流程：
 #   1. df 磁盘预检
-#   2. 调 GitHub API（经 gh-proxy）解析 release asset 的 API URL
-#   3. curl 带 Bearer token 经 gh-proxy 下载 asset（API URL 返回二进制流）
-#   4. sha256 校验（runner 端 build 时生成并传入）
-#   5. 解压出 xingran-backend + xingran.service，就位 .new 文件
-#   6. exec deploy-remote.sh（备份/原子替换/重启/health/回滚，零改动）
+#   2. curl 匿名经 gh-proxy 下载 browser_download_url
+#   3. sha256 校验（runner 端 build 时生成并传入）
+#   4. 解压出 xingran-backend + xingran.service，就位 .new 文件
+#   5. exec deploy-remote.sh（备份/原子替换/重启/health/回滚，零改动）
 #
-# 用法: ssh ... 'bash -s' -- <VERSION> <RELEASE_TAG> <GH_TOKEN> <SHA256> < fetch-release-and-activate.sh
-#   GH_TOKEN 仅存在于进程命令行/环境，不落盘。
+# 用法: ssh ... 'bash -s' -- <VERSION> <BROWSER_DOWNLOAD_URL> <SHA256> < fetch-release-and-activate.sh
 
 set -euo pipefail
 
@@ -25,15 +24,13 @@ UNIT_NEW=$APP/deploy/xingran.service.new
 PROXY="https://gh-proxy.com"
 
 VERSION="${1:-}"
-ASSET_API_URL="${2:-}"   # runner 侧已解析,服务器 0 次 API 调用(避开 PAT rate limit)
-GH_TOKEN="${3:-}"
-EXPECTED_SHA="${4:-}"
+ASSET_URL="${2:-}"   # runner 侧已解析的 browser_download_url
+EXPECTED_SHA="${3:-}"
 
 fail() { echo "!! $*" >&2; exit 1; }
 
-[ -n "$VERSION" ]      || fail "usage: $0 <version> <asset_api_url> <gh_token> <sha256>"
-[ -n "$ASSET_API_URL" ] || fail "missing asset api url"
-[ -n "$GH_TOKEN" ]     || fail "missing gh token"
+[ -n "$VERSION" ]    || fail "usage: $0 <version> <browser_download_url> <sha256>"
+[ -n "$ASSET_URL" ]  || fail "missing asset url"
 [ -n "$EXPECTED_SHA" ] || fail "missing sha256"
 
 # 1. 磁盘预检（tar.gz ~22MB + 解压后 63MB + 备份 63MB）
@@ -44,13 +41,11 @@ sudo install -d -m 0755 "$UPLOAD"
 TARBALL="$UPLOAD/xingran-backend.tar.gz"
 rm -f "$TARBALL"
 
-# 2. 直接下载 asset（Accept: application/octet-stream 让 API 直接返回二进制）
-echo ">> downloading asset via gh-proxy: $ASSET_API_URL"
+# 2. 匿名下载（公开资产,CDN 直达）
+echo ">> downloading asset via gh-proxy: $ASSET_URL"
 curl -fsSL --max-time 300 \
-  -H "Authorization: Bearer $GH_TOKEN" \
-  -H "Accept: application/octet-stream" \
   -o "$TARBALL" \
-  "$PROXY/$ASSET_API_URL" \
+  "$PROXY/$ASSET_URL" \
   || fail "asset download failed"
 
 SIZE=$(stat -c %s "$TARBALL")
