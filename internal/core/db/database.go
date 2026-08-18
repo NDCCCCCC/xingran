@@ -733,6 +733,17 @@ func (d *Database) AutoMigrate() error {
 			&models.KnowledgeCategory{},
 			&models.KnowledgeTag{},
 		)
+		// column-config-table-recon-stats (2026-08-18): sys_user_column_config 缺表
+		// 同族第四次缺漏(同 kb-tag-table-stats-400 / rpa-tasks-table-missing 模式 ——
+		// 模型已存在 internal/models/user_column_config.go,历史从未注册进 AutoMigrate
+		// 任何分支,sys_user_column_config 永远不被建,/system/column-config/asset.list 500
+		// "no such table: sys_user_column_config")。仅 sqlite 分支注册:PG 存量库已存在
+		// (假设 production 已 seed),GORM 对存量表按 model tag 发起漂移 ALTER 会破坏
+		// 生产语义(零漂移是项目惯例);PG 新部署由 scripts/dbprovision 建表。
+		// 模型 tag 已核查:无函数式默认值(`BeforeCreate` 钩子填充 ID)/数组类型等
+		// PG-only DDL 片段(type:uuid/bool/int/size:100 均为合法 type-name),无需经过
+		// sanitizeSQLiteModelDefaults 净化。
+		migrateList = append(migrateList, &models.UserColumnConfig{})
 	}
 	err := d.DB.Migrator().AutoMigrate(migrateList...)
 	if err != nil {

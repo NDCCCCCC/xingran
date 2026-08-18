@@ -199,6 +199,10 @@ func TestNewDatabaseSQLite(t *testing.T) {
 		// SQL(102_add_rpa_tables.sql)建表类,Worker/Execution 注册时漏了 Task,
 		// 不注册则 /rpa/tasks/list 报 no such table:
 		"sys_rpa_tasks",
+		// 260818 column-config-table-recon-stats:sys_user_column_config 缺表同族
+		// 第四次缺漏(模型已存在但从未注册进 AutoMigrate 任何分支),不注册则
+		// /system/column-config/asset.list 报 no such table: sys_user_column_config:
+		"sys_user_column_config",
 	} {
 		if !d.DB.Migrator().HasTable(table) {
 			t.Errorf("HasTable(%q) = false after AutoMigrate on sqlite, want true", table)
