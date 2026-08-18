@@ -1,16 +1,23 @@
 /**
  * 字体系统令牌
+ *
+ * v1.22 品牌化（Phase 64 · TOKEN-04）
+ * - sans = 系统无衬线（含中文 PingFang SC / Microsoft YaHei）
+ * - serif = 衬线栈（仅标题可选，沿用登录页气质；Songti SC / Source Han Serif SC 中文衬线）
+ * - mono = 数据 / 编号 / 代码（JetBrains Mono 自托管时优先；零成本替代 SF Mono）
  */
 
 /**
  * 字体家族
  */
 export const fontFamily = {
-  // 默认字体（系统字体栈）
+  // 默认字体（系统字体栈 — UI / 正文）
   sans: [
     "-apple-system",
     "BlinkMacSystemFont",
     '"Segoe UI"',
+    '"PingFang SC"',
+    '"Microsoft YaHei"',
     "Roboto",
     '"Helvetica Neue"',
     "Arial",
@@ -20,10 +27,12 @@ export const fontFamily = {
     '"Segoe UI Symbol"',
   ].join(", "),
 
-  // 等宽字体
+  // 等宽字体（数据 / 编号 / 代码）
   mono: [
+    '"JetBrains Mono"',
     "ui-monospace",
     "SFMono-Regular",
+    '"SF Mono"',
     "Menlo",
     "Monaco",
     "Consolas",
@@ -32,8 +41,17 @@ export const fontFamily = {
     "monospace",
   ].join(", "),
 
-  // 衬线字体
-  serif: ["ui-serif", "Georgia", "Cambria", '"Times New Roman"', "Times", "serif"].join(", "),
+  // 衬线字体（Display / 标题，沿用登录页气质）
+  serif: [
+    "Georgia",
+    '"Songti SC"',
+    '"Source Han Serif SC"',
+    "ui-serif",
+    "Cambria",
+    '"Times New Roman"',
+    "Times",
+    "serif",
+  ].join(", "),
 } as const;
 
 /**
