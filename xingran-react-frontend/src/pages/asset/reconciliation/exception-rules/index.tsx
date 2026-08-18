@@ -347,12 +347,20 @@ const ExceptionRulesPage: React.FC = () => {
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic title="启用中" value={stats.enabled} valueStyle={{ color: "#52c41a" }} />
+            <Statistic
+              title="启用中"
+              value={stats.enabled}
+              styles={{ content: { color: "#52c41a" } }}
+            />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic title="已停用" value={stats.disabled} valueStyle={{ color: "#8c8c8c" }} />
+            <Statistic
+              title="已停用"
+              value={stats.disabled}
+              styles={{ content: { color: "#8c8c8c" } }}
+            />
           </Card>
         </Col>
         <Col span={6}>

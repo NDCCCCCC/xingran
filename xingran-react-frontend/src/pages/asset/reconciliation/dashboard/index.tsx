@@ -218,7 +218,7 @@ const Dashboard = () => {
         <Alert
           type="error"
           showIcon
-          message="对账看板数据加载失败"
+          title="对账看板数据加载失败"
           description="请稍后重试或联系管理员检查后端服务"
         />
       </div>
@@ -349,7 +349,7 @@ const Dashboard = () => {
           <Alert
             type="info"
             showIcon
-            message="请先到例外规则管理页记录基线"
+            title="请先到例外规则管理页记录基线"
             description={
               <>
                 R3 部署前 + R2 数据保留期内必须调用 Snapshot 记录 R2 末期基线,否则 SC 8 ≥60%
@@ -366,7 +366,7 @@ const Dashboard = () => {
                 value={reductions.excPct}
                 precision={1}
                 suffix="%"
-                valueStyle={{ color: reductions.excPct >= 60 ? "#52c41a" : "#faad14" }}
+                styles={{ content: { color: reductions.excPct >= 60 ? "#52c41a" : "#faad14" } }}
               />
               <small style={{ color: "var(--theme-text-secondary, #888)" }}>
                 baseline {baselineCompareQuery.data?.baseline?.total_exceptions ?? 0} → current{" "}
@@ -379,7 +379,7 @@ const Dashboard = () => {
                 value={reductions.woPct}
                 precision={1}
                 suffix="%"
-                valueStyle={{ color: reductions.woPct >= 60 ? "#52c41a" : "#faad14" }}
+                styles={{ content: { color: reductions.woPct >= 60 ? "#52c41a" : "#faad14" } }}
               />
               <small style={{ color: "var(--theme-text-secondary, #888)" }}>
                 baseline {baselineCompareQuery.data?.baseline?.total_workorders ?? 0} → current{" "}
@@ -392,7 +392,7 @@ const Dashboard = () => {
                 value={reductions.critPct}
                 precision={1}
                 suffix="%"
-                valueStyle={{ color: reductions.critPct >= 60 ? "#52c41a" : "#faad14" }}
+                styles={{ content: { color: reductions.critPct >= 60 ? "#52c41a" : "#faad14" } }}
               />
               <small style={{ color: "var(--theme-text-secondary, #888)" }}>
                 baseline {baselineCompareQuery.data?.baseline?.critical_exceptions ?? 0} → current{" "}

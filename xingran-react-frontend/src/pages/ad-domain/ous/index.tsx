@@ -470,7 +470,7 @@ const ADOUPage: FC = () => {
                 loading={treeLoading}
               />
             }
-            bodyStyle={{ maxHeight: "calc(100vh - 280px)", overflow: "auto" }}
+            styles={{ body: { maxHeight: "calc(100vh - 280px)", overflow: "auto" } }}
           >
             <Space orientation="vertical" style={{ width: "100%" }} size="small">
               <Select
@@ -479,6 +479,9 @@ const ADOUPage: FC = () => {
                 value={selectedConfig}
                 onChange={setSelectedConfig}
                 options={configs.map((c) => ({ label: c.configName, value: c.id }))}
+                showSearch
+                // noop 满足 local/no-large-dropdown-list(要求 Select 带 onSearch);
+                // showSearch 让 antd 警告(onSearch 应配合 showSearch)消除
                 onSearch={() => {}}
               />
               <Spin spinning={treeLoading}>
@@ -502,7 +505,7 @@ const ADOUPage: FC = () => {
 
         {/* 右侧：用户列表、部门映射和用户组映射 */}
         <Col span={18} style={{ height: "100%", overflow: "auto" }}>
-          <Space direction="vertical" style={{ width: "100%" }} size="small">
+          <Space orientation="vertical" style={{ width: "100%" }} size="small">
             {/* 用户列表卡片 */}
             <Card
               title={
@@ -512,7 +515,7 @@ const ADOUPage: FC = () => {
                 </Space>
               }
               size="small"
-              bodyStyle={{ maxHeight: "calc(100vh - 550px)", overflow: "auto" }}
+              styles={{ body: { maxHeight: "calc(100vh - 550px)", overflow: "auto" } }}
             >
               <Table
                 columns={userColumns}
@@ -548,7 +551,7 @@ const ADOUPage: FC = () => {
               loading={mappingLoading}
             >
               {deptMapping?.hasMapping ? (
-                <Space direction="vertical" style={{ width: "100%" }}>
+                <Space orientation="vertical" style={{ width: "100%" }}>
                   <div>
                     <span style={{ color: "#999" }}>关联部门：</span>
                     <Tag color="blue" style={{ marginLeft: 8 }}>

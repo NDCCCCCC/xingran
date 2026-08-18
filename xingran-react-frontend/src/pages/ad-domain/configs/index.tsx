@@ -432,8 +432,8 @@ const ADConfigPage: FC = () => {
         title={detailConfig ? `AD 配置详情: ${detailConfig.configName}` : "AD 配置详情"}
         open={detailDrawerVisible}
         onClose={() => setDetailDrawerVisible(false)}
-        width={1100}
-        destroyOnClose
+        size={1100}
+        destroyOnHidden
       >
         {detailConfig && (
           <Tabs

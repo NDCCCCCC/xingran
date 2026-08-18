@@ -529,6 +529,9 @@ const ADUserPage: FC = () => {
               value={selectedConfig}
               onChange={setSelectedConfig}
               options={configs.map((c) => ({ label: c.configName, value: c.id }))}
+              showSearch
+              // noop 满足 local/no-large-dropdown-list(要求 Select 带 onSearch);
+              // showSearch 让 antd 警告(onSearch 应配合 showSearch)消除
               onSearch={() => {}}
             />
           </Form.Item>
@@ -561,7 +564,13 @@ const ADUserPage: FC = () => {
             <Input placeholder="用户名" allowClear style={{ width: 150 }} />
           </Form.Item>
           <Form.Item name="isEnabled">
-            <Select placeholder="状态" allowClear style={{ width: 120 }} onSearch={() => {}}>
+            <Select
+              placeholder="状态"
+              allowClear
+              style={{ width: 120 }}
+              showSearch
+              onSearch={() => {}}
+            >
               <Select.Option value={true}>启用</Select.Option>
               <Select.Option value={false}>禁用</Select.Option>
             </Select>

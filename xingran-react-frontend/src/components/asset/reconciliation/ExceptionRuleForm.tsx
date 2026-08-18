@@ -138,7 +138,7 @@ const ExceptionRuleForm: React.FC<ExceptionRuleFormProps> = ({
       confirmLoading={submitting}
       okText="保存"
       cancelText="取消"
-      destroyOnClose
+      destroyOnHidden
       width={680}
     >
       <Form form={form} layout="vertical" preserve={false}>
