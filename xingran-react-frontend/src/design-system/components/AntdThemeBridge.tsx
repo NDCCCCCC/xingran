@@ -91,9 +91,10 @@ const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
         fontFamily: fontFamily.sans,
       },
       components: {
-        // 主按钮 D-03: 永远绿底白字
+        // 主按钮 D-03: 永远绿底白字 (Phase 66 · G4/COMP-03 白字 7.64:1)
         Button: {
           colorPrimary: xingranBrand.greenPrimary,
+          primaryColor: xingranBrand.onDark.white,
           colorPrimaryHover: xingranBrand.greenPrimaryHover,
           colorPrimaryActive: xingranBrand.greenPrimaryActive,
           defaultBorderColor: xingranBrand.cream.border,
@@ -102,18 +103,26 @@ const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
           fontWeight: 500,
         },
         // 表格: 表头 #E9EFEB 绿灰淡彩 / 行 hover #F7F5EE 浅交互底
+        // (Phase 66 · G1/COMP-02 排序/筛选/选中态令牌补齐)
         Table: {
           headerBg: xingranBrand.cream.headerBg,
           headerColor: xingranBrand.cream.fg,
           borderColor: xingranBrand.cream.border,
           rowHoverBg: xingranBrand.cream.zebraBg,
+          headerSortActiveBg: xingranBrand.cream.zebraBg,
+          headerSortHoverBg: xingranBrand.cream.zebraBg,
+          headerFilterHoverBg: xingranBrand.cream.zebraBg,
+          fixedHeaderSortActiveBg: xingranBrand.cream.zebraBg,
+          rowSelectedBg: xingranBrand.cream.headerBg,
+          rowSelectedHoverBg: xingranBrand.cream.zebraBg,
           borderRadius: 8,
         },
-        // 输入框: focus 环用品牌绿
+        // 输入框: focus 环用品牌绿 (Phase 66 · G2/COMP-04 焦点环 2px)
         Input: {
           colorBgContainer: xingranBrand.cream.surface,
           activeBorderColor: xingranBrand.greenPrimary,
           hoverBorderColor: xingranBrand.greenPrimary,
+          activeShadow: "0 0 0 2px rgba(21, 96, 49, 0.15)",
           borderRadius: 8,
           controlHeight: 36,
         },
@@ -126,15 +135,16 @@ const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
           optionSelectedBg: xingranBrand.cream.headerBg,
         },
         // 菜单: 浅色底用绿灰 / 深色侧栏用品牌深绿
+        // (Phase 66 · QA-02 卫生 — darkItem* 改为 xingranBrand 引用)
         Menu: {
           itemBg: "transparent",
           itemSelectedBg: xingranBrand.cream.headerBg,
           itemSelectedColor: xingranBrand.greenPrimary,
           itemHoverBg: xingranBrand.cream.zebraBg,
-          darkItemBg: "#14532D",
-          darkItemSelectedBg: "#156031",
+          darkItemBg: xingranBrand.green[900],
+          darkItemSelectedBg: xingranBrand.greenPrimary,
           darkItemSelectedColor: xingranBrand.onDark.lightYellow,
-          darkItemHoverBg: "#1A6839",
+          darkItemHoverBg: xingranBrand.greenPrimaryLight,
         },
         // Tabs: 选中色 = 品牌绿
         Tabs: {
@@ -143,10 +153,10 @@ const AntdThemeBridge: FC<AntdThemeBridgeProps> = ({ children }) => {
           itemHoverColor: xingranBrand.greenPrimaryHover,
           inkBarColor: xingranBrand.greenPrimary,
         },
-        // Tag: 默认底用绿灰淡彩
+        // Tag: 默认底用淡黄 (Phase 66 · G3/COMP-04 SM2/SM3/SM4 品牌锚点配方)
         Tag: {
-          defaultBg: xingranBrand.cream.headerBg,
-          defaultColor: xingranBrand.cream.fg,
+          defaultBg: xingranBrand.onDark.paleYellow,
+          defaultColor: xingranBrand.copper[500],
           borderRadiusSM: 4,
         },
         // Card: 白卡浮在奶油底上, 12px 圆角
