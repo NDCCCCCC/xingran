@@ -15,6 +15,9 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { xingranBrand } from "./colors";
 
 /**
@@ -194,5 +197,117 @@ describe("xingranBrand WCAG contrast ratios", () => {
     expect(xingranBrand.cream.surface).toBe("#FFFFFF");
     expect(xingranBrand.onDark.lightYellow).toBe("#E0E0B0");
     expect(xingranBrand.functional.danger).toBe("#BA3630");
+  });
+});
+
+/**
+ * 读取 src/index.css 文本（THEME-02 静态变量层防回归）。
+ */
+function loadIndexCss(): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+  return readFileSync(resolve(here, "../../index.css"), "utf-8");
+}
+
+/**
+ * 从 CSS 文本中切出指定选择器的规则块（花括号匹配）。
+ * selector 需含尾部空格（如 ":root {" / '[data-color-mode="dark"] {'）
+ * 以精确命中变量定义块而非组件覆盖规则。
+ */
+function extractCssBlock(css: string, selectorWithBrace: string): string {
+  const start = css.indexOf(selectorWithBrace);
+  if (start === -1) {
+    throw new Error(`Selector block not found: ${selectorWithBrace}`);
+  }
+  const open = css.indexOf("{", start);
+  let depth = 0;
+  for (let i = open; i < css.length; i++) {
+    if (css[i] === "{") depth++;
+    else if (css[i] === "}") {
+      depth--;
+      if (depth === 0) {
+        return css.slice(open + 1, i);
+      }
+    }
+  }
+  throw new Error(`Unbalanced braces for block: ${selectorWithBrace}`);
+}
+
+describe("dark-mode brand derivation (THEME-02)", () => {
+  const css = loadIndexCss();
+  const rootBlock = extractCssBlock(css, ":root {").toLowerCase();
+  const darkBlock = extractCssBlock(css, '[data-color-mode="dark"] {').toLowerCase();
+
+  // ---- Phase 64 深底推导值存在性（防回归） ----
+
+  it("dark block contains deep-green sidebar bg #0a2418 (Phase 64 derivation)", () => {
+    expect(darkBlock).toContain("--sidebar-bg: #0a2418");
+  });
+
+  it("dark block contains deep-green canvas #0f2e1b for --theme-bg-primary (Phase 64 derivation)", () => {
+    expect(darkBlock).toContain("--theme-bg-primary: #0f2e1b");
+    expect(darkBlock).toContain("--theme-bg-surface: #1a2e1f");
+  });
+
+  // ---- Phase 65 品牌深底提亮推导（静态品牌变量） ----
+
+  it("dark block lightens --theme-brand to icon green #598e5e (controlled lightening)", () => {
+    expect(darkBlock).toContain("--theme-brand: #598e5e");
+    expect(darkBlock).toContain("--theme-brand-dark: #3b784c");
+    expect(darkBlock).toContain("--theme-brand-alpha-10: rgba(89, 142, 94, 0.15)");
+  });
+
+  it("dark block lightens --theme-primary-500/600 to secondary/icon green", () => {
+    expect(darkBlock).toContain("--theme-primary-500: #3b784c");
+    expect(darkBlock).toContain("--theme-primary-600: #598e5e");
+  });
+
+  it(":root defines static brand vars matching brand-spec (D-02 single source)", () => {
+    expect(rootBlock).toContain("--theme-brand: #156031");
+    expect(rootBlock).toContain("--theme-brand-dark: #14542e");
+    expect(rootBlock).toContain("--theme-brand-alpha-10: rgba(21, 96, 49, 0.1)");
+    expect(rootBlock).toContain("--theme-primary-50: #e9efeb");
+    expect(rootBlock).toContain("--theme-primary-100: #598e5e");
+    expect(rootBlock).toContain("--theme-primary-500: #156031");
+    expect(rootBlock).toContain("--theme-primary-600: #14532d");
+    expect(rootBlock).toContain("--theme-primary-700: #14542e");
+  });
+
+  // ---- light 模式基线 ----
+
+  it("light baseline: :root --theme-primary stays brand #156031 (no regression)", () => {
+    expect(rootBlock).toContain("--theme-primary: #156031");
+  });
+
+  // ---- 受控提亮：dark 与 :root 品牌色不同且均为品牌绿梯度成员 ----
+
+  it("dark --theme-brand differs from :root and both are brand green gradient members", () => {
+    const darkBrand = "#598E5E";
+    const rootBrand = "#156031";
+    expect(darkBrand).not.toBe(rootBrand);
+    // xingranBrand.green[100] = 深底图标绿, green[400] = 品牌主色
+    expect(darkBrand).toBe(xingranBrand.green[100]);
+    expect(rootBrand).toBe(xingranBrand.green[400]);
+  });
+
+  // ---- 暗色关键前景/背景对 WCAG AA (≥ 4.5:1) ----
+
+  it("#F0ECE3 (cream text) on #0A2418 (deep green sidebar) meets WCAG AA (≥ 4.5:1)", () => {
+    const ratio = contrastRatio("#F0ECE3", "#0A2418");
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("#E0E0B0 (light yellow accent) on #0A2418 (deep green sidebar) meets WCAG AA (≥ 4.5:1)", () => {
+    const ratio = contrastRatio("#E0E0B0", "#0A2418");
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("#F0ECE3 (cream text) on #0F2E1B (dark canvas) meets WCAG AA (≥ 4.5:1)", () => {
+    const ratio = contrastRatio("#F0ECE3", "#0F2E1B");
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("#FFFFFF on #156031 primary button unchanged in dark mode meets WCAG AA (≥ 7.6:1)", () => {
+    const ratio = contrastRatio("#FFFFFF", "#156031");
+    expect(ratio).toBeGreaterThanOrEqual(7.6);
   });
 });
