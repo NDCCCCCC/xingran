@@ -58,14 +58,36 @@ if [[ "${GOT_FP}" != "${EXPECTED_FP}" ]]; then
 fi
 
 # 通用 scp/ssh 选项
-SCP_OPTS=(-P "$PORT" -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes \
-          -o StrictHostKeyChecking=yes -o BatchMode=yes \
-          -o ServerAliveInterval=30 -o ServerAliveCountMax=6 \
-          -o ConnectTimeout=15)
-SSH_OPTS=(-p "$PORT" -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes \
-          -o StrictHostKeyChecking=yes -o BatchMode=yes \
-          -o ServerAliveInterval=30 -o ServerAliveCountMax=6 \
-          -o ConnectTimeout=15)
+# ControlMaster 复用: 127 次 scp 共享 1 个 master TCP 连接,
+# 消除每次握手 ~5s 的开销(实测 per-chunk scp 无 mux 是 9min/127 片,
+# 加 mux 估算 60-90s)。Control* 选项在前(早探测 socket),-i 最后。
+MUX_SOCK="/tmp/ssh-c-$$-%r@%h:%p"
+SCP_OPTS=(-P "$PORT" \
+          -o "ControlMaster=auto" \
+          -o "ControlPath=$MUX_SOCK" \
+          -o "ControlPersist=600" \
+          -o IdentitiesOnly=yes \
+          -o StrictHostKeyChecking=yes \
+          -o BatchMode=yes \
+          -o ServerAliveInterval=15 \
+          -o ServerAliveCountMax=4 \
+          -o ConnectTimeout=15 \
+          -i ~/.ssh/id_ed25519)
+SSH_OPTS=(-p "$PORT" \
+          -o "ControlMaster=auto" \
+          -o "ControlPath=$MUX_SOCK" \
+          -o "ControlPersist=600" \
+          -o IdentitiesOnly=yes \
+          -o StrictHostKeyChecking=yes \
+          -o BatchMode=yes \
+          -o ServerAliveInterval=15 \
+          -o ServerAliveCountMax=4 \
+          -o ConnectTimeout=15 \
+          -i ~/.ssh/id_ed25519)
+
+# mux + 临时目录清理 trap(退出时优雅关闭 master;TMP_DIR 在下方赋值,
+# trap 用单引号延迟展开,退出时 TMP_DIR 已定义)
+trap 'ssh -O exit -o "ControlPath='"$MUX_SOCK"'" -o BatchMode=yes "${SSH_USER}@${SSH_HOST}" 2>/dev/null || true; rm -rf "${TMP_DIR:-}"' EXIT
 
 # 2. 远端准备
 ssh "${SSH_OPTS[@]}" "${SSH_USER}@${SSH_HOST}" \
@@ -74,7 +96,6 @@ ssh "${SSH_OPTS[@]}" "${SSH_USER}@${SSH_HOST}" \
 
 # 3. split 临时目录
 TMP_DIR=$(mktemp -d)
-trap 'rm -rf "$TMP_DIR"' EXIT
 
 split -b "$CHUNK_BYTES" -d -a 4 "$BIN" "$TMP_DIR/chunk."
 CHUNK_COUNT=$(ls -1 "$TMP_DIR"/chunk.* | wc -l | tr -d ' ')
