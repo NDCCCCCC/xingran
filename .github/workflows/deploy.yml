@@ -161,13 +161,15 @@ jobs:
               deploy/xingran.service \
               ubuntu@"${{ secrets.SSH_HOST }}":/opt/xingran/deploy/xingran.service.new
 
-      - name: Upload binary via chunked base64
-        # 拆 75MB 为 158x500KB 短流(base64 文本),通过 SSH ControlMaster
-        # 复用传到服务器。短流在该链路上已验证 ~1s/片,绕过 75MB 长流
-        # 链路层卡死问题(deploy runs 32107499009, 32112268319, 32113627075,
-        # 32115683166 全部因 scp/rsync 75MB 长流卡死 15min)。server 端
-        # decode-and-activate.sh 拼回 + sha256 校验 + exec 调
-        # deploy-remote.sh 走原 activate 流程(零改动)。
+      - name: Upload binary via chunked scp
+        # 拆 75MB 为 ~127x500KB 短流(base64 文本每片 ~666KB),通过独立 scp
+        # 每次一开一关传一片。scp 单独短文件传输已验证 1.3KB 秒传,本链路
+        # 上 stdin 长流(单次 ssh cat >> file)即使拆 chunk 也仍是连续 pipe 长流,
+        # 改用 scp 自闭合短连接彻底规避
+        # (deploy runs 32107499009, 32112268319, 32113627075, 32115683166,
+        # 32118118412 全部因 75MB 长流卡死 15min)。server 端
+        # decode-and-activate.sh 按数字序 base64 -d 拼回 + sha256 校验 + exec
+        # 调 deploy-remote.sh 走原 activate 流程(零改动)。
         env:
           SSH_PORT: ${{ vars.SSH_PORT || '22' }}
         run: bash scripts/deploy/upload-binary.sh "${{ secrets.SSH_HOST }}" ubuntu "${{ secrets.SSH_PRIVATE_KEY }}" "${{ secrets.SSH_KNOWN_HOSTS }}" "${{ needs.build.outputs.version }}"

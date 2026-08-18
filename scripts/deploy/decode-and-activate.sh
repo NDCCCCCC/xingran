@@ -10,17 +10,22 @@ set -euo pipefail
 
 UPLOAD=/opt/xingran/upload
 APP=/opt/xingran
-B64="$UPLOAD/xingran-backend.new.b64"
 SHA_FILE="$UPLOAD/xingran-backend.new.sha256"
 SIZE_FILE="$UPLOAD/xingran-backend.new.size"
 VERSION_FILE="$UPLOAD/xingran-backend.new.version"
 NEW="$APP/xingran-backend.new"
 VERSION="${1:-}"
 
-[ -f "$B64" ]      || { echo "!! missing $B64 (was upload-binary.sh skipped?)" >&2; exit 1; }
 [ -f "$SHA_FILE" ] || { echo "!! missing $SHA_FILE" >&2; exit 1; }
 [ -f "$SIZE_FILE" ] || { echo "!! missing $SIZE_FILE" >&2; exit 1; }
 [ -n "$VERSION" ]  || { echo "!! usage: $0 <version>" >&2; exit 1; }
+
+# 检查 chunk 文件齐
+CHUNK_COUNT=$(ls -1 "$UPLOAD"/chunk.*.b64 2>/dev/null | wc -l | tr -d ' ')
+if (( CHUNK_COUNT == 0 )); then
+  echo "!! no chunk.*.b64 files in $UPLOAD" >&2
+  exit 1
+fi
 
 # 1. 磁盘预检查
 FREE_KB=$(df -k "$APP" | tail -1 | awk '{print $4}')
@@ -36,8 +41,12 @@ if [[ "$UPLOADED_VERSION" != "$VERSION" ]]; then
   exit 1
 fi
 
-# 3. base64 -d 拼回
-base64 -d "$B64" > "$NEW"
+# 3. 严格按数字顺序 base64 -d 拼回 (chunk.0001.b64, chunk.0002.b64, ...)
+#    base64 -d 容忍任意空白/换行,ls -1 默认字典序 = 数字序 (左 0 填充)
+: > "$NEW"
+for f in $(ls -1 "$UPLOAD"/chunk.*.b64 | sort); do
+  base64 -d "$f" >> "$NEW"
+done
 
 # 4. sha256 校验
 EXPECTED_SHA=$(awk '{print $1}' "$SHA_FILE")
@@ -61,9 +70,9 @@ fi
 sudo chmod 0755 "$NEW"
 
 # 7. 清理 upload/ 临时文件
-rm -f "$B64" "$SHA_FILE" "$SIZE_FILE" "$VERSION_FILE"
+rm -f "$UPLOAD"/chunk.*.b64 "$SHA_FILE" "$SIZE_FILE" "$VERSION_FILE"
 
-echo "decode + verify OK: $NEW size=${ACTUAL_SIZE} sha256=${ACTUAL_SHA}"
+echo "decode + verify OK: ${CHUNK_COUNT} chunks, size=${ACTUAL_SIZE} sha256=${ACTUAL_SHA}"
 
 # 8. exec 触发原有 activate 流程(零改动复用)
 exec sudo -n bash "$APP/deploy/deploy-remote.sh" "$VERSION"

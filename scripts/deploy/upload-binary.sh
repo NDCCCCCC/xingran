@@ -1,19 +1,20 @@
 #!/usr/bin/env bash
 # upload-binary.sh — runner 端（GitHub Actions）
-# 把 out/xingran-backend 拆成 500KB 的 base64 短流分片上传到服务器，
-# 走 SSH ControlMaster 复用连接。
+# 把 out/xingran-backend 拆成 500KB 切片,每片 base64 后用一次独立 scp
+# 传到服务器(每片自闭合的短 ssh 会话,~666KB 短流)。
 #
-# 背景：scp/rsync/sftp put 75MB 二进制在 GitHub runner -> 212.129.154.78
-# 链路上一致 15 分钟静默卡死（本地 1KB 短流 0.6s 成功）。拆成 158x500KB
-# 短流 + ControlMaster 复用可彻底规避长流 TCP 状态机被中间盒 RST。
+# 背景:scp/rsync/sftp put 75MB 二进制在 GitHub runner -> 212.129.154.78
+# 链路上一致 15 分钟静默卡死;即便用 ssh stdin pipe 拆 158 个 500KB chunk,
+# 每次 ssh 会话底层仍是 666KB 连续 pipe 长流,被中间盒 RST 卡死(32118118412)。
+# 改用 scp 短文件传输:scp 命令本身一开一关,每片 < 1s,与长流无关。
 #
-# 流程：
+# 流程:
 #   1. 写私钥 + known_hosts 到 ~/.ssh/(fingerprint self-check)
-#   2. SSH ControlMaster 握手复用
-#   3. split -b 500000 -d -a 4 out/xingran-backend -> upload/chunk.0000 ..
-#   4. 逐片 base64 -w 76 | ssh ... "cat >> /opt/xingran/upload/xingran-backend.new.b64"
-#   5. 传 sha256 + size (server 端 base64 -d + sha256 校验)
-#   6. 关闭 ControlMaster
+#   2. server 端准备 upload/ 目录
+#   3. split -b 500000 -d -a 4 -> chunk.0000, chunk.0001, ...
+#   4. 逐片 base64 -w 76 + scp 短传(每片独立 ssh 会话)
+#   5. 传 sha256 + size + version(server 端 base64 -d + sha256 校验)
+#   6. 清理临时文件
 #
 # 用法: upload-binary.sh <SSH_HOST> <SSH_USER> <SSH_PRIVATE_KEY> <SSH_KNOWN_HOSTS> <VERSION>
 #   VERSION 传给 server 端 decode-and-activate.sh,最终给 deploy-remote.sh
@@ -36,7 +37,6 @@ BIN="${BIN:-out/xingran-backend}"
 CHUNK_BYTES="${CHUNK_BYTES:-500000}"
 EXPECTED_FP="SHA256:9RrflpLM3hblmkElV/xRaMGqmGz5oikfVatiOl92PJ8"
 
-# 一些 sanity check
 test -f "$BIN" || { echo "::error::$BIN not found"; exit 1; }
 
 LOCAL_SIZE=$(stat -c %s "$BIN")
@@ -57,51 +57,51 @@ if [[ "${GOT_FP}" != "${EXPECTED_FP}" ]]; then
   exit 1
 fi
 
-SSH_BASE="-p ${PORT} -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes \
+# 通用 scp/ssh 选项
+SCP_OPTS=(-P "$PORT" -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes \
           -o StrictHostKeyChecking=yes -o BatchMode=yes \
           -o ServerAliveInterval=30 -o ServerAliveCountMax=6 \
-          -o ConnectTimeout=15"
+          -o ConnectTimeout=15)
+SSH_OPTS=(-p "$PORT" -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes \
+          -o StrictHostKeyChecking=yes -o BatchMode=yes \
+          -o ServerAliveInterval=30 -o ServerAliveCountMax=6 \
+          -o ConnectTimeout=15)
 
-# 2. ControlMaster socket (PID 防同名)
-SOCK="/tmp/ssh-c-$$-${SSH_HOST}-${PORT}"
-trap 'ssh -S "$SOCK" -O exit -o BatchMode=yes "${SSH_USER}@${SSH_HOST}" 2>/dev/null || true; rm -f "$SOCK"' EXIT
-
-# 3. 建立主连接
-ssh -M -S "$SOCK" -o "ControlPersist=600" $SSH_BASE "${SSH_USER}@${SSH_HOST}" true
-
-# 4. 远端准备
-ssh -S "$SOCK" $SSH_BASE "${SSH_USER}@${SSH_HOST}" \
+# 2. 远端准备
+ssh "${SSH_OPTS[@]}" "${SSH_USER}@${SSH_HOST}" \
   "sudo install -d -m 0755 /opt/xingran/upload && \
-   : > /opt/xingran/upload/xingran-backend.new.b64 && \
-   chmod 0644 /opt/xingran/upload/xingran-backend.new.b64"
+   sudo rm -f /opt/xingran/upload/chunk.*.b64"
 
-# 5. split 临时目录
+# 3. split 临时目录
 TMP_DIR=$(mktemp -d)
-trap 'rm -rf "$TMP_DIR"; ssh -S "$SOCK" -O exit -o BatchMode=yes "${SSH_USER}@${SSH_HOST}" 2>/dev/null || true; rm -f "$SOCK"' EXIT
+trap 'rm -rf "$TMP_DIR"' EXIT
 
 split -b "$CHUNK_BYTES" -d -a 4 "$BIN" "$TMP_DIR/chunk."
 CHUNK_COUNT=$(ls -1 "$TMP_DIR"/chunk.* | wc -l | tr -d ' ')
 echo "chunks: ${CHUNK_COUNT} of ${CHUNK_BYTES} bytes each"
 
-# 6. 逐片上传（严格排序！-d -a 4 + ls sort = 数字序）
+# 4. 逐片 base64 + scp 短传
+# 每片 ~666KB 短流,scp 自闭合连接(每片一开一关)。
+# ls 默认字典序 = 数字序(左 0 填充保证 chunk.0009 < chunk.0010)
 i=0
 for f in $(ls -1 "$TMP_DIR"/chunk.* | sort); do
   i=$((i + 1))
-  base64 -w 76 "$f" | \
-    ssh -S "$SOCK" $SSH_BASE "${SSH_USER}@${SSH_HOST}" \
-      "cat >> /opt/xingran/upload/xingran-backend.new.b64"
-  if (( i % 20 == 0 || i == CHUNK_COUNT )); then
+  base64 -w 76 "$f" > "$f.b64"
+  scp "${SCP_OPTS[@]}" \
+    "$f.b64" \
+    "${SSH_USER}@${SSH_HOST}:/opt/xingran/upload/chunk.$(printf '%04d' $i).b64"
+  if (( i % 10 == 0 || i == CHUNK_COUNT )); then
     echo "progress: ${i}/${CHUNK_COUNT}"
   fi
 done
 
-# 7. 传 sha256 + size + version
-ssh -S "$SOCK" $SSH_BASE "${SSH_USER}@${SSH_HOST}" \
-  "printf '%s  xingran-backend\n' '${LOCAL_SHA}' > /opt/xingran/upload/xingran-backend.new.sha256 && \
-   printf '%s\n' ${LOCAL_SIZE} > /opt/xingran/upload/xingran-backend.new.size && \
-   printf '%s\n' '${VERSION}' > /opt/xingran/upload/xingran-backend.new.version"
-
-# 8. 关闭主连接
-ssh -S "$SOCK" -O exit $SSH_BASE "${SSH_USER}@${SSH_HOST}"
+# 5. 传 sha256 + size + version
+ssh "${SSH_OPTS[@]}" "${SSH_USER}@${SSH_HOST}" \
+  "printf '%s  xingran-backend\n' '${LOCAL_SHA}' \
+     > /opt/xingran/upload/xingran-backend.new.sha256 && \
+   printf '%s\n' ${LOCAL_SIZE} \
+     > /opt/xingran/upload/xingran-backend.new.size && \
+   printf '%s\n' '${VERSION}' \
+     > /opt/xingran/upload/xingran-backend.new.version"
 
 echo "upload complete: ${CHUNK_COUNT} chunks, ${LOCAL_SIZE} bytes, sha256=${LOCAL_SHA}"
