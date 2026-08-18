@@ -124,7 +124,10 @@ Plans:
 4. 表单控件 focus 环用品牌绿(`#156031` 2px 焦点环)、校验错误态色阶统一(`#BA3630` + 行内错误文案);Tag / Badge 含 SM2 / SM3 / SM4 淡黄标签 `#FEF3C7` 规范化;Tabs 多页签与面包屑接品牌;ECharts 图表系列色为绿金梯度(`#156031` / `#3B784C` / `#598E5E` / `#C09058` / `#C89868`),无默认蓝紫
 5. 全仓扫描脚本(`scripts/check-hardcoded-colors.mjs` 或 `eslint-plugin-no-hardcoded-colors` 自定义规则)对 `src/` 下 `.tsx` / `.ts` / `.css` 文件检查硬编码 `#4F46E5` / `#F1F5F9` / slate 系(`#1e293b` / `#334155` / `#475569` 等)及非品牌裸 hex,命中即非零退出;脚本集成进 `npm run lint` 与 Phase 63 的 CI(`frontend-build.yml`);既有命中通过替换为品牌 token 清零,新文件如有违规即 fail(防回归)
 
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 66-01-PLAN.md — 通用组件样式 + 硬编码色扫描:AntdThemeBridge 四 Gap 补齐(T1)、侧边栏深绿化 + header 解耦(T2)、ECharts 品牌系列色(T3)、全仓色值清除 + 扫描器 lint 门(T4)、四门回归 + Phase 67 视觉清单(T5)、目检 checkpoint(T6)
 
 **UI hint**: yes
 
@@ -158,7 +161,7 @@ Phases execute in numeric order: 64 → 65 → 66 → 67 (Phase 63 独立 IN PRO
 |-------|-----------|----------------|--------|-----------|
 | 64. 品牌令牌层落地 + 对比度验证 | v1.22 | 0/TBD | Not started | - |
 | 65. 主题系统收敛 | v1.22 | 0/1 | Planned | - |
-| 66. 通用组件样式 + 硬编码色扫描 | v1.22 | 0/TBD | Not started | - |
+| 66. 通用组件样式 + 硬编码色扫描 | v1.22 | 0/1 | Planned | - |
 | 67. 构建回归 + 视觉确认 | v1.22 | 0/TBD | Not started | - |
 
 ---
