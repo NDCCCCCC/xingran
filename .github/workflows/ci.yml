@@ -1,0 +1,96 @@
+# CI quality gate — PR / push to main.
+#
+# Two independent jobs (backend slow, frontend fast → parallel feedback):
+#   backend:  golangci-lint + go test (packages that need no live services)
+#   frontend: lint → type-check → vitest → build (cheap-to-expensive order)
+#
+# Deploy lives in deploy.yml (separate file on purpose):
+#   - this file carries NO secrets context and only `contents: read`
+#   - concurrency semantics are opposite (CI cancels stale runs; deploys queue)
+
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          # go.mod declares go 1.24.0 + toolchain go1.24.5; GOTOOLCHAIN=auto
+          # (setup-go default) fetches the exact toolchain if needed.
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          # Pinned to the last v1 release: v2 binaries refuse v1-syntax
+          # .golangci.yml in this repo. Bump to v7 + config migration
+          # together when Go version forces it.
+          version: v1.64.8
+          args: --timeout=5m ./...
+
+      - name: Test
+        # Explicit package list excludes the root tests/ dir (integration
+        # tests that need a running service) and rpa-worker/ (separate Go
+        # module). Most unit tests use glebarez sqlite (:memory:, pure Go).
+        # If a package starts timing out, fall back to a whitelist:
+        #   go test ./internal/config/... ./pkg/...
+        # and re-admit packages one by one.
+        run: go test -timeout 15m -count=1 ./internal/... ./pkg/... ./cmd/...
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: xingran-react-frontend
+
+    steps:
+      # Full-repo checkout (not sparse): npm prebuild (sync-columns-schema)
+      # writes back to internal/services/system/*.json
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Pin to current LTS. Never use 'latest' — non-reproducible CI
+          # is a CI smell. Bump in a deliberate commit when EOL approaches.
+          node-version: '24'
+          # Cache ~/.npm keyed on the lockfile. Do NOT cache node_modules
+          # directly — architecture-dependent, not safely cacheable.
+          cache: npm
+          cache-dependency-path: xingran-react-frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Test
+        # vitest auto-runs once (no watch) when CI=true
+        run: npm run test
+
+      - name: Build
+        run: npm run build

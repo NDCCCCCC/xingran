@@ -1,0 +1,43 @@
+# XingRan systemd unit — embedded frontend + sqlite, Tencent Cloud Lighthouse.
+#
+# Installed to /etc/systemd/system/xingran.service by
+# scripts/deploy/deploy-remote.sh (idempotent: only re-installed + daemon-reload
+# when this file differs from the active unit).
+#
+# Path conventions (server):
+#   /opt/xingran/xingran-backend   binary (uploaded by CI)
+#   /opt/xingran/configs/config.yaml  app config (NOT managed by CI)
+#   /opt/xingran/data/             sqlite db lands here (path is relative to
+#                                  WorkingDirectory — do not drop that line)
+#   /opt/xingran/logs/, uploads/   lumberjack rotation, user uploads
+#   /etc/xingran/secrets.env       JWT/SM4 secrets, 600 root:root, read by pid 1
+
+[Unit]
+Description=XingRan Backend (embedded frontend, sqlite)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/xingran
+ExecStart=/opt/xingran/xingran-backend
+EnvironmentFile=/etc/xingran/secrets.env
+Environment=SERVER_MODE=release
+Restart=always
+RestartSec=5
+StartLimitBurst=3
+StartLimitIntervalSec=60
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=xingran
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/xingran/logs /opt/xingran/uploads /opt/xingran/data
+
+[Install]
+WantedBy=multi-user.target

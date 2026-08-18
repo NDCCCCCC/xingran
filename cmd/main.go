@@ -35,6 +35,14 @@ const (
 	ShutdownTimeout = 10 * time.Second
 )
 
+// Version 版本号，构建时经 ldflags 注入：
+//
+//	go build -ldflags="-X main.Version=v1.2.3" ...
+//
+// 缺省 "dev"（本地 go run / 未注入的构建）。/health 端点与启动日志都会输出，
+// 部署流水线据此校验发布是否生效（curl /health | grep 版本号）。
+var Version = "dev"
+
 func init() {
 	loadDotEnv()
 	setTimeZone()
@@ -121,6 +129,7 @@ func initializeLogger(cfg *config.Config) {
 // logStartupInfo 记录启动信息
 func logStartupInfo(cfg *config.Config) {
 	applogger.Info("========== 应用启动 ==========")
+	applogger.Infof("版本: %s", Version)
 	applogger.Infof("日志级别: %s", cfg.Log.Level)
 	applogger.Infof("日志目录: %s", cfg.Log.LogDir)
 }
@@ -192,8 +201,9 @@ func setupRoutes(engine *gin.Engine, cfg *config.Config, coreModule *core.Core, 
 	// 健康检查
 	engine.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"status": "ok",
-			"time":   time.Now().Format(time.RFC3339),
+			"status":  "ok",
+			"version": Version,
+			"time":    time.Now().Format(time.RFC3339),
 		})
 	})
 

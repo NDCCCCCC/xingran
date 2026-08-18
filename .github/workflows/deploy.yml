@@ -1,0 +1,175 @@
+# Deploy pipeline — push to main deploys; push of v* tag deploys + Release.
+#
+# Chain: build (embedded linux binary) → deploy (scp + remote activate)
+#        → release (tag only; skipped if deploy failed)
+#
+# Design notes:
+#   - concurrency group is FIXED and never cancelled: a deploy killed
+#     mid-binary-swap means downtime; concurrent deploys queue instead.
+#   - SSH uses raw ssh/scp (no third-party actions): this workflow holds
+#     the production private key, and every third-party action is another
+#     supply-chain surface. Rollback logic lives in
+#     scripts/deploy/deploy-remote.sh where it gets code-reviewed.
+#   - embed sanity check (size + embedded filename grep) guards against
+#     silently shipping a binary without the frontend (503-only fallback).
+#   - push main runs this in parallel with ci.yml: build success is the
+#     gate, not test success (user-accepted). Upgrade path: switch the
+#     branch trigger to `workflow_run` on ci success, keep tag trigger.
+
+name: deploy
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: xingran-react-frontend/package-lock.json
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Build frontend
+        run: |
+          cd xingran-react-frontend
+          npm ci
+          npm run build   # prebuild auto-syncs columns schema
+
+      - name: Stage embed directory
+        run: |
+          rm -rf internal/server/xingran-react-frontend
+          mkdir -p internal/server/xingran-react-frontend
+          cp -r xingran-react-frontend/dist internal/server/xingran-react-frontend/
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            V="${GITHUB_REF_NAME}"
+          else
+            V="main-${GITHUB_SHA::7}"
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+
+      - name: Build linux binary
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+          go build -tags=embed -trimpath \
+            -ldflags="-s -w -X main.Version=${{ steps.ver.outputs.version }}" \
+            -o out/xingran-backend ./cmd/main.go
+
+      - name: Sanity-check embed
+        # Belt and braces against an embed-less binary slipping through:
+        # embedded frontend puts the binary well over 40MB, and go:embed
+        # stores the file path verbatim in the binary (grep -a finds it
+        # even after -s -w stripping).
+        run: |
+          size=$(stat -c%s out/xingran-backend)
+          [ "$size" -gt 40000000 ] || { echo "binary too small ($size bytes), embed likely missing"; exit 1; }
+          grep -aq 'xingran-react-frontend/dist/index.html' out/xingran-backend \
+            || { echo "embed FS marker not found in binary"; exit 1; }
+          echo "embed check OK ($size bytes)"
+
+      - name: Package release archive
+        run: |
+          cp configs/config.prod.example.yaml deploy/xingran.service out/
+          tar -czf "out/xingran-backend-${{ steps.ver.outputs.version }}-linux-amd64.tar.gz" \
+            -C out xingran-backend config.prod.example.yaml xingran.service
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xingran-backend-linux-amd64
+          path: out/xingran-backend
+          retention-days: 3
+          compression-level: 0   # already a stripped binary; gzip wastes CPU
+
+      - name: Upload release archive artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-archive
+          path: out/*.tar.gz
+          retention-days: 3
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production   # deployment history; add reviewers later if wanted
+    steps:
+      - uses: actions/checkout@v4   # fetches deploy-remote.sh + xingran.service
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: xingran-backend-linux-amd64
+          path: out
+
+      - name: Setup SSH
+        # Pin host key from SSH_KNOWN_HOSTS secret instead of accept-new
+        # blind trust on first connect.
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          echo "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+
+      - name: Upload binary and unit file
+        run: |
+          chmod +x out/xingran-backend
+          PORT="${{ vars.SSH_PORT || '22' }}"
+          scp -C -P "$PORT" deploy/xingran.service \
+              ubuntu@"${{ secrets.SSH_HOST }}":/opt/xingran/deploy/xingran.service.new
+          scp -C -P "$PORT" out/xingran-backend \
+              ubuntu@"${{ secrets.SSH_HOST }}":/opt/xingran/xingran-backend.new
+
+      - name: Activate (backup → replace → restart → health → rollback)
+        run: |
+          PORT="${{ vars.SSH_PORT || '22' }}"
+          ssh -p "$PORT" ubuntu@"${{ secrets.SSH_HOST }}" \
+            'bash -s' -- "${{ needs.build.outputs.version }}" \
+            < scripts/deploy/deploy-remote.sh
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, deploy]   # no release artifact for a failed deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # only place in this workflow that needs write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-archive
+          path: out
+
+      - name: Create GitHub Release
+        # gh is preinstalled on runners; --generate-notes builds the
+        # changelog from merged PRs/commits automatically.
+        run: |
+          gh release create "${GITHUB_REF_NAME}" out/*.tar.gz \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes \
+            --verify-tag
+        env:
+          GH_TOKEN: ${{ github.token }}
