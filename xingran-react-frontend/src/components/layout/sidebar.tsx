@@ -16,8 +16,6 @@ import { getIconComponent } from "@/utils/iconUtils";
 import { buildFullPath, findMenuById, findMenuByFullPath } from "./sidebar.utils";
 import {
   DEFAULT_SIDEBAR_WIDTH,
-  HEADER_HEIGHT,
-  COLLAPSE_BUTTON_LEFT,
   MENU_FONT_SIZE,
   NAVIGATION_DELAY,
 } from "./sidebar.constants";
@@ -28,8 +26,20 @@ type MenuItem = NonNullable<MenuProps["items"]>[number];
 
 const getIcon = (iconName?: string | null): React.ReactNode => getIconComponent(iconName);
 
-const convertToMenuItem = (menu: MenuType, parentPath: string = ""): MenuItem => {
-  const icon = getIcon(menu.icon);
+/**
+ * 子菜单项默认细右箭头（原型 shell.js makeLink L202：无 icon 时默认 i-chev）
+ */
+const SubChevron: React.FC = () => (
+  <span className="menu-sub-chevron" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 6l6 6-6 6" />
+    </svg>
+  </span>
+);
+
+const convertToMenuItem = (menu: MenuType, parentPath: string = "", depth = 0): MenuItem => {
+  // 原型 shell.js：子菜单项统一用小箭头（无视后端配置的图标）；仅顶层保留配置图标
+  const icon = depth >= 1 ? <SubChevron /> : getIcon(menu.icon);
 
   if (menu.menuType === "F" || menu.visible !== 1) {
     return null;
@@ -49,7 +59,7 @@ const convertToMenuItem = (menu: MenuType, parentPath: string = ""): MenuItem =>
   if (menu.children && menu.children.length > 0) {
     const validChildren = menu.children
       .filter((child) => child.menuType !== "F" && child.visible === 1)
-      .map((child) => convertToMenuItem(child, menuPath))
+      .map((child) => convertToMenuItem(child, menuPath, depth + 1))
       .filter((item): item is MenuItem => item !== null);
 
     if (validChildren.length > 0 || menu.menuType === "M") {
@@ -274,87 +284,73 @@ const Sidebar = () => {
       trigger={null}
       className="layout-sidebar"
       style={{
-        background: "var(--sidebar-bg)",
+        background: "var(--sidebar-gradient)",
+        position: "relative",
       }}
     >
       <div
-        className="flex items-center relative"
         style={{
-          height: `${HEADER_HEIGHT}px`,
-          borderBottom: "1px solid var(--theme-border-primary)",
-          paddingLeft: sidebarCollapsed ? "0" : "56px",
-          transition: "padding-left var(--theme-transition-base)",
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+          overflow: "hidden",
         }}
       >
-        {/* 收缩按钮 */}
-        <button
-          onClick={toggleSidebar}
-          className="p-2 rounded hover:bg-[#1a6839] transition-colors absolute"
-          style={{
-            color: "var(--sidebar-text)",
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            left: `${COLLAPSE_BUTTON_LEFT}px`,
-          }}
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 20 20"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            style={{
-              transition: "transform var(--theme-transition-base)",
-              transform: sidebarCollapsed ? "rotate(180deg)" : "rotate(0deg)",
-            }}
-          >
-            <path
-              d="M3 5h14M3 10h10M3 15h6"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
+        {/* 品牌区（原型 .sidebar-brand：金方块 mark + font-display 字标） */}
+        <div className="sidebar-brand">
+          <span className="brand-mark" aria-hidden="true">
+            星
+          </span>
+          {!sidebarCollapsed && <span className="brand-wordmark">星苒 · XINGRAN</span>}
+        </div>
 
-        <h1
-          className="text-xl font-bold"
-          style={{
-            backgroundImage:
-              "linear-gradient(135deg, var(--theme-brand, #156031) 0%, #ffffff 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-            color: "transparent",
-            display: sidebarCollapsed ? "none" : "inline-block",
-          }}
-        >
-          星苒
-        </h1>
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <Spin size="large" />
+          </div>
+        ) : (
+          <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+            <Menu
+              mode="inline"
+              theme="dark"
+              selectedKeys={getSelectedKeys()}
+              openKeys={openKeys}
+              onOpenChange={handleOpenChange}
+              items={menuItems}
+              onClick={handleMenuClick}
+              className="border-r-0 px-2 py-4"
+              style={{
+                background: "transparent",
+                fontSize: `${MENU_FONT_SIZE}px`,
+                color: "var(--sidebar-text)",
+              }}
+            />
+          </div>
+        )}
+
+        {/* 底部国密 chips（原型 .sidebar-foot：SM2/SM3/SM4 + 版本号） */}
+        {!sidebarCollapsed && (
+          <div className="sidebar-foot">
+            <span className="sm-chip">SM2</span>
+            <span className="sm-chip">SM3</span>
+            <span className="sm-chip">SM4</span>
+            <span className="ver">v1.0.0</span>
+          </div>
+        )}
       </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center h-64">
-          <Spin size="large" />
-        </div>
-      ) : (
-        <Menu
-          mode="inline"
-          theme="dark"
-          selectedKeys={getSelectedKeys()}
-          openKeys={openKeys}
-          onOpenChange={handleOpenChange}
-          items={menuItems}
-          onClick={handleMenuClick}
-          className="border-r-0 px-2 py-4"
-          style={{
-            background: "transparent",
-            fontSize: `${MENU_FONT_SIZE}px`,
-            color: "var(--sidebar-text)",
-          }}
-        />
-      )}
+      {/* 右缘内嵌折叠手柄（原型 .sidebar-toggle 18×46 白底） */}
+      <button
+        onClick={toggleSidebar}
+        className={`sidebar-toggle${sidebarCollapsed ? " is-collapsed" : ""}`}
+        aria-expanded={!sidebarCollapsed}
+        aria-label={sidebarCollapsed ? "展开侧边栏" : "折叠侧边栏"}
+        title={sidebarCollapsed ? "展开侧边栏" : "折叠侧边栏"}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M14 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
     </Sider>
   );
 };

@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>系统用户 · 星苒 XINGRAN</title>
+  <style>
+    /* ============================================================
+       星苒 XINGRAN · theme.css（原型权威样式，1:1 复刻）
+       令牌唯一来源：brand-spec.md（像素实测 + 对比度验证）
+       ============================================================ */
+    :root {
+      --bg: #F0ECE3;
+      --surface: #FFFFFF;
+      --fg: #101010;
+      --muted: #707068;
+      --border: #DBD7CE;
+      --accent: #C09058;
+      --primary: #156031;
+      --primary-hover: #2E7444;
+      --primary-active: #14542E;
+      --primary-light: #1A6839;
+      --green-600: #2D8949;   /* theme.css .sc-green 引用但 :root 未定义，此处补齐 */
+      --green-500: #3B784C;
+      --green-400: #598E5E;
+      --green-tint: #E9EFEB;
+      --gold-deep: #B88850;
+      --gold: #C09058;
+      --gold-light: #C89868;
+      --gold-hover: #AA7B42;
+      --on-green: #FFFFFF;
+      --on-green-accent: #E0E0B0;
+      --gold-tag-bg: #FEF3C7;
+      --success: #2D8949;
+      --warning-text: #905D00;
+      --danger: #BA3630;
+      --muted-strong: #64645C;
+      --border-strong: #C2BDB2;
+      --input-bg: #FAFAF9;
+      --zebra: #FAF8F3;
+      --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, sans-serif;
+      --font-display: Georgia, "Songti SC", "Source Han Serif SC", serif;
+      --font-mono: "JetBrains Mono", "SF Mono", SFMono-Regular, Consolas, monospace;
+      --radius: 8px;
+      --radius-panel: 12px;
+      --ease: cubic-bezier(0.4, 0, 0.2, 1);
+      --dur: 0.2s;
+      --sidebar-w: 240px;
+      --header-h: 64px;   /* v1.22 锁定 64px（原型 56px）*/
+      --tabs-h: 40px;
+      --ring: 0 0 0 3px rgba(21, 96, 49, 0.28);
+      --shadow-card: 0 1px 2px rgba(120, 100, 70, 0.06);
+      --shadow-pop: 0 12px 32px -8px rgba(120, 100, 70, 0.25);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-ui);
+      font-size: 14px; line-height: 1.5;
+      color: var(--fg); background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    a { color: var(--primary); text-decoration: none; }
+    ul, ol { list-style: none; }
+    svg { display: block; }
+    :focus-visible { outline: 3px solid rgba(21, 96, 49, 0.45); outline-offset: 1px; border-radius: 4px; }
+
+    /* ============================================================
+       布局骨架
+       ============================================================ */
+    .app { display: flex; min-height: 100vh; }
+
+    /* ---------- Sidebar（theme.css L109）---------- */
+    .sidebar {
+      width: var(--sidebar-w);
+      flex-shrink: 0;
+      display: flex; flex-direction: column;
+      background: linear-gradient(168deg, #14532D 0%, #156031 58%, #1A6839 100%);
+      color: var(--on-green);
+      position: sticky; top: 0; height: 100vh;
+      transition: width 0.25s var(--ease);
+    }
+    .sidebar-brand {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px; height: var(--header-h);
+      flex-shrink: 0;
+    }
+    .brand-mark {
+      width: 32px; height: 32px;
+      border-radius: var(--radius);
+      display: grid; place-items: center;
+      background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold-deep) 100%);
+      color: #14532D;
+      font-family: var(--font-display);
+      font-size: 17px; font-weight: 700;
+      flex-shrink: 0;
+    }
+    .brand-wordmark {
+      font-family: var(--font-display);
+      font-size: 16px; font-weight: 600;
+      letter-spacing: 0.12em;
+      color: var(--on-green);
+      white-space: nowrap;
+    }
+    .sidebar-nav {
+      flex: 1; overflow-y: auto;
+      padding: 8px 10px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.25) transparent;
+    }
+    .menu-item {
+      display: flex; align-items: center; gap: 10px;
+      min-height: 38px; padding: 0 12px;
+      margin: 2px 0;
+      border-radius: 6px;
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.82);
+      cursor: pointer; border: 0; background: transparent;
+      width: 100%; text-align: left;
+      transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+      position: relative;
+    }
+    .menu-item .mi-icon { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.92; }
+    .menu-item:hover { background: rgba(255, 255, 255, 0.08); color: var(--on-green); }
+    .menu-item.is-active {
+      background: rgba(224, 224, 176, 0.13);
+      color: var(--on-green-accent);
+      font-weight: 600;
+    }
+    .menu-item.is-active::before {
+      content: "";
+      position: absolute; left: 0; top: 7px; bottom: 7px;
+      width: 3px; border-radius: 2px;
+      background: var(--gold);
+    }
+    .menu-sub { padding: 0; }
+    .menu-sub .menu-item { min-height: 34px; font-size: 13px; padding-left: 38px; color: rgba(255, 255, 255, 0.72); }
+    .menu-sub .menu-item:hover { color: var(--on-green); }
+    .menu-item .mi-arrow { margin-left: auto; width: 14px; height: 14px; transition: transform var(--dur) var(--ease); }
+    .menu-item[aria-expanded="true"] .mi-arrow { transform: rotate(90deg); }
+
+    .sidebar-foot {
+      flex-shrink: 0;
+      padding: 12px 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; color: rgba(255, 255, 255, 0.7);
+    }
+    .sm-chip {
+      display: inline-block;
+      padding: 1px 7px; border-radius: 4px;
+      border: 1px solid rgba(224, 224, 176, 0.28);
+      background: rgba(224, 224, 176, 0.14);
+      color: var(--on-green-accent);
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 0.06em;
+    }
+    .sidebar-foot .ver { margin-left: auto; font-family: var(--font-mono); font-size: 10px; }
+
+    /* 折叠手柄 */
+    .sidebar-toggle {
+      position: absolute; right: -9px; top: 50%;
+      transform: translateY(-50%);
+      width: 18px; height: 46px;
+      border: 1px solid var(--border); border-radius: 9px;
+      background: var(--surface); color: var(--muted-strong);
+      display: flex; align-items: center; justify-content: center;
+      padding: 0; cursor: pointer;
+      box-shadow: 0 2px 8px rgba(120, 100, 70, 0.18);
+    }
+    .sidebar-toggle svg { width: 12px; height: 12px; transform: rotate(180deg); }
+
+    /* ---------- Header ---------- */
+    .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .header {
+      height: var(--header-h);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px;
+      padding: 0 20px;
+      position: sticky; top: 0; z-index: 40;
+    }
+    .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted-strong); }
+    .breadcrumb .sep { color: var(--border-strong); }
+    .header-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    .search-trigger {
+      display: flex; align-items: center; gap: 8px;
+      width: 260px; height: 34px; padding: 0 10px;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--input-bg);
+      color: var(--muted-strong);
+      font-size: 13px; cursor: pointer;
+      transition: border-color var(--dur) var(--ease);
+    }
+    .search-trigger:hover { border-color: var(--border-strong); color: var(--fg); }
+    .search-trigger .st-text { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .search-trigger kbd { margin-left: auto; }
+    kbd {
+      font-family: var(--font-mono); font-size: 11px;
+      color: var(--muted-strong); background: var(--surface);
+      border: 1px solid var(--border); border-bottom-width: 2px;
+      border-radius: 4px; padding: 0 5px; line-height: 1.5;
+    }
+    .icon-btn {
+      position: relative; width: 36px; height: 36px;
+      display: grid; place-items: center;
+      border: 0; border-radius: var(--radius);
+      background: transparent; color: var(--fg); cursor: pointer;
+      transition: background var(--dur) var(--ease);
+    }
+    .icon-btn:hover { background: var(--bg); }
+    .icon-btn svg { width: 18px; height: 18px; }
+    .icon-btn .badge {
+      position: absolute; top: 4px; right: 4px;
+      min-width: 15px; height: 15px; padding: 0 4px;
+      border-radius: 8px; background: var(--danger); color: #FFFFFF;
+      font-size: 10px; font-weight: 700; line-height: 15px; text-align: center;
+    }
+    .header-user {
+      display: flex; align-items: center; gap: 8px;
+      padding: 4px 8px 4px 4px; border-radius: 999px;
+      cursor: pointer; border: 0; background: transparent;
+      transition: background var(--dur) var(--ease);
+    }
+    .header-user:hover { background: var(--bg); }
+    .avatar {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--primary); color: #FFFFFF;
+      font-family: var(--font-display); font-size: 14px;
+      display: grid; place-items: center;
+    }
+    .header-user .uname { font-size: 13px; font-weight: 500; }
+    .header-user .ucaret { color: var(--muted); }
+
+    /* ---------- Tabs（纯文字 + 金色下划线）---------- */
+    .tabs {
+      height: var(--tabs-h);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: stretch;
+      padding: 0 12px; gap: 2px;
+      overflow-x: auto; scrollbar-width: none;
+    }
+    .tab {
+      display: flex; align-items: center;
+      padding: 0 10px;
+      font-size: 13px; color: var(--muted-strong);
+      border: 0; background: transparent; cursor: pointer;
+      white-space: nowrap;
+      transition: color var(--dur) var(--ease), background var(--dur) var(--ease);
+    }
+    .tab:hover { color: var(--fg); background: rgba(233, 239, 235, 0.55); }
+    .tab.is-active { color: var(--primary); font-weight: 600; box-shadow: inset 0 -2px 0 var(--gold); }
+
+    /* ---------- Content ---------- */
+    .content { flex: 1; min-width: 0; padding: 20px 28px 40px; }
+    .page-head {
+      display: flex; align-items: flex-end; gap: 16px;
+      margin-bottom: 18px; flex-wrap: wrap;
+    }
+    .page-title {
+      font-family: var(--font-display);
+      font-size: 24px; font-weight: 700;
+      letter-spacing: -0.01em; line-height: 1.25;
+    }
+    .page-title .dot { color: var(--gold); font-weight: 300; margin: 0 0.15em; }
+    .page-sub { font-size: 13px; color: var(--muted-strong); margin-top: 4px; }
+    .page-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+    /* ---------- Buttons ---------- */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      height: 36px; padding: 0 16px;
+      border-radius: var(--radius); border: 1px solid transparent;
+      font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap;
+      transition: all var(--dur) var(--ease);
+    }
+    .btn svg { width: 15px; height: 15px; }
+    .btn-primary { background: var(--primary); color: #FFFFFF; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-primary:active { background: var(--primary-active); }
+    .btn-secondary { background: var(--surface); border-color: var(--border-strong); color: var(--fg); }
+    .btn-secondary:hover { border-color: var(--primary); color: var(--primary); background: var(--green-tint); }
+    .btn-lg { height: 40px; padding: 0 22px; font-size: 15px; }
+
+    /* ---------- Card ---------- */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-panel);
+      box-shadow: var(--shadow-card);
+    }
+
+    /* ---------- 统计卡组（theme.css L471-486 1:1）---------- */
+    .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 14px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-panel); padding: 16px 18px; box-shadow: var(--shadow-card); position: relative; overflow: hidden; }
+    .stat-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--primary); }
+    .stat-card.sc-green::before { background: var(--green-600); }
+    .stat-card.sc-gray::before { background: var(--muted); }
+    .stat-card.sc-gold::before { background: var(--gold); }
+    .stat-card.sc-danger::before { background: var(--danger); }
+    .stat-label { font-size: 12px; color: var(--muted-strong); margin-bottom: 6px; }
+    .stat-value { font-size: 26px; font-weight: 700; color: var(--fg); line-height: 1.1; }
+    .stat-trend { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .mono { font-family: var(--font-mono); }
+
+    /* ---------- 部门列表（system-users.html 内嵌样式 1:1）---------- */
+    .dept-tree { padding: 8px; }
+    .dept-tree .dt-title {
+      font-size: 14px; font-weight: 600;
+      padding: 8px 10px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .dept-tree .dt-title svg { width: 15px; height: 15px; color: var(--primary); }
+    .dept-tree li { margin: 1px 0; }
+    .dept-tree button.dt-node {
+      display: flex; align-items: center; gap: 8px;
+      width: 100%; min-height: 34px; padding: 0 10px;
+      border: 0; border-radius: 6px; background: none;
+      font-size: 13.5px; color: var(--fg); text-align: left; cursor: pointer;
+      transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+    }
+    .dept-tree button.dt-node:hover { background: var(--green-tint); }
+    .dept-tree button.dt-node.is-active { background: rgba(21, 96, 49, 0.1); color: var(--primary); font-weight: 600; }
+    .dept-tree .lv2 { padding-left: 14px; }
+    .dept-tree .cnt { margin-left: auto; font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); }
+    .dept-tree button.dt-node.is-active .cnt { color: var(--primary); }
+    .dt-toggle { width: 12px; height: 12px; opacity: 0.55; }
+
+    /* ---------- 查询区 ---------- */
+    .filter-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-panel);
+      padding: 16px 20px;
+      display: flex; flex-wrap: wrap; gap: 12px 16px;
+      align-items: flex-end;
+      margin-bottom: 14px;
+    }
+    .filter-bar .field { display: flex; flex-direction: row; align-items: center; gap: 8px; }
+    .field-label { font-size: 13px; font-weight: 500; color: var(--fg); white-space: nowrap; }
+    .input, .select {
+      height: 36px; padding: 0 12px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      background: var(--input-bg);
+      font-size: 14px; color: var(--fg);
+      transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+    }
+    .input::placeholder { color: var(--muted-strong); }
+    .filter-bar .input, .filter-bar .select { width: 180px; }
+    .input:hover, .select:hover { border-color: var(--primary); background: var(--surface); }
+    .input:focus, .select:focus {
+      outline: none; border-color: var(--primary); background: var(--surface); box-shadow: var(--ring);
+    }
+    .select {
+      appearance: none; padding-right: 32px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%2364645C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 10px center;
+      cursor: pointer;
+    }
+    .filter-actions { margin-left: auto; display: flex; gap: 8px; }
+
+    /* ---------- 表格 ---------- */
+    .table-card { overflow: hidden; }
+    .table-wrap { overflow-x: auto; }
+    table.grid { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    .grid thead th {
+      background: var(--green-tint);
+      color: var(--fg); font-size: 13px; font-weight: 600;
+      text-align: left; padding: 11px 14px;
+      white-space: nowrap; border-bottom: 1px solid var(--border);
+    }
+    .grid tbody td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .grid tbody tr:nth-child(even) { background: var(--zebra); }
+    .grid tbody tr:hover { background: #F3EEE3; }
+    .cell-id { font-family: var(--font-mono); font-size: 12.5px; }
+    .cell-time { font-family: var(--font-mono); font-size: 12px; color: var(--muted-strong); white-space: nowrap; }
+    .row-ops { display: flex; align-items: center; gap: 2px; white-space: nowrap; }
+    .row-ops a { color: var(--primary); padding: 0 4px; }
+    .row-ops a:hover { color: var(--primary-hover); text-decoration: underline; }
+    .row-ops .danger { color: var(--danger); }
+
+    /* ---------- Tag ---------- */
+    .tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 1px 9px; border-radius: 4px;
+      font-size: 12px; font-weight: 500; line-height: 1.7;
+      border: 1px solid transparent; white-space: nowrap;
+    }
+    .tag::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+    .tag-green { background: rgba(21, 96, 49, 0.08); border-color: rgba(21, 96, 49, 0.25); color: var(--primary); }
+    .tag-gold { background: var(--gold-tag-bg); border-color: rgba(144, 93, 0, 0.2); color: var(--warning-text); }
+
+    /* ---------- Switch ---------- */
+    .switch { position: relative; display: inline-block; width: 36px; height: 20px; flex-shrink: 0; }
+    .switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+    .switch .track {
+      position: absolute; inset: 0;
+      border-radius: 10px; background: var(--border-strong);
+      transition: background var(--dur) var(--ease);
+    }
+    .switch .track::after {
+      content: ""; position: absolute; top: 2px; left: 2px;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+      transition: transform var(--dur) var(--ease);
+    }
+    .switch input:checked + .track { background: var(--primary); }
+    .switch input:checked + .track::after { transform: translateX(16px); }
+
+    /* ---------- 分页（shell.js renderPager 1:1）---------- */
+    .pager {
+      display: flex; align-items: center; gap: 4px;
+      padding: 14px 20px; font-size: 13px; color: var(--muted-strong);
+      flex-wrap: wrap;
+    }
+    .pager .total { margin-right: auto; }
+    .page-btn {
+      min-width: 32px; height: 32px; padding: 0 8px;
+      border: 0; border-radius: 6px;
+      background: transparent; color: var(--muted-strong);
+      font-size: 13px; cursor: pointer; font-family: var(--font-mono);
+    }
+    .page-btn:hover { background: var(--bg); color: var(--fg); }
+    .page-btn.is-active { background: var(--primary); color: #FFFFFF; font-weight: 600; }
+    .page-btn:disabled { opacity: 0.35; cursor: not-allowed; background: none; }
+    .size-changer { display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; white-space: nowrap; }
+    .page-size {
+      height: 32px; padding: 0 26px 0 10px;
+      font-size: 13px; font-family: var(--font-mono); color: var(--fg);
+      background: var(--input-bg);
+      border: 1px solid var(--border-strong); border-radius: 6px;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%2364645C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 8px center;
+      cursor: pointer;
+    }
+    .jump { display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; white-space: nowrap; }
+    .page-jump {
+      width: 52px; height: 32px; text-align: center;
+      font-family: var(--font-mono); font-size: 13px; color: var(--fg);
+      background: var(--input-bg);
+      border: 1px solid var(--border-strong); border-radius: 6px;
+    }
+
+    /* ---------- 布局 ---------- */
+    .users-grid {
+      display: grid;
+      grid-template-columns: 250px minmax(0, 1fr);
+      gap: 14px; align-items: start;
+    }
+    .page-note { text-align: center; font-size: 12px; color: var(--muted-strong); padding: 18px 0 0; }
+
+    /* ---------- SVG 图标（shell.js SPRITE 同款）---------- */
+    .mi-icon, .mi-arrow { stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+</head>
+<body>
+
+<!-- SVG 精灵（shell.js L17-51 同款） -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+  <symbol id="i-cluster" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 5V2M12 22v-3M5 12H2M22 12h-3M7 7 5 5M19 19l-2-2M17 7l2-2M5 19l2-2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+  <symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="7" ry="2.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5 5v14c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V5M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M9 4V2.8h6V4M9 10h6M9 14h6M9 18h3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+  <symbol id="i-api" viewBox="0 0 24 24"><path d="M9 8 5 12l4 4M15 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="M12 3 4 7v10l8 4 8-4V7l-8-4zM4 7l8 4 8-4M12 11v10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18a4.5 4.5 0 1 1 .8-8.9A6 6 0 0 1 19 11a3.5 3.5 0 0 1-.5 7H7z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M3 12h4l2.5-6 4 12 2.5-6H21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M20 20l-4-4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6M10 20a2.2 2.2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-build" viewBox="0 0 24 24"><path d="M6 21V7h8v14M14 21V11h4v10M3 21h18M9 11h2M9 15h2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+</svg>
+
+<div class="app">
+
+  <!-- =========================================================
+       SIDEBAR（shell.js MENU 1:1，无分组标题）
+       ============================================================ -->
+  <aside class="sidebar" data-od-id="sidebar" aria-label="主导航" style="position:sticky">
+
+    <div class="sidebar-brand">
+      <span class="brand-mark" aria-hidden="true">星</span>
+      <span class="brand-wordmark">星苒 · XINGRAN</span>
+    </div>
+
+    <nav class="sidebar-nav" id="menuNav">
+      <!-- 仪表盘（直接链接） -->
+      <a class="menu-item" href="dashboard.html">
+        <svg class="mi-icon"><use href="#i-grid"/></svg>
+        <span class="mi-text">仪表盘</span>
+      </a>
+
+      <!-- 网络设备（收起） -->
+      <div class="menu-wrap">
+        <button class="menu-item" aria-expanded="false">
+          <svg class="mi-icon"><use href="#i-cluster"/></svg>
+          <span class="mi-text">网络设备</span>
+          <svg class="mi-arrow"><use href="#i-chev"/></svg>
+        </button>
+        <ul class="menu-sub" hidden>
+          <li><a class="menu-item" href="device-discovery.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">设备发现</span></a></li>
+          <li><a class="menu-item" href="device-management.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">设备管理</span></a></li>
+          <li><a class="menu-item" href="device-credentials.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">授权凭证</span></a></li>
+          <li><a class="menu-item" href="command-distribution.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">命令分发</span></a></li>
+          <li><a class="menu-item" href="config-execution.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">配置执行</span></a></li>
+          <li><a class="menu-item" href="config-backup.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">配置备份</span></a></li>
+          <li><a class="menu-item" href="config-templates.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">配置模板</span></a></li>
+          <li><a class="menu-item" href="mac-address.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">MAC 地址</span></a></li>
+        </ul>
+      </div>
+
+      <!-- 空间管理（收起） -->
+      <div class="menu-wrap">
+        <button class="menu-item" aria-expanded="false">
+          <svg class="mi-icon"><use href="#i-db"/></svg>
+          <span class="mi-text">空间管理</span>
+          <svg class="mi-arrow"><use href="#i-chev"/></svg>
+        </button>
+        <ul class="menu-sub" hidden>
+          <li><a class="menu-item" href="building-spaces.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">楼宇空间</span></a></li>
+          <li><a class="menu-item" href="building-spaces-3d.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">楼宇空间 3D</span></a></li>
+          <li><a class="menu-item" href="buildings.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">楼宇管理</span></a></li>
+          <li><a class="menu-item" href="floors.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">楼层管理</span></a></li>
+          <li><a class="menu-item" href="workstations.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">工位管理</span></a></li>
+          <li><a class="menu-item" href="server-rooms.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">机房管理</span></a></li>
+          <li><a class="menu-item" href="info-points.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">信息点管理</span></a></li>
+          <li><a class="menu-item" href="dedicated-lines.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">专线管理</span></a></li>
+          <li><a class="menu-item" href="room-devices.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">机房设备管理</span></a></li>
+        </ul>
+      </div>
+
+      <!-- 运维管理（收起） -->
+      <div class="menu-wrap">
+        <button class="menu-item" aria-expanded="false">
+          <svg class="mi-icon"><use href="#i-clip"/></svg>
+          <span class="mi-text">运维管理</span>
+          <svg class="mi-arrow"><use href="#i-chev"/></svg>
+        </button>
+        <ul class="menu-sub" hidden>
+          <li><a class="menu-item" href="workorders.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">工单管理</span></a></li>
+          <li><a class="menu-item" href="workorder-categories.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">工单分类</span></a></li>
+          <li><a class="menu-item" href="workorder-statistics.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">工单统计</span></a></li>
+          <li><a class="menu-item" href="periodic-workorders.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">周期性工单</span></a></li>
+          <li><a class="menu-item" href="duty-schedules.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">排班管理</span></a></li>
+          <li><a class="menu-item" href="duty-config.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">配置</span></a></li>
+          <li><a class="menu-item" href="my-duty.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">我的值班</span></a></li>
+          <li><a class="menu-item" href="knowledge-articles.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">知识库文章</span></a></li>
+          <li><a class="menu-item" href="knowledge-view.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">知识库查看</span></a></li>
+        </ul>
+      </div>
+
+      <!-- AD 域控（收起） -->
+      <div class="menu-wrap">
+        <button class="menu-item" aria-expanded="false">
+          <svg class="mi-icon"><use href="#i-api"/></svg>
+          <span class="mi-text">AD 域控</span>
+          <svg class="mi-arrow"><use href="#i-chev"/></svg>
+        </button>
+        <ul class="menu-sub" hidden>
+          <li><a class="menu-item" href="ad-users.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">域控用户</span></a></li>
+          <li><a class="menu-item" href="ad-groups.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">域用户组</span></a></li>
+          <li><a class="menu-item" href="ad-computers.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">电脑设备</span></a></li>
+          <li><a class="menu-item" href="ad-ous.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">组织单元（OU）</span></a></li>
+          <li><a class="menu-item" href="ad-sync-logs.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">同步日志</span></a></li>
+          <li><a class="menu-item" href="ad-config.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">域控配置</span></a></li>
+        </ul>
+      </div>
+
+      <!-- 资产管理（收起） -->
+      <div class="menu-wrap">
+        <button class="menu-item" aria-expanded="false">
+          <svg class="mi-icon"><use href="#i-box"/></svg>
+          <span class="mi-text">资产管理</span>
+          <svg class="mi-arrow"><use href="#i-chev"/></svg>
+        </button>
+        <ul class="menu-sub" hidden>
+          <li><a class="menu-item" href="assets.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">资产列表</span></a></li>
+          <li><a class="menu-item" href="reconcile-board.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">对账看板</span></a></li>
+          <li><a class="menu-item" href="asset-anomalies.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">异常列表</span></a></li>
+          <li><a class="menu-item" href="exception-rules.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">例外规则管理</span></a></li>
+          <li><a class="menu-item" href="repair-suggestions.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">修复建议</span></a></li>
+        </ul>
+      </div>
+
+      <!-- 虚拟机（收起） -->
+      <div class="menu-wrap">
+        <button class="menu-item" aria-expanded="false">
+          <svg class="mi-icon"><use href="#i-cloud"/></svg>
+          <span class="mi-text">虚拟机</span>
+          <svg class="mi-arrow"><use href="#i-chev"/></svg>
+        </button>
+        <ul class="menu-sub" hidden>
+          <li><a class="menu-item" href="vm-list.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">虚拟机列表</span></a></li>
+          <li><a class="menu-item" href="vdi-config.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">VDI 服务器配置</span></a></li>
+          <li><a class="menu-item" href="rpa-management.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">RPA 管理</span></a></li>
+        </ul>
+      </div>
+
+      <!-- 系统监控（收起） -->
+      <div class="menu-wrap">
+        <button class="menu-item" aria-expanded="false">
+          <svg class="mi-icon"><use href="#i-pulse"/></svg>
+          <span class="mi-text">系统监控</span>
+          <svg class="mi-arrow"><use href="#i-chev"/></svg>
+        </button>
+        <ul class="menu-sub" hidden>
+          <li><a class="menu-item" href="monitor-dashboard.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">监控仪表盘</span></a></li>
+          <li><a class="menu-item" href="server-monitor.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">服务监控</span></a></li>
+          <li><a class="menu-item" href="system-logs.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">日志管理</span></a></li>
+          <li><a class="menu-item" href="scheduled-jobs.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">定时任务</span></a></li>
+          <li><a class="menu-item" href="cache-management.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">缓存管理</span></a></li>
+        </ul>
+      </div>
+
+      <!-- 系统管理（当前页所在组 → 展开） -->
+      <div class="menu-wrap">
+        <button class="menu-item" aria-expanded="true">
+          <svg class="mi-icon"><use href="#i-gear"/></svg>
+          <span class="mi-text">系统管理</span>
+          <svg class="mi-arrow"><use href="#i-chev"/></svg>
+        </button>
+        <ul class="menu-sub">
+          <li><a class="menu-item is-active" href="system-users.html" data-od-id="menu-current"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">系统用户</span></a></li>
+          <li><a class="menu-item" href="system-roles.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">角色管理</span></a></li>
+          <li><a class="menu-item" href="system-menus.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">菜单管理</span></a></li>
+          <li><a class="menu-item" href="system-dept.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">部门管理</span></a></li>
+          <li><a class="menu-item" href="system-post.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">岗位管理</span></a></li>
+          <li><a class="menu-item" href="system-dict.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">字典管理</span></a></li>
+          <li><a class="menu-item" href="system-config.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">参数配置</span></a></li>
+          <li><a class="menu-item" href="system-notice.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">通知公告</span></a></li>
+          <li><button class="menu-item"><span class="mi-text" style="padding-left:0">系统设置</span></button></li>
+          <li><a class="menu-item" href="system-keys.html"><svg class="mi-icon"><use href="#i-chev"/></svg><span class="mi-text">密钥列表</span></a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <button class="sidebar-toggle" id="sidebarToggle" aria-expanded="true" aria-label="折叠侧边栏" title="折叠侧边栏" style="position:absolute;right:-9px;top:50%;transform:translateY(-50%)">
+      <svg><use href="#i-chev"/></svg>
+    </button>
+
+    <div class="sidebar-foot">
+      <span class="sm-chip">SM2</span>
+      <span class="sm-chip">SM3</span>
+      <span class="sm-chip">SM4</span>
+      <span class="ver">v1.0.0</span>
+    </div>
+  </aside>
+
+  <!-- ============================================================
+       MAIN
+       ============================================================ -->
+  <div class="main">
+
+    <!-- Header（shell.js L208-222：search-trigger 在 header-actions 内） -->
+    <header class="header" data-od-id="header">
+      <nav class="breadcrumb" aria-label="面包屑">
+        <span>首页</span>
+        <span class="sep">/</span>
+        <span>系统管理</span>
+      </nav>
+      <div class="header-actions">
+        <button class="search-trigger" aria-label="全局搜索">
+          <svg width="15" height="15"><use href="#i-search"/></svg>
+          <span class="st-text">搜索菜单、资产、告警</span>
+          <kbd>⌘K</kbd>
+        </button>
+        <button class="icon-btn" aria-label="通知，3 条未读">
+          <svg><use href="#i-bell"/></svg>
+          <span class="badge">3</span>
+        </button>
+        <button class="header-user" aria-label="用户菜单">
+          <span class="avatar" aria-hidden="true">管</span>
+          <span class="uname">超级管理员</span>
+          <svg width="12" height="12" class="ucaret"><use href="#i-chev" transform="rotate(90 12 12)"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Tabs（shell.js L228-234：纯文字 + 当前页） -->
+    <nav class="tabs" data-od-id="tabs-bar" aria-label="已打开页面">
+      <a class="tab" href="dashboard.html">首页</a>
+      <a class="tab" href="dashboard.html">运维总览</a>
+      <a class="tab" href="assets.html">资产列表</a>
+      <span class="tab is-active" data-od-id="tab-current">系统用户</span>
+    </nav>
+
+    <!-- Content -->
+    <main class="content">
+
+      <!-- Page head -->
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">系统<span class="dot">·</span>用户</h1>
+          <p class="page-sub">账号 · 部门 · 角色三位一体的权限底座</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-secondary">导入用户</button>
+          <button class="btn btn-primary btn-lg">
+            <svg><use href="#i-plus"/></svg>新增用户
+          </button>
+        </div>
+      </div>
+
+      <!-- 统计卡组（theme.css 统计卡组 · 数据与表格一致：12 总 / 10 启 / 2 停 / 4 部门） -->
+      <div class="stat-cards" data-od-id="user-stats">
+        <div class="stat-card"><div class="stat-label">用户总数</div><div class="stat-value mono">12</div><div class="stat-trend">含内置账号 1</div></div>
+        <div class="stat-card sc-green"><div class="stat-label">启用</div><div class="stat-value mono">10</div><div class="stat-trend">占比 83.3%</div></div>
+        <div class="stat-card sc-gray"><div class="stat-label">停用</div><div class="stat-value mono">2</div><div class="stat-trend">可随时恢复</div></div>
+        <div class="stat-card sc-gold"><div class="stat-label">部门数</div><div class="stat-value mono">4</div><div class="stat-trend">研发 / 运维 / 安全 / 综合</div></div>
+      </div>
+
+      <div class="users-grid">
+
+        <!-- 部门列表（system-users.html 内嵌：card dept-tree + dt-title + button 列表） -->
+        <aside class="card dept-tree" data-od-id="dept-tree" aria-label="部门列表">
+          <div class="dt-title"><svg><use href="#i-build"/></svg>部门列表</div>
+          <ul id="deptTree">
+            <li>
+              <button class="dt-node is-active">
+                <svg class="dt-toggle"><use href="#i-chev"/></svg>
+                全部
+                <span class="cnt">12</span>
+              </button>
+            </li>
+            <li>
+              <button class="dt-node">
+                <svg class="dt-toggle"><use href="#i-chev"/></svg>
+                星苒科技
+                <span class="cnt">12</span>
+              </button>
+              <ul class="lv2">
+                <li><button class="dt-node">研发部 <span class="cnt">2</span></button></li>
+                <li><button class="dt-node">运维部 <span class="cnt">5</span></button></li>
+                <li><button class="dt-node">安全部 <span class="cnt">2</span></button></li>
+                <li><button class="dt-node">综合部 <span class="cnt">3</span></button></li>
+              </ul>
+            </li>
+          </ul>
+        </aside>
+
+        <div>
+          <!-- 查询区 -->
+          <form class="filter-bar" data-od-id="filter-bar" onsubmit="return false">
+            <label class="field">
+              <span class="field-label">用户名</span>
+              <input class="input" id="fKw" placeholder="用户名 / 昵称 / 手机号" style="width:200px">
+            </label>
+            <label class="field">
+              <span class="field-label">状态</span>
+              <select class="select" id="fStatus">
+                <option value="">全部状态</option>
+                <option>启用</option><option>停用</option>
+              </select>
+            </label>
+            <div class="filter-actions">
+              <button class="btn btn-secondary" type="button">重置</button>
+              <button class="btn btn-primary" type="button">
+                <svg><use href="#i-search"/></svg>搜索
+              </button>
+            </div>
+          </form>
+
+          <!-- 表格 -->
+          <section class="card table-card" data-od-id="user-table">
+            <div class="table-wrap">
+              <table class="grid" aria-label="用户列表">
+                <thead>
+                  <tr>
+                    <th>用户名</th>
+                    <th>昵称</th>
+                    <th>工号</th>
+                    <th>部门</th>
+                    <th>角色</th>
+                    <th>手机号</th>
+                    <th>状态</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="cell-id">admin</span> <span class="tag tag-gold">内置</span></td>
+                    <td>超级管理员</td>
+                    <td class="cell-id">—</td>
+                    <td>综合部</td>
+                    <td><span class="tag tag-green">超级管理员</span></td>
+                    <td class="cell-id">13800000001</td>
+                    <td><label class="switch"><input type="checkbox" checked><span class="track"></span></label></td>
+                    <td class="cell-time">2026-08-01 09:00</td>
+                    <td>
+                      <div class="row-ops">
+                        <a href="#">编辑</a>
+                        <a href="#">重置密码</a>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="cell-id">chenxi</span></td>
+                    <td>陈曦</td>
+                    <td class="cell-id">GH-0102</td>
+                    <td>运维部</td>
+                    <td><span class="tag tag-green">运维员</span></td>
+                    <td class="cell-id">13800000002</td>
+                    <td><label class="switch"><input type="checkbox" checked><span class="track"></span></label></td>
+                    <td class="cell-time">2026-08-02 10:12</td>
+                    <td>
+                      <div class="row-ops">
+                        <a href="#">编辑</a>
+                        <a href="#">重置密码</a>
+                        <a href="#" class="danger">删除</a>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="cell-id">zhouyun</span></td>
+                    <td>周芸</td>
+                    <td class="cell-id">GH-0103</td>
+                    <td>运维部</td>
+                    <td><span class="tag tag-green">运维员</span></td>
+                    <td class="cell-id">13800000003</td>
+                    <td><label class="switch"><input type="checkbox" checked><span class="track"></span></label></td>
+                    <td class="cell-time">2026-08-02 10:15</td>
+                    <td>
+                      <div class="row-ops">
+                        <a href="#">编辑</a>
+                        <a href="#">重置密码</a>
+                        <a href="#" class="danger">删除</a>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="cell-id">zhengnan</span></td>
+                    <td>郑楠</td>
+                    <td class="cell-id">GH-0104</td>
+                    <td>安全部</td>
+                    <td><span class="tag tag-green">安全管理员</span></td>
+                    <td class="cell-id">13800000004</td>
+                    <td><label class="switch"><input type="checkbox" checked><span class="track"></span></label></td>
+                    <td class="cell-time">2026-08-03 09:20</td>
+                    <td>
+                      <div class="row-ops">
+                        <a href="#">编辑</a>
+                        <a href="#">重置密码</a>
+                        <a href="#" class="danger">删除</a>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="cell-id">hanlei</span></td>
+                    <td>韩磊</td>
+                    <td class="cell-id">GH-0105</td>
+                    <td>运维部</td>
+                    <td><span class="tag tag-green">运维员</span></td>
+                    <td class="cell-id">13800000005</td>
+                    <td><label class="switch"><input type="checkbox" checked><span class="track"></span></label></td>
+                    <td class="cell-time">2026-08-03 09:26</td>
+                    <td>
+                      <div class="row-ops">
+                        <a href="#">编辑</a>
+                        <a href="#">重置密码</a>
+                        <a href="#" class="danger">删除</a>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="cell-id">linxiao</span></td>
+                    <td>林晓</td>
+                    <td class="cell-id">GH-0201</td>
+                    <td>研发部</td>
+                    <td><span class="tag tag-green">只读用户</span></td>
+                    <td class="cell-id">13800000006</td>
+                    <td><label class="switch"><input type="checkbox" checked><span class="track"></span></label></td>
+                    <td class="cell-time">2026-08-05 14:02</td>
+                    <td>
+                      <div class="row-ops">
+                        <a href="#">编辑</a>
+                        <a href="#">重置密码</a>
+                        <a href="#" class="danger">删除</a>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="cell-id">gaoxiang</span></td>
+                    <td>高翔</td>
+                    <td class="cell-id">GH-0202</td>
+                    <td>研发部</td>
+                    <td><span class="tag tag-green">只读用户</span></td>
+                    <td class="cell-id">13800000007</td>
+                    <td><label class="switch"><input type="checkbox"><span class="track"></span></label></td>
+                    <td class="cell-time">2026-08-05 14:08</td>
+                    <td>
+                      <div class="row-ops">
+                        <a href="#">编辑</a>
+                        <a href="#">重置密码</a>
+                        <a href="#" class="danger">删除</a>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="cell-id">wuqian</span></td>
+                    <td>吴倩</td>
+                    <td class="cell-id">GH-0301</td>
+                    <td>综合部</td>
+                    <td><span class="tag tag-green">只读用户</span></td>
+                    <td class="cell-id">13800000008</td>
+                    <td><label class="switch"><input type="checkbox" checked><span class="track"></span></label></td>
+                    <td class="cell-time">2026-08-08 11:40</td>
+                    <td>
+                      <div class="row-ops">
+                        <a href="#">编辑</a>
+                        <a href="#">重置密码</a>
+                        <a href="#" class="danger">删除</a>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="cell-id">ligong</span></td>
+                    <td>李工</td>
+                    <td class="cell-id">GH-0302</td>
+                    <td>运维部</td>
+                    <td><span class="tag tag-green">运维员</span></td>
+                    <td class="cell-id">13800000009</td>
+                    <td><label class="switch"><input type="checkbox" checked><span class="track"></span></label></td>
+                    <td class="cell-time">2026-08-10 08:55</td>
+                    <td>
+                      <div class="row-ops">
+                        <a href="#">编辑</a>
+                        <a href="#">重置密码</a>
+                        <a href="#" class="danger">删除</a>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="cell-id">wanggong</span></td>
+                    <td>王工</td>
+                    <td class="cell-id">GH-0303</td>
+                    <td>运维部</td>
+                    <td><span class="tag tag-green">运维员</span></td>
+                    <td class="cell-id">13800000010</td>
+                    <td><label class="switch"><input type="checkbox" checked><span class="track"></span></label></td>
+                    <td class="cell-time">2026-08-11 16:22</td>
+                    <td>
+                      <div class="row-ops">
+                        <a href="#">编辑</a>
+                        <a href="#">重置密码</a>
+                        <a href="#" class="danger">删除</a>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- 分页（shell.js renderPager：共 12 项 / 上一页 1 2 下一页 / 每页 10 条 / 跳至 1 / 2 页） -->
+            <div class="pager" data-od-id="pager">
+              <span class="total">共 12 项</span>
+              <button class="page-btn" disabled>‹ 上一页</button>
+              <button class="page-btn is-active">1</button>
+              <button class="page-btn">2</button>
+              <button class="page-btn">下一页 ›</button>
+              <label class="size-changer">每页
+                <select class="page-size" aria-label="每页条数">
+                  <option value="10" selected>10</option>
+                  <option value="20">20</option>
+                  <option value="50">50</option>
+                </select>
+                条
+              </label>
+              <span class="jump">跳至
+                <input class="page-jump" type="number" min="1" max="2" value="1" aria-label="跳转页码，回车确认">
+                / 2 页
+              </span>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <p class="page-note">本页为原型复刻 demo · 列表为演示数据（共 12 条）</p>
+
+    </main>
+  </div>
+</div>
+
+</body>
+</html>

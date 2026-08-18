@@ -3,8 +3,8 @@
  * Sidebar component constants
  */
 
-/** 默认侧边栏宽度（像素） */
-export const DEFAULT_SIDEBAR_WIDTH = 280;
+/** 默认侧边栏宽度（像素）— 原型 --sidebar-w: 240px（v1.23 复刻） */
+export const DEFAULT_SIDEBAR_WIDTH = 240;
 
 /** Header高度（像素） */
 export const HEADER_HEIGHT = 64;

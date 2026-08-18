@@ -457,9 +457,15 @@ body {
 
 .ant-menu-dark .ant-menu-item-selected {
   background: var(--sidebar-bg-active) !important;
-  color: var(--sidebar-text-active) !important;
+  /* 白字（绿底 7.64:1）：浅黄 #E0E0B0 在提亮底色上 13px 字发灰看不清 */
+  color: var(--sidebar-text-hover) !important;
   font-weight: 600 !important;
   position: relative;
+}
+/* antd 在内层 title-content span 上单独注入 itemSelectedColor（绿）— 一并压白 */
+.ant-menu-dark .ant-menu-item-selected .ant-menu-title-content,
+.ant-menu-dark .ant-menu-item-selected .ant-menu-title-content * {
+  color: inherit !important;
 }
 
 .ant-menu-dark .ant-menu-item-selected::before {
@@ -501,14 +507,25 @@ body {
   background: var(--sidebar-bg-hover) !important;
 }
 
-.ant-menu-dark .ant-menu-submenu-open > .ant-menu-submenu-title {
-  color: var(--sidebar-text-active) !important;
+.ant-menu-dark .ant-menu-submenu-open > .ant-menu-submenu-title,
+/* 选中但收起态：antd 注入 itemSelectedColor 绿字（绿底上不可见）— 一并压白 */
+.ant-menu-dark .ant-menu-submenu-selected > .ant-menu-submenu-title {
+  color: var(--sidebar-text-hover) !important;
   font-weight: 600 !important;
+}
+.ant-menu-dark .ant-menu-submenu-selected > .ant-menu-submenu-title .ant-menu-title-content,
+.ant-menu-dark .ant-menu-submenu-selected > .ant-menu-submenu-title .ant-menu-title-content * {
+  color: inherit !important;
 }
 
 .ant-menu-dark .ant-menu-submenu-title .anticon {
   min-width: 16px;
   margin-right: 8px !important;
+}
+/* 父级标题图标：antd 选中态注入 itemSelectedColor 绿字（绿底上隐形）— 继承标题色 */
+.ant-menu-dark .ant-menu-submenu-title .anticon,
+.ant-menu-dark .ant-menu-submenu-title .ant-menu-item-icon {
+  color: inherit !important;
 }
 
 /* 菜单分组分隔线 */
@@ -2121,7 +2138,7 @@ body {
   width: var(--sidebar-collapsed-width) !important;
 }
 
-/* 部门列表侧边栏 */
+/* 部门列表侧边栏（其他消费方默认 360px；用户页 250px 见下方 xr-dept-panel 覆盖） */
 .dept-list-sider {
   width: 360px !important;
   max-width: 360px !important;
@@ -4662,28 +4679,10 @@ body {
 /* ========================================
  * Sidebar Menu Styles
  * ======================================== */
-
-/* 选中的菜单项 */
-.ant-menu-item-selected {
-  background-color: var(--theme-brand-alpha-10) !important;
-  color: var(--theme-brand) !important;
-}
-
-.ant-menu-item-selected .ant-menu-title-content,
-.ant-menu-item-selected .anticon {
-  color: var(--theme-brand) !important;
-}
-
-/* 展开的子菜单标题（父菜单）样式 */
-.ant-menu-submenu-selected > .ant-menu-submenu-title,
-.ant-menu-submenu-active > .ant-menu-submenu-title {
-  color: var(--theme-brand) !important;
-}
-
-.ant-menu-submenu-selected > .ant-menu-submenu-title .anticon,
-.ant-menu-submenu-active > .ant-menu-submenu-title .anticon {
-  color: var(--theme-brand) !important;
-}
+/* v1.23 移除：旧「选中=绿字」三块（.ant-menu-item-selected / 父级标题 / 图标 全部
+   var(--theme-brand) !important）——本意为浅色菜单设计，但会打进深色侧栏，
+   绿字落在绿渐变上不可见，且与 AntdThemeBridge 的 itemSelectedColor 重复。
+   深色侧栏选中态统一由上文 .ant-menu-dark 规则（白字+浅黄底+金条）接管。 */
 
 /* ========================================
  * Tab Bar Styles
@@ -4747,4 +4746,518 @@ body {
   overflow: hidden;
   flex: 1;
   min-width: 0;
+}
+
+/* ========================================
+   原型 Shell 复刻（v1.23）
+   基准：.planning/sketch/system-user-demo.html（用户逐版确认稿）
+   来源：655aa291-9bfe-4e94-ad5d-b3c8b2d24984/assets/theme.css + shell.js
+   原则：品牌色值全部走既有令牌 / brand-spec 实测值，dark 模式回退实色
+   ======================================== */
+
+/* ---------- 布局变量：侧栏 240px（原型 --sidebar-w） ---------- */
+[data-layout="classic"],
+[data-layout="hybrid"] {
+  --sidebar-width: 240px;
+}
+
+/* ---------- 展示字体栈（page-title / brand / stat-value） ---------- */
+:root {
+  --theme-font-display: Georgia, "Songti SC", "Source Han Serif SC", serif;
+  --theme-zebra: #faf8f3; /* 表格斑马纹（原型 --zebra 实测） */
+  --input-bg: #fafaf9; /* 输入框底（原型实测） */
+  --sidebar-gradient: linear-gradient(168deg, #14532d 0%, #156031 58%, #1a6839 100%);
+}
+[data-color-mode="dark"] {
+  --sidebar-gradient: var(--sidebar-bg); /* dark 保持实色 */
+}
+
+/* ---------- Sidebar：168deg 三阶品牌绿渐变（theme.css L109） ---------- */
+.ant-layout-sider.layout-sidebar {
+  background: var(--sidebar-gradient) !important;
+}
+
+/* 品牌区（demo .sidebar-brand：金方块 mark + font-display 字标） */
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  height: var(--header-height);
+  flex-shrink: 0;
+}
+.brand-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #c89868 0%, #b88850 100%);
+  color: #14532d;
+  font-family: var(--theme-font-display);
+  font-size: 17px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.brand-wordmark {
+  font-family: var(--theme-font-display);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+/* 底部国密 chips（demo .sidebar-foot + .sm-chip） */
+.sidebar-foot {
+  flex-shrink: 0;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+}
+.sm-chip {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 4px;
+  border: 1px solid rgba(224, 224, 176, 0.28);
+  background: rgba(224, 224, 176, 0.14);
+  color: #e0e0b0;
+  font-family: var(--theme-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+.sidebar-foot .ver {
+  margin-left: auto;
+  font-family: var(--theme-font-mono);
+  font-size: 10px;
+}
+
+/* 右缘内嵌折叠手柄（demo .sidebar-toggle 18×46 白底） */
+.sidebar-toggle {
+  position: absolute;
+  right: -9px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 46px;
+  z-index: 50;
+  border: 1px solid var(--theme-border-primary);
+  border-radius: 9px;
+  background: var(--theme-bg-surface);
+  color: var(--theme-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(120, 100, 70, 0.18);
+  transition: color var(--theme-transition-base);
+}
+.sidebar-toggle:hover {
+  color: var(--theme-primary);
+}
+.sidebar-toggle svg {
+  width: 12px;
+  height: 12px;
+  transition: transform var(--theme-transition-base);
+}
+.sidebar-toggle.is-collapsed svg {
+  transform: rotate(180deg);
+}
+
+/* 菜单选中态对齐原型：浅黄 13% 底 + 金色左竖条；文字/箭头用白色保证可读 */
+.ant-menu-dark .ant-menu-item-selected {
+  background: rgba(224, 224, 176, 0.13) !important;
+}
+.ant-menu-dark .ant-menu-item-selected .anticon,
+.ant-menu-dark .ant-menu-item-selected .menu-sub-chevron {
+  color: var(--sidebar-text-hover) !important;
+}
+.ant-menu-dark .ant-menu-item-selected::before {
+  box-shadow: none !important;
+}
+/* 子菜单项：34px 高 / 13px 字（demo .menu-sub .menu-item） */
+.ant-menu-dark .ant-menu-sub .ant-menu-item {
+  height: 34px !important;
+  line-height: 34px !important;
+  font-size: 13px;
+}
+/* 子菜单默认小箭头（shell.js makeLink i-chev 16px + 8px 间距） */
+.ant-menu-dark .ant-menu-sub .menu-sub-chevron {
+  display: inline-flex;
+  align-items: center;
+  width: 16px;
+  height: 16px;
+  margin-inline-end: 8px;
+  opacity: 0.9;
+  flex-shrink: 0;
+}
+.ant-menu-dark .ant-menu-sub .menu-sub-chevron svg {
+  width: 13px;
+  height: 13px;
+}
+/* 子项缩进（demo padding-left 38px 语义：含箭头列） */
+.ant-menu-dark .ant-menu-sub .ant-menu-item {
+  padding-inline-start: 14px !important;
+}
+/* 展开子菜单容器：antd 深色主题默认近黑底（darkSubMenuItemBg）— 透明以透出侧栏绿渐变（原型） */
+.ant-menu-dark .ant-menu-sub.ant-menu-inline {
+  background: transparent !important;
+}
+/* 折叠态悬浮子菜单弹出层：品牌深绿实底（可读性） */
+.ant-menu-dark .ant-menu-submenu-popup .ant-menu {
+  background: var(--sidebar-bg) !important;
+}
+
+/* ---------- Header：面包屑 + 搜索触发器 + 用户胶囊 ---------- */
+.header-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--theme-text-secondary);
+  white-space: nowrap;
+}
+.header-breadcrumb a {
+  color: var(--theme-text-secondary);
+}
+.header-breadcrumb a:hover {
+  color: var(--theme-primary);
+}
+.header-breadcrumb .sep {
+  color: var(--theme-text-disabled);
+}
+
+.search-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 260px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--theme-border-primary);
+  border-radius: var(--theme-radius-lg);
+  background: var(--input-bg);
+  color: var(--theme-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    border-color var(--theme-transition-base),
+    color var(--theme-transition-base);
+}
+.search-trigger:hover {
+  border-color: var(--theme-neutral-300);
+  color: var(--theme-text-primary);
+}
+.search-trigger .st-text {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+.search-trigger kbd {
+  margin-left: auto;
+  font-family: var(--theme-font-mono);
+  font-size: 11px;
+  color: var(--theme-text-secondary);
+  background: var(--theme-bg-surface);
+  border: 1px solid var(--theme-border-primary);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0 5px;
+  line-height: 1.5;
+}
+
+.header-user-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background var(--theme-transition-base);
+}
+.header-user-pill:hover {
+  background: var(--theme-bg-primary);
+}
+.header-user-pill .ant-avatar {
+  background: var(--theme-primary);
+}
+.header-user-pill .uname {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--theme-text-primary);
+}
+.header-user-pill .ucaret {
+  font-size: 10px;
+  color: var(--theme-text-secondary);
+}
+
+/* ---------- TabBar：纯文字 + 金色 inset 下划线（demo .tabs） ---------- */
+.layout-tab-bar .ant-tabs-tab {
+  color: var(--theme-text-secondary) !important;
+  font-size: 13px;
+  border: none !important;
+}
+.layout-tab-bar .ant-tabs-tab:hover {
+  background: rgba(233, 239, 235, 0.55) !important;
+  color: var(--theme-text-primary) !important;
+}
+.layout-tab-bar .ant-tabs-tab-active {
+  color: var(--theme-primary) !important;
+  box-shadow: inset 0 -2px 0 var(--sidebar-accent);
+}
+.layout-tab-bar .ant-tabs-tab-active::after {
+  display: none !important; /* 旧 ::after 蓝辉光条废弃，改 inset 金线 */
+}
+.layout-tab-bar .ant-tabs-tab-active .anticon {
+  color: var(--theme-primary) !important;
+}
+.layout-tab-bar .ant-tabs-tab .ant-tabs-tab-remove {
+  color: var(--theme-text-disabled);
+}
+.layout-tab-bar .ant-tabs-tab .ant-tabs-tab-remove:hover {
+  color: var(--theme-error);
+}
+/* demo 无「更多」下拉与常驻滚动钮（右键菜单仍可用；滚动钮仅在可滚动时出现） */
+.layout-tab-bar > button.ant-btn:not(.tab-scroll-button) {
+  display: none;
+}
+.layout-tab-bar .tab-scroll-button:disabled {
+  display: none;
+}
+
+/* ---------- PageTitle：font-display + 金色 dot（demo .page-title） ---------- */
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.page-title {
+  font-family: var(--theme-font-display);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  color: var(--theme-text-primary);
+  margin: 0;
+}
+.page-title .dot {
+  color: var(--sidebar-accent);
+  font-weight: 300;
+  margin: 0 0.15em;
+}
+.page-sub {
+  font-size: 13px;
+  color: var(--theme-text-secondary);
+  margin: 4px 0 0;
+}
+.page-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ---------- 统计卡组（theme.css L471-486 · 左 3px 色条） ---------- */
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.stat-card {
+  background: var(--theme-bg-surface);
+  border: 1px solid var(--theme-border-primary);
+  border-radius: var(--theme-radius-xl);
+  padding: 16px 18px;
+  box-shadow: 0 1px 2px rgba(120, 100, 70, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--theme-primary);
+}
+.stat-card.sc-green::before {
+  background: var(--theme-success);
+}
+.stat-card.sc-gray::before {
+  background: var(--theme-text-secondary);
+}
+.stat-card.sc-gold::before {
+  background: var(--sidebar-accent);
+}
+.stat-card.sc-danger::before {
+  background: var(--theme-error);
+}
+.stat-label {
+  font-size: 12px;
+  color: var(--theme-text-secondary);
+  margin-bottom: 6px;
+}
+.stat-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--theme-text-primary);
+  line-height: 1.1;
+  font-family: var(--theme-font-mono);
+}
+.stat-trend {
+  font-size: 11px;
+  color: var(--theme-text-secondary);
+  margin-top: 4px;
+}
+
+/* ---------- 表格斑马纹（demo .grid tbody tr:nth-child(even)） ---------- */
+.xr-table-zebra .ant-table-tbody > tr:nth-child(even) > td {
+  background: var(--theme-zebra);
+}
+.xr-table-zebra .ant-table-tbody > tr:nth-child(even):hover > td {
+  background: #f3eee3 !important;
+}
+.xr-table-zebra .ant-table-tbody > tr:hover > td {
+  background: #f3eee3 !important;
+}
+
+/* ---------- 表格密度/字体（demo .grid：表头 11×14 / 行 10×14 / 13.5px） ---------- */
+.xr-table-zebra .ant-table-thead > tr > th {
+  padding: 11px 14px !important;
+  font-size: 13px;
+}
+.xr-table-zebra .ant-table-tbody > tr > td {
+  padding: 10px 14px !important;
+  font-size: 13.5px;
+}
+/* demo .cell-id：ID/编号/手机号等宽字体 */
+.xr-cell-id {
+  font-family: var(--theme-font-mono);
+  font-size: 12.5px;
+}
+/* demo .cell-time：时间等宽弱化 */
+.xr-cell-time {
+  font-family: var(--theme-font-mono);
+  font-size: 12px;
+  color: var(--theme-text-secondary);
+  white-space: nowrap;
+}
+
+/* ---------- 品牌圆点 Tag（demo .tag::before 5px 圆点） ---------- */
+.xr-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 9px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.7;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.xr-tag::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.xr-tag-green {
+  background: rgba(21, 96, 49, 0.08);
+  border-color: rgba(21, 96, 49, 0.25);
+  color: var(--theme-primary);
+}
+.xr-tag-gold {
+  background: var(--theme-warning-bg);
+  border-color: rgba(144, 93, 0, 0.2);
+  color: var(--theme-warning-text, #905d00);
+}
+
+/* ---------- 行操作（demo .row-ops：纯文字链接，无图标无边框） ---------- */
+.xr-row-ops {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+.xr-row-ops .ant-btn-link {
+  padding: 0 4px;
+  height: auto;
+  font-size: 13.5px;
+}
+.xr-row-ops .xr-op-danger,
+.xr-row-ops .action-btn-link-danger {
+  color: var(--theme-error);
+}
+.xr-row-ops .xr-op-danger:hover,
+.xr-row-ops .action-btn-link-danger:hover {
+  color: var(--theme-error);
+  text-decoration: underline;
+}
+
+/* ---------- 部门面板（demo .dept-tree：整行 hover/active 绿色） ---------- */
+/* 用户页部门列 300px（用户反馈加宽；全局 .dept-list-sider 360px 不动其他页） */
+.dept-list-sider.xr-dept-panel {
+  width: 300px !important;
+  max-width: 300px !important;
+  min-width: 300px !important;
+}
+/* 业务页内嵌 Sider（部门列）不是侧边导航 — 排除全局深绿底，透出奶油画布 */
+.dept-list-sider {
+  background: transparent !important;
+}
+.xr-dept-panel .ant-tree .ant-tree-node-content-wrapper {
+  flex: 1;
+  border-radius: 6px;
+  transition:
+    background var(--theme-transition-base),
+    color var(--theme-transition-base);
+}
+.xr-dept-panel .ant-tree .ant-tree-node-content-wrapper:hover {
+  background: var(--theme-primary-50);
+}
+.xr-dept-panel .ant-tree .ant-tree-node-content-wrapper.ant-tree-node-selected {
+  background: rgba(21, 96, 49, 0.1);
+  color: var(--theme-primary);
+  font-weight: 600;
+}
+
+/* ---------- 分页器（demo .pager：透明无边框 page-btn，active 绿底白字） ---------- */
+.ant-pagination .ant-pagination-item {
+  border: none !important;
+  background: transparent !important;
+  min-width: 32px;
+  height: 32px;
+  line-height: 32px;
+  border-radius: 6px !important;
+  font-family: var(--theme-font-mono);
+}
+.ant-pagination .ant-pagination-item:hover {
+  background: var(--theme-bg-primary) !important;
+}
+.ant-pagination .ant-pagination-item:hover a {
+  color: var(--theme-text-primary) !important;
+}
+.ant-pagination .ant-pagination-item-active {
+  background: var(--theme-primary) !important;
+  border: none !important;
+}
+.ant-pagination .ant-pagination-item-active a {
+  color: #ffffff !important;
+}
+.ant-pagination .ant-pagination-options .ant-select-selector {
+  font-family: var(--theme-font-mono);
 }

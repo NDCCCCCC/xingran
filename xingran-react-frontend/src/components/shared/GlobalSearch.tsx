@@ -194,47 +194,17 @@ const GlobalSearch: FC = () => {
 
   return (
     <>
-      {/* 搜索提示 - 鼠标悬停显示 */}
-      <div
-        style={{
-          position: "fixed",
-          bottom: "20px",
-          right: "20px",
-          background: "var(--theme-bg-surface)",
-          border: "1px solid var(--theme-border-primary)",
-          borderRadius: "var(--theme-radius-lg)",
-          padding: "8px 16px",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          cursor: "pointer",
-          boxShadow: "var(--theme-shadow-md)",
-          zIndex: 1000,
-          transition: "all var(--theme-transition-base)",
-        }}
+      {/* 搜索触发器（原型 .search-trigger：260px 顶栏内嵌，替代旧右下浮动球） */}
+      <button
+        type="button"
+        className="search-trigger"
+        aria-label="全局搜索"
         onClick={() => setVisible(true)}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = "translateY(-2px)";
-          e.currentTarget.style.boxShadow = "var(--theme-shadow-lg)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = "translateY(0)";
-          e.currentTarget.style.boxShadow = "var(--theme-shadow-md)";
-        }}
       >
-        <SearchOutlined style={{ fontSize: "16px", color: "var(--theme-text-secondary)" }} />
-        <Text style={{ fontSize: "14px", color: "var(--theme-text-secondary)" }}>搜索</Text>
-        {/* COMP-04: 无内联色覆盖，走 AntdThemeBridge Tag 品牌默认（#FEF3C7 底 + #B88850 字，SM2/SM3/SM4 同款锚点） */}
-        <Tag
-          style={{
-            margin: 0,
-            fontSize: "12px",
-            borderRadius: "6px",
-          }}
-        >
-          ⌘K
-        </Tag>
-      </div>
+        <SearchOutlined style={{ fontSize: "14px" }} />
+        <span className="st-text">搜索菜单、资产、告警</span>
+        <kbd>⌘K</kbd>
+      </button>
 
       {/* 搜索模态框 */}
       <Modal

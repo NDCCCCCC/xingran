@@ -13,37 +13,27 @@ import {
   Form,
   Input,
   Select,
-  Tag,
-  Avatar,
-  Card,
-  Row,
-  Col,
-  Statistic,
+  Switch,
   Layout,
   Alert,
+  Card,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
-  EditOutlined,
   DeleteOutlined,
   SearchOutlined,
   ReloadOutlined,
-  UserOutlined,
-  TeamOutlined,
-  LockOutlined,
-  UnlockOutlined,
-  KeyOutlined,
   ImportOutlined,
 } from "@ant-design/icons";
 import type { User } from "@/types";
 import { post } from "@/lib/api";
 import type { PageResponse } from "@/types";
 import DeptTree from "@/components/DeptTree";
+import PageTitle from "@/design-system/components/PageTitle";
 import { useTableManager } from "@/hooks/useTableManager";
 import { usePagination } from "@/hooks/usePagination";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
-import ActionButtons from "@/components/shared/ActionButtons";
 import { DepartmentTreeSelect } from "@/components/shared";
 import ExcelImport from "@/components/shared/ExcelImport";
 import { formatDateTime } from "@/utils/datetime";
@@ -52,7 +42,7 @@ import type { SortOrder } from "@/hooks/useServerSort";
 
 // 导入提取的文件
 import { GENDER_OPTIONS, STATUS_OPTIONS } from "./constants";
-import { formatGender, formatStatus } from "./utils.tsx";
+import { formatGender } from "./utils.tsx";
 import { useUserData } from "./hooks/useUserData";
 import { useUserModals } from "./hooks/useUserModals";
 
@@ -86,12 +76,8 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       minWidth: 120,
       sorter: true,
       sortOrder: getColumnSortOrder("username"),
-      render: (text, record) => (
-        <Space>
-          <Avatar src={record.avatar} icon={<UserOutlined />} />
-          {text}
-        </Space>
-      ),
+      // 原型复刻：用户名纯 mono 文本（demo .cell-id，无头像）
+      render: (text) => <span className="xr-cell-id">{text}</span>,
     },
     {
       title: "昵称",
@@ -110,7 +96,7 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       minWidth: 80,
       sorter: true,
       sortOrder: getColumnSortOrder("employeeNo"),
-      render: (text) => text || "-",
+      render: (text) => <span className="xr-cell-id">{text || "—"}</span>,
     },
     {
       title: "邮箱",
@@ -130,6 +116,7 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       minWidth: 120,
       sorter: true,
       sortOrder: getColumnSortOrder("phone"),
+      render: (text) => <span className="xr-cell-id">{text || "—"}</span>,
     },
     {
       title: "性别",
@@ -159,6 +146,7 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       key: "roles",
       width: 160,
       minWidth: 120,
+      // 原型复刻：品牌圆点 tag（demo .tag-green / .tag-gold，超级管理员=金）
       render: (roles: string[] | Array<{ roleName?: string; roleKey?: string; id?: string }>) => {
         if (!roles || roles.length === 0) {
           return <span style={{ color: "var(--theme-text-tertiary, #999)" }}>无角色</span>;
@@ -168,10 +156,12 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
             {roles.map((role, index) => {
               const roleName =
                 typeof role === "string" ? role : role.roleName || role.roleKey || "-";
+              const isSuperAdmin =
+                roleName === "超级管理员" || roleName.toLowerCase().includes("admin");
               return (
-                <Tag key={index} color="blue">
+                <span key={index} className={`xr-tag ${isSuperAdmin ? "xr-tag-gold" : "xr-tag-green"}`}>
                   {roleName}
-                </Tag>
+                </span>
               );
             })}
           </Space>
@@ -187,10 +177,13 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       align: "center" as const,
       sorter: true,
       sortOrder: getColumnSortOrder("status"),
-      render: (status) => {
-        const config = formatStatus(status);
-        return <Tag color={config.color}>{config.text}</Tag>;
-      },
+      // 原型复刻：状态用 Switch 直改（0=启用 / 1=禁用），替代旧 Tag + 操作列「禁用/启用」
+      render: (status, record) => (
+        <Switch
+          checked={status === 0}
+          onChange={(checked) => handleUpdateStatus(record.id, checked ? 0 : 1)}
+        />
+      ),
     },
     {
       title: "创建时间",
@@ -200,40 +193,28 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       minWidth: 160,
       sorter: true,
       sortOrder: getColumnSortOrder("createdAt"),
-      render: (text) => formatDateTime(text),
+      render: (text) => <span className="xr-cell-time">{formatDateTime(text)}</span>,
     },
     {
       title: "操作",
       key: "action",
-      width: 220,
-      minWidth: 200,
+      width: 200,
+      minWidth: 180,
       fixed: "right" as const,
-      render: (_, record) => {
-        const actions = [
-          {
-            key: "edit",
-            label: "编辑",
-            icon: <EditOutlined />,
-            onClick: () => handleEdit(record),
-          },
-          {
-            key: "status",
-            label: record.status === 0 ? "禁用" : "启用",
-            icon: record.status === 1 ? <LockOutlined /> : <UnlockOutlined />,
-            onClick: () => handleUpdateStatus(record.id, record.status === 1 ? 0 : 1),
-          },
-          {
-            key: "reset-password",
-            label: "重置密码",
-            icon: <KeyOutlined />,
-            onClick: () => handleResetPassword(record),
-          },
-          {
-            key: "delete",
-            label: "删除",
-            icon: <DeleteOutlined />,
-            danger: true,
-            onClick: () => {
+      // 原型复刻：纯文字链接（demo .row-ops，无图标不折叠）
+      render: (_, record) => (
+        <div className="xr-row-ops">
+          <Button type="link" size="small" onClick={() => handleEdit(record)}>
+            编辑
+          </Button>
+          <Button type="link" size="small" onClick={() => handleResetPassword(record)}>
+            重置密码
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            className="xr-op-danger"
+            onClick={() => {
               Modal.confirm({
                 title: "确定要删除这个用户吗？",
                 okText: "确定",
@@ -241,12 +222,12 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
                 okButtonProps: { danger: true },
                 onOk: () => handleDelete(record.id),
               });
-            },
-          },
-        ];
-
-        return <ActionButtons actions={actions} />;
-      },
+            }}
+          >
+            删除
+          </Button>
+        </div>
+      ),
     },
   ];
 }
@@ -528,166 +509,176 @@ const UserManagement: FC = () => {
     [selectedDeptId]
   );
 
+  // 统计卡占比（禁用/正常 占总数的百分比，total 为 0 时兜底 0）
+  const activePct = statistics.total ? Math.round((statistics.active / statistics.total) * 1000) / 10 : 0;
+
+  // 部门数（全树节点数，含根节点 — 原型「部门数」卡）
+  const deptCount = useMemo(() => {
+    const count = (nodes: typeof departments): number =>
+      nodes.reduce((sum, node) => sum + 1 + count(node.children ?? []), 0);
+    return count(departments);
+  }, [departments]);
+
   return (
-    <Layout style={{ display: "flex", alignItems: "stretch" }}>
-      {/* 左侧部门树 */}
-      <Sider
-        width={360}
-        className="dept-list-sider"
-        style={{ background: "#fff", padding: "0 16px 16px 0" }}
-      >
-        <DeptTree onSelect={handleDeptSelect} selectedKeys={deptTreeSelectedKeys} />
-      </Sider>
+    <>
+      {/* 页头（原型 .page-head：标题 + 副标题 + 右侧操作） */}
+      <PageTitle
+        pre="系统"
+        post="用户"
+        sub="账号 · 部门 · 角色三位一体的权限底座"
+        actions={
+          <>
+            <Button icon={<ImportOutlined />} onClick={() => setImportModalVisible(true)}>
+              导入用户
+            </Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAddUser}>
+              新增用户
+            </Button>
+          </>
+        }
+      />
 
-      {/* 右侧内容区 */}
-      <Content style={{ padding: 0, background: "#fff" }}>
-        <div>
-          {/* 统计卡片 */}
-          <Row gutter={16} style={{ marginBottom: 16 }}>
-            <Col span={8}>
-              <Card>
-                <Statistic title="总用户数" value={statistics.total} prefix={<TeamOutlined />} />
-              </Card>
-            </Col>
-            <Col span={8}>
-              <Card>
-                <Statistic
-                  title="正常用户"
-                  value={statistics.active}
-                  styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
-                  prefix={<UnlockOutlined />}
-                />
-              </Card>
-            </Col>
-            <Col span={8}>
-              <Card>
-                <Statistic
-                  title="禁用用户"
-                  value={statistics.inactive}
-                  styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
-                  prefix={<LockOutlined />}
-                />
-              </Card>
-            </Col>
-          </Row>
+      {/* 统计卡组（theme.css .stat-card：左 3px 色条 + label/value/trend） */}
+      <div className="stat-cards">
+        <div className="stat-card">
+          <div className="stat-label">用户总数</div>
+          <div className="stat-value">{statistics.total}</div>
+          <div className="stat-trend">全部门合计</div>
+        </div>
+        <div className="stat-card sc-green">
+          <div className="stat-label">正常用户</div>
+          <div className="stat-value">{statistics.active}</div>
+          <div className="stat-trend">占比 {activePct}%</div>
+        </div>
+        <div className="stat-card sc-gray">
+          <div className="stat-label">禁用用户</div>
+          <div className="stat-value">{statistics.inactive}</div>
+          <div className="stat-trend">可随时恢复</div>
+        </div>
+        <div className="stat-card sc-gold">
+          <div className="stat-label">部门数</div>
+          <div className="stat-value">{deptCount}</div>
+          <div className="stat-trend">左侧部门列表</div>
+        </div>
+      </div>
 
-          {/* 搜索表单和操作按钮 */}
-          <Card style={{ marginBottom: 16 }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                flexWrap: "wrap",
-                gap: "16px",
-              }}
-            >
-              <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
-                <Form.Item name="username" label="用户名">
-                  <Input placeholder="请输入用户名" />
-                </Form.Item>
-                <Form.Item name="nickname" label="昵称">
-                  <Input placeholder="请输入昵称" />
-                </Form.Item>
-                <Form.Item name="status" label="状态">
-                  <Select
-                    placeholder="请选择状态"
-                    style={{ width: 120 }}
-                    allowClear
-                    onSearch={() => {}}
-                  >
-                    {STATUS_OPTIONS.map((opt) => (
-                      <Option key={opt.value} value={String(opt.value)}>
-                        {opt.label}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-                <Form.Item>
-                  <Space>
-                    <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
-                      搜索
-                    </Button>
-                    <Button onClick={handleReset}>重置</Button>
-                    <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-                      刷新
-                    </Button>
-                  </Space>
-                </Form.Item>
-              </Form>
-              <Space>
-                {selectedRowKeys.length > 0 && (
-                  <Button
-                    icon={<DeleteOutlined />}
-                    onClick={handleBatchDelete}
-                    style={{
-                      color: "var(--theme-error, #ba3630)",
-                    }}
-                  >
-                    批量删除 ({selectedRowKeys.length})
-                  </Button>
-                )}
-                <Button type="primary" icon={<PlusOutlined />} onClick={handleAddUser}>
-                  新增用户
-                </Button>
-                <Button icon={<ImportOutlined />} onClick={() => setImportModalVisible(true)}>
-                  导入用户
-                </Button>
-              </Space>
-            </div>
-            {selectedRowKeys.length > 0 && (
-              <Alert
-                message={
-                  <span>
-                    已选择 <strong>{selectedRowKeys.length}</strong> 个用户，
-                    <Button
-                      type="link"
-                      size="small"
-                      onClick={() => setSelectedRowKeys([])}
-                      style={{ padding: 0 }}
+      <Layout style={{ display: "flex", alignItems: "stretch", background: "transparent" }}>
+        {/* 左侧部门树（原型 250px 白卡） */}
+        <Sider
+          width={250}
+          className="dept-list-sider xr-dept-panel"
+          style={{ background: "transparent", padding: "0 14px 16px 0" }}
+        >
+          <DeptTree onSelect={handleDeptSelect} selectedKeys={deptTreeSelectedKeys} />
+        </Sider>
+
+        {/* 右侧内容区 */}
+        <Content style={{ padding: 0, background: "transparent" }}>
+          <div>
+            {/* 搜索表单（原型 .filter-bar：label + 输入框一排；操作按钮进页头） */}
+            <Card style={{ marginBottom: 14 }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  flexWrap: "wrap",
+                  gap: "16px",
+                }}
+              >
+                <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
+                  <Form.Item name="username" label="用户名">
+                    <Input placeholder="用户名 / 昵称 / 手机号" />
+                  </Form.Item>
+                  <Form.Item name="status" label="状态">
+                    <Select
+                      placeholder="全部状态"
+                      style={{ width: 140 }}
+                      allowClear
+                      onSearch={() => {}}
                     >
-                      取消选择
+                      {STATUS_OPTIONS.map((opt) => (
+                        <Option key={opt.value} value={String(opt.value)}>
+                          {opt.label}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                  <Form.Item>
+                    <Space>
+                      <Button onClick={handleReset}>重置</Button>
+                      <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                        搜索
+                      </Button>
+                      <Button icon={<ReloadOutlined />} onClick={handleRefresh} aria-label="刷新" />
+                    </Space>
+                  </Form.Item>
+                </Form>
+                <Space>
+                  {selectedRowKeys.length > 0 && (
+                    <Button
+                      icon={<DeleteOutlined />}
+                      onClick={handleBatchDelete}
+                      style={{
+                        color: "var(--theme-error, #ba3630)",
+                      }}
+                    >
+                      批量删除 ({selectedRowKeys.length})
                     </Button>
-                  </span>
-                }
-                type="info"
-                showIcon
-                style={{ marginTop: 12 }}
-              />
-            )}
-          </Card>
+                  )}
+                </Space>
+              </div>
+              {selectedRowKeys.length > 0 && (
+                <Alert
+                  message={
+                    <span>
+                      已选择 <strong>{selectedRowKeys.length}</strong> 个用户，
+                      <Button
+                        type="link"
+                        size="small"
+                        onClick={() => setSelectedRowKeys([])}
+                        style={{ padding: 0 }}
+                      >
+                        取消选择
+                      </Button>
+                    </span>
+                  }
+                  type="info"
+                  showIcon
+                  style={{ marginTop: 12 }}
+                />
+              )}
+            </Card>
 
-          {/* 用户表格 */}
-          <Card>
-            <Table
-              columns={columns}
-              dataSource={users}
-              rowKey="id"
-              loading={loading}
-              pagination={paginationProps}
-              onChange={handleTableChange}
-              rowSelection={{
-                selectedRowKeys,
-                onChange: setSelectedRowKeys,
+            {/* 用户表格（原型 .grid：绿灰表头 + 斑马纹） */}
+            <Card>
+              <Table
+                columns={columns}
+                dataSource={users}
+                rowKey="id"
+                loading={loading}
+                pagination={paginationProps}
+                onChange={handleTableChange}
+                className="xr-table-zebra"
+                size="middle"
+              />
+            </Card>
+
+            {/* 用户导入模态框：复用通用 ExcelImport 组件 */}
+            <ExcelImport
+              entityType="user"
+              entityName="用户"
+              importUrl="/api/v1/system/users/import"
+              templateUrl="/api/v1/system/users/import/template"
+              visible={importModalVisible}
+              onClose={() => setImportModalVisible(false)}
+              onImportSuccess={() => {
+                loadUsers();
+                loadStatistics();
               }}
             />
-          </Card>
-
-          {/* 用户导入模态框：复用通用 ExcelImport 组件 */}
-          <ExcelImport
-            entityType="user"
-            entityName="用户"
-            importUrl="/api/v1/system/users/import"
-            templateUrl="/api/v1/system/users/import/template"
-            visible={importModalVisible}
-            onClose={() => setImportModalVisible(false)}
-            onImportSuccess={() => {
-              loadUsers();
-              loadStatistics();
-            }}
-          />
-        </div>
-      </Content>
+          </div>
+        </Content>
 
       {/* 编辑弹窗 */}
       <Modal
@@ -812,7 +803,8 @@ const UserManagement: FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </Layout>
+      </Layout>
+    </>
   );
 };
 
