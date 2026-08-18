@@ -21,7 +21,6 @@ import {
   LockOutlined,
   UnlockOutlined,
 } from "@ant-design/icons";
-import "@/design-system/themes/theme-styles.css";
 import type { FC, ReactNode } from "react";
 import {
   SCROLL_STEP,

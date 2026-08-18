@@ -21,7 +21,6 @@ import {
   MENU_FONT_SIZE,
   NAVIGATION_DELAY,
 } from "./sidebar.constants";
-import "@/design-system/themes/theme-styles.css";
 
 const { Sider } = Layout;
 

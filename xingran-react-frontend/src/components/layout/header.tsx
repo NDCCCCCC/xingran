@@ -9,7 +9,6 @@ import { USER_PROFILE, USER_SETTINGS, LOGIN } from "@/constants/routes";
 import type { MenuProps } from "antd";
 import type { FC } from "react";
 import { AVATAR_BORDER_OPACITY, HEADER_Z_INDEX } from "./header.constants";
-import "@/design-system/themes/theme-styles.css";
 
 const { Header: AntHeader } = Layout;
 

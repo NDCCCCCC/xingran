@@ -33,6 +33,18 @@
   --theme-primary-lighter: #e9efeb; /* 浅色背景 (实测绿灰淡彩) */
   --theme-primary-subtle: #598e5e; /* 柔和边框 (实测深底图标绿) */
 
+  /* ===== 品牌色静态定义 (Phase 65 · THEME-01) =====
+     原由 design-system/themes/index.ts 运行时注入；多主题移除后由本文件静态提供。
+     色值唯一来源：655aa291-9bfe-4e94-ad5d-b3c8b2d24984/brand-spec.md (per D-02) */
+  --theme-brand: #156031; /* 品牌主色 (theme-styles.css 消费) */
+  --theme-brand-dark: #14542e; /* 品牌深端 (激活深端) */
+  --theme-brand-alpha-10: rgba(21, 96, 49, 0.1); /* 选中菜单 10% 品牌底 */
+  --theme-primary-50: #e9efeb; /* 绿灰淡彩 (同 --theme-primary-lighter) */
+  --theme-primary-100: #598e5e; /* 深底图标绿 */
+  --theme-primary-500: #156031; /* 品牌主色 (InnovativeLayout/GlobalSearch 消费) */
+  --theme-primary-600: #14532d; /* 侧边栏深绿 */
+  --theme-primary-700: #14542e; /* 激活深端 */
+
   /* ===== 中性色 - 奶油纸感色阶 (实测+推导) ===== */
   --theme-neutral-white: #ffffff; /* 白卡 surface */
   --theme-neutral-50: #f0ece3; /* 奶油画布 (实测) */
@@ -190,6 +202,14 @@
   --theme-bg-tertiary: #1f3524;
   --theme-bg-surface: #1a2e1f;
   --theme-bg-elevated: #243a29;
+
+  /* ===== 品牌色暗色推导 (Phase 65 · THEME-02，深底提亮 per brand-spec) =====
+     深绿底上 500/600 提亮为次级绿/深底图标绿；50/100/700 沿用 :root 值 */
+  --theme-brand: #598e5e; /* 深底图标绿（提亮） */
+  --theme-brand-dark: #3b784c; /* 次级绿（提亮） */
+  --theme-brand-alpha-10: rgba(89, 142, 94, 0.15); /* 深底选中底 */
+  --theme-primary-500: #3b784c; /* 次级绿 */
+  --theme-primary-600: #598e5e; /* 深底图标绿 */
 
   /* ===== 文字系统 - 5级对比度层次（奶油文字） ===== */
   --text-primary: #f0ece3; /* Level 1 - 主文字 - 奶油 */
@@ -4617,4 +4637,100 @@ body {
 /* 暗色模式 */
 [data-color-mode="dark"] .ant-table-tbody > tr > td {
   color: #e8e8e8 !important;
+}
+
+/* ========================================
+   Theme Component Overrides (merged from theme-styles.css)
+   Phase 65 · THEME-01：原 src/design-system/themes/theme-styles.css 规则
+   原样合并（选择器与值未改动），多主题移除后由 index.css 单入口提供。
+   ======================================== */
+
+/* ========================================
+ * Sidebar Menu Styles
+ * ======================================== */
+
+/* 选中的菜单项 */
+.ant-menu-item-selected {
+  background-color: var(--theme-brand-alpha-10) !important;
+  color: var(--theme-brand) !important;
+}
+
+.ant-menu-item-selected .ant-menu-title-content,
+.ant-menu-item-selected .anticon {
+  color: var(--theme-brand) !important;
+}
+
+/* 展开的子菜单标题（父菜单）样式 */
+.ant-menu-submenu-selected > .ant-menu-submenu-title,
+.ant-menu-submenu-active > .ant-menu-submenu-title {
+  color: var(--theme-brand) !important;
+}
+
+.ant-menu-submenu-selected > .ant-menu-submenu-title .anticon,
+.ant-menu-submenu-active > .ant-menu-submenu-title .anticon {
+  color: var(--theme-brand) !important;
+}
+
+/* ========================================
+ * Tab Bar Styles
+ * ======================================== */
+
+/* 激活的标签页 */
+.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: var(--theme-brand) !important;
+}
+
+/* 标签页下划线指示器 */
+.ant-tabs-ink-bar {
+  background-color: var(--theme-brand) !important;
+}
+
+/* ========================================
+ * Layout Component Styles
+ * ======================================== */
+
+/* Sidebar container */
+.layout-sidebar {
+  background: var(--sidebar-bg, #ffffff);
+  border-right: 1px solid var(--theme-border-primary, #e5e7eb);
+  transition: all var(--theme-transition-base, 0.3s ease);
+}
+
+/* Header container */
+.layout-header {
+  background: var(--theme-bg-surface, #ffffff);
+  color: var(--theme-text-primary, #1f2937);
+  border-bottom: 1px solid var(--theme-border-primary, #e5e7eb);
+  transition: var(--theme-transition-base, 0.3s ease);
+}
+
+/* Tab bar container */
+.layout-tab-bar {
+  color: var(--theme-text-primary, #1f2937);
+  background: var(--theme-bg-surface, #ffffff);
+  border-color: var(--theme-border-primary, #e5e7eb);
+}
+
+/* Tab scroll buttons */
+.tab-scroll-button {
+  border: none;
+  background: transparent;
+  color: var(--theme-text-secondary, #6b7280);
+  transition: color var(--theme-transition-fast, 0.15s ease);
+}
+
+.tab-scroll-button:hover:not(:disabled) {
+  color: var(--theme-brand, #3b82f6);
+}
+
+.tab-scroll-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Tabs scroll container */
+.tabs-scroll-container {
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
 }
