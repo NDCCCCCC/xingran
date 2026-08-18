@@ -6,10 +6,8 @@
 import { useState } from "react";
 import { Card, Button, Tooltip, Space, Divider } from "antd";
 import { useNavigate } from "react-router-dom";
-import ThemeSwitcher from "@/design-system/components/ThemeSwitcher";
 import LayoutSwitcher from "@/design-system/components/LayoutSwitcher";
 import DensitySwitcher from "@/design-system/components/DensitySwitcher";
-import ColorSwitcher from "@/design-system/components/ColorSwitcher";
 import { useAuthStore } from "@/store/authStore";
 import { DASHBOARD, MONITOR_DASHBOARD, LOGIN } from "@/constants/routes";
 import {
@@ -241,10 +239,8 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
           </Space>
 
           <Space size="middle" separator={<Divider orientation="vertical" style={{ margin: 0 }} />}>
-            <ThemeSwitcher />
             <LayoutSwitcher />
             <DensitySwitcher />
-            <ColorSwitcher />
             <span
               style={{
                 fontSize: "14px",
