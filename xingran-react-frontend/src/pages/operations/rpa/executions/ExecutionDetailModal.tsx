@@ -122,13 +122,13 @@ export function ExecutionDetailModal({ open, execution, onClose }: ExecutionDeta
   const renderStatusIcon = (level: string) => {
     switch (level) {
       case "info":
-        return <CheckCircleOutlined style={{ color: "var(--theme-success, #52c41a)" }} />;
+        return <CheckCircleOutlined style={{ color: "var(--theme-success, #2d8949)" }} />;
       case "error":
-        return <CloseCircleOutlined style={{ color: "var(--theme-error, #ff4d4f)" }} />;
+        return <CloseCircleOutlined style={{ color: "var(--theme-error, #ba3630)" }} />;
       case "warn":
-        return <CloseCircleOutlined style={{ color: "var(--theme-warning, #faad14)" }} />;
+        return <CloseCircleOutlined style={{ color: "var(--theme-warning, #b07a20)" }} />;
       default:
-        return <ClockCircleOutlined style={{ color: "var(--theme-text-tertiary, #8c8c8c)" }} />;
+        return <ClockCircleOutlined style={{ color: "var(--theme-text-tertiary, #707068)" }} />;
     }
   };
 

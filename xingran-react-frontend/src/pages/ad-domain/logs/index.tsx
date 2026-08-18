@@ -165,7 +165,7 @@ const ADSyncLogsPage: React.FC = () => {
       key: "errorMessage",
       ellipsis: true,
       render: (msg: string | undefined) =>
-        msg ? <span style={{ color: "#ff4d4f" }}>{msg}</span> : "-",
+        msg ? <span style={{ color: "#ba3630" }}>{msg}</span> : "-",
     },
   ];
 

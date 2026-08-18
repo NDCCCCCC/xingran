@@ -275,7 +275,7 @@ const ConfigBackupPage: FC = () => {
       ? "#c92a2a"
       : isAdded
         ? "#2b7a41"
-        : "var(--theme-text-tertiary, #8c8c8c)";
+        : "var(--theme-text-tertiary, #707068)";
     const contentColor = isRemoved
       ? "#c92a2a"
       : isAdded
@@ -290,7 +290,7 @@ const ConfigBackupPage: FC = () => {
               width: 50,
               padding: "0 8px",
               textAlign: "right",
-              color: "var(--theme-text-tertiary, #8c8c8c)",
+              color: "var(--theme-text-tertiary, #707068)",
               userSelect: "none",
               flexShrink: 0,
               borderRight: "1px solid #e8e8e8",
@@ -527,7 +527,7 @@ const ConfigBackupPage: FC = () => {
             <Statistic
               title="自动备份"
               value={statistics.auto}
-              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
+              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
               prefix={<ClockCircleOutlined />}
             />
           </Card>
@@ -537,7 +537,7 @@ const ConfigBackupPage: FC = () => {
             <Statistic
               title="手动备份"
               value={statistics.manual}
-              styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
+              styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
               prefix={<SaveOutlined />}
             />
           </Card>
@@ -923,19 +923,19 @@ const ConfigBackupPage: FC = () => {
           <div
             style={{
               height: 600,
-              border: "1px solid #d9d9d9",
+              border: "1px solid #dbd7ce",
               borderRadius: 4,
               overflow: "hidden",
             }}
           >
             {/* 版本信息栏 */}
-            <div style={{ display: "flex", borderBottom: "1px solid #d9d9d9" }}>
+            <div style={{ display: "flex", borderBottom: "1px solid #dbd7ce" }}>
               <div
                 style={{
                   flex: 1,
                   padding: "8px 16px",
                   background: "#f5f5f5",
-                  borderRight: "1px solid #d9d9d9",
+                  borderRight: "1px solid #dbd7ce",
                   fontSize: 13,
                   fontWeight: 500,
                   color: "var(--theme-text-primary, #262626)",
@@ -967,7 +967,7 @@ const ConfigBackupPage: FC = () => {
                   flex: 1,
                   overflow: "auto",
                   background: "#ffffff",
-                  borderRight: "1px solid #d9d9d9",
+                  borderRight: "1px solid #dbd7ce",
                   fontFamily: 'Consolas, "Courier New", monospace',
                   fontSize: 13,
                   lineHeight: "22px",

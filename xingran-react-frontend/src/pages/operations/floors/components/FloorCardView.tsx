@@ -50,7 +50,7 @@ export const FloorCardView: FC<FloorCardViewProps> = ({
                 okText="确定"
                 cancelText="取消"
               >
-                <DeleteOutlined style={{ color: "var(--theme-error, #ff4d4f)" }} />
+                <DeleteOutlined style={{ color: "var(--theme-error, #ba3630)" }} />
               </Popconfirm>,
             ]}
           >

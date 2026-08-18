@@ -109,7 +109,7 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
             return {
               type: "stat-card",
               icon: "📊",
-              iconColor: "var(--theme-info, #1890ff)",
+              iconColor: "var(--theme-info, #337ab0)",
               decimals: 0,
             };
           case "chart":
@@ -140,7 +140,7 @@ export const WidgetSelector: React.FC<WidgetSelectorProps> = ({
             return {
               type: "stat-card",
               icon: "📊",
-              iconColor: "var(--theme-info, #1890ff)",
+              iconColor: "var(--theme-info, #337ab0)",
             };
         }
       };

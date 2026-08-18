@@ -223,7 +223,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
 
         {/* 中文描述 */}
         {isValid && (
-          <div style={{ marginBottom: 12, color: "var(--theme-info, #1890ff)", fontSize: 13 }}>
+          <div style={{ marginBottom: 12, color: "var(--theme-info, #337ab0)", fontSize: 13 }}>
             {chineseDesc}
           </div>
         )}
@@ -252,7 +252,7 @@ const CronSelector = forwardRef<CronSelectorRef, CronSelectorProps>(
           <div style={{ marginTop: 16 }}>
             <Space orientation="vertical" style={{ width: "100%" }} size="small">
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <ClockCircleOutlined style={{ color: "var(--theme-info, #1890ff)" }} />
+                <ClockCircleOutlined style={{ color: "var(--theme-info, #337ab0)" }} />
                 <span style={{ fontWeight: 500 }}>最近五次执行时间</span>
               </div>
               <div style={{ background: "#fafafa", padding: "8px 16px", borderRadius: 4 }}>

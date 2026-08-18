@@ -44,7 +44,7 @@ const SPACE_NAVS: SpaceNav[] = [
     title: "仪表盘",
     icon: <DashboardOutlined />,
     path: DASHBOARD,
-    color: "var(--theme-info, #3b82f6)",
+    color: "var(--theme-info, #156031)",
     description: "数据概览与统计",
   },
   {
@@ -60,7 +60,7 @@ const SPACE_NAVS: SpaceNav[] = [
     title: "系统监控",
     icon: <MonitorOutlined />,
     path: MONITOR_DASHBOARD,
-    color: "#f59e0b",
+    color: "#b07a20",
     description: "服务器、日志、任务",
   },
   {
@@ -68,7 +68,7 @@ const SPACE_NAVS: SpaceNav[] = [
     title: "网络设备",
     icon: <CloudServerOutlined />,
     path: "/network/devices",
-    color: "var(--theme-purple, #8b5cf6)",
+    color: "var(--theme-purple, #c09058)",
     description: "设备、凭证、配置",
   },
   {
@@ -84,7 +84,7 @@ const SPACE_NAVS: SpaceNav[] = [
     title: "工单管理",
     icon: <FileTextOutlined />,
     path: "/workorder/orders",
-    color: "#ef4444",
+    color: "#ba3630",
     description: "工单、分类、统计",
   },
   {
@@ -100,7 +100,7 @@ const SPACE_NAVS: SpaceNav[] = [
     title: "个人中心",
     icon: <UserOutlined />,
     path: "/user/profile",
-    color: "#6366f1",
+    color: "#156031",
     description: "个人信息、设置",
   },
   {
@@ -108,7 +108,7 @@ const SPACE_NAVS: SpaceNav[] = [
     title: "系统设置",
     icon: <SettingOutlined />,
     path: "/user/settings",
-    color: "var(--theme-purple, #8b5cf6)",
+    color: "var(--theme-purple, #c09058)",
     description: "配置、偏好、主题",
   },
 ];
@@ -170,7 +170,7 @@ const InnovativeLayout: FC<InnovativeLayoutProps> = ({ children }) => {
             fontWeight: "bold",
             marginBottom: "16px",
             background:
-              "linear-gradient(135deg, var(--theme-primary-500, #3b82f6) 0%, var(--theme-primary-600, #2563eb) 100%)",
+              "linear-gradient(135deg, var(--theme-primary-500, #156031) 0%, var(--theme-primary-600, #14542e) 100%)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             backgroundClip: "text",

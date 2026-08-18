@@ -391,7 +391,7 @@ const ServerRoomManagement: FC = () => {
                 <EditOutlined key="edit" onClick={() => openModal(room)} />,
                 <DeleteOutlined
                   key="delete"
-                  style={{ color: "var(--theme-error, #ff4d4f)" }}
+                  style={{ color: "var(--theme-error, #ba3630)" }}
                   onClick={() => {
                     Modal.confirm({
                       title: "确定要删除这个机房吗？",
@@ -537,7 +537,7 @@ const ServerRoomManagement: FC = () => {
               {selectedRowKeys.length > 0 && (
                 <Button
                   icon={<DeleteOutlined />}
-                  style={{ color: "var(--theme-error, #ff4d4f)" }}
+                  style={{ color: "var(--theme-error, #ba3630)" }}
                   onClick={handleBatchDelete}
                 >
                   批量删除 ({selectedRowKeys.length})

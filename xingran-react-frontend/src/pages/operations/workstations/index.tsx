@@ -710,19 +710,19 @@ const WorkstationManagement: FC = () => {
             {
               title: "空闲",
               value: statistics.available,
-              styles: { content: { color: "var(--theme-success, #52c41a)" } },
+              styles: { content: { color: "var(--theme-success, #2d8949)" } },
               prefix: <CheckCircleOutlined />,
             },
             {
               title: "占用",
               value: statistics.occupied,
-              styles: { content: { color: "var(--theme-error, #ff4d4f)" } },
+              styles: { content: { color: "var(--theme-error, #ba3630)" } },
               prefix: <StopOutlined />,
             },
             {
               title: "维护",
               value: statistics.maintain,
-              styles: { content: { color: "var(--theme-warning, #faad14)" } },
+              styles: { content: { color: "var(--theme-warning, #b07a20)" } },
               prefix: <StopOutlined />,
             },
           ]}
@@ -827,7 +827,7 @@ const WorkstationManagement: FC = () => {
               {selectedRowKeys.length > 0 && (
                 <Button
                   icon={<DeleteOutlined />}
-                  style={{ color: "var(--theme-error, #ff4d4f)" }}
+                  style={{ color: "var(--theme-error, #ba3630)" }}
                   onClick={() => handleBatchDelete(selectedRowKeys, handleSuccess, resetSelection)}
                 >
                   批量删除 ({selectedRowKeys.length})

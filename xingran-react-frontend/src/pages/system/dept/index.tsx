@@ -217,7 +217,7 @@ const DepartmentManagement: FC = () => {
             <Statistic
               title="子部门"
               value={statistics.subLevel}
-              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
+              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
               prefix={<ApartmentOutlined />}
             />
           </Card>

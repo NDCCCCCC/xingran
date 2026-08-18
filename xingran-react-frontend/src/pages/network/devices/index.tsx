@@ -111,7 +111,7 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
       render: (deviceName: string, record: NetworkDevice) => (
         <a
           onClick={() => navigate(`/network/ports?deviceId=${record.id}`)}
-          style={{ color: "var(--theme-info, #1890ff)", cursor: "pointer" }}
+          style={{ color: "var(--theme-info, #337ab0)", cursor: "pointer" }}
         >
           {deviceName}
         </a>
@@ -640,7 +640,7 @@ const DeviceManagement: FC = () => {
       <Sider
         width={360}
         className="dept-list-sider"
-        style={{ background: "#fff", padding: "0 16px 16px 0", borderRight: "1px solid #f0f0f0" }}
+        style={{ background: "#fff", padding: "0 16px 16px 0", borderRight: "1px solid #e9efeb" }}
       >
         <DeptTree
           onSelect={(selectedKeys) => handleDeptSelect(selectedKeys)}
@@ -688,7 +688,7 @@ const DeviceManagement: FC = () => {
                   <Statistic
                     title="未知状态"
                     value={statistics.unknown}
-                    styles={{ content: { color: "var(--theme-warning, #faad14)" } }}
+                    styles={{ content: { color: "var(--theme-warning, #b07a20)" } }}
                     prefix={<WarningOutlined />}
                   />
                 </Card>
@@ -814,7 +814,7 @@ const DeviceManagement: FC = () => {
                 {selectedRowKeys.length > 0 && (
                   <Button
                     icon={<DeleteOutlined />}
-                    style={{ color: "var(--theme-error, #ff4d4f)" }}
+                    style={{ color: "var(--theme-error, #ba3630)" }}
                     onClick={handleBatchDelete}
                   >
                     批量删除 ({selectedRowKeys.length})

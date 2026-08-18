@@ -174,7 +174,7 @@ const ExecutionManagement: FC = () => {
           </div>
 
           {/* 统计信息 */}
-          <Space style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #f0f0f0" }}>
+          <Space style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #e9efeb" }}>
             <Tag icon={<FilterOutlined />} color="blue">
               总计: {statistics.total}
             </Tag>

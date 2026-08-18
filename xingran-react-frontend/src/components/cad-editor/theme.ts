@@ -32,7 +32,7 @@ export const CAD_COLOR_THEME = {
   wall: {
     default: "#5C6BC0",
     exterior: "#455A64",
-    selected: "#1890ff",
+    selected: "#337ab0",
     hover: "#7986CB",
   },
 
@@ -40,36 +40,36 @@ export const CAD_COLOR_THEME = {
   door: {
     default: "#FF7043",
     emergency: "#F5222D",
-    selected: "#ff4d4f",
+    selected: "#ba3630",
     hover: "#FF8A65",
   },
 
   /** 工位颜色 */
   workstation: {
-    available: "#52c41a",
-    occupied: "#ff4d4f",
-    maintain: "#faad14",
-    selected: "#1890ff",
+    available: "#2d8949",
+    occupied: "#ba3630",
+    maintain: "#b07a20",
+    selected: "#337ab0",
     hover: "#69c0ff",
   },
 
   /** 辅助元素颜色 */
   guide: {
     line: "#ffec3d",
-    snap: "#52c41a",
+    snap: "#2d8949",
   },
 
   /** 测量元素颜色 */
   measurement: {
-    line: "#8c8c8c",
+    line: "#707068",
     text: "#262626",
     background: "rgba(255, 255, 255, 0.9)",
   },
 
   /** 选择框颜色 */
   selection: {
-    fill: "rgba(24, 144, 255, 0.1)",
-    stroke: "#1890ff",
+    fill: "rgba(51, 122, 176, 0.1)",
+    stroke: "#337ab0",
   },
 } as const;
 

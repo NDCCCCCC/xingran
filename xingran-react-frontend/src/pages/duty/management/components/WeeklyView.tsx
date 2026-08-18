@@ -70,7 +70,7 @@ export const WeeklyView: React.FC<WeeklyViewProps> = ({ currentWeekStart, weekly
                 size="small"
                 style={{
                   height: "120px",
-                  borderColor: isToday ? "var(--theme-info, #1890ff)" : undefined,
+                  borderColor: isToday ? "var(--theme-info, #337ab0)" : undefined,
                   backgroundColor: isToday ? "#e6f7ff" : undefined,
                 }}
                 styles={{ body: { padding: "8px", height: "100%", overflow: "auto" } }}
@@ -81,7 +81,7 @@ export const WeeklyView: React.FC<WeeklyViewProps> = ({ currentWeekStart, weekly
                       strong
                       style={{
                         fontSize: "13px",
-                        color: isToday ? "var(--theme-info, #1890ff)" : undefined,
+                        color: isToday ? "var(--theme-info, #337ab0)" : undefined,
                         display: "block",
                       }}
                     >

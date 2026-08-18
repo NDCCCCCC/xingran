@@ -470,7 +470,7 @@ const ServerMonitor: FC = () => {
                     value={1234.56}
                     precision={2}
                     suffix="MB/s"
-                    styles={{ content: { color: "#1890ff" } }}
+                    styles={{ content: { color: "#337ab0" } }}
                   />
                 </Col>
                 <Col span={12}>
@@ -479,7 +479,7 @@ const ServerMonitor: FC = () => {
                     value={987.32}
                     precision={2}
                     suffix="MB/s"
-                    styles={{ content: { color: "#52c41a" } }}
+                    styles={{ content: { color: "#2d8949" } }}
                   />
                 </Col>
               </Row>

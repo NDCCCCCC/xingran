@@ -127,7 +127,7 @@ function getMenuTableColumns(props: MenuTableColumnsProps): ColumnsType<Menu> {
           <Button
             type="link"
             icon={<DeleteOutlined />}
-            style={{ color: "var(--theme-error, #ff4d4f)" }}
+            style={{ color: "var(--theme-error, #ba3630)" }}
             onClick={() => handleDeleteConfirm(record)}
           >
             删除
@@ -237,7 +237,7 @@ const MenuManagement: FC = () => {
             <Statistic
               title="目录数量"
               value={statistics.directories}
-              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
+              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
               prefix={<FolderOutlined />}
             />
           </Card>
@@ -247,7 +247,7 @@ const MenuManagement: FC = () => {
             <Statistic
               title="菜单数量"
               value={statistics.menus}
-              styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
+              styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
               prefix={<FileOutlined />}
             />
           </Card>
@@ -309,7 +309,7 @@ const MenuManagement: FC = () => {
             {selectedRowKeys.length > 0 && (
               <Button
                 icon={<DeleteOutlined />}
-                style={{ color: "var(--theme-error, #ff4d4f)" }}
+                style={{ color: "var(--theme-error, #ba3630)" }}
                 onClick={handleBatchDelete}
               >
                 批量删除 ({selectedRowKeys.length})

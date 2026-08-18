@@ -88,7 +88,7 @@ const Floor3D: React.FC<Floor3DProps> = ({ floor, position, onClick, isSelected 
       >
         <div
           style={{
-            background: hovered || isSelected ? "rgba(24, 144, 255, 0.95)" : "rgba(0, 0, 0, 0.75)",
+            background: hovered || isSelected ? "rgba(51, 122, 176, 0.95)" : "rgba(0, 0, 0, 0.75)",
             color: "var(--theme-text-inverse, #fff)",
             padding: "8px 16px",
             borderRadius: 8,
@@ -96,7 +96,7 @@ const Floor3D: React.FC<Floor3DProps> = ({ floor, position, onClick, isSelected 
             fontWeight: "bold",
             whiteSpace: "nowrap",
             boxShadow: hovered
-              ? "0 4px 12px rgba(24, 144, 255, 0.4)"
+              ? "0 4px 12px rgba(51, 122, 176, 0.4)"
               : "0 2px 8px rgba(0,0,0,0.15)",
             transition: "all 0.2s",
           }}
@@ -130,7 +130,7 @@ const Floor3D: React.FC<Floor3DProps> = ({ floor, position, onClick, isSelected 
                 color: "var(--theme-text-primary, #262626)",
                 marginBottom: 12,
                 paddingBottom: 10,
-                borderBottom: "1px solid #f0f0f0",
+                borderBottom: "1px solid #e9efeb",
               }}
             >
               {floor.name || floor.floorNo}
@@ -149,7 +149,7 @@ const Floor3D: React.FC<Floor3DProps> = ({ floor, position, onClick, isSelected 
                 <span
                   style={{
                     fontWeight: "bold",
-                    color: "var(--theme-text-accent, #1890ff)",
+                    color: "var(--theme-text-accent, #337ab0)",
                     fontSize: 15,
                   }}
                 >
@@ -161,7 +161,7 @@ const Floor3D: React.FC<Floor3DProps> = ({ floor, position, onClick, isSelected 
                 <span
                   style={{
                     fontWeight: "bold",
-                    color: floor.status === 0 ? "var(--theme-success, #52c41a)" : "#ff4d4f",
+                    color: floor.status === 0 ? "var(--theme-success, #2d8949)" : "#ba3630",
                     fontSize: 14,
                   }}
                 >
@@ -171,7 +171,7 @@ const Floor3D: React.FC<Floor3DProps> = ({ floor, position, onClick, isSelected 
               <div
                 style={{
                   fontSize: 13,
-                  color: "var(--theme-text-tertiary, #8c8c8c)",
+                  color: "var(--theme-text-tertiary, #707068)",
                   marginTop: 6,
                   textAlign: "center",
                   paddingTop: 4,
@@ -240,7 +240,7 @@ const BuildingModel3D: React.FC<BuildingModel3DProps> = ({
           flexDirection: "column",
           gap: 16,
           background: "#f5f5f5",
-          color: "var(--theme-text-tertiary, #8c8c8c)",
+          color: "var(--theme-text-tertiary, #707068)",
         }}
       >
         <div style={{ fontSize: 48 }}>{EMPTY_STATE.icon}</div>

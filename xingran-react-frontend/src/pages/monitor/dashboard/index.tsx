@@ -246,7 +246,7 @@ const Dashboard: FC = () => {
             <Statistic
               title="进程数量"
               value={metrics?.processCount || 0}
-              styles={{ content: { color: "#1890ff" } }}
+              styles={{ content: { color: "#337ab0" } }}
               prefix={<ClusterOutlined />}
             />
           </Card>

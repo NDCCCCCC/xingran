@@ -129,7 +129,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
       boundaries.forEach((boundaryStr) => {
         const points = parseBoundaryPoints(boundaryStr, BMap);
         const polygon = new BMap.Polygon(points, {
-          strokeColor: "var(--theme-info, #1890ff)",
+          strokeColor: "var(--theme-info, #337ab0)",
           strokeWeight: 4, // 加粗边界线
           strokeOpacity: 1, // 完全不透明
           fillColor: "transparent", // 无填充
@@ -147,7 +147,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
     // 绘制简化边界（只显示边线，无遮罩）
     const points = HUBEI_BOUNDARY.map((coord) => new BMap.Point(coord[0], coord[1]));
     const polygon = new BMap.Polygon(points, {
-      strokeColor: "var(--theme-info, #1890ff)",
+      strokeColor: "var(--theme-info, #337ab0)",
       strokeWeight: 4, // 加粗边界线
       strokeOpacity: 0.8,
       fillColor: "transparent", // 无填充
@@ -335,13 +335,13 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
           <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
             <defs>
               <filter id="clusterShadow" x="-50%" y="-50%" width="200%" height="200%">
-                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(255, 77, 79, 0.5)" flood-opacity="0.7"/>
+                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(186, 54, 48, 0.5)" flood-opacity="0.7"/>
               </filter>
             </defs>
             <!-- 外圈阴影圆 -->
-            <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 1}" fill="rgba(255,77,79,0.1)"/>
+            <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 1}" fill="rgba(186, 54, 48, 0.1)"/>
             <!-- 主圆 -->
-            <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 4}" fill="#ff4d4f" stroke="#fff" stroke-width="3" filter="url(#clusterShadow)"/>
+            <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 4}" fill="#ba3630" stroke="#fff" stroke-width="3" filter="url(#clusterShadow)"/>
             <!-- 数字 -->
             <text x="${size / 2}" y="${size / 2 + 8}" text-anchor="middle" fill="white" font-size="${size / 3}" font-weight="bold">${buildings.length}</text>
           </svg>
@@ -375,7 +375,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
 
       // 使用醒目的橙红色作为正常楼宇标记，灰色作为停用楼宇标记
       const mainColor = isStopped ? "#9e9e9e" : "#ff6b35"; // 橙红色更醒目
-      const borderColor = isStopped ? "#757575" : "#ff4d4f";
+      const borderColor = isStopped ? "#757575" : "#ba3630";
       const shadowColor = isStopped ? "rgba(0,0,0,0.2)" : "rgba(255, 107, 53, 0.5)";
 
       // 获取楼宇名称前两个字，不足则取全名
@@ -444,7 +444,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
 
     const content = `
       <div style="padding: 12px; min-width: 260px;">
-        <h3 style="margin: 0 0 12px 0; font-size: 16px; color: var(--theme-info, #1890ff); border-bottom: 2px solid #1890ff; padding-bottom: 8px;">
+        <h3 style="margin: 0 0 12px 0; font-size: 16px; color: var(--theme-info, #337ab0); border-bottom: 2px solid #337ab0; padding-bottom: 8px;">
           ${building.name}
         </h3>
         <div style="font-size: 13px; color: var(--theme-text-tertiary, #666); line-height: 1.8;">
@@ -462,14 +462,14 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
             onclick="window.viewBuildingDetails('${building.id}')"
             style="
               padding: 6px 18px;
-              background: linear-gradient(135deg, #1890ff, #096dd9);
+              background: linear-gradient(135deg, #337ab0, #096dd9);
               color: white;
               border: none;
               border-radius: 6px;
               cursor: pointer;
               font-size: 13px;
               font-weight: 500;
-              box-shadow: 0 2px 4px rgba(24, 144, 255, 0.3);
+              box-shadow: 0 2px 4px rgba(51, 122, 176, 0.3);
             "
           >
             查看详情
@@ -524,7 +524,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
           gap: 16,
         }}
       >
-        <div style={{ fontSize: 18, color: "var(--theme-error, #ff4d4f)" }}>未配置百度地图 AK</div>
+        <div style={{ fontSize: 18, color: "var(--theme-error, #ba3630)" }}>未配置百度地图 AK</div>
         <div style={{ color: "var(--theme-text-tertiary, #666)" }}>
           请在 .env.development 文件中配置 VITE_BAIDU_MAP_AK
         </div>
@@ -569,7 +569,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
             transform: "translate(-50%, -100%)",
             marginTop: -10,
             background: "white",
-            border: "1px solid #d9d9d9",
+            border: "1px solid #dbd7ce",
             borderRadius: "4px",
             padding: "8px 12px",
             boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
@@ -583,7 +583,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
               <div
                 style={{
                   fontWeight: "bold",
-                  color: "var(--theme-text-accent, #1890ff)",
+                  color: "var(--theme-text-accent, #337ab0)",
                   marginBottom: 4,
                 }}
               >
@@ -599,7 +599,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
               <div
                 style={{
                   fontWeight: "bold",
-                  color: "var(--theme-error, #ff4d4f)",
+                  color: "var(--theme-error, #ba3630)",
                   marginBottom: 4,
                 }}
               >
@@ -646,7 +646,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
           <Badge
             count={currentZoom}
             showZero
-            style={{ backgroundColor: "var(--theme-info, #1890ff)" }}
+            style={{ backgroundColor: "var(--theme-info, #337ab0)" }}
           />
         </div>
         <div>
@@ -673,8 +673,8 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
             style={{
               backgroundColor:
                 buildings.filter((b) => b.longitude && b.latitude).length > 0
-                  ? "var(--theme-success, #52c41a)"
-                  : "#ff4d4f",
+                  ? "var(--theme-success, #2d8949)"
+                  : "#ba3630",
             }}
           />
         </div>
@@ -739,7 +739,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
           <div
             style={{
               padding: "16px",
-              borderBottom: "1px solid #f0f0f0",
+              borderBottom: "1px solid #e9efeb",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
@@ -747,7 +747,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
           >
             <div>
               <div
-                style={{ fontWeight: "bold", fontSize: 16, color: "var(--theme-error, #ff4d4f)" }}
+                style={{ fontWeight: "bold", fontSize: 16, color: "var(--theme-error, #ba3630)" }}
               >
                 📍 {selectedCluster.buildings.length} 栋楼宇
               </div>
@@ -789,7 +789,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
                 <List.Item
                   key={building.id}
                   style={{
-                    border: "1px solid #f0f0f0",
+                    border: "1px solid #e9efeb",
                     borderRadius: "8px",
                     marginBottom: "12px",
                     padding: "12px",
@@ -797,11 +797,11 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
                     transition: "all 0.2s",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "var(--theme-info, #1890ff)";
-                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(24, 144, 255, 0.2)";
+                    e.currentTarget.style.borderColor = "var(--theme-info, #337ab0)";
+                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(51, 122, 176, 0.2)";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "#f0f0f0";
+                    e.currentTarget.style.borderColor = "#e9efeb";
                     e.currentTarget.style.boxShadow = "none";
                   }}
                   onClick={() => {
@@ -834,7 +834,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
                       <div
                         style={{
                           fontWeight: "bold",
-                          color: "var(--theme-text-accent, #1890ff)",
+                          color: "var(--theme-text-accent, #337ab0)",
                           fontSize: 14,
                         }}
                       >
@@ -878,7 +878,7 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
           <div
             style={{
               padding: "12px 16px",
-              borderTop: "1px solid #f0f0f0",
+              borderTop: "1px solid #e9efeb",
               background: "#fafafa",
               fontSize: 11,
               color: "var(--theme-text-tertiary, #999)",

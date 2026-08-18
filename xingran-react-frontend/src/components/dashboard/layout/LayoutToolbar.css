@@ -11,7 +11,7 @@
   gap: 16px;
   padding: 12px 16px;
   background: var(--toolbar-bg, #ffffff);
-  border-bottom: 1px solid var(--toolbar-border-color, #f0f0f0);
+  border-bottom: 1px solid var(--toolbar-border-color, #e9efeb);
   min-height: 56px;
 }
 

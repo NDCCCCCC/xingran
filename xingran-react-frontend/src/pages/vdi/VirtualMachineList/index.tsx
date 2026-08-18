@@ -807,7 +807,7 @@ const VirtualMachineList: React.FC = () => {
       render: (text: string, record) => (
         <a
           onClick={() => navigate(`/vdi/vm/${record.id}`)}
-          style={{ color: "var(--theme-info, #1890ff)", textDecoration: "underline" }}
+          style={{ color: "var(--theme-info, #337ab0)", textDecoration: "underline" }}
         >
           {text}
         </a>

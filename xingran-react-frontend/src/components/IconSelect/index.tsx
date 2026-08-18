@@ -173,7 +173,7 @@ const IconSelect: FC<IconSelectProps> = ({
                           key={iconName}
                           onClick={() => handleIconClick(iconName)}
                           style={{
-                            border: `1px solid ${isSelected ? "var(--theme-info, #1890ff)" : "#d9d9d9"}`,
+                            border: `1px solid ${isSelected ? "var(--theme-info, #337ab0)" : "#dbd7ce"}`,
                             borderRadius: 4,
                             padding: 12,
                             textAlign: "center",
@@ -183,13 +183,13 @@ const IconSelect: FC<IconSelectProps> = ({
                           }}
                           onMouseEnter={(e) => {
                             if (!isSelected) {
-                              e.currentTarget.style.borderColor = "var(--theme-info, #1890ff)";
-                              e.currentTarget.style.backgroundColor = "#f0f0f0";
+                              e.currentTarget.style.borderColor = "var(--theme-info, #337ab0)";
+                              e.currentTarget.style.backgroundColor = "#e9efeb";
                             }
                           }}
                           onMouseLeave={(e) => {
                             if (!isSelected) {
-                              e.currentTarget.style.borderColor = "#d9d9d9";
+                              e.currentTarget.style.borderColor = "#dbd7ce";
                               e.currentTarget.style.backgroundColor = "#fff";
                             }
                           }}
@@ -218,7 +218,7 @@ const IconSelect: FC<IconSelectProps> = ({
                                 width: 16,
                                 height: 16,
                                 borderRadius: "50%",
-                                backgroundColor: "var(--theme-info, #1890ff)",
+                                backgroundColor: "var(--theme-info, #337ab0)",
                                 color: "#fff",
                                 fontSize: 10,
                                 display: "flex",
@@ -263,7 +263,7 @@ const IconSelect: FC<IconSelectProps> = ({
         {/* 清空按钮 */}
         {value && (
           <div style={{ marginTop: 12, textAlign: "center" }}>
-            <a onClick={handleClear} style={{ color: "var(--theme-error, #ff4d4f)" }}>
+            <a onClick={handleClear} style={{ color: "var(--theme-error, #ba3630)" }}>
               清空已选图标
             </a>
           </div>

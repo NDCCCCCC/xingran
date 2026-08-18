@@ -550,7 +550,7 @@ const PortStatusPage: FC = () => {
             <Statistic
               title="802.1X启用"
               value={statistics.dot1xEnabled}
-              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
+              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
               prefix={<ApiOutlined />}
             />
           </Card>
@@ -690,7 +690,7 @@ const PortStatusPage: FC = () => {
               icon={<DeleteOutlined />}
               onClick={handleBatchDelete}
               disabled={selectedRowKeys.length === 0}
-              style={{ color: "var(--theme-error, #ff4d4f)" }}
+              style={{ color: "var(--theme-error, #ba3630)" }}
             >
               批量删除 ({selectedRowKeys.length})
             </Button>

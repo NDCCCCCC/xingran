@@ -255,7 +255,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                         summary.success_rate >= 0.95
                           ? "var(--theme-success, #3f8600)"
                           : summary.success_rate >= 0.8
-                            ? "var(--theme-warning, #faad14)"
+                            ? "var(--theme-warning, #b07a20)"
                             : "var(--theme-error, #cf1322)",
                     },
                   }}
@@ -283,7 +283,7 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                         summary.avg_duration < 100
                           ? "var(--theme-success, #3f8600)"
                           : summary.avg_duration < 500
-                            ? "var(--theme-warning, #faad14)"
+                            ? "var(--theme-warning, #b07a20)"
                             : "var(--theme-error, #cf1322)",
                     },
                   }}
@@ -368,8 +368,8 @@ const LogsModal: FC<LogsModalProps> = ({ visible, apiKeyId, onClose }) => {
                           <Progress
                             percent={percentage}
                             showInfo={false}
-                            strokeColor="var(--theme-info, #1890ff)"
-                            trailColor="#f0f0f0"
+                            strokeColor="var(--theme-info, #337ab0)"
+                            trailColor="#e9efeb"
                             size="small"
                           />
                         </div>

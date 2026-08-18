@@ -14,16 +14,16 @@
   flex: 1;
   height: 40px;
   padding: 8px 12px;
-  border: 1px solid var(--input-border, #d9d9d9);
+  border: 1px solid var(--input-border, #dbd7ce);
   border-radius: 6px;
   font-size: 14px;
   transition: all 0.3s;
 }
 
 .captcha-input:focus {
-  border-color: var(--input-border-focus, #1890ff);
+  border-color: var(--input-border-focus, #337ab0);
   outline: none;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  box-shadow: 0 0 0 2px rgba(51, 122, 176, 0.2);
 }
 
 .captcha-image-wrapper {

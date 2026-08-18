@@ -98,7 +98,7 @@ export function HolidayBatchModal({
                   <Button
                     type="link"
                     size="small"
-                    style={{ color: "var(--theme-error, #ff4d4f)" }}
+                    style={{ color: "var(--theme-error, #ba3630)" }}
                     onClick={() => onRemoveRow(index)}
                   >
                     删除

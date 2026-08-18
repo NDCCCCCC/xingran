@@ -343,7 +343,7 @@ const DutyPoolPage: FC = () => {
             type="link"
             size="small"
             icon={<DeleteOutlined />}
-            style={{ color: "#ff4d4f" }}
+            style={{ color: "#ba3630" }}
             onClick={() => {
               Modal.confirm({
                 title: "确定要删除吗？",

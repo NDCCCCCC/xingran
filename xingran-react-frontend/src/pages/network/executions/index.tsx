@@ -167,7 +167,7 @@ const ConfigExecutionPage: FC = () => {
             <Statistic
               title="执行中"
               value={statistics.running}
-              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
+              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
               prefix={<ApiOutlined />}
             />
           </Card>
@@ -177,7 +177,7 @@ const ConfigExecutionPage: FC = () => {
             <Statistic
               title="成功"
               value={statistics.success}
-              styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
+              styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
               prefix={<CheckCircleOutlined />}
             />
           </Card>
@@ -187,7 +187,7 @@ const ConfigExecutionPage: FC = () => {
             <Statistic
               title="失败"
               value={statistics.failed}
-              styles={{ content: { color: "var(--theme-error, #ff4d4f)" } }}
+              styles={{ content: { color: "var(--theme-error, #ba3630)" } }}
               prefix={<CloseCircleOutlined />}
             />
           </Card>

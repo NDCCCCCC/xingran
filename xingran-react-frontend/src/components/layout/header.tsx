@@ -85,7 +85,7 @@ const Header: FC = () => {
             className="cursor-pointer shadow-md border-2"
             style={{
               background:
-                "linear-gradient(135deg, var(--theme-brand, #3b82f6) 0%, var(--theme-brand-dark, #2563eb) 100%)",
+                "linear-gradient(135deg, var(--theme-brand, #156031) 0%, var(--theme-brand-dark, #14542e) 100%)",
               color: "var(--theme-text-inverse)",
               borderColor: `rgba(255, 255, 255, ${AVATAR_BORDER_OPACITY})`,
               transition: "var(--theme-transition-base)",

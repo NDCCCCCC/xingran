@@ -453,7 +453,7 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
               width={w}
               height={h}
               fill={colors.main}
-              stroke={isSelected ? "#ff4d4f" : colors.border}
+              stroke={isSelected ? "#ba3630" : colors.border}
               strokeWidth={isSelected ? 3 : 2}
               rx={6}
               ry={6}
@@ -724,7 +724,7 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
           justifyContent: "space-between",
           alignItems: "center",
           padding: "8px 12px",
-          borderBottom: "1px solid #f0f0f0",
+          borderBottom: "1px solid #e9efeb",
         }}
       >
         <div className="toolbar-left">

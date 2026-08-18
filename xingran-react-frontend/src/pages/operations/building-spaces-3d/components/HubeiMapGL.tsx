@@ -192,7 +192,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
       boundaries.forEach((boundaryStr: string) => {
         const points = parseBoundaryPoints(boundaryStr, BMapGL);
         const polygon = new BMapGL.Polygon(points, {
-          strokeColor: "var(--theme-info, #1890ff)",
+          strokeColor: "var(--theme-info, #337ab0)",
           strokeWeight: 4,
           strokeOpacity: 1,
           fillColor: "transparent",
@@ -209,7 +209,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
   const addFallbackMask = (map: BMapMapGL, BMapGL: BMapGLNamespace) => {
     const points = HUBEI_BOUNDARY.map((coord) => new BMapGL.Point(coord[0], coord[1]));
     const polygon = new BMapGL.Polygon(points, {
-      strokeColor: "var(--theme-info, #1890ff)",
+      strokeColor: "var(--theme-info, #337ab0)",
       strokeWeight: 4,
       strokeOpacity: 0.8,
       fillColor: "transparent",
@@ -433,7 +433,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
 
     const content = `
       <div style="padding: 12px; min-width: 260px;">
-        <h3 style="margin: 0 0 12px 0; font-size: 16px; color: var(--theme-info, #1890ff); border-bottom: 2px solid #1890ff; padding-bottom: 8px;">
+        <h3 style="margin: 0 0 12px 0; font-size: 16px; color: var(--theme-info, #337ab0); border-bottom: 2px solid #337ab0; padding-bottom: 8px;">
           ${building.name}
         </h3>
         <div style="font-size: 13px; color: var(--theme-text-tertiary, #666); line-height: 1.8;">
@@ -451,14 +451,14 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
             onclick="window.viewBuildingDetailsGL('${building.id}')"
             style="
               padding: 6px 18px;
-              background: linear-gradient(135deg, #1890ff, #096dd9);
+              background: linear-gradient(135deg, #337ab0, #096dd9);
               color: white;
               border: none;
               border-radius: 6px;
               cursor: pointer;
               font-size: 13px;
               font-weight: 500;
-              box-shadow: 0 2px 4px rgba(24, 144, 255, 0.3);
+              box-shadow: 0 2px 4px rgba(51, 122, 176, 0.3);
             "
           >
             查看详情
@@ -515,7 +515,7 @@ const HubeiMapGL: React.FC<HubeiMapGLProps> = ({ buildings }) => {
           gap: 16,
         }}
       >
-        <div style={{ fontSize: 18, color: "var(--theme-error, #ff4d4f)" }}>未配置百度地图 AK</div>
+        <div style={{ fontSize: 18, color: "var(--theme-error, #ba3630)" }}>未配置百度地图 AK</div>
         <div style={{ color: "var(--theme-text-tertiary, #666)" }}>
           请在 .env.development 文件中配置 VITE_BAIDU_MAP_AK
         </div>
@@ -641,7 +641,7 @@ const MapInfoPanel: React.FC<MapInfoPanelProps> = ({ currentZoom, is3DMode, curr
       <Badge
         count={currentZoom}
         showZero
-        style={{ backgroundColor: "var(--theme-info, #1890ff)" }}
+        style={{ backgroundColor: "var(--theme-info, #337ab0)" }}
       />
     </div>
     <div>
@@ -650,7 +650,7 @@ const MapInfoPanel: React.FC<MapInfoPanelProps> = ({ currentZoom, is3DMode, curr
         count={is3DMode ? `${currentTilt}°` : "关闭"}
         showZero
         style={{
-          backgroundColor: is3DMode ? "var(--theme-purple, #722ed1)" : "#d9d9d9",
+          backgroundColor: is3DMode ? "var(--theme-purple, #722ed1)" : "#dbd7ce",
           marginLeft: 8,
         }}
       />
@@ -677,7 +677,7 @@ const TooltipPanel: React.FC<TooltipPanelProps> = ({ buildings, position }) => (
       transform: "translate(-50%, -100%)",
       marginTop: -10,
       background: "white",
-      border: "1px solid #d9d9d9",
+      border: "1px solid #dbd7ce",
       borderRadius: "4px",
       padding: "8px 12px",
       boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
@@ -691,7 +691,7 @@ const TooltipPanel: React.FC<TooltipPanelProps> = ({ buildings, position }) => (
         <div
           style={{
             fontWeight: "bold",
-            color: "var(--theme-text-accent, #1890ff)",
+            color: "var(--theme-text-accent, #337ab0)",
             marginBottom: 4,
           }}
         >
@@ -704,7 +704,7 @@ const TooltipPanel: React.FC<TooltipPanelProps> = ({ buildings, position }) => (
       </div>
     ) : (
       <div>
-        <div style={{ fontWeight: "bold", color: "var(--theme-error, #ff4d4f)", marginBottom: 4 }}>
+        <div style={{ fontWeight: "bold", color: "var(--theme-error, #ba3630)", marginBottom: 4 }}>
           {buildings.length} 栋楼宇
         </div>
         {buildings.slice(0, 3).map((b, i) => (
@@ -808,14 +808,14 @@ const ClusterSidebar: React.FC<ClusterSidebarProps> = ({ cluster, onClose, onBui
     <div
       style={{
         padding: "16px",
-        borderBottom: "1px solid #f0f0f0",
+        borderBottom: "1px solid #e9efeb",
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
       }}
     >
       <div>
-        <div style={{ fontWeight: "bold", fontSize: 16, color: "var(--theme-error, #ff4d4f)" }}>
+        <div style={{ fontWeight: "bold", fontSize: 16, color: "var(--theme-error, #ba3630)" }}>
           📍 {cluster.buildings.length} 栋楼宇
         </div>
         <div style={{ fontSize: 12, color: "var(--theme-text-tertiary, #999)", marginTop: 4 }}>
@@ -849,7 +849,7 @@ const ClusterSidebar: React.FC<ClusterSidebarProps> = ({ cluster, onClose, onBui
           <List.Item
             key={building.id}
             style={{
-              border: "1px solid #f0f0f0",
+              border: "1px solid #e9efeb",
               borderRadius: "8px",
               marginBottom: "12px",
               padding: "12px",
@@ -869,7 +869,7 @@ const ClusterSidebar: React.FC<ClusterSidebarProps> = ({ cluster, onClose, onBui
                 <div
                   style={{
                     fontWeight: "bold",
-                    color: "var(--theme-text-accent, #1890ff)",
+                    color: "var(--theme-text-accent, #337ab0)",
                     fontSize: 14,
                   }}
                 >
@@ -902,7 +902,7 @@ const ClusterSidebar: React.FC<ClusterSidebarProps> = ({ cluster, onClose, onBui
     <div
       style={{
         padding: "12px 16px",
-        borderTop: "1px solid #f0f0f0",
+        borderTop: "1px solid #e9efeb",
         background: "#fafafa",
         fontSize: 11,
         color: "var(--theme-text-tertiary, #999)",

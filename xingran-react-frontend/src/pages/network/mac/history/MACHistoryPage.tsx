@@ -496,7 +496,7 @@ const MACHistoryPage: React.FC = () => {
               background: "#fff",
               marginBottom: 8,
               borderRadius: 6,
-              border: "1px solid #f0f0f0",
+              border: "1px solid #e9efeb",
             }}
             actions={[
               <Button

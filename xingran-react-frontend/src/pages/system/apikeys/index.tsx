@@ -543,7 +543,7 @@ const APIKeyManagement: FC = () => {
           const now = new Date();
           const isExpired = date < now;
           return (
-            <span style={{ color: isExpired ? "#ff4d4f" : undefined }}>{formatDateTime(text)}</span>
+            <span style={{ color: isExpired ? "#ba3630" : undefined }}>{formatDateTime(text)}</span>
           );
         },
       },

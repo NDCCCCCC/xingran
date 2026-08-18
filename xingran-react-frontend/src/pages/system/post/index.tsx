@@ -249,7 +249,7 @@ const PostManagement: FC = () => {
                 <Button
                   type="link"
                   icon={<DeleteOutlined />}
-                  style={{ color: "var(--theme-error, #ff4d4f)" }}
+                  style={{ color: "var(--theme-error, #ba3630)" }}
                   size="small"
                 >
                   删除
@@ -363,7 +363,7 @@ const PostManagement: FC = () => {
             {selectedRowKeys.length > 0 && (
               <Button
                 icon={<DeleteOutlined />}
-                style={{ color: "var(--theme-error, #ff4d4f)" }}
+                style={{ color: "var(--theme-error, #ba3630)" }}
                 onClick={handleBatchDelete}
               >
                 批量删除 ({selectedRowKeys.length})

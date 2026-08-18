@@ -65,7 +65,7 @@ const AVATAR_WRAPPER_STYLE = {
 
 const AVATAR_STYLE = {
   background: "linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%)",
-  boxShadow: "0 2px 8px rgba(79, 70, 229, 0.2)",
+  boxShadow: "0 2px 8px rgba(21, 96, 49, 0.2)",
   transition: "transform 300ms, box-shadow 300ms",
 } as const;
 
@@ -380,14 +380,14 @@ const NotificationBell: FC = () => {
             const avatar = e.currentTarget.querySelector(".ant-avatar") as HTMLElement;
             if (avatar) {
               avatar.style.transform = "scale(1.05)";
-              avatar.style.boxShadow = "0 4px 16px rgba(79, 70, 229, 0.3)";
+              avatar.style.boxShadow = "0 4px 16px rgba(21, 96, 49, 0.3)";
             }
           }}
           onMouseLeave={(e) => {
             const avatar = e.currentTarget.querySelector(".ant-avatar") as HTMLElement;
             if (avatar) {
               avatar.style.transform = "scale(1)";
-              avatar.style.boxShadow = "0 2px 8px rgba(79, 70, 229, 0.2)";
+              avatar.style.boxShadow = "0 2px 8px rgba(21, 96, 49, 0.2)";
             }
           }}
         >

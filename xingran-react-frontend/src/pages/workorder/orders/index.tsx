@@ -208,7 +208,7 @@ function getWorkOrderTableColumns(props: WorkOrderTableColumnsProps): ColumnsTyp
                 <Button
                   type="link"
                   icon={<DeleteOutlined />}
-                  style={{ color: "var(--theme-error, #ff4d4f)" }}
+                  style={{ color: "var(--theme-error, #ba3630)" }}
                   size="small"
                 >
                   删除
@@ -496,28 +496,28 @@ const WorkOrderPage: FC = () => {
               <Statistic
                 title="待处理"
                 value={stats.pending}
-                styles={{ content: { color: "var(--theme-warning, #faad14)" } }}
+                styles={{ content: { color: "var(--theme-warning, #b07a20)" } }}
               />
             </Col>
             <Col span={4}>
               <Statistic
                 title="处理中"
                 value={stats.processing}
-                styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
+                styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
               />
             </Col>
             <Col span={4}>
               <Statistic
                 title="已完成"
                 value={stats.completed}
-                styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
+                styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
               />
             </Col>
             <Col span={4}>
               <Statistic
                 title="已关闭"
                 value={stats.closed}
-                styles={{ content: { color: "var(--theme-text-tertiary, #8c8c8c)" } }}
+                styles={{ content: { color: "var(--theme-text-tertiary, #707068)" } }}
               />
             </Col>
             <Col span={4}>
@@ -653,7 +653,7 @@ const WorkOrderPage: FC = () => {
               <Button
                 type="primary"
                 onClick={handleBatchDelete}
-                style={{ color: "var(--theme-error, #ff4d4f)", borderColor: "#ff4d4f" }}
+                style={{ color: "var(--theme-error, #ba3630)", borderColor: "#ba3630" }}
               >
                 批量删除 ({selectedRowKeys.length})
               </Button>

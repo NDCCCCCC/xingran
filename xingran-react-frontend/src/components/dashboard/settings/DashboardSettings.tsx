@@ -192,12 +192,12 @@ export const DashboardSettings: React.FC<DashboardSettingsProps> = ({ visible, o
               <strong>更新时间:</strong> {currentDashboard.updatedAt}
             </p>
             {currentDashboard.isDefault && (
-              <p style={{ color: "var(--theme-info, #1890ff)" }}>
+              <p style={{ color: "var(--theme-info, #337ab0)" }}>
                 <strong>★ 这是默认仪表盘</strong>
               </p>
             )}
             {currentDashboard.isTemplate && (
-              <p style={{ color: "var(--theme-success, #52c41a)" }}>
+              <p style={{ color: "var(--theme-success, #2d8949)" }}>
                 <strong>📋 这是一个模板</strong>
               </p>
             )}

@@ -27,7 +27,7 @@ const LINE_COLOR = "#2c3e50";
 const DESK_FILL_COLOR = "rgba(236, 240, 241, 0.8)";
 const DIVIDER_COLOR = "#34495e";
 const DEVICE_STROKE_COLOR = "#5d6d7e";
-const HIGHLIGHT_COLOR = "#1890ff";
+const HIGHLIGHT_COLOR = "#337ab0";
 const HOVER_COLOR = "#40a9ff";
 const DEFAULT_COLOR = "#3498db";
 

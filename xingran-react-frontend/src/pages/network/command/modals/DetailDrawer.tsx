@@ -54,10 +54,10 @@ export function CommandDetailDrawer({
           />
           <div style={{ marginTop: 8, display: "flex", gap: 24 }}>
             <span>总设备: {execution.totalDevices}</span>
-            <span style={{ color: "var(--theme-success, #52c41a)" }}>
+            <span style={{ color: "var(--theme-success, #2d8949)" }}>
               成功: {execution.successCount}
             </span>
-            <span style={{ color: "var(--theme-error, #ff4d4f)" }}>
+            <span style={{ color: "var(--theme-error, #ba3630)" }}>
               失败: {execution.failureCount}
             </span>
           </div>

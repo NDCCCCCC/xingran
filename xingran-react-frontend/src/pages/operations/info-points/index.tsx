@@ -759,7 +759,7 @@ const InfoPointManagement: FC = () => {
                 <EditOutlined key="edit" onClick={() => openModal(infoPoint)} />,
                 <DeleteOutlined
                   key="delete"
-                  style={{ color: "var(--theme-error, #ff4d4f)" }}
+                  style={{ color: "var(--theme-error, #ba3630)" }}
                   onClick={() => {
                     Modal.confirm({
                       title: "确定要删除这个信息点吗？",
@@ -850,7 +850,7 @@ const InfoPointManagement: FC = () => {
             {
               title: "停用",
               value: statistics.disabled,
-              styles: { content: { color: "var(--theme-text-tertiary, #8c8c8c)" } },
+              styles: { content: { color: "var(--theme-text-tertiary, #707068)" } },
               prefix: <StopOutlined />,
             },
           ]}
@@ -973,7 +973,7 @@ const InfoPointManagement: FC = () => {
               {selectedRowKeys.length > 0 && (
                 <Button
                   icon={<DeleteOutlined />}
-                  style={{ color: "var(--theme-error, #ff4d4f)" }}
+                  style={{ color: "var(--theme-error, #ba3630)" }}
                   onClick={handleBatchDelete}
                 >
                   批量删除 ({selectedRowKeys.length})

@@ -138,7 +138,7 @@ const CaptchaModal: FC<CaptchaModalProps> = ({
                 onClick={handleNormalConfirm}
                 style={{
                   padding: "8px 24px",
-                  background: "var(--theme-primary, #1890ff)",
+                  background: "var(--theme-primary, #337ab0)",
                   color: "white",
                   border: "none",
                   borderRadius: "4px",

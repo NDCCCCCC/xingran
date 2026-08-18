@@ -476,7 +476,7 @@ const BuildingManagement: FC = () => {
                 <EditOutlined key="edit" onClick={() => openModal(building)} />,
                 <DeleteOutlined
                   key="delete"
-                  style={{ color: "var(--theme-error, #ff4d4f)" }}
+                  style={{ color: "var(--theme-error, #ba3630)" }}
                   onClick={() => {
                     Modal.confirm({
                       title: "确定要删除这个楼宇吗？",
@@ -536,7 +536,7 @@ const BuildingManagement: FC = () => {
       <Sider
         width={360}
         className="dept-list-sider"
-        style={{ background: "#fff", padding: "0 16px 16px 0", borderRight: "1px solid #f0f0f0" }}
+        style={{ background: "#fff", padding: "0 16px 16px 0", borderRight: "1px solid #e9efeb" }}
       >
         <DeptTree
           onSelect={(selectedKeys) => handleDeptSelect(selectedKeys)}
@@ -662,7 +662,7 @@ const BuildingManagement: FC = () => {
                 {selectedRowKeys.length > 0 && (
                   <Button
                     icon={<DeleteOutlined />}
-                    style={{ color: "var(--theme-error, #ff4d4f)" }}
+                    style={{ color: "var(--theme-error, #ba3630)" }}
                     onClick={handleBatchDelete}
                   >
                     批量删除 ({selectedRowKeys.length})

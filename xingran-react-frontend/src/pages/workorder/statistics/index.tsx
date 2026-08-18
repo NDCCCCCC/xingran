@@ -177,7 +177,7 @@ const WorkOrderStatisticsPage: FC = () => {
               title="待处理"
               value={stats?.pending || 0}
               prefix={<ClockCircleOutlined />}
-              styles={{ content: { color: "var(--theme-warning, #faad14)" } }}
+              styles={{ content: { color: "var(--theme-warning, #b07a20)" } }}
               loading={loading}
             />
           </Card>
@@ -187,7 +187,7 @@ const WorkOrderStatisticsPage: FC = () => {
             <Statistic
               title="处理中"
               value={stats?.processing || 0}
-              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
+              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
               loading={loading}
             />
           </Card>
@@ -198,7 +198,7 @@ const WorkOrderStatisticsPage: FC = () => {
               title="已完成"
               value={stats?.completed || 0}
               prefix={<CheckCircleOutlined />}
-              styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
+              styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
               loading={loading}
             />
           </Card>
@@ -209,7 +209,7 @@ const WorkOrderStatisticsPage: FC = () => {
               title="已关闭"
               value={stats?.closed || 0}
               prefix={<CloseCircleOutlined />}
-              styles={{ content: { color: "var(--theme-text-tertiary, #8c8c8c)" } }}
+              styles={{ content: { color: "var(--theme-text-tertiary, #707068)" } }}
               loading={loading}
             />
           </Card>

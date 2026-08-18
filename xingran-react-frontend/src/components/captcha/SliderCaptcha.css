@@ -13,7 +13,7 @@
   aspect-ratio: 2 / 1;
   border-radius: 8px;
   overflow: hidden;
-  background: var(--theme-bg-tertiary, #f0f0f0);
+  background: var(--theme-bg-tertiary, #e9efeb);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -52,7 +52,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(82, 196, 26, 0.8);
+  background: rgba(45, 137, 73, 0.8);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -102,9 +102,9 @@
   position: relative;
   width: 100%;
   height: 40px;
-  background: var(--theme-bg-tertiary, #f0f0f0);
+  background: var(--theme-bg-tertiary, #e9efeb);
   border-radius: 20px;
-  border: 1px solid var(--input-border, #d9d9d9);
+  border: 1px solid var(--input-border, #dbd7ce);
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -115,7 +115,7 @@
   height: 36px;
   background: linear-gradient(
     135deg,
-    var(--theme-primary, #1890ff),
+    var(--theme-primary, #337ab0),
     var(--theme-primary-hover, #096dd9)
   );
   border-radius: 18px;
@@ -138,7 +138,7 @@
   background: linear-gradient(
     135deg,
     var(--input-border-focus, #40a9ff),
-    var(--theme-primary, #1890ff)
+    var(--theme-primary, #337ab0)
   );
 }
 
@@ -148,6 +148,6 @@
 }
 
 .slider-button.verified {
-  background: linear-gradient(135deg, var(--theme-success, #52c41a), #389e0d);
+  background: linear-gradient(135deg, var(--theme-success, #2d8949), #389e0d);
   cursor: default;
 }

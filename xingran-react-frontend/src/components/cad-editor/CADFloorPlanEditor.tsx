@@ -1458,7 +1458,7 @@ export function CADFloorPlanEditor({
                       d={wallDrawing.drawPoints
                         .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
                         .join(" ")}
-                      stroke="#1890ff"
+                      stroke="#337ab0"
                       strokeWidth={2}
                       fill="none"
                       strokeDasharray="5,5"
@@ -1470,7 +1470,7 @@ export function CADFloorPlanEditor({
                       y1={wallDrawing.drawPoints[wallDrawing.drawPoints.length - 1].y}
                       x2={wallDrawing.previewPoint.x}
                       y2={wallDrawing.previewPoint.y}
-                      stroke="#1890ff"
+                      stroke="#337ab0"
                       strokeWidth={2}
                       strokeDasharray="5,5"
                     />
@@ -1479,7 +1479,7 @@ export function CADFloorPlanEditor({
                     cx={wallDrawing.previewPoint.x}
                     cy={wallDrawing.previewPoint.y}
                     r={4}
-                    fill="#1890ff"
+                    fill="#337ab0"
                   />
                 </>
               )}
@@ -1491,8 +1491,8 @@ export function CADFloorPlanEditor({
                   y={Math.min(boxSelectStart.y, boxSelectEnd.y)}
                   width={Math.abs(boxSelectEnd.x - boxSelectStart.x)}
                   height={Math.abs(boxSelectEnd.y - boxSelectStart.y)}
-                  fill="rgba(24, 144, 255, 0.1)"
-                  stroke="#1890ff"
+                  fill="rgba(51, 122, 176, 0.1)"
+                  stroke="#337ab0"
                   strokeWidth={1}
                   strokeDasharray="4,4"
                   pointerEvents="none"

@@ -229,7 +229,7 @@ const DeviceDiscoveryPage: FC = () => {
             <Statistic
               title="扫描中"
               value={statistics.running}
-              styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
+              styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
               prefix={<CloudServerOutlined />}
             />
           </Card>
@@ -239,7 +239,7 @@ const DeviceDiscoveryPage: FC = () => {
             <Statistic
               title="已完成"
               value={statistics.completed}
-              styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
+              styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
               prefix={<CheckCircleOutlined />}
             />
           </Card>
@@ -249,7 +249,7 @@ const DeviceDiscoveryPage: FC = () => {
             <Statistic
               title="失败"
               value={statistics.failed}
-              styles={{ content: { color: "var(--theme-error, #ff4d4f)" } }}
+              styles={{ content: { color: "var(--theme-error, #ba3630)" } }}
               prefix={<CloseCircleOutlined />}
             />
           </Card>

@@ -174,7 +174,7 @@ const WorkerMonitor: FC = () => {
                 title="Worker 总数"
                 value={statistics.total}
                 prefix={<CloudServerOutlined />}
-                styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
+                styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
               />
             </Card>
           </Col>
@@ -184,7 +184,7 @@ const WorkerMonitor: FC = () => {
                 title="在线"
                 value={statistics.online}
                 prefix={<CheckCircleOutlined />}
-                styles={{ content: { color: "var(--theme-success, #52c41a)" } }}
+                styles={{ content: { color: "var(--theme-success, #2d8949)" } }}
               />
             </Card>
           </Col>
@@ -194,7 +194,7 @@ const WorkerMonitor: FC = () => {
                 title="忙碌"
                 value={statistics.busy}
                 prefix={<LoadingOutlined />}
-                styles={{ content: { color: "var(--theme-info, #1890ff)" } }}
+                styles={{ content: { color: "var(--theme-info, #337ab0)" } }}
               />
             </Card>
           </Col>
@@ -204,7 +204,7 @@ const WorkerMonitor: FC = () => {
                 title="离线"
                 value={statistics.offline}
                 prefix={<ClockCircleOutlined />}
-                styles={{ content: { color: "var(--theme-text-tertiary, #8c8c8c)" } }}
+                styles={{ content: { color: "var(--theme-text-tertiary, #707068)" } }}
               />
             </Card>
           </Col>
@@ -214,7 +214,7 @@ const WorkerMonitor: FC = () => {
                 title="错误"
                 value={statistics.error}
                 prefix={<CloseCircleOutlined />}
-                styles={{ content: { color: "var(--theme-error, #ff4d4f)" } }}
+                styles={{ content: { color: "var(--theme-error, #ba3630)" } }}
               />
             </Card>
           </Col>

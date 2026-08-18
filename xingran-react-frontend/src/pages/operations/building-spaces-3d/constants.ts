@@ -239,15 +239,15 @@ export const MARKER_COLORS = {
   /** 正常楼宇主色 */
   NORMAL_MAIN: "#ff6b35",
   /** 正常楼宇边框色 */
-  NORMAL_BORDER: "#ff4d4f",
+  NORMAL_BORDER: "#ba3630",
   /** 正常楼宇阴影色 */
   NORMAL_SHADOW: "rgba(255, 107, 53, 0.5)",
   /** 聚类标记颜色 */
-  CLUSTER: "#ff4d4f",
+  CLUSTER: "#ba3630",
   /** 聚类标记背景色 */
-  CLUSTER_BG: "rgba(255,77,79,0.1)",
+  CLUSTER_BG: "rgba(186, 54, 48, 0.1)",
   /** 聚类标记阴影色 */
-  CLUSTER_SHADOW: "rgba(255, 77, 79, 0.5)",
+  CLUSTER_SHADOW: "rgba(186, 54, 48, 0.5)",
 } as const;
 
 /** 状态文本颜色 */

@@ -275,7 +275,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
   <div style={styles.headerBar}>
     <div>
       <Space>
-        <BuildOutlined style={{ color: "var(--theme-text-accent, #1890ff)" }} />
+        <BuildOutlined style={{ color: "var(--theme-text-accent, #337ab0)" }} />
         <span style={styles.headerTitle}>{building.name}</span>
         <Tag color={statusColor}>{statusText}</Tag>
         {floor && (
@@ -374,7 +374,7 @@ const FloorPlanPanel: React.FC<FloorPlanPanelProps> = ({ floor, workstations, lo
     {/* 平面图标题 */}
     <div style={styles.panelHeader}>
       <Space>
-        <DesktopOutlined style={{ color: "var(--theme-text-accent, #1890ff)" }} />
+        <DesktopOutlined style={{ color: "var(--theme-text-accent, #337ab0)" }} />
         <span style={styles.panelTitle}>{floor.name || floor.floorNo} - 工位平面图</span>
         <Tag color="blue">{workstations.length} 个工位</Tag>
       </Space>
@@ -442,14 +442,14 @@ const styles = {
     color: "var(--theme-text-primary, #262626)",
   },
   headerArrow: {
-    color: "var(--theme-text-tertiary, #8c8c8c)",
+    color: "var(--theme-text-tertiary, #707068)",
   },
   headerInfo: {
     fontSize: 12,
-    color: "var(--theme-text-tertiary, #8c8c8c)",
+    color: "var(--theme-text-tertiary, #707068)",
   },
   splitter: {
-    color: "var(--theme-border-divider, #d9d9d9)",
+    color: "var(--theme-border-divider, #dbd7ce)",
   },
   mainContent: {
     flex: 1,
@@ -481,7 +481,7 @@ const styles = {
   },
   controlLabel: {
     fontSize: 12,
-    color: "var(--theme-text-tertiary, #8c8c8c)",
+    color: "var(--theme-text-tertiary, #707068)",
     marginTop: 4,
   },
   modelContainer: {

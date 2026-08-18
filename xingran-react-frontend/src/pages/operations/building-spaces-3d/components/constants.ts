@@ -51,7 +51,7 @@ export const MARKER_COLORS = {
   // 正常状态
   NORMAL: {
     MAIN: "#ff6b35",
-    BORDER: "#ff4d4f",
+    BORDER: "#ba3630",
     SHADOW: "rgba(255, 107, 53, 0.5)",
   },
   // 停用状态
@@ -62,20 +62,20 @@ export const MARKER_COLORS = {
   },
   // 聚类标记
   CLUSTER: {
-    MAIN: "#ff4d4f",
-    SHADOW: "rgba(255, 77, 79, 0.5)",
+    MAIN: "#ba3630",
+    SHADOW: "rgba(186, 54, 48, 0.5)",
   },
   // 边界
-  BOUNDARY: "#1890ff",
+  BOUNDARY: "#337ab0",
 } as const;
 
 // 3D 楼宇视图状态色（业务专属色，暂不归入 design-system）
 // 后续如需主题切换可考虑迁移到 design-system/tokens/colors.ts
 export const THREE_D_STATUS_COLORS = {
-  ANOMALY: { MAIN: "#ff6b35", BORDER: "#ff4d4f" },
+  ANOMALY: { MAIN: "#ff6b35", BORDER: "#ba3630" },
   INACTIVE: { MAIN: "#9e9e9e", BORDER: "#757575" },
-  ABNORMAL: { MAIN: "#ff4d4f", BORDER: "#ff4d4f" },
-  BOUNDARY: { MAIN: "#1890ff", BORDER: "#096dd9" },
+  ABNORMAL: { MAIN: "#ba3630", BORDER: "#ba3630" },
+  BOUNDARY: { MAIN: "#337ab0", BORDER: "#096dd9" },
   MAINTENANCE: { MAIN: "#f57c00", BORDER: "#d46b08" },
 } as const;
 
@@ -129,8 +129,8 @@ export const STYLE_CONFIG = {
     PADDING: "12px 16px",
   },
   BUTTON: {
-    GRADIENT: "linear-gradient(135deg, #1890ff, #096dd9)",
-    BOX_SHADOW: "0 2px 4px rgba(24, 144, 255, 0.3)",
+    GRADIENT: "linear-gradient(135deg, #337ab0, #096dd9)",
+    BOX_SHADOW: "0 2px 4px rgba(51, 122, 176, 0.3)",
   },
 } as const;
 

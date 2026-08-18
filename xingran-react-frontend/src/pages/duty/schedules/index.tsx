@@ -206,7 +206,7 @@ function getDutyTableColumns(props: DutyTableColumnsProps): ColumnsType<DutySche
           type="link"
           size="small"
           icon={<DeleteOutlined />}
-          style={{ color: "#ff4d4f" }}
+          style={{ color: "#ba3630" }}
           onClick={() => {
             Modal.confirm({
               title: "确定要删除这条排班吗？",
@@ -396,7 +396,7 @@ const DutySchedulePage: FC = () => {
                 <Card
                   size="small"
                   style={{
-                    borderColor: isToday ? "#1890ff" : undefined,
+                    borderColor: isToday ? "#337ab0" : undefined,
                     backgroundColor: isToday ? "#e6f7ff" : undefined,
                     borderRadius: "4px",
                     minHeight: "80px",
@@ -411,7 +411,7 @@ const DutySchedulePage: FC = () => {
                           strong
                           style={{
                             fontSize: "12px",
-                            color: isToday ? "#1890ff" : undefined,
+                            color: isToday ? "#337ab0" : undefined,
                           }}
                         >
                           {getWeekdayText(day)}
@@ -557,7 +557,7 @@ const DutySchedulePage: FC = () => {
             {selectedRowKeys.length > 0 && (
               <Button
                 icon={<DeleteOutlined />}
-                style={{ color: "#ff4d4f" }}
+                style={{ color: "#ba3630" }}
                 onClick={() => {
                   Modal.confirm({
                     title: "确定要批量删除选中的排班记录吗？",

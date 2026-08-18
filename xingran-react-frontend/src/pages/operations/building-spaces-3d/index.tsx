@@ -109,7 +109,7 @@ const BuildingSpaces3D: React.FC = () => {
       <div style={MAP_SWITCH_STYLE}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <span
-            style={{ fontSize: 14, fontWeight: "bold", color: "var(--theme-text-accent, #1890ff)" }}
+            style={{ fontSize: 14, fontWeight: "bold", color: "var(--theme-text-accent, #337ab0)" }}
           >
             🗺️ 地图版本
           </span>

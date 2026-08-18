@@ -106,7 +106,7 @@ export function generateBuildingInfoHTML(building: BuildingItem): string {
 
   return `
     <div style="padding: 12px; min-width: 260px;">
-      <h3 style="margin: 0 0 12px 0; font-size: 16px; color: var(--theme-info, #1890ff); border-bottom: 2px solid #1890ff; padding-bottom: 8px;">
+      <h3 style="margin: 0 0 12px 0; font-size: 16px; color: var(--theme-info, #337ab0); border-bottom: 2px solid #337ab0; padding-bottom: 8px;">
         ${building.name}
       </h3>
       <div style="font-size: 13px; color: var(--theme-text-tertiary, #666); line-height: 1.8;">
@@ -124,14 +124,14 @@ export function generateBuildingInfoHTML(building: BuildingItem): string {
           onclick="window.viewBuildingDetails('${building.id}')"
           style="
             padding: 6px 18px;
-            background: linear-gradient(135deg, #1890ff, #096dd9);
+            background: linear-gradient(135deg, #337ab0, #096dd9);
             color: white;
             border: none;
             border-radius: 6px;
             cursor: pointer;
             font-size: 13px;
             font-weight: 500;
-            box-shadow: 0 2px 4px rgba(24, 144, 255, 0.3);
+            box-shadow: 0 2px 4px rgba(51, 122, 176, 0.3);
           "
         >
           查看详情
@@ -159,11 +159,11 @@ export function generateClusterIconSVG(count: number, size: number): string {
     <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
       <defs>
         <filter id="clusterShadow" x="-50%" y="-50%" width="200%" height="200%">
-          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(255, 77, 79, 0.5)" flood-opacity="0.7"/>
+          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(186, 54, 48, 0.5)" flood-opacity="0.7"/>
         </filter>
       </defs>
-      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 1}" fill="rgba(255,77,79,0.1)"/>
-      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 4}" fill="#ff4d4f" stroke="#fff" stroke-width="3" filter="url(#clusterShadow)"/>
+      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 1}" fill="rgba(186, 54, 48, 0.1)"/>
+      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 4}" fill="#ba3630" stroke="#fff" stroke-width="3" filter="url(#clusterShadow)"/>
       <text x="${size / 2}" y="${size / 2 + 8}" text-anchor="middle" fill="white" font-size="${size / 3}" font-weight="bold">${count}</text>
     </svg>
   `;

@@ -157,7 +157,7 @@ function getCacheTableColumns(props: CacheTableColumnsProps): ColumnsType<CacheI
                 <Button
                   type="link"
                   icon={<DeleteOutlined />}
-                  style={{ color: "#ff4d4f" }}
+                  style={{ color: "#ba3630" }}
                   size="small"
                 >
                   删除
@@ -480,7 +480,7 @@ const CacheManager: FC = () => {
                 value={monitor?.l2?.stats?.hitRate || 0}
                 precision={1}
                 suffix="%"
-                styles={{ content: { fontSize: "16px", color: "#1890ff" } }}
+                styles={{ content: { fontSize: "16px", color: "#337ab0" } }}
               />
             </Card>
           </Col>
@@ -567,7 +567,7 @@ const CacheManager: FC = () => {
                 </Button>
                 <Button
                   icon={<DeleteOutlined />}
-                  style={{ color: "#ff4d4f" }}
+                  style={{ color: "#ba3630" }}
                   onClick={handleClearAll}
                 >
                   清空
@@ -689,7 +689,7 @@ const CacheManager: FC = () => {
                         value={monitor?.l2?.stats?.hitRate || 0}
                         precision={2}
                         suffix="%"
-                        styles={{ content: { color: "#1890ff" } }}
+                        styles={{ content: { color: "#337ab0" } }}
                       />
                       <Divider className="my-2" />
                       <Row gutter={8}>
@@ -814,7 +814,7 @@ const CacheManager: FC = () => {
                 value={monitor?.l1?.stats?.hitRate || 0}
                 precision={2}
                 suffix="%"
-                styles={{ content: { fontSize: "20px", color: "#1890ff" } }}
+                styles={{ content: { fontSize: "20px", color: "#337ab0" } }}
               />
               <Divider className="my-2" />
               <Statistic
@@ -862,7 +862,7 @@ const CacheManager: FC = () => {
                 value={monitor?.l2?.stats?.hitRate || 0}
                 precision={2}
                 suffix="%"
-                styles={{ content: { fontSize: "20px", color: "#1890ff" } }}
+                styles={{ content: { fontSize: "20px", color: "#337ab0" } }}
               />
               <Divider className="my-2" />
               <Statistic

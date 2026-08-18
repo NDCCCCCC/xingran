@@ -311,7 +311,7 @@ const ConfigManagement: FC = () => {
                 <Button
                   type="link"
                   icon={<DeleteOutlined />}
-                  style={{ color: "var(--theme-error, #ff4d4f)" }}
+                  style={{ color: "var(--theme-error, #ba3630)" }}
                   size="small"
                   disabled={record.isSystem === 1}
                 >
@@ -426,7 +426,7 @@ const ConfigManagement: FC = () => {
             {selectedRowKeys.length > 0 && (
               <Button
                 icon={<DeleteOutlined />}
-                style={{ color: "var(--theme-error, #ff4d4f)" }}
+                style={{ color: "var(--theme-error, #ba3630)" }}
                 onClick={handleBatchDelete}
               >
                 批量删除 ({selectedRowKeys.length})

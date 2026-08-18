@@ -12,8 +12,8 @@
 /* 编辑模式样式 */
 .dashboard-grid--editable {
   background-image:
-    linear-gradient(to right, var(--grid-line-color, #f0f0f0) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--grid-line-color, #f0f0f0) 1px, transparent 1px);
+    linear-gradient(to right, var(--grid-line-color, #e9efeb) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line-color, #e9efeb) 1px, transparent 1px);
   background-size: calc(100% / 24) var(--row-height, 60px);
   background-position: -1px -1px;
 }
@@ -30,7 +30,7 @@
 
 .dashboard-grid .react-grid-item.react-grid-placeholder {
   background: var(--grid-placeholder-bg, rgba(0, 0, 0, 0.05));
-  border: 2px dashed var(--grid-placeholder-border, #d9d9d9);
+  border: 2px dashed var(--grid-placeholder-border, #dbd7ce);
   border-radius: var(--border-radius-base, 4px);
   opacity: 1;
 }
@@ -51,7 +51,7 @@
   height: 20px;
   bottom: 0;
   right: 0;
-  background: linear-gradient(135deg, transparent 50%, var(--resize-handle-color, #bfbfbf) 50%);
+  background: linear-gradient(135deg, transparent 50%, var(--resize-handle-color, #707068) 50%);
   background-position: bottom right;
   background-repeat: no-repeat;
   background-size: 10px 10px;
@@ -63,7 +63,7 @@
   background: linear-gradient(
     135deg,
     transparent 50%,
-    var(--resize-handle-hover-color, #8c8c8c) 50%
+    var(--resize-handle-hover-color, #707068) 50%
   );
 }
 
@@ -97,7 +97,7 @@
   min-height: 400px;
   width: 100%;
   background: var(--placeholder-bg, #fafafa);
-  border: 2px dashed var(--placeholder-border, #d9d9d9);
+  border: 2px dashed var(--placeholder-border, #dbd7ce);
   border-radius: var(--border-radius-base, 4px);
 }
 
@@ -147,7 +147,7 @@
 
 /* 编辑模式下显示拖拽手柄提示 */
 .dashboard-grid--editable .react-grid-item:hover .widget-drag-handle {
-  background-color: rgba(24, 144, 255, 0.1);
+  background-color: rgba(51, 122, 176, 0.1);
 }
 
 /* 平滑动画过渡 */
@@ -161,12 +161,12 @@
   background-image:
     linear-gradient(
       to right,
-      var(--grid-line-active-color, rgba(24, 144, 255, 0.3)) 1px,
+      var(--grid-line-active-color, rgba(51, 122, 176, 0.3)) 1px,
       transparent 1px
     ),
     linear-gradient(
       to bottom,
-      var(--grid-line-active-color, rgba(24, 144, 255, 0.3)) 1px,
+      var(--grid-line-active-color, rgba(51, 122, 176, 0.3)) 1px,
       transparent 1px
     );
 }
@@ -186,7 +186,7 @@
     --grid-placeholder-bg: rgba(255, 255, 255, 0.05);
     --grid-placeholder-border: #434343;
     --resize-handle-color: #595959;
-    --resize-handle-hover-color: var(--theme-text-tertiary, #8c8c8c);
+    --resize-handle-hover-color: var(--theme-text-tertiary, #707068);
   }
 
   .dashboard-grid-placeholder {

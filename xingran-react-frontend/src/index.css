@@ -469,7 +469,7 @@ body {
   height: 20px;
   background: var(--sidebar-accent) !important;
   border-radius: 0 2px 2px 0;
-  box-shadow: 0 0 8px rgba(79, 70, 229, 0.5) !important;
+  box-shadow: 0 0 8px rgba(21, 96, 49, 0.5) !important;
 }
 
 .ant-menu-dark .ant-menu-item-selected .anticon {
@@ -643,12 +643,12 @@ body {
 }
 
 .ant-card.statistic-card:hover {
-  box-shadow: 0 8px 16px rgba(79, 70, 229, 0.12) !important;
+  box-shadow: 0 8px 16px rgba(21, 96, 49, 0.12) !important;
   transform: translateY(-2px);
 }
 
 [data-color-mode="dark"] .ant-card.statistic-card:hover {
-  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.2) !important;
+  box-shadow: 0 8px 24px rgba(21, 96, 49, 0.2) !important;
 }
 
 /* ========================================
@@ -675,13 +675,13 @@ body {
 .ant-btn-primary:hover {
   background: var(--theme-primary-hover) !important;
   border-color: var(--theme-primary-hover) !important;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25) !important;
+  box-shadow: 0 4px 12px rgba(21, 96, 49, 0.25) !important;
 }
 
 [data-color-mode="dark"] .ant-btn-primary:hover {
   box-shadow:
-    0 4px 16px rgba(79, 70, 229, 0.4),
-    0 0 20px rgba(79, 70, 229, 0.2) !important;
+    0 4px 16px rgba(21, 96, 49, 0.4),
+    0 0 20px rgba(21, 96, 49, 0.2) !important;
 }
 
 .ant-btn-primary:focus {
@@ -691,7 +691,7 @@ body {
 }
 
 [data-color-mode="dark"] .ant-btn-primary:focus {
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3) !important;
+  box-shadow: 0 0 0 3px rgba(21, 96, 49, 0.3) !important;
 }
 
 /* 次按钮 */
@@ -796,7 +796,7 @@ body {
 
 .ant-btn-primary:active {
   background: var(--theme-primary-hover) !important;
-  box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2) !important;
+  box-shadow: 0 2px 4px rgba(21, 96, 49, 0.2) !important;
 }
 
 /* 按钮尺寸 */
@@ -871,8 +871,8 @@ body {
 [data-color-mode="dark"] .ant-input-number:focus,
 [data-color-mode="dark"] .ant-select-focused .ant-select-selector {
   box-shadow:
-    0 0 0 2px rgba(79, 70, 229, 0.15),
-    0 0 12px rgba(79, 70, 229, 0.1) !important;
+    0 0 0 2px rgba(21, 96, 49, 0.15),
+    0 0 12px rgba(21, 96, 49, 0.1) !important;
 }
 
 .ant-input::placeholder {
@@ -899,8 +899,8 @@ body {
 
 [data-color-mode="dark"] .ant-input-affix-wrapper-focused {
   box-shadow:
-    0 0 0 2px rgba(79, 70, 229, 0.15),
-    0 0 12px rgba(79, 70, 229, 0.1) !important;
+    0 0 0 2px rgba(21, 96, 49, 0.15),
+    0 0 12px rgba(21, 96, 49, 0.1) !important;
 }
 
 /* ========================================
@@ -959,7 +959,7 @@ body {
 }
 
 [data-color-mode="dark"] .ant-table-tbody > tr:nth-child(odd) > td {
-  background: rgba(37, 42, 63, 0.3) !important;
+  background: rgba(15, 46, 27, 0.3) !important;
 }
 
 [data-color-mode="dark"] .ant-table-tbody > tr:nth-child(even) > td {
@@ -1000,7 +1000,7 @@ body {
 }
 
 [data-color-mode="dark"] .ant-table-tbody .ant-btn-link:hover {
-  background: rgba(79, 70, 229, 0.15) !important;
+  background: rgba(21, 96, 49, 0.15) !important;
 }
 
 /* 表格排序图标 */
@@ -1160,8 +1160,8 @@ body {
 }
 
 [data-color-mode="dark"] .ant-tag {
-  background: rgba(79, 70, 229, 0.2) !important;
-  border-color: rgba(79, 70, 229, 0.3) !important;
+  background: rgba(21, 96, 49, 0.2) !important;
+  border-color: rgba(21, 96, 49, 0.3) !important;
 }
 
 /* 状态标签 */
@@ -2252,8 +2252,8 @@ body {
 [data-color-mode="dark"] .ant-input-affix-wrapper-focused {
   border-color: var(--input-border-focus) !important;
   box-shadow:
-    0 0 0 2px rgba(79, 70, 229, 0.15),
-    0 0 12px rgba(79, 70, 229, 0.1) !important;
+    0 0 0 2px rgba(21, 96, 49, 0.15),
+    0 0 12px rgba(21, 96, 49, 0.1) !important;
 }
 
 /* 暗色模式：Select 选择器 */
@@ -2352,7 +2352,7 @@ body {
 }
 
 [data-color-mode="dark"] .ant-table-tbody > tr:nth-child(odd) > td {
-  background-color: rgba(37, 42, 63, 0.3) !important;
+  background-color: rgba(15, 46, 27, 0.3) !important;
 }
 
 [data-color-mode="dark"] .ant-table-container {
@@ -2767,18 +2767,18 @@ body {
    ======================================== */
 [data-color-mode="dark"] .ant-btn-primary:hover {
   box-shadow:
-    0 4px 16px rgba(79, 70, 229, 0.4),
-    0 0 24px rgba(79, 70, 229, 0.2) !important;
+    0 4px 16px rgba(21, 96, 49, 0.4),
+    0 0 24px rgba(21, 96, 49, 0.2) !important;
 }
 
 [data-color-mode="dark"] .ant-btn-primary:focus {
   box-shadow:
-    0 0 0 3px rgba(79, 70, 229, 0.3),
-    0 0 20px rgba(79, 70, 229, 0.15) !important;
+    0 0 0 3px rgba(21, 96, 49, 0.3),
+    0 0 20px rgba(21, 96, 49, 0.15) !important;
 }
 
 [data-color-mode="dark"] .ant-table-tbody > tr:hover > td {
-  box-shadow: inset 0 0 30px rgba(79, 70, 229, 0.03) !important;
+  box-shadow: inset 0 0 30px rgba(21, 96, 49, 0.03) !important;
 }
 
 [data-color-mode="dark"] .ant-card:hover {
@@ -2813,12 +2813,12 @@ body {
    Selection 选中文本样式 - 暗色模式优化
    ======================================== */
 [data-color-mode="dark"] ::selection {
-  background: rgba(79, 70, 229, 0.3) !important;
+  background: rgba(21, 96, 49, 0.3) !important;
   color: #ffffff !important;
 }
 
 [data-color-mode="dark"] ::-moz-selection {
-  background: rgba(79, 70, 229, 0.3) !important;
+  background: rgba(21, 96, 49, 0.3) !important;
   color: #ffffff !important;
 }
 
@@ -3000,14 +3000,14 @@ body {
 [data-color-mode="dark"] .ant-slider-handle {
   background-color: var(--theme-primary) !important;
   border: 2px solid #ffffff !important;
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3) !important;
+  box-shadow: 0 2px 8px rgba(21, 96, 49, 0.3) !important;
 }
 
 [data-color-mode="dark"] .ant-slider-handle:hover,
 [data-color-mode="dark"] .ant-slider-handle:focus {
   box-shadow:
-    0 0 0 4px rgba(79, 70, 229, 0.4),
-    0 2px 12px rgba(79, 70, 229, 0.3) !important;
+    0 0 0 4px rgba(21, 96, 49, 0.4),
+    0 2px 12px rgba(21, 96, 49, 0.3) !important;
 }
 
 /* ========================================
@@ -3553,8 +3553,8 @@ body {
 [data-color-mode="dark"] .ant-captcha-input:focus {
   border-color: var(--input-border-focus) !important;
   box-shadow:
-    0 0 0 2px rgba(79, 70, 229, 0.15),
-    0 0 12px rgba(79, 70, 229, 0.1) !important;
+    0 0 0 2px rgba(21, 96, 49, 0.15),
+    0 0 12px rgba(21, 96, 49, 0.1) !important;
 }
 
 /* ========================================
@@ -3623,7 +3623,7 @@ body {
   background: var(--btn-primary-hover) !important;
   border-color: var(--btn-primary-hover) !important;
   box-shadow:
-    0 4px 12px rgba(79, 70, 229, 0.4),
+    0 4px 12px rgba(21, 96, 49, 0.4),
     var(--glow-subtle) !important;
 }
 
@@ -3702,7 +3702,7 @@ body {
   background: var(--input-bg-focus) !important;
   border-color: var(--input-border-focus) !important;
   box-shadow:
-    0 0 0 2px rgba(79, 70, 229, 0.15),
+    0 0 0 2px rgba(21, 96, 49, 0.15),
     var(--glow-subtle) !important;
 }
 
@@ -3725,7 +3725,7 @@ body {
   background: var(--input-bg-focus) !important;
   border-color: var(--input-border-focus) !important;
   box-shadow:
-    0 0 0 2px rgba(79, 70, 229, 0.15),
+    0 0 0 2px rgba(21, 96, 49, 0.15),
     var(--glow-subtle) !important;
 }
 
@@ -3737,7 +3737,7 @@ body {
 [data-color-mode="dark"] .ant-input-number:focus {
   border-color: var(--input-border-focus) !important;
   box-shadow:
-    0 0 0 2px rgba(79, 70, 229, 0.15),
+    0 0 0 2px rgba(21, 96, 49, 0.15),
     var(--glow-subtle) !important;
 }
 
@@ -3903,7 +3903,7 @@ body {
 [data-color-mode="dark"] .ant-select-focused .ant-select-selector {
   border-color: var(--input-border-focus) !important;
   box-shadow:
-    0 0 0 2px rgba(79, 70, 229, 0.15),
+    0 0 0 2px rgba(21, 96, 49, 0.15),
     var(--glow-subtle) !important;
 }
 
@@ -3975,7 +3975,7 @@ body {
 }
 
 [data-color-mode="dark"] .ant-switch:hover {
-  box-shadow: 0 0 8px rgba(79, 70, 229, 0.3) !important;
+  box-shadow: 0 0 8px rgba(21, 96, 49, 0.3) !important;
 }
 
 /* Modal */
@@ -4216,7 +4216,7 @@ body {
 [data-color-mode="dark"] .ant-picker-focused {
   border-color: var(--input-border-focus) !important;
   box-shadow:
-    0 0 0 2px rgba(79, 70, 229, 0.15),
+    0 0 0 2px rgba(21, 96, 49, 0.15),
     var(--glow-subtle) !important;
 }
 
@@ -4455,9 +4455,9 @@ body {
 
 /* 成功/正常状态 - 绿色系 */
 .modern-tag-success {
-  background-color: #f6ffed !important;
-  border: 1px solid #b7eb8f !important;
-  color: var(--theme-success, #52c41a) !important;
+  background-color: var(--theme-success-bg) !important;
+  border: 1px solid rgba(45, 137, 73, 0.35) !important;
+  color: var(--theme-success) !important;
   border-radius: 6px !important;
   padding: 2px 10px !important;
   font-size: 13px !important;
@@ -4467,9 +4467,9 @@ body {
 
 /* 错误/停用状态 - 红色系 */
 .modern-tag-error {
-  background-color: #fff1f0 !important;
-  border: 1px solid #ffccc7 !important;
-  color: #ff4d4f !important;
+  background-color: var(--theme-error-bg) !important;
+  border: 1px solid rgba(186, 54, 48, 0.35) !important;
+  color: var(--theme-error) !important;
   border-radius: 6px !important;
   padding: 2px 10px !important;
   font-size: 13px !important;
@@ -4477,11 +4477,11 @@ body {
   line-height: 20px !important;
 }
 
-/* 警告状态 - 橙色系 */
+/* 警告状态 - 橙色系 (淡黄底 + warningText 5.03:1) */
 .modern-tag-warning {
-  background-color: #fffbe6 !important;
-  border: 1px solid #ffe58f !important;
-  color: var(--theme-warning, #faad14) !important;
+  background-color: var(--theme-warning-bg) !important;
+  border: 1px solid rgba(144, 93, 0, 0.35) !important;
+  color: var(--theme-warning-text) !important;
   border-radius: 6px !important;
   padding: 2px 10px !important;
   font-size: 13px !important;
@@ -4491,9 +4491,9 @@ body {
 
 /* 默认状态 - 灰色系 */
 .modern-tag-default {
-  background-color: #fafafa !important;
-  border: 1px solid #d9d9d9 !important;
-  color: var(--theme-text-tertiary, #8c8c8c) !important;
+  background-color: var(--theme-neutral-50) !important;
+  border: 1px solid rgba(112, 112, 104, 0.35) !important;
+  color: var(--theme-text-secondary) !important;
   border-radius: 6px !important;
   padding: 2px 10px !important;
   font-size: 13px !important;
@@ -4503,9 +4503,9 @@ body {
 
 /* 进行中状态 - 蓝色系 */
 .modern-tag-processing {
-  background-color: #e6f7ff !important;
-  border: 1px solid #91d5ff !important;
-  color: var(--theme-info, #1890ff) !important;
+  background-color: rgba(51, 122, 176, 0.12) !important;
+  border: 1px solid rgba(51, 122, 176, 0.35) !important;
+  color: var(--theme-info) !important;
   border-radius: 6px !important;
   padding: 2px 10px !important;
   font-size: 13px !important;
@@ -4515,32 +4515,32 @@ body {
 
 /* 暗色模式下的现代化 Tag 样式 */
 [data-color-mode="dark"] .modern-tag-success {
-  background-color: rgba(82, 196, 26, 0.15) !important;
-  border: 1px solid rgba(82, 196, 26, 0.4) !important;
+  background-color: rgba(45, 137, 73, 0.15) !important;
+  border: 1px solid rgba(45, 137, 73, 0.4) !important;
   color: #95de64 !important;
 }
 
 [data-color-mode="dark"] .modern-tag-error {
-  background-color: rgba(255, 77, 79, 0.15) !important;
-  border: 1px solid rgba(255, 77, 79, 0.4) !important;
+  background-color: rgba(186, 54, 48, 0.15) !important;
+  border: 1px solid rgba(186, 54, 48, 0.4) !important;
   color: #ff7875 !important;
 }
 
 [data-color-mode="dark"] .modern-tag-warning {
-  background-color: rgba(250, 173, 20, 0.15) !important;
-  border: 1px solid rgba(250, 173, 20, 0.4) !important;
+  background-color: rgba(176, 122, 32, 0.15) !important;
+  border: 1px solid rgba(176, 122, 32, 0.4) !important;
   color: #ffc53d !important;
 }
 
 [data-color-mode="dark"] .modern-tag-default {
-  background-color: rgba(140, 140, 140, 0.15) !important;
-  border: 1px solid rgba(140, 140, 140, 0.4) !important;
-  color: #bfbfbf !important;
+  background-color: rgba(112, 112, 104, 0.15) !important;
+  border: 1px solid rgba(112, 112, 104, 0.4) !important;
+  color: #707068 !important;
 }
 
 [data-color-mode="dark"] .modern-tag-processing {
-  background-color: rgba(24, 144, 255, 0.15) !important;
-  border: 1px solid rgba(24, 144, 255, 0.4) !important;
+  background-color: rgba(51, 122, 176, 0.15) !important;
+  border: 1px solid rgba(51, 122, 176, 0.4) !important;
   color: #69c0ff !important;
 }
 
@@ -4559,17 +4559,17 @@ body {
 }
 
 .ant-table .action-btn-danger {
-  color: #ff4d4f !important;
+  color: #ba3630 !important;
 }
 
 .ant-table .action-btn-danger:hover {
   color: #cf1322 !important;
-  background-color: rgba(255, 77, 79, 0.1) !important;
+  background-color: rgba(186, 54, 48, 0.1) !important;
 }
 
 /* 暗色模式下的操作按钮 */
 [data-color-mode="dark"] .ant-table .action-btn {
-  color: #d9d9d9 !important;
+  color: #dbd7ce !important;
 }
 
 [data-color-mode="dark"] .ant-table .action-btn:hover {
@@ -4582,8 +4582,8 @@ body {
 }
 
 [data-color-mode="dark"] .ant-table .action-btn-danger:hover {
-  color: #ff4d4f !important;
-  background-color: rgba(255, 77, 79, 0.15) !important;
+  color: #ba3630 !important;
+  background-color: rgba(186, 54, 48, 0.15) !important;
 }
 
 /* 通用链接按钮样式 - 不使用主题色 */
@@ -4596,7 +4596,7 @@ body {
 }
 
 .ant-btn-link.action-link-danger {
-  color: #ff4d4f !important;
+  color: #ba3630 !important;
 }
 
 .ant-btn-link.action-link-danger:hover {
@@ -4605,7 +4605,7 @@ body {
 
 /* 暗色模式 */
 [data-color-mode="dark"] .ant-btn-link.action-link {
-  color: #d9d9d9 !important;
+  color: #dbd7ce !important;
 }
 
 [data-color-mode="dark"] .ant-btn-link.action-link:hover {
@@ -4617,7 +4617,7 @@ body {
 }
 
 [data-color-mode="dark"] .ant-btn-link.action-link-danger:hover {
-  color: #ff4d4f !important;
+  color: #ba3630 !important;
 }
 
 /* 表格列标题 - 固定黑色，不受主题色影响 */
@@ -4631,11 +4631,11 @@ body {
 
 /* 暗色模式下的表格列标题 */
 [data-color-mode="dark"] .ant-table th {
-  color: #d9d9d9 !important;
+  color: #dbd7ce !important;
 }
 
 [data-color-mode="dark"] .ant-table-thead > tr > th {
-  color: #d9d9d9 !important;
+  color: #dbd7ce !important;
 }
 
 /* 固定表格内容文字颜色 */
@@ -4729,7 +4729,7 @@ body {
 }
 
 .tab-scroll-button:hover:not(:disabled) {
-  color: var(--theme-brand, #3b82f6);
+  color: var(--theme-brand, #156031);
 }
 
 .tab-scroll-button:disabled {

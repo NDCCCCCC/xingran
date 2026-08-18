@@ -32,11 +32,11 @@ const CONFLICT_TYPE_TOOLTIPS: Record<string, string> = {
 };
 
 const LIST_CLASS_TO_HEX: Record<string, string> = {
-  success: "#22c55e",
-  warning: "#f59e0b",
-  error: "#ef4444",
+  success: "#2d8949",
+  warning: "#b07a20",
+  error: "#ba3630",
   default: "#d4d4d8",
-  processing: "#3b82f6",
+  processing: "#156031",
 };
 
 const HealthBadgeInner: React.FC<HealthBadgeProps> = ({ assetId, conflictType, onClick }) => {

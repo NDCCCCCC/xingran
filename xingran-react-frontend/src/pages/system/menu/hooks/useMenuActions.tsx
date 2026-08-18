@@ -169,7 +169,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
 
       modalInstance = Modal.confirm({
         title: "删除菜单",
-        icon: <WarningOutlined style={{ color: "var(--theme-warning, #faad14)" }} />,
+        icon: <WarningOutlined style={{ color: "var(--theme-warning, #b07a20)" }} />,
         content: <DeleteConfirmContent />,
         okText: "确定删除",
         okType: "danger",
@@ -241,7 +241,7 @@ export function useMenuActions(params: UseMenuActionsParams): UseMenuActionsRetu
 
     modalInstance = Modal.confirm({
       title: "批量删除菜单",
-      icon: <WarningOutlined style={{ color: "var(--theme-warning, #faad14)" }} />,
+      icon: <WarningOutlined style={{ color: "var(--theme-warning, #b07a20)" }} />,
       content: <BatchDeleteConfirmContent />,
       okText: "确定删除",
       okType: "danger",

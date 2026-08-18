@@ -440,7 +440,7 @@ function ResultView({ result, interfaceMap, onRetry }: ResultViewProps) {
             <Statistic
               title="⚠ 跳过"
               value={result.skipped.length}
-              valueStyle={{ color: "var(--theme-text-secondary, #8c8c8c)" }}
+              valueStyle={{ color: "var(--theme-text-secondary, #707068)" }}
             />
             {result.skipped.length > 0 && (
               <Tag color="default" style={{ marginTop: 8 }}>

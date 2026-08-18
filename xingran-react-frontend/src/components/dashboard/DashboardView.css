@@ -47,6 +47,6 @@
 /* 暗色主题适配 */
 @media (prefers-color-scheme: dark) {
   .dashboard-view__title p {
-    color: var(--theme-text-tertiary, #8c8c8c);
+    color: var(--theme-text-tertiary, #707068);
   }
 }

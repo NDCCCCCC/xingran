@@ -434,13 +434,13 @@ const WorkstationTooltip: React.FC<WorkstationTooltipProps> = ({
 }) => {
   const statusColor =
     status === 0
-      ? "var(--theme-success, #52c41a)"
+      ? "var(--theme-success, #2d8949)"
       : status === 1
-        ? "#ff4d4f"
-        : "var(--theme-warning, #faad14)";
+        ? "#ba3630"
+        : "var(--theme-warning, #b07a20)";
   const typeColor =
     type === 0
-      ? "var(--theme-info, #1890ff)"
+      ? "var(--theme-info, #337ab0)"
       : type === 1
         ? "var(--theme-purple, #722ed1)"
         : "#13c2c2";
@@ -616,7 +616,7 @@ const styles = {
     flexDirection: "column" as const,
     gap: 16,
     background: "#f5f5f5",
-    color: "var(--theme-text-tertiary, #8c8c8c)",
+    color: "var(--theme-text-tertiary, #707068)",
   },
   emptyIcon: {
     fontSize: 48,

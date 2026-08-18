@@ -9,10 +9,10 @@
  * - 抽屉空间有限,> 100 事件时分页拉,避免一次性渲染卡顿
  *
  * 颜色与图标体系(D-10 锁定):
- *   appeared     → #52c41a (绿色) + PlusCircleOutlined
- *   disappeared → #ff4d4f (红色) + MinusCircleOutlined
- *   moved        → #faad14 (黄色) + SwapOutlined
- *   vlan_changed → #1890ff (蓝色) + TagOutlined
+ *   appeared     → #2d8949 (绿色) + PlusCircleOutlined
+ *   disappeared → #ba3630 (红色) + MinusCircleOutlined
+ *   moved        → #b07a20 (黄色) + SwapOutlined
+ *   vlan_changed → #337ab0 (蓝色) + TagOutlined
  */
 
 import React, { useState, useCallback, useEffect } from "react";

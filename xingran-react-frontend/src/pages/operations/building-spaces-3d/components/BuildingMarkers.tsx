@@ -53,7 +53,7 @@ const BuildingMarkers: React.FC<BuildingMarkersProps> = ({
                   width: "24px",
                   height: "24px",
                   borderRadius: "4px",
-                  background: isSelected ? "#ff4d4f" : colors.main,
+                  background: isSelected ? "#ba3630" : colors.main,
                   border: `2px solid ${isSelected ? "#ffccc7" : colors.border}`,
                   boxShadow: `0 2px 8px ${colors.shadow}`,
                   display: "flex",

@@ -290,7 +290,7 @@ const MyDutyPage: FC = () => {
               prefix={stats?.isOnDutyToday ? <ClockCircleOutlined /> : <CoffeeOutlined />}
               styles={{
                 content: {
-                  color: stats?.isOnDutyToday ? "#3f8600" : "#8c8c8c",
+                  color: stats?.isOnDutyToday ? "#3f8600" : "#707068",
                   fontSize: "20px",
                 },
               }}
@@ -305,7 +305,7 @@ const MyDutyPage: FC = () => {
               value={stats?.thisMonthCount || 0}
               suffix="次"
               prefix={<CalendarOutlined />}
-              styles={{ content: { color: "#1890ff", fontSize: "20px" } }}
+              styles={{ content: { color: "#337ab0", fontSize: "20px" } }}
             />
           </Card>
         </Col>
@@ -337,7 +337,7 @@ const MyDutyPage: FC = () => {
                     {stats.nextDutyPoolName && <Tag color="blue">{stats.nextDutyPoolName}</Tag>}
                   </Space>
                 ) : (
-                  <span style={{ color: "#8c8c8c" }}>暂无排班</span>
+                  <span style={{ color: "#707068" }}>暂无排班</span>
                 )}
               </div>
             </div>

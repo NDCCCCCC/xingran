@@ -511,12 +511,12 @@ const FloorManagement: FC = () => {
             {
               title: "正常",
               value: statistics.active,
-              styles: { content: { color: "var(--theme-success, #52c41a)" } },
+              styles: { content: { color: "var(--theme-success, #2d8949)" } },
             },
             {
               title: "停用",
               value: statistics.inactive,
-              styles: { content: { color: "var(--theme-error, #ff4d4f)" } },
+              styles: { content: { color: "var(--theme-error, #ba3630)" } },
             },
           ]}
         />
