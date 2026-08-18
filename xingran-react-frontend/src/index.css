@@ -184,8 +184,10 @@
   --input-bg: #ffffff;
   --input-border: #dbd7ce;
   --input-border-hover: #598e5e;
+  --input-border-focus: #156031; /* COMP-04: 聚焦边框品牌绿（原 light 块漏定义致 fallback 黑色） */
   --input-text: #101010;
   --input-placeholder: #707068;
+  --table-header-bg: #e9efeb; /* COMP-02: 表头专用绿灰淡彩（原借 --bg-elevated 白色） */
 }
 
 /* ========================================
@@ -253,6 +255,7 @@
   --input-bg-hover: #1a2e1f; /* 输入悬停背景 */
   --input-bg-focus: #0f2e1b; /* 输入聚焦背景 */
   --input-bg-disabled: #0a1f12; /* 输入禁用背景 */
+  --table-header-bg: #1f3524; /* COMP-02: 表头专用深色（保持 dark 视觉层次） */
 
   --input-border: #2d4d33; /* 输入边框 */
   --input-border-hover: #598e5e; /* 悬停边框 */
@@ -915,7 +918,7 @@ body {
 
 /* 表头 */
 .ant-table-thead > tr > th {
-  background: var(--bg-elevated) !important;
+  background: var(--table-header-bg, #e9efeb) !important;
   border-bottom: 2px solid var(--border-base) !important;
   border-top: 1px solid var(--border-base) !important;
   color: var(--text-primary) !important;
@@ -926,7 +929,7 @@ body {
 }
 
 [data-color-mode="dark"] .ant-table-thead > tr > th {
-  background: var(--bg-elevated) !important;
+  background: var(--table-header-bg, #1f3524) !important;
   border-color: var(--border-strong) !important;
   color: var(--text-primary) !important;
 }
