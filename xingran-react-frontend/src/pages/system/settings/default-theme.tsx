@@ -1,12 +1,15 @@
 /**
  * 默认主题配置页面
  * Default Theme Configuration Page
+ *
+ * v1.22 Phase 65（D-01）：多主题移除后仅剩明暗模式配置；
+ * 主题风格与自定义颜色入口不再存在。
  */
 
 import { useState, useEffect } from "react";
-import { App, Form, Select, Button, Card, Space, Divider, ColorPicker } from "antd";
+import { App, Form, Select, Button, Card, Space } from "antd";
 import { SyncOutlined, SaveOutlined } from "@ant-design/icons";
-import type { ThemeConfiguration } from "@/types/config";
+import type { ThemeConfiguration } from "@/lib/defaultThemeApi";
 import {
   getDefaultThemeConfig,
   setDefaultThemeConfig,
@@ -20,19 +23,6 @@ import { useSettingsStore } from "@/store/settingsStore";
 const MODE_OPTIONS = [
   { label: "浅色", value: "light" },
   { label: "深色", value: "dark" },
-  { label: "自动", value: "auto" },
-];
-
-/**
- * 主题风格选项
- */
-const STYLE_OPTIONS = [
-  { label: "简约", value: "minimal" },
-  { label: "玻璃态", value: "glassmorphism" },
-  { label: "新拟态", value: "neumorphism" },
-  { label: "扁平化 2.0", value: "flat2.0" },
-  { label: "奢华静雅", value: "luxury-quiet" },
-  { label: "墨绿琥珀", value: "ink-amber" },
 ];
 
 const DefaultThemePage: React.FC = () => {
@@ -57,9 +47,6 @@ const DefaultThemePage: React.FC = () => {
         const config = await getDefaultThemeConfig();
         form.setFieldsValue({
           mode: config.mode,
-          style: config.style,
-          primaryColor: config.customColors?.primary,
-          sidebarColor: config.customColors?.sidebar,
         });
       } catch (error) {
         message.error("加载默认主题配置失败");
@@ -74,26 +61,12 @@ const DefaultThemePage: React.FC = () => {
   }, [form]);
 
   // 保存默认主题配置
-  const handleSave = async (values: any) => {
+  const handleSave = async (values: { mode: ThemeConfiguration["mode"] }) => {
     try {
       setLoading(true);
 
-      // ColorPicker 返回的是 Color 对象,需要 toHexString() 转成 hex 字符串;
-      // 空值或未选择时退化为 undefined,后端 bind 不会报错
-      const toHex = (v: any): string | undefined => {
-        if (!v) return undefined;
-        if (typeof v === "string") return v;
-        if (typeof v?.toHexString === "function") return v.toHexString();
-        return undefined;
-      };
-
       const config: ThemeConfiguration = {
         mode: values.mode,
-        style: values.style,
-        customColors: {
-          primary: toHex(values.primaryColor),
-          sidebar: toHex(values.sidebarColor),
-        },
       };
 
       await setDefaultThemeConfig(config);
@@ -121,9 +94,6 @@ const DefaultThemePage: React.FC = () => {
       const config = await getDefaultThemeConfig();
       form.setFieldsValue({
         mode: config.mode,
-        style: config.style,
-        primaryColor: config.customColors?.primary,
-        sidebarColor: config.customColors?.sidebar,
       });
 
       message.success("已从当前用户配置同步到默认主题");
@@ -140,9 +110,6 @@ const DefaultThemePage: React.FC = () => {
     const preferences = useSettingsStore.getState().preferences;
     form.setFieldsValue({
       mode: preferences.theme.mode,
-      style: preferences.theme.style,
-      primaryColor: preferences.theme.customColors?.primary,
-      sidebarColor: preferences.theme.customColors?.sidebar,
     });
     message.info("已加载当前设置到表单，请点击保存按钮保存");
   };
@@ -174,24 +141,6 @@ const DefaultThemePage: React.FC = () => {
           rules={[{ required: true, message: "请选择主题模式" }]}
         >
           <Select options={MODE_OPTIONS} placeholder="请选择主题模式" onSearch={() => {}} />
-        </Form.Item>
-
-        <Form.Item
-          label="主题风格"
-          name="style"
-          rules={[{ required: true, message: "请选择主题风格" }]}
-        >
-          <Select options={STYLE_OPTIONS} placeholder="请选择主题风格" onSearch={() => {}} />
-        </Form.Item>
-
-        <Divider>自定义颜色（可选）</Divider>
-
-        <Form.Item label="主色调" name="primaryColor">
-          <ColorPicker showText />
-        </Form.Item>
-
-        <Form.Item label="侧边栏颜色" name="sidebarColor">
-          <ColorPicker showText />
         </Form.Item>
 
         <Form.Item style={{ marginTop: 24 }}>
