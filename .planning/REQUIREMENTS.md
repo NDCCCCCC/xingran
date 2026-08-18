@@ -33,10 +33,10 @@ update_trigger: v1.22 ROADMAP drafted (Phases 64-67) — traceability section fi
 
 ### TOKEN — 品牌令牌层
 
-- [ ] **TOKEN-01**: `src/index.css` 的 `--theme-primary*` / `--theme-neutral-*` / `--sidebar-*` 变量组全量改为 brand-spec 实测值（深绿 `#156031` / 铜金 `#C09058` / 奶油 `#F0ECE3` / 白卡 `#FFFFFF` / 描边 `#DBD7CE` / 次级文字 `#707068`），使 253 变量层成为全站品牌单一入口
-- [ ] **TOKEN-02**: `src/design-system/tokens/colors.ts` 新增 `xingranBrand` 色板常量 —— 绿梯度 6 阶（`#14532D` / `#156031` / `#1A6839` / `#3B784C` / `#598E5E` / `#E9EFEB`）、铜金梯度 4 阶（`#B88850` / `#C09058` / `#C89868` / `#AA7B42`）、奶油中性阶，每个色值带 OKLch 值与 WCAG 对比度注释，作为 TS 侧唯一真相源
-- [ ] **TOKEN-03**: `src/design-system/components/AntdThemeBridge.tsx` 的 Antd 6 `theme.token` 与 `theme.components` 覆盖全量接品牌令牌，使 Button / Table / Input / Select / Menu / Tabs / Tag / Card 等内置组件自动品牌化，无需逐组件写 CSS override
-- [ ] **TOKEN-04**: `tokens/shadows.ts` / `spacing.ts` / `typography.ts` 按 brand-spec 的「奶油底衬白卡双层纸感」调性对齐（阴影减弱、圆角统一、字阶收敛），消除与新色彩体系不协调的旧值
+- [x] **TOKEN-01**: `src/index.css` 的 `--theme-primary*` / `--theme-neutral-*` / `--sidebar-*` 变量组全量改为 brand-spec 实测值（深绿 `#156031` / 铜金 `#C09058` / 奶油 `#F0ECE3` / 白卡 `#FFFFFF` / 描边 `#DBD7CE` / 次级文字 `#707068`），使 253 变量层成为全站品牌单一入口
+- [x] **TOKEN-02**: `src/design-system/tokens/colors.ts` 新增 `xingranBrand` 色板常量 —— 绿梯度 6 阶（`#14532D` / `#156031` / `#1A6839` / `#3B784C` / `#598E5E` / `#E9EFEB`）、铜金梯度 4 阶（`#B88850` / `#C09058` / `#C89868` / `#AA7B42`）、奶油中性阶，每个色值带 OKLch 值与 WCAG 对比度注释，作为 TS 侧唯一真相源
+- [x] **TOKEN-03**: `src/design-system/components/AntdThemeBridge.tsx` 的 Antd 6 `theme.token` 与 `theme.components` 覆盖全量接品牌令牌，使 Button / Table / Input / Select / Menu / Tabs / Tag / Card 等内置组件自动品牌化，无需逐组件写 CSS override
+- [x] **TOKEN-04**: `tokens/shadows.ts` / `spacing.ts` / `typography.ts` 按 brand-spec 的「奶油底衬白卡双层纸感」调性对齐（阴影减弱、圆角统一、字阶收敛），消除与新色彩体系不协调的旧值
 
 ### THEME — 主题系统收敛
 
@@ -46,17 +46,17 @@ update_trigger: v1.22 ROADMAP drafted (Phases 64-67) — traceability section fi
 
 ### COMP — 通用组件样式
 
-- [ ] **COMP-01**: 侧边栏深绿化 —— `--sidebar-bg` `#1e293b` → `#14532D`，hover / active 用 `#156031` 底 + `#E0E0B0` 强调文字（5.62:1），折叠态（64px）与展开态（280px）均正确；顶栏保持白底 64px，面包屑与全局搜索 ⌘K 视觉不破
-- [ ] **COMP-02**: 表格与卡片统一 —— 表头底 `#F1F5F9` → `#E9EFEB` 绿灰淡彩，斑马纹与分割线用 `#DBD7CE`，白卡 `#FFFFFF` 衬奶油画布 `#F0ECE3` 形成双层纸感；表格排序/筛选/选中态、空状态、分页器全部接品牌令牌
-- [ ] **COMP-03**: 按钮体系落地 D-03 按钮纪律 —— 主按钮 `#156031` 绿底白字、hover `#2E7444`；次级（描边绿）、危险、禁用、链接、图标按钮全套规范；`#FEF3C7` 从按钮前景移除，回归为淡黄标签底；全站无铜金实心主按钮
-- [ ] **COMP-04**: 表单 / 标签 / 图表接令牌 —— 表单控件 focus 环用品牌绿、校验错误态色阶统一；Tag / Badge（含 SM2 / SM3 / SM4 淡黄标签 `#FEF3C7`）规范化；Tabs 多页签与面包屑；ECharts 图表系列色改用绿金梯度（`#156031` / `#3B784C` / `#C09058` / `#598E5E` / `#C89868`）而非默认蓝紫
+- [x] **COMP-01**: 侧边栏深绿化 —— `--sidebar-bg` `#1e293b` → `#14532D`，hover / active 用 `#156031` 底 + `#E0E0B0` 强调文字（5.62:1），折叠态（64px）与展开态（280px）均正确；顶栏保持白底 64px，面包屑与全局搜索 ⌘K 视觉不破
+- [x] **COMP-02**: 表格与卡片统一 —— 表头底 `#F1F5F9` → `#E9EFEB` 绿灰淡彩，斑马纹与分割线用 `#DBD7CE`，白卡 `#FFFFFF` 衬奶油画布 `#F0ECE3` 形成双层纸感；表格排序/筛选/选中态、空状态、分页器全部接品牌令牌
+- [x] **COMP-03**: 按钮体系落地 D-03 按钮纪律 —— 主按钮 `#156031` 绿底白字、hover `#2E7444`；次级（描边绿）、危险、禁用、链接、图标按钮全套规范；`#FEF3C7` 从按钮前景移除，回归为淡黄标签底；全站无铜金实心主按钮
+- [x] **COMP-04**: 表单 / 标签 / 图表接令牌 —— 表单控件 focus 环用品牌绿、校验错误态色阶统一；Tag / Badge（含 SM2 / SM3 / SM4 淡黄标签 `#FEF3C7`）规范化；Tabs 多页签与面包屑；ECharts 图表系列色改用绿金梯度（`#156031` / `#3B784C` / `#C09058` / `#598E5E` / `#C89868`）而非默认蓝紫
 
 ### QA — 质量门与防回归
 
-- [ ] **QA-01**: 对比度自动验证 —— 提供可执行的对比度校验（脚本或单测）覆盖 brand-spec 列出的关键前景/背景对（白字 on `#156031` ≥7.6:1、`#E0E0B0` on `#156031` ≥5.6:1、`#707068` on 白卡 ≥4.9:1 等），不达标即失败
-- [ ] **QA-02**: 硬编码色值防回归 —— 全仓扫描并清除 `src/` 下遗留的 `#4F46E5` / `#F1F5F9` / slate 系等非品牌硬编码色值，并以 lint 规则或 CI 检查阻止新增（衔接 Phase 63 前端工具链）
-- [ ] **QA-03**: 构建回归门 —— `npm run build` / `type-check` / `lint` / `test` 全绿；移除 6 套主题后 bundle 体积不增（预期下降），记录前后对比数值
-- [ ] **QA-04**: 视觉回归确认 —— 关键屏（仪表盘 / 系统用户 / 工位管理 / 监控仪表盘 / 资产对账看板 / 登录页）改造前后截图对比，人工确认无布局崩坏、无不可读文本、无残留冲突色
+- [x] **QA-01**: 对比度自动验证 —— 提供可执行的对比度校验（脚本或单测）覆盖 brand-spec 列出的关键前景/背景对（白字 on `#156031` ≥7.6:1、`#E0E0B0` on `#156031` ≥5.6:1、`#707068` on 白卡 ≥4.9:1 等），不达标即失败
+- [x] **QA-02**: 硬编码色值防回归 —— 全仓扫描并清除 `src/` 下遗留的 `#4F46E5` / `#F1F5F9` / slate 系等非品牌硬编码色值，并以 lint 规则或 CI 检查阻止新增（衔接 Phase 63 前端工具链）
+- [x] **QA-03**: 构建回归门 —— `npm run build` / `type-check` / `lint` / `test` 全绿；移除 6 套主题后 bundle 体积不增（预期下降），记录前后对比数值
+- [x] **QA-04**: 视觉回归确认 —— 关键屏（仪表盘 / 系统用户 / 工位管理 / 监控仪表盘 / 资产对账看板 / 登录页）改造前后截图对比，人工确认无布局崩坏、无不可读文本、无残留冲突色
 
 ## Future Requirements (v1.23+)
 

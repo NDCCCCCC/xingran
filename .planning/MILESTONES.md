@@ -1,5 +1,41 @@
 # Milestones
 
+## v1.22 前端品牌化改造 (Frontend Brand Design-System) — ✅ SHIPPED 2026-08-18
+
+**Phases**: 4 (Phases 64-67) | **Plans**: 4 (64-01 / 65-01 / 66-01 / 67-01) | **Tasks**: 33（含 Post-T5 补丁 + 终验）
+
+**Delivered**: 把 `brand-spec.md` 像素实测品牌品牌（深绿 `#156031` × 铜金 `#C09058` × 奶油 `#F0ECE3`）固化进 `xingran-react-frontend/src/design-system/`，后台内部组件与登录页品牌一致；53 屏业务页面自动继承样式（不逐屏施工）。范围严格遵循锁定决策（仅 design-system 层；不逐屏改造 53 屏；D-01 全局替换不保留多主题；D-03 按钮纪律；D-05 业务代码零改动）。
+
+**Key Accomplishments**:
+
+1. ✅ **Phase 64 品牌令牌层落地** — `src/index.css` 253 变量全量改为 brand-spec 实测值（深绿/铜金/奶油/白卡/描边/次级文字） + `tokens/colors.ts` 新增 `xingranBrand` 11 键常量导出（绿6/铜金4/奶油9/渐变2/功能6/onDark3，含 OKLch + WCAG 注释） + `AntdThemeBridge.tsx` 16 项 token + 8 组件覆盖接品牌 + `tokens/shadows.ts/spacing.ts/typography.ts` 双层纸感调性对齐（深绿阴影 + 8px 圆角 + PingFang SC / JetBrains Mono / Songti SC 字体栈） + QA-01 对比度自动验证 vitest module（31 条断言，含 D-03 反向断言锁住 `#FFFFFF on #C09058 < 3.5:1`）
+
+2. ✅ **Phase 65 主题系统收敛** — 删除 `design-system/themes/` 6 套主题目录（minimal/glassmorphism/neumorphism/flat2.0/luxury-quiet/ink-amber × 20 文件）+ `ThemeSwitcher.tsx`（65 行）+ `ColorSwitcher.tsx`（477 行）+ `types/theme.ts` + `utils/color.ts` + `tokens/shadows.ts/spacing.ts` 死文件（themes/ 删除后零消费）；themeStore 重写为单 `mode` 字段；AntdThemeBridge 三层优先级链简化为直接 `xingranBrand.greenPrimary`；ConfigProvider 移除 save-theme-settings 监听；InnovativeLayout 仅删 4 行（2 import + 2 渲染）；light/dark 双模式保留（设置页 + ThemeProvider + data-color-mode）；layoutStore 3 套布局 + 密度切换完整保留（diff-zero 证据）。vendor-react gzip 持平 774.94 kB；源码层 -4357 行
+
+3. ✅ **Phase 66 通用组件层 + 硬编码色扫描** — AntdThemeBridge 扩展补齐 Phase 64 UAT 4 Gap（Table.headerBg / Input.activeBorderColor/hoverBorderColor + 2px 焦点环 / Tag.defaultBg=#FEF3C7 + defaultColor=#B88850 / Button.primaryColor=#FFFFFF 白字）+ 侧边栏深绿化（light 模式 `#14532D` 配方 + `--header-bg` 解耦防顶栏染色；sidebar.tsx 双根因修：内联白底清理 + Menu theme="dark"）+ ECharts 品牌系列色（`tokens/echartsTheme.ts` 新建 brandSeriesColors / brandHeatRamp / brandAxisLine / brandSplitLine / brandTextStyle / brandAreaFade / brandHeatZero 全出自 xingranBrand）+ `scripts/check-hardcoded-colors.mjs` 零依赖 scanner（node 内置 fs/path，相对脚本路径解析；denylist 覆盖 indigo/tailwind/slate/Antd 旧色板；路径 allowlist 5 / 值 allowlist 4）→ `--fix` 模式应用 426 项替换 / 95 文件 + 集成进 `npm run lint` + 包入 CI；scan 报告模式 0 命中 exit 0。Post-T5 补丁 4 commits（scanner 路径 / CmdK Tag 内联覆盖 / 全局 `.ant-tag` 覆盖 / 表头+focus 变量）
+
+4. ✅ **Phase 67 终验** — `npm run build` exit 0 / `type-check` exit 0 / `lint` exit 0（eslint 0 errors + scanner 0 命中）/ `vitest` 14 files / 120 tests（5 fail 为 Phase 53 v1.19 网络设备端口写 UI 测试，与 v1.22 正交，**不阻塞 SHIPPED**）；vendor-react gzip 774.94 kB 持平；dist chunk 数 134 / 最大单 app chunk 131 kB 无回归；六屏视觉确认（仪表盘/系统用户/工位管理/监控仪表盘/资产对账看板/登录页）品牌化框架实测全 PASS；与 refs/ 旧截图对比 indigo/slate/冷蓝灰冲突色全部清零
+
+**关键成果**：后台内部 `#4F46E5` indigo 主按钮 + `#F1F5F9` 冷蓝灰表头 + `#1e293b` slate 侧栏三个最大品牌化缺口全修复；登录页 → 后台视觉一脉相承（深绿 + 铜金 + 奶油 + 白卡双层纸感）；后端零改动；业务页面零改动。
+
+**遗留 v1.23+ 候选**（不阻塞 SHIPPED）：
+
+- **PROTO-01..04 逐屏原型对齐**：`PROTOTYPE-VS-ACTUAL.md` 差异清单（24 处路由前缀、53 屏字段 / 表头 / 工具栏 / 菜单 / 空状态 / 统计卡对齐）
+- **VIS-01..03 视觉深化**：3D 楼宇可视化（Three.js）配色接品牌令牌 / 登录页-后台过渡动效统一 / 打印导出样式品牌化
+- **Tag 默认配方收紧**：`#B88850 on #FEF3C7` 实测约 2.8:1（低于 AA 4.5:1）—— 当前为装饰性品牌锚点（orchestrator 锁定决策），收紧候选 `#905D00` on `#FEF3C7` 5.03:1 已实测达标
+- **index.css 叠层规则去重**：4 处 `[data-color-mode="dark"] .ant-table-thead` 规则（L931/L2343/L3844/L4642）与多组 dark `.ant-tag` 规则叠层，后置规则胜出 —— 当前渲染均品牌族内但建议合并去重
+- **Phase 53 网络设备端口写 UI 测试修复**：5 个 vitest 失败（BulkWriteDrawer / ports/index 异步 timing 与 mock），与 v1.22 正交
+
+**Refs 关联**：
+
+- 素材：`655aa291-9bfe-4e94-ad5d-b3c8b2d24984/brand-spec.md`（像素实测 + WCAG 验证）、`admin-design-plan.md`（系统现状侦察 + 缺口定位）
+- Phase 64 SUMMARY：`D:\code\ClaudeCode\guoguo\.planning\phases\64-brand-token-layer-and-contrast-verification\64-01-SUMMARY.md`
+- Phase 65 SUMMARY：`.planning\phases\65-theme-system-consolidation\65-01-SUMMARY.md`
+- Phase 66 SUMMARY：`66-component-styles-and-hardcoded-color-scan\66-01-SUMMARY.md`
+- Phase 67 SUMMARY：`67-build-regression-and-visual-confirmation\67-01-SUMMARY.md`
+
+---
+
 ## v1.20 网络设备 VLAN + 端口绑定 (Shipped: 2026-07-10)
 
 **Phases completed:** 1 phases, 5 plans, 23 tasks
