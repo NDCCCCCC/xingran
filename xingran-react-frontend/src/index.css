@@ -1151,17 +1151,19 @@ body {
    Tag 标签
    ======================================== */
 .ant-tag {
-  background: var(--theme-primary-light) !important;
-  border: 1px solid var(--theme-primary-lighter) !important;
-  color: var(--theme-primary) !important;
+  /* COMP-04 品牌锚点：SM2/SM3/SM4 同款淡黄标签（#FEF3C7 底 + #B88850 铜金字，与 AntdThemeBridge Tag.defaultBg 同配方） */
+  background: #fef3c7 !important;
+  border: 1px solid rgba(184, 136, 80, 0.35) !important;
+  color: #b88850 !important;
   border-radius: var(--theme-radius-sm) !important;
   font-size: 12px !important;
   padding: 2px 8px !important;
 }
 
 [data-color-mode="dark"] .ant-tag {
-  background: rgba(21, 96, 49, 0.2) !important;
-  border-color: rgba(21, 96, 49, 0.3) !important;
+  background: rgba(192, 144, 88, 0.18) !important;
+  border-color: rgba(192, 144, 88, 0.35) !important;
+  color: #c89868 !important;
 }
 
 /* 状态标签 */
