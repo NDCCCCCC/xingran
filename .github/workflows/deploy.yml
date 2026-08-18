@@ -157,18 +157,20 @@ jobs:
         run: |
           chmod +x out/xingran-backend
           PORT="${{ vars.SSH_PORT || '22' }}"
-          # Common cause of hang (deploy run 32110660342): scp -C with a 75MB
-          # binary sat at 100% for 15 minutes without closing the SSH channel.
-          # Drop -C (runner→server bandwidth is fine unzipped) and add
-          # ServerAliveInterval/ClientAliveInterval so dead-handshakes don't
-          # stall the job.
-          SCP_OPTS="-P ${PORT} -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes \
-                    -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
-                    -o IPQoS=throughput"
-          scp $SCP_OPTS deploy/xingran.service \
-              ubuntu@"${{ secrets.SSH_HOST }}":/opt/xingran/deploy/xingran.service.new
-          scp $SCP_OPTS out/xingran-backend \
-              ubuntu@"${{ secrets.SSH_HOST }}":/opt/xingran/xingran-backend.new
+          # Common cause of hang (deploy runs 32110660342, 32112268319, 32113627075):
+          # scp sat at 100% for 15 minutes without closing the SSH channel —
+          # server-side StateMachine stalls on the last ack.
+          # Switch to rsync over ssh (chunked streaming protocol, no scp acks).
+          # Available on ubuntu-latest runners + 腾讯云 ubuntu servers (verified).
+          SSH_KEY_OPTS="-i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -p ${PORT}"
+          rsync -av --progress \
+                -e "ssh ${SSH_KEY_OPTS}" \
+                deploy/xingran.service \
+                ubuntu@"${{ secrets.SSH_HOST }}":/opt/xingran/deploy/xingran.service.new
+          rsync -av --progress --inplace \
+                -e "ssh ${SSH_KEY_OPTS}" \
+                out/xingran-backend \
+                ubuntu@"${{ secrets.SSH_HOST }}":/opt/xingran/xingran-backend.new
 
       - name: Activate (backup → replace → restart → health → rollback)
         run: |
