@@ -99,7 +99,10 @@ previous_update: 2026-08-13 after v1.21 plans drafted (Phases 57-61) + Phase 62 
 4. `npm run type-check` / `npm run build` / `npm run lint` / `npm run test` 全绿,移除 6 套主题后 vendor-react 打包体积较 Phase 64 baseline 不增(预期下降);无新增 lint warning(`react/no-unused-prop-types` 等)
 5. 验收清单:在 settings 页内,**主题切换器 UI 不再存在**;**颜色自定义(主色 / 侧边栏色)入口不再存在**(D-01 不可逆);**布局 / 密度 / 浅色 / 深色切换入口完整可用**;主页面视觉与登录页品牌一致(深绿 × 铜金 × 奶油)
 
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 65-01-PLAN.md — 主题系统收敛:删除 6 套主题与切换器(T1-T6 机械清除,每任务独立 commit 常绿),THEME-02 暗色推导断言(T7),THEME-03 布局/密度边界验证 + 全量 QA 门 + bundle 对比(T8),视觉冒烟 checkpoint(T9)
 
 **UI hint**: yes
 
@@ -154,7 +157,7 @@ Phases execute in numeric order: 64 → 65 → 66 → 67 (Phase 63 独立 IN PRO
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 64. 品牌令牌层落地 + 对比度验证 | v1.22 | 0/TBD | Not started | - |
-| 65. 主题系统收敛 | v1.22 | 0/TBD | Not started | - |
+| 65. 主题系统收敛 | v1.22 | 0/1 | Planned | - |
 | 66. 通用组件样式 + 硬编码色扫描 | v1.22 | 0/TBD | Not started | - |
 | 67. 构建回归 + 视觉确认 | v1.22 | 0/TBD | Not started | - |
 
