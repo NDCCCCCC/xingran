@@ -206,8 +206,11 @@ jobs:
       - name: Create GitHub Release
         # gh is preinstalled on runners; --generate-notes builds the
         # changelog from merged PRs/commits automatically.
+        # -R 显式指定仓库 — 本 job 无 checkout 步骤,gh 无 .git 上下文
+        # 会报 "fatal: not a git repository" (v0.1.0 run 32197297657)
         run: |
           gh release create "${GITHUB_REF_NAME}" out/*.tar.gz \
+            -R "${{ github.repository }}" \
             --title "${GITHUB_REF_NAME}" \
             --generate-notes \
             --verify-tag
