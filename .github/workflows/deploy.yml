@@ -164,7 +164,7 @@ jobs:
           # stall the job.
           SCP_OPTS="-P ${PORT} -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes \
                     -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
-                    -o IPQoS=lowdelay throughput"
+                    -o IPQoS=throughput"
           scp $SCP_OPTS deploy/xingran.service \
               ubuntu@"${{ secrets.SSH_HOST }}":/opt/xingran/deploy/xingran.service.new
           scp $SCP_OPTS out/xingran-backend \
