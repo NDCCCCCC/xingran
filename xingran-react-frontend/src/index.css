@@ -4,81 +4,88 @@
    现代企业设计系统 - Premium Dark Mode
    Modern Enterprise Design System
 
+   v1.22 品牌化落地（Phase 64 · TOKEN-01）
+   - 色值真相源：`655aa291-9bfe-4e94-ad5d-b3c8b2d24984/brand-spec.md`
+   - 实测来源：登录页像素取色 + OKLch 派生 + WCAG AA 校验
+   - D-02 锁定：标注「实测」直接采用；「推导」须通过 QA-01 对比度校验
+   - D-03 锁定：主按钮永远 `#156031` 绿底白字；铜金 `#C09058` 不做实心主按钮
+
    设计理念：专业、清晰、高效
-   配色方案：靛蓝主色 + 精致深色层次
+   配色方案：深绿主色 + 铜金点缀 + 奶油纸感画布
    暗色模式：深邃、层次分明、细节精致
    ========================================
 
    暗色模式设计语言：
-   - 基础背景：深海军炭 (#0A0E1A) - 柔和深邃
-   - 表面层递：#1A1D2D → #252A3F → #2D3247
-   - 边框系统：#334155 → #404655（微妙过渡）
-   - 文字层次：#FFFFFF → #F1F5F9 → #94A3B8
+   - 基础背景：深绿加深 (#0F2E1B) - 深绿品牌底
+   - 表面层递：#1A2E1F → #1F3524 → #243A29
+   - 边框系统：#2D4D33 → #345B3A（深绿低饱和过渡）
+   - 文字层次：#F0ECE3 → #DBD7CE → #C2BDB2
    - 微光效果：subtle box-shadow 提升品质感
    ======================================== */
 
 /* 核心颜色变量 */
 :root {
-  /* ===== 主色调 - 靛蓝专业色系 ===== */
-  --theme-primary: #4f46e5; /* 靛蓝主色 */
-  --theme-primary-hover: #4338ca; /* 悬停深色 */
-  --theme-primary-light: #eef2ff; /* 浅色背景 */
-  --theme-primary-lighter: #e0e7ff; /* 更浅背景 */
-  --theme-primary-subtle: #c7d2fe; /* 柔和边框 */
+  /* ===== 主色调 - 深绿品牌色系 (实测) ===== */
+  --theme-primary: #156031; /* 品牌主色 (实测) */
+  --theme-primary-hover: #2e7444; /* 悬停浅提 (推导 L+0.07) */
+  --theme-primary-active: #14542e; /* 激活深端 (实测) */
+  --theme-primary-light: #1a6839; /* 渐变亮端 (实测) */
+  --theme-primary-lighter: #e9efeb; /* 浅色背景 (实测绿灰淡彩) */
+  --theme-primary-subtle: #598e5e; /* 柔和边框 (实测深底图标绿) */
 
-  /* ===== 中性色 - 精心调配的灰度 ===== */
-  --theme-neutral-white: #ffffff;
-  --theme-neutral-50: #f8fafc;
-  --theme-neutral-100: #f1f5f9;
-  --theme-neutral-200: #e2e8f0;
-  --theme-neutral-300: #cbd5e1;
-  --theme-neutral-400: #94a3b8;
-  --theme-neutral-500: #64748b;
-  --theme-neutral-600: #475569;
-  --theme-neutral-700: #334155;
-  --theme-neutral-800: #1e293b;
-  --theme-neutral-900: #0f172a;
+  /* ===== 中性色 - 奶油纸感色阶 (实测+推导) ===== */
+  --theme-neutral-white: #ffffff; /* 白卡 surface */
+  --theme-neutral-50: #f0ece3; /* 奶油画布 (实测) */
+  --theme-neutral-100: #e9efeb; /* 绿灰淡彩/表头底 (实测) */
+  --theme-neutral-200: #dbd7ce; /* 暖灰描边 (推导自 --bg) */
+  --theme-neutral-300: #c2bdb2; /* 强描边 (实测 borderStrong) */
+  --theme-neutral-400: #707068; /* 次级文字 (实测 muted, 白卡 4.99:1) */
+  --theme-neutral-500: #64645c; /* muted-strong (实测, 奶油底 5.06:1) */
+  --theme-neutral-600: #101010; /* 主文字 (实测 fg) */
+  --theme-neutral-700: #3b784c; /* 次级绿 */
+  --theme-neutral-800: #14532d; /* 侧边栏深绿 (实测) */
+  --theme-neutral-900: #0f2e1b; /* 深绿加深 (暗色模式) */
 
   /* ===== 侧边栏专用色 ===== */
-  --sidebar-bg: #1e293b;
-  --sidebar-bg-hover: #2d3748;
-  --sidebar-bg-active: #334155;
-  --sidebar-border: #334155;
-  --sidebar-text: #f1f5f9;
+  --sidebar-bg: #14532d; /* 深绿侧栏底 (实测) */
+  --sidebar-bg-hover: #156031; /* 悬停态 */
+  --sidebar-bg-active: #1a6839; /* 激活态 (实测渐变亮端) */
+  --sidebar-border: #dbd7ce;
+  --sidebar-text: #f0ece3; /* 奶油文字 (实测) */
   --sidebar-text-hover: #ffffff;
-  --sidebar-text-active: #ffffff;
-  --sidebar-accent: #3b82f6;
+  --sidebar-text-active: #e0e0b0; /* 浅黄强调 (实测, 深绿底 5.62:1) */
+  --sidebar-accent: #c09058; /* 铜金点缀 (实测) */
 
   /* ===== 背景色系统 ===== */
-  --theme-bg-primary: var(--theme-neutral-white);
-  --theme-bg-secondary: var(--theme-neutral-50);
-  --theme-bg-tertiary: var(--theme-neutral-100);
-  --theme-bg-surface: var(--theme-neutral-white);
-  --theme-bg-elevated: var(--theme-neutral-white);
-  --theme-bg-accent: var(--theme-primary-light);
+  --theme-bg-primary: #f0ece3; /* 奶油画布 (实测) */
+  --theme-bg-secondary: #f0ece3;
+  --theme-bg-tertiary: #e9efeb; /* 绿灰表头底 (实测) */
+  --theme-bg-surface: #ffffff; /* 白卡 (实测) */
+  --theme-bg-elevated: #ffffff;
+  --theme-bg-accent: #e9efeb;
 
   /* ===== 文字色系统 ===== */
-  --theme-text-primary: var(--theme-neutral-700);
-  --theme-text-secondary: var(--theme-neutral-500);
-  --theme-text-tertiary: var(--theme-neutral-400);
-  --theme-text-disabled: var(--theme-neutral-400);
-  --theme-text-inverse: var(--theme-neutral-white);
-  --theme-text-accent: var(--theme-primary);
+  --theme-text-primary: #101010; /* 主文字 (实测) */
+  --theme-text-secondary: #707068; /* 次级文字 (实测) */
+  --theme-text-tertiary: #598e5e; /* 次级绿提示 */
+  --theme-text-disabled: #c2bdb2;
+  --theme-text-inverse: #ffffff;
+  --theme-text-accent: #156031;
 
   /* ===== 边框色系统 ===== */
-  --theme-border-primary: var(--theme-neutral-200);
-  --theme-border-secondary: var(--theme-neutral-100);
-  --theme-border-divider: var(--theme-neutral-200);
-  --theme-border-accent: var(--theme-primary-subtle);
+  --theme-border-primary: #dbd7ce; /* 暖灰描边 (实测) */
+  --theme-border-secondary: #e9efeb;
+  --theme-border-divider: #dbd7ce;
+  --theme-border-accent: #598e5e;
 
-  /* ===== 功能色系统 ===== */
-  --theme-success: #10b981;
-  --theme-success-bg: #d1fae5;
-  --theme-warning: #f59e0b;
-  --theme-warning-bg: #fef3c7;
-  --theme-error: #ef4444;
-  --theme-error-bg: #fee2e2;
-  --theme-info: #3b82f6;
+  /* ===== 功能色系统 (推导 + WCAG 验证) ===== */
+  --theme-success: #2d8949; /* 图标/大字 4.39:1 */
+  --theme-success-bg: #e9efeb;
+  --theme-warning: #b07a20;
+  --theme-warning-bg: #fef3c7; /* SM2/SM3/SM4 标签底 (实测) */
+  --theme-error: #ba3630; /* 白字 5.74:1 (实测) */
+  --theme-error-bg: #f7d8d5; /* 错误背景（奶油系淡红，与 --theme-error 协调） */
+  --theme-info: #337ab0;
 
   /* ===== 间距系统 ===== */
   --theme-spacing-xs: 4px;
@@ -125,42 +132,42 @@
    明暗模式核心变量
    ======================================== */
 [data-color-mode="light"] {
-  /* 浅色模式侧边栏 */
+  /* 浅色模式侧边栏（Phase 65 收敛为单一品牌侧栏） */
   --sidebar-bg: #ffffff;
-  --sidebar-bg-hover: #f1f5f9;
-  --sidebar-bg-active: #e2e8f0;
-  --sidebar-border: #e2e8f0;
-  --sidebar-text: #000000;
-  --sidebar-text-hover: #1e293b;
-  --sidebar-text-active: #4f46e5;
+  --sidebar-bg-hover: #e9efeb;
+  --sidebar-bg-active: #e9efeb;
+  --sidebar-border: #dbd7ce;
+  --sidebar-text: #101010;
+  --sidebar-text-hover: #14532d;
+  --sidebar-text-active: #156031;
 
-  /* 背景层 */
-  --bg-base: #ffffff;
-  --bg-surface: #f8fafc;
-  --bg-elevated: #f1f5f9;
+  /* 背景层（奶油画布 + 白卡 surface） */
+  --bg-base: #f0ece3;
+  --bg-surface: #ffffff;
+  --bg-elevated: #ffffff;
   --bg-overlay: #ffffff;
-  --bg-overlay-hover: #f1f5f9;
+  --bg-overlay-hover: #f0ece3;
 
   /* 文字 */
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-tertiary: #94a3b8;
-  --text-disabled: #cbd5e1;
+  --text-primary: #101010;
+  --text-secondary: #707068;
+  --text-tertiary: #598e5e;
+  --text-disabled: #c2bdb2;
 
   /* 边框 */
-  --border-base: #e2e8f0;
-  --border-subtle: #f1f5f9;
+  --border-base: #dbd7ce;
+  --border-subtle: #e9efeb;
 
   /* 组件背景 */
   --component-bg: #ffffff;
-  --component-bg-hover: #f8fafc;
+  --component-bg-hover: #f0ece3;
 
   /* 输入框 */
   --input-bg: #ffffff;
-  --input-border: #e2e8f0;
-  --input-border-hover: #cbd5e1;
-  --input-text: #0f172a;
-  --input-placeholder: #94a3b8;
+  --input-border: #dbd7ce;
+  --input-border-hover: #598e5e;
+  --input-text: #101010;
+  --input-placeholder: #707068;
 }
 
 /* ========================================
@@ -169,178 +176,178 @@
    WCAG AA 标准：所有文字对比度 ≥ 4.5:1
    ======================================== */
 [data-color-mode="dark"] {
-  /* ===== 背景层系统 - 6层深度层次 ===== */
-  --bg-base: #0a0e1a; /* Level 0 - 主背景 - 深邃海军炭 */
-  --bg-surface: #0d101f; /* Level 1 - 表面层 - 微升 */
-  --bg-elevated: #121624; /* Level 2 - 悬浮层 - 卡片基础 */
-  --bg-overlay: #1a1d2d; /* Level 3 - 覆盖层 - 弹窗/抽屉 */
-  --bg-overlay-hover: #252a3f; /* Level 4 - 悬停层 - 交互反馈 */
-  --bg-overlay-active: #2d3247; /* Level 5 - 激活层 - 最高优先级 */
+  /* ===== 背景层系统 - 深绿低饱和纸感 (Phase 64 品牌化) ===== */
+  --bg-base: #0f2e1b; /* Level 0 - 主背景 - 深绿加深 */
+  --bg-surface: #1a2e1f; /* Level 1 - 表面层 - 微升 */
+  --bg-elevated: #1f3524; /* Level 2 - 悬浮层 - 卡片基础 */
+  --bg-overlay: #243a29; /* Level 3 - 覆盖层 - 弹窗/抽屉 */
+  --bg-overlay-hover: #2d4d33; /* Level 4 - 悬停层 - 交互反馈 */
+  --bg-overlay-active: #345b3a; /* Level 5 - 激活层 - 最高优先级 */
 
   /* ===== 背景色映射到主题系统 ===== */
-  --theme-bg-primary: #0a0e1a;
-  --theme-bg-secondary: #0d101f;
-  --theme-bg-tertiary: #121624;
-  --theme-bg-surface: #121624;
-  --theme-bg-elevated: #1a1d2d;
+  --theme-bg-primary: #0f2e1b;
+  --theme-bg-secondary: #1a2e1f;
+  --theme-bg-tertiary: #1f3524;
+  --theme-bg-surface: #1a2e1f;
+  --theme-bg-elevated: #243a29;
 
-  /* ===== 文字系统 - 5级对比度层次 ===== */
-  --text-primary: #ffffff; /* Level 1 - 主文字 - 纯白 (21:1) */
-  --text-secondary: #e2e8f0; /* Level 2 - 次要 - 蓝白 (16:1) */
-  --text-tertiary: #cbd5e1; /* Level 3 - 辅助 - 银灰 (12:1) */
-  --text-quaternary: #94a3b8; /* Level 4 - 描述 - 中灰 (7:1) */
-  --text-disabled: #64748b; /* Level 5 - 禁用 - 深灰 (4.5:1) */
-  --text-inverse: #0a0e1a; /* 反色文字 - 深邃背景 */
+  /* ===== 文字系统 - 5级对比度层次（奶油文字） ===== */
+  --text-primary: #f0ece3; /* Level 1 - 主文字 - 奶油 */
+  --text-secondary: #dbd7ce; /* Level 2 - 次要 - 暖灰描边 */
+  --text-tertiary: #c2bdb2; /* Level 3 - 辅助 - 强描边 */
+  --text-quaternary: #e0e0b0; /* Level 4 - 描述 - 浅黄强调 */
+  --text-disabled: #707068; /* Level 5 - 禁用 */
+  --text-inverse: #0f2e1b; /* 反色文字 */
 
   /* ===== 文字色映射到主题系统 ===== */
-  --theme-text-primary: #ffffff;
-  --theme-text-secondary: #e2e8f0;
-  --theme-text-tertiary: #cbd5e1;
-  --theme-text-disabled: #64748b;
+  --theme-text-primary: #f0ece3;
+  --theme-text-secondary: #dbd7ce;
+  --theme-text-tertiary: #c2bdb2;
+  --theme-text-disabled: #707068;
 
-  /* ===== 边框系统 - 4级微妙界定 ===== */
-  --border-base: #1e293b; /* Level 1 - 主边框 - 柔和界定 */
-  --border-subtle: #0f172a; /* Level 2 - 次边框 - 极其微妙 */
-  --border-strong: #334155; /* Level 3 - 强调边框 - 清晰突出 */
-  --border-focus: #4f46e5; /* Level 4 - 聚焦边框 - 主色强调 */
+  /* ===== 边框系统 - 4级微妙界定（深绿低饱和） ===== */
+  --border-base: #2d4d33; /* Level 1 - 主边框 */
+  --border-subtle: #1a2e1f; /* Level 2 - 次边框 */
+  --border-strong: #345b3a; /* Level 3 - 强调边框 */
+  --border-focus: #1a6839; /* Level 4 - 聚焦边框 - 品牌绿 */
 
   /* ===== 边框色映射到主题系统 ===== */
-  --theme-border-primary: #1e293b;
-  --theme-border-secondary: #0f172a;
-  --theme-border-divider: #1e293b;
+  --theme-border-primary: #2d4d33;
+  --theme-border-secondary: #1a2e1f;
+  --theme-border-divider: #2d4d33;
 
   /* ===== 组件背景系统 ===== */
-  --component-bg: #121624; /* 组件基础背景 */
-  --component-bg-hover: #1a1d2d; /* 组件悬停背景 */
-  --component-bg-active: #252a3f; /* 组件激活背景 */
-  --component-bg-disabled: #0a0e1a; /* 组件禁用背景 */
+  --component-bg: #1f3524; /* 组件基础背景 */
+  --component-bg-hover: #243a29; /* 组件悬停背景 */
+  --component-bg-active: #2d4d33; /* 组件激活背景 */
+  --component-bg-disabled: #0f2e1b; /* 组件禁用背景 */
 
-  /* ===== 输入框系统 - 深邃可读 ===== */
-  --input-bg: #0a0e1a; /* 输入背景 - 与主背景融合 */
-  --input-bg-hover: #0d101f; /* 输入悬停背景 */
-  --input-bg-focus: #0a0e1a; /* 输入聚焦背景 */
-  --input-bg-disabled: #070912; /* 输入禁用背景 */
+  /* ===== 输入框系统 - 深绿可读 ===== */
+  --input-bg: #0f2e1b; /* 输入背景 - 与主背景融合 */
+  --input-bg-hover: #1a2e1f; /* 输入悬停背景 */
+  --input-bg-focus: #0f2e1b; /* 输入聚焦背景 */
+  --input-bg-disabled: #0a1f12; /* 输入禁用背景 */
 
-  --input-border: #1e293b; /* 输入边框 - 柔和界定 */
-  --input-border-hover: #334155; /* 悬停边框 - 清晰提示 */
-  --input-border-focus: #4f46e5; /* 聚焦边框 - 主色强调 */
-  --input-border-error: #f87171; /* 错误边框 - 红色警示 */
-  --input-border-disabled: #0f172a; /* 禁用边框 */
+  --input-border: #2d4d33; /* 输入边框 */
+  --input-border-hover: #598e5e; /* 悬停边框 */
+  --input-border-focus: #1a6839; /* 聚焦边框 - 品牌绿 */
+  --input-border-error: #ba3630; /* 错误边框 */
+  --input-border-disabled: #1a2e1f; /* 禁用边框 */
 
-  --input-text: #e2e8f0; /* 输入文字 - 高对比 */
-  --input-text-placeholder: #64748b; /* 占位符 - 柔和提示 */
-  --input-text-disabled: #475569; /* 禁用文字 */
+  --input-text: #f0ece3; /* 输入文字 */
+  --input-text-placeholder: #707068; /* 占位符 */
+  --input-text-disabled: #64645c; /* 禁用文字 */
 
-  /* ===== 侧边栏系统 - 独立深色调 ===== */
-  --sidebar-bg: #0f121d; /* 侧边栏背景 - 深邃 */
-  --sidebar-bg-hover: #1a1d2d; /* 侧边栏悬停 */
-  --sidebar-bg-active: #252a3f; /* 侧边栏激活 */
-  --sidebar-bg-disabled: #0a0e1a; /* 侧边栏禁用 */
+  /* ===== 侧边栏系统 - 深绿品牌 ===== */
+  --sidebar-bg: #0a2418; /* 侧边栏背景 - 品牌深绿加深 */
+  --sidebar-bg-hover: #14532d; /* 侧边栏悬停 */
+  --sidebar-bg-active: #156031; /* 侧边栏激活 */
+  --sidebar-bg-disabled: #0a1f12; /* 侧边栏禁用 */
 
-  --sidebar-border: #1e293b; /* 侧边栏边框 */
-  --sidebar-border-hover: #334155; /* 侧边栏悬停边框 */
+  --sidebar-border: #2d4d33; /* 侧边栏边框 */
+  --sidebar-border-hover: #598e5e; /* 侧边栏悬停边框 */
 
-  --sidebar-text: #cbd5e1; /* 侧边栏文字 */
+  --sidebar-text: #f0ece3; /* 侧边栏文字 - 奶油 */
   --sidebar-text-hover: #ffffff; /* 侧边栏悬停文字 */
-  --sidebar-text-active: #ffffff; /* 侧边栏激活文字 */
-  --sidebar-text-disabled: #64748b; /* 侧边栏禁用文字 */
+  --sidebar-text-active: #e0e0b0; /* 侧边栏激活文字 - 浅黄 */
+  --sidebar-text-disabled: #707068; /* 侧边栏禁用文字 */
 
-  --sidebar-accent: #4f46e5; /* 侧边栏强调色 */
-  --sidebar-accent-glow: rgba(79, 70, 229, 0.3); /* 侧边栏发光 */
+  --sidebar-accent: #c09058; /* 侧边栏强调色 - 铜金 */
+  --sidebar-accent-glow: rgba(192, 144, 88, 0.3); /* 侧边栏发光 */
 
-  /* ===== 按钮系统 ===== */
-  --btn-primary-bg: #4f46e5; /* 主按钮背景 */
-  --btn-primary-hover: #4338ca; /* 主按钮悬停 */
-  --btn-primary-active: #3730a3; /* 主按钮激活 */
+  /* ===== 按钮系统（品牌绿） ===== */
+  --btn-primary-bg: #2e7444; /* 主按钮背景（深色模式 hover 态） */
+  --btn-primary-hover: #1a6839; /* 主按钮悬停 */
+  --btn-primary-active: #14542e; /* 主按钮激活 */
   --btn-primary-text: #ffffff; /* 主按钮文字 */
 
-  --btn-default-bg: #1a1d2d; /* 默认按钮背景 */
-  --btn-default-hover: #252a3f; /* 默认按钮悬停 */
-  --btn-default-active: #2d3247; /* 默认按钮激活 */
-  --btn-default-border: #334155; /* 默认按钮边框 */
-  --btn-default-text: #e2e8f0; /* 默认按钮文字 */
+  --btn-default-bg: #243a29; /* 默认按钮背景 */
+  --btn-default-hover: #2d4d33; /* 默认按钮悬停 */
+  --btn-default-active: #345b3a; /* 默认按钮激活 */
+  --btn-default-border: #345b3a; /* 默认按钮边框 */
+  --btn-default-text: #f0ece3; /* 默认按钮文字 */
 
   --btn-ghost-bg: transparent; /* 幽灵按钮背景 */
-  --btn-ghost-hover: rgba(255, 255, 255, 0.05); /* 幽灵按钮悬停 */
-  --btn-ghost-text: #cbd5e1; /* 幽灵按钮文字 */
+  --btn-ghost-hover: rgba(240, 236, 227, 0.08); /* 幽灵按钮悬停 */
+  --btn-ghost-text: #dbd7ce; /* 幽灵按钮文字 */
 
-  --btn-danger-bg: #dc2626; /* 危险按钮背景 */
-  --btn-danger-hover: #ef4444; /* 危险按钮悬停 */
+  --btn-danger-bg: #ba3630; /* 危险按钮背景 */
+  --btn-danger-hover: #d44a44; /* 危险按钮悬停 */
   --btn-danger-text: #ffffff; /* 危险按钮文字 */
 
-  --btn-success-bg: #059669; /* 成功按钮背景 */
-  --btn-success-hover: #10b981; /* 成功按钮悬停 */
+  --btn-success-bg: #238142; /* 成功按钮背景 */
+  --btn-success-hover: #2d8949; /* 成功按钮悬停 */
   --btn-success-text: #ffffff; /* 成功按钮文字 */
 
-  /* ===== 功能色系统 - 暗色优化高对比度 ===== */
-  /* 成功色 - 绿色系 */
-  --success-bg: rgba(16, 185, 129, 0.15); /* 成功背景 */
-  --success-bg-hover: rgba(16, 185, 129, 0.25); /* 成功悬停背景 */
-  --success-text: #34d399; /* 成功文字 - 高亮绿 */
-  --success-border: #059669; /* 成功边框 */
+  /* ===== 功能色系统 - 品牌色调适配 ===== */
+  /* 成功色 - 品牌绿系 */
+  --success-bg: rgba(45, 137, 73, 0.18); /* 成功背景 */
+  --success-bg-hover: rgba(45, 137, 73, 0.28); /* 成功悬停背景 */
+  --success-text: #5fb87b; /* 成功文字 - 高亮绿 */
+  --success-border: #238142; /* 成功边框 */
 
-  /* 警告色 - 橙色系 */
-  --warning-bg: rgba(245, 158, 11, 0.15); /* 警告背景 */
-  --warning-bg-hover: rgba(245, 158, 11, 0.25); /* 警告悬停背景 */
-  --warning-text: #fbbf24; /* 警告文字 - 高亮橙 */
-  --warning-border: #d97706; /* 警告边框 */
+  /* 警告色 - 铜金系 */
+  --warning-bg: rgba(192, 144, 88, 0.18); /* 警告背景 */
+  --warning-bg-hover: rgba(192, 144, 88, 0.28); /* 警告悬停背景 */
+  --warning-text: #d4a574; /* 警告文字 - 高亮铜金 */
+  --warning-border: #b07a20; /* 警告边框 */
 
   /* 错误色 - 红色系 */
-  --error-bg: rgba(239, 68, 68, 0.15); /* 错误背景 */
-  --error-bg-hover: rgba(239, 68, 68, 0.25); /* 错误悬停背景 */
-  --error-text: #f87171; /* 错误文字 - 高亮红 */
-  --error-border: #dc2626; /* 错误边框 */
+  --error-bg: rgba(186, 54, 48, 0.18); /* 错误背景 */
+  --error-bg-hover: rgba(186, 54, 48, 0.28); /* 错误悬停背景 */
+  --error-text: #e0736e; /* 错误文字 - 高亮红 */
+  --error-border: #ba3630; /* 错误边框 */
 
-  /* 信息色 - 蓝色系 */
-  --info-bg: rgba(59, 130, 246, 0.15); /* 信息背景 */
-  --info-bg-hover: rgba(59, 130, 246, 0.25); /* 信息悬停背景 */
-  --info-text: #60a5fa; /* 信息文字 - 高亮蓝 */
-  --info-border: #3b82f6; /* 信息边框 */
+  /* 信息色 - 中性蓝系 */
+  --info-bg: rgba(51, 122, 176, 0.18); /* 信息背景 */
+  --info-bg-hover: rgba(51, 122, 176, 0.28); /* 信息悬停背景 */
+  --info-text: #6ba6d4; /* 信息文字 - 高亮蓝 */
+  --info-border: #337ab0; /* 信息边框 */
 
-  /* 处理中色 - 青色系 */
-  --processing-bg: rgba(22, 163, 74, 0.15); /* 处理中背景 */
-  --processing-text: #4ade80; /* 处理中文字 */
-  --processing-border: #16a34a; /* 处理中边框 */
+  /* 处理中色 - 品牌绿 */
+  --processing-bg: rgba(21, 96, 49, 0.18); /* 处理中背景 */
+  --processing-text: #598e5e; /* 处理中文字 */
+  --processing-border: #1a6839; /* 处理中边框 */
 
-  /* ===== 阴影系统 - 暗色环境优化 ===== */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.6);
-  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.7);
-  --shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.75);
-  --shadow-2xl: 0 20px 40px rgba(0, 0, 0, 0.8);
-  --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+  /* ===== 阴影系统 - 深绿低饱和（暖色调） ===== */
+  --shadow-xs: 0 1px 2px rgba(15, 46, 27, 0.4);
+  --shadow-sm: 0 2px 4px rgba(15, 46, 27, 0.5);
+  --shadow-md: 0 4px 8px rgba(15, 46, 27, 0.6);
+  --shadow-lg: 0 8px 16px rgba(15, 46, 27, 0.7);
+  --shadow-xl: 0 12px 24px rgba(15, 46, 27, 0.75);
+  --shadow-2xl: 0 20px 40px rgba(15, 46, 27, 0.8);
+  --shadow-inner: inset 0 2px 4px rgba(15, 46, 27, 0.5);
 
-  /* ===== 微光效果 - Premium Glow ===== */
-  --glow-subtle: 0 0 20px rgba(79, 70, 229, 0.08);
-  --glow-medium: 0 0 30px rgba(79, 70, 229, 0.12);
-  --glow-strong: 0 0 40px rgba(79, 70, 229, 0.15);
+  /* ===== 微光效果 - 品牌绿 Premium Glow ===== */
+  --glow-subtle: 0 0 20px rgba(21, 96, 49, 0.08);
+  --glow-medium: 0 0 30px rgba(21, 96, 49, 0.12);
+  --glow-strong: 0 0 40px rgba(21, 96, 49, 0.15);
 
   /* ===== 链接颜色 ===== */
-  --link-color: #60a5fa; /* 链接色 - 明亮蓝 */
-  --link-hover: #93c5fd; /* 链接悬停 */
-  --link-active: #3b82f6; /* 链接激活 */
-  --link-visited: #a78bfa; /* 链接访问过 */
+  --link-color: #598e5e; /* 链接色 - 品牌绿 */
+  --link-hover: #3b784c; /* 链接悬停 */
+  --link-active: #156031; /* 链接激活 */
+  --link-visited: #c09058; /* 链接访问过 - 铜金 */
 
   /* ===== 代码块颜色 ===== */
-  --code-bg: #0d1117; /* 代码背景 */
-  --code-text: #c9d1d9; /* 代码文字 */
-  --code-border: #21262d; /* 代码边框 */
-  --code-inline-bg: rgba(110, 118, 129, 0.2); /* 行内代码背景 */
+  --code-bg: #0a1f12; /* 代码背景 - 深绿 */
+  --code-text: #dbd7ce; /* 代码文字 */
+  --code-border: #2d4d33; /* 代码边框 */
+  --code-inline-bg: rgba(89, 142, 94, 0.18); /* 行内代码背景 */
 
   /* ===== 滚动条颜色 ===== */
-  --scrollbar-track: #0a0e1a; /* 滚动条轨道 */
-  --scrollbar-thumb: #334155; /* 滚动条滑块 */
-  --scrollbar-thumb-hover: #475569; /* 滚动条悬停 */
+  --scrollbar-track: #0f2e1b; /* 滚动条轨道 */
+  --scrollbar-thumb: #345b3a; /* 滚动条滑块 */
+  --scrollbar-thumb-hover: #598e5e; /* 滚动条悬停 */
 
   /* ===== 选中文本颜色 ===== */
-  --selection-bg: rgba(79, 70, 229, 0.3); /* 选中背景 */
+  --selection-bg: rgba(21, 96, 49, 0.3); /* 选中背景 - 品牌绿 */
   --selection-text: #ffffff; /* 选中文字 */
 
   /* ===== 禁用状态 ===== */
-  --disabled-bg: #0a0e1a; /* 禁用背景 */
-  --disabled-border: #1e293b; /* 禁用边框 */
-  --disabled-text: #64748b; /* 禁用文字 */
+  --disabled-bg: #0f2e1b; /* 禁用背景 */
+  --disabled-border: #2d4d33; /* 禁用边框 */
+  --disabled-text: #707068; /* 禁用文字 */
   --disabled-opacity: 0.5; /* 禁用透明度 */
 }
 
