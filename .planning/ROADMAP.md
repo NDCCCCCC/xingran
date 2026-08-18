@@ -1,8 +1,8 @@
 ---
-last_updated: 2026-08-14
-update_trigger: v1.21 milestone INITIATED — ROADMAP drafted (Phases 57-61, regression fix for v1.6 Phase 16; Phase 61 conditional on Phase 60 AUTH-03=启用)
-last_plan_update: 2026-08-14 — Phase 62 plans created from cross-AI reviews (5 plans, Wave 1 ×4 parallel / Wave 2 ×1; C1-C7 + 单方 HIGH + 锁定 MEDIUM 全覆盖)
-previous_update: 2026-07-10 after v1.20 milestone SHIPPED + ARCHIVED
+last_updated: 2026-08-18
+update_trigger: v1.22 milestone INITIATED — ROADMAP drafted (Phases 64-67, 4 phases; design-system 层品牌令牌落地)
+last_plan_update: 2026-08-18 — v1.21 SHIPPED + ARCHIVED (Phases 57-62; Phase 63 IN PROGRESS 独立前端工具链工作)
+previous_update: 2026-08-13 after v1.21 plans drafted (Phases 57-61) + Phase 62 cross-AI review close-out
 ---
 
 # Roadmap: XingRan-Next 运维管理系统
@@ -15,7 +15,7 @@ previous_update: 2026-07-10 after v1.20 milestone SHIPPED + ARCHIVED
 - ✅ **v1.3 技术债清理** — Phases 8-10 (shipped 2026-04-27)
 - ✅ **v1.4 MAC地址采集优化** — Phase 11 (shipped 2026-05-09)
 - ✅ **v1.5 MAC地址历史数据管理** — Phases 12-15 (shipped 2026-06-15)
-- ✅ **v1.6 API密钥管理系统** — Phase 16 (shipped 2026-05-19) ← **本里程碑回归对象**
+- ✅ **v1.6 API密钥管理系统** — Phase 16 (shipped 2026-05-19)
 - ✅ **v1.7 前后端加密配置同步** — Phase 17 (shipped 2026-05-20)
 - ✅ **v1.8 登录端点加密增强** — Phase 18 (shipped 2026-05-21)
 - ✅ **v1.9 AD域控集成扩展** — Phases 19-20 (shipped 2026-05-24)
@@ -30,205 +30,189 @@ previous_update: 2026-07-10 after v1.20 milestone SHIPPED + ARCHIVED
 - ✅ **v1.18 网络设备硬件清单 (Device Component Serials)** — Phase 48 + Phase 49 gap closure (shipped 2026-07-04)
 - ✅ **v1.19 网络设备写命令 (Network Device Port Write Operations)** — Phases 50-55 (shipped 2026-07-08) — see [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md)
 - ✅ **v1.20 网络设备 VLAN + 端口绑定** — Phase 56 (shipped 2026-07-10) — see [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.md)
-- 🚧 **v1.21 API Key 认证链修复 + 能力补全 (API Key Auth Chain Repair + Feature Completion)** — Phases 57-61 (in planning; regression fix 57-60 + post-enable feature completion 61)
+- ✅ **v1.21 API Key 认证链修复 + 能力补全 (API Key Auth Chain Repair + Feature Completion)** — Phases 57-62 (shipped 2026-08-18) — see [milestones/v1.21-ROADMAP.md](milestones/v1.21-ROADMAP.md)
+- 🚧 **v1.22 前端品牌化改造 (Frontend Brand Design-System)** — Phases 64-67 (in planning; design-system 层品牌令牌落地)
 
 ---
 
-## Phases (v1.21) — IN PLANNING
+## Phases (v1.22) — IN PLANNING
 
-**Milestone Goal:** 修复 API Key 认证系统的 P0/P1/P2 缺陷,回归 v1.6「API 密钥管理系统」(Phase 16)的可用性与可观测性,让 MultiAuth 认证链代码就绪可启用,使用日志真实反映请求结果。
+**Milestone Goal:** 把 `brand-spec.md` 的像素实测品牌令牌(深绿 `#156031` × 铜金 `#C09058` × 奶油 `#F0ECE3`)固化进 `xingran-react-frontend/src/design-system/`,让后台内部组件与登录页品牌一致,53 屏业务页面自动继承样式。
 
-**Regression scope (调查已确认的根因):**
+**范围边界(用户决策 v1.22 init,锁定):** **仅 design-system 层**。业务页面自动继承样式,不逐屏改造 53 屏;`PROTOTYPE-VS-ACTUAL.md` 里的字段 / 表头 / 路由差异修正转 v1.23+ Future。
 
-| 缺陷 ID | 根因 | 文件:行 | 类别 |
-|---------|------|---------|------|
-| P0-1 | MultiAuth 及下游中间件未挂载(死代码) | router.go / apikey.go | AUTH |
-| P0-2 | `setUserContextForAPIKey` 把 `*models.APIKey` 断言为局部值类型 `apiKeyType`,恒 false | apikey.go:146-179 | AUTH |
-| P1-1 | 前端 GET/PUT/DELETE vs 后端 POST 路由契约不匹配 → 404 | apikey_router.go / apikey.ts | CONTRACT |
-| P1-2 | 使用日志 goroutine 在 `c.Next()` 前记录,StatusCode/Duration/Success 全零 → successRate≈0% | apikey.go:60-75 | OBSERV |
-| P2-a | `RateLimitByScope` 响应头 `string(rune(int))` 编码错误 (Limit=100 → "d") | apikey.go:274-275 | QUAL |
-| P2-b | 使用日志 goroutine 复用 `c.Request.Context()`,请求结束 → ctx.Canceled,记录丢弃 | apikey.go:66 | OBSERV |
-| P2-c | API Key `Key` 字段明文存储 | apikey_service.go / migration_085 | SEC |
-| P3 | migration_085 `idx_api_keys_key` 与 `uniqueIndex` 重复 | migration_085 | SEC |
+**锁定的硬约束:**
+- D-01 全局替换,不保留多主题 —— 移除 6 套主题(minimal/glassmorphism/neumorphism/flat2.0/luxury-quiet/ink-amber)与 ThemeSwitcher / ColorSwitcher;保留 light / dark 双模式(单一品牌色相);保留 layoutStore 的布局与密度切换
+- D-02 `brand-spec.md` 为唯一色值来源,标注「实测」直接采用,「推导」微调须重跑对比度验证
+- D-03 按钮纪律:主按钮一律 `--primary` `#156031` 绿底白字(7.64:1);hover `#2E7444`(5.68:1);铜金 `#C09058` 不做实心主按钮(2.85:1 不达标);必须铜金实心时用 `#B88850` + ≥16px 半粗体白字(3.15:1 大字达标),hover 只许加深至 `#AA7B42`
+- D-04 Phase 编号从 **64** 起(Phase 63「前端工具链自动化」已存在且 IN PROGRESS,不占用)
+- D-05 仅 design-system 层;业务页面自动继承样式,不逐屏改造 53 屏
 
-**Phase Numbering:** 从 v1.20 末尾 Phase 56 续编 (57-61)。整数 phase 为计划里程碑工作;小数 phase (如 57.1) 为紧急插入。
+**回归性质:** 纯视觉层重构,不动业务逻辑、不改 API、不改数据模型。落点集中在 `xingran-react-frontend/src/design-system/` 与 `src/index.css`(253 个 CSS 变量层)。
 
-- [x] **Phase 57: 认证链核心修复 + 回归测试** - 修复 setUserContextForAPIKey 类型断言 (P0-2),消除 MultiAuth 下游死代码 (P0-1),用集成测试锁住认证链防止 P0-2 回归
-- [x] **Phase 58: 前后端路由契约对齐** - 修复前端 getAPIKey/updateAPIKey/deleteAPIKey 三个操作 404 (P1-1),与后端 POST 路由方法对齐;+ 修复字段命名契约断裂(CONTRACT-02,前端 snake→camelCase,Create/Update 不再静默丢字段、List/详情复合字段正常显示) — code-complete,SC#1-SC#4 E2E 延期(dev DB 性能,见 58-01-SUMMARY)
-- [x] **Phase 59: 可观测性 / 使用日志修复** - 修复使用日志记录时机 (P1-2),让 successRate 可信 (P1-2 连锁),消除 ctx 取消竞态 (P2-b)
-- [x] **Phase 60: 安全加固与启用决策** - MultiAuth 启用决策 + 安全评估,密钥哈希存储决策,移除重复索引,修复限流头编码 (P2-a)
-- [x] **Phase 61: 资源级权限矩阵 + 限流生产调优** - MultiAuth 启用后落地 RequireAPIKeyResourcePermission 的 resource 参数真实生效 (AUTH-04, ex-FUTURE-APIKEY-01) + RateLimitByScope 生产接入与调优 (QUAL-03, ex-FUTURE-APIKEY-02);仅在 Phase 60 AUTH-03=启用 时执行
+**Phase Numbering:** 从 Phase 63 续编(64+)。整数 phase 为计划里程碑工作;小数 phase (如 64.1) 为紧急插入。Phase 63「前端工具链自动化」(.planning/phases/63-frontend-toolchain-automation/) 独立 IN PROGRESS,不占用本 milestone 编号。
+
+- [ ] **Phase 64: 品牌令牌层落地 + 对比度验证** - 把 brand-spec 实测值写进 index.css 253 变量、tokens/colors.ts 新增 xingranBrand 常量、AntdThemeBridge 全量接品牌令牌、tokens/shadows+spacing+typography 调性对齐;含可执行对比度校验断言关键前景/背景对达标
+- [ ] **Phase 65: 主题系统收敛** - 删除 6 套主题目录与 ThemeSwitcher / ColorSwitcher / themeStore 类型字段,清理 13 个消费方残留;保留 light / dark 双模式 + layoutStore 布局与密度切换
+- [ ] **Phase 66: 通用组件样式 + 硬编码色扫描** - 侧边栏深绿化、表格/卡片双层纸感、按钮纪律落地、表单/标签/ECharts 接令牌;全仓扫描并以 lint / CI 阻止硬编码 `#4F46E5` / `#F1F5F9` / slate 系新增
+- [ ] **Phase 67: 构建回归 + 视觉确认** - `npm run build` / `type-check` / `lint` / `test` 全绿、vendor-react gzip 体积不增、6 屏前后截图对比、登录页与后台视觉一致、milestone SHIPPED + ARCHIVED
 
 ---
 
 ## Phase Details
 
-### Phase 57: 认证链核心修复 + 回归测试
+### Phase 64: 品牌令牌层落地 + 对比度验证
 
-**Goal**: API Key 认证链代码功能正确——`setUserContextForAPIKey` 真实把上下文写入 gin context (修复 P0-2 类型断言恒 false),MultiAuth 及其下游 `RequireScope` / `RequireAPIKeyResourcePermission` / `RateLimitByScope` 类型签名、参数传递、作用域匹配逻辑经审查正确且具备被路由挂载的条件 (消除 P0-1 死代码),并由集成测试锁住"API Key 认证 → 上下文写入 → 作用域校验"完整链路,防止 P0-2 类型断言回归。
+**Goal**: design-system 层拥有完整的品牌令牌真相源 —— `index.css` 253 变量全量接 brand-spec 实测值,`tokens/colors.ts` 提供 TS 侧 `xingranBrand` 常量(绿/铜金/奶油三梯度,带 OKLch + WCAG 注释),`AntdThemeBridge` 把 Antd 6 `theme.token` 与 `theme.components` 全量映射到品牌令牌,`tokens/shadows+spacing+typography` 与新色彩调性对齐;并以可执行对比度校验断言关键前景/背景对达标,把品牌基线锁在测试层。
 
-**Depends on**: Nothing (本 milestone 第一个 phase,所有后续 phase 依赖认证链代码就绪)
+**Depends on**: Nothing (v1.22 第一个 phase;Phase 63 独立进行中,无依赖)
 
-**Requirements**: AUTH-01, AUTH-02, QUAL-02
+**Requirements**: TOKEN-01, TOKEN-02, TOKEN-03, TOKEN-04, QA-01
 
 **Success Criteria** (what must be TRUE):
 
-1. 携带有效 API Key 的请求经过 MultiAuth → `setUserContextForAPIKey` 后,gin context 中 `user_id` / `api_key_id` / `scopes` / `auth_type="api_key"` 四个键被下游 handler 成功读取且值非空(由新增集成测试断言,而非手工打印);P0-2 恒 false 分支消除(直接 import `internal/models` 包,无 `interface{}` workaround 残留)
-2. `MultiAuth` / `RequireScope` / `RequireAPIKeyResourcePermission` / `RateLimitByScope` 四个中间件经类型签名与调用路径审查无死代码缺陷,`services.NewUsageLogger` 与 `services.NewRateLimiter` 在代码库内有真实实例化调用点(`grep -rn` 证据,而非仅定义)
-3. 新增集成测试覆盖完整链路三条路径:① 有效 key + 正确 scope → 通过;② 有效 key + 缺失 scope → 403;③ 无效 key → 401;且原 `apikey_test.go` 3 个纯函数测试与全量 `go test ./...` 不回归
-4. `go build ./...` 退出码 0,无 "interface{} 避免循环导入" 型 workaround 残留注释
+1. 打开任一后台页面(如 `/system/user`),DevTools `:root` 上 `--theme-primary` = `#156031`、`--sidebar-bg` = `#14532D`、`--theme-neutral-100` = `#E9EFEB`、`--theme-bg-primary` = `#F0ECE3`、描述 `--theme-primary-hover` = `#2E7444`、品牌 `--theme-primary-active` = `#14542E` 等关键实测值均落位,无 indigo `#4F46E5` 与冷 slate `#1e293b` / `#F1F5F9` 残留;`src/index.css` `grep -E "#4F46E5|#1e293b|#F1F5F9"` 在变量定义段零命中
+2. 在 TS 侧 `import { xingranBrand } from "@/design-system/tokens/colors"` 拿到含 OKLch + WCAG 注释的常量集:绿梯度 6 阶(`#14532D` / `#156031` / `#1A6839` / `#3B784C` / `#598E5E` / `#E9EFEB`)、铜金梯度 4 阶(`#B88850` / `#C09058` / `#C89868` / `#AA7B42`)、奶油中性阶(底 / 描边 / 次级文字等),无蓝 / 紫 / indigo;同名常量在 `AntdThemeBridge.tsx` 与组件样式中被引用,值不重复
+3. `AntdThemeBridge.tsx` 的 `theme.token.colorPrimary` / `colorInfo` / `colorLink` 与 `theme.components.Button` / `Table` / `Input` / `Select` / `Menu` / `Tabs` / `Tag` / `Card` 等组件级覆盖全部从品牌令牌读取,无硬编码 `#1677ff` / `#4F46E5` 残留;切换 light / dark 时 algorithm 仍为 darkAlgorithm / defaultAlgorithm,密度切换 compactAlgorithm 叠加正确
+4. `tokens/shadows.ts` / `spacing.ts` / `typography.ts` 与品牌调性对齐 —— 阴影减弱(暖低饱和)、圆角统一(控件 8px 一档)、字阶收敛(衬线可选、UI 单一无衬线、数据 mono 增强);DevTools computed style 显示新值生效,旧 indigo / slate 调色板不再被消费
+5. 可执行对比度校验(单测 `tokens/colors.test.ts` 或脚本 `scripts/check-contrast.mjs`)断言 brand-spec 关键前景/背景对:`#FFFFFF` on `#156031` ≥ 7.6:1、`#E0E0B0` on `#156031` ≥ 5.6:1、`#707068` on `#FFFFFF` ≥ 4.9:1、`#FFFFFF` on `#14532D` ≥ 7.0:1(深绿渐变深端)、暗色模式关键对 ≥ 4.5:1;任一对不达标即 fail,`npm test` 全绿
 
-**Plans**: 1 plan (single-wave, fix-then-test)
+**Plans**: TBD
 
-Plans:
-
-- [x] 57-01-PLAN.md — 修复 setUserContextForAPIKey 类型断言 (AUTH-01/P0-2) + 重写 RequireAPIKeyResourcePermission 反模式 (AUTH-02/P0-1) + 创建集成测试锁住三路径链路 (QUAL-02) + D-02 构造函数证据
+**UI hint**: yes
 
 ---
 
-### Phase 58: 前后端路由契约对齐
+### Phase 65: 主题系统收敛
 
-**Goal**: 前端 API Key 管理页对单条记录的查询、更新、删除三个操作不再返回 404,前后端路由方法与路径完全对齐,操作真实生效。
+**Goal**: 移除 6 套主题与主题切换能力 —— 整站视觉归一到品牌,ThemeSwitcher / ColorSwitcher / themeStore 主题类型字段与 13 个消费方残留代码全部清零;保留 light / dark 双模式切换(品牌一套色相的深底推导)与 layoutStore 的布局 / 密度切换,确保里程碑不可逆决策(D-01)落实到位且 layout / density 不回归(D-03)。
 
-**Depends on**: Phase 57 (认证链就绪后再校验契约,避免与 P0 修复交叉污染)
+**Depends on**: Phase 64 (品牌令牌已就位,主题移除才有可回退的真相源)
 
-**Requirements**: CONTRACT-01, CONTRACT-02 (CONTRACT-02 为 2026-08-13 discuss 审计发现的字段命名断裂,同属契约层故同 phase 吸收)
+**Requirements**: THEME-01, THEME-02, THEME-03
 
 **Success Criteria** (what must be TRUE):
 
-1. 前端 API Key 管理页点击单条记录的"编辑"操作,前端能成功拉取该 key 的当前详情字段(返回码 `code:0`,无 404;表单字段完整回填)
-2. 前端修改 API Key 属性(如名称、作用域、IP 白名单)并保存后,后端持久化成功,列表刷新展示更新后的值(返回码 `code:0`,无 404;数据库行 `updated_at` 刷新)
-3. 前端对单条 API Key 执行"删除"操作后,记录从列表中消失(软删除生效),重复删除或再访问返回明确错误而非 404 路由缺失
-4. 前后端方法/路径对齐方向由 phase 内 discuss 决策并落记录(选项 A: 改前端用 POST 对齐 v1.6 后端既有模式;选项 B: 后端补 RESTful GET/PUT/DELETE),决策与 `apikey_router.go` 当前注册路径一致或显式迁移
+1. `design-system/themes/` 下 6 套主题目录(`minimal` / `glassmorphism` / `neumorphism` / `flat2.0` / `luxury-quiet` / `ink-amber`)全部删除,`themes/index.ts` 与 `themes/theme-styles.css` 清理;`ThemeSwitcher.tsx` / `ColorSwitcher.tsx` 组件删除;`themeStore` 主题类型字段(`configuration.style` 等)与 `themes/` 引用清除,`settings/index.tsx` 主题入口移除;13 个消费方(`ConfigProvider` / `header` / `InnovativeLayout` / `TabBar` / `sidebar` / `ThemeProvider` / `main.tsx` / `settings/index.tsx` / `settingsStore` 等)`grep -rn "ThemeSwitcher|ColorSwitcher|getTheme\\(|getMinimalTheme\\(|getGlassmorphismTheme\\(|getInkAmberTheme\\("` 在 `src/` 下零命中,无死代码 / TS 错误 / unused import 警告
+2. light / dark 双模式切换仍可在 settings 页操作 —— 暗色模式下 `--theme-bg-primary` / `--theme-text-primary` / `--sidebar-bg` 等关键变量有对应的深底推导(深绿底加深、铜金提亮受控、奶油转深灰纸感),`#FFFFFF` on 深绿底 / `#E0E0B0` on 深底等关键前景/背景对均满足 WCAG AA(Phase 64 的对比度校验脚本在 dark fixture 下全绿)
+3. `layoutStore` 的布局切换(`ClassicLayout` / `HybridLayout` / `InnovativeLayout`)与密度切换(`classic` / `comfortable`)完整保留 —— 切换后侧边栏宽 280px ↔ 64px、列表行高密度变化正确,工具栏 / 表单 / 表格不受影响;`settings/layout` 入口与 density switcher 控件正常工作
+4. `npm run type-check` / `npm run build` / `npm run lint` / `npm run test` 全绿,移除 6 套主题后 vendor-react 打包体积较 Phase 64 baseline 不增(预期下降);无新增 lint warning(`react/no-unused-prop-types` 等)
+5. 验收清单:在 settings 页内,**主题切换器 UI 不再存在**;**颜色自定义(主色 / 侧边栏色)入口不再存在**(D-01 不可逆);**布局 / 密度 / 浅色 / 深色切换入口完整可用**;主页面视觉与登录页品牌一致(深绿 × 铜金 × 奶油)
 
-**Plans**: 1 plan (single-wave; CONTRACT-01 路由方法对齐 + CONTRACT-02 字段命名 camelCase 对齐, 3 个前端文件, 后端零改动)
+**Plans**: TBD
 
-Plans:
-
-- [x] 58-01-PLAN.md — 前端 apikey.ts 三函数改 POST 对齐 (CONTRACT-01/D-01) + types/apikey.ts & index.tsx 字段命名 snake→camelCase 对齐 (CONTRACT-02/D-02/D-03/D-04/D-05) + 端到端 SC#1-SC#4 验证 checkpoint (D-06) — code-complete;Task 1+2 已提交 1978935/6a4c772,自动化门全绿;SC#1-SC#4 E2E 延期(dev DB 性能,见 58-01-SUMMARY)
-
-**UI hint**: yes (前端 API Key 管理页面编辑/删除交互流程,涉及 `src/api/apikey.ts` + 列表/表单组件)
+**UI hint**: yes
 
 ---
 
-### Phase 59: 可观测性 / 使用日志修复
+### Phase 66: 通用组件样式 + 硬编码色扫描
 
-**Goal**: API Key 使用日志真实反映请求结果——记录时机移到请求处理完成之后,`StatusCode` / `Duration` / `Success` 取真实值,`successRate` 聚合可信,异步 goroutine 不被请求生命周期取消竞态污染。
+**Goal**: 侧边栏 / 表格 / 卡片 / 按钮 / 表单 / 标签 / 图表全量接品牌令牌,D-03 按钮纪律(主按钮绿底白字、铜金只做点缀)落地;全仓扫描并以 lint / CI 阻止硬编码 `#4F46E5` / `#F1F5F9` / slate 系新增,确保 v1.22 品牌效果不被后续代码破坏。
 
-**Depends on**: Phase 57 (修复必须基于已就绪的认证链,日志记录点在 MultiAuth goroutine 内)
+**Depends on**: Phase 65 (主题已收敛,组件样式落地才有稳定的应用上下文)
 
-**Requirements**: OBSERV-01, OBSERV-02, OBSERV-03
+**Requirements**: COMP-01, COMP-02, COMP-03, COMP-04, QA-02
 
 **Success Criteria** (what must be TRUE):
 
-1. 发起一次成功的 API Key 请求(2xx 响应)后,`sys_api_key_usage_log` 表对应记录的 `StatusCode` 落在 2xx,`Duration > 0`,`Success = true`(数据库行实证,而非代码推断)
-2. 发起一次失败的 API Key 请求(权限不足 403 / 错误 key 401 / 限流 429)后,对应记录的 `Success = false`,`StatusCode` 为真实错误码
-3. `GetUsageLogSummary` 返回的 `successRate` 在混合成功/失败请求后落入 (0%, 100%) 开区间内可信值,不再恒 ≈ 0%(P1-2 连锁消除)
-4. 客户端主动断开连接或请求 context 取消后,使用日志记录仍能完整写入数据库——异步 goroutine 使用独立的、不被请求生命周期取消的 `context.Background()` 派生 context(P2-b 消除;新增测试模拟请求取消,断言记录已入库)
-5. `go test ./internal/middleware/... ./internal/services/...` 全绿,新增"记录时机"与"独立 context"用例覆盖 P1-2 与 P2-b 防回归
+1. 登录后台后侧边栏底色为 `#14532D` 深绿、折叠态 64px / 展开态 280px 均正确,hover / active 强调用 `#156031` 底 + `#E0E0B0` 浅黄文字(对比度 ≥ 5.6:1);顶栏保持白底 64px,面包屑 / 全局搜索 ⌘K / 通知铃铛 / 用户菜单视觉不破;与品牌深绿(`#14532D` → `#1A6839` 渐变)同源
+2. 任一业务页面(如工位管理)的表头底色为 `#E9EFEB` 绿灰淡彩、斑马纹与分割线用 `#DBD7CE`、白卡 `#FFFFFF` 衬 `#F0ECE3` 奶油画布形成双层纸感;表格排序 / 筛选 / 选中态 / 空状态 / 分页器全部接品牌令牌;Card 浮起用 1px 暖灰描边而非重阴影
+3. 按钮体系满足 D-03 纪律 —— 主按钮 `#156031` 绿底白字、hover `#2E7444`(白字对比度 ≥ 7.6:1 / 5.68:1);次级(描边绿)、危险(红实心)、禁用、链接、图标按钮全套规范;`#FEF3C7` 从按钮前景移除,回归为 SM2 / SM3 / SM4 淡黄标签底;全站 `grep -rE "#C09058|#B88850" src/ --include="*.tsx" --include="*.css"` 中实心 `background-color: solid` / `Button type="primary"` 零命中,铜金仅出现在描边 / 图标 / 图表系列 / Tag 背景等点缀场景
+4. 表单控件 focus 环用品牌绿(`#156031` 2px 焦点环)、校验错误态色阶统一(`#BA3630` + 行内错误文案);Tag / Badge 含 SM2 / SM3 / SM4 淡黄标签 `#FEF3C7` 规范化;Tabs 多页签与面包屑接品牌;ECharts 图表系列色为绿金梯度(`#156031` / `#3B784C` / `#598E5E` / `#C09058` / `#C89868`),无默认蓝紫
+5. 全仓扫描脚本(`scripts/check-hardcoded-colors.mjs` 或 `eslint-plugin-no-hardcoded-colors` 自定义规则)对 `src/` 下 `.tsx` / `.ts` / `.css` 文件检查硬编码 `#4F46E5` / `#F1F5F9` / slate 系(`#1e293b` / `#334155` / `#475569` 等)及非品牌裸 hex,命中即非零退出;脚本集成进 `npm run lint` 与 Phase 63 的 CI(`frontend-build.yml`);既有命中通过替换为品牌 token 清零,新文件如有违规即 fail(防回归)
 
-**Plans**: 2 plans (Wave 1 源码修复 + Wave 2 测试验证)
+**Plans**: TBD
 
-Plans:
-**Wave 1**
-
-- [x] 59-01-PLAN.md — 源码修复: apikey.go 记录点后移到 c.Next() 之后 + 填 StatusCode/Duration/Success + 去冗余 goroutine (D-01/D-02a/OBSERV-01) + usage_logger.go logUsageAsync 改 detached context + applogger 替换 _ = err (D-02/D-04/OBSERV-03)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 59-02-PLAN.md — 测试验证: SC#1/#2 真实 DB 时序/失败集成测试 + SC#4 cancel-race 单元测试 + SC#3 混合 successRate 聚合测试 + waitForUsageLog helper (require.Eventually) + D-03 真实 sqlite 文件 DB + D-03a 既有 fake 测试原样保留
+**UI hint**: yes
 
 ---
 
-### Phase 60: 安全加固与启用决策
+### Phase 67: 构建回归 + 视觉确认
 
-**Goal**: 完成 MultiAuth 路由挂载启用与 API Key 哈希存储两项安全决策(产出决策记录),落地可直接执行的硬化项(限流响应头编码修复、重复索引移除),使认证链具备生产启用条件或在显式理由下推迟启用。
+**Goal**: 全量构建 / 类型 / 单测 / 视觉四门全绿,验证 v1.22 品牌化未引入回归 —— vendor-react 打包后体积不增(预期下降)、关键 6 屏前后截图对比无布局崩坏、登录页与后台视觉一致,里程碑可 SHIPPED + ARCHIVED。
 
-**Depends on**: Phase 57 (MultiAuth 代码就绪)、Phase 59 (使用日志可信,为启用决策提供可观测基础)
+**Depends on**: Phase 66
 
-**Requirements**: AUTH-03, SEC-01, SEC-02, QUAL-01
-
-**Success Criteria** (what must be TRUE):
-
-1. **AUTH-03**: phase 内 discuss 完成 MultiAuth 路由挂载启用决策并产出决策记录,内容含:作用域继承 (`InheritPerms`) 行为、IP 白名单语义、与 JWT 中间件的优先级与回退关系、对现有认证链的安全影响评估;决策为"启用"则附挂载点清单与权限校验矩阵,为"推迟"则附触发条件与再次评估时机
-2. **SEC-01**: phase 内 discuss 完成 API Key 存储方式决策并产出决策记录(明文 vs SM3 / argon2id 哈希);若决定迁移,含平滑过渡方案(兼容期双读、回填脚本)与回滚方案;若保留明文,含接受理由与补偿控制(如 DB at-rest 加密、访问审计、轮换流程)
-3. **SEC-02**: migration 中 `idx_api_keys_key` 冗余索引被移除,`key` 字段仅保留一个 `uniqueIndex`;数据库 schema introspection (或迁移脚本 idempotent 验证) 证实索引已收敛
-4. **QUAL-01**: 触发限流(或单元测试构造 `result.Limit=100` / `result.Remaining=99`)后,响应头 `X-RateLimit-Limit` / `X-RateLimit-Remaining` 为数字字面量字符串 `"100"` / `"99"`(用 `strconv.Itoa`),不再是 `string(rune(100))` 产生的 `"d"` 单字符;curl 或 httpie 验证可被标准工具解析为整数
-
-**Plans**: 2 plans (Wave 1, parallel;互不耦合)
-
-Plans:
-
-- [x] 60-01-PLAN.md — AUTH-03 router MultiAuth + RateLimitByScope 挂载 + 4 维度决策记录 + QUAL-01 apikey.go strconv.Itoa 修复 + TestRateLimitHeaderEncoding(单测) + TestRateLimitHeadersInResponse(集成测)
-- [x] 60-02-PLAN.md — SEC-01 models/api_key.go schema 三列替换 + apikey_service.go 三函数改造 + hashAPIKey/generateSalt helper + apikey_service_test.go 按新 schema 重写 + SEC-02 手动 SQL (DROP INDEX IF EXISTS) + 双 dialect 验证查询
-
----
-
-### Phase 61: 资源级权限矩阵 + 限流生产调优
-
-**Goal**: MultiAuth 生产启用后,落地 API Key 资源级细粒度权限(`RequireAPIKeyResourcePermission` 的 `resource` 参数真实生效,含 resource→permission 映射与继承权限下的资源校验)与 `RateLimitByScope` 生产接入与调优,使 API Key 的权限控制与限流按设计真实生效。
-
-**Depends on**: Phase 60 (AUTH-03 启用决策=启用;本 phase 仅在 MultiAuth 生产挂载后执行,若 AUTH-03=推迟则本 phase 随之 defer)
-
-**Requirements**: AUTH-04 (ex-FUTURE-APIKEY-01), QUAL-03 (ex-FUTURE-APIKEY-02)
+**Requirements**: QA-03, QA-04
 
 **Success Criteria** (what must be TRUE):
 
-1. `RequireAPIKeyResourcePermission(resource, action)` 的 `resource` 参数不再被忽略——resource→permission 映射接入,继承权限 (InheritPerms) 下的细粒度资源校验经测试覆盖验证(有效 key 有资源权限→通过 / 无资源权限→403)
-2. `RateLimitByScope` 在 MultiAuth 已挂载的生产路由上接入,限流按作用域生效;`X-RateLimit-Limit` / `X-RateLimit-Remaining` 可被标准工具解析为整数(衔接 Phase 60 QUAL-01 的 strconv.Itoa 修复);多 scope key 的限流作用域选择逻辑正确(不再任意只取首个 scope)
-3. 资源权限矩阵 + 限流配置均有测试覆盖;`go test ./...` 全绿
+1. `npm run build` 退出码 0,`npm run type-check` / `npm run lint` / `npm run test` 全绿;`vendor-react` 打包后 gzip 体积较 v1.21 baseline(774.96 kB,见 v1.19 W4 / v1.20 close)不增(预期下降 —— 移除 6 套主题节约 ~数 kB),前后对比数值记录到 ROADMAP Progress 段;Phase 64-66 的对比度校验脚本与硬编码扫描在 CI 中运行并通过
+2. 关键 6 屏(仪表盘 / 系统用户 / 工位管理 / 监控仪表盘 / 资产对账看板 / 登录页)改造前后截图对比 —— 前后两套 PNG 在同一对比画布并列展示(可视化 diff):**无布局崩坏**、**无不可读文本**、**无残留 indigo / slate 冲突色**;登录页(品牌锚点)与后台内部组件(品牌化落地)视觉一致(深绿 × 铜金 × 奶油纸感),同一品牌语汇贯穿
+3. Phase 64-66 的 success criteria 全部复测通过(回归守护):`--theme-primary` / `--sidebar-bg` / `--theme-neutral-100` 等关键变量值正确,AntdThemeBridge 接品牌令牌,主题切换器已移除且 light / dark + layout / density 切换可用,侧边栏 / 表格 / 按钮 / 表单 / ECharts 颜色全量品牌化,硬编码扫描零命中
+4. `MILESTONES.md` v1.22 条目落盘、`REQUIREMENTS.md` 仍标记 v1.23+ 候选(PROTO 逐屏对齐 / VIS 视觉深化);里程碑 SHIPPED 报告产出,ROADMAP archived 至 `milestones/v1.22-ROADMAP.md` + `milestones/v1.22-REQUIREMENTS.md`
 
-**Plans**: 2 plans (Wave 1: Plan 01; Wave 2: Plan 02 — sequential; Plan 02 依赖 Plan 01,因两者都修改 `internal/middleware/apikey.go`,sequential 消除 parallel write race)
-
-Plans:
-
-**Wave 1**
-
-- [x] 61-01-PLAN.md (Wave 1) — AUTH-04: pkg/permission/resource_action_map.go 静态 map(D-01/D-02/D-03/D-04)+ MultiAuth+setUserContextForAPIKey InheritPerms 加载(D-06/D-07/D-09)+ username/nickname 修正(D-10)+ RequireAPIKeyResourcePermission 接入 map(D-03)+ router.go 调用形态变更 + map 单测 + 5 个 ResourcePermission 中间件单测 + 5 个 InheritPerms sqlite 集成测
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 61-02-PLAN.md (Wave 2, depends_on: ["61-01"]) — QUAL-03: RateLimitByScope 接收 action 参数(D-11)+ getRequiredScope 扩展 list→read(D-11)+ 提取纯函数 SelectScope(D-12)+ getScopeFromContext 薄壳包装 SelectScope(D-12)+ CacheConfigService 新增 12 个 rate_limit.* 配置键(D-15/D-16/D-17,拆分为两次单占位符查询沿用既有 pattern)+ RateLimiter 改造为配置驱动接收 RateLimitProvider(D-18)+ reload race 语义(D-19)+ router.go 调用形态变更(`core.CacheConfigService` 字段访问,**非** getter)+ modify existing rate_limiter_test.go(449 行,7 个既有测试函数迁移到 `NewRateLimiter(provider)`,移除 `limiter.limits` 断言)+ 既有 TestRateLimitHeadersInResponse 签名更新 + 9 个 SelectScope 纯函数单测 + 7 个 RateLimitByScope 中间件单测 + 7 个 RateLimiter 配置驱动单测 + 5 个 CacheConfigService rate_limit 单测
-
-**Conditional**: 本 phase 仅在 Phase 60 AUTH-03 决策=启用 时执行;若决策=推迟启用,本 phase 随之 defer(记录触发条件与再次评估时机)。
+**Plans**: TBD
 
 ---
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 57 → 58 → 59 → 60 → 61 (Phase 61 conditional on Phase 60 AUTH-03=启用)
+Phases execute in numeric order: 64 → 65 → 66 → 67 (Phase 63 独立 IN PROGRESS,无依赖关系)
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 57. 认证链核心修复 + 回归测试 | v1.21 | 1/1 | Complete    | 2026-08-13 |
-| 58. 前后端路由契约对齐 | v1.21 | 0/TBD | Not started | - |
-| 59. 可观测性 / 使用日志修复 | v1.21 | 2/2 | Complete    | 2026-08-13 |
-| 60. 安全加固与启用决策 | v1.21 | 2/2 | Complete    | 2026-08-13 |
-| 61. 资源级权限矩阵 + 限流生产调优 | v1.21 | 2/2 | Complete    | 2026-08-13 |
+| 64. 品牌令牌层落地 + 对比度验证 | v1.22 | 0/TBD | Not started | - |
+| 65. 主题系统收敛 | v1.22 | 0/TBD | Not started | - |
+| 66. 通用组件样式 + 硬编码色扫描 | v1.22 | 0/TBD | Not started | - |
+| 67. 构建回归 + 视觉确认 | v1.22 | 0/TBD | Not started | - |
 
 ---
 
 ## Coverage Map
 
-14/14 v1 requirements mapped to exactly one phase (0 orphans, 0 duplicates):
+15/15 v1.22 requirements mapped to exactly one phase (0 orphans, 0 duplicates):
 
 | Requirement | Phase | Category |
 |-------------|-------|----------|
-| AUTH-01 | Phase 57 | AUTH (P0-2) |
-| AUTH-02 | Phase 57 | AUTH (P0-1) |
-| QUAL-02 | Phase 57 | QUAL |
-| CONTRACT-01 | Phase 58 | CONTRACT (P1-1) |
-| CONTRACT-02 | Phase 58 | CONTRACT (字段命名,discuss 新增) |
-| OBSERV-01 | Phase 59 | OBSERV (P1-2) |
-| OBSERV-02 | Phase 59 | OBSERV (P1-2 连锁) |
-| OBSERV-03 | Phase 59 | OBSERV (P2-b) |
-| AUTH-03 | Phase 60 | AUTH (启用决策) |
-| SEC-01 | Phase 60 | SEC (P2-c 决策) |
-| SEC-02 | Phase 60 | SEC (P3) |
-| QUAL-01 | Phase 60 | QUAL (P2-a) |
-| AUTH-04 | Phase 61 | AUTH (资源级权限, ex-FUTURE-APIKEY-01) |
-| QUAL-03 | Phase 61 | QUAL (限流调优, ex-FUTURE-APIKEY-02) |
+| TOKEN-01 | Phase 64 | TOKEN (index.css 253 变量) |
+| TOKEN-02 | Phase 64 | TOKEN (xingranBrand TS 常量) |
+| TOKEN-03 | Phase 64 | TOKEN (AntdThemeBridge) |
+| TOKEN-04 | Phase 64 | TOKEN (shadows/spacing/typography 调性对齐) |
+| QA-01 | Phase 64 | QA (对比度自动验证) |
+| THEME-01 | Phase 65 | THEME (多主题移除) |
+| THEME-02 | Phase 65 | THEME (light/dark 双模式保留) |
+| THEME-03 | Phase 65 | THEME (layout/density 不回归) |
+| COMP-01 | Phase 66 | COMP (侧边栏深绿化) |
+| COMP-02 | Phase 66 | COMP (表格 / 卡片) |
+| COMP-03 | Phase 66 | COMP (按钮体系 D-03) |
+| COMP-04 | Phase 66 | COMP (表单 / 标签 / 图表) |
+| QA-02 | Phase 66 | QA (硬编码色扫描防回归) |
+| QA-03 | Phase 67 | QA (构建 / lint / test / bundle 回归门) |
+| QA-04 | Phase 67 | QA (6 屏前后视觉回归确认) |
+
+**Inter-phase dependency graph (v1.22):**
+
+```
+Phase 64 (品牌令牌 + 对比度验证)
+   │
+   └─→ Phase 65 (主题系统收敛) [depends on 64]
+          │
+          └─→ Phase 66 (通用组件样式 + 硬编码扫描) [depends on 65]
+                 │
+                 └─→ Phase 67 (构建回归 + 视觉确认) [depends on 66]
+```
+
+Phase 63 (frontend-toolchain-automation) 独立 IN PROGRESS,提供 CI / lint / 测试基建,本 milestone 4 个 phase 的验证门与 lint 集成将直接受益。
+
+---
+
+## Archive: v1.21 Milestone History
+
+<details>
+<summary>✅ v1.21 API Key 认证链修复 + 能力补全 (Phases 57-62, shipped 2026-08-18) — 详见 [milestones/v1.21-ROADMAP.md](milestones/v1.21-ROADMAP.md)</summary>
+
+- ✓ **Phase 57**: 认证链核心修复 + 回归测试 — 修复 `setUserContextForAPIKey` 类型断言(P0-2),消除 MultiAuth 死代码(P0-1),集成测试锁住三路径链路
+- ✓ **Phase 58**: 前后端路由契约对齐 — 前端 `getAPIKey` / `updateAPIKey` / `deleteAPIKey` 改 POST 对齐后端;`CONTRACT-02` 字段命名 camelCase 对齐
+- ✓ **Phase 59**: 可观测性 / 使用日志修复 — 使用日志记录时机后移,异步 goroutine detached context,`successRate` 可信
+- ✓ **Phase 60**: 安全加固与启用决策 — MultiAuth 路由挂载启用决策 + API Key 哈希存储决策 + 限流响应头编码修复 + 重复索引移除
+- ✓ **Phase 61**: 资源级权限矩阵 + 限流生产调优 — `RequireAPIKeyResourcePermission` resource 参数真实生效 + `RateLimitByScope` 生产接入与调优(conditional on Phase 60 AUTH-03=启用)
+- ✓ **Phase 62**: 数据库核心安全加固(跨 AI 评审修复) — internal/core/db 跨 AI 评审(codex + opencode)共识 C1-C7 + 单方 HIGH/MEDIUM 全部清零,迁移安全 / 种子凭据 / 并发保护
+
+**v1.21 shipped 14/14 v1.21 requirements + Phase 62 跨 AI 评审 14 项 review items。** 唯一遗留:Phase 58 SC#1-SC#4 端到端验证因 dev DB 性能延期(代码契约修复已提交且自动化门全绿),见 `58-01-SUMMARY` §Deferred。
+
+</details>
 
 ---
 
@@ -243,8 +227,8 @@ Phases execute in numeric order: 57 → 58 → 59 → 60 → 61 (Phase 61 condit
 - ✓ Phases 8-10 — v1.3 技术债清理 (9 plans)
 - ✓ Phase 11 — v1.4 MAC地址采集优化 (4 plans)
 - ✓ Phases 12-15 — v1.5 MAC地址历史数据 (26 plans)
-- ✓ Phase 16 — v1.6 API密钥管理 (10 plans) ← **v1.21 回归对象**
-- ✓ Phase 17 — v1.7 加密配置同步 (6 plans)
+- ✓ Phase 16 — v1.6 API密钥管理 (10 plans)
+- ✓ Phases 17 — v1.7 加密配置同步 (6 plans)
 - ✓ Phase 18 — v1.8 登录端加密 (4 plans)
 - ✓ Phases 19-20 — v1.9 AD域控集成 (11 plans)
 - ✓ Phase 21 — v1.10 网络设备权限修复 (1 plan)
@@ -257,35 +241,14 @@ Phases execute in numeric order: 57 → 58 → 59 → 60 → 61 (Phase 61 condit
 - ✓ Phases 37-39 — 前端部门选择统一/AD账号池统一/部门物理位置映射
 - ✓ Phases 40-41 — v1.16 技术债清理 (8 plans)
 - ✓ Phases 42-47 — v1.17 资产对账 + 根因修复 (16 plans)
-- ✓ Phase 48-49 — v1.18 网络设备硬件清单 + gap closure (5 plans)
-- ✓ Phases 50-55 — v1.19 网络设备写命令 (9 plans, 5 build + 1 cleanup) — see [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md)
-- ✓ Phase 56 — v1.20 网络设备 VLAN + 端口绑定 (5 plans) — see [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.md)
+- ✓ Phases 48-49 — v1.18 网络设备硬件清单 + gap closure (5 plans)
+- ✓ Phases 50-55 — v1.19 网络设备写命令 (9 plans, 5 build + 1 cleanup)
+- ✓ Phase 56 — v1.20 网络设备 VLAN + 端口绑定 (5 plans)
 
-**Total shipped through v1.20**: 156 plans across 49 phases (Phases 1-49 + 50-56).
+**Total shipped through v1.21**: 173 plans across 62 phases (Phases 1-56 + 57-62).
 
 </details>
 
-### Phase 62: 数据库核心安全加固(跨AI评审修复): internal/core/db 迁移安全+种子凭据+并发保护
-
-**Goal:** internal/core/db 的跨AI评审(codex + opencode)发现全部清零——共识 C1-C7 修复(Migrate176 升级路径 schema 校验与破坏性 UPDATE 门控、默认 admin 凭据加固、advisory lock 并发保护、FilterLogger 慢查询实现、种子细粒度幂等、grant helper 参数化、BootstrapMissingTables 单一事实源),单方 HIGH(createDatabaseIfNotExists 吞错、SKIP_AUTOMIGRATE 生产半初始化)与锁定 MEDIUM(支撑索引、UTC NowFunc、SQLite 静默回退告警、菜单种子错误处理)一并落地,所有迁移保持幂等。
-
-**Requirements**: C1, C2, C3, C4, C5, C6, C7, CDX-H1, CDX-H2, CDX-M-UTC, CDX-M-IDX, OC-M-SQLITE, OC-M-MENUSEED, CDX-M-USERROLE(评审项 ID,来源 62-REVIEWS.md 共识 + 单方发现;phase_req_ids 为 null,评审项即需求集)
-**Depends on:** Phase 61
-**Plans:** 5/5 plans complete
-
-Plans:
-
-**Wave 1** (4 plans 并行,文件零重叠)
-
-- [x] 62-01-PLAN.md — Migrate176 加固(C1:快路径 R5 标记列校验回退慢路径 + 双路径回填 + Type E 门控 WARN)+ 支撑索引(CDX-M-IDX:idx_sys_user_nickname + idx_recon_resolved_asset_time)
-- [x] 62-02-PLAN.md — FilterLogger 慢查询日志实现 + MinLevel 语义(C4)+ GrantNewMenuToRolesHavingParent 参数化(C6)
-- [x] 62-03-PLAN.md — admin 种子凭据 env 覆盖 + 告警 + 死 salt 清除(C2)+ 部门种子细粒度幂等(C5)+ 菜单种子错误处理(OC-M-MENUSEED)+ UserRole 关联去原生 SQL(CDX-M-USERROLE)
-- [x] 62-04-PLAN.md — advisory lock 并发保护(C3)+ createDatabaseIfNotExists 错误上抛 + 42P04 容忍(CDX-H1)+ NowFunc UTC(CDX-M-UTC)+ SQLite 回退告警(OC-M-SQLITE)
-
-**Wave 2** *(blocked on 62-04,共享 database.go)*
-
-- [x] 62-05-PLAN.md — BootstrapMissingTables 改 gorm.Migrator().CreateTable(C7)+ SKIP_AUTOMIGRATE 生产模式 fatal 守卫(CDX-H2)
-
 ---
 
-*Last updated: 2026-08-13 — Phase 61 planned (2 plans / Wave 1 Plan 01 + Wave 2 Plan 02 sequential; D-01~D-21 全部覆盖、4 层测试策略 [unit+integration+pure-function+migration]、SC#1-3 全部锚定). Phase 60 已完成(2 plans / Wave 1 parallel). Now 5 phases (57-61) / 14 requirements. v1.21 re-planned 2026-08-12: Phase 61 added (资源级权限矩阵 + 限流生产调优, conditional on Phase 60 AUTH-03=启用); FUTURE-APIKEY-01/02 pulled into v1 as AUTH-04/QUAL-03. Core regression fix = Phases 57-60; Phase 61 = post-enable feature completion. Plan-checker revision 2026-08-13: 3 BLOCKERs + 3 WARNINGs 全部修复;Plan 02 改为 Wave 2 依赖 Plan 01,SelectScope 提取为纯函数,既有 rate_limiter_test.go 449 行迁移而非新建,CacheConfigService 12 配置键用单占位符两次查询. v1.20 网络设备 VLAN + 端口绑定 SHIPPED + ARCHIVED 2026-07-10 (Phase 56 / 5 plans).*
+*Last updated: 2026-08-18 — v1.22 ROADMAP drafted (4 phases, Phases 64-67, 15 requirements / 4 categories, 100% coverage). v1.21 SHIPPED + ARCHIVED (Phases 57-62 / 14 v1 requirements + Phase 62 cross-AI 14 review items / C1-C7 + 单方 HIGH/MEDIUM). Phase 63 frontend-toolchain-automation 独立 IN PROGRESS,提供 CI / lint / 测试基建;v1.22 Phase 67 的回归门将直接受益于其 CI gate 与 lint-staged hook。Granularity: standard (config),natural delivery boundary 划分为 4 phases (TOKEN+QA-01 / THEME / COMP+QA-02 / QA-03+QA-04),每个 phase 保持应用在边界处可构建。*

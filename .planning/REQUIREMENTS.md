@@ -1,3 +1,8 @@
+---
+last_updated: 2026-08-18
+update_trigger: v1.22 ROADMAP drafted (Phases 64-67) — traceability section filled (15 requirements / 4 categories / 100% coverage)
+---
+
 # Requirements: XingRan-Next — Milestone v1.22
 
 **Defined:** 2026-08-18
@@ -82,4 +87,30 @@
 
 ## Traceability
 
-*Filled by roadmap.*
+15/15 v1.22 requirements mapped to exactly one phase (0 orphans, 0 duplicates):
+
+| Requirement | Phase | Status | Category |
+|-------------|-------|--------|----------|
+| TOKEN-01 | Phase 64 | Pending | TOKEN (index.css 253 变量层) |
+| TOKEN-02 | Phase 64 | Pending | TOKEN (tokens/colors.ts xingranBrand 常量) |
+| TOKEN-03 | Phase 64 | Pending | TOKEN (AntdThemeBridge 全量映射) |
+| TOKEN-04 | Phase 64 | Pending | TOKEN (shadows/spacing/typography 调性对齐) |
+| QA-01 | Phase 64 | Pending | QA (对比度自动验证) |
+| THEME-01 | Phase 65 | Pending | THEME (6 套主题 + 切换器移除) |
+| THEME-02 | Phase 65 | Pending | THEME (light/dark 双模式保留) |
+| THEME-03 | Phase 65 | Pending | THEME (layout/density 不回归) |
+| COMP-01 | Phase 66 | Pending | COMP (侧边栏深绿化) |
+| COMP-02 | Phase 66 | Pending | COMP (表格/卡片 双层纸感) |
+| COMP-03 | Phase 66 | Pending | COMP (按钮体系 D-03 纪律) |
+| COMP-04 | Phase 66 | Pending | COMP (表单/标签/ECharts 接令牌) |
+| QA-02 | Phase 66 | Pending | QA (硬编码色扫描防回归) |
+| QA-03 | Phase 67 | Pending | QA (构建/lint/test/bundle 回归门) |
+| QA-04 | Phase 67 | Pending | QA (6 屏前后视觉回归确认) |
+
+**Coverage validation**: All 15 v1.22 requirements (TOKEN-01..04 / THEME-01..03 / COMP-01..04 / QA-01..04) are mapped to exactly one phase. No orphans, no duplicates.
+
+**Phase ordering rationale**:
+- Phase 64 (TOKEN + QA-01) first — 品牌令牌是所有后续 phase 的真相源,对比度校验断言 token 值正确性,尽早暴露 brand-spec 实测值与设计目标偏差
+- Phase 65 (THEME) second — 多主题移除是高风险机械重构,需要在令牌已就位(避免视觉退化)后执行;依赖令牌层提供回退色源
+- Phase 66 (COMP + QA-02) third — 组件样式落地依赖稳定令牌 + 单一品牌上下文;硬编码扫描与组件落地同步,防止新代码破坏品牌
+- Phase 67 (QA-03/04) terminal — 构建回归 + 视觉确认是里程碑 SHIPPED 前置门

@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.22
 milestone_name: 前端品牌化改造
 status: planning
-last_updated: "2026-08-18T02:49:40.859Z"
+last_updated: "2026-08-18T03:10:00.000Z"
 last_activity: 2026-08-18
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,76 +17,72 @@ progress:
 
 **Project**: XingRan-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.21 API Key 认证链修复 + 能力补全 milestone COMPLETE — Phases 57-61 全部代码完成。Phase 58 SC#1-SC#4 端到端验证因 dev DB(Supabase pooler)性能延期(见 58-01-SUMMARY §Deferred),代码契约修复已提交且自动化门全绿。
-**Last activity**: 2026-08-17 — quick-260817-hfl: 后端 Supabase(远程PG) → 本地 SQLite(纯 Go glebarez 驱动);同日两个调试会话(sqlite-startup-pg-only-errors、admin-role-incomplete-menus)修复 sqlite 兼容性收尾(PG-only 守卫/缺表注册/方言修复/规范菜单目录种子 migration_207,admin 全量菜单),用户已验证确认。此前 2026-08-15 Phase 62 完成。2026-08-13 — Phase 58 标记 code-complete + 58-01-SUMMARY;该会话另修后端启动 hang(config.go keepalive `7c821d7`)、dev 环境 SM2 登录链路(config.yaml use_sm2)、MV/分区补建(dbprobe `26e93fd`)、logger 镜像修复(`7901248`)、WIP 清理(dev 工具 + rebrand)。
+**Status**: v1.21 API Key 认证链修复 + 能力补全 milestone SHIPPED + ARCHIVED 2026-08-18(Phases 57-62 / 5 phases + Phase 62 跨 AI 评审修复);v1.22 前端品牌化改造 ROADMAP drafted(Phases 64-67 / 4 phases / 15 requirements / 100% coverage)。Phase 63 前端工具链自动化独立 IN PROGRESS。
+**Last activity**: 2026-08-18 — v1.22 ROADMAP drafted(Phases 64-67),15 requirements mapped 100% to TOKEN(64) / THEME(65) / COMP+QA-02(66) / QA-03+QA-04(67)。Phase 63 63-01-PLAN.md 在 `.planning/phases/63-frontend-toolchain-automation/` IN PROGRESS(2026-08-14 起)。此前 2026-08-17 quick-260817-hfl: 后端 Supabase → 本地 SQLite + sqlite 兼容收尾(PG-only 守卫/缺表注册/方言修复/admin 全量菜单种子 migration_207);同日 quick-260817-ucz: 第 6 套主题「墨绿琥珀」(ink-amber)延伸到控制台。2026-08-15 Phase 62 全部 5/5 plan 完成;2026-08-14 Phase 57-61 全部完成 + Phase 62 plans created from cross-AI reviews。
 
 ## Project Reference
 
-See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-12)
+See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 
-**Core value**: 端到端运维可观测与审计能力——每个写操作产生可追溯记录(who/when/what/from-where/before-after-state),敏感字段自动脱敏。API Key 作为 JWT 之外的第二条认证通道,其认证链、作用域校验、使用日志必须真实生效且可观测;Phase 61 落地资源级权限矩阵与限流生产调优。
+**Core value**: 端到端运维可观测与审计能力——每个写操作产生可追溯记录(who/when/what/from-where/before-after-state),敏感字段自动脱敏。v1.22 在不破坏既有核心价值的前提下,把后台内部视觉统一到登录页品牌(深绿 × 铜金 × 奶油纸感),让 53 屏业务页面在 design-system 层自动继承品牌样式。
 
-**Current focus**: v1.21 milestone COMPLETE(5/5 phases, 8/8 plans)。唯一遗留:Phase 58 SC#1-SC#4 端到端验证延期(待更快 dev DB)。
+**Current focus**: v1.22 milestone INITIATED + ROADMAP drafted,4 phases(64-67),等待 plan-phase 64 启动。
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 64 (next up)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-08-18 — Milestone v1.22 started
+Status: Defining roadmap → Planning phase 64
+Last activity: 2026-08-18 — v1.22 ROADMAP drafted
 
 ## Accumulated Context
 
 ### Roadmap Evolution
 
-- Phase 62 added: 数据库核心安全加固(跨AI评审修复): internal/core/db 迁移安全+种子凭据+并发保护 — 来源 .planning/reviews/260814-internal-core-db-REVIEWS.md(codex + opencode 交叉评审,共识 C1-C7 + 单方高危项)
+- **v1.22 ROADMAP drafted (2026-08-18)**: 4 phases (64-67), 15 requirements, 100% coverage
+  - Phase 64: 品牌令牌层落地 + 对比度验证 (TOKEN-01/02/03/04 + QA-01)
+  - Phase 65: 主题系统收敛 (THEME-01/02/03)
+  - Phase 66: 通用组件样式 + 硬编码色扫描 (COMP-01/02/03/04 + QA-02)
+  - Phase 67: 构建回归 + 视觉确认 (QA-03 + QA-04)
+- **Phase 63 IN PROGRESS (2026-08-14)**: 前端工具链自动化 — `.planning/phases/63-frontend-toolchain-automation/63-01-PLAN.md` 独立进行,本 milestone 不占用 63
+- **v1.21 SHIPPED + ARCHIVED 2026-08-18**: Phases 57-62 / 14 v1 requirements + 14 跨 AI review items
+  - Phase 62 added 2026-08-12: 数据库核心安全加固(跨 AI 评审修复) — 来源 `.planning/reviews/260814-internal-core-db-REVIEWS.md`(codex + opencode 交叉评审,共识 C1-C7 + 单方 HIGH/MEDIUM)
+  - v1.21 ROADMAP archived to `.planning/milestones/v1.21-ROADMAP.md` + `.planning/milestones/v1.21-REQUIREMENTS.md`
 
-### v1.21 Milestone — Critical Decisions (locked at init)
+### v1.22 Milestone — Critical Decisions (locked at init)
+
+- **Scope**: 仅 design-system 层(D-05 锁定)——落地 brand-spec.md 品牌令牌到 `xingran-react-frontend/src/design-system/` 与 `src/index.css` 253 变量层,53 屏业务页面自动继承样式,不逐屏改造
+- **Theme strategy**: 全局替换,不保留多主题(D-01 锁定,不可逆)——移除 6 套主题(minimal/glassmorphism/neumorphism/flat2.0/luxury-quiet/ink-amber)与 ThemeSwitcher / ColorSwitcher;保留 light / dark 双模式(单一品牌色相);保留 layoutStore 的布局与密度切换(D-03)
+- **Color source**: `brand-spec.md` 为唯一色值真相源(D-02)——标注「实测」直接采用,「推导」微调须重跑对比度验证
+- **Button discipline**: 主按钮一律 `--primary` `#156031` 绿底白字(7.64:1);hover `#2E7444`(5.68:1);铜金 `#C09058` 不做实心主按钮(2.85:1 不达标);必须铜金实心时用 `#B88850` + ≥16px 半粗体白字(3.15:1 大字达标),hover 只许加深至 `#AA7B42`(D-03)
+- **Phase numbering**: 从 Phase 63 续编(64+);Phase 63 独立 IN PROGRESS,不占用(D-04)
+- **Research skipped**: 视觉层重构,brand-spec.md 与 admin-design-plan.md 现状侦察已落盘,代码与改造范围均已调查清楚(`.planning/research/` 不需要新建)
+- **Granularity**: standard(项目配置),4 phases (64-67) 为本 milestone 自然交付边界 —— 每个 phase 保持应用在边界处可构建(buildable at phase boundary),避免大爆炸式重构
+
+### v1.22 — Phase Dependency Graph
+
+```
+Phase 64 (品牌令牌 + 对比度验证)
+   │
+   └─→ Phase 65 (主题系统收敛) [depends on 64]
+          │
+          └─→ Phase 66 (通用组件样式 + 硬编码扫描) [depends on 65]
+                 │
+                 └─→ Phase 67 (构建回归 + 视觉确认) [depends on 66]
+```
+
+Phase 63 (frontend-toolchain-automation) 独立 IN PROGRESS,提供 CI / lint / 测试基建,v1.22 Phase 67 的回归门将直接受益于其 CI gate 与 lint-staged hook。
+
+### v1.21 Milestone — Critical Decisions (locked at init, for archive)
 
 - **Scope**: 全修复 + 就绪 + 能力补全 — 修复全部 P0/P1/P2 确定性缺陷,MultiAuth 代码修好并已挂载;Phase 61 落地 AUTH-04 资源级权限矩阵与 QUAL-03 限流生产调优
 - **Regression nature**: 对 v1.6「API 密钥管理系统」(Phase 16 / 2026-05-19 / 10 plans) 的回归修复,非新功能
 - **Research skipped**: 回归修复场景,代码与问题均已调查清楚(`.planning/research/` 不存在)
-- **Phase numbering**: 从 v1.20 末尾 Phase 56 续编(57-61)
+- **Phase numbering**: 从 v1.20 末尾 Phase 56 续编(57-61,后增 62 为跨 AI 评审修复)
 - **Granularity**: standard(项目配置),5 phases (57-61) 为本 milestone 自然交付边界;Phase 61 为 2026-08-12 重规划新增(能力补全,conditional)
 - **Scope evolution (2026-08-12 re-plan)**: 原"全修复 + 就绪"扩展为"全修复 + 就绪 + 能力补全"——FUTURE-APIKEY-01/02 升级为 v1 AUTH-04/QUAL-03 归 Phase 61(资源级权限矩阵 + 限流生产调优),仅在 Phase 60 AUTH-03=启用 后执行
 
-### Phase 61 Plan 01 Locked Decisions (AUTH-04)
-
-- **D-02**: 资源权限矩阵仅覆盖 `system:*` 11 资源(user/role/menu/dept/post/workstation/dict/config/captchaBackground/notice/apikey),共 59 个 (resource, action) 组合;`monitor:*` / `network:*` / `tool:*` / `operations:*` 不纳入
-- **D-03**: 资源/操作未命中 map → 403 fail-closed,新增 resource 必须显式补 entry
-- **D-05**: `RequireAPIKeyResourcePermission` 本 phase 仍为公共 helper,不挂载到 `apikey_router.go`
-- **D-06**: `InheritPerms=true` 实时加载 User 权限代码,与 API Key scopes 取并集写入 `c.scopes`
-- **D-07**: 每请求一次 DB 查询加载 User 权限,不引入缓存
-- **D-08**: `InheritPerms=false` 行为不变,仅校验 API Key 自带 scopes
-- **D-09**: User 权限加载失败(DB error / UserID nil / service error) → 401 fail-closed
-- **D-10**: `c.Set("username", apiKey.User.Username)` + `c.Set("nickname", apiKey.User.Nickname)`(ValidateAPIKey 已 `Preload("User")`)
-- **D-20/D-21**: 三层测试(单元 + 中间件单元 + 集成),无 gomock,真实 `permission.Service` + sqlite in-memory
-
-### Phase 61 Plan 02 Locked Decisions (QUAL-03)
-
-- **D-11**: `RateLimitByScope(rateLimiter, action string)` 新增 action 参数,注册期 `requiredScope := getRequiredScope(action)` 闭包捕获;`getRequiredScope` 扩展 `list → read`
-- **D-12**: 多 scope 选择 action-aware 严格语义 — 精确匹配 requiredScope → admin 覆盖 → 403 fail-closed(无 fallback);提取纯函数 `SelectScope(scopes, inheritPerms, action)` 直接可单测,不新增 context 中转键
-- **D-13**: `InheritPerms=true` 短路走 default 限额(细粒度 permission code 不参与 action 匹配)
-- **D-14**: `RequireScope` 硬鉴权 / `RateLimitByScope` 精细限流职责分工,两中间件保留
-- **D-15/D-16/D-17**: 12 个 `rate_limit.{read|write|admin|default}.{per_minute|per_hour|per_day}` 配置键复用 CacheConfigService(独立 rateLimits map,次数语义),默认值与既有硬编码一致,Min/Max 范围校验
-- **D-18**: `RateLimiter` 移除硬编码 limits map,改 `RateLimitProvider` 接口注入;`NewRateLimiter(nil)` 兜底 staticRateLimitProvider;router.go 用 `core.CacheConfigService` 字段(非 getter)
-- **D-19**: reload 后新阈值仅对新请求生效,在途滑动窗口保留旧阈值
-
-### Phase 62 Plan 03 Locked Decisions (C2/C5/OC-M-MENUSEED/CDX-M-USERROLE)
-
-- **D-62-03-01 (C2 scope)**: 完整"首登强制改密"方案需改动 handler + 前端登录链路,超出本纯 db 修复 phase 范围 → 本 plan 落地 env 覆盖 + 大声 WARN + 死 salt 清除,完整方案 deferred
-- **D-62-03-02 (C5 strategy)**: 全量 `db.Transaction` 包裹 initData 会与 core.go initDBAndData "失败仅警告不阻断启动" 策略冲突 → 选择逐条 check-and-create 细粒度幂等(ensureDept helper)
-- **D-62-03-03 (DeptCode population)**: 原 seed 在 dept_code 上留空,违反 uniqueIndex;not null(由 migration_080 添加)→ 填充 ROOT/SHENZHEN/CHANGSHA/RD/MARKET/TEST 唯一编码使首装种子真正生效(brand/leader/phone/email 按 plan 保持原样)
-- **D-62-03-04 (Test DSN cache mode)**: `file::memory:?cache=shared` 在多测试间共享 in-memory DB,导致 TestCreateDefaultUser_EnvOverride 写入的 admin 行污染 FallbackDefault → init_data_test.go 三个 DB helper 改用 `cache=private`
-
-### Phase 62 Plan 04 Locked Decisions (C3/CDX-H1/CDX-M-UTC/OC-M-SQLITE)
-
-- **D-62-04-01 (Advisory lock fail-safe)**: 未获锁 / 取锁失败 → `applogger.Warnf("[advisory-lock] 另一实例正在执行启动迁移,本实例跳过 175/176/202-205 迁移块")` + `return nil`。单实例部署锁永远可得,只有 HA/滚动重启异常路径才落到跳过;不 fail-deadly(`fail-safe 而非 fail-deadly`)
-- **D-62-04-02 (42P04 容忍 tradeoff)**: 理论上真正失败的 CREATE DATABASE 若恰好报 42P04 会被 WARN 放过——但 42P04 语义唯一即"已存在",后续 `gorm.Open` 真实验证连通性,风险可接受。提取 `isDuplicateDatabaseError(err error) bool` 私有 helper,`errors.As` 解包 `*pq.Error` 判 `Code == "42P04"`
-- **D-62-04-03 (UTC 切换 tradeoff)**: 历史 `created_at`/`updated_at` 是服务器本地时区,新写入为 UTC;PG `timestamptz` 列按会话时区规范化存储,混合期查询按 timestamptz 语义正确,仅 naive timestamp 列(若有)存在解释漂移。用户已锁定修复,接受该过渡期
-- **D-62-04-04 (Test commit 顺序)**: RED 测试覆盖两个 task 的所有断言(compile-time + source assertion + pure function),拆为 1 test commit + 2 feat commits 以保持每 commit 独立 build 通过——在 Task 1 commit 加 `sqliteFallbackWarning` stub(返回空串),Task 2 commit 替换为真实实现。`database_test.go` 跨 task 引用同 package-private 符号,必须合并 RED commit
-
-### v1.21 — 根因调查结论(ground-truth 已验证)
+### v1.21 — 根因调查结论(ground-truth 已验证,for archive)
 
 | 缺陷 | 文件:行 | 根因 |
 |------|---------|------|
@@ -99,31 +95,13 @@ Last activity: 2026-08-18 — Milestone v1.22 started
 | P2-c | `internal/services/system/apikey_service.go` + migration_085 | API Key `Key` 字段明文存储(`WHERE key = ?` 直查) |
 | P3 | migration_085 | `idx_api_keys_key` 与 `uniqueIndex` 重复 |
 
-### Phase Dependencies (v1.21)
-
-```
-Phase 57 (认证链核心修复 + 回归测试)
-   │
-   ├─→ Phase 58 (前后端路由契约对齐) [depends on 57]
-   │
-   ├─→ Phase 59 (可观测性 / 使用日志修复) [depends on 57]
-   │      │
-   │      └─→ Phase 60 (安全加固与启用决策) [depends on 57 + 59]
-   │             │
-   │             └─→ Phase 61 (资源级权限矩阵 + 限流生产调优) [depends on 60 AUTH-03=启用]
-```
-
-Phase 58 可与 Phase 59 并行(两者依赖仅 Phase 57);Phase 60 必须在 59 后(启用决策需要可观测基础);Phase 61 仅在 Phase 60 AUTH-03 决策=启用 时执行,否则 defer。
-
 ### Pending Decisions (defer to phase-internal discuss)
 
-- **AUTH-03** (Phase 60): 是否在生产路由挂载 MultiAuth 使 X-API-Key 认证真正生效?含作用域继承、IP 白名单、与 JWT 优先级/回退关系
-- **SEC-01** (Phase 60): API Key `Key` 字段是否迁移到 SM3 / argon2id 哈希存储?含平滑过渡 + 回滚方案
-- **CONTRACT-01** (Phase 58): 前后端契约对齐方向——选项 A 改前端用 POST 对齐 v1.6 既有模式,选项 B 后端补 RESTful GET/PUT/DELETE
+None for v1.22. 所有 v1.22 决策(D-01..D-05)已在 init 时锁定,Phase 内不再做策略性讨论;Plan 内部仅做工程实现细节(对比度校验脚本写法 / lint 规则选择 / 截图对比画布工具等)讨论。
 
 ### Blockers/Concerns
 
-None currently. Roadblock risk: Phase 60 AUTH-03 启用决策若选"启用",会触发 Phase 61(资源级权限矩阵 + 限流调优)执行——已通过 2026-08-12 重规划将该项独立为 Phase 61,避免污染 Phase 60 决策型 scope。
+None currently. v1.22 是纯前端 design-system 层重构,无后端 API / 数据模型 / 权限风险;Phase 65 多主题移除涉及 13 个消费方但每个消费方仅引用清除,可机械重构;Phase 66 硬编码扫描脚本需在 .css / .tsx 中准确识别"非品牌裸 hex"(误报防护需明确白名单如品牌 token 定义本身 / svg fill="none" / rgba 透明色等)。
 
 ## Quick Tasks Completed
 
@@ -141,7 +119,7 @@ None currently. Roadblock risk: Phase 60 AUTH-03 启用决策若选"启用",会�
 
 ## Deferred Items
 
-Items acknowledged and carried forward from previous milestone closes (non-v1.21 work):
+Items acknowledged and carried forward from previous milestone closes (non-v1.22 work):
 
 | Category | Item | Status | Source |
 |----------|------|--------|--------|
@@ -151,8 +129,11 @@ Items acknowledged and carried forward from previous milestone closes (non-v1.21
 | uat_gap | v1.18 3 项 site-visit UAT (S8700/RS8607E) | deferred (site-visit) | v1.18 close 2026-07-04 |
 | tech-debt | WR-01 / WR-03 / WR-04 / WR-05 + 14 项 v1.19.x+ future work | backlog | v1.19 REQUIREMENTS §Future |
 | tech-debt | ~88 audit-open historical items (19 debug_sessions / 60 quick_tasks / etc.) | backlog | pre-v1.20 |
+| v1.22 future | PROTO-01/02/03/04 逐屏对齐(路由前缀 / 字段表头工具栏 / 菜单组结构 / 空状态文案) | v1.23+ candidate | v1.22 REQUIREMENTS §Future (来源 PROTOTYPE-VS-ACTUAL.md) |
+| v1.22 future | VIS-01/02/03 视觉深化(3D 楼宇配色 / 登录后台过渡动效 / 打印导出样式) | v1.23+ candidate | v1.22 REQUIREMENTS §Future |
+| v1.22 future | ink-amber 主题 removal hard-deletion 检查(Phase 65 落地) | scope of Phase 65 | v1.22 (quick-260817-ucz 引入) |
 
-Full deferred detail in [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.md) + [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md).
+Full deferred detail in [milestones/v1.21-ROADMAP.md](milestones/v1.21-ROADMAP.md) + [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.md) + [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md).
 
 ## Completed Milestones
 
@@ -162,7 +143,7 @@ Full deferred detail in [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.m
 - ✅ v1.3 技术债清理 (2026-04-27) — 3 phases, 9 plans
 - ✅ v1.4 MAC地址采集优化 (2026-05-09) — 1 phase, 4 plans
 - ✅ v1.5 MAC地址历史数据管理 (2026-06-15) — 4 phases, 26 plans
-- ✅ **v1.6 API密钥管理系统 (2026-05-19) — 1 phase, 10 plans** ← v1.21 回归对象
+- ✅ **v1.6 API密钥管理系统 (2026-05-19) — 1 phase, 10 plans**
 - ✅ v1.7 前后端加密配置同步 (2026-05-20) — 1 phase, 6 plans
 - ✅ v1.8 登录端点加密增强 (2026-05-21) — 1 phase, 4 plans
 - ✅ v1.9 AD域控集成扩展 (2026-05-24) — 2 phases, 11 plans
@@ -177,16 +158,18 @@ Full deferred detail in [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.m
 - ✅ v1.18 网络设备硬件清单 (2026-07-04) — Phases 48-49, 5 plans
 - ✅ v1.19 网络设备写命令 (2026-07-08) — Phases 50-55, 9 plans
 - ✅ v1.20 网络设备 VLAN + 端口绑定 (2026-07-10) — Phase 56, 5 plans
+- ✅ v1.21 API Key 认证链修复 + 能力补全 (2026-08-18) — Phases 57-62, 8 plans (1+1+2+2+2+5) [含 Phase 62 跨 AI 评审修复]
 
 ## Session Continuity
 
-Last session: 2026-08-17T14:09:19Z
-Stopped at: quick-260817-ucz Task 3 blocking checkpoint(人工视觉验证 pending,自动化门全绿)
+Last session: 2026-08-18T03:10:00Z
+Stopped at: v1.22 ROADMAP drafted (Phases 64-67, 15 requirements mapped 100%, 4 phases);awaiting plan-phase 64 execution
 Resume file: None
 
-**Milestone status:** v1.21 IN PROGRESS — **Phase 62 Plan 05 COMPLETE — Phase 62 全部 5/5 plan 完成** (commits fb3cc70 + b774cc3 + 42ce9e4 + 94ddc9e, TDD 双门 test→feat × 2): Task 1 (C7) `BootstrapMissingTables` 重写——删除硬编码 `CREATE TABLE public.sys_api_keys/sys_api_key_usage_logs`(APIKey schema 第三份拷贝消除),改为 `Migrator().HasTable` 判定 + `Migrator().CreateTable(&models.APIKey{}/&models.APIKeyUsageLog{})` 从 model 派生建表(与 AutoMigrate/MigrateModelList 同一事实源,天然防漂移);CreateTable 在 PrepareStmt:false 连接走 simple protocol 无 pooler 死锁;硬编码 `public.` schema 前缀消除(跟随 search_path);六条 `CREATE INDEX IF NOT EXISTS idx_api_keys_*/idx_api_key_logs_*` 显式索引兜底原样保留;建表失败错误具体化。Task 2 (CDX-H2) `core.go initDBAndData` 的 SKIP_AUTOMIGRATE 分支最前面(Warnf 之前)插入生产守卫:`c.Config.Server.Mode == "release"` 时 `return fmt.Errorf`(文案含 `半初始化` 风险与"移除环境变量后重启"处置),启动 fail-fast;debug/非 release WARN 旁路 + BootstrapMissingTables 保留(dev 应急能力不丢)。新增 `core_skipautomigrate_test.go` 2 源码断言测试 + `database_test.go` 追加 TestBootstrapMissingTablesModelDerived。`go build ./...` exit 0;`go test ./internal/core/db/ + ./internal/core/` 全 PASS;`go test ./...` 全量 40 包 ok,唯一 FAIL 为预存在 `internal/api/v1/auth` TestADLoginWithOUProcessing(与 Phase 62 无关,记录于 phase 目录 deferred-items.md)。62-04 改动(advisory lock / UTC NowFunc / sqlite 回退告警 / createDatabase 错误上抛)完整性确认保留。执行期偏差:commitlint subject-case 改小写开头提交信息;主工作树并发 merge 干扰(用户侧 stash,等待恢复后确认 4 commit 完整落地)。
+**Milestone status:** v1.22 IN PLANNING — **ROADMAP drafted 2026-08-18**,4 phases (64-67) / 15 requirements / 100% coverage。Token 层 (Phase 64) 落地位于 index.css 253 变量 + tokens/colors.ts xingranBrand + AntdThemeBridge + tokens/shadows+spacing+typography + QA-01 对比度校验;主题收敛 (Phase 65) 移除 6 套主题 + ThemeSwitcher/ColorSwitcher/themeStore 残留 + 13 消费方清理,保留 light/dark + layout/density;组件样式 (Phase 66) 侧边栏深绿 + 表格/卡片 + 按钮 D-03 纪律 + 表单/标签/ECharts + QA-02 硬编码扫描;终端验证 (Phase 67) 构建/类型/lint/test 全绿 + bundle 体积不增 + 6 屏前后截图对比。
 
 ## Operator Next Steps
 
-- Phase 62 (ai-internal-core-db) 5/5 plan 全部完成 — 共识 C1-C7 + 锁定单方项清零,可运行 `/gsd:review-phase 62` 或验证关闭
-- 遗留 deferred 清单见 62-05-SUMMARY §Phase 62 全 phase Deferred 清单汇总(首登强制改密、LOW 项、schema_migrations 版本表、预存在 auth 测试失败)
+- 启动 `/gsd:plan-phase 64` 进入 Phase 64(品牌令牌层落地 + 对比度验证)实施规划
+- Phase 63 frontend-toolchain-automation 独立进行,可观察其 CI gate / lint-staged hook 完成时间,Phase 67 验证门集成前确认 CI 可用
+- Phase 64 完成后按 64 → 65 → 66 → 67 顺序依次 plan-phase
