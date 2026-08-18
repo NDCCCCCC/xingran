@@ -140,6 +140,7 @@ None currently. Roadblock risk: Phase 60 AUTH-03 启用决策若选"启用",会�
 | 260814-h0e | my-menus 系列接缓存(menuCacheService 补 GetOrSet 覆盖,消除慢库每次打DB) | 2026-08-14 | ba36b1b / f481c93 | [260814-h0e-cache-my-menus-series-via-menucacheservi](./quick/260814-h0e-cache-my-menus-series-via-menucacheservi/) |
 | 260814-wxb | 修复两个存量前端测试失败(ACTION_TITLE 7 key + HealthCard 紧凑版断言,零产品代码改动) | 2026-08-14 | 19ac4f6 / bbc5248 | [260814-wxb-port-write-constants-action-title-health](./quick/260814-wxb-port-write-constants-action-title-health/) |
 | 260817-hfl | 后端数据库 Supabase(远程PG) → 本地 SQLite(纯 Go glebarez/modernc 驱动,无 CGO);含 sqlite 兼容收尾:PG-only 守卫(分区/statement_timeout/MV刷新)、缺表注册(user_preference/rpa/oui/oper_log/logininfor/reconciliation)、PG 方言修复(INTERVAL/NOW/::text)、migration_207 规范菜单目录种子(admin 全量菜单修复) | 2026-08-17 | 7c422a1~b793304 + 调试修复待提交 | [260817-hfl-supabase-postgresql-sqlite-go-modernc-or](./quick/260817-hfl-supabase-postgresql-sqlite-go-modernc-or/) |
+| 260817-ucz | 第 6 套主题「墨绿琥珀」(ink-amber): 登录页 v4 配色(墨绿+琥珀金+米白)延伸到控制台,themes/ink-amber 三件套 + 前端 7 处/后端 2 处白名单注册;纯增量,现有 5 套主题与登录页零改动;自动化门全绿,人工视觉验证 checkpoint pending | 2026-08-17 | de46ceb / 1e0253b | [260817-ucz-login-theme-palette-themestore-design-to](./quick/260817-ucz-login-theme-palette-themestore-design-to/) |
 
 ## Deferred Items
 
@@ -182,8 +183,8 @@ Full deferred detail in [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-17T09:00:45.661Z
-Stopped at: context exhaustion at 76% (2026-08-17)
+Last session: 2026-08-17T14:09:19Z
+Stopped at: quick-260817-ucz Task 3 blocking checkpoint(人工视觉验证 pending,自动化门全绿)
 Resume file: None
 
 **Milestone status:** v1.21 IN PROGRESS — **Phase 62 Plan 05 COMPLETE — Phase 62 全部 5/5 plan 完成** (commits fb3cc70 + b774cc3 + 42ce9e4 + 94ddc9e, TDD 双门 test→feat × 2): Task 1 (C7) `BootstrapMissingTables` 重写——删除硬编码 `CREATE TABLE public.sys_api_keys/sys_api_key_usage_logs`(APIKey schema 第三份拷贝消除),改为 `Migrator().HasTable` 判定 + `Migrator().CreateTable(&models.APIKey{}/&models.APIKeyUsageLog{})` 从 model 派生建表(与 AutoMigrate/MigrateModelList 同一事实源,天然防漂移);CreateTable 在 PrepareStmt:false 连接走 simple protocol 无 pooler 死锁;硬编码 `public.` schema 前缀消除(跟随 search_path);六条 `CREATE INDEX IF NOT EXISTS idx_api_keys_*/idx_api_key_logs_*` 显式索引兜底原样保留;建表失败错误具体化。Task 2 (CDX-H2) `core.go initDBAndData` 的 SKIP_AUTOMIGRATE 分支最前面(Warnf 之前)插入生产守卫:`c.Config.Server.Mode == "release"` 时 `return fmt.Errorf`(文案含 `半初始化` 风险与"移除环境变量后重启"处置),启动 fail-fast;debug/非 release WARN 旁路 + BootstrapMissingTables 保留(dev 应急能力不丢)。新增 `core_skipautomigrate_test.go` 2 源码断言测试 + `database_test.go` 追加 TestBootstrapMissingTablesModelDerived。`go build ./...` exit 0;`go test ./internal/core/db/ + ./internal/core/` 全 PASS;`go test ./...` 全量 40 包 ok,唯一 FAIL 为预存在 `internal/api/v1/auth` TestADLoginWithOUProcessing(与 Phase 62 无关,记录于 phase 目录 deferred-items.md)。62-04 改动(advisory lock / UTC NowFunc / sqlite 回退告警 / createDatabase 错误上抛)完整性确认保留。执行期偏差:commitlint subject-case 改小写开头提交信息;主工作树并发 merge 干扰(用户侧 stash,等待恢复后确认 4 commit 完整落地)。
