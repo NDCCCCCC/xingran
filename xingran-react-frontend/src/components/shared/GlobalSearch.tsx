@@ -224,14 +224,12 @@ const GlobalSearch: FC = () => {
       >
         <SearchOutlined style={{ fontSize: "16px", color: "var(--theme-text-secondary)" }} />
         <Text style={{ fontSize: "14px", color: "var(--theme-text-secondary)" }}>搜索</Text>
+        {/* COMP-04: 无内联色覆盖，走 AntdThemeBridge Tag 品牌默认（#FEF3C7 底 + #B88850 字，SM2/SM3/SM4 同款锚点） */}
         <Tag
           style={{
             margin: 0,
             fontSize: "12px",
             borderRadius: "6px",
-            background: "var(--theme-bg-tertiary)",
-            borderColor: "var(--theme-border-primary)",
-            color: "var(--theme-text-secondary)",
           }}
         >
           ⌘K
