@@ -129,25 +129,45 @@ jobs:
       - name: Setup SSH
         # Pin host key from SSH_KNOWN_HOSTS secret instead of accept-new
         # blind trust on first connect.
+        #
+        # Common failure mode (v1.22 first deploy run 32107499009): sshd offers
+        # the host's accepted public keys one-by-one; if ~/.ssh/id_ed25519 is
+        # rejected (wrong key / blank-trailing-newline in Secret), ssh silently
+        # moves on and the connection closes with no diagnostic. Two guards:
+        #   1. fingerprint self-check after writing — bail with clear error if
+        #      the on-disk private key does not match the expected SHA256
+        #      (catches trailing newline / wrong-key Secrets at install time,
+        #      before any ssh invocation hides the issue).
+        #   2. explicit -i + IdentitiesOnly=yes on every ssh/scp below, so the
+        #      runner's ambient keys can't interfere with auth order.
         run: |
           install -m 700 -d ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          echo "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          printf '%s\n' "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          got_fp=$(ssh-keygen -lf ~/.ssh/id_ed25519 | awk '{print $2}')
+          echo "deploy key fingerprint: ${got_fp}"
+          if [[ "${got_fp}" != "SHA256:9RrflpLM3hblmkElV/xRaMGqmGz5oikfVatiOl92PJ8" ]]; then
+            echo "::error::deploy private key fingerprint mismatch — refusing to connect"
+            echo "::error::expected SHA256:9RrflpLM3hblmkElV/xRaMGqmGz5oikfVatiOl92PJ8"
+            exit 1
+          fi
 
       - name: Upload binary and unit file
         run: |
           chmod +x out/xingran-backend
           PORT="${{ vars.SSH_PORT || '22' }}"
-          scp -C -P "$PORT" deploy/xingran.service \
+          SCP_OPTS="-C -P ${PORT} -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+          scp $SCP_OPTS deploy/xingran.service \
               ubuntu@"${{ secrets.SSH_HOST }}":/opt/xingran/deploy/xingran.service.new
-          scp -C -P "$PORT" out/xingran-backend \
+          scp $SCP_OPTS out/xingran-backend \
               ubuntu@"${{ secrets.SSH_HOST }}":/opt/xingran/xingran-backend.new
 
       - name: Activate (backup → replace → restart → health → rollback)
         run: |
           PORT="${{ vars.SSH_PORT || '22' }}"
-          ssh -p "$PORT" ubuntu@"${{ secrets.SSH_HOST }}" \
+          ssh -p "$PORT" -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            ubuntu@"${{ secrets.SSH_HOST }}" \
             'bash -s' -- "${{ needs.build.outputs.version }}" \
             < scripts/deploy/deploy-remote.sh
 

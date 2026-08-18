@@ -16,7 +16,9 @@ import (
 // loadSampleFixture mirrors component_collector.LoadFixture but is duplicated
 // here because LoadFixture lives in the component_collector (internal) test
 // helper and is not exported. It walks up from the test cwd to find go.mod,
-// then resolves templates/samples/<name>.
+// then resolves internal/templates/embedded/templates/samples/<name>.
+// (Path must match component_collector.fixturesRoot — the samples live in the
+// embed tree, NOT a root-level templates/samples directory.)
 func loadSampleFixture(t *testing.T, name string) string {
 	t.Helper()
 	cwd, err := os.Getwd()
@@ -26,7 +28,7 @@ func loadSampleFixture(t *testing.T, name string) string {
 	dir := cwd
 	for {
 		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			b, err := os.ReadFile(filepath.Join(dir, "templates", "samples", name))
+			b, err := os.ReadFile(filepath.Join(dir, "internal", "templates", "embedded", "templates", "samples", name))
 			if err != nil {
 				t.Fatalf("read fixture %s: %v", name, err)
 			}

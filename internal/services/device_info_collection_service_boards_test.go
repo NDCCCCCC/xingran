@@ -72,15 +72,19 @@ func TestCollectBoardsInto_ChassisRowDropped(t *testing.T) {
 	}
 }
 
-// TestCollectBoardsInto_HuaweiNoBoards verifies the D-08 deferred semantic:
-// huawei board collection goes through ENTITY-MIB SNMP, which is deferred in
-// this environment. So huawei must NOT issue any module command —
-// collectBoardsInto must be a no-op for huawei. (49-01 handles huawei chassis
-// SN writeback to sys_network_device; board collection stays deferred.)
-func TestCollectBoardsInto_HuaweiNoBoards(t *testing.T) {
-	called := false
+// TestCollectBoardsInto_HuaweiElabelBrief verifies the Phase 49-D-12 semantic
+// (supersedes the old D-08 "huawei no-op" deferral): huawei board collection
+// now runs `display device elabel brief` via CLI — and ONLY that command —
+// parsed by ParseDisplayDeviceElabelBrief into card/engine/fan/power rows.
+// Empty output is tolerated (D-14): no components, no error.
+func TestCollectBoardsInto_HuaweiElabelBrief(t *testing.T) {
+	raw := loadSampleFixture(t, "huawei_CX-WH-RUITONG-26F-SWL3-HW-S8700_display_device_elabel_brief.txt")
+	var issued []string
 	runner := func(cmd string) (string, error) {
-		called = true
+		issued = append(issued, cmd)
+		if cmd == "display device elabel brief" {
+			return raw, nil
+		}
 		return "", nil
 	}
 	set := &component_collector.ComponentSet{Components: []component_collector.Component{}}
@@ -89,14 +93,40 @@ func TestCollectBoardsInto_HuaweiNoBoards(t *testing.T) {
 	if err := collectBoardsInto(device, runner, set); err != nil {
 		t.Fatalf("collectBoardsInto: unexpected error: %v", err)
 	}
-	if called {
-		t.Errorf("huawei must NOT issue any module command (ENTITY-MIB deferred); runner was called")
+
+	// D-12: 只发 elabel brief 一条命令,不发其他 module 命令
+	if len(issued) != 1 || issued[0] != "display device elabel brief" {
+		t.Errorf("huawei must issue exactly [display device elabel brief]; issued %v", issued)
 	}
-	if len(set.Components) != 0 {
-		t.Errorf("huawei must NOT append any component; got %d", len(set.Components))
+	// 真机 fixture 必须解析出至少一块板卡(card/engine/fan/power)
+	if len(set.Components) == 0 {
+		t.Error("huawei elabel brief fixture must yield board components; got 0")
+	}
+	for _, c := range set.Components {
+		if c.ComponentType == component_collector.ComponentTypeChassis {
+			t.Errorf("chassis row must NOT be appended to set.Components: found %+v", c)
+		}
 	}
 	if set.Chassis != nil {
 		t.Errorf("huawei must keep set.Chassis nil; got %+v", set.Chassis)
+	}
+}
+
+// TestCollectBoardsInto_HuaweiEmptyOutputTolerated: 空输出(如老版本设备
+// 回 "Error: Unrecognized command")时 parser 返回空集,不报错不阻塞
+// 后续 transceiver 采集管线(D-14 容错语义)。
+func TestCollectBoardsInto_HuaweiEmptyOutputTolerated(t *testing.T) {
+	runner := func(cmd string) (string, error) {
+		return "", nil
+	}
+	set := &component_collector.ComponentSet{Components: []component_collector.Component{}}
+
+	device := &models.NetworkDevice{Vendor: models.VendorHuawei}
+	if err := collectBoardsInto(device, runner, set); err != nil {
+		t.Fatalf("empty output must be tolerated (D-14): got %v", err)
+	}
+	if len(set.Components) != 0 {
+		t.Errorf("empty output must not append components; got %d", len(set.Components))
 	}
 }
 

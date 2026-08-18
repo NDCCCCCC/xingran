@@ -36,7 +36,8 @@ func setupTestDB(t *testing.T) *gorm.DB {
 		CREATE TABLE ops_buildings (
 			id TEXT PRIMARY KEY,
 			name TEXT,
-			building_name TEXT
+			building_name TEXT,
+			deleted_at DATETIME
 		);
 	`).Error
 	assert.NoError(t, err)
@@ -45,7 +46,8 @@ func setupTestDB(t *testing.T) *gorm.DB {
 		CREATE TABLE ops_floors (
 			id TEXT PRIMARY KEY,
 			name TEXT,
-			building_id TEXT
+			building_id TEXT,
+			deleted_at DATETIME
 		);
 	`).Error
 	assert.NoError(t, err)

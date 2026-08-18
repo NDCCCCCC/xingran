@@ -126,6 +126,12 @@ func GetAppError(err error) *AppError {
 
 // GetErrorCode 获取错误码，如果不是AppError则返回CodeServerError
 func GetErrorCode(err error) ErrorCode {
+	if err == nil {
+		// nil error = 无错误 = 成功码。
+		// 若此处返回 CodeServerError,调用方在成功路径上会拿到 1500,
+		// 导致"按错误码判断结果"的逻辑全部误判(测试 TestValidator_* 即为此暴露)。
+		return CodeSuccess
+	}
 	if appErr := GetAppError(err); appErr != nil {
 		return appErr.Code
 	}

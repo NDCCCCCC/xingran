@@ -391,6 +391,7 @@ func TestBatchUpsertWithCamelCaseFields(t *testing.T) {
 	}()
 
 	// 创建包含驼峰命名列的测试表
+	// 注:必须含 deleted_at — standardUpsert 无条件写入该列以恢复软删除记录
 	err := db.Exec(`
 		CREATE TABLE test_devices (
 			id TEXT PRIMARY KEY,
@@ -400,7 +401,8 @@ func TestBatchUpsertWithCamelCaseFields(t *testing.T) {
 			purchase_date TEXT,
 			power_consumption REAL,
 			updated_at DATETIME,
-			created_at DATETIME
+			created_at DATETIME,
+			deleted_at DATETIME
 		);
 	`).Error
 	assert.NoError(t, err)

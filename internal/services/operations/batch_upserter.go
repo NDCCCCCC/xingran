@@ -117,8 +117,50 @@ func (b *BatchUpsert) standardUpsert(ctx context.Context, records []map[string]i
 		convertedRecords[i]["deleted_at"] = nil
 	}
 
+	// 预查已存在记录（必须在下方 INSERT 之前 — 插入后所有键必然存在），
+	// 用于把 affected 拆分为真实的 inserted/updated 计数。
+	// 此前返回 RowsAffected 会把"更新行"也计入 inserted(违反 Upsert 文档契约
+	// "返回：插入行数、更新行数"),调用方(Excel 导入结果展示/操作日志)拿到
+	// 错误的计数。查询含软删除记录(与 Unscoped 恢复语义一致)。
+	//
+	// 不复用 queryExistingRecords:它对"无有效冲突键值"返回 error,而
+	// standardUpsert 允许 conflict 键为空的记录直接插入(纯插入语义)。
+	updatedCount := 0
+	if len(conflictColumns) > 0 {
+		columnValues := make(map[string][]interface{})
+		for _, record := range convertedRecords {
+			for _, col := range conflictColumns {
+				if val := getValidValue(record, col.Name); val != nil {
+					columnValues[col.Name] = append(columnValues[col.Name], val)
+				}
+			}
+		}
+		if len(columnValues) > 0 {
+			query := b.db.WithContext(ctx).Table(b.config.TableName).Unscoped()
+			for colName, values := range columnValues {
+				query = query.Where(fmt.Sprintf("%s IN ?", colName), uniqueValues(values))
+			}
+			var existingRecords []map[string]interface{}
+			if err := query.Find(&existingRecords).Error; err != nil {
+				return 0, 0, fmt.Errorf("查询已存在记录失败: %w", err)
+			}
+			existingMap := make(map[string]map[string]interface{}, len(existingRecords))
+			for _, record := range existingRecords {
+				if key := buildCombinedKey(record, conflictColumns); key != "" {
+					existingMap[key] = record
+				}
+			}
+			for _, record := range convertedRecords {
+				if key := buildCombinedKey(record, conflictColumns); key != "" {
+					if _, found := existingMap[key]; found {
+						updatedCount++
+					}
+				}
+			}
+		}
+	}
+
 	// 分批执行，避免超过 PostgreSQL 参数限制（65535）
-	totalAffected := 0
 	for i := 0; i < len(convertedRecords); i += maxBatchSize {
 		end := i + maxBatchSize
 		if end > len(convertedRecords) {
@@ -138,10 +180,10 @@ func (b *BatchUpsert) standardUpsert(ctx context.Context, records []map[string]i
 		if result.Error != nil {
 			return 0, 0, fmt.Errorf("批量Upsert失败 (batch %d-%d): %w", i, end, result.Error)
 		}
-		totalAffected += int(result.RowsAffected)
 	}
 
-	return totalAffected, 0, nil
+	// updatedCount 已在执行前预查得出（见上方注释）。
+	return len(convertedRecords) - updatedCount, updatedCount, nil
 }
 
 // partialUpsert 部分更新的Upsert（只更新有值的字段）
