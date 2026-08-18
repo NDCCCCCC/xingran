@@ -19,9 +19,12 @@
  */
 
 import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = process.cwd();
+// 相对脚本自身位置解析（scripts/ 的上一级 = frontend 根），而非 process.cwd() ——
+// 保证从 repo 根（node xingran-react-frontend/scripts/...）或 CI 任意 CWD 下行为一致
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SRC = join(ROOT, "src");
 const FIX_MODE = process.argv.includes("--fix");
 
