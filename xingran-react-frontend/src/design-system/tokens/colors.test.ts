@@ -19,6 +19,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { xingranBrand } from "./colors";
+import { brandSeriesColors, brandHeatRamp } from "./echartsTheme";
 
 /**
  * 将 #RRGGBB hex 解析为 [r, g, b] 0-255 整数数组。
@@ -390,5 +391,32 @@ describe("phase-64 UAT gap tokens in AntdThemeBridge (COMP-02/03/04)", () => {
     expect(block).toContain("darkItemSelectedBg: xingranBrand.greenPrimary");
     expect(block).toContain("darkItemHoverBg: xingranBrand.greenPrimaryLight");
     expect(block).not.toMatch(/#[0-9a-fA-F]{6}/);
+  });
+});
+
+describe("ECharts brand palette (COMP-04, canvas-safe)", () => {
+  it("brandSeriesColors has 5 entries from xingranBrand (green-gold gradient, no blue/purple)", () => {
+    expect(brandSeriesColors).toHaveLength(5);
+    expect(brandSeriesColors[0]).toBe(xingranBrand.greenPrimary);
+    expect(brandSeriesColors[1]).toBe(xingranBrand.green[200]);
+    expect(brandSeriesColors[2]).toBe(xingranBrand.copperAccent);
+    expect(brandSeriesColors[3]).toBe(xingranBrand.green[100]);
+    expect(brandSeriesColors[4]).toBe(xingranBrand.copper[700]);
+  });
+
+  it("brandSeriesColors contains no default Antd blue (#1890ff) or indigo (#6366f1)", () => {
+    const lower = brandSeriesColors.map((c) => c.toLowerCase());
+    expect(lower).not.toContain("#1890ff");
+    expect(lower).not.toContain("#6366f1");
+    expect(lower).not.toContain("#8b5cf6");
+  });
+
+  it("brandHeatRamp has 5 entries: low-to-high green-to-copper gradient", () => {
+    expect(brandHeatRamp).toHaveLength(5);
+    expect(brandHeatRamp[0]).toBe(xingranBrand.green[50]);
+    expect(brandHeatRamp[1]).toBe(xingranBrand.green[100]);
+    expect(brandHeatRamp[2]).toBe(xingranBrand.greenPrimary);
+    expect(brandHeatRamp[3]).toBe(xingranBrand.copperAccent);
+    expect(brandHeatRamp[4]).toBe(xingranBrand.copper[500]);
   });
 });

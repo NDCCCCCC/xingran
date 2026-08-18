@@ -38,7 +38,7 @@ const Loading = () => (
     <Spin>
       <div style={{ minHeight: 60 }} />
     </Spin>
-    <div style={{ marginTop: 8, color: "rgba(0, 0, 0, 0.45)" }}>加载图表...</div>
+    <div style={{ marginTop: 8, color: "var(--theme-text-secondary)" }}>加载图表...</div>
   </div>
 );
 

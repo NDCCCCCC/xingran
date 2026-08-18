@@ -13,6 +13,7 @@ import ReactECharts from "@/components/charts/EChartsWrapper";
 import type { EChartsOption } from "echarts";
 import { Card, Empty, Spin, Tag } from "antd";
 import type { HeatmapCell, HeatmapResult } from "@/lib/api/macHeatmapApi";
+import { brandHeatRamp, brandHeatZero } from "@/design-system/tokens/echartsTheme";
 
 interface MACHeatmapChartProps {
   data: HeatmapResult;
@@ -20,14 +21,15 @@ interface MACHeatmapChartProps {
   isMobile?: boolean;
 }
 
-// change_count → 颜色 (D-18 锁定色阶)
+// change_count → 颜色 (Phase 66 · COMP-04 品牌热力梯度)
+// 1:1 映射原 4 档阈值, 改用 brandHeatRamp (低 → 高: 绿灰 → 绿 → 铜金)
 function getHeatColor(value: number, max: number): string {
-  if (max <= 0) return "#bfbfbf";
+  if (max <= 0) return brandHeatZero;
   const ratio = value / max;
-  if (ratio < 0.25) return "#50a3ba";
-  if (ratio < 0.5) return "#fad252";
-  if (ratio < 0.75) return "#eac736";
-  return "#d94e5d";
+  if (ratio < 0.25) return brandHeatRamp[1];
+  if (ratio < 0.5) return brandHeatRamp[2];
+  if (ratio < 0.75) return brandHeatRamp[3];
+  return brandHeatRamp[4];
 }
 
 const MACHeatmapChart: React.FC<MACHeatmapChartProps> = ({
@@ -83,7 +85,7 @@ const MACHeatmapChart: React.FC<MACHeatmapChartProps> = ({
         orient: "horizontal",
         left: "center",
         bottom: 10,
-        inRange: { color: ["#50a3ba", "#eac736", "#d94e5d"] },
+        inRange: { color: [brandHeatRamp[1], brandHeatRamp[3], brandHeatRamp[4]] },
       },
       series: [
         {

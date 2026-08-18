@@ -10,6 +10,13 @@ import type { EChartsOption } from "echarts";
 import type { ChartDisplayConfig, WidgetConfig } from "@/types/dashboard";
 import { BaseWidget } from "../base/BaseWidget";
 import { useWidgetData } from "@/hooks/useWidgetData";
+import {
+  brandSeriesColors,
+  brandAxisLine,
+  brandSplitLine,
+  brandTextStyle,
+  brandAreaFade,
+} from "@/design-system/tokens/echartsTheme";
 
 interface ChartWidgetProps {
   widget: WidgetConfig;
@@ -75,12 +82,12 @@ function getLineOption(data: Record<string, unknown>, display: ChartDisplayConfi
     xAxis: {
       type: "category",
       data: xData,
-      axisLine: { lineStyle: { color: "var(--theme-border-primary, #d9d9d9)" } },
+      axisLine: { lineStyle: { color: brandAxisLine } },
     },
     yAxis: {
       type: "value",
       axisLine: { show: false },
-      splitLine: { lineStyle: { color: "var(--theme-border-secondary, #f0f0f0)" } },
+      splitLine: { lineStyle: { color: brandSplitLine } },
     },
     series: [
       {
@@ -88,7 +95,7 @@ function getLineOption(data: Record<string, unknown>, display: ChartDisplayConfi
         type: "line",
         smooth: display.smooth ?? false,
         lineStyle: { width: 2 },
-        itemStyle: { color: display.colors?.[0] ?? "var(--theme-info, #1890ff)" },
+        itemStyle: { color: display.colors?.[0] ?? brandSeriesColors[0] },
       },
     ],
     tooltip: {
@@ -107,19 +114,19 @@ function getBarOption(data: Record<string, unknown>, display: ChartDisplayConfig
     xAxis: {
       type: "category",
       data: xData,
-      axisLine: { lineStyle: { color: "var(--theme-border-primary, #d9d9d9)" } },
+      axisLine: { lineStyle: { color: brandAxisLine } },
     },
     yAxis: {
       type: "value",
       axisLine: { show: false },
-      splitLine: { lineStyle: { color: "var(--theme-border-secondary, #f0f0f0)" } },
+      splitLine: { lineStyle: { color: brandSplitLine } },
     },
     series: [
       {
         data: yData,
         type: "bar",
         itemStyle: {
-          color: display.colors?.[0] ?? "var(--theme-info, #1890ff)",
+          color: display.colors?.[0] ?? brandSeriesColors[0],
           borderRadius: [4, 4, 0, 0],
         },
       },
@@ -163,7 +170,7 @@ function getPieOption(data: Record<string, unknown>, _display: ChartDisplayConfi
         radius: ["40%", "70%"],
         itemStyle: {
           borderRadius: 4,
-          borderColor: "var(--theme-neutral-white, #fff)",
+          borderColor: "#fff",
           borderWidth: 2,
         },
       },
@@ -185,12 +192,12 @@ function getAreaOption(data: Record<string, unknown>, display: ChartDisplayConfi
     xAxis: {
       type: "category",
       data: xData,
-      axisLine: { lineStyle: { color: "var(--theme-border-primary, #d9d9d9)" } },
+      axisLine: { lineStyle: { color: brandAxisLine } },
     },
     yAxis: {
       type: "value",
       axisLine: { show: false },
-      splitLine: { lineStyle: { color: "var(--theme-border-secondary, #f0f0f0)" } },
+      splitLine: { lineStyle: { color: brandSplitLine } },
     },
     series: [
       {
@@ -205,8 +212,8 @@ function getAreaOption(data: Record<string, unknown>, display: ChartDisplayConfi
             x2: 0,
             y2: 1,
             colorStops: [
-              { offset: 0, color: display.colors?.[0] ?? "var(--theme-info, #1890ff)" },
-              { offset: 1, color: "rgba(24, 144, 255, 0.1)" },
+              { offset: 0, color: display.colors?.[0] ?? brandSeriesColors[0] },
+              { offset: 1, color: brandAreaFade },
             ],
           },
         },
@@ -226,7 +233,7 @@ function getEmptyOption(): EChartsOption {
       text: "暂无数据",
       left: "center",
       top: "center",
-      textStyle: { color: "var(--theme-text-tertiary, #bfbfbf)" },
+      textStyle: { color: brandTextStyle },
     },
   };
 }
