@@ -153,33 +153,36 @@ jobs:
             exit 1
           fi
 
-      - name: Upload binary and unit file
+      - name: Upload systemd unit
+        # 1.3KB 秒传,沿用 scp 避免影响 upload-binary.sh 的 ssh 状态机
         run: |
-          chmod +x out/xingran-backend
           PORT="${{ vars.SSH_PORT || '22' }}"
-          # Common cause of hang (deploy runs 32110660342, 32112268319, 32113627075):
-          # scp sat at 100% for 15 minutes without closing the SSH channel —
-          # server-side StateMachine stalls on the last ack.
-          # Switch to rsync over ssh (chunked streaming protocol, no scp acks).
-          # Available on ubuntu-latest runners + 腾讯云 ubuntu servers (verified).
-          SSH_KEY_OPTS="-i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -p ${PORT}"
-          rsync -av --progress \
-                -e "ssh ${SSH_KEY_OPTS}" \
-                deploy/xingran.service \
-                ubuntu@"${{ secrets.SSH_HOST }}":/opt/xingran/deploy/xingran.service.new
-          rsync -av --progress --inplace \
-                -e "ssh ${SSH_KEY_OPTS}" \
-                out/xingran-backend \
-                ubuntu@"${{ secrets.SSH_HOST }}":/opt/xingran/xingran-backend.new
+          scp -P "$PORT" -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes \
+              deploy/xingran.service \
+              ubuntu@"${{ secrets.SSH_HOST }}":/opt/xingran/deploy/xingran.service.new
 
-      - name: Activate (backup → replace → restart → health → rollback)
+      - name: Upload binary via chunked base64
+        # 拆 75MB 为 158x500KB 短流(base64 文本),通过 SSH ControlMaster
+        # 复用传到服务器。短流在该链路上已验证 ~1s/片,绕过 75MB 长流
+        # 链路层卡死问题(deploy runs 32107499009, 32112268319, 32113627075,
+        # 32115683166 全部因 scp/rsync 75MB 长流卡死 15min)。server 端
+        # decode-and-activate.sh 拼回 + sha256 校验 + exec 调
+        # deploy-remote.sh 走原 activate 流程(零改动)。
+        env:
+          SSH_PORT: ${{ vars.SSH_PORT || '22' }}
+        run: bash scripts/deploy/upload-binary.sh "${{ secrets.SSH_HOST }}" ubuntu "${{ secrets.SSH_PRIVATE_KEY }}" "${{ secrets.SSH_KNOWN_HOSTS }}" "${{ needs.build.outputs.version }}"
+
+      - name: Activate (decode → backup → replace → restart → health → rollback)
+        # decode-and-activate.sh server 端: base64 -d 拼回 + sha256 校验 + chmod
+        # 然后 exec 调原本就位的 deploy-remote.sh (backup/replace/restart/health/rollback)。
+        # 替换 trigger 脚本而非改 deploy-remote.sh,保留 84 行原子替换 + 回滚逻辑零改动。
         run: |
           PORT="${{ vars.SSH_PORT || '22' }}"
           ssh -p "$PORT" -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes \
               -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
             ubuntu@"${{ secrets.SSH_HOST }}" \
             'bash -s' -- "${{ needs.build.outputs.version }}" \
-            < scripts/deploy/deploy-remote.sh
+            < scripts/deploy/decode-and-activate.sh
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
