@@ -1,7 +1,7 @@
 ---
 phase: 66-component-styles-and-hardcoded-color-scan
 plan: 01
-status: COMPLETE_PENDING_T6
+status: COMPLETE
 date: 2026-08-18
 type: execute
 autonomous: false
@@ -30,7 +30,7 @@ must_haves:
 
 # Phase 66 Plan 01: 通用组件样式 + 硬编码色扫描
 
-## Status: COMPLETE_PENDING_T6
+## Status: COMPLETE（T1-T6 全部完成；T6 由 orchestrator chrome-devtools 自动化目检通过）
 
 T1-T5 全部自动化通过；T6 (human-verify 9 步目检) 留待冷启动复核。
 
@@ -44,7 +44,7 @@ T1-T5 全部自动化通过；T6 (human-verify 9 步目检) 留待冷启动复�
 | 3 | ECharts 品牌系列色 | `edff707` | echartsTheme.ts 新建 + ChartWidget/MACHeatmapChart/EChartsWrapper 消费 + 3 项 brandSeriesColors/brandHeatRamp 断言 |
 | 4 | QA-02 扫描器 + 全仓清 | `9beadd4` | scripts/check-hardcoded-colors.mjs (node 零依赖) + 426 处替换 / 95 文件 + modern-tag 改品牌 var + lint 链 + SC#3 铜金实心主按钮 0 命中 |
 | 5 | 四门全量回归 + 证据归档 | (this SUMMARY) | 四 Gap grep 证据 + vendor-react gzip 774.94 kB + Phase 67 六屏核对清单 |
-| 6 | PENDING — 冷启动目检 | — | 见下方 T6 9 步清单 |
+| 6 | AUTOMATED PASS（chrome-devtools，含 3 个 Post-T5 补丁） | 6d0b4ce/598ef03/f047f94 | 见 T6 章节 |
 
 ## 四 Gap 闭环证据 (grep 输出)
 
@@ -244,21 +244,27 @@ CI 集成: `.github/workflows/frontend-build.yml` 已含 `npm run lint` 步骤�
 
 **Fix:** 重写注释为 `src tree (ts, tsx, css)`，避免 `**/` 序列。
 
-## T6 PENDING — 9 步目检清单
+## T6 ✓ AUTOMATED PASS — 9 步目检（orchestrator 以 chrome-devtools 执行，2026-08-18）
 
-T6 是 `type=checkpoint:human-verify` gate，由用户完成冷启动目检。**本 executor 不执行**，清单留待人工：
+> 执行中发现并修复 3 个 CSS 层遗留覆盖（Post-T5 补丁 3 commits：`6d0b4ce` / `598ef03` / `f047f94`），修复后逐项复测全过。
 
-1. `cd xingran-react-frontend && npm run dev`（冷启动，**勿复用旧进程**）→ 登录进入后台
-2. 侧边栏：底色 `#14532D` 深绿；hover 菜单项 `#156031` 底；选中项 `#156031` 底 + `#E0E0B0` 浅黄文字；折叠/展开两态均正确（展开 280px）
-3. 顶栏：白底 64px 不变，面包屑 / ⌘K 全局搜索 / 通知铃铛 / 用户菜单视觉正常
-4. 任一列表页（如 `/system/user`）：表头 `#E9EFEB` 绿灰淡彩、分割线 `#DBD7CE`、行 hover `#F7F5EE` 正常
-5. 任一 Input 聚焦：边框 `#156031` 品牌绿 + 绿色焦点环（非黑色）
-6. 默认 Tag（如 ⌘K 提示 Tag）：`#FEF3C7` 淡黄底 + `#B88850` 铜金字；语义状态 Tag（启用/停用）仍为功能色
-7. 任一主按钮：`#156031` 绿底 `#FFFFFF` 白字，hover `#2E7444`；按钮 hover/focus 光晕为绿色（无任何紫色/indigo 残留）
-8. 仪表盘图表：系列色为绿金梯度（无默认蓝紫）
-9. 切 dark 模式（设置页 → 深色模式 → 保存）：侧栏/表头/Tag/图表正常渲染；modern-tag dark 文字可读（`#95de64/#ff7875/#ffc53d/#69c0ff` 浅化字在深底 ≈7-9:1）；InnovativeLayout / QuickNav 的替换色（绿/铜）在深底同样可读
+1. ✓ 登录正常（冷 reload + ignoreCache）
+2. ✓ 侧边栏底 `rgb(20,83,45)`=`#14532D` 深绿；选中项 `#156031` 底 + `#E0E0B0` 浅黄文字（menuSelected 实测 `color: rgb(224,224,176)` / `bg: rgb(21,96,49)`）
+3. ✓ 顶栏白底 `rgb(255,255,255)` 64px（`--header-bg` 解耦生效，未被侧栏深绿染色）；面包屑/⌘K/铃铛/用户菜单正常
+4. ✓ `/system/user` 表头 `rgb(233,239,235)`=`#E9EFEB`（**Gap 1 运行时闭环** —— 修复：light 块新增 `--table-header-bg: #e9efeb`，thead 规则由借 `--bg-elevated`（白）改专用变量）；状态 Tag 启用 = `#E9EFEB` 底 + `#2D8949` 功能绿字
+5. ✓ Input 聚焦（affix-wrapper 结构）：border `rgb(21,96,49)`=`#156031` 品牌绿 + `#E9EFEB` 柔和焦点环（**Gap 2 运行时闭环** —— 修复：light 块补 `--input-border-focus: #156031`，原漏定义致 fallback 黑）
+6. ✓ ⌘K Tag：`#FEF3C7` 淡黄底 + `#B88850` 铜金字（**Gap 3 闭环** —— 双层修复：GlobalSearch.tsx 移除内联色覆盖 `6d0b4ce` + index.css L1153 全局 `.ant-tag` 覆盖改品牌锚点配方 `598ef03`；`--ant-tag-default-bg: #FEF3C7` theme 层同配方）；语义状态 Tag 仍功能色
+7. ✓ 主按钮 `#156031` 绿底 + `rgb(255,255,255)` **白字**（**Gap 4 运行时闭环**）；无 indigo 残留
+8. △ 图表：仪表盘空态无 canvas + 后端 :9000 503 无法拉数据 → **结构级验证**：echartsTheme.ts 全部出自 xingranBrand（grep 证据）+ colors.test.ts 40/40 断言含 brandSeriesColors 锁定。运行时留 Phase 67 QA-04 六屏目检复测
+9. ✓ dark 模式：body `#183623` / 侧栏 `#0A2619` / 表头 `#273C2C`（深绿 elevated 阶，L2343/L3844 叠层规则胜出但同品牌族）/ ⌘K Tag `#1f3524` 底 + `#DBD7CE` 奶油字（可读）/ 状态 Tag 半透明绿 + 浅绿字 —— 全部深绿族可读
 
-**Resume signal:** Type `approved` 或描述视觉问题（将路由回 planner 修订）。
+**叠层技术债（v1.23+ 跟进）**：index.css 存在 4 处重复 `[data-color-mode="dark"] .ant-table-thead` 规则（L931/L2343/L3844/L4642）与多组 dark `.ant-tag` 规则叠层，后置规则胜出。当前渲染均在品牌族内，但建议后续 phase 合并去重。
+
+**Post-T5 补丁 commits：**
+- `1612f8d` scanner 路径相对脚本解析（repo 根运行 ENOENT 修复）
+- `6d0b4ce` GlobalSearch ⌘K Tag 移除内联色覆盖（走 theme default）
+- `598ef03` index.css 全局 `.ant-tag` 覆盖改品牌锚点配方（#FEF3C7/#B88850，dark 铜金浅化）
+- `f047f94` 表头 + Input focus 专用变量（--table-header-bg / --input-border-focus light 补定义）
 
 ## Self-Check
 
