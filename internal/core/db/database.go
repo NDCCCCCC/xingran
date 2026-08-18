@@ -239,6 +239,12 @@ func (d *Database) sanitizeSQLiteModelDefaults() error {
 	// (DetectedAt default:now() / AppliedActions type:text[]),必须一并净化,
 	// 否则 sqlite 建表报 "near \"(\": syntax error" / type-name 方括号语法错误。
 	modelsToSanitize = append(modelsToSanitize, &models.SysDataReconciliation{})
+	// log-errors-fix-20260818: sys_ad_service_accounts 缺表同族(同 rpa-tasks-table-missing
+	// / column-config-table-recon-stats 模式)。模型 internal/models/ad_service_account.go
+	// 自 Phase 36 起存在,ID 字段 tag 含 default:gen_random_uuid()(PG-only 函数式默认,
+	// sqlite 不接受),必须显式加入净化列表,否则 sqlite 路径上 sys_ad_service_accounts
+	// 建表报 "near \"(\": syntax error"。
+	modelsToSanitize = append(modelsToSanitize, &models.ADServiceAccount{})
 	for _, model := range modelsToSanitize {
 		stmt := &gorm.Statement{DB: d.DB}
 		if err := stmt.Parse(model); err != nil {
@@ -637,6 +643,17 @@ func (d *Database) AutoMigrate() error {
 	// 外键约束已通过 SQL 脚本手动创建
 	migrateList := MigrateModelList()
 	if d.Type == "sqlite" {
+		// log-errors-fix-20260818 AutoMigrate-view-dep: GORM ALTER TABLE 在 sqlite 下走
+		// __temp → RENAME 路径,而 reconciliation_normalized 视图持 schema-level 引用
+		// sys_data_reconciliation,RENAME 会触发 "SQL logic error: error in view
+		// reconciliation_normalized: no such table: main.sys_data_reconciliation"
+		// (实测 2026-08-18 10:32 启动期,Phase 48 加 recon_category 列触发)。
+		// 必须先 DROP 三视图让 ALTER 路径无依赖完成,本函数下方
+		// ensureSQLiteReconciliationViews 会在 AutoMigrate 后重建它们。
+		// PG 不受影响(走 advisory-lock + migration_175/176 块流)。
+		if err := d.dropSQLiteReconciliationViews(); err != nil {
+			return err
+		}
 		// sys_user_preference 历史由归档 SQL(004/005/044)创建,PG 存量库已存在;
 		// 仅 sqlite 分支注册进 AutoMigrate(全新文件库必须建表,否则登录后首屏
 		// GET /system/settings/preferences 500)。PG 不注册的原因:GORM 对存量表
@@ -744,6 +761,20 @@ func (d *Database) AutoMigrate() error {
 		// PG-only DDL 片段(type:uuid/bool/int/size:100 均为合法 type-name),无需经过
 		// sanitizeSQLiteModelDefaults 净化。
 		migrateList = append(migrateList, &models.UserColumnConfig{})
+		// log-errors-fix-20260818: sys_ad_service_accounts 缺表同族(同
+		// rpa-tasks-table-missing / kb-tag-table-stats-400 /
+		// column-config-table-recon-stats 模式)。Phase 36 引入的多账号池表
+		// internal/models/ad_service_account.go 历史由归档 SQL migration_162
+		// 创建,PG 存量库已存在;sqlite 全新文件库从未被任何 AutoMigrate 分支注册,
+		// 导致 ADAccountPool.RecoverExpiredBreakers 每 5 分钟 cron 触发
+		// "no such table: sys_ad_service_accounts"(实测 585+ 次持续失败)。
+		// 仅 sqlite 分支注册:PG 不注册的原因同 UserPreference(零漂移,GORM 对存量表
+		// 按 model tag 发起漂移 ALTER 会破坏生产语义);PG 新部署由 scripts/dbprovision 建表。
+		// 模型 tag 已核查:无数组类型 text[] 等 PG-only DDL 片段(type:uuid/size:255/500/64
+		// 均为合法 type-name),但 ID 字段 default:gen_random_uuid() 是 PG-only 函数式默认,
+		// 已在上方 sanitizeSQLiteModelDefaults 显式追加本模型净化,SQLite 下默认剥离由应用层
+		// uuid.New() 填充(BeforeCreate 钩子),PG 下行为等价。
+		migrateList = append(migrateList, &models.ADServiceAccount{})
 	}
 	err := d.DB.Migrator().AutoMigrate(migrateList...)
 	if err != nil {

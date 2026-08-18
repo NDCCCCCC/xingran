@@ -100,6 +100,34 @@ func sqliteLowerStripSQL(col string) string {
 	return fmt.Sprintf("LOWER(REPLACE(COALESCE(%s, ''), ' ', ''))", col)
 }
 
+// dropSQLiteReconciliationViews 仅 DROP 三视图(不重建)。用于 AutoMigrate 之前:
+// GORM ALTER TABLE(sys_data_reconciliation 加 recon_category 列)在 sqlite 下走
+// __temp → RENAME 路径,而 RENAME 会因 reconciliation_normalized 视图持有
+// schema-level 引用而失败:
+//   "SQL logic error: error in view reconciliation_normalized:
+//    no such table: main.sys_data_reconciliation"
+// 必须先 DROP 视图让 ALTER 路径无依赖完成,AutoMigrate 之后再调
+// ensureSQLiteReconciliationViews 重建。
+//
+// 仅 sqlite 分支调用;PG 路径零改动(走 PG 自己的 advisory-lock + MV 重建流)。
+func (d *Database) dropSQLiteReconciliationViews() error {
+	if d.Type != "sqlite" {
+		return nil
+	}
+	drops := []string{
+		"DROP VIEW IF EXISTS reconciliation_normalized",
+		"DROP VIEW IF EXISTS reconciliation_physical_chain",
+		"DROP VIEW IF EXISTS reconciliation_user_lookup",
+	}
+	for _, stmt := range drops {
+		if err := d.DB.Exec(stmt).Error; err != nil {
+			return fmt.Errorf("sqlite 视图清理失败 (%s): %w", stmt, err)
+		}
+	}
+	applogger.Infof("[sqlite] reconciliation 三视图已 DROP(为 AutoMigrate 腾出 ALTER 路径)")
+	return nil
+}
+
 // ensureSQLiteReconciliationViews 在 sqlite 分支补建 reconciliation 三视图。
 // 依赖表由 AutoMigrate 先行创建(本函数在 AutoMigrate 成功后的 else 块调用)。
 func (d *Database) ensureSQLiteReconciliationViews() error {

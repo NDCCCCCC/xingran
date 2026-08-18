@@ -203,6 +203,12 @@ func TestNewDatabaseSQLite(t *testing.T) {
 		// 第四次缺漏(模型已存在但从未注册进 AutoMigrate 任何分支),不注册则
 		// /system/column-config/asset.list 报 no such table: sys_user_column_config:
 		"sys_user_column_config",
+		// 260818 log-errors-fix-20260818:sys_ad_service_accounts 缺表同族第五次缺漏
+		// (Phase 36 多账号池模型 internal/models/ad_service_account.go,ID 字段含
+		// default:gen_random_uuid() PG-only 函数式默认需 sanitize 净化),不注册则
+		// ADAccountPool.RecoverExpiredBreakers 每 5 分钟 cron 报 no such table
+		// (实测 585+ 次持续失败至 2026-08-18 10:20):
+		"sys_ad_service_accounts",
 	} {
 		if !d.DB.Migrator().HasTable(table) {
 			t.Errorf("HasTable(%q) = false after AutoMigrate on sqlite, want true", table)
@@ -234,6 +240,32 @@ func TestNewDatabaseSQLite(t *testing.T) {
 	var normalizedCount int64
 	if err := d.DB.Raw("SELECT COUNT(*) FROM reconciliation_normalized").Scan(&normalizedCount).Error; err != nil {
 		t.Errorf("SELECT COUNT(*) FROM reconciliation_normalized error = %v, want nil", err)
+	}
+
+	// log-errors-fix-20260818 AutoMigrate-view-dep: 守护视图依赖不破坏 ALTER。
+	// 在已就位视图上再跑一次 AutoMigrate,GORM 因 model tag 漂移会触发 ALTER TABLE
+	// (走 sqlite __temp + RENAME 路径)。Phase 48 加 recon_category 列就是这类触发器。
+	// 修复前:GORM RENAME sys_data_reconciliation__temp → sys_data_reconciliation 时
+	// 因 reconciliation_normalized 视图持有 schema-level 引用而 FATA。
+	// 修复后:AutoMigrate 之前 dropSQLiteReconciliationViews 先 DROP 三视图,ALTER
+	// 路径无依赖完成,再 ensureSQLiteReconciliationViews 重建。
+	if err := d.AutoMigrate(); err != nil {
+		t.Fatalf("second AutoMigrate() on sqlite error = %v, want nil (view dep must be dropped before ALTER)", err)
+	}
+	for _, view := range []string{
+		"reconciliation_user_lookup",
+		"reconciliation_physical_chain",
+		"reconciliation_normalized",
+	} {
+		var cnt int64
+		if err := d.DB.Raw(
+			"SELECT COUNT(*) FROM sqlite_master WHERE type = 'view' AND name = ?", view,
+		).Scan(&cnt).Error; err != nil {
+			t.Fatalf("query sqlite_master for view %q after 2nd AutoMigrate: %v", view, err)
+		}
+		if cnt != 1 {
+			t.Errorf("sqlite_master view %q count = %d after 2nd AutoMigrate, want 1", view, cnt)
+		}
 	}
 }
 
