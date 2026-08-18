@@ -38,9 +38,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       {/*
-        AntdThemeBridge 读取 settingsStore 中的 customColors / mode / density
-        并把 AntD ThemeConfig 喂给 ConfigProvider。这是解决"AntD 组件硬编码蓝色"
-        （如工位管理页面表格/卡片/平面图 Radio.Group）跟随用户主色变化的关键。
+        AntdThemeBridge 读取 settingsStore 中的 mode / density，
+        并把 xingranBrand 品牌令牌喂给 AntD ThemeConfig。
+        这是解决"AntD 组件硬编码蓝色"（如工位管理页面表格/卡片/平面图
+        Radio.Group）的关键；v1.22 Phase 65 起主色固定为品牌绿 #156031。
         locale 通过 AntdThemeBridge 内部直接传给 ConfigProvider。
       */}
       <AntdThemeBridge>
