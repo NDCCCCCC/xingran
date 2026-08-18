@@ -295,16 +295,29 @@ func (s *reconciliationServiceImpl) Refresh(ctx context.Context) (int, int, int,
 
 // probeMaterializedView 检查 reconciliation_normalized 物化视图是否存在。
 //
-// 仅 PostgreSQL 需要探测(SQLite 测试用 view 模拟,MySQL 由 migration 168 直接跳过);
-// 使用 PG `to_regclass('schema.name')` 内置函数 — 返回 NULL 表示不存在,返回 oid 表示存在。
-// 安全:SELECT to_regclass 不写表,且非破坏性。
+// 仅 PostgreSQL 需要 PG `to_regclass('schema.name')` 内置函数 — 返回 NULL 表示
+// 不存在,返回 oid 表示存在。安全:SELECT to_regclass 不写表,且非破坏性。
+//
+// sqlite(glebarez 驱动 Dialector 名 "sqlite"):诚实探测 sqlite_master。
+// reconciliation_normalized 是 PG MATERIALIZED VIEW(归档迁移 168/176 创建,
+// sqlite 分支不执行,见 database.go sqlite 分支注释)— 此前对非 postgres 无条件
+// return true 基于"单测 setupTestDB 建 view"的假设,运行期文件库无视图时会误走
+// MV 路径,JOIN 报 no such table(reconciliation-sqlite-cast-400 第二层根因)。
+// 视图存在(单测形态 / sqlite bootstrap 补建)→ true;缺失 → false,ListExceptions 走设计内
+// fallback 降级路径(Warnf + 无 rn.* 列)。
 func (s *reconciliationServiceImpl) probeMaterializedView() bool {
 	if s.db == nil {
 		return false
 	}
 	if s.db.Dialector.Name() != "postgres" {
-		// SQLite 测试用 view 模拟,unit test 路径下 MV 等价物总存在(setupTestDB 建 view)
-		return true
+		var cnt int64
+		if err := s.db.Raw(
+			"SELECT COUNT(*) FROM sqlite_master WHERE type IN ('table','view') AND name = 'reconciliation_normalized'",
+		).Scan(&cnt).Error; err != nil {
+			applogger.Warnf("[reconciliation] MV probe(sqlite) SQL error: %v", err)
+			return false
+		}
+		return cnt > 0
 	}
 	var exists sql.NullString
 	if err := s.db.Raw("SELECT to_regclass('public.reconciliation_normalized')::text").Scan(&exists).Error; err != nil {
@@ -406,6 +419,71 @@ const exceptionListJoinClauseFallback = `
 LEFT JOIN ops_asset a ON a.id = sys_data_reconciliation.asset_id AND a.deleted_at IS NULL
 LEFT JOIN sys_user ru ON ru.id = a.user_id::uuid AND ru.deleted_at IS NULL`
 
+// ============================================================================
+// 方言感知片段方法(reconciliation-sqlite-cast-400,2026-08-18)
+//
+// 上方 const 是 PG 规范版,保留字面零改动(PG 语义/索引使用不受影响);
+// sqlite 不识别 `::` cast 词法(SQL logic error: unrecognized token: ":"),
+// 由以下方法按 Dialector 返回 sqlite 安全版本。模式与同模块
+// fix_suggestion_service.go userJoinOn() / 本文件 silenceExcludeFilter() 一致。
+// ============================================================================
+
+// exceptionListJoinSelectDialect 方言感知的 ListExceptions SELECT 子句(MV 路径)。
+//
+// sqlite 差异:COALESCE(CAST(a.machine_ip AS TEXT), '') 替代 machine_ip::text
+// (sqlite 端该列即 TEXT,CAST 为双方言中立写法);rn.* 列无 cast 不受影响。
+func (s *reconciliationServiceImpl) exceptionListJoinSelectDialect() string {
+	if s.db != nil && s.db.Dialector.Name() == "postgres" {
+		return exceptionListJoinSelect
+	}
+	return `sys_data_reconciliation.*,
+		a.devicesn AS asset_code,
+		COALESCE(CAST(a.machine_ip AS TEXT), '') AS asset_ip,
+		rn.physical_username,
+		ru.username AS responsible_username,
+		rn.ad_username`
+}
+
+// exceptionListResponsibleUserJoinDialect 方言感知的 sys_user LEFT JOIN 片段。
+//
+// postgres: a.user_id(varchar) join sys_user.id(uuid) 必须 ::uuid 显式转换
+// (PG 强类型不会自动 cast,SQLSTATE 42883);cast 在非索引侧,不影响 sys_user.id 索引。
+// sqlite: 两列均 TEXT,直接等值比较。
+func (s *reconciliationServiceImpl) exceptionListResponsibleUserJoinDialect() string {
+	if s.db != nil && s.db.Dialector.Name() == "postgres" {
+		return "LEFT JOIN sys_user ru ON ru.id = a.user_id::uuid AND ru.deleted_at IS NULL"
+	}
+	return "LEFT JOIN sys_user ru ON ru.id = a.user_id AND ru.deleted_at IS NULL"
+}
+
+// exceptionListJoinSelectFallbackDialect 方言感知的降级 SELECT 子句(MV 缺失路径)。
+//
+// sqlite 差异:CAST(a.machine_ip AS TEXT) 替代 ::text;'' 字面量两库均推断为
+// text,无需 ::text 定型。
+func (s *reconciliationServiceImpl) exceptionListJoinSelectFallbackDialect() string {
+	if s.db != nil && s.db.Dialector.Name() == "postgres" {
+		return exceptionListJoinSelectFallback
+	}
+	return `sys_data_reconciliation.*,
+		a.devicesn AS asset_code,
+		COALESCE(CAST(a.machine_ip AS TEXT), '') AS asset_ip,
+		'' AS physical_username,
+		ru.username AS responsible_username,
+		'' AS ad_username`
+}
+
+// exceptionListJoinClauseFallbackDialect 方言感知的降级 JOIN 子句(MV 缺失路径)。
+//
+// sqlite 差异:ru.id = a.user_id 直接等值(两列均 TEXT),无 ::uuid cast。
+func (s *reconciliationServiceImpl) exceptionListJoinClauseFallbackDialect() string {
+	if s.db != nil && s.db.Dialector.Name() == "postgres" {
+		return exceptionListJoinClauseFallback
+	}
+	return `
+LEFT JOIN ops_asset a ON a.id = sys_data_reconciliation.asset_id AND a.deleted_at IS NULL
+LEFT JOIN sys_user ru ON ru.id = a.user_id AND ru.deleted_at IS NULL`
+}
+
 // ListExceptions 列出对账异常
 //
 // 行为:
@@ -494,9 +572,9 @@ func (s *reconciliationServiceImpl) ListExceptions(ctx context.Context, params *
 		// 这里只追加 MV JOIN + SELECT。注意:不能再次 .Joins("LEFT JOIN ops_asset ..."),
 		// GORM Joins() 链式累加会导致重复 JOIN(不影响结果但污染 SQL)。
 		findQuery = query.
-			Select(exceptionListJoinSelect).
+			Select(s.exceptionListJoinSelectDialect()).
 			Joins("LEFT JOIN reconciliation_normalized rn ON rn.asset_id = a.id").
-			Joins("LEFT JOIN sys_user ru ON ru.id = a.user_id::uuid AND ru.deleted_at IS NULL")
+			Joins(s.exceptionListResponsibleUserJoinDialect())
 	} else {
 		applogger.Warnf("[reconciliation] reconciliation_normalized 物化视图缺失,异常列表查询降级 (无 physical_username / ad_username 字段)。请执行 migration_168 创建 MV 后重启服务")
 		// 全新 session,只含 filter WHERE,不累加前次 Joins()
@@ -523,8 +601,8 @@ func (s *reconciliationServiceImpl) ListExceptions(ctx context.Context, params *
 			filterQuery = filterQuery.Where(s.silenceExcludeFilter())
 		}
 		findQuery = filterQuery.
-			Select(exceptionListJoinSelectFallback).
-			Joins(exceptionListJoinClauseFallback)
+			Select(s.exceptionListJoinSelectFallbackDialect()).
+			Joins(s.exceptionListJoinClauseFallbackDialect())
 	}
 
 	// 排序:白名单过滤;无显式排序则默认 detected_at DESC(操作员最关心"最新告警")
@@ -787,12 +865,21 @@ func (s *reconciliationServiceImpl) computeByWorkstation(ctx context.Context, ws
 	// (R1 已知约束:物理链路 sys_port_mac→sys_info_point→sys_workstation_info_point 未落地,
 	//  R4 用 ops_workstation_device 作工位-资产关联的可靠路径)。
 	// 沿用 workstation_service List 中 primary_device_serial 子查询的 cast 模式 (::text)。
+	// 方言分支(reconciliation-sqlite-cast-400):PG 保留 ::text(零改动);
+	// sqlite 不识别 `::` 词法(unrecognized token ':'),machine_ip/id 均 TEXT,
+	// 用 CAST(x AS TEXT) 中立写法。
+	ipExpr := "a.machine_ip::text AS ip"
+	wsdJoin := "INNER JOIN ops_workstation_device wsd ON wsd.asset_id = a.id::text AND wsd.deleted_at IS NULL"
+	if s.db.Dialector.Name() != "postgres" {
+		ipExpr = "CAST(a.machine_ip AS TEXT) AS ip"
+		wsdJoin = "INNER JOIN ops_workstation_device wsd ON wsd.asset_id = CAST(a.id AS TEXT) AND wsd.deleted_at IS NULL"
+	}
 	var assets []assetRow
 	if err := s.db.WithContext(ctx).
 		Table("ops_asset a").
-		Select("a.id, a.devicesn, a.machine_ip::text AS ip").
-		Joins("INNER JOIN ops_workstation_device wsd ON wsd.asset_id = a.id::text AND wsd.deleted_at IS NULL").
-	Where("wsd.workstation_id = ? AND a.deleted_at IS NULL", wsID).
+		Select("a.id, a.devicesn, " + ipExpr).
+		Joins(wsdJoin).
+		Where("wsd.workstation_id = ? AND a.deleted_at IS NULL", wsID).
 		Scan(&assets).Error; err != nil {
 		return nil, fmt.Errorf("查询工位关联资产失败: %w", err)
 	}
@@ -1019,10 +1106,16 @@ func (s *reconciliationServiceImpl) fetchWorkstationDeviceIPs(ctx context.Contex
 		return nil
 	}
 	var ips []string
+	// 方言分支(reconciliation-sqlite-cast-400):PG 保留 id::text(零改动);
+	// sqlite 用 CAST(x AS TEXT) 中立写法(不识别 `::` 词法)。
+	networkDeviceJoin := "JOIN sys_network_device ON sys_network_device.id::text = ops_info_points.device_id"
+	if s.db.Dialector.Name() != "postgres" {
+		networkDeviceJoin = "JOIN sys_network_device ON CAST(sys_network_device.id AS TEXT) = ops_info_points.device_id"
+	}
 	if err := s.db.WithContext(ctx).
 		Table("ops_info_points").
 		Distinct("sys_network_device.ip_address").
-		Joins("JOIN sys_network_device ON sys_network_device.id::text = ops_info_points.device_id").
+		Joins(networkDeviceJoin).
 		Where("ops_info_points.workstation_id = ? AND ops_info_points.deleted_at IS NULL "+
 			"AND sys_network_device.deleted_at IS NULL "+
 			"AND sys_network_device.ip_address IS NOT NULL AND sys_network_device.ip_address != ''", wsID).
