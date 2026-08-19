@@ -5265,6 +5265,240 @@ body {
   font-weight: 600;
 }
 
+/* ===== Phase 70: Settings 双层纸感骨架与分类页 ===== */
+/* 全部仅消费 var(--theme-*) / var(--sidebar-*) 令牌，零手写 hex（QA-02 lint 门锁）。
+   后续 plan (70-03/04/05/06/07) 仅在 TSX 里写 className，不再改 CSS。 */
+
+/* ---------- Settings 骨架（Sider 透明 + 左导航白卡 + 右内容白卡） ---------- */
+.xr-settings-sider {
+  background: transparent !important;
+  flex-shrink: 0;
+}
+
+.xr-settings-nav {
+  background: var(--theme-bg-surface);
+  border: 1px solid var(--theme-border-primary);
+  border-radius: var(--theme-radius-xl);
+  padding: var(--theme-spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.xr-settings-nav-item {
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--theme-spacing-sm);
+  padding: 8px 12px;
+  border-radius: var(--theme-radius-md);
+  color: var(--theme-text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+  transition:
+    background var(--theme-transition-base),
+    color var(--theme-transition-base);
+}
+.xr-settings-nav-item:hover {
+  background: var(--theme-primary-50);
+}
+.xr-settings-nav-item .xr-settings-nav-icon {
+  font-size: 16px;
+  color: var(--theme-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.xr-settings-nav-item-active,
+.xr-settings-nav-item[aria-current="true"] {
+  background: var(--theme-brand-alpha-10);
+  color: var(--theme-primary);
+  font-weight: 600;
+}
+.xr-settings-nav-item-active .xr-settings-nav-icon,
+.xr-settings-nav-item[aria-current="true"] .xr-settings-nav-icon {
+  color: var(--theme-primary);
+}
+
+.xr-settings-content {
+  background: var(--theme-bg-surface);
+  border: 1px solid var(--theme-border-primary);
+  border-radius: var(--theme-radius-xl);
+  padding: var(--theme-spacing-xl);
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---------- 设置行（用户设置：行 label/desc + 右侧控件） ---------- */
+.xr-settings-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--theme-spacing-lg) 0;
+  gap: var(--theme-spacing-lg);
+}
+.xr-settings-card-row + .xr-settings-card-row {
+  border-top: 1px solid var(--theme-border-primary);
+}
+.xr-settings-card-row-label {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--theme-text-primary);
+  line-height: 1.5;
+}
+.xr-settings-card-row-desc {
+  font-size: 12px;
+  color: var(--theme-text-secondary);
+  margin-top: 2px;
+  line-height: 1.5;
+}
+.xr-settings-card-row-control {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--theme-spacing-sm);
+}
+
+/* ---------- 明暗模式分段卡片（界面设置首屏） ---------- */
+.xr-settings-segmented {
+  display: flex;
+  gap: var(--theme-spacing-md);
+  flex-wrap: wrap;
+}
+.xr-settings-segmented-card {
+  width: 160px;
+  background: var(--theme-bg-surface);
+  border: 1px solid var(--theme-border-primary);
+  border-radius: var(--theme-radius-lg);
+  cursor: pointer;
+  text-align: center;
+  padding-bottom: var(--theme-spacing-sm);
+  transition:
+    border-color var(--theme-transition-base),
+    box-shadow var(--theme-transition-base);
+}
+.xr-settings-segmented-card:hover {
+  border-color: var(--theme-border-divider);
+}
+.xr-settings-segmented-card-active {
+  border: 2px solid var(--theme-primary);
+  box-shadow: 0 0 0 3px var(--theme-brand-alpha-10);
+}
+.xr-settings-segmented-card-active .xr-settings-segmented-card-preview {
+  border-color: var(--theme-primary);
+}
+.xr-settings-segmented-card-preview {
+  height: 90px;
+  border-radius: var(--theme-radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--theme-border-primary);
+  margin: var(--theme-spacing-sm);
+  display: flex;
+}
+.xr-settings-segmented-card-preview .preview-side {
+  width: 28px;
+  flex-shrink: 0;
+}
+.xr-settings-segmented-card-preview .preview-body {
+  flex: 1;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.xr-settings-segmented-card-preview .preview-bar {
+  height: 4px;
+  border-radius: var(--theme-radius-sm);
+}
+.xr-settings-segmented-card-preview .preview-bar.short {
+  width: 60%;
+}
+.xr-settings-segmented-card-label {
+  font-size: 12px;
+  color: var(--theme-text-primary);
+  padding-top: var(--theme-spacing-sm);
+  font-weight: 400;
+}
+.xr-settings-segmented-card-active .xr-settings-segmented-card-label {
+  font-weight: 600;
+  color: var(--theme-primary);
+}
+
+/* 浅色预览：白底 + 深绿侧栏块 + 暖灰文本条 */
+.xr-appearance-preview-light,
+.xr-settings-segmented-card-preview-light {
+  background: var(--theme-bg-surface);
+}
+.xr-appearance-preview-light .preview-side,
+.xr-settings-segmented-card-preview-light .preview-side {
+  background: var(--sidebar-bg);
+}
+.xr-appearance-preview-light .preview-bar,
+.xr-settings-segmented-card-preview-light .preview-bar {
+  background: var(--theme-border-primary);
+}
+
+/* 深色预览：深绿底 + 浅黄文本条（IC-2 注释笔误 —— 取 --sidebar-text-active） */
+.xr-appearance-preview-dark,
+.xr-settings-segmented-card-preview-dark {
+  background: var(--sidebar-bg);
+}
+.xr-appearance-preview-dark .preview-bar,
+.xr-settings-segmented-card-preview-dark .preview-bar {
+  background: var(--sidebar-text-active);
+}
+
+/* ---------- 验证码背景图网格墙 ---------- */
+.xr-captcha-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--theme-spacing-md);
+}
+.xr-captcha-card {
+  background: var(--theme-bg-surface);
+  border: 1px solid var(--theme-border-primary);
+  border-radius: var(--theme-radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.xr-captcha-card-image {
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  object-fit: cover;
+  display: block;
+  background: var(--theme-bg-secondary);
+}
+.xr-captcha-card-foot {
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--theme-spacing-sm);
+  border-top: 1px solid var(--theme-border-primary);
+  font-family: var(--theme-font-mono);
+  font-size: 12.5px;
+  color: var(--theme-text-primary);
+}
+.xr-captcha-card-name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.xr-captcha-card-ops {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 /* ---------- 分页器（demo .pager：透明无边框 page-btn，active 绿底白字） ---------- */
 .ant-pagination .ant-pagination-item {
   border: none !important;
