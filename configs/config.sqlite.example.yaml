@@ -11,6 +11,13 @@
 #   SM4_KEY=$(openssl rand -base64 16)
 #   SM2_私钥对（绝对不能复用仓库默认值）
 #
+#   【启用 SM2 必读】
+#     本模板 use_sm2: true 与生产模板对齐，强制走 SM2 国密签名。
+#     启用前必须先在 /etc/xingran/secrets.env 注入 JWT_SM2_PRIVATE_KEY / JWT_SM2_PUBLIC_KEY
+#     两项密钥（生成方法见 docs/deployment/secret-management.md §2.2）。
+#     若仅作本地 sqlite 首跑调试,可临时把 use_sm2 改回 false 跳过密钥注入,
+#     但 /api/v1/system/auth/public-key 将返回 500（与生产行为一致）。
+#
 # 此文件覆盖 configs/config.prod.example.yaml 中与 sqlite/in-memory 不兼容
 # 的字段（database.type / database.path / cache.type）。其余字段（server、
 # jwt、log、security.request_encryption 等）保持与 config.prod.example.yaml 一致。
@@ -55,8 +62,8 @@ jwt:
   access_key_expire: 7200
   refresh_key_expire: 604800
   issuer: "XingRan-Next"
-  use_sm2: false              # 首跑用 HS256 免 SM2 密钥生成依赖(部署期可改 true)
-  # SM2 密钥留空(use_sm2=false 时不会读取);生产环境务必切 true 并通过
+  use_sm2: true               # SM2 国密签名（与 config.prod.example.yaml 对齐；启用前必读下方迁移指引）
+  # SM2 密钥留空(必须通过 env 注入);生产环境通过
   # JWT_SM2_PRIVATE_KEY / JWT_SM2_PUBLIC_KEY 注入新生成的对
   sm2_private_key: ""
   sm2_public_key: ""
