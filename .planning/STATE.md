@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.22 + v1.23 启动块
 milestone_name: milestone
 status: executing
-stopped_at: "Phase 69 Plan 01 EXECUTED (3 commits: 72608d2/d72a691/da5d0a0); next 69-02 migration_208 dict seed"
-last_updated: "2026-08-19T05:46:15.676Z"
+stopped_at: Phase 70 UI-SPEC approved
+last_updated: "2026-08-19T05:50:45.045Z"
 last_activity: 2026-08-19
 progress:
   total_phases: 6
@@ -187,9 +187,9 @@ Full deferred detail in [milestones/v1.21-ROADMAP.md](milestones/v1.21-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-19T05:46:15.667Z
-Stopped at: Phase 69 Plan 01 EXECUTED（锁值测试 + 守护脚本 + 批 1 替换全绿，3 commits: 72608d2 / d72a691 / da5d0a0）；下一步 69-02（migration_208 字典 seed，依赖本 plan 的 DictStatus 常量）
-Resume file: .planning/phases/69-dict-and-status-governance/69-01-SUMMARY.md
+Last session: 2026-08-19T05:50:45.035Z
+Stopped at: Phase 70 UI-SPEC approved
+Resume file: .planning/phases/70-settings-page-redesign/70-UI-SPEC.md
 
 **Milestone status:** v1.22 IN PLANNING — **ROADMAP drafted 2026-08-18**,4 phases (64-67) / 15 requirements / 100% coverage。Token 层 (Phase 64) 落地位于 index.css 253 变量 + tokens/colors.ts xingranBrand + AntdThemeBridge + tokens/shadows+spacing+typography + QA-01 对比度校验;主题收敛 (Phase 65) 移除 6 套主题 + ThemeSwitcher/ColorSwitcher/themeStore 残留 + 13 消费方清理,保留 light/dark + layout/density;组件样式 (Phase 66) 侧边栏深绿 + 表格/卡片 + 按钮 D-03 纪律 + 表单/标签/ECharts + QA-02 硬编码扫描;终端验证 (Phase 67) 构建/类型/lint/test 全绿 + bundle 体积不增 + 6 屏前后截图对比。
 
