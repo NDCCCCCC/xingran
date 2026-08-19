@@ -520,19 +520,24 @@ func Migrate208UpdateSettingsMenuComponent(db *gorm.DB) error {
 | A4 | Migrate208 内可直接复用现有菜单缓存失效方法（未逐行核对 cache service 的失效 API 名称） | 迁移机制 | 低：实现时按 menu_cache_impl.go 实际方法名调整 |
 | A5 | email/api 统计卡用「主列表 total + 两次 status 筛选轻请求」口径可行（list 的 Status 筛选已确认存在于 service 层，前端 req 结构透传未逐字段核对） | Pitfall 5 | 低：若前端 API 封装未透传 status，加一个可选参数即可（不越契约，service 已支持） |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **用户设置的保存交互（A3）**
+> 三问实质均已由 approved 的 70-UI-SPEC 裁定闭环，逐条内联标注如下（后续施工以 UI-SPEC 对应条目为准）。
+
+1. **用户设置的保存交互（A3）** —— (RESOLVED → UI-SPEC IC-1)
    - What we know: 现页面是 Form + 底部保存按钮；settingsStore 有单字段 updateTheme/updateLayout/updateDataPageSize 即改即存能力
    - What's unclear: 行式化后是否保留「保存」按钮
    - Recommendation: planner 定；倾向即改即存（现代 settings 惯例，与行式形态匹配），重置按钮语义需同步定义
-2. **SettingsShell 归属目录（Claude 裁量项）**
+   - Resolution: 采纳「即改即存」——每行控件 onChange 直接调 settingsStore 单字段更新方法 + message.success("已保存") 轻提示，移除底部「保存/重置」按钮（UI-SPEC IC-1 裁定）
+2. **SettingsShell 归属目录（Claude 裁量项）** —— (RESOLVED → UI-SPEC L-1)
    - What we know: `design-system/components/`（与 LayoutSwitcher 同级）或 `components/layout/` 均有先例
    - Recommendation: `design-system/components/`（跨页共用 + 令牌消费性质更贴合）
-3. **图片网格墙的筛选/分页保留形态**
+   - Resolution: 采纳建议——落位 `xingran-react-frontend/src/design-system/components/SettingsShell.tsx`，与 LayoutSwitcher / DensitySwitcher 同级（UI-SPEC L-1 归属目录裁定）
+3. **图片网格墙的筛选/分页保留形态** —— (RESOLVED → UI-SPEC L-3)
    - What we know: 现有 fileName/形状/难度/状态筛选 + 分页；图片资产量级通常小
    - What's unclear: 网格墙是否保留完整筛选栏（D-08 未细说）
    - Recommendation: 保留筛选（降为工具栏内紧凑形态）+ 保留分页（list API 契约不变）；UI-SPEC 细化
+   - Resolution: 采纳建议——筛选保留但降为工具栏内紧凑形态（文件名/拼图形状/难度/状态），分页保留（usePagination 沿用，list API 契约不变）（UI-SPEC L-3 工具栏卡裁定）
 
 ## Environment Availability
 
