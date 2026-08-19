@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.22 + v1.23 启动块
 milestone_name: milestone
 status: executing
-stopped_at: Phase 70 context gathered
-last_updated: "2026-08-19T05:25:32.335Z"
-last_activity: 2026-08-19 -- Phase 69 execution started
+stopped_at: "Phase 69 Plan 01 EXECUTED (3 commits: 72608d2/d72a691/da5d0a0); next 69-02 migration_208 dict seed"
+last_updated: "2026-08-19T05:46:15.676Z"
+last_activity: 2026-08-19
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 12
-  completed_plans: 4
-  percent: 33
+  completed_plans: 5
+  percent: 42
 ---
 
 # Project State
@@ -39,9 +39,9 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 ## Current Position
 
 Phase: 69 (字典与状态值治理（状态语义单一真相源）) — EXECUTING
-Plan: 1 of 8
-Status: Executing Phase 69
-Last activity: 2026-08-19 -- Phase 69 execution started
+Plan: 2 of 8
+Status: Ready to execute
+Last activity: 2026-08-19
 
 ## Accumulated Context
 
@@ -187,9 +187,9 @@ Full deferred detail in [milestones/v1.21-ROADMAP.md](milestones/v1.21-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-19T05:25:32.323Z
-Stopped at: Phase 70 context gathered
-Resume file: .planning/phases/70-settings-page-redesign/70-CONTEXT.md
+Last session: 2026-08-19T05:46:15.667Z
+Stopped at: Phase 69 Plan 01 EXECUTED（锁值测试 + 守护脚本 + 批 1 替换全绿，3 commits: 72608d2 / d72a691 / da5d0a0）；下一步 69-02（migration_208 字典 seed，依赖本 plan 的 DictStatus 常量）
+Resume file: .planning/phases/69-dict-and-status-governance/69-01-SUMMARY.md
 
 **Milestone status:** v1.22 IN PLANNING — **ROADMAP drafted 2026-08-18**,4 phases (64-67) / 15 requirements / 100% coverage。Token 层 (Phase 64) 落地位于 index.css 253 变量 + tokens/colors.ts xingranBrand + AntdThemeBridge + tokens/shadows+spacing+typography + QA-01 对比度校验;主题收敛 (Phase 65) 移除 6 套主题 + ThemeSwitcher/ColorSwitcher/themeStore 残留 + 13 消费方清理,保留 light/dark + layout/density;组件样式 (Phase 66) 侧边栏深绿 + 表格/卡片 + 按钮 D-03 纪律 + 表单/标签/ECharts + QA-02 硬编码扫描;终端验证 (Phase 67) 构建/类型/lint/test 全绿 + bundle 体积不增 + 6 屏前后截图对比。
 
@@ -198,3 +198,13 @@ Resume file: .planning/phases/70-settings-page-redesign/70-CONTEXT.md
 - 启动 `/gsd:plan-phase 64` 进入 Phase 64(品牌令牌层落地 + 对比度验证)实施规划
 - Phase 63 frontend-toolchain-automation 独立进行,可观察其 CI gate / lint-staged hook 完成时间,Phase 67 验证门集成前确认 CI 可用
 - Phase 64 完成后按 64 → 65 → 66 → 67 顺序依次 plan-phase
+
+## Performance Metrics
+
+| Phase | Plan | Duration | Notes |
+|-------|------|----------|-------|
+| Phase 69 P01 | 46m | 3 tasks | 11 files |
+
+## Decisions
+
+- [Phase 69-01]: internal/models 为状态常量唯一真相源（既有 internal/constants 工具包不放状态语义）；新增 DictStatus/OperLogStatus/LoginLogStatus/JobLogStatus/VDIServerStatus/NoticeStatus 六家族 + status_constants_test.go AST 锁值（31 前缀/74 常量，跨包同名异值即 fail）+ check-status-literals.sh 四模式 ratchet 守护（基线 43 文件/149 命中，geocoding F 簇永久豁免）；批 1 services/system 5 文件 15 处常量化（widget_data_fetcher 的 m.status=0 确认为 sys_menu MenuStatusNormal，簇 A）
