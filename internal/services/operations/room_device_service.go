@@ -2,6 +2,7 @@ package operations
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
 	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
@@ -27,9 +28,9 @@ type RoomDeviceService interface {
 // RoomDeviceStatisticsResult 机房设备统计结果(status: 0=正常 1=故障 2=报废)。
 type RoomDeviceStatisticsResult struct {
 	Total    int64 `json:"total"`
-	Normal   int64 `json:"normal"`   // status = 0
-	Fault    int64 `json:"fault"`    // status = 1
-	Scrapped int64 `json:"scrapped"` // status = 2
+	Normal   int64 `json:"normal"`   // operations.RoomDeviceStatusNormal
+	Fault    int64 `json:"fault"`    // operations.RoomDeviceStatusFault
+	Scrapped int64 `json:"scrapped"` // operations.RoomDeviceStatusScrapped
 }
 
 // Statistics 统计机房设备(按 status 聚合,排除软删除)。
@@ -39,9 +40,9 @@ func (s *roomDeviceService) Statistics(ctx context.Context) (*RoomDeviceStatisti
 		Model(&operations.OpsRoomDevice{}).
 		Select(
 			"COUNT(*) AS total",
-			"COALESCE(SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END), 0) AS normal",
-			"COALESCE(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END), 0) AS fault",
-			"COALESCE(SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END), 0) AS scrapped",
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS normal", int(operations.RoomDeviceStatusNormal)),
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS fault", int(operations.RoomDeviceStatusFault)),
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS scrapped", int(operations.RoomDeviceStatusScrapped)),
 		).
 		Scan(&result).Error
 	if err != nil {

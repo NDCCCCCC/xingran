@@ -2,6 +2,7 @@ package operations
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 
 	"github.com/xingran-next/xingran-go-backend/internal/constants"
@@ -31,9 +32,9 @@ type AssetService interface {
 // status: 0=正常 1=停用; nbf_status: 0=否 1=拟报废(独立维度,nbf 计数与 normal/stopped 不互补)。
 type AssetStatisticsResult struct {
 	Total   int64 `json:"total"`
-	Normal  int64 `json:"normal"`  // status = 0
-	Stopped int64 `json:"stopped"` // status = 1
-	NBF     int64 `json:"nbf"`     // nbf_status = 1
+	Normal  int64 `json:"normal"`  // models.AssetStatusNormal
+	Stopped int64 `json:"stopped"` // models.AssetStatusStopped
+	NBF     int64 `json:"nbf"`     // models.AssetNBFStatusYes
 }
 
 // DeviceTypeCount 设备类型统计
@@ -67,9 +68,9 @@ func (s *assetService) Statistics(ctx context.Context) (*AssetStatisticsResult, 
 		Where("component_type IS NULL").
 		Select(
 			"COUNT(*) AS total",
-			"COALESCE(SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END), 0) AS normal",
-			"COALESCE(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END), 0) AS stopped",
-			"COALESCE(SUM(CASE WHEN nbf_status = 1 THEN 1 ELSE 0 END), 0) AS nbf",
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS normal", models.AssetStatusNormal),
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS stopped", models.AssetStatusStopped),
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN nbf_status = %d THEN 1 ELSE 0 END), 0) AS nbf", models.AssetNBFStatusYes),
 		).
 		Scan(&result).Error
 	if err != nil {
@@ -82,16 +83,16 @@ func (s *assetService) Statistics(ctx context.Context) (*AssetStatisticsResult, 
 // 注意:key 必须与前端列 dataIndex/json tag 一致(驼峰)才能命中白名单;
 // deviceSN 为旧版别名,保留作向后兼容。
 var assetAllowedSortFields = map[string]string{
-	"deviceSN":           "devicesn",
-	"devicesn":           "devicesn",
-	"name":               "name",
-	"type":               "type",
-	"status":             "status",
-	"deptId":             "dept_id",
-	"userId":             "user_id",
-	"deviceTypeName":     "device_type_name",
-	"lastInventoryDate":  "last_inventory_date",
-	"createdAt":          "created_at",
+	"deviceSN":          "devicesn",
+	"devicesn":          "devicesn",
+	"name":              "name",
+	"type":              "type",
+	"status":            "status",
+	"deptId":            "dept_id",
+	"userId":            "user_id",
+	"deviceTypeName":    "device_type_name",
+	"lastInventoryDate": "last_inventory_date",
+	"createdAt":         "created_at",
 }
 
 // Create 创建资产

@@ -72,6 +72,8 @@ var watchedStatusPrefixes = []string{
 	"WorkstationType", "WorkstationStatus", "DeviceStatus",
 	"DutyStatus", "DutyPoolStatus", "BuildingStatus", "FloorStatus",
 	"RoomStatus", "RoomDeviceStatus", "InfoPointStatus", "DashboardStatus",
+	// Phase 69 batch 2 additions (untyped int, int-typed struct fields)
+	"WorkstationDeviceStatus", "AssetStatus", "AssetNBFStatus",
 }
 
 // expectedStatusValues pins the documented (name -> value) mapping of every
@@ -166,6 +168,13 @@ var expectedStatusValues = map[string]int{
 	"InfoPointStatusNormal":    0, // 正常
 	"InfoPointStatusFault":     1, // 故障
 	"InfoPointStatusDisabled":  2, // 停用
+	// workstation_device.go / asset.go（Phase 69 批 2 新增，无类型 int 常量）
+	"WorkstationDeviceStatusNormal":  0, // 正常
+	"WorkstationDeviceStatusStopped": 1, // 停用
+	"AssetStatusNormal":              0, // 正常
+	"AssetStatusStopped":             1, // 停用
+	"AssetNBFStatusNo":               0, // 否
+	"AssetNBFStatusYes":              1, // 拟报废
 }
 
 // TestStatusConstantsStability asserts each watched constant is pinned to its

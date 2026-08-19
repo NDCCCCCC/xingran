@@ -36,12 +36,13 @@ PATTERN='status = [0-9]|Status: *[0-9]|Status [=!]= *[0-9]|"status":[[:space:]]*
 
 # ALLOWED — ratchet baseline captured 2026-08-19 (43 files, 149 hits);
 # batch 1 (services/system: dict/post/role/user/widget_data_fetcher) replaced
-# and removed 2026-08-19 — 38 files remain.
+# and removed 2026-08-19 — 38 files remained.
+# batch 2 (services/operations 10 files + api/v1/operations/excel_handler,
+# 58 hits) replaced and removed 2026-08-19 — 27 files remain (69-03).
 # Delete entries as replacement batches land; counts may only decrease.
 # geocoding_service.go is cluster-F: Baidu API response-code contract, never migrated.
 declare -A ALLOWED=(
   ["internal/api/v1/monitor/oper_log_handler.go"]=1
-  ["internal/api/v1/operations/excel_handler.go"]=1
   ["internal/api/v1/scheduler/job_handler.go"]=1
   ["internal/api/v1/system/notice_handler.go"]=2
   ["internal/services/addomain/dept_sync_service.go"]=1
@@ -61,17 +62,7 @@ declare -A ALLOWED=(
   ["internal/services/notice_service.go"]=4
   ["internal/services/notification_config_service.go"]=1
   ["internal/services/oper_log_service.go"]=1
-  ["internal/services/operations/asset_service.go"]=6
-  ["internal/services/operations/building_service.go"]=4
-  ["internal/services/operations/dedicated_line_service.go"]=6
-  ["internal/services/operations/excel_service.go"]=2
-  ["internal/services/operations/floor_service.go"]=4
   ["internal/services/operations/geocoding_service.go"]=1 # F 簇：百度 API 返回码契约，不迁移
-  ["internal/services/operations/infopoint_service.go"]=6
-  ["internal/services/operations/room_device_service.go"]=6
-  ["internal/services/operations/server_room_service.go"]=4
-  ["internal/services/operations/workstation_device_service.go"]=13
-  ["internal/services/operations/workstation_service.go"]=6
   ["internal/services/rpa/credential_service.go"]=3
   ["internal/services/scheduler/job_log_service.go"]=4
   ["internal/services/scheduler/job_service.go"]=3

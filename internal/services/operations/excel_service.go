@@ -1972,7 +1972,7 @@ func (s *ExcelService) ensureDeptGroupExists(ctx context.Context, db *gorm.DB, c
 		"dept_code":  code,
 		"parent_id":  nil, // 部门组是顶级部门
 		"order_num":  0,
-		"status":     0, // 正常
+		"status":     models.DeptStatusNormal,
 		"ancestors":  "",
 		"created_at": now,
 		"updated_at": now,
@@ -2026,7 +2026,7 @@ func (s *ExcelService) ensureDeptExists(ctx context.Context, db *gorm.DB, code, 
 		"parent_id":  parentID,
 		"ancestors":  ancestors,
 		"order_num":  0,
-		"status":     0, // 正常
+		"status":     models.DeptStatusNormal,
 		"created_at": now,
 		"updated_at": now,
 	}
@@ -2270,8 +2270,8 @@ func (s *ExcelService) batchGetWorkstationNames(ctx context.Context, ids []strin
 		return result
 	}
 	var rows []struct {
-	 ID              string
-	 WorkstationName string
+		ID              string
+		WorkstationName string
 	}
 	if err := s.db.WithContext(ctx).
 		Table("sys_workstation").
@@ -2305,9 +2305,9 @@ func (s *ExcelService) batchGetADEnrichment(ctx context.Context, devices []*mode
 		return result
 	}
 	var rows []struct {
-	 ID              string
-	 OperatingSystem string
-	 LastLogon       *time.Time
+		ID              string
+		OperatingSystem string
+		LastLogon       *time.Time
 	}
 	if err := s.db.WithContext(ctx).
 		Table("sys_ad_computer").
@@ -2349,8 +2349,8 @@ func (s *ExcelService) batchGetAssetEnrichment(ctx context.Context, devices []*m
 		return result
 	}
 	var rows []struct {
-	 ID        string
-	 MachineIP string
+		ID        string
+		MachineIP string
 	}
 	if err := s.db.WithContext(ctx).
 		Table("ops_asset").

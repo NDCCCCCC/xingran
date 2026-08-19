@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
 	opsServices "github.com/xingran-next/xingran-go-backend/internal/services/operations"
 	"github.com/xingran-next/xingran-go-backend/internal/services/system"
@@ -205,7 +206,7 @@ func DownloadDeptMappingTemplate(core *core.Core) gin.HandlerFunc {
 		if err := core.DB.GetDB().WithContext(c.Request.Context()).
 			Table("sys_dept").
 			Select("dept_name, dept_code").
-			Where("deleted_at IS NULL AND status = 0").
+			Where("deleted_at IS NULL AND status = ?", models.DeptStatusNormal).
 			Order("dept_code ASC").
 			Scan(&rows).Error; err != nil {
 			response.Error(c, response.ErrServerError, fmt.Sprintf("查询部门映射失败: %v", err))

@@ -9,6 +9,7 @@ import (
 
 	"github.com/xingran-next/xingran-go-backend/internal/constants"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
@@ -88,62 +89,62 @@ type WorkstationDeviceService interface {
 
 // SetPrimaryAndSaveRequest 设置主设备并保存请求
 type SetPrimaryAndSaveRequest struct {
-	WorkstationID  string  `json:"workstationId"`
-	DeviceSerial   string  `json:"deviceSerial"`
-	DeviceName     string  `json:"deviceName"`
-	DeviceModel    *string `json:"deviceModel,omitempty"`
-	DeviceType     *string `json:"deviceType,omitempty"`
-	MACAddress     *string `json:"macAddress,omitempty"`
-	IPAddress      *string `json:"ipAddress,omitempty"`
+	WorkstationID   string  `json:"workstationId"`
+	DeviceSerial    string  `json:"deviceSerial"`
+	DeviceName      string  `json:"deviceName"`
+	DeviceModel     *string `json:"deviceModel,omitempty"`
+	DeviceType      *string `json:"deviceType,omitempty"`
+	MACAddress      *string `json:"macAddress,omitempty"`
+	IPAddress       *string `json:"ipAddress,omitempty"`
 	ResponsibleUser *string `json:"responsibleUser,omitempty"`
 }
 
 // AddDeviceRequest 手动添加设备请求
 type AddDeviceRequest struct {
-	WorkstationID  string  `json:"workstationId"`
-	DeviceSerial   string  `json:"deviceSerial"`
-	DeviceName     *string `json:"deviceName,omitempty"`
-	DeviceModel    *string `json:"deviceModel,omitempty"`
-	DeviceType     *string `json:"deviceType,omitempty"`
-	MACAddress     *string `json:"macAddress,omitempty"`
-	IPAddress      *string `json:"ipAddress,omitempty"`
+	WorkstationID   string  `json:"workstationId"`
+	DeviceSerial    string  `json:"deviceSerial"`
+	DeviceName      *string `json:"deviceName,omitempty"`
+	DeviceModel     *string `json:"deviceModel,omitempty"`
+	DeviceType      *string `json:"deviceType,omitempty"`
+	MACAddress      *string `json:"macAddress,omitempty"`
+	IPAddress       *string `json:"ipAddress,omitempty"`
 	ResponsibleUser *string `json:"responsibleUser,omitempty"`
-	Description    *string `json:"description,omitempty"`
+	Description     *string `json:"description,omitempty"`
 }
 
 // UpdateDeviceRequest 更新设备请求
 type UpdateDeviceRequest struct {
-	DeviceSerial   *string `json:"deviceSerial,omitempty"`
-	DeviceName     *string `json:"deviceName,omitempty"`
-	DeviceModel    *string `json:"deviceModel,omitempty"`
-	DeviceType     *string `json:"deviceType,omitempty"`
-	MACAddress     *string `json:"macAddress,omitempty"`
-	IPAddress      *string `json:"ipAddress,omitempty"`
+	DeviceSerial    *string `json:"deviceSerial,omitempty"`
+	DeviceName      *string `json:"deviceName,omitempty"`
+	DeviceModel     *string `json:"deviceModel,omitempty"`
+	DeviceType      *string `json:"deviceType,omitempty"`
+	MACAddress      *string `json:"macAddress,omitempty"`
+	IPAddress       *string `json:"ipAddress,omitempty"`
 	ResponsibleUser *string `json:"responsibleUser,omitempty"`
-	Status         *int    `json:"status,omitempty"`
-	Priority       *int    `json:"priority,omitempty"`
-	IsPrimary      *bool   `json:"isPrimary,omitempty"`
-	Description    *string `json:"description,omitempty"`
+	Status          *int    `json:"status,omitempty"`
+	Priority        *int    `json:"priority,omitempty"`
+	IsPrimary       *bool   `json:"isPrimary,omitempty"`
+	Description     *string `json:"description,omitempty"`
 }
 
 // ADDeviceMatch 域控设备匹配结果
 type ADDeviceMatch struct {
-	ADComputerID    string  `json:"adComputerId"`
-	DeviceSerial    string  `json:"deviceSerial"`
-	DeviceName      string  `json:"deviceName"`
-	MACAddress      string  `json:"macAddress"`
-	IPAddress       string  `json:"ipAddress"`
-	OperatingSystem string  `json:"operatingSystem"`
+	ADComputerID    string `json:"adComputerId"`
+	DeviceSerial    string `json:"deviceSerial"`
+	DeviceName      string `json:"deviceName"`
+	MACAddress      string `json:"macAddress"`
+	IPAddress       string `json:"ipAddress"`
+	OperatingSystem string `json:"operatingSystem"`
 }
 
 // AssetDeviceMatch 资产设备匹配结果
 type AssetDeviceMatch struct {
-	AssetID          string  `json:"assetId"`
-	DeviceSN         string  `json:"deviceSerial"`
-	DeviceModel      *string `json:"deviceModel,omitempty"`
-	DeviceType       *string `json:"deviceType,omitempty"`
-	MACAddress       *string `json:"macAddress,omitempty"`
-	ResponsibleUser  *string `json:"responsibleUser,omitempty"`
+	AssetID         string  `json:"assetId"`
+	DeviceSN        string  `json:"deviceSerial"`
+	DeviceModel     *string `json:"deviceModel,omitempty"`
+	DeviceType      *string `json:"deviceType,omitempty"`
+	MACAddress      *string `json:"macAddress,omitempty"`
+	ResponsibleUser *string `json:"responsibleUser,omitempty"`
 }
 
 type workstationDeviceService struct {
@@ -225,16 +226,16 @@ func (s *workstationDeviceService) GetADDevices(ctx context.Context, workstation
 		tempID := fmt.Sprintf("ad-%d", i)
 		adDeviceCopy := adDevice
 		devices = append(devices, &models.WorkstationDevice{
-			BaseModel:        models.BaseModel{ID: tempID},
-			WorkstationID:    workstationID,
-			DeviceSource:     models.DeviceSourceAD,
-			ADComputerID:     &adDeviceCopy.ADComputerID,
-			DeviceSerial:     &adDeviceCopy.DeviceSerial,
-			DeviceName:       &adDeviceCopy.DeviceName,
-			MACAddress:       &adDeviceCopy.MACAddress,
-			Status:           0,
-			IsPrimary:        false,
-			Priority:         0,
+			BaseModel:     models.BaseModel{ID: tempID},
+			WorkstationID: workstationID,
+			DeviceSource:  models.DeviceSourceAD,
+			ADComputerID:  &adDeviceCopy.ADComputerID,
+			DeviceSerial:  &adDeviceCopy.DeviceSerial,
+			DeviceName:    &adDeviceCopy.DeviceName,
+			MACAddress:    &adDeviceCopy.MACAddress,
+			Status:        models.WorkstationDeviceStatusNormal,
+			IsPrimary:     false,
+			Priority:      0,
 		})
 	}
 
@@ -295,18 +296,18 @@ func (s *workstationDeviceService) GetAssetDevices(ctx context.Context, workstat
 		tempID := fmt.Sprintf("asset-%d", i)
 		assetDeviceCopy := assetDevice
 		devices = append(devices, &models.WorkstationDevice{
-			BaseModel:        models.BaseModel{ID: tempID},
-			WorkstationID:    workstationID,
-			DeviceSource:     models.DeviceSourceAsset,
-			AssetID:          &assetDeviceCopy.AssetID,
-			DeviceSerial:     &assetDeviceCopy.DeviceSN,
-			DeviceModel:      assetDeviceCopy.DeviceModel,
-			DeviceType:       assetDeviceCopy.DeviceType,
-			MACAddress:       assetDeviceCopy.MACAddress,
-			ResponsibleUser:  assetDeviceCopy.ResponsibleUser,
-			Status:           0,
-			IsPrimary:        false,
-			Priority:         0,
+			BaseModel:       models.BaseModel{ID: tempID},
+			WorkstationID:   workstationID,
+			DeviceSource:    models.DeviceSourceAsset,
+			AssetID:         &assetDeviceCopy.AssetID,
+			DeviceSerial:    &assetDeviceCopy.DeviceSN,
+			DeviceModel:     assetDeviceCopy.DeviceModel,
+			DeviceType:      assetDeviceCopy.DeviceType,
+			MACAddress:      assetDeviceCopy.MACAddress,
+			ResponsibleUser: assetDeviceCopy.ResponsibleUser,
+			Status:          models.WorkstationDeviceStatusNormal,
+			IsPrimary:       false,
+			Priority:        0,
 		})
 	}
 
@@ -318,8 +319,9 @@ func (s *workstationDeviceService) GetAssetDevices(ctx context.Context, workstat
 // Phase 45 R5: 按 MAC→port→infoPoint→workstation 反推链路,得到该工位物理接入的设备。
 //
 // 链路(同 reconciliation_physical_chain 物化视图):
-//   asset.mac1/mac2 → sys_device_mac_address → sys_device_port_status
-//     → ops_info_points.workstation_id → sys_workstation.id
+//
+//	asset.mac1/mac2 → sys_device_mac_address → sys_device_port_status
+//	  → ops_info_points.workstation_id → sys_workstation.id
 //
 // 注意: 物理链路是客观事实, 与工位是否绑定 user_id 无关。
 // (2026-07-21 工位 3f130 排查:B-3f130-2026-07-21 修正了 user_id 早退耦合)
@@ -380,8 +382,8 @@ func (s *workstationDeviceService) GetPhysicalDevices(ctx context.Context, works
 		HistoryLastSeen *time.Time
 		Confidence      *float64
 		// AD 侧只补字段,不覆盖
-		ADComputerID *string
-		ADDeviceName *string
+		ADComputerID      *string
+		ADDeviceName      *string
 		ADOperatingSystem *string
 	}
 
@@ -410,7 +412,7 @@ WITH workstation_ports AS (
        -- - port.device_id 是历史脏数据, 不影响 query
      WHERE ip.workstation_id = ?
        AND ip.deleted_at IS NULL
-       AND ip.status = 0
+       AND ip.status = ?
        AND EXISTS (SELECT 1 FROM sys_network_device WHERE id::text = ip.device_id)
 ),
 latest_mac AS (
@@ -498,7 +500,7 @@ SELECT DISTINCT ON (COALESCE(a.devicesn, COALESCE(mac.mac_address, hist.mac_addr
           wp.interface_name NULLS LAST;
 `
 
-	if err := s.db.WithContext(ctx).Raw(rawSQL, workstationID).Scan(&rows).Error; err != nil {
+	if err := s.db.WithContext(ctx).Raw(rawSQL, workstationID, int(operations.InfoPointStatusNormal)).Scan(&rows).Error; err != nil {
 		return nil, fmt.Errorf("查询物理链路设备失败: %w", err)
 	}
 
@@ -560,22 +562,22 @@ SELECT DISTINCT ON (COALESCE(a.devicesn, COALESCE(mac.mac_address, hist.mac_addr
 		}
 
 		devices = append(devices, &models.WorkstationDevice{
-			BaseModel:         models.BaseModel{ID: tempID},
-			WorkstationID:     workstationID,
-			DeviceSource:      models.DeviceSourcePhysical,
-			AssetID:           row.AssetID,
-			ADComputerID:      row.ADComputerID,
-			DeviceSerial:      row.DeviceSerial,
-			DeviceName:        deviceName,
-			DeviceModel:       row.DeviceModel,
-			DeviceType:        row.DeviceType,
-			MACAddress:        row.MACAddress,
-			IPAddress:         row.IPAddress,
-			ResponsibleUser:   row.ResponsibleUser,
+			BaseModel:       models.BaseModel{ID: tempID},
+			WorkstationID:   workstationID,
+			DeviceSource:    models.DeviceSourcePhysical,
+			AssetID:         row.AssetID,
+			ADComputerID:    row.ADComputerID,
+			DeviceSerial:    row.DeviceSerial,
+			DeviceName:      deviceName,
+			DeviceModel:     row.DeviceModel,
+			DeviceType:      row.DeviceType,
+			MACAddress:      row.MACAddress,
+			IPAddress:       row.IPAddress,
+			ResponsibleUser: row.ResponsibleUser,
 			// 2026-07-21 B-3f130: 不再硬编码 &userID; 工位未绑定用户时为 nil。
 			// 物理链路与 user_id 解耦, 但有 user_id 时仍继承工位绑定的责任人语义。
 			ResponsibleUserID: workstation.UserID,
-			Status:            0,
+			Status:            models.WorkstationDeviceStatusNormal,
 			IsPrimary:         false,
 			Priority:          0,
 			Description:       portDesc,
@@ -788,20 +790,20 @@ func (s *workstationDeviceService) AddDeviceManual(ctx context.Context, req *Add
 	}
 
 	device := &models.WorkstationDevice{
-		WorkstationID:    req.WorkstationID,
-		DeviceSource:     models.DeviceSourceManual,
-		DeviceSerial:     &req.DeviceSerial,
-		AssetID:          assetID,
-		DeviceName:       req.DeviceName,
-		DeviceModel:      deviceModel,
-		DeviceType:       deviceType,
-		MACAddress:       req.MACAddress,
-		IPAddress:        req.IPAddress,
-		ResponsibleUser:  req.ResponsibleUser,
-		Status:           0, // 默认正常
-		IsPrimary:        false,
-		Priority:         0,
-		Description:      req.Description,
+		WorkstationID:   req.WorkstationID,
+		DeviceSource:    models.DeviceSourceManual,
+		DeviceSerial:    &req.DeviceSerial,
+		AssetID:         assetID,
+		DeviceName:      req.DeviceName,
+		DeviceModel:     deviceModel,
+		DeviceType:      deviceType,
+		MACAddress:      req.MACAddress,
+		IPAddress:       req.IPAddress,
+		ResponsibleUser: req.ResponsibleUser,
+		Status:          models.WorkstationDeviceStatusNormal,
+		IsPrimary:       false,
+		Priority:        0,
+		Description:     req.Description,
 	}
 
 	if err := s.db.WithContext(ctx).Create(device).Error; err != nil {
@@ -853,15 +855,15 @@ func (s *workstationDeviceService) SyncFromAD(ctx context.Context, workstationID
 	// 添加新的域控设备
 	for _, adDevice := range adDevices {
 		device := &models.WorkstationDevice{
-			WorkstationID:    workstationID,
-			DeviceSource:     models.DeviceSourceAD,
-			ADComputerID:     &adDevice.ADComputerID,
-			DeviceSerial:     &adDevice.DeviceSerial,
-			DeviceName:       &adDevice.DeviceName,
-			MACAddress:       &adDevice.MACAddress,
-			Status:           0,
-			IsPrimary:        false,
-			Priority:         0,
+			WorkstationID: workstationID,
+			DeviceSource:  models.DeviceSourceAD,
+			ADComputerID:  &adDevice.ADComputerID,
+			DeviceSerial:  &adDevice.DeviceSerial,
+			DeviceName:    &adDevice.DeviceName,
+			MACAddress:    &adDevice.MACAddress,
+			Status:        models.WorkstationDeviceStatusNormal,
+			IsPrimary:     false,
+			Priority:      0,
 		}
 
 		if err := s.db.WithContext(ctx).Create(device).Error; err != nil {
@@ -942,17 +944,17 @@ func (s *workstationDeviceService) SyncFromAsset(ctx context.Context, workstatio
 	// 添加新的资产设备
 	for _, assetDevice := range assetDevices {
 		device := &models.WorkstationDevice{
-			WorkstationID:     workstationID,
-			DeviceSource:      models.DeviceSourceAsset,
-			AssetID:           &assetDevice.AssetID,
-			DeviceSerial:      &assetDevice.DeviceSN,
-			DeviceModel:       assetDevice.DeviceModel,
-			DeviceType:        assetDevice.DeviceType,
-			MACAddress:        assetDevice.MACAddress,
-			ResponsibleUser:   assetDevice.ResponsibleUser,
-			Status:            0,
-			IsPrimary:         false,
-			Priority:          0,
+			WorkstationID:   workstationID,
+			DeviceSource:    models.DeviceSourceAsset,
+			AssetID:         &assetDevice.AssetID,
+			DeviceSerial:    &assetDevice.DeviceSN,
+			DeviceModel:     assetDevice.DeviceModel,
+			DeviceType:      assetDevice.DeviceType,
+			MACAddress:      assetDevice.MACAddress,
+			ResponsibleUser: assetDevice.ResponsibleUser,
+			Status:          models.WorkstationDeviceStatusNormal,
+			IsPrimary:       false,
+			Priority:        0,
 		}
 
 		if err := s.db.WithContext(ctx).Create(device).Error; err != nil {
@@ -1162,7 +1164,7 @@ func (s *workstationDeviceService) SetPrimaryAndSave(ctx context.Context, device
 			MACAddress:      merged.finalMACAddress,
 			IPAddress:       merged.finalIPAddress,
 			ResponsibleUser: merged.finalResponsible,
-			Status:          0,
+			Status:          models.WorkstationDeviceStatusNormal,
 			IsPrimary:       true,
 			Priority:        0,
 		}
@@ -1244,7 +1246,7 @@ func (s *workstationDeviceService) SetPrimaryAndSaveBySerial(ctx context.Context
 			MACAddress:      merged.finalMACAddress,
 			IPAddress:       merged.finalIPAddress,
 			ResponsibleUser: merged.finalResponsible,
-			Status:          0,
+			Status:          models.WorkstationDeviceStatusNormal,
 			IsPrimary:       true,
 			Priority:        0,
 		}
@@ -1410,11 +1412,11 @@ func safePrefix(s string, n int) string {
 // GetADDevicesByWorkstations 批量查询多工位的 AD 设备
 //
 // 实现路径 (5 次批量 SQL, 替代 239 单工位 = ~717 次 SQL):
-//   1. sys_workstation 批量查 wsID → userID
-//   2. sys_user 批量查 userID → username
-//   3. sys_ad_user 批量查 username → user_dn
-//   4. sys_ad_computer 批量查 (managed_by IN user_dns OR description LIKE 任意 username)
-//   5. 代码层映射: computer → user_dn/username → userID → wsID
+//  1. sys_workstation 批量查 wsID → userID
+//  2. sys_user 批量查 userID → username
+//  3. sys_ad_user 批量查 username → user_dn
+//  4. sys_ad_computer 批量查 (managed_by IN user_dns OR description LIKE 任意 username)
+//  5. 代码层映射: computer → user_dn/username → userID → wsID
 //
 // 实现要点: 所有 Scan 用 map[string]interface{} 而非 struct, 规避 GORM struct 扫描丢失中文字段的问题
 func (s *workstationDeviceService) GetADDevicesByWorkstations(
@@ -1570,7 +1572,7 @@ func (s *workstationDeviceService) GetADDevicesByWorkstations(
 				DeviceName:    &cn,
 				MACAddress:    &mac,
 				IPAddress:     &ip,
-				Status:        0,
+				Status:        models.WorkstationDeviceStatusNormal,
 				IsPrimary:     false,
 				Priority:      0,
 			})
@@ -1680,18 +1682,18 @@ func (s *workstationDeviceService) GetAssetDevicesByWorkstations(
 			typeName := stringFromMap(a, "device_type_name")
 			mac := stringFromMap(a, "mac1")
 			result[wsID] = append(result[wsID], &models.WorkstationDevice{
-				BaseModel:     models.BaseModel{ID: fmt.Sprintf("asset-%s-%s", safePrefix(wsID, 8), safePrefix(id, 8))},
-				WorkstationID: wsID,
-				DeviceSource:  models.DeviceSourceAsset,
-				AssetID:       &id,
-				DeviceSerial:  &sn,
-				DeviceModel:   strPtr(modelName),
-				DeviceType:    strPtr(typeName),
-				MACAddress:    strPtr(mac),
+				BaseModel:       models.BaseModel{ID: fmt.Sprintf("asset-%s-%s", safePrefix(wsID, 8), safePrefix(id, 8))},
+				WorkstationID:   wsID,
+				DeviceSource:    models.DeviceSourceAsset,
+				AssetID:         &id,
+				DeviceSerial:    &sn,
+				DeviceModel:     strPtr(modelName),
+				DeviceType:      strPtr(typeName),
+				MACAddress:      strPtr(mac),
 				ResponsibleUser: strPtr(nowUser),
-				Status:    0,
-				IsPrimary: false,
-				Priority:  0,
+				Status:          models.WorkstationDeviceStatusNormal,
+				IsPrimary:       false,
+				Priority:        0,
 			})
 		}
 	}
@@ -1785,7 +1787,7 @@ WITH workstation_ports AS (
         ON port.id::text = ip.port_id
      WHERE ip.workstation_id IN (?)
        AND ip.deleted_at IS NULL
-       AND ip.status = 0
+       AND ip.status = ?
        AND EXISTS (SELECT 1 FROM sys_network_device WHERE id::text = ip.device_id)
 ),
 latest_mac AS (
@@ -1855,24 +1857,24 @@ SELECT wp.workstation_id                                                   AS ws
 `
 
 	type physicalRow struct {
-		WSID              string  `gorm:"column:ws_id"`
-		AssetID           *string `gorm:"column:asset_id"`
-		DeviceSerial      *string `gorm:"column:device_serial"`
-		DeviceModel       *string `gorm:"column:device_model"`
-		DeviceType        *string `gorm:"column:device_type"`
-		MACAddress        *string `gorm:"column:mac_address"`
-		IPAddress         *string `gorm:"column:ip_address"`
-		ResponsibleUser   *string `gorm:"column:responsible_user"`
-		PortName          *string `gorm:"column:port_name"`
-		InfoPointName     *string `gorm:"column:info_point_name"`
+		WSID              string     `gorm:"column:ws_id"`
+		AssetID           *string    `gorm:"column:asset_id"`
+		DeviceSerial      *string    `gorm:"column:device_serial"`
+		DeviceModel       *string    `gorm:"column:device_model"`
+		DeviceType        *string    `gorm:"column:device_type"`
+		MACAddress        *string    `gorm:"column:mac_address"`
+		IPAddress         *string    `gorm:"column:ip_address"`
+		ResponsibleUser   *string    `gorm:"column:responsible_user"`
+		PortName          *string    `gorm:"column:port_name"`
+		InfoPointName     *string    `gorm:"column:info_point_name"`
 		HistoryLastSeen   *time.Time `gorm:"column:history_last_seen"`
-		Confidence        *float64 `gorm:"column:confidence"`
-		ADComputerID      *string `gorm:"column:ad_computer_id"`
-		ADDeviceName      *string `gorm:"column:ad_device_name"`
-		ADOperatingSystem *string `gorm:"column:ad_operating_system"`
+		Confidence        *float64   `gorm:"column:confidence"`
+		ADComputerID      *string    `gorm:"column:ad_computer_id"`
+		ADDeviceName      *string    `gorm:"column:ad_device_name"`
+		ADOperatingSystem *string    `gorm:"column:ad_operating_system"`
 	}
 	var rows []physicalRow
-	if err := s.db.WithContext(ctx).Raw(rawSQL, workstationIDs).Scan(&rows).Error; err != nil {
+	if err := s.db.WithContext(ctx).Raw(rawSQL, workstationIDs, int(operations.InfoPointStatusNormal)).Scan(&rows).Error; err != nil {
 		return result, fmt.Errorf("批量查询物理链路设备失败: %w", err)
 	}
 
@@ -1917,20 +1919,20 @@ SELECT wp.workstation_id                                                   AS ws
 		}
 
 		result[wsID] = append(result[wsID], &models.WorkstationDevice{
-			BaseModel:        models.BaseModel{ID: fmt.Sprintf("physical-%s-%s", safePrefix(wsID, 8), macIDFragment(row.MACAddress))},
-			WorkstationID:    wsID,
-			DeviceSource:     models.DeviceSourcePhysical,
-			AssetID:          row.AssetID,
-			ADComputerID:     row.ADComputerID,
-			DeviceSerial:     row.DeviceSerial,
-			DeviceName:       deviceName,
-			DeviceModel:      row.DeviceModel,
-			DeviceType:       row.DeviceType,
-			MACAddress:       row.MACAddress,
-			IPAddress:        row.IPAddress,
-			ResponsibleUser:  row.ResponsibleUser,
+			BaseModel:         models.BaseModel{ID: fmt.Sprintf("physical-%s-%s", safePrefix(wsID, 8), macIDFragment(row.MACAddress))},
+			WorkstationID:     wsID,
+			DeviceSource:      models.DeviceSourcePhysical,
+			AssetID:           row.AssetID,
+			ADComputerID:      row.ADComputerID,
+			DeviceSerial:      row.DeviceSerial,
+			DeviceName:        deviceName,
+			DeviceModel:       row.DeviceModel,
+			DeviceType:        row.DeviceType,
+			MACAddress:        row.MACAddress,
+			IPAddress:         row.IPAddress,
+			ResponsibleUser:   row.ResponsibleUser,
 			ResponsibleUserID: wsUserMap[wsID],
-			Status:            0,
+			Status:            models.WorkstationDeviceStatusNormal,
 			IsPrimary:         false,
 			Priority:          0,
 			Description:       portDesc,

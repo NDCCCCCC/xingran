@@ -3,6 +3,7 @@ package operations
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -34,8 +35,8 @@ type FloorService interface {
 // FloorStatisticsResult 楼层统计结果(status: 0=正常 1=停用)。
 type FloorStatisticsResult struct {
 	Total    int64 `json:"total"`
-	Active   int64 `json:"active"`   // status = 0
-	Inactive int64 `json:"inactive"` // status = 1
+	Active   int64 `json:"active"`   // operations.FloorStatusNormal
+	Inactive int64 `json:"inactive"` // operations.FloorStatusStopped
 }
 
 // Statistics 统计楼层(按 status 聚合,排除软删除)。
@@ -45,8 +46,8 @@ func (s *floorService) Statistics(ctx context.Context) (*FloorStatisticsResult, 
 		Model(&operations.OpsFloor{}).
 		Select(
 			"COUNT(*) AS total",
-			"COALESCE(SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END), 0) AS active",
-			"COALESCE(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END), 0) AS inactive",
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS active", int(operations.FloorStatusNormal)),
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS inactive", int(operations.FloorStatusStopped)),
 		).
 		Scan(&result).Error
 	if err != nil {
@@ -74,13 +75,13 @@ func NewFloorService(db *gorm.DB) FloorService {
 // floorAllowedSortFields 楼层可排序字段白名单。
 // 因 List 有 LEFT JOIN buildings/files,字段值带表别名。
 var floorAllowedSortFields = map[string]string{
-	"name":          "ops_floors.name",
-	"floorNo":       "ops_floors.floor_no",
-	"orderNum":      "ops_floors.order_num",
-	"area":          "ops_floors.area",
-	"buildingName":  "ops_buildings.name",
-	"status":        "ops_floors.status",
-	"createdAt":     "ops_floors.created_at",
+	"name":         "ops_floors.name",
+	"floorNo":      "ops_floors.floor_no",
+	"orderNum":     "ops_floors.order_num",
+	"area":         "ops_floors.area",
+	"buildingName": "ops_buildings.name",
+	"status":       "ops_floors.status",
+	"createdAt":    "ops_floors.created_at",
 }
 
 func (s *floorService) Create(ctx context.Context, floor *operations.OpsFloor) error {
@@ -145,7 +146,7 @@ func (s *floorService) Update(ctx context.Context, floor *operations.OpsFloor) e
 			syncCtx, cancel := context.WithTimeout(context.Background(), floorSyncBuildingTimeout)
 			defer cancel()
 			// best-effort: 同步工位 building_id，忽略错误以避免阻塞主流程
-				_ = s.syncWorkstationBuildingID(syncCtx, floor.ID, floor.BuildingID)
+			_ = s.syncWorkstationBuildingID(syncCtx, floor.ID, floor.BuildingID)
 		}()
 	}
 

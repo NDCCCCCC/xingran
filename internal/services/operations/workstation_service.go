@@ -59,9 +59,9 @@ type DeptOption struct {
 // WorkstationStatisticsResult 工位统计结果(status: 0=可用 1=占用 2=维护)。
 type WorkstationStatisticsResult struct {
 	Total     int64 `json:"total"`
-	Available int64 `json:"available"` // status = 0
-	Occupied  int64 `json:"occupied"`  // status = 1
-	Maintain  int64 `json:"maintain"`  // status = 2
+	Available int64 `json:"available"` // models.WorkstationStatusAvailable
+	Occupied  int64 `json:"occupied"`  // models.WorkstationStatusOccupied
+	Maintain  int64 `json:"maintain"`  // models.WorkstationStatusMaintain
 }
 
 // Statistics 统计工位(按 status 聚合,排除软删除;支持 orgId 部门筛选含子部门,与 List orgId 过滤一致)。
@@ -74,9 +74,9 @@ func (s *workstationService) Statistics(ctx context.Context, params map[string]i
 	err := query.
 		Select(
 			"COUNT(*) AS total",
-			"COALESCE(SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END), 0) AS available",
-			"COALESCE(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END), 0) AS occupied",
-			"COALESCE(SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END), 0) AS maintain",
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS available", int(models.WorkstationStatusAvailable)),
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS occupied", int(models.WorkstationStatusOccupied)),
+			fmt.Sprintf("COALESCE(SUM(CASE WHEN status = %d THEN 1 ELSE 0 END), 0) AS maintain", int(models.WorkstationStatusMaintain)),
 		).
 		Scan(&result).Error
 	if err != nil {
