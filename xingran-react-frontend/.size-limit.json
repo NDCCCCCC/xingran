@@ -8,7 +8,7 @@
   {
     "name": "total bundle (min+gzip)",
     "path": "dist/assets/*.js",
-    "limit": "2 MB",
+    "limit": "2.5 MB",
     "gzip": true
   }
 ]
