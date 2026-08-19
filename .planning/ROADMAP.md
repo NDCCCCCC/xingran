@@ -189,7 +189,7 @@ Plans:
 **Wave 1**
 
 - [x] 69-01-PLAN.md — DICT-01 基建:models 常量补齐(DictStatus/OperLog 成败/VDIServer/Notice/InfoPoint) + status_constants_test.go AST 锁值 + scripts/check-status-literals.sh 四模式 ratchet 守护(含 map/JSON 形态) + 批 1(services/system 六文件)替换
-- [ ] 69-06-PLAN.md — DICT-03 前端 status 线:src/constants/status.ts 共享常量模块(两套 label 语义组+vitest 锁值) + 7 文件收敛(含 menu VISIBLE 反转保护),status 不进字典
+- [x] 69-06-PLAN.md — DICT-03 前端 status 线:src/constants/status.ts 共享常量模块(两套 label 语义组+vitest 锁值) + 7 文件收敛(含 menu VISIBLE 反转保护),status 不进字典
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
