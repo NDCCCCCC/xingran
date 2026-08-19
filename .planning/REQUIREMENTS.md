@@ -110,6 +110,7 @@ update_trigger: Phase 69-05 DICT-01 backend status-literal ratchet completed; DI
 **Coverage validation**: All 15 v1.22 requirements (TOKEN-01..04 / THEME-01..03 / COMP-01..04 / QA-01..04) are mapped to exactly one phase. No orphans, no duplicates.
 
 **Phase ordering rationale**:
+
 - Phase 64 (TOKEN + QA-01) first — 品牌令牌是所有后续 phase 的真相源,对比度校验断言 token 值正确性,尽早暴露 brand-spec 实测值与设计目标偏差
 - Phase 65 (THEME) second — 多主题移除是高风险机械重构,需要在令牌已就位(避免视觉退化)后执行;依赖令牌层提供回退色源
 - Phase 66 (COMP + QA-02) third — 组件样式落地依赖稳定令牌 + 单一品牌上下文;硬编码扫描与组件落地同步,防止新代码破坏品牌
@@ -131,4 +132,4 @@ update_trigger: Phase 69-05 DICT-01 backend status-literal ratchet completed; DI
 | DICT-01 | Phase 69 | Complete | Plans 69-01/03/04/05；`--baseline` 终态仅 geocoding F 簇 1 条 |
 | DICT-02 | Phase 69 | Pending | Plan 69-02 executed；字典 seed 已落地 |
 | DICT-03 | Phase 69 | In Progress | Plans 69-06/69-07 executed；前端消费迁移分批完成 |
-| DICT-04 | Phase 69 | Pending | Plan 69-08 |
+| DICT-04 | Phase 69 | Complete | Plan 69-08 |

@@ -3,23 +3,23 @@ gsd_state_version: 1.0
 milestone: v1.22 + v1.23 启动块
 milestone_name: milestone
 status: executing
-stopped_at: Completed 69-05-PLAN.md (task commit bc00d9c)
-last_updated: "2026-08-19T09:59:20Z"
+stopped_at: Completed 69-08-PLAN.md (DICT-04 CLAUDE.md 指针化 + T2 五步实测通过,closeout commit pending)
+last_updated: "2026-08-19T19:55:21Z"
 last_activity: 2026-08-19
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 19
-  completed_plans: 11
-  percent: 58
+  completed_plans: 12
+  percent: 63
 ---
 
 # Project State
 
 **Project**: XingRan-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.22 前端品牌化改造 SHIPPED 2026-08-18（Phases 64-67 / 4 phases / 4 plans / 15 requirements 100% 勾选 / 33 tasks）。Phase 63 前端工具链自动化独立 IN PROGRESS。**v1.23 启动块**: Phase 68 部署稳健性 & 文档一致性(SM2 密钥配置闭环)EXECUTED 2026-08-19(5 commits: a21dcec..25ded8f)。Phase 69-05 DICT-01 后端终态门 EXECUTED 2026-08-19（17 文件/46 命中→F 簇 1 条，task commit `bc00d9c`）。
-**Last activity**: 2026-08-19 — Phase 68-01 EXECUTED（5 commits: a21dcec / a764825 / 65093b9 / 52685fd / 25ded8f）。来源：归档会话 `.planning/debug/resolved/public-key-500-after-subpath-fix.md`（DEPLOY-01~05 全量修复：env 变量名文档一致 / setup-server.sh secrets.env 模板补 SM2 keys 段 / gen_sm2_keys header 注释路径修正 / getPublicKey handler 500 时打印 useSM2 状态 / sqlite 模板 use_sm2 默认值 + 迁移指引）。Phase 63 63-01-PLAN.md 在 `.planning/phases/63-frontend-toolchain-automation/` IN PROGRESS(2026-08-14 起)。此前 2026-08-17 quick-260817-hfl: 后端 Supabase → 本地 SQLite + sqlite 兼容收尾(PG-only 守卫/缺表注册/方言修复/admin 全量菜单种子 migration_207);同日 quick-260817-ucz: 第 6 套主题「墨绿琥珀」(ink-amber)延伸到控制台。2026-08-15 Phase 62 全部 5/5 plan 完成;2026-08-14 Phase 57-61 全部完成 + Phase 62 plans created from cross-AI reviews。
+**Status**: v1.22 前端品牌化改造 SHIPPED 2026-08-18（Phases 64-67 / 4 phases / 4 plans / 15 requirements 100% 勾选 / 33 tasks）。Phase 63 前端工具链自动化独立 IN PROGRESS。**v1.23 启动块**: Phase 68 部署稳健性 & 文档一致性(SM2 密钥配置闭环)EXECUTED 2026-08-19(5 commits: a21dcec..25ded8f)。Phase 69 字典与状态值治理 8/8 plans EXECUTED 2026-08-19(DICT-01 后端常量终态 + DICT-02 字典 seed 11 组 + DICT-03 前端 4 页 useDict 迁移 + DICT-04 CLAUDE.md 指针化,T2 五步实测通过 chrome-devtools,DICT-04 落勾选,closeout commit pending)。Phase 70-01 系统设置页面布局重构 D-10 default-theme 清理原子提交已落地(`35db1b5`),余下 6 plans 进行中(并行)。
+**Last activity**: 2026-08-19 — Phase 69-08 closeout:CLAUDE.md Status Value Convention 段指针化(`0da2284`)+ T2 字典链路端到端五步验证实测通过(chrome-devtools)→ DICT-04 requirements mark-complete 落勾选 → STATE/ROADMAP 终态更新中。Phase 70-01 D-10 default-theme 清理原子提交(`35db1b5`)并行落地,吸收工作区遗留 13 文件(+42/-717)。Phase 63 63-01-PLAN.md 在 `.planning/phases/63-frontend-toolchain-automation/` IN PROGRESS(2026-08-14 起)。
 
 # Project State
 
@@ -34,13 +34,13 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 
 **Core value**: 端到端运维可观测与审计能力——每个写操作产生可追溯记录(who/when/what/from-where/before-after-state),敏感字段自动脱敏。v1.22 在不破坏既有核心价值的前提下,把后台内部视觉统一到登录页品牌(深绿 × 铜金 × 奶油纸感),让 53 屏业务页面在 design-system 层自动继承品牌样式。
 
-**Current focus**: v1.22 milestone INITIATED + ROADMAP drafted,4 phases(64-67),等待 plan-phase 64 启动。
+**Current focus**: v1.24 启动块 Phase 69 字典与状态值治理 8/8 plans 完成(DICT-01~04 全部勾选,T2 字典链路端到端实测通过);Phase 70 系统设置页面布局重构并行 70-01 已落地(D-10 default-theme 清理),余下 6 plans 进行中。
 
 ## Current Position
 
-Phase: 69 (字典与状态值治理) — EXECUTING (并行 Phase 70 会话执行中)
+Phase: 69 (字典与状态值治理) — COMPLETE (8/8 plans done)
 Plan: 8 of 8
-Status: Ready to execute
+Status: Complete (DICT-01~04 全部勾选,字典链路端到端实测通过)
 Last activity: 2026-08-19
 
 ## Accumulated Context
@@ -210,6 +210,7 @@ Resume file: None
 | Phase 69 P04 | 14m | 1 tasks | 15 files |
 | Phase 69 P05 | 23m | 1 tasks | 22 files |
 | Phase 69 P07 | 13m | 2 tasks | 12 files |
+| Phase 69 P08 | 5m + 10m(T2 人工实测) | 2 tasks | 1 file(CLAUDE.md 指针化)+ T2 字典链路端到端五步实测 PASS |
 
 ## Decisions
 
@@ -220,3 +221,4 @@ Resume file: None
 - [Phase 69-04]: 批3六目录30处常量化：E簇反转(knowledge/notice 1=已发布)与D簇账号池三态零误替；ADAccountStatus*(0/1/2 Phase36状态机)与RPACredentialStatus*(0/1)两新族落 models 并双登记锁值(80→85)；account_pool 本地 AccountStatus* 改为 models 别名实现真相源上移；VDIResourceGroup 2处复用 VDIServerStatus 族；白名单 27→17 文件
 - [Phase 69-05]: 批4将 17 文件/46 守护命中清零，workorder/duty/discovery/execution/dispatch/monitor/asset 与 API 散点改用实体状态常量；补齐 ServerStatus/NotificationConfigStatus 并将 DiscoveryStatus 0-4 纳入锁值（85→94）；百度 geocoding 外部返回码保持 F 簇唯一豁免
 - [Phase 69]: 69-07: 四页 type 下拉迁 useDict（三件套+空态回退静态 OPTIONS 第四件）；workstations hook 放 index.tsx 经 prop 透传 EditModal；number 字段 Option value 用 Number(dictValue) 保提交契约；devices 不引入新增默认值，isDefault 默认件仅用于原有默认的三处（user 0→2保密 / workstation 0 不变 / holiday legal→custom 对齐后端 gorm default）
+- [Phase 69-08]: DICT-04 CLAUDE.md 指针化+字典链路端到端收尾：删除 6 行模块值表格改写为 5 点真相源指针段(models 常量/status_constants_test 锁值/sys_dict+migration_208/前端 constants/status.ts/status 不入字典安全决策)，Menu visible 例外句保留并显式引用 models.VisibleShow/VisibleHidden 不成为手工值拷贝，新增常量流程「先 models→同步 test→业务引用」三步走写入指针段末尾；T2 五步实测(2026-08-19 chrome-devtools):字典管理 11 组可见 / 专线类型 6 项+ISP 5 项 / ops_workstation_type 改 label→工位管理新增弹窗默认值即时显示新 label(SC#3 强信号) / 四页 useDict 链路生效+workstations/constants.tsx:16-20 TYPE_OPTIONS 静态 fallback 保留 / status 共享常量零 UX 回归 → 5/5 PASS,DICT-04 落勾选

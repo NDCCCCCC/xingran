@@ -1,7 +1,7 @@
 ---
 last_updated: 2026-08-19
-update_trigger: v1.22 milestone INITIATED — ROADMAP drafted (Phases 64-67, 4 phases; design-system 层品牌令牌落地)
-last_plan_update: 2026-08-18 — v1.21 SHIPPED + ARCHIVED (Phases 57-62; Phase 63 IN PROGRESS 独立前端工具链工作)
+update_trigger: v1.24 启动块 Phase 69 EXECUTED (8/8 plans complete, DICT-01~04 全部勾选, T2 字典链路端到端实测通过);Phase 70-01 D-10 default-theme 清理原子提交落地(`35db1b5`)
+last_plan_update: 2026-08-19 — Phase 69-08 closeout: CLAUDE.md 指针化(T1 0da2284)+ T2 五步实测 5/5 PASS
 previous_update: 2026-08-13 after v1.21 plans drafted (Phases 57-61) + Phase 62 cross-AI review close-out
 ---
 
@@ -62,9 +62,9 @@ previous_update: 2026-08-13 after v1.21 plans drafted (Phases 57-61) + Phase 62 
 
 - [ ] **Phase 68: 部署稳健性 & 文档一致性（SM2 密钥配置闭环）** - 修正 env 变量名文档-代码不一致(DEPLOY-01)、setup-server.sh secrets.env 模板补 SM2 keys 段(DEPLOY-02)、gen_sm2_keys header 注释路径修正(DEPLOY-03)、getPublicKey handler 500 时打印 useSM2 / sm2PublicKey 状态(DEPLOY-04)、config.sqlite.example.yaml use_sm2 默认值与迁移文档对齐(DEPLOY-05);来源已归档会话 public-key-500-after-subpath-fix.md
 
-## Phases (v1.24 启动块 — 字典与状态值治理) — IN PLANNING
+## Phases (v1.24 启动块 — 字典与状态值治理) — EXECUTED 2026-08-19
 
-- [ ] **Phase 69: 字典与状态值治理（状态语义单一真相源）** - 后端新增集中状态常量包消灭 50+ 文件裸 0/1 字面量(DICT-01)、盘点 type/category 真枚举字段并 seed 进 sys_dict(DICT-02)、前端 constants.tsx 硬编码 options 分批迁移 useDict(DICT-03)、CLAUDE.md Status Value Convention 改指向常量真相源(DICT-04);现状审计(2026-08-19):字典基础设施完整但消费端近零——后端 GetDictDataByTypeKey 仅 dict_cache_impl 自用(0 个业务 service 读字典),前端 ~78 页仅 4 页用 useDict(~5%),sys_dict seed 仅 network_device_type 一类,状态语义散落后端字面量/前端 constants.tsx/CLAUDE.md 三处手工同步拷贝
+- [x] **Phase 69: 字典与状态值治理（状态语义单一真相源）** - 后端新增集中状态常量包消灭 50+ 文件裸 0/1 字面量(DICT-01)、盘点 type/category 真枚举字段并 seed 进 sys_dict(DICT-02)、前端 constants.tsx 硬编码 options 分批迁移 useDict(DICT-03)、CLAUDE.md Status Value Convention 改指向常量真相源(DICT-04);现状审计(2026-08-19):字典基础设施完整但消费端近零——后端 GetDictDataByTypeKey 仅 dict_cache_impl 自用(0 个业务 service 读字典),前端 ~78 页仅 4 页用 useDict(~5%),sys_dict seed 仅 network_device_type 一类,状态语义散落后端字面量/前端 constants.tsx/CLAUDE.md 三处手工同步拷贝;8/8 plans EXECUTED 2026-08-19,DICT-01~04 全部勾选,T2 字典链路端到端五步实测 5/5 PASS(chrome-devtools):字典管理 11 组可见 / 专线类型 6 项+ISP 5 项 / ops_workstation_type 改 label→工位管理新增弹窗默认值即时显示新 label(SC#3 强信号) / 四页 useDict 链路生效+静态 fallback 保留 / status 共享常量零 UX 回归
 
 ## Phases (v1.25 启动块 — 系统设置页面布局重构) — IN PLANNING
 
@@ -207,7 +207,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 69-08-PLAN.md — DICT-04:CLAUDE.md Status Value Convention 指针化(删 6 行值表格) + 字典链路端到端 blocking checkpoint(改值联动/fallback/零 UX 回归)
+- [x] 69-08-PLAN.md — DICT-04:CLAUDE.md Status Value Convention 指针化(删 6 行值表格) + 字典链路端到端 blocking checkpoint(改值联动/fallback/零 UX 回归,5/5 PASS)
 
 ---
 
