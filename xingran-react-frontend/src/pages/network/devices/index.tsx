@@ -49,6 +49,7 @@ import { batchExport } from "@/lib/api/networkApi";
 import DeptTree from "@/components/DeptTree";
 import { useNavigate } from "react-router-dom";
 import { useTableManager } from "@/hooks/useTableManager";
+import { useDict } from "@/hooks/useDict";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
 import ActionButtons from "@/components/shared/ActionButtons";
 import { DepartmentTreeSelect } from "@/components/shared";
@@ -86,6 +87,8 @@ interface DeviceTableColumnsProps {
   collectingDeviceId: string | null;
   canViewMACHistory: boolean;
   getColumnSortOrder: (field: string) => SortOrder | undefined;
+  /** Phase 69 DICT-03: 设备类型 label 渲染（优先字典，回退静态 DEVICE_TYPE_OPTIONS） */
+  getDeviceTypeText: (type: string) => string | undefined;
 }
 
 function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<NetworkDevice> {
@@ -98,6 +101,7 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
     collectingDeviceId,
     canViewMACHistory,
     getColumnSortOrder,
+    getDeviceTypeText,
   } = props;
 
   return [
@@ -125,7 +129,7 @@ function getDeviceTableColumns(props: DeviceTableColumnsProps): ColumnsType<Netw
       sorter: true,
       sortOrder: getColumnSortOrder("deviceType"),
       render: (deviceType: string) => (
-        <Tag color={DEVICE_TYPE_TAG_COLOR}>{getOptionLabel(DEVICE_TYPE_OPTIONS, deviceType)}</Tag>
+        <Tag color={DEVICE_TYPE_TAG_COLOR}>{getDeviceTypeText(deviceType)}</Tag>
       ),
     },
     {
@@ -281,6 +285,20 @@ const DeviceManagement: FC = () => {
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+
+  // Phase 69 DICT-03: 设备类型下拉迁 useDict("network_device_type")——字典管理页改 label
+  // 后搜索/编辑下拉与表格 Tag 随之变化；字典空态/接口异常时回退静态 DEVICE_TYPE_OPTIONS。
+  // VENDOR_OPTIONS 无对应字典组，保持静态现状（明确不迁）。
+  const { data: deviceTypeDict = [] } = useDict("network_device_type");
+
+  // 设备类型 label 渲染：优先字典 dictLabel，空态/未命中回退静态映射（dedicated-lines 三件套）
+  const getDeviceTypeText = useCallback(
+    (type: string) => {
+      const dictItem = deviceTypeDict.find((d) => d.dictValue === type);
+      return dictItem?.dictLabel || getOptionLabel(DEVICE_TYPE_OPTIONS, type);
+    },
+    [deviceTypeDict]
+  );
 
   // 使用自定义 Hooks
   const {
@@ -632,6 +650,7 @@ const DeviceManagement: FC = () => {
     collectingDeviceId,
     canViewMACHistory,
     getColumnSortOrder,
+    getDeviceTypeText,
   });
 
   return (
@@ -747,11 +766,17 @@ const DeviceManagement: FC = () => {
                     style={{ width: 130 }}
                     onSearch={() => {}}
                   >
-                    {DEVICE_TYPE_OPTIONS.map((opt) => (
-                      <Option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </Option>
-                    ))}
+                    {deviceTypeDict.length > 0
+                      ? deviceTypeDict.map((d) => (
+                          <Option key={d.dictValue} value={d.dictValue}>
+                            {d.dictLabel}
+                          </Option>
+                        ))
+                      : DEVICE_TYPE_OPTIONS.map((opt) => (
+                          <Option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </Option>
+                        ))}
                   </Select>
                 </Form.Item>
                 <Form.Item name="status" label="状态">
@@ -1019,11 +1044,17 @@ const DeviceManagement: FC = () => {
             rules={[{ required: true, message: "请选择设备类型" }]}
           >
             <Select placeholder="请选择设备类型" onSearch={() => {}}>
-              {DEVICE_TYPE_OPTIONS.map((opt) => (
-                <Option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </Option>
-              ))}
+              {deviceTypeDict.length > 0
+                ? deviceTypeDict.map((d) => (
+                    <Option key={d.dictValue} value={d.dictValue}>
+                      {d.dictLabel}
+                    </Option>
+                  ))
+                : DEVICE_TYPE_OPTIONS.map((opt) => (
+                    <Option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </Option>
+                  ))}
             </Select>
           </Form.Item>
           <Form.Item name="vendor" label="厂商" rules={[{ required: true, message: "请选择厂商" }]}>
@@ -1128,8 +1159,7 @@ const DeviceManagement: FC = () => {
                   <strong>设备名称:</strong> {viewingDevice.deviceName}
                 </p>
                 <p>
-                  <strong>设备类型:</strong>{" "}
-                  {getOptionLabel(DEVICE_TYPE_OPTIONS, viewingDevice.deviceType) || "-"}
+                  <strong>设备类型:</strong> {getDeviceTypeText(viewingDevice.deviceType) || "-"}
                 </p>
                 <p>
                   <strong>厂商:</strong>{" "}

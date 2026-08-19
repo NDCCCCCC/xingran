@@ -5,6 +5,7 @@
 
 import { Modal, Button, DatePicker, Input, Select, Switch } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
+import type { DictItem } from "@/hooks/useDict";
 import type { BatchHolidayRow } from "../types";
 import { HOLIDAY_TYPE_OPTIONS } from "../constants";
 
@@ -13,6 +14,9 @@ const { Option } = Select;
 export interface HolidayBatchModalProps {
   open: boolean;
   batchHolidays: BatchHolidayRow[];
+  /** Phase 69 DICT-03: duty_holiday_type 字典数据（父页面 useDict 拉取后透传；
+   *  空数组时下拉回退静态 HOLIDAY_TYPE_OPTIONS） */
+  holidayTypeDict?: DictItem[];
   onOk: () => Promise<void>;
   onCancel: () => void;
   onAddRow: () => void;
@@ -23,6 +27,7 @@ export interface HolidayBatchModalProps {
 export function HolidayBatchModal({
   open,
   batchHolidays,
+  holidayTypeDict = [],
   onOk,
   onCancel,
   onAddRow,
@@ -79,11 +84,17 @@ export function HolidayBatchModal({
                     style={{ width: "100%" }}
                     onSearch={() => {}}
                   >
-                    {HOLIDAY_TYPE_OPTIONS.map((opt) => (
-                      <Option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </Option>
-                    ))}
+                    {holidayTypeDict.length > 0
+                      ? holidayTypeDict.map((d) => (
+                          <Option key={d.dictValue} value={d.dictValue}>
+                            {d.dictLabel}
+                          </Option>
+                        ))
+                      : HOLIDAY_TYPE_OPTIONS.map((opt) => (
+                          <Option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </Option>
+                        ))}
                   </Select>
                 </td>
                 <td className="border p-2 text-center">

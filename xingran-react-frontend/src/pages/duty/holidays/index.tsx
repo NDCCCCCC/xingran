@@ -7,6 +7,7 @@ import {
   CalendarOutlined,
   FileExcelOutlined,
 } from "@ant-design/icons";
+import { useDict } from "@/hooks/useDict";
 import { useHolidayData, useHolidayModals } from "./hooks";
 import { getHolidayColumns } from "./columns";
 import { HolidayEditModal, HolidayBatchModal } from "./modals";
@@ -15,6 +16,10 @@ import { handleExcelImport, downloadTemplate } from "./utils";
 const { Option } = Select;
 
 const DutyHolidayPage: FC = () => {
+  // Phase 69 DICT-03: 假日类型下拉迁 useDict("duty_holiday_type")——字典管理页改 label
+  // 后 EditModal/BatchModal 下拉随之变化；字典空态/接口异常时回退静态 HOLIDAY_TYPE_OPTIONS
+  const { data: holidayTypeDict = [] } = useDict("duty_holiday_type");
+
   // 数据管理
   const { loading, dataSource, year, availableYears, fetchList } = useHolidayData();
 
@@ -131,6 +136,7 @@ const DutyHolidayPage: FC = () => {
         editingRecord={modalState.editingRecord}
         year={year}
         availableYears={availableYears}
+        holidayTypeDict={holidayTypeDict}
         onOk={handleModalOk}
         onCancel={() => {
           // Close modal through hook - will implement properly
@@ -142,6 +148,7 @@ const DutyHolidayPage: FC = () => {
       <HolidayBatchModal
         open={modalState.batchModalVisible}
         batchHolidays={batchState.batchHolidays}
+        holidayTypeDict={holidayTypeDict}
         onOk={handleBatchSubmit}
         onCancel={() => {
           setBatchModalVisible(false);

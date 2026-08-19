@@ -6,6 +6,7 @@
 import { Form, Input, InputNumber, Select, Switch, Modal, DatePicker } from "antd";
 import type { FormInstance } from "antd/es/form";
 import type { Holiday } from "@/lib/dutyApi";
+import type { DictItem } from "@/hooks/useDict";
 import { HOLIDAY_TYPE_OPTIONS } from "../constants";
 import dayjs from "dayjs";
 import { useEffect } from "react";
@@ -18,6 +19,9 @@ export interface HolidayEditModalProps {
   editingRecord: Holiday | null;
   year: number | undefined;
   availableYears: number[];
+  /** Phase 69 DICT-03: duty_holiday_type 字典数据（父页面 useDict 拉取后透传；
+   *  空数组时下拉回退静态 HOLIDAY_TYPE_OPTIONS） */
+  holidayTypeDict?: DictItem[];
   onOk: (form: FormInstance<unknown>) => Promise<void>;
   onCancel: () => void;
 }
@@ -27,12 +31,17 @@ export function HolidayEditModal({
   editingRecord,
   year,
   availableYears,
+  holidayTypeDict = [],
   onOk,
   onCancel,
 }: HolidayEditModalProps) {
   const [form] = Form.useForm();
 
   const getDefaultYear = () => year ?? availableYears[0] ?? new Date().getFullYear();
+
+  // Phase 69 DICT-03: 新增默认类型取字典 isDefault 项（seed 为 "custom"，对齐后端
+  // Holiday.HolidayType gorm default:'custom'）；字典空态回退静态 "legal"（迁移前行为）
+  const defaultHolidayType = holidayTypeDict.find((d) => d.isDefault)?.dictValue || "legal";
 
   // 当编辑记录变化时，更新表单
   useEffect(() => {
@@ -52,13 +61,13 @@ export function HolidayEditModal({
         form.setFieldsValue({
           holidayDate: dayjs(),
           isOffday: true,
-          holidayType: "legal",
+          holidayType: defaultHolidayType,
           year: getDefaultYear(),
         });
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- getDefaultYear defined in render
-  }, [open, editingRecord, form, year, availableYears]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getDefaultYear/defaultHolidayType defined in render
+  }, [open, editingRecord, form, year, availableYears, defaultHolidayType]);
 
   return (
     <Modal
@@ -91,11 +100,17 @@ export function HolidayEditModal({
           rules={[{ required: true, message: "请选择类型" }]}
         >
           <Select placeholder="请选择类型" onSearch={() => {}}>
-            {HOLIDAY_TYPE_OPTIONS.map((opt) => (
-              <Option key={opt.value} value={opt.value}>
-                {opt.label}
-              </Option>
-            ))}
+            {holidayTypeDict.length > 0
+              ? holidayTypeDict.map((d) => (
+                  <Option key={d.dictValue} value={d.dictValue}>
+                    {d.dictLabel}
+                  </Option>
+                ))
+              : HOLIDAY_TYPE_OPTIONS.map((opt) => (
+                  <Option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </Option>
+                ))}
           </Select>
         </Form.Item>
 
