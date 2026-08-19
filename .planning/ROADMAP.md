@@ -235,12 +235,23 @@ Plans:
 **Plans**: 7 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 70-01-PLAN.md — D-10 原子提交吸收 default-theme 清理(checkpoint 过目提交范围)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 70-02-PLAN.md — 样式契约层(.xr-* 新类) + SettingsShell 共用骨架 + Wave 0 单测
 - [ ] 70-03-PLAN.md — 邮箱/API 配置页 v16 三段式改造(Modal 契约不变)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 70-04-PLAN.md — 验证码背景图图片网格墙 + status 反转语义锁定
 - [ ] 70-05-PLAN.md — 用户设置行式化 + 即改即存 + 明暗分段卡片选择器
 - [ ] 70-06-PLAN.md — 目录合并 + Migrate208 sys_menu 迁移 + 菜单缓存失效
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 70-07-PLAN.md — D-12 残留清理 + 注册表测试 + 收口七门 + 截图 checkpoint
 
 ---
