@@ -59,20 +59,20 @@ jobs:
       asset_url: ${{ steps.rel.outputs.asset_url }}
       archive_sha256: ${{ steps.pkg.outputs.sha256 }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         # workflow_run event carries the triggering CI's commit SHA in
         # head_sha (github.sha would point at the workflow_run event itself);
         # push event uses github.sha as usual.
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
           cache-dependency-path: xingran-react-frontend/package-lock.json
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: true
@@ -136,7 +136,7 @@ jobs:
           echo "sha256=$(sha256sum "$ARCHIVE" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: xingran-backend-linux-amd64
           path: out/xingran-backend
@@ -144,7 +144,7 @@ jobs:
           compression-level: 0   # already a stripped binary; gzip wastes CPU
 
       - name: Upload release archive artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-archive
           path: out/*.tar.gz
@@ -189,7 +189,7 @@ jobs:
     timeout-minutes: 15
     environment: production   # deployment history; add reviewers later if wanted
     steps:
-      - uses: actions/checkout@v4   # fetches deploy scripts
+      - uses: actions/checkout@v7   # fetches deploy scripts
 
       - name: Setup SSH
         # Pin host key from SSH_KNOWN_HOSTS secret instead of accept-new
@@ -232,7 +232,7 @@ jobs:
     permissions:
       contents: write   # only place in this workflow that needs write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: release-archive
           path: out

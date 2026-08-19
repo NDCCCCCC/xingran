@@ -28,9 +28,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           # go.mod declares go 1.24.0 + toolchain go1.24.5; GOTOOLCHAIN=auto
           # (setup-go default) fetches the exact toolchain if needed.
@@ -39,7 +39,7 @@ jobs:
           cache-dependency-path: go.sum
 
       - name: Lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v9
         with:
           # Pinned to the last v1 release: v2 binaries refuse v1-syntax
           # .golangci.yml in this repo. Bump to v7 + config migration
@@ -67,9 +67,9 @@ jobs:
     steps:
       # Full-repo checkout (not sparse): npm prebuild (sync-columns-schema)
       # writes back to internal/services/system/*.json
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           # Pin to current LTS. Never use 'latest' — non-reproducible CI
           # is a CI smell. Bump in a deliberate commit when EOL approaches.
