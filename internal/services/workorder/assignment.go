@@ -172,10 +172,10 @@ func (s *AssignmentService) getTodayDutyMembers(ctx context.Context, poolID *str
 		FROM sys_duty_schedule ds
 		LEFT JOIN sys_duty_pool dp ON ds.pool_id = dp.id
 		LEFT JOIN sys_user u ON ds.user_id = u.id
-		WHERE DATE(ds.schedule_date) = ? AND ds.status = 0 AND ds.deleted_at IS NULL
+		WHERE DATE(ds.schedule_date) = ? AND ds.status = ? AND ds.deleted_at IS NULL
 	`
 
-	args := []interface{}{today}
+	args := []interface{}{today, int(models.DutyStatusNormal)}
 
 	// 如果指定了值班池ID，添加筛选条件
 	if poolID != nil {

@@ -28,17 +28,17 @@ func NewCommandDispatchService(db *gorm.DB, executor *device.DeviceExecutor) *Co
 }
 
 // GetStatistics 统计命令执行的总数及各状态计数(execution_type='command',与 GetExecutionList 口径一致)。
-// status: 0=待执行 1=执行中 2=成功 3=失败。用条件聚合避免加载全量行进内存。
+// 状态机由 models.ExecutionStatus 定义。
 func (s *CommandDispatchService) GetStatistics(ctx context.Context) (*ExecutionStatistics, error) {
 	var result ExecutionStatistics
 	err := s.db.WithContext(ctx).Model(&models.ConfigExecution{}).
 		Where("execution_type = ?", models.ExecutionTypeCommand).
 		Select(
 			"COUNT(*) AS total",
-			"SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS pending",
-			"SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS running",
-			"SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS success",
-			"SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) AS failed",
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS pending", int(models.ExecutionStatusPending)),
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS running", int(models.ExecutionStatusRunning)),
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS success", int(models.ExecutionStatusSuccess)),
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS failed", int(models.ExecutionStatusFailed)),
 		).
 		Scan(&result).Error
 	if err != nil {
@@ -355,10 +355,10 @@ func (s *CommandDispatchService) GetExecutionList(ctx context.Context, current, 
 
 // commandExecutionAllowedSortFields 命令执行记录可排序字段白名单(对应 sys_config_execution 表列名)。
 var commandExecutionAllowedSortFields = map[string]string{
-	"deviceId":     "device_id",
-	"commandId":    "command_id",
-	"status":       "status",
-	"startTime":    "start_time",
-	"endTime":      "end_time",
-	"createdAt":    "created_at",
+	"deviceId":  "device_id",
+	"commandId": "command_id",
+	"status":    "status",
+	"startTime": "start_time",
+	"endTime":   "end_time",
+	"createdAt": "created_at",
 }

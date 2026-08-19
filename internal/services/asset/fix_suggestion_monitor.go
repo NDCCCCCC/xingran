@@ -6,11 +6,11 @@ import (
 	"sync"
 	"time"
 
-	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
 	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/xingran-next/xingran-go-backend/internal/websocket"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -64,9 +64,9 @@ type FixSuggestionMonitor struct {
 	service       FixSuggestionService
 
 	// 防告警风暴 in-memory 状态
-	mu                    sync.Mutex
-	lastBreachNotifiedAt  time.Time
-	lastBreached          bool
+	mu                   sync.Mutex
+	lastBreachNotifiedAt time.Time
+	lastBreached         bool
 }
 
 // NewFixSuggestionMonitor 构造函数
@@ -178,7 +178,7 @@ func (m *FixSuggestionMonitor) CheckAndNotify(ctx context.Context) error {
 		Title:        FixSuggestionMisFixRateNoticeTitle,
 		BusinessType: 2, // OperTypeUpdate
 		Method:       "fix_suggestion_monitor.CheckAndNotify",
-		Status:       0, // 0=成功
+		Status:       int(models.OperLogStatusSuccess), // OperLogStatusSuccess=0
 		OperTime:     now,
 		CostTime:     0,
 	}

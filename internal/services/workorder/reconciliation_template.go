@@ -1,6 +1,8 @@
 package workorder
 
 import (
+	"fmt"
+
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
@@ -43,7 +45,7 @@ var (
 		AssigneeRoleKey: "asset_owner",
 		DescriptionLines: []string{
 			"1. 在 ops_asset 上补充责任人(检查 sys_user.deleted_at)",
-			"2. 检查 sys_user.status 是否被禁用(status=1)",
+			fmt.Sprintf("2. 检查 sys_user.status 是否被禁用(status=%d)", int(models.UserStatusDisabled)),
 			"3. 排查 ops_asset.user_id 是否指向已软删用户",
 			"4. 核查工位 sys_workstation.user_id 是否指向已离职账号",
 			"5. 修复后请把 ops_asset.user_id 更新为当前在职人员",
@@ -61,7 +63,7 @@ var (
 			"2. 确认 ops_asset.user_id 是否过期或未设置",
 			"3. 通过 sys_user.username 在人事系统核对人员状态",
 			"4. 若人员仍在职,在 ops_asset.user_id 上补充当前用户",
-			"5. 若人员已离职,标记 ops_asset.status=1(停用)并归档",
+			fmt.Sprintf("5. 若人员已离职,标记 ops_asset.status=%d(停用)并归档", int(models.AssetStatusStopped)),
 		},
 		DefaultPriority: models.WorkOrderPriorityHigh, // 2 = 高,C 类转单需明确责任人
 	}
@@ -76,7 +78,7 @@ var (
 			"2. 若仍在用,在 ops_asset.user_id 上同步到物理使用人",
 			"3. 同步更新 sys_workstation.user_id(若资产绑定工位)",
 			"4. 通知原责任人变更结果,确认无需后续资产交割",
-			"5. 若资产已无物理使用,标记 ops_asset.status=1(停用)并归档",
+			fmt.Sprintf("5. 若资产已无物理使用,标记 ops_asset.status=%d(停用)并归档", int(models.AssetStatusStopped)),
 		},
 		DefaultPriority: models.WorkOrderPriorityMedium, // 1 = 中,D 类转单通常可批量处理
 	}
@@ -103,7 +105,7 @@ var (
 		AssigneeRoleKey: "responsible_owner",
 		DescriptionLines: []string{
 			"1. 检查 AD is_enabled 是否为 false(sys_user_ad_attrs)",
-			"2. 同步 sys_user.status=0(启用)与 AD 一致",
+			fmt.Sprintf("2. 同步 sys_user.status=%d(启用)与 AD 一致", int(models.UserStatusEnabled)),
 			"3. 若 AD 账号已停用:在 sys_user 上同步停用状态",
 			"4. 同步 ops_asset.user_id 关联到正确 sys_user",
 			"5. 修复后刷新 reconciliation_normalized MV 验证一致",

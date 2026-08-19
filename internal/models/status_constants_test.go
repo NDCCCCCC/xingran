@@ -69,7 +69,8 @@ var watchedStatusPrefixes = []string{
 	"PublishStatus", "NoticeStatus", "VDIServerStatus",
 	// operations-domain families
 	"ExecutionStatus", "KnowledgeArticleStatus", "LineStatus",
-	"WorkstationType", "WorkstationStatus", "DeviceStatus",
+	"WorkstationType", "WorkstationStatus", "DeviceStatus", "DiscoveryStatus",
+	"ServerStatus", "NotificationConfigStatus",
 	"DutyStatus", "DutyPoolStatus", "BuildingStatus", "FloorStatus",
 	"RoomStatus", "RoomDeviceStatus", "InfoPointStatus", "DashboardStatus",
 	// Phase 69 batch 2 additions (untyped int, int-typed struct fields)
@@ -123,6 +124,11 @@ var expectedStatusValues = map[string]int{
 	// vdi.go（Wave 0 新增）
 	"VDIServerStatusNormal":  0, // 正常
 	"VDIServerStatusStopped": 1, // 停用
+	// monitor.go / notification_config.go（Phase 69 Plan 05 补齐真相源）
+	"ServerStatusNormal":              0, // 正常
+	"ServerStatusAbnormal":            1, // 异常
+	"NotificationConfigStatusNormal":  0, // 正常
+	"NotificationConfigStatusStopped": 1, // 停用
 	// workstation.go（多态簇 D：1=占用 并非"停用"）
 	"WorkstationStatusAvailable": 0, // 空闲
 	"WorkstationStatusOccupied":  1, // 占用
@@ -134,6 +140,12 @@ var expectedStatusValues = map[string]int{
 	"DeviceStatusOnline":  0, // 在线
 	"DeviceStatusOffline": 1, // 离线
 	"DeviceStatusUnknown": 2, // 未知
+	// device_discovery.go（任务状态机）
+	"DiscoveryStatusPending":   0, // 待执行
+	"DiscoveryStatusRunning":   1, // 执行中
+	"DiscoveryStatusSuccess":   2, // 成功
+	"DiscoveryStatusFailed":    3, // 失败
+	"DiscoveryStatusCancelled": 4, // 已取消
 	// config_execution.go（状态机簇 B，顺序即语义）
 	"ExecutionStatusPending":   0, // 待执行
 	"ExecutionStatusRunning":   1, // 执行中

@@ -329,6 +329,7 @@ func (s *GeocodingService) callGeocodingAPI(ctx context.Context, address string)
 		return nil, fmt.Errorf("解析响应失败: %w", err)
 	}
 
+	// F 簇：百度地图 API 返回码契约，不迁移到 models 常量（见 scripts/check-status-literals.sh 白名单）
 	if baiduResp.Status != 0 {
 		return nil, fmt.Errorf("地址解析失败: %s", baiduResp.Message)
 	}

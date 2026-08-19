@@ -3,6 +3,7 @@ package scheduler
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/common"
 	schedulerServices "github.com/xingran-next/xingran-go-backend/internal/services/scheduler"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
@@ -254,7 +255,7 @@ func (h *JobHandler) UpdateStatus(c *gin.Context) {
 
 	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "定时任务", operlog.OperTypeStatus)
 	statusText := "启用"
-	if req.Status == 1 {
+	if req.Status == int(models.JobStatusPause) {
 		statusText = "暂停"
 	}
 

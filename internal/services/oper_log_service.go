@@ -109,10 +109,10 @@ func (s *operLogService) RecordFromGinContext(c *gin.Context, db *gorm.DB, title
 	}
 
 	// 确定状态
-	status := 0
+	status := models.OperLogStatusSuccess
 	errorMsg := (*string)(nil)
 	if len(c.Errors) > 0 {
-		status = 1
+		status = models.OperLogStatusFailure
 		errMsg := c.Errors.String()
 		errorMsg = &errMsg
 	}
@@ -130,7 +130,7 @@ func (s *operLogService) RecordFromGinContext(c *gin.Context, db *gorm.DB, title
 		OperLocation:  nil, // 可以添加 IP 地理位置解析
 		OperParam:     operParam,
 		JsonResult:    jsonResult,
-		Status:        status,
+		Status:        int(status),
 		ErrorMsg:      errorMsg,
 		OperTime:      time.Now(),
 		CostTime:      costTime,

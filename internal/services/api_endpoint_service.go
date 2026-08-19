@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/config"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
 	"gorm.io/gorm"
 )
@@ -126,8 +127,8 @@ func (s *APIEndpointService) getUserPermissions(ctx context.Context, userID stri
 		WHERE ur.user_id = ?
 		AND m.perms IS NOT NULL
 		AND m.perms != ''
-		AND m.status = 0
-	`, userID).Scan(&permissions).Error
+		AND m.status = ?
+	`, userID, models.MenuStatusNormal).Scan(&permissions).Error
 
 	return permissions, err
 }

@@ -70,7 +70,7 @@ func (s *APISenderService) Send(ctx context.Context, configID string, msg *APIMe
 	}
 
 	// 检查配置状态
-	if config.Status != 0 {
+	if config.Status != int(models.NotificationConfigStatusNormal) {
 		return &APISendResult{
 			Success: false,
 			Message: "API配置未启用",

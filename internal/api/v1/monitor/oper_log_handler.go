@@ -187,7 +187,7 @@ func (h *OperLogHandler) Clean(c *gin.Context) {
 		OperUrl:       &operUrl,
 		OperIP:        &clientIP,
 		OperParam:     strPtr(`{"action":"clean"}`),
-		Status:        0,
+		Status:        int(models.OperLogStatusSuccess),
 		OperTime:      now,
 	}
 	if h.core != nil && h.core.OperLogService != nil && h.core.GetDB() != nil {

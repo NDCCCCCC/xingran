@@ -4,19 +4,27 @@ import (
 	"time"
 )
 
+// ServerStatus 服务器健康状态枚举（0=正常 1=异常）
+type ServerStatus int
+
+const (
+	ServerStatusNormal   ServerStatus = 0 // 正常
+	ServerStatusAbnormal ServerStatus = 1 // 异常
+)
+
 // ServerInfo 服务器信息
 type ServerInfo struct {
 	BaseModel
-	HostName        string     `json:"hostName" gorm:"size:128;not null;comment:主机名"`
-	OS              string     `json:"os" gorm:"size:64;comment:操作系统"`
-	Arch            string     `json:"arch" gorm:"size:32;comment:系统架构"`
-	CPUCount        int        `json:"cpuCount" gorm:"comment:CPU核心数"`
-	TotalMemory     uint64     `json:"totalMemory" gorm:"comment:总内存(字节)"`
-	AvailableMemory uint64     `json:"availableMemory" gorm:"comment:可用内存(字节)"`
-	DiskTotal       uint64     `json:"diskTotal" gorm:"comment:磁盘总容量(字节)"`
-	DiskAvailable   uint64     `json:"diskAvailable" gorm:"comment:磁盘可用容量(字节)"`
-	Status          int        `json:"status" gorm:"default:0;comment:状态:0=正常,1=异常"`
-	LastActiveAt    *time.Time `json:"lastActiveAt" gorm:"comment:最后活跃时间"`
+	HostName        string       `json:"hostName" gorm:"size:128;not null;comment:主机名"`
+	OS              string       `json:"os" gorm:"size:64;comment:操作系统"`
+	Arch            string       `json:"arch" gorm:"size:32;comment:系统架构"`
+	CPUCount        int          `json:"cpuCount" gorm:"comment:CPU核心数"`
+	TotalMemory     uint64       `json:"totalMemory" gorm:"comment:总内存(字节)"`
+	AvailableMemory uint64       `json:"availableMemory" gorm:"comment:可用内存(字节)"`
+	DiskTotal       uint64       `json:"diskTotal" gorm:"comment:磁盘总容量(字节)"`
+	DiskAvailable   uint64       `json:"diskAvailable" gorm:"comment:磁盘可用容量(字节)"`
+	Status          ServerStatus `json:"status" gorm:"default:0;comment:状态:0=正常,1=异常"`
+	LastActiveAt    *time.Time   `json:"lastActiveAt" gorm:"comment:最后活跃时间"`
 }
 
 func (ServerInfo) TableName() string {

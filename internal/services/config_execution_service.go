@@ -27,13 +27,14 @@ func NewConfigExecutionService(db *gorm.DB, executor *device.DeviceExecutor) *Co
 	}
 }
 
-// ExecutionStatistics 配置/命令执行的统计结果。status: 0=待执行 1=执行中 2=成功 3=失败 4=取消。
+// ExecutionStatistics 配置/命令执行的统计结果。
+// 状态机由 models.ExecutionStatus 定义：待执行/执行中/成功/失败/取消。
 type ExecutionStatistics struct {
 	Total   int64 `json:"total"`
-	Pending int64 `json:"pending"` // status = 0
-	Running int64 `json:"running"` // status = 1
-	Success int64 `json:"success"` // status = 2
-	Failed  int64 `json:"failed"`  // status = 3
+	Pending int64 `json:"pending"` // ExecutionStatusPending
+	Running int64 `json:"running"` // ExecutionStatusRunning
+	Success int64 `json:"success"` // ExecutionStatusSuccess
+	Failed  int64 `json:"failed"`  // ExecutionStatusFailed
 }
 
 // GetStatistics 统计配置执行(模板执行)的总数及各状态计数(execution_type='template',与 GetExecutionList 口径一致)。
@@ -43,10 +44,10 @@ func (s *ConfigExecutionService) GetStatistics(ctx context.Context) (*ExecutionS
 		Where("execution_type = ?", models.ExecutionTypeTemplate).
 		Select(
 			"COUNT(*) AS total",
-			"SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS pending",
-			"SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS running",
-			"SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS success",
-			"SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) AS failed",
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS pending", int(models.ExecutionStatusPending)),
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS running", int(models.ExecutionStatusRunning)),
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS success", int(models.ExecutionStatusSuccess)),
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS failed", int(models.ExecutionStatusFailed)),
 		).
 		Scan(&result).Error
 	if err != nil {

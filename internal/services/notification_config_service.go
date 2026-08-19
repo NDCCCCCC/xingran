@@ -72,7 +72,7 @@ func (s *NotificationConfigService) GetEmailConfigByID(ctx context.Context, id s
 // GetDefaultEmailConfig 获取邮件配置（系统只有一条配置）
 func (s *NotificationConfigService) GetDefaultEmailConfig(ctx context.Context) (*models.EmailConfig, error) {
 	var config models.EmailConfig
-	if err := s.db.WithContext(ctx).Where("status = 0 AND del_flag = 0").First(&config).Error; err != nil {
+	if err := s.db.WithContext(ctx).Where("status = ? AND del_flag = ?", int(models.NotificationConfigStatusNormal), 0).First(&config).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, fmt.Errorf("未设置邮件配置")
 		}

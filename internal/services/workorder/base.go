@@ -21,13 +21,13 @@ func NewBaseService(db *gorm.DB) *BaseService {
 }
 
 // WorkOrderStatusStatistics 工单按状态的聚合统计。
-// status: 0=待处理 1=处理中 2=已完成 3=已关闭 4=已拒绝(models.WorkOrderStatus)。
+// 状态机由 models.WorkOrderStatus 定义：待处理/处理中/已完成/已关闭/已拒绝。
 type WorkOrderStatusStatistics struct {
 	Total      int64 `json:"total"`
-	Pending    int64 `json:"pending"`    // status = 0
-	Processing int64 `json:"processing"` // status = 1
-	Completed  int64 `json:"completed"`  // status = 2
-	Closed     int64 `json:"closed"`     // status = 3
+	Pending    int64 `json:"pending"`    // WorkOrderStatusPending
+	Processing int64 `json:"processing"` // WorkOrderStatusProcessing
+	Completed  int64 `json:"completed"`  // WorkOrderStatusCompleted
+	Closed     int64 `json:"closed"`     // WorkOrderStatusClosed
 }
 
 // GetStatusStatistics 统计工单总数及各状态计数。
@@ -39,10 +39,10 @@ func (s *BaseService) GetStatusStatistics(ctx context.Context) (*WorkOrderStatus
 		Model(&models.WorkOrder{}).
 		Select(
 			"COUNT(*) AS total",
-			"SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS pending",
-			"SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS processing",
-			"SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS completed",
-			"SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) AS closed",
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS pending", int(models.WorkOrderStatusPending)),
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS processing", int(models.WorkOrderStatusProcessing)),
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS completed", int(models.WorkOrderStatusCompleted)),
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS closed", int(models.WorkOrderStatusClosed)),
 		).
 		Scan(&result).Error
 	if err != nil {
@@ -149,17 +149,17 @@ func (s *BaseService) GetList(ctx context.Context, req *ListRequest) ([]models.W
 
 // workOrderAllowedSortFields 工单可排序字段白名单(对应 work_order 表列名)。
 var workOrderAllowedSortFields = map[string]string{
-	"workOrderNo":  "work_order_no",
-	"title":        "title",
-	"categoryId":   "category_id",
-	"type":         "type",
-	"priority":     "priority",
-	"status":       "status",
-	"submitterId":  "submitter_id",
-	"assigneeId":   "assignee_id",
-	"createdAt":    "created_at",
-	"updatedAt":    "updated_at",
-	"completedAt":  "completed_at",
+	"workOrderNo": "work_order_no",
+	"title":       "title",
+	"categoryId":  "category_id",
+	"type":        "type",
+	"priority":    "priority",
+	"status":      "status",
+	"submitterId": "submitter_id",
+	"assigneeId":  "assignee_id",
+	"createdAt":   "created_at",
+	"updatedAt":   "updated_at",
+	"completedAt": "completed_at",
 }
 
 // GetMyPendingRequest 获取待办工单请求

@@ -77,7 +77,7 @@ func (s *EmailSenderService) Send(ctx context.Context, configID string, msg *Ema
 	}
 
 	// 检查配置状态
-	if config.Status != 0 {
+	if config.Status != int(models.NotificationConfigStatusNormal) {
 		return &SendResult{
 			Success: false,
 			Message: "邮件配置未启用",

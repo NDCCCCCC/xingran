@@ -27,13 +27,13 @@ func NewDeviceDiscoveryService(db *gorm.DB) *DeviceDiscoveryService {
 }
 
 // DiscoveryStatistics 设备发现统计结果。
-// status: 0=待执行 1=执行中 2=成功(前端称 completed) 3=失败。
+// 状态机由 models.DiscoveryStatus 定义。
 type DiscoveryStatistics struct {
 	Total        int64 `json:"total"`
-	Pending      int64 `json:"pending"`      // status = 0
-	Running      int64 `json:"running"`      // status = 1
-	Completed    int64 `json:"completed"`    // status = 2
-	Failed       int64 `json:"failed"`       // status = 3
+	Pending      int64 `json:"pending"`      // DiscoveryStatusPending
+	Running      int64 `json:"running"`      // DiscoveryStatusRunning
+	Completed    int64 `json:"completed"`    // DiscoveryStatusSuccess
+	Failed       int64 `json:"failed"`       // DiscoveryStatusFailed
 	TotalDevices int64 `json:"totalDevices"` // SUM(discovered_count)
 }
 
@@ -44,10 +44,10 @@ func (s *DeviceDiscoveryService) GetStatistics(ctx context.Context) (*DiscoveryS
 	err := s.db.WithContext(ctx).Model(&models.DeviceDiscovery{}).
 		Select(
 			"COUNT(*) AS total",
-			"SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS pending",
-			"SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS running",
-			"SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS completed",
-			"SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) AS failed",
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS pending", int(models.DiscoveryStatusPending)),
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS running", int(models.DiscoveryStatusRunning)),
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS completed", int(models.DiscoveryStatusSuccess)),
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS failed", int(models.DiscoveryStatusFailed)),
 			"COALESCE(SUM(discovered_count), 0) AS total_devices",
 		).
 		Scan(&result).Error

@@ -39,28 +39,12 @@ PATTERN='status = [0-9]|Status: *[0-9]|Status [=!]= *[0-9]|"status":[[:space:]]*
 # and removed 2026-08-19 — 38 files remained.
 # batch 2 (services/operations 10 files + api/v1/operations/excel_handler,
 # 58 hits) replaced and removed 2026-08-19 — 27 files remained (69-03).
-# batch 3 (services vdi/addomain/notice/knowledge/rpa/scheduler, 10 files,
-# 30 hits) replaced and removed 2026-08-19 — 17 files remain (69-04).
-# Delete entries as replacement batches land; counts may only decrease.
+# batch 4 (workorder/duty/discovery/execution/dispatch/monitor/asset, api/v1,
+# and scattered service/handler hits) replaced and removed 2026-08-19 — 17 files
+# remain (69-05). Delete entries as replacement batches land; counts may only decrease.
 # geocoding_service.go is cluster-F: Baidu API response-code contract, never migrated.
 declare -A ALLOWED=(
-  ["internal/api/v1/monitor/oper_log_handler.go"]=1
-  ["internal/api/v1/scheduler/job_handler.go"]=1
-  ["internal/api/v1/system/notice_handler.go"]=2
-  ["internal/services/api_endpoint_service.go"]=1
-  ["internal/services/api_sender_service.go"]=1
-  ["internal/services/asset/fix_suggestion_monitor.go"]=1
-  ["internal/services/command_dispatch_service.go"]=4
-  ["internal/services/config_execution_service.go"]=8
-  ["internal/services/device_discovery_service.go"]=8
-  ["internal/services/duty_pool_service.go"]=4
-  ["internal/services/email_sender_service.go"]=1
-  ["internal/services/monitor/server_service.go"]=2
-  ["internal/services/notification_config_service.go"]=1
-  ["internal/services/oper_log_service.go"]=1
   ["internal/services/operations/geocoding_service.go"]=1 # F 簇：百度 API 返回码契约，不迁移
-  ["internal/services/workorder/assignment.go"]=1
-  ["internal/services/workorder/base.go"]=8
 )
 
 # hits_in FILE — count non-comment lines matching PATTERN in FILE.
