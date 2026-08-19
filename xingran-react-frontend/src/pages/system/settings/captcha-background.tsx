@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
-import type { FC } from "react";
+import type { FC, CSSProperties } from "react";
 import {
   App,
-  Table,
   Button,
   Space,
   Modal,
@@ -10,29 +9,20 @@ import {
   Input,
   Select,
   Upload,
-  Tag,
   Image,
-  Statistic,
   Card,
-  Row,
-  Col,
+  Pagination,
+  Spin,
 } from "antd";
-import type { ColumnsType } from "antd/es/table";
 import type { UploadFile, UploadProps } from "antd/es/upload";
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  ReloadOutlined,
-  UploadOutlined,
-  PictureOutlined,
-} from "@ant-design/icons";
+import { UploadOutlined, PictureOutlined } from "@ant-design/icons";
 import type {
   CaptchaBackground,
   CaptchaBackgroundUpdateRequest,
   PieceShape,
   DifficultyLevel,
   CaptchaBackgroundStatus,
+  StatisticsResponse,
 } from "@/types/captcha";
 import * as captchaService from "@/services/captcha";
 import { usePagination } from "@/hooks/usePagination";
@@ -64,43 +54,67 @@ const SHAPE_OPTIONS = [
   { label: "心形", value: "heart" },
 ];
 
+// ★ status 语义反转（后端契约例外，70-RESEARCH Pitfall 1）：
+//   captcha 背景图 1 = 启用 / 0 = 禁用 —— 与全局「0=启用」惯例相反，显示层按此取数，勿「纠正」。
+//   统计卡「启用数量」与卡脚「启用」徽标均按 status === 1 取值；启停按钮文案 = 当前 status 取反动作。
+
+// 空状态卡（跨整行白卡：icon + 标题 + 正文 + CTA）
+const EMPTY_CARD_STYLE: CSSProperties = {
+  gridColumn: "1 / -1",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 4,
+  padding: "32px 24px",
+  background: "var(--theme-bg-surface)",
+  border: "1px solid var(--theme-border-primary)",
+  borderRadius: "var(--theme-radius-xl)",
+};
+
 const CaptchaBackgroundSettingsPage: FC = () => {
   const { message } = App.useApp();
   const [backgrounds, setBackgrounds] = useState<CaptchaBackground[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchForm] = Form.useForm();
+
+  // 紧凑筛选（工具栏内即时生效：Select 即选即筛，文件名回车/清空生效）
+  const [fileNameInput, setFileNameInput] = useState("");
+  const [fileNameFilter, setFileNameFilter] = useState("");
+  const [shapeFilter, setShapeFilter] = useState<PieceShape | undefined>(undefined);
+  const [difficultyFilter, setDifficultyFilter] = useState<DifficultyLevel | undefined>(undefined);
+  const [statusFilter, setStatusFilter] = useState<CaptchaBackgroundStatus | undefined>(undefined);
+
+  // 统计（getCaptchaBackgroundStatistics 现成端点：4 卡数据源）
+  const [statistics, setStatistics] = useState<StatisticsResponse | null>(null);
+
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
-  const [previewVisible, setPreviewVisible] = useState(false);
-  const [previewImage, _setPreviewImage] = useState<string | null>(null);
   const [editForm] = Form.useForm();
   const [uploadForm] = Form.useForm();
   const [editingBg, setEditingBg] = useState<CaptchaBackground | null>(null);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [statistics, setStatistics] = useState<{
-    totalCount: number;
-    enabledCount: number;
-    disabledCount: number;
-  } | null>(null);
 
-  // 使用全局分页 hook
-  const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
+  // 使用全局分页 hook（list API 契约不变）
+  const { paginationProps, setCurrent, setTotal } = usePagination();
 
   // 加载背景图列表
-  const loadBackgrounds = async (params: { current?: number; pageSize?: number } = {}) => {
+  const loadBackgrounds = async () => {
     setLoading(true);
     try {
-      const values = searchForm.getFieldsValue();
       const result = await captchaService.getCaptchaBackgroundList({
-        current: params.current || paginationProps.current,
-        pageSize: params.pageSize || paginationProps.pageSize,
-        ...values,
+        current: paginationProps.current,
+        pageSize: paginationProps.pageSize,
+        fileName: fileNameFilter || undefined,
+        pieceShape: shapeFilter,
+        difficultyLevel: difficultyFilter,
+        status: statusFilter,
       });
       setBackgrounds(result.items);
       setTotal(result.total);
     } catch (error) {
       console.error("加载背景图列表失败:", error);
+      message.error("加载背景图列表失败，请刷新重试");
     } finally {
       setLoading(false);
     }
@@ -178,7 +192,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
     }
   };
 
-  // 删除背景图
+  // 删除背景图（具名确认弹窗，danger 按钮）
   const handleDelete = async (id: string) => {
     try {
       await captchaService.deleteCaptchaBackground(id);
@@ -190,7 +204,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
     }
   };
 
-  // 切换状态
+  // 切换状态（非破坏性操作，不弹确认；文案按 status 取反）
   const handleToggle = async (id: string) => {
     try {
       await captchaService.toggleCaptchaBackgroundStatus(id);
@@ -226,7 +240,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
     setEditModalVisible(true);
   };
 
-  // 上传配置
+  // 上传配置（D-09 约束逐字保留：仅图片 + <2MB + maxCount 1 + 手动上传）
   const uploadProps: UploadProps = {
     listType: "picture-card",
     fileList,
@@ -249,271 +263,224 @@ const CaptchaBackgroundSettingsPage: FC = () => {
     maxCount: 1,
   };
 
-  // 表格列
-  const columns: ColumnsType<CaptchaBackground> = [
-    {
-      title: "预览",
-      key: "preview",
-      width: 80,
-      render: (_, record) => (
-        <Image
-          width={50}
-          height={30}
-          src={record.previewUrl}
-          preview={{
-            src: record.previewUrl,
-          }}
-          style={{ objectFit: "cover", cursor: "pointer" }}
-        />
-      ),
-    },
-    { title: "文件名", dataIndex: "fileName", key: "fileName", width: 150, ellipsis: true },
-    {
-      title: "拼图形状",
-      dataIndex: "pieceShape",
-      key: "pieceShape",
-      width: 120,
-      render: (shape: PieceShape) => <Tag color="blue">{PIECE_SHAPE_MAP[shape]}</Tag>,
-    },
-    {
-      title: "难度",
-      dataIndex: "difficultyLevel",
-      key: "difficultyLevel",
-      width: 80,
-      render: (level: DifficultyLevel) => <Tag color="orange">{DIFFICULTY_MAP[level]}</Tag>,
-    },
-    {
-      title: "尺寸",
-      key: "size",
-      width: 100,
-      render: (_, record) => `${record.fileWidth}x${record.fileHeight}`,
-    },
-    {
-      title: "文件大小",
-      dataIndex: "fileSize",
-      key: "fileSize",
-      width: 100,
-      render: (size: number) => `${(size / 1024).toFixed(1)} KB`,
-    },
-    {
-      title: "使用次数",
-      dataIndex: "useCount",
-      key: "useCount",
-      width: 100,
-      sorter: (a, b) => a.useCount - b.useCount,
-    },
-    {
-      title: "状态",
-      dataIndex: "status",
-      key: "status",
-      width: 80,
-      render: (status: CaptchaBackgroundStatus) => (
-        <Tag color={status === 1 ? "success" : "default"}>{status === 1 ? "启用" : "禁用"}</Tag>
-      ),
-    },
-    { title: "备注", dataIndex: "remark", key: "remark", width: 150, ellipsis: true },
-    {
-      title: "操作",
-      key: "action",
-      fixed: "right",
-      width: 200,
-      render: (_, record) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => openEditModal(record)}
-          >
-            编辑
-          </Button>
-          <Button type="link" size="small" onClick={() => handleToggle(record.id)}>
-            {record.status === 1 ? "禁用" : "启用"}
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => {
-              Modal.confirm({
-                title: "确认删除?",
-                okText: "确定",
-                cancelText: "取消",
-                okButtonProps: { danger: true },
-                onOk: () => handleDelete(record.id),
-              });
-            }}
-          >
-            删除
-          </Button>
-        </Space>
-      ),
-    },
-  ];
-
   useEffect(() => {
     loadBackgrounds();
     loadStatistics();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paginationProps.current, paginationProps.pageSize]);
+  }, [
+    paginationProps.current,
+    paginationProps.pageSize,
+    fileNameFilter,
+    shapeFilter,
+    difficultyFilter,
+    statusFilter,
+  ]);
+
+  // 启用占比（反转语义：enabledCount 即 status=1 计数）
+  const enabledPct =
+    statistics && statistics.totalCount > 0
+      ? Math.round((statistics.enabledCount / statistics.totalCount) * 100)
+      : 0;
 
   return (
-    <div style={{ padding: "0 0 24px" }}>
-      {/* 统计卡片 */}
-      {statistics && (
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col span={6}>
-            <Card>
-              <Statistic title="总数量" value={statistics.totalCount} />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="启用数量"
-                value={statistics.enabledCount}
-                styles={{ content: { color: "var(--theme-success, #3f8600)" } }}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="禁用数量"
-                value={statistics.disabledCount}
-                styles={{ content: { color: "var(--theme-error, #cf1322)" } }}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="总使用次数"
-                value={
-                  (
-                    statistics as {
-                      totalCount: number;
-                      enabledCount: number;
-                      disabledCount: number;
-                      totalUsage?: number;
-                    }
-                  ).totalUsage ?? 0
-                }
-              />
-            </Card>
-          </Col>
-        </Row>
-      )}
-
-      {/* 搜索表单 */}
-      <Form form={searchForm} layout="inline" style={{ marginBottom: 16 }}>
-        <Form.Item name="fileName" label="文件名">
-          <Input
-            placeholder="请输入文件名"
-            allowClear
-            className="user-form-input"
-            style={{ width: 150 }}
-          />
-        </Form.Item>
-        <Form.Item name="pieceShape" label="拼图形状">
-          <Select
-            placeholder="请选择"
-            allowClear
-            className="user-form-input"
-            style={{ width: 120 }}
-            onSearch={() => {}}
-          >
-            {SHAPE_OPTIONS.map((opt) => (
-              <Option key={opt.value} value={opt.value}>
-                {opt.label}
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
-        <Form.Item name="difficultyLevel" label="难度">
-          <Select
-            placeholder="请选择"
-            allowClear
-            className="user-form-input"
-            style={{ width: 100 }}
-            onSearch={() => {}}
-          >
-            <Option value={1}>简单</Option>
-            <Option value={2}>中等</Option>
-            <Option value={3}>困难</Option>
-          </Select>
-        </Form.Item>
-        <Form.Item name="status" label="状态">
-          <Select
-            placeholder="请选择"
-            allowClear
-            className="user-form-input"
-            style={{ width: 100 }}
-            onSearch={() => {}}
-          >
-            <Option value={1}>启用</Option>
-            <Option value={0}>禁用</Option>
-          </Select>
-        </Form.Item>
-        <Form.Item>
-          <Space>
-            <Button type="primary" onClick={() => loadBackgrounds()}>
-              查询
-            </Button>
-            <Button
-              onClick={() => {
-                searchForm.resetFields();
-                loadBackgrounds();
-              }}
-            >
-              重置
-            </Button>
-          </Space>
-        </Form.Item>
-      </Form>
-
-      {/* 操作按钮 */}
-      <div style={{ marginBottom: 16 }}>
-        <Space>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => setUploadModalVisible(true)}
-          >
-            上传背景图
-          </Button>
-          <Button icon={<PictureOutlined />} onClick={handlePreload}>
-            预加载缓存
-          </Button>
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={() => {
-              loadBackgrounds();
-              loadStatistics();
-            }}
-          >
-            刷新
-          </Button>
-        </Space>
+    <>
+      {/* 统计卡行：4 卡 — 总数量（默认绿条）/ 启用（sc-green）/ 禁用（sc-gray）/ 总使用次数（sc-gold） */}
+      <div className="stat-cards">
+        <div className="stat-card">
+          <div className="stat-label">总数量</div>
+          <div className="stat-value">{statistics?.totalCount ?? 0}</div>
+          <div className="stat-trend">全部背景图资产</div>
+        </div>
+        <div className="stat-card sc-green">
+          <div className="stat-label">启用数量</div>
+          <div className="stat-value" style={{ color: "var(--theme-success)" }}>
+            {statistics?.enabledCount ?? 0}
+          </div>
+          <div className="stat-trend">占比 {enabledPct}%</div>
+        </div>
+        <div className="stat-card sc-gray">
+          <div className="stat-label">禁用数量</div>
+          <div className="stat-value" style={{ color: "var(--theme-error)" }}>
+            {statistics?.disabledCount ?? 0}
+          </div>
+          <div className="stat-trend">不参与抽取</div>
+        </div>
+        <div className="stat-card sc-gold">
+          <div className="stat-label">总使用次数</div>
+          <div className="stat-value">{statistics?.totalUsage ?? 0}</div>
+          <div className="stat-trend">累计验证码展示</div>
+        </div>
       </div>
 
-      {/* 表格 */}
-      <Table
-        columns={columns}
-        dataSource={backgrounds}
-        loading={loading}
-        rowKey="id"
-        pagination={paginationProps}
-        onChange={(pagination) => {
-          setCurrent(pagination.current ?? 1);
-          setPageSize(pagination.pageSize ?? 10);
-          loadBackgrounds();
-        }}
-        scroll={{ x: 1200 }}
-      />
+      {/* 工具栏卡：紧凑筛选（无独立搜索区）+ 右侧按钮组 */}
+      <Card style={{ marginBottom: 14 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
+        >
+          <Space wrap size={8}>
+            <Input
+              placeholder="搜索文件名"
+              allowClear
+              value={fileNameInput}
+              onChange={(e) => {
+                setFileNameInput(e.target.value);
+                if (e.target.value === "") {
+                  setFileNameFilter("");
+                  setCurrent(1);
+                }
+              }}
+              onPressEnter={() => {
+                setFileNameFilter(fileNameInput);
+                setCurrent(1);
+              }}
+              style={{ width: 180 }}
+            />
+            <Select<PieceShape | undefined>
+              placeholder="拼图形状"
+              allowClear
+              value={shapeFilter}
+              onChange={(value) => {
+                setShapeFilter(value);
+                setCurrent(1);
+              }}
+              options={SHAPE_OPTIONS}
+              onSearch={() => {}}
+              style={{ width: 110 }}
+            />
+            <Select<DifficultyLevel | undefined>
+              placeholder="难度"
+              allowClear
+              value={difficultyFilter}
+              onChange={(value) => {
+                setDifficultyFilter(value);
+                setCurrent(1);
+              }}
+              options={[
+                { value: 1, label: "简单" },
+                { value: 2, label: "中等" },
+                { value: 3, label: "困难" },
+              ]}
+              onSearch={() => {}}
+              style={{ width: 100 }}
+            />
+            <Select<CaptchaBackgroundStatus | undefined>
+              placeholder="状态"
+              allowClear
+              value={statusFilter}
+              onChange={(value) => {
+                setStatusFilter(value);
+                setCurrent(1);
+              }}
+              options={[
+                { value: 1, label: "启用" },
+                { value: 0, label: "禁用" },
+              ]}
+              onSearch={() => {}}
+              style={{ width: 100 }}
+            />
+          </Space>
+          <Space>
+            <Button icon={<PictureOutlined />} onClick={handlePreload}>
+              预加载缓存
+            </Button>
+            <Button
+              type="primary"
+              icon={<UploadOutlined />}
+              onClick={() => setUploadModalVisible(true)}
+            >
+              上传背景图
+            </Button>
+          </Space>
+        </div>
+      </Card>
 
-      {/* 上传模态框 */}
+      {/* 网格墙（D-08）：缩略图卡片网格，图片即视觉主体 */}
+      <Spin spinning={loading}>
+        <div className="xr-captcha-grid">
+          {!loading && backgrounds.length === 0 ? (
+            <div style={EMPTY_CARD_STYLE}>
+              <PictureOutlined style={{ fontSize: 48, color: "var(--theme-text-secondary)" }} />
+              <div
+                style={{ fontSize: 16, fontWeight: 600, color: "var(--theme-text-primary)" }}
+              >
+                暂无背景图
+              </div>
+              <div style={{ fontSize: 12, color: "var(--theme-text-secondary)" }}>
+                上传第一张验证码背景图，用于登录页拼图验证码
+              </div>
+              <Button
+                type="primary"
+                icon={<UploadOutlined />}
+                onClick={() => setUploadModalVisible(true)}
+                style={{ marginTop: 8 }}
+              >
+                上传背景图
+              </Button>
+            </div>
+          ) : (
+            backgrounds.map((record) => (
+              <div className="xr-captcha-card" key={record.id}>
+                {/* 图片区 4:3 + Antd Image 内置预览（不自建灯箱） */}
+                <Image
+                  className="xr-captcha-card-image"
+                  src={record.previewUrl}
+                  preview={{ src: record.previewUrl }}
+                  style={{ objectFit: "cover" }}
+                />
+                {/* 卡脚行 1：文件名（mono ellipsis）+ 状态徽标（1=启用 反转语义）。
+                    形状/难度/尺寸/大小/使用次数信息不丢 — 以 title 提示承载（planner 裁量，
+                    铜金 xr-tag-gold 每屏 ≤2 处预算不允许逐卡渲染难度 Tag） */}
+                <div
+                  className="xr-captcha-card-foot"
+                  title={`${record.fileName} · 形状 ${PIECE_SHAPE_MAP[record.pieceShape]} · 难度 ${DIFFICULTY_MAP[record.difficultyLevel]} · ${record.fileWidth}x${record.fileHeight} · ${(record.fileSize / 1024).toFixed(1)} KB · 使用 ${record.useCount} 次${record.remark ? ` · ${record.remark}` : ""}`}
+                >
+                  <span className="xr-captcha-card-name">{record.fileName}</span>
+                  <span className={`xr-tag ${record.status === 1 ? "xr-tag-green" : ""}`}>
+                    {record.status === 1 ? "启用" : "禁用"}
+                  </span>
+                </div>
+                {/* 卡脚行 2：文字链接操作（启停文案 = 当前 status 取反） */}
+                <div className="xr-row-ops xr-captcha-card-ops" style={{ padding: "0 8px 8px" }}>
+                  <Button type="link" size="small" onClick={() => handleToggle(record.id)}>
+                    {record.status === 1 ? "禁用" : "启用"}
+                  </Button>
+                  <Button type="link" size="small" onClick={() => openEditModal(record)}>
+                    编辑
+                  </Button>
+                  <Button
+                    type="link"
+                    size="small"
+                    className="xr-op-danger"
+                    onClick={() => {
+                      Modal.confirm({
+                        title: "删除背景图？",
+                        content: "删除后不可恢复，启用中的拼图验证码将不再使用该背景。",
+                        okText: "删除",
+                        cancelText: "取消",
+                        okButtonProps: { danger: true },
+                        onOk: () => handleDelete(record.id),
+                      });
+                    }}
+                  >
+                    删除
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </Spin>
+
+      {/* 分页保留（usePagination 沿用，list API 契约不变） */}
+      <Pagination {...paginationProps} style={{ marginTop: 16, justifyContent: "flex-end" }} />
+
+      {/* 上传模态框 — D-09 原样保留 */}
       <Modal
         title="上传背景图"
         open={uploadModalVisible}
@@ -581,7 +548,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
         </Form>
       </Modal>
 
-      {/* 编辑模态框 */}
+      {/* 编辑模态框 — D-09 原样保留 */}
       <Modal
         title="编辑背景图"
         open={editModalVisible}
@@ -633,22 +600,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-
-      {/* 图片预览 */}
-      {previewImage && (
-        <Image
-          style={{ display: "none" }}
-          src={previewImage}
-          preview={{
-            open: previewVisible,
-            src: previewImage,
-            onOpenChange: (value) => {
-              setPreviewVisible(value);
-            },
-          }}
-        />
-      )}
-    </div>
+    </>
   );
 };
 
