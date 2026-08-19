@@ -29,10 +29,10 @@
     "noImplicitThis": true,
     "alwaysStrict": true,
 
-    /* Path mapping */
-    "baseUrl": ".",
+    /* Path mapping (TS 7 removed `baseUrl`; paths now relative to
+       config file root with explicit `./` prefix on each entry) */
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src"]
