@@ -1,7 +1,7 @@
 ---
 last_updated: 2026-08-19
-update_trigger: v1.24 启动块 Phase 69 EXECUTED (8/8 plans complete, DICT-01~04 全部勾选, T2 字典链路端到端实测通过);Phase 70-01 D-10 default-theme 清理原子提交落地(`35db1b5`)
-last_plan_update: 2026-08-19 — Phase 69-08 closeout: CLAUDE.md 指针化(T1 0da2284)+ T2 五步实测 5/5 PASS
+update_trigger: v1.24 启动块 Phase 69 EXECUTED (8/8 plans complete, DICT-01~04 全部勾选, T2 字典链路端到端实测通过);Phase 70-01 D-10 default-theme 清理原子提交落地(`35db1b5`);Phase 70-02 样式契约层 + SettingsShell 共用骨架 + Wave 0 单测落地(`9c273d8`/`c28b271`/`446119c` + SUMMARY `9283ac5`)
+last_plan_update: 2026-08-19 — Phase 70-02 EXECUTED: index.css +14 selectors + SettingsShell + 6 vitest cases + quality gates all green
 previous_update: 2026-08-13 after v1.21 plans drafted (Phases 57-61) + Phase 62 cross-AI review close-out
 ---
 
@@ -241,7 +241,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 70-02-PLAN.md — 样式契约层(.xr-* 新类) + SettingsShell 共用骨架 + Wave 0 单测
+- [x] 70-02-PLAN.md — 样式契约层(.xr-* 新类) + SettingsShell 共用骨架 + Wave 0 单测
 - [ ] 70-03-PLAN.md — 邮箱/API 配置页 v16 三段式改造(Modal 契约不变)
 
 **Wave 3** *(blocked on Wave 2 completion)*

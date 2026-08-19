@@ -2,24 +2,24 @@
 gsd_state_version: 1.0
 milestone: v1.22 + v1.23 启动块
 milestone_name: milestone
-status: completed
-stopped_at: Phase 70 plan 01 complete (35db1b5)
-last_updated: "2026-08-19T12:09:09.071Z"
+status: in_progress
+stopped_at: Phase 70 plan 02 complete (9c273d8/c28b271/446119c + SUMMARY 9283ac5)
+last_updated: "2026-08-19T20:11:00.000Z"
 last_activity: 2026-08-19
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 19
-  completed_plans: 13
-  percent: 68
+  completed_plans: 14
+  percent: 74
 ---
 
 # Project State
 
 **Project**: XingRan-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.22 前端品牌化改造 SHIPPED 2026-08-18（Phases 64-67 / 4 phases / 4 plans / 15 requirements 100% 勾选 / 33 tasks）。Phase 63 前端工具链自动化独立 IN PROGRESS。**v1.23 启动块**: Phase 68 部署稳健性 & 文档一致性(SM2 密钥配置闭环)EXECUTED 2026-08-19(5 commits: a21dcec..25ded8f)。Phase 69 字典与状态值治理 8/8 plans EXECUTED 2026-08-19(DICT-01 后端常量终态 + DICT-02 字典 seed 11 组 + DICT-03 前端 4 页 useDict 迁移 + DICT-04 CLAUDE.md 指针化,T2 五步实测通过 chrome-devtools,DICT-04 落勾选,closeout commit pending)。Phase 70-01 系统设置页面布局重构 D-10 default-theme 清理原子提交已落地(`35db1b5`),余下 6 plans 进行中(并行)。
-**Last activity**: 2026-08-19 — Phase 69-08 closeout:CLAUDE.md Status Value Convention 段指针化(`0da2284`)+ T2 字典链路端到端五步验证实测通过(chrome-devtools)→ DICT-04 requirements mark-complete 落勾选 → STATE/ROADMAP 终态更新中。Phase 70-01 D-10 default-theme 清理原子提交(`35db1b5`)并行落地,吸收工作区遗留 13 文件(+42/-717)。Phase 63 63-01-PLAN.md 在 `.planning/phases/63-frontend-toolchain-automation/` IN PROGRESS(2026-08-14 起)。
+**Status**: v1.22 前端品牌化改造 SHIPPED 2026-08-18（Phases 64-67 / 4 phases / 4 plans / 15 requirements 100% 勾选 / 33 tasks）。Phase 63 前端工具链自动化独立 IN PROGRESS。**v1.23 启动块**: Phase 68 部署稳健性 & 文档一致性(SM2 密钥配置闭环)EXECUTED 2026-08-19(5 commits: a21dcec..25ded8f)。Phase 69 字典与状态值治理 8/8 plans EXECUTED 2026-08-19(DICT-01 后端常量终态 + DICT-02 字典 seed 11 组 + DICT-03 前端 4 页 useDict 迁移 + DICT-04 CLAUDE.md 指针化,T2 五步实测通过 chrome-devtools,DICT-04 落勾选,closeout commit pending)。Phase 70-01 系统设置页面布局重构 D-10 default-theme 清理原子提交已落地(`35db1b5`)。Phase 70-02 样式契约层 + SettingsShell 共用骨架 + Wave 0 单测已落地(`9c273d8` CSS + `c28b271` SettingsShell + `446119c` 6 vitest cases + `9283ac5` SUMMARY),quality gates 全绿(type-check + lint + 138 tests),余下 5 plans 进行中(并行)。
+**Last activity**: 2026-08-19 — Phase 70-02 EXECUTED: index.css +14 .xr-* selectors + SettingsShell.tsx (D-01/D-03/D-04/D-05 落地) + 6 vitest cases (D-03/D-04 锁定) + quality gates 全绿 (type-check + lint 0 errors / 138 tests pass)。Phase 70-01 D-10 default-theme 清理原子提交(`35db1b5`)并行落地,吸收工作区遗留 13 文件(+42/-717)。Phase 63 63-01-PLAN.md 在 `.planning/phases/63-frontend-toolchain-automation/` IN PROGRESS(2026-08-14 起)。
 
 # Project State
 
@@ -34,13 +34,13 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 
 **Core value**: 端到端运维可观测与审计能力——每个写操作产生可追溯记录(who/when/what/from-where/before-after-state),敏感字段自动脱敏。v1.22 在不破坏既有核心价值的前提下,把后台内部视觉统一到登录页品牌(深绿 × 铜金 × 奶油纸感),让 53 屏业务页面在 design-system 层自动继承品牌样式。
 
-**Current focus**: v1.24 启动块 Phase 69 字典与状态值治理 8/8 plans 完成(DICT-01~04 全部勾选,T2 字典链路端到端实测通过);Phase 70 系统设置页面布局重构并行 70-01 已落地(D-10 default-theme 清理),余下 6 plans 进行中。
+**Current focus**: v1.24 启动块 Phase 69 字典与状态值治理 8/8 plans 完成(DICT-01~04 全部勾选,T2 字典链路端到端实测通过);Phase 70 系统设置页面布局重构并行 70-01 + 70-02 已落地(70-01 D-10 default-theme 清理,70-02 SettingsShell 契约层 + Wave 0 单测),余下 5 plans 进行中(70-03~07)。
 
 ## Current Position
 
 Phase: 70
-Plan: Not started
-Status: Complete (DICT-01~04 全部勾选,字典链路端到端实测通过)
+Plan: 02 of 07 complete
+Status: 70-02 EXECUTED (CSS + SettingsShell + 6 tests + SUMMARY)
 Last activity: 2026-08-19
 
 ## Accumulated Context
