@@ -6,6 +6,7 @@
 import type { ReactElement } from "react";
 import { FolderOutlined, FileOutlined, AppstoreOutlined, MenuOutlined } from "@ant-design/icons";
 import { Tag } from "antd";
+import { NORMAL_STOP_OPTIONS } from "@/constants/status";
 
 /** 菜单类型选项 */
 export const MENU_TYPE_OPTIONS = [
@@ -14,11 +15,14 @@ export const MENU_TYPE_OPTIONS = [
   { label: "按钮", value: "F" },
 ] as const;
 
-/** 菜单状态选项 */
-export const MENU_STATUS_OPTIONS = [
-  { label: "正常", value: "0" },
-  { label: "停用", value: "1" },
-] as const;
+/**
+ * 菜单状态选项（Phase 69 DICT-03: 语义对齐共享常量 models.MenuStatusNormal=0/MenuStatusStop=1）
+ * 保留字符串 value 形态（"0"/"1"）——搜索表单既有契约，页面零改动。
+ */
+export const MENU_STATUS_OPTIONS = NORMAL_STOP_OPTIONS.map((opt) => ({
+  label: opt.label,
+  value: String(opt.value),
+}));
 
 /** 菜单类型 */
 export type MenuType = "M" | "C" | "F";
@@ -57,5 +61,8 @@ export const DEFAULT_FORM_VALUES = {
   menuType: "M" as MenuType,
   orderNum: 0,
   status: true,
+  // VISIBLE 反转例外（严禁与 status 0/1 统一）:
+  // 对齐 models.VisibleShow=1(显示) / VisibleHidden=0(隐藏), internal/models/base.go
+  // —— 与通用启停「0=正常/1=停用」方向相反；表单内以 boolean 承载，提交侧转换。
   visible: true,
 };

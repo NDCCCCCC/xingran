@@ -5,18 +5,14 @@
 
 import type { BadgeProps } from "antd";
 import { Tag } from "antd";
+import { ENABLE_DISABLE_OPTIONS, ENABLE_DISABLE_TAG_CONFIG } from "@/constants/status";
 
-/** 状态选项 */
-export const STATUS_OPTIONS = [
-  { label: "启用", value: 0 },
-  { label: "禁用", value: 1 },
-] as const;
+/** 状态选项（Phase 69 DICT-03: 共享常量别名引用，本地导出名不变） */
+export const STATUS_OPTIONS = ENABLE_DISABLE_OPTIONS;
 
 /** 状态配置 */
-export const STATUS_CONFIG: Record<number, { text: string; color: BadgeProps["color"] }> = {
-  0: { text: "启用", color: "success" },
-  1: { text: "禁用", color: "error" },
-};
+export const STATUS_CONFIG: Record<number, { text: string; color: BadgeProps["color"] }> =
+  ENABLE_DISABLE_TAG_CONFIG;
 
 /** 默认表单值 */
 export const DEFAULT_TYPE_FORM_VALUES = {

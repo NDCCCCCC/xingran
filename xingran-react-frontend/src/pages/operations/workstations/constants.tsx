@@ -6,13 +6,11 @@
 import { Tag } from "antd";
 import type { WorkstationNode } from "@/components/shared/FloorPlanEditor.types";
 import type { WorkstationOps } from "@/types";
+import { WORKSTATION_STATUS_OPTIONS, WORKSTATION_STATUS_TAG_CONFIG } from "@/constants/status";
 
-// 工位状态选项
-export const STATUS_OPTIONS = [
-  { label: "空闲", value: 0 },
-  { label: "占用", value: 1 },
-  { label: "维护", value: 2 },
-];
+// 工位状态选项（Phase 69 DICT-03: 共享常量别名引用——工位状态是三态业务簇
+// （对齐 models.WorkstationStatus: 0=空闲/1=占用/2=维护），非通用启停 0/1，独立成组）
+export const STATUS_OPTIONS = WORKSTATION_STATUS_OPTIONS;
 
 // 工位类型选项
 export const TYPE_OPTIONS = [
@@ -28,33 +26,19 @@ const TYPE_TEXT_MAP: Record<number, string> = {
   2: "管理工位",
 };
 
-// 工位状态文本映射
-const STATUS_TEXT_MAP: Record<number, string> = {
-  0: "空闲",
-  1: "占用",
-  2: "维护",
-};
-
-// 工位状态颜色映射
-const STATUS_COLOR_MAP: Record<number, string> = {
-  0: "success",
-  1: "error",
-  2: "warning",
-};
-
 // 获取工位类型文本
 export function getWorkstationTypeText(type: number): string {
   return TYPE_TEXT_MAP[type] || "-";
 }
 
-// 获取工位状态文本
+// 获取工位状态文本（Phase 69 DICT-03: 改用共享 tag 配置，删除本地重复映射）
 export function getWorkstationStatusText(status: number): string {
-  return STATUS_TEXT_MAP[status] || "-";
+  return WORKSTATION_STATUS_TAG_CONFIG[status]?.text || "-";
 }
 
 // 获取工位状态颜色
 export function getWorkstationStatusColor(status: number): string {
-  return STATUS_COLOR_MAP[status] || "default";
+  return WORKSTATION_STATUS_TAG_CONFIG[status]?.color || "default";
 }
 
 // 渲染工位类型标签
