@@ -29,6 +29,11 @@ import (
 type Database struct {
 	DB   *gorm.DB
 	Type string
+	// SettingsMenuComponentChanged 表示 Migrate209 (系统设置菜单 component 路径
+	// 修正) 本次启动实际改写了数据。core.go 在缓存服务就绪后按此标志失效菜单
+	// 缓存 —— 迁移执行期 c.Cache 尚未创建, 迁移函数内拿不到 cache 实例
+	// (Phase 70 PATTERNS 事实 1 的时序约束)。
+	SettingsMenuComponentChanged bool
 	// migrationLockConn 持有启动期 PG advisory lock 的专用 *sql.Conn。
 	// 仅 AutoMigrate 期间非空;releaseMigrationAdvisoryLock 后重置为 nil。
 	// 不导出,避免外部代码误关连接导致 pg_advisory_unlock noop。
@@ -844,6 +849,13 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate208DictSeed(d.DB); err != nil {
 			applogger.Errorf("字典 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
+		// 系统设置菜单 component 路径修正 (Phase 70 D-11: 前端 settings-page 目录
+		// 并入 system/settings; 幂等 UPDATE, changed 标志供 core.go 失效菜单缓存)
+		if changed, err := migrations.Migrate209UpdateSettingsMenuComponent(d.DB); err != nil {
+			applogger.Errorf("系统设置菜单 component 修正失败 (非阻断,留待下次启动): %v", err)
+		} else if changed {
+			d.SettingsMenuComponentChanged = true
+		}
 	} else {
 		// sqlite 分支: 规范菜单目录种子 (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
 		if err := migrations.Migrate207SeedCanonicalMenuCatalog(d.DB); err != nil {
@@ -852,6 +864,13 @@ func (d *Database) AutoMigrate() error {
 		// sqlite 分支: 字典 seed (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
 		if err := migrations.Migrate208DictSeed(d.DB); err != nil {
 			applogger.Errorf("字典 seed 失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: 系统设置菜单 component 路径修正 (双方言迁移; PG 分支在上方
+		// advisory-lock 块内执行)
+		if changed, err := migrations.Migrate209UpdateSettingsMenuComponent(d.DB); err != nil {
+			applogger.Errorf("系统设置菜单 component 修正失败 (非阻断,留待下次启动): %v", err)
+		} else if changed {
+			d.SettingsMenuComponentChanged = true
 		}
 		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
 		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only

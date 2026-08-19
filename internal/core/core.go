@@ -356,6 +356,24 @@ func (c *Core) initCacheAndWarmUp() error {
 		c.DataCacheService = services.NewDataCacheService(c.Cache)
 		c.DataCacheService.SetCacheConfig(c.CacheConfigService)
 
+		// Migrate209 配套菜单缓存失效 (Phase 70 D-11): 迁移改写了 sys_menu.component
+		// (系统设置页前端目录合并), 必须清掉 6 个 menu: key 前缀, 否则 Redis 30 分钟
+		// TTL 内菜单接口持续返回旧 component 路径 → 前端懒加载拾取不到组件白屏。
+		// 时序约束: 迁移执行于 db.NewDatabase (initDBAndData), 早于本处 cache 创建,
+		// 迁移函数内拿不到 cache 实例 —— 故由 Database.SettingsMenuComponentChanged
+		// 标志传递, 在 DataCacheService 就绪后、缓存预热前按标志失效。
+		if c.DB != nil && c.DB.SettingsMenuComponentChanged {
+			system.InvalidateCacheByPattern(context.Background(), system.NewCacheProvider(c.DataCacheService), []string{
+				system.CacheKeyMenuTree + "*",
+				system.CacheKeyMenuRouter + "*",
+				system.CacheKeyMenuAll + "*",
+				system.CacheKeyMenuUserMenus + ":*",
+				system.CacheKeyMenuUserAllMenus + ":*",
+				system.CacheKeyMenuUserPermissions + ":*",
+			}, "MENU")
+			applogger.Infof("[迁移] 209 菜单缓存已失效 (系统设置 component 路径变更)")
+		}
+
 		// 初始化缓存管理器（增强功能）
 		// 缓存预热功能默认禁用，可通过配置启用
 		cacheManagerEnabled := c.Config.Cache.WarmUpEnabled
