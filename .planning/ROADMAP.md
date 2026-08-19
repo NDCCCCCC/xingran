@@ -1,8 +1,8 @@
 ---
 last_updated: 2026-08-19
-update_trigger: v1.24 启动块 Phase 69 EXECUTED (8/8 plans complete, DICT-01~04 全部勾选, T2 字典链路端到端实测通过);Phase 70-01 D-10 default-theme 清理原子提交落地(`35db1b5`);Phase 70-02 样式契约层 + SettingsShell 共用骨架 + Wave 0 单测落地(`9c273d8`/`c28b271`/`446119c` + SUMMARY `9283ac5`)
-last_plan_update: 2026-08-19 — Phase 70-02 EXECUTED: index.css +14 selectors + SettingsShell + 6 vitest cases + quality gates all green
-previous_update: 2026-08-13 after v1.21 plans drafted (Phases 57-61) + Phase 62 cross-AI review close-out
+update_trigger: v1.23 启动块 Phase 68 EXECUTED (1/1 plan, 5 commits a21dcec..25ded8f, DEPLOY-01~05 PASS, SUMMARY `68-01-SUMMARY.md` 落地);Phase 70-07 EXECUTED 2026-08-19 (visual gate passed, 收口 commit `e138411`)
+last_plan_update: 2026-08-19 — Phase 68 SUMMARY 落地 + ROADMAP Phase 68 标记 EXECUTED + Progress 表更新为 7/7 phases (64-70) 全部落地
+previous_update: 2026-08-19 after Phase 70-02 EXECUTED
 ---
 
 # Roadmap: XingRan-Next 运维管理系统
@@ -31,7 +31,8 @@ previous_update: 2026-08-13 after v1.21 plans drafted (Phases 57-61) + Phase 62 
 - ✅ **v1.19 网络设备写命令 (Network Device Port Write Operations)** — Phases 50-55 (shipped 2026-07-08) — see [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md)
 - ✅ **v1.20 网络设备 VLAN + 端口绑定** — Phase 56 (shipped 2026-07-10) — see [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.md)
 - ✅ **v1.21 API Key 认证链修复 + 能力补全 (API Key Auth Chain Repair + Feature Completion)** — Phases 57-62 (shipped 2026-08-18) — see [milestones/v1.21-ROADMAP.md](milestones/v1.21-ROADMAP.md)
-- 🚧 **v1.22 前端品牌化改造 (Frontend Brand Design-System)** — Phases 64-67 (in planning; design-system 层品牌令牌落地)
+- ✅ **v1.22 前端品牌化改造 (Frontend Brand Design-System)** — Phases 64-67 (shipped 2026-08-18)
+- ✅ **v1.23 部署稳健性 & 文档一致性 (Deploy Robustness & Docs Consistency)** — Phase 68 (executed 2026-08-19; 5 DEPLOY-XX PASS)
 
 ---
 
@@ -58,9 +59,9 @@ previous_update: 2026-08-13 after v1.21 plans drafted (Phases 57-61) + Phase 62 
 - [ ] **Phase 66: 通用组件样式 + 硬编码色扫描** - 侧边栏深绿化、表格/卡片双层纸感、按钮纪律落地、表单/标签/ECharts 接令牌;全仓扫描并以 lint / CI 阻止硬编码 `#4F46E5` / `#F1F5F9` / slate 系新增
 - [ ] **Phase 67: 构建回归 + 视觉确认** - `npm run build` / `type-check` / `lint` / `test` 全绿、vendor-react gzip 体积不增、6 屏前后截图对比、登录页与后台视觉一致、milestone SHIPPED + ARCHIVED
 
-## Phases (v1.23 启动块 — 部署稳健性 & 文档一致性) — IN PLANNING
+## Phases (v1.23 启动块 — 部署稳健性 & 文档一致性) — EXECUTED 2026-08-19
 
-- [ ] **Phase 68: 部署稳健性 & 文档一致性（SM2 密钥配置闭环）** - 修正 env 变量名文档-代码不一致(DEPLOY-01)、setup-server.sh secrets.env 模板补 SM2 keys 段(DEPLOY-02)、gen_sm2_keys header 注释路径修正(DEPLOY-03)、getPublicKey handler 500 时打印 useSM2 / sm2PublicKey 状态(DEPLOY-04)、config.sqlite.example.yaml use_sm2 默认值与迁移文档对齐(DEPLOY-05);来源已归档会话 public-key-500-after-subpath-fix.md
+- [x] **Phase 68: 部署稳健性 & 文档一致性（SM2 密钥配置闭环）** - 修正 env 变量名文档-代码不一致(DEPLOY-01)、setup-server.sh secrets.env 模板补 SM2 keys 段(DEPLOY-02)、gen_sm2_keys header 注释路径修正(DEPLOY-03)、getPublicKey handler 500 时打印 useSM2 / sm2PublicKey 状态(DEPLOY-04)、config.sqlite.example.yaml use_sm2 默认值与迁移文档对齐(DEPLOY-05);1/1 plan EXECUTED 2026-08-19(5 commits: a21dcec/a764825/65093b9/52685fd/25ded8f,SUMMARY `68-01-SUMMARY.md`),DEPLOY-01~05 全部 PASS,5 SC 全部达成;来源已归档会话 public-key-500-after-subpath-fix.md;备注:`configs/config.yaml` (live,user-managed) 与 `.env` 仍含 `XINGRAN_JWT_SM2_*` 字面量,Phase 范围仅 6 个 `.example.yaml` → 此 2 处由运维手工迁移到 secrets.env 注入路径,不入 phase 范围
 
 ## Phases (v1.24 启动块 — 字典与状态值治理) — EXECUTED 2026-08-19
 
@@ -72,9 +73,33 @@ previous_update: 2026-08-13 after v1.21 plans drafted (Phases 57-61) + Phase 62 
 
 ---
 
-## Phase Details
+---
 
-### Phase 64: 品牌令牌层落地 + 对比度验证
+### Phase 68: 部署稳健性 & 文档一致性（SM2 密钥配置闭环）
+
+**Goal**: 闭环 5 项与 SM2 密钥配置相关的部署稳健性与文档一致性缺陷 —— 让 `public-key-500-after-subpath-fix.md` Specialist Review 列出的 4 项 related bugs + 1 项 sqlite 模板漂移一次性消除,避免再次发生"SM2 配置链路 → 500 + ssh grep"生产事件;纯部署/文档稳健性修复,非新功能。
+
+**Depends on**: Nothing (v1.23 启动块独立 phase;不依赖 Phase 67 品牌化基线)
+
+**Requirements**: DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04, DEPLOY-05
+
+**Success Criteria** (what must be TRUE):
+
+1. **DEPLOY-01 PASS**: `docs/deployment/{secret-management,single-machine-deployment,docker-compose}.md` + `configs/{config,config.prod,config.sqlite}.example.yaml` 共 17 处 `XINGRAN_JWT_SM2_*` 全部改为 `JWT_SM2_*`,与 `internal/config/config.go:359-360` BindEnv 一致;语义/表头/必填列保留;不动 secrets 注入值;`grep -rn "XINGRAN_JWT_SM2" docs/ configs/` 零命中
+2. **DEPLOY-02 PASS**: `scripts/deploy/setup-server.sh` 的 `/etc/xingran/secrets.env` heredoc 在 `SM4_KEY=` 后追加 `# === SM2 密钥对（非对称,不能动态生成,否则每次重启踢全部用户） ===` 注释 + `go run scripts/crypto/gen_sm2_keys/main.go` 一次性生成命令说明 + `JWT_SM2_PRIVATE_KEY=` / `JWT_SM2_PUBLIC_KEY=` 两行占位;脚本整体可幂等重跑;**不做** `use_sm2=true` 强制校验(user-managed config 保守处理)
+3. **DEPLOY-03 PASS**: `scripts/crypto/gen_sm2_keys/main.go` line 2 注释改为 `go run scripts/crypto/gen_sm2_keys/main.go`,与文件实际路径一致;`//go:build ignore` 标签保留;docs 中 `scripts/gen-sm2-keys*` 历史路径同步修正
+4. **DEPLOY-04 PASS**: `internal/api/v1/auth.go` `getPublicKey` handler 在 `response.Error` 返回 500 之前打印 `applogger.Warnf("SM2 公钥不可用: useSM2=%v, sm2PublicKeyLoaded=%v, requestPath=%s, clientIP=%s", ...)`;`internal/core/security/jwt.go` 新增 `IsSM2Enabled()` 与 `HasSM2PublicKey()` 两个最小 getter;`go build ./...` + `go vet` 退出码 0;handler HTTP status / 响应文案零变化
+5. **DEPLOY-05 PASS**: `configs/config.sqlite.example.yaml` line 58 `use_sm2: false` → `true`;line 60 env 名同步修正;文件顶部注释段新增【启用 SM2 必读】6 行迁移指引指向 `docs/deployment/secret-management.md §2.2`
+
+**Plans:** 1 plan
+
+Plans:
+
+- [x] 68-01-PLAN.md — DEPLOY-01~05 闭环:env var 名称全仓一致性(T1) + setup-server.sh secrets.env SM2 段(T2) + gen_sm2_keys header 路径修正(T3) + getPublicKey WARN + 2 个 getter(T4) + sqlite use_sm2 默认值 + 迁移指引(T5);5 commits a21dcec/a764825/65093b9/52685fd/25ded8f,DEPLOY-01~05 全部 PASS,自动化门常绿,见 [68-01-SUMMARY.md](../phases/68-deploy-robustness-and-docs-consistency/68-01-SUMMARY.md)
+
+---
+
+
 
 **Goal**: design-system 层拥有完整的品牌令牌真相源 —— `index.css` 253 变量全量接 brand-spec 实测值,`tokens/colors.ts` 提供 TS 侧 `xingranBrand` 常量(绿/铜金/奶油三梯度,带 OKLch + WCAG 注释),`AntdThemeBridge` 把 Antd 6 `theme.token` 与 `theme.components` 全量映射到品牌令牌,`tokens/shadows+spacing+typography` 与新色彩调性对齐;并以可执行对比度校验断言关键前景/背景对达标,把品牌基线锁在测试层。
 
@@ -263,10 +288,13 @@ Phases execute in numeric order: 64 → 65 → 66 → 67 (Phase 63 独立 IN PRO
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 64. 品牌令牌层落地 + 对比度验证 | v1.22 | 0/TBD | Not started | - |
-| 65. 主题系统收敛 | v1.22 | 0/1 | Planned | - |
-| 66. 通用组件样式 + 硬编码色扫描 | v1.22 | 0/1 | Planned | - |
-| 67. 构建回归 + 视觉确认 | v1.22 | 0/TBD | Not started | - |
+| 64. 品牌令牌层落地 + 对比度验证 | v1.22 | 1/1 | ✅ SHIPPED | 2026-08-18 |
+| 65. 主题系统收敛 | v1.22 | 1/1 | ✅ SHIPPED | 2026-08-18 |
+| 66. 通用组件样式 + 硬编码色扫描 | v1.22 | 1/1 | ✅ SHIPPED | 2026-08-18 |
+| 67. 构建回归 + 视觉确认 | v1.22 | 1/1 | ✅ SHIPPED | 2026-08-18 |
+| 68. 部署稳健性 & 文档一致性 | v1.23 | 1/1 | ✅ EXECUTED | 2026-08-19 |
+| 69. 字典与状态值治理 | v1.24 | 8/8 | ✅ EXECUTED | 2026-08-19 |
+| 70. 系统设置页面布局重构 | v1.25 | 7/7 | ✅ EXECUTED | 2026-08-19 |
 
 ---
 
