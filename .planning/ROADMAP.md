@@ -186,15 +186,28 @@ Plans:
 
 Plans:
 
+**Wave 1**
+
 - [ ] 69-01-PLAN.md — DICT-01 基建:models 常量补齐(DictStatus/OperLog 成败/VDIServer/Notice/InfoPoint) + status_constants_test.go AST 锁值 + scripts/check-status-literals.sh 四模式 ratchet 守护(含 map/JSON 形态) + 批 1(services/system 六文件)替换
+- [ ] 69-06-PLAN.md — DICT-03 前端 status 线:src/constants/status.ts 共享常量模块(两套 label 语义组+vitest 锁值) + 7 文件收敛(含 menu VISIBLE 反转保护),status 不进字典
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 69-02-PLAN.md — DICT-02:migration_208 字典 seed(11 组 = 8 组 archive 存量重建 + ops_workstation_type/sys_user_sex/duty_holiday_type 新增,组级幂等+事务+WARN,Status 引用 DictStatus 常量——硬依赖 69-01) + database.go PG/SQLite 双分支挂载 + dev 库行数 smoke
 - [ ] 69-03-PLAN.md — DICT-01 批 2:operations 9 service + excel_handler + excel_service map/JSON 2 处替换(簇 A + D 专线三态,双包定义陷阱规避)
-- [ ] 69-04-PLAN.md — DICT-01 批 3:vdi/addomain/notice/knowledge/rpa/scheduler 替换(簇 A + D 账号池三态 + E 反转;批内补缺常量 ADAccountStatus*/RPACredentialStatus* 同步登记锁值测试 watched 集合与 expectedStatusValues)
-- [ ] 69-05-PLAN.md — DICT-01 批 4:workorder/duty/discovery/execution/dispatch/monitor + 两 handler 替换(簇 B/C CASE WHEN 自洽化) + F 簇豁免收口,守护白名单终态只剩 geocoding,go test ./... 终态门
-- [ ] 69-06-PLAN.md — DICT-03 前端 status 线:src/constants/status.ts 共享常量模块(两套 label 语义组+vitest 锁值) + 7 文件收敛(含 menu VISIBLE 反转保护),status 不进字典
-- [ ] 69-07-PLAN.md — DICT-03 前端字典线:四页 type 下拉 useDict 迁移(sys_user_sex/ops_workstation_type/duty_holiday_type/network_device_type,静态兜底+isDefault 默认值)
-- [ ] 69-08-PLAN.md — DICT-04:CLAUDE.md Status Value Convention 指针化(删 6 行值表格) + 字典链路端到端 blocking checkpoint(改值联动/fallback/零 UX 回归)
 
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 69-04-PLAN.md — DICT-01 批 3:vdi/addomain/notice/knowledge/rpa/scheduler 替换(簇 A + D 账号池三态 + E 反转;批内补缺常量 ADAccountStatus*/RPACredentialStatus* 同步登记锁值测试 watched 集合与 expectedStatusValues)
+- [ ] 69-07-PLAN.md — DICT-03 前端字典线:四页 type 下拉 useDict 迁移(sys_user_sex/ops_workstation_type/duty_holiday_type/network_device_type,静态兜底+isDefault 默认值)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 69-05-PLAN.md — DICT-01 批 4:workorder/duty/discovery/execution/dispatch/monitor + 两 handler 替换(簇 B/C CASE WHEN 自洽化) + F 簇豁免收口,守护白名单终态只剩 geocoding,go test ./... 终态门
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 69-08-PLAN.md — DICT-04:CLAUDE.md Status Value Convention 指针化(删 6 行值表格) + 字典链路端到端 blocking checkpoint(改值联动/fallback/零 UX 回归)
 
 ---
 

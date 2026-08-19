@@ -1,16 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.22 + v1.23 启动块
-milestone_name: 前端品牌化改造 (v1.22 SHIPPED) / 部署稳健性 (v1.23 启动)
-status: in_progress
-last_updated: "2026-08-19T12:00:00.000Z"
-last_activity: 2026-08-19
+milestone_name: milestone
+status: executing
+stopped_at: "Phase 65 Plan 01 T1-T8 全部完成（8 commits），T9 人工视觉冒烟 checkpoint PENDING USER CONFIRMATION（回复 "approved" 或描述问题）；T9 通过后启动 /gsd:plan-phase 66"
+last_updated: "2026-08-19T05:01:41.280Z"
+last_activity: 2026-08-19 -- Phase 69 execution started
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 4
-  total_plans: 5
-  completed_plans: 5
-  percent: 80
+  total_plans: 12
+  completed_plans: 4
+  percent: 33
 ---
 
 # Project State
@@ -37,10 +38,10 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 
 ## Current Position
 
-Phase: 68 (Plan 01 EXECUTED — 5 commits a21dcec..25ded8f)
-Plan: 68-01 done (T1-T5 atomic commits, all PASS)
-Status: v1.22 SHIPPED + ARCHIVED; v1.23 启动块 Phase 68 EXECUTED（DEPLOY-01~05 全闭环）。Phase 63 仍独立 IN PROGRESS（前端工具链自动化）。next: 待用户授权 push 触发新一轮 CI/CD
-Last activity: 2026-08-19 — Phase 68-01 EXECUTED（5 commits: a21dcec / a764825 / 65093b9 / 52685fd / 25ded8f；DEPLOY-01~05 全 PASS；3 处偏差已记录:T2 verify count=3 vs plan 估算4；config.yaml 残留命中属 gitignored；T5 line 66 注释最小一致性修正）
+Phase: 69 (字典与状态值治理（状态语义单一真相源）) — EXECUTING
+Plan: 1 of 8
+Status: Executing Phase 69
+Last activity: 2026-08-19 -- Phase 69 execution started
 
 ## Accumulated Context
 
@@ -58,6 +59,16 @@ Last activity: 2026-08-19 — Phase 68-01 EXECUTED（5 commits: a21dcec / a76482
   - DEPLOY-04: getPublicKey handler 500 时打印 useSM2/sm2PublicKey 状态
   - DEPLOY-05: config.sqlite.example.yaml use_sm2 默认值对齐 + 迁移指引
   - 来源: `.planning/debug/resolved/public-key-500-after-subpath-fix.md` §Specialist Review + §Related bugs
+- **v1.24 启动块 ROADMAP drafted (2026-08-19)**: Phase 69 — 字典与状态值治理(状态语义单一真相源)
+  - DICT-01: 后端集中状态常量定义,消灭 50+ 文件裸 0/1 字面量
+  - DICT-02: 真枚举(type/category)盘点 + sys_dict seed
+  - DICT-03: 前端 constants.tsx 硬编码 options → useDict 分批迁移
+  - DICT-04: CLAUDE.md Status Value Convention 改指向常量真相源
+  - 来源: 2026-08-19 字典消费率审计 — 后端 GetDictDataByTypeKey 仅 dict_cache_impl 内部自用(0 业务 service)、前端 4/78 页用 useDict、sys_dict seed 仅 network_device_type 一类
+- **v1.25 启动块 ROADMAP drafted (2026-08-19)**: Phase 70 — 系统设置页面布局重构(对齐 v1.22 品牌设计理念)
+  - 按 v1.22 品牌理念(深绿 × 铜金 × 奶油纸感、双层纸感卡片、按钮纪律)重新设计 `src/pages/system/settings-page/` + `src/pages/settings/` 页面布局
+  - 清理多主题时代布局残留(含 default-theme 入口删除后的遗留文件)
+  - 纯前端布局重构,不改业务逻辑与 API;依赖 Phase 67 已 SHIPPED 的品牌基线,与 Phase 69 无硬依赖
 - **Phase 63 IN PROGRESS (2026-08-14)**: 前端工具链自动化 — `.planning/phases/63-frontend-toolchain-automation/63-01-PLAN.md` 独立进行,本 milestone 不占用 63
 - **v1.21 SHIPPED + ARCHIVED 2026-08-18**: Phases 57-62 / 14 v1 requirements + 14 跨 AI review items
   - Phase 62 added 2026-08-12: 数据库核心安全加固(跨 AI 评审修复) — 来源 `.planning/reviews/260814-internal-core-db-REVIEWS.md`(codex + opencode 交叉评审,共识 C1-C7 + 单方 HIGH/MEDIUM)
