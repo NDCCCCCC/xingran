@@ -1,5 +1,5 @@
 // 一次性工具: 生成 SM2 密钥对并输出 hex 字符串
-// 用法: go run scripts/gen-sm2-keys.go
+// 用法: go run scripts/crypto/gen_sm2_keys/main.go
 // 不会进入正常构建（//go:build ignore 标签）
 package main
 
