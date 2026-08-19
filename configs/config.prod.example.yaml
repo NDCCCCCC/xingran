@@ -83,7 +83,7 @@ cache:
 # ----------------------------------------------------------------------------
 # JWT 配置（高危：所有密钥必须独立生成）
 # ----------------------------------------------------------------------------
-# 环境变量覆盖: JWT_SECRET, XINGRAN_JWT_SM2_PRIVATE_KEY, XINGRAN_JWT_SM2_PUBLIC_KEY
+# 环境变量覆盖: JWT_SECRET, JWT_SM2_PRIVATE_KEY, JWT_SM2_PUBLIC_KEY
 jwt:
   # ⚠️ 注意：use_sm2=true 时,jwt.secret_key 实际不被使用（HS256 备选方案）。
   # 但启动校验仍要求非空,所以保留为 env 注入。
@@ -94,10 +94,10 @@ jwt:
   use_sm2: true               # 必须启用 SM2 国密签名（生产强制要求）
   # SM2 密钥对 — 真正用于 JWT 签名的密钥
   # 私钥必须新生成，**绝不能使用仓库默认值 d8d9a3e6...**
-  # 部署期通过环境变量 XINGRAN_JWT_SM2_PRIVATE_KEY / XINGRAN_JWT_SM2_PUBLIC_KEY 注入
+  # 部署期通过环境变量 JWT_SM2_PRIVATE_KEY / JWT_SM2_PUBLIC_KEY 注入
   sm2_private_key: ""         # ⚠️ 必须通过 env 注入；**绝不能留空**（留空会触发"动态生成"分支，
                               #   每次重启都换密钥,旧 token 全部失效,所有用户被强制登出）
-  sm2_public_key: ""          # 通过 XINGRAN_JWT_SM2_PUBLIC_KEY 注入；公钥可对外（嵌入前端、APP）
+  sm2_public_key: ""          # 通过 JWT_SM2_PUBLIC_KEY 注入；公钥可对外（嵌入前端、APP）
 
 # ----------------------------------------------------------------------------
 # 日志配置

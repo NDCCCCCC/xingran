@@ -68,15 +68,15 @@ cache:
   retry_worker_count: 3
 
 # JWT 配置
-# 环境变量: JWT_SECRET, XINGRAN_JWT_SM2_PRIVATE_KEY, XINGRAN_JWT_SM2_PUBLIC_KEY
+# 环境变量: JWT_SECRET, JWT_SM2_PRIVATE_KEY, JWT_SM2_PUBLIC_KEY
 jwt:
   secret_key: ""               # 留空,通过 JWT_SECRET 注入（启动时强制校验非空）
   access_key_expire: 7200
   refresh_key_expire: 604800
   issuer: "XingRan-Next-Dev"
   use_sm2: true
-  sm2_private_key: ""          # 通过 XINGRAN_JWT_SM2_PRIVATE_KEY 注入
-  sm2_public_key: ""           # 通过 XINGRAN_JWT_SM2_PUBLIC_KEY 注入
+  sm2_private_key: ""          # 通过 JWT_SM2_PRIVATE_KEY 注入
+  sm2_public_key: ""           # 通过 JWT_SM2_PUBLIC_KEY 注入
 
 # 日志配置
 log:

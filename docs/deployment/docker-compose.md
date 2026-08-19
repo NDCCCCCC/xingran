@@ -357,8 +357,8 @@ server {
 DB_PASSWORD=<openssl rand -hex 16>
 REDIS_PASSWORD=<openssl rand -hex 16>
 JWT_SECRET=<openssl rand -hex 32>
-XINGRAN_JWT_SM2_PRIVATE_KEY=<hex>
-XINGRAN_JWT_SM2_PUBLIC_KEY=<hex>
+JWT_SM2_PRIVATE_KEY=<hex>
+JWT_SM2_PUBLIC_KEY=<hex>
 SM4_KEY=<openssl rand -base64 16>
 
 # 可选

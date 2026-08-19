@@ -149,8 +149,8 @@ SERVER_PORT=9000
 SERVER_MODE=release
 
 JWT_SECRET=${JWT_SECRET}
-XINGRAN_JWT_SM2_PRIVATE_KEY=${SM2_PRIV}
-XINGRAN_JWT_SM2_PUBLIC_KEY=${SM2_PUB}
+JWT_SM2_PRIVATE_KEY=${SM2_PRIV}
+JWT_SM2_PUBLIC_KEY=${SM2_PUB}
 
 SM4_KEY=${SM4_KEY}
 
@@ -474,7 +474,7 @@ curl -s https://yourdomain.com/api/v1/system/menus/my-menus \
 |---|---|---|
 | 启动报 `SM4_KEY 是仓库默认值` | 用了 `dGVzdC1zZWNyZXQxNiEhIQ==` 默认值 | 用 `openssl rand -base64 16` 重新生成 |
 | 启动报 `SM2 私钥是公开值` | 用了仓库默认 `d8d9a3e6...` | 用 gmssl 重新生成 SM2 密钥对 |
-| 登录后立刻被踢出 | SM2 私钥每次启动动态生成（重启即换） | 显式配置 `XINGRAN_JWT_SM2_PRIVATE_KEY` |
+| 登录后立刻被踢出 | SM2 私钥每次启动动态生成（重启即换） | 显式配置 `JWT_SM2_PRIVATE_KEY` |
 | PG 连接失败 `FATAL: no pg_hba.conf entry` | `sslmode: require` 但服务端未配 TLS | 改 `disable`（内网）或启用服务端 TLS |
 | Redis 报 `NOAUTH` | Redis 设了密码但配置 `password: ""` | 通过 `REDIS_PASSWORD` 环境变量注入 |
 | `lumberjack` 报权限不足 | systemd `ProtectSystem=strict` | 加 `ReadWritePaths=/opt/xingran/logs` |

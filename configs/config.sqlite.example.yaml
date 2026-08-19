@@ -57,7 +57,7 @@ jwt:
   issuer: "XingRan-Next"
   use_sm2: false              # 首跑用 HS256 免 SM2 密钥生成依赖(部署期可改 true)
   # SM2 密钥留空(use_sm2=false 时不会读取);生产环境务必切 true 并通过
-  # XINGRAN_JWT_SM2_PRIVATE_KEY / XINGRAN_JWT_SM2_PUBLIC_KEY 注入新生成的对
+  # JWT_SM2_PRIVATE_KEY / JWT_SM2_PUBLIC_KEY 注入新生成的对
   sm2_private_key: ""
   sm2_public_key: ""
 

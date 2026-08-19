@@ -43,8 +43,8 @@ configs/
 | `cache.port` | `REDIS_PORT` | | 整型 |
 | `cache.password` | `REDIS_PASSWORD` | ✓ | **生产绝不能留空** |
 | `jwt.secret_key` | `JWT_SECRET` | ✓ | HS256 备选密钥（`use_sm2: true` 时**不被使用**，仅满足启动校验） |
-| `jwt.sm2_private_key` | `XINGRAN_JWT_SM2_PRIVATE_KEY` | ✓ | **真正用于 JWT 签名的密钥**；留空会触发"动态生成"分支，重启后旧 token 全部失效 |
-| `jwt.sm2_public_key` | `XINGRAN_JWT_SM2_PUBLIC_KEY` | ✓ | 验签公钥；公钥可对外（嵌入前端、APP） |
+| `jwt.sm2_private_key` | `JWT_SM2_PRIVATE_KEY` | ✓ | **真正用于 JWT 签名的密钥**；留空会触发"动态生成"分支，重启后旧 token 全部失效 |
+| `jwt.sm2_public_key` | `JWT_SM2_PUBLIC_KEY` | ✓ | 验签公钥；公钥可对外（嵌入前端、APP） |
 | `security.sm4_key` | `SM4_KEY` | ✓ | SM4 主密钥（Base64 编码 16 字节） |
 | `baidu.map_ak` | `BAIDU_MAP_AK` | | 百度地图 AK |
 | `rpa.ai.generator.api_key` | `RPA_AI_GENERATOR_KEY` | | 文本模型 Key |
@@ -103,7 +103,7 @@ echo "SERVER_PORT=9000"
 
 **推荐方式：用项目自带的 Go 工具生成（依赖已在 go.mod）**
 
-`scripts/gen-sm2-keys/main.go`：
+`scripts/crypto/gen_sm2_keys/main.go`：
 
 ```go
 package main
@@ -120,15 +120,15 @@ func main() {
 	}
 	privHex, _ := crypto.PrivateKeyToHex(priv)
 	pubHex, _ := crypto.PublicKeyToHex(pub)
-	fmt.Printf("XINGRAN_JWT_SM2_PRIVATE_KEY=%s\n", privHex)
-	fmt.Printf("XINGRAN_JWT_SM2_PUBLIC_KEY=%s\n", pubHex)
+	fmt.Printf("JWT_SM2_PRIVATE_KEY=%s\n", privHex)
+	fmt.Printf("JWT_SM2_PUBLIC_KEY=%s\n", pubHex)
 }
 ```
 
 使用：
 
 ```bash
-go run scripts/gen-sm2-keys/main.go >> .env.production
+go run scripts/crypto/gen_sm2_keys/main.go >> .env.production
 ```
 
 **⚠️ 切勿使用"动态生成"**：如果 `sm2_private_key` 配置留空，`internal/core/security/jwt.go:86-92` 会自动生成 SM2 密钥对——**每次重启密钥都换，旧 token 全部失效，所有用户被强制登出**。生产部署必须显式配置。
@@ -148,12 +148,12 @@ grep -E "^\s*password:\s*\"\"$" configs/config.yaml || { echo "⚠️ 数据库/
 
 # 3. 关键环境变量已设置
 for v in DB_PASSWORD REDIS_PASSWORD JWT_SECRET SM4_KEY \
-         XINGRAN_JWT_SM2_PRIVATE_KEY XINGRAN_JWT_SM2_PUBLIC_KEY; do
+         JWT_SM2_PRIVATE_KEY JWT_SM2_PUBLIC_KEY; do
   [ -n "${!v:-}" ] || { echo "❌ 环境变量 $v 未设置"; exit 1; }
 done
 
 # 4. SM2 私钥不是仓库默认值（公开值,任何能读仓库的人都能伪造 JWT）
-[ "$XINGRAN_JWT_SM2_PRIVATE_KEY" != "d8d9a3e6b356cf7538cb0fd6a486055c2a621a63a8a095e60a6362874b26508b" ] \
+[ "$JWT_SM2_PRIVATE_KEY" != "d8d9a3e6b356cf7538cb0fd6a486055c2a621a63a8a095e60a6362874b26508b" ] \
   || { echo "❌ SM2 私钥是仓库默认值，必须重新生成"; exit 1; }
 
 # 5. SM4 不是默认 test-secret
