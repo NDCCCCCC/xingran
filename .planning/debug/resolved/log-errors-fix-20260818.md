@@ -1,3 +1,8 @@
+---
+status: resolved
+closed: 2026-08-18
+---
+
 # 逐个修复日志错误 — Debug Session 完成报告
 
 **Created**: 2026-08-18

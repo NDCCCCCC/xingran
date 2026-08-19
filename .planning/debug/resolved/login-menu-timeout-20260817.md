@@ -272,3 +272,7 @@
 - Do not apply code fixes until root cause is confirmed.
 - User explicitly asked to combine with backend logs.
 - Previous mitigation (max_open_conns 10→25) only relieved connection-pool starvation; it did not address missing indexes or remote DB latency.
+
+## Resolution (2026-08-19)
+
+chrome-devtools 实测：整页刷新后 `POST /api/v1/system/my-menus` / `my-menus/all` / `my-menus/permissions` 两批 6 个请求全部 200，菜单完整渲染（9 个一级菜单秒级出现），无超时无挂起。Round 4 索引修复（sys_user_role/sys_role_menu）在 dev sqlite 库验证有效。Resolved。

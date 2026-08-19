@@ -1,9 +1,9 @@
 ---
 slug: kb-tag-table-stats-400
-status: awaiting_human_verify
+status: resolved
 trigger: 前端知识库页报 "查询标签列表失败: SQL logic error: no such table: sys_knowledge_tag"（/knowledge/tags/all 500），运维楼宇页报 "加载统计数据 Error: 解密失败"（/ops/building/statistics 400 + 前端 SM2 解密失败清除公钥缓存）；另有 useForm 未连接 / antd Drawer width / Alert message 弃用警告。
 created: "2026-08-18T01:00:00Z"
-updated: "2026-08-18T01:18:00Z"
+updated: "2026-08-19T12:50:00Z"
 ---
 
 # Debug Session: kb-tag-table-stats-400
@@ -106,3 +106,7 @@ files_changed:
   - internal/core/db/database.go
   - internal/core/db/database_test.go
   - xingran-react-frontend/src/lib/api.ts
+
+## Resolution (2026-08-19)
+
+chrome-devtools 实测知识库查看页（/ops/knowledge/view）：`POST /api/v1/knowledge/tags/all` → **200**（原 500 "no such table: sys_knowledge_tag" 已修复——表已建 + seed 正常）、`articles/search` → 200、`categories/list` → 200。页面渲染完整（分类/热门标签/文章列表三区块），空数据状态正常无报错。Resolved。

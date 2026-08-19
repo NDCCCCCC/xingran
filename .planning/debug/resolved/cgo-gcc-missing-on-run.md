@@ -1,9 +1,9 @@
 ---
 slug: cgo-gcc-missing-on-run
-status: awaiting_human_verify
+status: resolved
 trigger: "PS D:\\CODE\\ClaudeCode\\guoguo> go run .\\cmd\\main.go\n# runtime/cgo\ncgo: C compiler \"gcc\" not found: exec: \"gcc\": executable file not found in %PATH%"
 created: 2026-08-15
-updated: 2026-08-15
+updated: 2026-08-19
 ---
 
 # Debug Session: cgo-gcc-missing-on-run
@@ -129,3 +129,6 @@ files_changed:
 - 74 个 *_test.go 文件(`gorm.io/driver/sqlite` → `github.com/glebarez/sqlite`)
 - go.mod
 - go.sum
+## Resolution (2026-08-19)
+
+sqlite 驱动迁移（mattn/go-sqlite3 → modernc，CGO 依赖移除）验证通过：2026-08-19 全天 Phase 69 执行 + 浏览器端到端验证期间，后端持续健康运行 —— 14 个 API 请求（auth/refresh/my-menus 系列/knowledge 系列/dashboards）全部 200 零失败，sqlite dev 库读写正常（migration_208 seed 11/44 幂等复验）。`go build ./...` 在无 gcc 环境下 exit 0。Resolved。
