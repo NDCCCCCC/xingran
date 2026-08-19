@@ -32,6 +32,7 @@ import type { PageResponse } from "@/types";
 import DeptTree from "@/components/DeptTree";
 import { useTableManager } from "@/hooks/useTableManager";
 import { usePagination } from "@/hooks/usePagination";
+import { useDict, type DictItem } from "@/hooks/useDict";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
 import { DepartmentTreeSelect } from "@/components/shared";
 import ExcelImport from "@/components/shared/ExcelImport";
@@ -60,11 +61,19 @@ interface UserTableColumnsProps {
   handleResetPassword: (user: User) => void;
   handleDelete: (id: string) => void;
   getColumnSortOrder: (field: string) => SortOrder | undefined;
+  /** Phase 69 DICT-03: sys_user_sex 字典数据（空数组时 formatGender 回退静态映射） */
+  genderDict: DictItem[];
 }
 
 function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
-  const { handleEdit, handleUpdateStatus, handleResetPassword, handleDelete, getColumnSortOrder } =
-    props;
+  const {
+    handleEdit,
+    handleUpdateStatus,
+    handleResetPassword,
+    handleDelete,
+    getColumnSortOrder,
+    genderDict,
+  } = props;
 
   return [
     {
@@ -126,7 +135,7 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
       align: "center" as const,
       sorter: true,
       sortOrder: getColumnSortOrder("gender"),
-      render: (gender) => formatGender(gender),
+      render: (gender) => formatGender(gender, genderDict),
     },
     {
       title: "部门",
@@ -259,6 +268,17 @@ const UserManagement: FC = () => {
   // 用户导入模态框
   const [importModalVisible, setImportModalVisible] = useState(false);
 
+  // Phase 69 DICT-03: 性别下拉迁 useDict("sys_user_sex")——字典管理页改 label 后
+  // 搜索/编辑下拉与表格渲染随之变化；字典空态/接口异常时回退静态 GENDER_OPTIONS
+  const { data: genderDict = [] } = useDict("sys_user_sex");
+
+  // 新增用户默认性别取字典 isDefault 项（seed 为 "2" 保密，对齐后端 User.Gender gorm
+  // default:2）；字典空态回退静态 0（迁移前行为）
+  const defaultGender = useMemo(() => {
+    const item = genderDict.find((d) => d.isDefault);
+    return item ? Number(item.dictValue) : 0;
+  }, [genderDict]);
+
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
 
@@ -350,7 +370,7 @@ const UserManagement: FC = () => {
   const handleAddUser = useCallback(() => {
     handleAdd();
     const defaultValues: Record<string, unknown> = {
-      gender: 0,
+      gender: defaultGender,
       status: 0,
     };
     if (departments.length > 0) {
@@ -360,7 +380,7 @@ const UserManagement: FC = () => {
       defaultValues.roleIds = [roles[0].id];
     }
     editForm.setFieldsValue(defaultValues);
-  }, [handleAdd, departments, roles, editForm]);
+  }, [handleAdd, departments, roles, editForm, defaultGender]);
 
   const handleModalOpenChange = useCallback(
     (open: boolean) => {
@@ -501,6 +521,7 @@ const UserManagement: FC = () => {
     handleResetPassword: openResetPasswordModal,
     handleDelete,
     getColumnSortOrder,
+    genderDict,
   });
 
   // 给 DeptTree 喂稳定引用 — selectedKeys 在 selectedDeptId 不变时复用同一数组，
@@ -724,11 +745,17 @@ const UserManagement: FC = () => {
             </Form.Item>
             <Form.Item name="gender" label="性别" initialValue={2}>
               <Select className="user-form-input" onSearch={() => {}}>
-                {GENDER_OPTIONS.map((opt) => (
-                  <Option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </Option>
-                ))}
+                {genderDict.length > 0
+                  ? genderDict.map((d) => (
+                      <Option key={d.dictValue} value={Number(d.dictValue)}>
+                        {d.dictLabel}
+                      </Option>
+                    ))
+                  : GENDER_OPTIONS.map((opt) => (
+                      <Option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </Option>
+                    ))}
               </Select>
             </Form.Item>
             <Form.Item name="deptId" label="部门">

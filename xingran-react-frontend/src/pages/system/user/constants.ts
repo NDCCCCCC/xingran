@@ -9,7 +9,8 @@ export interface SelectOption {
   value: number;
 }
 
-// 性别选项
+// 性别选项（Phase 69 DICT-03: 降级为静态 fallback——下拉已迁 useDict("sys_user_sex")，
+// 字典接口异常/空数据时由消费方回退渲染本数组；导出保留不删除）
 export const GENDER_OPTIONS: SelectOption[] = [
   { label: "男", value: 0 },
   { label: "女", value: 1 },

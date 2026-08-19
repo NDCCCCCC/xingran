@@ -31,6 +31,7 @@ import type { WorkstationOps } from "@/types";
 import { useTableManager } from "@/hooks/useTableManager";
 import { useTableQuery } from "@/hooks/useTableQuery";
 import { usePagination } from "@/hooks/usePagination";
+import { useDict, type DictItem } from "@/hooks/useDict";
 import { useSidebarDeptFilter } from "@/hooks/useSidebarDeptFilter";
 import { useAliasByLocation } from "@/hooks/useAliasByLocation";
 import { ExcelImportLazy } from "@/components/shared";
@@ -90,6 +91,17 @@ const WorkstationManagement: FC = () => {
   const [importVisible, setImportVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [exportFilters, setExportFilters] = useState<Record<string, unknown>>({});
+
+  // Phase 69 DICT-03: 工位类型下拉迁 useDict("ops_workstation_type")——编辑弹窗 Select
+  // 与新增默认值消费；字典空态/接口异常时回退静态 TYPE_OPTIONS（经 EditModal prop 透传）
+  const { data: typeDict = [] } = useDict("ops_workstation_type");
+
+  // 新增工位默认类型取字典 isDefault 项（seed 为 "0" 固定工位，对齐后端
+  // Workstation.WorkstationType gorm default:0）；字典空态回退静态 0（迁移前行为）
+  const defaultType = useMemo(() => {
+    const item: DictItem | undefined = typeDict.find((d) => d.isDefault);
+    return item ? Number(item.dictValue) : 0;
+  }, [typeDict]);
   const [floorOptions, setFloorOptions] = useState<FloorOption[]>([]);
   const [deptTreeData, setDeptTreeData] = useState<DeptTreeNode[]>([]);
   const [userOptions, setUserOptions] = useState<UserOption[]>([]);
@@ -548,11 +560,19 @@ const WorkstationManagement: FC = () => {
         setCascaderOptions([]);
         // Phase 39: 新增模式无 orgId, 清空顶层 watchedOrgId 避免上一次编辑的 alias 数据残留
         setWatchedOrgId(undefined);
-        workstationForm.setFieldsValue({ status: 0, type: 0 });
+        workstationForm.setFieldsValue({ status: 0, type: defaultType });
       }
       setModalVisible(true);
     },
-    [setEditFormValues, handleEdit, handleAdd, workstationForm, setModalVisible, loadUserOptions]
+    [
+      setEditFormValues,
+      handleEdit,
+      handleAdd,
+      workstationForm,
+      setModalVisible,
+      loadUserOptions,
+      defaultType,
+    ]
   );
 
   const handleImportSuccess = useCallback(() => {
@@ -885,6 +905,7 @@ const WorkstationManagement: FC = () => {
           open={modalVisible}
           form={workstationForm}
           editingWorkstation={editingWorkstation}
+          typeDict={typeDict}
           orgTreeData={orgTreeData}
           deptTreeData={deptTreeData}
           aliasList={aliasList}
