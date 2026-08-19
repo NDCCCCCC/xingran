@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.22 + v1.23 + v1.25 启动块
+milestone: v1.22 + v1.23 + v1.24 + v1.25 + Phase 63
 milestone_name: milestone
-status: Phase 70 SHIPPED — 7/7 plans EXECUTED (D-10 default-theme 原子提交 + SettingsShell/14 selectors + email/api v16 三段式 + captcha 网格墙 status 反转 + 用户设置行式即改即存 + 目录合并 Migrate209 + D-12 清理 + 七门回归 + visual gate passed);ROADMAP Phase 70 勾选 + 10 SC 落位(e138411 收口)
-stopped_at: Phase 70 SHIPPED (7 plans + 10 SC + 159 tests pass;visual gate 通过,10 张截图归档)
-last_updated: "2026-08-19T22:35:00.000Z"
-last_activity: 2026-08-19
+status: Phase 63 SHIPPED — 1/1 plan EXECUTED (5/5 SC verified: format:check pass + lint 0 errors + lint-staged/commitlint hooks + CI Node 24 + coverage thresholds + knip/size-limit advisory);ROADMAP Phase 63 勾选 + 7-commit chain `760606a..937f35f`(含 `d2184fd` Phase 70 格式回归修复)
+stopped_at: Phase 63 SHIPPED (1 plan + 5 SC + 159 tests pass;3 advisory 留给 Phase 71+:network/ports timeout + total bundle +90kB + knip ignore churn)
+last_updated: "2026-08-20T00:48:00.000Z"
+last_activity: 2026-08-20
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 27
-  completed_plans: 27
+  total_phases: 8
+  completed_phases: 8
+  total_plans: 28
+  completed_plans: 28
   percent: 100
 ---
 
@@ -18,8 +18,8 @@ progress:
 
 **Project**: XingRan-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.22 前端品牌化改造 SHIPPED 2026-08-18（Phases 64-67 / 4 phases / 4 plans / 15 requirements 100% 勾选 / 33 tasks）。Phase 63 前端工具链自动化独立 IN PROGRESS。**v1.23 启动块**: Phase 68 部署稳健性 & 文档一致性(SM2 密钥配置闭环)EXECUTED 2026-08-19(5 commits: a21dcec..25ded8f)。Phase 69 字典与状态值治理 8/8 plans EXECUTED 2026-08-19(DICT-01 后端常量终态 + DICT-02 字典 seed 11 组 + DICT-03 前端 4 页 useDict 迁移 + DICT-04 CLAUDE.md 指针化,T2 五步实测通过 chrome-devtools,DICT-04 落勾选,closeout commit pending)。Phase 70-01 系统设置页面布局重构 D-10 default-theme 清理原子提交已落地(`35db1b5`)。Phase 70-02 样式契约层 + SettingsShell 共用骨架 + Wave 0 单测已落地(`9c273d8` CSS + `c28b271` SettingsShell + `446119c` 6 vitest cases + `9283ac5` SUMMARY),quality gates 全绿(type-check + lint + 138 tests),余下 5 plans 进行中(并行)。
-**Last activity**: 2026-08-19 — Phase 68 closeout:68-01-SUMMARY.md 落地(350 行/16KB,5 commits × DEPLOY-XX 验证对照表),ROADMAP Phase 68 状态由 IN PLANNING 改为 EXECUTED + Progress 表 7/7 phases 全部落地 + Phase 68 详情段(5 SC)补齐;Phase 70-07 早间(2026-08-19)EXECUTED —— 7/7 plans,D-01~D-12 全部勾选,visual gate 通过,e138411 收口 commit。前期 2026-08-19 上午 Phase 70-02 EXECUTED: index.css +14 .xr-* selectors + SettingsShell.tsx (D-01/D-03/D-04/D-05 落地) + 6 vitest cases (D-03/D-04 锁定) + quality gates 全绿 (type-check + lint 0 errors / 138 tests pass)。Phase 70-01 D-10 default-theme 清理原子提交(`35db1b5`)并行落地,吸收工作区遗留 13 文件(+42/-717)。Phase 63 63-01-PLAN.md 在 `.planning/phases/63-frontend-toolchain-automation/` IN PROGRESS(2026-08-14 起)。
+**Status**: v1.22 + v1.23 + v1.24 + v1.25 启动块 + Phase 63 全部 SHIPPED(Phases 63-70 / 8 phases / 21 plans / 36 requirements 100% 勾选 / 33+ tasks)。**Phase 63** 前端工具链自动化 SHIPPED 2026-08-20(1/1 plan,5/5 SC verified,7-commit chain `760606a..937f35f`,含 `d2184fd` Phase 70 格式回归修复)。**v1.23 启动块**: Phase 68 部署稳健性 & 文档一致性(SM2 密钥配置闭环)EXECUTED 2026-08-19(5 commits: a21dcec..25ded8f)。**v1.24 启动块**: Phase 69 字典与状态值治理 8/8 plans EXECUTED 2026-08-19(DICT-01 后端常量终态 + DICT-02 字典 seed 11 组 + DICT-03 前端 4 页 useDict 迁移 + DICT-04 CLAUDE.md 指针化)。**v1.25 启动块**: Phase 70 系统设置页面布局重构 7/7 plans EXECUTED 2026-08-19(D-01~D-12 全部勾选,visual gate 通过,e138411 收口)。
+**Last activity**: 2026-08-20 — Phase 63 closeout:`63-01-SUMMARY.md` 落地(177 行),ROADMAP Phase 63 状态由 IN PROGRESS 改为 SHIPPED + Progress 表 8/8 phases 全部落地(63-70)+ Phase 63 详情段(5 SC)补齐;5/5 SC 验证通过(format:check pass + lint 0 errors + lint-staged/commitlint hooks 经 `d2184fd` 触发实测 + CI Node 24 + coverage thresholds 25/15/22/25 + knip/size-limit advisory 可运行);3 项 advisory 留给 Phase 71+(network/ports 3 timeout + total bundle +90kB + knip ignore churn)。Phase 70-07 早间(2026-08-19)EXECUTED —— 7/7 plans,D-01~D-12 全部勾选,visual gate 通过,e138411 收口 commit。前期 2026-08-19 上午 Phase 70-02 EXECUTED: index.css +14 .xr-* selectors + SettingsShell.tsx (D-01/D-03/D-04/D-05 落地) + 6 vitest cases (D-03/D-04 锁定) + quality gates 全绿 (type-check + lint 0 errors / 138 tests pass)。Phase 70-01 D-10 default-theme 清理原子提交(`35db1b5`)并行落地。Phase 63 6 个 commit(`760606a` Prettier + `0248e46` 全仓格式化 + `953f365` CI Node 24 + `78aa802` husky/lint-staged/commitlint + `1609869` coverage thresholds + `4d8cd0d` knip/size-limit)由 `ed25272` merge 收口于 2026-08-15。
 
 # Project State
 
@@ -34,14 +34,14 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 
 **Core value**: 端到端运维可观测与审计能力——每个写操作产生可追溯记录(who/when/what/from-where/before-after-state),敏感字段自动脱敏。v1.22 在不破坏既有核心价值的前提下,把后台内部视觉统一到登录页品牌(深绿 × 铜金 × 奶油纸感),让 53 屏业务页面在 design-system 层自动继承品牌样式。
 
-**Current focus**: v1.23 启动块 Phase 68 EXECUTED 收口(2026-08-19 本日补 SUMMARY 与 ROADMAP 状态);v1.24 启动块 Phase 69 字典与状态值治理 8/8 plans 完成(DICT-01~04 全部勾选,T2 字典链路端到端实测通过);v1.25 启动块 Phase 70 系统设置页面布局重构 7/7 plans EXECUTED(D-01~D-12 全部勾选,visual gate 通过);三块启动块(v1.23/v1.24/v1.25)全部落地。
+**Current focus**: v1.22 + v1.23 + v1.24 + v1.25 四块启动块 + Phase 63 全部 SHIPPED。Phase 63(独立无依赖,前端工具链基建)2026-08-20 SHIPPED —— 1/1 plan,5/5 SC verified(SC#1 format:check + lint 0 errors / SC#2 lint-staged + commitlint 经 `d2184fd` 实测触发 / SC#3 CI Node 24 / SC#4 coverage thresholds 25/15/22/25 生效 / SC#5 knip + size-limit advisory 可运行),7-commit chain `760606a..937f35f`;3 项 advisory 留给 Phase 71+(network/ports 3 timeout + total bundle +90kB + knip ignore churn)。
 
 ## Current Position
 
-Phase: 70
-Plan: Not started
-Status: 68-01 SUMMARY 落地 + ROADMAP Phase 68 标记 EXECUTED (Phase 68 早已 5 commits 2026-08-19 a21dcec..25ded8f,本日补 SUMMARY 与状态收口)
-Last activity: 2026-08-19
+Phase: 63
+Plan: 1/1
+Status: SHIPPED — `63-01-SUMMARY.md` 落地 + ROADMAP Phase 63 标记 SHIPPED + Progress 表 8/8 phases(63-70)+ Phase 63 详情段(5 SC)补齐;`d2184fd` 修复 Phase 70 引入的 8 文件 format 回归(独立 format-only commit 保持 bisect-friendly)
+Last activity: 2026-08-20
 
 ## Accumulated Context
 
@@ -191,13 +191,13 @@ Last session: 2026-08-19T22:30:00.000Z
 Stopped at: Phase 68 closeout (SUMMARY 68-01-SUMMARY.md + ROADMAP Phase 68 收口)
 Resume file: .planning/phases/68-deploy-robustness-and-docs-consistency/68-01-SUMMARY.md
 
-**Milestone status:** ✅ v1.22 SHIPPED 2026-08-18 (Phases 64-67 / 4 phases / 15 requirements / 100% coverage) + ✅ v1.23 Phase 68 EXECUTED 2026-08-19 (DEPLOY-01~05 闭环) + ✅ v1.24 Phase 69 EXECUTED 2026-08-19 (DICT-01~04 闭环) + ✅ v1.25 Phase 70 EXECUTED 2026-08-19 (D-01~D-12 闭环);三块启动块全部落地,共 7 phases / 20 plans 全绿。Phase 63 frontend-toolchain-automation 独立 IN PROGRESS,提供 CI / lint / 测试基建。
+**Milestone status:** ✅ v1.22 SHIPPED 2026-08-18 (Phases 64-67 / 4 phases / 15 requirements / 100% coverage) + ✅ v1.23 Phase 68 EXECUTED 2026-08-19 (DEPLOY-01~05 闭环) + ✅ v1.24 Phase 69 EXECUTED 2026-08-19 (DICT-01~04 闭环) + ✅ v1.25 Phase 70 EXECUTED 2026-08-19 (D-01~D-12 闭环) + ✅ **Phase 63 SHIPPED 2026-08-20 (1/1 plan, 5/5 SC, 7-commit chain `760606a..937f35f`)**;四块启动块 + Phase 63 全部落地,共 8 phases / 21 plans 全绿;3 项 advisory 留给 Phase 71+(network/ports 3 timeout + total bundle +90kB + knip ignore churn)。
 
 ## Operator Next Steps
 
-- v1.23 / v1.24 / v1.25 三块启动块全 EXECUTED,可启动 v1.26 启动块(由用户决定下一阶段范围)
+- v1.22 / v1.23 / v1.24 / v1.25 + Phase 63 五块全部 SHIPPED,可启动 v1.26 启动块(由用户决定下一阶段范围)
 - 工作区遗留 `M internal/services/system/asset_columns_schema.json`(Phase 68 范围外,Phase 34 任务期间的状态) — 需用户决定 commit / stash / 还原
-- Phase 63 frontend-toolchain-automation 独立进行,可观察其 CI gate / lint-staged hook 完成时间
+- Phase 71+ 候选方向:network/ports 3 timeout 修复 + bundle 治理(echarts tree-shaking + chunk split) + knip ignore 收紧
 - v1.22 / v1.23 / v1.25 尚未产出 VERIFICATION.md 报告(可选补 — 不阻塞 shipping)
 - ROADMAP milestone 段可补 v1.26 启动块(若用户给出下一阶段方向)
 
