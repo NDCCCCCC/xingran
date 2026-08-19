@@ -252,7 +252,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 70-07-PLAN.md — D-12 残留清理 + 注册表测试 + 收口七门 + 截图 checkpoint
+- [x] 70-07-PLAN.md — D-12 残留清理 + 注册表测试 + 收口七门 + 截图 checkpoint
 
 ---
 
