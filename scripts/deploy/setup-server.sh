@@ -5,7 +5,10 @@
 # Lighthouse default) BEFORE the first CI deploy:
 #
 #   1. creates /opt/xingran directory layout (configs/logs/uploads/data/deploy)
-#   2. creates /etc/xingran/secrets.env skeleton (600 root:root) if absent
+#   2. creates /etc/xingran/secrets.env skeleton (600 root:root) if absent;
+#      includes 6 keys: JWT_ACCESS_SECRET / JWT_REFRESH_SECRET / SM4_KEY /
+#      JWT_SM2_PRIVATE_KEY / JWT_SM2_PUBLIC_KEY (SM2 keys must be generated
+#      via `go run scripts/crypto/gen_sm2_keys/main.go` and pasted manually)
 #   3. verifies /opt/xingran/configs/config.yaml exists (must be copied from
 #      configs/config.prod.example.yaml and edited manually — sqlite mode)
 #
@@ -29,6 +32,12 @@ if [ ! -f /etc/xingran/secrets.env ]; then
 JWT_ACCESS_SECRET=change-me
 JWT_REFRESH_SECRET=change-me
 SM4_KEY=
+# === SM2 密钥对（非对称，绝不能用 openssl 动态生成；否则每次重启踢全部用户） ===
+# 生成方法（一次性,在本地仓库内运行,把两行输出粘贴到下面两行等号右侧）:
+#   go run scripts/crypto/gen_sm2_keys/main.go
+# 生产环境两行必须都填写;空值会让 jwt.go 走"动态生成"分支重启即失效。
+JWT_SM2_PRIVATE_KEY=
+JWT_SM2_PUBLIC_KEY=
 EOF
   sudo chmod 600 /etc/xingran/secrets.env
   sudo chown root:root /etc/xingran/secrets.env
