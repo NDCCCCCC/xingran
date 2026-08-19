@@ -199,7 +199,7 @@ Plans:
 **Wave 3** *(blocked on Wave 2 completion)*
 
 - [x] 69-04-PLAN.md — DICT-01 批 3:vdi/addomain/notice/knowledge/rpa/scheduler 替换(簇 A + D 账号池三态 + E 反转;批内补缺常量 ADAccountStatus*/RPACredentialStatus* 同步登记锁值测试 watched 集合与 expectedStatusValues)
-- [ ] 69-07-PLAN.md — DICT-03 前端字典线:四页 type 下拉 useDict 迁移(sys_user_sex/ops_workstation_type/duty_holiday_type/network_device_type,静态兜底+isDefault 默认值)
+- [x] 69-07-PLAN.md — DICT-03 前端字典线:四页 type 下拉 useDict 迁移(sys_user_sex/ops_workstation_type/duty_holiday_type/network_device_type,静态兜底+isDefault 默认值)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 

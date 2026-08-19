@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.22 + v1.23 启动块
 milestone_name: milestone
 status: executing
-stopped_at: Completed 69-04-PLAN.md (batch 3, commit 8620d9b)
-last_updated: "2026-08-19T07:24:12.977Z"
+stopped_at: Completed 69-07-PLAN.md (commits 3a133dc/235b8f7)
+last_updated: "2026-08-19T07:42:01.993Z"
 last_activity: 2026-08-19
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 19
-  completed_plans: 9
-  percent: 47
+  completed_plans: 10
+  percent: 53
 ---
 
 # Project State
@@ -39,7 +39,7 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 ## Current Position
 
 Phase: 69 (字典与状态值治理) — EXECUTING (并行 Phase 70 会话执行中)
-Plan: 6 of 8
+Plan: 7 of 8
 Status: Ready to execute
 Last activity: 2026-08-19
 
@@ -187,8 +187,8 @@ Full deferred detail in [milestones/v1.21-ROADMAP.md](milestones/v1.21-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-19T07:24:01.335Z
-Stopped at: Completed 69-04-PLAN.md (batch 3, commit 8620d9b)
+Last session: 2026-08-19T07:42:01.984Z
+Stopped at: Completed 69-07-PLAN.md (commits 3a133dc/235b8f7)
 Resume file: None
 
 **Milestone status:** v1.22 IN PLANNING — **ROADMAP drafted 2026-08-18**,4 phases (64-67) / 15 requirements / 100% coverage。Token 层 (Phase 64) 落地位于 index.css 253 变量 + tokens/colors.ts xingranBrand + AntdThemeBridge + tokens/shadows+spacing+typography + QA-01 对比度校验;主题收敛 (Phase 65) 移除 6 套主题 + ThemeSwitcher/ColorSwitcher/themeStore 残留 + 13 消费方清理,保留 light/dark + layout/density;组件样式 (Phase 66) 侧边栏深绿 + 表格/卡片 + 按钮 D-03 纪律 + 表单/标签/ECharts + QA-02 硬编码扫描;终端验证 (Phase 67) 构建/类型/lint/test 全绿 + bundle 体积不增 + 6 屏前后截图对比。
@@ -208,6 +208,7 @@ Resume file: None
 | Phase 69 P02 | 42m | 2 tasks | 3 files |
 | Phase 69 P03 | 15m | 1 tasks | 15 files |
 | Phase 69 P04 | 14m | 1 tasks | 15 files |
+| Phase 69 P07 | 13m | 2 tasks | 12 files |
 
 ## Decisions
 
@@ -216,3 +217,4 @@ Resume file: None
 - [Phase 69-02]: migration_208 字典 seed 组级查重走 Unscoped（软删 dict_type 视为组已存在——防复活且防软删行占位 uniqueIndex 每次启动撞约束）；isDefault 取值规则 = archive/模型 gorm default 注释照抄，无来源组取组内第一条（sys_user_sex 默认 "2" 保密 = User.Gender default:2 而非 0=男；duty_holiday_type 默认 custom = Holiday gorm default）；dashboard_*/workorder_* 剔除不 seed（前端零 useDict 消费，planner Q4 圈定）
 - [Phase 69-03]: 批 2 operations+excel 链路 58 处常量化：WorkstationDevice/Asset 无既有族且 WorkstationStatus(三态)/DeviceStatus(在线) 语义错配，按 69-01 登记机制新增无类型 WorkstationDeviceStatus/AssetStatus/AssetNBFStatus 三族(锁值 74→80)；双包陷阱按 model struct 实际所在包引用；白名单 38→27 文件
 - [Phase 69-04]: 批3六目录30处常量化：E簇反转(knowledge/notice 1=已发布)与D簇账号池三态零误替；ADAccountStatus*(0/1/2 Phase36状态机)与RPACredentialStatus*(0/1)两新族落 models 并双登记锁值(80→85)；account_pool 本地 AccountStatus* 改为 models 别名实现真相源上移；VDIResourceGroup 2处复用 VDIServerStatus 族；白名单 27→17 文件
+- [Phase 69]: 69-07: 四页 type 下拉迁 useDict（三件套+空态回退静态 OPTIONS 第四件）；workstations hook 放 index.tsx 经 prop 透传 EditModal；number 字段 Option value 用 Number(dictValue) 保提交契约；devices 不引入新增默认值，isDefault 默认件仅用于原有默认的三处（user 0→2保密 / workstation 0 不变 / holiday legal→custom 对齐后端 gorm default）
