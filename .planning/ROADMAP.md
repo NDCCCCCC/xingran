@@ -237,7 +237,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 70-01-PLAN.md — D-10 原子提交吸收 default-theme 清理(checkpoint 过目提交范围)
+- [x] 70-01-PLAN.md — D-10 原子提交吸收 default-theme 清理(checkpoint 过目提交范围)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
