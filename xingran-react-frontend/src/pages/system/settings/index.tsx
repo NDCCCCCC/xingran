@@ -14,7 +14,7 @@
  *     本文件改为页面入口后旧 Tabs 壳 src/pages/system/settings-page/ 随之删除，
  *     sys_menu component 由 Migrate209 从 system/settings-page/index 更新为
  *     system/settings/index（path 字段不动，路由 URL 保持 /system/settings-page）。
- *   - 旧 usePersistedStateController activeTab 持久化被 SettingsShell 的
+ *   - 旧 sessionStorage activeTab 持久化被 SettingsShell 的
  *     useSearchParams 唯一真相源取代（D-03/D-12）。
  */
 

@@ -51,7 +51,8 @@ const EmailConfigPage: FC = () => {
 
   // 搜索表单
   // 注：后端 list 端点仅支持 status 筛选（notification_config_handler.go 只绑定
-  // current/pageSize/status），配置名称筛选需后端支持后接入，故无名称 state。
+  // current/pageSize/status），配置名称筛选输入框已于 70-07 移除（后端支持后可从
+  // git 历史恢复）。
   const [searchForm] = Form.useForm();
   const [statusFilter, setStatusFilter] = useState<number | undefined>(undefined);
 
@@ -340,7 +341,7 @@ const EmailConfigPage: FC = () => {
         </div>
       </div>
 
-      {/* 工具栏卡：搜索 / 状态筛选 / 新增配置 */}
+      {/* 工具栏卡：状态筛选 / 新增配置（名称搜索待后端支持，70-07 移除死输入框） */}
       <Card style={{ marginBottom: 14 }}>
         <div
           style={{
@@ -352,9 +353,6 @@ const EmailConfigPage: FC = () => {
           }}
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
-            <Form.Item name="configName" label="配置名称">
-              <Input placeholder="按配置名称搜索" allowClear style={{ width: 200 }} />
-            </Form.Item>
             <Form.Item name="status" label="状态">
               <Select
                 placeholder="全部状态"

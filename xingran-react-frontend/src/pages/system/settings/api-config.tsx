@@ -48,7 +48,7 @@ const APIConfigPage: FC = () => {
   const [configs, setConfigs] = useState<APINotificationConfig[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // 搜索筛选（configType + 状态；名称筛选待后端 list 端点支持，同 email-config 注）
+  // 搜索筛选（configType + 状态；名称筛选输入框已于 70-07 移除，同 email-config 注）
   const [searchForm] = Form.useForm();
   const [configTypeFilter, setConfigTypeFilter] = useState<APIConfigType | undefined>(undefined);
   const [statusFilter, setStatusFilter] = useState<number | undefined>(undefined);
@@ -325,7 +325,7 @@ const APIConfigPage: FC = () => {
         </div>
       </div>
 
-      {/* 工具栏卡：配置名称 + configType 筛选 + 状态筛选 + 新增配置 */}
+      {/* 工具栏卡：configType 筛选 + 状态筛选 + 新增配置（名称搜索待后端支持，70-07 移除死输入框） */}
       <Card style={{ marginBottom: 14 }}>
         <div
           style={{
@@ -337,9 +337,6 @@ const APIConfigPage: FC = () => {
           }}
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
-            <Form.Item name="configName" label="配置名称">
-              <Input placeholder="按配置名称搜索" allowClear style={{ width: 200 }} />
-            </Form.Item>
             <Form.Item name="configType" label="配置类型">
               <Select
                 placeholder="全部类型"

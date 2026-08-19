@@ -41,10 +41,6 @@ interface SettingsActions {
   // 重置
   reset: () => void;
 
-  // 导入/导出
-  exportPreferences: () => string;
-  importPreferences: (json: string) => void;
-
   // 内部方法
   syncToStores: () => void;
 }
@@ -175,25 +171,6 @@ export const useSettingsStore = create<SettingsStore>()(
       reset: () => {
         set({ preferences: defaultUserPreferences });
         get().syncToStores();
-      },
-
-      // 导出配置
-      exportPreferences: () => {
-        const { preferences } = get();
-        return JSON.stringify(preferences, null, 2);
-      },
-
-      // 导入配置
-      importPreferences: (json) => {
-        try {
-          const imported = JSON.parse(json);
-          const migrated = configService.migratePreferences(imported);
-          set({ preferences: migrated });
-          get().syncToStores();
-        } catch (error) {
-          console.error("Failed to import preferences:", error);
-          throw new Error("Invalid configuration file");
-        }
       },
     }),
     {
