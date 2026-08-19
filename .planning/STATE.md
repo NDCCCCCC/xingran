@@ -153,7 +153,7 @@ Items acknowledged and carried forward from previous milestone closes (non-v1.22
 | uat_gap | v1.19 7 项真机 SSH transport verification | deferred (site-visit) | v1.19 close 2026-07-08 |
 | uat_gap | v1.18 3 项 site-visit UAT (S8700/RS8607E) | deferred (site-visit) | v1.18 close 2026-07-04 |
 | tech-debt | WR-01 / WR-03 / WR-04 / WR-05 + 14 项 v1.19.x+ future work | backlog | v1.19 REQUIREMENTS §Future |
-| tech-debt | ~88 audit-open historical items (19 debug_sessions / 60 quick_tasks / etc.) | backlog | pre-v1.20 |
+| tech-debt | ~88 audit-open historical items (19 debug_sessions / 60 quick_tasks / etc.) | backlog — partial cleanup 2026-08-20 (-4 debug_sessions → resolved/ + 14 quick_tasks → quick-archive/) | pre-v1.20 |
 | v1.22 future | PROTO-01/02/03/04 逐屏对齐(路由前缀 / 字段表头工具栏 / 菜单组结构 / 空状态文案) | v1.23+ candidate | v1.22 REQUIREMENTS §Future (来源 PROTOTYPE-VS-ACTUAL.md) |
 | v1.22 future | VIS-01/02/03 视觉深化(3D 楼宇配色 / 登录后台过渡动效 / 打印导出样式) | v1.23+ candidate | v1.22 REQUIREMENTS §Future |
 | v1.22 future | ink-amber 主题 removal hard-deletion 检查(Phase 65 落地) | scope of Phase 65 | v1.22 (quick-260817-ucz 引入) |
