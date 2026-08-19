@@ -14,12 +14,7 @@ import {
   InputNumber,
   Empty,
 } from "antd";
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  SendOutlined,
-} from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DeleteOutlined, SendOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { formatDateTime } from "@/utils/datetime";
 import {
@@ -243,7 +238,11 @@ const EmailConfigPage: FC = () => {
       render: (_, record) => (
         <span>
           {record.host}:{record.port}
-          {record.useSsl && <span className="xr-tag" style={{ marginLeft: 8 }}>SSL</span>}
+          {record.useSsl && (
+            <span className="xr-tag" style={{ marginLeft: 8 }}>
+              SSL
+            </span>
+          )}
         </span>
       ),
     },
@@ -285,10 +284,20 @@ const EmailConfigPage: FC = () => {
       width: 200,
       render: (_, record: EmailConfig) => (
         <div className="xr-row-ops">
-          <Button type="link" size="small" icon={<SendOutlined />} onClick={() => openTestModal(record)}>
+          <Button
+            type="link"
+            size="small"
+            icon={<SendOutlined />}
+            onClick={() => openTestModal(record)}
+          >
             测试
           </Button>
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openModal(record)}>
+          <Button
+            type="link"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => openModal(record)}
+          >
             编辑
           </Button>
           <Button
@@ -354,12 +363,7 @@ const EmailConfigPage: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="status" label="状态">
-              <Select
-                placeholder="全部状态"
-                style={{ width: 140 }}
-                allowClear
-                onSearch={() => {}}
-              >
+              <Select placeholder="全部状态" style={{ width: 140 }} allowClear onSearch={() => {}}>
                 <Option value={0}>正常</Option>
                 <Option value={1}>停用</Option>
               </Select>

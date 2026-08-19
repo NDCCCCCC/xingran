@@ -29,11 +29,7 @@ const SRC = join(ROOT, "src");
 const FIX_MODE = process.argv.includes("--fix");
 
 // 路径 allowlist (相对 ROOT, 跳过扫描)
-const PATH_ALLOW = [
-  "src/utils/three/colors.ts",
-  "src/design-system/tokens/",
-  "scripts/",
-];
+const PATH_ALLOW = ["src/utils/three/colors.ts", "src/design-system/tokens/", "scripts/"];
 
 // 值 allowlist (允许这些 hex / rgba 出现, 例如 modern-tag dark 浅化文字)
 const VALUE_ALLOW_HEX = new Set(["#95de64", "#ff7875", "#ffc53d", "#69c0ff"]);
@@ -172,7 +168,9 @@ for (const file of files) {
 }
 
 if (FIX_MODE) {
-  console.log(`[fix] applied ${totalFixed} replacements across ${files.length - SKIPPED.length} scanned files`);
+  console.log(
+    `[fix] applied ${totalFixed} replacements across ${files.length - SKIPPED.length} scanned files`
+  );
   console.log(`[skip] ${SKIPPED.length} paths allowlisted: ${SKIPPED.join(", ")}`);
   process.exit(0);
 }

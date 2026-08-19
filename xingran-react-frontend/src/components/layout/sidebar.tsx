@@ -14,11 +14,7 @@ import {
 } from "./sidebar-helper";
 import { getIconComponent } from "@/utils/iconUtils";
 import { buildFullPath, findMenuById, findMenuByFullPath } from "./sidebar.utils";
-import {
-  DEFAULT_SIDEBAR_WIDTH,
-  MENU_FONT_SIZE,
-  NAVIGATION_DELAY,
-} from "./sidebar.constants";
+import { DEFAULT_SIDEBAR_WIDTH, MENU_FONT_SIZE, NAVIGATION_DELAY } from "./sidebar.constants";
 
 const { Sider } = Layout;
 
@@ -31,7 +27,14 @@ const getIcon = (iconName?: string | null): React.ReactNode => getIconComponent(
  */
 const SubChevron: React.FC = () => (
   <span className="menu-sub-chevron" aria-hidden="true">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M9 6l6 6-6 6" />
     </svg>
   </span>

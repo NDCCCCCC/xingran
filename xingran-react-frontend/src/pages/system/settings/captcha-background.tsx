@@ -406,9 +406,7 @@ const CaptchaBackgroundSettingsPage: FC = () => {
           {!loading && backgrounds.length === 0 ? (
             <div style={EMPTY_CARD_STYLE}>
               <PictureOutlined style={{ fontSize: 48, color: "var(--theme-text-secondary)" }} />
-              <div
-                style={{ fontSize: 16, fontWeight: 600, color: "var(--theme-text-primary)" }}
-              >
+              <div style={{ fontSize: 16, fontWeight: 600, color: "var(--theme-text-primary)" }}>
                 暂无背景图
               </div>
               <div style={{ fontSize: 12, color: "var(--theme-text-secondary)" }}>

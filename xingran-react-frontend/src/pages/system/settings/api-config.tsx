@@ -16,11 +16,7 @@ import {
   Radio,
   Empty,
 } from "antd";
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-} from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { formatDateTime } from "@/utils/datetime";
 import {
@@ -272,7 +268,12 @@ const APIConfigPage: FC = () => {
       width: 150,
       render: (_, record: APINotificationConfig) => (
         <div className="xr-row-ops">
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openModal(record)}>
+          <Button
+            type="link"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => openModal(record)}
+          >
             编辑
           </Button>
           <Button
@@ -338,24 +339,14 @@ const APIConfigPage: FC = () => {
         >
           <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
             <Form.Item name="configType" label="配置类型">
-              <Select
-                placeholder="全部类型"
-                style={{ width: 140 }}
-                allowClear
-                onSearch={() => {}}
-              >
+              <Select placeholder="全部类型" style={{ width: 140 }} allowClear onSearch={() => {}}>
                 <Option value={APIConfigTypes.SMS}>短信</Option>
                 <Option value={APIConfigTypes.WEBHOOK}>Webhook</Option>
                 <Option value={APIConfigTypes.PUSH}>推送</Option>
               </Select>
             </Form.Item>
             <Form.Item name="status" label="状态">
-              <Select
-                placeholder="全部状态"
-                style={{ width: 140 }}
-                allowClear
-                onSearch={() => {}}
-              >
+              <Select placeholder="全部状态" style={{ width: 140 }} allowClear onSearch={() => {}}>
                 <Option value={0}>正常</Option>
                 <Option value={1}>停用</Option>
               </Select>

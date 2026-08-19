@@ -142,7 +142,11 @@ describe("SettingsShell — Phase 70-02 D-03/D-04 Wave 0", () => {
 
     // doMock 在模块层不会重渲染已导入的 SettingsShell；改为端到端断言 history.length
     // 简化路径：渲染后点击 captcha 按钮，断言 history.length 不变 + URL 变化（经 MemoryRouter）
-    const { rerender } = render(<Wrapper><SettingsShell categories={testCategories} defaultCat="email" /></Wrapper>);
+    const { rerender } = render(
+      <Wrapper>
+        <SettingsShell categories={testCategories} defaultCat="email" />
+      </Wrapper>
+    );
 
     // 初始 history.length
     const initialHistoryLength = window.history.length;
@@ -161,12 +165,20 @@ describe("SettingsShell — Phase 70-02 D-03/D-04 Wave 0", () => {
       const actual = await importOriginal<typeof import("react-router-dom")>();
       return actual;
     });
-    rerender(<Wrapper><SettingsShell categories={testCategories} defaultCat="email" /></Wrapper>);
+    rerender(
+      <Wrapper>
+        <SettingsShell categories={testCategories} defaultCat="email" />
+      </Wrapper>
+    );
   });
 
   it("用例4a: 桌面端（mockBreakpoint.lg=true）渲染 Sider 导航，无 Segmented", () => {
     mockBreakpoint = { lg: true };
-    render(<Wrapper><SettingsShell categories={testCategories} defaultCat="email" /></Wrapper>);
+    render(
+      <Wrapper>
+        <SettingsShell categories={testCategories} defaultCat="email" />
+      </Wrapper>
+    );
 
     // 桌面端有左导航白卡
     const nav = document.querySelector(".xr-settings-nav");
@@ -182,7 +194,11 @@ describe("SettingsShell — Phase 70-02 D-03/D-04 Wave 0", () => {
 
   it("用例4b: 窄屏（mockBreakpoint.lg=false）降级为 Segmented 块，无 Sider 导航", () => {
     mockBreakpoint = { lg: false };
-    render(<Wrapper><SettingsShell categories={testCategories} defaultCat="email" /></Wrapper>);
+    render(
+      <Wrapper>
+        <SettingsShell categories={testCategories} defaultCat="email" />
+      </Wrapper>
+    );
 
     // Segmented 渲染
     expect(document.querySelector(".ant-segmented")).not.toBeNull();
@@ -195,8 +211,12 @@ describe("SettingsShell — Phase 70-02 D-03/D-04 Wave 0", () => {
     expect(screen.getByTestId("content-email")).toBeInTheDocument();
   });
 
-  it("用例5: 激活分类项带 aria-current=\"true\"，非激活项无该属性", () => {
-    render(<Wrapper><SettingsShell categories={testCategories} defaultCat="email" /></Wrapper>);
+  it('用例5: 激活分类项带 aria-current="true"，非激活项无该属性', () => {
+    render(
+      <Wrapper>
+        <SettingsShell categories={testCategories} defaultCat="email" />
+      </Wrapper>
+    );
 
     const allBtns = screen.getAllByRole("button");
 

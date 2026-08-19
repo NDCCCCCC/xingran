@@ -129,9 +129,7 @@ export const SettingsShell: FC<SettingsShellProps> = (props) => {
       <Content style={{ padding: 0, background: "transparent" }}>
         <div className="xr-settings-content">
           {activeCategory?.maxWidth ? (
-            <div style={{ maxWidth: activeCategory.maxWidth }}>
-              {activeCategory.content}
-            </div>
+            <div style={{ maxWidth: activeCategory.maxWidth }}>{activeCategory.content}</div>
           ) : (
             activeCategory?.content
           )}
