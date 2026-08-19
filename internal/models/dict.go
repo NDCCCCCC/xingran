@@ -1,5 +1,13 @@
 package models
 
+// DictStatus 字典状态枚举（DictType.Status / DictData.Status 共用）
+type DictStatus int
+
+const (
+	DictStatusNormal   DictStatus = 0 // 正常
+	DictStatusDisabled DictStatus = 1 // 停用
+)
+
 // DictType 字典类型模型
 type DictType struct {
 	BaseModel
