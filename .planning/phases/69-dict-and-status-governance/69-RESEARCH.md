@@ -344,18 +344,20 @@ const def = typeDict.find((d) => d.isDefault)?.dictValue ?? typeDict[0]?.dictVal
 | A3 | 生产 PG 库的 sys_dict 数据状态未知（dev sqlite 为空是实测；生产库字典可能有历史数据）——组级幂等 seed 对两种状态都安全 | DICT-02 | 低——幂等设计已覆盖；若生产库有值且 label 与新 seed 不一致，组级跳过会保留旧值（符合「尊重用户数据」） |
 | A4 | 74 个 index.tsx ≈ ROADMAP「~78 页」口径（含子组件页） | A5 | 无影响 |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **DICT-01 真相源位置：models 包 vs internal/constants 门面包？**
+> 2026-08-19 规划决议回填（checker W4；决议已落地到 plan 69-01..69-08）。
+
+1. **DICT-01 真相源位置：models 包 vs internal/constants 门面包？** — **(RESOLVED → 69-01)**：models 为唯一真相源，不新建 internal/constants 平行包；缺失实体常量（DictStatus / OperLog 成败 / VDIServer / Notice / InfoPoint）由 69-01 T1 按 base.go 风格补齐并锁值。
    - What we know: SC#1 原文「如 internal/constants/」是举例；models 已有 86 个枚举 + 11 组常量
    - What's unclear: 用户/规划是否坚持「物理集中」的形式要求
    - Recommendation: models 为真相源；若坚持 internal/constants，做成纯 re-export 别名门面（零拷贝）。planner 可在 plan 内定，不必打断用户
-2. **status 0/1 下拉是否进字典？**
+2. **status 0/1 下拉是否进字典？** — **(RESOLVED → 69-06)**：不进字典。status 走前端共享常量模块 `src/constants/status.ts`（69-06 落地）；type/性别/假日类才走 useDict（69-07）——status 是代码分支语义不宜运营可配（Q2 安全决策，threat T-69-13 背书）。
    - What we know: DICT-03 说「硬编码 options 迁移 useDict」未区分 status 与 type
    - Recommendation: status 走共享常量模块（批 4），type 走 useDict（批 2-3）——status 是代码分支语义不宜运营可配。若用户想要字典化 status 也可行（seed sys_user_status 等），但需接受「管理员加值可能不被代码识别」的说明成本
-3. **excel_config Options map 是否改造为读字典？**
+3. **excel_config Options map 是否改造为读字典？** — **(RESOLVED)**：本 phase 不改（静态配置 + 导入热路径，改造收益低风险高）；只保证 seed 值与 excel_config 一致（69-02 T1 硬约束）。excel_service.go:1975/:2029 的 map 形态字面量仅做常量化（69-03 批 2），不改造为读字典。留 v1.25+ 候选。
    - Recommendation: 本 phase 不改（静态配置 + 导入热路径，改造收益低风险高）；只保证 seed 值与 excel_config 一致。留 v1.25+ 候选
-4. **DICT-02 新增候选的最终清单边界**（workorder/notice/duty/sys_user_sex 取哪些）——planner 按「前端有对应下拉的优先」原则圈定即可，seed 机制对增量友好
+4. **DICT-02 新增候选的最终清单边界**（workorder/notice/duty/sys_user_sex 取哪些）— **(RESOLVED → 69-02)**：按「前端有对应下拉的优先」圈定 11 组 = 8 组 archive 存量重建 + 3 组新增（ops_workstation_type / sys_user_sex / duty_holiday_type）；dashboard_* 三组与 workorder_type/workorder_priority 剔除（前端零消费方，69-02 Source Audit 记录）。
 
 ## Environment Availability
 
