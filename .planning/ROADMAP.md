@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-08-18
+last_updated: 2026-08-19
 update_trigger: v1.22 milestone INITIATED — ROADMAP drafted (Phases 64-67, 4 phases; design-system 层品牌令牌落地)
 last_plan_update: 2026-08-18 — v1.21 SHIPPED + ARCHIVED (Phases 57-62; Phase 63 IN PROGRESS 独立前端工具链工作)
 previous_update: 2026-08-13 after v1.21 plans drafted (Phases 57-61) + Phase 62 cross-AI review close-out
@@ -217,13 +217,31 @@ Plans:
 
 **Depends on**: Phase 67 (v1.22 品牌令牌层与组件样式基线已 SHIPPED;与 Phase 69 字典治理无硬依赖,可独立规划)
 
-**Requirements**: TBD
+**Requirements**: 无 REQ-ID —— 以 `70-CONTEXT.md` 锁定决策 D-01~D-12 为需求真相源(12/12 已映射到 plans)
 
 **Success Criteria** (what must be TRUE):
 
-1. TBD — 由 /gsd:plan-phase 70 结合品牌设计理念与现页面盘点产出
+1. **D-01/D-03/D-04**: 系统设置页(`/system/settings-page`)为左侧分类导航白卡 + 右侧内容白卡的 SettingsShell 布局;激活分类由 URL `?cat=` 参数驱动(非法值回退默认 `email`),切换 replace:true 不产生新 RouteTab;`<lg` 断点降级为顶部 Segmented block 控件——`npx vitest run src/pages/system/settings/__tests__/SettingsShell.test.tsx` 全绿锁定
+2. **D-02 混合宽度**: 表格/网格类分类(邮箱/API/验证码)撑满容器,用户设置三类表单限宽 760px——由 `categories.test.ts` 纯数据断言锁定(systemSettings 无 maxWidth / userSettings 均 760)
+3. **D-05 两页同构**: 用户设置(`/user/settings`)与系统设置共用同一 `design-system/components/SettingsShell.tsx`(界面/布局/数据 3 分类),不合并菜单入口
+4. **D-06 行式设置项**: 用户设置每行 label+描述+右对齐控件(Switch/Select),明暗模式为分段卡片选择器(role=radio 非 Radio.Button),即改即存(updateTheme/updateLayout/updateDataPageSize + 已保存轻提示,无保存/重置按钮)——`src/pages/settings/__tests__/index.test.tsx` 全绿
+5. **D-07 v16 范式**: 邮箱/API 配置页为统计卡行(总配置数/启用/停用,status 轻请求零后端改动) + 品牌工具栏(搜索/筛选/深绿「新增配置」) + `.xr-table-zebra` 双层纸感表格三段式;**D-09**: 5 个 Modal 容器结构与宽度不变(email 700/api 800,captcha 现状),api Modal 内 headers/template/auth Tabs 保留
+6. **D-08 网格墙**: 验证码背景图为 `.xr-captcha-grid` 图片网格墙(4 统计卡 + 紧凑筛选 + 缩略图卡片 + Image 预览),captcha status 语义反转(1=启用)在统计卡与徽标两处一致——`captcha-background.test.tsx` 全绿
+7. **D-10 首提交**: 工作区 default-theme 清理 13 文件(+42/-717)作为 phase 首个原子提交入库(双绿验证 + 噪音排除)
+8. **D-11 目录合并**: 三个 settings 目录合并为 `src/pages/system/settings/`,`settings-page/` 删除;sys_menu component 经 Migrate208 迁移(`system/settings-page/index` → `system/settings/index`,id+旧值双条件幂等,双方言注册);迁移后菜单缓存按 changed 标志失效(6 个 menu: key 前缀)——`go test ./internal/core/db/migrations/ -run TestMigrate208` 全绿,重启后侧边栏「系统设置」点击不白屏
+9. **D-12 残留清零**: settings 范围内死目录 `system/captcha-background/`(防御查询后删除)、settingsStore 死 actions、preset Tag、persisted activeTab 键、fallback 硬编码色全部清零(grep 门零命中;不做全仓扫描)
+10. **回归收口**: `npm run build/type-check/lint/test` + `npm run deadcode` + `go build ./...` 全绿;截图矩阵(≥lg × light/dark 代表页 + <lg Segmented 降级)对照 v16 基准归档并经 checkpoint 确认
 
-**Plans**: TBD
+**Plans**: 7 plans
+
+Plans:
+- [ ] 70-01-PLAN.md — D-10 原子提交吸收 default-theme 清理(checkpoint 过目提交范围)
+- [ ] 70-02-PLAN.md — 样式契约层(.xr-* 新类) + SettingsShell 共用骨架 + Wave 0 单测
+- [ ] 70-03-PLAN.md — 邮箱/API 配置页 v16 三段式改造(Modal 契约不变)
+- [ ] 70-04-PLAN.md — 验证码背景图图片网格墙 + status 反转语义锁定
+- [ ] 70-05-PLAN.md — 用户设置行式化 + 即改即存 + 明暗分段卡片选择器
+- [ ] 70-06-PLAN.md — 目录合并 + Migrate208 sys_menu 迁移 + 菜单缓存失效
+- [ ] 70-07-PLAN.md — D-12 残留清理 + 注册表测试 + 收口七门 + 截图 checkpoint
 
 ---
 

@@ -41,14 +41,14 @@ created: 2026-08-19
 
 | Requirement | Plan | Wave | Behavior | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |-------------|------|------|----------|------------|-----------------|-----------|-------------------|-------------|--------|
-| D-03 | TBD | TBD | ?cat= 参数驱动激活分类；非法值回退首分类；replace 语义 | — | N/A | unit（jsdom + MemoryRouter） | `npx vitest run src/pages/system/settings/__tests__/SettingsShell.test.tsx -t "cat"` | ❌ W0 | ⬜ pending |
-| D-04 | TBD | TBD | `<lg` 断点渲染 Segmented、≥lg 渲染 Sider（mock useBreakpoint） | — | N/A | unit | `npx vitest run src/pages/system/settings/__tests__/SettingsShell.test.tsx -t "breakpoint"` | ❌ W0 | ⬜ pending |
-| D-06 | TBD | TBD | 行式设置项 onChange → settingsStore 对应字段更新 | — | N/A | unit | `npx vitest run src/pages/settings/__tests__/index.test.tsx` | ❌ W0 | ⬜ pending |
-| D-07/D-08 | TBD | TBD | 分类注册表完整性（两页各自 3 分类、icon/label/key） | — | N/A | unit（纯数据断言） | `npx vitest run src/pages/system/settings/__tests__/categories.test.ts` | ❌ W0 | ⬜ pending |
-| D-08 | TBD | TBD | 网格墙 status===1 → 启用徽标（**反转语义锁定**：captcha 背景 1=启用） | — | N/A | unit | 并入 SettingsShell/网格墙测试文件 | ❌ W0 | ⬜ pending |
-| D-11 | TBD | TBD | 迁移幂等 + sys_menu.component 值正确 | T-70-01（组件路径注入） | 迁移只写固定常量，不改 perms/visible | Go unit | `go test ./internal/core/db/migrations/ -run TestMigrate208` | ❌ W0 | ⬜ pending |
-| D-11 | TBD | TBD | 迁移后菜单缓存失效（否则旧组件路径白屏 30min） | — | 迁移内失效 Redis 菜单缓存键 | gate/代码审查 | sqlite/PG 启动日志 + 手动验证菜单渲染 | ⬜ checkpoint | ⬜ pending |
-| D-12 | TBD | TBD | 死代码清理后无悬空导出 | — | N/A | 既有门 | `npm run lint` + `npm run deadcode`（knip） | ✅ | ⬜ pending |
+| D-03 | 70-02 | 2 | ?cat= 参数驱动激活分类；非法值回退首分类；replace 语义 | — | N/A | unit（jsdom + MemoryRouter） | `npx vitest run src/pages/system/settings/__tests__/SettingsShell.test.tsx -t "cat"` | ❌ W0 | ⬜ pending |
+| D-04 | 70-02 | 2 | `<lg` 断点渲染 Segmented、≥lg 渲染 Sider（mock useBreakpoint） | — | N/A | unit | `npx vitest run src/pages/system/settings/__tests__/SettingsShell.test.tsx -t "breakpoint"` | ❌ W0 | ⬜ pending |
+| D-06 | 70-05 | 3 | 行式设置项 onChange → settingsStore 对应字段更新 | — | N/A | unit | `npx vitest run src/pages/settings/__tests__/index.test.tsx` | ❌ W0 | ⬜ pending |
+| D-07/D-08 | 70-07 | 4 | 分类注册表完整性（两页各自 3 分类、icon/label/key） | — | N/A | unit（纯数据断言） | `npx vitest run src/pages/system/settings/__tests__/categories.test.ts` | ❌ W0 | ⬜ pending |
+| D-08 | 70-04 | 3 | 网格墙 status===1 → 启用徽标（**反转语义锁定**：captcha 背景 1=启用） | — | N/A | unit | `npx vitest run src/pages/system/settings/__tests__/captcha-background.test.tsx`（planner 裁量：独立网格墙测试文件） | ❌ W0 | ⬜ pending |
+| D-11 | 70-06 | 3 | 迁移幂等 + sys_menu.component 值正确 | T-70-01（组件路径注入） | 迁移只写固定常量，不改 perms/visible | Go unit | `go test ./internal/core/db/migrations/ -run TestMigrate208` | ❌ W0 | ⬜ pending |
+| D-11 | 70-06 | 3 | 迁移后菜单缓存失效（否则旧组件路径白屏 30min） | — | 迁移内失效 Redis 菜单缓存键 | gate/代码审查 | sqlite/PG 启动日志 + 手动验证菜单渲染 | ⬜ checkpoint | ⬜ pending |
+| D-12 | 70-07 | 4 | 死代码清理后无悬空导出 | — | N/A | 既有门 | `npm run lint` + `npm run deadcode`（knip） | ✅ | ⬜ pending |
 | 全部门 | — | — | 构建/类型/测试回归 | — | N/A | gate | `npm run build && npm run type-check && npm run lint && npm run test -- run` | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
