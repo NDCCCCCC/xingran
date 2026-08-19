@@ -102,20 +102,20 @@ export function ExecutionDetailModal({ open, execution, onClose }: ExecutionDeta
       }
     }
 
-    // 为每个截图 URL 添加正确的前缀
-    // 后端存储的路径格式: rpa/screenshots/{executionID}/xxx.png
-    // 前端访问路径: /uploads/rpa/screenshots/{executionID}/xxx.png
+    // 为每个截图 URL 拼接正确的前缀。前缀取 Vite BASE_URL,
+    // dev 为 '/' 行为完全等同旧逻辑；prod 为 '/xingran/' 时产出
+    // /xingran/uploads/rpa/screenshots/xxx.png,与 nginx 子路径部署一致。
+    // 兼容已有前缀('/uploads/' 或 '<BASE_URL>uploads/'):剥掉后重新拼接,
+    // 避免产生 '/xingran/uploads/uploads/...' 这种重复前缀。
+    const uploadsBase = `${import.meta.env.BASE_URL}uploads/`;
     return screenshotList.map((url) => {
       if (url.startsWith("http://") || url.startsWith("https://")) {
         return url; // 已经是完整 URL
       }
-      if (url.startsWith("/uploads/")) {
-        return url; // 已有前缀
-      }
-      if (url.startsWith("/")) {
-        return `/uploads${url}`;
-      }
-      return `/uploads/${url}`;
+      // 取 "/uploads/" 最后一次出现之后的部分作为相对路径
+      const idx = url.lastIndexOf("/uploads/");
+      const rel = idx >= 0 ? url.slice(idx + "/uploads/".length) : url.replace(/^\//, "");
+      return `${uploadsBase}${rel}`;
     });
   }, [execution?.screenshots]);
 

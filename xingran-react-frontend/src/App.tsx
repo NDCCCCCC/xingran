@@ -48,7 +48,12 @@ function App() {
         <ConfigProvider>
           <ThemeProvider>
             <LayoutProvider>
-              <Router>
+              {/* basename 取 Vite 的 base（VITE_BASE），dev 时 '/' 等价于未设；生产为 '/xingran/'
+                  时让 React Router 内部所有 <Link>/navigate/history 都自动加此前缀，
+                  与 nginx 子路径部署模型一致。 */}
+              <Router
+                basename={import.meta.env.BASE_URL !== "/" ? import.meta.env.BASE_URL : undefined}
+              >
                 <DynamicRoutes />
               </Router>
             </LayoutProvider>
