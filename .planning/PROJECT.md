@@ -1,10 +1,52 @@
 ---
-last_updated: 2026-08-18
-update_trigger: v1.22 milestone INITIATED (前端品牌化改造 · design-system 层)
-previous_update: 2026-07-10 v1.20 milestone SHIPPED + ARCHIVED
+last_updated: 2026-08-20
+update_trigger: Combined v1.22 + v1.23 + v1.24 + v1.25 milestone COMPLETE + ARCHIVED (7 phases / 20 plans / 36 items, audit passed)
+previous_update: 2026-08-18 v1.22 SHIPPED
 ---
 
-## Current Milestone: v1.22 前端品牌化改造 (Frontend Brand Design-System)
+## Current State: v1.22 + v1.23 + v1.24 + v1.25 — ✅ SHIPPED + ARCHIVED 2026-08-19
+
+**Combined Launch Blocks Delivered** (audit: [v1.22-v1.25-MILESTONE-AUDIT.md](v1.22-v1.25-MILESTONE-AUDIT.md) — `passed`):
+
+| Block | Title | Phases | Plans | Items | Shipped |
+|-------|-------|--------|-------|-------|---------|
+| v1.22 | 前端品牌化改造 (Frontend Brand Design-System) | 64-67 | 4 | 15 REQ | 2026-08-18 |
+| v1.23 | 部署稳健性 & 文档一致性 (Deploy Robustness & Docs) | 68 | 1 | 5 DEPLOY-XX | 2026-08-19 |
+| v1.24 | 字典与状态值治理 (Dict & Status Governance) | 69 | 8 | 4 DICT-XX | 2026-08-19 |
+| v1.25 | 系统设置页面布局重构 (Settings Page Redesign) | 70 | 7 | 12 D-XX | 2026-08-19 |
+| **Total** | **Combined Launch Blocks** | **7** | **20** | **36 items** | **2026-08-19** |
+
+**Audit scores**: 20/20 reqs + 7/7 phases + 5/5 integration + 4/4 E2E flows
+
+**Delivered:**
+- **v1.22**: 把 `brand-spec.md` 像素实测品牌令牌固化进 design-system — `index.css` 253 变量 + xingranBrand TS 常量 + AntdThemeBridge 全量映射;移除 6 套主题;硬编码色扫描;6 屏视觉确认
+- **v1.23**: 闭环 SM2 密钥配置部署稳健性 — 17 处 XINGRAN_JWT_SM2 → JWT_SM2 + setup-server.sh SM2 段 + getPublicKey 可观测 + sqlite use_sm2 默认值
+- **v1.24**: 状态语义单一真相源 — 94 常量 AST锁值 + 11 组字典 seed + 4 页 useDict 迁移 + CLAUDE.md 指针化
+- **v1.25**: 系统设置页对齐 v1.22 品牌 — SettingsShell 共用骨架 + 行式即改即存 + 目录合并 + Migrate208 sys_menu 迁移
+
+**Archive**:
+- Combined: [milestones/v1.22-v1.25-ROADMAP.md](milestones/v1.22-v1.25-ROADMAP.md) + [milestones/v1.22-v1.25-REQUIREMENTS.md](milestones/v1.22-v1.25-REQUIREMENTS.md)
+- Per-block: milestones/v1.22-*, v1.23-*, v1.24-*, v1.25-* (preserved for full traceability)
+
+## Next Milestone Goals: v1.26+ (TBD by /gsd:new-milestone)
+
+启动新里程碑:`/clear` 然后 `/gsd:new-milestone`
+
+**候选方向** (基于 STATE.md §Pending Decisions + §Deferred Items + v1.22 Future Requirements):
+- **PROTO-01..04 逐屏原型对齐** (v1.22 Future Requirements §Future)
+- **VIS-01..03 视觉深化** (v1.22 Future Requirements §Future)
+- **Phase 63 frontend-toolchain-automation** 持续 IN PROGRESS(独立)
+- **真机 site-visit UAT 闭环** (v1.19/v1.18/v1.20 deferred items)
+- **残余 deferred debug session 清理** (audit-open backlog)
+
+**用户决策方向**: 由 `/gsd:new-milestone` 启动下一里程碑 questioning → research → requirements → roadmap
+
+---
+
+## Current Milestone: v1.22 前端品牌化改造 (Frontend Brand Design-System) — ✅ SHIPPED 2026-08-18
+
+<details>
+<summary>📜 v1.22 SHIPPED details (archived)</summary>
 
 **Goal:** 把 `brand-spec.md` 的像素实测品牌令牌（深绿 `#156031` × 铜金 `#C09058` × 奶油 `#F0ECE3`）固化进 `xingran-react-frontend/src/design-system/`，让后台内部组件与登录页品牌一致，53 屏业务页面自动继承样式。
 
@@ -28,6 +70,73 @@ previous_update: 2026-07-10 v1.20 milestone SHIPPED + ARCHIVED
 - **D-04 Phase 编号**: 从 v1.21 末尾 Phase 62 续编（63+）
 
 **Phase 编号:** 从 v1.21 末尾 Phase 62 续编（63+）。
+
+**已 SHIPPED 2026-08-18** — 详见 [milestones/v1.22-ROADMAP.md](milestones/v1.22-ROADMAP.md) + [milestones/v1.22-REQUIREMENTS.md](milestones/v1.22-REQUIREMENTS.md)
+
+</details>
+
+---
+
+## v1.22 + v1.23 + v1.24 + v1.25 启动块 (Combined Launch Blocks) — ✅ SHIPPED + ARCHIVED 2026-08-19
+
+**Audit**: [v1.22-v1.25-MILESTONE-AUDIT.md](v1.22-v1.25-MILESTONE-AUDIT.md) — `passed` (20/20 reqs + 7/7 phases + 5/5 integration + 4/4 E2E flows)
+
+**Goal**: 四个连续启动块一次性落地 — 品牌化(design-system 层)+ 部署稳健性(SM2 闭环)+ 状态/字典治理(单一真相源)+ 系统设置重构(对齐 v1.22 品牌)。7 phases / 20 plans / 36 items 全部 delivered。
+
+**Target features / 工作池:**
+
+- **v1.22 (Phases 64-67) — Frontend Brand Design-System** — 把 `brand-spec.md` 像素实测品牌令牌固化进 design-system;移除 6 套主题;硬编码色扫描;6 屏视觉确认
+  - 品牌令牌层:`tokens/colors.ts` `xingranBrand`(绿 6 / 铜金 4 / 奶油 9 + OKLch + WCAG)+ `index.css` 253 变量 + `AntdThemeBridge` 全量映射
+  - 主题收敛:删除 6 套主题(minimal/glassmorphism/neumorphism/flat2.0/luxury-quiet/ink-amber)与 ThemeSwitcher/ColorSwitcher;保留 light/dark + layoutStore 布局/密度切换
+  - 组件样式:侧边栏深绿化(`#14532D`)+ 表格/卡片双层纸感 + 按钮纪律 D-03(主按钮 `#156031` 绿底白字)
+  - QA:对比度自动验证 + 硬编码色扫描 lint/CI 门 + 构建回归 + 6 屏前后视觉确认
+- **v1.23 (Phase 68) — Deploy Robustness & Docs Consistency** — 闭环 SM2 密钥配置部署稳健性
+  - DEPLOY-01:17 处 XINGRAN_JWT_SM2 → JWT_SM2(与 BindEnv 一致)
+  - DEPLOY-02:setup-server.sh secrets.env 补 SM2 密钥对段(非对称,不能动态生成)
+  - DEPLOY-03:gen_sm2_keys header 注释路径修正
+  - DEPLOY-04:getPublicKey 500 时 WARN 日志(useSM2/sm2PublicKeyLoaded 状态)+ 2 个最小 getter
+  - DEPLOY-05:sqlite use_sm2 默认值与 prod 一致(`true`) + 6 行迁移指引
+- **v1.24 (Phase 69) — Dict & Status Governance** — 状态语义单一真相源
+  - DICT-01:internal/models 状态常量作为语义真相源;94 常量 AST 锁值测试;白名单 ratchet 守护(终态 1 条 F 簇豁免 geocoding)
+  - DICT-02:migration_208 字典 seed 11 组(8 组 archive 重建 + ops_workstation_type/sys_user_sex/duty_holiday_type 新增)
+  - DICT-03:前端 4 页 type 下拉 useDict 迁移(user/workstations/holidays/devices)+ status.ts 共享常量(7 文件引用)
+  - DICT-04:CLAUDE.md Status Value Convention 改指向常量真相源(删 6 行表格)
+- **v1.25 (Phase 70) — Settings Page Layout Redesign** — 系统设置页对齐 v1.22 品牌
+  - D-01/D-03/D-04:SettingsShell 布局(左分类 + 右内容)+ URL `?cat=` 驱动 + `<lg` Segmented 降级
+  - D-02 混合宽度:表格/网格类撑满 + 用户设置 760px
+  - D-05 两页同构:系统设置 + 用户设置共用 SettingsShell.tsx
+  - D-06 行式设置项:label+描述+右对齐控件 + 即改即存
+  - D-07 v16 范式:统计卡 + 品牌工具栏 + `.xr-table-zebra` 双层纸感
+  - D-08 网格墙:验证码 `.xr-captcha-grid` + status 反转语义(1=启用)
+  - D-09:5 个 Modal 容器结构与宽度不变
+  - D-10:工作区 default-theme 清理 13 文件(+42/-717)首提交入库
+  - D-11:三个 settings 目录合并 + Migrate208 sys_menu 迁移 + 菜单缓存失效
+  - D-12:settings 范围内死目录 / dead actions / preset Tag / persisted activeTab 键 / fallback 硬编码色清零
+
+**锁定决策 (combined):**
+
+- v1.22 D-01..D-05:全局替换不保留多主题(不可逆)+ brand-spec.md 唯一色值源 + 按钮纪律绿底白字 + Phase 64 续编 + 仅 design-system 层
+- v1.23:DEPLOY-01~05 闭环 SM2 配置链路;live user-managed configs/config.yaml + .env 由运维手工迁移(phase 范围外)
+- v1.24:internal/models 为状态常量唯一真相源;type/category 真枚举 → sys_dict;前端 constants.tsx → useDict + status.ts 共享常量;CLAUDE.md 指针化
+- v1.25:D-01..D-12 全部 PASS — SettingsShell 共用骨架 / 混合宽度 / URL 驱动 / Segmented 降级 / 行式即改即存 / v16 范式 / 网格墙 / Modal 契约不变 / default-theme 清理 / 目录合并 + Migrate208 / 残留清零
+
+**回归性质:** 启动块序列组合,各自独立 + 局部依赖(v1.25 依赖 v1.22 品牌基线;其他独立)。v1.22 是纯 design-system 层重构;v1.23 是部署/文档稳健性修复;v1.24 是状态语义治理;v1.25 是设置页布局重构(对齐 v1.22 品牌理念)。
+
+**Phase 编号:** 从 v1.21 末尾 Phase 62 续编(63+)。Phase 63「前端工具链自动化」独立 IN PROGRESS,提供 CI / lint / 测试基建。
+
+**范围边界(用户决策各 init):**
+
+- v1.22 仅 design-system 层 — 业务页面自动继承样式,不逐屏改造 53 屏;PROTO 逐屏对齐与 VIS 视觉深化转 v1.23+ Future
+- v1.23 仅 6 个 `*.example.yaml` + docs + scripts;live 配置由运维手工迁移
+- v1.24 守 F 簇(geocoding 百度地图 API 外部契约)永久豁免
+- v1.25 仅前端布局重构,不改业务逻辑与 API 契约
+
+**Status:** ✅ SHIPPED + ARCHIVED 2026-08-19
+
+**归档:**
+
+- Combined: [milestones/v1.22-v1.25-ROADMAP.md](milestones/v1.22-v1.25-ROADMAP.md) + [milestones/v1.22-v1.25-REQUIREMENTS.md](milestones/v1.22-v1.25-REQUIREMENTS.md)
+- Per-block:milestones/v1.22-*, v1.23-*, v1.24-*, v1.25-*(完整 phase 细节保留)
 
 ---
 
@@ -203,6 +312,11 @@ estate.
   - W4 Frontend: PortWriteModal 5-action unified Modal + BulkWriteDrawer select→executing→result 状态机 (D-05 indeterminate Spin 不伪造 X/Y) + ports/logs 页 useMenuStore canWrite gating + audit-link Toast + monitor/logs URL query 预填 + vendor-react gzip 774.96 kB 零回归
   - W5 E2E + UAT Deferral + Docs: scrapligo FileTransport 10 TestE2E_* (闭环 Phase 51 mockDeviceExecutor 不调 fn 漏洞) + API响应规范 + 安全设计 + CHANGELOG/README/MILESTONES/STATE 文档同步 + 54-HUMAN-UAT.md 7 项 deferred (owner = 现场运维同事)
   - Phase 55 Tech-Debt Cleanup: WR-02 antd validator 3-param signature + IN-01 instanceof Error narrowing + IN-02 eslint-disable placement 修正 (Lesson: directive 紧贴 `}, []);` 而非 useEffect 开头) + HealthCard.test.tsx regex match + CR-02 后端 batch_orchestrator.go fallback port 归属跨层防御 (纵深双保险)
+- ✓ **v1.22 + v1.23 + v1.24 + v1.25 启动块 (Combined Launch Blocks)** — Phases 64-70 — 2026-08-18 → 2026-08-19 (7 phases / 20 plans / 36 items, audit `passed` 20/20 reqs + 7/7 phases + 5/5 integration + 4/4 E2E flows)
+  - v1.22 (Phases 64-67): 253 CSS 变量 + xingranBrand 11 键 + AntdThemeBridge + 6 主题移除 + 硬编码扫描 + 6 屏视觉确认(15/15 reqs)
+  - v1.23 (Phase 68): 17 处 XINGRAN_JWT_SM2 → JWT_SM2 + setup-server.sh SM2 段 + getPublicKey 可观测 + sqlite use_sm2 默认(5/5 DEPLOY-XX)
+  - v1.24 (Phase 69): 94 状态常量 AST锁值 + 11 字典 seed + 4 页 useDict 迁移 + CLAUDE.md 指针化(4/4 DICT-XX)
+  - v1.25 (Phase 70): SettingsShell 共用骨架 + 14 .xr-* 选择器 + 行式即改即存 + Migrate208 sys_menu 迁移(12/12 D-XX)
 
 ### Active
 
@@ -465,5 +579,11 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 - H3C: 复用 Huawei 模板结构 (per user direction)
 
 ---
+
+*Last updated: 2026-08-20 — Combined v1.22 + v1.23 + v1.24 + v1.25 milestone SHIPPED + ARCHIVED (7 phases / 20 plans / 36 items, audit `passed`). Combined archive [milestones/v1.22-v1.25-ROADMAP.md](milestones/v1.22-v1.25-ROADMAP.md) + [milestones/v1.22-v1.25-REQUIREMENTS.md](milestones/v1.22-v1.25-REQUIREMENTS.md); per-block archives (v1.22/v1.23/v1.24/v1.25) preserved for full traceability. PROJECT.md reorganized: Current State = v1.22-v1.25 SHIPPED; Next Milestone = v1.26+ TBD by `/gsd:new-milestone`. Phase 63 frontend-toolchain-automation 独立 IN PROGRESS. v1.21 SHIPPED 2026-08-18 (Phases 57-62 / 6 phases / 8 plans / 14 v1 requirements + Phase 62 cross-AI 14 review items / C1-C7 + 单方 HIGH/MEDIUM).*
+
+---
+
+## Previous Milestone Footer (v1.21 close)
 
 *Last updated: 2026-08-13 — Phase 59「可观测性 / 使用日志修复」COMPLETE (2/2 plans, OBSERV-01/02/03 验证 8/8 must-haves passed; 7 commits e0f4611/2dcb041/e4c80fa/c35e675/7643578/10e5bb1/644bc94 + tracking 66a3d34)。v1.21 API Key 认证链修复 milestone 进行中 (Phase 60-61 待执行)。Phase 58 (CONTRACT-01 前后端路由方法对齐) 已 commit 1978935。v1.20 网络设备 VLAN + 端口绑定 SHIPPED 2026-07-10 (Phase 56 / 5 plans / 5 waves). v1.19 网络设备写命令 SHIPPED 2026-07-08 (Phases 50-55, 6 phases / 9 plans, 37/37 MVP requirements).*
