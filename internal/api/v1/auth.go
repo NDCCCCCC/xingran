@@ -501,6 +501,10 @@ func getPublicKey(core *core.Core) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		publicKey := core.JWTManager.GetPublicKey()
 		if publicKey == "" {
+			useSM2 := core.JWTManager.IsSM2Enabled()
+			hasPub := core.JWTManager.HasSM2PublicKey()
+			applogger.Warnf("SM2 公钥不可用: useSM2=%v, sm2PublicKeyLoaded=%v, requestPath=%s, clientIP=%s",
+				useSM2, hasPub, c.Request.URL.Path, c.ClientIP())
 			response.Error(c, response.ErrServerError, "SM2 未启用或公钥不可用")
 			return
 		}

@@ -282,6 +282,16 @@ func (j *JWTManager) GetPublicKey() string {
 	return crypto.ExportPublicKeyToHex(j.sm2PublicKey)
 }
 
+// IsSM2Enabled 返回 SM2 签名是否启用（来自 jwt.use_sm2 配置）
+func (j *JWTManager) IsSM2Enabled() bool {
+	return j.useSM2
+}
+
+// HasSM2PublicKey 返回 SM2 公钥是否已加载（用于诊断 GetPublicKey 返回空的原因）
+func (j *JWTManager) HasSM2PublicKey() bool {
+	return j.sm2PublicKey != nil
+}
+
 // DecryptPassword 使用 SM2 私钥解密密码
 func (j *JWTManager) DecryptPassword(ciphertext string) (string, error) {
 	if !j.useSM2 || j.sm2PrivateKey == nil {
