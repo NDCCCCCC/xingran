@@ -1,16 +1,18 @@
 /**
- * 用户设置页面（v1.22 Phase 65 收敛版 —— 仅明暗/布局/密度/数据设置）
+ * 用户设置页面（v1.22 收尾版 —— 仅明暗/布局/密度/数据设置）
  * User Settings Page (Light/Dark Mode, Layout, Density & Data)
  *
  * 多主题能力已随 D-01 移除：主题风格选择与颜色自定义入口不再存在，
  * 仅保留明暗模式（THEME-02）与布局/密度（THEME-03）。
+ *
+ * v1.22 收尾：移除"重置=获取管理员默认主题"逻辑 —— 后端默认主题页面已删除，
+ * 无 sys.theme.default 来源。重置行为简化为"恢复表单到上一次保存的偏好"。
  */
 
 import { useEffect, type FC } from "react";
-import { App, Card, Form, Select, Switch, Button, Divider, Alert, Radio } from "antd";
+import { App, Card, Form, Select, Switch, Button, Divider, Radio } from "antd";
 import { SunOutlined, MoonOutlined } from "@ant-design/icons";
 import { useSettingsStore } from "@/store/settingsStore";
-import { getDefaultThemeConfig } from "@/lib/defaultThemeApi";
 
 const { Option } = Select;
 
@@ -44,27 +46,10 @@ const SettingsPage: FC = () => {
     }
   };
 
-  // 重置设置 - 从后端获取管理员配置的默认主题，覆盖当前用户偏好
-  const handleReset = async () => {
-    try {
-      // 获取管理员配置的默认主题（Phase 65 后仅含 mode）
-      const defaultTheme = await getDefaultThemeConfig();
-
-      // 用默认明暗模式覆盖表单的主题字段
-      form.resetFields();
-      form.setFieldsValue({
-        ...preferences,
-        theme: {
-          ...preferences.theme,
-          mode: defaultTheme.mode,
-        },
-      });
-    } catch {
-      // 获取失败时回退到当前用户偏好
-      form.resetFields();
-      form.setFieldsValue(preferences);
-      message.warning("获取系统默认主题失败，已重置为当前保存值");
-    }
+  // 重置设置 - 恢复表单到上一次保存的用户偏好（v1.22：不再请求管理员默认主题 API）
+  const handleReset = () => {
+    form.resetFields();
+    form.setFieldsValue(preferences);
   };
 
   if (!initialized) {
@@ -74,14 +59,6 @@ const SettingsPage: FC = () => {
   return (
     <div className="p-6">
       <Card title="用户设置" loading={loading}>
-        <Alert
-          title="配置说明"
-          description="所有配置会自动保存到服务器，并在您下次登录时恢复。"
-          type="info"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
-
         <Form form={form} layout="vertical" initialValues={preferences}>
           <Divider styles={{ content: { margin: 0 } }}>界面设置</Divider>
 
@@ -103,20 +80,6 @@ const SettingsPage: FC = () => {
           </Form.Item>
 
           <Divider styles={{ content: { margin: 0 } }}>布局设置</Divider>
-
-          {/* 布局类型 */}
-          <Form.Item
-            label="布局类型"
-            name={["layout", "type"]}
-            tooltip="选择系统的布局方式"
-            rules={[{ required: true, message: "请选择布局类型" }]}
-          >
-            <Select onSearch={() => {}}>
-              <Option value="classic">经典布局</Option>
-              <Option value="hybrid">混合布局</Option>
-              <Option value="innovative">创新布局</Option>
-            </Select>
-          </Form.Item>
 
           {/* 密度模式 */}
           <Form.Item

@@ -18,13 +18,15 @@ type settingsCacheService struct {
 }
 
 // NewSettingsServiceWithCache 创建带缓存的用户设置服务
+//
+// v1.22 收尾：移除 configService 参数（默认主题 sys.theme.default 删除后，
+// settingsService 不再需要它）。
 func NewSettingsServiceWithCache(
 	db *gorm.DB,
 	cache CacheProvider,
 	config *services.CacheConfigService,
-	configService ConfigService,
 ) SettingsService {
-	base := &settingsService{db: db, configService: configService}
+	base := &settingsService{db: db}
 	return &settingsCacheService{
 		settingsService:  base,
 		cache:            cache,
