@@ -165,7 +165,7 @@ func (s *DeptToADSyncService) getRootDepartments(ctx context.Context) ([]*models
 	err := s.db.WithContext(ctx).
 		Preload("Children.Children.Children"). // 预加载3层子部门
 		Where("parent_id IS NULL").            // UUID字段不能使用空字符串比较
-		Where("status = 0").                   // 0=正常
+		Where("status = ?", models.DeptStatusNormal).
 		Find(&depts).Error
 	return depts, err
 }

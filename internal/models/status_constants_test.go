@@ -74,6 +74,8 @@ var watchedStatusPrefixes = []string{
 	"RoomStatus", "RoomDeviceStatus", "InfoPointStatus", "DashboardStatus",
 	// Phase 69 batch 2 additions (untyped int, int-typed struct fields)
 	"WorkstationDeviceStatus", "AssetStatus", "AssetNBFStatus",
+	// Phase 69 batch 3 additions (untyped int; AD pool state machine + RPA credential)
+	"ADAccountStatus", "RPACredentialStatus",
 }
 
 // expectedStatusValues pins the documented (name -> value) mapping of every
@@ -175,6 +177,14 @@ var expectedStatusValues = map[string]int{
 	"AssetStatusStopped":             1, // 停用
 	"AssetNBFStatusNo":               0, // 否
 	"AssetNBFStatusYes":              1, // 拟报废
+	// ad_service_account.go（Phase 69 批 3 新增，D 簇三态状态机：
+	// 0=可用 / 1=停用 / 2=熔断，语义见 Phase 36 AccountPool 状态机）
+	"ADAccountStatusAvailable": 0, // 可用
+	"ADAccountStatusDisabled":  1, // 管理员手动停用
+	"ADAccountStatusBreaker":   2, // 熔断中
+	// rpa.go（Phase 69 批 3 新增，簇 A 凭证启停，对齐 credentials.go check IN (0,1)）
+	"RPACredentialStatusNormal":  0, // 正常
+	"RPACredentialStatusStopped": 1, // 停用
 }
 
 // TestStatusConstantsStability asserts each watched constant is pinned to its

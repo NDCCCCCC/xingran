@@ -199,7 +199,7 @@ func (s *UserOUService) createDeptFromOUDN(ctx context.Context, ouDN, userDN str
 
 	// 1. 获取 AD 配置
 	var adConfig models.ADConfig
-	if err := s.db.WithContext(ctx).Where("status = 0").First(&adConfig).Error; err != nil {
+	if err := s.db.WithContext(ctx).Where("status = ?", models.ADConfigStatusEnabled).First(&adConfig).Error; err != nil {
 		return "", fmt.Errorf("获取AD配置失败: %w", err)
 	}
 
@@ -236,7 +236,7 @@ func (s *UserOUService) createDeptFromOUDN(ctx context.Context, ouDN, userDN str
 
 		// 检查部门是否已存在（限定parent_id范围，避免同名部门跨分支错误匹配）
 		var dept models.Department
-		query := s.db.WithContext(ctx).Where("dept_name = ? AND status = 0", deptName)
+		query := s.db.WithContext(ctx).Where("dept_name = ? AND status = ?", deptName, models.DeptStatusNormal)
 		if parentDeptID != nil {
 			query = query.Where("parent_id = ?", *parentDeptID)
 		} else {
@@ -254,7 +254,7 @@ func (s *UserOUService) createDeptFromOUDN(ctx context.Context, ouDN, userDN str
 				DeptName:  deptName,
 				DeptCode:  deptCode,
 				ParentID:  parentDeptID,
-				Status:    0, // 正常
+				Status:    models.DeptStatusNormal, // 正常
 				Ancestors: s.buildAncestors(ctx, parentDeptID),
 			}
 

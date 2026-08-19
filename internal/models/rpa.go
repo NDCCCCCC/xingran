@@ -56,6 +56,15 @@ const (
 	ScheduleStatusPaused   ScheduleStatus = 2 // 暂停
 )
 
+// RPACredentialStatus RPA 凭证启停状态（簇 A：0=正常, 1=停用）。
+// 实体 RPACredential 定义于 internal/models/rpa/credentials.go（Status int,
+// check:status IN (0,1)），常量按 Phase 69 DICT-01 约定收敛在本文件——
+// status_constants_test.go 的 AST 扫描范围（models/rpa/ 子目录不在扫描路径）。
+const (
+	RPACredentialStatusNormal  = 0 // 正常
+	RPACredentialStatusStopped = 1 // 停用
+)
+
 // ScheduleType 调度类型枚举
 type ScheduleType string
 

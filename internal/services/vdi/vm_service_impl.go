@@ -63,7 +63,7 @@ func (s *vmServiceImpl) getClient(ctx context.Context) (VDIClientExtended, error
 	// 动态查找第一个启用的VDI服务器
 	var server models.VDIServer
 	if err := s.db.WithContext(ctx).
-		Where("status = 0").
+		Where("status = ?", models.VDIServerStatusNormal).
 		Order("created_at ASC").
 		First(&server).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -160,10 +160,11 @@ func (s *vmServiceImpl) syncResourceGroups(ctx context.Context, groups []VDIReso
 	applogger.Debugf("[VDI] SYNC Syncing %d resource groups for server %s", len(groups), vdiServerID)
 
 	for _, group := range groups {
-		// 将VDI的enable字段映射到status: enable=1 -> status=0(正常), 其他 -> status=1(停用)
-		status := 1
+		// 将VDI的enable字段映射到status: enable=1 -> 正常(0), 其他 -> 停用(1)
+		// （VDIResourceGroup.Status 与 VDIServer 共用 0=正常/1=停用语义，见 vdi.go 注释）
+		status := int(models.VDIServerStatusStopped)
 		if group.Enable == "1" {
-			status = 0
+			status = int(models.VDIServerStatusNormal)
 		}
 
 		s.saveOrUpdateResourceGroup(ctx, group, vdiServerID, status)
@@ -441,7 +442,7 @@ func (s *vmServiceImpl) parseIntSafe(str string) int {
 // vdiServerID 获取当前VDI服务器ID
 func (s *vmServiceImpl) vdiServerID() (string, error) {
 	var server models.VDIServer
-	err := s.db.Where("status = 0").First(&server).Error
+	err := s.db.Where("status = ?", models.VDIServerStatusNormal).First(&server).Error
 	if err != nil {
 		return "", fmt.Errorf("failed to query VDI server: %w", err)
 	}
@@ -450,7 +451,7 @@ func (s *vmServiceImpl) vdiServerID() (string, error) {
 
 // ListResourceGroups 查询资源组列表（从本地数据库查询，不调用VDI API）
 func (s *vmServiceImpl) ListResourceGroups(ctx context.Context, vdiServerID string) ([]VDIResourceGroupDTO, error) {
-	query := s.db.WithContext(ctx).Model(&models.VDIResourceGroup{}).Where("status = 0")
+	query := s.db.WithContext(ctx).Model(&models.VDIResourceGroup{}).Where("status = ?", models.VDIServerStatusNormal)
 
 	if vdiServerID != "" {
 		query = query.Where("vdi_server_id = ?", vdiServerID)
@@ -510,7 +511,7 @@ func (s *vmServiceImpl) ListResources(ctx context.Context, vdiServerID string, g
 func (s *vmServiceImpl) CreateVM(ctx context.Context, req *CreateVMServiceRequest) (*VDIVMDTO, error) {
 	// 1. 验证VDI服务器存在
 	var server models.VDIServer
-	if err := s.db.WithContext(ctx).Where("id = ? AND status = 0", req.VdiServerID).First(&server).Error; err != nil {
+	if err := s.db.WithContext(ctx).Where("id = ? AND status = ?", req.VdiServerID, models.VDIServerStatusNormal).First(&server).Error; err != nil {
 		return nil, fmt.Errorf("VDI server not found or disabled: %w", err)
 	}
 
@@ -588,7 +589,7 @@ var vmAllowedSortFields = map[string]string{
 func (s *vmServiceImpl) ListVMs(ctx context.Context, req *ListVMRequest, userID string, dataScope models.DataScope) (*PageResult, error) {
 	// 检查是否有启用的VDI服务器配置
 	var serverCount int64
-	if err := s.db.WithContext(ctx).Model(&models.VDIServer{}).Where("status = 0").Count(&serverCount).Error; err != nil {
+	if err := s.db.WithContext(ctx).Model(&models.VDIServer{}).Where("status = ?", models.VDIServerStatusNormal).Count(&serverCount).Error; err != nil {
 		return nil, fmt.Errorf("failed to check VDI servers: %w", err)
 	}
 

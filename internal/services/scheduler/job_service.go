@@ -142,7 +142,7 @@ func (s *jobServiceImpl) Create(ctx context.Context, req *JobCreateRequest) (*mo
 		CronExpression: req.CronExpression,
 		MisfirePolicy:  req.MisfirePolicy,
 		Concurrent:     req.Concurrent,
-		Status:         0, // 默认正常状态
+		Status:         models.JobStatusNormal, // 默认正常状态（0=正常, 1=暂停）
 		Remark:         req.Remark,
 	}
 
@@ -209,7 +209,7 @@ func (s *jobServiceImpl) Update(ctx context.Context, req *JobUpdateRequest) erro
 	}
 
 	// 更新调度器中的任务
-	if s.scheduler != nil && job.Status == 0 {
+	if s.scheduler != nil && job.Status == models.JobStatusNormal {
 		if err := s.scheduler.UpdateJob(job); err != nil {
 			return fmt.Errorf("更新调度器中的任务失败: %w", err)
 		}
@@ -362,7 +362,7 @@ func (s *jobServiceImpl) Execute(ctx context.Context, id string) error {
 			JobGroup:     job.JobGroup,
 			InvokeTarget: job.InvokeTarget,
 			JobMessage:   "手动执行",
-			Status:       0,
+			Status:       int(models.JobLogStatusSuccess),
 			StartTime:    &startTime,
 		}
 

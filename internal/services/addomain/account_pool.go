@@ -15,11 +15,12 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// 账号池状态机常量
+// 账号池状态机常量（Phase 69 DICT-01：值唯一真相源位于 models.ADAccountStatus*，
+// 此处为包内别名，保持既有调用方零改动；值语义由 status_constants_test.go 锁定）
 const (
-	AccountStatusAvailable     = 0
-	AccountStatusDisabled      = 1
-	AccountStatusCircuitBroken = 2
+	AccountStatusAvailable     = models.ADAccountStatusAvailable
+	AccountStatusDisabled      = models.ADAccountStatusDisabled
+	AccountStatusCircuitBroken = models.ADAccountStatusBreaker
 )
 
 // 阈值常量（与 PLAN.md 对齐）

@@ -64,7 +64,7 @@ func (s *NoticeService) CreateNoticeWithTargets(ctx context.Context, req *Create
 		TargetType:    req.TargetType,
 		CreatedByName: creatorName,
 		IsMarkdown:    req.IsMarkdown,
-		Status:        0, // 正常
+		Status:        int(models.NoticeStatusNormal), // 正常（启停字段；区别于 PublishStatus 发布态）
 	}
 
 	// 默认为草稿状态，需要手动发布或设置定时发布
@@ -119,9 +119,9 @@ func (s *NoticeService) GetNoticeStatusStatistics(ctx context.Context) (*NoticeS
 		Model(&models.Notice{}).
 		Select(
 			"COUNT(*) AS total",
-			"SUM(CASE WHEN publish_status = 1 THEN 1 ELSE 0 END) AS published",
-			"SUM(CASE WHEN publish_status = 0 THEN 1 ELSE 0 END) AS draft",
-			"SUM(CASE WHEN publish_status = 2 THEN 1 ELSE 0 END) AS scheduled",
+			fmt.Sprintf("SUM(CASE WHEN publish_status = %d THEN 1 ELSE 0 END) AS published", int(models.PublishStatusPublished)),
+			fmt.Sprintf("SUM(CASE WHEN publish_status = %d THEN 1 ELSE 0 END) AS draft", int(models.PublishStatusDraft)),
+			fmt.Sprintf("SUM(CASE WHEN publish_status = %d THEN 1 ELSE 0 END) AS scheduled", int(models.PublishStatusScheduled)),
 		).
 		Scan(&result).Error
 	if err != nil {

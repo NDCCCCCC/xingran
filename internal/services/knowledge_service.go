@@ -25,11 +25,11 @@ func NewKnowledgeService(db *gorm.DB) *KnowledgeService {
 }
 
 // KnowledgeArticleStatistics 知识库文章统计结果。
-// status: 0=草稿 1=已发布(models.KnowledgeArticleStatus)。
+// status: KnowledgeArticleStatusDraft=草稿 / KnowledgeArticleStatusPublished=已发布（E 簇反转：1=已发布）。
 type KnowledgeArticleStatistics struct {
 	Total      int64 `json:"total"`
-	Draft      int64 `json:"draft"`      // status = 0
-	Published  int64 `json:"published"`  // status = 1
+	Draft      int64 `json:"draft"`      // KnowledgeArticleStatusDraft
+	Published  int64 `json:"published"`  // KnowledgeArticleStatusPublished
 	TotalViews int64 `json:"totalViews"` // SUM(view_count)
 	TotalLikes int64 `json:"totalLikes"` // SUM(like_count)
 }
@@ -43,8 +43,8 @@ func (s *KnowledgeService) GetArticleStatistics(ctx context.Context) (*Knowledge
 		Model(&models.KnowledgeArticle{}).
 		Select(
 			"COUNT(*) AS total",
-			"SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS draft",
-			"SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS published",
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS draft", int(models.KnowledgeArticleStatusDraft)),
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS published", int(models.KnowledgeArticleStatusPublished)),
 			"COALESCE(SUM(view_count), 0) AS total_views",
 			"COALESCE(SUM(like_count), 0) AS total_likes",
 		).
