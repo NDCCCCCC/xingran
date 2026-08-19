@@ -242,11 +242,11 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 70-02-PLAN.md — 样式契约层(.xr-* 新类) + SettingsShell 共用骨架 + Wave 0 单测
-- [ ] 70-03-PLAN.md — 邮箱/API 配置页 v16 三段式改造(Modal 契约不变)
+- [x] 70-03-PLAN.md — 邮箱/API 配置页 v16 三段式改造(Modal 契约不变)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 70-04-PLAN.md — 验证码背景图图片网格墙 + status 反转语义锁定
+- [x] 70-04-PLAN.md — 验证码背景图图片网格墙 + status 反转语义锁定
 - [ ] 70-05-PLAN.md — 用户设置行式化 + 即改即存 + 明暗分段卡片选择器
 - [ ] 70-06-PLAN.md — 目录合并 + Migrate208 sys_menu 迁移 + 菜单缓存失效
 
