@@ -1,24 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "entry": ["src/main.tsx", "src/App.tsx", "vite.config.ts", "vitest.config.ts"],
   "project": ["src/**/*.{ts,tsx}"],
-  "ignore": [
-    "src/**/*.test.{ts,tsx}",
-    "src/**/__tests__/**",
-    "src/test/**",
-    "src/types/**",
-    "src/**/*.d.ts",
-    "eslint-rules/**",
-    "scripts/**"
-  ],
-  "ignoreDependencies": [
-    "@types/*",
-    "@vitejs/plugin-react",
-    "@vitest/coverage-v8",
-    "vite-plugin-remove-console",
-    "rollup-plugin-visualizer",
-    "vite",
-    "vitest"
-  ],
+  "ignore": ["src/types/**"],
   "ignoreExportsUsedInFile": true
 }
