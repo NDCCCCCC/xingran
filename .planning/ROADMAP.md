@@ -57,6 +57,10 @@ previous_update: 2026-08-13 after v1.21 plans drafted (Phases 57-61) + Phase 62 
 - [ ] **Phase 66: 通用组件样式 + 硬编码色扫描** - 侧边栏深绿化、表格/卡片双层纸感、按钮纪律落地、表单/标签/ECharts 接令牌;全仓扫描并以 lint / CI 阻止硬编码 `#4F46E5` / `#F1F5F9` / slate 系新增
 - [ ] **Phase 67: 构建回归 + 视觉确认** - `npm run build` / `type-check` / `lint` / `test` 全绿、vendor-react gzip 体积不增、6 屏前后截图对比、登录页与后台视觉一致、milestone SHIPPED + ARCHIVED
 
+## Phases (v1.23 启动块 — 部署稳健性 & 文档一致性) — IN PLANNING
+
+- [ ] **Phase 68: 部署稳健性 & 文档一致性（SM2 密钥配置闭环）** - 修正 env 变量名文档-代码不一致(DEPLOY-01)、setup-server.sh secrets.env 模板补 SM2 keys 段(DEPLOY-02)、gen_sm2_keys header 注释路径修正(DEPLOY-03)、getPublicKey handler 500 时打印 useSM2 / sm2PublicKey 状态(DEPLOY-04)、config.sqlite.example.yaml use_sm2 默认值与迁移文档对齐(DEPLOY-05);来源已归档会话 public-key-500-after-subpath-fix.md
+
 ---
 
 ## Phase Details
