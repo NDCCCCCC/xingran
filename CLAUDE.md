@@ -302,16 +302,17 @@ operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "API密钥管�
 
 **Universal Rule:** `0 = enabled/normal/visible, 1 = disabled/stopped/hidden`
 
-**Exception - Menu Visibility:** `1 = visible, 0 = hidden` (boolean semantics)
+**Exception - Menu Visibility:** `1 = visible, 0 = hidden` (boolean semantics; see `models.VisibleShow` / `models.VisibleHidden`)
 
-| Module | Field | 0 Value | 1 Value | Default |
-|--------|-------|---------|---------|---------|
-| User | status | Enabled | Disabled | 0 |
-| Role | status | Normal | Stopped | 0 |
-| Menu | status | Normal | Stopped | 0 |
-| Menu | visible | Hidden | Visible | 1 |
-| Dept | status | Normal | Stopped | 0 |
-| Post | status | Normal | Stopped | 0 |
+**Source of truth (do not hard-code values):**
+
+1. **状态常量唯一真相源** — `internal/models/` (e.g. `internal/models/base.go`)。所有模块的 `status` / `visible` / 业务三态字段都以具名常量引用(如 `models.UserStatusEnabled = 0`、`models.VisibleShow = 1`、`models.WorkstationStatus*`)。
+2. **常量值由回归测试锁定** — `internal/models/status_constants_test.go` AST 扫描所有 `models.XxxStatus*` / `Visible*` 字面量,任何静默改动(包括 0/1 调换、跨包同名异值)立即测试失败。修改值先改测试再改常量。
+3. **运营可维护枚举(type / category / 业务选项)真相源** — `sys_dict_type` / `sys_dict_data`,通过字典管理页维护。Seed 见 `internal/core/db/migrations/migration_208_dict_seed.go`(sqlite / postgres 双分支均注册)。
+4. **前端通用启停选项共享常量** — `xingran-react-frontend/src/constants/status.ts`(ENABLE_DISABLE / NORMAL_STOP / 三态工作组等),不再每页重复 `[{value: 0, label: '启用'}, ...]`。
+5. **status 0/1 不入字典** — 通用规则的 0/1 是代码分支语义(管理员可配值会破坏 `if status == 0` 逻辑);type / category / 业务选项等可选项才走 sys_dict。**Menu visible 例外**仅保留文档提示,不破坏普适规则。
+
+新增 status / visible 常量:先在 `internal/models/<file>.go` 命名常量 → 同步 `status_constants_test.go` 期望表 → 业务代码按常量引用。
 
 ### API Response Format
 
