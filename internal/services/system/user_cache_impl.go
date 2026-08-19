@@ -267,7 +267,7 @@ func (s *userCacheService) InvalidateUserCache(ctx context.Context, userID strin
 
 // InvalidateAllUserCache 失效所有用户缓存
 func (s *userCacheService) InvalidateAllUserCache(ctx context.Context) error {
-	InvalidateCacheByPattern(ctx, s.cache, []string{CacheKeyUserByID + "*"}, "USER")
+	InvalidateCacheByPattern(ctx, s.cache, []string{CacheKeyUserByID + "*", CacheKeyUserList + "*"}, "USER")
 	return nil
 }
 
@@ -289,6 +289,8 @@ func (s *userCacheService) Update(ctx context.Context, req *requests.UserUpdateR
 	// 用户↔角色关联(sys_user_role)已重写（先删后插），失效 user-scoped 菜单缓存（F-01），
 	// 避免该用户最长 30min(TTL)看到陈旧菜单/权限标识
 	InvalidateUserMenuCacheByProvider(ctx, s.cache)
+	// 昵称/部门/状态等列表可见字段可能变化，失效列表缓存（否则列表最长 30min 陈旧）
+	InvalidateCacheByPattern(ctx, s.cache, []string{CacheKeyUserList + "*"}, "USER")
 	return s.InvalidateUserCache(ctx, req.ID)
 }
 
@@ -299,6 +301,8 @@ func (s *userCacheService) Delete(ctx context.Context, id string) error {
 	}
 	// 用户↔角色关联(sys_user_role)已删除，失效 user-scoped 菜单缓存（F-01）
 	InvalidateUserMenuCacheByProvider(ctx, s.cache)
+	// 行从列表消失，失效列表缓存
+	InvalidateCacheByPattern(ctx, s.cache, []string{CacheKeyUserList + "*"}, "USER")
 	return s.InvalidateUserCache(ctx, id)
 }
 
@@ -308,7 +312,7 @@ func (s *userCacheService) BatchDelete(ctx context.Context, ids []string) error 
 		return err
 	}
 	// 清除所有用户相关缓存
-	InvalidateCacheByPattern(ctx, s.cache, []string{CacheKeyUserByID + "*"}, "USER")
+	InvalidateCacheByPattern(ctx, s.cache, []string{CacheKeyUserByID + "*", CacheKeyUserList + "*"}, "USER")
 	// 批量删除同样清理 sys_user_role，失效 user-scoped 菜单缓存（F-01）
 	InvalidateUserMenuCacheByProvider(ctx, s.cache)
 	return nil
@@ -319,6 +323,8 @@ func (s *userCacheService) UpdateStatus(ctx context.Context, id string, status i
 	if err := s.userService.UpdateStatus(ctx, id, status); err != nil {
 		return err
 	}
+	// 状态列直接展示在列表中，失效列表缓存
+	InvalidateCacheByPattern(ctx, s.cache, []string{CacheKeyUserList + "*"}, "USER")
 	return s.InvalidateUserCache(ctx, id)
 }
 

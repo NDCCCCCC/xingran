@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { FC, MouseEvent } from "react";
-import { App, Badge, Dropdown, Empty, Spin, Tag, Avatar } from "antd";
+import { App, Dropdown, Empty, Spin, Tag } from "antd";
 import { BellOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { USER_NOTICES } from "@/constants/routes";
@@ -52,21 +52,6 @@ const EMPTY_STYLE = {
 const FOOTER_STYLE = {
   borderTopColor: "var(--theme-border-secondary)",
   background: "var(--theme-bg-tertiary)",
-} as const;
-
-const BADGE_STYLE = {
-  background: "var(--theme-error)",
-  boxShadow: "0 2px 8px rgba(239, 68, 68, 0.3)",
-} as const;
-
-const AVATAR_WRAPPER_STYLE = {
-  display: "inline-block",
-} as const;
-
-const AVATAR_STYLE = {
-  background: "linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%)",
-  boxShadow: "0 2px 8px rgba(21, 96, 49, 0.2)",
-  transition: "transform 300ms, box-shadow 300ms",
 } as const;
 
 /**
@@ -372,28 +357,25 @@ const NotificationBell: FC = () => {
       placement="bottomRight"
       trigger={["click"]}
     >
-      <Badge count={unreadCount} size="small" offset={[0, 8]} style={BADGE_STYLE}>
-        <div
-          className="cursor-pointer transition-all duration-300"
-          style={AVATAR_WRAPPER_STYLE}
-          onMouseEnter={(e) => {
-            const avatar = e.currentTarget.querySelector(".ant-avatar") as HTMLElement;
-            if (avatar) {
-              avatar.style.transform = "scale(1.05)";
-              avatar.style.boxShadow = "0 4px 16px rgba(21, 96, 49, 0.3)";
-            }
-          }}
-          onMouseLeave={(e) => {
-            const avatar = e.currentTarget.querySelector(".ant-avatar") as HTMLElement;
-            if (avatar) {
-              avatar.style.transform = "scale(1)";
-              avatar.style.boxShadow = "0 2px 8px rgba(21, 96, 49, 0.2)";
-            }
-          }}
+      {/* 通知触发器：原型 .icon-btn 36×36 透明方块 + 红圆角 badge */}
+      <button
+        type="button"
+        className="notif-btn"
+        aria-label={unreadCount > 0 ? `通知，${unreadCount} 条未读` : "通知"}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         >
-          <Avatar size="large" icon={<BellOutlined />} style={AVATAR_STYLE} />
-        </div>
-      </Badge>
+          <path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6" />
+          <path d="M10 20a2.2 2.2 0 0 0 4 0" />
+        </svg>
+        {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
+      </button>
     </Dropdown>
   );
 };

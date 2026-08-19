@@ -119,7 +119,7 @@ export function usePagination(options: UsePaginationOptions = {}): UsePagination
       total,
       showSizeChanger: true,
       showQuickJumper: true,
-      showTotal: (t) => `共 ${t} 条`,
+      showTotal: (t) => `共 ${Math.max(1, Math.ceil(t / pageSize))} 页`,
       onChange: handlePageChange,
     }),
     [current, pageSize, total, handlePageChange]

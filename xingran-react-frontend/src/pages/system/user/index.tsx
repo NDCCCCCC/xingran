@@ -30,7 +30,6 @@ import type { User } from "@/types";
 import { post } from "@/lib/api";
 import type { PageResponse } from "@/types";
 import DeptTree from "@/components/DeptTree";
-import PageTitle from "@/design-system/components/PageTitle";
 import { useTableManager } from "@/hooks/useTableManager";
 import { usePagination } from "@/hooks/usePagination";
 import { handleApiError, handleSuccess } from "@/utils/errorHandler";
@@ -159,7 +158,10 @@ function getUserTableColumns(props: UserTableColumnsProps): ColumnsType<User> {
               const isSuperAdmin =
                 roleName === "超级管理员" || roleName.toLowerCase().includes("admin");
               return (
-                <span key={index} className={`xr-tag ${isSuperAdmin ? "xr-tag-gold" : "xr-tag-green"}`}>
+                <span
+                  key={index}
+                  className={`xr-tag ${isSuperAdmin ? "xr-tag-gold" : "xr-tag-green"}`}
+                >
                   {roleName}
                 </span>
               );
@@ -510,7 +512,9 @@ const UserManagement: FC = () => {
   );
 
   // 统计卡占比（禁用/正常 占总数的百分比，total 为 0 时兜底 0）
-  const activePct = statistics.total ? Math.round((statistics.active / statistics.total) * 1000) / 10 : 0;
+  const activePct = statistics.total
+    ? Math.round((statistics.active / statistics.total) * 1000) / 10
+    : 0;
 
   // 部门数（全树节点数，含根节点 — 原型「部门数」卡）
   const deptCount = useMemo(() => {
@@ -521,22 +525,7 @@ const UserManagement: FC = () => {
 
   return (
     <>
-      {/* 页头（原型 .page-head：标题 + 副标题 + 右侧操作） */}
-      <PageTitle
-        pre="系统"
-        post="用户"
-        sub="账号 · 部门 · 角色三位一体的权限底座"
-        actions={
-          <>
-            <Button icon={<ImportOutlined />} onClick={() => setImportModalVisible(true)}>
-              导入用户
-            </Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAddUser}>
-              新增用户
-            </Button>
-          </>
-        }
-      />
+      {/* 顶部 TabBar 已显示标题，页面内不再重复 PageTitle */}
 
       {/* 统计卡组（theme.css .stat-card：左 3px 色条 + label/value/trend） */}
       <div className="stat-cards">
@@ -575,7 +564,7 @@ const UserManagement: FC = () => {
         {/* 右侧内容区 */}
         <Content style={{ padding: 0, background: "transparent" }}>
           <div>
-            {/* 搜索表单（原型 .filter-bar：label + 输入框一排；操作按钮进页头） */}
+            {/* 搜索表单（原型 .filter-bar：label + 输入框一排；导入/新增按钮在右侧） */}
             <Card style={{ marginBottom: 14 }}>
               <div
                 style={{
@@ -626,6 +615,12 @@ const UserManagement: FC = () => {
                       批量删除 ({selectedRowKeys.length})
                     </Button>
                   )}
+                  <Button icon={<ImportOutlined />} onClick={() => setImportModalVisible(true)}>
+                    导入用户
+                  </Button>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={handleAddUser}>
+                    新增用户
+                  </Button>
                 </Space>
               </div>
               {selectedRowKeys.length > 0 && (
@@ -680,129 +675,134 @@ const UserManagement: FC = () => {
           </div>
         </Content>
 
-      {/* 编辑弹窗 */}
-      <Modal
-        title={editingUser ? "编辑用户" : "新增用户"}
-        open={editModalVisible}
-        onOk={handleSave}
-        afterOpenChange={handleModalOpenChange}
-        onCancel={() => setEditModalVisible(false)}
-        width={600}
-      >
-        <Form form={editForm} layout="horizontal" labelCol={{ span: 4 }} wrapperCol={{ span: 20 }}>
-          <Form.Item
-            name="username"
-            label="用户名"
-            rules={[{ required: true, message: "请输入用户名" }]}
+        {/* 编辑弹窗 */}
+        <Modal
+          title={editingUser ? "编辑用户" : "新增用户"}
+          open={editModalVisible}
+          onOk={handleSave}
+          afterOpenChange={handleModalOpenChange}
+          onCancel={() => setEditModalVisible(false)}
+          width={600}
+        >
+          <Form
+            form={editForm}
+            layout="horizontal"
+            labelCol={{ span: 4 }}
+            wrapperCol={{ span: 20 }}
           >
-            <Input disabled={!!editingUser} className="user-form-input" />
-          </Form.Item>
-          {!editingUser && (
+            <Form.Item
+              name="username"
+              label="用户名"
+              rules={[{ required: true, message: "请输入用户名" }]}
+            >
+              <Input disabled={!!editingUser} className="user-form-input" />
+            </Form.Item>
+            {!editingUser && (
+              <Form.Item
+                name="password"
+                label="密码"
+                rules={[{ required: true, message: "请输入密码" }]}
+              >
+                <Input.Password className="user-form-input" />
+              </Form.Item>
+            )}
+            <Form.Item
+              name="nickname"
+              label="昵称"
+              rules={[{ required: true, message: "请输入昵称" }]}
+            >
+              <Input className="user-form-input" />
+            </Form.Item>
+            <Form.Item name="employeeNo" label="工号">
+              <Input placeholder="请输入工号" className="user-form-input" />
+            </Form.Item>
+            <Form.Item name="email" label="邮箱">
+              <Input className="user-form-input" />
+            </Form.Item>
+            <Form.Item name="phone" label="手机号">
+              <Input className="user-form-input" />
+            </Form.Item>
+            <Form.Item name="gender" label="性别" initialValue={2}>
+              <Select className="user-form-input" onSearch={() => {}}>
+                {GENDER_OPTIONS.map((opt) => (
+                  <Option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item name="deptId" label="部门">
+              <DepartmentTreeSelect departments={departments} className="user-form-input" />
+            </Form.Item>
+            <Form.Item name="roleIds" label="角色">
+              <Select
+                mode="multiple"
+                placeholder="请选择角色"
+                allowClear
+                optionFilterProp="label"
+                showSearch
+                className="user-form-input"
+                onSearch={() => {}}
+              >
+                {roles.map((role) => (
+                  <Option key={role.id} value={role.id} label={role.roleName}>
+                    {role.roleName}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item name="status" label="状态" initialValue={0}>
+              <Select className="user-form-input" onSearch={() => {}}>
+                {STATUS_OPTIONS.map((opt) => (
+                  <Option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+          </Form>
+        </Modal>
+
+        {/* 重置密码弹窗 */}
+        <Modal
+          title={`重置密码 - ${resettingUser?.username || ""}`}
+          open={resetPasswordModalVisible}
+          onOk={handleSaveResetPassword}
+          onCancel={closeResetPasswordModal}
+          width={400}
+        >
+          <Form form={resetPasswordForm} layout="vertical">
             <Form.Item
               name="password"
-              label="密码"
-              rules={[{ required: true, message: "请输入密码" }]}
+              label="新密码"
+              rules={[
+                { required: true, message: "请输入新密码" },
+                { min: 6, message: "密码长度不能少于6位" },
+                { max: 20, message: "密码长度不能超过20位" },
+              ]}
             >
-              <Input.Password className="user-form-input" />
+              <Input.Password placeholder="请输入新密码" />
             </Form.Item>
-          )}
-          <Form.Item
-            name="nickname"
-            label="昵称"
-            rules={[{ required: true, message: "请输入昵称" }]}
-          >
-            <Input className="user-form-input" />
-          </Form.Item>
-          <Form.Item name="employeeNo" label="工号">
-            <Input placeholder="请输入工号" className="user-form-input" />
-          </Form.Item>
-          <Form.Item name="email" label="邮箱">
-            <Input className="user-form-input" />
-          </Form.Item>
-          <Form.Item name="phone" label="手机号">
-            <Input className="user-form-input" />
-          </Form.Item>
-          <Form.Item name="gender" label="性别" initialValue={2}>
-            <Select className="user-form-input" onSearch={() => {}}>
-              {GENDER_OPTIONS.map((opt) => (
-                <Option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item name="deptId" label="部门">
-            <DepartmentTreeSelect departments={departments} className="user-form-input" />
-          </Form.Item>
-          <Form.Item name="roleIds" label="角色">
-            <Select
-              mode="multiple"
-              placeholder="请选择角色"
-              allowClear
-              optionFilterProp="label"
-              showSearch
-              className="user-form-input"
-              onSearch={() => {}}
+            <Form.Item
+              name="confirmPassword"
+              label="确认密码"
+              dependencies={["password"]}
+              rules={[
+                { required: true, message: "请确认密码" },
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    if (!value || getFieldValue("password") === value) {
+                      return Promise.resolve();
+                    }
+                    return Promise.reject(new Error("两次输入的密码不一致"));
+                  },
+                }),
+              ]}
             >
-              {roles.map((role) => (
-                <Option key={role.id} value={role.id} label={role.roleName}>
-                  {role.roleName}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item name="status" label="状态" initialValue={0}>
-            <Select className="user-form-input" onSearch={() => {}}>
-              {STATUS_OPTIONS.map((opt) => (
-                <Option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* 重置密码弹窗 */}
-      <Modal
-        title={`重置密码 - ${resettingUser?.username || ""}`}
-        open={resetPasswordModalVisible}
-        onOk={handleSaveResetPassword}
-        onCancel={closeResetPasswordModal}
-        width={400}
-      >
-        <Form form={resetPasswordForm} layout="vertical">
-          <Form.Item
-            name="password"
-            label="新密码"
-            rules={[
-              { required: true, message: "请输入新密码" },
-              { min: 6, message: "密码长度不能少于6位" },
-              { max: 20, message: "密码长度不能超过20位" },
-            ]}
-          >
-            <Input.Password placeholder="请输入新密码" />
-          </Form.Item>
-          <Form.Item
-            name="confirmPassword"
-            label="确认密码"
-            dependencies={["password"]}
-            rules={[
-              { required: true, message: "请确认密码" },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || getFieldValue("password") === value) {
-                    return Promise.resolve();
-                  }
-                  return Promise.reject(new Error("两次输入的密码不一致"));
-                },
-              }),
-            ]}
-          >
-            <Input.Password placeholder="请再次输入密码" />
-          </Form.Item>
-        </Form>
-      </Modal>
+              <Input.Password placeholder="请再次输入密码" />
+            </Form.Item>
+          </Form>
+        </Modal>
       </Layout>
     </>
   );

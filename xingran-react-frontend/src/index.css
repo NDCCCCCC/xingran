@@ -437,7 +437,12 @@ body {
 .ant-menu-dark {
   background: transparent !important;
   color: var(--sidebar-text) !important;
-  padding: var(--theme-spacing-sm) 0 !important;
+  padding: var(--theme-spacing-sm) 8px !important;
+}
+/* antd 给子项留了 calc(100% - 8px) 右内缩 — 拉满使选中框左右内边距对称（8px/8px） */
+.ant-menu-dark .ant-menu-item,
+.ant-menu-dark .ant-menu-submenu-title {
+  width: 100% !important;
 }
 
 .ant-menu-dark .ant-menu-item {
@@ -969,13 +974,13 @@ body {
   display: none !important;
 }
 
-/* 斑马纹 */
+/* 斑马纹（原型 theme.css：奇白 / 偶奶油 #FAF8F3；旧值白/白不可见） */
 .ant-table-tbody > tr:nth-child(odd) > td {
   background: var(--bg-surface) !important;
 }
 
 .ant-table-tbody > tr:nth-child(even) > td {
-  background: var(--component-bg) !important;
+  background: var(--theme-zebra) !important;
 }
 
 [data-color-mode="dark"] .ant-table-tbody > tr:nth-child(odd) > td {
@@ -986,9 +991,9 @@ body {
   background: transparent !important;
 }
 
-/* 悬停效果 */
+/* 悬停效果（原型 hover #F3EEE3） */
 .ant-table-tbody > tr:hover > td {
-  background: var(--bg-overlay-hover) !important;
+  background: #f3eee3 !important;
   transition: background-color 0.15s ease-in-out !important;
 }
 
@@ -4776,6 +4781,25 @@ body {
 .ant-layout-sider.layout-sidebar {
   background: var(--sidebar-gradient) !important;
 }
+/* 侧栏滚动条（原型 .sidebar-nav：thin + 半透明白，替代 Windows 原生粗滚动条） */
+.layout-sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+.layout-sidebar ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.layout-sidebar ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.layout-sidebar ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
+}
+.layout-sidebar ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
 
 /* 品牌区（demo .sidebar-brand：金方块 mark + font-display 字标） */
 .sidebar-brand {
@@ -4900,9 +4924,13 @@ body {
   width: 13px;
   height: 13px;
 }
-/* 子项缩进（demo padding-left 38px 语义：含箭头列） */
+/* 子项缩进：子项起点对齐父级文字下方（demo .menu-sub .menu-item padding-left 38px） */
 .ant-menu-dark .ant-menu-sub .ant-menu-item {
-  padding-inline-start: 14px !important;
+  padding-inline-start: 38px !important;
+}
+/* 三级子项再进一档（24px/级，antd inline 语义） */
+.ant-menu-dark .ant-menu-sub .ant-menu-sub .ant-menu-item {
+  padding-inline-start: 62px !important;
 }
 /* 展开子菜单容器：antd 深色主题默认近黑底（darkSubMenuItemBg）— 透明以透出侧栏绿渐变（原型） */
 .ant-menu-dark .ant-menu-sub.ant-menu-inline {
@@ -4991,10 +5019,12 @@ body {
 .header-user-pill .uname {
   font-size: 13px;
   font-weight: 500;
+  line-height: 1; /* 覆盖 antd Layout.Header 的 line-height:64px，避免被撑高 */
   color: var(--theme-text-primary);
 }
 .header-user-pill .ucaret {
   font-size: 10px;
+  line-height: 1; /* 同上，icon 也不要被 header line-height 撑高 */
   color: var(--theme-text-secondary);
 }
 
@@ -5260,4 +5290,55 @@ body {
 }
 .ant-pagination .ant-pagination-options .ant-select-selector {
   font-family: var(--theme-font-mono);
+}
+/* 表格底部分页：「共 X 页」靠左、翻页/跳转靠右（默认 antd 把整行 flex-end 推到右侧） */
+.ant-table-pagination.ant-pagination {
+  justify-content: flex-start !important;
+}
+.ant-table-pagination.ant-pagination > li.ant-pagination-total-text {
+  margin-right: auto !important;
+}
+
+/* ---------- Header 通知铃铛（原型 .icon-btn：36×36 透明方块 + 红圆角 badge） ---------- */
+.notif-btn {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius, 8px);
+  background: transparent;
+  color: var(--theme-text-primary);
+  cursor: pointer;
+  transition: background 200ms ease;
+}
+.notif-btn:hover {
+  background: var(--theme-bg-secondary);
+}
+.notif-btn:focus-visible {
+  outline: 2px solid var(--theme-primary);
+  outline-offset: 2px;
+}
+.notif-btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+.notif-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--theme-error, #ba3630);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
