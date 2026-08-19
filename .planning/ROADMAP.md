@@ -203,7 +203,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 69-05-PLAN.md — DICT-01 批 4:workorder/duty/discovery/execution/dispatch/monitor + 两 handler 替换(簇 B/C CASE WHEN 自洽化) + F 簇豁免收口,守护白名单终态只剩 geocoding,go test ./... 终态门
+- [x] 69-05-PLAN.md — DICT-01 批 4:workorder/duty/discovery/execution/dispatch/monitor + 两 handler 替换(簇 B/C CASE WHEN 自洽化) + F 簇豁免收口,守护白名单终态只剩 geocoding,go test ./... 终态门
 
 **Wave 5** *(blocked on Wave 4 completion)*
 

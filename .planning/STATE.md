@@ -3,22 +3,22 @@ gsd_state_version: 1.0
 milestone: v1.22 + v1.23 启动块
 milestone_name: milestone
 status: executing
-stopped_at: Completed 69-07-PLAN.md (commits 3a133dc/235b8f7)
-last_updated: "2026-08-19T07:42:01.993Z"
+stopped_at: Completed 69-05-PLAN.md (task commit bc00d9c)
+last_updated: "2026-08-19T09:59:20Z"
 last_activity: 2026-08-19
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 19
-  completed_plans: 10
-  percent: 53
+  completed_plans: 11
+  percent: 58
 ---
 
 # Project State
 
 **Project**: XingRan-Next 运维管理系统
 **Created**: 2026-04-16
-**Status**: v1.22 前端品牌化改造 SHIPPED 2026-08-18（Phases 64-67 / 4 phases / 4 plans / 15 requirements 100% 勾选 / 33 tasks）。Phase 63 前端工具链自动化独立 IN PROGRESS。**v1.23 启动块**: Phase 68 部署稳健性 & 文档一致性(SM2 密钥配置闭环)EXECUTED 2026-08-19(5 commits: a21dcec..25ded8f)。
+**Status**: v1.22 前端品牌化改造 SHIPPED 2026-08-18（Phases 64-67 / 4 phases / 4 plans / 15 requirements 100% 勾选 / 33 tasks）。Phase 63 前端工具链自动化独立 IN PROGRESS。**v1.23 启动块**: Phase 68 部署稳健性 & 文档一致性(SM2 密钥配置闭环)EXECUTED 2026-08-19(5 commits: a21dcec..25ded8f)。Phase 69-05 DICT-01 后端终态门 EXECUTED 2026-08-19（17 文件/46 命中→F 簇 1 条，task commit `bc00d9c`）。
 **Last activity**: 2026-08-19 — Phase 68-01 EXECUTED（5 commits: a21dcec / a764825 / 65093b9 / 52685fd / 25ded8f）。来源：归档会话 `.planning/debug/resolved/public-key-500-after-subpath-fix.md`（DEPLOY-01~05 全量修复：env 变量名文档一致 / setup-server.sh secrets.env 模板补 SM2 keys 段 / gen_sm2_keys header 注释路径修正 / getPublicKey handler 500 时打印 useSM2 状态 / sqlite 模板 use_sm2 默认值 + 迁移指引）。Phase 63 63-01-PLAN.md 在 `.planning/phases/63-frontend-toolchain-automation/` IN PROGRESS(2026-08-14 起)。此前 2026-08-17 quick-260817-hfl: 后端 Supabase → 本地 SQLite + sqlite 兼容收尾(PG-only 守卫/缺表注册/方言修复/admin 全量菜单种子 migration_207);同日 quick-260817-ucz: 第 6 套主题「墨绿琥珀」(ink-amber)延伸到控制台。2026-08-15 Phase 62 全部 5/5 plan 完成;2026-08-14 Phase 57-61 全部完成 + Phase 62 plans created from cross-AI reviews。
 
 # Project State
@@ -39,7 +39,7 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 ## Current Position
 
 Phase: 69 (字典与状态值治理) — EXECUTING (并行 Phase 70 会话执行中)
-Plan: 7 of 8
+Plan: 8 of 8
 Status: Ready to execute
 Last activity: 2026-08-19
 
@@ -187,8 +187,8 @@ Full deferred detail in [milestones/v1.21-ROADMAP.md](milestones/v1.21-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-19T07:42:01.984Z
-Stopped at: Completed 69-07-PLAN.md (commits 3a133dc/235b8f7)
+Last session: 2026-08-19T09:59:20Z
+Stopped at: Completed 69-05-PLAN.md (task commit bc00d9c)
 Resume file: None
 
 **Milestone status:** v1.22 IN PLANNING — **ROADMAP drafted 2026-08-18**,4 phases (64-67) / 15 requirements / 100% coverage。Token 层 (Phase 64) 落地位于 index.css 253 变量 + tokens/colors.ts xingranBrand + AntdThemeBridge + tokens/shadows+spacing+typography + QA-01 对比度校验;主题收敛 (Phase 65) 移除 6 套主题 + ThemeSwitcher/ColorSwitcher/themeStore 残留 + 13 消费方清理,保留 light/dark + layout/density;组件样式 (Phase 66) 侧边栏深绿 + 表格/卡片 + 按钮 D-03 纪律 + 表单/标签/ECharts + QA-02 硬编码扫描;终端验证 (Phase 67) 构建/类型/lint/test 全绿 + bundle 体积不增 + 6 屏前后截图对比。
@@ -208,6 +208,7 @@ Resume file: None
 | Phase 69 P02 | 42m | 2 tasks | 3 files |
 | Phase 69 P03 | 15m | 1 tasks | 15 files |
 | Phase 69 P04 | 14m | 1 tasks | 15 files |
+| Phase 69 P05 | 23m | 1 tasks | 22 files |
 | Phase 69 P07 | 13m | 2 tasks | 12 files |
 
 ## Decisions
@@ -217,4 +218,5 @@ Resume file: None
 - [Phase 69-02]: migration_208 字典 seed 组级查重走 Unscoped（软删 dict_type 视为组已存在——防复活且防软删行占位 uniqueIndex 每次启动撞约束）；isDefault 取值规则 = archive/模型 gorm default 注释照抄，无来源组取组内第一条（sys_user_sex 默认 "2" 保密 = User.Gender default:2 而非 0=男；duty_holiday_type 默认 custom = Holiday gorm default）；dashboard_*/workorder_* 剔除不 seed（前端零 useDict 消费，planner Q4 圈定）
 - [Phase 69-03]: 批 2 operations+excel 链路 58 处常量化：WorkstationDevice/Asset 无既有族且 WorkstationStatus(三态)/DeviceStatus(在线) 语义错配，按 69-01 登记机制新增无类型 WorkstationDeviceStatus/AssetStatus/AssetNBFStatus 三族(锁值 74→80)；双包陷阱按 model struct 实际所在包引用；白名单 38→27 文件
 - [Phase 69-04]: 批3六目录30处常量化：E簇反转(knowledge/notice 1=已发布)与D簇账号池三态零误替；ADAccountStatus*(0/1/2 Phase36状态机)与RPACredentialStatus*(0/1)两新族落 models 并双登记锁值(80→85)；account_pool 本地 AccountStatus* 改为 models 别名实现真相源上移；VDIResourceGroup 2处复用 VDIServerStatus 族；白名单 27→17 文件
+- [Phase 69-05]: 批4将 17 文件/46 守护命中清零，workorder/duty/discovery/execution/dispatch/monitor/asset 与 API 散点改用实体状态常量；补齐 ServerStatus/NotificationConfigStatus 并将 DiscoveryStatus 0-4 纳入锁值（85→94）；百度 geocoding 外部返回码保持 F 簇唯一豁免
 - [Phase 69]: 69-07: 四页 type 下拉迁 useDict（三件套+空态回退静态 OPTIONS 第四件）；workstations hook 放 index.tsx 经 prop 透传 EditModal；number 字段 Option value 用 Number(dictValue) 保提交契约；devices 不引入新增默认值，isDefault 默认件仅用于原有默认的三处（user 0→2保密 / workstation 0 不变 / holiday legal→custom 对齐后端 gorm default）

@@ -1,6 +1,6 @@
 ---
-last_updated: 2026-08-18
-update_trigger: v1.22 ROADMAP drafted (Phases 64-67) — traceability section filled (15 requirements / 4 categories / 100% coverage)
+last_updated: 2026-08-19
+update_trigger: Phase 69-05 DICT-01 backend status-literal ratchet completed; DICT-01 checkbox promoted to complete
 ---
 
 # Requirements: XingRan-Next — Milestone v1.22
@@ -114,3 +114,21 @@ update_trigger: v1.22 ROADMAP drafted (Phases 64-67) — traceability section fi
 - Phase 65 (THEME) second — 多主题移除是高风险机械重构,需要在令牌已就位(避免视觉退化)后执行;依赖令牌层提供回退色源
 - Phase 66 (COMP + QA-02) third — 组件样式落地依赖稳定令牌 + 单一品牌上下文;硬编码扫描与组件落地同步,防止新代码破坏品牌
 - Phase 67 (QA-03/04) terminal — 构建回归 + 视觉确认是里程碑 SHIPPED 前置门
+
+## v1.24 Requirements
+
+### DICT — 状态与字典单一真相源
+
+- [x] **DICT-01**: 后端以 `internal/models` 状态常量作为语义单一真相源，清除受控 service/handler 范围内的裸 0/1 status 字面量，并以白名单 ratchet 防止回归
+- **DICT-02**: 盘点 type/category 真枚举字段并 seed 进 sys_dict
+- **DICT-03**: 前端 constants.tsx 硬编码 options 分批迁移 useDict
+- **DICT-04**: CLAUDE.md Status Value Convention 改指向常量真相源
+
+## v1.24 Traceability
+
+| Requirement | Phase | Status | Notes |
+|-------------|-------|--------|-------|
+| DICT-01 | Phase 69 | Complete | Plans 69-01/03/04/05；`--baseline` 终态仅 geocoding F 簇 1 条 |
+| DICT-02 | Phase 69 | Pending | Plan 69-02 executed；字典 seed 已落地 |
+| DICT-03 | Phase 69 | In Progress | Plans 69-06/69-07 executed；前端消费迁移分批完成 |
+| DICT-04 | Phase 69 | Pending | Plan 69-08 |
