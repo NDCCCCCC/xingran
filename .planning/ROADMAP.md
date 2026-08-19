@@ -182,7 +182,7 @@ Plans:
 3. 前端 `constants.tsx` 硬编码 options 数组分批迁移 `useDict`,已迁移下拉在字典管理改值后选项随之变化（保留静态 fallback 保证字典接口异常时可用）
 4. `CLAUDE.md` Status Value Convention 段落改写为指向后端常量包 + sys_dict 真相源的引用,不再作为独立手工维护的第三份拷贝
 
-**Plans:** 8 plans
+**Plans:** 8/8 plans complete
 
 Plans:
 

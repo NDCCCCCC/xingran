@@ -130,6 +130,6 @@ update_trigger: Phase 69-05 DICT-01 backend status-literal ratchet completed; DI
 | Requirement | Phase | Status | Notes |
 |-------------|-------|--------|-------|
 | DICT-01 | Phase 69 | Complete | Plans 69-01/03/04/05；`--baseline` 终态仅 geocoding F 簇 1 条 |
-| DICT-02 | Phase 69 | Pending | Plan 69-02 executed；字典 seed 已落地 |
-| DICT-03 | Phase 69 | In Progress | Plans 69-06/69-07 executed；前端消费迁移分批完成 |
+| DICT-02 | Phase 69 | Complete | Plan 69-02 executed；字典 seed 已落地 |
+| DICT-03 | Phase 69 | Complete | Plans 69-06/69-07 executed；前端消费迁移分批完成 |
 | DICT-04 | Phase 69 | Complete | Plan 69-08 |
