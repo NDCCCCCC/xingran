@@ -1,3 +1,9 @@
+---
+status: reference
+type: knowledge-base
+note: 不是 debug session —— 已解决会话的模式参考库，供 gsd-debugger 检索。audit-open 应跳过。
+---
+
 # GSD Debug Knowledge Base
 
 Resolved debug sessions. Used by `gsd-debugger` to surface known-pattern hypotheses at the start of new investigations.
