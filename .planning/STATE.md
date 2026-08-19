@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.22 + v1.23 启动块
+milestone: v1.22 + v1.23 + v1.25 启动块
 milestone_name: milestone
-status: 68-01 SUMMARY 落地 + ROADMAP Phase 68 标记 EXECUTED (Phase 68 实际 5 commits 2026-08-19 a21dcec..25ded8f,本日补 SUMMARY + 状态收口)
-stopped_at: Phase 68 closeout (SUMMARY 68-01-SUMMARY.md + ROADMAP Updated)
-last_updated: "2026-08-19T22:30:00.000Z"
+status: Phase 70 SHIPPED — 7/7 plans EXECUTED (D-10 default-theme 原子提交 + SettingsShell/14 selectors + email/api v16 三段式 + captcha 网格墙 status 反转 + 用户设置行式即改即存 + 目录合并 Migrate209 + D-12 清理 + 七门回归 + visual gate passed);ROADMAP Phase 70 勾选 + 10 SC 落位(e138411 收口)
+stopped_at: Phase 70 SHIPPED (7 plans + 10 SC + 159 tests pass;visual gate 通过,10 张截图归档)
+last_updated: "2026-08-19T22:35:00.000Z"
 last_activity: 2026-08-19
 progress:
   total_phases: 7
   completed_phases: 7
-  total_plans: 20
-  completed_plans: 20
+  total_plans: 27
+  completed_plans: 27
   percent: 100
 ---
 
@@ -38,8 +38,8 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 
 ## Current Position
 
-Phase: 68 (closeout)
-Plan: 01 of 01 complete
+Phase: 70
+Plan: Not started
 Status: 68-01 SUMMARY 落地 + ROADMAP Phase 68 标记 EXECUTED (Phase 68 早已 5 commits 2026-08-19 a21dcec..25ded8f,本日补 SUMMARY 与状态收口)
 Last activity: 2026-08-19
 

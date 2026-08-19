@@ -69,7 +69,7 @@ previous_update: 2026-08-19 after Phase 70-02 EXECUTED
 
 ## Phases (v1.25 启动块 — 系统设置页面布局重构) — IN PLANNING
 
-- [ ] **Phase 70: 系统设置页面布局重构（对齐 v1.22 品牌设计理念）** - 按品牌设计理念(深绿 × 铜金 × 奶油纸感、双层纸感卡片、按钮纪律 D-03)重新设计系统设置页面布局,清理多主题时代遗留布局残留(含已删除的 default-theme 入口);范围:`xingran-react-frontend/src/pages/system/settings-page/` + `src/pages/settings/`;纯前端布局重构,不改业务逻辑与 API 契约;依赖 Phase 67 已交付的品牌基线
+- [x] **Phase 70: 系统设置页面布局重构（对齐 v1.22 品牌设计理念）** - 按品牌设计理念(深绿 × 铜金 × 奶油纸感、双层纸感卡片、按钮纪律 D-03)重新设计系统设置页面布局,清理多主题时代遗留布局残留(含已删除的 default-theme 入口);范围:`xingran-react-frontend/src/pages/system/settings-page/` + `src/pages/settings/`;纯前端布局重构,不改业务逻辑与 API 契约;依赖 Phase 67 已交付的品牌基线 (completed 2026-08-19)
 
 ---
 
@@ -98,8 +98,6 @@ Plans:
 - [x] 68-01-PLAN.md — DEPLOY-01~05 闭环:env var 名称全仓一致性(T1) + setup-server.sh secrets.env SM2 段(T2) + gen_sm2_keys header 路径修正(T3) + getPublicKey WARN + 2 个 getter(T4) + sqlite use_sm2 默认值 + 迁移指引(T5);5 commits a21dcec/a764825/65093b9/52685fd/25ded8f,DEPLOY-01~05 全部 PASS,自动化门常绿,见 [68-01-SUMMARY.md](../phases/68-deploy-robustness-and-docs-consistency/68-01-SUMMARY.md)
 
 ---
-
-
 
 **Goal**: design-system 层拥有完整的品牌令牌真相源 —— `index.css` 253 变量全量接 brand-spec 实测值,`tokens/colors.ts` 提供 TS 侧 `xingranBrand` 常量(绿/铜金/奶油三梯度,带 OKLch + WCAG 注释),`AntdThemeBridge` 把 Antd 6 `theme.token` 与 `theme.components` 全量映射到品牌令牌,`tokens/shadows+spacing+typography` 与新色彩调性对齐;并以可执行对比度校验断言关键前景/背景对达标,把品牌基线锁在测试层。
 
@@ -294,7 +292,7 @@ Phases execute in numeric order: 64 → 65 → 66 → 67 (Phase 63 独立 IN PRO
 | 67. 构建回归 + 视觉确认 | v1.22 | 1/1 | ✅ SHIPPED | 2026-08-18 |
 | 68. 部署稳健性 & 文档一致性 | v1.23 | 1/1 | ✅ EXECUTED | 2026-08-19 |
 | 69. 字典与状态值治理 | v1.24 | 8/8 | ✅ EXECUTED | 2026-08-19 |
-| 70. 系统设置页面布局重构 | v1.25 | 7/7 | ✅ EXECUTED | 2026-08-19 |
+| 70. 系统设置页面布局重构 | v1.25 | 7/7 | Complete    | 2026-08-19 |
 
 ---
 
