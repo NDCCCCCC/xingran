@@ -247,7 +247,7 @@ Plans:
 **Wave 3** *(blocked on Wave 2 completion)*
 
 - [x] 70-04-PLAN.md — 验证码背景图图片网格墙 + status 反转语义锁定
-- [ ] 70-05-PLAN.md — 用户设置行式化 + 即改即存 + 明暗分段卡片选择器
+- [x] 70-05-PLAN.md — 用户设置行式化 + 即改即存 + 明暗分段卡片选择器
 - [ ] 70-06-PLAN.md — 目录合并 + Migrate208 sys_menu 迁移 + 菜单缓存失效
 
 **Wave 4** *(blocked on Wave 3 completion)*
