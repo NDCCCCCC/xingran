@@ -15,12 +15,12 @@ import {
   InputNumber,
   Tabs,
   Radio,
+  Empty,
 } from "antd";
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  ReloadOutlined,
   ApiOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
@@ -49,7 +49,17 @@ const APIConfigPage: FC = () => {
   // 列表相关状态
   const [configs, setConfigs] = useState<APINotificationConfig[]>([]);
   const [loading, setLoading] = useState(false);
-  const [configTypeFilter, setConfigTypeFilter] = useState<APIConfigType | undefined>();
+
+  // 搜索筛选（configType + 名称 + 状态）
+  const [searchForm] = Form.useForm();
+  const [searchName, setSearchName] = useState<string>("");
+  const [configTypeFilter, setConfigTypeFilter] = useState<APIConfigType | undefined>(undefined);
+  const [statusFilter, setStatusFilter] = useState<number | undefined>(undefined);
+
+  // 统计卡轻请求
+  const [totalCount, setTotalCount] = useState(0);
+  const [enabledCount, setEnabledCount] = useState(0);
+  const [disabledCount, setDisabledCount] = useState(0);
 
   // 使用全局分页 hook
   const { paginationProps, setCurrent, setPageSize, setTotal } = usePagination();
@@ -60,6 +70,25 @@ const APIConfigPage: FC = () => {
   const [editingConfig, setEditingConfig] = useState<APINotificationConfig | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // 统计卡轻请求：status 0/1 各一次只取 total（API 配置 0=启用/1=停用）
+  const loadStatistics = async () => {
+    try {
+      const [allRes, enabledRes, disabledRes] = await Promise.all([
+        getAPINotificationConfigList({ page: 1, pageSize: 1 }),
+        getAPINotificationConfigList({ page: 1, pageSize: 1, status: 0 }),
+        getAPINotificationConfigList({ page: 1, pageSize: 1, status: 1 }),
+      ]);
+      const data = allRes as { data: { total: number } };
+      const eData = enabledRes as { data: { total: number } };
+      const dData = disabledRes as { data: { total: number } };
+      setTotalCount(data.data.total);
+      setEnabledCount(eData.data.total);
+      setDisabledCount(dData.data.total);
+    } catch (error) {
+      console.error("加载API配置统计失败:", error);
+    }
+  };
+
   // 加载API通知配置列表
   const loadConfigs = async () => {
     setLoading(true);
@@ -68,12 +97,13 @@ const APIConfigPage: FC = () => {
         page: paginationProps.current,
         pageSize: paginationProps.pageSize,
         configType: configTypeFilter,
+        status: statusFilter,
       })) as { data: { list: APINotificationConfig[]; total: number } };
       setConfigs(result.data.list);
       setTotal(result.data.total);
     } catch (error) {
       console.error("加载API配置失败:", error);
-      message.error("加载API配置失败");
+      message.error("加载API配置失败，请刷新重试");
     } finally {
       setLoading(false);
     }
@@ -121,6 +151,7 @@ const APIConfigPage: FC = () => {
       editForm.resetFields();
       setEditingConfig(null);
       loadConfigs();
+      loadStatistics();
     } catch (error: unknown) {
       if (isFormValidationError(error)) {
         return;
@@ -137,9 +168,46 @@ const APIConfigPage: FC = () => {
       await deleteAPINotificationConfig(id);
       message.success("删除成功");
       loadConfigs();
+      loadStatistics();
     } catch (_error) {
       message.error("删除失败");
     }
+  };
+
+  // 搜索处理
+  const handleSearch = () => {
+    const values = searchForm.getFieldsValue();
+    setSearchName(values.configName || "");
+    setConfigTypeFilter(values.configType);
+    setStatusFilter(values.status);
+    setCurrent(1);
+  };
+
+  // 重置搜索
+  const handleResetSearch = () => {
+    searchForm.resetFields();
+    setSearchName("");
+    setConfigTypeFilter(undefined);
+    setStatusFilter(undefined);
+    setCurrent(1);
+  };
+
+  // 启用占比
+  const enabledPct = totalCount > 0 ? Math.round((enabledCount / totalCount) * 100) : 0;
+
+  // 类型 Tag 标签映射（统一走 xr-tag 中性 — 移除 preset cyan/purple/orange）
+  const configTypeLabelMap: Record<APIConfigType, string> = {
+    [APIConfigTypes.SMS]: "短信",
+    [APIConfigTypes.WEBHOOK]: "Webhook",
+    [APIConfigTypes.PUSH]: "推送",
+  };
+
+  // 认证方式 label
+  const authTypeLabelMap: Record<AuthType, string> = {
+    [AuthTypes.NONE]: "无",
+    [AuthTypes.BASIC]: "Basic",
+    [AuthTypes.BEARER]: "Bearer",
+    [AuthTypes.APIKEY]: "API Key",
   };
 
   // 表格列定义
@@ -148,10 +216,11 @@ const APIConfigPage: FC = () => {
       title: "配置名称",
       dataIndex: "configName",
       key: "configName",
+      width: 180,
       render: (text: string, record) => (
-        <Space>
-          <span>{text}</span>
-          {record.isDefault && <Tag color="blue">默认</Tag>}
+        <Space size={4}>
+          <span className="xr-cell-id">{text}</span>
+          {record.isDefault && <span className="xr-tag xr-tag-gold">默认</span>}
         </Space>
       ),
     },
@@ -159,14 +228,10 @@ const APIConfigPage: FC = () => {
       title: "类型",
       dataIndex: "configType",
       key: "configType",
-      render: (type: APIConfigType) => {
-        const config = {
-          [APIConfigTypes.SMS]: { color: "cyan", label: "短信" },
-          [APIConfigTypes.WEBHOOK]: { color: "purple", label: "Webhook" },
-          [APIConfigTypes.PUSH]: { color: "orange", label: "推送" },
-        }[type];
-        return <Tag color={config?.color}>{config?.label}</Tag>;
-      },
+      width: 100,
+      render: (type: APIConfigType) => (
+        <span className="xr-tag">{configTypeLabelMap[type] || type}</span>
+      ),
     },
     {
       title: "API地址",
@@ -185,15 +250,7 @@ const APIConfigPage: FC = () => {
       dataIndex: "authType",
       key: "authType",
       width: 100,
-      render: (type: AuthType) => {
-        const config = {
-          [AuthTypes.NONE]: { label: "无" },
-          [AuthTypes.BASIC]: { label: "Basic" },
-          [AuthTypes.BEARER]: { label: "Bearer" },
-          [AuthTypes.APIKEY]: { label: "API Key" },
-        }[type];
-        return <span>{config?.label}</span>;
-      },
+      render: (type: AuthType) => <span>{authTypeLabelMap[type] || type}</span>,
     },
     {
       title: "状态",
@@ -201,7 +258,9 @@ const APIConfigPage: FC = () => {
       key: "status",
       width: 80,
       render: (status: number) => (
-        <Tag color={status === 0 ? "success" : "default"}>{status === 0 ? "正常" : "停用"}</Tag>
+        <span className={`xr-tag ${status === 0 ? "xr-tag-green" : ""}`}>
+          {status === 0 ? "正常" : "停用"}
+        </span>
       ),
     },
     {
@@ -209,7 +268,7 @@ const APIConfigPage: FC = () => {
       dataIndex: "createdAt",
       key: "createdAt",
       width: 180,
-      render: (date: string) => formatDateTime(date),
+      render: (date: string) => <span className="xr-cell-time">{formatDateTime(date)}</span>,
     },
     {
       title: "操作",
@@ -217,73 +276,115 @@ const APIConfigPage: FC = () => {
       fixed: "right",
       width: 150,
       render: (_, record: APINotificationConfig) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => openModal(record)}
-          >
+        <div className="xr-row-ops">
+          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openModal(record)}>
             编辑
           </Button>
           <Button
             type="link"
             size="small"
-            danger
+            className="xr-op-danger"
             icon={<DeleteOutlined />}
             onClick={() => {
               Modal.confirm({
-                title: "确认删除?",
-                okText: "确定",
-                cancelText: "取消",
+                title: "删除 API 配置？",
+                content: "删除后不可恢复，使用该配置的通知推送将失败。",
+                okText: "删除",
                 okButtonProps: { danger: true },
+                cancelText: "取消",
                 onOk: () => handleDelete(record.id),
               });
             }}
           >
             删除
           </Button>
-        </Space>
+        </div>
       ),
     },
   ];
 
   useEffect(() => {
     loadConfigs();
+    loadStatistics();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paginationProps.current, paginationProps.pageSize, configTypeFilter]);
+  }, [paginationProps.current, paginationProps.pageSize, configTypeFilter, statusFilter]);
 
   return (
-    <div className="p-6">
-      <Card
-        title={
-          <Space>
-            <ApiOutlined />
-            <span>API通知配置</span>
-          </Space>
-        }
-        extra={
-          <Space>
-            <Select
-              placeholder="筛选类型"
-              allowClear
-              style={{ width: 120 }}
-              onChange={(value) => setConfigTypeFilter(value)}
-              onSearch={() => {}}
-            >
-              <Option value={APIConfigTypes.SMS}>短信</Option>
-              <Option value={APIConfigTypes.WEBHOOK}>Webhook</Option>
-              <Option value={APIConfigTypes.PUSH}>推送</Option>
-            </Select>
-            <Button icon={<ReloadOutlined />} onClick={loadConfigs}>
-              刷新
-            </Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
-              新增配置
-            </Button>
-          </Space>
-        }
-      >
+    <>
+      {/* 统计卡行：3 卡 — 总配置数 / 启用 / 停用（不加第 4 卡——configType 分布由工具栏筛选承载） */}
+      <div className="stat-cards">
+        <div className="stat-card">
+          <div className="stat-label">总配置数</div>
+          <div className="stat-value">{totalCount}</div>
+          <div className="stat-trend">全部推送渠道</div>
+        </div>
+        <div className="stat-card sc-green">
+          <div className="stat-label">启用</div>
+          <div className="stat-value">{enabledCount}</div>
+          <div className="stat-trend">占比 {enabledPct}%</div>
+        </div>
+        <div className="stat-card sc-gray">
+          <div className="stat-label">停用</div>
+          <div className="stat-value">{disabledCount}</div>
+          <div className="stat-trend">可随时恢复</div>
+        </div>
+      </div>
+
+      {/* 工具栏卡：配置名称 + configType 筛选 + 状态筛选 + 新增配置 */}
+      <Card style={{ marginBottom: 14 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
+        >
+          <Form form={searchForm} layout="inline" style={{ flex: 1, minWidth: 0 }}>
+            <Form.Item name="configName" label="配置名称">
+              <Input placeholder="按配置名称搜索" allowClear style={{ width: 200 }} />
+            </Form.Item>
+            <Form.Item name="configType" label="配置类型">
+              <Select
+                placeholder="全部类型"
+                style={{ width: 140 }}
+                allowClear
+                onSearch={() => {}}
+              >
+                <Option value={APIConfigTypes.SMS}>短信</Option>
+                <Option value={APIConfigTypes.WEBHOOK}>Webhook</Option>
+                <Option value={APIConfigTypes.PUSH}>推送</Option>
+              </Select>
+            </Form.Item>
+            <Form.Item name="status" label="状态">
+              <Select
+                placeholder="全部状态"
+                style={{ width: 140 }}
+                allowClear
+                onSearch={() => {}}
+              >
+                <Option value={0}>正常</Option>
+                <Option value={1}>停用</Option>
+              </Select>
+            </Form.Item>
+            <Form.Item>
+              <Space>
+                <Button onClick={handleResetSearch}>重置</Button>
+                <Button type="primary" onClick={handleSearch}>
+                  搜索
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
+            新增配置
+          </Button>
+        </div>
+      </Card>
+
+      {/* 表格卡：双层纸感表格（.xr-table-zebra 绿灰表头 + 斑马纹） */}
+      <Card>
         <Table
           columns={columns}
           dataSource={configs}
@@ -291,15 +392,33 @@ const APIConfigPage: FC = () => {
           rowKey="id"
           scroll={{ x: 1200 }}
           pagination={paginationProps}
+          className="xr-table-zebra"
+          size="middle"
           onChange={(pagination) => {
             setCurrent(pagination.current ?? 1);
             setPageSize(pagination.pageSize ?? 10);
-            loadConfigs();
+          }}
+          locale={{
+            emptyText: (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description={
+                  <Space direction="vertical" size={4}>
+                    <span style={{ color: "var(--theme-text-primary)", fontWeight: 500 }}>
+                      暂无 API 通知配置
+                    </span>
+                    <span style={{ color: "var(--theme-text-secondary)", fontSize: 12 }}>
+                      新增 Webhook / 短信 / 推送渠道配置，用于系统通知推送
+                    </span>
+                  </Space>
+                }
+              />
+            ),
           }}
         />
       </Card>
 
-      {/* 编辑模态框 */}
+      {/* 编辑模态框 — D-09: 宽度 800 不变；Modal 内 headers/template/auth Tabs 原样保留 */}
       <Modal
         title={editingConfig ? "编辑API配置" : "新增API配置"}
         open={modalVisible}
@@ -459,7 +578,7 @@ const APIConfigPage: FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </>
   );
 };
 
