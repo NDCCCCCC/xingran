@@ -1,8 +1,8 @@
 ---
-status: awaiting_human_verify
+status: resolved
 trigger: "诊断并修复 4 个既有测试失败 + 评估 1 个 flaky 测试。工作目录 D:\\code\\ClaudeCode\\guoguo(Go 后端)。这些失败在改动前 HEAD 同样存在,与业务代码无关,多为测试环境/数据问题。用科学方法: 先复现、读错误、定位根因(测试设置 vs 被测代码 bug),再最小修复。"
 created: 2026-08-14T00:00:00+08:00
-updated: 2026-08-14T17:10:00+08:00
+updated: 2026-08-19T12:40:00+08:00
 ---
 
 ## Current Focus
@@ -112,3 +112,7 @@ files_changed:
   - internal/services/addomain/user_ou_service_test.go
   - internal/api/v1/auth.go
   - internal/services/system/apikey_service_test.go
+
+## Resolution (2026-08-19)
+
+四项修复（asset migration 路径更新 / addomain 补 sys_dept 表 / api/v1 OS 匹配顺序调整 / system 独立内存库名+busy_timeout）已在位并通过全仓回归验证：2026-08-19 Phase 69 执行期间干净 worktree `go test ./...` 全绿（43 包 ok），今天遗留处理中 `internal/models` / `core/db/migrations` / `tests/integration` 复跑全绿。flaky 表锁问题未再复现。Resolved。
