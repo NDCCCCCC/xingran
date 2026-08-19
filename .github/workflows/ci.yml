@@ -41,10 +41,10 @@ jobs:
       - name: Lint
         uses: golangci/golangci-lint-action@v9
         with:
-          # Pinned to the last v1 release: v2 binaries refuse v1-syntax
-          # .golangci.yml in this repo. Bump to v7 + config migration
-          # together when Go version forces it.
-          version: v1.64.8
+          # Bumped from v1.64.8 → v2.12.2 alongside dependabot PR #1's
+          # action bump v6 → v9 (action v7+ requires lint v2+).
+          # .golangci.yml also migrated to v2 schema in the same commit.
+          version: v2.12.2
           args: --timeout=5m ./...
 
       - name: Test
