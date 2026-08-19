@@ -1,9 +1,9 @@
 ---
-status: partial
+status: completed
 phase: 64-brand-token-layer-and-contrast-verification
 source: 64-01-SUMMARY.md
 started: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-19
 ---
 
 ## Current Test
@@ -55,7 +55,7 @@ expected: |
   console.log(Object.keys(m.xingranBrand));
   // 期望输出含 'green' / 'copper' / 'cream' / 'gradient' 等
   ```
-result: pending
+result: pass (verified 2026-08-19 via chrome-devtools console import: Object.keys(xingranBrand) 含 green/copper/cream/gradient/onDark/functional；色值逐字核验 greenPrimary=#156031 hover=#2E7444 active=#14542E copperAccent=#C09058 cream=#F0ECE3 gradient.brandPanel=linear-gradient(135deg,#14532D 0%,#156031 60%,#1E6B3F 100%))
 
 ### 3. TOKEN-03 / SC#3 Antd 6 内置组件品牌化
 expected: |
