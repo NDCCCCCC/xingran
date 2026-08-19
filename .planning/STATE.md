@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.22 + v1.23 启动块
 milestone_name: milestone
 status: executing
-stopped_at: "Phase 69 Plan 06 EXECUTED (commit 1aa6f3e); 并行 Phase 70 会话进行中(前值: UI-SPEC approved)"
-last_updated: "2026-08-19T06:35:38.043Z"
-last_activity: 2026-08-19 -- Phase 70 planning complete
+stopped_at: "Phase 69 Plan 02 EXECUTED (commits c3a1e4a/a8687f7); 并行 Phase 70 会话执行中(前值: execution started)"
+last_updated: "2026-08-19T06:50:02.424Z"
+last_activity: 2026-08-19 -- Phase 69 Plan 02 (DICT-02 字典 seed) EXECUTED; Phase 70 并行执行中
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 19
-  completed_plans: 6
-  percent: 32
+  completed_plans: 7
+  percent: 37
 ---
 
 # Project State
@@ -38,10 +38,10 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 
 ## Current Position
 
-Phase: 69 (字典与状态值治理（状态语义单一真相源）) — EXECUTING
-Plan: 3 of 8
-Status: Ready to execute
-Last activity: 2026-08-19 -- Phase 70 planning complete
+Phase: 69 (字典与状态值治理) — EXECUTING (并行 Phase 70 会话执行中)
+Plan: 4 of 8
+Status: Ready to execute (69-02 done; Wave 2 剩 69-03)
+Last activity: 2026-08-19 -- Phase 69 Plan 02 EXECUTED (migration_208 字典 seed, dev 库 0/0→11/44)
 
 ## Accumulated Context
 
@@ -187,9 +187,9 @@ Full deferred detail in [milestones/v1.21-ROADMAP.md](milestones/v1.21-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-19T06:03:53.132Z
-Stopped at: Phase 69 Plan 06 EXECUTED (commit 1aa6f3e); 并行 Phase 70 会话进行中(前值: UI-SPEC approved)
-Resume file: .planning/phases/69-dict-and-status-governance/69-06-SUMMARY.md
+Last session: 2026-08-19T06:50:02.424Z
+Stopped at: Phase 69 Plan 02 EXECUTED (commits c3a1e4a/a8687f7); 并行 Phase 70 会话执行中
+Resume file: .planning/phases/69-dict-and-status-governance/69-02-SUMMARY.md
 
 **Milestone status:** v1.22 IN PLANNING — **ROADMAP drafted 2026-08-18**,4 phases (64-67) / 15 requirements / 100% coverage。Token 层 (Phase 64) 落地位于 index.css 253 变量 + tokens/colors.ts xingranBrand + AntdThemeBridge + tokens/shadows+spacing+typography + QA-01 对比度校验;主题收敛 (Phase 65) 移除 6 套主题 + ThemeSwitcher/ColorSwitcher/themeStore 残留 + 13 消费方清理,保留 light/dark + layout/density;组件样式 (Phase 66) 侧边栏深绿 + 表格/卡片 + 按钮 D-03 纪律 + 表单/标签/ECharts + QA-02 硬编码扫描;终端验证 (Phase 67) 构建/类型/lint/test 全绿 + bundle 体积不增 + 6 屏前后截图对比。
 
@@ -205,8 +205,10 @@ Resume file: .planning/phases/69-dict-and-status-governance/69-06-SUMMARY.md
 |-------|------|----------|-------|
 | Phase 69 P01 | 46m | 3 tasks | 11 files |
 | Phase 69 P06 | 15m | 1 tasks | 9 files |
+| Phase 69 P02 | 42m | 2 tasks | 3 files |
 
 ## Decisions
 
 - [Phase 69-01]: internal/models 为状态常量唯一真相源（既有 internal/constants 工具包不放状态语义）；新增 DictStatus/OperLogStatus/LoginLogStatus/JobLogStatus/VDIServerStatus/NoticeStatus 六家族 + status_constants_test.go AST 锁值（31 前缀/74 常量，跨包同名异值即 fail）+ check-status-literals.sh 四模式 ratchet 守护（基线 43 文件/149 命中，geocoding F 簇永久豁免）；批 1 services/system 5 文件 15 处常量化（widget_data_fetcher 的 m.status=0 确认为 sys_menu MenuStatusNormal，簇 A）
 - [Phase 69-06]: 前端 status 共享常量落 src/constants/status.ts 三组（ENABLE_DISABLE/NORMAL_STOP/WORKSTATION_STATUS 三态组）——workstation 按 models.WorkstationStatus 注释判为三态业务簇不套两态组；menu 字符串 value 契约用 String(value) 派生保留；status 不进 sys_dict（Q2）由 status.test.ts 12 断言 + 69-01 后端 AST 锁值双向守卫
+- [Phase 69-02]: migration_208 字典 seed 组级查重走 Unscoped（软删 dict_type 视为组已存在——防复活且防软删行占位 uniqueIndex 每次启动撞约束）；isDefault 取值规则 = archive/模型 gorm default 注释照抄，无来源组取组内第一条（sys_user_sex 默认 "2" 保密 = User.Gender default:2 而非 0=男；duty_holiday_type 默认 custom = Holiday gorm default）；dashboard_*/workorder_* 剔除不 seed（前端零 useDict 消费，planner Q4 圈定）

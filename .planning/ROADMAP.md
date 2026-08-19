@@ -193,7 +193,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 69-02-PLAN.md — DICT-02:migration_208 字典 seed(11 组 = 8 组 archive 存量重建 + ops_workstation_type/sys_user_sex/duty_holiday_type 新增,组级幂等+事务+WARN,Status 引用 DictStatus 常量——硬依赖 69-01) + database.go PG/SQLite 双分支挂载 + dev 库行数 smoke
+- [x] 69-02-PLAN.md — DICT-02:migration_208 字典 seed(11 组 = 8 组 archive 存量重建 + ops_workstation_type/sys_user_sex/duty_holiday_type 新增,组级幂等+事务+WARN,Status 引用 DictStatus 常量——硬依赖 69-01) + database.go PG/SQLite 双分支挂载 + dev 库行数 smoke
 - [ ] 69-03-PLAN.md — DICT-01 批 2:operations 9 service + excel_handler + excel_service map/JSON 2 处替换(簇 A + D 专线三态,双包定义陷阱规避)
 
 **Wave 3** *(blocked on Wave 2 completion)*
