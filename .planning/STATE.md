@@ -1,17 +1,24 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.22
-milestone_name: 前端品牌化改造
-status: completed
-last_updated: "2026-08-18T18:30:00.000Z"
-last_activity: 2026-08-18
+milestone: v1.22 + v1.23 启动块
+milestone_name: 前端品牌化改造 (v1.22 SHIPPED) / 部署稳健性 (v1.23 启动)
+status: in_progress
+last_updated: "2026-08-19T12:00:00.000Z"
+last_activity: 2026-08-19
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 4
-  total_plans: 4
-  completed_plans: 4
-  percent: 100
+  total_plans: 5
+  completed_plans: 5
+  percent: 80
 ---
+
+# Project State
+
+**Project**: XingRan-Next 运维管理系统
+**Created**: 2026-04-16
+**Status**: v1.22 前端品牌化改造 SHIPPED 2026-08-18（Phases 64-67 / 4 phases / 4 plans / 15 requirements 100% 勾选 / 33 tasks）。Phase 63 前端工具链自动化独立 IN PROGRESS。**v1.23 启动块**: Phase 68 部署稳健性 & 文档一致性(SM2 密钥配置闭环)EXECUTED 2026-08-19(5 commits: a21dcec..25ded8f)。
+**Last activity**: 2026-08-19 — Phase 68-01 EXECUTED（5 commits: a21dcec / a764825 / 65093b9 / 52685fd / 25ded8f）。来源：归档会话 `.planning/debug/resolved/public-key-500-after-subpath-fix.md`（DEPLOY-01~05 全量修复：env 变量名文档一致 / setup-server.sh secrets.env 模板补 SM2 keys 段 / gen_sm2_keys header 注释路径修正 / getPublicKey handler 500 时打印 useSM2 状态 / sqlite 模板 use_sm2 默认值 + 迁移指引）。Phase 63 63-01-PLAN.md 在 `.planning/phases/63-frontend-toolchain-automation/` IN PROGRESS(2026-08-14 起)。此前 2026-08-17 quick-260817-hfl: 后端 Supabase → 本地 SQLite + sqlite 兼容收尾(PG-only 守卫/缺表注册/方言修复/admin 全量菜单种子 migration_207);同日 quick-260817-ucz: 第 6 套主题「墨绿琥珀」(ink-amber)延伸到控制台。2026-08-15 Phase 62 全部 5/5 plan 完成;2026-08-14 Phase 57-61 全部完成 + Phase 62 plans created from cross-AI reviews。
 
 # Project State
 
@@ -30,10 +37,10 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 
 ## Current Position
 
-Phase: 65 (Plan 01 executed — COMPLETE_PENDING_T9)
-Plan: 65-01 done (T1-T8 committed), T9 人工视觉冒烟 checkpoint 等待用户确认
-Status: Executing v1.22 — Phase 64 COMPLETE; Phase 65 code-complete, awaiting T9 smoke approval; next: plan-phase 66
-Last activity: 2026-08-18 — Phase 65-01 executed (8 commits: 57bdd51..b605d88, -4,357 lines, 6 套主题移除 + light/dark 保留 + layout/density diff-zero)
+Phase: 68 (Plan 01 EXECUTED — 5 commits a21dcec..25ded8f)
+Plan: 68-01 done (T1-T5 atomic commits, all PASS)
+Status: v1.22 SHIPPED + ARCHIVED; v1.23 启动块 Phase 68 EXECUTED（DEPLOY-01~05 全闭环）。Phase 63 仍独立 IN PROGRESS（前端工具链自动化）。next: 待用户授权 push 触发新一轮 CI/CD
+Last activity: 2026-08-19 — Phase 68-01 EXECUTED（5 commits: a21dcec / a764825 / 65093b9 / 52685fd / 25ded8f；DEPLOY-01~05 全 PASS；3 处偏差已记录:T2 verify count=3 vs plan 估算4；config.yaml 残留命中属 gitignored；T5 line 66 注释最小一致性修正）
 
 ## Accumulated Context
 
@@ -44,6 +51,13 @@ Last activity: 2026-08-18 — Phase 65-01 executed (8 commits: 57bdd51..b605d88,
   - Phase 65: 主题系统收敛 (THEME-01/02/03)
   - Phase 66: 通用组件样式 + 硬编码色扫描 (COMP-01/02/03/04 + QA-02)
   - Phase 67: 构建回归 + 视觉确认 (QA-03 + QA-04)
+- **v1.23 启动块 ROADMAP drafted (2026-08-19)**: Phase 68 — 部署稳健性 & 文档一致性(SM2 密钥配置闭环)
+  - DEPLOY-01: env 变量名文档-代码一致（XINGRAN_JWT_SM2_* → JWT_SM2_*，全仓17 处）
+  - DEPLOY-02: setup-server.sh secrets.env 模板补 SM2 keys 段
+  - DEPLOY-03: gen_sm2_keys header 注释路径修正
+  - DEPLOY-04: getPublicKey handler 500 时打印 useSM2/sm2PublicKey 状态
+  - DEPLOY-05: config.sqlite.example.yaml use_sm2 默认值对齐 + 迁移指引
+  - 来源: `.planning/debug/resolved/public-key-500-after-subpath-fix.md` §Specialist Review + §Related bugs
 - **Phase 63 IN PROGRESS (2026-08-14)**: 前端工具链自动化 — `.planning/phases/63-frontend-toolchain-automation/63-01-PLAN.md` 独立进行,本 milestone 不占用 63
 - **v1.21 SHIPPED + ARCHIVED 2026-08-18**: Phases 57-62 / 14 v1 requirements + 14 跨 AI review items
   - Phase 62 added 2026-08-12: 数据库核心安全加固(跨 AI 评审修复) — 来源 `.planning/reviews/260814-internal-core-db-REVIEWS.md`(codex + opencode 交叉评审,共识 C1-C7 + 单方 HIGH/MEDIUM)
