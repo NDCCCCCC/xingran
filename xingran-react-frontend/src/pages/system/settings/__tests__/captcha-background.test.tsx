@@ -139,7 +139,7 @@ describe("captcha-background 网格墙 — Phase 70-04 D-08 status 反转语义�
 
     expect(await screen.findByText("forest-01.png")).toBeInTheDocument();
 
-    const cards = document.querySelectorAll(".xr-captcha-card");
+    const cards = document.querySelectorAll<HTMLElement>(".xr-captcha-card");
     expect(cards).toHaveLength(2);
 
     // 启用卡（status=1）：徽标「启用」+ 操作行提供「禁用」（取反动作），无「启用」按钮
