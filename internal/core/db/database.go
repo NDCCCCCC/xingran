@@ -840,10 +840,18 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate207SeedCanonicalMenuCatalog(d.DB); err != nil {
 			applogger.Errorf("规范菜单目录种子失败 (非阻断,留待下次启动): %v", err)
 		}
+		// 字典 seed (11 组, 幂等; Phase 69 DICT-02: dev 库字典表为空的修复)
+		if err := migrations.Migrate208DictSeed(d.DB); err != nil {
+			applogger.Errorf("字典 seed 失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: 规范菜单目录种子 (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
 		if err := migrations.Migrate207SeedCanonicalMenuCatalog(d.DB); err != nil {
 			applogger.Errorf("规范菜单目录种子失败 (非阻断,留待下次启动): %v", err)
+		}
+		// sqlite 分支: 字典 seed (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
+		if err := migrations.Migrate208DictSeed(d.DB); err != nil {
+			applogger.Errorf("字典 seed 失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
 		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only
