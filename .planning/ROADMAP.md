@@ -42,6 +42,7 @@ previous_update: 2026-08-13 after v1.21 plans drafted (Phases 57-61) + Phase 62 
 **范围边界(用户决策 v1.22 init,锁定):** **仅 design-system 层**。业务页面自动继承样式,不逐屏改造 53 屏;`PROTOTYPE-VS-ACTUAL.md` 里的字段 / 表头 / 路由差异修正转 v1.23+ Future。
 
 **锁定的硬约束:**
+
 - D-01 全局替换,不保留多主题 —— 移除 6 套主题(minimal/glassmorphism/neumorphism/flat2.0/luxury-quiet/ink-amber)与 ThemeSwitcher / ColorSwitcher;保留 light / dark 双模式(单一品牌色相);保留 layoutStore 的布局与密度切换
 - D-02 `brand-spec.md` 为唯一色值来源,标注「实测」直接采用,「推导」微调须重跑对比度验证
 - D-03 按钮纪律:主按钮一律 `--primary` `#156031` 绿底白字(7.64:1);hover `#2E7444`(5.68:1);铜金 `#C09058` 不做实心主按钮(2.85:1 不达标);必须铜金实心时用 `#B88850` + ≥16px 半粗体白字(3.15:1 大字达标),hover 只许加深至 `#AA7B42`
@@ -60,6 +61,14 @@ previous_update: 2026-08-13 after v1.21 plans drafted (Phases 57-61) + Phase 62 
 ## Phases (v1.23 启动块 — 部署稳健性 & 文档一致性) — IN PLANNING
 
 - [ ] **Phase 68: 部署稳健性 & 文档一致性（SM2 密钥配置闭环）** - 修正 env 变量名文档-代码不一致(DEPLOY-01)、setup-server.sh secrets.env 模板补 SM2 keys 段(DEPLOY-02)、gen_sm2_keys header 注释路径修正(DEPLOY-03)、getPublicKey handler 500 时打印 useSM2 / sm2PublicKey 状态(DEPLOY-04)、config.sqlite.example.yaml use_sm2 默认值与迁移文档对齐(DEPLOY-05);来源已归档会话 public-key-500-after-subpath-fix.md
+
+## Phases (v1.24 启动块 — 字典与状态值治理) — IN PLANNING
+
+- [ ] **Phase 69: 字典与状态值治理（状态语义单一真相源）** - 后端新增集中状态常量包消灭 50+ 文件裸 0/1 字面量(DICT-01)、盘点 type/category 真枚举字段并 seed 进 sys_dict(DICT-02)、前端 constants.tsx 硬编码 options 分批迁移 useDict(DICT-03)、CLAUDE.md Status Value Convention 改指向常量真相源(DICT-04);现状审计(2026-08-19):字典基础设施完整但消费端近零——后端 GetDictDataByTypeKey 仅 dict_cache_impl 自用(0 个业务 service 读字典),前端 ~78 页仅 4 页用 useDict(~5%),sys_dict seed 仅 network_device_type 一类,状态语义散落后端字面量/前端 constants.tsx/CLAUDE.md 三处手工同步拷贝
+
+## Phases (v1.25 启动块 — 系统设置页面布局重构) — IN PLANNING
+
+- [ ] **Phase 70: 系统设置页面布局重构（对齐 v1.22 品牌设计理念）** - 按品牌设计理念(深绿 × 铜金 × 奶油纸感、双层纸感卡片、按钮纪律 D-03)重新设计系统设置页面布局,清理多主题时代遗留布局残留(含已删除的 default-theme 入口);范围:`xingran-react-frontend/src/pages/system/settings-page/` + `src/pages/settings/`;纯前端布局重构,不改业务逻辑与 API 契约;依赖 Phase 67 已交付的品牌基线
 
 ---
 
@@ -106,6 +115,7 @@ previous_update: 2026-08-13 after v1.21 plans drafted (Phases 57-61) + Phase 62 
 **Plans:** 1 plan
 
 Plans:
+
 - [x] 65-01-PLAN.md — 主题系统收敛:删除 6 套主题与切换器(T1-T6 机械清除,每任务独立 commit 常绿),THEME-02 暗色推导断言(T7),THEME-03 布局/密度边界验证 + 全量 QA 门 + bundle 对比(T8),视觉冒烟 checkpoint(T9) — **T1-T8 COMPLETE (8 commits 57bdd51..b605d88, -4,357 行, SC#1-4 全过), T9 人工冒烟 PENDING USER CONFIRMATION**, 见 [65-01-SUMMARY.md](../phases/65-theme-system-consolidation/65-01-SUMMARY.md)
 
 **UI hint**: yes
@@ -131,6 +141,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
+
 - [ ] 66-01-PLAN.md — 通用组件样式 + 硬编码色扫描:AntdThemeBridge 四 Gap 补齐(T1)、侧边栏深绿化 + header 解耦(T2)、ECharts 品牌系列色(T3)、全仓色值清除 + 扫描器 lint 门(T4)、四门回归 + Phase 67 视觉清单(T5)、目检 checkpoint(T6)
 
 **UI hint**: yes
@@ -151,6 +162,49 @@ Plans:
 2. 关键 6 屏(仪表盘 / 系统用户 / 工位管理 / 监控仪表盘 / 资产对账看板 / 登录页)改造前后截图对比 —— 前后两套 PNG 在同一对比画布并列展示(可视化 diff):**无布局崩坏**、**无不可读文本**、**无残留 indigo / slate 冲突色**;登录页(品牌锚点)与后台内部组件(品牌化落地)视觉一致(深绿 × 铜金 × 奶油纸感),同一品牌语汇贯穿
 3. Phase 64-66 的 success criteria 全部复测通过(回归守护):`--theme-primary` / `--sidebar-bg` / `--theme-neutral-100` 等关键变量值正确,AntdThemeBridge 接品牌令牌,主题切换器已移除且 light / dark + layout / density 切换可用,侧边栏 / 表格 / 按钮 / 表单 / ECharts 颜色全量品牌化,硬编码扫描零命中
 4. `MILESTONES.md` v1.22 条目落盘、`REQUIREMENTS.md` 仍标记 v1.23+ 候选(PROTO 逐屏对齐 / VIS 视觉深化);里程碑 SHIPPED 报告产出,ROADMAP archived 至 `milestones/v1.22-ROADMAP.md` + `milestones/v1.22-REQUIREMENTS.md`
+
+**Plans**: TBD
+
+---
+
+### Phase 69: 字典与状态值治理（状态语义单一真相源）
+
+**Goal**: 建立状态语义单一真相源 —— 后端新增集中状态常量包消灭 50+ 文件裸 0/1 字面量(DICT-01)、盘点 type/category 真枚举字段并 seed 进 sys_dict(DICT-02)、前端 constants.tsx 硬编码 options 分批迁移 useDict(DICT-03)、CLAUDE.md Status Value Convention 改指向常量真相源(DICT-04);消除状态语义散落后端字面量/前端 constants.tsx/CLAUDE.md 三处手工同步拷贝的漂移风险。
+
+**Depends on**: Nothing（v1.24 启动块独立 phase;不依赖 Phase 68 部署修复）
+
+**Requirements**: DICT-01, DICT-02, DICT-03, DICT-04
+
+**Success Criteria** (what must be TRUE):
+
+1. 后端存在集中状态常量包（如 `internal/constants/`），User/Role/Menu/Dept/Post 等核心实体 status 语义（0=正常/enabled、1=停用/disabled;Menu visible 例外 1=可见/0=隐藏）以具名常量导出,handler/service 层原先的裸 0/1 字面量替换为常量引用;`go build ./...` / `go test ./...` 全绿
+2. type/category 真枚举字段盘点完成（network_device_type 之外新识别的枚举字段）,seed 进 `sys_dict_type` / `sys_dict_data`,迁移随启动自动执行,字典管理页面可见可维护
+3. 前端 `constants.tsx` 硬编码 options 数组分批迁移 `useDict`,已迁移下拉在字典管理改值后选项随之变化（保留静态 fallback 保证字典接口异常时可用）
+4. `CLAUDE.md` Status Value Convention 段落改写为指向后端常量包 + sys_dict 真相源的引用,不再作为独立手工维护的第三份拷贝
+
+**Plans:** 4 plans
+
+Plans:
+
+- [ ] 69-01-PLAN.md — DICT-01 基建:models 常量补齐(DictStatus/OperLog 成败/VDIServer/Notice/InfoPoint) + status_constants_test.go AST 锁值 + scripts/check-status-literals.sh ratchet 守护 + 批 1(services/system 六文件)替换
+- [ ] 69-02-PLAN.md — DICT-02:migration_208 字典 seed(11 组 = 8 组 archive 存量重建 + ops_workstation_type/sys_user_sex/duty_holiday_type 新增,组级幂等+事务+WARN) + database.go PG/SQLite 双分支挂载 + dev 库行数 smoke
+- [ ] 69-03-PLAN.md — DICT-01 批 2-4:operations/vdi/addomain/notice/knowledge/rpa/scheduler/workorder/duty_pool/discovery/execution/dispatch/monitor + 三 handler 按语义簇 A-E 替换(F 簇豁免),守护白名单终态只剩 geocoding
+- [ ] 69-04-PLAN.md — DICT-03/04:前端 status 共享常量模块(7 文件收敛,含 menu VISIBLE 反转保护) + 四页 type 下拉 useDict 迁移(sys_user_sex/ops_workstation_type/duty_holiday_type/network_device_type,静态兜底) + CLAUDE.md 指针化 + 端到端 checkpoint
+
+
+---
+
+### Phase 70: 系统设置页面布局重构（对齐 v1.22 品牌设计理念）
+
+**Goal**: 重构系统管理-系统设置页面 —— 按 v1.22 品牌化改造确立的设计理念(深绿 × 铜金 × 奶油纸感、双层纸感卡片、按钮纪律 D-03)重新设计 `xingran-react-frontend/src/pages/system/settings-page/` 与 `src/pages/settings/` 的页面布局,清理多主题时代遗留的布局残留(含已删除的 default-theme 入口),使系统设置页与品牌化后的其余页面视觉语汇一致;纯前端布局重构,不改业务逻辑与 API 契约。
+
+**Depends on**: Phase 67 (v1.22 品牌令牌层与组件样式基线已 SHIPPED;与 Phase 69 字典治理无硬依赖,可独立规划)
+
+**Requirements**: TBD
+
+**Success Criteria** (what must be TRUE):
+
+1. TBD — 由 /gsd:plan-phase 70 结合品牌设计理念与现页面盘点产出
 
 **Plans**: TBD
 
@@ -258,7 +312,5 @@ Phase 63 (frontend-toolchain-automation) 独立 IN PROGRESS,提供 CI / lint / �
 **Total shipped through v1.21**: 173 plans across 62 phases (Phases 1-56 + 57-62).
 
 </details>
-
----
 
 *Last updated: 2026-08-18 — v1.22 ROADMAP drafted (4 phases, Phases 64-67, 15 requirements / 4 categories, 100% coverage). v1.21 SHIPPED + ARCHIVED (Phases 57-62 / 14 v1 requirements + Phase 62 cross-AI 14 review items / C1-C7 + 单方 HIGH/MEDIUM). Phase 63 frontend-toolchain-automation 独立 IN PROGRESS,提供 CI / lint / 测试基建;v1.22 Phase 67 的回归门将直接受益于其 CI gate 与 lint-staged hook。Granularity: standard (config),natural delivery boundary 划分为 4 phases (TOKEN+QA-01 / THEME / COMP+QA-02 / QA-03+QA-04),每个 phase 保持应用在边界处可构建。*
