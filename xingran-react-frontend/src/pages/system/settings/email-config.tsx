@@ -11,7 +11,6 @@ import {
   Input,
   Select,
   Switch,
-  Tag,
   InputNumber,
   Empty,
 } from "antd";
@@ -19,7 +18,6 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  MailOutlined,
   SendOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
@@ -52,8 +50,9 @@ const EmailConfigPage: FC = () => {
   const [disabledCount, setDisabledCount] = useState(0);
 
   // 搜索表单
+  // 注：后端 list 端点仅支持 status 筛选（notification_config_handler.go 只绑定
+  // current/pageSize/status），配置名称筛选需后端支持后接入，故无名称 state。
   const [searchForm] = Form.useForm();
-  const [searchName, setSearchName] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<number | undefined>(undefined);
 
   // 使用全局分页 hook
@@ -208,7 +207,6 @@ const EmailConfigPage: FC = () => {
   // 搜索处理
   const handleSearch = () => {
     const values = searchForm.getFieldsValue();
-    setSearchName(values.configName || "");
     setStatusFilter(values.status);
     setCurrent(1);
   };
@@ -216,7 +214,6 @@ const EmailConfigPage: FC = () => {
   // 重置搜索
   const handleResetSearch = () => {
     searchForm.resetFields();
-    setSearchName("");
     setStatusFilter(undefined);
     setCurrent(1);
   };

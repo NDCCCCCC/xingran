@@ -11,7 +11,6 @@ import {
   Input,
   Select,
   Switch,
-  Tag,
   InputNumber,
   Tabs,
   Radio,
@@ -21,7 +20,6 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  ApiOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { formatDateTime } from "@/utils/datetime";
@@ -50,9 +48,8 @@ const APIConfigPage: FC = () => {
   const [configs, setConfigs] = useState<APINotificationConfig[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // 搜索筛选（configType + 名称 + 状态）
+  // 搜索筛选（configType + 状态；名称筛选待后端 list 端点支持，同 email-config 注）
   const [searchForm] = Form.useForm();
-  const [searchName, setSearchName] = useState<string>("");
   const [configTypeFilter, setConfigTypeFilter] = useState<APIConfigType | undefined>(undefined);
   const [statusFilter, setStatusFilter] = useState<number | undefined>(undefined);
 
@@ -177,7 +174,6 @@ const APIConfigPage: FC = () => {
   // 搜索处理
   const handleSearch = () => {
     const values = searchForm.getFieldsValue();
-    setSearchName(values.configName || "");
     setConfigTypeFilter(values.configType);
     setStatusFilter(values.status);
     setCurrent(1);
@@ -186,7 +182,6 @@ const APIConfigPage: FC = () => {
   // 重置搜索
   const handleResetSearch = () => {
     searchForm.resetFields();
-    setSearchName("");
     setConfigTypeFilter(undefined);
     setStatusFilter(undefined);
     setCurrent(1);
