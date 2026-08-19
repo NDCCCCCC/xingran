@@ -279,14 +279,18 @@ func ValidateTokenWithSM2(tokenString string, publicKey *sm2.PublicKey) (*Claims
 }
 
 // GenerateRefreshTokenWithSM2 生成刷新Token（使用SM2签名）
-func GenerateRefreshTokenWithSM2(userID string, username string, privateKey *sm2.PrivateKey) (string, error) {
-	expirationTime := time.Now().Add(7 * 24 * time.Hour)
+//
+// issuer 与 expiration 必须由调用方（JWTManager）从配置传入，禁止硬编码：
+// 曾硬编码 Issuer "Xingran-Next"，与配置 jwt.issuer（如 "XingRan-Next-Dev"）不一致，
+// 导致 ValidateToken 签发者校验恒定失败 → 页面刷新时 /system/auth/refresh 100% 401。
+func GenerateRefreshTokenWithSM2(userID string, username string, issuer string, expiration time.Duration, privateKey *sm2.PrivateKey) (string, error) {
+	expirationTime := time.Now().Add(expiration)
 
 	claims := &Claims{
 		UserID:   userID,
 		Username: username,
 		Roles:    []string{"refresh"},
-		Issuer:   "Xingran-Next",
+		Issuer:   issuer,
 		Subject:  userID,
 		Audience: []string{"xingran-next"},
 		RegisteredClaims: jwt.RegisteredClaims{
