@@ -196,8 +196,8 @@ func (f *WidgetDataFetcherImpl) getUserPermissions(ctx context.Context, userID s
 		WHERE ur.user_id = ?
 		AND m.perms IS NOT NULL
 		AND m.perms != ''
-		AND m.status = 0
-	`, userID).Scan(&permissions).Error
+		AND m.status = ?
+	`, userID, models.MenuStatusNormal).Scan(&permissions).Error
 
 	return permissions, err
 }

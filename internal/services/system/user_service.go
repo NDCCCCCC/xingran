@@ -2,6 +2,7 @@ package system
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/core/security"
@@ -477,8 +478,8 @@ func (s *userService) Statistics(ctx context.Context) (*UserStatisticsResult, er
 		Model(&models.User{}).
 		Select(
 			"COUNT(*) AS total",
-			"SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS active",
-			"SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS inactive",
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS active", int(models.UserStatusEnabled)),
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS inactive", int(models.UserStatusDisabled)),
 		).
 		Scan(&result).Error
 	if err != nil {

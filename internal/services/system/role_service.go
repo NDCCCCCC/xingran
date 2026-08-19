@@ -52,8 +52,8 @@ func (s *roleService) Statistics(ctx context.Context) (*RoleStatisticsResult, er
 		Model(&models.Role{}).
 		Select(
 			"COUNT(*) AS total",
-			"SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS active",
-			"SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS inactive",
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS active", int(models.RoleStatusEnabled)),
+			fmt.Sprintf("SUM(CASE WHEN status = %d THEN 1 ELSE 0 END) AS inactive", int(models.RoleStatusDisabled)),
 		).
 		Scan(&result).Error
 	if err != nil {
@@ -65,8 +65,8 @@ func (s *roleService) Statistics(ctx context.Context) (*RoleStatisticsResult, er
 // RoleStatisticsResult 角色统计结果。status: 0=正常, 1=停用。
 type RoleStatisticsResult struct {
 	Total    int64 `json:"total"`
-	Active   int64 `json:"active"`   // status = 0
-	Inactive int64 `json:"inactive"` // status = 1
+	Active   int64 `json:"active"`   // RoleStatusEnabled
+	Inactive int64 `json:"inactive"` // RoleStatusDisabled
 }
 
 // roleAllowedSortFields 角色可排序字段白名单。

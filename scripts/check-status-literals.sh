@@ -34,7 +34,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # Combined ERE for the four hit patterns.
 PATTERN='status = [0-9]|Status: *[0-9]|Status [=!]= *[0-9]|"status":[[:space:]]*[0-9]'
 
-# ALLOWED — ratchet baseline captured 2026-08-19 (43 files, 149 hits).
+# ALLOWED — ratchet baseline captured 2026-08-19 (43 files, 149 hits);
+# batch 1 (services/system: dict/post/role/user/widget_data_fetcher) replaced
+# and removed 2026-08-19 — 38 files remain.
 # Delete entries as replacement batches land; counts may only decrease.
 # geocoding_service.go is cluster-F: Baidu API response-code contract, never migrated.
 declare -A ALLOWED=(
@@ -73,11 +75,6 @@ declare -A ALLOWED=(
   ["internal/services/rpa/credential_service.go"]=3
   ["internal/services/scheduler/job_log_service.go"]=4
   ["internal/services/scheduler/job_service.go"]=3
-  ["internal/services/system/dict_service.go"]=4
-  ["internal/services/system/post_service.go"]=4
-  ["internal/services/system/role_service.go"]=4
-  ["internal/services/system/user_service.go"]=2
-  ["internal/services/system/widget_data_fetcher.go"]=1
   ["internal/services/vdi/vm_service_impl.go"]=6
   ["internal/services/workorder/assignment.go"]=1
   ["internal/services/workorder/base.go"]=8
