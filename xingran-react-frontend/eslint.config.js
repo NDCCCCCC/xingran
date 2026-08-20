@@ -1,54 +1,39 @@
-// PR #3 dev-deps bump (typescript 5.9 → 7.0) workaround:
-// typescript-eslint@8.x does not support TS 7 yet.
+// 2026-08-20 修复（/gsd:debug 后续）：dependabot PR #3 留下的本文件
+// 顶部注释已过时 —— 实际版本是 TS 5.9.3 + eslint 9.39.2（从未升到
+// TS 7 / eslint 10），typescript-eslint@8.50 完全兼容。原注释基于
+// 一次未落地的升级尝试。现恢复 tseslint.configs.recommended（修复
+// 此前 627 个 "interface is reserved" 解析错误），并新增
+// import/no-extraneous-dependencies 防止「直接 import 的包未在
+// package.json 声明」—— 这正是 @testing-library/dom CI 故障的根因。
 //
-// Upstream fix tracked at:
-//   https://github.com/typescript-eslint/typescript-eslint/issues/10940
-//
-// Until that ships, drop the type-aware tseslint.configs.recommended
-// layer entirely and run only base ESLint + react/react-hooks/react-
-// refresh + prettier-conflict-suppression.
-//
-// What this loses vs the old config:
-//   - @typescript-eslint/no-unsafe-* warnings
-//   - @typescript-eslint/consistent-type-imports enforcement
-//   - type-aware noUnusedLocals / noExplicitAny
-//
-// Restore instructions (when typescript-eslint@9 lands):
-//   1. Re-add `import tseslint from "typescript-eslint";`
-//   2. Restore `extends: [js.configs.recommended, ...tseslint.configs.recommended]`
-//   3. Restore the languageOptions.parser block (parser + parserOptions.project)
-//   4. Restore the @typescript-eslint/* rule entries under `rules:`
+// typescript-eslint 恢复后会产生存量违规，故将两条最吵的规则降为
+// warn（不阻塞 CI），后续逐步清理：
+//   - @typescript-eslint/no-unused-vars  (~255 处)
+//   - @typescript-eslint/no-explicit-any (~75 处)
 
 import js from "@eslint/js";
 import globals from "globals";
+import tseslint from "typescript-eslint";
+import importPlugin from "eslint-plugin-import";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import prettier from "eslint-config-prettier";
+import { createRequire } from "node:module";
 
-// PR #3 lint plugins dropped entirely (waiting on upstream TS 7 +
-// ESLint 10 ecosystem updates); see top-of-file comment.
-//   - typescript-eslint: TS 7 detection
-//   - eslint-plugin-react: legacy getFilename API
-//   - ./eslint-rules/no-large-dropdown-list.cjs: depends on the
-//     @typescript-eslint/utils RuleCreator which itself depends on
-//     typescript-eslint → bootstrap dies
-
-// PR #3 dev-deps bump (eslint 9 → 10) workaround:
-// eslint-plugin-react@7.37.5 (still latest published) uses legacy
-// `contextOrFilename.getFilename` that ESLint 10 removed → crashes at
-// rule load. We strip the entire `eslint-plugin-react` plugin layer
-// from this config. The rules that depend on it are moved to comments
-// below for restore instructions.
-//
-// Combined with the typescript-eslint gap above, the only React-aware
-// plugins active here are `react-hooks` (still works on ESLint 10)
-// and `react-refresh`.
+// 本地自定义规则（CommonJS），依赖 typescript-eslint 的 RuleCreator。
+// dependabot PR #3 误删 typescript-eslint 后该规则无法加载，源码中
+// 20 处 `eslint-disable local/no-large-dropdown-list` 注释随之报
+// "rule not found"。typescript-eslint 已恢复，故重新启用。
+const require = createRequire(import.meta.url);
+const noLargeDropdownList = require("./eslint-rules/no-large-dropdown-list.cjs");
+const localPlugin = { rules: { "no-large-dropdown-list": noLargeDropdownList } };
 
 export default [
   {
     ignores: ["dist", "vitest.config.ts", "eslint-rules/**"],
   },
   js.configs.recommended,
+  ...tseslint.configs.recommended,
   {
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
@@ -58,10 +43,33 @@ export default [
     plugins: {
       "react-hooks": reactHooks,
       "react-refresh": reactRefresh,
+      import: importPlugin,
+      local: localPlugin,
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+
+      // 直接 import 的包必须在 package.json 声明（防 @testing-library/dom 式 CI 故障）。
+      // 测试/配置文件豁免 devDependencies。
+      "import/no-extraneous-dependencies": [
+        "error",
+        {
+          devDependencies: [
+            "**/*.test.*",
+            "**/*.spec.*",
+            "**/test/**",
+            "**/__tests__/**",
+            "**/*.config.*",
+            "vitest.config.ts",
+            "vite.config.ts",
+          ],
+        },
+      ],
+
+      // typescript-eslint 恢复后的存量噪音，降为 warn 不阻塞 CI，后续逐步清理
+      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-explicit-any": "warn",
 
       // 通用规则
       "no-console": ["warn", { allow: ["warn", "error"] }],
@@ -83,16 +91,10 @@ export default [
         },
       ],
 
-      // 性能规则 (D-16) — Wave 4 + Wave 5
-      //   react/jsx-no-constructed-context-values
-      //   react/no-unstable-nested-components
-      //   react/jsx-no-useless-fragment
-      //   react/no-array-index-key
-      // 都跟随 eslint-plugin-react 临时禁用,见文件顶部说明。
       "react-hooks/exhaustive-deps": "error",
 
       // 本地自定义规则 — Phase 46/47 下拉框反模式防护
-//   "local/no-large-dropdown-list" — 临时禁用(见顶部说明)
+      "local/no-large-dropdown-list": "error",
     },
   },
   // eslint-config-prettier 必须放最后: 关闭与 prettier 冲突的格式规则
