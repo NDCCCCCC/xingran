@@ -83,19 +83,11 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Lint
-        # PR #3 dev-deps bump breaks the lint gate because
-        #   typescript-eslint@8.x and @typescript-eslint/parser both
-        #   throw "does not support TS 7.0" on bootstrap.
-        # We pin eslint-plugin-react@7.37.5 (last published) on ESLint 10
-        # via .npmrc's legacy-peer-deps, but the parser itself refuses
-        # TS 7 internals. Upstream fix in
-        #   https://github.com/typescript-eslint/typescript-eslint/issues/10940
-        # is still pending (no v9 release). Lint failure is allowed here
-        # via `continue-on-error: true`; type-check, test, and build
-        # remain strict gates so the dep bump can't land a regression.
-        # When the upstream parser ships TS 7 support, drop the
-        # `continue-on-error` line and restore the strict gate.
-        continue-on-error: true
+        # 2026-08-20: 恢复 strict gate。此前 dependabot PR #3 因误删
+        # typescript-eslint parser 配置导致 627 个解析错误，被迫
+        # continue-on-error。现 parser 已恢复（实际版本 TS 5.9.3 +
+        # eslint 9.39.2，从未升到 TS 7 / eslint 10），lint 可正常通过，
+        # 移除 continue-on-error 让 lint 重新成为硬门禁。
         run: npm run lint
 
       - name: Type check
