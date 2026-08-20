@@ -1,6 +1,6 @@
 ---
 last_updated: 2026-08-20
-update_trigger: Phase 71 plan 71-01 created (governance baseline + CI gate, 8 tasks, single wave)
+update_trigger: Phase 71 plan 71-01b executed (verify + push + amend half; CI Coverage gate SHIPPED at 12.8% threshold on main)
 ---
 
 # Roadmap: XingRan-Next 运维管理系统
@@ -170,7 +170,7 @@ Plans:
 
 | Phase | Status | Plans | Requirements | Started | Completed |
 |-------|--------|-------|--------------|---------|-----------|
-| Phase 71 | IN PROGRESS | 1/2 | GOV-01, GOV-02, GOV-04 (0/3 done — file creation half 71-01 committed, verify+push+amend half 71-01b pending) | 2026-08-20 | — |
+| Phase 71 | SHIPPED | 2/2 | GOV-01, GOV-02, GOV-04 (3/3 done — file creation half 71-01 + verify+push+amend half 71-01b both complete; CI Coverage gate PASSED on runs 32382995316 + 32384622877; coverage-baseline.md Phase 71 后 row commit column amended TBD → 326a541 via commit cfec2c4) | 2026-08-20 | 2026-08-20 |
 | Phase 72 | Pending | 0/? | CORE-01..06 (0/6 done) | — | — |
 | Phase 73 | Pending | 0/? | IMP-01..06 (0/6 done) | — | — |
 | Phase 74 | Pending | 0/? | GOV-03, SCALE-01..03 (0/4 done) | — | — |
@@ -222,4 +222,4 @@ Test Infrastructure
 
 ---
 
-*Last updated: 2026-08-20 — v1.26 backend-test-coverage-excellence milestone IN PROGRESS: 4 phases (71-74) / 19 requirements / 100% mapped. Quick task 260820-bcs 后端覆盖率扫描数据为规划输入。**Phase 71 plan 71-01 EXECUTED 2026-08-20 (file creation half: 4 commits `4242a75` `.coverage-threshold` + `3e2664c` check-coverage.sh + `75a4703` ci.yml 4-step extension + `75b96be` coverage-baseline.md scaffold with TBD commit on Phase 71 后 row; SUMMARY: `.planning/phases/71-governance-baseline-and-ci-gate/71-01-SUMMARY.md`)**. Phase 71 plan 71-01b (verify + push + amend) pending. Phase 63 frontend-toolchain-automation SHIPPED 2026-08-20(前端 coverage thresholds 已就位,本 milestone 为后端对称物)。Combined v1.22-v1.25 SHIPPED + ARCHIVED 2026-08-19.*
+*Last updated: 2026-08-20 — v1.26 backend-test-coverage-excellence milestone IN PROGRESS: 4 phases (71-74) / 19 requirements / 100% mapped. Quick task 260820-bcs 后端覆盖率扫描数据为规划输入。**Phase 71 SHIPPED 2026-08-20 (2/2 plans)** — plan 71-01 file creation half (4 commits `4242a75` `.coverage-threshold` + `3e2664c` check-coverage.sh + `75a4703` ci.yml 4-step extension + `75b96be` coverage-baseline.md scaffold with TBD commit on Phase 71 后 row; SUMMARY: `.planning/phases/71-governance-baseline-and-ci-gate/71-01-SUMMARY.md`) + plan 71-01b verify+push+amend half (1 commit `cfec2c4` TBD → 326a541 amend as new commit on protected branch; CI backend Coverage gate PASSED on runs 32382995316 + 32384622877; backend-coverage artifact 1.4MB / 30-day retention; SUMMARY: `.planning/phases/71-governance-baseline-and-ci-gate/71-01b-SUMMARY.md`). Phase 63 frontend-toolchain-automation SHIPPED 2026-08-20(前端 coverage thresholds 已就位,本 milestone 为后端对称物)。Combined v1.22-v1.25 SHIPPED + ARCHIVED 2026-08-19.*
