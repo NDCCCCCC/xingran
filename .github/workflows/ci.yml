@@ -54,7 +54,40 @@ jobs:
         # If a package starts timing out, fall back to a whitelist:
         #   go test ./internal/config/... ./pkg/...
         # and re-admit packages one by one.
-        run: go test -timeout 15m -count=1 ./internal/... ./pkg/... ./cmd/...
+        # Phase 71 GOV-01: -coverprofile + -covermode=atomic (count=1 already
+        # present). atomic mode is Go 1.21+ standalone (no -race needed; -race
+        # would 5-10x coverage time, forbidden by D-01 Claude's Discretion).
+        run: |
+          go test -timeout 15m -count=1 -coverprofile=coverage.out -covermode=atomic \
+            ./internal/... ./pkg/... ./cmd/...
+
+      - name: Coverage HTML report
+        # GOV-01: human-readable HTML for browser inspection on the artifact
+        # page. if: always() so a gate failure later does not block this step
+        # (we still want the HTML when the gate has to fail visibly).
+        if: always()
+        run: go tool cover -html=coverage.out -o coverage.html
+
+      - name: Coverage gate
+        # GOV-02: weighted-average floor read from .coverage-threshold (D-01).
+        # Script exits 0/1; exit 1 fails this step and the workflow. Script
+        # itself returns 0 when coverage.out is missing (soft skip) so the
+        # if: always() Upload step below can still publish the HTML for debug.
+        run: bash .github/scripts/check-coverage.sh coverage.out .coverage-threshold
+
+      - name: Upload coverage artifact
+        # GOV-01 + D-02: actions/upload-artifact@v4 (NOT @v7) with 30-day
+        # retention. Both raw coverage.out and HTML uploaded for local debug
+        # when the gate fails. if: always() so a gate failure still publishes
+        # the artifact instead of leaving the developer blind to the regression.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: |
+            coverage.out
+            coverage.html
+          retention-days: 30
 
   frontend:
     runs-on: ubuntu-latest
@@ -81,6 +114,13 @@ jobs:
 
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
+
+      - name: Format check
+        # prettier --check 是廉价 fail-fast:文本比对不需要 transform/parse。
+        # 在 lint/type-check/test/build 之前跑,任何未格式化文件立刻阻断 CI,
+        # 与本地 lint-staged 的 prettier --write 互补(pre-commit 自动修;
+        # CI 兜底确保 push 进来的代码至少已经通过 check,不会被 --write 改写)。
+        run: npm run format:check
 
       - name: Lint
         # 2026-08-20: 恢复 strict gate。此前 dependabot PR #3 因误删
