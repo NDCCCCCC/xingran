@@ -30,7 +30,15 @@ const localPlugin = { rules: { "no-large-dropdown-list": noLargeDropdownList } }
 
 export default [
   {
-    ignores: ["dist", "vitest.config.ts", "eslint-rules/**"],
+    ignores: [
+      "dist",
+      "vitest.config.ts",
+      "eslint-rules/**",
+      // Node 脚本（QA-02 硬编码色扫描器、列定义同步、审计/spike 工具），不属于前端源码。
+      // 这些文件使用 require/__dirname/console/process 等 Node 全局，与浏览器 globals 不匹配。
+      "**/*.cjs",
+      "**/*.mjs",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
