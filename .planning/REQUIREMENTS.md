@@ -1,135 +1,113 @@
 ---
-last_updated: 2026-08-19
-update_trigger: Phase 69-05 DICT-01 backend status-literal ratchet completed; DICT-01 checkbox promoted to complete
+last_updated: 2026-08-20
+update_trigger: v1.26 backend-test-coverage-excellence milestone requirements defined
 ---
 
-# Requirements: XingRan-Next — Milestone v1.22
+# Requirements: XingRan-Next — Milestone v1.26
 
-**Defined:** 2026-08-18
-**Milestone:** v1.22 前端品牌化改造 (Frontend Brand Design-System)
-**Core Value:** 后台内部视觉与登录页品牌一致 —— 一套像素实测、对比度达标的品牌令牌，全站组件自动继承，消除 indigo/slate 通用色与绿金奶油品牌的冲突。
+**Defined:** 2026-08-20
+**Milestone:** v1.26 后端测试覆盖率优秀 (Backend Test Coverage Excellence)
+**Core Value:** 后端 Go 代码库具备可信赖的测试护城河——加权平均覆盖率从 **12.8% 提升到 ≥70%(优秀等级)**,P0/P1 业务模块零测试清零,CI 落地 coverage 阈值 gate + PR diff coverage,使覆盖率从此不可无声倒退。
 
-> **性质:** 本里程碑是**视觉层重构**，不改业务逻辑、不改 API、不改数据模型。落点集中在 `xingran-react-frontend/src/design-system/` 与 `src/index.css`（253 个 CSS 变量层）。
+> **性质:** 本里程碑是**测试补齐 + CI 治理**,不修改业务逻辑(测试暴露的确定性 bug 修复除外)、不改 API 契约、不改数据模型。
 >
-> **素材基准:** `655aa291-9bfe-4e94-ad5d-b3c8b2d24984/brand-spec.md`（像素实测 + WCAG 验证）为唯一色值真相源；`admin-design-plan.md` 提供现状侦察与缺口定位；53 张 HTML 原型屏与 `refs/` 截图作为视觉参考，**不逐屏施工**。
+> **数据基准:** `.planning/quick/260820-backend-test-coverage-scan/SUMMARY.md`(2026-08-20 纯只读扫描)— 74 业务包 / 43652 stmts / 加权平均 12.8% / 33 个 0% 包 / P0-P2 分级清单。包级 stmts 与百分比均出自该扫描。
 >
-> **已定位的品牌化缺口（admin-design-plan 实测）:**
-> - `--theme-primary: #4f46e5`（indigo 紫蓝）配 `#FEF3C7` 浅金字 —— 主按钮完全脱离品牌
-> - `--theme-neutral-100: #f1f5f9`（冷蓝灰 slate）—— 表头底色与暖米画布冲突
-> - `--sidebar-bg: #1e293b`（slate 深灰）—— 应为品牌深绿 `#14532D`
-> - 登录页品牌化完成度高，后台内部脱节
-
-## 锁定决策 (v1.22 init)
-
-| ID | 决策 |
-|----|------|
-| **D-01** | **全局替换，不保留多主题** —— 移除 6 套主题（minimal / glassmorphism / neumorphism / flat2.0 / luxury-quiet / ink-amber）与 ThemeSwitcher / ColorSwitcher；保留 light / dark 双模式（仅品牌一套色相）；保留 layoutStore 的布局与密度切换 |
-| **D-02** | `brand-spec.md` 为唯一色值来源。标注「实测」的直接采用；「推导」的可微调但须重跑对比度验证 |
-| **D-03** | **按钮纪律**：主按钮一律 `--primary` `#156031` 绿底白字（7.64:1）；hover `#2E7444`（5.68:1）。铜金不做实心主按钮（`#C09058` 上白字仅 2.85:1 不达标）；必须铜金实心时用 `#B88850` + ≥16px 半粗体白字（3.15:1 大字达标），hover 只许加深至 `#AA7B42` |
-| **D-04** | Phase 编号从 **64** 起（Phase 63「前端工具链自动化」已存在且 IN PROGRESS，不占用） |
-| **D-05** | 仅 design-system 层。业务页面自动继承样式，不逐屏改造 53 屏 |
+> **测试基建(D-04 锁定):** 沿用已有 glebarez sqlite in-memory,不引入新 mock framework。
+>
+> **前置已完成:** pkg/cache `TestAsyncRetryWorker_Enqueue` flaky test 已修复(commit `5ead742`,quick-260820-far,`go test ./pkg/cache/...` 15/15 全过)——Phase 71 直接验收,不需重做。
 
 ## v1 Requirements
 
-### TOKEN — 品牌令牌层
+### GOV — 治理与 CI 守护
 
-- [x] **TOKEN-01**: `src/index.css` 的 `--theme-primary*` / `--theme-neutral-*` / `--sidebar-*` 变量组全量改为 brand-spec 实测值（深绿 `#156031` / 铜金 `#C09058` / 奶油 `#F0ECE3` / 白卡 `#FFFFFF` / 描边 `#DBD7CE` / 次级文字 `#707068`），使 253 变量层成为全站品牌单一入口
-- [x] **TOKEN-02**: `src/design-system/tokens/colors.ts` 新增 `xingranBrand` 色板常量 —— 绿梯度 6 阶（`#14532D` / `#156031` / `#1A6839` / `#3B784C` / `#598E5E` / `#E9EFEB`）、铜金梯度 4 阶（`#B88850` / `#C09058` / `#C89868` / `#AA7B42`）、奶油中性阶，每个色值带 OKLch 值与 WCAG 对比度注释，作为 TS 侧唯一真相源
-- [x] **TOKEN-03**: `src/design-system/components/AntdThemeBridge.tsx` 的 Antd 6 `theme.token` 与 `theme.components` 覆盖全量接品牌令牌，使 Button / Table / Input / Select / Menu / Tabs / Tag / Card 等内置组件自动品牌化，无需逐组件写 CSS override
-- [x] **TOKEN-04**: `tokens/shadows.ts` / `spacing.ts` / `typography.ts` 按 brand-spec 的「奶油底衬白卡双层纸感」调性对齐（阴影减弱、圆角统一、字阶收敛），消除与新色彩体系不协调的旧值
+- [ ] **GOV-01**: CI 后端 job 以 `-coverprofile` 跑全量测试并产出覆盖率报告(终端 summary + profile artifact 可下载)
+- [ ] **GOV-02**: CI 落地全局加权覆盖率阈值 gate——低于阈值的 commit 使 job 失败阻断(ratchet 机制防倒退,阈值随 phase 递进上调至 70%)
+- [ ] **GOV-03**: PR 增量 diff coverage 门槛启用——变更代码(新增/修改行)覆盖率 ≥80%
+- [ ] **GOV-04**: 覆盖率基线与进展落盘——起点 12.8% / per-package 数据 / 各 phase 后的实际数字形成可追踪记录(更新 quick-260820-bcs 扫描或等价物)
 
-### THEME — 主题系统收敛
+### CORE — P0 核心业务清零(零/近零测试的审计关键路径)
 
-- [x] **THEME-01**: 彻底移除多主题能力 —— 删除 `design-system/themes/` 下 6 套主题目录、`ThemeSwitcher.tsx` / `ColorSwitcher.tsx` 组件、`themeStore` 的主题类型字段与 settings 页主题入口；清理全部 13 个消费方（`ConfigProvider` / `header` / `InnovativeLayout` / `TabBar` / `sidebar` / `ThemeProvider` / `main.tsx` / `settings/index.tsx` / `settingsStore` 等）的残留引用，无死代码、无 TS 错误
-- [x] **THEME-02**: 保留 light / dark 双模式切换 —— 品牌色在暗色模式下有对应的深底推导（深绿底加深、铜金提亮受控、奶油转深灰纸感），暗色模式下关键前景/背景对同样满足 WCAG AA
-- [x] **THEME-03**: `layoutStore` 的布局切换（ClassicLayout / HybridLayout / InnovativeLayout）与密度切换（classic / comfortable）完整保留且不回归 —— 本里程碑只动颜色，不动布局与间距结构
+- [ ] **CORE-01**: `internal/api/v1/workorder` handler 测试补齐(297 stmts,0.0% → ≥70%)
+- [ ] **CORE-02**: `internal/api/v1/monitor` handler 测试补齐(518 stmts,0.0% → ≥70%)
+- [ ] **CORE-03**: `internal/api/v1/scheduler` handler 测试补齐(152 stmts,0.0% → ≥70%)
+- [ ] **CORE-04**: `internal/api/v1/system` handler 测试补齐(3039 stmts,0.5% → ≥70%)
+- [ ] **CORE-05**: `internal/services/workorder` 服务测试补齐(715 stmts,0.6% → ≥70%)
+- [ ] **CORE-06**: `internal/services/system` 服务测试增量(3483 stmts,10.2% → ≥70%)
 
-### COMP — 通用组件样式
+### IMP — P1 重要模块清零(8 个完全无测试的业务模块)
 
-- [x] **COMP-01**: 侧边栏深绿化 —— `--sidebar-bg` `#1e293b` → `#14532D`，hover / active 用 `#156031` 底 + `#E0E0B0` 强调文字（5.62:1），折叠态（64px）与展开态（280px）均正确；顶栏保持白底 64px，面包屑与全局搜索 ⌘K 视觉不破
-- [x] **COMP-02**: 表格与卡片统一 —— 表头底 `#F1F5F9` → `#E9EFEB` 绿灰淡彩，斑马纹与分割线用 `#DBD7CE`，白卡 `#FFFFFF` 衬奶油画布 `#F0ECE3` 形成双层纸感；表格排序/筛选/选中态、空状态、分页器全部接品牌令牌
-- [x] **COMP-03**: 按钮体系落地 D-03 按钮纪律 —— 主按钮 `#156031` 绿底白字、hover `#2E7444`；次级（描边绿）、危险、禁用、链接、图标按钮全套规范；`#FEF3C7` 从按钮前景移除，回归为淡黄标签底；全站无铜金实心主按钮
-- [x] **COMP-04**: 表单 / 标签 / 图表接令牌 —— 表单控件 focus 环用品牌绿、校验错误态色阶统一；Tag / Badge（含 SM2 / SM3 / SM4 淡黄标签 `#FEF3C7`）规范化；Tabs 多页签与面包屑；ECharts 图表系列色改用绿金梯度（`#156031` / `#3B784C` / `#C09058` / `#598E5E` / `#C89868`）而非默认蓝紫
+- [ ] **IMP-01**: `internal/api/v1/duty` handler 测试补齐(265 stmts,0.0% → ≥70%)
+- [ ] **IMP-02**: `internal/api/v1/knowledge` handler 测试补齐(273 stmts,0.0% → ≥70%)
+- [ ] **IMP-03**: `internal/api/v1/rpa` handler 测试补齐(612 stmts,0.0% → ≥70%)
+- [ ] **IMP-04**: `internal/api/v1/vdi` handler 测试补齐(298 stmts,0.0% → ≥70%)
+- [ ] **IMP-05**: `internal/services/duty` + `internal/services/knowledge` 服务测试补齐(114 + 85 stmts,0.0% → ≥70%)
+- [ ] **IMP-06**: `internal/services/monitor` + `internal/services/network` 服务测试补齐(485 + 127 stmts,0.0% → ≥70%)
 
-### QA — 质量门与防回归
+### SCALE — P2 增量与整体达标
 
-- [x] **QA-01**: 对比度自动验证 —— 提供可执行的对比度校验（脚本或单测）覆盖 brand-spec 列出的关键前景/背景对（白字 on `#156031` ≥7.6:1、`#E0E0B0` on `#156031` ≥5.6:1、`#707068` on 白卡 ≥4.9:1 等），不达标即失败
-- [x] **QA-02**: 硬编码色值防回归 —— 全仓扫描并清除 `src/` 下遗留的 `#4F46E5` / `#F1F5F9` / slate 系等非品牌硬编码色值，并以 lint 规则或 CI 检查阻止新增（衔接 Phase 63 前端工具链）
-- [x] **QA-03**: 构建回归门 —— `npm run build` / `type-check` / `lint` / `test` 全绿；移除 6 套主题后 bundle 体积不增（预期下降），记录前后对比数值
-- [x] **QA-04**: 视觉回归确认 —— 关键屏（仪表盘 / 系统用户 / 工位管理 / 监控仪表盘 / 资产对账看板 / 登录页）改造前后截图对比，人工确认无布局崩坏、无不可读文本、无残留冲突色
+- [ ] **SCALE-01**: P2 大块增量——`api/v1/{operations, asset, network}`(1285/420/1971 stmts)+ `services/{rpa, vdi}`(1865/1127 stmts)+ `internal/core` / `internal/device` / `internal/utils` / `agent/server` / `services/scheduler` 等 <10% 包系统性提升(目标区间由 planner 按整体达标分配,参考 ≥70%)
+- [ ] **SCALE-02**: 中等覆盖(10-50%)与高性价比纯工具包(如 `pkg/{response,query,time,logger,captcha}`、`internal/pkg/*`)选择性提升,补足整体缺口——纯函数工具包测试成本低、贡献直接
+- [ ] **SCALE-03**: 最终整体加权平均覆盖率 ≥70%(43652 stmts 口径;D-02 豁免的辅助包不覆盖的情况下,业务包整体需达约 74%——planner 分配时以此为准)
 
-## Future Requirements (v1.23+)
+## Milestone 成功指标(verbatim from 扫描建议 + 用户决策)
 
-本里程碑不交付，来源于 `PROTOTYPE-VS-ACTUAL.md` 差异清单与 53 屏原型：
+- **SC-a**: 加权平均 ≥70%(12.8% → ≥70%)
+- **SC-b**: 0% 覆盖业务包 ≤5(33 → ≤5,仅剩辅助类豁免)
+- **SC-c**: CI coverage threshold gate 生效(失败即阻断)
+- **SC-d**: 全量 `go test` 零失败(flaky 已修,保持)
+- **SC-e**: PR diff coverage ≥80% 门槛启用
 
-### PROTO — 原型对齐（逐屏）
+## v2 Requirements (Future)
 
-- **PROTO-01**: 路由前缀差异修正 —— 24 处原型路径与真实路径不一致（`/workorders` vs `/ops/workorder/orders` 等）
-- **PROTO-02**: 逐屏字段 / 表头 / 工具栏差异对齐（53 屏）
-- **PROTO-03**: 菜单组结构与命名对齐（密钥列表 `/system/list` 等）
-- **PROTO-04**: 空状态 / 统计卡文案与原型对齐
+### 辅助包与深化
 
-### VIS — 视觉深化
-
-- **VIS-01**: 3D 楼宇可视化（Three.js）配色接品牌令牌
-- **VIS-02**: 登录页与后台的过渡动效统一
-- **VIS-03**: 打印 / 导出样式品牌化
+- **FUT-01**: 纯 struct 模型包(`internal/models/*` 无逻辑部分)、`cmd` 入口、`internal/docs` 强制覆盖——低价值高成本,永久豁免或按需补
+- **FUT-02**: 分支覆盖率(branch coverage)——Go 原生 coverprofile 仅语句级;引入第三方工具或 Go 官方分支支持后再议
+- **FUT-03**: mutation testing(变异测试)验证测试质量——覆盖率达标后的下一步,工具选型单独评估
+- **FUT-04**: 覆盖率 PR 评论机器人(每条 PR 自动贴 per-file diff coverage 表)——GOV-03 达标后的体验增强
 
 ## Out of Scope
 
-| 项 | 理由 |
-|----|------|
-| 逐屏改造 53 张原型屏 | 用户明确限定仅 design-system 层；令牌层落地后业务页面自动继承，逐屏施工投入产出比低 |
-| 后端任何改动 | 纯前端视觉重构，不涉及 API / 数据模型 / 权限 |
-| 布局结构与信息架构调整 | D-01 保留现有 3 套 Layout 与九组菜单结构，只换颜色不换骨架 |
-| 保留 6 套主题并新增第 7 套 | 用户明确选择「全局替换，不保留多主题」（不可逆决策） |
-| 新增设计资产（图标库 / 插画） | 品牌插画与图标沿用现状，本里程碑不产出新素材 |
+| Feature | Reason |
+|---------|--------|
+| 修改业务逻辑 / API 契约 / 数据模型 | 本里程碑只加测试;测试暴露的确定性 bug 修复须走最小 diff 且单独说明 |
+| 引入新 mock framework(gomock/testify-mock 等) | D-04 锁定:glebarez sqlite in-memory + 标准 testing 已足够;portwrite 85.3% 范本即此模式 |
+| 前端覆盖率治理 | Phase 63 已落地(vitest coverage thresholds 25/15/22/25),本里程碑只做后端对称物 |
+| 辅助包强制覆盖(~2.5k stmts) | D-02 锁定:纯 struct / cmd main / docs 类不强制;高性价比纯工具包例外(见 SCALE-02) |
+| 修 `M internal/services/system/asset_columns_schema.json` 等工作区遗留 | Phase 34 遗留状态,与测试无关,由用户单独决定 |
 
 ## Traceability
 
-15/15 v1.22 requirements mapped to exactly one phase (0 orphans, 0 duplicates):
+Which phases cover which requirements. Updated during roadmap creation.
 
-| Requirement | Phase | Status | Category |
-|-------------|-------|--------|----------|
-| TOKEN-01 | Phase 64 | Pending | TOKEN (index.css 253 变量层) |
-| TOKEN-02 | Phase 64 | Pending | TOKEN (tokens/colors.ts xingranBrand 常量) |
-| TOKEN-03 | Phase 64 | Pending | TOKEN (AntdThemeBridge 全量映射) |
-| TOKEN-04 | Phase 64 | Pending | TOKEN (shadows/spacing/typography 调性对齐) |
-| QA-01 | Phase 64 | Pending | QA (对比度自动验证) |
-| THEME-01 | Phase 65 | Delivered (65-01, T9 视觉确认 pending) | THEME (6 套主题 + 切换器移除) |
-| THEME-02 | Phase 65 | Delivered (65-01, T9 视觉确认 pending) | THEME (light/dark 双模式保留) |
-| THEME-03 | Phase 65 | Delivered (65-01, T9 视觉确认 pending) | THEME (layout/density 不回归) |
-| COMP-01 | Phase 66 | Pending | COMP (侧边栏深绿化) |
-| COMP-02 | Phase 66 | Pending | COMP (表格/卡片 双层纸感) |
-| COMP-03 | Phase 66 | Pending | COMP (按钮体系 D-03 纪律) |
-| COMP-04 | Phase 66 | Pending | COMP (表单/标签/ECharts 接令牌) |
-| QA-02 | Phase 66 | Pending | QA (硬编码色扫描防回归) |
-| QA-03 | Phase 67 | Pending | QA (构建/lint/test/bundle 回归门) |
-| QA-04 | Phase 67 | Pending | QA (6 屏前后视觉回归确认) |
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| GOV-01 | Phase 71 | Pending |
+| GOV-02 | Phase 71 | Pending |
+| GOV-03 | Phase 74 | Pending |
+| GOV-04 | Phase 71 | Pending |
+| CORE-01 | Phase 72 | Pending |
+| CORE-02 | Phase 72 | Pending |
+| CORE-03 | Phase 72 | Pending |
+| CORE-04 | Phase 72 | Pending |
+| CORE-05 | Phase 72 | Pending |
+| CORE-06 | Phase 72 | Pending |
+| IMP-01 | Phase 73 | Pending |
+| IMP-02 | Phase 73 | Pending |
+| IMP-03 | Phase 73 | Pending |
+| IMP-04 | Phase 73 | Pending |
+| IMP-05 | Phase 73 | Pending |
+| IMP-06 | Phase 73 | Pending |
+| SCALE-01 | Phase 74 | Pending |
+| SCALE-02 | Phase 74 | Pending |
+| SCALE-03 | Phase 74 | Pending |
 
-**Coverage validation**: All 15 v1.22 requirements (TOKEN-01..04 / THEME-01..03 / COMP-01..04 / QA-01..04) are mapped to exactly one phase. No orphans, no duplicates.
+**Coverage:**
+- v1 requirements: 19 total
+- Mapped to phases: 19
+- Unmapped: 0 ✓
 
-**Phase ordering rationale**:
-
-- Phase 64 (TOKEN + QA-01) first — 品牌令牌是所有后续 phase 的真相源,对比度校验断言 token 值正确性,尽早暴露 brand-spec 实测值与设计目标偏差
-- Phase 65 (THEME) second — 多主题移除是高风险机械重构,需要在令牌已就位(避免视觉退化)后执行;依赖令牌层提供回退色源
-- Phase 66 (COMP + QA-02) third — 组件样式落地依赖稳定令牌 + 单一品牌上下文;硬编码扫描与组件落地同步,防止新代码破坏品牌
-- Phase 67 (QA-03/04) terminal — 构建回归 + 视觉确认是里程碑 SHIPPED 前置门
-
-## v1.24 Requirements
-
-### DICT — 状态与字典单一真相源
-
-- [x] **DICT-01**: 后端以 `internal/models` 状态常量作为语义单一真相源，清除受控 service/handler 范围内的裸 0/1 status 字面量，并以白名单 ratchet 防止回归
-- **DICT-02**: 盘点 type/category 真枚举字段并 seed 进 sys_dict
-- **DICT-03**: 前端 constants.tsx 硬编码 options 分批迁移 useDict
-- **DICT-04**: CLAUDE.md Status Value Convention 改指向常量真相源
-
-## v1.24 Traceability
-
-| Requirement | Phase | Status | Notes |
-|-------------|-------|--------|-------|
-| DICT-01 | Phase 69 | Complete | Plans 69-01/03/04/05；`--baseline` 终态仅 geocoding F 簇 1 条 |
-| DICT-02 | Phase 69 | Complete | Plan 69-02 executed；字典 seed 已落地 |
-| DICT-03 | Phase 69 | Complete | Plans 69-06/69-07 executed；前端消费迁移分批完成 |
-| DICT-04 | Phase 69 | Complete | Plan 69-08 |
+---
+*Requirements defined: 2026-08-20*
+*Last updated: 2026-08-20 after v1.26 milestone init*
