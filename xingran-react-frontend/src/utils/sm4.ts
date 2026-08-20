@@ -37,7 +37,9 @@ async function getSM4(): Promise<SM4Module> {
   try {
     const smCrypto = await import("sm-crypto");
     sm4Module = smCrypto.sm4;
-    return sm4Module;
+    // TS 7 不会跨赋值语句收窄 let + SM4Module | null 的类型,
+    // 但此处赋值后必然非 null,显式断言让返回类型匹配 Promise<SM4Module>。
+    return sm4Module as SM4Module;
   } catch (error) {
     console.error("[SM4] 加载 sm-crypto 失败:", error);
     throw new Error("无法加载 sm-crypto 包，请确保已安装: npm install sm-crypto");

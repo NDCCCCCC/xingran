@@ -12,7 +12,8 @@
  * 前端 canWrite gating 是 UX 优化,后端 RequirePermissions(["network:port:write"]) 是真相源 (T-53-05)。
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/dom";
 import { App } from "antd";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";

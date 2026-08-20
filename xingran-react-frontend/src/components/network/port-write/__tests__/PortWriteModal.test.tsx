@@ -11,7 +11,8 @@
  * 实现: 通过 antd Form 行为驱动 (fireEvent submit + waitFor validation), 不直接调 form API。
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { render, act } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/dom";
 import { App } from "antd";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";

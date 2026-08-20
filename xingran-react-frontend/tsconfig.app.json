@@ -35,5 +35,10 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src"],
+  "files": [
+    "src/types/global.d.ts",
+    "src/types/externals.d.ts",
+    "src/utils/sm-crypto.d.ts"
+  ]
 }
