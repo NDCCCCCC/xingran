@@ -1,8 +1,6 @@
 ---
-last_updated: 2026-08-19
-update_trigger: v1.23 启动块 Phase 68 EXECUTED (1/1 plan, 5 commits a21dcec..25ded8f, DEPLOY-01~05 PASS, SUMMARY `68-01-SUMMARY.md` 落地);Phase 70-07 EXECUTED 2026-08-19 (visual gate passed, 收口 commit `e138411`)
-last_plan_update: 2026-08-19 — Phase 68 SUMMARY 落地 + ROADMAP Phase 68 标记 EXECUTED + Progress 表更新为 7/7 phases (64-70) 全部落地
-previous_update: 2026-08-19 after Phase 70-02 EXECUTED
+last_updated: 2026-08-20
+update_trigger: v1.26 backend-test-coverage-excellence milestone roadmap drafted (4 phases 71-74, 19 reqs 100% mapped)
 ---
 
 # Roadmap: XingRan-Next 运维管理系统
@@ -24,141 +22,200 @@ previous_update: 2026-08-19 after Phase 70-02 EXECUTED
 - ✅ **v1.12 深信服桌面云集成 (22A+22B)** — Phases 22A/22B (shipped 2026-06-02)
 - ✅ **v1.13 资产管理模块** — Phase 26 (shipped 2026-06-08)
 - ✅ **v1.14 全局列自定义** — Phase 27 (shipped 2026-06-09)
-- ✅ **v1.15 工位设备关联 + 部门物理位置映射** — Phases 28 + 39 (shipped 2026-06-10 / 2026-06-25)
+- ✅ **v1.15 工位设备关联 + 部门物理位置映射** — Phases 28 + 39 (shipped 2026-06-10 / 06-25)
 - ✅ **v1.16 技术债清理 (Tech-Debt Cleanup)** — Phases 40-41 (shipped 2026-06-26)
 - ✅ **v1.17 资产对账 (Asset Reconciliation)** — Phases 42-46 + Phase 47 root-cause (shipped 2026-07-03)
 - ✅ **v1.18 网络设备硬件清单 (Device Component Serials)** — Phase 48 + Phase 49 gap closure (shipped 2026-07-04)
-- ✅ **v1.19 网络设备写命令 (Network Device Port Write Operations)** — Phases 50-55 (shipped 2026-07-08) — see [milestones/v1.19-ROADMAP.md](milestones/v1.19-ROADMAP.md)
-- ✅ **v1.20 网络设备 VLAN + 端口绑定** — Phase 56 (shipped 2026-07-10) — see [milestones/v1.20-ROADMAP.md](milestones/v1.20-ROADMAP.md)
-- ✅ **v1.21 API Key 认证链修复 + 能力补全 (API Key Auth Chain Repair + Feature Completion)** — Phases 57-62 (shipped 2026-08-18) — see [milestones/v1.21-ROADMAP.md](milestones/v1.21-ROADMAP.md)
-- ✅ **v1.22 + v1.23 + v1.24 + v1.25 启动块 (Combined Launch Blocks)** — Phases 64-70 (shipped 2026-08-18 → 2026-08-19; 7 phases, 20 plans, audit `passed`) — see [milestones/v1.22-v1.25-ROADMAP.md](milestones/v1.22-v1.25-ROADMAP.md) + [milestones/v1.22-v1.25-REQUIREMENTS.md](milestones/v1.22-v1.25-REQUIREMENTS.md)
-  - v1.22 前端品牌化改造 (Phases 64-67)
-  - v1.23 部署稳健性 & 文档一致性 (Phase 68)
-  - v1.24 字典与状态值治理 (Phase 69)
-  - v1.25 系统设置页面布局重构 (Phase 70)
-
-<details>
-<summary>✅ v1.22 + v1.23 + v1.24 + v1.25 Combined (Phases 64-70) — SHIPPED 2026-08-18 → 2026-08-19</summary>
-
-**Milestone Goal:** v1.22 把 `brand-spec.md` 像素实测品牌令牌固化进 design-system;v1.23 闭环 SM2 密钥配置部署稳健性;v1.24 建立状态语义单一真相源(94 常量 + 11 字典);v1.25 重构系统设置页对齐 v1.22 品牌理念。共 7 phases / 20 plans / 36 items (15 v1.22 REQ + 5 v1.23 DEPLOY-XX + 4 v1.24 DICT-XX + 12 v1.25 D-XX)。
-
-- [x] Phase 64: 品牌令牌层落地 + 对比度验证 — Phases 64-67 完整细节见 [milestones/v1.22-ROADMAP.md](milestones/v1.22-ROADMAP.md)
-- [x] Phase 65: 主题系统收敛 — 同上
-- [x] Phase 66: 通用组件样式 + 硬编码色扫描 — 同上
-- [x] Phase 67: 构建回归 + 视觉确认 — 同上
-- [x] Phase 68: 部署稳健性 & 文档一致性 — 完整细节见 [milestones/v1.23-ROADMAP.md](milestones/v1.23-ROADMAP.md)
-- [x] Phase 69: 字典与状态值治理 — 完整细节见 [milestones/v1.24-ROADMAP.md](milestones/v1.24-ROADMAP.md)
-- [x] Phase 70: 系统设置页面布局重构 — 完整细节见 [milestones/v1.25-ROADMAP.md](milestones/v1.25-ROADMAP.md)
-
-**Audit**: [v1.22-v1.25-MILESTONE-AUDIT.md](v1.22-v1.25-MILESTONE-AUDIT.md) — passed (20/20 reqs, 7/7 phases, 5/5 integration, 4/4 E2E flows)
-
-</details>
+- ✅ **v1.19 网络设备写命令 (Network Device Port Write Operations)** — Phases 50-55 (shipped 2026-07-08)
+- ✅ **v1.20 网络设备 VLAN + 端口绑定 (Network Device VLAN + Port Binding)** — Phase 56 (shipped 2026-07-10)
+- ✅ **v1.21 API Key 认证链修复 + 能力补全 (API Key Auth Chain Repair)** — Phases 57-62 (shipped 2026-08-18)
+- ✅ **v1.22 前端品牌化改造 (Frontend Brand Design-System)** — Phases 64-67 (shipped 2026-08-18)
+- ✅ **v1.23 部署稳健性 & 文档一致性 (Deploy Robustness & Docs Consistency)** — Phase 68 (shipped 2026-08-19)
+- ✅ **v1.24 字典与状态值治理 (Dict & Status Governance)** — Phase 69 (shipped 2026-08-19)
+- ✅ **v1.25 系统设置页面布局重构 (Settings Page Layout Redesign)** — Phase 70 (shipped 2026-08-19)
+- ✅ **Phase 63 前端工具链自动化 (Frontend Toolchain Automation)** — Phase 63 (shipped 2026-08-20)
+- 🚧 **v1.26 后端测试覆盖率优秀 (Backend Test Coverage Excellence)** — Phases 71-74 — **IN PROGRESS** (milestone started 2026-08-20)
 
 ---
 
-## Phases (Next Milestone — TBD by /gsd:new-milestone)
+## Current Milestone: v1.26 后端测试覆盖率优秀 (Backend Test Coverage Excellence) — 🚧 IN PROGRESS
 
-**Milestone Goal:** TBD — 见下一里程碑启动块(v1.26+)
+**Goal:** 后端 Go 加权平均测试覆盖率 **12.8% → ≥70%**(优秀等级),P0/P1 业务模块零测试清零,CI 落地 coverage 阈值 gate + PR diff coverage,使覆盖率从此不可无声倒退。
 
-启动新里程碑:`/clear` 然后 `/gsd:new-milestone`
+**Source planning data:** `.planning/quick/260820-backend-test-coverage-scan/SUMMARY.md`(2026-08-20 纯只读扫描,74 业务包 / 43652 stmts / 加权 12.8% / 33 个 0% 包 / P0-P2 分级)。
+
+**Milestone success criteria:**
+- SC-a: 加权平均 ≥70%(12.8% → ≥70%)
+- SC-b: 0% 覆盖业务包 ≤5(33 → ≤5)
+- SC-c: CI coverage threshold gate 生效(失败即阻断)
+- SC-d: 全量 `go test` 零失败(flaky 已修,`5ead742`)
+- SC-e: PR diff coverage ≥80% 门槛启用
+
+**Phase 编号:** 从 v1.25 末尾 Phase 70 续编(71+)。
+
+**研究:** 已跳过——覆盖率数据/模块清单/CI 现状均在 quick-260820-bcs 扫描中落盘,无需域研究。
+
+### Phase Dependency Graph
+
+```
+Phase 71 (治理基线 + CI gate)
+   │
+   ├─→ Phase 72 (P0 核心补齐) [depends on 71]
+   │         │
+   │         └─→ Phase 73 (P1 重要补齐) [depends on 72]
+   │                  │
+   │                  └─→ Phase 74 (P2 增量 + diff coverage 收尾) [depends on 73]
+```
+
+每个 phase 是自然交付边界,可在 phase boundary 处构建 + CI 绿。
+
+### Phase 71: 治理基线 + CI gate — IN PROGRESS
+
+**Goal:** CI 后端 job 产出覆盖率报告与阈值 gate;建立测试补齐的基线记录与 ratchet 防倒退机制;前置 flaky test 修复验收。
+
+**Requirements:** GOV-01, GOV-02, GOV-04
+
+**Success Criteria:**
+1. `.github/workflows/ci.yml` 后端 job 含 `-coverprofile=coverage.out -covermode=atomic` 参数并产出 profile artifact
+2. CI 引入阈值 gate(初值对应当前 12.8% 基线),低于阈值 PR 即 fail;ratchet 机制记录每次 phase 提升后的实际数字
+3. `.planning/quick/260820-backend-test-coverage-scan/` 或同等位置有完整 per-package 基线表,phase 完成后回填新数字形成可追踪差异
+4. pkg/cache `TestAsyncRetryWorker_Enqueue` 通过验证(`5ead742` 已修,Phase 71 跑 `go test ./pkg/cache/...` 全过即可验收)
+5. `go test ./internal/... ./pkg/... ./cmd/...` 全包 exit 0,无任何测试失败
+
+**Key Decisions (lock at plan-internal):**
+- 阈值 gate 工具选择:bash + awk 自检 vs go-test-coverage GitHub Action vs custom Makefile——planner 评估,优先复用最少依赖
+- profile artifact 上传:actions/upload-artifact vs 仅在失败时 dump——按 CI 体积成本权衡
+- 基线数据存放:更新 quick task 目录 vs 写入 `.planning/coverage-baseline.md`——planner 决策
+
+**Notes:**
+- GOV-03(diff coverage)属于 Phase 74,Phase 71 只建立全量覆盖率基线 gate
+- Phase 71 是整条治理链的起点——所有测试补齐工作受益于此 gate 的"防倒退"价值
+- 阈值 gate 的初始值需等于或低于当前 12.8% 基线(防止首次落地就 fail),后续 phase 完成时逐步 ratchet 上调
+
+---
+
+### Phase 72: P0 核心补齐 — Pending
+
+**Goal:** P0 核心业务链路(高频审计路径 + 系统管理核心)零测试清零,所有 P0 包达 ≥70% 覆盖。
+
+**Requirements:** CORE-01, CORE-02, CORE-03, CORE-04, CORE-05, CORE-06
+
+**Success Criteria:**
+1. `internal/api/v1/workorder` 覆盖率 ≥70%(297 stmts)
+2. `internal/api/v1/monitor` 覆盖率 ≥70%(518 stmts)
+3. `internal/api/v1/scheduler` 覆盖率 ≥70%(152 stmts)
+4. `internal/api/v1/system` 覆盖率 ≥70%(3039 stmts)
+5. `internal/services/workorder` 覆盖率 ≥70%(715 stmts)
+6. `internal/services/system` 覆盖率 ≥70%(3483 stmts)
+7. Phase 72 完成后加权平均覆盖率显著上升(预估 12.8% → ≥30%),CI gate 阈值 ratchet 上调至新实际值
+8. 全部新测试遵循 portwrite 85.3% 范本模式(glebarez sqlite in-memory + table-driven tests),零业务代码改动(测试暴露的确定性 bug 修复除外,最小 diff 单独说明)
+
+**Notes:**
+- services/system 3483 stmts 是最大单包,需分层拆分测试(user / role / dept / menu / dict / post / config)——planner 分配
+- api/v1/system 3039 stmts 同理;按子模块拆 plan
+- operlog 82.2% 是治理范本,Phase 72 service 测试可参考其 regression_test.go AST 锁值手法(如需)
+
+---
+
+### Phase 73: P1 重要补齐 — Pending
+
+**Goal:** 8 个 P1 重要模块(duty/knowledge/rpa/vdi/monitor/network)从 0% 测试提升至 ≥70%。
+
+**Requirements:** IMP-01, IMP-02, IMP-03, IMP-04, IMP-05, IMP-06
+
+**Success Criteria:**
+1. `internal/api/v1/duty` 覆盖率 ≥70%(265 stmts)
+2. `internal/api/v1/knowledge` 覆盖率 ≥70%(273 stmts)
+3. `internal/api/v1/rpa` 覆盖率 ≥70%(612 stmts)
+4. `internal/api/v1/vdi` 覆盖率 ≥70%(298 stmts)
+5. `internal/services/duty` + `internal/services/knowledge` 覆盖率 ≥70%(114 + 85 stmts)
+6. `internal/services/monitor` + `internal/services/network` 覆盖率 ≥70%(485 + 127 stmts)
+7. Phase 73 完成后加权平均覆盖率预估达 ≥55%,CI gate 阈值 ratchet 上调
+8. 全部新测试零业务代码改动
+
+**Notes:**
+- services/rpa 1865 stmts 1.1% / services/vdi 1127 stmts 2.7% 暂归 P2(Phase 74),本 phase 只补到 70% handler + 小 service 包
+- 复杂模块(rpa 1865 / vdi 1127)planner 可分多 plan 拆分
+
+---
+
+### Phase 74: P2 增量 + diff coverage 收尾 — Pending
+
+**Goal:** 把整体加权平均推到 ≥70%(SCALE-03),落地 PR 增量 diff coverage 门槛,验证 milestone SC 全部达成。
+
+**Requirements:** GOV-03, SCALE-01, SCALE-02, SCALE-03
+
+**Success Criteria:**
+1. PR 增量 diff coverage ≥80% 门槛在 CI 启用(GOV-03)— 变更代码必须 ≥80% 覆盖才通过
+2. `api/v1/{operations, asset, network}` 覆盖率均 ≥70%(1285 / 420 / 1971 stmts)
+3. `services/{rpa, vdi}` 覆盖率均 ≥70%(1865 / 1127 stmts)
+4. `internal/core` / `internal/device` / `internal/utils` / `internal/agent/server` / `services/scheduler` 等中等覆盖包系统性提升(目标区间按整体达标分配)
+5. 中等覆盖(10-50%)与高性价比纯工具包(`pkg/{response,query,time,logger,captcha}`、`internal/pkg/*`)选择性提升
+6. **整体加权平均覆盖率 ≥70%**(43652 stmts 口径;SC-a)
+7. **0% 覆盖业务包 ≤5**(SC-b;仅剩辅助类豁免——纯 struct / cmd / docs)
+8. milestone SC-a/b/c/d/e 全部 5 项达成并写入 audit 报告
+
+**Notes:**
+- 本 phase 是 v1.26 收口 phase,验证所有 milestone SC
+- diff coverage 工具:gocover-diff / go-test-coverage(action 内置支持)——planner 评估选型
+- Phase 74 plan 数量可能较多(planner 按业务包工作量拆分),建议 3-5 个 plan
 
 ---
 
 ## Progress
 
-**Execution Order:**
-Phases execute in numeric order: 63 → 64 → 65 → 66 → 67 → 68 → 69 → 70 (Phase 63 独立无依赖,2026-08-20 SHIPPED)
+| Phase | Status | Plans | Requirements | Started | Completed |
+|-------|--------|-------|--------------|---------|-----------|
+| Phase 71 | IN PROGRESS | 0/? | GOV-01, GOV-02, GOV-04 (0/3 done) | 2026-08-20 | — |
+| Phase 72 | Pending | 0/? | CORE-01..06 (0/6 done) | — | — |
+| Phase 73 | Pending | 0/? | IMP-01..06 (0/6 done) | — | — |
+| Phase 74 | Pending | 0/? | GOV-03, SCALE-01..03 (0/4 done) | — | — |
 
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|----------------|--------|-----------|
-| 63. 前端工具链自动化 | independent | 1/1 | ✅ SHIPPED | 2026-08-20 |
-| 64. 品牌令牌层落地 + 对比度验证 | v1.22 | 1/1 | ✅ SHIPPED | 2026-08-18 |
-| 65. 主题系统收敛 | v1.22 | 1/1 | ✅ SHIPPED | 2026-08-18 |
-| 66. 通用组件样式 + 硬编码色扫描 | v1.22 | 1/1 | ✅ SHIPPED | 2026-08-18 |
-| 67. 构建回归 + 视觉确认 | v1.22 | 1/1 | ✅ SHIPPED | 2026-08-18 |
-| 68. 部署稳健性 & 文档一致性 | v1.23 | 1/1 | ✅ EXECUTED | 2026-08-19 |
-| 69. 字典与状态值治理 | v1.24 | 8/8 | ✅ EXECUTED | 2026-08-19 |
-| 70. 系统设置页面布局重构 | v1.25 | 7/7 | ✅ EXECUTED | 2026-08-19 |
+**Total:** 4 phases / 19 requirements (0 done)
 
 ---
 
-## Coverage Map (v1.22 + v1.23 + v1.24 + v1.25)
+## Future Milestones (TBD)
 
-完整 v1.22 (15) + v1.23 (5) + v1.24 (4) + v1.25 (12) requirement coverage 见 [milestones/v1.22-v1.25-REQUIREMENTS.md](milestones/v1.22-v1.25-REQUIREMENTS.md) — 36/36 items mapped to exactly one phase (0 orphans, 0 duplicates)。
+候选方向(基于 STATE.md §Deferred Items + Future Requirements):
 
-**Inter-phase dependency graph (combined):**
+- **v1.27+**: Phase 63 启动块遗留 advisory 收尾(network/ports 3 timeout + total bundle +90kB + knip ignore 收紧)
+- **v1.27+**: PROTO-01..04 逐屏原型对齐 + VIS-01..03 视觉深化(v1.22 Future Requirements)
+- **v1.27+**: VDI 22C/22D(账号管理 + Web Console,依赖 v1.11 生产稳定性数据)
+- **v1.27+**: 分支覆盖率 / mutation testing / PR 评论机器人(FUT-02..04)
+- **v1.27+**: 真机 site-visit UAT 闭环(v1.18-v1.20 deferred items)
+
+---
+
+## Operational Architecture
 
 ```
-Phase 64 (品牌令牌 + 对比度验证)
-   │
-   └─→ Phase 65 (主题系统收敛) [depends on 64]
-          │
-          └─→ Phase 66 (通用组件样式 + 硬编码扫描) [depends on 65]
-                 │
-                 └─→ Phase 67 (构建回归 + 视觉确认) [depends on 66]
-                                                │
-Phase 68 (SM2 部署稳健性)         Phase 69 (字典 + 状态治理)
-   [独立 phase]                          [独立 phase]
-                                                │
-                                          Phase 70 (settings 重构) [depends on 67]
+Backend (Go)
+├── internal/api/v1/{system,operations,workorder,scheduler,duty,network,
+│                       knowledge,monitor,rpa,vdi,asset}/  ← Phase 72/73/74 重点补齐
+├── internal/services/{system,operations,workorder,scheduler,duty,network,
+│                       knowledge,monitor,rpa,vdi,asset,portwrite,
+│                       component_collector,topology,lldp,addomain}/  ← Phase 72/73/74 重点补齐
+├── internal/middleware/  (86.2% 已高,Phase 71-74 维持)
+├── internal/utils/operlog/  (82.2% 范本)
+├── pkg/{cache,normalize,transform,response,query,logger,...}/
+└── internal/{core,config,device,agent,scheduler,collector}/
+
+CI Gate (.github/workflows/ci.yml)
+├── backend job:
+│   ├── go test ./internal/... ./pkg/... ./cmd/... -coverprofile=coverage.out -covermode=atomic  ← Phase 71 加
+│   ├── go tool cover -func=coverage.out → awk 算加权平均 vs 阈值 gate  ← Phase 71 加
+│   └── (Phase 74 加) diff coverage ≥80% 门槛
+└── frontend job:  Phase 63 已加 vitest coverage thresholds 25/15/22/25(本 milestone 不动)
+
+Test Infrastructure
+├── glebarez sqlite in-memory (已有,不引新 mock)
+├── testing + table-driven tests (已有模式)
+├── portwrite 85.3% 范本 (Phase 50-55 落地,Phase 72-74 参考)
+├── operlog 82.2% 范本 (regression_test.go 锁公共 API)
+└── middleware 86.2% 范本 (apikey 全链路测试)
 ```
 
-Phase 63 (frontend-toolchain-automation) 独立 IN PROGRESS,提供 CI / lint / 测试基建。
-
 ---
 
-## Archive: v1.21 Milestone History
-
-<details>
-<summary>✅ v1.21 API Key 认证链修复 + 能力补全 (Phases 57-62, shipped 2026-08-18) — 详见 [milestones/v1.21-ROADMAP.md](milestones/v1.21-ROADMAP.md)</summary>
-
-- ✓ **Phase 57**: 认证链核心修复 + 回归测试 — 修复 `setUserContextForAPIKey` 类型断言(P0-2),消除 MultiAuth 死代码(P0-1),集成测试锁住三路径链路
-- ✓ **Phase 58**: 前后端路由契约对齐 — 前端 `getAPIKey` / `updateAPIKey` / `deleteAPIKey` 改 POST 对齐后端;`CONTRACT-02` 字段命名 camelCase 对齐
-- ✓ **Phase 59**: 可观测性 / 使用日志修复 — 使用日志记录时机后移,异步 goroutine detached context,`successRate` 可信
-- ✓ **Phase 60**: 安全加固与启用决策 — MultiAuth 路由挂载启用决策 + API Key 哈希存储决策 + 限流响应头编码修复 + 重复索引移除
-- ✓ **Phase 61**: 资源级权限矩阵 + 限流生产调优 — `RequireAPIKeyResourcePermission` resource 参数真实生效 + `RateLimitByScope` 生产接入与调优(conditional on Phase 60 AUTH-03=启用)
-- ✓ **Phase 62**: 数据库核心安全加固(跨 AI 评审修复) — internal/core/db 跨 AI 评审(codex + opencode)共识 C1-C7 + 单方 HIGH/MEDIUM 全部清零,迁移安全 / 种子凭据 / 并发保护
-
-**v1.21 shipped 14/14 v1.21 requirements + Phase 62 跨 AI 评审 14 项 review items。** 唯一遗留:Phase 58 SC#1-SC#4 端到端验证因 dev DB 性能延期(代码契约修复已提交且自动化门全绿),见 `58-01-SUMMARY` §Deferred。
-
-</details>
-
----
-
-## Archive: Pre-v1.21 Milestone History
-
-<details>
-<summary>✅ Earlier milestone phase history (v1.0–v1.20) preserved for reference</summary>
-
-- ✓ Phases 1-2 — v1.0 工位导入部门/用户关联 (7 plans)
-- ✓ Phase 3 — v1.1 信息点导入设备端口关联 (1 plan)
-- ✓ Phases 4-7 — v1.2 可配置仪表盘 (11 plans)
-- ✓ Phases 8-10 — v1.3 技术债清理 (9 plans)
-- ✓ Phase 11 — v1.4 MAC地址采集优化 (4 plans)
-- ✓ Phases 12-15 — v1.5 MAC地址历史数据 (26 plans)
-- ✓ Phase 16 — v1.6 API密钥管理 (10 plans)
-- ✓ Phases 17 — v1.7 加密配置同步 (6 plans)
-- ✓ Phase 18 — v1.8 登录端加密 (4 plans)
-- ✓ Phases 19-20 — v1.9 AD域控集成 (11 plans)
-- ✓ Phase 21 — v1.10 网络设备权限修复 (1 plan)
-- ✓ Phases 22A/22B — v1.12 深信服 VDI (6 plans)
-- ✓ Phase 23 — v1.11 AD组自动同步 (18 plans)
-- ✓ Phase 26 — v1.13 资产管理 (6 plans)
-- ✓ Phase 27 — v1.14 全局列自定义 (1 plan)
-- ✓ Phase 28 — v1.15 工位设备关联 (4 plans)
-- ✓ Phases 30-34 — 前端性能/P0收尾/P1P2/React best practices/操作日志全模块集成 (~40 plans)
-- ✓ Phases 37-39 — 前端部门选择统一/AD账号池统一/部门物理位置映射
-- ✓ Phases 40-41 — v1.16 技术债清理 (8 plans)
-- ✓ Phases 42-47 — v1.17 资产对账 + 根因修复 (16 plans)
-- ✓ Phases 48-49 — v1.18 网络设备硬件清单 + gap closure (5 plans)
-- ✓ Phases 50-55 — v1.19 网络设备写命令 (9 plans, 5 build + 1 cleanup)
-- ✓ Phase 56 — v1.20 网络设备 VLAN + 端口绑定 (5 plans)
-
-**Total shipped through v1.21**: 173 plans across 62 phases (Phases 1-56 + 57-62).
-**Total shipped through v1.22-v1.25 (combined)**: +20 plans across 7 phases (64-70).
-
-**Cumulative shipped through 2026-08-20**: 194 plans across 70 phases (Phases 1-63 + 64-70).
-
-</details>
-
-*Last updated: 2026-08-20 — Combined v1.22 + v1.23 + v1.24 + v1.25 milestone complete (Phases 63-70 / 21 plans / 36 items). 8/8 phases passed verification; audit [v1.22-v1.25-MILESTONE-AUDIT.md](v1.22-v1.25-MILESTONE-AUDIT.md) `passed` (20/20 reqs + 5/5 integration + 4/4 E2E flows). Combined archive [milestones/v1.22-v1.25-ROADMAP.md](milestones/v1.22-v1.25-ROADMAP.md) + [milestones/v1.22-v1.25-REQUIREMENTS.md](milestones/v1.22-v1.25-REQUIREMENTS.md) created; per-block archives preserved for full traceability. **Phase 63 frontend-toolchain-automation SHIPPED 2026-08-20** (1/1 plan, 5/5 SC, 7-commit chain `760606a..d2184fd`).*
+*Last updated: 2026-08-20 — v1.26 backend-test-coverage-excellence milestone IN PROGRESS: 4 phases (71-74) / 19 requirements / 100% mapped. Quick task 260820-bcs 后端覆盖率扫描数据为规划输入。Phase 71 IN PROGRESS。Phase 63 frontend-toolchain-automation SHIPPED 2026-08-20(前端 coverage thresholds 已就位,本 milestone 为后端对称物)。Combined v1.22-v1.25 SHIPPED + ARCHIVED 2026-08-19.*
