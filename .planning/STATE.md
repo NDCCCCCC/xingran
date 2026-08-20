@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.22 + v1.23 + v1.24 + v1.25 + Phase 63
-milestone_name: milestone
-status: Phase 63 SHIPPED — 1/1 plan EXECUTED (5/5 SC verified: format:check pass + lint 0 errors + lint-staged/commitlint hooks + CI Node 24 + coverage thresholds + knip/size-limit advisory);ROADMAP Phase 63 勾选 + 7-commit chain `760606a..937f35f`(含 `d2184fd` Phase 70 格式回归修复)
-stopped_at: Phase 63 SHIPPED (1 plan + 5 SC + 159 tests pass;3 advisory 留给 Phase 71+:network/ports timeout + total bundle +90kB + knip ignore churn)
-last_updated: "2026-08-20T00:48:00.000Z"
+milestone: v1.26
+milestone_name: backend-test-coverage-excellence
+status: planning
+last_updated: "2026-08-20T13:19:08.924Z"
 last_activity: 2026-08-20
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 28
-  completed_plans: 28
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -38,10 +37,10 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 
 ## Current Position
 
-Phase: 63
-Plan: 1/1
-Status: SHIPPED — `63-01-SUMMARY.md` 落地 + ROADMAP Phase 63 标记 SHIPPED + Progress 表 8/8 phases(63-70)+ Phase 63 详情段(5 SC)补齐;`d2184fd` 修复 Phase 70 引入的 8 文件 format 回归(独立 format-only commit 保持 bisect-friendly)
-Last activity: 2026-08-20
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-08-20 — Milestone v1.26 started
 
 ## Accumulated Context
 

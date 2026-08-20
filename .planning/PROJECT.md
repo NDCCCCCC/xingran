@@ -1,7 +1,7 @@
 ---
 last_updated: 2026-08-20
-update_trigger: Combined v1.22 + v1.23 + v1.24 + v1.25 milestone COMPLETE + ARCHIVED (7 phases / 20 plans / 36 items, audit passed)
-previous_update: 2026-08-18 v1.22 SHIPPED
+update_trigger: v1.26 backend-test-coverage-excellence milestone started (12.8% → ≥70%, P0/P1 全清, CI coverage gate)
+previous_update: 2026-08-19 Combined v1.22-v1.25 COMPLETE + ARCHIVED
 ---
 
 ## Current State: v1.22 + v1.23 + v1.24 + v1.25 — ✅ SHIPPED + ARCHIVED 2026-08-19
@@ -28,18 +28,27 @@ previous_update: 2026-08-18 v1.22 SHIPPED
 - Combined: [milestones/v1.22-v1.25-ROADMAP.md](milestones/v1.22-v1.25-ROADMAP.md) + [milestones/v1.22-v1.25-REQUIREMENTS.md](milestones/v1.22-v1.25-REQUIREMENTS.md)
 - Per-block: milestones/v1.22-*, v1.23-*, v1.24-*, v1.25-* (preserved for full traceability)
 
-## Next Milestone Goals: v1.26+ (TBD by /gsd:new-milestone)
+## Current Milestone: v1.26 后端测试覆盖率优秀 (Backend Test Coverage Excellence)
 
-启动新里程碑:`/clear` 然后 `/gsd:new-milestone`
+**Goal:** 后端 Go 加权平均测试覆盖率从 **12.8% → ≥70%(优秀等级)**,P0/P1 业务模块零测试清零,CI 落地 coverage 阈值 gate + PR diff coverage,使覆盖率从此不可无声倒退。
 
-**候选方向** (基于 STATE.md §Pending Decisions + §Deferred Items + v1.22 Future Requirements):
-- **PROTO-01..04 逐屏原型对齐** (v1.22 Future Requirements §Future)
-- **VIS-01..03 视觉深化** (v1.22 Future Requirements §Future)
-- **Phase 63 frontend-toolchain-automation** 持续 IN PROGRESS(独立)
-- **真机 site-visit UAT 闭环** (v1.19/v1.18/v1.20 deferred items)
-- **残余 deferred debug session 清理** (audit-open backlog)
+**Target features:**
+- 治理基线 + CI gate:后端 CI 加 `-coverprofile` + 全局阈值 gate(失败即阻断)+ 基线数字落盘;pkg/cache flaky test 已修复(`5ead742`,Phase 71 直接验收)
+- P0 核心补齐:api/v1/{workorder, monitor, scheduler, system}(全 0%)+ services/{workorder 0.6%, system 10.2%} 核心业务链路
+- P1 重要补齐:api/v1/{duty, knowledge, rpa, vdi} + services/{duty, knowledge, monitor, network} 8 个零测试模块全清
+- P2 增量收尾:api/v1/{operations, asset, network} + services/{rpa, vdi} + core/device 等大块增量,把整体推到 ≥70%,启用 diff coverage ≥80%
 
-**用户决策方向**: 由 `/gsd:new-milestone` 启动下一里程碑 questioning → research → requirements → roadmap
+**锁定决策 (v1.26 init):**
+- **D-01 目标等级**: 整体加权平均 ≥70%(优秀)——对齐 milestone 命名与 quick-260820-bcs 扫描建议
+- **D-02 范围边界**: P0+P1 全清 + P2 增量至整体 ≥70%;纯 struct 模型 / cmd 入口 / docs 类辅助包(~2.5k stmts)不强制覆盖
+- **D-03 CI gate**: 全局阈值 gate(失败即阻断)+ PR 增量 diff coverage ≥80%,与前端 Phase 63 模式对称
+- **D-04 测试基建**: 沿用已有 glebarez sqlite in-memory,不引入新 mock framework
+- **D-05 Phase 编号**: 从 v1.25 末尾 Phase 70 续编(71+),4 phases 按扫描建议拆分
+- **D-06 Research skipped**: 覆盖率数据/模块清单/CI 现状均已落盘(quick-260820-bcs),无需域研究
+
+**规划输入:** `.planning/quick/260820-backend-test-coverage-scan/SUMMARY.md`(74 业务包 / 12.8% 加权 / 33 个 0% 包 / P0-P2 分级清单 / 4-phase 拆分建议 / 5 SC 建议)
+
+**范围边界:** 仅补测试 + CI 治理,不修改业务逻辑(测试暴露的 bug 修复除外);辅助工具包(models 纯 struct / cmd main / internal/docs)不强制覆盖。
 
 ---
 
@@ -580,7 +589,7 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 
 ---
 
-*Last updated: 2026-08-20 — Combined v1.22 + v1.23 + v1.24 + v1.25 milestone SHIPPED + ARCHIVED (7 phases / 20 plans / 36 items, audit `passed`). Combined archive [milestones/v1.22-v1.25-ROADMAP.md](milestones/v1.22-v1.25-ROADMAP.md) + [milestones/v1.22-v1.25-REQUIREMENTS.md](milestones/v1.22-v1.25-REQUIREMENTS.md); per-block archives (v1.22/v1.23/v1.24/v1.25) preserved for full traceability. PROJECT.md reorganized: Current State = v1.22-v1.25 SHIPPED; Next Milestone = v1.26+ TBD by `/gsd:new-milestone`. Phase 63 frontend-toolchain-automation 独立 IN PROGRESS. v1.21 SHIPPED 2026-08-18 (Phases 57-62 / 6 phases / 8 plans / 14 v1 requirements + Phase 62 cross-AI 14 review items / C1-C7 + 单方 HIGH/MEDIUM).*
+*Last updated: 2026-08-20 — v1.26 后端测试覆盖率优秀 (Backend Test Coverage Excellence) milestone started: 12.8% → ≥70% 加权平均,P0/P1 零测试模块全清,CI coverage 阈值 gate + diff coverage ≥80%;4 phases (71-74) 按 quick-260820-bcs 扫描建议拆分。规划输入: `.planning/quick/260820-backend-test-coverage-scan/SUMMARY.md`。Previous: Combined v1.22-v1.25 SHIPPED + ARCHIVED 2026-08-19 (7 phases / 20 plans / 36 items, audit `passed`); Phase 63 前端工具链自动化 SHIPPED 2026-08-20; v1.21 SHIPPED 2026-08-18 (Phases 57-62).*
 
 ---
 
