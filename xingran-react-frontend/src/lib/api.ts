@@ -565,7 +565,7 @@ export function postLongRequest<T = unknown>(
   url: string,
   data?: unknown,
   timeout: number = 300000
-): Promise<T> {
+): Promise<BaseResponse<T>> {
   return api.post(url, data, { timeout });
 }
 
