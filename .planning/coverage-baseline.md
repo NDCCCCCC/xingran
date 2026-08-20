@@ -99,7 +99,7 @@ PACKAGE                                                                 STMT    
 
 | date | phase_label | weighted_avg | total_stmts | total_covered | 0pct_pkg_count | commit | phase_executor | ratchet_from | ratchet_to |
 |------|-------------|--------------|-------------|---------------|----------------|--------|----------------|--------------|------------|
-| 2026-08-20 | Phase 71 后 | 12.8 | 43652 | 5589 | 33 | TBD | gsd-execute-phase 71 | n/a | n/a |
+| 2026-08-20 | Phase 71 后 | 12.8 | 43652 | 5589 | 33 | 326a541 | gsd-execute-phase 71 | n/a | n/a |
 
 ### Per-package (Phase 71 后)
 
