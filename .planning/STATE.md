@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.26
 milestone_name: backend-test-coverage-excellence
-status: planning
-last_updated: "2026-08-20T13:19:08.924Z"
+status: in_progress
+last_updated: "2026-08-20T22:32:00.000Z"
 last_activity: 2026-08-20
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 2
+  completed_plans: 1
+  percent: 25
 ---
 
 # Project State
@@ -18,7 +18,7 @@ progress:
 **Project**: XingRan-Next 运维管理系统
 **Created**: 2026-04-16
 **Status**: v1.22 + v1.23 + v1.24 + v1.25 启动块 + Phase 63 全部 SHIPPED(Phases 63-70 / 8 phases / 21 plans / 36 requirements 100% 勾选 / 33+ tasks)。**Phase 63** 前端工具链自动化 SHIPPED 2026-08-20(1/1 plan,5/5 SC verified,7-commit chain `760606a..937f35f`,含 `d2184fd` Phase 70 格式回归修复)。**v1.23 启动块**: Phase 68 部署稳健性 & 文档一致性(SM2 密钥配置闭环)EXECUTED 2026-08-19(5 commits: a21dcec..25ded8f)。**v1.24 启动块**: Phase 69 字典与状态值治理 8/8 plans EXECUTED 2026-08-19(DICT-01 后端常量终态 + DICT-02 字典 seed 11 组 + DICT-03 前端 4 页 useDict 迁移 + DICT-04 CLAUDE.md 指针化)。**v1.25 启动块**: Phase 70 系统设置页面布局重构 7/7 plans EXECUTED 2026-08-19(D-01~D-12 全部勾选,visual gate 通过,e138411 收口)。
-**Last activity**: 2026-08-20 — Phase 63 closeout:`63-01-SUMMARY.md` 落地(177 行),ROADMAP Phase 63 状态由 IN PROGRESS 改为 SHIPPED + Progress 表 8/8 phases 全部落地(63-70)+ Phase 63 详情段(5 SC)补齐;5/5 SC 验证通过(format:check pass + lint 0 errors + lint-staged/commitlint hooks 经 `d2184fd` 触发实测 + CI Node 24 + coverage thresholds 25/15/22/25 + knip/size-limit advisory 可运行);3 项 advisory 留给 Phase 71+(network/ports 3 timeout + total bundle +90kB + knip ignore churn)。Phase 70-07 早间(2026-08-19)EXECUTED —— 7/7 plans,D-01~D-12 全部勾选,visual gate 通过,e138411 收口 commit。前期 2026-08-19 上午 Phase 70-02 EXECUTED: index.css +14 .xr-* selectors + SettingsShell.tsx (D-01/D-03/D-04/D-05 落地) + 6 vitest cases (D-03/D-04 锁定) + quality gates 全绿 (type-check + lint 0 errors / 138 tests pass)。Phase 70-01 D-10 default-theme 清理原子提交(`35db1b5`)并行落地。Phase 63 6 个 commit(`760606a` Prettier + `0248e46` 全仓格式化 + `953f365` CI Node 24 + `78aa802` husky/lint-staged/commitlint + `1609869` coverage thresholds + `4d8cd0d` knip/size-limit)由 `ed25272` merge 收口于 2026-08-15。
+**Last activity**: 2026-08-20 — **Phase 71 plan 71-01 EXECUTED 2026-08-20** (file creation half): 4 atomic commits `4242a75` `.coverage-threshold` (5 bytes, 12.8 baseline) + `3e2664c` `.github/scripts/check-coverage.sh` (139 lines bash + awk, chmod +x, exit 0/1/2) + `75a4703` `.github/workflows/ci.yml` backend job 4-step extension (Test +coverprofile + Coverage HTML + Coverage gate + Upload artifact@v4) + `75b96be` `.planning/coverage-baseline.md` scaffold (起点 row commit `5ead742` + Phase 71 后 row commit `TBD` pending 71-01b amend + two 76-line per-package fenced blocks + regression checklist + ratchet note). D-01..D-04 锁定决策全部 honored (bash + awk zero-deps; actions/upload-artifact@v4 + 30-day retention; standalone baseline file not contaminating quick scan; manual ratchet by editing only .coverage-threshold in future phases). Pre-existing workspace artifacts (frontend Format check step from prior session; D-state on 57-62 phase plan files; M-state on internal/services/system/asset_columns_schema.json + frontend global.d.ts + tsconfig.app.json) preserved untouched per planner directive. Plan 71-01b (verify + push + amend) next. Phase 63 closeout:`63-01-SUMMARY.md` 落地(177 行),ROADMAP Phase 63 状态由 IN PROGRESS 改为 SHIPPED + Progress 表 8/8 phases 全部落地(63-70)+ Phase 63 详情段(5 SC)补齐;5/5 SC 验证通过(format:check pass + lint 0 errors + lint-staged/commitlint hooks 经 `d2184fd` 触发实测 + CI Node 24 + coverage thresholds 25/15/22/25 + knip/size-limit advisory 可运行);3 项 advisory 留给 Phase 71+(network/ports 3 timeout + total bundle +90kB + knip ignore churn)。Phase 70-07 早间(2026-08-19)EXECUTED —— 7/7 plans,D-01~D-12 全部勾选,visual gate 通过,e138411 收口 commit。前期 2026-08-19 上午 Phase 70-02 EXECUTED: index.css +14 .xr-* selectors + SettingsShell.tsx (D-01/D-03/D-04/D-05 落地) + 6 vitest cases (D-03/D-04 锁定) + quality gates 全绿 (type-check + lint 0 errors / 138 tests pass)。Phase 70-01 D-10 default-theme 清理原子提交(`35db1b5`)并行落地。Phase 63 6 个 commit(`760606a` Prettier + `0248e46` 全仓格式化 + `953f365` CI Node 24 + `78aa802` husky/lint-staged/commitlint + `1609869` coverage thresholds + `4d8cd0d` knip/size-limit)由 `ed25272` merge 收口于 2026-08-15。
 
 # Project State
 
@@ -37,10 +37,10 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-08-20 — Milestone v1.26 started
+Phase: Phase 71 (governance baseline + CI gate) — IN PROGRESS
+Plan: 71-01 EXECUTED (file creation half) / 71-01b PENDING (verify+push+amend)
+Status: Phase 71 plan 71-01 file-creation half complete; plan 71-01b to verify on CI and amend the TBD commit SHA
+Last activity: 2026-08-20 — Phase 71 plan 71-01 EXECUTED (4 atomic commits, see last_activity above)
 
 ## Accumulated Context
 
@@ -214,6 +214,7 @@ Resume file: .planning/phases/68-deploy-robustness-and-docs-consistency/68-01-SU
 | Phase 69 P05 | 23m | 1 tasks | 22 files |
 | Phase 69 P07 | 13m | 2 tasks | 12 files |
 | Phase 69 P08 | 5m + 10m(T2 人工实测) | 2 tasks | 1 file(CLAUDE.md 指针化)+ T2 字典链路端到端五步实测 PASS |
+| Phase 71 P01 | 12m | 4 tasks | 4 files (3 NEW + 1 MODIFY, 0 business code); commits 4242a75/3e2664c/75a4703/75b96be; file creation half (verify+push+amend by 71-01b) |
 
 ## Decisions
 
@@ -225,3 +226,4 @@ Resume file: .planning/phases/68-deploy-robustness-and-docs-consistency/68-01-SU
 - [Phase 69-05]: 批4将 17 文件/46 守护命中清零，workorder/duty/discovery/execution/dispatch/monitor/asset 与 API 散点改用实体状态常量；补齐 ServerStatus/NotificationConfigStatus 并将 DiscoveryStatus 0-4 纳入锁值（85→94）；百度 geocoding 外部返回码保持 F 簇唯一豁免
 - [Phase 69]: 69-07: 四页 type 下拉迁 useDict（三件套+空态回退静态 OPTIONS 第四件）；workstations hook 放 index.tsx 经 prop 透传 EditModal；number 字段 Option value 用 Number(dictValue) 保提交契约；devices 不引入新增默认值，isDefault 默认件仅用于原有默认的三处（user 0→2保密 / workstation 0 不变 / holiday legal→custom 对齐后端 gorm default）
 - [Phase 69-08]: DICT-04 CLAUDE.md 指针化+字典链路端到端收尾：删除 6 行模块值表格改写为 5 点真相源指针段(models 常量/status_constants_test 锁值/sys_dict+migration_208/前端 constants/status.ts/status 不入字典安全决策)，Menu visible 例外句保留并显式引用 models.VisibleShow/VisibleHidden 不成为手工值拷贝，新增常量流程「先 models→同步 test→业务引用」三步走写入指针段末尾；T2 五步实测(2026-08-19 chrome-devtools):字典管理 11 组可见 / 专线类型 6 项+ISP 5 项 / ops_workstation_type 改 label→工位管理新增弹窗默认值即时显示新 label(SC#3 强信号) / 四页 useDict 链路生效+workstations/constants.tsx:16-20 TYPE_OPTIONS 静态 fallback 保留 / status 共享常量零 UX 回归 → 5/5 PASS,DICT-04 落勾选
+- [Phase 71-01]: 治理基线+CI gate 文件创建半幅交付 — D-01..D-04 锁定决策全部 honored。`.coverage-threshold` 5 字节(12.8 + LF，no `%`, no BOM, no JSON)；`.github/scripts/check-coverage.sh` 139 行 bash + awk 零依赖 gate，awk 公式与 quick-260820-bcs 基线扫描 byte-identical 复用同口径(`%-50s %8d %8d %6.2f%%` 列宽与 per-package-coverage.txt 对齐)，exit 0/1/2 镜像 `scripts/check-status-literals.sh`；`.github/workflows/ci.yml` backend job 4 步扩展(Test 加 `-coverprofile=coverage.out -covermode=atomic`，无 `-race` per D-01 → Coverage HTML `if: always()` → Coverage gate 调脚本 → Upload artifact `actions/upload-artifact@v4` `retention-days: 30` `if: always()`)，Lint / concurrency / permissions / frontend job(及先前会话的 Format check 步)全保留；`.planning/coverage-baseline.md` 196 行 ratchet tracking 文件(独立于 quick scan SUMMARY.md 不可回填,per D-03)，起点行 commit `5ead742` 12.8%/43652 stmts/5589 covered/33 zero-coverage 包 + Phase 71 后行 commit `TBD` 待 71-01b amend + 两 76 行 per-package fenced block + 倒退检查 checklist + ratchet note。Phase 71 不改业务/不改测试，per-package 数字在 12.8% 上不变化(73 个包字节同，1 个 PACKAGE 总结同)。Plan 71-01b 接手:本地 `go test` 三绿 + 故意 bump `.coverage-threshold` 到 99.9 验 exit 1 + 回滚 12.8 + push + `gh run watch` + 替换 TBD SHA 完成 GOV-01/02/04 勾选。
