@@ -17,7 +17,8 @@
  *   - state machine: open + submit → phase 转 executing → 转入 result (DOM 中可见 Statistic 卡片)
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { render, act } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/dom";
 import { App } from "antd";
 import { MemoryRouter } from "react-router-dom";
 import { useState, type ReactNode } from "react";

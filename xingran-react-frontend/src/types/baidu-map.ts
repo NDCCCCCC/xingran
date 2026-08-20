@@ -385,7 +385,7 @@ export interface BMapGLNamespace extends BMapNamespace {
  * 获取百度地图命名空间（标准2D版本）
  */
 export function getBMap(): BMapNamespace | undefined {
-  return window.BMap;
+  return window.BMap as BMapNamespace | undefined;
 }
 
 /**

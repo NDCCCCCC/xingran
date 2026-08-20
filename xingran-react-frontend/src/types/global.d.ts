@@ -11,6 +11,7 @@ declare module "@breejs/later" {
 }
 
 declare module "sm-crypto" {
+  // 顶层函数 (legacy 调用,仓库还有非 await-import 形式)
   export function sm2Encrypt(data: string, publicKey: string): string;
   export function sm2Decrypt(encryptedData: string, privateKey: string): string;
   export function sm3Encrypt(data: string): string;
@@ -18,7 +19,7 @@ declare module "sm-crypto" {
   export function sm4Decrypt(encryptedData: string, key: string): string;
   export function doEncrypt(message: string, publicKey: string): string;
   export function doDecrypt(encryptedText: string, privateKey: string): string;
-}
+}// 详细对象挂载点 (sm2 / sm4) 见 ./sm-crypto.d.ts,后者更具体。
 
 declare module "@uiw/react-md-editor" {
   import type React from "react";
@@ -49,10 +50,15 @@ declare namespace CSS {
 }
 
 // 百度地图全局类型
+// 注: 故意不用 `any`,因为 optional `any` 在 TS 7 + typescript-eslint
+// 组合下会被静态分析器误报为"always defined" (TS2774),导致
+// `if (window.BMap)` 这种守卫失效。用 `BaiduMap | undefined`
+// 让 TypeScript 严格区分"存在"与"未加载"。
+import type {} from "@/pages/operations/building-spaces-3d/components/HubeiMapGL";
 declare global {
   interface Window {
-    BMap?: any;
-    BMapGL?: any;
+    BMap?: unknown;
+    BMapGL?: unknown;
     initBMapGL?: () => void;
     init?: () => void;
     viewBuildingDetails?: (buildingId: string) => void;

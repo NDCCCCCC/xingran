@@ -10,7 +10,8 @@
  *   - onApplyException 按钮被点击时调用 prop
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/dom";
 
 // mock 子 hooks(useWorkstationHealth + useReconciliationVisibility)
 const mockUseReconciliationVisibility = vi.fn();
