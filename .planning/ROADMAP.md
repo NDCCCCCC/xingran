@@ -1,6 +1,6 @@
 ---
 last_updated: 2026-08-20
-update_trigger: v1.26 backend-test-coverage-excellence milestone roadmap drafted (4 phases 71-74, 19 reqs 100% mapped)
+update_trigger: Phase 71 plan 71-01 created (governance baseline + CI gate, 8 tasks, single wave)
 ---
 
 # Roadmap: XingRan-Next 运维管理系统
@@ -72,6 +72,9 @@ Phase 71 (治理基线 + CI gate)
 ### Phase 71: 治理基线 + CI gate — IN PROGRESS
 
 **Goal:** CI 后端 job 产出覆盖率报告与阈值 gate;建立测试补齐的基线记录与 ratchet 防倒退机制;前置 flaky test 修复验收。
+Plans:
+- [ ] [71-01-PLAN.md](phases/71-governance-baseline-and-ci-gate/71-01-PLAN.md) — Bash+awk coverage gate + ci.yml extension + baseline snapshot (8 tasks, autonomous)
+
 
 **Requirements:** GOV-01, GOV-02, GOV-04
 
@@ -166,7 +169,7 @@ Phase 71 (治理基线 + CI gate)
 
 | Phase | Status | Plans | Requirements | Started | Completed |
 |-------|--------|-------|--------------|---------|-----------|
-| Phase 71 | IN PROGRESS | 0/? | GOV-01, GOV-02, GOV-04 (0/3 done) | 2026-08-20 | — |
+| Phase 71 | IN PROGRESS | 1/? | GOV-01, GOV-02, GOV-04 (0/3 done) | 2026-08-20 | — |
 | Phase 72 | Pending | 0/? | CORE-01..06 (0/6 done) | — | — |
 | Phase 73 | Pending | 0/? | IMP-01..06 (0/6 done) | — | — |
 | Phase 74 | Pending | 0/? | GOV-03, SCALE-01..03 (0/4 done) | — | — |
