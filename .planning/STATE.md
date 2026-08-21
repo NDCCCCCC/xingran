@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.26
 milestone_name: 后端测试覆盖率优秀
 status: verifying
-stopped_at: Phase 72 context gathered
-last_updated: "2026-08-20T16:17:23.500Z"
-last_activity: 2026-08-20
+stopped_at: Phase 72 atomic ratchet committed
+last_updated: "2026-08-21T00:00:00.000Z"
+last_activity: 2026-08-21
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 25
+  completed_phases: 2
+  total_plans: 15
+  completed_plans: 15
+  percent: 50
 ---
 
 # Project State
@@ -39,9 +39,9 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 ## Current Position
 
 Phase: 72
-Plan: Not started
-Status: Phase 71 fully shipped — file creation half (71-01, 4 commits) + verify+push+amend half (71-01b, 1 amend commit) both complete; gated coverage at 12.8% on `main`; CI Coverage gate PASSED on signed-off push
-Last activity: 2026-08-20
+Plan: SHIPPED (atomic ratchet committed)
+Status: Phase 72 fully complete — 13 plans EXECUTED 2026-08-21 (72-01..72-13); atomic coverage ratchet 12.8% → 21.5%; .coverage-threshold + coverage-baseline.md + STATE.md + ROADMAP.md + 72-13-SUMMARY.md all in single atomic ratchet commit (D-07); 6 CORE targets partial (workorder 75.4%, monitor 71.2%, scheduler 85.5% ≥70%; system 35.4%, services/system 53.5% <70% per-sub-module D-04 strict); deferred to Phase 73/74. Per-plan test files batched in single commit `6297f9f` (Task 0 W2 fix). Zero business code changes (D-08 honored).
+Last activity: 2026-08-21
 
 ## Accumulated Context
 
