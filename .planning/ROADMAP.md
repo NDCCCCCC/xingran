@@ -127,7 +127,7 @@ Plans:
 
 ---
 
-### Phase 73: P1 重要补齐 — Pending
+### Phase 73: P1 重要补齐 — PLANNED 2026-08-21
 
 **Goal:** 8 个 P1 重要模块(duty/knowledge/rpa/vdi/monitor/network)从 0% 测试提升至 ≥70%。
 
@@ -141,13 +141,21 @@ Plans:
 4. `internal/api/v1/vdi` 覆盖率 ≥70%(298 stmts)
 5. `internal/services/duty` + `internal/services/knowledge` 覆盖率 ≥70%(114 + 85 stmts)
 6. `internal/services/monitor` + `internal/services/network` 覆盖率 ≥70%(485 + 127 stmts)
-7. Phase 73 完成后加权平均覆盖率预估达 ≥55%,CI gate 阈值 ratchet 上调
+7. Phase 73 完成后加权平均覆盖率 ratchet 到新实际值(预估 27-30%,沿用 Phase 72 D-07),CI gate 阈值 ratchet 上调
 8. 全部新测试零业务代码改动
+
+**Wave / Plan structure:**
+
+- **Wave 1 (parallel):** 73-01 (handler 简单: duty+knowledge, 538 stmts) + 73-02 (handler 复杂: rpa+vdi, 910 stmts, incl. public router) + 73-03 (service 简单: duty+knowledge+network, 326 stmts) + 73-04 (service 中等: monitor, 485 stmts, incl. oper_log)
+- **Wave 5:** 73-05 (ratchet + per-package gate extension, depends on 73-01..04)
 
 **Notes:**
 
 - services/rpa 1865 stmts 1.1% / services/vdi 1127 stmts 2.7% 暂归 P2(Phase 74),本 phase 只补到 70% handler + 小 service 包
 - 复杂模块(rpa 1865 / vdi 1127)planner 可分多 plan 拆分
+- Plan 73-05 (Wave 5) mirrors Phase 72 Plan 72-13: Task 0 批量提交所有 test files → Task 1 全包覆盖率测量 → Task 2 扩展 check-coverage.sh (8 P1 包 per-package 验证) → Task 3 原子 ratchet commit (6 文件) → Task 4 CI 验证
+- D-08 + D-09 (test pattern consistency + 真实中间件) 沿用 Phase 71/72 范本,在 73-05 must_haves 中显式标注
+- D-04 (rpa 公开路由不豁免) + D-03 (oper_log_service 不豁免) 严格按 ≥70% 覆盖
 
 ---
 

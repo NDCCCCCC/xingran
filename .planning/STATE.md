@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.26
 milestone_name: 后端测试覆盖率优秀
-status: completed
-stopped_at: Phase 73 context gathered
-last_updated: "2026-08-21T01:51:36.258Z"
+status: in_progress
+stopped_at: Phase 73 planned (5 plans ready for execution)
+last_updated: "2026-08-21T02:15:00.000Z"
 last_activity: 2026-08-21
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 15
+  total_plans: 20
   completed_plans: 15
   percent: 50
 ---
@@ -38,9 +38,9 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 
 ## Current Position
 
-Phase: 72
-Plan: SHIPPED (atomic ratchet committed)
-Status: Phase 72 fully complete — 13 plans EXECUTED 2026-08-21 (72-01..72-13); atomic coverage ratchet 12.8% → 21.5%; .coverage-threshold + coverage-baseline.md + STATE.md + ROADMAP.md + 72-13-SUMMARY.md all in single atomic ratchet commit (D-07); 6 CORE targets partial (workorder 75.4%, monitor 71.2%, scheduler 85.5% ≥70%; system 35.4%, services/system 53.5% <70% per-sub-module D-04 strict); deferred to Phase 73/74. Per-plan test files batched in single commit `6297f9f` (Task 0 W2 fix). Zero business code changes (D-08 honored).
+Phase: 73
+Plan: PLANNED (5 plans ready for execution)
+Status: Phase 73 P1 重要补齐 PLANNED 2026-08-21 — 5 plans created via /gsd:plan-phase 73: 73-01 (handler 简单: duty+knowledge 538 stmts) + 73-02 (handler 复杂: rpa+vdi 910 stmts, incl. public router) + 73-03 (service 简单: duty+knowledge+network 326 stmts) + 73-04 (service 中等: monitor 485 stmts, incl. oper_log) + 73-05 (Wave 5 ratchet + per-package gate extension). All IMP-01..06 covered; D-01..D-13 锁定决策全部 honored in plans; PLAN-CHECKER initially flagged 1 BLOCKER (missing ratchet plan) + 3 WARNINGS — BLOCKER fixed by adding Plan 73-05 (mirrors Phase 72 Plan 72-13 structure); WARNINGS fixed by adjusting 73-02 Task 1 per-file target 60%→75% + adding explicit skip enumeration + post-skip coverage math in 73-01 Task 1. RESEARCH.md + VALIDATION.md generated alongside CONTEXT.md. Next: /gsd:execute-phase 73 to run all 5 plans (Wave 1: 73-01..73-04 parallel, Wave 5: 73-05 after all). Phase 72 fully complete — 13 plans EXECUTED 2026-08-21 (72-01..72-13); atomic coverage ratchet 12.8% → 21.5%; 6 CORE targets partial (workorder 75.4%, monitor 71.2%, scheduler 85.5% ≥70%; system 35.4%, services/system 53.5% <70%); deferred to Phase 73/74. Zero business code changes (D-08 honored).
 Last activity: 2026-08-21
 
 ## Accumulated Context
@@ -189,9 +189,9 @@ Full deferred detail in [milestones/v1.21-ROADMAP.md](milestones/v1.21-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-21T01:51:36.247Z
-Stopped at: Phase 73 context gathered
-Resume file: .planning/phases/73-p1-pending/73-CONTEXT.md
+Last session: 2026-08-21T02:15:00.000Z
+Stopped at: Phase 73 planned (5 plans ready for execution)
+Resume file: .planning/phases/73-p1-pending/73-{01..05}-PLAN.md
 
 **Milestone status:** ✅ v1.22 SHIPPED 2026-08-18 (Phases 64-67 / 4 phases / 15 requirements / 100% coverage) + ✅ v1.23 Phase 68 EXECUTED 2026-08-19 (DEPLOY-01~05 闭环) + ✅ v1.24 Phase 69 EXECUTED 2026-08-19 (DICT-01~04 闭环) + ✅ v1.25 Phase 70 EXECUTED 2026-08-19 (D-01~D-12 闭环) + ✅ **Phase 63 SHIPPED 2026-08-20 (1/1 plan, 5/5 SC, 7-commit chain `760606a..937f35f`)**;四块启动块 + Phase 63 全部落地,共 8 phases / 21 plans 全绿;3 项 advisory 留给 Phase 71+(network/ports 3 timeout + total bundle +90kB + knip ignore churn)。
 
