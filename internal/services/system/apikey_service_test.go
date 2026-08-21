@@ -945,7 +945,10 @@ func TestListUsageLogs(t *testing.T) {
 		db.Create(&oldLog)
 		db.Create(&recentLog)
 
-		startTime := now.Add(-24 * time.Hour).Format(time.RFC3339)
+		// sqlite 下 created_at 为字符串字典序比较：RFC3339 的 'T' 分隔符
+		// 会让同日前缀的行恒小于阈值（mac_history_query_service_tz_test.go 同款问题），
+		// 用与存储一致的空间分隔格式。
+		startTime := now.Add(-24 * time.Hour).Format("2006-01-02 15:04:05")
 		params := ListUsageLogsParams{
 			APIKeyID:  apiKey.ID,
 			Current:   1,
