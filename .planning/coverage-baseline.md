@@ -308,3 +308,129 @@ PACKAGE                                                                43652    
 > same column schema, bumping `.coverage-threshold` in the same atomic
 > commit (D-04 manual ratchet, see `.planning/phases/71-.../71-RESEARCH.md`
 > §"Ratchet Workflow").
+
+---
+
+## Phase 73 后
+
+| date | phase_label | weighted_avg | total_stmts | total_covered | 0pct_pkg_count | commit | phase_executor | ratchet_from | ratchet_to |
+|------|-------------|--------------|-------------|---------------|----------------|--------|----------------|--------------|------------|
+| 2026-08-21 | Phase 73 后 | 25.9 | 43652 | 11336 | 22 | TBD (atomic ratchet) | gsd-execute-phase 73 | 21.5 | 25.9 |
+
+### 8 P1 packages per-package (Phase 73 后 — D-04 + D-10 strict)
+
+| IMP | Package | Coverage | Stmts | Status |
+|-----|---------|---------:|------:|--------|
+| IMP-01 | internal/api/v1/duty | 83.0% | 220/265 | PASS (≥70%) |
+| IMP-02 | internal/api/v1/knowledge | 84.2% | 230/273 | PASS (≥70%) |
+| IMP-03 | internal/api/v1/rpa | 79.2% | 485/612 | PASS (≥70%) |
+| IMP-04 | internal/api/v1/vdi | 76.2% | 227/298 | PASS (≥70%) |
+| IMP-05 | internal/services/duty | 95.6% | 109/114 | PASS (≥70%) |
+| IMP-05 | internal/services/knowledge | 95.3% | 81/85 | PASS (≥70%) |
+| IMP-06 | internal/services/network | 92.1% | 117/127 | PASS (≥70%) |
+| IMP-06 | internal/services/monitor | 95.3% | 462/485 | PASS (≥70%) |
+
+All 8 P1 targets ≥70% (D-04 + D-10 strict). check-coverage.sh extended with p1_package_check floor (exit code 4) — additive to weighted-avg gate.
+
+### Per-package (Phase 73 后)
+
+```
+pkg/normalize                                                             45         44      97.8%
+internal/config                                                          147        137      93.2%
+internal/middleware                                                      196        169      86.2%
+internal/transform                                                       111         95      85.6%
+internal/services/portwrite                                              259        221      85.3%
+internal/services/component_collector                                    345        285      82.6%
+internal/utils/operlog                                                    90         74      82.2%
+internal/services/topology                                                73         55      75.3%
+internal/api/v1/scheduler                                                152        130      85.5%
+internal/services/lldp                                                    96         57      59.4%
+internal/services/workorder                                              715        527      73.7%
+internal/api/v1/monitor                                                  518        369      71.2%
+internal/core/security                                                   313        153      48.9%
+internal/templates                                                       243        108      44.4%
+internal/services/asset                                                 1354        549      40.6%
+internal/api/v1/system                                                  3039       1077      35.4%
+internal/core/db                                                         643        241      37.5%
+internal/services/system                                                3483       1862      53.5%
+internal/websocket                                                      129         45      34.9%
+pkg/crypto                                                              439        148      33.7%
+internal/core/db/migrations                                             293         83      28.3%
+pkg/permission                                                          114         30      26.3%
+pkg/cache                                                               926        228      24.6%
+internal/services/base                                                   61         14      23.0%
+internal/services/operations                                           3714        835      22.5%
+internal/services/portcollection                                        580        112      19.3%
+internal/services/addomain                                             2415        371      15.4%
+pkg/middleware                                                          609         87      14.3%
+pkg/errors                                                              326         45      13.8%
+internal/services                                                      5202        589      11.3%
+internal/api/v1/asset                                                   420         35       8.3%
+internal/api/v1/network                                                1971        149       7.6%
+internal/api/v1                                                          578         38       6.6%
+internal/services/scheduler                                             167          8       4.8%
+internal/utils                                                          531         24       4.5%
+internal/scheduler                                                     1103         36       3.3%
+internal/api/v1/operations                                             1285         39       3.0%
+internal/services/vdi                                                  1127         30       2.7%
+internal/device                                                        1249         31       2.5%
+internal/core                                                           754         16       2.1%
+internal/agent/server                                                   616         13       2.1%
+internal/services/rpa                                                  1865         21       1.1%
+internal/api/v1/workorder                                               297        224      75.4%
+internal/services/duty                                                 114        109      95.6%
+internal/services/knowledge                                              85         81      95.3%
+internal/services/network                                               127        117      92.1%
+internal/services/monitor                                               485        462      95.3%
+internal/api/v1/duty                                                    265        220      83.0%
+internal/api/v1/knowledge                                               273        230      84.2%
+internal/api/v1/rpa                                                     612        485      79.2%
+internal/api/v1/vdi                                                     298        227      76.2%
+pkg/time                                                                 63          0       0.0%
+pkg/response                                                             51          0       0.0%
+pkg/query                                                               105          0       0.0%
+pkg/logger                                                               79          0       0.0%
+pkg/ldaputils                                                            33          0       0.0%
+pkg/gormutil                                                            194          0       0.0%
+pkg/captcha                                                             409          0       0.0%
+internal/services/common                                                  1          0       0.0%
+internal/server                                                           2          0       0.0%
+internal/pkg/system                                                     345          0       0.0%
+internal/pkg/cache                                                      167          0       0.0%
+internal/models/system/requests                                         109          0       0.0%
+internal/models/system                                                   11          0       0.0%
+internal/models/rpa                                                      94          0       0.0%
+internal/models/operations                                               23          0       0.0%
+internal/docs                                                             1          0       0.0%
+internal/api/v1/operations/requests                                      15          0       0.0%
+internal/api/v1/agent                                                     38          0       0.0%
+internal/api                                                             417          0       0.0%
+internal/agent/pkg/retry                                                 33          0       0.0%
+cmd/agent                                                                59          0       0.0%
+cmd                                                                     106          0       0.0%
+PACKAGE                                                                 STMT    COVERED        PCT
+-------                                                                 ----    -------        ---
+PACKAGE                                                                43652      11336      25.9%
+```
+
+### Per-package 倒退检查 (Phase 73 后)
+
+- [x] 0% 包数 Phase 72 后 31 → Phase 73 后 22 (减少 9 个 0% 包; 全部来自 P1 8 包 + 1 来自覆盖率波动)
+- [x] 8 个 P1 包全部 ≥70% per-package (D-04 + D-10 strict)
+- [x] 加权平均 21.5% → 25.9% (上升 4.4 个百分点)
+- [x] 无 per-package 倒退 (Phase 73 严格测试-only, 无业务代码改动 per D-12)
+
+### Notes (Phase 73 deviation)
+
+- 加权平均 25.9% 低于规划区间 27-30% (预估) — 实际 gate 测量 25.97% (脚本 %.2f), 25.9 是 %.1f 截断值; Phase 72 同款 21.5/21.55 模式
+- check-coverage.sh 扩展 p1_package_check (8 P1 包 per-package ≥70% floor, exit code 4) — 与 weighted-avg gate 并列, 加性不互斥
+- CORE-04 (api/v1/system 35.4%) / CORE-06 (services/system 53.5%) 仍低于 70% per-sub-module (Phase 72 deviation #1 遗留); per-sub-package validation 仍属 Phase 74 (GOV-03 scope), 未引入
+- IMP-06 整体完成 (network 92.1% + monitor 95.3%, 含 oper_log per D-03 不豁免)
+- **Ratchet commit 落地**: 21.5% → 25.9%, phase-level gate 已重置, Phase 74 (P2) 持续 ratchet 上调; p1_package_check 守卫 8 个 P1 包不退
+
+> **Ratchet note (D-04):** The `commit` column on the Phase 73 后 row reads
+> `TBD (atomic ratchet)` until plan 73-05 Task 4 amends this file with the
+> actual short SHA of the commit that ships the .coverage-threshold + this
+> file. Subsequent phases (74) append a new section with the same column
+> schema, bumping `.coverage-threshold` in the same atomic commit (D-04
+> manual ratchet).
