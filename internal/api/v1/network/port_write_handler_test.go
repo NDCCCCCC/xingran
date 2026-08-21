@@ -3,6 +3,7 @@ package network
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -14,8 +15,10 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/portcollection"
 	"github.com/xingran-next/xingran-go-backend/internal/services/portwrite"
+	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
@@ -806,3 +809,180 @@ func TestBuildAuditRow_SkippedSetAccessVlan_ContainsVlan(t *testing.T) {
 
 // ptrInt 辅助构造 *int 字面量。
 func ptrInt(i int) *int { return &i }
+
+// ============================================================================
+// Phase 74-03: UndoShutdown / EnableDot1x / DisableDot1x / SetDescription
+// handler entry points (all were 0% / 66.7% in baseline).
+// ============================================================================
+
+// TestPortWriteHandler_UndoShutdown_Success 走通 UndoShutdown 完整成功路径 —
+// 端口行存在 + service 返 succeeded → 200 + audit + operlog.Record。
+func TestPortWriteHandler_UndoShutdown_Success(t *testing.T) {
+	h, mockSvc, mockOperLog, sqlDB := newTestHandler(t)
+
+	port := &models.DevicePortStatus{
+		ID: "port-und-1", DeviceID: "dev-und-1", InterfaceName: "GE0/0/10",
+		AdminStatus: "down",
+	}
+	require.NoError(t, sqlDB.Create(port).Error)
+	require.NoError(t, sqlDB.Create(&models.NetworkDevice{BaseModel: models.BaseModel{ID: "dev-und-1"}, DeviceName: "undo-dev"}).Error)
+
+	w := invokeWithCtx("UndoShutdown", h.UndoShutdown, PortWriteRequest{PortID: "port-und-1"}, nil)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, 1, mockOperLog.recordAsyncCalls)
+	assert.Equal(t, "端口管理", mockOperLog.lastTitle)
+	assert.Equal(t, operlog.OperTypeEnable, mockOperLog.lastBusinessType,
+		"UndoShutdown maps to OperTypeEnable(12) per port_write_handler.go:115")
+	assert.Equal(t, 1, mockSvc.undoCalls, "service.UndoShutdown must be called once")
+}
+
+// TestPortWriteHandler_UndoShutdown_PortNotFound 路径 — service 返
+// portwrite.ErrPortNotFound sentinel → 不写 audit + 不调 operlog.
+//
+// 注：response.Error(c, http.StatusNotFound, ...) 的 int 首参硬编码为 400
+// (toAppError case int → HTTPStatus=400 quirk — 见 pkg/response/response.go)，
+// 这里断言 400 而非 404 是对 pre-existing 行为的如实记录 (D-12)。
+func TestPortWriteHandler_UndoShutdown_PortNotFound(t *testing.T) {
+	h, _, mockOperLog, sqlDB := newTestHandler(t)
+	_ = sqlDB
+
+	mockSvc := h.service.(*mockPortWriteService)
+	mockSvc.undoShutdownErr = portwrite.ErrPortNotFound
+
+	w := invokeWithCtx("UndoShutdown", h.UndoShutdown, PortWriteRequest{PortID: "ghost"}, nil)
+	assert.Equal(t, http.StatusBadRequest, w.Code,
+		"sentinel ErrPortNotFound maps to 400 due to response.Error int-first-arg quirk (D-12)")
+	assert.Equal(t, 0, mockOperLog.recordAsyncCalls, "sentinel path must NOT call operlog")
+}
+
+// TestPortWriteHandler_UndoShutdown_BindingError 触发 binding 校验失败路径。
+func TestPortWriteHandler_UndoShutdown_BindingError(t *testing.T) {
+	h, _, mockOperLog, sqlDB := newTestHandler(t)
+	_ = mockOperLog
+	_ = sqlDB
+
+	w := invokeWithCtx("UndoShutdown", h.UndoShutdown, map[string]string{}, nil)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// TestPortWriteHandler_EnableDot1x_Success 走通 EnableDot1x 完整成功路径 —
+// OperType=Enable(12), 调用 service.EnableDot1x。
+func TestPortWriteHandler_EnableDot1x_Success(t *testing.T) {
+	h, mockSvc, mockOperLog, sqlDB := newTestHandler(t)
+
+	port := &models.DevicePortStatus{
+		ID: "port-dot1x-en", DeviceID: "dev-dot1x-en", InterfaceName: "GE0/0/20",
+		AdminStatus: "up", Dot1xEnabled: false,
+	}
+	require.NoError(t, sqlDB.Create(port).Error)
+	require.NoError(t, sqlDB.Create(&models.NetworkDevice{BaseModel: models.BaseModel{ID: "dev-dot1x-en"}, DeviceName: "dot1x-en-dev"}).Error)
+
+	w := invokeWithCtx("EnableDot1x", h.EnableDot1x, PortWriteRequest{PortID: "port-dot1x-en"}, nil)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, 1, mockOperLog.recordAsyncCalls)
+	assert.Equal(t, operlog.OperTypeEnable, mockOperLog.lastBusinessType,
+		"EnableDot1x maps to OperTypeEnable(12) per port_write_handler.go:141")
+	assert.Equal(t, 1, mockSvc.enableCalls, "service.EnableDot1x must be called once")
+
+	// audit 行落库 + dot1x_enabled=true 在 after_value
+	var audit models.PortWriteAudit
+	require.NoError(t, sqlDB.First(&audit, "port_id = ?", "port-dot1x-en").Error)
+	var after map[string]interface{}
+	_ = json.Unmarshal(audit.AfterValue, &after)
+	assert.Equal(t, true, after["dot1x_enabled"])
+}
+
+// TestPortWriteHandler_DisableDot1x_Success 走通 DisableDot1x 完整成功路径 —
+// OperType=Disable(13), 调用 service.DisableDot1x。
+func TestPortWriteHandler_DisableDot1x_Success(t *testing.T) {
+	h, mockSvc, mockOperLog, sqlDB := newTestHandler(t)
+
+	port := &models.DevicePortStatus{
+		ID: "port-dot1x-dis", DeviceID: "dev-dot1x-dis", InterfaceName: "GE0/0/21",
+		AdminStatus: "up", Dot1xEnabled: true,
+	}
+	require.NoError(t, sqlDB.Create(port).Error)
+	require.NoError(t, sqlDB.Create(&models.NetworkDevice{BaseModel: models.BaseModel{ID: "dev-dot1x-dis"}, DeviceName: "dot1x-dis-dev"}).Error)
+
+	w := invokeWithCtx("DisableDot1x", h.DisableDot1x, PortWriteRequest{PortID: "port-dot1x-dis"}, nil)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, 1, mockOperLog.recordAsyncCalls)
+	assert.Equal(t, operlog.OperTypeDisable, mockOperLog.lastBusinessType,
+		"DisableDot1x maps to OperTypeDisable(13) per port_write_handler.go:154")
+	assert.Equal(t, 1, mockSvc.disableCalls, "service.DisableDot1x must be called once")
+
+	var audit models.PortWriteAudit
+	require.NoError(t, sqlDB.First(&audit, "port_id = ?", "port-dot1x-dis").Error)
+	var after map[string]interface{}
+	_ = json.Unmarshal(audit.AfterValue, &after)
+	assert.Equal(t, false, after["dot1x_enabled"])
+}
+
+// TestPortWriteHandler_DisableDot1x_DeviceNotFound 路径 — service 返
+// portwrite.ErrDeviceNotFound sentinel → 不写 audit + 不调 operlog.
+//
+// 注：同上 response.Error int-first-arg quirk — 实际 HTTP 400 而非 404。
+func TestPortWriteHandler_DisableDot1x_DeviceNotFound(t *testing.T) {
+	h, _, mockOperLog, sqlDB := newTestHandler(t)
+	_ = sqlDB
+
+	mockSvc := h.service.(*mockPortWriteService)
+	mockSvc.disableDot1xErr = portwrite.ErrDeviceNotFound
+
+	w := invokeWithCtx("DisableDot1x", h.DisableDot1x, PortWriteRequest{PortID: "port-ghost"}, nil)
+	assert.Equal(t, http.StatusBadRequest, w.Code,
+		"sentinel ErrDeviceNotFound maps to 400 due to response.Error int-first-arg quirk (D-12)")
+	assert.Equal(t, 0, mockOperLog.recordAsyncCalls, "sentinel path must NOT call operlog")
+}
+
+// TestPortWriteHandler_EnableDot1x_BindingError 触发 binding 校验失败。
+func TestPortWriteHandler_EnableDot1x_BindingError(t *testing.T) {
+	h, _, _, _ := newTestHandler(t)
+
+	w := invokeWithCtx("EnableDot1x", h.EnableDot1x, map[string]string{}, nil)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// TestPortWriteHandler_DisableDot1x_BindingError 触发 binding 校验失败。
+func TestPortWriteHandler_DisableDot1x_BindingError(t *testing.T) {
+	h, _, _, _ := newTestHandler(t)
+
+	w := invokeWithCtx("DisableDot1x", h.DisableDot1x, map[string]string{}, nil)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// TestPortWriteHandler_SetDescription_FailedStatus walks the result.Status=="failed"
+// path through execSinglePort — audit is still written + operlog.Record still called.
+//
+// (SetDescription was 66.7% in baseline; this exercises the after_value=different
+// from before_value branch where description actually changes.)
+func TestPortWriteHandler_SetDescription_FailedStatus(t *testing.T) {
+	h, mockSvc, mockOperLog, sqlDB := newTestHandler(t)
+
+	port := &models.DevicePortStatus{
+		ID: "port-desc-fail", DeviceID: "dev-desc-fail", InterfaceName: "GE0/0/30",
+		AdminStatus: "up", Description: "old desc",
+	}
+	require.NoError(t, sqlDB.Create(port).Error)
+	require.NoError(t, sqlDB.Create(&models.NetworkDevice{BaseModel: models.BaseModel{ID: "dev-desc-fail"}, DeviceName: "desc-fail-dev"}).Error)
+
+	// Force the failed status path: mock returns a result with Status="failed"
+	// and a non-nil error → execSinglePort falls through to audit + operlog + 200.
+	mockSvc.setDescriptionErr = errors.New("device rejected command")
+	mockSvc.setDescriptionOut = &portwrite.PortResult{
+		PortID: "port-desc-fail", Action: portcollection.ActionDescription,
+		Status: "failed", Error: "device refused",
+	}
+
+	w := invokeWithCtx("SetDescription", h.SetDescription,
+		PortWriteRequest{PortID: "port-desc-fail", Description: "new desc"}, nil)
+
+	// result.Status==failed path returns 200 (per RESEATCH §3.3)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, 1, mockOperLog.recordAsyncCalls, "failed path still writes operlog")
+	assert.Equal(t, operlog.OperTypeUpdate, mockOperLog.lastBusinessType,
+		"SetDescription maps to OperTypeUpdate(2)")
+}
