@@ -39,8 +39,8 @@ update_trigger: v1.26 backend-test-coverage-excellence milestone requirements de
 
 - [x] **IMP-01**: `internal/api/v1/duty` handler 测试补齐(265 stmts,0.0% → 83.0%) ✓ Phase 73 P01
 - [x] **IMP-02**: `internal/api/v1/knowledge` handler 测试补齐(273 stmts,0.0% → 84.2%) ✓ Phase 73 P01
-- [ ] **IMP-03**: `internal/api/v1/rpa` handler 测试补齐(612 stmts,0.0% → ≥70%)
-- [ ] **IMP-04**: `internal/api/v1/vdi` handler 测试补齐(298 stmts,0.0% → ≥70%)
+- [x] **IMP-03**: `internal/api/v1/rpa` handler 测试补齐(612 stmts,0.0% → 79.2%,含公开路由 3 endpoint) ✓ Phase 73 P02
+- [x] **IMP-04**: `internal/api/v1/vdi` handler 测试补齐(298 stmts,0.0% → 76.2%) ✓ Phase 73 P02
 - [x] **IMP-05**: `internal/services/duty` + `internal/services/knowledge` 服务测试补齐(114 + 85 stmts,0.0% → ≥70%) ✓ Phase 73 P03 (duty 95.6% + knowledge 95.3%)
 - [ ] **IMP-06**: `internal/services/monitor` + `internal/services/network` 服务测试补齐(485 + 127 stmts,0.0% → ≥70%) (network half done in 73 P03: 0%→92.1%; monitor half → 73-04)
 
@@ -95,8 +95,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CORE-06 | Phase 72 | Pending |
 | IMP-01 | Phase 73 | Done (73-01, 0%→83.0%) |
 | IMP-02 | Phase 73 | Done (73-01, 0%→84.2%) |
-| IMP-03 | Phase 73 | Pending |
-| IMP-04 | Phase 73 | Pending |
+| IMP-03 | Phase 73 | Done (73-02, 0%→79.2%) |
+| IMP-04 | Phase 73 | Done (73-02, 0%→76.2%) |
 | IMP-05 | Phase 73 | Done (73-03, duty 0%→95.6% + knowledge 0%→95.3%) |
 | IMP-06 | Phase 73 | Pending (network 0%→92.1% done in 73-03; monitor → 73-04) |
 | SCALE-01 | Phase 74 | Pending |
