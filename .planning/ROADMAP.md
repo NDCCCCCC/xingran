@@ -190,7 +190,7 @@ Plans:
 |-------|--------|-------|--------------|---------|-----------|
 | Phase 71 | SHIPPED | 2/2 | GOV-01, GOV-02, GOV-04 (3/3 done — file creation half 71-01 + verify+push+amend half 71-01b both complete; CI Coverage gate PASSED on runs 32382995316 + 32384622877; coverage-baseline.md Phase 71 后 row commit column amended TBD → 326a541 via commit cfec2c4) | 2026-08-20 | 2026-08-20 |
 | Phase 72 | SHIPPED | 13/13 | CORE-01..06 (6/6 done — workorder 75.4%, monitor 71.2%, scheduler 85.5% ≥70%; system 35.4%, services/system 53.5% <70% per-sub-module deferred to Phase 73/74; weighted avg 12.8% → 21.5% ratchet landed) | 2026-08-21 | 2026-08-21 |
-| Phase 73 | Pending | 0/? | IMP-01..06 (0/6 done) | — | — |
+| Phase 73 | In Progress | 2/5 | IMP-01..06 (3/6 done — IMP-01 duty handler 83.0% + IMP-02 knowledge handler 84.2% both in 73-01; IMP-05 duty 95.6% + knowledge 95.3% in 73-03; IMP-06 network half 92.1% in 73-03, monitor half → 73-04) | 2026-08-21 | — |
 | Phase 74 | Pending | 0/? | GOV-03, SCALE-01..03 (0/4 done) | — | — |
 
 **Total:** 4 phases / 19 requirements (0 done)
