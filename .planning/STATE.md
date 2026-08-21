@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.26
 milestone_name: 后端测试覆盖率优秀
 status: in_progress
-stopped_at: Phase 73 planned (5 plans ready for execution)
-last_updated: "2026-08-21T02:15:00.000Z"
+stopped_at: Phase 73 Plan 01 EXECUTED (handler 简单: duty+knowledge 538 stmts → IMP-01/02 met)
+last_updated: "2026-08-21T03:30:00.000Z"
 last_activity: 2026-08-21
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 20
-  completed_plans: 15
-  percent: 50
+  completed_plans: 16
+  percent: 51
 ---
 
 # Project State
@@ -39,8 +39,8 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 ## Current Position
 
 Phase: 73
-Plan: PLANNED (5 plans ready for execution)
-Status: Phase 73 P1 重要补齐 PLANNED 2026-08-21 — 5 plans created via /gsd:plan-phase 73: 73-01 (handler 简单: duty+knowledge 538 stmts) + 73-02 (handler 复杂: rpa+vdi 910 stmts, incl. public router) + 73-03 (service 简单: duty+knowledge+network 326 stmts) + 73-04 (service 中等: monitor 485 stmts, incl. oper_log) + 73-05 (Wave 5 ratchet + per-package gate extension). All IMP-01..06 covered; D-01..D-13 锁定决策全部 honored in plans; PLAN-CHECKER initially flagged 1 BLOCKER (missing ratchet plan) + 3 WARNINGS — BLOCKER fixed by adding Plan 73-05 (mirrors Phase 72 Plan 72-13 structure); WARNINGS fixed by adjusting 73-02 Task 1 per-file target 60%→75% + adding explicit skip enumeration + post-skip coverage math in 73-01 Task 1. RESEARCH.md + VALIDATION.md generated alongside CONTEXT.md. Next: /gsd:execute-phase 73 to run all 5 plans (Wave 1: 73-01..73-04 parallel, Wave 5: 73-05 after all). Phase 72 fully complete — 13 plans EXECUTED 2026-08-21 (72-01..72-13); atomic coverage ratchet 12.8% → 21.5%; 6 CORE targets partial (workorder 75.4%, monitor 71.2%, scheduler 85.5% ≥70%; system 35.4%, services/system 53.5% <70%); deferred to Phase 73/74. Zero business code changes (D-08 honored).
+Plan: 02 (next), 01 SHIPPED (handler 简单: duty+knowledge 538 stmts)
+Status: Phase 73 P1 重要补齐 PLANNED 2026-08-21 — 5 plans created via /gsd:plan-phase 73: 73-01 (handler 简单: duty+knowledge 538 stmts) + 73-02 (handler 复杂: rpa+vdi 910 stmts, incl. public router) + 73-03 (service 简单: duty+knowledge+network 326 stmts) + 73-04 (service 中等: monitor 485 stmts, incl. oper_log) + 73-05 (Wave 5 ratchet + per-package gate extension). All IMP-01..06 covered; D-01..D-13 锁定决策全部 honored in plans; PLAN-CHECKER initially flagged 1 BLOCKER (missing ratchet plan) + 3 WARNINGS — BLOCKER fixed by adding Plan 73-05 (mirrors Phase 72 Plan 72-13 structure); WARNINGS fixed by adjusting 73-02 Task 1 per-file target 60%→75% + adding explicit skip enumeration + post-skip coverage math in 73-01 Task 1. RESEARCH.md + VALIDATION.md generated alongside CONTEXT.md. **Phase 73-01 EXECUTED 2026-08-21**: 3/3 tasks complete, 2 test files created (`duty_handler_test.go` 1165 lines / 68 tests + `handler_test.go` 1079 lines / 67 tests = 135 total), per-package coverage `duty 83.0%` + `knowledge 84.2%` (both ≥70% threshold, IMP-01 + IMP-02 SCs met), 3 atomic commits `debe0e4` test(73-01): add duty_handler_test.go + `d8eb6f3` test(73-01): add handler_test.go + `d87aa82` docs(73-01): add plan summary. Zero business code changes (D-12 honored). Next: execute Plan 73-02 (handler 复杂: rpa+vdi 910 stmts, incl. public router). Phase 72 fully complete — 13 plans EXECUTED 2026-08-21 (72-01..72-13); atomic coverage ratchet 12.8% → 21.5%; 6 CORE targets partial (workorder 75.4%, monitor 71.2%, scheduler 85.5% ≥70%; system 35.4%, services/system 53.5% <70%); deferred to Phase 73/74. Zero business code changes (D-08 honored).
 Last activity: 2026-08-21
 
 ## Accumulated Context
@@ -189,9 +189,9 @@ Full deferred detail in [milestones/v1.21-ROADMAP.md](milestones/v1.21-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-21T02:15:00.000Z
-Stopped at: Phase 73 planned (5 plans ready for execution)
-Resume file: .planning/phases/73-p1-pending/73-{01..05}-PLAN.md
+Last session: 2026-08-21T03:30:00.000Z
+Stopped at: Phase 73 Plan 01 EXECUTED (handler 简单: duty+knowledge 538 stmts → IMP-01/02 met)
+Resume file: .planning/phases/73-p1-pending/73-{02..05}-PLAN.md
 
 **Milestone status:** ✅ v1.22 SHIPPED 2026-08-18 (Phases 64-67 / 4 phases / 15 requirements / 100% coverage) + ✅ v1.23 Phase 68 EXECUTED 2026-08-19 (DEPLOY-01~05 闭环) + ✅ v1.24 Phase 69 EXECUTED 2026-08-19 (DICT-01~04 闭环) + ✅ v1.25 Phase 70 EXECUTED 2026-08-19 (D-01~D-12 闭环) + ✅ **Phase 63 SHIPPED 2026-08-20 (1/1 plan, 5/5 SC, 7-commit chain `760606a..937f35f`)**;四块启动块 + Phase 63 全部落地,共 8 phases / 21 plans 全绿;3 项 advisory 留给 Phase 71+(network/ports 3 timeout + total bundle +90kB + knip ignore churn)。
 
@@ -217,6 +217,7 @@ Resume file: .planning/phases/73-p1-pending/73-{01..05}-PLAN.md
 | Phase 69 P08 | 5m + 10m(T2 人工实测) | 2 tasks | 1 file(CLAUDE.md 指针化)+ T2 字典链路端到端五步实测 PASS |
 | Phase 71 P01 | 12m | 4 tasks | 4 files (3 NEW + 1 MODIFY, 0 business code); commits 4242a75/3e2664c/75a4703/75b96be; file creation half (verify+push+amend by 71-01b) |
 | Phase 71 P01b | 32m | 4 tasks | 1 file modified (.planning/coverage-baseline.md TBD → 326a541); commit cfec2c4 (TBD-amend as new commit, force-push rejected on protected branch); CI backend Coverage gate PASSED on runs 32382995316 + 32384622877; backend-coverage artifact 1.4MB / 30-day retention; Phase 71 SHIPPED |
+| Phase 73 P01 | 8m | 3 tasks | 2 test files (duty_handler_test.go 1165 lines / 68 tests + handler_test.go 1079 lines / 67 tests = 135 tests total); per-package coverage duty 0%→83.0% + knowledge 0%→84.2%; 3 commits `debe0e4` + `d8eb6f3` + `d87aa82`; IMP-01 + IMP-02 SCs met; D-02/D-09/D-12/D-13 honored |
 
 ## Decisions
 
@@ -230,3 +231,4 @@ Resume file: .planning/phases/73-p1-pending/73-{01..05}-PLAN.md
 - [Phase 69-08]: DICT-04 CLAUDE.md 指针化+字典链路端到端收尾：删除 6 行模块值表格改写为 5 点真相源指针段(models 常量/status_constants_test 锁值/sys_dict+migration_208/前端 constants/status.ts/status 不入字典安全决策)，Menu visible 例外句保留并显式引用 models.VisibleShow/VisibleHidden 不成为手工值拷贝，新增常量流程「先 models→同步 test→业务引用」三步走写入指针段末尾；T2 五步实测(2026-08-19 chrome-devtools):字典管理 11 组可见 / 专线类型 6 项+ISP 5 项 / ops_workstation_type 改 label→工位管理新增弹窗默认值即时显示新 label(SC#3 强信号) / 四页 useDict 链路生效+workstations/constants.tsx:16-20 TYPE_OPTIONS 静态 fallback 保留 / status 共享常量零 UX 回归 → 5/5 PASS,DICT-04 落勾选
 - [Phase 71-01]: 治理基线+CI gate 文件创建半幅交付 — D-01..D-04 锁定决策全部 honored。`.coverage-threshold` 5 字节(12.8 + LF，no `%`, no BOM, no JSON)；`.github/scripts/check-coverage.sh` 139 行 bash + awk 零依赖 gate，awk 公式与 quick-260820-bcs 基线扫描 byte-identical 复用同口径(`%-50s %8d %8d %6.2f%%` 列宽与 per-package-coverage.txt 对齐)，exit 0/1/2 镜像 `scripts/check-status-literals.sh`；`.github/workflows/ci.yml` backend job 4 步扩展(Test 加 `-coverprofile=coverage.out -covermode=atomic`，无 `-race` per D-01 → Coverage HTML `if: always()` → Coverage gate 调脚本 → Upload artifact `actions/upload-artifact@v4` `retention-days: 30` `if: always()`)，Lint / concurrency / permissions / frontend job(及先前会话的 Format check 步)全保留；`.planning/coverage-baseline.md` 196 行 ratchet tracking 文件(独立于 quick scan SUMMARY.md 不可回填,per D-03)，起点行 commit `5ead742` 12.8%/43652 stmts/5589 covered/33 zero-coverage 包 + Phase 71 后行 commit `TBD` 待 71-01b amend + 两 76 行 per-package fenced block + 倒退检查 checklist + ratchet note。Phase 71 不改业务/不改测试，per-package 数字在 12.8% 上不变化(73 个包字节同，1 个 PACKAGE 总结同)。Plan 71-01b 接手:本地 `go test` 三绿 + 故意 bump `.coverage-threshold` 到 99.9 验 exit 1 + 回滚 12.8 + push + `gh run watch` + 替换 TBD SHA 完成 GOV-01/02/04 勾选。
 - [Phase 71-01b]: 治理基线+CI gate 验证+push+amend 半幅交付 — 4 tasks 全绿 + 5/5 SC + 3/3 requirements (GOV-01/02/04) + 4/4 D-locked decisions (D-01..D-04) verified；(Task 1) 本地 smoke test: gate pass at 12.8 (12.80% exit 0) → fail at 99.9 (exit 1, stderr `FAIL: weighted avg 12.80% < threshold 99.90%`) → restore 12.8 (exit 0 二次确认)；(Task 2) SC#4 pkg/cache 15/15 PASS 含 `TestAsyncRetryWorker_Enqueue` (5ead742 修复) + `TestAsyncRetryWorker_QueueSemantics` (5ead742 新增)；(Task 3) SC#5 全包 `go test -timeout 15m -count=1 ./internal/... ./pkg/... ./cmd/...` exit 0/0 FAIL/0 panic/全部 `ok` 行；(Task 4) 推送 6 commits to origin/main (4 file-creation `4242a75`/`3e2664c`/`75a4703`/`75b96be` + close-out `326a541` + amend `cfec2c4`)；CI run `32382995316` (HEAD 326a541) + run `32384622877` (HEAD cfec2c4) 双双 PASS backend 全 8 steps (含 Lint + Test + Coverage HTML + **Coverage gate** + Upload artifact)，`backend-coverage` artifact 1.4MB / 30-day retention (expires 2026-09-19)，`coverage-baseline.md` Phase 71 后行 commit 列 TBD → 326a541 amend 落地 (deviation: `git push --force-with-lease` rejected on protected branch `main`，回滚 commit-amend 改用 fast-forward 新 commit `cfec2c4` 语义等价)；frontend Format check 双 run 均 fail pre-existing (工作区遗留 uncommitted M-state 触发，非 Phase 71 范围 per planner directive + memory `push-watch-ci.md`)；Phase 71 SHIPPED — coverage gate 12.8% 已在 `main` 上活起来，每次 PR 必须 ≥ 12.8% 否则 fail，D-04 手动 ratchet 由 Phase 72/73/74 execute plans 末尾原子 bump 维护。
+- [Phase 73-01]: Phase 73 首单交付 — handler 简单对 (duty+knowledge 538 stmts) 0% → 70%+ ratchet。2 test files (1165 + 1079 lines / 135 tests total) + 3 atomic commits `debe0e4`/`d8eb6f3`/`d87aa82`；per-package coverage `duty 83.0%` + `knowledge 84.2%` 均超 70% 阈值 (SC#1 + SC#2 met)；D-02 锁定决策 honored: `mockDutyService` / `mockKnowledgeService` 使用 Phase 72 SHIPPED ad_account 范本 (per-interface *Func fields + interface-embedded-as-nil)，无 testify/mock；D-09 honored: handler 直接调用 mock service 真实接口方法，encryption middleware 不在 handler 层；D-12 honored: 0 业务代码改动 (`git diff --stat` 仅新增 `*_test.go` 文件，未触碰 handler/router/service)；D-13 honored: cache invalidation 5+4 个 interface 方法都有默认 override 满足接口契约；Nyquist 8-dim 审计 PASS (truths/artifacts/key-links/SC trace/locks/patterns/threshold 7 PASS + TDD N/A)。Phase 73-02 (handler 复杂: rpa+vdi 910 stmts) 待执行。
