@@ -13,9 +13,10 @@
 #   bash .github/scripts/check-coverage.sh <profile> [<threshold-file>]
 #
 # Exit codes (mirror scripts/check-status-literals.sh):
-#   0 — weighted average >= threshold (gate passes)
+#   0 — weighted average >= threshold AND all 8 P1 packages >= 70% (gate passes)
 #   1 — weighted average <  threshold (gate fails) OR awk parse error
 #   2 — usage error (missing args / unreadable files)
+#   4 — Phase 73 P1 per-package floor failure (one of the 8 P1 packages < 70%)
 #
 # CI hookup (ci.yml, step order invariant: Test -> Coverage HTML -> Coverage
 # gate -> Upload artifact):
@@ -24,7 +25,15 @@
 #
 # Ratchet workflow (D-04 — manual): Phase 72/73/74 execute plans end with a
 # deliberate commit bumping .coverage-threshold AND appending a row to
-# .planning/coverage-baseline.md. This script and ci.yml are not edited.
+# .planning/coverage-baseline.md. Phase 73 (Plan 73-05) additionally extended
+# this script with the P1 per-package floor (section 3 below); ci.yml still
+# invokes the same command — no workflow edits needed per ratchet.
+#
+# P1 per-package floor (Phase 73, IMP-01..06 / D-04 strict / D-10): the 8 P1
+# packages (internal/api/v1/{duty,knowledge,rpa,vdi} +
+# internal/services/{duty,knowledge,network,monitor}) must EACH stay >= 70.0%.
+# This is deliberately stricter than the weighted average — a P1 package
+# cannot regress below the floor even if the overall average rises.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -136,4 +145,64 @@ if ! echo "$AWK_TABLE" | grep -qE '^PASS:'; then
 fi
 
 echo "coverage gate passed (threshold=$THRESHOLD%)"
+
+# --- 3. p1_package_check: Phase 73 P1 per-package floor (8 packages >= 70%) --
+# awk parses coverage.out (atomic profile, format: import/path/file.go:loc,loc
+# stmts count) and aggregates stmts/covered per package using the SAME split
+# logic as section 1, so both blocks agree to the percent.
+
+P1_FLOOR="70.0"
+P1_PACKAGES="internal/api/v1/duty internal/api/v1/knowledge internal/api/v1/rpa internal/api/v1/vdi internal/services/duty internal/services/knowledge internal/services/network internal/services/monitor"
+
+P1_PKG_TABLE=$(awk '
+NR > 1 {
+    split($1, parts, ":")
+    n = split(parts[1], seg, "/")
+    pkg = ""
+    for (i = 4; i <= n - 1; i++) {
+        pkg = (pkg == "") ? seg[i] : pkg "/" seg[i]
+    }
+    if (pkg == "") next
+    num_stmts = $2 + 0
+    hit_count = $3 + 0
+    covered   = (hit_count > 0) ? num_stmts : 0
+    p1_stmts[pkg]   += num_stmts
+    p1_covered[pkg] += covered
+}
+END {
+    for (k in p1_stmts) {
+        printf "%s %d %d\n", k, p1_stmts[k], p1_covered[k]
+    }
+}
+' "$PROFILE")
+
+P1_FAILED=0
+for pkg in $P1_PACKAGES; do
+  line="$(printf '%s\n' "$P1_PKG_TABLE" | awk -v p="$pkg" '$1 == p { print $2, $3; exit }')"
+  if [ -z "$line" ]; then
+    echo "FAIL: P1 $pkg not found in profile — no statements measured for this package" >&2
+    P1_FAILED=$((P1_FAILED + 1))
+    continue
+  fi
+  stmts="${line%% *}"
+  covered="${line##* }"
+  pct="$(awk -v s="$stmts" -v c="$covered" 'BEGIN { printf "%.2f", (s + 0 > 0) ? c * 100.0 / s : 0 }')"
+  if awk -v a="$pct" -v b="$P1_FLOOR" 'BEGIN { exit !(a + 0 >= b + 0) }'; then
+    echo "PASS: P1 $pkg $pct% >= $P1_FLOOR% ($covered/$stmts stmts)"
+  else
+    echo "FAIL: P1 $pkg $pct% < $P1_FLOOR% ($covered/$stmts stmts)" >&2
+    P1_FAILED=$((P1_FAILED + 1))
+  fi
+done
+
+if [ "$P1_FAILED" -ne 0 ]; then
+  echo "" >&2
+  echo "coverage gate FAILED — $P1_FAILED P1 package(s) below the $P1_FLOOR% floor" >&2
+  echo "P1 floor is from Phase 73 (IMP-01..06, D-04 strict + D-10): a P1 package" >&2
+  echo "cannot regress below 70% even when the weighted average stays above the" >&2
+  echo "threshold. Add tests for the failing package(s) to lift it back." >&2
+  exit 4
+fi
+
+echo "P1 per-package floor passed ($P1_FLOOR% x 8 packages)"
 exit 0

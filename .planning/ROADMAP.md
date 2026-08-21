@@ -127,7 +127,7 @@ Plans:
 
 ---
 
-### Phase 73: P1 重要补齐 — PLANNED 2026-08-21
+### Phase 73: P1 重要补齐 — SHIPPED 2026-08-21
 
 **Goal:** 8 个 P1 重要模块(duty/knowledge/rpa/vdi/monitor/network)从 0% 测试提升至 ≥70%。
 
@@ -156,6 +156,7 @@ Plans:
 - Plan 73-05 (Wave 5) mirrors Phase 72 Plan 72-13: Task 0 批量提交所有 test files → Task 1 全包覆盖率测量 → Task 2 扩展 check-coverage.sh (8 P1 包 per-package 验证) → Task 3 原子 ratchet commit (6 文件) → Task 4 CI 验证
 - D-08 + D-09 (test pattern consistency + 真实中间件) 沿用 Phase 71/72 范本,在 73-05 must_haves 中显式标注
 - D-04 (rpa 公开路由不豁免) + D-03 (oper_log_service 不豁免) 严格按 ≥70% 覆盖
+- **Ratchet landed (73-05)**: weighted avg 21.5% → 25.9% (+4.4 pp); check-coverage.sh extended with `p1_package_check` (8 P1 packages ≥70% floor, exit code 4) — additive to weighted-avg gate (sections 1-2 byte-identical to Phase 71); ci.yml unchanged. 8/8 P1 packages PASS per D-04/D-10 strict: api/v1/duty 83.0%, api/v1/knowledge 84.2%, api/v1/rpa 79.2%, api/v1/vdi 76.2%, services/duty 95.6%, services/knowledge 95.3%, services/network 92.1%, services/monitor 95.3%. 0% pkg count 31 → 22 (-9 from P1). Single atomic ratchet commit (D-07 + D-11) contains 6 files: `.coverage-threshold` + `.planning/coverage-baseline.md` + `.github/scripts/check-coverage.sh` + `.planning/STATE.md` + `.planning/ROADMAP.md` + `73-05-SUMMARY.md`. Push deferred to orchestrator/user. Per-package CORE validation (28 cells) still Phase 74 (GOV-03 scope).
 
 ---
 
@@ -190,10 +191,10 @@ Plans:
 |-------|--------|-------|--------------|---------|-----------|
 | Phase 71 | SHIPPED | 2/2 | GOV-01, GOV-02, GOV-04 (3/3 done — file creation half 71-01 + verify+push+amend half 71-01b both complete; CI Coverage gate PASSED on runs 32382995316 + 32384622877; coverage-baseline.md Phase 71 后 row commit column amended TBD → 326a541 via commit cfec2c4) | 2026-08-20 | 2026-08-20 |
 | Phase 72 | SHIPPED | 13/13 | CORE-01..06 (6/6 done — workorder 75.4%, monitor 71.2%, scheduler 85.5% ≥70%; system 35.4%, services/system 53.5% <70% per-sub-module deferred to Phase 73/74; weighted avg 12.8% → 21.5% ratchet landed) | 2026-08-21 | 2026-08-21 |
-| Phase 73 | In Progress | 3/5 | IMP-01..06 (4/6 done — IMP-01 duty handler 83.0% + IMP-02 knowledge handler 84.2% both in 73-01; IMP-05 duty 95.6% + knowledge 95.3% in 73-03; IMP-06 COMPLETE network 92.1% in 73-03 + monitor 95.3% in 73-04 incl. oper_log per D-03; IMP-03/04 rpa+vdi → 73-02) | 2026-08-21 | — |
+| Phase 73 | SHIPPED | 5/5 | IMP-01..06 (6/6 done — IMP-01 api/v1/duty handler 83.0% + IMP-02 api/v1/knowledge handler 84.2% both in 73-01; IMP-03 api/v1/rpa handler 79.2% (incl. public router per D-04) + IMP-04 api/v1/vdi handler 76.2% both in 73-02; IMP-05 services/duty 95.6% + services/knowledge 95.3% in 73-03; IMP-06 services/network 92.1% in 73-03 + services/monitor 95.3% in 73-04 incl. oper_log per D-03 non-exempt; weighted avg 21.5% → 25.9% ratchet in 73-05 + check-coverage.sh extended with p1_package_check 8-package ≥70% floor exit 4) | 2026-08-21 | 2026-08-21 |
 | Phase 74 | Pending | 0/? | GOV-03, SCALE-01..03 (0/4 done) | — | — |
 
-**Total:** 4 phases / 19 requirements (0 done)
+**Total:** 4 phases / 19 requirements (15 done — Phase 71 3 + Phase 72 6 + Phase 73 6 = 15; Phase 74 4 pending)
 
 ---
 
