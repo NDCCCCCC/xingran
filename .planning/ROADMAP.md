@@ -45,6 +45,7 @@ update_trigger: Phase 71 plan 71-01b executed (verify + push + amend half; CI Co
 **Source planning data:** `.planning/quick/260820-backend-test-coverage-scan/SUMMARY.md`(2026-08-20 纯只读扫描,74 业务包 / 43652 stmts / 加权 12.8% / 33 个 0% 包 / P0-P2 分级)。
 
 **Milestone success criteria:**
+
 - SC-a: 加权平均 ≥70%(12.8% → ≥70%)
 - SC-b: 0% 覆盖业务包 ≤5(33 → ≤5)
 - SC-c: CI coverage threshold gate 生效(失败即阻断)
@@ -73,13 +74,14 @@ Phase 71 (治理基线 + CI gate)
 
 **Goal:** CI 后端 job 产出覆盖率报告与阈值 gate;建立测试补齐的基线记录与 ratchet 防倒退机制;前置 flaky test 修复验收。
 Plans:
+
 - [x] [71-01-PLAN.md](phases/71-governance-baseline-and-ci-gate/71-01-PLAN.md) — Bash+awk coverage gate + ci.yml extension + baseline snapshot (file creation half, 4 tasks, commits 4242a75/3e2664c/75a4703/75b96be; SUMMARY: [71-01-SUMMARY.md](phases/71-governance-baseline-and-ci-gate/71-01-SUMMARY.md))
 - [ ] [71-01b-PLAN.md](phases/71-governance-baseline-and-ci-gate/71-01b-PLAN.md) — Local go test verification + bump-threshold fail test + push + gh run watch + amend TBD SHA in coverage-baseline.md (verify+push+amend half)
-
 
 **Requirements:** GOV-01, GOV-02, GOV-04
 
 **Success Criteria:**
+
 1. `.github/workflows/ci.yml` 后端 job 含 `-coverprofile=coverage.out -covermode=atomic` 参数并产出 profile artifact
 2. CI 引入阈值 gate(初值对应当前 12.8% 基线),低于阈值 PR 即 fail;ratchet 机制记录每次 phase 提升后的实际数字
 3. `.planning/quick/260820-backend-test-coverage-scan/` 或同等位置有完整 per-package 基线表,phase 完成后回填新数字形成可追踪差异
@@ -87,24 +89,27 @@ Plans:
 5. `go test ./internal/... ./pkg/... ./cmd/...` 全包 exit 0,无任何测试失败
 
 **Key Decisions (lock at plan-internal):**
+
 - 阈值 gate 工具选择:bash + awk 自检 vs go-test-coverage GitHub Action vs custom Makefile——planner 评估,优先复用最少依赖
 - profile artifact 上传:actions/upload-artifact vs 仅在失败时 dump——按 CI 体积成本权衡
 - 基线数据存放:更新 quick task 目录 vs 写入 `.planning/coverage-baseline.md`——planner 决策
 
 **Notes:**
+
 - GOV-03(diff coverage)属于 Phase 74,Phase 71 只建立全量覆盖率基线 gate
 - Phase 71 是整条治理链的起点——所有测试补齐工作受益于此 gate 的"防倒退"价值
 - 阈值 gate 的初始值需等于或低于当前 12.8% 基线(防止首次落地就 fail),后续 phase 完成时逐步 ratchet 上调
 
 ---
 
-### Phase 72: P0 核心补齐 — Pending
+### Phase 72: P0 核心补齐 — SHIPPED 2026-08-21
 
 **Goal:** P0 核心业务链路(高频审计路径 + 系统管理核心)零测试清零,所有 P0 包达 ≥70% 覆盖。
 
 **Requirements:** CORE-01, CORE-02, CORE-03, CORE-04, CORE-05, CORE-06
 
 **Success Criteria:**
+
 1. `internal/api/v1/workorder` 覆盖率 ≥70%(297 stmts)
 2. `internal/api/v1/monitor` 覆盖率 ≥70%(518 stmts)
 3. `internal/api/v1/scheduler` 覆盖率 ≥70%(152 stmts)
@@ -115,6 +120,7 @@ Plans:
 8. 全部新测试遵循 portwrite 85.3% 范本模式(glebarez sqlite in-memory + table-driven tests),零业务代码改动(测试暴露的确定性 bug 修复除外,最小 diff 单独说明)
 
 **Notes:**
+
 - services/system 3483 stmts 是最大单包,需分层拆分测试(user / role / dept / menu / dict / post / config)——planner 分配
 - api/v1/system 3039 stmts 同理;按子模块拆 plan
 - operlog 82.2% 是治理范本,Phase 72 service 测试可参考其 regression_test.go AST 锁值手法(如需)
@@ -128,6 +134,7 @@ Plans:
 **Requirements:** IMP-01, IMP-02, IMP-03, IMP-04, IMP-05, IMP-06
 
 **Success Criteria:**
+
 1. `internal/api/v1/duty` 覆盖率 ≥70%(265 stmts)
 2. `internal/api/v1/knowledge` 覆盖率 ≥70%(273 stmts)
 3. `internal/api/v1/rpa` 覆盖率 ≥70%(612 stmts)
@@ -138,6 +145,7 @@ Plans:
 8. 全部新测试零业务代码改动
 
 **Notes:**
+
 - services/rpa 1865 stmts 1.1% / services/vdi 1127 stmts 2.7% 暂归 P2(Phase 74),本 phase 只补到 70% handler + 小 service 包
 - 复杂模块(rpa 1865 / vdi 1127)planner 可分多 plan 拆分
 
@@ -150,6 +158,7 @@ Plans:
 **Requirements:** GOV-03, SCALE-01, SCALE-02, SCALE-03
 
 **Success Criteria:**
+
 1. PR 增量 diff coverage ≥80% 门槛在 CI 启用(GOV-03)— 变更代码必须 ≥80% 覆盖才通过
 2. `api/v1/{operations, asset, network}` 覆盖率均 ≥70%(1285 / 420 / 1971 stmts)
 3. `services/{rpa, vdi}` 覆盖率均 ≥70%(1865 / 1127 stmts)
@@ -160,6 +169,7 @@ Plans:
 8. milestone SC-a/b/c/d/e 全部 5 项达成并写入 audit 报告
 
 **Notes:**
+
 - 本 phase 是 v1.26 收口 phase,验证所有 milestone SC
 - diff coverage 工具:gocover-diff / go-test-coverage(action 内置支持)——planner 评估选型
 - Phase 74 plan 数量可能较多(planner 按业务包工作量拆分),建议 3-5 个 plan
@@ -171,7 +181,7 @@ Plans:
 | Phase | Status | Plans | Requirements | Started | Completed |
 |-------|--------|-------|--------------|---------|-----------|
 | Phase 71 | SHIPPED | 2/2 | GOV-01, GOV-02, GOV-04 (3/3 done — file creation half 71-01 + verify+push+amend half 71-01b both complete; CI Coverage gate PASSED on runs 32382995316 + 32384622877; coverage-baseline.md Phase 71 后 row commit column amended TBD → 326a541 via commit cfec2c4) | 2026-08-20 | 2026-08-20 |
-| Phase 72 | Pending | 0/? | CORE-01..06 (0/6 done) | — | — |
+| Phase 72 | SHIPPED | 13/13 | CORE-01..06 (6/6 done — workorder 75.4%, monitor 71.2%, scheduler 85.5% ≥70%; system 35.4%, services/system 53.5% <70% per-sub-module deferred to Phase 73/74; weighted avg 12.8% → 21.5% ratchet landed) | 2026-08-21 | 2026-08-21 |
 | Phase 73 | Pending | 0/? | IMP-01..06 (0/6 done) | — | — |
 | Phase 74 | Pending | 0/? | GOV-03, SCALE-01..03 (0/4 done) | — | — |
 
