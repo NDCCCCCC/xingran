@@ -21,10 +21,10 @@ update_trigger: v1.26 backend-test-coverage-excellence milestone requirements de
 
 ### GOV — 治理与 CI 守护
 
-- [ ] **GOV-01**: CI 后端 job 以 `-coverprofile` 跑全量测试并产出覆盖率报告(终端 summary + profile artifact 可下载)
-- [ ] **GOV-02**: CI 落地全局加权覆盖率阈值 gate——低于阈值的 commit 使 job 失败阻断(ratchet 机制防倒退,阈值随 phase 递进上调至 70%)
+- [x] **GOV-01**: CI 后端 job 以 `-coverprofile` 跑全量测试并产出覆盖率报告(终端 summary + profile artifact 可下载)
+- [x] **GOV-02**: CI 落地全局加权覆盖率阈值 gate——低于阈值的 commit 使 job 失败阻断(ratchet 机制防倒退,阈值随 phase 递进上调至 70%)
 - [ ] **GOV-03**: PR 增量 diff coverage 门槛启用——变更代码(新增/修改行)覆盖率 ≥80%
-- [ ] **GOV-04**: 覆盖率基线与进展落盘——起点 12.8% / per-package 数据 / 各 phase 后的实际数字形成可追踪记录(更新 quick-260820-bcs 扫描或等价物)
+- [x] **GOV-04**: 覆盖率基线与进展落盘——起点 12.8% / per-package 数据 / 各 phase 后的实际数字形成可追踪记录(更新 quick-260820-bcs 扫描或等价物)
 
 ### CORE — P0 核心业务清零(零/近零测试的审计关键路径)
 
@@ -37,8 +37,8 @@ update_trigger: v1.26 backend-test-coverage-excellence milestone requirements de
 
 ### IMP — P1 重要模块清零(8 个完全无测试的业务模块)
 
-- [ ] **IMP-01**: `internal/api/v1/duty` handler 测试补齐(265 stmts,0.0% → ≥70%)
-- [ ] **IMP-02**: `internal/api/v1/knowledge` handler 测试补齐(273 stmts,0.0% → ≥70%)
+- [x] **IMP-01**: `internal/api/v1/duty` handler 测试补齐(265 stmts,0.0% → 83.0%) ✓ Phase 73 P01
+- [x] **IMP-02**: `internal/api/v1/knowledge` handler 测试补齐(273 stmts,0.0% → 84.2%) ✓ Phase 73 P01
 - [ ] **IMP-03**: `internal/api/v1/rpa` handler 测试补齐(612 stmts,0.0% → ≥70%)
 - [ ] **IMP-04**: `internal/api/v1/vdi` handler 测试补齐(298 stmts,0.0% → ≥70%)
 - [ ] **IMP-05**: `internal/services/duty` + `internal/services/knowledge` 服务测试补齐(114 + 85 stmts,0.0% → ≥70%)
@@ -83,18 +83,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GOV-01 | Phase 71 | Pending |
-| GOV-02 | Phase 71 | Pending |
+| GOV-01 | Phase 71 | Complete |
+| GOV-02 | Phase 71 | Complete |
 | GOV-03 | Phase 74 | Pending |
-| GOV-04 | Phase 71 | Pending |
+| GOV-04 | Phase 71 | Complete |
 | CORE-01 | Phase 72 | Pending |
 | CORE-02 | Phase 72 | Pending |
 | CORE-03 | Phase 72 | Pending |
 | CORE-04 | Phase 72 | Pending |
 | CORE-05 | Phase 72 | Pending |
 | CORE-06 | Phase 72 | Pending |
-| IMP-01 | Phase 73 | Pending |
-| IMP-02 | Phase 73 | Pending |
+| IMP-01 | Phase 73 | Done (73-01, 0%→83.0%) |
+| IMP-02 | Phase 73 | Done (73-01, 0%→84.2%) |
 | IMP-03 | Phase 73 | Pending |
 | IMP-04 | Phase 73 | Pending |
 | IMP-05 | Phase 73 | Pending |
@@ -104,6 +104,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SCALE-03 | Phase 74 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 19 total
 - Mapped to phases: 19
 - Unmapped: 0 ✓
