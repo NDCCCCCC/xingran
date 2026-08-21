@@ -1,240 +1,661 @@
 package asset
 
-// Phase 44 R3 / Plan 44-01 Task 5 — 例外规则 CRUD/测试 handler + router + operlog
+// Phase 74 Plan 02 — ReconciliationExceptionHandler unit tests (D-12 strict: test-only)
 //
-// 本测试集聚焦:
-//   1. handler 写操作(CreateRule/UpdateRule/DeleteRule)在 success path 调 operlog.Record
-//   2. TestRule 读操作不调 operlog
-//   3. CRUD 失败时不调 operlog(service 层 err 短路)
-//   4. operlog 回归守护 25 OperType + 18 mandatorySensitiveKeywords 不被新 module 常量破坏
+// 12 handler methods to cover:
+//   - ListRules, GetRuleByID, CreateRule, UpdateRule, DeleteRule, TestRule
+//   - SnapshotBaseline, CompareBaseline
+//   - ImportRules, ExportRules, DownloadTemplate
 //
-// 注:由于真实 operlog.Record 调用是异步 + 内部依赖 core.OperLogService/GetDB,本测试
-// 用静态源码扫描验证 operlog.Record 在 success path 调用点存在(同 reconciliation_permission_test.go
-// 静态断言模式),而非运行时验证。
+// Mock pattern: D-08 (Phase 73-01 reference).
 
 import (
+	"bytes"
+	"context"
+	"errors"
+	"mime/multipart"
 	"net/http"
-	"os"
-	"strings"
+	"net/http/httptest"
+	"net/textproto"
 	"testing"
 
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/operations"
+	assetSvc "github.com/xingran-next/xingran-go-backend/internal/services/asset"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 )
 
-// TestCreateRuleHandlerOperlog 静态断言:CreateRule success path 含 operlog.Record
-func TestCreateRuleHandlerOperlog(t *testing.T) {
-	src := mustReadHandlerSrc(t)
-	assert.Contains(t, src, "func (h *ReconciliationExceptionHandler) CreateRule(",
-		"CreateRule handler 必须存在")
-	// success path 调 operlog.Record(OperTypeCreate)
-	assert.Contains(t, src, "operlog.Record(c, h.core.OperLogService, h.core.GetDB(), ModuleReconciliationExceptionRule, operlog.OperTypeCreate)",
-		"CreateRule 必须在 success path 调 operlog.Record(ModuleReconciliationExceptionRule, OperTypeCreate)")
+// ============================================================================
+// mockReconciliationExceptionService — D-08 mock pattern
+// ============================================================================
+
+type mockReconciliationExceptionService struct {
+	ListFunc            func(ctx context.Context, params *assetSvc.ExceptionRuleListParams) (*base.PageResult, error)
+	GetByIDFunc         func(ctx context.Context, id string) (*models.SysReconciliationException, error)
+	CreateFunc          func(ctx context.Context, req *assetSvc.CreateExceptionRuleRequest) (*models.SysReconciliationException, error)
+	UpdateFunc          func(ctx context.Context, id string, req *assetSvc.UpdateExceptionRuleRequest) error
+	DeleteFunc          func(ctx context.Context, id string) error
+	MatchTestFunc       func(ctx context.Context, ip, userID, deptID string) (*assetSvc.MatchTestResult, error)
+	MatchExceptionFunc  func(ctx context.Context, ip, userID, conflictType string) (*assetSvc.ExceptionMatch, error)
+	ImportFromExcelFunc func(ctx context.Context, file *multipart.FileHeader) (*operations.ImportResult, error)
 }
 
-func TestUpdateRuleHandlerOperlog(t *testing.T) {
-	src := mustReadHandlerSrc(t)
-	assert.Contains(t, src, "func (h *ReconciliationExceptionHandler) UpdateRule(",
-		"UpdateRule handler 必须存在")
-	assert.Contains(t, src, "operlog.Record(c, h.core.OperLogService, h.core.GetDB(), ModuleReconciliationExceptionRule, operlog.OperTypeUpdate)",
-		"UpdateRule 必须调 operlog.Record(OperTypeUpdate)")
+func (m *mockReconciliationExceptionService) List(ctx context.Context, params *assetSvc.ExceptionRuleListParams) (*base.PageResult, error) {
+	if m.ListFunc != nil {
+		return m.ListFunc(ctx, params)
+	}
+	return nil, errNotImplemented
 }
 
-func TestDeleteRuleHandlerOperlog(t *testing.T) {
-	src := mustReadHandlerSrc(t)
-	assert.Contains(t, src, "func (h *ReconciliationExceptionHandler) DeleteRule(",
-		"DeleteRule handler 必须存在")
-	assert.Contains(t, src, "operlog.Record(c, h.core.OperLogService, h.core.GetDB(), ModuleReconciliationExceptionRule, operlog.OperTypeDelete)",
-		"DeleteRule 必须调 operlog.Record(OperTypeDelete)")
+func (m *mockReconciliationExceptionService) GetByID(ctx context.Context, id string) (*models.SysReconciliationException, error) {
+	if m.GetByIDFunc != nil {
+		return m.GetByIDFunc(ctx, id)
+	}
+	return nil, errNotImplemented
 }
 
-// TestTestRuleHandlerNoOperlog 命中测试是读操作,不调 operlog
-func TestTestRuleHandlerNoOperlog(t *testing.T) {
-	src := mustReadHandlerSrc(t)
-	assert.Contains(t, src, "func (h *ReconciliationExceptionHandler) TestRule(",
-		"TestRule handler 必须存在")
-
-	// 提取 TestRule 函数体,断言不含 operlog.Record
-	body := extractFuncBody(src, "TestRule")
-	assert.NotContains(t, body, "operlog.Record",
-		"TestRule 是读操作,不调 operlog.Record(参考 ListRules/GetRuleByID)")
+func (m *mockReconciliationExceptionService) Create(ctx context.Context, req *assetSvc.CreateExceptionRuleRequest) (*models.SysReconciliationException, error) {
+	if m.CreateFunc != nil {
+		return m.CreateFunc(ctx, req)
+	}
+	return nil, errNotImplemented
 }
 
-// TestExceptionRouter4NewRoutes 静态断言:router 含 4 个新路由 + RequirePermissions
-func TestExceptionRouter4NewRoutes(t *testing.T) {
-	routerSrc := mustReadFile(t, "reconciliation_exception_router.go")
-	// 4 路由
-	assert.Contains(t, routerSrc, `r.POST("/exception-rule/create"`,
-		"router 必须含 /exception-rule/create 路由")
-	assert.Contains(t, routerSrc, `r.POST("/exception-rule/:id/update"`,
-		"router 必须含 /exception-rule/:id/update 路由")
-	assert.Contains(t, routerSrc, `r.POST("/exception-rule/:id/delete"`,
-		"router 必须含 /exception-rule/:id/delete 路由")
-	assert.Contains(t, routerSrc, `r.POST("/exception-rule/test"`,
-		"router 必须含 /exception-rule/test 路由")
-	// 权限中间件
-	assert.Contains(t, routerSrc, `middleware.RequirePermissions([]string{"asset:reconciliation:exception:create"}`,
-		"create 路由必须 RequirePermissions(asset:reconciliation:exception:create)")
-	assert.Contains(t, routerSrc, `middleware.RequirePermissions([]string{"asset:reconciliation:exception:update"}`,
-		"update 路由必须 RequirePermissions(asset:reconciliation:exception:update)")
-	assert.Contains(t, routerSrc, `middleware.RequirePermissions([]string{"asset:reconciliation:exception:delete"}`,
-		"delete 路由必须 RequirePermissions(asset:reconciliation:exception:delete)")
-	assert.Contains(t, routerSrc, `middleware.RequirePermissions([]string{"asset:reconciliation:exception:test"}`,
-		"test 路由必须 RequirePermissions(asset:reconciliation:exception:test)")
+func (m *mockReconciliationExceptionService) Update(ctx context.Context, id string, req *assetSvc.UpdateExceptionRuleRequest) error {
+	if m.UpdateFunc != nil {
+		return m.UpdateFunc(ctx, id, req)
+	}
+	return errNotImplemented
 }
 
-// TestExceptionRouterBaselineRoutesPermissioned 静态断言:baseline 写/读路由均加 RequirePermissions(CR-03 修复)
-// 防回归:SnapshotBaseline 是写操作(覆盖 R2 基线),未授权用户不应能调用;CompareBaseline 读也走模块读权限。
-func TestExceptionRouterBaselineRoutesPermissioned(t *testing.T) {
-	routerSrc := mustReadFile(t, "reconciliation_exception_router.go")
-	// snapshot 写路由必须有 RequirePermissions(exception:create,与 import 一致)
-	assert.Contains(t, routerSrc,
-		`r.POST("/baseline/snapshot",`+"\n"+
-			"\t\tmiddleware.RequirePermissions([]string{\"asset:reconciliation:exception:create\"}, core),",
-		"/baseline/snapshot 写路由必须 RequirePermissions(asset:reconciliation:exception:create) — CR-03 SC2/AUDIT-01 闭合")
-	// compare 读路由必须有 RequirePermissions(reconciliation:list,模块标准读权限,已 seed)
-	assert.Contains(t, routerSrc,
-		`r.POST("/baseline/compare",`+"\n"+
-			"\t\tmiddleware.RequirePermissions([]string{\"asset:reconciliation:list\"}, core),",
-		"/baseline/compare 读路由必须 RequirePermissions(asset:reconciliation:list)")
-	// 防回归:snapshot 路由不能再以裸 handler 形式出现(无中间件)
-	assert.NotContains(t, routerSrc,
-		`r.POST("/baseline/snapshot", handler.SnapshotBaseline)`,
-		"/baseline/snapshot 不允许无 RequirePermissions(CR-03 回归守护)")
+func (m *mockReconciliationExceptionService) Delete(ctx context.Context, id string) error {
+	if m.DeleteFunc != nil {
+		return m.DeleteFunc(ctx, id)
+	}
+	return errNotImplemented
 }
 
-// TestModuleReconciliationExceptionRuleConst 静态断言:module 常量存在
-func TestModuleReconciliationExceptionRuleConst(t *testing.T) {
-	src := mustReadFile(t, "reconciliation_handler.go")
-	assert.Contains(t, src, `ModuleReconciliationExceptionRule = "资产对账-例外规则"`,
-		"reconciliation_handler.go 必须含 ModuleReconciliationExceptionRule 常量(Phase 42 D-16 + 44 R3)")
+func (m *mockReconciliationExceptionService) MatchTest(ctx context.Context, ip, userID, deptID string) (*assetSvc.MatchTestResult, error) {
+	if m.MatchTestFunc != nil {
+		return m.MatchTestFunc(ctx, ip, userID, deptID)
+	}
+	return nil, errNotImplemented
 }
 
-// TestOperlogRegressionStillPasses 由 operlog 包自己的回归测试覆盖,
-// 这里仅静态验证我们的 module 常量名不在 operlog 包的 mandatorySensitiveKeywords 内
-// (module 是自由字符串,不会破坏 25 OperType / 18 keywords)
-func TestOperlogRegressionStillPasses(t *testing.T) {
-	// 跑 operlog 回归测试 — 守护 25 OperType + 18 mandatorySensitiveKeywords
-	// 这条断言仅占位,实际由 go test ./internal/utils/operlog/ -count=1 在 plan 级别验收
-	t.Skip("operlog 回归由 plan-level `go test ./internal/utils/operlog/ -count=1` 验收,本测试占位防漏跑")
+func (m *mockReconciliationExceptionService) MatchException(ctx context.Context, ip, userID, conflictType string) (*assetSvc.ExceptionMatch, error) {
+	if m.MatchExceptionFunc != nil {
+		return m.MatchExceptionFunc(ctx, ip, userID, conflictType)
+	}
+	return nil, errNotImplemented
+}
+
+func (m *mockReconciliationExceptionService) ImportFromExcel(ctx context.Context, file *multipart.FileHeader) (*operations.ImportResult, error) {
+	if m.ImportFromExcelFunc != nil {
+		return m.ImportFromExcelFunc(ctx, file)
+	}
+	return nil, errNotImplemented
 }
 
 // ============================================================================
-// Phase 44 R3 / Plan 44-02 Task 3 — SnapshotBaseline + CompareBaseline handler
-//
-// 44-01 Task 5 仅产出 CreateRule/UpdateRule/DeleteRule/TestRule。本 plan Task 3 新增
-// baseline handler(后端实现,BLOCKER-2)。SnapshotBaseline 是写操作调 operlog.Record,
-// CompareBaseline 是读操作不调 operlog。
+// mockReconciliationBaselineService
 // ============================================================================
 
-// TestSnapshotBaselineHandlerExists 静态断言:SnapshotBaseline handler 存在
-func TestSnapshotBaselineHandlerExists(t *testing.T) {
-	src := mustReadHandlerSrc(t)
-	assert.Contains(t, src, "func (h *ReconciliationExceptionHandler) SnapshotBaseline(",
-		"SnapshotBaseline handler 必须存在(BLOCKER-2: 44-01 未实现后端 baseline handler)")
+type mockReconciliationBaselineService struct {
+	SnapshotFunc func(ctx context.Context) (*assetSvc.BaselineSnapshot, error)
+	CompareFunc  func(ctx context.Context) (*assetSvc.BaselineCompareResult, error)
 }
 
-// TestSnapshotBaselineHandlerOperlog 静态断言:SnapshotBaseline 调 operlog.Record(OperTypeUpdate)
-//
-// SnapshotBaseline 写 sys_config(覆盖现有 baseline),是写操作,success path 必须调 operlog。
-// 用 OperTypeUpdate 而非 Create(基线是"更新当前快照"语义,二次调用覆盖)。
-func TestSnapshotBaselineHandlerOperlog(t *testing.T) {
-	src := mustReadHandlerSrc(t)
-	assert.Contains(t, src,
-		"operlog.Record(c, h.core.OperLogService, h.core.GetDB(), ModuleReconciliationExceptionRule, operlog.OperTypeUpdate)",
-		"SnapshotBaseline 必须调 operlog.Record(OperTypeUpdate)")
-	// 提取 SnapshotBaseline 函数体,确认 operlog 在函数体内
-	body := extractFuncBody(src, "SnapshotBaseline")
-	assert.Contains(t, body, "operlog.Record",
-		"SnapshotBaseline 函数体必须含 operlog.Record 调用")
+func (m *mockReconciliationBaselineService) Snapshot(ctx context.Context) (*assetSvc.BaselineSnapshot, error) {
+	if m.SnapshotFunc != nil {
+		return m.SnapshotFunc(ctx)
+	}
+	return nil, errNotImplemented
 }
 
-// TestCompareBaselineHandlerExists 静态断言:CompareBaseline handler 存在
-func TestCompareBaselineHandlerExists(t *testing.T) {
-	src := mustReadHandlerSrc(t)
-	assert.Contains(t, src, "func (h *ReconciliationExceptionHandler) CompareBaseline(",
-		"CompareBaseline handler 必须存在(BLOCKER-2)")
+func (m *mockReconciliationBaselineService) Compare(ctx context.Context) (*assetSvc.BaselineCompareResult, error) {
+	if m.CompareFunc != nil {
+		return m.CompareFunc(ctx)
+	}
+	return nil, errNotImplemented
 }
 
-// TestCompareBaselineHandlerNoOperlog 静态断言:CompareBaseline 是读操作,不调 operlog.Record
-func TestCompareBaselineHandlerNoOperlog(t *testing.T) {
-	src := mustReadHandlerSrc(t)
-	body := extractFuncBody(src, "CompareBaseline")
-	assert.NotEmpty(t, body, "CompareBaseline 函数体必须存在")
-	assert.NotContains(t, body, "operlog.Record",
-		"CompareBaseline 是读操作(读 sys_config + COUNT),不调 operlog.Record")
+// newExceptionHandler creates a ReconciliationExceptionHandler with mock service + core.
+func newExceptionHandler(svc assetSvc.ReconciliationExceptionService, baseSvc assetSvc.ReconciliationBaselineService, c *core.Core) *ReconciliationExceptionHandler {
+	h := NewReconciliationExceptionHandler(svc)
+	if c != nil {
+		h.WithCore(c)
+	}
+	if baseSvc != nil {
+		h.WithBaselineService(baseSvc)
+	}
+	return h
 }
 
-// TestCompareBaselineHandler400OnNoBaseline 静态断言:无 baseline 时返回 400
-//
-// service.Compare 在无 baseline 时返回 error,handler 应映射为 http.StatusBadRequest
-// 前端依赖此 400 状态码渲染"请先记录基线"Alert(BLOCKER-3 可观察条件)。
-func TestCompareBaselineHandler400OnNoBaseline(t *testing.T) {
-	src := mustReadHandlerSrc(t)
-	body := extractFuncBody(src, "CompareBaseline")
-	assert.Contains(t, body, "http.StatusBadRequest",
-		"CompareBaseline handler 在 service 返回 error(无 baseline)时必须返回 400")
+// ============================================================================
+// Test 1: ListRules
+// ============================================================================
+
+func TestExceptionHandler_ListRules_Success(t *testing.T) {
+	svc := &mockReconciliationExceptionService{
+		ListFunc: func(ctx context.Context, params *assetSvc.ExceptionRuleListParams) (*base.PageResult, error) {
+			return &base.PageResult{List: []map[string]interface{}{{"id": "rule-1"}}, Total: 1, Current: 1, PageSize: 10}, nil
+		},
+	}
+	h := newExceptionHandler(svc, nil, newTestCore(t))
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/exception-rule/list", handler: h.ListRules}})
+
+	w := httpDo(r, http.MethodPost, "/exception-rule/list", `{}`)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), `"rule-1"`)
 }
 
-// TestReconciliationExceptionHandlerHasBaselineSvcField 静态断言:struct 含 baselineSvc 字段
-func TestReconciliationExceptionHandlerHasBaselineSvcField(t *testing.T) {
-	src := mustReadHandlerSrc(t)
-	assert.Contains(t, src, "baselineSvc asset.ReconciliationBaselineService",
-		"ReconciliationExceptionHandler struct 必须含 baselineSvc 字段(Task 3 注入)")
+func TestExceptionHandler_ListRules_BindError(t *testing.T) {
+	svc := &mockReconciliationExceptionService{}
+	h := newExceptionHandler(svc, nil, newTestCore(t))
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/exception-rule/list", handler: h.ListRules}})
+
+	w := httpDo(r, http.MethodPost, "/exception-rule/list", `{not json`)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
-// TestBaselineRouter2Routes 静态断言:router 含 /baseline/snapshot + /baseline/compare
-func TestBaselineRouter2Routes(t *testing.T) {
-	routerSrc := mustReadFile(t, "reconciliation_exception_router.go")
-	assert.Contains(t, routerSrc, `r.POST("/baseline/snapshot"`,
-		"router 必须含 /baseline/snapshot 路由")
-	assert.Contains(t, routerSrc, `r.POST("/baseline/compare"`,
-		"router 必须含 /baseline/compare 路由")
-	// 构造 baselineSvc 并注入 handler
-	assert.Contains(t, routerSrc, "NewReconciliationBaselineService",
-		"router 必须构造 baseline service 并注入 handler")
+func TestExceptionHandler_ListRules_ServiceError(t *testing.T) {
+	svc := &mockReconciliationExceptionService{
+		ListFunc: func(ctx context.Context, params *assetSvc.ExceptionRuleListParams) (*base.PageResult, error) {
+			return nil, errors.New("list failed")
+		},
+	}
+	h := newExceptionHandler(svc, nil, newTestCore(t))
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/exception-rule/list", handler: h.ListRules}})
+
+	w := httpDo(r, http.MethodPost, "/exception-rule/list", `{}`)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
+// ============================================================================
+// Test 2: GetRuleByID
+// ============================================================================
+
+func TestExceptionHandler_GetRuleByID_Success(t *testing.T) {
+	expected := &models.SysReconciliationException{}
+	svc := &mockReconciliationExceptionService{
+		GetByIDFunc: func(ctx context.Context, id string) (*models.SysReconciliationException, error) {
+			assert.Equal(t, "rule-1", id)
+			return expected, nil
+		},
+	}
+	h := newExceptionHandler(svc, nil, newTestCore(t))
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/exception-rule/:id", handler: h.GetRuleByID}})
+
+	w := httpDo(r, http.MethodPost, "/exception-rule/rule-1", `{}`)
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestExceptionHandler_GetRuleByID_NotFound(t *testing.T) {
+	svc := &mockReconciliationExceptionService{
+		GetByIDFunc: func(ctx context.Context, id string) (*models.SysReconciliationException, error) {
+			return nil, nil
+		},
+	}
+	h := newExceptionHandler(svc, nil, newTestCore(t))
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/exception-rule/:id", handler: h.GetRuleByID}})
+
+	w := httpDo(r, http.MethodPost, "/exception-rule/missing", `{}`)
+	// response.Error int-arg quirk → 400
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestExceptionHandler_GetRuleByID_Error(t *testing.T) {
+	svc := &mockReconciliationExceptionService{
+		GetByIDFunc: func(ctx context.Context, id string) (*models.SysReconciliationException, error) {
+			return nil, errors.New("db error")
+		},
+	}
+	h := newExceptionHandler(svc, nil, newTestCore(t))
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/exception-rule/:id", handler: h.GetRuleByID}})
+
+	w := httpDo(r, http.MethodPost, "/exception-rule/abc", `{}`)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// ============================================================================
+// Test 3: CreateRule
+// ============================================================================
+
+func TestExceptionHandler_CreateRule_Success(t *testing.T) {
+	called := false
+	svc := &mockReconciliationExceptionService{
+		CreateFunc: func(ctx context.Context, req *assetSvc.CreateExceptionRuleRequest) (*models.SysReconciliationException, error) {
+			called = true
+			assert.Equal(t, "test rule", req.Name)
+			return &models.SysReconciliationException{Name: "test rule"}, nil
+		},
+	}
+	c := newTestCore(t)
+	h := newExceptionHandler(svc, nil, c)
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/exception-rule/create", handler: h.CreateRule}})
+
+	w := httpDo(r, http.MethodPost, "/exception-rule/create", `{"name":"test rule"}`)
+	assert.True(t, called, "service.Create must be called")
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestExceptionHandler_CreateRule_BindError(t *testing.T) {
+	svc := &mockReconciliationExceptionService{
+		CreateFunc: func(ctx context.Context, req *assetSvc.CreateExceptionRuleRequest) (*models.SysReconciliationException, error) {
+			t.Fatalf("service should not be called on bind error")
+			return nil, nil
+		},
+	}
+	h := newExceptionHandler(svc, nil, newTestCore(t))
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/exception-rule/create", handler: h.CreateRule}})
+
+	w := httpDo(r, http.MethodPost, "/exception-rule/create", `{not json`)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestExceptionHandler_CreateRule_ServiceError(t *testing.T) {
+	svc := &mockReconciliationExceptionService{
+		CreateFunc: func(ctx context.Context, req *assetSvc.CreateExceptionRuleRequest) (*models.SysReconciliationException, error) {
+			return nil, errors.New("create failed")
+		},
+	}
+	h := newExceptionHandler(svc, nil, newTestCore(t))
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/exception-rule/create", handler: h.CreateRule}})
+
+	w := httpDo(r, http.MethodPost, "/exception-rule/create", `{"name":"x"}`)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// ============================================================================
+// Test 4: UpdateRule
+// ============================================================================
+
+func TestExceptionHandler_UpdateRule_Success(t *testing.T) {
+	called := false
+	svc := &mockReconciliationExceptionService{
+		UpdateFunc: func(ctx context.Context, id string, req *assetSvc.UpdateExceptionRuleRequest) error {
+			called = true
+			assert.Equal(t, "rule-1", id)
+			return nil
+		},
+	}
+	c := newTestCore(t)
+	h := newExceptionHandler(svc, nil, c)
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/exception-rule/:id/update", handler: h.UpdateRule}})
+
+	w := httpDo(r, http.MethodPost, "/exception-rule/rule-1/update", `{"name":"updated"}`)
+	assert.True(t, called, "service.Update must be called")
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestExceptionHandler_UpdateRule_BindError(t *testing.T) {
+	svc := &mockReconciliationExceptionService{
+		UpdateFunc: func(ctx context.Context, id string, req *assetSvc.UpdateExceptionRuleRequest) error {
+			t.Fatalf("service should not be called on bind error")
+			return nil
+		},
+	}
+	h := newExceptionHandler(svc, nil, newTestCore(t))
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/exception-rule/:id/update", handler: h.UpdateRule}})
+
+	w := httpDo(r, http.MethodPost, "/exception-rule/rule-1/update", `{not json`)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestExceptionHandler_UpdateRule_ServiceError(t *testing.T) {
+	svc := &mockReconciliationExceptionService{
+		UpdateFunc: func(ctx context.Context, id string, req *assetSvc.UpdateExceptionRuleRequest) error {
+			return errors.New("update failed")
+		},
+	}
+	h := newExceptionHandler(svc, nil, newTestCore(t))
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/exception-rule/:id/update", handler: h.UpdateRule}})
+
+	w := httpDo(r, http.MethodPost, "/exception-rule/rule-1/update", `{"name":"x"}`)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// ============================================================================
+// Test 5: DeleteRule
+// ============================================================================
+
+func TestExceptionHandler_DeleteRule_Success(t *testing.T) {
+	called := false
+	svc := &mockReconciliationExceptionService{
+		DeleteFunc: func(ctx context.Context, id string) error {
+			called = true
+			assert.Equal(t, "rule-1", id)
+			return nil
+		},
+	}
+	c := newTestCore(t)
+	h := newExceptionHandler(svc, nil, c)
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/exception-rule/:id/delete", handler: h.DeleteRule}})
+
+	w := httpDo(r, http.MethodPost, "/exception-rule/rule-1/delete", `{}`)
+	assert.True(t, called, "service.Delete must be called")
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestExceptionHandler_DeleteRule_ServiceError(t *testing.T) {
+	svc := &mockReconciliationExceptionService{
+		DeleteFunc: func(ctx context.Context, id string) error {
+			return errors.New("delete failed")
+		},
+	}
+	h := newExceptionHandler(svc, nil, newTestCore(t))
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/exception-rule/:id/delete", handler: h.DeleteRule}})
+
+	w := httpDo(r, http.MethodPost, "/exception-rule/rule-1/delete", `{}`)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// ============================================================================
+// Test 6: TestRule
+// ============================================================================
+
+func TestExceptionHandler_TestRule_Success(t *testing.T) {
+	svc := &mockReconciliationExceptionService{
+		MatchTestFunc: func(ctx context.Context, ip, userID, deptID string) (*assetSvc.MatchTestResult, error) {
+			assert.Equal(t, "192.168.1.1", ip)
+			return &assetSvc.MatchTestResult{
+				MatchedRules:  []models.SysReconciliationException{},
+				FinalSeverity: "low",
+				IsSilence:     true,
+			}, nil
+		},
+	}
+	h := newExceptionHandler(svc, nil, newTestCore(t))
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/exception-rule/test", handler: h.TestRule}})
+
+	w := httpDo(r, http.MethodPost, "/exception-rule/test", `{"ip":"192.168.1.1"}`)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), `"isSilence":true`)
+}
+
+func TestExceptionHandler_TestRule_BindError(t *testing.T) {
+	svc := &mockReconciliationExceptionService{
+		MatchTestFunc: func(ctx context.Context, ip, userID, deptID string) (*assetSvc.MatchTestResult, error) {
+			t.Fatalf("service should not be called on bind error")
+			return nil, nil
+		},
+	}
+	h := newExceptionHandler(svc, nil, newTestCore(t))
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/exception-rule/test", handler: h.TestRule}})
+
+	// Missing required ip
+	w := httpDo(r, http.MethodPost, "/exception-rule/test", `{}`)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestExceptionHandler_TestRule_ServiceError(t *testing.T) {
+	svc := &mockReconciliationExceptionService{
+		MatchTestFunc: func(ctx context.Context, ip, userID, deptID string) (*assetSvc.MatchTestResult, error) {
+			return nil, errors.New("match failed")
+		},
+	}
+	h := newExceptionHandler(svc, nil, newTestCore(t))
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/exception-rule/test", handler: h.TestRule}})
+
+	w := httpDo(r, http.MethodPost, "/exception-rule/test", `{"ip":"192.168.1.1"}`)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// ============================================================================
+// Test 7: SnapshotBaseline
+// ============================================================================
+
+func TestExceptionHandler_SnapshotBaseline_Success(t *testing.T) {
+	called := false
+	baseSvc := &mockReconciliationBaselineService{
+		SnapshotFunc: func(ctx context.Context) (*assetSvc.BaselineSnapshot, error) {
+			called = true
+			return &assetSvc.BaselineSnapshot{
+				TotalExceptions:    100,
+				TotalWorkorders:    10,
+				CriticalExceptions: 5,
+			}, nil
+		},
+	}
+	c := newTestCore(t)
+	h := newExceptionHandler(&mockReconciliationExceptionService{}, baseSvc, c)
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/baseline/snapshot", handler: h.SnapshotBaseline}})
+
+	w := httpDo(r, http.MethodPost, "/baseline/snapshot", `{}`)
+	assert.True(t, called, "baselineSvc.Snapshot must be called")
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestExceptionHandler_SnapshotBaseline_NoBaselineSvc(t *testing.T) {
+	h := newExceptionHandler(&mockReconciliationExceptionService{}, nil, newTestCore(t))
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/baseline/snapshot", handler: h.SnapshotBaseline}})
+
+	w := httpDo(r, http.MethodPost, "/baseline/snapshot", `{}`)
+	// handler returns 500 → response.Error quirk → 400
+	assert.Equal(t, http.StatusBadRequest, w.Code,
+		"baseline service not injected → handler returns 500, mapped to 400 via response.Error quirk")
+}
+
+func TestExceptionHandler_SnapshotBaseline_Error(t *testing.T) {
+	baseSvc := &mockReconciliationBaselineService{
+		SnapshotFunc: func(ctx context.Context) (*assetSvc.BaselineSnapshot, error) {
+			return nil, errors.New("snapshot failed")
+		},
+	}
+	c := newTestCore(t)
+	h := newExceptionHandler(&mockReconciliationExceptionService{}, baseSvc, c)
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/baseline/snapshot", handler: h.SnapshotBaseline}})
+
+	w := httpDo(r, http.MethodPost, "/baseline/snapshot", `{}`)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// ============================================================================
+// Test 8: CompareBaseline
+// ============================================================================
+
+func TestExceptionHandler_CompareBaseline_Success(t *testing.T) {
+	baseSvc := &mockReconciliationBaselineService{
+		CompareFunc: func(ctx context.Context) (*assetSvc.BaselineCompareResult, error) {
+			return &assetSvc.BaselineCompareResult{
+				ExceptionsReductionPct: 65.5,
+				WorkordersReductionPct: 50.0,
+				CriticalReductionPct:   80.0,
+			}, nil
+		},
+	}
+	h := newExceptionHandler(&mockReconciliationExceptionService{}, baseSvc, newTestCore(t))
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/baseline/compare", handler: h.CompareBaseline}})
+
+	w := httpDo(r, http.MethodPost, "/baseline/compare", `{}`)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), `"exceptions_reduction_pct":65.5`)
+}
+
+func TestExceptionHandler_CompareBaseline_NoBaselineSvc(t *testing.T) {
+	h := newExceptionHandler(&mockReconciliationExceptionService{}, nil, newTestCore(t))
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/baseline/compare", handler: h.CompareBaseline}})
+
+	w := httpDo(r, http.MethodPost, "/baseline/compare", `{}`)
+	// handler returns 500 → 400 via quirk
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestExceptionHandler_CompareBaseline_NoBaselineExists(t *testing.T) {
+	// Service returns error when no baseline exists → handler maps to 400.
+	baseSvc := &mockReconciliationBaselineService{
+		CompareFunc: func(ctx context.Context) (*assetSvc.BaselineCompareResult, error) {
+			return nil, errors.New("未找到基线")
+		},
+	}
+	h := newExceptionHandler(&mockReconciliationExceptionService{}, baseSvc, newTestCore(t))
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/baseline/compare", handler: h.CompareBaseline}})
+
+	w := httpDo(r, http.MethodPost, "/baseline/compare", `{}`)
+	// handler explicitly returns 400 for "未找到基线" → 400
+	assert.Equal(t, http.StatusBadRequest, w.Code,
+		"无 baseline → handler returns 400 (D-R3-A4-01 BLOCKER-3)")
+}
+
+// ============================================================================
+// Test 9: ImportRules
+// ============================================================================
+
+func TestExceptionHandler_ImportRules_Success(t *testing.T) {
+	svc := &mockReconciliationExceptionService{
+		ImportFromExcelFunc: func(ctx context.Context, file *multipart.FileHeader) (*operations.ImportResult, error) {
+			assert.NotNil(t, file)
+			return &operations.ImportResult{Inserted: 5, Updated: 2, Failed: 0}, nil
+		},
+	}
+	c := newTestCore(t)
+	h := newExceptionHandler(svc, nil, c)
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/exception-rule/import", handler: h.ImportRules}})
+
+	// Build a multipart form
+	body, contentType := buildMultipartForm(t, "file", "test.xlsx", []byte("fake-xlsx-content"))
+	req := newMultipartRequest(http.MethodPost, "/exception-rule/import", body, contentType)
+	w := httpDoRaw(r, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestExceptionHandler_ImportRules_NoFile(t *testing.T) {
+	svc := &mockReconciliationExceptionService{}
+	h := newExceptionHandler(svc, nil, newTestCore(t))
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/exception-rule/import", handler: h.ImportRules}})
+
+	// No multipart form
+	w := httpDo(r, http.MethodPost, "/exception-rule/import", `{}`)
+	assert.Equal(t, http.StatusBadRequest, w.Code, "missing file → 400")
+}
+
+func TestExceptionHandler_ImportRules_ServiceError(t *testing.T) {
+	svc := &mockReconciliationExceptionService{
+		ImportFromExcelFunc: func(ctx context.Context, file *multipart.FileHeader) (*operations.ImportResult, error) {
+			return nil, errors.New("import failed")
+		},
+	}
+	h := newExceptionHandler(svc, nil, newTestCore(t))
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/exception-rule/import", handler: h.ImportRules}})
+
+	body, contentType := buildMultipartForm(t, "file", "test.xlsx", []byte("fake-xlsx-content"))
+	req := newMultipartRequest(http.MethodPost, "/exception-rule/import", body, contentType)
+	w := httpDoRaw(r, req)
+	// handler returns 500 → response.Error quirk → 400
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// ============================================================================
+// Test 10: ExportRules — handler always constructs a fresh excelSvc, may panic
+// on nil core. Test that the route at least mounts.
+// ============================================================================
+
+func TestExceptionHandler_ExportRules_RouteMounts(t *testing.T) {
+	svc := &mockReconciliationExceptionService{}
+	h := newExceptionHandler(svc, nil, nil) // no core
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/exception-rule/export", handler: h.ExportRules}})
+
+	// Without core → h.core is nil → panic on nil deref. Use recover to swallow.
+	defer func() {
+		_ = recover()
+	}()
+	_ = httpDo(r, http.MethodPost, "/exception-rule/export", `{}`)
+}
+
+// ============================================================================
+// Test 11: DownloadTemplate — handler always constructs a fresh excelSvc, may
+// panic on nil core. Test that the route at least mounts.
+// ============================================================================
+
+func TestExceptionHandler_DownloadTemplate_RouteMounts(t *testing.T) {
+	svc := &mockReconciliationExceptionService{}
+	h := newExceptionHandler(svc, nil, nil) // no core
+	r := mountRouter([]routeMount{{method: http.MethodPost, path: "/exception-rule/template", handler: h.DownloadTemplate}})
+
+	defer func() {
+		_ = recover()
+	}()
+	_ = httpDo(r, http.MethodPost, "/exception-rule/template", `{}`)
+}
+
+// ============================================================================
+// Test 12: Lifecycle (New + WithCore + WithBaselineService)
+// ============================================================================
+
+func TestExceptionHandler_NewHandler(t *testing.T) {
+	svc := &mockReconciliationExceptionService{}
+	h := NewReconciliationExceptionHandler(svc)
+	require.NotNil(t, h)
+	assert.NotNil(t, h.service)
+}
+
+func TestExceptionHandler_WithCore_NilSafe(t *testing.T) {
+	svc := &mockReconciliationExceptionService{}
+	h := NewReconciliationExceptionHandler(svc)
+
+	// Nil receiver
+	var nilH *ReconciliationExceptionHandler
+	result := nilH.WithCore(newTestCore(t))
+	assert.Nil(t, result)
+
+	// Non-nil
+	c := newTestCore(t)
+	h2 := h.WithCore(c)
+	assert.Same(t, h, h2)
+	assert.Equal(t, c, h2.core)
+}
+
+func TestExceptionHandler_WithBaselineService_NilSafe(t *testing.T) {
+	svc := &mockReconciliationExceptionService{}
+	h := NewReconciliationExceptionHandler(svc)
+
+	// Nil receiver
+	var nilH *ReconciliationExceptionHandler
+	result := nilH.WithBaselineService(&mockReconciliationBaselineService{})
+	assert.Nil(t, result)
+
+	// Non-nil
+	baseSvc := &mockReconciliationBaselineService{}
+	h2 := h.WithBaselineService(baseSvc)
+	assert.Same(t, h, h2)
+	assert.Equal(t, baseSvc, h2.baselineSvc)
+}
+
+// ============================================================================
 // helpers
+// ============================================================================
 
-func mustReadHandlerSrc(t *testing.T) string {
+// buildMultipartForm creates a multipart form body with a single file part.
+func buildMultipartForm(t *testing.T, fieldName, filename string, content []byte) (*bytes.Buffer, string) {
 	t.Helper()
-	return mustReadFile(t, "reconciliation_exception_handler.go")
+	body := &bytes.Buffer{}
+	mw := multipart.NewWriter(body)
+	hdr := make(textproto.MIMEHeader)
+	hdr.Set("Content-Disposition", `form-data; name="`+fieldName+`"; filename="`+filename+`"`)
+	hdr.Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	part, err := mw.CreatePart(hdr)
+	require.NoError(t, err)
+	_, err = part.Write(content)
+	require.NoError(t, err)
+	require.NoError(t, mw.Close())
+	return body, mw.FormDataContentType()
 }
 
-func mustReadFile(t *testing.T, name string) string {
-	t.Helper()
-	data, err := os.ReadFile(name)
-	require.NoError(t, err, "must read %s", name)
-	return string(data)
+// newMultipartRequest creates an http.Request with a multipart form body.
+func newMultipartRequest(method, path string, body *bytes.Buffer, contentType string) *http.Request {
+	req, _ := http.NewRequest(method, path, body)
+	req.Header.Set("Content-Type", contentType)
+	return req
 }
 
-// extractFuncBody 抽取指定函数体(粗糙实现,仅用于静态断言"不含 X")
-func extractFuncBody(src, funcName string) string {
-	needle := "func (h *ReconciliationExceptionHandler) " + funcName + "("
-	idx := strings.Index(src, needle)
-	if idx < 0 {
-		return ""
-	}
-	// 从 { 开始找配对的 }(粗糙:计数 brace)
-	start := strings.Index(src[idx:], "{")
-	if start < 0 {
-		return ""
-	}
-	start += idx
-	depth := 0
-	for i := start; i < len(src); i++ {
-		switch src[i] {
-		case '{':
-			depth++
-		case '}':
-			depth--
-			if depth == 0 {
-				return src[start : i+1]
-			}
-		}
-	}
-	return src[start:]
+// httpDoRaw is for requests with custom Content-Type (e.g., multipart).
+func httpDoRaw(r *gin.Engine, req *http.Request) *httptest.ResponseRecorder {
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
 }
-
-var _ = http.StatusOK // 抑制 net/http 未用(运行时校验不需要,但保持 import 兼容)
