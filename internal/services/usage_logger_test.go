@@ -312,14 +312,16 @@ func TestAsyncLogging(t *testing.T) {
 			assert.NoError(t, err, "Log %d should succeed", i)
 		}
 
-		// 等待异步操作完成
-		time.Sleep(200 * time.Millisecond)
-
-		// 验证所有日志都被正确记录
+		// 等待异步写完成:CI runner 慢时 200ms 固定 sleep 会丢拍,
+		// 改 Eventually 轮询(最长 5s,500ms 间隔)。
 		var logs []models.APIKeyUsageLog
-		err := db.Where("api_key_id = ?", "integrity-key").Find(&logs).Error
-		assert.NoError(t, err)
-		assert.Len(t, logs, len(expectedLogs))
+		require.Eventually(t, func() bool {
+			logs = nil
+			if err := db.Where("api_key_id = ?", "integrity-key").Find(&logs).Error; err != nil {
+				return false
+			}
+			return len(logs) == len(expectedLogs)
+		}, 5*time.Second, 500*time.Millisecond, "异步日志应最终全部落库")
 
 		// 验证每条日志的内容
 		for i, expected := range expectedLogs {

@@ -31,7 +31,10 @@ func TestL1Cache_SetGetExpire(t *testing.T) {
 	m := NewMetricsCacheManager(nil)
 	defer m.Stop()
 
-	key := m.getCacheKey("metrics:current")
+	// 私有 probe key:NewMetricsCacheManager 启动的后台 metrics ticker
+	// 会周期性覆写 metrics:current 键(CI Linux 上 sleep 期间撞上 tick 即污染;
+	// Windows 本地时序恰好避开),用独立键彻底隔离。
+	key := "test:l1:probe"
 	m.setToL1(key, "value-x", 100*time.Millisecond)
 
 	// 立即读 → 命中
