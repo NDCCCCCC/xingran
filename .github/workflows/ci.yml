@@ -89,6 +89,35 @@ jobs:
             coverage.html
           retention-days: 30
 
+  coverage-diff:
+    # GOV-03 (Phase 74, D-14): PR diff coverage ≥80% gate. PR-only — push to
+    # main has no diff base and is already gated by the backend job's
+    # weighted-average floor. D-14 locked an external action with an explicit
+    # ratchet to self-implementation; the locked actions (gocover-coverage /
+    # ory/xcoverage-action) could not be verified to exist, so the gate is
+    # implemented in-repo (.github/scripts/check-diff-coverage.sh) with the
+    # same zero-dep bash+awk paradigm as check-coverage.sh (D-01).
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: backend
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # merge-base (three-dot) diff needs full history
+          fetch-depth: 0
+
+      - name: Download coverage profile
+        # Reuses the backend job's coverage.out — no second test run.
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-coverage
+
+      - name: Diff coverage gate (≥80%)
+        # Exit 1 when <80% of changed executable .go lines are covered.
+        # Exits 0 (skip) when the PR touches no testable .go lines.
+        run: bash .github/scripts/check-diff-coverage.sh coverage.out origin/${{ github.base_ref }} 80
+
   frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 15
