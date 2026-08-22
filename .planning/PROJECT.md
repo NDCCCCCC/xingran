@@ -1,12 +1,41 @@
 ---
-last_updated: 2026-08-20
-update_trigger: v1.26 backend-test-coverage-excellence milestone started (12.8% → ≥70%, P0/P1 全清, CI coverage gate)
-previous_update: 2026-08-19 Combined v1.22-v1.25 COMPLETE + ARCHIVED
+last_updated: 2026-08-22
+update_trigger: v1.26 SHIPPED + ARCHIVED 2026-08-22; weighted 12.8→55.5, 0%-pkg 33→5, 4-layer gate + diff coverage live
+previous_update: 2026-08-20 v1.26 started
 ---
 
-## Current State: v1.22 + v1.23 + v1.24 + v1.25 — ✅ SHIPPED + ARCHIVED 2026-08-19
+## Current State: v1.26 后端测试覆盖率优秀 — ✅ SHIPPED + ARCHIVED 2026-08-22
 
-**Combined Launch Blocks Delivered** (audit: [v1.22-v1.25-MILESTONE-AUDIT.md](v1.22-v1.25-MILESTONE-AUDIT.md) — `passed`):
+**Audit**: [v1.26-MILESTONE-AUDIT.md](milestones/v1.26-MILESTONE-AUDIT.md) — `partial` (4/5 SC fully met + SC-a honestly shortfall-documented)
+
+| Milestone | Title | Phases | Plans | Items | Shipped |
+|-----------|-------|--------|-------|-------|---------|
+| **v1.26** | 后端测试覆盖率优秀 (Backend Test Coverage Excellence) | 71-74 | 34 | 19 reqs (15 ✅ + 4 partial) | **2026-08-22** |
+| **Total** | **4 phases / 34 plans / 19 items / 2 days** | | | | |
+
+**SC 状态**:
+- **SC-a** weighted ≥70%: ⚠️ **55.56%** (ratchet 12.8→21.5→25.9→55.5;+42.76pp/4.34×;缺口结构化归因 + 7 pkg P2 ratchet 守住成果)
+- **SC-b** 0%-pkg ≤5: ✅ **5** (全部入口/装配/生成代码)
+- **SC-c** threshold gate: ✅ **55.5% UP-only** (4 phase ratchet chain 落 `coverage-baseline.md`)
+- **SC-d** 0 FAIL: ✅ **65 ok / 0 FAIL / 0 panic**
+- **SC-e** PR diff ≥80%: ✅ **74-10 D-14 自实现**(market 上 gocover-diff / ory/xcoverage-action 均不可达,自实现 bash+awk,ci.yml `coverage-diff` PR-only job)
+
+**Delivered**:
+- **Phase 71**: `check-coverage.sh` (bash + awk, D-01 零依赖) + ci.yml Coverage gate step + `.coverage-threshold` + `coverage-baseline.md` 起点 row
+- **Phase 72**: P0 核心 13 plans — `api/v1/workorder 75.4%` + `api/v1/monitor 71.2%` + `api/v1/scheduler 85.5%` + `services/workorder 73.7%`;ratchet 21.5
+- **Phase 73**: P1 重要 5 plans — 8 P1 包全部 ≥70% (D-04/D-10 strict);`p1_package_check` floor exit 4;ratchet 25.9
+- **Phase 74**: P2 增量 + diff coverage 收口 — 11 plans + 74-12 escalation;P2 7/10 ≥70% + 3 UP-ONLY ratcheted;`p2_package_check` exit 5 + `coverage-diff` PR-only job;ratchet 55.5;原子 7 文件 commit (1f18e20) + SHA amend (33c8b5c)
+- **业务代码变更**: **0** (D-12 STRICT 全程;~40 个 `*_test.go` 文件)
+
+**Archive**:
+- Combined: [milestones/v1.26-ROADMAP.md](milestones/v1.26-ROADMAP.md) + [milestones/v1.26-REQUIREMENTS.md](milestones/v1.26-REQUIREMENTS.md)
+- Audit: [milestones/v1.26-MILESTONE-AUDIT.md](milestones/v1.26-MILESTONE-AUDIT.md)
+- Per-plan: `.planning/phases/74-p2-finalize-and-diff-coverage/74-{01..12}-*` (preserved for full traceability)
+
+<details>
+<summary>📜 v1.22 + v1.23 + v1.24 + v1.25 SHIPPED details (archived 2026-08-19)</summary>
+
+**Combined Launch Blocks Delivered** (audit: [v1.22-v1.25-MILESTONE-AUDIT.md](milestones/v1.22-v1.25-MILESTONE-AUDIT.md) — `passed`):
 
 | Block | Title | Phases | Plans | Items | Shipped |
 |-------|-------|--------|-------|-------|---------|
@@ -17,16 +46,6 @@ previous_update: 2026-08-19 Combined v1.22-v1.25 COMPLETE + ARCHIVED
 | **Total** | **Combined Launch Blocks** | **7** | **20** | **36 items** | **2026-08-19** |
 
 **Audit scores**: 20/20 reqs + 7/7 phases + 5/5 integration + 4/4 E2E flows
-
-**Delivered:**
-- **v1.22**: 把 `brand-spec.md` 像素实测品牌令牌固化进 design-system — `index.css` 253 变量 + xingranBrand TS 常量 + AntdThemeBridge 全量映射;移除 6 套主题;硬编码色扫描;6 屏视觉确认
-- **v1.23**: 闭环 SM2 密钥配置部署稳健性 — 17 处 XINGRAN_JWT_SM2 → JWT_SM2 + setup-server.sh SM2 段 + getPublicKey 可观测 + sqlite use_sm2 默认值
-- **v1.24**: 状态语义单一真相源 — 94 常量 AST锁值 + 11 组字典 seed + 4 页 useDict 迁移 + CLAUDE.md 指针化
-- **v1.25**: 系统设置页对齐 v1.22 品牌 — SettingsShell 共用骨架 + 行式即改即存 + 目录合并 + Migrate208 sys_menu 迁移
-
-**Archive**:
-- Combined: [milestones/v1.22-v1.25-ROADMAP.md](milestones/v1.22-v1.25-ROADMAP.md) + [milestones/v1.22-v1.25-REQUIREMENTS.md](milestones/v1.22-v1.25-REQUIREMENTS.md)
-- Per-block: milestones/v1.22-*, v1.23-*, v1.24-*, v1.25-* (preserved for full traceability)
 
 ## Current Milestone: v1.26 后端测试覆盖率优秀 (Backend Test Coverage Excellence)
 
