@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -436,12 +438,11 @@ func TestGenerateRandomString_StablePattern(t *testing.T) {
 // ----------------------------------------------------------------------------
 
 func TestSetupAgentRouter_RouteShape(t *testing.T) {
-	// Use an absolute path so the test does not depend on the caller's cwd.
-	src, err := os.ReadFile("D:/CODE/ClaudeCode/guoguo/internal/api/v1/agent/agent_router.go")
-	if err != nil {
-		// Fallback to relative path (works when test runs from project root).
-		src, err = os.ReadFile("internal/api/v1/agent/agent_router.go")
-	}
+	// 定位测试文件自身路径,读同目录的 agent_router.go(不依赖 cwd,
+	// 本地 Windows / CI Linux / go test 包目录 cwd 三态均可运行)。
+	_, thisFile, _, ok := runtime.Caller(0)
+	require.True(t, ok)
+	src, err := os.ReadFile(filepath.Join(filepath.Dir(thisFile), "agent_router.go"))
 	require.NoError(t, err)
 	source := string(src)
 	assert.Contains(t, source, `r.Group("/agent")`)

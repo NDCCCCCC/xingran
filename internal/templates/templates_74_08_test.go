@@ -83,8 +83,9 @@ func TestFindProjectRoot(t *testing.T) {
 	require.NoError(t, err)
 	root := findProjectRoot(here)
 	require.NotEmpty(t, root)
-	base := filepath.Base(filepath.Clean(root))
-	assert.Equal(t, "guoguo", base, "找到 go.mod 所在项目根")
+	// 不锁目录名(CI checkout 目录名与本地不同):只验证找到的根含 go.mod
+	_, statErr := os.Stat(filepath.Join(root, "go.mod"))
+	assert.NoError(t, statErr, "项目根应含 go.mod")
 }
 
 func TestResolveEmbedPath(t *testing.T) {
