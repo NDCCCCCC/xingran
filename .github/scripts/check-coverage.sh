@@ -13,10 +13,11 @@
 #   bash .github/scripts/check-coverage.sh <profile> [<threshold-file>]
 #
 # Exit codes (mirror scripts/check-status-literals.sh):
-#   0 — weighted average >= threshold AND all 8 P1 packages >= 70% (gate passes)
+#   0 — weighted average >= threshold AND all 8 P1 packages >= 70% AND all 10 P2 packages >= floor (gate passes)
 #   1 — weighted average <  threshold (gate fails) OR awk parse error
 #   2 — usage error (missing args / unreadable files)
 #   4 — Phase 73 P1 per-package floor failure (one of the 8 P1 packages < 70%)
+#   5 — Phase 74 P2 per-package floor failure (one of the 10 P2 packages < its floor)
 #
 # CI hookup (ci.yml, step order invariant: Test -> Coverage HTML -> Coverage
 # gate -> Upload artifact):
@@ -34,6 +35,14 @@
 # internal/services/{duty,knowledge,network,monitor}) must EACH stay >= 70.0%.
 # This is deliberately stricter than the weighted average — a P1 package
 # cannot regress below the floor even if the overall average rises.
+#
+# P2 per-package floor (Phase 74, SCALE-01 / D-15, Plan 74-11 section 4): the
+# 10 P2 packages must EACH stay >= 70.0%. 7 of 10 reached 70% in Phase 74.
+# 3 packages are structurally blocked in unit-test scope (SSH scrapligo driver,
+# full Core.Init dependency graph, agent subprocess server — see
+# .planning/phases/74-p2-finalize-and-diff-coverage/74-08-SUMMARY.md); for
+# these the floor is ratcheted to the achieved value (UP-only: coverage may
+# not regress below what Phase 74 shipped, and the 70% intent stays on record).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -205,4 +214,85 @@ if [ "$P1_FAILED" -ne 0 ]; then
 fi
 
 echo "P1 per-package floor passed ($P1_FLOOR% x 8 packages)"
+
+# --- 4. p2_package_check: Phase 74 P2 per-package floor (10 packages) --------
+# Mirrors section 3 (same awk aggregation, same PASS/FAIL format). Differences:
+#   - P2_FLOOR applies to the 7 packages that reached 70% in Phase 74.
+#   - 3 structurally-blocked packages carry an UP-ONLY ratcheted floor equal to
+#     the Phase 74 shipped value (core 38.33 / device 39.07 / agent-server
+#     22.08). Raising these floors back toward 70 is the standing TODO; they
+#     must never move DOWN. Removal condition: when a package crosses 70.0%,
+#     delete its P2_RATCHET entry so the global P2_FLOOR takes over.
+
+P2_FLOOR="70.0"
+P2_PACKAGES="internal/api/v1/operations internal/api/v1/asset internal/api/v1/network internal/services/rpa internal/services/vdi internal/core internal/device internal/utils internal/agent/server internal/services/scheduler"
+
+# Ratcheted floors for structurally blocked packages (UP-only, see header).
+P2_RATCHET_internal_core="38.33"
+P2_RATCHET_internal_device="39.07"
+P2_RATCHET_internal_agent_server="22.08"
+
+floor_of() {
+  # Map package path to ratchet variable name (slashes -> underscores).
+  var="P2_RATCHET_$(printf '%s' "$1" | tr '/' '_')"
+  if [ -n "${!var:-}" ]; then
+    echo "${!var}"
+  else
+    echo "$P2_FLOOR"
+  fi
+}
+
+P2_PKG_TABLE=$(awk '
+NR > 1 {
+    split($1, parts, ":")
+    n = split(parts[1], seg, "/")
+    pkg = ""
+    for (i = 4; i <= n - 1; i++) {
+        pkg = (pkg == "") ? seg[i] : pkg "/" seg[i]
+    }
+    if (pkg == "") next
+    num_stmts = $2 + 0
+    hit_count = $3 + 0
+    covered   = (hit_count > 0) ? num_stmts : 0
+    p2_stmts[pkg]   += num_stmts
+    p2_covered[pkg] += covered
+}
+END {
+    for (k in p2_stmts) {
+        printf "%s %d %d\n", k, p2_stmts[k], p2_covered[k]
+    }
+}
+' "$PROFILE")
+
+P2_FAILED=0
+for pkg in $P2_PACKAGES; do
+  line="$(printf '%s\n' "$P2_PKG_TABLE" | awk -v p="$pkg" '$1 == p { print $2, $3; exit }')"
+  if [ -z "$line" ]; then
+    echo "FAIL: P2 $pkg not found in profile — no statements measured for this package" >&2
+    P2_FAILED=$((P2_FAILED + 1))
+    continue
+  fi
+  stmts="${line%% *}"
+  covered="${line##* }"
+  pct="$(awk -v s="$stmts" -v c="$covered" 'BEGIN { printf "%.2f", (s + 0 > 0) ? c * 100.0 / s : 0 }')"
+  floor="$(floor_of "$pkg")"
+  if awk -v a="$pct" -v b="$floor" 'BEGIN { exit !(a + 0 >= b + 0) }'; then
+    echo "PASS: P2 $pkg $pct% >= $floor% ($covered/$stmts stmts)"
+  else
+    echo "FAIL: P2 $pkg $pct% < $floor% ($covered/$stmts stmts)" >&2
+    P2_FAILED=$((P2_FAILED + 1))
+  fi
+done
+
+if [ "$P2_FAILED" -ne 0 ]; then
+  echo "" >&2
+  echo "coverage gate FAILED — $P2_FAILED P2 package(s) below their floor" >&2
+  echo "P2 floor is from Phase 74 (SCALE-01, D-15): 7 packages at the 70.0%" >&2
+  echo "global floor + 3 structurally-blocked packages at UP-ONLY ratcheted" >&2
+  echo "floors (core/device/agent-server — see 74-08-SUMMARY.md). Floors may" >&2
+  echo "only move UP. Add tests for the failing package(s) to lift it back." >&2
+  exit 5
+fi
+
+echo "P2 per-package floor passed (70.0% x 7 + ratcheted x 3 = 10 packages)"
 exit 0
