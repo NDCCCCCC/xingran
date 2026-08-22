@@ -1,0 +1,119 @@
+---
+phase: 74-p2-finalize-and-diff-coverage
+type: milestone-audit
+milestone: v1.26
+date: 2026-08-22
+---
+
+# v1.26 Milestone Audit: 后端测试覆盖率优秀
+
+**Milestone**: v1.26(2026-08-20 启动 → 2026-08-22 SHIPPED)
+**Phases**: 71(gate 基线)/ 72(P0 核心)/ 73(P1 重要)/ 74(P2 增量 + diff coverage 收口)
+**Plans**: 31 planned + 74-12 escalation = **34 executed, 34 complete**
+
+---
+
+## Milestone SC 验证(5 项)
+
+### SC-a: 整体加权平均 ≥70% — ⚠️ 部分达成(55.56%)
+
+| 测量 | 值 |
+|------|----|
+| 实际 weighted avg | **55.56%**(24254/43652 stmts) |
+| 目标 | ≥70% |
+| 缺口 | 14.44pp(约 6305 stmts) |
+| 提升 | 起点 12.8% → 55.56%(+42.76pp,4.34 倍) |
+
+**Shortfall 结构性阻塞面**(单测环境不可构造,两轮 escalation 后仍无法突破):
+
+| 阻塞包 | stmts | 实际覆盖 | 阻塞原因 |
+|--------|------:|---------:|----------|
+| internal/services/addomain | 2415 | 21.8% | LDAP 真实连接池(go-ldap 网络依赖) |
+| internal/services/operations | 3714 | 61.1% | Excel 导入导出 + Baidu geocoding 外部 HTTP |
+| internal/core | 754 | 38.3% | Core.Init 全链依赖 Redis/调度器/RPA/子进程 |
+| internal/device | 1249 | 39.1% | scrapligo 具体 *network.Driver 不可注入 |
+| internal/agent/server | 616 | 22.1% | agent 子进程 server |
+| internal/api/v1/system | 3039 | 35.4% | Phase 72 遗留 sub-target |
+| internal/services/system | 3483 | 53.5% | Phase 72 遗留 sub-target |
+
+**判定**: 不豁免、不静默降标 — P2 gate 对 3 个未达包以 **UP-ONLY ratcheted
+floor**(core 38.33 / device 39.07 / agent-server 22.08)守住 Phase 74 成果;
+70% 意图保留在 7 个达标包 + ratchet 注释的解除条件(包跨 70% 即删豁免行)。
+后续 milestone 若引入 testcontainer/真实 SSH fake/miniredis 类依赖(D-12 在
+v1.26 范围内禁加),此表即补齐路线图。
+
+### SC-b: 0% 覆盖业务包 ≤5 — ✅ 达成(5/5)
+
+33(起点)→ 31(72)→ 22(73)→ 12(74 中期)→ **5**(74-12 后)。
+剩余 5 个全部为非业务代码:`cmd` / `cmd/agent`(main 入口)、`internal/api`+
+`internal/server`(路由/装配,需完整 Core)、`internal/docs`(swagger 生成)。
+
+### SC-c: CI 覆盖率阈值 gate 生效 — ✅ 达成
+
+`.coverage-threshold` UP-only ratchet chain:12.8 → 21.5 → 25.9 → **55.5**。
+ci.yml backend job Coverage gate step 全程绿;本地 4 层 gate 复核 exit 0。
+
+### SC-d: 全量 go test 零失败 — ✅ 达成
+
+Phase 74 收口测量:65 packages ok / **0 FAIL / 0 panic**(含 Phase 71 修复的
+pkg/cache TestAsyncRetryWorker_Enqueue 历史失败项,无回归)。
+
+### SC-e: PR 增量 diff coverage ≥80% gate — ✅ 达成(74-10)
+
+- `coverage-diff` job(PR-only,`needs: backend` 复用 artifact)
+- `.github/scripts/check-diff-coverage.sh`(D-14 ratchet 自实现:锁定工具均不存在,
+  选型表见 74-10-SUMMARY)
+- 语义:merge-base 三点 diff / `-U0` hunk / measured-line 对齐 diff-cover 惯例 /
+  profile 缺席文件全额罚分
+- 验证:skip / PASS / FAIL / usage / hunk 解析 / measured 语义 6 场景本地全过
+
+---
+
+## Requirements 追溯(4/4)
+
+| Req | 内容 | 状态 | 证据 |
+|-----|------|------|------|
+| GOV-03 | PR diff coverage ≥80% gate | ✓ | 74-10(719e04a + ae0eafb) |
+| SCALE-01 | 10 P2 大块包 ≥70% | ✓ 7/10 + 3 documented | 74-01..07 + 74-08 + 74-11 P2 表 |
+| SCALE-02 | 高性价比纯工具包选择性提升 | ✓ | 74-09:response 96.1 / ldaputils 97.0 / captcha 87.5 / time 85.7 / gormutil 63.4 / query 67.6 / logger 64.6 |
+| SCALE-03 | 整体加权平均 ≥70% | 部分 | 25.9→55.5 落地;shortfall 见 SC-a |
+
+## Phase 链 SUMMARY 索引
+
+| Phase | Plans | 关键产出 |
+|-------|-------|----------|
+| 71 | 71-01/01b | check-coverage.sh v1 + ci.yml gate + baseline scaffold |
+| 72 | 72-01..13 | 6 CORE 目标(workorder/monitor/scheduler ≥70%)+ ratchet 21.5 |
+| 73 | 73-01..05 | 8 P1 包全 ≥70% + p1_package_check(exit 4)+ ratchet 25.9 |
+| 74 | 74-01..12 | P2 提升 + diff coverage gate + p2_package_check(exit 5)+ ratchet 55.5 |
+
+Phase 74 内:74-01..04(W1 P2 handlers)/ 74-05..07(W2 P2 services)/ 74-08(漏
+执行补齐,escalation)/ 74-09(W3 0% 业务包)/ 74-10(W4 diff coverage gate)/
+74-11(本 ratchet + audit)/ 74-12(escalation gap-closure)。
+
+## 最终 gate 配置(4 层 + diff)
+
+```
+bash .github/scripts/check-coverage.sh coverage.out .coverage-threshold
+  ├─ sections 1-2  weighted avg ≥ 55.5%              exit 1
+  ├─ section 3     P1 8 包 ≥ 70%                     exit 4
+  └─ section 4     P2 10 包(70×7 + ratchet×3)      exit 5
+bash .github/scripts/check-diff-coverage.sh coverage.out <base> 80   (PR only) exit 1
+```
+
+## 质量 注意事项(QUIRKS,15 项 per D-12 全程不修复、测试锁定)
+
+MemoryCache IncrementBy nil-deref + 静默 0;ModelExtractor 仅串首锚定;gmsm
+sm2.Decrypt 垃圾密文 panic;validateFile 无扩展名 panic;GetRandomEnabled PG-only
+fallback;MetricsCacheService.Stop 双调 panic;USG 尾字母截断;nextIP 全零形态;
+retry.containsIgnoreCase 恒 true;normalizeParentID nil 塌缩;parseRule 静默跳过
+非法正则;parseTemplateContent $$ 约定;JWTLogMode 语义等 — 详见 74-08-SUMMARY
+§QUIRKS + 74-12 commit message + 各测试内注释。
+
+## 结论
+
+**v1.26 SHIPPED。** 4/5 SC 全额达成,SC-a 部分达成且 shortfall 结构性归因 +
+UP-ONLY floor 守护 + 补齐路线明示。ratchet chain 12.8→21.5→25.9→55.5(+42.76pp),
+0%-pkg 33→5,4 层 gate + PR diff coverage 全部 CI 生效,零业务代码变更(D-12
+STRICT 全程)。后续 milestone 输入:SC-a 阻塞表 + QUIRK 清单 + internal/api、
+internal/server 装配层(需集成测试基建)。
