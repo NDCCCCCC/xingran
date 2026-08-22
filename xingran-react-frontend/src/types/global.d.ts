@@ -19,7 +19,7 @@ declare module "sm-crypto" {
   export function sm4Decrypt(encryptedData: string, key: string): string;
   export function doEncrypt(message: string, publicKey: string): string;
   export function doDecrypt(encryptedText: string, privateKey: string): string;
-}// 详细对象挂载点 (sm2 / sm4) 见 ./sm-crypto.d.ts,后者更具体。
+} // 详细对象挂载点 (sm2 / sm4) 见 ./sm-crypto.d.ts,后者更具体。
 
 declare module "@uiw/react-md-editor" {
   import type React from "react";
