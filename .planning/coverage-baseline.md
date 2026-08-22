@@ -440,7 +440,7 @@ PACKAGE                                                                43652    
 
 | date | phase_label | weighted_avg | total_stmts | total_covered | 0pct_pkg_count | commit | phase_executor | ratchet_from | ratchet_to |
 |------|-------------|--------------|-------------|---------------|----------------|--------|----------------|--------------|------------|
-| 2026-08-22 | Phase 74 后 | 55.5 | 43652 | 24254 | 5 | TBD (atomic ratchet) | gsd-execute-phase 74 | 25.9 | 55.5 |
+| 2026-08-22 | Phase 74 后 | 55.5 | 43652 | 24254 | 5 | 1f18e20 | gsd-execute-phase 74 | 25.9 | 55.5 |
 
 ### 10 P2 packages per-package (Phase 74 后 — D-15)
 
