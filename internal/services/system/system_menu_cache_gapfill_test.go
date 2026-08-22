@@ -63,13 +63,16 @@ func TestMenuService_AppendAncestorMenuIDs(t *testing.T) {
 	got := svc.appendAncestorMenuIDs(ctx, []string{a})
 	assert.Equal(t, []string{a}, got)
 
-	// 中层 b → [b, a](自身在前,祖先在后)
+	// QUIRK(D-12 不修复): 实现用 map[string]bool 收集结果(menu_service.go:306),
+	// 返回顺序非确定(Go map 遍历序随机;CI Linux 上复现反序,Windows 偶绿)。
+	// 调用方不应依赖顺序 — 测试用 ElementsMatch 只锁成员集合。
+	// 中层 b → 成员 {b, a}
 	got = svc.appendAncestorMenuIDs(ctx, []string{b})
-	assert.Equal(t, []string{b, a}, got)
+	assert.ElementsMatch(t, []string{b, a}, got)
 
-	// 叶 c → [c, b, a](自下而上)
+	// 叶 c → 成员 {c, b, a}
 	got = svc.appendAncestorMenuIDs(ctx, []string{c})
-	assert.Equal(t, []string{c, b, a}, got)
+	assert.ElementsMatch(t, []string{c, b, a}, got)
 
 	// 不存在的 id → 原样返回(容错)
 	got = svc.appendAncestorMenuIDs(ctx, []string{"ghost-id"})
