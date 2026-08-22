@@ -2,224 +2,208 @@ package system
 
 import (
 	"context"
+	"errors"
 	"testing"
-	"time"
 
+	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
+
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
+	pkgcache "github.com/xingran-next/xingran-go-backend/pkg/cache"
 )
 
-// MockEndpointService 模拟端点服务
-type MockEndpointService struct {
-	mock.Mock
+// =====================================================================
+// Phase 74-07 收尾:widget_data_fetcher 私有方法 + cache hit + stub
+// endpoint/registry 路径。WidgetConfig 通过缓存 roundtrip 规避 GORM 读
+// 写 widget_configs 表(Position 无 Valuer/Scanner 的 QUIRK,见
+// dashboard_service_test.go)。
+// =====================================================================
+
+func newWDFTestDB(t *testing.T) *gorm.DB {
+	t.Helper()
+	// cache=shared + 同名 named-memory:同进程内多次 Open 同 DSN 共享同一内存库,
+	// 避免 widget_configs 表创建/查询跨连接看不到。
+	db, err := gorm.Open(sqlite.Open("file:wdf_"+t.Name()+"?mode=memory&cache=shared&_enable_boolean=true&_busy_timeout=5000"), &gorm.Config{})
+	require.NoError(t, err)
+	// getUserPermissions 需 sys_menu.perms + status 列,搭最小菜单/关联 schema
+	require.NoError(t, db.Exec(`
+		CREATE TABLE IF NOT EXISTS sys_menu (id TEXT PRIMARY KEY, perms TEXT, status INTEGER DEFAULT 0)
+	`).Error)
+	require.NoError(t, db.Exec(`CREATE TABLE IF NOT EXISTS sys_role_menu (role_id TEXT, menu_id TEXT)`).Error)
+	require.NoError(t, db.Exec(`CREATE TABLE IF NOT EXISTS sys_user_role (user_id TEXT, role_id TEXT)`).Error)
+	return db
 }
 
-func (m *MockEndpointService) GetUserAccessibleEndpoints(ctx context.Context, userID string) ([]services.CategoryEndpoints, error) {
-	args := m.Called(ctx, userID)
-	return args.Get(0).([]services.CategoryEndpoints), args.Error(1)
-}
-
-func (m *MockEndpointService) ValidateEndpoint(route, method string) (*services.EndpointDetail, error) {
-	args := m.Called(route, method)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
+func newWidgetFetcher(t *testing.T, db *gorm.DB, endpoint EndpointService, registry ServiceRegistry) *WidgetDataFetcherImpl {
+	t.Helper()
+	if registry == nil {
+		registry = NewDefaultServiceRegistry()
 	}
-	return args.Get(0).(*services.EndpointDetail), args.Error(1)
+	return NewWidgetDataFetcher(db, pkgcache.NewMemoryCache(50, 0), endpoint, registry)
 }
 
-func (m *MockEndpointService) InvalidateUserCache(ctx context.Context, userID string) {
-	m.Called(ctx, userID)
+// stubEndpointService 满足 EndpointService 的最小实现。
+type stubEndpointService struct {
+	EndpointService
+	validateFn func(route, method string) (*services.EndpointDetail, error)
 }
 
-// TestFetchWidgetData_StaticSource 测试静态数据源
-func TestFetchWidgetData_StaticSource(t *testing.T) {
-	// 创建测试数据
-	widget := &models.WidgetConfig{
-		ID: "test-widget-1",
+func (s *stubEndpointService) ValidateEndpoint(route, method string) (*services.EndpointDetail, error) {
+	return s.validateFn(route, method)
+}
+
+// stubServiceRegistry 把 endpoint 字符串返回固定结果用于覆盖 CallService 分支。
+type stubServiceRegistry struct {
+	ServiceRegistry
+	result interface{}
+	err    error
+}
+
+func (s *stubServiceRegistry) CallService(ctx context.Context, endpoint, method string, params map[string]interface{}, userID string) (interface{}, error) {
+	return s.result, s.err
+}
+
+func TestWidgetFetcher_ExtractParams(t *testing.T) {
+	f := newWidgetFetcher(t, newWDFTestDB(t), nil, nil)
+
+	// Api 非 nil 且有 params → 返 params
+	want := map[string]interface{}{"k": "v"}
+	got := f.extractParams(&models.WidgetConfig{
 		DataSource: models.DataSourceConfig{
-			Static: &models.StaticDataSourceConfig{
-				Type: models.DataSourceTypeStatic,
-				Data: map[string]interface{}{"value": 100},
-			},
+			Api: &models.ApiDataSourceConfig{Params: want},
 		},
+	})
+	assert.Equal(t, want, got)
+
+	// Api 为 nil → nil
+	got = f.extractParams(&models.WidgetConfig{DataSource: models.DataSourceConfig{}})
+	assert.Nil(t, got)
+
+	// Api 非 nil 但 params nil → nil
+	got = f.extractParams(&models.WidgetConfig{
+		DataSource: models.DataSourceConfig{Api: &models.ApiDataSourceConfig{}},
+	})
+	assert.Nil(t, got)
+}
+
+func TestWidgetFetcher_GetUserPermissions_DBShortCircuit(t *testing.T) {
+	f := &WidgetDataFetcherImpl{} // db=nil
+	perms, err := f.getUserPermissions(context.Background(), "u1")
+	require.NoError(t, err)
+	assert.Empty(t, perms)
+}
+
+func TestWidgetFetcher_GetUserPermissions_SQLHit(t *testing.T) {
+	db := newWDFTestDB(t)
+	// 种 2 菜单:menu-1 有 perms 'sys:user:list', menu-2 无 perms
+	db.Exec(`INSERT INTO sys_menu (id, perms, status) VALUES ('m1', 'sys:user:list', 0)`)
+	db.Exec(`INSERT INTO sys_menu (id, perms, status) VALUES ('m2', '', 0)`)
+	db.Exec(`INSERT INTO sys_menu (id, perms, status) VALUES ('m3', 'sys:user:edit', 1)`) // disabled
+	db.Exec(`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ('r1', 'm1'), ('r1', 'm2'), ('r1', 'm3')`)
+	db.Exec(`INSERT INTO sys_user_role (user_id, role_id) VALUES ('u1', 'r1')`)
+
+	f := newWidgetFetcher(t, db, nil, nil)
+	perms, err := f.getUserPermissions(context.Background(), "u1")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"sys:user:list"}, perms, "应只返回启用菜单的非空 perms")
+}
+
+func TestWidgetFetcher_FetchWidgetData_CacheHit(t *testing.T) {
+	mem := pkgcache.NewMemoryCache(50, 0)
+	f := NewWidgetDataFetcher(nil, mem, nil, nil)
+	ctx := context.Background()
+
+	w := &models.WidgetConfig{
+		ID: "w1", Type: "stat", Title: "t",
+		DataSource: models.DataSourceConfig{Static: &models.StaticDataSourceConfig{Data: "fresh"}},
 	}
+	// 预写缓存
+	require.NoError(t, mem.SetJSON(ctx, buildWidgetCacheKey("w1", nil), "cached", 0))
 
-	// 创建 fetcher
-	fetcher := NewWidgetDataFetcher(nil, nil, nil, nil)
-
-	// 执行测试
-	data, cached, err := fetcher.FetchWidgetData(context.Background(), widget, "user-1", true)
-
-	// 验证结果
-	assert.NoError(t, err)
-	assert.False(t, cached)
-	assert.Equal(t, map[string]interface{}{"value": 100}, data)
+	got, cached, err := f.FetchWidgetData(ctx, w, "u1", false)
+	require.NoError(t, err)
+	assert.True(t, cached)
+	assert.Equal(t, "cached", got, "应命中缓存而非走 data source")
 }
 
-// TestFetchWidgetData_WebSocketPlaceholder 测试 WebSocket 占位符
-func TestFetchWidgetData_WebSocketPlaceholder(t *testing.T) {
-	widget := &models.WidgetConfig{
-		ID: "test-widget-ws",
-		DataSource: models.DataSourceConfig{
-			WebSocket: &models.WebSocketDataSourceConfig{
-				Type:    models.DataSourceTypeWebSocket,
-				Channel: "test-channel",
-			},
-		},
+func TestWidgetFetcher_FetchWidgetData_StaticAndWebSocket(t *testing.T) {
+	mem := pkgcache.NewMemoryCache(10, 0)
+	f := newWidgetFetcher(t, newWDFTestDB(t), nil, nil)
+	f.cache = mem
+	ctx := context.Background()
+
+	// Static
+	w := &models.WidgetConfig{
+		ID: "ws", Type: "stat", Title: "s",
+		DataSource: models.DataSourceConfig{Static: &models.StaticDataSourceConfig{Data: map[string]int{"v": 1}}},
 	}
+	got, _, err := f.FetchWidgetData(ctx, w, "u1", true)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]int{"v": 1}, got)
 
-	fetcher := NewWidgetDataFetcher(nil, nil, nil, nil)
-
-	data, cached, err := fetcher.FetchWidgetData(context.Background(), widget, "user-1", true)
-
-	assert.NoError(t, err)
-	assert.False(t, cached)
-	assert.Equal(t, map[string]interface{}{"status": "websocket_not_implemented"}, data)
-}
-
-// TestFetchWidgetData_NoDataSource 测试无数据源
-func TestFetchWidgetData_NoDataSource(t *testing.T) {
-	widget := &models.WidgetConfig{
-		ID:         "test-widget-no-source",
-		DataSource: models.DataSourceConfig{},
+	// WebSocket 占位
+	w = &models.WidgetConfig{
+		ID: "ww", Type: "table", Title: "w",
+		DataSource: models.DataSourceConfig{WebSocket: &models.WebSocketDataSourceConfig{Channel: "ch"}},
 	}
+	got, _, err = f.FetchWidgetData(ctx, w, "u1", true)
+	require.NoError(t, err)
+	assert.Equal(t, "websocket_not_implemented", got.(map[string]interface{})["status"])
 
-	fetcher := NewWidgetDataFetcher(nil, nil, nil, nil)
-
-	data, cached, err := fetcher.FetchWidgetData(context.Background(), widget, "user-1", true)
-
-	assert.Error(t, err)
-	assert.False(t, cached)
-	assert.Nil(t, data)
-	assert.Contains(t, err.Error(), "no data source configured")
+	// Default(无任何 datasource)→ err
+	w = &models.WidgetConfig{ID: "wx", Type: "x", Title: "x"}
+	_, _, err = f.FetchWidgetData(ctx, w, "u1", true)
+	require.ErrorContains(t, err, "no data source configured")
 }
 
-// TestFetchWidgetData_CacheHit 测试缓存命中
-func TestFetchWidgetData_CacheHit(t *testing.T) {
-	// TODO: 实现缓存命中测试
-	t.Skip("需要 mock cache 实现")
-}
+func TestWidgetFetcher_FetchFromAPISource(t *testing.T) {
+	ep := &stubEndpointService{}
+	registry := &stubServiceRegistry{result: "data", err: nil}
 
-// TestFetchWidgetData_PermissionDenied 测试权限拒绝
-func TestFetchWidgetData_PermissionDenied(t *testing.T) {
-	// TODO: 实现权限拒绝测试
-	t.Skip("需要 mock endpoint service 实现")
-}
+	// endpointService=nil → err
+	f := &WidgetDataFetcherImpl{}
+	_, err := f.fetchFromAPISource(context.Background(), &models.ApiDataSourceConfig{Endpoint: "/x", Method: "GET"}, "u1")
+	require.ErrorContains(t, err, "endpoint service not available")
 
-// TestBuildWidgetCacheKey 测试缓存 Key 生成
-func TestBuildWidgetCacheKey(t *testing.T) {
-	// 无参数
-	key1 := buildWidgetCacheKey("widget-1", nil)
-	assert.Equal(t, "widget:data:widget-1", key1)
+	// ValidateEndpoint err
+	ep.validateFn = func(_, _ string) (*services.EndpointDetail, error) { return nil, errors.New("bad") }
+	f = newWidgetFetcher(t, newWDFTestDB(t), ep, registry)
+	_, err = f.fetchFromAPISource(context.Background(), &models.ApiDataSourceConfig{Endpoint: "/x", Method: "GET"}, "u1")
+	require.ErrorContains(t, err, "endpoint not found")
 
-	// 有参数
-	params := map[string]interface{}{"page": 1, "size": 10}
-	key2 := buildWidgetCacheKey("widget-1", params)
-	assert.Contains(t, key2, "widget:data:widget-1:")
-	assert.NotEqual(t, key1, key2) // 有参数的 Key 应该不同
-
-	// 相同参数生成相同 Key
-	params2 := map[string]interface{}{"page": 1, "size": 10}
-	key3 := buildWidgetCacheKey("widget-1", params2)
-	assert.Equal(t, key2, key3)
-
-	// 不同参数生成不同 Key
-	params3 := map[string]interface{}{"page": 2, "size": 10}
-	key4 := buildWidgetCacheKey("widget-1", params3)
-	assert.NotEqual(t, key2, key4)
-}
-
-// TestCalculateTTL 测试 TTL 计算
-func TestCalculateTTL(t *testing.T) {
-	// 配置了刷新间隔
-	ttl1 := calculateTTL(30)
-	assert.Equal(t, 30*time.Second, ttl1)
-
-	// 未配置刷新间隔，使用默认值
-	ttl2 := calculateTTL(0)
-	assert.Equal(t, 5*time.Minute, ttl2)
-
-	// 负数刷新间隔，使用默认值
-	ttl3 := calculateTTL(-1)
-	assert.Equal(t, 5*time.Minute, ttl3)
-
-	// 大刷新间隔
-	ttl4 := calculateTTL(3600)
-	assert.Equal(t, 1*time.Hour, ttl4)
-}
-
-// TestDefaultServiceRegistry_CallService 测试默认服务注册表
-func TestDefaultServiceRegistry_CallService(t *testing.T) {
-	registry := NewDefaultServiceRegistry()
-
-	// 测试未知端点（返回占位符）
-	result, err := registry.CallService(context.Background(), "/unknown/endpoint", "GET", map[string]interface{}{"test": 1}, "user-1")
-
-	assert.NoError(t, err)
-	assert.NotNil(t, result)
-
-	resultMap := result.(map[string]interface{})
-	assert.Equal(t, "/unknown/endpoint", resultMap["endpoint"])
-	assert.Equal(t, "GET", resultMap["method"])
-	assert.Equal(t, map[string]interface{}{"test": 1}, resultMap["params"])
-}
-
-// TestFetchBatchWidgetData_Parallel 测试并行获取
-func TestFetchBatchWidgetData_Parallel(t *testing.T) {
-	// 创建 fetcher（需要 mock db）
-	// TODO: 实现 mock db 和 cache
-	t.Skip("需要 mock db 实现")
-}
-
-// TestFetchBatchWidgetData_PartialFailure 测试部分失败
-func TestFetchBatchWidgetData_PartialFailure(t *testing.T) {
-	// 创建 fetcher
-	// TODO: 实现 mock db 和 cache
-	// 验证结果：
-	// - widget-1 和 widget-2 有数据
-	// - non-existent-widget 有错误
-	// - 整体不返回错误
-
-	t.Skip("需要 mock db 实现")
-}
-
-// TestFetchBatchWidgetData_Timeout 测试超时
-func TestFetchBatchWidgetData_Timeout(t *testing.T) {
-	// 创建测试数据：包含一个会超时的 Widget
-	// 验证超时 Widget 返回错误，其他 Widget 正常返回
-
-	t.Skip("需要 mock db 和慢速数据源实现")
-}
-
-// TestFetchBatchWidgetData_ConcurrencyLimit 测试并发限制
-func TestFetchBatchWidgetData_ConcurrencyLimit(t *testing.T) {
-	// 创建 20 个 Widget，验证并发数不超过 10
-	// 通过记录并发执行数，验证最大并发数
-
-	t.Skip("需要实现并发数监控")
-}
-
-// TestWidgetDataResult 测试 WidgetDataResult 结构
-func TestWidgetDataResult(t *testing.T) {
-	// 成功结果
-	successResult := WidgetDataResult{
-		Data:   map[string]interface{}{"value": 100},
-		Cached: true,
+	// 端点需要 perm 但用户没权限
+	ep.validateFn = func(_, _ string) (*services.EndpointDetail, error) {
+		return &services.EndpointDetail{RequiredPerms: []string{"sys:user:list"}}, nil
 	}
-	assert.NotNil(t, successResult.Data)
-	assert.Empty(t, successResult.Error)
-	assert.True(t, successResult.Cached)
+	_, err = f.fetchFromAPISource(context.Background(), &models.ApiDataSourceConfig{Endpoint: "/x", Method: "GET"}, "u1")
+	require.ErrorContains(t, err, "permission denied")
 
-	// 错误结果
-	errorResult := WidgetDataResult{
-		Error:  "widget not found",
-		Code:   404,
-		Cached: false,
+	// 完整成功路径: validateFn 切回无 perm 要求,registry 桩返回 "data"
+	ep.validateFn = func(_, _ string) (*services.EndpointDetail, error) { return &services.EndpointDetail{}, nil }
+	f = newWidgetFetcher(t, newWDFTestDB(t), ep, registry)
+	got, err := f.fetchFromAPISource(context.Background(), &models.ApiDataSourceConfig{Endpoint: "/x", Method: "GET"}, "u1")
+	require.NoError(t, err)
+	assert.Equal(t, "data", got)
+}
+
+func TestWidgetFetcher_FetchBatchWidgetData(t *testing.T) {
+	// widget_configs 表的 Position 列既无 Valuer 也无 Scanner(Q-12 QUIRK),
+	// GORM 读写 widget 行均不可达,只测 widget-not-found 分支。
+	db := newWDFTestDB(t)
+	require.NoError(t, db.Exec(`CREATE TABLE widget_configs (
+		id TEXT PRIMARY KEY, type TEXT, title TEXT,
+		position TEXT, data_source TEXT, display TEXT,
+		refresh_interval INTEGER DEFAULT 0, enabled INTEGER DEFAULT 1
+	)`).Error)
+	f := newWidgetFetcher(t, db, nil, nil)
+	res, err := f.FetchBatchWidgetData(context.Background(), []string{"ghost-a", "ghost-b"}, "u1", false)
+	require.NoError(t, err)
+	require.Len(t, res, 2)
+	for _, id := range []string{"ghost-a", "ghost-b"} {
+		assert.Equal(t, 404, res[id].Code)
+		assert.Contains(t, res[id].Error, "widget not found")
 	}
-	assert.Nil(t, errorResult.Data)
-	assert.NotEmpty(t, errorResult.Error)
-	assert.Equal(t, 404, errorResult.Code)
-	assert.False(t, errorResult.Cached)
 }
