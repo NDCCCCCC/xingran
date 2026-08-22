@@ -235,3 +235,63 @@
 3. **operlog module/chinese-name 双轨(Phase 34 + 48 共验证)** — 强制使用 ops asset 中文常量,避免 module 字段在审计回路漂移
 4. **基线审计后允许部分 deferred(Phase 41 29→ + Phase 48 3 site-visit)** — observe-only 策略延续,真机/外部依赖类 UAT 显式 partial 而非阻塞代码合入
 5. **CR + Lint 在 phase 末尾加入,不在开头(Phase 32 P1+P2 + 48)** — 实施期先跑通,review 期 catch 全,避免过度返工
+
+## Milestone: v1.26 — 后端测试覆盖率优秀 (Backend Test Coverage Excellence)
+
+**Shipped**: 2026-08-22 (2 days)
+**Phases**: 4 (71-74) | **Plans**: 34 (11 规划 + 74-12 escalation) | **Requirements**: 19 (15 done + 4 documented gaps)
+
+### What Was Built
+
+- check-coverage.sh v1 (bash + awk, zero deps, D-01) + ci.yml Coverage gate step + .coverage-threshold (12.8) + coverage-baseline.md row schema
+- 4 phase ratchet chain (12.8 → 21.5 → 25.9 → 55.5; +42.76pp / 4.34x) — UP-only coverage-threshold
+- 4 enforcement layers: weighted-avg (exit 1) + P1 floor (exit 4) + P2 floor (exit 5) + PR diff >=80% (exit 1)
+- ~40 *_test.go files across 25 packages
+- P1 8 packages all >=70% (D-04/D-10 strict) + P2 7/10 at 70% + 3 UP-ONLY ratcheted (core 38.33 / device 39.07 / agent-server 22.08)
+- 15 QUIRKS locked inline (D-12 STRICT — zero business code changes)
+- GOV-03 PR diff coverage gate CI-live via 74-10 D-14 self-implementation
+
+### What Worked
+
+- Test-only constraint (D-12 STRICT 全程) — 0 business code changes across 34 plans
+- ratchet chain 12.8 → 55.5 — UP-only enforcement prevents silent regression
+- Sequential inline execution over subagent dispatch — preserved all 34 plans
+- Escalation path 74-11 → 74-12 — ad-hoc gap-closure spawned cleanly
+- Honest shortfall documentation — SC-a 55.56% < 70% written directly, gate UP-ONLY ratcheted floors (not silent)
+- Module imports cross-repo D-12 exception — utils/operlog test uses local mock Recorder
+- Pre-existing flake guard (5ead742 TestAsyncRetryWorker_Enqueue) — Phase 71 SC#4 directly validates
+
+### What Was Inefficient
+
+- Subagent dispatch failure mid-Wave 2 — fell back to sequential (~3x wall-clock)
+- Phase 74 plan count (11) inflated — could have been 6 plans with wave grouping
+- 74-08 gap-closure missed in Wave 2 — Task 1 measurement caught it; cost extra round-trip
+- CORE-04 / CORE-06 sub-targets遗留 Phase 72 → never picked Phase 73/74 → v1.27 backlog
+- scrapligo concrete *network.Driver cannot be unit-tested → device 39.07% capped
+- CI push deferred to orchestrator/user per 73-05 pattern
+- No end-to-end make test-coverage wrapper script — 12 measurements × 15min = ~3h
+
+### Patterns Established
+
+- D-12 import-cycle escape via local mock in test pkg (utils/operlog Recorder)
+- TableName() DB-contract lock tests (models/{operations,rpa,system,system/requests})
+- UNIFIED-FAIL-MOCK network retry test (containsIgnoreCase QUIRK lock)
+- ratcheted floor in gate (D-15 application) — UP-only per package instead of gate lowering
+- plan-level escalation clause for shortfall — 74-11 Task 1 spawned ad-hoc 74-12 cleanly
+
+### Key Lessons
+
+1. Honest partial-SHIPPED over quiet threshold lowering — SC-a shortfall documented + ratcheted floors
+2. Structural blockers must be planned, not encountered — 3 packages needed integration infra not in scope
+3. Subagent dispatch fallback acceptable for correctness over speed — sequential is safe default
+4. Wave plan count + ROADMAP count mismatch is silent failure mode — add verification check
+5. per-sub-package validation should match ratchet granularity — align gate granularity from day 1
+6. D-14 self-implementation when market tools unavailable — same idiom as check-coverage.sh
+7. gate extension is additive, never replaces — check-coverage.sh sections stacked not replaced
+
+### Cost Observations
+
+- Sessions: 4 (Phase 71 + 72/73 dispatch attempts + 74 sequential + retrospective)
+- Model mix: ~70% Sonnet + ~20% Opus + ~10% Haiku
+- Notable: Sequential inline cost ~2h extra vs subagent parallelism; accepted for correctness
+- Notable: SC-a shortfall (55.56% < 70%) committed to roadmap explicitly rather than hidden
