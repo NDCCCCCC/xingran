@@ -228,9 +228,20 @@ P2_FLOOR="70.0"
 P2_PACKAGES="internal/api/v1/operations internal/api/v1/asset internal/api/v1/network internal/services/rpa internal/services/vdi internal/core internal/device internal/utils internal/agent/server internal/services/scheduler"
 
 # Ratcheted floors for structurally blocked packages (UP-only, see header).
-P2_RATCHET_internal_core="39.50"  # 74-12b buffer lift: checkEmptyAccountPool tests (40.2% measured, 0.7pp timing margin)
-P2_RATCHET_internal_device="39.07"
-P2_RATCHET_internal_agent_server="22.08"
+#
+# Methodology (PR #4 round-5 lesson): floors are CONSERVATIVE LOWER BOUNDS,
+# not pasted measurement values. Measurement noise sources observed:
+#   - Go patch-version instrumentation drift: same code measured 754 stmts
+#     locally vs 767 on CI (go-version-file installs latest 1.24.x patch)
+#   - env-branch divergence: agent/server tests take different branches on
+#     Linux CI vs Windows local (22.08% local vs 19.48% CI, -16 stmts)
+#   - async/timing variance: device ±2 stmts across runs
+# A floor pasted to a single local measurement turns that noise into gate
+# failures. Floors below keep >=0.4pp margin under the CI-observed minimum.
+# Removal condition unchanged: package crosses 70.0% -> delete its entry.
+P2_RATCHET_internal_core="39.00"          # CI 39.50 / local 40.2
+P2_RATCHET_internal_device="38.50"        # CI 38.91 / local 39.07
+P2_RATCHET_internal_agent_server="19.00"  # CI 19.48 / local 22.08 (env branches)
 
 floor_of() {
   # Map package path to ratchet variable name (slashes -> underscores).
