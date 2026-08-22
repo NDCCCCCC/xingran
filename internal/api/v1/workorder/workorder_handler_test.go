@@ -374,7 +374,7 @@ func seedWorkOrder(t *testing.T, db *gorm.DB, overrides map[string]interface{}) 
 	placeholders := []string{}
 	args := []interface{}{}
 	for k, v := range overrides {
-		cols = append(cols, fmt.Sprintf("%s", k))
+		cols = append(cols, k)
 		placeholders = append(placeholders, "?")
 		args = append(args, v)
 	}

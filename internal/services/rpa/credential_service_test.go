@@ -188,7 +188,7 @@ func TestCredentialService_ListCredentials(t *testing.T) {
 
 	// 状态过滤
 	status := 1
-	list, total, err = svc.ListCredentials(ctx, &rpamodels.CredentialListParams{Current: 1, PageSize: 10, Status: &status}, "u1", "d1")
+	_, total, err = svc.ListCredentials(ctx, &rpamodels.CredentialListParams{Current: 1, PageSize: 10, Status: &status}, "u1", "d1")
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), total)
 

@@ -331,11 +331,8 @@ func TestUserService_Statistics_Zero(t *testing.T) {
 func TestUserService_PasswordManagerAdapter(t *testing.T) {
 	// 由于 security.PasswordManager 字段复杂,这里只验证接口契约
 	pm := NewPasswordManagerAdapter(nil)
-	// nil PM → 调用应 panic, 这只是接口类型校验
+	// nil PM → 接口实现由编译期保证(构造函数签名),此处只验非 nil
 	assert.NotNil(t, pm)
-	_, ok := pm.(PasswordManager)
-	assert.True(t, ok)
-	_ = pm
 }
 
 // TestUserService_BuildDepartmentPaths_NoAncestors 验证无 ancestors 时 early return。

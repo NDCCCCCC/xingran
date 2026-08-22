@@ -222,7 +222,7 @@ func TestQueryService_GetList_Filters(t *testing.T) {
 	assert.Len(t, list, 3)
 
 	// DeviceID 过滤
-	list, total, err = svc.GetList(ctx, &ListRequest{
+	_, total, err = svc.GetList(ctx, &ListRequest{
 		BaseListRequest: base.BaseListRequest{Current: 1, PageSize: 10},
 		DeviceID:        devID,
 	})

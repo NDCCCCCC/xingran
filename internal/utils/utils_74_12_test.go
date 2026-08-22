@@ -188,7 +188,7 @@ func TestTemplateEngine_NetHelpers(t *testing.T) {
 	assert.Equal(t, 9, toInt(float64(9.7)))
 	assert.Equal(t, 5, toInt("5"))
 	assert.Equal(t, 0, toInt("bad"))
-	assert.Equal(t, 0, toInt(1.5 == 1.5))
+	assert.Equal(t, 0, toInt(true), "bool 走 default 分支返回 0")
 	assert.True(t, toBool(true))
 	assert.True(t, toBool("TRUE"))
 	assert.True(t, toBool("1"))

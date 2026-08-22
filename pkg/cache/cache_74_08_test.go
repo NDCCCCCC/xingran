@@ -381,7 +381,7 @@ func TestMemoryCache_HashOps(t *testing.T) {
 
 	// HDel 单字段 → 保留其余
 	require.NoError(t, m.HDel(ctx, "h1", "f1"))
-	v, err = m.HGet(ctx, "h1", "f1")
+	_, err = m.HGet(ctx, "h1", "f1")
 	assert.ErrorIs(t, err, ErrNotFound)
 	v, err = m.HGet(ctx, "h1", "f2")
 	require.NoError(t, err)
