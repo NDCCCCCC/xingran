@@ -30,6 +30,7 @@ var (
 	testTrackedMu        sync.Mutex
 	testKeySeq           uint64
 	testDBSeq            uint64
+	testUserSeq          uint64
 )
 
 // setupTestDB 创建测试数据库连接
@@ -201,8 +202,14 @@ func setupTestDB(t *testing.T) *gorm.DB {
 // createTestUser 创建测试用户
 func createTestUser(t *testing.T, db *gorm.DB) *models.User {
 	nickname := "Test User"
-	// 生成唯一的用户名以避免UNIQUE约束冲突
-	uniqueID := fmt.Sprintf("testuser_%d", time.Now().UnixNano())
+	// 生成唯一的用户名以避免UNIQUE约束冲突。
+	// Windows 时钟粒度粗,连续调用可能拿到相同 nanos(实测 74-07 期间
+	// 7/15 复现)—— 与 testKeySeq 同理,补单调计数器兜底。
+	testTrackedMu.Lock()
+	useq := testUserSeq
+	testUserSeq++
+	testTrackedMu.Unlock()
+	uniqueID := fmt.Sprintf("testuser_%d_%d", time.Now().UnixNano(), useq)
 	user := &models.User{
 		Username: uniqueID,
 		Nickname: &nickname,

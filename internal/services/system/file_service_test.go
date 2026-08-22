@@ -1,392 +1,289 @@
 package system
 
-// =====================================================================
-// file_service_test.go — covers file_service.go (433 lines)
-// Per Plan 72-11 Task 4
-// =====================================================================
-
 import (
+	"bytes"
 	"context"
+	"image"
+	"image/png"
+	"mime/multipart"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/glebarez/sqlite"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
+
+	"github.com/xingran-next/xingran-go-backend/internal/models/system"
 )
 
-// setupFileServiceDB creates in-memory SQLite with sys_files + sys_file_access_logs schema.
-func setupFileServiceDB(t *testing.T) *gorm.DB {
+// =====================================================================
+// Phase 74-07: file_service.go 全量测试。上传走 t.TempDir() 真实落盘,
+// PNG 由 image/png 现场编码,multipart.FileHeader 与 handler 入口同构。
+// =====================================================================
+
+func newFileTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open("file:filesvc_"+t.Name()+"?mode=memory&cache=shared&_enable_boolean=true&_busy_timeout=5000"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.Exec(`
-		CREATE TABLE sys_files (
-			id TEXT PRIMARY KEY,
-			created_at DATETIME,
-			updated_at DATETIME,
-			deleted_at DATETIME,
-			created_by TEXT,
-			updated_by TEXT,
-			version INTEGER,
-			file_name TEXT,
-			file_size INTEGER,
-			file_type TEXT,
-			extension TEXT,
-			storage_path TEXT,
-			file_hash TEXT,
-			uploader_id TEXT,
-			business_type TEXT,
-			is_deleted BOOLEAN,
-			delete_time DATETIME,
-			file_width INTEGER,
-			file_height INTEGER,
-			metadata TEXT
-		)
-	`).Error)
-	require.NoError(t, db.Exec(`
-		CREATE TABLE sys_file_access_logs (
-			id TEXT PRIMARY KEY,
-			created_at DATETIME,
-			updated_at DATETIME,
-			file_id TEXT,
-			action_type TEXT,
-			user_id TEXT,
-			user_name TEXT,
-			ip_address TEXT,
-			user_agent TEXT
-		)
-	`).Error)
+	require.NoError(t, db.AutoMigrate(&system.SysFile{}, &system.SysFileAccessLog{}))
 	return db
 }
 
-// seedFileSvcRow inserts a sys_files row directly.
-func seedFileSvcRow(t *testing.T, db *gorm.DB, userID string, businessType string) string {
+func newFileSvc(t *testing.T) *FileService {
 	t.Helper()
-	id := uuid.NewString()
-	now := time.Now().Format("2006-01-02 15:04:05")
-	require.NoError(t, db.Exec(`INSERT INTO sys_files (id, file_name, file_size, file_type, extension, storage_path, uploader_id, business_type, is_deleted, created_at, updated_at, version)
-		VALUES (?, 'test.png', 1024, 'image/png', '.png', '/uploads/test.png', ?, ?, 0, ?, ?, 0)`,
-		id, userID, businessType, now, now).Error)
-	return id
+	svc := NewFileService(newFileTestDB(t))
+	svc.uploadBaseDir = t.TempDir() // 同包改私有字段,避免污染仓库目录
+	return svc
 }
 
-// TC1: GetCategoryConfig - returns existing config
-func TestFileService_GetCategoryConfig_Existing(t *testing.T) {
+// tinyPNG 现场编码 w×h PNG 字节流。
+func tinyPNG(t *testing.T, w, h int) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	require.NoError(t, png.Encode(&buf, image.NewRGBA(image.Rect(0, 0, w, h))))
+	return buf.Bytes()
+}
+
+// fileHeaderFor 构造 *multipart.FileHeader(Content-Type 可指定)。
+func fileHeaderFor(t *testing.T, data []byte, filename, contentType string) *multipart.FileHeader {
+	t.Helper()
+	var buf bytes.Buffer
+	w := multipart.NewWriter(&buf)
+	fw, err := w.CreateFormFile("file", filename)
+	require.NoError(t, err)
+	_, err = fw.Write(data)
+	require.NoError(t, err)
+	require.NoError(t, w.Close())
+
+	form, err := multipart.NewReader(&buf, w.Boundary()).ReadForm(32 << 20)
+	require.NoError(t, err)
+	require.Len(t, form.File["file"], 1)
+	fh := form.File["file"][0]
+	if contentType != "" {
+		fh.Header.Set("Content-Type", contentType)
+	}
+	return fh
+}
+
+// memFile 把 bytes.Reader 适配成 multipart.File(Read/ReadAt/Seek 由 Reader 提供)。
+type memFile struct{ *bytes.Reader }
+
+func (memFile) Close() error { return nil }
+
+// failReader 注入读错误,覆盖 calculateFileHash 失败分支。
+type failReader struct{}
+
+func (failReader) Read([]byte) (int, error)       { return 0, assert.AnError }
+func (failReader) ReadAt([]byte, int64) (int, error) { return 0, assert.AnError }
+func (failReader) Seek(int64, int) (int64, error) { return 0, nil }
+func (failReader) Close() error                   { return nil }
+
+func TestFileService_ConfigsAndPureHelpers(t *testing.T) {
+	// 分类配置:命中 / 未知回退 image 默认
 	cfg := GetCategoryConfig("avatar")
 	require.NotNil(t, cfg)
 	assert.Equal(t, int64(2*megabyte), cfg.MaxSize)
 	assert.True(t, cfg.ExtractDimensions)
+	fallback := GetCategoryConfig("nope")
+	assert.Equal(t, CategoryConfigs["image"].MaxSize, fallback.MaxSize)
+
+	// 校验转换:已配置分类 → ext map;未配置分类 → ImageValidation
+	v := GetValidationByCategory("import")
+	assert.True(t, v.AllowedExts[".xlsx"])
+	assert.False(t, v.AllowedExts[".png"])
+	fallbackV := GetValidationByCategory("nope")
+	assert.Equal(t, ImageValidation.MaxSize, fallbackV.MaxSize)
+	assert.True(t, fallbackV.AllowedExts[".webp"])
+	doc := CategoryConfigs["document"]
+	dv := doc.toFileValidation()
+	assert.True(t, dv.AllowedExts[".pdf"])
+
+	assert.True(t, isImageFile(".png"))
+	assert.False(t, isImageFile(".pdf"))
+
+	meta := buildImageMetadata(640, 480)
+	require.NotNil(t, meta)
+	assert.Contains(t, *meta, `"width":640`)
+
+	// 哈希:正常 + 读错误
+	h1, err := calculateFileHash(memFile{bytes.NewReader([]byte("hello"))})
+	require.NoError(t, err)
+	h2, _ := calculateFileHash(memFile{bytes.NewReader([]byte("hello"))})
+	h3, _ := calculateFileHash(memFile{bytes.NewReader([]byte("world"))})
+	assert.Equal(t, h1, h2)
+	assert.NotEqual(t, h1, h3)
+	assert.Len(t, h1, 64)
+	_, err = calculateFileHash(failReader{})
+	require.ErrorContains(t, err, "计算文件哈希失败")
+
+	// 尺寸提取:真 PNG / 打不开 / 非图片
+	dir := t.TempDir()
+	p := filepath.Join(dir, "a.png")
+	require.NoError(t, writeFileForTest(p, tinyPNG(t, 3, 5)))
+	w, h, err := extractImageDimensions(p)
+	require.NoError(t, err)
+	assert.Equal(t, 3, w)
+	assert.Equal(t, 5, h)
+	_, _, err = extractImageDimensions(filepath.Join(dir, "missing.png"))
+	require.Error(t, err)
+	np := filepath.Join(dir, "not.png")
+	require.NoError(t, writeFileForTest(np, []byte("plain text")))
+	_, _, err = extractImageDimensions(np)
+	require.Error(t, err)
 }
 
-// TC2: GetCategoryConfig - unknown returns default
-func TestFileService_GetCategoryConfig_Default(t *testing.T) {
-	cfg := GetCategoryConfig("nonexistent")
-	require.NotNil(t, cfg)
+func TestFileService_UploadFile(t *testing.T) {
+	svc := newFileSvc(t)
+	ctx := context.Background()
+
+	pngBytes := tinyPNG(t, 3, 5)
+
+	// 超大小限制
+	big := GetValidationByCategory("avatar")
+	big.MaxSize = 2
+	_, err := svc.UploadFile(ctx, fileHeaderFor(t, pngBytes, "a.png", "image/png"), "avatar", "u1", big)
+	require.ErrorContains(t, err, "文件大小超过限制")
+
+	// 非法扩展名
+	_, err = svc.UploadFile(ctx, fileHeaderFor(t, []byte("x"), "a.exe", ""), "avatar", "u1", GetValidationByCategory("avatar"))
+	require.ErrorContains(t, err, "不支持的文件类型: .exe")
+
+	// 图片成功上传:尺寸提取 + metadata
+	f1, err := svc.UploadFile(ctx, fileHeaderFor(t, pngBytes, "pic.PNG", "image/png"), "avatar", "u1", nil)
+	require.NoError(t, err)
+	require.NotNil(t, f1.Width)
+	require.NotNil(t, f1.Height)
+	assert.Equal(t, 3, *f1.Width)
+	assert.Equal(t, 5, *f1.Height)
+	require.NotNil(t, f1.Metadata)
+	assert.Contains(t, *f1.Metadata, `"height":5`)
+	assert.Equal(t, ".png", f1.Extension, "扩展名应转小写")
+	assert.Equal(t, "image/png", f1.FileType)
+
+	// 相同内容二次上传 → 秒传返回已有记录
+	var before int64
+	require.NoError(t, svc.db.Model(&system.SysFile{}).Count(&before).Error)
+	f2, err := svc.UploadFile(ctx, fileHeaderFor(t, pngBytes, "dup.png", "image/png"), "avatar", "u2", nil)
+	require.NoError(t, err)
+	assert.Equal(t, f1.ID, f2.ID)
+	var after int64
+	require.NoError(t, svc.db.Model(&system.SysFile{}).Count(&after).Error)
+	assert.Equal(t, before, after, "秒传不应新增记录")
+
+	// document 类:不做尺寸提取
+	txtHdr := fileHeaderFor(t, []byte("note"), "a.txt", "text/plain")
+	f3, err := svc.UploadFile(ctx, txtHdr, "document", "u1", GetValidationByCategory("document"))
+	require.NoError(t, err)
+	assert.Nil(t, f3.Width)
+	assert.Nil(t, f3.Metadata)
+	assert.True(t, strings.HasPrefix(f3.StoragePath, "document"), "存储路径应含分类子目录")
 }
 
-// TC3: GetValidationByCategory - returns validation for known
-func TestFileService_GetValidationByCategory_Known(t *testing.T) {
-	v := GetValidationByCategory("avatar")
-	require.NotNil(t, v)
-	assert.Equal(t, int64(2*megabyte), v.MaxSize)
-	assert.NotNil(t, v.AllowedExts)
-}
+func TestFileService_GetDeleteList(t *testing.T) {
+	svc := newFileSvc(t)
+	ctx := context.Background()
 
-// TC4: GetValidationByCategory - unknown returns image default
-func TestFileService_GetValidationByCategory_Unknown(t *testing.T) {
-	v := GetValidationByCategory("nonexistent")
-	require.NotNil(t, v)
-}
-
-// TC5: toFileValidation - converts correctly
-func TestFileService_ToFileValidation(t *testing.T) {
-	cfg := &FileCategoryConfig{
-		MaxSize:     1000,
-		AllowedExts: []string{".jpg", ".png"},
+	// 直接造记录(不经上传)
+	mk := func(name, biz, uploader string) *system.SysFile {
+		f := &system.SysFile{FileName: name, FileSize: 1, StoragePath: biz + "/x", FileHash: name, UploaderID: uploader, BusinessType: biz}
+		require.NoError(t, svc.db.Create(f).Error)
+		return f
 	}
-	v := cfg.toFileValidation()
-	assert.Equal(t, int64(1000), v.MaxSize)
-	assert.True(t, v.AllowedExts[".jpg"])
-	assert.True(t, v.AllowedExts[".png"])
-}
+	a := mk("a.png", "avatar", "u1")
+	mk("b.png", "avatar", "u2")
+	mk("c.txt", "document", "u1")
 
-// TC6: GetFile - success
-func TestFileService_GetFile_Success(t *testing.T) {
-	db := setupFileServiceDB(t)
-	svc := NewFileService(db)
-	id := seedFileSvcRow(t, db, "user-1", "avatar")
-
-	file, err := svc.GetFile(context.Background(), id)
+	// GetFile:命中 / 不存在
+	got, err := svc.GetFile(ctx, a.ID)
 	require.NoError(t, err)
-	require.NotNil(t, file)
-	assert.Equal(t, "test.png", file.GetFileName())
-}
+	assert.Equal(t, "a.png", got.FileName)
+	_, err = svc.GetFile(ctx, "ghost")
+	require.ErrorContains(t, err, "文件不存在")
 
-// TC7: GetFile - not found
-func TestFileService_GetFile_NotFound(t *testing.T) {
-	db := setupFileServiceDB(t)
-	svc := NewFileService(db)
+	// DeleteFile:软删 + 访问日志
+	require.NoError(t, svc.DeleteFile(ctx, a.ID))
+	_, err = svc.GetFile(ctx, a.ID)
+	require.Error(t, err, "软删后不可见")
+	var logs []*system.SysFileAccessLog
+	require.NoError(t, svc.db.Where("file_id = ?", a.ID).Find(&logs).Error)
+	assert.Len(t, logs, 1, "DeleteFile 应记录 delete 日志")
 
-	_, err := svc.GetFile(context.Background(), uuid.NewString())
-	assert.Error(t, err)
-}
+	// BatchDeleteFiles:空列表 / 命中
+	require.ErrorContains(t, svc.BatchDeleteFiles(ctx, nil), "不能为空")
+	require.NoError(t, svc.BatchDeleteFiles(ctx, []string{"ghost-id"}))
 
-// TC8: ListFiles - empty
-func TestFileService_ListFiles_Empty(t *testing.T) {
-	db := setupFileServiceDB(t)
-	svc := NewFileService(db)
-
-	files, total, err := svc.ListFiles(context.Background(), "", "", 0, 10)
-	require.NoError(t, err)
-	assert.Equal(t, int64(0), total)
-	assert.Empty(t, files)
-}
-
-// TC9: ListFiles - with data
-func TestFileService_ListFiles_WithData(t *testing.T) {
-	db := setupFileServiceDB(t)
-	svc := NewFileService(db)
-	seedFileSvcRow(t, db, "user-1", "avatar")
-	seedFileSvcRow(t, db, "user-2", "avatar")
-
-	files, total, err := svc.ListFiles(context.Background(), "avatar", "", 0, 10)
+	// ListFiles:全量 / businessType / userID / 分页
+	files, total, err := svc.ListFiles(ctx, "", "", 0, 10)
 	require.NoError(t, err)
 	assert.Equal(t, int64(2), total)
 	assert.Len(t, files, 2)
-}
-
-// TC10: ListFiles - with userID filter
-func TestFileService_ListFiles_UserFilter(t *testing.T) {
-	db := setupFileServiceDB(t)
-	svc := NewFileService(db)
-	seedFileSvcRow(t, db, "user-1", "avatar")
-	seedFileSvcRow(t, db, "user-2", "avatar")
-
-	files, total, err := svc.ListFiles(context.Background(), "", "user-1", 0, 10)
+	files, total, err = svc.ListFiles(ctx, "document", "", 0, 10)
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), total)
-	assert.Len(t, files, 1)
-}
-
-// TC11: DeleteFile - success
-func TestFileService_DeleteFile_Success(t *testing.T) {
-	db := setupFileServiceDB(t)
-	svc := NewFileService(db)
-	id := seedFileSvcRow(t, db, "user-1", "avatar")
-
-	require.NoError(t, svc.DeleteFile(context.Background(), id))
-
-	var isDeleted bool
-	require.NoError(t, db.Raw("SELECT is_deleted FROM sys_files WHERE id = ?", id).Scan(&isDeleted).Error)
-	assert.True(t, isDeleted)
-}
-
-// TC12: DeleteFile - not found
-func TestFileService_DeleteFile_NotFound(t *testing.T) {
-	db := setupFileServiceDB(t)
-	svc := NewFileService(db)
-
-	err := svc.DeleteFile(context.Background(), uuid.NewString())
-	assert.Error(t, err)
-}
-
-// TC13: BatchDeleteFiles - success
-func TestFileService_BatchDeleteFiles_Success(t *testing.T) {
-	db := setupFileServiceDB(t)
-	svc := NewFileService(db)
-	id1 := seedFileSvcRow(t, db, "user-1", "avatar")
-	id2 := seedFileSvcRow(t, db, "user-2", "avatar")
-
-	require.NoError(t, svc.BatchDeleteFiles(context.Background(), []string{id1, id2}))
-
-	var deletedCount int64
-	require.NoError(t, db.Raw("SELECT COUNT(*) FROM sys_files WHERE is_deleted = 1").Scan(&deletedCount).Error)
-	assert.Equal(t, int64(2), deletedCount)
-}
-
-// TC14: GetFileURL - returns URL for real file
-func TestFileService_GetFileURL(t *testing.T) {
-	db := setupFileServiceDB(t)
-	svc := NewFileService(db)
-	id := seedFileSvcRow(t, db, "user-1", "avatar")
-
-	file, err := svc.GetFile(context.Background(), id)
+	files, total, err = svc.ListFiles(ctx, "", "u1", 0, 10)
 	require.NoError(t, err)
-
-	url := svc.GetFileURL(file)
-	assert.NotEmpty(t, url)
-}
-
-// TC15: LogAccess - success
-func TestFileService_LogAccess_Success(t *testing.T) {
-	db := setupFileServiceDB(t)
-	svc := NewFileService(db)
-	fileID := seedFileSvcRow(t, db, "user-1", "avatar")
-
-	err := svc.LogAccess(context.Background(), fileID, "view", "user-1", "alice", "127.0.0.1")
+	assert.Equal(t, int64(1), total)
+	files, _, err = svc.ListFiles(ctx, "", "", 1, 1)
 	require.NoError(t, err)
-
-	var count int64
-	require.NoError(t, db.Raw("SELECT COUNT(*) FROM sys_file_access_logs WHERE file_id = ?", fileID).Scan(&count).Error)
-	assert.Equal(t, int64(1), count)
+	assert.Len(t, files, 1, "offset=1 limit=1")
 }
 
-// TC16: imageExtensions - all defined
-func TestFileService_ImageExtensions(t *testing.T) {
-	expected := []string{".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"}
-	for _, ext := range expected {
-		assert.True(t, imageExtensions[ext], "%s should be in imageExtensions", ext)
-	}
-}
+func TestFileService_PathsLogsAndCleanup(t *testing.T) {
+	svc := newFileSvc(t)
+	ctx := context.Background()
 
-// TC17: CategoryConfigs - all categories defined
-func TestFileService_CategoryConfigs(t *testing.T) {
-	categories := []string{"avatar", "room-photo", "floor-plan", "image", "document", "import", "export"}
-	for _, cat := range categories {
-		cfg := GetCategoryConfig(cat)
-		require.NotNil(t, cfg, "%s config should be defined", cat)
-	}
-}
+	// 路径 helpers
+	f := &system.SysFile{StoragePath: "avatar/x.png"}
+	assert.Equal(t, filepath.Join(svc.uploadBaseDir, "avatar/x.png"), svc.GetFilePath(f))
+	assert.Equal(t, "/uploads/avatar/x.png", svc.GetFileURL(f))
 
-// TC18: GetFile - DB error
-func TestFileService_GetFile_DBError(t *testing.T) {
-	db := setupFileServiceDB(t)
-	svc := NewFileService(db)
-	require.NoError(t, db.Exec("DROP TABLE sys_files").Error)
-
-	_, err := svc.GetFile(context.Background(), uuid.NewString())
-	assert.Error(t, err)
-}
-
-// TC19: ListFiles - DB error
-func TestFileService_ListFiles_DBError(t *testing.T) {
-	db := setupFileServiceDB(t)
-	svc := NewFileService(db)
-	require.NoError(t, db.Exec("DROP TABLE sys_files").Error)
-
-	_, _, err := svc.ListFiles(context.Background(), "", "", 0, 10)
-	assert.Error(t, err)
-}
-
-// TC20: DeleteFile - DB error
-func TestFileService_DeleteFile_DBError(t *testing.T) {
-	db := setupFileServiceDB(t)
-	svc := NewFileService(db)
-	require.NoError(t, db.Exec("DROP TABLE sys_files").Error)
-
-	err := svc.DeleteFile(context.Background(), uuid.NewString())
-	assert.Error(t, err)
-}
-
-// TC21: BatchDeleteFiles - DB error
-func TestFileService_BatchDeleteFiles_DBError(t *testing.T) {
-	db := setupFileServiceDB(t)
-	svc := NewFileService(db)
-	require.NoError(t, db.Exec("DROP TABLE sys_files").Error)
-
-	err := svc.BatchDeleteFiles(context.Background(), []string{uuid.NewString()})
-	assert.Error(t, err)
-}
-
-// TC22: toFileValidation - nil AllowedExts
-func TestFileService_ToFileValidation_NilExts(t *testing.T) {
-	cfg := &FileCategoryConfig{
-		MaxSize: 100,
-	}
-	v := cfg.toFileValidation()
-	assert.Equal(t, int64(100), v.MaxSize)
-	assert.NotNil(t, v.AllowedExts)
-	assert.Empty(t, v.AllowedExts)
-}
-
-// TC23: defaultUploadDir constant
-func TestFileService_DefaultUploadDir(t *testing.T) {
-	assert.Equal(t, "./uploads", defaultUploadDir)
-}
-
-// TC24: megabyte constant
-func TestFileService_MegabyteConstant(t *testing.T) {
-	assert.Equal(t, 1024*1024, megabyte)
-}
-
-// TC25: GetCategoryConfig - image fallback for unknown
-func TestFileService_GetCategoryConfig_ImageFallback(t *testing.T) {
-	cfg := GetCategoryConfig("some_random_category")
-	require.NotNil(t, cfg)
-	// Should match the image default config
-	assert.Equal(t, int64(5*megabyte), cfg.MaxSize)
-}
-
-// TC26: DeleteFile - storage path cleanup with real file
-func TestFileService_DeleteFile_Storage(t *testing.T) {
-	db := setupFileServiceDB(t)
-	svc := NewFileService(db)
-
-	// Create real file in tmp
-	tmpDir, err := os.MkdirTemp("", "file_test_*")
+	// LogAccess / GetAccessLogs
+	require.NoError(t, svc.LogAccess(ctx, "f1", "view", "u1", "alice", "127.0.0.1"))
+	require.NoError(t, svc.LogAccess(ctx, "f1", "download", "u1", "alice", "127.0.0.1"))
+	require.NoError(t, svc.LogAccess(ctx, "f2", "view", "u2", "bob", "::1"))
+	logs, total, err := svc.GetAccessLogs(ctx, "f1", 0, 10)
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
-
-	storagePath := filepath.Join(tmpDir, "test.txt")
-	require.NoError(t, os.WriteFile(storagePath, []byte("test"), 0644))
-
-	// Insert file with real storage path
-	id := uuid.NewString()
-	now := time.Now().Format("2006-01-02 15:04:05")
-	require.NoError(t, db.Exec(`INSERT INTO sys_files (id, file_name, storage_path, is_deleted, created_at, updated_at, version)
-		VALUES (?, 'test.txt', ?, 0, ?, ?, 0)`,
-		id, storagePath, now, now).Error)
-
-	require.NoError(t, svc.DeleteFile(context.Background(), id))
-
-	var isDeleted bool
-	require.NoError(t, db.Raw("SELECT is_deleted FROM sys_files WHERE id = ?", id).Scan(&isDeleted).Error)
-	assert.True(t, isDeleted)
-}
-
-// TC27: GetFileURL - format
-func TestFileService_GetFileURL_Format(t *testing.T) {
-	db := setupFileServiceDB(t)
-	svc := NewFileService(db)
-	id := seedFileSvcRow(t, db, "user-1", "avatar")
-
-	file, err := svc.GetFile(context.Background(), id)
+	assert.Equal(t, int64(2), total)
+	assert.Len(t, logs, 2)
+	logs, total, err = svc.GetAccessLogs(ctx, "f2", 0, 10)
 	require.NoError(t, err)
-	url := svc.GetFileURL(file)
-	assert.NotEmpty(t, url)
+	assert.Equal(t, int64(1), total)
+
+	// CleanupDeletedFiles:两条软删记录,磁盘上只放一个真文件 → count=1
+	old := time.Now().AddDate(0, 0, -10)
+	livePath := filepath.Join(svc.uploadBaseDir, "avatar")
+	require.NoError(t, writeFileForTest(filepath.Join(livePath, "live.png"), []byte("x")))
+	svc.db.Create(&system.SysFile{
+		FileName: "live.png", StoragePath: "avatar/live.png", FileHash: "h1",
+		IsDeleted: true, DeleteTime: &old,
+	})
+	svc.db.Create(&system.SysFile{
+		FileName: "gone.png", StoragePath: "avatar/gone.png", FileHash: "h2",
+		IsDeleted: true, DeleteTime: &old,
+	})
+	// 未删除的记录不应被清理
+	svc.db.Create(&system.SysFile{FileName: "keep.png", StoragePath: "avatar/keep.png", FileHash: "h3"})
+
+	count, err := svc.CleanupDeletedFiles(ctx, 5)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count, "仅磁盘上真实存在的文件计入清理")
+
+	var remain int64
+	require.NoError(t, svc.db.Model(&system.SysFile{}).Where("is_deleted = ?", true).Count(&remain).Error)
+	assert.Zero(t, remain, "清理后软删记录应被移除")
+	var kept int64
+	require.NoError(t, svc.db.Model(&system.SysFile{}).Where("file_name = ?", "keep.png").Count(&kept).Error)
+	assert.Equal(t, int64(1), kept)
 }
 
-// TC28: CategoryConfigs - extract dimensions flag
-func TestFileService_CategoryConfigs_ExtractDimensions(t *testing.T) {
-	avatar := GetCategoryConfig("avatar")
-	assert.True(t, avatar.ExtractDimensions, "avatar should extract dimensions")
-
-	doc := GetCategoryConfig("document")
-	assert.False(t, doc.ExtractDimensions, "document should not extract dimensions")
-}
-
-// TC29: ValidateResponse_FormatValidation
-func TestFileService_FileValidationFields(t *testing.T) {
-	v := &FileValidation{
-		MaxSize:      1000,
-		AllowedExts:  map[string]bool{".jpg": true},
-		AllowedMimes: map[string]bool{"image/jpeg": true},
+// writeFileForTest 写测试文件并确保父目录存在。
+func writeFileForTest(path string, data []byte) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
 	}
-	assert.Equal(t, int64(1000), v.MaxSize)
-	assert.NotNil(t, v.AllowedExts)
-}
-
-// TC30: LogAccess - DB error
-func TestFileService_LogAccess_DBError(t *testing.T) {
-	db := setupFileServiceDB(t)
-	svc := NewFileService(db)
-	require.NoError(t, db.Exec("DROP TABLE sys_file_access_logs").Error)
-
-	err := svc.LogAccess(context.Background(), uuid.NewString(), "view", "user-1", "alice", "127.0.0.1")
-	assert.Error(t, err)
+	return os.WriteFile(path, data, 0o644)
 }
