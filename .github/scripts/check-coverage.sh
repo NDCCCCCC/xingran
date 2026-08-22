@@ -228,7 +228,7 @@ P2_FLOOR="70.0"
 P2_PACKAGES="internal/api/v1/operations internal/api/v1/asset internal/api/v1/network internal/services/rpa internal/services/vdi internal/core internal/device internal/utils internal/agent/server internal/services/scheduler"
 
 # Ratcheted floors for structurally blocked packages (UP-only, see header).
-P2_RATCHET_internal_core="38.33"
+P2_RATCHET_internal_core="39.50"  # 74-12b buffer lift: checkEmptyAccountPool tests (40.2% measured, 0.7pp timing margin)
 P2_RATCHET_internal_device="39.07"
 P2_RATCHET_internal_agent_server="22.08"
 

@@ -360,16 +360,21 @@ func TestMetricsCacheService(t *testing.T) {
 
 	// 无缓存(core.Cache nil)→ manager 内部直采
 	ctx := context.Background()
-	metrics, err := svc.GetCurrentMetrics(ctx)
-	if err != nil {
-		// CI runner 空闲时两次 CPU 采样差可为 0 → 业务码报
-		// "CPU时间差值计算为0"(环境限制,非缺陷;Windows 本地恒有差)。
-		// D-12: 不改业务码,测试侧容错该环境形态。
-		require.ErrorContains(t, err, "CPU时间差值")
-		metrics = nil
-	} else {
-		require.NotNil(t, metrics)
+	// CPU 采样稳定性:gopsutil 差值采样在空闲机器(CI Linux runner / 空闲
+	// Windows)两次采样差可为 0 → 业务码报"CPU时间差值计算为0"。空转 burn
+	// 制造非零差,让 getRealtimeMetrics 成功路径成为**确定性**覆盖(曾因
+	// 环境施舍导致 core 包 288/754 跌破 P2 floor 38.33)。
+	burnCPU := func(d time.Duration) {
+		deadline := time.Now().Add(d)
+		for time.Now().Before(deadline) {
+		}
 	}
+	burnCPU(200 * time.Millisecond)
+	_, _ = svc.GetCurrentMetrics(ctx) // 预热:建立采样基线+写 L1(覆盖 realtime 分支)
+	burnCPU(200 * time.Millisecond)
+	metrics, err := svc.GetCurrentMetrics(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, metrics)
 
 	info, err := svc.GetServerInfo(ctx)
 	require.NoError(t, err)
