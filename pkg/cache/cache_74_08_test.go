@@ -12,7 +12,8 @@ import (
 // =====================================================================
 // 74-08: pkg/cache — MemoryCache 全 API 面(Get/Set/M*/Hash/JSON/TTL/
 // LRU/cleanup/统计)+ errors.go 谓词 + CacheItem.IsExpired。
-// Redis 实现依赖真实 Redis,不在单测范围(D-12 禁加 miniredis 依赖)。
+// Redis 实现已由 redis_miniredis_76_01_test.go 覆盖(v1.27 D-02 解禁
+// test-only 依赖后，D-12 禁令失效)。
 // =====================================================================
 
 func newMem(t *testing.T, maxSize int) *MemoryCache {
