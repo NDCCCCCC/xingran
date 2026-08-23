@@ -394,27 +394,19 @@ it("buildingApi.list 调用正确端点", async () => {
 | A4 | utils 与 lib 的测试可并行（utils 测试中通过 `vi.mock('@/lib/api')` 解耦） | Wave 划分 | 若存在 utils 文件无法被 mock 且依赖 lib 真实行为，则并行 plan 会阻塞 |
 | A5 | Phase 83 期间 `sm-crypto` 算法行为保持稳定，国密向量可复用 | INFRA-02 | 若库升级改变密文格式，固定向量测试会失败；当前 lock 在 0.5.5，风险低 |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **CR-01 plan 是否需要显式存在？**
-   - What we know: 代码修复已落库；82-VERIFICATION.md 建议 "Phase 83 首个触 src 的 PR 前修复"；D-01/D-02 要求作为 plan0。
-   - What's unclear: 用户/编排器是否希望把已提交的修复重新包装成一个 "验证/文档清理" plan，还是直接合并到首个 harness/测试 plan 中。
-   - Recommendation: 首个 plan 做 "CR-01 已落库修复验证 + ci.yml 注释措辞清理 + 发起试验 PR"，并在 plan 文档中明确说明 "实现代码已在 Phase 82 review-fix 提交中完成"。
+1. **CR-01 plan 是否需要显式存在？** *(RESOLVED)*
+   - Resolution: Plan 01 设为 "CR-01/WR-01~03 已落库修复验证 + ci.yml 注释措辞清理 + 发起并关闭试验 PR"，不重新实现代码。对应 commit: 60f712c / 27f275e / 94d3a16 / aa3bf0c 已在 main。
 
-2. **router 目录当前 0% 且依赖 React Router v7 动态加载，如何低成本达到 70%？**
-   - What we know: routeConfigManager（78 stmts）、routeGenerator（62 stmts）、componentLoader（61 stmts）占主要面积；DynamicRoutes（60 stmts）涉及组件懒加载。
-   - What's unclear: componentLoader 是否使用 `React.lazy` + `Suspense`，jsdom 下能否稳定渲染。
-   - Recommendation: 优先测 routeConfigManager 的纯配置转换函数与 routeGenerator 的输出结构；componentLoader/DynamicRoutes 用 `renderWithProviders` + 最小路由 fixture；若懒加载在 jsdom 下不稳定，可在测试内 mock `import()`。
+2. **router 目录当前 0% 且依赖 React Router v7 动态加载，如何低成本达到 70%？** *(RESOLVED)*
+   - Resolution: Plan 05 Task 2 覆盖 routeConfigManager 纯配置转换与 routeGenerator 输出结构；componentLoader / DynamicRoutes 用 `renderWithProviders` + 最小路由 fixture，必要时在测试内 mock `import()`。
 
-3. **types 目录大量文件为纯类型声明（0 stmts），是否只需覆盖带运行时代码的文件？**
-   - What we know: 实测 types 共 22 文件，多数 0 stmts；有运行时代码的仅 `config.ts`（7 stmts）、`dashboard.ts`（7 stmts）、`notice.ts`（7 stmts）、`widgets/helpers.ts`（4 stmts）、`operations.ts`（2 stmts）、`common.ts`（1 stmts）等少数文件。
-   - What's unclear: 0-stmt 文件是否会影响 "目录覆盖率 ≥70%" 的判定——按 gate 脚本的加权公式，0-stmt 文件不计入分母，因此只需保证有 stmt 的文件覆盖达标。
-   - Recommendation: types 层测试重点覆盖 `config.ts`、`dashboard.ts`、`notice.ts`、`common.ts` 中的类型守卫/辅助函数；纯接口类型文件无需测试。
+3. **types 目录大量文件为纯类型声明（0 stmts），是否只需覆盖带运行时代码的文件？** *(RESOLVED)*
+   - Resolution: Plan 05 Task 1 仅覆盖含运行时代码的文件（`config.ts`、`dashboard.ts`、`notice.ts`、`widgets/helpers.ts`、`operations.ts`、`common.ts`）；0-stmt 纯接口文件不测试。
 
-4. **utils 中 `cad/geometry.ts`（70 stmts）和 `three/colors.ts`（12 stmts）是否属于 P0 范围？**
-   - What we know: 它们位于 `src/utils/` 下，未被 vitest exclude 排除，因此计入 utils 分母。
-   - What's unclear: 这些文件与 CAD/3D 相关，是否因业务上属于 "重画布" 而难以测试。
-   - Recommendation: 它们只是 utils 子目录中的纯几何/颜色函数，不依赖 canvas，应正常写单元测试；真正的 CAD 画布白名单在 `src/components/cad-editor/` 和 `src/components/cad-elements/`。
+4. **utils 中 `cad/geometry.ts`（70 stmts）和 `three/colors.ts`（12 stmts）是否属于 P0 范围？** *(RESOLVED)*
+   - Resolution: Plan 02 Task 2 正常覆盖；二者是纯几何/颜色函数，不依赖 canvas，计入 utils 分母。
 
 ## Environment Availability
 

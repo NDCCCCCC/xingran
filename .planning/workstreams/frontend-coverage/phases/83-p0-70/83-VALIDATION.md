@@ -40,7 +40,7 @@ created: 2026-08-24
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 83-01-01 | 01 | 1 | INFRA-04 / QUAL-03 | — | 验证 CR-01/WR-01~03 修复在 main 已生效；发起试验 PR 触发 CI 双绿 | script + CI | `bash .github/scripts/check-frontend-diff-coverage.sh ...` | ✅ main 已存在 | ⬜ pending |
+| 83-01-01 | 01 | 1 | CR-01 / GOV-04 | — | 验证 CR-01/WR-01~03 修复在 main 已生效；发起试验 PR 触发 CI 双绿 | script + CI | `bash .github/scripts/check-frontend-diff-coverage.sh ...` | ✅ main 已存在 | ⬜ pending |
 | 83-02-xx | 02 | 2 | INFRA-02 | V6 / V8 | utils（国密/token/cache）statements ≥70% | unit + coverage | `npx vitest run src/utils/...` / gate | ❌ W0 后创建 | ⬜ pending |
 | 83-03-xx | 03 | 2 | INFRA-01 | V2 / V3 / V5 | lib（api.ts 双轨）statements ≥70% | unit + coverage | `npx vitest run src/lib/...` / gate | ❌ W0 后创建 | ⬜ pending |
 | 83-04-xx | 04 | 3 | INFRA-03 | V3 / V5 | hooks（usePagination/useServerSort/usePersistedState 等）≥70% | unit + coverage | `npx vitest run src/hooks/...` / gate | ❌ W0 后创建 | ⬜ pending |
@@ -63,7 +63,7 @@ created: 2026-08-24
 - [ ] `xingran-react-frontend/src/store/*.test.ts` — 各 Zustand store 按需注入 + reset 测试
 - [ ] `xingran-react-frontend/src/router/*.test.ts` — routeConfigManager / routeGenerator 等低成本覆盖
 
-*Wave 0 在 Plan 01（CR-01 验证/清理/试验 PR）与 Plan 02（utils）之间完成，作为 harness 可用前提。*
+*Harness 三件套在 Wave 0 创建最小可用版本（供 Wave 2/3 使用），在 Plan 05 (Wave 4) 按 P0 实证重复需求定稿并清理接口。这与 D-04「P0 尾声定稿」一致。*
 
 ---
 
