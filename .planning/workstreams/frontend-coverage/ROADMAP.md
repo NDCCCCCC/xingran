@@ -66,7 +66,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 82-04-PLAN.md — ci.yml 接线（frontend job 内嵌 gate + PR-only frontend-coverage-diff job）+ 基线文档与白名单登记
+- [x] 82-04-PLAN.md — ci.yml 接线（frontend job 内嵌 gate + PR-only frontend-coverage-diff job）+ 基线文档与白名单登记
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -163,7 +163,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 82. 口径修正与治理基建 | 3/5 | In Progress|  |
+| 82. 口径修正与治理基建 | 4/5 | In Progress|  |
 | 83. P0 基建层全清 ≥70% | 0/TBD | Not started | - |
 | 84. P1 组件层 ≥70% | 0/TBD | Not started | - |
 | 85. P2 页面层 R1 — operations | 0/TBD | Not started | - |

@@ -14,7 +14,7 @@
 ### 治理与口径 (GOV)
 
 - [x] **GOV-01**: vitest coverage 切换全量口径——`coverage.include` 显式圈定 `src/**/*.{ts,tsx}`（Vitest 4 已移除 `coverage.all`，未配置 include 时只报告被 import 文件），白名单目录同步 exclude，未测试文件计入报告
-- [ ] **GOV-02**: 前端覆盖率基线落盘（起点 3.67% / 22602 stmts + per-dir 快照 + ratchet 记录），与后端 `.planning/coverage-baseline.md` 模式对称
+- [x] **GOV-02**: 前端覆盖率基线落盘（起点 3.67% / 22602 stmts + per-dir 快照 + ratchet 记录），与后端 `.planning/coverage-baseline.md` 模式对称
 - [x] **GOV-03**: CI 前端全局阈值 gate 切到全量口径并 ratchet 只升不降（失败即阻断）
 - [x] **GOV-04**: PR diff coverage ≥80% gate（复用后端 74-10 自实现 bash+awk 模式，前端版）
 - [x] **GOV-05**: per-directory floor gate（白名单外目录 ≥70%，未达标目录走白名单 ratchet 过渡，对称后端 `p1_package_check` / `p2_package_check`）
@@ -46,7 +46,7 @@
 ### 质量守护 (QUAL)
 
 - [ ] **QUAL-01**: 全量 vitest 0 失败 0 flaky（现有 19 文件 159 测试不回归）
-- [ ] **QUAL-02**: 白名单治理——cad-editor 804 + cad-elements 224 等重画布 UI 排除登记（理由 / 面积 / 复审条件），白名单面积 ≤5% 总语句
+- [x] **QUAL-02**: 白名单治理——cad-editor 804 + cad-elements 224 等重画布 UI 排除登记（理由 / 面积 / 复审条件），白名单面积 ≤5% 总语句
 - [ ] **QUAL-03**: 测试公共 harness 沉淀（mock api / antd message / router wrapper 等高频样板），供 P1/P2 复用提效
 
 ## v2 Requirements
@@ -72,7 +72,7 @@ Roadmap created 2026-08-23 — `.planning/workstreams/frontend-coverage/ROADMAP.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | GOV-01 | Phase 82 | Complete |
-| GOV-02 | Phase 82 | Pending |
+| GOV-02 | Phase 82 | Complete |
 | GOV-03 | Phase 82 | Complete |
 | GOV-04 | Phase 82 | Complete |
 | GOV-05 | Phase 82 | Complete |
@@ -92,7 +92,7 @@ Roadmap created 2026-08-23 — `.planning/workstreams/frontend-coverage/ROADMAP.
 | PAGES-04 | Phase 87 | Pending |
 | PAGES-05 | Phase 87 | Pending |
 | QUAL-01 | Phase 88 | Pending |
-| QUAL-02 | Phase 82 | Pending |
+| QUAL-02 | Phase 82 | Complete |
 | QUAL-03 | Phase 83 | Pending |
 
 **Coverage:**
