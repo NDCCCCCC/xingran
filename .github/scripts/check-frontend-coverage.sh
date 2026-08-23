@@ -260,9 +260,13 @@ case "$GLOBAL_FLOOR" in
     ;;
 esac
 
+# The GLOBAL line is space-separated while dir rows are TAB-separated, so it is
+# excluded by matching the raw record (a tab-only FS would fold the whole GLOBAL
+# line into $1 and never compare equal to "GLOBAL").
 MALFORMED="$(awk -F'\t' '
   { sub(/\r$/, "") }
-  $1 !~ /^#/ && $1 != "" && $1 != "GLOBAL" && NF < 2 { print }
+  /^#/ || /^GLOBAL([ \t]|$)/ || /^[[:space:]]*$/ { next }
+  NF < 2 { print }
 ' "$FLOORS_PATH")"
 if [ -n "$MALFORMED" ]; then
   echo "check-frontend-coverage.sh: malformed floor rows in $FLOORS_FILE (expected <dir><TAB>floor):" >&2
@@ -272,7 +276,8 @@ fi
 
 DIR_TABLE="$(awk -F'\t' '
   { sub(/\r$/, "") }
-  $1 !~ /^#/ && $1 != "" && $1 != "GLOBAL" && NF >= 2 { print $1 "\t" $2 }
+  /^#/ || /^GLOBAL([ \t]|$)/ || /^[[:space:]]*$/ { next }
+  NF >= 2 { print $1 "\t" $2 }
 ' "$FLOORS_PATH")"
 
 # ---------------------------------------------------------------------------
