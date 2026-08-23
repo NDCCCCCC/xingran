@@ -10,7 +10,8 @@
 
 | date | phase_label | weighted_avg | total_stmts | total_covered | 0pct_pkg_count | commit | phase_executor | ratchet_from | ratchet_to |
 |------|-------------|--------------|-------------|---------------|----------------|--------|----------------|--------------|------------|
-| 2026-08-23 | 起点 | 3.85 | 21574 | 830 | 15 | TBD (atomic ratchet) | n/a | n/a | n/a |
+| 2026-08-23 | 起点 | 3.85 | 21574 | 830 | 15 | bddb2fc | n/a | n/a | n/a |
+| 2026-08-23 | Phase 82 CI 实测读数 | 3.85 | 21574 | 830 | 15 | 8c7b69f | n/a | n/a | n/a |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
@@ -96,10 +97,18 @@ TOTAL                            3958       215    5.43%    118
 - [x] 白名单面积 ≤5%（1028 / 22602 = 4.55%）
 - [x] 全局与 per-dir 数字可由 gate 脚本复算（`bash .github/scripts/check-frontend-coverage.sh xingran-react-frontend/coverage/coverage-final.json .coverage-fe-floors` → GLOBAL PASS + 28/28 目录 PASS）
 
-> **Ratchet note（P-ratchet，后端 D-04 前端对称）:** The `commit` column on the 起点
-> row reads `TBD (atomic ratchet)` until plan 82-05 (真实 CI 验证 + 校准定稿)
-> amends this file with the actual short SHA. `.coverage-fe-floors` 的每次变更
-> 必须与本文件的追加落在同一 commit；floor 只升不降（D-06 初值 = 实测 −0.5pp
-> 的噪声余量纪律见 `.coverage-fe-floors` 头注释与 gate 脚本头注释摘录）。
+> **Ratchet note（P-ratchet，后端 D-04 前端对称）:** 起点 row 的 `commit` 列已由
+> plan 82-05（真实 CI 验证，2026-08-23）回填为 82-04 落盘 commit 短 SHA——CI 实测
+> 3.85% ≥ 阈值 3.8，未触发 D-14 校准，`.coverage-fe-floors` 未变更（起点 commit
+> 携带其最终态）。`.coverage-fe-floors` 的每次变更必须与本文件的追加落在同一
+> commit；floor 只升不降（D-06 初值 = 实测 −0.5pp 的噪声余量纪律见
+> `.coverage-fe-floors` 头注释与 gate 脚本头注释摘录）。
 
-CI 验证 PR 记录（占位）
+## CI 验证记录 (Phase 82 · 82-05, 2026-08-23)
+
+- **验证 PR**: https://github.com/NDCCCCCC/xingran/pull/6 — docs-only 单 commit `4d1361b`（基线文档 +2 行，不触 `xingran-react-frontend/src`），squash merge = `8c7b69f`
+- **证据一（PR run 32642143749）**: frontend job pass（`Coverage gate`: `TOTAL 21574 830 3.85%` / `PASS: weighted avg 3.85% >= threshold 3.80%` / `PASS: per-dir floor gate — 28/28 directories >= floor`）；frontend-coverage-diff job pass 且日志**无** json 缺失软跳过提示（`Test step skipped` / `skipping gate` 均 0 次），空 diff 软通过 1 次（`diff-coverage: no testable .ts/.tsx lines changed vs origin/main — PASS (nothing to gate)`）——diff gate 实读 artifact 还原后的 profile，非静默空转（T-82-04-05 mitigation 真实 CI 生效）
+- **证据二（main push run 32643452003，head=8c7b69f）**: frontend = success；frontend-coverage-diff = **skipped**（PR-only job 在 push run 的既定表现——job 仍列于 run 但标记 skipped）；backend = success / coverage-diff = skipped（main 常态）
+- **D-14 校准判定**: 无需校准——CI 实测 3.85%（run 32642143749）≥ 阈值 3.8，与本地读数零漂移；`.coverage-fe-floors` GLOBAL 3.8 维持
+- **D-04 观察项**: `Test (coverage)` 步骤 CI 实际耗时 41 秒（13:23:20→13:24:01；15 分钟 timeout 余量充足，不调整）
+- **先行佐证（作废 run 32630491947，PR #5）**: head 被并行 workstream 共享工作树事故污染后废弃重开（处置链见 82-05-SUMMARY）；其读数与正式证据完全一致（3.85% / 28/28 目录 / 无软跳过），佐证 gate 行为可复现
