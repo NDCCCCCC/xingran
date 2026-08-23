@@ -70,7 +70,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 82-05-PLAN.md — 真实 CI 验证 PR 三项证据 + D-14 全局阈值 CI 校准 + 基线 SHA 回填
+- [x] 82-05-PLAN.md — 真实 CI 验证 PR 三项证据 + D-14 全局阈值 CI 校准 + 基线 SHA 回填
 
 ### Phase 83: P0 基建层全清 ≥70%
 
@@ -163,7 +163,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 82. 口径修正与治理基建 | 4/5 | In Progress|  |
+| 82. 口径修正与治理基建 | 5/5 | Plans complete (awaiting /gsd:verify-work) | |
 | 83. P0 基建层全清 ≥70% | 0/TBD | Not started | - |
 | 84. P1 组件层 ≥70% | 0/TBD | Not started | - |
 | 85. P2 页面层 R1 — operations | 0/TBD | Not started | - |

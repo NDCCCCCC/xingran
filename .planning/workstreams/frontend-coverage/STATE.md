@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.28
 milestone_name: milestone
 status: executing
-stopped_at: Completed 82-03-PLAN.md
-last_updated: "2026-08-23T08:55:36.384Z"
+stopped_at: Completed 82-05-PLAN.md (Task 2 checkpoint pending user verify)
+last_updated: "2026-08-23T14:25:00.000Z"
 last_activity: 2026-08-23
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -26,17 +26,17 @@ See: .planning/PROJECT.md (updated 2026-08-23) — v1.28 Current Milestone 段
 ## Current Position
 
 Phase: 82 (coverage-caliber-and-governance) — EXECUTING
-Plan: 5 of 5
-Status: Ready to execute
+Plan: 5 of 5 (all complete; Task 2 human-verify checkpoint awaiting user)
+Status: Phase 82 plans complete — awaiting /gsd:verify-work
 Last activity: 2026-08-23
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100%（Phase 82 内 5/5 plans；7 phases 总进度待 verify-work 后更新）
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0（首个 plan 执行后开始记录）
+- Total plans completed: 5（Phase 82 全部完成：82-01 口径切换 / 82-02 主 gate / 82-03 diff gate / 82-04 ci.yml 接线 / 82-05 真实 CI 验证）
 
 ## Accumulated Context
 
@@ -60,6 +60,8 @@ v1.28 init 锁定决策（详见 PROJECT.md v1.28 段，不可违反）:
 - [Phase 82]: 82-04: components 细分参考 block 取 json 复算而非 RESEARCH 研究期数字——RESEARCH 其余 91 与具名合计 3981 不等于 gate 口径 3958, 按以脚本输出为准纪律 13 行合计恰为 3958/215/118
 - [Phase 82]: 82-04: 基线文档双口径并存有意为之——文档头 3.67%/22602/584 白名单前口径 vs ratchet 表与快照 3.85%/21574/571 gate 口径, 防 verify-work 对 SC-3 字面误读
 - [Phase 82]: 82-04: frontend-coverage-diff 的 download-artifact 必须带 with.path 还原 upload v4 LCA 剥离——无 path 则 json 落 workspace 根、gate 全 PR 静默软跳过 exit 0 (GOV-04 失效), 82-05 以 diff job 日志无软跳过提示复核
+- [Phase 82]: 82-05: D-14 校准未触发——CI 实测 3.85% (run 32642143749) == 本地 3.85% 零漂移, GLOBAL 3.8 维持, .coverage-fe-floors 零改动; ratchet 起点 SHA 回填 bddb2fc (82-04 落盘 commit 携带 floors 最终态), CI 读数行记 8c7b69f
+- [Phase 82]: 82-05: PR-only job 的 push run 断言口径 = conclusion==skipped (job 仍列于 run 而非消失); diff gate 实读 profile 的证据 = 日志无软跳过提示 + 有 diff gate 输出行, job 绿本身不能证明 gate 真跑
 
 ### Pending Todos
 
@@ -73,8 +75,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-23T08:55:17.944Z
-Stopped at: Completed 82-03-PLAN.md
+Last session: 2026-08-23T14:25:00.000Z
+Stopped at: Completed 82-05-PLAN.md (Task 2 human-verify checkpoint awaiting user; then /gsd:verify-work)
 Resume file: None
 
 ## Performance Metrics
@@ -85,3 +87,4 @@ Resume file: None
 | Phase 82 P02 | 12min | 2 tasks | 2 files |
 | Phase 82 P3 | 11min | 2 tasks | 1 files |
 | Phase 82 P4 | 6min | 2 tasks tasks | 2 files files |
+| Phase 82 P5 | 66min (含确认/merge 等待) | 1 task + 1 checkpoint | 1 file |
