@@ -151,7 +151,7 @@ var _ LDAPClientIface = (*mockLDAPClient)(nil)
 
 // ============ Connect 测试 ============
 
-func TestLDAPClient_Connect_Success(t *testing.T) {
+func TestMockLDAPClient_Connect_Success(t *testing.T) {
 	mock := &mockLDAPClient{connectErr: nil}
 
 	err := mock.Connect()
@@ -164,7 +164,7 @@ func TestLDAPClient_Connect_Success(t *testing.T) {
 	}
 }
 
-func TestLDAPClient_Connect_Failure(t *testing.T) {
+func TestMockLDAPClient_Connect_Failure(t *testing.T) {
 	expectedErr := errors.New("connection refused")
 	mock := &mockLDAPClient{connectErr: expectedErr}
 
@@ -180,7 +180,7 @@ func TestLDAPClient_Connect_Failure(t *testing.T) {
 
 // ============ Close 测试 ============
 
-func TestLDAPClient_Close(t *testing.T) {
+func TestMockLDAPClient_Close(t *testing.T) {
 	mock := &mockLDAPClient{}
 
 	mock.Close()
@@ -192,7 +192,7 @@ func TestLDAPClient_Close(t *testing.T) {
 
 // ============ SearchGroups 测试 ============
 
-func TestLDAPClient_SearchGroups_ReturnsEntries(t *testing.T) {
+func TestMockLDAPClient_SearchGroups_ReturnsEntries(t *testing.T) {
 	entries := []*ldap.Entry{
 		ldap.NewEntry("CN=Group1,DC=example,DC=com", map[string][]string{"cn": {"Group1"}}),
 		ldap.NewEntry("CN=Group2,DC=example,DC=com", map[string][]string{"cn": {"Group2"}}),
@@ -212,7 +212,7 @@ func TestLDAPClient_SearchGroups_ReturnsEntries(t *testing.T) {
 	}
 }
 
-func TestLDAPClient_SearchGroups_Empty(t *testing.T) {
+func TestMockLDAPClient_SearchGroups_Empty(t *testing.T) {
 	mock := &mockLDAPClient{searchGroupsRes: nil, searchGroupsErr: nil}
 
 	result, err := mock.SearchGroups("DC=example,DC=com")
@@ -225,7 +225,7 @@ func TestLDAPClient_SearchGroups_Empty(t *testing.T) {
 	}
 }
 
-func TestLDAPClient_SearchGroups_Error(t *testing.T) {
+func TestMockLDAPClient_SearchGroups_Error(t *testing.T) {
 	expectedErr := errors.New("LDAP search failed")
 	mock := &mockLDAPClient{searchGroupsErr: expectedErr}
 
@@ -241,7 +241,7 @@ func TestLDAPClient_SearchGroups_Error(t *testing.T) {
 
 // ============ SearchUsers 测试 ============
 
-func TestLDAPClient_SearchUsers_ReturnsEntries(t *testing.T) {
+func TestMockLDAPClient_SearchUsers_ReturnsEntries(t *testing.T) {
 	entries := []*ldap.Entry{
 		ldap.NewEntry("CN=user1,DC=example,DC=com", map[string][]string{"sAMAccountName": {"user1"}}),
 	}
@@ -259,7 +259,7 @@ func TestLDAPClient_SearchUsers_ReturnsEntries(t *testing.T) {
 
 // ============ 写操作测试（覆盖成员管理与组管理错误路径） ============
 
-func TestLDAPClient_AddGroupMember_Success(t *testing.T) {
+func TestMockLDAPClient_AddGroupMember_Success(t *testing.T) {
 	mock := &mockLDAPClient{}
 
 	err := mock.AddGroupMember("CN=Group,DC=example,DC=com", "CN=user,DC=example,DC=com")
@@ -269,7 +269,7 @@ func TestLDAPClient_AddGroupMember_Success(t *testing.T) {
 	}
 }
 
-func TestLDAPClient_CreateGroup_Error(t *testing.T) {
+func TestMockLDAPClient_CreateGroup_Error(t *testing.T) {
 	expectedErr := errors.New("insufficient rights")
 	mock := &mockLDAPClient{createGroupErr: expectedErr}
 
@@ -280,7 +280,7 @@ func TestLDAPClient_CreateGroup_Error(t *testing.T) {
 	}
 }
 
-func TestLDAPClient_DeleteGroup_Error(t *testing.T) {
+func TestMockLDAPClient_DeleteGroup_Error(t *testing.T) {
 	expectedErr := errors.New("group not found")
 	mock := &mockLDAPClient{deleteGroupErr: expectedErr}
 
