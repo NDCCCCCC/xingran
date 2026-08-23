@@ -2,7 +2,7 @@
 
 **Defined:** 2026-08-23
 **Core Value:** 前端全量口径测试覆盖率达到优秀（≥70%），CI 防倒退 gate 对称后端 v1.26 治理，使前端覆盖率从此不可无声倒退。
-**Workstream:** `frontend-coverage`（与 `milestone` workstream 的 v1.27 后端覆盖率 II 并行；Phase 80 起，75-79 留给 v1.27）
+**Workstream:** `frontend-coverage`（与 `milestone` workstream 的 v1.27 后端覆盖率 II 并行；Phase 82 起，75-81 留给 v1.27）
 
 **基线（2026-08-23 实测）:**
 - 旧口径（Phase 63，只算被 import 文件）: statements 24.58% / branches 15.04% / functions 18.94% / lines 24.75%（71 文件 3376 stmts）
@@ -65,33 +65,34 @@
 
 ## Traceability
 
-（roadmap 创建时填充）
+Roadmap created 2026-08-23 — `.planning/workstreams/frontend-coverage/ROADMAP.md`（Phases 82-88，7 phases）。
+映射备注：顶层 `design-system` 194 stmts 归入 Phase 84（COMP-05 零散桶），保证白名单外无无主面积、全局 ≥70% 由 per-dir 全 ≥70% 数学保证。
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GOV-01 | Phase 80 | Pending |
-| GOV-02 | Phase 80 | Pending |
-| GOV-03 | Phase 80 | Pending |
-| GOV-04 | Phase 80 | Pending |
-| GOV-05 | Phase 80 | Pending |
-| INFRA-01 | Phase 81 | Pending |
-| INFRA-02 | Phase 81 | Pending |
-| INFRA-03 | Phase 81 | Pending |
-| INFRA-04 | Phase 81 | Pending |
-| INFRA-05 | Phase 81 | Pending |
-| COMP-01 | Phase 82 | Pending |
-| COMP-02 | Phase 82 | Pending |
-| COMP-03 | Phase 82 | Pending |
-| COMP-04 | Phase 82 | Pending |
-| COMP-05 | Phase 82 | Pending |
-| PAGES-01 | Phase 83 | Pending |
-| PAGES-02 | Phase 84 | Pending |
-| PAGES-03 | Phase 84 | Pending |
-| PAGES-04 | Phase 85 | Pending |
-| PAGES-05 | Phase 85 | Pending |
-| QUAL-01 | Phase 86 | Pending |
-| QUAL-02 | Phase 80 | Pending |
-| QUAL-03 | Phase 81 | Pending |
+| GOV-01 | Phase 82 | Pending |
+| GOV-02 | Phase 82 | Pending |
+| GOV-03 | Phase 82 | Pending |
+| GOV-04 | Phase 82 | Pending |
+| GOV-05 | Phase 82 | Pending |
+| INFRA-01 | Phase 83 | Pending |
+| INFRA-02 | Phase 83 | Pending |
+| INFRA-03 | Phase 83 | Pending |
+| INFRA-04 | Phase 83 | Pending |
+| INFRA-05 | Phase 83 | Pending |
+| COMP-01 | Phase 84 | Pending |
+| COMP-02 | Phase 84 | Pending |
+| COMP-03 | Phase 84 | Pending |
+| COMP-04 | Phase 84 | Pending |
+| COMP-05 | Phase 84 | Pending |
+| PAGES-01 | Phase 85 | Pending |
+| PAGES-02 | Phase 86 | Pending |
+| PAGES-03 | Phase 86 | Pending |
+| PAGES-04 | Phase 87 | Pending |
+| PAGES-05 | Phase 87 | Pending |
+| QUAL-01 | Phase 88 | Pending |
+| QUAL-02 | Phase 82 | Pending |
+| QUAL-03 | Phase 83 | Pending |
 
 **Coverage:**
 - v1 requirements: 23 total
@@ -100,4 +101,4 @@
 
 ---
 *Requirements defined: 2026-08-23*
-*Last updated: 2026-08-23 after initial definition*
+*Last updated: 2026-08-23 — roadmap created (Phases 82-88), 23/23 mapped, design-system 194 stmts 归入 COMP-05 零散桶*

@@ -10,7 +10,7 @@ previous_update: 2026-08-23 v1.27 started (backend coverage 55.6->>=70%, milesto
 > - `milestone` workstream: **v1.27 后端测试覆盖率优秀 II**（另一会话，STATE/ROADMAP 在 `.planning/workstreams/milestone/`）
 > - `frontend-coverage` workstream: **v1.28 前端测试覆盖率优秀**（本段，STATE/ROADMAP 在 `.planning/workstreams/frontend-coverage/`）
 >
-> PROJECT.md / MILESTONES.md 跨 workstream 共享；Phase 编号错开（v1.27 用 75-79，v1.28 从 80 起）。
+> PROJECT.md / MILESTONES.md 跨 workstream 共享；Phase 编号错开（v1.27 用 75-81，v1.28 从 82 起）。
 
 **Goal:** 前端全量口径（vitest `coverage.include` 全 src，白名单排除重画布低确定性 UI）语句覆盖率 **3.67% → ≥70%（优秀）**，建成与后端 v1.26 对称的 4 层 CI 防倒退 gate。
 
@@ -23,7 +23,7 @@ previous_update: 2026-08-23 v1.27 started (backend coverage 55.6->>=70%, milesto
 - **D-01 目标线**: 语句 ≥70%（全量口径，对齐后端 v1.26/27 优秀定义）
 - **D-02 范围**: 全 src + 白名单排除（候选 `components/cad-editor` 804 + `cad-elements` 224 stmts 等重画布 UI；白名单终版在 requirements 定）
 - **D-03 CI gate**: 对齐后端全套 4 层（全局阈值 + per-dir floor + ratchet + PR diff coverage ≥80%）
-- **D-04 Phase 编号**: 从 Phase 80 起（75-79 留给 v1.27）
+- **D-04 Phase 编号**: 从 Phase 82 起（75-81 留给 v1.27）
 
 **规划输入:** 2026-08-23 本会话实测扫描（npm test:coverage + coverage.include 全量口径，per-dir 数据见上）；对标后端 v1.26 4 层 gate 模式。
 
