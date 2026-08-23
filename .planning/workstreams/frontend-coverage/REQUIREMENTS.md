@@ -16,7 +16,7 @@
 - [x] **GOV-01**: vitest coverage 切换全量口径——`coverage.include` 显式圈定 `src/**/*.{ts,tsx}`（Vitest 4 已移除 `coverage.all`，未配置 include 时只报告被 import 文件），白名单目录同步 exclude，未测试文件计入报告
 - [ ] **GOV-02**: 前端覆盖率基线落盘（起点 3.67% / 22602 stmts + per-dir 快照 + ratchet 记录），与后端 `.planning/coverage-baseline.md` 模式对称
 - [x] **GOV-03**: CI 前端全局阈值 gate 切到全量口径并 ratchet 只升不降（失败即阻断）
-- [ ] **GOV-04**: PR diff coverage ≥80% gate（复用后端 74-10 自实现 bash+awk 模式，前端版）
+- [x] **GOV-04**: PR diff coverage ≥80% gate（复用后端 74-10 自实现 bash+awk 模式，前端版）
 - [x] **GOV-05**: per-directory floor gate（白名单外目录 ≥70%，未达标目录走白名单 ratchet 过渡，对称后端 `p1_package_check` / `p2_package_check`）
 
 ### P0 基建层 ≥70% (INFRA) — ~3,900 stmts
@@ -74,7 +74,7 @@ Roadmap created 2026-08-23 — `.planning/workstreams/frontend-coverage/ROADMAP.
 | GOV-01 | Phase 82 | Complete |
 | GOV-02 | Phase 82 | Pending |
 | GOV-03 | Phase 82 | Complete |
-| GOV-04 | Phase 82 | Pending |
+| GOV-04 | Phase 82 | Complete |
 | GOV-05 | Phase 82 | Complete |
 | INFRA-01 | Phase 83 | Pending |
 | INFRA-02 | Phase 83 | Pending |

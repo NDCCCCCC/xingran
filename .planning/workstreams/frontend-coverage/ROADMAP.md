@@ -62,7 +62,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 82-02-PLAN.md — check-frontend-coverage.sh（全局阈值 + per-dir floor + 漂移检测 + --init）+ .coverage-fe-floors 生成与五分支干跑矩阵
-- [ ] 82-03-PLAN.md — check-frontend-diff-coverage.sh（PR diff ≥80% lines 口径三段式）+ 空树合成基线两分支实证
+- [x] 82-03-PLAN.md — check-frontend-diff-coverage.sh（PR diff ≥80% lines 口径三段式）+ 空树合成基线两分支实证
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -163,7 +163,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 82. 口径修正与治理基建 | 2/5 | In Progress|  |
+| 82. 口径修正与治理基建 | 3/5 | In Progress|  |
 | 83. P0 基建层全清 ≥70% | 0/TBD | Not started | - |
 | 84. P1 组件层 ≥70% | 0/TBD | Not started | - |
 | 85. P2 页面层 R1 — operations | 0/TBD | Not started | - |
