@@ -385,9 +385,11 @@ func stringPtrValue(s *string) string {
 	return ""
 }
 
-// normalizeParentID 处理空字符串的 ParentID
+// normalizeParentID 处理空字符串 / "0" 的 ParentID,统一为 nil(根菜单)
+// 与 internal/models/system/requests/menu_requests.go 的语义保持一致(Q-11):
+// nil / "" / "0" 全部塌缩为 nil,避免 Update 路径落库字面 "0" 造成菜单树孤儿。
 func normalizeParentID(parentID *string) *string {
-	if parentID != nil && *parentID == "" {
+	if parentID == nil || *parentID == "" || *parentID == "0" {
 		return nil
 	}
 	return parentID

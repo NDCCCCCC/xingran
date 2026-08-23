@@ -406,7 +406,10 @@ func TestCaptchaBackgroundService_ValidateFile(t *testing.T) {
 	assert.ErrorContains(t, svc.validateFile("bg.png", 3*1024*1024), "超过限制")
 	// 不支持格式
 	assert.ErrorContains(t, svc.validateFile("bg.gif", 100), "不支持的文件格式")
-	// QUIRK(D-12 不修复): 无扩展名文件名 ext="" → ext[1:] 越界 panic,该子用例移除
+	// 无扩展名(Q-5):不得 panic,应返回不支持的文件格式
+	assert.ErrorContains(t, svc.validateFile("noext", 100), "不支持的文件格式")
+	// 扩展名为单个点(Q-5):filepath.Ext 返回 "."
+	assert.ErrorContains(t, svc.validateFile("bg.", 100), "不支持的文件格式")
 }
 
 func TestCaptchaBackgroundService_CalculateMD5(t *testing.T) {

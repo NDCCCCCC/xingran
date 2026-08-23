@@ -363,6 +363,9 @@ func (s *CaptchaBackgroundService) validateFile(fileName string, fileSize int64)
 
 	// 检查文件扩展名
 	ext := filepath.Ext(fileName)
+	if ext == "" {
+		return fmt.Errorf("不支持的文件格式: 文件名缺少扩展名")
+	}
 	ext = ext[1:] // 去掉点
 	allowed := false
 	for _, format := range s.config.AllowedFormats {

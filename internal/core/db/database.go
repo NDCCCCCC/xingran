@@ -856,6 +856,10 @@ func (d *Database) AutoMigrate() error {
 		} else if changed {
 			d.SettingsMenuComponentChanged = true
 		}
+		// Q-11: 归一化 sys_menu.parent_id='0' 为 NULL(幂等,修复 Update 路径落库字面 "0" 造成的孤儿节点)
+		if _, err := migrations.Migrate210NormalizeMenuParentID(d.DB); err != nil {
+			applogger.Errorf("sys_menu parent_id='0' 归一失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: 规范菜单目录种子 (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
 		if err := migrations.Migrate207SeedCanonicalMenuCatalog(d.DB); err != nil {
@@ -871,6 +875,10 @@ func (d *Database) AutoMigrate() error {
 			applogger.Errorf("系统设置菜单 component 修正失败 (非阻断,留待下次启动): %v", err)
 		} else if changed {
 			d.SettingsMenuComponentChanged = true
+		}
+		// sqlite 分支: Q-11 归一化 sys_menu.parent_id='0' 为 NULL
+		if _, err := migrations.Migrate210NormalizeMenuParentID(d.DB); err != nil {
+			applogger.Errorf("sys_menu parent_id='0' 归一失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
 		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only

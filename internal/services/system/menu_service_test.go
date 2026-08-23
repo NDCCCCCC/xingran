@@ -154,6 +154,77 @@ func TestMenuService_Create_EmptyParent_Normalized(t *testing.T) {
 	assert.Nil(t, got.ParentID)
 }
 
+// TC3b: Create - parent "0" normalized to nil
+func TestMenuService_Create_ZeroParent_Normalized(t *testing.T) {
+	db := setupMenuServiceDB(t)
+	svc := NewMenuService(db).(*menuService)
+	zero := "0"
+	req := &requests.MenuCreateRequest{
+		MenuName: "RootFromZero",
+		ParentID: &zero,
+		MenuType: models.MenuTypeDir,
+		Visible:  models.VisibleShow,
+		Status:   models.MenuStatusNormal,
+	}
+	require.NoError(t, svc.Create(context.Background(), req))
+
+	var got models.Menu
+	require.NoError(t, db.Where("menu_name = ?", "RootFromZero").First(&got).Error)
+	assert.Nil(t, got.ParentID)
+}
+
+// TC3c: Update - parent "0" normalized to nil
+func TestMenuService_Update_ZeroParent_Normalized(t *testing.T) {
+	db := setupMenuServiceDB(t)
+	svc := NewMenuService(db).(*menuService)
+	id := seedMenuDirect(t, db, &models.Menu{MenuName: "Old", MenuType: models.MenuTypeDir, Visible: models.VisibleShow, Status: models.MenuStatusNormal})
+
+	zero := "0"
+	req := &requests.MenuUpdateRequest{
+		ID:       id,
+		MenuName: "Updated",
+		ParentID: &zero,
+		MenuType: models.MenuTypeDir,
+		Visible:  models.VisibleShow,
+		Status:   models.MenuStatusNormal,
+	}
+	require.NoError(t, svc.Update(context.Background(), req))
+
+	var got models.Menu
+	require.NoError(t, db.First(&got, "id = ?", id).Error)
+	assert.Nil(t, got.ParentID)
+}
+
+// TC3d: normalizeParentID unit test covering nil/""/"0"/valid UUID
+func TestNormalizeParentID(t *testing.T) {
+	empty := ""
+	zero := "0"
+	uuid := "a1b2c3d4-e5f6-7a8b-9c0d-e1f2a3b4c5d6"
+
+	cases := []struct {
+		name     string
+		input    *string
+		expected *string
+	}{
+		{"nil", nil, nil},
+		{"empty", &empty, nil},
+		{"zero", &zero, nil},
+		{"uuid", &uuid, &uuid},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := normalizeParentID(tc.input)
+			if tc.expected == nil {
+				assert.Nil(t, got)
+			} else {
+				require.NotNil(t, got)
+				assert.Equal(t, *tc.expected, *got)
+			}
+		})
+	}
+}
+
 // TC4: Update - success
 func TestMenuService_Update_Success(t *testing.T) {
 	db := setupMenuServiceDB(t)
