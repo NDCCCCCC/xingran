@@ -51,7 +51,8 @@
 # Exit codes (mirror check-diff-coverage.sh):
 #   0 — diff coverage >= threshold, OR no testable .ts/.tsx lines changed (skip)
 #   1 — diff coverage < threshold (gate fails) OR parse failure (no PASS line)
-#   2 — usage error / missing inputs / base ref not rev-parseable / diff failed
+#   2 — usage error / missing inputs / missing coverage profile (fail-closed,
+#       mirrors backend check-diff-coverage.sh) / base ref not rev-parseable / diff failed
 #
 # CI hookup (ci.yml PR-only job, wired in Phase 82-04):
 #   frontend-coverage-diff:
@@ -97,14 +98,17 @@ if ! git rev-parse --verify --quiet "$BASE_REF" >/dev/null; then
   exit 2
 fi
 
-# Fail-safe: when no profile exists (frontend job's Test step skipped or
-# coverage not generated), don't fail this job — the upstream failure is the
-# real blocker. Missing profile is a soft skip, not a hard gate failure (same
-# semantics as check-frontend-coverage.sh, pairing with the PR job's needs:).
+# Fail-closed (WR-01): this job carries `needs: frontend`, so reaching the
+# gate means the frontend job already passed and the json MUST exist. A
+# missing profile here is configuration drift (artifact name/path, reporter
+# change), not an upstream failure — soft-skipping would silently disable
+# GOV-04. Mirror the backend twin check-diff-coverage.sh: exit 2. (The
+# coverage gate script keeps its exit-0 soft skip: it pairs with the
+# frontend job's own `if: always()` Upload step, backend check-coverage.sh
+# semantics.)
 if [ ! -f "$PROFILE" ]; then
-  echo "check-frontend-diff-coverage.sh: coverage profile $PROFILE missing — was the frontend job's Test step skipped?" >&2
-  echo "check-frontend-diff-coverage.sh: skipping gate (exit 0); the upstream job failure is the real blocker" >&2
-  exit 0
+  echo "check-frontend-diff-coverage.sh: coverage profile $PROFILE missing — configuration drift? (needs: frontend already passed, so the json must exist)" >&2
+  exit 2
 fi
 
 if [ ! -r "$PROFILE" ]; then
