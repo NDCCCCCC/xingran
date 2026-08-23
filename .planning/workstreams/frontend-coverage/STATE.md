@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.28
 milestone_name: milestone
 status: executing
-stopped_at: Completed 82-01-PLAN.md
-last_updated: "2026-08-23T08:14:45.614Z"
+stopped_at: Completed 82-02-PLAN.md
+last_updated: "2026-08-23T08:30:59.141Z"
 last_activity: 2026-08-23
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 5
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-08-23) — v1.28 Current Milestone 段
 ## Current Position
 
 Phase: 82 (coverage-caliber-and-governance) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-08-23
 
@@ -53,6 +53,8 @@ v1.28 init 锁定决策（详见 PROJECT.md v1.28 段，不可违反）:
 
 - [Phase 82]: 82-01: QUAL-02 仅交付配置侧（exclude 真相源 D-10），登记文档侧由 82-04 落地后才整体 complete
 - [Phase 82]: 82-01: 两步口径断言零偏差——584/571/22602/21574/830/3.85 全部实测命中研究基点
+- [Phase 82]: 82-02: pages/login floor 61.6 为真相源（62.11−0.5 一位小数），RESEARCH 表 61.7 属研究期舍入笔误（Open Question 3：gate 可复算输出优先）
+- [Phase 82]: 82-02: --init GLOBAL 向下截断而非四舍五入——实测落在 (3.7,3.8) 区间时舍入会生成高于实测的阈值让 gate 自锁，82-05 CI 校准直接受益
 
 ### Pending Todos
 
@@ -66,8 +68,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-23T08:14:45.608Z
-Stopped at: Completed 82-01-PLAN.md
+Last session: 2026-08-23T08:30:59.135Z
+Stopped at: Completed 82-02-PLAN.md
 Resume file: None
 
 ## Performance Metrics
@@ -75,3 +77,4 @@ Resume file: None
 | Phase | Plan | Duration | Notes |
 |-------|------|----------|-------|
 | Phase 82 P01 | 6min | 2 tasks | 2 files |
+| Phase 82 P02 | 12min | 2 tasks | 2 files |
