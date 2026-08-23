@@ -22,13 +22,14 @@ import (
 var dialErrForTest = errors.New("dial tcp: connection refused")
 
 // TestFailover_SequentialTraversal_StopsOnFirstSuccess 顺序遍历语义：
-// 账号0（username-0）Connect 失败 → MarkFailure 落库（failure_count+1）；
-// 账号1（username-1）Connect 成功 → operation 执行一次即止 → MarkSuccess 路径。
+// 首个被尝试的账号 Connect 失败 → MarkFailure 落库（failure_count+1）；
+// 第二个账号 Connect 成功 → operation 执行一次即止 → MarkSuccess 路径。
+// 断言按"尝试序"而非具体 username 表述——ListAvailable（GORM Find 无
+// ORDER BY）的返回行序是引擎实现细节，测试不得依赖（WR-03）。
 func TestFailover_SequentialTraversal_StopsOnFirstSuccess(t *testing.T) {
 	pool, db, configID := setupTestPool(t)
 	ctx := context.Background()
 
-	// 插入顺序即 ListAvailable（GORM Find 无 ORDER BY，sqlite 按 rowid）返回顺序
 	insertAccount(t, db, configID, "username-0", AccountStatusAvailable)
 	insertAccount(t, db, configID, "username-1", AccountStatusAvailable)
 
@@ -37,14 +38,16 @@ func TestFailover_SequentialTraversal_StopsOnFirstSuccess(t *testing.T) {
 
 	var factoryCalls int
 	var operationCalls int
+	attempted := make(map[string]bool)
 	cfg := &models.ADConfig{BaseModel: models.BaseModel{ID: configID}}
 	fc := NewFailoverClient(pool, cfg)
 	fc.clientFactory = func(_ *models.ADConfig, acct *models.ADServiceAccount) LDAPClientIface {
 		factoryCalls++
-		if acct.Username == "username-1" {
-			return okMock
+		attempted[acct.Username] = true
+		if factoryCalls == 1 {
+			return failMock // 首个被尝试的账号（无论具体是谁）Connect 失败
 		}
-		return failMock
+		return okMock // 第二个被尝试的账号成功
 	}
 
 	err := fc.ExecuteWithFailover(ctx, func(client LDAPClientIface) error {
@@ -53,25 +56,32 @@ func TestFailover_SequentialTraversal_StopsOnFirstSuccess(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// 成功即止：operation 恰执行 1 次；工厂恰构造 2 个客户端（账号0 失败 + 账号1 成功）
+	// 成功即止：operation 恰执行 1 次；遍历恰经过 2 个账号（首个失败 → 次个成功）
 	assert.Equal(t, 1, operationCalls, "成功即止：operation 只应执行一次")
-	assert.Equal(t, 2, factoryCalls, "应恰好尝试 2 个账号（0 失败 → 1 成功）")
+	assert.Equal(t, 2, factoryCalls, "应恰好尝试 2 个账号（首个失败 → 次个成功）")
+	attemptedNames := make([]string, 0, len(attempted))
+	for name := range attempted {
+		attemptedNames = append(attemptedNames, name)
+	}
+	assert.ElementsMatch(t, []string{"username-0", "username-1"}, attemptedNames,
+		"被尝试的账号集合应为池中全部账号（次序无关，不依赖 sqlite 行序）")
 	assert.Equal(t, 1, okMock.closeCalls, "成功账号的客户端应被 Close")
 
-	// 账号0 走 MarkFailure 路径：failure_count 落库 +1（注入缝不破坏审计簿记）
-	var failRow struct{ FailureCount int }
+	// 首个被尝试的账号走 MarkFailure 路径：不点名 username，按 failure_count 计数断言
+	// （注入缝不破坏审计簿记；谁排先是未定义行序，失败者即首个被尝试者）
+	var failRows int64
 	require.NoError(t, db.Raw(
-		`SELECT failure_count FROM sys_ad_service_accounts WHERE username = ?`, "username-0",
-	).Scan(&failRow).Error)
-	assert.Equal(t, 1, failRow.FailureCount, "username-0 应被 MarkFailure（failure_count=1）")
+		`SELECT COUNT(*) FROM sys_ad_service_accounts WHERE failure_count = 1`,
+	).Scan(&failRows).Error)
+	assert.Equal(t, int64(1), failRows, "应恰有一个账号被 MarkFailure（failure_count=1）")
 
-	// 账号1 走 MarkSuccess 路径：failure_count 归零 + last_success_at 落库
+	// 第二个被尝试的账号走 MarkSuccess 路径：failure_count 归零 + last_success_at 落库
 	var okRowCount int64
 	require.NoError(t, db.Raw(
 		`SELECT COUNT(*) FROM sys_ad_service_accounts
-		 WHERE username = ? AND failure_count = 0 AND last_success_at IS NOT NULL`, "username-1",
+		 WHERE failure_count = 0 AND last_success_at IS NOT NULL`,
 	).Scan(&okRowCount).Error)
-	assert.Equal(t, int64(1), okRowCount, "username-1 应走 MarkSuccess（failure_count=0 且 last_success_at 落库）")
+	assert.Equal(t, int64(1), okRowCount, "应恰有一个账号走 MarkSuccess（failure_count=0 且 last_success_at 落库）")
 }
 
 // TestFailover_MaxHops_CapsAtDefaultMaxHops maxHops 封顶语义：
