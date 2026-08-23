@@ -459,9 +459,15 @@ func TestCaptchaBackgroundService_GetRandomEnabled(t *testing.T) {
 	ctx := context.Background()
 	svc, db, mem := newBgService(t)
 
-	// QUIRK(D-12 不移植): 空库时精确匹配 0 行 → fallback 查询带 PG-only 的
-	// `allowed_shapes @> ...jsonb_array_length` 在 sqlite 直接报 unrecognized token "@",
-	// "没有可用的背景图" 分支仅在 PG 可达。sqlite 下只测精确命中与缓存路径。
+	// sqlite 空库时精确匹配 0 行,PG-only fallback 被方言 guard 跳过,
+	// 直接走"没有找到可用的背景图"业务分支(Q-6)
+	svcEmpty, _, _ := newBgService(t)
+	_, err := svcEmpty.GetRandomEnabled(ctx, models.PieceShapeCircle, 1)
+	assert.ErrorContains(t, err, "没有找到可用的背景图")
+	assert.NotContains(t, err.Error(), "unrecognized token")
+	assert.NotContains(t, err.Error(), "syntax error")
+
+	// 精确命中正路径(确保 guard 不影响主查询)
 	require.NoError(t, db.Exec(`INSERT INTO sys_captcha_background
 		(id, file_name, file_path, piece_shape, difficulty_level, status, use_count, allowed_shapes)
 		VALUES ('bg-1', 'a.png', 'uploads/a.png', 'circle', 1, 1, 0, '["circle"]')`).Error)

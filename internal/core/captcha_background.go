@@ -162,8 +162,8 @@ func (s *CaptchaBackgroundService) GetRandomEnabled(ctx context.Context, shape m
 		return nil, fmt.Errorf("查询背景图失败: %w", err)
 	}
 
-	// 如果精确匹配没有结果，尝试通过 allowedShapes 匹配
-	if len(backgrounds) == 0 {
+	// 如果精确匹配没有结果，尝试通过 allowedShapes 匹配(PG 专属语法)
+	if len(backgrounds) == 0 && s.db.Type == "postgres" {
 		query = s.db.GetDB().
 			Where("status = ?", models.CaptchaBgEnabled).
 			Where("difficulty_level = ?", difficulty).
