@@ -190,6 +190,7 @@ func (m *MemoryCache) IncrementBy(ctx context.Context, key string, value int64) 
 
 	item, exists := m.items[key]
 	var currentValue int64
+	var expiration int64
 
 	if exists && !item.IsExpired() {
 		// 尝试转换当前值为整数
@@ -205,14 +206,15 @@ func (m *MemoryCache) IncrementBy(ctx context.Context, key string, value int64) 
 		default:
 			return 0, ErrInvalidType
 		}
+		expiration = item.Expiration
 	}
 
 	currentValue += value
 
-	// 更新值
+	// 更新值:缺 key 或已过期时按 0 起算并新建缓存项(对齐 Redis INCR)
 	m.items[key] = &CacheItem{
 		Value:      currentValue,
-		Expiration: item.Expiration,
+		Expiration: expiration,
 		Created:    time.Now(),
 	}
 

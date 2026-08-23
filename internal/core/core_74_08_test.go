@@ -124,21 +124,25 @@ func TestCaptchaService_GenerateAndVerify_Normal(t *testing.T) {
 	assert.NoError(t, svc.VerifyCaptcha(ctx, "any", "any", "1.2.3.4"))
 	assert.ErrorContains(t, svc.VerifySliderCaptcha(ctx, "any", 1, "t"), "当前未启用滑动验证码", "禁用模式滑块验证提示未启用")
 
-	// QUIRK(D-12 不修复): MemoryCache.IncrementBy 在 key 不存在时解引用 nil item.Expiration
-	// 直接 panic(memory.go:215),GenerateCaptcha 的 IP 限流首击必 panic → MemoryCache 下
-	// 无法走到 normal 生成分支。此处手工种入验证码数据验证 Verify 逻辑。
+	// 启用 normal 模式后,GenerateCaptcha 在 MemoryCache 下应真实生成验证码
 	svc.GetConfig().Enabled = captcha.CaptchaTypeNormal
-	require.NoError(t, mem.Set(ctx, "captcha:data:cap-9", "AB12", time.Minute))
-	_ = mem.SetInt(ctx, "captcha:attempts:cap-9", 0, time.Minute)
+	resp, err = svc.GenerateCaptcha(ctx, "1.2.3.4")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.NotEmpty(t, resp.CaptchaID)
+	assert.Contains(t, resp.CaptchaImg, "data:image/png;base64,")
+
+	storedCode, err := mem.Get(ctx, fmt.Sprintf("captcha:data:%s", resp.CaptchaID))
+	require.NoError(t, err)
 
 	// 错误输入 → 验证码错误
-	assert.ErrorContains(t, svc.VerifyCaptcha(ctx, "cap-9", "WRONG", "1.2.3.4"), "验证码错误")
+	assert.ErrorContains(t, svc.VerifyCaptcha(ctx, resp.CaptchaID, "WRONG", "1.2.3.4"), "验证码错误")
 
 	// 正确输入 → 通过
-	assert.NoError(t, svc.VerifyCaptcha(ctx, "cap-9", "AB12", "1.2.3.4"))
+	assert.NoError(t, svc.VerifyCaptcha(ctx, resp.CaptchaID, storedCode, "1.2.3.4"))
 
 	// 二次验证(数据已删) → 不存在
-	assert.ErrorContains(t, svc.VerifyCaptcha(ctx, "cap-9", "AB12", "1.2.3.4"), "验证码不存在或已过期")
+	assert.ErrorContains(t, svc.VerifyCaptcha(ctx, resp.CaptchaID, storedCode, "1.2.3.4"), "验证码不存在或已过期")
 
 	// 不存在的验证码 → 不存在
 	assert.ErrorContains(t, svc.VerifyCaptcha(ctx, "no-such-id", "x", "1.2.3.4"), "验证码不存在或已过期")
@@ -146,20 +150,22 @@ func TestCaptchaService_GenerateAndVerify_Normal(t *testing.T) {
 
 func TestCaptchaService_VerifyCaptcha_MaxAttempts(t *testing.T) {
 	ctx := context.Background()
-	svc, _, mem := newCaptchaTestDB(t, map[string]string{
+	svc, _, _ := newCaptchaTestDB(t, map[string]string{
 		"sys.account.captchaEnabled":     "normal",
 		"sys.account.captchaMaxAttempts": "2",
 	})
 	require.NoError(t, svc.LoadConfig(ctx))
 
-	// QUIRK: GenerateCaptcha 在 MemoryCache 下 panic(见上),手工种入
-	require.NoError(t, mem.Set(ctx, "captcha:data:cap-m", "CD34", time.Minute))
-	_ = mem.SetInt(ctx, "captcha:attempts:cap-m", 0, time.Minute)
+	// 启用 normal 模式后真实生成验证码
+	svc.GetConfig().Enabled = captcha.CaptchaTypeNormal
+	resp, err := svc.GenerateCaptcha(ctx, "9.9.9.9")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
 
 	// 2 次错误后(attempts 1,2),第 3 次 attempts>=2 → "已失效"
-	assert.Error(t, svc.VerifyCaptcha(ctx, "cap-m", "bad1", "9.9.9.9"))
-	assert.Error(t, svc.VerifyCaptcha(ctx, "cap-m", "bad2", "9.9.9.9"))
-	assert.ErrorContains(t, svc.VerifyCaptcha(ctx, "cap-m", "bad3", "9.9.9.9"), "验证码已失效")
+	assert.Error(t, svc.VerifyCaptcha(ctx, resp.CaptchaID, "bad1", "9.9.9.9"))
+	assert.Error(t, svc.VerifyCaptcha(ctx, resp.CaptchaID, "bad2", "9.9.9.9"))
+	assert.ErrorContains(t, svc.VerifyCaptcha(ctx, resp.CaptchaID, "bad3", "9.9.9.9"), "验证码已失效")
 }
 
 func TestCaptchaService_VerifySliderCaptcha(t *testing.T) {
@@ -198,7 +204,7 @@ func TestCaptchaService_VerifySliderCaptcha(t *testing.T) {
 
 func TestCaptchaService_LoginLock(t *testing.T) {
 	ctx := context.Background()
-	svc, _, mem := newCaptchaTestDB(t, map[string]string{
+	svc, _, _ := newCaptchaTestDB(t, map[string]string{
 		"sys.account.loginMaxRetry": "3",
 		"sys.account.loginLockTime": "30",
 	})
@@ -207,24 +213,16 @@ func TestCaptchaService_LoginLock(t *testing.T) {
 	// 未锁定
 	assert.NoError(t, svc.CheckLoginLock(ctx, "alice"))
 
-	// QUIRK(D-12): MemoryCache.IncrementBy 对不存在 key panic,预种 "N" 字符串
-	// 使 Increment 走 exists 分支(int64 累加),模拟连续失败。
-	seedFail := func(n int) {
-		_ = mem.Set(ctx, "login:fail:alice", fmt.Sprintf("%d", n), time.Hour)
-	}
-
+	// 连续调用 RecordLoginFailure,缺 key 时 Increment 从 1 起算自然累积
 	// 失败 1 次(3 次的一半阈值以下不提示剩余)
-	seedFail(0)
 	err := svc.RecordLoginFailure(ctx, "alice")
 	assert.ErrorContains(t, err, "用户名或密码错误")
 
 	// 失败 2 次 → 剩余 1 次(<= max/2=1)
-	seedFail(1)
 	err = svc.RecordLoginFailure(ctx, "alice")
 	assert.ErrorContains(t, err, "还可尝试 1 次")
 
 	// 失败 3 次 → 锁定
-	seedFail(2)
 	err = svc.RecordLoginFailure(ctx, "alice")
 	assert.ErrorContains(t, err, "账号已被锁定 30 分钟")
 
@@ -240,8 +238,6 @@ func TestCaptchaService_LoginLock(t *testing.T) {
 // ---------------- IP 限流 ----------------
 
 func TestCaptchaService_IPRateLimit(t *testing.T) {
-	// QUIRK(D-12): GenerateCaptcha 在 MemoryCache 下因 IncrementBy nil 解引用 panic,
-	// IP 限流路径无法在 MemoryCache 上测;限流阈值读取逻辑由 getIPRateLimit 测试覆盖。
 	ctx := context.Background()
 	svc, _, _ := newCaptchaTestDB(t, map[string]string{
 		"sys.account.captchaEnabled": "normal",

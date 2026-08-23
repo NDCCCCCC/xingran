@@ -128,31 +128,36 @@ func TestMemoryCache_IncrementDecrement(t *testing.T) {
 	ctx := context.Background()
 	m := newMem(t, 100)
 
-	// QUIRK(D-12 不修复): IncrementBy 对不存在 key 直接 nil 解引用 panic
-	// (memory.go:215 item.Expiration) — 必须预种 string 数字值。
-	require.NoError(t, m.Set(ctx, "cnt", "10", 0))
-
+	// 缺 key 时按 0 起算(对齐 Redis INCR),返回 1 并新建缓存项
 	n, err := m.Increment(ctx, "cnt")
 	require.NoError(t, err)
-	assert.Equal(t, int64(11), n)
+	assert.Equal(t, int64(1), n)
 
 	n, err = m.IncrementBy(ctx, "cnt", 5)
 	require.NoError(t, err)
-	assert.Equal(t, int64(16), n)
+	assert.Equal(t, int64(6), n)
 
 	n, err = m.Decrement(ctx, "cnt")
 	require.NoError(t, err)
-	assert.Equal(t, int64(15), n)
+	assert.Equal(t, int64(5), n)
 
 	n, err = m.DecrementBy(ctx, "cnt", 3)
 	require.NoError(t, err)
-	assert.Equal(t, int64(12), n)
+	assert.Equal(t, int64(2), n)
 
 	// int 值路径
 	require.NoError(t, m.Set(ctx, "icnt", 7, 0))
 	n, err = m.IncrementBy(ctx, "icnt", 1)
 	require.NoError(t, err)
 	assert.Equal(t, int64(8), n)
+
+	// 全新 key 起算:IncrementBy(ctx,"fresh",5) 返回 5,且 TTL 为 -1(永不过期)
+	n, err = m.IncrementBy(ctx, "fresh", 5)
+	require.NoError(t, err)
+	assert.Equal(t, int64(5), n)
+	ttl, err := m.TTL(ctx, "fresh")
+	require.NoError(t, err)
+	assert.Equal(t, time.Duration(-1), ttl)
 
 	// QUIRK(D-12 不修复): 非数值字符串解析失败被静默吞掉,按 0 计继续累加
 	require.NoError(t, m.Set(ctx, "bad", "not-num", 0))
