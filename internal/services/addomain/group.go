@@ -126,7 +126,7 @@ func (s *GroupService) AddMember(ctx context.Context, config *models.ADConfig, g
 
 	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
 	fc := NewFailoverClient(s.pool, config)
-	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+	if err := fc.ExecuteWithFailover(ctx, func(client LDAPClientIface) error {
 		return client.AddGroupMember(groupDN, userDN)
 	}); err != nil {
 		if errors.Is(err, ErrAllAccountsUnavailable) {
@@ -156,7 +156,7 @@ func (s *GroupService) RemoveMember(ctx context.Context, config *models.ADConfig
 
 	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
 	fc := NewFailoverClient(s.pool, config)
-	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+	if err := fc.ExecuteWithFailover(ctx, func(client LDAPClientIface) error {
 		return client.RemoveGroupMember(groupDN, userDN)
 	}); err != nil {
 		if errors.Is(err, ErrAllAccountsUnavailable) {
@@ -197,7 +197,7 @@ func (s *GroupService) Update(ctx context.Context, config *models.ADConfig, grou
 
 	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
 	fc := NewFailoverClient(s.pool, config)
-	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+	if err := fc.ExecuteWithFailover(ctx, func(client LDAPClientIface) error {
 		return client.UpdateGroupAttribute(groupDN, attrs)
 	}); err != nil {
 		if errors.Is(err, ErrAllAccountsUnavailable) {

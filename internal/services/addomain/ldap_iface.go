@@ -46,6 +46,9 @@ type LDAPClientIface interface {
 	CreateOU(ouDN, ouName string) error
 	// DN 存在性预检（user_ad_sync_service.go failover 闭包使用）
 	DNExists(dn string) (bool, error)
+	// 原始搜索请求直通（group_sync_service.go SyncSingleGroup failover 闭包使用，
+	// 76-03 接口化编译门强制补入——闭包原直接访问 client.conn.Search）
+	SearchWithRequest(searchRequest *ldap.SearchRequest) (*ldap.SearchResult, error)
 }
 
 // 编译期断言：*LDAPClient 必须满足 LDAPClientIface。

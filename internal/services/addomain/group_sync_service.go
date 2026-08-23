@@ -57,7 +57,7 @@ func (s *GroupSyncService) SyncGroupsByConfig(ctx context.Context, configID stri
 	// 2. Connect to LDAP（Phase 38 Wave 1: 改走 FailoverClient 账号池故障切换）
 	fc := NewFailoverClient(s.pool, &config)
 	var entries []*ldap.Entry
-	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+	if err := fc.ExecuteWithFailover(ctx, func(client LDAPClientIface) error {
 		var err error
 		entries, err = client.SearchGroups(config.BaseDN)
 		if err != nil {
@@ -101,7 +101,7 @@ func (s *GroupSyncService) SyncSingleGroup(ctx context.Context, configID, groupD
 	// 仅 LDAP Search 在闭包内；DB upsert/members 同步放闭包外（不依赖 LDAP 连接）
 	fc := NewFailoverClient(s.pool, &config)
 	var entry *ldap.Entry
-	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+	if err := fc.ExecuteWithFailover(ctx, func(client LDAPClientIface) error {
 		// Search for the specific group by DN
 		searchRequest := ldap.NewSearchRequest(
 			groupDN,
@@ -112,7 +112,7 @@ func (s *GroupSyncService) SyncSingleGroup(ctx context.Context, configID, groupD
 			[]string{"dn", "cn", "description", "member", "groupType"},
 			nil,
 		)
-		sr, err := client.conn.Search(searchRequest)
+		sr, err := client.SearchWithRequest(searchRequest)
 		if err != nil {
 			return fmt.Errorf("搜索用户组失败: %w", err)
 		}

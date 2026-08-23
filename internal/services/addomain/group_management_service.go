@@ -86,7 +86,7 @@ func (s *groupManagementService) CreateGroupForDept(ctx context.Context, deptID,
 
 	// 4. 连接LDAP并创建组（Phase 38 Wave 1: 改走 FailoverClient 账号池故障切换）
 	fc := NewFailoverClient(s.pool, &config)
-	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+	if err := fc.ExecuteWithFailover(ctx, func(client LDAPClientIface) error {
 		// 检查组是否已存在
 		if err := client.CreateGroup(groupDN, groupName, dept.DeptName+"部门组", 0); err != nil {
 			// 判断是否为"已存在"错误
@@ -157,7 +157,7 @@ func (s *groupManagementService) DeleteGroup(ctx context.Context, groupID string
 
 	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
 	fc := NewFailoverClient(s.pool, &config)
-	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+	if err := fc.ExecuteWithFailover(ctx, func(client LDAPClientIface) error {
 		if err := client.DeleteGroup(group.GroupDN); err != nil {
 			return fmt.Errorf("删除AD组失败: %w", err)
 		}
@@ -216,7 +216,7 @@ func (s *groupManagementService) AddMembers(ctx context.Context, groupID string,
 	}
 
 	fc := NewFailoverClient(s.pool, &config)
-	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+	if err := fc.ExecuteWithFailover(ctx, func(client LDAPClientIface) error {
 		if err := client.AddGroupMembers(group.GroupDN, userDNs); err != nil {
 			return fmt.Errorf("添加组成员失败: %w", err)
 		}
@@ -277,7 +277,7 @@ func (s *groupManagementService) RemoveMembers(ctx context.Context, groupID stri
 	}
 
 	fc := NewFailoverClient(s.pool, &config)
-	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+	if err := fc.ExecuteWithFailover(ctx, func(client LDAPClientIface) error {
 		if err := client.RemoveGroupMembers(group.GroupDN, userDNs); err != nil {
 			return fmt.Errorf("移除组成员失败: %w", err)
 		}

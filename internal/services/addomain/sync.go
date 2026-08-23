@@ -102,7 +102,7 @@ func (s *SyncService) syncDataInternal(ctx context.Context, config *models.ADCon
 		users    []*ldap.Entry
 		computers []*ldap.Entry
 	)
-	if err := fc.ExecuteWithFailover(ctx, func(client *LDAPClient) error {
+	if err := fc.ExecuteWithFailover(ctx, func(client LDAPClientIface) error {
 		var err error
 		// 2. 搜索 OU
 		if ous, err = client.SearchOUs(config.BaseDN); err != nil {

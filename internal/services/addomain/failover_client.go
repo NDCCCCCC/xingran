@@ -20,6 +20,9 @@ import (
 type FailoverClient struct {
 	pool   AccountPool
 	config *models.ADConfig
+	// clientFactory 构造每账号客户端；nil 时用 NewLDAPClient（生产默认）。
+	// 测试注入 mock 工厂以驱动顺序遍历/maxHops 语义验证（零真实网络）。
+	clientFactory func(*models.ADConfig, *models.ADServiceAccount) LDAPClientIface
 }
 
 // NewFailoverClient 创建 FailoverClient
@@ -27,12 +30,20 @@ func NewFailoverClient(pool AccountPool, config *models.ADConfig) *FailoverClien
 	return &FailoverClient{pool: pool, config: config}
 }
 
+// newClient 构造指定账号的 LDAP 客户端
+func (f *FailoverClient) newClient(acct *models.ADServiceAccount) LDAPClientIface {
+	if f.clientFactory != nil {
+		return f.clientFactory(f.config, acct)
+	}
+	return NewLDAPClient(f.config, acct) // 生产路径行为不变
+}
+
 // ExecuteWithFailover 用池中可用账号依次尝试执行 operation，任一成功即返回
 //
-// operation 接收已 Bind 成功的 LDAPClient，可执行任意 AD 操作（搜索/修改/移动等）
+// operation 接收已 Bind 成功的 LDAPClientIface，可执行任意 AD 操作（搜索/修改/移动等）
 func (f *FailoverClient) ExecuteWithFailover(
 	ctx context.Context,
-	operation func(client *LDAPClient) error,
+	operation func(client LDAPClientIface) error,
 ) error {
 	available, err := f.pool.ListAvailable(ctx, f.config.ID)
 	if err != nil {
@@ -51,7 +62,7 @@ func (f *FailoverClient) ExecuteWithFailover(
 	for i := 0; i < maxAttempts; i++ {
 		acct := &available[i]
 
-		client := NewLDAPClient(f.config, acct)
+		client := f.newClient(acct)
 		if err := client.Connect(); err != nil {
 			// P0-2 修复（H5 修正）：连接失败显式上报到 pool
 			f.pool.MarkFailure(ctx, acct.ID, "dial:"+err.Error())
