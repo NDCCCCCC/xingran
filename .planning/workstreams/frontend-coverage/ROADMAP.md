@@ -57,7 +57,7 @@
 Plans:
 **Wave 1**
 
-- [ ] 82-01-PLAN.md — vitest 全量口径切换（include/删 thresholds/test:coverage run 语义）+ 白名单 exclude 两步口径断言（584→571）
+- [x] 82-01-PLAN.md — vitest 全量口径切换（include/删 thresholds/test:coverage run 语义）+ 白名单 exclude 两步口径断言（584→571）
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -163,7 +163,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 82. 口径修正与治理基建 | 0/5 | Not started | - |
+| 82. 口径修正与治理基建 | 1/5 | In Progress|  |
 | 83. P0 基建层全清 ≥70% | 0/TBD | Not started | - |
 | 84. P1 组件层 ≥70% | 0/TBD | Not started | - |
 | 85. P2 页面层 R1 — operations | 0/TBD | Not started | - |

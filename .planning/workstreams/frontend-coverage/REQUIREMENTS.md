@@ -5,6 +5,7 @@
 **Workstream:** `frontend-coverage`（与 `milestone` workstream 的 v1.27 后端覆盖率 II 并行；Phase 82 起，75-81 留给 v1.27）
 
 **基线（2026-08-23 实测）:**
+
 - 旧口径（Phase 63，只算被 import 文件）: statements 24.58% / branches 15.04% / functions 18.94% / lines 24.75%（71 文件 3376 stmts）
 - **全量口径（本里程碑基准，coverage.include 全 src）: statements 3.67% (830/22602) / branches 1.98% / functions 2.38% / lines 3.70%（584 文件）**
 
@@ -12,7 +13,7 @@
 
 ### 治理与口径 (GOV)
 
-- [ ] **GOV-01**: vitest coverage 切换全量口径——`coverage.include` 显式圈定 `src/**/*.{ts,tsx}`（Vitest 4 已移除 `coverage.all`，未配置 include 时只报告被 import 文件），白名单目录同步 exclude，未测试文件计入报告
+- [x] **GOV-01**: vitest coverage 切换全量口径——`coverage.include` 显式圈定 `src/**/*.{ts,tsx}`（Vitest 4 已移除 `coverage.all`，未配置 include 时只报告被 import 文件），白名单目录同步 exclude，未测试文件计入报告
 - [ ] **GOV-02**: 前端覆盖率基线落盘（起点 3.67% / 22602 stmts + per-dir 快照 + ratchet 记录），与后端 `.planning/coverage-baseline.md` 模式对称
 - [ ] **GOV-03**: CI 前端全局阈值 gate 切到全量口径并 ratchet 只升不降（失败即阻断）
 - [ ] **GOV-04**: PR diff coverage ≥80% gate（复用后端 74-10 自实现 bash+awk 模式，前端版）
@@ -70,7 +71,7 @@ Roadmap created 2026-08-23 — `.planning/workstreams/frontend-coverage/ROADMAP.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GOV-01 | Phase 82 | Pending |
+| GOV-01 | Phase 82 | Complete |
 | GOV-02 | Phase 82 | Pending |
 | GOV-03 | Phase 82 | Pending |
 | GOV-04 | Phase 82 | Pending |
@@ -95,6 +96,7 @@ Roadmap created 2026-08-23 — `.planning/workstreams/frontend-coverage/ROADMAP.
 | QUAL-03 | Phase 83 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 23 total
 - Mapped to phases: 23
 - Unmapped: 0 ✓
