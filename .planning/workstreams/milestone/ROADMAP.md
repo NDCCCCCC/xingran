@@ -133,9 +133,9 @@ Phase 77-80 全部完成
 **Plans**: 5(wave 1→2→3;76-01 必须最先落地 go.mod,76-05 收官验证全仓最终态)
 
 - [x] 76-01-PLAN.md — miniredis + httpmock go.mod 落地 + pkg/cache Redis 冒烟(三坑防护)+ geocoding httpmock PoC(tidy 保活)+ cache_74_08 过期注释联动(wave 1)
-- [ ] 76-02-PLAN.md — ScrapliWrapper Driver 工厂 var 抽取(错误字符串 byte 不变)+ FileTransport 注入演示测试 + testdata fixture(wave 2)
-- [ ] 76-03-PLAN.md — LDAPClientIface 16→19 方法 + FailoverClient clientFactory 字段 + operation 签名接口化 + 20 处闭包机械替换 + mock walk/分页 + failover 接口驱动测试(wave 2)
-- [ ] 76-04-PLAN.md — TestHelperProcess re-exec helper(四形态)+ 5 处 echo 分组替换(newCommand 组 / t.Setenv 环境继承组,保住 runCommand/runCommandOutput 生产覆盖)(wave 2)
+- [x] 76-02-PLAN.md — ScrapliWrapper Driver 工厂 var 抽取(错误字符串 byte 不变)+ FileTransport 注入演示测试 + testdata fixture(wave 2)
+- [x] 76-03-PLAN.md — LDAPClientIface 16→19 方法 + FailoverClient clientFactory 字段 + operation 签名接口化 + 20 处闭包机械替换 + mock walk/分页 + failover 接口驱动测试(wave 2)
+- [x] 76-04-PLAN.md — TestHelperProcess re-exec helper(四形态)+ 5 处 echo 分组替换(newCommand 组 / t.Setenv 环境继承组,保住 runCommand/runCommandOutput 生产覆盖)(wave 2)
 - [ ] 76-05-PLAN.md — AST 守护测试(WalkDir + worktrees 跳过 + 白名单 + 注毒自证 + 三层契约成文)(wave 3,验证全仓最终态)
 
 **Notes**:
