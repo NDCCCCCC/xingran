@@ -39,9 +39,9 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 ## Current Position
 
 Phase: 75 (QUIRK 行为修正 — 15 项业务怪癖关闭)
-Plan: —
-Status: Roadmap created (7 phases 75-81, 19 reqs 100% mapped) — ready for /gsd-plan-phase 75
-Last activity: 2026-08-23 — v1.27 ROADMAP drafted: Phase 75 QUIRK-first (IncrementBy 解锁 core captcha) → 76 测试基建 (miniredis/httpmock + 4 类注入缝) → 77/78 阻塞包两批 → 79/80 TAIL 长尾两批 → 81 收口 (ratchet ≥70 + P2_RATCHET 删除 + audit); gap-math 6287 stmts (BLOCK ~2402 + TAIL ~3885)
+Plan: 4 (completed)
+Status: In Progress — Plan 75-04 EXECUTED (Q-10/Q-12/Q-13 agent 三项 QUIRK 修正, gate 全绿)
+Last activity: 2026-08-23 — 75-04 EXECUTED: fix(quirk-10) 46c1485 + fix(quirk-13) 2b6b7d1 (Q-12 变更因并发 commit 边界混合落入同 commit,详见 75-04-SUMMARY.md); build + full test + check-ci-local.sh backend --no-npm-ci 全绿
 
 ## Accumulated Context
 
@@ -207,6 +207,7 @@ Resume file: None
 
 | Phase | Plan | Duration | Notes |
 |-------|------|----------|-------|
+| Phase 75 P04 | 35m | 3 tasks | 6 files; fix(quirk-10) 46c1485 + fix(quirk-13) 2b6b7d1 (Q-12 merged due to concurrent executor HEAD reset); build + go test ./... + check-ci-local.sh backend --no-npm-ci 全绿; deviation: commit boundary mixed |
 | Phase 69 P01 | 46m | 3 tasks | 11 files |
 | Phase 69 P06 | 15m | 1 tasks | 9 files |
 | Phase 69 P02 | 42m | 2 tasks | 3 files |
