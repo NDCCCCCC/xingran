@@ -71,7 +71,7 @@ completed: 2026-08-23
 2. **Task 2: Q-12 InitLogger 非法 level 返回 error** - 变更被合并入 `2b6b7d1` (见 Deviations)
 3. **Task 3: Q-13 NewTLSConfigFromConfig 空参校验 + main.go guard** - `2b6b7d1` (`fix(quirk-13)`)
 
-**Plan metadata:** 待本 SUMMARY 提交后补充。
+**Plan metadata:** `40965fb` (initial docs commit, mixed attribution) → `939e3ae` (deviation record update) → `1e67dc9` (STATE.md update)
 
 ## Files Created/Modified
 
