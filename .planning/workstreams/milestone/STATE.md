@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.27
 milestone_name: 后端测试覆盖率优秀 II
 status: executing
-stopped_at: ""
-last_updated: "2026-08-23T13:00:00.000Z"
-last_activity: 2026-08-23
+stopped_at: context exhaustion at 75% (2026-08-21)
+last_updated: "2026-08-23T05:51:38.311Z"
+last_activity: 2026-08-23 -- Phase 76 planning complete
 progress:
   total_phases: 7
   completed_phases: 1
-  total_plans: 37
+  total_plans: 11
   completed_plans: 6
   percent: 14
 ---
@@ -40,8 +40,8 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 
 Phase: 76 (测试基建落地 — INFRA-01..05)
 Plan: 未规划
-Status: Phase 75 SHIPPED 2026-08-23 (6/6 plans, 15 QUIRK + M-2 全关闭, verifier 16/16 实证)
-Last activity: 2026-08-23 — Phase 75 SHIPPED: 11 个独立 fix(quirk-N) + Q-3/Q-15 混装于 bb2716b、Q-8/Q-12 混装于 2b6b7d1、Q-5 代码混装于 8172f21(并发 shared-index 副作用,内容零损耗,留痕于各 SUMMARY + 75-VERIFICATION.md); 额外修复 pkg/logger GetLogger 懒初始化数据竞争(77de053,Q-7 race 硬约束经 WSL 暴露并清零, 0 DATA RACE); Q-11 census 三处 0 行(迁移 210 纯预防兜底); 本地 CI 镜像全绿; 下一棒 Phase 76 测试基建(miniredis/httpmock 依赖引入 + INFRA-02..05)
+Status: Ready to execute
+Last activity: 2026-08-23 -- Phase 76 planning complete
 
 ## Accumulated Context
 
