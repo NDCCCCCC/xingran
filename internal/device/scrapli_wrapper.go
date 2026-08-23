@@ -107,6 +107,29 @@ func checkDeviceReachable(host string, port int, timeout time.Duration) error {
 	return nil
 }
 
+// newNetworkDriver 是 platform→network.Driver 的默认工厂（76-02 INFRA-02）。
+// 生产路径行为与原先两处内联调用完全一致：NewPlatform 失败包装"创建平台实例失败"，
+// GetNetworkDriver 失败包装"获取网络驱动失败"，错误字符串 byte 不变。
+// 测试通过临时替换该 var 注入 FileTransport/自定义 transport（见
+// driver_factory_76_02_test.go），替换必须 t.Cleanup 恢复且所在测试禁止 t.Parallel()。
+var newNetworkDriver = func(platformName interface{}, host string, opts ...util.Option) (*network.Driver, error) {
+	p, err := platform.NewPlatform(
+		platformName,
+		host,
+		opts...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("创建平台实例失败: %w", err)
+	}
+
+	d, err := p.GetNetworkDriver()
+	if err != nil {
+		return nil, fmt.Errorf("获取网络驱动失败: %w", err)
+	}
+
+	return d, nil
+}
+
 // NewScrapliWrapper 创建scrapligo封装实例
 func NewScrapliWrapper(device *models.NetworkDevice, username, password string, protocolType models.ProtocolType) (*ScrapliWrapper, error) {
 	if device == nil {
@@ -145,20 +168,10 @@ func NewScrapliWrapper(device *models.NetworkDevice, username, password string, 
 		}))
 	}
 
-	// 创建平台实例
-	p, err := platform.NewPlatform(
-		platformName,
-		device.IPAddress,
-		opts...,
-	)
+	// 经工厂构造平台实例与网络驱动（错误在工厂内部包装，文案不变）
+	d, err := newNetworkDriver(platformName, device.IPAddress, opts...)
 	if err != nil {
-		return nil, fmt.Errorf("创建平台实例失败: %w", err)
-	}
-
-	// 获取网络驱动
-	d, err := p.GetNetworkDriver()
-	if err != nil {
-		return nil, fmt.Errorf("获取网络驱动失败: %w", err)
+		return nil, err
 	}
 
 	return &ScrapliWrapper{
@@ -209,20 +222,10 @@ func NewScrapliWrapperWithPort(device *models.NetworkDevice, username, password 
 		}))
 	}
 
-	// 创建平台实例
-	p, err := platform.NewPlatform(
-		platformName,
-		device.IPAddress,
-		opts...,
-	)
+	// 经工厂构造平台实例与网络驱动（错误在工厂内部包装，文案不变）
+	d, err := newNetworkDriver(platformName, device.IPAddress, opts...)
 	if err != nil {
-		return nil, fmt.Errorf("创建平台实例失败: %w", err)
-	}
-
-	// 获取网络驱动
-	d, err := p.GetNetworkDriver()
-	if err != nil {
-		return nil, fmt.Errorf("获取网络驱动失败: %w", err)
+		return nil, err
 	}
 
 	return &ScrapliWrapper{
