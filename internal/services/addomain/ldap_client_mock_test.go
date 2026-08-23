@@ -35,11 +35,18 @@ type mockLDAPClient struct {
 	moveUserErr         error
 	enableUserErr       error
 	disableUserErr      error
+	updateGroupAttrErr  error
+	createOUErr         error
+	dnExistsRes         bool
+	dnExistsErr         error
 
 	// 调用计数
-	connectCalls   int
-	closeCalls     int
-	searchGrpCalls int
+	connectCalls      int
+	closeCalls        int
+	searchGrpCalls    int
+	updateGroupCalls  int
+	createOUCalls     int
+	dnExistsCalls     int
 }
 
 func (m *mockLDAPClient) Connect() error {
@@ -106,6 +113,21 @@ func (m *mockLDAPClient) EnableUser(userDN string) error {
 
 func (m *mockLDAPClient) DisableUser(userDN string) error {
 	return m.disableUserErr
+}
+
+func (m *mockLDAPClient) UpdateGroupAttribute(groupDN string, attrs map[string]string) error {
+	m.updateGroupCalls++
+	return m.updateGroupAttrErr
+}
+
+func (m *mockLDAPClient) CreateOU(ouDN, ouName string) error {
+	m.createOUCalls++
+	return m.createOUErr
+}
+
+func (m *mockLDAPClient) DNExists(dn string) (bool, error) {
+	m.dnExistsCalls++
+	return m.dnExistsRes, m.dnExistsErr
 }
 
 // 编译期断言：mockLDAPClient 满足 LDAPClientIface

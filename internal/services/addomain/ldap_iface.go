@@ -39,6 +39,13 @@ type LDAPClientIface interface {
 	MoveUser(userDN, newOUDN string) error
 	EnableUser(userDN string) error
 	DisableUser(userDN string) error
+
+	// 组属性管理（group.go failover 闭包使用）
+	UpdateGroupAttribute(groupDN string, attrs map[string]string) error
+	// OU 管理（dept_sync_service.go failover 闭包使用）
+	CreateOU(ouDN, ouName string) error
+	// DN 存在性预检（user_ad_sync_service.go failover 闭包使用）
+	DNExists(dn string) (bool, error)
 }
 
 // 编译期断言：*LDAPClient 必须满足 LDAPClientIface。
