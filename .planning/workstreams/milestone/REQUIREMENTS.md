@@ -3,10 +3,12 @@ milestone: v1.27
 milestone_name: 后端测试覆盖率优秀 II
 defined: 2026-08-23
 sources:
+
   - .planning/research/v1.27-stack.md
   - .planning/research/v1.27-features.md
   - .planning/research/v1.27-architecture.md
   - .planning/research/v1.27-pitfalls.md
+
 ---
 
 # Milestone v1.27 Requirements
@@ -17,11 +19,11 @@ sources:
 
 ## 基建 (INFRA)
 
-- [ ] **INFRA-01**: 引入 miniredis/v2 (v2.38+) 与 httpmock (v1.4.x) 两个 test-only 依赖(MIT;redismock 硬淘汰——锁死 go-redis v8;testcontainers 不引入——Windows 无 Docker 断裂本地测试)。miniredis 三坑防护:TTL 用 FastForward / INFO 断言降级 / go-redis v9.5+ CLIENT SETINFO 兼容
-- [ ] **INFRA-02**: ScrapliWrapper 新增可注入 Driver 工厂入口(小重构,生产路径不变;pitfalls 实证 StandardTransport 即 x/crypto/ssh v0.46 零新增模块,fake server 需输出 prompt)
-- [ ] **INFRA-03**: addomain 走 LDAPClientIface 扩展 stub 主推线(零新依赖);嵌入式 vjeantet/ldapserver 停更风险不担
-- [ ] **INFRA-04**: agent 子进程 stub 统一 os/exec TestHelperProcess re-exec 模式(替换 exec.Command("echo") Windows/CI 分歧根源)
-- [ ] **INFRA-05**: 测试隔离治理:沿用 e2e_helpers A1(ForTesting 后缀+无 build tag) + AST 守护测试(仿 status_constants_test.go)
+- [x] **INFRA-01**: 引入 miniredis/v2 (v2.38+) 与 httpmock (v1.4.x) 两个 test-only 依赖(MIT;redismock 硬淘汰——锁死 go-redis v8;testcontainers 不引入——Windows 无 Docker 断裂本地测试)。miniredis 三坑防护:TTL 用 FastForward / INFO 断言降级 / go-redis v9.5+ CLIENT SETINFO 兼容
+- [x] **INFRA-02**: ScrapliWrapper 新增可注入 Driver 工厂入口(小重构,生产路径不变;pitfalls 实证 StandardTransport 即 x/crypto/ssh v0.46 零新增模块,fake server 需输出 prompt)
+- [x] **INFRA-03**: addomain 走 LDAPClientIface 扩展 stub 主推线(零新依赖);嵌入式 vjeantet/ldapserver 停更风险不担
+- [x] **INFRA-04**: agent 子进程 stub 统一 os/exec TestHelperProcess re-exec 模式(替换 exec.Command("echo") Windows/CI 分歧根源)
+- [x] **INFRA-05**: 测试隔离治理:沿用 e2e_helpers A1(ForTesting 后缀+无 build tag) + AST 守护测试(仿 status_constants_test.go)
 
 ## 阻塞包攻破 (BLOCK)
 
