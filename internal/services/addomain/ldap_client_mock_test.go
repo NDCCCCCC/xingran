@@ -21,6 +21,9 @@ type mockLDAPClient struct {
 	searchGroupsRes   []*ldap.Entry
 	searchUsersErr    error
 	searchUsersRes    []*ldap.Entry
+	// searchUsersFn 非 nil 时优先于 searchUsersRes（多批次/函数式返回驱动，
+	// 76-03 walk/分页窄边界：驱动 service 层遍历，非 wire 级分页）
+	searchUsersFn     func() ([]*ldap.Entry, error)
 	searchComputersErr error
 	searchComputersRes []*ldap.Entry
 
@@ -46,6 +49,7 @@ type mockLDAPClient struct {
 	connectCalls       int
 	closeCalls         int
 	searchGrpCalls     int
+	searchUsersCalls   int
 	updateGroupCalls   int
 	createOUCalls      int
 	dnExistsCalls      int
@@ -71,6 +75,10 @@ func (m *mockLDAPClient) SearchGroups(baseDN string) ([]*ldap.Entry, error) {
 }
 
 func (m *mockLDAPClient) SearchUsers(baseDN string) ([]*ldap.Entry, error) {
+	m.searchUsersCalls++
+	if m.searchUsersFn != nil {
+		return m.searchUsersFn()
+	}
 	return m.searchUsersRes, m.searchUsersErr
 }
 
