@@ -174,11 +174,15 @@ fi
 
 # ---------------------------------------------------------------------------
 # 3. Whitelist drift detection (D-10) — fail fast, BEFORE aggregation.
+#    Anchored to the truth-source PATH PREFIX (WR-02): the vitest exclude
+#    globs are directory-prefix anchored and case-sensitive, so the drift
+#    grep must be too — an unanchored substring match would false-positive
+#    on legitimate paths like src/utils/cad-editor-helpers.ts.
 # ---------------------------------------------------------------------------
 
-if printf '%s\n' "$FLAT" | grep -Eqi 'cad-editor|cad-elements'; then
+if printf '%s\n' "$FLAT" | grep -Eq '^xingran-react-frontend/src/components/cad-(editor|elements)/'; then
   echo "check-frontend-coverage.sh: WHITELIST DRIFT (D-10) — cad-editor/cad-elements files present in the profile:" >&2
-  printf '%s\n' "$FLAT" | grep -Ei 'cad-editor|cad-elements' | cut -f1 >&2
+  printf '%s\n' "$FLAT" | grep -E '^xingran-react-frontend/src/components/cad-(editor|elements)/' | cut -f1 >&2
   echo "coverage.exclude in xingran-react-frontend/vitest.config.ts is the single truth source —" >&2
   echo "restore the exclusion and re-run coverage; do not let polluted data into the gate." >&2
   exit 6
