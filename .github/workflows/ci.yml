@@ -171,8 +171,12 @@ jobs:
 
       - name: Coverage gate
         # GOV-03/GOV-05 (82-04): 全局阈值 + per-dir floor + 白名单漂移三合一,
-        # exit 1/4/6 任一即本 job 红。json 缺失软跳过逻辑在脚本内 (exit 0),
-        # 对称 backend job 语义——不挂 if: always()。
+        # exit 1/4/6 任一即本 job 红。本 gate (check-frontend-coverage.sh) 在
+        # json 缺失时软跳过 (exit 0), 对称 backend check-coverage.sh 语义——
+        # 不挂 if: always()。注意: 这与本仓另一只 diff gate 脚本
+        # (check-frontend-diff-coverage.sh) 的 fail-closed exit 2 (WR-01) 刻意
+        # 不对称——那只脚本 pairing 的是 if: always() Upload 已完成的 diff job,
+        # json 缺失属配置漂移必须显式红; 两者不可混读。
         # working-directory: . 覆盖 job 级 xingran-react-frontend (Pitfall 4):
         # 否则 .github/scripts 与 .coverage-fe-floors 相对 frontend 目录解析不到。
         working-directory: .
@@ -216,8 +220,11 @@ jobs:
         # 上传目录时以路径最小公共祖先为 artifact 根 (xingran-react-frontend/
         # 前缀被剥离, json 与 html 报告位于 artifact 根); 无 path 输入时 json
         # 解压到 workspace 根而非脚本第一参数路径, gate 会在所有 PR 上命中
-        # 脚本内 json 缺失软跳过而静默 exit 0 (GOV-04 失效)。后端上传的是
-        # workspace 根单文件, 故其 download 无需 path。
+        # 脚本的 profile 缺失分支——该分支自 WR-01 (27f275e) 起为 fail-closed
+        # exit 2: job 显式红并提示 configuration drift, 不再静默放行。path
+        # 输入因此是让 gate 真正读到 json 跑起来, 而非防静默失效 (防失效已由
+        # fail-closed 兜底)。后端上传的是 workspace 根单文件, 故其 download
+        # 无需 path。
         uses: actions/download-artifact@v4
         with:
           name: frontend-coverage
@@ -225,7 +232,9 @@ jobs:
 
       - name: Diff coverage gate (≥80%)
         # Exit 1 when <80% of changed executable .ts/.tsx lines are covered.
-        # Exits 0 (skip) when the PR touches no testable lines.
+        # Exits 0 (skip) only when the PR touches no testable lines.
+        # json 缺失 = fail-closed exit 2 (WR-01, 27f275e): 本 job 挂 needs:
+        # frontend, 到这里 json 必然存在, 缺失即配置漂移, 显式红不软跳过。
         # 本 job 无 defaults.working-directory, 从 workspace root 跑; artifact
         # 内容已经 path 输入解压回 xingran-react-frontend/coverage/ 下。
         run: bash .github/scripts/check-frontend-diff-coverage.sh xingran-react-frontend/coverage/coverage-final.json origin/${{ github.base_ref }} 80
