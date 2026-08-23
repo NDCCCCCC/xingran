@@ -46,6 +46,7 @@ update_trigger: v1.27 roadmap created — 7 phases (75-81) / 19 reqs 100% mapped
 **数学校验基线**(2026-08-23 gate 实测):24269/43652 = 55.60%;70% 需 30556 covered;缺口 6287 = BLOCK ~2402 + TAIL ~3885。不含 TAIL 目标必失守(v1.26 SC-a 覆辙预防)。
 
 **Source planning data:**
+
 - `.planning/research/v1.27-features.md`(5 阻塞包未覆盖语句地形图 + 投入产出排序: operations > agent/server > core > device > addomain;零基建可先行 stmts ≈1870)
 - `.planning/research/v1.27-architecture.md`(基建接入架构: QUIRK-01 必须最先修、零 Docker 进程内替身、A1 隔离契约 + AST 守护)
 - `.planning/research/v1.27-stack.md`(仅 2 个新 test-only 依赖: miniredis/v2 v2.38+ 与 httpmock v1.4.x)
@@ -95,6 +96,7 @@ Phase 77-80 全部完成
 5. 每项 QUIRK 一个原子 commit(`fix(quirk-N): <语义> + 回归测试`),每个 commit 点 CI 全绿(4 层 gate + diff coverage ≥80% 把关业务变更)
 
 **Plans**: 6(75-04 经 plan-checker 拆分,agent 与 utils/system 各 3 任务)
+
 - 75-01 QUIRK-01 MemoryCache.IncrementBy(nil-deref + 非法串 error)+ 翻转断言 + 删 3 处 captcha workaround — 全 milestone 第一个 plan(wave 0)
 - 75-02 device 家族:Q-3 锚定 + Q-8 尾字母 + Q-9 nextIP/ScanIPRange 同 commit
 - 75-03 core 防御家族:Q-4 sm2 长度预检 + Q-5 validateFile + Q-6 PG-only fallback + Q-7 Stop 幂等
@@ -129,7 +131,8 @@ Phase 77-80 全部完成
 5. AST 守护测试上线:扫描生产 .go 文件禁止引用 `*ForTesting` 符号(仿 status_constants_test.go),测试隔离契约由编译器(_test.go)+ 命名(ForTesting 后缀)+ AST 三层保证
 
 **Plans**: 5(wave 1→2→3;76-01 必须最先落地 go.mod,76-05 收官验证全仓最终态)
-- [ ] 76-01-PLAN.md — miniredis + httpmock go.mod 落地 + pkg/cache Redis 冒烟(三坑防护)+ geocoding httpmock PoC(tidy 保活)+ cache_74_08 过期注释联动(wave 1)
+
+- [x] 76-01-PLAN.md — miniredis + httpmock go.mod 落地 + pkg/cache Redis 冒烟(三坑防护)+ geocoding httpmock PoC(tidy 保活)+ cache_74_08 过期注释联动(wave 1)
 - [ ] 76-02-PLAN.md — ScrapliWrapper Driver 工厂 var 抽取(错误字符串 byte 不变)+ FileTransport 注入演示测试 + testdata fixture(wave 2)
 - [ ] 76-03-PLAN.md — LDAPClientIface 16→19 方法 + FailoverClient clientFactory 字段 + operation 签名接口化 + 20 处闭包机械替换 + mock walk/分页 + failover 接口驱动测试(wave 2)
 - [ ] 76-04-PLAN.md — TestHelperProcess re-exec helper(四形态)+ 5 处 echo 分组替换(newCommand 组 / t.Setenv 环境继承组,保住 runCommand/runCommandOutput 生产覆盖)(wave 2)
@@ -160,6 +163,7 @@ Phase 77-80 全部完成
 4. phase 边界 `go test ./...` 全绿,gate(weighted-avg / P1 floor / P2 floor / diff coverage)不倒退
 
 **Plans**: TBD(建议 5)
+
 - 77-01 workstation_device_service(GetADDevices/SyncFromAD/SyncFromAsset/mergeBySerial/SetPrimaryDevice*)
 - 77-02 excel_service 导出链(ExportData/queryData/writeDataRows/writeInstructions/appendWorkstationDeviceSheets)
 - 77-03 excel_service 导入剩余 + reference_resolver + workstation/floor/code_generator/excel_raw_rows
@@ -191,6 +195,7 @@ Phase 77-80 全部完成
 5. 每个 plan 完成点 `go test ./...` 全绿,gate 不倒退
 
 **Plans**: TBD(建议 7)
+
 - 78-01 core captcha 真实链路(QUIRK-01 解锁)+ captcha_background(文件+DB)+ metrics_cache 边缘
 - 78-02 core Init 链(miniredis+sqlite+reaper re-exec+Close 收尾;plan 首任务为 Init 可跑深度探针实验)
 - 78-03 device scrapli_wrapper + connection_pool + executor(FileTransport + fake SSH,fake server 输出 prompt)
@@ -224,6 +229,7 @@ Phase 77-80 全部完成
 4. gate 全程绿(本 phase 不动 `.coverage-threshold`,统一 Phase 81 收口)
 
 **Plans**: TBD(建议 6)
+
 - 79-01 legacy cache services 群 A(dept/role/dict)
 - 79-02 legacy cache services 群 B(menu/user/post)
 - 79-03 token blacklist + DataCacheService/CacheConfigService 深路径
@@ -254,6 +260,7 @@ Phase 77-80 全部完成
 4. gate 全程绿
 
 **Plans**: TBD(建议 5)
+
 - 80-01 scheduler 注册表 + job 执行器
 - 80-02 scheduler 引擎分支(并发/取消/恢复)
 - 80-03 碎包 A:api/v1 装配纯函数段 + models
@@ -283,6 +290,7 @@ Phase 77-80 全部完成
 4. milestone audit 报告落盘:19/19 需求核验、15 项 QUIRK 关闭清单、SC-a..e 证据链、v1.26 SC-a 缺口(6287 stmts)收口数学
 
 **Plans**: TBD(建议 3)
+
 - 81-01 全量重测 + threshold ratchet 55.5 → 实测 ≥70 + coverage-baseline.md 回填
 - 81-02 P2_RATCHET 豁免行删除 + floor 回落 70 全量 + CI 验证
 - 81-03 milestone audit(镜像 74-11 收口流程 + v1.26 74-MILESTONE-AUDIT 模式)
