@@ -1,15 +1,55 @@
 package server
 
 import (
-	"context"
 	"bufio"
+	"context"
+	"fmt"
+	"io"
 	"os"
 	"os/exec"
+	"os/signal"
 	"runtime"
 	"strings"
 	"syscall"
 	"testing"
 )
+
+// TestHelperProcess is not a real test: it is the entry point for the re-exec
+// subprocess stub (Go stdlib pattern, cf. GOROOT src/os/os_test.go). When this
+// test binary runs with GO_WANT_HELPER_PROCESS=1 and
+// -test.run=^TestHelperProcess$, the guard passes and the last argv element
+// (the shape argument after "--") selects the stub behavior. Every branch
+// reaches os.Exit so the testing framework never continues parsing the stub
+// arguments. A normal `go test` run hits the guard and returns immediately:
+// silent pass, no hang, no output pollution.
+func TestHelperProcess(t *testing.T) {
+	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" { // guard must stay first
+		return
+	}
+	args := os.Args[len(os.Args)-1:] // shape argument after "--"
+	switch {
+	case len(args) > 0 && args[0] == "sleep-until-stdin-close":
+		// Long-lived shape: exit only after the parent closes our stdin.
+		io.Copy(io.Discard, os.Stdin)
+	case len(args) > 0 && args[0] == "ignore-sigterm" && runtime.GOOS == "linux":
+		// SIGTERM has no meaning on Windows; non-linux falls through to default.
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, syscall.SIGTERM)
+		// Ready marker: lets the parent synchronize on handler installation
+		// so its SIGTERM can never race the Notify call.
+		fmt.Println("sigterm-armed")
+		<-sig
+		fmt.Println("still-alive")
+	case len(args) > 0 && args[0] == "stdout-flood":
+		for i := 0; i < 1000; i++ {
+			fmt.Println("line")
+		}
+	default:
+		// Fast-exit shape: print "hello" and exit 0.
+		fmt.Println("hello")
+	}
+	os.Exit(0)
+}
 
 // helperStubCommand builds a re-exec subprocess stub command: it executes this
 // test binary (os.Args[0]) filtered down to TestHelperProcess only, passes the
