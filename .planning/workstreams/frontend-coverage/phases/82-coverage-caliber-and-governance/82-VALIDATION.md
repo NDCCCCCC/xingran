@@ -1,9 +1,9 @@
 ---
 phase: 82
 slug: coverage-caliber-and-governance
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: ready
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-08-23
 ---
 
@@ -40,10 +40,16 @@ created: 2026-08-23
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| *(planner 落 PLAN.md 后按任务填写)* | | | GOV-01 | — | N/A | smoke（产物断言） | `npm run test:coverage && node -e "const d=require('./coverage/coverage-final.json');const k=Object.keys(d);console.log('files='+k.length,'cad='+k.filter(p=>p.includes('cad-')).length)"` → 期望 files=571, cad=0 | ❌ 执行期即时命令 | ⬜ pending |
-| | | | GOV-03 | — | N/A | integration（gate 干跑） | `bash .github/scripts/check-frontend-coverage.sh xingran-react-frontend/coverage/coverage-final.json .coverage-fe-floors` → exit 0（3.85≥3.8）；临时改全局行 5.0 → exit 1 | ❌ W0（脚本本 phase 新建） | ⬜ pending |
-| | | | GOV-04 | — | N/A | integration（gate 干跑） | `bash .github/scripts/check-frontend-diff-coverage.sh <json> HEAD~1 80`（构造已知覆盖/未覆盖 diff 合成基线验证两分支 exit code） | ❌ W0（脚本本 phase 新建） | ⬜ pending |
-| | | | GOV-05 | — | N/A | integration（gate 干跑） | 同 GOV-03 脚本：临时把某目录 floor 改 90.0 → exit 4；白名单漂移注入 → exit 6 | ❌ W0 | ⬜ pending |
+| 82-01-T1 | 82-01 | 1 | GOV-01 | T-82-01-01/02 | N/A | smoke（产物断言） | `npm run test:coverage && node -e` 断言 files=584 + `! grep -q "thresholds:" vitest.config.ts` + package.json run 语义 grep | ⬜ pending |
+| 82-01-T2 | 82-01 | 1 | GOV-01, QUAL-02 | T-82-01-01 | N/A | smoke（产物断言） | `npm run test:coverage && node -e` 断言 files=571 / cad=0 / stmts=21574 / cov=830 / pct=3.85 + exclude 两项 grep -cF =1 | ⬜ pending |
+| 82-02-T1 | 82-02 | 2 | GOV-03, GOV-05 | T-82-02-01/03/04 | gate 不静默通过 | integration（--init 干跑） | `bash -n` + `--init` 输出 29 行（1 GLOBAL + 28 目录，含 (src root)/api） | ⬜ pending |
+| 82-02-T2 | 82-02 | 2 | GOV-03, GOV-05 | T-82-02-02/03 | exit 1/4/6 独立可区分 | integration（gate 干跑矩阵） | 五分支矩阵：真实 0 / 无参 2 / GLOBAL 5.0→1 / components 90.0→4 / cad 注入→6 + --init 幂等 diff | ⬜ pending |
+| 82-03-T1 | 82-03 | 2 | GOV-04 | T-82-03-01/02 | base-ref 校验 + 引号 | integration（软过干跑） | `bash -n` + 无参→2 + 坏 ref→2 + base=HEAD 空 diff→0 | ⬜ pending |
+| 82-03-T2 | 82-03 | 2 | GOV-04 | T-82-03-03 | 新文件不免费通行 | integration（合成基线） | 空树 commit-tree 基线：threshold 80→exit 1 + UNCOVERED 清单；threshold 0→exit 0 + DIFF 数值行 | ⬜ pending |
+| 82-04-T1 | 82-04 | 3 | GOV-03, GOV-04 | T-82-04-01/02 | backend job 零改动 | integration（YAML/结构断言） | pyyaml 解析 + `git show main:` 区间 diff 断言共享 job 未变 + frontend 步骤序 + diff job 四件套 grep | ⬜ pending |
+| 82-04-T2 | 82-04 | 3 | GOV-02, QUAL-02 | T-82-04-04 | 数字可复算 | manual-only（文档审查）+ 自动核算 | node -e 复算 json stmts/cov 与文档记载一致 + 白名单三列/4.55%/ratchet schema grep | ⬜ pending |
+| 82-05-T1 | 82-05 | 4 | GOV-03, GOV-04 | T-82-05-01/02 | 校准只降不升留档 | integration（真实 CI） | gh 证据链：PR checks 含 diff job / main push 无 diff job + frontend success / SHA 回填无 TBD 残留 | ⬜ pending |
+| 82-05-T2 | 82-05 | 4 | 全 phase | — | N/A | checkpoint:human-verify | 人工核验 PR 双绿 + main job 列表 + 本地三件套 + 基线文档审阅 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -52,7 +58,7 @@ created: 2026-08-23
 ## Wave 0 Requirements
 
 - 无 vitest 测试缺口——本 phase 零新增测试，现有基础设施（19 文件 159 测试）覆盖回归验证。
-- gate 脚本（`check-frontend-coverage.sh` / `check-frontend-diff-coverage.sh`）本地干跑清单属执行期任务——脚本本身是本 phase 产出物。
+- gate 脚本（`check-frontend-coverage.sh` / `check-frontend-diff-coverage.sh`）本地干跑清单属执行期任务——脚本本身是本 phase 产出物（82-02/82-03 的 Task 2 即干跑矩阵）。
 
 *Existing infrastructure covers all phase requirements.*
 
@@ -64,16 +70,17 @@ created: 2026-08-23
 |----------|-------------|------------|-------------------|
 | 基线文档落盘且数字可复算 | GOV-02 | 文档任务 | `node -e` 复算 coverage-final.json 比对文档记载 21574 stmts / 830 covered / 3.85% |
 | 白名单登记三项齐全（理由/面积/复审条件）+ 面积 ≤5% | QUAL-02 | 文档审查 | 人工审查登记表完整性；自动核算 1028/22602=4.55%（已实测成立） |
+| 4 层 gate 上线终检 | 全 phase | 视觉/流程核验 | 82-05 Task 2 checkpoint：PR 双绿 + main job 列表 + 本地三件套复跑 + 基线文档审阅 |
 
 ---
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 300s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags（package.json test:coverage 已改 `vitest run --coverage`，82-01-T1）
+- [x] Feedback latency < 300s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** planner（2026-08-23，plans 82-01~82-05 落盘）

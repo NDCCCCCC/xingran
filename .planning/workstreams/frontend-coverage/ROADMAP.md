@@ -49,7 +49,13 @@
   3. 前端覆盖率基线文档落盘（起点行 3.67% / 22602 stmts + per-dir 快照 + ratchet 记录表，对称后端 `coverage-baseline.md` 模式），CI 前端 job 的全局阈值 gate 切到全量口径且失败即阻断（低于阈值 exit 非零）
   4. PR diff coverage ≥80% gate 以 PR-only CI job 生效：改动 `xingran-react-frontend/src/**` 的 PR 若新增/改动行覆盖 <80%，该 job 失败并输出未覆盖文件清单（复用后端 74-10 bash+awk 自实现模式，前端版基于 vitest json 报告）
   5. per-directory floor gate 机制上线：白名单外目录目标 floor 70% + 未达标目录按当期实测值 ratchet 过渡（只升不降），floor 违例以独立 exit code 在 CI 可区分
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 82-01-PLAN.md — vitest 全量口径切换（include/删 thresholds/test:coverage run 语义）+ 白名单 exclude 两步口径断言（584→571）
+- [ ] 82-02-PLAN.md — check-frontend-coverage.sh（全局阈值 + per-dir floor + 漂移检测 + --init）+ .coverage-fe-floors 生成与五分支干跑矩阵
+- [ ] 82-03-PLAN.md — check-frontend-diff-coverage.sh（PR diff ≥80% lines 口径三段式）+ 空树合成基线两分支实证
+- [ ] 82-04-PLAN.md — ci.yml 接线（frontend job 内嵌 gate + PR-only frontend-coverage-diff job）+ 基线文档与白名单登记
+- [ ] 82-05-PLAN.md — 真实 CI 验证 PR 三项证据 + D-14 全局阈值 CI 校准 + 基线 SHA 回填
 
 ### Phase 83: P0 基建层全清 ≥70%
 **Goal**: 前端基建层（lib / utils / hooks / store / services / router / constants / types，约 3,900 stmts）各目录语句覆盖率全清 ≥70%，并沉淀供 P1/P2 复用的测试公共 harness——全站 mock 与渲染样板在此定型。
@@ -120,11 +126,11 @@
 
 ## Progress
 
-**Execution Order:** Phase 82 → 81 → 82 → 83 → 84 → 85 → 86（严格串行；每个 phase 边界 = 全量 vitest 0 失败 + gate 绿 + 覆盖率单调上升的检查点）
+**Execution Order:** Phase 82 → 83 → 84 → 85 → 86 → 87 → 88（严格串行；每个 phase 边界 = 全量 vitest 0 失败 + gate 绿 + 覆盖率单调上升的检查点）
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 82. 口径修正与治理基建 | 0/TBD | Not started | - |
+| 82. 口径修正与治理基建 | 0/5 | Not started | - |
 | 83. P0 基建层全清 ≥70% | 0/TBD | Not started | - |
 | 84. P1 组件层 ≥70% | 0/TBD | Not started | - |
 | 85. P2 页面层 R1 — operations | 0/TBD | Not started | - |
