@@ -39,9 +39,9 @@ sources:
 
 ## QUIRK 修复 (QUIRK)
 
-- [ ] **QUIRK-01**: MemoryCache.IncrementBy 最先修(nil-deref panic + 非法字符串静默 0)——core_74_08_test.go 三处 captcha workaround 连锁解锁,DB 语义 INCR 缺键=1
-- [ ] **QUIRK-02**: 其余 14 项全修,每项**同 commit** 翻转 v1.26 锁定断言 + 回归测试 + 原子 commit:ModelExtractor 锚定(Q-3,发现落库 model 值会变,有 ExtractModelFromSysDescr 回退 caller)/ sm2.Decrypt 长度预检 / validateFile 无扩展名 / retry.containsIgnoreCase(retry 包零生产调用方,影响面=0)/ GetRandomEnabled PG-only fallback / MetricsCacheService.Stop 幂等 / nextIP 全零形态(须与 ScanIPRange 循环条件同 commit)等
-- [ ] **QUIRK-03**: Q-11 normalizeParentID 双实现分歧修复 + 存量数据迁移(Update 路径落库字面 "0" 的行归一为 NULL)
+- [x] **QUIRK-01**: MemoryCache.IncrementBy 最先修(nil-deref panic + 非法字符串静默 0)——core_74_08_test.go 三处 captcha workaround 连锁解锁,DB 语义 INCR 缺键=1
+- [x] **QUIRK-02**: 其余 14 项全修,每项**同 commit** 翻转 v1.26 锁定断言 + 回归测试 + 原子 commit:ModelExtractor 锚定(Q-3,发现落库 model 值会变,有 ExtractModelFromSysDescr 回退 caller)/ sm2.Decrypt 长度预检 / validateFile 无扩展名 / retry.containsIgnoreCase(retry 包零生产调用方,影响面=0)/ GetRandomEnabled PG-only fallback / MetricsCacheService.Stop 幂等 / nextIP 全零形态(须与 ScanIPRange 循环条件同 commit)等
+- [x] **QUIRK-03**: Q-11 normalizeParentID 双实现分歧修复 + 存量数据迁移(Update 路径落库字面 "0" 的行归一为 NULL)
 
 ## 收口防线 (GATE)
 
@@ -55,9 +55,9 @@ sources:
 
 | REQ | Phase | Plans | Status |
 |-----|-------|-------|--------|
-| QUIRK-01 | Phase 75 | TBD | Pending |
-| QUIRK-02 | Phase 75 | TBD | Pending |
-| QUIRK-03 | Phase 75 | TBD | Pending |
+| QUIRK-01 | Phase 75 | 75-01 | Complete |
+| QUIRK-02 | Phase 75 | 75-02, 75-03, 75-04, 75-05 | Complete |
+| QUIRK-03 | Phase 75 | 75-06 | Complete |
 | INFRA-01 | Phase 76 | TBD | Pending |
 | INFRA-02 | Phase 76 | TBD | Pending |
 | INFRA-03 | Phase 76 | TBD | Pending |

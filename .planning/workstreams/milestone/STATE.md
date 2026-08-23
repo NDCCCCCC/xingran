@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.27
 milestone_name: 后端测试覆盖率优秀 II
-status: planning
+status: executing
 stopped_at: ""
-last_updated: "2026-08-23T00:00:00.000Z"
+last_updated: "2026-08-23T13:00:00.000Z"
 last_activity: 2026-08-23
 progress:
   total_phases: 7
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 37
+  completed_plans: 6
+  percent: 14
 ---
 
 # Project State
@@ -38,10 +38,10 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 
 ## Current Position
 
-Phase: 75 (QUIRK 行为修正 — 15 项业务怪癖关闭)
-Plan: 4 (completed)
-Status: In Progress — Plan 75-04 EXECUTED (Q-10/Q-12/Q-13 agent 三项 QUIRK 修正, gate 全绿)
-Last activity: 2026-08-23 — 75-04 EXECUTED: fix(quirk-10) 46c1485 + fix(quirk-13) 2b6b7d1 (Q-12 变更因并发 commit 边界混合落入同 commit) + docs(75-04) 40965fb..4fe8b3b (最终 docs commit 夹带 frontend-coverage 已 staged 文件,attribution 异常,详见 75-04-SUMMARY.md); build + full test + check-ci-local.sh backend --no-npm-ci 全绿
+Phase: 76 (测试基建落地 — INFRA-01..05)
+Plan: 未规划
+Status: Phase 75 SHIPPED 2026-08-23 (6/6 plans, 15 QUIRK + M-2 全关闭, verifier 16/16 实证)
+Last activity: 2026-08-23 — Phase 75 SHIPPED: 11 个独立 fix(quirk-N) + Q-3/Q-15 混装于 bb2716b、Q-8/Q-12 混装于 2b6b7d1、Q-5 代码混装于 8172f21(并发 shared-index 副作用,内容零损耗,留痕于各 SUMMARY + 75-VERIFICATION.md); 额外修复 pkg/logger GetLogger 懒初始化数据竞争(77de053,Q-7 race 硬约束经 WSL 暴露并清零, 0 DATA RACE); Q-11 census 三处 0 行(迁移 210 纯预防兜底); 本地 CI 镜像全绿; 下一棒 Phase 76 测试基建(miniredis/httpmock 依赖引入 + INFRA-02..05)
 
 ## Accumulated Context
 

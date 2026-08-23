@@ -78,7 +78,7 @@ Phase 77-80 全部完成
 
 每个 phase 是自然交付边界,phase boundary 处 `go test ./...` 全绿 + gate 不倒退。
 
-### Phase 75: QUIRK 行为修正 (15 项业务怪癖关闭)
+### Phase 75: QUIRK 行为修正 (15 项业务怪癖关闭) ✅ SHIPPED 2026-08-23
 
 **Goal:** 按"修复 + 同 commit 翻转断言 + 回归用例 + 原子 commit"五步法关闭全部 15 项 QUIRK(MemoryCache.IncrementBy 全场最先,Q-11 连带存量数据迁移),让业务行为先归正、后续所有新测试从第一天起断言正确行为。
 
@@ -297,7 +297,7 @@ Phase 77-80 全部完成
 
 | Phase | Status | Plans | Requirements | Started | Completed |
 |-------|--------|-------|--------------|---------|-----------|
-| Phase 75 QUIRK 行为修正 | Not started | 0/6 | QUIRK-01..03 | - | - |
+| Phase 75 QUIRK 行为修正 | SHIPPED | 6/6 | QUIRK-01..03 | 2026-08-23 | 2026-08-23 |
 | Phase 76 测试基建落地 | Not started | 0/5 (建议) | INFRA-01..05 | - | - |
 | Phase 77 阻塞包·零基建 | Not started | 0/5 (建议) | BLOCK-01, BLOCK-02 | - | - |
 | Phase 78 阻塞包·基建解锁 | Not started | 0/7 (建议) | BLOCK-03..05 | - | - |
@@ -305,7 +305,7 @@ Phase 77-80 全部完成
 | Phase 80 长尾·scheduler+碎包 | Not started | 0/5 (建议) | TAIL-02, TAIL-03 | - | - |
 | Phase 81 收口·ratchet+gate | Not started | 0/3 (建议) | GATE-01..03 | - | - |
 
-**Total:** 7 phases / 19 requirements (0/19 done — 100% mapped,无孤儿)
+**Total:** 7 phases / 19 requirements (3/19 done — 100% mapped,无孤儿)
 
 ---
 
