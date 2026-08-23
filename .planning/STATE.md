@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.26
-milestone_name: 后端测试覆盖率优秀
-status: v1.26 milestone SHIPPED
+milestone: v1.27
+milestone_name: 后端测试覆盖率优秀 II
+status: planning
 stopped_at: ""
 last_updated: "2026-08-22T00:00:00.000Z"
 last_activity: 2026-08-22
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 34
-  completed_plans: 34
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -38,10 +38,10 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 
 ## Current Position
 
-Phase: 74
-Plan: 11 (last), all 11 + escalation 74-12 SHIPPED
-Status: Phase 74 SHIPPED 2026-08-22 — v1.26 milestone closed. 11 plans (74-01..74-11) + ad-hoc escalation 74-12 executed per 74-11 Task 1 escalation clause. Final measurement: weighted avg 55.56% (24254/43652), 0%-pkg 5 (SC-b met: cmd, cmd/agent, internal/api, internal/docs, internal/server — all entry/assembly/generated code), P2 7/10 ≥70% (operations 72.30 / asset 84.52 / network 75.34 / rpa 86.11 / vdi 85.09 / utils 95.10 / scheduler 89.82), 3 structurally blocked with UP-ONLY ratcheted floors (core 38.33 / device 39.07 / agent-server 22.08). check-coverage.sh 4 enforcement layers: weighted-avg (exit 1) + P1 floor (exit 4) + P2 floor (exit 5) + PR diff coverage ≥80% (74-10, exit 1). SC-a shortfall documented honestly (55.56% < 70%): structural blockers = addomain 2415 stmts LDAP pool / services/operations 3714 stmts Excel+geocoding HTTP / scrapligo concrete SSH driver / Core.Init full chain / agent subprocess. 15 QUIRKS locked in tests per D-12 (MemoryCache IncrementBy nil-deref + silent-0, ModelExtractor string-start-only anchoring, gmsm sm2.Decrypt panic, retry.containsIgnoreCase恒true, normalizeParentID nil-collapse etc). — 5 plans created via /gsd:plan-phase 73: 73-01 (handler 简单: duty+knowledge 538 stmts) + 73-02 (handler 复杂: rpa+vdi 910 stmts, incl. public router) + 73-03 (service 简单: duty+knowledge+network 326 stmts) + 73-04 (service 中等: monitor 485 stmts, incl. oper_log) + 73-05 (Wave 5 ratchet + per-package gate extension). All IMP-01..06 covered; D-01..D-13 锁定决策全部 honored in plans; PLAN-CHECKER initially flagged 1 BLOCKER (missing ratchet plan) + 3 WARNINGS — BLOCKER fixed by adding Plan 73-05 (mirrors Phase 72 Plan 72-13 structure); WARNINGS fixed by adjusting 73-02 Task 1 per-file target 60%→75% + adding explicit skip enumeration + post-skip coverage math in 73-01 Task 1. RESEARCH.md + VALIDATION.md generated alongside CONTEXT.md. **Phase 73-01 EXECUTED 2026-08-21**: 3/3 tasks complete, 2 test files created (`duty_handler_test.go` 1165 lines / 68 tests + `handler_test.go` 1079 lines / 67 tests = 135 total), per-package coverage `duty 83.0%` + `knowledge 84.2%` (both ≥70% threshold, IMP-01 + IMP-02 SCs met), 3 atomic commits `debe0e4` test(73-01): add duty_handler_test.go + `d8eb6f3` test(73-01): add handler_test.go + `d87aa82` docs(73-01): add plan summary. Zero business code changes (D-12 honored). **Phase 73-03 EXECUTED 2026-08-21**: 4/4 tasks complete, 3 test files (duty REWRITE 57 tests + knowledge 46 tests + network 43 tests = 146 total), per-package coverage `duty 95.6%` + `knowledge 95.3%` + `network 92.1%` (combined 94.2%, all ≥70%), 4 commits `3bd352d` + `91a7bb7` + `6fab146` + docs. Prior partial-run duty file (panicking fixture) rewritten root-cause-fixed. IMP-05 SC#5 met; IMP-06 SC#6 network half met (monitor half → 73-04). 4 business-code quirks documented in SUMMARY (duty monthly-key invalidation miss, knowledge UUID inline-Delete, network GetByID association loss, knowledge tx-crossing tag create) — NOT fixed per D-12. **Phase 73-04 EXECUTED 2026-08-21**: 5/5 tasks complete, 4 test files via D-02 mixed strategy (cache_service portwrite 纯 mock 78 tests + login_log ad_account 23 + oper_log ad_account 24 (D-03 不豁免, header lock 注释) + server_service 混合 DB+MetricsProvider mock 18 = 143 total), package coverage monitor 0%→**95.3%** (all functions ≥66.7%; 唯一 sub-70 函数 normalizeCacheKeyForService 66.7% 因 Q1 死代码), 5 commits `870480f`+`f922505`+`39d8701`+`b19fe05`+`946aa37`. **IMP-06 COMPLETE** (network 92.1% + monitor 95.3%, REQUIREMENTS.md 已勾选). 4 business quirks locked NOT fixed: Q1 normalizeCacheKeyForService 恒等(key[:6] 比 8 字节字面量恒 false → xingran: 前缀永不剥离)、Q3 loginLogService.Clean 删不存在的 sys_login_log 表(真实表 sys_logininfor → 生产必报错)、Q4 operLogService.List OperName 过滤用不存在列 operator_name(真实列 oper_name)、Q5 非法排序列时默认 time DESC 排序丢失(三处同款). Next: Phase 73-02 + Phase 73-05 EXECUTED 2026-08-21. **Phase 73-02 EXECUTED**: 4/4 tasks complete, 10 test files (~199 tests: rpa 7 files ~125T + vdi 3 files ~74T), per-package coverage `rpa 79.2%` (incl. public router 3 endpoints per D-04: register/heartbeat/progress WITHOUT JWT) + `vdi 76.2%`, 3 commits `a3454c0` + `1861079` + `e299260`. IMP-03 + IMP-04 SCs met. Documented quirks (NOT fixed per D-12): T-NORESP ensureVDIServer response.Error int→400 default (production latent bug), T-NOREDIS publishScaleCommand 0% (Redis nil panic), rpa_router.go Setup* 0% (real-service-construction smoke-only). **Phase 73-05 EXECUTED** (Wave 5 ratchet): per-plan test SHAs already committed individually (Task 0 batch adapted away — 9 test commits + 4 docs commits across 73-01..04, 0 uncommitted *_test.go per `git status --porcelain | grep _test.go`). Full backend coverage: 53 ok / 0 FAIL / 0 panic; weighted avg **25.97%** (gate %.2f, threshold 25.9 per Phase 72 1-decimal precedent); total stmts 43652 / covered 11336 / 0% pkg count 22 (down from 31). All 8 P1 packages PASS ≥70% per-package (D-04/D-10 strict): api/v1/duty 83.0%, api/v1/knowledge 84.2%, api/v1/rpa 79.2%, api/v1/vdi 76.2%, services/duty 95.6%, services/knowledge 95.3%, services/network 92.1%, services/monitor 95.3%. check-coverage.sh extended with section 3 `p1_package_check` (exit code 4) — additive to weighted-avg gate; ci.yml unchanged. Single atomic ratchet commit contains 6 files per D-07 + D-11: `.coverage-threshold` (21.5 → 25.9) + `.planning/coverage-baseline.md` (Phase 73 后 row + 8 P1 packages per-package table + per-package block) + `.github/scripts/check-coverage.sh` (section 3) + `.planning/STATE.md` + `.planning/ROADMAP.md` (Phase 73 PLANNED → SHIPPED) + `73-05-SUMMARY.md`. Zero business code changes (D-12 honored). Push deferred to orchestrator/user. **Phase 73 SHIPPED.** Phase 72 fully complete — 13 plans EXECUTED 2026-08-21 (72-01..72-13); atomic coverage ratchet 12.8% → 21.5%; 6 CORE targets partial (workorder 75.4%, monitor 71.2%, scheduler 85.5% ≥70%; system 35.4%, services/system 53.5% <70%); deferred to Phase 73/74. Zero business code changes (D-08 honored).
-Last activity: 2026-08-21
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-08-23 — Milestone v1.27 started (coverage 55.6 -> >=70%, full integration-test infra, all 15 QUIRKS fixed)
 
 ## Accumulated Context
 

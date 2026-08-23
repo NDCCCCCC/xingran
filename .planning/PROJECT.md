@@ -1,7 +1,27 @@
 ---
-last_updated: 2026-08-22
-update_trigger: v1.26 SHIPPED + ARCHIVED 2026-08-22; weighted 12.8→55.5, 0%-pkg 33→5, 4-layer gate + diff coverage live
-previous_update: 2026-08-20 v1.26 started
+last_updated: 2026-08-23
+update_trigger: v1.27 started (coverage 55.6->>=70% + full integration-test infra + all 15 QUIRKS fixed)
+previous_update: 2026-08-22 v1.26 SHIPPED
+---
+
+## Current Milestone: v1.27 后端测试覆盖率优秀 II (Backend Coverage Excellence II)
+
+**Goal:** 加权平均覆盖率 55.6% → **≥70%**(收掉 v1.26 SC-a 缺口),5 个结构阻塞包逐一攻破至 ≥70%,并修复全部 15 个 v1.26 锁定的 QUIRK。
+
+**Target features:**
+- 集成测试基建全量引入:miniredis(core) / 嵌入式 LDAP server(addomain) / HTTP mock(operations) / SSH fake(device) / 子进程 stub(agent-server)
+- 5 阻塞包各 ≥70%:addomain 2415 / operations 3714 / device 1249 / core 754 / agent-server 616 stmts
+- 15 项 QUIRK 全部修复(业务变更,每个带回归测试):MemoryCache IncrementBy nil-panic+静默-0 / ModelExtractor 锚定 / gmsm sm2.Decrypt panic 防御 / validateFile 无扩展名 panic / retry.containsIgnoreCase 恒 true / normalizeParentID 塌缩 等
+- ratcheted floor 随包达标逐个解除(70% 全量 floor 收口)
+
+**锁定决策 (v1.27 init):**
+- **D-01 目标线**: 加权 ≥70%(v1.26 SC-a 原目标,本 milestone 收口)
+- **D-02 基建解禁**: v1.26 D-04"不引入新 mock framework"解除,全量引入测试专用 devDependencies(miniredis / LDAP test server / SSH fake 等);仍禁生产依赖变更
+- **D-03 QUIRK 全修**: v1.26 D-12"零业务变更"解除——15 项 QUIRK 全部修复,每项带回归测试 + 独立原子 commit;生产语义变更需在 SUMMARY 记录影响面
+- **D-04 防线不倒退**: v1.26 建成的 4 层 gate + diff coverage 全程保持绿;ratcheted floor 只升不降,包达标即解除对应豁免
+
+**范围边界:** 覆盖率补齐 + QUIRK 修复;不做新业务功能;SCALE-02 工具包尾巴(gormutil/query/logger)不在本期范围。
+
 ---
 
 ## Current State: v1.26 后端测试覆盖率优秀 — ✅ SHIPPED + ARCHIVED 2026-08-22
