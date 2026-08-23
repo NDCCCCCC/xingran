@@ -257,12 +257,14 @@ fi
 
 GLOBAL_FLOOR="$(awk '{ sub(/\r$/, "") } $1 == "GLOBAL" { print $2; exit }' "$FLOORS_PATH")"
 
-case "$GLOBAL_FLOOR" in
-  ''|*[!0-9.]*)
-    echo "check-frontend-coverage.sh: floors file $FLOORS_FILE has no numeric GLOBAL line" >&2
-    exit 2
-    ;;
-esac
+# Structural numeric validation (WR-03): .coverage-fe-floors is a hand-edited
+# ratchet data file (D-07) — a charset check lets "GLOBAL ." or "GLOBAL 3..8"
+# through, and awk then silently coerces them to 0 / 3 ("." + 0 = 0 would make
+# the global gate pass at ANY coverage). Require <int>[.<frac>] structure.
+if ! awk -v v="$GLOBAL_FLOOR" 'BEGIN { exit (v !~ /^[0-9]+([.][0-9]+)?$/) }'; then
+  echo "check-frontend-coverage.sh: floors file $FLOORS_FILE has no numeric GLOBAL line" >&2
+  exit 2
+fi
 
 # The GLOBAL line is space-separated while dir rows are TAB-separated, so it is
 # excluded by matching the raw record (a tab-only FS would fold the whole GLOBAL
@@ -379,12 +381,13 @@ DIR_COUNT=0
 # a) floors-registered directories vs the profile.
 while IFS=$'\t' read -r fdir ffloor _; do
   [ -z "$fdir" ] && continue
-  case "$ffloor" in
-    ''|*[!0-9.]*)
-      echo "check-frontend-coverage.sh: malformed floor value for '$fdir' in $FLOORS_FILE (got '${ffloor:-<empty>}')" >&2
-      exit 2
-      ;;
-  esac
+  # Structural numeric validation (WR-03, same regex as the GLOBAL line):
+  # reject "4..9" / "." / negative / non-numeric instead of letting awk
+  # silently truncate them to a wrong (possibly always-passing) floor.
+  if ! awk -v v="$ffloor" 'BEGIN { exit (v !~ /^[0-9]+([.][0-9]+)?$/) }'; then
+    echo "check-frontend-coverage.sh: malformed floor value for '$fdir' in $FLOORS_FILE (got '${ffloor:-<empty>}')" >&2
+    exit 2
+  fi
   DIR_COUNT=$((DIR_COUNT + 1))
   line="$(printf '%s\n' "$DIR_AGG" | awk -F'\t' -v p="$fdir" '$1 == p { print $2, $3; exit }')"
   if [ -z "$line" ]; then
