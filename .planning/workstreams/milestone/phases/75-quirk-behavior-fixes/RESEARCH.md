@@ -77,10 +77,10 @@ SUMMARY 与各测试注释中。retry QUIRK 的业务影响面 = 0(零生产调�
 | geocoding RoundTripper 零改动注入 | HIGH | 构造器源码实证 |
 | Windows 本地 5 包全可跑 | MEDIUM | miniredis/LDAP/httptest 理论跨平台,agent pty 路径可能仍需 skip |
 
-**开放问题(留给 plan-phase):**
-1. vjeantet/ldapserver 对 StartTLS/LDAPS 路径的支持范围(AD 场景走 ldaps://,测试或需降级 ldap:// 明文分支);
-2. core.Core 完整 Init 图能否用 miniredis + sqlite 拼出(Close/Stop 幂等 QUIRK #6 修复顺序影响);
-3. device createConnection 是否补一个生产级 transport 注入 seam(D-03 允许,但 ForTesting 工厂已够覆盖,建议默认不加)。
+**开放问题 (RESOLVED,2026-08-23 plan-checker 收口):**
+1. vjeantet/ldapserver 对 StartTLS/LDAPS 路径的支持范围 — RESOLVED:Phase 75 不涉及 LDAP;addomain 主推线为 LDAPClientIface stub(零新依赖,vjeantet 停更风险不担),本问题整体 defer 到 Phase 76 INFRA-03,届时按 Iface-stub 路线无需回答 ldapserver 支持面。
+2. core.Core 完整 Init 图能否用 miniredis + sqlite 拼出 — RESOLVED:defer 到 Phase 78 BLOCK-03(core Init 链 302 stmts 属该 plan 范围);Phase 75 的 Q-7 Stop 幂等修复只需 manager 级单测,不依赖完整 Init 图。
+3. device createConnection 是否补生产级 transport 注入 seam — RESOLVED:Phase 75 不加(D-03 范围围栏,ForTesting 工厂已够);生产级 seam 属 Phase 76 INFRA-02 工厂注入重构,届时一并设计。
 
 **来源:** [miniredis](https://github.com/alicebob/miniredis) / [vjeantet/ldapserver](https://github.com/vjeantet/ldapserver) / [go-ldap issue #146](https://github.com/go-ldap/ldap/issues/146) / [cloudogu/go-ldap](https://github.com/cloudogu/go-ldap) + 仓库内 ci.yml、e2e_helpers.go、check-coverage.sh、各 QUIRK 测试实证。
 

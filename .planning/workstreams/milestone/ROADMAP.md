@@ -94,12 +94,13 @@ Phase 77-80 全部完成
 4. Q-11:normalizeParentID 双实现统一为 requests 语义(nil/""/"0" 全塌缩),存量 `parent_id='0'` 行经数据迁移归一为 NULL,迁移后菜单树查询无孤儿节点
 5. 每项 QUIRK 一个原子 commit(`fix(quirk-N): <语义> + 回归测试`),每个 commit 点 CI 全绿(4 层 gate + diff coverage ≥80% 把关业务变更)
 
-**Plans**: TBD(建议 5)
-- 75-01 QUIRK-01 MemoryCache.IncrementBy(nil-deref + 非法串 error)+ 翻转断言 + 删 3 处 captcha workaround — 全 milestone 第一个 plan
+**Plans**: 6(75-04 经 plan-checker 拆分,agent 与 utils/system 各 3 任务)
+- 75-01 QUIRK-01 MemoryCache.IncrementBy(nil-deref + 非法串 error)+ 翻转断言 + 删 3 处 captcha workaround — 全 milestone 第一个 plan(wave 0)
 - 75-02 device 家族:Q-3 锚定 + Q-8 尾字母 + Q-9 nextIP/ScanIPRange 同 commit
 - 75-03 core 防御家族:Q-4 sm2 长度预检 + Q-5 validateFile + Q-6 PG-only fallback + Q-7 Stop 幂等
-- 75-04 agent/utils 家族:Q-10 retry + Q-12 InitLogger + Q-13 TLS 空参 + Q-14 GetUnifiedDiff + Q-15 磁盘递归
-- 75-05 Q-11 normalizeParentID 统一 + parent_id='0' 存量数据迁移
+- 75-04 agent 家族:Q-10 retry + Q-12 InitLogger + Q-13 TLS 空参(含 main.go guard)
+- 75-05 utils/system 家族:Q-14 GetUnifiedDiff + Q-15 磁盘递归 + M-2 cpu_linux mutex
+- 75-06 Q-11 normalizeParentID 统一 + parent_id='0' 存量数据迁移(迁移 210)
 
 **Notes**:
 
