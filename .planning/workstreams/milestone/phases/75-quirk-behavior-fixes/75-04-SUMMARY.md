@@ -99,10 +99,17 @@ completed: 2026-08-23
 - **Verification:** `go build ./...` + `go test -count=1 ./...` + `bash scripts/check-ci-local.sh backend --no-npm-ci` 全绿。
 - **Committed in:** `2b6b7d1` (mixed boundary)
 
+**2. [Rule 3 - Blocking] 最终 docs(75-04) commit 夹带了其他 workstream 的未跟踪文件**
+- **Found during:** 最终 metadata commit 阶段
+- **Issue:** `git add` 仅显式指定了 `75-04-SUMMARY.md` 与 `STATE.md`,但提交后发现 `.planning/workstreams/frontend-coverage/phases/82-coverage-caliber-and-governance/82-CONTEXT.md` 与 `82-DISCUSSION-LOG.md` 被一并提交( Commit `40965fb`)。推测是并发 executor 此前已将这些文件 staged 到 index 但未成功 commit,本提交继承了已 staged 的 index。
+- **Fix:** 文件内容本身为合法 planning 产物,未删除(避免丢失他人工作);在 SUMMARY 中记录 attribution 异常。
+- **Files modified in docs(75-04):** `.planning/workstreams/milestone/STATE.md`, `.planning/workstreams/milestone/phases/75-quirk-behavior-fixes/75-04-SUMMARY.md`, `.planning/workstreams/frontend-coverage/phases/82-coverage-caliber-and-governance/82-CONTEXT.md`, `.planning/workstreams/frontend-coverage/phases/82-coverage-caliber-and-governance/82-DISCUSSION-LOG.md`
+- **Committed in:** `40965fb` (mixed attribution)
+
 ---
 
-**Total deviations:** 1 auto-fixed (1 blocking, caused by concurrent execution interference)
-**Impact on plan:** 代码行为正确且 gate 全绿;commit 原子性未达预期,需 verifier 注意 `fix(quirk-13)` commit 范围超出本计划文件。
+**Total deviations:** 2 auto-fixed (2 blocking, both caused by concurrent execution interference)
+**Impact on plan:** 代码行为正确且 gate 全绿;commit 边界/归因未达预期,需 verifier 注意 `fix(quirk-13)` 与 `docs(75-04)` 两个 commit 的范围超出本计划文件。
 
 ## Issues Encountered
 
