@@ -30,7 +30,7 @@
 - 本 workstream 整数 phase 从 82 起，单调递增到 88
 - 75-81 保留给并行 `milestone` workstream（v1.27），严禁使用
 
-- [ ] **Phase 82: 口径修正与治理基建** - vitest 全量口径切换 + 白名单登记 + 4 层 CI gate 落地（全局阈值 / per-dir floor / baseline ratchet / PR diff coverage ≥80%）
+- [x] **Phase 82: 口径修正与治理基建** - vitest 全量口径切换 + 白名单登记 + 4 层 CI gate 落地（全局阈值 / per-dir floor / baseline ratchet / PR diff coverage ≥80%） (completed 2026-08-23)
 - [ ] **Phase 83: P0 基建层全清 ≥70%** - lib / utils / hooks / store / services+router+constants+types ~3,900 stmts 各目录 ≥70% + 测试公共 harness 沉淀
 - [ ] **Phase 84: P1 组件层 ≥70%** - components 五组（shared / dashboard / layout / CronSelector+captcha+operations / network+reconciliation+零散含 design-system）≥70%
 - [ ] **Phase 85: P2 页面层 R1 — operations** - 最大单一目录 76 文件 3611 stmts ≥70%
@@ -163,7 +163,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 82. 口径修正与治理基建 | 5/5 | Plans complete (awaiting /gsd:verify-work) | |
+| 82. 口径修正与治理基建 | 5/5 | Complete    | 2026-08-23 |
 | 83. P0 基建层全清 ≥70% | 0/TBD | Not started | - |
 | 84. P1 组件层 ≥70% | 0/TBD | Not started | - |
 | 85. P2 页面层 R1 — operations | 0/TBD | Not started | - |
