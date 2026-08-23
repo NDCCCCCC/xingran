@@ -15,25 +15,16 @@ export default defineConfig({
     setupFiles: ["./src/test/setup.ts"],
     coverage: {
       provider: "v8",
+      // GOV-01 全量口径: Vitest 4 已移除 coverage.all,include 是全量口径唯一开关——
+      // 未配置 include 时只报告被 import 的文件(旧口径 24.58% 失真的来源),
+      // 584 个 src 文件(含 0 语句文件)全部进入 coverage-final.json,未测文件以 0% 计入。
+      // D-10: 白名单排除的单一真相源在下方 exclude 数组,gate 脚本做漂移检测。
+      include: ["src/**/*.{ts,tsx}"],
       reporter: ["text", "json", "html"],
-      exclude: [
-        "node_modules/",
-        "src/test/",
-        "**/*.d.ts",
-        "**/*.config.*",
-        "**/mockData/**",
-        "dist/",
-      ],
-      // Phase 63 基准阈值:基于实测 29.45/18.57/27.2/29.9 取整下调 (Phase 63 落地)。
-      // 2026-08-20 Phase 63 收口验证:实测降到 24.58/15.04/18.94/24.75 (后续 phase
-      // 新增未覆盖代码拉低),按"取整下调"原则再降到 24/15/18/24 保证 CI gate 不挂。
-      // 后续 phase 应逐步提升(目标例如 60/50/60/60)。
-      thresholds: {
-        statements: 24,
-        branches: 15,
-        functions: 18,
-        lines: 24,
-      },
+      exclude: ["src/test/", "**/*.d.ts"],
+      // D-16: 原生 thresholds 配置已整段删除——gate 唯一真相源移交外部 bash 脚本
+      // (check-frontend-coverage.sh) + .coverage-fe-floors 数据文件;保留旧值会让
+      // test:coverage 在口径切换瞬间因全量实测 3.85% < 24 直接失败。
     },
   },
   resolve: {
