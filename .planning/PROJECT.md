@@ -49,6 +49,8 @@ previous_update: 2026-08-23 v1.27 started (backend coverage 55.6->>=70%, milesto
 
 **范围边界:** 覆盖率补齐 + QUIRK 修复;不做新业务功能;SCALE-02 工具包尾巴(gormutil/query/logger)不在本期范围。
 
+**Progress:** Phase 75 (15 QUIRKS + M-2) ✅ COMPLETE 2026-08-22 · Phase 76 (测试基建: miniredis/httpmock test-only 落地 + 4 类注入缝 Driver 工厂/LDAPClientIface 16→20/re-exec stub/AST 守护, INFRA-01..05 6/6 must-haves, Windows+ubuntu CI 双绿零 Docker) ✅ COMPLETE 2026-08-23 · Phase 77+ 待执行
+
 ---
 
 ## Current State: v1.26 后端测试覆盖率优秀 — ✅ SHIPPED + ARCHIVED 2026-08-22
