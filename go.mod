@@ -5,6 +5,7 @@ go 1.24.0
 toolchain go1.24.5
 
 require (
+	github.com/alicebob/miniredis/v2 v2.38.0 // test-only (v1.27 D-02)
 	github.com/gin-contrib/cors v1.7.0
 	github.com/gin-contrib/gzip v0.0.6
 	github.com/gin-gonic/gin v1.10.0
@@ -13,6 +14,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/gosnmp/gosnmp v1.35.0
+	github.com/jarcoal/httpmock v1.4.2 // test-only (v1.27 D-02)
 	github.com/joho/godotenv v1.5.1
 	github.com/jsonata-go/jsonata v0.0.0-20250709164031-599f35f32e5f
 	github.com/lib/pq v1.10.9
@@ -44,6 +46,7 @@ require (
 	github.com/tiendc/go-deepcopy v1.7.1 // indirect
 	github.com/xuri/efp v0.0.1 // indirect
 	github.com/xuri/nfp v0.0.2-0.20250530014748-2ddeb826f9a9 // indirect
+	github.com/yuin/gopher-lua v1.1.1 // indirect
 	modernc.org/sqlite v1.40.1 // indirect
 )
 
