@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
@@ -38,6 +39,11 @@ func TestGeocodingService_HttpmockDefaultTransport(t *testing.T) {
 
 	// 生产构造器，零白盒改动：Transport 为空 → DefaultTransport 被拦截。
 	svc := NewGeocodingService("ak-test")
+
+	// 仅替换令牌桶（analog geocoding_photo_floor_test.go 同款白盒手法）：
+	// NewGeocodingService 默认挂共享 BaiduAPIRateLimiter，Geocode 会消耗其
+	// 令牌——TestBaiduAPIRateLimiter 断言该全局限流器满额，污染即红。
+	svc.rateLimiter = NewRateLimiter(100, time.Hour)
 
 	lng, lat, err := svc.Geocode(context.Background(), "测试地址")
 	require.NoError(t, err)
