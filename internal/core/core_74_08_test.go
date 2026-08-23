@@ -408,6 +408,8 @@ func TestCaptchaBackgroundService_ValidateFile(t *testing.T) {
 	assert.ErrorContains(t, svc.validateFile("bg.gif", 100), "不支持的文件格式")
 	// 无扩展名(Q-5):不得 panic,应返回不支持的文件格式
 	assert.ErrorContains(t, svc.validateFile("noext", 100), "不支持的文件格式")
+	// 空文件名(Q-5):同样属于无扩展名边界
+	assert.ErrorContains(t, svc.validateFile("", 100), "不支持的文件格式")
 	// 扩展名为单个点(Q-5):filepath.Ext 返回 "."
 	assert.ErrorContains(t, svc.validateFile("bg.", 100), "不支持的文件格式")
 }
