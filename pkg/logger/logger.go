@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -28,6 +29,9 @@ const (
 )
 
 var (
+	// logMu 保护 log/fileLogger/fileWriter 三全局:Init(显式或 GetLogger 懒触发)
+	// 与并发读取之间的同步点。Q-7 race 验证暴露出懒初始化数据竞争,行为不变修复。
+	logMu      sync.RWMutex
 	log        *logrus.Logger
 	fileLogger *logrus.Logger
 	fileWriter io.WriteCloser
@@ -59,6 +63,13 @@ func DefaultConfig() *Config {
 
 // Init 初始化日志系统
 func Init(cfg *Config) error {
+	logMu.Lock()
+	defer logMu.Unlock()
+	return initLocked(cfg)
+}
+
+// initLocked 初始化日志系统(调用方必须已持有 logMu 写锁)
+func initLocked(cfg *Config) error {
 	if cfg == nil {
 		cfg = DefaultConfig()
 	}
@@ -178,8 +189,17 @@ func createConsoleLogger(level logrus.Level) *logrus.Logger {
 
 // GetLogger 获取日志记录器
 func GetLogger() *logrus.Logger {
+	logMu.RLock()
+	l := log
+	logMu.RUnlock()
+	if l != nil {
+		return l
+	}
+
+	logMu.Lock()
+	defer logMu.Unlock()
 	if log == nil {
-		if err := Init(DefaultConfig()); err != nil {
+		if err := initLocked(DefaultConfig()); err != nil {
 			// 记录到stderr，因为日志系统尚未初始化
 			fmt.Fprintf(os.Stderr, "日志初始化失败，使用标准日志: %v\n", err)
 			fallbackToStdLogger()
@@ -258,13 +278,16 @@ func Fatalf(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	// 直接写一条 Fatal 到 fileLogger(绕过 stdout logger 的 hook 链路,避免 os.Exit
 	// 在 hook 执行前切断 flush 时机)。
-	if fileLogger != nil {
-		fileLogger.Fatal(msg)
+	logMu.RLock()
+	fl, fw := fileLogger, fileWriter
+	logMu.RUnlock()
+	if fl != nil {
+		fl.Fatal(msg)
 	}
 	// 同时写 stdout,保留原终端输出格式
 	GetLogger().Error(msg)
-	if fileWriter != nil {
-		_ = fileWriter.Close()
+	if fw != nil {
+		_ = fw.Close()
 	}
 	os.Exit(1)
 }
@@ -291,12 +314,17 @@ func SetLevel(level string) error {
 
 // GetFileLogger 获取纯文件日志记录器（只写入文件）
 func GetFileLogger() *logrus.Logger {
+	logMu.RLock()
+	defer logMu.RUnlock()
 	return fileLogger
 }
 
 // Close 关闭日志系统
 func Close() {
-	if fileWriter != nil {
-		fileWriter.Close()
+	logMu.RLock()
+	fw := fileWriter
+	logMu.RUnlock()
+	if fw != nil {
+		fw.Close()
 	}
 }

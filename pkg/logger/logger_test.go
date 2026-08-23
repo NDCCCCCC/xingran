@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -237,4 +238,38 @@ func (nopCloser) Close() error { return nil }
 func TestStringSplit_LogFilenames(t *testing.T) {
 	parts := strings.Split("app.log", ".")
 	assert.Equal(t, 2, len(parts))
+}
+
+// Q-7 race 验证暴露的回归:GetLogger 懒初始化曾在并发首调时与 Init 形成数据竞争
+// (pkg/logger 全局 log 无锁读写)。本用例在 -race 下判别:重置全局后并发首调。
+func TestGetLogger_ConcurrentLazyInit(t *testing.T) {
+	logMu.Lock()
+	savedLog, savedFileLogger, savedFileWriter := log, fileLogger, fileWriter
+	log, fileLogger, fileWriter = nil, nil, nil
+	logMu.Unlock()
+	t.Cleanup(func() {
+		logMu.Lock()
+		log, fileLogger, fileWriter = savedLog, savedFileLogger, savedFileWriter
+		logMu.Unlock()
+	})
+
+	tmp := t.TempDir()
+	const goroutines = 32
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			l := GetLogger()
+			assert.NotNil(t, l)
+		}()
+	}
+	// 并发的显式 Init 也不许与懒初始化竞争
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_ = Init(&Config{Level: "info", LogDir: tmp, ConsoleOutput: false})
+	}()
+	wg.Wait()
+	assert.NotNil(t, GetLogger())
 }
