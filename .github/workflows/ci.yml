@@ -2,7 +2,8 @@
 #
 # Two independent jobs (backend slow, frontend fast → parallel feedback):
 #   backend:  golangci-lint + go test (packages that need no live services)
-#   frontend: lint → type-check → vitest → build (cheap-to-expensive order)
+#   frontend: lint → type-check → test:coverage → coverage gate → build
+#             (cheap-to-expensive order; coverage gate = Phase 82 全量口径 gate)
 #
 # Deploy lives in deploy.yml (separate file on purpose):
 #   - this file carries NO secrets context and only `contents: read`
@@ -162,9 +163,69 @@ jobs:
       - name: Type check
         run: npm run type-check
 
-      - name: Test
-        # vitest auto-runs once (no watch) when CI=true
-        run: npm run test
+      - name: Test (coverage)
+        # package.json 已改 vitest run --coverage (82-01): 全量口径 statements
+        # 报告 (coverage.include 圈定全 src, 白名单 cad 两目录排除), 产出
+        # coverage/coverage-final.json 供本 job 的 gate 与 PR diff job 复用。
+        run: npm run test:coverage
+
+      - name: Coverage gate
+        # GOV-03/GOV-05 (82-04): 全局阈值 + per-dir floor + 白名单漂移三合一,
+        # exit 1/4/6 任一即本 job 红。json 缺失软跳过逻辑在脚本内 (exit 0),
+        # 对称 backend job 语义——不挂 if: always()。
+        # working-directory: . 覆盖 job 级 xingran-react-frontend (Pitfall 4):
+        # 否则 .github/scripts 与 .coverage-fe-floors 相对 frontend 目录解析不到。
+        working-directory: .
+        run: bash .github/scripts/check-frontend-coverage.sh xingran-react-frontend/coverage/coverage-final.json .coverage-fe-floors
+
+      - name: Upload coverage artifact
+        # D-03 (82-04): vitest json + html 报告目录随 artifact 上传供本地 debug
+        # 下载, 命名与 backend-coverage 对齐。if: always() 对称 backend job:
+        # gate 失败仍发布 artifact。path 相对 workspace root (upload 不走 job
+        # defaults); upload v4 以路径最小公共祖先为 artifact 根, 目录前缀被
+        # 剥离后 json 与 html 报告位于 artifact 根——frontend-coverage-diff
+        # job 的 download 必须带 path 输入还原 (见该 job 注释)。
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: xingran-react-frontend/coverage/
+          retention-days: 30
 
       - name: Build
         run: npm run build
+
+  frontend-coverage-diff:
+    # GOV-04 (82-04, D-02): PR-only 前端 diff coverage ≥80% gate, 逐字段对称
+    # 后端 coverage-diff job。复用 frontend job 上传的 vitest json artifact
+    # (零重复测试); push 无 diff base (已被 frontend job 的全局阈值 gate 把守),
+    # 故仅 PR 触发。
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: frontend
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # merge-base (three-dot) diff needs full history
+          fetch-depth: 0
+
+      - name: Download coverage report
+        # Reuses the frontend job's coverage-final.json — no second test run.
+        # 与后端 coverage-diff 的唯一刻意偏差: download 带 path 输入。upload v4
+        # 上传目录时以路径最小公共祖先为 artifact 根 (xingran-react-frontend/
+        # 前缀被剥离, json 与 html 报告位于 artifact 根); 无 path 输入时 json
+        # 解压到 workspace 根而非脚本第一参数路径, gate 会在所有 PR 上命中
+        # 脚本内 json 缺失软跳过而静默 exit 0 (GOV-04 失效)。后端上传的是
+        # workspace 根单文件, 故其 download 无需 path。
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-coverage
+          path: xingran-react-frontend/coverage
+
+      - name: Diff coverage gate (≥80%)
+        # Exit 1 when <80% of changed executable .ts/.tsx lines are covered.
+        # Exits 0 (skip) when the PR touches no testable lines.
+        # 本 job 无 defaults.working-directory, 从 workspace root 跑; artifact
+        # 内容已经 path 输入解压回 xingran-react-frontend/coverage/ 下。
+        run: bash .github/scripts/check-frontend-diff-coverage.sh xingran-react-frontend/coverage/coverage-final.json origin/${{ github.base_ref }} 80
