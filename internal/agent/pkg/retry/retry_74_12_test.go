@@ -39,11 +39,9 @@ func TestIsNetworkError(t *testing.T) {
 	} {
 		assert.True(t, IsNetworkError(errors.New(msg)), msg)
 	}
-	// QUIRK(D-12 不修复): containsIgnoreCase 直接 return true — 任何长度
-	// >= pattern 的错误串都被判为可重试网络错误("some business error" 19 字符
-	// >= "connection refused" 17 字符 → true)。只有短于全部 pattern 的串才 false。
 	assert.True(t, IsNetworkError(errors.New("Connection Refused")))
-	assert.True(t, IsNetworkError(errors.New("some business error")), "QUIRK: 长串恒 true")
+	assert.False(t, IsNetworkError(errors.New("some business error")), "精确匹配: 长业务串不再恒 true")
+	assert.False(t, IsNetworkError(errors.New("validation failed with long message")))
 	assert.False(t, IsNetworkError(errors.New("x")), "短于全部 pattern 才 false")
 }
 
@@ -102,17 +100,14 @@ func TestDoWithRetry_MaxRetriesExceeded(t *testing.T) {
 }
 
 func TestDoWithRetry_NonRetryableFailsFast(t *testing.T) {
-	// QUIRK(D-12 不修复): IsNetworkError 对长串恒 true(见上) → "validation failed"
-	// 被当作可重试错误重试到上限(4 次调用),不 fails-fast。用自定义精确 Retryable
-	// 验证非可重试路径本身正确。
+	// IsNetworkError 精确匹配后,"validation failed" 不再被误判为可重试,应直接 fails-fast
 	calls := 0
 	bizErr := errors.New("validation failed")
-	exact := func(err error) bool { return false } // 全部不可重试
-	err := DoWithRetry(context.Background(), fastConfig(3, exact), func() error {
+	err := DoWithRetry(context.Background(), fastConfig(3, IsNetworkError), func() error {
 		calls++
 		return bizErr
 	})
-	assert.ErrorIs(t, err, bizErr, "自定义 Retryable=false 直接返回")
+	assert.ErrorIs(t, err, bizErr, "业务错误不可重试,直接返回")
 	assert.Equal(t, 1, calls)
 }
 
@@ -141,9 +136,10 @@ func TestDoWithRetry_NilConfigUsesDefault(t *testing.T) {
 }
 
 func TestContainsHelpers(t *testing.T) {
-	// contains: 前缀直配 / IgnoreCase 分支恒 true(QUIRK: containsIgnoreCase
-	// 直接 return true — 只要 s 长度 >= substr 即命中)
+	// contains: 前缀直配 / containsIgnoreCase 精确忽略大小写包含
 	assert.True(t, contains("connection refused", "connection"))
-	assert.True(t, contains("xyz", "abc"), "containsIgnoreCase 恒 true")
+	assert.True(t, contains("Connection REFUSED", "refused"), "containsIgnoreCase 忽略大小写")
+	assert.False(t, contains("xyz", "abc"), "containsIgnoreCase 精确匹配,非恒 true")
+	assert.False(t, contains("some business error", "connection refused"), "业务串不匹配网络 pattern")
 	assert.False(t, contains("ab", "abc"), "长度不足才 false")
 }
