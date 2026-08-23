@@ -280,6 +280,20 @@ if [ -n "$MALFORMED" ]; then
   exit 2
 fi
 
+# Structural numeric validation (WR-03): per-dir floor values must be numeric
+# (<int>[.<frac>]); reject "3..8" / "." / "-1" / "abc" before gate math so awk
+# cannot silently coerce them to a wrong (possibly always-passing) floor.
+MALFORMED_FLOOR="$(awk -F'\t' '
+  { sub(/\r$/, "") }
+  /^#/ || /^GLOBAL([ \t]|$)/ || /^[[:space:]]*$/ { next }
+  NF >= 2 && $2 !~ /^[0-9]+([.][0-9]+)?$/ { print }
+' "$FLOORS_PATH")"
+if [ -n "$MALFORMED_FLOOR" ]; then
+  echo "check-frontend-coverage.sh: malformed floor rows in $FLOORS_FILE (expected <dir><TAB>floor with numeric value):" >&2
+  printf '%s\n' "$MALFORMED_FLOOR" >&2
+  exit 2
+fi
+
 DIR_TABLE="$(awk -F'\t' '
   { sub(/\r$/, "") }
   /^#/ || /^GLOBAL([ \t]|$)/ || /^[[:space:]]*$/ { next }
