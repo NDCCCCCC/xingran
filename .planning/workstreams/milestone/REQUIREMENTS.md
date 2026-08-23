@@ -58,11 +58,11 @@ sources:
 | QUIRK-01 | Phase 75 | 75-01 | Complete |
 | QUIRK-02 | Phase 75 | 75-02, 75-03, 75-04, 75-05 | Complete |
 | QUIRK-03 | Phase 75 | 75-06 | Complete |
-| INFRA-01 | Phase 76 | TBD | Pending |
-| INFRA-02 | Phase 76 | TBD | Pending |
-| INFRA-03 | Phase 76 | TBD | Pending |
-| INFRA-04 | Phase 76 | TBD | Pending |
-| INFRA-05 | Phase 76 | TBD | Pending |
+| INFRA-01 | Phase 76 | 76-01 | Pending |
+| INFRA-02 | Phase 76 | 76-02 | Pending |
+| INFRA-03 | Phase 76 | 76-03 | Pending |
+| INFRA-04 | Phase 76 | 76-04 | Pending |
+| INFRA-05 | Phase 76 | 76-05 | Pending |
 | BLOCK-01 | Phase 77 | TBD | Pending |
 | BLOCK-02 | Phase 77 | TBD | Pending |
 | BLOCK-03 | Phase 78 | TBD | Pending |

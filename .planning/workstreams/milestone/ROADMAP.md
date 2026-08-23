@@ -128,18 +128,19 @@ Phase 77-80 全部完成
 4. LDAPClientIface mock 补全(walk/分页语义),FailoverClient 顺序遍历/maxHops 可经接口驱动;agent 子进程 stub 统一为 TestHelperProcess re-exec 模式,`exec.Command("echo")` 类 Windows/CI 平台分歧根源清除
 5. AST 守护测试上线:扫描生产 .go 文件禁止引用 `*ForTesting` 符号(仿 status_constants_test.go),测试隔离契约由编译器(_test.go)+ 命名(ForTesting 后缀)+ AST 三层保证
 
-**Plans**: TBD(建议 5)
-- 76-01 miniredis + httpmock go.mod 落地 + pkg/cache Redis 冒烟(含三坑防护用例)
-- 76-02 ScrapliWrapper Driver 工厂注入重构(生产路径不变)
-- 76-03 LDAPClientIface mock 补全 + FailoverClient 接口 seam
-- 76-04 TestHelperProcess re-exec helper + 替换 exec.Command("echo") 先例
-- 76-05 AST 守护测试(ForTesting 隔离契约)
+**Plans**: 5(wave 1→2→3;76-01 必须最先落地 go.mod,76-05 收官验证全仓最终态)
+- [ ] 76-01-PLAN.md — miniredis + httpmock go.mod 落地 + pkg/cache Redis 冒烟(三坑防护)+ geocoding httpmock PoC(tidy 保活)+ cache_74_08 过期注释联动(wave 1)
+- [ ] 76-02-PLAN.md — ScrapliWrapper Driver 工厂 var 抽取(错误字符串 byte 不变)+ FileTransport 注入演示测试 + testdata fixture(wave 2)
+- [ ] 76-03-PLAN.md — LDAPClientIface 16→19 方法 + FailoverClient clientFactory 字段 + operation 签名接口化 + 20 处闭包机械替换 + mock walk/分页 + failover 接口驱动测试(wave 2)
+- [ ] 76-04-PLAN.md — TestHelperProcess re-exec helper(四形态)+ 5 处 echo 分组替换(newCommand 组 / t.Setenv 环境继承组,保住 runCommand/runCommandOutput 生产覆盖)(wave 2)
+- [ ] 76-05-PLAN.md — AST 守护测试(WalkDir + worktrees 跳过 + 白名单 + 注毒自证 + 三层契约成文)(wave 3,验证全仓最终态)
 
 **Notes**:
 
 - redismock(锁死 go-redis v8)/ gock(休眠)/ testcontainers(Docker)明令禁止引入
 - `_test.go` import `golang.org/x/crypto/ssh` 会移除 go.mod 的 `// indirect` 注释——属测试可见性变化非生产依赖新增,SUMMARY 显式说明以免误判违反 D-02
-- fake SSH server 的实现留给 Phase 78 device plan,本 phase 只交付工厂入口;httpmock 使用纪律(DeactivateAndRestore / 独立 MockTransport 二选一)在本 phase 成文
+- fake SSH server 的实现留给 Phase 78 device plan,本 phase 只交付工厂入口;httpmock 使用纪律(Activate(t) 自动清理 / 独立 MockTransport 二选一)在本 phase 成文
+- wave 结构依据:76-01 是唯一 go.mod 变更者,单独 wave 1 隔离 `go get`/`go mod tidy` 的模块状态写入窗口;wave 2 三个 plan 文件集互斥(device / addomain+scheduler / agent-server);76-05 与 76-02 同包(internal/device)且需对全仓最终态做守护,排 wave 3
 
 ---
 
@@ -298,7 +299,7 @@ Phase 77-80 全部完成
 | Phase | Status | Plans | Requirements | Started | Completed |
 |-------|--------|-------|--------------|---------|-----------|
 | Phase 75 QUIRK 行为修正 | SHIPPED | 6/6 | QUIRK-01..03 | 2026-08-23 | 2026-08-23 |
-| Phase 76 测试基建落地 | Not started | 0/5 (建议) | INFRA-01..05 | - | - |
+| Phase 76 测试基建落地 | IN PROGRESS (planned) | 0/5 | INFRA-01..05 | 2026-08-23 | - |
 | Phase 77 阻塞包·零基建 | Not started | 0/5 (建议) | BLOCK-01, BLOCK-02 | - | - |
 | Phase 78 阻塞包·基建解锁 | Not started | 0/7 (建议) | BLOCK-03..05 | - | - |
 | Phase 79 长尾·services root | Not started | 0/6 (建议) | TAIL-01 | - | - |
@@ -362,4 +363,4 @@ Test Infrastructure
 
 ---
 
-*Last updated: 2026-08-23 — v1.27 backend-test-coverage-excellence-II milestone roadmap drafted: 7 phases (75-81) / 19 requirements / 100% mapped。QUIRK-first 排序(IncrementBy 最先解锁 core captcha),零 Docker 双环境同构,gap-math 6287 stmts(BLOCK ~2402 + TAIL ~3885)。v1.26 已 SHIPPED 2026-08-22(详情归档 `.planning/milestones/v1.26-phases/`)。*
+*Last updated: 2026-08-23 — Phase 76 planned: 5 plans / 3 waves(INFRA-01..05 全映射;76-01 wave 1 独占 go.mod 写入窗口 → 76-02/03/04 wave 2 并行(文件集互斥)→ 76-05 wave 3 收官守护全仓最终态)。v1.27 roadmap 此前于 2026-08-23 drafted:7 phases (75-81) / 19 requirements / 100% mapped。QUIRK-first 排序(IncrementBy 最先解锁 core captcha),零 Docker 双环境同构,gap-math 6287 stmts(BLOCK ~2402 + TAIL ~3885)。v1.26 已 SHIPPED 2026-08-22(详情归档 `.planning/milestones/v1.26-phases/`)。*
