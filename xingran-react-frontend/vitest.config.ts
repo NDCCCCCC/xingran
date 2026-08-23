@@ -21,7 +21,18 @@ export default defineConfig({
       // D-10: 白名单排除的单一真相源在下方 exclude 数组,gate 脚本做漂移检测。
       include: ["src/**/*.{ts,tsx}"],
       reporter: ["text", "json", "html"],
-      exclude: ["src/test/", "**/*.d.ts"],
+      exclude: [
+        "src/test/",
+        "**/*.d.ts",
+        // QUAL-02 白名单 (D-10: 白名单排除的单一真相源在此——gate 脚本 82-02 做
+        // 漂移检测, cad 条目出现在 coverage json 中即视为配置漂移失败):
+        // 合计 1028/22602 ≈ 4.55% ≤ 5% 上限; 复审条件 (D-11): 目录自身语句覆盖率达
+        // ≥70% 即可启动移除, milestone 收口时强制重审。
+        // cad-editor: 804 stmts / 8 文件 (重画布低确定性 UI)
+        // cad-elements: 224 stmts / 5 文件 (重画布低确定性 UI)
+        "src/components/cad-editor/**",
+        "src/components/cad-elements/**",
+      ],
       // D-16: 原生 thresholds 配置已整段删除——gate 唯一真相源移交外部 bash 脚本
       // (check-frontend-coverage.sh) + .coverage-fe-floors 数据文件;保留旧值会让
       // test:coverage 在口径切换瞬间因全量实测 3.85% < 24 直接失败。
