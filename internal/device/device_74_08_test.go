@@ -152,10 +152,25 @@ func TestIPHelpers(t *testing.T) {
 	next2 := nextIP(net.ParseIP("192.0.2.255"))
 	assert.Equal(t, "192.0.3.0", next2.String())
 
-	// 全 255 → 返回非 nil 全零形态 IP(QUIRK D-12: net.IP.Equal 4/16 字节形态差异使
-	// 函数内 IPv4zero 判定失效;ScanIPRange 的 ipToUint32(0) 比较使其终止,不发散)
+	next3 := nextIP(net.ParseIP("192.168.1.255"))
+	assert.Equal(t, "192.168.2.0", next3.String())
+
+	// 0.0.0.0 自增
+	next4 := nextIP(net.ParseIP("0.0.0.0"))
+	assert.Equal(t, "0.0.0.1", next4.String())
+
+	// 全 255 回卷后返回 nil(Q-9:消除 16 字节输入下返回垃圾 IP 的隐患)
 	last := nextIP(net.ParseIP("255.255.255.255"))
-	require.NotNil(t, last)
+	assert.Nil(t, last)
+}
+
+func TestScanIPRange_LastIPTerminates(t *testing.T) {
+	// 终点为 255.255.255.255 时,nextIP 回卷返回 nil,ScanIPRange 应正常终止(不 panic/不挂死)
+	start := time.Now()
+	results := ScanIPRange("255.255.255.255", "255.255.255.255", 10*time.Millisecond)
+	elapsed := time.Since(start)
+	assert.Less(t, elapsed, 2*time.Second, "应在 2 秒内返回,不挂死")
+	assert.LessOrEqual(t, len(results), 1, "仅扫描一个 IP")
 }
 
 func TestDetectVendorAndDeviceType(t *testing.T) {
