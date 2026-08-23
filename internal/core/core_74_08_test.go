@@ -376,7 +376,7 @@ func TestMetricsCacheService(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, info)
 
-	// Stop 双重调用会 close 已关闭 channel(QUIRK D-12);defer 一次即可
+	// Q-7 已修复:Stop 经 sync.Once 幂等,双重调用安全(见 manager_stop_75_03_test.go)
 }
 
 // ---------------- CaptchaBackgroundService ----------------
