@@ -47,7 +47,7 @@ None — all discussed areas have explicit user decisions.
 ### Deferred Ideas (OUT OF SCOPE)
 - 前端具体测试补齐 —— Phase 83(P0 基建层)、Phase 84(P1 组件层)、Phase 85-87(P2 页面层三波)。
 - 公共测试 harness 沉淀 —— Phase 83 成功标准之一。
-- 若全量 coverage transform 超出 15 分钟,在执行阶段实测后由 Phase 82 末尾决定是否上调 CI timeout。
+- 若全量 coverage transform 超过 15 分钟,在执行阶段实测后由 Phase 82 末尾决定是否上调 CI timeout。
 - CI 缓存/分片优化:当前不引入,先通过 D-04 观察,必要时未来 phase 处理。
 </user_constraints>
 
@@ -254,7 +254,7 @@ for (const [p, f] of Object.entries(d)) {
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
-|---------|-------------|-------------|-----|
+|---------|-------------|-------------|------|
 | 覆盖率测量/报告 | 自写 instrumentation | vitest + @vitest/coverage-v8（已有） | V8 runtime coverage + AST remapping，精度等同 istanbul [CITED: vitest.dev/guide/coverage] |
 | JSON 解析 | awk 手撕嵌套 JSON | 内联 `node -e`（运行时已有） | json 实测单行 5.6MB 嵌套结构；node 是前端 CI 必然存在的运行时，不算引入依赖 |
 | diff hunk 解析 | 从零写 diff 解析器 | 复刻 `check-diff-coverage.sh` 第 1 段 awk（已验证的 unified=0 解析） | 后端已在 PR-only CI 上线运行，边界情况（`\ No newline`、removed line 不推进行号）都已处理 |
@@ -480,23 +480,28 @@ git diff --unified=0 "${BASE_REF}...HEAD" \
 
 **除上述 3 条外，本研究全部关键主张均为 [VERIFIED]（本地实测 / 官方文档 / 仓库文件三方之一以上支撑）。**
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **D-14 全局阈值 3.8% 的 CI 校准点**
    - What we know: 本地实测 3.847%（vitest 摘要 3.84%），阈值 3.8 通过，余量 0.047pp；击穿需新增 ~268 未覆盖 stmts。
    - What's unclear: CI Linux 首次实测值（历史上后端 CI/本地有 ±0.5pp 级差异案例）。
    - Recommendation: plan 中把「首次 CI 全量运行读数」设为显式检查点；若 CI <3.8，以 CI 读数写 `.coverage-fe-floors` 全局行（D-14 语义「失败即阻断」不变，数值是 D-07 管辖的数据）。
+   - RESOLVED: 82-05-PLAN Task 1 步骤 2/4 采纳——CI 首跑读数为显式检查点；gate 红时 GLOBAL := min(CI 实测, 3.8) 向下取一位小数，与基线文档追加同一 commit 落盘。
 2. **SC-1「584 文件」的验证口径（Pitfall 7）**
    - What we know: 白名单 exclude 后 per-file 报告为 571 文件；584 含 cad 13 文件。
    - What's unclear: SC-1 字面要求 584 全部出现与其前半句「白名单排除后」矛盾。
    - Recommendation: VALIDATION.md 拆两步断言——口径切换瞬间 584（未排白名单）、白名单落地后 571 + 3.85%。
+   - RESOLVED: 82-01-PLAN Task 1（files=584）/ Task 2（files=571 + pct=3.85）两步断言已落地，82-VALIDATION.md 按两步记载。
 3. **ROADMAP per-dir 清单与实测的小额差异（login 62 vs 95、零散 224 vs 189）**
    - What we know: 实测表可由 gate 脚本 `--init` 复算，数字自洽（pages 合计 13144 与 ROADMAP 精确一致）。
    - Recommendation: 基线文档快照以实测表为准；ROADMAP 不改（后续 phase 的 wave 验收以 gate 实测为准）。
+   - RESOLVED: 82-02-PLAN Task 2 步骤 2 与 82-04-PLAN Task 2 步骤 3 采纳「以 gate 脚本可复算的实测表为准」，ROADMAP 不改。
 4. **`(src root)` / `src/api` 共 21 stmts 的 floor 归属（Pitfall 8）**
    - What we know: D-05 粒度下它们是「无主面积」；REQUIREMENTS 要求白名单外无无主面积。
    - Recommendation: floor 表加 `(src root)` 与 `api` 两个显式条目（合计仅 21 stmts，可并入 Phase 83 INFRA-05 收尾覆盖）。
+   - RESOLVED: 82-02-PLAN floors 契约（28 目录条目）与 must_haves 明确含 `(src root)` 与 `api` 两个显式条目，21 stmts 无主面积消除。
 5. **ROADMAP 执行顺序笔误**：「Phase 82 → 81 → 82 → 83…」中的 81 属并行 workstream 保留号——不影响本 phase，提请后续修正。
+   - RESOLVED: 不影响本 phase——全部 plans 的依赖图未引用该顺序；排序笔误留待 ROADMAP 后续维护修正（超出本 phase 范围，不计入本 phase 交付）。
 
 ## Environment Availability
 
@@ -560,7 +565,7 @@ git diff --unified=0 "${BASE_REF}...HEAD" \
 ### Known Threat Patterns for CI gate scripts
 
 | Pattern | STRIDE | Standard Mitigation |
-|---------|--------|---------------------|
+|--------|--------|---------------------|
 | gate 静默通过（解析失败/空输入被当成功） | Elevation of Privilege（绕过质量门） | 后端「no PASS line → exit 1」防御收尾模式照抄；`set -euo pipefail` |
 | 第三方 coverage action 供应链注入 | Tampering | 零第三方 action：后端 74-10 已验证 marketplace 选项不可信，前端沿用 in-repo 自实现 [VERIFIED: check-diff-coverage.sh 头注释] |
 | 阈值数据文件被悄悄调低（ratchet 倒退） | Repudiation | `.coverage-fe-floors` 走 PR review + 基线文档同 commit 追加纪律（D-04 后端对称）；CI diff 可见任何下调 |
