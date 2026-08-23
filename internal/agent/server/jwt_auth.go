@@ -86,6 +86,10 @@ func NewJWTAuthenticator(secret, backendURL, agentID, vmID string, tlsConfig *tl
 
 // NewTLSConfigFromConfig 从配置创建 TLS 配置
 func NewTLSConfigFromConfig(certFile, keyFile, caFile string, verifyCertificates bool) (*tls.Config, error) {
+	if certFile == "" && keyFile == "" && caFile == "" {
+		return nil, errors.New("TLS 配置不能全空: 至少提供 certFile/keyFile/caFile 之一(未启用 TLS 请传 nil)")
+	}
+
 	config := &tls.Config{
 		MinVersion: tls.VersionTLS13,
 	}

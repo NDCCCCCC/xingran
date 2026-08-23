@@ -50,10 +50,18 @@ func TestAccount_Struct(t *testing.T) {
 func TestInitLogger(t *testing.T) {
 	// 空 path → 默认
 	require.NoError(t, InitLogger("info", ""))
-	// QUIRK: InitLogger 内部 level parse 失败降级 info 但**不返回 err**
-	// (ParseLevel 后丢弃 err,直接 return nil)。invalid level → nil err。
-	err := InitLogger("bogus", "")
-	require.NoError(t, err, "QUIRK: InitLogger 应返回 nil even with bogus level")
+
+	// 非法 level 返回 error,但 logger 仍完成初始化(后续调用不 panic)
+	err := InitLogger("bogus-level", "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "无效的日志级别")
+	assert.NotPanics(t, func() {
+		Info("info after bogus level")
+		Debug("debug after bogus level")
+	})
+
+	// 合法 level 无错
+	require.NoError(t, InitLogger("debug", ""))
 }
 
 func TestLoggerShortcuts(t *testing.T) {
@@ -177,10 +185,11 @@ func TestParseTokenClaims_Invalid(t *testing.T) {
 }
 
 func TestNewTLSConfigFromConfig_Errors(t *testing.T) {
-	// QUIRK: 全部空字符串参数不报错,仅 verifyCertificates=true 时构造 empty TLS config
+	// 全空字符串参数必须报错
 	cfg, err := NewTLSConfigFromConfig("", "", "", true)
-	require.NoError(t, err)
-	assert.NotNil(t, cfg)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "TLS 配置不能全空")
+	assert.Nil(t, cfg)
 
 	// 提供无效 CA 文件 → err
 	_, err = NewTLSConfigFromConfig("", "", "/nonexistent/ca.pem", true)

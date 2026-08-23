@@ -56,7 +56,7 @@ func (e *ModelExtractor) extractHuaweiModel() string {
 		// AR系列路由器: AR2220, AR1220E, AR1220V等
 		`(?:^|[\s\r\n])AR[0-9]{3,4}[A-Z]*`,
 		// USG系列防火墙: USG6000, USG6680, USG67xx等
-		`(?:^|[\s\r\n])USG[0-9]{4,5}(?:-[A-Z0-9]+)?`,
+		`(?:^|[\s\r\n])USG[0-9]{4,5}[A-Z]{0,2}(?:-[A-Z0-9]+)?`,
 		// AirEngine系列AP: AirEngine5760-10, AirEngine5761-21等
 		`(?:^|[\s\r\n])AirEngine[0-9]{4,6}(?:-[A-Z0-9]+)?`,
 		// AP系列: AP4030DN, AP5030DN, AP6010SN等

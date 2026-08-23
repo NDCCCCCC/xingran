@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/google/uuid"
@@ -14,9 +15,9 @@ var logger *logrus.Logger
 func InitLogger(logLevel string, logPath string) error {
 	logger = logrus.New()
 
-	// 设置日志级别
-	level, err := logrus.ParseLevel(logLevel)
-	if err != nil {
+	// 设置日志级别(解析失败降级 info,但返回 error)
+	level, parseErr := logrus.ParseLevel(logLevel)
+	if parseErr != nil {
 		level = logrus.InfoLevel
 	}
 	logger.SetLevel(level)
@@ -41,6 +42,9 @@ func InitLogger(logLevel string, logPath string) error {
 		}
 	}
 
+	if parseErr != nil {
+		return fmt.Errorf("无效的日志级别 %q: %w", logLevel, parseErr)
+	}
 	return nil
 }
 

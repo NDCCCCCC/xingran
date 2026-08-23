@@ -2,14 +2,15 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/gin-gonic/gin"
-	"github.com/xingran-next/xingran-go-backend/internal/agent/server"
 	"github.com/sirupsen/logrus"
+	"github.com/xingran-next/xingran-go-backend/internal/agent/server"
 )
 
 func main() {
@@ -47,15 +48,21 @@ func main() {
 		log.Printf("Failed to initialize logger: %v", err)
 	}
 
-	// 创建 TLS 配置
-	tlsConfig, err := server.NewTLSConfigFromConfig(
-		config.TLSCertFile,
-		config.TLSKeyFile,
-		config.CAFile,
-		config.VerifyCertificates,
-	)
-	if err != nil {
-		server.Fatal("Failed to create TLS config:", err)
+	// 创建 TLS 配置(仅当至少提供一个 TLS 文件时;否则用 nil 走 NewJWTAuthenticator 默认安全分支)
+	var tlsConfig *tls.Config
+	if config.TLSCertFile != "" || config.TLSKeyFile != "" || config.CAFile != "" {
+		var err error
+		tlsConfig, err = server.NewTLSConfigFromConfig(
+			config.TLSCertFile,
+			config.TLSKeyFile,
+			config.CAFile,
+			config.VerifyCertificates,
+		)
+		if err != nil {
+			server.Fatal("Failed to create TLS config:", err)
+		}
+	} else {
+		server.Info("TLS 未配置,使用默认传输")
 	}
 
 	// 初始化组件
