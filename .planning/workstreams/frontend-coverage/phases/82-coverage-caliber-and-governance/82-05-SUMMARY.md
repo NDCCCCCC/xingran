@@ -62,7 +62,7 @@ completed: 2026-08-23
 ### 证据一：验证 PR 双绿 + diff gate 实读 profile（防御断言）
 
 - **PR**: https://github.com/NDCCCCCC/xingran/pull/6 — `chore(82): CI gate verification`，docs-only 单 commit `4d1361b`（基线文档 +2 行占位，不触 `xingran-react-frontend/src`），**squash merge = 8c7b69f（2026-08-23T13:48:02Z，用户本人 merge）**
-- **PR run 32642143749**（分支 chore/82-ci-gate-verify）：
+- **PR run 32642143749**（分支 chore/82-ci-gate-verify-v2——PR #5 污染作废后从 main 重建的新分支名；计划 verify 块字面查旧分支名，续接执行时按实际正式分支替换执行，断言原样）：
   - frontend job **pass**，`Coverage gate` 步骤输出：`TOTAL 21574 830 3.85%` / `PASS: weighted avg 3.85% >= threshold 3.80%` / `PASS: per-dir floor gate — 28/28 directories >= floor`
   - frontend-coverage-diff job **pass**，日志防御断言（T-82-05-04 / T-82-04-05 真实 CI 复核）：
     - json 缺失软跳过提示 **0 次**（`Test step skipped` / `skipping gate` 均未出现）——download-artifact `with.path: xingran-react-frontend/coverage` 的 LCA 还原生效
@@ -114,7 +114,22 @@ CI 实测 3.85%（run 32642143749）== 本地实测 3.85% **零漂移**（Ubuntu
 
 ## Deviations from Plan
 
-None - plan executed exactly as written.（PR #5 分支污染作废重开属计划外事故但按 T-82-05-03 防线处置——关闭重开干净分支，非计划偏离；无 Rule 1-3 触发。）
+### Auto-fixed Issues
+
+**1. [Rule 3 - Blocking] verify 块 PRRUN 查询的分支名替换**
+- **Found during:** 续接会话执行计划 automated verify 块
+- **Issue:** 计划 verify 块字面查询 `--branch chore/82-ci-gate-verify`，但 PR #5 污染作废后正式验证 PR #6 重建在 `chore/82-ci-gate-verify-v2`（head 4d1361b）——按字面查询取到的是旧污染分支上的 PR #5 时代 run（32639775886，head 3924d0d），断言对象错位
+- **Fix:** 同一断言逻辑改查 `--branch chore/82-ci-gate-verify-v2` 取得正式 run 32642143749，四项断言（DIFF_GATE_RAN_ON_PROFILE / MAIN_DIFF_JOB_SKIPPED / FRONTEND_GREEN_ON_MAIN / SHA_BACKFILLED）原样全过
+- **Files modified:** 无（执行口径修正，计划文件保持历史原样）
+- **Commit:** 无（续接会话批准范围仅限两笔 commit）
+
+**2. [Rule 1 - Bug] 本 SUMMARY 证据一 run 分支标注笔误**
+- **Found during:** 同上（排查 verify 失败时核实 run 归属）
+- **Issue:** 证据一节初版将 run 32642143749 标注为「分支 chore/82-ci-gate-verify」——实为 `chore/82-ci-gate-verify-v2`
+- **Fix:** 标注改为 -v2 并注明分支重建缘由（本处修正；基线文档无此问题，未提及分支名）
+- **Files modified:** 82-05-SUMMARY.md（待随 checkpoint 后续收尾 commit 入库）
+
+PR #5 分支污染作废重开属计划外事故但按 T-82-05-03 防线处置——关闭重开干净分支，非计划偏离。
 
 ## Issues Encountered
 
