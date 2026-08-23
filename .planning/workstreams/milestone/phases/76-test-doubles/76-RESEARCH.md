@@ -500,20 +500,23 @@ func TestNoProductionForTestingReferences(t *testing.T) {
 | A4 | FailoverClient 工厂用 struct 字段(clientFactory)而非包级 var,与 device 的 var 方案不对称 | Pattern 3 | 两种都正确;字段方案因 FailoverClient 本身就是 per-instance 构造(NewFailoverClient),字段更符合仓库 DI 风格;planner 可统一改 var,但 28 调用点不受影响 |
 | A5 | httpmock PoC 选 geocoding(NewGeocodingService 无 Redis 依赖路径) | Pattern 1 | 若 PoC 改选别的调用点需确认该点同样走 DefaultTransport(凡 `&http.Client{}` Transport==nil 均满足) |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **INFRA-01 的 SC#1 措辞精度(gomap diff 口径)**
    - What we know:direct +2、indirect +2、go.sum 若干行是模块机制必然。
    - What's unclear:SC#1 "生产依赖零变更"是否把 indirect 行视为"变更"。
    - Recommendation:76-01 SUMMARY 首段即写明 diff 形态预览(见 Pitfall 1),verifier 按此口径验收;无需阻塞 plan。
+   - RESOLVED: 采纳 Recommendation——已嵌入 76-01 Task 1 action 与 success_criteria（SUMMARY 首段预写 go.mod diff 形态：direct +2 带 test-only 注释 / indirect +2 gopher-lua+go-testdeep / 生产 require 零变更），verifier 按此口径验收。
 2. **A2 的"walk/分页语义"边界**
    - What we know:接口 stub 线能驱动 service 层;具体客户端分页降级测试需 wire server。
    - What's unclear:用户是否预期本 phase 覆盖后者。
    - Recommendation:按 REQUIREMENTS INFRA-03 原文("扩展 stub 主推线,零新依赖")取窄解读——本 phase 只做接口/工厂/mock;wire 线留给 Phase 78 按缺口决定。planner 在 76-03 plan 里写明该边界即可。
+   - RESOLVED: 按窄解读裁决——76-03 objective 已写边界声明（本 phase 只做接口/工厂/mock；ldap_client.go:243-295 searchWithPaging 分页降级与 wire 级 server 留 Phase 78 按缺口决定）。
 3. **76-02 演示测试的 fixture 放哪**
    - What we know:portwrite fixtures 在 internal/services/portwrite/testdata/;device 包自身无 testdata。
    - What's unclear:device 包新建 testdata/ 还是复用 portwrite 的。
    - Recommendation:internal/device/testdata/ 新建(自包含;portwrite 的 fixture 是命令回放序列,device 的 Open 场景 prompt 形态不同)。
+   - RESOLVED: 新建 internal/device/testdata/ 自包含——76-02 Task 2 已按此规划（Open 场景 prompt 形态与 portwrite 命令回放序列不同）。
 
 ## Environment Availability
 
