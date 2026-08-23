@@ -31,9 +31,8 @@ func TestCalculateHash(t *testing.T) {
 }
 
 func TestGetUnifiedDiff_Same(t *testing.T) {
-	// QUIRK: 配置相同时 GetUnifiedDiff 返回空字符串(不输出 headers)。
 	d := GetUnifiedDiff("x=1", "x=1", 3)
-	assert.Equal(t, "", d)
+	assert.Equal(t, "--- old\n+++ new\n", d)
 }
 
 func TestGetUnifiedDiff_Different(t *testing.T) {
