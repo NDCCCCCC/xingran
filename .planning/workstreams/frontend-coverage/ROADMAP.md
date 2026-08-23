@@ -84,7 +84,24 @@ Plans:
   3. 测试公共 harness（mock api 客户端 / antd message·Modal / router wrapper / 常用 store 预置等高频样板）沉淀为可导入的测试工具模块并有使用示例，P1/P2 测试直接复用
   4. 全量 vitest 0 失败（现有 19 文件 159 测试全数通过，无回归），CI gate 绿，全局 ratchet 阈值上调至 Phase 83 后实测值（单调上升）
 
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+**Wave 1**
+
+- [ ] 83-01-CR01-verify-trial-PLAN.md — 验证已落库的 CR-01/WR-01~03 gate 修复、清理 ci.yml 注释、发起并关闭试验 PR
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 83-02-utils-coverage-PLAN.md — utils 层 950 stmts 测试补齐至 ≥70%，bump utils floor
+- [ ] 83-03-lib-coverage-PLAN.md — lib 层 1042 stmts 测试补齐至 ≥70%（含 api.ts 双轨直测），bump lib floor
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 83-04-hooks-store-coverage-PLAN.md — hooks + store 层测试补齐至 ≥70%，bump hooks/store floor
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 83-05-services-router-harness-PLAN.md — services/router/constants/types 收尾 ≥70% + 测试公共 harness 定稿
 
 ### Phase 84: P1 组件层 ≥70%
 

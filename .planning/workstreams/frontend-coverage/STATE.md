@@ -4,12 +4,12 @@ milestone: v1.28
 milestone_name: milestone
 status: verifying
 stopped_at: Phase 83 context gathered
-last_updated: "2026-08-23T16:25:11.954Z"
+last_updated: "2026-08-23T16:58:32.728Z"
 last_activity: 2026-08-23
 progress:
   total_phases: 7
   completed_phases: 1
-  total_plans: 5
+  total_plans: 10
   completed_plans: 5
   percent: 14
 ---
@@ -36,7 +36,7 @@ Progress: [██████████] 100%（Phase 82 内 5/5 plans；7 pha
 
 **Velocity:**
 
-- Total plans completed: 10（Phase 82 全部完成：82-01 口径切换 / 82-02 主 gate / 82-03 diff gate / 82-04 ci.yml 接线 / 82-05 真实 CI 验证）
+- Total plans completed: 15（Phase 82 全部完成：82-01 口径切换 / 82-02 主 gate / 82-03 diff gate / 82-04 ci.yml 接线 / 82-05 真实 CI 验证）
 
 ## Accumulated Context
 
