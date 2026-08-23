@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.28
-milestone_name: 前端测试覆盖率优秀
-workstream: frontend-coverage
-status: roadmap-created
-last_updated: "2026-08-23T01:48:21.000Z"
-last_activity: 2026-08-23
+milestone_name: milestone
+status: planning
+stopped_at: Phase 82 context gathered
+last_updated: "2026-08-23T04:09:16.724Z"
+last_activity: 2026-08-23 — v1.28 roadmap created（7 phases / 23 reqs 全映射 / Phase 82-88）
 progress:
   total_phases: 7
   completed_phases: 0
@@ -35,6 +35,7 @@ Progress: [░░░░░░░░░░] 0%
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 0（首个 plan 执行后开始记录）
 
 ## Accumulated Context
@@ -42,6 +43,7 @@ Progress: [░░░░░░░░░░] 0%
 ### Decisions
 
 v1.28 init 锁定决策（详见 PROJECT.md v1.28 段，不可违反）:
+
 - D-01 目标线: 语句 ≥70%（全量口径，statements 3.67% → ≥70%）
 - D-02 范围: 全 src + 白名单 ≤5%（候选 cad-editor 804 + cad-elements 224 ≈ 4.5%，终版 Phase 82 登记）
 - D-03 CI gate: 4 层对称后端 v1.26（全局阈值 + per-dir floor + baseline ratchet + PR diff ≥80%）
@@ -61,6 +63,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-23 (roadmap creation)
-Stopped at: ROADMAP.md + STATE.md + REQUIREMENTS.md traceability 写入完成，Phase 82 待 `/gsd:plan-phase 82`
-Resume file: None
+Last session: 2026-08-23T04:09:16.689Z
+Stopped at: Phase 82 context gathered
+Resume file: .planning/workstreams/frontend-coverage/phases/82-coverage-caliber-and-governance/82-CONTEXT.md
