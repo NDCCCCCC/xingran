@@ -405,22 +405,10 @@ func (r *RedisCache) HDel(ctx context.Context, key string, fields ...string) err
 }
 
 // HKeys 获取Hash所有字段名
+// 字段名不携带 key 前缀，直接返回；原先按 prefixLen 裁剪字段名是错误逻辑
+// （76 WR-01：前缀 "xingran" 时任何长度 >8 的字段名都会被截掉前 8 个字符）。
 func (r *RedisCache) HKeys(ctx context.Context, key string) ([]string, error) {
-	keys, err := r.client.HKeys(ctx, r.buildKey(key)).Result()
-	if err != nil {
-		return nil, err
-	}
-
-	if r.prefix != "" {
-		prefixLen := len(r.prefix) + 1
-		for i, key := range keys {
-			if len(key) > prefixLen {
-				keys[i] = key[prefixLen:]
-			}
-		}
-	}
-
-	return keys, nil
+	return r.client.HKeys(ctx, r.buildKey(key)).Result()
 }
 
 // GetStats 获取Redis统计信息

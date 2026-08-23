@@ -93,20 +93,22 @@ func TestRedisBasicCommandSurface(t *testing.T) {
 	assert.Equal(t, []string{"a", "b", ""}, vals)
 
 	// HSet / HGet / HGetAll / HKeys / HDel
-	// （字段名保持短于前缀长度，规避 HKeys 对字段名的历史前缀裁剪行为）
-	require.NoError(t, r.HSet(ctx, "h1", "f1", "hv1"))
-	require.NoError(t, r.HSet(ctx, "h1", "f2", "hv2"))
-	fv, err := r.HGet(ctx, "h1", "f1")
+	// （字段名刻意长于 prefixLen=len("xingran")+1=8，实证 WR-01 修复：
+	//   HKeys 不再对字段名做前缀裁剪，长字段名原样返回）
+	require.NoError(t, r.HSet(ctx, "h1", "department_name", "hv1"))
+	require.NoError(t, r.HSet(ctx, "h1", "display_order", "hv2"))
+	fv, err := r.HGet(ctx, "h1", "department_name")
 	require.NoError(t, err)
 	assert.Equal(t, "hv1", fv)
 	all, err := r.HGetAll(ctx, "h1")
 	require.NoError(t, err)
-	assert.Equal(t, map[string]string{"f1": "hv1", "f2": "hv2"}, all)
+	assert.Equal(t, map[string]string{"department_name": "hv1", "display_order": "hv2"}, all)
 	fields, err := r.HKeys(ctx, "h1")
 	require.NoError(t, err)
-	assert.ElementsMatch(t, []string{"f1", "f2"}, fields)
-	require.NoError(t, r.HDel(ctx, "h1", "f1"))
-	_, err = r.HGet(ctx, "h1", "f1")
+	assert.ElementsMatch(t, []string{"department_name", "display_order"}, fields,
+		"长字段名应原样返回（字段名不携带 key 前缀，不应被裁剪）")
+	require.NoError(t, r.HDel(ctx, "h1", "department_name"))
+	_, err = r.HGet(ctx, "h1", "department_name")
 	assert.Error(t, err, "HDel 后字段应返回 redis.Nil（HGet 保持原语义）")
 }
 
