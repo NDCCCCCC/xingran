@@ -321,9 +321,18 @@ func TestSM2EncryptDecrypt_Roundtrip(t *testing.T) {
 	_, err = DecryptWithSM2("!!!not-base64!!!", priv)
 	assert.Error(t, err)
 
-	// QUIRK(D-12 不修复): 合法 base64 但非 SM2 密文的输入会让
-	// tjfoc/gmsm sm2.Decrypt 直接 panic(makeslice: len out of range,
-	// gmsm v1.4.1 sm2.go:321 不做长度预检)。该子用例移除,仅记录。
+	// 合法 base64 但非 SM2 密文 → 错误,不得 panic(Q-4)
+	_, err = DecryptWithSM2(base64.StdEncoding.EncodeToString([]byte("garbage-not-a-ciphertext")), priv)
+	require.Error(t, err)
+
+	// 96 字节边界样本(非前缀与前缀两种形态)同样返回错误,不得 panic(Q-4)
+	sample96NoPrefix := make([]byte, 96)
+	sample96WithPrefix := make([]byte, 96)
+	sample96WithPrefix[0] = 0x04
+	_, err = DecryptWithSM2(base64.StdEncoding.EncodeToString(sample96NoPrefix), priv)
+	require.Error(t, err)
+	_, err = DecryptWithSM2(base64.StdEncoding.EncodeToString(sample96WithPrefix), priv)
+	require.Error(t, err)
 }
 
 func TestIsHexString(t *testing.T) {

@@ -47,9 +47,14 @@ func TestGetAllDiskInfo_Smoke(t *testing.T) {
 	assert.NotEmpty(t, disks)
 }
 
-// GetDiskInfoDetailed 内部调用 getDiskInfoByPlatform,后者又递归调用
-// GetDiskInfoDetailed → 栈溢出 panic (QUIRK: D-12 不修)。
-// 跳过该函数的调用测试,仅通过 SystemMetrics struct 构造做覆盖。
+func TestGetDiskInfoDetailed(t *testing.T) {
+	path := t.TempDir()
+	total, avail, err := GetDiskInfoDetailed(path)
+	assert.NoError(t, err)
+	assert.Greater(t, total, uint64(0))
+	assert.Greater(t, avail, uint64(0))
+	assert.LessOrEqual(t, avail, total)
+}
 
 func TestGetNetworkStats_Smoke(t *testing.T) {
 	rx, tx, err := GetNetworkStats()

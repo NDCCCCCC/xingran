@@ -36,19 +36,18 @@ func TestModelExtractor_Extract(t *testing.T) {
 		vendor   models.DeviceVendor
 		want     string
 	}{
-		// QUIRK(D-12 不修复): 锚点 (?:^|[\s\r\n]) 的前导字符进入 FindString 结果,
-		// 随后 ^[A-Z0-9-]+ 对含前导空白的 match 提取为空 → 仅型号在**串首**才命中;
-		// 行首/空格分隔的真实 sysDescr 形状一律返回空串(caller 有旧回退,
-		// 见 device_discovery_service.go:610 ExtractModelFromSysDescr)。
 		{"空输入", "", models.VendorHuawei, ""},
 		{"华为 S 系列-串首", "S5735-L48T4X-A Huawei Versatile Routing Platform", models.VendorHuawei, "S5735-L48T4X-A"},
-		{"华为 S 系列-行首(QUIRK 空)", "Huawei Platform\nS5735-L48T4X-A\nCopyright", models.VendorHuawei, ""},
+		{"华为 S 系列-行首", "Huawei Platform\nS5735-L48T4X-A\nCopyright", models.VendorHuawei, "S5735-L48T4X-A"},
 		{"华为 AR-串首", "AR2220 Router Software", models.VendorHuawei, "AR2220"},
+		{"华为 S 系列-空格分隔", "Huawei Versatile S5735-L48T4X-A Platform", models.VendorHuawei, "S5735-L48T4X-A"},
 		{"华为 USG-串首", "USG6000E Security Gateway", models.VendorHuawei, "USG6000"},
 		{"华为无匹配", "Huawei Versatile Routing Platform Software", models.VendorHuawei, ""},
 		{"H3C S 系列-串首", "S5120-28P-SI H3C Comware Software", models.VendorH3C, "S5120-28P-SI"},
 		{"H3C MSR-串首", "MSR3640 H3C Comware V7", models.VendorH3C, "MSR3640"},
+		{"H3C S 系列-行首", "H3C Comware\nS5120-28P-SI Software", models.VendorH3C, "S5120-28P-SI"},
 		{"锐捷 RG-S-串首", "RG-S5750-28GT-P-S Ruijie RGOS 11.4", models.VendorRuijie, "RG-S5750-28GT-P-S"},
+		{"锐捷 RG-S-行首", "RGOS\nRG-S5750-28GT-P-S", models.VendorRuijie, "RG-S5750-28GT-P-S"},
 		{"锐捷 RSR-串首", "RSR20-04 Ruijie RSR Routing OS", models.VendorRuijie, "RSR20-04"},
 		{"迈普 MP-串首", "MP2800 Maipu Router", models.VendorMaipu, "MP2800"},
 		{"未知厂商通用提取-串首", "S5700-X Cisco-like System", "", "S5700-X"},
@@ -60,6 +59,20 @@ func TestModelExtractor_Extract(t *testing.T) {
 			assert.Equal(t, tc.want, got)
 		})
 	}
+}
+
+func TestModelExtractor_DualPath_DiscoveryFallback(t *testing.T) {
+	// 双路径回归:发现链先走 NewModelExtractor().Extract(),再回退 ExtractModelFromSysDescr()。
+	// 修复前,行首/空格分隔样本会让新提取器返回 "",实际落库 model 依赖 :611 回退结果;
+	// 修复后两条路径对同一样本结果一致,部分设备落库 model 将从"回退结果"变"新提取器结果"。
+	sysDescr := "Huawei Platform\nS5735-L48T4X-A\nCopyright"
+	want := "S5735-L48T4X-A"
+
+	gotNew := NewModelExtractor(sysDescr, models.VendorHuawei).Extract()
+	gotOld := ExtractModelFromSysDescr(sysDescr, models.VendorHuawei)
+
+	assert.Equal(t, want, gotNew, "NewModelExtractor 应提取行首型号")
+	assert.Equal(t, want, gotOld, "ExtractModelFromSysDescr 回退路径结果应一致")
 }
 
 func TestIdentifyVendor(t *testing.T) {

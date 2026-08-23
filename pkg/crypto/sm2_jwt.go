@@ -390,11 +390,18 @@ func DecryptWithSM2(ciphertext string, privateKey *sm2.PrivateKey) (string, erro
 		return "", fmt.Errorf("base64 decode failed: %w", err)
 	}
 
+	// SM2 mode-1(C1C3C2 未压缩)密文最小 97 字节: 0x04(1) + X||Y(64) + SM3(32) + 密文(≥0)
+	if len(data) < 96 {
+		return "", fmt.Errorf("sm2 密文长度非法: %d", len(data))
+	}
+
 	var plaintext []byte
 
-	plaintext, err = sm2.Decrypt(privateKey, data, 1)
-	if err == nil {
-		return decodeHexEncodedResult(plaintext, "mode1")
+	if len(data) >= 97 {
+		plaintext, err = sm2.Decrypt(privateKey, data, 1)
+		if err == nil {
+			return decodeHexEncodedResult(plaintext, "mode1")
+		}
 	}
 
 	if len(data) > 0 && data[0] != 0x04 {
@@ -407,9 +414,11 @@ func DecryptWithSM2(ciphertext string, privateKey *sm2.PrivateKey) (string, erro
 		}
 	}
 
-	plaintext, err = sm2.Decrypt(privateKey, data, 0)
-	if err == nil {
-		return decodeHexEncodedResult(plaintext, "mode0")
+	if len(data) >= 97 {
+		plaintext, err = sm2.Decrypt(privateKey, data, 0)
+		if err == nil {
+			return decodeHexEncodedResult(plaintext, "mode0")
+		}
 	}
 
 	if len(data) > 0 && data[0] != 0x04 {
