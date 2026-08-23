@@ -297,7 +297,7 @@ Phase 77-80 全部完成
 
 | Phase | Status | Plans | Requirements | Started | Completed |
 |-------|--------|-------|--------------|---------|-----------|
-| Phase 75 QUIRK 行为修正 | Not started | 0/5 (建议) | QUIRK-01..03 | - | - |
+| Phase 75 QUIRK 行为修正 | Not started | 0/6 | QUIRK-01..03 | - | - |
 | Phase 76 测试基建落地 | Not started | 0/5 (建议) | INFRA-01..05 | - | - |
 | Phase 77 阻塞包·零基建 | Not started | 0/5 (建议) | BLOCK-01, BLOCK-02 | - | - |
 | Phase 78 阻塞包·基建解锁 | Not started | 0/7 (建议) | BLOCK-03..05 | - | - |
