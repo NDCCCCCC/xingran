@@ -101,3 +101,5 @@ TOTAL                            3958       215    5.43%    118
 > amends this file with the actual short SHA. `.coverage-fe-floors` 的每次变更
 > 必须与本文件的追加落在同一 commit；floor 只升不降（D-06 初值 = 实测 −0.5pp
 > 的噪声余量纪律见 `.coverage-fe-floors` 头注释与 gate 脚本头注释摘录）。
+
+CI 验证 PR 记录（占位）
