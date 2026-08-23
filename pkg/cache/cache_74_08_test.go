@@ -159,11 +159,13 @@ func TestMemoryCache_IncrementDecrement(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, time.Duration(-1), ttl)
 
-	// QUIRK(D-12 不修复): 非数值字符串解析失败被静默吞掉,按 0 计继续累加
+	// 非数值字符串 → ErrNotInteger,原值不被改写
 	require.NoError(t, m.Set(ctx, "bad", "not-num", 0))
-	n, err = m.IncrementBy(ctx, "bad", 1)
-	require.NoError(t, err, "解析失败不上抛,按 0 累加")
-	assert.Equal(t, int64(1), n)
+	_, err = m.IncrementBy(ctx, "bad", 1)
+	assert.ErrorIs(t, err, ErrNotInteger)
+	v, err := m.Get(ctx, "bad")
+	require.NoError(t, err)
+	assert.Equal(t, "not-num", v)
 
 	// 不可解析类型(map)→ ErrInvalidType
 	require.NoError(t, m.Set(ctx, "mapv", map[string]int{"a": 1}, 0))

@@ -200,9 +200,11 @@ func (m *MemoryCache) IncrementBy(ctx context.Context, key string, value int64) 
 		case int64:
 			currentValue = v
 		case string:
-			if parsed, err := strconv.ParseInt(v, 10, 64); err == nil {
-				currentValue = parsed
+			parsed, err := strconv.ParseInt(v, 10, 64)
+			if err != nil {
+				return 0, ErrNotInteger
 			}
+			currentValue = parsed
 		default:
 			return 0, ErrInvalidType
 		}
