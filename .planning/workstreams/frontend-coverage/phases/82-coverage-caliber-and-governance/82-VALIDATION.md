@@ -46,9 +46,9 @@ created: 2026-08-23
 | 82-02-T2 | 82-02 | 2 | GOV-03, GOV-05 | T-82-02-02/03 | exit 1/4/6 独立可区分 | integration（gate 干跑矩阵） | 五分支矩阵：真实 0 / 无参 2 / GLOBAL 5.0→1 / components 90.0→4 / cad 注入→6 + --init 幂等 diff | ⬜ pending |
 | 82-03-T1 | 82-03 | 2 | GOV-04 | T-82-03-01/02 | base-ref 校验 + 引号 | integration（软过干跑） | `bash -n` + 无参→2 + 坏 ref→2 + base=HEAD 空 diff→0 | ⬜ pending |
 | 82-03-T2 | 82-03 | 2 | GOV-04 | T-82-03-03 | 新文件不免费通行 | integration（合成基线） | 空树 commit-tree 基线：threshold 80→exit 1 + UNCOVERED 清单；threshold 0→exit 0 + DIFF 数值行 | ⬜ pending |
-| 82-04-T1 | 82-04 | 3 | GOV-03, GOV-04 | T-82-04-01/02 | backend job 零改动 | integration（YAML/结构断言） | pyyaml 解析 + `git show main:` 区间 diff 断言共享 job 未变 + frontend 步骤序 + diff job 四件套 grep | ⬜ pending |
+| 82-04-T1 | 82-04 | 3 | GOV-03, GOV-04 | T-82-04-01/02 | backend job 零改动 | integration（YAML/结构断言） | pyyaml 解析 + `git show main:` 区间 diff 断言共享 job 未变 + frontend 步骤序 + diff job 五件套 grep（needs/PR-only/fetch-depth/artifact/download path 还原 DIFF_ARTIFACT_PATH_RESTORED） | ⬜ pending |
 | 82-04-T2 | 82-04 | 3 | GOV-02, QUAL-02 | T-82-04-04 | 数字可复算 | manual-only（文档审查）+ 自动核算 | node -e 复算 json stmts/cov 与文档记载一致 + 白名单三列/4.55%/ratchet schema grep | ⬜ pending |
-| 82-05-T1 | 82-05 | 4 | GOV-03, GOV-04 | T-82-05-01/02 | 校准只降不升留档 | integration（真实 CI） | gh 证据链：PR checks 含 diff job / main push 无 diff job + frontend success / SHA 回填无 TBD 残留 | ⬜ pending |
+| 82-05-T1 | 82-05 | 4 | GOV-03, GOV-04 | T-82-05-01/02 | 校准只降不升留档 | integration（真实 CI） | gh 证据链：PR checks 含 diff job + 日志断言 DIFF_GATE_RAN_ON_PROFILE（实读 profile 非软跳过）/ main push diff job skipped + frontend success / SHA 回填无 TBD 残留 + 基线含「Phase 82 CI 实测读数」行 | ⬜ pending |
 | 82-05-T2 | 82-05 | 4 | 全 phase | — | N/A | checkpoint:human-verify | 人工核验 PR 双绿 + main job 列表 + 本地三件套 + 基线文档审阅 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
