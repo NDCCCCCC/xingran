@@ -4,10 +4,10 @@ milestone: v1.27
 milestone_name: 后端测试覆盖率优秀 II
 status: planning
 stopped_at: ""
-last_updated: "2026-08-22T00:00:00.000Z"
-last_activity: 2026-08-22
+last_updated: "2026-08-23T00:00:00.000Z"
+last_activity: 2026-08-23
 progress:
-  total_phases: 0
+  total_phases: 7
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -38,10 +38,10 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 75 (QUIRK 行为修正 — 15 项业务怪癖关闭)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-08-23 — Milestone v1.27 started (coverage 55.6 -> >=70%, full integration-test infra, all 15 QUIRKS fixed)
+Status: Roadmap created (7 phases 75-81, 19 reqs 100% mapped) — ready for /gsd-plan-phase 75
+Last activity: 2026-08-23 — v1.27 ROADMAP drafted: Phase 75 QUIRK-first (IncrementBy 解锁 core captcha) → 76 测试基建 (miniredis/httpmock + 4 类注入缝) → 77/78 阻塞包两批 → 79/80 TAIL 长尾两批 → 81 收口 (ratchet ≥70 + P2_RATCHET 删除 + audit); gap-math 6287 stmts (BLOCK ~2402 + TAIL ~3885)
 
 ## Accumulated Context
 

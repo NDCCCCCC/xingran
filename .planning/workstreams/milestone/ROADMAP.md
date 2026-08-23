@@ -1,6 +1,6 @@
 ---
-last_updated: 2026-08-22
-update_trigger: Phase 71 plan 71-01b executed (verify + push + amend half; CI Coverage gate SHIPPED at 12.8% threshold on main)
+last_updated: 2026-08-23
+update_trigger: v1.27 roadmap created — 7 phases (75-81) / 19 reqs 100% mapped / QUIRK-first sequencing (IncrementBy 最先解锁 core captcha)
 ---
 
 # Roadmap: XingRan-Next 运维管理系统
@@ -34,163 +34,261 @@ update_trigger: Phase 71 plan 71-01b executed (verify + push + amend half; CI Co
 - ✅ **v1.24 字典与状态值治理 (Dict & Status Governance)** — Phase 69 (shipped 2026-08-19)
 - ✅ **v1.25 系统设置页面布局重构 (Settings Page Layout Redesign)** — Phase 70 (shipped 2026-08-19)
 - ✅ **Phase 63 前端工具链自动化 (Frontend Toolchain Automation)** — Phase 63 (shipped 2026-08-20)
-- ✅ **v1.26 后端测试覆盖率优秀 (Backend Test Coverage Excellence)** — Phases 71-74 — **SHIPPED 2026-08-22** (weighted 12.8→55.5, 0%-pkg 33→5, 4-layer gate + diff coverage live; SC-a shortfall honestly documented)
+- ✅ **v1.26 后端测试覆盖率优秀 (Backend Test Coverage Excellence)** — Phases 71-74 — **SHIPPED 2026-08-22** (weighted 12.8→55.5, 0%-pkg 33→5, 4-layer gate + diff coverage live; SC-a shortfall honestly documented; phase 详情已归档 `.planning/milestones/v1.26-phases/`)
+- **v1.27 后端测试覆盖率优秀 II (Backend Test Coverage Excellence II)** — Phases 75-81 — **IN PROGRESS 2026-08-23**(weighted 55.60 → ≥70, 5 结构阻塞包 + TAIL 长尾逐一 ≥70, 15 项 QUIRK 全修, miniredis/httpmock 零 Docker 基建)
 
 ---
 
-## Current Milestone: v1.26 后端测试覆盖率优秀 (Backend Test Coverage Excellence) — ✅ SHIPPED 2026-08-22
+## Current Milestone: v1.27 后端测试覆盖率优秀 II (Backend Test Coverage Excellence II) — IN PROGRESS
 
-**Goal:** 后端 Go 加权平均测试覆盖率 **12.8% → ≥70%**(优秀等级),P0/P1 业务模块零测试清零,CI 落地 coverage 阈值 gate + PR diff coverage,使覆盖率从此不可无声倒退。
+**Goal:** 后端 Go 加权平均测试覆盖率 **55.60% → ≥70%**(收掉 v1.26 SC-a 缺口 6287 stmts,含数学修正后的 TAIL 长尾),5 结构阻塞包 + 长尾包逐一 ≥70%,15 项 QUIRK 全部修复。
 
-**Source planning data:** `.planning/quick/260820-backend-test-coverage-scan/SUMMARY.md`(2026-08-20 纯只读扫描,74 业务包 / 43652 stmts / 加权 12.8% / 33 个 0% 包 / P0-P2 分级)。
+**数学校验基线**(2026-08-23 gate 实测):24269/43652 = 55.60%;70% 需 30556 covered;缺口 6287 = BLOCK ~2402 + TAIL ~3885。不含 TAIL 目标必失守(v1.26 SC-a 覆辙预防)。
+
+**Source planning data:**
+- `.planning/research/v1.27-features.md`(5 阻塞包未覆盖语句地形图 + 投入产出排序: operations > agent/server > core > device > addomain;零基建可先行 stmts ≈1870)
+- `.planning/research/v1.27-architecture.md`(基建接入架构: QUIRK-01 必须最先修、零 Docker 进程内替身、A1 隔离契约 + AST 守护)
+- `.planning/research/v1.27-stack.md`(仅 2 个新 test-only 依赖: miniredis/v2 v2.38+ 与 httpmock v1.4.x)
+- `.planning/research/v1.27-pitfalls.md`(miniredis 三坑 / fake SSH 三坑 / 15 项 QUIRK blast radius / Q-11 需数据迁移)
 
 **Milestone success criteria:**
 
-- SC-a: 加权平均 ≥70%(12.8% → ≥70%)
-- SC-b: 0% 覆盖业务包 ≤5(33 → ≤5)
-- SC-c: CI coverage threshold gate 生效(失败即阻断)
-- SC-d: 全量 `go test` 零失败(flaky 已修,`5ead742`)
-- SC-e: PR diff coverage ≥80% 门槛启用
+- SC-a: 加权平均 ≥70%(43652 stmts 口径;数学 30556/43652)
+- SC-b: 5 结构阻塞包(operations / agent-server / core / device / addomain)逐一 ≥70%
+- SC-c: 15 项 QUIRK 全部修复(每项原子 commit + 同 commit 翻转断言 + 回归用例)
+- SC-d: TAIL 长尾清零(services root / scheduler / 碎包 ≥70%,堵住 v1.26 数学修正揭示的隐藏缺口)
+- SC-e: ratchet 闭环(`.coverage-threshold` 55.5 → ≥70 实测值;P2_RATCHET 豁免行删除回落全量 floor;4 层 gate + diff coverage 全程绿)
 
-**Phase 编号:** 从 v1.25 末尾 Phase 70 续编(71+)。
+**Phase 编号:** 从 v1.26 末尾 Phase 74 续编(75+)。
 
-**研究:** 已跳过——覆盖率数据/模块清单/CI 现状均在 quick-260820-bcs 扫描中落盘,无需域研究。
+**排序原则(研究结论锁定):** QUIRK 修复先于覆盖补齐——被 v1.26 测试 workaround 依赖的 QUIRK-01 最优先(连锁解锁 core captcha 真实链路),Q-7 Stop 幂等是 core Init Close 收尾前置,Q-3/Q-8 提取器修正好让 device 新测试从第一天断言正确行为;基建(miniredis/工厂/iface/re-exec)第二批落地;随后零基建阻塞包与基建解锁阻塞包分两批攻破;TAIL 两批清欠;最后镜像 74-11 收口。
 
 ### Phase Dependency Graph
 
 ```
-Phase 71 (治理基线 + CI gate)
-   │
-   ├─→ Phase 72 (P0 核心补齐) [depends on 71]
-   │         │
-   │         └─→ Phase 73 (P1 重要补齐) [depends on 72]
-   │                  │
-   │                  └─→ Phase 74 (P2 增量 + diff coverage 收尾) [depends on 73]
+Phase 75 (QUIRK 全修 — IncrementBy 全场最先)
+  └→ Phase 76 (测试基建: miniredis/httpmock + 4 类注入缝)
+        ├→ Phase 77 (阻塞包·零基建: operations + agent/server)   [depends 76]
+        ├→ Phase 78 (阻塞包·基建解锁: core + device + addomain)   [depends 75 + 76]
+        ├→ Phase 79 (长尾 I: internal/services root)              [depends 76; 与 77/78 可并行穿插]
+        └→ Phase 80 (长尾 II: scheduler + 碎包)                    [depends 76; 与 77-79 可并行穿插]
+Phase 77-80 全部完成
+  └→ Phase 81 (全仓收口: ratchet ≥70 + P2_RATCHET 删除 + audit)   [depends 75-80 全部]
 ```
 
-每个 phase 是自然交付边界,可在 phase boundary 处构建 + CI 绿。
+每个 phase 是自然交付边界,phase boundary 处 `go test ./...` 全绿 + gate 不倒退。
 
-### Phase 71: 治理基线 + CI gate — IN PROGRESS
+### Phase 75: QUIRK 行为修正 (15 项业务怪癖关闭)
 
-**Goal:** CI 后端 job 产出覆盖率报告与阈值 gate;建立测试补齐的基线记录与 ratchet 防倒退机制;前置 flaky test 修复验收。
-Plans:
+**Goal:** 按"修复 + 同 commit 翻转断言 + 回归用例 + 原子 commit"五步法关闭全部 15 项 QUIRK(MemoryCache.IncrementBy 全场最先,Q-11 连带存量数据迁移),让业务行为先归正、后续所有新测试从第一天起断言正确行为。
 
-- [x] [71-01-PLAN.md](phases/71-governance-baseline-and-ci-gate/71-01-PLAN.md) — Bash+awk coverage gate + ci.yml extension + baseline snapshot (file creation half, 4 tasks, commits 4242a75/3e2664c/75a4703/75b96be; SUMMARY: [71-01-SUMMARY.md](phases/71-governance-baseline-and-ci-gate/71-01-SUMMARY.md))
-- [ ] [71-01b-PLAN.md](phases/71-governance-baseline-and-ci-gate/71-01b-PLAN.md) — Local go test verification + bump-threshold fail test + push + gh run watch + amend TBD SHA in coverage-baseline.md (verify+push+amend half)
+**Depends on**: Nothing (first phase;plan 75-01 必须是整个 milestone 第一个执行的 plan)
 
-**Requirements:** GOV-01, GOV-02, GOV-04
+**Requirements**: QUIRK-01, QUIRK-02, QUIRK-03
 
-**Success Criteria:**
+**Success Criteria** (what must be TRUE):
 
-1. `.github/workflows/ci.yml` 后端 job 含 `-coverprofile=coverage.out -covermode=atomic` 参数并产出 profile artifact
-2. CI 引入阈值 gate(初值对应当前 12.8% 基线),低于阈值 PR 即 fail;ratchet 机制记录每次 phase 提升后的实际数字
-3. `.planning/quick/260820-backend-test-coverage-scan/` 或同等位置有完整 per-package 基线表,phase 完成后回填新数字形成可追踪差异
-4. pkg/cache `TestAsyncRetryWorker_Enqueue` 通过验证(`5ead742` 已修,Phase 71 跑 `go test ./pkg/cache/...` 全过即可验收)
-5. `go test ./internal/... ./pkg/... ./cmd/...` 全包 exit 0,无任何测试失败
+1. `MemoryCache.IncrementBy` 缺 key 时按 0 起算并新建缓存项(返回 1,对齐 Redis INCR 语义),非法数字串返回 error 而非静默按 0 累加;`pkg/cache/cache_74_08_test.go:131,157` 与 `internal/core/core_74_08_test.go:127,155,210` 的锁定断言同 commit 翻转
+2. core 的 3 处 captcha workaround(手工种 captcha 数据)删除,`GenerateCaptcha` 真实链路在测试中可直测(QUIRK-01 连锁解锁的验收信号)
+3. 其余 QUIRK 逐项关闭且行为可观察:型号提取命中行首/空格分隔 sysDescr(Q-3)与 USG6000E 尾字母(Q-8);sm2.Decrypt 对垃圾密文返回 error→HTTP 4xx 而非 panic 500(Q-4);validateFile 无扩展名返回"不支持的文件格式"(Q-5);GetRandomEnabled 在 sqlite 下走空结果分支而非 SQL error(Q-6);MetricsCacheService.Stop 双调幂等(Q-7);nextIP(255.255.255.255) 返回 nil 且 ScanIPRange 循环条件同 commit 改 nil 检查(Q-9);retry.containsIgnoreCase 精确匹配(Q-10);InitLogger 非法 level 报错(Q-12);TLS 全空参数报错(Q-13);GetDiskInfoDetailed 不再递归栈溢出(Q-15)
+4. Q-11:normalizeParentID 双实现统一为 requests 语义(nil/""/"0" 全塌缩),存量 `parent_id='0'` 行经数据迁移归一为 NULL,迁移后菜单树查询无孤儿节点
+5. 每项 QUIRK 一个原子 commit(`fix(quirk-N): <语义> + 回归测试`),每个 commit 点 CI 全绿(4 层 gate + diff coverage ≥80% 把关业务变更)
 
-**Key Decisions (lock at plan-internal):**
+**Plans**: TBD(建议 5)
+- 75-01 QUIRK-01 MemoryCache.IncrementBy(nil-deref + 非法串 error)+ 翻转断言 + 删 3 处 captcha workaround — 全 milestone 第一个 plan
+- 75-02 device 家族:Q-3 锚定 + Q-8 尾字母 + Q-9 nextIP/ScanIPRange 同 commit
+- 75-03 core 防御家族:Q-4 sm2 长度预检 + Q-5 validateFile + Q-6 PG-only fallback + Q-7 Stop 幂等
+- 75-04 agent/utils 家族:Q-10 retry + Q-12 InitLogger + Q-13 TLS 空参 + Q-14 GetUnifiedDiff + Q-15 磁盘递归
+- 75-05 Q-11 normalizeParentID 统一 + parent_id='0' 存量数据迁移
 
-- 阈值 gate 工具选择:bash + awk 自检 vs go-test-coverage GitHub Action vs custom Makefile——planner 评估,优先复用最少依赖
-- profile artifact 上传:actions/upload-artifact vs 仅在失败时 dump——按 CI 体积成本权衡
-- 基线数据存放:更新 quick task 目录 vs 写入 `.planning/coverage-baseline.md`——planner 决策
+**Notes**:
 
-**Notes:**
-
-- GOV-03(diff coverage)属于 Phase 74,Phase 71 只建立全量覆盖率基线 gate
-- Phase 71 是整条治理链的起点——所有测试补齐工作受益于此 gate 的"防倒退"价值
-- 阈值 gate 的初始值需等于或低于当前 12.8% 基线(防止首次落地就 fail),后续 phase 完成时逐步 ratchet 上调
-
----
-
-### Phase 72: P0 核心补齐 — SHIPPED 2026-08-21
-
-**Goal:** P0 核心业务链路(高频审计路径 + 系统管理核心)零测试清零,所有 P0 包达 ≥70% 覆盖。
-
-**Requirements:** CORE-01, CORE-02, CORE-03, CORE-04, CORE-05, CORE-06
-
-**Success Criteria:**
-
-1. `internal/api/v1/workorder` 覆盖率 ≥70%(297 stmts)
-2. `internal/api/v1/monitor` 覆盖率 ≥70%(518 stmts)
-3. `internal/api/v1/scheduler` 覆盖率 ≥70%(152 stmts)
-4. `internal/api/v1/system` 覆盖率 ≥70%(3039 stmts)
-5. `internal/services/workorder` 覆盖率 ≥70%(715 stmts)
-6. `internal/services/system` 覆盖率 ≥70%(3483 stmts)
-7. Phase 72 完成后加权平均覆盖率显著上升(预估 12.8% → ≥30%),CI gate 阈值 ratchet 上调至新实际值
-8. 全部新测试遵循 portwrite 85.3% 范本模式(glebarez sqlite in-memory + table-driven tests),零业务代码改动(测试暴露的确定性 bug 修复除外,最小 diff 单独说明)
-
-**Notes:**
-
-- services/system 3483 stmts 是最大单包,需分层拆分测试(user / role / dept / menu / dict / post / config)——planner 分配
-- api/v1/system 3039 stmts 同理;按子模块拆 plan
-- operlog 82.2% 是治理范本,Phase 72 service 测试可参考其 regression_test.go AST 锁值手法(如需)
+- 五步法与锁定断言坐标清单见 architecture 研究 Q4 表(43 处 QUIRK 注释命中)
+- Q-1/Q-7 修复后本地至少跑一次 `go test -race ./pkg/cache/... ./internal/core/...`(W-5:Windows 支持本机 race)
+- Q-11 修复前先实测存量 `parent_id='0'` 行数,迁移与代码统一同一交付面
+- Q-3 回归测试须含双路径样本(新提取器 + 既有 ExtractModelFromSysDescr 回退 caller,落库 model 值会变);Q-15 修复行为面最小化(M-3);Q-10 retry 零生产调用方,风险全在测试翻转
+- M-2:cpu_linux 包级全局无锁——顺手加 mutex 去递归(行为不变)
 
 ---
 
-### Phase 73: P1 重要补齐 — SHIPPED 2026-08-21
+### Phase 76: 测试基建落地 (test doubles + 注入缝)
 
-**Goal:** 8 个 P1 重要模块(duty/knowledge/rpa/vdi/monitor/network)从 0% 测试提升至 ≥70%。
+**Goal:** 引入 miniredis/httpmock 两个 test-only 依赖并落地全部注入缝(Driver 工厂 / LDAPClientIface / re-exec stub / AST 守护),零 Docker、Windows 本地与 ubuntu CI 同构,使 5 个结构阻塞包的覆盖工作不再被"没有真实依赖基建"卡死。
 
-**Requirements:** IMP-01, IMP-02, IMP-03, IMP-04, IMP-05, IMP-06
+**Depends on**: Phase 75(顺序保证 QUIRK-01 全场最先;内容上无硬依赖)
 
-**Success Criteria:**
+**Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04, INFRA-05
 
-1. `internal/api/v1/duty` 覆盖率 ≥70%(265 stmts)
-2. `internal/api/v1/knowledge` 覆盖率 ≥70%(273 stmts)
-3. `internal/api/v1/rpa` 覆盖率 ≥70%(612 stmts)
-4. `internal/api/v1/vdi` 覆盖率 ≥70%(298 stmts)
-5. `internal/services/duty` + `internal/services/knowledge` 覆盖率 ≥70%(114 + 85 stmts)
-6. `internal/services/monitor` + `internal/services/network` 覆盖率 ≥70%(485 + 127 stmts)
-7. Phase 73 完成后加权平均覆盖率 ratchet 到新实际值(预估 27-30%,沿用 Phase 72 D-07),CI gate 阈值 ratchet 上调
-8. 全部新测试零业务代码改动
+**Success Criteria** (what must be TRUE):
 
-**Wave / Plan structure:**
+1. go.mod 仅新增 2 个 test-only 依赖(miniredis/v2 v2.38+ 与 httpmock v1.4.x,MIT,require 行带 `// test-only (v1.27 D-02)` 注释),生产依赖零变更,`go test ./...` Windows 本地 + ubuntu CI 双绿且全程无 Docker
+2. miniredis 三坑防护落地:TTL 断言用 FastForward(R-1)/ INFO 断言降级为 err==nil + key 存在性(R-2)/ CLIENT SETINFO 兼容(R-3);`pkg/cache` Redis 路径(INCR/EXPIRE/SCAN/HSET/INFO/EVAL)有冒烟测试实证命令面
+3. ScrapliWrapper 具备可注入 Driver 工厂入口(生产路径行为不变,现有测试全绿),测试可注入 FileTransport/自定义 transport 进入 Open/SendCommand 链
+4. LDAPClientIface mock 补全(walk/分页语义),FailoverClient 顺序遍历/maxHops 可经接口驱动;agent 子进程 stub 统一为 TestHelperProcess re-exec 模式,`exec.Command("echo")` 类 Windows/CI 平台分歧根源清除
+5. AST 守护测试上线:扫描生产 .go 文件禁止引用 `*ForTesting` 符号(仿 status_constants_test.go),测试隔离契约由编译器(_test.go)+ 命名(ForTesting 后缀)+ AST 三层保证
 
-- **Wave 1 (parallel):** 73-01 (handler 简单: duty+knowledge, 538 stmts) + 73-02 (handler 复杂: rpa+vdi, 910 stmts, incl. public router) + 73-03 (service 简单: duty+knowledge+network, 326 stmts) + 73-04 (service 中等: monitor, 485 stmts, incl. oper_log)
-- **Wave 5:** 73-05 (ratchet + per-package gate extension, depends on 73-01..04)
+**Plans**: TBD(建议 5)
+- 76-01 miniredis + httpmock go.mod 落地 + pkg/cache Redis 冒烟(含三坑防护用例)
+- 76-02 ScrapliWrapper Driver 工厂注入重构(生产路径不变)
+- 76-03 LDAPClientIface mock 补全 + FailoverClient 接口 seam
+- 76-04 TestHelperProcess re-exec helper + 替换 exec.Command("echo") 先例
+- 76-05 AST 守护测试(ForTesting 隔离契约)
 
-**Notes:**
+**Notes**:
 
-- services/rpa 1865 stmts 1.1% / services/vdi 1127 stmts 2.7% 暂归 P2(Phase 74),本 phase 只补到 70% handler + 小 service 包
-- 复杂模块(rpa 1865 / vdi 1127)planner 可分多 plan 拆分
-- Plan 73-05 (Wave 5) mirrors Phase 72 Plan 72-13: Task 0 批量提交所有 test files → Task 1 全包覆盖率测量 → Task 2 扩展 check-coverage.sh (8 P1 包 per-package 验证) → Task 3 原子 ratchet commit (6 文件) → Task 4 CI 验证
-- D-08 + D-09 (test pattern consistency + 真实中间件) 沿用 Phase 71/72 范本,在 73-05 must_haves 中显式标注
-- D-04 (rpa 公开路由不豁免) + D-03 (oper_log_service 不豁免) 严格按 ≥70% 覆盖
-- **Ratchet landed (73-05)**: weighted avg 21.5% → 25.9% (+4.4 pp); check-coverage.sh extended with `p1_package_check` (8 P1 packages ≥70% floor, exit code 4) — additive to weighted-avg gate (sections 1-2 byte-identical to Phase 71); ci.yml unchanged. 8/8 P1 packages PASS per D-04/D-10 strict: api/v1/duty 83.0%, api/v1/knowledge 84.2%, api/v1/rpa 79.2%, api/v1/vdi 76.2%, services/duty 95.6%, services/knowledge 95.3%, services/network 92.1%, services/monitor 95.3%. 0% pkg count 31 → 22 (-9 from P1). Single atomic ratchet commit (D-07 + D-11) contains 6 files: `.coverage-threshold` + `.planning/coverage-baseline.md` + `.github/scripts/check-coverage.sh` + `.planning/STATE.md` + `.planning/ROADMAP.md` + `73-05-SUMMARY.md`. Push deferred to orchestrator/user. Per-package CORE validation (28 cells) still Phase 74 (GOV-03 scope).
+- redismock(锁死 go-redis v8)/ gock(休眠)/ testcontainers(Docker)明令禁止引入
+- `_test.go` import `golang.org/x/crypto/ssh` 会移除 go.mod 的 `// indirect` 注释——属测试可见性变化非生产依赖新增,SUMMARY 显式说明以免误判违反 D-02
+- fake SSH server 的实现留给 Phase 78 device plan,本 phase 只交付工厂入口;httpmock 使用纪律(DeactivateAndRestore / 独立 MockTransport 二选一)在本 phase 成文
 
 ---
 
-### Phase 74: P2 增量 + diff coverage 收尾 — SHIPPED 2026-08-22
+### Phase 77: 阻塞包攻破·零基建先行 (operations + agent/server)
 
-> **SHIPPED**: 11 plans (74-01..74-11) + ad-hoc escalation 74-12 全部执行。
-> weighted avg 25.9% → **55.5%** (SC-a shortfall 诚实文档化: 55.56% < 70% 目标,
-> 结构性阻塞见 74-MILESTONE-AUDIT.md); 0%-pkg 22 → **5** (SC-b 达成,剩余 5 个
-> 全部为 cmd/装配/swagger 生成代码); GOV-03 diff coverage gate CI 生效 (74-10
-> D-14 自实现, exit 1 阻断); check-coverage.sh 4 层 gate: weighted-avg + P1
-> floor (exit 4) + **P2 floor (exit 5, 70% x 7 + UP-ONLY ratcheted x 3: core
-> 38.33 / device 39.07 / agent-server 22.08)** + diff coverage。SC-c/d/e 达成,
-> SC-a 部分达成并文档化。15 QUIRKS per D-12 锁定。v1.26 收口。
+**Goal:** 用既有 sqlite/httptest/假策略先攻投入产出排名前二的 operations 与 agent/server,双双越过 70% 线。
 
-**Goal:** 把整体加权平均推到 ≥70%(SCALE-03),落地 PR 增量 diff coverage 门槛,验证 milestone SC 全部达成。
+**Depends on**: Phase 76(INFRA-04 re-exec 供 agent;operations 各 plan 零基建硬依赖,必要时可提前执行)
 
-**Requirements:** GOV-03, SCALE-01, SCALE-02, SCALE-03
+**Requirements**: BLOCK-01, BLOCK-02
 
-**Success Criteria:**
+**Success Criteria** (what must be TRUE):
 
-1. PR 增量 diff coverage ≥80% 门槛在 CI 启用(GOV-03)— 变更代码必须 ≥80% 覆盖才通过
-2. `api/v1/{operations, asset, network}` 覆盖率均 ≥70%(1285 / 420 / 1971 stmts)
-3. `services/{rpa, vdi}` 覆盖率均 ≥70%(1865 / 1127 stmts)
-4. `internal/core` / `internal/device` / `internal/utils` / `internal/agent/server` / `services/scheduler` 等中等覆盖包系统性提升(目标区间按整体达标分配)
-5. 中等覆盖(10-50%)与高性价比纯工具包(`pkg/{response,query,time,logger,captcha}`、`internal/pkg/*`)选择性提升
-6. **整体加权平均覆盖率 ≥70%**(43652 stmts 口径;SC-a)
-7. **0% 覆盖业务包 ≤5**(SC-b;仅剩辅助类豁免——纯 struct / cmd / docs)
-8. milestone SC-a/b/c/d/e 全部 5 项达成并写入 audit 报告
+1. `internal/services/operations` ≥70%(61.1% → ≥70%,补 ~330 stmts;workstation_device_service 445 unc + excel_service 399 unc 为主力,sqlite+excelize 零基建)
+2. `internal/agent/server` ≥70%(22.1% → ≥70%,补 ~295 stmts;jwt_auth/connection_manager 走 httptest 假后端,account_manager 走假策略 + re-exec stub)
+3. Windows 本地与 ubuntu CI 的 agent 包覆盖率差 <2pp(env-branch divergence 消除,P2_RATCHET 注释记录的 22.08 vs 19.48 问题收口)
+4. phase 边界 `go test ./...` 全绿,gate(weighted-avg / P1 floor / P2 floor / diff coverage)不倒退
 
-**Notes:**
+**Plans**: TBD(建议 5)
+- 77-01 workstation_device_service(GetADDevices/SyncFromAD/SyncFromAsset/mergeBySerial/SetPrimaryDevice*)
+- 77-02 excel_service 导出链(ExportData/queryData/writeDataRows/writeInstructions/appendWorkstationDeviceSheets)
+- 77-03 excel_service 导入剩余 + reference_resolver + workstation/floor/code_generator/excel_raw_rows
+- 77-04 agent jwt_auth + connection_manager(httptest 假后端,backendURL 明文参数)
+- 77-05 agent handlers(gin + Recorder)+ config 校验/注册 + account_manager(假策略上层 + re-exec 真策略体)
 
-- 本 phase 是 v1.26 收口 phase,验证所有 milestone SC
-- diff coverage 工具:gocover-diff / go-test-coverage(action 内置支持)——planner 评估选型
-- Phase 74 plan 数量可能较多(planner 按业务包工作量拆分),建议 3-5 个 plan
+**Notes**:
+
+- geocoding 已有 fakeGeocodeTransport(RoundTripper)先例,httpmock 在本包仅边际价值
+- Q-12/Q-13 已在 Phase 75 修复,agent config 测试直接断言新行为(非法 level 返回 error / TLS 空参报错)
+- pty_manager 真 pty 路径(18 stmts)允许平台 Skipf 兜底,不影响 70% 达线
+
+---
+
+### Phase 78: 阻塞包攻破·基建解锁 (core + device + addomain)
+
+**Goal:** 用 Phase 75/76 的修复与基建把 core、device、addomain 全部推过 70%,5 结构阻塞包清零。
+
+**Depends on**: Phase 75(Q-7 Stop 幂等是 core Init Close 收尾前置;Q-3/Q-8 修正好让 device 提取器测试断言新行为), Phase 76(INFRA-01 miniredis / INFRA-02 Driver 工厂 / INFRA-03 LDAPClientIface)
+
+**Requirements**: BLOCK-03, BLOCK-04, BLOCK-05
+
+**Success Criteria** (what must be TRUE):
+
+1. `internal/core` 根包 ≥70%(40.2% → ≥70%;Init 链 302 stmts 经 miniredis+sqlite config 分支跑通并以 Close 收尾;captcha 98 stmts 纯补 + QUIRK-01 解锁的真实链路直测)
+2. `internal/device` ≥70%(39.1% → ≥70%;FileTransport 照搬 portwrite 先例解锁 scrapli_wrapper/connection_pool/executor 346 stmts,x/crypto/ssh fake 补 Open/transport 路径,snmp UDP 对端 + task_scheduler 并发/取消分支)
+3. `internal/services/addomain` ≥70%(21.8% → ≥70%,补 ~1165 stmts;两段式:sqlite+`[]*ldap.Entry` 段 ~535 先行,Iface stub 段 ldap_client 159 + failover 入口收尾)
+4. check-coverage.sh 三条 P2_RATCHET 豁免行(core 38.33 / device 39.07 / agent-server 22.08)对应包全部实测 ≥70%(豁免行的删除动作统一留 Phase 81 收口)
+5. 每个 plan 完成点 `go test ./...` 全绿,gate 不倒退
+
+**Plans**: TBD(建议 7)
+- 78-01 core captcha 真实链路(QUIRK-01 解锁)+ captcha_background(文件+DB)+ metrics_cache 边缘
+- 78-02 core Init 链(miniredis+sqlite+reaper re-exec+Close 收尾;plan 首任务为 Init 可跑深度探针实验)
+- 78-03 device scrapli_wrapper + connection_pool + executor(FileTransport + fake SSH,fake server 输出 prompt)
+- 78-04 device snmp_client UDP 对端 + task_scheduler 剩余分支
+- 78-05 addomain sqlite 段 A:sync.go 全链(`[]*ldap.Entry` 驱动,syncOUs/syncGroups/syncUsers/syncGroupMembers)
+- 78-06 addomain sqlite 段 B:computer.go + ou_group_mapping/group_config/config 纯 CRUD + account_pool 剩余(MarkSuccess/RecoverExpiredBreakers)
+- 78-07 addomain Iface stub 段:ldap_client 参数/错误分支 + FailoverClient 遍历 + user.go/group.go failover 入口
+
+**Notes**:
+
+- core Init 探针实验(research 数据缺口):scheduler goroutine / device pool 初始化副作用未知,78-02 首任务验证
+- fake SSH 三坑:session channel 必须在 pty-req+shell 后输出 `<host>#` 提示符否则 hang(S-2)/ 拒绝时返回 (nil,false) 而非 error(S-3)/ ExtraCiphers 静默忽略不影响默认协商
+- MultiLevelCache 构造即启 L2WriteWorker goroutine(R-7)——测试用 NewMultiLevelCacheSimple 或 t.Cleanup Close,防 -race 泄漏
+- addomain StartTLS/LDAPS 分支若 stub 不可达:明文 ldap:// 分支覆盖 + TLS 分支降级断言(architecture 开放问题 1);嵌入式 vjeantet/ldapserver wire 线仅在 stub 段不足 70% 时按需立项(零新依赖主推线不动摇)
+
+---
+
+### Phase 79: 长尾清欠·internal/services root
+
+**Goal:** 补齐 v1.26 从未进 P0/P1/P2 名单的最大隐藏缺口 internal/services root(5202 stmts @11.3%,补 ~3052 stmts)到 ≥70%。
+
+**Depends on**: Phase 76(miniredis 供 legacy cache services 的 Redis 路径;与 Phase 77/78 无硬依赖,可并行穿插)
+
+**Requirements**: TAIL-01
+
+**Success Criteria** (what must be TRUE):
+
+1. `internal/services`(root)包覆盖率 ≥70%,legacy cache services 群(dept/role/dict/menu/user/post)逐文件 ≥70%
+2. token blacklist 及其余 root service 文件按覆盖率 profile 倒序补齐,无单文件留在 <50%
+3. phase 收尾以 `go tool cover -func` 实测数字回填 `.planning/coverage-baseline.md`(ratchet 数据链连续)
+4. gate 全程绿(本 phase 不动 `.coverage-threshold`,统一 Phase 81 收口)
+
+**Plans**: TBD(建议 6)
+- 79-01 legacy cache services 群 A(dept/role/dict)
+- 79-02 legacy cache services 群 B(menu/user/post)
+- 79-03 token blacklist + DataCacheService/CacheConfigService 深路径
+- 79-04 root services 扫尾 A(profile 倒序)
+- 79-05 root services 扫尾 B(profile 倒序)
+- 79-06 phase 复测 + baseline 回填
+
+**Notes**:
+
+- 5202 stmts 是全 milestone 最大单包工作面;plan 边界按 profile 实测倒序,planner 可再细调拆分
+- 新测试遇到 v1.26 锁定的非正典 quirk(如 73-04 系列的 monitor cache_service 锁定项)沿用"锁定+注释"惯例,不擅自扩修(15 项正典之外范围纪律)
+
+---
+
+### Phase 80: 长尾清欠·scheduler + 碎包
+
+**Goal:** internal/scheduler 引擎与全部碎包(api/v1 / models / internal/api / pkg/errors / pkg/cache / 小尾巴)逐一 ≥70%,TAIL 长尾清零、70% 数学缺口关门。
+
+**Depends on**: Phase 76(miniredis 供 pkg/cache Redis 路径;与 Phase 77/78/79 无硬依赖,可并行穿插)
+
+**Requirements**: TAIL-02, TAIL-03
+
+**Success Criteria** (what must be TRUE):
+
+1. `internal/scheduler` ≥70%(3.3% → ≥70%,补 ~736 stmts;注册表/执行器/引擎并发与取消分支)
+2. 碎包逐包 ≥70%:api/v1(366)+ models(310)+ internal/api(291,装配层纯函数段)+ pkg/errors(183)+ pkg/cache(161,Redis 路径经 miniredis)
+3. <50 stmts 小尾巴(permission/websocket/base/lldp/gormutil/middleware/logger/query)合计 ≥70%,确不可测的按既有豁免规则文档化
+4. gate 全程绿
+
+**Plans**: TBD(建议 5)
+- 80-01 scheduler 注册表 + job 执行器
+- 80-02 scheduler 引擎分支(并发/取消/恢复)
+- 80-03 碎包 A:api/v1 装配纯函数段 + models
+- 80-04 碎包 B:internal/api + pkg/errors
+- 80-05 碎包 C:pkg/cache(miniredis)+ 小尾巴清尾
+
+**Notes**:
+
+- scheduler goroutine 需 t.Cleanup 停机,防 -race 泄漏告警;internal/scheduler(引擎)≠ api/v1/scheduler(job CRUD,已达标)
+- websocket 真 WS 握手 httptest 可测;lldp 优先报文解析纯函数段
+
+---
+
+### Phase 81: 全仓收口·ratchet 闭环与 milestone audit
+
+**Goal:** 全量重测把 `.coverage-threshold` 从 55.5 ratchet 到 ≥70 实测值、删除 P2_RATCHET 豁免行回落全量 70% floor、milestone audit 定案,gate 防线全程不倒退。
+
+**Depends on**: Phase 75, Phase 76, Phase 77, Phase 78, Phase 79, Phase 80(全部完成后收口)
+
+**Requirements**: GATE-01, GATE-02, GATE-03
+
+**Success Criteria** (what must be TRUE):
+
+1. 全量 `go test -coverprofile` 重测:加权平均 ≥70%(43652 stmts 口径,SC-a 数学 30556/43652 达成),`.coverage-threshold` 55.5 → 新实测值(UP-only 语义)
+2. check-coverage.sh 删除 core/device/agent-server 三条 P2_RATCHET 豁免行,P2 floor 回落全量 70%,删除后 gate 本地 + CI 实跑绿(UP-only 闭环:豁免只减不增)
+3. 4 层 gate(weighted-avg / P1 floor exit 4 / P2 floor exit 5 / PR diff coverage ≥80%)在收口 commit 上 CI 全绿,且 milestone 全程无 gate 倒退记录
+4. milestone audit 报告落盘:19/19 需求核验、15 项 QUIRK 关闭清单、SC-a..e 证据链、v1.26 SC-a 缺口(6287 stmts)收口数学
+
+**Plans**: TBD(建议 3)
+- 81-01 全量重测 + threshold ratchet 55.5 → 实测 ≥70 + coverage-baseline.md 回填
+- 81-02 P2_RATCHET 豁免行删除 + floor 回落 70 全量 + CI 验证
+- 81-03 milestone audit(镜像 74-11 收口流程 + v1.26 74-MILESTONE-AUDIT 模式)
+
+**Notes**:
+
+- 镜像 v1.26 的 74-11 收口:atomic ratchet commit 模式(D-07 六文件先例:threshold + baseline + check-coverage.sh + STATE + ROADMAP + SUMMARY)
+- 若个别包最终 <70%(如平台绑定的 pty 路径),豁免必须在 audit 显式文档化并保留对应 P2_RATCHET 行——不允许静默豁免
 
 ---
 
@@ -198,12 +296,15 @@ Plans:
 
 | Phase | Status | Plans | Requirements | Started | Completed |
 |-------|--------|-------|--------------|---------|-----------|
-| Phase 71 | SHIPPED | 2/2 | GOV-01, GOV-02, GOV-04 (3/3 done — file creation half 71-01 + verify+push+amend half 71-01b both complete; CI Coverage gate PASSED on runs 32382995316 + 32384622877; coverage-baseline.md Phase 71 后 row commit column amended TBD → 326a541 via commit cfec2c4) | 2026-08-20 | 2026-08-20 |
-| Phase 72 | SHIPPED | 13/13 | CORE-01..06 (6/6 done — workorder 75.4%, monitor 71.2%, scheduler 85.5% ≥70%; system 35.4%, services/system 53.5% <70% per-sub-module deferred to Phase 73/74; weighted avg 12.8% → 21.5% ratchet landed) | 2026-08-21 | 2026-08-21 |
-| Phase 73 | SHIPPED | 5/5 | IMP-01..06 (6/6 done — IMP-01 api/v1/duty handler 83.0% + IMP-02 api/v1/knowledge handler 84.2% both in 73-01; IMP-03 api/v1/rpa handler 79.2% (incl. public router per D-04) + IMP-04 api/v1/vdi handler 76.2% both in 73-02; IMP-05 services/duty 95.6% + services/knowledge 95.3% in 73-03; IMP-06 services/network 92.1% in 73-03 + services/monitor 95.3% in 73-04 incl. oper_log per D-03 non-exempt; weighted avg 21.5% → 25.9% ratchet in 73-05 + check-coverage.sh extended with p1_package_check 8-package ≥70% floor exit 4) | 2026-08-21 | 2026-08-21 |
-| Phase 74 | SHIPPED | 12/12 (11 planned + 74-12 escalation) | GOV-03, SCALE-01..03 (4/4 done — GOV-03 diff coverage ≥80% gate CI-live via 74-10 D-14 self-implementation; SCALE-01 P2 7/10 at 70% floor + 3 UP-ONLY ratcheted (structural blocks documented); SCALE-02 pkg/{response 96.1,query,time,logger,captcha} + internal/pkg/* selective lift done in 74-09; SCALE-03 weighted 25.9→55.5 ratchet landed, SC-a 70% shortfall honestly documented in 74-MILESTONE-AUDIT.md) | 2026-08-21 | 2026-08-22 |
+| Phase 75 QUIRK 行为修正 | Not started | 0/5 (建议) | QUIRK-01..03 | - | - |
+| Phase 76 测试基建落地 | Not started | 0/5 (建议) | INFRA-01..05 | - | - |
+| Phase 77 阻塞包·零基建 | Not started | 0/5 (建议) | BLOCK-01, BLOCK-02 | - | - |
+| Phase 78 阻塞包·基建解锁 | Not started | 0/7 (建议) | BLOCK-03..05 | - | - |
+| Phase 79 长尾·services root | Not started | 0/6 (建议) | TAIL-01 | - | - |
+| Phase 80 长尾·scheduler+碎包 | Not started | 0/5 (建议) | TAIL-02, TAIL-03 | - | - |
+| Phase 81 收口·ratchet+gate | Not started | 0/3 (建议) | GATE-01..03 | - | - |
 
-**Total:** 4 phases / 19 requirements (19/19 done — Phase 71 3 + Phase 72 6 + Phase 73 6 + Phase 74 4 = 19; SC-a shortfall documented, not waived)
+**Total:** 7 phases / 19 requirements (0/19 done — 100% mapped,无孤儿)
 
 ---
 
@@ -211,11 +312,12 @@ Plans:
 
 候选方向(基于 STATE.md §Deferred Items + Future Requirements):
 
-- **v1.27+**: Phase 63 启动块遗留 advisory 收尾(network/ports 3 timeout + total bundle +90kB + knip ignore 收紧)
-- **v1.27+**: PROTO-01..04 逐屏原型对齐 + VIS-01..03 视觉深化(v1.22 Future Requirements)
-- **v1.27+**: VDI 22C/22D(账号管理 + Web Console,依赖 v1.11 生产稳定性数据)
-- **v1.27+**: 分支覆盖率 / mutation testing / PR 评论机器人(FUT-02..04)
-- **v1.27+**: 真机 site-visit UAT 闭环(v1.18-v1.20 deferred items)
+- **v1.28+**: Phase 63 启动块遗留 advisory 收尾(network/ports 3 timeout + total bundle +90kB + knip ignore 收紧)
+- **v1.28+**: PROTO-01..04 逐屏原型对齐 + VIS-01..03 视觉深化(v1.22 Future Requirements)
+- **v1.28+**: VDI 22C/22D(账号管理 + Web Console,依赖 v1.11 生产稳定性数据)
+- **v1.28+**: 分支覆盖率 / mutation testing / PR 评论机器人(FUT-02..04)
+- **v1.28+**: 真机 site-visit UAT 闭环(v1.18-v1.20 deferred items)
+- **v1.28+**: CI-only smoke 层(真 Redis 连接池行为 / 真 OpenLDAP 报文;`//go:build smoke` + 本地自动 skip,不进默认测试面)
 
 ---
 
@@ -224,30 +326,39 @@ Plans:
 ```
 Backend (Go)
 ├── internal/api/v1/{system,operations,workorder,scheduler,duty,network,
-│                       knowledge,monitor,rpa,vdi,asset}/  ← Phase 72/73/74 重点补齐
+│                       knowledge,monitor,rpa,vdi,asset}/  ← v1.26 P0-P2 已补齐
 ├── internal/services/{system,operations,workorder,scheduler,duty,network,
 │                       knowledge,monitor,rpa,vdi,asset,portwrite,
-│                       component_collector,topology,lldp,addomain}/  ← Phase 72/73/74 重点补齐
-├── internal/middleware/  (86.2% 已高,Phase 71-74 维持)
+│                       component_collector,topology,lldp,addomain}/
+│     └── (root) 遗留 cache services 群 ← v1.27 Phase 79 主战场
+├── internal/middleware/  (86.2% 已高,维持)
 ├── internal/utils/operlog/  (82.2% 范本)
 ├── pkg/{cache,normalize,transform,response,query,logger,...}/
-└── internal/{core,config,device,agent,scheduler,collector}/
+└── internal/{core,config,device,agent,scheduler,collector}/  ← v1.27 结构阻塞包所在
 
 CI Gate (.github/workflows/ci.yml)
 ├── backend job:
-│   ├── go test ./internal/... ./pkg/... ./cmd/... -coverprofile=coverage.out -covermode=atomic  ← Phase 71 加
-│   ├── go tool cover -func=coverage.out → awk 算加权平均 vs 阈值 gate  ← Phase 71 加
-│   └── (Phase 74 加) diff coverage ≥80% 门槛
-└── frontend job:  Phase 63 已加 vitest coverage thresholds 25/15/22/25(本 milestone 不动)
+│   ├── go test ./internal/... ./pkg/... ./cmd/... -coverprofile=coverage.out -covermode=atomic
+│   ├── go tool cover -func → awk 加权平均 vs .coverage-threshold gate
+│   ├── P1 floor (8 包 ≥70%, exit 4) + P2 floor (70% x 7 + UP-ONLY ratcheted x 3, exit 5)
+│   └── PR diff coverage ≥80% 门槛 (74-10 落地)
+└── frontend job:  Phase 63 vitest coverage thresholds 25/15/22/25(不动)
 
 Test Infrastructure
 ├── glebarez sqlite in-memory (已有,不引新 mock)
 ├── testing + table-driven tests (已有模式)
-├── portwrite 85.3% 范本 (Phase 50-55 落地,Phase 72-74 参考)
+├── portwrite 85.3% 范本 (Phase 50-55 落地)
 ├── operlog 82.2% 范本 (regression_test.go 锁公共 API)
-└── middleware 86.2% 范本 (apikey 全链路测试)
+├── middleware 86.2% 范本 (apikey 全链路测试)
+└── v1.27 test doubles (Phase 76 落地,零 Docker,Windows/CI 同构)
+    ├── miniredis/v2 v2.38+ (pkg/cache + core Init 链)     ← INFRA-01
+    ├── httpmock v1.4.x (const-URL 出站 HTTP)              ← INFRA-01
+    ├── scrapligo FileTransport + x/crypto/ssh fake (device) ← INFRA-02
+    ├── LDAPClientIface stub (addomain)                    ← INFRA-03
+    ├── TestHelperProcess re-exec (agent 子进程/reaper)     ← INFRA-04
+    └── AST 守护测试 (ForTesting 隔离契约)                  ← INFRA-05
 ```
 
 ---
 
-*Last updated: 2026-08-20 — v1.26 backend-test-coverage-excellence milestone IN PROGRESS: 4 phases (71-74) / 19 requirements / 100% mapped. Quick task 260820-bcs 后端覆盖率扫描数据为规划输入。**Phase 71 SHIPPED 2026-08-20 (2/2 plans)** — plan 71-01 file creation half (4 commits `4242a75` `.coverage-threshold` + `3e2664c` check-coverage.sh + `75a4703` ci.yml 4-step extension + `75b96be` coverage-baseline.md scaffold with TBD commit on Phase 71 后 row; SUMMARY: `.planning/phases/71-governance-baseline-and-ci-gate/71-01-SUMMARY.md`) + plan 71-01b verify+push+amend half (1 commit `cfec2c4` TBD → 326a541 amend as new commit on protected branch; CI backend Coverage gate PASSED on runs 32382995316 + 32384622877; backend-coverage artifact 1.4MB / 30-day retention; SUMMARY: `.planning/phases/71-governance-baseline-and-ci-gate/71-01b-SUMMARY.md`). Phase 63 frontend-toolchain-automation SHIPPED 2026-08-20(前端 coverage thresholds 已就位,本 milestone 为后端对称物)。Combined v1.22-v1.25 SHIPPED + ARCHIVED 2026-08-19.*
+*Last updated: 2026-08-23 — v1.27 backend-test-coverage-excellence-II milestone roadmap drafted: 7 phases (75-81) / 19 requirements / 100% mapped。QUIRK-first 排序(IncrementBy 最先解锁 core captcha),零 Docker 双环境同构,gap-math 6287 stmts(BLOCK ~2402 + TAIL ~3885)。v1.26 已 SHIPPED 2026-08-22(详情归档 `.planning/milestones/v1.26-phases/`)。*

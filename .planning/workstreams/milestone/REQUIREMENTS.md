@@ -55,11 +55,25 @@ sources:
 
 | REQ | Phase | Plans | Status |
 |-----|-------|-------|--------|
-| INFRA-01..05 | TBD | TBD | Pending |
-| BLOCK-01..05 | TBD | TBD | Pending |
-| TAIL-01..03 | TBD | TBD | Pending |
-| QUIRK-01..03 | TBD | TBD | Pending |
-| GATE-01..03 | TBD | TBD | Pending |
+| QUIRK-01 | Phase 75 | TBD | Pending |
+| QUIRK-02 | Phase 75 | TBD | Pending |
+| QUIRK-03 | Phase 75 | TBD | Pending |
+| INFRA-01 | Phase 76 | TBD | Pending |
+| INFRA-02 | Phase 76 | TBD | Pending |
+| INFRA-03 | Phase 76 | TBD | Pending |
+| INFRA-04 | Phase 76 | TBD | Pending |
+| INFRA-05 | Phase 76 | TBD | Pending |
+| BLOCK-01 | Phase 77 | TBD | Pending |
+| BLOCK-02 | Phase 77 | TBD | Pending |
+| BLOCK-03 | Phase 78 | TBD | Pending |
+| BLOCK-04 | Phase 78 | TBD | Pending |
+| BLOCK-05 | Phase 78 | TBD | Pending |
+| TAIL-01 | Phase 79 | TBD | Pending |
+| TAIL-02 | Phase 80 | TBD | Pending |
+| TAIL-03 | Phase 80 | TBD | Pending |
+| GATE-01 | Phase 81 | TBD | Pending |
+| GATE-02 | Phase 81 | TBD | Pending |
+| GATE-03 | Phase 81 | TBD | Pending |
 
 Unmapped: 0 ✓
 
