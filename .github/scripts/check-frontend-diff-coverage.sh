@@ -22,9 +22,14 @@
 #   diff coverage = changed executable lines covered by tests / all changed
 #                   executable lines in the PR (xingran-react-frontend/src)
 #   - changed lines: `+` lines from `git diff --unified=0 <base>...HEAD`
-#     (three-dot = merge-base), restricted to src *.ts/*.tsx, excluding
-#     *.test.* and __tests__/** (vitest already keeps test files out of the
-#     coverage json; the pathspec keeps them out of the diff too)
+#     (three-dot = merge-base), restricted to src *.ts/*.tsx. The exclude
+#     pathspec MIRRORS the vitest coverage.exclude array in
+#     xingran-react-frontend/vitest.config.ts (single truth source, D-10):
+#     *.test.*, __tests__/**, **/*.d.ts, src/test/** and the cad whitelist
+#     dirs cad-editor/** / cad-elements/**. The two lists MUST be maintained
+#     in sync, in the same commit — a file excluded from the coverage json
+#     but admitted by the diff pathspec falls into the "absent = all changed
+#     lines uncovered" branch below and fails every PR touching it (CR-01).
 #   - executable: blank lines and TS comment-only lines excluded — // line
 #     comments, /* block-comment openers, and * JSDoc continuation lines
 #   - covered: a changed line falls inside an istanbul statementMap range with
@@ -135,7 +140,11 @@ fi
 if ! git diff --unified=0 "${DIFF_ARGS[@]}" -- \
   'xingran-react-frontend/src/*.ts' 'xingran-react-frontend/src/*.tsx' \
   ':(exclude)xingran-react-frontend/src/*.test.*' \
-  ':(exclude)xingran-react-frontend/src/**/__tests__/**' | awk '
+  ':(exclude)xingran-react-frontend/src/**/__tests__/**' \
+  ':(exclude)xingran-react-frontend/src/**/*.d.ts' \
+  ':(exclude)xingran-react-frontend/src/test/**' \
+  ':(exclude)xingran-react-frontend/src/components/cad-editor/**' \
+  ':(exclude)xingran-react-frontend/src/components/cad-elements/**' | awk '
   /^\+\+\+ b\// { file = substr($0, 7); in_hunk = 0; next }
   /^@@ / {
     match($0, /\+[0-9]+/)
