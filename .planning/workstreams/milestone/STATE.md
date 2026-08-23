@@ -41,7 +41,7 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 Phase: 75 (QUIRK 行为修正 — 15 项业务怪癖关闭)
 Plan: 4 (completed)
 Status: In Progress — Plan 75-04 EXECUTED (Q-10/Q-12/Q-13 agent 三项 QUIRK 修正, gate 全绿)
-Last activity: 2026-08-23 — 75-04 EXECUTED: fix(quirk-10) 46c1485 + fix(quirk-13) 2b6b7d1 (Q-12 变更因并发 commit 边界混合落入同 commit) + docs(75-04) 40965fb/939e3ae (最终 docs commit 夹带 frontend-coverage 已 staged 文件,attribution 异常,详见 75-04-SUMMARY.md); build + full test + check-ci-local.sh backend --no-npm-ci 全绿
+Last activity: 2026-08-23 — 75-04 EXECUTED: fix(quirk-10) 46c1485 + fix(quirk-13) 2b6b7d1 (Q-12 变更因并发 commit 边界混合落入同 commit) + docs(75-04) 40965fb..4fe8b3b (最终 docs commit 夹带 frontend-coverage 已 staged 文件,attribution 异常,详见 75-04-SUMMARY.md); build + full test + check-ci-local.sh backend --no-npm-ci 全绿
 
 ## Accumulated Context
 
