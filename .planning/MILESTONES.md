@@ -248,7 +248,7 @@
 
 - ✅ GOV-01 / GOV-02 / GOV-04 / IMP-01..06 (10/10)
 - ⚠️ GOV-03 部分(74-10 自实现,缺市场认可工具支撑,可接受)
-- ⚠️ CORE-04 (`api/v1/system 35.4%`) + CORE-06 (`services/system 53.5%`) Phase 72 sub-target 遗留,迁 v1.27 路线
+- ✅ CORE-04 (`api/v1/system 70.35%` via 74-04) + CORE-06 (`services/system 75.57%` via 74-07) — Phase 72 时未达,Phase 74 已补齐(本行勘误于 2026-08-23,归档初版误记为遗留)
 - ⚠️ SCALE-01 P2 7/10 + 3 ratcheted(结构阻塞,UP-only)
 - ⚠️ SCALE-02 pkg/ 高性价比工具包(完成 7 包,其余未达 70%)
 - ⚠️ SCALE-03 weighted 55.5%(未达 70% 目标,诚实文档化)
