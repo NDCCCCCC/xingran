@@ -21,6 +21,9 @@ type mockLDAPClient struct {
 	searchGroupsRes   []*ldap.Entry
 	searchUsersErr    error
 	searchUsersRes    []*ldap.Entry
+	// searchUsersFn 非 nil 时优先于 searchUsersRes（多批次/函数式返回驱动，
+	// 76-03 walk/分页窄边界：驱动 service 层遍历，非 wire 级分页）
+	searchUsersFn     func() ([]*ldap.Entry, error)
 	searchComputersErr error
 	searchComputersRes []*ldap.Entry
 
@@ -35,11 +38,22 @@ type mockLDAPClient struct {
 	moveUserErr         error
 	enableUserErr       error
 	disableUserErr      error
+	updateGroupAttrErr  error
+	createOUErr         error
+	dnExistsRes         bool
+	dnExistsErr         error
+	searchWithReqRes    *ldap.SearchResult
+	searchWithReqErr    error
 
 	// 调用计数
-	connectCalls   int
-	closeCalls     int
-	searchGrpCalls int
+	connectCalls       int
+	closeCalls         int
+	searchGrpCalls     int
+	searchUsersCalls   int
+	updateGroupCalls   int
+	createOUCalls      int
+	dnExistsCalls      int
+	searchWithReqCalls int
 }
 
 func (m *mockLDAPClient) Connect() error {
@@ -61,6 +75,10 @@ func (m *mockLDAPClient) SearchGroups(baseDN string) ([]*ldap.Entry, error) {
 }
 
 func (m *mockLDAPClient) SearchUsers(baseDN string) ([]*ldap.Entry, error) {
+	m.searchUsersCalls++
+	if m.searchUsersFn != nil {
+		return m.searchUsersFn()
+	}
 	return m.searchUsersRes, m.searchUsersErr
 }
 
@@ -106,6 +124,26 @@ func (m *mockLDAPClient) EnableUser(userDN string) error {
 
 func (m *mockLDAPClient) DisableUser(userDN string) error {
 	return m.disableUserErr
+}
+
+func (m *mockLDAPClient) UpdateGroupAttribute(groupDN string, attrs map[string]string) error {
+	m.updateGroupCalls++
+	return m.updateGroupAttrErr
+}
+
+func (m *mockLDAPClient) CreateOU(ouDN, ouName string) error {
+	m.createOUCalls++
+	return m.createOUErr
+}
+
+func (m *mockLDAPClient) DNExists(dn string) (bool, error) {
+	m.dnExistsCalls++
+	return m.dnExistsRes, m.dnExistsErr
+}
+
+func (m *mockLDAPClient) SearchWithRequest(searchRequest *ldap.SearchRequest) (*ldap.SearchResult, error) {
+	m.searchWithReqCalls++
+	return m.searchWithReqRes, m.searchWithReqErr
 }
 
 // 编译期断言：mockLDAPClient 满足 LDAPClientIface

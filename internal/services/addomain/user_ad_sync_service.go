@@ -65,7 +65,7 @@ func (s *UserADSyncService) SyncUserUpdateToAD(ctx context.Context, userID strin
 	// Phase 38 Wave 1: 改走 FailoverClient.ExecuteWithFailover（账号池故障切换）
 	// 所有 LDAP 操作（MoveUser + UpdateUserAttribute）必须在闭包内完成（Pitfall 3）
 	fc := NewFailoverClient(s.pool, &adConfig)
-	if err := fc.ExecuteWithFailover(ctx, func(ldapClient *LDAPClient) error {
+	if err := fc.ExecuteWithFailover(ctx, func(ldapClient LDAPClientIface) error {
 		// 3. 如果部门变更，需要移动用户到新OU
 		if newDeptID, ok := updateReq["deptId"]; ok {
 			if newDeptIDStr, ok := newDeptID.(string); ok && newDeptIDStr != "" {
@@ -104,7 +104,7 @@ func (s *UserADSyncService) SyncUserUpdateToAD(ctx context.Context, userID strin
 }
 
 // moveUserToNewOU 移动用户到新OU
-func (s *UserADSyncService) moveUserToNewOU(ctx context.Context, ldapClient *LDAPClient, userID, newDeptID string) error {
+func (s *UserADSyncService) moveUserToNewOU(ctx context.Context, ldapClient LDAPClientIface, userID, newDeptID string) error {
 	// 1. 查找新部门的OU DN
 	ouDN, err := s.mapper.FindOUDNByDeptID(ctx, newDeptID)
 	if err != nil {
@@ -139,7 +139,7 @@ func (s *UserADSyncService) moveUserToNewOU(ctx context.Context, ldapClient *LDA
 }
 
 // syncUserAttributes 同步用户属性到AD
-func (s *UserADSyncService) syncUserAttributes(ctx context.Context, ldapClient *LDAPClient, user *models.User, updateReq map[string]interface{}) error {
+func (s *UserADSyncService) syncUserAttributes(ctx context.Context, ldapClient LDAPClientIface, user *models.User, updateReq map[string]interface{}) error {
 	attributes := make(map[string]string)
 
 	// 映射系统字段到AD属性
@@ -261,7 +261,7 @@ func (s *UserADSyncService) BatchMoveUsersToNewOU(ctx context.Context, userIDs [
 	successCount := 0
 	failedCount := 0
 	fc := NewFailoverClient(s.pool, &adConfig)
-	if err := fc.ExecuteWithFailover(ctx, func(ldapClient *LDAPClient) error {
+	if err := fc.ExecuteWithFailover(ctx, func(ldapClient LDAPClientIface) error {
 		// 批量移动用户（分批处理，每批10个）
 		batchSize := 10
 		for i := 0; i < len(userIDs); i += batchSize {
@@ -302,7 +302,7 @@ func (s *UserADSyncService) BatchMoveUsersToNewOU(ctx context.Context, userIDs [
 }
 
 // moveSingleUserToOU 移动单个用户到指定OU
-func (s *UserADSyncService) moveSingleUserToOU(ctx context.Context, ldapClient *LDAPClient, userID, ouDN string) error {
+func (s *UserADSyncService) moveSingleUserToOU(ctx context.Context, ldapClient LDAPClientIface, userID, ouDN string) error {
 	var user models.User
 	if err := s.db.WithContext(ctx).Where("id = ?", userID).First(&user).Error; err != nil {
 		return fmt.Errorf("查询用户失败: %w", err)
@@ -532,7 +532,7 @@ func (s *UserADSyncService) SyncManagersToAD(ctx context.Context, userIDs []stri
 		// Phase 38 Wave 1: operation 边界 = 整个 errgroup 批量（SP-3）
 		// FailoverClient 闭包内启动 errgroup，g.Wait() 必须在闭包内（Pitfall 3+5）
 		fc := NewFailoverClient(s.pool, &adConfig)
-		if err := fc.ExecuteWithFailover(ctx, func(ldapClient *LDAPClient) error {
+		if err := fc.ExecuteWithFailover(ctx, func(ldapClient LDAPClientIface) error {
 			updateAttr = ldapClient.UpdateUserAttribute
 			// 7. 信号量并发同步（单失败不中断：g.Go 始终返回 nil）
 			g, gctx := errgroup.WithContext(ctx)
@@ -716,7 +716,7 @@ func (s *UserADSyncService) BatchSyncUsersToAD(ctx context.Context, userIDs []st
 	//    errgroup 在此仅用于 gctx 取消传播 + SetLimit 信号量；错误聚合走 result struct
 	//    （每个 goroutine 必返 nil，不中断批量），故 _ = g.Wait() 是有意的。
 	fc := NewFailoverClient(s.pool, &adConfig)
-	if err := fc.ExecuteWithFailover(ctx, func(ldapClient *LDAPClient) error {
+	if err := fc.ExecuteWithFailover(ctx, func(ldapClient LDAPClientIface) error {
 		g, gctx := errgroup.WithContext(ctx)
 		g.SetLimit(constants.MaxConcurrentADSync)
 		var mu sync.Mutex

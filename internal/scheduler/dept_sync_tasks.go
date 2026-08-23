@@ -180,7 +180,7 @@ func executeDeptMemberToADGroupSyncTask(ctx context.Context, params map[string]i
 	totalProcessed := 0
 	totalSuccess := 0
 	totalFailed := 0
-	if err := fc.ExecuteWithFailover(ctx, func(ldapClient *addomain.LDAPClient) error {
+	if err := fc.ExecuteWithFailover(ctx, func(ldapClient addomain.LDAPClientIface) error {
 		// 对每个映射执行同步
 		for _, mapping := range mappings {
 			totalProcessed++

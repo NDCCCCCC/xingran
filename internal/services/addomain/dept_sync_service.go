@@ -76,7 +76,7 @@ func (s *DeptToADSyncService) SyncDeptStructureToAD(ctx context.Context, adConfi
 	result.TotalDepts = s.countTotalDepts(secondLevelDepts)
 
 	fc := NewFailoverClient(s.pool, &adConfig)
-	if err := fc.ExecuteWithFailover(ctx, func(ldapClient *LDAPClient) error {
+	if err := fc.ExecuteWithFailover(ctx, func(ldapClient LDAPClientIface) error {
 		// 5. 递归同步二级部门树到AD OU（所有 LDAP CreateOU 在闭包内，Pitfall 3）
 		for _, dept := range secondLevelDepts {
 			if err := s.syncDeptTree(ctx, ldapClient, &adConfig, dept, adConfig.BaseDN, result); err != nil {
@@ -110,7 +110,7 @@ func (s *DeptToADSyncService) SyncDeptStructureToAD(ctx context.Context, adConfi
 }
 
 // syncDeptTree 递归同步部门树
-func (s *DeptToADSyncService) syncDeptTree(ctx context.Context, ldapClient *LDAPClient, config *models.ADConfig, dept *models.Department, parentOUDN string, result *DeptSyncResult) error {
+func (s *DeptToADSyncService) syncDeptTree(ctx context.Context, ldapClient LDAPClientIface, config *models.ADConfig, dept *models.Department, parentOUDN string, result *DeptSyncResult) error {
 	// 1. 构建当前部门的OU DN
 	ouDN := fmt.Sprintf("OU=%s,%s", dept.DeptName, parentOUDN)
 
