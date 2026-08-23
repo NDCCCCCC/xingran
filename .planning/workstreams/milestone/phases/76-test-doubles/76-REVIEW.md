@@ -31,7 +31,7 @@ findings:
   warning: 3
   info: 7
   total: 10
-status: issues_found
+status: fixed
 ---
 
 # Phase 76: Code Review Report
@@ -133,6 +133,16 @@ func (r *RedisCache) HKeys(ctx context.Context, key string) ([]string, error) {
 **File:** `internal/agent/server/subprocess_pgroup_test.go:34-36`（helper 在 `subprocess.go:44-49`，存量代码）
 **Issue:** `setProcessGroup` 赋的是共享包级变量 `&sysProcAttr` 的指针；断言只验证非 nil。若 `sysproc_linux.go` 丢失 `Setpgid: true` 或 `sysproc_windows.go` 丢失 `CREATE_NEW_PROCESS_GROUP`（例如重构为零值结构体），测试依旧通过——进程组隔离真正失效不会被检出。
 **Fix:** 按平台断言具体字段（linux/darwin: `cmd.SysProcAttr.Setpgid == true`；windows: `CreationFlags & CREATE_NEW_PROCESS_GROUP != 0`），可用 `runtime.GOOS` 分支的期望文件（`//go:build`）实现。
+
+## Fix Log
+
+`/gsd:code-review --fix`（2026-08-23，范围：3 个 WARNING；Critical=0，Info 不在修复范围）：
+
+- **WR-01** → `febceaa`（fix(cache)）：修复 `RedisCache.HKeys` 对字段名的错误前缀裁剪（`pkg/cache/redis.go`）；miniredis 测试改用长字段名（`department_name`/`display_order`，均长于 prefixLen=8）实证修复。`redis.go:980` 两层缓存透传确认为纯转发且全仓无 HKeys 生产调用方（仅接口定义/mock/测试），未改动。
+- **WR-02** → `45ded45`（test(addomain)）：mock 自证测试 `TestLDAPClient_*` → `TestMockLDAPClient_*` 纯重命名（实际 10 个，非 9 个），断言零改动。
+- **WR-03** → `504279d`（test(addomain)）：`TestFailover_SequentialTraversal_StopsOnFirstSuccess` 断言改为次序无关（按尝试序的 positional mock 工厂 + failure_count/last_success_at 计数断言，不再依赖 username 具体行序），零生产改动。
+
+验证：`go build ./...`、`go vet ./pkg/cache/ ./internal/services/addomain/`、`go test ./pkg/cache/ ./internal/services/addomain/ ./internal/device/ -timeout 120s` 全部通过。
 
 ---
 
