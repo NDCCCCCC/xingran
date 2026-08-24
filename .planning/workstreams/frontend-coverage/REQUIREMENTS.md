@@ -21,7 +21,7 @@
 
 ### P0 基建层 ≥70% (INFRA) — ~3,900 stmts
 
-- [ ] **INFRA-01**: lib 通信层 ≥70%（api.ts 加密客户端 / opsApi / networkApi / menuApi / profileApi / 列配置 api 等 20 文件 1042 stmts）
+- [x] **INFRA-01**: lib 通信层 ≥70%（api.ts 加密客户端 / opsApi / networkApi / menuApi / profileApi / 列配置 api 等 20 文件 1042 stmts）
 - [x] **INFRA-02**: utils 层 ≥70%（sm2 / sm4 / encoding 国密、token 三件套、dualLevelCache、errorHandler、authHelpers、deptUtils、datetime 等 23 文件 950 stmts）
 - [ ] **INFRA-03**: hooks 层 ≥70%（27 文件 1050 stmts，含 usePagination / useServerSort / usePersistedState 续推）
 - [ ] **INFRA-04**: store 层 ≥70%（auth / menu / settings / tabs / dashboard / layout / notice / theme 9 文件 589 stmts）
@@ -76,7 +76,7 @@ Roadmap created 2026-08-23 — `.planning/workstreams/frontend-coverage/ROADMAP.
 | GOV-03 | Phase 82 | Complete |
 | GOV-04 | Phase 82 | Complete |
 | GOV-05 | Phase 82 | Complete |
-| INFRA-01 | Phase 83 | Pending |
+| INFRA-01 | Phase 83 | Complete |
 | INFRA-02 | Phase 83 | Complete |
 | INFRA-03 | Phase 83 | Pending |
 | INFRA-04 | Phase 83 | Pending |

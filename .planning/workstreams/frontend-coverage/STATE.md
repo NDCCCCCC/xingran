@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.28
 milestone_name: milestone
 status: executing
-stopped_at: Completed 83-02-utils-coverage-PLAN.md
-last_updated: "2026-08-24T01:00:53.090Z"
+stopped_at: Completed 83-03-lib-coverage-PLAN.md
+last_updated: "2026-08-24T01:30:35.621Z"
 last_activity: 2026-08-24
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 10
-  completed_plans: 7
-  percent: 14
+  completed_plans: 8
+  percent: 80
 ---
 
 # Project State (v1.28 — frontend-coverage workstream)
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-08-23) — v1.28 Current Milestone 段
 ## Current Position
 
 Phase: 83 (P0 基建层全清 ≥70%) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-08-24
 
-Progress: [███████░░░] 70%（milestone 内 7/10 plans；Phase 83 内 2/5 plans）
+Progress: [████████░░] 80%（milestone 内 8/10 plans；Phase 83 内 3/5 plans）
 
 ## Performance Metrics
 
@@ -68,6 +68,9 @@ v1.28 init 锁定决策（详见 PROJECT.md v1.28 段，不可违反）:
 - [Phase 83]: 83-02: utils floor=89.7——gate json 复算 90.21−0.5 一位小数（v8 text 88.28% 不作数，D-12 gate 输出为真相源）
 - [Phase 83]: 83-02: QUAL-01 不在本 plan 标记 complete——REQUIREMENTS 映射 Phase 88 里程碑收口，本 plan 仅贡献 399 pass / 0 fail 证据
 - [Phase 83]: 83-02: 篡改密文实测 sm-crypto 抛 padding is invalid（D-08 直测可行）；filterExternalOrgDepts docstring 与实现不一致按 actual 锁定，不修业务代码
+- [Phase 83]: 83-03: lib gate 实测 86.56% (902/1042) 为真相源,v8 text 93.15% 不采信(重申 82-02 json 复算优先);floor 86.56-0.5=86.06 一位小数向下截断为 86.0,余量 0.56pp
+- [Phase 83]: 83-03: D-07 双轨 mock 范式落地——vi.mock(axios) 工厂捕获双实例+拦截器 handler 提取直驱,真模块链覆盖 401 刷新队列/400 解密重放/login 401 短路,后续 P0/P1 plan 可复用
+- [Phase 83]: 83-03: IN-06 (vitest 版本统一) 条件未触发不执行;adDomainApi.deleteMapping URL 多余 } + 后端缺 /ad-domain/mappings 路由,范围外登记 deferred-items.md
 
 ### Pending Todos
 
@@ -81,8 +84,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-24T01:00:53.085Z
-Stopped at: Completed 83-02-utils-coverage-PLAN.md
+Last session: 2026-08-24T01:30:35.615Z
+Stopped at: Completed 83-03-lib-coverage-PLAN.md
 Resume file: None
 
 ## Performance Metrics
@@ -96,3 +99,4 @@ Resume file: None
 | Phase 82 P5 | 66min (含确认/merge 等待) | 1 task + 1 checkpoint | 1 file |
 | Phase 83 P01 | 90min | 4 tasks | 2 files |
 | Phase 83 P02 | 22min | 3 tasks | 23 files |
+| Phase 83 P83-03 | 26m | 3 tasks | 20 files |
