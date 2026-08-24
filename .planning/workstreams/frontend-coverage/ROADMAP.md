@@ -92,7 +92,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 83-02-utils-coverage-PLAN.md — utils 层 950 stmts 测试补齐至 ≥70%，bump utils floor
+- [x] 83-02-utils-coverage-PLAN.md — utils 层 950 stmts 测试补齐至 ≥70%，bump utils floor
 - [ ] 83-03-lib-coverage-PLAN.md — lib 层 1042 stmts 测试补齐至 ≥70%（含 api.ts 双轨直测），bump lib floor
 
 **Wave 3** *(blocked on Wave 2 completion)*
@@ -181,7 +181,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 82. 口径修正与治理基建 | 5/5 | Complete    | 2026-08-23 |
-| 83. P0 基建层全清 ≥70% | 1/5 | In Progress|  |
+| 83. P0 基建层全清 ≥70% | 2/5 | In Progress|  |
 | 84. P1 组件层 ≥70% | 0/TBD | Not started | - |
 | 85. P2 页面层 R1 — operations | 0/TBD | Not started | - |
 | 86. P2 页面层 R2 — system + network | 0/TBD | Not started | - |
