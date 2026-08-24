@@ -438,10 +438,12 @@ None — 现有测试基建（helper 先例、TestHelperProcess、go.mod 依赖�
 | A4 | seam 方案（runAccountCmd 等 3 var）被 D-08「re-exec 真策略体」锁定语义覆盖（76-02 工厂 var 同构先例） | 77-05 | 中——若被否决，真策略体 50 stmts 放弃，agent 仍 ~398 ≥ 299 达线（数学不破） |
 | A5 | 全部 per-function unc 数字基于 2026-08-24 工作树 8ec0a06；后续 commit 可能微移 | 数学 | 低——planner/executor 以 plan 收尾时实测 cover 输出为准 |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **真策略体 seam 的措辞确认** —— D-08 已锁「re-exec 真策略体」，本研究据 76-02 先例定案为 3 个包级 var seam（A4）。planner 若认为超出授权，可整段降级为「仅假策略 + parse 纯函数」，数学不受影响。
+   **RESOLVED:** 采纳 seam 方案——77-05 Task 2 落地 3 个包级 var seam（15 处机械替换，生产路径行为 byte 不变），planner 未降级。
 2. **Q-77-A（确定性 secret）是否升级安全通告** —— 修复本身低风险，但「agent JWT secret 曾可预测」若已有生产部署，收口时值得在 77-VERIFICATION.md 提示运维重注册 agent。留给 discuss/execute 阶段人工裁决。
+   **RESOLVED:** 转移至收口人工裁决——77-05 Task 3 SUMMARY 落运维提示（已部署 agent 建议重注册），由 77-VERIFICATION.md 收口时人工定夺。
 
 ## Sources
 
