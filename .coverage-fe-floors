@@ -15,7 +15,7 @@ api	0.0
 components	4.9
 constants	38.8
 design-system	15.0
-hooks	7.6
+hooks	91.7
 lib	86.0
 pages/ad	0.0
 pages/ad-domain	0.0
@@ -35,6 +35,6 @@ pages/vdi	0.0
 pages/workorder	0.0
 router	0.0
 services	3.3
-store	4.3
+store	95.0
 types	12.0
 utils	89.7
