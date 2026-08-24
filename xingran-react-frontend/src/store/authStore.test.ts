@@ -18,13 +18,15 @@ const tokenManagerMock = vi.hoisted(() => ({
 
 // 注意:new 调用需要 constructable 实现(普通 function,this 被 return 的对象覆盖)
 vi.mock("@/utils/token/TokenManager", () => ({
-  TokenManager: vi.fn(() => {
+  // eslint-disable-next-line prefer-arrow-callback -- 被 authStore 以 new 调用
+  TokenManager: vi.fn(function MockTokenManager() {
     return tokenManagerMock;
   }),
 }));
 
 vi.mock("@/utils/token/SecureTokenStorageImpl", () => ({
-  SecureTokenStorageImpl: vi.fn(() => {
+  // eslint-disable-next-line prefer-arrow-callback -- 被 authStore 以 new 调用
+  SecureTokenStorageImpl: vi.fn(function MockSecureTokenStorageImpl() {
     return {};
   }),
 }));
