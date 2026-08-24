@@ -69,3 +69,5 @@ declare global {
     BMAPGL_ANCHOR_BOTTOM_RIGHT?: number;
   }
 }
+
+// Phase 83 CR-01 trial: harmless appended comment line (.d.ts is excluded from the diff gate).

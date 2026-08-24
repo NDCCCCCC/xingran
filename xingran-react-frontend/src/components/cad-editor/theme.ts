@@ -139,3 +139,5 @@ export const DEFAULT_WORKSTATION_COLOR = CAD_COLOR_THEME.workstation.available;
 
 /** CAD 颜色主题类型 */
 export type CadColorTheme = typeof CAD_COLOR_THEME;
+
+// Phase 83 CR-01 trial: harmless appended comment line (cad-editor whitelist is excluded).
