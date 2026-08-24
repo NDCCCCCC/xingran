@@ -4,14 +4,14 @@ milestone: v1.28
 milestone_name: milestone
 status: executing
 stopped_at: Completed 83-03-lib-coverage-PLAN.md
-last_updated: "2026-08-24T01:30:35.621Z"
+last_updated: "2026-08-24T02:12:38.594Z"
 last_activity: 2026-08-24
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 10
-  completed_plans: 8
-  percent: 80
+  completed_plans: 9
+  percent: 14
 ---
 
 # Project State (v1.28 — frontend-coverage workstream)
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-08-23) — v1.28 Current Milestone 段
 ## Current Position
 
 Phase: 83 (P0 基建层全清 ≥70%) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-08-24
 
@@ -71,6 +71,8 @@ v1.28 init 锁定决策（详见 PROJECT.md v1.28 段，不可违反）:
 - [Phase 83]: 83-03: lib gate 实测 86.56% (902/1042) 为真相源,v8 text 93.15% 不采信(重申 82-02 json 复算优先);floor 86.56-0.5=86.06 一位小数向下截断为 86.0,余量 0.56pp
 - [Phase 83]: 83-03: D-07 双轨 mock 范式落地——vi.mock(axios) 工厂捕获双实例+拦截器 handler 提取直驱,真模块链覆盖 401 刷新队列/400 解密重放/login 401 短路,后续 P0/P1 plan 可复用
 - [Phase 83]: 83-03: IN-06 (vitest 版本统一) 条件未触发不执行;adDomainApi.deleteMapping URL 多余 } + 后端缺 /ad-domain/mappings 路由,范围外登记 deferred-items.md
+- [Phase 83]: hooks floor 91.7 / store floor 95.0 (83-04 实测 92.29%/95.59% 各减 0.5pp 截断)
+- [Phase 83]: noticeStore unreadCount 为服务器侧计数,不随本地 50 条列表淘汰回退 (83-04)
 
 ### Pending Todos
 
@@ -84,7 +86,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-24T01:30:35.615Z
+Last session: 2026-08-24T02:12:38.589Z
 Stopped at: Completed 83-03-lib-coverage-PLAN.md
 Resume file: None
 
@@ -100,3 +102,4 @@ Resume file: None
 | Phase 83 P01 | 90min | 4 tasks | 2 files |
 | Phase 83 P02 | 22min | 3 tasks | 23 files |
 | Phase 83 P83-03 | 26m | 3 tasks | 20 files |
+| Phase 83 P83-04 | 38m | 3 tasks | 18 files |

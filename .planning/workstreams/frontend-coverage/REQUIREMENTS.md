@@ -23,8 +23,8 @@
 
 - [x] **INFRA-01**: lib 通信层 ≥70%（api.ts 加密客户端 / opsApi / networkApi / menuApi / profileApi / 列配置 api 等 20 文件 1042 stmts）
 - [x] **INFRA-02**: utils 层 ≥70%（sm2 / sm4 / encoding 国密、token 三件套、dualLevelCache、errorHandler、authHelpers、deptUtils、datetime 等 23 文件 950 stmts）
-- [ ] **INFRA-03**: hooks 层 ≥70%（27 文件 1050 stmts，含 usePagination / useServerSort / usePersistedState 续推）
-- [ ] **INFRA-04**: store 层 ≥70%（auth / menu / settings / tabs / dashboard / layout / notice / theme 9 文件 589 stmts）
+- [x] **INFRA-03**: hooks 层 ≥70%（27 文件 1050 stmts，含 usePagination / useServerSort / usePersistedState 续推）
+- [x] **INFRA-04**: store 层 ≥70%（auth / menu / settings / tabs / dashboard / layout / notice / theme 9 文件 589 stmts）
 - [ ] **INFRA-05**: services + router + constants + types 收尾 ≥70%（~626 stmts）
 
 ### P1 组件层 ≥70% (COMP) — ~5,000 stmts
@@ -78,8 +78,8 @@ Roadmap created 2026-08-23 — `.planning/workstreams/frontend-coverage/ROADMAP.
 | GOV-05 | Phase 82 | Complete |
 | INFRA-01 | Phase 83 | Complete |
 | INFRA-02 | Phase 83 | Complete |
-| INFRA-03 | Phase 83 | Pending |
-| INFRA-04 | Phase 83 | Pending |
+| INFRA-03 | Phase 83 | Complete |
+| INFRA-04 | Phase 83 | Complete |
 | INFRA-05 | Phase 83 | Pending |
 | COMP-01 | Phase 84 | Pending |
 | COMP-02 | Phase 84 | Pending |

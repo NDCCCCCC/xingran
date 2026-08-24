@@ -97,7 +97,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 83-04-hooks-store-coverage-PLAN.md — hooks + store 层测试补齐至 ≥70%，bump hooks/store floor
+- [x] 83-04-hooks-store-coverage-PLAN.md — hooks + store 层测试补齐至 ≥70%，bump hooks/store floor
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -181,7 +181,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 82. 口径修正与治理基建 | 5/5 | Complete    | 2026-08-23 |
-| 83. P0 基建层全清 ≥70% | 3/5 | In Progress|  |
+| 83. P0 基建层全清 ≥70% | 4/5 | In Progress|  |
 | 84. P1 组件层 ≥70% | 0/TBD | Not started | - |
 | 85. P2 页面层 R1 — operations | 0/TBD | Not started | - |
 | 86. P2 页面层 R2 — system + network | 0/TBD | Not started | - |
