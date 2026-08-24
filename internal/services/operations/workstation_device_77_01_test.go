@@ -275,8 +275,11 @@ func TestWSD77_GetADDevices(t *testing.T) {
 	assert.Equal(t, "AD-PC-MANAGED", *m1.DeviceName)
 	require.NotNil(t, m1.MACAddress)
 	assert.Equal(t, "AA:BB:CC:DD:EE:01", *m1.MACAddress)
-	// 注: IPAddress 断言由 quirk-77-1 修复 commit 补回(GetADDevices 转换漏 IPAddress,
-	// 与 :53-61 注释及批量实现 :1574 不符,按 D-01/D-03 发现即修)。
+	// quirk-77-1 回归: GetADDevices 转换此前漏掉 IPAddress,导致接口注释 :58 的
+	// 「ipAddress 优先取 AD」合并规则在 mergeBySerial 链路永不可达(批量实现 :1574
+	// 一直有 IPAddress: &ip)。修复后单工位查询与批量行为一致。
+	require.NotNil(t, m1.IPAddress)
+	assert.Equal(t, "10.1.1.1", *m1.IPAddress)
 
 	// 实时查询不落库
 	var cnt int64

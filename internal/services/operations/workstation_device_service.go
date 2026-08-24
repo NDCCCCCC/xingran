@@ -233,6 +233,7 @@ func (s *workstationDeviceService) GetADDevices(ctx context.Context, workstation
 			DeviceSerial:  &adDeviceCopy.DeviceSerial,
 			DeviceName:    &adDeviceCopy.DeviceName,
 			MACAddress:    &adDeviceCopy.MACAddress,
+			IPAddress:     &adDeviceCopy.IPAddress,
 			Status:        models.WorkstationDeviceStatusNormal,
 			IsPrimary:     false,
 			Priority:      0,
