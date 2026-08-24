@@ -88,7 +88,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 83-01-CR01-verify-trial-PLAN.md — 验证已落库的 CR-01/WR-01~03 gate 修复、清理 ci.yml 注释、发起并关闭试验 PR
+- [x] 83-01-CR01-verify-trial-PLAN.md — 验证已落库的 CR-01/WR-01~03 gate 修复、清理 ci.yml 注释、发起并关闭试验 PR
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -181,7 +181,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 82. 口径修正与治理基建 | 5/5 | Complete    | 2026-08-23 |
-| 83. P0 基建层全清 ≥70% | 0/TBD | Not started | - |
+| 83. P0 基建层全清 ≥70% | 1/5 | In Progress|  |
 | 84. P1 组件层 ≥70% | 0/TBD | Not started | - |
 | 85. P2 页面层 R1 — operations | 0/TBD | Not started | - |
 | 86. P2 页面层 R2 — system + network | 0/TBD | Not started | - |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.28
 milestone_name: milestone
 status: executing
-stopped_at: Phase 83 context gathered
-last_updated: "2026-08-23T17:23:00.714Z"
-last_activity: 2026-08-23 -- Phase 83 planning complete
+stopped_at: Completed 83-01-CR01-verify-trial-PLAN.md
+last_updated: "2026-08-24T00:37:37.910Z"
+last_activity: 2026-08-24
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 10
-  completed_plans: 5
+  completed_plans: 6
   percent: 14
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-23) — v1.28 Current Milestone 段
 
 **Core value:** 前端全量口径测试覆盖率达到优秀（≥70%），CI 防倒退 gate 对称后端 v1.26 治理，使前端覆盖率从此不可无声倒退
-**Current focus:** Phase 82 — coverage-caliber-and-governance
+**Current focus:** Phase 83 — P0 基建层全清 ≥70%
 
 ## Current Position
 
-Phase: 83
-Plan: Not started
+Phase: 83 (P0 基建层全清 ≥70%) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-08-23 -- Phase 83 planning complete
+Last activity: 2026-08-24
 
-Progress: [██████████] 100%（Phase 82 内 5/5 plans；7 phases 总进度待 verify-work 后更新）
+Progress: [██████░░░░] 60%（milestone 内 6/10 plans；Phase 83 内 1/5 plans）
 
 ## Performance Metrics
 
@@ -62,6 +62,9 @@ v1.28 init 锁定决策（详见 PROJECT.md v1.28 段，不可违反）:
 - [Phase 82]: 82-04: frontend-coverage-diff 的 download-artifact 必须带 with.path 还原 upload v4 LCA 剥离——无 path 则 json 落 workspace 根、gate 全 PR 静默软跳过 exit 0 (GOV-04 失效), 82-05 以 diff job 日志无软跳过提示复核
 - [Phase 82]: 82-05: D-14 校准未触发——CI 实测 3.85% (run 32642143749) == 本地 3.85% 零漂移, GLOBAL 3.8 维持, .coverage-fe-floors 零改动; ratchet 起点 SHA 回填 bddb2fc (82-04 落盘 commit 携带 floors 最终态), CI 读数行记 8c7b69f
 - [Phase 82]: 82-05: PR-only job 的 push run 断言口径 = conclusion==skipped (job 仍列于 run 而非消失); diff gate 实读 profile 的证据 = 日志无软跳过提示 + 有 diff gate 输出行, job 绿本身不能证明 gate 真跑
+- [Phase 83]: 83-01: CR-01 闭环——三类路径(src/test/、*.d.ts、cad-editor 白名单)零行进 diff 分母经真实 CI 确认(PR #7 关闭不 merge, run 32675492512 四 job 全绿), Phase 83 测试/harness PR 不再踩红
+- [Phase 83]: 83-01: GOV-04 profile 主路径首次真实触发(补 82-REVIEW IN-06)——diff gate 日志无 json 缺失软跳过提示且有 diff gate 输出行; ci.yml 注释已与 fail-closed exit 2 行为对齐(55389ae)
+- [Phase 83]: 83-01: .coverage-fe-floors 零变更——验证性 plan 无覆盖率变化不触发 D-11 ratchet; 本地空树合成基线前后对照(修复前 145 行进分母 0.00% FAIL → 修复后 PASS)与真实 CI 结论一致
 
 ### Pending Todos
 
@@ -75,9 +78,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-23T16:25:11.947Z
-Stopped at: Phase 83 context gathered
-Resume file: .planning/workstreams/frontend-coverage/phases/83-p0-70/83-CONTEXT.md
+Last session: 2026-08-24T00:37:37.905Z
+Stopped at: Completed 83-01-CR01-verify-trial-PLAN.md
+Resume file: None
 
 ## Performance Metrics
 
@@ -88,3 +91,4 @@ Resume file: .planning/workstreams/frontend-coverage/phases/83-p0-70/83-CONTEXT.
 | Phase 82 P3 | 11min | 2 tasks | 1 files |
 | Phase 82 P4 | 6min | 2 tasks tasks | 2 files files |
 | Phase 82 P5 | 66min (含确认/merge 等待) | 1 task + 1 checkpoint | 1 file |
+| Phase 83 P01 | 90min | 4 tasks | 2 files |
