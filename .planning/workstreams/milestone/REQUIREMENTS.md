@@ -65,8 +65,8 @@ sources:
 | INFRA-03 | Phase 76 | 76-03 | Pending |
 | INFRA-04 | Phase 76 | 76-04 | Pending |
 | INFRA-05 | Phase 76 | 76-05 | Pending |
-| BLOCK-01 | Phase 77 | TBD | Pending |
-| BLOCK-02 | Phase 77 | TBD | Pending |
+| BLOCK-01 | Phase 77 | 77-01, 77-02, 77-03 | Pending |
+| BLOCK-02 | Phase 77 | 77-04, 77-05 | Pending |
 | BLOCK-03 | Phase 78 | TBD | Pending |
 | BLOCK-04 | Phase 78 | TBD | Pending |
 | BLOCK-05 | Phase 78 | TBD | Pending |

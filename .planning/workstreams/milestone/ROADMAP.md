@@ -1,6 +1,6 @@
 ---
-last_updated: 2026-08-23
-update_trigger: v1.27 roadmap created — 7 phases (75-81) / 19 reqs 100% mapped / QUIRK-first sequencing (IncrementBy 最先解锁 core captcha)
+last_updated: 2026-08-24
+update_trigger: v1.27 roadmap created — 7 phases (75-81) / 19 reqs 100% mapped / QUIRK-first sequencing (IncrementBy 最先解锁 core captcha); 2026-08-24 Phase 77 planned (5 plans / 3 waves)
 ---
 
 # Roadmap: XingRan-Next 运维管理系统
@@ -149,7 +149,7 @@ Phase 77-80 全部完成
 
 ### Phase 77: 阻塞包攻破·零基建先行 (operations + agent/server)
 
-**Goal:** 用既有 sqlite/httptest/假策略先攻投入产出排名前二的 operations 与 agent/server,双双越过 70% 线。
+**Goal:** 用既有 sqlite/httptest/假策略先例攻投入产出排名前二的 operations 与 agent/server,双双越过 70% 线。
 
 **Depends on**: Phase 76(INFRA-04 re-exec 供 agent;operations 各 plan 零基建硬依赖,必要时可提前执行)
 
@@ -162,19 +162,21 @@ Phase 77-80 全部完成
 3. Windows 本地与 ubuntu CI 的 agent 包覆盖率差 <2pp(env-branch divergence 消除,P2_RATCHET 注释记录的 22.08 vs 19.48 问题收口)
 4. phase 边界 `go test ./...` 全绿,gate(weighted-avg / P1 floor / P2 floor / diff coverage)不倒退
 
-**Plans**: TBD(建议 5)
+**Plans**: 5(wave 1→2→3;同包 plan 串行隔 wave 规避整包编译互踩,operations 与 agent 双线并行——D-09 planner 编排)
 
-- 77-01 workstation_device_service(GetADDevices/SyncFromAD/SyncFromAsset/mergeBySerial/SetPrimaryDevice*)
-- 77-02 excel_service 导出链(ExportData/queryData/writeDataRows/writeInstructions/appendWorkstationDeviceSheets)
-- 77-03 excel_service 导入剩余 + reference_resolver + workstation/floor/code_generator/excel_raw_rows
-- 77-04 agent jwt_auth + connection_manager(httptest 假后端,backendURL 明文参数)
-- 77-05 agent handlers(gin + Recorder)+ config 校验/注册 + account_manager(假策略上层 + re-exec 真策略体)
+- [ ] 77-01-PLAN.md — workstation_device_service sqlite 7 表直测(GetADDevices/GetAssetDevices/ByUser×2/SyncFromAD/SyncFromAsset/AddDeviceManual/UpdateDevice/DeleteDevice/SetPrimary*/mergeBySerial 三态;~375 stmts,BLOCK-01 主力)(wave 1)
+- [ ] 77-02-PLAN.md — excel_service 导出链(ExportData legacy 8 类/queryData/writeDataRows/formatCellValue/writeInstructions/appendWorkstationDeviceSheets 三 sheet;D-07 结构断言 + D-06 全内存)(wave 2)
+- [ ] 77-03-PLAN.md — 导入剩余(依赖引用二阶段/populateNewUserPasswords)+ reference_resolver 尾部 + workstation/floor/code_generator/excel_raw_rows 卫星 + Q-77-C(doc-only)/Q-77-D(按现行为断言)+ BLOCK-01 收口 ≥70%(wave 3)
+- [ ] 77-04-PLAN.md — agent jwt_auth(httptest 假后端经 backendURL 明文参数/x509 自签)+ connection_manager 状态机(channel 同步断言;191 stmts)(wave 1)
+- [ ] 77-05-PLAN.md — agent handlers(gin+Recorder+JWTAuth 端到端/sanitizeError)+ config 校验/注册(Q-77-A crypto/rand / Q-77-B 长度守卫 quirk 修复)+ account_manager(3 var seam × 15 处机械替换 + re-exec 真策略体 + 假策略上层)+ pty_manager + BLOCK-02/SC#3(D-04/D-05)收口(wave 2)
 
 **Notes**:
 
 - geocoding 已有 fakeGeocodeTransport(RoundTripper)先例,httpmock 在本包仅边际价值
 - Q-12/Q-13 已在 Phase 75 修复,agent config 测试直接断言新行为(非法 level 返回 error / TLS 空参报错)
-- pty_manager 真 pty 路径(18 stmts)允许平台 Skipf 兜底,不影响 70% 达线
+- pty_manager 非"真 pty"(77-RESEARCH 实证:Create/Close 返回 not-implemented,Write/Read/List 操作内存 map)——18 stmts 零 Skipf 全覆盖,原 Skipf 兜底备注作废
+- 判修级 quirk 两项排入 77-05:Q-77-A(generateRandomSecret 确定性输出,JTW secret 可预测——生产安全语义)与 Q-77-B(MachineGUID[:8] slice panic);Q-77-C 注释 doc-only(77-03),Q-77-D 死分支按现行为断言待裁决
+- ratchet 阈值 55.6 与 P2_RATCHET 豁免行不动(Phase 81 统一收口);测试文件命名沿用 {topic}_77_{NN}_test.go
 
 ---
 
@@ -308,7 +310,7 @@ Phase 77-80 全部完成
 |-------|--------|-------|--------------|---------|-----------|
 | Phase 75 QUIRK 行为修正 | SHIPPED | 6/6 | QUIRK-01..03 | 2026-08-23 | 2026-08-23 |
 | Phase 76 测试基建落地 | IN PROGRESS (planned) | 0/5 | INFRA-01..05 | 2026-08-23 | - |
-| Phase 77 阻塞包·零基建 | Not started | 0/5 (建议) | BLOCK-01, BLOCK-02 | - | - |
+| Phase 77 阻塞包·零基建 | Not started | 0/5 | BLOCK-01, BLOCK-02 | - | - |
 | Phase 78 阻塞包·基建解锁 | Not started | 0/7 (建议) | BLOCK-03..05 | - | - |
 | Phase 79 长尾·services root | Not started | 0/6 (建议) | TAIL-01 | - | - |
 | Phase 80 长尾·scheduler+碎包 | Not started | 0/5 (建议) | TAIL-02, TAIL-03 | - | - |
@@ -371,4 +373,4 @@ Test Infrastructure
 
 ---
 
-*Last updated: 2026-08-23 — Phase 76 planned: 5 plans / 3 waves(INFRA-01..05 全映射;76-01 wave 1 独占 go.mod 写入窗口 → 76-02/03/04 wave 2 并行(文件集互斥)→ 76-05 wave 3 收官守护全仓最终态)。v1.27 roadmap 此前于 2026-08-23 drafted:7 phases (75-81) / 19 requirements / 100% mapped。QUIRK-first 排序(IncrementBy 最先解锁 core captcha),零 Docker 双环境同构,gap-math 6287 stmts(BLOCK ~2402 + TAIL ~3885)。v1.26 已 SHIPPED 2026-08-22(详情归档 `.planning/milestones/v1.26-phases/`)。*
+*Last updated: 2026-08-24 — Phase 77 planned: 5 plans / 3 waves(BLOCK-01 → 77-01/02/03,BLOCK-02 → 77-04/05;wave 1 = 77-01 ∥ 77-04(包互斥)→ wave 2 = 77-02 ∥ 77-05 → wave 3 = 77-03 收口 BLOCK-01;Q-77-A/B 判修级 quirk 排入 77-05,3 var seam × 15 处机械替换口径按 77-PATTERNS 实测修正)。此前 2026-08-23 Phase 76 planned: 5 plans / 3 waves(INFRA-01..05 全映射)。v1.27 roadmap 于 2026-08-23 drafted:7 phases (75-81) / 19 requirements / 100% mapped。QUIRK-first 排序(IncrementBy 最先解锁 core captcha),零 Docker 双环境同构,gap-math 6287 stmts(BLOCK ~2402 + TAIL ~3885)。v1.26 已 SHIPPED 2026-08-22(详情归档 `.planning/milestones/v1.26-phases/`)。*
