@@ -125,6 +125,12 @@ None - no external service configuration required.
 - GOV-04 主路径已有真实 CI 触发先例，82-REVIEW IN-06 缺口补齐
 - 无遗留 blocker；`.coverage-fe-floors` 未动，ratchet 起点（bddb2fc）不变
 
+## Self-Check: PASSED
+
+- FOUND: 83-01-CR01-verify-trial-SUMMARY.md（本文件）
+- FOUND: .planning/frontend-coverage-baseline.md（含 Phase 83 · 83-01 段）
+- FOUND: commit 55389ae / 3d17bd1 / 728a29e（本地 main）
+
 ---
 *Phase: 83-p0-70*
 *Completed: 2026-08-24*
