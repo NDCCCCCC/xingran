@@ -112,3 +112,14 @@ TOTAL                            3958       215    5.43%    118
 - **D-14 校准判定**: 无需校准——CI 实测 3.85%（run 32642143749）≥ 阈值 3.8，与本地读数零漂移；`.coverage-fe-floors` GLOBAL 3.8 维持
 - **D-04 观察项**: `Test (coverage)` 步骤 CI 实际耗时 41 秒（13:23:20→13:24:01；15 分钟 timeout 余量充足，不调整）
 - **先行佐证（作废 run 32630491947，PR #5）**: head 被并行 workstream 共享工作树事故污染后废弃重开（处置链见 82-05-SUMMARY）；其读数与正式证据完全一致（3.85% / 28/28 目录 / 无软跳过），佐证 gate 行为可复现
+
+## CI 验证记录 (Phase 83 · 83-01 CR-01 试验 PR 验证, 2026-08-24)
+
+- **试验 PR**: https://github.com/NDCCCCCC/xingran/pull/7 "[DO NOT MERGE] Phase 83 CR-01 trial PR" — 分支 `phase-83-trial-cr01`，head `7d481f9`，状态 CLOSED（关闭不 merge，2026-08-24T00:13:33Z）
+- **三类路径变更清单**: `xingran-react-frontend/src/test/utils/trial-test.ts`（src/test/ 占位测试）、`xingran-react-frontend/src/types/global.d.ts`（.d.ts 追加注释）、`xingran-react-frontend/src/components/cad-editor/theme.ts`（cad-editor 白名单目录追加注释）——每类至少一个文件，均为无害变更，不触业务逻辑
+- **CI run**: https://github.com/NDCCCCCC/xingran/actions/runs/32675492512 — 四 job 全绿：backend / frontend / frontend-coverage-diff / coverage-diff 均 success
+- **diff gate 结论**: frontend-coverage-diff 日志输出 `diff-coverage: no testable .ts/.tsx lines changed vs origin/main — PASS`——三类路径（src/test/、`*.d.ts`、cad-editor 白名单）零行进入 diff 分母，CR-01 pathspec 镜像在真实 CI 生效，无误报失败
+- **frontend job**: Tests 159 passed（存量无回归）+ Coverage gate PASS（3.85% >= 3.80%；GLOBAL 与 28/28 目录 floor 均不变）
+- **GOV-04 profile 主路径首次真实触发（补 82-REVIEW IN-06）**: 本 run 是 CR-01/WR-01~03 四项修复合入后，diff gate 首次在真实 PR 上以"非空三类路径变更 + profile 实读"主路径运行——日志无 json 缺失软跳过提示；fail-closed exit 2 行为已由 ci.yml 注释修正（commit 55389ae）与脚本实际对齐
+- **本地前后对照（Task 2 空树合成基线）**: 修复前同 diff 有 145 行（三类路径）进入分母、diff 覆盖率 0.00% FAIL；修复后同 diff 输出 "no testable .ts/.tsx lines changed ... PASS"。合成基线前后对照与真实 CI 结论一致，CR-01 修复闭环
+- **floors 不变**: 本 plan 为验证性变更，无覆盖率变化，`.coverage-fe-floors` 未修改、不触发 D-11 ratchet
