@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.27
 milestone_name: 后端测试覆盖率优秀 II
 status: executing
-stopped_at: Phase 77 context gathered
-last_updated: "2026-08-24T02:05:09.236Z"
-last_activity: 2026-08-24 -- Phase 77 planning complete
+stopped_at: Completed 77-05-PLAN.md (BLOCK-02 收口, 6 commits)
+last_updated: "2026-08-27T06:11:46.448Z"
+last_activity: 2026-08-27
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 16
-  completed_plans: 11
-  percent: 29
+  completed_plans: 16
+  percent: 43
 ---
 
 # Project State
@@ -38,10 +38,10 @@ See: [.planning/PROJECT.md](PROJECT.md) (updated 2026-08-18)
 
 ## Current Position
 
-Phase: 77
-Plan: Not started
+Phase: 77 (operations-agent-server) — EXECUTING
+Plan: 3 of 5
 Status: Ready to execute
-Last activity: 2026-08-24 -- Phase 77 planning complete
+Last activity: 2026-08-27
 
 ## Accumulated Context
 
@@ -189,9 +189,9 @@ Full deferred detail in [milestones/v1.21-ROADMAP.md](milestones/v1.21-ROADMAP.m
 
 ## Session Continuity
 
-Last session: 2026-08-24T01:06:31.800Z
-Stopped at: Phase 77 context gathered
-Resume file: .planning/workstreams/milestone/phases/77-operations-agent-server/77-CONTEXT.md
+Last session: 2026-08-27T06:11:40.494Z
+Stopped at: Completed 77-05-PLAN.md (BLOCK-02 收口, 6 commits)
+Resume file: None
 
 **Milestone status:** ✅ v1.22 SHIPPED 2026-08-18 (Phases 64-67 / 4 phases / 15 requirements / 100% coverage) + ✅ v1.23 Phase 68 EXECUTED 2026-08-19 (DEPLOY-01~05 闭环) + ✅ v1.24 Phase 69 EXECUTED 2026-08-19 (DICT-01~04 闭环) + ✅ v1.25 Phase 70 EXECUTED 2026-08-19 (D-01~D-12 闭环) + ✅ **Phase 63 SHIPPED 2026-08-20 (1/1 plan, 5/5 SC, 7-commit chain `760606a..937f35f`)**;四块启动块 + Phase 63 全部落地,共 8 phases / 21 plans 全绿;3 项 advisory 留给 Phase 71+(network/ports 3 timeout + total bundle +90kB + knip ignore churn)。
 
@@ -222,6 +222,7 @@ Resume file: .planning/workstreams/milestone/phases/77-operations-agent-server/7
 | Phase 73 P03 | 50m | 4 tasks | 3 test files (duty_cache_impl_test.go rewrite 57 tests + knowledge_cache_impl_test.go 46 tests + network cache_impl_test.go 43 tests = 146 total); per-package coverage duty 0%→95.6% + knowledge 0%→95.3% + network 0%→92.1% (combined 94.2%); 4 commits `3bd352d` + `91a7bb7` + `6fab146` + docs; IMP-05 SC#5 met + IMP-06 network half; D-02/D-10/D-12 honored |
 | Phase 73 P04 | 18m | 5 tasks | 4 test files (cache_service_test.go 78 + login_log_service_test.go 23 + oper_log_service_test.go 24 + server_service_test.go 18 = 143 total); package coverage monitor 0%→95.3% (all functions ≥66.7%); 5 commits `870480f` + `f922505` + `39d8701` + `b19fe05` + docs `946aa37`; IMP-06 COMPLETE (network 92.1% + monitor 95.3%); D-02 mixed strategy + D-03 oper_log non-exempt + D-10/D-12 honored; 4 business quirks locked (Q1 prefix-identity, Q3 login Clean wrong table, Q4 oper filter wrong column, Q5 sort fallback loss) |
 | Phase 73 P05 | 25m | 4 tasks | 6 files in single atomic ratchet commit (per D-07 + D-11): `.coverage-threshold` (21.5→25.9) + `.planning/coverage-baseline.md` (Phase 73 后 row + 8 P1 per-package table) + `.github/scripts/check-coverage.sh` (section 3 p1_package_check, exit 4) + `.planning/STATE.md` + `.planning/ROADMAP.md` (Phase 73 SHIPPED) + `73-05-SUMMARY.md`; full backend coverage measured (53 ok / 0 FAIL / 0 panic); all 8 P1 packages PASS ≥70% (D-04/D-10 strict); gate at new threshold 25.9 passes; Task 0 batch commit adapted away (per-plan executors committed test files individually — 0 uncommitted *_test.go per `git status --porcelain | grep _test.go`); deviations: Phase 72 28-cell per-sub-package validation NOT added (deferred to Phase 74 per 72-13 deviation #3; adding now would fail gate on api/v1/system 35.4% / services/system 53.5%); check-coverage-p1-test.sh fixture script NOT committed (conflicts with D-07's 6-file atomic ratchet; equivalent verification via local temp fixtures); push deferred to orchestrator/user per task directive |
+| Phase 77 P05 | 31 | 6 tasks | 5 files |
 
 ## Decisions
 
@@ -239,3 +240,4 @@ Resume file: .planning/workstreams/milestone/phases/77-operations-agent-server/7
 - [Phase 73-05]: Phase 73 ratchet 21.5% → 25.9% 落地 — 阈值取实际测量 25.97% 的 1-decimal 截断值 (Phase 72 同款 21.5/21.55 模式);check-coverage.sh 扩展 p1_package_check (8 P1 包 ≥70% floor, exit 4) 加性不互斥 sections 1-2 weighted-avg gate 不变;Task 0 batch commit 适配掉(per-plan executors 已 individual 提交 9 个 test commits + 4 docs commits, 0 uncommitted *_test.go 验证通过);atomic ratchet commit 6 文件 (D-07+D-11);3 deviations 文档化 (Phase 72 28-cell per-sub-package validation NOT added - 72-13 deviation #3 deferred 到 Phase 74 + 加之即 fail 因 api/v1/system 35.4%/services/system 53.5%;check-coverage-p1-test.sh fixture NOT committed - 冲突 D-07 6-file 严格性,等价验证走 /tmp 临时 fixtures;Plan Task 1 awk '/weighted avg/' coverage.out 命令无效 - 字符串在 cover-func.txt 而非 coverage.out,改走 gate output 的 PACKAGE 行);push deferred to orchestrator/user;Phase 73 SHIPPED → 8/8 P1 包 PASS ≥70% (D-04+D-10 strict),加权平均 +4.4 pp,0% 包 31→22 (-9 个)。
 - [Phase 73-01]: Phase 73 首单交付 — handler 简单对 (duty+knowledge 538 stmts) 0% → 70%+ ratchet。2 test files (1165 + 1079 lines / 135 tests total) + 3 atomic commits `debe0e4`/`d8eb6f3`/`d87aa82`；per-package coverage `duty 83.0%` + `knowledge 84.2%` 均超 70% 阈值 (SC#1 + SC#2 met)；D-02 锁定决策 honored: `mockDutyService` / `mockKnowledgeService` 使用 Phase 72 SHIPPED ad_account 范本 (per-interface *Func fields + interface-embedded-as-nil)，无 testify/mock；D-09 honored: handler 直接调用 mock service 真实接口方法，encryption middleware 不在 handler 层；D-12 honored: 0 业务代码改动 (`git diff --stat` 仅新增 `*_test.go` 文件，未触碰 handler/router/service)；D-13 honored: cache invalidation 5+4 个 interface 方法都有默认 override 满足接口契约；Nyquist 8-dim 审计 PASS (truths/artifacts/key-links/SC trace/locks/patterns/threshold 7 PASS + TDD N/A)。Phase 73-02 (handler 复杂: rpa+vdi 910 stmts) 待执行。
 - [Phase 73-03]: service 简单三包 (duty+knowledge+network 326 stmts) 0% → 70%+。3 test files (57+46+43 = 146 tests) + 4 commits `3bd352d`/`91a7bb7`/`6fab146`/docs；per-package `duty 95.6%` + `knowledge 95.3%` + `network 92.1%` (combined 94.2%)。前次部分执行遗留的 duty panic fixture 重写修复 (root cause: testify m.Called 对未注册 Delete panic + setup 走 service 触发 invalidation)；D-02 portwrite 纯 mock 范本 (mockCacheProvider + 接口断言 + reflect dest 注入)；D-12 honored: 0 业务代码改动，4 个业务代码 quirk 只记录不修 (duty parseInt 月份=0 失效键 miss、knowledge UUID inline-Delete、network GetByID 关联名丢失、knowledge GetOrCreateTag 跨 tx 连接)。
+- [Phase ?]: BLOCK-02 收口 (agent/server 50.0%→90.4%); 三 quirk Q-77-A/B/E 修复 (crypto/rand 随机密钥 / MachineGUID 长度守卫 / Config mapstructure 标签); 3 var seam × 15 处机械替换 (生产路径 byte 不变); 4 helper stub shape + fakeStrategy 上层覆盖 AccountManager 6 公开方法 — 按 plan 必须_haves truths 与 BLOCK-02 ≥70% 收口判据; Q-77-A/B/E 按 D-01/D-03 判修 (代码注释 + 字段标签与实际行为不符); seam 纪律按 76-02b 同构先例 (var 初值即原直调, 改前先 Cleanup 后覆盖, 禁 t.Parallel)

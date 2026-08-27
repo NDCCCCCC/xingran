@@ -164,11 +164,11 @@ Phase 77-80 全部完成
 
 **Plans**: 5(wave 1→2→3;同包 plan 串行隔 wave 规避整包编译互踩,operations 与 agent 双线并行——D-09 planner 编排)
 
-- [ ] 77-01-PLAN.md — workstation_device_service sqlite 7 表直测(GetADDevices/GetAssetDevices/ByUser×2/SyncFromAD/SyncFromAsset/AddDeviceManual/UpdateDevice/DeleteDevice/SetPrimary*/mergeBySerial 三态;~375 stmts,BLOCK-01 主力)(wave 1)
-- [ ] 77-02-PLAN.md — excel_service 导出链(ExportData legacy 8 类/queryData/writeDataRows/formatCellValue/writeInstructions/appendWorkstationDeviceSheets 三 sheet;D-07 结构断言 + D-06 全内存)(wave 2)
-- [ ] 77-03-PLAN.md — 导入剩余(依赖引用二阶段/populateNewUserPasswords)+ reference_resolver 尾部 + workstation/floor/code_generator/excel_raw_rows 卫星 + Q-77-C(doc-only)/Q-77-D(按现行为断言)+ BLOCK-01 收口 ≥70%(wave 3)
-- [ ] 77-04-PLAN.md — agent jwt_auth(httptest 假后端经 backendURL 明文参数/x509 自签)+ connection_manager 状态机(channel 同步断言;191 stmts)(wave 1)
-- [ ] 77-05-PLAN.md — agent handlers(gin+Recorder+JWTAuth 端到端/sanitizeError)+ config 校验/注册(Q-77-A crypto/rand / Q-77-B 长度守卫 quirk 修复)+ account_manager(3 var seam × 15 处机械替换 + re-exec 真策略体 + 假策略上层)+ pty_manager + BLOCK-02/SC#3(D-04/D-05)收口(wave 2)
+- [x] 77-01-PLAN.md — workstation_device_service sqlite 7 表直测(GetADDevices/GetAssetDevices/ByUser×2/SyncFromAD/SyncFromAsset/AddDeviceManual/UpdateDevice/DeleteDevice/SetPrimary*/mergeBySerial 三态;~375 stmts,BLOCK-01 主力)(wave 1)
+- [x] 77-02-PLAN.md — excel_service 导出链(ExportData legacy 8 类/queryData/writeDataRows/formatCellValue/writeInstructions/appendWorkstationDeviceSheets 三 sheet;D-07 结构断言 + D-06 全内存)(wave 2)
+- [x] 77-03-PLAN.md — 导入剩余(依赖引用二阶段/populateNewUserPasswords)+ reference_resolver 尾部 + workstation/floor/code_generator/excel_raw_rows 卫星 + Q-77-C(doc-only)/Q-77-D(按现行为断言)+ BLOCK-01 收口 ≥70%(wave 3)
+- [x] 77-04-PLAN.md — agent jwt_auth(httptest 假后端经 backendURL 明文参数/x509 自签)+ connection_manager 状态机(channel 同步断言;191 stmts)(wave 1)
+- [x] 77-05-PLAN.md — agent handlers(gin+Recorder+JWTAuth 端到端/sanitizeError)+ config 校验/注册(Q-77-A crypto/rand / Q-77-B 长度守卫 quirk 修复)+ account_manager(3 var seam × 15 处机械替换 + re-exec 真策略体 + 假策略上层)+ pty_manager + BLOCK-02/SC#3(D-04/D-05)收口(wave 2)
 
 **Notes**:
 

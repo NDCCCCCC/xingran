@@ -28,7 +28,7 @@ sources:
 ## 阻塞包攻破 (BLOCK)
 
 - [ ] **BLOCK-01**: `internal/services/operations` ≥70%(缺 ~330;全 (c) 类纯补测试:workstation_device 445 + excel_service 399,sqlite+excelize,零基建依赖可先行)
-- [ ] **BLOCK-02**: `internal/agent/server` ≥70%(缺 ~295;platformStrategy 接口 + backendURL 参数 + httptest 先例)
+- [x] **BLOCK-02**: `internal/agent/server` ≥70%(缺 ~295;platformStrategy 接口 + backendURL 参数 + httptest 先例)
 - [ ] **BLOCK-03**: `internal/core` ≥70%(缺 ~224 直补 + Init 链 302(miniredis+sqlite config 分支)+ captcha 98 纯补;QUIRK-01 修复连锁解锁真实 GenerateCaptcha 链路额外受益)
 - [ ] **BLOCK-04**: `internal/device` ≥70%(缺 ~387;INFRA-02 工厂重构 + FileTransport 照搬解锁 346 + x/crypto/ssh fake 补 Open/transport)
 - [ ] **BLOCK-05**: `internal/services/addomain` ≥70%(缺 ~1165;两段式:sqlite 段 ~535(sync 管道/computer.go,`[]*ldap.Entry` 驱动)+ Iface stub 段(ldap_client 159 + failover 入口))
