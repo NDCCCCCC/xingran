@@ -217,6 +217,17 @@ INIT_HEADER
       n = split(rest, seg, "/")
       if (n == 1) key = "(src root)"
       else if (seg[1] == "pages") key = "pages/" seg[2]
+      # Phase 84 D-04/D-05: 与下方两处完全镜像(--init 段缩进层级不同,漏改
+      # 此处会导致 --init 生成口径与 gate 运行口径漂移,RESEARCH Pitfall #1)。
+      # components 父子双计:主 key 顶层聚合 + 子目录辅助 key(带 "." 的散件
+      # 文件除外),TOTAL 只按主 key 累计。
+      else if (seg[1] == "components") {
+        key = "components"
+        if (n >= 2 && seg[2] !~ /[.]/) {
+          d_stmts["components/" seg[2]] += $2 + 0
+          d_cov["components/" seg[2]] += $3 + 0
+        }
+      }
       else key = seg[1]
       d_stmts[key] += $2 + 0
       d_cov[key] += $3 + 0
@@ -314,25 +325,39 @@ GLOBAL_TABLE="$(awk -F'\t' -v threshold="$GLOBAL_FLOOR" '
     n = split(rest, seg, "/")
     if (n == 1) key = "(src root)"
     else if (seg[1] == "pages") key = "pages/" seg[2]
+    # Phase 84 D-04/D-05: components 二级聚合。与 pages 不同的是 components
+    # 采用「父子双计」:主 key 固定为顶层 "components"(分母不缩水,D-06 聚合
+    # 行语义与既有 4.9 floor 的 ratchet 基线保持不变),同时为每个一级子目录
+    # 追加 "components/<sub>" 辅助 key(floors 表已登记,gate 方向 a/b 双向
+    # 校验);带 "." 的是直接落在 components/ 下的散件文件(ConfigProvider 等),
+    # 不生成子 key。TOTAL 只按主 key 累计,不受辅助 key 影响。
+    else if (seg[1] == "components") {
+      key = "components"
+      if (n >= 2 && seg[2] !~ /[.]/) {
+        d_stmts["components/" seg[2]] += $2 + 0
+        d_cov["components/" seg[2]] += $3 + 0
+      }
+    }
     else key = seg[1]
     d_stmts[key] += $2 + 0
     d_cov[key] += $3 + 0
+    # TOTAL/全局加权只按主 key 累计(辅助子目录 key 不重复计入分母)
+    t_s += $2 + 0
+    t_c += $3 + 0
   }
   END {
     if (length(d_stmts) == 0) {
       printf "FAIL: empty profile (0 statements aggregated) — treating as failure\n"
       exit 1
     }
-    total_s = 0
-    total_c = 0
     for (k in d_stmts) {
       s = d_stmts[k]
       c = d_cov[k]
       pct = (s + 0 > 0) ? c * 100.0 / s : 0
       printf "%-50s %8d %8d %6.2f%%\n", k, s, c, pct
-      total_s += s
-      total_c += c
     }
+    total_s = t_s
+    total_c = t_c
     pkg_pct = (total_s + 0 > 0) ? total_c * 100.0 / total_s : 0
     printf "%-50s %8d %8d %6.2f%%\n", "TOTAL", total_s, total_c, pkg_pct
     if (pkg_pct + 0 < threshold + 0) {
@@ -379,6 +404,19 @@ DIR_AGG="$(awk -F'\t' '
     n = split(rest, seg, "/")
     if (n == 1) key = "(src root)"
     else if (seg[1] == "pages") key = "pages/" seg[2]
+    # Phase 84 D-04/D-05: components 二级聚合。与 pages 不同的是 components
+    # 采用「父子双计」:主 key 固定为顶层 "components"(分母不缩水,D-06 聚合
+    # 行语义与既有 4.9 floor 的 ratchet 基线保持不变),同时为每个一级子目录
+    # 追加 "components/<sub>" 辅助 key(floors 表已登记,gate 方向 a/b 双向
+    # 校验);带 "." 的是直接落在 components/ 下的散件文件(ConfigProvider 等),
+    # 不生成子 key。TOTAL 只按主 key 累计,不受辅助 key 影响。
+    else if (seg[1] == "components") {
+      key = "components"
+      if (n >= 2 && seg[2] !~ /[.]/) {
+        d_stmts["components/" seg[2]] += $2 + 0
+        d_cov["components/" seg[2]] += $3 + 0
+      }
+    }
     else key = seg[1]
     d_stmts[key] += $2 + 0
     d_cov[key] += $3 + 0
