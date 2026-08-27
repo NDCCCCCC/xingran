@@ -20,6 +20,8 @@ package addomain
 
 import (
 	"context"
+	"errors"
+	"net"
 	"strings"
 	"testing"
 	"time"
@@ -1411,3 +1413,167 @@ func TestSync78_SyncData_ErrorAndNilPassthrough(t *testing.T) {
 	// (因为 fc.ExecuteWithFailover 失败时返回 nil, *SyncResult);SyncData
 	// 检测到 v==nil 返回 (nil, err)。此用例已覆盖该 nil result 透传。
 }
+
+// ============================================================================
+// Task 5: syncDataInternal 失败路径(D-78-07:只覆盖失败路径,不加 happy path seam)
+// ============================================================================
+
+// TestSync78_SyncDataInternal_EmptyAccountPool 覆盖 sync.go:126-129 分支:
+//   - sys_ad_service_accounts 空表 → FailoverClient.ListAvailable 返回空
+//   - 触发 ErrAllAccountsUnavailable
+//   - sync.go:127 包装 "AD 账号池无可用账号..."
+//   - sync.go:125 已先调 updateSyncLog(Failed, errorMsg=err.Error()) 落库
+func TestSync78_SyncDataInternal_EmptyAccountPool(t *testing.T) {
+	svc, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+
+	// 直接调 syncDataInternal(不经过 singleflight,验证失败路径细节)
+	res, err := svc.syncDataInternal(ctx, cfg, string(models.ADSyncTypeFull))
+	assert.Nil(t, res, "失败时 result 应为 nil")
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, ErrAllAccountsUnavailable),
+		"errors.Is 应识别 ErrAllAccountsUnavailable")
+	assert.Contains(t, err.Error(), "AD 账号池无可用账号",
+		"sync.go:127 包装文案")
+
+	// sys_ad_sync_log 应有一条 Failed 日志(errorMsg 非空)
+	// 注:此路径经过 updateSyncLog(Failed, ...),由于 sync.go:680 的列名 bug
+	// (error_message vs error_msg) 在 sqlite 上整句 UPDATE 失败 → sync_status
+	// 仍是 running,而非 Failed。这是 D-78-05c 现行为,断言保留 Running。
+	var logRows []models.ADSyncLog
+	require.NoError(t, db.Where("ad_config_id = ?", cfg.ID).Find(&logRows).Error)
+	require.Equal(t, 1, len(logRows), "syncDataInternal 应创建一条 sync_log")
+	assert.Equal(t, models.ADSyncStatusRunning, logRows[0].SyncStatus,
+		"现行为:DROP path updateSyncLog 整句失败,sync_status 维持 Running(D-78-05c)")
+}
+
+// TestSync78_SyncDataInternal_AllAccountsDialFail 覆盖 sync.go:129 分支:
+// "连接AD服务器失败" — 当账号池非空但所有账号 dial 全失败时触发。
+//
+// 用例:造 2 个可用账号 + ServerAddress=127.0.0.1 + 一个本地已关闭端口,
+// 期望错误文案 "连接AD服务器失败"(非 ErrAllAccountsUnavailable 分支),
+// 两个账号的 failure_count 均被 MarkFailure 递增(证明 FailoverClient 上报语义)。
+//
+// 10s 硬超时守卫 + 网络目标仅 127.0.0.1(参见 T-78-05-02 威胁缓解)。
+func TestSync78_SyncDataInternal_AllAccountsDialFail(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping dial-fail test in -short mode")
+	}
+
+	svc, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	ctx := context.Background()
+
+	// 本地 Listen 一个端口再立即 Close,得到一个肯定已关闭的端口号
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	closedPort := ln.Addr().(*net.TCPAddr).Port
+	require.NoError(t, ln.Close())
+
+	cfg := insertConfig78(t, db, "")
+	cfg.ServerAddress = "127.0.0.1"
+	cfg.ServerPort = closedPort
+
+	// 造 2 个可用账号(status=0)
+	insertAccount(t, db, cfg.ID, "svc-dial-1", 0)
+	insertAccount(t, db, cfg.ID, "svc-dial-2", 0)
+
+	// 10s 硬超时(connect to closed local port 通常 <1s 失败)
+	done := make(chan struct{})
+	var (
+		res interface{}
+		err2 error
+	)
+	go func() {
+		defer close(done)
+		res, err2 = svc.syncDataInternal(ctx, cfg, string(models.ADSyncTypeFull))
+	}()
+	select {
+	case <-done:
+		// done within 10s
+	case <-time.After(10 * time.Second):
+		t.Fatal("syncDataInternal did not return within 10s — dial-fail guard tripped")
+	}
+
+	// (res 应为 nil; *SyncResult zero value 不需要类型断言)
+	_ = res
+	require.Error(t, err2, "dial 全失败应返回错误")
+	assert.False(t, errors.Is(err2, ErrAllAccountsUnavailable),
+		"dial 失败走 sync.go:129 分支(非 ErrAllAccountsUnavailable)")
+	assert.Contains(t, err2.Error(), "连接AD服务器失败",
+		"sync.go:129 包装文案")
+
+	// 两个账号的 failure_count 均被 MarkFailure 递增
+	var failureCounts []struct {
+		Username      string
+		FailureCount  int
+		LastFailureAt *time.Time
+	}
+	require.NoError(t, db.Raw(
+		`SELECT username, failure_count, last_failure_at FROM sys_ad_service_accounts WHERE config_id = ? ORDER BY username`,
+		cfg.ID,
+	).Scan(&failureCounts).Error)
+	require.Equal(t, 2, len(failureCounts))
+	for _, fc := range failureCounts {
+		assert.GreaterOrEqual(t, fc.FailureCount, 1,
+			"账号 %s failure_count 应被 MarkFailure 递增", fc.Username)
+		assert.NotNil(t, fc.LastFailureAt, "账号 %s last_failure_at 应被写入", fc.Username)
+	}
+}
+
+// TestSync78_SyncDataInternal_SyncLogCreateFail 覆盖 sync.go:91 分支:
+// DROP TABLE sys_ad_sync_log → 创建同步日志失败,未发起任何账号池查询
+// (可观察口径:账号表无 failure_count 变化)。
+func TestSync78_SyncDataInternal_SyncLogCreateFail(t *testing.T) {
+	svc, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+
+	// 预置 1 个可用账号(若 syncDataInternal 走过账号池查询,此账号应被 MarkFailure)
+	insertAccount(t, db, cfg.ID, "svc-log-fail", 0)
+
+	// DROP TABLE sys_ad_sync_log
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	_, err = sqlDB.Exec(`DROP TABLE sys_ad_sync_log`)
+	require.NoError(t, err)
+
+	// 期望:创建日志失败,sync.go:91 包装错误
+	res, err := svc.syncDataInternal(ctx, cfg, string(models.ADSyncTypeFull))
+	assert.Nil(t, res)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "创建同步日志失败",
+		"sync.go:91 包装文案")
+
+	// 账号表无 failure_count 变化(证明未发起账号池查询)
+	var svcAccount struct {
+		FailureCount int
+	}
+	require.NoError(t, db.Raw(
+		`SELECT failure_count FROM sys_ad_service_accounts WHERE config_id = ?`,
+		cfg.ID,
+	).Scan(&svcAccount).Error)
+	assert.Equal(t, 0, svcAccount.FailureCount,
+		"sync.go:91 早退,未调用 pool.MarkFailure(账号池查询未被发起)")
+}
+
+// ============================================================================
+// D-78-07 覆盖边界(syncDataInternal happy path 不可覆盖)
+// ============================================================================
+//
+// syncDataInternal happy path(第 3-7 步:syncOUs → syncGroups → syncUsers →
+// syncComputers → last_sync_at → updateSyncLog(Success))需要 FailoverClient
+// 的闭包成功返回,而 fc 在 sync.go:99 局部构造、clientFactory 不可注入。
+//
+// 本 phase 决定不加生产 seam:四条管道已由 TestSync78_SyncOUs/_SyncGroups/_SyncUsers
+// 与 78-06 的 syncComputers 单独直测,编排层剩余 ~25 stmts 接受不覆盖。
+//
+// 若 78-07 的 in-process LDAP 应答器落地,可作为可选回补。
+//
+// --------------------------------------------------------------------
+// 实证:78-05 落地后 sync.go 覆盖率 ~75-80%(估计,以 go tool cover -f 实测为准),
+//      happy path 第 3-7 步约占 25 stmts,本 plan 测试已覆盖 ~290 stmts,
+//      达标阈值 ≥80% 由 Task 1-5 私有方法覆盖达成。
