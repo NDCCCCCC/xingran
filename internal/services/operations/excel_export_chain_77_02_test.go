@@ -9,8 +9,16 @@ package operations
 //     (D-03 有据:excel_export_config.go GetExportConfig 的 map 键清单)。
 //   - queryData 的 sys_dept 字段名特判分支(name→dept_name/code→dept_code)无法经
 //     ExportData 触达(department 已被新导出链截流),用白盒直调覆盖。
+//   - appendWorkstationDeviceSheets 直接白盒调用:workstation 主表导出走
+//     WorkstationQueryBuilder,含 ::uuid/::text PG-only 强转,sqlite 必报错
+//     (P-77-1 现行为,由 TestExp77_ExportData_WorkstationMainSheet_PGOnlySQL 文档化),
+//     故不能经 PLAN 设想的 svc.ExportData("workstation") 入口触达追加链。
+//   - 物理链路 sheet 经 physErr != nil 降级(P-77-10):GetPhysicalDevices* 的
+//     DISTINCT ON/REGEXP_REPLACE CTE 在 sqlite 报错已被 77-01
+//     TestWSD77_GetPhysicalDevicesByWorkstations_FrontSegment 实证。
 //   - D-06:全部 xlsx 经 excelize.NewFile() 内存生成,零 testdata 二进制;
-//   - D-07:断言仅 sheet 名/表头行/行数 + 抽查关键单元格,禁全量逐单元格快照。
+//   - D-07:断言仅 sheet 名/表头行/行数 + 抽查关键单元格(AD sheet 序列号列,
+//     mergeBySerial 合并主键),禁全量逐单元格快照。
 
 import (
 	"context"
@@ -282,7 +290,7 @@ func TestExp77_FormatCellValue(t *testing.T) {
 // TestExp77_WriteInstructions 说明行写入:非空说明逐行合并写入首列,空串行跳过;
 // 全部为空串时零合并;instructions 列表为空时整体早退零写入。
 // 注:当前没有任何 ExcelConfig 配置 Instructions(GREP 实证),GenerateTemplate
-// 入口不可达非空分支,故白盒直调。QUIRK-77-2 回归见下方前两条断言。
+// 入口不可达非空分支,故白盒直调。
 func TestExp77_WriteInstructions(t *testing.T) {
 	svc := &ExcelService{}
 	sheet := "模板说明"
@@ -363,4 +371,161 @@ func TestExp77_GetExampleValue(t *testing.T) {
 	// Reference 列:示例器只看 Field/Options,Reference 不参与分支
 	assert.Equal(t, "（请填写所属楼宇名称）",
 		svc.getExampleValue(ExcelColumn{Field: "buildingId", Reference: "ops_buildings.id"}))
+}
+
+// ===========================================================================
+// Task 2: appendWorkstationDeviceSheets 三 sheet 追加链(P-77-10 sqlite 降级)
+// ===========================================================================
+
+var exp77LastLogon = time.Date(2026, 8, 1, 9, 30, 0, 0, time.UTC)
+
+// TestExp77_AppendSheets_MissingDeviceService 未注入 deviceService 的守卫分支。
+func TestExp77_AppendSheets_MissingDeviceService(t *testing.T) {
+	db := setupWSD77DB(t)
+	svc := NewExcelService(db, nil, nil, nil)
+	exportSvc := NewExcelExportService(db).(*excelExportServiceImpl)
+
+	f := excelize.NewFile()
+	err := svc.appendWorkstationDeviceSheets(context.Background(), f, exportSvc, map[string]any{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "deviceService 未注入")
+	assert.Len(t, f.GetSheetList(), 1, "守卫分支不得追加任何设备 sheet")
+}
+
+// TestExp77_AppendSheets_NoMatchingWorkstation 过滤后无工位 → 静默跳过无追加。
+func TestExp77_AppendSheets_NoMatchingWorkstation(t *testing.T) {
+	db := setupWSD77DB(t) // 全空表
+	svc := NewExcelService(db, nil, nil, nil).WithDeviceService(NewWorkstationDeviceService(db))
+	exportSvc := NewExcelExportService(db).(*excelExportServiceImpl)
+
+	f := excelize.NewFile()
+	err := svc.appendWorkstationDeviceSheets(context.Background(), f, exportSvc, map[string]any{})
+	require.NoError(t, err, "工位列表为空应静默返回而非报错")
+	assert.Len(t, f.GetSheetList(), 1, "无工位时不追加任何设备 sheet")
+}
+
+// TestExp77_ExportData_WorkstationAppendSheets 追加链主路径:D-07 结构断言 —
+// 三 sheet 存在、表头行逐字相等、AD sheet 行数 = 种子命中数、序列号列抽查
+// (mergeBySerial 的合并主键)。物理链路 sheet 断言 0 数据行但表头在
+// (P-77-10:PG-only CTE 在 sqlite 报错走 physErr 降级,已被 77-01 实证)。
+func TestExp77_ExportData_WorkstationAppendSheets(t *testing.T) {
+	db := setupWSD77DB(t)
+	// 77-01 fixture 为查询链精简,未建 AD enrichment 所需的 last_logon 列 → 补列
+	require.NoError(t, db.Exec(`ALTER TABLE sys_ad_computer ADD COLUMN last_logon DATETIME`).Error)
+	ctx := context.Background()
+
+	// 种子:工位 → 用户 → AD 用户 → AD 计算机(managed_by 命中)+ 资产(nowuser_name 命中)
+	seedWSD77Workstation(t, db, wsd77WS1, "3f130", wsd77User1)
+	seedWSD77User(t, db, wsd77User1, "zhangsan", "张三", "")
+	seedWSD77ADUser(t, db, "60000000-0000-0000-0000-000000000001", "zhangsan", wsd77DN1)
+	seedWSD77ADComputer(t, db, wsd77ADComp1, "AD-PC-MANAGED", "SN-EXP-B1",
+		"AA:BB:CC:DD:EE:01", "10.1.1.1", "Windows 11", wsd77DN1, "")
+	require.NoError(t, db.Exec(`UPDATE sys_ad_computer SET last_logon = ? WHERE id = ?`,
+		exp77LastLogon, wsd77ADComp1).Error)
+	seedWSD77Asset(t, db, wsd77Asset1, "SN-EXP-A1", "ThinkPad T14", "笔记本",
+		"AA:BB:CC:DD:EE:11", "张三", "研发部", "10.2.2.1")
+
+	exportSvc := NewExcelExportService(db).(*excelExportServiceImpl)
+	svc := NewExcelService(db, nil, nil, nil).WithDeviceService(NewWorkstationDeviceService(db))
+
+	f := excelize.NewFile()
+	err := svc.appendWorkstationDeviceSheets(ctx, f, exportSvc, map[string]any{})
+	require.NoError(t, err)
+
+	sheets := f.GetSheetList()
+	assert.Contains(t, sheets, "AD设备")
+	assert.Contains(t, sheets, "资产设备")
+	assert.Contains(t, sheets, "物理链路设备")
+
+	// ---- AD 设备 sheet ----
+	adRows, err := f.GetRows("AD设备")
+	require.NoError(t, err)
+	require.Len(t, adRows, 2, "表头 + 1 台 managed_by 命中的 AD 设备")
+	assert.Equal(t, []string{"工位名称", "ComputerName", "OS", "MAC", "Serial", "LastLogon"}, adRows[0])
+	assert.Equal(t, "3f130", adRows[1][0], "工位名称列(enrichment batchGetWorkstationNames)")
+	assert.Equal(t, "Windows 11", adRows[1][2], "OS 列(batchGetADEnrichment)")
+	assert.Equal(t, "SN-EXP-B1", adRows[1][4], "序列号列锚点(mergeBySerial 合并主键,D-07 抽查)")
+	assert.Equal(t, "2026-08-01 09:30:00", adRows[1][5], "LastLogon 列按 2006-01-02 15:04:05 格式化")
+
+	// ---- 资产设备 sheet ----
+	assetRows, err := f.GetRows("资产设备")
+	require.NoError(t, err)
+	require.Len(t, assetRows, 2, "表头 + 1 台 nowuser_name 命中的资产")
+	assert.Equal(t, []string{"工位名称", "DeviceName", "Model", "Type", "IP", "ResponsibleUser"}, assetRows[0])
+	assert.Equal(t, "10.2.2.1", assetRows[1][4], "IP 列(batchGetAssetEnrichment 读 machine_ip)")
+
+	// ---- 物理链路设备 sheet(physErr 降级:A1 假设成立)----
+	physRows, err := f.GetRows("物理链路设备")
+	require.NoError(t, err)
+	require.Len(t, physRows, 1, "sqlite 下物理链路查询必报错 → 降级为 0 数据行但表头保留")
+	assert.Equal(t, []string{"工位名称", "设备名称", "序列号", "型号", "类型", "MAC", "IP地址",
+		"责任人", "Port", "InfoPoint", "LastSeen", "Confidence"}, physRows[0])
+}
+
+// TestExp77_ExportData_WorkstationMainSheet_PGOnlySQL 文档化工位主表导出现行为:
+// WorkstationQueryBuilder 含 ::uuid/::text 强转,sqlite 解析必败 → ExportData
+// 直接报错、追加链无机会执行(因此本 plan 用白盒直调覆盖 appendWorkstationDeviceSheets)。
+func TestExp77_ExportData_WorkstationMainSheet_PGOnlySQL(t *testing.T) {
+	db := setupWSD77DB(t)
+	seedWSD77Workstation(t, db, wsd77WS1, "3f130", "")
+	svc := NewExcelService(db, nil, nil, nil).WithDeviceService(NewWorkstationDeviceService(db))
+
+	f, err := svc.ExportData(context.Background(), "workstation", map[string]any{})
+	require.Error(t, err, "P-77-1 现行为::uuid/::text 强转在 sqlite 必报错")
+	assert.Nil(t, f)
+	assert.Contains(t, err.Error(), "查询数据失败")
+}
+
+// TestExp77_QueryWorkstationIDsForExport_ParamTypes 直查 sys_workstation 的
+// 参数应用矩阵:string LIKE(FilterMapping name→workstation_name)/ int 等值 /
+// []interface{} IN / bool 等值 / nil 或空串跳过 / 未声明字段回退 paramKey 报错。
+func TestExp77_QueryWorkstationIDsForExport_ParamTypes(t *testing.T) {
+	db := setupWSD77DB(t)
+	ctx := context.Background()
+
+	seedWSD77Workstation(t, db, wsd77WS1, "3f130", "")
+	seedWSD77Workstation(t, db, wsd77WS2, "3f131", "")
+	seedWSD77Workstation(t, db, wsd77WSNoUsr, "XYZ-9", "")
+	wsd77Exec(t, db,
+		`INSERT INTO sys_workstation (id, workstation_name, status, user_id, deleted_at) VALUES (?, ?, 1, NULL, NULL)`,
+		wsd77WSMiss, "STATUS-ONE")
+
+	svc := &ExcelService{db: db} // exportService 形参已不再被实现依赖(excel_service.go:2220 注释)
+
+	// nil 参数 → 全量 4 工位
+	ids, err := svc.queryWorkstationIDsForExport(ctx, nil, nil)
+	require.NoError(t, err)
+	assert.Len(t, ids, 4)
+
+	// string → FilterMapping workstation_name LIKE
+	ids, err = svc.queryWorkstationIDsForExport(ctx, nil, map[string]any{"name": "3f1"})
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{wsd77WS1, wsd77WS2}, ids)
+
+	// int 等值(status)
+	ids, err = svc.queryWorkstationIDsForExport(ctx, nil, map[string]any{"status": 1})
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{wsd77WSMiss}, ids)
+
+	// bool 等值(false → status=0)
+	ids, err = svc.queryWorkstationIDsForExport(ctx, nil, map[string]any{"status": false})
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{wsd77WS1, wsd77WS2, wsd77WSNoUsr}, ids)
+
+	// []interface{} IN(workstation_name 双命中)
+	ids, err = svc.queryWorkstationIDsForExport(ctx, nil, map[string]any{
+		"name": []interface{}{"3f130", "3f131"},
+	})
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{wsd77WS1, wsd77WS2}, ids)
+
+	// nil / 空串参数一律跳过
+	ids, err = svc.queryWorkstationIDsForExport(ctx, nil, map[string]any{"name": "", "status": nil})
+	require.NoError(t, err)
+	assert.Len(t, ids, 4)
+
+	// 未声明字段回退 paramKey → 不存在列,SQL 报错包一层定位信息
+	_, err = svc.queryWorkstationIDsForExport(ctx, nil, map[string]any{"ghostParam": "x"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "查询 sys_workstation.id 失败")
 }
