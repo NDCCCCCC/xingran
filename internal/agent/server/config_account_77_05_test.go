@@ -15,13 +15,18 @@ package server
 // =====================================================================
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -442,3 +447,426 @@ func TestCfg77_LoadConfig_DefaultTLSRequiresFiles(t *testing.T) {
 
 // 仅占位校验 yaml 解析 schema 形状 — 防止误删除字段时编译期才发现。
 var _ = json.Unmarshal
+
+// =====================================================================
+// account_manager — 三个 seam 注入 + 真策略体驱动 + 假策略上层 + 解析函数
+// 前缀 TestAcct77_; 文件头注释 P-77-9 警示: 覆盖 var 前必须先 t.Cleanup
+// 恢复 (本包 seam 是 runAccountCmd / runAccountCmdOutput / newAccountCmd),
+// 否则后续测试真跑 powershell/useradd (Windows 危险, Linux 权限破坏)。
+// =====================================================================
+
+type acctCall struct {
+	name string
+	args []string
+}
+
+// stubAcctCmds77 同时替换三个 seam 为 helperStubCommand re-exec 子进程桩。
+// per-seam shape picker: 传入 nil 表示用默认成功形态 (echo-args / print-users /
+// passwd-style); 非 nil 时按调用序号 idx 选 shape — 通常用 "exit-1" 驱动失败
+// 分支。返回 calls 按三个 seam 调用顺序追加; newBuf 累积 newAccountCmd 子进程
+// stdout (passwd-style 把 stdin 一行内容回显到 stdout, 供测试断言 stdin 内容)。
+func stubAcctCmds77(t *testing.T, pRun, pOut, pNew func(idx int) string) (calls *[]acctCall, newBuf *bytes.Buffer) {
+	t.Helper()
+	calls = &[]acctCall{}
+	var buf bytes.Buffer
+	origRun, origOut, origNew := runAccountCmd, runAccountCmdOutput, newAccountCmd
+	t.Cleanup(func() {
+		runAccountCmd = origRun
+		runAccountCmdOutput = origOut
+		newAccountCmd = origNew
+	})
+
+	runAccountCmd = func(_ context.Context, name string, args ...string) error {
+		idx := len(*calls)
+		shape := "echo-args"
+		if pRun != nil {
+			shape = pRun(idx)
+		}
+		*calls = append(*calls, acctCall{name: name, args: append([]string(nil), args...)})
+		cmd := helperStubCommand(t, shape)
+		cmd.Args = append(cmd.Args, name)
+		cmd.Args = append(cmd.Args, args...)
+		return cmd.Run()
+	}
+	runAccountCmdOutput = func(_ context.Context, name string, args ...string) ([]byte, error) {
+		idx := len(*calls)
+		shape := "print-users"
+		if pOut != nil {
+			shape = pOut(idx)
+		}
+		*calls = append(*calls, acctCall{name: name, args: append([]string(nil), args...)})
+		cmd := helperStubCommand(t, shape)
+		cmd.Args = append(cmd.Args, name)
+		cmd.Args = append(cmd.Args, args...)
+		var outBuf bytes.Buffer
+		cmd.Stdout = &outBuf
+		cmd.Stderr = &outBuf
+		if err := cmd.Run(); err != nil {
+			return nil, err
+		}
+		return outBuf.Bytes(), nil
+	}
+	newAccountCmd = func(_ context.Context, name string, args ...string) *exec.Cmd {
+		idx := len(*calls)
+		shape := "passwd-style"
+		if pNew != nil {
+			shape = pNew(idx)
+		}
+		*calls = append(*calls, acctCall{name: name, args: append([]string(nil), args...)})
+		cmd := helperStubCommand(t, shape)
+		cmd.Args = append(cmd.Args, name)
+		cmd.Args = append(cmd.Args, args...)
+		cmd.Stdout = &buf
+		cmd.Stderr = &buf
+		return cmd
+	}
+	return calls, &buf
+}
+
+// ---------------------------------------------------------------------
+// 假策略上层 (76-PATTERNS §76-03c mock 范本: preset + Fn + 计数)
+// ---------------------------------------------------------------------
+
+// fakeStrategy 实现 platformStrategy 6 方法 — 行为与 ldap_client_mock_test.go
+// fakeStrategy 同构 (preset + 调用计数 + last* 透传断言字段)。
+type fakeStrategy struct {
+	createErr, deleteErr, resetErr, enableErr, disableErr, listErr error
+	listResult                                                      []string
+	lastCreate                                                      *Account
+	createCalls, deleteCalls, resetCalls, enableCalls, disableCalls, listCalls int
+}
+
+func (f *fakeStrategy) createAccount(_ context.Context, username, password string, isAdmin bool) error {
+	f.createCalls++
+	f.lastCreate = &Account{Username: username, Password: password, IsAdmin: isAdmin}
+	return f.createErr
+}
+func (f *fakeStrategy) deleteAccount(_ context.Context, _ string) error {
+	f.deleteCalls++
+	return f.deleteErr
+}
+func (f *fakeStrategy) resetPassword(_ context.Context, username, newPassword string) error {
+	f.resetCalls++
+	f.lastCreate = &Account{Username: username, Password: newPassword}
+	return f.resetErr
+}
+func (f *fakeStrategy) enableAccount(_ context.Context, _ string) error {
+	f.enableCalls++
+	return f.enableErr
+}
+func (f *fakeStrategy) disableAccount(_ context.Context, _ string) error {
+	f.disableCalls++
+	return f.disableErr
+}
+func (f *fakeStrategy) listAccounts(_ context.Context) ([]string, error) {
+	f.listCalls++
+	return f.listResult, f.listErr
+}
+
+func newAccountManagerWithFake77(t *testing.T, fs *fakeStrategy) *AccountManager {
+	t.Helper()
+	am := NewAccountManager()
+	am.strategy = fs
+	return am
+}
+
+// TestAcct77_UpperLayer_Passthrough 五公开方法参数透传 + 错误透传。
+func TestAcct77_UpperLayer_Passthrough(t *testing.T) {
+	fs := &fakeStrategy{}
+	am := newAccountManagerWithFake77(t, fs)
+
+	// CreateAccount: username/password/isAdmin 透传
+	require.NoError(t, am.CreateAccount(context.Background(), &Account{
+		Username: "u1", Password: "pw1", IsAdmin: true,
+	}))
+	require.Equal(t, 1, fs.createCalls)
+	require.NotNil(t, fs.lastCreate)
+	require.Equal(t, "u1", fs.lastCreate.Username)
+	require.Equal(t, "pw1", fs.lastCreate.Password)
+	require.True(t, fs.lastCreate.IsAdmin)
+
+	// Delete / Enable / Disable 仅透传 username
+	require.NoError(t, am.DeleteAccount(context.Background(), "u1"))
+	require.Equal(t, 1, fs.deleteCalls)
+	require.NoError(t, am.EnableAccount(context.Background(), "u1"))
+	require.Equal(t, 1, fs.enableCalls)
+	require.NoError(t, am.DisableAccount(context.Background(), "u1"))
+	require.Equal(t, 1, fs.disableCalls)
+
+	// ResetPassword: username + newPassword 透传
+	require.NoError(t, am.ResetPassword(context.Background(), "u1", "newpw"))
+	require.Equal(t, 1, fs.resetCalls)
+	require.Equal(t, "newpw", fs.lastCreate.Password)
+
+	// 错误透传
+	fs.createErr = errors.New("boom-create")
+	require.Error(t, am.CreateAccount(context.Background(), &Account{Username: "u2"}))
+	fs.deleteErr = errors.New("boom-delete")
+	require.Error(t, am.DeleteAccount(context.Background(), "u2"))
+}
+
+func TestAcct77_UpperLayer_ListAccounts(t *testing.T) {
+	fs := &fakeStrategy{listResult: []string{"u1", "u2", "u3"}}
+	am := newAccountManagerWithFake77(t, fs)
+	got, err := am.ListAccounts(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, []string{"u1", "u2", "u3"}, got)
+	assert.Equal(t, 1, fs.listCalls)
+
+	fs.listErr = errors.New("list-boom")
+	_, err = am.ListAccounts(context.Background())
+	require.Error(t, err)
+}
+
+// ---------------------------------------------------------------------
+// 真策略体 — Windows 平台 (同包白盒直构 windowsPlatformStrategy)
+// ---------------------------------------------------------------------
+
+func TestAcct77_WindowsCreateAccount_SuccessNoAdmin(t *testing.T) {
+	calls, _ := stubAcctCmds77(t, nil, nil, nil)
+	w := &windowsPlatformStrategy{}
+	require.NoError(t, w.createAccount(context.Background(), "u1", "pw1", false))
+	require.Len(t, *calls, 1, "非 admin 仅一次 powershell 调用")
+	assert.Equal(t, "powershell", (*calls)[0].name)
+	joined := strings.Join((*calls)[0].args, " ")
+	assert.Contains(t, joined, "ConvertTo-SecureString")
+	assert.Contains(t, joined, "u1")
+}
+
+func TestAcct77_WindowsCreateAccount_AdminAddsGroup(t *testing.T) {
+	calls, _ := stubAcctCmds77(t, nil, nil, nil)
+	w := &windowsPlatformStrategy{}
+	require.NoError(t, w.createAccount(context.Background(), "admin1", "pw1", true))
+	require.Len(t, *calls, 2, "isAdmin 触发 Add-LocalGroupMember 第二次调用")
+	assert.Contains(t, strings.Join((*calls)[1].args, " "), "Add-LocalGroupMember")
+	assert.Contains(t, strings.Join((*calls)[1].args, " "), "admin1")
+}
+
+func TestAcct77_WindowsCreateAccount_FailUser(t *testing.T) {
+	calls, _ := stubAcctCmds77(t, func(int) string { return "exit-1" }, nil, nil)
+	w := &windowsPlatformStrategy{}
+	err := w.createAccount(context.Background(), "u1", "pw", false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to create Windows user")
+	require.NotEmpty(t, *calls)
+}
+
+func TestAcct77_WindowsCreateAccount_FailAdminGroup(t *testing.T) {
+	// 第一次 echo-args 成功, 第二次 exit-1 → "failed to add to admin group"
+	calls, _ := stubAcctCmds77(t, func(idx int) string {
+		if idx == 0 {
+			return "echo-args"
+		}
+		return "exit-1"
+	}, nil, nil)
+	w := &windowsPlatformStrategy{}
+	err := w.createAccount(context.Background(), "u1", "pw", true)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to add to admin group")
+	require.Len(t, *calls, 2)
+}
+
+func TestAcct77_WindowsDeleteAccount(t *testing.T) {
+	calls, _ := stubAcctCmds77(t, nil, nil, nil)
+	w := &windowsPlatformStrategy{}
+	require.NoError(t, w.deleteAccount(context.Background(), "u1"))
+	require.Len(t, *calls, 1)
+	assert.Equal(t, "powershell", (*calls)[0].name)
+	assert.Contains(t, strings.Join((*calls)[0].args, " "), "Remove-LocalUser")
+}
+
+func TestAcct77_WindowsResetPassword(t *testing.T) {
+	calls, _ := stubAcctCmds77(t, nil, nil, nil)
+	w := &windowsPlatformStrategy{}
+	require.NoError(t, w.resetPassword(context.Background(), "u1", "newpw"))
+	require.Len(t, *calls, 1)
+	joined := strings.Join((*calls)[0].args, " ")
+	assert.Contains(t, joined, "Set-LocalUser")
+	assert.Contains(t, joined, "ConvertTo-SecureString")
+	assert.Contains(t, joined, "newpw")
+}
+
+func TestAcct77_WindowsEnableDisable(t *testing.T) {
+	calls, _ := stubAcctCmds77(t, nil, nil, nil)
+	w := &windowsPlatformStrategy{}
+	require.NoError(t, w.enableAccount(context.Background(), "u1"))
+	require.NoError(t, w.disableAccount(context.Background(), "u1"))
+	require.Len(t, *calls, 2)
+	assert.Contains(t, strings.Join((*calls)[0].args, " "), "Enable-LocalUser")
+	assert.Contains(t, strings.Join((*calls)[1].args, " "), "Disable-LocalUser")
+}
+
+func TestAcct77_WindowsListAccounts(t *testing.T) {
+	t.Setenv("STUB_USERS_77", "Alice\nBob\n\n")
+	_, _ = stubAcctCmds77(t, nil, nil, nil)
+	w := &windowsPlatformStrategy{}
+	got, err := w.listAccounts(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, []string{"Alice", "Bob"}, got)
+}
+
+func TestAcct77_WindowsListAccounts_Fail(t *testing.T) {
+	_, _ = stubAcctCmds77(t, nil, func(int) string { return "exit-1" }, nil)
+	w := &windowsPlatformStrategy{}
+	_, err := w.listAccounts(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to list Windows users")
+}
+
+// ---------------------------------------------------------------------
+// 真策略体 — Linux 平台
+// ---------------------------------------------------------------------
+
+func TestAcct77_LinuxCreateAccount_SuccessNoAdmin(t *testing.T) {
+	calls, newBuf := stubAcctCmds77(t, nil, nil, nil)
+	l := &linuxPlatformStrategy{}
+	require.NoError(t, l.createAccount(context.Background(), "alice", "s3cr3t", false))
+	// 1 runAccountCmd (useradd) + 1 newAccountCmd (chpasswd)
+	require.Len(t, *calls, 2)
+	assert.Equal(t, "useradd", (*calls)[0].name)
+	assert.Equal(t, []string{"-m", "alice"}, (*calls)[0].args)
+	assert.Equal(t, "chpasswd", (*calls)[1].name)
+	// passwd-style 把 stdin 一行内容回显到 stdout
+	assert.Contains(t, newBuf.String(), "alice:s3cr3t")
+}
+
+func TestAcct77_LinuxCreateAccount_AdminSudo(t *testing.T) {
+	calls, newBuf := stubAcctCmds77(t, nil, nil, nil)
+	l := &linuxPlatformStrategy{}
+	require.NoError(t, l.createAccount(context.Background(), "admin1", "pw", true))
+	// useradd + chpasswd(newAccountCmd) + tee(newAccountCmd) + chmod(runAccountCmd) = 4
+	require.Len(t, *calls, 4)
+	assert.Equal(t, "useradd", (*calls)[0].name)
+	assert.Equal(t, "chpasswd", (*calls)[1].name)
+	assert.Equal(t, "tee", (*calls)[2].name)
+	assert.Equal(t, "/etc/sudoers.d/admin1", (*calls)[2].args[0])
+	assert.Equal(t, "chmod", (*calls)[3].name)
+	assert.Equal(t, []string{"440", "/etc/sudoers.d/admin1"}, (*calls)[3].args)
+	// tee 的 stdin 是 sudoersContent, 经 passwd-style 回显
+	assert.Contains(t, newBuf.String(), "admin1 ALL=(root) NOPASSWD")
+}
+
+func TestAcct77_LinuxCreateAccount_FailUseradd(t *testing.T) {
+	calls, _ := stubAcctCmds77(t, func(int) string { return "exit-1" }, nil, nil)
+	l := &linuxPlatformStrategy{}
+	err := l.createAccount(context.Background(), "u1", "pw", false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to create user")
+	require.NotEmpty(t, *calls)
+}
+
+func TestAcct77_LinuxCreateAccount_FailChpasswd(t *testing.T) {
+	calls, _ := stubAcctCmds77(t, nil, nil, func(int) string { return "exit-1" })
+	l := &linuxPlatformStrategy{}
+	err := l.createAccount(context.Background(), "u1", "pw", false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to set password")
+	require.Len(t, *calls, 2, "useradd 成功后 chpasswd 失败")
+}
+
+func TestAcct77_LinuxCreateAccount_FailTee(t *testing.T) {
+	// useradd 成功 + chpasswd 成功 + tee 失败 → "failed to write sudoers file"
+	calls, _ := stubAcctCmds77(t, nil, nil, func(idx int) string {
+		if idx == 2 { // tee 是第 3 个调用 (idx 2), useradd + chpasswd 各占 idx 0,1
+			return "exit-1"
+		}
+		return "passwd-style"
+	})
+	l := &linuxPlatformStrategy{}
+	err := l.createAccount(context.Background(), "u1", "pw", true)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to write sudoers file")
+	require.Len(t, *calls, 3)
+}
+
+func TestAcct77_LinuxCreateAccount_FailChmod(t *testing.T) {
+	// 调用顺序: runAccountCmd(idx0=useradd) + newAccountCmd(idx1=chpasswd)
+	//           + newAccountCmd(idx2=tee) + runAccountCmd(idx3=chmod) = 4
+	// chmod 是全局第 4 次调用 (idx 3) → exit-1
+	calls, _ := stubAcctCmds77(t, func(idx int) string {
+		if idx == 3 {
+			return "exit-1"
+		}
+		return "echo-args"
+	}, nil, nil)
+	l := &linuxPlatformStrategy{}
+	err := l.createAccount(context.Background(), "u1", "pw", true)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to set sudoers permissions")
+	require.Len(t, *calls, 4)
+}
+
+func TestAcct77_LinuxDeleteAccount(t *testing.T) {
+	calls, _ := stubAcctCmds77(t, nil, nil, nil)
+	l := &linuxPlatformStrategy{}
+	require.NoError(t, l.deleteAccount(context.Background(), "u1"))
+	require.Len(t, *calls, 1)
+	assert.Equal(t, "userdel", (*calls)[0].name)
+	assert.Equal(t, []string{"-r", "u1"}, (*calls)[0].args)
+}
+
+func TestAcct77_LinuxResetPassword(t *testing.T) {
+	calls, newBuf := stubAcctCmds77(t, nil, nil, nil)
+	l := &linuxPlatformStrategy{}
+	require.NoError(t, l.resetPassword(context.Background(), "u1", "newpw"))
+	require.Len(t, *calls, 1)
+	assert.Equal(t, "chpasswd", (*calls)[0].name)
+	assert.Contains(t, newBuf.String(), "u1:newpw")
+}
+
+func TestAcct77_LinuxEnableDisable(t *testing.T) {
+	calls, _ := stubAcctCmds77(t, nil, nil, nil)
+	l := &linuxPlatformStrategy{}
+	require.NoError(t, l.enableAccount(context.Background(), "u1"))
+	require.NoError(t, l.disableAccount(context.Background(), "u1"))
+	require.Len(t, *calls, 2)
+	assert.Equal(t, "usermod", (*calls)[0].name)
+	assert.Equal(t, []string{"-U", "u1"}, (*calls)[0].args)
+	assert.Equal(t, "usermod", (*calls)[1].name)
+	assert.Equal(t, []string{"-L", "u1"}, (*calls)[1].args)
+}
+
+func TestAcct77_LinuxListAccounts(t *testing.T) {
+	calls, _ := stubAcctCmds77(t, nil, nil, nil)
+	l := &linuxPlatformStrategy{}
+	got, err := l.listAccounts(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, []string{"alice", "bob"}, got,
+		"parseLinuxUsers 过滤 uid>=1000, 默认 getent 块含 alice/bob")
+	require.Len(t, *calls, 1)
+	assert.Equal(t, "getent", (*calls)[0].name)
+}
+
+func TestAcct77_LinuxListAccounts_Fail(t *testing.T) {
+	_, _ = stubAcctCmds77(t, nil, func(int) string { return "exit-1" }, nil)
+	l := &linuxPlatformStrategy{}
+	_, err := l.listAccounts(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to list Linux users")
+}
+
+// ---------------------------------------------------------------------
+// parseWindowsUsers / parseLinuxUsers 纯函数
+// ---------------------------------------------------------------------
+
+func TestAcct77_ParseWindowsUsers(t *testing.T) {
+	assert.Equal(t, []string{"Alice", "Bob"}, parseWindowsUsers("Alice\nBob\n\n"))
+	assert.Equal(t, []string{"Alice"}, parseWindowsUsers("  Alice  \n\n"))
+	// 空输入 → 空切片
+	got := parseWindowsUsers("")
+	assert.Empty(t, got)
+}
+
+func TestAcct77_ParseLinuxUsers(t *testing.T) {
+	// uid>=1000 过滤; 空行 / 无冒号 / UID 非数字 / parts<3 全部跳过
+	input := "" +
+		"root:x:0:0:root:/root:/bin/bash\n" +        // uid<1000 跳过
+		"sysuser:x:999:999::/:/sbin/nologin\n" +     // uid<1000 跳过
+		"alice:x:1000:1000::/home/alice:/bin/bash\n" + // 入
+		"bob:x:1001:1001::/home/bob:/bin/bash\n" +   // 入
+		"\n" +                                        // 空行跳过
+		"weirdnocolon\n" +                            // 无冒号跳过
+		"x:y\n" +                                     // parts<3 跳过
+		"charlie:x:not-a-num:/home/c:/bin/c\n"       // uid 非数字跳过
+	assert.Equal(t, []string{"alice", "bob"}, parseLinuxUsers(input))
+}
