@@ -507,7 +507,7 @@ inside check-coverage.sh section 4; removal condition: package crosses 70.0%.
 
 | date | phase_label | weighted_avg | total_stmts | total_covered | 0pct_pkg_count | commit | phase_executor | ratchet_from | ratchet_to |
 |------|-------------|--------------|-------------|---------------|----------------|--------|----------------|--------------|------------|
-| 2026-08-28 | Phase 79 后 | 70.9 | 43893 | 31119 | 7 | TBD (atomic ratchet) | gsd-executor 79-06 | 55.5 | 55.5 (不动,Phase 81 收口 bump) |
+| 2026-08-28 | Phase 79 后 | 70.9 | 43893 | 31119 | 7 | 3d8019e | gsd-executor 79-06 | 55.5 | 55.5 (不动,Phase 81 收口 bump) |
 
 ### Per-package (Phase 79 后)
 
@@ -622,5 +622,6 @@ PACKAGE    43893    31119  70.90%
 - **Ratchet 落地**: 55.5% → 70.9% (实测), `.coverage-threshold` 不动 — Phase 81 收口按 UP-ONLY 纪律 bump; 本行为 v1.27 milestone 的加权平均贡献段
 
 > **Ratchet note (D-04):** The `commit` column on the Phase 79 后 row reads
-> `TBD (atomic ratchet)` until plan 79-06 Task 8 amends this file with the
-> actual short SHA of the closeout commit (71-01b amend precedent).
+> `3d8019e` — the docs(79-06) closeout commit that shipped this section together
+> with 79-06-SUMMARY.md (71-01b two-step fill precedent: the SHA is back-filled
+> by an immediate follow-up docs commit rather than an amend).
