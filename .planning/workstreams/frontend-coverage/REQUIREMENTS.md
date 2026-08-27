@@ -38,8 +38,8 @@
 ### P2 页面层 ≥70% (PAGES) — ~13,100 stmts
 
 - [x] **PAGES-01**: pages/operations ≥70%（76 文件 3611 stmts，最大单一目录）
-- [ ] **PAGES-02**: pages/system ≥70%（56 文件 2203 stmts）
-- [ ] **PAGES-03**: pages/network ≥70%（61 文件 1962 stmts）
+- [x] **PAGES-02**: pages/system ≥70%（56 文件 2203 stmts）
+- [x] **PAGES-03**: pages/network ≥70%（61 文件 1962 stmts）
 - [ ] **PAGES-04**: pages/duty 1190 + pages/ad-domain 1082 ≥70%（48 文件）
 - [ ] **PAGES-05**: monitor 627 / vdi 567 / workorder 551 / asset 475 / knowledge 262 / dashboard-system 203 / my-notices 127 / login 62 续推 + 零散页 ≥70%（~70 文件）
 
@@ -87,8 +87,8 @@ Roadmap created 2026-08-23 — `.planning/workstreams/frontend-coverage/ROADMAP.
 | COMP-04 | Phase 84 | Complete |
 | COMP-05 | Phase 84 | Complete |
 | PAGES-01 | Phase 85 | Complete |
-| PAGES-02 | Phase 86 | Pending |
-| PAGES-03 | Phase 86 | Pending |
+| PAGES-02 | Phase 86 | Complete |
+| PAGES-03 | Phase 86 | Complete |
 | PAGES-04 | Phase 87 | Pending |
 | PAGES-05 | Phase 87 | Pending |
 | QUAL-01 | Phase 88 | Pending |
