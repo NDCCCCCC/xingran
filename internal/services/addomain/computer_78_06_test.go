@@ -470,5 +470,366 @@ func compEntry78(dn, cn string, attrs map[string][]string) *ldap.Entry {
 	return entry78(dn, all)
 }
 
-// _ 占位导入，确保 strings 被引用（其他 Task 测试将使用）。
-var _ = strings.Contains
+// =============================================================================
+// Task 2: syncComputers entry-driven 全链
+// =============================================================================
+
+// TestComp78_BuildComputerFromEntry 覆盖 computer.go:262-304：
+//   - 完整 entry：cn / distinguishedName / operatingSystem / managedBy / description
+//   - parsedDesc 由 parseComputerDescription 预解析后传入（serialNumber / ipAddress 等）
+//   - 属性缺失 → 零值兜底，不 panic
+//   - 异常 desc 形态 → serialNumber/IPAddress 等安全串（safeAttr 包络）
+func TestComp78_BuildComputerFromEntry(t *testing.T) {
+	// 完整 entry + 完整 parsedDesc
+	entry := compEntry78("CN=PC-A,OU=Test,DC=example,DC=com", "PC-A", map[string][]string{
+		"description":            {"|alice|10.0.0.1|AA:BB:CC:DD:EE:FF|SN-1234|Win11|i7-12700|x64|16GB|512GB|2024-06-01 12:00:00"},
+		"operatingSystem":        {"Windows 11 Enterprise"},
+		"operatingSystemVersion": {"22H2"},
+		"managedBy":              {"CN=ops-svc,OU=Service,DC=example,DC=com"},
+		"lastLogon":              {"133500000000000000"},
+		"pwdLastSet":             {"133490000000000000"},
+		"logonCount":             {"42"},
+	})
+	parsedDesc := parseComputerDescription("|alice|10.0.0.1|AA:BB:CC:DD:EE:FF|SN-1234|Win11|i7-12700|x64|16GB|512GB|2024-06-01 12:00:00")
+	got := buildComputerFromEntry("cfg-X", entry, parsedDesc, models.ComputerStatusOnline)
+
+	assert.Equal(t, "cfg-X", got.ADConfigID)
+	assert.Equal(t, "PC-A", got.ComputerName)
+	assert.Equal(t, "CN=PC-A,OU=Test,DC=example,DC=com", got.DistinguishedName)
+	assert.Equal(t, "OU=Test,DC=example,DC=com", got.OUDN, "extractParentDN 剥离首段 CN=")
+	assert.Equal(t, "Windows 11 Enterprise", got.OperatingSystem)
+	assert.Equal(t, "22H2", got.OSVersion)
+	assert.Equal(t, "CN=ops-svc,OU=Service,DC=example,DC=com", got.ManagedBy)
+	assert.Equal(t, "10.0.0.1", got.IPAddress, "现行为：parsedDesc[\"ipAddress\"]='10.0.0.1'（即 desc 第 3 段，对应 fieldMappings index=2）")
+	assert.Equal(t, "AA:BB:CC:DD:EE:FF", got.MacAddress, "现行为：parsedDesc[\"macAddress\"]='AA:BB...'（即 desc 第 4 段，index=3）")
+	assert.Equal(t, models.ComputerStatusOnline, got.Status)
+	assert.NotNil(t, got.LastLogon)
+	assert.NotNil(t, got.LastOnlineTime)
+	assert.Equal(t, 42, got.LogonCount)
+
+	// 属性缺失 → 零值兜底不 panic
+	empty := &ldap.Entry{DN: "CN=X,OU=Test,DC=example,DC=com"}
+	got2 := buildComputerFromEntry("cfg-Y", empty, map[string]string{}, models.ComputerStatusOffline)
+	assert.Equal(t, "cfg-Y", got2.ADConfigID)
+	assert.Equal(t, "", got2.ComputerName, "cn 缺失 → empty string")
+	assert.Equal(t, "OU=Test,DC=example,DC=com", got2.OUDN)
+	assert.Equal(t, models.ComputerStatusOffline, got2.Status)
+	assert.Nil(t, got2.LastLogon)
+	assert.Nil(t, got2.LastOnlineTime)
+	assert.Equal(t, 0, got2.LogonCount)
+}
+
+// TestComp78_UpdateComputerFields 覆盖 computer.go:307-343：mutate existing 指针。
+//   - 字段变更 → 反映；未变更字段保留；UpdatedAt 刷新
+func TestComp78_UpdateComputerFields(t *testing.T) {
+	existing := &models.ADComputer{
+		ComputerName:      "PC-OLD",
+		DistinguishedName: "CN=OLD,OU=Test,DC=example,DC=com",
+		OUDN:              "OU=Test,DC=example,DC=com",
+		OperatingSystem:   "Windows 10",
+		OSVersion:         "21H2",
+		LogonCount:        10,
+		Status:            models.ComputerStatusOnline,
+	}
+	prevUpdatedAt := existing.UpdatedAt // 通常为零值
+
+	entry := compEntry78("CN=NEW,OU=Test,DC=example,DC=com", "PC-NEW", map[string][]string{
+		"description":            {"||10.0.0.99|AA:99:99|SN-NEW|Win11||x64|||2024-12-31 00:00:00"},
+		"operatingSystem":        {"Windows 11"},
+		"operatingSystemVersion": {"23H2"},
+		"logonCount":             {"100"},
+	})
+	parsed := parseComputerDescription("||10.0.0.99|AA:99:99|SN-NEW|Win11||x64|||2024-12-31 00:00:00")
+	now := time.Now()
+	updateComputerFields(existing, entry, parsed, models.ComputerStatusOffline, now)
+
+	assert.Equal(t, "PC-NEW", existing.ComputerName)
+	assert.Equal(t, "CN=NEW,OU=Test,DC=example,DC=com", existing.DistinguishedName)
+	assert.Equal(t, "OU=Test,DC=example,DC=com", existing.OUDN)
+	assert.Equal(t, "Windows 11", existing.OperatingSystem)
+	assert.Equal(t, "23H2", existing.OSVersion)
+	assert.Equal(t, 100, existing.LogonCount)
+	assert.Equal(t, models.ComputerStatusOffline, existing.Status)
+	assert.True(t, existing.UpdatedAt.After(prevUpdatedAt) || existing.UpdatedAt.Equal(prevUpdatedAt),
+		"UpdatedAt 应被刷新到 now 或保持（首次写入等于 now）")
+}
+
+// TestComp78_QueryExistingComputers_And_AllNames 覆盖 computer.go:478-523：
+//   - queryExistingComputers：按 DN + configID 命中；不同 config 不命中；空 DNs → 空
+//   - queryAllComputerNames：本 config 全部（软删行也命中，因 :519 显式 deleted_at IS NULL
+//     实际过滤；预置软删行 → 验证它被排除）
+func TestComp78_QueryExistingComputers_And_AllNames(t *testing.T) {
+	db := setupComp78DB(t)
+	defer closeDB(t, db)
+	svc := NewComputerService(db)
+	ctx := context.Background()
+
+	cfgA := insertConfig78(t, db, uuid.NewString())
+	cfgB := insertConfig78(t, db, uuid.NewString())
+
+	// 4 行：2 行 cfgA 在查询 DN 内 + 1 行 cfgA 不同 DN + 1 行 cfgB
+	insertComputer78(t, db, cfgA.ID, "CN=DN1,OU=Test,DC=example,DC=com", "PC-A1", "OU=Test,DC=example,DC=com", models.ComputerStatusOnline)
+	insertComputer78(t, db, cfgA.ID, "CN=DN2,OU=Test,DC=example,DC=com", "PC-A2", "OU=Test,DC=example,DC=com", models.ComputerStatusOnline)
+	insertComputer78(t, db, cfgA.ID, "CN=DN3,OU=Test,DC=example,DC=com", "PC-A3", "OU=Test,DC=example,DC=com", models.ComputerStatusOnline)
+	insertComputer78(t, db, cfgB.ID, "CN=DN1,OU=Test,DC=example,DC=com", "PC-B1", "OU=Test,DC=example,DC=com", models.ComputerStatusOnline)
+	// 软删行（应被 queryAllComputerNames 排除）
+	insertComputer78(t, db, cfgA.ID, "CN=DNSOFT,OU=Test,DC=example,DC=com", "PC-SOFT", "OU=Test,DC=example,DC=com", models.ComputerStatusOnline)
+	require.NoError(t, db.Exec(`UPDATE sys_ad_computer SET deleted_at = ? WHERE computer_name = ?`,
+		time.Now(), "PC-SOFT").Error)
+
+	// queryExistingComputers: cfgA + DNs {DN1, DN2, MISS} → 应返回 DN1 + DN2（不同 DN/不同 config 都不命中）
+	got := svc.queryExistingComputers(ctx, cfgA.ID, []string{
+		"CN=DN1,OU=Test,DC=example,DC=com",
+		"CN=DN2,OU=Test,DC=example,DC=com",
+		"CN=MISS,OU=Test,DC=example,DC=com",
+	})
+	require.Len(t, got, 2, "cfgA 内命中 2 行（DN1/DN2），cfgB 同 DN 不命中")
+	dns := []string{got[0].DistinguishedName, got[1].DistinguishedName}
+	assert.Contains(t, dns, "CN=DN1,OU=Test,DC=example,DC=com")
+	assert.Contains(t, dns, "CN=DN2,OU=Test,DC=example,DC=com")
+
+	// 空 DN 切片 → 空结果
+	gotEmpty := svc.queryExistingComputers(ctx, cfgA.ID, []string{})
+	assert.Empty(t, gotEmpty)
+
+	// queryAllComputerNames: cfgA 应返回 3 行（PC-SOFT 软删被过滤）
+	all := svc.queryAllComputerNames(ctx, cfgA.ID)
+	assert.Len(t, all, 3, "软删行 PC-SOFT 被 queryAllComputerNames 过滤（:519 显式 deleted_at IS NULL）")
+	names := map[string]bool{}
+	for _, c := range all {
+		names[c.ComputerName] = true
+	}
+	assert.True(t, names["PC-A1"])
+	assert.True(t, names["PC-A2"])
+	assert.True(t, names["PC-A3"])
+	assert.False(t, names["PC-SOFT"], "软删行不在结果中")
+}
+
+// TestComp78_BuildComputerMaps 覆盖 computer.go:526-539：双 map 构造。
+//   - 4 行：2 行 distinct DN + name；2 行同 name（map 语义后写覆盖前写）。
+func TestComp78_BuildComputerMaps(t *testing.T) {
+	db := setupComp78DB(t)
+	defer closeDB(t, db)
+	svc := NewComputerService(db)
+
+	rows := []models.ADComputer{
+		{DistinguishedName: "CN=DN1,OU=Test,DC=example,DC=com", ComputerName: "PC-A"},
+		{DistinguishedName: "CN=DN2,OU=Test,DC=example,DC=com", ComputerName: "PC-B"},
+		{DistinguishedName: "CN=DN3,OU=Test,DC=example,DC=com", ComputerName: "PC-C"},
+		{DistinguishedName: "CN=DN4,OU=Test,DC=example,DC=com", ComputerName: "PC-C"}, // 与上行同名，后写覆盖
+	}
+	dnMap, nameMap := svc.buildComputerMaps(rows, rows)
+
+	require.NotNil(t, dnMap)
+	require.NotNil(t, nameMap)
+	assert.Len(t, dnMap, 4, "dnMap 按 DN 去重 → 4 行 4 DN")
+	assert.Len(t, nameMap, 3, "nameMap 按 name 去重 → PC-C 重复 → 3 个 entry")
+
+	assert.Equal(t, "PC-A", dnMap["CN=DN1,OU=Test,DC=example,DC=com"].ComputerName)
+	assert.Equal(t, "PC-B", dnMap["CN=DN2,OU=Test,DC=example,DC=com"].ComputerName)
+	assert.NotNil(t, nameMap["PC-A"])
+	assert.NotNil(t, nameMap["PC-B"])
+	assert.NotNil(t, nameMap["PC-C"], "同名重复 → nameMap 仍存在条目（后写覆盖）")
+}
+
+// TestComp78_ProcessComputerEntry_NewVsUpdateVsRename 覆盖 computer.go:547-577 三分支。
+//
+// 关键 F-01 修复（computer.go:543-546 注释）：
+//   - DN 命中 existingDNMap → 更新 existingComputer 指针，加入 toUpdate[conflictKey]
+//   - DN 不命中但 name 命中 existingNameMap（改名/OU move）→ 更新 existingByName 指针，加入 toUpdate[conflictKey]
+//   - 都不命中 → buildComputerFromEntry 后 append toCreate
+func TestComp78_ProcessComputerEntry_NewVsUpdateVsRename(t *testing.T) {
+	db := setupComp78DB(t)
+	defer closeDB(t, db)
+	svc := NewComputerService(db)
+
+	cfgID := "cfg-test"
+	existing := &models.ADComputer{
+		ADConfigID:        cfgID,
+		ComputerName:      "PC-OLD",
+		DistinguishedName: "CN=OLD,OU=Test,DC=example,DC=com",
+		OUDN:              "OU=Test,DC=example,DC=com",
+		Status:            models.ComputerStatusOnline,
+	}
+	dnMap := map[string]*models.ADComputer{
+		"CN=OLD,OU=Test,DC=example,DC=com": existing,
+	}
+	nameMap := map[string]*models.ADComputer{
+		"PC-OLD": existing,
+	}
+	toCreate := []models.ADComputer{}
+	toUpdate := map[string]*models.ADComputer{}
+	now := time.Now()
+
+	// (a) 新建：DN 与 name 都不在 maps
+	entryNew := compEntry78("CN=NEW,OU=Test,DC=example,DC=com", "PC-NEW", map[string][]string{
+		"operatingSystem": {"Win11"},
+	})
+	svc.processComputerEntry(entryNew, cfgID, map[string]string{}, models.ComputerStatusOnline, now, dnMap, nameMap, &toCreate, toUpdate)
+	assert.Len(t, toCreate, 1, "(a) 新建应进 toCreate")
+	assert.Equal(t, "PC-NEW", toCreate[0].ComputerName)
+	assert.Empty(t, toUpdate)
+
+	// (b) DN 命中（既有行 DN 不变，名字也不变）
+	toCreate = toCreate[:0]
+	toUpdate = map[string]*models.ADComputer{}
+	entryUpdate := compEntry78("CN=OLD,OU=Test,DC=example,DC=com", "PC-OLD", map[string][]string{
+		"operatingSystem": {"Win11-updated"},
+	})
+	svc.processComputerEntry(entryUpdate, cfgID, map[string]string{}, models.ComputerStatusOffline, now, dnMap, nameMap, &toCreate, toUpdate)
+	assert.Empty(t, toCreate, "(b) DN 命中 → 不进 toCreate")
+	require.Len(t, toUpdate, 1)
+	key := cfgID + "/" + "PC-OLD"
+	assert.NotNil(t, toUpdate[key])
+	assert.Equal(t, "Win11-updated", existing.OperatingSystem, "指针被 mutate")
+	assert.Equal(t, models.ComputerStatusOffline, existing.Status)
+
+	// (c) 改名：DN 不在 dnMap 但 name 在 nameMap（OU move / 重建场景）
+	toCreate = toCreate[:0]
+	toUpdate = map[string]*models.ADComputer{}
+	// 重置 existing 状态以便观察
+	existing.ComputerName = "PC-OLD"
+	existing.DistinguishedName = "CN=OLD,OU=Test,DC=example,DC=com"
+	existing.OperatingSystem = "Win11"
+	entryRename := compEntry78("CN=RENAMED,OU=Test,DC=example,DC=com", "PC-OLD", map[string][]string{
+		"operatingSystem": {"Win11-after-rename"},
+	})
+	svc.processComputerEntry(entryRename, cfgID, map[string]string{}, models.ComputerStatusOnline, now, dnMap, nameMap, &toCreate, toUpdate)
+	assert.Empty(t, toCreate, "(c) DN 不命中 → 不进 toCreate")
+	require.Len(t, toUpdate, 1, "(c) name 命中 → 进 toUpdate (F-01 修复：key 用 config_id+name 而非 DN)")
+	assert.NotNil(t, toUpdate[key])
+	assert.Equal(t, "CN=RENAMED,OU=Test,DC=example,DC=com", existing.DistinguishedName, "指针 DN 被更新")
+	assert.Equal(t, "Win11-after-rename", existing.OperatingSystem)
+}
+
+// TestComp78_SyncComputers_FullChain 覆盖 computer.go:372-473 编排：
+//   - 空 entries → 早退 nil
+//   - 5 entries (2 新建 / 2 更新 / 1 改名) → 断言行数与字段
+func TestComp78_SyncComputers_FullChain(t *testing.T) {
+	db := setupComp78DB(t)
+	defer closeDB(t, db)
+	svc := NewComputerService(db)
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+
+	// 预置 2 行（将被 update）
+	insertComputer78(t, db, cfg.ID, "CN=U1,OU=Test,DC=example,DC=com", "PC-U1", "OU=Test,DC=example,DC=com", models.ComputerStatusOnline, "", "Win10")
+	insertComputer78(t, db, cfg.ID, "CN=U2,OU=Test,DC=example,DC=com", "PC-U2", "OU=Test,DC=example,DC=com", models.ComputerStatusOffline, "", "Win10")
+	// 预置 1 行（将被 rename：DN 不命中，name 命中）
+	insertComputer78(t, db, cfg.ID, "CN=REN-OLD,OU=Test,DC=example,DC=com", "PC-REN", "OU=Test,DC=example,DC=com", models.ComputerStatusOnline, "", "Win11")
+
+	// 5 entries: 2 新 + 2 更 + 1 改名
+	entries := []*ldap.Entry{
+		compEntry78("CN=N1,OU=Test,DC=example,DC=com", "PC-N1", map[string][]string{"operatingSystem": {"Win11"}}),
+		compEntry78("CN=N2,OU=Test,DC=example,DC=com", "PC-N2", map[string][]string{"operatingSystem": {"Win11"}}),
+		compEntry78("CN=U1,OU=Test,DC=example,DC=com", "PC-U1", map[string][]string{"operatingSystem": {"Win11-upd"}}),
+		compEntry78("CN=U2,OU=Test,DC=example,DC=com", "PC-U2", map[string][]string{"operatingSystem": {"Win11-upd"}}),
+		compEntry78("CN=REN-NEW,OU=Test,DC=example,DC=com", "PC-REN", map[string][]string{"operatingSystem": {"Win11-ren"}}),
+	}
+	require.NoError(t, svc.syncComputers(ctx, cfg, entries))
+
+	// 行数 = 5（3 预置 + 2 新建；改名不增行）
+	var n int64
+	require.NoError(t, db.Model(&models.ADComputer{}).Where("ad_config_id = ?", cfg.ID).Count(&n).Error)
+	assert.EqualValues(t, 5, n, "改名不增行 (F-01 修复：name map 去重)")
+
+	// 断言字段
+	var pcU1 models.ADComputer
+	require.NoError(t, db.Where("ad_config_id = ? AND computer_name = ?", cfg.ID, "PC-U1").First(&pcU1).Error)
+	assert.Equal(t, "Win11-upd", pcU1.OperatingSystem)
+
+	var pcREN models.ADComputer
+	require.NoError(t, db.Where("ad_config_id = ? AND computer_name = ?", cfg.ID, "PC-REN").First(&pcREN).Error)
+	assert.Equal(t, "CN=REN-NEW,OU=Test,DC=example,DC=com", pcREN.DistinguishedName, "改名后 DN 被 upsert 更新")
+
+	var pcN1 models.ADComputer
+	require.NoError(t, db.Where("ad_config_id = ? AND computer_name = ?", cfg.ID, "PC-N1").First(&pcN1).Error)
+	assert.Equal(t, "CN=N1,OU=Test,DC=example,DC=com", pcN1.DistinguishedName)
+	assert.Equal(t, "Win11", pcN1.OperatingSystem)
+
+	// 空 entries 早退
+	require.NoError(t, svc.syncComputers(ctx, cfg, nil))
+	require.NoError(t, svc.syncComputers(ctx, cfg, []*ldap.Entry{}))
+}
+
+// TestComp78_BatchCreate_And_BatchUpdate_Batching 验证分批：
+//   - batchCreate (computer.go:346-369, batchCreateSize=100): 250 entries → 3 批 (100/100/50)
+//   - batchUpdate (computer.go:580-623, batchUpdateSize=200): 250 pre-inserted + 250 same (config,name) → 2 批 ON CONFLICT
+//   - 空切片 / 空 map 早退
+func TestComp78_BatchCreate_And_BatchUpdate_Batching(t *testing.T) {
+	db := setupComp78DB(t)
+	defer closeDB(t, db)
+	svc := NewComputerService(db)
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+
+	// batchCreate 空切片早退
+	require.NoError(t, svc.batchCreate(ctx, nil))
+	require.NoError(t, svc.batchCreate(ctx, []models.ADComputer{}))
+
+	// batchUpdate 空 map 早退
+	require.NoError(t, svc.batchUpdate(ctx, nil))
+	require.NoError(t, svc.batchUpdate(ctx, map[string]*models.ADComputer{}))
+
+	// batchCreate 多批：生成 250 entries（>100 = batchCreateSize）
+	entries := make([]*ldap.Entry, 250)
+	for i := 0; i < 250; i++ {
+		cn := fmt.Sprintf("PC-%04d", i)
+		entries[i] = compEntry78(fmt.Sprintf("CN=%s,OU=Test,DC=example,DC=com", cn), cn, map[string][]string{
+			"operatingSystem": {"Win11"},
+		})
+	}
+	require.NoError(t, svc.syncComputers(ctx, cfg, entries))
+
+	var totalRows int64
+	require.NoError(t, db.Model(&models.ADComputer{}).Where("ad_config_id = ?", cfg.ID).Count(&totalRows).Error)
+	assert.EqualValues(t, 250, totalRows, "batchCreate 分批后 250 行全部落库")
+
+	// batchUpdate 多批：预置 250 行 → 同步 250 entries (同样 config_id+computer_name) 触发 upsert
+	// 先清空表，预置 250 行
+	require.NoError(t, db.Exec(`DELETE FROM sys_ad_computer WHERE ad_config_id = ?`, cfg.ID).Error)
+	now := time.Now()
+	for i := 0; i < 250; i++ {
+		cn := fmt.Sprintf("PC-%04d", i)
+		dn := fmt.Sprintf("CN=%s,OU=Test,DC=example,DC=com", cn)
+		require.NoError(t, db.Exec(`
+			INSERT INTO sys_ad_computer (id, ad_config_id, computer_name, distinguished_name, oudn, status, operating_system, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`, uuid.NewString(), cfg.ID, cn, dn, "OU=Test,DC=example,DC=com", 0, "Win10-old", now, now).Error)
+	}
+
+	// syncComputers 重新跑同样 250 entries → 全部走 batchUpdate ON CONFLICT 分支
+	require.NoError(t, svc.syncComputers(ctx, cfg, entries))
+
+	require.NoError(t, db.Model(&models.ADComputer{}).Where("ad_config_id = ?", cfg.ID).Count(&totalRows).Error)
+	assert.EqualValues(t, 250, totalRows, "batchUpdate upsert 不增行")
+	// 抽查其中一行确认 OS 被更新
+	var pc0 models.ADComputer
+	require.NoError(t, db.Where("ad_config_id = ? AND computer_name = ?", cfg.ID, "PC-0000").First(&pc0).Error)
+	assert.Equal(t, "Win11", pc0.OperatingSystem, "ON CONFLICT 应更新字段")
+}
+
+// TestComp78_SyncComputers_DBError DROP 表 → syncComputers 应包装返回错误（来自 batchCreate）。
+func TestComp78_SyncComputers_DBError(t *testing.T) {
+	db := setupComp78DB(t)
+	defer closeDB(t, db)
+	svc := NewComputerService(db)
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+
+	require.NoError(t, db.Exec(`DROP TABLE sys_ad_computer`).Error)
+
+	entries := []*ldap.Entry{
+		compEntry78("CN=PC1,OU=Test,DC=example,DC=com", "PC1", map[string][]string{
+			"operatingSystem": {"Win11"},
+		}),
+	}
+	err := svc.syncComputers(ctx, cfg, entries)
+	require.Error(t, err, "缺表时应返回错误，不 panic")
+	// queryExistingComputers / queryAllComputerNames 静默吞错 → batchCreate 报缺表
+	// 错误路径：queryExistingComputers 无错 → queryAllComputerNames 无错 →
+	// buildComputerMaps 空 → processComputerEntry 全部进 toCreate → batchCreate 失败
+	assert.True(t,
+		strings.Contains(err.Error(), "批量创建失败") || strings.Contains(err.Error(), "no such table"),
+		"错误应来自 batchCreate (computer.go:361)：%v", err)
+}
