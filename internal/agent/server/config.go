@@ -351,10 +351,17 @@ func AutoRegisterAgent(backendURL string, fp *SystemFingerprint) (vmID, agentID 
 	return result.Data.VMID, result.Data.AgentID, nil
 }
 
+// collectFingerprint 是 CollectSystemFingerprint 的可覆盖包级缝, 初值即原直调,
+// 生产路径 byte 行为不变。该 seam 用于让 77-05 Q-77-B 的 RED 探针 (空 GUID 不 panic)
+// 在 Windows/CI 双平台都得到确定性结论 — 真实 CollectSystemFingerprint 在 Windows 上
+// 总能拿到注册表 GUID, 无法直接驱动 panic 复现。76-02b 覆盖纪律: 测试先 t.Cleanup
+// 后覆盖, 禁 t.Parallel (P-77-9)。
+var collectFingerprint = CollectSystemFingerprint
+
 // RegisterToBackend 配置不完整时自动注册
 func RegisterToBackend(config *Config) (*Config, error) {
 	// 收集指纹
-	fp, err := CollectSystemFingerprint()
+	fp, err := collectFingerprint()
 	if err != nil {
 		return nil, fmt.Errorf("收集系统指纹失败: %w", err)
 	}
@@ -368,7 +375,13 @@ func RegisterToBackend(config *Config) (*Config, error) {
 			"error":       err.Error(),
 		}).Warn("auto registration failed, using temporary ID")
 		vmID = fmt.Sprintf("vm-temp-%s", fp.Hostname)
-		agentID = fmt.Sprintf("agent-%s-%s", fp.Hostname, fp.MachineGUID[:8])
+		// 长度守卫: Linux 上 MachineGUID 永远为空, Windows reg query 失败亦可能
+		// 为空 — 旧实现 fp.MachineGUID[:8] 直接 panic。修复按可用长度截断, 不补零。
+		guidPrefix := fp.MachineGUID
+		if len(guidPrefix) > 8 {
+			guidPrefix = guidPrefix[:8]
+		}
+		agentID = fmt.Sprintf("agent-%s-%s", fp.Hostname, guidPrefix)
 	}
 
 	// 更新配置
