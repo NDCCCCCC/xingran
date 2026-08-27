@@ -25,15 +25,15 @@
 - [x] **INFRA-02**: utils 层 ≥70%（sm2 / sm4 / encoding 国密、token 三件套、dualLevelCache、errorHandler、authHelpers、deptUtils、datetime 等 23 文件 950 stmts）
 - [x] **INFRA-03**: hooks 层 ≥70%（27 文件 1050 stmts，含 usePagination / useServerSort / usePersistedState 续推）
 - [x] **INFRA-04**: store 层 ≥70%（auth / menu / settings / tabs / dashboard / layout / notice / theme 9 文件 589 stmts）
-- [ ] **INFRA-05**: services + router + constants + types 收尾 ≥70%（~626 stmts）
+- [x] **INFRA-05**: services + router + constants + types 收尾 ≥70%（~626 stmts）
 
 ### P1 组件层 ≥70% (COMP) — ~5,000 stmts
 
-- [ ] **COMP-01**: components/shared ≥70%（21 文件 892 stmts，最高价值共享组件）
-- [ ] **COMP-02**: components/dashboard ≥70%（29 文件 1068 stmts，仪表盘 Widget 体系）
-- [ ] **COMP-03**: components/layout ≥70%（HybridLayout / Sidebar / Header，16 文件 507 stmts）
-- [ ] **COMP-04**: components/CronSelector 316 + components/captcha 154 + components/operations 149 ≥70%
-- [ ] **COMP-05**: components/network 324（现 50.6%）+ components/reconciliation 144（现 18.1%）+ 零散小组件续推 ≥70%
+- [x] **COMP-01**: components/shared ≥70%（21 文件 892 stmts，最高价值共享组件）
+- [x] **COMP-02**: components/dashboard ≥70%（29 文件 1068 stmts，仪表盘 Widget 体系）
+- [x] **COMP-03**: components/layout ≥70%（HybridLayout / Sidebar / Header，16 文件 507 stmts）
+- [x] **COMP-04**: components/CronSelector 316 + components/captcha 154 + components/operations 149 ≥70%
+- [x] **COMP-05**: components/network 324（现 50.6%）+ components/reconciliation 144（现 18.1%）+ 零散小组件续推 ≥70%
 
 ### P2 页面层 ≥70% (PAGES) — ~13,100 stmts
 
@@ -47,7 +47,7 @@
 
 - [ ] **QUAL-01**: 全量 vitest 0 失败 0 flaky（现有 19 文件 159 测试不回归）
 - [x] **QUAL-02**: 白名单治理——cad-editor 804 + cad-elements 224 等重画布 UI 排除登记（理由 / 面积 / 复审条件），白名单面积 ≤5% 总语句
-- [ ] **QUAL-03**: 测试公共 harness 沉淀（mock api / antd message / router wrapper 等高频样板），供 P1/P2 复用提效
+- [x] **QUAL-03**: 测试公共 harness 沉淀（mock api / antd message / router wrapper 等高频样板），供 P1/P2 复用提效
 
 ## v2 Requirements
 
@@ -80,12 +80,12 @@ Roadmap created 2026-08-23 — `.planning/workstreams/frontend-coverage/ROADMAP.
 | INFRA-02 | Phase 83 | Complete |
 | INFRA-03 | Phase 83 | Complete |
 | INFRA-04 | Phase 83 | Complete |
-| INFRA-05 | Phase 83 | Pending |
-| COMP-01 | Phase 84 | Pending |
-| COMP-02 | Phase 84 | Pending |
-| COMP-03 | Phase 84 | Pending |
-| COMP-04 | Phase 84 | Pending |
-| COMP-05 | Phase 84 | Pending |
+| INFRA-05 | Phase 83 | Complete |
+| COMP-01 | Phase 84 | Complete |
+| COMP-02 | Phase 84 | Complete |
+| COMP-03 | Phase 84 | Complete |
+| COMP-04 | Phase 84 | Complete |
+| COMP-05 | Phase 84 | Complete |
 | PAGES-01 | Phase 85 | Pending |
 | PAGES-02 | Phase 86 | Pending |
 | PAGES-03 | Phase 86 | Pending |
@@ -93,7 +93,7 @@ Roadmap created 2026-08-23 — `.planning/workstreams/frontend-coverage/ROADMAP.
 | PAGES-05 | Phase 87 | Pending |
 | QUAL-01 | Phase 88 | Pending |
 | QUAL-02 | Phase 82 | Complete |
-| QUAL-03 | Phase 83 | Pending |
+| QUAL-03 | Phase 83 | Complete |
 
 **Coverage:**
 

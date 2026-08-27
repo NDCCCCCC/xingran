@@ -31,8 +31,8 @@
 - 75-81 保留给并行 `milestone` workstream（v1.27），严禁使用
 
 - [x] **Phase 82: 口径修正与治理基建** - vitest 全量口径切换 + 白名单登记 + 4 层 CI gate 落地（全局阈值 / per-dir floor / baseline ratchet / PR diff coverage ≥80%） (completed 2026-08-23)
-- [ ] **Phase 83: P0 基建层全清 ≥70%** - lib / utils / hooks / store / services+router+constants+types ~3,900 stmts 各目录 ≥70% + 测试公共 harness 沉淀
-- [ ] **Phase 84: P1 组件层 ≥70%** - components 五组（shared / dashboard / layout / CronSelector+captcha+operations / network+reconciliation+零散含 design-system）≥70%
+- [x] **Phase 83: P0 基建层全清 ≥70%** - lib / utils / hooks / store / services+router+constants+types ~3,900 stmts 各目录 ≥70% + 测试公共 harness 沉淀 (completed 2026-08-27)
+- [x] **Phase 84: P1 组件层 ≥70%** - components 五组（shared / dashboard / layout / CronSelector+captcha+operations / network+reconciliation+零散含 design-system）≥70% (completed 2026-08-27)
 - [ ] **Phase 85: P2 页面层 R1 — operations** - 最大单一目录 76 文件 3611 stmts ≥70%
 - [ ] **Phase 86: P2 页面层 R2 — system + network** - 两大目录 2203 + 1962 stmts ≥70%
 - [ ] **Phase 87: P2 页面层 R3 — 剩余全部页面** - duty / ad-domain / monitor / vdi / workorder / asset / knowledge / dashboard-system / my-notices / login + 零散页收清，全局首达 ≥70%
@@ -101,7 +101,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 83-05-services-router-harness-PLAN.md — services/router/constants/types 收尾 ≥70% + 测试公共 harness 定稿
+- [x] 83-05-services-router-harness-PLAN.md — services/router/constants/types 收尾 ≥70% + 测试公共 harness 定稿
 
 ### Phase 84: P1 组件层 ≥70%
 
@@ -181,8 +181,8 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 82. 口径修正与治理基建 | 5/5 | Complete    | 2026-08-23 |
-| 83. P0 基建层全清 ≥70% | 4/5 | In Progress|  |
-| 84. P1 组件层 ≥70% | 0/TBD | Not started | - |
+| 83. P0 基建层全清 ≥70% | 5/5 | Complete    | 2026-08-27 |
+| 84. P1 组件层 ≥70% | 7/7 | Complete    | 2026-08-27 |
 | 85. P2 页面层 R1 — operations | 0/TBD | Not started | - |
 | 86. P2 页面层 R2 — system + network | 0/TBD | Not started | - |
 | 87. P2 页面层 R3 — 剩余全部页面 | 0/TBD | Not started | - |

@@ -4,14 +4,14 @@ milestone: v1.28
 milestone_name: milestone
 status: executing
 stopped_at: Phase 84 context gathered
-last_updated: "2026-08-27T08:20:36.886Z"
+last_updated: "2026-08-27T14:25:21.598Z"
 last_activity: 2026-08-27
 progress:
   total_phases: 7
-  completed_phases: 2
-  total_plans: 10
-  completed_plans: 10
-  percent: 29
+  completed_phases: 3
+  total_plans: 17
+  completed_plans: 17
+  percent: 43
 ---
 
 # Project State (v1.28 — frontend-coverage workstream)
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-23) — v1.28 Current Milestone 段
 
 **Core value:** 前端全量口径测试覆盖率达到优秀（≥70%），CI 防倒退 gate 对称后端 v1.26 治理，使前端覆盖率从此不可无声倒退
-**Current focus:** Phase 83 — P0 基建层全清 ≥70%
+**Current focus:** Phase 84 — p1-70
 
 ## Current Position
 
-Phase: 84
+Phase: 85
 Plan: Not started
-Status: Ready to execute
+Status: Executing Phase 84
 Last activity: 2026-08-27
 
 Progress: [████████░░] 80%（milestone 内 8/10 plans；Phase 83 内 3/5 plans）
@@ -36,7 +36,7 @@ Progress: [████████░░] 80%（milestone 内 8/10 plans；Phas
 
 **Velocity:**
 
-- Total plans completed: 20（Phase 82 全部完成：82-01 口径切换 / 82-02 主 gate / 82-03 diff gate / 82-04 ci.yml 接线 / 82-05 真实 CI 验证）
+- Total plans completed: 27（Phase 82 全部完成：82-01 口径切换 / 82-02 主 gate / 82-03 diff gate / 82-04 ci.yml 接线 / 82-05 真实 CI 验证）
 
 ## Accumulated Context
 
