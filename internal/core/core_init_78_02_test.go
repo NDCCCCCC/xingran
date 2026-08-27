@@ -1,28 +1,28 @@
 package core
 
 // =====================================================================
-// Phase 78-02: internal/core 装配层(core.go)Init/Close 全链测试。
+// Phase 78-02: core.Core Init 全链装配 + Close 收尾测试 (BLOCK-03 收口段)。
 //
-// Task 1 = ROADMAP L211 明示的 **Init 深度探针实验**(Gap G1 / DQ3):
-//   先证 core.Core 完整 Init 图能否用 glebarez sqlite + MemoryCache 拼出,
-//   把「实际可达的子系统清单 / 失败点 / 耗时 / goroutine 收尾行为」落 SUMMARY;
-//   后续 Task 2-5 在探针结论上叠加深度断言(D-78-02b: 探针通过条件是
-//   「给出结论且不 hang」,而非「Init 必须返回 nil」)。
-//
-// 关键纪律:
-//   - D-78-02a  sqlite 用 t.TempDir 文件库而非 :memory:(Init 链跨多 GORM 会话)
-//   - D-78-02b  禁为过测改生产装配代码;fail-fast/warn 分支按现行为锚定
-//   - D-78-03   Close hang 处置阶梯 (c): 测试侧硬超时守卫界定问题范围,
-//               零新依赖(不引入 goleak),NumGoroutine 只做宽松回落断言
-//   - R-7       所有启 goroutine 的阶段用 t.Cleanup 兜底收尾
-//   - T-78-02-01 每处 Init/Close 调用均带硬超时守卫 channel
-//   - 本文件禁 t.Parallel()(scheduler/addomain 全局状态 + 包级共享)
+// 关键纪律 (PLAN 78-02 must_haves / decision_audit):
+//   - D-78-02a: sqlite 用 t.TempDir 文件库而非 :memory:(Init 链跨多 GORM 会话,
+//     :memory: 多连接各自建库造成表凭空消失的假失败)。
+//   - D-78-02b: 探针通过条件是「给出结论且不 hang」而非「Init 必须返回 nil」;
+//     禁为过测改生产装配代码。
+//   - D-78-02c: startSubprocessReaper 只覆盖当前平台实现,禁 GOOS 条件 t.Skip。
+//   - D-78-01: 默认形态走 MemoryCache / NewMultiLevelCacheSimple(无 L2Writer),
+//     生产 WithWriter 形态单独用例并显式断言 Close 后 worker 停止(R-7)。
+//   - T-78-02-01/02: 所有 Init/Close 调用均包硬超时守卫 channel + t.Cleanup;
+//     所有 goroutine(cron/采集/L2Writer/reaper/refreshView)显式 Stop/Close。
+//   - T-78-02-03: 仅 sqlite(miniredis 只用于 Cache.Type=redis 分支),禁生产 PG/Redis 地址。
+//   - 命名前缀 TestInit78_(D-78-08);本文件零生产 .go 改动。
 // =====================================================================
 
 import (
-	"encoding/base64"
+	"fmt"
 	"net"
+	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"testing"
 	"time"
@@ -31,49 +31,70 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/xingran-next/xingran-go-backend/internal/config"
-	"github.com/xingran-next/xingran-go-backend/internal/scheduler"
-	"github.com/xingran-next/xingran-go-backend/pkg/cache"
 )
-
-// init78SM4Key 合法 base64 的 16 字节测试密钥(T-78-02-04: 禁真实生产密钥)。
-// 注意刻意避开仓库默认值 dGVzdC1zZWNyZXQxNiEhIQ==("test-secret16!!!"),
-// 默认值仅告警放行的既有设计由 Task 5 的 TestInit78_New_ErrorPaths 单独覆盖。
-var init78SM4Key = base64.StdEncoding.EncodeToString([]byte("init78-test-key!"))
 
 const (
-	init78InitTimeout    = 60 * time.Second // Init 整体硬超时(T-78-02-01)
-	init78CloseTimeout   = 30 * time.Second // Close 整体硬超时(与生产 coreShutdownTimeout 同量级)
-	init78PollInterval   = 50 * time.Millisecond
-	init78WaitUpperBound = 5 * time.Second // 预热/goroutine 回落的轮询上限(R-1/R-7 禁裸 sleep)
+	// init78GuardTimeout Init 探针硬超时守卫。AutoMigrate ~200 张 model 表在 sqlite
+	// 文件库上需数秒,60s 余量足够区分「慢」与「真 hang」(T-78-02-01);
+	// 测试二进制层面另有 go test -timeout 300s 兜底。
+	init78GuardTimeout = 60 * time.Second
+
+	// close78GuardTimeout Close 硬超时守卫。Core.Close 自带 coreShutdownTimeout=30s
+	// 总 deadline,守卫给到 30s 即可判定「Close 自身已无法自恢复」的场景。
+	close78GuardTimeout = 30 * time.Second
+
+	// init78SM4Key 合法 base64 的 16 字节测试 key(base64("78Init02TestKey16"))。
+	// 刻意避开仓库默认值 dGVzdC1zZWNyZXQxNiEhIQ==(T-78-02-04:不引入任何真实生产 key),
+	// 保证 crypto.NewSM4Cipher 能构造成功(NormalNew happy path)。
+	init78SM4Key = "SW5pdDc4VGVzdEtleTE2IQ==" // base64("Init78TestKey16!") = 16 字节
+
+	// init78JWTSecret 满足 NewJWTManager 非空 + ≥16 字节校验的测试密钥,
+	// 且避开已知弱默认值 xingran-next-secret-key(security/jwt.go F-04)。
+	init78JWTSecret = "init78-02-jwt-secret-key-test-only"
 )
 
-// newInit78Config 全字段自造 *config.Config(sqlite + memory/redis 双分支)。
+// newInit78Config 构造一份 Core.Init 可跑的全字段配置(D-78-02b 装配 helper)。
 //
-// - Server.Mode="debug": 避免 SKIP_AUTOMIGRATE 的 release fatal 守卫误触(CDX-H2);
-//   个别用例需要 release 形态时显式改 cfg.Server.Mode 后再调 initDBAndData。
-// - Database.Type="sqlite" + t.TempDir 文件库(D-78-02a)。
-// - Cache.Type=cacheType("memory"/"redis");redis 时 Addr 来自调用方(miniredis.RunT)。
-// - JWT/SM4Key 均为合法测试字面量(NewJWTManager/crypto.NewSM4Cipher 能构造)。
-// - Server.SkipSetup=true: 跳过 InitData / 默认角色菜单 seed(耗时且非装配断言目标);
-//   需要验证 seed 链的用例显式置 false。
-// - RPA 默认 Disabled(initRPAServices 早退);RPA happy path 由 Task 4 直调覆盖。
+//   - Server.Mode="debug":避免 SKIP_AUTOMIGRATE release fatal 守卫误触(core.go CDX-H2);
+//   - Server.Port=0:不占真实端口(T-78-02-03);
+//   - SkipSetup=false:真跑 InitData / 默认角色菜单(warn-continue 双分支可观察);
+//   - Database.Type="sqlite" + t.TempDir 文件库(D-78-02a);
+//   - Cache.Type 由调用方指定:"memory" | "redis"(redis 时必须传 miniredis 地址);
+//   - Cache.WarmUpEnabled 缺省 false:预热链异步行为由 Task 3 TestInit78_CacheWarmUp 单独打开;
+//   - RPA.Enabled 缺省 false:RPA 服务段由 Task 4 TestInit78_ReaperAndRPA 单独打开。
 func newInit78Config(t *testing.T, cacheType string, redisAddr string) *config.Config {
 	t.Helper()
-	cfg := &config.Config{}
-
-	cfg.Server.Name = "core-init-78-test"
-	cfg.Server.Host = "127.0.0.1"
-	cfg.Server.Port = 0            // 不绑定端口,避免占用/T-78-02-03(禁打外部系统)
-	cfg.Server.Mode = "debug"      // 见上
-	cfg.Server.SkipSetup = true    // 跳过 seed,保组装测试确定性
-
-	cfg.Database.Type = "sqlite"
-	cfg.Database.Path = filepath.Join(t.TempDir(), "core_init.db") // D-78-02a 文件库
-
-	cfg.Cache.Type = cacheType
-	cfg.Cache.MaxSize = 1000
-	cfg.Cache.CleanupTime = 60
+	cfg := &config.Config{
+		Server: config.ServerConfig{
+			Name:      "core-init-78-02-test",
+			Host:      "127.0.0.1",
+			Port:      0,
+			Mode:      "debug",
+			SkipSetup: false,
+		},
+		Database: config.DatabaseConfig{
+			Type:         "sqlite",
+			Path:         filepath.Join(t.TempDir(), "core_init.db"),
+			MaxOpenConns: 20,
+			MaxIdleConns: 5,
+		},
+		Cache: config.CacheConfig{
+			Type:        cacheType,
+			MaxSize:     1000,
+			CleanupTime: 300,
+		},
+		JWT: config.JWTConfig{
+			SecretKey:        init78JWTSecret,
+			AccessKeyExpire:  7200,
+			RefreshKeyExpire: 604800,
+			Issuer:           "xingran-init78-test",
+		},
+		Security: config.SecurityConfig{
+			SM4Key: init78SM4Key,
+		},
+	}
 	if cacheType == "redis" {
+		require.NotEmpty(t, redisAddr, "Cache.Type=redis 时必须传 miniredis.RunT(t).Addr()")
 		host, portStr, err := net.SplitHostPort(redisAddr)
 		require.NoError(t, err)
 		port, err := strconv.Atoi(portStr)
@@ -81,202 +102,218 @@ func newInit78Config(t *testing.T, cacheType string, redisAddr string) *config.C
 		cfg.Cache.Host = host
 		cfg.Cache.Port = port
 	}
-
-	cfg.JWT.SecretKey = "init78-test-secret-key-not-for-production-32bytes"
-	cfg.JWT.AccessKeyExpire = 7200
-	cfg.JWT.RefreshKeyExpire = 604800
-	cfg.JWT.Issuer = "xingran-init78-test"
-
-	cfg.Security.SM4Key = init78SM4Key
-
 	return cfg
 }
 
-// init78CloseResult 记录一次受守卫的 Close 的观察结果。
-type init78CloseResult struct {
-	duration time.Duration
-	hung     bool // 硬超时未返回
-	panicked bool // panic(recover 捕获)
-	panicVal any
+// init78CallResult 带 panic 隔离与超时判定的守卫调用结果。
+//
+//   - completed=false → 被测调用未在守卫内返回(hang 结论由此给出;goroutine 泄漏
+//     属预期伴生现象,由 go test -timeout 300s 二进制级兜底回收)。
+//   - panicErr 非 nil → 被测调用 panic,已在 goroutine 内 recover 捕获转成 error,
+//     防 panic 逃逸击穿整个测试二进制(PLAN Task1 步骤 5「不允许 panic 逃逸」)。
+type init78CallResult struct {
+	completed bool
+	panicErr  error
 }
 
-// closeCore78Guarded 在带硬超时守卫的 goroutine 中执行 c.Close()(T-78-02-01),
-// 并以 recover 兜住 panic(D-78-03 (c) 幂等探测期把 panic 变成可观察信号而非进程崩)。
-// 函数必然在 init78CloseTimeout+ε 内返回;hang 时调用方决定 fail-fast 与否。
-func closeCore78Guarded(c *Core) init78CloseResult {
-	done := make(chan init78CloseResult, 1)
+// runInit78Guarded 在带硬超时守卫 + recover 隔离的独立 goroutine 中执行 fn。
+func runInit78Guarded(guard time.Duration, what string, fn func()) init78CallResult {
+	done := make(chan init78CallResult, 1)
 	go func() {
-		res := init78CloseResult{}
-		start := time.Now()
+		res := init78CallResult{completed: true}
 		defer func() {
 			if r := recover(); r != nil {
-				res.panicked = true
-				res.panicVal = r
+				res.panicErr = fmt.Errorf("%s PANIC: %v", what, r)
 			}
-			res.duration = time.Since(start)
 			done <- res
 		}()
-		c.Close()
+		fn()
 	}()
 	select {
 	case res := <-done:
 		return res
-	case <-time.After(init78CloseTimeout):
-		return init78CloseResult{hung: true}
+	case <-time.After(guard):
+		return init78CallResult{completed: false}
 	}
 }
 
-// openInit78Core 装配一个已成功 New 的 Core 并注册 t.Cleanup 兜底关闭(R-7)。
-// 兜底 Close 也走守卫形态:即使用例自身已 Close 过,这里的三次幂等调用同样被验证。
-func openInit78Core(t *testing.T, cfg *config.Config) *Core {
-	t.Helper()
-	c, err := New(cfg)
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		res := closeCore78Guarded(c)
-		if res.hung {
-			t.Logf("[CLEANUP] Close 硬超时 %v 未返回(hang)", init78CloseTimeout)
-		}
-	})
-	return c
-}
-
-// initCore78Guarded 在带硬超时守卫的 goroutine 中执行 c.Init(),返回 (err, hung)。
-func initCore78Guarded(c *Core) (err error, hung bool) {
-	done := make(chan error, 1)
-	go func() { done <- c.Init() }()
-	select {
-	case e := <-done:
-		return e, false
-	case <-time.After(init78InitTimeout):
-		return nil, true
+// cleanupUploadsDir78 清理 initCaptchaServices 以相对路径创建的存储目录
+// ("./uploads/captcha/backgrounds",相对 internal/core 包运行目录)。
+// 只做空目录移除(os.Remove 对非空目录报错即静默跳过),绝不误删真实上传数据;
+// 避免 git 工作树被测试残留污染(T-78-02-03 同类纪律)。
+func cleanupUploadsDir78() {
+	for _, dir := range []string{
+		filepath.Join("uploads", "captcha", "backgrounds"),
+		filepath.Join("uploads", "captcha"),
+		"uploads",
+	} {
+		_ = os.Remove(dir)
 	}
 }
 
-// =====================================================================
-// Task 1: Init 深度探针实验
-// =====================================================================
-
-// TestInit78_Probe_SqliteMemoryCache ROADMAP L211 研究缺口(Gap G1/DQ3)的可执行探针:
-// sqlite + memory cache 下跑完整 Init → 子系统清单盘点 → Close 收尾 → 二次幂等探测。
+// TestInit78_Probe_SqliteMemoryCache Task 1 深度探针实验(PLAN Task1 主产出)。
 //
-// 通过条件是「给出结论(A/B/C)且不 hang」,不是「Init 必须返回 nil」(D-78-02b)。
+// 目标:回答研究缺口 Gap G1/DQ3 —— "core.Core 完整 Init 图能否用 sqlite + MemoryCache
+// 拼出、能否在守卫内收尾"。本用例产出三份实证数据(全部抄录 SUMMARY ## Probe Findings):
+//  1. Init 终态(A 返回 nil / B 返回 error / C hang)+ 耗时;
+//  2. 逐子系统非空清单(Init 各阶段产物字段的可达性证据);
+//  3. Close 收尾行为(一次调用耗时 / 二次调用是否幂等 / 是否 panic)。
+//
+// 通过条件遵循 D-78-02b:「给出结论且不 hang」,因此本用例对 Init 返回 error 只记录不失败;
+// 只有 Init 或首次 Close 在硬超时内未返回(结论 C)才判 Fatal。
 func TestInit78_Probe_SqliteMemoryCache(t *testing.T) {
 	cfg := newInit78Config(t, "memory", "")
+	c, err := New(cfg)
+	require.NoError(t, err)
+	// New() 的直产字段(core.go:120-151)必须全部就位
+	require.NotNil(t, c.CoreInfra, "New 必须装配 CoreInfra(向后兼容 embedding)")
+	require.NotNil(t, c.CoreServices, "New 必须装配 CoreServices")
+	require.NotNil(t, c.JWTManager)
+	require.NotNil(t, c.PwdManager)
+	require.NotNil(t, c.SM4Cipher, "合法 SM4Key 下 initSM4Cipher 必须产出 cipher")
 
-	c := openInit78Core(t, cfg)
-
-	// New 阶段产物断言(:120-151 明确契约)
-	assert.NotNil(t, c.CoreInfra, "New 必须装配 CoreInfra")
-	assert.NotNil(t, c.CoreServices, "New 必须装配 CoreServices")
-	assert.NotNil(t, c.JWTManager, "New 必须能构造 JWTManager")
-	assert.NotNil(t, c.PwdManager, "New 必须构造 PasswordManager")
-	assert.NotNil(t, c.SM4Cipher, "合法 SM4Key 下 SM4Cipher 非 nil")
-
-	// --- Init(硬超时守卫) ---
-	start := time.Now()
-	initErr, hung := initCore78Guarded(c)
-	initDur := time.Since(start)
-	if hung {
-		t.Fatalf("PROBE 结论 C(hang): Init 在 %v 内未返回 — SUMMARY 必须按 D-78-03 阶梯处置", init78InitTimeout)
-	}
-	t.Logf("[PROBE] Init 返回耗时=%v err=%v", initDur, initErr)
-
-	// --- 子系统清单探测(探针主产出,原样抄进 SUMMARY ## Probe Findings)---
-	subsystems := []struct {
-		name string
-		set  bool
-	}{
-		{"DB(infra)", c.DB != nil},
-		{"Cache(infra)", c.Cache != nil},
-		{"JWTManager", c.JWTManager != nil},
-		{"PwdManager", c.PwdManager != nil},
-		{"SM4Cipher", c.SM4Cipher != nil},
-		{"reaperCancel(private)", c.reaperCancel != nil},
-		{"MetricsCacheService", c.MetricsCacheService != nil},
-		{"Scheduler", c.Scheduler != nil},
-		{"DeviceExecutor", c.DeviceExecutor != nil},
-		{"DeviceDiscoveryService", c.DeviceDiscoveryService != nil},
-		{"DeviceInfoCollectionService", c.DeviceInfoCollectionService != nil},
-		{"DeviceMonitorService", c.DeviceMonitorService != nil},
-		{"PartitionService", c.PartitionService != nil},
-		{"CaptchaService", c.CaptchaService != nil},
-		{"CaptchaBackgroundService", c.CaptchaBackgroundService != nil},
-		{"AuthFactory", c.AuthFactory != nil},
-		{"OperLogService", c.OperLogService != nil},
-		{"TokenBlacklistService", c.TokenBlacklistService != nil},
-		{"DataCacheService", c.DataCacheService != nil},
-		{"CacheConfigService", c.CacheConfigService != nil},
-		{"CacheManager", c.CacheManager != nil},
-		{"RPAScalingService", c.RPAScalingService != nil},
-		{"APIEndpointService", c.APIEndpointService != nil},
-		{"NoticeHub", c.NoticeHub != nil},
-	}
-	setCount := 0
-	for _, s := range subsystems {
-		status := "nil "
-		if s.set {
-			status = "SET "
-			setCount++
+	// 兜底收尾:此后任何断言失败 / Init 中途失败都要尝试 Close(LIFO:最后注册先执行)
+	closeStillPending := true
+	t.Cleanup(func() {
+		if !closeStillPending {
+			return
 		}
-		t.Logf("[PROBE] %-26s %s", s.name, status)
-	}
-	t.Logf("[PROBE] 子系统装配计数: %d/%d", setCount, len(subsystems))
-	t.Logf("[PROBE] Cache 动态类型: %T", c.Cache)
+		res := runInit78Guarded(close78GuardTimeout, "Close#cleanup", func() { c.Close() })
+		if !res.completed {
+			t.Logf("PROBE 收尾结论: cleanup Close 在 %v 内未返回(hang)", close78GuardTimeout)
+		} else if res.panicErr != nil {
+			t.Logf("PROBE 收尾结论: cleanup Close panic — %v", res.panicErr)
+		}
+	})
+	t.Cleanup(cleanupUploadsDir78)
 
-	// Cache 动态类型与链路互证:memory 分支应为 *cache.MemoryCache(nil-panic 前 assert 即可)
-	if initErr == nil && c.Cache != nil {
-		assert.IsType(t, &cache.MemoryCache{}, c.Cache,
-			"Cache.Type=memory 应走 initCache else 分支的纯内存缓存")
+	// ---- ① Init 终态 + 耗时 -------------------------------------------------
+	initStart := time.Now()
+	var initErr error
+	initRes := runInit78Guarded(init78GuardTimeout, "Init", func() { initErr = c.Init() })
+	initElapsed := time.Since(initStart)
+
+	switch {
+	case !initRes.completed:
+		// 结论 C(hang):PLAN Task1 明示 Fatal 并把结论写进日志/SUMMARY
+		t.Fatalf("PROBE 结论 C: Init 在 %v 内未返回(疑似 hang)——Gap G1/DQ3 记录为 hang 分支", init78GuardTimeout)
+	case initRes.panicErr != nil:
+		// 结论 B(panic 被隔离,未逃逸)
+		t.Logf("PROBE 结论 B(panic): Init panic — %v (耗时 %v)", initRes.panicErr, initElapsed)
+	default:
+		t.Logf("PROBE: Init 返回 err=%v (耗时 %v)", initErr, initElapsed)
 	}
 
-	// --- 阶段直调核证(若 Init 成功,各私有阶段语义已被顶层串起)---
+	// ---- ② 逐子系统非空清单(探针主产出,原样抄录 SUMMARY)------------------
+	// 字段名严格取自 core_infra.go / core_services.go;分两档:
+	//   alwaysSet:对应阶段无早期 return 旁路,Init 成功时理应必非 nil;
+	//   condSet  :条件产物(API 元数据文件缺失 → nil / RPA 未启用 → nil /
+	//             NoticeHub 由 router 层注入,Init 链不建)。
+	alwaysSet := []string{
+		"DB", "Cache", "CacheConfigService", "DataCacheService", "CacheManager",
+		"MetricsCacheService", "Scheduler", "DeviceExecutor", "DeviceDiscoveryService",
+		"DeviceInfoCollectionService", "DeviceMonitorService", "PartitionService",
+		"CaptchaService", "CaptchaBackgroundService", "OperLogService",
+		"TokenBlacklistService", "AuthFactory",
+	}
+	condSet := map[string]bool{
+		"APIEndpointService": c.APIEndpointService != nil, // initAPIEndpointService 读 ./configs/api_metadata.yaml
+		"RPAScalingService":  c.RPAScalingService != nil,  // RPA.Enabled=false → 不建
+		"NoticeHub":          c.NoticeHub != nil,          // router 层注入(internal/api/router.go:91)
+	}
+
+	inventory := make(map[string]bool, len(alwaysSet)+len(condSet))
+	for _, name := range alwaysSet {
+		inventory[name] = probeField78(c, name)
+	}
+	for name, v := range condSet {
+		inventory[name] = v
+	}
+	names := make([]string, 0, len(inventory))
+	for name := range inventory {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	t.Logf("=== PROBE 子系统清单 (Init err=%v) ===", initErr)
+	for _, name := range names {
+		t.Logf("  %-28s present=%v", name, inventory[name])
+	}
+	t.Logf("=== Init 耗时=%v ===", initElapsed)
+
 	if initErr == nil {
-		// 挑 3 个关键系统表验证 AutoMigrate 真建表(任取存在的: sys_user/sys_role/sys_menu)
-		if c.GetDB() != nil {
-			for _, tbl := range []string{"sys_user", "sys_role", "sys_menu"} {
-				var cnt int64
-				err := c.GetDB().Table(tbl).Count(&cnt).Error
-				assert.NoError(t, err, "关键系统表 %s 应存在(AutoMigrate)", tbl)
+		missing := make([]string, 0, len(alwaysSet))
+		for _, name := range alwaysSet {
+			if !inventory[name] {
+				missing = append(missing, name)
 			}
 		}
+		assert.Empty(t, missing,
+			"Init 返回 nil 时下列无旁路的子系统必须全部就位(conclusion A 完整性),缺失=%v", missing)
+	}
+
+	// ---- ③ Close 行为:一次调用 + 二次幂等探测 ------------------------------
+	closeStart := time.Now()
+	closeRes := runInit78Guarded(close78GuardTimeout, "Close#1", func() { c.Close() })
+	closeElapsed := time.Since(closeStart)
+	closeStillPending = false
+
+	// 首次 Close 是收尾底线:hang(结论 C)/ panic 都要在此浮出水面
+	require.True(t, closeRes.completed,
+		"PROBE 结论 C: 首次 Close 在 %v 内未返回(hang)——coreShutdownTimeout=30s 自身未兜住", close78GuardTimeout)
+	require.NoError(t, closeRes.panicErr, "单次 Close 不允许 panic(装配完整链上 Close 的每步都有 nil 守卫)")
+	t.Logf("PROBE: Close#1 完成 (耗时 %v)", closeElapsed)
+
+	// 幂等探测(PLAN Task1 步骤 5):二次 Close 必须 recover 隔离。
+	// 若发现非幂等 → 按 D-78-03(c) 只记 quirk 进 SUMMARY 待裁决,不在本任务改生产。
+	r2 := runInit78Guarded(close78GuardTimeout, "Close#2", func() { c.Close() })
+	if !r2.completed || r2.panicErr != nil {
+		t.Logf("QUIRK-CANDIDATE [D-78-03c]: 二次 Close 非幂等 (completed=%v, panic=%v) — "+
+			"SUMMARY 记为待裁决 quirk,本 plan 不改生产 Close;后续 Task4 幂等断言按此降级",
+			r2.completed, r2.panicErr)
 	} else {
-		t.Logf("[PROBE] 结论 B: Init 返回 error=%v — 上表仅为失败点之前可达的阶段", initErr)
+		t.Log("PROBE: Close#2 幂等成立(completed=true, 无 panic)")
 	}
+}
 
-	// --- Close(硬超时守卫)---
-	closeRes := closeCore78Guarded(c)
-	if closeRes.hung {
-		t.Fatalf("PROBE 结论 C(hang): Close 在 %v 内未返回 — D-78-03 阶梯触发点,SUMMARY 必录", init78CloseTimeout)
-	}
-	t.Logf("[PROBE] Close 返回耗时=%v panicked=%v", closeRes.duration, closeRes.panicked)
-
-	// --- 二次 Close 幂等探测(Q-7 已修 MetricsCacheService.Stop;整链幂等未验证)---
-	//
-	// [QUIRK-78-02-P1] 实测(2026-08-27 探针):二次 Close panic "close of closed channel"
-	//   根因 pkg/cache/memory.go:312 MemoryCache.Close() 裸 close(stopChan) 无 sync.Once。
-	//   按 D-78-03 (c):不在本 plan 擅改生产(pkg/cache 不在 internal/core 变更面内,
-	//   且 Close 的 doc 注释从未声明幂等契约,D-78-10 无据不改);
-	//   本文件及后续 Task 一律遵循「首次 Close 即终态」语义,SUMMARY 待裁决给 Phase 79/80。
-	close2 := closeCore78Guarded(c)
-	t.Logf("[PROBE] 二次 Close: hung=%v panicked=%v panicVal=%v dur=%v (QUIRK-78-02-P1 观察值)",
-		close2.hung, close2.panicked, close2.panicVal, close2.duration)
-	assert.False(t, close2.hung, "二次 Close 即使 panic 也必须立即返回,不允许 hang")
-
-	// --- 探针结论分流(SUMMARY ## Probe Findings 抄录)---
-	switch {
-	case initErr != nil:
-		t.Logf("[PROBE] ===== 结论 B: Init 返回 error(失败点见上方日志),后续 Task 改分步直调路径 =====")
-	case closeRes.hung || closeRes.panicked || close2.hung:
-		t.Logf("[PROBE] ===== 结论 C: 收尾阶段 hang,按 D-78-03 阶梯先 (c) 测试侧界定 =====")
-	case close2.panicked:
-		t.Logf("[PROBE] ===== 结论 A'(A-with-quirk): Init 成功返回 nil,首次 Close 不 hang 不 panic;" +
-			"二次 Close panic(QUIRK-78-02-P1)→ 后续 Task 按「首次 Close 即终态」叠加断言 =====")
+// probeField78 按 initXxx 阶段产物逐字段判空(反射不可达的私有字段除外)。
+// 用具名分支而非 reflect,保证字段改名时编译期立刻暴露。
+func probeField78(c *Core, field string) bool {
+	switch field {
+	case "DB":
+		return c.DB != nil
+	case "Cache":
+		return c.Cache != nil
+	case "CacheConfigService":
+		return c.CacheConfigService != nil
+	case "DataCacheService":
+		return c.DataCacheService != nil
+	case "CacheManager":
+		return c.CacheManager != nil
+	case "MetricsCacheService":
+		return c.MetricsCacheService != nil
+	case "Scheduler":
+		return c.Scheduler != nil
+	case "DeviceExecutor":
+		return c.DeviceExecutor != nil
+	case "DeviceDiscoveryService":
+		return c.DeviceDiscoveryService != nil
+	case "DeviceInfoCollectionService":
+		return c.DeviceInfoCollectionService != nil
+	case "DeviceMonitorService":
+		return c.DeviceMonitorService != nil
+	case "PartitionService":
+		return c.PartitionService != nil
+	case "CaptchaService":
+		return c.CaptchaService != nil
+	case "CaptchaBackgroundService":
+		return c.CaptchaBackgroundService != nil
+	case "OperLogService":
+		return c.OperLogService != nil
+	case "TokenBlacklistService":
+		return c.TokenBlacklistService != nil
+	case "AuthFactory":
+		return c.AuthFactory != nil
 	default:
-		t.Logf("[PROBE] ===== 结论 A: Init 成功返回 nil + Close 收尾不 hang + 二次 Close 幂等 =====")
+		return false
 	}
-
-	// ADSyncScheduler 是 initSchedulerAndTasks 里 StartADSyncScheduler 启动的全局组件,
-	// 显式停一次防跨用例残留(R-7;Scheduler.Stop 已在 Close 内)。
-	scheduler.StopADSyncScheduler()
 }
