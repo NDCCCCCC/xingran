@@ -596,11 +596,14 @@ func (p *DeviceConnectionPool) GetDevice(deviceID string) (*models.NetworkDevice
 func (p *DeviceConnectionPool) Close() error {
 	applogger.Infof("[连接池] 正在关闭连接池...")
 
-	// 停止清理协程
-	close(p.done)
+	// 停止清理协程 — 先 Stop ticker 再 close done。
+	// 避免 startCleanup goroutine 在 close(p.done) 之后、Stop() 之前
+	// 收到一个 pending tick，导致 select 随机选择 tick case 而非 done case，
+	// 从而 goroutine 泄漏（QUIRK-P2 根因）。
 	if p.cleanupTicker != nil {
 		p.cleanupTicker.Stop()
 	}
+	close(p.done)
 
 	p.poolLock.Lock()
 	defer p.poolLock.Unlock()
