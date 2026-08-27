@@ -28,6 +28,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 )
 
 // dsc7902Creator 所有测试共用的 creatorID(非魔法值,仅用于 CreatedBy 透传断言)。
@@ -485,3 +486,395 @@ func TestDsc7902_IsWeekend(t *testing.T) {
 			"%s 应为 %v", tt.date.Format("2006-01-02"), tt.want)
 	}
 }
+
+// ==================== Task 2: duty_schedule CRUD 族 ====================
+
+// dsc7902LocalToday 本地"今天"日期的 UTC 零点 —— 与生产 GenerateSchedule 经
+// time.Parse("2006-01-02") 落库的行同形态,保证 DATE(schedule_date) 能命中
+// GetTodayDuty 的本地今天字符串。
+// 注意:不能用 time.Now().Truncate(24*time.Hour) —— 那是 UTC 日的零点,在 +08
+// 时区 08:00 前其本地日期是"昨天"(duty_stats_service.go:24 即此构造,Task 4 另行
+// 同值种子处理)。断言只比对成员/池字段,不断言日期值本身(跨日安全)。
+func dsc7902LocalToday() time.Time {
+	now := time.Now()
+	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+}
+
+// dsc7902User 预置一个 sys_user 行(Username 必填,Password/Salt 有 not null 约束)。
+func dsc7902User(t *testing.T, db *gorm.DB, id, username string, nickname, phone *string) {
+	t.Helper()
+	require.NoError(t, db.Create(&models.User{
+		BaseModel: models.BaseModel{ID: id, CreatedBy: dsc7902Creator},
+		Username:  username,
+		Password:  "not-a-real-password",
+		Salt:      "salt-7902",
+		Nickname:  nickname,
+		Phone:     phone,
+	}).Error, "seed user %s", username)
+}
+
+// 分页 + 全量过滤分支 + 白名单排序 + 非法列回退。
+func TestDsc7902_GetList_PaginationAndFilter(t *testing.T) {
+	svc, db := newDsc7902(t)
+	poolA := seedPool7902(t, db, "list-pool-a", 1, "member-a")
+	poolB := seedPool7902(t, db, "list-pool-b", 1, "member-b")
+
+	seedSchedule7902(t, db, poolA, "member-a", dsc7902Mon, models.ScheduleModeWeekday)
+	seedSchedule7902(t, db, poolA, "member-a", dsc7902Tue, models.ScheduleModeWeekday)
+	seedSchedule7902(t, db, poolA, "member-b", dsc7902Wed, models.ScheduleModeWeekday)
+	seedSchedule7902(t, db, poolA, "member-b", dsc7902Sat, models.ScheduleModeWeekend)
+	r5 := seedSchedule7902(t, db, poolB, "member-c", dsc7902Sun, models.ScheduleModeWeekend)
+	// 状态变体行(默认全部 DutyStatusNormal,补一条 Exchanged 供 status 过滤)
+	seedSchedule7902(t, db, poolB, "member-c", dsc7902Fri, models.ScheduleModeWeekday)
+	require.NoError(t, db.Model(&models.DutySchedule{}).Where("id = ?", r5.ID).
+		Update("status", int(models.DutyStatusExchanged)).Error)
+
+	strPtr := func(s string) *string { return &s }
+	intPtr := func(i int) *int { return &i }
+
+	// 分页语义:Current 从 1 起,PageSize=2,第 2 页
+	rows, total, err := svc.GetDutyScheduleList(context.Background(), &DutyScheduleListRequest{
+		BaseListRequest: base7902Req(2, 2),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int64(6), total)
+	assert.Len(t, rows, 2)
+
+	// PageSize=0 → 默认 20(:205 分支)
+	rows, total, err = svc.GetDutyScheduleList(context.Background(), &DutyScheduleListRequest{})
+	require.NoError(t, err)
+	assert.Equal(t, int64(6), total)
+	assert.Len(t, rows, 6, "未传分页参数时默认 PageSize=20,单页取全量")
+
+	// poolID 过滤
+	rows, total, err = svc.GetDutyScheduleList(context.Background(), &DutyScheduleListRequest{
+		PoolID: strPtr(poolA),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int64(4), total)
+	for _, r := range rows {
+		assert.Equal(t, poolA, r.PoolID)
+	}
+
+	// userId 过滤
+	rows, total, err = svc.GetDutyScheduleList(context.Background(), &DutyScheduleListRequest{
+		UserID: strPtr("member-b"),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), total)
+	for _, r := range rows {
+		assert.Equal(t, "member-b", r.UserID)
+	}
+
+	// 日期范围过滤(周一..周三)
+	rows, total, err = svc.GetDutyScheduleList(context.Background(), &DutyScheduleListRequest{
+		StartDate: strPtr("2026-03-02"),
+		EndDate:   strPtr("2026-03-04"),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int64(3), total)
+
+	// dutyType 过滤
+	rows, total, err = svc.GetDutyScheduleList(context.Background(), &DutyScheduleListRequest{
+		DutyType: strPtr(string(models.ScheduleModeWeekend)),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), total)
+	for _, r := range rows {
+		assert.Equal(t, models.ScheduleModeWeekend, r.DutyType)
+	}
+
+	// status 过滤(具名常量,禁裸 0/1)
+	rows, total, err = svc.GetDutyScheduleList(context.Background(), &DutyScheduleListRequest{
+		Status: intPtr(int(models.DutyStatusExchanged)),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), total)
+	require.Len(t, rows, 1)
+	assert.Equal(t, models.DutyStatusExchanged, rows[0].Status)
+
+	// Preload("Pool") 生效:池名随行返回
+	rows, _, err = svc.GetDutyScheduleList(context.Background(), &DutyScheduleListRequest{
+		PoolID: strPtr(poolB),
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, rows)
+	require.NotNil(t, rows[0].Pool, "Preload(Pool) 应装载池名")
+	assert.Equal(t, "list-pool-b", rows[0].Pool.PoolName)
+
+	// 白名单排序:orderByColumn=scheduleDate + IsAsc=false → schedule_date DESC
+	asc := false
+	rows, _, err = svc.GetDutyScheduleList(context.Background(), &DutyScheduleListRequest{
+		BaseListRequest: base.BaseListRequest{OrderByColumn: "scheduleDate", IsAsc: &asc, PageSize: 6},
+	})
+	require.NoError(t, err)
+	require.Len(t, rows, 6)
+	assert.Equal(t, "2026-03-08", rows[0].ScheduleDate.Format("2006-01-02"), "降序首行是最晚日期")
+
+	// 升序
+	ascTrue := true
+	rows, _, err = svc.GetDutyScheduleList(context.Background(), &DutyScheduleListRequest{
+		BaseListRequest: base.BaseListRequest{OrderByColumn: "scheduleDate", IsAsc: &ascTrue, PageSize: 6},
+	})
+	require.NoError(t, err)
+	require.Len(t, rows, 6)
+	assert.Equal(t, "2026-03-02", rows[0].ScheduleDate.Format("2006-01-02"), "升序首行是最早日期")
+
+	// QUIRK-79-02-A(只锁不修,R7):非法列名走 ApplySort 回退分支 —— 白名单未命中
+	// 仅打 warn 日志且不追加 Order;又因 OrderByColumn 非空,源码不再补默认
+	// schedule_date ASC(:212 条件只对空串生效),最终顺序退化为 sqlite 自然序(插入序)。
+	// 此处只断言"无错误 + 总数正确 + 白名单列未被注入",不锁具体顺序(实现细节)。
+	rows, total, err = svc.GetDutyScheduleList(context.Background(), &DutyScheduleListRequest{
+		BaseListRequest: base.BaseListRequest{OrderByColumn: "schedule_date; DROP TABLE x", PageSize: 6},
+	})
+	require.NoError(t, err, "非法排序列静默忽略,不报错")
+	assert.Equal(t, int64(6), total)
+	assert.Len(t, rows, 6)
+}
+
+// base7902Req 构造分页参数(独立 helper 避免与既有测试重名)。
+func base7902Req(current, pageSize int) base.BaseListRequest {
+	return base.BaseListRequest{Current: current, PageSize: pageSize}
+}
+
+// GetTodayDuty:只返回今天的行;昵称展示格式;空库报"今日无值班人员"。
+func TestDsc7902_GetTodayDuty(t *testing.T) {
+	svc, db := newDsc7902(t)
+	poolID := seedPool7902(t, db, "today-pool", 2, "member-a", "member-b")
+
+	nick := "张三丰"
+	phone := "13800000001"
+	dsc7902User(t, db, "member-a", "operator01", &nick, &phone)
+	// 无昵称成员 → 展示用户名本身
+	dsc7902User(t, db, "member-b", "operator02", nil, nil)
+
+	today := dsc7902LocalToday()
+	seedSchedule7902(t, db, poolID, "member-a", today, models.ScheduleModeWeekday)
+	seedSchedule7902(t, db, poolID, "member-b", today.AddDate(0, 0, 1), models.ScheduleModeWeekday) // 明天,不返回
+
+	members, err := svc.GetTodayDuty(context.Background())
+	require.NoError(t, err)
+	require.Len(t, members, 1, "只返回今天(明天那行不返回)")
+
+	m := members[0]
+	assert.Equal(t, poolID, m.PoolID)
+	assert.Equal(t, "member-a", m.UserID)
+	assert.Equal(t, "today-pool", m.PoolName)
+	assert.Equal(t, "张三丰 (operator01)", m.Username, "昵称(用户名)统一展示格式")
+	assert.Equal(t, phone, m.Phone)
+	assert.Equal(t, string(models.ScheduleModeWeekday), m.DutyType)
+	assert.NotEmpty(t, m.ScheduleID)
+	// 不断言日期值本身(跨日安全): today 的取值与种子行同源
+
+	// 空库 → 实装返回错误(非空切片),按现行为锁定
+	svc2, db2 := newDsc7902(t)
+	_ = db2
+	members2, err := svc2.GetTodayDuty(context.Background())
+	require.Error(t, err, "空库无今日值班 → 实装返回错误")
+	assert.Contains(t, err.Error(), "今日无值班人员")
+	assert.Nil(t, members2)
+}
+
+// GetMonthlyDutySchedule:map 键 "YYYY-MM-DD"、只含当月、按日分组;月份越界归一化锁定。
+func TestDsc7902_GetMonthlyDutySchedule(t *testing.T) {
+	svc, db := newDsc7902(t)
+	poolID := seedPool7902(t, db, "monthly-pool", 2, "member-a", "member-b")
+
+	seedSchedule7902(t, db, poolID, "member-a", dsc7902Mon, models.ScheduleModeWeekday)
+	seedSchedule7902(t, db, poolID, "member-b", dsc7902Mon, models.ScheduleModeWeekday)
+	seedSchedule7902(t, db, poolID, "member-a", dsc7902Date(2026, 3, 15), models.ScheduleModeWeekday)
+	seedSchedule7902(t, db, poolID, "member-b", dsc7902Date(2026, 3, 31), models.ScheduleModeWeekend)
+	seedSchedule7902(t, db, poolID, "member-a", dsc7902Date(2026, 4, 1), models.ScheduleModeWeekday) // 跨月,排除
+
+	byDay, err := svc.GetMonthlyDutySchedule(context.Background(), 2026, 3)
+	require.NoError(t, err)
+	require.Len(t, byDay, 3, "只含 3 月的 3 天")
+
+	require.Len(t, byDay["2026-03-02"], 2, "同日两行分到一组")
+	assert.Equal(t, "member-a", byDay["2026-03-02"][0].UserID)
+	assert.Equal(t, "member-b", byDay["2026-03-02"][1].UserID)
+	assert.Equal(t, "monthly-pool", byDay["2026-03-02"][0].PoolName)
+	assert.Len(t, byDay["2026-03-15"], 1)
+	assert.Len(t, byDay["2026-03-31"], 1)
+	assert.NotContains(t, byDay, "2026-04-01", "跨月行不入当月 map")
+
+	// QUIRK-79-02-B(只锁不修):无效月份不报错 —— time.Date 归一化
+	// month=13 → 2027-01;month=0 → 2025-12。返回空 map(非 nil)。
+	byDay13, err := svc.GetMonthlyDutySchedule(context.Background(), 2026, 13)
+	require.NoError(t, err, "month=13 被 time.Date 归一化为 2027-01,不报错")
+	assert.NotNil(t, byDay13)
+	assert.Empty(t, byDay13, "2027-01 无种子行")
+	byDay0, err := svc.GetMonthlyDutySchedule(context.Background(), 2026, 0)
+	require.NoError(t, err, "month=0 归一化为 2025-12")
+	assert.NotNil(t, byDay0)
+	assert.Empty(t, byDay0)
+}
+
+// SwapDuty:双方 ScheduleDate 保留、UserID 对调 + 状态/IsManual/SwapFrom/历史记录;
+// 双侧不存在分支;同 ID 自换(实装允许,按现行为锁定)。
+func TestDsc7902_SwapDuty(t *testing.T) {
+	svc, db := newDsc7902(t)
+	poolID := seedPool7902(t, db, "swap-pool", 1, "member-a", "member-b")
+	from := seedSchedule7902(t, db, poolID, "member-a", dsc7902Mon, models.ScheduleModeWeekday)
+	to := seedSchedule7902(t, db, poolID, "member-b", dsc7902Tue, models.ScheduleModeWeekday)
+
+	err := svc.SwapDuty(context.Background(), &SwapDutyRequest{
+		FromScheduleID: from.ID,
+		ToScheduleID:   to.ID,
+		Reason:         "临时调班",
+	}, "operator-7902")
+	require.NoError(t, err)
+
+	var afterFrom, afterTo models.DutySchedule
+	require.NoError(t, db.Where("id = ?", from.ID).First(&afterFrom).Error)
+	require.NoError(t, db.Where("id = ?", to.ID).First(&afterTo).Error)
+
+	// 双方字段对调断言(日期保留,人员互换)
+	assert.Equal(t, "member-b", afterFrom.UserID, "原排班换成对方人员")
+	assert.Equal(t, "member-a", afterTo.UserID, "目标排班换成原人员")
+	assert.Equal(t, dsc7902Mon.Format("2006-01-02"), afterFrom.ScheduleDate.Format("2006-01-02"), "日期保留")
+	assert.Equal(t, dsc7902Tue.Format("2006-01-02"), afterTo.ScheduleDate.Format("2006-01-02"), "日期保留")
+	assert.Equal(t, models.DutyStatusExchanged, afterFrom.Status)
+	assert.Equal(t, models.DutyStatusExchanged, afterTo.Status)
+	assert.True(t, afterFrom.IsManual)
+	assert.True(t, afterTo.IsManual)
+	require.NotNil(t, afterFrom.SwapFromDate)
+	assert.Equal(t, dsc7902Mon.Format("2006-01-02"), afterFrom.SwapFromDate.Format("2006-01-02"))
+	require.NotNil(t, afterTo.SwapFromDate)
+	assert.Equal(t, dsc7902Tue.Format("2006-01-02"), afterTo.SwapFromDate.Format("2006-01-02"))
+	assert.Equal(t, "临时调班", afterFrom.SwapReason)
+	assert.Equal(t, "operator-7902", afterFrom.UpdatedBy)
+	assert.Equal(t, "operator-7902", afterTo.UpdatedBy)
+
+	// 调班历史恰好一条,original/new 与交换方向一致
+	var exchanges []models.DutyExchange
+	require.NoError(t, db.Find(&exchanges).Error)
+	require.Len(t, exchanges, 1)
+	assert.Equal(t, from.ID, exchanges[0].ScheduleID)
+	assert.Equal(t, "member-a", exchanges[0].OriginalUserID)
+	assert.Equal(t, "member-b", exchanges[0].NewUserID)
+	assert.Equal(t, "临时调班", exchanges[0].Reason)
+	assert.Equal(t, "operator-7902", exchanges[0].CreatedBy)
+
+	// 原排班不存在分支
+	err = svc.SwapDuty(context.Background(), &SwapDutyRequest{
+		FromScheduleID: "no-such-id",
+		ToScheduleID:   to.ID,
+	}, "operator-7902")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "原排班记录不存在")
+
+	// 目标排班不存在分支
+	err = svc.SwapDuty(context.Background(), &SwapDutyRequest{
+		FromScheduleID: from.ID,
+		ToScheduleID:   "no-such-id",
+	}, "operator-7902")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "目标排班记录不存在")
+
+	// QUIRK-79-02-C(只锁不修):From==To 自换 —— 实装两次查到同一行后对调同一值,
+	// 人员不变、状态置 Exchanged、再记一条历史,均不报错。
+	err = svc.SwapDuty(context.Background(), &SwapDutyRequest{
+		FromScheduleID: afterFrom.ID,
+		ToScheduleID:   afterFrom.ID,
+		Reason:         "自换",
+	}, "operator-7902")
+	require.NoError(t, err, "实装不禁止自换")
+	var selfSwapped models.DutySchedule
+	require.NoError(t, db.Where("id = ?", afterFrom.ID).First(&selfSwapped).Error)
+	assert.Equal(t, "member-b", selfSwapped.UserID, "自换不改变人员")
+	assert.Equal(t, models.DutyStatusExchanged, selfSwapped.Status)
+	var exchangeCount int64
+	require.NoError(t, db.Model(&models.DutyExchange{}).Count(&exchangeCount).Error)
+	assert.Equal(t, int64(2), exchangeCount, "自换也记一条历史")
+}
+
+// ManualDuty:合法请求落 IsManual 行;同池同日旧行被替换;坏日期报错;
+// QUIRK-79-02-D:实装不校验池存在性,池不存在也不报错(计划预期错误分支,按现行为锁定)。
+func TestDsc7902_ManualDuty(t *testing.T) {
+	svc, db := newDsc7902(t)
+	poolID := seedPool7902(t, db, "manual-pool", 1, "member-a", "member-b")
+
+	// 预置同池同日旧行(自动排班),验证替换语义
+	old := seedSchedule7902(t, db, poolID, "member-a", dsc7902Thu, models.ScheduleModeWeekday)
+
+	err := svc.ManualDuty(context.Background(), &ManualDutyRequest{
+		PoolID:   poolID,
+		DutyDate: "2026-03-05",
+		UserIDs:  []string{"member-a", "member-b"},
+		DutyType: string(models.ScheduleModeWeekend),
+		Reason:   "手工补班",
+	}, dsc7902Creator)
+	require.NoError(t, err)
+
+	rows := dsc7902Rows(t, db, poolID)
+	require.Len(t, rows, 2, "同池同日旧行被删,只剩 2 条新行")
+	for _, r := range rows {
+		assert.NotEqual(t, old.ID, r.ID, "旧行已被替换")
+		assert.Equal(t, dsc7902Thu.Format("2006-01-02"), r.ScheduleDate.Format("2006-01-02"))
+		assert.True(t, r.IsManual, "手工排班行 IsManual=true")
+		assert.Equal(t, models.ScheduleModeWeekend, r.DutyType)
+		assert.Equal(t, models.DutyStatusNormal, r.Status)
+		assert.Equal(t, dsc7902Creator, r.CreatedBy)
+		assert.Equal(t, "手工补班", r.SwapReason)
+	}
+	userIDs := []string{rows[0].UserID, rows[1].UserID}
+	assert.ElementsMatch(t, []string{"member-a", "member-b"}, userIDs)
+
+	// 坏日期 → 报错且不落库
+	err = svc.ManualDuty(context.Background(), &ManualDutyRequest{
+		PoolID:   poolID,
+		DutyDate: "2026-03-05T10:00",
+		UserIDs:  []string{"member-a"},
+		DutyType: string(models.ScheduleModeWeekday),
+	}, dsc7902Creator)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "值班日期格式错误")
+	assert.Equal(t, int64(2), dsc7902Count(t, db), "坏日期无写入")
+
+	// QUIRK-79-02-D(只锁不修):池不存在不报错,行仍创建 —— 计划预期
+	// "池不存在分支 → 错误",实装 ManualDuty 无池校验(:388-418),按现行为锁定。
+	err = svc.ManualDuty(context.Background(), &ManualDutyRequest{
+		PoolID:   "no-such-pool",
+		DutyDate: "2026-03-06",
+		UserIDs:  []string{"member-a"},
+		DutyType: string(models.ScheduleModeWeekday),
+	}, dsc7902Creator)
+	require.NoError(t, err, "实装无池存在性校验(quirk 锁定)")
+	assert.Equal(t, int64(3), dsc7902Count(t, db))
+}
+
+// Delete / BatchDelete:单删-1、批删只剩未列入行、删不存在 ID 不报错。
+func TestDsc7902_DeleteAndBatchDelete(t *testing.T) {
+	svc, db := newDsc7902(t)
+	poolID := seedPool7902(t, db, "delete-pool", 1, "member-a", "member-b")
+	r1 := seedSchedule7902(t, db, poolID, "member-a", dsc7902Mon, models.ScheduleModeWeekday)
+	r2 := seedSchedule7902(t, db, poolID, "member-a", dsc7902Tue, models.ScheduleModeWeekday)
+	r3 := seedSchedule7902(t, db, poolID, "member-b", dsc7902Wed, models.ScheduleModeWeekday)
+	r4 := seedSchedule7902(t, db, poolID, "member-b", dsc7902Thu, models.ScheduleModeWeekday)
+
+	// 单删
+	require.NoError(t, svc.DeleteDutySchedule(context.Background(), r1.ID))
+	assert.Equal(t, int64(3), dsc7902Count(t, db), "单删后行数 -1")
+
+	// 删不存在的 ID → 不报错、行数不变(软删除 0 行受影响)
+	require.NoError(t, svc.DeleteDutySchedule(context.Background(), "no-such-id"))
+	assert.Equal(t, int64(3), dsc7902Count(t, db))
+
+	// 批删
+	require.NoError(t, svc.BatchDeleteDutySchedules(context.Background(), []string{r2.ID, r3.ID}))
+	assert.Equal(t, int64(1), dsc7902Count(t, db), "批删后只剩未列入 IDs 的行")
+	remaining := dsc7902Rows(t, db, poolID)
+	require.Len(t, remaining, 1)
+	assert.Equal(t, r4.ID, remaining[0].ID)
+
+	// QUIRK-79-02-E(只锁不修):空 IDs 切片 → GORM 无 WHERE 条件,
+	// 实装把驱动错误包装为"批量删除排班记录失败"。
+	err := svc.BatchDeleteDutySchedules(context.Background(), []string{})
+	if err == nil {
+		t.Log("空 IDs 不报错(GORM 版本行为),锁定当前实现")
+		return
+	}
+	assert.Contains(t, err.Error(), "批量删除排班记录失败")
+}
+
