@@ -878,3 +878,40 @@ func TestDsc7902_DeleteAndBatchDelete(t *testing.T) {
 	assert.Contains(t, err.Error(), "批量删除排班记录失败")
 }
 
+// Expired 过期态过滤(:185-193):0=未过期(schedule_date >= 今天),1=已过期(< 今天)。
+// "今天"语义方法 → 种子用本地日期的 UTC 零点(同 dsc7902LocalToday 形态),
+// 断言只区分"今天/过去"两行,不依赖日期字面值(跨日安全:
+// 种子行日期与绑定字符串同源,行分类在任意运行时刻都稳定)。
+func TestDsc7902_GetList_ExpiredFilter(t *testing.T) {
+	svc, db := newDsc7902(t)
+	poolID := seedPool7902(t, db, "expired-pool", 1, "member-a")
+	today := dsc7902LocalToday()
+	past := today.AddDate(0, 0, -3)
+	seedSchedule7902(t, db, poolID, "member-a", today, models.ScheduleModeWeekday)
+	seedSchedule7902(t, db, poolID, "member-a", past, models.ScheduleModeWeekday)
+
+	// Expired=0 → 仅未过期(今天那行)
+	notExpired := 0
+	rows, total, err := svc.GetDutyScheduleList(context.Background(), &DutyScheduleListRequest{
+		Expired: &notExpired,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), total, "未过期只有今天那行")
+	require.Len(t, rows, 1)
+
+	// Expired=1 → 仅已过期(过去那行)
+	expired := 1
+	rows, total, err = svc.GetDutyScheduleList(context.Background(), &DutyScheduleListRequest{
+		Expired: &expired,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), total, "已过期只有过去那行")
+	require.Len(t, rows, 1)
+	assert.Equal(t, past.Format("2006-01-02"), rows[0].ScheduleDate.Format("2006-01-02"))
+
+	// 不传 Expired → 全部
+	_, total, err = svc.GetDutyScheduleList(context.Background(), &DutyScheduleListRequest{})
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), total, "不传 expired 返回全部")
+}
+
