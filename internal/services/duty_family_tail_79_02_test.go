@@ -375,3 +375,171 @@ func TestDcf7902_UpdateConfig_RoundTrip(t *testing.T) {
 	assert.Equal(t, 30, *rows[0].BeforeReminderMinutes)
 }
 
+// ==================== Task 5: duty_service 门面委托链 ====================
+
+// QUIRK 说明:门面 duty_service.go 共 21 个委托方法(池 6 + 排班 6 + stats 1 +
+// holiday 6 + config 2),全部单行转发。按 D-79-07 轻量口径:池域 4 方法做
+// 完整 round-trip,排班域 3 方法做主干链,其余以"调用形态正确 + 错误分支
+// 透传"覆盖,不重复下层全量断言(下层已由 Task 1-4 覆盖)。
+func TestDsv7902_FacadeDelegation(t *testing.T) {
+	db, _, _, _ := newDtx7902(t)
+	facade := NewDutyService(db)
+	// 池域成员走存在性校验 → 先落 sys_user
+	dsc7902User(t, db, "member-a", "user-member-a", nil, nil)
+	dsc7902User(t, db, "member-b", "user-member-b", nil, nil)
+
+	// ---- 池域 round-trip:Create → GetByID → Update → Delete ----
+	created, err := facade.CreateDutyPool(context.Background(), &DutyPoolCreateRequest{
+		PoolName:   "facade-pool",
+		DailyCount: 2,
+		MemberIDs:  []string{"member-a"},
+	}, dsc7902Creator)
+	require.NoError(t, err, "门面 CreateDutyPool 与直调子 service 等价")
+	require.NotNil(t, created)
+
+	byID, err := facade.GetDutyPoolByID(context.Background(), created.ID)
+	require.NoError(t, err)
+	require.Len(t, byID.Members, 1)
+	assert.Equal(t, "member-a", byID.Members[0].UserID, "门面读回与直调一致")
+
+	list, total, err := facade.GetDutyPoolList(context.Background(), &DutyPoolListRequest{
+		PoolName: &[]string{"facade"}[0],
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), total)
+	require.Len(t, list, 1)
+
+	require.NoError(t, facade.UpdateDutyPool(context.Background(), &DutyPoolUpdateRequest{
+		ID:         created.ID,
+		PoolName:   "facade-pool-v2",
+		DailyCount: 3,
+		MemberIDs:  []string{"member-a", "member-b"},
+	}, "facade-updater"))
+	afterUpdate, err := facade.GetDutyPoolByID(context.Background(), created.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "facade-pool-v2", afterUpdate.PoolName)
+	assert.Equal(t, 3, afterUpdate.DailyCount)
+
+	// 错误分支透传:门面原样返回子 service 错误
+	_, err = facade.GetDutyPoolByID(context.Background(), "no-such-pool")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "值班池不存在", "错误透传不变形")
+
+	// ---- 排班域主干链:GenerateSchedule → GetDutyScheduleList → BatchDelete ----
+	count, err := facade.GenerateSchedule(context.Background(), &GenerateScheduleRequest{
+		PoolID:    created.ID,
+		StartDate: "2026-03-02",
+		EndDate:   "2026-03-04",
+		DutyType:  string(models.ScheduleModeWeekday),
+	}, dsc7902Creator)
+	require.NoError(t, err)
+	assert.Equal(t, 9, count, "3 个工作日 × DailyCount 3")
+
+	schedules, total, err := facade.GetDutyScheduleList(context.Background(), &DutyScheduleListRequest{
+		PoolID: &created.ID,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int64(9), total)
+	require.Len(t, schedules, 9)
+
+	// 手工排班 + 删除族
+	require.NoError(t, facade.ManualDuty(context.Background(), &ManualDutyRequest{
+		PoolID:   created.ID,
+		DutyDate: "2026-03-07",
+		UserIDs:  []string{"member-a"},
+		DutyType: string(models.ScheduleModeWeekend),
+		Reason:   "facade 手工",
+	}, dsc7902Creator))
+	require.NoError(t, facade.BatchDeleteDutySchedules(context.Background(),
+		[]string{schedules[0].ID, schedules[1].ID}))
+	_, totalAfter, err := facade.GetDutyScheduleList(context.Background(), &DutyScheduleListRequest{
+		PoolID: &created.ID,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int64(8), totalAfter, "批删 2 行后剩 8 行(9 自动 -2 +1 手工)")
+	require.NoError(t, facade.DeleteDutySchedule(context.Background(), schedules[2].ID))
+	_, totalAfterSingle, err := facade.GetDutyScheduleList(context.Background(), &DutyScheduleListRequest{
+		PoolID: &created.ID,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int64(7), totalAfterSingle, "单删后剩 7 行")
+
+	// ---- 其余委托方法:调用形态正确 / 错误分支透传,不重复下层全量断言 ----
+
+	// stats 域
+	stats, err := facade.GetMyDutyStats(context.Background(), "member-a")
+	require.NoError(t, err)
+	require.NotNil(t, stats, "门面 GetMyDutyStats 返回形态正确")
+
+	// holiday 域全链
+	holiday := &models.Holiday{
+		BaseModel:   models.BaseModel{CreatedBy: dsc7902Creator},
+		HolidayDate: dsc7902Tue,
+		HolidayName: "门面节假日",
+		IsOffday:    true,
+		HolidayType: models.HolidayTypeCustom,
+		Year:        2026,
+	}
+	require.NoError(t, facade.CreateHoliday(context.Background(), holiday, dsc7902Creator))
+	holidays, err := facade.GetHolidayList(context.Background(), 2026)
+	require.NoError(t, err)
+	require.Len(t, holidays, 1)
+	years, err := facade.GetHolidayYears(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, []int{2026}, years)
+	require.NoError(t, facade.UpdateHoliday(context.Background(), &holidays[0], "facade-updater"))
+	require.NoError(t, facade.DeleteHoliday(context.Background(), holidays[0].ID))
+	// 批量创建用新日期:删除是软删,holiday_date 的硬唯一索引仍被已删行占位
+	// (QUIRK-79-02-K:同日期节假日"删后再建"会撞 UNIQUE 约束,现行为锁定)
+	rebatch := &models.Holiday{
+		BaseModel:   models.BaseModel{CreatedBy: dsc7902Creator},
+		HolidayDate: dsc7902Thu,
+		HolidayName: "门面批量节假日",
+		IsOffday:    true,
+		HolidayType: models.HolidayTypeCustom,
+		Year:        2026,
+	}
+	require.NoError(t, facade.BatchCreateHolidays(context.Background(),
+		[]models.Holiday{*rebatch}, dsc7902Creator))
+
+	// config 域
+	require.NoError(t, facade.UpdateDutyConfig(context.Background(), &models.DutyConfig{
+		ReminderEnabled: true,
+		ReminderTime:    "08:30",
+	}, "facade-cfg"))
+	cfg, err := facade.GetDutyConfig(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, "08:30", cfg.ReminderTime, "门面 config 委托读写一致")
+
+	// 池域收尾:statistics + delete(有排班记录 → 拒删透传)
+	poolStats, err := facade.GetDutyPoolStatistics(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), poolStats.Total)
+	err = facade.DeleteDutyPool(context.Background(), created.ID)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "该值班池存在排班记录，无法删除", "门面错误透传")
+
+	// 换班:两行互换(错误分支传坏参数)
+	var remain []models.DutySchedule
+	require.NoError(t, db.Where("pool_id = ?", created.ID).Find(&remain).Error)
+	require.Len(t, remain, 7, "9 自动 -2 批删 -1 单删 +1 手工")
+	require.NoError(t, facade.SwapDuty(context.Background(), &SwapDutyRequest{
+		FromScheduleID: remain[0].ID,
+		ToScheduleID:   remain[1].ID,
+		Reason:         "facade 换班",
+	}, "facade-operator"))
+	err = facade.SwapDuty(context.Background(), &SwapDutyRequest{
+		FromScheduleID: "no-such-id",
+		ToScheduleID:   remain[0].ID,
+	}, "facade-operator")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "原排班记录不存在")
+
+	// 今日值班:无今天行 → 错误透传(不断言日期值)
+	_, err = facade.GetTodayDuty(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "今日无值班人员")
+	monthly, err := facade.GetMonthlyDutySchedule(context.Background(), 2026, 3)
+	require.NoError(t, err)
+	assert.NotNil(t, monthly, "门面 GetMonthlyDutySchedule 返回 map 形态正确")
+}
