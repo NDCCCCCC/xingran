@@ -1,0 +1,11 @@
+<dummy-host>
+screen-length 0 temporary
+<dummy-host>
+system-view
+[dummy-host]
+sysname Dummy-Switch
+<dummy-host>
+system-view
+[dummy-host]
+vlan 100
+<dummy-host>

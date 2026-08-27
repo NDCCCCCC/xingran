@@ -1,0 +1,61 @@
+<dummy-host>
+screen-length 0 temporary
+<dummy-host>
+display current-configuration
+! Software Version V800R022C00
+sysname Huawei-Dummy
+interface GigabitEthernet0/0/1
+ description uplink-to-core
+<dummy-host>
+display version
+Huawei Versatile Routing Platform Software
+VRP (R) software, Version 8.180 (dummy build for fixture replay)
+<dummy-host>
+display version
+Huawei Versatile Routing Platform Software
+VRP (R) software, Version 8.180 (dummy build for fixture replay)
+<dummy-host>
+display version
+Huawei Versatile Routing Platform Software
+VRP (R) software, Version 8.180 (dummy build for fixture replay)
+<dummy-host>
+display version
+Huawei Versatile Routing Platform Software
+VRP (R) software, Version 8.180 (dummy build for fixture replay)
+<dummy-host>
+display version
+Huawei Versatile Routing Platform Software
+VRP (R) software, Version 8.180 (dummy build for fixture replay)
+<dummy-host>
+display version
+Huawei Versatile Routing Platform Software
+VRP (R) software, Version 8.180 (dummy build for fixture replay)
+<dummy-host>
+display version
+Huawei Versatile Routing Platform Software
+VRP (R) software, Version 8.180 (dummy build for fixture replay)
+<dummy-host>
+display version
+Huawei Versatile Routing Platform Software
+VRP (R) software, Version 8.180 (dummy build for fixture replay)
+<dummy-host>
+<dummy-host>
+<dummy-host>
+<dummy-host>
+<dummy-host>
+<dummy-host>
+<dummy-host>
+<dummy-host>
+<dummy-host>
+<dummy-host>
+<dummy-host>
+<dummy-host>
+<dummy-host>
+<dummy-host>
+<dummy-host>
+<dummy-host>
+<dummy-host>
+<dummy-host>
+<dummy-host>
+<dummy-host>
+<dummy-host>

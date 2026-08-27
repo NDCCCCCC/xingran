@@ -65,7 +65,8 @@ func poolFixturePath(t *testing.T, name string) string {
 	t.Helper()
 	_, thisFile, _, ok := runtime.Caller(0)
 	if !ok {
-		t.Fatal("runtime.Caller failed")
+		t.Errorf("runtime.Caller failed")
+		return ""
 	}
 	return filepath.Join(filepath.Dir(thisFile), "testdata", name)
 }
@@ -83,7 +84,7 @@ func newPool78(t *testing.T) (*DeviceConnectionPool, *gorm.DB) {
 
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
-		t.Fatalf("gorm.Open failed: %v", err)
+		t.Errorf("gorm.Open failed: %v", err)
 	}
 
 	// Minimal CREATE TABLEs for the columns createConnection / GetDevice
@@ -117,7 +118,7 @@ func newPool78(t *testing.T) (*DeviceConnectionPool, *gorm.DB) {
 	}
 	for _, stmt := range ddl {
 		if err := db.Exec(stmt).Error; err != nil {
-			t.Fatalf("DDL %q failed: %v", stmt, err)
+			t.Errorf("DDL %q failed: %v", stmt, err)
 		}
 	}
 
@@ -147,7 +148,8 @@ func newPool78(t *testing.T) (*DeviceConnectionPool, *gorm.DB) {
 func seedPool78(t *testing.T, p *DeviceConnectionPool, deviceID string, w *ScrapliWrapper) *PooledConnection {
 	t.Helper()
 	if w == nil {
-		t.Fatal("seedPool78 requires non-nil wrapper")
+		t.Errorf("seedPool78 requires non-nil wrapper")
+		return nil
 	}
 	mu := p.getDeviceLock(deviceID)
 	pc := &PooledConnection{
@@ -431,7 +433,7 @@ func TestCP78_GetConnection_ReuseHit(t *testing.T) {
 
 	got, err := pool.GetConnection(context.Background(), "dev-reuse")
 	if err != nil {
-		t.Fatalf("GetConnection returned err: %v", err)
+		t.Errorf("GetConnection returned err: %v", err)
 	}
 	if got != seeded {
 		t.Errorf("GetConnection returned different pc; want same pointer")
@@ -606,7 +608,7 @@ func TestCP78_CreateConnection_CredentialNotFound(t *testing.T) {
 	// Case A: device has NO CredentialID and NO is_default=true credential.
 	if err := db.Exec(`INSERT INTO sys_network_device (id, device_name, vendor, ip_address, port, status, created_at, updated_at, credential_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
 		"dev-cred-miss", "dev-cred-miss", "huawei", "10.0.0.1", 22, 0, "2024-01-01", "2024-01-01").Error; err != nil {
-		t.Fatalf("seed device: %v", err)
+		t.Errorf("seed device: %v", err)
 	}
 	_, err := pool.createConnection(context.Background(), "dev-cred-miss")
 	if err == nil {
@@ -620,7 +622,7 @@ func TestCP78_CreateConnection_CredentialNotFound(t *testing.T) {
 	// Case B: device HAS a CredentialID pointing to a missing credential id.
 	if err := db.Exec(`INSERT INTO sys_network_device (id, device_name, vendor, ip_address, port, status, created_at, updated_at, credential_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		"dev-cred-ptr-miss", "dev-cred-ptr-miss", "huawei", "10.0.0.5", 22, 0, "2024-01-01", "2024-01-01", "cred-does-not-exist").Error; err != nil {
-		t.Fatalf("seed device: %v", err)
+		t.Errorf("seed device: %v", err)
 	}
 	_, err = pool.createConnection(context.Background(), "dev-cred-ptr-miss")
 	if err == nil {
@@ -641,11 +643,11 @@ func TestCP78_CreateConnection_NoCipher(t *testing.T) {
 	pool.passwordCipher = nil // override to nil
 	if err := db.Exec(`INSERT INTO sys_network_device (id, device_name, vendor, ip_address, port, status, created_at, updated_at, credential_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
 		"dev-no-cipher", "dev-no-cipher", "huawei", "10.0.0.2", 22, 0, "2024-01-01", "2024-01-01").Error; err != nil {
-		t.Fatalf("seed device: %v", err)
+		t.Errorf("seed device: %v", err)
 	}
 	if err := db.Exec(`INSERT INTO sys_auth_credential (id, credential_name, protocol_type, username, password, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		"cred-default", "cred-default", "ssh", "u", "p", 1, "2024-01-01", "2024-01-01").Error; err != nil {
-		t.Fatalf("seed credential: %v", err)
+		t.Errorf("seed credential: %v", err)
 	}
 	_, err := pool.createConnection(context.Background(), "dev-no-cipher")
 	if err == nil {
@@ -665,11 +667,11 @@ func TestCP78_CreateConnection_EmptyPassword(t *testing.T) {
 	pool, db := newPool78(t)
 	if err := db.Exec(`INSERT INTO sys_network_device (id, device_name, vendor, ip_address, port, status, created_at, updated_at, credential_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
 		"dev-empty-pw", "dev-empty-pw", "huawei", "10.0.0.3", 22, 0, "2024-01-01", "2024-01-01").Error; err != nil {
-		t.Fatalf("seed device: %v", err)
+		t.Errorf("seed device: %v", err)
 	}
 	if err := db.Exec(`INSERT INTO sys_auth_credential (id, credential_name, protocol_type, username, password, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		"cred-empty", "cred-empty", "ssh", "u", "", 1, "2024-01-01", "2024-01-01").Error; err != nil {
-		t.Fatalf("seed credential: %v", err)
+		t.Errorf("seed credential: %v", err)
 	}
 	_, err := pool.createConnection(context.Background(), "dev-empty-pw")
 	if err == nil {
@@ -828,7 +830,7 @@ func TestCP78_GetStats_And_GetDevice(t *testing.T) {
 	// GetDevice hit — insert + retrieve.
 	if err := db.Exec(`INSERT INTO sys_network_device (id, device_name, vendor, ip_address, port, status, created_at, updated_at, credential_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
 		"dev-get", "dev-get", "huawei", "10.0.0.4", 22, 0, "2024-01-01", "2024-01-01").Error; err != nil {
-		t.Fatalf("seed device: %v", err)
+		t.Errorf("seed device: %v", err)
 	}
 	dev, err := pool.GetDevice("dev-get")
 	if err != nil {
@@ -857,13 +859,13 @@ func TestCP78_GetStats_And_GetDevice(t *testing.T) {
 func TestCP78_PoolClose_WithConnections(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
-		t.Fatalf("gorm.Open failed: %v", err)
+		t.Errorf("gorm.Open failed: %v", err)
 	}
 	if err := db.Exec(`CREATE TABLE IF NOT EXISTS sys_network_device (
 		id TEXT PRIMARY KEY, device_name TEXT, vendor TEXT, ip_address TEXT,
 		port INTEGER DEFAULT 22, status INTEGER DEFAULT 2, created_at DATETIME,
 		updated_at DATETIME, deleted_at DATETIME, credential_id TEXT)`).Error; err != nil {
-		t.Fatalf("DDL failed: %v", err)
+		t.Errorf("DDL failed: %v", err)
 	}
 
 	pool := NewDeviceConnectionPool(db, fakeCipher{}, &PoolConfig{
@@ -893,7 +895,7 @@ func TestCP78_PoolClose_WithConnections(t *testing.T) {
 	case <-done:
 		// OK
 	case <-time.After(15 * time.Second):
-		t.Fatal("pool.Close did not return within 15s — Close hung on idle connections")
+		t.Errorf("pool.Close did not return within 15s — Close hung on idle connections")
 	}
 
 	pool.poolLock.RLock()
