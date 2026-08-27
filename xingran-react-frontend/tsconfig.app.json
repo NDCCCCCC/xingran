@@ -36,5 +36,6 @@
     }
   },
   "include": ["src"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/test/**"],
   "files": ["src/types/global.d.ts", "src/types/externals.d.ts", "src/utils/sm-crypto.d.ts"]
 }
