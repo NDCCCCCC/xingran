@@ -14,6 +14,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"path/filepath"
 	"testing"
 
@@ -419,4 +420,215 @@ func TestTsv7903_ValidateVariables(t *testing.T) {
 
 	// 不存在模板 → 透传错误
 	require.ErrorContains(t, svc.ValidateVariables(ctx, "ghost-id", nil), "查询模板失败")
+}
+
+// =====================================================================
+// Task 4: Preview / Render / Clone / Export / Import / GetTemplatesByVendor
+// =====================================================================
+
+// TestTsv7903_Preview_Render_Substitution 变量占位 `{{.name}}`(text/template 形态)
+// 双通道替换;必填缺失报错;可选变量走默认值;模板不存在透传错误。
+func TestTsv7903_Preview_Render_Substitution(t *testing.T) {
+	svc, _ := newTsv7903(t)
+	ctx := context.Background()
+
+	tpl := tsv7903Create(t, svc, "tpl-render-01", false)
+
+	// 必填 + 可选全给 → 全量替换
+	got, err := svc.Preview(ctx, tpl.ID, map[string]string{
+		"iface": "GigabitEthernet0/0",
+		"vlan":  "200",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "interface GigabitEthernet0/0\nswitchport access vlan 200\n", got,
+		"Preview 按 `{{.name}}` 占位替换(vlan 为 int 型,替换后整数字面)")
+
+	// 可选缺省 → BuildVariablesMap 回填默认值 100
+	got, err = svc.Preview(ctx, tpl.ID, map[string]string{"iface": "Vlanif10"})
+	require.NoError(t, err)
+	assert.Equal(t, "interface Vlanif10\nswitchport access vlan 100\n", got,
+		"未提供的可选变量回填默认值")
+
+	// 必填缺失 → 报错(不渲染)
+	_, err = svc.Preview(ctx, tpl.ID, map[string]string{"vlan": "1"})
+	require.ErrorContains(t, err, "缺少必需变量: iface")
+
+	// Render 走 templateCode 通道,结果与 Preview 同口径
+	got, err = svc.Render(ctx, tpl.TemplateCode, map[string]string{
+		"iface": "TenGigabitEthernet1/1",
+		"vlan":  "300",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "interface TenGigabitEthernet1/1\nswitchport access vlan 300\n", got)
+
+	// Render 未命中 code → 透传 GetByCode 错误
+	_, err = svc.Render(ctx, "ghost-code", nil)
+	require.ErrorContains(t, err, "查询模板失败")
+	// Preview 未命中 ID → 透传 GetByID 错误
+	_, err = svc.Preview(ctx, "ghost-id", nil)
+	require.ErrorContains(t, err, "查询模板失败")
+}
+
+// TestTsv7903_Export_Import_RoundTrip Export → Import 双通道 round-trip;
+// 坏 JSON/空字节/code 冲突分支;系统标志重置锁定。
+func TestTsv7903_Export_Import_RoundTrip(t *testing.T) {
+	svc, _ := newTsv7903(t)
+	ctx := context.Background()
+
+	source := tsv7903Create(t, svc, "tpl-export-01", false)
+
+	// Export → JSON 字节
+	data, err := svc.Export(ctx, source.ID)
+	require.NoError(t, err)
+	require.NotEmpty(t, data)
+	var dumped map[string]interface{}
+	require.NoError(t, json.Unmarshal(data, &dumped), "Export 产物为合法 JSON")
+	assert.Equal(t, "tpl-export-01", dumped["templateCode"], "导出 JSON 含模板编码")
+
+	// Import 语义锁定:code 已存在即拒绝(不覆盖)→ 同库 round-trip 须先删源行
+	_, err = svc.Import(ctx, data, "importer-7903")
+	require.ErrorContains(t, err, "模板编码已存在", "源行仍在 → Import 拒绝(先证据化该分支)")
+
+	// QUIRK-79-03-K(锁定不修,⚠️ 现网可见,与 QUIRK-79-02-K 同根):软删不释放
+	// template_code 硬唯一索引 —— Delete 后行仍在(unscoped),Import 的存在性
+	// 计数(带 deleted_at IS NULL)放行,但 INSERT 撞 UNIQUE 约束。
+	require.NoError(t, svc.Delete(ctx, source.ID), "软删源行")
+	_, err = svc.Import(ctx, data, "importer-7903")
+	require.Error(t, err, "软删行仍占用唯一索引 → 导入失败")
+	assert.Contains(t, err.Error(), "UNIQUE constraint failed")
+
+	// 硬删(Unscoped)后才可同库 round-trip(测试侧 fixture 处置,非生产行为)
+	require.NoError(t, svc.db.Unscoped().Delete(&models.ConfigTemplate{}, "id = ?", source.ID).Error)
+
+	// Import → 新行字段一致(ID 重置/IsSystem=false/CreatedBy 覆写)
+	imported, err := svc.Import(ctx, data, "importer-7903")
+	require.NoError(t, err)
+	assert.NotEqual(t, source.ID, imported.ID, "导入生成新 ID")
+	assert.False(t, imported.IsSystem, "导入强制 IsSystem=false")
+	assert.Equal(t, "importer-7903", imported.CreatedBy, "CreatedBy=导入人")
+	assert.Equal(t, source.TemplateName, imported.TemplateName)
+	assert.Equal(t, source.TemplateCode, imported.TemplateCode)
+	assert.Equal(t, source.TemplateContent, imported.TemplateContent)
+	assert.Equal(t, source.Variables, imported.Variables, "变量 JSON round-trip")
+	assert.Equal(t, source.Vendor, imported.Vendor)
+	assert.Equal(t, source.DeviceType, imported.DeviceType)
+
+	// round-trip 独立读回核对
+	reloaded, err := svc.GetByID(ctx, imported.ID)
+	require.NoError(t, err)
+	assert.Equal(t, source.TemplateContent, reloaded.TemplateContent)
+
+	// code 冲突 → 明确报错(已导入的 code 不可再导)
+	_, err = svc.Import(ctx, data, "importer-7903")
+	require.ErrorContains(t, err, "模板编码已存在")
+
+	// 坏 JSON / 空字节 → 解析失败
+	_, err = svc.Import(ctx, []byte("{not-json"), "importer-7903")
+	require.ErrorContains(t, err, "解析模板数据失败")
+	_, err = svc.Import(ctx, []byte{}, "importer-7903")
+	require.ErrorContains(t, err, "解析模板数据失败")
+
+	// Export 未命中 → 错误
+	_, err = svc.Export(ctx, "ghost-id")
+	require.ErrorContains(t, err, "查询模板失败")
+
+	// QUIRK-79-03-I(锁定不修):系统模板可 Export/Import,导入后 IsSystem 被重置
+	// 为 false —— 系统模板经「导出→导入」通道即变为可改可删的自定义模板。
+	systemTpl := tsv7903Create(t, svc, "tpl-export-sys", true)
+	sysData, err := svc.Export(ctx, systemTpl.ID)
+	require.NoError(t, err)
+	fromSystem, err := svc.Import(ctx, sysData, "importer-7903")
+	require.Error(t, err, "code 冲突(tpl-export-sys 已存在)→ 先改 code 再导")
+	_ = fromSystem
+	// 改 code 后再导入 → IsSystem=false
+	sysData = tsv7903BytesWithCode(t, sysData, "tpl-export-sys-2")
+	cloneOfSystem, err := svc.Import(ctx, sysData, "importer-7903")
+	require.NoError(t, err)
+	assert.False(t, cloneOfSystem.IsSystem, "系统模板导入后重置为自定义(QUIRK-79-03-I)")
+}
+
+// tsv7903BytesWithCode 改写导出 JSON 的 templateCode 字段(测试辅助)。
+func tsv7903BytesWithCode(t *testing.T, data []byte, newCode string) []byte {
+	t.Helper()
+	var m map[string]interface{}
+	require.NoError(t, json.Unmarshal(data, &m))
+	m["templateCode"] = newCode
+	out, err := json.Marshal(m)
+	require.NoError(t, err)
+	return out
+}
+
+// TestTsv7903_Clone 克隆落库且内容一致;源不存在/newCode 重复分支。
+func TestTsv7903_Clone(t *testing.T) {
+	svc, _ := newTsv7903(t)
+	ctx := context.Background()
+
+	source := tsv7903Create(t, svc, "tpl-clone-src", false)
+
+	cloned, err := svc.Clone(ctx, source.ID, "克隆模板", "tpl-clone-dst", "cloner-7903")
+	require.NoError(t, err)
+	assert.NotEqual(t, source.ID, cloned.ID)
+	assert.Equal(t, "克隆模板", cloned.TemplateName)
+	assert.Equal(t, "tpl-clone-dst", cloned.TemplateCode)
+	assert.False(t, cloned.IsSystem, "克隆强制非系统模板")
+	assert.Equal(t, "cloner-7903", cloned.CreatedBy)
+	assert.Equal(t, source.TemplateContent, cloned.TemplateContent, "克隆内容一致")
+	assert.Equal(t, source.Variables, cloned.Variables, "克隆变量一致")
+	assert.Equal(t, source.TemplateType, cloned.TemplateType)
+
+	// 源不存在 → 透传错误
+	_, err = svc.Clone(ctx, "ghost-id", "x", "tpl-clone-x", "c")
+	require.ErrorContains(t, err, "查询模板失败")
+
+	// newCode 重复 → 明确报错
+	_, err = svc.Clone(ctx, source.ID, "再克隆", "tpl-clone-dst", "c")
+	require.ErrorContains(t, err, "模板编码已存在")
+
+	// QUIRK-79-03-J(锁定不修):系统模板无克隆保护(与 Update/Delete 的系统
+	// 保护不对称),克隆产物 IsSystem=false。
+	systemTpl := tsv7903Create(t, svc, "tpl-clone-sys-src", true)
+	sysClone, err := svc.Clone(ctx, systemTpl.ID, "克隆系统模板", "tpl-clone-sys-dst", "c")
+	require.NoError(t, err, "系统模板可被克隆(无保护分支)")
+	assert.False(t, sysClone.IsSystem)
+}
+
+// TestTsv7903_GetTemplatesByVendor 厂商过滤 + deviceType 可选二级过滤(具名常量)。
+func TestTsv7903_GetTemplatesByVendor(t *testing.T) {
+	svc, _ := newTsv7903(t)
+	ctx := context.Background()
+
+	seed := func(code string, vendor models.DeviceVendor, dtype models.DeviceType) {
+		t.Helper()
+		_, err := svc.Create(ctx, &CreateTemplateRequest{
+			TemplateName:    code,
+			TemplateCode:    code,
+			TemplateType:    models.TemplateTypeConfig,
+			Vendor:          vendor,
+			DeviceType:      dtype,
+			TemplateContent: "plain",
+		})
+		require.NoError(t, err, "create %s", code)
+	}
+	seed("vendor-hw-switch", models.VendorHuawei, models.DeviceTypeSwitch)
+	seed("vendor-hw-router", models.VendorHuawei, models.DeviceTypeRouter)
+	seed("vendor-h3c-switch", models.VendorH3C, models.DeviceTypeSwitch)
+	seed("vendor-rj-firewall", models.VendorRuijie, models.DeviceTypeFirewall)
+
+	// 仅 vendor → 该厂商全部
+	list, err := svc.GetTemplatesByVendor(ctx, models.VendorHuawei, "")
+	require.NoError(t, err)
+	require.Len(t, list, 2)
+	codes := []string{list[0].TemplateCode, list[1].TemplateCode}
+	assert.ElementsMatch(t, []string{"vendor-hw-switch", "vendor-hw-router"}, codes)
+
+	// vendor + deviceType → 二级过滤
+	list, err = svc.GetTemplatesByVendor(ctx, models.VendorHuawei, models.DeviceTypeSwitch)
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	assert.Equal(t, "vendor-hw-switch", list[0].TemplateCode)
+
+	// vendor 无行 → 空集
+	list, err = svc.GetTemplatesByVendor(ctx, models.VendorMaipu, "")
+	require.NoError(t, err)
+	assert.Empty(t, list)
 }
