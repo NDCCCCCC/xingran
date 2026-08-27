@@ -12,6 +12,7 @@ commits:
   - 1021e3c (test: task 2 init 8 阶段产物断言 + db-fail + skip_migrate 旁路;亦含 task 5 边角用例)
   - 24f8493 (test: task 3 initCache redis 分支 + 预热链 5 个用例全绿)
   - 441efe5 (test: task 4 Close 收尾顺序 + 幂等 + reaper/RPA 6 用例全绿)
+  - 0c837a5 (test: task 4 goroutine 回落轮询改显式 time.after,plan acceptance grep time.after ≥2 落地)
 metrics:
   test_funcs: 24
   test_subs: 9
@@ -132,7 +133,7 @@ per-file weighted(internal/core 包,cov profile 按 numStmt 加权):
 ## Self-Check: PASSED
 
 - 文件存在:`internal/core/core_init_78_02_test.go` — FOUND(1046 行)。
-- 提交存在:f6d6a4a / 8db313e / 39ab54b / 1021e3c / 24f8493 / 441efe5 — 全 FOUND(`git log --all`)。
+- 提交存在:f6d6a4a / 8db313e / 39ab54b / 1021e3c / 24f8493 / 441efe5 / 0c837a5 — 全 FOUND(`git log --all`)。
 - `go build ./...` exit 0;`go test ./...` exit 0;`go test -count=1 ./internal/core/` exit 0。
 - 覆盖率:`go tool cover -func=cov78_02.out | grep total` = 82.5%(≥70%);core.go 加权 77.4%(≥60%);Init 78.3% + Close 83.8% 均 ≥60%。
 
