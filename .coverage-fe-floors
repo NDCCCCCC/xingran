@@ -12,7 +12,7 @@
 GLOBAL 3.8
 (src root)	0.0
 api	0.0
-components	13.4
+components	18.6
 constants	38.8
 design-system	52.5
 hooks	91.7
@@ -48,20 +48,20 @@ utils	89.7
 #   - 散件子目录 DeptTree/IconSelect/NoticeDetail/asset/charts/markdown/modal/
 #     table/three:同 commit 新增的 0.0 校准行(新 key 初始校准,非下调),
 #     后续 wave 3 / P2 阶段补测后逐 plan bump。
-components/shared	21.9
-components/dashboard	2.1
+components/shared	23.7
+components/dashboard	4.1
 components/layout	14.1
-components/CronSelector	7.0
-components/captcha	10.5
-components/operations	0.8
+components/CronSelector	37.4
+components/captcha	21.5
+components/operations	3.5
 components/network	50.1
 components/reconciliation	21.0
-components/DeptTree	0.0
+components/DeptTree	44.8
 components/IconSelect	0.0
-components/NoticeDetail	0.0
+components/NoticeDetail	16.1
 components/asset	0.0
 components/charts	0.0
-components/markdown	0.0
-components/modal	0.0
-components/table	0.0
+components/markdown	49.5
+components/modal	99.5
+components/table	6.6
 components/three	0.0
