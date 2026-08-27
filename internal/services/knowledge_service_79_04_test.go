@@ -583,3 +583,295 @@ func TestKsv7904_ParseTagsFromContent(t *testing.T) {
 		})
 	}
 }
+
+// -------------------------------------------------------------------------
+// Task 2: 分类树 + 标签族
+// -------------------------------------------------------------------------
+
+// TestKsv7904_CategoryTree_Recursive 建父→子→孙三层 → GetKnowledgeCategoryList 返回树
+// 且 loadKnowledgeChildrenCategories 递归填充 Children;ParentID/Status 过滤与
+// GetKnowledgeCategory(含 Parent Preload)分支。
+func TestKsv7904_CategoryTree_Recursive(t *testing.T) {
+	ctx := context.Background()
+	svc, db := newKsv7904(t)
+
+	root, err := svc.CreateKnowledgeCategory(ctx, &KnowledgeCategoryCreateRequest{
+		CategoryName: "根分类", SortOrder: 1,
+		Status: int(models.KnowledgeArticleStatusPublished),
+	}, ksv7904Creator)
+	require.NoError(t, err)
+	mid, err := svc.CreateKnowledgeCategory(ctx, &KnowledgeCategoryCreateRequest{
+		CategoryName: "中间分类", ParentID: &root.ID, SortOrder: 2,
+		Status: int(models.KnowledgeArticleStatusPublished),
+	}, ksv7904Creator)
+	require.NoError(t, err)
+	leaf, err := svc.CreateKnowledgeCategory(ctx, &KnowledgeCategoryCreateRequest{
+		CategoryName: "叶子分类", ParentID: &mid.ID, SortOrder: 3,
+		Status: int(models.KnowledgeArticleStatusPublished),
+	}, ksv7904Creator)
+	require.NoError(t, err)
+	// 停用分类(Status 过滤分支用)。KnowledgeArticleStatusDraft=0 是零值,GORM 建行
+	// 时会被列 default:1 覆盖(与 73-03 network seed 同款零值跳过 quirk)→ 建后强制回写。
+	disabled, err := svc.CreateKnowledgeCategory(ctx, &KnowledgeCategoryCreateRequest{
+		CategoryName: "停用分类", SortOrder: 4,
+		Status: int(models.KnowledgeArticleStatusDraft),
+	}, ksv7904Creator)
+	require.NoError(t, err)
+	require.NoError(t, db.Model(&models.KnowledgeCategory{}).Where("id = ?", disabled.ID).
+		Update("status", int(models.KnowledgeArticleStatusDraft)).Error)
+
+	// 全树:根层只有 根分类 + 停用分类,且孙层被递归填充
+	roots, err := svc.GetKnowledgeCategoryList(ctx, &KnowledgeCategoryListRequest{})
+	require.NoError(t, err)
+	require.Len(t, roots, 2, "根层只应返回 parent_id IS NULL 的分类")
+	byName := map[string]*models.KnowledgeCategory{}
+	for i := range roots {
+		byName[roots[i].CategoryName] = &roots[i]
+	}
+	gotRoot := byName["根分类"]
+	require.NotNil(t, gotRoot)
+	require.Len(t, gotRoot.Children, 1, "loadKnowledgeChildrenCategories 第一层")
+	require.Len(t, gotRoot.Children[0].Children, 1, "递归第二层必须填充")
+	assert.Equal(t, mid.ID, gotRoot.Children[0].ID)
+	assert.Equal(t, leaf.ID, gotRoot.Children[0].Children[0].ID)
+
+	// ParentID 过滤:parent_id = mid → 返回 mid 的直接子层(leaf),leaf 无下级
+	parentID := mid.ID
+	subtree, err := svc.GetKnowledgeCategoryList(ctx, &KnowledgeCategoryListRequest{ParentID: &parentID})
+	require.NoError(t, err)
+	require.Len(t, subtree, 1)
+	assert.Equal(t, leaf.ID, subtree[0].ID, "ParentID 过滤返回该层子分类而非该分类自身")
+	assert.Empty(t, subtree[0].Children)
+
+	// Status 过滤:只看停用 → 只返回 停用分类
+	stopped := int(models.KnowledgeArticleStatusDraft)
+	stoppedList, err := svc.GetKnowledgeCategoryList(ctx, &KnowledgeCategoryListRequest{Status: &stopped})
+	require.NoError(t, err)
+	require.Len(t, stoppedList, 1)
+	assert.Equal(t, disabled.ID, stoppedList[0].ID)
+
+	// GetKnowledgeCategory:Parent Preload 命中
+	got, err := svc.GetKnowledgeCategory(ctx, mid.ID)
+	require.NoError(t, err)
+	require.NotNil(t, got.Parent)
+	assert.Equal(t, root.ID, got.Parent.ID)
+
+	// GetKnowledgeCategory 不存在 → 错误
+	_, err = svc.GetKnowledgeCategory(ctx, uuid.New().String())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "知识库分类不存在")
+}
+
+// TestKsv7904_CategoryCRUD Create/Update round-trip;删除含子类/含文章的分类被拒;
+// 删除叶子分类 happy path 用数字串主键(Q1 UUID inline-Delete 锁定,见文件头)。
+func TestKsv7904_CategoryCRUD(t *testing.T) {
+	ctx := context.Background()
+	svc, db := newKsv7904(t)
+	root := ksv7904Category(t, db, "CRUD根分类")
+
+	// Create round-trip
+	cat, err := svc.CreateKnowledgeCategory(ctx, &KnowledgeCategoryCreateRequest{
+		CategoryName: "CRUD子分类",
+		Description:  "描述",
+		ParentID:     &root.ID,
+		SortOrder:    7,
+		Status:       int(models.KnowledgeArticleStatusPublished),
+	}, ksv7904Creator)
+	require.NoError(t, err)
+	assert.Equal(t, "CRUD子分类", cat.CategoryName)
+	assert.Equal(t, 7, cat.SortOrder)
+	assert.Equal(t, ksv7904Creator, cat.CreatedBy)
+
+	// Update(指针字段)读回
+	newName := "CRUD子分类-改"
+	newDesc := "新描述"
+	newSort := 9
+	newStatus := int(models.KnowledgeArticleStatusDraft)
+	require.NoError(t, svc.UpdateKnowledgeCategory(ctx, cat.ID, &KnowledgeCategoryUpdateRequest{
+		CategoryName: &newName, Description: &newDesc, SortOrder: &newSort, Status: &newStatus,
+	}, "op-7904"))
+	got, err := svc.GetKnowledgeCategory(ctx, cat.ID)
+	require.NoError(t, err)
+	assert.Equal(t, newName, got.CategoryName)
+	assert.Equal(t, newDesc, got.Description)
+	assert.Equal(t, newSort, got.SortOrder)
+	assert.Equal(t, models.KnowledgeArticleStatusDraft, got.Status)
+	assert.Equal(t, "op-7904", got.UpdatedBy)
+
+	// Update 不存在 → 错误
+	err = svc.UpdateKnowledgeCategory(ctx, uuid.New().String(), &KnowledgeCategoryUpdateRequest{}, "op")
+	require.Error(t, err)
+
+	// 删除被拒:含子分类
+	err = svc.DeleteKnowledgeCategory(ctx, root.ID)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "子分类")
+
+	// 删除被拒:含关联文章
+	_ = ksv7904Article(t, svc, cat.ID)
+	err = svc.DeleteKnowledgeCategory(ctx, cat.ID)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "关联文章")
+
+	// 删除 happy path:叶子且无文章。Q1 锁定:inline Delete 只认数字串主键,
+	// 因此本分支用数字串 ID 直插一行(GORM 直插不受 inline 条件限制)。
+	digit := &models.KnowledgeCategory{
+		BaseModel:    models.BaseModel{ID: "9901"},
+		CategoryName: "数字串叶子分类",
+		Status:       models.KnowledgeArticleStatusPublished,
+	}
+	require.NoError(t, db.Create(digit).Error)
+	require.NoError(t, svc.DeleteKnowledgeCategory(ctx, "9901"), "数字串主键的 inline Delete 必须成功")
+	_, err = svc.GetKnowledgeCategory(ctx, "9901")
+	require.Error(t, err, "删除后必须不可再查")
+
+	// Q1 锁定:真实 UUID 主键 → inline Delete 被当作原生 SQL 片段 → 报错(不修)
+	uuidLeaf := ksv7904Category(t, db, "UUID叶子分类")
+	err = svc.DeleteKnowledgeCategory(ctx, uuidLeaf.ID)
+	require.Error(t, err, "锁定现行为:UUID 主键的 inline Delete 报错(Q1)")
+}
+
+// ksv7904Article 快捷建一篇文章(Q2:不带标签,避免 pre-seed 噪音)。
+func ksv7904Article(t *testing.T, svc *KnowledgeService, categoryID string) *models.KnowledgeArticle {
+	t.Helper()
+	art, err := svc.CreateKnowledgeArticle(context.Background(), &KnowledgeArticleCreateRequest{
+		Title: "关联文章", Content: "正文", CategoryID: categoryID,
+		Status: int(models.KnowledgeArticleStatusPublished),
+	}, ksv7904Creator)
+	require.NoError(t, err)
+	return art
+}
+
+// TestKsv7904_TagFamily GetAllTags 排序 / GetTagByName 命中与未命中 / CreateTag 重复名 /
+// UpdateTag / DeleteTag(数字串 happy + UUID Q1 锁定 + 关联清理)全链。
+func TestKsv7904_TagFamily(t *testing.T) {
+	ctx := context.Background()
+	svc, db := newKsv7904(t)
+
+	// GetTagByName 未命中 → (nil, nil) 不报错(实现的分支形态)
+	miss, err := svc.GetTagByName(ctx, "不存在标签")
+	require.NoError(t, err)
+	assert.Nil(t, miss, "未命中必须返回 nil tag 而非错误")
+
+	// CreateTag
+	tag, err := svc.CreateTag(ctx, "标签甲")
+	require.NoError(t, err)
+	assert.NotEmpty(t, tag.ID)
+	assert.Equal(t, "标签甲", tag.TagName)
+	assert.Equal(t, 0, tag.UseCount)
+
+	// CreateTag 重复名 → 唯一索引拒绝
+	_, err = svc.CreateTag(ctx, "标签甲")
+	require.Error(t, err, "重复名必须被 idx_kb_tag_name 唯一索引拒绝")
+
+	// GetTagByName 命中
+	hit, err := svc.GetTagByName(ctx, "标签甲")
+	require.NoError(t, err)
+	require.NotNil(t, hit)
+	assert.Equal(t, tag.ID, hit.ID)
+
+	// GetAllTags 排序:use_count DESC, created_at ASC
+	_ = ksv7904SeedTag(t, db, "标签乙")
+	_ = ksv7904SeedTag(t, db, "标签丙")
+	require.NoError(t, db.Model(&models.KnowledgeTag{}).Where("tag_name = ?", "标签乙").
+		UpdateColumn("use_count", 5).Error)
+	require.NoError(t, db.Model(&models.KnowledgeTag{}).Where("tag_name = ?", "标签丙").
+		UpdateColumn("use_count", 9).Error)
+	all, err := svc.GetAllTags(ctx)
+	require.NoError(t, err)
+	require.Len(t, all, 3)
+	assert.Equal(t, []string{"标签丙", "标签乙", "标签甲"},
+		[]string{all[0].TagName, all[1].TagName, all[2].TagName}, "use_count 降序排列")
+
+	// UpdateTag 读回
+	require.NoError(t, svc.UpdateTag(ctx, tag.ID, "标签甲-改"))
+	got, err := svc.GetTagByName(ctx, "标签甲-改")
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	assert.Equal(t, tag.ID, got.ID)
+
+	// UpdateTag 不存在 ID → GORM 0 行更新不报错(锁定 Update 语义)
+	require.NoError(t, svc.UpdateTag(ctx, uuid.New().String(), "无人生还"))
+
+	// DeleteTag happy path:数字串主键(Q1 锁定)+ 关联清理
+	digit := &models.KnowledgeTag{ID: "8801", TagName: "数字串标签"}
+	require.NoError(t, db.Create(digit).Error)
+	digitArt := ksv7904Category(t, db, "标签删除分类")
+	art := ksv7904Article(t, svc, digitArt.ID)
+	require.NoError(t, db.Create(&models.KnowledgeArticleTag{
+		ArticleID: art.ID, TagID: "8801", CreatedAt: db.NowFunc(),
+	}).Error)
+	require.NoError(t, svc.DeleteTag(ctx, "8801"))
+	var assocCount int64
+	require.NoError(t, db.Model(&models.KnowledgeArticleTag{}).
+		Where("tag_id = ?", "8801").Count(&assocCount).Error)
+	assert.Equal(t, int64(0), assocCount, "DeleteTag 必须先清文章关联")
+
+	// Q1 锁定:UUID 主键的 inline Delete 报错(不修)
+	err = svc.DeleteTag(ctx, tag.ID)
+	require.Error(t, err, "锁定现行为:UUID 主键的 DeleteTag inline Delete 报错(Q1)")
+	var still int64
+	require.NoError(t, db.Model(&models.KnowledgeTag{}).Where("id = ?", tag.ID).Count(&still).Error)
+	assert.Equal(t, int64(1), still, "锁定现行为:报错时标签行不被删除")
+}
+
+// TestKsv7904_GetOrCreateTag_BothPaths 不存在 → 创建;已存在 → 返回既有行(不新建)。
+// 本测试直调(无外层事务)所以两条路径都可走;Q2(跨 tx 连接)只在
+// CreateKnowledgeArticle/UpdateKnowledgeArticle/AutoCreateTagsFromContent 的事务内
+// 触发,彼时必须 pre-seed(见 ksv7904SeedTag),锁定不修。
+func TestKsv7904_GetOrCreateTag_BothPaths(t *testing.T) {
+	ctx := context.Background()
+	svc, db := newKsv7904(t)
+
+	// 路径 1:不存在 → 创建
+	created, err := svc.GetOrCreateTag(ctx, "或建标签")
+	require.NoError(t, err)
+	require.NotNil(t, created)
+	assert.Equal(t, "或建标签", created.TagName)
+	var count int64
+	require.NoError(t, db.Model(&models.KnowledgeTag{}).
+		Where("tag_name = ?", "或建标签").Count(&count).Error)
+	assert.Equal(t, int64(1), count, "只应创建一行")
+
+	// 路径 2:已存在 → 返回既有行
+	again, err := svc.GetOrCreateTag(ctx, "或建标签")
+	require.NoError(t, err)
+	require.NotNil(t, again)
+	assert.Equal(t, created.ID, again.ID, "必须复用既有行")
+	require.NoError(t, db.Model(&models.KnowledgeTag{}).
+		Where("tag_name = ?", "或建标签").Count(&count).Error)
+	assert.Equal(t, int64(1), count, "不得重复创建")
+}
+
+// TestKsv7904_AutoCreateTagsFromContent 内容含 N 个标记 → 关联 N 标签并 +use_count;
+// 重复调用幂等;无标记内容直接返回;Q2 锁定:标记先 pre-seed(事务内建标签必 BUSY)。
+func TestKsv7904_AutoCreateTagsFromContent(t *testing.T) {
+	ctx := context.Background()
+	svc, db := newKsv7904(t)
+	cat := ksv7904Category(t, db, "自动标签分类")
+	art := ksv7904Article(t, svc, cat.ID)
+
+	tagA := ksv7904SeedTag(t, db, "巡检")
+	tagB := ksv7904SeedTag(t, db, "应急")
+	_ = tagA
+	_ = tagB
+
+	content := "#巡检 与 #应急 的处理流程"
+	require.NoError(t, svc.AutoCreateTagsFromContent(ctx, art.ID, content))
+
+	assert.ElementsMatch(t, []string{tagA.ID, tagB.ID}, ksv7904AssocTagIDs(t, db, art.ID),
+		"两个标记都必须关联到文章")
+	counts := ksv7904TagCounts(t, db)
+	assert.Equal(t, 1, counts[tagA.ID], "巡检 use_count +1")
+	assert.Equal(t, 1, counts[tagB.ID], "应急 use_count +1")
+
+	// 重复调用幂等:关联不重复,use_count 不再增长
+	require.NoError(t, svc.AutoCreateTagsFromContent(ctx, art.ID, content))
+	assert.ElementsMatch(t, []string{tagA.ID, tagB.ID}, ksv7904AssocTagIDs(t, db, art.ID))
+	countsAfter := ksv7904TagCounts(t, db)
+	assert.Equal(t, counts[tagA.ID], countsAfter[tagA.ID], "幂等:use_count 不再增长")
+
+	// 无标记内容 → 解析为空 → 不开事务直接返回
+	require.NoError(t, svc.AutoCreateTagsFromContent(ctx, art.ID, "没有标记的正文"))
+	assert.ElementsMatch(t, []string{tagA.ID, tagB.ID}, ksv7904AssocTagIDs(t, db, art.ID))
+}
