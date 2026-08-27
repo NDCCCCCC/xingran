@@ -30,8 +30,8 @@ sources:
 - [ ] **BLOCK-01**: `internal/services/operations` ≥70%(缺 ~330;全 (c) 类纯补测试:workstation_device 445 + excel_service 399,sqlite+excelize,零基建依赖可先行)
 - [x] **BLOCK-02**: `internal/agent/server` ≥70%(缺 ~295;platformStrategy 接口 + backendURL 参数 + httptest 先例)
 - [x] **BLOCK-03**: `internal/core` ≥70%(基线 43.7% → 78-01 收 54.2%(captcha/metrics 链) → 78-02 收 82.5%(Init/Close 装配链 + 各阶段产物);Init 链 302 stmts + Close 60 stmts 由 78-02 全覆盖,核心链 8 initXxx 阶段 + Close 顺序/幂等/半装配 + reaper/RPA 全锁;实测 24 TestInit78_ 用例全绿,QUIRK-78-02-P1(二次 Close panic)+ P2(DeviceConnectionPool 1 goroutine 泄漏)记入 Phase 79/80 长尾)
-- [ ] **BLOCK-04**: `internal/device` ≥70%(缺 ~387;INFRA-02 工厂重构 + FileTransport 照搬解锁 346 + x/crypto/ssh fake 补 Open/transport)
-- [ ] **BLOCK-05**: `internal/services/addomain` ≥70%(缺 ~1165;两段式:sqlite 段 ~535(sync 管道/computer.go,`[]*ldap.Entry` 驱动)+ Iface stub 段(ldap_client 159 + failover 入口))
+- [x] **BLOCK-04**: `internal/device` ≥70%(基线 69.2% → 78-03 收 scrapli ~88%/executor ~75%/pool 89.9% → 78-04 收 snmp ~50%(lightweight)/scheduler 94.6%;FileTransport D-78-05 pre-seed 路径解锁;Windows loopback snmp 跨 socket 响应丢弃降级 error-path;P2_RATCHET_device 豁免行可删)
+- [ ] **BLOCK-05**: `internal/services/addomain` ≥70%(基线 23.1% → 78-05 收 sync.go 83.9% → 78-06 收 computer 96.1%/ou_group_mapping 88.6%/group_config 86.7%/config 83.0%/account_pool 82.0% → 78-07 收 failover 88.9%/user 63%/group 67%;ldap_client ~36% → **实测 58.0%**;LDAP responder BER 不兼容 go-ldap/v3 导致 Conclusion B,ldap_client ~180 stmts 不可达;12pp gap 留 Phase 79 接手)
 
 ## 长尾补齐 (TAIL)
 

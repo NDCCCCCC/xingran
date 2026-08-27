@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.27
 milestone_name: 后端测试覆盖率优秀 II
 status: executing
-stopped_at: Completed 78-02-PLAN.md (BLOCK-03 收口 — core 43.7% → 82.5%, 7 commits)
-last_updated: "2026-08-27T20:38:00.000Z"
+stopped_at: Completed Phase 78 — BLOCK-03 + BLOCK-04 清零,BLOCK-05 差 12pp(LDAP BER 不兼容留 Phase 79),SC#1-2+4-5 全绿
+last_updated: "2026-08-27T21:10:00.000Z"
 last_activity: 2026-08-27
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 17
-  completed_plans: 17
-  percent: 45
+  completed_plans: 24
+  percent: 57
 ---
 
 # Project State

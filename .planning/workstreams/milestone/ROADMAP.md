@@ -180,31 +180,33 @@ Phase 77-80 全部完成
 
 ---
 
-### Phase 78: 阻塞包攻破·基建解锁 (core + device + addomain)
+### Phase 78: 阻塞包攻破·基建解锁 (core + device + addomain) ✅ SHIPPED 2026-08-27
 
 **Goal:** 用 Phase 75/76 的修复与基建把 core、device、addomain 全部推过 70%,5 结构阻塞包清零。
 
 **Depends on**: Phase 75(Q-7 Stop 幂等是 core Init Close 收尾前置;Q-3/Q-8 修正好让 device 提取器测试断言新行为), Phase 76(INFRA-01 miniredis / INFRA-02 Driver 工厂 / INFRA-03 LDAPClientIface)
 
-**Requirements**: BLOCK-03, BLOCK-04, BLOCK-05
+**Requirements**: BLOCK-03 ✅, BLOCK-04 ✅, BLOCK-05 ⚠️ (58% vs 70% target, 12pp gap remains — LDAP BER 不兼容留 Phase 79)
 
 **Success Criteria** (what must be TRUE):
 
-1. `internal/core` 根包 ≥70%(40.2% → ≥70%;Init 链 302 stmts 经 miniredis+sqlite config 分支跑通并以 Close 收尾;captcha 98 stmts 纯补 + QUIRK-01 解锁的真实链路直测)
-2. `internal/device` ≥70%(39.1% → ≥70%;FileTransport 照搬 portwrite 先例解锁 scrapli_wrapper/connection_pool/executor 346 stmts,x/crypto/ssh fake 补 Open/transport 路径,snmp UDP 对端 + task_scheduler 并发/取消分支)
-3. `internal/services/addomain` ≥70%(21.8% → ≥70%,补 ~1165 stmts;两段式:sqlite+`[]*ldap.Entry` 段 ~535 先行,Iface stub 段 ldap_client 159 + failover 入口收尾)
-4. check-coverage.sh 三条 P2_RATCHET 豁免行(core 38.33 / device 39.07 / agent-server 22.08)对应包全部实测 ≥70%(豁免行的删除动作统一留 Phase 81 收口)
-5. 每个 plan 完成点 `go test ./...` 全绿,gate 不倒退
+1. `internal/core` 根包 ≥70%(40.2% → ≥70%;Init 链 302 stmts 经 miniredis+sqlite config 分支跑通并以 Close 收尾;captcha 98 stmts 纯补 + QUIRK-01 解锁的真实链路直测) → **实测 82.5%** ✅
+2. `internal/device` ≥70%(39.1% → ≥70%;FileTransport 照搬 portwrite 先例解锁 scrapli_wrapper/connection_pool/executor 346 stmts,x/crypto/ssh fake 补 Open/transport 路径,snmp UDP 对端 + task_scheduler 并发/取消分支) → **实测 82.6%** ✅
+3. `internal/services/addomain` ≥70%(21.8% → ≥70%,补 ~1165 stmts;两段式:sqlite+`[]*ldap.Entry` 段 ~535 先行,Iface stub 段 ldap_client 159 + failover 入口收尾) → **实测 58.0%** ⚠️ (LDAP responder BER 不兼容 go-ldap/v3,Conclusion B;ldap_client ~36%,failover 88.9%,user 63%,group 67%)
+4. check-coverage.sh 三条 P2_RATCHET 豁免行(core 38.33 / device 39.07 / agent-server 22.08)对应包全部实测 ≥70%(豁免行的删除动作统一留 Phase 81 收口) → core 82.5% / device 82.6% ✅ (可删豁免行)
+5. 每个 plan 完成点 `go test ./...` 全绿,gate 不倒退 → **实测 exit 0** ✅
 
-**Plans**: TBD(建议 7)
+**Plans**: 78-01/78-02/78-03/78-04/78-05/78-06/78-07 全部完成(7/7)
 
-- 78-01 core captcha 真实链路(QUIRK-01 解锁)+ captcha_background(文件+DB)+ metrics_cache 边缘
-- 78-02 core Init 链(miniredis+sqlite+reaper re-exec+Close 收尾;plan 首任务为 Init 可跑深度探针实验)
-- 78-03 device scrapli_wrapper + connection_pool + executor(FileTransport + fake SSH,fake server 输出 prompt)
-- 78-04 device snmp_client UDP 对端 + task_scheduler 剩余分支
-- 78-05 addomain sqlite 段 A:sync.go 全链(`[]*ldap.Entry` 驱动,syncOUs/syncGroups/syncUsers/syncGroupMembers)
-- 78-06 addomain sqlite 段 B:computer.go + ou_group_mapping/group_config/config 纯 CRUD + account_pool 剩余(MarkSuccess/RecoverExpiredBreakers)
-- 78-07 addomain Iface stub 段:ldap_client 参数/错误分支 + FailoverClient 遍历 + user.go/group.go failover 入口
+- 78-01 core captcha 真实链路(QUIRK-01 解锁)+ captcha_background(文件+DB)+ metrics_cache 边缘 ✅ captcha 88.8%/bg 89.2%/metrics 92.9%
+- 78-02 core Init 链(miniredis+sqlite+reaper re-exec+Close 收尾;probe-first Task1 达结论 A) ✅ Init 78.3%/Close 83.8%/core.go 77.4%
+- 78-03 device scrapli_wrapper + connection_pool + executor(FileTransport + D-78-05 pre-seed) ✅ scrapli ~88%/executor ~75%/pool 89.9%
+- 78-04 device snmp_client UDP 对端 + task_scheduler 剩余分支 ✅ snmp ~50%(lightweight)/scheduler 94.6%
+- 78-05 addomain sqlite 段 A:sync.go 全链(`[]*ldap.Entry` 驱动) ✅ sync.go 83.9%
+- 78-06 addomain sqlite 段 B:computer.go + ou_group_mapping/group_config/config + account_pool ✅ computer 96.1%/ou_group_mapping 88.6%/group_config 86.7%/config 83.0%/account_pool 82.0%
+- 78-07 addomain Iface stub 段:ldap_client 参数/错误分支 + FailoverClient 遍历 + user/group failover 入口 ⚠️ Conclusion B(BER 不兼容),ldap_client 36%/failover 88.9%/user 63%/group 67%
+
+**Notes**: QUIRK-P1(MemoryCache.Close 二次 close panic)+QUIRK-P2(DeviceConnectionPool.startCleanup goroutine 泄漏)留 Phase 79/80 修;78-04 probe 发现 Windows loopback snmp 跨 socket 丢弃响应(降级 error-path);addomain 新增 asn1-ber 传递依赖(已 go mod tidy)
 
 **Notes**:
 
