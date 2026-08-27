@@ -525,3 +525,449 @@ func TestNtc7903_StatusStatistics(t *testing.T) {
 	assert.Equal(t, int64(6), result.Total, "软删行排除")
 	assert.Equal(t, int64(2), result.Published, "软删的已发布行不再计入")
 }
+
+// =====================================================================
+// Task 2: notice_read / notice_target / notice_query(可见性链路)
+// =====================================================================
+
+// ntc7903User 落 sys_user 行(+可选 sys_user_role 行),Password/Salt 满足 not null。
+func ntc7903User(t *testing.T, db *gorm.DB, id string, deptID *string, roleIDs ...string) {
+	t.Helper()
+	require.NoError(t, db.Create(&models.User{
+		BaseModel: models.BaseModel{ID: id},
+		Username:  "user-" + id,
+		Password:  "not-a-real-password",
+		Salt:      "salt-7903",
+		DeptID:    deptID,
+	}).Error, "seed user %s", id)
+	for _, roleID := range roleIDs {
+		require.NoError(t, db.Create(&models.UserRole{UserID: id, RoleID: roleID}).Error,
+			"seed user_role %s->%s", id, roleID)
+	}
+}
+
+// ntc7903Publish 走 service 发布路径(草稿 → PublishStatusPublished)。
+func ntc7903Publish(t *testing.T, s *NoticeService, noticeID string) {
+	t.Helper()
+	require.NoError(t, s.PublishNotice(context.Background(), noticeID), "publish notice %s", noticeID)
+}
+
+// ntc7903VisibleIDs 以 buildUserVisibleQuery 的产物实际执行查询,返回可见通知 ID 集。
+func ntc7903VisibleIDs(t *testing.T, qctx *UserNoticeQueryContext) []string {
+	t.Helper()
+	var ids []string
+	require.NoError(t, qctx.Query.Pluck("id", &ids).Error, "execute visible query")
+	return ids
+}
+
+// TestNrd7903_ReadChain 已读链:标记已读落行 + ip 落库 + 重复读幂等 +
+// GetUnreadCount 递减 + MarkAllNoticesRead 归零。
+func TestNrd7903_ReadChain(t *testing.T) {
+	svc, db := newNtc7903(t)
+	ctx := context.Background()
+	deptID := "dept-r1"
+	ntc7903User(t, db, "reader-u1", &deptID, "role-r1")
+
+	n1 := ntc7903Notice(t, svc, ntc7903CreateReq("已读甲", "c", models.PriorityNormal), "c", "创建人")
+	n2 := ntc7903Notice(t, svc, ntc7903CreateReq("已读乙", "c", models.PriorityNormal), "c", "创建人")
+	ntc7903Publish(t, svc, n1.ID)
+	ntc7903Publish(t, svc, n2.ID)
+
+	unread, err := svc.GetUnreadCount(ctx, "reader-u1")
+	require.NoError(t, err)
+	assert.Equal(t, 2, unread, "初始未读 2")
+
+	// 标记已读:落 sys_notice_read 行 + ReadIP 透传
+	require.NoError(t, svc.MarkNoticeRead(ctx, n1.ID, "reader-u1", "10.0.0.9"))
+	var read models.NoticeRead
+	require.NoError(t, db.Where("notice_id = ? AND user_id = ?", n1.ID, "reader-u1").First(&read).Error)
+	assert.Equal(t, "10.0.0.9", read.ReadIP, "ip 参数落 ReadIP")
+	assert.False(t, read.ReadAt.IsZero())
+
+	unread, err = svc.GetUnreadCount(ctx, "reader-u1")
+	require.NoError(t, err)
+	assert.Equal(t, 1, unread, "读一条后未读递减")
+
+	// 重复标记:实装先查已读计数,命中即跳过 → 不重复落行
+	require.NoError(t, svc.MarkNoticeRead(ctx, n1.ID, "reader-u1", "10.0.0.9"))
+	var readRows int64
+	require.NoError(t, db.Model(&models.NoticeRead{}).Where("notice_id = ? AND user_id = ?", n1.ID, "reader-u1").Count(&readRows).Error)
+	assert.Equal(t, int64(1), readRows, "重复已读不重复计")
+
+	// QUIRK-79-03-D(锁定不修):MarkAllNoticesRead 的可见集口径 = 全部
+	// 已发布+正常 通知(notice_read_service.go:39-41 不带 target/ignore 过滤),
+	// 与 buildUserVisibleQuery 的 4-OR 口径不同;本用例两条通知均可见,两口径等价。
+	// QUIRK-79-03-F(锁定不修):MarkAllNoticesRead 不校验既有已读行 → n1 重复
+	// 落一条已读记录(共 3 行);GetUnreadCount 以「可见总数 - 已读行数」计,负值
+	// 夹为 0,恰好掩盖了重复行 —— 两 quirk 叠加后未读数仍归 0。
+	require.NoError(t, svc.MarkAllNoticesRead(ctx, "reader-u1"))
+	unread, err = svc.GetUnreadCount(ctx, "reader-u1")
+	require.NoError(t, err)
+	assert.Equal(t, 0, unread, "全量已读后未读归零(含 QUIRK-79-03-F 的夹 0)")
+	require.NoError(t, db.Model(&models.NoticeRead{}).Where("user_id = ?", "reader-u1").Count(&readRows).Error)
+	assert.Equal(t, int64(3), readRows, "n1×2(重复)+ n2×1:全量已读不去重(QUIRK-79-03-F)")
+}
+
+// TestNrd7903_IgnoreChain 忽略链:忽略出现 → 幂等 → 取消消失 → 重复取消报错。
+func TestNrd7903_IgnoreChain(t *testing.T) {
+	svc, db := newNtc7903(t)
+	ctx := context.Background()
+	ntc7903User(t, db, "ignorer-u1", nil)
+
+	n1 := ntc7903Notice(t, svc, ntc7903CreateReq("忽略甲", "c", models.PriorityNormal), "c", "创建人")
+	n2 := ntc7903Notice(t, svc, ntc7903CreateReq("忽略乙", "c", models.PriorityNormal), "c", "创建人")
+	ntc7903Publish(t, svc, n1.ID)
+	ntc7903Publish(t, svc, n2.ID)
+
+	// 空忽略集:空切片 + total 0(不查库分支)
+	notices, total, err := svc.GetIgnoredNotices(ctx, "ignorer-u1", 1, 10)
+	require.NoError(t, err)
+	assert.Empty(t, notices)
+	assert.Zero(t, total)
+
+	require.NoError(t, svc.IgnoreNotice(ctx, n1.ID, "ignorer-u1"))
+	notices, total, err = svc.GetIgnoredNotices(ctx, "ignorer-u1", 1, 10)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), total)
+	require.Len(t, notices, 1)
+	assert.Equal(t, n1.ID, notices[0].ID)
+
+	// 重复忽略:实装先查计数命中即跳过 → 幂等
+	require.NoError(t, svc.IgnoreNotice(ctx, n1.ID, "ignorer-u1"))
+	var ignoreRows int64
+	require.NoError(t, db.Model(&models.NoticeIgnore{}).Where("user_id = ?", "ignorer-u1").Count(&ignoreRows).Error)
+	assert.Equal(t, int64(1), ignoreRows, "重复忽略幂等")
+
+	// QUIRK-79-03-E(锁定不修,⚠️ 现网可见):models.NoticeIgnore 的唯一索引
+	// `idx_notice_ignore_user_notice` 标签只含 UserID 一个成员(NoticeID 仅挂在
+	// 非 unique 的 idx_notice_ignore_notice_id)→ 唯一索引实为 user_id 单列,
+	// 一个用户至多忽略一条通知;忽略第二条直接撞 UNIQUE 约束。
+	// 修复需动 model 标签(生产 schema 变更),属 escape hatch 范畴,本 plan 只锁。
+	err = svc.IgnoreNotice(ctx, n2.ID, "ignorer-u1")
+	require.Error(t, err, "第二忽略命中 user_id 单列唯一索引")
+	assert.Contains(t, err.Error(), "UNIQUE constraint failed")
+
+	// 分页:size=1 单行 → 1 行、total 1
+	notices, total, err = svc.GetIgnoredNotices(ctx, "ignorer-u1", 1, 1)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), total)
+	assert.Len(t, notices, 1)
+
+	// 取消忽略 → 从列表消失;再次取消 → "该通知未被忽略"
+	require.NoError(t, svc.UnignoreNotice(ctx, n1.ID, "ignorer-u1"))
+	_, total, err = svc.GetIgnoredNotices(ctx, "ignorer-u1", 1, 10)
+	require.NoError(t, err)
+	assert.Zero(t, total, "取消后忽略集为空")
+	require.ErrorContains(t, svc.UnignoreNotice(ctx, n1.ID, "ignorer-u1"), "该通知未被忽略")
+}
+
+// TestNrd7903_GetUserNotices_StatusFilter 用户可见列表:status 过滤 nil/read/unread
+// + 未知值不过滤 + 分页正确 + 用户缺失报错。
+func TestNrd7903_GetUserNotices_StatusFilter(t *testing.T) {
+	svc, db := newNtc7903(t)
+	ctx := context.Background()
+	deptD1, deptD2 := "dept-d1", "dept-d2"
+	ntc7903User(t, db, "list-u1", &deptD1, "role-r1")
+	ntc7903User(t, db, "list-u2", &deptD2)
+
+	// 6 条已发布 + 1 草稿;target 形态各异(可见集口径见矩阵用例)
+	seed := func(title string, targetType models.TargetType, ids []string) *models.Notice {
+		t.Helper()
+		req := ntc7903CreateReq(title, "c", models.PriorityNormal)
+		req.TargetType = targetType
+		switch targetType {
+		case models.TargetDept:
+			req.TargetDepts = ids
+		case models.TargetRole:
+			req.TargetRoles = ids
+		case models.TargetUser:
+			req.TargetUsers = ids
+		}
+		n := ntc7903Notice(t, svc, req, "c", "创建人")
+		ntc7903Publish(t, svc, n.ID)
+		return n
+	}
+	nAll := seed("列表-全体", models.TargetAll, nil)
+	seed("列表-部门命中", models.TargetDept, []string{deptD1})
+	seed("列表-部门未命中", models.TargetDept, []string{deptD2})
+	seed("列表-角色命中", models.TargetRole, []string{"role-r1"})
+	seed("列表-角色未命中", models.TargetRole, []string{"role-rx"})
+	seed("列表-用户命中", models.TargetUser, []string{"list-u1"})
+	draft := ntc7903Notice(t, svc, ntc7903CreateReq("列表-草稿", "c", models.PriorityNormal), "c", "创建人")
+	_ = draft // 保持草稿态,不发布
+	_ = nAll
+
+	// nil status → 不过滤已读,只走可见性
+	list, total, err := svc.GetUserNotices(ctx, "list-u1", 1, 10, nil)
+	require.NoError(t, err)
+	assert.Equal(t, int64(4), total, "可见 = 全体 + 部门命中 + 角色命中 + 用户命中")
+	require.Len(t, list, 4)
+
+	// unread:全部未读 → 4
+	unreadStatus := "unread"
+	_, total, err = svc.GetUserNotices(ctx, "list-u1", 1, 10, &unreadStatus)
+	require.NoError(t, err)
+	assert.Equal(t, int64(4), total)
+
+	// 读一条 → read=1 / unread=3
+	require.NoError(t, svc.MarkNoticeRead(ctx, nAll.ID, "list-u1", "127.0.0.1"))
+	readStatus := "read"
+	_, total, err = svc.GetUserNotices(ctx, "list-u1", 1, 10, &readStatus)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), total, "read 子查询仅命中已读行")
+	_, total, err = svc.GetUserNotices(ctx, "list-u1", 1, 10, &unreadStatus)
+	require.NoError(t, err)
+	assert.Equal(t, int64(3), total)
+
+	// 未知 status 值:switch 无分支 → 不过滤(锁定现行为)
+	weird := "weird"
+	_, total, err = svc.GetUserNotices(ctx, "list-u1", 1, 10, &weird)
+	require.NoError(t, err)
+	assert.Equal(t, int64(4), total, "未知 status 值等价于不过滤")
+
+	// 分页:size=3 → 第 1 页 3 行、第 2 页 1 行,total 恒 4
+	_, total, err = svc.GetUserNotices(ctx, "list-u1", 1, 3, nil)
+	require.NoError(t, err)
+	assert.Equal(t, int64(4), total)
+	list, total, err = svc.GetUserNotices(ctx, "list-u1", 2, 3, nil)
+	require.NoError(t, err)
+	assert.Equal(t, int64(4), total)
+	assert.Len(t, list, 1, "尾页余 1 行")
+
+	// 用户缺失 → buildUserVisibleQuery 报"获取用户信息失败"
+	_, _, err = svc.GetUserNotices(ctx, "ghost-user", 1, 10, nil)
+	require.ErrorContains(t, err, "获取用户信息失败")
+}
+
+// TestNtg7903_GetTargetUsers_FourTypes 四类目标的用户解析 + getTargetIDsByType/unique 直调。
+func TestNtg7903_GetTargetUsers_FourTypes(t *testing.T) {
+	svc, db := newNtc7903(t)
+	ctx := context.Background()
+
+	// 部门树(sys_department 裸表,QUIRK-79-03-A)
+	ntc7903Dept(t, db, "dept-t1", "")
+	ntc7903Dept(t, db, "dept-t1-child", "dept-t1")
+	// 用户:d1 主部门 / child 子部门 / 双角色 / 仅 r2 / 无归属
+	ntc7903User(t, db, "u-d1", strPtr7903("dept-t1"))
+	ntc7903User(t, db, "u-child", strPtr7903("dept-t1-child"))
+	ntc7903User(t, db, "u-role1", strPtr7903("dept-t1"), "role-r1")
+	ntc7903User(t, db, "u-role1b", strPtr7903("dept-t1-child"), "role-r1")
+	ntc7903User(t, db, "u-role2", nil, "role-r2")
+	ntc7903User(t, db, "u-none", nil)
+
+	build := func(title string, targetType models.TargetType) *models.Notice {
+		t.Helper()
+		req := ntc7903CreateReq(title, "c", models.PriorityNormal)
+		req.TargetType = targetType
+		return ntc7903Notice(t, svc, req, "c", "创建人")
+	}
+	load := func(id string) *models.Notice {
+		t.Helper()
+		n, err := svc.GetNoticeByID(ctx, id)
+		require.NoError(t, err)
+		return n
+	}
+
+	// (0) 全体 → 全部用户(实装上限 10000)
+	nAll := build("目标-全体", models.TargetAll)
+	users, err := svc.GetTargetUsers(ctx, load(nAll.ID))
+	require.NoError(t, err)
+	assert.ElementsMatch(t,
+		[]string{"u-d1", "u-child", "u-role1", "u-role1b", "u-role2", "u-none"}, users)
+
+	// (1) 部门 → target 行消费(GetTargetUsers 不做递归,buildTargets 已展开子部门)
+	deptReq := ntc7903CreateReq("目标-部门", "c", models.PriorityNormal)
+	deptReq.TargetType = models.TargetDept
+	deptReq.TargetDepts = []string{"dept-t1"}
+	withTargets := ntc7903Notice(t, svc, deptReq, "c", "创建人")
+	users, err = svc.GetTargetUsers(ctx, load(withTargets.ID))
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"u-d1", "u-child", "u-role1", "u-role1b"}, users,
+		"dept_t1 及其子部门的用户集")
+
+	// 空 dept target 行 → 空集(非 nil)
+	emptyDept := build("目标-部门空", models.TargetDept)
+	users, err = svc.GetTargetUsers(ctx, load(emptyDept.ID))
+	require.NoError(t, err)
+	assert.NotNil(t, users)
+	assert.Empty(t, users)
+
+	// (2) 角色 → sys_user_role DISTINCT user_id
+	roleReq := ntc7903CreateReq("目标-角色", "c", models.PriorityNormal)
+	roleReq.TargetType = models.TargetRole
+	roleReq.TargetRoles = []string{"role-r1", "role-r2"}
+	roleNotice := ntc7903Notice(t, svc, roleReq, "c", "创建人")
+	users, err = svc.GetTargetUsers(ctx, load(roleNotice.ID))
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"u-role1", "u-role1b", "u-role2"}, users,
+		"角色目标经 sys_user_role DISTINCT 解析")
+
+	// (3) 指定用户 → target 行直取(不查 sys_user)+ unique 去重保持首现序
+	dupReq := ntc7903CreateReq("目标-用户重复", "c", models.PriorityNormal)
+	dupReq.TargetType = models.TargetUser
+	dupReq.TargetUsers = []string{"u-none", "u-none", "u-d1"}
+	dupNotice := ntc7903Notice(t, svc, dupReq, "c", "创建人")
+	users, err = svc.GetTargetUsers(ctx, load(dupNotice.ID))
+	require.NoError(t, err)
+	assert.Equal(t, []string{"u-none", "u-d1"}, users, "unique 去重且保持首现序")
+
+	// 包级直调:getTargetIDsByType 过滤 + unique 去重(表驱动)
+	targets := []models.NoticeTarget{
+		{TargetType: "dept", TargetID: "d1"},
+		{TargetType: "user", TargetID: "u1"},
+		{TargetType: "user", TargetID: "u1"},
+		{TargetType: "role", TargetID: "r1"},
+		{TargetType: "user", TargetID: "u2"},
+	}
+	assert.Equal(t, []string{"d1"}, getTargetIDsByType(targets, "dept"))
+	assert.Equal(t, []string{"u1", "u1", "u2"}, getTargetIDsByType(targets, "user"))
+	assert.Empty(t, getTargetIDsByType(targets, "api"))
+	assert.Equal(t, []string{"u1", "u2"}, unique([]string{"u1", "u1", "u2", "u1"}))
+	assert.Empty(t, unique(nil))
+}
+
+// TestNtg7903_GetChildDeptIDs getChildDeptIDs 递归(含孙级)+ 叶子空集。
+func TestNtg7903_GetChildDeptIDs(t *testing.T) {
+	svc, db := newNtc7903(t)
+
+	ntc7903Dept(t, db, "root", "")
+	ntc7903Dept(t, db, "child-a", "root")
+	ntc7903Dept(t, db, "grandchild", "child-a")
+	ntc7903Dept(t, db, "child-b", "root")
+
+	got := svc.getChildDeptIDs("root")
+	assert.ElementsMatch(t, []string{"child-a", "grandchild", "child-b"}, got, "递归展开含孙级")
+
+	got = svc.getChildDeptIDs("grandchild")
+	assert.Empty(t, got, "叶子部门无子集")
+
+	got = svc.getChildDeptIDs("ghost-dept")
+	assert.Empty(t, got, "不存在部门 → 空集")
+}
+
+// TestNtg7903_NoticeStatistics 阅读统计:TotalTargets/ReadCount/UnreadCount/ReadRate 手算一致。
+func TestNtg7903_NoticeStatistics(t *testing.T) {
+	svc, db := newNtc7903(t)
+	ctx := context.Background()
+
+	ntc7903User(t, db, "stat-u1", nil)
+	ntc7903User(t, db, "stat-u2", nil)
+	ntc7903User(t, db, "stat-u3", nil)
+
+	// TargetAll → 目标 = 全部 3 用户
+	req := ntc7903CreateReq("统计通知", "c", models.PriorityNormal)
+	notice := ntc7903Notice(t, svc, req, "c", "创建人")
+	ntc7903Publish(t, svc, notice.ID)
+
+	require.NoError(t, svc.MarkNoticeRead(ctx, notice.ID, "stat-u1", "127.0.0.1"))
+
+	stats, err := svc.GetNoticeStatistics(ctx, notice.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 3, stats.TotalTargets)
+	assert.Equal(t, 1, stats.ReadCount)
+	assert.Equal(t, 2, stats.UnreadCount)
+	assert.InDelta(t, 33.33, stats.ReadRate, 0.01, "阅读率 = 1/3*100")
+
+	// 零目标分支:dept 型且无 target 行 → 不执行已读计数,ReadRate=0
+	emptyReq := ntc7903CreateReq("零目标通知", "c", models.PriorityNormal)
+	emptyReq.TargetType = models.TargetDept
+	emptyNotice := ntc7903Notice(t, svc, emptyReq, "c", "创建人")
+	stats, err = svc.GetNoticeStatistics(ctx, emptyNotice.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 0, stats.TotalTargets)
+	assert.Equal(t, 0, stats.ReadCount)
+	assert.Equal(t, 0, stats.UnreadCount)
+	assert.Zero(t, stats.ReadRate, "零目标 → ReadRate 0(防除零分支)")
+
+	// 通知不存在 → 错误
+	_, err = svc.GetNoticeStatistics(ctx, "ghost-notice")
+	require.ErrorContains(t, err, "查询通知失败")
+}
+
+// TestNqv7903_BuildVisibleQuery_UserMissing 不存在用户 → 明确报错。
+func TestNqv7903_BuildVisibleQuery_UserMissing(t *testing.T) {
+	svc, _ := newNtc7903(t)
+	_, err := svc.buildUserVisibleQuery(context.Background(), "ghost-user")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "获取用户信息失败")
+}
+
+// TestNqv7903_BuildVisibleQuery_FourOrMatrix buildUserVisibleQuery 的 4-OR 权限过滤
+// 逐支断言(全体体 / 部门命中与未命中 / 角色命中与未命中 / 指定用户命中与未命中 /
+// 发布态+启停语义 / ignore 排除),断言走 ctx.Query 实际执行 Count/Find。
+func TestNqv7903_BuildVisibleQuery_FourOrMatrix(t *testing.T) {
+	svc, db := newNtc7903(t)
+	ctx := context.Background()
+
+	deptD1, deptD2 := "dept-q1", "dept-q2"
+	ntc7903User(t, db, "q-user", &deptD1, "role-qr1", "role-qr2")
+	ntc7903User(t, db, "q-user-other", &deptD2)
+
+	seed := func(title string, targetType models.TargetType, ids []string, publish bool, status int) string {
+		t.Helper()
+		req := ntc7903CreateReq(title, "c", models.PriorityNormal)
+		req.TargetType = targetType
+		switch targetType {
+		case models.TargetDept:
+			req.TargetDepts = ids
+		case models.TargetRole:
+			req.TargetRoles = ids
+		case models.TargetUser:
+			req.TargetUsers = ids
+		}
+		n := ntc7903Notice(t, svc, req, "c", "创建人")
+		if status != int(models.NoticeStatusNormal) {
+			require.NoError(t, svc.UpdateNotice(ctx, n.ID, &UpdateNoticeRequest{Status: &status}))
+		}
+		if publish {
+			ntc7903Publish(t, svc, n.ID)
+		}
+		return n.ID
+	}
+	nAll := seed("矩阵-全体", models.TargetAll, nil, true, int(models.NoticeStatusNormal))
+	nDeptHit := seed("矩阵-部门命中", models.TargetDept, []string{deptD1}, true, int(models.NoticeStatusNormal))
+	nDeptMiss := seed("矩阵-部门未命中", models.TargetDept, []string{deptD2}, true, int(models.NoticeStatusNormal))
+	nRoleHit := seed("矩阵-角色命中", models.TargetRole, []string{"role-qr1"}, true, int(models.NoticeStatusNormal))
+	nRoleMiss := seed("矩阵-角色未命中", models.TargetRole, []string{"role-qx"}, true, int(models.NoticeStatusNormal))
+	nUserHit := seed("矩阵-用户命中", models.TargetUser, []string{"q-user"}, true, int(models.NoticeStatusNormal))
+	nUserMiss := seed("矩阵-用户未命中", models.TargetUser, []string{"q-user-other"}, true, int(models.NoticeStatusNormal))
+	nDraft := seed("矩阵-草稿", models.TargetAll, nil, false, int(models.NoticeStatusNormal))
+	nClosed := seed("矩阵-停用", models.TargetAll, nil, true, int(models.NoticeStatusClosed))
+	nIgnored := seed("矩阵-被忽略", models.TargetAll, nil, true, int(models.NoticeStatusNormal))
+
+	qctx, err := svc.buildUserVisibleQuery(ctx, "q-user")
+	require.NoError(t, err)
+	assert.Equal(t, "q-user", qctx.User.ID, "上下文携带用户")
+	assert.ElementsMatch(t, []string{"role-qr1", "role-qr2"}, qctx.RoleIDs, "上下文携带角色集")
+
+	// 可见集 = 全体×2(nAll + nIgnored) + 部门命中 + 角色命中 + 用户命中;
+	// 其余 5 条(部门/角色/用户未命中、草稿、停用)不可见
+	visible := ntc7903VisibleIDs(t, qctx)
+	assert.ElementsMatch(t, []string{nAll, nIgnored, nDeptHit, nRoleHit, nUserHit}, visible)
+
+	var count int64
+	require.NoError(t, qctx.Query.Count(&count).Error)
+	assert.Equal(t, int64(5), count, "Count 与 Find 同口径")
+
+	// (e) 反向证明:publish_status 非发布态 或 status 停用 → 不可见(E 簇语义)
+	for _, id := range []string{nDraft, nClosed} {
+		q2, err := svc.buildUserVisibleQuery(ctx, "q-user")
+		require.NoError(t, err)
+		var hit int64
+		require.NoError(t, q2.Query.Where("id = ?", id).Count(&hit).Error)
+		assert.Zero(t, hit, "id=%s 不可见(草稿/停用)", id)
+	}
+
+	// (f) ignore 排除:忽略 nIgnored 后其退出可见集
+	require.NoError(t, svc.IgnoreNotice(ctx, nIgnored, "q-user"))
+	q3, err := svc.buildUserVisibleQuery(ctx, "q-user")
+	require.NoError(t, err)
+	visible = ntc7903VisibleIDs(t, q3)
+	assert.NotContains(t, visible, nIgnored, "被忽略行退出可见集")
+	assert.Len(t, visible, 4, "其余可见集不变")
+
+	// 未命中支逐条复核:部门未命中/角色未命中/用户未命中 3 条始终不可见
+	for _, id := range []string{nDeptMiss, nRoleMiss, nUserMiss} {
+		assert.NotContains(t, visible, id)
+	}
+}
