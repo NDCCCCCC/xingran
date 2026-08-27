@@ -45,6 +45,8 @@ import (
 	jwtlib "github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
 // =====================================================================
@@ -307,6 +309,24 @@ func TestJWT77_CallBackend_TLSVerificationErrorBranch(t *testing.T) {
 	_, err := auth.CallBackend(context.Background(), http.MethodPost, APIPathStatus, map[string]interface{}{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "TLS certificate verification failed")
+}
+
+func TestJWT77_CallBackend_NilBody_NoTypedNilPanic(t *testing.T) {
+	// Q-77-D 回归: CallBackend 声明 var bodyReader *bytes.Reader 而 body==nil 时
+	// 不赋值, 传给 http.NewRequestWithContext 的是"接口持 typed-nil 指针",
+	// stdlib 按 case *bytes.Reader 调 v.Len() 读字段 → nil 解引用 panic。
+	b := newAgentBackend77(t)
+	auth := newJWT77(t, b)
+
+	var gotResp *response.Response
+	require.NotPanics(t, func() {
+		resp, err := auth.CallBackend(context.Background(), http.MethodPost, APIPathStatus, nil)
+		require.NoError(t, err)
+		gotResp = resp
+	})
+	require.NotNil(t, gotResp)
+	assert.Equal(t, 0, gotResp.Code)
+	assert.Equal(t, 1, b.CallsFor(APIPathStatus))
 }
 
 func TestJWT77_SendHeartbeat_ThroughCallBackend(t *testing.T) {

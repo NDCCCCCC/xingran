@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"errors"
+	"io"
 	"fmt"
 	"net/http"
 	"os"
@@ -263,7 +264,11 @@ func (a *JWTAuthenticator) CallBackend(ctx context.Context, method, path string,
 	url := a.backendURL + path
 
 	// 序列化请求体
-	var bodyReader *bytes.Reader
+	// 注意: 声明为 io.Reader 而非 *bytes.Reader —— 若用具体类型, body==nil 时会把
+	// "接口持 typed-nil 指针" 传给 http.NewRequestWithContext, stdlib 按
+	// case *bytes.Reader 调 v.Len() 读字段 → nil 解引用 panic(Q-77-D 回归守护见
+	// jwt_conn_77_04_test.go TestJWT77_CallBackend_NilBody_NoTypedNilPanic)。
+	var bodyReader io.Reader
 	if body != nil {
 		jsonData, err := json.Marshal(body)
 		if err != nil {
