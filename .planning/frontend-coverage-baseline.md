@@ -28,6 +28,7 @@
 | 2026-08-27 | Phase 86-W1 system dept/role/notice | 20.90 | 21574 | 4511 | | | 86-W1 | sys 2.2 | sys 3.7 |
 | 2026-08-27 | Phase 86-W2 menu/dict/user/零散 | 21.21 | 21574 | 4576 | | | 86-W2 | sys 3.7 | sys 6.4 |
 | 2026-08-27 | Phase 86-W3 net discoveries/exec/templates | 21.34 | 21574 | 4605 | | | 86-W3 | net 2.6 | net 4.2 |
+| 2026-08-27 | Phase 86-W4 command/backups/devices/cred | 21.60 | 21574 | 4662 | | | 86-W4 | net 4.2 | net 7.1 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
