@@ -27,6 +27,7 @@
 | 2026-08-27 | Phase 85-W4 零散 5 目录 | 20.75 | 21574 | 4478 | | | 85-W4 | ops 3.1 | ops 3.6 |
 | 2026-08-27 | Phase 86-W1 system dept/role/notice | 20.90 | 21574 | 4511 | | | 86-W1 | sys 2.2 | sys 3.7 |
 | 2026-08-27 | Phase 86-W2 menu/dict/user/零散 | 21.21 | 21574 | 4576 | | | 86-W2 | sys 3.7 | sys 6.4 |
+| 2026-08-27 | Phase 86-W3 net discoveries/exec/templates | 21.34 | 21574 | 4605 | | | 86-W3 | net 2.6 | net 4.2 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
