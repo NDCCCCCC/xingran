@@ -502,3 +502,125 @@ inside check-coverage.sh section 4; removal condition: package crosses 70.0%.
 > **Ratchet note (D-04):** The `commit` column on the Phase 74 后 row reads
 > `TBD (atomic ratchet)` until plan 74-11 Task 3 amends this file with the
 > actual short SHA. This is the v1.26 closing ratchet.
+
+## Phase 79 后
+
+| date | phase_label | weighted_avg | total_stmts | total_covered | 0pct_pkg_count | commit | phase_executor | ratchet_from | ratchet_to |
+|------|-------------|--------------|-------------|---------------|----------------|--------|----------------|--------------|------------|
+| 2026-08-28 | Phase 79 后 | 70.9 | 43893 | 31119 | 7 | TBD (atomic ratchet) | gsd-executor 79-06 | 55.5 | 55.5 (不动,Phase 81 收口 bump) |
+
+### Per-package (Phase 79 后)
+
+```
+pkg/ldaputils                                            33       32  96.97%
+internal/services/knowledge                              85       81  95.29%
+pkg/crypto                                              443      332  74.94%
+internal/core/db/migrations                             301       90  29.90%
+pkg/logger                                               97       62  63.92%
+internal/services/duty                                  114      109  95.61%
+internal/services/scheduler                             167      150  89.82%
+cmd                                                     106        0   0.00%
+internal/services/rpa                                  1865     1615  86.60%
+internal/api/v1/vdi                                     298      227  76.17%
+internal/services/monitor                               485      462  95.26%
+internal/services                                      5202     4245  81.60%
+internal/services/network                               127      117  92.13%
+internal/core                                           756      624  82.54%
+internal/services/portcollection                        580      334  57.59%
+internal/services/base                                   61       14  22.95%
+pkg/errors                                              326       45  13.80%
+internal/websocket                                      129       45  34.88%
+internal/config                                         147      137  93.20%
+internal/device                                        1265     1047  82.77%
+internal/api/v1/workorder                               297      224  75.42%
+internal/pkg/system                                     352      116  32.95%
+xingran-react-frontend/node_modules/flatted/golang/pkg/flatted      160        0   0.00%
+internal/docs                                             1        0   0.00%
+internal/utils                                          531      505  95.10%
+internal/services/common                                  1        1 100.00%
+internal/services/component_collector                   345      285  82.61%
+pkg/normalize                                            45       44  97.78%
+pkg/permission                                          114       30  26.32%
+cmd/agent                                                63        0   0.00%
+internal/api/v1/operations/requests                      15       15 100.00%
+internal/models/system/requests                         109       85  77.98%
+pkg/gormutil                                            194      123  63.40%
+internal/services/workorder                             715      527  73.71%
+internal/api/v1/rpa                                     612      485  79.25%
+internal/services/lldp                                   96       57  59.38%
+internal/services/portwrite                             259      221  85.33%
+pkg/time                                                 63       54  85.71%
+internal/agent/pkg/retry                                 33       31  93.94%
+internal/server                                           2        0   0.00%
+internal/scheduler                                     1103       36   3.26%
+internal/models/rpa                                      94       30  31.91%
+tests/fixtures                                            4        0   0.00%
+internal/services/system                               3483     2632  75.57%
+pkg/captcha                                             409      358  87.53%
+internal/api/v1/duty                                    265      220  83.02%
+internal/utils/operlog                                   90       85  94.44%
+internal/api/v1/asset                                   420      355  84.52%
+internal/api/v1/operations                             1285      929  72.30%
+internal/api/v1                                         578       38   6.57%
+internal/core/security                                  313      234  74.76%
+internal/services/vdi                                  1127      959  85.09%
+internal/api/v1/knowledge                               273      230  84.25%
+internal/services/asset                                1354      960  70.90%
+internal/api                                            417        0   0.00%
+internal/api/v1/system                                 3039     2138  70.35%
+internal/models                                         445        1   0.22%
+pkg/cache                                               924      598  64.72%
+internal/services/topology                               73       55  75.34%
+internal/models/operations                               23       11  47.83%
+internal/api/v1/agent                                    38       30  78.95%
+pkg/query                                               105       71  67.62%
+pkg/middleware                                          609      419  68.80%
+internal/api/v1/scheduler                               152      130  85.53%
+internal/middleware                                     196      169  86.22%
+internal/agent/server                                   627      567  90.43%
+internal/services/operations                           3714     3109  83.71%
+internal/pkg/cache                                      168       89  52.98%
+pkg/response                                             51       49  96.08%
+internal/core/db                                        647      470  72.64%
+internal/api/v1/monitor                                 518      369  71.24%
+internal/templates                                      243      214  88.07%
+internal/services/addomain                             2419     1403  58.00%
+internal/transform                                      111       95  85.59%
+internal/models/system                                   11       10  90.91%
+internal/api/v1/network                                1971     1485  75.34%
+PACKAGE    43893    31119  70.90%
+```
+
+### Per-package 倒退检查 (Phase 79 后)
+
+- [x] SC-1: internal/services root **81.60%** (5202 stmts / 4245 covered) ≥ 70% gate — 基线 589/11.3% (Phase 74 后表), Phase 79 前 62.9%, 本 phase 六个 plan 累计 +3656 covered, 其中 79-06 device 家族 +984
+- [x] 0% 包数 Phase 74 后 5 → Phase 79 后 7 (+2): 新增两包均为「首次进入扫描的第三方/测试支撑包」——`xingran-react-frontend/node_modules/flatted/golang/pkg/flatted` (160 stmts, 前端 node_modules 内的 Go 移植) 与 `tests/fixtures` (4 stmts), 非既有覆盖包回退; 既有 5 个 (cmd, cmd/agent, internal/api, internal/docs, internal/server) 保持 0% (入口/装配/生成代码)
+- [x] 8 个 P1 包全部 ≥70% (gate PASS, 零回归)
+- [x] 10 个 P2 包全部 ≥ floor (gate PASS: 70.0% × 7 + ratcheted × 3 — core 82.54% / device 82.77% / agent-server 90.43%, 三个 ratcheted 包全部越过 70%, 仅 UP-ONLY floor 未删)
+- [x] 加权平均 55.5% (Phase 74 后) → 70.9% (上升 15.4 个百分点); `.coverage-threshold` diff = 0 (55.5 保持, Phase 81 才 bump)
+- [x] 无 per-package 倒退 (Phase 79 严格测试-only; 唯一生产树 touch = internal/device/e2e_helpers.go 追加 ForTesting helper, D-79-02 豁免, AST 守护全绿, 零行为变更)
+
+### device 家族 7 文件达标判定 (79-06 / TAIL-01)
+
+| 文件 | 基线 (RESEARCH §2) | 实测 | 目标 | 结果 |
+|------|------|------|------|------|
+| device_discovery_service.go | 1.4% (4/293) | **87.4%** (256/293) | ≥60% | ✅ |
+| device_info_collection_service.go | 29.5% (115/390) | **66.9%** (261/390) | ≥65% | ✅ |
+| config_backup_service.go | 0.0% (0/244) | **86.9%** (212/244) | ≥65% | ✅ |
+| device_monitor_service.go | 0.0% (0/189) | **68.3%** (129/189) | ≥65% | ✅ |
+| config_execution_service.go | 0.0% (0/152) | **65.1%** (99/152) | ≥60% | ✅ |
+| command_dispatch_service.go | 3.4% (4/116) | **90.5%** (105/116) | ≥60% | ✅ |
+| device_credential_helper.go | 0.0% (0/47) | **95.7%** (45/47) | ≥70% | ✅ |
+| **7 文件合计** | 123/1431 (8.6%) | **1107/1431 (77.4%)** | — | +984 covered |
+
+### Notes (Phase 79 收口)
+
+- 实测命令: `go test -count=1 -coverprofile=coverage.out ./...` (exit 0) + `bash .github/scripts/check-coverage.sh coverage.out .coverage-threshold` (exit 0, 全部 PASS 行见上方 gate 输出)
+- internal/services root 单包口径: `go test -count=1 -coverprofile ./internal/services/` → 445s, 81.6% (5202/4245)
+- device 家族 Tier-2 (executor 路径) 通过公共构造器装配 + `device.SeedConnectionForTesting` (D-79-02 唯一豁免生产树 touch) 种子 FileTransport 连接实现; 详见 79-06-SUMMARY
+- `-race` 本地不可执行 (Windows cgo 工具链故障, 与 79-01..05 同源), 由 ci.yml Linux race job 兜底
+- **Ratchet 落地**: 55.5% → 70.9% (实测), `.coverage-threshold` 不动 — Phase 81 收口按 UP-ONLY 纪律 bump; 本行为 v1.27 milestone 的加权平均贡献段
+
+> **Ratchet note (D-04):** The `commit` column on the Phase 79 后 row reads
+> `TBD (atomic ratchet)` until plan 79-06 Task 8 amends this file with the
+> actual short SHA of the closeout commit (71-01b amend precedent).
