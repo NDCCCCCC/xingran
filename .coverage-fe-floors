@@ -38,3 +38,30 @@ services	3.3
 store	95.0
 types	12.0
 utils	89.7
+# Phase 84 D-04/D-05/D-07: components 二级 subdir 独立 floor。D-05 起聚合逻辑
+# 与 pages/<subdir> 完全镜像——每个 components 一级子目录各自成 key,gate 方向 b
+# 要求全部登记;顶层 components 行继续覆盖全部 components 文件(父子双计,分母
+# 不缩水),故其 4.9 floor 不动。
+#   - P1 五组件组目标行(下方前 8 行):初值 0.0,由各 wave plan 完成后按实测
+#     -0.5pp ratchet(D-14);wave 3 收口时 components/design-system 聚合行 bump
+#     至终点值(D-15)。
+#   - 散件子目录 DeptTree/IconSelect/NoticeDetail/asset/charts/markdown/modal/
+#     table/three:同 commit 新增的 0.0 校准行(新 key 初始校准,非下调),
+#     后续 wave 3 / P2 阶段补测后逐 plan bump。
+components/shared	0.0
+components/dashboard	0.0
+components/layout	0.0
+components/CronSelector	0.0
+components/captcha	0.0
+components/operations	0.0
+components/network	0.0
+components/reconciliation	0.0
+components/DeptTree	0.0
+components/IconSelect	0.0
+components/NoticeDetail	0.0
+components/asset	0.0
+components/charts	0.0
+components/markdown	0.0
+components/modal	0.0
+components/table	0.0
+components/three	0.0
