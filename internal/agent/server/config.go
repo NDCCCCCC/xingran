@@ -2,9 +2,11 @@ package server
 
 import (
 	"bytes"
+	cryptorand "crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"os"
 	"os/exec"
@@ -377,12 +379,21 @@ func RegisterToBackend(config *Config) (*Config, error) {
 	return config, nil
 }
 
-// generateRandomSecret 生成随机密钥
+// generateRandomSecret 用 crypto/rand 从字符集随机选 32 字符生成密钥。
+// 修复 Q-77-A: 原实现 charset[i%len] 确定性返回常量串, 与函数名 + 注释
+// 「生成随机密钥」的语义不符, 且让 Agent 自动注册的 JWT secret 可被外部预测。
+// 这里使用 CSPRNG, math/rand 禁用; CSPRNG 读取失败属系统级异常, 直接 panic
+// (签名同一代码基线的不变量: agent secret 永远不应该降级为常量)。
 func generateRandomSecret() string {
 	const charset = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	result := make([]byte, 32)
+	max := big.NewInt(int64(len(charset)))
 	for i := range result {
-		result[i] = charset[i%len(charset)]
+		n, err := cryptorand.Int(cryptorand.Reader, max)
+		if err != nil {
+			panic(fmt.Sprintf("generateRandomSecret: 读取 crypto/rand 失败: %v", err))
+		}
+		result[i] = charset[n.Int64()]
 	}
 	return string(result)
 }
