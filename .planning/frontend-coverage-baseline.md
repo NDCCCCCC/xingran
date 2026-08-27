@@ -31,6 +31,7 @@
 | 2026-08-27 | Phase 86-W4 command/backups/devices/cred | 21.60 | 21574 | 4662 | | | 86-W4 | net 4.2 | net 7.1 |
 | 2026-08-27 | Phase 87-W1 duty+ad-domain | 21.70 | 21574 | 4682 | | | 87-W1 | duty/ad 0.0 | duty 0.5/ad 0.2 |
 | 2026-08-27 | Phase 87-W2 monitor+vdi | 21.97 | 21574 | 4740 | | | 87-W2 | mon/vdi 0.0 | mon 7.7/vdi 0.2 |
+| 2026-08-27 | Phase 87-W3 workorder+asset | 21.98 | 21574 | 4744 | | | 87-W3 | wo/as 0.0 | wo 0.05/as 0.05 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
