@@ -16,6 +16,8 @@ package core
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"image"
 	"image/color"
@@ -35,6 +37,7 @@ import (
 	"gorm.io/gorm"
 
 	coredb "github.com/xingran-next/xingran-go-backend/internal/core/db"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
 	"github.com/xingran-next/xingran-go-backend/pkg/captcha"
 )
@@ -290,4 +293,299 @@ func TestCap78_GetIPRateLimit_Edge(t *testing.T) {
 		"ip-ok", "sys.captcha.ip_rate_limit", "25",
 	).Error)
 	assert.Equal(t, 25, svc4.getIPRateLimit(ctx))
+}
+
+// =====================================================================
+// Task 2: slider 全分支(自定义背景 × 缓存池 × 降级)+ VerifySliderCaptcha + abs
+// =====================================================================
+
+// TestCap78_Slider_AutoFallback 验证 BackgroundMode="auto" → useCustom=false →
+// 直接降级到 GenerateSliderBase64(:626-643),断言基础字段。
+func TestCap78_Slider_AutoFallback(t *testing.T) {
+	ctx := context.Background()
+	svc, _, _ := newCap78Mem(t, nil)
+	svc.GetConfig().Enabled = captcha.CaptchaTypeSlider
+	svc.GetConfig().BackgroundMode = "auto"
+	svc.GetConfig().PieceShape = "circle"
+	svc.GetConfig().Difficulty = 1
+
+	data, err := svc.generateSliderWithBackground(ctx)
+	require.NoError(t, err)
+	assert.NotEmpty(t, data["sliderImg"])
+	assert.Contains(t, data["sliderImg"].(string), "data:image/png;base64,")
+	assert.NotEmpty(t, data["pieceImg"])
+	assert.Contains(t, data["pieceImg"].(string), "data:image/png;base64,")
+	assert.NotZero(t, data["xPos"], "xPos 应非零")
+	assert.NotZero(t, data["yPos"], "yPos 应非零")
+	assert.NotEmpty(t, data["token"])
+	// auto 路径无 backgroundId 键
+	_, hasBgID := data["backgroundId"]
+	assert.False(t, hasBgID, "auto 降级路径不应有 backgroundId")
+}
+
+// TestCap78_Slider_UnknownMode 验证 BackgroundMode="bogus" → default 分支
+// (:565 warn + 回退 auto),行为断言而非日志断言。
+func TestCap78_Slider_UnknownMode(t *testing.T) {
+	ctx := context.Background()
+	svc, _, _ := newCap78Mem(t, nil)
+	svc.GetConfig().Enabled = captcha.CaptchaTypeSlider
+	svc.GetConfig().BackgroundMode = "bogus"
+	svc.GetConfig().PieceShape = "square"
+	svc.GetConfig().Difficulty = 1
+
+	data, err := svc.generateSliderWithBackground(ctx)
+	require.NoError(t, err, "未知模式应回退 auto,不应报错")
+	assert.NotEmpty(t, data["sliderImg"])
+	assert.NotEmpty(t, data["token"])
+	_, hasBgID := data["backgroundId"]
+	assert.False(t, hasBgID, "bogus 模式回退 auto,无 backgroundId")
+}
+
+// TestCap78_Slider_CustomModeNoBackgroundService 验证 BackgroundMode="custom" 且
+// 未 SetBackgroundService → 走 :617-624 的 nil 提示分支后降级成功。
+func TestCap78_Slider_CustomModeNoBackgroundService(t *testing.T) {
+	ctx := context.Background()
+	svc, _, _ := newCap78Mem(t, nil)
+	svc.GetConfig().Enabled = captcha.CaptchaTypeSlider
+	svc.GetConfig().BackgroundMode = "custom"
+	svc.GetConfig().PieceShape = "circle"
+	svc.GetConfig().Difficulty = 1
+	// 故意不 SetBackgroundService
+
+	data, err := svc.generateSliderWithBackground(ctx)
+	require.NoError(t, err, "backgroundService=nil 时应降级 auto")
+	assert.NotEmpty(t, data["sliderImg"])
+	_, hasBgID := data["backgroundId"]
+	assert.False(t, hasBgID, "nil service 降级路径无 backgroundId")
+}
+
+// TestCap78_Slider_CustomModeCachePoolHit 验证缓存池命中(:572-576 直接返回)。
+// 预先种入 captcha:cache:pool:<shape>:<difficulty>:1 与 counter → GetFromCachePool
+// 直接返回,不查 DB。
+func TestCap78_Slider_CustomModeCachePoolHit(t *testing.T) {
+	ctx := context.Background()
+	svc, _, mem := newCap78Mem(t, nil)
+	svc.GetConfig().Enabled = captcha.CaptchaTypeSlider
+	svc.GetConfig().BackgroundMode = "custom"
+	svc.GetConfig().PieceShape = "circle"
+	svc.GetConfig().Difficulty = 1
+
+	bgSvc := NewCaptchaBackgroundService(svc.db, mem)
+	svc.SetBackgroundService(bgSvc)
+
+	// 预种缓存池:counter=1 + pool 槽 1 写入合法 map
+	cachedMap := map[string]interface{}{
+		"backgroundId": "bg-pool-1",
+		"sliderImg":    "data:image/png;base64,POOLED_BG",
+		"pieceImg":     "data:image/png;base64,POOLED_PIECE",
+		"xPos":         42,
+		"yPos":         7,
+		"token":        "pool-token-xyz",
+		"shape":        "circle",
+		"difficulty":   1,
+		"createdAt":    time.Now().Unix(),
+	}
+	require.NoError(t, mem.SetJSON(ctx, "captcha:cache:pool:circle:1:1", cachedMap, 5*time.Minute))
+	require.NoError(t, mem.Set(ctx, "captcha:cache:pool:circle:1:counter", "1", 5*time.Minute))
+
+	data, err := svc.generateSliderWithBackground(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "pool-token-xyz", data["token"], "缓存池命中应原样返回预置 token")
+	assert.Equal(t, "bg-pool-1", data["backgroundId"], "缓存池命中应原样返回 backgroundId")
+}
+
+// TestCap78_Slider_CustomModeDBHitLoadOK 验证缓存池空 + DB 一行 status=enabled,
+// piece_shape/difficulty 匹配,file_path=真 PNG → 命中 DB 路径(:586-611),
+// 返回 map 含 backgroundId 且 use_count +1。
+func TestCap78_Slider_CustomModeDBHitLoadOK(t *testing.T) {
+	ctx := context.Background()
+	svc, db, mem := newCap78Mem(t, nil)
+	svc.GetConfig().Enabled = captcha.CaptchaTypeSlider
+	svc.GetConfig().BackgroundMode = "custom"
+	svc.GetConfig().PieceShape = "circle"
+	svc.GetConfig().Difficulty = 1
+
+	// 落盘一张真 PNG
+	pngBytes := makePNGBytes(t, 300, 150)
+	bgFilePath := filepath.Join(t.TempDir(), "dbbg.png")
+	require.NoError(t, os.WriteFile(bgFilePath, pngBytes, 0o644))
+
+	md5Sum := md5.Sum(pngBytes)
+	md5Hex := hex.EncodeToString(md5Sum[:])
+
+	require.NoError(t, db.Exec(
+		`INSERT INTO sys_captcha_background
+		 (id, file_name, file_path, file_size, file_width, file_height, file_md5,
+		  piece_shape, difficulty_level, status, use_count)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"bg-db-1", "dbbg.png", bgFilePath, int64(len(pngBytes)), 300, 150, md5Hex,
+		"circle", 1, models.CaptchaBgEnabled, 0,
+	).Error)
+
+	bgSvc := NewCaptchaBackgroundService(svc.db, mem)
+	svc.SetBackgroundService(bgSvc)
+
+	data, err := svc.generateSliderWithBackground(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, data["backgroundId"], "DB 命中路径必须包含 backgroundId")
+	assert.Equal(t, "bg-db-1", data["backgroundId"])
+	assert.NotEmpty(t, data["sliderImg"])
+	assert.NotEmpty(t, data["token"])
+
+	// use_count + 1 落库断言(IncrementUseCount 调用过)
+	var useCount int
+	require.NoError(t, db.Raw(`SELECT use_count FROM sys_captcha_background WHERE id = ?`, "bg-db-1").Scan(&useCount).Error)
+	assert.Equal(t, 1, useCount, "IncrementUseCount 必须落库")
+}
+
+// TestCap78_Slider_CustomModeLoadFileFail 验证 DB 行 file_path 指向不存在文件
+// → :591 LoadBackgroundFromFile 失败 → 降级到 auto,断言返回 map 不含 backgroundId。
+func TestCap78_Slider_CustomModeLoadFileFail(t *testing.T) {
+	ctx := context.Background()
+	svc, db, mem := newCap78Mem(t, nil)
+	svc.GetConfig().Enabled = captcha.CaptchaTypeSlider
+	svc.GetConfig().BackgroundMode = "custom"
+	svc.GetConfig().PieceShape = "circle"
+	svc.GetConfig().Difficulty = 1
+
+	// file_path 指向不存在文件
+	require.NoError(t, db.Exec(
+		`INSERT INTO sys_captcha_background
+		 (id, file_name, file_path, file_size, piece_shape, difficulty_level, status, use_count)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		"bg-broken", "ghost.png", filepath.Join(t.TempDir(), "ghost.png"),
+		100, "circle", 1, models.CaptchaBgEnabled, 0,
+	).Error)
+
+	bgSvc := NewCaptchaBackgroundService(svc.db, mem)
+	svc.SetBackgroundService(bgSvc)
+
+	data, err := svc.generateSliderWithBackground(ctx)
+	require.NoError(t, err, "LoadFile 失败应降级 auto,不传播错误")
+	assert.NotEmpty(t, data["sliderImg"])
+	_, hasBgID := data["backgroundId"]
+	assert.False(t, hasBgID, "LoadFile 失败路径不应有 backgroundId")
+}
+
+// TestCap78_Slider_MixedMode 验证 BackgroundMode="mixed" → rand 50% 双分支。
+// D-78-01b: 随机分支采用宽松断言口径(N 次全部成功 + 至少一种形态命中),
+// 不做固定次数强断言防 flake。
+func TestCap78_Slider_MixedMode(t *testing.T) {
+	ctx := context.Background()
+	svc, db, mem := newCap78Mem(t, nil)
+	svc.GetConfig().Enabled = captcha.CaptchaTypeSlider
+	svc.GetConfig().BackgroundMode = "mixed"
+	svc.GetConfig().PieceShape = "circle"
+	svc.GetConfig().Difficulty = 1
+
+	// 预置 DB 行让 custom 分支可命中(否则 50% custom 路径全走 nil → auto)
+	pngBytes := makePNGBytes(t, 300, 150)
+	bgFilePath := filepath.Join(t.TempDir(), "mixed.png")
+	require.NoError(t, os.WriteFile(bgFilePath, pngBytes, 0o644))
+	require.NoError(t, db.Exec(
+		`INSERT INTO sys_captcha_background
+		 (id, file_name, file_path, file_size, piece_shape, difficulty_level, status, use_count)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		"bg-mixed", "mixed.png", bgFilePath, int64(len(pngBytes)),
+		"circle", 1, models.CaptchaBgEnabled, 0,
+	).Error)
+
+	bgSvc := NewCaptchaBackgroundService(svc.db, mem)
+	svc.SetBackgroundService(bgSvc)
+
+	const N = 20
+	var (
+		withBgID    int
+		withoutBgID int
+	)
+	for i := 0; i < N; i++ {
+		data, err := svc.generateSliderWithBackground(ctx)
+		require.NoError(t, err, "第 %d 次混合模式必须成功", i)
+		if _, ok := data["backgroundId"]; ok {
+			withBgID++
+		} else {
+			withoutBgID++
+		}
+	}
+	// 至少一种形态命中
+	assert.Greater(t, withBgID+withoutBgID, 0)
+	t.Logf("mixed 模式 N=%d: custom=%d auto=%d (允许分布任意,仅防 panic 与全失败)", N, withBgID, withoutBgID)
+}
+
+// TestCap78_GenerateCaptcha_SliderStorage 验证 slider 全链 SetJSON + VerifySliderCaptcha
+// 剩余分支(:409-480):正确 xPos+token 通过 / 错误 xPos 拒绝 / 错误 token 拒绝 /
+// attempts 超限拒绝 / captchaID 不存在拒绝。
+func TestCap78_GenerateCaptcha_SliderStorage(t *testing.T) {
+	ctx := context.Background()
+	svc, _, _ := newCap78Mem(t, nil)
+	svc.GetConfig().Enabled = captcha.CaptchaTypeSlider
+	svc.GetConfig().MaxAttempts = 5 // 足够覆盖 token 错(1) + xPos 错(2) + 通过(3)
+
+	resp, err := svc.GenerateCaptcha(ctx, "7.7.7.7")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Token)
+
+	// 由于 capcha.go 直接读 verifyData.XPos(resp.YPos 不一定等于 XPos),
+	// 通过独立 svcInner 直接种入已知 SliderVerifyData 覆盖所有剩余分支。
+	svcInner, _, innerMem := newCap78Mem(t, nil)
+	svcInner.GetConfig().Enabled = captcha.CaptchaTypeSlider
+	svcInner.GetConfig().MaxAttempts = 5
+
+	type pair struct{ x, y int; t string }
+	p := pair{x: 123, y: 45, t: "tok-fixed"}
+	require.NoError(t, innerMem.SetJSON(ctx, "captcha:data:cap-storage",
+		SliderVerifyData{XPos: p.x, YPos: p.y, Token: p.t}, time.Minute))
+	require.NoError(t, innerMem.SetInt(ctx, "captcha:attempts:cap-storage", 0, time.Minute))
+
+	// 错误 token → "token无效"
+	err = svcInner.VerifySliderCaptcha(ctx, "cap-storage", p.x, "WRONG-TOKEN")
+	assert.ErrorContains(t, err, "token无效")
+
+	// 错误 xPos → "位置不正确"
+	err = svcInner.VerifySliderCaptcha(ctx, "cap-storage", p.x+50, p.t)
+	assert.ErrorContains(t, err, "位置不正确")
+
+	// 正确 → 通过(MemoryCache 非 L2ExposingCache → 普通 Set)
+	require.NoError(t, svcInner.VerifySliderCaptcha(ctx, "cap-storage", p.x, p.t))
+
+	// 不存在 captchaID → "验证码不存在或已过期"
+	err = svcInner.VerifySliderCaptcha(ctx, "no-such-cap", 0, "x")
+	assert.ErrorContains(t, err, "验证码不存在或已过期")
+
+	// 未启用 slider → "当前未启用滑动验证码"
+	offSvc, _, _ := newCap78Mem(t, nil)
+	offSvc.GetConfig().Enabled = captcha.CaptchaTypeNormal
+	err = offSvc.VerifySliderCaptcha(ctx, "anything", 0, "x")
+	assert.ErrorContains(t, err, "未启用滑动验证码")
+
+	// MaxAttempts 超限:连调 2 次错误,attempts 累到 2,MaxAttempts=2 → 第 3 次 "已失效"
+	limSvc, _, limMem := newCap78Mem(t, nil)
+	limSvc.GetConfig().Enabled = captcha.CaptchaTypeSlider
+	limSvc.GetConfig().MaxAttempts = 2
+	require.NoError(t, limMem.SetJSON(ctx, "captcha:data:cap-attempts",
+		SliderVerifyData{XPos: 100, YPos: 50, Token: "tt"}, time.Minute))
+	require.NoError(t, limMem.SetInt(ctx, "captcha:attempts:cap-attempts", 0, time.Minute))
+	assert.Error(t, limSvc.VerifySliderCaptcha(ctx, "cap-attempts", 999, "tt")) // 位置错 +1
+	assert.Error(t, limSvc.VerifySliderCaptcha(ctx, "cap-attempts", 100, "bad")) // token 错 +1
+	// 第 3 次 attempts >= 2 → 拒绝
+	err = limSvc.VerifySliderCaptcha(ctx, "cap-attempts", 100, "tt")
+	assert.ErrorContains(t, err, "验证码已失效")
+
+	_ = svc // resp 已生成用于证明 GenerateCaptcha slider 全链 OK
+}
+
+// TestCap78_Abs 验证 abs 的负数分支(:482-486)。
+func TestCap78_Abs(t *testing.T) {
+	assert.Equal(t, 5, abs(-5))
+	assert.Equal(t, 5, abs(5))
+	assert.Equal(t, 0, abs(0))
+	// 容差边界:abs(xPos - expectedX) = abs(100 - 108) = 8 ≤ 8 → 通过分支
+	svc, _, mem := newCap78Mem(t, nil)
+	svc.GetConfig().Enabled = captcha.CaptchaTypeSlider
+	ctx := context.Background()
+	require.NoError(t, mem.SetJSON(ctx, "captcha:data:cap-abs",
+		SliderVerifyData{XPos: 100, YPos: 50, Token: "tt"}, time.Minute))
+	require.NoError(t, mem.SetInt(ctx, "captcha:attempts:cap-abs", 0, time.Minute))
+	require.NoError(t, svc.VerifySliderCaptcha(ctx, "cap-abs", 108, "tt")) // abs(8) ≤ 8
 }
