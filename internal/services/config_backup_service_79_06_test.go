@@ -126,6 +126,19 @@ func writeFixture7906(t *testing.T, cycles int, cmd, output string) string {
 	return path
 }
 
+// writeFixtureBytes7906 writes raw fixture bytes to the process temp dir
+// (shared low-level writer behind writeFixture7906 and the dispatch/config
+// fixtures).
+func writeFixtureBytes7906(t *testing.T, content []byte) string {
+	t.Helper()
+	dir, err := os.MkdirTemp("", "svc7906-fixture")
+	require.NoError(t, err, "MkdirTemp")
+	t.Cleanup(func() { _ = os.RemoveAll(dir) }) // best effort on Windows file locks
+	path := filepath.Join(dir, "svc7906-raw.fixture")
+	require.NoError(t, os.WriteFile(path, content, 0o644), "write fixture")
+	return path
+}
+
 // newExecutor7906 assembles a fully wired *device.DeviceExecutor over db with
 // a FileTransport connection seeded for deviceID. Everything goroutine-backed
 // (pool cleanup, scheduler workers) is shut down via t.Cleanup, with the pool
