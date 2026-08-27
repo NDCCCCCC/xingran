@@ -955,6 +955,95 @@ func TestCM77_StartHealthMonitor_ReconnectsViaChannels(t *testing.T) {
 	cm.Disconnect()
 }
 
+func TestCM77_StartHealthMonitor_ConnectedArmSpawnsReconnectOnHeartbeatFailure(t *testing.T) {
+	b := newAgentBackend77(t)
+	auth := newJWT77(t, b)
+	cm := NewConnectionManager(auth)
+
+	ch, cb := newStateRecorder77(512)
+	cm.SetStateChangeCallback(cb)
+
+	origDelay := cm.reconnectDelay
+	cm.reconnectDelay = time.Millisecond
+	t.Cleanup(func() { cm.reconnectDelay = origDelay })
+
+	// 先健康连接成功 → 监控器循环内 IsConnected 为真, 进入心跳真分支
+	require.NoError(t, cm.Connect(context.Background()))
+	waitStates77(t, ch, 2, 2*time.Second) // 排空 Connecting/Connected
+
+	// 心跳响应改为垃圾字节 → SendHeartbeat 必然 decode 失败,
+	// 已连接态监控器只对该失败派生 go Reconnect(不改本函数状态)
+	b.InstallHook(APIPathHeartbeat, func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, "garbage-not-json")
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 250*time.Millisecond)
+	monitorDone := make(chan struct{})
+	go func() {
+		cm.StartHealthMonitor(ctx, 5*time.Millisecond)
+		close(monitorDone)
+	}()
+
+	// channel 同步等待失败臂的指纹事件: 只有 SendHeartbeat 失败才会派生 Reconnect,
+	// 故「已连接后再次出现 Reconnecting」即证明走了失败分支 (P-77-4)
+	failureFired, chainCompleted := false, false
+	for !chainCompleted {
+		select {
+		case s := <-ch:
+			switch s {
+			case Reconnecting:
+				failureFired = true
+			case Disconnected:
+				if failureFired {
+					chainCompleted = true // 派生链完整走完: 重连尝试已落定
+				}
+			}
+		case <-time.After(3 * time.Second):
+			t.Fatal("已连接态的心跳失败未按预期派生 Reconnect(事件指纹缺失)")
+		}
+	}
+
+	// 收尾防泄漏 (T-77-04-02): cancel → 等 monitor 退出 → Disconnect 清场
+	cancel()
+	select {
+	case <-monitorDone:
+	case <-time.After(2 * time.Second):
+		t.Fatal("StartHealthMonitor 未在 ctx 取消后退出")
+	}
+	cm.Disconnect()
+}
+
+func TestCM77_StartHealthMonitor_StopChannelExitArm(t *testing.T) {
+	newAgentBackend77(t)
+	require.NoError(t, InitLogger("info", ""))
+	auth := NewJWTAuthenticator("test-secret", "http://127.0.0.1:1", "agent-1", "vm-1", nil)
+	cm := NewConnectionManager(auth)
+
+	// 巨大间隔让 ticker 永不就绪 + 初始断连无派生 → select 里唯一可能就绪的
+	// 就是 stopCh, 退出路径确定性锁定, 且全程零 goroutine 派生
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	monitorDone := make(chan struct{})
+	go func() {
+		cm.StartHealthMonitor(ctx, time.Hour)
+		close(monitorDone)
+	}()
+
+	select {
+	case cm.stopCh <- struct{}{}:
+	case <-time.After(time.Second):
+		t.Fatal("stopCh 发送被阻塞")
+	}
+
+	select {
+	case <-monitorDone:
+	case <-time.After(2 * time.Second):
+		t.Fatal("StartHealthMonitor 应经 stopCh 分支退出")
+	}
+	assert.Equal(t, Disconnected, cm.GetState())
+}
+
 func TestCM77_Misc_AccessorsStringsAndDisconnect(t *testing.T) {
 	b := newAgentBackend77(t)
 	auth := newJWT77(t, b)
