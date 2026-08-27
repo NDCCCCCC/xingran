@@ -31,6 +31,7 @@
 package device
 
 import (
+	"context"
 	"net"
 	"testing"
 	"time"
@@ -606,6 +607,151 @@ func TestSW78_NewScrapliWrapperWithPort_NilDevice(t *testing.T) {
 	_, err := NewScrapliWrapperWithPort(nil, "u", "p", 2222, models.ProtocolTypeSSH)
 	if err == nil {
 		t.Errorf("NewScrapliWrapperWithPort(nil device) should error")
+	}
+}
+
+// TestSW78_OpenContext_Success covers the OpenContext happy path: the public
+// constructor + a real FileTransport fixture → wrapper opens, state becomes
+// StateReady, IsConnected() true, and WaitForReady() returns immediately.
+func TestSW78_OpenContext_Success(t *testing.T) {
+	// Inject the FileTransport factory but DON'T call Open() this time —
+	// we want OpenContext to do the work itself.
+	orig := newNetworkDriver
+	t.Cleanup(func() { newNetworkDriver = orig })
+
+	fixturePath := factoryFixturePath(t, "huawei_vrp_open.fixture")
+	newNetworkDriver = func(_ interface{}, _ string, _ ...util.Option) (*network.Driver, error) {
+		p, err := platform.NewPlatform(
+			"huawei_vrp",
+			"dummy-host",
+			options.WithTransportType(transport.FileTransport),
+			options.WithFileTransportFile(fixturePath),
+			options.WithTransportReadSize(1),
+			options.WithReadDelay(0),
+		)
+		if err != nil {
+			return nil, err
+		}
+		return p.GetNetworkDriver()
+	}
+
+	dev := &models.NetworkDevice{
+		DeviceName: "dummy-ctx",
+		IPAddress:  "dummy-host",
+		Vendor:     models.VendorHuawei,
+	}
+
+	w, err := NewScrapliWrapper(dev, "u", "p", models.ProtocolTypeSSH)
+	if err != nil {
+		t.Errorf("NewScrapliWrapper returned err: %v", err)
+		return
+	}
+
+	// OpenContext with a 10s budget. The internal ticker polls GetPrompt
+	// at 100ms intervals; with a valid fixture the first poll succeeds.
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := w.OpenContext(ctx); err != nil {
+		t.Errorf("OpenContext returned err: %v", err)
+		return
+	}
+	if w.getState() != StateReady {
+		t.Errorf("state after OpenContext = %s, want Ready", w.getState())
+	}
+	if !w.IsConnected() {
+		t.Errorf("IsConnected after OpenContext = false, want true")
+	}
+	if err := w.WaitForReady(100 * time.Millisecond); err != nil {
+		t.Errorf("WaitForReady after OpenContext returned err: %v", err)
+	}
+}
+
+// TestSW78_OpenContext_CtxCancelled covers the ctx-cancelled-before path:
+// OpenContext selects on ctx.Done() before the internal goroutine returns.
+// Since the ctx is already cancelled, the select hits ctx.Done() and returns
+// "连接设备超时". The test has a 10s budget to prevent CI hangs (R2).
+//
+// We use a real FileTransport wrapper so the internal goroutine has a real
+// driver.Open() call to handle. With ctx pre-cancelled, the outer select
+// hits ctx.Done() and the format string tries to dereference w.device.IPAddress
+// for the error message — so device must be non-nil.
+func TestSW78_OpenContext_CtxCancelled(t *testing.T) {
+	w := newSW78(t, "huawei_vrp_open.fixture")
+	if w == nil {
+		return
+	}
+
+	// Pre-cancelled context.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	done := make(chan struct{})
+	var err error
+	go func() {
+		err = w.OpenContext(ctx)
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatal("OpenContext with cancelled ctx did not return within 10s — hang")
+	}
+
+	if err == nil {
+		t.Errorf("OpenContext with cancelled ctx returned nil err, want timeout")
+		return
+	}
+}
+
+// TestSW78_OpenContext_DriverOpenFail covers the case where the injected
+// driver factory itself returns an error. The wrapper's state ends up
+// StateClosed and OpenContext returns a wrapped "连接设备失败" error.
+func TestSW78_OpenContext_DriverOpenFail(t *testing.T) {
+	orig := newNetworkDriver
+	t.Cleanup(func() { newNetworkDriver = orig })
+
+	// Point the factory at a non-existent file — platform.NewPlatform
+	// succeeds, but driver.Open fails immediately when trying to read the
+	// fixture. The internal goroutine will return an error and OpenContext
+	// will propagate it as "连接设备失败".
+	fixturePath := factoryFixturePath(t, "does-not-exist.fixture")
+	newNetworkDriver = func(_ interface{}, _ string, _ ...util.Option) (*network.Driver, error) {
+		p, err := platform.NewPlatform(
+			"huawei_vrp",
+			"dummy-host",
+			options.WithTransportType(transport.FileTransport),
+			options.WithFileTransportFile(fixturePath),
+			options.WithTransportReadSize(1),
+			options.WithReadDelay(0),
+		)
+		if err != nil {
+			return nil, err
+		}
+		return p.GetNetworkDriver()
+	}
+
+	dev := &models.NetworkDevice{
+		DeviceName: "dummy-ctx-fail",
+		IPAddress:  "dummy-host",
+		Vendor:     models.VendorHuawei,
+	}
+
+	w, err := NewScrapliWrapper(dev, "u", "p", models.ProtocolTypeSSH)
+	if err != nil {
+		t.Errorf("NewScrapliWrapper returned err: %v", err)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	err = w.OpenContext(ctx)
+	if err == nil {
+		t.Errorf("OpenContext with bad fixture should error")
+		return
+	}
+	if w.getState() != StateClosed {
+		t.Errorf("state after OpenContext failure = %s, want Closed", w.getState())
 	}
 }
 
