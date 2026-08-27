@@ -543,3 +543,266 @@ func TestSync78_BatchUpdateOUs_Empty_And_Multi(t *testing.T) {
 	db.Model(&models.ADOU{}).Where("ad_config_id = ?", cfg.ID).Count(&count)
 	assert.Equal(t, int64(3), count)
 }
+
+// ============================================================================
+// Task 2: Group 管道(syncGroups / createGroupsInBatches /
+// updateGroupsInBatches / parseGroupTypeFromLDAP)
+// ============================================================================
+
+// TestSync78_ParseGroupTypeFromLDAP_Table 表驱动覆盖位掩码全枚举 +
+// 未知 + 空 + 非数字字符串。零 DB,纯函数。
+//
+// AD groupType 值(sync.go:694-700 + parseGroupTypeFromLDAP 位运算):
+//   - scope (低 28 位):2=Global, 4=Local, 8=Universal
+//   - high bit (0x80000000):Security vs Distribution
+//   - 0/未知值/非数字字符串 → 默认 Global + Security
+func TestSync78_ParseGroupTypeFromLDAP_Table(t *testing.T) {
+	cases := []struct {
+		name      string
+		input     string
+		wantScope models.ADGroupScope
+		wantType  models.ADGroupType
+	}{
+		// 6 标准组合:Security/Distribution × Global/Local/Universal
+		{"global_security", "-2147483646", models.ADGroupScopeGlobal, models.ADGroupTypeSecurity},     // 0x80000002
+		{"local_security", "-2147483644", models.ADGroupScopeLocal, models.ADGroupTypeSecurity},       // 0x80000004
+		{"universal_security", "-2147483640", models.ADGroupScopeUniversal, models.ADGroupTypeSecurity}, // 0x80000008
+		{"global_distribution", "2", models.ADGroupScopeGlobal, models.ADGroupTypeDistribution},       // 0x00000002
+		{"local_distribution", "4", models.ADGroupScopeLocal, models.ADGroupTypeDistribution},         // 0x00000004
+		{"universal_distribution", "8", models.ADGroupScopeUniversal, models.ADGroupTypeDistribution}, // 0x00000008
+		// 边界/兜底
+		{"empty_string", "", models.ADGroupScopeGlobal, models.ADGroupTypeSecurity}, // sync.go:702-704
+		{"unknown_scope", "16", models.ADGroupScopeGlobal, models.ADGroupTypeDistribution}, // 16 & 0x0FFFFFFF=16 不在 case 中,default → Global;但 high bit=0 → Distribution
+		{"non_numeric", "abc", models.ADGroupScopeGlobal, models.ADGroupTypeSecurity}, // parseIntOrDefault → -2147483646
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			gotScope, gotType := parseGroupTypeFromLDAP(tc.input)
+			assert.Equal(t, tc.wantScope, gotScope, "scope mismatch")
+			assert.Equal(t, tc.wantType, gotType, "type mismatch")
+		})
+	}
+}
+
+// TestSync78_SyncGroups_CreateAndUpdate 覆盖 syncGroups 主路径:
+//   - 空 entries 早退
+//   - 1 既有 + 2 新 → 创建 2 + 更新 1
+//   - member_count 从 entry.GetAttributeValues("member") 长度推导
+func TestSync78_SyncGroups_CreateAndUpdate(t *testing.T) {
+	svc, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+
+	// 空 entries 早退
+	require.NoError(t, svc.syncGroups(ctx, cfg, nil))
+	require.NoError(t, svc.syncGroups(ctx, cfg, []*ldap.Entry{}))
+
+	// 预置 1 条 group(同名 group_dn)
+	existing := &models.ADGroup{
+		ADConfigID: cfg.ID,
+		GroupDN:    "CN=ExistingGroup,OU=Groups,DC=example,DC=com",
+		GroupName:  "OldName",
+		GroupScope: models.ADGroupScopeGlobal,
+		GroupType:  models.ADGroupTypeSecurity,
+	}
+	existing.ID = uuid.NewString()
+	require.NoError(t, db.Create(existing).Error)
+
+	// 3 条 entry
+	entries := []*ldap.Entry{
+		// 既有 — 应被更新
+		entry78("CN=ExistingGroup,OU=Groups,DC=example,DC=com", map[string][]string{
+			"cn":         {"ExistingGroup"},
+			"description": {"UpdatedDesc"},
+			"groupType":  {"-2147483644"}, // LocalSecurity
+			"member":     {"CN=u1,DC=example,DC=com", "CN=u2,DC=example,DC=com", "CN=u3,DC=example,DC=com"},
+		}),
+		// 新建 1 — 带 3 个 member 验证 member_count=3
+		entry78("CN=NewGroup1,OU=Groups,DC=example,DC=com", map[string][]string{
+			"cn":         {"NewGroup1"},
+			"description": {"NG1Desc"},
+			"groupType":  {"-2147483646"}, // GlobalSecurity
+			"member":     {"CN=a,DC=example,DC=com", "CN=b,DC=example,DC=com", "CN=c,DC=example,DC=com"},
+		}),
+		// 新建 2 — 缺 member 属性 → member_count=0;缺 description → ""
+		entry78("CN=NewGroup2,OU=Groups,DC=example,DC=com", map[string][]string{
+			"cn":        {"NewGroup2"},
+			"groupType": {"-2147483640"}, // UniversalSecurity
+		}),
+	}
+	require.NoError(t, svc.syncGroups(ctx, cfg, entries))
+
+	// 总行数 3
+	var count int64
+	db.Model(&models.ADGroup{}).Where("ad_config_id = ?", cfg.ID).Count(&count)
+	assert.Equal(t, int64(3), count)
+
+	// 既有行被更新(description/GroupScope/GroupType/MemberCount)
+	var updated models.ADGroup
+	require.NoError(t, db.Where("group_dn = ? AND ad_config_id = ?", "CN=ExistingGroup,OU=Groups,DC=example,DC=com", cfg.ID).First(&updated).Error)
+	assert.Equal(t, "ExistingGroup", updated.GroupName)
+	assert.Equal(t, "UpdatedDesc", updated.Description)
+	assert.Equal(t, models.ADGroupScopeLocal, updated.GroupScope)
+	assert.Equal(t, models.ADGroupTypeSecurity, updated.GroupType)
+	assert.Equal(t, 3, updated.MemberCount, "member_count 应为 member 属性值数")
+	assert.Equal(t, "OU=Groups,DC=example,DC=com", updated.OUN)
+	require.NotNil(t, updated.LastSyncAt)
+
+	// 新建 1:member_count=3, scope=Global, type=Security
+	var ng1 models.ADGroup
+	require.NoError(t, db.Where("group_dn = ? AND ad_config_id = ?", "CN=NewGroup1,OU=Groups,DC=example,DC=com", cfg.ID).First(&ng1).Error)
+	assert.Equal(t, 3, ng1.MemberCount)
+	assert.Equal(t, models.ADGroupScopeGlobal, ng1.GroupScope)
+	assert.Equal(t, models.ADGroupTypeSecurity, ng1.GroupType)
+
+	// 新建 2:member_count=0(无 member 属性), description=""
+	var ng2 models.ADGroup
+	require.NoError(t, db.Where("group_dn = ? AND ad_config_id = ?", "CN=NewGroup2,OU=Groups,DC=example,DC=com", cfg.ID).First(&ng2).Error)
+	assert.Equal(t, 0, ng2.MemberCount)
+	assert.Equal(t, "", ng2.Description)
+}
+
+// TestSync78_SyncGroups_MemberSync 验证 syncGroups 内联调用 syncGroupMembers
+// (sync.go:373-377):group entry 带 member 属性 → sys_ad_group_member 行落库。
+func TestSync78_SyncGroups_MemberSync(t *testing.T) {
+	svc, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+
+	entries := []*ldap.Entry{
+		entry78("CN=G1,OU=Groups,DC=example,DC=com", map[string][]string{
+			"cn":        {"G1"},
+			"groupType": {"-2147483646"},
+			"member": {
+				"CN=alice,DC=example,DC=com",
+				"CN=bob,DC=example,DC=com",
+			},
+		}),
+	}
+	require.NoError(t, svc.syncGroups(ctx, cfg, entries))
+
+	// sys_ad_group_member 应有 2 行(同 ad_config_id+group_dn,user_dn 各异)
+	var members []models.ADGroupMember
+	require.NoError(t, db.Where("ad_config_id = ? AND group_dn = ?", cfg.ID, "CN=G1,OU=Groups,DC=example,DC=com").Find(&members).Error)
+	assert.Equal(t, 2, len(members))
+	userDNs := []string{members[0].UserDN, members[1].UserDN}
+	assert.ElementsMatch(t, []string{"CN=alice,DC=example,DC=com", "CN=bob,DC=example,DC=com"}, userDNs)
+}
+
+// TestSync78_CreateGroupsInBatches_Empty_And_Batching 覆盖:
+//   - 空切片早退
+//   - 501 条触发 batchSize=500 双批
+//   - 冲突分支:同 (ad_config_id, group_dn) 预置后再 Create → 不报错,upsert 行为
+//     (createGroupsInBatches 用 s.db.Create(),无 clause.OnConflict;冲突会让
+//     GORM 返回 unique constraint error。文档化:这是已知失败分支。)
+func TestSync78_CreateGroupsInBatches_Empty_And_Batching(t *testing.T) {
+	svc, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+
+	// 空切片早退
+	require.NoError(t, svc.createGroupsInBatches(ctx, nil))
+	require.NoError(t, svc.createGroupsInBatches(ctx, []models.ADGroup{}))
+
+	// 501 条触发多批
+	groups := make([]models.ADGroup, 0, 501)
+	for i := 0; i < 501; i++ {
+		g := models.ADGroup{
+			ADConfigID: cfg.ID,
+			GroupDN:    "CN=B" + itoaForTest(i) + ",DC=example,DC=com",
+			GroupName:  "B" + itoaForTest(i),
+			GroupScope: models.ADGroupScopeGlobal,
+			GroupType:  models.ADGroupTypeSecurity,
+		}
+		g.ID = uuid.NewString()
+		groups = append(groups, g)
+	}
+	require.NoError(t, svc.createGroupsInBatches(ctx, groups))
+
+	var count int64
+	db.Model(&models.ADGroup{}).Where("ad_config_id = ?", cfg.ID).Count(&count)
+	assert.Equal(t, int64(501), count)
+
+	// 冲突分支(无 OnConflict,直接 Create → unique constraint 失败)
+	// 文档化:这是 sync.go 现状行为,createGroupsInBatches 不处理冲突。
+	dup := groups[0] // 同 (ad_config_id, group_dn)
+	err := svc.createGroupsInBatches(ctx, []models.ADGroup{dup})
+	assert.Error(t, err, "createGroupsInBatches 无 OnConflict → 重复 DN 应触发 unique constraint 错误")
+}
+
+// TestSync78_UpdateGroupsInBatches_Empty_And_Multi 覆盖:
+//   - 空 map 早退
+//   - 多条更新逐行断言 + OnConflict upsert 不产生重复行
+func TestSync78_UpdateGroupsInBatches_Empty_And_Multi(t *testing.T) {
+	svc, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+
+	// 空 map 早退
+	require.NoError(t, svc.updateGroupsInBatches(ctx, nil))
+	require.NoError(t, svc.updateGroupsInBatches(ctx, map[string]*models.ADGroup{}))
+
+	// 预置 3 条 group
+	dns := []string{
+		"CN=GU1,OU=Groups,DC=example,DC=com",
+		"CN=GU2,OU=Groups,DC=example,DC=com",
+		"CN=GU3,OU=Groups,DC=example,DC=com",
+	}
+	for _, dn := range dns {
+		g := &models.ADGroup{
+			ADConfigID: cfg.ID, GroupDN: dn, GroupName: "Old",
+			GroupScope: models.ADGroupScopeGlobal, GroupType: models.ADGroupTypeSecurity,
+		}
+		g.ID = uuid.NewString()
+		require.NoError(t, db.Create(g).Error)
+	}
+
+	// 构造 update map(group_name 改为 "New", member_count=10)
+	now := time.Now()
+	updates := make(map[string]*models.ADGroup)
+	var live []models.ADGroup
+	require.NoError(t, db.Where("ad_config_id = ?", cfg.ID).Find(&live).Error)
+	for i := range live {
+		live[i].GroupName = "New"
+		live[i].MemberCount = 10
+		live[i].LastSyncAt = &now
+		updates[live[i].GroupDN] = &live[i]
+	}
+	require.NoError(t, svc.updateGroupsInBatches(ctx, updates))
+
+	// 逐行断言 + 总行数 3(upsert 不增行)
+	var count int64
+	db.Model(&models.ADGroup{}).Where("ad_config_id = ?", cfg.ID).Count(&count)
+	assert.Equal(t, int64(3), count)
+	for _, dn := range dns {
+		var row models.ADGroup
+		require.NoError(t, db.Where("group_dn = ? AND ad_config_id = ?", dn, cfg.ID).First(&row).Error)
+		assert.Equal(t, "New", row.GroupName)
+		assert.Equal(t, 10, row.MemberCount)
+	}
+}
+
+// TestSync78_SyncGroups_DBError 覆盖 syncGroups DB 错误早退分支:
+// DROP TABLE sys_ad_group → GetOrCreate 链应包装错误返回而非 panic。
+func TestSync78_SyncGroups_DBError(t *testing.T) {
+	svc, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+
+	// DROP 之前需要关掉 sqlite db 连接,DROP TABLE 才会真正生效
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	_, err = sqlDB.Exec(`DROP TABLE sys_ad_group`)
+	require.NoError(t, err)
+
+	entries := []*ldap.Entry{
+		entry78("CN=X,OU=Groups,DC=example,DC=com", map[string][]string{"cn": {"X"}}),
+	}
+	err = svc.syncGroups(ctx, cfg, entries)
+	assert.Error(t, err, "DROP TABLE 后应返回包装错误而非 panic")
+}
