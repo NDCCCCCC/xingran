@@ -918,3 +918,129 @@ func TestInit78_StartSubprocessReaper_Platform(t *testing.T) {
 	// 不强断言 goroutine 数(linux 下 ticker 30s 触发后才退出;windows 下根本未启)。
 	// 仅断言「调用 + cancel」整体不 panic。
 }
+
+// =====================================================================
+// Task 5: 边角补齐 + BLOCK-03 收口 checkpoint(core.go ≥60% / 包 ≥70%)
+//
+// 覆盖 New 错误路径、GetDB nil 分支、剩余 helper(parseDuration /
+// loadConnectionPoolConfig / GetAuthFactory / checkEmptyAccountPoolOnStartup),
+// 然后跑 cover -func 核对 core.go + 包总覆盖率。
+// =====================================================================
+
+// TestInit78_New_ErrorPaths Task 5 Step 1 — New(cfg) 错误路径真跑:
+//   - SM4Key 为空 → error 含 "SM4_KEY 未配置"(core.go:167-172)
+//   - SM4Key = 仓库默认值 dGVzdC1zZWNyZXQxNiEhIQ== → 仅 ERROR 日志,允许启动
+//   - SM4Key 非法 base64 → error
+//   - JWT 配置非法(secret 短 / 弱默认)→ error
+func TestInit78_New_ErrorPaths(t *testing.T) {
+	t.Run("SM4Key_Empty", func(t *testing.T) {
+		cfg := newInit78Config(t, "memory", "")
+		cfg.Security.SM4Key = ""
+		_, err := New(cfg)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "SM4_KEY 未配置")
+	})
+
+	t.Run("SM4Key_RepoDefault_StillWorks", func(t *testing.T) {
+		cfg := newInit78Config(t, "memory", "")
+		cfg.Security.SM4Key = "dGVzdC1zZWNyZXQxNiEhIQ==" // 仓库默认值
+		c, err := New(cfg)
+		require.NoError(t, err, "仓库默认 SM4Key 仅告警放行(core.go:171-181),不应 error")
+		require.NotNil(t, c)
+		assert.NotNil(t, c.SM4Cipher)
+	})
+
+	t.Run("SM4Key_InvalidBase64", func(t *testing.T) {
+		cfg := newInit78Config(t, "memory", "")
+		cfg.Security.SM4Key = "!!!not-base64!!!"
+		_, err := New(cfg)
+		require.Error(t, err)
+	})
+
+	t.Run("JWT_ShortSecret", func(t *testing.T) {
+		cfg := newInit78Config(t, "memory", "")
+		cfg.JWT.SecretKey = "short" // < 16 字节
+		_, err := New(cfg)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "JWT secret_key")
+	})
+
+	t.Run("JWT_WeakDefault", func(t *testing.T) {
+		cfg := newInit78Config(t, "memory", "")
+		cfg.JWT.SecretKey = "xingran-next-secret-key" // 已知弱默认(F-04)
+		_, err := New(cfg)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "xingran-next-secret-key")
+	})
+}
+
+// TestInit78_GetDB_NilBranch Task 5 Step 2 — Core.GetDB() 在 DB 为 nil 时返回 nil
+// (core.go:111-115 的 33.3% unc 分支填补)。
+func TestInit78_GetDB_NilBranch(t *testing.T) {
+	c := &Core{CoreInfra: &CoreInfra{}, CoreServices: &CoreServices{}}
+	assert.Nil(t, c.GetDB(), "DB 为 nil 时 GetDB 必须返回 nil(core.go:111-115 守卫)")
+}
+
+// TestInit78_Misc Task 5 Step 3 — 剩余 helper 直调补覆盖:
+// parseDuration / loadConnectionPoolConfig / GetAuthFactory / checkEmptyAccountPoolOnStartup。
+//
+// parseDuration 是 core.go:1120-1130 顶层函数,简单单元测试即可;
+// loadConnectionPoolConfig 查 sys_config 表;checkEmptyAccountPoolOnStartup 查 sys_ad_config。
+// 这些 helper 都被 initDeviceServices / initAuthFactory 间接调用,但首次真跑直调有覆盖增益。
+func TestInit78_Misc(t *testing.T) {
+	t.Run("parseDuration_Empty_Default", func(t *testing.T) {
+		got := parseDuration("", 30*time.Second)
+		assert.Equal(t, 30*time.Second, got, "空字符串必须返回 defaultVal")
+	})
+
+	t.Run("parseDuration_Invalid_Default", func(t *testing.T) {
+		got := parseDuration("not-a-duration", 5*time.Minute)
+		assert.Equal(t, 5*time.Minute, got, "非法格式必须返回 defaultVal")
+	})
+
+	t.Run("parseDuration_Valid", func(t *testing.T) {
+		got := parseDuration("10s", time.Second)
+		assert.Equal(t, 10*time.Second, got)
+	})
+
+	t.Run("GetAuthFactory_Returns_Field", func(t *testing.T) {
+		c := &Core{CoreInfra: &CoreInfra{AuthFactory: nil}}
+		assert.Nil(t, c.GetAuthFactory())
+		c.AuthFactory = nil // 测试 nil 路径
+	})
+
+	t.Run("checkEmptyAccountPoolOnStartup_EmptyDB", func(t *testing.T) {
+		// 空 sqlite 表下 sys_ad_config 不存在会 warn(初始化器),但 checkEmptyAccountPoolOnStartup
+		// 本身应当 warn-continue 不 panic。
+		cfg := newInit78Config(t, "memory", "")
+		c, err := New(cfg)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			if c.DB != nil {
+				c.DB.Close()
+			}
+		})
+		require.NoError(t, c.initDBAndData())
+
+		require.NotPanics(t, func() {
+			c.checkEmptyAccountPoolOnStartup(nil)
+		}, "nil pool 必须 warn-continue 不 panic(core.go:888)")
+	})
+
+	t.Run("loadConnectionPoolConfig_NoSysConfig_Row", func(t *testing.T) {
+		// loadConnectionPoolConfig 查 sys_config,空表走 fallback 50/300。
+		cfg := newInit78Config(t, "memory", "")
+		c, err := New(cfg)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			if c.DB != nil {
+				c.DB.Close()
+			}
+		})
+		require.NoError(t, c.initDBAndData())
+
+		got := loadConnectionPoolConfig(c.GetDB())
+		assert.Equal(t, 50, got.MaxConnections)
+		assert.Equal(t, 300*time.Second, got.MaxIdle)
+	})
+}
