@@ -18,6 +18,7 @@
 | 2026-08-27 | Phase 84-01a shared 组件全清 | 18.91 | 21574 | 4081 | 15 | c76946a | 84-01a | shared 0.0 | shared 21.9 |
 | 2026-08-27 | Phase 84-01b dashboard 测试落地 | 19.08 | 21574 | 4116 | 15 | c8dd140 | 84-01b | dashboard 0.0 | dashboard 2.1 |
 | 2026-08-27 | Phase 84-02a layout 组件测试 | 19.39 | 21574 | 4186 | 15 | $(git rev-parse --short HEAD) | 84-02a | layout 0.0 | layout 14.1 |
+| 2026-08-27 | Phase 84-02b cron+captcha+ops | 19.61 | 21574 | 4230 | | | 84-02b | cr/cp/op 0.0 | cr 7.0/cp 10.5/op 0.8 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
