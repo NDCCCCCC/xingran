@@ -22,6 +22,7 @@
 | 2026-08-27 | Phase 84-03a network+recon 测试 | 19.64 | 21574 | 4237 | | | 84-03a | network/recon 0.0 | network 50.1 / recon 21.0 |
 | 2026-08-27 | Phase 84-03b design-system+components 聚合收口 | 20.06 | 21574 | 4328 | 9 | $(git rev-parse --short HEAD) | 84-03b | ds 15.0/components 4.9 | ds 52.5/components 13.4 |
 | 2026-08-27 | Phase 85-W1 floors+workstations | 20.21 | 21574 | 4377 | | | 85-W1 | ops 0.0 | ops 0.7 |
+| 2026-08-27 | Phase 85-W2 3d+rpa | 20.51 | 21574 | 4426 | | | 85-W2 | ops 0.7 | ops 2.2 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
