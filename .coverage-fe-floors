@@ -18,10 +18,10 @@ design-system	52.5
 hooks	91.7
 lib	86.0
 pages/ad	0.0
-pages/ad-domain	0.0
+pages/ad-domain	0.2
 pages/asset	0.0
 pages/dashboard-system	0.0
-pages/duty	0.0
+pages/duty	0.5
 pages/knowledge	0.0
 pages/login	61.6
 pages/monitor	0.0

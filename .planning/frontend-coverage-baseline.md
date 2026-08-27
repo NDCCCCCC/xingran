@@ -29,6 +29,7 @@
 | 2026-08-27 | Phase 86-W2 menu/dict/user/零散 | 21.21 | 21574 | 4576 | | | 86-W2 | sys 3.7 | sys 6.4 |
 | 2026-08-27 | Phase 86-W3 net discoveries/exec/templates | 21.34 | 21574 | 4605 | | | 86-W3 | net 2.6 | net 4.2 |
 | 2026-08-27 | Phase 86-W4 command/backups/devices/cred | 21.60 | 21574 | 4662 | | | 86-W4 | net 4.2 | net 7.1 |
+| 2026-08-27 | Phase 87-W1 duty+ad-domain | 21.70 | 21574 | 4682 | | | 87-W1 | duty/ad 0.0 | duty 0.5/ad 0.2 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
