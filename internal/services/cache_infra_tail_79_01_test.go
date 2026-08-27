@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -230,3 +231,246 @@ func TestTmc7901_Get_MissHitError(t *testing.T) {
 
 // now79 统一取当前时间(命名带后缀,防与其他 plan helper 撞名)。
 func now79() time.Time { return time.Now() }
+
+// ==================== Task 4: mac_history_cache_decorator ====================
+
+// TestMcd7901_BuildKey_AllPrefixes 4 个合法 method 各断言键前缀 == 对应
+// cacheKeyPrefix* 常量(D-13 锁定,禁裸字符串)+ ":" + 64 位 sha256 hex;
+// 同 params 同 method 幂等;不同 method 同 params 键不同。
+func TestMcd7901_BuildKey_AllPrefixes(t *testing.T) {
+	cases := []struct {
+		method string
+		prefix string
+	}{
+		{"port-history", cacheKeyPrefixPortHistory},
+		{"device-history", cacheKeyPrefixDeviceHistory},
+		{"stats", cacheKeyPrefixStats},
+		{"heatmap", cacheKeyPrefixHeatmap},
+	}
+	params := map[string]interface{}{"mac": "9C:7B:EF:2F:31:B8", "limit": 100}
+
+	for _, tc := range cases {
+		t.Run(tc.method, func(t *testing.T) {
+			key, err := BuildMACQueryCacheKey(tc.method, params)
+			require.NoError(t, err)
+			require.True(t, strings.HasPrefix(key, tc.prefix+":"),
+				"键前缀必须是常量 %s + \":\", got %s", tc.prefix, key)
+
+			sum := strings.TrimPrefix(key, tc.prefix+":")
+			require.Len(t, sum, 64, "参数摘要应为 64 位 sha256 hex")
+			for _, r := range sum {
+				require.True(t, (r >= '0' && r <= '9') || (r >= 'a' && r <= 'f'),
+					"摘要必须是小写 hex, got %q", sum)
+			}
+
+			// 幂等:同 method 同 params 两次调用同键(Go encoding/json 字段序稳定)
+			key2, err := BuildMACQueryCacheKey(tc.method, params)
+			require.NoError(t, err)
+			assert.Equal(t, key, key2, "同 method 同 params 必须产出同一缓存键")
+		})
+	}
+
+	// 不同 method 同 params → 前缀不同 → 键不同
+	k1, err := BuildMACQueryCacheKey("port-history", params)
+	require.NoError(t, err)
+	k2, err := BuildMACQueryCacheKey("stats", params)
+	require.NoError(t, err)
+	assert.NotEqual(t, k1, k2, "不同 method 的键不得碰撞")
+}
+
+// TestMcd7901_BuildKey_UnknownMethod method 不在 4 前缀清单 → "未知方法: %s"。
+func TestMcd7901_BuildKey_UnknownMethod(t *testing.T) {
+	key, err := BuildMACQueryCacheKey("bogus", map[string]int{"x": 1})
+	require.Error(t, err)
+	assert.Empty(t, key)
+	assert.Contains(t, err.Error(), "未知方法")
+	assert.Contains(t, err.Error(), "bogus")
+}
+
+// TestMcd7901_BuildKey_MarshalFail params 不可 JSON 序列化 → "序列化缓存参数失败: %w"。
+func TestMcd7901_BuildKey_MarshalFail(t *testing.T) {
+	key, err := BuildMACQueryCacheKey("stats", make(chan int))
+	require.Error(t, err)
+	assert.Empty(t, key)
+	assert.Contains(t, err.Error(), "序列化缓存参数失败")
+}
+
+// ==================== Task 4: rate_limiter 尾支 ====================
+
+// TestRlm7901_CalculateRemaining_Edges 表驱动 :229 calculateRemaining 的
+// 零计数/满限/超限/三窗口最小值分支(期望值按 min(rM,rH,rD) 手算,见各 why 注释)。
+func TestRlm7901_CalculateRemaining_Edges(t *testing.T) {
+	limiter := NewRateLimiter(newMockRateLimitProvider())
+	limit := RateLimit{PerMinute: 30, PerHour: 500, PerDay: 5000}
+
+	cases := []struct {
+		name string
+		m    int
+		h    int
+		d    int
+		want int
+		why  string
+	}{
+		{"零计数_分钟分支", 0, 0, 0, 30, "min(30-0, 500-0, 5000-0)=30"},
+		{"分钟满限", 30, 100, 1000, 0, "min(0, 400, 4000)=0"},
+		{"分钟超限为负", 35, 100, 1000, -5, "min(-5, 400, 4000)=-5(负值合法,Check 在前已拒)"},
+		{"小时最小", 5, 495, 1000, 5, "min(25, 5, 4000)=5 → 走小时分支"},
+		{"天最小", 5, 100, 4998, 2, "min(25, 400, 2)=2 → 走天分支"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := limiter.calculateRemaining(limit, tc.m, tc.h, tc.d)
+			assert.Equal(t, tc.want, got, tc.why)
+		})
+	}
+}
+
+// TestRlm7901_CalculateReset_AndWindow :251 calculateReset 空 times 切片分支 +
+// :192 getOrCreateWindow 复用既有窗口分支(往返回窗口写入时间戳后再次取窗仍可见)。
+func TestRlm7901_CalculateReset_AndWindow(t *testing.T) {
+	limiter := NewRateLimiter(newMockRateLimitProvider())
+
+	// 空 times 切片(:252-254)→ 返回当前时间,不 panic
+	reset := limiter.calculateReset([]time.Time{}, time.Minute)
+	assert.WithinDuration(t, time.Now(), reset, 2*time.Second,
+		"空窗口应返回 now 作为兜底 ResetAt")
+
+	// getOrCreateWindow 复用分支(:194-196 sync.Map Load 命中)
+	w1 := limiter.getOrCreateWindow("rlm7901-reuse")
+	w1.mu.Lock()
+	w1.minute = append(w1.minute, now79())
+	w1.mu.Unlock()
+
+	w2 := limiter.getOrCreateWindow("rlm7901-reuse")
+	assert.Same(t, w1, w2, "同 key 二次调用必须复用同一 *rateLimitWindow")
+	w2.mu.Lock()
+	count := len(w2.minute)
+	w2.mu.Unlock()
+	assert.Equal(t, 1, count, "往返回窗口写入的时间戳在再次取窗后仍可见(复用证据)")
+}
+
+// TestRlm7901_CleanOlderThan_Cutoff 构造 mixed 新旧时间戳切片,断言 cutoff
+// 边界两侧的保留/剔除(含「等于 cutoff 不算早于」的二分边界语义)。
+func TestRlm7901_CleanOlderThan_Cutoff(t *testing.T) {
+	limiter := NewRateLimiter(newMockRateLimitProvider())
+	base := now79()
+
+	times := []time.Time{
+		base.Add(-3 * time.Hour),
+		base.Add(-2 * time.Hour),
+		base.Add(-30 * time.Second),
+		base.Add(-10 * time.Second),
+	}
+
+	kept := limiter.cleanOlderThan(times, base.Add(-time.Minute))
+	assert.Equal(t, times[2:], kept, "早于 cutoff 的 2 条应被剔除,其余按序保留")
+
+	// 边界相等:Before(cutoff)==false → 保留(二分 left 停在该元素)
+	atBoundary := limiter.cleanOlderThan([]time.Time{base}, base)
+	assert.Equal(t, []time.Time{base}, atBoundary, "等于 cutoff 的时间戳不算「早于」,应保留")
+
+	// 全部早于 cutoff → 空切片
+	assert.Empty(t, limiter.cleanOlderThan([]time.Time{base.Add(-time.Hour)}, base))
+
+	// 空入参 → 空出参,不 panic
+	assert.Empty(t, limiter.cleanOlderThan(nil, base))
+}
+
+// TestRlm7901_Check_HourDayLimitDenials 驱动 Check 的小时/天级超限分支(:151-171,
+// 既有测试只能靠 1500/50000 次请求触达,改用小阈值 provider 直达):
+// 第 3 次请求分别被 hour/day 窗口拒绝,ResetAt 按 WR-02 口径 = 最早时间戳 + 对应窗口时长。
+func TestRlm7901_Check_HourDayLimitDenials(t *testing.T) {
+	t.Run("小时窗口拒绝", func(t *testing.T) {
+		provider := &mockRateLimitProvider{limits: map[string]RateLimit{
+			APIKeyScopeRead: {PerMinute: 1000, PerHour: 2, PerDay: 1000},
+		}}
+		limiter := NewRateLimiter(provider)
+		start := now79()
+
+		for i := 0; i < 2; i++ {
+			allowed, res := limiter.Check("rlm7901-hour", APIKeyScopeRead)
+			require.True(t, allowed, "第 %d 次请求应放行", i+1)
+			require.NotNil(t, res)
+		}
+		allowed, res := limiter.Check("rlm7901-hour", APIKeyScopeRead)
+		assert.False(t, allowed, "小时窗口满限后必须拒绝")
+		require.NotNil(t, res)
+		assert.Equal(t, 2, res.Limit, "Limit 应取小时档配置")
+		assert.Equal(t, 0, res.Remaining, "拒绝路径 Remaining 必须为 0")
+		assert.WithinDuration(t, start.Add(time.Hour), res.ResetAt, 2*time.Second,
+			"ResetAt = 最早时间戳 + 1 小时(WR-02 回归口径)")
+	})
+
+	t.Run("天窗口拒绝", func(t *testing.T) {
+		provider := &mockRateLimitProvider{limits: map[string]RateLimit{
+			APIKeyScopeRead: {PerMinute: 1000, PerHour: 1000, PerDay: 2},
+		}}
+		limiter := NewRateLimiter(provider)
+		start := now79()
+
+		for i := 0; i < 2; i++ {
+			allowed, res := limiter.Check("rlm7901-day", APIKeyScopeRead)
+			require.True(t, allowed, "第 %d 次请求应放行", i+1)
+			require.NotNil(t, res)
+		}
+		allowed, res := limiter.Check("rlm7901-day", APIKeyScopeRead)
+		assert.False(t, allowed, "天窗口满限后必须拒绝")
+		require.NotNil(t, res)
+		assert.Equal(t, 2, res.Limit, "Limit 应取天档配置")
+		assert.Equal(t, 0, res.Remaining, "拒绝路径 Remaining 必须为 0")
+		assert.WithinDuration(t, start.Add(24*time.Hour), res.ResetAt, 2*time.Second,
+			"ResetAt = 最早时间戳 + 24 小时(WR-02 回归口径)")
+	})
+}
+
+// TestRlm7901_StaticProvider_Tails 兜底 provider 的防御/回退尾支:
+// getLimit 的 config==nil 分支(:69-71,生产装配不可达,零值白盒直驱)+
+// staticRateLimitProvider.GetRateLimit 的段数异常(:100-102)与未知 scope/粒度(:113)。
+func TestRlm7901_StaticProvider_Tails(t *testing.T) {
+	// config == nil 防御分支:零值 RateLimiter 白盒直调
+	var zeroLimiter RateLimiter
+	assert.Equal(t, RateLimit{PerMinute: 120, PerHour: 2000, PerDay: 20000},
+		zeroLimiter.getLimit(APIKeyScopeRead),
+		"config==nil 应返回 120/2000/20000 兜底档")
+
+	// staticRateLimitProvider 尾支
+	p := newStaticRateLimitProvider()
+	assert.Equal(t, 42, p.GetRateLimit("badkey", 42),
+		"key 段数 != 3 应返回 defaultValue")
+	assert.Equal(t, 42, p.GetRateLimit("rate_limit.read.per_week", 42),
+		"已知 scope + 未知粒度应返回 defaultValue")
+	assert.Equal(t, 42, p.GetRateLimit("rate_limit.noscope.per_minute", 42),
+		"未知 scope 应返回 defaultValue")
+}
+
+// ==================== Task 4: mac_normalize 收口 ====================
+
+// TestMnm7901_IsCanonicalMAC_LastBranch isCanonicalMAC 全分支表驱动
+// (空串守卫 + canonical 正则两态),并回归 NormalizeMACAddress 全链口径
+// (引用既有 mac_normalize_test.go 的期望值,只增不改)。
+func TestMnm7901_IsCanonicalMAC_LastBranch(t *testing.T) {
+	cases := []struct {
+		name string
+		mac  string
+		want bool
+	}{
+		{"空串守卫", "", false},
+		{"标准大写冒号", "9C:7B:EF:2F:31:B8", true},
+		{"小写不合规", "9c:7b:ef:2f:31:b8", false},
+		{"无分隔符不合规", "9C7BEF2F31B8", false},
+		{"非 hex 字符不合规", "ZZ:7B:EF:2F:31:B8", false},
+		{"段数不足", "9C:7B:EF:2F:31", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, isCanonicalMAC(tc.mac))
+		})
+	}
+
+	// 全链不回归:归一 → canonical 校验 落地通路
+	normalized := NormalizeMACAddress("9c7b.ef2f.31b8")
+	assert.Equal(t, "9C:7B:EF:2F:31:B8", normalized)
+	assert.True(t, isCanonicalMAC(normalized), "归一化产物必须通过 canonical 校验")
+	assert.False(t, isCanonicalMAC(NormalizeMACAddress("not-a-mac")),
+		"非法输入归一为空串后 canonical 校验必须为 false")
+}
