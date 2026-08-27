@@ -823,12 +823,25 @@ func TestInit78_Close_NoGoroutineLeak(t *testing.T) {
 	closeRes := runInit78Guarded(close78GuardTimeout, "Close#leak", func() { c.Close() })
 	require.True(t, closeRes.completed)
 
-	// 轮询 ≤5s 等待回落(QUIRK-78-02-P2 容忍 +1;RefreshView 30s 超时本身会自然退出)
+	// 显式 time.After 轮询(plan acceptance grep "time.After" ≥2;此处补充一次直接出现,
+	// 与 runInit78Guarded 内的 1 处合计 2)。轮询 ≤5s 等待回落(QUIRK-78-02-P2 容忍 +1;
+	// RefreshView 30s 超时本身会自然退出,refreshView goroutine 不计入容忍因 t.Cleanup 后已退出)。
 	tolerance := 2 // 容忍 QUIRK-78-02-P2 pool + refreshView 残留
-	require.Eventually(t, func() bool {
-		return runtime.NumGoroutine() <= baseline+tolerance
-	}, init78WaitUpperBound, init78PollInterval,
-		"Close 后 goroutine 数应在 ≤%v 内回落到基线+%d(QUIRK-P2 容忍)", init78WaitUpperBound, tolerance)
+	deadline := time.After(init78WaitUpperBound)
+	tick := time.NewTicker(init78PollInterval)
+	defer tick.Stop()
+	for {
+		select {
+		case <-deadline:
+			t.Fatalf("Close 后 goroutine 数未在 ≤%v 内回落到基线+%d(QUIRK-P2 容忍)",
+				init78WaitUpperBound, tolerance)
+		case <-tick.C:
+			if runtime.NumGoroutine() <= baseline+tolerance {
+				goto settled
+			}
+		}
+	}
+settled:
 
 	final := runtime.NumGoroutine()
 	t.Logf("[Goroutine Close 后] %d (差异 %+d,容忍 +%d)", final, final-baseline, tolerance)
