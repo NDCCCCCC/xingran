@@ -356,3 +356,173 @@ func md5Sum(data []byte) string {
 	sum := md5.Sum(data)
 	return hex.EncodeToString(sum[:])
 }
+
+// =====================================================================
+// Task 4: preGenerateForConfig + PreGeneratePool + GetFromCachePool + IncrementUseCount
+// =====================================================================
+
+// TestBg78_PreGenerateForConfig_NoBackground 无匹配背景行 → 早退分支。
+// 内部 err 即便发生也返回 nil(preGenerateForConfig 在循环里静默吞,只有 len==0 早退)。
+func TestBg78_PreGenerateForConfig_NoBackground(t *testing.T) {
+	ctx := context.Background()
+	svc, _, _ := newBg78(t)
+
+	// 空表 → 早退
+	require.NoError(t, svc.preGenerateForConfig(ctx, "circle", 1))
+
+	// 有 1 行但 shape/difficulty 不匹配 → 早退
+	require.NoError(t, svc.GetDB().Exec(
+		`INSERT INTO sys_captcha_background (id, file_name, file_path, piece_shape, difficulty_level, status)
+		 VALUES ('bg-wrong', 'w.png', '/x', 'square', 2, ?)`,
+		models.CaptchaBgEnabled).Error)
+	require.NoError(t, svc.preGenerateForConfig(ctx, "circle", 1))
+}
+
+// TestBg78_PreGenerateForConfig_Success 预置真 PNG 背景 → 缓存池键被写入,生成条目含完整 map。
+func TestBg78_PreGenerateForConfig_Success(t *testing.T) {
+	ctx := context.Background()
+	svc, db, mem := newBg78(t)
+
+	pngBytes, pngPath := makeBG78PNG(t, 300, 150)
+	require.NoError(t, db.Exec(
+		`INSERT INTO sys_captcha_background
+		 (id, file_name, file_path, file_size, piece_shape, difficulty_level, status, use_count)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		"bg-preg-1", "preg.png", pngPath, int64(len(pngBytes)),
+		"circle", 1, models.CaptchaBgEnabled, 0).Error)
+
+	require.NoError(t, svc.preGenerateForConfig(ctx, "circle", 1))
+
+	// 缓存池 counter > 0 → 已写入
+	counterStr, err := mem.Get(ctx, "captcha:cache:pool:circle:1:counter")
+	require.NoError(t, err, "缓存池 counter 应已写入")
+	assert.NotEqual(t, "", counterStr)
+	assert.NotEqual(t, "0", counterStr, "至少一个背景预生成后 counter > 0")
+
+	// 直接经 GetFromCachePool 取出一条,断言 map 含完整字段
+	item, err := svc.GetFromCachePool(ctx, "circle", 1)
+	require.NoError(t, err)
+	require.NotNil(t, item)
+	assert.Contains(t, item, "sliderImg")
+	assert.Contains(t, item, "pieceImg")
+	assert.Contains(t, item, "xPos")
+	assert.Contains(t, item, "yPos")
+	assert.Contains(t, item, "token")
+}
+
+// TestBg78_PreGenerateForConfig_BadFile 背景行 file_path 指向不存在文件 →
+// LoadBackgroundFromFile 失败的容错分支(预生成循环里静默 continue,不 panic)。
+func TestBg78_PreGenerateForConfig_BadFile(t *testing.T) {
+	ctx := context.Background()
+	svc, db, _ := newBg78(t)
+
+	require.NoError(t, db.Exec(
+		`INSERT INTO sys_captcha_background
+		 (id, file_name, file_path, piece_shape, difficulty_level, status, use_count)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		"bg-bad-1", "ghost.png", filepath.Join(t.TempDir(), "ghost.png"),
+		"circle", 1, models.CaptchaBgEnabled, 0).Error)
+
+	// 不 panic + 返回 nil(内部错误静默吞)
+	assert.NotPanics(t, func() {
+		require.NoError(t, svc.preGenerateForConfig(ctx, "circle", 1))
+	})
+}
+
+// TestBg78_PreGeneratePool_AllShapes 4 shape × 3 difficulty 双循环走完 →
+// 不 panic 且至少一个配置的缓存池非空(需预置对应 shape/difficulty 背景行)。
+func TestBg78_PreGeneratePool_AllShapes(t *testing.T) {
+	ctx := context.Background()
+	svc, db, mem := newBg78(t)
+
+	// 预置至少 1 个 circle/1 背景(确保 PreGeneratePool 后该形状缓存池非空)
+	pngBytes, pngPath := makeBG78PNG(t, 200, 100)
+	require.NoError(t, db.Exec(
+		`INSERT INTO sys_captcha_background
+		 (id, file_name, file_path, file_size, piece_shape, difficulty_level, status, use_count)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		"bg-pool", "pool.png", pngPath, int64(len(pngBytes)),
+		"circle", 1, models.CaptchaBgEnabled, 0).Error)
+
+	// 不 panic(全部 shape × difficulty 走完,内部错误静默吞)
+	assert.NotPanics(t, func() {
+		require.NoError(t, svc.PreGeneratePool(ctx))
+	})
+
+	// circle/1 池被填充(counter > 0)
+	counter, err := mem.Get(ctx, "captcha:cache:pool:circle:1:counter")
+	require.NoError(t, err)
+	assert.NotEqual(t, "", counter, "circle/1 池被填充")
+}
+
+// TestBg78_GetFromCachePool_MissAndHit 空池 / 命中 / 坏 JSON 三态。
+func TestBg78_GetFromCachePool_MissAndHit(t *testing.T) {
+	ctx := context.Background()
+	svc, _, mem := newBg78(t)
+
+	// 空池 → "cache pool is empty"
+	_, err := svc.GetFromCachePool(ctx, "circle", 1)
+	assert.ErrorContains(t, err, "cache pool is empty")
+
+	// 计数器存在但为 0 → "cache pool is empty"
+	require.NoError(t, mem.Set(ctx, "captcha:cache:pool:circle:1:counter", "0", time.Minute))
+	_, err = svc.GetFromCachePool(ctx, "circle", 1)
+	assert.ErrorContains(t, err, "cache pool is empty")
+
+	// 预置 counter=1 + 合法 JSON 池 → 命中返回,counter 自减
+	require.NoError(t, mem.Set(ctx, "captcha:cache:pool:circle:1:counter", "1", time.Minute))
+	require.NoError(t, mem.SetJSON(ctx, "captcha:cache:pool:circle:1:1", map[string]interface{}{
+		"sliderImg": "data:image/png;base64,X",
+		"pieceImg":  "data:image/png;base64,Y",
+		"xPos":      10,
+		"yPos":      20,
+		"token":     "tk",
+		"shape":     "circle",
+		"difficulty": 1,
+	}, time.Minute))
+
+	item, err := svc.GetFromCachePool(ctx, "circle", 1)
+	require.NoError(t, err)
+	assert.Equal(t, "tk", item["token"])
+
+	// counter 自减到 0 → key 被删
+	_, err = mem.Get(ctx, "captcha:cache:pool:circle:1:counter")
+	assert.Error(t, err, "counter 归零后 key 被删")
+
+	// 坏 JSON → Unmarshal 失败分支
+	require.NoError(t, mem.Set(ctx, "captcha:cache:pool:heart:2:counter", "1", time.Minute))
+	require.NoError(t, mem.Set(ctx, "captcha:cache:pool:heart:2:1", "this is not JSON {", time.Minute))
+	_, err = svc.GetFromCachePool(ctx, "heart", 2)
+	assert.Error(t, err, "坏 JSON → Unmarshal 错误")
+}
+
+// TestBg78_IncrementUseCount 存在行 → use_count +1 且 last_used_at 更新;
+// 不存在 id → 不报错(GORM UpdateColumn 语义)。
+func TestBg78_IncrementUseCount(t *testing.T) {
+	svc, db, _ := newBg78(t)
+
+	require.NoError(t, db.Exec(
+		`INSERT INTO sys_captcha_background
+		 (id, file_name, file_path, piece_shape, difficulty_level, status, use_count)
+		 VALUES ('bg-inc', 'i.png', '/x', 'circle', 1, ?, 0)`,
+		models.CaptchaBgEnabled).Error)
+
+	// 存在行 → use_count + 1
+	require.NoError(t, svc.IncrementUseCount("bg-inc"))
+	var useCount int
+	require.NoError(t, db.Raw(`SELECT use_count FROM sys_captcha_background WHERE id = ?`, "bg-inc").Scan(&useCount).Error)
+	assert.Equal(t, 1, useCount)
+
+	// 再 + 1 → 2
+	require.NoError(t, svc.IncrementUseCount("bg-inc"))
+	require.NoError(t, db.Raw(`SELECT use_count FROM sys_captcha_background WHERE id = ?`, "bg-inc").Scan(&useCount).Error)
+	assert.Equal(t, 2, useCount)
+
+	// last_used_at 被更新
+	var lastUsed *time.Time
+	require.NoError(t, db.Raw(`SELECT last_used_at FROM sys_captcha_background WHERE id = ?`, "bg-inc").Scan(&lastUsed).Error)
+	require.NotNil(t, lastUsed, "last_used_at 必填")
+
+	// 不存在 id → GORM UpdateColumn 不报错(零行影响)
+	assert.NoError(t, svc.IncrementUseCount("ghost-id"))
+}
