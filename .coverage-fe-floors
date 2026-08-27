@@ -54,8 +54,8 @@ components/layout	14.1
 components/CronSelector	7.0
 components/captcha	10.5
 components/operations	0.8
-components/network	0.0
-components/reconciliation	0.0
+components/network	50.1
+components/reconciliation	21.0
 components/DeptTree	0.0
 components/IconSelect	0.0
 components/NoticeDetail	0.0
