@@ -12,12 +12,13 @@ import (
 
 // MemoryCache 内存缓存实现
 type MemoryCache struct {
-	items    map[string]*CacheItem
-	mutex    sync.RWMutex
-	maxSize  int
-	stopChan chan struct{}
-	hits     int64 // 命中次数
-	misses   int64 // 未命中次数
+	items     map[string]*CacheItem
+	mutex     sync.RWMutex
+	maxSize   int
+	stopChan  chan struct{}
+	stopOnce  sync.Once
+	hits      int64 // 命中次数
+	misses    int64 // 未命中次数
 }
 
 // NewMemoryCache 创建内存缓存实例
@@ -309,8 +310,11 @@ func (m *MemoryCache) FlushDB(ctx context.Context) error {
 
 // Close 关闭缓存
 func (m *MemoryCache) Close() error {
-	close(m.stopChan)
-	return nil
+	var err error
+	m.stopOnce.Do(func() {
+		close(m.stopChan)
+	})
+	return err
 }
 
 // MGetJSON 批量获取JSON对象
