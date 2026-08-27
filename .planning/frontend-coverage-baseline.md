@@ -16,6 +16,7 @@
 | 2026-08-24 | Phase 83-03 lib 全清 | 11.11 | 21574 | 2397 | 15 | 3d57a8e | 83-03 | lib 10.4 | lib 86.0 |
 | 2026-08-24 | Phase 83-04 hooks+store 全清 | 18.03 | 21574 | 3890 | 15 | 7b2d22a | 83-04 | hooks 7.6 / store 4.3 | hooks 91.7 / store 95.0 |
 | 2026-08-27 | Phase 84-01a shared 组件全清 | 18.91 | 21574 | 4081 | 15 | c76946a | 84-01a | shared 0.0 | shared 21.9 |
+| 2026-08-27 | Phase 84-01b dashboard 测试落地 | 19.08 | 21574 | 4116 | 15 | c8dd140 | 84-01b | dashboard 0.0 | dashboard 2.1 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
