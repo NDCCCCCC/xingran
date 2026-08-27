@@ -1211,3 +1211,203 @@ func TestSync78_SyncUsers_DBError(t *testing.T) {
 	err = svc.syncUsers(ctx, cfg, entries)
 	assert.Error(t, err, "DROP TABLE 后应返回包装错误")
 }
+
+// ============================================================================
+// Task 4: syncGroupMembers + updateSyncLog + SyncDataByID / SyncData 入口
+// ============================================================================
+
+// TestSync78_SyncGroupMembers_FullDiff 覆盖 syncGroupMembers 全差异同步:
+// 预置 3 行(A/B/C)+ 传入 [A,B,D] → A/B 保留,C 移除,D 新增,最终 3 行。
+//
+// sync.go:616-642 实现:全删全增(syncGroupMembers 无 in-place 差异算法,
+// 这是 sync.go 当前行为)。无据源语义按现行为断言(D-78-05c)。
+func TestSync78_SyncGroupMembers_FullDiff(t *testing.T) {
+	svc, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+	groupDN := "CN=G1,OU=Groups,DC=example,DC=com"
+
+	// 预置 A/B/C 三行(用 Unscoped 绕过软删除过滤)
+	pre := []models.ADGroupMember{
+		{ADConfigID: cfg.ID, GroupDN: groupDN, UserDN: "CN=A,DC=example,DC=com"},
+		{ADConfigID: cfg.ID, GroupDN: groupDN, UserDN: "CN=B,DC=example,DC=com"},
+		{ADConfigID: cfg.ID, GroupDN: groupDN, UserDN: "CN=C,DC=example,DC=com"},
+	}
+	for i := range pre {
+		pre[i].ID = uuid.NewString()
+		require.NoError(t, db.Create(&pre[i]).Error)
+	}
+
+	// 传入 [A,B,D](应保留 A/B,移除 C,新增 D)
+	require.NoError(t, svc.syncGroupMembers(ctx, cfg, groupDN, []string{
+		"CN=A,DC=example,DC=com",
+		"CN=B,DC=example,DC=com",
+		"CN=D,DC=example,DC=com",
+	}))
+
+	// 最终 3 行
+	var liveMembers []models.ADGroupMember
+	require.NoError(t, db.Where("ad_config_id = ? AND group_dn = ?", cfg.ID, groupDN).Find(&liveMembers).Error)
+	assert.Equal(t, 3, len(liveMembers))
+	userDNs := make([]string, 0, len(liveMembers))
+	for _, m := range liveMembers {
+		userDNs = append(userDNs, m.UserDN)
+	}
+	assert.ElementsMatch(t, []string{"CN=A,DC=example,DC=com", "CN=B,DC=example,DC=com", "CN=D,DC=example,DC=com"}, userDNs,
+		"A/B 保留,C 移除,D 新增")
+
+	// 空 memberDNs → 全部清空
+	require.NoError(t, svc.syncGroupMembers(ctx, cfg, groupDN, []string{}))
+	var remaining []models.ADGroupMember
+	require.NoError(t, db.Where("ad_config_id = ? AND group_dn = ?", cfg.ID, groupDN).Find(&remaining).Error)
+	assert.Empty(t, remaining, "空 memberDNs → 清空")
+
+	// DB 错误:DROP TABLE → 包装错误返回
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	_, err = sqlDB.Exec(`DROP TABLE sys_ad_group_member`)
+	require.NoError(t, err)
+	err = svc.syncGroupMembers(ctx, cfg, groupDN, []string{"CN=X,DC=example,DC=com"})
+	assert.Error(t, err, "DROP TABLE 后应返回包装错误")
+}
+
+// TestSync78_UpdateSyncLog_StatusMatrix 覆盖 updateSyncLog 状态机:
+//   - Success(无 errMsg):4 个 count + end_time 落库
+//   - Failed(errMsg 非空):**当前生产 bug** — sync.go:680 使用 key `error_message`,
+//     但 models.ADSyncLog 的列映射是 `column:error_msg`,SQL UPDATE 因列名不匹配
+//     整句失败,导致 sync_status/ou_count 等所有字段都未被写入。
+//     D-78-05c "按现行为断言"+ D-78-10 "无据不改":本测试断言该失败行为,
+//     留下 fail-path 兜底而非修复 sync.go。
+//   - 不存在的 logID:函数无返回值,静默(sync.go:655-657 查询失败 fallback)
+func TestSync78_UpdateSyncLog_StatusMatrix(t *testing.T) {
+	svc, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+
+	// 1) 预置一条 Running 日志(Success 测试)
+	now := time.Now()
+	logRunning := &models.ADSyncLog{
+		ADConfigID: cfg.ID,
+		SyncType:   models.ADSyncTypeFull,
+		SyncStatus: models.ADSyncStatusRunning,
+		StartTime:  now.Add(-10 * time.Second),
+	}
+	logRunning.ID = uuid.NewString()
+	logRunning.CreatedAt = now
+	require.NoError(t, db.Create(logRunning).Error)
+
+	// Success:4 count + end_time(errMsg="" → 不走 error_message 分支)
+	svc.updateSyncLog(ctx, logRunning.ID, models.ADSyncStatusSuccess, 3, 5, 10, 2, "")
+
+	var afterSuccess models.ADSyncLog
+	require.NoError(t, db.Where("id = ?", logRunning.ID).First(&afterSuccess).Error)
+	assert.Equal(t, models.ADSyncStatusSuccess, afterSuccess.SyncStatus)
+	assert.Equal(t, 3, afterSuccess.OUCount)
+	assert.Equal(t, 5, afterSuccess.GroupCount)
+	assert.Equal(t, 10, afterSuccess.UserCount)
+	assert.Equal(t, 2, afterSuccess.ComputerCount)
+	require.NotNil(t, afterSuccess.EndTime, "Success 应写 end_time")
+	assert.Equal(t, 0, afterSuccess.ErrorCount, "Success → error_count=0")
+	assert.Empty(t, afterSuccess.ErrorMsg)
+
+	// 2) 预置另一条 Running 日志(Failed 测试)
+	logFailed := &models.ADSyncLog{
+		ADConfigID: cfg.ID,
+		SyncType:   models.ADSyncTypeIncremental,
+		SyncStatus: models.ADSyncStatusRunning,
+		StartTime:  now.Add(-20 * time.Second),
+	}
+	logFailed.ID = uuid.NewString()
+	logFailed.CreatedAt = now
+	require.NoError(t, db.Create(logFailed).Error)
+
+	// Failed(errMsg="boom"):文档化 sync.go:680 列名不匹配导致 UPDATE 整句失败
+	svc.updateSyncLog(ctx, logFailed.ID, models.ADSyncStatusFailed, 1, 0, 0, 0, "boom")
+	var afterFailed models.ADSyncLog
+	require.NoError(t, db.Where("id = ?", logFailed.ID).First(&afterFailed).Error)
+	// 现行为:UPDATE 失败(sync.go:687 applogger.Errorf),所有字段维持原值
+	assert.Equal(t, models.ADSyncStatusRunning, afterFailed.SyncStatus,
+		"现行为:sync.go:680 error_message 列名错误导致 UPDATE 失败,sync_status 未写入(D-78-05c)")
+	assert.Equal(t, 0, afterFailed.OUCount, "现行为:UPDATE 失败,count 字段未写入")
+	assert.Equal(t, 0, afterFailed.ErrorCount, "现行为:UPDATE 失败,error_count 未写入")
+	assert.Empty(t, afterFailed.ErrorMsg, "现行为:UPDATE 失败,error_msg 未写入")
+	assert.Nil(t, afterFailed.EndTime, "现行为:UPDATE 失败,end_time 未写入")
+
+	// 3) 不存在的 logID:无返回值,静默(sync.go:655-657 查询失败 fallback)
+	//     此处函数直接调用,不期望 panic;DB 无变化
+	assert.NotPanics(t, func() {
+		svc.updateSyncLog(ctx, "non-existent-log-id", models.ADSyncStatusSuccess, 0, 0, 0, 0, "")
+	}, "不存在 logID 不应 panic(sync.go:655-657 静默语义)")
+}
+
+// TestSync78_SyncDataByID_ConfigNotFound 覆盖 SyncDataByID 入口的两条
+// "未启用配置"分支(空 sys_ad_config / status != models.ADConfigStatusEnabled)。
+func TestSync78_SyncDataByID_ConfigNotFound(t *testing.T) {
+	_, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	svc := &SyncService{db: db, pool: NewAccountPool(db, nil)}
+	ctx := context.Background()
+
+	// 1) 空 sys_ad_config
+	_, err := svc.SyncDataByID(ctx, "missing-config-id", string(models.ADSyncTypeFull))
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "AD配置不存在或未启用", "sync.go:51 错误文案")
+
+	// 2) 预置 status != Enabled 配置(disabled)
+	disabledCfg := &models.ADConfig{
+		ConfigName: "disabled-cfg",
+		Status:    models.ADConfigStatusDisabled,
+	}
+	disabledCfg.ID = uuid.NewString()
+	require.NoError(t, db.Create(disabledCfg).Error)
+
+	_, err = svc.SyncDataByID(ctx, disabledCfg.ID, string(models.ADSyncTypeFull))
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "AD配置不存在或未启用",
+		"sync.go:50 status=Enabled 过滤后命中 disabled → 报不存在")
+}
+
+// TestSync78_SyncDataByID_Enabled_DelegatesToSyncData 验证 SyncDataByID
+// 在"启用配置 + 空账号池"路径下,委派到 SyncData → syncDataInternal →
+// FailoverClient 失败,返回账号池不可用错误。
+//
+// 这同时覆盖 sync.go:48-54 的"启用配置 happy 查询分支"。
+func TestSync78_SyncDataByID_Enabled_DelegatesToSyncData(t *testing.T) {
+	_, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	svc := &SyncService{db: db, pool: NewAccountPool(db, nil)}
+	ctx := context.Background()
+
+	// 预置启用配置
+	cfg := insertConfig78(t, db, "")
+
+	// sys_ad_service_accounts 空表 → FailoverClient.ListAvailable 返回空 →
+	// syncDataInternal 返回 ErrAllAccountsUnavailable + "AD 账号池无可用账号" 包装
+	res, err := svc.SyncDataByID(ctx, cfg.ID, string(models.ADSyncTypeFull))
+	assert.Error(t, err, "空账号池应报错")
+	assert.Nil(t, res, "错误时 result 应为 nil(syncDataInternal fail 时 v==nil)")
+	assert.Contains(t, err.Error(), "AD 账号池无可用账号", "sync.go:127 包装文案")
+}
+
+// TestSync78_SyncData_ErrorAndNilPassthrough 验证 SyncData 公开入口的
+// 错误透传 + nil result 透传路径。singleflight 合并语义由
+// sync_singleflight_test.go 独立覆盖,本测试不复用。
+func TestSync78_SyncData_ErrorAndNilPassthrough(t *testing.T) {
+	_, db := newSyncSvc78(t)
+	defer closeDB(t, db)
+	svc := &SyncService{db: db, pool: NewAccountPool(db, nil)}
+	ctx := context.Background()
+	cfg := insertConfig78(t, db, "")
+
+	// 错误透传:SyncData → singleflight.Do → syncDataInternal → 空池失败
+	res, err := svc.SyncData(ctx, cfg, string(models.ADSyncTypeFull))
+	assert.Nil(t, res)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "AD 账号池无可用账号")
+
+	// 注意:syncDataInternal 失败路径下,sync.go:73 的 v==nil 分支被走到
+	// (因为 fc.ExecuteWithFailover 失败时返回 nil, *SyncResult);SyncData
+	// 检测到 v==nil 返回 (nil, err)。此用例已覆盖该 nil result 透传。
+}
