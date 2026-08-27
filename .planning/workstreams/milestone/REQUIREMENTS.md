@@ -29,7 +29,7 @@ sources:
 
 - [ ] **BLOCK-01**: `internal/services/operations` ≥70%(缺 ~330;全 (c) 类纯补测试:workstation_device 445 + excel_service 399,sqlite+excelize,零基建依赖可先行)
 - [x] **BLOCK-02**: `internal/agent/server` ≥70%(缺 ~295;platformStrategy 接口 + backendURL 参数 + httptest 先例)
-- [ ] **BLOCK-03**: `internal/core` ≥70%(缺 ~224 直补 + Init 链 302(miniredis+sqlite config 分支)+ captcha 98 纯补;QUIRK-01 修复连锁解锁真实 GenerateCaptcha 链路额外受益)
+- [x] **BLOCK-03**: `internal/core` ≥70%(基线 43.7% → 78-01 收 54.2%(captcha/metrics 链) → 78-02 收 82.5%(Init/Close 装配链 + 各阶段产物);Init 链 302 stmts + Close 60 stmts 由 78-02 全覆盖,核心链 8 initXxx 阶段 + Close 顺序/幂等/半装配 + reaper/RPA 全锁;实测 24 TestInit78_ 用例全绿,QUIRK-78-02-P1(二次 Close panic)+ P2(DeviceConnectionPool 1 goroutine 泄漏)记入 Phase 79/80 长尾)
 - [ ] **BLOCK-04**: `internal/device` ≥70%(缺 ~387;INFRA-02 工厂重构 + FileTransport 照搬解锁 346 + x/crypto/ssh fake 补 Open/transport)
 - [ ] **BLOCK-05**: `internal/services/addomain` ≥70%(缺 ~1165;两段式:sqlite 段 ~535(sync 管道/computer.go,`[]*ldap.Entry` 驱动)+ Iface stub 段(ldap_client 159 + failover 入口))
 
@@ -67,7 +67,7 @@ sources:
 | INFRA-05 | Phase 76 | 76-05 | Pending |
 | BLOCK-01 | Phase 77 | 77-01, 77-02, 77-03 | Pending |
 | BLOCK-02 | Phase 77 | 77-04, 77-05 | Pending |
-| BLOCK-03 | Phase 78 | TBD | Pending |
+| BLOCK-03 | Phase 78 | 0fd3694 | Done (78-02) |
 | BLOCK-04 | Phase 78 | TBD | Pending |
 | BLOCK-05 | Phase 78 | TBD | Pending |
 | TAIL-01 | Phase 79 | TBD | Pending |

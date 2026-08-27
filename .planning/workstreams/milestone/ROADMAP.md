@@ -311,7 +311,7 @@ Phase 77-80 全部完成
 | Phase 75 QUIRK 行为修正 | SHIPPED | 6/6 | QUIRK-01..03 | 2026-08-23 | 2026-08-23 |
 | Phase 76 测试基建落地 | IN PROGRESS (planned) | 0/5 | INFRA-01..05 | 2026-08-23 | - |
 | Phase 77 阻塞包·零基建 | Not started | 0/5 | BLOCK-01, BLOCK-02 | - | - |
-| Phase 78 阻塞包·基建解锁 | Not started | 0/7 (建议) | BLOCK-03..05 | - | - |
+| Phase 78 阻塞包·基建解锁 | In progress | 2/7 (78-01+78-02 done; 78-03..07 pending) | BLOCK-03..05 | - | - |
 | Phase 79 长尾·services root | Not started | 0/6 (建议) | TAIL-01 | - | - |
 | Phase 80 长尾·scheduler+碎包 | Not started | 0/5 (建议) | TAIL-02, TAIL-03 | - | - |
 | Phase 81 收口·ratchet+gate | Not started | 0/3 (建议) | GATE-01..03 | - | - |
