@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 )
 
@@ -731,4 +733,142 @@ func seedMhq7905At(t *testing.T, db *gorm.DB, svc *macHistoryQueryServiceImpl, d
 	}
 	require.NoError(t, db.Create(&records).Error)
 	_ = svc
+}
+
+// -------------------------------------------------------------------------
+// Task 3: ExportHistory(:664-792)xlsx 字节断言
+// -------------------------------------------------------------------------
+
+// mhq7905ExportWindow 导出窗口(覆盖全部种子,跨度 < 30 天上限)。
+func mhq7905ExportWindow() (string, string) {
+	return mhq7905Time(8, 0, 0).Format(time.RFC3339), mhq7905Time(12, 0, 0).Format(time.RFC3339)
+}
+
+// TestMhq7905_ExportHistory_Happy 导出全量种子 → zip magic("PK")+ excelize 内容断言。
+func TestMhq7905_ExportHistory_Happy(t *testing.T) {
+	ctx := context.Background()
+	svc, db := newMhq7905(t)
+	seedMhq7905(t, db, 3)
+
+	start, end := mhq7905ExportWindow()
+	var buf bytes.Buffer
+	require.NoError(t, svc.ExportHistory(ctx, &MACHistoryListQuery{StartTime: start, EndTime: end}, &buf))
+	require.Greater(t, buf.Len(), 0, "导出应有字节产出")
+	assert.True(t, bytes.HasPrefix(buf.Bytes(), []byte("PK")), "xlsx 即 zip,字节前缀应为 PK")
+
+	xf, err := excelize.OpenReader(bytes.NewReader(buf.Bytes()))
+	require.NoError(t, err, "导出字节应可被 excelize 重新打开")
+	defer func() { _ = xf.Close() }()
+
+	sheetList := xf.GetSheetList()
+	require.Len(t, sheetList, 1, "应只剩一个工作表(MAC 历史,Sheet1 已删)")
+	sheetName := sheetList[0]
+	assert.Equal(t, "MAC 历史", sheetName)
+
+	rows, err := xf.GetRows(sheetName)
+	require.NoError(t, err)
+	require.Len(t, rows, 4, "1 表头 + 3 数据行")
+	assert.Equal(t, []string{"时间", "MAC", "设备", "端口", "VLAN", "事件类型", "首次出现", "最后出现", "采集时间"}, rows[0])
+
+	// 排序 first_seen DESC:首条数据行应是最后一条种子(AA:BB:CC:00:00:02)
+	assert.Equal(t, "AA:BB:CC:00:00:02", rows[1][1], "首条数据行应为最新种子(DESC)")
+	assert.Equal(t, "dev-7905", rows[1][2])
+	assert.Equal(t, "appeared", rows[1][5], "事件类型列")
+	assert.Equal(t, "100", rows[1][4], "VLAN 列取 VLANID 数值形态")
+}
+
+// TestMhq7905_ExportHistory_Empty 空数据集 → 仅表头(SUMMARY 锁定口径)。
+func TestMhq7905_ExportHistory_Empty(t *testing.T) {
+	ctx := context.Background()
+	svc, _ := newMhq7905(t)
+
+	start, end := mhq7905ExportWindow()
+	var buf bytes.Buffer
+	require.NoError(t, svc.ExportHistory(ctx, &MACHistoryListQuery{StartTime: start, EndTime: end}, &buf))
+	require.Greater(t, buf.Len(), 0)
+
+	xf, err := excelize.OpenReader(bytes.NewReader(buf.Bytes()))
+	require.NoError(t, err)
+	defer func() { _ = xf.Close() }()
+	rows, err := xf.GetRows(xf.GetSheetList()[0])
+	require.NoError(t, err)
+	require.Len(t, rows, 1, "空数据集应仅剩表头行")
+	assert.Equal(t, "MAC", rows[0][1])
+}
+
+// TestMhq7905_ExportHistory_WithFilters 过滤参数只导出命中行。
+func TestMhq7905_ExportHistory_WithFilters(t *testing.T) {
+	ctx := context.Background()
+	svc, db := newMhq7905(t)
+	deviceID := seedMhq7905(t, db, 6)
+	start, end := mhq7905ExportWindow()
+
+	t.Run("interface_filter", func(t *testing.T) {
+		var buf bytes.Buffer
+		require.NoError(t, svc.ExportHistory(ctx, &MACHistoryListQuery{
+			DeviceID: deviceID, InterfaceName: "GE0/0/2", StartTime: start, EndTime: end,
+		}, &buf))
+		xf, err := excelize.OpenReader(bytes.NewReader(buf.Bytes()))
+		require.NoError(t, err)
+		defer func() { _ = xf.Close() }()
+		rows, err := xf.GetRows(xf.GetSheetList()[0])
+		require.NoError(t, err)
+		require.Len(t, rows, 3, "1 表头 + 2 条 GE0/0/2 命中行")
+		assert.Equal(t, "GE0/0/2", rows[1][3])
+		assert.Equal(t, "GE0/0/2", rows[2][3])
+	})
+
+	t.Run("mac_filter", func(t *testing.T) {
+		var buf bytes.Buffer
+		require.NoError(t, svc.ExportHistory(ctx, &MACHistoryListQuery{
+			MAC: "AA:BB:CC:00:00:04", StartTime: start, EndTime: end,
+		}, &buf))
+		xf, err := excelize.OpenReader(bytes.NewReader(buf.Bytes()))
+		require.NoError(t, err)
+		defer func() { _ = xf.Close() }()
+		rows, err := xf.GetRows(xf.GetSheetList()[0])
+		require.NoError(t, err)
+		require.Len(t, rows, 2, "1 表头 + 1 条 MAC 命中行")
+		assert.Equal(t, "AA:BB:CC:00:00:04", rows[1][1])
+	})
+}
+
+// TestMhq7905_ExportHistory_InvalidReq 非法请求分支(:664-695 校验段)。
+func TestMhq7905_ExportHistory_InvalidReq(t *testing.T) {
+	ctx := context.Background()
+	svc, _ := newMhq7905(t)
+	start, end := mhq7905ExportWindow()
+
+	t.Run("invalid_mac", func(t *testing.T) {
+		var buf bytes.Buffer
+		err := svc.ExportHistory(ctx, &MACHistoryListQuery{MAC: "ZZ:00:00:00:00:01", StartTime: start, EndTime: end}, &buf)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "MAC地址验证失败")
+		assert.Zero(t, buf.Len(), "校验失败不应产出字节")
+	})
+
+	t.Run("invalid_device_id", func(t *testing.T) {
+		var buf bytes.Buffer
+		err := svc.ExportHistory(ctx, &MACHistoryListQuery{DeviceID: "not-a-uuid", StartTime: start, EndTime: end}, &buf)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "无效的设备ID格式")
+	})
+
+	t.Run("range_over_30_days", func(t *testing.T) {
+		// UI-02 锁定:导出强制 30 天上限
+		var buf bytes.Buffer
+		err := svc.ExportHistory(ctx, &MACHistoryListQuery{
+			StartTime: mhq7905Time(1, 0, 0).Format(time.RFC3339),
+			EndTime:   mhq7905Time(1, 0, 0).AddDate(0, 2, 0).Format(time.RFC3339),
+		}, &buf)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "导出范围最大 30 天")
+	})
+
+	t.Run("bad_time_format", func(t *testing.T) {
+		var buf bytes.Buffer
+		err := svc.ExportHistory(ctx, &MACHistoryListQuery{StartTime: "soon-ish", EndTime: end}, &buf)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "无效的开始时间格式")
+	})
 }
