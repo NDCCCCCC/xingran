@@ -132,6 +132,8 @@ None currently. v1.22 是纯前端 design-system 层重构,无后端 API / 数�
 
 | Quick ID | Description | Date | Commit | Plan |
 |----------|-------------|------|--------|------|
+| quirk-p1 | MemoryCache.Close() sync.Once 幂等化 | 2026-08-27 | `4282983` | PLAN.md |
+| quirk-p2 | DeviceConnectionPool.Close() ticker.Stop 顺序修正,goroutine 泄漏修复 | 2026-08-27 | `05afbc8` | PLAN.md |
 | 260812-wu5 | clean constants dead code and unify pagination constants | 2026-08-12 | 759a65a | [260812-wu5-clean-constants-dead-code-and-unify-pagi](./quick/260812-wu5-clean-constants-dead-code-and-unify-pagi/) |
 | 260814-164 | 修复 RPA Worker 注册主键 NULL(23502) + 菜单接口 N+1(context canceled 500) | 2026-08-14 | f0d0a1f / 4c2a900 | [260814-164-fix-rpa-pk-menu-n1](./quick/260814-164-fix-rpa-pk-menu-n1/) |
 | 260814-211 | 修复 workstation/list uuid=text 类型错误(42883) + dept.leader 非 uuid 查询防御(22P02) | 2026-08-14 | c9ab875 / 08d97ed | [260814-211-fix-workstation-list-uuid-text-cast-dept](./quick/260814-211-fix-workstation-list-uuid-text-cast-dept/) |
