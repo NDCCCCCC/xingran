@@ -140,6 +140,18 @@ export function resetApiMocks(): void {
 }
 
 /**
+ * 给四个通用 verb 回退 spy 统一配 mockResolvedValue。
+ * 页面渲染测试常并发打多个未登记端点(statistics/tree/...)——统一给安全空
+ * 结构,避免逐端点登记。resetApiMocks 会清掉本配置。
+ */
+export function setGenericFallback(response: unknown): void {
+  genericSpies.get.mockResolvedValue(response);
+  genericSpies.post.mockResolvedValue(response);
+  genericSpies.put.mockResolvedValue(response);
+  genericSpies.del.mockResolvedValue(response);
+}
+
+/**
  * 生成可直接作为 vi.mock("@/lib/api", ...) 工厂返回值的模块替身。
  *
  * 覆盖面:
