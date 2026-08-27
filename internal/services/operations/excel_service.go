@@ -1613,9 +1613,6 @@ func (s *ExcelService) writeInstructions(f *excelize.File, sheetName string, col
 	// 设置第一列宽度以容纳说明文字
 	_ = f.SetColWidth(sheetName, "A", "A", 60)
 
-	// 写入说明文字（跨所有列合并）
-	lastCol, _ := excelize.CoordinatesToCellName(len(columns), 1)
-
 	for i, text := range instructions {
 		row := i + 1
 		if text == "" {
@@ -1623,8 +1620,14 @@ func (s *ExcelService) writeInstructions(f *excelize.File, sheetName string, col
 		}
 
 		startCell, _ := excelize.CoordinatesToCellName(1, row)
+		// QUIRK-77-2 修复: 合并区间锚点必须按行逐次计算。原实现把 end 锚点固定为
+		// 第 1 行 (CoordinatesToCellName(len(columns), 1)),当说明多于一行时第二次
+		// MergeCell 变成 A{row}:M1 的跨行巨型合并 —— excelize 会清空区间内非锚点
+		// 单元格,首个说明文本被吞掉,只剩末行说明,与上方"逐行写样式/逐行设行高"
+		// 的设计意图相悖。
+		endCol, _ := excelize.CoordinatesToCellName(len(columns), row)
 		// 合并单元格以显示完整说明
-		if err := f.MergeCell(sheetName, startCell, lastCol); err != nil {
+		if err := f.MergeCell(sheetName, startCell, endCol); err != nil {
 			logger.Debugf("合并单元格失败: %v", err)
 			continue
 		}
