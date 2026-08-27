@@ -89,12 +89,23 @@ type smtpConversation7905 struct {
 	Commands []string
 }
 
-func (c *smtpConversation7905) snapshot() smtpConversation7905 {
+// smtpConversation7905Snapshot 快照值类型(不含锁,避免 vet copylocks)。
+type smtpConversation7905Snapshot struct {
+	MailFrom string
+	RcptTo   []string
+	Data     []byte
+	Commands []string
+}
+
+func (c *smtpConversation7905) snapshot() smtpConversation7905Snapshot {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	cp := smtpConversation7905{MailFrom: c.MailFrom, RcptTo: append([]string(nil), c.RcptTo...), Data: append([]byte(nil), c.Data...)}
-	cp.Commands = append(cp.Commands, c.Commands...)
-	return cp
+	return smtpConversation7905Snapshot{
+		MailFrom: c.MailFrom,
+		RcptTo:   append([]string(nil), c.RcptTo...),
+		Data:     append([]byte(nil), c.Data...),
+		Commands: append([]string(nil), c.Commands...),
+	}
 }
 
 // fakeSMTPServer7905 可编程响应的极简 SMTP 服务(单连接顺序处理)。
