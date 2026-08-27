@@ -35,7 +35,7 @@ sources:
 
 ## 长尾补齐 (TAIL)
 
-- [ ] **TAIL-01**: `internal/services`(root,5202 stmts @11.3%)补 ~3052 — 遗留 cache services 群(dept/role/dict/menu/user/post)+ token blacklist 等,sqlite 可测非结构阻塞(v1.26 从未进 P0/P1/P2 名单的最大隐藏缺口)
+- [x] **TAIL-01**: `internal/services`(root,5202 stmts @11.3%)补 ~3052 → **实测 81.60%**(4245/5202,+3656 covered,超目标 ~600);D-79-01 重锚:legacy cache services 已迁 internal/services/system(不进口径),root 实际 cache 文件 + 全部 45 文件清欠,0 文件 <50%(v1.26 从未进 P0/P1/P2 名单的最大隐藏缺口)
 - [ ] **TAIL-02**: `internal/scheduler`(1103 @3.3%)补 ~736 — 内部 cron 引擎,注册表/执行器可测
 - [ ] **TAIL-03**: 碎包合计 ~831:api/v1(366)+ models(310)+ internal/api(291;装配层仅可测纯函数段)+ pkg/errors(183)+ pkg/cache(161,Redis 路径经 miniredis)+ 其余 <50 的小尾巴(permission/websocket/base/lldp/gormutil/middleware/logger/query)
 
@@ -47,7 +47,7 @@ sources:
 
 ## 收口防线 (GATE)
 
-- [ ] **GATE-01**: 加权平均 ≥70%(43652 stmts 口径;SC-a 收口)
+- [x] **GATE-01**: 加权平均 ≥70%(43652 stmts 口径;SC-a 收口)→ **实测 70.90%**(Phase 79 收口时 check-coverage.sh exit 0;v1.26 SC-a 缺口正式翻转;Phase 81 做最终审计确认)
 - [ ] **GATE-02**: ratcheted floor 解除——core/device/agent-server 达标后删除 check-coverage.sh 对应 P2_RATCHET 行,回落 70% 全量 floor(UP-only 语义闭环)
 - [ ] **GATE-03**: 4 层 gate + PR diff coverage 全程绿;QUIRK 业务变更经 PR diff coverage ≥80% 把关(v1.26 防线不倒退)
 
@@ -60,20 +60,20 @@ sources:
 | QUIRK-01 | Phase 75 | 75-01 | Complete |
 | QUIRK-02 | Phase 75 | 75-02, 75-03, 75-04, 75-05 | Complete |
 | QUIRK-03 | Phase 75 | 75-06 | Complete |
-| INFRA-01 | Phase 76 | 76-01 | Pending |
-| INFRA-02 | Phase 76 | 76-02 | Pending |
-| INFRA-03 | Phase 76 | 76-03 | Pending |
-| INFRA-04 | Phase 76 | 76-04 | Pending |
-| INFRA-05 | Phase 76 | 76-05 | Pending |
-| BLOCK-01 | Phase 77 | 77-01, 77-02, 77-03 | Pending |
-| BLOCK-02 | Phase 77 | 77-04, 77-05 | Pending |
-| BLOCK-03 | Phase 78 | 0fd3694 | Done (78-02) |
-| BLOCK-04 | Phase 78 | TBD | Pending |
-| BLOCK-05 | Phase 78 | TBD | Pending |
-| TAIL-01 | Phase 79 | TBD | Pending |
+| INFRA-01 | Phase 76 | 76-01 | Complete |
+| INFRA-02 | Phase 76 | 76-02 | Complete |
+| INFRA-03 | Phase 76 | 76-03 | Complete |
+| INFRA-04 | Phase 76 | 76-04 | Complete |
+| INFRA-05 | Phase 76 | 76-05 | Complete |
+| BLOCK-01 | Phase 77 | 77-01, 77-02, 77-03 | Complete (operations 83.7%) |
+| BLOCK-02 | Phase 77 | 77-04, 77-05 | Complete (agent/server 90.4%) |
+| BLOCK-03 | Phase 78 | 78-01, 78-02 | Complete (core 82.5%) |
+| BLOCK-04 | Phase 78 | 78-03, 78-04 | Complete (device 82.6%) |
+| BLOCK-05 | Phase 78 | 78-05, 78-06, 78-07 | Partial (addomain 58.0%,差 12pp,Linux BER 接线留 Phase 80/81) |
+| TAIL-01 | Phase 79 | 79-01..79-06 | Complete (services root 81.6%) |
 | TAIL-02 | Phase 80 | TBD | Pending |
 | TAIL-03 | Phase 80 | TBD | Pending |
-| GATE-01 | Phase 81 | TBD | Pending |
+| GATE-01 | Phase 79/81 | 79-06 收口 + 81 审计 | Achieved 70.90%(81 最终确认) |
 | GATE-02 | Phase 81 | TBD | Pending |
 | GATE-03 | Phase 81 | TBD | Pending |
 

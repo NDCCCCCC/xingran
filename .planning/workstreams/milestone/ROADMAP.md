@@ -217,29 +217,29 @@ Phase 77-80 全部完成
 
 ---
 
-### Phase 79: 长尾清欠·internal/services root
+### Phase 79: 长尾清欠·internal/services root ✅ SHIPPED 2026-08-28
 
 **Goal:** 补齐 v1.26 从未进 P0/P1/P2 名单的最大隐藏缺口 internal/services root(5202 stmts @11.3%,补 ~3052 stmts)到 ≥70%。
 
 **Depends on**: Phase 76(miniredis 供 legacy cache services 的 Redis 路径;与 Phase 77/78 无硬依赖,可并行穿插)
 
-**Requirements**: TAIL-01
+**Requirements**: TAIL-01 ✅
 
 **Success Criteria** (what must be TRUE):
 
-1. `internal/services`(root)包覆盖率 ≥70%,legacy cache services 群(dept/role/dict/menu/user/post)逐文件 ≥70%
-2. token blacklist 及其余 root service 文件按覆盖率 profile 倒序补齐,无单文件留在 <50%
-3. phase 收尾以 `go tool cover -func` 实测数字回填 `.planning/coverage-baseline.md`(ratchet 数据链连续)
-4. gate 全程绿(本 phase 不动 `.coverage-threshold`,统一 Phase 81 收口)
+1. `internal/services`(root)包覆盖率 ≥70%,cache 群逐文件 ≥70%(D-79-01 重锚后) → **实测 81.60%** ✅(data_cache 96.1%/cache_config 86.3%/token_blacklist 100%/template_cache 94.4%/decorator 100%)
+2. token blacklist 及其余 root service 文件按覆盖率 profile 倒序补齐,无单文件留在 <50% → **45 文件 0 个 <50%** ✅
+3. phase 收尾以 `go tool cover -func` 实测数字回填 `.planning/coverage-baseline.md`(ratchet 数据链连续) → **"Phase 79 后" row 已落(commit 3d8019e)** ✅
+4. gate 全程绿(本 phase 不动 `.coverage-threshold`,统一 Phase 81 收口) → **check-coverage.sh exit 0,weighted avg 70.90% ≥ 55.5** ✅
 
-**Plans**: TBD(建议 6)
+**Plans**: 6/6 完成(39 tasks;标题按 79-RESEARCH §7 重切)
 
-- 79-01 legacy cache services 群 A(dept/role/dict)
-- 79-02 legacy cache services 群 B(menu/user/post)
-- 79-03 token blacklist + DataCacheService/CacheConfigService 深路径
-- 79-04 root services 扫尾 A(profile 倒序)
-- 79-05 root services 扫尾 B(profile 倒序)
-- 79-06 phase 复测 + baseline 回填
+- [x] 79-01 — root 缓存基建 7 文件(~155 unc → 5):data_cache 96.1%/cache_config 86.3%/token_blacklist 100%/decorator 100%/rate_limiter 100%/mac_normalize 100%
+- [x] 79-02 — duty 家族 6 文件(380 unc → 44):schedule 91.4%/pool 83.3%/stats 90.6%/holiday 82.8%/config 83.3%/facade 100%
+- [x] 79-03 — notice/template/operlog/api-endpoint 9 文件:9/9 ≥70%,cluster 90.7%
+- [x] 79-04 — knowledge/network/notification/auth 5 文件:knowledge 82.0%/network 76.7%/notif_config 83.5%/notif_sender 90.8%/auth 85.2%
+- [x] 79-05 — 外呼三件套 + mac 家族 10 文件(+918):api_sender 95.8%/email 80.4%/ad_ldap 69.3%/mac 族 70-88%
+- [x] 79-06 — device 家族 7 文件 + 收口回填:discovery 87.4%/config_backup 86.9%/command_dispatch 90.5%/credential 95.7% 等;包 81.60%,baseline 回填 commit 3d8019e
 
 **Notes**:
 
