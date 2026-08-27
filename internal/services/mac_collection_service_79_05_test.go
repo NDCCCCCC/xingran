@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/topology"
 	"gorm.io/gorm"
 )
 
@@ -625,5 +626,119 @@ func TestMcl7905_Collect_NilExecutor(t *testing.T) {
 		result, err := svc.CollectDevice(ctx, dev.ID)
 		require.NoError(t, err)
 		assert.Nil(t, result, "QUIRK-79-05-F:recover 后返回 nil result 且不报错")
+	})
+}
+
+// -------------------------------------------------------------------------
+// 79-05 补差(收口前): 用 Task 5 的 mhs7905PGFake 假方言 + FilterRuleService stub
+// 补 mac_collection 的错误包装分支与 getMACThreshold 配置分支(目标 ≥70%)。
+// -------------------------------------------------------------------------
+
+// mcl7905RuleStub topology.FilterRuleService stub(Phase 73 D-02 范本:未注册即 panic)。
+type mcl7905RuleStub struct {
+	rule *models.MACFilterRule
+	err  error
+}
+
+func (s *mcl7905RuleStub) Create(context.Context, *topology.CreateFilterRuleRequest) (*models.MACFilterRule, error) {
+	panic("mcl7905RuleStub.Create 未注册")
+}
+func (s *mcl7905RuleStub) Update(context.Context, string, *topology.UpdateFilterRuleRequest) error {
+	panic("mcl7905RuleStub.Update 未注册")
+}
+func (s *mcl7905RuleStub) Delete(context.Context, string) error {
+	panic("mcl7905RuleStub.Delete 未注册")
+}
+func (s *mcl7905RuleStub) GetByID(context.Context, string) (*models.MACFilterRule, error) {
+	panic("mcl7905RuleStub.GetByID 未注册")
+}
+func (s *mcl7905RuleStub) List(context.Context, topology.ListFilterRulesParams) (*topology.PageResult, error) {
+	panic("mcl7905RuleStub.List 未注册")
+}
+func (s *mcl7905RuleStub) GetEffectiveRule(context.Context, *models.NetworkDevice) (*models.MACFilterRule, error) {
+	return s.rule, s.err
+}
+
+// 编译期接口断言
+var _ topology.FilterRuleService = (*mcl7905RuleStub)(nil)
+
+// TestMcl7905_GetMACThreshold_WithFilterRule getMACThreshold(:798-809)规则命中与查询失败分支。
+func TestMcl7905_GetMACThreshold_WithFilterRule(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(strings.ReplaceAll(t.TempDir(), `\`, "/")+"/mcl7905rule.db"), &gorm.Config{
+		DisableForeignKeyConstraintWhenMigrating: true,
+	})
+	require.NoError(t, err)
+	if sqlDB, err := db.DB(); err == nil {
+		t.Cleanup(func() { _ = sqlDB.Close() })
+	}
+	require.NoError(t, db.AutoMigrate(&models.NetworkDevice{}, &models.Config{}))
+
+	dev := mcl7905SeedDevice(t, db, "dev-rule-7905", models.VendorHuawei, models.DeviceTypeSwitch, models.DeviceStatusOnline, nil)
+
+	t.Run("effective_rule_wins", func(t *testing.T) {
+		svc := NewMACCollectionService(db, nil, nil, &mcl7905RuleStub{rule: &models.MACFilterRule{
+			RuleName:     "rule-7905",
+			MACThreshold: 77,
+		}})
+		assert.Equal(t, 77, svc.getMACThreshold(dev), "配置规则阈值应优先于硬编码表")
+	})
+
+	t.Run("rule_error_falls_back_to_defaults", func(t *testing.T) {
+		svc := NewMACCollectionService(db, nil, nil, &mcl7905RuleStub{err: context.DeadlineExceeded})
+		assert.Equal(t, 10, svc.getMACThreshold(dev), "规则查询失败 → Warnf + 回退硬编码表(dev 是 switch → 10)")
+	})
+}
+
+// TestMcl7905_ParseMACLine_KeywordSkips parseMACLine 的类型关键字跳过与接口名兜底分支。
+func TestMcl7905_ParseMACLine_KeywordSkips(t *testing.T) {
+	svc, _ := newMcl7905(t)
+
+	t.Run("type_keyword_inside_interface_segment", func(t *testing.T) {
+		// fields=[mac,100,Dynamic,GE0/0/3,Static]:中间的 "Dynamic" 应被跳过,不混入接口名
+		entry, ok := svc.parseMACLine("aabbccddeeff 100 Dynamic GE0/0/3 Static", models.VendorHuawei, MACCommandTypeMacTable)
+		require.True(t, ok)
+		assert.Equal(t, "AA:BB:CC:DD:EE:FF", entry.MACAddress)
+		assert.Equal(t, "GE0/0/3", entry.InterfaceName)
+		assert.Equal(t, "Static", entry.MACType)
+	})
+
+	t.Run("all_middle_fields_are_keywords_falls_back", func(t *testing.T) {
+		// 中间段全是类型关键字 → interfaceParts 为空 → 回退 fields[2]("Dynamic" 被当接口名,锁定现行为)
+		entry, ok := svc.parseMACLine("aabbccddeeff 100 Dynamic Static", models.VendorHuawei, MACCommandTypeMacTable)
+		require.True(t, ok)
+		assert.Equal(t, "AA:BB:CC:DD:EE:FF", entry.MACAddress)
+		assert.Equal(t, "Dynamic", entry.InterfaceName,
+			"QUIRK-79-05-I(锁定): 华为分支兜底取 fields[2] 时不走 NormalizeInterfaceName,类型关键字可原样落为接口名")
+	})
+}
+
+// TestMcl7905_DBError_Wraps fake 方言下 ConnPool 失败 → 各错误包装分支。
+func TestMcl7905_DBError_Wraps(t *testing.T) {
+	ctx := context.Background()
+	fakeDB, _ := newMhs7905PGFake(t)
+	svc := NewMACCollectionService(fakeDB, nil, nil, nil)
+
+	t.Run("collect_all_query_error", func(t *testing.T) {
+		_, err := svc.CollectAllDevices(ctx)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "查询设备列表失败")
+	})
+
+	t.Run("list_count_error", func(t *testing.T) {
+		_, _, err := svc.GetMACAddressList(ctx, 1, 10, "", "", "", "", "", nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "查询MAC地址总数失败")
+	})
+
+	t.Run("clean_old_records_error", func(t *testing.T) {
+		_, err := svc.CleanOldRecords(ctx, 30)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "清理旧记录失败")
+	})
+
+	t.Run("batch_delete_error", func(t *testing.T) {
+		_, err := svc.BatchDelete(ctx, []string{"00000000-0000-0000-0000-000000000001"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "批量删除MAC地址记录失败")
 	})
 }
