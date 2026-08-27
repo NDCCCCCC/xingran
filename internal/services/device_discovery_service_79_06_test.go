@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gosnmp/gosnmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -41,7 +42,7 @@ import (
 // models.DeviceDiscovery carries no BeforeCreate hook).
 func newDdv7906(t *testing.T) (*DeviceDiscoveryService, *gorm.DB) {
 	t.Helper()
-	db := newDB7906(t, &models.DeviceDiscovery{})
+	db := newDB7906(t, &models.DeviceDiscovery{}, &models.AuthCredential{})
 	return &DeviceDiscoveryService{db: db}, db
 }
 
@@ -483,3 +484,144 @@ func TestDdv7906_ExecuteDiscovery_MissingTask(t *testing.T) {
 
 // boolPtr7906 is a tiny helper for sort-direction arguments.
 func boolPtr7906(v bool) *bool { return &v }
+
+// -----------------------------------------------------------------------------
+// SNMP 段(D-79-05 fake)—— snmpProbe / discoverBySNMP
+// -----------------------------------------------------------------------------
+
+// ddv7906SNMPTable is the sysName/sysDescr OID table shared by the fake-backed
+// discovery cases (only the two OIDs snmpProbe requests).
+func ddv7906SNMPTable() []gosnmp.SnmpPDU {
+	return []gosnmp.SnmpPDU{
+		{Name: ".1.3.6.1.2.1.1.5.0", Type: gosnmp.OctetString, Value: "core-sw-7906"},
+		{Name: ".1.3.6.1.2.1.1.1.0", Type: gosnmp.OctetString, Value: "Huawei Versatile Routing Platform V800R022C00"},
+	}
+}
+
+// TestDdv7906_SnmpProbe_Happy — fake answers both OIDs; the parsed device
+// carries sysName/sysDescr and the vendor identification from the replayed
+// sysDescr.
+func TestDdv7906_SnmpProbe_Happy(t *testing.T) {
+	fake := newFakeSNMPServer7906(t, ddv7906SNMPTable())
+
+	svc := &DeviceDiscoveryService{} // snmpProbe never touches the DB
+	dev := svc.snmpProbe("127.0.0.1", "public", int(fake.Port()))
+	require.NotNil(t, dev)
+	assert.True(t, dev.IsAlive, "answered probe reports the host alive")
+	assert.Equal(t, "core-sw-7906", dev.SysName)
+	assert.Contains(t, dev.SysDescr, "Huawei")
+	assert.Equal(t, string(models.VendorHuawei), dev.Vendor,
+		"vendor identified from the replayed sysDescr")
+	assert.Equal(t, int64(2), fake.RequestCount(), "one Get per OID on the same socket")
+}
+
+// TestDdv7906_SnmpProbe_ErrorStatus locks an upstream quirk:
+// QUIRK-79-06-I — gosnmp v1.35 does not surface an SNMP error-status
+// (NoSuchName) response as a Go error, and snmpProbe only checks err, so an
+// error-status answer still counts as "alive" with the echoed variable parsed.
+// Callers therefore cannot distinguish NoSuchName from a real value (locked,
+// not fixed).
+func TestDdv7906_SnmpProbe_ErrorStatus(t *testing.T) {
+	fake := newFakeSNMPServer7906(t, ddv7906SNMPTable())
+	fake.SetBehavior(snmp7906ErrorStatus)
+
+	svc := &DeviceDiscoveryService{}
+	dev := svc.snmpProbe("127.0.0.1", "public", int(fake.Port()))
+	require.NotNil(t, dev)
+	assert.True(t, dev.IsAlive, "QUIRK-79-06-I: error-status response is treated as an answer")
+	assert.Equal(t, "core-sw-7906", dev.SysName, "echoed variable is parsed regardless of the error status")
+	assert.GreaterOrEqual(t, fake.RequestCount(), int64(1))
+}
+
+// TestDdv7906_SnmpProbe_Timeout — the drop behavior swallows the request and
+// the probe burns its 5s gosnmp timeout before reporting not-alive. One slow
+// case on purpose: it is the only deterministic way to reach the timeout
+// branch (no Windows cross-socket discard involved — bound socket round trip).
+func TestDdv7906_SnmpProbe_Timeout(t *testing.T) {
+	fake := newFakeSNMPServer7906(t, ddv7906SNMPTable())
+	fake.SetBehavior(snmp7906Drop)
+
+	svc := &DeviceDiscoveryService{}
+	dev := svc.snmpProbe("127.0.0.1", "public", int(fake.Port()))
+	require.NotNil(t, dev)
+	assert.False(t, dev.IsAlive)
+	assert.Equal(t, "127.0.0.1", dev.IPAddress)
+	assert.Equal(t, int64(1), fake.RequestCount(), "swallowed request still arrives")
+}
+
+// TestDdv7906_ExecuteDiscovery_SNMPType drives discoverBySNMP end-to-end
+// (goroutine fan-out + semaphore + result aggregation) through ExecuteDiscovery
+// with the fake answering the single probed address.
+func TestDdv7906_ExecuteDiscovery_SNMPType(t *testing.T) {
+	fake := newFakeSNMPServer7906(t, ddv7906SNMPTable())
+	ctx := context.Background()
+
+	svc, _ := newDdv7906(t)
+	id, err := svc.CreateDiscoveryTask(ctx, &DiscoveryRequest{
+		TaskName:      "ddv-snmp-e2e",
+		DiscoveryType: models.DiscoveryTypeSNMP,
+		IPRanges:      []models.IPRange{{StartIP: "127.0.0.1", EndIP: "127.0.0.1"}},
+		SNMPCommunity: "public",
+		SNMPPort:      int(fake.Port()),
+	})
+	require.NoError(t, err)
+
+	result, err := svc.ExecuteDiscovery(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, models.DiscoveryStatusSuccess, result.Status,
+		"discoverBySNMP never errors — misses simply yield an empty list")
+	require.Len(t, result.DiscoveredDevices, 1, "the faked host is discovered")
+	assert.Equal(t, "core-sw-7906", result.DiscoveredDevices[0].SysName)
+
+	row, err := svc.GetDiscoveryByID(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, models.DiscoveryStatusSuccess, row.Status)
+	assert.Equal(t, 1, row.DiscoveredCount)
+}
+
+// TestDdv7906_ProbeSingleDevice_Validation — the pure validation ladder of
+// ProbeSingleDevice (no SNMP traffic): empty IP, empty credential id, unknown
+// credential, credential without communities — then the user-communities path
+// over the fake.
+func TestDdv7906_ProbeSingleDevice_Validation(t *testing.T) {
+	ctx := context.Background()
+	svc, db := newDdv7906(t)
+
+	result, err := svc.ProbeSingleDevice(ctx, &DeviceProbeRequest{IPAddress: "", CredentialID: "x"})
+	require.NoError(t, err, "validation failures are results, not errors")
+	assert.False(t, result.Success)
+	assert.Contains(t, result.Message, "IP地址不能为空")
+
+	result, err = svc.ProbeSingleDevice(ctx, &DeviceProbeRequest{IPAddress: "127.0.0.1"})
+	require.NoError(t, err)
+	assert.False(t, result.Success)
+	assert.Contains(t, result.Message, "授权凭证ID不能为空")
+
+	result, err = svc.ProbeSingleDevice(ctx, &DeviceProbeRequest{IPAddress: "127.0.0.1", CredentialID: "no-such-cred"})
+	require.NoError(t, err)
+	assert.False(t, result.Success)
+	assert.Contains(t, result.Message, "授权凭证不存在")
+
+	cred := &models.AuthCredential{CredentialName: "no-communities", ProtocolType: models.ProtocolTypeSSH, Username: "u"}
+	require.NoError(t, db.Create(cred).Error)
+	result, err = svc.ProbeSingleDevice(ctx, &DeviceProbeRequest{IPAddress: "127.0.0.1", CredentialID: cred.ID})
+	require.NoError(t, err)
+	assert.False(t, result.Success)
+	assert.Contains(t, result.Message, "未配置 SNMP community")
+
+	// User-supplied communities reach the SNMP layer; with the fake answering,
+	// the probe succeeds and vendor/type extraction runs.
+	fake := newFakeSNMPServer7906(t, ddv7906SNMPTable())
+	result, err = svc.ProbeSingleDevice(ctx, &DeviceProbeRequest{
+		IPAddress:    "127.0.0.1",
+		CredentialID: cred.ID,
+		SNMPPort:     int(fake.Port()),
+		Communities:  []string{"public"},
+	})
+	require.NoError(t, err)
+	assert.True(t, result.Success)
+	assert.Equal(t, "core-sw-7906", result.SysName)
+	assert.Equal(t, models.VendorHuawei, result.Vendor)
+	assert.Equal(t, models.DeviceTypeSwitch, result.DeviceType,
+		"unrecognized device type falls back to switch (locked default)")
+}

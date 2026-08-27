@@ -13,9 +13,11 @@ package services
 import (
 	"context"
 	"fmt"
+	"net"
 	"testing"
 	"time"
 
+	"github.com/gosnmp/gosnmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -329,4 +331,86 @@ func TestDmn7906_GetCredentialForDevice(t *testing.T) {
 	require.Error(t, err)
 	assert.Nil(t, got)
 	assert.Contains(t, err.Error(), "未找到默认凭证")
+}
+
+// -----------------------------------------------------------------------------
+// SNMP 段(D-79-05 fake)—— pingDeviceViaSNMP / CheckDeviceStatus happy
+// -----------------------------------------------------------------------------
+
+// dmn7906SNMPTable answers the two OIDs pingDeviceViaSNMP tries (sysDescr
+// first, then sysName).
+func dmn7906SNMPTable() []gosnmp.SnmpPDU {
+	return []gosnmp.SnmpPDU{
+		// Leading dot required: gosnmp decodes request OIDs in dotted-with-
+		// leading-dot form, and the fake matches by exact string equality.
+		{Name: ".1.3.6.1.2.1.1.1.0", Type: gosnmp.OctetString, Value: "Huawei Versatile Routing Platform V800R022C00"},
+		{Name: ".1.3.6.1.2.1.1.5.0", Type: gosnmp.OctetString, Value: "core-sw-7906"},
+	}
+}
+
+// TestDmn7906_PingDeviceViaSNMP_Branches — hit (first OID answered → true) and
+// the dead-port branch (closed UDP loopback port → ICMP port-unreachable makes
+// the connected-socket reads fail fast → both Gets error → false).
+//
+// QUIRK-79-06-I note: a DROP (silent swallow) variant is not driven here —
+// with the production config (Timeout 5s × Retries 2 × two OIDs) it costs ~30s
+// for one boolean, and gosnmp does not surface error-status responses as errors
+// anyway (see the discovery file), so the deterministic fast not-online branch
+// is the closed port.
+func TestDmn7906_PingDeviceViaSNMP_Branches(t *testing.T) {
+	fake := newFakeSNMPServer7906(t, dmn7906SNMPTable())
+	svc := &DeviceMonitorService{} // pingDeviceViaSNMP never touches the DB
+
+	online := svc.pingDeviceViaSNMP("127.0.0.1", fake.Port(), "public", device.SNMPVersion2c)
+	assert.True(t, online, "answered sysDescr OID reports the device online")
+	assert.Equal(t, int64(1), fake.RequestCount(), "first OID hit short-circuits the second Get")
+
+	// Dead port: bind a UDP socket, learn its port, close it — nothing answers.
+	dead, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 0})
+	require.NoError(t, err)
+	deadPort := uint16(dead.LocalAddr().(*net.UDPAddr).Port)
+	require.NoError(t, dead.Close())
+
+	online = svc.pingDeviceViaSNMP("127.0.0.1", deadPort, "public", device.SNMPVersion2c)
+	assert.False(t, online, "closed port → both Gets fail → offline")
+}
+
+// TestDmn7906_CheckDeviceStatus_SNMPHappy — the full status-check chain over
+// the fake: credential lookup → version conversion → SNMP ping → DB status +
+// last_seen update when the state flips offline → online.
+func TestDmn7906_CheckDeviceStatus_SNMPHappy(t *testing.T) {
+	ctx := context.Background()
+	fake := newFakeSNMPServer7906(t, dmn7906SNMPTable())
+	svc, db := newDmn7906(t)
+
+	cred := &models.AuthCredential{
+		CredentialName: "dmn-snmp-cred", ProtocolType: models.ProtocolTypeSSH, Username: "u",
+		SNMPCommunities: []string{"public"}, SNMPVersion: models.SNMPVersionV2c,
+	}
+	require.NoError(t, db.Create(cred).Error)
+
+	dev := dmn7906SeedDevice(t, db, "dev-dmn-snmp", "snmp-switch", models.DeviceStatusOffline)
+	require.NoError(t, db.Model(dev).Updates(map[string]interface{}{
+		"credential_id": cred.ID,
+		"ip_address":    "127.0.0.1",
+		"snmp_port":     fake.Port(),
+	}).Error)
+
+	online, err := svc.CheckDeviceStatus(ctx, dev.ID)
+	require.NoError(t, err)
+	assert.True(t, online, "the faked device answers → online")
+
+	var after models.NetworkDevice
+	require.NoError(t, db.Where("id = ?", dev.ID).First(&after).Error)
+	assert.Equal(t, models.DeviceStatusOnline, after.Status, "status flipped offline → online")
+	assert.NotNil(t, after.LastSeenAt, "last_seen_at written on the flip path")
+
+	// A second check keeps the state stable and only bumps last_seen.
+	online, err = svc.CheckDeviceStatus(ctx, dev.ID)
+	require.NoError(t, err)
+	assert.True(t, online)
+	var again models.NetworkDevice
+	require.NoError(t, db.Where("id = ?", dev.ID).First(&again).Error)
+	assert.Equal(t, models.DeviceStatusOnline, again.Status, "no second flip (unchanged branch)")
+	assert.NotNil(t, again.LastSeenAt)
 }
