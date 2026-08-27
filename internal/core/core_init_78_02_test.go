@@ -23,6 +23,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"testing"
@@ -33,6 +34,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/xingran-next/xingran-go-backend/internal/config"
+	"github.com/xingran-next/xingran-go-backend/internal/scheduler"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
 )
 
@@ -703,4 +705,216 @@ func TestInit78_CacheWarmUp(t *testing.T) {
 	})
 	require.True(t, warmRes.completed, "performCacheWarmUp 不应 hang")
 	require.NoError(t, warmRes.panicErr, "performCacheWarmUp 不应 panic")
+}
+
+// =====================================================================
+// Task 4: Close 收尾顺序 + 幂等 + goroutine 收敛(-race)+ reaper 平台分支
+//
+// 关键纪律:
+//   - T-78-02-01: 每个 Close 调用都包硬超时守卫 channel + t.Cleanup 兜底。
+//   - QUIRK-78-02-P1: 二次 Close 已知 panic(pkg/cache/memory.go:312),按 D-78-03(c)
+//     只记 quirk 不改生产;幂等断言降级为「首次 Close 不 hang 不 panic,二次 Close
+//     即使 panic 也立即返回(守卫兜住)」,禁为覆盖率改生产 Close。
+//   - QUIRK-78-02-P2: DeviceConnectionPool.startCleanup goroutine 在 initDeviceServices
+//     后即启动,Core.Close() 不引用该池(局部变量)→ 1 个清理 goroutine 永远泄漏直到
+//     进程退出,容忍 NumGoroutine +1 与 QUIRK-P2 一并记入 SUMMARY。
+//   - D-78-02c: startSubprocessReaper 覆盖当前平台实现,禁 GOOS 条件 t.Skip。
+// =====================================================================
+
+// TestInit78_Close_FullChain Task 4 Step 1 — 完整 Init → Close 全链验证:
+// Close 不 hang 不 panic + Close 后 GetDB().Exec 查询报错(连接已关) +
+// Close 后再调 MetricsCacheService.Stop 不 panic。
+func TestInit78_Close_FullChain(t *testing.T) {
+	cfg := newInit78Config(t, "memory", "")
+	c, err := New(cfg)
+	require.NoError(t, err)
+	t.Cleanup(cleanupUploadsDir78)
+
+	initRes := runInit78Guarded(init78GuardTimeout, "Init#full", func() { err = c.Init() })
+	require.True(t, initRes.completed, "Init 必须完成")
+	require.NoError(t, err, "Init 返回 err 应为 nil(探针结论 A)")
+
+	// Close 硬超时守卫
+	closeRes := runInit78Guarded(close78GuardTimeout, "Close#full", func() { c.Close() })
+	require.True(t, closeRes.completed, "Close 必须在守卫时间内完成")
+	require.NoError(t, closeRes.panicErr, "首次 Close 不应 panic")
+
+	// Close 后 DB 连接已关(查询报错)
+	require.NotNil(t, c.GetDB(), "Close 不该 nil 化 c.DB 指针本身(仍可 GetDB 取到底层)")
+	dbErr := c.GetDB().Exec("SELECT 1").Error
+	require.Error(t, dbErr, "Close 后 SQL 查询必须报错(连接已关)")
+
+	// Close 后 MetricsCacheService 内部 Stop 已被调过;再调一次也不 panic(Q-7 已修)。
+	require.NotNil(t, c.MetricsCacheService)
+	require.NotPanics(t, func() { c.MetricsCacheService.Stop() })
+}
+
+// TestInit78_Close_Idempotent Task 4 Step 2 — 三次 Close 全部不 hang;
+// 二次 Close panic(QUIRK-78-02-P1)允许但必须立即返回。
+func TestInit78_Close_Idempotent(t *testing.T) {
+	cfg := newInit78Config(t, "memory", "")
+	c, err := New(cfg)
+	require.NoError(t, err)
+	t.Cleanup(cleanupUploadsDir78)
+
+	require.NoError(t, c.Init())
+
+	// 第一次 Close:必经的 happy path
+	r1 := runInit78Guarded(close78GuardTimeout, "Close#1", func() { c.Close() })
+	require.True(t, r1.completed, "首次 Close 必须在守卫时间内完成")
+	require.NoError(t, r1.panicErr, "首次 Close 不应 panic")
+
+	// 第二次 Close:QUIRK-P1 已知 panic,但必须立即返回(守卫兜底)
+	r2 := runInit78Guarded(close78GuardTimeout, "Close#2", func() { c.Close() })
+	require.True(t, r2.completed, "即使 panic,二次 Close 必须立即返回")
+	if r2.panicErr != nil {
+		t.Logf("[QUIRK-78-02-P1] 二次 Close panic=%v(待裁决)", r2.panicErr)
+	}
+
+	// 第三次 Close:再次同 r2 行为,记观察值(SUMMARY)
+	r3 := runInit78Guarded(close78GuardTimeout, "Close#3", func() { c.Close() })
+	require.True(t, r3.completed, "三次 Close 必须立即返回")
+	t.Logf("[Close_Idempotent] Close#3 panic=%v(观察值)", r3.panicErr)
+}
+
+// TestInit78_Close_PartialInit Task 4 Step 3 — 半装配 Close(只 initDBAndData +
+// initMetrics,其余 nil),Close 必须按 nil-守卫跳过每一步不 panic。这是 Close 60 stmts
+// 中最容易漏掉的一批分支(nil-deref)。
+func TestInit78_Close_PartialInit(t *testing.T) {
+	cfg := newInit78Config(t, "memory", "")
+	c, err := New(cfg)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if c.DB != nil {
+			c.DB.Close()
+		}
+		cleanupUploadsDir78()
+	})
+
+	require.NoError(t, c.initDBAndData())
+	c.initMetrics()
+	// 显式不调:initCacheAndWarmUp / initDeviceServices / initSchedulerAndTasks /
+	// initCaptchaServices / initLogsAndAuth / initRPAAndAPIAndReaper
+	// 让 Close 必须按 nil 守卫跳过这些阶段
+
+	res := runInit78Guarded(close78GuardTimeout, "Close#partial", func() { c.Close() })
+	require.True(t, res.completed, "半装配 Close 必须在守卫时间内完成")
+	require.NoError(t, res.panicErr, "半装配 Close 不应 panic(每个 nil 字段被守卫)")
+}
+
+// TestInit78_Close_NoGoroutineLeak Task 4 Step 4 — 完整 Init → Close,断言 goroutine
+// 收敛。NumGoroutine 宽松口径:基线 + 容差 N(QUIRK-78-02-P2 池清理泄漏 +1,
+// RefreshView goroutine 由 Init() go 关键字启,30s 超时自然退出)。
+//
+// 断言为「轮询 ≤5s 等待回落 + 不引入 goleak」(D-78-03 (c) 口径)。
+func TestInit78_Close_NoGoroutineLeak(t *testing.T) {
+	cfg := newInit78Config(t, "memory", "")
+	c, err := New(cfg)
+	require.NoError(t, err)
+	t.Cleanup(cleanupUploadsDir78)
+
+	baseline := runtime.NumGoroutine()
+	t.Logf("[Goroutine 基线] %d (Init 前)", baseline)
+
+	require.NoError(t, c.Init())
+	afterInit := runtime.NumGoroutine()
+	t.Logf("[Goroutine Init 后] %d (差异 %+d)", afterInit, afterInit-baseline)
+
+	closeRes := runInit78Guarded(close78GuardTimeout, "Close#leak", func() { c.Close() })
+	require.True(t, closeRes.completed)
+
+	// 轮询 ≤5s 等待回落(QUIRK-78-02-P2 容忍 +1;RefreshView 30s 超时本身会自然退出)
+	tolerance := 2 // 容忍 QUIRK-78-02-P2 pool + refreshView 残留
+	require.Eventually(t, func() bool {
+		return runtime.NumGoroutine() <= baseline+tolerance
+	}, init78WaitUpperBound, init78PollInterval,
+		"Close 后 goroutine 数应在 ≤%v 内回落到基线+%d(QUIRK-P2 容忍)", init78WaitUpperBound, tolerance)
+
+	final := runtime.NumGoroutine()
+	t.Logf("[Goroutine Close 后] %d (差异 %+d,容忍 +%d)", final, final-baseline, tolerance)
+}
+
+// TestInit78_ReaperAndRPA Task 4 Step 5 — initRPAAndAPIAndReaper 直调覆盖:
+//   - RPA.Enabled=false 早退路径(RPAScalingService 仍 nil)
+//   - initAPIEndpointService 加载 ./configs/api_metadata.yaml 失败路径(APIEndpointService nil)
+//   - reaperCancel 已注入 Core
+//   - 调 reaperCancel 不 panic
+//   - initAuthFactory nil-DB 早退分支
+//   - registerRPATasks 直接调 → "rpa_task" 已注册到 scheduler taskRegistry
+func TestInit78_ReaperAndRPA(t *testing.T) {
+	cfg := newInit78Config(t, "memory", "")
+	c, err := New(cfg)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		scheduler.StopADSyncScheduler()
+		if c.Scheduler != nil {
+			c.Scheduler.Stop()
+		}
+		if c.DB != nil {
+			c.DB.Close()
+		}
+		cleanupUploadsDir78()
+	})
+
+	// initDBAndData 先就位(RPA 内部需要 DB 关联)
+	require.NoError(t, c.initDBAndData())
+
+	// initAuthFactory nil-DB 早退分支(单独小用例,不影响后续 ReaperAndRPA 主断言)
+	t.Run("initAuthFactory_NilDB_Guards", func(t *testing.T) {
+		savedDB := c.DB
+		c.DB = nil
+		defer func() { c.DB = savedDB }()
+		require.NotPanics(t, func() { c.initAuthFactory() },
+			"initAuthFactory 必须 nil-DB 守卫,不 panic")
+	})
+
+	// 直调 initRPAAndAPIAndReaper(RPA.Enabled 默认 false → 早退;API 元数据加载失败 → 早退)
+	c.initRPAAndAPIAndReaper()
+
+	// 断言:reaperCancel 已注入
+	require.NotNil(t, c.reaperCancel, "initRPAAndAPIAndReaper Step 19 必须注入 reaperCancel")
+	// 调 reaperCancel 不 panic
+	require.NotPanics(t, func() { c.reaperCancel() },
+		"reaperCancel 必须可调用")
+
+	// APIEndpointService 因 ./configs/api_metadata.yaml 缺失(cwd=internal/core)而 nil
+	// 这是 plan/probe 既定观察值;记日志不强行断言。
+	if c.APIEndpointService == nil {
+		t.Logf("[ReaperAndRPA] APIEndpointService nil(预期:API 元数据文件不在 internal/core cwd 下)")
+	}
+
+	// RPAScalingService 在 RPA.Enabled=false 时为 nil(早退)
+	assert.Nil(t, c.RPAScalingService, "RPA.Enabled=false 时 RPAScalingService 必须 nil")
+
+	// registerRPATasks 直调:需要在 initSchedulerAndTasks 之后才能拿到 c.Scheduler,
+	// 这里我们绕过 Init 链,直接构造一个空 Scheduler 让 registerRPATasks 能调
+	c.Scheduler = scheduler.NewScheduler(c.GetDB())
+	t.Cleanup(func() { c.Scheduler.Stop() })
+	require.NotNil(t, c.Scheduler)
+
+	// registerRPATasks 内会调 c.Scheduler.RegisterTask("rpa_task", ...)
+	// 不需启动 Scheduler 即可 Register(RegisterTask 只操作 taskRegistry map)
+	require.NotPanics(t, func() { c.registerRPATasks() })
+
+	handler := c.Scheduler.GetTaskHandler("rpa_task")
+	require.NotNil(t, handler, "registerRPATasks 必须把 rpa_task 注册进 Scheduler.taskRegistry")
+}
+
+// TestInit78_StartSubprocessReaper_Platform Task 4 Step 6 — startSubprocessReaper
+// 当前平台实现直调 + ctx cancel 收尾。Windows 是 no-op,Linux/Darwin 启 ticker goroutine。
+// 不允许 GOOS 条件 t.Skip(D-78-02c);windows 上 no-op 必须直接通过。
+func TestInit78_StartSubprocessReaper_Platform(t *testing.T) {
+	c := &Core{}
+	ctx, cancel := context.WithCancel(context78Bg())
+	defer cancel()
+
+	// startSubprocessReaper 在两种实现下都不应 panic
+	require.NotPanics(t, func() { c.startSubprocessReaper(ctx) },
+		"startSubprocessReaper 当前平台实现必须不 panic")
+
+	// 让 ctx cancel 触发(ticker goroutine 退出路径,Linux/Darwin 分支)
+	cancel()
+
+	// 不强断言 goroutine 数(linux 下 ticker 30s 触发后才退出;windows 下根本未启)。
+	// 仅断言「调用 + cancel」整体不 panic。
 }
