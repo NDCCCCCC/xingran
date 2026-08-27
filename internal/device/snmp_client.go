@@ -109,7 +109,7 @@ func (c *SNMPClient) isReady() bool {
 
 // closeLocked 内部关闭方法，假设调用方已持有锁
 func (c *SNMPClient) closeLocked() error {
-	if c.client != nil {
+	if c.client != nil && c.client.Conn != nil {
 		return c.client.Conn.Close()
 	}
 	return nil
@@ -295,7 +295,14 @@ func parseSNMPValue(variable gosnmp.SnmpPDU) interface{} {
 		}
 	case gosnmp.OctetString:
 		if variable.Value != nil {
-			return string(variable.Value.([]byte))
+			switch v := variable.Value.(type) {
+			case []byte:
+				return string(v)
+			case string:
+				return v
+			default:
+				return string(v.([]byte))
+			}
 		}
 	case gosnmp.ObjectIdentifier:
 		if variable.Value != nil {
