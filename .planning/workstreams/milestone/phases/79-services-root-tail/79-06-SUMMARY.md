@@ -11,7 +11,7 @@ commits:
   - e9e6133 (test(79-06): config_execution/command_dispatch validate 段 + executor 派发)
   - c477d40 (test(79-06): snmp fake 移植 + snmpProbe/pingDeviceViaSNMP(D-79-05))
   - 3d8019e (docs(79-06): phase 79 收口 — device 家族达标 + coverage-baseline Phase 79 后回填 + gate 全绿)
-  - <followup> (docs(79-06): baseline commit 列回填 TBD → 3d8019e)
+  - c050564 (docs(79-06): baseline commit 列回填 TBD → 3d8019e)
 ---
 
 # 79-06 Summary — device 家族 + 全包复测 + coverage-baseline 回填 (Phase 79 收口)
