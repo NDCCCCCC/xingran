@@ -33,33 +33,33 @@ const (
 // Config Agent 服务配置
 type Config struct {
 	// 后端服务器配置
-	BackendURL string `yaml:"backend_url" env:"BACKEND_URL"`
-	AgentID    string `yaml:"agent_id" env:"AGENT_ID"`
-	VMID       string `yaml:"vm_id" env:"VM_ID"`
+	BackendURL string `yaml:"backend_url" mapstructure:"backend_url" env:"BACKEND_URL"`
+	AgentID    string `yaml:"agent_id" mapstructure:"agent_id" env:"AGENT_ID"`
+	VMID       string `yaml:"vm_id" mapstructure:"vm_id" env:"VM_ID"`
 
 	// JWT 配置
-	JWTSecret  string        `yaml:"jwt_secret" env:"JWT_SECRET"`
-	TokenExpiry time.Duration `yaml:"token_expiry"`
+	JWTSecret   string        `yaml:"jwt_secret" mapstructure:"jwt_secret" env:"JWT_SECRET"`
+	TokenExpiry time.Duration `yaml:"token_expiry" mapstructure:"token_expiry"`
 
 	// HTTP 服务器配置
-	ListenAddr  string `yaml:"listen_addr"`
-	TLSCertFile string `yaml:"tls_cert_file"`
-	TLSKeyFile  string `yaml:"tls_key_file"`
+	ListenAddr  string `yaml:"listen_addr" mapstructure:"listen_addr"`
+	TLSCertFile string `yaml:"tls_cert_file" mapstructure:"tls_cert_file"`
+	TLSKeyFile  string `yaml:"tls_key_file" mapstructure:"tls_key_file"`
 
 	// TLS 强制配置
-	TLSEnabled         bool   `yaml:"tls_enabled"`
-	VerifyCertificates bool   `yaml:"verify_certificates"`
-	CAFile             string `yaml:"ca_file"`
+	TLSEnabled         bool   `yaml:"tls_enabled" mapstructure:"tls_enabled"`
+	VerifyCertificates bool   `yaml:"verify_certificates" mapstructure:"verify_certificates"`
+	CAFile             string `yaml:"ca_file" mapstructure:"ca_file"`
 
 	// 心跳配置
-	HeartbeatInterval time.Duration `yaml:"heartbeat_interval"`
+	HeartbeatInterval time.Duration `yaml:"heartbeat_interval" mapstructure:"heartbeat_interval"`
 
 	// 日志配置
-	LogLevel string `yaml:"log_level"`
-	LogPath  string `yaml:"log_path"`
+	LogLevel string `yaml:"log_level" mapstructure:"log_level"`
+	LogPath  string `yaml:"log_path" mapstructure:"log_path"`
 
 	// 平台配置
-	Platform string `yaml:"platform"` // windows or linux
+	Platform string `yaml:"platform" mapstructure:"platform"` // windows or linux
 }
 
 // LoadConfig 从 YAML 文件或环境变量加载配置

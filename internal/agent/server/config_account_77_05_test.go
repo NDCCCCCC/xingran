@@ -15,10 +15,17 @@ package server
 // =====================================================================
 
 import (
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
+	"time"
 
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -101,3 +108,337 @@ func TestCfg77_RegisterToBackend_TruncatesLongMachineGUID(t *testing.T) {
 		"GUID ≥8 字符时 fallback 应截取前 8 位 (行为不变)")
 	assert.Equal(t, "vm-temp-host-A", cfg.VMID, "vm_id 兜底含 hostname")
 }
+
+// ---------------------------------------------------------------------
+// Config.Validate / ValidateTLS / CheckCertificateFiles — 纯结构 + 文件存在性
+// ---------------------------------------------------------------------
+
+// writeCertAndKey 在 t.TempDir() 写入任意内容的 cert / key 文件, 返回路径对。
+// 文件内容无要求, ValidateTLS 只做 os.Stat 存在性检查。
+func writeCertAndKey(t *testing.T) (string, string) {
+	t.Helper()
+	dir := t.TempDir()
+	cert := filepath.Join(dir, "cert.pem")
+	key := filepath.Join(dir, "key.pem")
+	require.NoError(t, os.WriteFile(cert, []byte("dummy-cert"), 0o600))
+	require.NoError(t, os.WriteFile(key, []byte("dummy-key"), 0o600))
+	return cert, key
+}
+
+func TestCfg77_Validate_NilBackendURL(t *testing.T) {
+	c := &Config{} // BackendURL == "" → os.ErrInvalid
+	err := c.Validate()
+	require.ErrorIs(t, err, os.ErrInvalid)
+}
+
+func TestCfg77_ValidateTLSDisabled(t *testing.T) {
+	c := &Config{TLSEnabled: false}
+	err := c.ValidateTLS()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "TLS must be enabled")
+}
+
+func TestCfg77_ValidateTLSRequiresCertAndKey(t *testing.T) {
+	c := &Config{TLSEnabled: true} // cert/key 都空
+	err := c.ValidateTLS()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "must be specified when TLS is enabled")
+}
+
+func TestCfg77_ValidateTLS_HappyPath(t *testing.T) {
+	cert, key := writeCertAndKey(t)
+	c := &Config{
+		BackendURL:         "http://127.0.0.1:9000",
+		TLSEnabled:         true,
+		TLSCertFile:        cert,
+		TLSKeyFile:         key,
+		VerifyCertificates: false, // 不验 CA
+	}
+	require.NoError(t, c.Validate())
+}
+
+func TestCfg77_ValidateTLS_CertFileMissing(t *testing.T) {
+	_, key := writeCertAndKey(t)
+	c := &Config{
+		BackendURL:  "http://127.0.0.1:9000",
+		TLSEnabled:  true,
+		TLSCertFile: filepath.Join(t.TempDir(), "no-such.pem"),
+		TLSKeyFile:  key,
+	}
+	err := c.ValidateTLS()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "TLS certificate file not found")
+}
+
+func TestCfg77_ValidateTLS_KeyFileMissing(t *testing.T) {
+	cert, _ := writeCertAndKey(t)
+	c := &Config{
+		BackendURL:  "http://127.0.0.1:9000",
+		TLSEnabled:  true,
+		TLSCertFile: cert,
+		TLSKeyFile:  filepath.Join(t.TempDir(), "no-such.pem"),
+	}
+	err := c.ValidateTLS()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "TLS key file not found")
+}
+
+func TestCfg77_ValidateTLS_CAFileMissing(t *testing.T) {
+	cert, key := writeCertAndKey(t)
+	c := &Config{
+		BackendURL:         "http://127.0.0.1:9000",
+		TLSEnabled:         true,
+		TLSCertFile:        cert,
+		TLSKeyFile:         key,
+		VerifyCertificates: true,
+		CAFile:             filepath.Join(t.TempDir(), "no-ca.pem"),
+	}
+	err := c.ValidateTLS()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "CA bundle file not found")
+}
+
+func TestCfg77_ValidateTLS_ValidCAFile(t *testing.T) {
+	cert, key := writeCertAndKey(t)
+	ca := filepath.Join(t.TempDir(), "ca.pem")
+	require.NoError(t, os.WriteFile(ca, []byte("dummy-ca"), 0o600))
+	c := &Config{
+		BackendURL:         "http://127.0.0.1:9000",
+		TLSEnabled:         true,
+		TLSCertFile:        cert,
+		TLSKeyFile:         key,
+		VerifyCertificates: true,
+		CAFile:             ca,
+	}
+	require.NoError(t, c.ValidateTLS())
+}
+
+func TestCfg77_Validate_MissingAgentVMIsWarning(t *testing.T) {
+	// Phase 75 五步法: Validate 在缺 agent_id/vm_id 时只 warn 不返回 error。
+	cert, key := writeCertAndKey(t)
+	c := &Config{
+		BackendURL:  "http://127.0.0.1:9000",
+		TLSEnabled:  true,
+		TLSCertFile: cert,
+		TLSKeyFile:  key,
+		// AgentID 与 VMID 都空
+	}
+	require.NoError(t, c.Validate())
+}
+
+// TestCfg77_CheckCertificateFiles_LinuxKeyWorldReadable Linux 上 key 文件 0o644
+// 必须报错; Windows 自然只覆盖 guard 行 (SC#3 抵消数学的一部分, 勿 Skipf)。
+func TestCfg77_CheckCertificateFiles_LinuxKeyWorldReadable(t *testing.T) {
+	cert, key := writeCertAndKey(t)
+	c := &Config{TLSCertFile: cert, TLSKeyFile: key}
+	if runtime.GOOS == "windows" {
+		// Windows 走 guard 行直接 return nil
+		require.NoError(t, c.CheckCertificateFiles())
+		return
+	}
+	require.NoError(t, os.Chmod(key, 0o644))
+	err := c.CheckCertificateFiles()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "private key file should not be world-readable")
+}
+
+func TestCfg77_CheckCertificateFiles_LinuxKeyRestrictive(t *testing.T) {
+	cert, key := writeCertAndKey(t)
+	require.NoError(t, os.Chmod(key, 0o600))
+	c := &Config{TLSCertFile: cert, TLSKeyFile: key}
+	if runtime.GOOS != "windows" {
+		// Linux 也要校验 cert 文件 0o644 时会 warn 但不返回 error
+		require.NoError(t, os.Chmod(cert, 0o644))
+	}
+	require.NoError(t, c.CheckCertificateFiles())
+}
+
+// ---------------------------------------------------------------------
+// AutoRegisterAgent — http.Post 直打后端 /api/agent/register 假后端
+// ---------------------------------------------------------------------
+
+// fakeRegisterBackend 返回一个本地回环 httptest.Server, 处理 POST /api/agent/register,
+// 默认返回成功响应。test 可在调用前替换 defaultHandler 变量驱动失败分支。
+var fakeRegisterHandlerOverride func(http.ResponseWriter, *http.Request)
+
+func fakeRegisterBackend(t *testing.T) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/agent/register" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		if fakeRegisterHandlerOverride != nil {
+			fakeRegisterHandlerOverride(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = io.WriteString(w, `{"code":0,"message":"ok","data":{
+			"vm_id":"vm-from-backend","agent_id":"agent-from-backend","matched":true
+		}}`)
+	}))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+func TestCfg77_AutoRegisterAgent_Success(t *testing.T) {
+	srv := fakeRegisterBackend(t)
+	vmID, agentID, err := AutoRegisterAgent(srv.URL, &SystemFingerprint{Hostname: "h"})
+	require.NoError(t, err)
+	assert.Equal(t, "vm-from-backend", vmID)
+	assert.Equal(t, "agent-from-backend", agentID)
+}
+
+func TestCfg77_AutoRegisterAgent_Non200(t *testing.T) {
+	srv := fakeRegisterBackend(t)
+	fakeRegisterHandlerOverride = func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = io.WriteString(w, `{"code":500,"message":"internal"}`)
+	}
+	_, _, err := AutoRegisterAgent(srv.URL, &SystemFingerprint{Hostname: "h"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "500")
+	fakeRegisterHandlerOverride = nil
+}
+
+func TestCfg77_AutoRegisterAgent_BadJSON(t *testing.T) {
+	srv := fakeRegisterBackend(t)
+	fakeRegisterHandlerOverride = func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = io.WriteString(w, `not json at all`)
+	}
+	_, _, err := AutoRegisterAgent(srv.URL, &SystemFingerprint{Hostname: "h"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "解析响应失败")
+	fakeRegisterHandlerOverride = nil
+}
+
+func TestCfg77_AutoRegisterAgent_ConnectionRefused(t *testing.T) {
+	// 关闭假后端确保连接被拒
+	srv := fakeRegisterBackend(t)
+	srv.Close()
+	_, _, err := AutoRegisterAgent(srv.URL, &SystemFingerprint{Hostname: "h"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "调用注册 API 失败")
+}
+
+// ---------------------------------------------------------------------
+// RegisterToBackend — 成功路径走 fake 后端, fallback 路径在 Q-77-B 已测
+// ---------------------------------------------------------------------
+
+func TestCfg77_RegisterToBackend_SuccessWithBackend(t *testing.T) {
+	require.NoError(t, InitLogger("info", ""))
+	srv := fakeRegisterBackend(t)
+	stubFingerprint77(t, &SystemFingerprint{Hostname: "host", MachineGUID: "1234567890abcdef"})
+
+	cfg := &Config{BackendURL: srv.URL}
+	out, err := RegisterToBackend(cfg)
+	require.NoError(t, err)
+	assert.Same(t, cfg, out)
+	assert.Equal(t, "vm-from-backend", cfg.VMID)
+	assert.Equal(t, "agent-from-backend", cfg.AgentID)
+	assert.Len(t, cfg.JWTSecret, 32, "成功路径也需生成 32 字符随机密钥")
+}
+
+// ---------------------------------------------------------------------
+// LoadConfig — viper 全局态, t.Cleanup(viper.Reset) 防跨测试污染 (P-77-3)
+// ---------------------------------------------------------------------
+
+// viperResetCleanup 每个 LoadConfig 用例的 t.Cleanup 钩子, 显式 Reset 全局 viper。
+func viperResetCleanup(t *testing.T) {
+	t.Helper()
+	t.Cleanup(viper.Reset)
+}
+
+func TestCfg77_LoadConfig_MissingYAMLUsesEnv(t *testing.T) {
+	viperResetCleanup(t)
+	cert, key := writeCertAndKey(t)
+	// yaml 缺失 + 默认 TLSEnabled=true → Phase 75 Q-13 修复后的报错行为
+	t.Setenv("BACKEND_URL", "http://example.invalid:9000")
+
+	_, err := LoadConfig(filepath.Join(t.TempDir(), "no-such-yaml.yaml"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "TLS certificate and key files must be specified")
+	_ = cert
+	_ = key
+}
+
+func TestCfg77_LoadConfig_ValidYAMLHonoursFields(t *testing.T) {
+	viperResetCleanup(t)
+	cert, key := writeCertAndKey(t)
+	dir := t.TempDir()
+	yamlPath := filepath.Join(dir, "config.yaml")
+	// 单引号 YAML scalar: Windows 路径含反斜杠, 单引号按字面保留不解析转义,
+	// 双引号下 \U 等会被 YAML 误判为非法转义序列。
+	yaml := `
+backend_url: "http://yaml-host:9000"
+agent_id: "yaml-agent"
+vm_id: "yaml-vm"
+jwt_secret: "yaml-secret"
+tls_enabled: true
+tls_cert_file: '` + cert + `'
+tls_key_file: '` + key + `'
+verify_certificates: false
+log_level: "debug"
+log_path: "logs/agent"
+heartbeat_interval: "15s"
+platform: "linux"
+`
+	require.NoError(t, os.WriteFile(yamlPath, []byte(yaml), 0o600))
+
+	cfg, err := LoadConfig(yamlPath)
+	require.NoError(t, err)
+	assert.Equal(t, "http://yaml-host:9000", cfg.BackendURL)
+	assert.Equal(t, "yaml-agent", cfg.AgentID)
+	assert.Equal(t, "yaml-vm", cfg.VMID)
+	assert.Equal(t, "yaml-secret", cfg.JWTSecret)
+	assert.Equal(t, "debug", cfg.LogLevel)
+	assert.Equal(t, "linux", cfg.Platform)
+	// 相对路径被转为绝对
+	assert.True(t, filepath.IsAbs(cfg.LogPath),
+		"相对 LogPath 必须被 LoadConfig 转换为绝对路径, 实际 %q", cfg.LogPath)
+	assert.Equal(t, 15*time.Second, cfg.HeartbeatInterval)
+}
+
+func TestCfg77_LoadConfig_EnvOverridesYAML(t *testing.T) {
+	viperResetCleanup(t)
+	cert, key := writeCertAndKey(t)
+	dir := t.TempDir()
+	yamlPath := filepath.Join(dir, "config.yaml")
+	yaml := `
+backend_url: "http://yaml-host:9000"
+agent_id: "yaml-agent"
+vm_id: "yaml-vm"
+jwt_secret: "yaml-secret"
+tls_enabled: true
+tls_cert_file: '` + cert + `'
+tls_key_file: '` + key + `'
+verify_certificates: false
+`
+	require.NoError(t, os.WriteFile(yamlPath, []byte(yaml), 0o600))
+
+	// env 覆盖 YAML
+	t.Setenv("BACKEND_URL", "http://env-host:9000")
+	t.Setenv("AGENT_ID", "env-agent")
+
+	cfg, err := LoadConfig(yamlPath)
+	require.NoError(t, err)
+	assert.Equal(t, "http://env-host:9000", cfg.BackendURL, "env 覆盖 yaml")
+	assert.Equal(t, "env-agent", cfg.AgentID, "env 覆盖 yaml")
+	// 未被 env 覆盖的字段保留 yaml 值
+	assert.Equal(t, "yaml-vm", cfg.VMID)
+}
+
+func TestCfg77_LoadConfig_DefaultTLSRequiresFiles(t *testing.T) {
+	viperResetCleanup(t)
+	// 不写 yaml + 不提供 TLS 证书路径 → 默认 TLSEnabled=true 触发 Phase 75 Q-13
+	// 修复后的报错 (TLS cert/key 必须指定)
+	t.Setenv("BACKEND_URL", "http://env-host:9000")
+
+	_, err := LoadConfig(filepath.Join(t.TempDir(), "no-such.yaml"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "TLS certificate and key files must be specified")
+}
+
+// 仅占位校验 yaml 解析 schema 形状 — 防止误删除字段时编译期才发现。
+var _ = json.Unmarshal
