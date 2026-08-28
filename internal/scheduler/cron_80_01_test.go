@@ -10,7 +10,7 @@ package scheduler
 // 纪律:
 //   - 凡 Start 必须 t.Cleanup(s.Stop);不测 Start 的用例一律不起 cron
 //   - 任务 handler 体内绝不调 Scheduler 方法(handler 只做纯计数,规避 Stop 持锁互斥)
-//   - 全文件禁 t.Parallel(全局 var seams + 包级注册表)
+//   - 全文件禁并行子测试(全局 var seams + 包级注册表,串行执行)
 //   - status 断言只引用 models.* 常量,禁裸 0/1 字面量(CLAUDE.md Status Value Convention)
 //   - helper 一律 8001 后缀(D-80-07,防同包既有 helper 撞名)
 
@@ -681,6 +681,172 @@ func TestJob8001_GetJobCount_TotalRunning(t *testing.T) {
 	total, running = s.GetJobCount()
 	assert.Equal(t, 2, total)
 	assert.Equal(t, 0, running)
+}
+
+// ============================================================================
+// Task 4 — Start/Stop 生命周期 + 三组全局 var seams
+// ============================================================================
+
+// TestLife8001_StartAddStop Start 加载 DB 正常态 job → 运行中 AddJob 进 cron →
+// Stop 正常返回(有 job 在册);二次 Start/二次 Stop 幂等。
+// 纪律(R2): Start 配对 t.Cleanup(s.Stop);零 sleep、零时序断言(D-80-02)。
+func TestLife8001_StartAddStop(t *testing.T) {
+	s, db := newScheduler8001(t)
+
+	job := newJob8001("生命周期-加载", "reg8001_life_idle")
+	require.NoError(t, db.Create(job).Error)
+
+	require.NoError(t, s.Start(context.Background()))
+	t.Cleanup(s.Stop)
+
+	// 重复 Start:已在运行 → 错误
+	err := s.Start(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "调度器已经在运行")
+
+	// Start 加载了 DB 中正常态 job(进入 cron + executors)
+	total, running := s.GetJobCount()
+	assert.Equal(t, 1, total)
+	assert.Equal(t, 1, running)
+
+	// 运行中 AddJob → addJob 内部路径(:289-292)
+	extra := newJob8001("生命周期-运行中新增", "reg8001_life_idle")
+	require.NoError(t, s.AddJob(extra))
+	total, running = s.GetJobCount()
+	assert.Equal(t, 2, total)
+	assert.Equal(t, 2, running)
+
+	// 运行中 RemoveJob 退出一员(生命周期对称)
+	require.NoError(t, s.RemoveJob(extra.ID))
+	total, running = s.GetJobCount()
+	assert.Equal(t, 1, total)
+	assert.Equal(t, 1, running)
+
+	// Stop:有 job 在册下正常返回;二次 Stop 幂等不 panic
+	s.Stop()
+	s.Stop()
+
+	// Stop 后可重新 Start(证明 running 翻转)→ 收口仍由 t.Cleanup 兜底
+	require.NoError(t, s.Start(context.Background()))
+}
+
+// TestLife8001_StopWithoutStart 未 Start 直接 Stop → 不 panic(幂等边界)。
+func TestLife8001_StopWithoutStart(t *testing.T) {
+	s, _ := newScheduler8001(t)
+
+	s.Stop() // !running → 直接 return
+
+	// 状态查询仍可用
+	total, running := s.GetJobCount()
+	assert.Equal(t, 0, total)
+	assert.Equal(t, 0, running)
+}
+
+// TestLife8001_StopTimeoutBounded Stop 的等待路径受 defaultShutdownTimeout 约束;
+// 仅断言返回与状态翻转,不测墙钟时长(不真触发 cron,D-80-02)。
+func TestLife8001_StopTimeoutBounded(t *testing.T) {
+	s, _ := newScheduler8001(t)
+
+	// 注册"长任务"handler 但绝不执行(cron 表达式远离当前时刻)
+	registerCountingTask8001(t, s, "reg8001_long_task")
+	job := newJob8001("生命周期-长任务", "reg8001_long_task")
+	require.NoError(t, s.AddJob(job))
+
+	require.NoError(t, s.Start(context.Background()))
+	t.Cleanup(s.Stop)
+
+	// 等待路径:ctx.Done() 立即(无运行中任务);若任务卡死也会被 5s 上限截断
+	s.Stop()
+
+	// Stop 完成 ⇒ running 翻转 ⇒ 再次 Start 成功
+	require.NoError(t, s.Start(context.Background()))
+}
+
+// stubNoticeHub8001 NoticeHub seam stub —— 记录广播调用。
+type stubNoticeHub8001 struct {
+	mu      sync.Mutex
+	calls   int
+	lastIDs []string
+	lastMsg interface{}
+}
+
+func (h *stubNoticeHub8001) BroadcastToUsers(userIDs []string, message interface{}) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.calls++
+	h.lastIDs = append([]string(nil), userIDs...)
+	h.lastMsg = message
+}
+
+func (h *stubNoticeHub8001) snapshot() (int, []string, interface{}) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.calls, h.lastIDs, h.lastMsg
+}
+
+// stubDBGetter8001 DBGetter seam stub —— 返回 fixture 库。
+type stubDBGetter8001 struct{ db *gorm.DB }
+
+func (g *stubDBGetter8001) GetDB() *gorm.DB { return g.db }
+
+// TestSeam8001_NoticeHub GlobalNoticeHub 缝:save → Set → Get 同实例 → 可清空 →
+// t.Cleanup restore(77-05 var-seam 纪律)。
+func TestSeam8001_NoticeHub(t *testing.T) {
+	old := GlobalNoticeHub
+	t.Cleanup(func() { SetNoticeHub(old) })
+
+	hub := &stubNoticeHub8001{}
+	SetNoticeHub(hub)
+	assert.Same(t, hub, GetNoticeHub())
+
+	// 缝上广播可用(接口直达,不依赖 websocket)
+	hub.BroadcastToUsers([]string{"u1", "u2"}, map[string]string{"t": "reg8001"})
+	calls, ids, msg := hub.snapshot()
+	assert.Equal(t, 1, calls)
+	assert.Equal(t, []string{"u1", "u2"}, ids)
+	assert.NotNil(t, msg)
+
+	// 清空后读 nil 不 panic
+	SetNoticeHub(nil)
+	assert.Nil(t, GetNoticeHub())
+}
+
+// TestSeam8001_DBGetter GlobalDB 缝:save → Set → GetDB 取回 fixture 库 → restore。
+func TestSeam8001_DBGetter(t *testing.T) {
+	old := GlobalDB
+	t.Cleanup(func() { SetDB(old) })
+
+	db := newSchedDB8001(t)
+	getter := &stubDBGetter8001{db: db}
+	SetDB(getter)
+	assert.Same(t, getter, GetDB())
+	assert.Same(t, db, GetDB().GetDB())
+
+	// 取回的库真实可用(往返一次 sqlite 查询)
+	var count int64
+	require.NoError(t, GetDB().GetDB().Model(&models.Job{}).Count(&count).Error)
+	assert.Equal(t, int64(0), count, "fixture 库暂无 job 行")
+
+	SetDB(nil)
+	assert.Nil(t, GetDB())
+}
+
+// TestSeam8001_GlobalScheduler GlobalScheduler 缝:save → Set → Get 同实例 → restore。
+func TestSeam8001_GlobalScheduler(t *testing.T) {
+	old := GlobalScheduler
+	t.Cleanup(func() { SetGlobalScheduler(old) })
+
+	s, _ := newScheduler8001(t)
+	SetGlobalScheduler(s)
+	assert.Same(t, s, GetGlobalScheduler())
+
+	// 取回的调度器真实可用(注册表读写走同实例)
+	counter := registerCountingTask8001(t, GetGlobalScheduler(), "reg8001_global_sched")
+	require.NoError(t, GetGlobalScheduler().GetTaskHandler("reg8001_global_sched")(context.Background(), nil))
+	assert.Equal(t, int32(1), atomic.LoadInt32(counter))
+
+	SetGlobalScheduler(nil)
+	assert.Nil(t, GetGlobalScheduler())
 }
 
 
