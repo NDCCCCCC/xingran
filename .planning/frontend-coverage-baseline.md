@@ -58,6 +58,7 @@
 | 2026-08-28 | Phase 88 R28 ad-domain logs+AccountPoolTab 渲染 | 42.07 | 21574 | 9077 | | | 88-R28 | ad-dom 20.0 | ad-dom 24.4 |
 | 2026-08-28 | Phase 88 R29 network command hooks+mac heatmap | 42.46 | 21574 | 9161 | | | 88-R29 | net 32.5 | net 36.8 |
 | 2026-08-28 | Phase 88 R30 dashboard edit/view+NotificationBell | 42.62 | 21574 | 9196 | | | 88-R30 | ds-sys 20.1 | ds-sys 34.9 |
+| 2026-08-28 | Phase 88 R31 captcha+services API 封装 | 43.05 | 21574 | 9289 | | | 88-R31 | captcha 21.5/services 3.3 | captcha 44.9/services 42.3 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
