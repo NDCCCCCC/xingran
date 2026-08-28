@@ -480,3 +480,207 @@ func TestExec8001_ExecuteJob_ViaScheduler(t *testing.T) {
 	assert.Equal(t, int32(2), atomic.LoadInt32(counter))
 }
 
+// ============================================================================
+// Task 3 — Scheduler 公开方法 sqlite 驱动(全部 !running 路径,不起 cron)
+// ============================================================================
+
+// TestJob8001_AddJob_NotRunning 未 Start 时 AddJob 只落库 + 内存 map(:294-297 分支);
+// 同名 job 重复 AddJob 无唯一约束 ⇒ 各自成行(quirk 记录: 无冲突/去重分支)。
+func TestJob8001_AddJob_NotRunning(t *testing.T) {
+	s, db := newScheduler8001(t)
+
+	job := newJob8001("增-未运行", "reg8001_add")
+	require.NoError(t, s.AddJob(job))
+
+	// 落库
+	var row models.Job
+	require.NoError(t, db.First(&row, "id = ?", job.ID).Error)
+	assert.Equal(t, job.JobName, row.JobName)
+	assert.Equal(t, models.JobStatusNormal, row.Status, "默认状态为正常")
+
+	// 内存:jobs 计入,executors 不计入(!running)
+	total, running := s.GetJobCount()
+	assert.Equal(t, 1, total)
+	assert.Equal(t, 0, running)
+
+	// 重复 AddJob 同名 job:再落一行,无冲突分支
+	dup := newJob8001(job.JobName, "reg8001_add")
+	dup.Status = models.JobStatusPause
+	require.NoError(t, s.AddJob(dup))
+	assert.NotEqual(t, job.ID, dup.ID, "两次 AddJob 各自生成新 ID")
+	total, _ = s.GetJobCount()
+	assert.Equal(t, 2, total)
+
+	var rows []models.Job
+	require.NoError(t, db.Where("job_name = ?", job.JobName).Find(&rows).Error)
+	assert.Len(t, rows, 2, "同名 job 无唯一约束,两行并存")
+}
+
+// TestJob8001_UpdateJob 更新内存视图生效;持久化行为按实现断言(见 quirk)。
+//
+// quirk 记录(D-78-10 口径,零生产改动): UpdateJob 先 removeJob 对 sys_job 行软删,
+// 随后 db.Save 走"全字段 UPDATE"(GORM Save 语义,含零值字段)且 UPDATE 不带
+// deleted_at IS NULL 作用域 ⇒ 软删行被复活(deleted_at 写回 NULL)并落新值。
+// 净效果 = 行存在且为新值;UpdateJob 对不存在的 ID 也不报错(无存在性校验,
+// Save 0 行命中回退 OnConflict Create ⇒ 幽灵行被插入)。
+func TestJob8001_UpdateJob(t *testing.T) {
+	s, db := newScheduler8001(t)
+
+	job := newJob8001("改-更新", "reg8001_update")
+	require.NoError(t, s.AddJob(job))
+
+	job.CronExpression = "0 */5 * * * *"
+	job.Status = models.JobStatusPause
+	require.NoError(t, s.UpdateJob(job))
+
+	// 内存视图:仍 1 个 job
+	total, _ := s.GetJobCount()
+	assert.Equal(t, 1, total)
+
+	// 持久化:行可读(被 Save 复活)且为新值
+	var row models.Job
+	require.NoError(t, db.First(&row, "id = ?", job.ID).Error, "Save 全字段更新复活软删行")
+	assert.Equal(t, "0 */5 * * * *", row.CronExpression, "新表达式已持久化")
+	assert.Equal(t, models.JobStatusPause, row.Status, "新状态已持久化")
+	assert.False(t, row.DeletedAt.Valid, "软删标记被 Save 写回 NULL")
+
+	// 不存在的 jobID:无存在性校验,不报错
+	// quirk 续: Save 的 UPDATE 0 行命中会回退 OnConflict Create ⇒ 幽灵 job 意外落库
+	ghost := newJob8001("改-幽灵", "reg8001_update")
+	ghost.ID = "00000000-0000-0000-0000-000000000002"
+	require.NoError(t, s.UpdateJob(ghost))
+	total, _ = s.GetJobCount()
+	assert.Equal(t, 2, total, "幽灵 job 进内存 map")
+	var ghostRow models.Job
+	require.NoError(t, db.First(&ghostRow, "id = ?", ghost.ID).Error,
+		"Save 0 行命中回退 Create ⇒ 幽灵 job 意外落库(quirk)")
+	assert.Equal(t, ghost.JobName, ghostRow.JobName)
+}
+
+// TestJob8001_RemoveJob 移除后内存计数减一、DB 行软删;不存在的 ID 幂等不报错。
+func TestJob8001_RemoveJob(t *testing.T) {
+	s, db := newScheduler8001(t)
+
+	keep := newJob8001("删-保留", "reg8001_remove_a")
+	require.NoError(t, s.AddJob(keep))
+	gone := newJob8001("删-移除", "reg8001_remove_b")
+	require.NoError(t, s.AddJob(gone))
+
+	require.NoError(t, s.RemoveJob(gone.ID))
+
+	total, _ := s.GetJobCount()
+	assert.Equal(t, 1, total, "内存计数减一")
+
+	var row models.Job
+	assert.ErrorIs(t, db.First(&row, "id = ?", gone.ID).Error, gorm.ErrRecordNotFound)
+	var soft models.Job
+	require.NoError(t, db.Unscoped().First(&soft, "id = ?", gone.ID).Error)
+	assert.NotNil(t, soft.DeletedAt, "removeJob 为软删(审计链保留)")
+
+	// 保留的那条不受影响
+	require.NoError(t, db.First(&row, "id = ?", keep.ID).Error)
+
+	// 移除不存在的 ID:幂等返回 nil(removeJob 无存在性校验)
+	require.NoError(t, s.RemoveJob("00000000-0000-0000-0000-000000000003"))
+	total, _ = s.GetJobCount()
+	assert.Equal(t, 1, total)
+}
+
+// TestJob8001_StartStopJob_Status StartJob → models.JobStatusNormal;
+// StopJob → models.JobStatusPause;不存在/重复启停各走错误分支。
+func TestJob8001_StartStopJob_Status(t *testing.T) {
+	s, db := newScheduler8001(t)
+
+	job := newJob8001("启停-状态机", "reg8001_toggle")
+	job.Status = models.JobStatusPause
+	require.NoError(t, db.Create(job).Error)
+
+	// 暂停态 job → StartJob → 正常
+	require.NoError(t, s.StartJob(job.ID))
+	var row models.Job
+	require.NoError(t, db.First(&row, "id = ?", job.ID).Error)
+	assert.Equal(t, models.JobStatusNormal, row.Status, "StartJob 后应为正常态")
+	exists, err := s.GetJobStatus(job.ID)
+	require.NoError(t, err)
+	assert.True(t, exists, "StartJob 后进入 executors")
+
+	// 重复 StartJob:已在运行 → 错误
+	err = s.StartJob(job.ID)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "任务已经在运行")
+
+	// StopJob → 暂停
+	require.NoError(t, s.StopJob(job.ID))
+	require.NoError(t, db.First(&row, "id = ?", job.ID).Error)
+	assert.Equal(t, models.JobStatusPause, row.Status, "StopJob 后应为暂停态")
+	exists, err = s.GetJobStatus(job.ID)
+	require.NoError(t, err)
+	assert.False(t, exists, "StopJob 后移出 executors")
+
+	// 重复 StopJob:未在运行 → 错误
+	err = s.StopJob(job.ID)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "任务未在运行")
+
+	// 不存在的 ID:启/停各自错误分支
+	err = s.StartJob("00000000-0000-0000-0000-000000000004")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "任务不存在")
+	err = s.StopJob("00000000-0000-0000-0000-000000000004")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "任务未在运行")
+}
+
+// TestJob8001_GetJobStatus executors 视角的存在性:!running 下 AddJob 不算运行,
+// StartJob 后算;不存在 → false + nil error。
+func TestJob8001_GetJobStatus(t *testing.T) {
+	s, _ := newScheduler8001(t)
+
+	// 不存在:不 panic
+	exists, err := s.GetJobStatus("00000000-0000-0000-0000-000000000005")
+	require.NoError(t, err)
+	assert.False(t, exists)
+
+	job := newJob8001("状态-查询", "reg8001_status")
+	require.NoError(t, s.AddJob(job))
+
+	exists, err = s.GetJobStatus(job.ID)
+	require.NoError(t, err)
+	assert.False(t, exists, "!running 下 AddJob 不进 executors")
+
+	require.NoError(t, s.StartJob(job.ID))
+	exists, err = s.GetJobStatus(job.ID)
+	require.NoError(t, err)
+	assert.True(t, exists, "StartJob 后在 executors 中")
+}
+
+// TestJob8001_GetJobCount_TotalRunning 预置 3 job(2 正常 1 暂停):
+// !running 下 total==3 / running==0;StartJob 单独拉起一个 → running==1(不起 cron)。
+func TestJob8001_GetJobCount_TotalRunning(t *testing.T) {
+	s, _ := newScheduler8001(t)
+
+	n1 := newJob8001("计数-正常1", "reg8001_count_a")
+	require.NoError(t, s.AddJob(n1))
+	n2 := newJob8001("计数-正常2", "reg8001_count_b")
+	require.NoError(t, s.AddJob(n2))
+	p1 := newJob8001("计数-暂停", "reg8001_count_c")
+	p1.Status = models.JobStatusPause
+	require.NoError(t, s.AddJob(p1))
+
+	total, running := s.GetJobCount()
+	assert.Equal(t, 3, total)
+	assert.Equal(t, 0, running, "!running 调度器下无 executors")
+
+	// StartJob 只 AddFunc 到未启动的 cron(不产生 goroutine,D-80-02 口径)
+	require.NoError(t, s.StartJob(p1.ID))
+	total, running = s.GetJobCount()
+	assert.Equal(t, 3, total)
+	assert.Equal(t, 1, running, "StartJob 后 executors 计数 +1")
+
+	require.NoError(t, s.RemoveJob(p1.ID))
+	total, running = s.GetJobCount()
+	assert.Equal(t, 2, total)
+	assert.Equal(t, 0, running)
+}
+
+
