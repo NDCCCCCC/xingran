@@ -567,7 +567,7 @@ func TestDsc7902_GetList_PaginationAndFilter(t *testing.T) {
 	}
 
 	// 日期范围过滤(周一..周三)
-	rows, total, err = svc.GetDutyScheduleList(context.Background(), &DutyScheduleListRequest{
+	_, _, err = svc.GetDutyScheduleList(context.Background(), &DutyScheduleListRequest{
 		StartDate: strPtr("2026-03-02"),
 		EndDate:   strPtr("2026-03-04"),
 	})

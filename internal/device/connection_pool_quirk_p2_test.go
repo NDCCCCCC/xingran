@@ -12,6 +12,7 @@
 package device
 
 import (
+	"context"
 	"runtime"
 	"testing"
 	"time"
@@ -59,7 +60,7 @@ func TestDeviceConnectionPool_Close_GoroutineLeak(t *testing.T) {
 	// the cleanup goroutine, not the connection goroutines.
 	for i := 0; i < 3; i++ {
 		go func(idx int) {
-			_, _ = pool.GetConnection(nil, "nonexistent-device")
+			_, _ = pool.GetConnection(context.TODO(), "nonexistent-device")
 		}(i)
 	}
 	time.Sleep(10 * time.Millisecond)

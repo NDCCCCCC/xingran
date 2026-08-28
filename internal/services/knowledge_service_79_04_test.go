@@ -234,7 +234,7 @@ func TestKsv7904_ArticleCRUD_RoundTrip(t *testing.T) {
 
 	// 状态过滤:只看已发布 → 3 篇
 	pub := int(models.KnowledgeArticleStatusPublished)
-	list, total, err = svc.GetKnowledgeArticleList(ctx, &KnowledgeArticleListRequest{
+	_, total, err = svc.GetKnowledgeArticleList(ctx, &KnowledgeArticleListRequest{
 		BaseListRequest: baseListReq7904(1, 10),
 		Status:          &pub,
 	})
@@ -251,7 +251,7 @@ func TestKsv7904_ArticleCRUD_RoundTrip(t *testing.T) {
 	assert.Equal(t, draft.ID, list[0].ID)
 
 	// 标题模糊过滤
-	list, total, err = svc.GetKnowledgeArticleList(ctx, &KnowledgeArticleListRequest{
+	_, total, err = svc.GetKnowledgeArticleList(ctx, &KnowledgeArticleListRequest{
 		BaseListRequest: baseListReq7904(1, 10),
 		Title:           "草稿",
 	})
@@ -424,10 +424,10 @@ func TestKsv7904_SearchArticles(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(4), total)
 	assert.Len(t, list, 4)
-	list, total, err = svc.SearchKnowledgeArticles(ctx, &SearchKnowledgeRequest{PageSize: 1000, PageNum: 0})
+	_, _, err = svc.SearchKnowledgeArticles(ctx, &SearchKnowledgeRequest{PageSize: 1000, PageNum: 0})
 	require.NoError(t, err)
 	assert.Len(t, list, 4, "pageSize 钳制到 500 后仍返回全部 4 条")
-	list, total, err = svc.SearchKnowledgeArticles(ctx, &SearchKnowledgeRequest{PageSize: 2, PageNum: -1})
+	_, _, err = svc.SearchKnowledgeArticles(ctx, &SearchKnowledgeRequest{PageSize: 2, PageNum: -1})
 	require.NoError(t, err)
 	assert.Len(t, list, 2, "负 pageNum 归零后等同第 1 页")
 

@@ -196,7 +196,7 @@ func TestGrp78_GetList_FilterSortPage(t *testing.T) {
 
 	// 白名单排序
 	for _, field := range []string{"groupName", "memberCount", "ouDn"} {
-		groups, _, err = svc.GetList(ctx, &GroupListRequest{
+		_, _, err = svc.GetList(ctx, &GroupListRequest{
 			BaseListRequest: base.BaseListRequest{Current: 1, PageSize: 10, OrderByColumn: field},
 			ConfigID:        configID,
 		})
@@ -204,7 +204,7 @@ func TestGrp78_GetList_FilterSortPage(t *testing.T) {
 	}
 
 	// 白名单外回落 group_name ASC
-	groups, _, err = svc.GetList(ctx, &GroupListRequest{
+	_, _, err = svc.GetList(ctx, &GroupListRequest{
 		BaseListRequest: base.BaseListRequest{Current: 1, PageSize: 10, OrderByColumn: "unknown"},
 		ConfigID:        configID,
 	})

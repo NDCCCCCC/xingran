@@ -249,6 +249,7 @@ func TestSW78_SendConfig_And_SendConfigs(t *testing.T) {
 	w := newScrapliWrapperForTesting(nil)
 	if w == nil {
 		t.Errorf("newScrapliWrapperForTesting returned nil")
+		return
 	}
 	w.device = &models.NetworkDevice{
 		DeviceName: "dummy-device",

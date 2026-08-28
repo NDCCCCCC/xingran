@@ -257,7 +257,7 @@ func TestNdv7904_List_PaginationFilter(t *testing.T) {
 
 	// 排序白名单分支:deviceName ASC → alpha 打头
 	asc := true
-	list, total, err = svc.List(ctx, &ListDeviceRequest{
+	list, _, err = svc.List(ctx, &ListDeviceRequest{
 		BaseListRequest: base.BaseListRequest{
 			Current: 1, PageSize: 10, OrderByColumn: "deviceName", IsAsc: &asc,
 		},

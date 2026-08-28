@@ -283,7 +283,7 @@ func TestOGM78_ListMappings_FilterAndPage(t *testing.T) {
 	// D-78-06f 现行为锁：GroupName 过滤触发 JOIN sys_ad_group，最终 ORDER BY created_at
 	// 跨表歧义（"ambiguous column name: created_at"），sqlite 与 PG 同样会报错。
 	// 本期不修，记 SUMMARY 待裁决。改为断言"返回错误包含歧义信息"以实证覆盖到 JOIN 路径。
-	resp, err = svc.ListMappings(ctx, &ListMappingsRequest{
+	_, err = svc.ListMappings(ctx, &ListMappingsRequest{
 		GroupName: "EngGroup",
 		Current:   1, PageSize: 10,
 	})
