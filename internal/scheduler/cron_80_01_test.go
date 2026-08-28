@@ -849,4 +849,154 @@ func TestSeam8001_GlobalScheduler(t *testing.T) {
 	assert.Nil(t, GetGlobalScheduler())
 }
 
+// ============================================================================
+// Task 5 收口 — cron.go 缺口补足(纯函数 + var seams + 设备任务分支)
+// ============================================================================
+
+// TestGap8001_GetNoticeJobName notice_publish_<id> 拼字符串,纯函数直调。
+func TestGap8001_GetNoticeJobName(t *testing.T) {
+	assert.Equal(t, "notice_publish_xyz", getNoticeJobName("xyz"))
+	assert.Equal(t, "notice_publish_", getNoticeJobName(""))
+}
+
+// TestGap8001_JoinWithSeparator 中文顿号连接,表驱动覆盖空/单/多分支。
+func TestGap8001_JoinWithSeparator(t *testing.T) {
+	assert.Equal(t, "", joinWithSeparator(nil, "、"), "空切片 → 空串")
+	assert.Equal(t, "甲", joinWithSeparator([]string{"甲"}, "、"), "单元素不加分隔符")
+	assert.Equal(t, "甲、乙、丙", joinWithSeparator([]string{"甲", "乙", "丙"}, "、"), "多元素以分隔符相连")
+}
+
+// TestGap8001_FormatMemberList 优先 nickname,缺则 fallback username,空集合 → ""。
+func TestGap8001_FormatMemberList(t *testing.T) {
+	assert.Equal(t, "", formatMemberList(nil))
+	assert.Equal(t, "张三", formatMemberList([]dutyMember{{UserID: "u1", Username: "u1", NickName: "张三"}}))
+	assert.Equal(t, "u2", formatMemberList([]dutyMember{{UserID: "u2", Username: "u2"}}),
+		"缺 nickname → fallback username")
+	assert.Equal(t, "A、B、C", formatMemberList([]dutyMember{
+		{NickName: "A"}, {NickName: "B"}, {NickName: "C"},
+	}))
+}
+
+// stubVDIVMService8001 VDI seam stub,实现 VDIVMService 双方法。
+type stubVDIVMService8001 struct{}
+
+func (s *stubVDIVMService8001) SyncAllVMs(ctx context.Context, serverID string) error {
+	return nil
+}
+func (s *stubVDIVMService8001) SyncVMsFromVDIByServer(ctx context.Context, server *models.VDIServer) error {
+	return nil
+}
+
+// TestGap8001_SetGetVDIVMService VDI seam save/set/get/restore 纪律。
+func TestGap8001_SetGetVDIVMService(t *testing.T) {
+	old := GlobalVDIVMService
+	t.Cleanup(func() { SetVDIVMService(old) })
+
+	stub := &stubVDIVMService8001{}
+	SetVDIVMService(stub)
+	assert.Same(t, stub, GetVDIVMService())
+
+	SetVDIVMService(nil)
+	assert.Nil(t, GetVDIVMService())
+}
+
+// stubDeviceInfoCollection8001 设备信息采集 seam stub,实现 EnqueueAllOnlineDevices。
+type stubDeviceInfoCollection8001 struct {
+	errOnEnqueue error
+}
+
+func (s *stubDeviceInfoCollection8001) EnqueueAllOnlineDevices(ctx context.Context) error {
+	return s.errOnEnqueue
+}
+
+// TestGap8001_SetGetDeviceInfoCollectionService 设备信息采集 seam 纪律。
+func TestGap8001_SetGetDeviceInfoCollectionService(t *testing.T) {
+	old := GlobalDeviceInfoCollectionService
+	t.Cleanup(func() { SetDeviceInfoCollectionService(old) })
+
+	stub := &stubDeviceInfoCollection8001{}
+	SetDeviceInfoCollectionService(stub)
+	assert.Same(t, stub, GetDeviceInfoCollectionService())
+
+	SetDeviceInfoCollectionService(nil)
+	assert.Nil(t, GetDeviceInfoCollectionService())
+}
+
+// errDeviceMonitorService8001 设备监控 stub,所有方法返回 sentinel error,
+// 覆盖设备任务的"stub 返回 error"分支。
+type errDeviceMonitorService8001 struct{}
+
+var errDevice8001 = errors.New("reg8001 设备服务故障")
+
+func (e *errDeviceMonitorService8001) CheckAllDevicesStatus(ctx context.Context) (int, int, error) {
+	return 0, 0, errDevice8001
+}
+func (e *errDeviceMonitorService8001) CollectAllPortStatus(ctx context.Context) error {
+	return errDevice8001
+}
+func (e *errDeviceMonitorService8001) CollectAllMACAddresses(ctx context.Context) error {
+	return errDevice8001
+}
+func (e *errDeviceMonitorService8001) BackupAllConfigurations(ctx context.Context) error {
+	return errDevice8001
+}
+
+// TestGap8001_DeviceTasks_NilSeam 5 个设备任务在 seam 为 nil 时统一报错分支。
+func TestGap8001_DeviceTasks_NilSeam(t *testing.T) {
+	origDMS := GlobalDeviceMonitorService
+	origDIC := GlobalDeviceInfoCollectionService
+	t.Cleanup(func() {
+		SetDeviceMonitorService(origDMS)
+		SetDeviceInfoCollectionService(origDIC)
+	})
+	SetDeviceMonitorService(nil)
+	SetDeviceInfoCollectionService(nil)
+
+	assert.Error(t, executeDeviceStatusCheckTask(context.Background()), "device_status_check")
+	assert.Error(t, executePortCollectionTask(context.Background()), "port_collection")
+	assert.Error(t, executeMACCollectionTask(context.Background()), "mac_collection")
+	assert.Error(t, executeConfigBackupTask(context.Background()), "config_backup")
+	assert.Error(t, executeDeviceInfoUpdateTask(context.Background()), "device_info_update")
+}
+
+// TestGap8001_DeviceTasks_StubSuccess seam 注入成功 → 5 任务走完 nil 守卫到业务完成。
+func TestGap8001_DeviceTasks_StubSuccess(t *testing.T) {
+	origDMS := GlobalDeviceMonitorService
+	origDIC := GlobalDeviceInfoCollectionService
+	t.Cleanup(func() {
+		SetDeviceMonitorService(origDMS)
+		SetDeviceInfoCollectionService(origDIC)
+	})
+
+	// mockDeviceMonitorService 见 cron_test.go:50(全成功返回);同名复用
+	SetDeviceMonitorService(&mockDeviceMonitorService{})
+	SetDeviceInfoCollectionService(&stubDeviceInfoCollection8001{})
+
+	assert.NoError(t, executeDeviceStatusCheckTask(context.Background()))
+	assert.NoError(t, executePortCollectionTask(context.Background()))
+	assert.NoError(t, executeMACCollectionTask(context.Background()))
+	assert.NoError(t, executeConfigBackupTask(context.Background()))
+	assert.NoError(t, executeDeviceInfoUpdateTask(context.Background()))
+}
+
+// TestGap8001_DeviceTasks_StubError seam 注入返错 → 5 任务的 error 分支(device_info_update
+// 不走 DeviceMonitorService,只走 DeviceInfoCollectionService;此处仅覆盖 4 个 DMS 路径)。
+func TestGap8001_DeviceTasks_StubError(t *testing.T) {
+	origDMS := GlobalDeviceMonitorService
+	origDIC := GlobalDeviceInfoCollectionService
+	t.Cleanup(func() {
+		SetDeviceMonitorService(origDMS)
+		SetDeviceInfoCollectionService(origDIC)
+	})
+
+	SetDeviceMonitorService(&errDeviceMonitorService8001{})
+	SetDeviceInfoCollectionService(&stubDeviceInfoCollection8001{errOnEnqueue: errDevice8001})
+
+	assert.Error(t, executeDeviceStatusCheckTask(context.Background()))
+	assert.Error(t, executePortCollectionTask(context.Background()))
+	assert.Error(t, executeMACCollectionTask(context.Background()))
+	assert.Error(t, executeConfigBackupTask(context.Background()))
+	assert.Error(t, executeDeviceInfoUpdateTask(context.Background()))
+}
+
 
