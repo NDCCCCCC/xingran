@@ -63,6 +63,7 @@
 | 2026-08-28 | Phase 88 R33 components widgetRegistry+VDI/AssetRow | 43.36 | 21574 | 9355 | | | 88-R33 | comp-table 24.5/comp-dash 25.4 | comp-table 88.7/comp-dash 27.2 |
 | 2026-08-28 | Phase 88 R34 router routeConfigManager+componentLoader | 43.83 | 21574 | 9457 | | | 88-R34 | router 32.9 | router 74.5 |
 | 2026-08-28 | Phase 88 R35 dashboard widgets BaseWidget | 43.98 | 21574 | 9489 | | | 88-R35 | comp-dash 27.2 | comp-dash 29.2 |
+| 2026-08-28 | Phase 88 R36 system apikeys LogsModal | 44.22 | 21574 | 9541 | | | 88-R36 | sys 30.8 | sys 32.7 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
