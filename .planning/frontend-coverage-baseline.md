@@ -48,6 +48,7 @@
 | 2026-08-28 | Phase 88 R18 workorder 三页深测 | 39.73 | 21574 | 8572 | | | 88-R18 | wo 25.6 | wo 28.9 |
 | 2026-08-28 | Phase 88 R19 vdi 双列表+shared子组件 | 39.88 | 21574 | 8605 | | | 88-R19 | vdi 21.9/comp-shared 24.2 | vdi 26.3/comp-shared 24.1 |
 | 2026-08-28 | Phase 88 R20 fix-suggestion子组件+duty子组件 | 40.02 | 21574 | 8636 | | | 88-R20 | duty 35.5 | duty 37.5 |
+| 2026-08-28 | Phase 88 R21 notice/dept/role/post 子组件 | 40.24 | 21574 | 8683 | | | 88-R21 | sys 29.9 | sys 30.8 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
