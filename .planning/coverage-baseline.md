@@ -672,7 +672,7 @@ PACKAGE    43893    31119  70.90%
 
 | date | phase_label | weighted_avg | total_stmts | total_covered | 0pct_pkg_count | commit | phase_executor | ratchet_from | ratchet_to |
 |------|-------------|--------------|-------------|---------------|----------------|--------|----------------|--------------|------------|
-| 2026-08-28 | Phase 81 后 | 78.0 | 43729 | 34103 | 4 | TBD (81-01 ratchet) | gsd-executor 81-01 | 55.5 | 77.5 |
+| 2026-08-28 | Phase 81 后 | 78.0 | 43729 | 34103 | 4 | 2830800 | gsd-executor 81-01 | 55.5 | 77.5 |
 
 ### Per-package (Phase 81 后)
 
@@ -774,10 +774,9 @@ PACKAGE    43729    34103  77.99%
 - 75-78 文档债回填:见上方 `## Phase 75/76/77/78/80 后 (backfill)` 五段;75/76 用 mid-phase 测得值 (55.74% / 56.02%) 占位 weighted,stmts/covered/0pct 三列 `n/a`;77/78/80 全 `n/a` 且**不造数**——只在 SUMMARIES 里有 per-package 数据,无 PACKAGE 行级汇总可溯
 
 > **Ratchet note (D-04):** The `commit` column on the Phase 81 后 row reads
-> `TBD (81-01 ratchet)` — the docs(81-01) closeout commit that ships this
-> section together with 81-01-SUMMARY.md; the SHA is back-filled by an
-> immediate follow-up docs commit (71-01b / 79-06 two-step fill precedent:
-> 受保护 main 分支禁 amend,后随 commit 改 commit 列)。
+> `2830800` — the docs(81-01) atomic-ratchet closeout commit that shipped this
+> section together with 81-01-SUMMARY.md back-fill (71-01b / 79-06 two-step
+> fill precedent: 受保护 main 分支禁 amend,后随 commit 改 commit 列)。
 
 > **Backfill note (D-04 / 文档债 #3):** Phase 75-78 backfill rows have no
 > phase-end full-package measurement; rows with `n/a` in weighted column
