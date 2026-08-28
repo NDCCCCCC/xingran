@@ -999,4 +999,297 @@ func TestGap8001_DeviceTasks_StubError(t *testing.T) {
 	assert.Error(t, executeDeviceInfoUpdateTask(context.Background()))
 }
 
+// ============================================================================
+// Task 5 收口续 — Round 2:cron.go 任务族(duty/notice)sqlite 驱动分支
+// ============================================================================
 
+// newDutyDB8001 sqlite 文件库,基于 newSchedDB8001 + 手写 DDL(sys_duty_config /
+// sys_user / sys_duty_pool / sys_duty_schedule / sys_notice / sys_notice_target);
+// AutoMigrate 已落 sys_job/sys_job_log,本 fixture 追加 duty/notice 侧表。
+func newDutyDB8001(t *testing.T) *gorm.DB {
+	t.Helper()
+	db := newSchedDB8001(t)
+	ddl := []string{
+		`CREATE TABLE IF NOT EXISTS sys_duty_config (
+			id TEXT PRIMARY KEY,
+			reminder_enabled INTEGER
+		)`,
+		`CREATE TABLE IF NOT EXISTS sys_user (
+			id TEXT PRIMARY KEY,
+			username TEXT,
+			nickname TEXT,
+			deleted_at DATETIME
+		)`,
+		`CREATE TABLE IF NOT EXISTS sys_duty_pool (
+			id TEXT PRIMARY KEY,
+			pool_name TEXT
+		)`,
+		`CREATE TABLE IF NOT EXISTS sys_duty_schedule (
+			id TEXT PRIMARY KEY,
+			user_id TEXT,
+			pool_id TEXT,
+			schedule_date TEXT,
+			status INTEGER
+		)`,
+		`CREATE TABLE IF NOT EXISTS sys_notice (
+			id TEXT PRIMARY KEY,
+			notice_title TEXT,
+			priority INTEGER,
+			publish_status INTEGER,
+			target_type INTEGER,
+			end_date TEXT
+		)`,
+		`CREATE TABLE IF NOT EXISTS sys_notice_target (
+			id TEXT PRIMARY KEY,
+			notice_id TEXT,
+			target_id TEXT
+		)`,
+	}
+	for _, stmt := range ddl {
+		require.NoError(t, db.Exec(stmt).Error)
+	}
+	return db
+}
+
+// TestGap8001_IsDutyReminderEnabled 三分支:无配置默认启用 / 显式禁用 / 显式启用。
+func TestGap8001_IsDutyReminderEnabled(t *testing.T) {
+	db := newDutyDB8001(t)
+
+	// 无配置 → 默认 true(ErrRecordNotFound 分支)
+	enabled, err := isDutyReminderEnabled(db)
+	require.NoError(t, err)
+	assert.True(t, enabled)
+
+	// 显式禁用
+	require.NoError(t, db.Exec(`INSERT INTO sys_duty_config (id, reminder_enabled) VALUES (?, ?)`, "cfg1", 0).Error)
+	enabled, err = isDutyReminderEnabled(db)
+	require.NoError(t, err)
+	assert.False(t, enabled)
+
+	// 显式启用
+	require.NoError(t, db.Exec(`UPDATE sys_duty_config SET reminder_enabled = ? WHERE id = ?`, 1, "cfg1").Error)
+	enabled, err = isDutyReminderEnabled(db)
+	require.NoError(t, err)
+	assert.True(t, enabled)
+}
+
+// TestGap8001_GetTodayDutyMembers 空集 + 1 条带 join 信息。
+func TestGap8001_GetTodayDutyMembers(t *testing.T) {
+	db := newDutyDB8001(t)
+	today := time.Now().Format("2006-01-02")
+
+	// 空
+	members, err := getTodayDutyMembers(db, today)
+	require.NoError(t, err)
+	assert.Empty(t, members)
+
+	// 1 条
+	require.NoError(t, db.Exec(`INSERT INTO sys_user (id, username, nickname) VALUES (?, ?, ?)`, "u1", "alice", "爱丽丝").Error)
+	require.NoError(t, db.Exec(`INSERT INTO sys_duty_pool (id, pool_name) VALUES (?, ?)`, "p1", "A 班").Error)
+	require.NoError(t, db.Exec(`INSERT INTO sys_duty_schedule (id, user_id, pool_id, schedule_date, status) VALUES (?, ?, ?, ?, ?)`,
+		"s1", "u1", "p1", today, 0).Error)
+	members, err = getTodayDutyMembers(db, today)
+	require.NoError(t, err)
+	require.Len(t, members, 1)
+	assert.Equal(t, "u1", members[0].UserID)
+	assert.Equal(t, "alice", members[0].Username)
+	assert.Equal(t, "爱丽丝", members[0].NickName)
+	assert.Equal(t, "A 班", members[0].PoolName)
+}
+
+// TestGap8001_GetTargetUserIDs 全员(targetType 0, 排除软删)+ 通知目标(targetType 非 0)。
+func TestGap8001_GetTargetUserIDs(t *testing.T) {
+	db := newDutyDB8001(t)
+
+	// targetType 0:全部未删除用户
+	require.NoError(t, db.Exec(`INSERT INTO sys_user (id) VALUES (?)`, "u1").Error)
+	require.NoError(t, db.Exec(`INSERT INTO sys_user (id, deleted_at) VALUES (?, ?)`, "u2", time.Now()).Error)
+	ids, err := getTargetUserIDs(db, "n1", 0)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"u1"}, ids, "软删用户被排除")
+
+	// targetType 1:通知目标表
+	require.NoError(t, db.Exec(`INSERT INTO sys_notice_target (id, notice_id, target_id) VALUES (?, ?, ?)`, "t1", "n1", "u3").Error)
+	require.NoError(t, db.Exec(`INSERT INTO sys_notice_target (id, notice_id, target_id) VALUES (?, ?, ?)`, "t2", "n1", "u4").Error)
+	ids, err = getTargetUserIDs(db, "n1", 1)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"u3", "u4"}, ids)
+}
+
+// TestGap8001_SendDutyReminderNotification 多 member 经 stubNoticeHub 验证
+// fallback username + 消息结构(空 members 也广播但 ids 为空 — 由 formatMemberList
+// 空串分支直接返回 — 仍走完 BroadcastToUsers 调用,本测试聚焦多 member 主路径)。
+func TestGap8001_SendDutyReminderNotification(t *testing.T) {
+	origHub := GlobalNoticeHub
+	t.Cleanup(func() { SetNoticeHub(origHub) })
+
+	hub := &stubNoticeHub8001{}
+	SetNoticeHub(hub)
+
+	// 空 members → BroadcastToUsers 仍被调用(函数无 len 守卫),userIDs 为空
+	sendDutyReminderNotification(nil)
+	calls, ids, _ := hub.snapshot()
+	assert.Equal(t, 1, calls)
+	assert.Empty(t, ids)
+
+	// 多 member:nickname 优先,缺则 fallback username
+	members := []dutyMember{
+		{UserID: "u1", Username: "u1", NickName: "张三"},
+		{UserID: "u2", Username: "u2"},
+	}
+	sendDutyReminderNotification(members)
+	calls, ids, msg := hub.snapshot()
+	assert.Equal(t, 2, calls)
+	assert.Equal(t, []string{"u1", "u2"}, ids)
+	require.NotNil(t, msg)
+	raw := fmt.Sprintf("%+v", msg)
+	assert.Contains(t, raw, "张三")
+	assert.Contains(t, raw, "u2")
+	assert.Contains(t, raw, "duty_reminder")
+}
+
+// TestGap8001_HandleTaskLifecycle nil-scheduler 守卫 + 一次性 RemoveJob + 周期保留。
+func TestGap8001_HandleTaskLifecycle(t *testing.T) {
+	s, _ := newScheduler8001(t)
+
+	// GlobalScheduler nil → no-op(不 panic)
+	orig := GlobalScheduler
+	t.Cleanup(func() { SetGlobalScheduler(orig) })
+	SetGlobalScheduler(nil)
+	handleTaskLifecycle(models.Job{MisfirePolicy: models.MisfirePolicyExecuteOnce}, "x", "n1")
+
+	// 一次性 + job 存在 → RemoveJob
+	SetGlobalScheduler(s)
+	once := newJob8001("handleLifecycle-once-8001", "x")
+	once.MisfirePolicy = models.MisfirePolicyExecuteOnce
+	require.NoError(t, s.AddJob(once))
+	require.Equal(t, 1, sGetTotal(s))
+	handleTaskLifecycle(*once, "handleLifecycle-once-8001", "n1")
+	assert.Equal(t, 0, sGetTotal(s), "一次性任务 RemoveJob 后内存清零")
+
+	// 周期 + job 存在 → 保留
+	periodic := newJob8001("handleLifecycle-periodic-8001", "x")
+	periodic.MisfirePolicy = models.MisfirePolicyDefault
+	require.NoError(t, s.AddJob(periodic))
+	handleTaskLifecycle(*periodic, "handleLifecycle-periodic-8001", "n1")
+	assert.Equal(t, 1, sGetTotal(s), "周期任务保留")
+}
+
+// sGetTotal 小封装(GetJobCount 总数断言可读性)。
+func sGetTotal(s *Scheduler) int {
+	total, _ := s.GetJobCount()
+	return total
+}
+
+// TestGap8001_ShouldStopNotice endDate nil / 格式错 / 未来 / 过去 + GlobalScheduler 4 分支。
+func TestGap8001_ShouldStopNotice(t *testing.T) {
+	db := newDutyDB8001(t)
+
+	// endDate nil → false
+	assert.False(t, shouldStopNotice(nil, "title", "n1", db))
+
+	// endDate 格式错 → false
+	bad := "not-rfc3339"
+	assert.False(t, shouldStopNotice(&bad, "title", "n1", db))
+
+	// endDate 未来 → false
+	future := time.Now().Add(24 * time.Hour).Format(time.RFC3339)
+	assert.False(t, shouldStopNotice(&future, "title", "n1", db))
+
+	// 过去 + GlobalScheduler nil → true(内部块被守卫)
+	past := time.Now().Add(-24 * time.Hour).Format(time.RFC3339)
+	orig := GlobalScheduler
+	t.Cleanup(func() { SetGlobalScheduler(orig) })
+	SetGlobalScheduler(nil)
+	assert.True(t, shouldStopNotice(&past, "title", "n1", db))
+
+	// 过去 + GlobalScheduler 有 + 对应 job → 调 RemoveJob + true
+	// 注意:scheduler 与 shouldStopNotice 必须共享同一 db(否则按 job_name 查不到)
+	s := NewScheduler(db)
+	s.SetLogger(&schedStubLogger8001{})
+	SetGlobalScheduler(s)
+	noticeID := "n-past-8001"
+	jobName := getNoticeJobName(noticeID) // "notice_publish_n-past-8001"
+	job := newJob8001(jobName, "x")
+	require.NoError(t, s.AddJob(job))
+	assert.Equal(t, 1, sGetTotal(s))
+	assert.True(t, shouldStopNotice(&past, "title", noticeID, db))
+	assert.Equal(t, 0, sGetTotal(s), "过去 + 有 job + GlobalScheduler → RemoveJob 触发")
+}
+
+// TestGap8001_BroadcastNoticeToUsers hub nil 无广播;有 hub + targetType 0 走全用户列表。
+func TestGap8001_BroadcastNoticeToUsers(t *testing.T) {
+	db := newDutyDB8001(t)
+	orig := GlobalNoticeHub
+	t.Cleanup(func() { SetNoticeHub(orig) })
+
+	// hub nil → no-op(不 panic)
+	SetNoticeHub(nil)
+	broadcastNoticeToUsers(db, "n1", "title", 1, 0)
+
+	// 有 hub + 2 个用户(targetType 0) → 广播
+	hub := &stubNoticeHub8001{}
+	SetNoticeHub(hub)
+	require.NoError(t, db.Exec(`INSERT INTO sys_user (id) VALUES (?), (?)`, "u1", "u2").Error)
+	broadcastNoticeToUsers(db, "n1", "title", 1, 0)
+	calls, ids, msg := hub.snapshot()
+	assert.Equal(t, 1, calls)
+	assert.ElementsMatch(t, []string{"u1", "u2"}, ids)
+	require.NotNil(t, msg)
+	assert.Contains(t, fmt.Sprintf("%+v", msg), "new_notice")
+}
+
+// TestGap8001_ExecuteDutyReminderTask GlobalDB nil → 错误;禁用配置 → 跳过;无成员 → 跳过。
+func TestGap8001_ExecuteDutyReminderTask(t *testing.T) {
+	db := newDutyDB8001(t)
+	orig := GlobalDB
+	t.Cleanup(func() { SetDB(orig) })
+
+	// nil GlobalDB → error
+	SetDB(nil)
+	require.Error(t, executeDutyReminderTask(context.Background(), nil))
+
+	// 禁用配置 → 跳过(nil 返回)
+	SetDB(&stubDBGetter8001{db: db})
+	require.NoError(t, db.Exec(`INSERT INTO sys_duty_config (id, reminder_enabled) VALUES (?, ?)`, "cfg1", 0).Error)
+	require.NoError(t, executeDutyReminderTask(context.Background(), nil))
+
+	// 启用(默认)但无今日值班 → 跳过
+	require.NoError(t, db.Exec(`DELETE FROM sys_duty_config WHERE id = ?`, "cfg1").Error)
+	require.NoError(t, executeDutyReminderTask(context.Background(), nil))
+}
+
+// TestGap8001_ExecuteNoticePublishTask nil GlobalDB → 错误;不存在的 noticeID →
+// 内部 ErrRecordNotFound → 静默返回 nil(not "已发布或不存在"日志路径)。
+func TestGap8001_ExecuteNoticePublishTask(t *testing.T) {
+	db := newDutyDB8001(t)
+	orig := GlobalDB
+	t.Cleanup(func() { SetDB(orig) })
+
+	// nil GlobalDB → error
+	SetDB(nil)
+	require.Error(t, executeNoticePublishTask(context.Background(), map[string]interface{}{"param": "x"}))
+
+	// 不存在的 noticeID → ErrRecordNotFound 分支 → 返回 nil(不调用 senderService)
+	SetDB(&stubDBGetter8001{db: db})
+	require.NoError(t, executeNoticePublishTask(context.Background(), map[string]interface{}{"param": "no-such-notice-8001"}))
+}
+
+
+
+// TestGap8001_AddJob_Running_InvalidCron addJob 错误分支:running 状态下 AddJob
+// 传入非法 cron 表达式 → cron.AddFunc 报错 → AddJob 透传错误。
+// 直接写 s.running = true(同包)绕开 Start 以避免起 cron goroutine。
+func TestGap8001_AddJob_Running_InvalidCron(t *testing.T) {
+	s, _ := newScheduler8001(t)
+	s.running = true
+
+	bad := newJob8001("运行中-坏cron", "reg8001_bad_cron")
+	bad.CronExpression = "this-is-not-a-cron"
+	err := s.AddJob(bad)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "添加任务到调度器失败")
+
+	// running 标记未被错误回滚(本次 AddJob 错误后 s.running 仍为 true)
+	assert.True(t, s.running)
+}
