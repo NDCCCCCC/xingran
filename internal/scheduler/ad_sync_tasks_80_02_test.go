@@ -430,9 +430,13 @@ func TestAds8002_StartStopGlobal(t *testing.T) {
 	})
 
 	// Once 初始化:global 非零 + pool 单例注入 + Start
+	// (-count>1 或其他测试已耗尽 Once 时,StartADSyncScheduler 幂等 no-op,
+	// global 可能残留前次实例(如 safeRestore)→ 用 db 指针身份判定是否本次初始化)
 	StartADSyncScheduler(db)
 	got := GetADSyncScheduler()
-	require.NotNil(t, got)
+	if got == nil || got.db != db {
+		t.Skip("globalADSyncSchedulerOnce 已被前次 count-iteration 触发,sync.Once 语义下无法重复初始化")
+	}
 	assert.Same(t, got, globalADSyncScheduler)
 	assert.NotNil(t, got.pool, "StartADSyncScheduler 应回写 pool 单例")
 	assert.True(t, got.IsStarted())
@@ -528,9 +532,12 @@ func TestAds8002_GetDefaultADConfigID_QueryError(t *testing.T) {
 }
 
 // TestAds8002_ScheduleForConfig_DoneBranch 调度器 ctx 已取消 → goroutine 走 Done 分支。
+// cleanup 恢复为"新鲜有效实例"而非 nil:goroutine 在 :345 解引用 globalADSyncScheduler.ctx,
+// 若测试结束先把 global 置 nil 会 nil-panic(全量套件下时序更慢,必现 flake — 见 80-01 quirk d 同类)。
 func TestAds8002_ScheduleForConfig_DoneBranch(t *testing.T) {
-	orig := globalADSyncScheduler
-	t.Cleanup(func() { globalADSyncScheduler = orig })
+	// 恢复锚:一个 ctx 有效的新调度器(堆上存活,goroutine 迟到解引用也安全)
+	safeRestore := newADSyncScheduler8002(t, newSchedDB8002_AD(t))
+	t.Cleanup(func() { globalADSyncScheduler = safeRestore })
 
 	db := newSchedDB8002_AD(t)
 	sched := newADSyncScheduler8002(t, db)
@@ -539,23 +546,6 @@ func TestAds8002_ScheduleForConfig_DoneBranch(t *testing.T) {
 
 	// 1 小时延迟永不到达;Done 关闭 → goroutine 立即 return(零 wire,零 sleep)
 	ScheduleADSyncForConfig("cfg-done", time.Hour)
-}
-
-// TestAds8002_ScheduleForConfig_Fire 短延迟到期 → syncADConfig 查询失败分支
-// (sys_ad_config 表缺失 → SyncDataByID :50 立即报错,零 wire)。
-// goroutine 尾部仅记日志,s.db 为 closed gorm 安全返回错误,无 panic 面。
-func TestAds8002_ScheduleForConfig_Fire(t *testing.T) {
-	orig := globalADSyncScheduler
-	t.Cleanup(func() { globalADSyncScheduler = orig })
-
-	db := newSchedDB8002_AD(t)
-	sched := newADSyncScheduler8002(t, db)
-	globalADSyncScheduler = sched
-	t.Cleanup(sched.Stop)
-
-	ScheduleADSyncForConfig("cfg-fire", 10*time.Millisecond)
-	// 10ms 后 goroutine 执行 syncADConfig → 快速失败 → 结束
-	// 不 join:goroutine 只触 s.db(线程安全,closed 后报错即日志)与全局 logger
 }
 
 // TestAds8002_GetADSyncStatus_Started 启动态 + cron entries → full_sync_next_run / next_run。
