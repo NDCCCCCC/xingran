@@ -390,7 +390,7 @@ func TestDmn7906_CheckDeviceStatus_SNMPHappy(t *testing.T) {
 	require.NoError(t, db.Create(cred).Error)
 
 	dev := dmn7906SeedDevice(t, db, "dev-dmn-snmp", "snmp-switch", models.DeviceStatusOffline)
-	require.NoError(t, db.Model(dev).Updates(map[string]interface{}{
+	require.NoError(t, db.Model(dev).Updates(map[string]any{
 		"credential_id": cred.ID,
 		"ip_address":    "127.0.0.1",
 		"snmp_port":     fake.Port(),

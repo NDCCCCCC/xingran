@@ -42,7 +42,7 @@ import (
 // newDB7906 opens a glebarez sqlite file DB under t.TempDir(), AutoMigrates the
 // given models and installs the test-side UUID fill callback. The DB handle is
 // closed via t.Cleanup. Callers own seeding.
-func newDB7906(t *testing.T, migrateModels ...interface{}) *gorm.DB {
+func newDB7906(t *testing.T, migrateModels ...any) *gorm.DB {
 	t.Helper()
 
 	db, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "svc7906.db")), &gorm.Config{

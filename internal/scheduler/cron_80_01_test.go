@@ -60,19 +60,19 @@ type schedStubLogger8001 struct {
 	errorf []string
 }
 
-func (l *schedStubLogger8001) Infof(format string, args ...interface{}) {
+func (l *schedStubLogger8001) Infof(format string, args ...any) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.infof = append(l.infof, fmt.Sprintf(format, args...))
 }
 
-func (l *schedStubLogger8001) Warnf(format string, args ...interface{}) {
+func (l *schedStubLogger8001) Warnf(format string, args ...any) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.warnf = append(l.warnf, fmt.Sprintf(format, args...))
 }
 
-func (l *schedStubLogger8001) Errorf(format string, args ...interface{}) {
+func (l *schedStubLogger8001) Errorf(format string, args ...any) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.errorf = append(l.errorf, fmt.Sprintf(format, args...))
@@ -119,7 +119,7 @@ func newJob8001(name, invokeTarget string) *models.Job {
 func registerCountingTask8001(t *testing.T, s *Scheduler, taskType string) *int32 {
 	t.Helper()
 	var counter int32
-	s.RegisterTask(taskType, func(ctx context.Context, params map[string]interface{}) error {
+	s.RegisterTask(taskType, func(ctx context.Context, params map[string]any) error {
 		atomic.AddInt32(&counter, 1)
 		return nil
 	})
@@ -302,7 +302,7 @@ func TestExec8001_Execute_SuccessPath(t *testing.T) {
 // 日志落失败态且 ExceptionInfo 携带 sentinel 文案。
 func TestExec8001_Execute_HandlerError(t *testing.T) {
 	s, db := newScheduler8001(t)
-	s.RegisterTask("reg8001_boom", func(ctx context.Context, params map[string]interface{}) error {
+	s.RegisterTask("reg8001_boom", func(ctx context.Context, params map[string]any) error {
 		return errSentinel8001
 	})
 
@@ -359,7 +359,7 @@ func TestExec8001_ParseInvokeTarget_Table(t *testing.T) {
 		name         string
 		in           string
 		wantType     string
-		wantParams   map[string]interface{}
+		wantParams   map[string]any
 		wantNilParam bool
 	}{
 		{name: "无冒号_无参数", in: "reg8001_typeA", wantType: "reg8001_typeA", wantNilParam: true},
@@ -367,20 +367,20 @@ func TestExec8001_ParseInvokeTarget_Table(t *testing.T) {
 			name:       "带冒号_单参数原文",
 			in:         `reg8001_typeB:{"k":1}`,
 			wantType:   "reg8001_typeB",
-			wantParams: map[string]interface{}{"param": `{"k":1}`},
+			wantParams: map[string]any{"param": `{"k":1}`},
 		},
 		{
 			name:       "坏JSON_原文透传不报错",
 			in:         "reg8001_typeC:{bad json",
 			wantType:   "reg8001_typeC",
-			wantParams: map[string]interface{}{"param": "{bad json"},
+			wantParams: map[string]any{"param": "{bad json"},
 		},
 		{name: "空串", in: "", wantType: "", wantNilParam: true},
 		{
 			name:       "多冒号_首个切分",
 			in:         "reg8001_notice:abc:def",
 			wantType:   "reg8001_notice",
-			wantParams: map[string]interface{}{"param": "abc:def"},
+			wantParams: map[string]any{"param": "abc:def"},
 		},
 	}
 
@@ -448,7 +448,7 @@ func TestExec8001_DefaultLogger_Direct(t *testing.T) {
 	assert.GreaterOrEqual(t, info, 1, "成功路径应产生 Infof")
 	assert.Equal(t, 0, errCalls)
 
-	s.RegisterTask("reg8001_logger_fail", func(ctx context.Context, params map[string]interface{}) error {
+	s.RegisterTask("reg8001_logger_fail", func(ctx context.Context, params map[string]any) error {
 		return errSentinel8001
 	})
 	failJob := newJob8001("注入缝-失败", "reg8001_logger_fail")
@@ -767,10 +767,10 @@ type stubNoticeHub8001 struct {
 	mu      sync.Mutex
 	calls   int
 	lastIDs []string
-	lastMsg interface{}
+	lastMsg any
 }
 
-func (h *stubNoticeHub8001) BroadcastToUsers(userIDs []string, message interface{}) {
+func (h *stubNoticeHub8001) BroadcastToUsers(userIDs []string, message any) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.calls++
@@ -778,7 +778,7 @@ func (h *stubNoticeHub8001) BroadcastToUsers(userIDs []string, message interface
 	h.lastMsg = message
 }
 
-func (h *stubNoticeHub8001) snapshot() (int, []string, interface{}) {
+func (h *stubNoticeHub8001) snapshot() (int, []string, any) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return h.calls, h.lastIDs, h.lastMsg
@@ -1268,11 +1268,11 @@ func TestGap8001_ExecuteNoticePublishTask(t *testing.T) {
 
 	// nil GlobalDB → error
 	SetDB(nil)
-	require.Error(t, executeNoticePublishTask(context.Background(), map[string]interface{}{"param": "x"}))
+	require.Error(t, executeNoticePublishTask(context.Background(), map[string]any{"param": "x"}))
 
 	// 不存在的 noticeID → ErrRecordNotFound 分支 → 返回 nil(不调用 senderService)
 	SetDB(&stubDBGetter8001{db: db})
-	require.NoError(t, executeNoticePublishTask(context.Background(), map[string]interface{}{"param": "no-such-notice-8001"}))
+	require.NoError(t, executeNoticePublishTask(context.Background(), map[string]any{"param": "no-such-notice-8001"}))
 }
 
 

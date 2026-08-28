@@ -42,7 +42,7 @@ func TestMx78_NewMetricsCacheService_NilPaths(t *testing.T) {
 	require.NotNil(t, svc2)
 
 	burn(200 * time.Millisecond)
-	_, _ = svc2.GetCurrentMetrics(ctx) // 预热:写 L1(+L2 经 manager setToL2,interface{} 断言失败即跳过)
+	_, _ = svc2.GetCurrentMetrics(ctx) // 预热:写 L1(+L2 经 manager setToL2,any 断言失败即跳过)
 	burn(200 * time.Millisecond)
 	mx, err := svc2.GetCurrentMetrics(ctx)
 	require.NoError(t, err)

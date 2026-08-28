@@ -471,7 +471,7 @@ func TestBg78_GetFromCachePool_MissAndHit(t *testing.T) {
 
 	// 预置 counter=1 + 合法 JSON 池 → 命中返回,counter 自减
 	require.NoError(t, mem.Set(ctx, "captcha:cache:pool:circle:1:counter", "1", time.Minute))
-	require.NoError(t, mem.SetJSON(ctx, "captcha:cache:pool:circle:1:1", map[string]interface{}{
+	require.NoError(t, mem.SetJSON(ctx, "captcha:cache:pool:circle:1:1", map[string]any{
 		"sliderImg": "data:image/png;base64,X",
 		"pieceImg":  "data:image/png;base64,Y",
 		"xPos":      10,

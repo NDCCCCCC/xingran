@@ -190,7 +190,7 @@ func TestApd7905_BuildBody_Trio(t *testing.T) {
 		Recipients: []string{"a", "b"},
 		Title:      "标题7905",
 		Content:    "内容7905",
-		Data:       map[string]interface{}{"level": 3},
+		Data:       map[string]any{"level": 3},
 	}
 
 	t.Run("default_body_json", func(t *testing.T) {
@@ -404,7 +404,7 @@ func TestApd7905_SendVariants(t *testing.T) {
 		seen.mu.Unlock()
 
 		webhookCfg := apd7905SeedConfig(t, db, "hook7905", apd7905URL, "POST", models.APIConfigTypeWebhook, models.AuthTypeNone, nil, nil)
-		result2 := svc.SendWebhook(ctx, webhookCfg.ID, map[string]interface{}{"k": "v7905"})
+		result2 := svc.SendWebhook(ctx, webhookCfg.ID, map[string]any{"k": "v7905"})
 		require.NotNil(t, result2)
 		assert.True(t, result2.Success)
 		seen.mu.Lock()

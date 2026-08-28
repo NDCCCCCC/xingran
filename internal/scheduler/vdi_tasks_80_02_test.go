@@ -82,7 +82,7 @@ func TestVdi8002_ExecuteDispatch(t *testing.T) {
 	db := newSchedDB8002_VDI(t)
 	SetDB(&stubDBGetter8001{db: db})
 
-	err := executeVDIVMSyncTask(context.Background(), map[string]interface{}{"param": "auto"})
+	err := executeVDIVMSyncTask(context.Background(), map[string]any{"param": "auto"})
 	// stub 成功返回 nil
 	require.NoError(t, err)
 }
@@ -191,10 +191,10 @@ func TestFsm8002_HandlerDispatch(t *testing.T) {
 	require.NotNil(t, handler)
 
 	// 非本监控任务(不同 target 字符串)→ 跳过分支返回 nil
-	require.NoError(t, handler(context.Background(), map[string]interface{}{"param": "someOtherTarget"}))
+	require.NoError(t, handler(context.Background(), map[string]any{"param": "someOtherTarget"}))
 
 	// 本监控 target → CheckAndNotify(内部错误仅 Warnf 软失败,不 panic 即覆盖)
-	require.NoError(t, handler(context.Background(), map[string]interface{}{"param": "monitorFixSuggestionMisFix"}))
+	require.NoError(t, handler(context.Background(), map[string]any{"param": "monitorFixSuggestionMisFix"}))
 }
 
 // ============================================================================
@@ -228,7 +228,7 @@ func TestVdi8002_ExecuteDispatch_SingleID(t *testing.T) {
 	require.NoError(t, db.Exec(`INSERT INTO sys_vdi_server (id, name, status) VALUES ('vdi-target', 'VDI-目标', 0)`).Error)
 
 	// 指定存在的 serverID → syncSingleVDIServer → 成功
-	require.NoError(t, executeVDIVMSyncTask(context.Background(), map[string]interface{}{"param": "vdi-target"}))
+	require.NoError(t, executeVDIVMSyncTask(context.Background(), map[string]any{"param": "vdi-target"}))
 }
 
 // TestVdi8002_SyncAll_QueryError syncAllEnabledVDIServers 查询错误分支(表缺失)。

@@ -105,10 +105,10 @@ type stubNoticeHub8002 struct {
 	mu      sync.Mutex
 	calls   int
 	lastIDs []string
-	lastMsg interface{}
+	lastMsg any
 }
 
-func (h *stubNoticeHub8002) BroadcastToUsers(userIDs []string, message interface{}) {
+func (h *stubNoticeHub8002) BroadcastToUsers(userIDs []string, message any) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.calls++
@@ -116,7 +116,7 @@ func (h *stubNoticeHub8002) BroadcastToUsers(userIDs []string, message interface
 	h.lastMsg = message
 }
 
-func (h *stubNoticeHub8002) snapshot() (int, []string, interface{}) {
+func (h *stubNoticeHub8002) snapshot() (int, []string, any) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return h.calls, h.lastIDs, h.lastMsg
@@ -508,10 +508,10 @@ func TestWot8002_ExecutePeriodicCreate_Errors(t *testing.T) {
 
 	// 参数无效(param 非 string / 空串)
 	require.Error(t, executePeriodicWorkOrderCreateTask(context.Background(), nil))
-	require.Error(t, executePeriodicWorkOrderCreateTask(context.Background(), map[string]interface{}{"param": ""}))
+	require.Error(t, executePeriodicWorkOrderCreateTask(context.Background(), map[string]any{"param": ""}))
 
 	// 模板不存在(ErrRecordNotFound → nil,不是错误)
-	require.NoError(t, executePeriodicWorkOrderCreateTask(context.Background(), map[string]interface{}{"param": "no-such-tpl"}))
+	require.NoError(t, executePeriodicWorkOrderCreateTask(context.Background(), map[string]any{"param": "no-such-tpl"}))
 
 	// 模板存在但 system 用户缺失 → 错误
 	tpl := &models.PeriodicWorkOrderTemplate{
@@ -522,7 +522,7 @@ func TestWot8002_ExecutePeriodicCreate_Errors(t *testing.T) {
 		IsEnabled:      true,
 	}
 	require.NoError(t, db.Create(tpl).Error)
-	err := executePeriodicWorkOrderCreateTask(context.Background(), map[string]interface{}{"param": "tpl-no-sysuser"})
+	err := executePeriodicWorkOrderCreateTask(context.Background(), map[string]any{"param": "tpl-no-sysuser"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "查询系统用户失败")
 }
@@ -556,7 +556,7 @@ func TestWot8002_ExecutePeriodicCreate_Success(t *testing.T) {
 	}
 	require.NoError(t, db.Create(tpl).Error)
 
-	require.NoError(t, executePeriodicWorkOrderCreateTask(context.Background(), map[string]interface{}{"param": "tpl-success"}))
+	require.NoError(t, executePeriodicWorkOrderCreateTask(context.Background(), map[string]any{"param": "tpl-success"}))
 
 	// 工单落库(sys_workorder)
 	var woCount int64
@@ -610,7 +610,7 @@ func TestWot8002_ExecutePeriodicCreate_DutyPool(t *testing.T) {
 	// 显式 Update 写入 false(Update 不省略零值)。
 	require.NoError(t, db.Model(tpl).Update("notify_assignee", false).Error)
 
-	require.NoError(t, executePeriodicWorkOrderCreateTask(context.Background(), map[string]interface{}{"param": "tpl-dpool-exec"}))
+	require.NoError(t, executePeriodicWorkOrderCreateTask(context.Background(), map[string]any{"param": "tpl-dpool-exec"}))
 
 	// 通知未触发(NotifyAssignee=false)
 	calls, _, _ := hub.snapshot()

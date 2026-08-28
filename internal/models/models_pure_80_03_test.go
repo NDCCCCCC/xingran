@@ -163,7 +163,7 @@ func TestMdl8003_DataSourceConfig_RoundTrip(t *testing.T) {
 	d := DataSourceConfig{
 		Static: &StaticDataSourceConfig{
 			Type: "static",
-			Data: map[string]interface{}{"count": float64(42), "label": "示例"},
+			Data: map[string]any{"count": float64(42), "label": "示例"},
 		},
 	}
 	val, err := d.Value()
@@ -386,7 +386,7 @@ func TestMdl8003_DashboardConfigs_JSONShapeStable(t *testing.T) {
 	cfg := DataSourceConfig{
 		Static: &StaticDataSourceConfig{
 			Type: "static",
-			Data: map[string]interface{}{"x": 1.0},
+			Data: map[string]any{"x": 1.0},
 		},
 	}
 	b, err := json.Marshal(cfg)
@@ -464,7 +464,7 @@ func TestMdl8003_ScriptAction_RoundTrip(t *testing.T) {
 	a := ScriptAction{
 		Type:     ScriptActionClick,
 		Selector: "#submit-btn",
-		Params:   map[string]interface{}{"text": "提交"},
+		Params:   map[string]any{"text": "提交"},
 		Timeout:  500,
 		Retry:    3,
 	}

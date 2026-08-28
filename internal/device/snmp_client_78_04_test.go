@@ -374,7 +374,7 @@ func TestSN78_Walk(t *testing.T) {
 	defer c.Close()
 
 	var collected int
-	err = c.Walk("1.3.6.1.2.1.1", func(oid string, val interface{}) bool {
+	err = c.Walk("1.3.6.1.2.1.1", func(oid string, val any) bool {
 		collected++
 		t.Logf("Walk callback: %s = %v", oid, val)
 		return true
@@ -456,12 +456,12 @@ func TestSN78_ParseSNMPValue_Table(t *testing.T) {
 	tests := []struct {
 		name  string
 		pdu   gosnmp.SnmpPDU
-		check func(t *testing.T, v interface{})
+		check func(t *testing.T, v any)
 	}{
 		{
 			name: "Integer",
 			pdu:  gosnmp.SnmpPDU{Name: "1.0", Type: gosnmp.Integer, Value: int64(42)},
-			check: func(t *testing.T, v interface{}) {
+			check: func(t *testing.T, v any) {
 				if v != int64(42) {
 					t.Errorf("Integer = %v, want 42", v)
 				}
@@ -470,7 +470,7 @@ func TestSN78_ParseSNMPValue_Table(t *testing.T) {
 		{
 			name: "OctetString_bytes",
 			pdu:  gosnmp.SnmpPDU{Name: "1.0", Type: gosnmp.OctetString, Value: []byte("hello")},
-			check: func(t *testing.T, v interface{}) {
+			check: func(t *testing.T, v any) {
 				if v != "hello" {
 					t.Errorf("OctetString = %v, want hello", v)
 				}
@@ -479,7 +479,7 @@ func TestSN78_ParseSNMPValue_Table(t *testing.T) {
 		{
 			name: "OctetString_string",
 			pdu:  gosnmp.SnmpPDU{Name: "1.0", Type: gosnmp.OctetString, Value: "world"},
-			check: func(t *testing.T, v interface{}) {
+			check: func(t *testing.T, v any) {
 				if v != "world" {
 					t.Errorf("OctetString string = %v, want world", v)
 				}
@@ -488,7 +488,7 @@ func TestSN78_ParseSNMPValue_Table(t *testing.T) {
 		{
 			name:  "ObjectIdentifier",
 			pdu:   gosnmp.SnmpPDU{Name: "1.0", Type: gosnmp.ObjectIdentifier, Value: "1.3.6.1"},
-			check: func(t *testing.T, v interface{}) {
+			check: func(t *testing.T, v any) {
 				if v != "1.3.6.1" {
 					t.Errorf("ObjectIdentifier = %v, want 1.3.6.1", v)
 				}
@@ -497,7 +497,7 @@ func TestSN78_ParseSNMPValue_Table(t *testing.T) {
 		{
 			name: "Counter32",
 			pdu:  gosnmp.SnmpPDU{Name: "1.0", Type: gosnmp.Counter32, Value: uint64(100)},
-			check: func(t *testing.T, v interface{}) {
+			check: func(t *testing.T, v any) {
 				if v != uint64(100) {
 					t.Errorf("Counter32 = %v, want 100", v)
 				}
@@ -506,7 +506,7 @@ func TestSN78_ParseSNMPValue_Table(t *testing.T) {
 		{
 			name: "Counter64",
 			pdu:  gosnmp.SnmpPDU{Name: "1.0", Type: gosnmp.Counter64, Value: uint64(200)},
-			check: func(t *testing.T, v interface{}) {
+			check: func(t *testing.T, v any) {
 				if v != uint64(200) {
 					t.Errorf("Counter64 = %v, want 200", v)
 				}
@@ -515,7 +515,7 @@ func TestSN78_ParseSNMPValue_Table(t *testing.T) {
 		{
 			name: "Gauge32",
 			pdu:  gosnmp.SnmpPDU{Name: "1.0", Type: gosnmp.Gauge32, Value: uint64(50)},
-			check: func(t *testing.T, v interface{}) {
+			check: func(t *testing.T, v any) {
 				if v != uint64(50) {
 					t.Errorf("Gauge32 = %v, want 50", v)
 				}
@@ -524,7 +524,7 @@ func TestSN78_ParseSNMPValue_Table(t *testing.T) {
 		{
 			name: "TimeTicks",
 			pdu:  gosnmp.SnmpPDU{Name: "1.0", Type: gosnmp.TimeTicks, Value: uint64(3600)},
-			check: func(t *testing.T, v interface{}) {
+			check: func(t *testing.T, v any) {
 				if v != uint64(3600) {
 					t.Errorf("TimeTicks = %v, want 3600", v)
 				}
@@ -533,7 +533,7 @@ func TestSN78_ParseSNMPValue_Table(t *testing.T) {
 		{
 			name: "IPAddress",
 			pdu:  gosnmp.SnmpPDU{Name: "1.0", Type: gosnmp.IPAddress, Value: []byte{192, 168, 1, 1}},
-			check: func(t *testing.T, v interface{}) {
+			check: func(t *testing.T, v any) {
 				if v != "192.168.1.1" {
 					t.Errorf("IPAddress = %v, want 192.168.1.1", v)
 				}
@@ -542,7 +542,7 @@ func TestSN78_ParseSNMPValue_Table(t *testing.T) {
 		{
 			name: "Null",
 			pdu:  gosnmp.SnmpPDU{Name: "1.0", Type: gosnmp.Null, Value: nil},
-			check: func(t *testing.T, v interface{}) {
+			check: func(t *testing.T, v any) {
 				if v != nil {
 					t.Errorf("Null = %v, want nil", v)
 				}
@@ -551,7 +551,7 @@ func TestSN78_ParseSNMPValue_Table(t *testing.T) {
 		{
 			name: "NoSuchObject",
 			pdu:  gosnmp.SnmpPDU{Name: "1.0", Type: gosnmp.NoSuchObject, Value: nil},
-			check: func(t *testing.T, v interface{}) {
+			check: func(t *testing.T, v any) {
 				// parseSNMPValue returns the raw value for unhandled types
 				t.Logf("NoSuchObject = %v", v)
 			},
@@ -559,14 +559,14 @@ func TestSN78_ParseSNMPValue_Table(t *testing.T) {
 		{
 			name: "NoSuchInstance",
 			pdu:  gosnmp.SnmpPDU{Name: "1.0", Type: gosnmp.NoSuchInstance, Value: nil},
-			check: func(t *testing.T, v interface{}) {
+			check: func(t *testing.T, v any) {
 				t.Logf("NoSuchInstance = %v", v)
 			},
 		},
 		{
 			name: "Counter32_nil",
 			pdu:  gosnmp.SnmpPDU{Name: "1.0", Type: gosnmp.Counter32, Value: nil},
-			check: func(t *testing.T, v interface{}) {
+			check: func(t *testing.T, v any) {
 				// nil value should be returned as-is
 				t.Logf("Counter32 nil = %v", v)
 			},

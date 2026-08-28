@@ -481,7 +481,7 @@ func TestTsv7903_Export_Import_RoundTrip(t *testing.T) {
 	data, err := svc.Export(ctx, source.ID)
 	require.NoError(t, err)
 	require.NotEmpty(t, data)
-	var dumped map[string]interface{}
+	var dumped map[string]any
 	require.NoError(t, json.Unmarshal(data, &dumped), "Export 产物为合法 JSON")
 	assert.Equal(t, "tpl-export-01", dumped["templateCode"], "导出 JSON 含模板编码")
 
@@ -550,7 +550,7 @@ func TestTsv7903_Export_Import_RoundTrip(t *testing.T) {
 // tsv7903BytesWithCode 改写导出 JSON 的 templateCode 字段(测试辅助)。
 func tsv7903BytesWithCode(t *testing.T, data []byte, newCode string) []byte {
 	t.Helper()
-	var m map[string]interface{}
+	var m map[string]any
 	require.NoError(t, json.Unmarshal(data, &m))
 	m["templateCode"] = newCode
 	out, err := json.Marshal(m)

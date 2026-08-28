@@ -137,7 +137,7 @@ func insertComputer78(t *testing.T, db *gorm.DB, configID, dn, name, ouDn string
 }
 
 // nullableTime 把 RFC3339 字符串转 *time.Time 或 nil（空串 → nil → SQL NULL）。
-func nullableTime(s string) interface{} {
+func nullableTime(s string) any {
 	if s == "" {
 		return nil
 	}

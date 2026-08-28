@@ -208,7 +208,7 @@ func TestDst8002_ExecuteDeptToAD_Errors(t *testing.T) {
 	// config 停用 → 错误(经 params 显式传 configId:自动路径只查启用配置,够不到停用分支)
 	require.NoError(t, db.Exec(`INSERT INTO sys_ad_config (id, config_name, status) VALUES (?, ?, ?)`,
 		"cfg-dst-disabled", "停用配置", models.ADConfigStatusDisabled).Error)
-	err := executeDeptToADSyncTask(context.Background(), map[string]interface{}{"configId": "cfg-dst-disabled"})
+	err := executeDeptToADSyncTask(context.Background(), map[string]any{"configId": "cfg-dst-disabled"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "未启用")
 }
@@ -253,7 +253,7 @@ func TestDst8002_ExecuteMember_Errors(t *testing.T) {
 	// config 停用 → 错误(params 显式传 configId)
 	require.NoError(t, db.Exec(`INSERT INTO sys_ad_config (id, config_name, status) VALUES (?, ?, ?)`,
 		"cfg-m-disabled", "停用配置", models.ADConfigStatusDisabled).Error)
-	err := executeDeptMemberToADGroupSyncTask(context.Background(), map[string]interface{}{"configId": "cfg-m-disabled"})
+	err := executeDeptMemberToADGroupSyncTask(context.Background(), map[string]any{"configId": "cfg-m-disabled"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "未启用")
 
@@ -299,12 +299,12 @@ func TestDst8002_GetDefaultADConfigIDForDept_ParamKeys(t *testing.T) {
 	ctx := context.Background()
 
 	// adConfigId 命中
-	id, err := getDefaultADConfigIDForDept(ctx, db, map[string]interface{}{"adConfigId": "via-adcfg"})
+	id, err := getDefaultADConfigIDForDept(ctx, db, map[string]any{"adConfigId": "via-adcfg"})
 	require.NoError(t, err)
 	assert.Equal(t, "via-adcfg", id)
 
 	// configId 优先
-	id, err = getDefaultADConfigIDForDept(ctx, db, map[string]interface{}{"configId": "a", "adConfigId": "b"})
+	id, err = getDefaultADConfigIDForDept(ctx, db, map[string]any{"configId": "a", "adConfigId": "b"})
 	require.NoError(t, err)
 	assert.Equal(t, "a", id)
 }
@@ -332,7 +332,7 @@ func TestDst8002_ExecuteDeptToAD_ConfigQueryError(t *testing.T) {
 	sched.pool = &stubADPool8002{}
 	globalADSyncScheduler = sched
 
-	err := executeDeptToADSyncTask(context.Background(), map[string]interface{}{"configId": "no-such-cfg"})
+	err := executeDeptToADSyncTask(context.Background(), map[string]any{"configId": "no-such-cfg"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "查询 AD 配置失败")
 }
@@ -369,7 +369,7 @@ func TestDst8002_ExecuteMember_ConfigQueryError(t *testing.T) {
 	t.Cleanup(func() { SetDB(origDB) })
 	SetDB(&stubDBGetter8001{db: db})
 
-	err := executeDeptMemberToADGroupSyncTask(context.Background(), map[string]interface{}{"configId": "no-such-cfg"})
+	err := executeDeptMemberToADGroupSyncTask(context.Background(), map[string]any{"configId": "no-such-cfg"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "查询AD配置失败")
 }

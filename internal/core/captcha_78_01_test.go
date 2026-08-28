@@ -374,7 +374,7 @@ func TestCap78_Slider_CustomModeCachePoolHit(t *testing.T) {
 	svc.SetBackgroundService(bgSvc)
 
 	// 预种缓存池:counter=1 + pool 槽 1 写入合法 map
-	cachedMap := map[string]interface{}{
+	cachedMap := map[string]any{
 		"backgroundId": "bg-pool-1",
 		"sliderImg":    "data:image/png;base64,POOLED_BG",
 		"pieceImg":     "data:image/png;base64,POOLED_PIECE",

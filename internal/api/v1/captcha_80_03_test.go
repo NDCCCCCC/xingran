@@ -199,10 +199,10 @@ func TestCap8003_VerifySlider(t *testing.T) {
 		seedSlider8003(t, captID, 100, "tok-ok")
 		w, resp := performJSON8003(t, router, http.MethodPost,
 			"/api/v1/system/auth/captcha/verify/slider",
-			map[string]interface{}{"captchaId": captID, "xPos": 100, "token": "tok-ok"})
+			map[string]any{"captchaId": captID, "xPos": 100, "token": "tok-ok"})
 		require.Equal(t, http.StatusOK, w.Code)
 		require.Equal(t, 0, resp.Code)
-		var data map[string]interface{}
+		var data map[string]any
 		require.NoError(t, json.Unmarshal(resp.Data, &data))
 		assert.Equal(t, true, data["success"])
 	})
@@ -212,7 +212,7 @@ func TestCap8003_VerifySlider(t *testing.T) {
 		seedSlider8003(t, captID, 100, "tok-badpos")
 		w, resp := performJSON8003(t, router, http.MethodPost,
 			"/api/v1/system/auth/captcha/verify/slider",
-			map[string]interface{}{"captchaId": captID, "xPos": 200, "token": "tok-badpos"})
+			map[string]any{"captchaId": captID, "xPos": 200, "token": "tok-badpos"})
 		assert.Equal(t, http.StatusBadRequest, w.Code, "位置错 → ErrCaptchaError")
 		assert.Contains(t, resp.Message, "位置不正确")
 	})
@@ -220,7 +220,7 @@ func TestCap8003_VerifySlider(t *testing.T) {
 	t.Run("绑定失败_缺字段", func(t *testing.T) {
 		w, resp := performJSON8003(t, router, http.MethodPost,
 			"/api/v1/system/auth/captcha/verify/slider",
-			map[string]interface{}{"captchaId": "cap-slider-anything"}) // 缺 xPos/token
+			map[string]any{"captchaId": "cap-slider-anything"}) // 缺 xPos/token
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 		assert.Contains(t, resp.Message, "请求参数错误")
 	})
@@ -238,7 +238,7 @@ func TestCap8003_GetConfig(t *testing.T) {
 	w, resp := performJSON8003(t, router, http.MethodPost, "/api/v1/system/auth/captcha/config", nil)
 	require.Equal(t, http.StatusOK, w.Code)
 	require.Equal(t, 0, resp.Code)
-	var data map[string]interface{}
+	var data map[string]any
 	require.NoError(t, json.Unmarshal(resp.Data, &data))
 	assert.Equal(t, string(captcha.CaptchaTypeNormal), data["enabled"])
 	assert.Equal(t, 5.0, data["type"])
@@ -259,7 +259,7 @@ func TestCap8003_Reload(t *testing.T) {
 		w, resp := performJSON8003(t, router, http.MethodPost, "/api/v1/system/auth/captcha/config/reload", nil)
 		require.Equal(t, http.StatusOK, w.Code)
 		require.Equal(t, 0, resp.Code)
-		var data map[string]interface{}
+		var data map[string]any
 		require.NoError(t, json.Unmarshal(resp.Data, &data))
 		assert.Contains(t, data, "config")
 		// LoadConfig 已读 sys_config → 服务 config 同步为 normal
@@ -295,7 +295,7 @@ func TestCapBg8003_List_Paged(t *testing.T) {
 	t.Run("无筛选_全部", func(t *testing.T) {
 		w, resp := performJSON8003(t, router, http.MethodPost,
 			"/api/v1/system/captcha-background/list",
-			map[string]interface{}{"current": 1, "pageSize": 10})
+			map[string]any{"current": 1, "pageSize": 10})
 		require.Equal(t, http.StatusOK, w.Code)
 		require.Equal(t, 0, resp.Code)
 		var listResp models.CaptchaBackgroundListResponse
@@ -307,7 +307,7 @@ func TestCapBg8003_List_Paged(t *testing.T) {
 	t.Run("按pieceShape筛选", func(t *testing.T) {
 		w, resp := performJSON8003(t, router, http.MethodPost,
 			"/api/v1/system/captcha-background/list",
-			map[string]interface{}{"current": 1, "pageSize": 10, "pieceShape": "circle"})
+			map[string]any{"current": 1, "pageSize": 10, "pieceShape": "circle"})
 		require.Equal(t, http.StatusOK, w.Code)
 		var listResp models.CaptchaBackgroundListResponse
 		require.NoError(t, json.Unmarshal(resp.Data, &listResp))
@@ -333,7 +333,7 @@ func TestCapBg8003_List_Paged(t *testing.T) {
 
 		_, resp := performJSON8003(t, router, http.MethodPost,
 			"/api/v1/system/captcha-background/list",
-			map[string]interface{}{"current": 1, "pageSize": 10, "status": statusVal})
+			map[string]any{"current": 1, "pageSize": 10, "status": statusVal})
 		require.Equal(t, 0, resp.Code, resp.Message)
 		var listResp models.CaptchaBackgroundListResponse
 		require.NoError(t, json.Unmarshal(resp.Data, &listResp))
@@ -343,7 +343,7 @@ func TestCapBg8003_List_Paged(t *testing.T) {
 	t.Run("pageSize越界_绑定失败", func(t *testing.T) {
 		w, resp := performJSON8003(t, router, http.MethodPost,
 			"/api/v1/system/captcha-background/list",
-			map[string]interface{}{"current": 1, "pageSize": 200}) // max=100
+			map[string]any{"current": 1, "pageSize": 200}) // max=100
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 		assert.Contains(t, resp.Message, "请求参数错误")
 	})
@@ -465,7 +465,7 @@ func TestCapBg8003_Update(t *testing.T) {
 		newDiff := 3
 		w, resp := performJSON8003(t, router, http.MethodPost,
 			"/api/v1/system/captcha-background/bg-upd-1/update",
-			map[string]interface{}{"difficultyLevel": newDiff})
+			map[string]any{"difficultyLevel": newDiff})
 		require.Equal(t, http.StatusOK, w.Code, resp.Message)
 		require.Equal(t, 0, resp.Code)
 
@@ -479,7 +479,7 @@ func TestCapBg8003_Update(t *testing.T) {
 		// 鉴于此行为可观测,真装配测试也如实锁定(GORM 行为,非 QUIRK)。
 		_, resp := performJSON8003(t, router, http.MethodPost,
 			"/api/v1/system/captcha-background/no-such-id/update",
-			map[string]interface{}{"difficultyLevel": 2})
+			map[string]any{"difficultyLevel": 2})
 		assert.Equal(t, 0, resp.Code, "GORM Updates 不存在的行不报错")
 		var data map[string]string
 		require.NoError(t, json.Unmarshal(resp.Data, &data))
@@ -546,7 +546,7 @@ func TestCapBg8003_Toggle(t *testing.T) {
 			"/api/v1/system/captcha-background/bg-tog-1/toggle", nil)
 		require.Equal(t, http.StatusOK, w.Code)
 		require.Equal(t, 0, resp.Code)
-		var data map[string]interface{}
+		var data map[string]any
 		require.NoError(t, json.Unmarshal(resp.Data, &data))
 		assert.Equal(t, float64(int(models.CaptchaBgDisabled)), data["status"], "应引用 models 常量值")
 

@@ -59,7 +59,7 @@ func newSW78(t *testing.T, fixture string) *ScrapliWrapper {
 
 	fixturePath := factoryFixturePath(t, fixture)
 
-	newNetworkDriver = func(_ interface{}, _ string, _ ...util.Option) (*network.Driver, error) {
+	newNetworkDriver = func(_ any, _ string, _ ...util.Option) (*network.Driver, error) {
 		p, err := platform.NewPlatform(
 			"huawei_vrp",
 			"dummy-host",
@@ -352,7 +352,7 @@ func TestSW78_NewScrapliWrapperWithPort_Success(t *testing.T) {
 
 	fixturePath := factoryFixturePath(t, "huawei_vrp_open.fixture")
 
-	newNetworkDriver = func(_ interface{}, _ string, _ ...util.Option) (*network.Driver, error) {
+	newNetworkDriver = func(_ any, _ string, _ ...util.Option) (*network.Driver, error) {
 		p, err := platform.NewPlatform(
 			"huawei_vrp",
 			"dummy-host",
@@ -621,7 +621,7 @@ func TestSW78_OpenContext_Success(t *testing.T) {
 	t.Cleanup(func() { newNetworkDriver = orig })
 
 	fixturePath := factoryFixturePath(t, "huawei_vrp_open.fixture")
-	newNetworkDriver = func(_ interface{}, _ string, _ ...util.Option) (*network.Driver, error) {
+	newNetworkDriver = func(_ any, _ string, _ ...util.Option) (*network.Driver, error) {
 		p, err := platform.NewPlatform(
 			"huawei_vrp",
 			"dummy-host",
@@ -717,7 +717,7 @@ func TestSW78_OpenContext_DriverOpenFail(t *testing.T) {
 	// fixture. The internal goroutine will return an error and OpenContext
 	// will propagate it as "连接设备失败".
 	fixturePath := factoryFixturePath(t, "does-not-exist.fixture")
-	newNetworkDriver = func(_ interface{}, _ string, _ ...util.Option) (*network.Driver, error) {
+	newNetworkDriver = func(_ any, _ string, _ ...util.Option) (*network.Driver, error) {
 		p, err := platform.NewPlatform(
 			"huawei_vrp",
 			"dummy-host",
@@ -777,7 +777,7 @@ func TestSW78_NewScrapliWrapper_Telnet(t *testing.T) {
 	t.Cleanup(func() { newNetworkDriver = orig })
 
 	fixturePath := factoryFixturePath(t, "huawei_vrp_open.fixture")
-	newNetworkDriver = func(_ interface{}, _ string, _ ...util.Option) (*network.Driver, error) {
+	newNetworkDriver = func(_ any, _ string, _ ...util.Option) (*network.Driver, error) {
 		p, err := platform.NewPlatform(
 			"huawei_vrp",
 			"dummy-host",

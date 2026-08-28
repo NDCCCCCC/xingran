@@ -110,14 +110,14 @@ func newAuthCore8003(t *testing.T) (*core.Core, *gorm.DB) {
 }
 
 // migrateAuthTables8003 建 handler 实际引用的表(R3/78-01 精简哲学:不做全库迁移)。
-func migrateAuthTables8003(t *testing.T, db *gorm.DB, targets ...interface{}) {
+func migrateAuthTables8003(t *testing.T, db *gorm.DB, targets ...any) {
 	t.Helper()
 	require.NoError(t, db.AutoMigrate(targets...))
 }
 
 // authDefaultTables8003 login/logout/refresh 族引用的表集合。
-func authDefaultTables8003(db *gorm.DB) []interface{} {
-	return []interface{}{
+func authDefaultTables8003(db *gorm.DB) []any {
+	return []any{
 		&models.User{}, &models.UserRole{}, &models.Config{}, &models.LoginLog{},
 	}
 }
@@ -180,7 +180,7 @@ type apiResp8003 struct {
 }
 
 // performJSON8003 发出真实 httptest 请求并解析标准响应体。
-func performJSON8003(t *testing.T, router *gin.Engine, method, path string, body interface{}) (*httptest.ResponseRecorder, apiResp8003) {
+func performJSON8003(t *testing.T, router *gin.Engine, method, path string, body any) (*httptest.ResponseRecorder, apiResp8003) {
 	t.Helper()
 
 	var reader *strings.Reader
@@ -207,8 +207,8 @@ func performJSON8003(t *testing.T, router *gin.Engine, method, path string, body
 }
 
 // loginPayload8003 构造登录请求体。
-func loginPayload8003(username, password, authMode string) map[string]interface{} {
-	payload := map[string]interface{}{
+func loginPayload8003(username, password, authMode string) map[string]any {
+	payload := map[string]any{
 		"username": username,
 		"password": password,
 	}
@@ -414,7 +414,7 @@ func TestAuth8003_Login_MissingUsername(t *testing.T) {
 	router := mountAuthRouter8003(t, c)
 
 	w, resp := performJSON8003(t, router, http.MethodPost,
-		"/api/v1/system/auth/login", map[string]interface{}{"password": "no-username"})
+		"/api/v1/system/auth/login", map[string]any{"password": "no-username"})
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assert.Contains(t, resp.Message, "请求参数错误")
@@ -466,7 +466,7 @@ func TestAuth8003_GetAuthConfig(t *testing.T) {
 
 			require.Equal(t, http.StatusOK, w.Code)
 			require.Equal(t, 0, resp.Code)
-			var data map[string]interface{}
+			var data map[string]any
 			require.NoError(t, json.Unmarshal(resp.Data, &data))
 			assert.Equal(t, tt.wantADEnabled, data["adEnabled"])
 			assert.Equal(t, tt.wantDefaultMode, data["defaultMode"])
@@ -497,7 +497,7 @@ func TestAuth8003_TestSM2(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, w.Code)
 	require.Equal(t, 0, resp.Code)
-	var data map[string]interface{}
+	var data map[string]any
 	require.NoError(t, json.Unmarshal(resp.Data, &data))
 	assert.Equal(t, true, data["success"], "SM2 自检应通过")
 	assert.NotEmpty(t, data["encrypted"])
@@ -563,7 +563,7 @@ func TestAuth8003_RefreshToken(t *testing.T) {
 
 		router := mountAuthRouter8003(t, c)
 		w, resp := performJSON8003(t, router, http.MethodPost,
-			"/api/v1/system/auth/refresh", map[string]interface{}{"refreshToken": pair.RefreshToken})
+			"/api/v1/system/auth/refresh", map[string]any{"refreshToken": pair.RefreshToken})
 
 		require.Equal(t, http.StatusOK, w.Code, "合法 refresh 应换发成功: %s", resp.Message)
 		require.Equal(t, 0, resp.Code)
@@ -579,7 +579,7 @@ func TestAuth8003_RefreshToken(t *testing.T) {
 		c, _ := newMiniCore8003(t)
 		router := mountAuthRouter8003(t, c)
 		w, _ := performJSON8003(t, router, http.MethodPost,
-			"/api/v1/system/auth/refresh", map[string]interface{}{"refreshToken": "not-a-jwt"})
+			"/api/v1/system/auth/refresh", map[string]any{"refreshToken": "not-a-jwt"})
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
 	})
 
@@ -590,7 +590,7 @@ func TestAuth8003_RefreshToken(t *testing.T) {
 
 		router := mountAuthRouter8003(t, c)
 		w, resp := performJSON8003(t, router, http.MethodPost,
-			"/api/v1/system/auth/refresh", map[string]interface{}{"refreshToken": pair.AccessToken})
+			"/api/v1/system/auth/refresh", map[string]any{"refreshToken": pair.AccessToken})
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
 		assert.Equal(t, response.ErrTokenInvalid.Code, resp.Code, "access 角色不满足 refresh 校验")
 	})
@@ -605,7 +605,7 @@ func TestAuth8003_RefreshToken(t *testing.T) {
 
 		router := mountAuthRouter8003(t, c)
 		w, resp := performJSON8003(t, router, http.MethodPost,
-			"/api/v1/system/auth/refresh", map[string]interface{}{"refreshToken": pair.RefreshToken})
+			"/api/v1/system/auth/refresh", map[string]any{"refreshToken": pair.RefreshToken})
 		assert.Equal(t, http.StatusNotFound, w.Code, "ErrUserNotFound 映射 HTTP 404")
 		assert.Equal(t, response.ErrUserNotFound.Code, resp.Code)
 	})
@@ -614,7 +614,7 @@ func TestAuth8003_RefreshToken(t *testing.T) {
 		c, _ := newMiniCore8003(t)
 		router := mountAuthRouter8003(t, c)
 		w, resp := performJSON8003(t, router, http.MethodPost,
-			"/api/v1/system/auth/refresh", map[string]interface{}{})
+			"/api/v1/system/auth/refresh", map[string]any{})
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 		assert.Contains(t, resp.Message, "请求参数错误")
 	})
@@ -827,7 +827,7 @@ func TestAuth8003_Login_EncryptedPassword(t *testing.T) {
 
 		router := mountAuthRouter8003(t, c)
 		w, resp := performJSON8003(t, router, http.MethodPost,
-			"/api/v1/system/auth/login", map[string]interface{}{
+			"/api/v1/system/auth/login", map[string]any{
 				"username":          "enc-user",
 				"password":          "definitely-not-valid-sm2-ciphertext",
 				"encryptedPassword": true,
@@ -922,7 +922,7 @@ func TestAuth8003_GetEncryptionConfig(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, w.Code)
 	require.Equal(t, 0, resp.Code)
-	var data map[string]interface{}
+	var data map[string]any
 	require.NoError(t, json.Unmarshal(resp.Data, &data))
 	assert.Contains(t, data, "enabled", "响应必须含 enabled 字段")
 	assert.IsType(t, true, data["enabled"], "enabled 为布尔")

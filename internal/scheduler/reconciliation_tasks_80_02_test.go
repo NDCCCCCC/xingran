@@ -159,12 +159,12 @@ func TestRct8002_RegisterTasks(t *testing.T) {
 
 	// 子任务分发:未知 target → 错误;refreshView 分支(sqlite 无 MV,预期报错但 handler 返回错误)
 	handler := s.GetTaskHandler("reconciliation")
-	err := handler(context.Background(), map[string]interface{}{"param": "unknown_target"})
+	err := handler(context.Background(), map[string]any{"param": "unknown_target"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "未知子任务")
 
 	// detectExpiredSilence R1 placeholder → nil
-	err = handler(context.Background(), map[string]interface{}{"param": "detectExpiredSilence"})
+	err = handler(context.Background(), map[string]any{"param": "detectExpiredSilence"})
 	require.NoError(t, err)
 }
 
@@ -369,26 +369,26 @@ func TestRct8002_HandlerDispatch_Switch(t *testing.T) {
 	require.NotNil(t, handler)
 
 	// refreshView:sqlite 无物化视图 → 报错路径(handler 透传 error)
-	err := handler(context.Background(), map[string]interface{}{"param": "refreshView"})
+	err := handler(context.Background(), map[string]any{"param": "refreshView"})
 	_ = err // sqlite 上 RefreshView 行为不定(成功或报错),不 panic 即覆盖分发分支
 
 	// detectLayer3:sqlite 无 MV → 报错或 0 检出
-	err = handler(context.Background(), map[string]interface{}{"param": "detectLayer3"})
+	err = handler(context.Background(), map[string]any{"param": "detectLayer3"})
 	_ = err
 
 	// cleanupExpiredExceptions:表已建 → 成功(nil)
-	require.NoError(t, handler(context.Background(), map[string]interface{}{"param": "cleanupExpiredExceptions"}))
+	require.NoError(t, handler(context.Background(), map[string]any{"param": "cleanupExpiredExceptions"}))
 
 	// createWorkorderCritical / createWorkorderHigh:空异常 → nil 早退
-	require.NoError(t, handler(context.Background(), map[string]interface{}{"param": "createWorkorderCritical"}))
-	require.NoError(t, handler(context.Background(), map[string]interface{}{"param": "createWorkorderHigh"}))
+	require.NoError(t, handler(context.Background(), map[string]any{"param": "createWorkorderCritical"}))
+	require.NoError(t, handler(context.Background(), map[string]any{"param": "createWorkorderHigh"}))
 
 	// generateFixSuggestions:表已建 → 成功或错误(视实现),不 panic 即覆盖
-	err = handler(context.Background(), map[string]interface{}{"param": "generateFixSuggestions"})
+	err = handler(context.Background(), map[string]any{"param": "generateFixSuggestions"})
 	_ = err
 
 	// monitorFixSuggestionMisFix:软失败(内部 Warnf)→ nil
-	require.NoError(t, handler(context.Background(), map[string]interface{}{"param": "monitorFixSuggestionMisFix"}))
+	require.NoError(t, handler(context.Background(), map[string]any{"param": "monitorFixSuggestionMisFix"}))
 }
 
 // TestRct8002_SelfHeal sys_job seed 自愈三分支:legacy cron / JobGroup 大小写 / InvokeTarget 漂移。

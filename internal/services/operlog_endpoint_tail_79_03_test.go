@@ -192,7 +192,7 @@ func TestOpl7903_RecordFromGinContext(t *testing.T) {
 	req.Header.Set("User-Agent", "gtest-7903")
 	req.RemoteAddr = "10.1.2.3:5678"
 	c.Request = req
-	c.Set("claims", map[string]interface{}{"username": "gin-operator"})
+	c.Set("claims", map[string]any{"username": "gin-operator"})
 	c.Set("response_body", `{"code":0,"message":"success"}`)
 	c.Set("start_time", time.Now().Add(-50*time.Millisecond))
 

@@ -58,7 +58,7 @@ type tbl7901FailCache struct {
 	failDelete bool
 }
 
-func (m *tbl7901FailCache) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
+func (m *tbl7901FailCache) Set(ctx context.Context, key string, value any, expiration time.Duration) error {
 	if m.failSet {
 		return errTbl7901SetDown
 	}
@@ -247,7 +247,7 @@ func TestMcd7901_BuildKey_AllPrefixes(t *testing.T) {
 		{"stats", cacheKeyPrefixStats},
 		{"heatmap", cacheKeyPrefixHeatmap},
 	}
-	params := map[string]interface{}{"mac": "9C:7B:EF:2F:31:B8", "limit": 100}
+	params := map[string]any{"mac": "9C:7B:EF:2F:31:B8", "limit": 100}
 
 	for _, tc := range cases {
 		t.Run(tc.method, func(t *testing.T) {

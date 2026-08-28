@@ -336,7 +336,7 @@ func TestAds8002_RegisterTasks(t *testing.T) {
 	t.Cleanup(func() { globalADSyncScheduler = orig })
 	globalADSyncScheduler = nil
 
-	err := s.GetTaskHandler("ad_data_sync")(context.Background(), map[string]interface{}{"configId": "c1"})
+	err := s.GetTaskHandler("ad_data_sync")(context.Background(), map[string]any{"configId": "c1"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "未初始化")
 
@@ -359,8 +359,8 @@ func TestAds8002_ExecuteDataSync_Errors(t *testing.T) {
 	db := newSchedDB8002_AD(t)
 	globalADSyncScheduler = newADSyncScheduler8002(t, db)
 	require.Error(t, executeADDataSyncTask(context.Background(), nil))
-	require.Error(t, executeADDataSyncTask(context.Background(), map[string]interface{}{"configId": ""}))
-	require.Error(t, executeADDataSyncTask(context.Background(), map[string]interface{}{"configId": 123}))
+	require.Error(t, executeADDataSyncTask(context.Background(), map[string]any{"configId": ""}))
+	require.Error(t, executeADDataSyncTask(context.Background(), map[string]any{"configId": 123}))
 }
 
 // TestAds8002_ScheduleForConfig_NilScheduler nil scheduler → 记日志直接返回(不 panic)。
@@ -470,7 +470,7 @@ func TestAds8002_ExecuteDataSync_ParamsValid(t *testing.T) {
 	globalADSyncScheduler = newADSyncScheduler8002(t, db)
 
 	// 显式 configId(停用)→ 尾段构造 service 后报错
-	err := executeADDataSyncTask(context.Background(), map[string]interface{}{"configId": "cfg-ads-disabled"})
+	err := executeADDataSyncTask(context.Background(), map[string]any{"configId": "cfg-ads-disabled"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "AD配置不存在或未启用")
 }
@@ -496,7 +496,7 @@ func TestAds8002_ExecuteDataSync_AutoConfig(t *testing.T) {
 
 	// 无参数 → getDefaultADConfigID 自动选中启用 config → SyncDataByID →
 	// syncDataInternal 创建 ADSyncLog 失败(表缺失)→ 快速报错,未触 wire
-	err := executeADDataSyncTask(context.Background(), map[string]interface{}{"syncType": "full"})
+	err := executeADDataSyncTask(context.Background(), map[string]any{"syncType": "full"})
 	require.Error(t, err)
 }
 
@@ -507,17 +507,17 @@ func TestAds8002_GetDefaultADConfigID_ParamKeys(t *testing.T) {
 	ctx := context.Background()
 
 	// configId 命中(非空字符串,不需查库)
-	id, err := getDefaultADConfigID(ctx, db, map[string]interface{}{"configId": "via-config-id"})
+	id, err := getDefaultADConfigID(ctx, db, map[string]any{"configId": "via-config-id"})
 	require.NoError(t, err)
 	assert.Equal(t, "via-config-id", id)
 
 	// adConfigId 命中
-	id, err = getDefaultADConfigID(ctx, db, map[string]interface{}{"adConfigId": "via-ad-config-id"})
+	id, err = getDefaultADConfigID(ctx, db, map[string]any{"adConfigId": "via-ad-config-id"})
 	require.NoError(t, err)
 	assert.Equal(t, "via-ad-config-id", id)
 
 	// 两个键都存在 → configId 优先
-	id, err = getDefaultADConfigID(ctx, db, map[string]interface{}{"configId": "first", "adConfigId": "second"})
+	id, err = getDefaultADConfigID(ctx, db, map[string]any{"configId": "first", "adConfigId": "second"})
 	require.NoError(t, err)
 	assert.Equal(t, "first", id)
 }

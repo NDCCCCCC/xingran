@@ -39,7 +39,7 @@ import (
 //   [3] base_dn        (string)
 //   [4] domain_name    (string)
 //   [5] status         (models.ADConfigStatus)
-func insertCfg78(t *testing.T, db *gorm.DB, opts ...interface{}) *models.ADConfig {
+func insertCfg78(t *testing.T, db *gorm.DB, opts ...any) *models.ADConfig {
 	t.Helper()
 	id := uuid.NewString()
 	name := "cfg-" + id[:8]

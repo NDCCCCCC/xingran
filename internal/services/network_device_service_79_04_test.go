@@ -506,7 +506,7 @@ func TestNdv7904_GetDeviceStatistics(t *testing.T) {
 	ndv7904SeedDevice(t, db, "st-c", "10.5.0.3", models.DeviceStatusOffline, &deptB.ID, nil)
 	// 差异化第三行,便于分组断言(seed helper 统一是 switch/huawei)
 	require.NoError(t, db.Model(&models.NetworkDevice{}).Where("device_name = ?", "st-c").
-		Updates(map[string]interface{}{
+		Updates(map[string]any{
 			"device_type": string(models.DeviceTypeRouter),
 			"vendor":      string(models.VendorH3C),
 		}).Error)

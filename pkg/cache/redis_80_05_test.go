@@ -180,7 +180,7 @@ func TestRds8005_MGetJSON_PartialAndRaw(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, res, 2, "缺失键不应出现在结果中")
 
-	obj, ok := res["mg:obj"].(map[string]interface{})
+	obj, ok := res["mg:obj"].(map[string]any)
 	require.True(t, ok, "合法 JSON 应解为对象")
 	assert.Equal(t, "a", obj["name"])
 	assert.Equal(t, float64(1), obj["n"])
@@ -203,7 +203,7 @@ func TestRds8005_MSetJSON_TTLAndEmpty(t *testing.T) {
 	// 直传 client.MSet;struct/map 值会报 "can't marshal (implement
 	// encoding.BinaryMarshaler)"。仅 go-redis 原生可编码值(string/int/...)
 	// 可用。本测试按标量值锁行为,只锁不修(零生产改动纪律)。
-	data := map[string]interface{}{
+	data := map[string]any{
 		"ms:a": "va",
 		"ms:b": "vb",
 	}
@@ -216,10 +216,10 @@ func TestRds8005_MSetJSON_TTLAndEmpty(t *testing.T) {
 	assert.Greater(t, mr.TTL("ms:a"), time.Duration(0), "expiration>0 应设置 Expire")
 
 	// struct 值确实不可用(QUIRK-80-05-B 行为锁定)。
-	assert.Error(t, rc.MSetJSON(ctx, map[string]interface{}{"ms:s": rds8005Payload{}}, time.Second))
+	assert.Error(t, rc.MSetJSON(ctx, map[string]any{"ms:s": rds8005Payload{}}, time.Second))
 
 	// 空数据 → no-op(不报错、不落任何键)。
-	require.NoError(t, rc.MSetJSON(ctx, map[string]interface{}{}, time.Second))
+	require.NoError(t, rc.MSetJSON(ctx, map[string]any{}, time.Second))
 	assert.False(t, mr.Exists("ms:none"))
 
 	// FastForward 越过 TTL 后键应被移除。
@@ -485,7 +485,7 @@ func TestMlc8005_JSON_Helpers_TwoLevel(t *testing.T) {
 
 	// MSetJSON:L1 存 JSON 文本 + L2 同步循环写原始值(MSetJSON 的 L2 写是
 	// 同步 for 循环)。L2 值受 QUIRK-80-05-B 限制用标量。
-	require.NoError(t, mlc.MSetJSON(ctx, map[string]interface{}{
+	require.NoError(t, mlc.MSetJSON(ctx, map[string]any{
 		"j:m1": "m1v",
 		"j:m2": "m2v",
 	}, 30*time.Second))
@@ -510,7 +510,7 @@ func TestMlc8005_JSON_Helpers_TwoLevel(t *testing.T) {
 	empty, err := mlc.MGetJSON(ctx)
 	require.NoError(t, err)
 	assert.Empty(t, empty)
-	require.NoError(t, mlc.MSetJSON(ctx, map[string]interface{}{}, time.Second))
+	require.NoError(t, mlc.MSetJSON(ctx, map[string]any{}, time.Second))
 }
 
 // TestMlc8005_WithWriter_Close:起 L2Writer 的构造器必须 Close 收口
@@ -644,7 +644,7 @@ func TestMlc8005_DirectRedis_Accessors(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, time.Duration(-1), ttl, "无过期键 TTL = -1")
 
-	require.NoError(t, mlc.DirectRedisXAdd(ctx, "stream:8005", map[string]interface{}{"k": "v"}))
+	require.NoError(t, mlc.DirectRedisXAdd(ctx, "stream:8005", map[string]any{"k": "v"}))
 	assert.NotNil(t, mlc.GetRedisClient())
 
 	// L2 非 Redis(MemoryCache 不实现 getClient/getPrefix)→ 降级分支。
@@ -658,7 +658,7 @@ func TestMlc8005_DirectRedis_Accessors(t *testing.T) {
 	ttl, err = memOnly.DirectRedisTTL(ctx, "dr:1")
 	require.NoError(t, err)
 	assert.Zero(t, ttl)
-	assert.Error(t, memOnly.DirectRedisXAdd(ctx, "s", map[string]interface{}{"k": "v"}),
+	assert.Error(t, memOnly.DirectRedisXAdd(ctx, "s", map[string]any{"k": "v"}),
 		"L2 不支持 Redis 操作时应报错")
 	assert.Nil(t, memOnly.GetRedisClient())
 }

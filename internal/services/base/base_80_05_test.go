@@ -117,7 +117,7 @@ func TestBas8005_List_Paged(t *testing.T) {
 	// 操作符覆盖(各分支配对 sqlite 类型断言)。
 	ops := []struct {
 		op   string
-		val  interface{}
+		val  any
 	}{
 		{"=", "bob"},
 		{"!=", "bob"},

@@ -25,7 +25,7 @@ import (
 )
 
 // newModelsDB8003 sqlite 文件库(独立 t.TempDir)用于钩子触发;与 api/v1 同源同一 glebarez 模式。
-func newModelsDB8003(t *testing.T, targets ...interface{}) *gorm.DB {
+func newModelsDB8003(t *testing.T, targets ...any) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "models_hooks.db")), &gorm.Config{})
 	require.NoError(t, err)
@@ -397,7 +397,7 @@ func TestMhk8003_HookErrorBranch_GORM_Returns(t *testing.T) {
 
 // tableNameEntry 显式盘点所有 TableName 存根(便于审阅 + 避免反射遗漏)。
 type tableNameEntry struct {
-	instance interface{} // 用于取方法;须为值类型或可取址
+	instance any // 用于取方法;须为值类型或可取址
 	want     string
 }
 

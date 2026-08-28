@@ -69,7 +69,7 @@ func eml7905SeedConfig(t *testing.T, db *gorm.DB, host string, port int, useSSL,
 	require.NoError(t, db.Create(cfg).Error)
 	// QUIRK-79-04-D 同根:UseSSL/UseSTARTTLS 的 false 被列 default:true 的零值跳过吞掉,
 	// 建后强制回写布尔列(测试侧规避,零生产改动)。
-	require.NoError(t, db.Model(cfg).Updates(map[string]interface{}{
+	require.NoError(t, db.Model(cfg).Updates(map[string]any{
 		"use_ssl":       useSSL,
 		"use_start_tls": useSTARTTLS,
 	}).Error)

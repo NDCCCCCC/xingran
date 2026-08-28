@@ -1483,7 +1483,7 @@ func TestSync78_SyncDataInternal_AllAccountsDialFail(t *testing.T) {
 	// 10s 硬超时(connect to closed local port 通常 <1s 失败)
 	done := make(chan struct{})
 	var (
-		res interface{}
+		res any
 		err2 error
 	)
 	go func() {

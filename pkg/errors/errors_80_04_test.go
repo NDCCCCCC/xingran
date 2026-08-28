@@ -326,7 +326,7 @@ func TestApe8004_WithContext(t *testing.T) {
 	assert.Equal(t, 42, ctx2["key2"])
 
 	// WithContexts 批量追加。
-	err3 := New(CodeParamError, "batch").WithContexts(map[string]interface{}{
+	err3 := New(CodeParamError, "batch").WithContexts(map[string]any{
 		"batch1": "v1",
 		"batch2": "v2",
 	})

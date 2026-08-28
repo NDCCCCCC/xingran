@@ -133,7 +133,7 @@ func TestEX78_ExecuteWithRetry_CtxCancelDuringDelay(t *testing.T) {
 
 	done := make(chan struct{})
 	var err error
-	var resp interface{}
+	var resp any
 	go func() {
 		r, e := e.executeWithRetry(ctx, pc, "display version", false)
 		resp, err = r, e

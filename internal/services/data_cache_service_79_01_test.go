@@ -173,7 +173,7 @@ func TestDcs7901_GetOrSet_HitMissQueryError(t *testing.T) {
 	require.NoError(t, svc.Set(ctx, "dcs7901:gos-hit", pre, time.Minute))
 	var hitDest dcs7901Sample
 	require.NoError(t, svc.GetOrSet(ctx, "dcs7901:gos-hit", &hitDest, time.Minute,
-		func() (interface{}, error) {
+		func() (any, error) {
 			t.Fatal("命中路径不应执行 query")
 			return nil, errors.New("sentinel: query must not run")
 		}))
@@ -183,7 +183,7 @@ func TestDcs7901_GetOrSet_HitMissQueryError(t *testing.T) {
 	calls := 0
 	var missDest dcs7901Sample
 	require.NoError(t, svc.GetOrSet(ctx, "dcs7901:gos-miss", &missDest, time.Minute,
-		func() (interface{}, error) {
+		func() (any, error) {
 			calls++
 			return dcs7901Sample{ID: 2, Name: "query 结果"}, nil
 		}))
@@ -192,7 +192,7 @@ func TestDcs7901_GetOrSet_HitMissQueryError(t *testing.T) {
 
 	var again dcs7901Sample
 	require.NoError(t, svc.GetOrSet(ctx, "dcs7901:gos-miss", &again, time.Minute,
-		func() (interface{}, error) {
+		func() (any, error) {
 			calls++
 			return nil, nil
 		}))
@@ -202,7 +202,7 @@ func TestDcs7901_GetOrSet_HitMissQueryError(t *testing.T) {
 	// (3) query 返回 error → "查询数据失败: %w" 包装,errors.Is 可解包
 	qErr := errors.New("db down")
 	err := svc.GetOrSet(ctx, "dcs7901:gos-err", &missDest, time.Minute,
-		func() (interface{}, error) { return nil, qErr })
+		func() (any, error) { return nil, qErr })
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "查询数据失败")
 	assert.True(t, errors.Is(err, qErr), "错误应以 %w 包装,支持 errors.Is 解包")
@@ -221,7 +221,7 @@ func TestDcs7901_GetOrSet_SyncWriteLocks_P0_9(t *testing.T) {
 
 			var dest dcs7901Sample
 			require.NoError(t, svc.GetOrSet(ctx, "dcs7901:p09", &dest, 10*time.Minute,
-				func() (interface{}, error) {
+				func() (any, error) {
 					return dcs7901Sample{ID: 7, Name: "sync-write"}, nil
 				}))
 
@@ -369,7 +369,7 @@ func TestDcs7901_KeyBuilder_TypeMatrix(t *testing.T) {
 
 	tests := []struct {
 		name string
-		in   interface{}
+		in   any
 		want string
 	}{
 		{"int8", int8(8), "kb:8"},

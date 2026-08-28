@@ -103,7 +103,7 @@ func (d mhs7905PGDialector) DefaultValueOf(*schema.Field) clause.Expression {
 	return clause.Expr{SQL: "NULL"}
 }
 
-func (d mhs7905PGDialector) BindVarTo(writer clause.Writer, _ *gorm.Statement, _ interface{}) {
+func (d mhs7905PGDialector) BindVarTo(writer clause.Writer, _ *gorm.Statement, _ any) {
 	writer.WriteByte('?')
 }
 
@@ -119,7 +119,7 @@ func (d mhs7905PGDialector) QuoteTo(writer clause.Writer, str string) {
 	writer.WriteByte('"')
 }
 
-func (d mhs7905PGDialector) Explain(sqlStr string, vars ...interface{}) string {
+func (d mhs7905PGDialector) Explain(sqlStr string, vars ...any) string {
 	return gormlogger.ExplainSQL(sqlStr, nil, `"`, vars...)
 }
 
@@ -128,19 +128,19 @@ type mhs7905PGPool struct {
 	captured *[]string
 }
 
-func (p mhs7905PGPool) ExecContext(ctx context.Context, query string, _ ...interface{}) (sql.Result, error) {
+func (p mhs7905PGPool) ExecContext(ctx context.Context, query string, _ ...any) (sql.Result, error) {
 	*p.captured = append(*p.captured, query)
 	return nil, fmt.Errorf("mhs7905 fake pg: exec disabled (R6: 禁真执行 PG DDL)")
 }
 
-func (p mhs7905PGPool) QueryContext(_ context.Context, query string, _ ...interface{}) (*sql.Rows, error) {
+func (p mhs7905PGPool) QueryContext(_ context.Context, query string, _ ...any) (*sql.Rows, error) {
 	*p.captured = append(*p.captured, query)
 	return nil, fmt.Errorf("mhs7905 fake pg: query disabled")
 }
 
 // QueryRowContext 返回 nil:本 fixture 只用于 Raw().Scan(slice) 路径(QueryContext),
 // 任何走 Row().Scan() 的调用方会 panic —— 勿在该 fake 上调用 Row() 形态 API。
-func (p mhs7905PGPool) QueryRowContext(_ context.Context, _ string, _ ...interface{}) *sql.Row {
+func (p mhs7905PGPool) QueryRowContext(_ context.Context, _ string, _ ...any) *sql.Row {
 	return nil
 }
 

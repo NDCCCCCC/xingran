@@ -176,7 +176,7 @@ func newFTWrapper78(t *testing.T, fixture string) *ScrapliWrapper {
 	t.Cleanup(func() { newNetworkDriver = orig })
 
 	fixturePath := poolFixturePath(t, fixture)
-	newNetworkDriver = func(_ interface{}, _ string, _ ...util.Option) (*network.Driver, error) {
+	newNetworkDriver = func(_ any, _ string, _ ...util.Option) (*network.Driver, error) {
 		p, err := platform.NewPlatform(
 			"huawei_vrp",
 			"dummy-host",
