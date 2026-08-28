@@ -12,7 +12,7 @@
 GLOBAL 3.8
 (src root)	0.0
 api	0.0
-components	18.6
+components	25.4
 constants	38.8
 design-system	52.5
 hooks	91.7
@@ -49,13 +49,13 @@ utils	89.7
 #     table/three:同 commit 新增的 0.0 校准行(新 key 初始校准,非下调),
 #     后续 wave 3 / P2 阶段补测后逐 plan bump。
 components/shared	23.7
-components/dashboard	4.1
+components/dashboard	25.4
 components/layout	14.1
 components/CronSelector	37.4
 components/captcha	21.5
 components/operations	3.5
 components/network	50.1
-components/reconciliation	21.0
+components/reconciliation	49.5
 components/DeptTree	44.8
 components/IconSelect	0.0
 components/NoticeDetail	16.1
