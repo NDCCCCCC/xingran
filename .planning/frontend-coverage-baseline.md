@@ -64,6 +64,7 @@
 | 2026-08-28 | Phase 88 R34 router routeConfigManager+componentLoader | 43.83 | 21574 | 9457 | | | 88-R34 | router 32.9 | router 74.5 |
 | 2026-08-28 | Phase 88 R35 dashboard widgets BaseWidget | 43.98 | 21574 | 9489 | | | 88-R35 | comp-dash 27.2 | comp-dash 29.2 |
 | 2026-08-28 | Phase 88 R36 system apikeys LogsModal | 44.22 | 21574 | 9541 | | | 88-R36 | sys 30.8 | sys 32.7 |
+| 2026-08-28 | Phase 88 R37 system role useRoleActions | 44.32 | 21574 | 9563 | | | 88-R37 | sys 32.7 | sys 34.1 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
