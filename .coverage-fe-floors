@@ -14,7 +14,7 @@ GLOBAL 3.8
 api	0.0
 components	25.4
 constants	38.8
-design-system	52.5
+design-system	78.9
 hooks	91.7
 lib	86.0
 pages/ad	2.2
@@ -22,7 +22,7 @@ pages/ad-domain	20.0
 pages/asset	0.05
 pages/dashboard-system	2.4
 pages/duty	35.0
-pages/knowledge	46.4
+pages/knowledge	50.3
 pages/login	61.6
 pages/monitor	38.4
 pages/my-notices	2.6

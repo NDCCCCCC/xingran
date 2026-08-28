@@ -42,6 +42,7 @@
 | 2026-08-28 | Phase 88 R7-9 ops/vdi/wo/ad-dom/port-write | 36.19 | 21574 | 7808 | | | 88-R7 | ops 12.1 等 | ops 17.0/vdi 21.3/wo 25.0/ad 20.0 |
 | 2026-08-28 | Phase 88 R10-12 子页零散渲染 + maxWorkers | 36.86 | 21574 | 7954 | | | 88-R10 | 0.0 | table 24.5/IconSel 37.0/duty 35.0/kn 46.4 |
 | 2026-08-28 | Phase 88 R13-14 workstations子模块+operations子组件 | 37.18 | 21574 | 8023 | | | 88-R13 | ops 12.1/comp-ops 3.5 | ops 17.5/comp-ops 9.0 |
+| 2026-08-28 | Phase 88 R15 design-system ConfigProvider 链路 + knowledge view/modals | 37.47 | 21574 | 8084 | | | 88-R15 | ds 52.5/kn 46.4 | ds 78.9/kn 50.3 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
