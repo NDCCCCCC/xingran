@@ -498,9 +498,15 @@ func TestRct8002_CheckPortStatusDrift_Branches(t *testing.T) {
 	require.NoError(t, checkPortStatusDrift(ctx, db))
 
 	// 基线解析失败分支:config_value 非数字 → readDriftBaseline false → 首次观测分支
+	// 前两阶段经 FirstOrCreate 留下的基线行带随机 UUID id,而本阶段固定 id='cfg-bad-num';
+	// readDriftBaseline 用 First(ORDER BY id LIMIT 1),字典序取决于随机 UUID 首字符 ——
+	// ~19% 概率读到非数字行之外的路径翻转,导致断言 exists/value 随机失败(满载 flake 根因之一)。
+	// 处置:先清掉遗留基线行,并让本行 config_name 对齐生产 FirstOrCreate 的条件字段,
+	// 保证 Assign 更新确定命中本行、read-back 确定读回本行。
+	require.NoError(t, db.Exec(`DELETE FROM sys_config WHERE config_key = ?`, "reconciliation.port_status.drift_baseline").Error)
 	seedDrift8002(t, db, 2)
 	require.NoError(t, db.Exec(`INSERT INTO sys_config (id, config_name, config_key, config_value)
-		VALUES ('cfg-bad-num', '漂移基线', 'reconciliation.port_status.drift_baseline', 'not-a-number')`).Error)
+		VALUES ('cfg-bad-num', '端口状态漂移基线(自适应)', 'reconciliation.port_status.drift_baseline', 'not-a-number')`).Error)
 	require.NoError(t, checkPortStatusDrift(ctx, db))
 	// 首次观测分支把当前值写入(Assign 更新命中已有行)
 	val, exists := readDriftBaseline(ctx, db, "reconciliation.port_status.drift_baseline")

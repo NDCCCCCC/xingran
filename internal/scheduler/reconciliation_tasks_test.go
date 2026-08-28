@@ -28,6 +28,14 @@ func setupReconExceptionTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open("file:recon_task_"+t.Name()+"?mode=memory&cache=shared"), &gorm.Config{})
 	require.NoError(t, err)
+	// cache=shared 的内存库在最后一个连接关闭前一直存活;连接池的闲置连接不会自动关,
+	// 导致 -count=N 迭代复用同一内存库,固定 id 的 INSERT 第二次起撞 UNIQUE(1555)。
+	// 用例收口主动 Close,让每次迭代都拿到全新内存库(81-01 Task 0 满载 flake 根因之一)。
+	t.Cleanup(func() {
+		if sqlDB, err := db.DB(); err == nil {
+			_ = sqlDB.Close()
+		}
+	})
 	require.NoError(t, db.Exec(`
 		CREATE TABLE IF NOT EXISTS sys_reconciliation_exception (
 			id TEXT PRIMARY KEY,
