@@ -36,13 +36,9 @@
 # This is deliberately stricter than the weighted average — a P1 package
 # cannot regress below the floor even if the overall average rises.
 #
-# P2 per-package floor (Phase 74, SCALE-01 / D-15, Plan 74-11 section 4): the
-# 10 P2 packages must EACH stay >= 70.0%. 7 of 10 reached 70% in Phase 74.
-# 3 packages are structurally blocked in unit-test scope (SSH scrapligo driver,
-# full Core.Init dependency graph, agent subprocess server — see
-# .planning/phases/74-p2-finalize-and-diff-coverage/74-08-SUMMARY.md); for
-# these the floor is ratcheted to the achieved value (UP-only: coverage may
-# not regress below what Phase 74 shipped, and the 70% intent stays on record).
+# P2 per-package floor (Phase 74, SCALE-01 / D-15, Plan 74-11): all 10 P2
+# packages must EACH stay >= 70.0%. Phase 81 closed out the Phase 74 ratchets
+# after core/device/agent-server crossed 70% — UP-only history in git log.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -215,42 +211,17 @@ fi
 
 echo "P1 per-package floor passed ($P1_FLOOR% x 8 packages)"
 
-# --- 4. p2_package_check: Phase 74 P2 per-package floor (10 packages) --------
-# Mirrors section 3 (same awk aggregation, same PASS/FAIL format). Differences:
-#   - P2_FLOOR applies to the 7 packages that reached 70% in Phase 74.
-#   - 3 structurally-blocked packages carry an UP-ONLY ratcheted floor equal to
-#     the Phase 74 shipped value (core 38.33 / device 39.07 / agent-server
-#     22.08). Raising these floors back toward 70 is the standing TODO; they
-#     must never move DOWN. Removal condition: when a package crosses 70.0%,
-#     delete its P2_RATCHET entry so the global P2_FLOOR takes over.
+# --- 4. p2_package_check: Phase 74/81 P2 per-package floor (10 packages) --------
+# Mirrors section 3 (same awk aggregation, same PASS/FAIL format).
+# Phase 81 removed the Phase 74 ratchet entries after core/device/agent-server
+# all crossed 70% — all 10 packages now use the uniform P2_FLOOR of 70.0%.
 
 P2_FLOOR="70.0"
 P2_PACKAGES="internal/api/v1/operations internal/api/v1/asset internal/api/v1/network internal/services/rpa internal/services/vdi internal/core internal/device internal/utils internal/agent/server internal/services/scheduler"
 
-# Ratcheted floors for structurally blocked packages (UP-only, see header).
-#
-# Methodology (PR #4 round-5 lesson): floors are CONSERVATIVE LOWER BOUNDS,
-# not pasted measurement values. Measurement noise sources observed:
-#   - Go patch-version instrumentation drift: same code measured 754 stmts
-#     locally vs 767 on CI (go-version-file installs latest 1.24.x patch)
-#   - env-branch divergence: agent/server tests take different branches on
-#     Linux CI vs Windows local (22.08% local vs 19.48% CI, -16 stmts)
-#   - async/timing variance: device ±2 stmts across runs
-# A floor pasted to a single local measurement turns that noise into gate
-# failures. Floors below keep >=0.4pp margin under the CI-observed minimum.
-# Removal condition unchanged: package crosses 70.0% -> delete its entry.
-P2_RATCHET_internal_core="39.00"          # CI 39.50 / local 40.2
-P2_RATCHET_internal_device="38.50"        # CI 38.91 / local 39.07
-P2_RATCHET_internal_agent_server="19.00"  # CI 19.48 / local 22.08 (env branches)
-
 floor_of() {
-  # Map package path to ratchet variable name (slashes -> underscores).
-  var="P2_RATCHET_$(printf '%s' "$1" | tr '/' '_')"
-  if [ -n "${!var:-}" ]; then
-    echo "${!var}"
-  else
-    echo "$P2_FLOOR"
-  fi
+  # All 10 P2 packages now use the uniform floor.
+  echo "$P2_FLOOR"
 }
 
 P2_PKG_TABLE=$(awk '
@@ -298,12 +269,11 @@ done
 if [ "$P2_FAILED" -ne 0 ]; then
   echo "" >&2
   echo "coverage gate FAILED — $P2_FAILED P2 package(s) below their floor" >&2
-  echo "P2 floor is from Phase 74 (SCALE-01, D-15): 7 packages at the 70.0%" >&2
-  echo "global floor + 3 structurally-blocked packages at UP-ONLY ratcheted" >&2
-  echo "floors (core/device/agent-server — see 74-08-SUMMARY.md). Floors may" >&2
-  echo "only move UP. Add tests for the failing package(s) to lift it back." >&2
+  echo "P2 floor is 70.0% for all 10 packages (Phase 81 removed the Phase 74" >&2
+  echo "ratchets after core/device/agent-server crossed 70% — UP-only history in" >&2
+  echo "git log). Add tests for the failing package(s) to lift it back." >&2
   exit 5
 fi
 
-echo "P2 per-package floor passed (70.0% x 7 + ratcheted x 3 = 10 packages)"
+echo "P2 per-package floor passed (70.0% x 10 packages)"
 exit 0
