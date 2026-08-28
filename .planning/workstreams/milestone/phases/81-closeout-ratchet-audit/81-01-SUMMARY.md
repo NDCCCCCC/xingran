@@ -222,6 +222,35 @@ _Plan metadata:_ TBD(本 commit 即 plan-metadata docs commit,按 D-07 two-step 
 
 ---
 
+## Self-Check: PASSED
+
+| Item | Status |
+|------|--------|
+| `internal/scheduler/reconciliation_tasks_test.go` exists | FOUND |
+| `internal/scheduler/reconciliation_tasks_80_02_test.go` exists | FOUND |
+| `.coverage-threshold` exists, content `77.5` (no LF) | FOUND |
+| `.planning/coverage-baseline.md` exists, contains `Phase 81` 后 行 + 75-78/80 backfill | FOUND |
+| `.planning/workstreams/milestone/STATE.md` exists, stopped_at updated | FOUND |
+| `.planning/workstreams/milestone/phases/81-closeout-ratchet-audit/81-01-SUMMARY.md` exists | FOUND |
+| Task 0 commit `803caac` (test(81-01)) in git history | FOUND |
+| Task 2 commit `2830800` (docs(81-01) ratchet) in git history | FOUND |
+| Task 3 commit `a719dad` (docs(81-01) summary) in git history | FOUND |
+| Baseline Phase 81 后 row commit column = `2830800` (TBD backfilled) | FOUND |
+| `grep -c "TBD (81-01 ratchet)" .planning/coverage-baseline.md` = 0 | PASSED |
+| `go test -count=3 ./internal/scheduler/` exit 0 | PASSED (62.9s) |
+| `go test -timeout 15m -count=1 -coverprofile=coverage.out ./internal/... ./pkg/... ./cmd/...` EXIT=0, ^FAIL=0 | PASSED (Task 1 measurement) |
+| `bash .github/scripts/check-coverage.sh coverage.out .coverage-threshold` EXIT=0, PACKAGE weighted 77.99%, P1 8/8 + P2 10/10 PASS | PASSED (Task 1 measurement) |
+| gate parser at new threshold 77.5 — `PASS: weighted avg 84.98% >= threshold 77.50%` | PASSED (quick-test validation) |
+| Production `.go` files modified = 0 (Task 0 only touched `*_test.go`) | PASSED |
+| `t.Skip` additions = 0 (`git diff | grep -c "+.*t\.Skip"` = 0) | PASSED |
+| `coverage.out` not in any commit (verified absent from `git log --stat` and `git status`) | PASSED |
+| `asset_columns_schema.json` stash pop restored (back to ` M` state, not in any plan commit) | PASSED |
+| `.coverage-threshold` `git diff` shows only `-55.5` → `+77.5` (UP-only evidence) | PASSED |
+
+**Summary:** 6/6 files FOUND, 3/3 commits FOUND, 12/12 verification checks PASSED. **No missing items.**
+
+---
+
 *Phase: 81-closeout-ratchet-audit*
 *Plan: 01*
 *Completed: 2026-08-28*
