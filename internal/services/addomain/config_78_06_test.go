@@ -162,7 +162,7 @@ func TestCfg78_GetList_FilterSortPage(t *testing.T) {
 
 	// status 过滤：仅 disabled
 	disabled := int(models.ADConfigStatusDisabled)
-	list, total, err = svc.GetList(ctx, &ListRequest{
+	_, total, err = svc.GetList(ctx, &ListRequest{
 		BaseListRequest: base.BaseListRequest{Current: 1, PageSize: 10},
 		Status:          &disabled,
 	})

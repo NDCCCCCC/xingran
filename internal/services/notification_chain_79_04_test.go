@@ -208,7 +208,7 @@ func TestNcf7904_EmailConfigCRUD(t *testing.T) {
 	assert.Equal(t, int64(1), total)
 	assert.Len(t, list, 1)
 	stopped := int(models.NotificationConfigStatusStopped)
-	list, total, err = svc.ListEmailConfigs(ctx, 1, 10, &stopped)
+	_, total, err = svc.ListEmailConfigs(ctx, 1, 10, &stopped)
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), total, "状态过滤 models.NotificationConfigStatusStopped 不命中")
 	// 空页 → 空列表不报错
@@ -339,8 +339,11 @@ func TestNcf7904_APIConfigCRUD(t *testing.T) {
 	assert.Equal(t, int64(1), hookDefaultCount, "不同类型的默认互不干扰")
 
 	// List:configType + status 过滤 + 分页
-	list, total, err := svc.ListAPINotificationConfigs(ctx, 1, 10,
+	var list []models.APINotificationConfig
+	var total int64
+	list, total, err = svc.ListAPINotificationConfigs(ctx, 1, 10,
 		func() *models.APIConfigType { v := models.APIConfigTypeWebhook; return &v }(), nil)
+	_ = list // unused; only total is used for assertion
 	require.NoError(t, err)
 	assert.Equal(t, int64(2), total)
 	smsType := models.APIConfigTypeSMS
@@ -350,7 +353,7 @@ func TestNcf7904_APIConfigCRUD(t *testing.T) {
 	assert.Equal(t, "短信通道", list[0].ConfigName)
 	// status 过滤(停用)
 	stopped := int(models.NotificationConfigStatusStopped)
-	list, total, err = svc.ListAPINotificationConfigs(ctx, 1, 10, nil, &stopped)
+	_, total, err = svc.ListAPINotificationConfigs(ctx, 1, 10, nil, &stopped)
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), total)
 	// 空页

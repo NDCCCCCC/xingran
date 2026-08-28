@@ -167,7 +167,7 @@ func TestUsr78_GetList_FilterMatrix(t *testing.T) {
 
 	// OUDN 过滤:命中父 OU 时包含子 OU
 	ouDN := "OU=Users,DC=example,DC=com"
-	_, total, err = svc.GetList(ctx, &UserListRequest{
+	_, _, err = svc.GetList(ctx, &UserListRequest{
 		BaseListRequest: base.BaseListRequest{Current: 1, PageSize: 100},
 		ConfigID:      configID,
 		OUDN:          &ouDN,

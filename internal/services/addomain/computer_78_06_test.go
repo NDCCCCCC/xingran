@@ -240,7 +240,7 @@ func TestComp78_List_FilterMatrix(t *testing.T) {
 	assert.Len(t, list, 2)
 
 	// (c) ComputerName 模糊匹配
-	list, total, err = svc.List(ctx, &ComputerListRequest{
+	_, total, err = svc.List(ctx, &ComputerListRequest{
 		BaseListRequest: base.BaseListRequest{Current: 1, PageSize: 10},
 		ConfigID:        cfgA.ID,
 		ComputerName:    "PC",
