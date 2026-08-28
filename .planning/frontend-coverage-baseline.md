@@ -67,6 +67,7 @@
 | 2026-08-28 | Phase 88 R37 system role useRoleActions | 44.32 | 21574 | 9563 | | | 88-R37 | sys 32.7 | sys 34.1 |
 | 2026-08-28 | Phase 88 R38 dashboard Stat/Progress widget | 44.54 | 21574 | 9610 | | | 88-R38 | comp-dash 29.2 | comp-dash 33.7 |
 | 2026-08-28 | Phase 88 R39 workorder useWorkOrderActions | 44.80 | 21574 | 9667 | | | 88-R39 | workorder 28.9 | workorder 38.9 |
+| 2026-08-28 | Phase 88 R40 components shared ColumnConfigModal | 44.99 | 21574 | 9707 | | | 88-R40 | comp-shared 24.1 | comp-shared 27.4 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
