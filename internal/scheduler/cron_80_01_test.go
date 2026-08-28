@@ -16,6 +16,7 @@ package scheduler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"sync"
@@ -236,5 +237,246 @@ func TestReg8001_GetJobCount_ConcurrentRead(t *testing.T) {
 	assert.Equal(t, 0, running)
 }
 
-// quiet8001 抑制未使用告警的占位(time 包在后续 task 使用)。
-var _ = time.Now
+// ============================================================================
+// Task 2 — JobExecutor 全链(Execute/executeTask 分发 + 纯函数 + defaultLogger)
+// ============================================================================
+
+// errSentinel8001 handler 失败 sentinel(错误路径断言锚点)。
+var errSentinel8001 = errors.New("reg8001 处理器故障")
+
+// newExecutor8001 直调路径用 JobExecutor 装配(scheduler 必须非 nil ——
+// Execute 会经 calculateNextRunTime 解引用 scheduler.cron.Location())。
+func newExecutor8001(t *testing.T, s *Scheduler, db *gorm.DB, job *models.Job) *JobExecutor {
+	return &JobExecutor{job: job, db: db, logger: stubLoggerOf8001(t, s), scheduler: s}
+}
+
+// lastJobLog8001 取该 job 名下唯一一条执行日志。
+func lastJobLog8001(t *testing.T, db *gorm.DB, jobName string) *models.JobLog {
+	t.Helper()
+	var log models.JobLog
+	require.NoError(t, db.Where("job_name = ?", jobName).Order("start_time DESC").First(&log).Error)
+	return &log
+}
+
+// TestExec8001_Execute_SuccessPath 直调 Execute:handler 计数 +1、
+// 成功日志落库、job 行 prev/next_run_time 回写。
+func TestExec8001_Execute_SuccessPath(t *testing.T) {
+	s, db := newScheduler8001(t)
+	counter := registerCountingTask8001(t, s, "reg8001_ok")
+
+	job := newJob8001("执行器-成功", "reg8001_ok")
+	require.NoError(t, db.Create(job).Error)
+
+	err := newExecutor8001(t, s, db, job).Execute(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, int32(1), atomic.LoadInt32(counter), "注册 handler 应被分发调用一次")
+
+	// 日志:成功态 + 时间区间非空
+	log := lastJobLog8001(t, db, job.JobName)
+	assert.Equal(t, int(models.JobLogStatusSuccess), log.Status)
+	assert.NotNil(t, log.StartTime)
+	assert.NotNil(t, log.EndTime)
+	assert.GreaterOrEqual(t, log.Duration, int64(0))
+	assert.Equal(t, "任务执行成功", log.JobMessage)
+	assert.Nil(t, log.ExceptionInfo)
+
+	// job 行执行时间回写(合法 cron ⇒ next_run_time 非 nil)
+	var updated models.Job
+	require.NoError(t, db.First(&updated, "id = ?", job.ID).Error)
+	assert.NotNil(t, updated.PrevRunTime)
+	assert.NotNil(t, updated.NextRunTime)
+	if updated.NextRunTime != nil {
+		assert.True(t, updated.NextRunTime.After(time.Now().Add(-time.Minute)),
+			"next_run_time 应在未来")
+	}
+
+	// 成功路径走 Infof,不走 Errorf
+	stub := stubLoggerOf8001(t, s)
+	info, warn, errCalls := stub.counts()
+	assert.GreaterOrEqual(t, info, 1)
+	assert.Equal(t, 0, warn)
+	assert.Equal(t, 0, errCalls)
+}
+
+// TestExec8001_Execute_HandlerError handler 返回 sentinel ⇒ Execute 透传该 error,
+// 日志落失败态且 ExceptionInfo 携带 sentinel 文案。
+func TestExec8001_Execute_HandlerError(t *testing.T) {
+	s, db := newScheduler8001(t)
+	s.RegisterTask("reg8001_boom", func(ctx context.Context, params map[string]interface{}) error {
+		return errSentinel8001
+	})
+
+	job := newJob8001("执行器-失败", "reg8001_boom")
+	require.NoError(t, db.Create(job).Error)
+
+	err := newExecutor8001(t, s, db, job).Execute(context.Background())
+	require.Error(t, err)
+	assert.ErrorIs(t, err, errSentinel8001)
+
+	log := lastJobLog8001(t, db, job.JobName)
+	assert.Equal(t, int(models.JobLogStatusFailure), log.Status)
+	require.NotNil(t, log.ExceptionInfo)
+	assert.Contains(t, *log.ExceptionInfo, errSentinel8001.Error())
+	assert.Contains(t, log.JobMessage, errSentinel8001.Error())
+
+	// 失败路径走 Errorf
+	stub := stubLoggerOf8001(t, s)
+	_, _, errCalls := stub.counts()
+	assert.GreaterOrEqual(t, errCalls, 1)
+}
+
+// TestExec8001_ExecuteTask_UnregisteredTarget 注册表 miss 分支 + nil-scheduler 分支。
+func TestExec8001_ExecuteTask_UnregisteredTarget(t *testing.T) {
+	s, db := newScheduler8001(t)
+
+	// 未注册 taskType → miss
+	job := newJob8001("执行器-未注册", "reg8001_missing_task")
+	require.NoError(t, db.Create(job).Error)
+	executor := newExecutor8001(t, s, db, job)
+	err := executor.executeTask(context.Background(), &models.JobLog{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "未找到任务处理器")
+
+	// scheduler 引用为 nil → 显式错误(非 panic)
+	orphan := &JobExecutor{job: job, db: db, logger: stubLoggerOf8001(t, s), scheduler: nil}
+	err = orphan.executeTask(context.Background(), &models.JobLog{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "调度器引用为空")
+}
+
+// TestExec8001_ParseInvokeTarget_Table 表驱动覆盖 parseInvokeTarget 全部分支。
+//
+// quirk 记录(D-78-10 口径,零生产改动): plan <interfaces> 把该函数描述为
+// `type:{"k":v}` 的 JSON 解析;实际实现(cron.go parseInvokeTarget)是"首个冒号
+// 一次性切分",冒号后的整段原文作为 params["param"] 字符串,不做 JSON 解析、
+// 坏 JSON 也不报错 —— 与源码 docstring"统一通过 params[\"param\"] 获取参数值"
+// 一致,故按实际行为断言(坏 JSON 的 params 非 nil,含原文)。
+func TestExec8001_ParseInvokeTarget_Table(t *testing.T) {
+	s, db := newScheduler8001(t)
+	executor := newExecutor8001(t, s, db, newJob8001("纯函数-解析", "reg8001_parse"))
+
+	cases := []struct {
+		name         string
+		in           string
+		wantType     string
+		wantParams   map[string]interface{}
+		wantNilParam bool
+	}{
+		{name: "无冒号_无参数", in: "reg8001_typeA", wantType: "reg8001_typeA", wantNilParam: true},
+		{
+			name:       "带冒号_单参数原文",
+			in:         `reg8001_typeB:{"k":1}`,
+			wantType:   "reg8001_typeB",
+			wantParams: map[string]interface{}{"param": `{"k":1}`},
+		},
+		{
+			name:       "坏JSON_原文透传不报错",
+			in:         "reg8001_typeC:{bad json",
+			wantType:   "reg8001_typeC",
+			wantParams: map[string]interface{}{"param": "{bad json"},
+		},
+		{name: "空串", in: "", wantType: "", wantNilParam: true},
+		{
+			name:       "多冒号_首个切分",
+			in:         "reg8001_notice:abc:def",
+			wantType:   "reg8001_notice",
+			wantParams: map[string]interface{}{"param": "abc:def"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			taskType, params := executor.parseInvokeTarget(tc.in)
+			assert.Equal(t, tc.wantType, taskType)
+			if tc.wantNilParam {
+				assert.Nil(t, params)
+				return
+			}
+			require.NotNil(t, params)
+			assert.Equal(t, tc.wantParams, params)
+		})
+	}
+}
+
+// TestExec8001_CalculateNextRunTime 空/非法/合法 cron 三分支(调用个位数,
+// 临时 cron 有 Stop 不泄漏)。
+func TestExec8001_CalculateNextRunTime(t *testing.T) {
+	s, db := newScheduler8001(t)
+
+	// 空 cron → nil(短路径)
+	empty := newJob8001("纯函数-空cron", "reg8001_cron")
+	empty.CronExpression = ""
+	require.NoError(t, db.Create(empty).Error)
+	assert.Nil(t, newExecutor8001(t, s, db, empty).calculateNextRunTime())
+
+	// 合法 6 位表达式 → 非 nil 且在未来
+	valid := newJob8001("纯函数-合法cron", "reg8001_cron")
+	valid.CronExpression = "*/1 * * * * *"
+	require.NoError(t, db.Create(valid).Error)
+	next := newExecutor8001(t, s, db, valid).calculateNextRunTime()
+	require.NotNil(t, next)
+	assert.True(t, next.After(time.Now().Add(-time.Minute)), "next 应在未来, got %v", *next)
+
+	// 非法表达式 → AddFunc 报错 → nil
+	invalid := newJob8001("纯函数-非法cron", "reg8001_cron")
+	invalid.CronExpression = "not-a-cron-expression"
+	require.NoError(t, db.Create(invalid).Error)
+	assert.Nil(t, newExecutor8001(t, s, db, invalid).calculateNextRunTime())
+}
+
+// TestExec8001_DefaultLogger_Direct defaultLogger 三法冒烟直调 +
+// SetLogger 注入缝验证(ExecuteJob 成功走 Infof / 失败走 Errorf)。
+func TestExec8001_DefaultLogger_Direct(t *testing.T) {
+	// 三法直调(冒烟:不 panic 即过)
+	dl := &defaultLogger{}
+	dl.Infof("exec8001 直调 %s", "Infof")
+	dl.Warnf("exec8001 直调 %s", "Warnf")
+	dl.Errorf("exec8001 直调 %s", "Errorf")
+
+	// Logger 接口满足性(defaultLogger 是 Logger 的实现)
+	var _ Logger = dl
+
+	// SetLogger 注入缝:成功路径 → Infof;失败路径 → Errorf
+	s, _ := newScheduler8001(t)
+	counter := registerCountingTask8001(t, s, "reg8001_logger")
+	job := newJob8001("注入缝-成功", "reg8001_logger")
+	require.NoError(t, s.AddJob(job))
+	require.NoError(t, s.ExecuteJob(job.ID))
+	assert.Equal(t, int32(1), atomic.LoadInt32(counter))
+	stub := stubLoggerOf8001(t, s)
+	info, _, errCalls := stub.counts()
+	assert.GreaterOrEqual(t, info, 1, "成功路径应产生 Infof")
+	assert.Equal(t, 0, errCalls)
+
+	s.RegisterTask("reg8001_logger_fail", func(ctx context.Context, params map[string]interface{}) error {
+		return errSentinel8001
+	})
+	failJob := newJob8001("注入缝-失败", "reg8001_logger_fail")
+	require.NoError(t, s.AddJob(failJob))
+	require.Error(t, s.ExecuteJob(failJob.ID))
+	_, _, errCalls = stub.counts()
+	assert.GreaterOrEqual(t, errCalls, 1, "失败路径应产生 Errorf")
+}
+
+// TestExec8001_ExecuteJob_ViaScheduler Scheduler.ExecuteJob 公开入口全链:
+// 内存命中(AddJob !running 落入 s.jobs)→ 分发计数;不存在 ID → 报错不 panic。
+func TestExec8001_ExecuteJob_ViaScheduler(t *testing.T) {
+	s, _ := newScheduler8001(t)
+	counter := registerCountingTask8001(t, s, "reg8001_via_sched")
+
+	job := newJob8001("入口-立即执行", "reg8001_via_sched")
+	require.NoError(t, s.AddJob(job))
+
+	require.NoError(t, s.ExecuteJob(job.ID))
+	assert.Equal(t, int32(1), atomic.LoadInt32(counter))
+
+	// 不存在的 ID:内存 miss → DB miss → 报错(不 panic)
+	err := s.ExecuteJob("00000000-0000-0000-0000-000000000001")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "任务不存在")
+
+	// 二次执行仍可分发(执行器无状态副作用)
+	require.NoError(t, s.ExecuteJob(job.ID))
+	assert.Equal(t, int32(2), atomic.LoadInt32(counter))
+}
+
