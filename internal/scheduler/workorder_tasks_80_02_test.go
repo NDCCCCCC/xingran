@@ -52,10 +52,14 @@ func newDutyDB8002(t *testing.T) *gorm.DB {
 			id TEXT PRIMARY KEY,
 			reminder_enabled INTEGER
 		)`,
+		// sys_user 列齐全以对齐 models.User(AutoMigrate WorkOrder 关联时不加 NOT NULL 列)
 		`CREATE TABLE IF NOT EXISTS sys_user (
 			id TEXT PRIMARY KEY,
-			username TEXT,
+			username TEXT UNIQUE,
 			nickname TEXT,
+			password TEXT NOT NULL DEFAULT '',
+			salt TEXT NOT NULL DEFAULT '',
+			auth_source TEXT NOT NULL DEFAULT 'local',
 			deleted_at DATETIME
 		)`,
 		`CREATE TABLE IF NOT EXISTS sys_duty_pool (
@@ -261,7 +265,7 @@ func TestWot8002_AssignWorkOrderHandler_Branches(t *testing.T) {
 	today := time.Now().Format("2006-01-02")
 
 	// 准备:system 用户 + 模板
-	require.NoError(t, db.Exec(`INSERT INTO sys_user (id, username) VALUES ('system-id', 'system')`).Error)
+	require.NoError(t, db.Exec(`INSERT INTO sys_user (id, username, password) VALUES ('system-id', 'system', 'x')`).Error)
 
 	template := &models.PeriodicWorkOrderTemplate{
 		BaseModel:        models.BaseModel{ID: "tpl-8002"},
@@ -464,3 +468,285 @@ func TestWot8002_GetTodayDutyPerson(t *testing.T) {
 
 // strPtr 辅助。
 func strPtr(s string) *string { return &s }
+
+// ============================================================================
+// 缺口补足 Round 1 — 注册体 / executePeriodicWorkOrderCreateTask / Sync / 启停错误分支
+// ============================================================================
+
+// newWotFullDB8002 workorder 全表库(sys_workorder + sys_periodic_workorder_log AutoMigrate)。
+func newWotFullDB8002(t *testing.T) *gorm.DB {
+	t.Helper()
+	db := newDutyDB8002(t)
+	require.NoError(t, db.AutoMigrate(&models.WorkOrder{}, &models.PeriodicWorkOrderLog{}))
+	return db
+}
+
+// TestWot8002_RegisterTasks RegisterWorkOrderTasks 注册 + handler 分发(GlobalDB nil → 错误分支)。
+func TestWot8002_RegisterTasks(t *testing.T) {
+	s, _ := newScheduler8002(t)
+	RegisterWorkOrderTasks(s)
+	assert.True(t, s.IsTaskRegistered("periodic_workorder_create"))
+
+	// GlobalDB nil → handler 返回错误
+	origDB := GlobalDB
+	t.Cleanup(func() { SetDB(origDB) })
+	SetDB(nil)
+	handler := s.GetTaskHandler("periodic_workorder_create")
+	require.NotNil(t, handler)
+	err := handler(context.Background(), nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "数据库未初始化")
+}
+
+// TestWot8002_ExecutePeriodicCreate_Errors executePeriodicWorkOrderCreateTask 错误分支:
+// 参数无效 / 模板不存在或已禁用 / system 用户缺失。
+func TestWot8002_ExecutePeriodicCreate_Errors(t *testing.T) {
+	db := newWotFullDB8002(t)
+	origDB := GlobalDB
+	t.Cleanup(func() { SetDB(origDB) })
+	SetDB(&stubDBGetter8001{db: db})
+
+	// 参数无效(param 非 string / 空串)
+	require.Error(t, executePeriodicWorkOrderCreateTask(context.Background(), nil))
+	require.Error(t, executePeriodicWorkOrderCreateTask(context.Background(), map[string]interface{}{"param": ""}))
+
+	// 模板不存在(ErrRecordNotFound → nil,不是错误)
+	require.NoError(t, executePeriodicWorkOrderCreateTask(context.Background(), map[string]interface{}{"param": "no-such-tpl"}))
+
+	// 模板存在但 system 用户缺失 → 错误
+	tpl := &models.PeriodicWorkOrderTemplate{
+		BaseModel:      models.BaseModel{ID: "tpl-no-sysuser"},
+		TemplateName:   "无系统用户模板",
+		WorkOrderTitle: "工单-{date}",
+		CronExpression: "0 0 8 * * *",
+		IsEnabled:      true,
+	}
+	require.NoError(t, db.Create(tpl).Error)
+	err := executePeriodicWorkOrderCreateTask(context.Background(), map[string]interface{}{"param": "tpl-no-sysuser"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "查询系统用户失败")
+}
+
+// TestWot8002_ExecutePeriodicCreate_Success executePeriodicWorkOrderCreateTask 成功路径:
+// Manual 指派 + 通知(NotifyAssignee + AssigneeID → sendWorkOrderNotification)。
+func TestWot8002_ExecutePeriodicCreate_Success(t *testing.T) {
+	db := newWotFullDB8002(t)
+
+	origDB := GlobalDB
+	t.Cleanup(func() { SetDB(origDB) })
+	SetDB(&stubDBGetter8001{db: db})
+
+	origHub := GlobalNoticeHub
+	t.Cleanup(func() { SetNoticeHub(origHub) })
+	hub := &stubNoticeHub8002{}
+	SetNoticeHub(hub)
+
+	// system 用户 + Manual 指派模板
+	require.NoError(t, db.Exec(`INSERT INTO sys_user (id, username, password) VALUES ('sys-user-8002', 'system', 'x')`).Error)
+	assignee := "assignee-8002"
+	tpl := &models.PeriodicWorkOrderTemplate{
+		BaseModel:      models.BaseModel{ID: "tpl-success"},
+		TemplateName:   "成功模板",
+		WorkOrderTitle: "工单-{date}-{year}",
+		CronExpression: "0 0 8 * * *",
+		IsEnabled:      true,
+		AssignType:     models.PeriodicAssignTypeManual,
+		AssignTargetID: &assignee,
+		NotifyAssignee: true,
+	}
+	require.NoError(t, db.Create(tpl).Error)
+
+	require.NoError(t, executePeriodicWorkOrderCreateTask(context.Background(), map[string]interface{}{"param": "tpl-success"}))
+
+	// 工单落库(sys_workorder)
+	var woCount int64
+	require.NoError(t, db.Table("sys_workorder").Count(&woCount).Error)
+	assert.Equal(t, int64(1), woCount)
+
+	// 执行日志落库
+	var logCount int64
+	require.NoError(t, db.Table("sys_periodic_workorder_log").Count(&logCount).Error)
+	assert.Equal(t, int64(1), logCount)
+
+	// 模板 total_generated +1
+	var tpl2 models.PeriodicWorkOrderTemplate
+	require.NoError(t, db.First(&tpl2, "id = ?", "tpl-success").Error)
+	assert.Equal(t, 1, tpl2.TotalGenerated)
+
+	// 通知广播
+	calls, ids, _ := hub.snapshot()
+	assert.Equal(t, 1, calls)
+	assert.Equal(t, []string{assignee}, ids)
+}
+
+// TestWot8002_ExecutePeriodicCreate_DutyPool DutyPool 分支(有值班人)+ 不通知(NotifyAssignee=false)。
+func TestWot8002_ExecutePeriodicCreate_DutyPool(t *testing.T) {
+	db := newWotFullDB8002(t)
+
+	origDB := GlobalDB
+	t.Cleanup(func() { SetDB(origDB) })
+	SetDB(&stubDBGetter8001{db: db})
+
+	origHub := GlobalNoticeHub
+	t.Cleanup(func() { SetNoticeHub(origHub) })
+	hub := &stubNoticeHub8002{}
+	SetNoticeHub(hub)
+
+	require.NoError(t, db.Exec(`INSERT INTO sys_user (id, username, password) VALUES ('sys-user-8002', 'system', 'x')`).Error)
+	today := time.Now().Format("2006-01-02")
+	require.NoError(t, db.Exec(`INSERT INTO sys_duty_schedule (id, user_id, schedule_date, status) VALUES ('sch-wot', 'u-duty-8002', ?, 0)`, today).Error)
+
+	tpl := &models.PeriodicWorkOrderTemplate{
+		BaseModel:      models.BaseModel{ID: "tpl-dpool-exec"},
+		TemplateName:   "值班池模板",
+		WorkOrderTitle: "工单",
+		CronExpression: "0 0 8 * * *",
+		IsEnabled:      true,
+		AssignType:     models.PeriodicAssignTypeDutyPool,
+		NotifyAssignee: false, // 不通知
+	}
+	require.NoError(t, db.Create(tpl).Error)
+	// GORM 对 default:true 字段的零值 false 会省略 INSERT → 落库为 DB default 1;
+	// 显式 Update 写入 false(Update 不省略零值)。
+	require.NoError(t, db.Model(tpl).Update("notify_assignee", false).Error)
+
+	require.NoError(t, executePeriodicWorkOrderCreateTask(context.Background(), map[string]interface{}{"param": "tpl-dpool-exec"}))
+
+	// 通知未触发(NotifyAssignee=false)
+	calls, _, _ := hub.snapshot()
+	assert.Equal(t, 0, calls)
+}
+
+// TestWot8002_SyncPeriodicJobs SyncPeriodicWorkOrderJobs:GlobalDB nil / 空模板 / 有模板。
+func TestWot8002_SyncPeriodicJobs(t *testing.T) {
+	db := newWotFullDB8002(t)
+	s := NewScheduler(db)
+	s.SetLogger(&schedStubLogger8001{})
+
+	origDB := GlobalDB
+	t.Cleanup(func() { SetDB(origDB) })
+
+	// GlobalDB nil → 错误
+	SetDB(nil)
+	require.Error(t, SyncPeriodicWorkOrderJobs(s))
+
+	// 空模板列表 → 成功
+	SetDB(&stubDBGetter8001{db: db})
+	require.NoError(t, SyncPeriodicWorkOrderJobs(s))
+
+	// 有模板 → syncWorkOrderJob 全链(create 分支)
+	tpl := &models.PeriodicWorkOrderTemplate{
+		BaseModel:      models.BaseModel{ID: "tpl-sync-all"},
+		TemplateName:   "同步模板",
+		WorkOrderTitle: "工单",
+		CronExpression: "0 0 8 * * *",
+		IsEnabled:      true,
+	}
+	require.NoError(t, db.Create(tpl).Error)
+	require.NoError(t, SyncPeriodicWorkOrderJobs(s))
+
+	var job models.Job
+	require.NoError(t, db.Where("job_name = ?", "periodic_workorder_tpl-sync-all").First(&job).Error)
+	assert.Equal(t, models.JobStatusNormal, job.Status)
+}
+
+// TestWot8002_SyncJob_UpdateNilJobID updateExistingWorkOrderJob:模板 JobID=nil → 回填分支。
+func TestWot8002_SyncJob_UpdateNilJobID(t *testing.T) {
+	db := newWotFullDB8002(t)
+	s := NewScheduler(db)
+	s.SetLogger(&schedStubLogger8001{})
+
+	// 已存在 job 行(同名)
+	job := &models.Job{
+		JobName:        "periodic_workorder_tpl-niljobid",
+		JobGroup:       "PERIODIC_WORKORDER",
+		InvokeTarget:   "periodic_workorder_create:tpl-niljobid",
+		CronExpression: "0 0 8 * * *",
+		Status:         models.JobStatusNormal,
+	}
+	require.NoError(t, db.Create(job).Error)
+
+	// 模板 JobID=nil → updateExistingWorkOrderJob 回填 job_id 分支
+	tpl := &models.PeriodicWorkOrderTemplate{
+		BaseModel:      models.BaseModel{ID: "tpl-niljobid"},
+		TemplateName:   "回填模板",
+		CronExpression: "0 0 8 * * *",
+	}
+	require.NoError(t, db.Create(tpl).Error)
+
+	require.NoError(t, syncWorkOrderJob(db, s, tpl))
+	var tpl2 models.PeriodicWorkOrderTemplate
+	require.NoError(t, db.First(&tpl2, "id = ?", "tpl-niljobid").Error)
+	require.NotNil(t, tpl2.JobID, "updateExistingWorkOrderJob 应回填 job_id")
+}
+
+// TestWot8002_SyncJob_BadCron syncWorkOrderJob 非法 cron → 错误分支。
+func TestWot8002_SyncJob_BadCron(t *testing.T) {
+	db := newWotFullDB8002(t)
+	s := NewScheduler(db)
+	s.SetLogger(&schedStubLogger8001{})
+
+	tpl := &models.PeriodicWorkOrderTemplate{
+		BaseModel:      models.BaseModel{ID: "tpl-badcron"},
+		TemplateName:   "坏cron模板",
+		CronExpression: "not-a-cron",
+	}
+	require.NoError(t, db.Create(tpl).Error)
+	require.Error(t, syncWorkOrderJob(db, s, tpl))
+}
+
+// TestWot8002_DisableEnable_Errors Disable/Enable 错误分支:模板不存在 / Enable 坏 cron。
+func TestWot8002_DisableEnable_Errors(t *testing.T) {
+	db := newWotFullDB8002(t)
+	s := NewScheduler(db)
+	s.SetLogger(&schedStubLogger8001{})
+
+	origDB := GlobalDB
+	t.Cleanup(func() { SetDB(origDB) })
+	SetDB(&stubDBGetter8001{db: db})
+
+	// 模板不存在 → 错误
+	require.Error(t, DisablePeriodicWorkOrderJob(s, "no-such-tpl"))
+	require.Error(t, EnablePeriodicWorkOrderJob(s, "no-such-tpl"))
+
+	// Enable 坏 cron → 计算下次执行时间失败
+	tpl := &models.PeriodicWorkOrderTemplate{
+		BaseModel:      models.BaseModel{ID: "tpl-enable-bad"},
+		TemplateName:   "坏cron启停",
+		CronExpression: "not-a-cron",
+	}
+	require.NoError(t, db.Create(tpl).Error)
+	err := EnablePeriodicWorkOrderJob(s, "tpl-enable-bad")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "计算下次执行时间失败")
+
+	// Disable:模板 JobID=nil → 跳过 StopJob/RemoveJob 直达 job_id 置空
+	tpl2 := &models.PeriodicWorkOrderTemplate{
+		BaseModel:      models.BaseModel{ID: "tpl-disable-nojob"},
+		TemplateName:   "无job停用",
+		CronExpression: "0 0 8 * * *",
+	}
+	require.NoError(t, db.Create(tpl2).Error)
+	require.NoError(t, DisablePeriodicWorkOrderJob(s, "tpl-disable-nojob"))
+	var tpl3 models.PeriodicWorkOrderTemplate
+	require.NoError(t, db.First(&tpl3, "id = ?", "tpl-disable-nojob").Error)
+	assert.Nil(t, tpl3.JobID, "Disable 后 JobID 应为 nil")
+}
+
+// TestWot8002_GetTodayDutyPerson_QueryError getTodayDutyPerson 非NotFound 查询错误分支。
+func TestWot8002_GetTodayDutyPerson_QueryError(t *testing.T) {
+	// sys_duty_schedule 表不存在 → 查询错误(非 ErrRecordNotFound)
+	dsn := filepath.Join(t.TempDir(), "dutyerr8002.db")
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if sqlDB, err := db.DB(); err == nil {
+			_ = sqlDB.Close()
+		}
+	})
+
+	got, err := getTodayDutyPerson(db)
+	require.Error(t, err)
+	assert.Nil(t, got)
+	assert.Contains(t, err.Error(), "查询值班人员失败")
+}
