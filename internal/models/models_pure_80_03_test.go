@@ -397,5 +397,99 @@ func TestMdl8003_DashboardConfigs_JSONShapeStable(t *testing.T) {
 	assert.NotNil(t, ds.Static)
 }
 
+// =====================================================================
+// MenuMeta(menu.go:30/53) — Menu.Meta JSON 列
+// =====================================================================
+
+func TestMdl8003_MenuMeta_RoundTrip(t *testing.T) {
+	m := MenuMeta{Title: "系统管理", Icon: "setting", Hidden: false, KeepAlive: true}
+	val, err := m.Value()
+	require.NoError(t, err)
+	var got MenuMeta
+	require.NoError(t, got.Scan(val))
+	assert.Equal(t, m, got)
+}
+
+func TestMdl8003_MenuMeta_ScanEdgeCases(t *testing.T) {
+	t.Run("nil_不报错", func(t *testing.T) {
+		var m MenuMeta
+		require.NoError(t, m.Scan(nil))
+	})
+	t.Run("非法类型_报错", func(t *testing.T) {
+		var m MenuMeta
+		assert.Error(t, m.Scan(123))
+	})
+	t.Run("坏JSON_报错", func(t *testing.T) {
+		var m MenuMeta
+		assert.Error(t, m.Scan([]byte(`{bad`)))
+	})
+}
+
+// =====================================================================
+// MapFields(notification_config.go:70/83) — 通用 JSON 列
+// =====================================================================
+
+func TestMdl8003_MapFields_RoundTrip(t *testing.T) {
+	m := MapFields{"key1": "v1", "key2": 42.0, "key3": true}
+	val, err := m.Value()
+	require.NoError(t, err)
+	var got MapFields
+	require.NoError(t, got.Scan(val))
+	// JSON 反序列化数值 → float64 / string / bool;字段键一致即可
+	assert.Equal(t, len(m), len(got))
+}
+
+func TestMdl8003_MapFields_ScanEdgeCases(t *testing.T) {
+	t.Run("nil_不报错", func(t *testing.T) {
+		var m MapFields
+		require.NoError(t, m.Scan(nil))
+	})
+	t.Run("非法类型_静默忽略", func(t *testing.T) {
+		// QUIRK-80-03-I(就地锁定):MapFields.SScan 只接 string 类型,其他类型静默 return nil
+		// 不报错 —— 容忍型 Scanner 实现;坏输入被吞而不是 err。
+		var m MapFields
+		assert.NoError(t, m.Scan(123), "MapFields.Scan 对非 string 类型静默忽略")
+	})
+	t.Run("坏JSON_报错", func(t *testing.T) {
+		var m MapFields
+		assert.Error(t, m.Scan([]byte(`{garbage`)))
+	})
+}
+
+// =====================================================================
+// ScriptAction(rpa.go:108/120) — RPA ScriptAction JSON 列
+// ===================================================================
+
+func TestMdl8003_ScriptAction_RoundTrip(t *testing.T) {
+	a := ScriptAction{
+		Type:     ScriptActionClick,
+		Selector: "#submit-btn",
+		Params:   map[string]interface{}{"text": "提交"},
+		Timeout:  500,
+		Retry:    3,
+	}
+	val, err := a.Value()
+	require.NoError(t, err)
+	var got ScriptAction
+	require.NoError(t, got.Scan(val))
+	assert.Equal(t, a, got)
+}
+
+func TestMdl8003_ScriptAction_ScanEdgeCases(t *testing.T) {
+	t.Run("nil_不报错", func(t *testing.T) {
+		var a ScriptAction
+		require.NoError(t, a.Scan(nil))
+	})
+	t.Run("非法类型_静默忽略", func(t *testing.T) {
+		// QUIRK-80-03-J(就地锁定):ScriptAction.Scan 只接 []byte 类型,其他类型静默 return nil
+		var a ScriptAction
+		assert.NoError(t, a.Scan(42), "ScriptAction.Scan 对非 []byte 类型静默忽略")
+	})
+	t.Run("坏JSON_报错", func(t *testing.T) {
+		var a ScriptAction
+		assert.Error(t, a.Scan([]byte(`{garbage`)))
+	})
+}
+
 // 触发 time 引用,确保编译期间导入被使用(models 时间字段广泛引用,本文件随任务 5/6 继续用)。
 var _ = time.Second
