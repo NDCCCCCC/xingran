@@ -53,6 +53,7 @@
 | 2026-08-28 | Phase 88 R23 network discoveries/templates modals | 40.32 | 21574 | 8699 | | | 88-R23 | 0.0 | 0.0 |
 | 2026-08-28 | Phase 88 R24 workstations 钩子+HybridLayout | 41.28 | 21574 | 8905 | | | 88-R24 | ops 17.0/comp-ops 9.0 | ops 19.9/comp-ops 35.7 |
 | 2026-08-28 | Phase 88 R25 floors 子组件+geocoding 钩子 | 41.48 | 21574 | 8950 | | | 88-R25 | ops 19.9 | ops 21.2 |
+| 2026-08-28 | Phase 88 R26 monitor utils+columns+vdi 按钮表 | 41.69 | 21574 | 8996 | | | 88-R26 | mon 38.4 | mon 45.5 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
