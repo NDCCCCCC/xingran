@@ -60,6 +60,7 @@
 | 2026-08-28 | Phase 88 R30 dashboard edit/view+NotificationBell | 42.62 | 21574 | 9196 | | | 88-R30 | ds-sys 20.1 | ds-sys 34.9 |
 | 2026-08-28 | Phase 88 R31 captcha+services API 封装 | 43.05 | 21574 | 9289 | | | 88-R31 | captcha 21.5/services 3.3 | captcha 44.9/services 42.3 |
 | 2026-08-28 | Phase 88 R32 components network 子组件+MACEventsTimeline | 43.21 | 21574 | 9323 | | | 88-R32 | comp-net 51.9 | comp-net 63.3 |
+| 2026-08-28 | Phase 88 R33 components widgetRegistry+VDI/AssetRow | 43.36 | 21574 | 9355 | | | 88-R33 | comp-table 24.5/comp-dash 25.4 | comp-table 88.7/comp-dash 27.2 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
