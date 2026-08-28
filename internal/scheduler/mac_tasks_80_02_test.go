@@ -137,3 +137,137 @@ func TestMmv8002_Register(t *testing.T) {
 
 	assert.True(t, s.IsTaskRegistered("mac_history_matview_refresh"))
 }
+
+// ============================================================================
+// 缺口补足 Round 1 — RegisterMACHistoryTasks / upsert 三态 / 错误分发 / matview 分支
+// ============================================================================
+
+// errPartitionService8002 DropExpiredPartitions 返回错误的 PartitionService stub。
+type errPartitionService8002 struct{ stubPartitionService8002 }
+
+func (e *errPartitionService8002) DropExpiredPartitions(ctx context.Context) error {
+	return assert.AnError
+}
+
+// errPurgeService8002 PurgeMeaninglessRecords 返回错误的 MACHistoryPurgeService stub。
+type errPurgeService8002 struct{}
+
+func (e *errPurgeService8002) PurgeMeaninglessRecords(ctx context.Context, dryRun bool) (int64, string, error) {
+	return 0, "backup_tbl", assert.AnError
+}
+
+var (
+	_ PartitionService       = (*errPartitionService8002)(nil)
+	_ MACHistoryPurgeService = (*errPurgeService8002)(nil)
+)
+
+// TestMht8002_RegisterTasks RegisterMACHistoryTasks:db nil 只注册 handler;有 db 落两条 job。
+func TestMht8002_RegisterTasks(t *testing.T) {
+	s, db := newScheduler8002_DST(t)
+
+	// db=nil → 只注册 handler,提前返回
+	RegisterMACHistoryTasks(s, nil)
+	assert.True(t, s.IsTaskRegistered("mac_history_cleanup"))
+	assert.True(t, s.IsTaskRegistered("mac_history_purge_monthly"))
+
+	// 有 db → 两条 job 落库
+	RegisterMACHistoryTasks(s, db)
+	var count int64
+	require.NoError(t, db.Model(&models.Job{}).Where("job_name LIKE ?", "MAC历史%").Count(&count).Error)
+	assert.Equal(t, int64(2), count)
+
+	// 重复注册 → 已存在跳过(幂等)
+	RegisterMACHistoryTasks(s, db)
+	require.NoError(t, db.Model(&models.Job{}).Where("job_name LIKE ?", "MAC历史%").Count(&count).Error)
+	assert.Equal(t, int64(2), count)
+}
+
+// TestMht8002_UpsertJob_Exists upsertMACHistoryJob 已存在分支。
+func TestMht8002_UpsertJob_Exists(t *testing.T) {
+	db := newSchedDB8002_MAC(t)
+	s := NewScheduler(db)
+	s.SetLogger(&schedStubLogger8001{})
+
+	require.NoError(t, upsertMACHistoryJob(db, s, "MAC幂等任务", "mac_history_cleanup", "0 0 2 * * ?", "r", 2))
+	// 二次 → 已存在跳过
+	require.NoError(t, upsertMACHistoryJob(db, s, "MAC幂等任务", "mac_history_cleanup", "0 0 2 * * ?", "r", 2))
+
+	var count int64
+	require.NoError(t, db.Model(&models.Job{}).Where("job_name = ?", "MAC幂等任务").Count(&count).Error)
+	assert.Equal(t, int64(1), count)
+}
+
+// TestMht8002_UpsertJob_BadCron upsertMACHistoryJob 非法 cron → AddJob 错误分支。
+func TestMht8002_UpsertJob_BadCron(t *testing.T) {
+	db := newSchedDB8002_MAC(t)
+	s := NewScheduler(db)
+	s.SetLogger(&schedStubLogger8001{})
+	s.running = true // 同包直写:running 态 AddJob 才会走 cron.AddFunc 校验
+
+	err := upsertMACHistoryJob(db, s, "MAC坏cron", "mac_history_cleanup", "not-a-cron", "r", 2)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "创建任务失败")
+}
+
+// TestMht8002_ExecuteCleanup_Error 清理错误分支(同包直写 var,绕 sync.Once)。
+func TestMht8002_ExecuteCleanup_Error(t *testing.T) {
+	orig := globalPartitionService
+	t.Cleanup(func() { globalPartitionService = orig })
+	globalPartitionService = &errPartitionService8002{}
+
+	err := executeMACHistoryCleanup(context.Background(), nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "清理MAC历史分区失败")
+}
+
+// TestMht8002_ExecutePurge_Error purge 错误分支(同包直写 var,绕 sync.Once)。
+func TestMht8002_ExecutePurge_Error(t *testing.T) {
+	orig := globalPurgeService
+	t.Cleanup(func() { globalPurgeService = orig })
+	globalPurgeService = &errPurgeService8002{}
+
+	err := executeMACHistoryPurge(context.Background(), nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "MAC历史 purge 失败")
+}
+
+// ============================================================================
+// TestMmv8002 缺口补足 — handler 执行 / db nil / 已存在
+// ============================================================================
+
+// TestMmv8002_HandlerExec 注册后的 handler 执行一次分发(matview stub 被调)。
+func TestMmv8002_HandlerExec(t *testing.T) {
+	db := newSchedDB8002_MAC(t)
+	s := NewScheduler(db)
+	s.SetLogger(&schedStubLogger8001{})
+
+	RegisterMACHistoryMatViewTasks(s, db, &stubMatViewService8002{})
+	handler := s.GetTaskHandler("mac_history_matview_refresh")
+	require.NotNil(t, handler)
+	require.NoError(t, handler(context.Background(), nil))
+}
+
+// TestMmv8002_Register_DBNil db nil → 只注册 handler,提前返回。
+func TestMmv8002_Register_DBNil(t *testing.T) {
+	s := NewScheduler(newSchedDB8002_MAC(t))
+	s.SetLogger(&schedStubLogger8001{})
+
+	RegisterMACHistoryMatViewTasks(s, nil, &stubMatViewService8002{})
+	assert.True(t, s.IsTaskRegistered("mac_history_matview_refresh"))
+}
+
+// TestMmv8002_Register_Exists 已存在同名 job → 跳过创建(幂等)。
+func TestMmv8002_Register_Exists(t *testing.T) {
+	db := newSchedDB8002_MAC(t)
+	s := NewScheduler(db)
+	s.SetLogger(&schedStubLogger8001{})
+
+	existing := &models.Job{JobName: "MAC历史物化视图刷新"}
+	require.NoError(t, db.Create(existing).Error)
+
+	RegisterMACHistoryMatViewTasks(s, db, &stubMatViewService8002{})
+
+	var count int64
+	require.NoError(t, db.Model(&models.Job{}).Where("job_name = ?", "MAC历史物化视图刷新").Count(&count).Error)
+	assert.Equal(t, int64(1), count)
+}

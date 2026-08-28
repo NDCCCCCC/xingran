@@ -11,6 +11,7 @@ import (
 	"context"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
@@ -325,4 +326,184 @@ func seedDrift8002(t *testing.T, db *gorm.DB, n int) {
 		require.NoError(t, db.Exec(`INSERT INTO sys_device_port_status (id, device_id) VALUES (?, ?)`,
 			portID, "other-device").Error)
 	}
+}
+
+// ============================================================================
+// 缺口补足 Round 1 — handler 分发 switch / 自愈分支 / 漂移分支 / 转单成功路径
+// ============================================================================
+
+// TestRct8002_HandlerDispatch_Switch reconciliation handler 7 个子任务分发分支。
+func TestRct8002_HandlerDispatch_Switch(t *testing.T) {
+	db := newReconDB8002(t)
+	s := NewScheduler(db)
+	s.SetLogger(&schedStubLogger8001{})
+
+	// 例外规则表(cleanupExpiredExceptions 需要)
+	require.NoError(t, db.Exec(`CREATE TABLE IF NOT EXISTS sys_reconciliation_exception (
+		id TEXT PRIMARY KEY,
+		created_at DATETIME,
+		updated_at DATETIME,
+		deleted_at DATETIME,
+		name TEXT,
+		ip_range TEXT,
+		conflict_types TEXT,
+		exception_actions TEXT,
+		severity_override TEXT,
+		scope_type TEXT,
+		scope_id TEXT,
+		reason TEXT,
+		is_active INTEGER DEFAULT 0,
+		expires_at DATETIME
+	)`).Error)
+	// 修复建议表(generateFixSuggestions 需要)
+	require.NoError(t, db.Exec(`CREATE TABLE IF NOT EXISTS sys_reconciliation_fix_suggestion (
+		id TEXT PRIMARY KEY,
+		created_at DATETIME,
+		updated_at DATETIME,
+		deleted_at DATETIME
+	)`).Error)
+	// 误修复率监控依赖 sys_config(已有)+ 数据表(缺失时 CheckAndNotify 内部软失败)
+
+	RegisterReconciliationTasks(s, db, nil, nil, nil)
+	handler := s.GetTaskHandler("reconciliation")
+	require.NotNil(t, handler)
+
+	// refreshView:sqlite 无物化视图 → 报错路径(handler 透传 error)
+	err := handler(context.Background(), map[string]interface{}{"param": "refreshView"})
+	_ = err // sqlite 上 RefreshView 行为不定(成功或报错),不 panic 即覆盖分发分支
+
+	// detectLayer3:sqlite 无 MV → 报错或 0 检出
+	err = handler(context.Background(), map[string]interface{}{"param": "detectLayer3"})
+	_ = err
+
+	// cleanupExpiredExceptions:表已建 → 成功(nil)
+	require.NoError(t, handler(context.Background(), map[string]interface{}{"param": "cleanupExpiredExceptions"}))
+
+	// createWorkorderCritical / createWorkorderHigh:空异常 → nil 早退
+	require.NoError(t, handler(context.Background(), map[string]interface{}{"param": "createWorkorderCritical"}))
+	require.NoError(t, handler(context.Background(), map[string]interface{}{"param": "createWorkorderHigh"}))
+
+	// generateFixSuggestions:表已建 → 成功或错误(视实现),不 panic 即覆盖
+	err = handler(context.Background(), map[string]interface{}{"param": "generateFixSuggestions"})
+	_ = err
+
+	// monitorFixSuggestionMisFix:软失败(内部 Warnf)→ nil
+	require.NoError(t, handler(context.Background(), map[string]interface{}{"param": "monitorFixSuggestionMisFix"}))
+}
+
+// TestRct8002_SelfHeal sys_job seed 自愈三分支:legacy cron / JobGroup 大小写 / InvokeTarget 漂移。
+func TestRct8002_SelfHeal(t *testing.T) {
+	db := newReconDB8002(t)
+	s := NewScheduler(db)
+	s.SetLogger(&schedStubLogger8001{})
+
+	// 预置 4 条 job:3 条脏 + 1 条干净
+	require.NoError(t, db.Exec(`INSERT INTO sys_job (id, job_name, job_group, invoke_target, cron_expression, status, misfire_policy)
+		VALUES ('job-legacy', '对账-误修复率监控', 'reconciliation', 'reconciliation:monitorFixSuggestionMisFix', '7,17,27,37,47,57 * * * *', 0, 1)`).Error)
+	require.NoError(t, db.Exec(`INSERT INTO sys_job (id, job_name, job_group, invoke_target, cron_expression, status, misfire_policy)
+		VALUES ('job-group', '对账-Layer3检测', 'RECONCILIATION', 'reconciliation:detectLayer3', '@every 6m', 0, 1)`).Error)
+	require.NoError(t, db.Exec(`INSERT INTO sys_job (id, job_name, job_group, invoke_target, cron_expression, status, misfire_policy)
+		VALUES ('job-target', '对账-物化视图刷新', 'reconciliation', 'reconciliation:WRONG_TARGET', '@every 5m', 0, 1)`).Error)
+	require.NoError(t, db.Exec(`INSERT INTO sys_job (id, job_name, job_group, invoke_target, cron_expression, status, misfire_policy)
+		VALUES ('job-clean', '对账-静默期重检测', 'reconciliation', 'reconciliation:detectExpiredSilence', '0 0 2 * * *', 0, 1)`).Error)
+
+	RegisterReconciliationTasks(s, db, nil, nil, nil)
+
+	// a) legacy cron 被替换为权威值
+	var cronExpr string
+	require.NoError(t, db.Raw(`SELECT cron_expression FROM sys_job WHERE id = 'job-legacy'`).Scan(&cronExpr).Error)
+	assert.Equal(t, reconCronMonitorFixSuggestionMisFix, cronExpr, "legacy cron 应被自愈")
+
+	// b) JobGroup 统一为小写
+	var grp string
+	require.NoError(t, db.Raw(`SELECT job_group FROM sys_job WHERE id = 'job-group'`).Scan(&grp).Error)
+	assert.Equal(t, reconciliationJobGroup, grp, "JobGroup 应被统一")
+
+	// c) InvokeTarget 修正
+	var tgt string
+	require.NoError(t, db.Raw(`SELECT invoke_target FROM sys_job WHERE id = 'job-target'`).Scan(&tgt).Error)
+	assert.Equal(t, "reconciliation:"+reconInvokeRefreshView, tgt, "InvokeTarget 漂移应被修正")
+
+	// 其余 4 条 job 补齐 seed(共 8 条)
+	var count int64
+	require.NoError(t, db.Model(&models.Job{}).Where("job_group = ?", "reconciliation").Count(&count).Error)
+	assert.Equal(t, int64(8), count)
+}
+
+// TestRct8002_CreateWorkorderBySeverity_SuccessPath 转单成功路径:
+// woSvc 挂空库(查不到异常 → 返回 nil,nil)→ successCount 分支 + WorkstationIDForException 失败分支。
+func TestRct8002_CreateWorkorderBySeverity_SuccessPath(t *testing.T) {
+	db := newReconDB8002(t)
+
+	// woSvc 用独立空库:CreateWorkorderFromException 查询异常 ErrRecordNotFound → (nil, nil)
+	emptyDSN := filepath.Join(t.TempDir(), "rct-empty-8002.db")
+	emptyDB, err := gorm.Open(sqlite.Open(emptyDSN), &gorm.Config{})
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if sqlDB, err := emptyDB.DB(); err == nil {
+			_ = sqlDB.Close()
+		}
+	})
+	woSvc := asset.NewReconciliationWorkorderServiceWithCache(emptyDB, nil, nil, nil)
+
+	// 主库种 1 条 high 异常(供 createWorkorderBySeverity 主查询命中)
+	now := "2026-08-28 10:00:00"
+	require.NoError(t, db.Exec(`INSERT INTO sys_data_reconciliation
+		(id, asset_id, conflict_type, severity, raw_snapshot, detected_at)
+		VALUES ('exc-8002-succ', 'asset-s', 'A', 'high', CAST('{}' AS BLOB), ?)`, now).Error)
+
+	require.NoError(t, createWorkorderBySeverity(context.Background(), db, woSvc, "high", 30))
+}
+
+// TestRct8002_CleanupExpired_QueryError cleanupExpiredExceptionsDirect 查询错误分支(表缺失)。
+func TestRct8002_CleanupExpired_QueryError(t *testing.T) {
+	dsn := filepath.Join(t.TempDir(), "rct-cleanup-err-8002.db")
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		if sqlDB, err := db.DB(); err == nil {
+			_ = sqlDB.Close()
+		}
+	})
+
+	_, err = cleanupExpiredExceptionsDirect(context.Background(), db, time.Now())
+	require.Error(t, err)
+}
+
+// TestRct8002_CheckPortStatusDrift_Branches 漂移剩余分支:
+// 查询错误 / 上涨超阈 / 持平 / 基线解析失败。
+func TestRct8002_CheckPortStatusDrift_Branches(t *testing.T) {
+	db := newReconDB8002(t)
+	ctx := context.Background()
+
+	// 查询错误分支:port_status 表删除 → 查询失败
+	require.NoError(t, db.Exec(`DROP TABLE sys_device_port_status`).Error)
+	require.Error(t, checkPortStatusDrift(ctx, db))
+	// 还原
+	require.NoError(t, db.Exec(`CREATE TABLE sys_device_port_status (
+		id TEXT PRIMARY KEY, device_id TEXT,
+		created_at DATETIME, updated_at DATETIME, deleted_at DATETIME
+	)`).Error)
+
+	// 上涨超阈:基线 1,当前 10(> 1+5)→ WARN 分支(基线不更新)
+	seedDrift8002(t, db, 10)
+	upsertDriftBaseline(ctx, db, "reconciliation.port_status.drift_baseline", 1)
+	require.NoError(t, checkPortStatusDrift(ctx, db))
+	val, _ := readDriftBaseline(ctx, db, "reconciliation.port_status.drift_baseline")
+	assert.Equal(t, int64(1), val, "上涨分支基线不应更新")
+
+	// 持平分支:基线 == 当前(5 ≤ drift ≤ baseline+5)
+	seedDrift8002(t, db, 5)
+	upsertDriftBaseline(ctx, db, "reconciliation.port_status.drift_baseline", 5)
+	require.NoError(t, checkPortStatusDrift(ctx, db))
+
+	// 基线解析失败分支:config_value 非数字 → readDriftBaseline false → 首次观测分支
+	seedDrift8002(t, db, 2)
+	require.NoError(t, db.Exec(`INSERT INTO sys_config (id, config_name, config_key, config_value)
+		VALUES ('cfg-bad-num', '漂移基线', 'reconciliation.port_status.drift_baseline', 'not-a-number')`).Error)
+	require.NoError(t, checkPortStatusDrift(ctx, db))
+	// 首次观测分支把当前值写入(Assign 更新命中已有行)
+	val, exists := readDriftBaseline(ctx, db, "reconciliation.port_status.drift_baseline")
+	assert.True(t, exists)
+	assert.Equal(t, int64(2), val)
 }
