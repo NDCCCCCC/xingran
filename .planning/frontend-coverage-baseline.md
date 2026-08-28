@@ -62,6 +62,7 @@
 | 2026-08-28 | Phase 88 R32 components network 子组件+MACEventsTimeline | 43.21 | 21574 | 9323 | | | 88-R32 | comp-net 51.9 | comp-net 63.3 |
 | 2026-08-28 | Phase 88 R33 components widgetRegistry+VDI/AssetRow | 43.36 | 21574 | 9355 | | | 88-R33 | comp-table 24.5/comp-dash 25.4 | comp-table 88.7/comp-dash 27.2 |
 | 2026-08-28 | Phase 88 R34 router routeConfigManager+componentLoader | 43.83 | 21574 | 9457 | | | 88-R34 | router 32.9 | router 74.5 |
+| 2026-08-28 | Phase 88 R35 dashboard widgets BaseWidget | 43.98 | 21574 | 9489 | | | 88-R35 | comp-dash 27.2 | comp-dash 29.2 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
