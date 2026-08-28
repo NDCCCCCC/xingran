@@ -55,6 +55,7 @@
 | 2026-08-28 | Phase 88 R25 floors 子组件+geocoding 钩子 | 41.48 | 21574 | 8950 | | | 88-R25 | ops 19.9 | ops 21.2 |
 | 2026-08-28 | Phase 88 R26 monitor utils+columns+vdi 按钮表 | 41.69 | 21574 | 8996 | | | 88-R26 | mon 38.4 | mon 45.5 |
 | 2026-08-28 | Phase 88 R27 duty holidays/schedules utils+WeeklyView | 41.85 | 21574 | 9029 | | | 88-R27 | duty 37.5 | duty 40.3 |
+| 2026-08-28 | Phase 88 R28 ad-domain logs+AccountPoolTab 渲染 | 42.07 | 21574 | 9077 | | | 88-R28 | ad-dom 20.0 | ad-dom 24.4 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
