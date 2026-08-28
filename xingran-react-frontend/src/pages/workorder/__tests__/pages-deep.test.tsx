@@ -52,15 +52,6 @@ const categoriesArr = {
   ],
 };
 
-const categoriesList = {
-  data: {
-    list: categoriesArr.data,
-    total: 2,
-    current: 1,
-    pageSize: 10,
-  },
-};
-
 describe("pages/workorder — orders", () => {
   it("renders orders table rows", async () => {
     await renderPageWithEndpoints(<WorkOrderPage />, {
