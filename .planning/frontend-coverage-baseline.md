@@ -39,6 +39,7 @@
 | 2026-08-28 | Phase 88 批量页面渲染 R4 | 33.42 | 21574 | 7210 | | | 88-R4 | sys 20.8/net 20.7/duty 16.5 | sys 29.3/net 32.5/duty 28.9 |
 | 2026-08-28 | Phase 88 批量渲染 R5 components+widgets | 34.02 | 21574 | 7340 | | | 88-R5 | comps 13.4 | comps 18.6 |
 | 2026-08-28 | Phase 88 R6 dashboard+reconciliation 深测 | 35.27 | 21574 | 7610 | | | 88-R6 | dash 4.1/recon 21.0 | dash 25.4/recon 49.5 |
+| 2026-08-28 | Phase 88 R7-9 ops/vdi/wo/ad-dom/port-write | 36.19 | 21574 | 7808 | | | 88-R7 | ops 12.1 等 | ops 17.0/vdi 21.3/wo 25.0/ad 20.0 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
