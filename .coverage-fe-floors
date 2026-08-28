@@ -21,8 +21,8 @@ pages/ad	2.2
 pages/ad-domain	20.0
 pages/asset	0.05
 pages/dashboard-system	2.4
-pages/duty	28.9
-pages/knowledge	29.6
+pages/duty	35.0
+pages/knowledge	46.4
 pages/login	61.6
 pages/monitor	38.4
 pages/my-notices	2.6
@@ -57,11 +57,11 @@ components/operations	3.5
 components/network	51.9
 components/reconciliation	49.5
 components/DeptTree	44.8
-components/IconSelect	0.0
+components/IconSelect	37.0
 components/NoticeDetail	16.1
 components/asset	0.0
 components/charts	0.0
 components/markdown	49.5
 components/modal	99.5
-components/table	6.6
+components/table	24.5
 components/three	0.0

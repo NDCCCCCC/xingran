@@ -13,6 +13,10 @@ export default defineConfig({
     // 15s 给真实业务测试留缓冲;快速单元测试不受影响(timeout 是 max 不是 min)。
     testTimeout: 15000,
     setupFiles: ["./src/test/setup.ts"],
+    // Phase 88: 159 测试文件后 Windows threads 池句柄/内存间歇耗尽(全量偶发启动崩)。
+    // maxWorkers 限制并发工作线程,隔离 jsdom 实例数,消除资源竞争 flake。
+    maxWorkers: 4,
+    minWorkers: 1,
     coverage: {
       provider: "v8",
       // GOV-01 全量口径: Vitest 4 已移除 coverage.all,include 是全量口径唯一开关——
