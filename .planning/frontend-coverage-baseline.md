@@ -44,6 +44,7 @@
 | 2026-08-28 | Phase 88 R13-14 workstations子模块+operations子组件 | 37.18 | 21574 | 8023 | | | 88-R13 | ops 12.1/comp-ops 3.5 | ops 17.5/comp-ops 9.0 |
 | 2026-08-28 | Phase 88 R15 design-system ConfigProvider 链路 + knowledge view/modals | 37.47 | 21574 | 8084 | | | 88-R15 | ds 52.5/kn 46.4 | ds 78.9/kn 50.3 |
 | 2026-08-28 | Phase 88 R16 asset对账/my-notices/dashboard-system | 38.83 | 21574 | 8379 | | | 88-R16 | as 0.05/ds-sys 2.4/mn 2.6 | as 40.15/ds-sys 20.1/mn 40.4 |
+| 2026-08-28 | Phase 88 R17 router安全/ad同步/profile/asset组件 | 39.63 | 21574 | 8551 | | | 88-R17 | router 0/ad 2.2 | router 32.9/ad 72.4/profile 36.2/comp-asset 42.7 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
