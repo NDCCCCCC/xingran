@@ -13,7 +13,7 @@ updated: 2026-08-28
 - 只 mock @/lib/api 端点(fixture 数据)
 - QueryClient 自动注入 + 未注册端点安全 fallback
 
-单页收益 ~70-300 stmts,单文件可批量测 4-12 页面。
+**maxWorkers=4** 修复 159 测试文件的 Windows 资源竞争 flake。
 
 ## 里程碑推进(本会话)
 
@@ -27,7 +27,10 @@ updated: 2026-08-28
 | 88-R2 批量页面渲染 | 29.03% | — |
 | 88-R3 monitor+ad-domain+rpa | 30.77% | 1203 |
 | 88-R4 子页面深挖 | 33.42% | — |
-| **88-R5 components+widgets** | **34.02%** | **1219** |
+| 88-R5 components+widgets | 34.02% | — |
+| 88-R6 dashboard+reconciliation | 35.27% | — |
+| 88-R7-9 ops子/vdi/wo/ad-dom | 36.19% | — |
+| **88-R10-12 子页零散** | **36.86%** | **1264** |
 
 ## 目录现状(TOP)
 
@@ -36,27 +39,26 @@ updated: 2026-08-28
 | utils/store/lib/hooks/constants | ~3700 | 86-95% ✅ |
 | monitor | 627 | 38.92% |
 | login/settings | 160 | 62-83% |
-| network | 1962 | 33.03% |
-| system | 2203 | 29.82% |
-| duty | 1190 | 29.41% |
-| knowledge | 262 | 30.15% |
+| knowledge | 262 | 46.95% |
+| network | 1962 | 33%+ |
+| duty | 1190 | 35.55% |
 | design-system | 194 | 53.09% |
-| operations | 3611 | 12.66% ⚠ 最大洼地 |
-| components | 3958 | 19.18% ⚠ |
-| ad-domain | 1082 | 18.39% |
-| vdi/workorder | 1118 | ~17% |
+| system | 2203 | 29.82% |
+| operations | 3611 | 17.53% ⚠ 最大洼地 |
+| components | 3958 | 25.95% ⚠ |
+| ad-domain | 1082 | 20.52% |
+| vdi/workorder | 1118 | ~22% |
 
-## 剩余到 70%(差 ~7700 stmts)
+## 剩余到 70%(差 ~7100 stmts)
 
-优先级(按 stmts×提升空间):
-1. **operations 3611**(12.66%→65% 需 +1900): workstations 主页 jsdom 死锁需专项修复;子页面(modals/views)可加
-2. **components 3958**(19.18%→60% 需 +1600): dashboard settings/layout 子组件渲染 + reconciliation/network 组件深测
-3. **ad-domain/vdi/workorder/duty**(3951,~18%→55% 需 +1500): 剩余子页 + 详情页
-4. **system/network 深测**(4165,~31%→55% 需 +1000): Modal/Drawer 交互路径
+未触达关键子页:
+1. **operations**: workstations 主页(jsdom 死锁,需专项修复)、rpa executions/workers 详情、server-rooms/dedicated-lines/info-points 子组件
+2. **components 深测**: design-system 组件(已 53%,待 push 至 70%+)、reconciliation 网络 Modal、reconciliation 健康详情
+3. **system/network**: Modal/Drawer 交互路径、knowledge 子组件
+4. **零散组件**: NoticeDetail/Modal/Form/RecurrenceConfig、Mac Detail、Profile page
 
 ## 已知阻塞
-
-- workstations/index.tsx: jsdom 渲染死锁(useEffect 链或轮询),单独进程跑挂起——需 vitest单独 pool 或页面重构才可测
-- dashboard widgets: lazy Suspense 早退,display config 需完整 fixture 才走主路径
-- asset/reconciliation: 首屏空分支只 +1 stmt
-- Layout 组件: menuStore 深依赖,vi.mock store 后可测(未做)
+- workstations/index.tsx: jsdom 渲染死锁(useEffect 链或轮询),需专项修复
+- asset/reconciliation: 首屏空分支只 +1 stmt(子组件化)
+- Layout/HybridLayout: menuStore 深依赖 + 菜单轮询导致死锁
+- design-system 组件: 已 53%,需 ConfigProvider 链路测试
