@@ -248,33 +248,30 @@ Phase 77-80 全部完成
 
 ---
 
-### Phase 80: 长尾清欠·scheduler + 碎包
+### Phase 80: 长尾清欠·scheduler + 碎包 ✅ SHIPPED 2026-08-28
 
 **Goal:** internal/scheduler 引擎与全部碎包(api/v1 / models / internal/api / pkg/errors / pkg/cache / 小尾巴)逐一 ≥70%,TAIL 长尾清零、70% 数学缺口关门。
 
 **Depends on**: Phase 76(miniredis 供 pkg/cache Redis 路径;与 Phase 77/78/79 无硬依赖,可并行穿插)
 
-**Requirements**: TAIL-02, TAIL-03
+**Requirements**: TAIL-02 ✅, TAIL-03 ✅
 
 **Success Criteria** (what must be TRUE):
 
-1. `internal/scheduler` ≥70%(3.3% → ≥70%,补 ~736 stmts;注册表/执行器/引擎并发与取消分支)
-2. 碎包逐包 ≥70%:api/v1(366)+ models(310)+ internal/api(291,装配层纯函数段)+ pkg/errors(183)+ pkg/cache(161,Redis 路径经 miniredis)
-3. <50 stmts 小尾巴(permission/websocket/base/lldp/gormutil/middleware/logger/query)合计 ≥70%,确不可测的按既有豁免规则文档化
-4. gate 全程绿
+1. `internal/scheduler` ≥70%(3.3% → ≥70%) → **实测 81.4%** ✅(cron 85.1%/workorder 86.7%/ad_sync 81.5%/vdi 95.8%/reconciliation 79.2% 等;D-80-06 wire 豁免 6 条目落 SUMMARY)
+2. 碎包逐包 ≥70% → **api/v1 87.2% / models 91.7% / internal/api 96.4% / pkg/errors 99.7% / pkg/cache 89.2%** ✅(D-80-05:pkg/cache 缺口重锚 +161→+49,Phase 76/78 已缩 gap)
+3. 小尾巴 8 包合计 ≥70%(D-80-04 修正口径为聚合) → **聚合 83.7%** ✅(permission 88.6%/websocket 82.9%/base 82.0%/gormutil 83.5%/middleware 84.4%/logger 81.4%/query 92.4%;lldp 68.8% 豁免文档化 — executor 依赖 device 基建)
+4. gate 全程绿 → ✅ `go test ./...` 73 包 ok 0 FAIL
 
-**Plans**: TBD(建议 5)
+**Plans**: 5/5 完成(32 tasks;3 waves)
 
-- 80-01 scheduler 注册表 + job 执行器
-- 80-02 scheduler 引擎分支(并发/取消/恢复)
-- 80-03 碎包 A:api/v1 装配纯函数段 + models
-- 80-04 碎包 B:internal/api + pkg/errors
-- 80-05 碎包 C:pkg/cache(miniredis)+ 小尾巴清尾
+- [x] 80-01 cron.go 引擎:1.5% → 85.1%(41 tests,var seams 直写,TaskExecutor 全链)
+- [x] 80-02 scheduler task 族 8 文件:包 32.6% → 81.4%(101 tests,2906 行,D-80-06 ADSyncScheduler wire 豁免)
+- [x] 80-03 api/v1 + models:mini-Core keystone fixture(D-80-03 真 CaptchaService/JWTManager),api/v1 6.6%→87.2%,models 0.2%→91.7%
+- [x] 80-04 internal/api + pkg/errors:R1 SetupRouter 探针 Conclusion A(单次组装成功),internal/api 0%→96.4%,pkg/errors 13.8%→99.7%
+- [x] 80-05 pkg/cache + 小尾巴 sweep:pkg/cache 64.7%→89.2%,8 包聚合 58.8%→83.7%,14 包验收表落 SUMMARY
 
-**Notes**:
-
-- scheduler goroutine 需 t.Cleanup 停机,防 -race 泄漏告警;internal/scheduler(引擎)≠ api/v1/scheduler(job CRUD,已达标)
-- websocket 真 WS 握手 httptest 可测;lldp 优先报文解析纯函数段
+**Notes**: 阶段总增量 **+2989 stmts**(目标 +2094);11 个 80-03 production quirks 锁定(getAuthConfig dest-pollution / Scan-to-map 双列 bug 等 3 项升级 Threat Flags);mini-Core fixture `newMiniCore8003` 形状已文档化供 81 复用
 
 ---
 

@@ -36,8 +36,8 @@ sources:
 ## 长尾补齐 (TAIL)
 
 - [x] **TAIL-01**: `internal/services`(root,5202 stmts @11.3%)补 ~3052 → **实测 81.60%**(4245/5202,+3656 covered,超目标 ~600);D-79-01 重锚:legacy cache services 已迁 internal/services/system(不进口径),root 实际 cache 文件 + 全部 45 文件清欠,0 文件 <50%(v1.26 从未进 P0/P1/P2 名单的最大隐藏缺口)
-- [ ] **TAIL-02**: `internal/scheduler`(1103 @3.3%)补 ~736 — 内部 cron 引擎,注册表/执行器可测
-- [ ] **TAIL-03**: 碎包合计 ~831:api/v1(366)+ models(310)+ internal/api(291;装配层仅可测纯函数段)+ pkg/errors(183)+ pkg/cache(161,Redis 路径经 miniredis)+ 其余 <50 的小尾巴(permission/websocket/base/lldp/gormutil/middleware/logger/query)
+- [x] **TAIL-02**: `internal/scheduler`(1103 @3.3%)补 ~736 → **实测 81.4%**(898/1103,+790 covered;cron 85.1%/task 族 8 文件全 ≥70%,D-80-06 wire 豁免 6 条目)
+- [x] **TAIL-03**: 碎包合计 → **api/v1 87.2% / models 91.7% / internal/api 96.4% / pkg/errors 99.7% / pkg/cache 89.2%** 全部 ≥70%(D-80-05 pkg/cache 重锚 +49);小尾巴 8 包聚合 **83.7%** ≥70%(D-80-04 口径修正;lldp 68.8% 豁免文档化);阶段总增量 +2989 stmts(目标 +2094)
 
 ## QUIRK 修复 (QUIRK)
 
@@ -71,8 +71,8 @@ sources:
 | BLOCK-04 | Phase 78 | 78-03, 78-04 | Complete (device 82.6%) |
 | BLOCK-05 | Phase 78 | 78-05, 78-06, 78-07 | Partial (addomain 58.0%,差 12pp,Linux BER 接线留 Phase 80/81) |
 | TAIL-01 | Phase 79 | 79-01..79-06 | Complete (services root 81.6%) |
-| TAIL-02 | Phase 80 | TBD | Pending |
-| TAIL-03 | Phase 80 | TBD | Pending |
+| TAIL-02 | Phase 80 | 80-01, 80-02 | Complete (scheduler 81.4%) |
+| TAIL-03 | Phase 80 | 80-03, 80-04, 80-05 | Complete (碎包全 ≥70%,8 包聚合 83.7%) |
 | GATE-01 | Phase 79/81 | 79-06 收口 + 81 审计 | Achieved 70.90%(81 最终确认) |
 | GATE-02 | Phase 81 | TBD | Pending |
 | GATE-03 | Phase 81 | TBD | Pending |
