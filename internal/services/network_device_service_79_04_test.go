@@ -204,7 +204,7 @@ func TestNdv7904_List_PaginationFilter(t *testing.T) {
 	assert.Len(t, list, 2)
 
 	// 名称模糊过滤
-	list, total, err = svc.List(ctx, &ListDeviceRequest{
+	_, total, err = svc.List(ctx, &ListDeviceRequest{
 		BaseListRequest: baseListReq7904(1, 10), DeviceName: ndv7904StrPtr("sw-"),
 	})
 	require.NoError(t, err)
@@ -220,7 +220,7 @@ func TestNdv7904_List_PaginationFilter(t *testing.T) {
 
 	// 状态过滤(models.DeviceStatus* 具名常量)
 	offline := models.DeviceStatusOffline
-	list, total, err = svc.List(ctx, &ListDeviceRequest{
+	_, total, err = svc.List(ctx, &ListDeviceRequest{
 		BaseListRequest: baseListReq7904(1, 10), Status: &offline,
 	})
 	require.NoError(t, err)
