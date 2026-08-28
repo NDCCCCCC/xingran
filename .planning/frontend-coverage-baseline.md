@@ -46,6 +46,7 @@
 | 2026-08-28 | Phase 88 R16 asset对账/my-notices/dashboard-system | 38.83 | 21574 | 8379 | | | 88-R16 | as 0.05/ds-sys 2.4/mn 2.6 | as 40.15/ds-sys 20.1/mn 40.4 |
 | 2026-08-28 | Phase 88 R17 router安全/ad同步/profile/asset组件 | 39.63 | 21574 | 8551 | | | 88-R17 | router 0/ad 2.2 | router 32.9/ad 72.4/profile 36.2/comp-asset 42.7 |
 | 2026-08-28 | Phase 88 R18 workorder 三页深测 | 39.73 | 21574 | 8572 | | | 88-R18 | wo 25.6 | wo 28.9 |
+| 2026-08-28 | Phase 88 R19 vdi 双列表+shared子组件 | 39.88 | 21574 | 8605 | | | 88-R19 | vdi 21.9/comp-shared 24.2 | vdi 26.3/comp-shared 24.1 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
