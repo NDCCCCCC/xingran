@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.27
 milestone_name: 后端测试覆盖率优秀 II
 status: executing
-stopped_at: Completed Phase 80 — TAIL-02/03 清零(14 包验收 13/14 + lldp 豁免),阶段 +2989 stmts;仅余 Phase 81 收口(81-01 全量重测 ratchet / 81-02 P2_RATCHET 删除 / 81-03 milestone audit)+ BLOCK-05 addomain 段差裁决
-last_updated: "2026-08-28T22:00:00.000Z"
+stopped_at: Completed 81-01: 零失败全量重测 weighted 78.0%(stmts 43729 / covered 34103 / 4×0pct),threshold 55.5→77.5 ratchet 落地(D-81-01),internal/scheduler 满载 flake 已修(Task 0 fixture+共享库回收),baseline 落 Phase 81 后 行与 75-78/80 回填行;余 81-02(豁免行删除 + push + CI 盯守)/ 81-03(milestone audit + 文档债清偿)
+last_updated: "2026-08-28T22:35:00.000Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 7
