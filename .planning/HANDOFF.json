@@ -1,55 +1,76 @@
 {
   "version": "1.0",
-  "timestamp": "2026-08-13T08:37:15.000Z",
-  "phase": "58",
-  "phase_name": "route-contract-alignment",
-  "phase_dir": ".planning/phases/58-route-contract-alignment",
-  "plan": 1,
-  "task": 3,
-  "total_tasks": 3,
+  "timestamp": "2026-08-29T00:57:51Z",
+  "phase": "88",
+  "phase_name": "frontend-coverage-70-percent",
+  "phase_dir": ".planning/workstreams/frontend-coverage/phases/88-p1-70",
+  "plan": "batch41",
+  "task": 41,
+  "total_tasks": 41,
   "status": "paused",
+  "workstream": "frontend-coverage",
+  "active_workstream": "milestone",
   "completed_tasks": [
-    {"id": 1, "name": "apikey.ts three CRUD ops align to POST routes (CONTRACT-01)", "status": "done", "commit": "1978935"},
-    {"id": 2, "name": "types/apikey.ts + index.tsx field names snake→camelCase (CONTRACT-02)", "status": "done", "commit": "6a4c772"},
-    {"id": 3, "name": "checkpoint:human-verify SC#1-SC#4 + 排序", "status": "in_progress", "progress": "DB schema + seed 已修复; backend :9000 LISTENING 仍 hang 在 createRequestEncryptionToggleConfig 之后,Supabase pooler 阻塞 runtime test"}
+    {"id": 1, "name": "Batch24 workstations 钩子+HybridLayout", "status": "done", "commit": "93c7645", "global": "40.32→41.28"},
+    {"id": 2, "name": "Batch25 floors 子组件+geocoding/floor 钩子", "status": "done", "commit": "1358ed4", "global": "41.28→41.48"},
+    {"id": 3, "name": "Batch26 monitor utils+columns+vdi 按钮", "status": "done", "commit": "ed22282", "global": "41.48→41.69"},
+    {"id": 4, "name": "Batch27 duty holidays/schedules utils+WeeklyView", "status": "done", "commit": "f86a6da", "global": "41.69→41.85"},
+    {"id": 5, "name": "Batch28 ad-domain logs+AccountPoolTab 渲染", "status": "done", "commit": "a67a5b9", "global": "41.85→42.07"},
+    {"id": 6, "name": "Batch29 network command hooks+mac heatmap", "status": "done", "commit": "8033938", "global": "42.07→42.46"},
+    {"id": 7, "name": "Batch30 dashboard edit/view+NotificationBell", "status": "done", "commit": "c769129", "global": "42.46→42.62"},
+    {"id": 8, "name": "Batch31 captcha+services API 封装", "status": "done", "commit": "d81c0ad", "global": "42.62→43.05"},
+    {"id": 9, "name": "Batch32 components network 子组件+MACEventsTimeline", "status": "done", "commit": "72676c9", "global": "43.05→43.21"},
+    {"id": 10, "name": "Batch33 components widgetRegistry+VDI/AssetRow", "status": "done", "commit": "a012ce8", "global": "43.21→43.36"},
+    {"id": 11, "name": "Batch34 router routeConfigManager+componentLoader", "status": "done", "commit": "73ba2b9", "global": "43.36→43.83"},
+    {"id": 12, "name": "Batch35 dashboard widgets BaseWidget", "status": "done", "commit": "57784d7", "global": "43.83→43.98"},
+    {"id": 13, "name": "Batch36 system apikeys LogsModal", "status": "done", "commit": "098da95", "global": "43.98→44.22"},
+    {"id": 14, "name": "Batch37 system role useRoleActions", "status": "done", "commit": "0ddda5c", "global": "44.22→44.32"},
+    {"id": 15, "name": "Batch38 dashboard Stat/Progress widget", "status": "done", "commit": "dc37b55", "global": "44.32→44.54"},
+    {"id": 16, "name": "Batch39 workorder useWorkOrderActions", "status": "done", "commit": "a1e8ba2", "global": "44.54→44.80"},
+    {"id": 17, "name": "Batch40 components shared ColumnConfigModal", "status": "done", "commit": "b86ec6b", "global": "44.80→44.99"},
+    {"id": 18, "name": "Batch41 workorder useTemplateActions", "status": "done", "commit": "19d7815", "global": "44.99→45.13"}
   ],
   "remaining_tasks": [
-    {"id": 4, "name": "Phase 58 58-01-SUMMARY.md 编写", "status": "not_started", "blocked_by": "Task 3 human-verify"}
+    {"id": 19, "name": "Batch42+ 推进 50% (目标 70%, 距 24.87pp)", "status": "not_started"}
   ],
   "blockers": [
     {
-      "description": "Backend 启动 hang 在 createRequestEncryptionToggleConfig 之后,GORM session 在 Supabase Session pooler 多次写后失活",
+      "description": "workstations/index.tsx 235 stmts jsdom 死锁 — FloorPlanEditor + Three.js lazy + ReconciliationDrawer + usePersistedState 跨测串扰",
       "type": "technical",
-      "workaround": "切 Transaction pooler (6543) + 加连接 keepalive/retry,或 init_data 拆批"
+      "workaround": "改用钩子 + 子组件单元测试绕过(已用 pages/operations/workstations/__tests__/{hooks,columns,useWorkstationData}.test.tsx 解锁)"
     },
     {
-      "description": "未 commit 改动需决策: commit 进独立 quick task 还是 revert",
-      "type": "human_action",
-      "blocking": false
+      "description": "pages/operations/{buildings,floors,building-spaces,workstations}/{index,view}.tsx 大 index 文件没进一步测试(剩余 ~9.6pp 来自此洼地)",
+      "type": "technical",
+      "workaround": "继续走子组件 + hooks 测试增量;不再主动尝试 index.tsx render"
     }
   ],
   "human_actions_pending": [
-    {"action": "决定 SKIP_AUTOMIGRATE/BootstrapMissingTables/AutoMigrate 列表补漏等 dev 改动是否 commit", "context": "10+ 行未 commit 改动,影响 Phase 58 backend-zero-changes 不变量", "blocking": false},
-    {"action": "考虑升级 Supabase pooler plan 或切 Transaction mode", "context": "Session pooler 在 AutoMigrate + init_data 后段 hang,可能外部连接数限制", "blocking": true}
+    {"action": "无", "context": "本 session 全 yolo 完成,无 pending 人工动作"}
   ],
   "decisions": [
-    {"decision": "CONTRACT-01 选 Option A (前端改 POST 对齐 v1.6 Router Pattern)", "rationale": "后端零改动,改动范围最小", "phase": "58"},
-    {"decision": "CONTRACT-02 改前端 types+index.tsx 字段名 camelCase 对齐后端 json tag", "rationale": "后端无 snake↔camel 转换层", "phase": "58"},
-    {"decision": "Dev DB 选 Supabase (hosted Postgres)", "rationale": "用户偏好; SQLite 被否决 (jsonb 不兼容)", "phase": "58"},
-    {"decision": "Dev Cache 选 Upstash Redis (TLS-required)", "rationale": "用户偏好", "phase": "58"},
-    {"decision": "Supabase pooler 选 Session mode (5432)", "rationale": "Transaction mode (6543) 有 EAUTHTIMEOUT 风险", "phase": "58"},
-    {"decision": "SKIP_AUTOMIGRATE + BootstrapMissingTables 作为 dev 工具", "rationale": "临时绕过 Supabase pooler 上 GORM AutoMigrate hang", "phase": "58"},
-    {"decision": "AutoMigrate 注册列表补 models.APIKey/APIKeyUsageLog/Config", "rationale": "新部署/clean DB 必备,Phase 60 SEC-01 + AUTH-03 依赖 sys_api_keys", "phase": "60"}
+    {"decision": "Batches R24-R41 共 18 个 commit,每批 ~0.3pp 提升,85+ 新测试", "rationale": "yolo 推进 — 子组件/hooks 测试覆盖优先 index.tsx render"},
+    {"decision": "workstations/index.tsx 不主动 render 测试", "rationale": "已知死锁,改用 hooks + 子组件覆盖,边收益为正"},
+    {"decision": "Antd 5 Modal footer 在 portal — 用 baseElement.innerHTML.contains() 而非 findByText", "rationale": "portal 输出的 DOM 不在 screen 树中"},
+    {"decision": "globalThis 跨 hook 树共享 form 实例 anti-pattern — 改用 mountShell + 同 React 树", "rationale": "Form 跨 renderHook 实例化会断流 setFieldsValue/getFieldsValue"}
   ],
   "uncommitted_files": [
-    "internal/core/db/database.go",
-    "internal/core/core.go",
-    "pkg/logger/logger.go",
-    "scripts/dbbootstrap/main.go",
-    "scripts/seedmain/main.go",
-    "xingran-react-frontend/src/components/layout/InnovativeLayout.tsx",
-    "xingran-react-frontend/src/pages/login/index.tsx"
+    {"path": ".continue-here.md", "type": "staging_delete", "note": "本 session 起跑前已 staged 为 deleted (旧 handoff 被替)"},
+    {"path": ".planning/workstreams/frontend-coverage/phases/84-p1-70/*.md", "type": "untracked", "note": "Phase 84 PLANNING 历史产物,长期未跟踪"},
+    {"path": ".planning/workstreams/milestone/phases/78-block-bp-unlock-by-foundation/*.md", "type": "untracked", "note": "Phase 78 PLANNING 同上"}
   ],
-  "next_action": "1) 读 .continue-here.md + STATE.md + 58-01-PLAN.md §4  2) 决定未 commit 改动去留  3) 试 Transaction pooler (DB_PORT=6543)  4) 若 :9000 达成则跑 human-verify  5) 若仍 hang 则标注 Phase 58 半成品关闭并启动 Phase 61 规划",
-  "context_notes": "DB schema + seed 全修复完成(75 表 + sys_api_keys + sys_config + admin + 36 menus),后端 :9000 LISTENING 仍未达成。Phase 60 已完成。Phase 61 (AUTH-04 + QUAL-03) 随时可启动。Context 77% critical 时暂停。"
+  "background_processes": [],
+  "blocking_constraints": [
+    {
+      "severity": "blocking",
+      "id": "cov-priority-decision",
+      "description": "距 70% 目标还差 24.87pp. 当前 batch 速度(每批 ~0.3pp 收益递减). 后续 120+ batch 仅边收益. 与 /gsd-advisor/discuss-phase 同需明确 — 该不该切换到下游 workstream 让 batch 优化继续自动跑,还是先打断评估 gate 通过标准。"
+    }
+  ],
+  "coverage_snapshot": {
+    "global": 45.13,
+    "tests_passing": 1688,
+    "gate_status": "PASS 45/45 dirs",
+    "ratchet_floors_applied": 18
+  }
 }
