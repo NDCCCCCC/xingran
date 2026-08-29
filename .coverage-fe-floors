@@ -48,7 +48,7 @@ utils	89.7
 #   - 散件子目录 DeptTree/IconSelect/NoticeDetail/asset/charts/markdown/modal/
 #     table/three:同 commit 新增的 0.0 校准行(新 key 初始校准,非下调),
 #     后续 wave 3 / P2 阶段补测后逐 plan bump。
-components/shared	30.8
+components/shared	33.0
 components/dashboard	33.7
 components/layout	14.1
 components/CronSelector	37.4

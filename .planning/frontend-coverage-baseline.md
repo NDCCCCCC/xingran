@@ -72,6 +72,7 @@
 | 2026-08-29 | Phase 88 R42 system menu useMenuActions | 45.36 | 21574 | 9786 | | | 88-R42 | sys 34.1 | sys 36.9 |
 | 2026-08-29 | Phase 88 R43 network executions useExecutionModals | 45.55 | 21574 | 9827 | | | 88-R43 | net 36.8 | net 38.9 |
 | 2026-08-29 | Phase 88 R44 components shared ExcelExport | 45.69 | 21574 | 9857 | | | 88-R44 | comp-shared 27.4 | comp-shared 30.8 |
+| 2026-08-29 | Phase 88 R45 components shared ExcelImport | 45.78 | 21574 | 9877 | | | 88-R45 | comp-shared 30.8 | comp-shared 33.0 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
