@@ -54,12 +54,14 @@ describe("port-write constants", () => {
   });
 
   it("IPV4_REGEX 业务地址匹配 + 边界拒绝", () => {
-    expect(IPV4_REGEX.test("10.62.25.5")).toBe(true);
-    expect(IPV4_REGEX.test("192.168.1.1")).toBe(true);
+    // 使用 RFC 5737 TEST-NET 文档化保留地址 (203.0.113.0/24 / 198.51.100.0/24) —
+    // 绕过 ESLint no-restricted-syntax 内网 IP 硬编码守卫,语义不变。
+    expect(IPV4_REGEX.test("203.0.113.5")).toBe(true);
+    expect(IPV4_REGEX.test("198.51.100.1")).toBe(true);
     expect(IPV4_REGEX.test("256.0.0.1")).toBe(false); // 越界
     // regex 当前允许首段 0([1-9]?\d 匹配 '0'),这是 IPV4_REGEX 行为,断言其形态
     expect(IPV4_REGEX.test("0.10.20.30")).toBe(true);
-    expect(IPV4_REGEX.test("10.62.25")).toBe(false); // 段数错
+    expect(IPV4_REGEX.test("203.0.113")).toBe(false); // 段数错
   });
 
   it("MAC_REGEX 三种格式", () => {
