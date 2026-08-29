@@ -26,13 +26,13 @@ pages/knowledge	50.3
 pages/login	61.6
 pages/monitor	45.5
 pages/my-notices	40.4
-pages/network	38.9
+pages/network	44.0
 pages/operations	21.2
 pages/profile	36.2
 pages/settings	82.6
 pages/system	36.9
-pages/vdi	26.3
-pages/workorder	44.2
+pages/vdi	30.2
+pages/workorder	57.0
 router	74.5
 services	42.3
 store	95.0
