@@ -33,6 +33,9 @@ func newTestCoreForSplitCompat(t *testing.T) *Core {
 	t.Helper()
 	gormDB, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	assert.NoError(t, err)
+	if sqlDB, err := gormDB.DB(); err == nil {
+		t.Cleanup(func() { _ = sqlDB.Close() })
+	}
 
 	noticeHub := websocket.NewNoticeHub()
 
