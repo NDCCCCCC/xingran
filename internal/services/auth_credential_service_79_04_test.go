@@ -212,7 +212,7 @@ func TestAcv7904_ListPagination(t *testing.T) {
 	}
 
 	// 名称模糊过滤
-	list, _, err = svc.List(ctx, &ListCredentialRequest{
+	list, total, err = svc.List(ctx, &ListCredentialRequest{
 		BaseListRequest: baseListReq7904(1, 10),
 		CredentialName:  func() *string { s := "telnet"; return &s }(),
 	})

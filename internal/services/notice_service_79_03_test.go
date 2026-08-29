@@ -260,7 +260,7 @@ func TestNtc7903_GetList_PaginationFilterSort(t *testing.T) {
 	assert.Equal(t, int64(3), total, "title LIKE %开机公告%")
 
 	// noticeType 精确
-	_, total, err = svc.GetNoticeList(ctx, 1, 10, nil, strPtr7903("2"), "", nil)
+	list, total, err = svc.GetNoticeList(ctx, 1, 10, nil, strPtr7903("2"), "", nil)
 	require.NoError(t, err)
 	assert.Equal(t, int64(2), total, "notice_type = 2")
 	for _, n := range list {
