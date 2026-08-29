@@ -83,6 +83,8 @@
 | 2026-08-29 | Phase 88 R53 renderPage 形状基建 + 9 页 Modal 交互 | 49.55 | 21574 | 10691 | | | 88-R53 | sys 42.8/ops 25.9/mon 45.5 | sys 44.3/ops 26.7/mon 45.6 |
 | 2026-08-29 | Phase 88 R54 8 页 Modal 横扫 | 49.70 | 21574 | 10724 | | | 88-R54 | ops 26.7 | ops 26.9 |
 | 2026-08-29 | Phase 88 R55 networkApi 单元测试 | 49.65 | 21574 | 10713 | | | 88-R55 | lib 86.0 | lib 87.2 |
+| 2026-08-29 | Phase 88 R56 rpaApi 10 子模块 list 路径 | 49.66 | 21574 | 10714 | | | 88-R56 | - | - |
+| 2026-08-29 | Phase 88 R57 profile/my-notices/settings 渲染 | 49.81 | 21574 | 10747 | | | 88-R57 | profile 36.2/mn 40.4 | profile 36.3/mn 50.7 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
