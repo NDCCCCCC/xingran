@@ -100,7 +100,9 @@ describe("services/captcha", () => {
 
   it("updateCaptchaBackground → :id/update", async () => {
     await updateCaptchaBackground("bg1", { remark: "new" });
-    expect(postSpy).toHaveBeenCalledWith("/system/captcha-backgrounds/bg1/update", { remark: "new" });
+    expect(postSpy).toHaveBeenCalledWith("/system/captcha-backgrounds/bg1/update", {
+      remark: "new",
+    });
   });
 
   it("deleteCaptchaBackground → :id/delete", async () => {
@@ -163,7 +165,10 @@ describe("services/operations floors/buildings/dedicated-lines/server-rooms/work
     expect(postSpy).toHaveBeenLastCalledWith("/ops/buildings/b1/delete");
 
     await buildingApi.batchDelete(["b1"]);
-    expect(postSpy).toHaveBeenLastCalledWith("/ops/buildings/batch", { ids: ["b1"], action: "delete" });
+    expect(postSpy).toHaveBeenLastCalledWith("/ops/buildings/batch", {
+      ids: ["b1"],
+      action: "delete",
+    });
   });
 
   it("dedicatedLineApi 方法 URL 映射", async () => {

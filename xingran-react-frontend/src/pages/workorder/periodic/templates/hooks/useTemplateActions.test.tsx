@@ -29,7 +29,11 @@ vi.mock("@/lib/workorderApi", async (importOriginal) => {
 import { useTemplateActions } from "../hooks/useTemplateActions";
 
 function Wrap({ children }: { children: React.ReactNode }) {
-  return <ConfigProvider><App>{children}</App></ConfigProvider>;
+  return (
+    <ConfigProvider>
+      <App>{children}</App>
+    </ConfigProvider>
+  );
 }
 const wrap = Wrap;
 

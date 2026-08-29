@@ -109,9 +109,7 @@ describe("HolidayModal", () => {
   });
 
   it("open 渲染表单", () => {
-    const { baseElement } = wrap(
-      <HolidayModal visible onCancel={vi.fn()} onOk={vi.fn()} />
-    );
+    const { baseElement } = wrap(<HolidayModal visible onCancel={vi.fn()} onOk={vi.fn()} />);
     expect(baseElement.innerHTML.length).toBeGreaterThan(100);
   });
 });

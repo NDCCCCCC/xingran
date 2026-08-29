@@ -39,9 +39,12 @@ describe("useCommandData", () => {
       data: { list: [{ id: "e1" }], total: 1 },
     });
     const setExecLoading = vi.fn();
-    const { result } = renderHook(() => useCommandData(setExecLoading, { current: 1, pageSize: 10 }), {
-      wrapper: Wrap,
-    });
+    const { result } = renderHook(
+      () => useCommandData(setExecLoading, { current: 1, pageSize: 10 }),
+      {
+        wrapper: Wrap,
+      }
+    );
 
     await act(async () => {
       await result.current.loadExecutions();
@@ -128,9 +131,11 @@ describe("useCommandData", () => {
     const { result } = renderHook(() => useCommandData(vi.fn(), { current: 1, pageSize: 10 }), {
       wrapper: Wrap,
     });
-    await expect(act(async () => {
-      await result.current.loadExecutionDetails("e1");
-    })).rejects.toThrow("boom");
+    await expect(
+      act(async () => {
+        await result.current.loadExecutionDetails("e1");
+      })
+    ).rejects.toThrow("boom");
   });
 });
 
@@ -214,7 +219,12 @@ describe("CommandDetailDrawer", () => {
       failureCount: 2,
     };
     const { baseElement, findByText } = render(
-      <CommandDetailDrawer open execution={exec} details={[{ id: "det1" } as any]} onClose={vi.fn()} />
+      <CommandDetailDrawer
+        open
+        execution={exec}
+        details={[{ id: "det1" } as any]}
+        onClose={vi.fn()}
+      />
     );
     expect(await findByText(/批量巡检/)).toBeDefined();
     expect(await findByText("执行中")).toBeDefined();

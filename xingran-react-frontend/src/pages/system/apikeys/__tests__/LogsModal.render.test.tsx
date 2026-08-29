@@ -60,9 +60,7 @@ describe("LogsModal 渲染", () => {
   });
 
   it("visible=true 渲染表格行 + 状态 tag", async () => {
-    renderWithProviders(
-      <LogsModal visible apiKeyId="k1" onClose={vi.fn()} />
-    );
+    renderWithProviders(<LogsModal visible apiKeyId="k1" onClose={vi.fn()} />);
     // 2 条记录 → 至少 2 处 POST 文本
     expect((await screen.findAllByText("POST")).length).toBeGreaterThanOrEqual(2);
     expect((await screen.findAllByText("/system/users")).length).toBeGreaterThanOrEqual(2);

@@ -167,9 +167,9 @@ describe("permission check", () => {
   });
 
   it("permissions 命中返 true", () => {
-    expect(
-      routeConfigManager.hasPermission("user", ["system:user:list"])
-    ).toEqual({ hasPermission: true });
+    expect(routeConfigManager.hasPermission("user", ["system:user:list"])).toEqual({
+      hasPermission: true,
+    });
   });
 
   it("permissions 部分缺失返 missingPermissions 数组", () => {
@@ -179,9 +179,9 @@ describe("permission check", () => {
   });
 
   it("permissions 多者任一命中即通过", () => {
-    expect(
-      routeConfigManager.hasPermission("user", ["a:1", "system:user:list"])
-    ).toEqual({ hasPermission: true });
+    expect(routeConfigManager.hasPermission("user", ["a:1", "system:user:list"])).toEqual({
+      hasPermission: true,
+    });
   });
 });
 

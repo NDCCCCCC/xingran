@@ -29,9 +29,7 @@ describe("SliderCaptcha", () => {
       sliderY: 50,
     });
     const onVerified = vi.fn();
-    const { container } = renderWithProviders(
-      <SliderCaptcha onVerified={onVerified} active />
-    );
+    const { container } = renderWithProviders(<SliderCaptcha onVerified={onVerified} active />);
 
     await vi.waitFor(() => {
       expect(getCaptcha).toHaveBeenCalled();
@@ -64,9 +62,7 @@ describe("SliderCaptcha", () => {
 
   it("getCaptcha throw 静默", async () => {
     (getCaptcha as any).mockRejectedValue(new Error("boom"));
-    const { container } = renderWithProviders(
-      <SliderCaptcha onVerified={vi.fn()} active />
-    );
+    const { container } = renderWithProviders(<SliderCaptcha onVerified={vi.fn()} active />);
     await vi.waitFor(() => {
       expect(getCaptcha).toHaveBeenCalled();
     });

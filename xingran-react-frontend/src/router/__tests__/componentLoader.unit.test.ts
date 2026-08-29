@@ -16,15 +16,21 @@ describe("ComponentLoader 白名单(只测同步拒绝路径)", () => {
   it("拒绝 .html 扩展名", async () => {
     // normalizePath 自动加 .tsx,但 normalize 后以 .tsx 结尾,白名单字符串结尾正则不再命中 .html
     // 实际触发 importComponent → Component not found
-    await expect(componentLoader.load("pages/x.html")).rejects.toThrow(/Invalid component|Component not found/);
+    await expect(componentLoader.load("pages/x.html")).rejects.toThrow(
+      /Invalid component|Component not found/
+    );
   });
 
   it("拒绝 .js 扩展名", async () => {
-    await expect(componentLoader.load("pages/x.js")).rejects.toThrow(/Invalid component|Component not found/);
+    await expect(componentLoader.load("pages/x.js")).rejects.toThrow(
+      /Invalid component|Component not found/
+    );
   });
 
   it("拒绝 .json 扩展名", async () => {
-    await expect(componentLoader.load("pages/x.json")).rejects.toThrow(/Invalid component|Component not found/);
+    await expect(componentLoader.load("pages/x.json")).rejects.toThrow(
+      /Invalid component|Component not found/
+    );
   });
 });
 
