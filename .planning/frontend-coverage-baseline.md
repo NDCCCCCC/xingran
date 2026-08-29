@@ -93,6 +93,7 @@
 | 2026-08-29 | Phase 88 R63 useDeviceData hook 测试 | 50.17 | 21574 | 10825 | | | 88-R63 | - | - |
 | 2026-08-29 | Phase 88 R64 useLogActions + useCommandModals | 50.18 | 21574 | 10826 | | | 88-R64 | - | - |
 | 2026-08-29 | Phase 88 R65/R66 useScheduleData + useArticleData | 50.19 | 21574 | 10828 | | | 88-R65-66 | - | - |
+| 2026-08-29 | Phase 88 R67 mac history 数据行 + port/user 渲染 | 50.21 | 21574 | 10833 | | | 88-R67 | net 44.6 | net 45.3 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
