@@ -78,6 +78,7 @@
 | 2026-08-29 | Phase 88 R48 FileUpload + WidgetDataFilter | 45.95 | 21574 | 9915 | | | 88-R48 | comp-shared 35.4/dash 34.36 | comp-shared 35.5/dash 35.96 |
 | 2026-08-29 | Phase 88 R49 5 个 0% 大页面 renderPage 批量渲染 | 47.11 | 21574 | 10164 | | | 88-R49 | net 38.9/vdi 26.3/wo 44.2 | net 44.0/vdi 30.2/wo 57.0 |
 | 2026-08-29 | Phase 88 R50 7 个低覆盖页面 renderPage 批量渲染 | 47.97 | 21574 | 10350 | | | 88-R50 | sys 36.9/ops 21.2 | sys 42.8/ops 24.2 |
+| 2026-08-29 | Phase 88 R51 8 个真 0% 文件批量渲染 | 48.89 | 21574 | 10549 | | | 88-R51 | ops 24.2/ad-dom 24.4 | ops 25.9/ad-dom 27.6 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 

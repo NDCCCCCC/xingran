@@ -18,7 +18,7 @@ design-system	78.9
 hooks	91.7
 lib	86.0
 pages/ad	72.4
-pages/ad-domain	24.4
+pages/ad-domain	27.6
 pages/asset	40.15
 pages/dashboard-system	34.9
 pages/duty	40.3
@@ -27,7 +27,7 @@ pages/login	61.6
 pages/monitor	45.5
 pages/my-notices	40.4
 pages/network	44.0
-pages/operations	24.2
+pages/operations	25.9
 pages/profile	36.2
 pages/settings	82.6
 pages/system	42.8
