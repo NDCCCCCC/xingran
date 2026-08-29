@@ -367,6 +367,9 @@ func TestLogUsageErrorHandling(t *testing.T) {
 	logger := NewUsageLogger(db)
 	ctx := context.Background()
 
+	// 81-01 ci-flake fix:让上一并发 test 的 fire-and-forget goroutine 完成写入后再 close db
+	time.Sleep(200 * time.Millisecond)
+
 	t.Run("数据库连接失败", func(t *testing.T) {
 		// 关闭数据库连接
 		sqlDB, _ := db.DB()
