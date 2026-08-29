@@ -112,6 +112,7 @@
 | 2026-08-30 | Phase 88 R83 operations info-points | 52.13 | 21574 | 11249 | | | 88-R83 | operations 29.9→30.5 |
 | 2026-08-30 | Phase 88 R84 ad-domain ous | 52.08 | 21574 | 11236 | | | 88-R84 | - |
 | 2026-08-30 | Phase 88 R85 dashboard dataFetcher 类覆盖 | 52.24 | 21574 | 11270 | | | 88-R85 | comp-dashboard 38.6→43.2 |
+| 2026-08-30 | Phase 88 R86 DataSourceForm + DisplayConfigForm | 52.47 | 21574 | 11322 | | | 88-R86 | comp-dashboard 43.2→48.1 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
