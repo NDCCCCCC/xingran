@@ -115,6 +115,7 @@
 | 2026-08-30 | Phase 88 R86 DataSourceForm + DisplayConfigForm | 52.47 | 21574 | 11322 | | | 88-R86 | comp-dashboard 43.2→48.1 |
 | 2026-08-30 | Phase 88 R87 DashboardView + TableWidget | 52.75 | 21574 | 11382 | | | 88-R87 | comp-dashboard 48.1→53.7 |
 | 2026-08-30 | Phase 88 R88 WidgetEditor + NetworkExport + holidays utils | 53.07 | 21574 | 11450 | | | 88-R88 | duty 54.1→57.9, comp-dashboard 53.7→55.9 |
+| 2026-08-30 | Phase 88 R89 useHolidayData + useTemplateModals 钩子 | 53.44 | 21574 | 11531 | | | 88-R89 | duty 57.9→61.0, network 48.6→49.9 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
