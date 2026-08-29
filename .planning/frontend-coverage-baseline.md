@@ -89,6 +89,7 @@
 | 2026-08-29 | Phase 88 R59 monitor/cache + ad-configs 渲染 | 49.81 | 21574 | 10748 | | | 88-R59 | - | - |
 | 2026-08-29 | Phase 88 R60 monitor/job useJobActions hook 测试 | 49.99 | 21574 | 10785 | | | 88-R60 | mon 45.6 | mon 46.0 |
 | 2026-08-29 | Phase 88 R61 useDutyConfig + useBackupData hooks | 50.12 | 21574 | 10814 | | | 88-R61 | duty 40.3/net 44.0 | duty 41.6/net 44.6 |
+| 2026-08-29 | Phase 88 R62 useHolidayData + useDiscoveryData hooks | 50.21 | 21574 | 10833 | | | 88-R62 | duty 41.6 | duty 41.7 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
