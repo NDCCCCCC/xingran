@@ -212,12 +212,14 @@ func TestAcv7904_ListPagination(t *testing.T) {
 	}
 
 	// 名称模糊过滤
-	_, _, err = svc.List(ctx, &ListCredentialRequest{
+	list, _, err = svc.List(ctx, &ListCredentialRequest{
 		BaseListRequest: baseListReq7904(1, 10),
 		CredentialName:  func() *string { s := "telnet"; return &s }(),
 	})
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), total)
+	assert.Len(t, list, 1)
+	assert.Equal(t, "list-telnet", list[0].CredentialName)
 
 	// 协议过滤(具名常量)
 	telnet := models.ProtocolTypeTelnet
