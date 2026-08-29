@@ -24,13 +24,13 @@ pages/dashboard-system	34.9
 pages/duty	40.3
 pages/knowledge	50.3
 pages/login	61.6
-pages/monitor	45.5
+pages/monitor	45.6
 pages/my-notices	40.4
 pages/network	44.0
-pages/operations	25.9
+pages/operations	26.7
 pages/profile	36.2
 pages/settings	82.6
-pages/system	42.8
+pages/system	44.3
 pages/vdi	30.2
 pages/workorder	57.0
 router	74.5

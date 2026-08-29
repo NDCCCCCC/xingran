@@ -48,6 +48,30 @@ export interface RenderPageOptions {
   fallbackResponse?: unknown | null;
 }
 
+/**
+ * 常见"形状敏感"端点内置注册(batch52 发现):generic fallback 统一给
+ * { data: { list: [], total: 0 } },但 tree/dropdown 类端点的 data 必须是
+ * 数组、statistics 类必须是对象——形状错会让页面主 UI 崩溃
+ * (deptUtils `(list ?? []).map is not a function`),表格与按钮全不渲染,
+ * 页面只剩 spin 空壳,coverage 收益趋近 0。这里按 URL 语义预登记正确形状。
+ */
+const COMMON_ENDPOINT_SHAPES: Record<string, unknown> = {
+  "/system/departments/tree": { data: [] },
+  "/system/dept/tree": { data: [] },
+  "/system/roles/list": { data: { list: [], total: 0 } },
+  "/system/users/list": { data: { list: [], total: 0 } },
+  "/system/posts/list": { data: { list: [], total: 0 } },
+  "/system/menus/list": { data: { list: [], total: 0 } },
+  "/system/dict/data/list": { data: { list: [], total: 0 } },
+};
+
+/** 以 /statistics 或 /dropdown-options 结尾的端点按语义给形状 */
+function shapeForUrl(url: string): unknown | undefined {
+  if (url.endsWith("/tree") || url.endsWith("/dropdown-options")) return { data: [] };
+  if (url.endsWith("/statistics") || url.endsWith("/stats")) return { data: {} };
+  return undefined;
+}
+
 export interface RenderPageResult {
   /** testing-library screen(共享查询 API) */
   screen: typeof screen;
@@ -72,7 +96,18 @@ export function renderPageWithEndpoints(
     handle.endpoint.mockResolvedValue(response);
     handles[endpoint] = handle;
   }
+  // 内置形状端点:显式 endpoints 未覆盖时按语义注册(树=数组/统计=对象)
+  const routeCall = (url: string): unknown =>
+    options.endpoints?.[url] ?? COMMON_ENDPOINT_SHAPES[url] ?? shapeForUrl(url);
+  for (const [url, response] of Object.entries(COMMON_ENDPOINT_SHAPES)) {
+    if (options.endpoints?.[url] === undefined) {
+      const handle = createApiMock(url);
+      handle.endpoint.mockResolvedValue(response);
+      handles[url] = handle;
+    }
+  }
   if (options.fallbackResponse !== null) {
+    // generic fallback 保持对象形状;数组类端点若未被上面覆盖仍可能需要显式注册
     setGenericFallback(options.fallbackResponse ?? { data: { list: [], total: 0 } });
   }
   // 页面普遍经 useDeptTree/useDict 等 React Query hook 取数,默认注入 QueryClient
