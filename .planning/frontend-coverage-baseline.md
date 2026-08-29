@@ -91,6 +91,7 @@
 | 2026-08-29 | Phase 88 R61 useDutyConfig + useBackupData hooks | 50.12 | 21574 | 10814 | | | 88-R61 | duty 40.3/net 44.0 | duty 41.6/net 44.6 |
 | 2026-08-29 | Phase 88 R62 useHolidayData + useDiscoveryData hooks | 50.21 | 21574 | 10833 | | | 88-R62 | duty 41.6 | duty 41.7 |
 | 2026-08-29 | Phase 88 R63 useDeviceData hook 测试 | 50.17 | 21574 | 10825 | | | 88-R63 | - | - |
+| 2026-08-29 | Phase 88 R64 useLogActions + useCommandModals | 50.18 | 21574 | 10826 | | | 88-R64 | - | - |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
