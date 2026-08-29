@@ -99,6 +99,7 @@
 | 2026-08-30 | Phase 88 R70 useDictActions hook 测试 | 50.67 | 21574 | 10932 | | | 88-R70 | sys 44.3 | sys 45.0 |
 | 2026-08-30 | Phase 88 R71 useHolidayModals 238 行大 hook | 50.83 | 21574 | 10967 | | | 88-R71 | duty 44.6 | duty 46.3 |
 | 2026-08-30 | Phase 88 R72 layout TabBar 渲染 | 50.83 | 21574 | 10967 | | | 88-R72 | - | - |
+| 2026-08-30 | Phase 88 R73 CronSelector utils cron 工具测试 | 50.91 | 21574 | 10985 | | | 88-R73 | cronsel 37.4 | cronsel 45.1 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
