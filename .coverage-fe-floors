@@ -27,10 +27,10 @@ pages/login	61.6
 pages/monitor	56.4
 pages/my-notices	50.7
 pages/network	50.1
-pages/operations	31.8
+pages/operations	31.9
 pages/profile	36.3
 pages/settings	82.6
-pages/system	46.1
+pages/system	46.2
 pages/vdi	30.2
 pages/workorder	57.0
 router	74.5
