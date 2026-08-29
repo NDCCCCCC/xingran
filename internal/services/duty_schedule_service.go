@@ -172,7 +172,7 @@ func (s *DutyScheduleService) GetDutyScheduleList(ctx context.Context, req *Duty
 	}
 	if req.EndDate != nil && *req.EndDate != "" {
 		if endDate, err := time.Parse("2006-01-02", *req.EndDate); err == nil {
-			query = query.Where("schedule_date <= ?", endDate)
+			query = query.Where("schedule_date <= ?", endDate.AddDate(0, 0, 1))
 		}
 	}
 	if req.DutyType != nil && *req.DutyType != "" {

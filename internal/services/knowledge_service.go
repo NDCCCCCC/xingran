@@ -501,7 +501,7 @@ func (s *KnowledgeService) SearchKnowledgeArticles(ctx context.Context, req *Sea
 	if err := query.
 		Preload("Category").
 		Preload("Tags").
-		Order("created_at DESC").
+		Order("sys_knowledge_article.created_at DESC").
 		Limit(pageSize).
 		Offset(pageNum * pageSize).
 		Find(&list).Error; err != nil {

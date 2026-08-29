@@ -172,7 +172,7 @@ func (s *NoticeService) GetNoticeList(ctx context.Context, page, pageSize int, t
 	if orderByColumn == "" {
 		query = query.Order("priority DESC, created_at DESC")
 	}
-	if err := query.Preload("Channels").Offset(offset).Limit(pageSize).Find(&notices).Error; err != nil {
+	if err := query.Preload("Channels").Limit(pageSize).Offset(offset).Find(&notices).Error; err != nil {
 		return nil, 0, fmt.Errorf("查询通知列表失败: %w", err)
 	}
 
