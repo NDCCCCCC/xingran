@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.27
 milestone_name: 后端测试覆盖率优秀 II
-status: executing
-stopped_at: "Completed 81-02: P2_RATCHET 豁免行删除(39.00/38.50/19.00 均删),P2 floor 回落 uniform 70,本地 gate EXIT=0(P2 10/10 PASS),BLOCK-01 翻转(a4cdb61),216 commits push 9daecb9→0b4b768,CI run 33176387515 backend lint 失败(13 SA* pre-existing in Phase 79),Coverage gate skipped,本地 diff 94.44% PASS;余 81-03(milestone audit + 文档债清偿)"
-last_updated: "2026-08-28T13:40:00.000Z"
+status: shipped
+stopped_at: "v1.27 SHIPPED: 后端覆盖 12.8% → 78.0%(weighted 78.0%,threshold 77.5),P2 uniform 70(floor 39/38.5/19 豁免行已删),P1 8/8 + P2 10/10 PASS,CI run 33176387515(backend lint 阻塞,Coverage gate 本地 EXIT=0),BLOCK-05 D-81-03 裁决定案(addomain 58.0%,BER 锁死 ~230 stmts,gate=0),audit: .planning/milestones/v1.27-MILESTONE-AUDIT.md"
+last_updated: "2026-08-28T14:00:00.000Z"
 last_activity: 2026-08-28
 progress:
   total_phases: 7
-  completed_phases: 6
-  total_plans: 17
-  completed_plans: 35
-  percent: 86
+  completed_phases: 7
+  total_plans: 38
+  completed_plans: 38
+  percent: 100
 ---
 
 # Project State
