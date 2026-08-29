@@ -49,7 +49,7 @@ utils	89.7
 #     table/three:同 commit 新增的 0.0 校准行(新 key 初始校准,非下调),
 #     后续 wave 3 / P2 阶段补测后逐 plan bump。
 components/shared	35.5
-components/dashboard	48.1
+components/dashboard	53.7
 components/layout	14.1
 components/CronSelector	45.1
 components/captcha	44.9
