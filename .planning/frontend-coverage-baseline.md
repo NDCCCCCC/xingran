@@ -107,6 +107,7 @@
 | 2026-08-30 | Phase 88 R78 ADConfigPage + VDI detail 渲染 | 51.78 | 21574 | 11173 | | | 88-R78 | - |
 | 2026-08-30 | Phase 88 R79 AD groups + RPA EditModal + ScheduleManagement | 51.85 | 21574 | 11188 | | | 88-R79 | duty 51.9→54.1, operations 29.5→29.6 |
 | 2026-08-30 | Phase 88 R80 AD users + network backups | 51.94 | 21574 | 11206 | | | 88-R80 | network 48.1→48.6 |
+| 2026-08-30 | Phase 88 R81 network devices | 51.94 | 21574 | 11207 | | | 88-R81 | - |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
