@@ -35,11 +35,11 @@ update_trigger: v1.27 roadmap created — 7 phases (75-81) / 19 reqs 100% mapped
 - ✅ **v1.25 系统设置页面布局重构 (Settings Page Layout Redesign)** — Phase 70 (shipped 2026-08-19)
 - ✅ **Phase 63 前端工具链自动化 (Frontend Toolchain Automation)** — Phase 63 (shipped 2026-08-20)
 - ✅ **v1.26 后端测试覆盖率优秀 (Backend Test Coverage Excellence)** — Phases 71-74 — **SHIPPED 2026-08-22** (weighted 12.8→55.5, 0%-pkg 33→5, 4-layer gate + diff coverage live; SC-a shortfall honestly documented; phase 详情已归档 `.planning/milestones/v1.26-phases/`)
-- **v1.27 后端测试覆盖率优秀 II (Backend Test Coverage Excellence II)** — Phases 75-81 — **IN PROGRESS 2026-08-23**(weighted 55.60 → ≥70, 5 结构阻塞包 + TAIL 长尾逐一 ≥70, 15 项 QUIRK 全修, miniredis/httpmock 零 Docker 基建)
+- **v1.27 后端测试覆盖率优秀 II (Backend Test Coverage Excellence II)** — Phases 75-81 — **SHIPPED 2026-08-28**(weighted 55.60 → 78.0%, 19/19 requirements, threshold 77.5)
 
 ---
 
-## Current Milestone: v1.27 后端测试覆盖率优秀 II (Backend Test Coverage Excellence II) — IN PROGRESS
+## Current Milestone: v1.27 后端测试覆盖率优秀 II (Backend Test Coverage Excellence II) — SHIPPED
 
 **Goal:** 后端 Go 加权平均测试覆盖率 **55.60% → ≥70%**(收掉 v1.26 SC-a 缺口 6287 stmts,含数学修正后的 TAIL 长尾),5 结构阻塞包 + 长尾包逐一 ≥70%,15 项 QUIRK 全部修复。
 
@@ -114,7 +114,7 @@ Phase 77-80 全部完成
 
 ---
 
-### Phase 76: 测试基建落地 (test doubles + 注入缝)
+### Phase 76: 测试基建落地 (test doubles + 注入缝) ✅ SHIPPED 2026-08-25
 
 **Goal:** 引入 miniredis/httpmock 两个 test-only 依赖并落地全部注入缝(Driver 工厂 / LDAPClientIface / re-exec stub / AST 守护),零 Docker、Windows 本地与 ubuntu CI 同构,使 5 个结构阻塞包的覆盖工作不再被"没有真实依赖基建"卡死。
 
@@ -147,7 +147,7 @@ Phase 77-80 全部完成
 
 ---
 
-### Phase 77: 阻塞包攻破·零基建先行 (operations + agent/server)
+### Phase 77: 阻塞包攻破·零基建先行 (operations + agent/server) ✅ SHIPPED 2026-08-27
 
 **Goal:** 用既有 sqlite/httptest/假策略先例攻投入产出排名前二的 operations 与 agent/server,双双越过 70% 线。
 
@@ -290,11 +290,7 @@ Phase 77-80 全部完成
 3. 4 层 gate(weighted-avg / P1 floor exit 4 / P2 floor exit 5 / PR diff coverage ≥80%)在收口 commit 上 CI 全绿,且 milestone 全程无 gate 倒退记录
 4. milestone audit 报告落盘:19/19 需求核验、15 项 QUIRK 关闭清单、SC-a..e 证据链、v1.26 SC-a 缺口(6287 stmts)收口数学
 
-**Plans**: TBD(建议 3)
-
-- 81-01 全量重测 + threshold ratchet 55.5 → 实测 ≥70 + coverage-baseline.md 回填
-- 81-02 P2_RATCHET 豁免行删除 + floor 回落 70 全量 + CI 验证
-- 81-03 milestone audit(镜像 74-11 收口流程 + v1.26 74-MILESTONE-AUDIT 模式)
+**Plans**: 3(81-01 重测+ratchet ✅ / 81-02 豁免删除+push+CI ✅ / 81-03 audit ✅)
 
 **Notes**:
 
@@ -308,14 +304,14 @@ Phase 77-80 全部完成
 | Phase | Status | Plans | Requirements | Started | Completed |
 |-------|--------|-------|--------------|---------|-----------|
 | Phase 75 QUIRK 行为修正 | SHIPPED | 6/6 | QUIRK-01..03 | 2026-08-23 | 2026-08-23 |
-| Phase 76 测试基建落地 | IN PROGRESS (planned) | 0/5 | INFRA-01..05 | 2026-08-23 | - |
-| Phase 77 阻塞包·零基建 | Not started | 0/5 | BLOCK-01, BLOCK-02 | - | - |
-| Phase 78 阻塞包·基建解锁 | In progress | 2/7 (78-01+78-02 done; 78-03..07 pending) | BLOCK-03..05 | - | - |
-| Phase 79 长尾·services root | Not started | 0/6 (建议) | TAIL-01 | - | - |
-| Phase 80 长尾·scheduler+碎包 | Not started | 0/5 (建议) | TAIL-02, TAIL-03 | - | - |
-| Phase 81 收口·ratchet+gate | Not started | 0/3 (建议) | GATE-01..03 | - | - |
+| Phase 76 测试基建落地 | SHIPPED | 5/5 | INFRA-01..05 | 2026-08-23 | 2026-08-25 |
+| Phase 77 阻塞包·零基建 | SHIPPED | 5/5 | BLOCK-01, BLOCK-02 | 2026-08-25 | 2026-08-27 |
+| Phase 78 阻塞包·基建解锁 | SHIPPED | 7/7 | BLOCK-03..05 | 2026-08-26 | 2026-08-27 |
+| Phase 79 长尾·services root | SHIPPED | 6/6 | TAIL-01 | 2026-08-27 | 2026-08-28 |
+| Phase 80 长尾·scheduler+碎包 | SHIPPED | 5/5 | TAIL-02, TAIL-03 | 2026-08-28 | 2026-08-28 |
+| Phase 81 收口·ratchet+gate | SHIPPED | 3/3 | GATE-01..03 | 2026-08-28 | 2026-08-28 |
 
-**Total:** 7 phases / 19 requirements (3/19 done — 100% mapped,无孤儿)
+**Total:** 7 phases / 19 requirements (19/19 done — 100% mapped,无孤儿)
 
 ---
 
@@ -372,4 +368,4 @@ Test Infrastructure
 
 ---
 
-*Last updated: 2026-08-24 — Phase 77 planned: 5 plans / 3 waves(BLOCK-01 → 77-01/02/03,BLOCK-02 → 77-04/05;wave 1 = 77-01 ∥ 77-04(包互斥)→ wave 2 = 77-02 ∥ 77-05 → wave 3 = 77-03 收口 BLOCK-01;Q-77-A/B 判修级 quirk 排入 77-05,3 var seam × 15 处机械替换口径按 77-PATTERNS 实测修正)。此前 2026-08-23 Phase 76 planned: 5 plans / 3 waves(INFRA-01..05 全映射)。v1.27 roadmap 于 2026-08-23 drafted:7 phases (75-81) / 19 requirements / 100% mapped。QUIRK-first 排序(IncrementBy 最先解锁 core captcha),零 Docker 双环境同构,gap-math 6287 stmts(BLOCK ~2402 + TAIL ~3885)。v1.26 已 SHIPPED 2026-08-22(详情归档 `.planning/milestones/v1.26-phases/`)。*
+*Last updated: 2026-08-28 — Phase 77 planned: 5 plans / 3 waves(BLOCK-01 → 77-01/02/03,BLOCK-02 → 77-04/05;wave 1 = 77-01 ∥ 77-04(包互斥)→ wave 2 = 77-02 ∥ 77-05 → wave 3 = 77-03 收口 BLOCK-01;Q-77-A/B 判修级 quirk 排入 77-05,3 var seam × 15 处机械替换口径按 77-PATTERNS 实测修正)。此前 2026-08-23 Phase 76 planned: 5 plans / 3 waves(INFRA-01..05 全映射)。v1.27 roadmap 于 2026-08-23 drafted:7 phases (75-81) / 19 requirements / 100% mapped。QUIRK-first 排序(IncrementBy 最先解锁 core captcha),零 Docker 双环境同构,gap-math 6287 stmts(BLOCK ~2402 + TAIL ~3885)。v1.26 已 SHIPPED 2026-08-22(详情归档 `.planning/milestones/v1.26-phases/`)。*

@@ -618,7 +618,7 @@ PACKAGE    43893    31119  70.90%
 - 实测命令: `go test -count=1 -coverprofile=coverage.out ./...` (exit 0) + `bash .github/scripts/check-coverage.sh coverage.out .coverage-threshold` (exit 0, 全部 PASS 行见上方 gate 输出)
 - internal/services root 单包口径: `go test -count=1 -coverprofile ./internal/services/` → 445s, 81.6% (5202/4245)
 - device 家族 Tier-2 (executor 路径) 通过公共构造器装配 + `device.SeedConnectionForTesting` (D-79-02 唯一豁免生产树 touch) 种子 FileTransport 连接实现; 详见 79-06-SUMMARY
-- `-race` 本地不可执行 (Windows cgo 工具链故障, 与 79-01..05 同源), 由 ci.yml Linux race job 兜底
+- `-race` 本地不可执行 (Windows cgo 工具链故障);**ci.yml 无 race job**(四 job:backend/coverage-diff/frontend/frontend-coverage-diff),`-race` 不在 v1.27 gate 口径(D-01 禁 race 进 coverage 跑);更正见 v1.27-MILESTONE-AUDIT.md
 - **Ratchet 落地**: 55.5% → 70.9% (实测), `.coverage-threshold` 不动 — Phase 81 收口按 UP-ONLY 纪律 bump; 本行为 v1.27 milestone 的加权平均贡献段
 
 > **Ratchet note (D-04):** The `commit` column on the Phase 79 后 row reads
