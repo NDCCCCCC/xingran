@@ -34,3 +34,39 @@ if (typeof globalThis.ResizeObserver === "undefined") {
   (globalThis as unknown as { ResizeObserver: typeof ResizeObserverStub }).ResizeObserver =
     ResizeObserverStub;
 }
+
+// Phase 88 Batch77 — FileReader polyfill for jsdom(duty/management/excelUtils 等
+// 使用 FileReader.readAsBinaryString 的工具测试需要)
+class FileReaderStub {
+  onload: ((e: ProgressEvent) => void) | null = null;
+  onerror: ((e: ProgressEvent) => void) | null = null;
+  onprogress: ((e: ProgressEvent) => void) | null = null;
+  result: string | ArrayBuffer | null = null;
+  readAsBinaryString(_file: Blob): void {
+    /* per-test override */
+  }
+  readAsText(_file: Blob, _encoding?: string): void {}
+  readAsArrayBuffer(_file: Blob): void {}
+  readAsDataURL(_file: Blob): void {}
+  abort(): void {}
+  addEventListener(): void {}
+  removeEventListener(): void {}
+  dispatchEvent(): boolean {
+    return true;
+  }
+}
+if (typeof globalThis.FileReader === "undefined") {
+  (globalThis as unknown as { FileReader: typeof FileReaderStub }).FileReader =
+    FileReaderStub as unknown as typeof FileReader;
+}
+// 强制覆盖(jsdom 的 FileReader 是真实但不可用的实现,FileReaderStub 更稳)
+Object.defineProperty(globalThis, "FileReader", {
+  writable: true,
+  configurable: true,
+  value: FileReaderStub,
+});
+Object.defineProperty(window, "FileReader", {
+  writable: true,
+  configurable: true,
+  value: FileReaderStub,
+});

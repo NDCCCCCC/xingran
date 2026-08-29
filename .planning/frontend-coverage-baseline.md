@@ -103,6 +103,7 @@
 | 2026-08-30 | Phase 88 R74 WorkstationDeviceTable + ExecutionDetail | 51.03 | 21574 | 11010 | | | 88-R74 | comp-ops 35.7 | comp-ops 36.2 |
 | 2026-08-30 | Phase 88 R75 AccountPoolTab + 4 settings 页 | 51.04 | 21574 | 11012 | | | 88-R75 | - | - |
 | 2026-08-30 | Phase 88 R76 useLogData + workers columns + NoticeList | 51.41 | 21574 | 11092 | | | 88-R76 | monitor 46.0→56.4, system 45.0→46.1, operations 26.9→28.7 |
+| 2026-08-30 | Phase 88 R77 ComponentListTab + duty excelUtils + FileReader stub | 51.79 | 21574 | 11174 | | | 88-R77 | duty 46.3→51.9, operations 28.7→29.5, comp-dashboard 37.7→40.1 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
