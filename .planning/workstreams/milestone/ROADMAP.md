@@ -1,6 +1,6 @@
 ---
-last_updated: 2026-08-24
-update_trigger: v1.27 roadmap created — 7 phases (75-81) / 19 reqs 100% mapped / QUIRK-first sequencing (IncrementBy 最先解锁 core captcha); 2026-08-24 Phase 77 planned (5 plans / 3 waves)
+last_updated: 2026-08-29
+update_trigger: v1.27 archived 2026-08-29 — phase dirs (75-81) moved to .planning/milestones/v1.27-phases/; this file's phase detail kept as audit reference; archive links: v1.27-ROADMAP.md + v1.27-REQUIREMENTS.md
 ---
 
 # Roadmap: XingRan-Next 运维管理系统
