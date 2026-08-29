@@ -101,6 +101,7 @@
 | 2026-08-30 | Phase 88 R72 layout TabBar 渲染 | 50.83 | 21574 | 10967 | | | 88-R72 | - | - |
 | 2026-08-30 | Phase 88 R73 CronSelector utils cron 工具测试 | 50.91 | 21574 | 10985 | | | 88-R73 | cronsel 37.4 | cronsel 45.1 |
 | 2026-08-30 | Phase 88 R74 WorkstationDeviceTable + ExecutionDetail | 51.03 | 21574 | 11010 | | | 88-R74 | comp-ops 35.7 | comp-ops 36.2 |
+| 2026-08-30 | Phase 88 R75 AccountPoolTab + 4 settings 页 | 51.04 | 21574 | 11012 | | | 88-R75 | - | - |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
