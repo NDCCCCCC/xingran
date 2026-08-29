@@ -119,6 +119,7 @@
 | 2026-08-30 | Phase 88 R90 useScheduleData + useFloorPlanEditor | 53.80 | 21574 | 11608 | | | 88-R90 | duty 61.0→66.0, operations 30.5→31.3 |
 | 2026-08-30 | Phase 88 R91 useGeocoding + network discoveries | 53.91 | 21574 | 11631 | | | 88-R91 | network 49.9→50.1, operations 31.3→31.8 |
 | 2026-08-30 | Phase 88 R92 operations floors + system notice | 53.92 | 21574 | 11634 | | | 88-R92 | operations 31.8→31.9, system 46.1→46.2 |
+| 2026-08-30 | Phase 88 R93 vdi VirtualMachineList 渲染 | 53.92 | 21574 | 11634 | | | 88-R93 | vdi 30.2→30.4 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
