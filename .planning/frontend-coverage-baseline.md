@@ -98,6 +98,7 @@
 | 2026-08-30 | Phase 88 R69 useBackupDiff + useScheduleModals | 50.56 | 21574 | 10909 | | | 88-R69 | net 46.7/duty 41.7 | net 48.1/duty 44.6 |
 | 2026-08-30 | Phase 88 R70 useDictActions hook 测试 | 50.67 | 21574 | 10932 | | | 88-R70 | sys 44.3 | sys 45.0 |
 | 2026-08-30 | Phase 88 R71 useHolidayModals 238 行大 hook | 50.83 | 21574 | 10967 | | | 88-R71 | duty 44.6 | duty 46.3 |
+| 2026-08-30 | Phase 88 R72 layout TabBar 渲染 | 50.83 | 21574 | 10967 | | | 88-R72 | - | - |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
