@@ -31,7 +31,10 @@ previous_update: 2026-08-23 v1.27 started (backend coverage 55.6->>=70%, milesto
 
 ---
 
-## Current Milestone: v1.27 后端测试覆盖率优秀 II (Backend Coverage Excellence II)
+## Current Milestone: v1.27 后端测试覆盖率优秀 II (Backend Coverage Excellence II) — ✅ SHIPPED + ARCHIVED 2026-08-29
+
+<details>
+<summary>v1.27 ROADMAP (archived) — 点击展开</summary>
 
 **Goal:** 加权平均覆盖率 55.6% → **≥70%**(收掉 v1.26 SC-a 缺口),5 个结构阻塞包逐一攻破至 ≥70%,并修复全部 15 个 v1.26 锁定的 QUIRK。
 
@@ -49,7 +52,20 @@ previous_update: 2026-08-23 v1.27 started (backend coverage 55.6->>=70%, milesto
 
 **范围边界:** 覆盖率补齐 + QUIRK 修复;不做新业务功能;SCALE-02 工具包尾巴(gormutil/query/logger)不在本期范围。
 
-**Progress:** Phase 75 (15 QUIRKS + M-2) ✅ COMPLETE 2026-08-22 · Phase 76 (测试基建: miniredis/httpmock test-only 落地 + 4 类注入缝 Driver 工厂/LDAPClientIface 16→20/re-exec stub/AST 守护, INFRA-01..05 6/6 must-haves, Windows+ubuntu CI 双绿零 Docker) ✅ COMPLETE 2026-08-23 · Phase 77+ 待执行
+**Progress (final):** Phase 75 (15 QUIRKS) ✅ · Phase 76 (5 INFRA) ✅ · Phase 77 (BLOCK-01/02 operations+agent) ✅ · Phase 78 (BLOCK-03/04/05 core+device+addomain) ✅ · Phase 79 (TAIL-01 services root) ✅ · Phase 80 (TAIL-02/03 scheduler+碎包) ✅ · Phase 81 (GATE-01/02/03 ratchet closeout + audit) ✅
+
+**Ship metrics (CI run 33243477394 PASS):**
+- Weighted avg: 55.60% → 78.12% (+22.52pp)
+- Threshold ratchet: 55.5 → 77.5 (UP-only)
+- P2 floor 10/10 × 70% PASS
+- 3 P2_RATCHET lines removed (core/device/agent-server)
+- BLOCK packages cleared: 4/5 (BLOCK-05 addomain 58% documented exemption — 12pp gap due to go-ldap/v3 BER incompatibility, gate impact = 0)
+- TAIL-01/02/03 all cleared
+- 15 canonical QUIRKs closed + ~100 new locked (deferred to future milestones)
+
+**Archive location:** `.planning/milestones/v1.27-{ROADMAP,REQUIREMENTS}.md`
+
+</details>
 
 ---
 

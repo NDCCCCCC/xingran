@@ -35,7 +35,7 @@ update_trigger: v1.27 roadmap created — 7 phases (75-81) / 19 reqs 100% mapped
 - ✅ **v1.25 系统设置页面布局重构 (Settings Page Layout Redesign)** — Phase 70 (shipped 2026-08-19)
 - ✅ **Phase 63 前端工具链自动化 (Frontend Toolchain Automation)** — Phase 63 (shipped 2026-08-20)
 - ✅ **v1.26 后端测试覆盖率优秀 (Backend Test Coverage Excellence)** — Phases 71-74 — **SHIPPED 2026-08-22** (weighted 12.8→55.5, 0%-pkg 33→5, 4-layer gate + diff coverage live; SC-a shortfall honestly documented; phase 详情已归档 `.planning/milestones/v1.26-phases/`)
-- **v1.27 后端测试覆盖率优秀 II (Backend Test Coverage Excellence II)** — Phases 75-81 — **SHIPPED 2026-08-28**(weighted 55.60 → 78.0%, 19/19 requirements, threshold 77.5)
+- ✅ **v1.27 后端测试覆盖率优秀 II (Backend Test Coverage Excellence II)** — Phases 75-81 — **SHIPPED 2026-08-29**(CI run 33243477394 PASS; weighted 55.60 → 78.12%, threshold 77.5; P2 floor 10/10 × 70%; 18/19 requirements validated; full archive [`.planning/milestones/v1.27-{ROADMAP,REQUIREMENTS}.md`](.planning/milestones/))
 
 ---
 
