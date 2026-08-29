@@ -1,6 +1,9 @@
 ---
 plan: quick-quirk-p2
-status: pending
+status: complete
+archived: 2026-08-29
+archived_via: e8fde3d
+fix_commit: 05afbc84
 ---
 
 # QUIRK-P2: DeviceConnectionPool.startCleanup goroutine 泄漏

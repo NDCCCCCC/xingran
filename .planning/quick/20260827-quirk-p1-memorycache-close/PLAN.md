@@ -1,6 +1,9 @@
 ---
 plan: quick-quirk-p1
-status: pending
+status: complete
+archived: 2026-08-29
+archived_via: e8fde3d
+fix_commit: 42829839
 ---
 
 # QUIRK-P1: MemoryCache.Close() 二次调用 panic
