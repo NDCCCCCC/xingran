@@ -102,6 +102,9 @@ func TestMx78_GetServerInfo(t *testing.T) {
 	svc := NewMetricsCacheService(c)
 	t.Cleanup(func() { svc.Stop() })
 
+	// 81-01 ci-flake fix:确保两次 CPU 采样有时间差 — CI runner 空闲下 /proc/stat 差值 0 导致 GetServerInfo 报错(M-1 在 v1.26 metrics_cache_74_08 行已记录,本次扩到 GetServerInfo)
+	burnCPUForMetrics(t)
+
 	ctx := context.Background()
 	info, err := svc.GetServerInfo(ctx)
 	require.NoError(t, err)
@@ -132,4 +135,13 @@ func TestMx78_Stop_Idempotent(t *testing.T) {
 		svc.Stop()
 		svc.Stop()
 	}, "QUIRK-02 sync.Once 幂等,三次调用必不 panic")
+}
+
+// burnCPUForMetrics 制造 CPU 非零差值采样(M-1 提示:空闲 runner /proc/stat 差 0)。
+// 81-01 ci-flake fix 扩展至 GetServerInfo(同源)。两次采样间 burn >= 200ms 既保证差值,
+func burnCPUForMetrics(t *testing.T) {
+	t.Helper()
+	deadline := time.Now().Add(200 * time.Millisecond)
+	for time.Now().Before(deadline) {
+	}
 }
