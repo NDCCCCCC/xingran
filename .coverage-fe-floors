@@ -21,7 +21,7 @@ pages/ad	72.4
 pages/ad-domain	27.6
 pages/asset	40.15
 pages/dashboard-system	34.9
-pages/duty	54.1
+pages/duty	57.9
 pages/knowledge	50.3
 pages/login	61.6
 pages/monitor	56.4
@@ -49,7 +49,7 @@ utils	89.7
 #     table/three:同 commit 新增的 0.0 校准行(新 key 初始校准,非下调),
 #     后续 wave 3 / P2 阶段补测后逐 plan bump。
 components/shared	35.5
-components/dashboard	53.7
+components/dashboard	55.9
 components/layout	14.1
 components/CronSelector	45.1
 components/captcha	44.9
