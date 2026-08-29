@@ -1,73 +1,78 @@
 /**
- * Phase 85 — workstations constants 纯函数测试
+ * Phase 88 Batch94 — operations/workstations/constants 单元测试
  */
 import { describe, it, expect } from "vitest";
 import {
-  STATUS_OPTIONS,
-  TYPE_OPTIONS,
   getWorkstationTypeText,
   getWorkstationStatusText,
   getWorkstationStatusColor,
+  renderWorkstationTypeTag,
+  renderWorkstationStatusTag,
   toWorkstationNode,
+  STATUS_OPTIONS,
+  TYPE_OPTIONS,
 } from "../constants";
-import type { WorkstationOps } from "@/types";
 
-describe("workstations constants (D-12)", () => {
-  it("TYPE_OPTIONS is non-empty", () => {
-    expect(TYPE_OPTIONS.length).toBeGreaterThan(0);
+describe("workstations constants", () => {
+  it("STATUS_OPTIONS 三态", () => {
+    expect(STATUS_OPTIONS).toHaveLength(3);
   });
 
-  it("STATUS_OPTIONS is non-empty", () => {
-    expect(STATUS_OPTIONS.length).toBeGreaterThan(0);
-  });
-});
-
-describe("getWorkstationTypeText", () => {
-  it("returns label for known type codes", () => {
-    // TYPE_OPTIONS 内任一 code 都应能取到非空 text
-    const first = TYPE_OPTIONS[0] as any;
-    expect(getWorkstationTypeText(first.value)).toBe(first.label);
+  it("TYPE_OPTIONS 三类型", () => {
+    expect(TYPE_OPTIONS).toHaveLength(3);
+    expect(TYPE_OPTIONS[0].value).toBe(0);
   });
 
-  it("returns fallback for unknown type", () => {
-    expect(getWorkstationTypeText(99999)).toBeTruthy();
-  });
-});
-
-describe("getWorkstationStatusText", () => {
-  it("returns label for status 0 (启用)", () => {
-    expect(getWorkstationStatusText(0)).toBeTruthy();
+  it("getWorkstationTypeText 已知/未知", () => {
+    expect(getWorkstationTypeText(0)).toBe("固定工位");
+    expect(getWorkstationTypeText(1)).toBe("灵活工位");
+    expect(getWorkstationTypeText(99)).toBe("-");
   });
 
-  it("returns label for status 1 (停用)", () => {
-    expect(getWorkstationStatusText(1)).toBeTruthy();
+  it("getWorkstationStatusText 已知/未知", () => {
+    expect(getWorkstationStatusText(0)).toBeDefined();
+    expect(getWorkstationStatusText(99)).toBe("-");
   });
-});
 
-describe("getWorkstationStatusColor", () => {
-  it("returns color string for known status", () => {
-    expect(getWorkstationStatusColor(0)).toBeTruthy();
-    expect(getWorkstationStatusColor(1)).toBeTruthy();
+  it("getWorkstationStatusColor 已知/未知", () => {
+    expect(getWorkstationStatusColor(0)).toBeDefined();
+    expect(getWorkstationStatusColor(99)).toBe("default");
   });
-});
 
-describe("toWorkstationNode", () => {
-  it("converts WorkstationOps to WorkstationNode", () => {
-    const ws: Partial<WorkstationOps> = {
-      id: "ws-1",
-      name: "A01",
+  it("renderWorkstationTypeTag 返回 Tag", () => {
+    const node = renderWorkstationTypeTag(0);
+    expect(node).toBeDefined();
+    expect(node.type).toBeDefined();
+  });
+
+  it("renderWorkstationStatusTag 返回带 color 的 Tag", () => {
+    const node = renderWorkstationStatusTag(0);
+    expect(node).toBeDefined();
+  });
+
+  it("toWorkstationNode 转换", () => {
+    const node = toWorkstationNode({
+      id: "w1",
+      name: "WS001",
       positionX: 100,
       positionY: 200,
-      width: 80,
-      depth: 60,
+      width: 180,
+      depth: 80,
       status: 0,
-      workstationType: 1,
+      type: 1,
       rotation: 90,
-    } as WorkstationOps;
-    const node = toWorkstationNode(ws);
-    expect(node.id).toBe("ws-1");
+    } as any);
+    expect(node.id).toBe("w1");
     expect(node.x).toBe(100);
     expect(node.y).toBe(200);
     expect(node.rotation).toBe(90);
+  });
+
+  it("toWorkstationNode 缺字段回退", () => {
+    const node = toWorkstationNode({ id: "w2", name: "WS002" } as any);
+    expect(node.x).toBe(0);
+    expect(node.y).toBe(0);
+    expect(node.rotation).toBe(0);
+    expect(node.width).toBe(160);
   });
 });
