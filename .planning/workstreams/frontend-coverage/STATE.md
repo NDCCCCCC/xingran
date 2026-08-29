@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.28
-milestone_name: milestone
+milestone_name: 前端测试覆盖率优秀
 status: executing
-stopped_at: Phase 84 context gathered
-last_updated: "2026-08-27T16:25:49.679Z"
-last_activity: 2026-08-27
+stopped_at: "Phase 88 batch 推进中 — batch47 完成 (GLOBAL 45.87%), active workstream 已切回 frontend-coverage, 用户指令持续 batch 至 70% 目标"
+last_updated: "2026-08-29T12:30:00.000Z"
+last_activity: 2026-08-29
 progress:
   total_phases: 7
   completed_phases: 6
@@ -21,14 +21,26 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-23) — v1.28 Current Milestone 段
 
 **Core value:** 前端全量口径测试覆盖率达到优秀（≥70%），CI 防倒退 gate 对称后端 v1.26 治理，使前端覆盖率从此不可无声倒退
-**Current focus:** Phase 88 收口 — 页面渲染模式批量推进(GLOBAL 34.02%)
+**Current focus:** Phase 88 收口 — batch 模式持续推进至 70% (batch47 完成, GLOBAL 45.87%)
 
 ## Current Position
 
 Phase: 88
-Plan: 88-PROGRESS(页面渲染模式迭代中)
-Status: Executing Phase 88
-Last activity: 2026-08-28
+Plan: 88-PROGRESS(batch 模式迭代中 — batch24..47 已完成)
+Status: Executing Phase 88 (batch 循环: scout → 测试 → coverage → gate → ratchet → commit → push → CI)
+Last activity: 2026-08-29
+
+### Batch 推进记录 (batch41 起,详见 .planning/frontend-coverage-baseline.md ratchet 表)
+
+| Batch | 目标 | GLOBAL | Floor bump | Commit |
+|-------|------|--------|-----------|--------|
+| 41 | workorder useTemplateActions | 45.12→45.13 | workorder 44.2 | 19d7815 |
+| 42 | system menu useMenuActions | 45.36 | sys 34.1→36.9 | c600aa6 |
+| 43 | network useExecutionModals | 45.55 | net 36.8→38.9 | 347ed16 |
+| 44 | shared ExcelExport | 45.69 | shared 27.4→30.8 | 0abf31d |
+| 45 | shared ExcelImport | 45.78 | shared 30.8→33.0 | 3709c04 |
+| 46 | shared ImageGallery | 45.86 | shared 33.0→34.9 | 046a730 |
+| 47 | shared ActionButtons | 45.87 | shared 34.9→35.4 | 26ae79b |
 
 Progress: [████████░░] 80%（milestone 内 8/10 plans；Phase 83 内 3/5 plans）
 
@@ -86,9 +98,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-27T08:20:36.880Z
-Stopped at: Phase 84 context gathered
-Resume file: .planning/workstreams/frontend-coverage/phases/84-p1-70/84-CONTEXT.md
+Last session: 2026-08-29
+Stopped at: Phase 88 batch47 完成 (GLOBAL 45.87%), 持续 batch 推进中
+Resume file: .planning/workstreams/frontend-coverage/phases/88-final-70/88-PROGRESS.md
 
 ## Performance Metrics
 
