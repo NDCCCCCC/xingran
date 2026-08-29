@@ -63,6 +63,8 @@ const COMMON_ENDPOINT_SHAPES: Record<string, unknown> = {
   "/system/posts/list": { data: { list: [], total: 0 } },
   "/system/menus/list": { data: { list: [], total: 0 } },
   "/system/dict/data/list": { data: { list: [], total: 0 } },
+  "/workorder/categories/list": { data: [] },
+  "/workorder/orders/categories": { data: [] },
 };
 
 /** 以 /statistics 或 /dropdown-options 结尾的端点按语义给形状 */
