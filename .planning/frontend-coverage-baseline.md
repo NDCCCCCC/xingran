@@ -123,6 +123,7 @@
 | 2026-08-30 | Phase 88 R94 useWorkstationView + constants | 53.97 | 21574 | 11643 | | | 88-R94 | operations 31.9→32.1 |
 | 2026-08-30 | Phase 88 R95 building-spaces-3d utils | 54.13 | 21574 | 11680 | | | 88-R95 | operations 32.1→33.0 |
 | 2026-08-30 | Phase 88 R96 system apikeys 渲染 | 54.13 | 21574 | 11680 | | | 88-R96 | - |
+| 2026-08-30 | Phase 88 R97 building-spaces-3d components utils | 54.33 | 21574 | 11723 | | | 88-R97 | operations 33.0→34.2 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
