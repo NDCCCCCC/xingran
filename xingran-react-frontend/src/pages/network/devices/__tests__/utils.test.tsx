@@ -1,31 +1,42 @@
 /**
- * Phase 86 — devices utils 测试
+ * Phase 88 Batch187 — pages/network/devices/utils 测试
  */
 import { describe, it, expect } from "vitest";
-import { getOptionLabel, getStatusColor } from "../utils";
 
-describe("getOptionLabel", () => {
-  it("finds label for matching value", () => {
-    const opts = [
-      { value: 1, label: "启用" },
-      { value: 0, label: "停用" },
-    ];
-    expect(getOptionLabel(opts, 1)).toBe("启用");
-    expect(getOptionLabel(opts, 0)).toBe("停用");
-  });
-
-  it("returns undefined for missing value", () => {
-    expect(getOptionLabel([{ value: 1, label: "a" }], 99)).toBeUndefined();
-  });
-
-  it("handles string values", () => {
-    expect(getOptionLabel([{ value: "k", label: "标签" }], "k")).toBe("标签");
-  });
+vi.mock("@/lib/api", async () => {
+  const { createApiTestingModule } = await import("@/test/utils/createApiMock");
+  return createApiTestingModule();
 });
 
-describe("getStatusColor", () => {
-  it("returns color for status 0/1", () => {
-    expect(getStatusColor(0)).toBeTruthy();
-    expect(getStatusColor(1)).toBeTruthy();
+import { getOptionLabel, getStatusColor } from "../utils";
+import { VENDOR_OPTIONS } from "../constants";
+
+describe("network/devices/utils", () => {
+  it("getOptionLabel 找到值", () => {
+    expect(getOptionLabel(VENDOR_OPTIONS, "huawei")).toBe("Huawei");
+  });
+
+  it("getOptionLabel 找不到 → undefined", () => {
+    expect(getOptionLabel(VENDOR_OPTIONS, "unknown")).toBeUndefined();
+  });
+
+  it("getOptionLabel 数字值", () => {
+    expect(getOptionLabel(VENDOR_OPTIONS as any, 1)).toBeUndefined();
+  });
+
+  it("getStatusColor 0 → success", () => {
+    expect(getStatusColor(0)).toBe("success");
+  });
+
+  it("getStatusColor 1 → error", () => {
+    expect(getStatusColor(1)).toBe("error");
+  });
+
+  it("getStatusColor 2 → default", () => {
+    expect(getStatusColor(2)).toBe("default");
+  });
+
+  it("getStatusColor 未知 → default", () => {
+    expect(getStatusColor(99)).toBe("default");
   });
 });
