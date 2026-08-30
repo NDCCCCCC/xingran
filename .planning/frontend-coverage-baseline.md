@@ -319,3 +319,12 @@ TOTAL                            3958       215    5.43%    118
 - **累计**: +12.71pp from 45.13% 起点
 - **floor bump**: components/CronSelector 45.1 → 63.4 (实测 63.92%)
 - **push**: cd14455 → origin/main
+
+## Batch164-168 (2026-08-31)
+
+- **新增测试**: InnovativeLayout / BaseEditModal / PageTitle /
+  LayoutProvider / typeGuards (4 files, 24 tests; ConfigProvider 删除失败)
+- **全局覆盖率**: 57.89% (57.84% → 57.89%, +0.05pp)
+- **累计**: +12.76pp from 45.13% 起点
+- **floor bump**: design-system 78.9 → 86.7 (实测 87.21%)
+- **push**: d65452d → origin/main
