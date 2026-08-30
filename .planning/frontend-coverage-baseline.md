@@ -126,6 +126,7 @@
 | 2026-08-30 | Phase 88 R97 building-spaces-3d components utils | 54.33 | 21574 | 11723 | | | 88-R97 | operations 33.0→34.2 |
 | 2026-08-30 | Phase 88 R98 AddressInput + BaiduMapScript | 54.49 | 21574 | 11757 | | | 88-R98 | operations 34.2→35.1 |
 | 2026-08-30 | Phase 88 R99 dashboardService + FloorPlanEditor panZoom | 54.77 | 21574 | 11817 | | | 88-R99 | shared 35.5→38.6 |
+| 2026-08-30 | Phase 88 R101 FloorView3D | 54.90 | 21574 | 11844 | | | 88-R101 | operations 35.1→35.9 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
