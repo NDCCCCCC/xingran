@@ -247,3 +247,12 @@ TOTAL                            3958       215    5.43%    118
 - **GOV-04 profile 主路径首次真实触发（补 82-REVIEW IN-06）**: 本 run 是 CR-01/WR-01~03 四项修复合入后，diff gate 首次在真实 PR 上以"非空三类路径变更 + profile 实读"主路径运行——日志无 json 缺失软跳过提示；fail-closed exit 2 行为已由 ci.yml 注释修正（commit 55389ae）与脚本实际对齐
 - **本地前后对照（Task 2 空树合成基线）**: 修复前同 diff 有 145 行（三类路径）进入分母、diff 覆盖率 0.00% FAIL；修复后同 diff 输出 "no testable .ts/.tsx lines changed ... PASS"。合成基线前后对照与真实 CI 结论一致，CR-01 修复闭环
 - **floors 不变**: 本 plan 为验证性变更，无覆盖率变化，`.coverage-fe-floors` 未修改、不触发 D-11 ratchet
+
+## Batch117 (2026-08-30, commit cbce3d3)
+
+- **新增测试**: `src/pages/operations/workstations/hooks/__tests__/useWorkstationModals.test.tsx` (10 tests)
+- **覆盖范围**: openModal/closeModal/handleSave(new/edit/校验失败)/handleDelete/handleBatchDelete
+- **全局覆盖率**: 56.03% (55.74% → 56.03%, +0.29pp)
+- **累计**: +10.90pp from 45.13% 起点
+- **floor bump**: pages/operations 38.6 → 39.0 (实测 39.41%)
+- **push**: cbce3d3 → origin/main
