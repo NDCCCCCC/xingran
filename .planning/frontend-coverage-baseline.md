@@ -129,6 +129,7 @@
 | 2026-08-30 | Phase 88 R101 FloorView3D | 54.90 | 21574 | 11844 | | | 88-R101 | operations 35.1→35.9 |
 | 2026-08-30 | Phase 88 R102 building-spaces-3d index + BuildingView3D | 54.90 | 21574 | 11844 | | | 88-R102 | - |
 | 2026-08-30 | Phase 88 R103 dedicated-lines 渲染 | 55.29 | 21574 | 11928 | | | 88-R103 | operations 35.9→38.3 |
+| 2026-08-30 | Phase 88 R104 system user 渲染 | 55.30 | 21574 | 11930 | | | 88-R104 | system 46.2→46.3 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
