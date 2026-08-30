@@ -132,6 +132,7 @@
 | 2026-08-30 | Phase 88 R104 system user 渲染 | 55.30 | 21574 | 11930 | | | 88-R104 | system 46.2→46.3 |
 | 2026-08-30 | Phase 88 R106 dashboard MetricWidget + ChartWidget | 55.40 | 21574 | 11953 | | | 88-R106 | comp-dashboard 55.9→57.9 |
 | 2026-08-30 | Phase 88 R107 ListWidget + ProgressWidget | 55.42 | 21574 | 11957 | | | 88-R107 | - |
+| 2026-08-30 | Phase 88 R108 WidgetRenderer 路由分发 | 55.46 | 21574 | 11966 | | | 88-R108 | comp-dashboard 57.9→59.1 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
