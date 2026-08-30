@@ -272,3 +272,13 @@ TOTAL                            3958       215    5.43%    118
 - **累计**: +11.81pp from 45.13% 起点
 - **floor bump**: components/dashboard 65.4 → 69.1 (实测 69.66%)
 - **push**: 2d7eb3b → origin/main
+
+## Batch136-138 (2026-08-31)
+
+- **新增测试**: useRouteTabs / ReconciliationTimeline / HealthBadge (3 files, 18 tests)
+- **全局覆盖率**: 57.18% (56.94% → 57.18%, +0.24pp)
+- **累计**: +12.05pp from 45.13% 起点
+- **floor bumps**:
+  - components/reconciliation 60.6 → 66.8 (实测 67.36%)
+  - components/layout 14.1 → 49.4 (实测 49.90%, useRouteTabs hook 拉满)
+- **push**: 73c0a0c → origin/main
