@@ -1,50 +1,93 @@
 /**
- * Phase 86 — role utils/constants 测试
+ * Phase 88 Batch190 — pages/system/role/utils 测试
  */
-import { describe, it, expect } from "vitest";
-import { processTreeData, formatLocalTime } from "../utils";
-import { DATA_SCOPE_OPTIONS, STATUS_OPTIONS, DEFAULT_FORM_VALUES } from "../constants";
+import { describe, it, expect, vi } from "vitest";
+import { render } from "@testing-library/react";
+import { App as AntdApp } from "antd";
+import type { ReactElement, ReactNode } from "react";
 
-const menuTree: any[] = [
-  {
-    id: 1,
-    menuName: "系统管理",
-    menuType: "M",
-    children: [{ id: 11, menuName: "用户", menuType: "C" }],
-  },
-  { id: 2, menuName: "监控", menuType: "M" },
-];
-
-describe("processTreeData", () => {
-  it("processes menu tree without error", () => {
-    const result = processTreeData(menuTree);
-    expect(Array.isArray(result)).toBe(true);
-  });
-
-  it("handles empty input", () => {
-    const result = processTreeData([]);
-    expect(result).toEqual([]);
-  });
+vi.mock("@/lib/api", async () => {
+  const { createApiTestingModule } = await import("@/test/utils/createApiMock");
+  return createApiTestingModule();
 });
 
-describe("formatLocalTime", () => {
-  it("formats ISO time string", () => {
-    const r = formatLocalTime("2026-08-27T10:00:00Z");
-    expect(typeof r).toBe("string");
-    expect(r).toBeTruthy();
-  });
-});
+vi.mock("@/utils/datetime", () => ({
+  formatDateTime: vi.fn(() => "2026-08-30 10:00:00"),
+}));
 
-describe("role constants (D-12)", () => {
-  it("DATA_SCOPE_OPTIONS non-empty", () => {
-    expect(DATA_SCOPE_OPTIONS.length).toBeGreaterThan(0);
+import {
+  processTreeData,
+  renderStatusTag,
+  renderRoleName,
+  renderRoleKeyTag,
+  formatLocalTime,
+} from "../utils";
+
+function wrapper({ children }: { children: ReactNode }): ReactElement {
+  return <AntdApp>{children}</AntdApp>;
+}
+
+describe("system/role/utils", () => {
+  it("processTreeData 扁平节点", () => {
+    const nodes = [
+      { id: "1", title: "A" },
+      { id: "2", title: "B" },
+    ];
+    const result = processTreeData(nodes);
+    expect(result.length).toBe(2);
+    expect(result[0].key).toBe("1");
+    expect(result[0].title).toBe("A");
   });
 
-  it("STATUS_OPTIONS is 0/1 启停", () => {
-    expect(STATUS_OPTIONS.length).toBe(2);
+  it("processTreeData 嵌套 children", () => {
+    const nodes = [
+      {
+        id: "1",
+        title: "A",
+        children: [{ id: "2", title: "B" }],
+      },
+    ];
+    const result = processTreeData(nodes);
+    expect(result.length).toBe(1);
+    expect(result[0].children?.length).toBe(1);
+    expect(result[0].children?.[0].title).toBe("B");
   });
 
-  it("DEFAULT_FORM_VALUES defined", () => {
-    expect(DEFAULT_FORM_VALUES).toBeDefined();
+  it("processTreeData 空 children → undefined", () => {
+    const nodes = [{ id: "1", title: "A", children: [] }];
+    const result = processTreeData(nodes);
+    expect(result[0].children).toBeUndefined();
+  });
+
+  it("processTreeData 自定义 keyField/titleField", () => {
+    const nodes = [{ uuid: "x1", name: "Test" }];
+    const result = processTreeData(nodes, "uuid", "name");
+    expect(result[0].title).toBe("Test");
+  });
+
+  it("renderStatusTag 0 → 正常", () => {
+    const { baseElement } = render(<>{renderStatusTag(0)}</>, { wrapper });
+    expect(baseElement.textContent).toContain("正常");
+  });
+
+  it("renderStatusTag 1 → 停用", () => {
+    const { baseElement } = render(<>{renderStatusTag(1)}</>, { wrapper });
+    expect(baseElement.textContent).toContain("停用");
+  });
+
+  it("renderRoleName 包含图标 + 文本", () => {
+    const { baseElement } = render(<>{renderRoleName("admin")}</>, { wrapper });
+    expect(baseElement.textContent).toContain("admin");
+    expect(baseElement.querySelector(".anticon")).toBeTruthy();
+  });
+
+  it("renderRoleKeyTag → 蓝色 Tag", () => {
+    const { baseElement } = render(<>{renderRoleKeyTag("admin")}</>, { wrapper });
+    expect(baseElement.textContent).toContain("admin");
+    expect(baseElement.querySelector(".ant-tag")).toBeTruthy();
+  });
+
+  it("formatLocalTime 调 formatDateTime", () => {
+    expect(formatLocalTime("2026-01-01T00:00:00Z")).toBe("2026-08-30 10:00:00");
   });
 });
