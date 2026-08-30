@@ -282,3 +282,13 @@ TOTAL                            3958       215    5.43%    118
   - components/reconciliation 60.6 → 66.8 (实测 67.36%)
   - components/layout 14.1 → 49.4 (实测 49.90%, useRouteTabs hook 拉满)
 - **push**: 73c0a0c → origin/main
+
+## Batch139-147 (2026-08-31)
+
+- **新增测试**: heatmap / MatchTestPanel / HealthCard / NetworkExport /
+  TargetSelector / useDiscoveryPolling / MACHeatmapChart /
+  PortBindingModal / columns (9 files, 53 tests)
+- **全局覆盖率**: 57.44% (57.27% → 57.44%, +0.17pp)
+- **累计**: +12.31pp from 45.13% 起点
+- **floor bump**: components/network 63.3 → 74.1 (实测 74.69%)
+- **push**: 35483b4 → origin/main
