@@ -300,3 +300,12 @@ TOTAL                            3958       215    5.43%    118
 - **累计**: +12.39pp from 45.13% 起点
 - **floor bump**: pages/knowledge 50.3 → 57.1 (实测 57.63%)
 - **push**: 73cc27f → origin/main
+
+## Batch150-154 (2026-08-31)
+
+- **新增测试**: NoticeDetailContent / DashboardScopeSelector / AssetRow /
+  PreviewModal / BuildingCard (5 files, 36 tests)
+- **全局覆盖率**: 57.61% (57.52% → 57.61%, +0.09pp)
+- **累计**: +12.48pp from 45.13% 起点
+- **floor bump**: components/dashboard 69.1 → 70.6 (实测 71.16%)
+- **push**: 2bc1709 → origin/main
