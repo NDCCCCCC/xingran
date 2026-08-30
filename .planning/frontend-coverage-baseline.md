@@ -128,6 +128,7 @@
 | 2026-08-30 | Phase 88 R99 dashboardService + FloorPlanEditor panZoom | 54.77 | 21574 | 11817 | | | 88-R99 | shared 35.5→38.6 |
 | 2026-08-30 | Phase 88 R101 FloorView3D | 54.90 | 21574 | 11844 | | | 88-R101 | operations 35.1→35.9 |
 | 2026-08-30 | Phase 88 R102 building-spaces-3d index + BuildingView3D | 54.90 | 21574 | 11844 | | | 88-R102 | - |
+| 2026-08-30 | Phase 88 R103 dedicated-lines 渲染 | 55.29 | 21574 | 11928 | | | 88-R103 | operations 35.9→38.3 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
