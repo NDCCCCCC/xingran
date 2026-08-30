@@ -133,6 +133,7 @@
 | 2026-08-30 | Phase 88 R106 dashboard MetricWidget + ChartWidget | 55.40 | 21574 | 11953 | | | 88-R106 | comp-dashboard 55.9→57.9 |
 | 2026-08-30 | Phase 88 R107 ListWidget + ProgressWidget | 55.42 | 21574 | 11957 | | | 88-R107 | - |
 | 2026-08-30 | Phase 88 R108 WidgetRenderer 路由分发 | 55.46 | 21574 | 11966 | | | 88-R108 | comp-dashboard 57.9→59.1 |
+| 2026-08-30 | Phase 88 R110 monitor cache + server | 55.52 | 21574 | 11977 | | | 88-R110 | monitor 56.4→57.3 |
 
 ### Per-directory (起点, D-05 粒度 = src 一级目录 + pages 二级拆分 + `(src root)`/`api` 显式条目)
 
