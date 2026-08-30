@@ -292,3 +292,11 @@ TOTAL                            3958       215    5.43%    118
 - **累计**: +12.31pp from 45.13% 起点
 - **floor bump**: components/network 63.3 → 74.1 (实测 74.69%)
 - **push**: 35483b4 → origin/main
+
+## Batch148-149 (2026-08-31)
+
+- **新增测试**: FileUpload / DeptSidebar (2 files, 14 tests)
+- **全局覆盖率**: 57.52% (57.44% → 57.52%, +0.08pp)
+- **累计**: +12.39pp from 45.13% 起点
+- **floor bump**: pages/knowledge 50.3 → 57.1 (实测 57.63%)
+- **push**: 73cc27f → origin/main
