@@ -328,3 +328,13 @@ TOTAL                            3958       215    5.43%    118
 - **累计**: +12.76pp from 45.13% 起点
 - **floor bump**: design-system 78.9 → 86.7 (实测 87.21%)
 - **push**: d65452d → origin/main
+
+## Batch169-177 (2026-08-31)
+
+- **新增测试**: antdMessage / debounce / buildSearchParams / duration /
+  Layout 入口 / network command constants / duty holidays constants /
+  duty schedules utils / monitor logs utils (9 files, 75 tests)
+- **全局覆盖率**: 57.96% (57.89% → 57.96%, +0.07pp)
+- **累计**: +12.83pp from 45.13% 起点
+- **floor bump**: pages/duty 66.0 → 68.1 (实测 68.66%)
+- **push**: 9112922 → origin/main
