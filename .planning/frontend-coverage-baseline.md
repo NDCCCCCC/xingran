@@ -256,3 +256,11 @@ TOTAL                            3958       215    5.43%    118
 - **累计**: +10.90pp from 45.13% 起点
 - **floor bump**: pages/operations 38.6 → 39.0 (实测 39.41%)
 - **push**: cbce3d3 → origin/main
+
+## Batch118-132 (2026-08-30)
+
+- **新增测试**: LayoutToolbar / WidgetSelector / BuildingModal / DashboardSettings / NoticeDetailPage / CaptchaModal / EChartsWrapper / useWorkOrderModals / EmptyStateWithAction / ErrorAlertWithRetry / BatchDeleteButton / ExcelImportLazy / useWorkstationView / ImageGallery (14 files, 100+ tests)
+- **全局覆盖率**: 56.76% (56.03% → 56.76%, +0.73pp)
+- **累计**: +11.63pp from 45.13% 起点
+- **floor bumps**: components/dashboard 59.1→65.4, components/shared 38.6→40.0, pages/operations 39.0→39.4
+- **push**: 4129281 → origin/main
