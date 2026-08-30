@@ -309,3 +309,13 @@ TOTAL                            3958       215    5.43%    118
 - **累计**: +12.48pp from 45.13% 起点
 - **floor bump**: components/dashboard 69.1 → 70.6 (实测 71.16%)
 - **push**: 2bc1709 → origin/main
+
+## Batch155-163 (2026-08-31)
+
+- **新增测试**: ClassicLayout / HybridLayout / VariableModal(失败删除) /
+  MinuteField / HourField / DayField / MonthField / SecondField /
+  WeekField / MarkdownEditor (8 files, 38 tests)
+- **全局覆盖率**: 57.84% (57.61% → 57.84%, +0.23pp)
+- **累计**: +12.71pp from 45.13% 起点
+- **floor bump**: components/CronSelector 45.1 → 63.4 (实测 63.92%)
+- **push**: cd14455 → origin/main
