@@ -37,7 +37,7 @@ router	74.5
 services	42.3
 store	95.0
 types	12.0
-utils	89.7
+utils	94.3
 # Phase 84 D-04/D-05/D-07: components 二级 subdir 独立 floor。D-05 起聚合逻辑
 # 与 pages/<subdir> 完全镜像——每个 components 一级子目录各自成 key,gate 方向 b
 # 要求全部登记;顶层 components 行继续覆盖全部 components 文件(父子双计,分母
