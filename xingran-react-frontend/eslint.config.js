@@ -105,6 +105,17 @@ export default [
       "local/no-large-dropdown-list": "error",
     },
   },
+  // 测试文件豁免 — 网络设备 / 虚拟机 / RPA worker 的测试夹具天然需要 IP 形态的
+  // mock 数据（如 ipAddress: "10.0.0.5"、ipRange: "10.0.0.0/24"），这些是断言用的
+  // 假数据，不是会被打进产物的配置。上面的内网 IP 规则对 src 源码仍是 error 级。
+  // 注意：本 override 关闭的是整条 no-restricted-syntax；若日后往该规则追加其它
+  // selector，需要重新评估测试文件是否也应豁免。
+  {
+    files: ["**/__tests__/**", "**/*.test.*", "**/*.spec.*"],
+    rules: {
+      "no-restricted-syntax": "off",
+    },
+  },
   // eslint-config-prettier 必须放最后: 关闭与 prettier 冲突的格式规则
   prettier,
   // quotes 规则在 prettier 之后重新启用
