@@ -1,88 +1,75 @@
 /**
- * Phase 88 Batch154 — operations/building-spaces/components/BuildingCard 测试
+ * Phase 88 Batch326 — operations/building-spaces/components/BuildingCard 测试
  */
 import { describe, it, expect, vi } from "vitest";
-import { render, fireEvent } from "@testing-library/react";
-import { App as AntdApp } from "antd";
-import type { ReactElement, ReactNode } from "react";
-
-vi.mock("@/lib/api", async () => {
-  const { createApiTestingModule } = await import("@/test/utils/createApiMock");
-  return createApiTestingModule();
-});
-
+import { render, screen, fireEvent } from "@testing-library/react";
 import BuildingCard from "../BuildingCard";
 
-function wrapper({ children }: { children: ReactNode }): ReactElement {
-  return <AntdApp>{children}</AntdApp>;
-}
+vi.mock("../styles.module.css", () => ({
+  default: {
+    buildingCard: "buildingCard",
+    buildingCardHeader: "buildingCardHeader",
+    buildingIcon: "buildingIcon",
+    buildingTitle: "buildingTitle",
+    buildingCode: "buildingCode",
+    buildingAddress: "buildingAddress",
+    buildingStats: "buildingStats",
+    buildingStat: "buildingStat",
+    buildingStatValue: "buildingStatValue",
+    buildingStatLabel: "buildingStatLabel",
+  },
+}));
 
-describe("BuildingCard", () => {
-  it("渲染 楼宇 name + code", () => {
-    const { baseElement } = render(
-      <BuildingCard building={{ name: "主楼", code: "B001" } as any} onClick={vi.fn()} />,
-      { wrapper }
-    );
-    expect(baseElement.textContent).toContain("主楼");
-    expect(baseElement.textContent).toContain("B001");
+describe("operations/building-spaces/components/BuildingCard", () => {
+  const baseBuilding: any = {
+    id: "b1",
+    name: "A 座",
+    code: "BLD-A",
+    totalFloors: 12,
+    workstationCount: 240,
+    address: "北京海淀",
+  };
+
+  it("渲染 name + code", () => {
+    render(<BuildingCard building={baseBuilding} onClick={vi.fn()} />);
+    expect(screen.getByText("A 座")).toBeInTheDocument();
+    expect(screen.getByText("BLD-A")).toBeInTheDocument();
   });
 
-  it("address 存在 → 显示", () => {
-    const { baseElement } = render(
+  it("渲染 address 含 emoji", () => {
+    render(<BuildingCard building={baseBuilding} onClick={vi.fn()} />);
+    expect(screen.getByText(/北京海淀/)).toBeInTheDocument();
+  });
+
+  it("无 address → 不渲染 address 行", () => {
+    const { address, ...rest } = baseBuilding;
+    render(<BuildingCard building={rest} onClick={vi.fn()} />);
+    expect(screen.queryByText(/北京海淀/)).toBeNull();
+  });
+
+  it("渲染 totalFloors + workstationCount 默认值", () => {
+    render(
       <BuildingCard
-        building={{ name: "B", code: "B001", address: "北京市朝阳区" } as any}
+        building={{ ...baseBuilding, totalFloors: undefined, workstationCount: undefined }}
         onClick={vi.fn()}
-      />,
-      { wrapper }
+      />
     );
-    expect(baseElement.textContent).toContain("北京市朝阳区");
+    expect(screen.getAllByText("0").length).toBe(2);
   });
 
-  it("address 不存在 → 不显示地址", () => {
-    const { baseElement } = render(
-      <BuildingCard building={{ name: "B", code: "B001" } as any} onClick={vi.fn()} />,
-      { wrapper }
-    );
-    expect(baseElement.textContent).not.toContain("📍");
-  });
-
-  it("显示楼层数 + 工位数", () => {
-    const { baseElement } = render(
-      <BuildingCard
-        building={
-          {
-            name: "B",
-            code: "B001",
-            totalFloors: 10,
-            workstationCount: 50,
-          } as any
-        }
-        onClick={vi.fn()}
-      />,
-      { wrapper }
-    );
-    expect(baseElement.textContent).toContain("10");
-    expect(baseElement.textContent).toContain("50");
-    expect(baseElement.textContent).toContain("楼层数");
-    expect(baseElement.textContent).toContain("工位数");
-  });
-
-  it("totalFloors undefined → 显示 0", () => {
-    const { baseElement } = render(
-      <BuildingCard building={{ name: "B", code: "B001" } as any} onClick={vi.fn()} />,
-      { wrapper }
-    );
-    expect(baseElement.textContent).toContain("0");
-  });
-
-  it("点击 card → onClick 调用", () => {
+  it("点击触发 onClick", () => {
     const onClick = vi.fn();
-    const { baseElement } = render(
-      <BuildingCard building={{ name: "B", code: "B001" } as any} onClick={onClick} />,
-      { wrapper }
-    );
-    const card = baseElement.querySelector('[class*="buildingCard"]');
-    fireEvent.click(card!);
+    const { container } = render(<BuildingCard building={baseBuilding} onClick={onClick} />);
+    const card = container.querySelector(".buildingCard") as HTMLElement;
+    fireEvent.click(card);
     expect(onClick).toHaveBeenCalled();
+  });
+
+  it("楼层数/工位数 显示正确", () => {
+    render(<BuildingCard building={baseBuilding} onClick={vi.fn()} />);
+    expect(screen.getByText("12")).toBeInTheDocument();
+    expect(screen.getByText("240")).toBeInTheDocument();
+    expect(screen.getByText("楼层数")).toBeInTheDocument();
+    expect(screen.getByText("工位数")).toBeInTheDocument();
   });
 });
