@@ -1,47 +1,107 @@
 /**
- * Phase 86 — user utils/constants 测试
+ * Phase 88 Batch339 — pages/system/user/utils 测试
  */
 import { describe, it, expect } from "vitest";
-import { formatGender, formatStatus } from "../utils";
-import { GENDER_OPTIONS, STATUS_OPTIONS, STATUS_TAG_CONFIG } from "../constants";
+import { renderToString } from "react-dom/server";
+import { renderDeptTreeOptions, formatGender, formatStatus } from "../utils";
 
-describe("formatGender", () => {
-  it("formats gender 0/1/2 with dict", () => {
-    const dict: any[] = [
-      { dictValue: "0", dictLabel: "男" },
-      { dictValue: "1", dictLabel: "女" },
-      { dictValue: "2", dictLabel: "未知" },
-    ];
-    expect(formatGender(0, dict)).toBe("男");
-    expect(formatGender(1, dict)).toBe("女");
+describe("pages/system/user/utils", () => {
+  describe("renderDeptTreeOptions", () => {
+    it("空 → 暂无部门数据", () => {
+      const result = renderDeptTreeOptions([]);
+      expect(result.length).toBe(1);
+    });
+
+    it("null → 暂无部门数据", () => {
+      const result = renderDeptTreeOptions(null as any);
+      expect(result.length).toBe(1);
+    });
+
+    it("undefined → 暂无部门数据", () => {
+      const result = renderDeptTreeOptions(undefined as any);
+      expect(result.length).toBe(1);
+    });
+
+    it("扁平部门 → 1 个 Option", () => {
+      const result = renderDeptTreeOptions([{ id: "d1", deptName: "Dept 1" }]);
+      expect(result.length).toBe(1);
+    });
+
+    it("嵌套部门 → 多个 Options + 缩进", () => {
+      const result = renderDeptTreeOptions([
+        {
+          id: "d1",
+          deptName: "Root",
+          children: [{ id: "d2", deptName: "Child" }],
+        },
+      ]);
+      expect(result.length).toBe(2);
+    });
+
+    it("3 层嵌套 → 3 Options", () => {
+      const result = renderDeptTreeOptions([
+        {
+          id: "d1",
+          deptName: "L1",
+          children: [
+            {
+              id: "d2",
+              deptName: "L2",
+              children: [{ id: "d3", deptName: "L3" }],
+            },
+          ],
+        },
+      ]);
+      expect(result.length).toBe(3);
+    });
+
+    it("空 children 不渲染子 Option", () => {
+      const result = renderDeptTreeOptions([{ id: "d1", deptName: "Root", children: [] }]);
+      expect(result.length).toBe(1);
+    });
   });
 
-  it("falls back without dict", () => {
-    expect(typeof formatGender(0)).toBe("string");
-  });
-});
+  describe("formatGender", () => {
+    it("0 → 男 (fallback)", () => {
+      expect(formatGender(0)).toBe("男");
+    });
 
-describe("formatStatus", () => {
-  it("returns text and color for status 0/1", () => {
-    const s0 = formatStatus(0);
-    const s1 = formatStatus(1);
-    expect(s0.text).toBeTruthy();
-    expect(s0.color).toBeTruthy();
-    expect(s1.text).toBeTruthy();
-  });
-});
+    it("1 → 女 (fallback)", () => {
+      expect(formatGender(1)).toBe("女");
+    });
 
-describe("user constants (D-12)", () => {
-  it("GENDER_OPTIONS non-empty", () => {
-    expect(GENDER_OPTIONS.length).toBeGreaterThan(0);
+    it("未知 → 保密", () => {
+      expect(formatGender(99)).toBe("保密");
+    });
+
+    it("dict 命中 dictLabel", () => {
+      expect(formatGender(0, [{ dictValue: "0", dictLabel: "Male" }])).toBe("Male");
+    });
+
+    it("dict 未命中 → fallback", () => {
+      expect(formatGender(0, [{ dictValue: "5", dictLabel: "Other" }])).toBe("男");
+    });
+
+    it("dict 空 → fallback", () => {
+      expect(formatGender(1, [])).toBe("女");
+    });
+
+    it("dict 空 + 未知 → 保密", () => {
+      expect(formatGender(99, [])).toBe("保密");
+    });
   });
 
-  it("STATUS_OPTIONS is 启停 2 项", () => {
-    expect(STATUS_OPTIONS.length).toBe(2);
-  });
+  describe("formatStatus", () => {
+    it("0 → 启用", () => {
+      expect(formatStatus(0)).toEqual({ text: "启用", color: "success" });
+    });
 
-  it("STATUS_TAG_CONFIG covers 0/1", () => {
-    expect(STATUS_TAG_CONFIG[0]).toBeDefined();
-    expect(STATUS_TAG_CONFIG[1]).toBeDefined();
+    it("1 → 禁用", () => {
+      expect(formatStatus(1)).toEqual({ text: "禁用", color: "error" });
+    });
+
+    it("未知 → 默认", () => {
+      expect(formatStatus(99)).toEqual({ text: "未知", color: "default" });
+    });
   });
 });
