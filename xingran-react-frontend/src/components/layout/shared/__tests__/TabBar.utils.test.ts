@@ -1,75 +1,111 @@
 /**
- * Phase 88 Batch287 — components/layout/shared/TabBar.utils 测试
+ * Phase 88 Batch361 — components/layout/shared/TabBar.utils 测试
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-
-vi.mock("@/lib/api", async () => {
-  const { createApiTestingModule } = await import("@/test/utils/createApiMock");
-  return createApiTestingModule();
-});
-
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { checkScrollState, scrollContainer, setupDelayedChecks } from "../TabBar.utils";
 
-describe("layout/shared/TabBar.utils", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.useRealTimers();
+describe("components/layout/shared/TabBar.utils", () => {
+  describe("checkScrollState", () => {
+    it("null container → 默认值", () => {
+      const result = checkScrollState(null);
+      expect(result.canScrollLeft).toBe(false);
+      expect(result.canScrollRight).toBe(false);
+      expect(result.scrollLeft).toBe(0);
+    });
+
+    it("scrollLeft=0 → canScrollLeft=false", () => {
+      const container = {
+        scrollLeft: 0,
+        scrollWidth: 1000,
+        clientWidth: 500,
+      } as HTMLElement;
+      const result = checkScrollState(container);
+      expect(result.canScrollLeft).toBe(false);
+      expect(result.canScrollRight).toBe(true);
+    });
+
+    it("scrollLeft>0 → canScrollLeft=true", () => {
+      const container = {
+        scrollLeft: 100,
+        scrollWidth: 1000,
+        clientWidth: 500,
+      } as HTMLElement;
+      expect(checkScrollState(container).canScrollLeft).toBe(true);
+    });
+
+    it("完全滚动到底 → canScrollRight=false", () => {
+      const container = {
+        scrollLeft: 500,
+        scrollWidth: 1000,
+        clientWidth: 500,
+      } as HTMLElement;
+      expect(checkScrollState(container).canScrollRight).toBe(false);
+    });
+
+    it("scrollWidth <= clientWidth → canScrollRight=false", () => {
+      const container = {
+        scrollLeft: 0,
+        scrollWidth: 500,
+        clientWidth: 500,
+      } as HTMLElement;
+      expect(checkScrollState(container).canScrollRight).toBe(false);
+    });
   });
 
-  it("checkScrollState null → 默认", () => {
-    const s = checkScrollState(null);
-    expect(s.canScrollLeft).toBe(false);
-    expect(s.canScrollRight).toBe(false);
-    expect(s.scrollLeft).toBe(0);
+  describe("scrollContainer", () => {
+    it("null container → 不调用 scrollTo", () => {
+      expect(() => scrollContainer(null, "left", 100)).not.toThrow();
+    });
+
+    it("left 方向 → 减少 scrollLeft", () => {
+      const container = {
+        scrollLeft: 200,
+        scrollTo: vi.fn(),
+      } as unknown as HTMLElement;
+      scrollContainer(container, "left", 100);
+      expect(container.scrollTo).toHaveBeenCalledWith({
+        left: 100,
+        behavior: "smooth",
+      });
+    });
+
+    it("right 方向 → 增加 scrollLeft", () => {
+      const container = {
+        scrollLeft: 200,
+        scrollTo: vi.fn(),
+      } as unknown as HTMLElement;
+      scrollContainer(container, "right", 50);
+      expect(container.scrollTo).toHaveBeenCalledWith({
+        left: 250,
+        behavior: "smooth",
+      });
+    });
   });
 
-  it("checkScrollState scrollLeft > 0", () => {
-    const el = { scrollLeft: 100, scrollWidth: 1000, clientWidth: 500 } as HTMLElement;
-    const s = checkScrollState(el);
-    expect(s.canScrollLeft).toBe(true);
-  });
+  describe("setupDelayedChecks", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
 
-  it("checkScrollState 可向右滚动", () => {
-    const el = { scrollLeft: 0, scrollWidth: 1000, clientWidth: 500 } as HTMLElement;
-    const s = checkScrollState(el);
-    expect(s.canScrollRight).toBe(true);
-  });
+    it("返回 N 个 timer", () => {
+      const callback = vi.fn();
+      const timers = setupDelayedChecks(callback, [100, 200, 300]);
+      expect(timers.length).toBe(3);
+    });
 
-  it("checkScrollState 不可向右滚动", () => {
-    const el = { scrollLeft: 500, scrollWidth: 1000, clientWidth: 500 } as HTMLElement;
-    const s = checkScrollState(el);
-    expect(s.canScrollRight).toBe(false);
-  });
+    it("callback 在每个 delay 都触发", () => {
+      const callback = vi.fn();
+      setupDelayedChecks(callback, [100, 200]);
+      vi.advanceTimersByTime(250);
+      expect(callback).toHaveBeenCalledTimes(2);
+    });
 
-  it("scrollContainer null → 不报错", () => {
-    expect(() => scrollContainer(null, "left", 100)).not.toThrow();
-  });
-
-  it("scrollContainer left", () => {
-    const scrollToMock = vi.fn();
-    const el = { scrollLeft: 200, scrollTo: scrollToMock } as any;
-    scrollContainer(el, "left", 50);
-    expect(scrollToMock).toHaveBeenCalledWith({ left: 150, behavior: "smooth" });
-  });
-
-  it("scrollContainer right", () => {
-    const scrollToMock = vi.fn();
-    const el = { scrollLeft: 200, scrollTo: scrollToMock } as any;
-    scrollContainer(el, "right", 50);
-    expect(scrollToMock).toHaveBeenCalledWith({ left: 250, behavior: "smooth" });
-  });
-
-  it("setupDelayedChecks 多次调用 callback", () => {
-    const cb = vi.fn();
-    const timers = setupDelayedChecks(cb, [0, 100, 300]);
-    expect(timers.length).toBe(3);
-    vi.advanceTimersByTime(50);
-    expect(cb).toHaveBeenCalledTimes(1);
-    vi.advanceTimersByTime(60);
-    expect(cb).toHaveBeenCalledTimes(2);
-    vi.advanceTimersByTime(200);
-    expect(cb).toHaveBeenCalledTimes(3);
+    it("empty delays → empty array", () => {
+      const timers = setupDelayedChecks(() => {}, []);
+      expect(timers.length).toBe(0);
+    });
   });
 });
