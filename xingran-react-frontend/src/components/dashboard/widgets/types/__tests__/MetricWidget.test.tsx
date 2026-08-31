@@ -1,9 +1,8 @@
 /**
- * Phase 88 Batch106 — dashboard/widgets/MetricWidget 测试
+ * Phase 88 Batch342 — components/dashboard/widgets/types/MetricWidget 测试
  */
 import { describe, it, expect, vi } from "vitest";
-import { renderWithProviders } from "@/test/utils/renderWithProviders";
-import { MetricWidget } from "../MetricWidget";
+import { render, screen } from "@testing-library/react";
 import { useWidgetData } from "@/hooks/useWidgetData";
 
 vi.mock("@/lib/api", async () => {
@@ -11,99 +10,118 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-vi.mock("@/hooks/useWidgetData", () => ({
-  useWidgetData: vi.fn(() => ({ data: null, loading: false, error: null, refresh: vi.fn() })),
+vi.mock("@/hooks/useWidgetData");
+
+vi.mock("../../base/BaseWidget", () => ({
+  BaseWidget: ({ children, data, loading, error }: any) => (
+    <div
+      data-testid="base-widget"
+      data-loading={loading}
+      data-error={error}
+      data-data={JSON.stringify(data)}
+    >
+      {children}
+    </div>
+  ),
 }));
 
-const baseWidget = {
+import { MetricWidget } from "../MetricWidget";
+
+const sampleWidget: any = {
   id: "w1",
+  type: "metric",
   title: "指标",
-  type: "progress",
-  dataSource: { type: "static", data: {} },
-  position: { x: 0, y: 0, w: 4, h: 3 },
-} as any;
+  display: {},
+};
 
-describe("MetricWidget 渲染", () => {
-  it("data=null → 渲染 percent=0", () => {
-    const { baseElement } = renderWithProviders(
-      <MetricWidget widget={baseWidget} display={{ target: 100 } as any} />
-    );
-    expect(baseElement).toBeDefined();
-  });
-
-  it("data.value + target → 计算 percent", () => {
-    vi.mocked(useWidgetData).mockReturnValueOnce({
-      data: { value: 50 },
+describe("components/dashboard/widgets/types/MetricWidget", () => {
+  it("渲染 BaseWidget + Progress", () => {
+    vi.mocked(useWidgetData).mockReturnValue({
+      data: { value: 75 },
       loading: false,
       error: null,
       refresh: vi.fn(),
-    });
-    const { baseElement } = renderWithProviders(
-      <MetricWidget widget={baseWidget} display={{ target: 100 } as any} />
-    );
-    expect(baseElement).toBeDefined();
+    } as any);
+    render(<MetricWidget widget={sampleWidget} display={{}} />);
+    expect(screen.getByTestId("base-widget")).toBeInTheDocument();
   });
 
-  it("data.percent → 使用 percent 字段", () => {
-    vi.mocked(useWidgetData).mockReturnValueOnce({
-      data: { percent: 75 },
+  it("无 data → 0%", () => {
+    vi.mocked(useWidgetData).mockReturnValue({
+      data: null,
       loading: false,
       error: null,
       refresh: vi.fn(),
-    });
-    const { baseElement } = renderWithProviders(
-      <MetricWidget widget={baseWidget} display={{ target: 100 } as any} />
-    );
-    expect(baseElement).toBeDefined();
+    } as any);
+    render(<MetricWidget widget={sampleWidget} display={{}} />);
+    expect(screen.getByText("0%")).toBeInTheDocument();
   });
 
-  it("value > target → clamp 到 100", () => {
-    vi.mocked(useWidgetData).mockReturnValueOnce({
-      data: { value: 500 },
+  it("value=75 + target=100 → 75%", () => {
+    vi.mocked(useWidgetData).mockReturnValue({
+      data: { value: 75 },
       loading: false,
       error: null,
       refresh: vi.fn(),
-    });
-    const { baseElement } = renderWithProviders(
-      <MetricWidget widget={baseWidget} display={{ target: 100 } as any} />
-    );
-    expect(baseElement).toBeDefined();
+    } as any);
+    render(<MetricWidget widget={sampleWidget} display={{ target: 100 }} />);
+    expect(screen.getByText("75%")).toBeInTheDocument();
   });
 
-  it("colorThresholds → 应用颜色", () => {
-    vi.mocked(useWidgetData).mockReturnValueOnce({
+  it("data.percent 字段优先", () => {
+    vi.mocked(useWidgetData).mockReturnValue({
+      data: { percent: 42 },
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    } as any);
+    render(<MetricWidget widget={sampleWidget} display={{ target: 100 }} />);
+    expect(screen.getByText("42%")).toBeInTheDocument();
+  });
+
+  it("value > target → 上限 100%", () => {
+    vi.mocked(useWidgetData).mockReturnValue({
+      data: { value: 200 },
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    } as any);
+    render(<MetricWidget widget={sampleWidget} display={{ target: 100 }} />);
+    expect(screen.getByText("100%")).toBeInTheDocument();
+  });
+
+  it("colorThresholds → 选择最大匹配阈值 color", () => {
+    vi.mocked(useWidgetData).mockReturnValue({
       data: { value: 80 },
       loading: false,
       error: null,
       refresh: vi.fn(),
-    });
-    const { baseElement } = renderWithProviders(
+    } as any);
+    render(
       <MetricWidget
-        widget={baseWidget}
-        display={
-          {
-            target: 100,
-            colorThresholds: [
-              { value: 0, color: "red" },
-              { value: 50, color: "orange" },
-              { value: 100, color: "green" },
-            ],
-          } as any
-        }
+        widget={sampleWidget}
+        display={{
+          target: 100,
+          colorThresholds: [
+            { value: 50, color: "orange" },
+            { value: 75, color: "green" },
+          ],
+        }}
       />
     );
-    expect(baseElement).toBeDefined();
+    expect(screen.getByText("80%")).toBeInTheDocument();
   });
 
-  it("onEdit + onDelete 传入", () => {
-    const { baseElement } = renderWithProviders(
-      <MetricWidget
-        widget={baseWidget}
-        display={{ target: 100 } as any}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-      />
+  it("onEdit/onDelete 传递", () => {
+    vi.mocked(useWidgetData).mockReturnValue({
+      data: { value: 50 },
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    } as any);
+    render(
+      <MetricWidget widget={sampleWidget} display={{}} onEdit={() => {}} onDelete={() => {}} />
     );
-    expect(baseElement).toBeDefined();
+    expect(screen.getByTestId("base-widget")).toBeInTheDocument();
   });
 });
