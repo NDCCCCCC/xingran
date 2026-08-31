@@ -1,13 +1,7 @@
 /**
- * Phase 88 Batch202 — constants/storage 测试
+ * Phase 88 Batch316 — constants/storage 测试
  */
 import { describe, it, expect, beforeEach } from "vitest";
-
-vi.mock("@/lib/api", async () => {
-  const { createApiTestingModule } = await import("@/test/utils/createApiMock");
-  return createApiTestingModule();
-});
-
 import {
   ZUSTAND_STORAGE_KEYS,
   STORAGE_KEYS,
@@ -32,47 +26,69 @@ describe("constants/storage", () => {
     expect(STORAGE_KEYS.LAST_PATH).toBe("xingran_last_visited_path");
   });
 
-  it("TABLE_STATE_PREFIX 前缀", () => {
+  it("TABLE_STATE_PREFIX", () => {
     expect(TABLE_STATE_PREFIX).toBe("xingran_table_state_");
   });
 
-  it("sanitizePathForKey 去除前导 /", () => {
-    expect(sanitizePathForKey("/system/user")).toBe("system_user");
+  describe("sanitizePathForKey", () => {
+    it("/system/user → system_user", () => {
+      expect(sanitizePathForKey("/system/user")).toBe("system_user");
+    });
+
+    it("/ops/buildings → ops_buildings", () => {
+      expect(sanitizePathForKey("/ops/buildings")).toBe("ops_buildings");
+    });
+
+    it("空字符串 → ''", () => {
+      expect(sanitizePathForKey("")).toBe("");
+    });
+
+    it("无前导斜杠", () => {
+      expect(sanitizePathForKey("foo/bar")).toBe("foo_bar");
+    });
+
+    it("多斜杠", () => {
+      expect(sanitizePathForKey("/a/b/c")).toBe("a_b_c");
+    });
   });
 
-  it("sanitizePathForKey 替换中间 /", () => {
-    expect(sanitizePathForKey("/ops/buildings")).toBe("ops_buildings");
+  describe("clearTableStateByPath", () => {
+    it("只清理指定路径前缀", () => {
+      sessionStorage.setItem(`${TABLE_STATE_PREFIX}foo_filter`, "x");
+      sessionStorage.setItem(`${TABLE_STATE_PREFIX}foo_page`, "y");
+      sessionStorage.setItem(`${TABLE_STATE_PREFIX}bar_filter`, "z");
+      sessionStorage.setItem("other-key", "keep");
+
+      clearTableStateByPath("/foo");
+
+      expect(sessionStorage.getItem(`${TABLE_STATE_PREFIX}foo_filter`)).toBeNull();
+      expect(sessionStorage.getItem(`${TABLE_STATE_PREFIX}foo_page`)).toBeNull();
+      expect(sessionStorage.getItem(`${TABLE_STATE_PREFIX}bar_filter`)).toBe("z");
+      expect(sessionStorage.getItem("other-key")).toBe("keep");
+    });
+
+    it("空路径 → 不清理", () => {
+      sessionStorage.setItem(`${TABLE_STATE_PREFIX}keep`, "v");
+      clearTableStateByPath("");
+      expect(sessionStorage.getItem(`${TABLE_STATE_PREFIX}keep`)).toBe("v");
+    });
   });
 
-  it("sanitizePathForKey 多斜杠", () => {
-    expect(sanitizePathForKey("//a/b/c")).toBe("a_b_c");
-  });
+  describe("clearAllTableState", () => {
+    it("清理所有 TABLE_STATE_PREFIX 开头的 key", () => {
+      sessionStorage.setItem(`${TABLE_STATE_PREFIX}a`, "1");
+      sessionStorage.setItem(`${TABLE_STATE_PREFIX}b`, "2");
+      sessionStorage.setItem("other", "keep");
 
-  it("sanitizePathForKey 空 → ''", () => {
-    expect(sanitizePathForKey("")).toBe("");
-  });
+      clearAllTableState();
 
-  it("clearTableStateByPath 删该路径下 keys", () => {
-    sessionStorage.setItem("xingran_table_state_system_user_filters", "x");
-    sessionStorage.setItem("xingran_table_state_ops_buildings_pagination", "y");
-    clearTableStateByPath("/system/user");
-    expect(sessionStorage.getItem("xingran_table_state_system_user_filters")).toBeNull();
-    expect(sessionStorage.getItem("xingran_table_state_ops_buildings_pagination")).toBe("y");
-  });
+      expect(sessionStorage.getItem(`${TABLE_STATE_PREFIX}a`)).toBeNull();
+      expect(sessionStorage.getItem(`${TABLE_STATE_PREFIX}b`)).toBeNull();
+      expect(sessionStorage.getItem("other")).toBe("keep");
+    });
 
-  it("clearTableStateByPath 空路径不删", () => {
-    sessionStorage.setItem("xingran_table_state_a_filters", "x");
-    clearTableStateByPath("");
-    expect(sessionStorage.getItem("xingran_table_state_a_filters")).toBe("x");
-  });
-
-  it("clearAllTableState 删全部", () => {
-    sessionStorage.setItem("xingran_table_state_a_filters", "x");
-    sessionStorage.setItem("xingran_table_state_b_pagination", "y");
-    sessionStorage.setItem("other_key", "z");
-    clearAllTableState();
-    expect(sessionStorage.getItem("xingran_table_state_a_filters")).toBeNull();
-    expect(sessionStorage.getItem("xingran_table_state_b_pagination")).toBeNull();
-    expect(sessionStorage.getItem("other_key")).toBe("z");
+    it("空 sessionStorage 不抛错", () => {
+      expect(() => clearAllTableState()).not.toThrow();
+    });
   });
 });
