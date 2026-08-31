@@ -1,53 +1,50 @@
 /**
- * Phase 88 Batch166 — design-system/components/PageTitle 测试
+ * Phase 88 Batch317 — design-system/components/PageTitle 测试
  */
 import { describe, it, expect } from "vitest";
-import { render } from "@testing-library/react";
-import type { ReactElement, ReactNode } from "react";
-
-vi.mock("@/lib/api", async () => {
-  const { createApiTestingModule } = await import("@/test/utils/createApiMock");
-  return createApiTestingModule();
-});
-
+import { render, screen } from "@testing-library/react";
 import PageTitle from "../PageTitle";
 
-function wrapper({ children }: { children: ReactNode }): ReactElement {
-  return <>{children}</>;
-}
-
-describe("PageTitle", () => {
-  it("pre + post → 显示标题 + dot 分隔符", () => {
-    const { baseElement } = render(<PageTitle pre="系统" post="用户" />, { wrapper });
-    expect(baseElement.textContent).toContain("系统");
-    expect(baseElement.textContent).toContain("用户");
-    expect(baseElement.querySelector(".dot")).toBeTruthy();
+describe("design-system/components/PageTitle", () => {
+  it("pre only → 只渲染 pre", () => {
+    render(<PageTitle pre="系统" />);
+    expect(screen.getByText("系统")).toBeInTheDocument();
+    expect(document.querySelector(".page-title")).toBeTruthy();
+    expect(document.querySelector(".dot")).toBeNull();
   });
 
-  it("post 未提供 → 不显示 dot", () => {
-    const { baseElement } = render(<PageTitle pre="用户" />, { wrapper });
-    expect(baseElement.textContent).toContain("用户");
-    expect(baseElement.querySelector(".dot")).toBeNull();
+  it("pre + post → 渲染 dot", () => {
+    const { container } = render(<PageTitle pre="系统" post="用户" />);
+    expect(container.textContent).toContain("系统");
+    expect(container.textContent).toContain("用户");
+    expect(container.querySelector(".dot")).toBeTruthy();
   });
 
-  it("sub 提供 → 显示副标题", () => {
-    const { baseElement } = render(<PageTitle pre="系统" post="用户" sub="副标题" />, { wrapper });
-    expect(baseElement.textContent).toContain("副标题");
-    expect(baseElement.querySelector(".page-sub")).toBeTruthy();
+  it("sub 渲染 page-sub", () => {
+    render(<PageTitle pre="系统" sub="副标题文本" />);
+    expect(screen.getByText("副标题文本")).toBeInTheDocument();
+    expect(document.querySelector(".page-sub")).toBeTruthy();
   });
 
-  it("actions 提供 → 显示操作区", () => {
-    const { baseElement } = render(
-      <PageTitle pre="系统" post="用户" actions={<button data-testid="action-btn">新增</button>} />,
-      { wrapper }
-    );
-    expect(baseElement.querySelector('[data-testid="action-btn"]')).toBeTruthy();
-    expect(baseElement.querySelector(".page-actions")).toBeTruthy();
+  it("无 sub → 不渲染 page-sub", () => {
+    render(<PageTitle pre="系统" />);
+    expect(document.querySelector(".page-sub")).toBeNull();
   });
 
-  it("page-head className 渲染", () => {
-    const { baseElement } = render(<PageTitle pre="A" />, { wrapper });
-    expect(baseElement.querySelector(".page-head")).toBeTruthy();
-    expect(baseElement.querySelector(".page-title")).toBeTruthy();
+  it("actions 渲染到 page-actions 容器", () => {
+    render(<PageTitle pre="系统" actions={<button type="button">新增</button>} />);
+    const actionsContainer = document.querySelector(".page-actions");
+    expect(actionsContainer).toBeTruthy();
+    expect(actionsContainer?.textContent).toContain("新增");
+  });
+
+  it("无 actions → 不渲染 page-actions", () => {
+    render(<PageTitle pre="系统" />);
+    expect(document.querySelector(".page-actions")).toBeNull();
+  });
+
+  it("post 空字符串 falsy → 不渲染 dot", () => {
+    render(<PageTitle pre="系统" post="" />);
+    expect(document.querySelector(".dot")).toBeNull();
   });
 });
