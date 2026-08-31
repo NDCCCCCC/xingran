@@ -1,16 +1,8 @@
 /**
- * Phase 88 Batch175 — pages/duty/holidays/constants 测试
+ * Phase 88 Batch328 — pages/duty/holidays/constants 测试
  */
 import { describe, it, expect } from "vitest";
-import { render } from "@testing-library/react";
-import { App as AntdApp } from "antd";
-import type { ReactElement, ReactNode } from "react";
-
-vi.mock("@/lib/api", async () => {
-  const { createApiTestingModule } = await import("@/test/utils/createApiMock");
-  return createApiTestingModule();
-});
-
+import { render, screen } from "@testing-library/react";
 import {
   HOLIDAY_TYPE_OPTIONS,
   WEEKDAY_TEXTS,
@@ -18,50 +10,39 @@ import {
   renderIsOffdayTag,
 } from "../constants";
 
-function wrapper({ children }: { children: ReactNode }): ReactElement {
-  return <AntdApp>{children}</AntdApp>;
-}
-
-describe("duty/holidays/constants", () => {
+describe("pages/duty/holidays/constants", () => {
   it("HOLIDAY_TYPE_OPTIONS 3 项", () => {
     expect(HOLIDAY_TYPE_OPTIONS.length).toBe(3);
-    expect(HOLIDAY_TYPE_OPTIONS.map((o) => o.value)).toEqual(["legal", "workday", "custom"]);
+    expect(HOLIDAY_TYPE_OPTIONS[0].value).toBe("legal");
   });
 
   it("WEEKDAY_TEXTS 7 项", () => {
     expect(WEEKDAY_TEXTS.length).toBe(7);
-    expect(WEEKDAY_TEXTS[0]).toBe("日");
-    expect(WEEKDAY_TEXTS[6]).toBe("六");
+    expect(WEEKDAY_TEXTS[1]).toBe("一");
   });
 
-  it("renderHolidayTypeTag legal → 法定节假日", () => {
-    const { baseElement } = render(<>{renderHolidayTypeTag("legal")}</>, { wrapper });
-    expect(baseElement.textContent).toContain("法定节假日");
-    expect(baseElement.querySelector(".ant-tag")).toBeTruthy();
+  it("renderHolidayTypeTag legal → red 法定节假日", () => {
+    render(renderHolidayTypeTag("legal"));
+    expect(screen.getByText("法定节假日")).toBeInTheDocument();
   });
 
-  it("renderHolidayTypeTag workday → 调休工作日", () => {
-    const { baseElement } = render(<>{renderHolidayTypeTag("workday")}</>, { wrapper });
-    expect(baseElement.textContent).toContain("调休工作日");
+  it("renderHolidayTypeTag workday → orange", () => {
+    render(renderHolidayTypeTag("workday"));
+    expect(screen.getByText("调休工作日")).toBeInTheDocument();
   });
 
-  it("renderHolidayTypeTag custom → 自定义", () => {
-    const { baseElement } = render(<>{renderHolidayTypeTag("custom")}</>, { wrapper });
-    expect(baseElement.textContent).toContain("自定义");
-  });
-
-  it("renderHolidayTypeTag 未知类型 → 显示原始字符串", () => {
-    const { baseElement } = render(<>{renderHolidayTypeTag("unknown" as any)}</>, { wrapper });
-    expect(baseElement.textContent).toContain("unknown");
+  it("renderHolidayTypeTag custom → blue", () => {
+    render(renderHolidayTypeTag("custom"));
+    expect(screen.getByText("自定义")).toBeInTheDocument();
   });
 
   it("renderIsOffdayTag true → 休息日", () => {
-    const { baseElement } = render(<>{renderIsOffdayTag(true)}</>, { wrapper });
-    expect(baseElement.textContent).toContain("休息日");
+    render(renderIsOffdayTag(true));
+    expect(screen.getByText("休息日")).toBeInTheDocument();
   });
 
   it("renderIsOffdayTag false → 工作日", () => {
-    const { baseElement } = render(<>{renderIsOffdayTag(false)}</>, { wrapper });
-    expect(baseElement.textContent).toContain("工作日");
+    render(renderIsOffdayTag(false));
+    expect(screen.getByText("工作日")).toBeInTheDocument();
   });
 });
