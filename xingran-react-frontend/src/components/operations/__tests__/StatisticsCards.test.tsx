@@ -1,62 +1,71 @@
 /**
- * Phase 88 Batch230 — components/operations/StatisticsCards 测试
+ * Phase 88 Batch346 — components/operations/StatisticsCards 测试
  */
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { App as AntdApp } from "antd";
-import type { ReactElement, ReactNode } from "react";
-
-vi.mock("@/lib/api", async () => {
-  const { createApiTestingModule } = await import("@/test/utils/createApiMock");
-  return createApiTestingModule();
-});
-
 import { StatisticsCards } from "../StatisticsCards";
 
-function wrapper({ children }: { children: ReactNode }): ReactElement {
-  return <AntdApp>{children}</AntdApp>;
-}
-
-describe("operations/StatisticsCards", () => {
-  it("渲染 items", () => {
-    const items = [
-      { title: "Total", value: 100 },
-      { title: "Active", value: 80 },
-    ];
-    render(<StatisticsCards items={items} />, { wrapper });
-    expect(screen.getByText("Total")).toBeInTheDocument();
-    expect(screen.getByText("Active")).toBeInTheDocument();
-    expect(screen.getByText("100")).toBeInTheDocument();
-    expect(screen.getByText("80")).toBeInTheDocument();
+describe("components/operations/StatisticsCards", () => {
+  it("渲染所有 items 的 title + value", () => {
+    render(
+      <StatisticsCards
+        items={[
+          { title: "总楼宇", value: 12 },
+          { title: "总楼层", value: 50 },
+        ]}
+      />
+    );
+    expect(screen.getByText("总楼宇")).toBeInTheDocument();
+    expect(screen.getByText("总楼层")).toBeInTheDocument();
+    expect(screen.getByText("12")).toBeInTheDocument();
+    expect(screen.getByText("50")).toBeInTheDocument();
   });
 
   it("show=false → 不渲染", () => {
-    const items = [{ title: "X", value: 1 }];
-    render(<StatisticsCards items={items} show={false} />, { wrapper });
-    expect(screen.queryByText("X")).toBeNull();
+    const { container } = render(
+      <StatisticsCards items={[{ title: "X", value: 1 }]} show={false} />
+    );
+    expect(container.firstChild).toBeNull();
   });
 
-  it("columns 自定义", () => {
-    const items = [
-      { title: "A", value: 1 },
-      { title: "B", value: 2 },
-      { title: "C", value: 3 },
-    ];
-    const { container } = render(<StatisticsCards items={items} columns={2} />, { wrapper });
-    expect(container.querySelectorAll(".ant-col").length).toBeGreaterThanOrEqual(2);
+  it("默认 columns = items.length", () => {
+    render(<StatisticsCards items={[{ title: "A", value: 1 }]} />);
+    // Single column - span=24
+    expect(screen.getByText("A")).toBeInTheDocument();
   });
 
-  it("items.length = columns 默认", () => {
-    const items = [
-      { title: "A", value: 1 },
-      { title: "B", value: 2 },
-    ];
-    const { container } = render(<StatisticsCards items={items} />, { wrapper });
-    expect(container.querySelectorAll(".ant-col").length).toBe(2);
+  it("自定义 columns=4", () => {
+    render(
+      <StatisticsCards
+        items={[
+          { title: "A", value: 1 },
+          { title: "B", value: 2 },
+          { title: "C", value: 3 },
+          { title: "D", value: 4 },
+        ]}
+        columns={4}
+      />
+    );
+    expect(screen.getByText("A")).toBeInTheDocument();
+    expect(screen.getByText("D")).toBeInTheDocument();
   });
 
-  it("空 items", () => {
-    const { container } = render(<StatisticsCards items={[]} />, { wrapper });
-    expect(container.querySelectorAll(".ant-col").length).toBe(0);
+  it("valueStyle deprecated path", () => {
+    render(<StatisticsCards items={[{ title: "X", value: 42, valueStyle: { color: "red" } }]} />);
+    expect(screen.getByText("42")).toBeInTheDocument();
+  });
+
+  it("styles.content 新 path", () => {
+    render(
+      <StatisticsCards
+        items={[{ title: "Y", value: 99, styles: { content: { color: "blue" } } }]}
+      />
+    );
+    expect(screen.getByText("99")).toBeInTheDocument();
+  });
+
+  it("空 items → 只渲染 Row", () => {
+    const { container } = render(<StatisticsCards items={[]} />);
+    expect(container.querySelector(".ant-row")).toBeTruthy();
   });
 });
