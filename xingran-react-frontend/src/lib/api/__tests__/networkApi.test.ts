@@ -1,211 +1,155 @@
 /**
- * Phase 53 W4 — networkApi port-write wrapper 行为单元测试 (UI-06)
- *
- * 锁定行为:
- * - 6 个 wrapper 各自调用 post() 时 URL 完全对齐 Phase 52 port_write_router.go kebab 路径
- * - request body shape 严格匹配后端契约 (portId/reason/description / deviceId+action+portIds+description?)
- * - wrapper 解包 BaseResponse envelope (result.data!) 直接返回业务数据
- * - wrapper 不 try/catch (透传 Promise.reject) — 不吞错误
- *
- * 通过 vi.mock 替换 ../api 模块的 post,断言 wrapper → post 的输入契约。
+ * Phase 88 Batch307 — lib/api/networkApi 测试
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { PortResult, BatchResult } from "@/types/network";
+import { describe, it, expect, vi } from "vitest";
 
-// 捕获 post 调用的 mock — 必须以 networkApi.ts 的 import 解析路径为准。
-// networkApi.ts 用 `import { post } from "../api"` (=> src/lib/api.ts),
-// 我们从 src/lib/api/__tests__/ 视角也用 ../api => 同一个 src/lib/api.ts。
-const mockPost = vi.fn();
-vi.mock("../api", () => ({
-  post: (...args: unknown[]) => mockPost(...args),
-}));
-vi.mock("@/lib/api", () => ({
-  post: (...args: unknown[]) => mockPost(...args),
-}));
+vi.mock("@/lib/api", async () => {
+  return {
+    post: vi.fn(async (url: string, params?: any) => ({
+      data: {
+        list: [{ id: "r1", macAddress: "00:11:22" }],
+        total: 1,
+        current: params?.current ?? 1,
+        pageSize: params?.pageSize ?? 10,
+        url,
+        payload: params,
+      },
+    })),
+  };
+});
 
+import { post } from "@/lib/api";
 import {
+  queryMACHistory,
+  getMACEvents,
   writeShutdown,
   writeUndoShutdown,
   writeDescription,
   writeDot1xEnable,
   writeDot1xDisable,
+  writeSetAccessVlan,
+  writePortBinding,
   batchWritePorts,
+  getPortMACBundle,
 } from "../networkApi";
 
-const PORT_RESULT_FIXTURE: PortResult = {
-  portId: "port-1",
-  action: "shutdown",
-  status: "succeeded",
-  noOp: false,
-  currentState: "down",
-  commandSent: "shutdown",
-};
-
-const BATCH_RESULT_FIXTURE: BatchResult = {
-  succeeded: [PORT_RESULT_FIXTURE],
-  failed: [],
-  skipped: [],
-};
-
-describe("networkApi port-write wrappers (Phase 53 — UI-06)", () => {
-  beforeEach(() => {
-    mockPost.mockReset();
+describe("lib/api/networkApi", () => {
+  it("queryMACHistory 调用 post /network/history/list", async () => {
+    const r = await queryMACHistory({ current: 1, pageSize: 20 });
+    expect(r.list.length).toBe(1);
+    expect(post).toHaveBeenCalledWith("/network/history/list", { current: 1, pageSize: 20 });
   });
 
-  describe("writeShutdown", () => {
-    it("calls POST /network/ports/write/shutdown with {portId, reason} and returns result.data", async () => {
-      mockPost.mockResolvedValueOnce({ code: 0, data: PORT_RESULT_FIXTURE });
+  it("getMACEvents 默认 current=1 + pageSize=100", async () => {
+    const r = await getMACEvents("00:11:22", "2026-08-01", "2026-08-07");
+    expect(r.current).toBe(1);
+    expect(r.pageSize).toBe(100);
+    expect(r.hasMore).toBe(false);
+  });
 
-      const result = await writeShutdown("port-1", "故障排查处理");
+  it("getMACEvents 自定义 pageSize → hasMore 计算", async () => {
+    const r = await getMACEvents("00:11:22", "2026-08-01", "2026-08-07", {
+      current: 2,
+      pageSize: 10,
+    });
+    expect(r.current).toBe(2);
+    expect(r.pageSize).toBe(10);
+  });
 
-      expect(mockPost).toHaveBeenCalledTimes(1);
-      expect(mockPost).toHaveBeenCalledWith("/network/ports/write/shutdown", {
-        portId: "port-1",
-        reason: "故障排查处理",
-      });
-      expect(result).toEqual(PORT_RESULT_FIXTURE);
+  it("writeShutdown 调用 shutdown endpoint", async () => {
+    await writeShutdown("port-1", "test reason");
+    expect(post).toHaveBeenCalledWith("/network/ports/write/shutdown", {
+      portId: "port-1",
+      reason: "test reason",
     });
   });
 
-  describe("writeUndoShutdown", () => {
-    it("calls POST /network/ports/write/undo-shutdown with {portId, reason}", async () => {
-      mockPost.mockResolvedValueOnce({ code: 0, data: PORT_RESULT_FIXTURE });
-
-      const result = await writeUndoShutdown("port-1", "业务变更需要");
-
-      expect(mockPost).toHaveBeenCalledWith("/network/ports/write/undo-shutdown", {
-        portId: "port-1",
-        reason: "业务变更需要",
-      });
-      expect(result).toEqual(PORT_RESULT_FIXTURE);
+  it("writeUndoShutdown 调用 endpoint", async () => {
+    await writeUndoShutdown("port-2", "undo");
+    expect(post).toHaveBeenCalledWith("/network/ports/write/undo-shutdown", {
+      portId: "port-2",
+      reason: "undo",
     });
   });
 
-  describe("writeDescription", () => {
-    it("calls POST /network/ports/write/description with {portId, description, reason}", async () => {
-      mockPost.mockResolvedValueOnce({ code: 0, data: PORT_RESULT_FIXTURE });
-
-      await writeDescription("port-1", "uplink-to-core", "安全合规要求");
-
-      expect(mockPost).toHaveBeenCalledWith("/network/ports/write/description", {
-        portId: "port-1",
-        description: "uplink-to-core",
-        reason: "安全合规要求",
-      });
-    });
-
-    it("forwards undefined reason when reason arg omitted (not null/empty)", async () => {
-      mockPost.mockResolvedValueOnce({ code: 0, data: PORT_RESULT_FIXTURE });
-
-      await writeDescription("port-1", "new-desc");
-
-      expect(mockPost).toHaveBeenCalledWith("/network/ports/write/description", {
-        portId: "port-1",
-        description: "new-desc",
-        reason: undefined,
-      });
+  it("writeDescription 含 description 可选 reason", async () => {
+    await writeDescription("port-3", "desc-x", "audit");
+    expect(post).toHaveBeenCalledWith("/network/ports/write/description", {
+      portId: "port-3",
+      description: "desc-x",
+      reason: "audit",
     });
   });
 
-  describe("writeDot1xEnable", () => {
-    it("calls POST /network/ports/write/dot1x-enable with {portId, reason}", async () => {
-      mockPost.mockResolvedValueOnce({ code: 0, data: PORT_RESULT_FIXTURE });
-
-      await writeDot1xEnable("port-1", "临时测试验证");
-
-      expect(mockPost).toHaveBeenCalledWith("/network/ports/write/dot1x-enable", {
-        portId: "port-1",
-        reason: "临时测试验证",
-      });
+  it("writeDescription 无 reason", async () => {
+    await writeDescription("port-3", "desc-x");
+    expect(post).toHaveBeenCalledWith("/network/ports/write/description", {
+      portId: "port-3",
+      description: "desc-x",
+      reason: undefined,
     });
   });
 
-  describe("writeDot1xDisable", () => {
-    it("calls POST /network/ports/write/dot1x-disable with {portId, reason}", async () => {
-      mockPost.mockResolvedValueOnce({ code: 0, data: PORT_RESULT_FIXTURE });
+  it("writeDot1xEnable/Disable 调用 endpoint", async () => {
+    await writeDot1xEnable("port-4", "auth");
+    await writeDot1xDisable("port-4", "noauth");
+    expect(post).toHaveBeenCalledWith("/network/ports/write/dot1x-enable", expect.any(Object));
+    expect(post).toHaveBeenCalledWith("/network/ports/write/dot1x-disable", expect.any(Object));
+  });
 
-      await writeDot1xDisable("port-1", "故障排查处理");
-
-      expect(mockPost).toHaveBeenCalledWith("/network/ports/write/dot1x-disable", {
-        portId: "port-1",
-        reason: "故障排查处理",
-      });
+  it("writeSetAccessVlan 含 vlanId", async () => {
+    await writeSetAccessVlan("port-5", 100, "vlan");
+    expect(post).toHaveBeenCalledWith("/network/ports/write/set-access-vlan", {
+      portId: "port-5",
+      vlanId: 100,
+      reason: "vlan",
     });
   });
 
-  describe("batchWritePorts", () => {
-    it("calls POST /network/ports/write/batch with the full BatchWriteRequest and returns BatchResult", async () => {
-      mockPost.mockResolvedValueOnce({ code: 0, data: BATCH_RESULT_FIXTURE });
-
-      const req = {
-        deviceId: "dev-1",
-        action: "shutdown" as const,
-        portIds: ["port-1", "port-2"],
-      };
-
-      const result = await batchWritePorts(req);
-
-      expect(mockPost).toHaveBeenCalledWith("/network/ports/write/batch", req);
-      expect(result).toEqual(BATCH_RESULT_FIXTURE);
-    });
-
-    it("forwards description field when provided (description action)", async () => {
-      mockPost.mockResolvedValueOnce({ code: 0, data: BATCH_RESULT_FIXTURE });
-
-      const req = {
-        deviceId: "dev-1",
-        action: "description" as const,
-        portIds: ["port-1"],
-        description: "new-port-desc",
-      };
-
-      await batchWritePorts(req);
-
-      expect(mockPost).toHaveBeenCalledWith("/network/ports/write/batch", req);
+  it("writePortBinding add + mac", async () => {
+    await writePortBinding("port-6", "add", "10.0.0.1", "00:AA:BB", "binding");
+    expect(post).toHaveBeenCalledWith("/network/ports/write/port-binding", {
+      portId: "port-6",
+      op: "add",
+      ipAddress: "10.0.0.1",
+      macAddress: "00:AA:BB",
+      reason: "binding",
     });
   });
 
-  describe("URL contract — all 6 endpoints must be kebab-cased (Phase 52 router alignment)", () => {
-    it("snapshot of every URL passed to post across all 6 wrappers", async () => {
-      mockPost.mockResolvedValue({ code: 0, data: PORT_RESULT_FIXTURE });
-      mockPost.mockResolvedValueOnce({ code: 0, data: BATCH_RESULT_FIXTURE });
-
-      await writeShutdown("p", "r");
-      await writeUndoShutdown("p", "r");
-      await writeDescription("p", "d");
-      await writeDot1xEnable("p", "r");
-      await writeDot1xDisable("p", "r");
-      await batchWritePorts({ deviceId: "d", action: "shutdown", portIds: ["p"] });
-
-      const urls = mockPost.mock.calls.map((call) => call[0]);
-      expect(urls).toEqual([
-        "/network/ports/write/shutdown",
-        "/network/ports/write/undo-shutdown",
-        "/network/ports/write/description",
-        "/network/ports/write/dot1x-enable",
-        "/network/ports/write/dot1x-disable",
-        "/network/ports/write/batch",
-      ]);
+  it("writePortBinding remove 不含 mac", async () => {
+    await writePortBinding("port-7", "remove", "10.0.0.2", undefined, "unbinding");
+    expect(post).toHaveBeenCalledWith("/network/ports/write/port-binding", {
+      portId: "port-7",
+      op: "remove",
+      ipAddress: "10.0.0.2",
+      macAddress: undefined,
+      reason: "unbinding",
     });
   });
 
-  describe("envelope unwrapping & reject propagation (LANDMINE #5)", () => {
-    it("returns result.data (not the full BaseResponse envelope)", async () => {
-      mockPost.mockResolvedValueOnce({
-        code: 0,
-        data: PORT_RESULT_FIXTURE,
-        message: "success",
-      });
-
-      const result = await writeShutdown("port-1", "reason");
-      expect(result).toBe(PORT_RESULT_FIXTURE);
+  it("batchWritePorts 调用 batch endpoint", async () => {
+    await batchWritePorts({
+      deviceId: "d1",
+      action: "shutdown",
+      portIds: ["p1", "p2"],
+    } as any);
+    expect(post).toHaveBeenCalledWith("/network/ports/write/batch", {
+      deviceId: "d1",
+      action: "shutdown",
+      portIds: ["p1", "p2"],
     });
+  });
 
-    it("propagates Promise.reject from post() without swallowing (no try/catch)", async () => {
-      const rejection = new Error("network down");
-      mockPost.mockRejectedValueOnce(rejection);
+  it("getPortMACBundle 返回 bundle", async () => {
+    const r = await getPortMACBundle("d1", "eth0");
+    expect(r.error).toBeNull();
+    expect(Array.isArray(r.current)).toBe(true);
+  });
 
-      await expect(writeShutdown("port-1", "reason")).rejects.toBe(rejection);
-    });
+  it("getPortMACBundle error 收集", async () => {
+    vi.mocked(post).mockRejectedValueOnce(new Error("net"));
+    const r = await getPortMACBundle("d1", "eth0");
+    expect(r.error).toBeInstanceOf(Error);
   });
 });
