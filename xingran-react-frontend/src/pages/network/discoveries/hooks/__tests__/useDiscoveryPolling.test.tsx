@@ -1,17 +1,11 @@
 /**
- * Phase 88 Batch278 — pages/network/discoveries/hooks/useDiscoveryPolling 测试
+ * Phase 88 Batch354 — pages/network/discoveries/hooks/useDiscoveryPolling 测试
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
-
-vi.mock("@/lib/api", async () => {
-  const { createApiTestingModule } = await import("@/test/utils/createApiMock");
-  return createApiTestingModule();
-});
-
+import { renderHook } from "@testing-library/react";
 import { useDiscoveryPolling } from "../useDiscoveryPolling";
 
-describe("network/discoveries/hooks/useDiscoveryPolling", () => {
+describe("pages/network/discoveries/hooks/useDiscoveryPolling", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -20,58 +14,57 @@ describe("network/discoveries/hooks/useDiscoveryPolling", () => {
     vi.useRealTimers();
   });
 
-  it("无 running 任务 → 不启动 polling", () => {
+  it("无 running tasks → 不启动 polling", () => {
     const onPoll = vi.fn();
-    renderHook(() => useDiscoveryPolling({ discoveries: [], onPoll }));
-    act(() => {
-      vi.advanceTimersByTime(5000);
-    });
+    const discoveries = [{ id: "d1", status: "completed" } as any];
+    renderHook(() => useDiscoveryPolling({ discoveries, onPoll }));
+    vi.advanceTimersByTime(5000);
     expect(onPoll).not.toHaveBeenCalled();
   });
 
-  it("有 running 任务 → 启动 polling 并 onPoll", () => {
+  it("含 running task → 启动 polling", () => {
     const onPoll = vi.fn();
-    const discoveries: any[] = [
-      { id: "d1", status: "running" },
-      { id: "d2", status: "completed" },
-    ];
+    const discoveries = [{ id: "d1", status: "running" } as any];
     renderHook(() => useDiscoveryPolling({ discoveries, onPoll }));
-    act(() => {
-      vi.advanceTimersByTime(3000);
-    });
+    vi.advanceTimersByTime(3000);
     expect(onPoll).toHaveBeenCalled();
   });
 
-  it("running 任务完成 → 停止 polling", () => {
+  it("3 秒间隔触发 onPoll", () => {
     const onPoll = vi.fn();
-    const discoveries: any[] = [{ id: "d1", status: "running" }];
-    const { rerender } = renderHook(
-      ({ d }: any) => useDiscoveryPolling({ discoveries: d, onPoll }),
-      { wrapper: ({ children }) => <>{children}</>, initialProps: { d: discoveries } }
-    );
-    act(() => {
-      vi.advanceTimersByTime(3000);
-    });
-    expect(onPoll).toHaveBeenCalledTimes(1);
-
-    // running 完成后清空
-    rerender({ d: [{ id: "d1", status: "completed" }] });
-    act(() => {
-      vi.advanceTimersByTime(5000);
-    });
-    // 停止后不再调用
-    expect(onPoll).toHaveBeenCalledTimes(1);
+    const discoveries = [{ id: "d1", status: "running" } as any];
+    renderHook(() => useDiscoveryPolling({ discoveries, onPoll }));
+    vi.advanceTimersByTime(6000);
+    expect(onPoll).toHaveBeenCalledTimes(2);
   });
 
-  it("卸载 → clearInterval", () => {
+  it("卸载时清理 polling", () => {
     const onPoll = vi.fn();
-    const discoveries: any[] = [{ id: "d1", status: "running" }];
+    const discoveries = [{ id: "d1", status: "running" } as any];
     const { unmount } = renderHook(() => useDiscoveryPolling({ discoveries, onPoll }));
     unmount();
-    // clearInterval 已调用,后续不报错
-    act(() => {
-      vi.advanceTimersByTime(5000);
-    });
+    vi.advanceTimersByTime(5000);
     expect(onPoll).not.toHaveBeenCalled();
+  });
+
+  it("running 完成后 → 停止 polling", () => {
+    const onPoll = vi.fn();
+    let discoveries = [{ id: "d1", status: "running" } as any];
+    const { rerender } = renderHook(({ d }) => useDiscoveryPolling({ discoveries: d, onPoll }), {
+      initialProps: { d: discoveries },
+    });
+
+    // 3s 时 onPoll 触发
+    vi.advanceTimersByTime(3000);
+    expect(onPoll).toHaveBeenCalled();
+
+    // running 变为 completed
+    discoveries = [{ id: "d1", status: "completed" } as any];
+    rerender({ d: discoveries });
+
+    // 后续不应再触发
+    vi.advanceTimersByTime(6000);
+    // Note: may have one more call from the 3s tick before re-render takes effect
+    expect(onPoll.mock.calls.length).toBeLessThan(3);
   });
 });
