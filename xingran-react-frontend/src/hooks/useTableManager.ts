@@ -6,6 +6,7 @@ import type { TablePaginationConfig, FilterValue, SorterResult } from "antd/es/t
 import { useServerSort, resolveSorter } from "@/hooks/useServerSort";
 import { usePersistedStateController } from "@/hooks/usePersistedState";
 import { TABLE_STATE_PREFIX, sanitizePathForKey } from "@/constants/storage";
+import { handleApiError } from "@/utils/errorHandler";
 import type { SortOrder } from "@/hooks/useServerSort";
 import type { SorterMeta } from "@/utils/tableHelpers";
 
@@ -240,6 +241,14 @@ export function useTableManager<T>(
       const newTotal = result.total ?? 0;
       setTotal(newTotal);
       externalPaginationRef.current?.setTotal?.(newTotal);
+    } catch (error) {
+      // loadData 的调用方多为 fire-and-forget（handleRefresh / handleReset /
+      // 分页回调），此前只有 finally 没有 catch，请求失败时 rejection 会逃逸成
+      // unhandled rejection，且用户看不到任何提示。这里统一兜住：提示 + 清空表格。
+      handleApiError(error, "加载列表数据");
+      setData([]);
+      setTotal(0);
+      externalPaginationRef.current?.setTotal?.(0);
     } finally {
       setLoading(false);
     }

@@ -98,7 +98,10 @@ const Sidebar = () => {
   // 组件加载时获取菜单
   useEffect(() => {
     if (menus.length === 0) {
-      fetchMenus();
+      // fetchMenus 失败时会 rethrow（login 页面依赖它显示登录失败，故不能在 store 层吞）。
+      // 这里是 fire-and-forget 调用，必须自行兜住，否则逃逸成 unhandled rejection。
+      // 失败原因已由 menuStore 写入 error 状态，此处无需重复提示。
+      fetchMenus().catch(() => {});
     }
   }, [fetchMenus, menus.length]);
 

@@ -39,14 +39,34 @@ describe("batch58 workstations 子组件 + workorder 剩余", () => {
   }, 15000);
 
   it("WorkorderStatistics 渲染", async () => {
+    // URL 是 /workorder/statistics（不带 /list，见 getWorkOrderStatistics）；
+    // 且 data 必须满足 WorkOrderStatistics 契约：空对象 {} 是真值, 会通过组件的
+    // `stats &&` 守卫, 随后 Object.entries(stats.byPriority) 对 undefined 抛错。
     await renderAndAssert(<WorkorderStatistics />, {
-      "/workorder/statistics/list": { data: {} },
+      "/workorder/statistics": {
+        data: {
+          total: 0,
+          pending: 0,
+          processing: 0,
+          completed: 0,
+          closed: 0,
+          rejected: 0,
+          byPriority: {},
+          byCategory: {},
+          byAssignee: [],
+          byDepartment: [],
+          trend: [],
+          avgProcessTime: 0,
+        },
+      },
     });
   }, 15000);
 
   it("WorkorderCategories 渲染", async () => {
+    // 该接口契约是 BaseResponse<WorkOrderCategory[]>，data 直接是数组而非分页对象；
+    // 误用 {list,total} 会让 categories 变成对象，渲染期 flatCategories 抛错。
     await renderAndAssert(<WorkorderCategories />, {
-      "/workorder/categories/list": { data: { list: [], total: 0 } },
+      "/workorder/categories/list": { data: [] },
     });
   }, 15000);
 });

@@ -69,6 +69,9 @@ describe("batch54 Modal 横扫", () => {
     expect(
       await openModalIfExists(<WorkorderOrders />, {
         "/workorder/orders/list": { data: { list: [], total: 0 } },
+        // 页面还会拉分类树：契约是 BaseResponse<WorkOrderCategory[]>，data 为数组。
+        // 不 mock 会让 categories 变成非数组，buildCategoryTree 的 categories.map 抛错。
+        "/workorder/categories/enabled": { data: [] },
       })
     ).toBeDefined();
   }, 20000);
