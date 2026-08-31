@@ -1,66 +1,112 @@
 /**
- * Phase 86 — dept utils 纯函数测试
+ * Phase 88 Batch356 — pages/system/dept/utils 测试
  */
 import { describe, it, expect } from "vitest";
 import { flattenTreeToList, transformToParentTreeOptions, renderTreeData } from "../utils";
 
-const tree: any[] = [
-  {
-    id: "d1",
-    deptName: "总经办",
-    children: [
-      { id: "d2", deptName: "技术部", children: [{ id: "d3", deptName: "前端组" }] },
-      { id: "d4", deptName: "综合部" },
-    ],
-  },
-  { id: "d5", deptName: "财务部" },
-];
+describe("pages/system/dept/utils", () => {
+  describe("flattenTreeToList", () => {
+    it("扁平化嵌套树", () => {
+      const tree: any[] = [
+        {
+          id: "d1",
+          deptName: "Root",
+          children: [
+            { id: "d2", deptName: "Child 1" },
+            { id: "d3", deptName: "Child 2" },
+          ],
+        },
+      ];
+      const result = flattenTreeToList(tree);
+      expect(result.length).toBe(3);
+      expect(result[0].id).toBe("d1");
+      expect(result[2].id).toBe("d3");
+    });
 
-describe("flattenTreeToList", () => {
-  it("flattens nested tree into flat list (DFS)", () => {
-    const list = flattenTreeToList(tree);
-    expect(list).toHaveLength(5);
-    expect(list.map((d) => d.id)).toEqual(["d1", "d2", "d3", "d4", "d5"]);
+    it("空 → []", () => {
+      expect(flattenTreeToList([])).toEqual([]);
+    });
+
+    it("null → []", () => {
+      expect(flattenTreeToList(null as any)).toEqual([]);
+    });
+
+    it("undefined → []", () => {
+      expect(flattenTreeToList(undefined as any)).toEqual([]);
+    });
+
+    it("非数组 → []", () => {
+      expect(flattenTreeToList("x" as any)).toEqual([]);
+    });
+
+    it("深层递归", () => {
+      const tree: any[] = [
+        {
+          id: "d1",
+          deptName: "L1",
+          children: [
+            {
+              id: "d2",
+              deptName: "L2",
+              children: [{ id: "d3", deptName: "L3" }],
+            },
+          ],
+        },
+      ];
+      expect(flattenTreeToList(tree).length).toBe(3);
+    });
   });
 
-  it("returns empty for null/invalid input", () => {
-    expect(flattenTreeToList(null as any)).toEqual([]);
-    expect(flattenTreeToList(undefined as any)).toEqual([]);
-    expect(flattenTreeToList("bad" as any)).toEqual([]);
+  describe("transformToParentTreeOptions", () => {
+    it("转 title/value/key", () => {
+      const tree: any[] = [{ id: "d1", deptName: "Root", children: [] }];
+      const result = transformToParentTreeOptions(tree);
+      expect(result[0]).toEqual({ title: "Root", value: "d1", key: "d1", children: undefined });
+    });
+
+    it("递归 children", () => {
+      const tree: any[] = [
+        {
+          id: "d1",
+          deptName: "Root",
+          children: [{ id: "d2", deptName: "Child" }],
+        },
+      ];
+      const result = transformToParentTreeOptions(tree);
+      expect(result[0].children?.length).toBe(1);
+      expect(result[0].children?.[0].title).toBe("Child");
+    });
+
+    it("空 → []", () => {
+      expect(transformToParentTreeOptions([])).toEqual([]);
+    });
+
+    it("null → []", () => {
+      expect(transformToParentTreeOptions(null as any)).toEqual([]);
+    });
+
+    it("无 children → children undefined", () => {
+      const result = transformToParentTreeOptions([{ id: "x", deptName: "X" } as any]);
+      expect(result[0].children).toBeUndefined();
+    });
   });
 
-  it("returns flat array as-is for leaf-only tree", () => {
-    const leaves: any[] = [{ id: "a" }, { id: "b" }];
-    expect(flattenTreeToList(leaves)).toHaveLength(2);
-  });
-});
+  describe("renderTreeData", () => {
+    it("递归 + key", () => {
+      const tree: any[] = [
+        { id: "d1", deptName: "Root", children: [{ id: "d2", deptName: "Child" }] },
+      ];
+      const result = renderTreeData(tree);
+      expect(result[0].key).toBe("d1");
+      expect(result[0].children?.[0].key).toBe("d2");
+    });
 
-describe("transformToParentTreeOptions", () => {
-  it("maps tree to TreeSelect options with title/value/key", () => {
-    const opts = transformToParentTreeOptions(tree);
-    expect(opts[0].title).toBe("总经办");
-    expect(opts[0].value).toBe("d1");
-    expect(opts[0].children).toHaveLength(2);
-  });
+    it("空 → []", () => {
+      expect(renderTreeData([])).toEqual([]);
+    });
 
-  it("leaf children become undefined", () => {
-    const opts = transformToParentTreeOptions(tree);
-    const leaf = opts[0].children![1];
-    expect(leaf.children).toBeUndefined();
-  });
-
-  it("returns empty array for invalid input", () => {
-    expect(transformToParentTreeOptions(null as any)).toEqual([]);
-  });
-});
-
-describe("renderTreeData", () => {
-  it("adds key field to every node", () => {
-    const rows = renderTreeData(tree);
-    expect(rows[0].key).toBe("d1");
-  });
-
-  it("returns empty array for invalid input", () => {
-    expect(renderTreeData(null as any)).toEqual([]);
+    it("null → []", () => {
+      expect(renderTreeData(null as any)).toEqual([]);
+    });
   });
 });
