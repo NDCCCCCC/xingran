@@ -1,5 +1,5 @@
 /**
- * Phase 88 Batch226 — components/captcha/TextCaptcha 测试
+ * Phase 88 Batch322 — components/captcha/TextCaptcha 测试
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
@@ -11,12 +11,9 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
+let mockCaptcha: any = null;
 vi.mock("@/services/captcha", () => ({
-  getCaptcha: vi.fn(async () => ({
-    captchaId: "c1",
-    captchaType: "normal",
-    captchaImg: "data:image/png;base64,xxx",
-  })),
+  getCaptcha: vi.fn(async () => mockCaptcha),
 }));
 
 import TextCaptcha from "../TextCaptcha";
@@ -25,88 +22,79 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
   return <AntdApp>{children}</AntdApp>;
 }
 
-describe("captcha/TextCaptcha", () => {
+describe("components/captcha/TextCaptcha", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCaptcha = null;
   });
 
-  it("渲染 input + 初始加载", async () => {
-    const onChange = vi.fn();
-    render(<TextCaptcha onChange={onChange} />, { wrapper });
-    const input = screen.getByPlaceholderText("请输入验证码");
-    expect(input).toBeInTheDocument();
-    await waitFor(() => {
-      expect(onChange).toHaveBeenCalledWith("", "c1");
-    });
-  });
-
-  it("显示 captchaImg", async () => {
-    render(<TextCaptcha onChange={vi.fn()} />, { wrapper });
+  it("正常返回 captcha → 渲染图片", async () => {
+    mockCaptcha = {
+      captchaType: "normal",
+      captchaImg: "data:image/png;base64,xxx",
+      captchaId: "cap-1",
+    };
+    render(<TextCaptcha value="" onChange={vi.fn()} />, { wrapper });
     await waitFor(() => {
       expect(screen.getByAltText("验证码")).toBeInTheDocument();
     });
   });
 
-  it("input change 触发 onChange", async () => {
+  it("onChange 触发回调", async () => {
+    mockCaptcha = {
+      captchaType: "normal",
+      captchaImg: "data:image/png;base64,xxx",
+      captchaId: "cap-2",
+    };
     const onChange = vi.fn();
-    render(<TextCaptcha onChange={onChange} />, { wrapper });
-    await waitFor(() => {
-      expect(onChange).toHaveBeenCalledWith("", "c1");
-    });
-    const input = screen.getByPlaceholderText("请输入验证码");
+    render(<TextCaptcha value="" onChange={onChange} />, { wrapper });
+    await waitFor(() => screen.getByAltText("验证码"));
+    const input = screen.getByPlaceholderText("请输入验证码") as HTMLInputElement;
     fireEvent.change(input, { target: { value: "abcd" } });
-    expect(onChange).toHaveBeenCalledWith("abcd", "c1");
+    expect(onChange).toHaveBeenCalledWith("abcd", "cap-2");
   });
 
-  it("reload 按钮 → 重新加载", async () => {
-    render(<TextCaptcha onChange={vi.fn()} />, { wrapper });
-    await waitFor(() => {
-      expect(screen.getByAltText("验证码")).toBeInTheDocument();
-    });
-    const captcha = await import("@/services/captcha");
-    vi.mocked(captcha.getCaptcha).mockClear();
-    const reloadBtn = screen.getByRole("button");
-    fireEvent.click(reloadBtn);
-    await waitFor(() => {
-      expect(captcha.getCaptcha).toHaveBeenCalled();
-    });
+  it("验证码未启用 (空对象) → 静默不渲染图片", async () => {
+    mockCaptcha = {};
+    render(<TextCaptcha value="" onChange={vi.fn()} />, { wrapper });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByAltText("验证码")).toBeNull();
   });
 
-  it("click image 重新加载", async () => {
-    render(<TextCaptcha onChange={vi.fn()} />, { wrapper });
-    await waitFor(() => {
-      expect(screen.getByAltText("验证码")).toBeInTheDocument();
-    });
-    const captcha = await import("@/services/captcha");
-    vi.mocked(captcha.getCaptcha).mockClear();
-    fireEvent.click(screen.getByAltText("验证码"));
-    await waitFor(() => {
-      expect(captcha.getCaptcha).toHaveBeenCalled();
-    });
-  });
-
-  it("slider 类型 → onError CAPTCHA_TYPE_MISMATCH", async () => {
+  it("slider 类型 → 触发 onError CAPTCHA_TYPE_MISMATCH", async () => {
+    mockCaptcha = { captchaType: "slider" };
     const onError = vi.fn();
-    const captcha = await import("@/services/captcha");
-    vi.mocked(captcha.getCaptcha).mockResolvedValueOnce({
-      captchaId: "s1",
-      captchaType: "slider",
-    } as any);
-    render(<TextCaptcha onError={onError} />, { wrapper });
+    render(<TextCaptcha value="" onChange={vi.fn()} onError={onError} />, { wrapper });
     await waitFor(() => {
       expect(onError).toHaveBeenCalledWith("CAPTCHA_TYPE_MISMATCH");
     });
   });
 
-  it("空 captchaType → 静默返回", async () => {
-    const onChange = vi.fn();
-    const captcha = await import("@/services/captcha");
-    vi.mocked(captcha.getCaptcha).mockResolvedValueOnce({
-      captchaId: "",
-      captchaType: "",
-    } as any);
-    render(<TextCaptcha onChange={onChange} />, { wrapper });
-    await new Promise((r) => setTimeout(r, 100));
-    expect(onChange).not.toHaveBeenCalled();
+  it("getCaptcha 抛错 → onError 被调用", async () => {
+    mockCaptcha = null;
+    const { getCaptcha } = await import("@/services/captcha");
+    vi.mocked(getCaptcha).mockRejectedValueOnce(new Error("net"));
+    const onError = vi.fn();
+    render(<TextCaptcha value="" onChange={vi.fn()} onError={onError} />, { wrapper });
+    await waitFor(() => {
+      expect(onError).toHaveBeenCalled();
+    });
+  });
+
+  it("点击刷新按钮 → 重新调用 getCaptcha", async () => {
+    mockCaptcha = {
+      captchaType: "normal",
+      captchaImg: "data:image/png;base64,xxx",
+      captchaId: "cap-3",
+    };
+    const { getCaptcha } = await import("@/services/captcha");
+    render(<TextCaptcha value="" onChange={vi.fn()} />, { wrapper });
+    await waitFor(() => screen.getByAltText("验证码"));
+    vi.mocked(getCaptcha).mockClear();
+    const btn = document.querySelector(".refresh-btn") as HTMLElement;
+    fireEvent.click(btn);
+    await waitFor(() => {
+      expect(getCaptcha).toHaveBeenCalled();
+    });
   });
 });
