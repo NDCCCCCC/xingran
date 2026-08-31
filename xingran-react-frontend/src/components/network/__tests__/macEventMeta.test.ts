@@ -1,52 +1,39 @@
 /**
- * Phase 84 84-03a — MAC 事件元数据静态断言(D-12)
+ * Phase 88 Batch266 — components/network/macEventMeta 测试
  */
 import { describe, it, expect } from "vitest";
-import {
-  EVENT_COLORS,
-  EVENT_ICON,
-  EVENT_LABEL,
-  EVENT_TAG_COLOR,
-  type MACEventType,
-} from "../macEventMeta";
 
-const EVENT_TYPES: MACEventType[] = ["appeared", "disappeared", "moved", "vlan_changed"];
+vi.mock("@/lib/api", async () => {
+  const { createApiTestingModule } = await import("@/test/utils/createApiMock");
+  return createApiTestingModule();
+});
 
-describe("network macEventMeta (D-12 static assertion)", () => {
-  it("EVENT_COLORS has 4 entries with hex colors", () => {
-    expect(Object.keys(EVENT_COLORS)).toHaveLength(4);
-    for (const t of EVENT_TYPES) {
-      expect(EVENT_COLORS[t]).toMatch(/(var\(--theme-|#[0-9a-fA-F]{6})/);
-    }
+import { EVENT_COLORS, EVENT_ICON, EVENT_LABEL, EVENT_TAG_COLOR } from "../macEventMeta";
+
+describe("network/macEventMeta", () => {
+  it("EVENT_COLORS 4 事件", () => {
+    expect(Object.keys(EVENT_COLORS).length).toBe(4);
+    expect(EVENT_COLORS.appeared).toContain("#2d8949");
+    expect(EVENT_COLORS.disappeared).toBe("#ba3630");
   });
 
-  it("EVENT_LABEL has 4 Chinese labels", () => {
-    expect(Object.keys(EVENT_LABEL)).toHaveLength(4);
-    for (const t of EVENT_TYPES) {
-      expect(EVENT_LABEL[t]).toBeTruthy();
-    }
+  it("EVENT_ICON 4 个图标组件", () => {
+    expect(Object.keys(EVENT_ICON).length).toBe(4);
+    expect(EVENT_ICON.appeared).toBeDefined();
+    expect(EVENT_ICON.moved).toBeDefined();
   });
 
-  it("EVENT_TAG_COLOR has 4 antd tag color names", () => {
-    expect(Object.keys(EVENT_TAG_COLOR)).toHaveLength(4);
-    for (const t of EVENT_TYPES) {
-      expect(EVENT_TAG_COLOR[t]).toBeTruthy();
-    }
+  it("EVENT_LABEL 4 标签", () => {
+    expect(EVENT_LABEL.appeared).toBe("出现");
+    expect(EVENT_LABEL.disappeared).toBe("消失");
+    expect(EVENT_LABEL.moved).toBe("迁移");
+    expect(EVENT_LABEL.vlan_changed).toBe("VLAN 变更");
   });
 
-  it("EVENT_ICON has 4 component entries", () => {
-    expect(Object.keys(EVENT_ICON)).toHaveLength(4);
-    for (const t of EVENT_TYPES) {
-      expect(EVENT_ICON[t]).toBeDefined();
-    }
-  });
-
-  it("all event types covered in every map", () => {
-    for (const t of EVENT_TYPES) {
-      expect(EVENT_COLORS[t]).toBeDefined();
-      expect(EVENT_ICON[t]).toBeDefined();
-      expect(EVENT_LABEL[t]).toBeDefined();
-      expect(EVENT_TAG_COLOR[t]).toBeDefined();
-    }
+  it("EVENT_TAG_COLOR 4 antd 颜色", () => {
+    expect(EVENT_TAG_COLOR.appeared).toBe("green");
+    expect(EVENT_TAG_COLOR.disappeared).toBe("red");
+    expect(EVENT_TAG_COLOR.moved).toBe("gold");
+    expect(EVENT_TAG_COLOR.vlan_changed).toBe("blue");
   });
 });
