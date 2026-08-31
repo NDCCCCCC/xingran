@@ -1,29 +1,26 @@
 /**
- * Phase 88 Batch199 — components/reconciliation/hooks/useWorkstationHealth 测试
+ * Phase 88 Batch365 — components/reconciliation/hooks/useWorkstationHealth 测试
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
+
+let mockVisible = true;
 
 vi.mock("@/lib/api", async () => {
   const { createApiTestingModule } = await import("@/test/utils/createApiMock");
   return createApiTestingModule();
 });
 
-vi.mock("@/lib/assetApi", () => ({
-  reconciliationApi: {
-    byWorkstation: vi.fn(async ({ workstationId }: any) => ({
-      workstation: { id: workstationId },
-      healthScore: 92,
-      visible: true,
-      assets: [],
-    })),
-  },
+vi.mock("../useReconciliationVisibility", () => ({
+  useReconciliationVisibility: vi.fn(() => mockVisible),
 }));
 
-vi.mock("../useReconciliationVisibility", () => ({
-  useReconciliationVisibility: vi.fn(() => true),
+vi.mock("@/lib/assetApi", () => ({
+  reconciliationApi: {
+    byWorkstation: vi.fn(async () => ({ workstation: "w1", healthScore: 90 })),
+  },
 }));
 
 import { useWorkstationHealth } from "../useWorkstationHealth";
@@ -33,26 +30,42 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
   return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
 }
 
-describe("reconciliation/hooks/useWorkstationHealth", () => {
-  it("visible=true + workstationId → 调用 byWorkstation", async () => {
-    const { result } = renderHook(() => useWorkstationHealth("ws-1"), { wrapper });
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data?.healthScore).toBe(92);
+describe("components/reconciliation/hooks/useWorkstationHealth", () => {
+  beforeEach(() => {
+    mockVisible = true;
   });
 
-  it("workstationId 空 → 不触发", async () => {
+  it("visible=true + workstationId → 调用 queryFn", async () => {
+    const { result } = renderHook(() => useWorkstationHealth("w1"), { wrapper });
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+  });
+
+  it("visible=false → enabled=false → 不调 queryFn", async () => {
+    mockVisible = false;
+    const { result } = renderHook(() => useWorkstationHealth("w1"), { wrapper });
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.data).toBeUndefined();
+  });
+
+  it("workstationId 为空 → 不调 queryFn", async () => {
     const { result } = renderHook(() => useWorkstationHealth(""), { wrapper });
-    // enabled=false → isPending, 不会变 success
-    await new Promise((r) => setTimeout(r, 50));
-    expect(result.current.isSuccess).toBe(false);
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.data).toBeUndefined();
   });
 
-  it("visible=false → 不触发", async () => {
-    vi.mocked(
-      await import("../useReconciliationVisibility")
-    ).useReconciliationVisibility.mockReturnValueOnce(false);
-    const { result } = renderHook(() => useWorkstationHealth("ws-2"), { wrapper });
-    await new Promise((r) => setTimeout(r, 50));
-    expect(result.current.isSuccess).toBe(false);
+  it("返回 data 含 healthScore", async () => {
+    const { result } = renderHook(() => useWorkstationHealth("w1"), { wrapper });
+    await waitFor(() => {
+      expect(result.current.data).toEqual({ workstation: "w1", healthScore: 90 });
+    });
+  });
+
+  it("shape 包含 isLoading/isError/data", () => {
+    const { result } = renderHook(() => useWorkstationHealth("w1"), { wrapper });
+    expect(typeof result.current.isLoading).toBe("boolean");
+    expect(typeof result.current.isError).toBe("boolean");
+    expect(result.current.data === undefined || typeof result.current.data === "object").toBe(true);
   });
 });
