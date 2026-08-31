@@ -1,20 +1,8 @@
 /**
- * Phase 88 Batch190 — pages/system/role/utils 测试
+ * Phase 88 Batch336 — pages/system/role/utils 测试
  */
-import { describe, it, expect, vi } from "vitest";
-import { render } from "@testing-library/react";
-import { App as AntdApp } from "antd";
-import type { ReactElement, ReactNode } from "react";
-
-vi.mock("@/lib/api", async () => {
-  const { createApiTestingModule } = await import("@/test/utils/createApiMock");
-  return createApiTestingModule();
-});
-
-vi.mock("@/utils/datetime", () => ({
-  formatDateTime: vi.fn(() => "2026-08-30 10:00:00"),
-}));
-
+import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
 import {
   processTreeData,
   renderStatusTag,
@@ -23,71 +11,66 @@ import {
   formatLocalTime,
 } from "../utils";
 
-function wrapper({ children }: { children: ReactNode }): ReactElement {
-  return <AntdApp>{children}</AntdApp>;
-}
+describe("pages/system/role/utils", () => {
+  describe("processTreeData", () => {
+    it("基本字段映射", () => {
+      const result = processTreeData([{ id: "1", title: "Root" }]);
+      expect(result[0].key).toBe("1");
+      expect(result[0].title).toBe("Root");
+      expect(result[0].value).toBe("1");
+      expect(result[0].children).toBeUndefined();
+    });
 
-describe("system/role/utils", () => {
-  it("processTreeData 扁平节点", () => {
-    const nodes = [
-      { id: "1", title: "A" },
-      { id: "2", title: "B" },
-    ];
-    const result = processTreeData(nodes);
-    expect(result.length).toBe(2);
-    expect(result[0].key).toBe("1");
-    expect(result[0].title).toBe("A");
-  });
+    it("使用 key 字段而非 title", () => {
+      const result = processTreeData([{ key: "k1", name: "n1" }], "key", "name");
+      expect(result[0].key).toBe("k1");
+      expect(result[0].title).toBe("n1");
+      expect(result[0].value).toBe("k1");
+    });
 
-  it("processTreeData 嵌套 children", () => {
-    const nodes = [
-      {
-        id: "1",
-        title: "A",
-        children: [{ id: "2", title: "B" }],
-      },
-    ];
-    const result = processTreeData(nodes);
-    expect(result.length).toBe(1);
-    expect(result[0].children?.length).toBe(1);
-    expect(result[0].children?.[0].title).toBe("B");
-  });
+    it("递归 children", () => {
+      const result = processTreeData([
+        { id: "1", title: "P", children: [{ id: "2", title: "C" }] },
+      ]);
+      expect(result[0].children?.length).toBe(1);
+      expect(result[0].children?.[0].key).toBe("2");
+    });
 
-  it("processTreeData 空 children → undefined", () => {
-    const nodes = [{ id: "1", title: "A", children: [] }];
-    const result = processTreeData(nodes);
-    expect(result[0].children).toBeUndefined();
-  });
+    it("空 children 不渲染", () => {
+      const result = processTreeData([{ id: "1", title: "X", children: [] }]);
+      expect(result[0].children).toBeUndefined();
+    });
 
-  it("processTreeData 自定义 keyField/titleField", () => {
-    const nodes = [{ uuid: "x1", name: "Test" }];
-    const result = processTreeData(nodes, "uuid", "name");
-    expect(result[0].title).toBe("Test");
+    it("自定义 keyField/titleField", () => {
+      const result = processTreeData([{ deptId: "d1", deptName: "Dept 1" }], "deptId", "deptName");
+      expect(result[0].key).toBe("d1");
+      expect(result[0].title).toBe("Dept 1");
+    });
   });
 
   it("renderStatusTag 0 → 正常", () => {
-    const { baseElement } = render(<>{renderStatusTag(0)}</>, { wrapper });
-    expect(baseElement.textContent).toContain("正常");
+    render(renderStatusTag(0));
+    expect(screen.getByText("正常")).toBeInTheDocument();
   });
 
   it("renderStatusTag 1 → 停用", () => {
-    const { baseElement } = render(<>{renderStatusTag(1)}</>, { wrapper });
-    expect(baseElement.textContent).toContain("停用");
+    render(renderStatusTag(1));
+    expect(screen.getByText("停用")).toBeInTheDocument();
   });
 
-  it("renderRoleName 包含图标 + 文本", () => {
-    const { baseElement } = render(<>{renderRoleName("admin")}</>, { wrapper });
-    expect(baseElement.textContent).toContain("admin");
-    expect(baseElement.querySelector(".anticon")).toBeTruthy();
+  it("renderRoleName 含 icon", () => {
+    const { container } = render(renderRoleName("Admin"));
+    expect(container.querySelector(".anticon")).toBeTruthy();
+    expect(screen.getByText("Admin")).toBeInTheDocument();
   });
 
-  it("renderRoleKeyTag → 蓝色 Tag", () => {
-    const { baseElement } = render(<>{renderRoleKeyTag("admin")}</>, { wrapper });
-    expect(baseElement.textContent).toContain("admin");
-    expect(baseElement.querySelector(".ant-tag")).toBeTruthy();
+  it("renderRoleKeyTag 蓝色 tag", () => {
+    const { container } = render(renderRoleKeyTag("admin"));
+    expect(container.querySelector(".ant-tag-blue")).toBeTruthy();
+    expect(screen.getByText("admin")).toBeInTheDocument();
   });
 
-  it("formatLocalTime 调 formatDateTime", () => {
-    expect(formatLocalTime("2026-01-01T00:00:00Z")).toBe("2026-08-30 10:00:00");
+  it("formatLocalTime", () => {
+    expect(formatLocalTime("2026-08-31T10:00:00")).toMatch(/2026-08-31/);
   });
 });
