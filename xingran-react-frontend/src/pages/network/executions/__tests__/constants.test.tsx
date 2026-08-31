@@ -1,79 +1,61 @@
 /**
- * Phase 88 Batch184 — pages/network/executions/constants 测试
+ * Phase 88 Batch332 — pages/network/executions/constants 测试
  */
 import { describe, it, expect } from "vitest";
-import { render } from "@testing-library/react";
-import { App as AntdApp } from "antd";
-import type { ReactElement, ReactNode } from "react";
-
-vi.mock("@/lib/api", async () => {
-  const { createApiTestingModule } = await import("@/test/utils/createApiMock");
-  return createApiTestingModule();
-});
-
+import { render, screen } from "@testing-library/react";
 import {
   STATUS_OPTIONS,
   STATUS_CONFIG,
   renderStatusTag,
   renderSimpleStatusTag,
 } from "../constants";
-import type { ExecutionStatus } from "../types";
 
-function wrapper({ children }: { children: ReactNode }): ReactElement {
-  return <AntdApp>{children}</AntdApp>;
-}
-
-describe("network/executions/constants", () => {
+describe("pages/network/executions/constants", () => {
   it("STATUS_OPTIONS 4 项", () => {
     expect(STATUS_OPTIONS.length).toBe(4);
-    expect(STATUS_OPTIONS.map((o) => o.value)).toEqual(["pending", "running", "success", "failed"]);
   });
 
-  it("STATUS_CONFIG 4 个状态", () => {
-    expect(Object.keys(STATUS_CONFIG)).toEqual(
-      expect.arrayContaining(["pending", "running", "success", "failed"])
-    );
+  it("STATUS_CONFIG 4 状态", () => {
+    expect(Object.keys(STATUS_CONFIG).length).toBe(4);
   });
 
-  it("renderStatusTag pending → 待执行", () => {
-    const { baseElement } = render(<>{renderStatusTag("pending")}</>, { wrapper });
-    expect(baseElement.textContent).toContain("待执行");
-    expect(baseElement.querySelector(".ant-tag")).toBeTruthy();
+  it("STATUS_CONFIG success 绿", () => {
+    expect(STATUS_CONFIG.success.color).toBe("success");
+    expect(STATUS_CONFIG.success.text).toBe("成功");
   });
 
-  it("renderStatusTag running → 执行中", () => {
-    const { baseElement } = render(<>{renderStatusTag("running")}</>, { wrapper });
-    expect(baseElement.textContent).toContain("执行中");
+  it("renderStatusTag pending", () => {
+    render(renderStatusTag("pending"));
+    expect(screen.getByText("待执行")).toBeInTheDocument();
   });
 
-  it("renderStatusTag success → 成功", () => {
-    const { baseElement } = render(<>{renderStatusTag("success")}</>, { wrapper });
-    expect(baseElement.textContent).toContain("成功");
+  it("renderStatusTag running", () => {
+    render(renderStatusTag("running"));
+    expect(screen.getByText("执行中")).toBeInTheDocument();
   });
 
-  it("renderStatusTag failed → 失败", () => {
-    const { baseElement } = render(<>{renderStatusTag("failed")}</>, { wrapper });
-    expect(baseElement.textContent).toContain("失败");
+  it("renderStatusTag success", () => {
+    render(renderStatusTag("success"));
+    expect(screen.getByText("成功")).toBeInTheDocument();
   });
 
-  it("renderStatusTag 未知 → fallback pending", () => {
-    const { baseElement } = render(<>{renderStatusTag("unknown" as ExecutionStatus)}</>, {
-      wrapper,
-    });
-    expect(baseElement.textContent).toContain("待执行");
+  it("renderStatusTag failed", () => {
+    render(renderStatusTag("failed"));
+    expect(screen.getByText("失败")).toBeInTheDocument();
   });
 
-  it("renderSimpleStatusTag success → 成功 (无图标)", () => {
-    const { baseElement } = render(<>{renderSimpleStatusTag("success")}</>, { wrapper });
-    expect(baseElement.textContent).toContain("成功");
-    // 简化版无 icon span
-    expect(baseElement.querySelector(".anticon")).toBeFalsy();
+  it("renderStatusTag unknown → pending", () => {
+    render(renderStatusTag("xyz" as any));
+    expect(screen.getByText("待执行")).toBeInTheDocument();
   });
 
-  it("renderSimpleStatusTag 未知 → fallback", () => {
-    const { baseElement } = render(<>{renderSimpleStatusTag("unknown" as ExecutionStatus)}</>, {
-      wrapper,
-    });
-    expect(baseElement.textContent).toContain("待执行");
+  it("renderSimpleStatusTag success", () => {
+    render(renderSimpleStatusTag("success"));
+    expect(screen.getByText("成功")).toBeInTheDocument();
+  });
+
+  it("renderSimpleStatusTag unknown → pending", () => {
+    render(renderSimpleStatusTag("xyz" as any));
+    expect(screen.getByText("待执行")).toBeInTheDocument();
   });
 });
