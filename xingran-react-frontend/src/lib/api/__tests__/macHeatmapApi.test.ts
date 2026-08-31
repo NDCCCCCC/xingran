@@ -1,51 +1,60 @@
 /**
- * Phase 88 Batch244 — lib/api/macHeatmapApi 测试
+ * Phase 88 Batch306 — lib/api/macHeatmapApi 测试
  */
 import { describe, it, expect, vi } from "vitest";
 
 vi.mock("@/lib/api", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
   return {
-    ...actual,
     post: vi.fn(async (url: string, data?: any) => ({
-      code: 0,
       data: {
+        cells: [{ deviceId: "d1", interfaceName: "eth0", changeCount: 5, date: "2026-08-01" }],
+        topN: 100,
+        start: "2026-08-01",
+        end: "2026-08-07",
+        total: 1,
+        snapshot: "snap1",
         url,
         payload: data,
-        cells: [],
-        topN: 100,
-        start: "s",
-        end: "e",
-        total: 0,
-        snapshot: "v1",
       },
     })),
   };
 });
 
-import * as api from "@/lib/api";
+import { post } from "@/lib/api";
 import { queryMACHeatmap } from "../macHeatmapApi";
 
 describe("lib/api/macHeatmapApi", () => {
-  it("queryMACHeatmap 调用", async () => {
-    const r = await queryMACHeatmap({ startTime: "2026-01-01", endTime: "2026-01-07" });
-    expect(r.cells).toEqual([]);
+  it("queryMACHeatmap 调用 post /network/history/heatmap", async () => {
+    await queryMACHeatmap({ topN: 50 });
+    expect(post).toHaveBeenCalledWith("/network/history/heatmap", { topN: 50 });
+  });
+
+  it("返回 result.data", async () => {
+    const r = await queryMACHeatmap({ topN: 10 });
+    expect(r.cells.length).toBe(1);
+    expect(r.cells[0].deviceId).toBe("d1");
     expect(r.topN).toBe(100);
+    expect(r.total).toBe(1);
+    expect(r.snapshot).toBe("snap1");
   });
 
-  it("post 被调用", async () => {
-    vi.mocked(api.post).mockClear();
+  it("params 为空对象", async () => {
     await queryMACHeatmap({});
-    expect(api.post).toHaveBeenCalled();
-    expect(api.post).toHaveBeenCalledWith("/network/history/heatmap", {});
+    expect(post).toHaveBeenCalledWith("/network/history/heatmap", {});
   });
 
-  it("HeatmapQuery 形状", () => {
-    const q: import("../macHeatmapApi").HeatmapQuery = {
-      startTime: "2026-01-01",
-      endTime: "2026-01-07",
-      topN: 50,
-    };
-    expect(q.topN).toBe(50);
+  it("params 含 startTime/endTime", async () => {
+    await queryMACHeatmap({
+      startTime: "2026-08-01",
+      endTime: "2026-08-07",
+      topN: 100,
+    });
+    expect(post).toHaveBeenCalled();
+    const lastCall = vi.mocked(post).mock.calls[vi.mocked(post).mock.calls.length - 1];
+    expect(lastCall[1]).toMatchObject({
+      topN: 100,
+      startTime: "2026-08-01",
+      endTime: "2026-08-07",
+    });
   });
 });
