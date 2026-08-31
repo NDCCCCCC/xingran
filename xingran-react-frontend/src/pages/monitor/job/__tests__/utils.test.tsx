@@ -1,20 +1,8 @@
 /**
- * Phase 88 Batch178 — pages/monitor/job/utils 测试
+ * Phase 88 Batch334 — pages/monitor/job/utils 测试
  */
-import { describe, it, expect, vi } from "vitest";
-import { render } from "@testing-library/react";
-import { App as AntdApp } from "antd";
-import type { ReactElement, ReactNode } from "react";
-
-vi.mock("@/lib/api", async () => {
-  const { createApiTestingModule } = await import("@/test/utils/createApiMock");
-  return createApiTestingModule();
-});
-
-vi.mock("@/utils/datetime", () => ({
-  formatDateTime: vi.fn(() => "2026-08-30 10:00:00"),
-}));
-
+import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
 import {
   formatLocalTime,
   formatDuration,
@@ -24,64 +12,64 @@ import {
   renderExceptionInfo,
 } from "../utils";
 
-function wrapper({ children }: { children: ReactNode }): ReactElement {
-  return <AntdApp>{children}</AntdApp>;
-}
+describe("pages/monitor/job/utils", () => {
+  it("formatLocalTime", () => {
+    expect(formatLocalTime("2026-08-31T10:00:00")).toMatch(/2026-08-31/);
+  });
 
-describe("monitor/job/utils", () => {
-  it("formatLocalTime → formatDateTime 调用", () => {
-    expect(formatLocalTime("2026-01-01T00:00:00Z")).toBe("2026-08-30 10:00:00");
+  it("formatLocalTime null → '-'", () => {
+    expect(formatLocalTime(null)).toBe("-");
   });
 
   it("formatDuration 0 → '-'", () => {
     expect(formatDuration(0)).toBe("-");
   });
 
-  it("formatDuration < 1000 → 'Nms'", () => {
+  it("formatDuration <1000 → ms", () => {
     expect(formatDuration(500)).toBe("500ms");
   });
 
-  it("formatDuration 1000 → '1.00s'", () => {
-    expect(formatDuration(1000)).toBe("1.00s");
-  });
-
-  it("formatDuration 1500 → '1.50s'", () => {
+  it("formatDuration >=1000 → s", () => {
     expect(formatDuration(1500)).toBe("1.50s");
   });
 
-  it("renderJobStatusTag Normal (0) → 正常 green", () => {
-    const { baseElement } = render(<>{renderJobStatusTag(0)}</>, { wrapper });
-    expect(baseElement.textContent).toContain("正常");
+  it("formatDuration 10000 → 10.00s", () => {
+    expect(formatDuration(10000)).toBe("10.00s");
   });
 
-  it("renderJobStatusTag Paused (1) → 暂停", () => {
-    const { baseElement } = render(<>{renderJobStatusTag(1)}</>, { wrapper });
-    expect(baseElement.textContent).toContain("暂停");
+  it("renderJobStatusTag Normal → 正常", () => {
+    render(renderJobStatusTag(0));
+    expect(screen.getByText("正常")).toBeInTheDocument();
+  });
+
+  it("renderJobStatusTag Paused → 暂停", () => {
+    render(renderJobStatusTag(1));
+    expect(screen.getByText("暂停")).toBeInTheDocument();
   });
 
   it("renderConcurrentTag true → 允许", () => {
-    const { baseElement } = render(<>{renderConcurrentTag(true)}</>, { wrapper });
-    expect(baseElement.textContent).toContain("允许");
+    render(renderConcurrentTag(true));
+    expect(screen.getByText("允许")).toBeInTheDocument();
   });
 
   it("renderConcurrentTag false → 禁止", () => {
-    const { baseElement } = render(<>{renderConcurrentTag(false)}</>, { wrapper });
-    expect(baseElement.textContent).toContain("禁止");
+    render(renderConcurrentTag(false));
+    expect(screen.getByText("禁止")).toBeInTheDocument();
   });
 
-  it("renderCronExpression → 渲染 Tooltip + code", () => {
-    const { baseElement } = render(<>{renderCronExpression("0/5 * * * *")}</>, { wrapper });
-    expect(baseElement.textContent).toContain("0/5 * * * *");
-    expect(baseElement.querySelector("code")).toBeTruthy();
+  it("renderCronExpression 渲染 code 元素", () => {
+    const { container } = render(renderCronExpression("0 0 * * *"));
+    expect(container.querySelector("code")).toBeTruthy();
+    expect(container.textContent).toContain("0 0 * * *");
   });
 
-  it("renderExceptionInfo → 显示 查看错误", () => {
-    const { baseElement } = render(<>{renderExceptionInfo("Error stack")}</>, { wrapper });
-    expect(baseElement.textContent).toContain("查看错误");
+  it("renderExceptionInfo 非空 → 渲染 Tooltip", () => {
+    const { container } = render(renderExceptionInfo("Error msg"));
+    expect(container.textContent).toContain("查看错误");
   });
 
   it("renderExceptionInfo 空 → '-'", () => {
-    const { baseElement } = render(<>{renderExceptionInfo("")}</>, { wrapper });
-    expect(baseElement.textContent).toContain("-");
+    render(renderExceptionInfo(""));
+    expect(screen.getByText("-")).toBeInTheDocument();
   });
 });
