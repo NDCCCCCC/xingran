@@ -11,7 +11,7 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-let currentLayout = "classic";
+const currentLayout = "classic";
 const mockSetLayout = vi.fn();
 
 vi.mock("@/store/layoutStore", () => ({
