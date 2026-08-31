@@ -1,13 +1,7 @@
 /**
- * Phase 88 Batch224 — components/layout/shared/TabBar.constants 测试
+ * Phase 88 Batch362 — components/layout/shared/TabBar.constants 测试
  */
 import { describe, it, expect } from "vitest";
-
-vi.mock("@/lib/api", async () => {
-  const { createApiTestingModule } = await import("@/test/utils/createApiMock");
-  return createApiTestingModule();
-});
-
 import {
   SCROLL_STEP,
   INITIAL_DELAYS,
@@ -18,16 +12,14 @@ import {
   DROPDOWN_MAX_ZINDEX,
 } from "../TabBar.constants";
 
-describe("layout/shared/TabBar.constants", () => {
+describe("components/layout/shared/TabBar.constants", () => {
   it("SCROLL_STEP = 200", () => {
     expect(SCROLL_STEP).toBe(200);
   });
 
-  it("INITIAL_DELAYS 3 阶段", () => {
+  it("INITIAL_DELAYS = [0, 100, 300]", () => {
+    expect(INITIAL_DELAYS).toEqual([0, 100, 300]);
     expect(INITIAL_DELAYS.length).toBe(3);
-    expect(INITIAL_DELAYS[0]).toBe(0);
-    expect(INITIAL_DELAYS[1]).toBe(100);
-    expect(INITIAL_DELAYS[2]).toBe(300);
   });
 
   it("DEFAULT_HEIGHT = 40", () => {
