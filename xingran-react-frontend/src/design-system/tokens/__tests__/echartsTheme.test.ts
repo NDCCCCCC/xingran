@@ -1,5 +1,5 @@
 /**
- * Phase 84 84-03b — Design-system echartsTheme 静态断言(D-12)
+ * Phase 88 Batch315 — design-system/tokens/echartsTheme 测试
  */
 import { describe, it, expect } from "vitest";
 import {
@@ -12,38 +12,52 @@ import {
   brandHeatZero,
 } from "../echartsTheme";
 
-describe("design-system tokens echartsTheme (D-12)", () => {
-  it("brandSeriesColors is non-empty array", () => {
-    expect(Array.isArray(brandSeriesColors)).toBe(true);
-    expect(brandSeriesColors.length).toBeGreaterThan(0);
-    for (const c of brandSeriesColors) {
-      expect(c).toMatch(/^#[0-9a-fA-F]{6}$/);
-    }
+describe("design-system/tokens/echartsTheme", () => {
+  it("brandSeriesColors 5 项", () => {
+    expect(brandSeriesColors.length).toBe(5);
   });
 
-  it("brandHeatRamp has heatmap color stops", () => {
-    expect(Array.isArray(brandHeatRamp)).toBe(true);
-    expect(brandHeatRamp.length).toBeGreaterThan(0);
+  it("brandSeriesColors 第一项 brand primary green", () => {
+    expect(brandSeriesColors[0]).toBe("#156031");
   });
 
-  it("brandAxisLine is CSS color or var", () => {
-    expect(brandAxisLine).toBeTruthy();
-    expect(brandAxisLine.length).toBeGreaterThan(0);
+  it("brandSeriesColors 含铜金", () => {
+    expect(brandSeriesColors).toContain("#C09058");
   });
 
-  it("brandSplitLine is CSS color or var", () => {
-    expect(brandSplitLine).toBeTruthy();
+  it("brandHeatRamp 5 项", () => {
+    expect(brandHeatRamp.length).toBe(5);
   });
 
-  it("brandTextStyle is defined", () => {
-    expect(brandTextStyle).toBeTruthy();
+  it("brandHeatRamp 低 → 高", () => {
+    expect(brandHeatRamp[0]).toBe("#E9EFEB");
+    expect(brandHeatRamp[2]).toBe("#156031");
+    expect(brandHeatRamp[4]).toBe("#B88850");
   });
 
-  it("brandAreaFade has rgba format", () => {
-    expect(brandAreaFade).toMatch(/^rgba?\(/);
+  it("brandAxisLine = cream.border", () => {
+    expect(brandAxisLine).toBe("#DBD7CE");
   });
 
-  it("brandHeatZero is defined", () => {
-    expect(brandHeatZero).toBeTruthy();
+  it("brandSplitLine = green[50]", () => {
+    expect(brandSplitLine).toBe("#E9EFEB");
+  });
+
+  it("brandTextStyle cream.mutedStrong", () => {
+    expect(brandTextStyle).toBe("#64645C");
+  });
+
+  it("brandAreaFade rgba", () => {
+    expect(brandAreaFade).toMatch(/^rgba/);
+    expect(brandAreaFade).toContain("0.1");
+  });
+
+  it("brandHeatZero = cream.borderStrong", () => {
+    expect(brandHeatZero).toBe("#C2BDB2");
+  });
+
+  it("导出项都是 readonly string", () => {
+    for (const c of brandSeriesColors) expect(typeof c).toBe("string");
+    for (const c of brandHeatRamp) expect(typeof c).toBe("string");
   });
 });
