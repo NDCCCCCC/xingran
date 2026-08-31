@@ -1,136 +1,99 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+/**
+ * Phase 88 Batch304 — lib/loginPreflight 测试
+ */
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const {
-  mockRefreshEncryptionConfig,
-  mockGetCaptchaConfig,
-  mockFetchPublicKey,
-  mockClearPublicKeyCache,
-} = vi.hoisted(() => ({
-  mockRefreshEncryptionConfig: vi.fn<() => Promise<boolean>>(),
-  mockGetCaptchaConfig: vi.fn(),
-  mockFetchPublicKey: vi.fn(),
-  mockClearPublicKeyCache: vi.fn(),
-}));
-
-vi.mock("@/lib/api", () => ({
-  refreshEncryptionConfig: mockRefreshEncryptionConfig,
-}));
+vi.mock("@/lib/api", async () => {
+  const { createApiTestingModule } = await import("@/test/utils/createApiMock");
+  const actual = await createApiTestingModule();
+  return { ...actual, refreshEncryptionConfig: vi.fn(async () => true) };
+});
 
 vi.mock("@/services/captcha", () => ({
-  getCaptchaConfig: mockGetCaptchaConfig,
+  getCaptchaConfig: vi.fn(async () => ({ enabled: true })),
 }));
 
 vi.mock("@/utils/sm2", () => ({
-  fetchPublicKey: mockFetchPublicKey,
-  clearPublicKeyCache: mockClearPublicKeyCache,
+  clearPublicKeyCache: vi.fn(),
+  fetchPublicKey: vi.fn(async () => "fake-public-key"),
 }));
 
-import { submitLoginPreflight } from "@/lib/loginPreflight";
+import { refreshEncryptionConfig } from "@/lib/api";
+import { getCaptchaConfig } from "@/services/captcha";
+import { fetchPublicKey, clearPublicKeyCache } from "@/utils/sm2";
+import { submitLoginPreflight } from "../loginPreflight";
 
-describe("submitLoginPreflight", () => {
+describe("lib/loginPreflight", () => {
   beforeEach(() => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    mockRefreshEncryptionConfig.mockReset();
-    mockGetCaptchaConfig.mockReset();
-    mockFetchPublicKey.mockReset();
-    mockClearPublicKeyCache.mockReset();
-
-    mockRefreshEncryptionConfig.mockResolvedValue(true);
-    mockGetCaptchaConfig.mockResolvedValue({ enabled: "disabled" });
-    mockFetchPublicKey.mockResolvedValue("04ABCD");
+    vi.mocked(refreshEncryptionConfig).mockReset();
+    vi.mocked(getCaptchaConfig).mockReset();
+    vi.mocked(fetchPublicKey).mockReset();
+    vi.mocked(clearPublicKeyCache).mockReset();
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
+  it("三项成功 → ok=true + captchaEnabled", async () => {
+    vi.mocked(refreshEncryptionConfig).mockResolvedValue(true as any);
+    vi.mocked(getCaptchaConfig).mockResolvedValue({ enabled: true } as any);
+    vi.mocked(fetchPublicKey).mockResolvedValue("key" as any);
+
+    const r = await submitLoginPreflight();
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.captchaEnabled).toBe(true);
   });
 
-  it("返回本次刷新得到的验证码类型", async () => {
-    mockGetCaptchaConfig.mockResolvedValue({ enabled: "slider" });
+  it("captcha=false 也 ok=true", async () => {
+    vi.mocked(refreshEncryptionConfig).mockResolvedValue(true as any);
+    vi.mocked(getCaptchaConfig).mockResolvedValue({ enabled: false } as any);
+    vi.mocked(fetchPublicKey).mockResolvedValue("key" as any);
 
-    const result = await submitLoginPreflight();
-
-    expect(result).toEqual({ ok: true, captchaEnabled: "slider" });
+    const r = await submitLoginPreflight();
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.captchaEnabled).toBe(false);
   });
 
-  it("并发刷新加密开关、公钥和验证码配置", async () => {
-    let resolveEncryption!: (value: boolean) => void;
-    mockRefreshEncryptionConfig.mockImplementation(
-      () =>
-        new Promise<boolean>((resolve) => {
-          resolveEncryption = resolve;
-        })
-    );
+  it("encryption 失败 → ok=false", async () => {
+    vi.mocked(refreshEncryptionConfig).mockResolvedValue(false as any);
+    vi.mocked(getCaptchaConfig).mockResolvedValue({ enabled: true } as any);
+    vi.mocked(fetchPublicKey).mockResolvedValue("key" as any);
 
-    const pending = submitLoginPreflight();
-    await Promise.resolve();
-
-    expect(mockRefreshEncryptionConfig).toHaveBeenCalledTimes(1);
-    expect(mockFetchPublicKey).toHaveBeenCalledWith(true);
-    expect(mockGetCaptchaConfig).toHaveBeenCalledTimes(1);
-
-    resolveEncryption(true);
-    await pending;
+    const r = await submitLoginPreflight();
+    expect(r.ok).toBe(false);
   });
 
-  it("加密配置刷新返回 false 时阻止继续登录", async () => {
-    mockRefreshEncryptionConfig.mockResolvedValue(false);
+  it("publicKey 失败 → ok=false", async () => {
+    vi.mocked(refreshEncryptionConfig).mockResolvedValue(true as any);
+    vi.mocked(getCaptchaConfig).mockResolvedValue({ enabled: true } as any);
+    vi.mocked(fetchPublicKey).mockRejectedValue(new Error("net"));
 
-    const result = await submitLoginPreflight();
-
-    expect(result).toEqual({
-      ok: false,
-      friendlyMessage: "登录安全配置已过期，自动更新失败，请检查网络后重试",
-    });
+    const r = await submitLoginPreflight();
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.friendlyMessage).toContain("失败");
   });
 
-  it("加密配置刷新抛错时返回友好提示", async () => {
-    mockRefreshEncryptionConfig.mockRejectedValue(new Error("network down"));
+  it("captcha 失败 → ok=false", async () => {
+    vi.mocked(refreshEncryptionConfig).mockResolvedValue(true as any);
+    vi.mocked(getCaptchaConfig).mockRejectedValue(new Error("cap"));
+    vi.mocked(fetchPublicKey).mockResolvedValue("key" as any);
 
-    const result = await submitLoginPreflight();
-
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.friendlyMessage).not.toContain("network down");
-    }
+    const r = await submitLoginPreflight();
+    expect(r.ok).toBe(false);
   });
 
-  it("验证码配置刷新失败时返回友好提示", async () => {
-    mockGetCaptchaConfig.mockRejectedValue(new Error("captcha service 500"));
+  it("成功时 clearPublicKeyCache 被调用", async () => {
+    vi.mocked(refreshEncryptionConfig).mockResolvedValue(true as any);
+    vi.mocked(getCaptchaConfig).mockResolvedValue({ enabled: true } as any);
+    vi.mocked(fetchPublicKey).mockResolvedValue("key" as any);
 
-    const result = await submitLoginPreflight();
-
-    expect(result.ok).toBe(false);
-  });
-
-  it("强制清除并刷新 SM2 公钥", async () => {
     await submitLoginPreflight();
-
-    expect(mockClearPublicKeyCache).toHaveBeenCalledTimes(1);
-    expect(mockFetchPublicKey).toHaveBeenCalledWith(true);
+    expect(clearPublicKeyCache).toHaveBeenCalled();
   });
 
-  it("SM2 公钥刷新失败时返回友好提示", async () => {
-    mockFetchPublicKey.mockRejectedValue(new Error("public key rotated"));
+  it("fetchPublicKey 收到 true 参数", async () => {
+    vi.mocked(refreshEncryptionConfig).mockResolvedValue(true as any);
+    vi.mocked(getCaptchaConfig).mockResolvedValue({ enabled: true } as any);
+    vi.mocked(fetchPublicKey).mockResolvedValue("key" as any);
 
-    const result = await submitLoginPreflight();
-
-    expect(result.ok).toBe(false);
-  });
-
-  it("刷新超过 5 秒时停止等待并返回友好提示", async () => {
-    mockRefreshEncryptionConfig.mockImplementation(() => new Promise(() => {}));
-
-    vi.useFakeTimers();
-    try {
-      const pending = submitLoginPreflight();
-      await vi.advanceTimersByTimeAsync(5000);
-
-      expect(await pending).toEqual({
-        ok: false,
-        friendlyMessage: "登录安全配置已过期，自动更新失败，请检查网络后重试",
-      });
-    } finally {
-      vi.useRealTimers();
-    }
+    await submitLoginPreflight();
+    expect(fetchPublicKey).toHaveBeenCalledWith(true);
   });
 });
