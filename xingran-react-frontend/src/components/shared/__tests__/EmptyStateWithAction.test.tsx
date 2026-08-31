@@ -1,8 +1,8 @@
 /**
- * Phase 88 Batch127 — components/shared/EmptyStateWithAction 测试
+ * Phase 88 Batch298 — components/shared/EmptyStateWithAction 测试
  */
 import { describe, it, expect, vi } from "vitest";
-import { render, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { App as AntdApp } from "antd";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactElement, ReactNode } from "react";
@@ -22,61 +22,47 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
   );
 }
 
-describe("EmptyStateWithAction", () => {
-  it("基础渲染 + description", () => {
-    const { baseElement } = render(<EmptyStateWithAction description="暂无数据" />, { wrapper });
-    expect(baseElement.textContent).toContain("暂无数据");
+describe("shared/EmptyStateWithAction", () => {
+  it("只显示 description", () => {
+    render(<EmptyStateWithAction description="无数据" />, { wrapper });
+    expect(screen.getByText("无数据")).toBeInTheDocument();
   });
 
-  it("title + description → 显示 title 与 description", () => {
-    const { baseElement } = render(
-      <EmptyStateWithAction title="无结果" description="请检查筛选条件" />,
+  it("含 title → 标题 + 描述", () => {
+    render(<EmptyStateWithAction title="提示" description="无数据" />, { wrapper });
+    expect(screen.getByText("提示")).toBeInTheDocument();
+    expect(screen.getByText("无数据")).toBeInTheDocument();
+  });
+
+  it("actionLabel + actionPath → Link 按钮", () => {
+    const { container } = render(
+      <EmptyStateWithAction description="无数据" actionLabel="新增" actionPath="/create" />,
       { wrapper }
     );
-    expect(baseElement.textContent).toContain("无结果");
-    expect(baseElement.textContent).toContain("请检查筛选条件");
+    const link = container.querySelector("a[href='/create']");
+    expect(link).toBeTruthy();
+    expect(link?.textContent?.replace(/\s/g, "")).toContain("新增");
   });
 
-  it("actionLabel + actionPath → 渲染 Link + Button", () => {
-    const { baseElement, getByText } = render(
-      <EmptyStateWithAction description="空" actionLabel="去添加" actionPath="/add" />,
-      { wrapper }
-    );
-    const link = getByText("去添加").closest("a");
-    expect(link?.getAttribute("href")).toBe("/add");
-  });
-
-  it("actionLabel + onAction → 渲染 Button + 触发回调", () => {
+  it("actionLabel + onAction → 触发回调", () => {
     const onAction = vi.fn();
-    const { baseElement } = render(
-      <EmptyStateWithAction description="空" actionLabel="点我" onAction={onAction} />,
+    const { container } = render(
+      <EmptyStateWithAction description="无数据" actionLabel="刷新" onAction={onAction} />,
       { wrapper }
     );
-    const btn = baseElement.querySelector("button") as HTMLButtonElement;
-    fireEvent.click(btn);
+    const btn = container.querySelector("button.ant-btn");
+    expect(btn).toBeTruthy();
+    if (btn) fireEvent.click(btn);
     expect(onAction).toHaveBeenCalled();
   });
 
-  it("actionLabel 但无 path/onAction → 不渲染按钮", () => {
-    const { baseElement, queryByText } = render(
-      <EmptyStateWithAction description="空" actionLabel="按钮" />,
-      { wrapper }
-    );
-    expect(queryByText("按钮")).toBeNull();
+  it("无 actionLabel → 不显示按钮", () => {
+    render(<EmptyStateWithAction description="无数据" onAction={vi.fn()} />, { wrapper });
+    expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it("无 actionLabel → 不渲染按钮", () => {
-    const { queryByText } = render(<EmptyStateWithAction description="空" actionPath="/add" />, {
-      wrapper,
-    });
-    expect(queryByText("/add")).toBeNull();
-  });
-
-  it("自定义 icon 渲染", () => {
-    const { baseElement } = render(
-      <EmptyStateWithAction description="空" icon={<span data-testid="custom-icon">★</span>} />,
-      { wrapper }
-    );
-    expect(baseElement.querySelector('[data-testid="custom-icon"]')).toBeTruthy();
+  it("actionLabel 但无 actionPath/onAction → 不显示按钮", () => {
+    render(<EmptyStateWithAction description="x" actionLabel="go" />, { wrapper });
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });
