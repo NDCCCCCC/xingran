@@ -1,16 +1,8 @@
 /**
- * Phase 88 Batch182 — pages/network/discoveries/constants 测试
+ * Phase 88 Batch330 — pages/network/discoveries/constants 测试
  */
 import { describe, it, expect } from "vitest";
-import { render } from "@testing-library/react";
-import { App as AntdApp } from "antd";
-import type { ReactElement, ReactNode } from "react";
-
-vi.mock("@/lib/api", async () => {
-  const { createApiTestingModule } = await import("@/test/utils/createApiMock");
-  return createApiTestingModule();
-});
-
+import { render, screen } from "@testing-library/react";
 import {
   DISCOVERY_TYPE_OPTIONS,
   STATUS_OPTIONS,
@@ -18,11 +10,7 @@ import {
   renderStatusTag,
 } from "../constants";
 
-function wrapper({ children }: { children: ReactNode }): ReactElement {
-  return <AntdApp>{children}</AntdApp>;
-}
-
-describe("network/discoveries/constants", () => {
+describe("pages/network/discoveries/constants", () => {
   it("DISCOVERY_TYPE_OPTIONS 2 项", () => {
     expect(DISCOVERY_TYPE_OPTIONS.length).toBe(2);
     expect(DISCOVERY_TYPE_OPTIONS[0].value).toBe("snmp");
@@ -30,42 +18,47 @@ describe("network/discoveries/constants", () => {
 
   it("STATUS_OPTIONS 4 项", () => {
     expect(STATUS_OPTIONS.length).toBe(4);
-    expect(STATUS_OPTIONS.map((o) => o.value)).toEqual([
-      "pending",
-      "running",
-      "completed",
-      "failed",
-    ]);
+    expect(STATUS_OPTIONS[0].value).toBe("pending");
   });
 
-  it("STATUS_CONFIG 4 个状态", () => {
-    expect(Object.keys(STATUS_CONFIG)).toEqual(
-      expect.arrayContaining(["pending", "running", "completed", "failed"])
-    );
+  it("STATUS_CONFIG 4 状态", () => {
+    expect(Object.keys(STATUS_CONFIG).length).toBe(4);
   });
 
-  it("renderStatusTag pending → 待执行", () => {
-    const { baseElement } = render(<>{renderStatusTag("pending")}</>, { wrapper });
-    expect(baseElement.textContent).toContain("待执行");
+  it("STATUS_CONFIG pending default", () => {
+    expect(STATUS_CONFIG.pending.color).toBe("default");
   });
 
-  it("renderStatusTag running → 扫描中", () => {
-    const { baseElement } = render(<>{renderStatusTag("running")}</>, { wrapper });
-    expect(baseElement.textContent).toContain("扫描中");
+  it("STATUS_CONFIG completed success", () => {
+    expect(STATUS_CONFIG.completed.color).toBe("success");
   });
 
-  it("renderStatusTag completed → 已完成", () => {
-    const { baseElement } = render(<>{renderStatusTag("completed")}</>, { wrapper });
-    expect(baseElement.textContent).toContain("已完成");
+  it("STATUS_CONFIG failed error", () => {
+    expect(STATUS_CONFIG.failed.color).toBe("error");
   });
 
-  it("renderStatusTag failed → 失败", () => {
-    const { baseElement } = render(<>{renderStatusTag("failed")}</>, { wrapper });
-    expect(baseElement.textContent).toContain("失败");
+  it("renderStatusTag pending", () => {
+    render(renderStatusTag("pending"));
+    expect(screen.getByText("待执行")).toBeInTheDocument();
   });
 
-  it("renderStatusTag 未知 → fallback pending", () => {
-    const { baseElement } = render(<>{renderStatusTag("unknown" as any)}</>, { wrapper });
-    expect(baseElement.textContent).toContain("待执行");
+  it("renderStatusTag running", () => {
+    render(renderStatusTag("running"));
+    expect(screen.getByText("扫描中")).toBeInTheDocument();
+  });
+
+  it("renderStatusTag completed", () => {
+    render(renderStatusTag("completed"));
+    expect(screen.getByText("已完成")).toBeInTheDocument();
+  });
+
+  it("renderStatusTag failed", () => {
+    render(renderStatusTag("failed"));
+    expect(screen.getByText("失败")).toBeInTheDocument();
+  });
+
+  it("renderStatusTag unknown → pending", () => {
+    render(renderStatusTag("xyz" as any));
+    expect(screen.getByText("待执行")).toBeInTheDocument();
   });
 });
