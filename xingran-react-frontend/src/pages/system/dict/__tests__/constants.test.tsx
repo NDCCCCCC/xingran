@@ -1,16 +1,8 @@
 /**
- * Phase 88 Batch180 — pages/system/dict/constants 测试
+ * Phase 88 Batch327 — pages/system/dict/constants 测试
  */
 import { describe, it, expect } from "vitest";
-import { render } from "@testing-library/react";
-import { App as AntdApp } from "antd";
-import type { ReactElement, ReactNode } from "react";
-
-vi.mock("@/lib/api", async () => {
-  const { createApiTestingModule } = await import("@/test/utils/createApiMock");
-  return createApiTestingModule();
-});
-
+import { render, screen } from "@testing-library/react";
 import {
   STATUS_OPTIONS,
   STATUS_CONFIG,
@@ -19,35 +11,33 @@ import {
   renderStatusTag,
 } from "../constants";
 
-function wrapper({ children }: { children: ReactNode }): ReactElement {
-  return <AntdApp>{children}</AntdApp>;
-}
-
-describe("system/dict/constants", () => {
+describe("pages/system/dict/constants", () => {
   it("STATUS_OPTIONS 至少 2 项", () => {
     expect(STATUS_OPTIONS.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("STATUS_CONFIG 至少 2 个状态", () => {
-    expect(Object.keys(STATUS_CONFIG).length).toBeGreaterThanOrEqual(2);
+  it("STATUS_CONFIG 含 0 + 1", () => {
+    expect(STATUS_CONFIG[0]).toBeDefined();
+    expect(STATUS_CONFIG[1]).toBeDefined();
   });
 
-  it("DEFAULT_TYPE_FORM_VALUES status=0", () => {
+  it("DEFAULT_TYPE_FORM_VALUES", () => {
     expect(DEFAULT_TYPE_FORM_VALUES.status).toBe(0);
   });
 
-  it("DEFAULT_DATA_FORM_VALUES 字段", () => {
+  it("DEFAULT_DATA_FORM_VALUES", () => {
+    expect(DEFAULT_DATA_FORM_VALUES.dictSort).toBe(0);
     expect(DEFAULT_DATA_FORM_VALUES.status).toBe(0);
     expect(DEFAULT_DATA_FORM_VALUES.isDefault).toBe(false);
   });
 
-  it("renderStatusTag 0 → 启用 Tag", () => {
-    const { baseElement } = render(<>{renderStatusTag(0)}</>, { wrapper });
-    expect(baseElement.querySelector(".ant-tag")).toBeTruthy();
+  it("renderStatusTag 0", () => {
+    render(renderStatusTag(0));
+    expect(screen.getByText(STATUS_CONFIG[0].text)).toBeInTheDocument();
   });
 
-  it("renderStatusTag 1 → 禁用 Tag", () => {
-    const { baseElement } = render(<>{renderStatusTag(1)}</>, { wrapper });
-    expect(baseElement.querySelector(".ant-tag")).toBeTruthy();
+  it("renderStatusTag 1", () => {
+    render(renderStatusTag(1));
+    expect(screen.getByText(STATUS_CONFIG[1].text)).toBeInTheDocument();
   });
 });
