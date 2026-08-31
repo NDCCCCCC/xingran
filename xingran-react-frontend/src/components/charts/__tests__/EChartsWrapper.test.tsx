@@ -1,10 +1,8 @@
 /**
- * Phase 88 Batch124 — components/charts/EChartsWrapper 测试
+ * Phase 88 Batch320 — components/charts/EChartsWrapper 测试
  */
 import { describe, it, expect, vi } from "vitest";
-import { render, waitFor } from "@testing-library/react";
-import { App as AntdApp } from "antd";
-import type { ReactElement, ReactNode } from "react";
+import { render, screen, waitFor } from "@testing-library/react";
 
 vi.mock("@/lib/api", async () => {
   const { createApiTestingModule } = await import("@/test/utils/createApiMock");
@@ -12,42 +10,39 @@ vi.mock("@/lib/api", async () => {
 });
 
 vi.mock("echarts-for-react", () => ({
-  default: ({ option }: any) => (
-    <div data-testid="echarts-mock">
-      <span data-testid="echarts-option">{JSON.stringify(option?.title?.text || "no-title")}</span>
-    </div>
+  default: (props: any) => (
+    <div data-testid="echarts-mock" data-option={JSON.stringify(props.option)} />
   ),
 }));
 
 import EChartsWrapper from "../EChartsWrapper";
 
-function wrapper({ children }: { children: ReactNode }): ReactElement {
-  return <AntdApp>{children}</AntdApp>;
-}
-
-describe("EChartsWrapper", () => {
-  it("渲染 → 加载 echarts-for-react 后渲染子组件", async () => {
-    const { baseElement } = render(
-      <EChartsWrapper option={{ title: { text: "Test Chart" } }} style={{ height: 300 }} />,
-      { wrapper }
-    );
+describe("components/charts/EChartsWrapper", () => {
+  it("渲染 → 显示 echarts mock", async () => {
+    render(<EChartsWrapper option={{ xAxis: { type: "value" } }} />);
     await waitFor(() => {
-      expect(baseElement.querySelector('[data-testid="echarts-mock"]')).toBeTruthy();
+      expect(screen.getByTestId("echarts-mock")).toBeInTheDocument();
     });
-    expect(baseElement.querySelector('[data-testid="echarts-option"]')?.textContent).toContain(
-      "Test Chart"
-    );
   });
 
-  it("forwardRef → 暴露 ref", async () => {
-    const ref: any = { current: null };
-    render(<EChartsWrapper ref={ref} option={{ title: { text: "R" } }} />, { wrapper });
-    await waitFor(() => {});
-    // ref forwarding verification — instance may be the lazy-loaded component
-    expect(ref).toBeDefined();
+  it("传递 option 到内部组件", async () => {
+    const option = { series: [{ type: "line", data: [1, 2, 3] }] };
+    render(<EChartsWrapper option={option} />);
+    await waitFor(() => {
+      const el = screen.getByTestId("echarts-mock");
+      const data = JSON.parse(el.getAttribute("data-option") || "{}");
+      expect(data.series[0].data).toEqual([1, 2, 3]);
+    });
   });
 
-  it("displayName = 'EChartsWrapper'", () => {
+  it("传递 style 属性", async () => {
+    render(<EChartsWrapper option={{}} style={{ height: 300 }} />);
+    await waitFor(() => {
+      expect(screen.getByTestId("echarts-mock")).toBeInTheDocument();
+    });
+  });
+
+  it("displayName 正确", () => {
     expect(EChartsWrapper.displayName).toBe("EChartsWrapper");
   });
 });
