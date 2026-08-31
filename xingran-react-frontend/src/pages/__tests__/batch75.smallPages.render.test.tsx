@@ -48,8 +48,13 @@ describe("batch75 小页面渲染", () => {
   }, 20000);
 
   it("CaptchaBackgroundSettingsPage 渲染", async () => {
+    // 页面还会调 /system/captcha-backgrounds/list（getCaptchaBackgroundList）。
+    // 不 mock 时响应为 undefined，setBackgrounds(result.items) 后渲染期
+    // `backgrounds.length` 对 undefined 抛错。响应类型 CaptchaBackgroundListResponse:
+    // { items: CaptchaBackground[]; total: number }。
     await renderAndAssert(<CaptchaBackgroundSettingsPage />, {
       "/system/configs/list": { data: { list: [], total: 0 } },
+      "/system/captcha-backgrounds/list": { data: { items: [], total: 0 } },
     });
   }, 20000);
 });
