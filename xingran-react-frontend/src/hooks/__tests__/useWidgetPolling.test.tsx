@@ -8,6 +8,13 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
+vi.mock("@/store/dashboardStore", () => ({
+  useDashboardStore: vi.fn(() => ({
+    getCachedWidgetData: vi.fn(),
+    cacheWidgetData: vi.fn(),
+  })),
+}));
+
 describe("hooks/useWidgetPolling", () => {
   it("useWidgetPolling 导出", async () => {
     const mod = await import("../useWidgetPolling");
