@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -223,5 +224,120 @@ func TestGetMappingByDept(t *testing.T) {
 	result, err := mapper.GetMappingByDept(ctx, "dept-1")
 	assert.NoError(t, err)
 	assert.Equal(t, "TestDept", result.OUName)
+	assert.Equal(t, "synced", result.SyncStatus)
+}
+
+// ─── 补测计划 B1-P6: GetMappingByOU ──────────────────────────────
+
+func TestGetMappingByOU(t *testing.T) {
+	mapper, ctx := setupOUMapperDB(t)
+
+	// 未找到
+	_, err := mapper.GetMappingByOU(ctx, "OU=NonExistent,DC=company,DC=com")
+	assert.Error(t, err)
+
+	// 找到
+	mapping := &models.DeptOUMapping{
+		ID:         "map-ou-1",
+		DeptID:     "dept-1",
+		ADConfigID: "config-1",
+		OUDN:       "OU=TargetOU,DC=company,DC=com",
+		OUName:     "TargetDept",
+		SyncStatus: "synced",
+	}
+	require.NoError(t, mapper.UpsertMapping(ctx, mapping))
+
+	result, err := mapper.GetMappingByOU(ctx, "OU=TargetOU,DC=company,DC=com")
+	require.NoError(t, err)
+	assert.Equal(t, "dept-1", result.DeptID)
+}
+
+// ─── 补测计划 B1-P6: ListMappings ────────────────────────────────
+
+func TestListMappings(t *testing.T) {
+	mapper, ctx := setupOUMapperDB(t)
+
+	// 空结果
+	mappings, err := mapper.ListMappings(ctx, "config-empty")
+	require.NoError(t, err)
+	assert.Empty(t, mappings)
+
+	// 多条结果
+	for i := 0; i < 3; i++ {
+		require.NoError(t, mapper.UpsertMapping(ctx, &models.DeptOUMapping{
+			ID:         "map-list-" + string(rune('a'+i)),
+			DeptID:     "dept-" + string(rune('1'+i)),
+			ADConfigID: "config-list",
+			OUDN:       "OU=Dept" + string(rune('A'+i)) + ",DC=company,DC=com",
+			OUName:     "Dept" + string(rune('A'+i)),
+			SyncStatus: "synced",
+		}))
+	}
+
+	results, err := mapper.ListMappings(ctx, "config-list")
+	require.NoError(t, err)
+	assert.Len(t, results, 3)
+}
+
+// ─── 补测计划 B1-P6: DeleteMapping ───────────────────────────
+
+func TestDeleteMapping(t *testing.T) {
+	mapper, ctx := setupOUMapperDB(t)
+
+	require.NoError(t, mapper.UpsertMapping(ctx, &models.DeptOUMapping{
+		ID:         "map-del-1",
+		DeptID:     "dept-1",
+		ADConfigID: "config-1",
+		OUDN:       "OU=ToDelete,DC=company,DC=com",
+		OUName:     "DeleteMe",
+	}))
+
+	require.NoError(t, mapper.DeleteMapping(ctx, "map-del-1"))
+
+	// 已删除，查不到
+	_, err := mapper.GetMappingByOU(ctx, "OU=ToDelete,DC=company,DC=com")
+	assert.Error(t, err)
+}
+
+// ─── 补测计划 B1-P6: DisableMapping ─────────────────────────
+
+func TestDisableMapping(t *testing.T) {
+	mapper, ctx := setupOUMapperDB(t)
+
+	require.NoError(t, mapper.UpsertMapping(ctx, &models.DeptOUMapping{
+		ID:          "map-dis-1",
+		DeptID:      "dept-1",
+		ADConfigID:  "config-1",
+		OUDN:        "OU=ToDisable,DC=company,DC=com",
+		OUName:      "DisableMe",
+		SyncEnabled: true,
+	}))
+
+	require.NoError(t, mapper.DisableMapping(ctx, "map-dis-1"))
+
+	// 禁用后 sync_enabled = false
+	result, err := mapper.GetMappingByOU(ctx, "OU=ToDisable,DC=company,DC=com")
+	require.NoError(t, err)
+	assert.False(t, result.SyncEnabled)
+}
+
+// ─── 补测计划 B1-P6: UpdateSyncStatus ──────────────────────
+
+func TestUpdateSyncStatus(t *testing.T) {
+	mapper, ctx := setupOUMapperDB(t)
+
+	require.NoError(t, mapper.UpsertMapping(ctx, &models.DeptOUMapping{
+		ID:         "map-status-1",
+		DeptID:     "dept-1",
+		ADConfigID: "config-1",
+		OUDN:       "OU=ToStatus,DC=company,DC=com",
+		OUName:     "StatusMe",
+		SyncStatus: "pending",
+	}))
+
+	require.NoError(t, mapper.UpdateSyncStatus(ctx, "map-status-1", "synced"))
+
+	result, err := mapper.GetMappingByOU(ctx, "OU=ToStatus,DC=company,DC=com")
+	require.NoError(t, err)
 	assert.Equal(t, "synced", result.SyncStatus)
 }

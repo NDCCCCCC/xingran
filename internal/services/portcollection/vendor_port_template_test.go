@@ -4,8 +4,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
 // TestRenderCommand_VendorActionMatrix 覆盖 3 厂商 × 5 操作 = 15 个 (vendor, action) 模板。
@@ -129,7 +131,7 @@ func TestRenderCommand_VendorActionMatrix(t *testing.T) {
 			action: ActionDot1xEnable,
 			params: PortTemplateParams{
 				InterfaceName:  "GigabitEthernet0/0/1",
-				Dot1xUserLimit: intPtr(2),
+				Dot1xUserLimit: IntPtr(2),
 			},
 			expected: []string{"interface GigabitEthernet0/0/1", "dot1x port-control auto", "dot1x default-user-limit 2"},
 		},
@@ -285,5 +287,175 @@ func TestRenderCommand_DescriptionTooLong(t *testing.T) {
 	assert.ErrorIs(t, err, ErrDescriptionTooLong)
 }
 
-// intPtr 取地址简写 —— 测试夹具中构造 *int 字面量的快捷方式。
-func intPtr(v int) *int { return &v }
+// intPtr 已迁至 helpers_test.go 的 IntPtr（避免跨测试文件冲突）。
+
+// =====================================================================
+// 补测计划 B1-P5: portcollection vendor_port_template 低覆盖分支
+// 覆盖: port_binding 有 MAC | port_binding remove 有 MAC |
+//       Ruijie binding invalid MAC 错误分支 | set_vlan VLAN 边界错误
+// =====================================================================
+
+// ─── port_binding 有 MAC（H3C/华为/锐捷 add+remove）─────────────────────
+
+func TestRenderCommand_H3C_PortBindingAdd_WithMAC(t *testing.T) {
+	got, err := RenderCommand(models.VendorH3C, ActionPortBinding, PortTemplateParams{
+		InterfaceName: "GE0/0/1", BindOp: "add",
+		IPAddress: "10.62.25.5", MACAddress: "AA:BB:CC:DD:EE:FF",
+	})
+	require.NoError(t, err)
+	// H3C 无 static 关键字，且 MAC 格式为 AA-BB-CC-DD-EE-FF（横杠）
+	assert.Equal(t, []string{"interface GE0/0/1", "user-bind ip-address 10.62.25.5 mac-address AA-BB-CC-DD-EE-FF"}, got)
+}
+
+func TestRenderCommand_H3C_PortBindingRemove_WithMAC(t *testing.T) {
+	got, err := RenderCommand(models.VendorH3C, ActionPortBinding, PortTemplateParams{
+		InterfaceName: "GE0/0/1", BindOp: "remove",
+		IPAddress: "10.62.25.5", MACAddress: "aabb.ccdd.eeff",
+	})
+	require.NoError(t, err)
+	// MAC 归一化为 AA-BB-CC-DD-EE-FF（H3C 格式）
+	assert.Equal(t, []string{"interface GE0/0/1", "undo user-bind ip-address 10.62.25.5 mac-address AA-BB-CC-DD-EE-FF"}, got)
+}
+
+func TestRenderCommand_Huawei_PortBindingRemove_WithMAC(t *testing.T) {
+	got, err := RenderCommand(models.VendorHuawei, ActionPortBinding, PortTemplateParams{
+		InterfaceName: "GE0/0/1", BindOp: "remove",
+		IPAddress: "10.62.25.5", MACAddress: "1122-3344-5566",
+	})
+	require.NoError(t, err)
+	// 华为有 static 关键字
+	assert.Equal(t, []string{"interface GE0/0/1", "undo user-bind static ip-address 10.62.25.5 mac-address 11-22-33-44-55-66"}, got)
+}
+
+// ─── Ruijie binding invalid MAC 错误分支 ───────────────────────────────────
+
+func TestRenderCommand_Ruijie_PortBindingAdd_InvalidMAC(t *testing.T) {
+	_, err := RenderCommand(models.VendorRuijie, ActionPortBinding, PortTemplateParams{
+		InterfaceName: "GigabitEthernet0/0/1", BindOp: "add",
+		IPAddress: "10.62.25.5", MACAddress: "not-a-mac",
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid mac")
+}
+
+func TestRenderCommand_Ruijie_PortBindingRemove_InvalidMAC(t *testing.T) {
+	_, err := RenderCommand(models.VendorRuijie, ActionPortBinding, PortTemplateParams{
+		InterfaceName: "GigabitEthernet0/0/1", BindOp: "remove",
+		IPAddress: "10.62.25.5", MACAddress: "GG:HH:II:JJ:KK:LL",
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid mac")
+}
+
+// ─── Ruijie port_binding add MAC-only 分支（已覆盖 baseline，但补充带 MAC 场景）──
+
+func TestRenderCommand_Ruijie_PortBindingRemove_WithMAC(t *testing.T) {
+	got, err := RenderCommand(models.VendorRuijie, ActionPortBinding, PortTemplateParams{
+		InterfaceName: "GigabitEthernet0/0/1", BindOp: "remove",
+		IPAddress: "10.62.25.5", MACAddress: "AABBCCDDEEFF",
+	})
+	require.NoError(t, err)
+	// AA:BB:CC:DD:EE:FF → aabb.ccdd.eeff（dot 格式）
+	assert.Equal(t, []string{"interface GigabitEthernet0/0/1", "no switchport port-security binding aabb.ccdd.eeff 10.62.25.5"}, got)
+}
+
+// ─── set_vlan VLAN 边界错误分支 ─────────────────────────────────────────
+
+func TestRenderCommand_Huawei_SetAccessVLAN_VLANTooLow(t *testing.T) {
+	_, err := RenderCommand(models.VendorHuawei, ActionSetAccessVLAN, PortTemplateParams{
+		InterfaceName: "GE0/0/1", VLANID: 0,
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "out of range")
+}
+
+func TestRenderCommand_Huawei_SetAccessVLAN_VLANTooHigh(t *testing.T) {
+	_, err := RenderCommand(models.VendorHuawei, ActionSetAccessVLAN, PortTemplateParams{
+		InterfaceName: "GE0/0/1", VLANID: 4095,
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "out of range")
+}
+
+func TestRenderCommand_H3C_SetAccessVLAN_VLANTooLow(t *testing.T) {
+	_, err := RenderCommand(models.VendorH3C, ActionSetAccessVLAN, PortTemplateParams{
+		InterfaceName: "GE0/0/1", VLANID: 0,
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "out of range")
+}
+
+func TestRenderCommand_H3C_SetAccessVLAN_VLANTooHigh(t *testing.T) {
+	_, err := RenderCommand(models.VendorH3C, ActionSetAccessVLAN, PortTemplateParams{
+		InterfaceName: "GE0/0/1", VLANID: 5000,
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "out of range")
+}
+
+func TestRenderCommand_Ruijie_SetAccessVLAN_VLANTooLow(t *testing.T) {
+	_, err := RenderCommand(models.VendorRuijie, ActionSetAccessVLAN, PortTemplateParams{
+		InterfaceName: "GigabitEthernet0/0/1", VLANID: 0,
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "out of range")
+}
+
+func TestRenderCommand_Ruijie_SetAccessVLAN_VLANBoundary(t *testing.T) {
+	// VLAN 1（最小合法值）和 4094（最大合法值）
+	got1, err1 := RenderCommand(models.VendorRuijie, ActionSetAccessVLAN, PortTemplateParams{
+		InterfaceName: "GigabitEthernet0/0/1", VLANID: 1,
+	})
+	require.NoError(t, err1)
+	assert.Contains(t, got1[2], "vlan 1")
+
+	got2, err2 := RenderCommand(models.VendorRuijie, ActionSetAccessVLAN, PortTemplateParams{
+		InterfaceName: "GigabitEthernet0/0/1", VLANID: 4094,
+	})
+	require.NoError(t, err2)
+	assert.Contains(t, got2[2], "vlan 4094")
+}
+
+// ─── Ruijie dot1x_enable limit=0 兜底分支 ──────────────────────────────
+
+func TestRenderCommand_Ruijie_Dot1xEnable_LimitZero(t *testing.T) {
+	got, err := RenderCommand(models.VendorRuijie, ActionDot1xEnable, PortTemplateParams{
+		InterfaceName: "GigabitEthernet0/0/1", Dot1xUserLimit: IntPtr(0),
+	})
+	require.NoError(t, err)
+	// 0 → 兜底 1（与 nil 等价）
+	assert.Equal(t, []string{
+		"interface GigabitEthernet0/0/1",
+		"dot1x port-control auto",
+		"dot1x default-user-limit 1",
+	}, got)
+}
+
+// ─── port_binding add 缺 IPAddress 错误分支（H3C/华为/锐捷）────────────────
+
+func TestRenderCommand_Huawei_PortBindingAdd_MissingIP(t *testing.T) {
+	_, err := RenderCommand(models.VendorHuawei, ActionPortBinding, PortTemplateParams{
+		InterfaceName: "GE0/0/1", BindOp: "add",
+		IPAddress: "", MACAddress: "AA:BB:CC:DD:EE:FF",
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "ip-address required")
+}
+
+func TestRenderCommand_H3C_PortBindingAdd_MissingIP(t *testing.T) {
+	_, err := RenderCommand(models.VendorH3C, ActionPortBinding, PortTemplateParams{
+		InterfaceName: "GE0/0/1", BindOp: "add",
+		IPAddress: "", MACAddress: "AA:BB:CC:DD:EE:FF",
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "ip-address required")
+}
+
+func TestRenderCommand_Ruijie_PortBindingAdd_MissingIP(t *testing.T) {
+	_, err := RenderCommand(models.VendorRuijie, ActionPortBinding, PortTemplateParams{
+		InterfaceName: "GigabitEthernet0/0/1", BindOp: "add",
+		IPAddress: "", MACAddress: "AA:BB:CC:DD:EE:FF",
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "ip-address required")
+}
