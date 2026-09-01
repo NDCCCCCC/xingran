@@ -1,5 +1,5 @@
 /**
- * Phase 88 Batch406 — pages/network/ports 测试
+ * Phase 88 Batch406 — pages/network/executions 测试
  */
 import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
@@ -14,15 +14,15 @@ vi.mock("@/lib/api", async () => {
 });
 
 vi.mock("@/lib/networkApi", () => ({
-  getNetworkPorts: vi.fn(async () => ({ list: [], total: 0 })),
-  getNetworkPortStats: vi.fn(async () => ({})),
-  collectDevicePorts: vi.fn(async () => ({})),
+  getCommandExecutions: vi.fn(async () => ({ list: [], total: 0 })),
+  getCommandExecutionDetail: vi.fn(async () => ({})),
+  cancelCommandExecution: vi.fn(async () => ({})),
 }));
 
 function wrapper({ children }: { children: ReactNode }): ReactElement {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return (
-    <MemoryRouter initialEntries={["/network/ports"]}>
+    <MemoryRouter initialEntries={["/network/executions"]}>
       <QueryClientProvider client={qc}>
         <AntdApp>{children}</AntdApp>
       </QueryClientProvider>
@@ -30,7 +30,7 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
   );
 }
 
-describe("pages/network/ports", () => {
+describe("pages/network/executions", () => {
   it("导出为函数组件", async () => {
     const mod = await import("../index");
     expect(typeof mod.default).toBe("function");

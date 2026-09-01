@@ -1,5 +1,5 @@
 /**
- * Phase 88 Batch406 — pages/network/ports 测试
+ * Phase 88 Batch406 — pages/network/mac/history 测试
  */
 import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
@@ -13,16 +13,15 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-vi.mock("@/lib/networkApi", () => ({
-  getNetworkPorts: vi.fn(async () => ({ list: [], total: 0 })),
-  getNetworkPortStats: vi.fn(async () => ({})),
-  collectDevicePorts: vi.fn(async () => ({})),
+vi.mock("@/lib/api/macHeatmapApi", () => ({
+  getMACHistoryList: vi.fn(async () => ({ list: [], total: 0 })),
+  getMACHistoryDetail: vi.fn(async () => ({})),
 }));
 
 function wrapper({ children }: { children: ReactNode }): ReactElement {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return (
-    <MemoryRouter initialEntries={["/network/ports"]}>
+    <MemoryRouter initialEntries={["/network/mac/history"]}>
       <QueryClientProvider client={qc}>
         <AntdApp>{children}</AntdApp>
       </QueryClientProvider>
@@ -30,14 +29,14 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
   );
 }
 
-describe("pages/network/ports", () => {
+describe("pages/network/mac/history", () => {
   it("导出为函数组件", async () => {
-    const mod = await import("../index");
+    const mod = await import("../MACHistoryPage");
     expect(typeof mod.default).toBe("function");
   });
 
   it("基础渲染不抛错", async () => {
-    const { default: Comp } = await import("../index");
+    const { default: Comp } = await import("../MACHistoryPage");
     expect(() => render(<Comp />, { wrapper })).not.toThrow();
   }, 15000);
 });
