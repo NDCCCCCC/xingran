@@ -82,7 +82,7 @@ jobs:
         # when the gate fails. if: always() so a gate failure still publishes
         # the artifact instead of leaving the developer blind to the regression.
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backend-coverage
           path: |
@@ -110,7 +110,7 @@ jobs:
 
       - name: Download coverage profile
         # Reuses the backend job's coverage.out — no second test run.
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: backend-coverage
 
@@ -190,7 +190,7 @@ jobs:
         # 剥离后 json 与 html 报告位于 artifact 根——frontend-coverage-diff
         # job 的 download 必须带 path 输入还原 (见该 job 注释)。
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-coverage
           path: xingran-react-frontend/coverage/
@@ -225,7 +225,7 @@ jobs:
         # 输入因此是让 gate 真正读到 json 跑起来, 而非防静默失效 (防失效已由
         # fail-closed 兜底)。后端上传的是 workspace 根单文件, 故其 download
         # 无需 path。
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: frontend-coverage
           path: xingran-react-frontend/coverage
