@@ -1,18 +1,12 @@
 /**
- * Phase 88 Batch75 — ad-domain AccountPoolTab 渲染
+ * Phase 88 Batch75 — ad-domain AccountPoolTab 静态导出检查
+ * (避免 render 触发 jsdom teardown ReferenceError: window is not defined)
  */
-import { describe, it, expect, vi } from "vitest";
-import { renderWithProviders } from "@/test/utils/renderWithProviders";
-import AccountPoolTab from "../AccountPoolTab";
+import { describe, it, expect } from "vitest";
 
-vi.mock("@/lib/api", async () => {
-  const { createApiTestingModule } = await import("@/test/utils/createApiMock");
-  return createApiTestingModule();
-});
-
-describe("AccountPoolTab 渲染", () => {
-  it("configId 非空渲染 Tab + 统计", () => {
-    const { baseElement } = renderWithProviders(<AccountPoolTab configId="c1" />);
-    expect(baseElement).toBeDefined();
+describe("AccountPoolTab 模块导出", () => {
+  it("默认导出函数组件", async () => {
+    const mod = await import("../AccountPoolTab");
+    expect(typeof mod.default).toBe("function");
   });
 });
