@@ -38,10 +38,9 @@ describe("NoticeDetailContent", () => {
   });
 
   it("showReadStatus=true → 显示阅读状态", () => {
-    const { baseElement } = render(
-      <NoticeDetailContent notice={baseNotice} showReadStatus />,
-      { wrapper }
-    );
+    const { baseElement } = render(<NoticeDetailContent notice={baseNotice} showReadStatus />, {
+      wrapper,
+    });
     expect(baseElement.textContent).toContain("未读");
   });
 
@@ -57,10 +56,9 @@ describe("NoticeDetailContent", () => {
   });
 
   it("showPublishStatus=true → 显示发布状态 + 发布时间", () => {
-    const { baseElement } = render(
-      <NoticeDetailContent notice={baseNotice} showPublishStatus />,
-      { wrapper }
-    );
+    const { baseElement } = render(<NoticeDetailContent notice={baseNotice} showPublishStatus />, {
+      wrapper,
+    });
     expect(baseElement.textContent).toContain("发布时间");
   });
 });

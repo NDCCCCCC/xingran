@@ -26,7 +26,9 @@ describe("components/CronSelector/fields/SecondField", () => {
   });
 
   it("基础渲染不抛错", () => {
-    expect(() => render(<SecondField value={everyValue} onChange={cb} />, { wrapper })).not.toThrow();
+    expect(() =>
+      render(<SecondField value={everyValue} onChange={cb} />, { wrapper })
+    ).not.toThrow();
   });
 });
 
@@ -35,7 +37,9 @@ describe("components/CronSelector/fields/MinuteField", () => {
     expect(typeof MinuteField).toBe("function");
   });
   it("基础渲染不抛错", () => {
-    expect(() => render(<MinuteField value={everyValue} onChange={cb} />, { wrapper })).not.toThrow();
+    expect(() =>
+      render(<MinuteField value={everyValue} onChange={cb} />, { wrapper })
+    ).not.toThrow();
   });
 });
 
@@ -62,7 +66,9 @@ describe("components/CronSelector/fields/MonthField", () => {
     expect(typeof MonthField).toBe("function");
   });
   it("基础渲染不抛错", () => {
-    expect(() => render(<MonthField value={everyValue} onChange={cb} />, { wrapper })).not.toThrow();
+    expect(() =>
+      render(<MonthField value={everyValue} onChange={cb} />, { wrapper })
+    ).not.toThrow();
   });
 });
 
