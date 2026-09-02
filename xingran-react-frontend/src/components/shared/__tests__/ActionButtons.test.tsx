@@ -7,9 +7,7 @@ import { App } from "antd";
 import ActionButtons from "../ActionButtons";
 import type { ReactElement } from "react";
 
-const wrapper = ({ children }: { children: ReactElement }) => (
-  <App>{children}</App>
-);
+const wrapper = ({ children }: { children: ReactElement }) => <App>{children}</App>;
 
 describe("components/shared/ActionButtons", () => {
   it("导出为函数组件", async () => {

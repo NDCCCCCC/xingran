@@ -78,10 +78,9 @@ describe("NetworkExport", () => {
       headers: { get: () => null },
     })) as any;
     try {
-      const { getByText } = render(
-        <NetworkExport entityType="devices" entityName="设备" />,
-        { wrapper }
-      );
+      const { getByText } = render(<NetworkExport entityType="devices" entityName="设备" />, {
+        wrapper,
+      });
       expect(() => fireEvent.click(getByText("导出"))).not.toThrow();
     } finally {
       globalThis.fetch = origFetch;
@@ -97,10 +96,9 @@ describe("NetworkExport", () => {
     const origFetch = globalThis.fetch;
     globalThis.fetch = fetchMock as any;
     try {
-      const { getByText } = render(
-        <NetworkExport entityType="devices" entityName="设备" />,
-        { wrapper }
-      );
+      const { getByText } = render(<NetworkExport entityType="devices" entityName="设备" />, {
+        wrapper,
+      });
       fireEvent.click(getByText("导出"));
       // dropdown menu closed in jsdom — but at least verify export renders
       expect(fetchMock).toBeDefined();

@@ -14,10 +14,7 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
 describe("TemplateVariablesModal", () => {
   it("空 variables 不抛错", () => {
     expect(() =>
-      render(
-        <TemplateVariablesModal open={true} variables={{}} onClose={vi.fn()} />,
-        { wrapper }
-      )
+      render(<TemplateVariablesModal open={true} variables={{}} onClose={vi.fn()} />, { wrapper })
     ).not.toThrow();
   });
 

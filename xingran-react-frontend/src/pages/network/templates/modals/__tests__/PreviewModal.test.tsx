@@ -14,19 +14,13 @@ function wrapper({ children }: { children: ReactNode }): ReactElement {
 describe("TemplatePreviewModal", () => {
   it("open=true 不抛错", () => {
     expect(() =>
-      render(
-        <TemplatePreviewModal open={true} content="测试内容" onClose={vi.fn()} />,
-        { wrapper }
-      )
+      render(<TemplatePreviewModal open={true} content="测试内容" onClose={vi.fn()} />, { wrapper })
     ).not.toThrow();
   });
 
   it("open=false 不抛错", () => {
     expect(() =>
-      render(
-        <TemplatePreviewModal open={false} content="" onClose={vi.fn()} />,
-        { wrapper }
-      )
+      render(<TemplatePreviewModal open={false} content="" onClose={vi.fn()} />, { wrapper })
     ).not.toThrow();
   });
 });

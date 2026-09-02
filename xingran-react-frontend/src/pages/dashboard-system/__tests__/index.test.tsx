@@ -47,7 +47,13 @@ vi.mock("@/store/dashboardStore", () => ({
   })),
 }));
 
-function wrapper({ children, initialEntries }: { children: ReactNode; initialEntries: string[] }): ReactElement {
+function wrapper({
+  children,
+  initialEntries,
+}: {
+  children: ReactNode;
+  initialEntries: string[];
+}): ReactElement {
   return (
     <MemoryRouter initialEntries={initialEntries}>
       <AntdApp>{children}</AntdApp>
@@ -58,7 +64,9 @@ function wrapper({ children, initialEntries }: { children: ReactNode; initialEnt
 describe("DashboardPage", () => {
   it("无 id 无 mode → DashboardHome", () => {
     expect(() =>
-      render(<DashboardPage />, { wrapper: (props) => wrapper({ ...props, initialEntries: ["/dashboard"] }) })
+      render(<DashboardPage />, {
+        wrapper: (props) => wrapper({ ...props, initialEntries: ["/dashboard"] }),
+      })
     ).not.toThrow();
   });
 });

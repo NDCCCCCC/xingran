@@ -19,10 +19,7 @@ describe("components/CronSelector/fields/SecondField", () => {
 
   it("基础渲染不抛错", () => {
     expect(() =>
-      render(
-        <SecondField value={{ type: "every" } as any} onChange={vi.fn()} />,
-        { wrapper }
-      )
+      render(<SecondField value={{ type: "every" } as any} onChange={vi.fn()} />, { wrapper })
     ).not.toThrow();
   });
 });
@@ -35,10 +32,7 @@ describe("components/CronSelector/fields/MinuteField", () => {
   });
   it("基础渲染不抛错", () => {
     expect(() =>
-      render(
-        <MinuteField value={{ type: "every" } as any} onChange={vi.fn()} />,
-        { wrapper }
-      )
+      render(<MinuteField value={{ type: "every" } as any} onChange={vi.fn()} />, { wrapper })
     ).not.toThrow();
   });
 });
@@ -51,10 +45,7 @@ describe("components/CronSelector/fields/HourField", () => {
   });
   it("基础渲染不抛错", () => {
     expect(() =>
-      render(
-        <HourField value={{ type: "every" } as any} onChange={vi.fn()} />,
-        { wrapper }
-      )
+      render(<HourField value={{ type: "every" } as any} onChange={vi.fn()} />, { wrapper })
     ).not.toThrow();
   });
 });
@@ -67,10 +58,7 @@ describe("components/CronSelector/fields/DayField", () => {
   });
   it("基础渲染不抛错", () => {
     expect(() =>
-      render(
-        <DayField value={{ type: "every" } as any} onChange={vi.fn()} />,
-        { wrapper }
-      )
+      render(<DayField value={{ type: "every" } as any} onChange={vi.fn()} />, { wrapper })
     ).not.toThrow();
   });
 });
@@ -83,10 +71,7 @@ describe("components/CronSelector/fields/MonthField", () => {
   });
   it("基础渲染不抛错", () => {
     expect(() =>
-      render(
-        <MonthField value={{ type: "every" } as any} onChange={vi.fn()} />,
-        { wrapper }
-      )
+      render(<MonthField value={{ type: "every" } as any} onChange={vi.fn()} />, { wrapper })
     ).not.toThrow();
   });
 });
@@ -99,10 +84,7 @@ describe("components/CronSelector/fields/WeekField", () => {
   });
   it("基础渲染不抛错", () => {
     expect(() =>
-      render(
-        <WeekField value={{ type: "every" } as any} onChange={vi.fn()} />,
-        { wrapper }
-      )
+      render(<WeekField value={{ type: "every" } as any} onChange={vi.fn()} />, { wrapper })
     ).not.toThrow();
   });
 });

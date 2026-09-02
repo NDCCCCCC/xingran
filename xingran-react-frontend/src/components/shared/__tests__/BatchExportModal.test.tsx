@@ -27,10 +27,9 @@ describe("components/shared/BatchExportModal", () => {
 
   it("visible=true 不抛错", () => {
     expect(() =>
-      render(
-        <BatchExportModal visible={true} onCancel={vi.fn()} onConfirm={vi.fn()} />,
-        { wrapper }
-      )
+      render(<BatchExportModal visible={true} onCancel={vi.fn()} onConfirm={vi.fn()} />, {
+        wrapper,
+      })
     ).not.toThrow();
   });
 });

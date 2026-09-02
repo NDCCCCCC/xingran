@@ -7,9 +7,7 @@ import { App } from "antd";
 import BatchDeleteButton from "../BatchDeleteButton";
 import type { ReactElement } from "react";
 
-const wrapper = ({ children }: { children: ReactElement }) => (
-  <App>{children}</App>
-);
+const wrapper = ({ children }: { children: ReactElement }) => <App>{children}</App>;
 
 describe("components/shared/BatchDeleteButton", () => {
   it("导出为函数组件", async () => {
@@ -18,6 +16,8 @@ describe("components/shared/BatchDeleteButton", () => {
   });
 
   it("disabled 时不抛错", () => {
-    expect(() => render(<BatchDeleteButton disabled selectedCount={0} />, { wrapper })).not.toThrow();
+    expect(() =>
+      render(<BatchDeleteButton disabled selectedCount={0} />, { wrapper })
+    ).not.toThrow();
   });
 });

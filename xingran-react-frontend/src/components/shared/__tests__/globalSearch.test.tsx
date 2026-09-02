@@ -22,8 +22,6 @@ describe("components/shared/GlobalSearch", () => {
   });
 
   it("自定义 placeholder 不抛错", () => {
-    expect(() =>
-      render(<GlobalSearch placeholder="搜索…" />, { wrapper })
-    ).not.toThrow();
+    expect(() => render(<GlobalSearch placeholder="搜索…" />, { wrapper })).not.toThrow();
   });
 });
