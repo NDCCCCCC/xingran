@@ -2,7 +2,9 @@ package operations
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
@@ -486,18 +488,21 @@ func TestImp77_GenerateCode(t *testing.T) {
 		assert.Contains(t, code, "-001")
 	})
 
-	t.Run("预置 BLD-202608-007 → 应 -008", func(t *testing.T) {
+	t.Run("预置当前月 007 → 应 -008", func(t *testing.T) {
 		// 用独立表避免与其他测试相互污染
+		// 使用当前年月保持跨跨跨跨跨跨跨跨跨月稳定
+		currentYM := time.Now().Format("200601")
 		require.NoError(t, db.Exec(`CREATE TABLE IF NOT EXISTS test_codes_inc (id INTEGER PRIMARY KEY, code TEXT)`).Error)
-		require.NoError(t, db.Exec(`INSERT INTO test_codes_inc (code) VALUES ('BLD-202608-007')`).Error)
+		require.NoError(t, db.Exec(fmt.Sprintf(`INSERT INTO test_codes_inc (code) VALUES ('BLD-%s-007')`, currentYM)).Error)
 		code, err := g.GenerateCode(ctx, CodeTypeBuilding, "test_codes_inc", "code")
 		require.NoError(t, err)
 		assert.Contains(t, code, "-008")
 	})
 
 	t.Run("serial 非数字 → 回 1", func(t *testing.T) {
+		currentYM := time.Now().Format("200601")
 		require.NoError(t, db.Exec(`CREATE TABLE IF NOT EXISTS test_codes_str (id INTEGER PRIMARY KEY, code TEXT)`).Error)
-		require.NoError(t, db.Exec(`INSERT INTO test_codes_str (code) VALUES ('BLD-202608-abc')`).Error)
+		require.NoError(t, db.Exec(fmt.Sprintf(`INSERT INTO test_codes_str (code) VALUES ('BLD-%s-abc')`, currentYM)).Error)
 		code, err := g.GenerateCode(ctx, CodeTypeBuilding, "test_codes_str", "code")
 		require.NoError(t, err)
 		assert.Contains(t, code, "-001", "Sscanf 失败回退 nextSerial=1")
