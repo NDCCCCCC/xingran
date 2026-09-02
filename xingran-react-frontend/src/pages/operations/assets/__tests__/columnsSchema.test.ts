@@ -1,23 +1,32 @@
 /**
- * Phase 85 — assets columnsSchema 静态断言(D-12)
+ * Phase 88 Batch412 — pages/operations/assets/columnsSchema 测试
  */
 import { describe, it, expect } from "vitest";
-import { defaultAssetColumns, type AssetColumnConfig } from "../columnsSchema";
 
-describe("assets columnsSchema (D-12)", () => {
-  it("defaultAssetColumns is non-empty array", () => {
-    expect(Array.isArray(defaultAssetColumns)).toBe(true);
-    expect(defaultAssetColumns.length).toBeGreaterThan(0);
+describe("pages/operations/assets/columnsSchema", () => {
+  it("导出 defaultAssetColumns", async () => {
+    const mod = await import("../columnsSchema");
+    expect(Array.isArray(mod.defaultAssetColumns)).toBe(true);
   });
 
-  it("each column config has key and title", () => {
-    for (const col of defaultAssetColumns) {
-      expect(col.key).toBeTruthy();
-    }
+  it("列数大于 10", async () => {
+    const { defaultAssetColumns } = await import("../columnsSchema");
+    expect(defaultAssetColumns.length).toBeGreaterThan(10);
   });
 
-  it("AssetColumnConfig type accepts visibility flags", () => {
-    const col: AssetColumnConfig = defaultAssetColumns[0];
-    expect(col).toBeDefined();
+  it("每个列都有 key/label/visible/order 字段", async () => {
+    const { defaultAssetColumns } = await import("../columnsSchema");
+    defaultAssetColumns.forEach((c) => {
+      expect(typeof c.key).toBe("string");
+      expect(typeof c.label).toBe("string");
+      expect(typeof c.visible).toBe("boolean");
+      expect(typeof c.order).toBe("number");
+    });
+  });
+
+  it("key 唯一", async () => {
+    const { defaultAssetColumns } = await import("../columnsSchema");
+    const keys = defaultAssetColumns.map((c) => c.key);
+    expect(new Set(keys).size).toBe(keys.length);
   });
 });
