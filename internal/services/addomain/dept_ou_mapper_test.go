@@ -4,12 +4,37 @@ import (
 	"context"
 	"testing"
 
+	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
+
+// setupOUMapperDB 为 dept_ou_mapper 5 个补测用例构造 sqlite 内存库与 mapper，
+// 避免每个测试重复 15 行 DDL。原 3 个测试保留旧结构以最小化 diff。
+func setupOUMapperDB(t *testing.T) (*DeptOUmapper, context.Context) {
+	t.Helper()
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+
+	require.NoError(t, db.Exec(`CREATE TABLE sys_dept_ou_mapping (
+		id TEXT PRIMARY KEY,
+		dept_id TEXT NOT NULL,
+		ad_config_id TEXT NOT NULL,
+		ou_dn TEXT NOT NULL,
+		ou_name TEXT NOT NULL,
+		parent_ou_dn TEXT,
+		sync_enabled INTEGER DEFAULT 1,
+		sync_status TEXT DEFAULT 'pending',
+		last_sync_at DATETIME,
+		created_at DATETIME,
+		updated_at DATETIME,
+		UNIQUE(dept_id, ad_config_id)
+	)`).Error)
+
+	return NewDeptOUmapper(db), context.Background()
+}
 
 func TestFindDeptByOUDN(t *testing.T) {
 	// 使用SQLite内存数据库
