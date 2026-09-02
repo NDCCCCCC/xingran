@@ -10,6 +10,9 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
 
+// IntPtr 返回 *int 的便捷构造器（inline 避免 helper 文件 CI 解析问题）
+func IntPtr(v int) *int { return &v }
+
 // TestRenderCommand_VendorActionMatrix 覆盖 3 厂商 × 5 操作 = 15 个 (vendor, action) 模板。
 // 子测试命名约定：{vendor}_{action}（snake_case），便于 grep 失败定位。
 func TestRenderCommand_VendorActionMatrix(t *testing.T) {
