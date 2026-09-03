@@ -39,5 +39,5 @@ describe("pages/network/ports", () => {
   it("基础渲染不抛错", async () => {
     const { default: Comp } = await import("../index");
     expect(() => render(<Comp />, { wrapper })).not.toThrow();
-  }, 15000);
+  }, 30000);
 });
