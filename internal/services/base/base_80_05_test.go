@@ -83,8 +83,9 @@ func TestBas8005_CRUD_RoundTrip(t *testing.T) {
 	assert.True(t, IsNotFound(err), "删除后 GetByID 应返回 ErrRecordNotFound")
 }
 
-// TestBas8005_List_Paged:5 行种子 → List with Where + Order + Limit + Offset +
-// 操作符覆盖(= != > < >= <= LIKE IN)+ 空 Where 全部行。
+// TestBas8005_List_Paged:5 行种子 → List(scope 形态:Where + Order + PageParams 分页)
+// + 条件覆盖(= != > < >= <= LIKE IN)+ 空条件全部行。
+// (Phase 91-01 适配:原 Query DSL 用例改写为 scope 调用,语义逐项等价。)
 func TestBas8005_List_Paged(t *testing.T) {
 	repo, _ := newBasRepo8005(t)
 	ctx := context.Background()
@@ -94,8 +95,10 @@ func TestBas8005_List_Paged(t *testing.T) {
 		seedBasRow8005(t, repo, n, 20+i)
 	}
 
+	nameAsc := func(db *gorm.DB) *gorm.DB { return db.Order("name ASC") }
+
 	// 基本分页:page 1 size 2 + 排序 name asc → alice, bob。
-	page1, err := repo.List(ctx, &Query{OrderBy: "name ASC", Offset: 0, Limit: 2})
+	page1, err := repo.List(ctx, PageParams{Current: 1, PageSize: 2}, nameAsc)
 	require.NoError(t, err)
 	assert.Equal(t, int64(5), page1.Total)
 	assert.Equal(t, 1, page1.Current)
@@ -106,7 +109,7 @@ func TestBas8005_List_Paged(t *testing.T) {
 	assert.Equal(t, "bob", rows1[1].Name)
 
 	// page 2 size 2 → carol, dave。
-	page2, err := repo.List(ctx, &Query{OrderBy: "name ASC", Offset: 2, Limit: 2})
+	page2, err := repo.List(ctx, PageParams{Current: 2, PageSize: 2}, nameAsc)
 	require.NoError(t, err)
 	rows2 := page2.List.([]basRepoRow8005)
 	require.Len(t, rows2, 2)
@@ -114,47 +117,44 @@ func TestBas8005_List_Paged(t *testing.T) {
 	assert.Equal(t, "dave", rows2[1].Name)
 	assert.Equal(t, 2, page2.Current)
 
-	// 操作符覆盖(各分支配对 sqlite 类型断言)。
+	// 条件覆盖(scope Where,各分支配对 sqlite 类型断言)。
 	ops := []struct {
-		op   string
+		cond string
 		val  any
 	}{
-		{"=", "bob"},
-		{"!=", "bob"},
-		{">", 20},
-		{"<", 23},
-		{">=", 23},
-		{"<=", 21},
-		{"LIKE", "%a%"},
+		{"name = ?", "bob"},
+		{"name != ?", "bob"},
+		{"age > ?", 20},
+		{"age < ?", 23},
+		{"age >= ?", 23},
+		{"age <= ?", 21},
+		{"name LIKE ?", "%a%"},
 	}
 	for _, tc := range ops {
-		_, err := repo.List(ctx, &Query{
-			Where:   []WhereCondition{{Field: "name", Operator: tc.op, Value: tc.val}},
-			OrderBy: "name ASC",
-			Limit:   100,
-		})
-		assert.NoError(t, err, "操作符 %s 应可执行", tc.op)
+		cond, val := tc.cond, tc.val
+		_, err := repo.List(ctx, PageParams{Current: 1, PageSize: 100},
+			func(db *gorm.DB) *gorm.DB { return db.Where(cond, val) }, nameAsc)
+		assert.NoError(t, err, "条件 %s 应可执行", tc.cond)
 	}
 
 	// IN:[]int 多值命中断言(20,22 → alice, carol)。
-	res, err := repo.List(ctx, &Query{
-		Where:   []WhereCondition{{Field: "age", Operator: "IN", Value: []int{20, 22}}},
-		OrderBy: "name ASC",
-		Limit:   100,
-	})
+	res, err := repo.List(ctx, PageParams{Current: 1, PageSize: 100},
+		func(db *gorm.DB) *gorm.DB { return db.Where("age IN ?", []int{20, 22}) }, nameAsc)
 	require.NoError(t, err)
 	rows := res.List.([]basRepoRow8005)
 	require.Len(t, rows, 2)
 	assert.Equal(t, "alice", rows[0].Name)
 	assert.Equal(t, "carol", rows[1].Name)
 
-	// 空 Where 列表 → 全部行。
-	all, err := repo.List(ctx, &Query{OrderBy: "age ASC", Limit: 100})
+	// 空条件 → 全部行。
+	all, err := repo.List(ctx, PageParams{Current: 1, PageSize: 100},
+		func(db *gorm.DB) *gorm.DB { return db.Order("age ASC") })
 	require.NoError(t, err)
 	assert.Equal(t, int64(5), all.Total)
 }
 
-// TestBas8005_BatchDelete:3 ID 批删 → 剩余计数;空切片 → BadRequest 分支。
+// TestBas8005_BatchDelete:3 ID 批删 → 剩余计数;空切片 → nil
+// (Phase 91-01 P1 语义反转:与 11 个 operations service 现状一致)。
 func TestBas8005_BatchDelete(t *testing.T) {
 	repo, db := newBasRepo8005(t)
 	ctx := context.Background()
@@ -170,11 +170,9 @@ func TestBas8005_BatchDelete(t *testing.T) {
 	require.NoError(t, db.Model(&basRepoRow8005{}).Count(&count).Error)
 	assert.Equal(t, int64(1), count)
 
-	// 空切片 → BadRequest 错误。
-	err := repo.BatchDelete(ctx, nil)
-	require.Error(t, err)
-	assert.True(t, apperrors.IsAppError(err), "空切片应包装为 AppError")
-	assert.Equal(t, apperrors.CodeParamError, apperrors.GetAppError(err).GetCode())
+	// 空切片 → nil(P1 语义反转,原期望 BadRequest 已移除)。
+	require.NoError(t, repo.BatchDelete(ctx, nil))
+	require.NoError(t, repo.BatchDelete(ctx, []string{}))
 }
 
 // TestBas8005_ErrorHelpers:WrapError + IsNotFound + IsDuplicate 三连。
