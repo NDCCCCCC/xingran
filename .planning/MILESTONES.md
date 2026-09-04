@@ -1,5 +1,56 @@
 # Milestones
 
+## v1.29 技术债治理 (Tech Debt Governance) — 🚧 STARTED 2026-09-04
+
+**Phases**: 7 (Phases 89-95) | **Plans**: TBD | **Status**: planning
+
+**Delivered (审计 → 规划)**:
+- 2026-09-03 综合审计 4 维度并行扫描（TODO/FIXME、硬编码值、重复实现、项目完成度）
+- 审计发现：**18 项真实 TODO + ~20 处中高度硬编码 + 8 个 CRUD services 60-70% 重复 + 缓存层 3 处架构重复 + config_backup 3 个 TODO 空函数**
+- 2026-09-04 milestone 启动；7 项行动转 REQ-ID（PAGINATION-01..11 / TIMEOUTS-01..08 / CRUD-REUSE-01..08 / CACHE-UNIFY-01..05 / BACKUP-CLOSED-01..05 / API-FACTORY-01..05 / CLOSEOUT-01..03）；7 phases 89-95 锁定
+
+**Target features (per REQUIREMENTS.md):**
+- Phase 89 PAGINATION 常量集中化（🔥 P0）
+- Phase 90 TIMEOUTS/PORT/PROTOCOL/CONCURRENCY 常量集中化（🔥 P0）
+- Phase 91 CRUD 复用 base.Repository[T]（🔥 P1）
+- Phase 92 缓存层三处架构统一（🟡 P2）
+- Phase 93 config_backup 三处 TODO 闭环（🟡 P2）
+- Phase 94 前端 API 工厂化（🟡 P2）
+- Phase 95 v1.28 SHIP 收口 + v1.29 closeout + audit（🟢 P4）
+
+**锁定决策 (v1.29 init):**
+- D-01 7 项审计行动 100% 完成
+- D-02 不破坏既有测试 + operlog 11 敏感关键词 / 25 OperType 常量 / 状态值常量 AST 锁值全程保持
+- D-03 每项行动 atomic commit，CRUD 复用先 pilot (workstation_service) 再批量复制
+- D-04 不修改业务行为（除 config_backup 三处 TODO 的真实实现）
+- D-05 Phase 编号从 89 起（v1.28 用 82-88，v1.27 用 75-81）
+
+**范围边界:** 不引入新业务功能；operlog exclude_paths todo 不在本期范围（独立 deferred）；前端覆盖率不推到 70%（v1.28 已 SHIP 45.13%）。
+
+---
+
+## v1.28 前端测试覆盖率优秀 (Frontend Test Coverage Excellence) — ✅ SHIPPED + 阶段性收口 2026-09-04
+
+**Phases**: 7 (Phases 82-88) | **Plans**: ~22 (82-01..88-PROGRESS) | **Tasks**: 47 batches (R24..R47+)
+
+**Delivered**: 前端全量口径（vitest `coverage.include` 全 src）测试覆盖率 **3.67% → 45.13%**（+41.46pp），并在 18+ batches (R24-R47) 持续推进至 45.87%。Gate 45/45 dirs PASS / 1688 tests passing / 4 层 CI 防倒退 gate（全局阈值 + per-directory floor + baseline ratchet + PR diff coverage ≥80%）全部落地。
+
+**阶段性收口理由**:
+- 边效益递减：每 batch 仅 ~0.27pp，距 70% 目标仍差 24.87pp
+- 主要洼地（pages/system hooks + workstations/assets 大页）边效益不抵 commit 时间
+- 工作树 clean（commit `bcb51f0` 末态）；Phase 88 暂停无 pending TODO 阻塞
+
+**遗留 (deferred)**:
+- Phase 88 batch 续推（用户 2026-09-04 决定阶段性收口）
+- PROTO-01..04 逐屏原型对齐 / VIS-01..03 视觉深化（v1.22 候选遗留）
+- Phase 53 网络设备端口写 UI 测试 5 个 vitest 失败（与 v1.28 正交）
+
+**归档位置**:
+- `.planning/workstreams/frontend-coverage/` (保留作历史，含 STATE.md / ROADMAP.md / phases/)
+- `.planning/PROJECT.md` v1.28 段标记 SHIPPED + ARCHIVED
+
+---
+
 ## v1.22 前端品牌化改造 (Frontend Brand Design-System) — ✅ SHIPPED 2026-08-18
 
 **Phases**: 4 (Phases 64-67) | **Plans**: 4 (64-01 / 65-01 / 66-01 / 67-01) | **Tasks**: 33（含 Post-T5 补丁 + 终验）

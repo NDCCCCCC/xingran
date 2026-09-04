@@ -1,37 +1,36 @@
 ---
-last_updated: 2026-08-23
-update_trigger: v1.28 started in frontend-coverage workstream (frontend all-src coverage 3.67% -> >=70% + CI gate parity with backend v1.26)
-previous_update: 2026-08-23 v1.27 started (backend coverage 55.6->>=70%, milestone workstream)
+last_updated: 2026-09-04
+update_trigger: v1.29 started — 技术债治理 (Tech Debt Governance)，按审计优先级逐批治理分页/超时常量、CRUD 复用、缓存层统一、配置备份闭环、前端 API 工厂化、Phase 88 收口共 7 项
+previous_update: 2026-08-23 v1.28 started (frontend coverage 3.67% → ≥70% in frontend-coverage workstream)
 ---
 
-## Current Milestone: v1.28 前端测试覆盖率优秀 (Frontend Test Coverage Excellence)
+## Current Milestone: v1.29 技术债治理 (Tech Debt Governance)
 
-> **并行结构（2026-08-23 起）:** 本项目现在用 GSD workstreams 并行推进两个里程碑——
-> - `milestone` workstream: **v1.27 后端测试覆盖率优秀 II**（另一会话，STATE/ROADMAP 在 `.planning/workstreams/milestone/`）
-> - `frontend-coverage` workstream: **v1.28 前端测试覆盖率优秀**（本段，STATE/ROADMAP 在 `.planning/workstreams/frontend-coverage/`）
->
-> PROJECT.md / MILESTONES.md 跨 workstream 共享；Phase 编号错开（v1.27 用 75-81，v1.28 从 82 起）。
-
-**Goal:** 前端全量口径（vitest `coverage.include` 全 src，白名单排除重画布低确定性 UI）语句覆盖率 **3.67% → ≥70%（优秀）**，建成与后端 v1.26 对称的 4 层 CI 防倒退 gate。
+**Goal:** 按 2026-09-03 综合审计发现的优先级，逐批治理 7 项技术债行动：分页/超时常量统一 → CRUD 服务复用泛型抽象 → 缓存层三处架构合并 → 配置备份闭环 → 前端 API 工厂化 → Phase 88 阶段性收口。每批原子 commit + 既有测试不回归。
 
 **Target features:**
-- 口径修正 + 治理基建：vitest 加 `coverage.include` 全量口径（Vitest 4 已移除 `coverage.all`，Phase 63 基线 24.58% 是"只算被 import 文件"旧口径，真实全量 **3.67%** = 830/22602 stmts / 584 文件）；阈值 gate 切全量口径 + baseline 落盘 + ratchet 只升不降
-- 分层补齐至 ≥70%（白名单后约 21,500 stmts）：P0 基建层 lib/utils/hooks/store/services/router (~3,900) → P1 组件层 components/* (~5,000) → P2 页面层 pages/* (~13,100，最大山头：operations 3611 / system 2203 / network 1962 / duty 1190 / ad-domain 1082)
-- CI 全套 gate：全局阈值 gate + per-directory floor + baseline ratchet + PR diff coverage ≥80%
+- **常量集中化**: 抽取 `pkg/constants/pagination.go` + `pkg/constants/timeouts.go`，消除 12+ 处 `current=1/pageSize=10` 散布和 6 处业务超时硬编码（命令/LDAP/SNMP/WS origin）
+- **CRUD 复用泛型**: 让 `internal/services/operations/` 下 8 个 CRUD 服务（building/floor/workstation/asset/room/infopoint/dedicated_line/door）复用 `base.Repository[T]` 抽象，预计减少 ~2000 行重复代码
+- **缓存层统一**: 合并 `internal/services/*_cache_service.go` (legacy root) 与 `internal/services/system/*_cache_impl.go` + `internal/services/operations/*_cache_impl.go` 三处 `CacheServiceBase` 重复模式到单一生成器/基类
+- **配置备份闭环**: 实现 `internal/services/config_backup_service.go:158,206,543` 三处 TODO 空函数（压缩 / 解压 / 恢复逻辑）+ 回归测试
+- **前端 API 工厂化**: 收敛 `xingran-react-frontend/src/lib/` 下约 15 个 `*Api.ts` 文件为工厂函数
+- **v1.28 阶段性收口**: 接受前端覆盖率 45.13% (Phase 88 batch47 已达 45.87%) 作为 SHIPPED 状态，转入技术债治理主线
 
-**锁定决策 (v1.28 init):**
-- **D-01 目标线**: 语句 ≥70%（全量口径，对齐后端 v1.26/27 优秀定义）
-- **D-02 范围**: 全 src + 白名单排除（候选 `components/cad-editor` 804 + `cad-elements` 224 stmts 等重画布 UI；白名单终版在 requirements 定）
-- **D-03 CI gate**: 对齐后端全套 4 层（全局阈值 + per-dir floor + ratchet + PR diff coverage ≥80%）
-- **D-04 Phase 编号**: 从 Phase 82 起（75-81 留给 v1.27）
+**锁定决策 (v1.29 init):**
+- **D-01 目标线**: 7 项审计行动 100% 完成（按优先级逐批）
+- **D-02 范围**: 后端治理（常量 + CRUD + 缓存 + 配置备份）+ 前端 API 工厂化 + Phase 88 收口；不引入新业务功能
+- **D-03 兼容约束**: 不破坏既有测试（`go build ./...` + `go test ./...` 必须 0 失败）；operlog 11 强制敏感关键词、25 OperType 常量、状态值常量 AST 锁值全程保持
+- **D-04 提交纪律**: 每项行动一个 atomic commit，失败可 revert；CRUD 复用采用逐步迁移（先 1-2 个 service 跑通模式，再批量复制）
+- **D-05 范围边界**: 不修改业务行为（除 config_backup 三处 TODO 的真实实现）；operlog exclude_paths todo 不在本期范围（独立 deferred）
+- **D-06 Phase 编号**: 从 Phase 89 起（v1.28 用 82-88，v1.27 用 75-81）
 
-**规划输入:** 2026-08-23 本会话实测扫描（npm test:coverage + coverage.include 全量口径，per-dir 数据见上）；对标后端 v1.26 4 层 gate 模式。
+**规划输入:** 2026-09-03 综合审计报告（4 维度并行扫描：TODO/FIXME、硬编码值、重复实现、项目完成度）；审计基线数据 = 后端 78.12% / 前端 45.13% / 1688 测试 / 18 项真实 TODO / ~20 处中高度硬编码 / 8 个 CRUD 服务 60-70% 重复 / 缓存层三处架构重复。
 
-**范围边界:** 仅补测试 + 覆盖率治理，不修改业务逻辑（测试暴露的 bug 修复除外）；CAD/3D 重画布 UI 白名单排除不强制覆盖。
+**范围边界:** 仅技术债治理（不含新业务功能、不含 operlog 白名单 todo）；所有业务行为变更必须附带回归测试；v1.28 SHIP 后 Phase 89+ 继续推进（暂不预设功能）。
 
 ---
 
-## Current Milestone: v1.27 后端测试覆盖率优秀 II (Backend Coverage Excellence II) — ✅ SHIPPED + ARCHIVED 2026-08-29
+## Current Milestone: v1.28 前端测试覆盖率优秀 (Frontend Test Coverage Excellence) — ✅ SHIPPED + ARCHIVED 2026-09-04 (阶段性收口 45.13%)
 
 <details>
 <summary>v1.27 ROADMAP (archived) — 点击展开</summary>
