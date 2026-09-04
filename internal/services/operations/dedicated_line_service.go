@@ -70,12 +70,19 @@ func (s *dedicatedLineService) Statistics(ctx context.Context) (*DedicatedLineSt
 }
 
 type dedicatedLineService struct {
+	// repo 承接六方法 CRUD 管道（Phase 91-04 repo 化，D-02 纯 struct 组合）
+	repo *base.GORMRepository[operations.OpsDedicatedLine]
+	// db 保留给 populateRoomNames 回填 / Statistics / SearchDedicatedLineOptions
+	// （D-04 留 service 的直用场景）
 	db *gorm.DB
 }
 
 // NewDedicatedLineService 创建专线服务实例
 func NewDedicatedLineService(db *gorm.DB) DedicatedLineService {
-	return &dedicatedLineService{db: db}
+	return &dedicatedLineService{
+		repo: base.NewGORMRepository[operations.OpsDedicatedLine](db),
+		db:   db,
+	}
 }
 
 // dedicatedLineAllowedSortFields 专线可排序字段白名单(对应 ops_dedicated_lines 表列名)。
@@ -97,7 +104,7 @@ func (s *dedicatedLineService) Create(ctx context.Context, line *operations.OpsD
 		return err
 	}
 
-	return s.db.WithContext(ctx).Create(line).Error
+	return s.repo.Create(ctx, line)
 }
 
 // Update 更新专线
@@ -106,94 +113,71 @@ func (s *dedicatedLineService) Update(ctx context.Context, line *operations.OpsD
 		return err
 	}
 
-	return s.db.WithContext(ctx).Save(line).Error
+	return s.repo.Update(ctx, line)
 }
 
 // Delete 删除专线
 func (s *dedicatedLineService) Delete(ctx context.Context, id string) error {
-	return s.db.WithContext(ctx).Delete(&operations.OpsDedicatedLine{}, "id = ?", id).Error
+	return s.repo.Delete(ctx, id)
 }
 
 // GetByID 根据ID获取专线
 func (s *dedicatedLineService) GetByID(ctx context.Context, id string) (*operations.OpsDedicatedLine, error) {
-	var line operations.OpsDedicatedLine
-	err := s.db.WithContext(ctx).Where("id = ?", id).First(&line).Error
-	if err != nil {
-		return nil, err
-	}
-	return &line, nil
+	return s.repo.GetByID(ctx, id)
 }
 
-// List 查询专线列表（类型安全版本）
+// filterScope List 管道的全部 11 个 filter（条件字符串、else-if 分支结构与
+// ? 占位符逐字平移自迁移前实现）。
+func (s *dedicatedLineService) filterScope(req requests.DedicatedLineListRequest) base.Scope {
+	return func(db *gorm.DB) *gorm.DB {
+		if req.Name != "" {
+			db = db.Where("name LIKE ?", "%"+req.Name+"%")
+		}
+		if req.LineType != "" {
+			db = db.Where("line_type = ?", req.LineType)
+		}
+		if req.ISP != "" {
+			db = db.Where("isp = ?", req.ISP)
+		}
+		// 机房ID筛选优先（更精确）
+		if req.SourceRoomId != "" {
+			db = db.Where("source_room_id = ?", req.SourceRoomId)
+		} else if req.SourceRoomName != "" {
+			db = db.Where("source_room_name LIKE ?", "%"+req.SourceRoomName+"%")
+		}
+		if req.DestRoomId != "" {
+			db = db.Where("dest_room_id = ?", req.DestRoomId)
+		} else if req.DestRoomName != "" {
+			db = db.Where("dest_room_name LIKE ?", "%"+req.DestRoomName+"%")
+		}
+		if req.SourceDeviceName != "" {
+			db = db.Where("source_device_name LIKE ?", "%"+req.SourceDeviceName+"%")
+		}
+		if req.DestDeviceName != "" {
+			db = db.Where("dest_device_name LIKE ?", "%"+req.DestDeviceName+"%")
+		}
+		if req.CarrierContactName != "" {
+			db = db.Where("carrier_contact_name LIKE ?", "%"+req.CarrierContactName+"%")
+		}
+		if req.HasStatus() {
+			db = db.Where("status = ?", req.GetStatus(0))
+		}
+		return db
+	}
+}
+
+// List 查询专线列表（CRUD 管道经 base.GORMRepository 执行；B 型排他默认排序）。
 func (s *dedicatedLineService) List(ctx context.Context, req requests.DedicatedLineListRequest) (*PageResult, error) {
-	var total int64
-	var list []operations.OpsDedicatedLine
-
-	query := s.db.WithContext(ctx).Model(&operations.OpsDedicatedLine{})
-
-	// 添加筛选条件 - 类型安全，使用相关字段进行筛选
-	if req.Name != "" {
-		query = query.Where("name LIKE ?", "%"+req.Name+"%")
-	}
-	if req.LineType != "" {
-		query = query.Where("line_type = ?", req.LineType)
-	}
-	if req.ISP != "" {
-		query = query.Where("isp = ?", req.ISP)
-	}
-	// 机房ID筛选优先（更精确）
-	if req.SourceRoomId != "" {
-		query = query.Where("source_room_id = ?", req.SourceRoomId)
-	} else if req.SourceRoomName != "" {
-		query = query.Where("source_room_name LIKE ?", "%"+req.SourceRoomName+"%")
-	}
-	if req.DestRoomId != "" {
-		query = query.Where("dest_room_id = ?", req.DestRoomId)
-	} else if req.DestRoomName != "" {
-		query = query.Where("dest_room_name LIKE ?", "%"+req.DestRoomName+"%")
-	}
-	if req.SourceDeviceName != "" {
-		query = query.Where("source_device_name LIKE ?", "%"+req.SourceDeviceName+"%")
-	}
-	if req.DestDeviceName != "" {
-		query = query.Where("dest_device_name LIKE ?", "%"+req.DestDeviceName+"%")
-	}
-	if req.CarrierContactName != "" {
-		query = query.Where("carrier_contact_name LIKE ?", "%"+req.CarrierContactName+"%")
-	}
-	if req.HasStatus() {
-		query = query.Where("status = ?", req.GetStatus(0))
-	}
-
-	// 分页 - 使用请求结构体的方法
-	offset := req.GetOffset()
-	_, pageSize := req.GetPagination()
-	current, _ := req.GetPagination()
-
-	if err := query.Count(&total).Error; err != nil {
-		return nil, err
-	}
-
-	// 用户排序(白名单)优先,无 OrderByColumn 时保留 created_at DESC 默认
-	query = base.ApplySort(query, req.BaseListRequest, dedicatedLineAllowedSortFields)
-	if req.OrderByColumn == "" {
-		query = query.Order("created_at DESC")
-	}
-	if err := query.Offset(offset).Limit(pageSize).Find(&list).Error; err != nil {
-		return nil, err
-	}
-
-	return &PageResult{
-		List:     list,
-		Total:    total,
-		Current:  current,
-		PageSize: pageSize,
-	}, nil
+	current, pageSize := req.GetPagination()
+	return s.repo.List(ctx, base.PageParams{Current: current, PageSize: pageSize},
+		s.filterScope(req),
+		base.SortScope(req.BaseListRequest, dedicatedLineAllowedSortFields, "created_at DESC"),
+	)
 }
 
 // BatchDelete 批量删除专线
 func (s *dedicatedLineService) BatchDelete(ctx context.Context, ids []string) error {
-	return s.db.WithContext(ctx).Delete(&operations.OpsDedicatedLine{}, "id IN ?", ids).Error
+	return s.repo.BatchDelete(ctx, ids)
 }
 
 // SearchDedicatedLineOptions 专线下拉数据源(name LIKE 模糊 + lineType/ISP/sourceRoomId/destRoomId/status 筛选,LIMIT 50)。

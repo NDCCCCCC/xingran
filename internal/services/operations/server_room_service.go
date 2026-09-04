@@ -50,13 +50,18 @@ func (s *serverRoomService) Statistics(ctx context.Context) (*ServerRoomStatisti
 }
 
 type serverRoomService struct {
+	// repo 承接六方法 CRUD 管道（Phase 91-04 repo 化，D-02 纯 struct 组合）
+	repo *base.GORMRepository[operations.OpsServerRoom]
+	// db 保留给 Statistics / SearchServerRoomOptions / validateFloor /
+	// getDeptAndChildDeptIDs（D-04 留 service 的直用场景）
 	db *gorm.DB
 }
 
 // NewServerRoomService 创建机房服务实例
 func NewServerRoomService(db *gorm.DB) ServerRoomService {
 	return &serverRoomService{
-		db: db,
+		repo: base.NewGORMRepository[operations.OpsServerRoom](db),
+		db:   db,
 	}
 }
 
@@ -76,7 +81,7 @@ func (s *serverRoomService) Create(ctx context.Context, room *operations.OpsServ
 		return err
 	}
 
-	return s.db.WithContext(ctx).Create(room).Error
+	return s.repo.Create(ctx, room)
 }
 
 // Update 更新机房
@@ -86,61 +91,67 @@ func (s *serverRoomService) Update(ctx context.Context, room *operations.OpsServ
 		return err
 	}
 
-	return s.db.WithContext(ctx).Save(room).Error
+	return s.repo.Update(ctx, room)
 }
 
 // Delete 删除机房
 func (s *serverRoomService) Delete(ctx context.Context, id string) error {
-	return s.db.WithContext(ctx).Delete(&operations.OpsServerRoom{}, "id = ?", id).Error
+	return s.repo.Delete(ctx, id)
 }
 
 // GetByID 根据ID获取机房
 func (s *serverRoomService) GetByID(ctx context.Context, id string) (*operations.OpsServerRoom, error) {
-	var room operations.OpsServerRoom
-	err := s.db.WithContext(ctx).Where("id = ?", id).First(&room).Error
-	if err != nil {
-		return nil, err
-	}
-	return &room, nil
+	return s.repo.GetByID(ctx, id)
 }
 
-// List 查询机房列表（类型安全版本）
+// joinScope List 的 Select + buildings/floors LEFT JOIN scope（常量逐字平移）。
+//
+// 迁移前 Select+Joins 即在 Count 之前（"必须在 Count 之前执行 JOIN,这样后面的
+// 条件才能使用 JOIN 的表"），repo 化后 joinScope 前置——现状本就全量前置，
+// 语义严格等价（Count 时自定义 Select 被临时替换为 count(*) 并在 Find 恢复，
+// TestBase91 契约锁定；两 JOIN 均按主键 N:1 无行增殖）。
+func (s *serverRoomService) joinScope() base.Scope {
+	return func(db *gorm.DB) *gorm.DB {
+		// JOIN 关联表获取楼宇名称和楼层名称（需要类型转换：varchar -> uuid）
+		return db.
+			Select("ops_server_rooms.*, b.name as building_name, f.name as floor_name, f.floor_no").
+			Joins("LEFT JOIN ops_buildings b ON CAST(b.id AS TEXT) = ops_server_rooms.building_id").
+			Joins("LEFT JOIN ops_floors f ON CAST(f.id AS TEXT) = ops_server_rooms.floor_id")
+	}
+}
+
+// filterScope List 的四个本表过滤条件（条件字符串与 ? 占位符逐字平移自迁移前实现）。
+// 使用表前缀避免与 JOIN 的表产生列名歧义。
+func (s *serverRoomService) filterScope(req requests.ServerRoomListRequest) base.Scope {
+	return func(db *gorm.DB) *gorm.DB {
+		if req.Name != "" {
+			db = db.Where("ops_server_rooms.name LIKE ?", "%"+req.Name+"%")
+		}
+		if req.BuildingID != "" {
+			db = db.Where("ops_server_rooms.building_id = ?", req.BuildingID)
+		}
+		if req.FloorID != "" {
+			db = db.Where("ops_server_rooms.floor_id = ?", req.FloorID)
+		}
+		if req.HasStatus() {
+			db = db.Where("ops_server_rooms.status = ?", req.GetStatus(0))
+		}
+		return db
+	}
+}
+
+// List 查询机房列表（CRUD 管道经 base.GORMRepository 执行）。
+//
+// scopes 顺序保持原代码顺序（P8）：joinScope（Joins 在前）→ filterScope →
+// orgId 过滤（引用 joined 表列 b.org_id，必须后于 joinScope）→ base.SortScope
+// （B 型排他默认）。orgId 空命中早退分支保留在函数体内、scope 构造之前。
 func (s *serverRoomService) List(ctx context.Context, req requests.ServerRoomListRequest) (*PageResult, error) {
-	var total int64
-	var list []operations.OpsServerRoom
+	current, pageSize := req.GetPagination()
 
-	query := s.db.WithContext(ctx).Model(&operations.OpsServerRoom{})
-
-	// 添加筛选条件 - 类型安全，无需类型断言
-	// 注意：使用表前缀避免与 JOIN 的表产生列名歧义
-	if req.Name != "" {
-		query = query.Where("ops_server_rooms.name LIKE ?", "%"+req.Name+"%")
-	}
-	if req.BuildingID != "" {
-		query = query.Where("ops_server_rooms.building_id = ?", req.BuildingID)
-	}
-	if req.FloorID != "" {
-		query = query.Where("ops_server_rooms.floor_id = ?", req.FloorID)
-	}
-	if req.HasStatus() {
-		query = query.Where("ops_server_rooms.status = ?", req.GetStatus(0))
-	}
-
-	// 分页 - 使用请求结构体的方法
-	offset := req.GetOffset()
-	_, pageSize := req.GetPagination()
-	current, _ := req.GetPagination()
-
-	// JOIN 关联表获取楼宇名称和楼层名称（需要类型转换：varchar -> uuid）
-	// 必须在 Count 之前执行 JOIN，这样后面的条件才能使用 JOIN 的表
-	query = query.
-		Select("ops_server_rooms.*, b.name as building_name, f.name as floor_name, f.floor_no").
-		Joins("LEFT JOIN ops_buildings b ON CAST(b.id AS TEXT) = ops_server_rooms.building_id").
-		Joins("LEFT JOIN ops_floors f ON CAST(f.id AS TEXT) = ops_server_rooms.floor_id")
-
-	// 部门筛选（包含子部门）- 必须在 JOIN 之后添加
+	// 部门筛选（包含子部门）
+	var deptIDs []string
 	if req.OrgID != "" {
-		deptIDs := s.getDeptAndChildDeptIDs(ctx, req.OrgID)
+		deptIDs = s.getDeptAndChildDeptIDs(ctx, req.OrgID)
 		if len(deptIDs) == 0 {
 			// 如果没有找到有效的部门ID，返回空结果
 			return &PageResult{
@@ -150,38 +161,22 @@ func (s *serverRoomService) List(ctx context.Context, req requests.ServerRoomLis
 				PageSize: pageSize,
 			}, nil
 		}
-		// 通过楼宇的 org_id 进行筛选
-		query = query.Where("b.org_id IN ?", deptIDs)
 	}
 
-	// 执行 Count 查询
-	if err := query.Count(&total).Error; err != nil {
-		return nil, err
+	scopes := []base.Scope{s.joinScope(), s.filterScope(req)}
+	if req.OrgID != "" {
+		scopes = append(scopes, func(db *gorm.DB) *gorm.DB {
+			// 通过楼宇的 org_id 进行筛选（引用 JOIN 的表，保持原顺序在后）
+			return db.Where("b.org_id IN ?", deptIDs)
+		})
 	}
-
-	// 执行数据查询 - 用户排序(白名单,带表别名)优先,无 OrderByColumn 时保留原默认
-	query = base.ApplySort(query, req.BaseListRequest, serverRoomAllowedSortFields)
-	if req.OrderByColumn == "" {
-		query = query.Order("ops_server_rooms.created_at DESC")
-	}
-	if err := query.
-		Offset(offset).
-		Limit(pageSize).
-		Find(&list).Error; err != nil {
-		return nil, err
-	}
-
-	return &PageResult{
-		List:     list,
-		Total:    total,
-		Current:  current,
-		PageSize: pageSize,
-	}, nil
+	scopes = append(scopes, base.SortScope(req.BaseListRequest, serverRoomAllowedSortFields, "ops_server_rooms.created_at DESC"))
+	return s.repo.List(ctx, base.PageParams{Current: current, PageSize: pageSize}, scopes...)
 }
 
 // BatchDelete 批量删除机房
 func (s *serverRoomService) BatchDelete(ctx context.Context, ids []string) error {
-	return s.db.WithContext(ctx).Delete(&operations.OpsServerRoom{}, "id IN ?", ids).Error
+	return s.repo.BatchDelete(ctx, ids)
 }
 
 // SearchServerRoomOptions 机房下拉数据源(name LIKE 模糊 + buildingId/floorId/status/orgId 筛选,LIMIT 50)。
