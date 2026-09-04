@@ -10,12 +10,12 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
 	"github.com/xingran-next/xingran-go-backend/internal/websocket"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
-// defaultShutdownTimeout 调度器关闭时等待任务完成的默认超时时间
-const defaultShutdownTimeout = 5 * time.Second
+// SchedulerShutdownTimeout is imported from pkg/constants/timeouts.go
 
 // JobTask 任务执行接口
 type JobTask interface {
@@ -261,9 +261,9 @@ func (s *Scheduler) Stop() {
 
 	ctx := s.cron.Stop()
 
-	// 等待所有正在运行的任务完成，但设置 defaultShutdownTimeout 超时
+	// 等待所有正在运行的任务完成，但设置 constants.SchedulerShutdownTimeout 超时
 	// 避免某个任务卡住导致整个服务无法关闭
-	timeout := time.After(defaultShutdownTimeout)
+	timeout := time.After(constants.SchedulerShutdownTimeout)
 	select {
 	case <-ctx.Done():
 		// 所有任务正常完成
