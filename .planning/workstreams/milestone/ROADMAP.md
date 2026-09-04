@@ -104,11 +104,15 @@ Phase 90 (TIMEOUTS/PORT/PROTOCOL/CONCURRENCY) ✅ ─┤
 4. `go test ./internal/services/operations/...` 0 失败
 5. handler 端到端 smoke 测试通过（workstation/building/floor CRUD 仍工作）
 
-**Plans (4 planned, 待 plan-phase 生成)**:
-- 91-01 补全 `internal/services/base/service.go` Repository[T] 缺失方法（Statistics/SearchOptions/BatchDelete）+ base/service_test.go 锁泛型契约
-- 91-02 Pilot: workstation_service.go 迁移（最大最复杂，跑通模式）
-- 91-03 复制模式: building_service + floor_service + asset_service
-- 91-04 收尾: server_room + infopoint + dedicated_line + room_device + door + LOC 统计 + SUMMARY
+**Plans:** 4
+
+Plans:
+- [ ] 91-01-PLAN.md — base.GORMRepository[T] scope 化改造（D-01/D-02/D-03：List scope 函数式 + interface/DSL 删除 + BatchDelete 空 ids 语义反转 + SortScope 双型 helper）+ base/service_test.go 泛型契约锁值
+- [ ] 91-02-PLAN.md — Pilot: workstation_service 迁移（D-05 typed request 全套接线 + 6 表 JOIN scope 化）+ 分页语义收紧 checkpoint
+- [ ] 91-03-PLAN.md — building + floor + asset 迁移（map 签名不变 + floor 装饰器签名锁定 P7 + floor 行为基线测试先行）+ F3 软删 Total 修复 checkpoint
+- [ ] 91-04-PLAN.md — 收尾 7 服务（door/wall/server_room/dedicated_line/floor_plan_text/room_device/infopoint，D-06 扩容）+ typesafe 死文件清理 + LOC 审计 ≥800（D-07）+ SUMMARY
+
+**Notes**: SC-1 中 Statistics/SearchOptions 不进 Repository（D-04）、SC-3 LOC 标准为 ≥800（D-07）、服务数为 11 个非 9 个（D-06）——以 91-CONTEXT.md 为准；map 参数服务实际 4 个（F1）、workstation typed 化含 3 字段扩展（F2）等前提修正见 91-RESEARCH.md。
 
 ---
 
@@ -224,4 +228,4 @@ Phase 90 (TIMEOUTS/PORT/PROTOCOL/CONCURRENCY) ✅ ─┤
 
 ---
 
-*Last updated: 2026-09-04 — Phase 90 SHIPPED（4 plans，commits b51f44c..3a2efe5）。Phase 89 SHIPPED 同日（3 plans，commits 238283c..3559626）。本文件由 stale v1.27 内容重写为 v1.29 追踪格式（修复 workstream 同步遗留：phase-complete 曾误报 is_last_phase）。91-95 详情见 `.planning/ROADMAP.md`。*
+*Last updated: 2026-09-04 — Phase 91 planned（4 plans 生成）。Phase 90 SHIPPED（4 plans，commits b51f44c..3a2efe5）。Phase 89 SHIPPED 同日（3 plans，commits 238283c..3559626）。本文件由 stale v1.27 内容重写为 v1.29 追踪格式（修复 workstream 同步遗留：phase-complete 曾误报 is_last_phase）。91-95 详情见 `.planning/ROADMAP.md`。*
