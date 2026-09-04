@@ -2,6 +2,7 @@ package rpa
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 	"net/http"
 )
@@ -45,10 +46,7 @@ func handleError(c *gin.Context, err error, statusCode int, msg string) bool {
 
 // setPaginationDefaults 设置分页默认值
 func setPaginationDefaults(current, pageSize *int) {
-	if *current <= 0 {
-		*current = 1
-	}
-	if *pageSize <= 0 {
-		*pageSize = 10
-	}
+	c, ps := query.NormalizePagination(*current, *pageSize)
+	*current = c
+	*pageSize = ps
 }
