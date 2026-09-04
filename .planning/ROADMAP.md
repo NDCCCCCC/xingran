@@ -43,7 +43,7 @@ Phase 90 (TIMEOUTS/PORT/PROTOCOL/CONCURRENCY 常量集中化) ─┤
 
 ---
 
-## Phase 89: PAGINATION 常量集中化 (🔥 立即 P0)
+## Phase 89: PAGINATION 常量集中化 (🔥 立即 P0) ✅ SHIPPED 2026-09-04
 
 **Goal**: 抽取 `pkg/constants/pagination.go` 并替换 12+ 处 `current=1/pageSize=10` 散布到 8 个文件（含 RPA/系统/工单/资产/知识/AD 域），回归测试 0 失败。
 
@@ -61,7 +61,7 @@ Phase 90 (TIMEOUTS/PORT/PROTOCOL/CONCURRENCY 常量集中化) ─┤
 4. `go test ./internal/... ./pkg/...` 0 失败（既有 1688+ 测试不回归）
 5. LOC 减少估算（重复代码消除）
 
-## Phase 90: TIMEOUTS/PORT/PROTOCOL/CONCURRENCY 常量集中化 (🔥 立即 P0)
+## Phase 90: TIMEOUTS/PORT/PROTOCOL/CONCURRENCY 常量集中化 (🔥 立即 P0) ✅ SHIPPED 2026-09-04
 
 **Goal**: 抽取 `pkg/constants/timeouts.go` + `pkg/constants/protocol.go`，替换 6 处业务超时 + 1 处 URL 协议 + 1 处 SNMP 端口 + 1 处并发数硬编码。
 
@@ -166,6 +166,20 @@ Phase 90 (TIMEOUTS/PORT/PROTOCOL/CONCURRENCY 常量集中化) ─┤
 5. v1.29 milestone SHIPPED 状态设置
 
 ---
+
+## Progress
+
+| Phase | Status | Plans | Requirements | Started | Completed |
+|-------|--------|-------|--------------|---------|-----------|
+| Phase 89 PAGINATION 常量集中化 | ✅ SHIPPED | 3/3 | PAGINATION-01..11 | 2026-09-04 | 2026-09-04 |
+| Phase 90 TIMEOUTS/PORT/PROTOCOL/CONCURRENCY | ✅ SHIPPED | 4/4 | TIMEOUTS-01..08 | 2026-09-04 | 2026-09-04 |
+| Phase 91 CRUD 复用 base.Repository[T] | Pending | 0/4 | CRUD-REUSE-01..08 | — | — |
+| Phase 92 缓存层三处架构统一 | Pending | 0/3 | CACHE-UNIFY-01..05 | — | — |
+| Phase 93 config_backup 三处 TODO 闭环 | Pending | 0/3 | BACKUP-CLOSED-01..05 | — | — |
+| Phase 94 前端 API 工厂化 | Pending | 0/3 | API-FACTORY-01..05 | — | — |
+| Phase 95 v1.28 SHIP + v1.29 closeout | Pending | 0/2 | CLOSEOUT-01..03 | — | — |
+
+**Total:** 7 phases / 41 requirements (19/41 done — Phase 89 + 90 SHIPPED；91-95 待推进)
 
 ## Execution Order (建议)
 

@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.29
 milestone_name: 技术债治理 (Tech Debt Governance)
-status: planning
-stopped_at: ""
+status: executing
+stopped_at: "Phase 90 SHIPPED (4/4 plans, commits b51f44c..3a2efe5)"
 last_updated: "2026-09-04T00:00:00.000Z"
 last_activity: 2026-09-04
 progress:
-  total_phases: 6
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 7
+  completed_phases: 2
+  total_plans: 7
+  completed_plans: 7
+  percent: 29
 ---
 
 # Project State (v1.29 — milestone workstream)
@@ -22,16 +22,16 @@ See: .planning/PROJECT.md (updated 2026-09-04) — v1.29 Current Milestone 段
 
 **Core value:** 按 2026-09-03 综合审计报告发现的优先级，逐批治理 7 项技术债行动；后端常量/CRUD/缓存/配置备份 + 前端 API 工厂化 + Phase 88 收口，使代码质量基线从此不可无声倒退。
 
-**Current focus:** Phase 89 (常量集中化) 规划中 — `pkg/constants/pagination.go` + `pkg/constants/timeouts.go` 双基础包
+**Current focus:** Phase 91 (CRUD 复用 base.Repository[T]) 待 discuss — v1.29 常量集中化双 phase (89+90) 已 SHIPPED
 
 ## Current Position
 
-Phase: 89 (待规划)
+Phase: 91 (待 discuss)
 Plan: —
-Status: Context gathered
-Last activity: 2026-09-04 — Phase 89 context captured (19 decisions, D-01..D-19, pilot = knowledge_service.go)
-Resume file: .planning/milestones/v1.29-phases/89-pagination-constants/89-CONTEXT.md
-Next action: `/gsd:plan-phase 89`
+Status: Phase 89 + Phase 90 SHIPPED (2026-09-04)；Phase 91-95 待推进
+Last activity: 2026-09-04 — Phase 90 SHIPPED (4 plans，commits b51f44c..3a2efe5，零行为变更)；workstream roadmap 同步到 v1.29（修复 is_last_phase 误报）
+Resume file: .planning/workstreams/milestone/phases/90-timeouts-port-protocol-concurrency/90-VERIFICATION.md
+Next action: `/gsd:discuss-phase 91 --chain`
 
 ### Phase 89 Decisions (D-01..D-19) — captured 2026-09-04
 - **D-PRINCIPLE**: 行业最佳实践为唯一依据,允许任何形式重构;去除硬编码/处理 todo/消除重复/合理抽象

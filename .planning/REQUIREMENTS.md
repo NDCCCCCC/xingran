@@ -2,7 +2,7 @@
 last_updated: 2026-09-04
 milestone: v1.29
 update_trigger: v1.29 技术债治理 — 7 项审计行动转 REQ-ID
-status: defining
+status: executing
 ---
 
 # Milestone v1.29 Requirements (技术债治理)
@@ -27,17 +27,17 @@ status: defining
 
 > **审计源**: 12+ 处 `current=1/pageSize=10` 散布于 8 个文件
 
-- [ ] **PAGINATION-01**: 新建 `pkg/constants/pagination.go`，定义 `DefaultCurrent=1`、`DefaultPageSize=10`、`MaxPageSize=10000`、`KnowledgePageSizeLarge=100`、`KnowledgePageSizeHuge=500`、`AccountPoolPageSize=20` 常量
-- [ ] **PAGINATION-02**: `internal/api/v1/rpa/handler_helpers.go` 替换 49/52 行硬编码为 `constants.DefaultCurrent/DefaultPageSize`
-- [ ] **PAGINATION-03**: `internal/api/v1/system/ad_domain_handler.go` 替换 41/44 行
-- [ ] **PAGINATION-04**: `internal/api/v1/system/notice_user_handler.go` 替换 111/114 行
-- [ ] **PAGINATION-05**: `internal/api/v1/monitor/cache_handler.go` 替换 52/55 行
-- [ ] **PAGINATION-06**: `internal/services/workorder/base.go` 替换 120/124 行；`periodic.go` 替换 92/96 行
-- [ ] **PAGINATION-07**: `internal/services/asset/reconciliation_service.go` 替换 506/510 行；`fix_suggestion_service.go` 替换 169/173/177 行
-- [ ] **PAGINATION-08**: `internal/services/knowledge_service.go` 替换 173/177/490/492 行（含 100/500 大分页常量）
-- [ ] **PAGINATION-09**: `internal/services/addomain/account_pool.go` 替换 207 行 `pageSize=20`
-- [ ] **PAGINATION-10**: 既有 handler/service 单测覆盖分页逻辑（DefaultCurrent 缺省 / MaxPageSize 截断）；回归测试 `go test ./internal/... ./pkg/...` 0 失败
-- [ ] **PAGINATION-11**: `pkg/constants/pagination_test.go` 锁定常量值（AST 防静默改动）
+- [x] **PAGINATION-01**: 新建 `pkg/constants/pagination.go`，定义 3 个常量（89-CONTEXT 深度讨论后简化：`DefaultCurrent=1`、`DefaultPageSize=10`、`MaxPageSize=200`；原规格的 `MaxPageSize=10000` 判定为无 DoS 防护价值，`KnowledgePageSizeLarge/Huge` + `AccountPoolPageSize` 按 D-08/D-09/D-16 判定为"拍脑袋"错误抽象，全部删除）
+- [x] **PAGINATION-02**: `internal/api/v1/rpa/handler_helpers.go` setPaginationDefaults 内部委托 `query.NormalizePagination`（D-06）
+- [x] **PAGINATION-03**: `internal/api/v1/system/ad_domain_handler.go` 内联守卫替换（`== 0` → `<= 0` bug 修复，D-06）
+- [x] **PAGINATION-04**: `internal/api/v1/system/notice_user_handler.go` 已迁移
+- [x] **PAGINATION-05**: `internal/api/v1/monitor/cache_handler.go` setPaginationDefaults 内部委托（D-06）
+- [x] **PAGINATION-06**: `internal/services/workorder/base.go` + `periodic.go` 已迁移
+- [x] **PAGINATION-07**: `internal/services/asset/reconciliation_service.go` + `fix_suggestion_service.go` 已迁移
+- [x] **PAGINATION-08**: `internal/services/knowledge_service.go` 两个代码路径统一走 `NormalizePagination`（default 100→10, max 500→200，用户已接受）
+- [x] **PAGINATION-09**: `internal/services/addomain/account_pool.go` 反常回退改为标准 clamp（default 20→10，用户已接受）
+- [x] **PAGINATION-10**: `pkg/query/pagination_test.go` 单测覆盖（DefaultCurrent 缺省 / MaxPageSize 截断 / Offset 计算）；回归 `go test ./...` 0 失败
+- [x] **PAGINATION-11**: `pkg/constants/pagination_test.go` AST 锁值（TestPaginationConstantStability + Count 双锁）
 
 ## TIMEOUTS (超时/URL/SNMP 端口/并发数常量集中化) — 🔥 立即 P0
 
