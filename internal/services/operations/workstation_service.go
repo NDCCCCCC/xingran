@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"gorm.io/gorm"
@@ -31,13 +32,19 @@ func validateTableName(tableName string) bool {
 	return allowedTables[tableName]
 }
 
-// WorkstationService 工位服务接口
+// WorkstationService 工位服务接口。
+//
+// D-05（Phase 91-02）：List 与 SearchWorkstationOptions 的参数从
+// map[string]interface{} 改为 typed request requests.WorkstationListRequest；
+// 其余方法签名保持不变。Statistics 保持 map 参数（D-04 留 service，仍需
+// 弱类型字符串提取）。
 type WorkstationService interface {
 	Create(ctx context.Context, workstation *models.Workstation) error
 	Update(ctx context.Context, workstation *models.Workstation) error
 	Delete(ctx context.Context, id string) error
 	GetByID(ctx context.Context, id string) (*models.Workstation, error)
-	List(ctx context.Context, params map[string]interface{}) (*PageResult, error)
+	// List 查询工位列表（D-05: typed request）
+	List(ctx context.Context, req requests.WorkstationListRequest) (*PageResult, error)
 	BatchDelete(ctx context.Context, ids []string) error
 	BatchUpdatePositions(ctx context.Context, items []PositionUpdateItem) error
 	// Statistics 工位统计(专用 COUNT 聚合,不依赖分页列表;支持 orgId 部门筛选含子部门,替代前端 4 次 list 拼 total)。
@@ -46,7 +53,8 @@ type WorkstationService interface {
 	GetWorkstationDeptOptions(ctx context.Context, orgId string) ([]DeptOption, error)
 	// SearchWorkstationOptions 工位下拉数据源(LIKE 模糊 + 多维筛选,LIMIT 50)。
 	// 设计给前端 Select/AutoComplete 远程搜索。workstation 高频变更,不缓存。
-	SearchWorkstationOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error)
+	// D-05: typed request,复用 WorkstationListRequest（去 map，不新增重复 struct）。
+	SearchWorkstationOptions(ctx context.Context, req requests.WorkstationListRequest) ([]DropdownOption, error)
 }
 
 // DeptOption 工位编辑"所属部门"下拉选项(union: orgId 子孙 + alias 映射)
@@ -120,6 +128,10 @@ func (s *workstationService) GetWorkstationDeptOptions(ctx context.Context, orgI
 }
 
 type workstationService struct {
+	// repo 承接六方法 CRUD 管道（Phase 91-02 repo 化，D-02 纯 struct 组合）
+	repo *base.GORMRepository[models.Workstation]
+	// db 保留给 Statistics / GetWorkstationDeptOptions / BatchUpdatePositions /
+	// SearchWorkstationOptions / Update 的 First 回填（D-04 留 service 的直用场景）
 	db *gorm.DB
 }
 
@@ -158,7 +170,8 @@ type PositionUpdateItem struct {
 // NewWorkstationService 创建工位服务实例
 func NewWorkstationService(db *gorm.DB) WorkstationService {
 	return &workstationService{
-		db: db,
+		repo: base.NewGORMRepository[models.Workstation](db),
+		db:   db,
 	}
 }
 
@@ -171,7 +184,7 @@ func NewWorkstationService(db *gorm.DB) WorkstationService {
 func (s *workstationService) Create(ctx context.Context, workstation *models.Workstation) error {
 	// ✨ 联动 user_id ↔ status(占用/空闲)
 	applyWorkstationOccupancyLink(workstation, workstation.Status)
-	return s.db.WithContext(ctx).Create(workstation).Error
+	return s.repo.Create(ctx, workstation)
 }
 
 // Update 更新工位
@@ -194,7 +207,7 @@ func (s *workstationService) Update(ctx context.Context, workstation *models.Wor
 	// ✨ 联动 user_id ↔ status(占用/空闲),Maintain(2) 保留维护语义
 	applyWorkstationOccupancyLink(workstation, existing.Status)
 
-	return s.db.WithContext(ctx).Save(workstation).Error
+	return s.repo.Update(ctx, workstation)
 }
 
 // applyWorkstationOccupancyLink 联动工位状态与所属人员。
@@ -219,52 +232,56 @@ func applyWorkstationOccupancyLink(w *models.Workstation, currentStatus models.W
 }
 
 func (s *workstationService) Delete(ctx context.Context, id string) error {
-	return s.db.WithContext(ctx).Table(workstationTable).Where("id = ?", id).Delete(&models.Workstation{}).Error
+	// repo.Delete 经 Model(new(T)) 软删除,与迁移前 .Table(workstationTable) 形式行为等价
+	return s.repo.Delete(ctx, id)
 }
 
-// GetByID 根据ID获取工位
+// GetByID 根据ID获取工位（6 表 JOIN 管道经 repo 执行）。
+// join scope 非空 → repo 经 Tabler 断言生成 sys_workstation.id = ?（models.Workstation
+// TableName() 返回 sys_workstation，与迁移前 :231 的表限定逐字一致）。
 func (s *workstationService) GetByID(ctx context.Context, id string) (*models.Workstation, error) {
-	var workstation models.Workstation
-	err := s.db.WithContext(ctx).
-		Select(workstationJoinSelect).
-		Joins(workstationJoinClause).
-		Where("sys_workstation.id = ?", id).
-		First(&workstation).Error
-	if err != nil {
-		return nil, err
-	}
-	return &workstation, nil
+	return s.repo.GetByID(ctx, id, s.joinScope())
 }
 
-// List 查询工位列表
-func (s *workstationService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
-	var total int64
-	var list []models.Workstation
-
-	query := s.db.WithContext(ctx).Model(&models.Workstation{})
-
-	// 添加筛选条件
-	if name := extractStringParam(params, "name"); name != "" {
-		query = query.Where("sys_workstation.workstation_name LIKE ?", "%"+name+"%")
+// joinScope List/GetByID 共用的 Select + 6 表 LEFT JOIN scope（常量逐字平移）。
+//
+// 行为等价说明（Phase 91-02）：迁移前 Select+Joins 仅在 Find 前追加（Count 无 join）；
+// repo 化后 joinScope 前置于 Count——workstationJoinClause 全部为按主键的 N:1 LEFT JOIN，
+// 无行增殖，Count 结果不变（91-01 spike 实证 + TestImp77 Total 断言守护）；
+// Count 时自定义 Select 被临时替换为 count(*) 并在 Find 恢复（TestBase91 契约锁定）。
+func (s *workstationService) joinScope() base.Scope {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Select(workstationJoinSelect).Joins(workstationJoinClause)
 	}
-	if floorId := extractStringParam(params, "floorId"); floorId != "" {
-		query = query.Where("sys_workstation.floor_id = ?", floorId)
-	}
-	if floorCode := extractStringParam(params, "floorCode"); floorCode != "" {
-		// 验证表名是否在白名单中，防止 SQL 注入
-		if !validateTableName(floorTable) {
-			return nil, fmt.Errorf("invalid table name: %s", floorTable)
+}
+
+// filterScope List 的六个过滤条件（条件字符串与 ? 占位符逐字平移自迁移前实现）。
+//
+// P6 -1 跳过语义保留：
+//   - status: req.GetStatus(-1)——nil/缺失 → -1 → 跳过（与迁移前 map 路径
+//     "status 缺省 -1，仅 >=0 才过滤" 语义等价）
+//   - type:   req.Type == nil 或 *req.Type < 0 → 跳过
+//
+// buildingId/code 不消费：WorkstationListRequest 保留声明但服务从不读取
+// （行为与迁移前一致，前端传入被静默忽略）。
+func (s *workstationService) filterScope(req requests.WorkstationListRequest) base.Scope {
+	return func(db *gorm.DB) *gorm.DB {
+		if req.Name != "" {
+			db = db.Where("sys_workstation.workstation_name LIKE ?", "%"+req.Name+"%")
 		}
-		query = query.Where("EXISTS (SELECT 1 FROM "+floorTable+" WHERE CAST("+floorTable+".id AS TEXT) = sys_workstation.floor_id AND "+floorTable+".floor_no = ?)", floorCode)
-	}
-	if status := extractIntParam(params, "status", -1); status >= 0 {
-		query = query.Where("sys_workstation.status = ?", status)
-	}
-	if typeVal := extractIntParam(params, "type", -1); typeVal >= 0 {
-		query = query.Where("sys_workstation.workstation_type = ?", typeVal)
-	}
-	// 通过关联楼宇的 orgId 筛选部门（包含子部门）
-	if orgId := extractStringParam(params, "orgId"); orgId != "" {
+		if req.FloorID != "" {
+			db = db.Where("sys_workstation.floor_id = ?", req.FloorID)
+		}
+		if req.FloorCode != "" {
+			db = db.Where("EXISTS (SELECT 1 FROM "+floorTable+" WHERE CAST("+floorTable+".id AS TEXT) = sys_workstation.floor_id AND "+floorTable+".floor_no = ?)", req.FloorCode)
+		}
+		if st := req.GetStatus(-1); st >= 0 {
+			db = db.Where("sys_workstation.status = ?", st)
+		}
+		if req.Type != nil && *req.Type >= 0 {
+			db = db.Where("sys_workstation.workstation_type = ?", *req.Type)
+		}
+		// 通过关联楼宇的 orgId 筛选部门（包含子部门）
 		// 工位 -> 楼层 -> 楼宇，通过楼宇的 org_id 筛选
 		// 支持查询该部门及其所有子部门的工位
 		// 使用 EXISTS 子查询避免与现有 JOIN 冲突
@@ -273,46 +290,40 @@ func (s *workstationService) List(ctx context.Context, params map[string]interfa
 		// - ops_buildings.org_id 是 varchar，sys_dept.id 是 uuid
 		// - 将两边都转为 text 进行比较，避免类型不匹配
 		// 查询该部门及其所有子部门：ancestors 包含该部门ID，或 ID 等于该部门ID
-		query = query.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id JOIN sys_dept d ON CAST(d.id AS TEXT) = b.org_id WHERE CAST(f.id AS TEXT) = sys_workstation.floor_id AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors = ?) AND b.deleted_at IS NULL)", orgId, "%,"+orgId, orgId)
+		if req.OrgID != "" {
+			db = db.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id JOIN sys_dept d ON CAST(d.id AS TEXT) = b.org_id WHERE CAST(f.id AS TEXT) = sys_workstation.floor_id AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors = ?) AND b.deleted_at IS NULL)", req.OrgID, "%,"+req.OrgID, req.OrgID)
+		}
+		return db
+	}
+}
+
+// List 查询工位列表（D-05 typed request；CRUD 管道经 base.GORMRepository 执行）。
+//
+// floorCode 白名单守卫保留在 scope 闭包外（floorTable 为编译期常量，
+// validateTableName(floorTable) 恒真——防御死分支按原样保留，错误路径逐字一致）。
+//
+// 分页切换语义（有意收紧，Task 3 checkpoint 确认）：typed GetPagination 相比迁移前
+// map 路径的 clamp 语义（上限 MaxOptionsPageSize=10000、current 不守卫）——
+// pageSize 上限 10000→100（MaxListPageSize）、current<1 回退 1（修复迁移前
+// current=0 产生负 offset 的 latent bug）、下限 10 与默认值不变。
+func (s *workstationService) List(ctx context.Context, req requests.WorkstationListRequest) (*PageResult, error) {
+	// 验证表名是否在白名单中，防止 SQL 注入（保留迁移前守卫与错误文案）
+	if req.FloorCode != "" && !validateTableName(floorTable) {
+		return nil, fmt.Errorf("invalid table name: %s", floorTable)
 	}
 
-	// 分页
-	pagination := extractPagination(params)
-
-	if err := query.Count(&total).Error; err != nil {
-		return nil, err
-	}
-
-	offset := calculateOffset(pagination)
-	// JOIN ops_floors 表获取 floor_name（类型转换：varchar -> uuid）
-	// 用户排序(白名单,带表别名);无 OrderByColumn 时保留原默认
-	sortReq := extractSortRequest(params)
-	query = base.ApplySort(query, sortReq, workstationAllowedSortFields)
-	if sortReq.OrderByColumn == "" {
-		query = query.Order("sys_workstation.created_at DESC")
-	}
-	if err := query.
-		Select(workstationJoinSelect).
-		Joins(workstationJoinClause).
-		Offset(offset).
-		Limit(pagination.PageSize).
-		Find(&list).Error; err != nil {
-		return nil, err
-	}
-
-	return &PageResult{
-		List:     list,
-		Total:    total,
-		Current:  pagination.Current,
-		PageSize: pagination.PageSize,
-	}, nil
+	current, pageSize := req.GetPagination()
+	return s.repo.List(ctx, base.PageParams{Current: current, PageSize: pageSize},
+		s.filterScope(req),
+		s.joinScope(),
+		base.SortScope(req.BaseListRequest, workstationAllowedSortFields, "sys_workstation.created_at DESC"),
+	)
 }
 
 func (s *workstationService) BatchDelete(ctx context.Context, ids []string) error {
-	if len(ids) == 0 {
-		return nil
-	}
-	return s.db.WithContext(ctx).Table(workstationTable).Where("id IN ?", ids).Delete(&models.Workstation{}).Error
+	// 空 ids 早退已由 repo 承接（91-01 P1 语义反转：空 ids 返回 nil），
+	// 与迁移前 `if len(ids) == 0 { return nil }` 行为一致
+	return s.repo.BatchDelete(ctx, ids)
 }
 
 // BatchUpdatePositions 批量更新工位位置和尺寸
@@ -419,34 +430,36 @@ func (s *workstationService) BatchUpdatePositions(ctx context.Context, items []P
 // 设计给前端 Select/AutoComplete 远程搜索(原 bug 位置: info-points/index.tsx 「所属工位」下拉)。
 //
 // 工位高频变更(占用/释放/调位),不缓存避免 staleness。
-func (s *workstationService) SearchWorkstationOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error) {
+// D-05: typed request；查询形状逐字保留（Select 两列 + DropdownMaxRows LIMIT + Order），
+// 仅 map 读取替换为 req 字段读取（status/type 的 -1 跳过规则与 List 一致，P6）。
+func (s *workstationService) SearchWorkstationOptions(ctx context.Context, req requests.WorkstationListRequest) ([]DropdownOption, error) {
 	var result []DropdownOption
 
 	query := s.db.WithContext(ctx).Table("sys_workstation").
 		Select("sys_workstation.id AS value, sys_workstation.workstation_name AS label").
 		Limit(DropdownMaxRows)
 
-	if name := extractStringParam(params, "name"); name != "" {
-		query = query.Where("sys_workstation.workstation_name LIKE ?", "%"+name+"%")
+	if req.Name != "" {
+		query = query.Where("sys_workstation.workstation_name LIKE ?", "%"+req.Name+"%")
 	}
-	if floorId := extractStringParam(params, "floorId"); floorId != "" {
-		query = query.Where("sys_workstation.floor_id = ?", floorId)
+	if req.FloorID != "" {
+		query = query.Where("sys_workstation.floor_id = ?", req.FloorID)
 	}
-	if floorCode := extractStringParam(params, "floorCode"); floorCode != "" {
+	if req.FloorCode != "" {
 		if !validateTableName(floorTable) {
 			return nil, fmt.Errorf("invalid table name: %s", floorTable)
 		}
-		query = query.Where("EXISTS (SELECT 1 FROM "+floorTable+" WHERE CAST("+floorTable+".id AS TEXT) = sys_workstation.floor_id AND "+floorTable+".floor_no = ?)", floorCode)
+		query = query.Where("EXISTS (SELECT 1 FROM "+floorTable+" WHERE CAST("+floorTable+".id AS TEXT) = sys_workstation.floor_id AND "+floorTable+".floor_no = ?)", req.FloorCode)
 	}
-	if status := extractIntParam(params, "status", -1); status >= 0 {
-		query = query.Where("sys_workstation.status = ?", status)
+	if st := req.GetStatus(-1); st >= 0 {
+		query = query.Where("sys_workstation.status = ?", st)
 	}
-	if typeVal := extractIntParam(params, "type", -1); typeVal >= 0 {
-		query = query.Where("sys_workstation.workstation_type = ?", typeVal)
+	if req.Type != nil && *req.Type >= 0 {
+		query = query.Where("sys_workstation.workstation_type = ?", *req.Type)
 	}
 	// orgId 部门筛选含子部门:与 List 同款 EXISTS 子查询,避免类型转换问题
-	if orgId := extractStringParam(params, "orgId"); orgId != "" {
-		query = query.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id JOIN sys_dept d ON CAST(d.id AS TEXT) = b.org_id WHERE CAST(f.id AS TEXT) = sys_workstation.floor_id AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors = ?) AND b.deleted_at IS NULL)", orgId, "%,"+orgId, orgId)
+	if req.OrgID != "" {
+		query = query.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id JOIN sys_dept d ON CAST(d.id AS TEXT) = b.org_id WHERE CAST(f.id AS TEXT) = sys_workstation.floor_id AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors = ?) AND b.deleted_at IS NULL)", req.OrgID, "%,"+req.OrgID, req.OrgID)
 	}
 
 	if err := query.Order("sys_workstation.workstation_name ASC").Find(&result).Error; err != nil {
