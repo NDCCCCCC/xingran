@@ -13,13 +13,11 @@ type PaginationParams struct {
 	PageSize int
 }
 
-// PageResult 分页结果
-type PageResult struct {
-	List     interface{} `json:"list"`
-	Total    int64       `json:"total"`
-	Current  int         `json:"current"`
-	PageSize int         `json:"pageSize"`
-}
+// PageResult 分页结果 — base.PageResult 的 type alias。
+//
+// 全项目唯一 struct 定义在 base 包（D-03 单一定义）；alias 使 opsServices.PageResult
+// 与 base.PageResult 成为同一类型，包内既有引用（含测试）零改动编译。
+type PageResult = base.PageResult
 
 // extractPagination 从参数中提取分页信息
 func extractPagination(params map[string]interface{}) PaginationParams {
