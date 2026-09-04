@@ -43,14 +43,14 @@ status: defining
 
 > **审计源**: 6 处业务超时 + 1 处 URL 协议 + 1 处 SNMP 端口 + 1 处并发数硬编码
 
-- [ ] **TIMEOUTS-01**: 新建 `pkg/constants/timeouts.go`，定义 `CommandExecTimeout=300s`、`CommandReadTimeout=60s`、`ExecutionTimeout=300s`、`LDAPConnTimeout=30s`、`DefaultSNMPPort=161`、`DefaultCommandConcurrency=10`
-- [ ] **TIMEOUTS-02**: 新建 `pkg/constants/protocol.go`，定义 `HTTPProto="http"`、`HTTPSProto="https"` (WS origin 协议白名单)
-- [ ] **TIMEOUTS-03**: `internal/api/v1/network/command_handler.go` 替换 58/61/98 行（Concurrency + 2× Timeout）
-- [ ] **TIMEOUTS-04**: `internal/api/v1/network/execution_handler.go` 替换 104 行 Timeout=300
-- [ ] **TIMEOUTS-05**: `internal/services/ad_ldap_client.go` 替换 74 行 `time.Second*30`
-- [ ] **TIMEOUTS-06**: `internal/api/v1/ws_notice_handler.go` 替换 47 行协议字符串拼接
-- [ ] **TIMEOUTS-07**: `internal/api/v1/network/discovery_handler.go` 替换 126 行 `SNMPPort=161`
-- [ ] **TIMEOUTS-08**: `pkg/constants/{timeouts,protocol}_test.go` AST 锁值；回归测试 `go test ./...` 0 失败
+- [x] **TIMEOUTS-01**: 新建 `pkg/constants/timeouts.go` + `pkg/constants/ports.go` + `pkg/constants/concurrency.go`，定义 `CommandExecTimeout=300s`（设备命令执行超时，command_handler + execution_handler 共用 D-06）、`CommandReadTimeout=60s`、`LDAPConnTimeout=30s`、`ADSyncTimeout=30m`、`SchedulerShutdownTimeout=5s`、`ADSyncTaskTimeout=1m`（后 3 个为 scheduler/cron 扩展审计 D-07）+ `SNMPPort=161` + `CommandConcurrency=10`（不加 `Default` 前缀 D-05）
+- [x] **TIMEOUTS-02**: 新建 `pkg/constants/protocol.go`，定义 `HTTPProto="http"`、`HTTPSProto="https"` (WS origin 协议白名单，按 D-03 裸 const 拼接 `HTTPProto+"://"+host`，无 helper 函数)
+- [x] **TIMEOUTS-03**: `internal/api/v1/network/command_handler.go` 替换 58/61/98 行（Concurrency + 2× Timeout，按 D-02 `int(constants.Xxx.Seconds())` 强类型转换模式）
+- [x] **TIMEOUTS-04**: `internal/api/v1/network/execution_handler.go` 替换 99/104 行（Concurrency + Timeout；104 行 `Timeout=300` 共用 `CommandExecTimeout` D-06）
+- [x] **TIMEOUTS-05**: `internal/services/ad_ldap_client.go` 替换 74 行 `time.Second*30` → `constants.LDAPConnTimeout`（time.Duration 强类型直接替换 D-02）
+- [x] **TIMEOUTS-06**: `internal/api/v1/ws_notice_handler.go` 替换 47 行协议字符串拼接 → `constants.HTTPProto+"://"+host` / `constants.HTTPSProto+"://"+host`（裸 const 拼接 D-03）
+- [x] **TIMEOUTS-07**: `internal/api/v1/network/discovery_handler.go` 替换 126 行 `SNMPPort=161` + scheduler/cron 审计扩展（`internal/scheduler/ad_sync_tasks.go` 重命名 `adSchedulerSyncTimeout` → `ADSyncTimeout` + `internal/scheduler/cron.go` 重命名 `defaultShutdownTimeout` → `SchedulerShutdownTimeout` + `internal/scheduler/ad_sync_tasks.go:164` 内联 `1*time.Minute` 抽 `ADSyncTaskTimeout`，均按 D-07/D-08 决策）
+- [x] **TIMEOUTS-08**: `pkg/constants/{timeouts,ports,protocol,concurrency}_test.go` AST 锁值（共 10 个测试，含 Stability + Count 双锁模式参考 `internal/utils/operlog/regression_test.go` 模板）；回归测试 `go build ./...` 0 错误 + `go test ./...` 0 失败（既有 1688+ 测试不回归）
 
 ## CRUD-REUSE (CRUD 服务复用 base.Repository[T]) — 🔥 高优 P1
 
