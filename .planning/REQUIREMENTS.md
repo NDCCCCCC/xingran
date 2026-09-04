@@ -56,14 +56,14 @@ status: executing
 
 > **审计源**: operations/ 下 8 个 CRUD service 60-70% 重复；base.Repository[T] 已存在未用
 
-- [ ] **CRUD-REUSE-01**: 改造 `internal/services/base/service.go` 为 gorm scope 函数式 GORMRepository[T] 完整 CRUD 抽象（List scope 化 + 删除 Repository[T] interface 与 Query/WhereCondition DSL，BatchDelete 已存在仅反转空 ids 语义；Statistics/SearchOptions 为异构业务查询，按 D-04 留 service 层不进 Repository）
-- [ ] **CRUD-REUSE-02**: `internal/services/operations/workstation_service.go` 迁移到 `base.Repository[T]`（首个 pilot，验证模式可复制）
-- [ ] **CRUD-REUSE-03**: `internal/services/operations/building_service.go` 迁移到 `base.Repository[T]`
-- [ ] **CRUD-REUSE-04**: `internal/services/operations/floor_service.go` 迁移
-- [ ] **CRUD-REUSE-05**: `internal/services/operations/asset_service.go` 迁移
-- [ ] **CRUD-REUSE-06**: `internal/services/operations/server_room_service.go` + `infopoint_service.go` + `dedicated_line_service.go` + `room_device_service.go` + `door_service.go` + `wall_service.go` + `floor_plan_text_service.go` 批量迁移（D-06 扩容后剩 7 个）
-- [ ] **CRUD-REUSE-07**: 每个 service 迁移后跑 `go test ./internal/services/operations/...` 全过；新增 `base/service_test.go` 锁定 Repository[T] 泛型契约
-- [ ] **CRUD-REUSE-08**: LOC 净减审计（D-07 混合标准：11 services 全部复用 GORMRepository + 每服务 CRUD 模板清零 + LOC 净减 ≥800 行，git numstat 证据写入 SUMMARY）；既有 handler 端到端测试 0 回归
+- [x] **CRUD-REUSE-01**: 改造 `internal/services/base/service.go` 为 gorm scope 函数式 GORMRepository[T] 完整 CRUD 抽象（List scope 化 + 删除 Repository[T] interface 与 Query/WhereCondition DSL，BatchDelete 已存在仅反转空 ids 语义；Statistics/SearchOptions 为异构业务查询，按 D-04 留 service 层不进 Repository）
+- [x] **CRUD-REUSE-02**: `internal/services/operations/workstation_service.go` 迁移到 `base.Repository[T]`（首个 pilot，验证模式可复制）
+- [x] **CRUD-REUSE-03**: `internal/services/operations/building_service.go` 迁移到 `base.Repository[T]`
+- [x] **CRUD-REUSE-04**: `internal/services/operations/floor_service.go` 迁移
+- [x] **CRUD-REUSE-05**: `internal/services/operations/asset_service.go` 迁移
+- [x] **CRUD-REUSE-06**: `internal/services/operations/server_room_service.go` + `infopoint_service.go` + `dedicated_line_service.go` + `room_device_service.go` + `door_service.go` + `wall_service.go` + `floor_plan_text_service.go` 批量迁移（D-06 扩容后剩 7 个）
+- [x] **CRUD-REUSE-07**: 每个 service 迁移后跑 `go test ./internal/services/operations/...` 全过；新增 `base/service_test.go` 锁定 Repository[T] 泛型契约
+- [x] **CRUD-REUSE-08**: LOC 净减审计（D-07 混合标准：11 services 全部复用 GORMRepository + 每服务 CRUD 模板清零 + LOC 净减 ≥800 行，git numstat 证据写入 SUMMARY）；既有 handler 端到端测试 0 回归
 
 ## CACHE-UNIFY (缓存层三处架构统一) — 🟡 中优 P2
 
