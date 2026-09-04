@@ -54,7 +54,9 @@ func TestAssetListExcludesComponents(t *testing.T) {
 	insertAssetRow(t, db, "asset-card-1", "CARD-SN-001", "card")
 	insertAssetRow(t, db, "asset-fan-1", "FAN-SN-001", "fan")
 
-	svc := &assetService{db: db}
+	// 91-03 repo 组合后 List 经 s.repo 执行，白盒 &assetService{db: db} 漏 repo 字段
+	// 会 nil panic → 改经构造函数（91-02 pilot 同型修复）
+	svc := NewAssetService(db)
 	result, err := svc.List(context.Background(), map[string]interface{}{})
 	require.NoError(t, err)
 	require.NotNil(t, result)
@@ -106,7 +108,8 @@ func TestAssetListFilterDoesNotBreakExistingFilters(t *testing.T) {
 	insertAssetRow(t, db, "asset-card-1", "SWITCH-CARD-001", "card")
 	insertAssetRow(t, db, "asset-fan-1", "SWITCH-FAN-001", "fan")
 
-	svc := &assetService{db: db}
+	// 91-03 repo 组合后 List 经 s.repo 执行，白盒构造改经构造函数（同上）
+	svc := NewAssetService(db)
 	// 用 devicesn LIKE 'SWITCH' 筛选 → 应该只命中 1 行主设备(SWITCH-SN-001)
 	// 2 行组件(SWITCH-CARD-001/SWITCH-FAN-001)即便 devicesn 匹配也应被 component_type IS NULL 排除
 	result, err := svc.List(context.Background(), map[string]interface{}{

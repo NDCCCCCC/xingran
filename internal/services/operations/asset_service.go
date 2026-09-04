@@ -45,6 +45,7 @@ type DeviceTypeCount struct {
 
 type assetService struct {
 	db            *gorm.DB
+	repo          *base.GORMRepository[models.Asset]
 	uuidValidator *regexp.Regexp
 }
 
@@ -52,6 +53,7 @@ type assetService struct {
 func NewAssetService(db *gorm.DB) AssetService {
 	return &assetService{
 		db:            db,
+		repo:          base.NewGORMRepository[models.Asset](db),
 		uuidValidator: constants.UUIDPattern,
 	}
 }
@@ -116,7 +118,7 @@ func (s *assetService) Create(ctx context.Context, asset *models.Asset) error {
 		return err
 	}
 
-	return s.db.WithContext(ctx).Create(asset).Error
+	return s.repo.Create(ctx, asset)
 }
 
 // Update 更新资产
@@ -146,17 +148,12 @@ func (s *assetService) Update(ctx context.Context, asset *models.Asset) error {
 
 // Delete 删除资产
 func (s *assetService) Delete(ctx context.Context, id string) error {
-	return s.db.WithContext(ctx).Delete(&models.Asset{}, "id = ?", id).Error
+	return s.repo.Delete(ctx, id)
 }
 
 // GetByID 根据ID获取资产
 func (s *assetService) GetByID(ctx context.Context, id string) (*models.Asset, error) {
-	var asset models.Asset
-	err := s.db.WithContext(ctx).Where("id = ?", id).First(&asset).Error
-	if err != nil {
-		return nil, err
-	}
-	return &asset, nil
+	return s.repo.GetByID(ctx, id)
 }
 
 // GetByDeviceSN 根据设备序列号获取资产
@@ -180,52 +177,39 @@ func (s *assetService) GetByDeviceSN(ctx context.Context, deviceSN string) (*mod
 	return &asset, nil
 }
 
-// List 查询资产列表
+// List 查询资产列表（map 签名不变——F1：D-05 只锁 workstation，service 内部 map→scope 转换）
+//
+// 语义说明（Phase 91-03 repo 化）：现状 .Table("ops_asset") 起链导致 Count 不过滤
+// 软删除行（Total 虚高，RESEARCH F3）；repo 统一 Model(new(T)) 起链后 Total 收紧为
+// 不含软删行（latent bugfix，经 91-03 Task 4 checkpoint 确认）。无软删数据时逐字节一致。
 func (s *assetService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
-	query := s.db.WithContext(ctx).Table("ops_asset")
-
-	// Phase 48 D-07 默认过滤:组件行(component_type IS NOT NULL)不出现在常规列表,
-	// 避免 "1 台交换机 + 6 块板卡" 被数成 7 台设备。组件另开独立视图(按 parent_asset_id 聚合)。
-	// 硬编码在 service 层(非 controller),保证所有调用入口(含 Excel 导入 GetByDeviceSN 之外的列表
-	// 统计路径)默认排除。GetByDeviceSN 不受影响,对账仍能查到组件 SN。
-	query = query.Where("component_type IS NULL")
-
-	// 应用筛选条件
-	query = s.applyFilters(query, params)
-
-	// 获取总数
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		return nil, err
-	}
-
-	// 应用分页
 	pagination := extractPagination(params)
-	offset := calculateOffset(pagination)
-
-	// 用户排序(白名单);无 OrderByColumn 时保留 created_at DESC 默认
 	sortReq := extractSortRequest(params)
-	query = base.ApplySort(query, sortReq, assetAllowedSortFields)
-	if sortReq.OrderByColumn == "" {
-		query = query.Order("created_at DESC")
-	}
-
-	var list []models.Asset
-	if err := query.Offset(offset).Limit(pagination.PageSize).Find(&list).Error; err != nil {
-		return nil, err
-	}
-
-	return &PageResult{
-		List:     list,
-		Total:    total,
-		Current:  pagination.Current,
-		PageSize: pagination.PageSize,
-	}, nil
+	return s.repo.List(ctx, base.PageParams{Current: pagination.Current, PageSize: pagination.PageSize},
+		// Phase 48 D-07 默认过滤:组件行(component_type IS NOT NULL)不出现在常规列表,
+		// 避免 "1 台交换机 + 6 块板卡" 被数成 7 台设备。组件另开独立视图(按 parent_asset_id 聚合)。
+		// 硬编码在 service 层(非 controller),保证所有调用入口(含 Excel 导入 GetByDeviceSN 之外的列表
+		// 统计路径)默认排除。GetByDeviceSN 不受影响,对账仍能查到组件 SN。
+		// 恒定过滤位于 scopes 首位（先于一切用户 filter 叠加）。
+		func(db *gorm.DB) *gorm.DB {
+			return db.Where("component_type IS NULL")
+		},
+		s.filterScope(params),
+		base.SortScope(sortReq, assetAllowedSortFields, "created_at DESC"),
+	)
 }
 
-// BatchDelete 批量删除资产
+// filterScope List 筛选条件 scope（闭包内调用 applyFilters 保证 9 个 filter 条件
+// 逐字平移零漂移，T-91-03-03/T-91-03-04 缓解）。
+func (s *assetService) filterScope(params map[string]interface{}) base.Scope {
+	return func(db *gorm.DB) *gorm.DB {
+		return s.applyFilters(db, params)
+	}
+}
+
+// BatchDelete 批量删除资产（repo 空 ids nil 语义与现状 IN(空) no-op 等价）
 func (s *assetService) BatchDelete(ctx context.Context, ids []string) error {
-	return s.db.WithContext(ctx).Delete(&models.Asset{}, "id IN ?", ids).Error
+	return s.repo.BatchDelete(ctx, ids)
 }
 
 // applyFilters 应用查询筛选条件
