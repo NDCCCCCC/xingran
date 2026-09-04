@@ -63,7 +63,7 @@ status: executing
 - [x] **CRUD-REUSE-05**: `internal/services/operations/asset_service.go` 迁移
 - [x] **CRUD-REUSE-06**: `internal/services/operations/server_room_service.go` + `infopoint_service.go` + `dedicated_line_service.go` + `room_device_service.go` + `door_service.go` + `wall_service.go` + `floor_plan_text_service.go` 批量迁移（D-06 扩容后剩 7 个）
 - [x] **CRUD-REUSE-07**: 每个 service 迁移后跑 `go test ./internal/services/operations/...` 全过；新增 `base/service_test.go` 锁定 Repository[T] 泛型契约
-- [x] **CRUD-REUSE-08**: LOC 净减审计（D-07 混合标准：11 services 全部复用 GORMRepository + 每服务 CRUD 模板清零 + LOC 净减 ≥800 行，git numstat 证据写入 SUMMARY）；既有 handler 端到端测试 0 回归
+- [x] **CRUD-REUSE-08**: LOC 净减审计（D-07 混合标准：11 services 全部复用 GORMRepository + 每服务 CRUD 模板清零 ✓ + LOC 净减量化锚点——**OVR-91-01 用户 override 后重校准**：生产代码口径净减 +408 行（全口径 -8，测试基线计划内 +678 抵消；numstat 证据见 91-04-SUMMARY））；既有 handler 端到端测试 0 回归 ✓
 
 ## CACHE-UNIFY (缓存层三处架构统一) — 🟡 中优 P2
 

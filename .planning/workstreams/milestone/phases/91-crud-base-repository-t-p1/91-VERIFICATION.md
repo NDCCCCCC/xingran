@@ -1,13 +1,18 @@
 ---
 phase: 91-crud-base-repository-t-p1
 verified: 2026-09-04T21:05:00Z
-status: gaps_found
-score: 8/9 must-haves verified
-overrides_applied: 0
-overrides: []
+status: passed
+score: 8/9 must-haves verified (+1 user override)
+overrides_applied: 1
+overrides:
+  - id: OVR-91-01
+    truth: "LOC 净减 ≥800（D-07 混合标准第三成分）"
+    decision: "接受偏差并 complete（用户 2026-09-04 决策）"
+    recalibrated_to: "生产代码口径净减 +408（numstat: del 1182 / add 774）+ 11/11 服务全部复用 + 每服务 CRUD 模板清零（定性成分达成）；量化锚点 800 系估算误差——测试基线计划内新增 +678 行（floor 行为基线 288 / base 契约锁 275 / fpt 冒烟 115）抵消了生产删减"
+    rationale: "F5 组合 2 仅 ~80-120 行无法闭合 808 缺口；继续删除违反『禁止凑数删除』。教训记入 LEARNINGS：LOC 目标应区分生产代码口径与测试投入口径。"
 gaps:
   - truth: "LOC 净减 ≥800（D-07 混合标准第三成分）"
-    status: partial
+    status: resolved-by-override
     reason: "git numstat 独立复核：全口径净减 -8（del 1555 / add 1563），仅生产代码口径 +408（del 1182 / add 774），均未达 ≥800。混合标准另两成分（11/11 服务全部复用 GORMRepository + 每服务 CRUD 模板清零）已实证达成；SUMMARY 如实记录未达标与归因（测试基线计划内新增 +678 行：floor_service_crud_test +288 / base service_test +275 / fpt_crud_test +115；条件逐字平移与行为等价论证注释），无虚报。91-04-PLAN Task 4 验收条款预授权「如实记录未达标差距」为合法完成路径。关键分析：F5 组合 2（building/floor typed 接线，估 ~80-120 行）即使实施也无法闭合数字缺口（差距 808 行）——本 gap 只能经用户决策（override 接受偏差或重校准锚点）解决，不可能靠继续删除解决。"
     artifacts:
       - path: ".planning/workstreams/milestone/phases/91-crud-base-repository-t-p1/91-04-SUMMARY.md"
