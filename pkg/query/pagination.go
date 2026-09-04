@@ -50,7 +50,7 @@ func NormalizePagination(current, pageSize int) (int, int) {
 // PaginationRequest 分页请求
 type PaginationRequest struct {
 	Current  int `json:"current" binding:"min=1"`
-	PageSize int `json:"pageSize" binding:"min=1,max=100"`
+	PageSize int `json:"pageSize" binding:"min=1"`
 }
 
 // Normalize 规范化分页参数
