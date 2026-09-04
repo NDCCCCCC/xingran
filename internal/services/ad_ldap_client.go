@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/xingran-next/xingran-go-backend/internal/config"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 )
 
 // adTLSSkipVerify 缓存 AD/LDAP TLS 证书校验开关,从 config.AD.TLSSkipVerify 读取。
@@ -71,7 +71,7 @@ func (c *LDAPClient) Connect() error {
 	}
 
 	// 设置超时
-	c.conn.SetTimeout(time.Second * 30)
+	c.conn.SetTimeout(constants.LDAPConnTimeout)
 
 	// 启动TLS (如果配置了StartTLS)
 	if c.config.UseTLS && !c.config.UseSSL {
