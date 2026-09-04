@@ -1,17 +1,10 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.29
-milestone_name: 技术债治理 (Tech Debt Governance)
+milestone_name: closeout + audit
 status: executing
-stopped_at: "Phase 90 SHIPPED (4/4 plans, commits b51f44c..3a2efe5)"
-last_updated: "2026-09-04T00:00:00.000Z"
-last_activity: 2026-09-04
-progress:
-  total_phases: 7
-  completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
-  percent: 29
+last_updated: "2026-09-04T09:43:58.504Z"
+last_activity: 2026-09-04 -- Phase 91 planning complete
 ---
 
 # Project State (v1.29 — milestone workstream)
@@ -28,12 +21,13 @@ See: .planning/PROJECT.md (updated 2026-09-04) — v1.29 Current Milestone 段
 
 Phase: 91 (待 discuss)
 Plan: —
-Status: Phase 89 + Phase 90 SHIPPED (2026-09-04)；Phase 91-95 待推进
-Last activity: 2026-09-04 — Phase 90 SHIPPED (4 plans，commits b51f44c..3a2efe5，零行为变更)；workstream roadmap 同步到 v1.29（修复 is_last_phase 误报）
+Status: Ready to execute
+Last activity: 2026-09-04 -- Phase 91 planning complete
 Resume file: .planning/workstreams/milestone/phases/90-timeouts-port-protocol-concurrency/90-VERIFICATION.md
 Next action: `/gsd:discuss-phase 91 --chain`
 
 ### Phase 89 Decisions (D-01..D-19) — captured 2026-09-04
+
 - **D-PRINCIPLE**: 行业最佳实践为唯一依据,允许任何形式重构;去除硬编码/处理 todo/消除重复/合理抽象
 - **3 常量最终定义** (深度思考后简化): DefaultCurrent=1, DefaultPageSize=10, MaxPageSize=200 (行业惯例对齐 GitHub=100/Stripe=100;200 略宽)
 - **D-08/D-09/D-16 删除**: KnowledgeDefaultPageSize=100 / KnowledgeMaxPageSize=500 / AccountPoolDefaultPageSize=20 全部判定为"拍脑袋"决定,无业务依据
@@ -44,6 +38,7 @@ Next action: `/gsd:discuss-phase 91 --chain`
 ## Accumulated Context (carried from v1.28)
 
 ### Decisions to preserve
+
 - D-26-01..05 (v1.26 后端覆盖率 gate): 4 层 CI 防倒退（加权阈值 + per-dir floor + ratchet + PR diff ≥80%）继续生效
 - D-27-01..04 (v1.27 后端覆盖率优秀 II): 测试基建 (miniredis/httpmock/ScrapliWrapper/LDAPClientIface/TestHelperProcess/AST守护) 沿用
 - D-28-01..04 (v1.28 前端覆盖率): 阶段性收口 45.13%，不再 push 到 70% 目标
@@ -51,12 +46,15 @@ Next action: `/gsd:discuss-phase 91 --chain`
 - status_constants_test.go: 状态 0/1 命名常量全程 AST 锁值
 
 ### Blockers (active)
+
 - 无新增 blocker（v1.29 主要是技术债治理，业务风险低）
 
 ### Pending Todos (carry forward, not in v1.29 scope)
+
 - `.planning/todos/pending/operlog-exclude-paths.md` — operlog 白名单配置驱动（RPA heartbeat 日志污染），独立 deferred 到后续 milestone（不在 v1.29 7 项治理范围内）
 
 ### Audit Baseline (2026-09-03)
+
 | 维度 | 基线 | 数据 |
 |------|------|------|
 | 后端覆盖率 | 78.12% | v1.27 SHIPPED |
@@ -70,6 +68,7 @@ Next action: `/gsd:discuss-phase 91 --chain`
 | 前端 API 文件 | ~15 | 散落在 src/lib/ |
 
 ### Phase 88 收口状态
+
 - Phase 88 已完成 18+ batches (R24-R41, R42-R47)
 - GLOBAL: 45.13% → 45.87% (batch47 末态)
 - 1688 tests passing, Gate 45/45 dirs PASS
