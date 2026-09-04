@@ -65,11 +65,25 @@ type FloorTreeNode struct {
 }
 
 type floorService struct {
-	db *gorm.DB
+	db   *gorm.DB
+	repo *base.GORMRepository[operations.OpsFloor]
 }
 
 func NewFloorService(db *gorm.DB) FloorService {
-	return &floorService{db: db}
+	return &floorService{db: db, repo: base.NewGORMRepository[operations.OpsFloor](db)}
+}
+
+// listRepo 返回仓储实例。
+// floor_cache_impl.go 装饰器经白盒字面量 &floorService{db: db} 构造内嵌 base
+// （不经过 NewFloorService，repo 字段为零值），而 router.go 生产路径走
+// NewFloorServiceWithCache——此处惰性兜底补建，保证 P7（零触碰 Phase 92 文件）
+// 约束下装饰器委托 List/GetByID 不 nil-panic。GORMRepository 无状态，惰性
+// 构造与构造函数初始化语义等价。
+func (s *floorService) listRepo() *base.GORMRepository[operations.OpsFloor] {
+	if s.repo == nil {
+		return base.NewGORMRepository[operations.OpsFloor](s.db)
+	}
+	return s.repo
 }
 
 // floorAllowedSortFields 楼层可排序字段白名单。
@@ -175,41 +189,48 @@ func (s *floorService) Delete(ctx context.Context, id string) error {
 }
 
 func (s *floorService) GetByID(ctx context.Context, id string) (*operations.OpsFloor, error) {
-	var floor operations.OpsFloor
-	err := s.db.WithContext(ctx).
-		Select("ops_floors.*, ops_buildings.name as building_name, '/uploads/' || sys_files.storage_path as plan_image_url").
-		Joins("LEFT JOIN ops_buildings ON CAST(ops_buildings.id AS TEXT) = ops_floors.building_id").
-		Joins("LEFT JOIN sys_files ON CAST(sys_files.id AS TEXT) = ops_floors.plan_image_id").
-		Where("ops_floors.id = ?", id).
-		First(&floor).Error
-	if err != nil {
-		return nil, err
+	// repo.GetByID 有 scope 时按 Tabler 断言生成 ops_floors.id = ?（与现状逐字等价），
+	// joinScope 携带 Select+Joins（:229-231 三段原样平移）。
+	return s.listRepo().GetByID(ctx, id, s.joinScope())
+}
+
+// joinScope List/GetByID 共用的 Select+Joins（原 :229-231 三段逐字平移）。
+//
+// 前置 Count 的等价性：现状 Select+Joins 在 Count 之后应用；repo 化后 scope 前置——
+// 两 JOIN 均按主键 N:1 LEFT JOIN 无行增殖，Count 时 Select 被替换为 count(*) 并在
+// Find 恢复，Total 不变（91-01 spike 实证 + TestFloor91_List_Filters 守护）。
+func (s *floorService) joinScope() base.Scope {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Select("ops_floors.*, ops_buildings.name as building_name, '/uploads/' || sys_files.storage_path as plan_image_url").
+			Joins("LEFT JOIN ops_buildings ON CAST(ops_buildings.id AS TEXT) = ops_floors.building_id").
+			Joins("LEFT JOIN sys_files ON CAST(sys_files.id AS TEXT) = ops_floors.plan_image_id")
 	}
-	return &floor, nil
+}
+
+// filterScope List 筛选条件（原 :187-201 四条件逐字平移，含 CAST 写法与
+// orgId EXISTS 子查询）。
+func (s *floorService) filterScope(params map[string]interface{}) base.Scope {
+	return func(db *gorm.DB) *gorm.DB {
+		if name, ok := params["name"].(string); ok && name != "" {
+			db = db.Where("ops_floors.name LIKE ?", "%"+name+"%")
+		}
+		if buildingId, ok := params["buildingId"].(string); ok && buildingId != "" {
+			db = db.Where("ops_floors.building_id = ?", buildingId)
+		}
+		if orgId, ok := params["orgId"].(string); ok && orgId != "" {
+			// 通过关联楼宇的 orgId 筛选（使用 EXISTS 子查询避免 JOIN 冲突）
+			db = db.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE CAST(b.id AS TEXT) = ops_floors.building_id AND b.org_id = ? AND b.deleted_at IS NULL)", orgId)
+		}
+
+		// 状态筛选
+		if status := extractIntParam(params, "status", -1); status >= 0 {
+			db = db.Where("ops_floors.status = ?", status)
+		}
+		return db
+	}
 }
 
 func (s *floorService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
-	var total int64
-	var list []operations.OpsFloor
-
-	query := s.db.WithContext(ctx).Model(&operations.OpsFloor{})
-
-	if name, ok := params["name"].(string); ok && name != "" {
-		query = query.Where("ops_floors.name LIKE ?", "%"+name+"%")
-	}
-	if buildingId, ok := params["buildingId"].(string); ok && buildingId != "" {
-		query = query.Where("ops_floors.building_id = ?", buildingId)
-	}
-	if orgId, ok := params["orgId"].(string); ok && orgId != "" {
-		// 通过关联楼宇的 orgId 筛选（使用 EXISTS 子查询避免 JOIN 冲突）
-		query = query.Where("EXISTS (SELECT 1 FROM ops_buildings b WHERE CAST(b.id AS TEXT) = ops_floors.building_id AND b.org_id = ? AND b.deleted_at IS NULL)", orgId)
-	}
-
-	// 状态筛选
-	if status := extractIntParam(params, "status", -1); status >= 0 {
-		query = query.Where("ops_floors.status = ?", status)
-	}
-
 	current := 1
 	pageSize := 10
 	if c, ok := params["current"].(int); ok {
@@ -223,34 +244,15 @@ func (s *floorService) List(ctx context.Context, params map[string]interface{}) 
 		pageSize = int(ps)
 	}
 
-	// 用户排序(白名单,带表别名);无 OrderByColumn 时保留原 order_num ASC 默认
+	// 分页为无 clamp 内联断言语契约（P5 floor 行）：current/pageSize 任意值直传
+	// base.PageParams，repo 直信入参；排序 B 型排他默认（白名单 + ops_floors.order_num ASC）。
+	// floor 起链本就是 Model 形态，无 building/asset 的 F3 软删 Count 分歧。
 	sortReq := extractSortRequest(params)
-	query = base.ApplySort(query, sortReq, floorAllowedSortFields)
-	if sortReq.OrderByColumn == "" {
-		query = query.Order("ops_floors.order_num ASC")
-	}
-
-	if err := query.Count(&total).Error; err != nil {
-		return nil, err
-	}
-
-	offset := (current - 1) * pageSize
-	if err := query.
-		Select("ops_floors.*, ops_buildings.name as building_name, '/uploads/' || sys_files.storage_path as plan_image_url").
-		Joins("LEFT JOIN ops_buildings ON CAST(ops_buildings.id AS TEXT) = ops_floors.building_id").
-		Joins("LEFT JOIN sys_files ON CAST(sys_files.id AS TEXT) = ops_floors.plan_image_id").
-		Offset(offset).
-		Limit(pageSize).
-		Find(&list).Error; err != nil {
-		return nil, err
-	}
-
-	return &PageResult{
-		List:     list,
-		Total:    total,
-		Current:  current,
-		PageSize: pageSize,
-	}, nil
+	return s.listRepo().List(ctx, base.PageParams{Current: current, PageSize: pageSize},
+		s.filterScope(params),
+		s.joinScope(),
+		base.SortScope(sortReq, floorAllowedSortFields, "ops_floors.order_num ASC"),
+	)
 }
 
 // SearchFloorOptions 楼层下拉数据源(name LIKE 模糊 + buildingId/orgId/status 筛选,LIMIT 50)。
