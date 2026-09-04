@@ -11,6 +11,7 @@ import (
 	monitorServices "github.com/xingran-next/xingran-go-backend/internal/services/monitor"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
+	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
@@ -48,13 +49,7 @@ func (h *CacheHandler) WithCore(core *core.Core) *CacheHandler {
 
 // setPaginationDefaults 设置分页默认值
 func (h *CacheHandler) setPaginationDefaults(current, pageSize int) (int, int) {
-	if current <= 0 {
-		current = 1
-	}
-	if pageSize <= 0 {
-		pageSize = 10
-	}
-	return current, pageSize
+	return query.NormalizePagination(current, pageSize)
 }
 
 // ==================== 请求/响应类型 ====================
