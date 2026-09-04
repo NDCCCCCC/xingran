@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.29
 milestone_name: 技术债治理
 status: executing
-last_updated: "2026-09-04T11:22:00.000Z"
-last_activity: 2026-09-04 -- Plan 91-03 complete (building/floor/asset repo 化)
+last_updated: "2026-09-04T12:00:00.000Z"
+last_activity: 2026-09-04 -- Phase 91 complete (4/4 plans, 11/11 services repo 化)
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 11
-  completed_plans: 10
-  percent: 91
+  completed_plans: 11
+  percent: 100
 ---
 
 # Project State (v1.29 — milestone workstream)
@@ -27,14 +27,26 @@ Config: "mode": "yolo"
 
 ## Current Position
 
-Phase: 91 (CRUD 复用 base.Repository[T] (🔥 高优 P1)) — EXECUTING
-Plan: 3 of 4 (91-01, 91-02, 91-03 complete)
-Status: Executing Phase 91
-Last activity: 2026-09-04 -- Plan 91-03 complete (building/floor/asset repo 化: map 签名不变 + floor 行为基线 6 锁 + Rule 1 修复 floor 换楼同步死分支 + F3 软删 Total 修复 checkpoint auto-approved, commits dbdacd9/039e6e7/7fb4531/a918f44)
-Resume file: .planning/workstreams/milestone/phases/91-crud-base-repository-t-p1/91-03-SUMMARY.md
-Next action: `/gsd:execute-phase 91` (plan 91-04 收尾: 7 个 typed 服务批量迁移 + typesafe 死文件清理 + pagination_helper 修剪)
+Phase: 91 (CRUD 复用 base.Repository[T] (🔥 高优 P1)) — COMPLETE (4/4 plans)
+Plan: 4 of 4 (91-01, 91-02, 91-03, 91-04 all complete)
+Status: Phase 91 SHIPPED — 11/11 operations CRUD 服务全部复用 base.GORMRepository[T]
+Last activity: 2026-09-04 -- Plan 91-04 complete (7 个 typed 服务迁移 + typesafe 死代码 -597 行 + calculateOffset 修剪 + REQUIREMENTS § CRUD-REUSE 措辞同步 + LOC 审计诚实记录: 生产代码净减 +408/全口径 -8, D-07 ≥800 未达成 F5 组合 2 留决策, commits d60e0e8/030d370/14e4a3c/963defe)
+Resume file: .planning/workstreams/milestone/phases/91-crud-base-repository-t-p1/91-04-SUMMARY.md
+Next action: `/gsd:discuss-phase 92` (缓存层三处架构统一——依赖 91 已解除; 93 config_backup / 94 前端 API 工厂化 可并行)
 
 ## Completed Phases (v1.29)
+
+### Phase 91: CRUD 复用 base.Repository[T] — SHIPPED 2026-09-04
+
+- 4 plans (91-01/02/03/04)，commits 5d0008b..963defe 区间
+- `base.GORMRepository[T]` scope 函数式六方法仓储（D-01/D-02）：List scope 化 + Repository[T] interface/Query DSL 删除 + BatchDelete 空 ids 语义反转 + SortScope/SortScopeWithTail 双型排序 helper
+- 11/11 operations CRUD 服务 repo 化（workstation D-05 typed pilot / building/floor/asset map 签名不变 / door/wall A 型复合尾随 / server_room·dedicated_line·floor_plan_text B 型 / room_device·infopoint JOIN typed P8 顺序敏感）
+- 每服务 CRUD 模板（countRecords/fetchRecords/buildListQueryFromRequest）清零；Statistics/SearchOptions 按 D-04 留 service
+- latent bugfix 2 个：floor 换楼异步同步死分支复活（Rule 1）+ building/asset 软删 Total 修复（F3/A3 checkpoint auto-approved）
+- typesafe 死代码三文件 -597 行 + calculateOffset 修剪；Wave 0 缺口清零（base 契约锁值 + floor 基线 6 锁 + fpt 冒烟）
+- REQUIREMENTS § CRUD-REUSE 措辞与 D-04/D-06/D-07 对齐（REQ_SYNC_OK gate）
+- LOC 审计：生产代码净减 +408 / 全口径 -8（测试基线 +678 行），D-07 ≥800 未达成诚实记录，F5 组合 2 备选留决策
+- 决策 D-01..D-07 见 91-CONTEXT.md；F1..F5 前提修正见 91-RESEARCH.md
 
 ### Phase 89: PAGINATION 常量集中化 — SHIPPED 2026-09-04
 
@@ -81,6 +93,6 @@ Next action: `/gsd:execute-phase 91` (plan 91-04 收尾: 7 个 typed 服务批�
 
 ## Next Step
 
-`/gsd:discuss-phase 91 --chain` — CRUD 复用 base.Repository[T]（P1，4 plans 预估）
+`/gsd:discuss-phase 92` — 缓存层三处架构统一（P2，依赖 Phase 91 已解除）
 
-或并行推进: 93 (config_backup，与 91 互不依赖) / 94 (前端 API 工厂化，完全独立)
+或并行推进: 93 (config_backup) / 94 (前端 API 工厂化，完全独立)；Phase 95 必须最后

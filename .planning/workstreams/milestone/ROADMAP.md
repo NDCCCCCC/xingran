@@ -108,7 +108,7 @@ Phase 90 (TIMEOUTS/PORT/PROTOCOL/CONCURRENCY) ✅ ─┤
 4. `go test ./internal/services/operations/...` 0 失败
 5. handler 端到端 smoke 测试通过（workstation/building/floor CRUD 仍工作）
 
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 **Wave 1**
@@ -125,7 +125,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 91-04-PLAN.md — 收尾 7 服务（door/wall/server_room/dedicated_line/floor_plan_text/room_device/infopoint，D-06 扩容）+ typesafe 死文件清理 + LOC 审计 ≥800（D-07）+ SUMMARY
+- [x] 91-04-PLAN.md — 收尾 7 服务（door/wall/server_room/dedicated_line/floor_plan_text/room_device/infopoint，D-06 扩容）+ typesafe 死文件清理 + LOC 审计 ≥800（D-07）+ SUMMARY
 
 **Notes**: SC-1 中 Statistics/SearchOptions 不进 Repository（D-04）、SC-3 LOC 标准为 ≥800（D-07）、服务数为 11 个非 9 个（D-06）——以 91-CONTEXT.md 为准；map 参数服务实际 4 个（F1）、workstation typed 化含 3 字段扩展（F2）等前提修正见 91-RESEARCH.md。
 
@@ -230,13 +230,13 @@ Plans:
 |-------|--------|-------|--------------|---------|-----------|
 | Phase 89 PAGINATION 常量集中化 | SHIPPED | 3/3 | PAGINATION-01..11 | 2026-09-04 | 2026-09-04 |
 | Phase 90 TIMEOUTS/PORT/PROTOCOL/CONCURRENCY | SHIPPED | 4/4 | TIMEOUTS-01..08 | 2026-09-04 | 2026-09-04 |
-| Phase 91 CRUD 复用 base.Repository[T] | In Progress | 2/4 | CRUD-REUSE-01..02 | 2026-09-04 | — |
+| Phase 91 CRUD 复用 base.Repository[T] | SHIPPED | 4/4 | CRUD-REUSE-01..08 | 2026-09-04 | 2026-09-04 |
 | Phase 92 缓存层三处架构统一 | Pending | 0/3 | CACHE-UNIFY-01..05 | — | — |
 | Phase 93 config_backup 三处 TODO 闭环 | Pending | 0/3 | BACKUP-CLOSED-01..05 | — | — |
 | Phase 94 前端 API 工厂化 | Pending | 0/3 | API-FACTORY-01..05 | — | — |
 | Phase 95 v1.28 SHIP + v1.29 closeout | Pending | 0/2 | CLOSEOUT-01..03 | — | — |
 
-**Total:** 7 phases / 41 requirements (19/41 done — 89+90 shipped；91-95 待推进)
+**Total:** 7 phases / 41 requirements (27/41 done — 89+90+91 shipped；92-95 待推进)
 
 ---
 
@@ -251,4 +251,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-09-04 — Phase 91 执行中（2/4 plans：91-01 base 改造 + 91-02 workstation pilot 完成）。Phase 90 SHIPPED（4 plans，commits b51f44c..3a2efe5）。Phase 89 SHIPPED 同日（3 plans，commits 238283c..3559626）。91-95 详情见 `.planning/ROADMAP.md`。*
+*Last updated: 2026-09-04 — Phase 91 SHIPPED（4/4 plans：91-01 base 改造 + 91-02 workstation pilot + 91-03 building/floor/asset + 91-04 收尾 7 服务，11/11 服务 repo 化；commits 5d0008b..963defe 区间）。Phase 90 SHIPPED（4 plans，commits b51f44c..3a2efe5）。Phase 89 SHIPPED 同日（3 plans，commits 238283c..3559626）。92-95 详情见 `.planning/ROADMAP.md`。*
