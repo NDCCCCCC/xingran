@@ -11,6 +11,7 @@ import (
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 )
 
 // newWebSocketUpgrader 创建 WebSocket 升级器
@@ -44,7 +45,7 @@ func newWebSocketUpgrader(allowedOrigins []string) websocket.Upgrader {
 			if host == "" {
 				host = r.Host
 			}
-			if strings.HasPrefix(origin, "http://"+host) || strings.HasPrefix(origin, "https://"+host) {
+			if strings.HasPrefix(origin, constants.HTTPProto+"://"+host) || strings.HasPrefix(origin, constants.HTTPSProto+"://"+host) {
 				return true
 			}
 
