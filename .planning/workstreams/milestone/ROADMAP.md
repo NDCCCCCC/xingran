@@ -14,16 +14,19 @@ update_trigger: v1.29 workstream ROADMAP synced from .planning/ROADMAP.md — v1
 **Goal:** 按 2026-09-03 综合审计发现的优先级，逐批治理 7 项技术债行动。**核心交付**: 后端常量集中化、CRUD 复用泛型抽象、缓存层三处架构合并、配置备份闭环、前端 API 工厂化、v1.28 阶段性收口。每项行动原子 commit + 既有测试 0 回归。
 
 **审计基线 (2026-09-03)**:
+
 - 后端覆盖率 78.12% / 前端覆盖率 45.13%
 - 1688 tests passing / 45/45 dirs Gate
 - 18 项真实 TODO / ~20 处中高度硬编码 / 8 个 CRUD services 60-70% 重复 / 缓存层 3 处架构重复 / config_backup 3 TODO
 
 **Source planning data:**
+
 - `.planning/ROADMAP.md` (v1.29 主 ROADMAP，含完整 phase 详情)
 - `.planning/REQUIREMENTS.md` (7 类别 / 41 requirements)
 - `.planning/PROJECT.md` (Current Milestone v1.29 段, D-01..D-06 locked decisions)
 
 **Milestone success criteria:**
+
 - SC-a (常量集中化): 12+ 处分页硬编码 + 6 处超时硬编码 + URL 协议 + SNMP 端口 + 并发数全部抽到 `pkg/constants/` ✅ (Phase 89 + 90 done)
 - SC-b (CRUD 复用): 8 个 CRUD services 复用 `base.Repository[T]`，LOC 减少 ≥2000 行
 - SC-c (缓存层统一): 三处 `CacheServiceBase` 合并到单一基类
@@ -98,6 +101,7 @@ Phase 90 (TIMEOUTS/PORT/PROTOCOL/CONCURRENCY) ✅ ─┤
 **Requirements**: CRUD-REUSE-01..08 (8 项)
 
 **Success Criteria**:
+
 1. `base.Repository[T]` 抽象完整（Create/Update/Delete/GetByID/List/Statistics/SearchOptions/BatchDelete）
 2. 8 个 operations services 全部迁移完成
 3. LOC 净减少 ≥2000 行
@@ -107,9 +111,20 @@ Phase 90 (TIMEOUTS/PORT/PROTOCOL/CONCURRENCY) ✅ ─┤
 **Plans:** 4
 
 Plans:
+**Wave 1**
+
 - [ ] 91-01-PLAN.md — base.GORMRepository[T] scope 化改造（D-01/D-02/D-03：List scope 函数式 + interface/DSL 删除 + BatchDelete 空 ids 语义反转 + SortScope 双型 helper）+ base/service_test.go 泛型契约锁值
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 91-02-PLAN.md — Pilot: workstation_service 迁移（D-05 typed request 全套接线 + 6 表 JOIN scope 化）+ 分页语义收紧 checkpoint
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 91-03-PLAN.md — building + floor + asset 迁移（map 签名不变 + floor 装饰器签名锁定 P7 + floor 行为基线测试先行）+ F3 软删 Total 修复 checkpoint
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 91-04-PLAN.md — 收尾 7 服务（door/wall/server_room/dedicated_line/floor_plan_text/room_device/infopoint，D-06 扩容）+ typesafe 死文件清理 + LOC 审计 ≥800（D-07）+ SUMMARY
 
 **Notes**: SC-1 中 Statistics/SearchOptions 不进 Repository（D-04）、SC-3 LOC 标准为 ≥800（D-07）、服务数为 11 个非 9 个（D-06）——以 91-CONTEXT.md 为准；map 参数服务实际 4 个（F1）、workstation typed 化含 3 字段扩展（F2）等前提修正见 91-RESEARCH.md。
@@ -125,6 +140,7 @@ Plans:
 **Requirements**: CACHE-UNIFY-01..05 (5 项)
 
 **Success Criteria**:
+
 1. `base/cache_service_base.go` 提供完整模板方法（Get/Set/Delete/Invalidate/InvalidatePattern）
 2. system/ + operations/ 下所有 `*_cache_impl.go` 继承新基类
 3. legacy root `*_cache_service.go` 标注 @Deprecated 并迁移
@@ -132,6 +148,7 @@ Plans:
 5. Cache Monitor 端到端验证（Redis 缓存读写 + 失效生效）
 
 **Plans (3 planned, 待 plan-phase 生成)**:
+
 - 92-01 抽 base/cache_service_base.go 单一基类 + 测试
 - 92-02 system/*_cache_impl.go (9 个文件) 继承新基类
 - 92-03 operations/*_cache_impl.go + legacy root 迁移 + core.Core 引用同步
@@ -147,12 +164,14 @@ Plans:
 **Requirements**: BACKUP-CLOSED-01..05 (5 项)
 
 **Success Criteria**:
+
 1. 3 个 TODO 空函数全部实现，删除 `// TODO:` 注释
 2. 回归测试覆盖 happy path + 失败场景（磁盘满/校验失败/事务回滚）
 3. 端到端：备份 → 修改 → 恢复 → 配置一致性校验通过
 4. `go test ./internal/services/...` 0 回归
 
 **Plans (3 planned, 待 plan-phase 生成)**:
+
 - 93-01 实现压缩(line 158) + 解压(line 206)：gzip 标准库，识别 .gz 后缀
 - 93-02 实现恢复(line 543)：事务化（读备份 → 校验 schema → 批量 upsert → 失效缓存）
 - 93-03 回归测试三路径 + 失败场景 + 端到端验证
@@ -168,12 +187,14 @@ Plans:
 **Requirements**: API-FACTORY-01..05 (5 项)
 
 **Success Criteria**:
+
 1. `src/lib/apiFactory.ts` 工厂函数实现完整（list/getByID/create/update/delete/import/export 7 方法 + 类型推导）
 2. ~15 个 `*Api.ts` 迁移完成，向后兼容（保留同名导出）
 3. `npm run type-check` + `npm run lint` + `npm run test` 0 错误
 4. 前端覆盖率 ≥45.13%（不下降）
 
 **Plans (3 planned, 待 plan-phase 生成)**:
+
 - 94-01 设计 + 实现 apiFactory.ts + types/apiFactory.ts
 - 94-02 迁移 opsApi.ts（building/floor/workstation/asset 等）
 - 94-03 迁移其余 ~10 个 *Api.ts（低风险优先）
@@ -189,6 +210,7 @@ Plans:
 **Requirements**: CLOSEOUT-01..03 (3 项)
 
 **Success Criteria**:
+
 1. `.planning/MILESTONES.md` v1.28 SHIPPED 段写入
 2. `.planning/PROJECT.md` v1.28 段标记 SHIPPED + ARCHIVED；归档 frontend-coverage workstream
 3. 所有 gate 全绿（go build/test / npm type-check/lint/test / 后端 CI gate / 前端 CI gate）
@@ -196,6 +218,7 @@ Plans:
 5. v1.29 milestone SHIPPED 状态设置
 
 **Plans (2 planned, 待 plan-phase 生成)**:
+
 - 95-01 v1.28 SHIP 收口：MILESTONES.md + PROJECT.md + frontend-coverage workstream 归档
 - 95-02 v1.29 closeout + audit：完整 gate + 7 项行动确认 + audit 报告
 
