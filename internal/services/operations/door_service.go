@@ -20,6 +20,9 @@ type DoorService interface {
 }
 
 type doorService struct {
+	// repo 承接六方法 CRUD 管道（Phase 91-04 repo 化，D-02 纯 struct 组合）
+	repo *base.GORMRepository[operationsmodels.Door]
+	// db 保留给 Validator 构造来源（validateDoorRelations 前置校验）
 	db        *gorm.DB
 	validator Validator
 }
@@ -27,6 +30,7 @@ type doorService struct {
 // NewDoorService 创建门服务
 func NewDoorService(db *gorm.DB) DoorService {
 	return &doorService{
+		repo:      base.NewGORMRepository[operationsmodels.Door](db),
 		db:        db,
 		validator: NewValidator(db),
 	}
@@ -43,63 +47,59 @@ func (s *doorService) Create(ctx context.Context, door *operationsmodels.Door) e
 	if err := s.validateDoorRelations(ctx, door); err != nil {
 		return err
 	}
-	return s.db.WithContext(ctx).Create(door).Error
+	return s.repo.Create(ctx, door)
 }
 
 func (s *doorService) Update(ctx context.Context, door *operationsmodels.Door) error {
 	if err := s.validateDoorRelations(ctx, door); err != nil {
 		return err
 	}
-	return s.db.WithContext(ctx).Save(door).Error
+	return s.repo.Update(ctx, door)
 }
 
 func (s *doorService) Delete(ctx context.Context, id string) error {
-	return s.db.WithContext(ctx).Delete(&operationsmodels.Door{}, "id = ?", id).Error
+	return s.repo.Delete(ctx, id)
 }
 
 func (s *doorService) GetByID(ctx context.Context, id string) (*operationsmodels.Door, error) {
-	var door operationsmodels.Door
-	err := s.db.WithContext(ctx).Where("id = ?", id).First(&door).Error
-	if err != nil {
-		return nil, err
-	}
-	return &door, nil
+	return s.repo.GetByID(ctx, id)
 }
 
+// filterScope List 的两个过滤条件（条件字符串与 ? 占位符逐字平移自迁移前实现）。
+func (s *doorService) filterScope(req requests.DoorListRequest) base.Scope {
+	return func(db *gorm.DB) *gorm.DB {
+		if req.FloorID != "" {
+			db = db.Where("floor_id = ?", req.FloorID)
+		}
+		if req.DoorType != "" {
+			db = db.Where("type = ?", req.DoorType)
+		}
+		return db
+	}
+}
+
+// List 查询门列表（CRUD 管道经 base.GORMRepository 执行）。
+//
+// A 型复合尾随排序语义（Phase 91-04，T-91-04-01 缓解）：SortScopeWithTail
+// 无条件尾随 created_at DESC——
+//   - 用户排序（白名单命中）→ ORDER BY <col> <dir>, created_at DESC
+//   - 无/非法排序 → 仅 ORDER BY created_at DESC
+//
+// 与迁移前 fetchRecords 恒追加 Order("created_at DESC") 逐字等价（无排序时
+// ApplySort 无 clauses，仅剩尾随序）。迁移前 List 中「用户排序时追加空串
+// Order」的分支是 GORM no-op 死代码（空串不进 clause），随迁移删除。
 func (s *doorService) List(ctx context.Context, req requests.DoorListRequest) (*PageResult, error) {
-	query := s.buildListQueryFromRequest(ctx, req)
-
-	// 用户排序(白名单);无 OrderByColumn 时 fetchRecords 内部仍用 created_at DESC 默认
-	query = base.ApplySort(query, req.BaseListRequest, doorAllowedSortFields)
-	if req.OrderByColumn != "" {
-		query = query.Order("")
-	}
-
-	total, err := s.countRecords(query)
-	if err != nil {
-		return nil, err
-	}
-
 	current, pageSize := req.GetPagination()
-
-	list, err := s.fetchRecords(query, current, pageSize, &[]operationsmodels.Door{})
-	if err != nil {
-		return nil, err
-	}
-
-	return &PageResult{
-		List:     list,
-		Total:    total,
-		Current:  current,
-		PageSize: pageSize,
-	}, nil
+	return s.repo.List(ctx, base.PageParams{Current: current, PageSize: pageSize},
+		s.filterScope(req),
+		base.SortScopeWithTail(req.BaseListRequest, doorAllowedSortFields, "created_at DESC"),
+	)
 }
 
 func (s *doorService) BatchDelete(ctx context.Context, ids []string) error {
-	if len(ids) == 0 {
-		return nil
-	}
-	return s.db.WithContext(ctx).Delete(&operationsmodels.Door{}, "id IN ?", ids).Error
+	// 空 ids 早退已由 repo 承接（91-01 P1 语义反转：空 ids 返回 nil），
+	// 与迁移前 `if len(ids) == 0 { return nil }` 行为一致
+	return s.repo.BatchDelete(ctx, ids)
 }
 
 // validateDoorRelations 验证门的关联关系
@@ -113,36 +113,4 @@ func (s *doorService) validateDoorRelations(ctx context.Context, door *operation
 		}
 	}
 	return nil
-}
-
-// buildListQueryFromRequest 从请求构建列表查询（类型安全版本）
-func (s *doorService) buildListQueryFromRequest(ctx context.Context, req requests.DoorListRequest) *gorm.DB {
-	query := s.db.WithContext(ctx).Model(&operationsmodels.Door{})
-
-	if req.FloorID != "" {
-		query = query.Where("floor_id = ?", req.FloorID)
-	}
-	if req.DoorType != "" {
-		query = query.Where("type = ?", req.DoorType)
-	}
-
-	return query
-}
-
-// countRecords 统计记录数
-func (s *doorService) countRecords(query *gorm.DB) (int64, error) {
-	var total int64
-	err := query.Count(&total).Error
-	return total, err
-}
-
-// fetchRecords 获取记录列表
-func (s *doorService) fetchRecords(query *gorm.DB, current, pageSize int, dest interface{}) (interface{}, error) {
-	offset := (current - 1) * pageSize
-	err := query.
-		Offset(offset).
-		Limit(pageSize).
-		Order("created_at DESC").
-		Find(dest).Error
-	return dest, err
 }
