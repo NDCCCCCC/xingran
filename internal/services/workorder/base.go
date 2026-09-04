@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	queryutil "github.com/xingran-next/xingran-go-backend/pkg/query"
 	"gorm.io/gorm"
 )
 
@@ -115,15 +116,7 @@ func (s *BaseService) GetList(ctx context.Context, req *ListRequest) ([]models.W
 	}
 
 	// 分页查询
-	current := req.Current
-	if current <= 0 {
-		current = 1
-	}
-	pageSize := req.PageSize
-	if pageSize <= 0 {
-		pageSize = 10
-	}
-
+	current, pageSize := queryutil.NormalizePagination(req.Current, req.PageSize)
 	offset := (current - 1) * pageSize
 
 	// 用户排序(白名单)优先,无 OrderByColumn 时保留 created_at DESC 默认

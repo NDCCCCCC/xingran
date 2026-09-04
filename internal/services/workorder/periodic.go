@@ -11,6 +11,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	queryutil "github.com/xingran-next/xingran-go-backend/pkg/query"
 	"gorm.io/gorm"
 )
 
@@ -87,14 +88,7 @@ func (s *PeriodicService) GetTemplateList(ctx context.Context, req *PeriodicTemp
 		return nil, 0, fmt.Errorf("查询周期性工单模板总数失败: %w", err)
 	}
 
-	current := req.Current
-	if current <= 0 {
-		current = 1
-	}
-	pageSize := req.PageSize
-	if pageSize <= 0 {
-		pageSize = 10
-	}
+	current, pageSize := queryutil.NormalizePagination(req.Current, req.PageSize)
 	offset := (current - 1) * pageSize
 
 	// 用户排序(白名单)优先,无 OrderByColumn 时保留 created_at DESC 默认
