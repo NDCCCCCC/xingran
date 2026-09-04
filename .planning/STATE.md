@@ -28,8 +28,15 @@ See: .planning/PROJECT.md (updated 2026-09-04) — v1.29 Current Milestone 段
 
 Phase: 89 (待规划)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-09-04 — Milestone v1.29 started (技术债治理)
+Status: Context gathered
+Last activity: 2026-09-04 — Phase 89 context captured (19 decisions, D-01..D-19, pilot = knowledge_service.go)
+Resume file: .planning/milestones/v1.29-phases/89-pagination-constants/89-CONTEXT.md
+Next action: `/gsd:plan-phase 89`
+
+### Phase 89 Decisions (D-01..D-19) — captured 2026-09-04
+- **D-PRINCIPLE**: 行业最佳实践为唯一依据,允许任何形式重构;去除硬编码/处理 todo/消除重复/合理抽象
+- **D-01..D-19**: 常量位置 pkg/constants/pagination.go (leaf const, 6 个)+ helper 放 pkg/query/pagination.go + NormalizePagination 纯函数 + binding 去 max=100 + 命名 Default/Max 体系 + MaxPageSize 10000 截断 + Pilot 先行(knowledge_service.go)+ 89-02 复制模式迁移剩余 7 个文件
+- 见 89-CONTEXT.md / 89-DISCUSSION-LOG.md 完整记录
 
 ## Accumulated Context (carried from v1.28)
 
