@@ -11,6 +11,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	pkgconstants "github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"golang.org/x/sync/semaphore"
 	"gorm.io/gorm"
 )
@@ -38,8 +39,7 @@ var (
 	globalADSM4CipherMu      sync.RWMutex
 )
 
-// adSchedulerSyncTimeout AD调度器同步任务超时
-const adSchedulerSyncTimeout = 30 * time.Minute
+// ADSyncTimeout is imported from pkg/constants/timeouts.go
 
 // SetADSM4Cipher 设置全局AD域SM4加密器（线程安全）
 func SetADSM4Cipher(cipher addomain.PasswordCipher) {
@@ -161,7 +161,7 @@ func (s *ADSyncScheduler) Start() {
 	// Phase 36: 每 5 分钟恢复已过期熔断的 AD 账号（Issue 4/11）
 	// Cron 表达式: 6 字段（含秒）"秒 分 时 日 月 周" → "0 */5 * * * *" = 每 5 分钟整点
 	_, err = s.cron.AddFunc("0 */5 * * * *", func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+		ctx, cancel := context.WithTimeout(context.Background(), pkgconstants.ADSyncTaskTimeout)
 		defer cancel()
 		if err := executeADAccountPoolRecoverBreakersTask(ctx, nil); err != nil {
 			applogger.Errorf("[ADAccountPool] cron 任务执行失败: %v", err)
@@ -232,7 +232,7 @@ func (s *ADSyncScheduler) checkAndSyncADConfigs() {
 			// 使用信号量控制并发数，异步执行同步
 			// 遵循 Go 最佳实践：使用带超时的 context
 			go func(configID string, configName string) {
-				syncCtx, cancel := context.WithTimeout(context.Background(), adSchedulerSyncTimeout)
+				syncCtx, cancel := context.WithTimeout(context.Background(), pkgconstants.ADSyncTimeout)
 				defer cancel()
 
 				// 尝试获取信号量
@@ -347,7 +347,7 @@ func ScheduleADSyncForConfig(configID string, delay time.Duration) {
 			return
 		case <-time.After(delay):
 			// 延迟结束，执行同步
-			syncCtx, cancel := context.WithTimeout(context.Background(), adSchedulerSyncTimeout)
+			syncCtx, cancel := context.WithTimeout(context.Background(), pkgconstants.ADSyncTimeout)
 			defer cancel()
 			globalADSyncScheduler.syncADConfig(syncCtx, configID)
 		}
