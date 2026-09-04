@@ -1,11 +1,10 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.29
-milestone_name: 技术债治理 (Tech Debt Governance)
-status: executing
-stopped_at: "Phase 90 SHIPPED (4/4 plans, commits b51f44c..3a2efe5)"
-last_updated: "2026-09-04T00:00:00.000Z"
-last_activity: 2026-09-04
+milestone_name: 技术债治理
+status: Phase 89 + 90 SHIPPED，Phase 91-95 待推进
+last_updated: "2026-09-04T07:50:35.298Z"
+last_activity: 2026-09-04 — Phase 90 SHIPPED (TIMEOUTS/PORT/PROTOCOL/CONCURRENCY 常量集中化，4 plans，零行为变更)
 progress:
   total_phases: 7
   completed_phases: 2
@@ -32,12 +31,13 @@ Phase: 91 (待 discuss)
 Plan: —
 Status: Phase 89 + 90 SHIPPED，Phase 91-95 待推进
 Last activity: 2026-09-04 — Phase 90 SHIPPED (TIMEOUTS/PORT/PROTOCOL/CONCURRENCY 常量集中化，4 plans，零行为变更)
-Resume file: .planning/workstreams/milestone/phases/90-timeouts-port-protocol-concurrency/90-VERIFICATION.md
+Resume file: .planning/workstreams/milestone/phases/91-crud-base-repository-t-p1/91-CONTEXT.md
 Next action: `/gsd:discuss-phase 91`
 
 ## Completed Phases (v1.29)
 
 ### Phase 89: PAGINATION 常量集中化 — SHIPPED 2026-09-04
+
 - 3 plans (89-01/02/03)，commits 238283c..3559626
 - `pkg/constants/pagination.go` 3 常量 + `pkg/query.NormalizePagination` 纯函数唯一入口
 - 8 文件 12+ 处硬编码迁移；6 处业务行为变更用户已接受
@@ -45,6 +45,7 @@ Next action: `/gsd:discuss-phase 91`
 - 决策 D-01..D-19 见 89-CONTEXT.md
 
 ### Phase 90: TIMEOUTS/PORT/PROTOCOL/CONCURRENCY 常量集中化 — SHIPPED 2026-09-04
+
 - 4 plans (90-01/02/03/04)，commits b51f44c..3a2efe5
 - 4 个 leaf const pkg（timeouts 6 Duration + ports + protocol + concurrency）共 10 常量
 - 8 调用点迁移（network handlers + ad_ldap + ws_notice + scheduler/cron 扩展审计 D-07）
@@ -55,6 +56,7 @@ Next action: `/gsd:discuss-phase 91`
 ## Accumulated Context (carried forward)
 
 ### Decisions to preserve
+
 - D-PRINCIPLE (v1.29 全局): 行业最佳实践为唯一依据,允许任何形式重构;去除硬编码/处理 todo/消除重复/合理抽象
 - leaf const pkg + AST 锁值(Stability+Count 双锁)模式：Phase 89/90 先例，后续 phase 沿用
 - 常量命名不加 Default 前缀（D-05，89/90 一致）
@@ -64,14 +66,17 @@ Next action: `/gsd:discuss-phase 91`
 - status_constants_test.go: 状态 0/1 命名常量全程 AST 锁值
 
 ### Workstream 同步修复 (2026-09-04, 本 commit)
+
 - `.planning/workstreams/milestone/ROADMAP.md` 由 stale v1.27 内容重写为 v1.29 追踪格式
 - 根因：workstream roadmap 未随 v1.29 启动同步，phase-complete 在 Phase 90 后误报 is_last_phase=true
 - 91-95 现已在 Progress 表注册，next_phase 可正确解析为 91
 
 ### Blockers (active)
+
 - 无
 
 ### Pending Todos (carry forward, not in v1.29 scope)
+
 - `.planning/todos/pending/operlog-exclude-paths.md` — operlog 白名单配置驱动（RPA heartbeat 日志污染），独立 deferred
 
 ## Next Step
