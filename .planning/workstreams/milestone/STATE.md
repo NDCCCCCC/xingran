@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.29
 milestone_name: 技术债治理
 status: executing
-last_updated: "2026-09-04T09:45:37.514Z"
-last_activity: 2026-09-04 -- Phase 91 planning complete
+last_updated: "2026-09-04T09:47:50.515Z"
+last_activity: 2026-09-04 -- Phase 91 execution started
 progress:
   total_phases: 7
   completed_phases: 2
@@ -23,16 +23,16 @@ Config: "mode": "yolo"
 
 **Core value:** 按 2026-09-03 综合审计报告发现的优先级，逐批治理 7 项技术债行动；后端常量/CRUD/缓存/配置备份 + 前端 API 工厂化 + Phase 88 收口，使代码质量基线从此不可无声倒退。
 
-**Current focus:** Phase 91 (CRUD 复用 base.Repository[T]) 待 discuss/plan — 下一个 P1 行动
+**Current focus:** Phase 91 — CRUD 复用 base.Repository[T] (🔥 高优 P1)
 
 ## Current Position
 
-Phase: 91 (待 discuss)
-Plan: —
-Status: Ready to execute
-Last activity: 2026-09-04 -- Phase 91 planning complete
-Resume file: .planning/workstreams/milestone/phases/91-crud-base-repository-t-p1/91-CONTEXT.md
-Next action: `/gsd:discuss-phase 91`
+Phase: 91 (CRUD 复用 base.Repository[T] (🔥 高优 P1)) — EXECUTING
+Plan: 1 of 4 (91-01 complete)
+Status: Executing Phase 91
+Last activity: 2026-09-04 -- Plan 91-01 complete (base.GORMRepository scope 化 + PageResult alias + 契约测试, commits d92097f/5d0008b/76a262c)
+Resume file: .planning/workstreams/milestone/phases/91-crud-base-repository-t-p1/91-01-SUMMARY.md
+Next action: `/gsd:execute-phase 91` (plan 91-02 workstation pilot)
 
 ## Completed Phases (v1.29)
 

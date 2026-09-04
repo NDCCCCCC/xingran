@@ -108,12 +108,12 @@ Phase 90 (TIMEOUTS/PORT/PROTOCOL/CONCURRENCY) ✅ ─┤
 4. `go test ./internal/services/operations/...` 0 失败
 5. handler 端到端 smoke 测试通过（workstation/building/floor CRUD 仍工作）
 
-**Plans:** 4
+**Plans:** 1/4 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 91-01-PLAN.md — base.GORMRepository[T] scope 化改造（D-01/D-02/D-03：List scope 函数式 + interface/DSL 删除 + BatchDelete 空 ids 语义反转 + SortScope 双型 helper）+ base/service_test.go 泛型契约锁值
+- [x] 91-01-PLAN.md — base.GORMRepository[T] scope 化改造（D-01/D-02/D-03：List scope 函数式 + interface/DSL 删除 + BatchDelete 空 ids 语义反转 + SortScope 双型 helper）+ base/service_test.go 泛型契约锁值
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
