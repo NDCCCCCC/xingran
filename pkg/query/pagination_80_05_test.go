@@ -56,11 +56,11 @@ func TestPag8005_Normalize_Offset(t *testing.T) {
 	assert.Equal(t, 1, p.Current)
 	assert.Equal(t, 10, p.PageSize)
 
-	// PageSize > 100 → 100。
+	// PageSize > 200 → 200 (MaxPageSize cap)。
 	p = &PaginationRequest{Current: 2, PageSize: 500}
 	p.Normalize()
 	assert.Equal(t, 2, p.Current)
-	assert.Equal(t, 100, p.PageSize)
+	assert.Equal(t, 200, p.PageSize)
 
 	// 合法值保持不变。
 	p = &PaginationRequest{Current: 3, PageSize: 10}

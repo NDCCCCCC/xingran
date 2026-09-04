@@ -1,7 +1,10 @@
 // Package query 提供通用的查询构建和分页辅助函数
 package query
 
-import "gorm.io/gorm"
+import (
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
+	"gorm.io/gorm"
+)
 
 // PaginatedResult 分页结果
 type PaginatedResult struct {
@@ -28,6 +31,22 @@ func NewPaginatedResult(total int64, current, pageSize int, data interface{}) *P
 	}
 }
 
+// NormalizePagination normalizes pagination parameters per industry best practice.
+// Returns (normalizedCurrent, normalizedPageSize).
+// Default: current=1, pageSize=10. Cap: pageSize <= MaxPageSize (200).
+func NormalizePagination(current, pageSize int) (int, int) {
+	if current <= 0 {
+		current = constants.DefaultCurrent
+	}
+	if pageSize <= 0 {
+		pageSize = constants.DefaultPageSize
+	}
+	if pageSize > constants.MaxPageSize {
+		pageSize = constants.MaxPageSize
+	}
+	return current, pageSize
+}
+
 // PaginationRequest 分页请求
 type PaginationRequest struct {
 	Current  int `json:"current" binding:"min=1"`
@@ -36,15 +55,7 @@ type PaginationRequest struct {
 
 // Normalize 规范化分页参数
 func (p *PaginationRequest) Normalize() {
-	if p.Current <= 0 {
-		p.Current = 1
-	}
-	if p.PageSize <= 0 {
-		p.PageSize = 10
-	}
-	if p.PageSize > 100 {
-		p.PageSize = 100
-	}
+	p.Current, p.PageSize = NormalizePagination(p.Current, p.PageSize)
 }
 
 // GetOffset 获取偏移量
