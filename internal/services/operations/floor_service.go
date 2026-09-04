@@ -124,8 +124,18 @@ func (s *floorService) Create(ctx context.Context, floor *operations.OpsFloor) e
 }
 
 func (s *floorService) Update(ctx context.Context, floor *operations.OpsFloor) error {
-	// 保存旧的 buildingID 用于后续同步
-	oldBuildingID := floor.BuildingID
+	// 保存旧的 buildingID 用于后续同步。
+	// 91-03 修复（原实现 bug）：oldBuildingID := floor.BuildingID 捕获的是待写入的
+	// 新值（同一变量），下方 oldBuildingID != floor.BuildingID 恒 false，换楼时异步
+	// 同步挂靠工位 building_id 的分支自仓库初始化起即死代码（Wave 0 无 service 级
+	// 测试未能暴露）。此处从库中读取修改前的 building_id，使换楼同步语义真正生效。
+	var oldBuildingID string
+	if floor.ID != "" {
+		var prev operations.OpsFloor
+		if err := s.db.WithContext(ctx).Select("building_id").Where("id = ?", floor.ID).First(&prev).Error; err == nil {
+			oldBuildingID = prev.BuildingID
+		}
+	}
 
 	if floor.BuildingID != "" {
 		if err := s.validateBuilding(ctx, floor.BuildingID); err != nil {
