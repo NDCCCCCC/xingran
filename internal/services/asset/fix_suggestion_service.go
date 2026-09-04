@@ -10,6 +10,7 @@ import (
 
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"github.com/xingran-next/xingran-go-backend/internal/services/system"
@@ -164,18 +165,7 @@ func (s *fixSuggestionServiceImpl) ListFixSuggestions(ctx context.Context, param
 		return nil, errors.New("查询参数不能为空")
 	}
 
-	current := params.Current
-	if current <= 0 {
-		current = 1
-	}
-	pageSize := params.PageSize
-	if pageSize <= 0 {
-		pageSize = 10
-	}
-	// MaxPageSize = 100 防 DoS(参考 stat-cards-from-list-length-capped-at-100 记忆)
-	if pageSize > 100 {
-		pageSize = 100
-	}
+	current, pageSize := query.NormalizePagination(params.Current, params.PageSize)
 
 	// 基础查询
 	query := s.db.WithContext(ctx).
