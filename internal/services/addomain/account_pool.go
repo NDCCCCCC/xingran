@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -200,12 +201,7 @@ func (p *accountPoolImpl) PickAvailable(ctx context.Context, configID string) (*
 
 // ListAll 包含停用/熔断账号（分页）
 func (p *accountPoolImpl) ListAll(ctx context.Context, configID string, page, pageSize int, statusFilter *int) ([]models.ADServiceAccount, int64, error) {
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 200 {
-		pageSize = 20
-	}
+	page, pageSize = query.NormalizePagination(page, pageSize)
 
 	q := p.db.WithContext(ctx).Model(&models.ADServiceAccount{}).
 		Where("config_id = ? AND deleted_at IS NULL", configID)
