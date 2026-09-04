@@ -5,6 +5,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 	responseHelpers "github.com/xingran-next/xingran-go-backend/pkg/response"
@@ -96,12 +97,12 @@ func (h *ExecutionHandler) ExecuteByTemplate(c *gin.Context) {
 
 	// 设置默认并发数
 	if req.Concurrency <= 0 {
-		req.Concurrency = 10
+		req.Concurrency = constants.CommandConcurrency
 	}
 
 	// 设置默认超时时间（5分钟）
 	if req.Timeout <= 0 {
-		req.Timeout = 300
+		req.Timeout = int(constants.CommandExecTimeout.Seconds())
 	}
 
 	userID, _ := c.Get("user_id")

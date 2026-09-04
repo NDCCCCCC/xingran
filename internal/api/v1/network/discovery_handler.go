@@ -5,6 +5,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 	responseHelpers "github.com/xingran-next/xingran-go-backend/pkg/response"
@@ -123,7 +124,7 @@ func (h *DiscoveryHandler) Create(c *gin.Context) {
 
 	// 设置默认SNMP端口
 	if req.SNMPPort == 0 {
-		req.SNMPPort = 161
+		req.SNMPPort = constants.SNMPPort
 	}
 
 	userID, _ := c.Get("user_id")
