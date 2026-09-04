@@ -108,7 +108,7 @@ Phase 90 (TIMEOUTS/PORT/PROTOCOL/CONCURRENCY) ✅ ─┤
 4. `go test ./internal/services/operations/...` 0 失败
 5. handler 端到端 smoke 测试通过（workstation/building/floor CRUD 仍工作）
 
-**Plans:** 1/4 plans executed
+**Plans:** 2/4 plans executed
 
 Plans:
 **Wave 1**
@@ -117,7 +117,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 91-02-PLAN.md — Pilot: workstation_service 迁移（D-05 typed request 全套接线 + 6 表 JOIN scope 化）+ 分页语义收紧 checkpoint
+- [x] 91-02-PLAN.md — Pilot: workstation_service 迁移（D-05 typed request 全套接线 + 6 表 JOIN scope 化）+ 分页语义收紧 checkpoint（A2 auto-approved；commits edc51fd/50577a5）
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -230,7 +230,7 @@ Plans:
 |-------|--------|-------|--------------|---------|-----------|
 | Phase 89 PAGINATION 常量集中化 | SHIPPED | 3/3 | PAGINATION-01..11 | 2026-09-04 | 2026-09-04 |
 | Phase 90 TIMEOUTS/PORT/PROTOCOL/CONCURRENCY | SHIPPED | 4/4 | TIMEOUTS-01..08 | 2026-09-04 | 2026-09-04 |
-| Phase 91 CRUD 复用 base.Repository[T] | Pending | 0/4 | CRUD-REUSE-01..08 | — | — |
+| Phase 91 CRUD 复用 base.Repository[T] | In Progress | 2/4 | CRUD-REUSE-01..02 | 2026-09-04 | — |
 | Phase 92 缓存层三处架构统一 | Pending | 0/3 | CACHE-UNIFY-01..05 | — | — |
 | Phase 93 config_backup 三处 TODO 闭环 | Pending | 0/3 | BACKUP-CLOSED-01..05 | — | — |
 | Phase 94 前端 API 工厂化 | Pending | 0/3 | API-FACTORY-01..05 | — | — |
@@ -251,4 +251,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-09-04 — Phase 91 planned（4 plans 生成）。Phase 90 SHIPPED（4 plans，commits b51f44c..3a2efe5）。Phase 89 SHIPPED 同日（3 plans，commits 238283c..3559626）。本文件由 stale v1.27 内容重写为 v1.29 追踪格式（修复 workstream 同步遗留：phase-complete 曾误报 is_last_phase）。91-95 详情见 `.planning/ROADMAP.md`。*
+*Last updated: 2026-09-04 — Phase 91 执行中（2/4 plans：91-01 base 改造 + 91-02 workstation pilot 完成）。Phase 90 SHIPPED（4 plans，commits b51f44c..3a2efe5）。Phase 89 SHIPPED 同日（3 plans，commits 238283c..3559626）。91-95 详情见 `.planning/ROADMAP.md`。*

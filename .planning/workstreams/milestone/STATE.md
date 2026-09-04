@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.29
 milestone_name: 技术债治理
 status: executing
-last_updated: "2026-09-04T09:47:50.515Z"
-last_activity: 2026-09-04 -- Phase 91 execution started
+last_updated: "2026-09-04T10:33:00.000Z"
+last_activity: 2026-09-04 -- Plan 91-02 complete (workstation pilot)
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 11
-  completed_plans: 7
-  percent: 29
+  completed_plans: 8
+  percent: 33
 ---
 
 # Project State (v1.29 — milestone workstream)
@@ -28,11 +28,11 @@ Config: "mode": "yolo"
 ## Current Position
 
 Phase: 91 (CRUD 复用 base.Repository[T] (🔥 高优 P1)) — EXECUTING
-Plan: 1 of 4 (91-01 complete)
+Plan: 2 of 4 (91-01, 91-02 complete)
 Status: Executing Phase 91
-Last activity: 2026-09-04 -- Plan 91-01 complete (base.GORMRepository scope 化 + PageResult alias + 契约测试, commits d92097f/5d0008b/76a262c)
-Resume file: .planning/workstreams/milestone/phases/91-crud-base-repository-t-p1/91-01-SUMMARY.md
-Next action: `/gsd:execute-phase 91` (plan 91-02 workstation pilot)
+Last activity: 2026-09-04 -- Plan 91-02 complete (workstation pilot 迁移: repo 化 + D-05 typed request 全套接线 + A2 分页收紧 checkpoint auto-approved, commits edc51fd/50577a5)
+Resume file: .planning/workstreams/milestone/phases/91-crud-base-repository-t-p1/91-02-SUMMARY.md
+Next action: `/gsd:execute-phase 91` (plan 91-03 building/floor/asset 迁移, 含 floor 基线测试先行 + F3 checkpoint)
 
 ## Completed Phases (v1.29)
 
