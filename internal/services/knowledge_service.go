@@ -9,6 +9,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	queryutil "github.com/xingran-next/xingran-go-backend/pkg/query"
 	"gorm.io/gorm"
 )
 
@@ -168,14 +169,7 @@ func (s *KnowledgeService) GetKnowledgeArticleList(ctx context.Context, req *Kno
 		return nil, 0, fmt.Errorf("查询知识库文章总数失败: %w", err)
 	}
 
-	current := req.Current
-	if current <= 0 {
-		current = 1
-	}
-	pageSize := req.PageSize
-	if pageSize <= 0 {
-		pageSize = 10
-	}
+	current, pageSize := queryutil.NormalizePagination(req.Current, req.PageSize)
 	offset := (current - 1) * pageSize
 
 	// 用户排序(白名单)优先,无 OrderByColumn 时保留 created_at DESC 默认
@@ -485,17 +479,7 @@ func (s *KnowledgeService) SearchKnowledgeArticles(ctx context.Context, req *Sea
 	}
 
 	// 设置分页参数，默认100条，最大500条
-	pageSize := req.PageSize
-	if pageSize <= 0 {
-		pageSize = 100
-	} else if pageSize > 500 {
-		pageSize = 500
-	}
-
-	pageNum := req.PageNum
-	if pageNum < 0 {
-		pageNum = 0
-	}
+	current, pageSize := queryutil.NormalizePagination(req.PageNum, req.PageSize)
 
 	// 应用分页和预加载
 	if err := query.
@@ -503,7 +487,7 @@ func (s *KnowledgeService) SearchKnowledgeArticles(ctx context.Context, req *Sea
 		Preload("Tags").
 		Order("sys_knowledge_article.created_at DESC").
 		Limit(pageSize).
-		Offset(pageNum * pageSize).
+		Offset((current - 1) * pageSize).
 		Find(&list).Error; err != nil {
 		return nil, 0, fmt.Errorf("搜索知识库文章失败: %w", err)
 	}
