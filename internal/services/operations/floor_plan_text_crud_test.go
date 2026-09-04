@@ -3,6 +3,7 @@ package operations
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,8 +34,13 @@ func TestFloorPlanText91_CRUDSmoke(t *testing.T) {
 	svc := NewFloorPlanTextService(db)
 	ctx := context.Background()
 
+	// 显式错开 created_at（GORM 对非零 CreatedAt 不覆盖），规避同刻创建的
+	// 排序平局——时间序断言必须确定性（map 序/同刻 flake 教训）。
+	t0 := time.Now().Add(-time.Minute)
+
 	// Create → GetByID 含字段
 	txt := &operationsmodels.FloorPlanText{FloorID: floorID, Content: "91冒烟A", Position: `{"x":1}`, FontSize: 16}
+	txt.CreatedAt = t0
 	require.NoError(t, svc.Create(ctx, txt))
 	got, err := svc.GetByID(ctx, txt.ID)
 	require.NoError(t, err)
@@ -51,9 +57,11 @@ func TestFloorPlanText91_CRUDSmoke(t *testing.T) {
 	assert.Equal(t, "91冒烟A改", got.Content)
 	assert.Equal(t, 20, got.FontSize)
 
-	// Create 第二条（不同楼层）供 List 过滤用例区分
+	// Create 第二条（不同楼层、created_at 晚一分钟）供排序/过滤用例区分
 	_, floorID2 := seedBuildingFloor(t, db, "fpt91-b")
-	require.NoError(t, svc.Create(ctx, &operationsmodels.FloorPlanText{FloorID: floorID2, Content: "91冒烟B", Position: "{}"}))
+	txt2 := &operationsmodels.FloorPlanText{FloorID: floorID2, Content: "91冒烟B", Position: "{}"}
+	txt2.CreatedAt = t0.Add(time.Minute)
+	require.NoError(t, svc.Create(ctx, txt2))
 
 	// List filter 命中（floorId + content 模糊）
 	page, err := svc.List(ctx, requests.FloorPlanTextListRequest{FloorID: floorID})
@@ -67,13 +75,13 @@ func TestFloorPlanText91_CRUDSmoke(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), page.Total)
 
-	// 默认序（B 型排他默认：无 OrderByColumn → created_at DESC，后创建的在前）
+	// 默认序（B 型排他默认：无 OrderByColumn → created_at DESC，晚创建的在前）
 	page, err = svc.List(ctx, requests.FloorPlanTextListRequest{})
 	require.NoError(t, err)
 	assert.Equal(t, int64(2), page.Total)
 	list, _ = page.List.([]operationsmodels.FloorPlanText)
 	require.Len(t, list, 2)
-	assert.Equal(t, "91冒烟B", list[0].Content, "默认 created_at DESC：后创建的在前")
+	assert.Equal(t, "91冒烟B", list[0].Content, "默认 created_at DESC：晚创建的在前")
 
 	// 用户排序（白名单命中 createdAt ASC）→ 排他，无尾随序
 	asc := true
@@ -85,7 +93,7 @@ func TestFloorPlanText91_CRUDSmoke(t *testing.T) {
 	require.NoError(t, err)
 	list, _ = page.List.([]operationsmodels.FloorPlanText)
 	require.Len(t, list, 2)
-	assert.Equal(t, "91冒烟A改", list[0].Content, "createdAt ASC：先创建的在前")
+	assert.Equal(t, "91冒烟A改", list[0].Content, "createdAt ASC：早创建的在前")
 
 	// Delete 软删后 GetByID NotFound
 	require.NoError(t, svc.Delete(ctx, txt.ID))

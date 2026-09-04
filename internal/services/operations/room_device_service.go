@@ -52,12 +52,18 @@ func (s *roomDeviceService) Statistics(ctx context.Context) (*RoomDeviceStatisti
 }
 
 type roomDeviceService struct {
+	// repo 承接六方法 CRUD 管道（Phase 91-04 repo 化，D-02 纯 struct 组合）
+	repo *base.GORMRepository[operations.OpsRoomDevice]
+	// db 保留给 Statistics / SearchRoomDeviceOptions / validateRoom（D-04 留 service）
 	db *gorm.DB
 }
 
 // NewRoomDeviceService 创建机房设备服务实例
 func NewRoomDeviceService(db *gorm.DB) RoomDeviceService {
-	return &roomDeviceService{db: db}
+	return &roomDeviceService{
+		repo: base.NewGORMRepository[operations.OpsRoomDevice](db),
+		db:   db,
+	}
 }
 
 // roomDeviceAllowedSortFields 机房设备可排序字段白名单。
@@ -78,7 +84,7 @@ func (s *roomDeviceService) Create(ctx context.Context, device *operations.OpsRo
 		return err
 	}
 
-	err := s.db.WithContext(ctx).Create(device).Error
+	err := s.repo.Create(ctx, device)
 	if err != nil && isDuplicateKeyError(err) {
 		return apperrors.DeviceCodeAlreadyExists()
 	}
@@ -92,94 +98,84 @@ func (s *roomDeviceService) Update(ctx context.Context, device *operations.OpsRo
 		return err
 	}
 
-	return s.db.WithContext(ctx).Save(device).Error
+	return s.repo.Update(ctx, device)
 }
 
 // Delete 删除机房设备
 func (s *roomDeviceService) Delete(ctx context.Context, id string) error {
-	return s.db.WithContext(ctx).Delete(&operations.OpsRoomDevice{}, "id = ?", id).Error
+	return s.repo.Delete(ctx, id)
 }
 
-// GetByID 根据ID获取机房设备
+// GetByID 根据ID获取机房设备（JOIN 管道经 repo 执行；repo 经 Tabler 断言生成
+// ops_room_devices.id = ?，与迁移前表限定逐字一致）。
 func (s *roomDeviceService) GetByID(ctx context.Context, id string) (*operations.OpsRoomDevice, error) {
-	var device operations.OpsRoomDevice
-	err := s.db.WithContext(ctx).
-		Joins("LEFT JOIN ops_server_rooms ON CAST(ops_server_rooms.id AS TEXT) = ops_room_devices.room_id").
-		Select("ops_room_devices.*, ops_server_rooms.name as room_name").
-		Where("ops_room_devices.id = ?", id).
-		First(&device).Error
-	if err != nil {
-		return nil, err
-	}
-	return &device, nil
+	return s.repo.GetByID(ctx, id, s.joinScope())
 }
 
-// List 查询机房设备列表（类型安全版本）
+// joinScope List/GetByID 共用的 JOIN + Select scope（逐字平移，含 CAST 写法）。
+//
+// 迁移前 List 的 Joins 在 filter 之前、Select 在 Count 之后；repo 化后 joinScope
+// 前置——两 JOIN 均为按主键 N:1 LEFT JOIN 无行增殖，Count 结果不变；Count 时
+// 自定义 Select 被临时替换为 count(*) 并在 Find 恢复（TestBase91 契约锁定）。
+// GetByID 迁移前仅 JOIN server_rooms——共用本 scope 后多一个按主键的 buildings
+// LEFT JOIN（无行增殖、不取 buildings 列），返回数据一致。
+func (s *roomDeviceService) joinScope() base.Scope {
+	return func(db *gorm.DB) *gorm.DB {
+		// 先 JOIN 机房表和楼宇表，便于后续筛选和显示机房名称
+		// 注意：server_rooms.building_id 是 varchar，需要转换为 uuid 才能与 buildings.id 比较
+		return db.
+			Joins("LEFT JOIN ops_server_rooms ON CAST(ops_server_rooms.id AS TEXT) = ops_room_devices.room_id").
+			Joins("LEFT JOIN ops_buildings ON CAST(ops_buildings.id AS TEXT) = ops_server_rooms.building_id").
+			// 选择字段（包括机房名称）
+			Select("ops_room_devices.*, ops_server_rooms.name as room_name")
+	}
+}
+
+// filterScope List 的过滤条件（条件字符串与 ? 占位符逐字平移自迁移前实现）。
+// orgId 引用 JOIN 的 ops_buildings 列——必须后于 joinScope 应用（P8 顺序敏感）。
+func (s *roomDeviceService) filterScope(req requests.RoomDeviceListRequest) base.Scope {
+	return func(db *gorm.DB) *gorm.DB {
+		if req.Name != "" {
+			db = db.Where("ops_room_devices.name LIKE ?", "%"+req.Name+"%")
+		}
+		if req.DeviceType != "" {
+			db = db.Where("ops_room_devices.device_type = ?", req.DeviceType)
+		}
+		// 机房ID筛选优先
+		if req.RoomID != "" {
+			db = db.Where("ops_room_devices.room_id = ?", req.RoomID)
+		}
+		// 部门筛选：通过楼宇表筛选（设备 → 机房 → 楼宇 → 部门）
+		if req.OrgID != "" {
+			db = db.Where("ops_buildings.org_id = ?", req.OrgID)
+		}
+		if req.IPAddress != "" {
+			db = db.Where("ops_room_devices.ip_address = ?", req.IPAddress)
+		}
+		if req.HasStatus() {
+			db = db.Where("ops_room_devices.status = ?", req.GetStatus(0))
+		}
+		return db
+	}
+}
+
+// List 查询机房设备列表（CRUD 管道经 base.GORMRepository 执行）。
+//
+// P8 顺序敏感（T-91-04-02 缓解）：joinScope 必须位于 filterScope 之前——
+// orgId filter 引用 joined 表 ops_buildings 的列，顺序颠倒会把 filter 打在
+// 未 join 的表列上（SQL 错误或语义漂移）。repo 按变参顺序应用 scopes。
 func (s *roomDeviceService) List(ctx context.Context, req requests.RoomDeviceListRequest) (*PageResult, error) {
-	var total int64
-	var list []operations.OpsRoomDevice
-
-	query := s.db.WithContext(ctx).Model(&operations.OpsRoomDevice{})
-
-	// 先 JOIN 机房表和楼宇表，便于后续筛选和显示机房名称
-	// 注意：server_rooms.building_id 是 varchar，需要转换为 uuid 才能与 buildings.id 比较
-	query = query.Joins("LEFT JOIN ops_server_rooms ON CAST(ops_server_rooms.id AS TEXT) = ops_room_devices.room_id").
-		Joins("LEFT JOIN ops_buildings ON CAST(ops_buildings.id AS TEXT) = ops_server_rooms.building_id")
-
-	// 添加筛选条件 - 类型安全，无需类型断言
-	if req.Name != "" {
-		query = query.Where("ops_room_devices.name LIKE ?", "%"+req.Name+"%")
-	}
-	if req.DeviceType != "" {
-		query = query.Where("ops_room_devices.device_type = ?", req.DeviceType)
-	}
-	// 机房ID筛选优先
-	if req.RoomID != "" {
-		query = query.Where("ops_room_devices.room_id = ?", req.RoomID)
-	}
-	// 部门筛选：通过楼宇表筛选（设备 → 机房 → 楼宇 → 部门）
-	if req.OrgID != "" {
-		query = query.Where("ops_buildings.org_id = ?", req.OrgID)
-	}
-	if req.IPAddress != "" {
-		query = query.Where("ops_room_devices.ip_address = ?", req.IPAddress)
-	}
-	if req.HasStatus() {
-		query = query.Where("ops_room_devices.status = ?", req.GetStatus(0))
-	}
-
-	// 分页 - 使用请求结构体的方法
-	offset := req.GetOffset()
-	_, pageSize := req.GetPagination()
-	current, _ := req.GetPagination()
-
-	if err := query.Count(&total).Error; err != nil {
-		return nil, err
-	}
-
-	// 选择字段（包括机房名称）
-	query = query.Select("ops_room_devices.*, ops_server_rooms.name as room_name")
-
-	// 用户排序(白名单,带表别名)优先,无 OrderByColumn 时保留原默认
-	query = base.ApplySort(query, req.BaseListRequest, roomDeviceAllowedSortFields)
-	if req.OrderByColumn == "" {
-		query = query.Order("ops_room_devices.created_at DESC")
-	}
-	if err := query.Offset(offset).Limit(pageSize).Find(&list).Error; err != nil {
-		return nil, err
-	}
-
-	return &PageResult{
-		List:     list,
-		Total:    total,
-		Current:  current,
-		PageSize: pageSize,
-	}, nil
+	current, pageSize := req.GetPagination()
+	return s.repo.List(ctx, base.PageParams{Current: current, PageSize: pageSize},
+		s.joinScope(),
+		s.filterScope(req),
+		base.SortScope(req.BaseListRequest, roomDeviceAllowedSortFields, "ops_room_devices.created_at DESC"),
+	)
 }
 
 // BatchDelete 批量删除机房设备
 func (s *roomDeviceService) BatchDelete(ctx context.Context, ids []string) error {
-	return s.db.WithContext(ctx).Delete(&operations.OpsRoomDevice{}, "id IN ?", ids).Error
+	return s.repo.BatchDelete(ctx, ids)
 }
 
 // SearchRoomDeviceOptions 机房设备下拉数据源(name LIKE 模糊 + roomId/deviceType/status 筛选,LIMIT 50)。

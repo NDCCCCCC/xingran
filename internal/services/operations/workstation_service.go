@@ -12,7 +12,6 @@ import (
 )
 
 const (
-	workstationTable      = "sys_workstation"
 	floorTable            = "ops_floors"
 	workstationJoinSelect = "sys_workstation.*, ops_floors.name as floor_name, ops_floors.floor_no as floor_code, ops_buildings.name as building_name, ops_buildings.id as building_id, sys_dept.dept_name as dept_name, sys_user.nickname as user_name, (SELECT device_serial FROM ops_workstation_device WHERE workstation_id = sys_workstation.id AND deleted_at IS NULL AND is_primary = true ORDER BY priority DESC, created_at ASC LIMIT 1) as primary_device_serial"
 	// uuid 列(varchar 外键列对 uuid 主键)用标准 SQL CAST(... AS TEXT) 统一转 text 比较,

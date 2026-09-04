@@ -52,13 +52,18 @@ func (s *infoPointService) Statistics(ctx context.Context) (*InfoPointStatistics
 }
 
 type infoPointService struct {
+	// repo 承接六方法 CRUD 管道（Phase 91-04 repo 化，D-02 纯 struct 组合）
+	repo *base.GORMRepository[operations.OpsInfoPoint]
+	// db 保留给 populateRedundantFields 回填 / Statistics / SearchInfoPointOptions
+	// （D-04 留 service 的直用场景）
 	db *gorm.DB
 }
 
 // NewInfoPointService 创建信息点服务实例
 func NewInfoPointService(db *gorm.DB) InfoPointService {
 	return &infoPointService{
-		db: db,
+		repo: base.NewGORMRepository[operations.OpsInfoPoint](db),
+		db:   db,
 	}
 }
 
@@ -78,7 +83,7 @@ func (s *infoPointService) Create(ctx context.Context, infoPoint *operations.Ops
 	if err := s.populateRedundantFields(ctx, infoPoint); err != nil {
 		return err
 	}
-	return s.db.WithContext(ctx).Create(infoPoint).Error
+	return s.repo.Create(ctx, infoPoint)
 }
 
 // Update 更新信息点
@@ -87,7 +92,7 @@ func (s *infoPointService) Update(ctx context.Context, infoPoint *operations.Ops
 	if err := s.populateRedundantFields(ctx, infoPoint); err != nil {
 		return err
 	}
-	return s.db.WithContext(ctx).Save(infoPoint).Error
+	return s.repo.Update(ctx, infoPoint)
 }
 
 // populateRedundantFields 填充冗余字段（设备名称、端口名称、工位名称）
@@ -121,115 +126,100 @@ func (s *infoPointService) populateRedundantFields(ctx context.Context, infoPoin
 
 // Delete 删除信息点
 func (s *infoPointService) Delete(ctx context.Context, id string) error {
-	return s.db.WithContext(ctx).Delete(&operations.OpsInfoPoint{}, "id = ?", id).Error
+	return s.repo.Delete(ctx, id)
 }
 
-// GetByID 根据ID获取信息点
+// GetByID 根据ID获取信息点（JOIN 管道经 repo 执行；repo 经 Tabler 断言生成
+// ops_info_points.id = ?，与迁移前表限定逐字一致）。
 // 通过 LEFT JOIN 工位/楼层/楼宇 动态填充 workstation_name/building_name/floor_name/building_id
 // (这些字段是 JOIN 虚拟字段，见 OpsInfoPoint model 的 gorm:"->;-:migration" tag，非物理列)
 func (s *infoPointService) GetByID(ctx context.Context, id string) (*operations.OpsInfoPoint, error) {
-	var infoPoint operations.OpsInfoPoint
-	err := s.db.WithContext(ctx).
-		Select("ops_info_points.*, ops_floors.name as floor_name, ops_buildings.name as building_name, ops_buildings.id as building_id, sys_workstation.workstation_name").
-		Joins("LEFT JOIN sys_workstation ON CAST(sys_workstation.id AS TEXT) = ops_info_points.workstation_id").
-		Joins("LEFT JOIN ops_floors ON CAST(ops_floors.id AS TEXT) = sys_workstation.floor_id").
-		Joins("LEFT JOIN ops_buildings ON CAST(ops_buildings.id AS TEXT) = sys_workstation.building_id").
-		Where("ops_info_points.id = ?", id).
-		First(&infoPoint).Error
-	if err != nil {
-		return nil, err
-	}
-	return &infoPoint, nil
+	return s.repo.GetByID(ctx, id, s.joinScope())
 }
 
-// List 查询信息点列表（类型安全版本）
+// joinScope List/GetByID 共用的 Select + workstation/floors/buildings LEFT JOIN
+// scope（逐字平移，含 CAST 写法）。
+//
+// 迁移前 List 的 Select+Joins 仅在 Find 前追加（Count 无 join）；repo 化后
+// joinScope 前置——三 JOIN 均按主键 N:1 无行增殖，Count 结果不变（91-02 pilot
+// 同款论证 + TestInfoPoint Total 断言守护）；Count 时自定义 Select 被临时替换为
+// count(*) 并在 Find 恢复（TestBase91 契约锁定）。
+func (s *infoPointService) joinScope() base.Scope {
+	return func(db *gorm.DB) *gorm.DB {
+		// JOIN 楼宇和楼层表获取关联信息（需要类型转换：floor_id/building_id是varchar，而floors/buildings的id是UUID）
+		// 注意：device_name和port_name是ops_info_points表的冗余字段，通过ops_info_points.*已经包含
+		return db.
+			Select("ops_info_points.*, ops_floors.name as floor_name, ops_buildings.name as building_name, ops_buildings.id as building_id, sys_workstation.workstation_name").
+			Joins("LEFT JOIN sys_workstation ON CAST(sys_workstation.id AS TEXT) = ops_info_points.workstation_id").
+			Joins("LEFT JOIN ops_floors ON CAST(ops_floors.id AS TEXT) = sys_workstation.floor_id").
+			Joins("LEFT JOIN ops_buildings ON CAST(ops_buildings.id AS TEXT) = sys_workstation.building_id")
+	}
+}
+
+// filterScope List 的过滤条件（条件字符串、WorkID/PointType 旧字段兼容分支
+// 结构与 ? 占位符逐字平移自迁移前实现；T-91-04-05 缓解）。
+// orgId 用 EXISTS 子查询，不引用外层 JOIN——与 joinScope 顺序无关。
+func (s *infoPointService) filterScope(req requests.InfoPointListRequest) base.Scope {
+	return func(db *gorm.DB) *gorm.DB {
+		if req.Name != "" {
+			db = db.Where("ops_info_points.name LIKE ?", "%"+req.Name+"%")
+		}
+		// 优先使用新字段 workstationId，兼容旧字段 workId
+		workstationID := req.WorkstationID
+		if workstationID == "" {
+			workstationID = req.WorkID
+		}
+		if workstationID != "" {
+			db = db.Where("ops_info_points.workstation_id = ?", workstationID)
+		}
+		// 优先使用新字段 infoPointType，兼容旧字段 pointType
+		infoPointType := req.InfoPointType
+		if infoPointType == "" {
+			infoPointType = req.PointType
+		}
+		if infoPointType != "" {
+			db = db.Where("ops_info_points.info_point_type = ?", infoPointType)
+		}
+		if req.HasStatus() {
+			db = db.Where("ops_info_points.status = ?", req.GetStatus(0))
+		}
+		// 通过关联工位、楼层、楼宇的 orgId 筛选部门（包含子部门）
+		// 信息点 → 工位 → 楼层 → 楼宇 → 部门
+		if req.OrgID != "" {
+			// 使用 EXISTS 子查询避免与现有 JOIN 冲突
+			// 查询该部门及其所有子部门：ancestors 包含该部门ID，或 ID 等于该部门ID
+			db = db.Where(`
+				EXISTS (
+					SELECT 1 FROM sys_workstation w
+					JOIN ops_floors f ON CAST(f.id AS TEXT) = w.floor_id
+					JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id
+					JOIN sys_dept d ON CAST(d.id AS TEXT) = b.org_id
+					WHERE CAST(w.id AS TEXT) = ops_info_points.workstation_id
+					AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors = ?)
+					AND w.deleted_at IS NULL
+					AND f.deleted_at IS NULL
+					AND b.deleted_at IS NULL
+				)
+			`, req.OrgID, "%,"+req.OrgID, req.OrgID)
+		}
+		return db
+	}
+}
+
+// List 查询信息点列表（CRUD 管道经 base.GORMRepository 执行；
+// B 型排他默认排序，无 OrderByColumn 时保留 ops_info_points.created_at DESC 默认）。
 func (s *infoPointService) List(ctx context.Context, req requests.InfoPointListRequest) (*PageResult, error) {
-	var total int64
-	var list []operations.OpsInfoPoint
-
-	query := s.db.WithContext(ctx).Model(&operations.OpsInfoPoint{})
-
-	// 添加筛选条件 - 类型安全，无需类型断言
-	if req.Name != "" {
-		query = query.Where("ops_info_points.name LIKE ?", "%"+req.Name+"%")
-	}
-	// 优先使用新字段 workstationId，兼容旧字段 workId
-	workstationID := req.WorkstationID
-	if workstationID == "" {
-		workstationID = req.WorkID
-	}
-	if workstationID != "" {
-		query = query.Where("ops_info_points.workstation_id = ?", workstationID)
-	}
-	// 优先使用新字段 infoPointType，兼容旧字段 pointType
-	infoPointType := req.InfoPointType
-	if infoPointType == "" {
-		infoPointType = req.PointType
-	}
-	if infoPointType != "" {
-		query = query.Where("ops_info_points.info_point_type = ?", infoPointType)
-	}
-	if req.HasStatus() {
-		query = query.Where("ops_info_points.status = ?", req.GetStatus(0))
-	}
-	// 通过关联工位、楼层、楼宇的 orgId 筛选部门（包含子部门）
-	// 信息点 → 工位 → 楼层 → 楼宇 → 部门
-	if req.OrgID != "" {
-		// 使用 EXISTS 子查询避免与现有 JOIN 冲突
-		// 查询该部门及其所有子部门：ancestors 包含该部门ID，或 ID 等于该部门ID
-		query = query.Where(`
-			EXISTS (
-				SELECT 1 FROM sys_workstation w
-				JOIN ops_floors f ON CAST(f.id AS TEXT) = w.floor_id
-				JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id
-				JOIN sys_dept d ON CAST(d.id AS TEXT) = b.org_id
-				WHERE CAST(w.id AS TEXT) = ops_info_points.workstation_id
-				AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors = ?)
-				AND w.deleted_at IS NULL
-				AND f.deleted_at IS NULL
-				AND b.deleted_at IS NULL
-			)
-		`, req.OrgID, "%,"+req.OrgID, req.OrgID)
-	}
-
-	// 分页 - 使用请求结构体的方法
-	offset := req.GetOffset()
-	_, pageSize := req.GetPagination()
-	current, _ := req.GetPagination()
-
-	if err := query.Count(&total).Error; err != nil {
-		return nil, err
-	}
-
-	// JOIN 楼宇和楼层表获取关联信息（需要类型转换：floor_id/building_id是varchar，而floors/buildings的id是UUID）
-	// 注意：device_name和port_name是ops_info_points表的冗余字段，通过ops_info_points.*已经包含
-	// 用户排序(白名单,带表别名)优先,无 OrderByColumn 时保留原默认
-	query = base.ApplySort(query, req.BaseListRequest, infoPointAllowedSortFields)
-	if req.OrderByColumn == "" {
-		query = query.Order("ops_info_points.created_at DESC")
-	}
-	if err := query.
-		Select("ops_info_points.*, ops_floors.name as floor_name, ops_buildings.name as building_name, ops_buildings.id as building_id, sys_workstation.workstation_name").
-		Joins("LEFT JOIN sys_workstation ON CAST(sys_workstation.id AS TEXT) = ops_info_points.workstation_id").
-		Joins("LEFT JOIN ops_floors ON CAST(ops_floors.id AS TEXT) = sys_workstation.floor_id").
-		Joins("LEFT JOIN ops_buildings ON CAST(ops_buildings.id AS TEXT) = sys_workstation.building_id").
-		Offset(offset).
-		Limit(pageSize).
-		Find(&list).Error; err != nil {
-		return nil, err
-	}
-
-	return &PageResult{
-		List:     list,
-		Total:    total,
-		Current:  current,
-		PageSize: pageSize,
-	}, nil
+	current, pageSize := req.GetPagination()
+	return s.repo.List(ctx, base.PageParams{Current: current, PageSize: pageSize},
+		s.filterScope(req),
+		s.joinScope(),
+		base.SortScope(req.BaseListRequest, infoPointAllowedSortFields, "ops_info_points.created_at DESC"),
+	)
 }
 
 // BatchDelete 批量删除信息点
 func (s *infoPointService) BatchDelete(ctx context.Context, ids []string) error {
-	return s.db.WithContext(ctx).Delete(&operations.OpsInfoPoint{}, "id IN ?", ids).Error
+	return s.repo.BatchDelete(ctx, ids)
 }
 
 // SearchInfoPointOptions 信息点下拉数据源(name LIKE 模糊 + workstationId/infoPointType/status 筛选,LIMIT 50)。
