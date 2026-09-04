@@ -85,7 +85,7 @@ func (s *doorService) filterScope(req requests.DoorListRequest) base.Scope {
 //   - 用户排序（白名单命中）→ ORDER BY <col> <dir>, created_at DESC
 //   - 无/非法排序 → 仅 ORDER BY created_at DESC
 //
-// 与迁移前 fetchRecords 恒追加 Order("created_at DESC") 逐字等价（无排序时
+// 与迁移前取数管道恒追加 Order("created_at DESC") 逐字等价（无排序时
 // ApplySort 无 clauses，仅剩尾随序）。迁移前 List 中「用户排序时追加空串
 // Order」的分支是 GORM no-op 死代码（空串不进 clause），随迁移删除。
 func (s *doorService) List(ctx context.Context, req requests.DoorListRequest) (*PageResult, error) {

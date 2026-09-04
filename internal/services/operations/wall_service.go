@@ -78,7 +78,7 @@ func (s *wallService) filterScope(req requests.WallListRequest) base.Scope {
 //   - 用户排序（白名单命中）→ ORDER BY <col> <dir>, created_at DESC
 //   - 无/非法排序 → 仅 ORDER BY created_at DESC
 //
-// 与迁移前 fetchRecords 恒追加 Order("created_at DESC") 逐字等价。迁移前 List
+// 与迁移前取数管道恒追加 Order("created_at DESC") 逐字等价。迁移前 List
 // 中「用户排序时追加空串 Order」的分支是 GORM no-op 死代码（空串不进 clause，
 // 原注释"移除硬编码 Order 避免冲突"的前提不成立），随迁移删除。
 func (s *wallService) List(ctx context.Context, req requests.WallListRequest) (*PageResult, error) {
