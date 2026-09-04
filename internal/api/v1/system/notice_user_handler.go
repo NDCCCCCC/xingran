@@ -6,6 +6,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
+	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 	"gorm.io/gorm"
 )
@@ -107,12 +108,7 @@ func (h *NoticeUserHandler) GetMyNotices(c *gin.Context) {
 		_ = c.ShouldBindJSON(&req)
 	}
 
-	if req.Current == 0 {
-		req.Current = 1
-	}
-	if req.PageSize == 0 {
-		req.PageSize = 10
-	}
+	req.Current, req.PageSize = query.NormalizePagination(req.Current, req.PageSize)
 
 	notices, total, err := h.noticeService.GetUserNotices(c.Request.Context(), userID, req.Current, req.PageSize, req.Status)
 	if err != nil {
