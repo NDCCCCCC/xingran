@@ -314,6 +314,29 @@ operlog.RecordWithBody(c, h.core.OperLogService, h.core.GetDB(), "API密钥管�
 
 新增 status / visible 常量:先在 `internal/models/<file>.go` 命名常量 → 同步 `status_constants_test.go` 期望表 → 业务代码按常量引用。
 
+### Pagination Constants Convention
+
+All pagination defaults and caps in the project are centralized in `pkg/constants/pagination.go`:
+
+```go
+package constants
+
+const (
+    DefaultCurrent  = 1
+    DefaultPageSize = 10
+    MaxPageSize     = 200
+)
+```
+
+**Rule:** All business code that needs pagination defaults or max caps MUST reference these constants via `pkg/query.NormalizePagination(current, pageSize int) (int, int)`. Inline literals (`current = 1`, `pageSize = 10`, `pageSize = 100`, etc.) are prohibited in source files (test fixtures exempt).
+
+**Key invariants:**
+- `NormalizePagination` is the only entry point for pagination normalization
+- `PaginationRequest.Normalize()` delegates to `NormalizePagination`
+- No file should contain `*current = 1` or `pageSize = 10` as a literal assignment without referencing `pkg/constants`
+
+**Migration status:** Phase 89 (PAGINATION) centralized all 12+ hardcoded pagination literals across handler and service layers.
+
 ### API Response Format
 
 All API responses follow this structure:
