@@ -35,7 +35,10 @@ Next action: `/gsd:plan-phase 89`
 
 ### Phase 89 Decisions (D-01..D-19) — captured 2026-09-04
 - **D-PRINCIPLE**: 行业最佳实践为唯一依据,允许任何形式重构;去除硬编码/处理 todo/消除重复/合理抽象
-- **D-01..D-19**: 常量位置 pkg/constants/pagination.go (leaf const, 6 个)+ helper 放 pkg/query/pagination.go + NormalizePagination 纯函数 + binding 去 max=100 + 命名 Default/Max 体系 + MaxPageSize 10000 截断 + Pilot 先行(knowledge_service.go)+ 89-02 复制模式迁移剩余 7 个文件
+- **3 常量最终定义** (深度思考后简化): DefaultCurrent=1, DefaultPageSize=10, MaxPageSize=200 (行业惯例对齐 GitHub=100/Stripe=100;200 略宽)
+- **D-08/D-09/D-16 删除**: KnowledgeDefaultPageSize=100 / KnowledgeMaxPageSize=500 / AccountPoolDefaultPageSize=20 全部判定为"拍脑袋"决定,无业务依据
+- **D-01..D-19**: leaf const pkg pkg/constants/pagination.go + helper 放 pkg/query/pagination.go + NormalizePagination 纯函数 + binding 去 max=100 + Pilot 先行(knowledge_service.go) + 89-02 复制模式迁移剩余 7 个文件
+- **业务行为变更** (用户已接受): 知识搜索 default 100→10 max 500→200;AD 账号池 default 20→10,`>200` 反常回退改为标准 clamp;ad_domain `== 0`→`<= 0` bug 修复
 - 见 89-CONTEXT.md / 89-DISCUSSION-LOG.md 完整记录
 
 ## Accumulated Context (carried from v1.28)
