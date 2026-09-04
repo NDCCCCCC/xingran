@@ -584,20 +584,25 @@ if err := c.ShouldBindJSON(&req); err != nil {
 | A4 | GetByID 表限定用 Tabler 断言可行（11 模型均实现 TableName()） | repo 设计 | 个别模型若无 TableName() 会退化为 `id = ?` 在 join 下 ambiguous——已 grep 确认 11 个模型族 TableName 普遍存在，个别遗漏由 service_test 契约 5 锁定 |
 | A5 | handler 测试充当 e2e smoke 已足够（无独立 e2e harness） | Validation | 若用户期望真浏览器级 smoke 则需手动验证步骤补充（CONTEXT 提到的「handler 端到端 smoke」按现有测试口径解释） |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> 3 项均已在 planning 阶段解决并落到对应 plan/task（下附 RESOLVED 指针），保留原始问题描述以供溯源。
 
 1. **D-05 分页上限收紧（A2）与 building/asset 软删 Total 修复（A3）是否需要用户显式确认？**
    - What we know: 两者都是「零行为变更」字面承诺下的微小语义变化，方向均正确
    - What's unclear: 用户对「字面零变更」的容忍度
    - Recommendation: 两个 plan checkpoint:human-verify，一次说清
+   - **RESOLVED → 91-02 Task 3 + 91-03 Task 4**：两个 checkpoint:human-verify 已分别落 plan——A2（workstation 分页收紧 pageSize 上限 10000→100 + current<1→1）见 91-02「Checkpoint: workstation 分页语义收紧确认（A2）」；A3（building/asset List Total 不再计入软删除行）见 91-03「Checkpoint: building/asset Total 软删语义修复确认（F3/A3）」
 2. **LOC ≥800 的范围决策（F5）**
    - What we know: 严格范围 450-550
    - What's unclear: typesafe 死文件清理是否算本 phase（属「消除重复」精神内，但不在 11 服务清单）
    - Recommendation: 纳入 91-04 收尾 plan；如讨论需要再确认
+   - **RESOLVED → 91-04 Task 4**：typesafe 死文件清理已由 orchestrator 拍板纳入 91-04 Task 4（无需 checkpoint，91-04 must_haves truths 显式记录该拍板），作为 LOC 净减 ≥800 的补充来源（F5 组合 1）
 3. **`extractIntParam`/`extractStringParam` 最终去留**
    - What we know: F1 证明严格范围无法全删（SearchXxxOptions + Statistics + 3 个 map 服务仍需）
    - What's unclear: 是否值得为删 2 个小 helper 把 SearchXxxOptions 改内联断言（负收益）
    - Recommendation: 保留 helper，plan 验收口径写「workstation 消费点清零」
+   - **RESOLVED → 91-02 Task 1 + 91-04 Task 4**：采用推荐口径——extract 族 helper 本体保留（F1：3 个 map 服务 List + SearchXxxOptions + Statistics 仍需），验收口径 = 「workstation 消费点清零」：91-02 Task 1 第八步（List/SearchWorkstationOptions 零 extract 调用）+ 91-02 success_criteria 5；91-04 Task 4 修剪红线明确 extractPagination/extractSortRequest/extractIntParam/extractStringParam/clampPageSize 全部保留
 
 ## Environment Availability
 
