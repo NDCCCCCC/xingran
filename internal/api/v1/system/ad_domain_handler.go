@@ -9,6 +9,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	addomainServices "github.com/xingran-next/xingran-go-backend/internal/services/addomain"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
+	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
@@ -37,12 +38,9 @@ func NewADDomainHandler(service *addomainServices.ADDomainService, core *core.Co
 
 // setDefaultPagination 设置默认分页参数
 func (h *ADDomainHandler) setDefaultPagination(current, pageSize *int) {
-	if *current == 0 {
-		*current = 1
-	}
-	if *pageSize == 0 {
-		*pageSize = 10
-	}
+	c, ps := query.NormalizePagination(*current, *pageSize)
+	*current = c
+	*pageSize = ps
 }
 
 // requireConfigID 验证配置ID是否为空
