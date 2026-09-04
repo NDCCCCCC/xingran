@@ -337,6 +337,76 @@ const (
 
 **Migration status:** Phase 89 (PAGINATION) centralized all 12+ hardcoded pagination literals across handler and service layers.
 
+### Timeout/Port/Protocol Constants Convention
+
+All timeout, port, protocol, and concurrency constants in the project are centralized in `pkg/constants/`:
+
+**timeouts.go** — `time.Duration` constants:
+```go
+package constants
+
+const (
+    CommandExecTimeout         = 300 * time.Second  // device command execution (shared by command_handler + execution_handler)
+    CommandReadTimeout         =  60 * time.Second  // quick command read
+    LDAPConnTimeout            =  30 * time.Second  // LDAP/AD connection
+    ADSyncTimeout             =  30 * time.Minute  // AD full sync context
+    SchedulerShutdownTimeout  =   5 * time.Second  // cron engine graceful shutdown
+    ADSyncTaskTimeout         =   1 * time.Minute  // AD sync single task
+)
+```
+
+**ports.go** — `int` constants (see `pkg/constants/ports.go`):
+```go
+package constants
+
+const (
+    SNMPPort = 161  // SNMP default UDP port
+)
+```
+
+**protocol.go** — `string` constants (see `pkg/constants/protocol.go`):
+```go
+package constants
+
+const (
+    HTTPProto  = "http"   // plain-text HTTP
+    HTTPSProto = "https"  // TLS-protected HTTPS
+)
+```
+
+**concurrency.go** — `int` constants (see `pkg/constants/concurrency.go`):
+```go
+package constants
+
+const (
+    CommandConcurrency = 10  // default concurrent command limit
+)
+```
+
+**Rules:**
+- All timeout values use `time.Duration` strong typing. When assigning to an `int` field (e.g., `req.Timeout`), use `int(constants.Xxx.Seconds())`.
+- All business code MUST reference these constants. Inline literals are prohibited:
+  - `time.Second * N` / `time.Minute * N`
+  - `Timeout = 300` / `Timeout = 60`
+  - `SNMPPort = 161`
+  - `Concurrency = 10`
+  - `"http://"+` / `"https://"+`
+
+**Reference patterns:**
+```go
+// time.Duration -> int conversion for handler fields
+req.Timeout = int(constants.CommandExecTimeout.Seconds())
+
+// Direct time.Duration use (context, SetTimeout)
+ctx, cancel := context.WithTimeout(ctx, constants.ADSyncTaskTimeout)
+c.conn.SetTimeout(constants.LDAPConnTimeout)
+
+// Bare const concatenation (D-03: no helper function)
+if strings.HasPrefix(origin, constants.HTTPProto+"://"+host) { ... }
+```
+
+**Migration status:** Phase 90 (TIMEOUTS) centralized 10 constants across 8 files.
+
 ### API Response Format
 
 All API responses follow this structure:
