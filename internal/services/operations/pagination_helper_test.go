@@ -73,38 +73,8 @@ func TestExtractPagination(t *testing.T) {
 	}
 }
 
-func TestCalculateOffset(t *testing.T) {
-	tests := []struct {
-		name     string
-		params   PaginationParams
-		expected int
-	}{
-		{
-			name:     "第一页",
-			params:   PaginationParams{Current: 1, PageSize: 10},
-			expected: 0,
-		},
-		{
-			name:     "第二页",
-			params:   PaginationParams{Current: 2, PageSize: 10},
-			expected: 10,
-		},
-		{
-			name:     "第三页每页20条",
-			params:   PaginationParams{Current: 3, PageSize: 20},
-			expected: 40,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := calculateOffset(tt.params)
-			if result != tt.expected {
-				t.Errorf("calculateOffset() = %v, want %v", result, tt.expected)
-			}
-		})
-	}
-}
+// 偏移量计算的用例已随同函数修剪删除（Phase 91-04：
+// 零生产消费者死代码，offset 计算由 base.GORMRepository.List 承接）。
 
 func TestExtractIntParam(t *testing.T) {
 	tests := []struct {

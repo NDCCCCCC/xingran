@@ -197,39 +197,6 @@ func TestBuildingService_CRUDAndValidate(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestBuildingService_TypeSafe(t *testing.T) {
-	db := newAssetTestDB(t)
-	seedAssetRefs(t, db)
-	svc := NewBuildingServiceTypeSafe(db)
-	ctx := context.Background()
-
-	b1 := &operationsmodels.OpsBuilding{Name: "TS-1", OrgID: testUUIDDept}
-	require.NoError(t, svc.Create(ctx, b1))
-	require.NoError(t, svc.Create(ctx, &operationsmodels.OpsBuilding{Name: "TS-2", OrgID: testUUIDSub, Status: 1}))
-
-	got, err := svc.GetByID(ctx, b1.ID)
-	require.NoError(t, err)
-	assert.Equal(t, "TS-1", got.Name)
-
-	// 类型安全 List：name + orgId 子树 + status
-	page, err := svc.List(ctx, requests.BuildingListRequest{OrgID: testUUIDDept})
-	require.NoError(t, err)
-	assert.Equal(t, int64(2), page.Total)
-	page, err = svc.List(ctx, requests.BuildingListRequest{Name: "TS-1"})
-	require.NoError(t, err)
-	assert.Equal(t, int64(1), page.Total)
-	stopped := 1
-	page, err = svc.List(ctx, requests.BuildingListRequest{StatusRequest: requests.StatusRequest{Status: &stopped}})
-	require.NoError(t, err)
-	assert.Equal(t, int64(1), page.Total)
-
-	// Update / Delete / BatchDelete
-	got.Name = "TS-1改"
-	require.NoError(t, svc.Update(ctx, got))
-	require.NoError(t, svc.Delete(ctx, b1.ID))
-	require.NoError(t, svc.BatchDelete(ctx, []string{b1.ID}))
-}
-
 func TestFloorPlanTextService_CRUD(t *testing.T) {
 	db := newPhotoTestDB(t)
 	require.NoError(t, db.AutoMigrate(&operationsmodels.FloorPlanText{}))

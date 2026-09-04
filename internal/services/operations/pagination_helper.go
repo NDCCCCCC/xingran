@@ -74,7 +74,7 @@ func clampPageSize(pageSize int) int {
 	return int(math.Max(float64(constants.MinPageSize), math.Min(float64(constants.MaxOptionsPageSize), float64(pageSize))))
 }
 
-// calculateOffset 计算偏移量
-func calculateOffset(params PaginationParams) int {
-	return (params.Current - 1) * params.PageSize
-}
+// 偏移量计算函数已于 Phase 91-04 修剪：最后一个生产消费者（building/asset List）
+// 已于 91-03 repo 化、workstation 于 91-02 repo 化，offset 计算由
+// base.GORMRepository.List 内部承接；typed 路径统一走
+// requests.PaginationParams.GetOffset。零消费者死代码。
