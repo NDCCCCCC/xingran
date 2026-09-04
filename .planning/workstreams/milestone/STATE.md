@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.29
 milestone_name: 技术债治理
-status: executing
-last_updated: "2026-09-04T12:00:00.000Z"
-last_activity: 2026-09-04 -- Phase 91 complete (4/4 plans, 11/11 services repo 化)
+status: Phase 91 SHIPPED — 11/11 operations CRUD 服务全部复用 base.GORMRepository[T]
+last_updated: "2026-09-04T14:17:29.315Z"
+last_activity: 2026-09-04
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 11
   completed_plans: 11
-  percent: 100
+  percent: 43
 ---
 
 # Project State (v1.29 — milestone workstream)
@@ -27,10 +27,10 @@ Config: "mode": "yolo"
 
 ## Current Position
 
-Phase: 91 (CRUD 复用 base.Repository[T] (🔥 高优 P1)) — COMPLETE (4/4 plans)
-Plan: 4 of 4 (91-01, 91-02, 91-03, 91-04 all complete)
+Phase: 92
+Plan: Not started
 Status: Phase 91 SHIPPED — 11/11 operations CRUD 服务全部复用 base.GORMRepository[T]
-Last activity: 2026-09-04 -- Plan 91-04 complete (7 个 typed 服务迁移 + typesafe 死代码 -597 行 + calculateOffset 修剪 + REQUIREMENTS § CRUD-REUSE 措辞同步 + LOC 审计诚实记录: 生产代码净减 +408/全口径 -8, D-07 ≥800 未达成 F5 组合 2 留决策, commits d60e0e8/030d370/14e4a3c/963defe)
+Last activity: 2026-09-04
 Resume file: .planning/workstreams/milestone/phases/91-crud-base-repository-t-p1/91-04-SUMMARY.md
 Next action: `/gsd:discuss-phase 92` (缓存层三处架构统一——依赖 91 已解除; 93 config_backup / 94 前端 API 工厂化 可并行)
 
