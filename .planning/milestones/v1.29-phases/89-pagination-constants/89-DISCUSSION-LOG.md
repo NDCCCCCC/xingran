@@ -224,5 +224,59 @@
 - Phase 90 (TIMEOUTS) 可借鉴本 phase 的 leaf const + invariants 扫描模式
 - Phase 95 closeout 时可考虑 invariants 升级为 fail-on-hit
 - 1688 测试 + 45/45 dirs Gate 必须保持
+
+---
+
+## Area 9: 模块特异常量深度重判 (用户深度思考输入)
+
+**用户原话**:
+> "为什么特定模块会有特定的常量,不能所有模块都是用defaultcurrent,和defaultpagesize吗?maxpagesize的作用是什么,之前设置maxpagesize为10000是因为要统计总量,现在端点改造,总量已经不依赖这个常量统计了,请深度思考,最终是否可以只保留两个常量,即defaultcurrent和defaultpagesize"
+
+**深度分析** (回复用户):
+
+### knowledge_service.go:177 → `pageSize = 10`
+- 本来就是 DefaultPageSize,统一
+
+### knowledge_service.go:490 → `pageSize = 100` (原 KnowledgeDefaultPageSize)
+- `SearchKnowledgeArticles` 全文搜索函数
+- 注释:"默认100条,最大500条"
+- **真实情况**:100 是 2024 年早期拍脑袋决定,无用户研究/性能数据支撑
+- 行业惯例:搜索结果默认 10-30,客户端按需请求
+
+### knowledge_service.go:492 → `pageSize = 500` (原 KnowledgeMaxPageSize)
+- 500 cap 偏高(行业惯例 100-200)
+- 用户的 MaxPageSize=10000 论点:10000 实质等于无上限,无 DoS 防护价值
+- 真正"防 DoS"应在 nginx/网关层,不是 const
+
+### account_pool.go:207 → `pageSize = 20` (原 AccountPoolDefaultPageSize)
+- 反常逻辑: `if <1 || >200 { pageSize = 20 }` (无效 OR 超 200 都回退到 20,不是 clamp)
+- 20 也是拍脑袋决定
+
+**用户最终选项**:
+
+| Option | Selected |
+|--------|----------|
+| 采纳 2-常量最终方案(仅 DefaultCurrent + DefaultPageSize,删除所有 MaxPageSize) | |
+| 保留 3 常量(加 MaxPageSize=200,行业惯例对齐) | ✓ |
+| 需进一步讨论 | |
+
+**User's choice:** 保留 3 常量(加 MaxPageSize=200)
+
+**Notes**:
+- 200 略宽于 GitHub=100/Stripe=100/Twitter=100,平衡 DoS 防护 + 内部企业系统的"大查询"场景
+- 决策: D-08/D-09/D-16 **全部删除**(原本计划保留 3 个模块特异常量)
+- D-10 修订: MaxPageSize 从 10000 → 200
+- D-14 简化: 无领域特异 limit,所有 endpoint 走统一 default=10 + max=200
+
+### 业务行为变更清单 (用户已显式接受)
+
+| 端点 | 旧行为 | 新行为 |
+|------|--------|--------|
+| `PaginationRequest` (所有用此结构的端点) | binding max=100 → HTTP 400 | 移除 max → pageSize>200 静默裁减 |
+| `ad_domain_handler` | `== 0` 守卫,负值穿透 | `<= 0` 守卫,负值归一为 1 (bug 修复) |
+| `knowledge_service.go:SearchKnowledgeArticles` | default=100, max=500 | default=10, max=200 |
+| `account_pool.go:ListAll` | `if <1 \|\| >200` 回退到 20 | `if <=0` 默认 10; `if >200` clamp 到 200 |
+| 任意端点 pageSize=99999 | 透传(可能慢查询) | 静默裁减到 200 |
+
 </content>
 </invoke>
