@@ -1,10 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.29
-milestone_name: closeout + audit
+milestone_name: 技术债治理 (Tech Debt Governance)
 status: executing
 last_updated: "2026-09-04T09:43:58.504Z"
 last_activity: 2026-09-04 -- Phase 91 planning complete
+progress:
+  total_phases: 7
+  completed_phases: 2
+  total_plans: 11
+  completed_plans: 7
+  percent: 29
 ---
 
 # Project State (v1.29 — milestone workstream)
@@ -15,16 +21,16 @@ See: .planning/PROJECT.md (updated 2026-09-04) — v1.29 Current Milestone 段
 
 **Core value:** 按 2026-09-03 综合审计报告发现的优先级，逐批治理 7 项技术债行动；后端常量/CRUD/缓存/配置备份 + 前端 API 工厂化 + Phase 88 收口，使代码质量基线从此不可无声倒退。
 
-**Current focus:** Phase 91 (CRUD 复用 base.Repository[T]) 待 discuss — v1.29 常量集中化双 phase (89+90) 已 SHIPPED
+**Current focus:** Phase 91 (CRUD 复用 base.Repository[T]) planning complete — 4 plans / 4 waves，待执行
 
 ## Current Position
 
-Phase: 91 (待 discuss)
-Plan: —
+Phase: 91 (planned, Ready to execute)
+Plan: 91-01..91-04 (4 plans, wave 1→4 串行)
 Status: Ready to execute
 Last activity: 2026-09-04 -- Phase 91 planning complete
-Resume file: .planning/workstreams/milestone/phases/90-timeouts-port-protocol-concurrency/90-VERIFICATION.md
-Next action: `/gsd:discuss-phase 91 --chain`
+Resume file: .planning/workstreams/milestone/phases/91-crud-base-repository-t-p1/91-01-PLAN.md
+Next action: `/gsd:execute-phase 91`
 
 ### Phase 89 Decisions (D-01..D-19) — captured 2026-09-04
 
