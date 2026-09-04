@@ -13,6 +13,7 @@ import (
 	"github.com/lib/pq"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"gorm.io/gorm"
@@ -501,14 +502,7 @@ func (s *reconciliationServiceImpl) ListExceptions(ctx context.Context, params *
 	}
 
 	// 默认分页
-	current := params.Current
-	if current <= 0 {
-		current = 1
-	}
-	pageSize := params.PageSize
-	if pageSize <= 0 {
-		pageSize = 10
-	}
+	current, pageSize := query.NormalizePagination(params.Current, params.PageSize)
 
 	// 基础查询
 	// 关键修复:assetCode LIKE 过滤在 WHERE 子句里直接引用 `a.devicesn`,
