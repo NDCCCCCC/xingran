@@ -9,17 +9,18 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 
+	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/core/db"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/asset"
-	opsServices "github.com/xingran-next/xingran-go-backend/internal/services/operations"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	opsServices "github.com/xingran-next/xingran-go-backend/internal/services/operations"
 )
 
 // stubWorkstationService 满足 WorkstationService 接口的最小子集,只用于测试 GetByID
@@ -31,7 +32,7 @@ func (s *stubWorkstationService) GetByID(_ context.Context, _ string) (*models.W
 	return s.ws, nil
 }
 
-func (s *stubWorkstationService) List(_ context.Context, _ map[string]interface{}) (*opsServices.PageResult, error) {
+func (s *stubWorkstationService) List(_ context.Context, _ requests.WorkstationListRequest) (*opsServices.PageResult, error) {
 	return nil, nil
 }
 
@@ -63,7 +64,7 @@ func (s *stubWorkstationService) GetWorkstationDeptOptions(_ context.Context, _ 
 	return nil, nil
 }
 
-func (s *stubWorkstationService) SearchWorkstationOptions(_ context.Context, _ map[string]interface{}) ([]opsServices.DropdownOption, error) {
+func (s *stubWorkstationService) SearchWorkstationOptions(_ context.Context, _ requests.WorkstationListRequest) ([]opsServices.DropdownOption, error) {
 	return nil, nil
 }
 
@@ -104,7 +105,7 @@ func newTestCoreForHandler(t *testing.T) *core.Core {
 // newTestWorkstation 构造测试用 Workstation 对象
 func newTestWorkstation(id string) *models.Workstation {
 	return &models.Workstation{
-		BaseModel:      models.BaseModel{ID: id},
+		BaseModel:       models.BaseModel{ID: id},
 		WorkstationName: "测试工位",
 		WorkstationType: 0,
 		Status:          0,

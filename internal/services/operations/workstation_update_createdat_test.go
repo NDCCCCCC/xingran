@@ -82,7 +82,8 @@ func TestWorkstationUpdate_PreservesCreatedAt(t *testing.T) {
 		WorkstationName: "工位A-改名",
 	}
 
-	svc := &workstationService{db: db}
+	// Phase 91-02:经构造器初始化(含 repo 字段——Update 落库已迁移到 base.GORMRepository)
+	svc := NewWorkstationService(db)
 	require.NoError(t, svc.Update(context.Background(), input), "Update should succeed")
 
 	// 关键断言:库中 created_at 仍是原非零值,未被零值覆盖。
@@ -127,7 +128,8 @@ func TestWorkstationUpdate_RecordNotFound(t *testing.T) {
 		)
 	`).Error, "create sys_workstation table")
 
-	svc := &workstationService{db: db}
+	// Phase 91-02:经构造器初始化(含 repo 字段)
+	svc := NewWorkstationService(db)
 	input := &models.Workstation{
 		BaseModel:      models.BaseModel{ID: "does-not-exist"},
 		WorkstationName: "ghost",

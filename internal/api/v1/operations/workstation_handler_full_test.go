@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	opsModels "github.com/xingran-next/xingran-go-backend/internal/models/operations"
 	opsServices "github.com/xingran-next/xingran-go-backend/internal/services/operations"
@@ -19,16 +20,16 @@ import (
 // ReconciliationService is satisfied via stubReconciliationService (see
 // workstation_handler_test.go existing pattern).
 type mockWorkstationService struct {
-	CreateFunc                     func(ctx context.Context, w *models.Workstation) error
-	UpdateFunc                     func(ctx context.Context, w *models.Workstation) error
-	DeleteFunc                     func(ctx context.Context, id string) error
-	GetByIDFunc                    func(ctx context.Context, id string) (*models.Workstation, error)
-	ListFunc                       func(ctx context.Context, p map[string]interface{}) (*opsServices.PageResult, error)
-	BatchDeleteFunc                func(ctx context.Context, ids []string) error
-	BatchUpdatePositionsFunc       func(ctx context.Context, items []opsServices.PositionUpdateItem) error
-	StatisticsFunc                 func(ctx context.Context, p map[string]interface{}) (*opsServices.WorkstationStatisticsResult, error)
-	GetWorkstationDeptOptionsFunc   func(ctx context.Context, orgID string) ([]opsServices.DeptOption, error)
-	SearchWorkstationOptionsFunc   func(ctx context.Context, p map[string]interface{}) ([]opsServices.DropdownOption, error)
+	CreateFunc                    func(ctx context.Context, w *models.Workstation) error
+	UpdateFunc                    func(ctx context.Context, w *models.Workstation) error
+	DeleteFunc                    func(ctx context.Context, id string) error
+	GetByIDFunc                   func(ctx context.Context, id string) (*models.Workstation, error)
+	ListFunc                      func(ctx context.Context, req requests.WorkstationListRequest) (*opsServices.PageResult, error)
+	BatchDeleteFunc               func(ctx context.Context, ids []string) error
+	BatchUpdatePositionsFunc      func(ctx context.Context, items []opsServices.PositionUpdateItem) error
+	StatisticsFunc                func(ctx context.Context, p map[string]interface{}) (*opsServices.WorkstationStatisticsResult, error)
+	GetWorkstationDeptOptionsFunc func(ctx context.Context, orgID string) ([]opsServices.DeptOption, error)
+	SearchWorkstationOptionsFunc  func(ctx context.Context, req requests.WorkstationListRequest) ([]opsServices.DropdownOption, error)
 }
 
 func (m *mockWorkstationService) Create(ctx context.Context, w *models.Workstation) error {
@@ -55,9 +56,9 @@ func (m *mockWorkstationService) GetByID(ctx context.Context, id string) (*model
 	}
 	return nil, errNotImplemented
 }
-func (m *mockWorkstationService) List(ctx context.Context, p map[string]interface{}) (*opsServices.PageResult, error) {
+func (m *mockWorkstationService) List(ctx context.Context, req requests.WorkstationListRequest) (*opsServices.PageResult, error) {
 	if m.ListFunc != nil {
-		return m.ListFunc(ctx, p)
+		return m.ListFunc(ctx, req)
 	}
 	return nil, errNotImplemented
 }
@@ -85,9 +86,9 @@ func (m *mockWorkstationService) GetWorkstationDeptOptions(ctx context.Context, 
 	}
 	return nil, errNotImplemented
 }
-func (m *mockWorkstationService) SearchWorkstationOptions(ctx context.Context, p map[string]interface{}) ([]opsServices.DropdownOption, error) {
+func (m *mockWorkstationService) SearchWorkstationOptions(ctx context.Context, req requests.WorkstationListRequest) ([]opsServices.DropdownOption, error) {
 	if m.SearchWorkstationOptionsFunc != nil {
-		return m.SearchWorkstationOptionsFunc(ctx, p)
+		return m.SearchWorkstationOptionsFunc(ctx, req)
 	}
 	return nil, errNotImplemented
 }
@@ -150,7 +151,7 @@ func TestWorkstationHandler_Create_ServiceError(t *testing.T) {
 func TestWorkstationHandler_List_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &mockWorkstationService{
-		ListFunc: func(_ context.Context, _ map[string]interface{}) (*opsServices.PageResult, error) {
+		ListFunc: func(_ context.Context, _ requests.WorkstationListRequest) (*opsServices.PageResult, error) {
 			return &opsServices.PageResult{Total: 7}, nil
 		},
 	}
@@ -166,7 +167,7 @@ func TestWorkstationHandler_List_BindErrorFallback(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	called := false
 	svc := &mockWorkstationService{
-		ListFunc: func(_ context.Context, _ map[string]interface{}) (*opsServices.PageResult, error) {
+		ListFunc: func(_ context.Context, _ requests.WorkstationListRequest) (*opsServices.PageResult, error) {
 			called = true
 			return &opsServices.PageResult{}, nil
 		},
@@ -182,7 +183,7 @@ func TestWorkstationHandler_List_BindErrorFallback(t *testing.T) {
 func TestWorkstationHandler_List_ServiceError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &mockWorkstationService{
-		ListFunc: func(_ context.Context, _ map[string]interface{}) (*opsServices.PageResult, error) {
+		ListFunc: func(_ context.Context, _ requests.WorkstationListRequest) (*opsServices.PageResult, error) {
 			return nil, errors.New("list err")
 		},
 	}
@@ -438,7 +439,7 @@ func TestWorkstationHandler_GetWorkstationDeptOptions_Error(t *testing.T) {
 func TestWorkstationHandler_SearchWorkstationOptions_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &mockWorkstationService{
-		SearchWorkstationOptionsFunc: func(_ context.Context, _ map[string]interface{}) ([]opsServices.DropdownOption, error) {
+		SearchWorkstationOptionsFunc: func(_ context.Context, _ requests.WorkstationListRequest) ([]opsServices.DropdownOption, error) {
 			return []opsServices.DropdownOption{{Value: "1", Label: "WS1"}}, nil
 		},
 	}
@@ -453,7 +454,7 @@ func TestWorkstationHandler_SearchWorkstationOptions_InvalidJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	called := false
 	svc := &mockWorkstationService{
-		SearchWorkstationOptionsFunc: func(_ context.Context, _ map[string]interface{}) ([]opsServices.DropdownOption, error) {
+		SearchWorkstationOptionsFunc: func(_ context.Context, _ requests.WorkstationListRequest) ([]opsServices.DropdownOption, error) {
 			called = true
 			return nil, nil
 		},
@@ -469,7 +470,7 @@ func TestWorkstationHandler_SearchWorkstationOptions_InvalidJSON(t *testing.T) {
 func TestWorkstationHandler_SearchWorkstationOptions_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &mockWorkstationService{
-		SearchWorkstationOptionsFunc: func(_ context.Context, _ map[string]interface{}) ([]opsServices.DropdownOption, error) {
+		SearchWorkstationOptionsFunc: func(_ context.Context, _ requests.WorkstationListRequest) ([]opsServices.DropdownOption, error) {
 			return nil, errors.New("opt err")
 		},
 	}

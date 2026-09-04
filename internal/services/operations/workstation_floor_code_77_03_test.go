@@ -12,9 +12,15 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
+	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	operationsmodels "github.com/xingran-next/xingran-go-backend/internal/models/operations"
 )
+
+// intPtr 构造 *int（typed request 的 status/type 字段用，Phase 91-02 D-05 改写）
+func intPtr(v int) *int {
+	return &v
+}
 
 // =====================================================================
 // Phase 77-03 Task 2/3 — workstation/floor/code_generator 卫星测试
@@ -109,53 +115,64 @@ func TestImp77_WorkstationCRUD(t *testing.T) {
 	require.NoError(t, db.Exec(`INSERT INTO sys_user (id, username) VALUES ('user-001', 'alice')`).Error)
 
 	t.Run("List name LIKE", func(t *testing.T) {
-		page, err := svc.List(ctx, map[string]interface{}{"name": "工位-1"})
+		page, err := svc.List(ctx, requests.WorkstationListRequest{Name: "工位-1"})
 		require.NoError(t, err)
 		assert.Equal(t, int64(2), page.Total)
 	})
 
 	t.Run("List name LIKE 不命中", func(t *testing.T) {
-		page, err := svc.List(ctx, map[string]interface{}{"name": "ghost"})
+		page, err := svc.List(ctx, requests.WorkstationListRequest{Name: "ghost"})
 		require.NoError(t, err)
 		assert.Zero(t, page.Total)
 	})
 
 	t.Run("List floorId 等值", func(t *testing.T) {
-		page, err := svc.List(ctx, map[string]interface{}{"floorId": floorID})
+		page, err := svc.List(ctx, requests.WorkstationListRequest{FloorID: floorID})
 		require.NoError(t, err)
 		assert.Equal(t, int64(2), page.Total)
 	})
 
 	t.Run("List status 等值", func(t *testing.T) {
-		occupied := int(models.WorkstationStatusOccupied)
-		page, err := svc.List(ctx, map[string]interface{}{"status": occupied})
+		page, err := svc.List(ctx, requests.WorkstationListRequest{
+			StatusRequest: requests.StatusRequest{Status: intPtr(int(models.WorkstationStatusOccupied))},
+		})
 		require.NoError(t, err)
 		assert.Equal(t, int64(1), page.Total)
 	})
 
 	t.Run("List type 等值", func(t *testing.T) {
-		fixed := int(models.WorkstationTypeFixed)
-		page, err := svc.List(ctx, map[string]interface{}{"type": fixed})
+		page, err := svc.List(ctx, requests.WorkstationListRequest{
+			Type: intPtr(int(models.WorkstationTypeFixed)),
+		})
 		require.NoError(t, err)
 		assert.Equal(t, int64(1), page.Total)
 	})
 
 	t.Run("List 状态 status < 0 → 跳过 status 过滤", func(t *testing.T) {
-		// status = -1 (extractor fallback) → 不应用 status 过滤
-		page, err := svc.List(ctx, map[string]interface{}{"status": -1})
+		// status = -1 (GetStatus(-1) 显式传入) → 不应用 status 过滤
+		page, err := svc.List(ctx, requests.WorkstationListRequest{
+			StatusRequest: requests.StatusRequest{Status: intPtr(-1)},
+		})
+		require.NoError(t, err)
+		assert.Equal(t, int64(2), page.Total)
+	})
+
+	t.Run("List type < 0 → 跳过 type 过滤", func(t *testing.T) {
+		// type = -1 → 不应用 type 过滤（P6 -1 跳过语义在 typed 路径的行为锁）
+		page, err := svc.List(ctx, requests.WorkstationListRequest{Type: intPtr(-1)})
 		require.NoError(t, err)
 		assert.Equal(t, int64(2), page.Total)
 	})
 
 	t.Run("List floorCode 通过 ops_floors 子查询", func(t *testing.T) {
-		page, err := svc.List(ctx, map[string]interface{}{"floorCode": "1"})
+		page, err := svc.List(ctx, requests.WorkstationListRequest{FloorCode: "1"})
 		require.NoError(t, err)
 		assert.Equal(t, int64(2), page.Total)
 	})
 
 	t.Run("List orgId EXISTS 子查询", func(t *testing.T) {
 		// buildingID 关联的 building 的 org_id 缺省 — 验证 EXISTS 路径不报错
-		page, err := svc.List(ctx, map[string]interface{}{"orgId": buildingID})
+		page, err := svc.List(ctx, requests.WorkstationListRequest{OrgID: buildingID})
 		require.NoError(t, err)
 		// org_id 缺省, 命中 0
 		_ = page
@@ -207,39 +224,43 @@ func TestImp77_WorkstationOptions(t *testing.T) {
 
 	// SearchWorkstationOptions
 	t.Run("name LIKE", func(t *testing.T) {
-		opts, err := svc.SearchWorkstationOptions(ctx, map[string]interface{}{"name": "工位"})
+		opts, err := svc.SearchWorkstationOptions(ctx, requests.WorkstationListRequest{Name: "工位"})
 		require.NoError(t, err)
 		assert.Len(t, opts, 3)
 	})
 
 	t.Run("floorId 等值", func(t *testing.T) {
-		opts, err := svc.SearchWorkstationOptions(ctx, map[string]interface{}{"floorId": floorID})
+		opts, err := svc.SearchWorkstationOptions(ctx, requests.WorkstationListRequest{FloorID: floorID})
 		require.NoError(t, err)
 		assert.Len(t, opts, 3)
 	})
 
 	t.Run("status 等值", func(t *testing.T) {
-		available := int(models.WorkstationStatusAvailable)
-		opts, err := svc.SearchWorkstationOptions(ctx, map[string]interface{}{"status": available})
+		opts, err := svc.SearchWorkstationOptions(ctx, requests.WorkstationListRequest{
+			StatusRequest: requests.StatusRequest{Status: intPtr(int(models.WorkstationStatusAvailable))},
+		})
 		require.NoError(t, err)
 		assert.GreaterOrEqual(t, len(opts), 1)
 	})
 
 	t.Run("type 等值", func(t *testing.T) {
-		fixed := int(models.WorkstationTypeFixed)
-		opts, err := svc.SearchWorkstationOptions(ctx, map[string]interface{}{"type": fixed})
+		opts, err := svc.SearchWorkstationOptions(ctx, requests.WorkstationListRequest{
+			Type: intPtr(int(models.WorkstationTypeFixed)),
+		})
 		require.NoError(t, err)
 		assert.Equal(t, 2, len(opts))
 	})
 
 	t.Run("floorCode 子查询", func(t *testing.T) {
-		opts, err := svc.SearchWorkstationOptions(ctx, map[string]interface{}{"floorCode": "1"})
+		opts, err := svc.SearchWorkstationOptions(ctx, requests.WorkstationListRequest{FloorCode: "1"})
 		require.NoError(t, err)
 		assert.Len(t, opts, 3)
 	})
 
 	t.Run("status=-1 跳过", func(t *testing.T) {
-		opts, err := svc.SearchWorkstationOptions(ctx, map[string]interface{}{"status": -1})
+		opts, err := svc.SearchWorkstationOptions(ctx, requests.WorkstationListRequest{
+			StatusRequest: requests.StatusRequest{Status: intPtr(-1)},
+		})
 		require.NoError(t, err)
 		assert.Len(t, opts, 3)
 	})
@@ -341,11 +362,11 @@ func TestImp77_WorkstationSearchOrgId(t *testing.T) {
 	}))
 
 	// orgId 不存在 → 0 条
-	opts, err := svc.SearchWorkstationOptions(ctx, map[string]interface{}{"orgId": "ghost-org"})
+	opts, err := svc.SearchWorkstationOptions(ctx, requests.WorkstationListRequest{OrgID: "ghost-org"})
 	require.NoError(t, err)
 	assert.Empty(t, opts)
 
-	page, err := svc.List(ctx, map[string]interface{}{"orgId": "ghost-org"})
+	page, err := svc.List(ctx, requests.WorkstationListRequest{OrgID: "ghost-org"})
 	require.NoError(t, err)
 	assert.Zero(t, page.Total)
 }

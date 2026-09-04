@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/asset"
@@ -17,9 +18,9 @@ import (
 )
 
 type WorkstationHandler struct {
-	service          opsServices.WorkstationService
+	service           opsServices.WorkstationService
 	reconciliationSvc asset.ReconciliationService
-	core             *core.Core
+	core              *core.Core
 }
 
 func NewWorkstationHandler(service opsServices.WorkstationService) *WorkstationHandler {
@@ -87,12 +88,15 @@ func (h *WorkstationHandler) GetWorkstationDeptOptions(c *gin.Context) {
 
 // SearchWorkstationOptions 工位下拉数据源(name LIKE 模糊 + floorId/floorCode/status/type/orgId 筛选,LIMIT 50,读操作不写操作日志)
 // 修复 info-points/index.tsx「所属工位」下拉用 pageSize:1000 + filterOption 客户端截断的 bug。
+//
+// D-05: typed bind；bind 失败降级为零值请求继续查询（零值 request = 空过滤全列表，
+// 与迁移前 bind 失败降级空 map 语义一致；不用 handleJSONBinding 的 400 路径）。
 func (h *WorkstationHandler) SearchWorkstationOptions(c *gin.Context) {
-	var params map[string]interface{}
-	if err := c.ShouldBindJSON(&params); err != nil {
-		params = map[string]interface{}{}
+	var req requests.WorkstationListRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		req = requests.WorkstationListRequest{}
 	}
-	result, err := h.service.SearchWorkstationOptions(c.Request.Context(), params)
+	result, err := h.service.SearchWorkstationOptions(c.Request.Context(), req)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -137,12 +141,15 @@ func (h *WorkstationHandler) Create(c *gin.Context) {
 // @Failure 500 {object} response.Response
 // @Router /ops/workstation/list [post]
 func (h *WorkstationHandler) List(c *gin.Context) {
-	var params map[string]interface{}
-	if err := c.ShouldBindJSON(&params); err != nil {
-		params = make(map[string]interface{})
+	// D-05: typed bind；bind 失败降级为零值请求继续查询（零值 request = 空过滤
+	// 全列表，与迁移前 bind 失败降级空 map 语义一致；不用 handleJSONBinding 的
+	// 400 路径，与现状不符）。
+	var req requests.WorkstationListRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		req = requests.WorkstationListRequest{}
 	}
 
-	result, err := h.service.List(c.Request.Context(), params)
+	result, err := h.service.List(c.Request.Context(), req)
 	if err != nil {
 		response.Error(c, apperrors.InternalServerErrorWithMsg("查询失败"))
 		return
