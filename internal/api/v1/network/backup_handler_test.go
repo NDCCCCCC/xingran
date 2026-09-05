@@ -1,12 +1,16 @@
 package network
 
-// BackupHandler tests (Phase 74-03).
+// BackupHandler tests (Phase 74-03; Restore rewritten for the async taskId
+// contract in Phase 93).
 //
 // ConfigBackupService wraps a device.DeviceExecutor for live fetches; only
 // CreateBackup's success path reaches it (after the handler-side device lookup),
 // so tests inject a nil executor and cover: device-not-found, all DB-only flows
-// (list/content/diff/statistics/delete/history/version), binding errors, and the
-// documented RestoreBackup stub ("配置恢复功能待实现").
+// (list/content/diff/statistics/delete/history/version), and binding errors.
+// ConfigRestoreTaskService also gets a nil executor: StartRestore returns at
+// the validation/mutex/create-task layer without touching devices, and the
+// detached goroutine lands in runRestore's nil-executor guard (task → failed)
+// without affecting HTTP assertions.
 
 import (
 	"net/http"
@@ -20,11 +24,13 @@ import (
 )
 
 func newBackupTestEnv(t *testing.T) *netTestEnv {
-	return newNetworkTestEnv(t, &models.ConfigBackup{}, &models.NetworkDevice{})
+	return newNetworkTestEnv(t, &models.ConfigBackup{}, &models.NetworkDevice{}, &models.ConfigRestoreTask{})
 }
 
 func newBackupHandler(env *netTestEnv) *BackupHandler {
-	return NewBackupHandler(services.NewConfigBackupService(env.db, nil), env.db).WithCore(env.core)
+	backupSvc := services.NewConfigBackupService(env.db, nil)
+	restoreTaskSvc := services.NewConfigRestoreTaskService(env.db, backupSvc, nil)
+	return NewBackupHandler(backupSvc, restoreTaskSvc, env.db).WithCore(env.core)
 }
 
 func seedBackup(t *testing.T, env *netTestEnv, id, deviceID, deviceName string, version int, content string) *models.ConfigBackup {
@@ -41,6 +47,18 @@ func seedBackup(t *testing.T, env *netTestEnv, id, deviceID, deviceName string, 
 	}
 	require.NoError(t, env.db.Create(b).Error)
 	return b
+}
+
+func seedRestoreTask(t *testing.T, env *netTestEnv, id, deviceID, backupID string, status models.RestoreTaskStatus) *models.ConfigRestoreTask {
+	t.Helper()
+	task := &models.ConfigRestoreTask{
+		ID:       id,
+		DeviceID: deviceID,
+		BackupID: backupID,
+		Status:   string(status),
+	}
+	require.NoError(t, env.db.Create(task).Error)
+	return task
 }
 
 func TestBackupHandler_List(t *testing.T) {
@@ -222,6 +240,25 @@ func TestBackupHandler_Restore(t *testing.T) {
 	h := newBackupHandler(env)
 	seedBackup(t, env, "bk-r", "dev-r", "restore-dev", 1, "config")
 
+	t.Run("restore_returns_task_id", func(t *testing.T) {
+		// Phase 93 D-07/D-17: async semantics — handler starts a task and returns
+		// {taskId, status, message} immediately (no device I/O on the request path).
+		w := netServe(t, []netRoute{{http.MethodPost, "/backups/:id/restore", h.Restore}},
+			http.MethodPost, "/backups/bk-r/restore", `{"deviceId":"dev-r"}`)
+		resp := decodeNetResp(t, w)
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, 0, resp.Code)
+		body := string(resp.Data)
+		assert.Contains(t, body, `"taskId"`)
+		assert.NotContains(t, body, `"taskId":""`)
+		assert.Contains(t, body, `"status":"pending"`)
+
+		// task row persisted (mutex queries key off this table)
+		var count int64
+		env.db.Model(&models.ConfigRestoreTask{}).Where("device_id = ? AND backup_id = ?", "dev-r", "bk-r").Count(&count)
+		assert.Equal(t, int64(1), count)
+	})
+
 	t.Run("backup_not_found", func(t *testing.T) {
 		w := netServe(t, []netRoute{{http.MethodPost, "/backups/:id/restore", h.Restore}},
 			http.MethodPost, "/backups/none/restore", `{"deviceId":"dev-r"}`)
@@ -230,14 +267,23 @@ func TestBackupHandler_Restore(t *testing.T) {
 		assert.Equal(t, 500, resp.Code)
 	})
 
-	t.Run("restore_is_a_documented_stub", func(t *testing.T) {
-		// RestoreBackup is a TODO stub — it always fails with 配置恢复功能待实现 (D-12: not fixed here)
+	t.Run("cross_device_rejected", func(t *testing.T) {
+		// D-04: restore is source-device-only — cross-device push is rejected.
+		w := netServe(t, []netRoute{{http.MethodPost, "/backups/:id/restore", h.Restore}},
+			http.MethodPost, "/backups/bk-r/restore", `{"deviceId":"other-dev"}`)
+		resp := decodeNetResp(t, w)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Contains(t, resp.Message, "备份不属于目标设备")
+	})
+
+	t.Run("mutual_exclusion_rejected", func(t *testing.T) {
+		// D-08: one in-flight restore per device.
+		seedRestoreTask(t, env, "task-live", "dev-r", "bk-r", models.RestoreTaskStatusPending)
 		w := netServe(t, []netRoute{{http.MethodPost, "/backups/:id/restore", h.Restore}},
 			http.MethodPost, "/backups/bk-r/restore", `{"deviceId":"dev-r"}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "配置恢复功能待实现")
+		assert.Contains(t, resp.Message, "进行中的恢复任务")
 	})
 
 	t.Run("binding_requires_deviceId", func(t *testing.T) {
@@ -246,6 +292,48 @@ func TestBackupHandler_Restore(t *testing.T) {
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 		assert.Equal(t, 400, resp.Code)
+	})
+}
+
+func TestBackupHandler_RestoreTaskQueries(t *testing.T) {
+	env := newBackupTestEnv(t)
+	h := newBackupHandler(env)
+	seedRestoreTask(t, env, "task-q1", "dev-q", "bk-q", models.RestoreTaskStatusSuccess)
+	seedRestoreTask(t, env, "task-q2", "dev-q2", "bk-q2", models.RestoreTaskStatusFailed)
+
+	t.Run("detail_by_id", func(t *testing.T) {
+		w := netServe(t, []netRoute{{http.MethodPost, "/backups/restore-tasks/:id", h.GetRestoreTask}},
+			http.MethodPost, "/backups/restore-tasks/task-q1", "")
+		resp := decodeNetResp(t, w)
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, 0, resp.Code)
+		body := string(resp.Data)
+		assert.Contains(t, body, `"status":"success"`)
+		assert.Contains(t, body, `"deviceId":"dev-q"`)
+	})
+
+	t.Run("detail_not_found", func(t *testing.T) {
+		w := netServe(t, []netRoute{{http.MethodPost, "/backups/restore-tasks/:id", h.GetRestoreTask}},
+			http.MethodPost, "/backups/restore-tasks/none", "")
+		resp := decodeNetResp(t, w)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Contains(t, resp.Message, "恢复任务不存在")
+	})
+
+	t.Run("list_all", func(t *testing.T) {
+		w := netPost(t, "/backups/restore-tasks/list", h.ListRestoreTasks, `{"current":1,"pageSize":10}`)
+		resp := decodeNetResp(t, w)
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, 0, resp.Code)
+		assert.Contains(t, string(resp.Data), `"total":2`)
+	})
+
+	t.Run("list_filter_by_deviceId", func(t *testing.T) {
+		w := netPost(t, "/backups/restore-tasks/list", h.ListRestoreTasks, `{"current":1,"pageSize":10,"deviceId":"dev-q2"}`)
+		resp := decodeNetResp(t, w)
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, string(resp.Data), `"total":1`)
+		assert.Contains(t, string(resp.Data), `"status":"failed"`)
 	})
 }
 
