@@ -9,10 +9,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 
 const h = vi.hoisted(() => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const created: any[] = [];
   return {
-    created,
     mockGetAccessToken: vi.fn<() => Promise<string>>(),
     mockCacheGet: vi.fn(),
     mockCacheSet: vi.fn(),
@@ -37,7 +34,8 @@ vi.mock("./api", () => ({
   postFormData: (...args: unknown[]) => mockPostFormData(...args),
 }));
 
-// blobAxios(Excel 下载专用 axios 实例)— opsApi 模块加载时 axios.create 的第一个实例
+// blobAxios(Excel 下载专用 axios 实例)— 定义已上移 download.ts(Phase 94 D-04),
+// 测试直接 import 实例本身,不再依赖模块加载顺序推断
 vi.mock("axios", () => {
   const createInstance = () => {
     const instance = Object.assign(vi.fn(), {
@@ -48,7 +46,6 @@ vi.mock("axios", () => {
         response: { use: vi.fn() },
       },
     });
-    h.created.push(instance);
     return instance;
   };
   return { default: { create: () => createInstance() } };
@@ -94,11 +91,18 @@ import {
   workstationApi,
   workstationDeviceApi,
 } from "./opsApi";
+import { blobAxios } from "./download";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const blobAxios = () => h.created[0] as any;
+// blobAxios 直取自 download.ts 导出(94-02 Pitfall 6:删除位置推断)
+/** blobAxios 的测试视型:暴露 mock 的 get/post 与请求拦截器注册点 */
+const mockedBlobAxios = blobAxios as unknown as {
+  get: Mock;
+  post: Mock;
+  interceptors: { request: { use: Mock } };
+};
+
 const blobRequestInterceptor = () =>
-  (blobAxios().interceptors.request.use as Mock).mock.calls[0][0] as (config: any) => Promise<any>;
+  mockedBlobAxios.interceptors.request.use.mock.calls[0][0] as (config: any) => Promise<any>;
 
 beforeAll(() => {
   // jsdom 不实现 URL.createObjectURL — 打桩以覆盖 triggerBrowserDownload
@@ -118,8 +122,8 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   [mockPost, mockGet, mockPostFormData].forEach((m) => m.mockReset());
   [
-    blobAxios().get,
-    blobAxios().post,
+    mockedBlobAxios.get,
+    mockedBlobAxios.post,
     h.mockGetAccessToken,
     h.mockCacheGet,
     h.mockCacheSet,
@@ -350,18 +354,18 @@ describe("Excel 导入导出(blobAxios 链路)", () => {
   });
 
   it("downloadTemplate GET /ops/:type/template 并触发浏览器下载", async () => {
-    blobAxios().get.mockResolvedValueOnce({ status: 200, data: new Blob(["x"]) });
+    mockedBlobAxios.get.mockResolvedValueOnce({ status: 200, data: new Blob(["x"]) });
 
     await excelApi.downloadTemplate("building");
 
-    expect(blobAxios().get).toHaveBeenCalledWith("/ops/building/template", {
+    expect(mockedBlobAxios.get).toHaveBeenCalledWith("/ops/building/template", {
       responseType: "blob",
     });
     expect(URL.createObjectURL).toHaveBeenCalled();
   });
 
   it("downloadTemplate 非 2xx 时抛出下载失败", async () => {
-    blobAxios().get.mockResolvedValueOnce({ status: 500, data: new Blob([]) });
+    mockedBlobAxios.get.mockResolvedValueOnce({ status: 500, data: new Blob([]) });
     await expect(excelApi.downloadTemplate("building")).rejects.toThrow(
       "下载失败: building_template.xlsx"
     );
@@ -380,7 +384,7 @@ describe("Excel 导入导出(blobAxios 链路)", () => {
   });
 
   it("export 从 content-disposition 提取文件名", async () => {
-    blobAxios().post.mockResolvedValueOnce({
+    mockedBlobAxios.post.mockResolvedValueOnce({
       status: 200,
       data: new Blob(["xlsx"]),
       headers: { "content-disposition": 'attachment; filename="%E6%A5%BC%E5%AE%87.xlsx"' },
@@ -388,7 +392,7 @@ describe("Excel 导入导出(blobAxios 链路)", () => {
 
     await excelApi.export("building", { status: 0 });
 
-    expect(blobAxios().post).toHaveBeenCalledWith(
+    expect(mockedBlobAxios.post).toHaveBeenCalledWith(
       "/ops/building/export",
       { status: 0 },
       {
@@ -399,7 +403,7 @@ describe("Excel 导入导出(blobAxios 链路)", () => {
   });
 
   it("export 无 content-disposition 时使用默认文件名", async () => {
-    blobAxios().post.mockResolvedValueOnce({ status: 200, data: new Blob(["x"]), headers: {} });
+    mockedBlobAxios.post.mockResolvedValueOnce({ status: 200, data: new Blob(["x"]), headers: {} });
     await expect(excelApi.export("floor", {})).resolves.toBeUndefined();
     expect(URL.createObjectURL).toHaveBeenCalled();
   });
@@ -412,10 +416,10 @@ describe("Excel 导入导出(blobAxios 链路)", () => {
   });
 
   it("deptApi.exportMapping GET /ops/workstation/dept-mapping-template", async () => {
-    blobAxios().get.mockReset();
-    blobAxios().get.mockResolvedValueOnce({ status: 200, data: new Blob(["map"]) });
+    mockedBlobAxios.get.mockReset();
+    mockedBlobAxios.get.mockResolvedValueOnce({ status: 200, data: new Blob(["map"]) });
     await deptApi.exportMapping();
-    expect(blobAxios().get).toHaveBeenCalledWith("/ops/workstation/dept-mapping-template", {
+    expect(mockedBlobAxios.get).toHaveBeenCalledWith("/ops/workstation/dept-mapping-template", {
       responseType: "blob",
     });
   });
@@ -542,9 +546,9 @@ describe("assetApi(运维资产)/componentApi", () => {
   });
 
   it("excel.export 走 blobAxios 并返回成功信封", async () => {
-    blobAxios().post.mockResolvedValueOnce({ status: 200, data: new Blob(["x"]), headers: {} });
+    mockedBlobAxios.post.mockResolvedValueOnce({ status: 200, data: new Blob(["x"]), headers: {} });
     const result = await assetApi.excel.export({ status: 0 });
-    expect(blobAxios().post).toHaveBeenCalledWith(
+    expect(mockedBlobAxios.post).toHaveBeenCalledWith(
       "/ops/asset/export",
       { status: 0 },
       {
