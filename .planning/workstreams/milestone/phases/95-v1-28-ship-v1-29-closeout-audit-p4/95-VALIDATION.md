@@ -47,7 +47,7 @@ revised: 2026-09-06
 | 95-02-T2 | 95-02 | 2 | CLOSEOUT-03② 前置 | — | — | go test flaky 复验 | `go test -count=10 -run "TestBackupHandler_Restore" ./internal/api/v1/network/` 全绿 + `go test -count=1 -run "TestJbu8003" ./internal/api/v1/` 绿 | ✅ | ⬜ pending |
 | 95-02-T3 | 95-02 | 2 | CLOSEOUT-03①②④⑤⑥⑦（D-06） | — | — | gate 跑批 | go build/test + npm 四件套 + 双 coverage gate，逐项 exit code 记录（② 含 `./...` 补充留证） | ✅ | ⬜ pending |
 | 95-02-T4 | 95-02 | 2 | CLOSEOUT-03⑧（D-07/D-08） | T-95-06 | audit 证据实名口径（89-01..03 / 90-01..04-SUMMARY.md，无幻影引用） | audit 报告存在性 + 结构 | `test -f .planning/milestones/v1.29-MILESTONE-AUDIT.md` + `grep -c "^## "` ≥8 + `grep -c "45/45"` + `grep -c "89-01-SUMMARY"` + `grep -c "90-04-SUMMARY"`（实名口径） | ❌ → W0（本任务建） | ⬜ pending |
-| 95-02-T5 | 95-02 | 2 | CLOSEOUT-03⑨ + 记账闭环（D-04/D-05/D-09） | — | — | grep 核对 | `grep -c "JOBSTAT-01" .planning/REQUIREMENTS.md` + `grep -c "^\- \[x\] \*\*CLOSEOUT-03\*\*" .planning/REQUIREMENTS.md` + `head -3 94-HUMAN-UAT.md \| grep -c resolved` + `grep -c "✅ SHIPPED 2026-09-06" .planning/MILESTONES.md` + 两 ROADMAP `grep -c "45/45"` | ❌ → W0（UAT/记账落点由本任务改写） | ⬜ pending |
+| 95-02-T5 | 95-02 | 2 | CLOSEOUT-03⑨ + 记账闭环（D-04/D-05/D-09） | — | — | grep 核对 | `grep -c "JOBSTAT-01" .planning/REQUIREMENTS.md` + `grep -c "^\- \[x\] \*\*CLOSEOUT-03\*\*" .planning/REQUIREMENTS.md` + `head -3 94-HUMAN-UAT.md | grep -cE "^status: (resolved|partial)"\| grep -c resolved` + `grep -c "✅ SHIPPED 2026-09-06" .planning/MILESTONES.md` + 两 ROADMAP `grep -c "45/45"` | ❌ → W0（UAT/记账落点由本任务改写） | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
