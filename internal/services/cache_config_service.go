@@ -86,10 +86,11 @@ const (
 // 值语义: 请求次数(整数),非分钟;默认值与既有 rate_limiter.go 硬编码一致(D-17)
 //
 // 12 键清单(D-16):
-//   rate_limit.read.per_minute     rate_limit.read.per_hour     rate_limit.read.per_day
-//   rate_limit.write.per_minute    rate_limit.write.per_hour    rate_limit.write.per_day
-//   rate_limit.admin.per_minute    rate_limit.admin.per_hour    rate_limit.admin.per_day
-//   rate_limit.default.per_minute  rate_limit.default.per_hour  rate_limit.default.per_day
+//
+//	rate_limit.read.per_minute     rate_limit.read.per_hour     rate_limit.read.per_day
+//	rate_limit.write.per_minute    rate_limit.write.per_hour    rate_limit.write.per_day
+//	rate_limit.admin.per_minute    rate_limit.admin.per_hour    rate_limit.admin.per_day
+//	rate_limit.default.per_minute  rate_limit.default.per_hour  rate_limit.default.per_day
 const (
 	RateLimitReadPerMinute    = "rate_limit.read.per_minute"    // 默认 30,   Min 1, Max 10000
 	RateLimitReadPerHour      = "rate_limit.read.per_hour"      // 默认 500,  Min 1, Max 100000

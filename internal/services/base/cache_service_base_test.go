@@ -15,6 +15,7 @@
 //   - package base_test(外部测试包): 测试需 import internal/services 与
 //     internal/services/system 做双装配,in-package 会成环
 //     (system→services root→base)。
+//
 // =====================================================================
 package base_test
 

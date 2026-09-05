@@ -2,7 +2,7 @@
 // Phase 92-01 (D-02): 缓存提供者抽象单一权威位置。
 //
 // 本文件内容自 internal/services/system/cache_provider.go 逐字迁入
-//（仅 package 子句变更；唯一偏差：私有 setValue 导出为 SetValue——同包
+// （仅 package 子句变更；唯一偏差：私有 setValue 导出为 SetValue——同包
 // 消费者 CacheAdapter 也依赖它，见 SetValue 注释）：CacheProvider 9 方法
 // 接口 + NoOpCacheProvider 全部 9 方法 + 反射赋值函数 + CacheStats/CacheEntry
 // 伴生类型。system 侧经 type alias（同一类型）原位引用，20+ 消费文件零改动。
