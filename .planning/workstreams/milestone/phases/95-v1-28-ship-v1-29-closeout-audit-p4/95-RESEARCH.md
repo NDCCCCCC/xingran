@@ -120,9 +120,10 @@
     TestJbu8003_GetJobStatistics（时区日界）──seed 修法──> 全天候绿
   七 gate 跑批 ──逐项 exit code + 关键数字──> audit 报告「最终 gate 实测」节
   89-95 证据索引 + 45/45 追溯 + V130 转记 + type-check 缺陷全程记录
-  ──> .planning/milestones/v1.29-MILESTONE-AUDIT.md
-  ──> MILESTONES.md v1.29 段 ✅ SHIPPED + PROJECT.md v1.29 段标记（D-09）
-  ──> 94-HUMAN-UAT.md status 流转（D-05）
+  ──> .planning/milestones/v1.29-MILESTONE-AUDIT.md（T4，commit A）
+  ──> MILESTONES.md v1.29 段 ✅ SHIPPED + PROJECT.md v1.29 段标记（D-09，T5）
+  ──> 94-HUMAN-UAT.md status 流转（D-05，T5）
+  ──> JOBSTAT-01 V130 登记 + CLOSEOUT-03 勾选 + 两 ROADMAP Progress 收口 45/45（T5，commit B）
 ```
 
 ### Pattern 1: gate 链合并执行（避免重复跑全量套件）
@@ -221,7 +222,7 @@ v1.27-MILESTONE-AUDIT.md 实测结构 → v1.29 对应：
 ### Pitfall 7: 89/90 两相无 VERIFICATION.md
 **What goes wrong:** D-08 要求「每项引用其 phase 的 VERIFICATION.md/关键 commit」——实测 89-pagination-constants/ 与 90-timeouts-port-protocol-concurrency/ 目录仅有 PLAN+SUMMARY+CONTEXT+DISCUSSION-LOG 全套，无 VERIFICATION.md（91/92/93/94 均有）。
 **Why it happens:** 89/90 完成于 2026-09-04（verifier 工作流未逐相执行的早期），STATE.md 引用的「90-VERIFICATION gaps」实为 SUMMARY 内记载。
-**How to avoid:** audit 证据索引对 89/90 用「NN-0M-SUMMARY.md + 关键 commit」兜底（D-08 措辞本身已留 `/关键 commit` 分支）。另注意 93-VERIFICATION.md 无 YAML frontmatter（goal-backward 内联格式，结论行 `✅ PHASE GOAL ACHIEVED (5/5)`）。
+**How to avoid:** audit 证据索引对 89/90 用**各 plan SUMMARY 实名 + 关键 commit 区间**兜底（D-08 措辞本身已留 `/关键 commit` 分支）：89 引用 `89-01-SUMMARY.md` / `89-02-SUMMARY.md` / `89-03-SUMMARY.md` 三份（commits 238283c..3559626），90 引用 `90-01-SUMMARY.md` / `90-02-SUMMARY.md` / `90-03-SUMMARY.md` / `90-04-SUMMARY.md` 四份（commits b51f44c..3a2efe5）；引用前 `ls` 存在性核对，禁用任何「NN-0M-SUMMARY.md」类占位名。另注意 93-VERIFICATION.md 无 YAML frontmatter（goal-backward 内联格式，结论行 `✅ PHASE GOAL ACHIEVED (5/5)`）。
 
 ### Pitfall 8: 前端 coverage gate 的 cwd 基准
 **What goes wrong:** `check-frontend-coverage.sh` 与 `.coverage-fe-floors` 在仓库根，`coverage-final.json` 在 xingran-react-frontend/coverage/——CI :182 显式 `working-directory: .` 覆盖 job 级 frontend 目录。
@@ -246,7 +247,7 @@ v1.27-MILESTONE-AUDIT.md 实测结构 → v1.29 对应：
 
 ### 失败 2：TestJbu8003_GetJobStatistics（internal/api/v1）——时区日界 flake（含潜在生产缺陷）
 - **现象**：`有种子_计数正确` subtest 断言今日成功/失败 = 1 实得 0；凌晨（本地 00:00–08:00 +08）窗口确定性失败（本研究 05:01/05:18 两次复现），白天必然通过——解释了历次白天验证零暴露。
-- **根因链（源码级实证）**：`job_utils.go:52` `today := time.Now().Format("2006-01-02")`（本地日界）→ 查询 `DATE(created_at) = ?`；glebarez 驱动默认写时间格式 `"2006-01-02 15:04:05.999999999-07:00"`（驱动 sqlite.go:296/352，**保留 +08:00 偏移**）→ sqlite `DATE()` 对带偏移值**换算 UTC 取日期** → 本地 00:00–08:00 间 UTC 日期是前一天 → 永不匹配 → 计数 0。
+- **根因链（源码级实证）**：`job_utils.go:57` `today := time.Now().Format("2006-01-02")`（本地日界）→ 查询 `DATE(created_at) = ?`；glebarez 驱动默认写时间格式 `"2006-01-02 15:04:05.999999999-07:00"`（驱动 sqlite.go:296/352，**保留 +08:00 偏移**）→ sqlite `DATE()` 对带偏移值**换算 UTC 取日期** → 本地 00:00–08:00 间 UTC 日期是前一天 → 永不匹配 → 计数 0。（注：日界行在 :57；同函数 :52 为 `stats["paused"]` 赋值行，与日界无关。）
 - **连带发现（潜在生产缺陷）**：生产 `GetJobStatistics` 在早晨窗口同样会把本地当天前 8 小时的 JobLog 计到「昨日」——今日成功/失败看板少计。修复生产属行为变更（D-04 红线 + 需回归测试），**不在本相修**：按 Phase 92 WR-01..05 先例登记 V130-CANDIDATES（audit 转记），audit 报告「新增发现」节记录。
 - **本相修复路径（test-infra）**：种子 JobLog 显式 `CreatedAt: time.Date(y, m, d, 12, 0, 0, 0, time.Local)`（正午本地在 +08 下 UTC 同日，全天候稳定）——单文件单测试改动。
 
@@ -335,8 +336,8 @@ passed: 2
 
 | v1.29 行动 | Phase | VERIFICATION.md | 关键证据/数字 | 关键 commit |
 |-----------|-------|-----------------|--------------|-------------|
-| PAGINATION 常量集中化 | 89 (3 plans) | **无**（用 SUMMARY 兜底） | 3 常量 + `NormalizePagination` 唯一入口 + AST Stability/Count 双锁 | 238283c..3559626 |
-| TIMEOUTS/PORT/PROTOCOL/CONCURRENCY | 90 (4 plans) | **无**（用 SUMMARY 兜底） | 4 leaf const pkg 10 常量 + AST 锁值 10 tests | b51f44c..3a2efe5 |
+| PAGINATION 常量集中化 | 89 (3 plans) | **无**（用各 plan SUMMARY 实名兜底：89-01/02/03-SUMMARY.md） | 3 常量 + `NormalizePagination` 唯一入口 + AST Stability/Count 双锁 | 238283c..3559626 |
+| TIMEOUTS/PORT/PROTOCOL/CONCURRENCY | 90 (4 plans) | **无**（用各 plan SUMMARY 实名兜底：90-01..04-SUMMARY.md） | 4 leaf const pkg 10 常量 + AST 锁值 10 tests | b51f44c..3a2efe5 |
 | CRUD 复用 base.Repository[T] | 91 (4 plans) | `91-VERIFICATION.md` status: **passed** 8/9 (+1 OVR-91-01) | 11/11 services 迁入 GORMRepository[T] + 生产口径 +408 LOC | 5d0008b..963defe |
 | 缓存层三处统一 | 92 (4 plans) | `92-VERIFICATION.md` status: **passed** 10/10（resolved 2026-09-05） | 32 处 GetOrSet 收敛 + 42 处失效归一 + 207 口径 + invariants 锁 | 92-04 收口（git log 区间可查） |
 | config_backup TODO 闭环 | 93 (6 plans) | `93-VERIFICATION.md`（无 frontmatter，结论 `✅ PHASE GOAL ACHIEVED` 5/5） | gzip helpers (:603/:617) + RestoreConfig + 异步任务 + 93_NN 19 用例 + Migrate211 | a4bfc71（93-05）等 |
@@ -363,27 +364,29 @@ passed: 2
 | A4 | 全量 go test 本地 ~7-9min（两轮实测 04:49→04:56 / ~05:00→05:09）；npm test:coverage 本地 ~17min（94 verifier 单源） | Code Examples | 低——仅影响 plan 工时估算；CI 口径 timeout 15m（后端）/15m（前端 job）为硬上限参考 |
 | A5 | 根 `tests/` 集成测试在 `go test ./...` 下自跳过不致失败（SKIP_E2E 默认 + SM2 keys 检查守卫 + v1.26 全仓绿先例） | Pitfall 3 | 低——未在本会话实跑 `./...`；若 planner 选字面口径，executor 首跑即验证 |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **gate ② 两个 flaky 测试的处置方式**
+> 2026-09-06 修订：五问均已裁定并落入 95-02 计划，以下为决策落点注记。
+
+1. **gate ② 两个 flaky 测试的处置方式** — ✅ RESOLVED：**95-02 T2 必做**（修 + `-count=10` 复验，先于全量 gate）；Jbu8003 生产边界缺陷 **JOBSTAT-01 登记 V130-CANDIDATES**（95-02 T5 落账 REQUIREMENTS，本相不修）
    - What we know: 均为 test-infra 缺陷（非生产行为），修复路径明确（见 § Gate ②），符合 D-04 红线
    - What's unclear: planner 是否将其作为 95-02 必做 task（本研究推荐：必做——否则 CLOSEOUT-03「go test 0 失败」无法诚实达成）以及是否同步把 Jbu8003 生产边界缺陷登记 V130-CANDIDATES
-   - Recommendation: 95-02 增加「gate ② 前置处置」task（修 + count=10 验证）；生产缺陷走 V130 转记（与 D-07 V130 段合并）
-2. **D-06 gate ② 字面 `./...` vs CI 三包口径**
+   - Recommendation: 95-02 增加「gate ② 前置处置」task（修 + count=10 验证）；生产缺陷走 V130 转记（与 D-07 V130 段合并）→ **已采纳**
+2. **D-06 gate ② 字面 `./...` vs CI 三包口径** — ✅ RESOLVED：**双口径**——CI 三包为主记录（audit 主记录）+ 字面 `./...` 一次性补充留证（95-02 T3 步骤 2/3，audit 报告写明口径声明）
    - What we know: CI 用三包口径并注释了排除原因；根 tests/ 自带守卫
    - What's unclear: audit 报告采用哪个口径作为「0 失败」的正式记录
-   - Recommendation: 三包口径为主（与 coverage gate CI 锚定一致 + 省时）；字面 `./...` 可作一次性补充跑
-3. **未跟踪文件处置（Pitfall 4）**
+   - Recommendation: 三包口径为主（与 coverage gate CI 锚定一致 + 省时）；字面 `./...` 可作一次性补充跑 → **已采纳为双口径**
+3. **未跟踪文件处置（Pitfall 4）** — ✅ RESOLVED：**记录放行**（选项 c）——跑批前快照 commit SHA + `git status --short`，4 个未跟踪测试文件单列标注「随跑批执行且全绿」，3 项杂物登记；不 stash 不入库（95-02 T3 步骤 1；用户 2026-09-06 修订裁定，覆盖本研究 stash 建议）
    - What we know: 4 个未跟踪测试全绿但未提交；另有 3 项杂物
    - What's unclear: 入库（独立 commit）/ stash / 记录放行，三选一
-   - Recommendation: 跑批前 `git stash -u` 保证 audit 复现性（gate 结果锚定干净 commit SHA）；4 个测试文件的去留属独立决策，建议 audit 报告附注登记，不并入本相
-4. **push/CI 实证是否入 scope**
+   - Recommendation: 跑批前 `git stash -u` 保证 audit 复现性 → **未采纳，改为记录放行（audit 报告写明工作树状态保证可复现）**
+4. **push/CI 实证是否入 scope** — ✅ RESOLVED：**不入 scope，不 push**——audit 如实记录本地口径 + CI 滞后 168 commits；push 决策留用户（73-05 先例）（95-02 T3 步骤 7）
    - What we know: v1.29 全程未推送（168 commits）；D-06/D-11 均未提及 push
    - What's unclear: 「最终 gate 全绿」是否要求 CI 见证
-   - Recommendation: 不入 scope（CONTEXT 边界未列）；audit 如实记录本地口径 + CI 滞后；push 决策留 orchestrator/user（73-05 先例）
-5. **`type-check:strict` 同类空转是否一并修**
+   - Recommendation: 不入 scope（CONTEXT 边界未列）→ **已采纳**
+5. **`type-check:strict` 同类空转是否一并修** — ✅ RESOLVED：**不修**——仅修 CI 引用的 `type-check`；`type-check:strict` 在 audit 注记登记（CI 未引用无消费方，避免扩大 D-11「除 D-03 修复线」解释面）（95-02 T1 步骤 1 + T4 章节 g）
    - What we know: 同为裸 tsc（Files: 0），CI 未引用，无消费方证据
-   - Recommendation: 最小方案 = 仅修 CI 引用的 `type-check`；`type-check:strict` 在 audit 注记登记（避免扩大 D-11「除 D-03 修复线」的解释面）
+   - Recommendation: 最小方案 = 仅修 CI 引用的 `type-check`；`type-check:strict` 在 audit 注记登记 → **已采纳**
 
 ## Environment Availability
 
@@ -418,14 +421,14 @@ passed: 2
 | CLOSEOUT-01 | MILESTONES v1.28 段四件套齐备 + REQUIREMENTS/ROADMAP 措辞校准落地 | 文档核对（grep 断言） | `grep -c "45.13\|24.87\|Phase 88\|保留作历史" .planning/MILESTONES.md`（期望全命中）+ `grep -c "核对确认" .planning/REQUIREMENTS.md` | ✅ 对象文件均存在 |
 | CLOSEOUT-02 | PROJECT.md:35 SHIPPED+ARCHIVED 标记 + workstream 目录完整性 | 文档核对（grep + ls） | `sed -n 35p .planning/PROJECT.md \| grep -c "SHIPPED + ARCHIVED"`；`ls .planning/workstreams/frontend-coverage/{STATE,ROADMAP}.md` | ✅ 均存在（本研究已实测） |
 | CLOSEOUT-03① | go build 0 错误 | gate | `go build ./...`（exit 0） | ✅ |
-| CLOSEOUT-03② | go test 0 失败 | gate（前置：2 个 flaky 修复 + count=10） | `go test -timeout 15m -count=1 ./internal/... ./pkg/... ./cmd/...`（exit 0） | 前置修复 ❌ Wave 0（95-02 内做） |
-| CLOSEOUT-03③ | type-check 真检查 0 错误 | gate（前置：D-03 两处修复） | `cd xingran-react-frontend && npm run type-check`（exit 0 且 >1s） | 前置修复 ❌ Wave 0 |
+| CLOSEOUT-03② | go test 0 失败 | gate（前置：2 个 flaky 修复 + count=10） | `go test -timeout 15m -count=1 ./internal/... ./pkg/... ./cmd/...`（exit 0） | 前置修复 ❌ Wave 0（95-02 T2 内做） |
+| CLOSEOUT-03③ | type-check 真检查 0 错误 | gate（前置：D-03 两处修复） | `cd xingran-react-frontend && npm run type-check`（exit 0 且 >1s） | 前置修复 ❌ Wave 0（95-02 T1） |
 | CLOSEOUT-03④ | lint 0 errors | gate | `npm run lint`（exit 0；warnings ≈1389 存量） | ✅ |
 | CLOSEOUT-03⑤ | 前端全量测试绿 | gate | `npx vitest run`（94 末态 554 文件 / 3800 tests） | ✅ |
 | CLOSEOUT-03⑥ | 后端 coverage gate | gate | `bash .github/scripts/check-coverage.sh coverage.out .coverage-threshold`（exit 0，≥77.5%） | ✅ |
 | CLOSEOUT-03⑦ | 前端 coverage gate | gate | `bash .github/scripts/check-frontend-coverage.sh xingran-react-frontend/coverage/coverage-final.json .coverage-fe-floors`（exit 0，45/45 dirs） | ✅ |
-| CLOSEOUT-03⑧ | v1.29-MILESTONE-AUDIT.md 生成（六段 + type-check 缺陷章节 + 45/45） | 文档存在性 + 结构 grep | `grep -c "^## " .planning/milestones/v1.29-MILESTONE-AUDIT.md`（≥6）；`grep -c "45/45\|type-check" <audit 文件>` | ❌ 本相交付物 |
-| CLOSEOUT-03⑨ | SHIPPED 标记（D-09）+ 94-HUMAN-UAT 状态流转（D-05） | 文档核对（grep） | `grep -c "✅ SHIPPED" .planning/MILESTONES.md`（v1.29 段）；`head -3 <94-HUMAN-UAT.md> \| grep -c resolved` | ❌ 本相交付物 |
+| CLOSEOUT-03⑧ | v1.29-MILESTONE-AUDIT.md 生成（六段 + type-check 缺陷章节 + 45/45） | 文档存在性 + 结构 grep | `grep -c "^## " .planning/milestones/v1.29-MILESTONE-AUDIT.md`（≥6）；`grep -c "45/45\|type-check" <audit 文件>` | ❌ 本相交付物（95-02 T4） |
+| CLOSEOUT-03⑨ | SHIPPED 标记（D-09）+ 94-HUMAN-UAT 状态流转（D-05）+ CLOSEOUT-03 记账闭环 | 文档核对（grep） | `grep -c "✅ SHIPPED" .planning/MILESTONES.md`（v1.29 段）；`head -3 <94-HUMAN-UAT.md> \| grep -c resolved`；`grep -c "45/45" .planning/ROADMAP.md .planning/workstreams/milestone/ROADMAP.md` | ❌ 本相交付物（95-02 T5） |
 
 ### Sampling Rate
 
@@ -435,9 +438,9 @@ passed: 2
 
 ### Wave 0 Gaps
 
-- [ ] `newNetworkTestEnv` SetMaxOpenConns(1)（或 shared-cache DSN）— gate ② 前置（flake 修复，先于全量跑）
-- [ ] `api_v1_tail_80_03_test.go` JobLog 种子 CreatedAt 正午化 — gate ② 前置（日界修复）
-- [ ] `package.json` type-check script + `useRestoreTask.ts:47` — gate ③ 前置（D-03）
+- [ ] `newNetworkTestEnv` SetMaxOpenConns(1)（或 shared-cache DSN）— gate ② 前置（flake 修复，先于全量跑）→ 95-02 T2
+- [ ] `api_v1_tail_80_03_test.go` JobLog 种子 CreatedAt 正午化 — gate ② 前置（日界修复）→ 95-02 T2
+- [ ] `package.json` type-check script + `useRestoreTask.ts:47` — gate ③ 前置（D-03）→ 95-02 T1
 - [ ] Framework install: 无需（全部既有）
 
 ## Security Domain
@@ -473,11 +476,11 @@ passed: 2
 **go test 实测（go 1.24.5，两轮全量 + 单包隔离 + count=10）：**
 - 全量两轮均 2 FAIL：TestBackupHandler_Restore（network）/ TestJbu8003_GetJobStatistics（api/v1）
 - 隔离跑时绿时红 + count=10 FAIL → flake 定性
-- 根因链源码直读：handlers_test_helpers_test.go:48（:memory: 无 MaxOpenConns）/ job_utils.go:52（本地日界）+ glebarez sqlite.go:295-303/348-353（默认写格式带偏移）/ sqlite DATE() 语义（UTC 取日期）
+- 根因链源码直读：handlers_test_helpers_test.go:48（:memory: 无 MaxOpenConns）/ job_utils.go:57（本地日界；:52 为 stats[paused] 与日界无关）+ glebarez sqlite.go:295-303/348-353（默认写格式带偏移）/ sqlite DATE() 语义（UTC 取日期）
 
 **关键文件直读：** 95-CONTEXT.md / REQUIREMENTS.md（根+workstream）/ STATE.md / ROADMAP.md（根+workstream）/ PROJECT.md / MILESTONES.md / v1.27-MILESTONE-AUDIT.md / 94-VERIFICATION.md / 94-HUMAN-UAT.md / 92-HUMAN-UAT.md / 91+92+93-VERIFICATION.md frontmatter / 94-03-PLAN.md:219（gate 链）/ 94-03-SUMMARY.md:85,116 / 94-VALIDATION.md:53 / ci.yml（:62-77 后端 gate、:145-200 前端 gate）/ check-coverage.sh 头注（exit 0/1/2/4/5）/ .coverage-threshold（77.5）/ .coverage-fe-floors / tsconfig{,.app,.node}.json / package.json / useRestoreTask.ts / types/base.ts:11（data?: T）/ backup_handler_test.go / api_v1_tail_80_03_test.go / config_backup_service.go:603,617
 
-**git/gh 实证：** a4bfc71 = 2026-09-05 20:26 +0800；`origin/main...HEAD` = 0/168；CI 末次 run 33713650858（2026-09-03 success）；VERIFICATION.md 存在性清单（89/90 缺）；requirement 计数 grep = 45
+**git/gh 实证：** a4bfc71 = 2026-09-05 20:26 +0800；`origin/main...HEAD` = 0/168；CI 末次 run 33713650858（2026-09-03 success）；VERIFICATION.md 存在性清单（89/90 缺）；requirement 计数 grep = 45；89/90 各 plan SUMMARY 实名清单（89-01/02/03、90-01..04，checker 复核 ls 确认）
 
 ## Metadata
 
@@ -487,5 +490,5 @@ passed: 2
 - audit 证据面: HIGH — 全部文件存在性与数字逐项实测（45/41 偏差、89/90 缺 VERIFICATION、BACKUP-CLOSED 记账遗漏均为实锤）
 - Pitfalls: HIGH — Pitfall 1 为本研究自身踩中复现
 
-**Research date:** 2026-09-06
+**Research date:** 2026-09-06（同日修订：Pitfall 7 证据实名口径 + job_utils.go 日界锚 :52→:57 + Open Questions 五问裁定落点）
 **Valid until:** 本相为 closeout 相，事实全部锚定当前 commit（f173991+ 工作树）；只要不 rebase/重置，数字长期有效。若 95-02 执行前有新 commit 入库，需复核 § 记账补漏清单与 § Gate ② 两测试状态。
