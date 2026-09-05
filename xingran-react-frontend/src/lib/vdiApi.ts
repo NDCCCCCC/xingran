@@ -4,7 +4,7 @@
  */
 
 import { post } from "./api";
-import type { PageResponse } from "@/types";
+import { createResourceApi } from "./apiFactory";
 import type {
   VirtualMachine,
   VDIServer,
@@ -28,26 +28,22 @@ import type {
 
 // ==================== 虚拟机 API（完整VDI API集成）====================
 
+const vmCrud = createResourceApi<VirtualMachine>({ basePath: "/vdi/vms" });
+
 export const vmApi = {
-  // 基础 CRUD
+  ...vmCrud,
+
+  // 基础 CRUD — list/create 与工厂签名不同构,SPREAD+OVERRIDE 原样保留（Phase 94 D-08）:
+  // - list: VMListParams 是 interface,工厂 list 的 PageParams & Record<string,unknown>
+  //   参数会拒绝 interface 变量直传(VirtualMachineList/index.tsx:186-191 实锤 TS2345)
+  // - create: CreateVMRequest 含 vtp_id/count 等实体外字段且缺 vm_id 必选字段,双向不可赋值
+  // get/update/delete 类型兼容,来自工厂 spread
   list: async (params: VMListParams) => {
     return await post<VMPageResponse>("/vdi/vms/list", params);
   },
 
-  get: async (id: string) => {
-    return await post<VirtualMachine>(`/vdi/vms/${id}`, {});
-  },
-
   create: async (data: CreateVMRequest) => {
     return await post<VirtualMachine>("/vdi/vms", data);
-  },
-
-  update: async (id: string, data: UpdateVMRequest) => {
-    return await post<void>(`/vdi/vms/${id}/update`, data);
-  },
-
-  delete: async (id: string) => {
-    return await post<void>(`/vdi/vms/${id}/delete`, {});
   },
 
   // VDI 操作（调用 VDI API）
@@ -141,26 +137,12 @@ export const vmApi = {
 
 // ==================== VDI 服务器 API ====================
 
+// 纯 SPREAD 接入（Phase 94 D-08）:CreatePayload 排除集含 snake_case created_at/updated_at,
+// VDIServerConfig 对 Partial<CreatePayload<VDIServer>> 可赋值（RESEARCH tsc 实测）
+const vdiServerCrud = createResourceApi<VDIServer>({ basePath: "/vdi/servers" });
+
 export const vdiServerApi = {
-  list: async (params: { current: number; pageSize: number }) => {
-    return await post<PageResponse<VDIServer>>("/vdi/servers/list", params);
-  },
-
-  get: async (id: string) => {
-    return await post<VDIServer>(`/vdi/servers/${id}`, {});
-  },
-
-  create: async (data: VDIServerConfig) => {
-    return await post<VDIServer>("/vdi/servers", data);
-  },
-
-  update: async (id: string, data: Partial<VDIServerConfig>) => {
-    return await post<void>(`/vdi/servers/${id}/update`, data);
-  },
-
-  delete: async (id: string) => {
-    return await post<void>(`/vdi/servers/${id}/delete`, {});
-  },
+  ...vdiServerCrud,
 
   testConnection: async (id: string) => {
     return await post<void>(`/vdi/servers/${id}/test`, {});
