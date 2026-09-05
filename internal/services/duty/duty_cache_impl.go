@@ -7,6 +7,7 @@ import (
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"gorm.io/gorm"
 )
@@ -297,35 +298,35 @@ func (s *dutyCacheServiceImpl) UpdateDutyConfig(ctx context.Context, config *mod
 // InvalidateTodayDutyCache 失效今日值班缓存
 func (s *dutyCacheServiceImpl) InvalidateTodayDutyCache(ctx context.Context) error {
 	keys := []string{"duty:today"}
-	systemServices.InvalidateCacheByKey(ctx, s.cache, keys, "DUTY")
+	base.Invalidate(ctx, s.cache, keys, "DUTY")
 	return nil
 }
 
 // InvalidateMonthlyScheduleCache 失效指定月份排班缓存
 func (s *dutyCacheServiceImpl) InvalidateMonthlyScheduleCache(ctx context.Context, year, month int) error {
 	keys := []string{fmt.Sprintf("duty:monthly:%d:%d", year, month)}
-	systemServices.InvalidateCacheByKey(ctx, s.cache, keys, "DUTY")
+	base.Invalidate(ctx, s.cache, keys, "DUTY")
 	return nil
 }
 
 // InvalidateAllScheduleCache 失效所有排班缓存
 func (s *dutyCacheServiceImpl) InvalidateAllScheduleCache(ctx context.Context) error {
 	keys := []string{"duty:*"}
-	systemServices.InvalidateCacheByPattern(ctx, s.cache, keys, "DUTY")
+	base.InvalidatePattern(ctx, s.cache, keys, "DUTY")
 	return nil
 }
 
 // InvalidateHolidayCache 失效指定年份节假日缓存
 func (s *dutyCacheServiceImpl) InvalidateHolidayCache(ctx context.Context, year int) error {
 	keys := []string{fmt.Sprintf("duty:holidays:%d", year)}
-	systemServices.InvalidateCacheByKey(ctx, s.cache, keys, "DUTY")
+	base.Invalidate(ctx, s.cache, keys, "DUTY")
 	return nil
 }
 
 // InvalidateAllHolidayCache 失效所有节假日缓存
 func (s *dutyCacheServiceImpl) InvalidateAllHolidayCache(ctx context.Context) error {
 	keys := []string{"duty:holidays:*"}
-	systemServices.InvalidateCacheByPattern(ctx, s.cache, keys, "DUTY")
+	base.InvalidatePattern(ctx, s.cache, keys, "DUTY")
 	return nil
 }
 

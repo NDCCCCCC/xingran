@@ -1,10 +1,7 @@
 package system
 
 import (
-	"context"
 	"strings"
-
-	"github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // filterSlice 通用切片过滤
@@ -47,23 +44,6 @@ func paginate[T any](items []T, current, pageSize int) ([]T, int64) {
 
 // CacheServiceBase 与 GetExpiration 已迁至 internal/services/base（Phase 92-01，
 // D-01/D-02），本包经 cache_provider.go 的 type alias 原位引用，嵌入点零改动。
-
-// Phase 92-03 待删除：失效底层已统一至 base.Invalidate/base.InvalidatePattern（D-04）
-// InvalidateCacheByPattern 根据模式列表失效缓存（通用方法）
-func InvalidateCacheByPattern(ctx context.Context, cache CacheProvider, patterns []string, module string) {
-	for _, pattern := range patterns {
-		if err := cache.DeleteByPattern(ctx, pattern); err != nil {
-			logger.Warnf("[%s] 清除缓存失败: %v", module, err)
-		}
-	}
-}
-
-// Phase 92-03 待删除：失效底层已统一至 base.Invalidate/base.InvalidatePattern（D-04）
-// InvalidateCacheByKey 根据键列表失效缓存（通用方法）
-func InvalidateCacheByKey(ctx context.Context, cache CacheProvider, keys []string, module string) {
-	for _, key := range keys {
-		if err := cache.Delete(ctx, key); err != nil {
-			logger.Warnf("[%s] 清除缓存失败: %v", module, err)
-		}
-	}
-}
+//
+// 原 InvalidateCacheByPattern/InvalidateCacheByKey 已删除（Phase 92-03 D-04）：
+// 失效底层唯一权威为 base.Invalidate/base.InvalidatePattern。

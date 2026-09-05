@@ -7,6 +7,7 @@ import (
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"gorm.io/gorm"
 )
@@ -256,27 +257,27 @@ func (s *workOrderCacheServiceImpl) GetStatistics(ctx context.Context) (*Statist
 // InvalidateWorkOrderCache 失效工单缓存
 func (s *workOrderCacheServiceImpl) InvalidateWorkOrderCache(ctx context.Context, workOrderID string) error {
 	keys := []string{fmt.Sprintf("workorder:detail:%s", workOrderID)}
-	systemServices.InvalidateCacheByKey(ctx, s.cache, keys, "WORKORDER")
+	base.Invalidate(ctx, s.cache, keys, "WORKORDER")
 	return nil
 }
 
 // InvalidateMyPendingCache 失效待办工单缓存
 func (s *workOrderCacheServiceImpl) InvalidateMyPendingCache(ctx context.Context, userID string) error {
 	keys := []string{fmt.Sprintf("workorder:my_pending:%s", userID)}
-	systemServices.InvalidateCacheByKey(ctx, s.cache, keys, "WORKORDER")
+	base.Invalidate(ctx, s.cache, keys, "WORKORDER")
 	return nil
 }
 
 // InvalidateStatisticsCache 失效统计缓存
 func (s *workOrderCacheServiceImpl) InvalidateStatisticsCache(ctx context.Context) error {
 	keys := []string{"workorder:statistics"}
-	systemServices.InvalidateCacheByKey(ctx, s.cache, keys, "WORKORDER")
+	base.Invalidate(ctx, s.cache, keys, "WORKORDER")
 	return nil
 }
 
 // InvalidateAllWorkOrderCache 失效所有工单缓存
 func (s *workOrderCacheServiceImpl) InvalidateAllWorkOrderCache(ctx context.Context) error {
-	systemServices.InvalidateCacheByPattern(ctx, s.cache, []string{"workorder:*"}, "WORKORDER")
+	base.InvalidatePattern(ctx, s.cache, []string{"workorder:*"}, "WORKORDER")
 	return nil
 }
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"gorm.io/gorm"
 )
@@ -249,28 +250,28 @@ func (s *knowledgeCacheServiceImpl) DeleteTag(ctx context.Context, id string) er
 // InvalidateCategoryCache 失效分类缓存
 func (s *knowledgeCacheServiceImpl) InvalidateCategoryCache(ctx context.Context) error {
 	keys := []string{"kb:category:*"}
-	systemServices.InvalidateCacheByPattern(ctx, s.cache, keys, "KNOWLEDGE")
+	base.InvalidatePattern(ctx, s.cache, keys, "KNOWLEDGE")
 	return nil
 }
 
 // InvalidateTagCache 失效标签缓存
 func (s *knowledgeCacheServiceImpl) InvalidateTagCache(ctx context.Context) error {
 	keys := []string{"kb:tags:all"}
-	systemServices.InvalidateCacheByKey(ctx, s.cache, keys, "KNOWLEDGE")
+	base.Invalidate(ctx, s.cache, keys, "KNOWLEDGE")
 	return nil
 }
 
 // InvalidateArticleCache 失效文章缓存
 func (s *knowledgeCacheServiceImpl) InvalidateArticleCache(ctx context.Context, articleID string) error {
 	keys := []string{fmt.Sprintf("kb:article:%s", articleID)}
-	systemServices.InvalidateCacheByKey(ctx, s.cache, keys, "KNOWLEDGE")
+	base.Invalidate(ctx, s.cache, keys, "KNOWLEDGE")
 	return nil
 }
 
 // InvalidateAllArticleCache 失效所有文章缓存
 func (s *knowledgeCacheServiceImpl) InvalidateAllArticleCache(ctx context.Context) error {
 	keys := []string{"kb:article:*"}
-	systemServices.InvalidateCacheByPattern(ctx, s.cache, keys, "KNOWLEDGE")
+	base.InvalidatePattern(ctx, s.cache, keys, "KNOWLEDGE")
 	return nil
 }
 

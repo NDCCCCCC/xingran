@@ -7,6 +7,7 @@ import (
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"gorm.io/gorm"
 )
@@ -318,33 +319,33 @@ func (s *cacheServiceImpl) GetDevicesByCredential(ctx context.Context, credentia
 // InvalidateDeviceCache 失效指定设备的缓存
 func (s *cacheServiceImpl) InvalidateDeviceCache(ctx context.Context, deviceID string) error {
 	keys := []string{fmt.Sprintf("network_device:detail:%s", deviceID)}
-	systemServices.InvalidateCacheByKey(ctx, s.cache, keys, "NETWORK_DEVICE")
+	base.Invalidate(ctx, s.cache, keys, "NETWORK_DEVICE")
 	return nil
 }
 
 // InvalidateStatisticsCache 失效统计缓存
 func (s *cacheServiceImpl) InvalidateStatisticsCache(ctx context.Context) error {
 	keys := []string{"network_device:statistics"}
-	systemServices.InvalidateCacheByKey(ctx, s.cache, keys, "NETWORK_DEVICE")
+	base.Invalidate(ctx, s.cache, keys, "NETWORK_DEVICE")
 	return nil
 }
 
 // InvalidateDeptCache 失效部门设备缓存
 func (s *cacheServiceImpl) InvalidateDeptCache(ctx context.Context, deptID string) error {
 	keys := []string{fmt.Sprintf("network_device:dept:%s", deptID)}
-	systemServices.InvalidateCacheByKey(ctx, s.cache, keys, "NETWORK_DEVICE")
+	base.Invalidate(ctx, s.cache, keys, "NETWORK_DEVICE")
 	return nil
 }
 
 // InvalidateCredentialCache 失效凭证设备缓存
 func (s *cacheServiceImpl) InvalidateCredentialCache(ctx context.Context, credentialID string) error {
 	keys := []string{fmt.Sprintf("network_device:credential:%s", credentialID)}
-	systemServices.InvalidateCacheByKey(ctx, s.cache, keys, "NETWORK_DEVICE")
+	base.Invalidate(ctx, s.cache, keys, "NETWORK_DEVICE")
 	return nil
 }
 
 // InvalidateAllDeviceCache 失效所有设备缓存
 func (s *cacheServiceImpl) InvalidateAllDeviceCache(ctx context.Context) error {
-	systemServices.InvalidateCacheByPattern(ctx, s.cache, []string{"network_device:*"}, "NETWORK_DEVICE")
+	base.InvalidatePattern(ctx, s.cache, []string{"network_device:*"}, "NETWORK_DEVICE")
 	return nil
 }

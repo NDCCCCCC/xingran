@@ -17,6 +17,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/services"
 	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
 	assetSvc "github.com/xingran-next/xingran-go-backend/internal/services/asset"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"github.com/xingran-next/xingran-go-backend/internal/services/rpa"
 	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/xingran-next/xingran-go-backend/internal/services/vdi"
@@ -363,7 +364,7 @@ func (c *Core) initCacheAndWarmUp() error {
 		// 迁移函数内拿不到 cache 实例 —— 故由 Database.SettingsMenuComponentChanged
 		// 标志传递, 在 DataCacheService 就绪后、缓存预热前按标志失效。
 		if c.DB != nil && c.DB.SettingsMenuComponentChanged {
-			system.InvalidateCacheByPattern(context.Background(), system.NewCacheProvider(c.DataCacheService), []string{
+			base.InvalidatePattern(context.Background(), system.NewCacheProvider(c.DataCacheService), []string{
 				system.CacheKeyMenuTree + "*",
 				system.CacheKeyMenuRouter + "*",
 				system.CacheKeyMenuAll + "*",
