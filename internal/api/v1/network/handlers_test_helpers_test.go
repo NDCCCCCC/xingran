@@ -47,6 +47,15 @@ func newNetworkTestEnv(t *testing.T, migrate ...interface{}) *netTestEnv {
 	t.Helper()
 	gormDB, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
+	// glebarez sqlite ":memory:" gives every pooled connection its OWN empty
+	// database. Handlers that spawn background goroutines (Phase 93 async restore
+	// task chain runs on a detached context) race the test goroutine for a second
+	// pooled connection and then see an empty DB → "no such table sys_config_restore_task".
+	// Serializing to a single connection keeps every query on the migrated in-memory DB
+	// and eliminates the race window (test-infra only; no production behavior change).
+	sqlDB, err := gormDB.DB()
+	require.NoError(t, err)
+	sqlDB.SetMaxOpenConns(1)
 	if len(migrate) > 0 {
 		require.NoError(t, gormDB.AutoMigrate(migrate...))
 	}

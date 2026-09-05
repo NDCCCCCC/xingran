@@ -80,9 +80,14 @@ func TestJbu8003_GetJobStatistics(t *testing.T) {
 		require.NoError(t, db.Create(&models.Job{JobName: "j1", JobGroup: "g1", InvokeTarget: "noop"}).Error)
 		require.NoError(t, db.Create(&models.Job{JobName: "j2", JobGroup: "g1", InvokeTarget: "noop", Status: models.JobStatusPause}).Error)
 
-		// 2 个 JobLog:1 success + 1 fail(GORM autoCreateTime 自动填 CreatedAt = now)
-		require.NoError(t, db.Create(&models.JobLog{JobName: "j1", JobGroup: "g1", InvokeTarget: "noop", Status: int(models.JobLogStatusSuccess)}).Error)
-		require.NoError(t, db.Create(&models.JobLog{JobName: "j1", JobGroup: "g1", InvokeTarget: "noop", Status: int(models.JobLogStatusFailure)}).Error)
+		// 2 个 JobLog:1 success + 1 fail;CreatedAt 显式正午锚定——生产日界在
+		// job_utils.go:57(time.Now() 本地日界)+ glebarez 驱动写时间带 +08:00 偏移 +
+		// sqlite DATE() 换算 UTC 取日,凌晨(00:00-08:00 +08)窗口 autoCreateTime(=now)
+		// 会被记到「昨日」致计数恒 0;本地正午 +08 = UTC 同日,全天候稳定(test-infra,
+		// 生产看板同窗口缺陷已登记 V130-CANDIDATES JOBSTAT-01,本测试不修生产行为)
+		noon := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 12, 0, 0, 0, time.Local)
+		require.NoError(t, db.Create(&models.JobLog{BaseTimeLine: models.BaseTimeLine{CreatedAt: noon}, JobName: "j1", JobGroup: "g1", InvokeTarget: "noop", Status: int(models.JobLogStatusSuccess)}).Error)
+		require.NoError(t, db.Create(&models.JobLog{BaseTimeLine: models.BaseTimeLine{CreatedAt: noon}, JobName: "j1", JobGroup: "g1", InvokeTarget: "noop", Status: int(models.JobLogStatusFailure)}).Error)
 
 		stats, err := GetJobStatistics(db)
 		require.NoError(t, err)
