@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.29
 milestone_name: 技术债治理
-status: executing
-last_updated: "2026-09-05T04:32:16.324Z"
+status: verifying
+last_updated: "2026-09-05T05:15:25.225Z"
 last_activity: 2026-09-05
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 15
-  completed_plans: 13
-  percent: 43
+  completed_plans: 15
+  percent: 57
 ---
 
 # Project State (v1.29 — milestone workstream)
@@ -29,10 +29,10 @@ Config: "mode": "yolo"
 
 Phase: 92 (缓存层三处架构统一 (🟡 中优 P2)) — EXECUTING
 Plan: 4 of 4
-Status: 92-03 complete — ready to execute 92-04 (收口)
-Last activity: 2026-09-05 -- 92-03 complete (operations floor 3 处迁移 + CacheInvalidator 委托 + D-04 涟漪 19 处改写与 InvalidateCache* 删除同 commit + root 定性)
-Resume file: .planning/workstreams/milestone/phases/92-p2/92-03-SUMMARY.md
-Next action: 执行 92-04-PLAN.md（monitor CacheOperator rename + invariants 扫描 + CLAUDE.md/REQUIREMENTS/ROADMAP 措辞同步 + D-05 LOC 双口径收口）
+Status: Phase complete — ready for verification
+Last activity: 2026-09-05 -- 92-04 complete（monitor CacheOperator rename + invariants 扫描锁 + 三文档措辞同步 + LOC 双口径审计，phase gate 全绿）
+Resume file: .planning/workstreams/milestone/phases/92-p2/92-04-SUMMARY.md
+Next action: /gsd:verify-work Phase 92；随后启动 93 (config_backup) / 94 (前端 API 工厂化)，Phase 95 必须最后
 
 ## Completed Phases (v1.29)
 
@@ -104,9 +104,11 @@ Next action: 执行 92-04-PLAN.md（monitor CacheOperator rename + invariants �
 | Phase 92 P01 | 31min | 3 tasks | 10 files |
 | Phase 92 P02 | 21min | 3 tasks | 10 files |
 | Phase 92 P03 | 20min | 3 tasks | 9 files |
+| Phase 92 P04 | 24min | 4 tasks | 7 files |
 
 ## Decisions
 
 - [Phase 92]: 92-01: base 缓存抽象全套落地（TTLResolver+CacheProvider 全家+泛型函数族），system 经 5 alias 翻转零改动；私有 setValue 因同包 CacheAdapter 消费导出为 base.SetValue（唯一迁移偏差） — D-01/D-02/D-03 锁定；SetValue 导出为 Rule 3 编译必需最小修复，语义零变更
 - [Phase 92]: 92-02: system 9 文件 29 处 GetOrSet 样板全部收敛 base.GetOrSetJSON 单 return + 21 处失效调用改写 base 底层 + notice 逃兵归队（删私有 getExpiration）；user/role List 站点 T=*PageResult 为 Pitfall 5 单向改善；cache mock 须回填 dest（JSON 往返）为 Rule 1 测试契约修复；键构造 diff 级零变更，生产行为零变更 — InvalidateCache* 函数本体留 92-03 与外围 19 处改写同 commit 删除
 - [Phase 92]: 92-03: D-04 完全达成——外围 19 处失效调用改写与 system.InvalidateCacheByPattern/ByKey 删除同 commit（编译器当 checklist 证明零遗漏），42 处调用全部收敛 base 唯一失效底层；CacheInvalidator 保留分发器底层委托；floor 3 处样板收敛（:168 注释假阳性未动）；DataCacheService 原地定性（GetExpiration 委托 base + D-07 定位注释不标 @Deprecated，装配链零改动）——plan 委托片段缺取地址为 Rule 3 编译必需修复（组合字面量不可寻址）；A5 纪律：duty/knowledge/network/workorder 12 处 GetOrSet 样板留 v1.30+
+- [Phase 92]: 92-04: monitor CacheProvider rename CacheOperator 消歧（D-08 含测试断言面，裸引用清零，base.CacheProvider 仓内唯一权威）；TestNoInterfaceGetOrSetResidue invariants 锁进 CI（D-10② 硬档 0 残留 + 白名单 + 外围 warning 11 处，红→绿演练通过）；CLAUDE.md 五处缓存段修订 + Cache Service Convention 新段 + REQUIREMENTS/ROADMAP 措辞对齐（D-10①/D-06）；LOC 双口径诚实审计：口径 A 毛减 187<200 未达（剔除 D-07 注释投资后 207 达成）+ 口径 B 全口径净增 529（测试投资计划内）；扫描器空接口判定踩 go/parser 空 FieldList 坑为 Rule 1 修复

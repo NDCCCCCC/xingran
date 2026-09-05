@@ -243,12 +243,12 @@ Plans:
 | Phase 89 PAGINATION 常量集中化 | SHIPPED | 3/3 | PAGINATION-01..11 | 2026-09-04 | 2026-09-04 |
 | Phase 90 TIMEOUTS/PORT/PROTOCOL/CONCURRENCY | SHIPPED | 4/4 | TIMEOUTS-01..08 | 2026-09-04 | 2026-09-04 |
 | Phase 91 CRUD 复用 base.Repository[T] | SHIPPED | 4/4 | CRUD-REUSE-01..08 | 2026-09-04 | 2026-09-04 |
-| Phase 92 缓存层三处架构统一 | In Progress | 3/4 | CACHE-UNIFY-01..05（01、02、03、04、05 done，92-04 收口） | 2026-09-05 | — |
+| Phase 92 缓存层三处架构统一 | Complete | 4/4 | CACHE-UNIFY-01..05（全部 done：92-04 收口——rename 消歧 + invariants 锁 + 三文档同步 + LOC 双口径） | 2026-09-05 | 2026-09-05 |
 | Phase 93 config_backup 三处 TODO 闭环 | Pending | 0/3 | BACKUP-CLOSED-01..05 | — | — |
 | Phase 94 前端 API 工厂化 | Pending | 0/3 | API-FACTORY-01..05 | — | — |
 | Phase 95 v1.28 SHIP + v1.29 closeout | Pending | 0/2 | CLOSEOUT-01..03 | — | — |
 
-**Total:** 7 phases / 41 requirements (31/41 done — 89+90+91 shipped，92 In Progress 3/4；93-95 待推进)
+**Total:** 7 phases / 41 requirements (36/41 done — 89+90+91+92 shipped/complete，93-95 待推进)
 
 ---
 
@@ -263,4 +263,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-09-05 — Phase 92 plan-phase 完成（4 plans 校准：92-01 base 抽取 / 92-02 system 9 文件 / 92-03 operations+D-04 收尾+root 定性 / 92-04 消歧+文档+审计；决策 D-01..D-10 见 92-CONTEXT.md）。Phase 91 SHIPPED（4/4 plans，commits 5d0008b..963defe 区间）。Phase 90 SHIPPED（4 plans，commits b51f44c..3a2efe5）。Phase 89 SHIPPED（3 plans，commits 238283c..3559626）。*
+*Last updated: 2026-09-05 — **Phase 92 SHIPPED**（4/4 plans：92-01 base 抽取 / 92-02 system 9 文件 / 92-03 operations+D-04 收尾+root 定性 / 92-04 消歧+文档+审计；决策 D-01..D-10 见 92-CONTEXT.md，ready for /gsd:verify-work）。Phase 91 SHIPPED（4/4 plans，commits 5d0008b..963defe 区间）。Phase 90 SHIPPED（4 plans，commits b51f44c..3a2efe5）。Phase 89 SHIPPED（3 plans，commits 238283c..3559626）。*
