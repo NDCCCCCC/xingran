@@ -509,6 +509,7 @@ func MigrateModelList() []interface{} {
 		&models.ConfigExecution{},
 		&models.ConfigExecutionDetail{},
 		&models.ConfigBackup{},
+		&models.ConfigRestoreTask{}, // Phase 93: 配置恢复任务 (D-15 异步编排载体)
 		&models.DeviceMACAddress{},
 		&models.DevicePortStatus{},
 		&models.LLDPNeighborInfo{}, // LLDP 邻居信息(拓扑发现)
@@ -859,6 +860,10 @@ func (d *Database) AutoMigrate() error {
 		// Q-11: 归一化 sys_menu.parent_id='0' 为 NULL(幂等,修复 Update 路径落库字面 "0" 造成的孤儿节点)
 		if _, err := migrations.Migrate210NormalizeMenuParentID(d.DB); err != nil {
 			applogger.Errorf("sys_menu parent_id='0' 归一失败 (非阻断,留待下次启动): %v", err)
+		}
+		// Phase 93: 配置恢复任务表 (PG 显式建表,幂等;sqlite 由 AutoMigrate 建表,分支无需注册)
+		if err := migrations.Migrate211CreateConfigRestoreTask(d.DB); err != nil {
+			applogger.Errorf("配置恢复任务表创建失败 (非阻断,留待下次启动): %v", err)
 		}
 	} else {
 		// sqlite 分支: 规范菜单目录种子 (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
