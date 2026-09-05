@@ -13,7 +13,7 @@ import (
 // ==================== 适配器 ====================
 
 // CacheProviderAdapter 缓存提供者适配器
-// 将 core.Core.Cache 适配为 CacheProvider、StatsProvider、MultiLevelCacheProvider 和 DirectRedisProvider
+// 将 core.Core.Cache 适配为 CacheOperator、StatsProvider、MultiLevelCacheProvider 和 DirectRedisProvider
 type CacheProviderAdapter struct {
 	cache interface {
 		Get(ctx context.Context, key string) (string, error)
@@ -39,7 +39,7 @@ type CacheProviderAdapter struct {
 }
 
 // NewCacheProviderAdapter 创建缓存提供者适配器
-func NewCacheProviderAdapter(core *core.Core) monitorServices.CacheProvider {
+func NewCacheProviderAdapter(core *core.Core) monitorServices.CacheOperator {
 	adapter := &CacheProviderAdapter{cache: core.Cache}
 
 	// 尝试获取统计功能支持

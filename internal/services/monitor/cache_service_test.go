@@ -5,7 +5,7 @@ package monitor
 // 范本要点(镜像 internal/services/portwrite/port_write_service_test.go):
 //   - 顶部 compile-time interface assertion 锁定 mockability 契约
 //   - testify/mock 嵌入式 mock(mock.Mock + m.Called)
-//   - 真实 cacheServiceImpl + mocked CacheProvider/CacheConfigProvider
+//   - 真实 cacheServiceImpl + mocked CacheOperator/CacheConfigProvider
 //   - glebarez sqlite 仅用于不可避免 gorm 路径(DB fallback / 历史统计 / 配置持久化)
 //
 // 已锁定的业务 quirk(见 73-04-SUMMARY.md "Business-code quirks discovered — NOT fixed"):
@@ -31,13 +31,13 @@ import (
 
 // ==================== Compile-time interface assertions ====================
 
-var _ CacheProvider = (*mockMonitorCacheProvider)(nil)
+var _ CacheOperator = (*mockMonitorCacheProvider)(nil)
 var _ MultiLevelCacheProvider = (*mockMonitorFullCacheProvider)(nil)
 var _ DirectRedisProvider = (*mockMonitorFullCacheProvider)(nil)
 var _ StatsProvider = (*mockMonitorFullCacheProvider)(nil)
 var _ CacheConfigProvider = (*mockCacheConfigProvider)(nil)
 
-// mockMonitorCacheProvider 仅实现基础 CacheProvider(不实现可选接口),
+// mockMonitorCacheProvider 仅实现基础 CacheOperator(不实现可选接口),
 // 用于 multiLevelCache/directRedis/statsProvider 均为 nil 的简单路径。
 type mockMonitorCacheProvider struct {
 	mock.Mock
@@ -86,7 +86,7 @@ func (m *mockMonitorCacheProvider) FlushDB(ctx context.Context) error {
 	return args.Error(0)
 }
 
-// mockMonitorFullCacheProvider 在基础 CacheProvider 之上实现全部可选接口
+// mockMonitorFullCacheProvider 在基础 CacheOperator 之上实现全部可选接口
 // (MultiLevelCacheProvider / DirectRedisProvider / StatsProvider),
 // 用于验证 NewCacheService 的类型断言装配逻辑。
 type mockMonitorFullCacheProvider struct {
@@ -214,7 +214,7 @@ func newCacheTestDB(t *testing.T) *gorm.DB {
 }
 
 // newTestCacheService 通过 NewCacheService 构造真实 cacheServiceImpl。
-func newTestCacheService(db *gorm.DB, provider CacheProvider, config CacheConfigProvider) *cacheServiceImpl {
+func newTestCacheService(db *gorm.DB, provider CacheOperator, config CacheConfigProvider) *cacheServiceImpl {
 	return NewCacheService(db, provider, config).(*cacheServiceImpl)
 }
 

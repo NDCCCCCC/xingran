@@ -45,8 +45,10 @@ type CacheService interface {
 	ReloadCacheConfigs(ctx context.Context) error
 }
 
-// CacheProvider 缓存提供者接口
-type CacheProvider interface {
+// CacheOperator 缓存监控原始操作接口（原 CacheProvider，Phase 92 D-08 rename 消歧）。
+// 业务缓存抽象唯一权威为 base.CacheProvider（internal/services/base）；
+// 本接口是监控侧的原始操作型（Get/Set/Keys/FlushDB），仅服务于缓存监控页。
+type CacheOperator interface {
 	Get(ctx context.Context, key string) (string, error)
 	Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error
 	Delete(ctx context.Context, key string) error
@@ -152,7 +154,7 @@ var cacheAllowedSortFields = map[string]string{
 
 type cacheServiceImpl struct {
 	db              *gorm.DB
-	cacheProvider   CacheProvider
+	cacheProvider   CacheOperator
 	configProvider  CacheConfigProvider
 	multiLevelCache MultiLevelCacheProvider
 	directRedis     DirectRedisProvider
@@ -162,7 +164,7 @@ type cacheServiceImpl struct {
 // NewCacheService 创建缓存服务实例
 func NewCacheService(
 	db *gorm.DB,
-	cacheProvider CacheProvider,
+	cacheProvider CacheOperator,
 	configProvider CacheConfigProvider,
 ) CacheService {
 	svc := &cacheServiceImpl{
