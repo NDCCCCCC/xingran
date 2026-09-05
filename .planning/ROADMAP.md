@@ -102,10 +102,11 @@ Phase 90 (TIMEOUTS/PORT/PROTOCOL/CONCURRENCY 常量集中化) ─┤
 
 **Requirements**: CACHE-UNIFY-01..05 (5 项)
 
-**Plans (3)**:
-- 92-01 抽 `internal/services/base/cache_service_base.go` 单一基类（Get/Set/Delete/Invalidate/InvalidatePattern 模板方法）+ `cache_service_base_test.go` 测试覆盖
-- 92-02 system/*_cache_impl.go (9 个文件) 全部继承新基类，删除重复 5 行模板代码
-- 92-03 operations/*_cache_impl.go + legacy root `*_cache_service.go` 迁移；core.Core 引用路径同步；既有 cache 测试 0 回归
+**Plans (4)** *(2026-09-05 plan-phase 校准：ROADMAP 原 3-plan 估算基于审计基线，未计入 D-04 失效涟漪 42 处（19 外围 + 21 in-system + floor 2）、monitor 同名接口 rename、三文档措辞同步与 invariants 守护的工作量；以 92-CONTEXT.md D-01..D-10 为准)*:
+- 92-01 抽 `internal/services/base` 缓存抽象包（TTLResolver + CacheProvider 全家 + 泛型函数族 GetOrSetJSON/SetJSON/Invalidate/InvalidatePattern，D-01/D-02/D-03/D-04）+ system type alias 翻转 + nil-receiver 防护（Pitfall 1）+ `cache_service_base_test.go` miniredis 双装配测试（D-09）
+- 92-02 system/*_cache_impl.go (9 个文件) 29 处 GetOrSet 样板迁移 base.GetOrSetJSON + 21 处失效调用改写 base.Invalidate*（user pilot → 批量 → notice 逃兵归队）
+- 92-03 operations floor 3 处迁移 + CacheInvalidator 底层委托（D-04）+ 外围 19 处失效调用改写 + 删除 system.InvalidateCache* + DataCacheService 原地定性（D-06/D-07）
+- 92-04 monitor CacheOperator rename 消歧（D-08）+ invariants 扫描锁（D-10②）+ CLAUDE.md/REQUIREMENTS/ROADMAP 措辞同步（D-10①/D-06）+ LOC 双口径审计（D-05）
 
 **Success Criteria**:
 1. `base/cache_service_base.go` 提供完整模板方法
@@ -113,6 +114,8 @@ Phase 90 (TIMEOUTS/PORT/PROTOCOL/CONCURRENCY 常量集中化) ─┤
 3. legacy root `*_cache_service.go` 标注 @Deprecated 并迁移
 4. `go test ./internal/services/...` 0 失败
 5. Cache Monitor 端到端验证（Redis 缓存读写 + 失效生效）
+
+*(注: SC-1/SC-3/SC-5 措辞按 D-03/D-06/D-09 校准修订在 92-04 执行——Phase 90 commit 3a2efe5 先例)*
 
 ## Phase 93: config_backup 三处 TODO 闭环 (🟡 中优 P2)
 
@@ -174,7 +177,7 @@ Phase 90 (TIMEOUTS/PORT/PROTOCOL/CONCURRENCY 常量集中化) ─┤
 | Phase 89 PAGINATION 常量集中化 | ✅ SHIPPED | 3/3 | PAGINATION-01..11 | 2026-09-04 | 2026-09-04 |
 | Phase 90 TIMEOUTS/PORT/PROTOCOL/CONCURRENCY | ✅ SHIPPED | 4/4 | TIMEOUTS-01..08 | 2026-09-04 | 2026-09-04 |
 | Phase 91 CRUD 复用 base.Repository[T] | Pending | 0/4 | CRUD-REUSE-01..08 | — | — |
-| Phase 92 缓存层三处架构统一 | Pending | 0/3 | CACHE-UNIFY-01..05 | — | — |
+| Phase 92 缓存层三处架构统一 | Pending | 0/4 | CACHE-UNIFY-01..05 | — | — |
 | Phase 93 config_backup 三处 TODO 闭环 | Pending | 0/3 | BACKUP-CLOSED-01..05 | — | — |
 | Phase 94 前端 API 工厂化 | Pending | 0/3 | API-FACTORY-01..05 | — | — |
 | Phase 95 v1.28 SHIP + v1.29 closeout | Pending | 0/2 | CLOSEOUT-01..03 | — | — |

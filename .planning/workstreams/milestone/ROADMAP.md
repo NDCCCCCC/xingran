@@ -1,7 +1,7 @@
 ---
-last_updated: 2026-09-04
+last_updated: 2026-09-05
 milestone: v1.29
-update_trigger: v1.29 workstream ROADMAP synced from .planning/ROADMAP.md — v1.27 content archived at .planning/milestones/v1.27-ROADMAP.md; phases 89-95 now tracked here with Progress table (was: stale v1.27 roadmap made phase-complete report is_last_phase=true after Phase 90)
+update_trigger: v1.29 workstream ROADMAP synced from .planning/ROADMAP.md — v1.27 content archived at .planning/milestones/v1.27-ROADMAP.md; phases 89-95 now tracked here with Progress table (was: stale v1.27 roadmap made phase-complete report is_last_phase=true after Phase 90); 2026-09-05 Phase 92 plan-phase 校准 3→4 plans
 ---
 
 # Roadmap: XingRan-Next 运维管理系统 — v1.29 milestone workstream
@@ -139,19 +139,31 @@ Plans:
 
 **Requirements**: CACHE-UNIFY-01..05 (5 项)
 
-**Success Criteria**:
+**Success Criteria** *(措辞按 D-03/D-06/D-09 校准修订在 92-04 执行)*:
 
-1. `base/cache_service_base.go` 提供完整模板方法（Get/Set/Delete/Invalidate/InvalidatePattern）
-2. system/ + operations/ 下所有 `*_cache_impl.go` 继承新基类
-3. legacy root `*_cache_service.go` 标注 @Deprecated 并迁移
+1. `base/cache_service_base.go` 提供完整模板方法（实际形态：泛型包级函数族 + TTLResolver 薄基类，D-03）
+2. system/ + operations/ 下所有 `*_cache_impl.go` 继承新基类（实际动作：嵌入源迁 base + 32 处方法体换泛型函数，含 notice 逃兵归队）
+3. legacy root `*_cache_service.go` 标注 @Deprecated 并迁移（实际动作：DataCacheService 原地定性 + 消除平行 TTL 逻辑，D-06——import cycle 硬约束）
 4. `go test ./internal/services/...` 0 失败
-5. Cache Monitor 端到端验证（Redis 缓存读写 + 失效生效）
+5. Cache Monitor 端到端验证（实际落地：miniredis 自动化集成测试，D-09）
 
-**Plans (3 planned, 待 plan-phase 生成)**:
+**Plans (4, 2026-09-05 plan-phase 校准)** *(原 3-plan 估算基于 2026-09-03 审计基线，未计入 D-04 失效涟漪 42 处（19 外围 + 21 in-system + floor 2）、monitor 同名接口 rename、三文档措辞同步与 invariants 守护的工作量；决策 D-01..D-10 见 92-CONTEXT.md)*:
 
-- 92-01 抽 base/cache_service_base.go 单一基类 + 测试
-- 92-02 system/*_cache_impl.go (9 个文件) 继承新基类
-- 92-03 operations/*_cache_impl.go + legacy root 迁移 + core.Core 引用同步
+**Wave 1**
+
+- [ ] 92-01-PLAN.md — base 缓存抽象包（TTLResolver + CacheProvider 全家 + 泛型函数族，D-01/D-02/D-03/D-04）+ system type alias 翻转 + nil-receiver 防护（Pitfall 1）+ cache_service_base_test.go miniredis 双装配测试（D-09）
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 92-02-PLAN.md — system 9 文件 29 处 GetOrSet 样板迁移 base.GetOrSetJSON + 21 处失效调用改写（user pilot → 批量 → notice 逃兵归队）
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 92-03-PLAN.md — operations floor 3 处迁移 + CacheInvalidator 底层委托（D-04）+ 外围 19 处失效调用改写 + 删除 system.InvalidateCache*（编译器驱动）+ DataCacheService 原地定性（D-06/D-07）
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 92-04-PLAN.md — monitor CacheOperator rename 消歧（D-08）+ invariants 扫描锁（D-10②）+ CLAUDE.md/REQUIREMENTS/ROADMAP 措辞同步（D-10①/D-06）+ LOC 双口径审计（D-05）+ SUMMARY
 
 ---
 
@@ -231,7 +243,7 @@ Plans:
 | Phase 89 PAGINATION 常量集中化 | SHIPPED | 3/3 | PAGINATION-01..11 | 2026-09-04 | 2026-09-04 |
 | Phase 90 TIMEOUTS/PORT/PROTOCOL/CONCURRENCY | SHIPPED | 4/4 | TIMEOUTS-01..08 | 2026-09-04 | 2026-09-04 |
 | Phase 91 CRUD 复用 base.Repository[T] | SHIPPED | 4/4 | CRUD-REUSE-01..08 | 2026-09-04 | 2026-09-04 |
-| Phase 92 缓存层三处架构统一 | Pending | 0/3 | CACHE-UNIFY-01..05 | — | — |
+| Phase 92 缓存层三处架构统一 | Pending | 0/4 | CACHE-UNIFY-01..05 | — | — |
 | Phase 93 config_backup 三处 TODO 闭环 | Pending | 0/3 | BACKUP-CLOSED-01..05 | — | — |
 | Phase 94 前端 API 工厂化 | Pending | 0/3 | API-FACTORY-01..05 | — | — |
 | Phase 95 v1.28 SHIP + v1.29 closeout | Pending | 0/2 | CLOSEOUT-01..03 | — | — |
@@ -251,4 +263,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-09-04 — Phase 91 SHIPPED（4/4 plans：91-01 base 改造 + 91-02 workstation pilot + 91-03 building/floor/asset + 91-04 收尾 7 服务，11/11 服务 repo 化；commits 5d0008b..963defe 区间）。Phase 90 SHIPPED（4 plans，commits b51f44c..3a2efe5）。Phase 89 SHIPPED 同日（3 plans，commits 238283c..3559626）。92-95 详情见 `.planning/ROADMAP.md`。*
+*Last updated: 2026-09-05 — Phase 92 plan-phase 完成（4 plans 校准：92-01 base 抽取 / 92-02 system 9 文件 / 92-03 operations+D-04 收尾+root 定性 / 92-04 消歧+文档+审计；决策 D-01..D-10 见 92-CONTEXT.md）。Phase 91 SHIPPED（4/4 plans，commits 5d0008b..963defe 区间）。Phase 90 SHIPPED（4 plans，commits b51f44c..3a2efe5）。Phase 89 SHIPPED（3 plans，commits 238283c..3559626）。*
