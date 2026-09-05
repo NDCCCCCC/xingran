@@ -206,7 +206,7 @@ Plans:
 
 ### Phase 94: 前端 API 工厂化 (🟡 中优 P2)
 
-**Goal**: 设计 `createResourceApi<T>()` 工厂函数，迁移 `src/lib/` 下 ~15 个 `*Api.ts` 到工厂模式；保持向后兼容。
+**Goal**: 设计 `createResourceApi<T>()` 工厂函数，迁移 `src/lib/` 下 13 个 `*Api.ts` 到工厂模式；保持向后兼容。
 
 **Depends on**: Phase 89 + Phase 90（前端独立，与 91/92/93 并行）
 
@@ -214,12 +214,12 @@ Plans:
 
 **Success Criteria**:
 
-1. `src/lib/apiFactory.ts` 工厂函数实现完整（list/getByID/create/update/delete/import/export 7 方法 + 类型推导）
-2. ~15 个 `*Api.ts` 迁移完成，向后兼容（保留同名导出）
+1. `src/lib/apiFactory.ts` 工厂函数实现完整（list/get/create/update/delete/batch/statistics/searchOptions 8 方法——提升自 opsApi 既有工厂，与 react-admin/refine 核心五方法行业对齐；import/export 不进工厂核心、单条查询并入 get，per D-01——+ CreatePayload 派生类型）
+2. 13 个 `*Api.ts` 全部按迁移矩阵处置完成（3 对象形态迁移 + 5 扁平文件 cluster 委托 + 5 KEEP），向后兼容（导出签名零变化）
 3. `npm run type-check` + `npm run lint` + `npm run test` 0 错误
 4. 前端覆盖率 ≥45.13%（不下降）
 
-**Plans (3, 2026-09-05 plan-phase 生成)** *(D-01 措辞校准：提升 opsApi 既有 8 方法工厂而非从零设计，SC-1/Goal 的 7 方法与 ~15 措辞由 94-03 收口按 CONTEXT 同步修订；实测 13 个 *Api.ts 口径；决策 D-01..D-14 见 94-CONTEXT.md)*:
+**Plans (3, 2026-09-05 plan-phase 生成)** *(D-01 措辞校准已由 94-03 收口落地：提升 opsApi 既有 8 方法工厂而非从零设计，实测 13 个 *Api.ts 口径；决策 D-01..D-14 见 94-CONTEXT.md)*:
 
 **Wave 1**
 

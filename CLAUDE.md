@@ -429,6 +429,35 @@ base.InvalidatePattern(ctx, s.cache, patterns, "MODULE")
 
 **Migration status:** Phase 92 unified the former three-way duplication (legacy root services / system impls / operations impls) into the base authority.
 
+### Frontend API Factory Convention
+
+All frontend resource CRUD must go through the single-authority factory in `xingran-react-frontend/src/lib/apiFactory.ts` (Phase 94):
+
+```typescript
+// Create a resource API — 8 methods: list/get/create/update/delete/batch/statistics/searchOptions
+const categoryCrud = createResourceApi<WorkOrderCategory>({ basePath: "/workorder/categories" });
+
+// Object form with custom methods — spread + override is the only extension idiom:
+export const floorApi = { ...floorCrud, tree: async () => post<Floor[]>("/ops/floor/tree", {}) };
+
+// Flat-file delegation — export signatures (incl. return annotations) must stay identical:
+export function getWorkOrderList(
+  params: WorkOrderListRequest
+): Promise<BaseResponse<PageResponse<WorkOrder>>> {
+  return orderCrud.list(params as unknown as PageParams & Record<string, unknown>);
+}
+```
+
+**Rules:**
+- `createResourceApi<T>` (8 methods) in `src/lib/apiFactory.ts` is the ONLY factory authority — do not create new private `createCrudApi` copies (Phase 94 deleted the opsApi and rpaApi private duplicates).
+- New resources MUST use the factory — never hand-write the CRUD five-piece (list/get/create/update/delete) by calling `post` directly (D-10 template zeroing). create/update params use `Partial<CreatePayload<T>>` (`src/types/apiFactory.ts`), so mis-sending id/audit timestamps fails at compile time.
+- Blob downloads go through `src/lib/download.ts` (`blobAxios` 5-min timeout + `downloadFile` / `downloadFilePost`) — do not hand-roll fetch/axios download chains.
+- Factory methods stay pure pass-through: default-value injection / pre-processing (e.g. adDomainApi `withDefaultPagination`, dutyApi `getUserList` default pagination) lives in the caller wrapper, never inside the factory.
+- Regression guard: `src/lib/apiFactory.invariants.test.ts` (D-12) AST-scans all 13 `src/lib/*Api.ts` — hard tier (opsApi/rpaApi/vdiApi) locks the registered KEEP baseline and warning tier locks per-file whitelist counts; any new hand-written CRUD template (or silent KEEP removal) turns it red.
+- KEEP exceptions (do not force-fit the factory): `notificationConfigApi` (GET list / PUT `/{id}` / DELETE verbs all differ from the factory), `assetApi` (unwraps `res.data` raw-data contract), `menuApi`/`profileApi`/`columnConfigApi` (no CRUD semantics, D-06), and heterogeneous functions whose request types are decoupled from the entity (`publishNotice` / `generateSchedule` / `createWorkOrder` with `WorkOrderCreateRequest`, etc.).
+
+**Migration status:** Phase 94 promoted the opsApi private factory and merged the rpaApi second copy into `apiFactory.ts`; all 13 `*Api.ts` handled per the migration matrix (3 object-form migrated + 5 flat files cluster-delegated + 5 KEEP), export signatures unchanged.
+
 ### Config Backup Restore Convention
 
 All three config-backup restore paths are locked as of Phase 93 (TODO 闭环 D-32). **Rules:**
@@ -493,6 +522,17 @@ await excelApi.export('building', { status: 0 });
 
 // ❌ WRONG - don't use raw post for operations module
 await post('/ops/building/list', params); // Use buildingApi.list instead
+```
+
+**For NEW resources in any domain, create the API with the shared factory — do not hand-write CRUD wrappers:**
+
+```typescript
+// ✅ CORRECT - createResourceApi (see Frontend API Factory Convention)
+import { createResourceApi } from '@/lib/apiFactory';
+export const categoryApi = createResourceApi<WorkOrderCategory>({ basePath: '/workorder/categories' });
+
+// ❌ WRONG - hand-written CRUD five-piece calling post directly
+const list = (params) => post('/workorder/categories/list', params);
 ```
 
 **Token management with authHelpers:**
