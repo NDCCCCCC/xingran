@@ -7,6 +7,7 @@ import (
 
 	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"gorm.io/gorm"
 )
@@ -35,44 +36,30 @@ func NewFloorServiceWithCache(
 // GetTree 获取楼层树（带缓存）
 // 这是最需要缓存的方法，被多个页面高频调用
 func (s *floorCacheService) GetTree(ctx context.Context) ([]FloorTreeNode, error) {
-	cacheKey := "floor:tree"
-	var result []FloorTreeNode
-
-	expiration := s.GetExpiration("cache.floor.tree", 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.floorService.GetTree(ctx)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return base.GetOrSetJSON(ctx, s.cache,
+		"floor:tree",
+		s.GetExpiration("cache.floor.tree", 30*time.Minute),
+		func() ([]FloorTreeNode, error) {
+			return s.floorService.GetTree(ctx)
+		})
 }
 
 // GetFloorsByBuildingID 获取指定楼宇的楼层列表（带缓存）
 func (s *floorCacheService) GetFloorsByBuildingID(ctx context.Context, buildingID string) ([]operations.OpsFloor, error) {
-	cacheKey := fmt.Sprintf("floor:building:%s", buildingID)
-	var result []operations.OpsFloor
-
-	expiration := s.GetExpiration("cache.floor.building", 15*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		// 查询指定楼宇的所有楼层
-		var floors []operations.OpsFloor
-		if err := s.db.WithContext(ctx).
-			Where("building_id = ?", buildingID).
-			Order("order_num ASC").
-			Find(&floors).Error; err != nil {
-			return nil, err
-		}
-		return floors, nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return base.GetOrSetJSON(ctx, s.cache,
+		fmt.Sprintf("floor:building:%s", buildingID),
+		s.GetExpiration("cache.floor.building", 15*time.Minute),
+		func() ([]operations.OpsFloor, error) {
+			// 查询指定楼宇的所有楼层
+			var floors []operations.OpsFloor
+			if err := s.db.WithContext(ctx).
+				Where("building_id = ?", buildingID).
+				Order("order_num ASC").
+				Find(&floors).Error; err != nil {
+				return nil, err
+			}
+			return floors, nil
+		})
 }
 
 // InvalidateFloorCache 失效楼层缓存
@@ -83,13 +70,13 @@ func (s *floorCacheService) InvalidateFloorCache(ctx context.Context, buildingID
 	if buildingID != "" {
 		keys = append(keys, fmt.Sprintf("floor:building:%s", buildingID))
 	}
-	system.InvalidateCacheByKey(ctx, s.cache, keys, "FLOOR")
+	base.Invalidate(ctx, s.cache, keys, "FLOOR")
 	return nil
 }
 
 // InvalidateAllFloorCache 失效所有楼层缓存
 func (s *floorCacheService) InvalidateAllFloorCache(ctx context.Context) error {
-	system.InvalidateCacheByPattern(ctx, s.cache, []string{"floor:*"}, "FLOOR")
+	base.InvalidatePattern(ctx, s.cache, []string{"floor:*"}, "FLOOR")
 	return nil
 }
 
@@ -173,14 +160,10 @@ func (s *floorCacheService) SearchFloorOptions(ctx context.Context, params map[s
 	}
 
 	cacheKey := BuildDropdownCacheKey("floor", params)
-	var result []DropdownOption
-	expiration := s.GetExpiration("cache.floor.dropdown", 5*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.floorService.SearchFloorOptions(ctx, params)
-	})
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return base.GetOrSetJSON(ctx, s.cache,
+		cacheKey,
+		s.GetExpiration("cache.floor.dropdown", 5*time.Minute),
+		func() ([]DropdownOption, error) {
+			return s.floorService.SearchFloorOptions(ctx, params)
+		})
 }

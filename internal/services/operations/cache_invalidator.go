@@ -3,6 +3,7 @@ package operations
 import (
 	"context"
 
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
@@ -30,20 +31,9 @@ func (c *CacheInvalidator) InvalidateByEntityType(
 		return nil
 	}
 
-	// 如果没有配置缓存，直接返回
-	if c.cache == nil {
-		logger.Debugf("[%s] 未配置缓存提供者，跳过缓存清理", entityType)
-		return nil
-	}
-
-	for _, pattern := range patterns {
-		if err := c.cache.DeleteByPattern(ctx, pattern); err != nil {
-			logger.Warnf("[%s] 清除缓存失败: pattern=%s, error=%v", entityType, pattern, err)
-		} else {
-			logger.Debugf("[%s] 清除缓存成功: pattern=%s", entityType, pattern)
-		}
-	}
-
+	// 失效底层统一委托 base 泛型函数（Phase 92-03 D-04）：
+	// nil 防护与删除循环已内聚于 base，本方法只保留 entityType 分发语义
+	base.InvalidatePattern(ctx, c.cache, patterns, entityType)
 	return nil
 }
 
@@ -53,16 +43,7 @@ func (c *CacheInvalidator) InvalidateByPatterns(
 	patterns []string,
 	module string,
 ) error {
-	// 如果没有配置缓存，直接返回
-	if c.cache == nil {
-		logger.Debugf("[%s] 未配置缓存提供者，跳过缓存清理", module)
-		return nil
-	}
-
-	for _, pattern := range patterns {
-		if err := c.cache.DeleteByPattern(ctx, pattern); err != nil {
-			logger.Warnf("[%s] 清除缓存失败: pattern=%s, error=%v", module, pattern, err)
-		}
-	}
+	// 同 InvalidateByEntityType：底层委托 base（Phase 92-03 D-04）
+	base.InvalidatePattern(ctx, c.cache, patterns, module)
 	return nil
 }
