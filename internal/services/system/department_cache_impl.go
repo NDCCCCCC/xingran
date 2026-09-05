@@ -7,6 +7,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -42,15 +43,11 @@ func (s *departmentCacheService) GetTreeWithFilter(ctx context.Context, includeD
 	if includeDisabled {
 		cacheKey += ":all"
 	}
-	var result []*models.Department
 
-	expiration := s.GetExpiration(services.CacheConfigDeptTree, 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.queryTree(ctx, includeDisabled)
-	})
-
-	return result, err
+	return base.GetOrSetJSON(ctx, s.cache,
+		cacheKey,
+		s.GetExpiration(services.CacheConfigDeptTree, 30*time.Minute),
+		func() ([]*models.Department, error) { return s.queryTree(ctx, includeDisabled) })
 }
 
 func (s *departmentCacheService) GetTreeWithCache(ctx context.Context, includeDisabled bool) ([]*models.Department, error) {
@@ -75,16 +72,10 @@ func (s *departmentCacheService) queryTree(ctx context.Context, includeDisabled 
 }
 
 func (s *departmentCacheService) GetSelectDataWithCache(ctx context.Context) ([]*models.Department, error) {
-	cacheKey := CacheKeyDeptTree
-	var result []*models.Department
-
-	expiration := s.GetExpiration(services.CacheConfigDeptSelect, 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.querySelectData(ctx)
-	})
-
-	return result, err
+	return base.GetOrSetJSON(ctx, s.cache,
+		CacheKeyDeptTree,
+		s.GetExpiration(services.CacheConfigDeptSelect, 30*time.Minute),
+		func() ([]*models.Department, error) { return s.querySelectData(ctx) })
 }
 
 func (s *departmentCacheService) querySelectData(ctx context.Context) ([]*models.Department, error) {
@@ -102,7 +93,7 @@ func (s *departmentCacheService) querySelectData(ctx context.Context) ([]*models
 }
 
 func (s *departmentCacheService) InvalidateDeptCache(ctx context.Context) error {
-	InvalidateCacheByPattern(ctx, s.cache, []string{
+	base.InvalidatePattern(ctx, s.cache, []string{
 		BuildDeptCacheKey(CacheKeyDeptTree) + "*",
 		BuildDeptCacheKey(CacheKeyDeptList) + "*",
 		BuildDeptCacheKey("tree:select") + "*",

@@ -7,6 +7,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -33,30 +34,18 @@ func NewPostServiceWithCache(
 
 // GetAllWithCache 获取所有岗位（覆盖基础方法，使用缓存）
 func (s *postCacheService) GetAllWithCache(ctx context.Context) ([]*models.Post, error) {
-	cacheKey := CacheKeyPostAll
-	var result []*models.Post
-
-	expiration := s.GetExpiration(services.CacheConfigPostAll, 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.queryAll(ctx)
-	})
-
-	return result, err
+	return base.GetOrSetJSON(ctx, s.cache,
+		CacheKeyPostAll,
+		s.GetExpiration(services.CacheConfigPostAll, 30*time.Minute),
+		func() ([]*models.Post, error) { return s.queryAll(ctx) })
 }
 
 // GetEnabledWithCache 获取启用的岗位（带缓存）
 func (s *postCacheService) GetEnabledWithCache(ctx context.Context) ([]*models.Post, error) {
-	cacheKey := CacheKeyPostEnabled
-	var result []*models.Post
-
-	expiration := s.GetExpiration(services.CacheConfigPostEnabled, 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.queryEnabled(ctx)
-	})
-
-	return result, err
+	return base.GetOrSetJSON(ctx, s.cache,
+		CacheKeyPostEnabled,
+		s.GetExpiration(services.CacheConfigPostEnabled, 30*time.Minute),
+		func() ([]*models.Post, error) { return s.queryEnabled(ctx) })
 }
 
 // queryAll 查询所有岗位
@@ -94,7 +83,7 @@ func (s *postCacheService) queryEnabled(ctx context.Context) ([]*models.Post, er
 
 // InvalidatePostCache 失效岗位缓存
 func (s *postCacheService) InvalidatePostCache(ctx context.Context) error {
-	InvalidateCacheByPattern(ctx, s.cache, []string{
+	base.InvalidatePattern(ctx, s.cache, []string{
 		CacheKeyPostAll + "*",
 		CacheKeyPostEnabled + "*",
 	}, "POST")

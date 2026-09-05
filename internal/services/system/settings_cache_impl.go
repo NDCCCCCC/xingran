@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -36,19 +37,10 @@ func NewSettingsServiceWithCache(
 
 // GetUserPreferences 获取用户设置（带缓存）
 func (s *settingsCacheService) GetUserPreferences(ctx context.Context, userID string) (*UserPreferences, error) {
-	cacheKey := fmt.Sprintf("settings:user:%s", userID)
-	var result UserPreferences
-
-	expiration := s.GetExpiration("cache.settings.user", 15*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.settingsService.GetUserPreferences(ctx, userID)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return base.GetOrSetJSON(ctx, s.cache,
+		fmt.Sprintf("settings:user:%s", userID),
+		s.GetExpiration("cache.settings.user", 15*time.Minute),
+		func() (*UserPreferences, error) { return s.settingsService.GetUserPreferences(ctx, userID) })
 }
 
 // UpdateUserPreferences 更新用户设置（带缓存失效）

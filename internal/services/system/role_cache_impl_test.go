@@ -8,6 +8,7 @@ package system
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -37,7 +38,14 @@ func (m *mockRoleCacheProvider) GetOrSet(ctx context.Context, key string, dest i
 	if err != nil {
 		return err
 	}
-	_ = result
+	// 对齐真实 provider 契约（DataCacheService.GetOrSet）：query 结果经 JSON
+	// 往返回填 dest。92-02 迁移后 GetOrSetJSON 的 T 可为指针类型，dest 不回填
+	// 会让调用方拿到 nil（旧值类型形态被零值 struct 隐式容忍，指针形态不容忍）。
+	if result != nil && dest != nil {
+		if data, jerr := json.Marshal(result); jerr == nil {
+			_ = json.Unmarshal(data, dest)
+		}
+	}
 	return nil
 }
 

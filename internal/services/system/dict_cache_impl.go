@@ -9,6 +9,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -35,15 +36,10 @@ func NewDictTypeServiceWithCache(
 
 // GetAllWithCache 获取所有字典类型（覆盖基础方法，使用缓存）
 func (s *dictTypeCacheService) GetAllWithCache(ctx context.Context) ([]*models.DictType, error) {
-	cacheKey := CacheKeyDictType
-	var result []*models.DictType
-
-	expiration := s.GetExpiration(services.CacheConfigDictType, 60*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.queryAllTypes(ctx)
-	})
-
+	result, err := base.GetOrSetJSON(ctx, s.cache,
+		CacheKeyDictType,
+		s.GetExpiration(services.CacheConfigDictType, 60*time.Minute),
+		func() ([]*models.DictType, error) { return s.queryAllTypes(ctx) })
 	if err != nil {
 		return nil, fmt.Errorf("获取字典类型失败: %w", err)
 	}
@@ -94,7 +90,7 @@ func (s *dictTypeCacheService) Delete(ctx context.Context, id string) error {
 
 // invalidateCache 失效缓存
 func (s *dictTypeCacheService) invalidateCache(ctx context.Context) {
-	InvalidateCacheByPattern(ctx, s.cache, []string{CacheKeyDictType + "*"}, "DICT")
+	base.InvalidatePattern(ctx, s.cache, []string{CacheKeyDictType + "*"}, "DICT")
 }
 
 // List 查询字典类型列表（全量缓存+内存筛选版本）
@@ -196,15 +192,10 @@ func NewDictDataServiceWithCache(
 
 // GetByTypeWithCache 根据类型获取字典数据（带缓存）
 func (s *dictDataCacheService) GetByTypeWithCache(ctx context.Context, dictType string) ([]*models.DictData, error) {
-	cacheKey := GetDictDataByTypeKey(dictType)
-	var result []*models.DictData
-
-	expiration := s.GetExpiration(services.CacheConfigDictData, 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.queryByType(ctx, dictType)
-	})
-
+	result, err := base.GetOrSetJSON(ctx, s.cache,
+		GetDictDataByTypeKey(dictType),
+		s.GetExpiration(services.CacheConfigDictData, 30*time.Minute),
+		func() ([]*models.DictData, error) { return s.queryByType(ctx, dictType) })
 	if err != nil {
 		return nil, fmt.Errorf("获取字典数据失败: %w", err)
 	}
@@ -268,5 +259,5 @@ func (s *dictDataCacheService) Delete(ctx context.Context, id string) error {
 // invalidateCache 失效缓存
 func (s *dictDataCacheService) invalidateCache(ctx context.Context, dictType string) {
 	cacheKey := GetDictDataByTypeKey(dictType)
-	InvalidateCacheByKey(ctx, s.cache, []string{cacheKey}, "DICT")
+	base.Invalidate(ctx, s.cache, []string{cacheKey}, "DICT")
 }
