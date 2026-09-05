@@ -482,11 +482,11 @@ func (s *ConfigBackupService) GetBackupList(ctx context.Context, current, pageSi
 	return result, total, nil
 }
 
-// configBackupAllowedSortFields 配置备份可排序字段白名单(对应 sys_config_backup 表列名)。
+// configBackupAllowedSortFields 配置备份可排序字段白名单(对应 sys_config_backup 表列名;
+// 无 status 列——白名单忽略该键走默认排序,Phase 93 D-33② 修复 ORDER BY status SQL 500)。
 var configBackupAllowedSortFields = map[string]string{
 	"deviceId":  "device_id",
 	"version":   "version",
-	"status":    "status",
 	"createdAt": "created_at",
 }
 
