@@ -223,7 +223,7 @@ Plans:
 
 **Wave 1**
 
-- [ ] 94-01-PLAN.md — apiFactory.ts（createResourceApi 8 方法提升，D-01/D-09）+ types/apiFactory.ts（CreatePayload 双命名并集，D-02）+ download.ts（blob 链 GET/POST 归一，D-04）+ apiFactory/download 契约测试（D-11）——纯新建零触碰既有文件
+- [x] 94-01-PLAN.md — apiFactory.ts（createResourceApi 8 方法提升，D-01/D-09）+ types/apiFactory.ts（CreatePayload 双命名并集，D-02）+ download.ts（blob 链 GET/POST 归一，D-04）+ apiFactory/download 契约测试（D-11）——纯新建零触碰既有文件
 
 **Wave 2** *(blocked on Wave 1)*
 
