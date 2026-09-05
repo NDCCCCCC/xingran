@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.29
 milestone_name: 技术债治理
 status: executing
-last_updated: "2026-09-05T13:12:15.142Z"
+last_updated: "2026-09-05T14:19:48.240Z"
 last_activity: 2026-09-05
 progress:
   total_phases: 7
@@ -31,7 +31,7 @@ Phase: 94
 Plan: Not started
 Status: Ready to execute
 Last activity: 2026-09-05
-Resume file: .planning/workstreams/milestone/phases/93-config-backup-todo-p2/93-CONTEXT.md
+Resume file: .planning/workstreams/milestone/phases/94-api-p2/94-CONTEXT.md
 Next action: /gsd:verify-work Phase 92；随后启动 93 (config_backup) / 94 (前端 API 工厂化)，Phase 95 必须最后
 
 ## Completed Phases (v1.29)
