@@ -155,11 +155,11 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 92-02-PLAN.md — system 9 文件 29 处 GetOrSet 样板迁移 base.GetOrSetJSON + 21 处失效调用改写（user pilot → 批量 → notice 逃兵归队）
+- [x] 92-02-PLAN.md — system 9 文件 29 处 GetOrSet 样板迁移 base.GetOrSetJSON + 21 处失效调用改写（user pilot → 批量 → notice 逃兵归队）
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 92-03-PLAN.md — operations floor 3 处迁移 + CacheInvalidator 底层委托（D-04）+ 外围 19 处失效调用改写 + 删除 system.InvalidateCache*（编译器驱动）+ DataCacheService 原地定性（D-06/D-07）
+- [x] 92-03-PLAN.md — operations floor 3 处迁移 + CacheInvalidator 底层委托（D-04）+ 外围 19 处失效调用改写 + 删除 system.InvalidateCache*（编译器驱动）+ DataCacheService 原地定性（D-06/D-07）
 
 **Wave 4** *(blocked on Wave 3)*
 
@@ -243,12 +243,12 @@ Plans:
 | Phase 89 PAGINATION 常量集中化 | SHIPPED | 3/3 | PAGINATION-01..11 | 2026-09-04 | 2026-09-04 |
 | Phase 90 TIMEOUTS/PORT/PROTOCOL/CONCURRENCY | SHIPPED | 4/4 | TIMEOUTS-01..08 | 2026-09-04 | 2026-09-04 |
 | Phase 91 CRUD 复用 base.Repository[T] | SHIPPED | 4/4 | CRUD-REUSE-01..08 | 2026-09-04 | 2026-09-04 |
-| Phase 92 缓存层三处架构统一 | In Progress | 2/4 | CACHE-UNIFY-01..05（01、02、05 done） | 2026-09-05 | — |
+| Phase 92 缓存层三处架构统一 | In Progress | 3/4 | CACHE-UNIFY-01..05（01、02、03、04、05 done，92-04 收口） | 2026-09-05 | — |
 | Phase 93 config_backup 三处 TODO 闭环 | Pending | 0/3 | BACKUP-CLOSED-01..05 | — | — |
 | Phase 94 前端 API 工厂化 | Pending | 0/3 | API-FACTORY-01..05 | — | — |
 | Phase 95 v1.28 SHIP + v1.29 closeout | Pending | 0/2 | CLOSEOUT-01..03 | — | — |
 
-**Total:** 7 phases / 41 requirements (29/41 done — 89+90+91 shipped，92 In Progress 1/4；93-95 待推进)
+**Total:** 7 phases / 41 requirements (31/41 done — 89+90+91 shipped，92 In Progress 3/4；93-95 待推进)
 
 ---
 

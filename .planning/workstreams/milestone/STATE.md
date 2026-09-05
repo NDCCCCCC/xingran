@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.29
 milestone_name: 技术债治理
 status: executing
-last_updated: "2026-09-05T04:05:43Z"
+last_updated: "2026-09-05T04:32:16.324Z"
 last_activity: 2026-09-05
 progress:
   total_phases: 7
@@ -28,11 +28,11 @@ Config: "mode": "yolo"
 ## Current Position
 
 Phase: 92 (缓存层三处架构统一 (🟡 中优 P2)) — EXECUTING
-Plan: 3 of 4
-Status: 92-02 complete — ready to execute 92-03
-Last activity: 2026-09-05 -- 92-02 complete (system 9 文件 29 处 GetOrSet 样板迁移 + 21 处失效调用改写 + notice 逃兵归队)
-Resume file: .planning/workstreams/milestone/phases/92-p2/92-02-SUMMARY.md
-Next action: 执行 92-03-PLAN.md（operations + D-04 外围 19 处失效调用改写 + cache_utils.go 删除 + root 定性 + monitor rename）
+Plan: 4 of 4
+Status: 92-03 complete — ready to execute 92-04 (收口)
+Last activity: 2026-09-05 -- 92-03 complete (operations floor 3 处迁移 + CacheInvalidator 委托 + D-04 涟漪 19 处改写与 InvalidateCache* 删除同 commit + root 定性)
+Resume file: .planning/workstreams/milestone/phases/92-p2/92-03-SUMMARY.md
+Next action: 执行 92-04-PLAN.md（monitor CacheOperator rename + invariants 扫描 + CLAUDE.md/REQUIREMENTS/ROADMAP 措辞同步 + D-05 LOC 双口径收口）
 
 ## Completed Phases (v1.29)
 
@@ -103,8 +103,10 @@ Next action: 执行 92-03-PLAN.md（operations + D-04 外围 19 处失效调用�
 |-------|------|----------|-------|
 | Phase 92 P01 | 31min | 3 tasks | 10 files |
 | Phase 92 P02 | 21min | 3 tasks | 10 files |
+| Phase 92 P03 | 20min | 3 tasks | 9 files |
 
 ## Decisions
 
 - [Phase 92]: 92-01: base 缓存抽象全套落地（TTLResolver+CacheProvider 全家+泛型函数族），system 经 5 alias 翻转零改动；私有 setValue 因同包 CacheAdapter 消费导出为 base.SetValue（唯一迁移偏差） — D-01/D-02/D-03 锁定；SetValue 导出为 Rule 3 编译必需最小修复，语义零变更
 - [Phase 92]: 92-02: system 9 文件 29 处 GetOrSet 样板全部收敛 base.GetOrSetJSON 单 return + 21 处失效调用改写 base 底层 + notice 逃兵归队（删私有 getExpiration）；user/role List 站点 T=*PageResult 为 Pitfall 5 单向改善；cache mock 须回填 dest（JSON 往返）为 Rule 1 测试契约修复；键构造 diff 级零变更，生产行为零变更 — InvalidateCache* 函数本体留 92-03 与外围 19 处改写同 commit 删除
+- [Phase 92]: 92-03: D-04 完全达成——外围 19 处失效调用改写与 system.InvalidateCacheByPattern/ByKey 删除同 commit（编译器当 checklist 证明零遗漏），42 处调用全部收敛 base 唯一失效底层；CacheInvalidator 保留分发器底层委托；floor 3 处样板收敛（:168 注释假阳性未动）；DataCacheService 原地定性（GetExpiration 委托 base + D-07 定位注释不标 @Deprecated，装配链零改动）——plan 委托片段缺取地址为 Rule 3 编译必需修复（组合字面量不可寻址）；A5 纪律：duty/knowledge/network/workorder 12 处 GetOrSet 样板留 v1.30+
