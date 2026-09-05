@@ -30,4 +30,9 @@ const (
 	// ADSyncTaskTimeout is the timeout for a single AD sync task (account pool recovery).
 	// scheduler/ad_sync_tasks.go:164 (inline 1*time.Minute extracted, D-08).
 	ADSyncTaskTimeout = 1 * time.Minute
+
+	// RestoreConfigTimeout is the timeout for a full running-config restore push
+	// (config backup restore, Phase 93). A full config can be hundreds of lines
+	// sent line-by-line, far exceeding the single-command CommandExecTimeout.
+	RestoreConfigTimeout = 10 * time.Minute
 )

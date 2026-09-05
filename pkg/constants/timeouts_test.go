@@ -20,6 +20,7 @@ var expectedTimeoutsValues = map[string]string{
 	"ADSyncTimeout":             "30m0s",
 	"SchedulerShutdownTimeout":  "5s",
 	"ADSyncTaskTimeout":         "1m0s",
+	"RestoreConfigTimeout":      "10m0s",
 }
 
 // readTimeoutsConsts parses timeouts.go and returns the map of constant
@@ -148,7 +149,7 @@ func TestTimeoutsConstantStability(t *testing.T) {
 // TestTimeoutsConstantCount asserts exactly 6 constants exist.
 func TestTimeoutsConstantCount(t *testing.T) {
 	t.Parallel()
-	const want = 6
+	const want = 7
 	actual, err := readTimeoutsConsts("timeouts.go")
 	if err != nil {
 		t.Fatalf("failed to parse timeouts.go: %v", err)
