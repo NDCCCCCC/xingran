@@ -44,7 +44,7 @@ export function useRestoreTask(taskId: string | null): UseRestoreTaskResult {
           return;
         }
         fetchedIdRef.current = taskId;
-        setTask(result.data);
+        setTask(result.data ?? null);
         if (isTerminal(result.data?.status) && timer) {
           // 终态：停止后续轮询（D-16）
           clearInterval(timer);
