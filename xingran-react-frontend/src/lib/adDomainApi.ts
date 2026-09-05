@@ -1,5 +1,6 @@
 import { get, post } from "./api";
-import type { BaseResponse, PageResponse } from "@/types";
+import { createResourceApi } from "./apiFactory";
+import type { BaseResponse, PageParams, PageResponse } from "@/types";
 
 // ==================== 类型定义 ====================
 
@@ -229,17 +230,24 @@ function withDefaultPagination<T extends { current?: number; pageSize?: number }
 
 // ==================== AD配置 API ====================
 
+// Phase 94 D-05/D-08: 标准 CRUD 形状函数委托共享工厂（导出签名零变化；
+// 全部 list 委托保留 withDefaultPagination 前置调用——Pitfall 5，直接透传即丢默认分页）
+const configCrud = createResourceApi<ADConfig>({ basePath: "/ad-domain/configs" });
+
 export function getADConfigList(
   params: ADConfigListRequest = {}
 ): Promise<BaseResponse<PageResponse<ADConfig>>> {
-  return post("/ad-domain/configs/list", withDefaultPagination(params));
+  return configCrud.list(
+    withDefaultPagination(params) as unknown as PageParams & Record<string, unknown>
+  );
 }
 
 export function createADConfig(data: ADConfigCreateRequest): Promise<BaseResponse<ADConfig>> {
-  return post("/ad-domain/configs", data);
+  return configCrud.create(data) as Promise<BaseResponse<ADConfig>>;
 }
 
 export function getADConfig(id: string): Promise<BaseResponse<ADConfig>> {
+  // KEEP: GET 动词（工厂 get 是 POST，动词不可改）
   return get(`/ad-domain/configs/${id}`);
 }
 
@@ -247,10 +255,11 @@ export function updateADConfig(
   id: string,
   data: ADConfigUpdateRequest
 ): Promise<BaseResponse<{ message: string }>> {
-  return post(`/ad-domain/configs/${id}/update`, data);
+  return configCrud.update(id, data) as Promise<BaseResponse<{ message: string }>>;
 }
 
 export function deleteADConfig(id: string): Promise<BaseResponse<{ message: string }>> {
+  // KEEP 直调（D-14 红线）: 既有测试锁定单参 post(url) 契约，工厂 delete 传 {} 属 wire 级 body 变更
   return post(`/ad-domain/configs/${id}/delete`);
 }
 
@@ -479,22 +488,29 @@ export interface UpdateMappingRequest {
   syncEnabled?: boolean;
 }
 
+// ==================== 部门组映射 API（CRUD 委托） ====================
+
+const mappingCrud = createResourceApi<DeptGroupMapping>({ basePath: "/ad-domain/mappings" });
+
 export function getMappingList(
   params: MappingListRequest
 ): Promise<BaseResponse<MappingListResponse>> {
-  return post("/ad-domain/mappings/list", withDefaultPagination(params));
+  return mappingCrud.list(
+    withDefaultPagination(params) as unknown as PageParams & Record<string, unknown>
+  );
 }
 
 export function createMapping(data: CreateMappingRequest): Promise<BaseResponse<DeptGroupMapping>> {
-  return post("/ad-domain/mappings", data);
+  return mappingCrud.create(data) as Promise<BaseResponse<DeptGroupMapping>>;
 }
 
 export function getMapping(id: string): Promise<BaseResponse<DeptGroupMapping>> {
+  // KEEP: GET 动词（工厂 get 是 POST，动词不可改）
   return get(`/ad-domain/mappings/${id}`);
 }
 
 export function updateMapping(id: string, data: UpdateMappingRequest): Promise<BaseResponse<null>> {
-  return post(`/ad-domain/mappings/${id}/update`, data);
+  return mappingCrud.update(id, data) as Promise<BaseResponse<null>>;
 }
 
 export function deleteMapping(id: string): Promise<BaseResponse<null>> {
@@ -577,31 +593,40 @@ export interface OUGroupMappingUpdateRequest {
   status?: "active" | "inactive";
 }
 
+// ==================== OU组映射 API ====================
+
+const ouGroupMappingCrud = createResourceApi<OUGroupMapping>({
+  basePath: "/ad-domain/ou-group-mappings",
+});
+
 export function getOUGroupMappings(
   params: OUGroupMappingListRequest
 ): Promise<BaseResponse<OUGroupMappingListResponse>> {
-  return post("/ad-domain/ou-group-mappings/list", withDefaultPagination(params));
+  return ouGroupMappingCrud.list(
+    withDefaultPagination(params) as unknown as PageParams & Record<string, unknown>
+  );
 }
 
 export function getOUGroupMapping(id: string): Promise<BaseResponse<OUGroupMapping>> {
+  // KEEP: GET 动词（工厂 get 是 POST，动词不可改）
   return get(`/ad-domain/ou-group-mappings/${id}`);
 }
 
 export function createOUGroupMapping(
   data: OUGroupMappingCreateRequest
 ): Promise<BaseResponse<OUGroupMapping>> {
-  return post("/ad-domain/ou-group-mappings", data);
+  return ouGroupMappingCrud.create(data) as Promise<BaseResponse<OUGroupMapping>>;
 }
 
 export function updateOUGroupMapping(
   id: string,
   data: OUGroupMappingUpdateRequest
 ): Promise<BaseResponse<{ message: string }>> {
-  return post(`/ad-domain/ou-group-mappings/${id}/update`, data);
+  return ouGroupMappingCrud.update(id, data) as Promise<BaseResponse<{ message: string }>>;
 }
 
 export function deleteOUGroupMapping(id: string): Promise<BaseResponse<{ message: string }>> {
-  return post(`/ad-domain/ou-group-mappings/${id}/delete`, {});
+  return ouGroupMappingCrud.delete(id) as Promise<BaseResponse<{ message: string }>>;
 }
 
 export function getOUGroupMappingsByOU(ouDn: string): Promise<BaseResponse<OUGroupMapping[]>> {
