@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.29
 milestone_name: 技术债治理
 status: verifying
-last_updated: "2026-09-05T20:28:35.530Z"
+last_updated: "2026-09-05T20:35:52.279Z"
 last_activity: 2026-09-05
 progress:
   total_phases: 7
@@ -31,7 +31,7 @@ Phase: 95
 Plan: Not started
 Status: Phase 94 execution complete — ready for verify
 Last activity: 2026-09-05
-Resume file: .planning/workstreams/milestone/phases/94-api-p2/94-03-SUMMARY.md
+Resume file: .planning/workstreams/milestone/phases/95-v1-28-ship-v1-29-closeout-audit-p4/95-CONTEXT.md
 Next action: /gsd:verify-work 94；随后启动 Phase 95 (v1.28 SHIP 收口 + v1.29 closeout，必须最后)
 
 ## Completed Phases (v1.29)
