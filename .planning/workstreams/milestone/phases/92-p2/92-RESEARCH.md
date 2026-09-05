@@ -448,21 +448,26 @@ func newBase92Redis(t *testing.T) (base.CacheProvider, *miniredis.Miniredis) {
 | A6 | `api/v1/system/cache_adapter.go`（NewDataCacheAdapter，生产 0 调用者）按 scope constrainment 原则本期不动，仅记录 | 发现清单 | 低——死代码遗留，可入 v1.30 清理候选 |
 | A7 | `SetJSON[T]` 在 D-03 锁定的函数族内，但实测当前 32 处调用点**零个**直接 Set 使用者（无 s.cache.Set 直调）——实现为薄包装（~10 行）以兑现 D-03，无迁移对象 | Standard Stack / Pattern 1 | 低——YAGNI 但已被 D-03 锁定 |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> 2026-09-05 revision 收口：三问均已被 plans 实质解决，逐条采纳结论附于各问之下（checker warning 2）。
 
 1. **LOC 锚点统计口径（建议 planner 在 plan 里显式锁定）**
    - What we know: 32 处毛减 ~190-290 行（实测）；base 新增 ~100-160 行生产代码；repo 全口径净减可能落在 ~30-190 区间。
    - What's unclear: D-05"净减 ≥200"是否把 base 包新增计入净额。
    - Recommendation: 沿 Phase 91 OVR-91-01 双口径（样板毛减 + base 投资分列），SUMMARY 诚实双报告；若坚持全口径，需用户 pre-confirm 接受 shortfall 可能。
+   - **RESOLVED（2026-09-05）→ 92-04 Task 4**：锁定双口径——口径 A = 样板调用段毛减（12 个迁移/改造生产文件，D-05 锚点 ≥200 判定）；口径 B = repo 全口径净减（诚实报告，shortfall 不算失败）。双数字 + 判定均入 92-04-SUMMARY。
 
 2. **D-04 涟漪 19 处的 plan 归属**
    - What we know: duty 5 / knowledge 4 / network 5 / workorder 4 / core.go 1，机械 1 行/处。
    - What's unclear: 放 92-01（与删除同 plan，编译器驱动）还是 92-03（operations+root+外围）。
    - Recommendation: 放 92-01 与"迁 base 后删除"同 commit——编译器保证零遗漏，符合 D-04 原子性。
+   - **RESOLVED（2026-09-05）→ 92-03 Task 2**：19 处改写与 cache_utils.go 删除落在同一 commit（go build ./... 编译器证明零遗漏，D-04 原子性达成）。注：研究原建议"放 92-01"，实际归 92-03——与 operations/root 收尾同 plan，且 92-02 完成后外围测试面稳定。
 
 3. **monitor rename 的最终名**
    - What we know: 候选 CacheOperator（D-08 建议）；接口 8 方法 Get/Set/Delete/Exists/Expire/TTL/Keys/FlushDB，rename 面 3 文件 ~58 处引用（cache_service.go 8 + cache_router.go 27 + cache_router_test.go 23）。
    - Recommendation: `CacheOperator`（动宾语义贴合"原始操作型"）；同文件 CacheConfigProvider/MultiLevelCacheProvider/DirectRedisProvider/StatsProvider 不撞名不动。
+   - **RESOLVED（2026-09-05）→ 92-04 Task 1**：采纳 CacheOperator。rename 面 planner 实测修正本问估算——"3 文件 ~58 处"系 CacheProviderAdapter/NewCacheProviderAdapter 子串匹配高估；实际裸类型引用 6 处代码点（cache_service.go :49/:155/:165 + cache_router.go :42 + **cache_service_test.go :34/:217**【checker blocker 补面】）+ 4 处 cosmetic 注释（router :16、test :8/:40/:89）。
 
 ## Environment Availability
 

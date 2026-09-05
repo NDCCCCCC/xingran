@@ -189,7 +189,7 @@ var _ CacheProvider = (*NoOpCacheProvider)(nil)
 - `internal/services/knowledge/knowledge_cache_impl_test.go:40`
 - `internal/services/network/cache_impl_test.go:42`
 - `internal/services/workorder/service_test.go:475`
-- `internal/services/monitor/cache_service_test.go:35` — `var _ MultiLevelCacheProvider = ...`（monitor 包内，不受影响）
+- `internal/services/monitor/cache_service_test.go:34` — `var _ CacheProvider = (*mockMonitorCacheProvider)(nil)`（**受影响**——monitor 包测试引用其自有接口，属 D-08 rename 代码点，92-04 Task 1 同步改名 CacheOperator【2026-09-05 勘误：本行曾误记为 ":35 var _ MultiLevelCacheProvider 不受影响"——:35/:36/:37/:38 的可选接口断言确实不受影响，但同文件 :34 断言与 :217 newTestCacheService 参数类型是 rename 面，checker blocker 已纳入 92-04】）
 
 ---
 
@@ -741,7 +741,7 @@ func (s *CacheConfigService) GetDurationWithDefault(configKey string, defaultDur
 **Apply to:** base/cache_functions.go——GetOrSetJSON 只做类型包装，禁止重写 Get/Set/JSON/同步写逻辑（重新实现 = 行为漂移，违背 v1.29 D-05 零行为变更底线）。
 
 ### 4. type alias 翻转迁移机制（D-02）
-**Source:** `system/cache_provider.go` 迁移后 alias 块（见 Pattern Assignments）+ 编译期断言 5 处（duty:48 / knowledge:40 / network:42 / workorder:475 / monitor:35）
+**Source:** `system/cache_provider.go` 迁移后 alias 块（见 Pattern Assignments）+ 编译期断言 4 处（duty:48 / knowledge:40 / network:42 / workorder:475——均为 `var _ systemServices.CacheProvider`；【2026-09-05 勘误：原列 monitor:35 系误记——monitor 测试断言引用其自有接口，非 alias 消费者，归 92-04 D-08 rename 面】）
 **Apply to:** 92-01——alias 同 commit 翻转，40+ 引用文件零改动由 Go alias 语义保证；duty/knowledge/network/workorder/cache_impl_test.go 的 `var _ systemServices.CacheProvider` 断言自动继续成立。
 
 ### 5. miniredis 测试纪律
