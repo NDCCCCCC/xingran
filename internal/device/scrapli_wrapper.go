@@ -12,6 +12,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/scrapli/scrapligo/driver/network"
 	"github.com/scrapli/scrapligo/driver/options"
+	"github.com/scrapli/scrapligo/driver/opoptions"
 	"github.com/scrapli/scrapligo/platform"
 	"github.com/scrapli/scrapligo/transport"
 	"github.com/scrapli/scrapligo/util"
@@ -625,6 +626,38 @@ func (w *ScrapliWrapper) SendConfigs(configs []string) ([]*Response, error) {
 		if err != nil {
 			return responses, fmt.Errorf("发送配置 '%s' 失败: %w", cfg, err)
 		}
+		responses = append(responses, &Response{
+			Result:   r.Result,
+			Started:  r.StartTime,
+			Finished: r.EndTime,
+			Failed:   r.Failed != nil,
+		})
+	}
+
+	return responses, nil
+}
+
+// SendConfigsStopOnFailed 一次 AcquirePriv(configuration) 批量下发配置命令，
+// 首个失败行即停止后续下发（scrapligo 原生 StopOnFailed）。与 SendConfigs 的
+// 逐行 SendConfig 循环不同，本方法只做一次 priv 舞步——千行级配置（配置备份
+// 恢复）效率与设备侧噪声显著更优。
+//
+// 失败语义：某行 Failed 时停止后续行，返回已发部分的 responses（含失败行，
+// Failed=true）且 error 为 nil——调用方需检查 Response.Failed 定位中断点
+// （RestoreConfig 的 D-12 进度留痕依赖此形态）。
+func (w *ScrapliWrapper) SendConfigsStopOnFailed(configs []string) ([]*Response, error) {
+	if err := w.acquireOp(); err != nil {
+		return nil, err
+	}
+	defer w.releaseOp()
+
+	m, err := w.driver.SendConfigs(configs, opoptions.WithStopOnFailed())
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make([]*Response, 0, len(m.Responses))
+	for _, r := range m.Responses {
 		responses = append(responses, &Response{
 			Result:   r.Result,
 			Started:  r.StartTime,

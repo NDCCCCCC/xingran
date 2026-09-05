@@ -1,0 +1,21 @@
+<Huawei>
+screen-length 0 temporary
+<Huawei>
+<Huawei>
+system-view
+[Huawei]
+interface GE0/0/1
+[Huawei-GigabitEthernet0/0/1]
+shutdown
+% Error: Unrecognized command found at '^' marker.
+[Huawei-GigabitEthernet0/0/1]
+quit
+[Huawei]
+return
+<Huawei>
+<Huawei>
+<Huawei>
+<Huawei>
+<Huawei>
+<Huawei>
+<Huawei>
