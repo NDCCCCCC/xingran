@@ -136,10 +136,10 @@
                   │                 └────────────┬──────────────┘
                   ▼                              │
    ┌─────────────────────────────────────────────┴───┐
-   │ src/lib/api.ts（零改动）                          │
-   │ post/get/put/del/postFormData → axios 实例        │
+   │ src/lib/api.ts（零改动）                              │
+   │ post/get/put/del/postFormData → axios 实例            │
    │ → SM2+SM4 加密拦截器 → 401 刷新/重放 → BaseResponse<T>│
-   └───────────────────────────┬──────────────────────┘
+   └───────────────────────────┬──────────────────────────┘
                                ▼
                      后端（契约零改动）
 ```
@@ -465,7 +465,9 @@ import ts from "typescript";
 | A3 | CreateNoticeRequest/WorkOrderCreateRequest 等「解耦请求类型」与各自实体 T 的 Omit 双向不可赋值——基于已读类型定义的结构推断（抽查的 Building/vm/VDIServer 四例均经 tsc 证实同规律），未对全部 ~15 个请求类型逐个跑探针 | 迁移矩阵 | 中——若个别类型意外可赋值，该函数从 KEEP 升级为 DELEGATE（方向安全：type-check 会即时暴露，plan 执行时以编译器为准微调矩阵） |
 | A4 | adDomainApi:501 `deleteMapping` 的 `/delete}` URL 在生产必然 404（gin 路由不会匹配带右括号的路径）——未起后端实测 | 迁移矩阵 | 低——即使后端有诡异的容错匹配，委托后改为正确 URL 也是修 bug 语义，plan 登记流程不变 |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> **决策落点（2026-09-05 修订登记）：** 两条开放问题均已裁决并落 plan——Q1（CreatePayload 严格版 vs 折中版）→ 94-01 Task 1 planner 定档：create/update 均采用 `Partial<CreatePayload<T>>` 折中版，本 phase 不收紧严格版；Q2（mappings 委托是否顺带修 ：501 URL bug）→ 94-03 Task 2 采纳推荐案：修复 + 独立 atomic commit 登记（v1.29 D-05 例外条款纪律）。以下保留研究期原文，仅作决策过程备查。
 
 1. **CreatePayload 严格版 vs 折中版（Pitfall 2 的 (a)/(b)）**
    - What we know: 两版都满足 D-02 字面目标；严格版需修补 ~25 处调用点（已全部定位），折中版零修补
