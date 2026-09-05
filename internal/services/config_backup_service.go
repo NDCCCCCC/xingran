@@ -150,9 +150,9 @@ func (s *ConfigBackupService) CreateBackup(ctx context.Context, req *BackupReque
 			return nil, fmt.Errorf("创建备份目录失败: %w", err)
 		}
 
-		// 生成文件名（CompressLarge=true 时追加 .gz 后缀，Phase 93 D-23）
+		// 生成文件名（设备名经 sanitizeBackupFileName 清洗防路径逃逸；CompressLarge=true 时追加 .gz 后缀，Phase 93 D-23/T-93-02）
 		timestamp := time.Now().Format("20060102_150405")
-		fileName := fmt.Sprintf("%s_v%d_%s.conf", req.DeviceName, newVersion, timestamp)
+		fileName := fmt.Sprintf("%s_v%d_%s.conf", sanitizeBackupFileName(req.DeviceName), newVersion, timestamp)
 		if req.CompressLarge {
 			fileName += ".gz"
 		}
@@ -396,9 +396,9 @@ func (s *ConfigBackupService) createNewAutoBackup(ctx context.Context, device *m
 			return false, fmt.Errorf("创建备份目录失败: %w", err)
 		}
 
-		// 生成文件名（auto 大文件统一压缩，Phase 93 D-25）
+		// 生成文件名（设备名清洗防路径逃逸；auto 大文件统一压缩，Phase 93 D-25/T-93-02）
 		timestamp := time.Now().Format("20060102_150405")
-		fileName := fmt.Sprintf("%s_v%d_%s.conf", device.DeviceName, newVersion, timestamp) + ".gz"
+		fileName := fmt.Sprintf("%s_v%d_%s.conf", sanitizeBackupFileName(device.DeviceName), newVersion, timestamp) + ".gz"
 		filePath := filepath.Join(backupDir, fileName)
 
 		// 写入文件（gzip 压缩后写入，与 CreateBackup 同构；BackupSize 保持
@@ -607,6 +607,10 @@ func (s *ConfigBackupService) GetBackupStatistics(ctx context.Context) (map[stri
 	}, nil
 }
 
+// maxDecompressedConfigBytes 解压后配置内容的大小上限（64MB）。
+// 防压缩炸弹：备份 .gz 文件即使被篡改为超高压缩比构造，解压也会在此截断报错（T-93-03）。
+const maxDecompressedConfigBytes = 64 << 20
+
 // gzipCompress 压缩配置内容（gzip DefaultCompression，Phase 93 D-26）。
 // 注意：必须先 Close 再取字节——gzip 尾部（CRC + ISIZE）仅在 Close 时写出。
 func gzipCompress(config string) ([]byte, error) {
@@ -621,7 +625,7 @@ func gzipCompress(config string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// gzipDecompress 解压 .gz 备份字节流。
+// gzipDecompress 解压 .gz 备份字节流（io.LimitReader 强制 64MB 上限，防压缩炸弹）。
 // 损坏数据错误形态：随机字节 → gzip.ErrHeader（Reader 创建期）；截断流 → io.ErrUnexpectedEOF；CRC 损坏 → gzip.ErrChecksum。
 func gzipDecompress(data []byte) (string, error) {
 	r, err := gzip.NewReader(bytes.NewReader(data))
@@ -629,11 +633,35 @@ func gzipDecompress(data []byte) (string, error) {
 		return "", fmt.Errorf("备份文件损坏: %w", err)
 	}
 	defer r.Close()
-	out, err := io.ReadAll(r)
+	out, err := io.ReadAll(io.LimitReader(r, maxDecompressedConfigBytes+1))
 	if err != nil {
 		return "", fmt.Errorf("备份文件解压失败: %w", err)
 	}
+	if len(out) > maxDecompressedConfigBytes {
+		return "", fmt.Errorf("解压后内容超过大小上限 (%d bytes)", maxDecompressedConfigBytes)
+	}
 	return string(out), nil
+}
+
+// sanitizeBackupFileName 清洗备份文件名中的设备名：替换路径分隔符与
+// Windows/POSIX 非法字符为 "_"，去除首尾的点与空格，空结果回退 "device"。
+// 防 DeviceName 夹带路径分隔符逃逸 data/config-backups 目录（T-93-02）。
+func sanitizeBackupFileName(name string) string {
+	replaced := strings.Map(func(r rune) rune {
+		switch r {
+		case '/', '\\', ':', '*', '?', '"', '<', '>', '|':
+			return '_'
+		}
+		if r < 0x20 {
+			return '_'
+		}
+		return r
+	}, name)
+	replaced = strings.Trim(replaced, ". ")
+	if replaced == "" {
+		return "device"
+	}
+	return replaced
 }
 
 // calculateHash 计算配置内容的哈希值

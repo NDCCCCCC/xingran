@@ -306,3 +306,85 @@ func TestCbk93GetBackupContentCompressed(t *testing.T) {
 	assert.Contains(t, err.Error(), "备份压缩状态不一致")
 	assert.Contains(t, err.Error(), "compressed=true")
 }
+
+// TestCbk93DecompressBombCapped — a highly-compressible payload larger than
+// maxDecompressedConfigBytes must be rejected by the LimitReader cap (T-93-03
+// zip-bomb DoS defence), not decompressed into memory.
+func TestCbk93DecompressBombCapped(t *testing.T) {
+	bomb := bytes.Repeat([]byte("0"), maxDecompressedConfigBytes+1<<20) // ~65MB, compresses to KBs
+	compressed, err := gzipCompress(string(bomb))
+	require.NoError(t, err)
+
+	_, err = gzipDecompress(compressed)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "解压后内容超过大小上限")
+}
+
+// TestCbk93SanitizeBackupFileName — path separators / Windows-illegal chars /
+// control chars are replaced; trailing dots and spaces are trimmed; empty
+// input falls back to "device" (T-93-02 path-escape defence).
+func TestCbk93SanitizeBackupFileName(t *testing.T) {
+	cases := []struct{ in, wantContains string }{
+		{"../..", "_.._.."}, // slashes replaced → no traversal
+		{"a/b", "a_b"},
+		{`a\b`, "a_b"},
+		{"x.", "x"},
+		{" con ", "con"},
+		{"", "device"},
+	}
+	for _, tc := range cases {
+		got := sanitizeBackupFileName(tc.in)
+		assert.NotContains(t, got, "/", "input %q: no path separator", tc.in)
+		assert.NotContains(t, got, "\\", "input %q: no backslash", tc.in)
+		assert.NotContains(t, got, ":", "input %q: no colon", tc.in)
+		assert.False(t, strings.HasSuffix(got, "."), "input %q: no trailing dot", tc.in)
+		if tc.in == "" {
+			assert.Equal(t, tc.wantContains, got)
+		}
+	}
+	assert.Equal(t, "dev_x", sanitizeBackupFileName("dev:x"))
+	assert.Equal(t, "dev_x_y", sanitizeBackupFileName("dev/x*y"))
+}
+
+// TestCbk93CreateBackupWriteFailure — D-28① disk-full/write-failure simulation:
+// occupy data/config-backups with a FILE so MkdirAll for the device subtree
+// fails; CreateBackup must surface "创建备份目录失败" and not persist a record.
+func TestCbk93CreateBackupWriteFailure(t *testing.T) {
+	ctx := context.Background()
+	cbk7906Chdir(t)
+	db := newDB7906(t, &models.ConfigBackup{}, &models.NetworkDevice{}, &models.Config{})
+
+	const deviceID = "dev-cbk93-wf"
+	cbk7906SeedDevice(t, db, deviceID, "cbk93-wf-switch")
+	require.NoError(t, db.Create(&models.Config{
+		ConfigName:  "备份阈值",
+		ConfigKey:   "network.config.backup.threshold",
+		ConfigValue: "1",
+	}).Error)
+
+	// occupy the backup root with a regular file → any MkdirAll below it fails
+	require.NoError(t, os.MkdirAll("data", 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join("data", "config-backups"), []byte("occupied"), 0o644))
+
+	executor := newExecutor93(t, db, deviceID, cbk93LargeOutput())
+	svc := NewConfigBackupService(db, executor)
+
+	result, err := svc.CreateBackup(ctx, &BackupRequest{
+		DeviceID:      deviceID,
+		DeviceName:    "cbk93-wf-switch",
+		BackupType:    models.BackupTypeManual,
+		ChangeReason:  "93-01 写失败回归",
+		CreatedBy:     "cbk93",
+		CompressLarge: true,
+	})
+	require.Error(t, err)
+	assert.Nil(t, result)
+	assert.True(t,
+		strings.Contains(err.Error(), "创建备份目录失败") || strings.Contains(err.Error(), "写入备份文件失败"),
+		"error should surface the write-path failure, got: %v", err)
+
+	// no backup record persisted for the failed write
+	var count int64
+	require.NoError(t, db.Model(&models.ConfigBackup{}).Where("device_id = ?", deviceID).Count(&count).Error)
+	assert.Equal(t, int64(0), count, "failed write must not persist a backup record (D-28④ rollback semantics)")
+}
