@@ -151,7 +151,7 @@ Plans:
 
 **Wave 1**
 
-- [ ] 92-01-PLAN.md — base 缓存抽象包（TTLResolver + CacheProvider 全家 + 泛型函数族，D-01/D-02/D-03/D-04）+ system type alias 翻转 + nil-receiver 防护（Pitfall 1）+ cache_service_base_test.go miniredis 双装配测试（D-09）
+- [x] 92-01-PLAN.md — base 缓存抽象包（TTLResolver + CacheProvider 全家 + 泛型函数族，D-01/D-02/D-03/D-04）+ system type alias 翻转 + nil-receiver 防护（Pitfall 1）+ cache_service_base_test.go miniredis 双装配测试（D-09）
 
 **Wave 2** *(blocked on Wave 1)*
 
@@ -243,12 +243,12 @@ Plans:
 | Phase 89 PAGINATION 常量集中化 | SHIPPED | 3/3 | PAGINATION-01..11 | 2026-09-04 | 2026-09-04 |
 | Phase 90 TIMEOUTS/PORT/PROTOCOL/CONCURRENCY | SHIPPED | 4/4 | TIMEOUTS-01..08 | 2026-09-04 | 2026-09-04 |
 | Phase 91 CRUD 复用 base.Repository[T] | SHIPPED | 4/4 | CRUD-REUSE-01..08 | 2026-09-04 | 2026-09-04 |
-| Phase 92 缓存层三处架构统一 | Pending | 0/4 | CACHE-UNIFY-01..05 | — | — |
+| Phase 92 缓存层三处架构统一 | In Progress | 1/4 | CACHE-UNIFY-01..05（01、05 done） | 2026-09-05 | — |
 | Phase 93 config_backup 三处 TODO 闭环 | Pending | 0/3 | BACKUP-CLOSED-01..05 | — | — |
 | Phase 94 前端 API 工厂化 | Pending | 0/3 | API-FACTORY-01..05 | — | — |
 | Phase 95 v1.28 SHIP + v1.29 closeout | Pending | 0/2 | CLOSEOUT-01..03 | — | — |
 
-**Total:** 7 phases / 41 requirements (27/41 done — 89+90+91 shipped；92-95 待推进)
+**Total:** 7 phases / 41 requirements (29/41 done — 89+90+91 shipped，92 In Progress 1/4；93-95 待推进)
 
 ---
 

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.29
 milestone_name: 技术债治理
 status: executing
-last_updated: "2026-09-05T03:02:34.541Z"
-last_activity: 2026-09-05 -- Phase 92 planning complete
+last_updated: "2026-09-05T03:39:27.239Z"
+last_activity: 2026-09-05
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 15
-  completed_plans: 11
+  completed_plans: 12
   percent: 43
 ---
 
@@ -23,16 +23,16 @@ Config: "mode": "yolo"
 
 **Core value:** 按 2026-09-03 综合审计报告发现的优先级，逐批治理 7 项技术债行动；后端常量/CRUD/缓存/配置备份 + 前端 API 工厂化 + Phase 88 收口，使代码质量基线从此不可无声倒退。
 
-**Current focus:** Phase 91 — CRUD 复用 base.Repository[T] (🔥 高优 P1)
+**Current focus:** Phase 92 — 缓存层三处架构统一 (🟡 中优 P2)
 
 ## Current Position
 
-Phase: 92
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-09-05 -- Phase 92 planning complete
-Resume file: .planning/workstreams/milestone/phases/92-p2/92-CONTEXT.md
-Next action: `/gsd:discuss-phase 92` (缓存层三处架构统一——依赖 91 已解除; 93 config_backup / 94 前端 API 工厂化 可并行)
+Phase: 92 (缓存层三处架构统一 (🟡 中优 P2)) — EXECUTING
+Plan: 2 of 4
+Status: 92-01 complete — ready to execute 92-02
+Last activity: 2026-09-05 -- 92-01 complete (base 缓存抽象包 + alias 翻转 + TestBase92 双装配测试)
+Resume file: .planning/workstreams/milestone/phases/92-p2/92-01-SUMMARY.md
+Next action: 执行 92-02-PLAN.md（system 9 文件 29 处 GetOrSet 样板迁移 base.GetOrSetJSON）
 
 ## Completed Phases (v1.29)
 
@@ -93,6 +93,16 @@ Next action: `/gsd:discuss-phase 92` (缓存层三处架构统一——依赖 91
 
 ## Next Step
 
-`/gsd:discuss-phase 92` — 缓存层三处架构统一（P2，依赖 Phase 91 已解除）
+执行 92-02-PLAN.md — system 9 文件 29 处 GetOrSet 样板迁移 base.GetOrSetJSON + 21 处失效调用改写
 
 或并行推进: 93 (config_backup) / 94 (前端 API 工厂化，完全独立)；Phase 95 必须最后
+
+## Performance Metrics
+
+| Phase | Plan | Duration | Notes |
+|-------|------|----------|-------|
+| Phase 92 P01 | 31min | 3 tasks | 10 files |
+
+## Decisions
+
+- [Phase 92]: 92-01: base 缓存抽象全套落地（TTLResolver+CacheProvider 全家+泛型函数族），system 经 5 alias 翻转零改动；私有 setValue 因同包 CacheAdapter 消费导出为 base.SetValue（唯一迁移偏差） — D-01/D-02/D-03 锁定；SetValue 导出为 Rule 3 编译必需最小修复，语义零变更

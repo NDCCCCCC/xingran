@@ -69,11 +69,11 @@ status: executing
 
 > **审计源**: legacy root / system/* / operations/* 三处同一 CacheServiceBase 组合模式
 
-- [ ] **CACHE-UNIFY-01**: 抽 `internal/services/base/cache_service_base.go` 为单一基类（提供 Get/Set/Delete/Invalidate/InvalidatePattern 模板方法）
+- [x] **CACHE-UNIFY-01**: 抽 `internal/services/base/cache_service_base.go` 为单一基类（提供 Get/Set/Delete/Invalidate/InvalidatePattern 模板方法）——**92-01 交付**（实际形态按 D-03 修订：Go method 无类型参数，模板方法落地为 TTLResolver 薄基类 + 泛型包级函数族 GetOrSetJSON[T]/SetJSON[T]/Invalidate/InvalidatePattern；92-CONTEXT 现实校准）
 - [ ] **CACHE-UNIFY-02**: `internal/services/system/*_cache_impl.go` (9 个文件) 全部继承新基类，删除重复的 5 行模板代码
 - [ ] **CACHE-UNIFY-03**: `internal/services/operations/*_cache_impl.go` (含 floor_cache_impl 等) 全部继承新基类
 - [ ] **CACHE-UNIFY-04**: legacy root `internal/services/*_cache_service.go` (data_cache_service 等) 标注 @Deprecated 并迁移到 system/ 下，core.Core 引用路径同步更新
-- [ ] **CACHE-UNIFY-05**: `base/cache_service_base_test.go` + system/operations 缓存实现单测覆盖 Get/Set/Delete/InvalidatePattern 路径；`go test ./internal/services/...` 0 失败
+- [x] **CACHE-UNIFY-05**: `base/cache_service_base_test.go` + system/operations 缓存实现单测覆盖 Get/Set/Delete/InvalidatePattern 路径；`go test ./internal/services/...` 0 失败——**92-01 交付 base 侧**（TestBase92 十用例 miniredis+MemoryCache 双装配；system/operations 侧既有单测保持绿；20 包全绿实测，invariants 扫描由 92-04 补齐）
 
 ## BACKUP-CLOSED (config_backup 三处 TODO 闭环) — 🟡 中优 P2
 
