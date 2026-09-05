@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.29
 milestone_name: 技术债治理
-status: executing
-last_updated: "2026-09-05T22:33:14.000Z"
-last_activity: 2026-09-06 -- 95-01 complete（v1.28 收口核对确认 + 措辞校准 + 记账补漏，commit 1c70eeb）
+status: shipped
+last_updated: "2026-09-05T23:50:00.000Z"
+last_activity: 2026-09-06 -- 95-02 complete + v1.29 SHIPPED（type-check 真实化 + flaky 双修复 + 七 gate 全绿 + audit 报告 + 记账闭环，commits d7e82ff..9173cb9）
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 26
-  completed_plans: 25
-  percent: 96
+  completed_plans: 26
+  percent: 100
 ---
 
 # Project State (v1.29 — milestone workstream)
@@ -23,18 +23,26 @@ Config: "mode": "yolo"
 
 **Core value:** 按 2026-09-03 综合审计报告发现的优先级，逐批治理 7 项技术债行动；后端常量/CRUD/缓存/配置备份 + 前端 API 工厂化 + Phase 88 收口，使代码质量基线从此不可无声倒退。
 
-**Current focus:** Phase 95 — v1.28 SHIP 收口 + v1.29 closeout + audit
+**Current focus:** v1.29 SHIPPED 2026-09-06 — milestone 已收口，待 /gsd-complete-milestone（用户触发）+ push 决策
 
 ## Current Position
 
-Phase: 95 (v1.28 SHIP 收口 + v1.29 closeout + audit) — EXECUTING
-Plan: 1 of 2 complete（95-01 done，commit 1c70eeb）— 95-02 待执行
-Status: Executing Phase 95
-Last activity: 2026-09-06 -- 95-01 complete（v1.28 收口核对确认 + 措辞校准 + 记账补漏）
-Resume file: .planning/workstreams/milestone/phases/95-v1-28-ship-v1-29-closeout-audit-p4/95-02-PLAN.md
-Next action: 执行 95-02（D-03 type-check 修复 + gate ② flaky 双修复 + D-06 七 gate 跑批 + D-07 audit 报告 + D-09 SHIPPED 标记）；引用 95-01 校准后口径（45 requirements / CLOSEOUT-01/02 已勾选）
+Phase: 95 (v1.28 SHIP 收口 + v1.29 closeout + audit) — COMPLETE（2/2 plans）
+Plan: 2 of 2 complete（95-01 commit 1c70eeb；95-02 commits d7e82ff / e49916b / 1ef2224 / 9173cb9）
+Status: v1.29 SHIPPED 2026-09-06（7 phases / 45 requirements 45/45 done）
+Last activity: 2026-09-06 -- 95-02 complete + v1.29 SHIPPED
+Resume file: None（milestone 收口；audit 报告 .planning/milestones/v1.29-MILESTONE-AUDIT.md）
+Next action: /gsd-complete-milestone 完整 archive（用户触发，deferred）；push 决策留用户（73-05 先例，本地领先 origin/main 179 commits）；v1.30 规划输入 = REQUIREMENTS § V130-CANDIDATES（CACHEDEF-01..05 + JOBSTAT-01）
 
 ## Completed Phases (v1.29)
+
+### Phase 95: v1.28 SHIP 收口 + v1.29 closeout + audit — COMPLETE + v1.29 SHIPPED 2026-09-06
+
+- 2 plans (95-01/02)，commits 1c70eeb + d7e82ff..9173cb9
+- 95-01: v1.28 收口核对确认零补漏 + 措辞校准 + 记账补漏（BACKUP-CLOSED 补勾 / Progress 表修正 / 41→45）
+- 95-02: D-03 type-check gate 真实化（-p tsconfig.app.json 3701 文件真检查面 + useRestoreTask:47 ?? null，npm run build 的 tsc -b 链同根因救活）+ gate ② flaky 双修复（newNetworkTestEnv SetMaxOpenConns(1) 消除 glebarez :memory: 每连接独立空库并发窗口 + TestJbu8003 种子正午锚定绕开 sqlite DATE() UTC 取日缺陷，均 -count=10 复验）+ D-06 七 gate 本地全绿（go build 0 错误 / go test 双口径 0 失败 / type-check 14s 真检查 / lint 0 errors 1389 warnings 存量 / 554 文件 3800 tests / 后端 coverage 78.33% ≥ 77.5 / 前端 45/45 dirs）+ v1.29-MILESTONE-AUDIT.md（六段 + type-check 空转与 flaky 双新增章节，45/45 追溯，89/90 实名证据口径）+ D-09 SHIPPED 双标记 + 94-HUMAN-UAT 流转 resolved（D-03 修复线）+ JOBSTAT-01 登记 V130-CANDIDATES + CLOSEOUT-03 记账闭环（两 ROADMAP Phase 95 行 Complete 2/2 + Total 45/45）
+- 生产缺陷 JOBSTAT-01（job_utils.go:57 时区日界看板少计）本相不修，登记 V130-CANDIDATES；job_utils.go 零改动
+- 跑批锚定 e49916b + 工作树快照记录放行（4 个未跟踪测试文件随跑批全绿）；push 决策留用户
 
 ### Phase 94: 前端 API 工厂化 — COMPLETE 2026-09-06
 
@@ -102,9 +110,11 @@ Next action: 执行 95-02（D-03 type-check 修复 + gate ② flaky 双修复 + 
 
 ## Next Step
 
-Phase 94/93 已完成 — 剩余 Phase 95 (v1.28 SHIP 收口 + v1.29 closeout + audit)：MILESTONES v1.28 段 + PROJECT SHIPPED 标记 + 全 gate 验证 + v1.29-MILESTONE-AUDIT.md 生成
+v1.29 SHIPPED 2026-09-06 — milestone 全部收口（7 phases / 26 plans / 45 requirements 45/45）。
 
-/gsd:plan-phase 95 待执行；Phase 95 必须最后
+- /gsd-complete-milestone 完整 archive（.planning/milestones/v1.29-phases/ 迁移、workstream 归位）— 用户触发，本相按 D-09 只做文档 SHIPPED 标记
+- push 决策留用户（73-05 先例）：本地领先 origin/main 179 commits，CI 末次绿跑 2026-09-03（Phase 88 内容），CI 未见证 v1.29 代码
+- v1.30 输入：REQUIREMENTS § V130-CANDIDATES（CACHEDEF-01..05 + Phase 95 增补 JOBSTAT-01）+ type-check:strict 空转注记 + 4 个未跟踪测试文件入库决策 + operlog exclude_paths todo
 
 ## Performance Metrics
 
@@ -116,9 +126,11 @@ Phase 94/93 已完成 — 剩余 Phase 95 (v1.28 SHIP 收口 + v1.29 closeout + 
 | Phase 92 P04 | 24min | 4 tasks | 7 files |
 | Phase 94 P03 | 69min | 3 tasks | 9 files |
 | Phase 95 P01 | 4min | 2 tasks | 3 files |
+| Phase 95 P02 | 68min | 5 tasks | 11 files（含 audit 报告；含七 gate 跑批 ~40min wall time） |
 
 ## Decisions
 
+- [Phase 95]: 95-02: D-03 修复线成立（实测全仓 1 处错误 < 5 降级线）——type-check script 显式 -p tsconfig.app.json（探针选型，「根 config 补 references」证伪）+ useRestoreTask:47 ?? null，npm run build 的 tsc -b 链同根因救活（pre-existing exit 2 → 0）；type-check:strict 不修仅注记（CI 未引用）；gate ② 双 flaky 全 test-infra 修复（SetMaxOpenConns(1) 全仓新 pattern + 种子正午锚定），备选 shared-cache DSN 未启用；生产看板缺陷 JOBSTAT-01 登记 V130 本相不修（job_utils.go:57 零改动守 D-04/D-05 红线）；gate ② 双口径（CI 三包主记录 540s + 字面 ./... 补充 476s）均 0 失败；跑批裁定记录放行（Pitfall 4 选项 c，锚 e49916b + 快照前后一致）；audit commit A（1ef2224）/ SHIPPED+UAT+记账 commit B（9173cb9）分线（D-11）
 - [Phase 95]: 95-01: MILESTONES v1.28 段四件套核对通过零补漏（45.13%/24.87pp/Phase 88 备选/归档位置）+ PROJECT.md :35 SHIPPED+ARCHIVED 确认零改动 + frontend-coverage workstream 五项齐备零移动（D-01/D-02）；CLOSEOUT-01/02 措辞校准「核对确认（已存在）」并勾选 + 两份 ROADMAP Phase 95 SC-1/SC-2 与 milestone SC-e 同步校准（D-10 同 commit 1c70eeb）；记账补漏：BACKUP-CLOSED-01/02 补勾带证据锚（gzipCompress :603/gzipDecompress :617）+ Progress 表 Phase 91-94 stale 修正（Complete 4/4·4/4·6/6·3/3）+ 41→45 requirements 三文件五处校准（11+8+8+5+5+5+3）；两 ROADMAP 95-01 plan 复选框勾选（完成事实登记，Phase 95 行保持 Pending 由 95-02 收口）
 - [Phase 94]: 94-03: 扁平 5 件 cluster 委托完成（workorder/knowledge/duty/notice/adDomain），导出签名零变化 + 5 个 .test.ts 零改动全绿；delete 形状函数统一保持单参 post 直调（plan DELEGATE 清单与 D-14 零改动红线冲突，工厂 delete 传 {} 属 wire 级 body 变更；deleteNotice/deleteOUGroupMapping/deleteMapping 例外——既有测试本就断言 {} body）；D-12 硬档按 allowedResidues 等值锁登记 KEEP 基线（opsApi 4 / vdiApi 1，plan「期望 0」被矩阵 KEEP 判定证伪）；adDomain deleteMapping :501 潜伏 404 独立 commit 登记（v1.29 D-05 例外条款纪律）；CLAUDE.md 新增 Frontend API Factory Convention（D-13）+ REQUIREMENTS/ROADMAP D-01 措辞校准；覆盖率 gate 45/45 dirs exit 0（lib 90.48% ≥ 87.2%）
 - [Phase 92]: 92-01: base 缓存抽象全套落地（TTLResolver+CacheProvider 全家+泛型函数族），system 经 5 alias 翻转零改动；私有 setValue 因同包 CacheAdapter 消费导出为 base.SetValue（唯一迁移偏差） — D-01/D-02/D-03 锁定；SetValue 导出为 Rule 3 编译必需最小修复，语义零变更
