@@ -23,6 +23,8 @@ import {
   Col,
   Statistic,
   Descriptions,
+  Alert,
+  Spin,
   App,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
@@ -43,7 +45,7 @@ import {
 import type { ConfigBackup } from "@/types";
 import type { DeviceBackupGroup, DiffLine } from "./types";
 import { useBackupData, useBackupDiff, useBackupModals } from "./hooks";
-import { post } from "@/lib/api";
+import { useRestoreTask } from "./hooks/useRestoreTask";
 import { batchExport } from "@/lib/api/networkApi";
 import ActionButtons from "@/components/shared/ActionButtons";
 import NetworkExport from "@/components/shared/NetworkExport";
@@ -131,6 +133,7 @@ const ConfigBackupPage: FC = () => {
     selectedRestoreBackup,
     selectedDeviceGroup: _modalDeviceGroup,
     backupContent,
+    restoreTaskId,
     openBackupModal,
     closeBackupModal,
     openRestoreModal,
@@ -147,6 +150,26 @@ const ConfigBackupPage: FC = () => {
       loadStatistics();
     },
   });
+
+  // Phase 93: 恢复任务轮询（restoreTaskId 非空时 3s 轮询，终态自动停止）
+  const { task: restoreTask } = useRestoreTask(restoreTaskId);
+
+  // 任务 result JSON 解析（sentLines/totalLines/hashMatched 展示用）
+  const restoreResult = useMemo(() => {
+    if (!restoreTask?.resultJson) {
+      return null;
+    }
+    try {
+      return JSON.parse(restoreTask.resultJson) as {
+        sentLines?: number;
+        totalLines?: number;
+        hashMatched?: boolean;
+        failedLine?: string;
+      };
+    } catch {
+      return null;
+    }
+  }, [restoreTask?.resultJson]);
 
   // 初始化加载
   useEffect(() => {
@@ -211,22 +234,17 @@ const ConfigBackupPage: FC = () => {
     openContentDrawer(backup);
   };
 
-  // 恢复配置
+  // 恢复配置（版本列表抽屉入口——复用恢复 Modal 的异步进度流程，Phase 93）
   const handleRestore = (backup: ConfigBackup) => {
     Modal.confirm({
       title: "确认恢复配置",
-      content: `确定要恢复到版本 ${backup.version} 吗？`,
+      content: `确定要恢复到版本 ${backup.version} 吗？此操作将会覆盖设备当前配置！`,
       okText: "确认",
       cancelText: "取消",
       okType: "danger",
       onOk: async () => {
-        try {
-          await post(`/network/backups/${backup.id}/restore`, {});
-          message.success("恢复成功");
-          loadBackups();
-        } catch (_error) {
-          message.error("恢复失败");
-        }
+        openRestoreModal(backup);
+        await confirmRestore();
       },
     });
   };
@@ -705,97 +723,156 @@ const ConfigBackupPage: FC = () => {
           closeRestoreModal();
           setSelectedDeviceGroup(null);
         }}
-        footer={[
-          <Button
-            key="cancel"
-            onClick={() => {
-              closeRestoreModal();
-              setSelectedDeviceGroup(null);
-            }}
-          >
-            取消
-          </Button>,
-          <Button key="confirm" type="primary" danger onClick={handleConfirmRestore}>
-            确认还原
-          </Button>,
-        ]}
+        footer={
+          restoreTaskId
+            ? [
+                <Button
+                  key="close"
+                  onClick={() => {
+                    closeRestoreModal();
+                    setSelectedDeviceGroup(null);
+                  }}
+                >
+                  关闭
+                </Button>,
+              ]
+            : [
+                <Button
+                  key="cancel"
+                  onClick={() => {
+                    closeRestoreModal();
+                    setSelectedDeviceGroup(null);
+                  }}
+                >
+                  取消
+                </Button>,
+                <Button key="confirm" type="primary" danger onClick={handleConfirmRestore}>
+                  确认还原
+                </Button>,
+              ]
+        }
         width={800}
       >
-        {selectedDeviceGroup && (
-          <div>
-            <Descriptions column={2} style={{ marginBottom: 16 }} bordered size="small">
-              <Descriptions.Item label="设备名称">
-                {selectedDeviceGroup.deviceName}
-              </Descriptions.Item>
-              <Descriptions.Item label="IP地址">{selectedDeviceGroup.ipAddress}</Descriptions.Item>
-              <Descriptions.Item label="备份总数">
-                {selectedDeviceGroup.backupCount} 份
-              </Descriptions.Item>
-              <Descriptions.Item label="已选版本">
-                <Tag color="blue">版本 {selectedRestoreBackup?.version}</Tag>
-              </Descriptions.Item>
-            </Descriptions>
-
-            <div style={{ marginBottom: 16 }}>
-              <Space>
-                <span>选择要还原的版本：</span>
-                <Select
-                  style={{ width: 400 }}
-                  value={selectedRestoreBackup?.id}
-                  onChange={(value) => {
-                    const backup = selectedDeviceGroup.backups.find((b) => b.id === value);
-                    if (backup) {
-                      setSelectedDeviceGroup(selectedDeviceGroup);
-                      openRestoreModal(backup);
-                    }
-                  }}
-                  placeholder="请选择要还原的版本"
-                  onSearch={() => {}}
-                >
-                  {selectedDeviceGroup.backups.map((backup) => (
-                    <Option key={backup.id} value={backup.id}>
-                      <Space>
-                        <span>版本 {backup.version}</span>
-                        <Tag color={backup.backupType === "auto" ? "blue" : "green"}>
-                          {backup.backupType === "auto" ? "自动" : "手动"}
-                        </Tag>
-                        <span style={{ color: "var(--theme-text-tertiary, #999)" }}>
-                          {formatDateTime(backup.createdAt)}
-                        </span>
-                      </Space>
-                    </Option>
-                  ))}
-                </Select>
-              </Space>
-            </div>
-
-            {selectedRestoreBackup && (
-              <Card size="small" title="选定版本详情">
-                <Descriptions column={2} size="small">
-                  <Descriptions.Item label="版本号">
-                    {selectedRestoreBackup.version}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="备份类型">
-                    <Tag color={selectedRestoreBackup.backupType === "auto" ? "blue" : "green"}>
-                      {selectedRestoreBackup.backupType === "auto" ? "自动备份" : "手动备份"}
-                    </Tag>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="文件大小">
-                    {(selectedRestoreBackup.backupSize / 1024).toFixed(2)} KB
-                  </Descriptions.Item>
-                  <Descriptions.Item label="创建时间">
-                    {formatDateTime(selectedRestoreBackup.createdAt)}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="创建人">
-                    {selectedRestoreBackup.createdBy}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="变更原因" span={2}>
-                    {selectedRestoreBackup.changeReason || "-"}
-                  </Descriptions.Item>
-                </Descriptions>
-              </Card>
+        {restoreTaskId ? (
+          // Phase 93: 异步恢复任务进度/结果（useRestoreTask 轮询驱动，D-19）
+          <Card size="small" title="恢复任务进度">
+            {restoreTask?.status === "failed" ? (
+              <Alert
+                type="error"
+                showIcon
+                message="恢复失败"
+                description={
+                  <div>
+                    {restoreTask.errorMessage && <div>错误信息：{restoreTask.errorMessage}</div>}
+                    {restoreResult?.failedLine && <div>失败行：{restoreResult.failedLine}</div>}
+                  </div>
+                }
+              />
+            ) : restoreTask?.status === "success" ? (
+              <Alert
+                type="success"
+                showIcon
+                message="恢复成功"
+                description={
+                  <div>
+                    <div>
+                      配置已下发 {restoreResult?.sentLines ?? restoreTask.sentLines ?? "-"} /{" "}
+                      {restoreResult?.totalLines ?? restoreTask.totalLines ?? "-"} 行
+                    </div>
+                    {restoreResult?.hashMatched === false && (
+                      <div style={{ color: "#faad14" }}>回读配置与备份存在差异，已记录警告</div>
+                    )}
+                  </div>
+                }
+              />
+            ) : (
+              <div style={{ textAlign: "center", padding: "24px 0" }}>
+                <Spin />
+                <div style={{ marginTop: 12 }}>
+                  {restoreTask?.status === "running" ? "配置下发中..." : "排队等待中..."}
+                </div>
+              </div>
             )}
-          </div>
+          </Card>
+        ) : (
+          selectedDeviceGroup && (
+            <div>
+              <Descriptions column={2} style={{ marginBottom: 16 }} bordered size="small">
+                <Descriptions.Item label="设备名称">
+                  {selectedDeviceGroup.deviceName}
+                </Descriptions.Item>
+                <Descriptions.Item label="IP地址">
+                  {selectedDeviceGroup.ipAddress}
+                </Descriptions.Item>
+                <Descriptions.Item label="备份总数">
+                  {selectedDeviceGroup.backupCount} 份
+                </Descriptions.Item>
+                <Descriptions.Item label="已选版本">
+                  <Tag color="blue">版本 {selectedRestoreBackup?.version}</Tag>
+                </Descriptions.Item>
+              </Descriptions>
+
+              <div style={{ marginBottom: 16 }}>
+                <Space>
+                  <span>选择要还原的版本：</span>
+                  <Select
+                    style={{ width: 400 }}
+                    value={selectedRestoreBackup?.id}
+                    onChange={(value) => {
+                      const backup = selectedDeviceGroup.backups.find((b) => b.id === value);
+                      if (backup) {
+                        setSelectedDeviceGroup(selectedDeviceGroup);
+                        openRestoreModal(backup);
+                      }
+                    }}
+                    placeholder="请选择要还原的版本"
+                    onSearch={() => {}}
+                  >
+                    {selectedDeviceGroup.backups.map((backup) => (
+                      <Option key={backup.id} value={backup.id}>
+                        <Space>
+                          <span>版本 {backup.version}</span>
+                          <Tag color={backup.backupType === "auto" ? "blue" : "green"}>
+                            {backup.backupType === "auto" ? "自动" : "手动"}
+                          </Tag>
+                          <span style={{ color: "var(--theme-text-tertiary, #999)" }}>
+                            {formatDateTime(backup.createdAt)}
+                          </span>
+                        </Space>
+                      </Option>
+                    ))}
+                  </Select>
+                </Space>
+              </div>
+
+              {selectedRestoreBackup && (
+                <Card size="small" title="选定版本详情">
+                  <Descriptions column={2} size="small">
+                    <Descriptions.Item label="版本号">
+                      {selectedRestoreBackup.version}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="备份类型">
+                      <Tag color={selectedRestoreBackup.backupType === "auto" ? "blue" : "green"}>
+                        {selectedRestoreBackup.backupType === "auto" ? "自动备份" : "手动备份"}
+                      </Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="文件大小">
+                      {(selectedRestoreBackup.backupSize / 1024).toFixed(2)} KB
+                    </Descriptions.Item>
+                    <Descriptions.Item label="创建时间">
+                      {formatDateTime(selectedRestoreBackup.createdAt)}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="创建人">
+                      {selectedRestoreBackup.createdBy}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="变更原因" span={2}>
+                      {selectedRestoreBackup.changeReason || "-"}
+                    </Descriptions.Item>
+                  </Descriptions>
+                </Card>
+              )}
+            </div>
+          )
         )}
       </Modal>
 

@@ -21,6 +21,8 @@ interface UseBackupModalsReturn {
   selectedRestoreBackup: ConfigBackup | null;
   selectedDeviceGroup: DeviceBackupGroup | null;
   backupContent: string;
+  /** 进行中的恢复任务 ID（非空时恢复 Modal 切换为进度态，Phase 93 D-17/D-19） */
+  restoreTaskId: string | null;
   openBackupModal: () => void;
   closeBackupModal: (form?: FormInstance<unknown>) => void;
   openRestoreModal: (backup: ConfigBackup) => void;
@@ -44,6 +46,7 @@ export function useBackupModals(options: UseBackupModalsOptions): UseBackupModal
   const [selectedRestoreBackup, setSelectedRestoreBackup] = useState<ConfigBackup | null>(null);
   const [selectedDeviceGroup, setSelectedDeviceGroup] = useState<DeviceBackupGroup | null>(null);
   const [backupContent, setBackupContent] = useState("");
+  const [restoreTaskId, setRestoreTaskId] = useState<string | null>(null);
 
   // 打开备份弹窗
   const openBackupModal = useCallback(() => {
@@ -64,10 +67,11 @@ export function useBackupModals(options: UseBackupModalsOptions): UseBackupModal
     setRestoreModalVisible(true);
   }, []);
 
-  // 关闭恢复弹窗
+  // 关闭恢复弹窗（复位任务态——任务本体在服务端继续执行，不受前端关闭影响）
   const closeRestoreModal = useCallback(() => {
     setRestoreModalVisible(false);
     setSelectedRestoreBackup(null);
+    setRestoreTaskId(null);
   }, []);
 
   // 打开内容抽屉
@@ -124,19 +128,24 @@ export function useBackupModals(options: UseBackupModalsOptions): UseBackupModal
     [closeBackupModal, onLoad]
   );
 
-  // 恢复备份
+  // 恢复备份（Phase 93 异步语义：携带备份自身 deviceId 发起（D-04 前端侧——
+  // 修复现状发空 body 缺 deviceId 必 400 的缺陷），捕获 taskId 后 Modal 切换为
+  // 进度态，由 useRestoreTask 轮询任务详情（D-16/D-17/D-19），不立即关闭弹窗
   const handleRestore = useCallback(async () => {
     if (!selectedRestoreBackup) {
       return;
     }
     try {
-      await post(`/network/backups/${selectedRestoreBackup.id}/restore`, {});
-      closeRestoreModal();
+      const result = await post<{ taskId: string; status: string; message: string }>(
+        `/network/backups/${selectedRestoreBackup.id}/restore`,
+        { deviceId: selectedRestoreBackup.deviceId }
+      );
+      setRestoreTaskId(result.data?.taskId || null);
       onLoad();
     } catch (error) {
-      console.error("恢复备份失败:", error);
+      console.error("发起恢复任务失败:", error);
     }
-  }, [selectedRestoreBackup, closeRestoreModal, onLoad]);
+  }, [selectedRestoreBackup, onLoad]);
 
   return {
     backupModalVisible,
@@ -147,6 +156,7 @@ export function useBackupModals(options: UseBackupModalsOptions): UseBackupModal
     selectedRestoreBackup,
     selectedDeviceGroup,
     backupContent,
+    restoreTaskId,
     openBackupModal,
     closeBackupModal,
     openRestoreModal,

@@ -98,13 +98,38 @@ describe("useBackupModals — handle 系列", () => {
     });
   });
 
-  it("handleRestore 调 post + onLoad", async () => {
+  it("handleRestore 携带 deviceId 调 post + 捕获 taskId 切进度态 (Phase 93)", async () => {
     const onLoad = vi.fn();
+    const { post } = await import("@/lib/api");
+    vi.mocked(post).mockResolvedValueOnce({
+      data: { taskId: "task-93", status: "pending", message: "恢复任务已创建" },
+    });
     const { result } = renderHook(() => useBackupModals({ onLoad }), { wrapper: wrap });
-    act(() => result.current.openRestoreModal({ id: "b1" } as any));
+    act(() => result.current.openRestoreModal({ id: "b1", deviceId: "dev-1" } as any));
     await act(async () => {
       await result.current.handleRestore();
     });
+    // D-04 前端侧: body 携带备份自身 deviceId（修复空 body 缺 deviceId 必 400）
+    expect(post).toHaveBeenCalledWith("/network/backups/b1/restore", { deviceId: "dev-1" });
+    // D-17/D-19: 捕获 taskId，Modal 不立即关闭（切进度态由 restoreTaskId 驱动）
+    expect(result.current.restoreTaskId).toBe("task-93");
+    expect(result.current.restoreModalVisible).toBe(true);
     expect(onLoad).toHaveBeenCalled();
+  });
+
+  it("closeRestoreModal 复位 restoreTaskId", async () => {
+    const { post } = await import("@/lib/api");
+    vi.mocked(post).mockResolvedValueOnce({
+      data: { taskId: "task-93", status: "pending", message: "恢复任务已创建" },
+    });
+    const { result } = renderHook(() => useBackupModals(opts()), { wrapper: wrap });
+    act(() => result.current.openRestoreModal({ id: "b1", deviceId: "dev-1" } as any));
+    await act(async () => {
+      await result.current.handleRestore();
+    });
+    expect(result.current.restoreTaskId).toBe("task-93");
+    act(() => result.current.closeRestoreModal());
+    expect(result.current.restoreTaskId).toBeNull();
+    expect(result.current.restoreModalVisible).toBe(false);
   });
 });
