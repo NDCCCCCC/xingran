@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.29
 milestone_name: 技术债治理
-status: shipped
-last_updated: "2026-09-05T23:50:00.000Z"
-last_activity: 2026-09-06 -- 95-02 complete + v1.29 SHIPPED（type-check 真实化 + flaky 双修复 + 七 gate 全绿 + audit 报告 + 记账闭环，commits d7e82ff..9173cb9）
+status: completed
+last_updated: "2026-09-05T23:54:47.335Z"
+last_activity: 2026-09-05
 progress:
   total_phases: 7
   completed_phases: 7
@@ -27,10 +27,10 @@ Config: "mode": "yolo"
 
 ## Current Position
 
-Phase: 95 (v1.28 SHIP 收口 + v1.29 closeout + audit) — COMPLETE（2/2 plans）
-Plan: 2 of 2 complete（95-01 commit 1c70eeb；95-02 commits d7e82ff / e49916b / 1ef2224 / 9173cb9）
+Phase: 95
+Plan: Not started
 Status: v1.29 SHIPPED 2026-09-06（7 phases / 45 requirements 45/45 done）
-Last activity: 2026-09-06 -- 95-02 complete + v1.29 SHIPPED
+Last activity: 2026-09-05
 Resume file: None（milestone 收口；audit 报告 .planning/milestones/v1.29-MILESTONE-AUDIT.md）
 Next action: /gsd-complete-milestone 完整 archive（用户触发，deferred）；push 决策留用户（73-05 先例，本地领先 origin/main 179 commits）；v1.30 规划输入 = REQUIREMENTS § V130-CANDIDATES（CACHEDEF-01..05 + JOBSTAT-01）
 
