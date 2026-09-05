@@ -429,6 +429,16 @@ base.InvalidatePattern(ctx, s.cache, patterns, "MODULE")
 
 **Migration status:** Phase 92 unified the former three-way duplication (legacy root services / system impls / operations impls) into the base authority.
 
+### Config Backup Restore Convention
+
+All three config-backup restore paths are locked as of Phase 93 (TODO 闭环 D-32). **Rules:**
+
+1. **压缩/解压唯一走 `gzipCompress`/`gzipDecompress` helper**（`internal/services/config_backup_service.go`）——`.conf.gz` 后缀 + `Compressed` 标志双检查（`GetBackupContent` 解压路径），解压含 64MB 上限防线（zip bomb 防护），文件名经 `sanitizeBackupFileName` 清洗防路径逃逸。禁止在别处直接 `gzip.New*` 处理备份内容。
+2. **设备配置下发唯一入口 `DeviceExecutor.RestoreConfig`**（`internal/device/restore_config.go`）——内部 `cleanConfigLines` 基础清洗（D-03）+ `SendConfigsStopOnFailed` 一次 AcquirePriv 批量下发（D-12 fail-fast）+ vendor 退出命令 `exitConfigCommand`（huawei/h3c→quit，其余→exit，禁用 end）。禁止绕过该入口直接调 wrapper 或逐行 `SendConfig` 下发配置。
+3. **恢复必须走异步任务模式**（`ConfigRestoreTaskService.StartRestore`，detached context + 四态状态机 pending→running→success/failed，D-34 不支持取消）——禁止同步下发实现。恢复流程链：发起校验/互斥（同设备 D-04 + `status IN (pending,running)` D-08）→ 恢复前自动备份（失败即中止 D-14）→ 清洗下发 fail-fast → 回读 hash **仅警告不算失败**（D-11）→ 版本链恢复记录（`BackupTypeManual` + ChangeReason "恢复自版本 N" D-09）→ 任务终态。operlog 在 handler 发起时记一次（D-18）。
+
+**Regression guards:** `config_backup_service_93_NN_test.go`（93_01 压缩/解压 + 93_02 restore FileTransport e2e 断言链：备份→恢复→hash 一致，D-29/D-30）+ `configBackupAllowedSortFields` 无 status 列（D-33②）。
+
 ### API Response Format
 
 All API responses follow this structure:
