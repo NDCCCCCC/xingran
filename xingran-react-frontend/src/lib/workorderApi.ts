@@ -1,5 +1,6 @@
 import { post } from "./api";
-import type { BaseResponse, PageResponse } from "@/types";
+import { createResourceApi } from "./apiFactory";
+import type { BaseResponse, PageParams, PageResponse } from "@/types";
 // canonical 部门类型锚点来自 dutyApi (Phase 37-05 类型去重)。
 // 本地 import 用于文件内引用 (line 84 WorkOrder.department / line 569 getDeptList 返回类型)。
 // 文件末尾的 `export type { SimpleDept } from "./dutyApi"` 仅用于 re-export 暴露给消费方,
@@ -382,10 +383,13 @@ export interface CreateWorkOrderRatingRequest {
 
 // ==================== 工单管理 API ====================
 
+// Phase 94 D-05/D-08: 标准 CRUD 形状函数委托共享工厂（导出签名零变化，异构函数保持原样）
+const orderCrud = createResourceApi<WorkOrder>({ basePath: "/workorder/orders" });
+
 export function getWorkOrderList(
   params: WorkOrderListRequest
 ): Promise<BaseResponse<PageResponse<WorkOrder>>> {
-  return post("/workorder/orders/list", params);
+  return orderCrud.list(params as unknown as PageParams & Record<string, unknown>);
 }
 
 /** 工单状态统计（总数 / 待处理 / 处理中 / 已完成 / 已关闭），供列表页统计卡片 */
@@ -411,7 +415,7 @@ export function getMyPendingWorkOrders(params?: {
 }
 
 export function getWorkOrder(id: string): Promise<BaseResponse<WorkOrder>> {
-  return post(`/workorder/orders/${id}`, {});
+  return orderCrud.get(id);
 }
 
 export function createWorkOrder(data: WorkOrderCreateRequest): Promise<BaseResponse<WorkOrder>> {
@@ -426,6 +430,7 @@ export function updateWorkOrder(
 }
 
 export function deleteWorkOrder(id: string): Promise<BaseResponse<{ message: string }>> {
+  // KEEP 直调（D-14 红线）: 既有测试锁定单参 post(url) 契约，工厂 delete 传 {} 属 wire 级 body 变更
   return post(`/workorder/orders/${id}/delete`);
 }
 
@@ -491,8 +496,14 @@ export function getRatingStatistics(
 
 // ==================== 工单分类 API ====================
 
+const orderCategoryCrud = createResourceApi<WorkOrderCategory>({
+  basePath: "/workorder/categories",
+});
+
 export function getWorkOrderCategoryList(): Promise<BaseResponse<WorkOrderCategory[]>> {
-  return post("/workorder/categories/list", {});
+  return orderCategoryCrud.list(
+    {} as unknown as PageParams & Record<string, unknown>
+  ) as unknown as Promise<BaseResponse<WorkOrderCategory[]>>;
 }
 
 export function getEnabledWorkOrderCategories(): Promise<BaseResponse<WorkOrderCategory[]>> {
@@ -500,23 +511,24 @@ export function getEnabledWorkOrderCategories(): Promise<BaseResponse<WorkOrderC
 }
 
 export function getWorkOrderCategory(id: string): Promise<BaseResponse<WorkOrderCategory>> {
-  return post(`/workorder/categories/${id}`, {});
+  return orderCategoryCrud.get(id);
 }
 
 export function createWorkOrderCategory(
   data: WorkOrderCategoryCreateRequest
 ): Promise<BaseResponse<WorkOrderCategory>> {
-  return post("/workorder/categories", data);
+  return orderCategoryCrud.create(data) as Promise<BaseResponse<WorkOrderCategory>>;
 }
 
 export function updateWorkOrderCategory(
   id: string,
   data: WorkOrderCategoryUpdateRequest
 ): Promise<BaseResponse<{ message: string }>> {
-  return post(`/workorder/categories/${id}/update`, data);
+  return orderCategoryCrud.update(id, data) as Promise<BaseResponse<{ message: string }>>;
 }
 
 export function deleteWorkOrderCategory(id: string): Promise<BaseResponse<{ message: string }>> {
+  // KEEP 直调（D-14 红线）: delete 统一保持单参 post(url) 契约，不委托工厂 delete（传 {}）
   return post(`/workorder/categories/${id}/delete`);
 }
 
@@ -528,10 +540,14 @@ export function getWorkOrderStatistics(): Promise<BaseResponse<WorkOrderStatisti
 
 // ==================== 周期性工单 API ====================
 
+const periodicCrud = createResourceApi<PeriodicWorkOrderTemplate>({
+  basePath: "/workorder/periodic/templates",
+});
+
 export function getPeriodicTemplateList(
   params: PeriodicTemplateListRequest
 ): Promise<BaseResponse<PageResponse<PeriodicWorkOrderTemplate>>> {
-  return post("/workorder/periodic/templates/list", params);
+  return periodicCrud.list(params as unknown as PageParams & Record<string, unknown>);
 }
 
 /** 周期性工单模板统计（总数 / 启用 / 停用 / 累计生成数） */
@@ -550,7 +566,7 @@ export function getPeriodicTemplateStatistics(): Promise<BaseResponse<PeriodicTe
 }
 
 export function getPeriodicTemplate(id: string): Promise<BaseResponse<PeriodicWorkOrderTemplate>> {
-  return post(`/workorder/periodic/templates/${id}`, {});
+  return periodicCrud.get(id);
 }
 
 export function createPeriodicTemplate(
@@ -567,6 +583,7 @@ export function updatePeriodicTemplate(
 }
 
 export function deletePeriodicTemplate(id: string): Promise<BaseResponse<{ message: string }>> {
+  // KEEP 直调（D-14 红线）: delete 统一保持单参 post(url) 契约，不委托工厂 delete（传 {}）
   return post(`/workorder/periodic/templates/${id}/delete`);
 }
 

@@ -1,5 +1,6 @@
 import { post } from "./api";
-import type { BaseResponse, PageResponse } from "@/types";
+import { createResourceApi } from "./apiFactory";
+import type { BaseResponse, PageParams, PageResponse } from "@/types";
 
 // ==================== 类型定义 ====================
 
@@ -152,10 +153,14 @@ export interface ManualDutyRequest {
 
 // ==================== 值班池管理 ====================
 
+// Phase 94 D-05: 标准 CRUD 形状函数委托共享工厂（导出签名零变化；create/update 请求类型
+// 含 memberIds 与工厂 CreatePayload 不同构，保持原样直调 post）
+const dutyPoolCrud = createResourceApi<DutyPool>({ basePath: "/duty/pools" });
+
 export function getDutyPoolList(
   params: DutyPoolListRequest
 ): Promise<BaseResponse<PageResponse<DutyPool>>> {
-  return post("/duty/pools/list", params);
+  return dutyPoolCrud.list(params as unknown as PageParams & Record<string, unknown>);
 }
 
 /** 值班池统计（总数 / 启用 / 停用 / 成员总数） */
@@ -178,7 +183,7 @@ export function createDutyPool(data: DutyPoolCreateRequest): Promise<BaseRespons
 }
 
 export function getDutyPool(id: string): Promise<BaseResponse<DutyPool>> {
-  return post(`/duty/pools/${id}`, {});
+  return dutyPoolCrud.get(id);
 }
 
 export function updateDutyPool(
@@ -189,6 +194,7 @@ export function updateDutyPool(
 }
 
 export function deleteDutyPool(id: string): Promise<BaseResponse<{ message: string }>> {
+  // KEEP 直调（D-14 红线）: 既有测试锁定单参 post(url) 契约，工厂 delete 传 {} 属 wire 级 body 变更
   return post(`/duty/pools/${id}/delete`);
 }
 
