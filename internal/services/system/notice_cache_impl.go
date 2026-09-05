@@ -8,6 +8,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -40,11 +41,13 @@ type NoticeCacheService interface {
 }
 
 // noticeCacheService 通知公告缓存服务实现
+// Phase 92-02 逃兵归队：嵌入 CacheServiceBase，TTL 解析走基类 GetExpiration，
+// 私有平行实现已删除。
 type noticeCacheService struct {
-	db     *gorm.DB
-	base   *services.NoticeService
-	cache  CacheProvider
-	config *services.CacheConfigService
+	db    *gorm.DB
+	base  *services.NoticeService
+	cache CacheProvider
+	CacheServiceBase
 }
 
 // NewNoticeServiceWithCache 创建带缓存的通知公告服务
@@ -54,19 +57,11 @@ func NewNoticeServiceWithCache(
 	config *services.CacheConfigService,
 ) NoticeCacheService {
 	return &noticeCacheService{
-		db:     db,
-		base:   services.NewNoticeService(db),
-		cache:  cache,
-		config: config,
+		db:               db,
+		base:             services.NewNoticeService(db),
+		cache:            cache,
+		CacheServiceBase: CacheServiceBase{Config: config},
 	}
-}
-
-// getExpiration 获取缓存过期时间
-func (s *noticeCacheService) getExpiration(configKey string, defaultVal time.Duration) time.Duration {
-	if s.config != nil {
-		return s.config.GetDurationWithDefault(configKey, defaultVal)
-	}
-	return defaultVal
 }
 
 // GetStatusStatistics 统计通知各发布状态计数(供统计卡片),委托给基础服务。
@@ -199,32 +194,39 @@ func (s *noticeCacheService) GetStatistics(ctx context.Context, id string) (*mod
 
 // ==================== 用户端方法（带缓存） ====================
 
-// GetUserNotices 获取我的通知列表（带缓存）
-func (s *noticeCacheService) GetUserNotices(ctx context.Context, userID string, page, pageSize int, status *string) ([]models.Notice, int64, error) {
+// noticeListPage "我的通知"列表缓存值（原匿名 struct 具名化，JSON 字段名
+// List/Total 与顺序不变，缓存数据兼容——92-RESEARCH Pitfall 6）。
+type noticeListPage struct {
+	List  []models.Notice
+	Total int64
+}
+
+// buildMyNoticesKey 构造"我的通知"列表缓存键（status 过滤为可选尾段）。
+// 两种 fmt.Sprintf 格式串与参数顺序自原 if/else 分支原样搬入，键构造结果
+// 逐字节等价（Redis 现存键迁移后继续命中）。
+func buildMyNoticesKey(userID string, page, pageSize int, status *string) string {
 	cacheKey := fmt.Sprintf("notice:my_notices:%s:page:%d:size:%d", userID, page, pageSize)
 	if status != nil {
 		cacheKey = fmt.Sprintf("notice:my_notices:%s:page:%d:size:%d:status:%s", userID, page, pageSize, *status)
 	}
-	var result struct {
-		List  []models.Notice
-		Total int64
-	}
+	return cacheKey
+}
 
-	expiration := s.getExpiration("cache.notice.my_notices", 1*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		list, total, err := s.base.GetUserNotices(ctx, userID, page, pageSize, status)
-		if err != nil {
-			return nil, err
-		}
-		return struct {
-			List  []models.Notice
-			Total int64
-		}{
-			List:  list,
-			Total: total,
-		}, nil
-	})
+// GetUserNotices 获取我的通知列表（带缓存）
+func (s *noticeCacheService) GetUserNotices(ctx context.Context, userID string, page, pageSize int, status *string) ([]models.Notice, int64, error) {
+	result, err := base.GetOrSetJSON(ctx, s.cache,
+		buildMyNoticesKey(userID, page, pageSize, status),
+		s.GetExpiration("cache.notice.my_notices", 1*time.Minute),
+		func() (noticeListPage, error) {
+			list, total, err := s.base.GetUserNotices(ctx, userID, page, pageSize, status)
+			if err != nil {
+				return noticeListPage{}, err
+			}
+			return noticeListPage{
+				List:  list,
+				Total: total,
+			}, nil
+		})
 
 	if err != nil {
 		return nil, 0, err
@@ -234,19 +236,10 @@ func (s *noticeCacheService) GetUserNotices(ctx context.Context, userID string, 
 
 // GetUnreadCount 获取未读通知数量（带缓存）
 func (s *noticeCacheService) GetUnreadCount(ctx context.Context, userID string) (int, error) {
-	cacheKey := fmt.Sprintf("notice:unread_count:%s", userID)
-	var result int
-
-	expiration := s.getExpiration("cache.notice.unread_count", 30*time.Second)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.base.GetUnreadCount(ctx, userID)
-	})
-
-	if err != nil {
-		return 0, err
-	}
-	return result, nil
+	return base.GetOrSetJSON(ctx, s.cache,
+		fmt.Sprintf("notice:unread_count:%s", userID),
+		s.GetExpiration("cache.notice.unread_count", 30*time.Second),
+		func() (int, error) { return s.base.GetUnreadCount(ctx, userID) })
 }
 
 // MarkNoticeRead 标记通知为已读（带缓存失效）
@@ -294,18 +287,18 @@ func (s *noticeCacheService) UnignoreNotice(ctx context.Context, noticeID, userI
 // InvalidateNoticeCache 失效指定通知的缓存
 func (s *noticeCacheService) InvalidateNoticeCache(ctx context.Context, noticeID string) error {
 	keys := []string{fmt.Sprintf("notice:detail:%s", noticeID)}
-	InvalidateCacheByKey(ctx, s.cache, keys, "NOTICE")
+	base.Invalidate(ctx, s.cache, keys, "NOTICE")
 	return nil
 }
 
 // InvalidateUserNoticeCache 失效指定用户的通知缓存
 func (s *noticeCacheService) InvalidateUserNoticeCache(ctx context.Context, userID string) error {
-	InvalidateCacheByPattern(ctx, s.cache, []string{fmt.Sprintf("notice:my_notices:%s:*", userID), fmt.Sprintf("notice:unread_count:%s", userID)}, "NOTICE")
+	base.InvalidatePattern(ctx, s.cache, []string{fmt.Sprintf("notice:my_notices:%s:*", userID), fmt.Sprintf("notice:unread_count:%s", userID)}, "NOTICE")
 	return nil
 }
 
 // InvalidateAllNoticeCache 失效所有通知缓存
 func (s *noticeCacheService) InvalidateAllNoticeCache(ctx context.Context) error {
-	InvalidateCacheByPattern(ctx, s.cache, []string{"notice:*"}, "NOTICE")
+	base.InvalidatePattern(ctx, s.cache, []string{"notice:*"}, "NOTICE")
 	return nil
 }
