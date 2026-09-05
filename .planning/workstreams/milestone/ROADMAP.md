@@ -227,7 +227,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 94-02-PLAN.md — opsApi 删私有工厂 + blob 四件套迁出 + DropdownOption re-export（D-03/D-04/D-07）+ opsApi.test.ts 适配（D-14）+ rpaApi 双工厂合并 + scriptApi 接入 + downloadReport 归一（D-08）+ vdiApi vmApi SPREAD+OVERRIDE / vdiServerApi SPREAD
+- [x] 94-02-PLAN.md — opsApi 删私有工厂 + blob 四件套迁出 + DropdownOption re-export（D-03/D-04/D-07）+ opsApi.test.ts 适配（D-14）+ rpaApi 双工厂合并 + scriptApi 接入 + downloadReport 归一（D-08）+ vdiApi vmApi SPREAD+OVERRIDE / vdiServerApi SPREAD
 
 **Wave 3** *(blocked on Wave 2)*
 
