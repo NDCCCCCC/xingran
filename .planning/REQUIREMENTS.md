@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-04
+last_updated: 2026-09-06
 milestone: v1.29
 update_trigger: v1.29 技术债治理 — 7 项审计行动转 REQ-ID
 status: executing
@@ -79,8 +79,8 @@ status: executing
 
 > **审计源**: `internal/services/config_backup_service.go:158, 206, 543` 三个 TODO 空函数
 
-- [ ] **BACKUP-CLOSED-01**: 实现 `config_backup_service.go:158` 压缩逻辑（gzip 标准库，压缩备份内容到 .gz 文件）
-- [ ] **BACKUP-CLOSED-02**: 实现 `config_backup_service.go:206` 解压逻辑（识别 .gz 后缀，调用 gzip 解压）
+- [x] **BACKUP-CLOSED-01**: 实现 `config_backup_service.go:158` 压缩逻辑（gzip 标准库，压缩备份内容到 .gz 文件）（实现已于 Phase 93 交付：gzipCompress :603 / gzipDecompress :617；2026-09-06 记账补勾，94-VERIFICATION:131 API-FACTORY 记账备注同类先例）
+- [x] **BACKUP-CLOSED-02**: 实现 `config_backup_service.go:206` 解压逻辑（识别 .gz 后缀，调用 gzip 解压）（实现已于 Phase 93 交付：gzipCompress :603 / gzipDecompress :617；2026-09-06 记账补勾，94-VERIFICATION:131 API-FACTORY 记账备注同类先例）
 - [x] **BACKUP-CLOSED-03**: 配置恢复异步任务化设备下发（恢复=把备份配置下发到网络设备：同设备校验 → 恢复前自动备份 → 基础清洗 → RestoreConfig 下发（fail-fast）→ 回读 hash 校验 → 版本链恢复记录；Phase 93 D-01 校准）
 - [x] **BACKUP-CLOSED-04**: 新增 `config_backup_service_93_NN_test.go`（命名遵循项目 _NN 后缀模式；原文误写为 78 前缀，已修正），覆盖 compress/decompress/restore 三路径 + 失败场景（写失败 / 损坏 gzip / 下发中断留痕 / DB 写入失败）
 - [x] **BACKUP-CLOSED-05**: `go test ./internal/services/...` 0 回归；端到端：备份 → 恢复 → 配置一致性校验通过（验收 = FileTransport 自动化集成测试断言链，Phase 92 D-09 先例）
@@ -97,8 +97,8 @@ status: executing
 
 ## V128-CLOSEOUT (v1.28 阶段性收口 + v1.29 closeout) — 🟢 长期 P4
 
-- [ ] **CLOSEOUT-01**: 更新 `.planning/MILESTONES.md`，添加 v1.28 SHIPPED 段（45.13% 阶段性收口理由 + 距离 70% 目标 24.87pp + 后续可重启 Phase 88 备选）
-- [ ] **CLOSEOUT-02**: 更新 `.planning/PROJECT.md`，v1.28 段标记 SHIPPED + ARCHIVED；`.planning/workstreams/frontend-coverage/` 目录归档到 `.archive/` 或保留作历史
+- [x] **CLOSEOUT-01**: 核对确认 `.planning/MILESTONES.md` v1.28 SHIPPED 段（已存在，2026-09-04 收口产物）：45.13% 阶段性收口理由 + 距离 70% 目标 24.87pp + Phase 88 重启备选 + 归档位置四件套（原「更新/添加」措辞按 D-01/D-10 校准）
+- [x] **CLOSEOUT-02**: 核对确认 `.planning/PROJECT.md` v1.28 段 SHIPPED + ARCHIVED 标记（已存在）+ frontend-coverage workstream 保留作历史（MILESTONES v1.28 段已登记，零移动，D-02；原「更新/标记/归档」措辞按 D-01/D-10 校准）
 - [ ] **CLOSEOUT-03**: v1.29 closeout — 跑完整 `go build ./...` + `go test ./...` + `npm run type-check` + `npm run lint` + `npm run test` + 后端 CI gate + 前端 CI gate；7 项行动全部完成确认；生成 v1.29-MILESTONE-AUDIT.md 验证报告
 
 ---
@@ -115,7 +115,7 @@ status: executing
 | 94 | 前端 API 工厂化 | API-FACTORY-01..05 |
 | 95 | v1.28 SHIP 收口 + v1.29 closeout | CLOSEOUT-01..03 |
 
-**Total**: 7 phases, 41 requirements, 全部覆盖 ✓
+**Total**: 7 phases, 45 requirements (PAGINATION 11 + TIMEOUTS 8 + CRUD-REUSE 8 + CACHE-UNIFY 5 + BACKUP-CLOSED 5 + API-FACTORY 5 + CLOSEOUT 3 = 45，2026-09-06 实数清点校准), 全部覆盖 ✓
 
 ---
 

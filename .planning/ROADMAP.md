@@ -16,7 +16,7 @@ status: executing
 - 18 项真实 TODO / ~20 处中高度硬编码 / 8 个 CRUD services 60-70% 重复 / 缓存层 3 处架构重复 / config_backup 3 TODO
 
 ## Source planning data
-- `.planning/REQUIREMENTS.md` (7 类别 / 41 requirements)
+- `.planning/REQUIREMENTS.md` (7 类别 / 45 requirements)
 - `.planning/PROJECT.md` (Current Milestone v1.29 段)
 - 2026-09-03 综合审计报告（4 维度并行扫描：TODO/FIXME、硬编码值、重复实现、项目完成度）
 
@@ -26,7 +26,7 @@ status: executing
 - **SC-b (CRUD 复用)**: `internal/services/operations/` 下 8 个 CRUD services 全部复用 `base.Repository[T]`，LOC 减少 ≥2000 行 ✅
 - **SC-c (缓存层统一)**: legacy root + system/* + operations/* 三处 `CacheServiceBase` 合并到单一基类，新代码统一继承 ✅
 - **SC-d (config_backup 闭环)**: 3 个 TODO 空函数全部实现 + 回归测试覆盖；端到端 备份 → 恢复 配置一致 ✅
-- **SC-e (前端 API 工厂化 + v1.28 SHIP + v1.29 closeout)**: ~15 个 `*Api.ts` 迁移到工厂模式；v1.28 SHIPPED 段写入 MILESTONES；最终 gate 全绿 ✅
+- **SC-e (前端 API 工厂化 + v1.28 SHIP + v1.29 closeout)**: ~15 个 `*Api.ts` 迁移到工厂模式；v1.28 SHIPPED 段核对确认（已存在，D-01）；最终 gate 全绿 ✅
 
 ## Phase Dependency Graph
 ```
@@ -159,12 +159,12 @@ Phase 90 (TIMEOUTS/PORT/PROTOCOL/CONCURRENCY 常量集中化) ─┤
 
 **Plans (2, 2026-09-06 plan-phase 生成)** *(CLOSEOUT-01/02 实质产物已于 2026-09-04 收口落地，95-01 动作按 D-01/D-10 校准为核对确认；决策 D-01..D-11 见 95-CONTEXT.md；95-02 含 D-03 type-check 修复与 gate ② flaky 双修复两个前置修复线)*:
 
-- [ ] 95-01-PLAN.md — v1.28 收口核对 + 文档措辞校准（CLOSEOUT-01/02 核对确认 + REQUIREMENTS/ROADMAP SC 措辞校准 + 记账补漏：BACKUP-CLOSED-01/02 补勾 / Progress 表 stale 修正 / 41→45 计数）
+- [x] 95-01-PLAN.md — v1.28 收口核对 + 文档措辞校准（CLOSEOUT-01/02 核对确认 + REQUIREMENTS/ROADMAP SC 措辞校准 + 记账补漏：BACKUP-CLOSED-01/02 补勾 / Progress 表 stale 修正 / 41→45 计数）
 - [ ] 95-02-PLAN.md — v1.29 closeout + audit（D-03 type-check gate 修复 + gate ② flaky 双修复 + D-06 七 gate 跑批 + D-07 v1.29-MILESTONE-AUDIT.md + D-08 七项行动确认 + D-09 SHIPPED 标记 + D-05 94-HUMAN-UAT 流转）
 
 **Success Criteria**:
-1. `.planning/MILESTONES.md` v1.28 SHIPPED 段写入
-2. `.planning/PROJECT.md` v1.28 段标记 SHIPPED + ARCHIVED
+1. `.planning/MILESTONES.md` v1.28 SHIPPED 段核对确认（已存在，D-01）
+2. `.planning/PROJECT.md` v1.28 段 SHIPPED + ARCHIVED 核对确认（已存在）+ frontend-coverage workstream 保留作历史（D-02）
 3. 所有 gate 全绿（go / npm / CI）
 4. v1.29-MILESTONE-AUDIT.md 验证报告生成
 5. v1.29 milestone SHIPPED 状态设置
@@ -177,13 +177,13 @@ Phase 90 (TIMEOUTS/PORT/PROTOCOL/CONCURRENCY 常量集中化) ─┤
 |-------|--------|-------|--------------|---------|-----------|
 | Phase 89 PAGINATION 常量集中化 | ✅ SHIPPED | 3/3 | PAGINATION-01..11 | 2026-09-04 | 2026-09-04 |
 | Phase 90 TIMEOUTS/PORT/PROTOCOL/CONCURRENCY | ✅ SHIPPED | 4/4 | TIMEOUTS-01..08 | 2026-09-04 | 2026-09-04 |
-| Phase 91 CRUD 复用 base.Repository[T] | Pending | 0/4 | CRUD-REUSE-01..08 | — | — |
-| Phase 92 缓存层三处架构统一 | Pending | 0/4 | CACHE-UNIFY-01..05 | — | — |
-| Phase 93 config_backup 三处 TODO 闭环 | Pending | 0/3 | BACKUP-CLOSED-01..05 | — | — |
-| Phase 94 前端 API 工厂化 | Pending | 0/3 | API-FACTORY-01..05 | — | — |
-| Phase 95 v1.28 SHIP + v1.29 closeout | Pending | 0/2 | CLOSEOUT-01..03 | — | — |
+| Phase 91 CRUD 复用 base.Repository[T] | Complete | 4/4 | CRUD-REUSE-01..08 | 2026-09-04 | 2026-09-04 |
+| Phase 92 缓存层三处架构统一 | Complete | 4/4 | CACHE-UNIFY-01..05 | 2026-09-05 | 2026-09-05 |
+| Phase 93 config_backup 三处 TODO 闭环 | Complete | 6/6 | BACKUP-CLOSED-01..05 | 2026-09-04 | 2026-09-05 |
+| Phase 94 前端 API 工厂化 | Complete | 3/3 | API-FACTORY-01..05 | 2026-09-05 | 2026-09-06 |
+| Phase 95 v1.28 SHIP + v1.29 closeout | Pending | 0/2 | CLOSEOUT-01..03 | 2026-09-06 | — |
 
-**Total:** 7 phases / 41 requirements (19/41 done — Phase 89 + 90 SHIPPED；91-95 待推进)
+**Total:** 7 phases / 45 requirements（44/45 done — Phase 89-94 complete + CLOSEOUT-01/02 本 plan 勾选；CLOSEOUT-03 由 95-02 收口）
 
 ## Execution Order (建议)
 
@@ -193,7 +193,7 @@ Phase 90 (TIMEOUTS/PORT/PROTOCOL/CONCURRENCY 常量集中化) ─┤
 3. **Wave 3 (并行)**: Phase 92 (缓存统一) + Phase 94 (前端 API 工厂) — 后端 + 前端独立推进
 4. **Wave 4 (顺序)**: Phase 95 (closeout) — 必须最后
 
-**预估时间**: 6 phases × ~2-4 hours = 12-24 小时集中推进；按 7 actions / 41 requirements / 18+ atomic commits 估算。
+**预估时间**: 6 phases × ~2-4 hours = 12-24 小时集中推进；按 7 actions / 45 requirements / 18+ atomic commits 估算。
 
 ---
 

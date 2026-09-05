@@ -22,7 +22,7 @@ update_trigger: v1.29 workstream ROADMAP synced from .planning/ROADMAP.md — v1
 **Source planning data:**
 
 - `.planning/ROADMAP.md` (v1.29 主 ROADMAP，含完整 phase 详情)
-- `.planning/REQUIREMENTS.md` (7 类别 / 41 requirements)
+- `.planning/REQUIREMENTS.md` (7 类别 / 45 requirements)
 - `.planning/PROJECT.md` (Current Milestone v1.29 段, D-01..D-06 locked decisions)
 
 **Milestone success criteria:**
@@ -31,7 +31,7 @@ update_trigger: v1.29 workstream ROADMAP synced from .planning/ROADMAP.md — v1
 - SC-b (CRUD 复用): 8 个 CRUD services 复用 `base.Repository[T]`，LOC 减少 ≥2000 行
 - SC-c (缓存层统一): 三处 `CacheServiceBase` 合并到单一基类
 - SC-d (config_backup 闭环): 3 个 TODO 空函数全部实现 + 回归测试
-- SC-e (前端 API 工厂化 + v1.28 SHIP + v1.29 closeout): ~15 个 `*Api.ts` 迁移工厂模式；v1.28 SHIPPED 段写入 MILESTONES；最终 gate 全绿
+- SC-e (前端 API 工厂化 + v1.28 SHIP + v1.29 closeout): ~15 个 `*Api.ts` 迁移工厂模式；v1.28 SHIPPED 段核对确认（已存在，D-01）；最终 gate 全绿
 
 **Phase 编号:** 从 Phase 89 起（v1.28 用 82-88，v1.27 用 75-81）。
 
@@ -245,15 +245,15 @@ Plans:
 
 **Success Criteria**:
 
-1. `.planning/MILESTONES.md` v1.28 SHIPPED 段写入
-2. `.planning/PROJECT.md` v1.28 段标记 SHIPPED + ARCHIVED；归档 frontend-coverage workstream
+1. `.planning/MILESTONES.md` v1.28 SHIPPED 段核对确认（已存在，D-01）
+2. `.planning/PROJECT.md` v1.28 段 SHIPPED + ARCHIVED 核对确认（已存在）+ frontend-coverage workstream 保留作历史（D-02）
 3. 所有 gate 全绿（go build/test / npm type-check/lint/test / 后端 CI gate / 前端 CI gate）
 4. v1.29-MILESTONE-AUDIT.md 验证报告生成（v1.27 同款模板）
 5. v1.29 milestone SHIPPED 状态设置
 
 **Plans (2, 2026-09-06 plan-phase 生成)** *(CLOSEOUT-01/02 实质产物已于 2026-09-04 收口落地，95-01 动作按 D-01/D-10 校准为核对确认；决策 D-01..D-11 见 95-CONTEXT.md；95-02 含 D-03 type-check 修复与 gate ② flaky 双修复两个前置修复线)*:
 
-- [ ] 95-01-PLAN.md — v1.28 收口核对 + 文档措辞校准（CLOSEOUT-01/02 核对确认 + REQUIREMENTS/ROADMAP SC 措辞校准 + 记账补漏：BACKUP-CLOSED-01/02 补勾 / Progress 表 stale 修正 / 41→45 计数）
+- [x] 95-01-PLAN.md — v1.28 收口核对 + 文档措辞校准（CLOSEOUT-01/02 核对确认 + REQUIREMENTS/ROADMAP SC 措辞校准 + 记账补漏：BACKUP-CLOSED-01/02 补勾 / Progress 表 stale 修正 / 41→45 计数）
 - [ ] 95-02-PLAN.md — v1.29 closeout + audit（D-03 type-check gate 修复 + gate ② flaky 双修复 + D-06 七 gate 跑批 + D-07 v1.29-MILESTONE-AUDIT.md + D-08 七项行动确认 + D-09 SHIPPED 标记 + D-05 94-HUMAN-UAT 流转）
 
 ---
@@ -266,11 +266,11 @@ Plans:
 | Phase 90 TIMEOUTS/PORT/PROTOCOL/CONCURRENCY | SHIPPED | 4/4 | TIMEOUTS-01..08 | 2026-09-04 | 2026-09-04 |
 | Phase 91 CRUD 复用 base.Repository[T] | SHIPPED | 4/4 | CRUD-REUSE-01..08 | 2026-09-04 | 2026-09-04 |
 | Phase 92 缓存层三处架构统一 | Complete | 4/4 | CACHE-UNIFY-01..05（全部 done：92-04 收口——rename 消歧 + invariants 锁 + 三文档同步 + LOC 双口径） | 2026-09-05 | 2026-09-05 |
-| Phase 93 config_backup 三处 TODO 闭环 | Pending | 0/6 | BACKUP-CLOSED-01..05 | — | — |
-| Phase 94 前端 API 工厂化 | Complete | 3/3 | API-FACTORY-01..05 | — | — |
+| Phase 93 config_backup 三处 TODO 闭环 | Complete | 6/6 | BACKUP-CLOSED-01..05 | 2026-09-04 | 2026-09-05 |
+| Phase 94 前端 API 工厂化 | Complete | 3/3 | API-FACTORY-01..05 | 2026-09-05 | 2026-09-06 |
 | Phase 95 v1.28 SHIP + v1.29 closeout | Pending | 0/2 | CLOSEOUT-01..03 | — | — |
 
-**Total:** 7 phases / 41 requirements (36/41 done — 89+90+91+92 shipped/complete，93-95 待推进；93 已 6-plan 规划就绪，94 已 3-plan 规划就绪)
+**Total:** 7 phases / 45 requirements (44/45 done — Phase 89-94 complete + CLOSEOUT-01/02 本 plan 勾选；CLOSEOUT-03 由 95-02 收口，与根 ROADMAP 口径一致)
 
 ---
 
@@ -285,4 +285,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-09-05 — **Phase 94 plan-phase 完成**（3 plans：94-01 工厂+类型+download+契约测试 / 94-02 对象形态三文件迁移 / 94-03 扁平委托+扫描防线+收口；决策 D-01..D-14 见 94-CONTEXT.md）。Phase 93 已 6-plan 规划就绪。Phase 92 SHIPPED（4/4 plans；决策 D-01..D-10 见 92-CONTEXT.md，ready for /gsd:verify-work）。Phase 91 SHIPPED（4/4 plans，commits 5d0008b..963defe 区间）。Phase 90 SHIPPED（4 plans，commits b51f44c..3a2efe5）。Phase 89 SHIPPED（3 plans，commits 238283c..3559626）。*
+*Last updated: 2026-09-06 — **Phase 95 Plan 1 (95-01) 完成**（v1.28 收口核对确认 + REQUIREMENTS/ROADMAP SC 措辞校准 D-01/D-10 + 记账补漏：BACKUP-CLOSED-01/02 补勾 / Progress 表 Phase 91-94 stale 修正 / 41→45 计数校准）。Phase 94 COMPLETE 2026-09-06（3 plans，commits b3bc745..1771e1d 区间；决策 D-01..D-14 见 94-CONTEXT.md）。Phase 93 SHIPPED（6 plans）。Phase 92 SHIPPED（4/4 plans；决策 D-01..D-10 见 92-CONTEXT.md）。Phase 91 SHIPPED（4/4 plans，commits 5d0008b..963defe 区间）。Phase 90 SHIPPED（4 plans，commits b51f44c..3a2efe5）。Phase 89 SHIPPED（3 plans，commits 238283c..3559626）。*
