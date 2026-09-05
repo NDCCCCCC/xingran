@@ -3,7 +3,8 @@
  */
 
 import { post } from "./api";
-import { getAuthHeaders } from "@/utils/authHelpers";
+import { createResourceApi } from "./apiFactory";
+import { downloadFilePost } from "./download";
 import type { PageParams, PageResponse } from "@/types/base";
 import type {
   // 任务相关
@@ -46,37 +47,11 @@ import type {
   RPAStatistics,
 } from "@/types/rpa";
 
-// ==================== 通用 CRUD 工厂函数 ====================
-
-interface CrudApiConfig<_T> {
-  basePath: string;
-}
-
-function createCrudApi<T>(config: CrudApiConfig<T>) {
-  const { basePath } = config;
-
-  return {
-    list: async (params: PageParams & Record<string, unknown>) => {
-      return await post<PageResponse<T>>(`${basePath}/list`, params);
-    },
-
-    get: async (id: string) => {
-      return await post<T>(`${basePath}/${id}`, {});
-    },
-
-    create: async (data: Partial<T>) => {
-      return await post(basePath, data);
-    },
-
-    update: async (id: string, data: Partial<T>) => {
-      return await post(`${basePath}/${id}/update`, data);
-    },
-
-    delete: async (id: string) => {
-      return await post(`${basePath}/${id}/delete`, {});
-    },
-  };
-}
+// ==================== 通用 CRUD 工厂 ====================
+//
+// 私有 5 方法版 createCrudApi 已删除,统一消费 src/lib/apiFactory.ts 的
+// createResourceApi（Phase 94 D-03/D-08:仓库第二份平行工厂合并,以 opsApi
+// 8 方法版为权威;spread 实例由此新增 batch/statistics/searchOptions,additive 中性）。
 
 // ==================== 任务管理 API ====================
 
@@ -92,7 +67,7 @@ export interface TaskListSearchParams extends PageParams {
   dateRange?: [string, string];
 }
 
-const taskCrudApi = createCrudApi<Task>({ basePath: "/rpa/tasks" });
+const taskCrudApi = createResourceApi<Task>({ basePath: "/rpa/tasks" });
 
 /**
  * RPA 任务 API
@@ -154,44 +129,13 @@ export const taskApi = {
 
 // ==================== 脚本管理 API ====================
 
+const scriptCrud = createResourceApi<Script>({ basePath: "/rpa/scripts" });
+
 /**
- * 脚本 API
+ * 脚本 API — 标准五方法来自工厂 spread（Phase 94 D-08 接入）,testAction/format 异构保持
  */
 export const scriptApi = {
-  /**
-   * 获取脚本列表
-   */
-  list: async (params: PageParams) => {
-    return await post<PageResponse<Script>>("/rpa/scripts/list", params);
-  },
-
-  /**
-   * 获取脚本详情
-   */
-  get: async (id: string) => {
-    return await post<Script>(`/rpa/scripts/${id}`, {});
-  },
-
-  /**
-   * 创建脚本
-   */
-  create: async (data: Partial<Script>) => {
-    return await post<Script>("/rpa/scripts", data);
-  },
-
-  /**
-   * 更新脚本
-   */
-  update: async (id: string, data: Partial<Script>) => {
-    return await post<Script>(`/rpa/scripts/${id}/update`, data);
-  },
-
-  /**
-   * 删除脚本
-   */
-  delete: async (id: string) => {
-    return await post(`/rpa/scripts/${id}/delete`, {});
-  },
+  ...scriptCrud,
 
   /**
    * 测试脚本动作
@@ -225,7 +169,7 @@ export interface WorkerListSearchParams extends PageParams {
   name?: string;
 }
 
-const workerCrudApi = createCrudApi<Worker>({ basePath: "/rpa/workers" });
+const workerCrudApi = createResourceApi<Worker>({ basePath: "/rpa/workers" });
 
 /**
  * RPA Worker API
@@ -312,7 +256,7 @@ export interface ExecutionListSearchParams extends PageParams {
   dateRange?: [string, string];
 }
 
-const executionCrudApi = createCrudApi<Execution>({ basePath: "/rpa/executions" });
+const executionCrudApi = createResourceApi<Execution>({ basePath: "/rpa/executions" });
 
 /**
  * RPA 执行记录 API
@@ -350,32 +294,15 @@ export const executionApi = {
   },
 
   /**
-   * 下载执行报告
+   * 下载执行报告 — 委托 download.ts 统一下载链（Phase 94 D-04/T-94-04/T-94-05:
+   * 裸 fetch 换 blobAxios 拦截器注入 token,白得 5min 超时防护）
    */
   downloadReport: async (id: string, format: "pdf" | "html" = "pdf") => {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api/v1";
-    const authHeaders = await getAuthHeaders();
-    const response = await fetch(`${baseUrl}/rpa/executions/${id}/report?format=${format}`, {
-      method: "POST",
-      headers: {
-        ...authHeaders,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error("下载报告失败");
-    }
-
-    const blob = await response.blob();
-    const blobUrl = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = blobUrl;
-    a.download = `execution_report_${id}.${format}`;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(blobUrl);
-    document.body.removeChild(a);
+    await downloadFilePost(
+      `/rpa/executions/${id}/report?format=${format}`,
+      {},
+      `execution_report_${id}.${format}`
+    );
   },
 
   /**
@@ -397,7 +324,7 @@ export interface ScheduleListSearchParams extends PageParams {
   name?: string;
 }
 
-const scheduleCrudApi = createCrudApi<Schedule>({ basePath: "/rpa/schedules" });
+const scheduleCrudApi = createResourceApi<Schedule>({ basePath: "/rpa/schedules" });
 
 /**
  * RPA 定时调度 API
@@ -463,7 +390,7 @@ export interface VariableListSearchParams extends PageParams {
   name?: string;
 }
 
-const variableCrudApi = createCrudApi<Variable>({ basePath: "/rpa/variables" });
+const variableCrudApi = createResourceApi<Variable>({ basePath: "/rpa/variables" });
 
 /**
  * RPA 变量 API
@@ -512,7 +439,7 @@ export interface TemplateListSearchParams extends PageParams {
   name?: string;
 }
 
-const templateCrudApi = createCrudApi<Template>({ basePath: "/rpa/templates" });
+const templateCrudApi = createResourceApi<Template>({ basePath: "/rpa/templates" });
 
 /**
  * RPA 脚本模板 API
@@ -615,7 +542,9 @@ export interface NotificationListSearchParams extends PageParams {
   enabled?: boolean;
 }
 
-const notificationCrudApi = createCrudApi<NotificationConfig>({ basePath: "/rpa/notifications" });
+const notificationCrudApi = createResourceApi<NotificationConfig>({
+  basePath: "/rpa/notifications",
+});
 
 /**
  * RPA 通知配置 API

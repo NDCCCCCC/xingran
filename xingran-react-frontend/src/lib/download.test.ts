@@ -3,9 +3,9 @@
  *
  * 锁定: blobAxios 异步 Bearer 注入拦截器 / downloadFile GET 链(含非 2xx 抛错) /
  * downloadFilePost POST 链(content-disposition URL 编码文件名提取 + 默认回退 +
- * 非 2xx 抛错) / triggerBrowserDownload 触发顺序 / 5min 超时锁值。
+ * 非 2xx 抛错) / triggerBrowserDownload 触发顺序 / 5min 超时锁值 /
+ * executionApi.downloadReport 归一新链路(94-02 D-11 组 6,T-94-04/T-94-05)。
  * axios create 工厂 mock 照抄 opsApi.test.ts:41-55,URL.createObjectURL 打桩 :103-115。
- * rpaApi.downloadReport 链路用例留待 94-02 迁移落地时补。
  */
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
@@ -17,6 +17,11 @@ const h = vi.hoisted(() => {
     mockGetAccessToken: vi.fn<() => Promise<string>>(),
   };
 });
+
+vi.mock("./api", () => ({
+  post: vi.fn(),
+  get: vi.fn(),
+}));
 
 vi.mock("axios", () => {
   const createInstance = () => {
@@ -46,6 +51,7 @@ vi.mock("@/utils/authHelpers", () => ({
 }));
 
 import { blobAxios, downloadFile, downloadFilePost, triggerBrowserDownload } from "./download";
+import { executionApi } from "./rpaApi";
 
 /** blobAxios 的测试视型:暴露 mock 的 get/post 与请求拦截器注册点 */
 const mockedBlobAxios = blobAxios as unknown as {
@@ -205,5 +211,40 @@ describe("triggerBrowserDownload 触发顺序", () => {
 describe("blobAxios 实例配置", () => {
   it("timeout 锁值 300000(5min 超时语义不回退)", () => {
     expect(h.createConfigs[0]?.timeout).toBe(300000);
+  });
+});
+
+describe("executionApi.downloadReport 经 downloadFilePost 链路 (94-02 D-11 组 6)", () => {
+  it("POST /rpa/executions/:id/report?format=html 且默认文件名 execution_report_<id>.<format>", async () => {
+    mockedBlobAxios.post.mockResolvedValueOnce({
+      status: 200,
+      data: new Blob(["report"]),
+      headers: {},
+    });
+
+    await executionApi.downloadReport("e1", "html");
+
+    expect(mockedBlobAxios.post).toHaveBeenCalledWith(
+      "/rpa/executions/e1/report?format=html",
+      {},
+      {
+        responseType: "blob",
+      }
+    );
+    expect(anchorCapture.element?.download).toBe("execution_report_e1.html");
+    expect(createObjectURLMock()).toHaveBeenCalled();
+  });
+
+  it("缺省 format=pdf;非 2xx 抛「下载失败」(T-94-05 超时防护归一)", async () => {
+    mockedBlobAxios.post.mockResolvedValueOnce({ status: 500, data: new Blob([]), headers: {} });
+
+    await expect(executionApi.downloadReport("e2")).rejects.toThrow("下载失败");
+    expect(mockedBlobAxios.post).toHaveBeenCalledWith(
+      "/rpa/executions/e2/report?format=pdf",
+      {},
+      {
+        responseType: "blob",
+      }
+    );
   });
 });
