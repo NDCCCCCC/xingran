@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
@@ -35,6 +36,23 @@ import (
 //
 // ===========================================================
 
+// ==================== 文件定位说明 (Phase 92-03, D-06/D-07) ====================
+//
+// **双定位**:
+//   1. 本文件是 pkg/cache.Cache 的 **业务封装层** — 提供 GetOrSet 读穿透、
+//      JSON 序列化/反序列化、批量操作与统计等面向业务的能力;
+//   2. 本文件是 internal/services/base.CacheProvider 接口的 **实现底座**
+//      (Adaptee) — 经 system.NewCacheProvider(dataCache) 适配器适配为
+//      base.CacheProvider, 供 system 9 个 *_cache_impl 与全部 base 泛型
+//      函数族消费。
+//
+// **新代码路径 (D-07)**: 新增业务缓存代码应使用 base.GetOrSetJSON[T] /
+// base.CacheProvider (唯一权威抽象), 不应直接新增 DataCacheService 调用点。
+// 本文件 **不标 @Deprecated** — 既有 12+ API 文件的 import 面与 core.Core
+// 装配链保持零改动, 本文件长期稳定存在 (D-06 原地定性, 永久留 services root)。
+//
+// ===========================================================
+
 // DataCacheService 数据缓存服务
 type DataCacheService struct {
 	cache       cache.Cache
@@ -52,11 +70,13 @@ func (s *DataCacheService) SetCacheConfig(cacheConfig *CacheConfigService) {
 }
 
 // GetExpiration 获取缓存过期时间
+//
+// Phase 92-03 (D-06): 平行 TTL 逻辑消除 — 方法签名保留（2 个行为锁定测试
+// Dcs7901/Ccs7901），内部委托 base 基类统一 TTL 解析。
+// s.cacheConfig 为 nil 时装入 typed-nil，由 CacheConfigService.GetDurationWithDefault
+// 顶部 nil-receiver 防护返回 default（与原 nil 判空语义完全等价，Phase 92-01 配套）。
 func (s *DataCacheService) GetExpiration(configKey string, defaultExpiration time.Duration) time.Duration {
-	if s.cacheConfig != nil {
-		return s.cacheConfig.GetDurationWithDefault(configKey, defaultExpiration)
-	}
-	return defaultExpiration
+	return (&base.CacheServiceBase{Config: s.cacheConfig}).GetExpiration(configKey, defaultExpiration)
 }
 
 // Get 获取缓存数据（自动反序列化）
