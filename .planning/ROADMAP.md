@@ -1,7 +1,7 @@
 ---
-last_updated: 2026-09-04
+last_updated: 2026-09-06
 milestone: v1.29
-status: planning
+status: executing
 ---
 
 # Milestone v1.29 ROADMAP (技术债治理)
@@ -157,9 +157,10 @@ Phase 90 (TIMEOUTS/PORT/PROTOCOL/CONCURRENCY 常量集中化) ─┤
 
 **Requirements**: CLOSEOUT-01..03 (3 项)
 
-**Plans (2)**:
-- 95-01 v1.28 SHIP 收口：更新 `.planning/MILESTONES.md` 添加 v1.28 SHIPPED 段（45.13% 阶段性收口理由 + 距离 70% 目标 24.87pp）；更新 `.planning/PROJECT.md` v1.28 段 SHIPPED + ARCHIVED；归档 `.planning/workstreams/frontend-coverage/` 目录
-- 95-02 v1.29 closeout + audit：跑完整 gate（go build / go test / npm type-check / npm lint / npm test / 后端 CI gate / 前端 CI gate）；7 项行动全部完成确认；生成 v1.29-MILESTONE-AUDIT.md（v1.27 同款模板）
+**Plans (2, 2026-09-06 plan-phase 生成)** *(CLOSEOUT-01/02 实质产物已于 2026-09-04 收口落地，95-01 动作按 D-01/D-10 校准为核对确认；决策 D-01..D-11 见 95-CONTEXT.md；95-02 含 D-03 type-check 修复与 gate ② flaky 双修复两个前置修复线)*:
+
+- [ ] 95-01-PLAN.md — v1.28 收口核对 + 文档措辞校准（CLOSEOUT-01/02 核对确认 + REQUIREMENTS/ROADMAP SC 措辞校准 + 记账补漏：BACKUP-CLOSED-01/02 补勾 / Progress 表 stale 修正 / 41→45 计数）
+- [ ] 95-02-PLAN.md — v1.29 closeout + audit（D-03 type-check gate 修复 + gate ② flaky 双修复 + D-06 七 gate 跑批 + D-07 v1.29-MILESTONE-AUDIT.md + D-08 七项行动确认 + D-09 SHIPPED 标记 + D-05 94-HUMAN-UAT 流转）
 
 **Success Criteria**:
 1. `.planning/MILESTONES.md` v1.28 SHIPPED 段写入

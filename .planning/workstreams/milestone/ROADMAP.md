@@ -1,7 +1,7 @@
 ---
-last_updated: 2026-09-05
+last_updated: 2026-09-06
 milestone: v1.29
-update_trigger: v1.29 workstream ROADMAP synced from .planning/ROADMAP.md — v1.27 content archived at .planning/milestones/v1.27-ROADMAP.md; phases 89-95 now tracked here with Progress table (was: stale v1.27 roadmap made phase-complete report is_last_phase=true after Phase 90); 2026-09-05 Phase 92 plan-phase 校准 3→4 plans; 2026-09-05 Phase 94 plan-phase 生成 3 plans
+update_trigger: v1.29 workstream ROADMAP synced from .planning/ROADMAP.md — v1.27 content archived at .planning/milestones/v1.27-ROADMAP.md; phases 89-95 now tracked here with Progress table (was: stale v1.27 roadmap made phase-complete report is_last_phase=true after Phase 90); 2026-09-05 Phase 92 plan-phase 校准 3→4 plans; 2026-09-05 Phase 94 plan-phase 生成 3 plans; 2026-09-06 Phase 95 plan-phase 生成 2 plans（95-01 核对校准 / 95-02 gate+audit+SHIPPED）
 ---
 
 # Roadmap: XingRan-Next 运维管理系统 — v1.29 milestone workstream
@@ -251,10 +251,10 @@ Plans:
 4. v1.29-MILESTONE-AUDIT.md 验证报告生成（v1.27 同款模板）
 5. v1.29 milestone SHIPPED 状态设置
 
-**Plans (2 planned, 待 plan-phase 生成)**:
+**Plans (2, 2026-09-06 plan-phase 生成)** *(CLOSEOUT-01/02 实质产物已于 2026-09-04 收口落地，95-01 动作按 D-01/D-10 校准为核对确认；决策 D-01..D-11 见 95-CONTEXT.md；95-02 含 D-03 type-check 修复与 gate ② flaky 双修复两个前置修复线)*:
 
-- 95-01 v1.28 SHIP 收口：MILESTONES.md + PROJECT.md + frontend-coverage workstream 归档
-- 95-02 v1.29 closeout + audit：完整 gate + 7 项行动确认 + audit 报告
+- [ ] 95-01-PLAN.md — v1.28 收口核对 + 文档措辞校准（CLOSEOUT-01/02 核对确认 + REQUIREMENTS/ROADMAP SC 措辞校准 + 记账补漏：BACKUP-CLOSED-01/02 补勾 / Progress 表 stale 修正 / 41→45 计数）
+- [ ] 95-02-PLAN.md — v1.29 closeout + audit（D-03 type-check gate 修复 + gate ② flaky 双修复 + D-06 七 gate 跑批 + D-07 v1.29-MILESTONE-AUDIT.md + D-08 七项行动确认 + D-09 SHIPPED 标记 + D-05 94-HUMAN-UAT 流转）
 
 ---
 
