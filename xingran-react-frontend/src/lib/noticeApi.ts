@@ -1,4 +1,6 @@
 import { del, get, post } from "./api";
+import { createResourceApi } from "./apiFactory";
+import type { PageParams } from "@/types";
 import type {
   Notice,
   NoticeListItem,
@@ -17,13 +19,17 @@ const tokenStorage = new SecureTokenStorageImpl();
 
 // ==================== 管理端通知 API ====================
 
+// Phase 94 D-05: 标准 CRUD 形状函数委托共享工厂（导出签名零变化；
+// GET 动词端点 / batch-delete / publish / withdraw / 用户端 my-notices 全族保持原样）
+const adminNoticeCrud = createResourceApi<Notice>({ basePath: "/system/notices" });
+
 /**
  * 获取通知列表（管理端）
  */
 export function getNoticeList(
   params: NoticeListParams
 ): Promise<BaseResponse<PageResponse<Notice>>> {
-  return post("/system/notices/list", params);
+  return adminNoticeCrud.list(params as unknown as PageParams & Record<string, unknown>);
 }
 
 /** 通知状态统计（按发布状态聚合，供统计卡片） */
@@ -46,7 +52,7 @@ export function getNoticeStatusStatistics(): Promise<BaseResponse<NoticeStatusSt
  * 获取通知详情
  */
 export function getNoticeDetail(id: string): Promise<BaseResponse<Notice>> {
-  return post(`/system/notices/${id}`, {});
+  return adminNoticeCrud.get(id);
 }
 
 /**
@@ -55,7 +61,7 @@ export function getNoticeDetail(id: string): Promise<BaseResponse<Notice>> {
 export function createNotice(
   data: CreateNoticeRequest
 ): Promise<BaseResponse<{ id: string; message: string }>> {
-  return post("/system/notices", data);
+  return adminNoticeCrud.create(data) as Promise<BaseResponse<{ id: string; message: string }>>;
 }
 
 /**
@@ -65,14 +71,14 @@ export function updateNotice(
   id: string,
   data: UpdateNoticeRequest
 ): Promise<BaseResponse<{ message: string }>> {
-  return post(`/system/notices/${id}/update`, data);
+  return adminNoticeCrud.update(id, data) as Promise<BaseResponse<{ message: string }>>;
 }
 
 /**
  * 删除通知
  */
 export function deleteNotice(id: string): Promise<BaseResponse<{ message: string }>> {
-  return post(`/system/notices/${id}/delete`, {});
+  return adminNoticeCrud.delete(id) as Promise<BaseResponse<{ message: string }>>;
 }
 
 /**
