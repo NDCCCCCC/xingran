@@ -514,7 +514,9 @@ export function updateMapping(id: string, data: UpdateMappingRequest): Promise<B
 }
 
 export function deleteMapping(id: string): Promise<BaseResponse<null>> {
-  return post(`/ad-domain/mappings/${id}/delete}`, {});
+  // fix(94-03): URL 模板串历史笔误（末尾多余右括号）必然 404，
+  // 随工厂委托自然正确化为 `${id}/delete`（v1.29 D-05 例外条款登记，独立 commit 可审计）
+  return mappingCrud.delete(id) as Promise<BaseResponse<null>>;
 }
 
 // ==================== OU 部门映射 API ====================

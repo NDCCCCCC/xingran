@@ -299,11 +299,11 @@ describe("adDomainApi — 部门组映射(legacy)", () => {
     });
   });
 
-  it("deleteMapping 按 actual 锁定(URL 含历史笔误 '}',后端无对应路由,见 deferred-items)", async () => {
+  it("deleteMapping POST /:id/delete（URL 历史笔误 '}' 随 94-03 工厂化委托修复,原必然 404）", async () => {
     mockPost.mockReset();
     mockPost.mockResolvedValueOnce(OK);
     await deleteMapping("m1");
-    expect(mockPost).toHaveBeenCalledWith("/ad-domain/mappings/m1/delete}", {});
+    expect(mockPost).toHaveBeenCalledWith("/ad-domain/mappings/m1/delete", {});
   });
 });
 
