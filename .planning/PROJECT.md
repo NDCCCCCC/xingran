@@ -24,7 +24,7 @@ previous_update: 2026-08-23 v1.28 started (frontend coverage 3.67% → ≥70% in
 - **D-05 范围边界**: 不修改业务行为（除 config_backup 三处 TODO 的真实实现）；operlog exclude_paths todo 不在本期范围（独立 deferred）
 - **D-06 Phase 编号**: 从 Phase 89 起（v1.28 用 82-88，v1.27 用 75-81）
 
-**Progress (v1.29):** Phase 89 (PAGINATION) ✅ · Phase 90 (TIMEOUTS) ✅ · **Phase 91 (CRUD 复用) ✅ 2026-09-04** — 11/11 services 迁入 base.GORMRepository[T]（scope 函数式），CRUD 模板清零，workstation typed 接线，附带修复 2 个现存 bug；LOC 量化锚点经 OVR-91-01 用户 override 重校准（生产口径 +408，测试基线 +678 属计划内投入）· Phase 92-95 待推进。
+**Progress (v1.29):** Phase 89 (PAGINATION) ✅ · Phase 90 (TIMEOUTS) ✅ · **Phase 91 (CRUD 复用) ✅ 2026-09-04** — 11/11 services 迁入 base.GORMRepository[T]（scope 函数式），CRUD 模板清零，workstation typed 接线，附带修复 2 个现存 bug；LOC 量化锚点经 OVR-91-01 用户 override 重校准（生产口径 +408，测试基线 +678 属计划内投入）· **Phase 92 (缓存层统一) ✅ 2026-09-05** — base 缓存权威抽象落地（TTLResolver + CacheProvider 全家 type alias 翻转 + 泛型函数族），32 处 GetOrSet 样板收敛单 return，失效底层归一（42 处改写 + 旧函数删除同 commit），DataCacheService 原地定性，monitor rename CacheOperator，miniredis 十用例 + invariants 锁；LOC 校准口径 207 达成（用户判定）；WR-01..05 预存缺陷登记 V130-CANDIDATES · Phase 93-95 待推进。
 
 **规划输入:** 2026-09-03 综合审计报告（4 维度并行扫描：TODO/FIXME、硬编码值、重复实现、项目完成度）；审计基线数据 = 后端 78.12% / 前端 45.13% / 1688 测试 / 18 项真实 TODO / ~20 处中高度硬编码 / 8 个 CRUD 服务 60-70% 重复 / 缓存层三处架构重复。
 
