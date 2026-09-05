@@ -1,8 +1,18 @@
 # Milestones
 
-## v1.29 技术债治理 (Tech Debt Governance) — 🚧 STARTED 2026-09-04
+## v1.29 技术债治理 (Tech Debt Governance) — ✅ SHIPPED 2026-09-06
 
-**Phases**: 7 (Phases 89-95) | **Plans**: TBD | **Status**: planning
+**Phases**: 7 (Phases 89-95) | **Plans**: 26 | **Status**: shipped
+
+**Delivered**:
+- Phase 89 PAGINATION：`pkg/constants/pagination.go` 3 常量 + `NormalizePagination` 唯一入口，12+ 处硬编码清零（3 plans，238283c..3559626）
+- Phase 90 TIMEOUTS：4 个 leaf const pkg 共 10 常量（超时/端口/协议/并发）+ AST 锁值 10 tests，8 调用点零行为变更（4 plans，b51f44c..3a2efe5）
+- Phase 91 CRUD 复用：11/11 operations services 迁入 `base.GORMRepository[T]`，CRUD 模板清零，生产口径净减 +408 行（4 plans，5d0008b..963defe）
+- Phase 92 缓存统一：`internal/services/base` 单一权威抽象（TTLResolver + 泛型函数族），32 处 GetOrSet 样板收敛 + 42 处失效归一 + invariants 锁进 CI（4 plans）
+- Phase 93 config_backup 闭环：gzipCompress/gzipDecompress + DeviceExecutor.RestoreConfig + 异步恢复四态状态机 + 93_NN 19 用例（6 plans，a4bfc71 等）
+- Phase 94 API 工厂化：`src/lib/apiFactory.ts` 单一权威（createResourceApi 8 方法），13 个 *Api.ts 矩阵处置，覆盖率 lib 90.48%，review 0 Critical（3 plans，b3bc745..1771e1d）
+- Phase 95 收口：v1.28 SHIP 段核对确认（95-01）+ D-03 type-check gate 真实化 + gate ② flaky 双修复 + 七 gate 本地全绿（后端 coverage 78.33% / 前端 45/45 dirs / 3800 tests）+ v1.29-MILESTONE-AUDIT.md（95-02，本段标记即 D-09 落点）
+- Audit: [v1.29-MILESTONE-AUDIT.md](milestones/v1.29-MILESTONE-AUDIT.md) — 45/45 requirements 追溯
 
 **Delivered (审计 → 规划)**:
 - 2026-09-03 综合审计 4 维度并行扫描（TODO/FIXME、硬编码值、重复实现、项目完成度）

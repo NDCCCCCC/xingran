@@ -254,7 +254,7 @@ Plans:
 **Plans (2, 2026-09-06 plan-phase 生成)** *(CLOSEOUT-01/02 实质产物已于 2026-09-04 收口落地，95-01 动作按 D-01/D-10 校准为核对确认；决策 D-01..D-11 见 95-CONTEXT.md；95-02 含 D-03 type-check 修复与 gate ② flaky 双修复两个前置修复线)*:
 
 - [x] 95-01-PLAN.md — v1.28 收口核对 + 文档措辞校准（CLOSEOUT-01/02 核对确认 + REQUIREMENTS/ROADMAP SC 措辞校准 + 记账补漏：BACKUP-CLOSED-01/02 补勾 / Progress 表 stale 修正 / 41→45 计数）
-- [ ] 95-02-PLAN.md — v1.29 closeout + audit（D-03 type-check gate 修复 + gate ② flaky 双修复 + D-06 七 gate 跑批 + D-07 v1.29-MILESTONE-AUDIT.md + D-08 七项行动确认 + D-09 SHIPPED 标记 + D-05 94-HUMAN-UAT 流转）
+- [x] 95-02-PLAN.md — v1.29 closeout + audit（D-03 type-check gate 修复 + gate ② flaky 双修复 + D-06 七 gate 跑批 + D-07 v1.29-MILESTONE-AUDIT.md + D-08 七项行动确认 + D-09 SHIPPED 标记 + D-05 94-HUMAN-UAT 流转）
 
 ---
 
@@ -268,9 +268,9 @@ Plans:
 | Phase 92 缓存层三处架构统一 | Complete | 4/4 | CACHE-UNIFY-01..05（全部 done：92-04 收口——rename 消歧 + invariants 锁 + 三文档同步 + LOC 双口径） | 2026-09-05 | 2026-09-05 |
 | Phase 93 config_backup 三处 TODO 闭环 | Complete | 6/6 | BACKUP-CLOSED-01..05 | 2026-09-04 | 2026-09-05 |
 | Phase 94 前端 API 工厂化 | Complete | 3/3 | API-FACTORY-01..05 | 2026-09-05 | 2026-09-06 |
-| Phase 95 v1.28 SHIP + v1.29 closeout | Pending | 0/2 | CLOSEOUT-01..03 | — | — |
+| Phase 95 v1.28 SHIP + v1.29 closeout | Complete | 2/2 | CLOSEOUT-01..03 | 2026-09-06 | 2026-09-06 |
 
-**Total:** 7 phases / 45 requirements (44/45 done — Phase 89-94 complete + CLOSEOUT-01/02 本 plan 勾选；CLOSEOUT-03 由 95-02 收口，与根 ROADMAP 口径一致)
+**Total:** 7 phases / 45 requirements (45/45 done — Phase 89-95 全部完成，与根 ROADMAP 口径一致)
 
 ---
 
@@ -285,4 +285,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-09-06 — **Phase 95 Plan 1 (95-01) 完成**（v1.28 收口核对确认 + REQUIREMENTS/ROADMAP SC 措辞校准 D-01/D-10 + 记账补漏：BACKUP-CLOSED-01/02 补勾 / Progress 表 Phase 91-94 stale 修正 / 41→45 计数校准）。Phase 94 COMPLETE 2026-09-06（3 plans，commits b3bc745..1771e1d 区间；决策 D-01..D-14 见 94-CONTEXT.md）。Phase 93 SHIPPED（6 plans）。Phase 92 SHIPPED（4/4 plans；决策 D-01..D-10 见 92-CONTEXT.md）。Phase 91 SHIPPED（4/4 plans，commits 5d0008b..963defe 区间）。Phase 90 SHIPPED（4 plans，commits b51f44c..3a2efe5）。Phase 89 SHIPPED（3 plans，commits 238283c..3559626）。*
+*Last updated: 2026-09-06 — **Phase 95 Plan 2 (95-02) 完成，v1.29 全部 7 phases / 45 requirements 收口**（D-03 type-check gate 真实化 + gate ② flaky 双修复 + 七 gate 全绿 + v1.29-MILESTONE-AUDIT.md + SHIPPED 标记；audit: milestones/v1.29-MILESTONE-AUDIT.md）。Phase 94 COMPLETE 2026-09-06（3 plans，commits b3bc745..1771e1d 区间；决策 D-01..D-14 见 94-CONTEXT.md）。Phase 93 SHIPPED（6 plans）。Phase 92 SHIPPED（4/4 plans；决策 D-01..D-10 见 92-CONTEXT.md）。Phase 91 SHIPPED（4/4 plans，commits 5d0008b..963defe 区间）。Phase 90 SHIPPED（4 plans，commits b51f44c..3a2efe5）。Phase 89 SHIPPED（3 plans，commits 238283c..3559626）。*

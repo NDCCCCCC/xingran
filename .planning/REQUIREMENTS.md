@@ -99,7 +99,7 @@ status: executing
 
 - [x] **CLOSEOUT-01**: 核对确认 `.planning/MILESTONES.md` v1.28 SHIPPED 段（已存在，2026-09-04 收口产物）：45.13% 阶段性收口理由 + 距离 70% 目标 24.87pp + Phase 88 重启备选 + 归档位置四件套（原「更新/添加」措辞按 D-01/D-10 校准）
 - [x] **CLOSEOUT-02**: 核对确认 `.planning/PROJECT.md` v1.28 段 SHIPPED + ARCHIVED 标记（已存在）+ frontend-coverage workstream 保留作历史（MILESTONES v1.28 段已登记，零移动，D-02；原「更新/标记/归档」措辞按 D-01/D-10 校准）
-- [ ] **CLOSEOUT-03**: v1.29 closeout — 跑完整 `go build ./...` + `go test ./...` + `npm run type-check` + `npm run lint` + `npm run test` + 后端 CI gate + 前端 CI gate；7 项行动全部完成确认；生成 v1.29-MILESTONE-AUDIT.md 验证报告
+- [x] **CLOSEOUT-03**: v1.29 closeout — 跑完整 `go build ./...` + `go test ./...` + `npm run type-check` + `npm run lint` + `npm run test` + 后端 CI gate + 前端 CI gate；7 项行动全部完成确认；生成 v1.29-MILESTONE-AUDIT.md 验证报告（2026-09-06 收口：七 gate 实测全绿 + v1.29-MILESTONE-AUDIT.md 落盘，见 audit 报告）
 
 ---
 
@@ -119,7 +119,7 @@ status: executing
 
 ---
 
-## V130-CANDIDATES (v1.30+ 缺陷候选 — Phase 92 review 登记，2026-09-05 用户判定)
+## V130-CANDIDATES (v1.30+ 缺陷候选 — Phase 92 review 登记，2026-09-05 用户判定；2026-09-06 Phase 95 增补 JOBSTAT-01)
 
 > 来源：`92-REVIEW.md` WR-01..05——五个迁移前即存在的缓存缺陷，被 v1.29 零行为变更约束有意原样保留。当前 milestone 93/94/95 均不覆盖。修复属**行为变更**，须附带回归测试（v1.29 D-05 例外条款同款纪律）。
 
@@ -128,6 +128,7 @@ status: executing
 - [ ] **CACHEDEF-03**: `duty/duty_cache_impl.go:333-344` — `parseInt` 的 `len(s) >= 4` 前置使 2 字符月份切片恒返回 0，`GenerateSchedule`/`ManualDuty` 后月度排班缓存失效无效（`duty_handler.go:325` 生产可达）
 - [ ] **CACHEDEF-04**: `workorder/workorder_cache_impl.go:207-234` — 待办缓存键仅含 userID，忽略 `GetMyPendingRequest.Limit`，不同 limit 共享同一缓存
 - [ ] **CACHEDEF-05**: `monitor/cache_service.go:766-771` — `key[:6] == "xingran:"`（6 字节切片比 8 字节字面量）恒 false，前缀剥离永不生效（Phase 73-04 quirk Q1 同源；CLAUDE.md 旧示例 `key[6:]` 同错，现已随 Cache Service Convention 修订移除）
+- [ ] **JOBSTAT-01**: `internal/api/v1/job_utils.go:57` — GetJobStatistics 时区日界生产看板缺陷：本地日界（:57 `today := time.Now().Format("2006-01-02")`）+ glebarez 驱动默认写时间格式带 +08:00 偏移 + sqlite `DATE()` 换算 UTC 取日 → 本地 00:00-08:00 窗口当天前 8 小时 JobLog 计入「昨日」，今日成功/失败看板少计。修复属**行为变更**须附回归测试（v1.29 D-05 例外条款同款纪律），v1.30+ 候选；测试侧已正午锚定隔离（api_v1_tail_80_03_test.go，Phase 95）
 
 ---
 
