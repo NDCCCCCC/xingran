@@ -53,6 +53,9 @@ func newNetworkTestEnv(t *testing.T, migrate ...interface{}) *netTestEnv {
 	// pooled connection and then see an empty DB → "no such table sys_config_restore_task".
 	// Serializing to a single connection keeps every query on the migrated in-memory DB
 	// and eliminates the race window (test-infra only; no production behavior change).
+	// 红线（Phase 95 review WR-02）：单连接 = 全包测试共用一个连接池槽位。
+	// 事务内嵌根 *gorm.DB 查询、或 Rows 迭代未读完时再发起查询，会无限死锁（非报错）。
+	// 本包内新增测试必须遵守：不要在事务回调内再走 gorm 查询；迭代 Rows 期间禁止嵌套查询。
 	sqlDB, err := gormDB.DB()
 	require.NoError(t, err)
 	sqlDB.SetMaxOpenConns(1)
