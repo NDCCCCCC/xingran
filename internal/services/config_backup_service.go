@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/device"
-	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -552,19 +552,6 @@ func (s *ConfigBackupService) DiffBackups(ctx context.Context, backupID1, backup
 	return backup1.DeviceName + " (版本" + strconv.Itoa(backup1.Version) + ")",
 		backup2.DeviceName + " (版本" + strconv.Itoa(backup2.Version) + ")",
 		diffResult, nil
-}
-
-// RestoreBackup 恢复配置（预留接口，实际需要设备支持）
-func (s *ConfigBackupService) RestoreBackup(ctx context.Context, backupID string, deviceID string) error {
-	// 获取备份内容
-	_, err := s.GetBackupContent(ctx, backupID)
-	if err != nil {
-		return err
-	}
-
-	// TODO: 实现配置恢复逻辑
-	// 这需要根据设备厂商和型号使用不同的命令
-	return fmt.Errorf("配置恢复功能待实现")
 }
 
 // GetBackupStatistics 获取备份统计信息

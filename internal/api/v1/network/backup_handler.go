@@ -16,16 +16,18 @@ import (
 
 // BackupHandler 配置备份处理器
 type BackupHandler struct {
-	backupService *services.ConfigBackupService
-	db            *gorm.DB
-	core          *core.Core
+	backupService  *services.ConfigBackupService
+	restoreTaskSvc *services.ConfigRestoreTaskService
+	db             *gorm.DB
+	core           *core.Core
 }
 
 // NewBackupHandler 创建配置备份处理器实例
-func NewBackupHandler(backupService *services.ConfigBackupService, db *gorm.DB) *BackupHandler {
+func NewBackupHandler(backupService *services.ConfigBackupService, restoreTaskSvc *services.ConfigRestoreTaskService, db *gorm.DB) *BackupHandler {
 	return &BackupHandler{
-		backupService: backupService,
-		db:            db,
+		backupService:  backupService,
+		restoreTaskSvc: restoreTaskSvc,
+		db:             db,
 	}
 }
 
@@ -254,9 +256,9 @@ func (h *BackupHandler) Diff(c *gin.Context) {
 	})
 }
 
-// Restore 恢复配置
+// Restore 恢复配置（异步任务发起，Phase 93 D-01/D-17）
 // @Summary 恢复配置
-// @Description 从备份恢复设备配置
+// @Description 从备份恢复设备配置——发起异步恢复任务并立即返回 taskId，任务进度经 /restore-tasks/:id 查询
 // @Tags 配置备份
 // @Accept json
 // @Produce json
@@ -277,14 +279,78 @@ func (h *BackupHandler) Restore(c *gin.Context) {
 		return
 	}
 
-	err := h.backupService.RestoreBackup(c.Request.Context(), id, req.DeviceID)
+	userID, _ := c.Get("user_id")
+	task, err := h.restoreTaskSvc.StartRestore(c.Request.Context(), id, req.DeviceID, userID.(string))
 	if !responseHelpers.HandleServiceError(c, err, "恢复配置") {
 		return
 	}
 
-	// Restore 是把备份配置下发到设备 — 属高危写操作
+	// Restore 是把备份配置下发到设备 — 属高危写操作（发起时记录一次，D-18；
+	// 任务结果只在任务表，不双记）
 	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "配置备份", operlog.OperTypeUpdate)
-	response.Success(c, gin.H{"message": "恢复成功"})
+	response.Success(c, gin.H{"taskId": task.ID, "status": task.Status, "message": "恢复任务已创建"})
+}
+
+// GetRestoreTask 查询恢复任务详情
+// @Summary 查询恢复任务详情
+// @Description 查询异步恢复任务的状态与下发进度
+// @Tags 配置备份
+// @Accept json
+// @Produce json
+// @Param id path string true "任务ID"
+// @Success 200 {object} response.Response
+// @Router /network/backups/restore-tasks/:id [post]
+func (h *BackupHandler) GetRestoreTask(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		response.Error(c, apperrors.ParamMissing("任务ID"))
+		return
+	}
+
+	task, err := h.restoreTaskSvc.GetRestoreTask(c.Request.Context(), id)
+	if !responseHelpers.HandleServiceError(c, err, "查询恢复任务") {
+		return
+	}
+
+	response.Success(c, task)
+}
+
+// ListRestoreTasks 查询恢复任务列表
+// @Summary 查询恢复任务列表
+// @Description 分页查询异步恢复任务列表（可按设备过滤）
+// @Tags 配置备份
+// @Accept json
+// @Produce json
+// @Param request body object{current=int,pageSize=int,deviceId=string} true "查询条件"
+// @Success 200 {object} response.Response{data=response.PageResponse}
+// @Router /network/backups/restore-tasks/list [post]
+func (h *BackupHandler) ListRestoreTasks(c *gin.Context) {
+	var rawReq map[string]interface{}
+	if err := c.ShouldBindJSON(&rawReq); err != nil {
+		rawReq = make(map[string]interface{})
+	}
+
+	current := getIntField(rawReq, "current", 1)
+	pageSize := getIntField(rawReq, "pageSize", 10)
+
+	var deviceID string
+	if val, ok := rawReq["deviceId"].(string); ok {
+		deviceID = val
+	}
+
+	tasks, total, err := h.restoreTaskSvc.ListRestoreTasks(c.Request.Context(), current, pageSize, deviceID, getOrderByColumn(rawReq), getIsAscPtr(rawReq))
+	if !responseHelpers.HandleServiceError(c, err, "查询恢复任务列表") {
+		return
+	}
+
+	pageResp := response.PageResponse{
+		List:     tasks,
+		Total:    total,
+		Current:  current,
+		PageSize: pageSize,
+	}
+
+	response.Success(c, pageResp)
 }
 
 // GetStatistics 获取备份统计信息

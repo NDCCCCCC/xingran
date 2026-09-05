@@ -1,6 +1,8 @@
 package network
 
 import (
+	"context"
+
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
@@ -38,6 +40,9 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	commandService := services.NewCommandDispatchService(db, core.DeviceExecutor)
 	executionService := services.NewConfigExecutionService(db, core.DeviceExecutor)
 	backupService := services.NewConfigBackupService(db, core.DeviceExecutor)
+	// Phase 93: 异步恢复任务服务（装配点与 backupService 同源；临时导出实例不在此接线）
+	restoreTaskSvc := services.NewConfigRestoreTaskService(db, backupService, core.DeviceExecutor)
+	restoreTaskSvc.RecoverStaleRunningTasks(context.Background()) // 启动收敛：残留 running 一次性置 failed（失败仅记日志，不阻断装配）
 	discoveryService := core.DeviceDiscoveryService
 
 	// 创建Handler
@@ -46,7 +51,7 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 	templateHandler := NewTemplateHandler(templateService).WithCore(core)
 	commandHandler := NewCommandHandler(commandService, db).WithCore(core)
 	executionHandler := NewExecutionHandler(executionService).WithCore(core)
-	backupHandler := NewBackupHandler(backupService, db).WithCore(core)
+	backupHandler := NewBackupHandler(backupService, restoreTaskSvc, db).WithCore(core)
 	discoveryHandler := NewDiscoveryHandler(discoveryService).WithCore(core)
 	exportHandler := NewNetworkExportHandler(core)
 
@@ -166,6 +171,9 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 		backups.POST("/batch-delete", backupHandler.BatchDelete)
 		backups.POST("/diff", backupHandler.Diff)
 		backups.POST("/:id/restore", backupHandler.Restore)
+		// Phase 93: 恢复任务查询双端点（组内继承 4 权限点，D-31 零新权限点）
+		backups.POST("/restore-tasks/list", backupHandler.ListRestoreTasks)
+		backups.POST("/restore-tasks/:id", backupHandler.GetRestoreTask)
 		backups.GET("/statistics", backupHandler.GetStatistics)
 		backups.POST("/batch", backupHandler.BatchBackup)
 		backups.GET("/version", backupHandler.GetByVersion)

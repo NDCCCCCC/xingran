@@ -444,25 +444,10 @@ func TestCbk7906_GetBackupContent(t *testing.T) {
 	assert.Contains(t, err.Error(), "备份记录不存在")
 }
 
-// TestCbk7906_RestoreBackup — locked stub: the restore endpoint validates the
-// backup content then always fails with 配置恢复功能待实现 (TODO in source).
-func TestCbk7906_RestoreBackup(t *testing.T) {
-	ctx := context.Background()
-	svc, db, _ := newCbk7906(t)
-
-	bk := cbk7906SeedBackup(t, db, &models.ConfigBackup{
-		DeviceID: "dev-r1", DeviceName: "r", BackupType: models.BackupTypeAuto,
-		StorageType: models.StorageTypeDatabase, ConfigContent: "cfg\n", Version: 1,
-	})
-
-	err := svc.RestoreBackup(ctx, bk.ID, "dev-r1")
-	require.Error(t, err, "restore is a stub — never succeeds (locked)")
-	assert.Contains(t, err.Error(), "配置恢复功能待实现")
-
-	err = svc.RestoreBackup(ctx, "no-such", "dev-r1")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "备份记录不存在")
-}
+// TestCbk7906_RestoreBackup was removed in Phase 93: the RestoreBackup stub it
+// locked (配置恢复功能待实现) was implemented for real as the async
+// ConfigRestoreTaskService (restore semantics now covered by 93-04 handler
+// tests + 93-06 e2e chain).
 
 // TestCbk7906_BackupStatistics — counts per type/storage plus size sum and the
 // distinct device count, all hand-computed.
