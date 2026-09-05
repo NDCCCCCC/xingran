@@ -141,7 +141,7 @@ Plans:
 
 **Success Criteria** *(措辞已按实际达成形态校准——D-03/D-06/D-09，Phase 92-04 收口同步；Phase 90 commit 3a2efe5 先例)*:
 
-1. `base/cache_service_base.go` 提供泛型包级函数族（`GetOrSetJSON[T]`/`SetJSON[T]`/`Invalidate`/`InvalidatePattern`）+ TTLResolver 薄基类（Go method 不能有类型参数，D-03）
+1. `base/cache_service_base.go` 提供泛型包级函数族（`GetOrSetJSON[T]`/`Invalidate`/`InvalidatePattern`）+ TTLResolver 薄基类（Go method 不能有类型参数，D-03；SetJSON 经 WR-06 判定删除）
 2. system/ + operations/ 下所有 `*_cache_impl.go` 继承新基类（嵌入源迁 base + 32 处方法体换泛型函数，含 notice 逃兵归队；invariants 扫描锁残留 = 0，D-10②）
 3. DataCacheService 原地定性 + 平行 TTL 逻辑消除（D-06——root↔system import cycle 硬约束，不标 @Deprecated，D-07 定位注释）
 4. `go test ./internal/services/...` 0 失败

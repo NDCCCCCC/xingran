@@ -186,7 +186,7 @@ pkg/                 # Public packages (reusable)
      ```
 
 2. **Unified Cache Architecture (Phase 92)**
-   - **Single authority**: `internal/services/base` — `CacheProvider` interface + `CacheServiceBase` (thin `TTLResolver` base class) + generic functions `GetOrSetJSON[T]` / `SetJSON[T]` / `Invalidate` / `InvalidatePattern`
+   - **Single authority**: `internal/services/base` — `CacheProvider` interface + `CacheServiceBase` (thin `TTLResolver` base class) + generic functions `GetOrSetJSON[T]` / `Invalidate` / `InvalidatePattern`
    - `internal/services/system/cache_provider.go` keeps only `type` aliases to base (zero-impact migration facade)
    - `*_cache_impl.go` decorators (system/, operations/) embed `base.CacheServiceBase` and call `base.GetOrSetJSON` — no interface{} closure boilerplate (guarded by invariants scan)
    - `DataCacheService` (services root) stays in place as infrastructure: `pkg/cache.Cache` business wrapper + `base.CacheProvider` implementation base (via `system.NewCacheProvider` adapter)
@@ -415,16 +415,13 @@ All business caching MUST go through the single-authority abstraction in `intern
 return base.GetOrSetJSON(ctx, s.cache, key, s.GetExpiration(cfgKey, 30*time.Minute),
     func() (*models.User, error) { return s.userService.GetByID(ctx, id) })
 
-// Write-through:
-base.SetJSON(ctx, s.cache, key, value, ttl)
-
 // Invalidation (nil-guard + unified warn logging built in):
 base.Invalidate(ctx, s.cache, keys, "MODULE")
 base.InvalidatePattern(ctx, s.cache, patterns, "MODULE")
 ```
 
 **Rules:**
-- `base.GetOrSetJSON[T]` / `SetJSON[T]` / `Invalidate` / `InvalidatePattern` + `base.CacheProvider` are the ONLY authority for business caching. `internal/services/system/cache_provider.go` keeps type aliases only.
+- `base.GetOrSetJSON[T]` / `Invalidate` / `InvalidatePattern` + `base.CacheProvider` are the ONLY authority for business caching. `internal/services/system/cache_provider.go` keeps type aliases only. (A `SetJSON` write-through helper was removed post-review — zero callers + delete-then-write races under concurrent read-through; revisit only with a native-Set provider extension, out of scope.)
 - `*_cache_impl.go` files MUST NOT contain interface{} closure-style GetOrSet (`func() (interface{}, error)`) — guarded by `internal/services/system/cache_invariants_92_test.go` (`TestNoInterfaceGetOrSetResidue`: hard-fail for system/operations, warning-count for duty/knowledge/network/workorder).
 - `monitor.CacheOperator` is the cache monitor page's raw operations interface (Get/Set/Keys/FlushDB) — it is NOT the business cache abstraction. Do not confuse it with `base.CacheProvider`.
 - Do NOT add new direct `DataCacheService` call sites — it is infrastructure (`pkg/cache.Cache` wrapper + `base.CacheProvider` implementation base). New business cache code goes through `base.GetOrSetJSON` + `CacheProvider`.
@@ -711,7 +708,7 @@ func GetDictDataByTypeKey(dictType string) string {
 1. **internal/services/base/** - Cache abstraction single authority (zero-dependency package)
    - `CacheProvider` interface (9 methods) + `NoOpCacheProvider`
    - `CacheServiceBase` thin base class with `TTLResolver` interface
-   - Generic functions: `GetOrSetJSON[T]` / `SetJSON[T]` / `Invalidate` / `InvalidatePattern`
+   - Generic functions: `GetOrSetJSON[T]` / `Invalidate` / `InvalidatePattern`
    - Guarded by invariants scan: `internal/services/system/cache_invariants_92_test.go`
 
 2. **pkg/cache/** - Low-level cache engine (below the abstraction)

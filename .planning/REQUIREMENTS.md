@@ -69,7 +69,7 @@ status: executing
 
 > **审计源**: legacy root / system/* / operations/* 三处同一 CacheServiceBase 组合模式
 
-- [x] **CACHE-UNIFY-01**: 抽 `internal/services/base/cache_service_base.go` 为缓存抽象单一基类——**92-01 交付**（实际形态按 D-03 锁定：Go method 不能有类型参数，模板方法落地为 **TTLResolver 薄基类 + 泛型包级函数族** `GetOrSetJSON[T]`/`SetJSON[T]`/`Invalidate`/`InvalidatePattern`，SC-1 措辞随之修订）
+- [x] **CACHE-UNIFY-01**: 抽 `internal/services/base/cache_service_base.go` 为缓存抽象单一基类——**92-01 交付**（实际形态按 D-03 锁定：Go method 不能有类型参数，模板方法落地为 **TTLResolver 薄基类 + 泛型包级函数族** `GetOrSetJSON[T]`/`Invalidate`/`InvalidatePattern`，SC-1 措辞随之修订；`SetJSON[T]` 经 review WR-06 用户判定于收口时删除——零调用方 + 先删后写并发丢写窗口）
 - [x] **CACHE-UNIFY-02**: `internal/services/system/*_cache_impl.go`（9 个文件）全部继承新基类，删除重复的模板代码——**92-02 交付**（实测 **29 处** GetOrSet 样板含 notice 逃兵归队：嵌入源迁 base.CacheServiceBase + 方法体换泛型函数 base.GetOrSetJSON 单 return；21 处 in-system 失效调用改写 base 底层）
 - [x] **CACHE-UNIFY-03**: `internal/services/operations/*_cache_impl.go` 全部继承新基类——**92-03 交付**（实测 **3 处**真实样板收敛 base.GetOrSetJSON——:168 为注释行 grep 假阳性未动；CacheInvalidator 按 D-04 **保留分发器、底层委托** base.InvalidatePattern，Excel 管道 entityType 分发语义零改动）
 - [x] **CACHE-UNIFY-04**: legacy root `internal/services/data_cache_service.go` 原地定性为基础设施（root↔system import cycle 硬约束，字面迁移不可行，措辞按 D-06 修订）——**92-03 交付**（消除平行 GetExpiration：保留签名、内部委托 base TTL 逻辑 + D-07 双定位注释，不标 @Deprecated；12+ API 文件引用与 core.Core 装配链零改动）
@@ -116,6 +116,18 @@ status: executing
 | 95 | v1.28 SHIP 收口 + v1.29 closeout | CLOSEOUT-01..03 |
 
 **Total**: 7 phases, 41 requirements, 全部覆盖 ✓
+
+---
+
+## V130-CANDIDATES (v1.30+ 缺陷候选 — Phase 92 review 登记，2026-09-05 用户判定)
+
+> 来源：`92-REVIEW.md` WR-01..05——五个迁移前即存在的缓存缺陷，被 v1.29 零行为变更约束有意原样保留。当前 milestone 93/94/95 均不覆盖。修复属**行为变更**，须附带回归测试（v1.29 D-05 例外条款同款纪律）。
+
+- [ ] **CACHEDEF-01**: `system/department_cache_impl.go:74-102` — `GetSelectDataWithCache` 写键 `"dept:tree"`（裸常量）与 `InvalidateDeptCache` 的 `cache:` 前缀模式永不匹配，失效永不命中（潜伏：暂无生产调用方）
+- [ ] **CACHEDEF-02**: `system/config_cache_impl.go:71-118` — 单条 Delete 只失效 `config:all` + `config:key:*`，遗漏 `config:id:<id>`，已删配置经详情接口最长 30min 可从缓存读回（`config_router.go:17` 生产可达）
+- [ ] **CACHEDEF-03**: `duty/duty_cache_impl.go:333-344` — `parseInt` 的 `len(s) >= 4` 前置使 2 字符月份切片恒返回 0，`GenerateSchedule`/`ManualDuty` 后月度排班缓存失效无效（`duty_handler.go:325` 生产可达）
+- [ ] **CACHEDEF-04**: `workorder/workorder_cache_impl.go:207-234` — 待办缓存键仅含 userID，忽略 `GetMyPendingRequest.Limit`，不同 limit 共享同一缓存
+- [ ] **CACHEDEF-05**: `monitor/cache_service.go:766-771` — `key[:6] == "xingran:"`（6 字节切片比 8 字节字面量）恒 false，前缀剥离永不生效（Phase 73-04 quirk Q1 同源；CLAUDE.md 旧示例 `key[6:]` 同错，现已随 Cache Service Convention 修订移除）
 
 ---
 

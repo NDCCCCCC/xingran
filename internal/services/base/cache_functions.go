@@ -41,25 +41,6 @@ func GetOrSetJSON[T any](
 	return result, err
 }
 
-// SetJSON 类型安全的覆盖写缓存：先删后写的组合语义。
-//
-// CacheProvider 接口无原生 Set（D-02 锁定 9 方法，接口扩展属范围外），
-// 实现为 Delete(key) 成功后 p.GetOrSet(key, &dest, ttl, 恒返回 value 闭包)
-// 的组合写：先删后写 = 覆盖语义，删除与写入之间的中间窗口读者只会 miss
-// 回源，无脏读。
-//
-// 当前 32 处样板调用点零个直接 Set 使用者（92-RESEARCH A7），本函数为
-// D-03 函数族完备性成员，无迁移对象。
-func SetJSON[T any](ctx context.Context, p CacheProvider, key string, value T, ttl time.Duration) error {
-	if err := p.Delete(ctx, key); err != nil {
-		return err
-	}
-	var dest T
-	return p.GetOrSet(ctx, key, &dest, ttl, func() (interface{}, error) {
-		return value, nil
-	})
-}
-
 // Invalidate 按键列表失效缓存（D-04 唯一失效底层之一）。
 //
 // void 返回 + warn 日志（对齐 system.InvalidateCacheByKey 现状语义）；
