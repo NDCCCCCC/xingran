@@ -185,13 +185,12 @@ pkg/                 # Public packages (reusable)
      }
      ```
 
-2. **Dual Cache Architecture**
-   - **Legacy**: Root-level `*_cache_service.go` files (dept, role, dict, menu, user, post)
-     - Used by `core.Core` for backward compatibility
-     - Wrap `DataCacheService` with business logic
-   - **New**: `internal/services/system/*_cache_impl.go`
-     - Use `CacheProvider` interface for decoupling
-     - Support both cached and non-cached implementations
+2. **Unified Cache Architecture (Phase 92)**
+   - **Single authority**: `internal/services/base` — `CacheProvider` interface + `CacheServiceBase` (thin `TTLResolver` base class) + generic functions `GetOrSetJSON[T]` / `SetJSON[T]` / `Invalidate` / `InvalidatePattern`
+   - `internal/services/system/cache_provider.go` keeps only `type` aliases to base (zero-impact migration facade)
+   - `*_cache_impl.go` decorators (system/, operations/) embed `base.CacheServiceBase` and call `base.GetOrSetJSON` — no interface{} closure boilerplate (guarded by invariants scan)
+   - `DataCacheService` (services root) stays in place as infrastructure: `pkg/cache.Cache` business wrapper + `base.CacheProvider` implementation base (via `system.NewCacheProvider` adapter)
+   - `monitor.CacheOperator` is a raw-operations interface (Get/Set/Keys/FlushDB) for the cache monitor page — NOT the business cache abstraction
 
 3. **Middleware Chain**: Auth → Permission → Encryption → Handler
 
@@ -406,6 +405,32 @@ if strings.HasPrefix(origin, constants.HTTPProto+"://"+host) { ... }
 ```
 
 **Migration status:** Phase 90 (TIMEOUTS) centralized 10 constants across 8 files.
+
+### Cache Service Convention
+
+All business caching MUST go through the single-authority abstraction in `internal/services/base` (Phase 92):
+
+```go
+// Read-through cache (replaces 12-15 line interface{} closure boilerplate with one return):
+return base.GetOrSetJSON(ctx, s.cache, key, s.GetExpiration(cfgKey, 30*time.Minute),
+    func() (*models.User, error) { return s.userService.GetByID(ctx, id) })
+
+// Write-through:
+base.SetJSON(ctx, s.cache, key, value, ttl)
+
+// Invalidation (nil-guard + unified warn logging built in):
+base.Invalidate(ctx, s.cache, keys, "MODULE")
+base.InvalidatePattern(ctx, s.cache, patterns, "MODULE")
+```
+
+**Rules:**
+- `base.GetOrSetJSON[T]` / `SetJSON[T]` / `Invalidate` / `InvalidatePattern` + `base.CacheProvider` are the ONLY authority for business caching. `internal/services/system/cache_provider.go` keeps type aliases only.
+- `*_cache_impl.go` files MUST NOT contain interface{} closure-style GetOrSet (`func() (interface{}, error)`) — guarded by `internal/services/system/cache_invariants_92_test.go` (`TestNoInterfaceGetOrSetResidue`: hard-fail for system/operations, warning-count for duty/knowledge/network/workorder).
+- `monitor.CacheOperator` is the cache monitor page's raw operations interface (Get/Set/Keys/FlushDB) — it is NOT the business cache abstraction. Do not confuse it with `base.CacheProvider`.
+- Do NOT add new direct `DataCacheService` call sites — it is infrastructure (`pkg/cache.Cache` wrapper + `base.CacheProvider` implementation base). New business cache code goes through `base.GetOrSetJSON` + `CacheProvider`.
+- Cache key construction: single source of truth `internal/services/system/cache_keys.go`. TTL resolution: `CacheServiceBase.GetExpiration` (config key + default; `CacheConfigService` implicitly satisfies `base.TTLResolver`).
+
+**Migration status:** Phase 92 unified the former three-way duplication (legacy root services / system impls / operations impls) into the base authority.
 
 ### API Response Format
 
@@ -681,22 +706,29 @@ func GetDictDataByTypeKey(dictType string) string {
 
 ### Cache System
 
-**Two-tier architecture:**
+**Single authority path (Phase 92):**
 
-1. **pkg/cache/** - Low-level cache interface
+1. **internal/services/base/** - Cache abstraction single authority (zero-dependency package)
+   - `CacheProvider` interface (9 methods) + `NoOpCacheProvider`
+   - `CacheServiceBase` thin base class with `TTLResolver` interface
+   - Generic functions: `GetOrSetJSON[T]` / `SetJSON[T]` / `Invalidate` / `InvalidatePattern`
+   - Guarded by invariants scan: `internal/services/system/cache_invariants_92_test.go`
+
+2. **pkg/cache/** - Low-level cache engine (below the abstraction)
    - `Cache` interface with Get/Set/Delete methods
    - Redis implementation in `redis.go`
    - **Important**: Redis uses prefix `xingran:` for all keys
    - When calling cache methods, use keys WITHOUT prefix, the prefix is added automatically
 
-2. **services/** - High-level caching
-   - `DataCacheService` - Generic caching with JSON serialization
-   - `CacheConfigService` - Dynamic cache TTL configuration
-   - Module-specific cache services (dept, role, dict, menu, user, post)
+3. **services root (infrastructure, in place per D-06/D-07)**
+   - `DataCacheService` - `pkg/cache.Cache` business wrapper (JSON serialization) + `base.CacheProvider` implementation base (via `system.NewCacheProvider` adapter); new code should NOT add direct call sites
+   - `CacheConfigService` - Dynamic cache TTL configuration (implicitly satisfies `base.TTLResolver`)
+
+4. **Module cache decorators** - `internal/services/system/*_cache_impl.go` + `internal/services/operations/floor_cache_impl.go` embed `CacheServiceBase` and read through `base.GetOrSetJSON`; invalidation goes through `base.Invalidate` / `base.InvalidatePattern` (operations `CacheInvalidator` keeps its Excel-pipeline entityType dispatch but delegates the underlying loop to base)
 
 **Cache key patterns:**
 - Use helper functions like `GetDictDataByTypeKey(dictType)` instead of hardcoding
-- Constants defined in root-level `*_cache_service.go` files
+- Single source of truth: `internal/services/system/cache_keys.go`
 
 **CRITICAL: Cache Key Prefix Handling**
 - Redis prefix is set to `xingran` in `internal/core/core.go:342`
@@ -771,13 +803,12 @@ func GetDictDataByTypeKey(dictType string) string {
 - API: `docs/standards/API响应规范.md`
 - Security: `docs/architecture/安全和认证设计（国密）.md`
 
-**Legacy Services (still used by core):**
-- `internal/services/dept_service.go`
-- `internal/services/role_cache_service.go`
-- `internal/services/dict_cache_service.go`
-- `internal/services/menu_cache_service.go`
-- `internal/services/user_cache_service.go`
-- `internal/services/post_cache_service.go`
+**Legacy Root Cache Files (infrastructure, kept in place):**
+- `internal/services/data_cache_service.go` — `DataCacheService` (pkg/cache wrapper + adapter Adaptee, D-06/D-07)
+- `internal/services/cache_config_service.go` — `CacheConfigService` (TTL config source of truth)
+- `internal/services/mac_history_cache_decorator.go` / `template_cache.go` — standalone root cache helpers (no CacheServiceBase pattern)
+
+Note: dept/role/dict/menu/user/post cache services were migrated into `internal/services/system/*_cache_impl.go` in v1.27 Phase 79; the root cache abstraction was unified into `internal/services/base` in v1.29 Phase 92.
 
 ---
 
@@ -806,15 +837,14 @@ func GetDictDataByTypeKey(dictType string) string {
 
 ### Working with Cache
 
-- **New code**: Use `internal/services/system/` pattern with `CacheProvider` interface
-- **Existing code**: May use legacy `*_cache_service.go` files in root
-- **Cache keys**: Use helper functions, don't hardcode strings
-- **Invalidation**: Call `Invalidate*Cache()` methods after mutations
+- **New code**: Always use `base.GetOrSetJSON[T]` + `base.CacheProvider` — never add interface{} closure-style GetOrSet or direct `DataCacheService` call sites
+- **Cache keys**: Use helper functions from `internal/services/system/cache_keys.go` (single source of truth), don't hardcode strings
+- **Invalidation**: Use `base.Invalidate` / `base.InvalidatePattern` after mutations (nil-guard + unified logging built in)
 
 ### Common Gotchas
 
 - **Scheduler confusion**: `internal/scheduler/` (engine) ≠ `api/v1/scheduler/` (job management)
-- **Cache dual architecture**: Legacy root files vs new `system/` implementations
+- **Cache authority confusion**: business cache = `base.CacheProvider` (via `internal/services/base`); `monitor.CacheOperator` is only the raw monitor-page operations interface
 - **Import paths**: Use full module path `github.com/xingran-next/xingran-go-backend/...`
 - **Context propagation**: Always pass `c.Request.Context()` to service methods
 - **Response wrapper**: Use `response.Success()` and `response.Error()`, not raw JSON
@@ -1150,6 +1180,8 @@ Excel Upload → ExcelService.Parse() → Validate rows
 
 ### CacheProvider Interface
 
+Defined in `internal/services/base/cache_provider.go` (single authority since Phase 92):
+
 ```go
 type CacheProvider interface {
     // GetOrSet 获取缓存，如果不存在则执行查询函数并缓存结果
@@ -1165,10 +1197,20 @@ type CacheProvider interface {
     // MGet/MDelete 批量操作
     MGet(ctx context.Context, keys ...string) (map[string]string, error)
     MDelete(ctx context.Context, keys ...string) error
+
+    // Exists 检查缓存是否存在
+    Exists(ctx context.Context, key string) (bool, error)
+
+    // SetTTL/GetTTL 缓存过期时间
+    SetTTL(ctx context.Context, key string, expiration time.Duration) error
+    GetTTL(ctx context.Context, key string) (time.Duration, error)
+
+    // GetStats 获取缓存统计信息
+    GetStats(ctx context.Context) (*CacheStats, error)
 }
 ```
-- Cached version: reads/writes Redis
-- Non-cached version: pass-through to DB
+- Cached version (Redis path): `DataCacheService` Adaptee via `system.NewCacheProvider` adapter
+- Non-cached version: `base.NoOpCacheProvider` pass-through (query executes, cache skipped)
 
 ### Module Boundaries
 

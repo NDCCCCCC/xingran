@@ -139,13 +139,13 @@ Plans:
 
 **Requirements**: CACHE-UNIFY-01..05 (5 项)
 
-**Success Criteria** *(措辞按 D-03/D-06/D-09 校准修订在 92-04 执行)*:
+**Success Criteria** *(措辞已按实际达成形态校准——D-03/D-06/D-09，Phase 92-04 收口同步；Phase 90 commit 3a2efe5 先例)*:
 
-1. `base/cache_service_base.go` 提供完整模板方法（实际形态：泛型包级函数族 + TTLResolver 薄基类，D-03）
-2. system/ + operations/ 下所有 `*_cache_impl.go` 继承新基类（实际动作：嵌入源迁 base + 32 处方法体换泛型函数，含 notice 逃兵归队）
-3. legacy root `*_cache_service.go` 标注 @Deprecated 并迁移（实际动作：DataCacheService 原地定性 + 消除平行 TTL 逻辑，D-06——import cycle 硬约束）
+1. `base/cache_service_base.go` 提供泛型包级函数族（`GetOrSetJSON[T]`/`SetJSON[T]`/`Invalidate`/`InvalidatePattern`）+ TTLResolver 薄基类（Go method 不能有类型参数，D-03）
+2. system/ + operations/ 下所有 `*_cache_impl.go` 继承新基类（嵌入源迁 base + 32 处方法体换泛型函数，含 notice 逃兵归队；invariants 扫描锁残留 = 0，D-10②）
+3. DataCacheService 原地定性 + 平行 TTL 逻辑消除（D-06——root↔system import cycle 硬约束，不标 @Deprecated，D-07 定位注释）
 4. `go test ./internal/services/...` 0 失败
-5. Cache Monitor 端到端验证（实际落地：miniredis 自动化集成测试，D-09）
+5. miniredis 自动化集成验证（D-09——SC-5 "端到端"落地为 provider 层集成测试，可回归进 CI gate）
 
 **Plans (4, 2026-09-05 plan-phase 校准)** *(原 3-plan 估算基于 2026-09-03 审计基线，未计入 D-04 失效涟漪 42 处（19 外围 + 21 in-system + floor 2）、monitor 同名接口 rename、三文档措辞同步与 invariants 守护的工作量；决策 D-01..D-10 见 92-CONTEXT.md)*:
 
@@ -163,7 +163,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3)*
 
-- [ ] 92-04-PLAN.md — monitor CacheOperator rename 消歧（D-08）+ invariants 扫描锁（D-10②）+ CLAUDE.md/REQUIREMENTS/ROADMAP 措辞同步（D-10①/D-06）+ LOC 双口径审计（D-05）+ SUMMARY
+- [x] 92-04-PLAN.md — monitor CacheOperator rename 消歧（D-08，含测试文件断言面）+ invariants 扫描锁（D-10②）+ CLAUDE.md/REQUIREMENTS/ROADMAP 措辞同步（D-10①/D-06）+ LOC 双口径审计（D-05）+ SUMMARY
 
 ---
 
