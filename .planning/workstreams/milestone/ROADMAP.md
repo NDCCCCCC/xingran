@@ -200,7 +200,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3)*
 
-- [ ] 93-06-PLAN.md — restore e2e FileTransport + 失败 4 场景 + 端到端断言链（D-27..D-30）+ REQUIREMENTS/ROADMAP 措辞校准（D-01/D-33①）+ D-33② sort 修复 + CLAUDE.md Convention（D-32）+ 全量回归 gate
+- [x] 93-06-PLAN.md — restore e2e FileTransport + 失败 4 场景 + 端到端断言链（D-27..D-30）+ REQUIREMENTS/ROADMAP 措辞校准（D-01/D-33①）+ D-33② sort 修复 + CLAUDE.md Convention（D-32）+ 全量回归 gate
 
 ---
 
