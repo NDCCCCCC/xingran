@@ -187,16 +187,16 @@ Plans:
 **Wave 1**
 
 - [x] 93-01-PLAN.md — 压缩(:158)/解压(:206)实现 + gzip helper 统一手动/批量/auto 三路径（D-23..D-26）+ 解压 64MB 上限 + 文件名清洗 + 93_01 回归测试
-- [ ] 93-02-PLAN.md — DeviceExecutor.RestoreConfig 下发内核（D-02/03/05/06/07/12：ExecuteCustom + SendConfigs + vendor 退出命令 map + 清洗 + fail-fast）+ RestoreConfigTimeout 常量 + AST 锁值同步
+- [x] 93-02-PLAN.md — DeviceExecutor.RestoreConfig 下发内核（D-02/03/05/06/07/12：ExecuteCustom + SendConfigs + vendor 退出命令 map + 清洗 + fail-fast）+ RestoreConfigTimeout 常量 + AST 锁值同步
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 93-03-PLAN.md — ConfigRestoreTask model + Migrate211 双注册 + ConfigRestoreTaskService 异步编排（D-01/04/08..11/14/15/17/20..22/34：同设备校验/互斥/恢复前备份/hash 警告/版本链记录/启动收敛）
+- [x] 93-03-PLAN.md — ConfigRestoreTask model + Migrate211 双注册 + ConfigRestoreTaskService 异步编排（D-01/04/08..11/14/15/17/20..22/34：同设备校验/互斥/恢复前备份/hash 警告/版本链记录/启动收敛）
 
 **Wave 3** *(blocked on Wave 2；93-04 与 93-05 零文件重叠可并行)*
 
-- [ ] 93-04-PLAN.md — Restore handler 异步语义（taskId 响应 + operlog 发起记录 D-13/18）+ /restore-tasks 查询双端点（D-31 组权限）+ 装配接线 + RestoreBackup stub 删除 + handler 测试重写
-- [ ] 93-05-PLAN.md — 前端最小异步交互（D-16/19：useRestoreTask 轮询 hook + 恢复 Modal 进度/结果 + 携带 deviceId 修复空 body 缺陷）
+- [x] 93-04-PLAN.md — Restore handler 异步语义（taskId 响应 + operlog 发起记录 D-13/18）+ /restore-tasks 查询双端点（D-31 组权限）+ 装配接线 + RestoreBackup stub 删除 + handler 测试重写
+- [x] 93-05-PLAN.md — 前端最小异步交互（D-16/19：useRestoreTask 轮询 hook + 恢复 Modal 进度/结果 + 携带 deviceId 修复空 body 缺陷）
 
 **Wave 4** *(blocked on Wave 3)*
 
