@@ -200,6 +200,18 @@ function scanFile(fileName: string, sourceText: string): TemplateHit[] {
     } else if (ts.isMethodDeclaration(node) && node.body) {
       owner = node.name.getText(sf);
       body = node.body;
+    } else if (ts.isVariableDeclaration(node)) {
+      // WR-02 补强：`export const x = (id) => post(...)` 形态（箭头函数/函数表达式
+      // 挂在变量声明器上）同样进扫描口径，堵住 tripwire 结构性盲区
+      const init = node.initializer;
+      if (
+        ts.isIdentifier(node.name) &&
+        init &&
+        (ts.isArrowFunction(init) || ts.isFunctionExpression(init))
+      ) {
+        owner = node.name.text;
+        body = init.body;
+      }
     }
     if (owner !== undefined && body !== undefined) {
       const returnExpr = unwrapSingleReturn(body);

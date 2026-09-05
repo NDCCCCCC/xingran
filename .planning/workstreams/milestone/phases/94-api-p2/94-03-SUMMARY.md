@@ -113,6 +113,8 @@ metrics:
 
 **5. ou-group「五方法」实际委托 4 件**：getOUGroupMapping 为 GET 动词（工厂 get 是 POST，plan 自己的 KEEP 理由「动词不可改」适用），与 getMapping/getADConfig 同 treatment。
 
+**6. [Review WR-01/IN-03 补登 2026-09-06] asset excel 导出与 downloadReport 的外观级行为变化**：assetApi.excel.export 文件名来源由硬编码「资产列表_*.xlsx」变为优先提取 content-disposition 后端英文名（`asset_*`；excel_handler.go:75 确实发送该头），错误文案同步归一 downloadFilePost 语义；rpaApi.downloadReport 错误文案同类变化。均为外观级，无断言依赖旧值（opsApi.test.ts:548-559 与 download.test.ts 已锁新行为）。与 94-02 登记的「excelApi.export 文案归一」同族，一并补登使「等价替换」承诺边界与 diff 一致。若产品要求中文文件名，后续可为 downloadFilePost 增加 ignoreContentDisposition 选项（登记为 deferred，不在本 phase 处理）。
+
 无其他偏离——withDefaultPagination 前置语义保留（Pitfall 5）、D-06 三文件零触碰、D-07/D-09 无涉及、5 文件导出签名逐一复核零变化。
 
 ## TDD Gate Compliance
