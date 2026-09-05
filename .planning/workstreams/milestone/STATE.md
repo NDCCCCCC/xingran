@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.29
 milestone_name: 技术债治理
 status: executing
-last_updated: "2026-09-05T22:23:56.829Z"
-last_activity: 2026-09-05 -- Phase 95 planning complete
+last_updated: "2026-09-05T22:33:14.000Z"
+last_activity: 2026-09-06 -- 95-01 complete（v1.28 收口核对确认 + 措辞校准 + 记账补漏，commit 1c70eeb）
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 26
-  completed_plans: 24
-  percent: 86
+  completed_plans: 25
+  percent: 96
 ---
 
 # Project State (v1.29 — milestone workstream)
@@ -23,16 +23,16 @@ Config: "mode": "yolo"
 
 **Core value:** 按 2026-09-03 综合审计报告发现的优先级，逐批治理 7 项技术债行动；后端常量/CRUD/缓存/配置备份 + 前端 API 工厂化 + Phase 88 收口，使代码质量基线从此不可无声倒退。
 
-**Current focus:** Phase 95 — v1.28 SHIP 收口 + v1.29 closeout + audit (🟢 长期 P4，必须最后)
+**Current focus:** Phase 95 — v1.28 SHIP 收口 + v1.29 closeout + audit
 
 ## Current Position
 
-Phase: 95
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-09-05 -- Phase 95 planning complete
-Resume file: .planning/workstreams/milestone/phases/95-v1-28-ship-v1-29-closeout-audit-p4/95-CONTEXT.md
-Next action: /gsd:verify-work 94；随后启动 Phase 95 (v1.28 SHIP 收口 + v1.29 closeout，必须最后)
+Phase: 95 (v1.28 SHIP 收口 + v1.29 closeout + audit) — EXECUTING
+Plan: 1 of 2 complete（95-01 done，commit 1c70eeb）— 95-02 待执行
+Status: Executing Phase 95
+Last activity: 2026-09-06 -- 95-01 complete（v1.28 收口核对确认 + 措辞校准 + 记账补漏）
+Resume file: .planning/workstreams/milestone/phases/95-v1-28-ship-v1-29-closeout-audit-p4/95-02-PLAN.md
+Next action: 执行 95-02（D-03 type-check 修复 + gate ② flaky 双修复 + D-06 七 gate 跑批 + D-07 audit 报告 + D-09 SHIPPED 标记）；引用 95-01 校准后口径（45 requirements / CLOSEOUT-01/02 已勾选）
 
 ## Completed Phases (v1.29)
 
@@ -115,9 +115,11 @@ Phase 94/93 已完成 — 剩余 Phase 95 (v1.28 SHIP 收口 + v1.29 closeout + 
 | Phase 92 P03 | 20min | 3 tasks | 9 files |
 | Phase 92 P04 | 24min | 4 tasks | 7 files |
 | Phase 94 P03 | 69min | 3 tasks | 9 files |
+| Phase 95 P01 | 4min | 2 tasks | 3 files |
 
 ## Decisions
 
+- [Phase 95]: 95-01: MILESTONES v1.28 段四件套核对通过零补漏（45.13%/24.87pp/Phase 88 备选/归档位置）+ PROJECT.md :35 SHIPPED+ARCHIVED 确认零改动 + frontend-coverage workstream 五项齐备零移动（D-01/D-02）；CLOSEOUT-01/02 措辞校准「核对确认（已存在）」并勾选 + 两份 ROADMAP Phase 95 SC-1/SC-2 与 milestone SC-e 同步校准（D-10 同 commit 1c70eeb）；记账补漏：BACKUP-CLOSED-01/02 补勾带证据锚（gzipCompress :603/gzipDecompress :617）+ Progress 表 Phase 91-94 stale 修正（Complete 4/4·4/4·6/6·3/3）+ 41→45 requirements 三文件五处校准（11+8+8+5+5+5+3）；两 ROADMAP 95-01 plan 复选框勾选（完成事实登记，Phase 95 行保持 Pending 由 95-02 收口）
 - [Phase 94]: 94-03: 扁平 5 件 cluster 委托完成（workorder/knowledge/duty/notice/adDomain），导出签名零变化 + 5 个 .test.ts 零改动全绿；delete 形状函数统一保持单参 post 直调（plan DELEGATE 清单与 D-14 零改动红线冲突，工厂 delete 传 {} 属 wire 级 body 变更；deleteNotice/deleteOUGroupMapping/deleteMapping 例外——既有测试本就断言 {} body）；D-12 硬档按 allowedResidues 等值锁登记 KEEP 基线（opsApi 4 / vdiApi 1，plan「期望 0」被矩阵 KEEP 判定证伪）；adDomain deleteMapping :501 潜伏 404 独立 commit 登记（v1.29 D-05 例外条款纪律）；CLAUDE.md 新增 Frontend API Factory Convention（D-13）+ REQUIREMENTS/ROADMAP D-01 措辞校准；覆盖率 gate 45/45 dirs exit 0（lib 90.48% ≥ 87.2%）
 - [Phase 92]: 92-01: base 缓存抽象全套落地（TTLResolver+CacheProvider 全家+泛型函数族），system 经 5 alias 翻转零改动；私有 setValue 因同包 CacheAdapter 消费导出为 base.SetValue（唯一迁移偏差） — D-01/D-02/D-03 锁定；SetValue 导出为 Rule 3 编译必需最小修复，语义零变更
 - [Phase 92]: 92-02: system 9 文件 29 处 GetOrSet 样板全部收敛 base.GetOrSetJSON 单 return + 21 处失效调用改写 base 底层 + notice 逃兵归队（删私有 getExpiration）；user/role List 站点 T=*PageResult 为 Pitfall 5 单向改善；cache mock 须回填 dest（JSON 往返）为 Rule 1 测试契约修复；键构造 diff 级零变更，生产行为零变更 — InvalidateCache* 函数本体留 92-03 与外围 19 处改写同 commit 删除
