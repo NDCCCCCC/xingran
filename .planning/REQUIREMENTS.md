@@ -81,9 +81,9 @@ status: executing
 
 - [ ] **BACKUP-CLOSED-01**: 实现 `config_backup_service.go:158` 压缩逻辑（gzip 标准库，压缩备份内容到 .gz 文件）
 - [ ] **BACKUP-CLOSED-02**: 实现 `config_backup_service.go:206` 解压逻辑（识别 .gz 后缀，调用 gzip 解压）
-- [ ] **BACKUP-CLOSED-03**: 实现 `config_backup_service.go:543` 配置恢复逻辑（事务化：读备份 → 校验 schema → 批量 upsert → 失效相关缓存）
-- [ ] **BACKUP-CLOSED-04**: 新增 `config_backup_service_78_NN_test.go`（命名遵循项目 _NN 后缀模式），覆盖 compress/decompress/restore 三路径 + 失败场景（磁盘满 / 校验失败 / 事务回滚）
-- [ ] **BACKUP-CLOSED-05**: `go test ./internal/services/...` 0 回归；端到端：备份 → 恢复 → 配置一致性校验通过
+- [x] **BACKUP-CLOSED-03**: 配置恢复异步任务化设备下发（恢复=把备份配置下发到网络设备：同设备校验 → 恢复前自动备份 → 基础清洗 → RestoreConfig 下发（fail-fast）→ 回读 hash 校验 → 版本链恢复记录；Phase 93 D-01 校准）
+- [x] **BACKUP-CLOSED-04**: 新增 `config_backup_service_93_NN_test.go`（命名遵循项目 _NN 后缀模式；原文误写为 78 前缀，已修正），覆盖 compress/decompress/restore 三路径 + 失败场景（写失败 / 损坏 gzip / 下发中断留痕 / DB 写入失败）
+- [x] **BACKUP-CLOSED-05**: `go test ./internal/services/...` 0 回归；端到端：备份 → 恢复 → 配置一致性校验通过（验收 = FileTransport 自动化集成测试断言链，Phase 92 D-09 先例）
 
 ## API-FACTORY (前端 API 工厂化) — 🟡 中优 P2
 

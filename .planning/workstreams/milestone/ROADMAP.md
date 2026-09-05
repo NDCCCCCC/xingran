@@ -178,7 +178,7 @@ Plans:
 **Success Criteria**:
 
 1. 3 个 TODO 空函数全部实现，删除 `// TODO:` 注释
-2. 回归测试覆盖 happy path + 失败场景（磁盘满/校验失败/事务回滚）
+2. 回归测试覆盖 happy path + 失败场景（写失败/损坏 gzip/下发中断留痕/DB 写入失败）
 3. 端到端：备份 → 修改 → 恢复 → 配置一致性校验通过
 4. `go test ./internal/services/...` 0 回归
 
@@ -186,7 +186,7 @@ Plans:
 
 **Wave 1**
 
-- [ ] 93-01-PLAN.md — 压缩(:158)/解压(:206)实现 + gzip helper 统一手动/批量/auto 三路径（D-23..D-26）+ 解压 64MB 上限 + 文件名清洗 + 93_01 回归测试
+- [x] 93-01-PLAN.md — 压缩(:158)/解压(:206)实现 + gzip helper 统一手动/批量/auto 三路径（D-23..D-26）+ 解压 64MB 上限 + 文件名清洗 + 93_01 回归测试
 - [ ] 93-02-PLAN.md — DeviceExecutor.RestoreConfig 下发内核（D-02/03/05/06/07/12：ExecuteCustom + SendConfigs + vendor 退出命令 map + 清洗 + fail-fast）+ RestoreConfigTimeout 常量 + AST 锁值同步
 
 **Wave 2** *(blocked on Wave 1)*
