@@ -92,8 +92,8 @@ status: executing
 - [ ] **API-FACTORY-01**: 提升 opsApi 既有 8 方法工厂为共享 `createResourceApi<T>(config)`（list/get/create/update/delete/batch/statistics/searchOptions；import/export 不进工厂核心、getByID 不采用，per D-01 行业对齐 react-admin/refine）
 - [ ] **API-FACTORY-02**: 新建 `src/lib/apiFactory.ts` + 类型定义 `src/types/apiFactory.ts`
 - [ ] **API-FACTORY-03**: `src/lib/opsApi.ts` (buildingApi/floorApi/workstationApi/assetApi 等) 迁移到工厂模式（保留同名导出，向后兼容）
-- [ ] **API-FACTORY-04**: `src/lib/` 下其余 12 个 `*Api.ts` 文件逐个按迁移矩阵处置（DELEGATE / SPREAD+OVERRIDE / KEEP 三态判定，低风险优先）
-- [ ] **API-FACTORY-05**: `npm run type-check` + `npm run lint` + `npm run test` 全过；前端覆盖率不下降（基线 45.13% 维持）
+- [x] **API-FACTORY-04**: `src/lib/` 下其余 12 个 `*Api.ts` 文件逐个按迁移矩阵处置（DELEGATE / SPREAD+OVERRIDE / KEEP 三态判定，低风险优先）
+- [x] **API-FACTORY-05**: `npm run type-check` + `npm run lint` + `npm run test` 全过；前端覆盖率不下降（基线 45.13% 维持）
 
 ## V128-CLOSEOUT (v1.28 阶段性收口 + v1.29 closeout) — 🟢 长期 P4
 

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.29
 milestone_name: 技术债治理
 status: executing
-last_updated: "2026-09-05T16:08:47.679Z"
-last_activity: 2026-09-05 -- Phase 94 execution started
+last_updated: "2026-09-05T19:19:22.181Z"
+last_activity: 2026-09-06 -- Phase 94 execution complete (94-03 flat delegation + D-12 scan + D-13 docs + coverage gate)
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 24
-  completed_plans: 21
-  percent: 71
+  completed_plans: 24
+  percent: 86
 ---
 
 # Project State (v1.29 — milestone workstream)
@@ -23,18 +23,27 @@ Config: "mode": "yolo"
 
 **Core value:** 按 2026-09-03 综合审计报告发现的优先级，逐批治理 7 项技术债行动；后端常量/CRUD/缓存/配置备份 + 前端 API 工厂化 + Phase 88 收口，使代码质量基线从此不可无声倒退。
 
-**Current focus:** Phase 94 — 前端 API 工厂化 (🟡 中优 P2)
+**Current focus:** Phase 95 — v1.28 SHIP 收口 + v1.29 closeout + audit (🟢 长期 P4，必须最后)
 
 ## Current Position
 
-Phase: 94 (前端 API 工厂化 (🟡 中优 P2)) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 94
-Last activity: 2026-09-05 -- Phase 94 execution started
-Resume file: .planning/workstreams/milestone/phases/94-api-p2/94-CONTEXT.md
-Next action: /gsd:verify-work Phase 92；随后启动 93 (config_backup) / 94 (前端 API 工厂化)，Phase 95 必须最后
+Phase: 94 (前端 API 工厂化 (🟡 中优 P2)) — COMPLETE
+Plan: 3 of 3 (94-01/02/03 全部完成)
+Status: Phase 94 execution complete — ready for verify
+Last activity: 2026-09-06 -- 94-03 complete (5 扁平文件 cluster 委托 + D-12 双档扫描防线 + D-13 Convention + D-01 措辞校准 + 覆盖率 gate 45/45 dirs)
+Resume file: .planning/workstreams/milestone/phases/94-api-p2/94-03-SUMMARY.md
+Next action: /gsd:verify-work 94；随后启动 Phase 95 (v1.28 SHIP 收口 + v1.29 closeout，必须最后)
 
 ## Completed Phases (v1.29)
+
+### Phase 94: 前端 API 工厂化 — COMPLETE 2026-09-06
+
+- 3 plans (94-01/02/03)，commits b3bc745..1771e1d 区间
+- 94-01: createResourceApi<T> 8 方法共享工厂（opsApi 私有工厂提升，D-01/D-03）+ CreatePayload 双命名并集派生类型（D-02）+ download.ts blob 链 GET/POST 归一（D-04）+ 双契约测试（D-11）
+- 94-02: opsApi/rpaApi/vdiApi 对象形态全接入（双份私有工厂清零 + scriptApi spread + 裸 fetch downloadReport 消灭白得 5min 超时），导出签名零变化
+- 94-03: workorder/knowledge/duty/notice/adDomain 扁平 5 件 cluster 委托（签名零变化，100+ 消费文件零改动）；adDomain deleteMapping :501 潜伏 404 URL bug 独立 commit 95be269 登记修复（T-94-07）；D-12 双档 AST 扫描防线（红绿演练验证）+ D-13 CLAUDE.md Convention 段 + D-01 措辞校准 + 覆盖率 gate 45/45 dirs（lib 90.48% ≥ 87.2）
+- 13 个 *Api.ts 全部按迁移矩阵处置（3 对象迁移 + 5 扁平委托 + 5 KEEP）；全量 554 文件 / 3800 测试绿；lint 0 errors（1389 warnings 存量基线）
+- 决策 D-01..D-14 见 94-CONTEXT.md；executor 偏离裁定（delete 直调保 D-14、硬档 allowedResidues 等值锁）见 94-03-SUMMARY.md
 
 ### Phase 91: CRUD 复用 base.Repository[T] — SHIPPED 2026-09-04
 
@@ -93,9 +102,9 @@ Next action: /gsd:verify-work Phase 92；随后启动 93 (config_backup) / 94 (�
 
 ## Next Step
 
-执行 92-03-PLAN.md — operations 3 处样板 + D-04 外围 19 处失效调用改写 + cache_utils.go 删除 + root 定性 + monitor rename
+Phase 94/93 已完成 — 剩余 Phase 95 (v1.28 SHIP 收口 + v1.29 closeout + audit)：MILESTONES v1.28 段 + PROJECT SHIPPED 标记 + 全 gate 验证 + v1.29-MILESTONE-AUDIT.md 生成
 
-或并行推进: 93 (config_backup) / 94 (前端 API 工厂化，完全独立)；Phase 95 必须最后
+/gsd:plan-phase 95 待执行；Phase 95 必须最后
 
 ## Performance Metrics
 
@@ -105,9 +114,11 @@ Next action: /gsd:verify-work Phase 92；随后启动 93 (config_backup) / 94 (�
 | Phase 92 P02 | 21min | 3 tasks | 10 files |
 | Phase 92 P03 | 20min | 3 tasks | 9 files |
 | Phase 92 P04 | 24min | 4 tasks | 7 files |
+| Phase 94 P03 | 69min | 3 tasks | 9 files |
 
 ## Decisions
 
+- [Phase 94]: 94-03: 扁平 5 件 cluster 委托完成（workorder/knowledge/duty/notice/adDomain），导出签名零变化 + 5 个 .test.ts 零改动全绿；delete 形状函数统一保持单参 post 直调（plan DELEGATE 清单与 D-14 零改动红线冲突，工厂 delete 传 {} 属 wire 级 body 变更；deleteNotice/deleteOUGroupMapping/deleteMapping 例外——既有测试本就断言 {} body）；D-12 硬档按 allowedResidues 等值锁登记 KEEP 基线（opsApi 4 / vdiApi 1，plan「期望 0」被矩阵 KEEP 判定证伪）；adDomain deleteMapping :501 潜伏 404 独立 commit 登记（v1.29 D-05 例外条款纪律）；CLAUDE.md 新增 Frontend API Factory Convention（D-13）+ REQUIREMENTS/ROADMAP D-01 措辞校准；覆盖率 gate 45/45 dirs exit 0（lib 90.48% ≥ 87.2%）
 - [Phase 92]: 92-01: base 缓存抽象全套落地（TTLResolver+CacheProvider 全家+泛型函数族），system 经 5 alias 翻转零改动；私有 setValue 因同包 CacheAdapter 消费导出为 base.SetValue（唯一迁移偏差） — D-01/D-02/D-03 锁定；SetValue 导出为 Rule 3 编译必需最小修复，语义零变更
 - [Phase 92]: 92-02: system 9 文件 29 处 GetOrSet 样板全部收敛 base.GetOrSetJSON 单 return + 21 处失效调用改写 base 底层 + notice 逃兵归队（删私有 getExpiration）；user/role List 站点 T=*PageResult 为 Pitfall 5 单向改善；cache mock 须回填 dest（JSON 往返）为 Rule 1 测试契约修复；键构造 diff 级零变更，生产行为零变更 — InvalidateCache* 函数本体留 92-03 与外围 19 处改写同 commit 删除
 - [Phase 92]: 92-03: D-04 完全达成——外围 19 处失效调用改写与 system.InvalidateCacheByPattern/ByKey 删除同 commit（编译器当 checklist 证明零遗漏），42 处调用全部收敛 base 唯一失效底层；CacheInvalidator 保留分发器底层委托；floor 3 处样板收敛（:168 注释假阳性未动）；DataCacheService 原地定性（GetExpiration 委托 base + D-07 定位注释不标 @Deprecated，装配链零改动）——plan 委托片段缺取地址为 Rule 3 编译必需修复（组合字面量不可寻址）；A5 纪律：duty/knowledge/network/workorder 12 处 GetOrSet 样板留 v1.30+

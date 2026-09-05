@@ -231,7 +231,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 94-03-PLAN.md — 扁平 5 件 cluster 委托 workorder/knowledge/duty/notice/adDomain（D-05/D-06/D-08，adDomain :501 潜伏 URL bug 独立 commit 登记）+ D-12 双档扫描防线 + D-13 CLAUDE.md Convention + REQUIREMENTS/ROADMAP 措辞校准 + 覆盖率 gate（API-FACTORY-05）
+- [x] 94-03-PLAN.md — 扁平 5 件 cluster 委托 workorder/knowledge/duty/notice/adDomain（D-05/D-06/D-08，adDomain :501 潜伏 URL bug 独立 commit 登记）+ D-12 双档扫描防线 + D-13 CLAUDE.md Convention + REQUIREMENTS/ROADMAP 措辞校准 + 覆盖率 gate（API-FACTORY-05）
 
 ---
 
