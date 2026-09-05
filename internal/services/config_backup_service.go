@@ -1,10 +1,13 @@
 package services
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -147,21 +150,27 @@ func (s *ConfigBackupService) CreateBackup(ctx context.Context, req *BackupReque
 			return nil, fmt.Errorf("创建备份目录失败: %w", err)
 		}
 
-		// 生成文件名
+		// 生成文件名（CompressLarge=true 时追加 .gz 后缀，Phase 93 D-23）
 		timestamp := time.Now().Format("20060102_150405")
 		fileName := fmt.Sprintf("%s_v%d_%s.conf", req.DeviceName, newVersion, timestamp)
+		if req.CompressLarge {
+			fileName += ".gz"
+		}
 		filePath := filepath.Join(backupDir, fileName)
 
-		// 写入文件
-		content := config
+		// 写入文件（CompressLarge=true 时 gzip 压缩后写入）。BackupSize 保持
+		// len(config) 原始字节口径，与 DB 存储路径及统计 totalSize 一致（D-24）。
+		content := []byte(config)
 		if req.CompressLarge {
-			// TODO: 实现压缩
-			backup.Compressed = false
-		} else {
-			backup.Compressed = false
+			compressed, err := gzipCompress(config)
+			if err != nil {
+				return nil, fmt.Errorf("压缩备份内容失败: %w", err)
+			}
+			content = compressed
 		}
+		backup.Compressed = req.CompressLarge
 
-		if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(filePath, content, 0644); err != nil {
 			return nil, fmt.Errorf("写入备份文件失败: %w", err)
 		}
 
@@ -202,9 +211,16 @@ func (s *ConfigBackupService) GetBackupContent(ctx context.Context, backupID str
 		return "", fmt.Errorf("读取备份文件失败: %w", err)
 	}
 
-	if backup.Compressed {
-		// TODO: 解压
-		return string(content), nil
+	// 压缩状态双检查（Phase 93 D-23）：Compressed 标志与 .gz 后缀必须同时成立
+	// 才解压；任一不匹配（如 Compressed=true 但 FilePath 无 .gz 后缀）显式报错
+	// 而非静默按明文返回，避免脏数据被误读为乱码。
+	compressedFlag := backup.Compressed
+	gzSuffix := strings.HasSuffix(backup.FilePath, ".gz")
+	if compressedFlag && gzSuffix {
+		return gzipDecompress(content)
+	}
+	if compressedFlag || gzSuffix {
+		return "", fmt.Errorf("备份压缩状态不一致: compressed=%v, file=%s", backup.Compressed, backup.FilePath)
 	}
 
 	return string(content), nil
@@ -380,18 +396,24 @@ func (s *ConfigBackupService) createNewAutoBackup(ctx context.Context, device *m
 			return false, fmt.Errorf("创建备份目录失败: %w", err)
 		}
 
-		// 生成文件名
+		// 生成文件名（auto 大文件统一压缩，Phase 93 D-25）
 		timestamp := time.Now().Format("20060102_150405")
-		fileName := fmt.Sprintf("%s_v%d_%s.conf", device.DeviceName, newVersion, timestamp)
+		fileName := fmt.Sprintf("%s_v%d_%s.conf", device.DeviceName, newVersion, timestamp) + ".gz"
 		filePath := filepath.Join(backupDir, fileName)
 
-		// 写入文件
-		if err := os.WriteFile(filePath, []byte(config), 0644); err != nil {
+		// 写入文件（gzip 压缩后写入，与 CreateBackup 同构；BackupSize 保持
+		// len(config) 原始字节口径，D-24）
+		compressed, cmpErr := gzipCompress(config)
+		if cmpErr != nil {
+			return false, fmt.Errorf("压缩备份内容失败: %w", cmpErr)
+		}
+
+		if err := os.WriteFile(filePath, compressed, 0644); err != nil {
 			return false, fmt.Errorf("写入备份文件失败: %w", err)
 		}
 
 		backup.FilePath = filePath
-		backup.Compressed = false
+		backup.Compressed = true
 	}
 
 	// 保存备份记录
@@ -583,6 +605,35 @@ func (s *ConfigBackupService) GetBackupStatistics(ctx context.Context) (map[stri
 		"totalSizeMB":      stats.TotalSize / 1024 / 1024,
 		"uniqueDevices":    uniqueDevices,
 	}, nil
+}
+
+// gzipCompress 压缩配置内容（gzip DefaultCompression，Phase 93 D-26）。
+// 注意：必须先 Close 再取字节——gzip 尾部（CRC + ISIZE）仅在 Close 时写出。
+func gzipCompress(config string) ([]byte, error) {
+	var buf bytes.Buffer
+	w := gzip.NewWriter(&buf)
+	if _, err := w.Write([]byte(config)); err != nil {
+		return nil, err
+	}
+	if err := w.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// gzipDecompress 解压 .gz 备份字节流。
+// 损坏数据错误形态：随机字节 → gzip.ErrHeader（Reader 创建期）；截断流 → io.ErrUnexpectedEOF；CRC 损坏 → gzip.ErrChecksum。
+func gzipDecompress(data []byte) (string, error) {
+	r, err := gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return "", fmt.Errorf("备份文件损坏: %w", err)
+	}
+	defer r.Close()
+	out, err := io.ReadAll(r)
+	if err != nil {
+		return "", fmt.Errorf("备份文件解压失败: %w", err)
+	}
+	return string(out), nil
 }
 
 // calculateHash 计算配置内容的哈希值
