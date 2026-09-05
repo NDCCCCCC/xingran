@@ -2,12 +2,13 @@
 // Phase 92-01 (D-02): 缓存提供者抽象单一权威位置。
 //
 // 本文件内容自 internal/services/system/cache_provider.go 逐字迁入
-//（仅 package 子句变更）：CacheProvider 9 方法接口 + NoOpCacheProvider
-// 全部 9 方法 + setValue 反射函数 + CacheStats/CacheEntry 伴生类型。
-// system 侧经 type alias（同一类型）原位引用，20+ 消费文件零改动。
+//（仅 package 子句变更；唯一偏差：私有 setValue 导出为 SetValue——同包
+// 消费者 CacheAdapter 也依赖它，见 SetValue 注释）：CacheProvider 9 方法
+// 接口 + NoOpCacheProvider 全部 9 方法 + 反射赋值函数 + CacheStats/CacheEntry
+// 伴生类型。system 侧经 type alias（同一类型）原位引用，20+ 消费文件零改动。
 //
 // 逐字搬迁红线：方法签名、字段名、注释语义均未改动。
-// setValue 的反射"AssignableTo 不成立时静默跳过"缺陷原样保留（92-RESEARCH
+// SetValue 的反射"AssignableTo 不成立时静默跳过"缺陷原样保留（92-RESEARCH
 // Pitfall 5）：泛型函数族 GetOrSetJSON 从调用侧绕开它，NoOp 本体不动。
 // =====================================================================
 package base
@@ -66,12 +67,17 @@ func (n *NoOpCacheProvider) GetOrSet(ctx context.Context, key string, dest inter
 		return err
 	}
 	// 将结果设置到目标变量（使用反射）
-	setValue(dest, result)
+	SetValue(dest, result)
 	return nil
 }
 
-// setValue 使用反射设置目标变量的值
-func setValue(dest interface{}, value interface{}) {
+// SetValue 使用反射设置目标变量的值。
+//
+// 导出说明（Phase 92-01 迁移偏差记录）：原 system 包私有 setValue 除 NoOp
+// 外还有同包消费者 CacheAdapter.GetOrSet（cache_adapter.go，生产装配在用），
+// 迁移后无法触及私有符号，故导出为 base.SetValue 保持单一来源（不复制两份）。
+// 新代码应优先使用 GetOrSetJSON[T]（类型安全，绕开本反射兜底）。
+func SetValue(dest interface{}, value interface{}) {
 	if dest == nil {
 		return
 	}

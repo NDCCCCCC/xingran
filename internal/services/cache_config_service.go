@@ -390,6 +390,9 @@ func (s *CacheConfigService) GetDuration(configKey string) time.Duration {
 
 // GetDurationWithDefault 获取缓存时间配置，支持自定义默认值
 func (s *CacheConfigService) GetDurationWithDefault(configKey string, defaultDuration time.Duration) time.Duration {
+	if s == nil { // Phase 92-01: typed-nil interface 防护（92-RESEARCH Pitfall 1）——Config 接口化后 typed-nil 判空失效，nil receiver 直接返回 default
+		return defaultDuration
+	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 

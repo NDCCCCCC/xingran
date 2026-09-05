@@ -13,6 +13,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	requests "github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	pkgcache "github.com/xingran-next/xingran-go-backend/pkg/cache"
 )
 
@@ -294,15 +295,15 @@ func TestCacheAdapter_AllMethods(t *testing.T) {
 	assert.Equal(t, 1, stats.KeyCount)
 	assert.Equal(t, int64(1), stats.Count)
 
-	// setValue 反射赋值
+	// base.SetValue 反射赋值（Phase 92-01 自 system 私有 setValue 迁入导出）
 	var dst int
-	setValue(&dst, 42)
+	base.SetValue(&dst, 42)
 	assert.Equal(t, 42, dst)
-	setValue(nil, 1)      // nil dest no-panic
+	base.SetValue(nil, 1)      // nil dest no-panic
 	var notPtr int
-	setValue(notPtr, 1)   // 非指针 no-panic
+	base.SetValue(notPtr, 1)   // 非指针 no-panic
 	var typeMismatch string
-	setValue(&typeMismatch, 1) // 类型不匹配 no-panic
+	base.SetValue(&typeMismatch, 1) // 类型不匹配 no-panic
 	_ = notPtr
 }
 

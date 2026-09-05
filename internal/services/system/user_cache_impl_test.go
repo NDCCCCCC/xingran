@@ -14,6 +14,7 @@ import (
 
 	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 )
 
 // Phase 72 W2 计划 72-05: userCacheService 测试补齐。
@@ -32,7 +33,7 @@ func (m *mockCacheProvider) GetOrSet(ctx context.Context, key string, dest inter
 	args := m.Called(ctx, key, dest, expiration, query)
 	// 模拟 cache 命中: 通过 mock 返回值设置 dest
 	if args.Get(0) != nil {
-		setValue(dest, args.Get(0))
+		base.SetValue(dest, args.Get(0))
 	}
 	return args.Error(1)
 }
