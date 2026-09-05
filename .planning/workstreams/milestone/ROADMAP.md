@@ -1,7 +1,7 @@
 ---
 last_updated: 2026-09-05
 milestone: v1.29
-update_trigger: v1.29 workstream ROADMAP synced from .planning/ROADMAP.md — v1.27 content archived at .planning/milestones/v1.27-ROADMAP.md; phases 89-95 now tracked here with Progress table (was: stale v1.27 roadmap made phase-complete report is_last_phase=true after Phase 90); 2026-09-05 Phase 92 plan-phase 校准 3→4 plans
+update_trigger: v1.29 workstream ROADMAP synced from .planning/ROADMAP.md — v1.27 content archived at .planning/milestones/v1.27-ROADMAP.md; phases 89-95 now tracked here with Progress table (was: stale v1.27 roadmap made phase-complete report is_last_phase=true after Phase 90); 2026-09-05 Phase 92 plan-phase 校准 3→4 plans; 2026-09-05 Phase 94 plan-phase 生成 3 plans
 ---
 
 # Roadmap: XingRan-Next 运维管理系统 — v1.29 milestone workstream
@@ -219,11 +219,19 @@ Plans:
 3. `npm run type-check` + `npm run lint` + `npm run test` 0 错误
 4. 前端覆盖率 ≥45.13%（不下降）
 
-**Plans (3 planned, 待 plan-phase 生成)**:
+**Plans (3, 2026-09-05 plan-phase 生成)** *(D-01 措辞校准：提升 opsApi 既有 8 方法工厂而非从零设计，SC-1/Goal 的 7 方法与 ~15 措辞由 94-03 收口按 CONTEXT 同步修订；实测 13 个 *Api.ts 口径；决策 D-01..D-14 见 94-CONTEXT.md)*:
 
-- 94-01 设计 + 实现 apiFactory.ts + types/apiFactory.ts
-- 94-02 迁移 opsApi.ts（building/floor/workstation/asset 等）
-- 94-03 迁移其余 ~10 个 *Api.ts（低风险优先）
+**Wave 1**
+
+- [ ] 94-01-PLAN.md — apiFactory.ts（createResourceApi 8 方法提升，D-01/D-09）+ types/apiFactory.ts（CreatePayload 双命名并集，D-02）+ download.ts（blob 链 GET/POST 归一，D-04）+ apiFactory/download 契约测试（D-11）——纯新建零触碰既有文件
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 94-02-PLAN.md — opsApi 删私有工厂 + blob 四件套迁出 + DropdownOption re-export（D-03/D-04/D-07）+ opsApi.test.ts 适配（D-14）+ rpaApi 双工厂合并 + scriptApi 接入 + downloadReport 归一（D-08）+ vdiApi vmApi SPREAD+OVERRIDE / vdiServerApi SPREAD
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 94-03-PLAN.md — 扁平 5 件 cluster 委托 workorder/knowledge/duty/notice/adDomain（D-05/D-06/D-08，adDomain :501 潜伏 URL bug 独立 commit 登记）+ D-12 双档扫描防线 + D-13 CLAUDE.md Convention + REQUIREMENTS/ROADMAP 措辞校准 + 覆盖率 gate（API-FACTORY-05）
 
 ---
 
@@ -262,7 +270,7 @@ Plans:
 | Phase 94 前端 API 工厂化 | Pending | 0/3 | API-FACTORY-01..05 | — | — |
 | Phase 95 v1.28 SHIP + v1.29 closeout | Pending | 0/2 | CLOSEOUT-01..03 | — | — |
 
-**Total:** 7 phases / 41 requirements (36/41 done — 89+90+91+92 shipped/complete，93-95 待推进；93 已 6-plan 规划就绪)
+**Total:** 7 phases / 41 requirements (36/41 done — 89+90+91+92 shipped/complete，93-95 待推进；93 已 6-plan 规划就绪，94 已 3-plan 规划就绪)
 
 ---
 
@@ -277,4 +285,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-09-05 — **Phase 92 SHIPPED**（4/4 plans：92-01 base 抽取 / 92-02 system 9 文件 / 92-03 operations+D-04 收尾+root 定性 / 92-04 消歧+文档+审计；决策 D-01..D-10 见 92-CONTEXT.md，ready for /gsd:verify-work）。Phase 91 SHIPPED（4/4 plans，commits 5d0008b..963defe 区间）。Phase 90 SHIPPED（4 plans，commits b51f44c..3a2efe5）。Phase 89 SHIPPED（3 plans，commits 238283c..3559626）。*
+*Last updated: 2026-09-05 — **Phase 94 plan-phase 完成**（3 plans：94-01 工厂+类型+download+契约测试 / 94-02 对象形态三文件迁移 / 94-03 扁平委托+扫描防线+收口；决策 D-01..D-14 见 94-CONTEXT.md）。Phase 93 已 6-plan 规划就绪。Phase 92 SHIPPED（4/4 plans；决策 D-01..D-10 见 92-CONTEXT.md，ready for /gsd:verify-work）。Phase 91 SHIPPED（4/4 plans，commits 5d0008b..963defe 区间）。Phase 90 SHIPPED（4 plans，commits b51f44c..3a2efe5）。Phase 89 SHIPPED（3 plans，commits 238283c..3559626）。*
