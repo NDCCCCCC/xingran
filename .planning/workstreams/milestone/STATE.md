@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.29
 milestone_name: 技术债治理
 status: executing
-last_updated: "2026-09-05T03:39:27.239Z"
+last_updated: "2026-09-05T04:05:43Z"
 last_activity: 2026-09-05
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 15
-  completed_plans: 12
+  completed_plans: 13
   percent: 43
 ---
 
@@ -28,11 +28,11 @@ Config: "mode": "yolo"
 ## Current Position
 
 Phase: 92 (缓存层三处架构统一 (🟡 中优 P2)) — EXECUTING
-Plan: 2 of 4
-Status: 92-01 complete — ready to execute 92-02
-Last activity: 2026-09-05 -- 92-01 complete (base 缓存抽象包 + alias 翻转 + TestBase92 双装配测试)
-Resume file: .planning/workstreams/milestone/phases/92-p2/92-01-SUMMARY.md
-Next action: 执行 92-02-PLAN.md（system 9 文件 29 处 GetOrSet 样板迁移 base.GetOrSetJSON）
+Plan: 3 of 4
+Status: 92-02 complete — ready to execute 92-03
+Last activity: 2026-09-05 -- 92-02 complete (system 9 文件 29 处 GetOrSet 样板迁移 + 21 处失效调用改写 + notice 逃兵归队)
+Resume file: .planning/workstreams/milestone/phases/92-p2/92-02-SUMMARY.md
+Next action: 执行 92-03-PLAN.md（operations + D-04 外围 19 处失效调用改写 + cache_utils.go 删除 + root 定性 + monitor rename）
 
 ## Completed Phases (v1.29)
 
@@ -93,7 +93,7 @@ Next action: 执行 92-02-PLAN.md（system 9 文件 29 处 GetOrSet 样板迁移
 
 ## Next Step
 
-执行 92-02-PLAN.md — system 9 文件 29 处 GetOrSet 样板迁移 base.GetOrSetJSON + 21 处失效调用改写
+执行 92-03-PLAN.md — operations 3 处样板 + D-04 外围 19 处失效调用改写 + cache_utils.go 删除 + root 定性 + monitor rename
 
 或并行推进: 93 (config_backup) / 94 (前端 API 工厂化，完全独立)；Phase 95 必须最后
 
@@ -102,7 +102,9 @@ Next action: 执行 92-02-PLAN.md（system 9 文件 29 处 GetOrSet 样板迁移
 | Phase | Plan | Duration | Notes |
 |-------|------|----------|-------|
 | Phase 92 P01 | 31min | 3 tasks | 10 files |
+| Phase 92 P02 | 21min | 3 tasks | 10 files |
 
 ## Decisions
 
 - [Phase 92]: 92-01: base 缓存抽象全套落地（TTLResolver+CacheProvider 全家+泛型函数族），system 经 5 alias 翻转零改动；私有 setValue 因同包 CacheAdapter 消费导出为 base.SetValue（唯一迁移偏差） — D-01/D-02/D-03 锁定；SetValue 导出为 Rule 3 编译必需最小修复，语义零变更
+- [Phase 92]: 92-02: system 9 文件 29 处 GetOrSet 样板全部收敛 base.GetOrSetJSON 单 return + 21 处失效调用改写 base 底层 + notice 逃兵归队（删私有 getExpiration）；user/role List 站点 T=*PageResult 为 Pitfall 5 单向改善；cache mock 须回填 dest（JSON 往返）为 Rule 1 测试契约修复；键构造 diff 级零变更，生产行为零变更 — InvalidateCache* 函数本体留 92-03 与外围 19 处改写同 commit 删除
