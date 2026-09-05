@@ -76,8 +76,9 @@ func (ConfigBackup) TableName() string { return "sys_config_backup" }
 ```
 → ConfigRestoreTask 照此三段式 + string 状态常量（TaskStatusPending 等）。
 
-### E. 79_06 测试 helpers（config_backup_service_79_06_test.go:43-130）
+### E. 79_06 测试 helpers（config_backup_service_79_06_test.go:43-130+）
 - `newCbk7906(t)` — sqlite(AutoMigrate ConfigBackup/NetworkDevice/Config) + 进程级 temp dir + nil executor
+- **`newExecutor7906(t, db, deviceID, fixtureCycles)`（:142-147）— 完整装配的 `*device.DeviceExecutor`（pool→scheduler→executor + FileTransport fixture 接线），93_NN 的 restore e2e 直接复用，无需自建装配**
 - `cbk7906Chdir(t)` — **MkdirTemp + t.Chdir**（非 t.TempDir：getBackupDir 相对路径 + applogger ./logs/app.log Windows 占用，注释明确）
 - `newDriver7906FromFixture(t, path)` — `platform.NewPlatform("huawei_vrp", "dummy-host", FileTransport, WithFileTransportFile(path), WithTransportReadSize(1), WithReadDelay(0))`
 - `writeFixture7906(t, cycles, cmd, output)` — banner → screen-length → n×命令周期 → 8 spare prompts
