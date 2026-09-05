@@ -169,7 +169,7 @@ Plans:
 
 ### Phase 93: config_backup 三处 TODO 闭环 (🟡 中优 P2)
 
-**Goal**: 实现 `config_backup_service.go:158, 206, 543` 三个 TODO 空函数（压缩/解压/恢复逻辑），新增回归测试；端到端 备份 → 恢复 配置一致。
+**Goal**: 实现 `config_backup_service.go:158, 206, 543` 三个 TODO 空函数（压缩/解压/恢复逻辑），新增回归测试；端到端 备份 → 恢复 配置一致。（恢复语义按 D-01 校准：恢复 = 把备份配置异步任务化下发到网络设备，决策 D-01..D-34 见 93-CONTEXT.md）
 
 **Depends on**: Phase 89 + Phase 90（与 91/92 互不依赖，可并行）
 
@@ -182,11 +182,25 @@ Plans:
 3. 端到端：备份 → 修改 → 恢复 → 配置一致性校验通过
 4. `go test ./internal/services/...` 0 回归
 
-**Plans (3 planned, 待 plan-phase 生成)**:
+**Plans (6, 2026-09-05 plan-phase 校准——D-15..D-22 异步任务化扩展，原 3-plan 估算基于审计基线)** *(93-01..93-04 原计划命名 93-01..93-03 的压缩/恢复/测试三分法已被 6-plan 单一职责拆分取代；恢复措辞按 D-01 校准为设备配置下发)*:
 
-- 93-01 实现压缩(line 158) + 解压(line 206)：gzip 标准库，识别 .gz 后缀
-- 93-02 实现恢复(line 543)：事务化（读备份 → 校验 schema → 批量 upsert → 失效缓存）
-- 93-03 回归测试三路径 + 失败场景 + 端到端验证
+**Wave 1**
+
+- [ ] 93-01-PLAN.md — 压缩(:158)/解压(:206)实现 + gzip helper 统一手动/批量/auto 三路径（D-23..D-26）+ 解压 64MB 上限 + 文件名清洗 + 93_01 回归测试
+- [ ] 93-02-PLAN.md — DeviceExecutor.RestoreConfig 下发内核（D-02/03/05/06/07/12：ExecuteCustom + SendConfigs + vendor 退出命令 map + 清洗 + fail-fast）+ RestoreConfigTimeout 常量 + AST 锁值同步
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 93-03-PLAN.md — ConfigRestoreTask model + Migrate211 双注册 + ConfigRestoreTaskService 异步编排（D-01/04/08..11/14/15/17/20..22/34：同设备校验/互斥/恢复前备份/hash 警告/版本链记录/启动收敛）
+
+**Wave 3** *(blocked on Wave 2；93-04 与 93-05 零文件重叠可并行)*
+
+- [ ] 93-04-PLAN.md — Restore handler 异步语义（taskId 响应 + operlog 发起记录 D-13/18）+ /restore-tasks 查询双端点（D-31 组权限）+ 装配接线 + RestoreBackup stub 删除 + handler 测试重写
+- [ ] 93-05-PLAN.md — 前端最小异步交互（D-16/19：useRestoreTask 轮询 hook + 恢复 Modal 进度/结果 + 携带 deviceId 修复空 body 缺陷）
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 93-06-PLAN.md — restore e2e FileTransport + 失败 4 场景 + 端到端断言链（D-27..D-30）+ REQUIREMENTS/ROADMAP 措辞校准（D-01/D-33①）+ D-33② sort 修复 + CLAUDE.md Convention（D-32）+ 全量回归 gate
 
 ---
 
@@ -244,11 +258,11 @@ Plans:
 | Phase 90 TIMEOUTS/PORT/PROTOCOL/CONCURRENCY | SHIPPED | 4/4 | TIMEOUTS-01..08 | 2026-09-04 | 2026-09-04 |
 | Phase 91 CRUD 复用 base.Repository[T] | SHIPPED | 4/4 | CRUD-REUSE-01..08 | 2026-09-04 | 2026-09-04 |
 | Phase 92 缓存层三处架构统一 | Complete | 4/4 | CACHE-UNIFY-01..05（全部 done：92-04 收口——rename 消歧 + invariants 锁 + 三文档同步 + LOC 双口径） | 2026-09-05 | 2026-09-05 |
-| Phase 93 config_backup 三处 TODO 闭环 | Pending | 0/3 | BACKUP-CLOSED-01..05 | — | — |
+| Phase 93 config_backup 三处 TODO 闭环 | Pending | 0/6 | BACKUP-CLOSED-01..05 | — | — |
 | Phase 94 前端 API 工厂化 | Pending | 0/3 | API-FACTORY-01..05 | — | — |
 | Phase 95 v1.28 SHIP + v1.29 closeout | Pending | 0/2 | CLOSEOUT-01..03 | — | — |
 
-**Total:** 7 phases / 41 requirements (36/41 done — 89+90+91+92 shipped/complete，93-95 待推进)
+**Total:** 7 phases / 41 requirements (36/41 done — 89+90+91+92 shipped/complete，93-95 待推进；93 已 6-plan 规划就绪)
 
 ---
 
