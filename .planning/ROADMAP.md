@@ -24,8 +24,8 @@ status: planning
 - [x] **Phase 97: config_backup 恢复链加固** — V130R-01..03（互斥原子性/实例归属/业务错误码；含 3 个 discuss 设计决策）✓（2026-09-07 recovery 落库）
 - [x] **Phase 98: 缓存键安全与 base 迁移收尾** — V130R-04..05（2/2 plans ✓）— 2026-09-06
 - [x] **Phase 99: operations 口径统一 — V130R-06..09（5 plans ✓ executed 2026-09-07，phase 验证于 101 收口统合）
-- [ ] **Phase 100: 前端契约修复** — V130R-10..12（3 plans: 100-01/02/03 planned ✓）
-- [ ] **Phase 101: 收口** — TESTFILE-01 + UAT62-01..03 + 七 gate 全绿 + v1.30 audit
+- [x] **Phase 100: 前端契约修复** — V130R-10..12（3 plans ✓ executed 2026-09-07，100-VERIFICATION 6/6 SC）
+- [x] **Phase 101: 收口** — TESTFILE-01 + UAT62-01..03 + 七 gate 全绿 + v1.30 audit ✓（2026-09-07，2/2 plans；UAT62-01/02 诚实 pending 待真实 PG，runbook 就绪）
 
 完整 phase 详情（goal/SC/requirements 映射/依赖图）：[workstreams/milestone/ROADMAP.md](workstreams/milestone/ROADMAP.md)
 
@@ -48,9 +48,9 @@ status: planning
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 | ----- | --------- | -------------- | ------ | --------- |
-| 96. 确定性缓存/看板缺陷修复 | v1.30 | 0/? | Not started | - |
-| 97. config_backup 恢复链加固 | v1.30 | 0/? | Not started | - |
-| 98. 缓存键安全与 base 迁移收尾 | v1.30 | 0/? | Not started | - |
-| 99. operations 口径统一 | v1.30 | 0/? | Not started | - |
-| 100. 前端契约修复 | v1.30 | 0/? | Not started | - |
-| 101. 收口（测试文件入库 + 62-UAT + audit） | v1.30 | 0/? | Not started | - |
+| 96. 确定性缓存/看板缺陷修复 | v1.30 | 3/3 | ✓ Complete | 2026-09-06 |
+| 97. config_backup 恢复链加固 | v1.30 | 3/3 | ✓ Complete（recovery 落库 09-07） | 2026-09-06 |
+| 98. 缓存键安全与 base 迁移收尾 | v1.30 | 2/2 | ✓ Complete | 2026-09-06 |
+| 99. operations 口径统一 | v1.30 | 6/6（含 99-06 gap closure） | ✓ Complete | 2026-09-07 |
+| 100. 前端契约修复 | v1.30 | 3/3 | ✓ Complete | 2026-09-07 |
+| 101. 收口（测试文件入库 + 62-UAT + audit） | v1.30 | 2/2 | ✓ Complete（UAT62-01/02 待人工） | 2026-09-07 |

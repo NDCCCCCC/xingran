@@ -41,9 +41,9 @@ update_trigger: v1.30 workstream ROADMAP 创建 — v1.29 内容已随 milestone
 - [x] **Phase 97: config_backup 恢复链加固** — 互斥原子性/实例归属/业务错误码（V130R-01..03）✓（2026-09-07 recovery 落库 2dd46a3，见 RECOVERY-NOTE）
   **Plans**: 3 plans (97-01: V130R-01 超时互斥原子化; 97-02: V130R-02 多实例归属过滤; 97-03: V130R-03 业务错误码语义化)
 - [x] **Phase 98: 缓存键安全与 base 迁移收尾** — 列表键防碰撞 + 四包 interface{} 残留迁 base 泛型（V130R-04..05）✓（2026-09-06，2/2 plans；helper 补遗 2b15574）
-- [x] **Phase 99: operations 口径统一** — Total 软删/换楼乱序/orgId 子部门筛选/分页 clamp 收敛（V130R-06..09）✓（2026-09-07 执行完成，5/5 plans；phase 验证于 101 收口统合）
-- [ ] **Phase 100: 前端契约修复** — 幽灵方法处置/rpaApi 契约对齐/networkApi 下载链收敛（V130R-10..12）
-- [ ] **Phase 101: 收口——测试文件入库 + 62-UAT + audit** — TESTFILE-01 + UAT62-01..03 + 七 gate 全绿 + audit
+- [x] **Phase 99: operations 口径统一** — Total 软删/换楼乱序/orgId 子部门筛选/分页 clamp 收敛（V130R-06..09）✓（2026-09-07 执行完成，6/6 plans 含 99-06 gap closure；99-VERIFICATION gaps 已关闭）
+- [x] **Phase 100: 前端契约修复** — 幽灵方法处置/rpaApi 契约对齐/networkApi 下载链收敛（V130R-10..12）✓（2026-09-07，3/3 plans；100-VERIFICATION 6/6 SC + gates 独立实跑全绿）
+- [x] **Phase 101: 收口——测试文件入库 + 62-UAT + audit** — TESTFILE-01 + UAT62-01..03 + 七 gate 全绿 + audit ✓（2026-09-07，2/2 plans；UAT62-03 passed 带证据链，UAT62-01/02 诚实 pending 待真实 PG——runbook `.planning/phases/101-closeout-uat-audit/UAT-RUNBOOK.md` 就绪）
 
 ### Phase Dependency Graph
 
@@ -193,14 +193,14 @@ Phase 100 (FEFIX 前端契约；v1.29 Phase 94 apiFactory 基线)           ─�
 
 | Phase | Status | Plans | Requirements | Started | Completed |
 |-------|--------|-------|--------------|---------|-----------|
-| Phase 96 确定性缓存/看板缺陷修复 | Not started | 0/? | CACHEDEF-01..05 + JOBSTAT-01 | - | - |
-| Phase 97 config_backup 恢复链加固 | Completed | 3/3 | V130R-01..03 | - | - |
-| Phase 98 缓存键安全与 base 迁移收尾 | Completed | 2/2 | V130R-04..05 | - | 2026-09-06 |
-| Phase 99 operations 口径统一 | Not started | 0/? | V130R-06..09 | - | - |
-| Phase 100 前端契约修复 | Not started | 0/? | V130R-10..12 | - | - |
-| Phase 101 收口（测试文件入库 + 62-UAT + audit） | Not started | 0/? | TESTFILE-01 + UAT62-01..03 | - | - |
+| Phase 96 确定性缓存/看板缺陷修复 | Completed | 3/3 | CACHEDEF-01..05 + JOBSTAT-01 | 2026-09-06 | 2026-09-06 |
+| Phase 97 config_backup 恢复链加固 | Completed | 3/3 | V130R-01..03 | 2026-09-06 | 2026-09-07（recovery 落库） |
+| Phase 98 缓存键安全与 base 迁移收尾 | Completed | 2/2 | V130R-04..05 | 2026-09-06 | 2026-09-06 |
+| Phase 99 operations 口径统一 | Completed | 6/6 | V130R-06..09 | 2026-09-06 | 2026-09-07 |
+| Phase 100 前端契约修复 | Completed | 3/3 | V130R-10..12 | 2026-09-07 | 2026-09-07 |
+| Phase 101 收口（测试文件入库 + 62-UAT + audit） | Completed | 2/2 | TESTFILE-01 + UAT62-01..03 | 2026-09-07 | 2026-09-07 |
 
-**Total:** 6 phases / 22 requirements (0/22 done — Traceability 见 `.planning/REQUIREMENTS.md`)
+**Total:** 6 phases / 22 requirements（22/22 traceability 见 `.planning/phases/101-closeout-uat-audit/TRACEABILITY-FINAL.md`；UAT62-01/02 诚实 pending 待真实 PG 人工执行，runbook 就绪）
 
 ---
 

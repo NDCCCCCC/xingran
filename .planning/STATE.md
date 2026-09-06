@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.30
 milestone_name: V130 缺陷治理
-status: planning
-last_updated: "2026-09-07T03:08:00+08:00"
-last_activity: 2026-09-07 -- Phase 99 plan 99-06 executed (V130R-08/09 缺口收口: helper 收敛 9 站点 + constants 合并 D-03-10 + base 注释)
+status: closing
+last_updated: "2026-09-07T04:15:00+08:00"
+last_activity: 2026-09-07 -- Phase 101 executed (TESTFILE 入库 + 七 gate 实测 + UAT runbook/回写); 全部 6 phases 执行完毕, push 67c 触发 CI 34056266515
 progress:
   total_phases: 6
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 17
+  completed_phases: 6
+  total_plans: 21
+  completed_plans: 21
+  percent: 100
 ---
 
 # Project State (v1.30 — milestone workstream)
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-09-06) — v1.30 Current Milestone 段
 
 ## Current Position
 
-Phase: 99 (operations 口径统一)
-Plan: 99-06 executed (gap closure; 99-01..05 done + verified gaps_found 2026-09-07)
-Status: Phase 99 缺口收口落地 — 99-06 三任务完成（c1b35be/3cd5b25/83782a5）：BuildDeptRecursiveFilter 9 生产调用站点（verifier 扫描遗漏 server_room 第 9 处，一并迁移）、internal/constants 整体并入 pkg/constants（D-03-10，无同名异值冲突）、base/service.go 注释清零；gate 全绿（build + 4 组包 26/26 ok）
-Last activity: 2026-09-07 — 99-06 执行完成（SUMMARY: .planning/phases/99-operations口径统一/99-06-SUMMARY.md）
+Phase: 101 (收口) — EXECUTED
+Plan: 101-01/101-02 done（4222dfa/a1220d6/0005022/d6d3a86/60e7901）
+Status: 全部 6 phases（96-101）执行完毕。七 gate 实测 6/7 过（coverage 78.32% ≥77.5 / 前端 45 dirs / lint 0 errors 1378 warnings / type-check ✓ / go build+test 0 FAIL）；diff coverage 70.72% 如实记 FAIL（stale origin/main 基线横跨 v1.29+v1.30，2026-09-07 push 67c 已同步，后续 diff 域恢复正常）。UAT62-03 passed 带证据链；UAT62-01/02 诚实 pending（runbook 就绪，待真实 PG 人工执行）。
+Last activity: 2026-09-07 — 101 执行完成 + push 12c37d1（CI 34056266515 盯梢中）+ milestone audit 进行中
 
-Progress: [▓▓░░░░░░░░] 2/6 phases, 6/6 plans (Phase 99)
+Progress: [██████████] 6/6 phases
 
 ## Milestone Reference
 
@@ -65,7 +65,7 @@ Progress: [▓▓░░░░░░░░] 2/6 phases, 6/6 plans (Phase 99)
 
 ### Pending Todos (carry forward, not in v1.30 scope)
 
-- `.planning/todos/pending/operlog-exclude-paths.md` — operlog 白名单配置驱动（RPA heartbeat 日志污染），独立 deferred
+- （无——operlog-exclude-paths 已于 2026-09-07 实证已实现并关闭，见 .planning/todos/completed/）
 
 ### Historical Baseline (v1.29 close, 2026-09-06)
 
@@ -87,7 +87,7 @@ Progress: [▓▓░░░░░░░░] 2/6 phases, 6/6 plans (Phase 99)
 
 ## Next Step
 
-Phase 99 gap closure 已落地（99-06）；建议 re-verification 确认 gaps 关闭，随后 Phase 100（前端契约修复，RESEARCH 进行中）。
+Milestone lifecycle 收尾：v1.30-MILESTONE-AUDIT（进行中）→ CI 34056266515 全绿确认 → complete-milestone 归档 → cleanup。人工验证台账（UAT62-01/02 真实 PG + Phase 100 三项真实环境行为）随完成报告交付用户。
 
 ## Session Continuity
 
