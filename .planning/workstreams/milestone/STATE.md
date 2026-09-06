@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.30
 milestone_name: V130 缺陷治理
-status: completed
-stopped_at: v1.30 ROADMAP（6 phases）/ STATE（双文件）/ REQUIREMENTS traceability 创建完成
+status: executing
+stopped_at: Phase 96 complete (3 plans, all verified)
 last_updated: "2026-09-06T09:44:17.747Z"
-last_activity: 2026-09-06 -- Phase 96 marked complete
+last_activity: 2026-09-06 -- Phase 96 verified and closed
 progress:
   total_phases: 6
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 3
+  completed_plans: 3
+  percent: 16
 ---
 
 # Project State (v1.30 — milestone workstream)
@@ -24,7 +24,7 @@ Config: "mode": "yolo"
 
 **Core value:** 修复 v1.29 期间登记的全部 17 项（18→17，JOBSTAT-01 重定性删除处置）V130-CANDIDATES 缺陷候选 + 闭环 2 个 deferred 小项；所有修复附回归测试，使深度复查发现的问题不再带病运行。
 
-**Current focus:** Phase 96 planning complete（3 plans / 1 wave）— Ready to execute
+**Current focus:** Phase 96 complete — Phase 97 discuss 待开始
 
 ## Current Position
 
@@ -43,7 +43,7 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Completed Phases (v1.30)
 
-（尚无——Phase 96 待规划）
+- Phase 96: 确定性缓存/看板缺陷修复（2026-09-06）
 
 ## Accumulated Context (carried forward)
 
@@ -81,9 +81,9 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Next Step
 
-`/gsd:plan-phase 96` — Phase 96 discuss 完成，规划（workflow.research=true + nyquist_validation=true）
+`/gsd:discuss-phase 97` — Phase 97 discuss 敲定设计决策（V130R-01/02/03 三项）
 
-- Phase 97 是设计决策密度最高 phase（V130R-01/02/03 三项 D-03 决策），规划时需 discuss 敲定方案（分段 context 预算 / 实例标识或 grace period / 业务错误类型体系）
+- Phase 97 是设计决策密度最高 phase（V130R-01/02/03 三项 D-03 决策），discuss 敲定方案（分段 context 预算 / 实例标识或 grace period / 业务错误类型体系）
 - Phase 99 的 V130R-09（分页 clamp 三口径 + 双包合并）同为 D-03 决策项
 - UAT62-01..03 为人工验证项（真实 PG），Phase 101 plan 需含验证步骤清单产出
 

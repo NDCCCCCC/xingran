@@ -37,7 +37,7 @@ update_trigger: v1.30 workstream ROADMAP 创建 — v1.29 内容已随 milestone
 
 ## Phases
 
-- [ ] **Phase 96: 确定性缓存/看板缺陷修复** — CACHEDEF-01..05 五项确定性缺陷 + JOBSTAT-01 死代码删除处置，修复项每项附回归测试
+- [x] **Phase 96: 确定性缓存/看板缺陷修复** — CACHEDEF-01..05 五项确定性缺陷 + JOBSTAT-01 死代码删除处置，修复项每项附回归测试 ✓（2026-09-06）
 - [ ] **Phase 97: config_backup 恢复链加固** — 互斥原子性/实例归属/业务错误码（V130R-01..03，含 3 个 discuss 设计决策）
 - [ ] **Phase 98: 缓存键安全与 base 迁移收尾** — 列表键防碰撞 + 四包 interface{} 残留迁 base 泛型（V130R-04..05）
 - [ ] **Phase 99: operations 口径统一** — Total 软删/换楼乱序/orgId 子部门筛选/分页 clamp 收敛（V130R-06..09，V130R-09 含 discuss）
