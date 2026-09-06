@@ -77,7 +77,7 @@ func (s *workstationService) Statistics(ctx context.Context, params map[string]i
 	var result WorkstationStatisticsResult
 	query := s.db.WithContext(ctx).Model(&models.Workstation{})
 	if orgId := extractStringParam(params, "orgId"); orgId != "" {
-		query = query.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id JOIN sys_dept d ON CAST(d.id AS TEXT) = b.org_id WHERE CAST(f.id AS TEXT) = sys_workstation.floor_id AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors = ?) AND b.deleted_at IS NULL)", orgId, "%,"+orgId, orgId)
+		query = query.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id JOIN sys_dept d ON CAST(d.id AS TEXT) = b.org_id WHERE CAST(f.id AS TEXT) = sys_workstation.floor_id AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors LIKE ? OR d.ancestors = ?) AND b.deleted_at IS NULL)", orgId, "%,"+orgId+",%", "%,"+orgId, orgId)
 	}
 	err := query.
 		Select(
@@ -115,7 +115,7 @@ func (s *workstationService) GetWorkstationDeptOptions(ctx context.Context, orgI
 		FROM sys_dept
 		WHERE deleted_at IS NULL
 		  AND is_external_org = 0
-		  AND ((',' || ancestors || ',') LIKE ('%,' || ? || ',%') OR CAST(id AS TEXT) = ?)
+		  AND ((',' || ancestors || ',') LIKE ('%,' || ? || ',%') OR CAST(id AS TEXT) = ? OR ancestors = ?)
 		UNION ALL
 		SELECT a.dept_id, d.dept_name, true AS is_alias
 		FROM sys_dept_location_alias a
@@ -291,7 +291,7 @@ func (s *workstationService) filterScope(req requests.WorkstationListRequest) ba
 		// - 将两边都转为 text 进行比较，避免类型不匹配
 		// 查询该部门及其所有子部门：ancestors 包含该部门ID，或 ID 等于该部门ID
 		if req.OrgID != "" {
-			db = db.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id JOIN sys_dept d ON CAST(d.id AS TEXT) = b.org_id WHERE CAST(f.id AS TEXT) = sys_workstation.floor_id AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors = ?) AND b.deleted_at IS NULL)", req.OrgID, "%,"+req.OrgID, req.OrgID)
+			db = db.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id JOIN sys_dept d ON CAST(d.id AS TEXT) = b.org_id WHERE CAST(f.id AS TEXT) = sys_workstation.floor_id AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors LIKE ? OR d.ancestors = ?) AND b.deleted_at IS NULL)", req.OrgID, "%,"+req.OrgID+",%", "%,"+req.OrgID, req.OrgID)
 		}
 		return db
 	}
@@ -459,7 +459,7 @@ func (s *workstationService) SearchWorkstationOptions(ctx context.Context, req r
 	}
 	// orgId 部门筛选含子部门:与 List 同款 EXISTS 子查询,避免类型转换问题
 	if req.OrgID != "" {
-		query = query.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id JOIN sys_dept d ON CAST(d.id AS TEXT) = b.org_id WHERE CAST(f.id AS TEXT) = sys_workstation.floor_id AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors = ?) AND b.deleted_at IS NULL)", req.OrgID, "%,"+req.OrgID, req.OrgID)
+		query = query.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id JOIN sys_dept d ON CAST(d.id AS TEXT) = b.org_id WHERE CAST(f.id AS TEXT) = sys_workstation.floor_id AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors LIKE ? OR d.ancestors = ?) AND b.deleted_at IS NULL)", req.OrgID, "%,"+req.OrgID+",%", "%,"+req.OrgID, req.OrgID)
 	}
 
 	if err := query.Order("sys_workstation.workstation_name ASC").Find(&result).Error; err != nil {

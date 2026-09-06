@@ -195,12 +195,12 @@ func (s *infoPointService) filterScope(req requests.InfoPointListRequest) base.S
 					JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id
 					JOIN sys_dept d ON CAST(d.id AS TEXT) = b.org_id
 					WHERE CAST(w.id AS TEXT) = ops_info_points.workstation_id
-					AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors = ?)
+					AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors LIKE ? OR d.ancestors = ?)
 					AND w.deleted_at IS NULL
 					AND f.deleted_at IS NULL
 					AND b.deleted_at IS NULL
 				)
-			`, req.OrgID, "%,"+req.OrgID, req.OrgID)
+			`, req.OrgID, "%,"+req.OrgID+",%", "%,"+req.OrgID, req.OrgID)
 		}
 		return db
 	}
