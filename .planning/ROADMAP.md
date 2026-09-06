@@ -20,7 +20,7 @@ status: planning
 
 **Milestone Goal:** 修复 v1.29 期间登记的全部 18 项 V130-CANDIDATES 缺陷候选 + 闭环 2 个 deferred 小项（4 个未跟踪测试文件入库决策 + 62-HUMAN-UAT 3 场景）。所有修复属行为变更，每项附回归测试；七 gate 全程不倒退。
 
-- [ ] **Phase 96: 确定性缓存/看板缺陷修复** — CACHEDEF-01..05 + JOBSTAT-01 六项确定性缺陷，每项附回归测试
+- [ ] **Phase 96: 确定性缓存/看板缺陷修复** — CACHEDEF-01..05 五项确定性缺陷 + JOBSTAT-01 死代码删除处置，修复项每项附回归测试
 - [ ] **Phase 97: config_backup 恢复链加固** — V130R-01..03（互斥原子性/实例归属/业务错误码；含 3 个 discuss 设计决策）
 - [ ] **Phase 98: 缓存键安全与 base 迁移收尾** — V130R-04..05（列表键防碰撞 + 四包 interface{} 残留迁 base 泛型）
 - [ ] **Phase 99: operations 口径统一** — V130R-06..09（Total 软删/换楼乱序/orgId 子部门筛选/分页 clamp 收敛；V130R-09 含 discuss）

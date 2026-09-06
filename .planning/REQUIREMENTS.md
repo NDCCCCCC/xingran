@@ -9,7 +9,7 @@
 - `.planning/STATE.md` v1.29 Deferred Items（TESTFILE / 62-HUMAN-UAT）
 
 **锁定决策 (v1.30 init):**
-- **D-01 范围**: 18 项全做 + 2 顺带项；不引入新业务功能
+- **D-01 范围**: 18 项全做 + 2 顺带项；不引入新业务功能（2026-09-06 修订：JOBSTAT-01 经 Phase 96 discuss 死代码分析重定性为**删除处置**，修复项 18→17，详见 96-CONTEXT.md）
 - **D-02 回归纪律**: 所有修复属行为变更，每项附回归测试（v1.29 D-05 例外条款同款纪律）；七 gate（go build / go test / 后端 coverage ≥77.5 / 前端 45 dirs / lint / type-check / diff coverage）全程不倒退
 - **D-03 设计决策项**: V130R-01/02/03/09 的技术方案在 phase 规划时敲定
 - **D-04 范围外**: WSNOTICE-01 已提前修复；operlog exclude_paths 继续挂账；前端覆盖率不推新目标
@@ -27,7 +27,7 @@
 
 ### JOBSTAT — 看板统计缺陷
 
-- [ ] **JOBSTAT-01**: `internal/api/v1/job_utils.go:57` — GetJobStatistics 时区日界统一（本地日界 + glebarez +08:00 偏移 + sqlite DATE() UTC 换算叠加致本地 00:00-08:00 窗口 JobLog 计入「昨日」），今日成功/失败看板不再少计；附回归测试（api_v1_tail_80_03_test.go 正午锚定隔离既有）
+- [ ] **JOBSTAT-01**（2026-09-06 Phase 96 discuss 重定性：**死代码删除处置**）: `internal/api/v1/job_utils.go` — 分析结论：GetJobStatistics 无任何生产调用方（仅定义 + api_v1_tail_80_03_test.go 测试引用），源自初始脚手架（ea528c6）从未接线路由；生产看板实际走 `/monitor/jobs/logs/statistics` → `jobLogService.Statistics`（全时段统计，无「今日」语义），「生产看板缺陷」前提不成立。处置：整个 `job_utils.go` 删除（GetJobStatistics + 同为死代码的 FormatDuration）连同对应测试，原时区日界缺陷随文件删除消解，不修不测
 
 ### BACKUPFIX — config_backup 恢复链加固
 
@@ -83,7 +83,7 @@
 | CACHEDEF-03 | Phase 96 | Pending |
 | CACHEDEF-04 | Phase 96 | Pending |
 | CACHEDEF-05 | Phase 96 | Pending |
-| JOBSTAT-01 | Phase 96 | Pending |
+| JOBSTAT-01 | Phase 96 | Delete（重定性删除处置，2026-09-06 discuss） |
 | V130R-01 | Phase 97 | Pending |
 | V130R-02 | Phase 97 | Pending |
 | V130R-03 | Phase 97 | Pending |

@@ -21,16 +21,16 @@ progress:
 
 Config: "mode": "yolo"
 
-**Core value:** 修复 v1.29 期间登记的全部 18 项 V130-CANDIDATES 缺陷候选 + 闭环 2 个 deferred 小项；所有修复附回归测试，使深度复查发现的问题不再带病运行。
+**Core value:** 修复 v1.29 期间登记的全部 17 项（18→17，JOBSTAT-01 重定性删除处置）V130-CANDIDATES 缺陷候选 + 闭环 2 个 deferred 小项；所有修复附回归测试，使深度复查发现的问题不再带病运行。
 
-**Current focus:** v1.30 ROADMAP 已创建（6 phases 96-101 / 22 requirements 全覆盖）— 待 `/gsd:plan-phase 96`
+**Current focus:** Phase 96 discuss 完成（context gathered）— 准备 plan-phase
 
 ## Current Position
 
-Phase: 96 (确定性缓存/看板缺陷修复, roadmap created — Ready to plan)
+Phase: 96 (确定性缓存/看板缺陷修复, context gathered — Ready to plan)
 Plan: —
-Status: Roadmap created
-Last activity: 2026-09-06 — v1.30 ROADMAP/STATE/REQUIREMENTS traceability 创建完成
+Status: Context gathered
+Last activity: 2026-09-06 — Phase 96 discuss 完成（6 项决策 + 3 项非决策锁定；JOBSTAT-01 重定性死代码删除，REQUIREMENTS 账目 18→17 已同步）
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -38,7 +38,7 @@ Progress: [░░░░░░░░░░] 0%
 
 - Roadmap (live): `.planning/workstreams/milestone/ROADMAP.md`；根摘要: `.planning/ROADMAP.md`
 - Requirements: `.planning/REQUIREMENTS.md`（22 项，Traceability 已回填 phase 映射）
-- 锁定决策: D-01 范围（18 项全做 + 2 顺带）/ D-02 回归纪律（每项附回归测试 + 七 gate 不倒退）/ D-03 设计决策项（V130R-01/02/03 → Phase 97、V130R-09 → Phase 99，plan 规划时敲定）/ D-04 范围外 / D-05 Phase 编号 96 起续编
+- 锁定决策: D-01 范围（17 项全做 + 2 顺带；2026-09-06 修订：JOBSTAT-01 重定性删除处置）/ D-02 回归纪律（每项附回归测试 + 七 gate 不倒退）/ D-03 设计决策项（V130R-01/02/03 → Phase 97、V130R-09 → Phase 99，plan 规划时敲定）/ D-04 范围外 / D-05 Phase 编号 96 起续编
 
 ## Completed Phases (v1.30)
 
@@ -80,7 +80,7 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Next Step
 
-`/gsd:plan-phase 96` — Phase 96（确定性缓存/看板缺陷修复）规划（workflow.research=true + nyquist_validation=true）
+`/gsd:plan-phase 96` — Phase 96 discuss 完成，规划（workflow.research=true + nyquist_validation=true）
 
 - Phase 97 是设计决策密度最高 phase（V130R-01/02/03 三项 D-03 决策），规划时需 discuss 敲定方案（分段 context 预算 / 实例标识或 grace period / 业务错误类型体系）
 - Phase 99 的 V130R-09（分页 clamp 三口径 + 双包合并）同为 D-03 决策项

@@ -37,7 +37,7 @@ update_trigger: v1.30 workstream ROADMAP 创建 — v1.29 内容已随 milestone
 
 ## Phases
 
-- [ ] **Phase 96: 确定性缓存/看板缺陷修复** — CACHEDEF-01..05 + JOBSTAT-01 六项确定性缺陷，每项附回归测试
+- [ ] **Phase 96: 确定性缓存/看板缺陷修复** — CACHEDEF-01..05 五项确定性缺陷 + JOBSTAT-01 死代码删除处置，修复项每项附回归测试
 - [ ] **Phase 97: config_backup 恢复链加固** — 互斥原子性/实例归属/业务错误码（V130R-01..03，含 3 个 discuss 设计决策）
 - [ ] **Phase 98: 缓存键安全与 base 迁移收尾** — 列表键防碰撞 + 四包 interface{} 残留迁 base 泛型（V130R-04..05）
 - [ ] **Phase 99: operations 口径统一** — Total 软删/换楼乱序/orgId 子部门筛选/分页 clamp 收敛（V130R-06..09，V130R-09 含 discuss）
@@ -61,23 +61,23 @@ Phase 100 (FEFIX 前端契约；v1.29 Phase 94 apiFactory 基线)           ─�
 
 ### Phase 96: 确定性缓存/看板缺陷修复
 
-**Goal**: 修复 5 项缓存确定性缺陷 + 1 项任务看板时区日界缺陷，使缓存失效真正命中、缓存键不再互相污染、看板统计不再少计；每项附回归测试防倒退。全部为小而确定的修复（方案已知，无设计决策）。
+**Goal**: 修复 5 项缓存确定性缺陷，使缓存失效真正命中、缓存键不再互相污染；另删除 JOBSTAT-01 死代码（`job_utils.go`，2026-09-06 discuss 分析无生产调用方，原时区日界缺陷随删除消解）；每项修复附回归测试防倒退。全部为小而确定的修复（方案已知，无设计决策）。
 
 **Depends on**: Nothing (v1.30 first phase)
 
-**Requirements**: CACHEDEF-01, CACHEDEF-02, CACHEDEF-03, CACHEDEF-04, CACHEDEF-05, JOBSTAT-01
+**Requirements**: CACHEDEF-01, CACHEDEF-02, CACHEDEF-03, CACHEDEF-04, CACHEDEF-05, JOBSTAT-01（删除处置）
 
 **Success Criteria** (what must be TRUE):
 
   1. 缓存失效真正命中：部门树删除/更新后 `InvalidateDeptCache` 命中写键、缓存读回为新数据（CACHEDEF-01）；单条删除配置后 `config:id:<id>` 同步失效，30 分钟窗口内详情接口不再从缓存读回已删配置（CACHEDEF-02）
   2. 缓存键口径修复：duty 月份解析不再恒 0，`GenerateSchedule`/`ManualDuty` 后月度排班缓存失效生效（CACHEDEF-03）；不同 limit 的待办查询各占独立缓存键、互不污染（CACHEDEF-04）
   3. 缓存监控前缀剥离生效：`key[:6]` 切片长度修正（6 字节比 8 字节字面量恒 false）后，含 `xingran:` 前缀的键在缓存监控操作中命中真实键（CACHEDEF-05）
-  4. 任务看板日界统一：本地时区 00:00-08:00 窗口的 JobLog 计入「今日」，今日成功/失败统计不再少计（JOBSTAT-01；正午锚定隔离既有）
-  5. 回归纪律：6 项修复每项附回归测试；`go build ./...` + `go test ./...` 0 失败，七 gate 不倒退
+  4. JOBSTAT-01 死代码删除：`internal/api/v1/job_utils.go`（GetJobStatistics + FormatDuration，均无生产调用方）连同对应测试删除，`go build ./...` 通过，REQUIREMENTS/ROADMAP 账目同步
+  5. 回归纪律：5 项修复每项附回归测试；`go build ./...` + `go test ./...` 0 失败，七 gate 不倒退
 
 **Plans**: TBD
 
-**Notes**: 涉及文件：system/department_cache_impl.go / system/config_cache_impl.go / duty/duty_cache_impl.go / workorder/workorder_cache_impl.go / monitor/cache_service.go / api/v1/job_utils.go——Phase 98 将再触 duty/workorder cache_impl（迁移），本相先修缺陷。
+**Notes**: 涉及文件：system/department_cache_impl.go / system/config_cache_impl.go / duty/duty_cache_impl.go / workorder/workorder_cache_impl.go / monitor/cache_service.go + 删除 api/v1/job_utils.go——Phase 98 将再触 duty/workorder cache_impl（迁移），本相先修缺陷。
 
 ---
 
