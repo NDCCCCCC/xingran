@@ -208,7 +208,11 @@ func (s *workOrderCacheServiceImpl) BatchDelete(ctx context.Context, ids []strin
 
 // GetMyPending 获取当前用户的待办工单（带缓存）
 func (s *workOrderCacheServiceImpl) GetMyPending(ctx context.Context, req *GetMyPendingRequest, userID string) ([]models.WorkOrder, int64, error) {
-	cacheKey := fmt.Sprintf("workorder:my_pending:%s", userID)
+	limit := 0
+	if req != nil {
+		limit = req.Limit
+	}
+	cacheKey := fmt.Sprintf("workorder:my_pending:%s:limit:%d", userID, limit)
 	var result struct {
 		List  []models.WorkOrder
 		Total int64
