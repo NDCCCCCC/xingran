@@ -14,6 +14,7 @@ vi.mock("@/lib/api", async () => {
 vi.mock("@/lib/opsApi", () => ({
   workstationApi: {
     list: vi.fn(() => Promise.resolve({ data: { list: [] } })),
+    getFloorWorkstationsAll: vi.fn(() => Promise.resolve([])),
     updatePositions: vi.fn(() => Promise.resolve({ code: 0 })),
   },
 }));
@@ -42,15 +43,32 @@ describe("useWorkstationView", () => {
     expect(result.current.viewMode).toBe("floorplan");
   });
 
-  it("handleFloorChangeForPlan 设置 selectedFloorForPlan + 触发加载", async () => {
+  it("handleFloorChangeForPlan 设置 selectedFloorForPlan + code→id 解析后走全集端点", async () => {
     const { workstationApi } = await import("@/lib/opsApi");
-    vi.mocked(workstationApi.list).mockClear();
-    const { result } = renderHook(() => useWorkstationView([]), { wrapper });
+    vi.mocked(workstationApi.getFloorWorkstationsAll).mockClear();
+    const { result } = renderHook(
+      () => useWorkstationView([{ id: "floor-uuid-1", code: "F1", name: "一层" }]),
+      { wrapper }
+    );
     await act(async () => {
       result.current.handleFloorChangeForPlan("F1");
     });
     expect(result.current.selectedFloorForPlan).toBe("F1");
-    expect(workstationApi.list).toHaveBeenCalled();
+    expect(workstationApi.getFloorWorkstationsAll).toHaveBeenCalledWith("floor-uuid-1");
+  });
+
+  it("handleFloorChangeForPlan + code 不在 floorOptions（解析落空）→ 清空数据", async () => {
+    const { workstationApi } = await import("@/lib/opsApi");
+    vi.mocked(workstationApi.getFloorWorkstationsAll).mockClear();
+    const { result } = renderHook(
+      () => useWorkstationView([{ id: "floor-uuid-1", code: "F1", name: "一层" }]),
+      { wrapper }
+    );
+    await act(async () => {
+      result.current.handleFloorChangeForPlan("NOPE");
+    });
+    expect(result.current.floorPlanWorkstations).toEqual([]);
+    expect(workstationApi.getFloorWorkstationsAll).not.toHaveBeenCalled();
   });
 
   it("handleFloorChangeForPlan + 空 floorCode → 清空数据", async () => {
@@ -92,14 +110,17 @@ describe("useWorkstationView", () => {
 
   it("viewMode=floorplan + 有 floorOptions + 未选楼层 → 默认加载", async () => {
     const { workstationApi } = await import("@/lib/opsApi");
-    vi.mocked(workstationApi.list).mockClear();
-    const { result } = renderHook(() => useWorkstationView([{ code: "F1", name: "1F" }]), {
-      wrapper,
-    });
+    vi.mocked(workstationApi.getFloorWorkstationsAll).mockClear();
+    const { result } = renderHook(
+      () => useWorkstationView([{ id: "floor-uuid-1", code: "F1", name: "1F" }]),
+      {
+        wrapper,
+      }
+    );
     act(() => result.current.setViewMode("floorplan"));
     await act(async () => {
       await new Promise((r) => setTimeout(r, 10));
     });
-    expect(workstationApi.list).toHaveBeenCalled();
+    expect(workstationApi.getFloorWorkstationsAll).toHaveBeenCalledWith("floor-uuid-1");
   });
 });

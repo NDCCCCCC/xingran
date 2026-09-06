@@ -36,7 +36,7 @@ export interface UseWorkstationDataReturn {
   loadFloorOptions: (orgId?: string, keyword?: string) => Promise<void>;
   loadDeptOptions: () => void;
   loadUserOptions: (deptId?: string) => Promise<void>;
-  loadFloorPlanWorkstations: (floorCode: string) => Promise<WorkstationOps[]>;
+  loadFloorPlanWorkstations: (floorId: string) => Promise<WorkstationOps[]>;
   // 注入式兜底(2026-06-30):编辑回填时若 userId 不在 pageSize:50 列表,
   // 调此方法基于 record.userName 注入一条临时 Option,避免 Select 显示 raw UUID。
   ensureUser: (user: { id: string; username?: string; nickname?: string }) => void;
@@ -150,13 +150,14 @@ export function useWorkstationData(
   );
 
   const loadFloorPlanWorkstations = useCallback(
-    async (floorCode: string): Promise<WorkstationOps[]> => {
-      if (!floorCode) {
+    // V130R-09 D-03-6: 入参按 floorId 语义（该成员无生产调用方，仅测试引用），
+    // 走楼层全集专用端点（无分页，替代 pageSize:1000 List 反模式）
+    async (floorId: string): Promise<WorkstationOps[]> => {
+      if (!floorId) {
         return [];
       }
       try {
-        const result = await workstationApi.list({ floorCode, current: 1, pageSize: 1000 });
-        return result.data?.list || [];
+        return await workstationApi.getFloorWorkstationsAll(floorId);
       } catch (error) {
         handleApiError(error, "加载平面图数据", false);
         return [];

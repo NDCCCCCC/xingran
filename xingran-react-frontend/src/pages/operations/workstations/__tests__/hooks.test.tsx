@@ -130,11 +130,13 @@ describe("useWorkstationView", () => {
     expect(result.current.viewMode).toBe("card");
   });
 
-  it("handleFloorChangeForPlan 设置 selectedFloorForPlan + 拉取数据", async () => {
-    const spy = vi.spyOn(workstationApi, "list").mockResolvedValue({
-      data: { list: [{ id: "w1", positionX: 0, positionY: 0, status: 0 } as any], total: 1 },
-    } as any);
-    const { result } = renderHook(() => useWorkstationView([]));
+  it("handleFloorChangeForPlan 设置 selectedFloorForPlan + code→id 解析拉取全集数据", async () => {
+    const spy = vi
+      .spyOn(workstationApi, "getFloorWorkstationsAll")
+      .mockResolvedValue([{ id: "w1", positionX: 0, positionY: 0, status: 0 } as any]);
+    const { result } = renderHook(() =>
+      useWorkstationView([{ id: "floor-uuid-1", code: "floor-1", name: "一层" }])
+    );
 
     act(() => {
       result.current.handleFloorChangeForPlan("floor-1");
@@ -146,7 +148,7 @@ describe("useWorkstationView", () => {
       await new Promise((r) => setTimeout(r, 50));
     });
 
-    expect(spy).toHaveBeenCalledWith({ floorCode: "floor-1", current: 1, pageSize: 1000 });
+    expect(spy).toHaveBeenCalledWith("floor-uuid-1");
     expect(result.current.floorPlanWorkstations.length).toBeGreaterThan(0);
   });
 

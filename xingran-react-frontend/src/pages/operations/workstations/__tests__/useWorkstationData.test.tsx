@@ -128,7 +128,7 @@ describe("useWorkstationData", () => {
     expect(setUserOptions).toHaveBeenCalledWith([{ id: "u1", username: "alice", nickname: "Al" }]);
   });
 
-  it("loadFloorPlanWorkstations 空 floorCode 返回 []", async () => {
+  it("loadFloorPlanWorkstations 空 floorId 返回 []", async () => {
     const { result } = renderHook(() => useWorkstationData(vi.fn(), vi.fn(), vi.fn(), vi.fn()));
 
     await act(async () => {
@@ -137,10 +137,10 @@ describe("useWorkstationData", () => {
     });
   });
 
-  it("loadFloorPlanWorkstations 有值时调用 api + 返回 list", async () => {
-    const spy = vi.spyOn(workstationApi, "list").mockResolvedValue({
-      data: { list: [{ id: "w1" }], total: 1 },
-    } as any);
+  it("loadFloorPlanWorkstations 有值时走全集端点 + 返回 list", async () => {
+    const spy = vi
+      .spyOn(workstationApi, "getFloorWorkstationsAll")
+      .mockResolvedValue([{ id: "w1" } as any]);
 
     const { result } = renderHook(() => useWorkstationData(vi.fn(), vi.fn(), vi.fn(), vi.fn()));
 
@@ -149,7 +149,7 @@ describe("useWorkstationData", () => {
       expect(list).toEqual([{ id: "w1" }]);
     });
 
-    expect(spy).toHaveBeenCalledWith({ floorCode: "F1", current: 1, pageSize: 1000 });
+    expect(spy).toHaveBeenCalledWith("F1");
   });
 
   it("ensureUser 重复 id 保持原引用", () => {
