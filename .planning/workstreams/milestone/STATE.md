@@ -3,12 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.30
 milestone_name: V130 缺陷治理
 status: planning
-last_updated: "2026-09-06T15:46:44+08:00"
-last_activity: 2026-09-06
+stopped_at: Phase 96 planning complete (3 plans in 1 wave)
+last_updated: "2026-09-06T09:02:32.708Z"
+last_activity: 2026-09-06 -- Phase 96 planning complete
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 0
+  total_plans: 3
   completed_plans: 0
   percent: 0
 ---
@@ -23,14 +24,14 @@ Config: "mode": "yolo"
 
 **Core value:** 修复 v1.29 期间登记的全部 17 项（18→17，JOBSTAT-01 重定性删除处置）V130-CANDIDATES 缺陷候选 + 闭环 2 个 deferred 小项；所有修复附回归测试，使深度复查发现的问题不再带病运行。
 
-**Current focus:** Phase 96 discuss 完成（context gathered）— 准备 plan-phase
+**Current focus:** Phase 96 planning complete（3 plans / 1 wave）— Ready to execute
 
 ## Current Position
 
-Phase: 96 (确定性缓存/看板缺陷修复, context gathered — Ready to plan)
-Plan: —
-Status: Context gathered
-Last activity: 2026-09-06 — Phase 96 discuss 完成（6 项决策 + 3 项非决策锁定；JOBSTAT-01 重定性死代码删除，REQUIREMENTS 账目 18→17 已同步）
+Phase: 96 (确定性缓存/看板缺陷修复, planned — Ready to execute)
+Plan: 3 plans (96-01/02/03), 1 wave
+Status: Ready to execute
+Last activity: 2026-09-06 -- Phase 96 planning complete
 
 Progress: [░░░░░░░░░░] 0%
 
