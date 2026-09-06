@@ -3,7 +3,9 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/device"
@@ -14,6 +16,23 @@ import (
 	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	"gorm.io/gorm"
 )
+
+// isDuplicateActiveRestoreErr 识别同设备活跃任务唯一索引冲突（migration 212，
+// v129-recheck C-1）。双方言：PG unique_violation (SQLSTATE 23505 / duplicate
+// key)；sqlite (glebarez/modernc) "UNIQUE constraint failed"；GORM 侧启用
+// TranslateError 时为 gorm.ErrDuplicatedKey。
+func isDuplicateActiveRestoreErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		return true
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "23505") ||
+		strings.Contains(msg, "duplicate key") ||
+		strings.Contains(msg, "UNIQUE constraint failed")
+}
 
 // ConfigRestoreTaskService 配置恢复任务服务（Phase 93 D-15..D-22/D-34）：
 // 异步恢复的生命周期编排——发起（同设备校验 D-04 + 互斥 D-08 + 建任务）→
@@ -67,7 +86,9 @@ func (s *ConfigRestoreTaskService) StartRestore(ctx context.Context, backupID, d
 		return nil, fmt.Errorf("该设备存在进行中的恢复任务")
 	}
 
-	// ③ 创建任务（pending）
+	// ③ 创建任务（pending）。同设备活跃唯一索引（migration 212，v129-recheck C-1）
+	// 使插入即夺锁：上方 ② 的预查只是快速路径，真正的互斥原子性由索引保证——
+	// 并发窗口内第二个 Create 命中唯一冲突，此处识别并归一为互斥错误。
 	task := &models.ConfigRestoreTask{
 		DeviceID:  deviceID,
 		BackupID:  backupID,
@@ -75,6 +96,9 @@ func (s *ConfigRestoreTaskService) StartRestore(ctx context.Context, backupID, d
 		CreatedBy: createdBy,
 	}
 	if err := s.db.WithContext(ctx).Create(task).Error; err != nil {
+		if isDuplicateActiveRestoreErr(err) {
+			return nil, fmt.Errorf("该设备存在进行中的恢复任务")
+		}
 		return nil, fmt.Errorf("创建恢复任务失败: %w", err)
 	}
 

@@ -18,6 +18,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -32,6 +33,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
+	"github.com/xingran-next/xingran-go-backend/internal/core/db/migrations"
 	"github.com/xingran-next/xingran-go-backend/internal/device"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 )
@@ -385,6 +387,54 @@ func TestCbk93RecoverStalePending(t *testing.T) {
 	task, err := taskSvc.StartRestore(context.Background(), bk.ID, cbk93RestoreDeviceID, "tester")
 	require.NoError(t, err, "mutex must be released after orphaned-pending convergence")
 	cbk93AwaitTerminal(t, taskSvc, task.ID)
+}
+
+// TestCbk93RestoreActiveUniqueIndex — v129-recheck C-1: the partial unique
+// index (migration 212) makes the D-08 same-device mutex atomic — a second
+// active (pending/running) task for the same device is rejected at insert time,
+// while terminal rows never block. Runs the real migration DDL on the sqlite
+// test DB (both dialects share the syntax).
+func TestCbk93RestoreActiveUniqueIndex(t *testing.T) {
+	db := newCbk93RestoreDB(t)
+	require.NoError(t, migrations.Migrate212CreateRestoreTaskActiveUniqueIndex(db))
+
+	bk := cbk7906SeedBackup(t, db, &models.ConfigBackup{
+		DeviceID: cbk93RestoreDeviceID, DeviceName: "r", BackupType: models.BackupTypeManual,
+		StorageType: models.StorageTypeDatabase, ConfigContent: "cfg\n", Version: 1,
+	})
+
+	first := seedRestoreTask93(t, db, cbk93RestoreDeviceID, bk.ID, models.RestoreTaskStatusPending)
+
+	// second active row (pending) for the same device → unique violation
+	dup := &models.ConfigRestoreTask{DeviceID: cbk93RestoreDeviceID, BackupID: bk.ID, Status: string(models.RestoreTaskStatusPending)}
+	err := db.Create(dup).Error
+	require.Error(t, err, "second active task for the same device must hit the unique index")
+	assert.True(t, isDuplicateActiveRestoreErr(err), "conflict must be recognized by the dual-dialect helper, got: %v", err)
+
+	// running counts as active too
+	dupRunning := &models.ConfigRestoreTask{DeviceID: cbk93RestoreDeviceID, BackupID: bk.ID, Status: string(models.RestoreTaskStatusRunning)}
+	require.Error(t, db.Create(dupRunning).Error)
+
+	// terminal rows never block (success coexists with an active task)
+	first.Status = string(models.RestoreTaskStatusSuccess)
+	require.NoError(t, db.Save(first).Error)
+	after := &models.ConfigRestoreTask{DeviceID: cbk93RestoreDeviceID, BackupID: bk.ID, Status: string(models.RestoreTaskStatusPending)}
+	require.NoError(t, db.Create(after).Error, "insert must succeed once no other active task exists")
+
+	// different devices never conflict
+	other := &models.ConfigRestoreTask{DeviceID: "dev-cbk93-other", BackupID: bk.ID, Status: string(models.RestoreTaskStatusPending)}
+	require.NoError(t, db.Create(other).Error)
+}
+
+// TestCbk93IsDuplicateActiveRestoreErr — v129-recheck C-1 helper contract:
+// recognizes both dialect spellings plus GORM translated errors, rejects nil
+// and unrelated errors.
+func TestCbk93IsDuplicateActiveRestoreErr(t *testing.T) {
+	assert.False(t, isDuplicateActiveRestoreErr(nil))
+	assert.False(t, isDuplicateActiveRestoreErr(errors.New("some other failure")))
+	assert.True(t, isDuplicateActiveRestoreErr(errors.New(`ERROR: duplicate key value violates unique constraint "uq_sys_config_restore_task_device_active" (SQLSTATE 23505)`)))
+	assert.True(t, isDuplicateActiveRestoreErr(errors.New("CONSTRAINT UNIQUE: UNIQUE constraint failed: sys_config_restore_task.device_id (2067)")))
+	assert.True(t, isDuplicateActiveRestoreErr(fmt.Errorf("wrapped: %w", gorm.ErrDuplicatedKey)))
 }
 
 // TestCbk93StartRestoreDBFailure — D-28④ (adjusted mechanism): with the task

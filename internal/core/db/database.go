@@ -865,6 +865,10 @@ func (d *Database) AutoMigrate() error {
 		if err := migrations.Migrate211CreateConfigRestoreTask(d.DB); err != nil {
 			applogger.Errorf("配置恢复任务表创建失败 (非阻断,留待下次启动): %v", err)
 		}
+		// v129-recheck C-1: 同设备活跃恢复任务部分唯一索引 (双方言;PG 分支在 advisory-lock 块内执行)
+		if err := migrations.Migrate212CreateRestoreTaskActiveUniqueIndex(d.DB); err != nil {
+			applogger.Errorf("恢复任务活跃唯一索引创建失败 (非阻断,留待下次启动): %v", err)
+		}
 	} else {
 		// sqlite 分支: 规范菜单目录种子 (双方言迁移; PG 分支在上方 advisory-lock 块内执行)
 		if err := migrations.Migrate207SeedCanonicalMenuCatalog(d.DB); err != nil {
@@ -884,6 +888,10 @@ func (d *Database) AutoMigrate() error {
 		// sqlite 分支: Q-11 归一化 sys_menu.parent_id='0' 为 NULL
 		if _, err := migrations.Migrate210NormalizeMenuParentID(d.DB); err != nil {
 			applogger.Errorf("sys_menu parent_id='0' 归一失败 (非阻断,留待下次启动): %v", err)
+		}
+		// v129-recheck C-1: 同设备活跃恢复任务部分唯一索引 (双方言;sqlite 3.8+ 支持 partial index)
+		if err := migrations.Migrate212CreateRestoreTaskActiveUniqueIndex(d.DB); err != nil {
+			applogger.Errorf("恢复任务活跃唯一索引创建失败 (非阻断,留待下次启动): %v", err)
 		}
 		// sqlite-recon-normalized-view (2026-08-18): 补建 reconciliation 三视图
 		// (PG 侧由上方 175/176 迁移块创建 MV+前置 VIEW;sqlite 分支不执行 PG-only
