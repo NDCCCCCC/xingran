@@ -556,16 +556,16 @@ func TestCacheService_GetCacheInfo_ProviderHit_TTLPositive(t *testing.T) {
 	provider.AssertExpectations(t)
 }
 
-// Q1 quirk lock: 前缀永不被剥离 —— "xingran:k" 原样传给 provider。
-func TestCacheService_GetCacheInfo_PrefixNotStripped_IdentityQuirk(t *testing.T) {
+// CACHEDEF-05 fix: 前缀正确剥离 —— "xingran:k" 经 normalizeCacheKeyForService 归一化为 "k" 后传给 provider。
+func TestCacheService_GetCacheInfo_PrefixStripped(t *testing.T) {
 	provider := &mockMonitorCacheProvider{}
 	svc := newTestCacheService(newCacheTestDB(t), provider, nil)
-	provider.On("Get", mock.Anything, "xingran:k").Return("v", nil)
-	provider.On("TTL", mock.Anything, "xingran:k").Return(time.Duration(0), nil)
+	provider.On("Get", mock.Anything, "k").Return("v", nil)
+	provider.On("TTL", mock.Anything, "k").Return(time.Duration(0), nil)
 
 	info, err := svc.GetCacheInfo(context.Background(), "xingran:k")
 	require.NoError(t, err)
-	assert.Equal(t, "xingran:k", info.Key, "quirk Q1: key 应原样保留(前缀剥离永不生效)")
+	assert.Equal(t, "k", info.Key, "CACHEDEF-05: 前缀 xingran: 应被正确剥离")
 	provider.AssertExpectations(t)
 }
 
