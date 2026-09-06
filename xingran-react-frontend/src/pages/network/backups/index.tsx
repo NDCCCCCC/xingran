@@ -89,7 +89,7 @@ const ConfigBackupPage: FC = () => {
   );
   const {
     orderByColumn,
-    isAsc,
+    isAsc: _isAsc, // v129-recheck WR-02: onChange 已改 resolveSorter 同步取值，hook state 不再消费
     handleTableChange: handleBackupSortChange,
     sortOrder: backupSortOrder,
   } = useServerSort<DeviceBackupGroup>({
