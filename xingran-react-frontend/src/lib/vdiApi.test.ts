@@ -1,8 +1,10 @@
 /**
- * vdiApi 端点契约测试 (Phase 83-03)
+ * vdiApi 端点契约测试 (Phase 83-03;Phase 100 V130R-10/11 端态收缩)
  *
- * 锁定:虚拟机 CRUD / VDI 操作 / 用户绑定 / 同步 / 资源组查询 / 账号管理 /
+ * 锁定:虚拟机 CRUD / VDI 操作 / 用户绑定 / 同步 / 资源组查询 /
  * 创建资源枚举 / VDI 服务器管理 各端点 URL 与 snake_case 请求体。
+ * (Phase 100 D-100-11: accounts 族 4 方法已删——后端零实现,运行时 404;
+ *  D-100-1: 幽灵 batch/statistics/searchOptions 已随 spread→pick 消失。)
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -47,14 +49,14 @@ describe("vmApi — 基础 CRUD", () => {
 describe("vmApi — VDI 操作与用户绑定", () => {
   beforeEach(() => mockPost.mockReset());
 
-  it("operate POST /vdi/vms/operate", async () => {
+  it("operate POST /vdi/vms/operate(路由已于 Phase 100 D-100-10 注册)", async () => {
     mockPost.mockResolvedValueOnce(OK);
     const request = { vmId: "vm1", action: "startup" };
     await vmApi.operate(request);
     expect(mockPost).toHaveBeenCalledWith("/vdi/vms/operate", request);
   });
 
-  it("batchOperate POST /vdi/vms/operate(vm_ids + action)", async () => {
+  it("batchOperate POST /vdi/vms/operate(vm_ids + action, D-100-10 补路由后可用)", async () => {
     mockPost.mockResolvedValueOnce(OK);
     await vmApi.batchOperate(["vm1", "vm2"], "shutdown");
     expect(mockPost).toHaveBeenCalledWith("/vdi/vms/operate", {
@@ -115,22 +117,45 @@ describe("vmApi — 资源与创建枚举查询", () => {
   });
 });
 
-describe("vmApi — 账号管理", () => {
-  beforeEach(() => mockPost.mockReset());
+describe("vmApi/vdiServerApi — Phase 100 方法集端态", () => {
+  it("vmApi 不含幽灵 batch/statistics/searchOptions 与已删 accounts 族", () => {
+    const keys = Object.keys(vmApi);
+    expect(keys).not.toContain("batch");
+    expect(keys).not.toContain("statistics");
+    expect(keys).not.toContain("searchOptions");
+    expect(keys).not.toContain("listAccounts");
+    expect(keys).not.toContain("createAccount");
+    expect(keys).not.toContain("resetAccountPassword");
+    expect(keys).not.toContain("deleteAccount");
+  });
 
-  it("listAccounts / createAccount / resetAccountPassword / deleteAccount", async () => {
-    mockPost.mockResolvedValue(OK);
-    await vmApi.listAccounts("vm1");
-    expect(mockPost).toHaveBeenNthCalledWith(1, "/vdi/vms/vm1/accounts", {});
-    const create = { accountName: "u1", password: "p" };
-    await vmApi.createAccount("vm1", create);
-    expect(mockPost).toHaveBeenNthCalledWith(2, "/vdi/vms/vm1/accounts", create);
-    await vmApi.resetAccountPassword("vm1", "acc1", { newPassword: "np" });
-    expect(mockPost).toHaveBeenNthCalledWith(3, "/vdi/vms/vm1/accounts/acc1/reset_password", {
-      newPassword: "np",
-    });
-    await vmApi.deleteAccount("vm1", "acc1");
-    expect(mockPost).toHaveBeenNthCalledWith(4, "/vdi/vms/vm1/accounts/acc1/delete", {});
+  it("方法集 == 后端已注册路由实测存活集(与 invariants POST_CLEANUP_BASELINE 互指)", () => {
+    expect(Object.keys(vmApi).sort()).toEqual([
+      "batchOperate",
+      "bindUser",
+      "create",
+      "delete",
+      "get",
+      "list",
+      "listNetworks",
+      "listResourceGroups",
+      "listResources",
+      "listRunPositions",
+      "listStorages",
+      "listVTPPlatforms",
+      "operate",
+      "sync",
+      "unbindUser",
+      "update",
+    ]);
+    expect(Object.keys(vdiServerApi).sort()).toEqual([
+      "create",
+      "delete",
+      "get",
+      "list",
+      "testConnection",
+      "update",
+    ]);
   });
 });
 

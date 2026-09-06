@@ -203,39 +203,3 @@ export interface VDIServerConfig {
   tenant_id: number;
   status: number;
 }
-
-// ==================== VM 账号类型 ====================
-
-/**
- * VM 账号信息
- */
-export interface VMAccount {
-  id: string;
-  vm_id: string;
-  account_id: string;
-  username: string;
-  account_type: string;
-  os_type: "Windows" | "Linux";
-  is_admin: boolean;
-  is_enabled: boolean;
-  sync_status: "synced" | "pending" | "failed";
-  created_at: string;
-  updated_at: string;
-}
-
-/**
- * 创建账号请求
- */
-export interface CreateAccountRequest {
-  username: string;
-  password: string;
-  os_type: "Windows" | "Linux";
-  is_admin?: boolean;
-}
-
-/**
- * 重置密码请求
- */
-export interface ResetPasswordRequest {
-  new_password: string;
-}

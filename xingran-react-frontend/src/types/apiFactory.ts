@@ -10,7 +10,7 @@
  *
  * 双命名并集依据：
  * - camelCase 四键:ops/knowledge/duty/rpa 域实体（id/createdAt/updatedAt/deletedAt）
- * - snake_case 三键:vdi 域实体实测使用 created_at/updated_at（VirtualMachine/VDIServer/VMAccount），
+ * - snake_case 三键:vdi 域实体实测使用 created_at/updated_at（VirtualMachine/VDIServer），
  *   camelCase-only 排除集对它们无效（Omit 对不存在的键无害,并集即安全）
  * - createdBy/updatedBy:审计人字段,后端从 JWT 落库,前端传值无效
  */

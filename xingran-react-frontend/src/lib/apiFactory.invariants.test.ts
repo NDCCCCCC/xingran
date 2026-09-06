@@ -57,15 +57,14 @@ const HARD_TIER = new Set<string>(HARD_TIER_FILES);
  *     参数 + create 注入 scope:"workstation"，硬套工厂即行为变更）+
  *     workstationDeviceApi.update/delete（全异构对象 setPrimaryAndSave/syncAD 族中
  *     的两处标准形状方法）
- *   - rpaApi.ts 0：对象族已全量接入工厂（94-02）
- *   - vdiApi.ts 1：vmApi.deleteAccount（accounts 子资源族
- *     createAccount/resetAccountPassword/deleteAccount D-08 纯异构保持，
- *     URL 恰为 /delete 后缀形状）
+ *   - rpaApi.ts 0：对象族已全量接入工厂（94-02）；Phase 100 spread→pick 后仍 0
+ *   - vdiApi.ts 0：Phase 100 D-100-11 accounts 族删除后清零
+ *     （原基线 1 = vmApi.deleteAccount，URL 恰为 /delete 后缀形状）；手写 CRUD 模板残留 0
  */
 const HARD_ALLOWED: Record<string, number> = {
   "opsApi.ts": 4,
   "rpaApi.ts": 0,
-  "vdiApi.ts": 1,
+  "vdiApi.ts": 0,
 };
 
 /** 13 个 *Api.ts 写死清单（sorted）：新增/删除 *Api.ts 必须显式更新本测试 */
@@ -285,11 +284,11 @@ describe("apiFactory invariants — src/lib/*Api.ts 手写 CRUD 模板扫描（D
  * D-100-12 register/heartbeat 前端方法已删,后端公开路由保留）。
  * 新增方法（含幽灵 batch/statistics/searchOptions 回流）或私删方法双向即红。
  *
- * 基线数值与 rpaApi.test.ts 末尾 keys 断言互指（两处必须一致）;
+ * 基线数值与 rpaApi.test.ts / vdiApi.test.ts 末尾 keys 断言互指（必须一致）;
  * 对账依据见 .planning/phases/100-frontend-contract-fixes/RECONCILIATION.md。
- * vmApi/vdiServerApi 基线由 Plan 100-02 追加。
  */
 import { aiApi, executionApi, taskApi, workerApi } from "./rpaApi";
+import { vdiServerApi, vmApi } from "./vdiApi";
 
 const POST_CLEANUP_BASELINE: Record<string, string[]> = {
   // taskApi: rpa_router.go:48-53（list/get/create/update/delete 工厂 + execute 手写）
@@ -300,10 +299,38 @@ const POST_CLEANUP_BASELINE: Record<string, string[]> = {
   executionApi: ["cancel", "get", "list", "logs", "statistics"],
   // aiApi: rpa_router.go:101-108
   aiApi: ["analyzeFailure", "decide", "generateScript", "optimizeScript"],
+  // vmApi: vm_router.go:18-43 + D-100-10 补注册的 /operate（accounts 族 D-100-11 已删）
+  vmApi: [
+    "batchOperate",
+    "bindUser",
+    "create",
+    "delete",
+    "get",
+    "list",
+    "listNetworks",
+    "listResourceGroups",
+    "listResources",
+    "listRunPositions",
+    "listStorages",
+    "listVTPPlatforms",
+    "operate",
+    "sync",
+    "unbindUser",
+    "update",
+  ],
+  // vdiServerApi: vdi_server_router.go:14-19 + testConnection（/:id/test）
+  vdiServerApi: ["create", "delete", "get", "list", "testConnection", "update"],
 };
 
 describe("apiFactory invariants — Phase 100 对象 keys 基线（D-100-2/D-100-5）", () => {
-  const exported: Record<string, object> = { taskApi, workerApi, executionApi, aiApi };
+  const exported: Record<string, object> = {
+    taskApi,
+    workerApi,
+    executionApi,
+    aiApi,
+    vmApi,
+    vdiServerApi,
+  };
 
   for (const [name, baseline] of Object.entries(POST_CLEANUP_BASELINE)) {
     it(`${name} 方法集 == 后端路由实测存活集（${baseline.length} 方法,回增/私删双向即红）`, () => {

@@ -174,3 +174,67 @@
 
 - RPA 三页面绕过 apiFactory/xxxApi 层内联 `post` 直调（既有约定债）：`src/pages/operations/rpa/tasks/index.tsx:18`、`src/pages/operations/rpa/executions/index.tsx:18`、`src/pages/operations/rpa/workers/index.tsx:39`。rpaApi 端态保留后页面是否迁移到 xxxApi 层属后续 phase 决策，本相不顺手扩 scope。
 - 后端 `/rpa/workers/register`、`/rpa/workers/:id/heartbeat` 公开路由保留（设计内 Worker 节点端点，D-100-12 明示不动）；admin bundle 不再携带这两个端点的前端包装器。
+
+---
+
+# Plan 100-02 — vdiApi 全族契约对账段（V130R-10/11 收尾）
+
+**对账总量:** 34 方法 → 22 alive（其中 operate/batchOperate 经 D-100-10 补路由后转活）/ 6 ghost（D-100-1 删）/ 6 mismatch（operate/batchOperate 补路由；accounts ×4 删除）
+**后端真相源:** `internal/api/v1/vdi/vm_router.go`（挂载 `internal/api/router.go` vdi JWT 组）+ `vdi_server_router.go:14-19`
+**vdiApi 与 rpaApi 的差异:** vdiApi 有真实生产消费者（VirtualMachineList/Detail/VDIServerConfig），删除逐项核对调用面。
+
+### vmApi（28 方法：16 端态 / 6 ghost / 6 mismatch）
+
+| 方法 | 动词 | 路径 | 后端路由（vm_router.go） | 裁决 | 理由 |
+|------|------|------|--------------------------|------|------|
+| list | POST | /vdi/vms/list | ✓ :18 | alive→保留 | 路由注册；手写 override（VMListParams 签名不同构，Phase 94 D-08 KEEP） |
+| get | POST | /vdi/vms/:id | ✓ :22 | alive→保留 | 路由注册（工厂 pick） |
+| create | POST | /vdi/vms | ✓ :21 | alive→保留 | 路由注册；手写 override（CreateVMRequest 双向不可赋值） |
+| update | POST | /vdi/vms/:id/update | ✓ :23 | alive→保留 | 路由注册（工厂 pick） |
+| delete | POST | /vdi/vms/:id/delete | ✓ :24 | alive→保留 | 路由注册（工厂 pick） |
+| operate | POST | /vdi/vms/operate | ✗→✓ D-100-10 补注册 | mismatch→alive（补路由） | handler/service/测试齐全（vm_handler.go:204、vm_service_impl.go:764），仅缺生产注册的接线缺陷；`RequirePermissions(["vdi:vm:edit"])` 在链，未认证 401 测试锁定 |
+| batchOperate | POST | /vdi/vms/operate | ✗→✓ D-100-10 | mismatch→alive（补路由） | 复用 operate 路径；VirtualMachineList/index.tsx:546 批量开关机/快照 UI 活跃调用，功能由 404 恢复可用 |
+| bindUser | POST | /vdi/vms/:id/bind_user | ✓ :32 | alive→保留 | 路由注册 |
+| unbindUser | POST | /vdi/vms/:id/unbind_user | ✓ :33 | alive→保留 | 路由注册 |
+| sync | POST | /vdi/vms/:id/sync | ✓ :36 | alive→保留 | 路由注册 |
+| listResourceGroups | POST | /vdi/vms/resource-groups | ✓ :19 | alive→保留 | 路由注册 |
+| listResources | POST | /vdi/vms/resources | ✓ :20 | alive→保留 | 路由注册 |
+| listVTPPlatforms | POST | /vdi/vms/vtp-platforms | ✓ :40 | alive→保留 | 路由注册 |
+| listRunPositions | POST | /vdi/vms/run-positions | ✓ :41 | alive→保留 | 路由注册 |
+| listStorages | POST | /vdi/vms/storages | ✓ :42 | alive→保留 | 路由注册 |
+| listNetworks | POST | /vdi/vms/networks | ✓ :43 | alive→保留 | 路由注册 |
+| batch | POST | /vdi/vms/batch | ✗ | ghost→删除（D-100-1） | 工厂幽灵，零调用方 |
+| statistics | POST | /vdi/vms/statistics | ✗ | ghost→删除（D-100-1） | 工厂幽灵，零调用方 |
+| searchOptions | POST | /vdi/vms/dropdown-options | ✗ | ghost→删除（D-100-1） | 工厂幽灵，零调用方 |
+| listAccounts | POST | /vdi/vms/:vmId/accounts | ✗（handler/service 均无） | mismatch→删除（D-100-11） | 后端零实现，运行时 404；调用方 VirtualMachineDetail accounts Tab 同删 |
+| createAccount | POST | /vdi/vms/:vmId/accounts | ✗ | mismatch→删除（D-100-11） | 同上 |
+| resetAccountPassword | POST | /vdi/vms/:vmId/accounts/:accountId/reset_password | ✗ | mismatch→删除（D-100-11） | 同上 |
+| deleteAccount | POST | /vdi/vms/:vmId/accounts/:accountId/delete | ✗ | mismatch→删除（D-100-11） | 同上 |
+
+端态：vmApi 恰 16 方法（上表前 16 行），`apiFactory.invariants.test.ts` POST_CLEANUP_BASELINE 锁定。
+
+### vdiServerApi（6 ghost 工厂实例之外：9 方法 → 6 端态）
+
+| 方法 | 动词 | 路径 | 后端路由（vdi_server_router.go） | 裁决 | 理由 |
+|------|------|------|----------------------------------|------|------|
+| list | POST | /vdi/servers/list | ✓ :14 | alive→保留 | 路由注册（工厂 pick） |
+| get | POST | /vdi/servers/:id | ✓ :16 | alive→保留 | 路由注册（工厂 pick） |
+| create | POST | /vdi/servers | ✓ :15 | alive→保留 | 路由注册（工厂 pick） |
+| update | POST | /vdi/servers/:id/update | ✓ :17 | alive→保留 | 路由注册（工厂 pick） |
+| delete | POST | /vdi/servers/:id/delete | ✓ :18 | alive→保留 | 路由注册（工厂 pick） |
+| testConnection | POST | /vdi/servers/:id/test | ✓ :19 | alive→保留 | 路由注册（手写） |
+| batch | POST | /vdi/servers/batch | ✗ | ghost→删除（D-100-1） | 工厂幽灵，零调用方 |
+| statistics | POST | /vdi/servers/statistics | ✗ | ghost→删除（D-100-1） | 工厂幽灵，零调用方 |
+| searchOptions | POST | /vdi/servers/dropdown-options | ✗ | ghost→删除（D-100-1） | 工厂幽灵，零调用方 |
+
+端态：vdiServerApi 恰 6 方法，invariants POST_CLEANUP_BASELINE 锁定。
+
+### vdi 段守卫
+
+- invariants：HARD_ALLOWED `vdiApi.ts` 1→0（accounts deleteAccount 模板残留随族删除清零）+ POST_CLEANUP_BASELINE 追加 vmApi(16)/vdiServerApi(6)
+- vdiApi.test.ts：keys 端态断言（与 invariants 基线互指）+ 幽灵/accounts 方法 not.toContain 断言
+
+### 用户可见变更（D-100-11 注记）
+
+VM 详情页「账号管理」Tab 移除。该功能后端零实现、运行时 100% 404——移除的是永久损坏的 UI，非功能回退；补齐需从 VDI client 到 handler 的全链路新开发，违反 ROADMAP D-01（不引入新业务功能）。VirtualMachineList 的批量开关机/快照操作（batchOperate）经 D-100-10 补路由后**由 404 恢复可用**。
+

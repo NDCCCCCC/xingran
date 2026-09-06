@@ -14,10 +14,6 @@ vi.mock("@/lib/api", async () => {
 vi.mock("@/lib/vdiApi", () => ({
   vmApi: {
     get: vi.fn(),
-    listAccounts: vi.fn(() => Promise.resolve({ data: { list: [] } })),
-    createAccount: vi.fn(),
-    deleteAccount: vi.fn(),
-    resetAccountPassword: vi.fn(),
   },
 }));
 
@@ -55,30 +51,6 @@ describe("VirtualMachineDetail 渲染", () => {
     // 此用例主要验证 mockResolvedValue 路径可解析(不会因 mock 形状错误抛异常)
   });
 
-  it("listAccounts 失败 → catch 路径", async () => {
-    vi.mocked(vmApi.get).mockResolvedValueOnce({ data: { id: "vm-1" } } as any);
-    vi.mocked(vmApi.listAccounts).mockRejectedValueOnce(new Error("accts"));
-    const { baseElement } = renderDetail();
-    await new Promise((r) => setTimeout(r, 300));
-    expect(baseElement).toBeDefined();
-  });
-
-  it("listAccounts 成功 + 数据填充", async () => {
-    vi.mocked(vmApi.get).mockResolvedValueOnce({ data: { id: "vm-1" } } as any);
-    vi.mocked(vmApi.listAccounts).mockResolvedValueOnce({
-      data: {
-        list: [
-          {
-            id: "a1",
-            username: "root",
-            vmId: "vm-1",
-            status: 0,
-          },
-        ],
-      },
-    } as any);
-    const { baseElement } = renderDetail();
-    await new Promise((r) => setTimeout(r, 300));
-    expect(baseElement).toBeDefined();
-  });
+  // Phase 100 D-100-11: accounts 族已全链路删除（后端零实现,运行时 404）,
+  // 原 listAccounts 成功/失败两用例随账号管理 Tab 一并摘除。
 });
