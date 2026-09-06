@@ -170,7 +170,6 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 		backups.POST("/:id/delete", backupHandler.Delete)
 		backups.POST("/batch-delete", backupHandler.BatchDelete)
 		backups.POST("/diff", backupHandler.Diff)
-		backups.POST("/:id/restore", backupHandler.Restore)
 		// Phase 93: 恢复任务查询双端点（组内继承 4 权限点，D-31 零新权限点）
 		backups.POST("/restore-tasks/list", backupHandler.ListRestoreTasks)
 		backups.POST("/restore-tasks/:id", backupHandler.GetRestoreTask)
@@ -179,6 +178,17 @@ func SetupNetworkRouter(r *gin.RouterGroup, core *core.Core) {
 		backups.GET("/version", backupHandler.GetByVersion)
 		backups.GET("/history", backupHandler.GetHistory)
 		backups.POST("/export", exportHandler.ExportBackups)
+	}
+
+	// ==================== 配置恢复路由（高危下发，单独收口 v129-recheck C-3） ====================
+	// RequirePermissions 为 ANY-of 语义：主组 4 权限点任一即放行，仅持 list 只读权限的
+	// 用户曾可触发恢复。restore 必须单独强制专用权限点（与 ports write 子组同模式）。
+	restores := backups.Group("")
+	restores.Use(middleware.RequirePermissions([]string{
+		"network:backup:restore",
+	}, core))
+	{
+		restores.POST("/:id/restore", backupHandler.Restore)
 	}
 
 	// ==================== 设备发现路由 ====================
