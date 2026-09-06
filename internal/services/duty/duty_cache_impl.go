@@ -134,36 +134,17 @@ func (s *dutyCacheServiceImpl) GetDutyScheduleList(ctx context.Context, req *ser
 
 // GetTodayDuty 获取今日值班人员（带缓存）
 func (s *dutyCacheServiceImpl) GetTodayDuty(ctx context.Context) ([]services.TodayDutyMember, error) {
-	cacheKey := "duty:today"
-	var result []services.TodayDutyMember
-
-	expiration := s.getExpiration("cache.duty.today", 5*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.base.GetTodayDuty(ctx)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return base.GetOrSetJSON(ctx, s.cache, "duty:today",
+		s.getExpiration("cache.duty.today", 5*time.Minute),
+		func() ([]services.TodayDutyMember, error) { return s.base.GetTodayDuty(ctx) })
 }
 
 // GetMonthlyDutySchedule 获取月度值班排班（带缓存）
 func (s *dutyCacheServiceImpl) GetMonthlyDutySchedule(ctx context.Context, year int, month int) (map[string][]services.TodayDutyMember, error) {
 	cacheKey := fmt.Sprintf("duty:monthly:%d:%d", year, month)
-	var result map[string][]services.TodayDutyMember
-
-	expiration := s.getExpiration("cache.duty.monthly", 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.base.GetMonthlyDutySchedule(ctx, year, month)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return base.GetOrSetJSON(ctx, s.cache, cacheKey,
+		s.getExpiration("cache.duty.monthly", 30*time.Minute),
+		func() (map[string][]services.TodayDutyMember, error) { return s.base.GetMonthlyDutySchedule(ctx, year, month) })
 }
 
 func (s *dutyCacheServiceImpl) SwapDuty(ctx context.Context, req *services.SwapDutyRequest, operatorID string) error {
@@ -232,18 +213,9 @@ func (s *dutyCacheServiceImpl) CreateHoliday(ctx context.Context, holiday *model
 // GetHolidayList 获取节假日列表（带缓存）
 func (s *dutyCacheServiceImpl) GetHolidayList(ctx context.Context, year int) ([]models.Holiday, error) {
 	cacheKey := fmt.Sprintf("duty:holidays:%d", year)
-	var result []models.Holiday
-
-	expiration := s.getExpiration("cache.duty.holidays", 60*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.base.GetHolidayList(ctx, year)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return base.GetOrSetJSON(ctx, s.cache, cacheKey,
+		s.getExpiration("cache.duty.holidays", 60*time.Minute),
+		func() ([]models.Holiday, error) { return s.base.GetHolidayList(ctx, year) })
 }
 
 func (s *dutyCacheServiceImpl) UpdateHoliday(ctx context.Context, holiday *models.Holiday, updaterID string) error {

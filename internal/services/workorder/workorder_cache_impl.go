@@ -213,27 +213,21 @@ func (s *workOrderCacheServiceImpl) GetMyPending(ctx context.Context, req *GetMy
 		limit = req.Limit
 	}
 	cacheKey := fmt.Sprintf("workorder:my_pending:%s:limit:%d", userID, limit)
-	var result struct {
+
+	type myPendingResult struct {
 		List  []models.WorkOrder
 		Total int64
 	}
 
-	expiration := s.getExpiration("cache.workorder.my_pending", 2*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		list, total, err := s.base.Base.GetMyPending(ctx, req, userID)
-		if err != nil {
-			return nil, err
-		}
-		return struct {
-			List  []models.WorkOrder
-			Total int64
-		}{
-			List:  list,
-			Total: total,
-		}, nil
-	})
-
+	result, err := base.GetOrSetJSON(ctx, s.cache, cacheKey,
+		s.getExpiration("cache.workorder.my_pending", 2*time.Minute),
+		func() (myPendingResult, error) {
+			list, total, err := s.base.Base.GetMyPending(ctx, req, userID)
+			if err != nil {
+				return myPendingResult{}, err
+			}
+			return myPendingResult{List: list, Total: total}, nil
+		})
 	if err != nil {
 		return nil, 0, err
 	}
@@ -244,19 +238,9 @@ func (s *workOrderCacheServiceImpl) GetMyPending(ctx context.Context, req *GetMy
 
 // GetStatistics 获取工单统计数据（带缓存）
 func (s *workOrderCacheServiceImpl) GetStatistics(ctx context.Context) (*Statistics, error) {
-	cacheKey := "workorder:statistics"
-	var result Statistics
-
-	expiration := s.getExpiration("cache.workorder.statistics", 5*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.statistics.Get(ctx)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return base.GetOrSetJSON(ctx, s.cache, "workorder:statistics",
+		s.getExpiration("cache.workorder.statistics", 5*time.Minute),
+		func() (*Statistics, error) { return s.statistics.Get(ctx) })
 }
 
 // ==================== 缓存失效方法 ====================

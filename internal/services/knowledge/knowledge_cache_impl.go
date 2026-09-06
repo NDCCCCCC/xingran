@@ -88,19 +88,9 @@ func (s *knowledgeCacheServiceImpl) GetArticleStatistics(ctx context.Context) (*
 
 // GetKnowledgeArticle 获取知识库文章详情（带缓存）
 func (s *knowledgeCacheServiceImpl) GetKnowledgeArticle(ctx context.Context, id string) (*models.KnowledgeArticle, error) {
-	cacheKey := fmt.Sprintf("kb:article:%s", id)
-	var result models.KnowledgeArticle
-
-	expiration := s.getExpiration("cache.kb.article", 10*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.base.GetKnowledgeArticle(ctx, id)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return &result, nil
+	return base.GetOrSetJSON(ctx, s.cache, fmt.Sprintf("kb:article:%s", id),
+		s.getExpiration("cache.kb.article", 10*time.Minute),
+		func() (*models.KnowledgeArticle, error) { return s.base.GetKnowledgeArticle(ctx, id) })
 }
 
 // CreateKnowledgeArticle 创建知识库文章（带缓存失效）
@@ -144,18 +134,9 @@ func (s *knowledgeCacheServiceImpl) GetKnowledgeCategoryList(ctx context.Context
 		cacheKey = fmt.Sprintf("%s:status:%d", cacheKey, *req.Status)
 	}
 
-	var result []models.KnowledgeCategory
-
-	expiration := s.getExpiration("cache.kb.category", 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.base.GetKnowledgeCategoryList(ctx, req)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return base.GetOrSetJSON(ctx, s.cache, cacheKey,
+		s.getExpiration("cache.kb.category", 30*time.Minute),
+		func() ([]models.KnowledgeCategory, error) { return s.base.GetKnowledgeCategoryList(ctx, req) })
 }
 
 // GetKnowledgeCategory 获取知识库分类详情（不缓存，查询频率低）
@@ -196,19 +177,9 @@ func (s *knowledgeCacheServiceImpl) DeleteKnowledgeCategory(ctx context.Context,
 
 // GetAllTags 获取所有标签（带缓存）
 func (s *knowledgeCacheServiceImpl) GetAllTags(ctx context.Context) ([]models.KnowledgeTag, error) {
-	cacheKey := "kb:tags:all"
-	var result []models.KnowledgeTag
-
-	expiration := s.getExpiration("cache.kb.tags", 30*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.base.GetAllTags(ctx)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return base.GetOrSetJSON(ctx, s.cache, "kb:tags:all",
+		s.getExpiration("cache.kb.tags", 30*time.Minute),
+		func() ([]models.KnowledgeTag, error) { return s.base.GetAllTags(ctx) })
 }
 
 // GetTagByName 根据名称获取标签（不缓存，内部使用）

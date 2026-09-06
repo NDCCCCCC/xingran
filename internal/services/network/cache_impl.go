@@ -265,53 +265,23 @@ func (s *cacheServiceImpl) UpdateStatusBatch(ctx context.Context, ids []string, 
 
 // GetDeviceStatistics 获取设备统计数据（带缓存）
 func (s *cacheServiceImpl) GetDeviceStatistics(ctx context.Context) (map[string]interface{}, error) {
-	cacheKey := "network_device:statistics"
-	var result map[string]interface{}
-
-	expiration := s.getExpiration("cache.network_device.statistics", 3*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.base.GetDeviceStatistics(ctx)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return base.GetOrSetJSON(ctx, s.cache, "network_device:statistics",
+		s.getExpiration("cache.network_device.statistics", 3*time.Minute),
+		func() (map[string]interface{}, error) { return s.base.GetDeviceStatistics(ctx) })
 }
 
 // GetDevicesByDept 获取指定部门的设备列表（带缓存）
 func (s *cacheServiceImpl) GetDevicesByDept(ctx context.Context, deptID string) ([]models.NetworkDevice, error) {
-	cacheKey := fmt.Sprintf("network_device:dept:%s", deptID)
-	var result []models.NetworkDevice
-
-	expiration := s.getExpiration("cache.network_device.dept", 5*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.base.GetDevicesByDept(ctx, deptID)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return base.GetOrSetJSON(ctx, s.cache, fmt.Sprintf("network_device:dept:%s", deptID),
+		s.getExpiration("cache.network_device.dept", 5*time.Minute),
+		func() ([]models.NetworkDevice, error) { return s.base.GetDevicesByDept(ctx, deptID) })
 }
 
 // GetDevicesByCredential 获取使用指定凭证的设备列表（带缓存）
 func (s *cacheServiceImpl) GetDevicesByCredential(ctx context.Context, credentialID string) ([]models.NetworkDevice, error) {
-	cacheKey := fmt.Sprintf("network_device:credential:%s", credentialID)
-	var result []models.NetworkDevice
-
-	expiration := s.getExpiration("cache.network_device.credential", 5*time.Minute)
-
-	err := s.cache.GetOrSet(ctx, cacheKey, &result, expiration, func() (interface{}, error) {
-		return s.base.GetDevicesByCredential(ctx, credentialID)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return base.GetOrSetJSON(ctx, s.cache, fmt.Sprintf("network_device:credential:%s", credentialID),
+		s.getExpiration("cache.network_device.credential", 5*time.Minute),
+		func() ([]models.NetworkDevice, error) { return s.base.GetDevicesByCredential(ctx, credentialID) })
 }
 
 // ==================== 缓存失效方法 ====================
