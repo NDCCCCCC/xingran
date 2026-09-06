@@ -68,10 +68,11 @@ func (s *configCacheService) queryAllConfigs(ctx context.Context) ([]models.Conf
 }
 
 // InvalidateConfigCache 失效配置缓存
-func (s *configCacheService) InvalidateConfigCache(ctx context.Context, configKey string) error {
+func (s *configCacheService) InvalidateConfigCache(ctx context.Context, id string, configKey string) error {
 	keys := []string{
 		"config:all",
 		fmt.Sprintf("config:key:%s", configKey),
+		fmt.Sprintf("config:id:%s", id),
 	}
 	base.Invalidate(ctx, s.cache, keys, "CONFIG")
 	return nil
@@ -114,7 +115,7 @@ func (s *configCacheService) Delete(ctx context.Context, id string) error {
 	}
 
 	// 清除缓存
-	return s.InvalidateConfigCache(ctx, config.ConfigKey)
+	return s.InvalidateConfigCache(ctx, id, config.ConfigKey)
 }
 
 // BatchDelete 批量删除配置（带缓存失效）

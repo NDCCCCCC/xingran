@@ -147,7 +147,7 @@ func TestConfigCache_InvalidateConfigCache(t *testing.T) {
 	svc := newConfigCacheService(t, db, cache)
 
 	cs := svc.(*configCacheService)
-	require.NoError(t, cs.InvalidateConfigCache(context.Background(), "sys.k1"))
+	require.NoError(t, cs.InvalidateConfigCache(context.Background(), "test-id-123", "sys.k1"))
 }
 
 // TC4: InvalidateAllConfigCache - no panic
