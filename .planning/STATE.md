@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.30
 milestone_name: V130 缺陷治理
-status: closing
-last_updated: "2026-09-07T04:15:00+08:00"
-last_activity: 2026-09-07 -- Phase 101 executed (TESTFILE 入库 + 七 gate 实测 + UAT runbook/回写); 全部 6 phases 执行完毕, push 67c 触发 CI 34056266515
+status: shipped
+last_updated: "2026-09-07T04:40:00+08:00"
+last_activity: 2026-09-07 -- v1.30 SHIPPED（CI 34057232365 全绿，audit tech_debt，归档完成）
 progress:
   total_phases: 6
   completed_phases: 6
@@ -87,7 +87,9 @@ Progress: [██████████] 6/6 phases
 
 ## Next Step
 
-Milestone lifecycle 收尾：v1.30-MILESTONE-AUDIT（进行中）→ CI 34056266515 全绿确认 → complete-milestone 归档 → cleanup。人工验证台账（UAT62-01/02 真实 PG + Phase 100 三项真实环境行为）随完成报告交付用户。
+v1.30 已 SHIPPED。遗留两件：
+1. **人工验证台账**（用户执行）：UAT62-01/02（真实 PG，runbook `.planning/phases/101-closeout-uat-audit/UAT-RUNBOOK.md`）+ Phase 100 三项真实环境验证（见根 ROADMAP Progress 段台账）
+2. **下一 milestone**：就绪后 `/gsd:new-milestone`（diff coverage 65 行补测已入 v1.30 audit 债台账，可作下一 milestone 候选项）
 
 ## Session Continuity
 

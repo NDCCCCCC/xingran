@@ -1,5 +1,27 @@
 # Milestones
 
+## v1.30 V130 缺陷治理 (Defect Remediation) — ✅ SHIPPED 2026-09-07
+
+**Phases**: 6 (Phases 96-101) | **Plans**: 21 | **Status**: shipped
+
+**Stats**: 2026-09-06 → 2026-09-07（2 天）· CI 全绿（run 34057232365，HEAD 0733d7e）
+
+**Delivered**:
+
+- Phase 96 确定性缓存/看板缺陷修复：CACHEDEF-01..05 五项缓存失效/键污染/前缀剥离修复 + JOBSTAT-01 死代码删除，每项附回归测试（3 plans）
+- Phase 97 config_backup 恢复链加固：V130R-01 两段 context 预算（超时 worker 停推）/ V130R-02 grace period（多实例不误杀）/ V130R-03 BusinessError 400/409 语义化（3 plans；会话崩溃后 recovery 落库 2dd46a3，见 RECOVERY-NOTE）
+- Phase 98 缓存键安全与 base 迁移收尾：V130R-04 键值转义防碰撞（EscapeCacheKeyValue）+ V130R-05 四包 interface{} 残留迁 base.GetOrSetJSON[T]（2 plans；helper 补遗 2b15574）
+- Phase 99 operations 口径统一：V130R-06 Total 软删过滤 / V130R-07 换楼乐观锁 / V130R-08 BuildDeptRecursiveFilter 收敛 9 站点（含 verifier 遗漏的 server_room）/ V130R-09 分页三口径收敛单一权威 + CAD 全集专用端点 + internal/constants 并入 pkg/constants（D-03-10）（6 plans 含 99-06 gap closure；verifier gaps_found → 全闭）
+- Phase 100 前端契约修复：rpaApi 116→17 存活端态 + RECONCILIATION 台账 / /vdi/vms/operate 补注册 + accounts 死 Tab 全链删除 / 下载链收敛 download.ts + JSON 错误体检测 + invariants 递归化 15 文件（3 plans；100-VERIFICATION 6/6 SC + gates 独立实跑全绿）
+- Phase 101 收口：TESTFILE-01 四测试文件入库（含 Linux CI 编译修复 0733d7e）+ 七 gate 实测（coverage 78.32% / 前端 45 dirs / lint 0 errors 1378 warnings；diff coverage 70.72% FAIL 如实记录——stale 基线测量伪影 + 65 行已入债台账）+ UAT62-03 passed 全证据链 + UAT62-01/02 诚实 pending（UAT-RUNBOOK 就绪）+ 22/22 TRACEABILITY-FINAL
+- Audit: [v1.30-MILESTONE-AUDIT.md](milestones/v1.30-MILESTONE-AUDIT.md) — verdict tech_debt（交付成立，残留为已登记债 + 人工验证项）
+
+**Known deferred items at close**:
+
+- UAT62-01/02（真实 PG 人工验证，runbook：`.planning/phases/101-closeout-uat-audit/UAT-RUNBOOK.md`）
+- Phase 100 三项真实环境验证（VDI 批量操作 e2e / 浏览器下载体验 / VM Tab 视觉走查，见 100-VERIFICATION）
+- diff coverage 65 行未覆盖补测（Phase 96-99 修复本体，债台账在 v1.30-MILESTONE-AUDIT）
+
 ## v1.29 技术债治理 (Tech Debt Governance) — ✅ SHIPPED 2026-09-06
 
 **Phases**: 7 (Phases 89-95) | **Plans**: 26 | **Tasks**: 39 | **Status**: shipped
