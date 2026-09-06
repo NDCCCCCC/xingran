@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
+	"github.com/xingran-next/xingran-go-backend/internal/constants"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"gorm.io/gorm"
@@ -301,17 +302,17 @@ func (s *workstationService) filterScope(req requests.WorkstationListRequest) ba
 // floorCode 白名单守卫保留在 scope 闭包外（floorTable 为编译期常量，
 // validateTableName(floorTable) 恒真——防御死分支按原样保留，错误路径逐字一致）。
 //
-// 分页切换语义（有意收紧，Task 3 checkpoint 确认）：typed GetPagination 相比迁移前
-// map 路径的 clamp 语义（上限 MaxOptionsPageSize=10000、current 不守卫）——
-// pageSize 上限 10000→100（MaxListPageSize）、current<1 回退 1（修复迁移前
-// current=0 产生负 offset 的 latent bug）、下限 10 与默认值不变。
+// 分页口径（v129-recheck C-4 修正）：恢复迁移前 map 路径的 MaxOptionsPageSize=10000
+// 上限——平面图/3D 消费方以 pageSize:1000 请求楼层全集，100 上限会静默截断
+// >100 工位的楼层；current<1 回退 1 守卫保留（修复迁移前负 offset 隐患）、
+// 下限 10 与默认值不变。
 func (s *workstationService) List(ctx context.Context, req requests.WorkstationListRequest) (*PageResult, error) {
 	// 验证表名是否在白名单中，防止 SQL 注入（保留迁移前守卫与错误文案）
 	if req.FloorCode != "" && !validateTableName(floorTable) {
 		return nil, fmt.Errorf("invalid table name: %s", floorTable)
 	}
 
-	current, pageSize := req.GetPagination()
+	current, pageSize := req.GetPaginationWithMax(constants.MaxOptionsPageSize)
 	return s.repo.List(ctx, base.PageParams{Current: current, PageSize: pageSize},
 		s.filterScope(req),
 		s.joinScope(),

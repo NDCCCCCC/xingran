@@ -14,6 +14,16 @@ type PaginationParams struct {
 
 // GetPagination 获取分页参数，应用默认值和限制
 func (p *PaginationParams) GetPagination() (current, pageSize int) {
+	return p.GetPaginationWithMax(constants.MaxListPageSize)
+}
+
+// GetPaginationWithMax 获取分页参数并按调用方指定的上限钳制 pageSize。
+//
+// v129-recheck C-4：workstation List 的消费方（CAD 平面图编辑器 / 3D 视图）
+// 以 pageSize:1000 请求楼层全集，迁移时误用 MaxListPageSize=100 上限导致
+// >100 工位的楼层静默截断。恢复迁移前 MaxOptionsPageSize=10000 口径
+// （current<1 守卫保留——修复迁移前 current=0 产生负 offset 的隐患）。
+func (p *PaginationParams) GetPaginationWithMax(maxPageSize int) (current, pageSize int) {
 	current = p.Current
 	if current < 1 {
 		current = constants.DefaultCurrent
@@ -22,8 +32,8 @@ func (p *PaginationParams) GetPagination() (current, pageSize int) {
 	if pageSize < constants.MinPageSize {
 		pageSize = constants.DefaultPageSize
 	}
-	if pageSize > constants.MaxListPageSize {
-		pageSize = constants.MaxListPageSize
+	if pageSize > maxPageSize {
+		pageSize = maxPageSize
 	}
 	return current, pageSize
 }
