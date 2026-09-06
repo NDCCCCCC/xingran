@@ -313,20 +313,28 @@ func (s *ConfigRestoreTaskService) ListRestoreTasks(ctx context.Context, current
 // RecoverStaleRunningTasks 启动收敛：进程崩溃/重启残留的 running 任务一次性
 // 置 failed（A5 discretion 方案①——状态机自洽性收口，防互斥锁死，非清理 cron，
 // 不违 D-20）。由装配点启动时调用一次。
+//
+// v129-recheck C-2：pending 一并收敛——StartRestore 的认领 goroutine 仅存在于
+// 进程内存（:77 提交 pending 后才启动），重启后残留 pending 永远无人认领，
+// 而互斥查询（:61-63）把 pending 计为进行中，遗留即永久锁死该设备恢复
+// （D-34 无取消端点）。收敛为 failed 语义正确。
 func (s *ConfigRestoreTaskService) RecoverStaleRunningTasks(ctx context.Context) {
 	res := s.db.WithContext(ctx).
 		Model(&models.ConfigRestoreTask{}).
-		Where("status = ?", string(models.RestoreTaskStatusRunning)).
+		Where("status IN (?)", []models.RestoreTaskStatus{
+			models.RestoreTaskStatusPending,
+			models.RestoreTaskStatusRunning,
+		}).
 		Updates(map[string]interface{}{
 			"status":        string(models.RestoreTaskStatusFailed),
 			"error_message": "服务重启，任务中断",
 			"completed_at":  time.Now(),
 		})
 	if res.Error != nil {
-		applogger.Errorf("[配置恢复] 收敛残留 running 任务失败: %v", res.Error)
+		applogger.Errorf("[配置恢复] 收敛残留任务失败: %v", res.Error)
 		return
 	}
 	if res.RowsAffected > 0 {
-		applogger.Infof("[配置恢复] 启动收敛: %d 个残留 running 任务已置 failed", res.RowsAffected)
+		applogger.Infof("[配置恢复] 启动收敛: %d 个残留 pending/running 任务已置 failed", res.RowsAffected)
 	}
 }

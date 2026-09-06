@@ -359,6 +359,34 @@ func TestCbk93RecoverStaleRunning(t *testing.T) {
 	cbk93AwaitTerminal(t, taskSvc, task.ID) // let the goroutine finish before DB teardown
 }
 
+// TestCbk93RecoverStalePending — v129-recheck C-2: a pending task orphaned by a
+// crash (StartRestore committed the row but the claim goroutine never ran) can
+// never be claimed after restart, yet the D-08 mutex counts pending as active —
+// convergence must fail it too, or the device is locked out forever (D-34 has
+// no cancel endpoint).
+func TestCbk93RecoverStalePending(t *testing.T) {
+	db := newCbk93RestoreDB(t)
+	_, taskSvc := newCbk93RestoreChain(db, nil)
+
+	bk := cbk7906SeedBackup(t, db, &models.ConfigBackup{
+		DeviceID: cbk93RestoreDeviceID, DeviceName: "r", BackupType: models.BackupTypeManual,
+		StorageType: models.StorageTypeDatabase, ConfigContent: "cfg\n", Version: 1,
+	})
+	orphan := seedRestoreTask93(t, db, cbk93RestoreDeviceID, bk.ID, models.RestoreTaskStatusPending)
+
+	taskSvc.RecoverStaleRunningTasks(context.Background())
+
+	var got models.ConfigRestoreTask
+	require.NoError(t, db.Where("id = ?", orphan.ID).First(&got).Error)
+	assert.Equal(t, string(models.RestoreTaskStatusFailed), got.Status, "orphaned pending must converge to failed")
+	assert.Contains(t, got.ErrorMessage, "服务重启")
+
+	// mutex released → a fresh StartRestore is accepted
+	task, err := taskSvc.StartRestore(context.Background(), bk.ID, cbk93RestoreDeviceID, "tester")
+	require.NoError(t, err, "mutex must be released after orphaned-pending convergence")
+	cbk93AwaitTerminal(t, taskSvc, task.ID)
+}
+
 // TestCbk93StartRestoreDBFailure — D-28④ (adjusted mechanism): with the task
 // table missing, StartRestore fails at the create-task step and leaves no
 // half-written state (no goroutine is spawned).
