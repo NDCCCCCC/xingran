@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.30
 milestone_name: V130 缺陷治理
 status: planning
-last_updated: "2026-09-06T17:22:01+08:00"
-last_activity: 2026-09-06 -- Phase 96 plan 01 completed (CACHEDEF-01..04 + regression tests)
+last_updated: "2026-09-06T17:30:00+08:00"
+last_activity: 2026-09-06 -- Phase 96 plan 02 completed (CACHEDEF-05 fix + regression test)
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 1
-  completed_plans: 1
-  percent: 1
+  total_plans: 2
+  completed_plans: 2
+  percent: 2
 ---
 
 # Project State (v1.30 — milestone workstream)
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-09-06) — v1.30 Current Milestone 段
 ## Current Position
 
 Phase: 96 (确定性缓存/看板缺陷修复)
-Plan: 01 (completed)
-Status: Phase 96 plan 01 done — 4/4 CACHEDEF fixed + regression tests
-Last activity: 2026-09-06 — Phase 96 plan 01 completed (CACHEDEF-01..04)
+Plan: 02 (completed)
+Status: Phase 96 plan 02 done — CACHEDEF-05 fixed + regression test
+Last activity: 2026-09-06 — Phase 96 plan 02 completed (CACHEDEF-05 fix)
 
-Progress: [▓░░░░░░░░░] 1/6 phases, 1/1 plans
+Progress: [▓░░░░░░░░░] 1/6 phases, 2/1 plans
 
 ## Milestone Reference
 
