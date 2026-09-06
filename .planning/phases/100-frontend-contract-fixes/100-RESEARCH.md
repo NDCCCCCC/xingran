@@ -516,20 +516,12 @@ export async function downloadFilePost(
 | A4 | 测试基线「554 文件 / 3800 tests」「lint 1389 warnings」沿用 CONTEXT.md 记载，未在本会话实跑复核 | §4.2 | 低——gate 是「不倒退」，以执行时实跑值为准 |
 | A5 | frontend axios baseURL 前缀为 `/api/v1`，与后端挂载组前缀一致（由 download.ts:24、networkApi.ts:15 与 api_v1_tail 测试三方互证） | §2.1 | 极低 |
 
-## 12. Open Questions
+## 12. Open Questions (RESOLVED 2026-09-06 — 裁决见 100-CONTEXT.md「RESEARCH 裁决补充」)
 
-1. **rpaApi.ts 端态：整文件删除（A）还是裁至 alive 集（B）？**
-   - What we know: 生产消费者为零；19 alive 方法全部零调用方。
-   - What's unclear: 用户是否想保留「已对齐路由」的 rpaApi 作为未来 RPA 功能扩展的契约骨架。
-   - Recommendation: 默认 B（D-100-2 守卫措辞的最小解释成本）；如用户确认 RPA 管理页近期不会接 rpaApi，A 更彻底。
-2. **`/vdi/vms/operate` 补路由 vs 删批量操作？**
-   - What we know: handler+service+测试齐全、前端批量操作 UI 活跃调用（List:546）、补注册 1 行 + RequirePermissions。
-   - Recommendation: 补路由（证据链完整，是 D-100-3 例外条款的正例）；需用户点头（新增后端写端点）。
-3. **VM accounts Tab 删除的用户确认**
-   - What we know: 运行时 100% 404（后端零实现），UI 已坏。
-   - Recommendation: 删（连同 4 方法 + Detail 页 accounts Tab + 对应测试 mock）；在 plan 里作为用户可见变更显式登记 OVR。
-4. **workerApi.register/heartbeat（alive、零 UI 调用方、Worker 节点专用公开端点）去留？**
-   - Recommendation: 按 D-100-3 字面保留（alive=路由存在）；planner 可选把这两个从 admin 前端 bundle 摘除（它们是给 Worker agent 的公开端点，出现在管理端 API 客户端里无意义且扩大信息暴露面）。
+1. **rpaApi.ts 端态：整文件删除（A）还是裁至 alive 集（B）？** — **RESOLVED: B（D-100-9）**，裁至 alive 集（后按 D-100-12 再减 register/heartbeat = 17 端态）；页面内联 post 记 observed debt。
+2. **`/vdi/vms/operate` 补路由 vs 删批量操作？** — **RESOLVED: 补路由（D-100-10）**，后端实现齐全仅缺注册，属接线缺陷修复非新功能。
+3. **VM accounts Tab 删除的用户确认** — **RESOLVED: 删（D-100-11）**，运行时 100% 404 保留即反模式；OVR 台账随 RECONCILIATION.md 登记。
+4. **workerApi.register/heartbeat（alive、零 UI 调用方、Worker 节点专用公开端点）去留？** — **RESOLVED: 前端方法删除（D-100-12）**，后端公开路由保留不动。
 
 ## 13. Environment Availability
 
