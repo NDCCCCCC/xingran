@@ -1,83 +1,111 @@
----
-milestone: v1.27
-milestone_name: 后端测试覆盖率优秀 II
-defined: 2026-08-23
-sources:
+# Requirements: XingRan-Next — Milestone v1.30 V130 缺陷治理
 
-  - .planning/research/v1.27-stack.md
-  - .planning/research/v1.27-features.md
-  - .planning/research/v1.27-architecture.md
-  - .planning/research/v1.27-pitfalls.md
+**Defined:** 2026-09-06
+**Core Value:** 修复 v1.29 期间登记的全部 18 项 V130-CANDIDATES 缺陷候选 + 闭环 2 个 deferred 小项；所有修复附回归测试，使深度复查发现的问题不再带病运行。
 
----
+**输入来源:**
+- `.planning/milestones/v1.29-REQUIREMENTS.md` V130-CANDIDATES 段（CACHEDEF-01..05 + JOBSTAT-01）
+- `.planning/milestones/v1.29-DEEP-RECHECK.md`（V130R-01..12）
+- `.planning/STATE.md` v1.29 Deferred Items（TESTFILE / 62-HUMAN-UAT）
 
-# Milestone v1.27 Requirements
+**锁定决策 (v1.30 init):**
+- **D-01 范围**: 18 项全做 + 2 顺带项；不引入新业务功能
+- **D-02 回归纪律**: 所有修复属行为变更，每项附回归测试（v1.29 D-05 例外条款同款纪律）；七 gate（go build / go test / 后端 coverage ≥77.5 / 前端 45 dirs / lint / type-check / diff coverage）全程不倒退
+- **D-03 设计决策项**: V130R-01/02/03/09 的技术方案在 phase 规划时敲定
+- **D-04 范围外**: WSNOTICE-01 已提前修复；operlog exclude_paths 继续挂账；前端覆盖率不推新目标
+- **D-05 Phase 编号**: 从 Phase 96 起续编
 
-**Goal:** 加权平均覆盖率 55.60% → **≥70%**(收掉 v1.26 SC-a 缺口 6287 stmts,含数学修正后的 TAIL 长尾),5 结构阻塞包 + 长尾包逐一 ≥70%,15 项 QUIRK 全部修复。
+## v1.30 Requirements
 
-**数学校验基线**(2026-08-23 gate 实测):24269/43652 = 55.60%;70% 需 30556;缺口 6287 = BLOCK ~2402 + TAIL ~3885。不含 TAIL 目标必失守(v1.26 SC-a 覆辙预防)。
+### CACHEDEF — 缓存缺陷修复
 
-## 基建 (INFRA)
+- [ ] **CACHEDEF-01**: `system/department_cache_impl.go:74-102` — `GetSelectDataWithCache` 写键与 `InvalidateDeptCache` 失效模式统一（现写裸键 `"dept:tree"` 与 `cache:` 前缀模式永不匹配），失效真正命中；附回归测试
+- [ ] **CACHEDEF-02**: `system/config_cache_impl.go:71-118` — 单条 Delete 失效补齐 `config:id:<id>`，已删配置不再能经详情接口从缓存读回（30min 窗口消除，`config_router.go:17` 生产可达）；附回归测试
+- [ ] **CACHEDEF-03**: `duty/duty_cache_impl.go:333-344` — `parseInt` 的 `len(s) >= 4` 前置修复（2 字符月份切片不再恒返回 0），`GenerateSchedule`/`ManualDuty` 后月度排班缓存失效生效（`duty_handler.go:325` 生产可达）；附回归测试
+- [ ] **CACHEDEF-04**: `workorder/workorder_cache_impl.go:207-234` — 待办缓存键补入 Limit 维度，不同 limit 不再共享同一缓存；附回归测试
+- [ ] **CACHEDEF-05**: `monitor/cache_service.go:766-771` — `key[:6] == "xingran:"` 切片长度修正（6 字节比 8 字节字面量恒 false），前缀剥离真正生效；附回归测试
 
-- [x] **INFRA-01**: 引入 miniredis/v2 (v2.38+) 与 httpmock (v1.4.x) 两个 test-only 依赖(MIT;redismock 硬淘汰——锁死 go-redis v8;testcontainers 不引入——Windows 无 Docker 断裂本地测试)。miniredis 三坑防护:TTL 用 FastForward / INFO 断言降级 / go-redis v9.5+ CLIENT SETINFO 兼容
-- [x] **INFRA-02**: ScrapliWrapper 新增可注入 Driver 工厂入口(小重构,生产路径不变;pitfalls 实证 StandardTransport 即 x/crypto/ssh v0.46 零新增模块,fake server 需输出 prompt)
-- [x] **INFRA-03**: addomain 走 LDAPClientIface 扩展 stub 主推线(零新依赖);嵌入式 vjeantet/ldapserver 停更风险不担
-- [x] **INFRA-04**: agent 子进程 stub 统一 os/exec TestHelperProcess re-exec 模式(替换 exec.Command("echo") Windows/CI 分歧根源)
-- [x] **INFRA-05**: 测试隔离治理:沿用 e2e_helpers A1(ForTesting 后缀+无 build tag) + AST 守护测试(仿 status_constants_test.go)
+### JOBSTAT — 看板统计缺陷
 
-## 阻塞包攻破 (BLOCK)
+- [ ] **JOBSTAT-01**: `internal/api/v1/job_utils.go:57` — GetJobStatistics 时区日界统一（本地日界 + glebarez +08:00 偏移 + sqlite DATE() UTC 换算叠加致本地 00:00-08:00 窗口 JobLog 计入「昨日」），今日成功/失败看板不再少计；附回归测试（api_v1_tail_80_03_test.go 正午锚定隔离既有）
 
-- [x] **BLOCK-01**: `internal/services/operations` ≥70%(缺 ~330;全 (c) 类纯补测试:workstation_device 445 + excel_service 399,sqlite+excelize,零基建依赖可先行) — a4cdb61: operations 73.2 → 83.7%, 77-03 收口
-- [x] **BLOCK-02**: `internal/agent/server` ≥70%(缺 ~295;platformStrategy 接口 + backendURL 参数 + httptest 先例)
-- [x] **BLOCK-03**: `internal/core` ≥70%(基线 43.7% → 78-01 收 54.2%(captcha/metrics 链) → 78-02 收 82.5%(Init/Close 装配链 + 各阶段产物);Init 链 302 stmts + Close 60 stmts 由 78-02 全覆盖,核心链 8 initXxx 阶段 + Close 顺序/幂等/半装配 + reaper/RPA 全锁;实测 24 TestInit78_ 用例全绿,QUIRK-78-02-P1(二次 Close panic)+ P2(DeviceConnectionPool 1 goroutine 泄漏)记入 Phase 79/80 长尾)
-- [x] **BLOCK-04**: `internal/device` ≥70%(基线 69.2% → 78-03 收 scrapli ~88%/executor ~75%/pool 89.9% → 78-04 收 snmp ~50%(lightweight)/scheduler 94.6%;FileTransport D-78-05 pre-seed 路径解锁;Windows loopback snmp 跨 socket 响应丢弃降级 error-path;P2_RATCHET_device 豁免行可删)
-- [x] **BLOCK-05**: `internal/services/addomain` ≥70%(基线 23.1% → 78-05 收 sync.go 83.9% → 78-06 收 computer 96.1%/ou_group_mapping 88.6%/group_config 86.7%/config 83.0%/account_pool 82.0% → 78-07 收 failover 88.9%/user 63%/group 67%;ldap_client ~36% → **实测 58.0%**;LDAP responder BER 不兼容 go-ldap/v3 导致 Conclusion B,ldap_client ~180 stmts 不可达;**D-81-03 豁免文档化**:差距 +291 stmts,BER 锁死 ~230 stmts,残差 ~61 stmts,gate=0;已知缺口见 v1.27-MILESTONE-AUDIT.md BLOCK-05 段)
+### BACKUPFIX — config_backup 恢复链加固
 
-## 长尾补齐 (TAIL)
+- [ ] **V130R-01**: `config_restore_task_service.go:82,163-171` — 超时路径互斥原子化：ExecuteCustom 返回后 worker 不再向设备推送、背对背新恢复窗口消除、RestoreResult 数据竞争修复、10min 总预算分段（方案 phase 规划时敲定：分段子 context 预算或超时后确认任务真终止）；附回归测试
+- [ ] **V130R-02**: `network_router.go:45` — RecoverStaleRunningTasks 实例归属过滤：多实例/滚动重启下不误杀其他实例在途任务、不致终态翻转（方案 phase 敲定：grace period >RestoreConfigTimeout 或实例标识列）；附回归测试
+- [ ] **V130R-03**: `backup_handler.go:283-284` — 业务错误码语义化：「存在进行中恢复任务」映射 409/400、「备份不属于目标设备」映射 400，不再经 HandleServiceError 统一 500（需 pkg/response 业务错误类型体系，设计 phase 敲定）；附回归测试
 
-- [x] **TAIL-01**: `internal/services`(root,5202 stmts @11.3%)补 ~3052 → **实测 81.60%**(4245/5202,+3656 covered,超目标 ~600);D-79-01 重锚:legacy cache services 已迁 internal/services/system(不进口径),root 实际 cache 文件 + 全部 45 文件清欠,0 文件 <50%(v1.26 从未进 P0/P1/P2 名单的最大隐藏缺口)
-- [x] **TAIL-02**: `internal/scheduler`(1103 @3.3%)补 ~736 → **实测 81.4%**(898/1103,+790 covered;cron 85.1%/task 族 8 文件全 ≥70%,D-80-06 wire 豁免 6 条目)
-- [x] **TAIL-03**: 碎包合计 → **api/v1 87.2% / models 91.7% / internal/api 96.4% / pkg/errors 99.7% / pkg/cache 89.2%** 全部 ≥70%(D-80-05 pkg/cache 重锚 +49);小尾巴 8 包聚合 **83.7%** ≥70%(D-80-04 口径修正;lldp 68.8% 豁免文档化);阶段总增量 +2989 stmts(目标 +2094)
+### CACHEKEY — 缓存键安全与迁移收尾
 
-## QUIRK 修复 (QUIRK)
+- [ ] **V130R-04**: `system/user_cache_impl.go:172-216` + `role_cache_impl.go:51-78` — buildListCacheKey 键值转义或参数集哈希，`Username="bob:status:1"` 与 `Username="bob"+Status=1` 不再碰撞污染；附回归测试
+- [ ] **V130R-05**: duty/knowledge/network/workorder 四 cache_impl 残留 11 处 interface{} 闭包 GetOrSet + 4 个平行 getExpiration 迁 base 泛型函数族（cache_invariants_92_test warning 档清零）；附回归测试
 
-- [x] **QUIRK-01**: MemoryCache.IncrementBy 最先修(nil-deref panic + 非法字符串静默 0)——core_74_08_test.go 三处 captcha workaround 连锁解锁,DB 语义 INCR 缺键=1
-- [x] **QUIRK-02**: 其余 14 项全修,每项**同 commit** 翻转 v1.26 锁定断言 + 回归测试 + 原子 commit:ModelExtractor 锚定(Q-3,发现落库 model 值会变,有 ExtractModelFromSysDescr 回退 caller)/ sm2.Decrypt 长度预检 / validateFile 无扩展名 / retry.containsIgnoreCase(retry 包零生产调用方,影响面=0)/ GetRandomEnabled PG-only fallback / MetricsCacheService.Stop 幂等 / nextIP 全零形态(须与 ScanIPRange 循环条件同 commit)等
-- [x] **QUIRK-03**: Q-11 normalizeParentID 双实现分歧修复 + 存量数据迁移(Update 路径落库字面 "0" 的行归一为 NULL)
+### OPSFIX — operations 口径统一
 
-## 收口防线 (GATE)
+- [ ] **V130R-06**: asset/building List Total 口径收紧（`.Table()` 起链不含软删过滤 → repo `Model(new(T))` 对齐）+ OVR 台账补记 + 软删环境分页器验证；附回归测试
+- [ ] **V130R-07**: `floor_service.go:140-178` — 换楼同步乱序修复（乐观条件 WHERE building_id=旧值 或队列串行化）+ First 失败不再静默吞掉 + OVR 补记；附回归测试
+- [ ] **V130R-08**: orgId「部门+全部子部门」筛选抽共享 helper 统一四条件口径（workstation/infopoint 三条件形式漏匹配 ancestors 中段修复，6+ 处复制粘贴收敛）；附回归测试
+- [ ] **V130R-09**: 分页 clamp 三口径收敛（pagination_helper 10..10000 / requests.GetPagination 10..100 / pkg/query ..200）+ internal/constants 与 pkg/constants 双包合并（consolidation 方案 phase 敲定，base/service.go 注释自认刻意保留处一并处置）；附回归测试
 
-- [x] **GATE-01**: 加权平均 ≥70%(43652 stmts 口径;SC-a 收口)→ **实测 70.90%**(Phase 79 收口时 check-coverage.sh exit 0;v1.26 SC-a 缺口正式翻转;Phase 81 做最终审计确认)
-- [x] **GATE-02**: ratcheted floor 解除——core/device/agent-server 达标后删除 check-coverage.sh 对应 P2_RATCHET 行,回落 70% 全量 floor(UP-only 语义闭环) — 81-02 d7321fe 收口
-- [x] **GATE-03**: 4 层 gate + PR diff coverage 全程绿;QUIRK 业务变更经 PR diff coverage ≥80% 把关(v1.26 防线不倒退) — 本地 EXIT=0,CI lint 阻塞属 pre-existing debt
+### FEFIX — 前端契约修复
 
----
+- [ ] **V130R-10**: `rpaApi.ts`（8 处）/`vdiApi.ts`（2 处）工厂 spread 幽灵方法处置——omit 或 apiFactory invariants 增加「新增方法须有后端路由」对照断言（当前零调用方，潜伏 404 面）；附回归测试
+- [ ] **V130R-11**: `rpaApi.ts` 大面积后端不存在端点契约对齐专项（scriptApi/scheduleApi/variableApi/templateApi/notificationApi/statisticsApi 全族等）——补路由或裁剪死方法，前后端对账清单落盘；附守卫
+- [ ] **V130R-12**: `src/lib/api/networkApi.ts` 平行下载链收敛到权威 download.ts + downloadFilePost 补 JSON 错误体检测（200+JSON 错误不再存成 .xlsx）+ apiFactory invariants readdirSync 改递归扫描；附回归测试
+
+### CLOSEOUT — 收口
+
+- [ ] **TESTFILE-01**: 4 个未跟踪测试文件（`internal/models/rpa/rpa_model_methods_test.go` / `internal/pkg/cache/manager_coverage_test.go` / `internal/pkg/system/sysmetrics_common_test.go` / `internal/pkg/system/sysmetrics_windows_test.go`）入库决策落地——入库补 gate 或明确排除归档（95-02 Pitfall 4 选项 c 口径终结）
+- [ ] **UAT62-01**: Migrate176 R1/R2→R5 就地升级 schema 校验回退——带旧结构 MV 的真实 PG 上启动验证（62-HUMAN-UAT 场景 1，归档于 `.planning/milestones/v1.29-phases/` 前身 `.planning/workstreams/milestone/phases/62-ai-internal-core-db/62-HUMAN-UAT.md`）
+- [ ] **UAT62-02**: Advisory lock 双实例并发迁移保护——第二实例跳过迁移块 WARN 且正常启动（62-HUMAN-UAT 场景 2）
+- [ ] **UAT62-03**: 空库首启 admin 种子凭据告警——默认凭据 WARN / env 覆盖 / salt 非默认（62-HUMAN-UAT 场景 3）
+
+## v1.31+ Requirements (future)
+
+（v1.30 未定义 future 需求；历史候选见各归档 milestone 的 Future 段）
+
+## Out of Scope
+
+| 排除项 | 理由 |
+|--------|------|
+| WSNOTICE-01（WS 双读者竞态 + origin 前缀绕过） | 已于 2026-09-06 v1.29 深度复查提前修复（503c162 + 6a44659） |
+| operlog exclude_paths 白名单 | 独立 deferred pending todo，与缺陷治理不重叠 |
+| 新业务功能 | v1.30 锁定为缺陷治理 |
+| 前端覆盖率推新目标 | v1.28 已阶段性收口 45.13%（D-04） |
+| CACHEDEF/V130R 之外的新扫描发现的缺陷 | 登记新 candidates，不顺手扩scope |
 
 ## Traceability
 
-| REQ | Phase | Plans | Status |
-|-----|-------|-------|--------|
-| QUIRK-01 | Phase 75 | 75-01 | Complete |
-| QUIRK-02 | Phase 75 | 75-02, 75-03, 75-04, 75-05 | Complete |
-| QUIRK-03 | Phase 75 | 75-06 | Complete |
-| INFRA-01 | Phase 76 | 76-01 | Complete |
-| INFRA-02 | Phase 76 | 76-02 | Complete |
-| INFRA-03 | Phase 76 | 76-03 | Complete |
-| INFRA-04 | Phase 76 | 76-04 | Complete |
-| INFRA-05 | Phase 76 | 76-05 | Complete |
-| BLOCK-01 | Phase 77 | 77-01, 77-02, 77-03 | Complete (operations 83.7%) |
-| BLOCK-02 | Phase 77 | 77-04, 77-05 | Complete (agent/server 90.4%) |
-| BLOCK-03 | Phase 78 | 78-01, 78-02 | Complete (core 82.5%) |
-| BLOCK-04 | Phase 78 | 78-03, 78-04 | Complete (device 82.6%) |
-| BLOCK-05 | Phase 78 | 78-05, 78-06, 78-07 | Partial — D-81-03 豁免文档化(58.0%,BER 锁死) |
-| TAIL-01 | Phase 79 | 79-01..79-06 | Complete (services root 81.6%) |
-| TAIL-02 | Phase 80 | 80-01, 80-02 | Complete (scheduler 81.4%) |
-| TAIL-03 | Phase 80 | 80-03, 80-04, 80-05 | Complete (碎包全 ≥70%,8 包聚合 83.7%) |
-| GATE-01 | Phase 79/81 | 79-06 收口 + 81-01 审计 | Achieved 77.99% |
-| GATE-02 | Phase 81 | 81-02 | Complete (P2_RATCHET 已删) |
-| GATE-03 | Phase 81 | 81-02/81-03 | Complete (本地 EXIT=0,CI lint pre-existing) |
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| CACHEDEF-01 | Phase 96 | Pending |
+| CACHEDEF-02 | Phase 96 | Pending |
+| CACHEDEF-03 | Phase 96 | Pending |
+| CACHEDEF-04 | Phase 96 | Pending |
+| CACHEDEF-05 | Phase 96 | Pending |
+| JOBSTAT-01 | Phase 96 | Pending |
+| V130R-01 | Phase 97 | Pending |
+| V130R-02 | Phase 97 | Pending |
+| V130R-03 | Phase 97 | Pending |
+| V130R-04 | Phase 98 | Pending |
+| V130R-05 | Phase 98 | Pending |
+| V130R-06 | Phase 99 | Pending |
+| V130R-07 | Phase 99 | Pending |
+| V130R-08 | Phase 99 | Pending |
+| V130R-09 | Phase 99 | Pending |
+| V130R-10 | Phase 100 | Pending |
+| V130R-11 | Phase 100 | Pending |
+| V130R-12 | Phase 100 | Pending |
+| TESTFILE-01 | Phase 101 | Pending |
+| UAT62-01 | Phase 101 | Pending |
+| UAT62-02 | Phase 101 | Pending |
+| UAT62-03 | Phase 101 | Pending |
 
-Unmapped: 0 ✓
+**Coverage:**
+- v1.30 requirements: 22 total
+- Mapped to phases: 22（Phase 96: 6 / Phase 97: 3 / Phase 98: 2 / Phase 99: 4 / Phase 100: 3 / Phase 101: 4）
+- Unmapped: 0 ✓
 
 ---
-*Requirements defined: 2026-08-23 (4-scope decisions confirmed: addomain Iface-stub / device factory-inject refactor / Q-11 fix+migration / TAIL included per gap-math correction)*
+*Requirements defined: 2026-09-06*
+*Last updated: 2026-09-06 — ROADMAP 创建后 Traceability 回填（22/22 → Phase 96-101）*

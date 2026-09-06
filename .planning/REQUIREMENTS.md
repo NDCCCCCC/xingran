@@ -78,34 +78,34 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CACHEDEF-01 | Pending roadmap | Pending |
-| CACHEDEF-02 | Pending roadmap | Pending |
-| CACHEDEF-03 | Pending roadmap | Pending |
-| CACHEDEF-04 | Pending roadmap | Pending |
-| CACHEDEF-05 | Pending roadmap | Pending |
-| JOBSTAT-01 | Pending roadmap | Pending |
-| V130R-01 | Pending roadmap | Pending |
-| V130R-02 | Pending roadmap | Pending |
-| V130R-03 | Pending roadmap | Pending |
-| V130R-04 | Pending roadmap | Pending |
-| V130R-05 | Pending roadmap | Pending |
-| V130R-06 | Pending roadmap | Pending |
-| V130R-07 | Pending roadmap | Pending |
-| V130R-08 | Pending roadmap | Pending |
-| V130R-09 | Pending roadmap | Pending |
-| V130R-10 | Pending roadmap | Pending |
-| V130R-11 | Pending roadmap | Pending |
-| V130R-12 | Pending roadmap | Pending |
-| TESTFILE-01 | Pending roadmap | Pending |
-| UAT62-01 | Pending roadmap | Pending |
-| UAT62-02 | Pending roadmap | Pending |
-| UAT62-03 | Pending roadmap | Pending |
+| CACHEDEF-01 | Phase 96 | Pending |
+| CACHEDEF-02 | Phase 96 | Pending |
+| CACHEDEF-03 | Phase 96 | Pending |
+| CACHEDEF-04 | Phase 96 | Pending |
+| CACHEDEF-05 | Phase 96 | Pending |
+| JOBSTAT-01 | Phase 96 | Pending |
+| V130R-01 | Phase 97 | Pending |
+| V130R-02 | Phase 97 | Pending |
+| V130R-03 | Phase 97 | Pending |
+| V130R-04 | Phase 98 | Pending |
+| V130R-05 | Phase 98 | Pending |
+| V130R-06 | Phase 99 | Pending |
+| V130R-07 | Phase 99 | Pending |
+| V130R-08 | Phase 99 | Pending |
+| V130R-09 | Phase 99 | Pending |
+| V130R-10 | Phase 100 | Pending |
+| V130R-11 | Phase 100 | Pending |
+| V130R-12 | Phase 100 | Pending |
+| TESTFILE-01 | Phase 101 | Pending |
+| UAT62-01 | Phase 101 | Pending |
+| UAT62-02 | Phase 101 | Pending |
+| UAT62-03 | Phase 101 | Pending |
 
 **Coverage:**
 - v1.30 requirements: 22 total
-- Mapped to phases: 0（roadmap 创建后回填）
-- Unmapped: 22 ⚠️
+- Mapped to phases: 22（Phase 96: 6 / Phase 97: 3 / Phase 98: 2 / Phase 99: 4 / Phase 100: 3 / Phase 101: 4）
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-09-06*
-*Last updated: 2026-09-06 after initial definition*
+*Last updated: 2026-09-06 — ROADMAP 创建后 Traceability 回填（22/22 → Phase 96-101）*

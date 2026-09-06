@@ -1,260 +1,188 @@
 ---
 last_updated: 2026-09-06
-milestone: v1.29
-update_trigger: v1.29 workstream ROADMAP synced from .planning/ROADMAP.md — v1.27 content archived at .planning/milestones/v1.27-ROADMAP.md; phases 89-95 now tracked here with Progress table (was: stale v1.27 roadmap made phase-complete report is_last_phase=true after Phase 90); 2026-09-05 Phase 92 plan-phase 校准 3→4 plans; 2026-09-05 Phase 94 plan-phase 生成 3 plans; 2026-09-06 Phase 95 plan-phase 生成 2 plans（95-01 核对校准 / 95-02 gate+audit+SHIPPED）
+milestone: v1.30
+update_trigger: v1.30 workstream ROADMAP 创建 — v1.29 内容已随 milestone 归档（milestones/v1.29-ROADMAP.md）；22 requirements → 6 phases（96-101）全覆盖映射（CACHEDEF/JOBSTAT/BACKUPFIX/CACHEKEY/OPSFIX/FEFIX/CLOSEOUT 七类别）
 ---
 
-# Roadmap: XingRan-Next 运维管理系统 — v1.29 milestone workstream
+# Roadmap: XingRan-Next 运维管理系统 — v1.30 milestone workstream
 
-> **v1.27 及更早的 milestone 历史已归档**: `.planning/milestones/`(v1.27-ROADMAP.md / v1.27-REQUIREMENTS.md / v1.27-phases/)。
-> 本文件自 2026-09-04 起只追踪 **v1.29 技术债治理 (Tech Debt Governance)**。
+> **v1.29 及更早的 milestone 历史已归档**: `.planning/milestones/`(v1.29-ROADMAP.md / v1.29-REQUIREMENTS.md / v1.29-phases/)。
+> 本文件自 2026-09-06 起只追踪 **v1.30 V130 缺陷治理 (Defect Remediation)**。
 
-## Current Milestone: v1.29 技术债治理 (Tech Debt Governance)
+## Current Milestone: v1.30 V130 缺陷治理 (Defect Remediation)
 
-**Goal:** 按 2026-09-03 综合审计发现的优先级，逐批治理 7 项技术债行动。**核心交付**: 后端常量集中化、CRUD 复用泛型抽象、缓存层三处架构合并、配置备份闭环、前端 API 工厂化、v1.28 阶段性收口。每项行动原子 commit + 既有测试 0 回归。
-
-**审计基线 (2026-09-03)**:
-
-- 后端覆盖率 78.12% / 前端覆盖率 45.13%
-- 1688 tests passing / 45/45 dirs Gate
-- 18 项真实 TODO / ~20 处中高度硬编码 / 8 个 CRUD services 60-70% 重复 / 缓存层 3 处架构重复 / config_backup 3 TODO
+**Goal:** 修复 v1.29 期间登记的全部 18 项 V130-CANDIDATES 缺陷候选 + 闭环 2 个 deferred 小项（4 个未跟踪测试文件入库决策 + 62-HUMAN-UAT 3 场景）。所有修复属行为变更，每项附回归测试（v1.29 D-05 例外条款同款纪律）；七 gate 全程不倒退，使深度复查发现的问题不再带病运行。
 
 **Source planning data:**
 
-- `.planning/ROADMAP.md` (v1.29 主 ROADMAP，含完整 phase 详情)
-- `.planning/REQUIREMENTS.md` (7 类别 / 45 requirements)
-- `.planning/PROJECT.md` (Current Milestone v1.29 段, D-01..D-06 locked decisions)
+- `.planning/REQUIREMENTS.md` (7 类别 / 22 requirements，Traceability 已回填 phase 映射)
+- `.planning/PROJECT.md` (Current Milestone v1.30 段, D-01..D-05 locked decisions)
+- `.planning/milestones/v1.29-DEEP-RECHECK.md` (V130R-01..12 深度复查详情)
+- `.planning/milestones/v1.29-REQUIREMENTS.md` V130-CANDIDATES 段 (CACHEDEF-01..05 + JOBSTAT-01)
 
 **Milestone success criteria:**
 
-- SC-a (常量集中化): 12+ 处分页硬编码 + 6 处超时硬编码 + URL 协议 + SNMP 端口 + 并发数全部抽到 `pkg/constants/` ✅ (Phase 89 + 90 done)
-- SC-b (CRUD 复用): 8 个 CRUD services 复用 `base.Repository[T]`，LOC 减少 ≥2000 行
-- SC-c (缓存层统一): 三处 `CacheServiceBase` 合并到单一基类
-- SC-d (config_backup 闭环): 3 个 TODO 空函数全部实现 + 回归测试
-- SC-e (前端 API 工厂化 + v1.28 SHIP + v1.29 closeout): ~15 个 `*Api.ts` 迁移工厂模式；v1.28 SHIPPED 段核对确认（已存在，D-01）；最终 gate 全绿
+- SC-a (覆盖): 22/22 requirements 全部交付，每项修复附回归测试（或守卫 / UAT 人工验证回写）
+- SC-b (gate): 七 gate 全程不倒退——go build / go test / 后端 coverage ≥77.5 / 前端 45 dirs / lint / type-check / diff coverage
+- SC-c (设计决策): V130R-01/02/03/09 的技术方案在对应 phase 规划时敲定并落盘（CONTEXT.md，D-03 锁定决策项）
+- SC-d (闭环): 4 个未跟踪测试文件入库决策终结（TESTFILE-01）+ 62-HUMAN-UAT 3 场景真实 PG 人工验证回写
 
-**Phase 编号:** 从 Phase 89 起（v1.28 用 82-88，v1.27 用 75-81）。
+**锁定决策 (v1.30 init):**
+
+- **D-01 范围**: 18 项 V130-CANDIDATES 全做 + 2 顺带项；不引入新业务功能
+- **D-02 回归纪律**: 所有修复属行为变更，每项附回归测试；七 gate 全程不倒退
+- **D-03 设计决策项**: V130R-01 / V130R-02 / V130R-03 / V130R-09 的方案在 phase 规划时敲定
+- **D-04 范围外**: WSNOTICE-01 已提前修复；operlog exclude_paths 继续挂账；前端覆盖率不推新目标
+- **D-05 Phase 编号**: 从 Phase 96 起续编（v1.29 用 89-95，v1.28 用 82-88）
+
+## Phases
+
+- [ ] **Phase 96: 确定性缓存/看板缺陷修复** — CACHEDEF-01..05 + JOBSTAT-01 六项确定性缺陷，每项附回归测试
+- [ ] **Phase 97: config_backup 恢复链加固** — 互斥原子性/实例归属/业务错误码（V130R-01..03，含 3 个 discuss 设计决策）
+- [ ] **Phase 98: 缓存键安全与 base 迁移收尾** — 列表键防碰撞 + 四包 interface{} 残留迁 base 泛型（V130R-04..05）
+- [ ] **Phase 99: operations 口径统一** — Total 软删/换楼乱序/orgId 子部门筛选/分页 clamp 收敛（V130R-06..09，V130R-09 含 discuss）
+- [ ] **Phase 100: 前端契约修复** — 幽灵方法处置/rpaApi 契约对齐/networkApi 下载链收敛（V130R-10..12）
+- [ ] **Phase 101: 收口——测试文件入库 + 62-UAT + audit** — TESTFILE-01 + UAT62-01..03 + 七 gate 全绿 + audit
 
 ### Phase Dependency Graph
 
 ```
-Phase 89 (PAGINATION 常量集中化) ✅ ─┐
-Phase 90 (TIMEOUTS/PORT/PROTOCOL/CONCURRENCY) ✅ ─┤
-                                   ├─→ Phase 91 (CRUD 复用 base.Repository[T])
-                                   ├─→ Phase 92 (缓存层三处架构统一)
-                                   ├─→ Phase 93 (config_backup 三处 TODO 闭环)
-                                   ├─→ Phase 94 (前端 API 工厂化)
-                                   └─→ Phase 95 (v1.28 SHIP 收口 + v1.29 closeout)
+Phase 96 (CACHEDEF+JOBSTAT 确定性缺陷) ─→ Phase 98 (CACHEKEY 键安全 + 四包迁移；同 cache_impl 文件族)
+Phase 97 (BACKUPFIX 恢复链加固；与 96 零文件重叠)
+Phase 99 (OPSFIX 口径统一；v1.29 Phase 91 base.Repository 基线)      ─┐
+Phase 100 (FEFIX 前端契约；v1.29 Phase 94 apiFactory 基线)           ─┼─→ Phase 101 (收口，必须最后)
 ```
 
-**并行机会**: Phase 91/93 互不依赖可并行；Phase 91/92 都改 internal/services/ 需顺序；Phase 94 前端独立；Phase 95 必须最后。
+**并行机会**: Phase 97/99/100 与 96/98 零文件重叠可并行（config `parallelization: false`，默认顺序执行）；Phase 98 必须在 96 后（duty/workorder cache_impl 同文件族——先修缺陷再迁移）；Phase 101 必须最后。
 
 ---
 
-### Phase 89: PAGINATION 常量集中化 ✅ SHIPPED 2026-09-04
+## Phase Details
 
-**Goal**: 抽取 `pkg/constants/pagination.go` 3 个分页常量（89-CONTEXT 深度讨论后简化），统一经 `pkg/query.NormalizePagination()` 纯函数替换 8 个文件 12+ 处硬编码；AST 锁值 + invariants 扫描；`go test ./...` 0 失败回归。
+### Phase 96: 确定性缓存/看板缺陷修复
 
-**Depends on**: Nothing (v1.29 first phase)
+**Goal**: 修复 5 项缓存确定性缺陷 + 1 项任务看板时区日界缺陷，使缓存失效真正命中、缓存键不再互相污染、看板统计不再少计；每项附回归测试防倒退。全部为小而确定的修复（方案已知，无设计决策）。
 
-**Requirements**: PAGINATION-01..11 (11 项)
+**Depends on**: Nothing (v1.30 first phase)
 
-**Success Criteria**: 3 常量 + AST 锁值 / 业务代码 100% 引用常量 / go build 0 错误 / go test 0 失败 — 全部达成
+**Requirements**: CACHEDEF-01, CACHEDEF-02, CACHEDEF-03, CACHEDEF-04, CACHEDEF-05, JOBSTAT-01
 
-**Plans**: 3(3/3 完成)
+**Success Criteria** (what must be TRUE):
 
-- [x] 89-01-PLAN.md — leaf const pkg + Pilot knowledge_service.go 迁移 + AST 锁值测试
-- [x] 89-02-PLAN.md — handler 层 5 文件迁移(rpa/system/monitor/workorder) + binding max=100 删除(D-15)
-- [x] 89-03-PLAN.md — service 层 3 文件迁移(asset/knowledge/account_pool) + CLAUDE.md Pagination Constants Convention 段
+  1. 缓存失效真正命中：部门树删除/更新后 `InvalidateDeptCache` 命中写键、缓存读回为新数据（CACHEDEF-01）；单条删除配置后 `config:id:<id>` 同步失效，30 分钟窗口内详情接口不再从缓存读回已删配置（CACHEDEF-02）
+  2. 缓存键口径修复：duty 月份解析不再恒 0，`GenerateSchedule`/`ManualDuty` 后月度排班缓存失效生效（CACHEDEF-03）；不同 limit 的待办查询各占独立缓存键、互不污染（CACHEDEF-04）
+  3. 缓存监控前缀剥离生效：`key[:6]` 切片长度修正（6 字节比 8 字节字面量恒 false）后，含 `xingran:` 前缀的键在缓存监控操作中命中真实键（CACHEDEF-05）
+  4. 任务看板日界统一：本地时区 00:00-08:00 窗口的 JobLog 计入「今日」，今日成功/失败统计不再少计（JOBSTAT-01；正午锚定隔离既有）
+  5. 回归纪律：6 项修复每项附回归测试；`go build ./...` + `go test ./...` 0 失败，七 gate 不倒退
 
-**Notes**: 决策 D-01..D-19 见 `.planning/workstreams/milestone/phases/89-pagination-constants/89-CONTEXT.md`；业务行为变更 6 处已用户接受(knowledge 100→10/500→200, account_pool 20→10, ad_domain ==0→<=0 bug 修复等)
+**Plans**: TBD
 
----
-
-### Phase 90: TIMEOUTS/PORT/PROTOCOL/CONCURRENCY 常量集中化 ✅ SHIPPED 2026-09-04
-
-**Goal**: 抽取 4 个 leaf const pkg(timeouts/ports/protocol/concurrency) 共 10 个常量，覆盖 6 处业务超时 + 1 URL 协议 + 1 SNMP 端口 + 1 并发数 + 3 处 scheduler/cron 扩展审计(D-07)；AST 锁值 + 全量回归 0 失败；零业务行为变更(D-09)。
-
-**Depends on**: Phase 89（leaf const + AST 锁值模式先例；内容上无硬依赖）
-
-**Requirements**: TIMEOUTS-01..08 (8 项)
-
-**Success Criteria**: 4 常量文件 + AST 锁值(10 tests) / 8 调用点迁移 / 零字面量残留 / go build+test 0 失败 — 全部达成
-
-**Plans**: 4(4/4 完成)
-
-- [x] 90-01-PLAN.md — 4 个 leaf const pkg + 4 个 AST 锁值测试(timeouts 6 Duration + SNMPPort + HTTPProto/HTTPSProto + CommandConcurrency)
-- [x] 90-02-PLAN.md — network handlers 迁移(command_handler 58/61/98 + execution_handler 99/104 + discovery_handler 126)
-- [x] 90-03-PLAN.md — scheduler/LDAP/WS 迁移(ad_ldap_client:74 + ws_notice_handler:47 + ad_sync_tasks 重命名 ADSyncTimeout/ADSyncTaskTimeout + cron.go SchedulerShutdownTimeout)
-- [x] 90-04-PLAN.md — CLAUDE.md Timeout/Port/Protocol Constants Convention 段 + 全量回归
-
-**Notes**: 决策 D-01..D-11 见 `.planning/workstreams/milestone/phases/90-timeouts-port-protocol-concurrency/90-CONTEXT.md`；REQUIREMENTS.md TIMEOUTS-01 命名已按 D-05/D-06 同步(无 Default 前缀 + 共用 CommandExecTimeout)
+**Notes**: 涉及文件：system/department_cache_impl.go / system/config_cache_impl.go / duty/duty_cache_impl.go / workorder/workorder_cache_impl.go / monitor/cache_service.go / api/v1/job_utils.go——Phase 98 将再触 duty/workorder cache_impl（迁移），本相先修缺陷。
 
 ---
 
-### Phase 91: CRUD 复用 base.Repository[T] (🔥 高优 P1)
+### Phase 97: config_backup 恢复链加固
 
-**Goal**: 让 `internal/services/operations/` 下 8 个 CRUD services 复用 `base.Repository[T]` 抽象，LOC 减少 ≥2000 行；首个 pilot (workstation_service) 验证模式可复制。
+**Goal**: config_backup 恢复链三项缺陷修复——超时后 worker 不再向设备推送、多实例不误杀在途任务、业务错误语义化返回。含 3 个开放设计决策（V130R-01/02/03），phase 内先 discuss 敲定方案再执行。
 
-**Depends on**: Phase 89 + Phase 90（常量基线稳定）
+**Depends on**: Nothing（与 Phase 96 零文件重叠；涉及 config_restore_task_service.go / network_router.go / backup_handler.go）
 
-**Requirements**: CRUD-REUSE-01..08 (8 项)
+**Requirements**: V130R-01, V130R-02, V130R-03
 
-**Success Criteria**:
+**Success Criteria** (what must be TRUE):
 
-1. `base.Repository[T]` 抽象完整（Create/Update/Delete/GetByID/List/Statistics/SearchOptions/BatchDelete）
-2. 8 个 operations services 全部迁移完成
-3. LOC 净减少 ≥2000 行
-4. `go test ./internal/services/operations/...` 0 失败
-5. handler 端到端 smoke 测试通过（workstation/building/floor CRUD 仍工作）
+  1. 超时互斥原子化：恢复任务超时后 worker 不再继续向设备推送命令，背对背新恢复请求不再出现双任务窗口，RestoreResult 无数据竞争（V130R-01，分段 context 预算方案经 discuss 敲定）
+  2. 实例归属过滤：RecoverStaleRunningTasks 在多实例/滚动重启下不误杀其他实例在途任务、不致终态翻转（V130R-02，grace period >RestoreConfigTimeout 或实例标识列方案经 discuss 敲定）
+  3. 业务错误码语义化：「存在进行中恢复任务」映射 409/400、「备份不属于目标设备」映射 400，不再统一经 HandleServiceError 返回 500（V130R-03，pkg/response 业务错误类型体系方案经 discuss 敲定）
+  4. 回归纪律：3 项修复每项附回归测试（超时路径 / 归属过滤 / 错误码映射）；七 gate 不倒退
 
-**Plans:** 4/4 plans complete
+**Plans**: TBD
 
-Plans:
-**Wave 1**
-
-- [x] 91-01-PLAN.md — base.GORMRepository[T] scope 化改造（D-01/D-02/D-03：List scope 函数式 + interface/DSL 删除 + BatchDelete 空 ids 语义反转 + SortScope 双型 helper）+ base/service_test.go 泛型契约锁值
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 91-02-PLAN.md — Pilot: workstation_service 迁移（D-05 typed request 全套接线 + 6 表 JOIN scope 化）+ 分页语义收紧 checkpoint（A2 auto-approved；commits edc51fd/50577a5）
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 91-03-PLAN.md — building + floor + asset 迁移（map 签名不变 + floor 装饰器签名锁定 P7 + floor 行为基线测试先行）+ F3 软删 Total 修复 checkpoint
-
-**Wave 4** *(blocked on Wave 3 completion)*
-
-- [x] 91-04-PLAN.md — 收尾 7 服务（door/wall/server_room/dedicated_line/floor_plan_text/room_device/infopoint，D-06 扩容）+ typesafe 死文件清理 + LOC 审计 ≥800（D-07）+ SUMMARY
-
-**Notes**: SC-1 中 Statistics/SearchOptions 不进 Repository（D-04）、SC-3 LOC 标准为 ≥800（D-07）、服务数为 11 个非 9 个（D-06）——以 91-CONTEXT.md 为准；map 参数服务实际 4 个（F1）、workstation typed 化含 3 字段扩展（F2）等前提修正见 91-RESEARCH.md。
+**Notes**: 本 phase 是 v1.30 设计决策密度最高的 phase（D-03 三项全在此）——plan-phase 前置 discuss 产出 CONTEXT.md 后再拆 plan。V130R-03 的业务错误类型体系是跨模块基建，落地后其他 phase 错误路径可复用。
 
 ---
 
-### Phase 92: 缓存层三处架构统一 (🟡 中优 P2)
+### Phase 98: 缓存键安全与 base 迁移收尾
 
-**Goal**: 合并 legacy root + system/* + operations/* 三处 `CacheServiceBase` 重复模式到单一基类，新代码统一继承。
+**Goal**: 缓存列表键防碰撞 + duty/knowledge/network/workorder 四包残留 interface{} GetOrSet 全量迁 `base.GetOrSetJSON[T]` 泛型函数族，cache_invariants_92_test warning 档清零——v1.29 Phase 92 缓存统一的完全收口。
 
-**Depends on**: Phase 91（都改 internal/services/，顺序执行避免 git diff 冲突）
+**Depends on**: Phase 96（duty/workorder cache_impl 同文件族——先修缺陷再迁移，避免同文件冲突）
 
-**Requirements**: CACHE-UNIFY-01..05 (5 项)
+**Requirements**: V130R-04, V130R-05
 
-**Success Criteria** *(措辞已按实际达成形态校准——D-03/D-06/D-09，Phase 92-04 收口同步；Phase 90 commit 3a2efe5 先例)*:
+**Success Criteria** (what must be TRUE):
 
-1. `base/cache_service_base.go` 提供泛型包级函数族（`GetOrSetJSON[T]`/`Invalidate`/`InvalidatePattern`）+ TTLResolver 薄基类（Go method 不能有类型参数，D-03；SetJSON 经 WR-06 判定删除）
-2. system/ + operations/ 下所有 `*_cache_impl.go` 继承新基类（嵌入源迁 base + 32 处方法体换泛型函数，含 notice 逃兵归队；invariants 扫描锁残留 = 0，D-10②）
-3. DataCacheService 原地定性 + 平行 TTL 逻辑消除（D-06——root↔system import cycle 硬约束，不标 @Deprecated，D-07 定位注释）
-4. `go test ./internal/services/...` 0 失败
-5. miniredis 自动化集成验证（D-09——SC-5 "端到端"落地为 provider 层集成测试，可回归进 CI gate）
+  1. 列表缓存键不再碰撞：`Username="bob:status:1"` 与 `Username="bob"+Status=1` 不再生成同一缓存键（键值转义或参数集哈希，方案 plan 时敲定），用户/角色列表缓存无交叉污染（V130R-04）
+  2. 四包迁移收尾：duty/knowledge/network/workorder cache_impl 的 11 处 interface{} 闭包 GetOrSet 全部收敛 `base.GetOrSetJSON[T]` 单 return，4 个平行 getExpiration 收敛 base TTL 解析（V130R-05）
+  3. invariants 锁升级：`cache_invariants_92_test.go` warning 档四包清零（移入硬档或残留计数 = 0）
+  4. 回归纪律：键防碰撞附回归测试；`go test ./internal/services/...` 0 失败，七 gate 不倒退
 
-**Plans (4, 2026-09-05 plan-phase 校准)** *(原 3-plan 估算基于 2026-09-03 审计基线，未计入 D-04 失效涟漪 42 处（19 外围 + 21 in-system + floor 2）、monitor 同名接口 rename、三文档措辞同步与 invariants 守护的工作量；决策 D-01..D-10 见 92-CONTEXT.md)*:
-
-**Wave 1**
-
-- [x] 92-01-PLAN.md — base 缓存抽象包（TTLResolver + CacheProvider 全家 + 泛型函数族，D-01/D-02/D-03/D-04）+ system type alias 翻转 + nil-receiver 防护（Pitfall 1）+ cache_service_base_test.go miniredis 双装配测试（D-09）
-
-**Wave 2** *(blocked on Wave 1)*
-
-- [x] 92-02-PLAN.md — system 9 文件 29 处 GetOrSet 样板迁移 base.GetOrSetJSON + 21 处失效调用改写（user pilot → 批量 → notice 逃兵归队）
-
-**Wave 3** *(blocked on Wave 2)*
-
-- [x] 92-03-PLAN.md — operations floor 3 处迁移 + CacheInvalidator 底层委托（D-04）+ 外围 19 处失效调用改写 + 删除 system.InvalidateCache*（编译器驱动）+ DataCacheService 原地定性（D-06/D-07）
-
-**Wave 4** *(blocked on Wave 3)*
-
-- [x] 92-04-PLAN.md — monitor CacheOperator rename 消歧（D-08，含测试文件断言面）+ invariants 扫描锁（D-10②）+ CLAUDE.md/REQUIREMENTS/ROADMAP 措辞同步（D-10①/D-06）+ LOC 双口径审计（D-05）+ SUMMARY
+**Plans**: TBD
 
 ---
 
-### Phase 93: config_backup 三处 TODO 闭环 (🟡 中优 P2)
+### Phase 99: operations 口径统一
 
-**Goal**: 实现 `config_backup_service.go:158, 206, 543` 三个 TODO 空函数（压缩/解压/恢复逻辑），新增回归测试；端到端 备份 → 恢复 配置一致。（恢复语义按 D-01 校准：恢复 = 把备份配置异步任务化下发到网络设备，决策 D-01..D-34 见 93-CONTEXT.md）
+**Goal**: operations 域四处口径/语义缺陷统一——List Total 软删过滤、换楼同步乱序、orgId 子部门筛选共享 helper、分页 clamp 三口径收敛；V130R-09 合并方案 phase 内 discuss 敲定。
 
-**Depends on**: Phase 89 + Phase 90（与 91/92 互不依赖，可并行）
+**Depends on**: Nothing（v1.29 Phase 91 `base.GORMRepository[T]` / Phase 89 `pkg/constants` 为既定基线）
 
-**Requirements**: BACKUP-CLOSED-01..05 (5 项)
+**Requirements**: V130R-06, V130R-07, V130R-08, V130R-09
 
-**Success Criteria**:
+**Success Criteria** (what must be TRUE):
 
-1. 3 个 TODO 空函数全部实现，删除 `// TODO:` 注释
-2. 回归测试覆盖 happy path + 失败场景（写失败/损坏 gzip/下发中断留痕/DB 写入失败）
-3. 端到端：备份 → 修改 → 恢复 → 配置一致性校验通过
-4. `go test ./internal/services/...` 0 回归
+  1. Total 口径收紧：asset/building List Total 不再计入软删记录（`.Table()` 起链 → repo `Model(new(T))` 对齐），软删环境下分页器页数正确；OVR 台账补记（V130R-06）
+  2. 换楼同步有序：floor 换楼同步不再乱序（乐观条件 WHERE building_id=旧值 或队列串行化），First 失败不再被静默吞掉；OVR 补记（V130R-07）
+  3. orgId 筛选统一：「部门+全部子部门」抽共享 helper 统一四条件口径，6+ 处复制粘贴收敛；workstation/infopoint 三条件形式漏匹配 ancestors 中段的缺陷修复（V130R-08）
+  4. 分页 clamp 收敛：三口径（pagination_helper 10..10000 / requests.GetPagination 10..100 / pkg/query ..200）收敛为单一权威路径；internal/constants 与 pkg/constants 双包合并方案经 discuss 敲定落地，base/service.go 注释自认刻意保留处一并处置（V130R-09）
+  5. 回归纪律：4 项修复每项附回归测试；七 gate 不倒退
 
-**Plans (6, 2026-09-05 plan-phase 校准——D-15..D-22 异步任务化扩展，原 3-plan 估算基于审计基线)** *(93-01..93-04 原计划命名 93-01..93-03 的压缩/恢复/测试三分法已被 6-plan 单一职责拆分取代；恢复措辞按 D-01 校准为设备配置下发)*:
+**Plans**: TBD
 
-**Wave 1**
-
-- [x] 93-01-PLAN.md — 压缩(:158)/解压(:206)实现 + gzip helper 统一手动/批量/auto 三路径（D-23..D-26）+ 解压 64MB 上限 + 文件名清洗 + 93_01 回归测试
-- [x] 93-02-PLAN.md — DeviceExecutor.RestoreConfig 下发内核（D-02/03/05/06/07/12：ExecuteCustom + SendConfigs + vendor 退出命令 map + 清洗 + fail-fast）+ RestoreConfigTimeout 常量 + AST 锁值同步
-
-**Wave 2** *(blocked on Wave 1)*
-
-- [x] 93-03-PLAN.md — ConfigRestoreTask model + Migrate211 双注册 + ConfigRestoreTaskService 异步编排（D-01/04/08..11/14/15/17/20..22/34：同设备校验/互斥/恢复前备份/hash 警告/版本链记录/启动收敛）
-
-**Wave 3** *(blocked on Wave 2；93-04 与 93-05 零文件重叠可并行)*
-
-- [x] 93-04-PLAN.md — Restore handler 异步语义（taskId 响应 + operlog 发起记录 D-13/18）+ /restore-tasks 查询双端点（D-31 组权限）+ 装配接线 + RestoreBackup stub 删除 + handler 测试重写
-- [x] 93-05-PLAN.md — 前端最小异步交互（D-16/19：useRestoreTask 轮询 hook + 恢复 Modal 进度/结果 + 携带 deviceId 修复空 body 缺陷）
-
-**Wave 4** *(blocked on Wave 3)*
-
-- [x] 93-06-PLAN.md — restore e2e FileTransport + 失败 4 场景 + 端到端断言链（D-27..D-30）+ REQUIREMENTS/ROADMAP 措辞校准（D-01/D-33①）+ D-33② sort 修复 + CLAUDE.md Convention（D-32）+ 全量回归 gate
+**Notes**: V130R-09 是 D-03 第四个设计决策项（双包合并路径 phase 规划时敲定）。
 
 ---
 
-### Phase 94: 前端 API 工厂化 (🟡 中优 P2)
+### Phase 100: 前端契约修复
 
-**Goal**: 设计 `createResourceApi<T>()` 工厂函数，迁移 `src/lib/` 下 13 个 `*Api.ts` 到工厂模式；保持向后兼容。
+**Goal**: 前端 API 契约与后端真实路由对齐——幽灵方法处置、rpaApi 全族契约对齐专项（本 milestone 最大单项对齐工程）、networkApi 下载链收敛到权威 download.ts。
 
-**Depends on**: Phase 89 + Phase 90（前端独立，与 91/92/93 并行）
+**Depends on**: Nothing（v1.29 Phase 94 `src/lib/apiFactory.ts` 单一权威 + D-12 双档扫描防线为既定基线）
 
-**Requirements**: API-FACTORY-01..05 (5 项)
+**Requirements**: V130R-10, V130R-11, V130R-12
 
-**Success Criteria**:
+**Success Criteria** (what must be TRUE):
 
-1. `src/lib/apiFactory.ts` 工厂函数实现完整（list/get/create/update/delete/batch/statistics/searchOptions 8 方法——提升自 opsApi 既有工厂，与 react-admin/refine 核心五方法行业对齐；import/export 不进工厂核心、单条查询并入 get，per D-01——+ CreatePayload 派生类型）
-2. 13 个 `*Api.ts` 全部按迁移矩阵处置完成（3 对象形态迁移 + 5 扁平文件 cluster 委托 + 5 KEEP），向后兼容（导出签名零变化）
-3. `npm run type-check` + `npm run lint` + `npm run test` 0 错误
-4. 前端覆盖率 ≥45.13%（不下降）
+  1. 幽灵方法处置：rpaApi 8 处 / vdiApi 2 处 spread 幽灵方法被 omit（或 apiFactory invariants 增加「新增方法须有后端路由」对照断言），调用面 404 隐患消除（V130R-10）
+  2. rpaApi 契约对账清单落盘：scriptApi/scheduleApi/variableApi/templateApi/notificationApi/statisticsApi 全族与后端路由逐一对账，死方法裁剪或后端路由补齐，附守卫防回增（V130R-11）
+  3. 下载链收敛：`src/lib/api/networkApi.ts` 平行下载链收敛到权威 download.ts；`downloadFilePost` 补 JSON 错误体检测——200+JSON 错误响应不再存成 .xlsx；apiFactory invariants 的 readdirSync 改递归扫描（V130R-12）
+  4. 回归纪律：3 项修复每项附回归测试（vitest）；npm run lint / type-check / test 0 errors，前端 45 dirs gate 不倒退
 
-**Plans (3, 2026-09-05 plan-phase 生成)** *(D-01 措辞校准已由 94-03 收口落地：提升 opsApi 既有 8 方法工厂而非从零设计，实测 13 个 *Api.ts 口径；决策 D-01..D-14 见 94-CONTEXT.md)*:
+**Plans**: TBD
 
-**Wave 1**
-
-- [x] 94-01-PLAN.md — apiFactory.ts（createResourceApi 8 方法提升，D-01/D-09）+ types/apiFactory.ts（CreatePayload 双命名并集，D-02）+ download.ts（blob 链 GET/POST 归一，D-04）+ apiFactory/download 契约测试（D-11）——纯新建零触碰既有文件
-
-**Wave 2** *(blocked on Wave 1)*
-
-- [x] 94-02-PLAN.md — opsApi 删私有工厂 + blob 四件套迁出 + DropdownOption re-export（D-03/D-04/D-07）+ opsApi.test.ts 适配（D-14）+ rpaApi 双工厂合并 + scriptApi 接入 + downloadReport 归一（D-08）+ vdiApi vmApi SPREAD+OVERRIDE / vdiServerApi SPREAD
-
-**Wave 3** *(blocked on Wave 2)*
-
-- [x] 94-03-PLAN.md — 扁平 5 件 cluster 委托 workorder/knowledge/duty/notice/adDomain（D-05/D-06/D-08，adDomain :501 潜伏 URL bug 独立 commit 登记）+ D-12 双档扫描防线 + D-13 CLAUDE.md Convention + REQUIREMENTS/ROADMAP 措辞校准 + 覆盖率 gate（API-FACTORY-05）
+**Notes**: 全部为 lib 层契约修复，不涉及页面/组件改动。V130R-11 体量最大（全族对账），plan-phase 时可能拆多 plan。
 
 ---
 
-### Phase 95: v1.28 SHIP 收口 + v1.29 closeout + audit (🟢 长期 P4)
+### Phase 101: 收口——测试文件入库 + 62-UAT 人工验证 + audit
 
-**Goal**: v1.28 阶段性收口（45.13% 写入 MILESTONES）+ v1.29 closeout 验证（7 项行动全部完成确认）+ 生成 v1.29-MILESTONE-AUDIT.md；同时收口 workstream 同步遗留（本文件即其修复产物）。
+**Goal**: v1.30 收口——4 个未跟踪测试文件入库决策终结 + 62-HUMAN-UAT 3 场景在真实 PG 环境人工验证闭环 + 七 gate 全绿 + v1.30 audit 落盘。
 
-**Depends on**: Phase 91 + 92 + 93 + 94（必须最后）
+**Depends on**: Phase 96 + 97 + 98 + 99 + 100（必须最后）
 
-**Requirements**: CLOSEOUT-01..03 (3 项)
+**Requirements**: TESTFILE-01, UAT62-01, UAT62-02, UAT62-03
 
-**Success Criteria**:
+**Success Criteria** (what must be TRUE):
 
-1. `.planning/MILESTONES.md` v1.28 SHIPPED 段核对确认（已存在，D-01）
-2. `.planning/PROJECT.md` v1.28 段 SHIPPED + ARCHIVED 核对确认（已存在）+ frontend-coverage workstream 保留作历史（D-02）
-3. 所有 gate 全绿（go build/test / npm type-check/lint/test / 后端 CI gate / 前端 CI gate）
-4. v1.29-MILESTONE-AUDIT.md 验证报告生成（v1.27 同款模板）
-5. v1.29 milestone SHIPPED 状态设置
+  1. 测试文件入库决策终结：4 个未跟踪 `*_test.go`（rpa_model_methods / cache manager_coverage / sysmetrics_common / sysmetrics_windows）入库并纳入 gate，或明确排除归档——95-02 Pitfall 4 选项 c 口径不再悬置（TESTFILE-01）
+  2. UAT 场景 1 回写：带旧结构 MV 的真实 PG 上启动验证 Migrate176 R1/R2→R5 就地升级 schema 校验回退通过，62-HUMAN-UAT.md 场景 1 回写 passed（UAT62-01）
+  3. UAT 场景 2 回写：Advisory lock 下第二实例跳过迁移块、打 WARN 且正常启动，62-HUMAN-UAT.md 场景 2 回写 passed（UAT62-02）
+  4. UAT 场景 3 回写：空库首启 admin 默认凭据 WARN / env 覆盖 / salt 非默认验证通过，62-HUMAN-UAT.md 场景 3 回写 passed（UAT62-03）
+  5. 七 gate 本地全绿（go build / go test / 后端 coverage ≥77.5 / 前端 45 dirs / lint / type-check / diff coverage）+ v1.30-MILESTONE-AUDIT.md 落盘
 
-**Plans (2, 2026-09-06 plan-phase 生成)** *(CLOSEOUT-01/02 实质产物已于 2026-09-04 收口落地，95-01 动作按 D-01/D-10 校准为核对确认；决策 D-01..D-11 见 95-CONTEXT.md；95-02 含 D-03 type-check 修复与 gate ② flaky 双修复两个前置修复线)*:
+**Plans**: TBD
 
-- [x] 95-01-PLAN.md — v1.28 收口核对 + 文档措辞校准（CLOSEOUT-01/02 核对确认 + REQUIREMENTS/ROADMAP SC 措辞校准 + 记账补漏：BACKUP-CLOSED-01/02 补勾 / Progress 表 stale 修正 / 41→45 计数）
-- [x] 95-02-PLAN.md — v1.29 closeout + audit（D-03 type-check gate 修复 + gate ② flaky 双修复 + D-06 七 gate 跑批 + D-07 v1.29-MILESTONE-AUDIT.md + D-08 七项行动确认 + D-09 SHIPPED 标记 + D-05 94-HUMAN-UAT 流转）
+**Notes**: UAT62-01..03 为人工验证项（真实 PG 环境，owner = 用户/运维）——executor 负责准备验证步骤清单与自动化前置（可自动部分），人工执行后回写。62-HUMAN-UAT.md 位于 `.planning/workstreams/milestone/phases/62-ai-internal-core-db/`（v1.27 workstream 遗留）。
 
 ---
 
@@ -262,27 +190,25 @@ Plans:
 
 | Phase | Status | Plans | Requirements | Started | Completed |
 |-------|--------|-------|--------------|---------|-----------|
-| Phase 89 PAGINATION 常量集中化 | SHIPPED | 3/3 | PAGINATION-01..11 | 2026-09-04 | 2026-09-04 |
-| Phase 90 TIMEOUTS/PORT/PROTOCOL/CONCURRENCY | SHIPPED | 4/4 | TIMEOUTS-01..08 | 2026-09-04 | 2026-09-04 |
-| Phase 91 CRUD 复用 base.Repository[T] | SHIPPED | 4/4 | CRUD-REUSE-01..08 | 2026-09-04 | 2026-09-04 |
-| Phase 92 缓存层三处架构统一 | Complete | 4/4 | CACHE-UNIFY-01..05（全部 done：92-04 收口——rename 消歧 + invariants 锁 + 三文档同步 + LOC 双口径） | 2026-09-05 | 2026-09-05 |
-| Phase 93 config_backup 三处 TODO 闭环 | Complete | 6/6 | BACKUP-CLOSED-01..05 | 2026-09-04 | 2026-09-05 |
-| Phase 94 前端 API 工厂化 | Complete | 3/3 | API-FACTORY-01..05 | 2026-09-05 | 2026-09-06 |
-| Phase 95 v1.28 SHIP + v1.29 closeout | Complete | 2/2 | CLOSEOUT-01..03 | 2026-09-06 | 2026-09-06 |
+| Phase 96 确定性缓存/看板缺陷修复 | Not started | 0/? | CACHEDEF-01..05 + JOBSTAT-01 | - | - |
+| Phase 97 config_backup 恢复链加固 | Not started | 0/? | V130R-01..03 | - | - |
+| Phase 98 缓存键安全与 base 迁移收尾 | Not started | 0/? | V130R-04..05 | - | - |
+| Phase 99 operations 口径统一 | Not started | 0/? | V130R-06..09 | - | - |
+| Phase 100 前端契约修复 | Not started | 0/? | V130R-10..12 | - | - |
+| Phase 101 收口（测试文件入库 + 62-UAT + audit） | Not started | 0/? | TESTFILE-01 + UAT62-01..03 | - | - |
 
-**Total:** 7 phases / 45 requirements (45/45 done — Phase 89-95 全部完成，与根 ROADMAP 口径一致)
-
----
-
-## Out of Scope (locked from v1.29 init)
-
-- 新业务功能（v1.30+ 候选）
-- operlog exclude_paths 白名单（独立 deferred）
-- 18 项真实 TODO 中非 config_backup 的 17 项
-- 前端覆盖率推到 70%
-- Phase 88 batch 续推
-- brand-spec 视觉深化（v1.22 遗留）
+**Total:** 6 phases / 22 requirements (0/22 done — Traceability 见 `.planning/REQUIREMENTS.md`)
 
 ---
 
-*Last updated: 2026-09-06 — **Phase 95 Plan 2 (95-02) 完成，v1.29 全部 7 phases / 45 requirements 收口**（D-03 type-check gate 真实化 + gate ② flaky 双修复 + 七 gate 全绿 + v1.29-MILESTONE-AUDIT.md + SHIPPED 标记；audit: milestones/v1.29-MILESTONE-AUDIT.md）。Phase 94 COMPLETE 2026-09-06（3 plans，commits b3bc745..1771e1d 区间；决策 D-01..D-14 见 94-CONTEXT.md）。Phase 93 SHIPPED（6 plans）。Phase 92 SHIPPED（4/4 plans；决策 D-01..D-10 见 92-CONTEXT.md）。Phase 91 SHIPPED（4/4 plans，commits 5d0008b..963defe 区间）。Phase 90 SHIPPED（4 plans，commits b51f44c..3a2efe5）。Phase 89 SHIPPED（3 plans，commits 238283c..3559626）。*
+## Out of Scope (locked from v1.30 init)
+
+- WSNOTICE-01（WS 双读者竞态 + origin 前缀绕过）——已于 2026-09-06 v1.29 深度复查提前修复（503c162 + 6a44659）
+- operlog exclude_paths 白名单——独立 deferred pending todo
+- 新业务功能——v1.30 锁定为缺陷治理
+- 前端覆盖率推新目标——v1.28 已阶段性收口 45.13%（D-04）
+- CACHEDEF/V130R 之外新扫描发现的缺陷——登记新 candidates，不顺手扩 scope
+
+---
+
+*Last updated: 2026-09-06 — v1.30 ROADMAP 创建（22 requirements → 6 phases 96-101 全覆盖映射；设计决策项 V130R-01/02/03 → Phase 97、V130R-09 → Phase 99；UAT62/TESTFILE → Phase 101）。上一 milestone: v1.29 技术债治理 SHIPPED + ARCHIVED 2026-09-06（7 phases / 26 plans / 45 requirements，见 milestones/v1.29-ROADMAP.md）。*
