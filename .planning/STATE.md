@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.29
-milestone_name: 技术债治理 (Tech Debt Governance)
-status: executing
-last_updated: "2026-09-04T09:43:58.504Z"
-last_activity: 2026-09-04 -- Phase 91 planning complete
+milestone: none
+milestone_name: v1.29 技术债治理 — SHIPPED + ARCHIVED 2026-09-06
+status: between-milestones
+last_updated: "2026-09-06T12:30:00+08:00"
+last_activity: 2026-09-06 -- v1.29 complete-milestone（归档 + tag v1.29 + push）
 progress:
   total_phases: 7
-  completed_phases: 2
-  total_plans: 11
-  completed_plans: 7
-  percent: 29
+  completed_phases: 7
+  total_plans: 26
+  completed_plans: 26
+  percent: 100
 ---
 
 # Project State (v1.29 — milestone workstream)
@@ -83,9 +83,11 @@ Next action: `/gsd:execute-phase 91`
 
 ## Next Step
 
-`/gsd:plan-phase 89` (待执行) — Phase 89: 常量集中化 (pkg/constants/pagination.go + timeouts.go)
+v1.29 已归档（tag v1.29，CI/deploy 全绿）。下一里程碑未立项——
+规划输入现成：V130-CANDIDATES（CACHEDEF-01..05 + JOBSTAT-01 + V130R-01..12，
+见 milestones/v1.29-REQUIREMENTS.md 归档段）。
 
-或 `/gsd:discuss-phase 89` 先讨论实施方案
+`/gsd-new-milestone` 启动下一里程碑立项（questioning → research → requirements → roadmap）
 
 ## Deferred Items
 
