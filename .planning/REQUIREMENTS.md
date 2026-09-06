@@ -119,7 +119,7 @@ status: executing
 
 ---
 
-## V130-CANDIDATES (v1.30+ 缺陷候选 — Phase 92 review 登记，2026-09-05 用户判定；2026-09-06 Phase 95 增补 JOBSTAT-01)
+## V130-CANDIDATES (v1.30+ 缺陷候选 — Phase 92 review 登记，2026-09-05 用户判定；2026-09-06 Phase 95 增补 JOBSTAT-01 + WSNOTICE-01；2026-09-06 v1.29 SHIPPED 后深度复查增补 V130R-01..12)
 
 > 来源：`92-REVIEW.md` WR-01..05——五个迁移前即存在的缓存缺陷，被 v1.29 零行为变更约束有意原样保留。当前 milestone 93/94/95 均不覆盖。修复属**行为变更**，须附带回归测试（v1.29 D-05 例外条款同款纪律）。
 
@@ -129,7 +129,24 @@ status: executing
 - [ ] **CACHEDEF-04**: `workorder/workorder_cache_impl.go:207-234` — 待办缓存键仅含 userID，忽略 `GetMyPendingRequest.Limit`，不同 limit 共享同一缓存
 - [ ] **CACHEDEF-05**: `monitor/cache_service.go:766-771` — `key[:6] == "xingran:"`（6 字节切片比 8 字节字面量）恒 false，前缀剥离永不生效（Phase 73-04 quirk Q1 同源；CLAUDE.md 旧示例 `key[6:]` 同错，现已随 Cache Service Convention 修订移除）
 - [ ] **JOBSTAT-01**: `internal/api/v1/job_utils.go:57` — GetJobStatistics 时区日界生产看板缺陷：本地日界（:57 `today := time.Now().Format("2006-01-02")`）+ glebarez 驱动默认写时间格式带 +08:00 偏移 + sqlite `DATE()` 换算 UTC 取日 → 本地 00:00-08:00 窗口当天前 8 小时 JobLog 计入「昨日」，今日成功/失败看板少计。修复属**行为变更**须附回归测试（v1.29 D-05 例外条款同款纪律），v1.30+ 候选；测试侧已正午锚定隔离（api_v1_tail_80_03_test.go，Phase 95）
-- [ ] **WSNOTICE-01**: `internal/api/v1/system/ws_notice_handler.go:112-115` — WS 通知链路同连接双读者：:112 经 RegisterClient 启动 hub readPump 后 :115 又 spawn 第二个 ReadMessage goroutine，两 goroutine 竞争同一连接读；pong 直写与 writePump 并发无锁。疑为 QUIRK-80-03-H（原归因 gin Hijack 时序）真实根因。另 origin 白名单前缀匹配（`strings.HasPrefix(origin, scheme+"://"+host)`）可被 `https://allowed.com.attacker.com` 绕过；api_v1_tail_80_03_test.go:144-147 将该宽松语义固化为预期，修复须同步收紧测试（Phase 95 review IN-08 登记，v1.30+ 候选）
+- [x] **WSNOTICE-01**: `internal/api/v1/ws_notice_handler.go` — **已修复（2026-09-06 v1.29 深度复查，早于原计划）**：双读者/双写者竞态由 commit 503c162 删除 handler 遗留读循环消除（keep-alive 全权交 hub readPump/writePump）；origin 前缀匹配绕过由 6a44659 改 url.Parse 精确 host 比较封死，api_v1_tail_80_03_test.go 补 2 个子域仿冒拒绝用例锁定收紧语义
+
+### v1.29 SHIPPED 后深度复查增补（2026-09-06，来源 `.planning/milestones/v1.29-DEEP-RECHECK.md`）
+
+> 六域并行深度审查（双门禁回归 + 约定扫描 + 独立源码二次验证）。Critical 六项已当场修复（a768dd2/365366c/b3e6352/538cdcc/9e2c304/503c162），以下为需设计决策或跨系统对齐的 manual-only 项。修复均属**行为变更**，须附回归测试。
+
+- [ ] **V130R-01**（config_backup WR-02）: `config_restore_task_service.go:82,163-171` — runCtx 超时路径互斥提前释放（ExecuteCustom 返回后 worker 仍向设备推送，可再发新恢复背对背执行）+ RestoreResult 数据竞争（超时路径无 happens-before）+ 10min 总预算被 pre-backup/回读摊薄。修复需分段子 context 预算或超时后确认任务真终止（设计决策）
+- [ ] **V130R-02**（config_backup WR-04）: `network_router.go:45` — RecoverStaleRunningTasks 无实例归属过滤，多实例/滚动重启下会误杀其他实例在途任务并致终态翻转。修复需 grace period（>RestoreConfigTimeout）或实例标识列（设计决策）
+- [ ] **V130R-03**（config_backup WR-05）: `backup_handler.go:283-284` — 「该设备存在进行中的恢复任务」（应 409/400）与「备份不属于目标设备」（应 400）经 HandleServiceError 统一映射 500。需业务错误类型体系（pkg/response 语义扩展）
+- [ ] **V130R-04**（缓存 WR-03）: `system/user_cache_impl.go:172-216`、`role_cache_impl.go:51-78` — buildListCacheKey 以 `:` 拼接筛选值未转义，`Username="bob:status:1"` 与 `Username="bob"+Status=1` 可碰撞，先请求者污染后请求者缓存结果。修复需键值转义或参数集哈希
+- [ ] **V130R-05**（缓存 WR-04）: duty/knowledge/network/workorder 四 cache_impl 残留 11 处 interface{} 闭包 GetOrSet + 4 个平行 getExpiration——base 演进时不跟随（cache_invariants_92_test warning 档在案），按既定计划迁 base 泛型函数族
+- [ ] **V130R-06**（operations WR-01）: asset/building List Total 口径变化（`.Table()` 起链不含软删过滤 → repo `Model(new(T))` 收紧）——疑似 bugfix 但超 v1.29 零行为授权，仅注释背书无 OVR 台账。需补台账 + 存软删环境验证分页器
+- [ ] **V130R-07**（operations WR-02）: `floor_service.go:140-178` — 换楼同步死代码复活（91-03 行为变更）：First 失败静默吞掉 + goroutine 无顺序保证（连续两次换楼 30s 窗口内可乱序收敛到错误 building_id）。需乐观条件（WHERE building_id=旧值）或队列串行化 + OVR 补记
+- [ ] **V130R-08**（operations WR-04）: orgId「部门+全部子部门」筛选 6+ 处复制粘贴且两种口径并存——workstation/infopoint 三条件形式漏匹配 ancestors 中段（孙部门少返回），asset/building/server_room 四条件形式正确。需抽共享 helper 统一四条件
+- [ ] **V130R-09**（operations WR-06）: 分页 clamp 三口径并存（pagination_helper 10..10000 / requests.GetPagination 10..100 / pkg/query ..200）+ 常量双包（internal/constants 与 pkg/constants）——base/service.go 注释自认刻意保留。需 consolidation ticket 明确收敛路径
+- [ ] **V130R-10**（前端 WR-03）: `rpaApi.ts`（8 处）/`vdiApi.ts`（2 处）工厂 spread 新增后端不存在的 batch/statistics/searchOptions 方法（当前零调用方，潜伏 404 面）。需 omit 或 invariants 加「新增方法须有后端路由」对照断言
+- [ ] **V130R-11**（前端 WR-04）: `rpaApi.ts` 大面积端点后端不存在（scriptApi/scheduleApi/variableApi/templateApi/notificationApi/statisticsApi 全族等，前置于 94 存量）——需前后端契约对齐专项（补路由或裁剪死方法）
+- [ ] **V130R-12**（前端 WR-06）: `src/lib/api/networkApi.ts` 保有完整平行下载链（私有 blobAxios+文件名正则+触发函数），apiFactory.invariants 的 readdirSync 非递归使其永免扫描；且权威 download.ts 的 downloadFilePost 缺 CR-01 JSON 错误体检测（200+JSON 错误会存成 .xlsx）。需 networkApi 改消费 download.ts + 检测提升 + invariants 递归扫描
 
 ---
 

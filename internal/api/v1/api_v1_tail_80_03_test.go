@@ -151,6 +151,17 @@ func TestWs8003_CheckOrigin_Table(t *testing.T) {
 			want: false, note: "显式白名单外的 origin 必须拒绝",
 		},
 		{
+			// v129-recheck WR-05: 前缀匹配曾放行同形子域攻击，收紧后必须拒绝
+			name: "同源_子域仿冒_拒绝", origins: []string{},
+			host: "example.com", origin: "http://example.com.attacker.com", hasOrigin: true,
+			want: false, note: "HasPrefix 子域绕过已封死（精确 host 比较）",
+		},
+		{
+			name: "白名单_子域仿冒_拒绝", origins: []string{"https://allowed.com"},
+			host: "example.com", origin: "https://allowed.com.evil.com", hasOrigin: true,
+			want: false, note: "白名单前缀绕过已封死（解析后精确 host 比较）",
+		},
+		{
 			name: "无origin_头_允许", origins: []string{},
 			host: "example.com", origin: "", hasOrigin: false,
 			want: true, note: "非浏览器客户端(无 Origin 头)允许",
