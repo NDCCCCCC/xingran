@@ -109,29 +109,15 @@ func SetupNoticeWebSocketRouter(r *gin.RouterGroup, hub *gorilla_ws.NoticeHub, c
 		}
 
 		// 注册客户端
-		client := hub.RegisterClient(userID, conn)
+		hub.RegisterClient(userID, conn)
 
-		// 读取客户端消息（用于保持连接）
-		go func() {
-			defer hub.UnregisterClient(client)
-			for {
-				messageType, message, err := conn.ReadMessage()
-				if err != nil {
-					if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-						applogger.Warnf("WebSocket错误: %v", err)
-					}
-					break
-				}
-
-				// 处理客户端消息（如果需要）
-				if messageType == websocket.TextMessage {
-					// 心跳响应
-					if string(message) == "ping" {
-						_ = conn.WriteMessage(websocket.TextMessage, []byte("pong"))
-					}
-				}
-			}
-		}()
+		// v129-recheck C-5: 此处不得再起读循环或直写 conn——RegisterClient 内部
+		// 已启动 Client.readPump（唯一读者：ReadDeadline/Pong/断连注销）与
+		// Client.writePump（唯一写者：54s 协议级 ping + 广播）。gorilla/websocket
+		// 约束单读者/单写者，历史遗留的 handler 读循环构成第二读者，其文本
+		// ping/pong 直写构成第二写者（并发写会 panic("concurrent write to
+		// websocket connection") 且无 recover，进程崩溃）。keep-alive 全权由
+		// hub 泵承担（协议级 ping/pong，浏览器自动应答，无需应用层文本心跳）。
 
 		applogger.Warnf("用户 %s WebSocket连接已建立", userID)
 	})
