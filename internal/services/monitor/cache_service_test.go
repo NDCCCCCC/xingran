@@ -1244,17 +1244,19 @@ func TestCacheService_ReloadCacheConfigs_Error(t *testing.T) {
 
 // ==================== 辅助函数 ====================
 
-// TestNormalizeCacheKeyForService — quirk Q1 lock:
-// `key[:6] == "xingran:"`(6 字节切片 vs 8 字节字面量)恒为 false,函数为恒等函数。
+// TestNormalizeCacheKeyForService — CACHEDEF-05 修复验证:
+// 使用 strings.HasPrefix + strings.TrimPrefix 正确剥离 "xingran:" 前缀。
 func TestNormalizeCacheKeyForService(t *testing.T) {
 	cases := []struct {
 		in, want string
 	}{
-		{"xingran:user:1", "xingran:user:1"}, // 前缀不被剥离(quirk)
-		{"user:1", "user:1"},
-		{"xingran", "xingran"}, // len<=6 短键原样返回
-		{"xingr", "xingr"},
-		{"", ""},
+		{"xingran:user:1", "user:1"},                // 前缀正确剥离
+		{"xingran:cache:dept:tree:select", "cache:dept:tree:select"},
+		{"user:1", "user:1"},                         // 无前缀键原样透传
+		{"xingran", "xingran"},                       // 无冒号不剥离
+		{"xingran:", ""},                             // 精确前缀剥离
+		{"xingr", "xingr"},                           // 短键原样返回
+		{"", ""},                                     // 空字符串边界
 	}
 	for _, tc := range cases {
 		assert.Equal(t, tc.want, normalizeCacheKeyForService(tc.in), "input=%q", tc.in)

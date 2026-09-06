@@ -3,6 +3,7 @@ package monitor
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
@@ -764,8 +765,8 @@ func (s *cacheServiceImpl) ReloadCacheConfigs(ctx context.Context) error {
 
 // normalizeCacheKeyForService 规范化缓存键
 func normalizeCacheKeyForService(key string) string {
-	if len(key) > 6 && key[:6] == "xingran:" {
-		return key[6:]
+	if strings.HasPrefix(key, "xingran:") {
+		return strings.TrimPrefix(key, "xingran:")
 	}
 	return key
 }
