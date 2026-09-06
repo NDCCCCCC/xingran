@@ -10,6 +10,39 @@ import (
 
 // =====================================================================
 // 补测计划 B1-P3 (修复): pkg/system Windows-only 测试
+// =====================================================================
+
+// ─── cpu_windows.go — 纯函数测试（filetime 是固定布局） ─────────────
+// （原位于 sysmetrics_common_test.go；符号仅存在于 windows 构建标签，
+//   放 common 文件会导致 linux CI 编译失败——2026-09-07 CI 34056266515）
+
+func TestFiletimeToUint64(t *testing.T) {
+	tests := []struct {
+		name string
+		high uint32
+		low  uint32
+		want uint64
+	}{
+		{"zero", 0, 0, 0},
+		{"low_only", 0, 1, 1},
+		{"high_only", 1, 0, 0x100000000},
+		{"max", 0xffffffff, 0xffffffff, 0xffffffffffffffff},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ft := filetime{dwHighDateTime: tt.high, dwLowDateTime: tt.low}
+			assert.Equal(t, tt.want, filetimeToUint64(ft))
+		})
+	}
+}
+
+func TestGetCPUUsageByRuntime(t *testing.T) {
+	// 纯函数：直接调用验证返回值范围
+	usage := getCPUUsageByRuntime()
+	assert.GreaterOrEqual(t, usage, 2.0)
+	assert.LessOrEqual(t, usage, 95.0)
+}
+
 // 用 t.Setenv 替代 os.Setenv + defer，更安全且并发友好。
 // =====================================================================
 

@@ -21,35 +21,6 @@ var errMockNotFound = errors.New("mock: file not found")
 // 跨平台纯函数测试（无平台依赖）
 // =====================================================================
 
-// ─── cpu_windows.go — 纯函数跨平台可测（filetime 是固定布局） ──────
-
-func TestFiletimeToUint64(t *testing.T) {
-	tests := []struct {
-		name  string
-		high uint32
-		low  uint32
-		want uint64
-	}{
-		{"zero", 0, 0, 0},
-		{"low_only", 0, 1, 1},
-		{"high_only", 1, 0, 0x100000000},
-		{"max", 0xffffffff, 0xffffffff, 0xffffffffffffffff},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ft := filetime{dwHighDateTime: tt.high, dwLowDateTime: tt.low}
-			assert.Equal(t, tt.want, filetimeToUint64(ft))
-		})
-	}
-}
-
-func TestGetCPUUsageByRuntime(t *testing.T) {
-	// 纯函数：直接调用验证返回值范围
-	usage := getCPUUsageByRuntime()
-	assert.GreaterOrEqual(t, usage, 2.0)
-	assert.LessOrEqual(t, usage, 95.0)
-}
-
 // ─── osOpen monkey-patch 验证（osOpen 在 network.go 声明） ───────────────
 
 func TestOSOpenPatch(t *testing.T) {
