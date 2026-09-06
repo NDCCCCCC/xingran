@@ -460,11 +460,9 @@ func TestDutyService_GenerateSchedule_NoMembers_Error(t *testing.T) {
 // TestDutyService_GenerateSchedule_Success_InvalidatesMonthlyCache —
 // 2026-08-03..05 (Mon-Wed) weekday schedule for a 1-member pool → 3 rows.
 //
-// NOTE (quirk, locked as-is per D-12): the impl computes
-// month = parseInt("08") = 0 (parseInt requires len >= 4), so it
-// invalidates "duty:monthly:2026:0" — NOT "duty:monthly:2026:8" which is
-// the key the read path (GetMonthlyDutySchedule) uses. The invalidation
-// misses the real key; see SUMMARY deviations.
+// After CACHEDEF-03 fix (parseInt len>=4 guard removed):
+// parseInt("08") = 8, so it invalidates "duty:monthly:2026:8" —
+// which matches the read path key from GetMonthlyDutySchedule.
 func TestDutyService_GenerateSchedule_Success_InvalidatesMonthlyCache(t *testing.T) {
 	db, svc, cache := newDutyTestService(t)
 	ctx := context.Background()
@@ -472,7 +470,7 @@ func TestDutyService_GenerateSchedule_Success_InvalidatesMonthlyCache(t *testing
 	seedDutyUser(t, db, "user-1", "alice")
 	seedDutyMember(t, db, pool.ID, "user-1", 0)
 
-	cache.On("Delete", mock.Anything, "duty:monthly:2026:0").Return(nil).Once()
+	cache.On("Delete", mock.Anything, "duty:monthly:2026:8").Return(nil).Once()
 
 	count, err := svc.GenerateSchedule(ctx, &services.GenerateScheduleRequest{
 		PoolID:    pool.ID,
@@ -658,14 +656,13 @@ func TestDutyService_SwapDuty_ToScheduleMissing_Error(t *testing.T) {
 // ==================== ManualDuty ====================
 
 // TestDutyService_ManualDuty_Success_InvalidatesMonthlyAndToday —
-// month key is "duty:monthly:2026:0" due to the parseInt quirk (see file
-// header note 2).
+// After CACHEDEF-03 fix: parseInt("08") = 8, so month key is "duty:monthly:2026:8".
 func TestDutyService_ManualDuty_Success_InvalidatesMonthlyAndToday(t *testing.T) {
 	db, svc, cache := newDutyTestService(t)
 	pool := seedDutyPool(t, db, "manual-pool")
 	_ = db
 
-	cache.On("Delete", mock.Anything, "duty:monthly:2026:0").Return(nil).Once()
+	cache.On("Delete", mock.Anything, "duty:monthly:2026:8").Return(nil).Once()
 	cache.On("Delete", mock.Anything, "duty:today").Return(nil).Once()
 
 	err := svc.ManualDuty(context.Background(), &services.ManualDutyRequest{
@@ -1038,12 +1035,12 @@ func TestDutyService_ParseInt(t *testing.T) {
 		want  int
 	}{
 		{"empty_string", "", 0},
-		{"short_string_len2", "08", 0}, // len < 4 → 0 (quirk source)
-		{"short_string_len3", "123", 0},
+		{"short_string_len2", "08", 8},   // CACHEDEF-03 fix: parses all digits
+		{"short_string_len3", "123", 123},
 		{"valid_year", "2026", 2026},
-		{"first4_of_longer", "20268", 2026},
+		{"first4_of_longer", "20268", 20268}, // full number parsed
 		{"non_digit", "abcd", 0},
-		{"mixed_digits", "2a4b", 24}, // '2'→2, 'a' skipped, '4'→24, 'b' skipped
+		{"mixed_digits", "2a4b", 0}, // strconv.Atoi fails on non-digit, returns 0
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
