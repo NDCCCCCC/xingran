@@ -30,7 +30,7 @@
 | TESTFILE-01 | Phase 101 | done | commit `4222dfa`（test(101): 4 个未跟踪测试文件入库纳入 go test gate，D-101-1）+ `101-01-SUMMARY.md` 七 gate 实测表 |
 | UAT62-01 | Phase 101 | 待人工 UAT | `62-HUMAN-UAT.md` 场景 1 result [pending]（2026-09-07 环境探针：本机无 docker/psql/本地 PG，D-101-3）→ 自动化前置已就绪：`UAT-RUNBOOK.md` §1（pre-R5 旧结构 MV 构造 SQL + 启动断言清单已备，待人工提供一次性试验 PG 执行） |
 | UAT62-02 | Phase 101 | 待人工 UAT | `62-HUMAN-UAT.md` 场景 2 result [pending]（同上环境约束）→ 自动化前置已就绪：`UAT-RUNBOOK.md` §2（advisory lock 持锁/双实例两路径 + pg_locks 残留检查已备） |
-| UAT62-03 | Phase 101 | 待人工 UAT（暂记） | `62-HUMAN-UAT.md` 场景 3——本表落盘时点 101-02 尚未执行完毕，按 D-101-3 如实暂记 pending；unit 级前置（`internal/core/db/init_data_test.go` TestCreateDefaultUser 四语义）已确认存在。101-02 场景 3 sqlite 全自动执行结果出来后本行将同步刷新（与 62-HUMAN-UAT.md 回写严格一致） |
+| UAT62-03 | Phase 101 | done（sqlite 空库口径） | `62-HUMAN-UAT.md` 场景 3 result **[passed 2026-09-07]**（2026-09-07 刷新，与 62-HUMAN-UAT.md 回写严格一致）: TestCreateDefaultUser 4/4 + run 1 默认凭据 WARN（init_data.go :288 逐字）+ run 2 env 覆盖 Infof（:294 逐字）+ 两库 salt=`''` ≠ "default" DB 断言；证据链 `101-02-SUMMARY.md` Task 2；口径注记 sqlite 空库，PG 变体步骤见 `UAT-RUNBOOK.md` §3 可选 |
 
 ## 口径注记
 
