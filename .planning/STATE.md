@@ -4,13 +4,13 @@ milestone: v1.30
 milestone_name: V130 缺陷治理
 status: planning
 last_updated: "2026-09-06T17:30:00+08:00"
-last_activity: 2026-09-06 -- Phase 96 plan 02 completed (CACHEDEF-05 fix + regression test)
+last_activity: 2026-09-06 -- Phase 96 plan 03 completed (JOBSTAT-01 dead code deletion)
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 2
-  completed_plans: 2
-  percent: 2
+  total_plans: 3
+  completed_plans: 3
+  percent: 3
 ---
 
 # Project State (v1.30 — milestone workstream)
