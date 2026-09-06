@@ -295,3 +295,63 @@
 - Model mix: ~70% Sonnet + ~20% Opus + ~10% Haiku
 - Notable: Sequential inline cost ~2h extra vs subagent parallelism; accepted for correctness
 - Notable: SC-a shortfall (55.56% < 70%) committed to roadmap explicitly rather than hidden
+
+---
+
+## Milestone: v1.29 — 技术债治理 (Tech Debt Governance)
+
+**Shipped:** 2026-09-06（3 天，2026-09-04 启动）
+**Phases:** 7（89-95）| **Plans:** 26 | **Tasks:** 39 | **Commits:** 191（+25478/−3502，236 files）
+
+### What Was Built
+
+- pkg/constants 五包（pagination/timeouts/ports/protocol/concurrency）+ NormalizePagination 唯一入口，AST 锁值双锁
+- 11/11 operations services 迁入 base.GORMRepository[T]，CRUD 模板清零
+- internal/services/base 缓存单一权威（TTLResolver + 泛型函数族），32 处 GetOrSet 收敛 + 42 处失效归一 + invariants 锁进 CI
+- config_backup 三 TODO 真实实现：gzip 压缩/解压（64MB 防线 + 文件名清洗）+ DeviceExecutor.RestoreConfig + 异步恢复四态状态机（migration 211/212）
+- 前端 apiFactory 单一权威（createResourceApi 8 方法），13 个 *Api.ts 矩阵处置，download.ts 下载归一
+- v1.28 收口 + MILESTONE-AUDIT + SHIPPED 后深度复查（6C+10W 当场修复）+ CI 首次见证全绿
+
+### What Worked
+
+- **审计驱动的 phase 划分**：2026-09-03 四维度并行扫描（TODO/硬编码/重复/完成度）直接转化为 7 相 45 requirements，零范围漂移
+- **diff 级零漂移纪律**：Phase 92/94 迁移逐 hunk 比对 wire 语义，键集/TTL/签名逐字保留——深度复查证实迁移本体零回归
+- **invariants 测试作为收口伴生品**：每个统一 phase 同时交付 AST/白名单锁（cache_invariants_92 / apiFactory.invariants / timeouts AST），防回退成本前置
+- **SHIPPED ≠ 完工**：SHIPPED 当日深度复查揪出 6 个 Critical（含 3 个 Phase 93 新增代码缺陷）——复查流水线（门禁复跑 + 8 项约定扫描 + 6 域并行审查 + Critical 独立二次验证）值得固化为 milestone close 前置
+
+### What Was Inefficient
+
+- Phase 91 三处超「零行为变更」授权的行为变更（workstation 上限收紧/Total 口径/floor 同步复活）仅以代码注释背书，未记 OVR 台账——其中 workstation 上限收紧造成真实的平面图/3D 静默截断（C-4）
+- Phase 93 新增异步恢复链的互斥（先查后写）与崩溃恢复（漏 pending）在设计期即可避免——新增代码的审查深度应不低于迁移代码
+- MILESTONES CLI 自动提取的 accomplishments 质量噪杂（"Task 3 verification"/"90-01"），依赖手工二次整理
+- commitlint subject-case 规则多次拒收大写开头 subject（C-3/C-5 等首轮被拒），修复提交的 finding ID 应置于 body
+
+### Patterns Established
+
+- 部分唯一索引实现「插入即夺锁」互斥（migration 212，PG/sqlite 双方言同语法）
+- GetPaginationWithMax(max) 模式：同一 typed request 服务「列表口径（100）」与「全集口径（10000）」双上限
+- UAT/VERIFICATION 落档模板：resolution 注记 + 证据 commit/run 编号内联
+
+### Key Lessons
+
+- 「零行为变更」授权需要 OVR 台账强制落账，仅注释背书必然漏记
+- 测试全绿 ≠ 无回归：C-4 分页截断（total 正确、无告警）全量测试无法捕获，需消费方契约核对
+- gate 语义必须验证工作量（type-check 0 文件恒真 gate 跨全程未报警）
+- 多相并行的 milestone 需要一次 SHIPPED 后全仓深度复查兜底——迁移类工作的质量在 diff 级，新增类工作的风险在设计级
+
+### Cost Observations
+
+- Sessions: 多会话并行（main + workstream）；复查阶段 6 域并行 reviewer ~60 分钟出全量报告
+- 修复流水线：12 个 atomic commit 零回退，针对性测试 → commit 节奏稳定
+
+---
+
+
+
+## Cross-Milestone Trends (v1.29 增补)
+
+| 维度 | v1.29 数据 |
+|------|-----------|
+| 时长/节奏 | 3 天 7 相 26 plans，日均 ~64 commits |
+| 回归防护 | 每相 invariants/AST 锁伴生；SHIPPED 后全量门禁两遍全绿 |
+| 缺陷发现前置 | 深度复查 6C 中 4 个为「新增代码缺陷」——新增代码审查深度需对齐迁移代码 |
