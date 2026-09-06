@@ -1,7 +1,27 @@
 ---
 last_updated: 2026-09-06
-update_trigger: v1.29 shipped + archived — 技术债治理 7 相 26 plans 全交付；SHIPPED 后深度复查修复 6 Critical + 10 Warning；CI 首次见证全绿（run 34007103013）
-previous_update: 2026-09-04 v1.29 started (tech debt governance, 7 audit actions)
+update_trigger: v1.30 started — V130 缺陷治理（18 项 CACHEDEF/JOBSTAT/V130R + 测试文件入库决策 + 62-HUMAN-UAT 3 场景）
+previous_update: 2026-09-06 v1.29 shipped + archived — 技术债治理 7 相 26 plans 全交付；SHIPPED 后深度复查修复 6 Critical + 10 Warning
+---
+
+## Current Milestone: v1.30 V130 缺陷治理 (Defect Remediation)
+
+**Goal:** 修复 v1.29 期间登记的全部 18 项 V130-CANDIDATES 缺陷候选 + 闭环 2 个 deferred 小项；所有修复附回归测试，使深度复查发现的问题不再带病运行。
+
+**Target features:**
+- **CACHEDEF-01..05**（5 项缓存缺陷）: 失效键不匹配（dept:tree）/ 遗漏 config:id 失效 / duty parseInt 恒 0 / 待办缓存键缺 limit / 前缀剥离恒 false（key[:6]）
+- **JOBSTAT-01**: GetJobStatistics 时区日界看板缺陷（本地 00:00-08:00 窗口 JobLog 计入昨日）
+- **V130R-01..12**（12 项深度复查 manual-only）: config_backup 互斥原子性/多实例归属/业务错误码、缓存列表键转义、duty/knowledge/network/workorder 四包迁 base 泛型、asset/building Total 口径、floor 换楼乱序、orgId 子部门筛选统一、分页 clamp 三口径收敛、前端幽灵方法（rpaApi/vdiApi batch 等）、rpaApi 契约对齐、networkApi 平行下载链收敛
+- **测试文件入库决策**: 4 个未跟踪 `*_test.go`（rpa_model_methods / cache manager_coverage / sysmetrics_common / sysmetrics_windows）
+- **62-HUMAN-UAT 3 场景**: v1.27 workstream 遗留人工验证闭环（62-ai-internal-core-db）
+
+**锁定决策 (v1.30 init):**
+- **D-01 范围**: 18 项 V130-CANDIDATES 全做 + 2 顺带项；不引入新业务功能
+- **D-02 回归纪律**: 所有修复属行为变更，须附回归测试（v1.29 D-05 例外条款同款纪律）；既有七 gate（go build / go test / 后端 coverage ≥77.5 / 前端 45 dirs / lint / type-check / diff coverage）全程不倒退
+- **D-03 设计决策项**: V130R-01（分段 context 预算）/ V130R-02（实例标识或 grace period）/ V130R-03（业务错误类型体系）/ V130R-09（分页口径收敛路径）的方案在 phase 规划时敲定
+- **D-04 范围外**: WSNOTICE-01 已提前修复不在范围内；operlog exclude_paths 继续挂账；前端覆盖率不推新目标（v1.28 已收口 45.13%）
+- **D-05 Phase 编号**: 从 Phase 96 起续编（v1.29 用 89-95，v1.28 用 82-88）
+
 ---
 
 ## Current Milestone: v1.29 技术债治理 (Tech Debt Governance) — ✅ SHIPPED + ARCHIVED 2026-09-06
@@ -674,7 +694,7 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 
 ---
 
-*Last updated: 2026-09-06 — v1.29 技术债治理 SHIPPED + ARCHIVED（7 phases / 26 plans / 45 requirements，191 commits，CI run 34007103013 全绿）。SHIPPED 后深度复查修复 6 Critical + 10 Warning（v1.29-DEEP-RECHECK.md）；V130-CANDIDATES 为下里程碑输入。Previous: v1.28 SHIPPED + ARCHIVED 2026-09-04（阶段性收口 45.13%）；v1.27 SHIPPED 2026-08-23；v1.26 footer: Last updated: 2026-08-20 — v1.26 后端测试覆盖率优秀 (Backend Test Coverage Excellence) milestone started: 12.8% → ≥70% 加权平均,P0/P1 零测试模块全清,CI coverage 阈值 gate + diff coverage ≥80%;4 phases (71-74) 按 quick-260820-bcs 扫描建议拆分。规划输入: `.planning/quick/260820-backend-test-coverage-scan/SUMMARY.md`。Previous: Combined v1.22-v1.25 SHIPPED + ARCHIVED 2026-08-19 (7 phases / 20 plans / 36 items, audit `passed`); Phase 63 前端工具链自动化 SHIPPED 2026-08-20; v1.21 SHIPPED 2026-08-18 (Phases 57-62).*
+*Last updated: 2026-09-06 — v1.30 V130 缺陷治理 milestone started（18 项 V130-CANDIDATES + 2 顺带项；Phase 编号从 96 续编）。Previous: v1.29 技术债治理 SHIPPED + ARCHIVED 2026-09-06（7 phases / 26 plans / 45 requirements，191 commits，CI run 34007103013 全绿）；SHIPPED 后深度复查修复 6 Critical + 10 Warning（v1.29-DEEP-RECHECK.md），V130-CANDIDATES 即本期输入。Previous: v1.28 SHIPPED + ARCHIVED 2026-09-04（阶段性收口 45.13%）；v1.27 SHIPPED 2026-08-23；v1.26 footer: Last updated: 2026-08-20 — v1.26 后端测试覆盖率优秀 (Backend Test Coverage Excellence) milestone started: 12.8% → ≥70% 加权平均,P0/P1 零测试模块全清,CI coverage 阈值 gate + diff coverage ≥80%;4 phases (71-74) 按 quick-260820-bcs 扫描建议拆分。规划输入: `.planning/quick/260820-backend-test-coverage-scan/SUMMARY.md`。Previous: Combined v1.22-v1.25 SHIPPED + ARCHIVED 2026-08-19 (7 phases / 20 plans / 36 items, audit `passed`); Phase 63 前端工具链自动化 SHIPPED 2026-08-20; v1.21 SHIPPED 2026-08-18 (Phases 57-62).*
 
 ---
 
