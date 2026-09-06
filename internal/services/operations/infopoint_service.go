@@ -186,21 +186,18 @@ func (s *infoPointService) filterScope(req requests.InfoPointListRequest) base.S
 		// 通过关联工位、楼层、楼宇的 orgId 筛选部门（包含子部门）
 		// 信息点 → 工位 → 楼层 → 楼宇 → 部门
 		if req.OrgID != "" {
-			// 使用 EXISTS 子查询避免与现有 JOIN 冲突
-			// 查询该部门及其所有子部门：ancestors 包含该部门ID，或 ID 等于该部门ID
-			db = db.Where(`
-				EXISTS (
-					SELECT 1 FROM sys_workstation w
-					JOIN ops_floors f ON CAST(f.id AS TEXT) = w.floor_id
-					JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id
-					JOIN sys_dept d ON CAST(d.id AS TEXT) = b.org_id
-					WHERE CAST(w.id AS TEXT) = ops_info_points.workstation_id
-					AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors LIKE ? OR d.ancestors = ?)
-					AND w.deleted_at IS NULL
-					AND f.deleted_at IS NULL
-					AND b.deleted_at IS NULL
-				)
-			`, req.OrgID, "%,"+req.OrgID+",%", "%,"+req.OrgID, req.OrgID)
+			// 使用 EXISTS 子查询避免与现有 JOIN 冲突；部门递归四条件统一走
+			// BuildDeptRecursiveFilter（V130R-08，uuid/varchar 混比内部统一
+			// CAST(... AS TEXT)）。Session(NewDB) 派生全新 statement 构建子查询，
+			// 不污染外层链；w/f/b 软删过滤与迁移前内联实现逐字一致。
+			sub := db.Session(&gorm.Session{NewDB: true}).
+				Table("sys_workstation w").
+				Joins("JOIN ops_floors f ON CAST(f.id AS TEXT) = w.floor_id").
+				Joins("JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id").
+				Where("CAST(w.id AS TEXT) = ops_info_points.workstation_id").
+				Where("w.deleted_at IS NULL AND f.deleted_at IS NULL AND b.deleted_at IS NULL").
+				Select("1")
+			db = db.Where("EXISTS (?)", BuildDeptRecursiveFilter(req.OrgID, "b.org_id")(sub))
 		}
 		return db
 	}

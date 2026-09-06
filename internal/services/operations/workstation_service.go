@@ -79,7 +79,10 @@ func (s *workstationService) Statistics(ctx context.Context, params map[string]i
 	var result WorkstationStatisticsResult
 	query := s.db.WithContext(ctx).Model(&models.Workstation{})
 	if orgId := extractStringParam(params, "orgId"); orgId != "" {
-		query = query.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id JOIN sys_dept d ON CAST(d.id AS TEXT) = b.org_id WHERE CAST(f.id AS TEXT) = sys_workstation.floor_id AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors LIKE ? OR d.ancestors = ?) AND b.deleted_at IS NULL)", orgId, "%,"+orgId+",%", "%,"+orgId, orgId)
+		// 部门递归四条件统一走 BuildDeptRecursiveFilter（V130R-08）；
+		// EXISTS 骨架（工位 → 楼层 f → 楼宇 b）见 workstationOrgExistsSub。
+		sub := workstationOrgExistsSub(query, "CAST(f.id AS TEXT) = sys_workstation.floor_id")
+		query = query.Where("EXISTS (?)", BuildDeptRecursiveFilter(orgId, "b.org_id")(sub))
 	}
 	err := query.
 		Select(
@@ -95,6 +98,26 @@ func (s *workstationService) Statistics(ctx context.Context, params map[string]i
 	return &result, nil
 }
 
+// workstationOrgExistsSub 工位 orgId 部门筛选的 EXISTS 子查询骨架
+// （工位 → 楼层 f → 楼宇 b；部门递归条件由调用方经
+// BuildDeptRecursiveFilter(orgId, "b.org_id") 注入后以 EXISTS (?) 挂接）：
+//
+//	sub := workstationOrgExistsSub(query, "CAST(f.id AS TEXT) = sys_workstation.floor_id")
+//	query = query.Where("EXISTS (?)", BuildDeptRecursiveFilter(orgId, "b.org_id")(sub))
+//
+// Session(NewDB) 从外层链派生全新 statement（保留 ConnPool/Context），
+// 子查询条件不会污染外层查询；原内联实现的 JOIN sys_dept d 已由 helper 的
+// IN 子查询承接，此处不再需要。Statistics / List(filterScope) /
+// SearchWorkstationOptions 三处共用。
+func workstationOrgExistsSub(db *gorm.DB, entityFloorLink string) *gorm.DB {
+	return db.Session(&gorm.Session{NewDB: true}).
+		Table("ops_floors f").
+		Joins("JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id").
+		Where(entityFloorLink).
+		Where("b.deleted_at IS NULL").
+		Select("1")
+}
+
 // GetWorkstationDeptOptions 工位编辑"所属部门"下拉数据源 (D-06 单 query union)
 // union: orgId 子孙节点 (is_alias=false) + alias 命中节点 (is_alias=true)
 func (s *workstationService) GetWorkstationDeptOptions(ctx context.Context, orgId string) ([]DeptOption, error) {
@@ -103,7 +126,8 @@ func (s *workstationService) GetWorkstationDeptOptions(ctx context.Context, orgI
 	}
 	var result []DeptOption
 	// 单 query union: sys_dept 子孙节点 (is_alias=false) + alias 命中节点 (is_alias=true)
-	// 1) 子孙节点: ancestors LIKE '%,<orgId>,%' OR id = orgId, 排除外部机构本身
+	// 1) 子孙节点: BuildDeptRecursiveFilter 四条件口径（orgId 自身 + 全部子孙，
+	//    V130R-08），排除外部机构本身 —— 与 List/Statistics orgId 过滤同一 helper
 	// 2) alias 节点: scope='workstation' AND location_id=orgId, JOIN sys_dept 取 dept_name
 	//
 	// 关于 sys_dept.id (uuid) 与 alias.dept_id/location_id (varchar) 的列对列比较:
@@ -112,20 +136,20 @@ func (s *workstationService) GetWorkstationDeptOptions(ctx context.Context, orgI
 	//   - SQLite: uuid 列实际存为 TEXT,CAST 是 no-op,TEXT = TEXT 正常
 	// 故 CAST 写法在 PG/SQLite 双 DB 行为一致(避免 PG 专有 ::text 在 SQLite 语法错误)。
 	// 与 location_alias_service.go 的 aliasListJoinClause 处理方式一致。
-	err := s.db.WithContext(ctx).Raw(`
-		SELECT CAST(id AS TEXT) AS dept_id, dept_name AS dept_name, false AS is_alias
-		FROM sys_dept
-		WHERE deleted_at IS NULL
-		  AND is_external_org = 0
-		  AND ((',' || ancestors || ',') LIKE ('%,' || ? || ',%') OR CAST(id AS TEXT) = ? OR ancestors = ?)
-		UNION ALL
+	// 子查询经 (?) 实参内联为 UNION ALL 左支（GORM 渲染 *gorm.DB 实参并合并其绑定参数）。
+	descendants := s.db.WithContext(ctx).
+		Table("sys_dept").
+		Select("CAST(id AS TEXT) AS dept_id, dept_name AS dept_name, false AS is_alias").
+		Where("deleted_at IS NULL AND is_external_org = 0").
+		Scopes(BuildDeptRecursiveFilter(orgId, "id"))
+	err := s.db.WithContext(ctx).Raw(`(?) UNION ALL
 		SELECT a.dept_id, d.dept_name, true AS is_alias
 		FROM sys_dept_location_alias a
 		JOIN sys_dept d ON CAST(d.id AS TEXT) = a.dept_id
 		WHERE a.deleted_at IS NULL
 		  AND a.scope = 'workstation'
 		  AND a.location_id = ?
-	`, orgId, orgId, orgId).Scan(&result).Error
+	`, descendants, orgId).Scan(&result).Error
 	return result, err
 }
 
@@ -285,15 +309,13 @@ func (s *workstationService) filterScope(req requests.WorkstationListRequest) ba
 		}
 		// 通过关联楼宇的 orgId 筛选部门（包含子部门）
 		// 工位 -> 楼层 -> 楼宇，通过楼宇的 org_id 筛选
-		// 支持查询该部门及其所有子部门的工位
-		// 使用 EXISTS 子查询避免与现有 JOIN 冲突
-		// 注意：需要类型转换
-		// - ops_floors.building_id 是 varchar，ops_buildings.id 是 uuid
-		// - ops_buildings.org_id 是 varchar，sys_dept.id 是 uuid
-		// - 将两边都转为 text 进行比较，避免类型不匹配
-		// 查询该部门及其所有子部门：ancestors 包含该部门ID，或 ID 等于该部门ID
+		// 使用 EXISTS 子查询避免与现有 JOIN 冲突；部门递归四条件统一走
+		// BuildDeptRecursiveFilter（V130R-08），其内部对 uuid/varchar 混比
+		// 统一 CAST(... AS TEXT)（PG 对二者无隐式互转）；EXISTS 骨架见
+		// workstationOrgExistsSub（Session(NewDB) 派生子查询，不污染外层链）。
 		if req.OrgID != "" {
-			db = db.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id JOIN sys_dept d ON CAST(d.id AS TEXT) = b.org_id WHERE CAST(f.id AS TEXT) = sys_workstation.floor_id AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors LIKE ? OR d.ancestors = ?) AND b.deleted_at IS NULL)", req.OrgID, "%,"+req.OrgID+",%", "%,"+req.OrgID, req.OrgID)
+			sub := workstationOrgExistsSub(db, "CAST(f.id AS TEXT) = sys_workstation.floor_id")
+			db = db.Where("EXISTS (?)", BuildDeptRecursiveFilter(req.OrgID, "b.org_id")(sub))
 		}
 		return db
 	}
@@ -478,7 +500,8 @@ func (s *workstationService) SearchWorkstationOptions(ctx context.Context, req r
 	}
 	// orgId 部门筛选含子部门:与 List 同款 EXISTS 子查询,避免类型转换问题
 	if req.OrgID != "" {
-		query = query.Where("EXISTS (SELECT 1 FROM ops_floors f JOIN ops_buildings b ON CAST(b.id AS TEXT) = f.building_id JOIN sys_dept d ON CAST(d.id AS TEXT) = b.org_id WHERE CAST(f.id AS TEXT) = sys_workstation.floor_id AND (b.org_id = ? OR d.ancestors LIKE ? OR d.ancestors LIKE ? OR d.ancestors = ?) AND b.deleted_at IS NULL)", req.OrgID, "%,"+req.OrgID+",%", "%,"+req.OrgID, req.OrgID)
+		sub := workstationOrgExistsSub(query, "CAST(f.id AS TEXT) = sys_workstation.floor_id")
+		query = query.Where("EXISTS (?)", BuildDeptRecursiveFilter(req.OrgID, "b.org_id")(sub))
 	}
 
 	if err := query.Order("sys_workstation.workstation_name ASC").Find(&result).Error; err != nil {

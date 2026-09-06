@@ -271,10 +271,9 @@ func (s *assetService) applyFilters(query *gorm.DB, params map[string]interface{
 func (s *assetService) applyDeptFilter(query *gorm.DB, deptId string) *gorm.DB {
 	var deptIDs []string
 
-	// 查询该部门及其所有子部门的ID
+	// 查询该部门及其所有子部门的ID（BuildDeptRecursiveFilter，V130R-08）
 	err := s.db.Table("sys_dept").
-		Where("id = ? OR ancestors LIKE ? OR ancestors LIKE ? OR ancestors = ?",
-			deptId, "%,"+deptId+",%", "%,"+deptId, deptId).
+		Scopes(BuildDeptRecursiveFilter(deptId, "id")).
 		Pluck("id", &deptIDs).Error
 
 	if err != nil || len(deptIDs) == 0 {

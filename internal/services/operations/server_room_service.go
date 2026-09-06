@@ -224,18 +224,12 @@ func (s *serverRoomService) validateFloor(ctx context.Context, floorID string) e
 }
 
 // getDeptAndChildDeptIDs 获取部门及其所有子部门的ID
+// （四条件递归口径统一走 BuildDeptRecursiveFilter，V130R-08）
 func (s *serverRoomService) getDeptAndChildDeptIDs(ctx context.Context, orgId string) []string {
 	var deptIDs []string
 
-	// 查询该部门及其所有子部门的ID
-	// 匹配条件：
-	// 1. id = orgId (当前部门)
-	// 2. ancestors LIKE '%,' + orgId + ',%' (中间的子部门)
-	// 3. ancestors LIKE '%,' + orgId (最后一个子部门)
-	// 4. ancestors = orgId (直接子部门)
 	err := s.db.WithContext(ctx).Table("sys_dept").
-		Where("id = ? OR ancestors LIKE ? OR ancestors LIKE ? OR ancestors = ?",
-			orgId, "%,"+orgId+",%", "%,"+orgId, orgId).
+		Scopes(BuildDeptRecursiveFilter(orgId, "id")).
 		Pluck("id", &deptIDs).Error
 
 	if err != nil || len(deptIDs) == 0 {

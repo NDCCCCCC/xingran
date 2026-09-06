@@ -188,10 +188,9 @@ func (s *buildingService) applyFilters(query *gorm.DB, params map[string]interfa
 func (s *buildingService) applyDeptFilter(query *gorm.DB, orgId string) *gorm.DB {
 	var deptIDs []string
 
-	// 查询该部门及其所有子部门的ID
+	// 查询该部门及其所有子部门的ID（BuildDeptRecursiveFilter，V130R-08）
 	err := s.db.Table("sys_dept").
-		Where("id = ? OR ancestors LIKE ? OR ancestors LIKE ? OR ancestors = ?",
-			orgId, "%,"+orgId+",%", "%,"+orgId, orgId).
+		Scopes(BuildDeptRecursiveFilter(orgId, "id")).
 		Pluck("id", &deptIDs).Error
 
 	if err != nil || len(deptIDs) == 0 {
@@ -272,8 +271,7 @@ func (s *buildingService) SearchBuildingOptions(ctx context.Context, params map[
 	if orgId := extractStringParam(params, "orgId"); orgId != "" {
 		var deptIDs []string
 		err := s.db.Table("sys_dept").
-			Where("id = ? OR ancestors LIKE ? OR ancestors LIKE ? OR ancestors = ?",
-				orgId, "%,"+orgId+",%", "%,"+orgId, orgId).
+			Scopes(BuildDeptRecursiveFilter(orgId, "id")).
 			Pluck("id", &deptIDs).Error
 		if err != nil {
 			return nil, err
