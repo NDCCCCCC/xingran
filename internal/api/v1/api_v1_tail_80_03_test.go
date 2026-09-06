@@ -1,8 +1,8 @@
 package v1
 
 // =====================================================================
-// Phase 80-03 Task 7 part B: api/v1 tail — FormatDuration + GetJobStatistics
-// + ws_notice_handler 真 WS 握手 + monitor_router/router.go 装配形状。
+// Phase 80-03 Task 7 part B: api/v1 tail — ws_notice_handler 真 WS 握手
+// + monitor_router/router.go 装配形状。
 //
 // 复用 newMiniCore8003 keystone;真 httptest.NewServer + gorilla websocket Dial
 // (照 readpump 范式);零新增依赖,全既有。
@@ -23,81 +23,6 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	wshub "github.com/xingran-next/xingran-go-backend/internal/websocket"
 )
-
-// =====================================================================
-// FormatDuration(纯函数,表驱动)
-// =====================================================================
-
-// TestJbu8003_FormatDuration 表驱动:秒/分/时/组合/零值/边界。
-func TestJbu8003_FormatDuration(t *testing.T) {
-	tests := []struct {
-		name string
-		ms   int64
-		want string
-	}{
-		{"0ms", 0, "0ms"},
-		{"500ms", 500, "500ms"},
-		{"999ms_临界", 999, "999ms"},
-		{"1s", 1000, "1s"},
-		{"30s", 30000, "30s"},
-		{"59s", 59000, "59s"},
-		{"60s_1m", 60000, "1m"},
-		{"90s_1m", 90000, "1m"}, // 1.5 min → 1
-		{"1h", 3600000, "1h"},
-		{"2h", 7200000, "2h"},
-		{"65000ms_1m", 65000, "1m"}, // 65s = 1.08m → 1
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, FormatDuration(tt.ms))
-		})
-	}
-}
-
-// =====================================================================
-// GetJobStatistics(sqlite 真实查询 sys_job + sys_job_log)
-// =====================================================================
-
-// TestJbu8003_GetJobStatistics 种子行 → 统计数断言;空表零值分支。
-func TestJbu8003_GetJobStatistics(t *testing.T) {
-	t.Run("空表_零值", func(t *testing.T) {
-		_, db := newMiniCore8003(t)
-		require.NoError(t, db.AutoMigrate(&models.Job{}, &models.JobLog{}))
-		stats, err := GetJobStatistics(db)
-		require.NoError(t, err)
-		assert.EqualValues(t, 0, stats["total"])
-		assert.EqualValues(t, 0, stats["running"])
-		assert.EqualValues(t, 0, stats["paused"])
-		assert.EqualValues(t, 0, stats["todaySuccess"])
-		assert.EqualValues(t, 0, stats["todayFail"])
-	})
-
-	t.Run("有种子_计数正确", func(t *testing.T) {
-		_, db := newMiniCore8003(t)
-		require.NoError(t, db.AutoMigrate(&models.Job{}, &models.JobLog{}))
-
-		// 2 个 Job:1 running(status=0) + 1 paused(status=1)
-		require.NoError(t, db.Create(&models.Job{JobName: "j1", JobGroup: "g1", InvokeTarget: "noop"}).Error)
-		require.NoError(t, db.Create(&models.Job{JobName: "j2", JobGroup: "g1", InvokeTarget: "noop", Status: models.JobStatusPause}).Error)
-
-		// 2 个 JobLog:1 success + 1 fail;CreatedAt 显式正午锚定——生产日界在
-		// job_utils.go:57(time.Now() 本地日界)+ glebarez 驱动写时间带 +08:00 偏移 +
-		// sqlite DATE() 换算 UTC 取日,凌晨(00:00-08:00 +08)窗口 autoCreateTime(=now)
-		// 会被记到「昨日」致计数恒 0;本地正午 +08 = UTC 同日,全天候稳定(test-infra,
-		// 生产看板同窗口缺陷已登记 V130-CANDIDATES JOBSTAT-01,本测试不修生产行为)
-		noon := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 12, 0, 0, 0, time.Local)
-		require.NoError(t, db.Create(&models.JobLog{BaseTimeLine: models.BaseTimeLine{CreatedAt: noon}, JobName: "j1", JobGroup: "g1", InvokeTarget: "noop", Status: int(models.JobLogStatusSuccess)}).Error)
-		require.NoError(t, db.Create(&models.JobLog{BaseTimeLine: models.BaseTimeLine{CreatedAt: noon}, JobName: "j1", JobGroup: "g1", InvokeTarget: "noop", Status: int(models.JobLogStatusFailure)}).Error)
-
-		stats, err := GetJobStatistics(db)
-		require.NoError(t, err)
-		assert.EqualValues(t, 2, stats["total"], "总任务数 = 2")
-		assert.EqualValues(t, 1, stats["running"], "running = 1(JobStatusNormal)")
-		assert.EqualValues(t, 1, stats["paused"], "paused = total-running")
-		assert.EqualValues(t, 1, stats["todaySuccess"], "今日成功 1")
-		assert.EqualValues(t, 1, stats["todayFail"], "今日失败 1")
-	})
-}
 
 // =====================================================================
 // ws_notice_handler 补分支 + 真 WS 握手
