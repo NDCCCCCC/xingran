@@ -2,7 +2,6 @@ package operations
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 
 	"github.com/glebarez/sqlite"
@@ -15,20 +14,23 @@ import (
 	operationsmodels "github.com/xingran-next/xingran-go-backend/internal/models/operations"
 )
 
-// newFloorMoveTestDB creates an in-memory-ish SQLite DB for floor-move tests.
-// Uses t.TempDir file DB (not :memory:) because Update spawns an async goroutine
-// that shares the same connection pool — :memory: creates independent DBs per connection.
+// newFloorMoveTestDB creates an in-memory SQLite DB for floor-move tests.
+//
+// :memory: + MaxOpenConns(1)：Update 派生的异步工位同步 goroutine 与主流程
+// 串行共享同一连接（连接池上限 1 使所有查询落到同一个 :memory: 实例）。
+// 此前用 t.TempDir 文件 DB——goroutine 在测试返回后仍写 journal，与
+// TempDir 的 RemoveAll 赛跑导致 "directory not empty" 清理失败
+// （CI 34058116266 flake）；无文件即无竞态，整类问题消除。
 func newFloorMoveTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
-	db, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "floor_move.db")), &gorm.Config{
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	require.NoError(t, err)
-	t.Cleanup(func() {
-		if sqlDB, err := db.DB(); err == nil {
-			_ = sqlDB.Close()
-		}
-	})
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	sqlDB.SetMaxOpenConns(1)
+	t.Cleanup(func() { _ = sqlDB.Close() })
 	require.NoError(t, db.AutoMigrate(
 		&operationsmodels.OpsBuilding{},
 		&operationsmodels.OpsFloor{},
