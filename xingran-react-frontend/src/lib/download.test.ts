@@ -1,9 +1,10 @@
 /**
- * download 契约测试 (Phase 94-01 D-11)
+ * download 契约测试 (Phase 94-01 D-11;Phase 100 D-100-7 增补)
  *
  * 锁定: blobAxios 异步 Bearer 注入拦截器 / downloadFile GET 链(含非 2xx 抛错) /
  * downloadFilePost POST 链(content-disposition URL 编码文件名提取 + 默认回退 +
- * 非 2xx 抛错) / triggerBrowserDownload 触发顺序 / 5min 超时锁值。
+ * 非 2xx 抛错) / triggerBrowserDownload 触发顺序 / 5min 超时锁值 /
+ * 200+application/json 错误体检测(GET/POST 双挂,content-type 强判据)。
  * (Phase 100 V130R-11: executionApi.downloadReport 判 dead 随 rpaApi 裁剪摘除;
  * downloadFilePost 本身保留,活消费者 opsApi excel/asset export。)
  * axios create 工厂 mock 照抄 opsApi.test.ts:41-55,URL.createObjectURL 打桩 :103-115。
@@ -211,5 +212,68 @@ describe("triggerBrowserDownload 触发顺序", () => {
 describe("blobAxios 实例配置", () => {
   it("timeout 锁值 300000(5min 超时语义不回退)", () => {
     expect(h.createConfigs[0]?.timeout).toBe(300000);
+  });
+});
+
+describe("200+JSON 错误体检测 (Phase 100 D-100-7)", () => {
+  beforeEach(() => {
+    createObjectURLMock().mockClear();
+    revokeObjectURLMock().mockClear();
+  });
+
+  it("downloadFilePost: 200 + application/json 错误体 → throw message 字段,不触发下载", async () => {
+    mockedBlobAxios.post.mockResolvedValueOnce({
+      status: 200,
+      data: new Blob([JSON.stringify({ code: 500, message: "导出失败" })], {
+        type: "application/json",
+      }),
+      headers: { "content-type": "application/json" },
+    });
+
+    await expect(downloadFilePost("/x", {}, "z.xlsx")).rejects.toThrow("导出失败");
+    expect(createObjectURLMock()).not.toHaveBeenCalled();
+  });
+
+  it("downloadFilePost: 200 + application/json + 非法 JSON body → 回退默认文案「下载失败」", async () => {
+    mockedBlobAxios.post.mockResolvedValueOnce({
+      status: 200,
+      data: new Blob(["<html>not-json</html>"], { type: "application/json" }),
+      headers: { "content-type": "application/json" },
+    });
+
+    await expect(downloadFilePost("/x", {}, "z.xlsx")).rejects.toThrow("下载失败");
+    expect(createObjectURLMock()).not.toHaveBeenCalled();
+  });
+
+  it("downloadFilePost: 流式 content-type + Blob → 正常下载并返回实际 filename(防误伤)", async () => {
+    mockedBlobAxios.post.mockResolvedValueOnce({
+      status: 200,
+      data: new Blob(["xlsx-bytes"]),
+      headers: {
+        "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "content-disposition": 'attachment; filename="%E6%A5%BC%E5%AE%87.xlsx"',
+      },
+    });
+
+    const filename = await downloadFilePost("/ops/building/export", {}, "fallback.xlsx");
+
+    expect(filename).toBe("楼宇.xlsx");
+    expect(anchorCapture.element?.download).toBe("楼宇.xlsx");
+    expect(createObjectURLMock()).toHaveBeenCalled();
+  });
+
+  it("downloadFile(GET): 200 + application/json 错误体 → throw(GET 侧同构防护)", async () => {
+    mockedBlobAxios.get.mockResolvedValueOnce({
+      status: 200,
+      data: new Blob([JSON.stringify({ code: 500, message: "导出失败" })], {
+        type: "application/json",
+      }),
+      headers: { "content-type": "application/json; charset=utf-8" },
+    });
+
+    await expect(downloadFile("/network/history/list?format=xlsx", "mac.xlsx")).rejects.toThrow(
+      "导出失败"
+    );
+    expect(createObjectURLMock()).not.toHaveBeenCalled();
   });
 });
