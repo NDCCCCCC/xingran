@@ -13,12 +13,6 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-vi.mock("@/lib/rpaApi", () => ({
-  getRPAWorkerList: vi.fn(async () => ({ list: [], total: 0 })),
-  getRPAWorkerStats: vi.fn(async () => ({})),
-  restartRPAWorker: vi.fn(async () => ({})),
-}));
-
 function wrapper({ children }: { children: ReactNode }): ReactElement {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return (

@@ -13,14 +13,6 @@ vi.mock("@/lib/api", async () => {
   return createApiTestingModule();
 });
 
-vi.mock("@/lib/rpaApi", () => ({
-  getRPATaskList: vi.fn(async () => ({ list: [], total: 0 })),
-  createRPATask: vi.fn(async () => ({})),
-  updateRPATask: vi.fn(async () => ({})),
-  deleteRPATask: vi.fn(async () => ({})),
-  runRPATask: vi.fn(async () => ({})),
-}));
-
 function wrapper({ children }: { children: ReactNode }): ReactElement {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return (

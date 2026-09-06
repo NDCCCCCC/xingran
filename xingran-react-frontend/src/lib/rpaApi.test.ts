@@ -1,8 +1,12 @@
 /**
- * rpaApi 端点契约测试 (Phase 83-03)
+ * rpaApi 存活契约基线测试 (Phase 100 V130R-10/11)
  *
- * 锁定:CRUD 工厂基座(/rpa/{tasks,workers,executions,schedules,variables,templates,notifications})
- * + 任务执行链路 + AI 端点 + 统计端点 + rpaApi 聚合对象结构。
+ * 锁定的是「后端已注册路由的实测存活集」(非前端单方面 URL 声明):
+ * 真相源 internal/api/v1/rpa/rpa_router.go;全族 116 方法对账后端态
+ * 17 方法 (task 6 / worker 2 / execution 5 / ai 4)。对账台账:
+ * .planning/phases/100-frontend-contract-fixes/RECONCILIATION.md。
+ * 末尾 keys 断言与 apiFactory.invariants.test.ts 的 POST_CLEANUP_BASELINE
+ * 数值一致 (两处互指,方法回增/私删双向即红)。
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -16,14 +20,14 @@ vi.mock("./api", () => ({
   get: vi.fn(),
 }));
 
-import { aiApi, rpaApi, scheduleApi, scriptApi, statisticsApi, taskApi, workerApi } from "./rpaApi";
+import { aiApi, executionApi, rpaApi, taskApi, workerApi } from "./rpaApi";
 
 const OK = { code: 0 };
 
-describe("rpaApi CRUD 工厂基座", () => {
+describe("rpaApi 存活契约 — task (6 方法, rpa_router.go:48-53)", () => {
   beforeEach(() => mockPost.mockReset());
 
-  it("taskApi.list/get/create/update/delete 使用 /rpa/tasks 基座", async () => {
+  it("list/get/create/update/delete 使用 /rpa/tasks 基座", async () => {
     mockPost.mockResolvedValue(OK);
     const params = { current: 1, pageSize: 10, name: "巡检" };
     await taskApi.list(params);
@@ -38,172 +42,110 @@ describe("rpaApi CRUD 工厂基座", () => {
     expect(mockPost).toHaveBeenNthCalledWith(5, "/rpa/tasks/t1/delete", {});
   });
 
-  it("workerApi 基座 + register/heartbeat", async () => {
+  it("execute 携带 variables", async () => {
+    mockPost.mockResolvedValue(OK);
+    await taskApi.execute("t1", { env: "prod" });
+    expect(mockPost).toHaveBeenCalledWith("/rpa/tasks/t1/execute", {
+      variables: { env: "prod" },
+    });
+  });
+});
+
+describe("rpaApi 存活契约 — worker (2 方法, rpa_router.go:64/:66)", () => {
+  beforeEach(() => mockPost.mockReset());
+
+  it("list + statistics(D-100-9 无参收窄版)", async () => {
     mockPost.mockResolvedValue(OK);
     await workerApi.list({ current: 1, pageSize: 10 });
     expect(mockPost).toHaveBeenNthCalledWith(1, "/rpa/workers/list", { current: 1, pageSize: 10 });
-    const register = { workerName: "node-1", os: "windows" };
-    await workerApi.register(register);
-    expect(mockPost).toHaveBeenNthCalledWith(2, "/rpa/workers/register", register);
-    const heartbeat = { cpuUsage: 12.5, memoryUsage: 40 };
-    await workerApi.heartbeat("w1", heartbeat);
-    expect(mockPost).toHaveBeenNthCalledWith(3, "/rpa/workers/w1/heartbeat", heartbeat);
+    await workerApi.statistics();
+    expect(mockPost).toHaveBeenNthCalledWith(2, "/rpa/workers/statistics", {});
   });
 });
 
-describe("rpaApi — 任务执行链路", () => {
+describe("rpaApi 存活契约 — execution (5 方法, rpa_router.go:84-89)", () => {
   beforeEach(() => mockPost.mockReset());
 
-  it("execute 携带 variables;cancelExecution/duplicate/executions 按 ID 拼接", async () => {
+  it("list/get/statistics 工厂 pick + cancel/logs 手写", async () => {
     mockPost.mockResolvedValue(OK);
-    await taskApi.execute("t1", { env: "prod" });
-    expect(mockPost).toHaveBeenNthCalledWith(1, "/rpa/tasks/t1/execute", {
-      variables: { env: "prod" },
+    const params = { current: 1, pageSize: 10 };
+    await executionApi.list(params);
+    expect(mockPost).toHaveBeenNthCalledWith(1, "/rpa/executions/list", params);
+    await executionApi.get("e1");
+    expect(mockPost).toHaveBeenNthCalledWith(2, "/rpa/executions/e1", {});
+    await executionApi.statistics();
+    expect(mockPost).toHaveBeenNthCalledWith(3, "/rpa/executions/statistics", {});
+    await executionApi.cancel("e1", "手动取消");
+    expect(mockPost).toHaveBeenNthCalledWith(4, "/rpa/executions/e1/cancel", {
+      reason: "手动取消",
     });
-    await taskApi.cancelExecution("t1");
-    expect(mockPost).toHaveBeenNthCalledWith(2, "/rpa/tasks/t1/cancel", {});
-    await taskApi.duplicate("t1", "副本");
-    expect(mockPost).toHaveBeenNthCalledWith(3, "/rpa/tasks/t1/duplicate", { newName: "副本" });
-    const params = { current: 1, pageSize: 5 };
-    await taskApi.executions("t1", params);
-    expect(mockPost).toHaveBeenNthCalledWith(4, "/rpa/tasks/t1/executions", params);
-  });
-
-  it("脚本:validateScript/format/testAction", async () => {
-    mockPost.mockResolvedValue(OK);
-    const script = { name: "s", actions: [] };
-    await taskApi.validateScript(script as never);
-    expect(mockPost).toHaveBeenNthCalledWith(1, "/rpa/tasks/validate-script", { script });
-    await scriptApi.format({ name: "s" } as never);
-    expect(mockPost).toHaveBeenNthCalledWith(2, "/rpa/scripts/format", { script: { name: "s" } });
-    const action = { type: "click", target: "#btn" };
-    await scriptApi.testAction(action as never, "https://target.example.com");
-    expect(mockPost).toHaveBeenNthCalledWith(3, "/rpa/scripts/test-action", {
-      action,
-      url: "https://target.example.com",
+    await executionApi.logs("e1", { current: 1, pageSize: 5 });
+    expect(mockPost).toHaveBeenNthCalledWith(5, "/rpa/executions/e1/logs", {
+      current: 1,
+      pageSize: 5,
     });
-  });
-
-  it("脚本 CRUD 使用 /rpa/scripts 基座", async () => {
-    mockPost.mockReset();
-    mockPost.mockResolvedValue(OK);
-    await scriptApi.list({ current: 1, pageSize: 10 });
-    expect(mockPost).toHaveBeenNthCalledWith(1, "/rpa/scripts/list", { current: 1, pageSize: 10 });
-    await scriptApi.get("s1");
-    expect(mockPost).toHaveBeenNthCalledWith(2, "/rpa/scripts/s1", {});
-    await scriptApi.create({ name: "脚本" } as never);
-    expect(mockPost).toHaveBeenNthCalledWith(3, "/rpa/scripts", { name: "脚本" });
-    await scriptApi.update("s1", { name: "改" } as never);
-    expect(mockPost).toHaveBeenNthCalledWith(4, "/rpa/scripts/s1/update", { name: "改" });
-    await scriptApi.delete("s1");
-    expect(mockPost).toHaveBeenNthCalledWith(5, "/rpa/scripts/s1/delete", {});
-  });
-
-  it("导入导出:export POST /:id/export,import POST /rpa/tasks/import", async () => {
-    mockPost.mockResolvedValue(OK);
-    await taskApi.export("t1");
-    expect(mockPost).toHaveBeenNthCalledWith(1, "/rpa/tasks/t1/export", {});
-    await taskApi.import("base64-payload");
-    expect(mockPost).toHaveBeenNthCalledWith(2, "/rpa/tasks/import", { data: "base64-payload" });
   });
 });
 
-describe("rpaApi — 调度/变量/模板", () => {
+describe("rpaApi 存活契约 — ai (4 方法, rpa_router.go:101-108)", () => {
   beforeEach(() => mockPost.mockReset());
 
-  it("scheduleApi:activate/pause/disable/run-now", async () => {
+  it("generate/optimize/decide/analyze-failure 端点", async () => {
     mockPost.mockResolvedValue(OK);
-    await scheduleApi.activate("sc1");
-    expect(mockPost).toHaveBeenNthCalledWith(1, "/rpa/schedules/sc1/activate", {});
-    await scheduleApi.pause("sc1");
-    expect(mockPost).toHaveBeenNthCalledWith(2, "/rpa/schedules/sc1/pause", {});
-    await scheduleApi.disable("sc1");
-    expect(mockPost).toHaveBeenNthCalledWith(3, "/rpa/schedules/sc1/disable", {});
-    await scheduleApi.runNow("sc1");
-    expect(mockPost).toHaveBeenNthCalledWith(4, "/rpa/schedules/sc1/run-now", {});
-  });
-
-  it("variableApi:getGlobal / getByTask / batchSet / decrypt", async () => {
-    mockPost.mockResolvedValue(OK);
-    const variableApi = rpaApi.variable;
-    await variableApi.getGlobal();
-    expect(mockPost).toHaveBeenNthCalledWith(1, "/rpa/variables/global", {});
-    await variableApi.getByTask("t1");
-    expect(mockPost).toHaveBeenNthCalledWith(2, "/rpa/variables/task/t1", {});
-    await variableApi.batchSet([{ name: "k", value: "v" }] as never);
-    expect(mockPost).toHaveBeenNthCalledWith(3, "/rpa/variables/batch-set", {
-      variables: [{ name: "k", value: "v" }],
+    await aiApi.generateScript({ description: "打开浏览器并登录" } as never);
+    expect(mockPost).toHaveBeenNthCalledWith(1, "/rpa/ai/generate", {
+      description: "打开浏览器并登录",
     });
-    await variableApi.decrypt("v1");
-    expect(mockPost).toHaveBeenNthCalledWith(4, "/rpa/variables/v1/decrypt", {});
-  });
-
-  it("templateApi:categories/use/rate/favorite/unfavorite", async () => {
-    mockPost.mockResolvedValue(OK);
-    const templateApi = rpaApi.template;
-    await templateApi.categories();
-    expect(mockPost).toHaveBeenNthCalledWith(1, "/rpa/templates/categories", {});
-    await templateApi.useTemplate("tp1", "我的任务");
-    expect(mockPost).toHaveBeenNthCalledWith(2, "/rpa/templates/tp1/use", { taskName: "我的任务" });
-    await templateApi.rate("tp1", 5);
-    expect(mockPost).toHaveBeenNthCalledWith(3, "/rpa/templates/tp1/rate", { rating: 5 });
-    await templateApi.favorite("tp1");
-    expect(mockPost).toHaveBeenNthCalledWith(4, "/rpa/templates/tp1/favorite", {});
-    await templateApi.unfavorite("tp1");
-    expect(mockPost).toHaveBeenNthCalledWith(5, "/rpa/templates/tp1/unfavorite", {});
-  });
-});
-
-describe("rpaApi — AI 与统计", () => {
-  beforeEach(() => mockPost.mockReset());
-
-  it("aiApi:generate/decide 端点", async () => {
-    mockPost.mockResolvedValue(OK);
-    const request = { prompt: "打开浏览器并登录" };
-    await aiApi.generateScript(request as never);
-    expect(mockPost).toHaveBeenNthCalledWith(1, "/rpa/ai/generate", request);
-    const decide = { context: "弹窗出现", options: ["确认", "取消"] };
-    await aiApi.decide(decide as never);
-    expect(mockPost).toHaveBeenNthCalledWith(2, "/rpa/ai/decide", decide);
-  });
-
-  it("statisticsApi.overview POST /rpa/statistics/overview", async () => {
-    mockPost.mockReset();
-    mockPost.mockResolvedValueOnce(OK);
-    await statisticsApi.overview();
-    expect(mockPost).toHaveBeenCalledWith("/rpa/statistics/overview", {});
-  });
-
-  it("通知:enable/disable/test/global", async () => {
-    mockPost.mockReset();
-    mockPost.mockResolvedValue(OK);
-    const notificationApi = rpaApi.notification;
-    await notificationApi.enable("n1");
-    expect(mockPost).toHaveBeenNthCalledWith(1, "/rpa/notifications/n1/enable", {});
-    await notificationApi.disable("n1");
-    expect(mockPost).toHaveBeenNthCalledWith(2, "/rpa/notifications/n1/disable", {});
-    await notificationApi.test("n1");
-    expect(mockPost).toHaveBeenNthCalledWith(3, "/rpa/notifications/n1/test", {});
-    await notificationApi.getGlobal();
-    expect(mockPost).toHaveBeenNthCalledWith(4, "/rpa/notifications/global", {});
+    await aiApi.optimizeScript({ script: {} } as never);
+    expect(mockPost).toHaveBeenNthCalledWith(2, "/rpa/ai/optimize", { script: {} });
+    const decide = {
+      taskDescription: "弹窗出现",
+      currentStep: 1,
+      failedAction: {},
+      availableSelectors: [],
+    } as never;
+    await aiApi.decide(decide);
+    expect(mockPost).toHaveBeenNthCalledWith(3, "/rpa/ai/decide", decide);
+    await aiApi.analyzeFailure({
+      taskDescription: "x",
+      failedStep: 1,
+      error: "timeout",
+    } as never);
+    expect(mockPost).toHaveBeenNthCalledWith(4, "/rpa/ai/analyze-failure", {
+      taskDescription: "x",
+      failedStep: 1,
+      error: "timeout",
+    });
   });
 });
 
-describe("rpaApi 聚合对象结构", () => {
-  it("rpaApi 暴露 10 个子 API", () => {
-    expect(Object.keys(rpaApi).sort()).toEqual(
-      [
-        "task",
-        "script",
-        "worker",
-        "execution",
-        "schedule",
-        "variable",
-        "template",
-        "ai",
-        "notification",
-        "statistics",
-      ].sort()
-    );
+describe("rpaApi 聚合对象结构 (D-100-2 keys 基线)", () => {
+  it("rpaApi 暴露 4 个子 API", () => {
+    expect(Object.keys(rpaApi).sort()).toEqual(["ai", "execution", "task", "worker"]);
+  });
+
+  it("各子对象方法集 == 后端已注册路由实测存活集 (与 invariants 基线互指)", () => {
+    expect(Object.keys(taskApi).sort()).toEqual([
+      "create",
+      "delete",
+      "execute",
+      "get",
+      "list",
+      "update",
+    ]);
+    expect(Object.keys(workerApi).sort()).toEqual(["list", "statistics"]);
+    expect(Object.keys(executionApi).sort()).toEqual([
+      "cancel",
+      "get",
+      "list",
+      "logs",
+      "statistics",
+    ]);
+    expect(Object.keys(aiApi).sort()).toEqual([
+      "analyzeFailure",
+      "decide",
+      "generateScript",
+      "optimizeScript",
+    ]);
   });
 });
