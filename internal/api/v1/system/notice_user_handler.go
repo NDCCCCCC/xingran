@@ -43,7 +43,9 @@ type NoticeWithReadStatus struct {
 // MyNoticesRequest 我的通知列表请求
 type MyNoticesRequest struct {
 	Current  int     `form:"current" json:"current" binding:"min=1"`
-	PageSize int     `form:"pageSize" json:"pageSize" binding:"min=1,max=50"`
+	// v129-recheck WR-06: 旧 max=50 因 bind 错误被吞从未生效，实际生效上限是
+	// NormalizePagination 的 MaxPageSize=200——删除失真契约，以实际行为为准
+	PageSize int `form:"pageSize" json:"pageSize" binding:"min=1"`
 	Status   *string `form:"status" json:"status,omitempty"` // read/unread/all
 }
 

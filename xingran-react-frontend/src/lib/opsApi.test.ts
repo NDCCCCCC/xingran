@@ -530,13 +530,16 @@ describe("assetApi(运维资产)/componentApi", () => {
     expect(mockPost).toHaveBeenCalledWith("/ops/asset/statistics", {});
   });
 
-  it("excel.template / excel.import(FormData)", async () => {
-    mockPost.mockReset();
-    mockPostFormData.mockReset();
-    mockPost.mockResolvedValueOnce({ code: 0 });
+  it("excel.template GET 下载 / excel.import(FormData)", async () => {
+    // v129-recheck WR-05: template 从 post（后端仅 GET，必 405）改走 downloadFile
+    mockedBlobAxios.get.mockResolvedValueOnce({ status: 200, data: new Blob(["x"]) });
     await assetApi.excel.template();
-    expect(mockPost).toHaveBeenCalledWith("/ops/asset/template", {});
+    expect(mockedBlobAxios.get).toHaveBeenCalledWith("/ops/asset/template", {
+      responseType: "blob",
+    });
+    expect(URL.createObjectURL).toHaveBeenCalled();
 
+    mockPostFormData.mockReset();
     mockPostFormData.mockResolvedValueOnce({ code: 0 });
     const file = new File(["rows"], "assets.xlsx");
     await assetApi.excel.import(file);

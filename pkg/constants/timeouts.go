@@ -23,6 +23,13 @@ const (
 	// scheduler/ad_sync_tasks.go:42 (renamed from adSchedulerSyncTimeout, D-08).
 	ADSyncTimeout = 30 * time.Minute
 
+	// ADGroupSyncTimeout is the context timeout for a group-list AD sync cycle.
+	// api/v1/system/ad_domain_handler.go (inline 30min/10min/2min extracted, v129-recheck WR-04).
+	ADGroupSyncTimeout = 10 * time.Minute
+
+	// ADSingleGroupSyncTimeout is the context timeout for syncing one AD group.
+	ADSingleGroupSyncTimeout = 2 * time.Minute
+
 	// SchedulerShutdownTimeout is the grace period for cron engine shutdown.
 	// scheduler/cron.go:18 (renamed from defaultShutdownTimeout, D-08).
 	SchedulerShutdownTimeout = 5 * time.Second

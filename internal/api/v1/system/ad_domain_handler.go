@@ -3,24 +3,19 @@ package system
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	addomainServices "github.com/xingran-next/xingran-go-backend/internal/services/addomain"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
-// AD域单分组同步超时时间
-const adSingleGroupSyncTimeout = 2 * time.Minute
-
-// adFullSyncTimeout AD域全量同步超时
-const adFullSyncTimeout = 30 * time.Minute
-
-// adGroupSyncTimeout AD域分组同步超时
-const adGroupSyncTimeout = 10 * time.Minute
+// v129-recheck WR-04: 三处内联 duration 已上移 pkg/constants/timeouts.go
+// （ADSyncTimeout/ADGroupSyncTimeout/ADSingleGroupSyncTimeout），消除与
+// scheduler 侧同值双源漂移。
 
 // ADDomainHandler AD域管理处理器
 type ADDomainHandler struct {
@@ -268,7 +263,7 @@ func (h *ADDomainHandler) SyncData(c *gin.Context) {
 		req.SyncType = "full"
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), adFullSyncTimeout)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), constants.ADSyncTimeout)
 	defer cancel()
 
 	result, err := h.service.SyncADData(ctx, id, req.SyncType)
@@ -756,7 +751,7 @@ func (h *ADDomainHandler) SyncGroups(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), adGroupSyncTimeout)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), constants.ADGroupSyncTimeout)
 	defer cancel()
 
 	result, err := h.service.GroupSync.SyncGroupsByConfig(ctx, id)
@@ -794,7 +789,7 @@ func (h *ADDomainHandler) SyncSingleGroup(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), adSingleGroupSyncTimeout)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), constants.ADSingleGroupSyncTimeout)
 	defer cancel()
 
 	if err := h.service.GroupSync.SyncSingleGroup(ctx, req.ConfigID, req.GroupDN); err != nil {

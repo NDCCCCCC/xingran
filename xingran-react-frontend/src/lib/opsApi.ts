@@ -544,8 +544,11 @@ export const assetApi = {
   // - POST /ops/asset/export    (导出数据)
 
   excel: {
+    // v129-recheck WR-05: 后端 SetupExcelRouter 只注册 GET /template，旧实现发
+    // POST 必 405（潜伏死方法，唯一引用为 mock 测试）——对齐 downloadTemplate
+    // 的 GET 下载链
     template: async () => {
-      return await post("/ops/asset/template", {});
+      await downloadFile("/ops/asset/template", "asset_template.xlsx");
     },
 
     import: async (file: File) => {

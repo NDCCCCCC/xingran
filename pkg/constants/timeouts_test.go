@@ -14,13 +14,16 @@ import (
 // expectedTimeoutsValues pins the documented (name -> Go duration string) mapping.
 // Note: Go duration string uses the largest evenly-dividing unit (300s = 5m0s, 60s = 1m0s).
 var expectedTimeoutsValues = map[string]string{
-	"CommandExecTimeout":        "5m0s",
-	"CommandReadTimeout":        "1m0s",
-	"LDAPConnTimeout":           "30s",
-	"ADSyncTimeout":             "30m0s",
-	"SchedulerShutdownTimeout":  "5s",
-	"ADSyncTaskTimeout":         "1m0s",
-	"RestoreConfigTimeout":      "10m0s",
+	"CommandExecTimeout":       "5m0s",
+	"CommandReadTimeout":       "1m0s",
+	"LDAPConnTimeout":          "30s",
+	"ADSyncTimeout":            "30m0s",
+	"SchedulerShutdownTimeout": "5s",
+	"ADSyncTaskTimeout":        "1m0s",
+	"RestoreConfigTimeout":     "10m0s",
+	// v129-recheck WR-04: ad_domain_handler 三处内联 duration 上移收编
+	"ADGroupSyncTimeout":       "10m0s",
+	"ADSingleGroupSyncTimeout": "2m0s",
 }
 
 // readTimeoutsConsts parses timeouts.go and returns the map of constant
@@ -146,10 +149,10 @@ func TestTimeoutsConstantStability(t *testing.T) {
 	}
 }
 
-// TestTimeoutsConstantCount asserts exactly 6 constants exist.
+// TestTimeoutsConstantCount asserts exactly 9 constants exist.
 func TestTimeoutsConstantCount(t *testing.T) {
 	t.Parallel()
-	const want = 7
+	const want = 9
 	actual, err := readTimeoutsConsts("timeouts.go")
 	if err != nil {
 		t.Fatalf("failed to parse timeouts.go: %v", err)

@@ -2,6 +2,7 @@ package v1
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -11,7 +12,6 @@ import (
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
-	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 )
 
 // newWebSocketUpgrader 创建 WebSocket 升级器
@@ -40,21 +40,42 @@ func newWebSocketUpgrader(allowedOrigins []string) websocket.Upgrader {
 				return true // 非浏览器客户端（如Postman）无Origin头
 			}
 
-			// 允许同源请求
+			// v129-recheck WR-05: HasPrefix 前缀匹配可被子域绕过
+			// （http://example.com.attacker.com 前缀命中 example.com）——改 url.Parse
+			// 后精确比较 host:port。Origin 头不含 path，精确 host 匹配即正确语义。
+			originURL, perr := url.Parse(origin)
+			if perr != nil || originURL.Host == "" {
+				applogger.Warnf("WebSocket 连接被拒绝（Origin 解析失败）: origin=%s, client_ip=%s", origin, r.RemoteAddr)
+				return false
+			}
+			originHost := strings.ToLower(originURL.Host)
+
+			// 允许同源请求（Origin host 与请求 Host 精确一致）
 			host := r.Header.Get("Host")
 			if host == "" {
 				host = r.Host
 			}
-			if strings.HasPrefix(origin, constants.HTTPProto+"://"+host) || strings.HasPrefix(origin, constants.HTTPSProto+"://"+host) {
+			if host != "" && originHost == strings.ToLower(host) {
 				return true
 			}
 
-			// 允许 localhost（开发环境）和配置的域名
-			if strings.HasPrefix(origin, "http://localhost") || strings.HasPrefix(origin, "http://127.0.0.1") {
+			// 允许 localhost（开发环境，精确 host + 任意端口形态）
+			if originHost == "localhost" || originHost == "127.0.0.1" ||
+				strings.HasPrefix(originHost, "localhost:") || strings.HasPrefix(originHost, "127.0.0.1:") {
 				return true
 			}
+
+			// 配置白名单：解析后精确比较 host（配置项也允许裸 host 形态）
 			for _, allowed := range allowedOrigins {
-				if origin == allowed || strings.HasPrefix(origin, allowed) {
+				if strings.EqualFold(origin, allowed) {
+					return true
+				}
+				allowedURL, aerr := url.Parse(allowed)
+				if aerr == nil && allowedURL.Host != "" {
+					if originHost == strings.ToLower(allowedURL.Host) {
+						return true
+					}
+				} else if originHost == strings.ToLower(allowed) {
 					return true
 				}
 			}
