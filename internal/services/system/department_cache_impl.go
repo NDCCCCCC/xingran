@@ -73,7 +73,7 @@ func (s *departmentCacheService) queryTree(ctx context.Context, includeDisabled 
 
 func (s *departmentCacheService) GetSelectDataWithCache(ctx context.Context) ([]*models.Department, error) {
 	return base.GetOrSetJSON(ctx, s.cache,
-		CacheKeyDeptTree,
+		BuildDeptCacheKey("tree:select"),
 		s.GetExpiration(services.CacheConfigDeptSelect, 30*time.Minute),
 		func() ([]*models.Department, error) { return s.querySelectData(ctx) })
 }
