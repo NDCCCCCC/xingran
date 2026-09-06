@@ -4,13 +4,13 @@ milestone: v1.30
 milestone_name: V130 缺陷治理
 status: planning
 last_updated: "2026-09-06T17:30:00+08:00"
-last_activity: 2026-09-06 -- Phase 96 plan 03 completed (JOBSTAT-01 dead code deletion)
+last_activity: 2026-09-06 -- Phase 97 context gathered (V130R-01/02/03 discuss decisions locked)
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
   completed_plans: 3
-  percent: 3
+  percent: 17
 ---
 
 # Project State (v1.30 — milestone workstream)
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-09-06) — v1.30 Current Milestone 段
 
 ## Current Position
 
-Phase: 96 (确定性缓存/看板缺陷修复)
-Plan: 02 (completed)
-Status: Phase 96 plan 02 done — CACHEDEF-05 fixed + regression test
-Last activity: 2026-09-06 — Phase 96 plan 02 completed (CACHEDEF-05 fix)
+Phase: 99 (operations 口径统一)
+Plan: 01-03 executing (99-04 blocked: V130R-09 discuss required)
+Status: Phase 99 Wave 1 executing — V130R-06/07/08；99-04 blocked by discuss
+Last activity: 2026-09-06 — Phase 99 plan 01-03 complete (99-03 V130R-08 done), 99-04 blocked pending discuss
 
-Progress: [▓░░░░░░░░░] 1/6 phases, 2/1 plans
+Progress: [▓▓░░░░░░░░] 2/6 phases, 4/4 plans
 
 ## Milestone Reference
 

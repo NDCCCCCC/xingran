@@ -19,6 +19,9 @@ import (
 // floorSyncBuildingTimeout 楼层变更后异步同步工位 building_id 超时
 const floorSyncBuildingTimeout = 30 * time.Second
 
+// ErrFloorNotInExpectedBuilding 乐观锁冲突：楼层已被其他请求变更
+var ErrFloorNotInExpectedBuilding = errors.New("floor was modified by another request")
+
 type FloorService interface {
 	Create(ctx context.Context, floor *operations.OpsFloor) error
 	Update(ctx context.Context, floor *operations.OpsFloor) error
@@ -159,9 +162,33 @@ func (s *floorService) Update(ctx context.Context, floor *operations.OpsFloor) e
 		}
 	}
 
-	// 保存楼层（这会触发 updateBuildingFloorCount）
-	if err := s.db.WithContext(ctx).Save(floor).Error; err != nil {
-		return err
+	// 换楼时使用乐观锁：只有楼层仍在旧楼宇才能更新，防止并发 race 导致后到的请求静默覆盖先到的请求。
+	// V130R-07: 如果 building_id 有变化，WHERE 条件包含 oldBuildingID 确保原子性。
+	if oldBuildingID != "" && floor.BuildingID != "" && oldBuildingID != floor.BuildingID {
+		// 乐观锁 UPDATE：只有楼层仍在 oldBuildingID 时才允许更新
+		result := s.db.WithContext(ctx).Model(&operations.OpsFloor{}).
+			Where("id = ? AND building_id = ?", floor.ID, oldBuildingID).
+			Updates(map[string]interface{}{
+				"building_id": floor.BuildingID,
+				"name":        floor.Name,
+				"floor_no":    floor.FloorNo,
+				"area":        floor.Area,
+				"order_num":   floor.OrderNum,
+				"status":      floor.Status,
+				"remark":      floor.Remark,
+			})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			// 楼层已不在预期的旧楼宇中（被并发修改），返回乐观锁冲突错误
+			return ErrFloorNotInExpectedBuilding
+		}
+	} else {
+		// 无换楼，保留原 Save 语义（普通字段更新）
+		if err := s.db.WithContext(ctx).Save(floor).Error; err != nil {
+			return err
+		}
 	}
 
 	// 如果楼宇ID发生了变化，同步更新相关工位的 building_id
