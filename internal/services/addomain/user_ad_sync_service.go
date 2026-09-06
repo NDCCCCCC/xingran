@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/go-ldap/ldap/v3"
-	"github.com/xingran-next/xingran-go-backend/internal/constants"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"

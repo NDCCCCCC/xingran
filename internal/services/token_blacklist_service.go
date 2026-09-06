@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/xingran-next/xingran-go-backend/internal/constants"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 )
 
 const (

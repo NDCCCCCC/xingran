@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/xingran-next/xingran-go-backend/internal/constants"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"gorm.io/gorm"
 )

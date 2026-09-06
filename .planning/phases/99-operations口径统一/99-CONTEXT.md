@@ -35,6 +35,7 @@
 - **D-03-7:** 新端点返回格式同 List：`{list: [...], total: N}`。
 - **D-03-8:** `workstation_service.go` 删除 `GetPaginationWithMax(constants.MaxOptionsPageSize)`，改用 `query.NormalizePagination` cap=200。
 - **D-03-9:** 前后端同步改造，包括前后端测试。
+- **D-03-10:**（2026-09-07 orchestrator 补充裁决）internal/constants 整体合并进 pkg/constants（Phase 89/90 leaf-const 唯一权威）；DefaultCurrent/DefaultPageSize 保留 pkg 既有定义。
 
 ### 99-01/02/03 继承决策（已在 SUMMARY 中记录）
 
@@ -57,8 +58,7 @@
 - `internal/services/operations/dept_filter.go` — Plan 99-03 新增 helper
 
 ### Constants
-- `internal/constants/pagination.go` — MinPageSize/MaxListPageSize/MaxOptionsPageSize
-- `pkg/constants/pagination.go` — DefaultCurrent/DefaultPageSize/MaxPageSize
+- `pkg/constants/pagination.go` — DefaultCurrent/DefaultPageSize/MaxPageSize/MinPageSize/MaxListPageSize/MaxOptionsPageSize（V130R-09 D-03-10 后唯一常量权威，internal/constants 已删除）
 
 ### Phase 99 Prior Plans
 - `.planning/phases/99-operations口径统一/PLAN.md` — 99-01/02/03/04 完整计划

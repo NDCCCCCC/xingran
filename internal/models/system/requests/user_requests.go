@@ -1,7 +1,7 @@
 package requests
 
 import (
-	"github.com/xingran-next/xingran-go-backend/internal/constants"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 )

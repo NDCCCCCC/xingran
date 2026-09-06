@@ -1,6 +1,8 @@
-// 时间相关常量:统一管理项目中使用的时间常量,避免硬编码。
-
 package constants
+
+// time.go — cache TTL, device, JWT, and system clock-interval constants
+// (V130R-09 D-03-10: merged from internal/constants/time.go).
+// Command/LDAP/AD business timeouts live in timeouts.go.
 
 import "time"
 

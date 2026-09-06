@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xingran-next/xingran-go-backend/internal/constants"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"

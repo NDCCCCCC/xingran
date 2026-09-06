@@ -1,8 +1,8 @@
 package requests
 
 import (
-	"github.com/xingran-next/xingran-go-backend/internal/constants"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 )
 
 // PaginationParams 分页参数（基础结构）

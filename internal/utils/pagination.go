@@ -1,6 +1,6 @@
 package utils
 
-import "github.com/xingran-next/xingran-go-backend/internal/constants"
+import "github.com/xingran-next/xingran-go-backend/pkg/constants"
 
 // PaginationParams 分页参数
 type PaginationParams struct {
@@ -10,7 +10,7 @@ type PaginationParams struct {
 
 // ParsePagination 解析分页参数。
 //
-// 默认值与上限统一引用 internal/constants,避免与本项目其它分页实现
+// 默认值与上限统一引用 pkg/constants,避免与本项目其它分页实现
 // (operations/pagination_helper.go)取值分叉。
 func ParsePagination(page, pageSize int) PaginationParams {
 	if page <= 0 {

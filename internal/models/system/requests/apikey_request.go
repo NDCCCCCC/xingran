@@ -1,7 +1,7 @@
 package requests
 
 import (
-	"github.com/xingran-next/xingran-go-backend/internal/constants"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 )
 
 // CreateAPIKeyRequest 创建API密钥请求

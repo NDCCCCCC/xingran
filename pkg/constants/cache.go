@@ -1,6 +1,7 @@
-// 缓存相关常量:统一管理 Redis 缓存键格式。
-
 package constants
+
+// cache.go — Redis cache key format constants (V130R-09 D-03-10: merged from
+// internal/constants/cache.go when the twin constants packages were unified).
 
 // Redis 键格式(仅保留生产代码实际使用的格式)。
 //

@@ -1,6 +1,7 @@
-// UUID 相关常量:统一管理 UUID 验证相关的正则表达式,避免在多个包内重复定义。
-
 package constants
+
+// uuid.go — UUID validation pattern (V130R-09 D-03-10: merged from
+// internal/constants/uuid.go).
 
 import "regexp"
 

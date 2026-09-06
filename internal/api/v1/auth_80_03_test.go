@@ -37,13 +37,13 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/xingran-next/xingran-go-backend/internal/config"
-	"github.com/xingran-next/xingran-go-backend/internal/constants"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	coredb "github.com/xingran-next/xingran-go-backend/internal/core/db"
 	"github.com/xingran-next/xingran-go-backend/internal/core/security"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 

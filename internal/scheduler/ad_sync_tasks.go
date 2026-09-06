@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/robfig/cron/v3"
-	"github.com/xingran-next/xingran-go-backend/internal/constants"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
@@ -120,7 +119,7 @@ func executeADAccountPoolRecoverBreakersTask(ctx context.Context, params map[str
 // 遵循 Go 最佳实践：使用 sync.Once 确保单例初始化的线程安全
 func StartADSyncScheduler(db *gorm.DB) {
 	globalADSyncSchedulerOnce.Do(func() {
-		globalADSyncScheduler = NewADSyncScheduler(db, constants.MaxConcurrentADSync)
+		globalADSyncScheduler = NewADSyncScheduler(db, pkgconstants.MaxConcurrentADSync)
 		// Phase 38 Wave 1 (W-04): 创建全局账号池单例供 scheduler 内各 task 与 dept_sync_tasks 复用
 		// （Pitfall 4：避免 per-task NewAccountPool 创建独立缓存，导致熔断后账号仍被选中）
 		globalADSyncScheduler.pool = addomain.NewAccountPool(db, nil)

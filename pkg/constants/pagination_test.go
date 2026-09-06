@@ -1,7 +1,9 @@
 package constants
 
-// regression_test.go pins the 3 pagination constants of pkg/constants against
+// regression_test.go pins the 6 pagination constants of pkg/constants against
 // accidental drift. Adapted from internal/utils/operlog/regression_test.go.
+// V130R-09 D-03-10: grew from 3 to 6 when internal/constants/pagination.go
+// (MinPageSize / MaxListPageSize / MaxOptionsPageSize) merged into this package.
 
 import (
 	"go/ast"
@@ -12,9 +14,12 @@ import (
 
 // expectedPaginationValues pins the documented (name -> value) mapping.
 var expectedPaginationValues = map[string]int{
-	"DefaultCurrent":  1,
-	"DefaultPageSize": 10,
-	"MaxPageSize":     200,
+	"DefaultCurrent":     1,
+	"DefaultPageSize":    10,
+	"MaxPageSize":        200,
+	"MinPageSize":        10,
+	"MaxListPageSize":    100,
+	"MaxOptionsPageSize": 10000,
 }
 
 // readPaginationConsts parses pagination.go and returns the map of constant
@@ -83,10 +88,10 @@ func TestPaginationConstantStability(t *testing.T) {
 	}
 }
 
-// TestPaginationConstantCount asserts exactly 3 constants exist.
+// TestPaginationConstantCount asserts exactly 6 constants exist.
 func TestPaginationConstantCount(t *testing.T) {
 	t.Parallel()
-	const want = 3
+	const want = 6
 	actual, err := readPaginationConsts("pagination.go")
 	if err != nil {
 		t.Fatalf("failed to parse pagination.go: %v", err)

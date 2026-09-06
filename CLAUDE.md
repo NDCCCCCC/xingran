@@ -321,9 +321,12 @@ All pagination defaults and caps in the project are centralized in `pkg/constant
 package constants
 
 const (
-    DefaultCurrent  = 1
-    DefaultPageSize = 10
-    MaxPageSize     = 200
+    DefaultCurrent     = 1
+    DefaultPageSize    = 10
+    MaxPageSize        = 200
+    MinPageSize        = 10
+    MaxListPageSize    = 100
+    MaxOptionsPageSize = 10000
 )
 ```
 
@@ -334,7 +337,7 @@ const (
 - `PaginationRequest.Normalize()` delegates to `NormalizePagination`
 - No file should contain `*current = 1` or `pageSize = 10` as a literal assignment without referencing `pkg/constants`
 
-**Migration status:** Phase 89 (PAGINATION) centralized all 12+ hardcoded pagination literals across handler and service layers.
+**Migration status:** Phase 89 (PAGINATION) centralized all 12+ hardcoded pagination literals across handler and service layers. internal/constants 已于 V130R-09 合并入 pkg/constants（D-03-10）——pkg/constants 是全项目唯一的常量包。
 
 ### Timeout/Port/Protocol Constants Convention
 

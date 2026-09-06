@@ -1,8 +1,8 @@
 package operations
 
 import (
-	"github.com/xingran-next/xingran-go-backend/internal/constants"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 )
 
 // PageResult 分页结果 — base.PageResult 的 type alias。

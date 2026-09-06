@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/xingran-next/xingran-go-backend/internal/constants"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	pkgquery "github.com/xingran-next/xingran-go-backend/pkg/query"
 	"gorm.io/gorm"
 )
