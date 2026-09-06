@@ -42,11 +42,11 @@ func TestV130R01_StartRestoreGoroutineLaunch(t *testing.T) {
 	require.NoError(t, db.Create(dev).Error)
 
 	bk := &models.ConfigBackup{
-		ID:             "bk-timeout-test",
+		ID:            "bk-timeout-test",
 		DeviceID:      "dev-timeout-test",
 		DeviceName:    "timeout-test-device",
-		ConfigContent:  "sysname Test\n",
-		ConfigHash:     "abc123",
+		ConfigContent: "sysname Test\n",
+		ConfigHash:    "abc123",
 		StorageType:   models.StorageTypeDatabase,
 		BackupType:    models.BackupTypeManual,
 		Version:       1,
@@ -97,11 +97,11 @@ func TestV130R01_RunRestorePhaseOrdering(t *testing.T) {
 	require.NoError(t, db.Create(dev).Error)
 
 	bk := &models.ConfigBackup{
-		ID:             "bk-phase-order",
+		ID:            "bk-phase-order",
 		DeviceID:      "dev-phase-order",
 		DeviceName:    "phase-order-device",
-		ConfigContent:  "sysname PhaseOrder\n",
-		ConfigHash:     "def456",
+		ConfigContent: "sysname PhaseOrder\n",
+		ConfigHash:    "def456",
 		StorageType:   models.StorageTypeDatabase,
 		BackupType:    models.BackupTypeManual,
 		Version:       1,

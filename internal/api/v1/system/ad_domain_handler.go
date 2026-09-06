@@ -59,11 +59,11 @@ func (h *ADDomainHandler) requireConfigID(id string) error {
 // @Router /system/ad-domain/configs/list [post]
 func (h *ADDomainHandler) ListConfigs(c *gin.Context) {
 	var req struct {
-		Status        *int    `json:"status,omitempty"`
-		Current       int     `json:"current"`
-		PageSize      int     `json:"pageSize"`
-		OrderByColumn string  `json:"orderByColumn,omitempty"`
-		IsAsc         *bool   `json:"isAsc,omitempty"`
+		Status        *int   `json:"status,omitempty"`
+		Current       int    `json:"current"`
+		PageSize      int    `json:"pageSize"`
+		OrderByColumn string `json:"orderByColumn,omitempty"`
+		IsAsc         *bool  `json:"isAsc,omitempty"`
 	}
 	_ = c.ShouldBindJSON(&req)
 
