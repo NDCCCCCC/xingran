@@ -7,6 +7,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
 	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
+	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 	responseHelpers "github.com/xingran-next/xingran-go-backend/pkg/response"
 )
@@ -88,8 +89,10 @@ func (h *DiscoveryHandler) List(c *gin.Context) {
 		rawReq = make(map[string]interface{})
 	}
 
-	current := getIntField(rawReq, "current", 1)
-	pageSize := getIntField(rawReq, "pageSize", 10)
+	current := getIntField(rawReq, "current", constants.DefaultCurrent)
+	pageSize := getIntField(rawReq, "pageSize", constants.DefaultPageSize)
+	// v129-recheck C-6: 分页归一化唯一入口（钳上限 200、负值/零回退默认）
+	current, pageSize = query.NormalizePagination(current, pageSize)
 
 	tasks, total, err := h.discoveryService.GetDiscoveryList(c.Request.Context(), current, pageSize, getOrderByColumn(rawReq), getIsAscPtr(rawReq))
 	if err != nil {

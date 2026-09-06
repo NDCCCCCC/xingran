@@ -8,6 +8,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
 	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
+	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 	responseHelpers "github.com/xingran-next/xingran-go-backend/pkg/response"
 	"gorm.io/gorm"
@@ -55,10 +56,12 @@ func (h *CommandHandler) Dispatch(c *gin.Context) {
 	if req.ExecutionStrategy == "" {
 		req.ExecutionStrategy = models.ExecutionStrategyParallel
 	}
-	if req.Concurrency == 0 {
+	// v129-recheck WR（分页域）: 负值穿透会取消 errgroup 并发上限并令 ctx 立即过期，
+	// 与 ad_domain_handler 已授权的 <=0 守卫同款对齐
+	if req.Concurrency <= 0 {
 		req.Concurrency = constants.CommandConcurrency
 	}
-	if req.Timeout == 0 {
+	if req.Timeout <= 0 {
 		req.Timeout = int(constants.CommandExecTimeout.Seconds())
 	}
 
@@ -164,8 +167,10 @@ func (h *CommandHandler) List(c *gin.Context) {
 		rawReq = make(map[string]interface{})
 	}
 
-	current := getIntField(rawReq, "current", 1)
-	pageSize := getIntField(rawReq, "pageSize", 10)
+	current := getIntField(rawReq, "current", constants.DefaultCurrent)
+	pageSize := getIntField(rawReq, "pageSize", constants.DefaultPageSize)
+	// v129-recheck C-6: 分页归一化唯一入口（钳上限 200、负值/零回退默认）
+	current, pageSize = query.NormalizePagination(current, pageSize)
 
 	executions, total, err := h.commandService.GetExecutionList(c.Request.Context(), current, pageSize, getOrderByColumn(rawReq), getIsAscPtr(rawReq))
 	if err != nil {
