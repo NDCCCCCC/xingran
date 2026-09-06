@@ -125,3 +125,6 @@ rpa-worker/configs/config.yaml
 
 # HTML 原型调试残留（chrome-devtools 会话产物）
 /655aa291-*/
+
+# root-level accidental artifacts
+cov_*.out
