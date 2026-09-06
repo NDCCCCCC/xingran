@@ -38,7 +38,8 @@ update_trigger: v1.30 workstream ROADMAP 创建 — v1.29 内容已随 milestone
 ## Phases
 
 - [x] **Phase 96: 确定性缓存/看板缺陷修复** — CACHEDEF-01..05 五项确定性缺陷 + JOBSTAT-01 死代码删除处置，修复项每项附回归测试 ✓（2026-09-06）
-- [ ] **Phase 97: config_backup 恢复链加固** — 互斥原子性/实例归属/业务错误码（V130R-01..03，含 3 个 discuss 设计决策）
+- [x] **Phase 97: config_backup 恢复链加固** — 互斥原子性/实例归属/业务错误码（V130R-01..03）✓（2026-09-06 done）
+  **Plans**: 3 plans (97-01: V130R-01 超时互斥原子化; 97-02: V130R-02 多实例归属过滤; 97-03: V130R-03 业务错误码语义化)
 - [ ] **Phase 98: 缓存键安全与 base 迁移收尾** — 列表键防碰撞 + 四包 interface{} 残留迁 base 泛型（V130R-04..05）
 - [ ] **Phase 99: operations 口径统一** — Total 软删/换楼乱序/orgId 子部门筛选/分页 clamp 收敛（V130R-06..09，V130R-09 含 discuss）
 - [ ] **Phase 100: 前端契约修复** — 幽灵方法处置/rpaApi 契约对齐/networkApi 下载链收敛（V130R-10..12）
@@ -96,7 +97,7 @@ Phase 100 (FEFIX 前端契约；v1.29 Phase 94 apiFactory 基线)           ─�
   3. 业务错误码语义化：「存在进行中恢复任务」映射 409/400、「备份不属于目标设备」映射 400，不再统一经 HandleServiceError 返回 500（V130R-03，pkg/response 业务错误类型体系方案经 discuss 敲定）
   4. 回归纪律：3 项修复每项附回归测试（超时路径 / 归属过滤 / 错误码映射）；七 gate 不倒退
 
-**Plans**: TBD
+**Plans**: 3 plans (97-01: V130R-01 超时互斥原子化; 97-02: V130R-02 多实例归属过滤; 97-03: V130R-03 业务错误码语义化)
 
 **Notes**: 本 phase 是 v1.30 设计决策密度最高的 phase（D-03 三项全在此）——plan-phase 前置 discuss 产出 CONTEXT.md 后再拆 plan。V130R-03 的业务错误类型体系是跨模块基建，落地后其他 phase 错误路径可复用。
 
@@ -129,6 +130,8 @@ Phase 100 (FEFIX 前端契约；v1.29 Phase 94 apiFactory 基线)           ─�
 
 **Requirements**: V130R-06, V130R-07, V130R-08, V130R-09
 
+**Plans**: 5 plans (99-01: V130R-06 Total 口径 ✓; 99-02: V130R-07 换楼有序化 ✓; 99-03: V130R-08 orgId helper ✓; 99-04: V130R-09 Go 分页口径核心 planned; 99-05: V130R-09 CAD 端点+前端迁移 planned, wave 2)
+
 **Success Criteria** (what must be TRUE):
 
   1. Total 口径收紧：asset/building List Total 不再计入软删记录（`.Table()` 起链 → repo `Model(new(T))` 对齐），软删环境下分页器页数正确；OVR 台账补记（V130R-06）
@@ -150,6 +153,8 @@ Phase 100 (FEFIX 前端契约；v1.29 Phase 94 apiFactory 基线)           ─�
 **Depends on**: Nothing（v1.29 Phase 94 `src/lib/apiFactory.ts` 单一权威 + D-12 双档扫描防线为既定基线）
 
 **Requirements**: V130R-10, V130R-11, V130R-12
+
+**Plans**: 3 plans (100-01: rpaApi 幽灵清除+全族裁剪 17 存活端态+RECONCILIATION; 100-02: /vdi/vms/operate 补注册+accounts Tab 删除+vdiApi 幽灵 pick 化; 100-03: 下载链收敛 download.ts+JSON 检测+invariants 递归化)
 
 **Success Criteria** (what must be TRUE):
 
@@ -191,8 +196,8 @@ Phase 100 (FEFIX 前端契约；v1.29 Phase 94 apiFactory 基线)           ─�
 | Phase | Status | Plans | Requirements | Started | Completed |
 |-------|--------|-------|--------------|---------|-----------|
 | Phase 96 确定性缓存/看板缺陷修复 | Not started | 0/? | CACHEDEF-01..05 + JOBSTAT-01 | - | - |
-| Phase 97 config_backup 恢复链加固 | Not started | 0/? | V130R-01..03 | - | - |
-| Phase 98 缓存键安全与 base 迁移收尾 | Not started | 0/? | V130R-04..05 | - | - |
+| Phase 97 config_backup 恢复链加固 | Completed | 3/3 | V130R-01..03 | - | - |
+| Phase 98 缓存键安全与 base 迁移收尾 | Completed | 2/2 | V130R-04..05 | - | 2026-09-06 |
 | Phase 99 operations 口径统一 | Not started | 0/? | V130R-06..09 | - | - |
 | Phase 100 前端契约修复 | Not started | 0/? | V130R-10..12 | - | - |
 | Phase 101 收口（测试文件入库 + 62-UAT + audit） | Not started | 0/? | TESTFILE-01 + UAT62-01..03 | - | - |

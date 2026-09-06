@@ -22,9 +22,9 @@ status: planning
 
 - [ ] **Phase 96: 确定性缓存/看板缺陷修复** — CACHEDEF-01..05 五项确定性缺陷 + JOBSTAT-01 死代码删除处置，修复项每项附回归测试
 - [ ] **Phase 97: config_backup 恢复链加固** — V130R-01..03（互斥原子性/实例归属/业务错误码；含 3 个 discuss 设计决策）
-- [ ] **Phase 98: 缓存键安全与 base 迁移收尾** — V130R-04..05（列表键防碰撞 + 四包 interface{} 残留迁 base 泛型）
-- [ ] **Phase 99: operations 口径统一** — V130R-06..09（Total 软删/换楼乱序/orgId 子部门筛选/分页 clamp 收敛；V130R-09 含 discuss）
-- [ ] **Phase 100: 前端契约修复** — V130R-10..12（幽灵方法处置/rpaApi 契约对齐/networkApi 下载链收敛）
+- [x] **Phase 98: 缓存键安全与 base 迁移收尾** — V130R-04..05（2/2 plans ✓）— 2026-09-06
+- [ ] **Phase 99: operations 口径统一 — V130R-06..09（5 plans: 01-03 executed，99-04/99-05 planned ✓，executing）
+- [ ] **Phase 100: 前端契约修复** — V130R-10..12（3 plans: 100-01/02/03 planned ✓）
 - [ ] **Phase 101: 收口** — TESTFILE-01 + UAT62-01..03 + 七 gate 全绿 + v1.30 audit
 
 完整 phase 详情（goal/SC/requirements 映射/依赖图）：[workstreams/milestone/ROADMAP.md](workstreams/milestone/ROADMAP.md)
