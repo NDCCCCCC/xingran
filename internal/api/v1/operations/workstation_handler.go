@@ -158,6 +158,28 @@ func (h *WorkstationHandler) List(c *gin.Context) {
 	response.Success(c, result)
 }
 
+// GetFloorWorkstationsAll 楼层全部工位（CAD/3D/平面图专用全集端点，无分页，读操作不写操作日志）
+// @Summary 楼层全部工位
+// @Description 返回指定楼层的全部工位（CAD/平面图/3D 全集场景专用，无分页参数，
+// 替代前端以 pageSize:1000 滥用 List 分页做全集下拉的反模式，V130R-09 D-03-6/D-03-7）
+// @Tags 运维管理
+// @Produce json
+// @Param floorId path string true "楼层ID"
+// @Success 200 {object} response.Response{data=object{list=[]models.Workstation,total=int}}
+// @Failure 500 {object} response.Response
+// @Router /ops/workstation/{floorId}/workstations-all [get]
+func (h *WorkstationHandler) GetFloorWorkstationsAll(c *gin.Context) {
+	floorId := c.Param("floorId")
+	workstations, err := h.service.GetFloorWorkstationsAll(c.Request.Context(), floorId)
+	if err != nil {
+		response.Error(c, apperrors.InternalServerErrorWithMsg("查询失败"))
+		return
+	}
+
+	// D-03-7: 返回格式同 List（{list, total}），total 为全集长度非分页口径
+	response.Success(c, gin.H{"list": workstations, "total": len(workstations)})
+}
+
 // GetByID 获取工位详情
 // @Summary 获取工位详情
 // @Description 根据ID获取工位详细信息

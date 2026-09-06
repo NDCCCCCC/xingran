@@ -2,6 +2,7 @@ package operations
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
@@ -30,6 +32,7 @@ type mockWorkstationService struct {
 	StatisticsFunc                func(ctx context.Context, p map[string]interface{}) (*opsServices.WorkstationStatisticsResult, error)
 	GetWorkstationDeptOptionsFunc func(ctx context.Context, orgID string) ([]opsServices.DeptOption, error)
 	SearchWorkstationOptionsFunc  func(ctx context.Context, req requests.WorkstationListRequest) ([]opsServices.DropdownOption, error)
+	GetFloorWorkstationsAllFunc   func(ctx context.Context, floorId string) ([]models.Workstation, error)
 }
 
 func (m *mockWorkstationService) Create(ctx context.Context, w *models.Workstation) error {
@@ -92,6 +95,12 @@ func (m *mockWorkstationService) SearchWorkstationOptions(ctx context.Context, r
 	}
 	return nil, errNotImplemented
 }
+func (m *mockWorkstationService) GetFloorWorkstationsAll(ctx context.Context, floorId string) ([]models.Workstation, error) {
+	if m.GetFloorWorkstationsAllFunc != nil {
+		return m.GetFloorWorkstationsAllFunc(ctx, floorId)
+	}
+	return nil, errNotImplemented
+}
 
 func newWorkstationRouter(h *WorkstationHandler) *gin.Engine {
 	return mountRouter([]routeMount{
@@ -105,6 +114,7 @@ func newWorkstationRouter(h *WorkstationHandler) *gin.Engine {
 		{http.MethodPost, "/workstations/statistics", h.Statistics},
 		{http.MethodPost, "/workstations/dept-options", h.GetWorkstationDeptOptions},
 		{http.MethodPost, "/workstations/search-options", h.SearchWorkstationOptions},
+		{http.MethodGet, "/workstations/:floorId/workstations-all", h.GetFloorWorkstationsAll},
 	})
 }
 
@@ -478,6 +488,51 @@ func TestWorkstationHandler_SearchWorkstationOptions_Error(t *testing.T) {
 	r := newWorkstationRouter(h)
 	w := httpDo(r, http.MethodPost, "/workstations/search-options", `{}`)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// TestWorkstationHandler_GetFloorWorkstationsAll_Success — V130R-09 D-03-6/07:
+// 全集端点 success 路径,断言 code=0 且 data.list 长度与 data.total 均为全集大小。
+func TestWorkstationHandler_GetFloorWorkstationsAll_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	svc := &mockWorkstationService{
+		GetFloorWorkstationsAllFunc: func(_ context.Context, floorId string) ([]models.Workstation, error) {
+			assert.Equal(t, "floor-1", floorId)
+			return []models.Workstation{
+				{BaseModel: models.BaseModel{ID: "ws1"}, WorkstationName: "WS1"},
+				{BaseModel: models.BaseModel{ID: "ws2"}, WorkstationName: "WS2"},
+			}, nil
+		},
+	}
+	h := newWorkstationHandler(svc).WithCore(newTestCore(t))
+	r := newWorkstationRouter(h)
+	w := httpDo(r, http.MethodGet, "/workstations/floor-1/workstations-all", "")
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp struct {
+		Code int `json:"code"`
+		Data struct {
+			List  []models.Workstation `json:"list"`
+			Total int                  `json:"total"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, 0, resp.Code)
+	assert.Len(t, resp.Data.List, 2)
+	assert.Equal(t, 2, resp.Data.Total)
+}
+
+// TestWorkstationHandler_GetFloorWorkstationsAll_Error — service 错误 → 500。
+func TestWorkstationHandler_GetFloorWorkstationsAll_Error(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	svc := &mockWorkstationService{
+		GetFloorWorkstationsAllFunc: func(_ context.Context, _ string) ([]models.Workstation, error) {
+			return nil, errors.New("all err")
+		},
+	}
+	h := newWorkstationHandler(svc).WithCore(newTestCore(t))
+	r := newWorkstationRouter(h)
+	w := httpDo(r, http.MethodGet, "/workstations/floor-1/workstations-all", "")
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 
 // TestWorkstationHandler_WithCore_NilSafe

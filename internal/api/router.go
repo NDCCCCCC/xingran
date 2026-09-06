@@ -633,6 +633,10 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			workstations.POST("/:id/delete", workstationHandler.Delete)
 			workstations.POST("", workstationHandler.Create) // 放在最后
 
+			// V130R-09 D-03-6: 楼层全部工位全集端点（CAD/3D/平面图专用，无分页，
+			// 替代前端以 pageSize:1000/10000 滥用 List 分页做全集下拉的反模式）
+			workstations.GET("/:floorId/workstations-all", workstationHandler.GetFloorWorkstationsAll)
+
 			// Excel导入导出
 			operations.SetupExcelRouter(workstations, "workstation", core)
 			// 部门名称↔代码映射表 (quick 260713-df0, 工位导入辅助)

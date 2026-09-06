@@ -55,6 +55,8 @@ type WorkstationService interface {
 	// 设计给前端 Select/AutoComplete 远程搜索。workstation 高频变更,不缓存。
 	// D-05: typed request,复用 WorkstationListRequest（去 map，不新增重复 struct）。
 	SearchWorkstationOptions(ctx context.Context, req requests.WorkstationListRequest) ([]DropdownOption, error)
+	// GetFloorWorkstationsAll 楼层全部工位(CAD/3D/平面图全集专用,无分页;V130R-09 D-03-6/D-03-7)。
+	GetFloorWorkstationsAll(ctx context.Context, floorId string) ([]models.Workstation, error)
 }
 
 // DeptOption 工位编辑"所属部门"下拉选项(union: orgId 子孙 + alias 映射)
@@ -318,6 +320,23 @@ func (s *workstationService) List(ctx context.Context, req requests.WorkstationL
 		s.joinScope(),
 		base.SortScope(req.BaseListRequest, workstationAllowedSortFields, "sys_workstation.created_at DESC"),
 	)
+}
+
+// GetFloorWorkstationsAll 楼层全部工位（CAD/3D/平面图全集专用端点，无分页；
+// V130R-09 D-03-6/D-03-7）。与 List 同一 6 表 JOIN/Select 口径
+// （floor_name/dept_name/user_name 等 CAD 视图所需字段照常返回）；
+// 软删过滤由 Model 起链自动附带（与 99-01 的 Total 口径一致）。
+func (s *workstationService) GetFloorWorkstationsAll(ctx context.Context, floorId string) ([]models.Workstation, error) {
+	var workstations []models.Workstation
+	if err := s.db.WithContext(ctx).
+		Model(&models.Workstation{}).
+		Scopes(s.joinScope()).
+		Where("sys_workstation.floor_id = ?", floorId).
+		Order("sys_workstation.created_at DESC").
+		Find(&workstations).Error; err != nil {
+		return nil, err
+	}
+	return workstations, nil
 }
 
 func (s *workstationService) BatchDelete(ctx context.Context, ids []string) error {

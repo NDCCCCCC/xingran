@@ -68,6 +68,10 @@ func (s *stubWorkstationService) SearchWorkstationOptions(_ context.Context, _ r
 	return nil, nil
 }
 
+func (s *stubWorkstationService) GetFloorWorkstationsAll(_ context.Context, _ string) ([]models.Workstation, error) {
+	return nil, nil
+}
+
 // stubReconciliationService 测试用 — 不接真实 DB,直接返回预设 ByWorkstationResponse
 type stubReconciliationService struct {
 	resp *asset.ByWorkstationResponse
