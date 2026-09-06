@@ -53,6 +53,7 @@ import { BatchExportModal } from "@/components/shared";
 import { usePagination } from "@/hooks/usePagination";
 import { useServerSort } from "@/hooks/useServerSort";
 import { createSorterMeta } from "@/utils/tableHelpers";
+import { resolveSorter } from "@/hooks/useServerSort";
 import { formatDateTime } from "@/utils/datetime";
 
 const { Option } = Select;
@@ -244,7 +245,9 @@ const ConfigBackupPage: FC = () => {
       okType: "danger",
       onOk: async () => {
         openRestoreModal(backup);
-        await confirmRestore();
+        // v129-recheck WR-01: 显式传参——本闭包捕获的 confirmRestore 引用
+        // selectedRestoreBackup 旧值（null），无参调用会被 null 守卫静默短路
+        await confirmRestore(backup);
       },
     });
   };
@@ -658,11 +661,15 @@ const ConfigBackupPage: FC = () => {
             handleBackupSortChange(pagination, _filters, sorter);
             setCurrent(pagination.current ?? 1);
             setPageSize(pagination.pageSize ?? 10);
+            // v129-recheck WR-02: 闭包里的 orderByColumn/isAsc 是上一次渲染的
+            // 旧 state（useServerSort 文档点名的时序坑），首次点击发空、之后每次
+            // 发上一次的排序——改用 resolveSorter 同步解析本次事件的新值
+            const nextSort = resolveSorter(sorter, sorterMetas);
             const formValues = searchForm.getFieldsValue() as Record<string, unknown>;
             const searchParams: Record<string, unknown> = {
               current: pagination.current ?? 1,
               pageSize: pagination.pageSize ?? 10,
-              ...(orderByColumn ? { orderByColumn, isAsc } : {}),
+              ...(nextSort.orderByColumn ? nextSort : {}),
             };
             Object.keys(formValues).forEach((key) => {
               const value = formValues[key];

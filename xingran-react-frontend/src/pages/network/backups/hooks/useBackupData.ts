@@ -62,6 +62,12 @@ export function useBackupData(options: UseBackupDataOptions): UseBackupDataRetur
         const result = await post<PageResponse<ConfigBackup>>("/network/backups/list", {
           current: params.current || current,
           pageSize: params.pageSize || pageSize,
+          // v129-recheck WR-02: 排序参数此前被静默丢弃，列头 sorter 承诺的服务端
+          // 排序从未生效——透传给后端（undefined 时展开为空，保持无排序语义）
+          ...(params.orderByColumn !== undefined && {
+            orderByColumn: params.orderByColumn,
+            isAsc: params.isAsc,
+          }),
           ...values,
         });
         const backups = result.data?.list || [];

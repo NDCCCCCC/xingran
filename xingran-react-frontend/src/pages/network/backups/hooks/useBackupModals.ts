@@ -32,7 +32,7 @@ interface UseBackupModalsReturn {
   openVersionListDrawer: (group: DeviceBackupGroup) => void;
   closeVersionListDrawer: () => void;
   handleBackup: (form: FormInstance<unknown>) => Promise<void>;
-  handleRestore: () => Promise<void>;
+  handleRestore: (backup?: ConfigBackup) => Promise<void>;
 }
 
 export function useBackupModals(options: UseBackupModalsOptions): UseBackupModalsReturn {
@@ -130,22 +130,30 @@ export function useBackupModals(options: UseBackupModalsOptions): UseBackupModal
 
   // 恢复备份（Phase 93 异步语义：携带备份自身 deviceId 发起（D-04 前端侧——
   // 修复现状发空 body 缺 deviceId 必 400 的缺陷），捕获 taskId 后 Modal 切换为
-  // 进度态，由 useRestoreTask 轮询任务详情（D-16/D-17/D-19），不立即关闭弹窗
-  const handleRestore = useCallback(async () => {
-    if (!selectedRestoreBackup) {
-      return;
-    }
-    try {
-      const result = await post<{ taskId: string; status: string; message: string }>(
-        `/network/backups/${selectedRestoreBackup.id}/restore`,
-        { deviceId: selectedRestoreBackup.deviceId }
-      );
-      setRestoreTaskId(result.data?.taskId || null);
-      onLoad();
-    } catch (error) {
-      console.error("发起恢复任务失败:", error);
-    }
-  }, [selectedRestoreBackup, onLoad]);
+  // 进度态，由 useRestoreTask 轮询任务详情（D-16/D-17/D-19），不立即关闭弹窗。
+  // v129-recheck WR-01: backup 显式参数——版本抽屉路径在同一同步块内
+  // openRestoreModal(backup) 后立即调用，state 尚未传播（且本闭包捕获的
+  // selectedRestoreBackup 恒为旧值），无参调用会因 null 守卫静默短路成死代码；
+  // 显式传参使恢复必然发起，恢复 Modal 主路径不传参仍走 state。
+  const handleRestore = useCallback(
+    async (backup?: ConfigBackup) => {
+      const target = backup ?? selectedRestoreBackup;
+      if (!target) {
+        return;
+      }
+      try {
+        const result = await post<{ taskId: string; status: string; message: string }>(
+          `/network/backups/${target.id}/restore`,
+          { deviceId: target.deviceId }
+        );
+        setRestoreTaskId(result.data?.taskId || null);
+        onLoad();
+      } catch (error) {
+        console.error("发起恢复任务失败:", error);
+      }
+    },
+    [selectedRestoreBackup, onLoad]
+  );
 
   return {
     backupModalVisible,
