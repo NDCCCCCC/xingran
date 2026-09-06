@@ -38,15 +38,25 @@ func NewPaginatedResult(total int64, current, pageSize int, data interface{}) *P
 // NormalizePagination normalizes pagination parameters per industry best practice.
 // Returns (normalizedCurrent, normalizedPageSize).
 // Default: current=1, pageSize=10. Cap: pageSize <= MaxPageSize (200).
+// V130R-09 D-03-1/D-03-2: 单行委托 NormalizePaginationWithMax（cap=MaxPageSize），
+// 归一化唯一实现核心在 NormalizePaginationWithMax。
 func NormalizePagination(current, pageSize int) (int, int) {
+	return NormalizePaginationWithMax(current, pageSize, constants.MaxPageSize)
+}
+
+// NormalizePaginationWithMax 归一化分页参数的唯一实现核心（V130R-09 D-03-2）。
+// current <= 0 → DefaultCurrent；pageSize <= 0 → DefaultPageSize；
+// pageSize > maxPageSize → maxPageSize（钳制，不静默重置默认）。
+// 不做 MinPageSize 下限放大：pageSize 1-9 原样透传。
+func NormalizePaginationWithMax(current, pageSize, maxPageSize int) (int, int) {
 	if current <= 0 {
 		current = constants.DefaultCurrent
 	}
 	if pageSize <= 0 {
 		pageSize = constants.DefaultPageSize
 	}
-	if pageSize > constants.MaxPageSize {
-		pageSize = constants.MaxPageSize
+	if pageSize > maxPageSize {
+		pageSize = maxPageSize
 	}
 	return current, pageSize
 }
