@@ -187,7 +187,9 @@ func (s *ConfigRestoreTaskService) runRestore(ctx context.Context, taskID string
 	result, restoreErr := s.executor.RestoreConfig(ctx, task.DeviceID, config)
 	if restoreErr != nil {
 		if result != nil {
-			s.failTaskWithResult(task, result, "")
+			// v129-recheck WR-01: 保留设备返回的真实错误文本（如 "Invalid input
+			// detected at '^' marker"），否则 error_message 恒空、进度留痕半残
+			s.failTaskWithResult(task, result, fmt.Sprintf("配置下发失败: %v", restoreErr))
 			return
 		}
 		s.failTask(taskID, fmt.Sprintf("配置下发失败: %v", restoreErr))

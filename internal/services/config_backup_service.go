@@ -17,6 +17,7 @@ import (
 
 	"github.com/xingran-next/xingran-go-backend/internal/device"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	pagination "github.com/xingran-next/xingran-go-backend/pkg/query"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
@@ -434,6 +435,10 @@ type BackupListItem struct {
 // GetBackupList 获取备份列表（包含设备IP地址）
 // orderByColumn/isAsc 为服务端排序参数(可选,透传给 base.ApplySort 白名单)。
 func (s *ConfigBackupService) GetBackupList(ctx context.Context, current, pageSize int, deviceID string, orderByColumn string, isAsc *bool) ([]BackupListItem, int64, error) {
+	// v129-recheck WR-03: 分页归一化唯一入口——负 pageSize 曾触发 GORM 负 Limit
+	// （无 LIMIT 全表返回，含 ConfigContent 大字段），超限无 200 封顶
+	current, pageSize = pagination.NormalizePagination(current, pageSize)
+
 	var backups []models.ConfigBackup
 	var total int64
 
