@@ -38,10 +38,10 @@ update_trigger: v1.30 workstream ROADMAP 创建 — v1.29 内容已随 milestone
 ## Phases
 
 - [x] **Phase 96: 确定性缓存/看板缺陷修复** — CACHEDEF-01..05 五项确定性缺陷 + JOBSTAT-01 死代码删除处置，修复项每项附回归测试 ✓（2026-09-06）
-- [x] **Phase 97: config_backup 恢复链加固** — 互斥原子性/实例归属/业务错误码（V130R-01..03）✓（2026-09-06 done）
+- [x] **Phase 97: config_backup 恢复链加固** — 互斥原子性/实例归属/业务错误码（V130R-01..03）✓（2026-09-07 recovery 落库 2dd46a3，见 RECOVERY-NOTE）
   **Plans**: 3 plans (97-01: V130R-01 超时互斥原子化; 97-02: V130R-02 多实例归属过滤; 97-03: V130R-03 业务错误码语义化)
-- [ ] **Phase 98: 缓存键安全与 base 迁移收尾** — 列表键防碰撞 + 四包 interface{} 残留迁 base 泛型（V130R-04..05）
-- [ ] **Phase 99: operations 口径统一** — Total 软删/换楼乱序/orgId 子部门筛选/分页 clamp 收敛（V130R-06..09，V130R-09 含 discuss）
+- [x] **Phase 98: 缓存键安全与 base 迁移收尾** — 列表键防碰撞 + 四包 interface{} 残留迁 base 泛型（V130R-04..05）✓（2026-09-06，2/2 plans；helper 补遗 2b15574）
+- [x] **Phase 99: operations 口径统一** — Total 软删/换楼乱序/orgId 子部门筛选/分页 clamp 收敛（V130R-06..09）✓（2026-09-07 执行完成，5/5 plans；phase 验证于 101 收口统合）
 - [ ] **Phase 100: 前端契约修复** — 幽灵方法处置/rpaApi 契约对齐/networkApi 下载链收敛（V130R-10..12）
 - [ ] **Phase 101: 收口——测试文件入库 + 62-UAT + audit** — TESTFILE-01 + UAT62-01..03 + 七 gate 全绿 + audit
 
@@ -76,7 +76,7 @@ Phase 100 (FEFIX 前端契约；v1.29 Phase 94 apiFactory 基线)           ─�
   4. JOBSTAT-01 死代码删除：`internal/api/v1/job_utils.go`（GetJobStatistics + FormatDuration，均无生产调用方）连同对应测试删除，`go build ./...` 通过，REQUIREMENTS/ROADMAP 账目同步
   5. 回归纪律：5 项修复每项附回归测试；`go build ./...` + `go test ./...` 0 失败，七 gate 不倒退
 
-**Plans**: TBD
+**Plans**: 3 plans ✓（96-01 CACHEDEF-01..04 回归修复; 96-02 CACHEDEF-05 monitor prefix; 96-03 JOBSTAT-01 死代码删除，2026-09-06 完成）
 
 **Notes**: 涉及文件：system/department_cache_impl.go / system/config_cache_impl.go / duty/duty_cache_impl.go / workorder/workorder_cache_impl.go / monitor/cache_service.go + 删除 api/v1/job_utils.go——Phase 98 将再触 duty/workorder cache_impl（迁移），本相先修缺陷。
 
@@ -118,7 +118,7 @@ Phase 100 (FEFIX 前端契约；v1.29 Phase 94 apiFactory 基线)           ─�
   3. invariants 锁升级：`cache_invariants_92_test.go` warning 档四包清零（移入硬档或残留计数 = 0）
   4. 回归纪律：键防碰撞附回归测试；`go test ./internal/services/...` 0 失败，七 gate 不倒退
 
-**Plans**: TBD
+**Plans**: 2 plans ✓（98-01 V130R-04 键防碰撞; 98-02 V130R-05 四包迁移 base 泛型，2026-09-06 完成）
 
 ---
 
@@ -130,7 +130,7 @@ Phase 100 (FEFIX 前端契约；v1.29 Phase 94 apiFactory 基线)           ─�
 
 **Requirements**: V130R-06, V130R-07, V130R-08, V130R-09
 
-**Plans**: 5 plans (99-01: V130R-06 Total 口径 ✓; 99-02: V130R-07 换楼有序化 ✓; 99-03: V130R-08 orgId helper ✓; 99-04: V130R-09 Go 分页口径核心 planned; 99-05: V130R-09 CAD 端点+前端迁移 planned, wave 2)
+**Plans**: 5 plans ✓ (99-01: V130R-06 Total 口径; 99-02: V130R-07 换楼有序化; 99-03: V130R-08 orgId helper; 99-04: V130R-09 Go 分页口径核心; 99-05: V130R-09 CAD 端点+前端迁移——2026-09-07 全部执行完成)
 
 **Success Criteria** (what must be TRUE):
 
@@ -140,7 +140,6 @@ Phase 100 (FEFIX 前端契约；v1.29 Phase 94 apiFactory 基线)           ─�
   4. 分页 clamp 收敛：三口径（pagination_helper 10..10000 / requests.GetPagination 10..100 / pkg/query ..200）收敛为单一权威路径；internal/constants 与 pkg/constants 双包合并方案经 discuss 敲定落地，base/service.go 注释自认刻意保留处一并处置（V130R-09）
   5. 回归纪律：4 项修复每项附回归测试；七 gate 不倒退
 
-**Plans**: TBD
 
 **Notes**: V130R-09 是 D-03 第四个设计决策项（双包合并路径 phase 规划时敲定）。
 
@@ -163,7 +162,6 @@ Phase 100 (FEFIX 前端契约；v1.29 Phase 94 apiFactory 基线)           ─�
   3. 下载链收敛：`src/lib/api/networkApi.ts` 平行下载链收敛到权威 download.ts；`downloadFilePost` 补 JSON 错误体检测——200+JSON 错误响应不再存成 .xlsx；apiFactory invariants 的 readdirSync 改递归扫描（V130R-12）
   4. 回归纪律：3 项修复每项附回归测试（vitest）；npm run lint / type-check / test 0 errors，前端 45 dirs gate 不倒退
 
-**Plans**: TBD
 
 **Notes**: 全部为 lib 层契约修复，不涉及页面/组件改动。V130R-11 体量最大（全族对账），plan-phase 时可能拆多 plan。
 
@@ -185,7 +183,7 @@ Phase 100 (FEFIX 前端契约；v1.29 Phase 94 apiFactory 基线)           ─�
   4. UAT 场景 3 回写：空库首启 admin 默认凭据 WARN / env 覆盖 / salt 非默认验证通过，62-HUMAN-UAT.md 场景 3 回写 passed（UAT62-03）
   5. 七 gate 本地全绿（go build / go test / 后端 coverage ≥77.5 / 前端 45 dirs / lint / type-check / diff coverage）+ v1.30-MILESTONE-AUDIT.md 落盘
 
-**Plans**: TBD
+**Plans**: 2 plans（101-01 TESTFILE-01 入库+七gate 实测+追溯终表; 101-02 UAT62 三场景 runbook+回写）
 
 **Notes**: UAT62-01..03 为人工验证项（真实 PG 环境，owner = 用户/运维）——executor 负责准备验证步骤清单与自动化前置（可自动部分），人工执行后回写。62-HUMAN-UAT.md 位于 `.planning/workstreams/milestone/phases/62-ai-internal-core-db/`（v1.27 workstream 遗留）。
 

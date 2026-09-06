@@ -20,10 +20,10 @@ status: planning
 
 **Milestone Goal:** 修复 v1.29 期间登记的全部 18 项 V130-CANDIDATES 缺陷候选 + 闭环 2 个 deferred 小项（4 个未跟踪测试文件入库决策 + 62-HUMAN-UAT 3 场景）。所有修复属行为变更，每项附回归测试；七 gate 全程不倒退。
 
-- [ ] **Phase 96: 确定性缓存/看板缺陷修复** — CACHEDEF-01..05 五项确定性缺陷 + JOBSTAT-01 死代码删除处置，修复项每项附回归测试
-- [ ] **Phase 97: config_backup 恢复链加固** — V130R-01..03（互斥原子性/实例归属/业务错误码；含 3 个 discuss 设计决策）
+- [x] **Phase 96: 确定性缓存/看板缺陷修复** — CACHEDEF-01..05 五项确定性缺陷 + JOBSTAT-01 死代码删除处置，修复项每项附回归测试 ✓（2026-09-06，3/3 plans）
+- [x] **Phase 97: config_backup 恢复链加固** — V130R-01..03（互斥原子性/实例归属/业务错误码；含 3 个 discuss 设计决策）✓（2026-09-07 recovery 落库）
 - [x] **Phase 98: 缓存键安全与 base 迁移收尾** — V130R-04..05（2/2 plans ✓）— 2026-09-06
-- [ ] **Phase 99: operations 口径统一 — V130R-06..09（5 plans: 01-03 executed，99-04/99-05 planned ✓，executing）
+- [x] **Phase 99: operations 口径统一 — V130R-06..09（5 plans ✓ executed 2026-09-07，phase 验证于 101 收口统合）
 - [ ] **Phase 100: 前端契约修复** — V130R-10..12（3 plans: 100-01/02/03 planned ✓）
 - [ ] **Phase 101: 收口** — TESTFILE-01 + UAT62-01..03 + 七 gate 全绿 + v1.30 audit
 
