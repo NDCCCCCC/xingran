@@ -64,13 +64,8 @@ const FloorView3D: React.FC = () => {
 
     try {
       setLoading(true);
-      const result = await workstationApi.list({
-        floorCode: selectedFloor.floorNo || selectedFloor.id,
-        current: 1,
-        pageSize: 1000,
-      });
-
-      const workstationList = result.data?.list || [];
+      // V130R-09 D-03-6: 楼层全集走专用端点(按 floor UUID),不再用 pageSize:1000 List 反模式
+      const workstationList = await workstationApi.getFloorWorkstationsAll(selectedFloor.id);
       const convertedWorkstations = convertApiWorkstations(workstationList);
 
       setWorkstations(convertedWorkstations);

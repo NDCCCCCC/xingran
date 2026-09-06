@@ -153,13 +153,8 @@ const BuildingView3D: React.FC = () => {
   const loadWorkstations = useCallback(async (floor: FloorData) => {
     try {
       setLoadingWorkstations(true);
-      const result = await workstationApi.list({
-        floorCode: floor.id,
-        current: 1,
-        pageSize: 500,
-      });
-
-      const workstationList = result.data?.list || [];
+      // V130R-09 D-03-6: 楼层全集走专用端点(按 floor UUID),替代 pageSize:500 List(99-04 后 >200 会被钳制截断)
+      const workstationList = await workstationApi.getFloorWorkstationsAll(floor.id);
       const convertedWorkstations = convertApiWorkstations(workstationList);
 
       setWorkstations(convertedWorkstations);

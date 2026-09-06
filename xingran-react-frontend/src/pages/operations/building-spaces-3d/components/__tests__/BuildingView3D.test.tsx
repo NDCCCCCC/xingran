@@ -16,6 +16,7 @@ vi.mock("@/lib/opsApi", () => ({
   },
   workstationApi: {
     list: vi.fn(() => Promise.resolve({ data: { list: [] } })),
+    getFloorWorkstationsAll: vi.fn(() => Promise.resolve([])),
   },
   buildingApi: {
     get: vi.fn(() => Promise.resolve({ data: null })),

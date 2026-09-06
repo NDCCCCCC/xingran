@@ -26,13 +26,10 @@ const WorkstationView: React.FC<WorkstationViewProps> = ({ floor, onBack }) => {
     const loadWorkstations = async () => {
       setLoading(true);
       try {
-        const result = await workstationApi.list({
-          floorCode: floor.floorNo || floor.id,
-          current: 1,
-          pageSize: 1000,
-        });
+        // V130R-09 D-03-6: 楼层全集走专用端点(按 floor UUID),不再用 pageSize:1000 List 反模式
+        const workstations = await workstationApi.getFloorWorkstationsAll(floor.id);
 
-        const nodes: WorkstationNode[] = (result.data?.list || []).map((ws) => ({
+        const nodes: WorkstationNode[] = (workstations || []).map((ws) => ({
           id: ws.id,
           code: ws.name || ws.id,
           name: ws.name || "",

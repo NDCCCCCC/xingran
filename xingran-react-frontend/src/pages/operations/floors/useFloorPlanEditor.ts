@@ -53,15 +53,16 @@ export function useFloorPlanEditor(
     async (floorId: string) => {
       setFloorPlanLoading(true);
       try {
-        const [wallsResult, doorsResult, workstationsResult] = await Promise.all([
+        const [wallsResult, doorsResult, workstationsAll] = await Promise.all([
           wallApi.list({ floorId, current: 1, pageSize: 1000 }),
           doorApi.list({ floorId, current: 1, pageSize: 1000 }),
-          workstationApi.list({ floorId, current: 1, pageSize: 1000 }),
+          // V130R-09 D-03-6: 楼层全集走专用端点,不再用 pageSize:1000 List 反模式
+          workstationApi.getFloorWorkstationsAll(floorId),
         ]);
 
         const walls = wallsResult.data?.list || [];
         const doors = doorsResult.data?.list || [];
-        const workstations = workstationsResult.data?.list || [];
+        const workstations = workstationsAll || [];
 
         let texts: unknown[] = [];
         try {

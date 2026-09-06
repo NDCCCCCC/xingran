@@ -95,6 +95,14 @@ export const workstationApi = {
     const res = await post<DeptOption[]>("/ops/workstation/dept-options", { orgId });
     return res.data ?? [];
   },
+
+  // V130R-09 D-03-6: 楼层全部工位(CAD/3D/平面图专用,无分页,替代 pageSize:1000 List 反模式)
+  getFloorWorkstationsAll: async (floorId: string): Promise<WorkstationOps[]> => {
+    const res = await get<{ list: WorkstationOps[]; total: number }>(
+      `/ops/workstation/${floorId}/workstations-all`
+    );
+    return res.data?.list ?? [];
+  },
 };
 
 // ==================== 工位部门物理位置映射 (Phase 39) ====================

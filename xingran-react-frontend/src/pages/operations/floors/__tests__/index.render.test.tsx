@@ -25,7 +25,10 @@ vi.mock("@/lib/opsApi", () => ({
     list: vi.fn(() => Promise.resolve({ data: { list: [] } })),
   },
   deptApi: { tree: vi.fn(() => Promise.resolve({ data: [] })) },
-  workstationApi: { list: vi.fn(() => Promise.resolve({ data: { list: [] } })) },
+  workstationApi: {
+    list: vi.fn(() => Promise.resolve({ data: { list: [] } })),
+    getFloorWorkstationsAll: vi.fn(() => Promise.resolve([])),
+  },
 }));
 
 function renderFloor() {

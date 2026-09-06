@@ -13,6 +13,7 @@ vi.mock("@/lib/api", async () => {
 vi.mock("@/lib/opsApi", () => ({
   workstationApi: {
     list: vi.fn(() => Promise.resolve({ data: { list: [], total: 0 } })),
+    getFloorWorkstationsAll: vi.fn(() => Promise.resolve([])),
   },
 }));
 

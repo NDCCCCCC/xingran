@@ -14,7 +14,11 @@ vi.mock("@/lib/api", async () => {
 vi.mock("@/lib/opsApi", () => ({
   wallApi: { list: vi.fn(), save: vi.fn() },
   doorApi: { list: vi.fn(), save: vi.fn() },
-  workstationApi: { list: vi.fn() },
+  workstationApi: {
+    list: vi.fn(),
+    getFloorWorkstationsAll: vi.fn(() => Promise.resolve([])),
+    updatePositions: vi.fn(),
+  },
   floorPlanTextApi: { list: vi.fn(), save: vi.fn() },
 }));
 
@@ -44,9 +48,8 @@ describe("useFloorPlanEditor", () => {
       data: { list: [{ id: "w1", points: "[]" }] },
     } as any);
     vi.mocked(doorApi.list).mockResolvedValueOnce({ data: { list: [] } } as any);
-    vi.mocked(workstationApi.list).mockResolvedValueOnce({
-      data: { list: [], total: 0 },
-    } as any);
+    // V130R-09 D-03-6: 楼层全集改走 getFloorWorkstationsAll(直接返回 WorkstationOps[])
+    vi.mocked(workstationApi.getFloorWorkstationsAll).mockResolvedValueOnce([]);
     vi.mocked(floorPlanTextApi.list).mockResolvedValueOnce({ data: { list: [] } } as any);
 
     const { result } = renderHook(() => useFloorPlanEditor(), { wrapper });
