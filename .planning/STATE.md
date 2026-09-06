@@ -86,3 +86,15 @@ Next action: `/gsd:execute-phase 91`
 `/gsd:plan-phase 89` (待执行) — Phase 89: 常量集中化 (pkg/constants/pagination.go + timeouts.go)
 
 或 `/gsd:discuss-phase 89` 先讨论实施方案
+
+## Deferred Items
+
+Items acknowledged and deferred at milestone close on 2026-09-06:
+
+| Category | Item | Status |
+|----------|------|--------|
+| uat | 62-HUMAN-UAT 3 个 pending 场景（v1.27 workstream 跨里程碑遗留，62-ai-internal-core-db） | acknowledged — 原里程碑语境已关闭，转 v1.30+ 酌情 |
+| uat | 4 个未跟踪测试文件入库决策（rpa_model_methods_test / manager_coverage_test / sysmetrics_common_test / sysmetrics_windows_test） | deferred 至 v1.30 — 维持放行不入库（95-02 Pitfall 4 选项 c 口径） |
+| candidates | V130R-01..12（深度复查 manual-only 候选，见 REQUIREMENTS.md V130-CANDIDATES 段） | tracked — v1.30+ 候选清单 |
+
+Known deferred items at close: 3（详见上表与 .planning/milestones/v1.29-MILESTONE-AUDIT.md known gaps）

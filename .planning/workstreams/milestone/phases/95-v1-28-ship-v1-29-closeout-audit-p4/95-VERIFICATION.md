@@ -1,7 +1,7 @@
 ---
 phase: 95-v1-28-ship-v1-29-closeout-audit-p4
 verified: 2026-09-05T23:51:53Z
-status: human_needed
+status: passed
 score: 5/5 must-haves verified
 overrides_applied: 0
 human_verification:
@@ -15,6 +15,12 @@ human_verification:
     expected: "用户触发独立工作流后 MILESTONES/PROJECT/phases 目录完成归档；文档级 SHIPPED 标记已就位，完整 archive 按设计不在本相"
     why_human: "独立工作流由用户另行触发（95-CONTEXT 明确 deferred）；何时归档属用户决策"
 ---
+
+## Human Verification Resolution（2026-09-06，v1.29 归档时落档）
+
+1. **push 决策** → resolved：已 push 200 commits（7de91ba），CI run 34007103013 全绿、deploy run 34007656876 success——CI 已完整见证 v1.29 代码。
+2. **4 个未跟踪测试文件** → resolved（deferred 型裁决）：维持放行不入库，留置 v1.30 决策。
+3. **/gsd-complete-milestone 归档触发** → resolved：本归档工作流即该触发，执行中。
 
 # Phase 95: v1.28 SHIP 收口 + v1.29 closeout + audit Verification Report
 

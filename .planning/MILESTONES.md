@@ -2,9 +2,12 @@
 
 ## v1.29 技术债治理 (Tech Debt Governance) — ✅ SHIPPED 2026-09-06
 
-**Phases**: 7 (Phases 89-95) | **Plans**: 26 | **Status**: shipped
+**Phases**: 7 (Phases 89-95) | **Plans**: 26 | **Tasks**: 39 | **Status**: shipped
+
+**Stats**: 2026-09-04 → 2026-09-06（3 天）· 191 commits（238283c..7de91ba）· 236 files changed · +25478/−3502 · CI 首次见证全绿（run 34007103013，HEAD 7de91ba）
 
 **Delivered**:
+
 - Phase 89 PAGINATION：`pkg/constants/pagination.go` 3 常量 + `NormalizePagination` 唯一入口，12+ 处硬编码清零（3 plans，238283c..3559626）
 - Phase 90 TIMEOUTS：4 个 leaf const pkg 共 10 常量（超时/端口/协议/并发）+ AST 锁值 10 tests，8 调用点零行为变更（4 plans，b51f44c..3a2efe5）
 - Phase 91 CRUD 复用：11/11 operations services 迁入 `base.GORMRepository[T]`，CRUD 模板清零，生产口径净减 +408 行（4 plans，5d0008b..963defe）
@@ -13,13 +16,17 @@
 - Phase 94 API 工厂化：`src/lib/apiFactory.ts` 单一权威（createResourceApi 8 方法），13 个 *Api.ts 矩阵处置，覆盖率 lib 90.48%，review 0 Critical（3 plans，b3bc745..1771e1d）
 - Phase 95 收口：v1.28 SHIP 段核对确认（95-01）+ D-03 type-check gate 真实化 + gate ② flaky 双修复 + 七 gate 本地全绿（后端 coverage 78.33% / 前端 45/45 dirs / 3800 tests）+ v1.29-MILESTONE-AUDIT.md（95-02，本段标记即 D-09 落点）
 - Audit: [v1.29-MILESTONE-AUDIT.md](milestones/v1.29-MILESTONE-AUDIT.md) — 45/45 requirements 追溯
+- SHIPPED 后深度复查（[v1.29-DEEP-RECHECK.md](milestones/v1.29-DEEP-RECHECK.md)，2026-09-06）：6 域并行审查发现 6 Critical + 29 Warning，**当场修复 6 Critical + 10 Warning**（12 个 atomic commit a768dd2..7de91ba，附回归锁）；12 项 manual-only 转记 REQUIREMENTS V130R-01..12；预检 7 个未决 artifacts 全部落档（Resolve 路线）
+- Known deferred items at close: 3（见 STATE.md Deferred Items：62 跨里程碑 UAT×3 场景、4 个未跟踪测试文件 deferred v1.30、V130R-01..12 tracked）
 
 **Delivered (审计 → 规划)**:
+
 - 2026-09-03 综合审计 4 维度并行扫描（TODO/FIXME、硬编码值、重复实现、项目完成度）
 - 审计发现：**18 项真实 TODO + ~20 处中高度硬编码 + 8 个 CRUD services 60-70% 重复 + 缓存层 3 处架构重复 + config_backup 3 个 TODO 空函数**
 - 2026-09-04 milestone 启动；7 项行动转 REQ-ID（PAGINATION-01..11 / TIMEOUTS-01..08 / CRUD-REUSE-01..08 / CACHE-UNIFY-01..05 / BACKUP-CLOSED-01..05 / API-FACTORY-01..05 / CLOSEOUT-01..03）；7 phases 89-95 锁定
 
 **Target features (per REQUIREMENTS.md):**
+
 - Phase 89 PAGINATION 常量集中化（🔥 P0）
 - Phase 90 TIMEOUTS/PORT/PROTOCOL/CONCURRENCY 常量集中化（🔥 P0）
 - Phase 91 CRUD 复用 base.Repository[T]（🔥 P1）
@@ -29,6 +36,7 @@
 - Phase 95 v1.28 SHIP 收口 + v1.29 closeout + audit（🟢 P4）
 
 **锁定决策 (v1.29 init):**
+
 - D-01 7 项审计行动 100% 完成
 - D-02 不破坏既有测试 + operlog 11 敏感关键词 / 25 OperType 常量 / 状态值常量 AST 锁值全程保持
 - D-03 每项行动 atomic commit，CRUD 复用先 pilot (workstation_service) 再批量复制
@@ -46,16 +54,19 @@
 **Delivered**: 前端全量口径（vitest `coverage.include` 全 src）测试覆盖率 **3.67% → 45.13%**（+41.46pp），并在 18+ batches (R24-R47) 持续推进至 45.87%。Gate 45/45 dirs PASS / 1688 tests passing / 4 层 CI 防倒退 gate（全局阈值 + per-directory floor + baseline ratchet + PR diff coverage ≥80%）全部落地。
 
 **阶段性收口理由**:
+
 - 边效益递减：每 batch 仅 ~0.27pp，距 70% 目标仍差 24.87pp
 - 主要洼地（pages/system hooks + workstations/assets 大页）边效益不抵 commit 时间
 - 工作树 clean（commit `bcb51f0` 末态）；Phase 88 暂停无 pending TODO 阻塞
 
 **遗留 (deferred)**:
+
 - Phase 88 batch 续推（用户 2026-09-04 决定阶段性收口）
 - PROTO-01..04 逐屏原型对齐 / VIS-01..03 视觉深化（v1.22 候选遗留）
 - Phase 53 网络设备端口写 UI 测试 5 个 vitest 失败（与 v1.28 正交）
 
 **归档位置**:
+
 - `.planning/workstreams/frontend-coverage/` (保留作历史，含 STATE.md / ROADMAP.md / phases/)
 - `.planning/PROJECT.md` v1.28 段标记 SHIPPED + ARCHIVED
 
@@ -332,4 +343,3 @@
 - [.planning/phases/71-governance-baseline-and-ci-gate/71-VERIFICATION.md](../phases/71-governance-baseline-and-ci-gate/71-VERIFICATION.md) — Phase 71 终验 passed
 - [.planning/coverage-baseline.md](../coverage-baseline.md) — 4 phase ratchet row(起点 → 71 → 72 → 73 → 74)
 - [.planning/phases/74-p2-finalize-and-diff-coverage/74-11-SUMMARY.md](../phases/74-p2-finalize-and-diff-coverage/74-11-SUMMARY.md) — Phase 74 final ratchet + v1.26 closeout
-

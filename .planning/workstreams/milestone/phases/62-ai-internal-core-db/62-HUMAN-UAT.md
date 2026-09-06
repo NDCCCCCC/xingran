@@ -1,9 +1,10 @@
 ---
-status: partial
+status: resolved
 phase: 62-ai-internal-core-db
 source: [62-VERIFICATION.md]
 started: 2026-08-15T00:30:00+08:00
-updated: 2026-08-15T00:30:00+08:00
+updated: 2026-09-06T12:00:00+08:00
+resolution_note: 2026-09-06 v1.29 归档预检裁决——本文件属 v1.27 workstream 跨里程碑遗留，与 v1.29 无关；3 个 pending 场景 acknowledge 转入 v1.29 STATE.md Deferred Items（原里程碑语境已关闭，不再构成阻塞）
 ---
 
 ## Current Test

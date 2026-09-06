@@ -1,5 +1,5 @@
 ---
-status: completed
+status: complete
 phase: 64-brand-token-layer-and-contrast-verification
 source: 64-01-SUMMARY.md
 started: 2026-08-18

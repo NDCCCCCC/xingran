@@ -1,7 +1,7 @@
 ---
 phase: 94-api-p2
 verified: 2026-09-06T04:26:00+08:00
-status: human_needed
+status: passed
 score: 4/4 must-haves verified
 overrides_applied: 0
 re_verification:
@@ -18,6 +18,11 @@ human_verification:
     expected: "产品/用户接受新文件名与新文案，或决定追加 ignoreContentDisposition 选项"
     why_human: "文件名与报错文案是最终用户可见行为，自动化测试无法判断产品可接受性"
 ---
+
+## Human Verification Resolution（2026-09-06，v1.29 归档时落档）
+
+1. **type-check gate 空转** → resolved：95-02 D-03 修复线落地——`package.json` scripts.type-check 改 `tsc --noEmit -p tsconfig.app.json`（真实检查面 3701 文件）；存量错误 `useRestoreTask.ts:47` TS2345 一并修复（`result.data ?? null`）；CI type-check 步骤同被救活（run 34007103013 绿）。
+2. **两处外观级行为变化** → resolved（D-04 裁决接受现状）：asset 导出文件名英文化 + 下载错误文案归一，零代码回退；opsApi.test.ts / download.test.ts 已锁新行为；`ignoreContentDisposition` 选项留 deferred 候选（v1.29 audit known gap 3）。
 
 # Phase 94: 前端 API 工厂化 Verification Report
 

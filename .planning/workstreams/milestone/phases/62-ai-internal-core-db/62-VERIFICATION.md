@@ -1,7 +1,8 @@
 ---
 phase: 62-ai-internal-core-db
 verified: 2026-08-15T00:00:00Z
-status: human_needed
+status: deferred_acknowledged
+resolution_note: 2026-09-06 v1.29 归档预检裁决——PG 就地升级演练需带旧 MV 的真实 PG 实例，属 v1.27 workstream 跨里程碑遗留；acknowledge 转入 v1.29 STATE.md Deferred Items
 score: 14/14 must-haves verified
 overrides_applied: 0
 human_verification:

@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.29
 milestone_name: 技术债治理
-status: completed
-last_updated: "2026-09-05T23:54:47.335Z"
-last_activity: 2026-09-05
+status: Awaiting next milestone
+last_updated: "2026-09-06T04:07:20.364Z"
+last_activity: 2026-09-06 — Milestone v1.29 completed and archived
 progress:
   total_phases: 7
   completed_phases: 7
@@ -27,12 +27,10 @@ Config: "mode": "yolo"
 
 ## Current Position
 
-Phase: 95
-Plan: Not started
-Status: v1.29 SHIPPED 2026-09-06（7 phases / 45 requirements 45/45 done）
-Last activity: 2026-09-05
-Resume file: None（milestone 收口；audit 报告 .planning/milestones/v1.29-MILESTONE-AUDIT.md）
-Next action: /gsd-complete-milestone 完整 archive（用户触发，deferred）；push 决策留用户（73-05 先例，本地领先 origin/main 179 commits）；v1.30 规划输入 = REQUIREMENTS § V130-CANDIDATES（CACHEDEF-01..05 + JOBSTAT-01）
+Phase: Milestone v1.29 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-09-06 — Milestone v1.29 completed and archived
 
 ## Completed Phases (v1.29)
 
@@ -137,3 +135,7 @@ v1.29 SHIPPED 2026-09-06 — milestone 全部收口（7 phases / 26 plans / 45 r
 - [Phase 92]: 92-02: system 9 文件 29 处 GetOrSet 样板全部收敛 base.GetOrSetJSON 单 return + 21 处失效调用改写 base 底层 + notice 逃兵归队（删私有 getExpiration）；user/role List 站点 T=*PageResult 为 Pitfall 5 单向改善；cache mock 须回填 dest（JSON 往返）为 Rule 1 测试契约修复；键构造 diff 级零变更，生产行为零变更 — InvalidateCache* 函数本体留 92-03 与外围 19 处改写同 commit 删除
 - [Phase 92]: 92-03: D-04 完全达成——外围 19 处失效调用改写与 system.InvalidateCacheByPattern/ByKey 删除同 commit（编译器当 checklist 证明零遗漏），42 处调用全部收敛 base 唯一失效底层；CacheInvalidator 保留分发器底层委托；floor 3 处样板收敛（:168 注释假阳性未动）；DataCacheService 原地定性（GetExpiration 委托 base + D-07 定位注释不标 @Deprecated，装配链零改动）——plan 委托片段缺取地址为 Rule 3 编译必需修复（组合字面量不可寻址）；A5 纪律：duty/knowledge/network/workorder 12 处 GetOrSet 样板留 v1.30+
 - [Phase 92]: 92-04: monitor CacheProvider rename CacheOperator 消歧（D-08 含测试断言面，裸引用清零，base.CacheProvider 仓内唯一权威）；TestNoInterfaceGetOrSetResidue invariants 锁进 CI（D-10② 硬档 0 残留 + 白名单 + 外围 warning 11 处，红→绿演练通过）；CLAUDE.md 五处缓存段修订 + Cache Service Convention 新段 + REQUIREMENTS/ROADMAP 措辞对齐（D-10①/D-06）；LOC 双口径诚实审计：口径 A 毛减 187<200 未达（剔除 D-07 注释投资后 207 达成）+ 口径 B 全口径净增 529（测试投资计划内）；扫描器空接口判定踩 go/parser 空 FieldList 坑为 Rule 1 修复
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd:new-milestone
