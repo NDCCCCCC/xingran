@@ -3,8 +3,13 @@
  *
  * 自 opsApi.ts:310-369 原样迁入：blobAxios 实例（5min 超时）+ 异步 token
  * 注入拦截器 + 文件名提取 + 浏览器触发 + GET 下载；并新增 downloadFilePost
- * （POST 变体），归一 excelApi.export / asset excel export /
- * rpaApi.downloadReport 三处 POST-blob 内联重复。
+ * （POST 变体），归一 excelApi.export / asset excel export 等处 POST-blob
+ * 内联重复。Phase 100（V130R-12/D-100-7）起为全站唯一下载权威：
+ * networkApi 的 exportMACHistory/batchExport 亦收敛为薄壳。
+ *
+ * D-100-7：downloadFile/downloadFilePost 同挂 200+application/json 错误体
+ * 检测（content-type 强判据，替换 networkApi 旧 size<1024 弱嗅探）——后端把
+ * 错误体伪装成下载响应时 throw（message 透传），不再存成伪 .xlsx。
  *
  * 本文件不 import 任何 *Api.ts（临时双份由 94-02 迁出）。
  */
@@ -33,12 +38,12 @@ blobAxios.interceptors.request.use(async (config: InternalAxiosRequestConfig) =>
   return config;
 });
 
-// 从响应头提取文件名
+// 从响应头提取文件名（headers 宽松读取：无头 mock/响应回退默认文件名）
 export function extractFilenameFromBlobResponse(
   response: AxiosResponse<Blob>,
   defaultFilename: string
 ): string {
-  const contentDisposition: string | undefined = response.headers["content-disposition"];
+  const contentDisposition: string | undefined = response.headers?.["content-disposition"];
   if (!contentDisposition) {
     return defaultFilename;
   }
@@ -63,30 +68,62 @@ export function triggerBrowserDownload(blob: Blob, filename: string): void {
   document.body.removeChild(a);
 }
 
-// 通用文件下载函数(GET)
-export async function downloadFile(url: string, filename: string): Promise<void> {
+// D-100-7：200 + application/json = 后端把错误体伪装成下载响应。
+// content-type 强判据（协议级信号）优先于文件名提取；错误体 message
+// 字段透传（API Response Format envelope），非法 JSON 回退默认文案。
+async function throwIfJsonErrorResponse(
+  response: AxiosResponse<Blob>,
+  defaultFilename: string
+): Promise<void> {
+  const contentType = String(response.headers?.["content-type"] ?? "");
+  if (!contentType.includes("application/json")) {
+    return;
+  }
+  let message = `下载失败: ${defaultFilename}`;
+  try {
+    const text = await response.data.text();
+    const parsed = JSON.parse(text) as { message?: string };
+    if (parsed?.message) {
+      message = parsed.message;
+    }
+  } catch {
+    // 非法 JSON 保留默认文案
+  }
+  throw new Error(message);
+}
+
+// 通用文件下载函数(GET) — 返回实际使用的 filename
+export async function downloadFile(url: string, filename: string): Promise<string> {
   const response = await blobAxios.get<Blob>(url, { responseType: "blob" });
 
   if (response.status < 200 || response.status >= 300) {
     throw new Error(`下载失败: ${filename}`);
   }
 
-  triggerBrowserDownload(response.data, filename);
+  await throwIfJsonErrorResponse(response, filename);
+
+  const actualFilename = extractFilenameFromBlobResponse(response, filename);
+  triggerBrowserDownload(response.data, actualFilename);
+  return actualFilename;
 }
 
-// 通用文件下载函数(POST) — excelApi.export / asset excel export /
-// rpaApi.downloadReport 三处 POST-blob 内联重复的归一目标（D-04）
+// 通用文件下载函数(POST) — excelApi.export / asset excel export 等
+// POST-blob 内联重复的归一目标（D-04）；Phase 100 D-100-6 起 networkApi
+// batchExport 亦为薄壳消费者。返回实际使用的 filename。
 export async function downloadFilePost(
   url: string,
   body: unknown,
   defaultFilename: string
-): Promise<void> {
+): Promise<string> {
   const response = await blobAxios.post<Blob>(url, body, { responseType: "blob" });
 
   if (response.status < 200 || response.status >= 300) {
     throw new Error(`下载失败: ${defaultFilename}`);
   }
 
+  await throwIfJsonErrorResponse(response, defaultFilename);
+
   const filename = extractFilenameFromBlobResponse(response, defaultFilename);
   triggerBrowserDownload(response.data, filename);
+  return filename;
 }

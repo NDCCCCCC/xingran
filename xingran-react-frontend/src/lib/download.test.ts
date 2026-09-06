@@ -216,6 +216,11 @@ describe("blobAxios 实例配置", () => {
 });
 
 describe("200+JSON 错误体检测 (Phase 100 D-100-7)", () => {
+  // jsdom 的 Blob 不实现 .text()——JSON 检测只消费 .text(),mock 数据按
+  // 被测单元实际消费面提供最小形状即可
+  const textBlob = (text: string) =>
+    ({ text: async () => text, size: text.length }) as unknown as Blob;
+
   beforeEach(() => {
     createObjectURLMock().mockClear();
     revokeObjectURLMock().mockClear();
@@ -224,9 +229,7 @@ describe("200+JSON 错误体检测 (Phase 100 D-100-7)", () => {
   it("downloadFilePost: 200 + application/json 错误体 → throw message 字段,不触发下载", async () => {
     mockedBlobAxios.post.mockResolvedValueOnce({
       status: 200,
-      data: new Blob([JSON.stringify({ code: 500, message: "导出失败" })], {
-        type: "application/json",
-      }),
+      data: textBlob(JSON.stringify({ code: 500, message: "导出失败" })),
       headers: { "content-type": "application/json" },
     });
 
@@ -237,7 +240,7 @@ describe("200+JSON 错误体检测 (Phase 100 D-100-7)", () => {
   it("downloadFilePost: 200 + application/json + 非法 JSON body → 回退默认文案「下载失败」", async () => {
     mockedBlobAxios.post.mockResolvedValueOnce({
       status: 200,
-      data: new Blob(["<html>not-json</html>"], { type: "application/json" }),
+      data: textBlob("<html>not-json</html>"),
       headers: { "content-type": "application/json" },
     });
 
@@ -265,9 +268,7 @@ describe("200+JSON 错误体检测 (Phase 100 D-100-7)", () => {
   it("downloadFile(GET): 200 + application/json 错误体 → throw(GET 侧同构防护)", async () => {
     mockedBlobAxios.get.mockResolvedValueOnce({
       status: 200,
-      data: new Blob([JSON.stringify({ code: 500, message: "导出失败" })], {
-        type: "application/json",
-      }),
+      data: textBlob(JSON.stringify({ code: 500, message: "导出失败" })),
       headers: { "content-type": "application/json; charset=utf-8" },
     });
 
