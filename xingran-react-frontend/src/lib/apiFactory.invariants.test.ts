@@ -22,15 +22,16 @@
  *   - warning 档：其余 *Api.ts——实际计数必须逐文件 == WARNING_WHITELIST 期望
  *     计数（实际 != 期望即 fail；每项附理由注释，新豁免必须显式登记）。
  *
- * 范围：仅 src/lib/*Api.ts（readdirSync 枚举 + import.meta.url 相对定位，禁本地
- * 绝对路径断言），豁免 api.ts / apiFactory.ts / download.ts；禁止扩大到全仓 src
- * （会误伤页面内联 post——RESEARCH Anti-Patterns）。
+ * 范围：src/lib 下全部 *Api.ts（Phase 100 D-100-8 起递归枚举，含 src/lib/api/ 子目录；
+ * readdirSync + import.meta.url 相对定位，禁本地绝对路径断言；Windows sep
+ * 归一为 "/" 后 sort/比较，防平台漂移），豁免 api.ts / apiFactory.ts /
+ * download.ts；禁止扩大到全仓 src（会误伤页面内联 post——RESEARCH Anti-Patterns）。
  *
  * 红绿演练（Phase 92 惯例，执行于 94-03 Task 3）：向任一硬档文件临时加入同构
  * 模板函数（单条 return post(`/x/${id}/delete`)），本测试转红；删除后恢复绿。
  */
 import { readdirSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import ts from "typescript";
@@ -67,9 +68,11 @@ const HARD_ALLOWED: Record<string, number> = {
   "vdiApi.ts": 0,
 };
 
-/** 13 个 *Api.ts 写死清单（sorted）：新增/删除 *Api.ts 必须显式更新本测试 */
+/** 15 个 *Api.ts 写死清单（sorted，POSIX 路径形态，含 src/lib/api/ 子目录 2 文件）：新增/删除 *Api.ts 必须显式更新本测试 */
 const EXPECTED_FILES = [
   "adDomainApi.ts",
+  "api/macHeatmapApi.ts",
+  "api/networkApi.ts",
   "assetApi.ts",
   "columnConfigApi.ts",
   "dutyApi.ts",
@@ -103,6 +106,9 @@ const WARNING_WHITELIST: Record<string, number> = {
   knowledgeApi: 5, // articles update/delete、categories delete、tags update/delete（update 直调 + delete 单参直调）；createKnowledgeArticle plain literal 不在模板口径
   dutyApi: 5, // pools update/delete、schedules delete、holidays update/delete；create/update 异构（memberIds/Omit idiom）与 plain literal list 不在模板口径
   workorderApi: 6, // orders update/delete、categories delete、periodic update/delete、comments/list 子资源列表；create/update 异构请求类型与 batchDelete plain literal 不在模板口径
+  // —— Phase 100 D-100-8 递归扫描新纳管的 src/lib/api/ 子目录（0 也要显式登记）——
+  "api/networkApi": 0, // post 类 write* 包装全为 plain-literal URL 不含 CRUD 后缀;exportMACHistory/batchExport 为薄壳调用 download.ts,不满足「单 return 直调传输函数」口径（D-100-6 收敛后归 download 域）
+  "api/macHeatmapApi": 0, // 单函数 plain-literal URL,无 CRUD 后缀模板形状
 };
 
 interface TemplateHit {
@@ -119,9 +125,10 @@ const TRANSPORT_FNS = new Set(["post", "get", "put", "del"]);
 /** CRUD 形状后缀（与 createResourceApi 8 方法的 URL 拼接形状对应） */
 const CRUD_SUFFIXES = ["/list", "/update", "/delete", "/batch-delete"];
 
-/** 枚举 src/lib 下业务 *Api.ts（豁免工厂/传输/下载自身）——范围仅此目录 */
+/** 枚举 src/lib 下业务 *Api.ts（豁免工厂/传输/下载自身）——D-100-8 起递归含 api/ 子目录；Windows sep 归一为 POSIX 后 filter/sort */
 function listApiFiles(): string[] {
-  return readdirSync(LIB_DIR)
+  return readdirSync(LIB_DIR, { recursive: true })
+    .map((f) => f.split(sep).join("/"))
     .filter((f) => f.endsWith("Api.ts") && !EXEMPT_FILES.has(f))
     .sort();
 }
@@ -235,7 +242,7 @@ describe("apiFactory invariants — src/lib/*Api.ts 手写 CRUD 模板扫描（D
     files.map((f) => [f, scanFile(f, readFileSync(join(LIB_DIR, f), "utf-8"))])
   );
 
-  it("扫描范围恰为 13 个业务 *Api.ts（3 对象形态 + 10 扁平/KEEP），不越 src/lib 半步", () => {
+  it("扫描范围恰为 15 个业务 *Api.ts（3 对象形态 + 10 扁平/KEEP + 2 子目录），不越 src/lib 半步", () => {
     expect(files).toEqual(EXPECTED_FILES);
   });
 
