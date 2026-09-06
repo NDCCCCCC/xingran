@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/xingran-next/xingran-go-backend/internal/constants"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	pkgquery "github.com/xingran-next/xingran-go-backend/pkg/query"
 	"gorm.io/gorm"
 )
 
@@ -63,13 +65,10 @@ var vdiServerAllowedSortFields = map[string]string{
 
 // ListServers 获取VDI服务器列表
 func (s *vdiServerServiceImpl) ListServers(ctx context.Context, page, pageSize int, orderByColumn string, isAsc *bool) (*VDIServerPageResult, error) {
-	// 设置默认分页参数
-	if page <= 0 {
-		page = 1
-	}
-	if pageSize <= 0 || pageSize > 100 {
-		pageSize = 10
-	}
+	// V130R-09 D-03-4: 分页归一化统一走 pkg/query 单一权威出口
+	// (cap=MaxListPageSize=100;超限由旧"静默重置为 10"改为钳制到上限;
+	// pkgquery 别名消除下方局部 query 变量遮蔽)。
+	page, pageSize = pkgquery.NormalizePaginationWithMax(page, pageSize, constants.MaxListPageSize)
 
 	// 构建查询
 	query := s.db.WithContext(ctx).Model(&models.VDIServer{})

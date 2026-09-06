@@ -413,10 +413,10 @@ func TestVDIServerService_CRUD(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "zzz", page.List[0].Name)
 
-	// pageSize > 100 → 回落 10
+	// pageSize > 100 → 钳到 MaxListPageSize=100（V130R-09 D-03-4：超限钳制而非静默重置默认）
 	page, err = svc.ListServers(ctx, 1, 500, "", nil)
 	require.NoError(t, err)
-	assert.Equal(t, 10, page.PageSize)
+	assert.Equal(t, 100, page.PageSize)
 
 	// Update: 全字段 + 密码更新清 token
 	future := time.Now().Add(time.Hour)
