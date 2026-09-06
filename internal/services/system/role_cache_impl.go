@@ -54,10 +54,10 @@ func (s *roleCacheService) buildListCacheKey(params requests.RoleListParams) str
 	var keyPart string
 
 	if params.RoleName != "" {
-		keyPart += ":name:" + params.RoleName
+		keyPart += ":name:" + EscapeCacheKeyValue(params.RoleName)
 	}
 	if params.RoleKey != "" {
-		keyPart += ":key:" + params.RoleKey
+		keyPart += ":key:" + EscapeCacheKeyValue(params.RoleKey)
 	}
 	if params.Status != "" {
 		keyPart += ":status:" + params.Status

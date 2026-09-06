@@ -175,30 +175,30 @@ func (s *userCacheService) buildListCacheKey(params requests.UserListParams) str
 	var keyPart string
 
 	if params.Username != nil && *params.Username != "" {
-		keyPart += ":username:" + *params.Username
+		keyPart += ":username:" + EscapeCacheKeyValue(*params.Username)
 	}
 	if params.Nickname != nil && *params.Nickname != "" {
-		keyPart += ":nickname:" + *params.Nickname
+		keyPart += ":nickname:" + EscapeCacheKeyValue(*params.Nickname)
 	}
 	if params.Phone != nil && *params.Phone != "" {
-		keyPart += ":phone:" + *params.Phone
+		keyPart += ":phone:" + EscapeCacheKeyValue(*params.Phone)
 	}
 	if params.Status != nil {
 		keyPart += ":status:" + fmt.Sprintf("%d", *params.Status)
 	}
 	if params.DeptID != nil && *params.DeptID != "" {
-		keyPart += ":dept:" + *params.DeptID
+		keyPart += ":dept:" + EscapeCacheKeyValue(*params.DeptID)
 	}
 	if params.RecursiveDeptID != nil && *params.RecursiveDeptID != "" {
 		// 与 DeptID 必须分别入 key:同一 deptId 用单值语义和递归语义命中的
 		// 数据集不同(递归 = 部门+所有子部门的并集),否则会读到错误缓存。
-		keyPart += ":recursiveDept:" + *params.RecursiveDeptID
+		keyPart += ":recursiveDept:" + EscapeCacheKeyValue(*params.RecursiveDeptID)
 	}
 	if params.BeginTime != nil && *params.BeginTime != "" {
-		keyPart += ":begin:" + *params.BeginTime
+		keyPart += ":begin:" + EscapeCacheKeyValue(*params.BeginTime)
 	}
 	if params.EndTime != nil && *params.EndTime != "" {
-		keyPart += ":end:" + *params.EndTime
+		keyPart += ":end:" + EscapeCacheKeyValue(*params.EndTime)
 	}
 
 	// 排序参数(关键:orderByColumn + isAsc 必须入 key,否则不同排序命中同一缓存)
