@@ -38,8 +38,14 @@ const (
 	// scheduler/ad_sync_tasks.go:164 (inline 1*time.Minute extracted, D-08).
 	ADSyncTaskTimeout = 1 * time.Minute
 
-	// RestoreConfigTimeout is the timeout for a full running-config restore push
-	// (config backup restore, Phase 93). A full config can be hundreds of lines
-	// sent line-by-line, far exceeding the single-command CommandExecTimeout.
-	RestoreConfigTimeout = 10 * time.Minute
+	// RestoreBackupTimeout is the context timeout for the pre-restore backup phase
+	// (CreateBackup in runRestore, Phase 97 V130R-01 D-01). Short TTL because
+	// CreateBackup just reads the device config and stores it — typically <10s.
+	RestoreBackupTimeout = 30 * time.Second
+
+	// RestoreConfigExecTimeout is the context timeout for the RestoreConfig下发 phase
+	// in runRestore (Phase 97 V130R-01 D-01). A full config can be hundreds of
+	// lines sent line-by-line, far exceeding the single-command CommandExecTimeout.
+	// Formerly RestoreConfigTimeout (10min); split into two independent budgets.
+	RestoreConfigExecTimeout = 5 * time.Minute
 )

@@ -278,11 +278,12 @@ func TestBackupHandler_Restore(t *testing.T) {
 
 	t.Run("mutual_exclusion_rejected", func(t *testing.T) {
 		// D-08: one in-flight restore per device.
+		// V130R-03: 活跃任务冲突映射 409 Conflict（BusinessError 语义化状态码）。
 		seedRestoreTask(t, env, "task-live", "dev-r", "bk-r", models.RestoreTaskStatusPending)
 		w := netServe(t, []netRoute{{http.MethodPost, "/backups/:id/restore", h.Restore}},
 			http.MethodPost, "/backups/bk-r/restore", `{"deviceId":"dev-r"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusConflict, w.Code)
 		assert.Contains(t, resp.Message, "进行中的恢复任务")
 	})
 

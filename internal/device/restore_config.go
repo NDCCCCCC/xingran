@@ -60,7 +60,7 @@ func exitConfigCommand(vendor string) string {
 //
 // 失败语义（D-12）：任一行报错/Failed 即停止后续行，返回的 RestoreResult 携带
 // SentLines 部分计数与 FailedLine 定位，供任务进度留痕与"恢复前备份"回退。
-// 超时：constants.RestoreConfigTimeout（D-05，全量配置千行级远超单命令语义）。
+// 超时：constants.RestoreConfigExecTimeout（D-05，全量配置千行级远超单命令语义）。
 func (e *DeviceExecutor) RestoreConfig(ctx context.Context, deviceID, config string) (*RestoreResult, error) {
 	pool := e.scheduler.GetConnectionPool()
 	dev, err := pool.GetDevice(deviceID)
@@ -100,7 +100,7 @@ func (e *DeviceExecutor) RestoreConfig(ctx context.Context, deviceID, config str
 			}
 		}
 		return nil
-	}, constants.RestoreConfigTimeout)
+	}, constants.RestoreConfigExecTimeout)
 
 	result.Duration = time.Since(startTime)
 	if execErr != nil {

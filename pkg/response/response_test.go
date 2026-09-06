@@ -172,7 +172,7 @@ func TestHandleJSONBinding(t *testing.T) {
 	// 成功
 	c, _ := newTestCtx(t, "")
 	c.Request = httptest.NewRequest(http.MethodPost, "/",
- strings.NewReader(`{"name":"alice"}`))
+		strings.NewReader(`{"name":"alice"}`))
 	c.Request.Header.Set("Content-Type", "application/json")
 	var okPayload payload
 	require.True(t, HandleJSONBinding(c, &okPayload))
@@ -181,7 +181,7 @@ func TestHandleJSONBinding(t *testing.T) {
 	// 失败
 	c2, w2 := newTestCtx(t, "")
 	c2.Request = httptest.NewRequest(http.MethodPost, "/",
- strings.NewReader(`{`))
+		strings.NewReader(`{`))
 	c2.Request.Header.Set("Content-Type", "application/json")
 	var bad payload
 	require.False(t, HandleJSONBinding(c2, &bad))
@@ -212,6 +212,27 @@ func TestHandleServiceError(t *testing.T) {
 	c2, w2 := newRouterCtx(t, "")
 	require.False(t, HandleServiceError(c2, errors.New("boom"), "写"))
 	assert.Equal(t, http.StatusBadRequest, w2.Code)
+}
+
+// TestHandleServiceErrorWithBusinessError V130R-03 D-04: BusinessError 携带语义化 HTTP status。
+func TestHandleServiceErrorWithBusinessError(t *testing.T) {
+	// 400: 备份不属于目标设备
+	c400, w400 := newRouterCtx(t, "")
+	err400 := &BusinessError{HTTPStatus: 400, Code: 400001, Message: "备份不属于目标设备"}
+	require.False(t, HandleServiceError(c400, err400, "恢复"))
+	assert.Equal(t, http.StatusBadRequest, w400.Code)
+	got400 := decodeResp(t, w400)
+	assert.Equal(t, 400, got400.Code)
+	assert.Contains(t, got400.Message, "备份不属于目标设备")
+
+	// 409: 进行中恢复任务冲突
+	c409, w409 := newRouterCtx(t, "")
+	err409 := &BusinessError{HTTPStatus: 409, Code: 409001, Message: "该设备存在进行中的恢复任务"}
+	require.False(t, HandleServiceError(c409, err409, "恢复"))
+	assert.Equal(t, http.StatusConflict, w409.Code)
+	got409 := decodeResp(t, w409)
+	assert.Equal(t, 409, got409.Code)
+	assert.Contains(t, got409.Message, "进行中")
 }
 
 func TestHandleIDParam(t *testing.T) {

@@ -20,7 +20,8 @@ var expectedTimeoutsValues = map[string]string{
 	"ADSyncTimeout":            "30m0s",
 	"SchedulerShutdownTimeout": "5s",
 	"ADSyncTaskTimeout":        "1m0s",
-	"RestoreConfigTimeout":     "10m0s",
+	"RestoreBackupTimeout":     "30s",
+	"RestoreConfigExecTimeout": "5m0s",
 	// v129-recheck WR-04: ad_domain_handler 三处内联 duration 上移收编
 	"ADGroupSyncTimeout":       "10m0s",
 	"ADSingleGroupSyncTimeout": "2m0s",
@@ -149,10 +150,11 @@ func TestTimeoutsConstantStability(t *testing.T) {
 	}
 }
 
-// TestTimeoutsConstantCount asserts exactly 9 constants exist.
+// TestTimeoutsConstantCount asserts exactly 10 constants exist.
+// (Phase 97 V130R-01: RestoreConfigTimeout split into RestoreBackupTimeout + RestoreConfigExecTimeout)
 func TestTimeoutsConstantCount(t *testing.T) {
 	t.Parallel()
-	const want = 9
+	const want = 10
 	actual, err := readTimeoutsConsts("timeouts.go")
 	if err != nil {
 		t.Fatalf("failed to parse timeouts.go: %v", err)

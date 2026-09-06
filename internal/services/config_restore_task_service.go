@@ -14,6 +14,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/query"
+	"github.com/xingran-next/xingran-go-backend/pkg/response"
 	"gorm.io/gorm"
 )
 
@@ -35,11 +36,11 @@ func isDuplicateActiveRestoreErr(err error) bool {
 }
 
 // ConfigRestoreTaskService 配置恢复任务服务（Phase 93 D-15..D-22/D-34）：
-// 异步恢复的生命周期编排——发起（同设备校验 D-04 + 互斥 D-08 + 建任务）→
-// detached 执行（恢复前备份 D-10/14 → 读备份 D-23 解压路径 → RestoreConfig
-// 下发 D-02/12 → 回读 hash 警告 D-11 → 版本链记录 D-09）→ 任务终态查询。
+// 异步恢复的生命周期编排——发起（同设备校验 D-04 + 互斥 D-08 + 建任务）->
+// detached 执行（恢复前备份 D-10/14 -> 读备份 D-23 解压路径 -> RestoreConfig
+// 下发 D-02/12 -> 回读 hash 警告 D-11 -> 版本链记录 D-09）-> 任务终态查询。
 //
-// 状态机（D-34 四态，不支持取消）：pending → running → success | failed。
+// 状态机（D-34 四态，不支持取消）：pending -> running -> success | failed。
 type ConfigRestoreTaskService struct {
 	db        *gorm.DB
 	backupSvc *ConfigBackupService
@@ -62,7 +63,7 @@ var restoreTaskAllowedSortFields = map[string]string{
 	"createdAt": "created_at",
 }
 
-// StartRestore 发起恢复：校验 → 互斥 → 建任务 → 异步执行。返回任务记录
+// StartRestore 发起恢复：校验 -> 互斥 -> 建任务 -> 异步执行。返回任务记录
 // （handler 取其 ID 返回 taskId，D-17）。
 func (s *ConfigRestoreTaskService) StartRestore(ctx context.Context, backupID, deviceID, createdBy string) (*models.ConfigRestoreTask, error) {
 	// ① 同设备校验（D-04）：跨设备误推配置是高危事故源
@@ -71,7 +72,12 @@ func (s *ConfigRestoreTaskService) StartRestore(ctx context.Context, backupID, d
 		return nil, err
 	}
 	if backup.DeviceID != deviceID {
-		return nil, fmt.Errorf("备份不属于目标设备，仅限恢复到备份源设备")
+		// V130R-03 D-04: 跨设备拒绝 → 400
+		return nil, &response.BusinessError{
+			HTTPStatus: 400,
+			Code:       400001,
+			Message:    "备份不属于目标设备，仅限恢复到备份源设备",
+		}
 	}
 
 	// ② 同设备互斥（D-08）：并发恢复交叉下发比慢更有害（Enqueue 去重先例）
@@ -83,7 +89,12 @@ func (s *ConfigRestoreTaskService) StartRestore(ctx context.Context, backupID, d
 		}).
 		First(&existing).Error
 	if err == nil {
-		return nil, fmt.Errorf("该设备存在进行中的恢复任务")
+		// V130R-03 D-04: 活跃任务冲突 → 409
+		return nil, &response.BusinessError{
+			HTTPStatus: 409,
+			Code:       409001,
+			Message:    "该设备存在进行中的恢复任务",
+		}
 	}
 
 	// ③ 创建任务（pending）。同设备活跃唯一索引（migration 212，v129-recheck C-1）
@@ -97,17 +108,19 @@ func (s *ConfigRestoreTaskService) StartRestore(ctx context.Context, backupID, d
 	}
 	if err := s.db.WithContext(ctx).Create(task).Error; err != nil {
 		if isDuplicateActiveRestoreErr(err) {
-			return nil, fmt.Errorf("该设备存在进行中的恢复任务")
+			// V130R-03 D-04: 唯一索引冲突 → 409（与活跃任务冲突同义）
+			return nil, &response.BusinessError{
+				HTTPStatus: 409,
+				Code:       409001,
+				Message:    "该设备存在进行中的恢复任务",
+			}
 		}
 		return nil, fmt.Errorf("创建恢复任务失败: %w", err)
 	}
 
-	// ④ 异步执行——detached context（P1：HTTP ctx 随响应取消，任务必须独立生命周期）
-	runCtx, cancel := context.WithTimeout(context.Background(), constants.RestoreConfigTimeout)
-	go func() {
-		defer cancel()
-		s.runRestore(runCtx, task.ID)
-	}()
+	// ④ 异步执行——detached context（P1：HTTP ctx 随响应取消，任务必须独立生命周期；
+	// V130R-01 D-01：goroutine 内部自己管理两段独立 context budget，不传 runCtx）
+	go s.runRestore(context.Background(), task.ID)
 
 	return task, nil
 }
@@ -121,9 +134,16 @@ type restoreRunResult struct {
 	RestoredHash string `json:"restoredHash,omitempty"`
 }
 
-// runRestore 异步执行恢复全流程（D-10/14 → D-23 → D-02/12 → D-11 → D-09 → 终态）。
+// runRestore 异步执行恢复全流程（D-10/14 -> D-23 -> D-02/12 -> D-11 -> D-09 -> 终态）。
 // 入口 defer recover 防 goroutine panic 把任务悬挂在 running（T-93-08）。
-func (s *ConfigRestoreTaskService) runRestore(ctx context.Context, taskID string) {
+//
+// V130R-01 D-01 两段 context 预算：
+//
+//	阶段① 恢复前备份（RestoreBackupTimeout = 30s）：CreateBackup 通常 <10s，超时则 fail 并退出
+//	阶段② RestoreConfig 下发（RestoreConfigExecTimeout = 5min）：大批量行-by-by 下发，超时则 fail 并退出
+//
+// 任一段超时 ctx cancel 后，goroutine 检测 ctx.Done() 立即退出，不依赖 ExecuteCustom 内部超时。
+func (s *ConfigRestoreTaskService) runRestore(baseCtx context.Context, taskID string) {
 	defer func() {
 		if r := recover(); r != nil {
 			applogger.Errorf("[配置恢复] 任务 panic (taskID=%s): %v", taskID, r)
@@ -145,7 +165,7 @@ func (s *ConfigRestoreTaskService) runRestore(ctx context.Context, taskID string
 
 	// running
 	now := time.Now()
-	if err := s.db.WithContext(ctx).Model(task).Updates(map[string]interface{}{
+	if err := s.db.WithContext(baseCtx).Model(task).Updates(map[string]interface{}{
 		"status":     string(models.RestoreTaskStatusRunning),
 		"started_at": &now,
 	}).Error; err != nil {
@@ -154,38 +174,62 @@ func (s *ConfigRestoreTaskService) runRestore(ctx context.Context, taskID string
 
 	// 源备份记录：DeviceName（⑤ 备份文件名 / ⑨ 版本链记录）与 ⑧ hash 比对都依赖。
 	// StartRestore 已校验过存在性与同设备，这里重取防御备份在排队间隙被删除。
-	backup, err := s.backupSvc.GetBackupByID(ctx, task.BackupID)
+	backup, err := s.backupSvc.GetBackupByID(baseCtx, task.BackupID)
 	if err != nil {
 		s.failTask(taskID, fmt.Sprintf("备份记录不存在: %v", err))
 		return
 	}
 
-	// ⑤ 恢复前自动备份（D-10）：CreateBackup 回读设备当前配置落库，失败即中止
-	// （D-14）——无法备份 = 无回退退路，不下发
-	preResult, err := s.backupSvc.CreateBackup(ctx, &BackupRequest{
+	// ⑤ 恢复前自动备份（D-10 + V130R-01 D-01 阶段①）：CreateBackup 回读设备当前配置落库，
+	// 失败即中止（D-14）——无法备份 = 无回退退路，不下发。
+	// V130R-01 D-01：独立 30s budget，超时则 fail 并退出，goroutine 立即返回。
+	backupCtx, backupCancel := context.WithTimeout(context.Background(), constants.RestoreBackupTimeout)
+	defer backupCancel()
+
+	if backupCtx.Err() != nil {
+		s.failTask(taskID, fmt.Sprintf("恢复前备份超时（%v）：%v", constants.RestoreBackupTimeout, backupCtx.Err()))
+		return
+	}
+	preResult, err := s.backupSvc.CreateBackup(backupCtx, &BackupRequest{
 		DeviceID:      task.DeviceID,
-		DeviceName:    backup.DeviceName, // 设备真实名（文件名 sanitize 即用此值）
+		DeviceName:    backup.DeviceName,
 		BackupType:    models.BackupTypeAuto,
 		ChangeReason:  "恢复前自动备份",
 		CreatedBy:     "restore",
 		CompressLarge: true,
 	})
 	if err != nil {
+		if backupCtx.Err() != nil {
+			s.failTask(taskID, fmt.Sprintf("恢复前备份超时（%v）：%v", constants.RestoreBackupTimeout, backupCtx.Err()))
+			return
+		}
 		s.failTask(taskID, fmt.Sprintf("恢复前自动备份失败，已中止恢复: %v", err))
 		return
 	}
 	applogger.Infof("[配置恢复] 恢复前自动备份完成 (taskID=%s, backupID=%s)", taskID, preResult.BackupID)
 
 	// ⑥ 读备份内容（走 93-01 的解压双检查路径）
-	config, err := s.backupSvc.GetBackupContent(ctx, task.BackupID)
+	config, err := s.backupSvc.GetBackupContent(baseCtx, task.BackupID)
 	if err != nil {
 		s.failTask(taskID, fmt.Sprintf("读取备份内容失败: %v", err))
 		return
 	}
 
-	// ⑦ 下发（D-02 RestoreConfig 唯一入口；D-12 fail-fast + 进度留痕）
-	result, restoreErr := s.executor.RestoreConfig(ctx, task.DeviceID, config)
+	// ⑦ 下发（D-02 RestoreConfig 唯一入口 + V130R-01 D-01 阶段②）：RestoreConfig 下发。
+	// V130R-01 D-01：独立 5min budget，超时则 fail 并退出，goroutine 立即返回。
+	restoreCtx, restoreCancel := context.WithTimeout(context.Background(), constants.RestoreConfigExecTimeout)
+	defer restoreCancel()
+
+	if restoreCtx.Err() != nil {
+		s.failTask(taskID, fmt.Sprintf("配置下发超时（%v）：%v", constants.RestoreConfigExecTimeout, restoreCtx.Err()))
+		return
+	}
+	result, restoreErr := s.executor.RestoreConfig(restoreCtx, task.DeviceID, config)
 	if restoreErr != nil {
+		if restoreCtx.Err() != nil {
+			s.failTask(taskID, fmt.Sprintf("配置下发超时（%v）：%v", constants.RestoreConfigExecTimeout, restoreCtx.Err()))
+			return
+		}
 		if result != nil {
 			// v129-recheck WR-01: 保留设备返回的真实错误文本（如 "Invalid input
 			// detected at '^' marker"），否则 error_message 恒空、进度留痕半残
@@ -202,7 +246,7 @@ func (s *ConfigRestoreTaskService) runRestore(ctx context.Context, taskID string
 	restored := config
 	restoredHash := backup.ConfigHash
 	hashMatched := false
-	if readback, rerr := s.executor.GetConfig(ctx, task.DeviceID); rerr != nil {
+	if readback, rerr := s.executor.GetConfig(baseCtx, task.DeviceID); rerr != nil {
 		applogger.Warnf("[配置恢复] 回读配置失败 (taskID=%s): %v", taskID, rerr)
 	} else {
 		restored = readback
@@ -217,7 +261,7 @@ func (s *ConfigRestoreTaskService) runRestore(ctx context.Context, taskID string
 	nextVersion := 1
 	{
 		var latest models.ConfigBackup
-		s.db.WithContext(ctx).Where("device_id = ?", task.DeviceID).Order("version DESC").First(&latest)
+		s.db.WithContext(baseCtx).Where("device_id = ?", task.DeviceID).Order("version DESC").First(&latest)
 		if latest.ID != "" {
 			nextVersion = latest.Version + 1
 		}
@@ -235,7 +279,7 @@ func (s *ConfigRestoreTaskService) runRestore(ctx context.Context, taskID string
 		ChangeReason:  changeReason,
 		CreatedBy:     task.CreatedBy,
 	}
-	if err := s.db.WithContext(ctx).Create(record).Error; err != nil {
+	if err := s.db.WithContext(baseCtx).Create(record).Error; err != nil {
 		applogger.Warnf("[配置恢复] 版本链恢复记录写入失败 (taskID=%s): %v", taskID, err)
 	}
 
@@ -248,7 +292,7 @@ func (s *ConfigRestoreTaskService) runRestore(ctx context.Context, taskID string
 	}
 	payload, _ := json.Marshal(runResult)
 	completed := time.Now()
-	if err := s.db.WithContext(ctx).Model(task).Updates(map[string]interface{}{
+	if err := s.db.WithContext(baseCtx).Model(task).Updates(map[string]interface{}{
 		"status":       string(models.RestoreTaskStatusSuccess),
 		"total_lines":  result.TotalLines,
 		"sent_lines":   result.SentLines,
@@ -344,13 +388,17 @@ func (s *ConfigRestoreTaskService) ListRestoreTasks(ctx context.Context, current
 // 进程内存（:77 提交 pending 后才启动），重启后残留 pending 永远无人认领，
 // 而互斥查询（:61-63）把 pending 计为进行中，遗留即永久锁死该设备恢复
 // （D-34 无取消端点）。收敛为 failed 语义正确。
+//
+// V130R-02 D-03：running 加 grace period 过滤（grace_period = 2 x
+// RestoreConfigExecTimeout，约 10 分钟），pending 无 grace period（无 goroutine 认领，真孤儿）。
 func (s *ConfigRestoreTaskService) RecoverStaleRunningTasks(ctx context.Context) {
+	// pending 无 grace period：真孤儿，立即收敛
+	// running 有 grace period：2 x RestoreConfigExecTimeout 内的 running 等待自愈或人工介入
 	res := s.db.WithContext(ctx).
 		Model(&models.ConfigRestoreTask{}).
-		Where("status IN (?)", []models.RestoreTaskStatus{
-			models.RestoreTaskStatusPending,
-			models.RestoreTaskStatusRunning,
-		}).
+		Where("(status = ? AND updated_at < ?) OR status = ?",
+			models.RestoreTaskStatusRunning, time.Now().Add(-2*constants.RestoreConfigExecTimeout),
+			models.RestoreTaskStatusPending).
 		Updates(map[string]interface{}{
 			"status":        string(models.RestoreTaskStatusFailed),
 			"error_message": "服务重启，任务中断",

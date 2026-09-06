@@ -345,6 +345,9 @@ func TestCbk93RecoverStaleRunning(t *testing.T) {
 	})
 	stale := seedRestoreTask93(t, db, cbk93RestoreDeviceID, bk.ID, models.RestoreTaskStatusRunning)
 
+	// V130R-02 D-03: grace period = 10 min — backdate so the running task is stale
+	backdateRestoreTask(t, db, stale.ID, 15*time.Minute)
+
 	taskSvc.RecoverStaleRunningTasks(context.Background())
 
 	var got models.ConfigRestoreTask
@@ -658,4 +661,13 @@ func seedRestoreTask93(t *testing.T, db *gorm.DB, deviceID, backupID string, sta
 	task.ID = fmt.Sprintf("task-cbk93-%s-%d", status, time.Now().UnixNano())
 	require.NoError(t, db.Create(task).Error)
 	return task
+}
+
+// backdateRestoreTask sets updated_at to duration ago so the task is treated
+// as stale by RecoverStaleRunningTasks (grace period = 10 minutes).
+func backdateRestoreTask(t *testing.T, db *gorm.DB, taskID string, duration time.Duration) {
+	t.Helper()
+	old := time.Now().Add(-duration)
+	require.NoError(t, db.Model(&models.ConfigRestoreTask{}).Where("id = ?", taskID).
+		Update("updated_at", old).Error)
 }
