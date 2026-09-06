@@ -276,3 +276,38 @@ describe("apiFactory invariants — src/lib/*Api.ts 手写 CRUD 模板扫描（D
     expect(drifted, `白名单期望计数漂移（新增残留或白名单腐烂）:\n${report}`).toEqual([]);
   });
 });
+
+/**
+ * Phase 100 D-100-2/D-100-5: 对象 keys 基线锁（方法集防回增的第二道守卫）。
+ *
+ * AST 模板扫描管「手写 CRUD 模板」，keys 等值断言管「方法集漂移」——
+ * 每个对象实际 keys == 后端已注册路由的实测存活集（D-100-9 端态;
+ * D-100-12 register/heartbeat 前端方法已删,后端公开路由保留）。
+ * 新增方法（含幽灵 batch/statistics/searchOptions 回流）或私删方法双向即红。
+ *
+ * 基线数值与 rpaApi.test.ts 末尾 keys 断言互指（两处必须一致）;
+ * 对账依据见 .planning/phases/100-frontend-contract-fixes/RECONCILIATION.md。
+ * vmApi/vdiServerApi 基线由 Plan 100-02 追加。
+ */
+import { aiApi, executionApi, taskApi, workerApi } from "./rpaApi";
+
+const POST_CLEANUP_BASELINE: Record<string, string[]> = {
+  // taskApi: rpa_router.go:48-53（list/get/create/update/delete 工厂 + execute 手写）
+  taskApi: ["create", "delete", "execute", "get", "list", "update"],
+  // workerApi: rpa_router.go:64/:66（statistics 为 D-100-9 无参收窄版）
+  workerApi: ["list", "statistics"],
+  // executionApi: rpa_router.go:84-89（list/get/statistics 工厂 + cancel/logs 手写）
+  executionApi: ["cancel", "get", "list", "logs", "statistics"],
+  // aiApi: rpa_router.go:101-108
+  aiApi: ["analyzeFailure", "decide", "generateScript", "optimizeScript"],
+};
+
+describe("apiFactory invariants — Phase 100 对象 keys 基线（D-100-2/D-100-5）", () => {
+  const exported: Record<string, object> = { taskApi, workerApi, executionApi, aiApi };
+
+  for (const [name, baseline] of Object.entries(POST_CLEANUP_BASELINE)) {
+    it(`${name} 方法集 == 后端路由实测存活集（${baseline.length} 方法,回增/私删双向即红）`, () => {
+      expect(Object.keys(exported[name]).sort()).toEqual(baseline);
+    });
+  }
+});
