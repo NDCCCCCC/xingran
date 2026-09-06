@@ -17,6 +17,10 @@ type PaginatedResult struct {
 
 // NewPaginatedResult 创建分页结果
 func NewPaginatedResult(total int64, current, pageSize int, data interface{}) *PaginatedResult {
+	// v129-recheck WR-02: 防御 pageSize<=0 的整除零 panic（导出 API 可传任意值）
+	if pageSize <= 0 {
+		pageSize = constants.DefaultPageSize
+	}
 	totalPages := int(total) / pageSize
 	if int(total)%pageSize > 0 {
 		totalPages++
@@ -123,10 +127,14 @@ func NewDefaultQueryExecutor(current, pageSize int) *DefaultQueryExecutor {
 
 // Execute 执行查询
 func (e *DefaultQueryExecutor) Execute(query *gorm.DB, dest interface{}) (*PaginatedResult, error) {
-	total, err := CountAndQuery(query, dest, e.Current, e.PageSize)
+	// v129-recheck WR-02: 入口先归一化，保证结果元数据与实际执行的查询口径
+	// 一致（此前 CountAndQuery 内部归一化而 NewPaginatedResult 用原始值，
+	// pageSize=0 时 NewPaginatedResult 还会整除零 panic）
+	current, pageSize := NormalizePagination(e.Current, e.PageSize)
+	total, err := CountAndQuery(query, dest, current, pageSize)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewPaginatedResult(total, e.Current, e.PageSize, dest), nil
+	return NewPaginatedResult(total, current, pageSize, dest), nil
 }
