@@ -225,8 +225,10 @@ func (s *roleCacheService) BatchDelete(ctx context.Context, ids []string) error 
 	if err := s.roleService.BatchDelete(ctx, ids); err != nil {
 		return err
 	}
-	// 清除所有角色相关缓存
-	base.InvalidatePattern(ctx, s.cache, []string{CacheKeyRoleAll + "*"}, "ROLE")
+	// 清除所有角色相关缓存（v129-recheck WR-02: 补齐 role:enabled*——批量删除
+	// 启用状态角色后，幽灵角色曾可从 GetAllEnabled 缓存存活一个 TTL 窗口；
+	// 键集与单条路径 InvalidateRoleCache 对齐）
+	base.InvalidatePattern(ctx, s.cache, []string{CacheKeyRoleAll + "*", CacheKeyRoleEnabled + "*"}, "ROLE")
 	// 批量删除同样清理 sys_role_menu，统一失效 user-scoped 菜单缓存兜底竞态（F-01）
 	InvalidateUserMenuCacheByProvider(ctx, s.cache)
 	return nil

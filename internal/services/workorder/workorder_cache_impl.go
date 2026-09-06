@@ -2,6 +2,7 @@ package workorder
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -112,9 +113,10 @@ func (s *workOrderCacheServiceImpl) Update(ctx context.Context, req *UpdateReque
 	// 先获取工单以便获取处理人信息
 	var workOrder models.WorkOrder
 	if err := s.db.WithContext(ctx).Where("id = ?", req.ID).First(&workOrder).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			// 继续执行，可能工单已被删除
-			_ = err
+		// v129-recheck WR-01: 仅 NotFound 允许继续（工单可能已删），其余 DB 错误
+		// 必须上抛——吞掉会带着零值 workOrder 继续，改派时旧处理人缓存不失效
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
 		}
 	}
 
@@ -146,8 +148,9 @@ func (s *workOrderCacheServiceImpl) Delete(ctx context.Context, id string) error
 	// 先获取工单以便获取处理人信息
 	var workOrder models.WorkOrder
 	if err := s.db.WithContext(ctx).Where("id = ?", id).First(&workOrder).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			_ = err // 工单不存在，继续执行
+		// v129-recheck WR-01: 仅 NotFound 允许继续，其余 DB 错误上抛（同 Update）
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
 		}
 	}
 
