@@ -3,6 +3,7 @@ package duty
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
@@ -332,13 +333,12 @@ func (s *dutyCacheServiceImpl) InvalidateAllHolidayCache(ctx context.Context) er
 
 // parseInt 辅助函数：安全地将字符串解析为整数
 func parseInt(s string) int {
-	var result int
-	if len(s) >= 4 {
-		for i := 0; i < len(s) && i < 4; i++ {
-			if s[i] >= '0' && s[i] <= '9' {
-				result = result*10 + int(s[i]-'0')
-			}
-		}
+	if s == "" {
+		return 0
 	}
-	return result
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return 0
+	}
+	return n
 }
