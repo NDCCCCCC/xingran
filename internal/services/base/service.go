@@ -16,9 +16,10 @@ type Scope = func(*gorm.DB) *gorm.DB
 
 // PageParams 已归一化的分页参数。
 //
-// repo 直信入参（有意设计）：项目现存三种 clamp 语义（10..100 / 10..10000 / 无 clamp）
-// 并存于各 service 层，repo 侧统一 clamp 会破坏零行为变更底线。
-// service 层负责归一化后再传入。
+// repo 直信入参（有意设计，不变）：clamp 语义已收敛单一权威——service 层统一经
+// pkg/query.NormalizePagination / NormalizePaginationWithMax 归一化后传入
+// （V130R-09 D-03-1..8，原多口径并存的 clamp 已于 99-04 收敛删除）。
+// repo 侧不做 clamp，直信入参。
 type PageParams struct {
 	Current  int
 	PageSize int
