@@ -369,19 +369,10 @@ const MACHistoryPage: React.FC = () => {
           });
         }
 
-        const { blob, filename } = await exportMACHistory(
-          baseParams as unknown as MACHistoryQueryParams,
-          exportScope
-        );
+        // Phase 100 D-100-6: exportMACHistory 全托管触发下载(权威 download.ts 链),
+        // 页面手写 a/click/revoke 触发链已删
+        await exportMACHistory(baseParams as unknown as MACHistoryQueryParams, exportScope);
 
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
         message.success(`已导出 ${exportScope === "current" ? "当前查询" : "全量"} 数据`);
       } catch (err) {
         if (err && typeof err === "object" && "errorFields" in err) {
