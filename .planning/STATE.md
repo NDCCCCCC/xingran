@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.30
 milestone_name: V130 缺陷治理
 status: planning
-last_updated: "2026-09-06T17:30:00+08:00"
-last_activity: 2026-09-06 -- Phase 97 context gathered (V130R-01/02/03 discuss decisions locked)
+last_updated: "2026-09-07T03:08:00+08:00"
+last_activity: 2026-09-07 -- Phase 99 plan 99-06 executed (V130R-08/09 缺口收口: helper 收敛 9 站点 + constants 合并 D-03-10 + base 注释)
 progress:
   total_phases: 6
   completed_phases: 1
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-09-06) — v1.30 Current Milestone 段
 ## Current Position
 
 Phase: 99 (operations 口径统一)
-Plan: 04-05 ready to execute (01-03 done; 99-04/99-05 planned 2026-09-06, checker passed 3 iterations)
-Status: Phase 99 plans complete — 99-04 (Go 分页口径核心, wave 1) + 99-05 (CAD 端点+前端迁移, wave 2); V130R-09 D-03-1..9 全锁定
-Last activity: 2026-09-06 — 99-04/99-05 计划落盘（V130R-09 解锁，plan split + 用户标准修订：死函数直接删除不留兼容壳）
+Plan: 99-06 executed (gap closure; 99-01..05 done + verified gaps_found 2026-09-07)
+Status: Phase 99 缺口收口落地 — 99-06 三任务完成（c1b35be/3cd5b25/83782a5）：BuildDeptRecursiveFilter 9 生产调用站点（verifier 扫描遗漏 server_room 第 9 处，一并迁移）、internal/constants 整体并入 pkg/constants（D-03-10，无同名异值冲突）、base/service.go 注释清零；gate 全绿（build + 4 组包 26/26 ok）
+Last activity: 2026-09-07 — 99-06 执行完成（SUMMARY: .planning/phases/99-operations口径统一/99-06-SUMMARY.md）
 
-Progress: [▓▓░░░░░░░░] 2/6 phases, 5/5 plans
+Progress: [▓▓░░░░░░░░] 2/6 phases, 6/6 plans (Phase 99)
 
 ## Milestone Reference
 
@@ -87,10 +87,10 @@ Progress: [▓▓░░░░░░░░] 2/6 phases, 5/5 plans
 
 ## Next Step
 
-Execute Phase 99 plans 99-04 → 99-05 (wave 1 → wave 2)，随后 Phase 100（前端契约修复，RESEARCH 进行中）。
+Phase 99 gap closure 已落地（99-06）；建议 re-verification 确认 gaps 关闭，随后 Phase 100（前端契约修复，RESEARCH 进行中）。
 
 ## Session Continuity
 
-Last session: 2026-09-06 17:22
-Stopped at: Phase 96 plan 01 completed (CACHEDEF-01..04)
+Last session: 2026-09-07 03:08
+Stopped at: Phase 99 plan 99-06 completed (V130R-08/09 gap closure)
 Resume file: None
