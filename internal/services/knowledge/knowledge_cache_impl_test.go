@@ -18,6 +18,7 @@ package knowledge
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -297,8 +298,21 @@ func TestKnowledgeService_GetKnowledgeArticle_CacheMiss_Success(t *testing.T) {
 	db, svc, cache := newKnowledgeTestService(t)
 	seeded := seedArticle(t, db, "cached article", "body", uuid.NewString(), false)
 
+	// Cache miss：mock 执行 query 闭包（走 base service 真实 sqlite 查询），
+	// 并把结果 JSON round-trip 进 dest（模拟 GetOrSetJSON 的回填语义）。
 	cache.On("GetOrSet", mock.Anything, "kb:article:"+seeded.ID, mock.Anything, mock.Anything, mock.Anything).
-		Return(nil).Once()
+		Run(func(args mock.Arguments) {
+			query := args.Get(4).(func() (interface{}, error))
+			result, qerr := query()
+			if qerr != nil || result == nil {
+				return
+			}
+			data, merr := json.Marshal(result)
+			if merr != nil {
+				return
+			}
+			_ = json.Unmarshal(data, args.Get(2))
+		}).Return(nil).Once()
 
 	article, err := svc.GetKnowledgeArticle(context.Background(), seeded.ID)
 	require.NoError(t, err)

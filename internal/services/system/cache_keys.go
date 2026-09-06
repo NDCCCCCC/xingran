@@ -365,3 +365,10 @@ func GetMenuUserAllMenusKey(userID string) string {
 func GetMenuUserPermissionsKey(userID string) string {
 	return CacheKeyMenuUserPermissions + ":" + userID
 }
+
+// escapeCacheKeyValue escapes colons in cache key values to prevent key collision.
+// e.g. "bob:status:1" -> "bob%3Astatus%3A1" so it cannot collide with
+// separate username="bob" + status=1 params that produce "bob:status:1".
+func EscapeCacheKeyValue(value string) string {
+	return strings.ReplaceAll(value, ":", "%3A")
+}

@@ -8,7 +8,7 @@ package workorder
 
 import (
 	"context"
-	"reflect"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -288,11 +288,11 @@ func TestRatingService_Create_Success(t *testing.T) {
 	woID := seedWorkOrder(t, db, map[string]interface{}{"status": int(models.WorkOrderStatusCompleted)})
 	svc := NewRatingService(db)
 	err := svc.Create(context.Background(), &RatingCreateRequest{
-		WorkOrderID:     woID,
-		RatingType:      "user",
-		CompletionScore: 5,
+		WorkOrderID:      woID,
+		RatingType:       "user",
+		CompletionScore:  5,
 		CooperationScore: 5,
-		Comment:         "好评",
+		Comment:          "好评",
 	}, uuid.NewString())
 	require.NoError(t, err)
 }
@@ -396,43 +396,20 @@ func (m *mockWorkOrderCache) GetOrSet(ctx context.Context, key string, dest inte
 	return nil
 }
 
-// copyResultToDest 用 JSON round-trip 复制 query 结果到 dest
+// copyResultToDest 用 JSON round-trip 复制 query 结果到 dest。
+//
+// Phase 98 起 service 层统一走 base.GetOrSetJSON[T]：dest 是 *T（T 可为
+// 匿名 struct{List,Total} 或具名指针如 *Statistics），统一用 encoding/json
+// 双向转换即可覆盖两种形态（json.Unmarshal 对多级指针会自动分配中间层）。
 func copyResultToDest(dest interface{}, src interface{}) error {
 	if dest == nil || src == nil {
 		return nil
 	}
-	// service 模式: src 是 *struct{List, Total}, dest 是同类型指针
-	// 借助 encoding/json
-	// 简单做法: 复制 List 和 Total 字段 (假设 dest 是匿名 struct)
-	// 这里用 reflect 简化处理
-	defer func() { _ = recover() }()
-	dv := reflect.ValueOf(dest)
-	if dv.Kind() != reflect.Ptr || dv.IsNil() {
-		return nil
+	data, err := json.Marshal(src)
+	if err != nil {
+		return err
 	}
-	dv = dv.Elem()
-	if dv.Kind() != reflect.Struct {
-		return nil
-	}
-	sv := reflect.ValueOf(src)
-	if sv.Kind() == reflect.Ptr {
-		sv = sv.Elem()
-	}
-	if sv.Kind() != reflect.Struct {
-		return nil
-	}
-	// 复制 List 和 Total 字段
-	if listField := dv.FieldByName("List"); listField.IsValid() && listField.CanSet() {
-		if srcList := sv.FieldByName("List"); srcList.IsValid() {
-			listField.Set(srcList)
-		}
-	}
-	if totalField := dv.FieldByName("Total"); totalField.IsValid() && totalField.CanSet() {
-		if srcTotal := sv.FieldByName("Total"); srcTotal.IsValid() {
-			totalField.Set(srcTotal)
-		}
-	}
-	return nil
+	return json.Unmarshal(data, dest)
 }
 func (m *mockWorkOrderCache) Delete(ctx context.Context, key string) error {
 	if m.store == nil {
