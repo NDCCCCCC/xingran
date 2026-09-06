@@ -11,11 +11,11 @@ import (
 	"time"
 
 	"github.com/lib/pq"
-	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
-	"github.com/xingran-next/xingran-go-backend/pkg/cache"
-	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
+	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	"gorm.io/gorm"
 )
 
@@ -241,9 +241,9 @@ func (s *reconciliationServiceImpl) SetMatcher(matcher ReconciliationExceptionSe
 // Refresh 手动刷新物化视图并立即触发异常检测(Phase 45 R5 / D-R5-A3-01)
 //
 // 行为:
-//   1. REFRESH MATERIALIZED VIEW reconciliation_normalized(非 CONCURRENTLY,确保同步生效)
-//   2. 立即调一次 DetectLayer3,绕过 5min/6min cron 等待
-//   3. 返回 inserted/skipped/skippedSilence/skippedThrottle 计数
+//  1. REFRESH MATERIALIZED VIEW reconciliation_normalized(非 CONCURRENTLY,确保同步生效)
+//  2. 立即调一次 DetectLayer3,绕过 5min/6min cron 等待
+//  3. 返回 inserted/skipped/skippedSilence/skippedThrottle 计数
 //
 // 用于运维/UAT 调试,避免等待 R1 cron 周期。
 //
@@ -371,9 +371,9 @@ func (s *reconciliationServiceImpl) silenceExcludeFilter() string {
 //   - "sys_data_reconciliation.*" 显式限定表名前缀,避免与 JOIN 表的列名冲突
 //   - a.devicesn AS asset_code —— 把 devicesn 别名为业务字段 asset_code,
 //     配合 ExceptionListItem.AssetCode 的 gorm column tag 让 GORM 自动 Scan
-//   - COALESCE(a.machine_ip::text, '') AS asset_ip —— machine_ip 是 inet 类型,
+//   - COALESCE(a.machine_ip::text, ”) AS asset_ip —— machine_ip 是 inet 类型,
 //     PG 强类型 inet 不能直接走 json Marshal,转 text 安全(SQLite 端 inet 即 TEXT,
-//     COALESCE(text, '') 在两库行为一致)
+//     COALESCE(text, ”) 在两库行为一致)
 //   - rn.physical_username / rn.ad_username —— 来自 reconciliation_normalized 物化视图
 //   - ru.username AS responsible_username —— sys_user.username 别名为 responsible_username
 //     匹配 ExceptionListItem.ResponsibleUsername 的 column tag
@@ -431,7 +431,7 @@ LEFT JOIN sys_user ru ON ru.id = a.user_id::uuid AND ru.deleted_at IS NULL`
 
 // exceptionListJoinSelectDialect 方言感知的 ListExceptions SELECT 子句(MV 路径)。
 //
-// sqlite 差异:COALESCE(CAST(a.machine_ip AS TEXT), '') 替代 machine_ip::text
+// sqlite 差异:COALESCE(CAST(a.machine_ip AS TEXT), ”) 替代 machine_ip::text
 // (sqlite 端该列即 TEXT,CAST 为双方言中立写法);rn.* 列无 cast 不受影响。
 func (s *reconciliationServiceImpl) exceptionListJoinSelectDialect() string {
 	if s.db != nil && s.db.Dialector.Name() == "postgres" {
@@ -459,7 +459,7 @@ func (s *reconciliationServiceImpl) exceptionListResponsibleUserJoinDialect() st
 
 // exceptionListJoinSelectFallbackDialect 方言感知的降级 SELECT 子句(MV 缺失路径)。
 //
-// sqlite 差异:CAST(a.machine_ip AS TEXT) 替代 ::text;'' 字面量两库均推断为
+// sqlite 差异:CAST(a.machine_ip AS TEXT) 替代 ::text;” 字面量两库均推断为
 // text,无需 ::text 定型。
 func (s *reconciliationServiceImpl) exceptionListJoinSelectFallbackDialect() string {
 	if s.db != nil && s.db.Dialector.Name() == "postgres" {
@@ -601,14 +601,11 @@ func (s *reconciliationServiceImpl) ListExceptions(ctx context.Context, params *
 
 	// 排序:白名单过滤;无显式排序则默认 detected_at DESC(操作员最关心"最新告警")
 	findQuery = base.ApplySort(findQuery, params.BaseListRequest, reconAllowedSortFields)
-	if findQuery.Statement.SQL.String() != "" {
-		// base.ApplySort 在 OrderByColumn 为空时不会追加 Order,这里手动判断
-		// 简化做法:始终先调用 ApplySort,然后无条件追加默认排序作为 fallback
-		// 但 GORM 多个 Order() 调用后者会覆盖前者,所以仅在未指定排序时追加
-		if params.OrderByColumn == "" {
-			findQuery = findQuery.Order("sys_data_reconciliation.detected_at DESC")
-		}
-	} else {
+	// v129-recheck WR-03: 旧守卫 findQuery.Statement.SQL.String() != "" 在查询
+	// 构建期恒为 ""（GORM 惰性构建 SQL,Find 时才填充）,属死分支——默认排序
+	// 实际走 else 无条件追加,显式排序时生成 ORDER BY 显式列, detected_at DESC
+	// 二级排序。对齐 workorder/base.go 模式: 仅无显式排序时补默认。
+	if params.OrderByColumn == "" {
 		findQuery = findQuery.Order("sys_data_reconciliation.detected_at DESC")
 	}
 
@@ -648,10 +645,11 @@ func (s *reconciliationServiceImpl) GetByID(ctx context.Context, id string) (*mo
 // ResolveException 标记异常为已解决(Phase 43 R2 / D-A4-04)
 //
 // 行为(详见接口注释):
-//   step 1: SELECT ... WHERE id=? AND deleted_at IS NULL → First
-//   step 2: 防御检查 — 若 resolved_at != nil → 返回 error(不允许重复 resolve)
-//   step 3: 构造 updates map(resolved_at=NOW, resolved_by=userID, resolution_note=note)
-//   step 4: db.Model(&rec).Updates(updates) — GORM 只 SET 包含的字段,避免覆盖其他字段
+//
+//	step 1: SELECT ... WHERE id=? AND deleted_at IS NULL → First
+//	step 2: 防御检查 — 若 resolved_at != nil → 返回 error(不允许重复 resolve)
+//	step 3: 构造 updates map(resolved_at=NOW, resolved_by=userID, resolution_note=note)
+//	step 4: db.Model(&rec).Updates(updates) — GORM 只 SET 包含的字段,避免覆盖其他字段
 //
 // 并发安全:
 //   - 防御 1:layer 2 SELECT resolved_at 检查 → 普通并发可拦截
@@ -751,7 +749,8 @@ type HealthScore struct {
 // AssetHealthItem 资产健康度条目(行内徽标数据源,UI-SPEC D-A4-02)
 //
 // IP 解析链 inline 实现 (D-A4-02 + strategy §4.4):
-//   asset.ip → workstation.ip → "unknown"
+//
+//	asset.ip → workstation.ip → "unknown"
 type AssetHealthItem struct {
 	AssetID         string   `json:"assetId"`
 	AssetCode       string   `json:"assetCode"`
@@ -849,9 +848,9 @@ func (s *reconciliationServiceImpl) computeByWorkstation(ctx context.Context, ws
 
 	// b) 关联资产 ID 列表
 	type assetRow struct {
-		ID         string
-		Devicesn   string
-		IP         *string
+		ID       string
+		Devicesn string
+		IP       *string
 	}
 	// 关联资产通过 ops_workstation_device 中间表(已有 workstation_id + asset_id 外键,
 	// 两列均为 VARCHAR(36) — 存 UUID 字符串,与 ops_asset.id (uuid) 需显式 cast 兼容 PG 强类型)。
@@ -871,7 +870,7 @@ func (s *reconciliationServiceImpl) computeByWorkstation(ctx context.Context, ws
 	var assets []assetRow
 	if err := s.db.WithContext(ctx).
 		Table("ops_asset a").
-		Select("a.id, a.devicesn, " + ipExpr).
+		Select("a.id, a.devicesn, "+ipExpr).
 		Joins(wsdJoin).
 		Where("wsd.workstation_id = ? AND a.deleted_at IS NULL", wsID).
 		Scan(&assets).Error; err != nil {

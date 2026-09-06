@@ -12,6 +12,8 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"gorm.io/gorm"
+
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 )
 
 // floorSyncBuildingTimeout 楼层变更后异步同步工位 building_id 超时
@@ -231,8 +233,9 @@ func (s *floorService) filterScope(params map[string]interface{}) base.Scope {
 }
 
 func (s *floorService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
-	current := 1
-	pageSize := 10
+	// v129-recheck WR-05: 内联字面量改引 pkg/constants（值不变,零行为变更）
+	current := constants.DefaultCurrent
+	pageSize := constants.DefaultPageSize
 	if c, ok := params["current"].(int); ok {
 		current = c
 	} else if c, ok := params["current"].(float64); ok {
