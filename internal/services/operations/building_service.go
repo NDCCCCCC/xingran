@@ -9,6 +9,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
+	pkgquery "github.com/xingran-next/xingran-go-backend/pkg/query"
 	"gorm.io/gorm"
 )
 
@@ -134,9 +135,13 @@ func (s *buildingService) GetByID(ctx context.Context, id string) (*operations.O
 //     repo 统一 Model(new(T)) 起链后 Total 收紧为不含软删行（latent bugfix，
 //     经 91-03 Task 4 checkpoint 确认）。无软删数据时逐字节一致。
 func (s *buildingService) List(ctx context.Context, params map[string]interface{}) (*PageResult, error) {
-	pagination := extractPagination(params)
+	// V130R-09 D-03-3: 分页归一化统一走 pkg/query 单一权威出口
+	// (cap=MaxOptionsPageSize,assets Excel 导出等全量路径依赖该上限,行为不变)。
+	current := extractIntParam(params, "current", constants.DefaultCurrent)
+	pageSize := extractIntParam(params, "pageSize", constants.DefaultPageSize)
+	current, pageSize = pkgquery.NormalizePaginationWithMax(current, pageSize, constants.MaxOptionsPageSize)
 	sortReq := extractSortRequest(params)
-	return s.repo.List(ctx, base.PageParams{Current: pagination.Current, PageSize: pagination.PageSize},
+	return s.repo.List(ctx, base.PageParams{Current: current, PageSize: pageSize},
 		s.filterScope(params),
 		s.selectScope(),
 		base.SortScope(sortReq, buildingAllowedSortFields, "order_num ASC"),

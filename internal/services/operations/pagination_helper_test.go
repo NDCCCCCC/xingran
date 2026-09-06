@@ -1,80 +1,13 @@
 package operations
 
 import (
-	"math"
 	"testing"
-
-	"github.com/xingran-next/xingran-go-backend/internal/constants"
 )
 
-func TestExtractPagination(t *testing.T) {
-	tests := []struct {
-		name     string
-		params   map[string]interface{}
-		expected PaginationParams
-	}{
-		{
-			name:     "默认值",
-			params:   map[string]interface{}{},
-			expected: PaginationParams{Current: 1, PageSize: 10},
-		},
-		{
-			name: "整数参数",
-			params: map[string]interface{}{
-				"current":  2,
-				"pageSize": 20,
-			},
-			expected: PaginationParams{Current: 2, PageSize: 20},
-		},
-		{
-			name: "浮点数参数",
-			params: map[string]interface{}{
-				"current":  float64(3),
-				"pageSize": float64(30),
-			},
-			expected: PaginationParams{Current: 3, PageSize: 30},
-		},
-		{
-			name: "PageSize 小于最小值",
-			params: map[string]interface{}{
-				"current":  1,
-				"pageSize": 5,
-			},
-			expected: PaginationParams{Current: 1, PageSize: 10},
-		},
-		{
-			name: "PageSize 大于最大值",
-			params: map[string]interface{}{
-				"current":  1,
-				"pageSize": 20000,
-			},
-			expected: PaginationParams{Current: 1, PageSize: 10000},
-		},
-		{
-			name: "混合类型参数",
-			params: map[string]interface{}{
-				"current":  int(5),
-				"pageSize": float64(50),
-			},
-			expected: PaginationParams{Current: 5, PageSize: 50},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := extractPagination(tt.params)
-			if result.Current != tt.expected.Current {
-				t.Errorf("Current = %v, want %v", result.Current, tt.expected.Current)
-			}
-			if result.PageSize != tt.expected.PageSize {
-				t.Errorf("PageSize = %v, want %v", result.PageSize, tt.expected.PageSize)
-			}
-		})
-	}
-}
-
-// 偏移量计算的用例已随同函数修剪删除（Phase 91-04：
-// 零生产消费者死代码，offset 计算由 base.GORMRepository.List 承接）。
+// TestExtractPagination / TestClampPageSize / TestClampPageSizeMath 已随
+// extractPagination / clampPageSize 于 Phase 99-04 (V130R-09 D-03-3) 删除：
+// 生产调用方全部迁移到 pkg/query.NormalizePaginationWithMax 单一权威出口，
+// 行为回归由 pkg/query/pagination_99_04_test.go 锁定。
 
 func TestExtractIntParam(t *testing.T) {
 	tests := []struct {
@@ -121,57 +54,5 @@ func TestExtractIntParam(t *testing.T) {
 				t.Errorf("extractIntParam() = %v, want %v", result, tt.expected)
 			}
 		})
-	}
-}
-
-func TestClampPageSize(t *testing.T) {
-	tests := []struct {
-		name     string
-		pageSize int
-		expected int
-	}{
-		{"小于最小值", 5, 10},
-		{"等于最小值", 10, 10},
-		{"在范围内", 50, 50},
-		{"在范围内(超过旧上限100,现上限10000)", 200, 200},
-		{"等于最大值", 10000, 10000},
-		{"大于最大值", 20000, 10000},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := clampPageSize(tt.pageSize)
-			if result != tt.expected {
-				t.Errorf("clampPageSize() = %v, want %v", result, tt.expected)
-			}
-		})
-	}
-}
-
-func TestClampPageSizeMath(t *testing.T) {
-	// 验证 clampPageSize 的数学计算逻辑(引用 constants 统一定义)。
-	// operations 模块 clamp 上限为 MaxOptionsPageSize(10000)。
-	pageSize := 50
-	min := float64(constants.MinPageSize)        // 10
-	max := float64(constants.MaxOptionsPageSize) // 10000
-	clamped := int(math.Max(min, math.Min(max, float64(pageSize))))
-
-	if clamped != 50 {
-		t.Errorf("math clamp calculation failed: got %v, want 50", clamped)
-	}
-
-	// 测试边界值:下限 clamp 到 MinPageSize
-	if int(math.Max(min, math.Min(max, 5))) != 10 {
-		t.Error("lower bound clamp failed")
-	}
-
-	// 200 在 [10, 10000] 范围内,不应被 clamp
-	if int(math.Max(min, math.Min(max, 200))) != 200 {
-		t.Error("in-range value should not be clamped")
-	}
-
-	// 超过 MaxOptionsPageSize 才 clamp 到上界
-	if int(math.Max(min, math.Min(max, 50000))) != 10000 {
-		t.Error("upper bound clamp failed")
 	}
 }
