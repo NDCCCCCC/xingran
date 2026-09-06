@@ -33,6 +33,13 @@
 - 前端三 gate 硬约束：`npm run lint` 0 errors（1389 warnings 存量不倒退）、`npm run type-check` 通过、`npm run test` 0 失败（554 文件 / 3800 tests 基线）；覆盖率 45/45 dirs gate 不倒退
 - 后端若需补路由（D-100-3 mismatch 裁决为补），走后端既有 Handler-Service 模式 + operlog 写操作约定
 
+### RESEARCH 裁决补充（2026-09-06 autonomous，基于 100-RESEARCH.md 实测）
+
+- **D-100-9（rpaApi 端态）:** 裁至 19 个存活方法（方案 B），不整文件删除——factory 文件是 Phase 94 约定的正确形态，页面内联 post 是既有约定债，登记 RECONCILIATION.md「observed debt」段不顺手扩 scope（D-04 纪律）
+- **D-100-10（/vdi/vms/operate）:** **补路由**——后端 handler/service/测试齐全（vm_handler.go:204），仅路由注册缺失（v129-recheck 级接线缺陷，非新功能，不违 D-01）；`vm_router.go` 1 行注册 + `RequirePermissions` 对齐同族端点
+- **D-100-11（VM accounts Tab）:** **删除**——后端零实现、运行时 100% 404，保留永久损坏的 UI Tab 即反模式；前端删 4 方法 + Tab 同删（用户可见变更 = 移除已坏功能）
+- **D-100-12（workerApi.register/heartbeat）:** 前端方法删除——RPA Worker 是独立进程直连后端 HTTP，不经 admin bundle；后端路由保留不动，RECONCILIATION.md 记录依据
+
 ## Canonical References
 
 **Downstream agents MUST read these before planning or implementing.**
