@@ -59,6 +59,10 @@ Progress: [▓▓░░░░░░░░] 2/6 phases, 5/5 plans
 
 - 无
 
+### 已解除 Blocker（2026-09-07）
+
+- Phase 97/98 会话崩溃遗留 WIP 已恢复落库：`2dd46a3 fix(97)`（V130R-01/02/03 全实现+回归测试）+ `2b15574 fix(98)`（EscapeCacheKeyValue + GetOrSetJSON mock 修复）+ `a4a2c37`（97/98 planning docs + RECOVERY-NOTE）。3 个 pre-existing 测试失败（network 409 期望/knowledge/workorder mock）已修复，详见 `.planning/phases/97-config-backup-restore-chain-hardening/RECOVERY-NOTE.md`
+
 ### Pending Todos (carry forward, not in v1.30 scope)
 
 - `.planning/todos/pending/operlog-exclude-paths.md` — operlog 白名单配置驱动（RPA heartbeat 日志污染），独立 deferred
