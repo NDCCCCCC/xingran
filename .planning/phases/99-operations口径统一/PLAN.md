@@ -209,7 +209,7 @@ go build ./...
 
 D-03 讨论已完成（方案 B 单一权威出口），按 checker 反馈拆分为两个计划，完整任务分解见：
 
-- **99-04（wave 1）**：`99-04-PLAN.md` — Go 分页口径核心：`pkg/query.NormalizePaginationWithMax` 变体、`pagination_helper.go` @deprecated、workstation List cap=200（D-03-8）、三个 extractPagination/clampPageSize 生产调用方迁移（D-03-3）、vdi 内联 100 清理（D-03-4 重定靶：真实内联 clamp 在 `vdi_server_service_impl.go:70`，dict/post 仅过时注释）
+- **99-04（wave 1）**：`99-04-PLAN.md` — Go 分页口径核心：`pkg/query.NormalizePaginationWithMax` 变体、`pagination_helper.go` 死函数删除（D-03-3 用户标准修订：不留 @deprecated 兼容壳）、workstation List cap=200（D-03-8）、三个 extractPagination/clampPageSize 生产调用方迁移、vdi 内联 100 清理（D-03-4 重定靶：真实内联 clamp 在 `vdi_server_service_impl.go:70`，dict/post 仅过时注释）
 - **99-05（wave 2，depends_on 99-04）**：`99-05-PLAN.md` — CAD 全集专用端点 `GET /ops/workstation/:floorId/workstations-all`（workstation 组注册，D-03-6/7）+ 6 个前端消费者迁移 + 前后端测试同步（D-03-9；assets/index.tsx 为 Excel 导出路径，排除）
 
 ---

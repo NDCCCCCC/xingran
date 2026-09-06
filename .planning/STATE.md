@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-09-06) — v1.30 Current Milestone 段
 ## Current Position
 
 Phase: 99 (operations 口径统一)
-Plan: 01-03 executing (99-04 blocked: V130R-09 discuss required)
-Status: Phase 99 Wave 1 executing — V130R-06/07/08；99-04 blocked by discuss
-Last activity: 2026-09-06 — Phase 99 plan 01-03 complete (99-03 V130R-08 done), 99-04 blocked pending discuss
+Plan: 04-05 ready to execute (01-03 done; 99-04/99-05 planned 2026-09-06, checker passed 3 iterations)
+Status: Phase 99 plans complete — 99-04 (Go 分页口径核心, wave 1) + 99-05 (CAD 端点+前端迁移, wave 2); V130R-09 D-03-1..9 全锁定
+Last activity: 2026-09-06 — 99-04/99-05 计划落盘（V130R-09 解锁，plan split + 用户标准修订：死函数直接删除不留兼容壳）
 
-Progress: [▓▓░░░░░░░░] 2/6 phases, 4/4 plans
+Progress: [▓▓░░░░░░░░] 2/6 phases, 5/5 plans
 
 ## Milestone Reference
 
@@ -83,7 +83,7 @@ Progress: [▓▓░░░░░░░░] 2/6 phases, 4/4 plans
 
 ## Next Step
 
-`/gsd:plan-phase 96` — execute Phase 96 plan 02 (CACHEDEF-05 monitor prefix fix) and plan 03 (JOBSTAT-01 dead code deletion).
+Execute Phase 99 plans 99-04 → 99-05 (wave 1 → wave 2)，随后 Phase 100（前端契约修复，RESEARCH 进行中）。
 
 ## Session Continuity
 
