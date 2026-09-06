@@ -200,7 +200,7 @@ func (h *VMHandler) Delete(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
-// @Router /vdi/vm/operate [post]
+// @Router /vdi/vms/operate [post]
 func (h *VMHandler) Operate(c *gin.Context) {
 	var req vdiServices.VMOperateRequest
 	if !handleJSONBinding(c, &req) {
