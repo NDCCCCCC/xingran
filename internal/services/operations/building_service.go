@@ -228,7 +228,7 @@ func (s *buildingService) validateOrg(ctx context.Context, orgID string) error {
 // validateNameUnique 验证楼宇名称唯一性（同一机构下不能有同名楼宇）
 func (s *buildingService) validateNameUnique(ctx context.Context, orgID, name string, excludeID string) error {
 	var count int64
-	query := s.db.WithContext(ctx).Table("ops_buildings").
+	query := s.db.WithContext(ctx).Model(&operations.OpsBuilding{}).
 		Where("org_id = ? AND name = ?", orgID, name)
 
 	// 更新时排除当前记录
@@ -255,7 +255,7 @@ func (s *buildingService) validateNameUnique(ctx context.Context, orgID, name st
 func (s *buildingService) SearchBuildingOptions(ctx context.Context, params map[string]interface{}) ([]DropdownOption, error) {
 	var result []DropdownOption
 
-	query := s.db.WithContext(ctx).Table("ops_buildings").
+	query := s.db.WithContext(ctx).Model(&operations.OpsBuilding{}).
 		Select("id AS value, name AS label").
 		Limit(DropdownMaxRows)
 
