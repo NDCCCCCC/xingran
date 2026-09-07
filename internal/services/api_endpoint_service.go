@@ -8,6 +8,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/config"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"gorm.io/gorm"
 )
 
@@ -60,7 +61,7 @@ func (s *APIEndpointService) GetUserAccessibleEndpoints(
 	ctx context.Context,
 	userID string,
 ) ([]CategoryEndpoints, error) {
-	cacheKey := fmt.Sprintf("user_endpoints:%s", userID)
+	cacheKey := fmt.Sprintf(constants.UserEndpointsKeyFormat, userID)
 	var cachedResult []CategoryEndpoints
 	if err := s.cache.GetJSON(ctx, cacheKey, &cachedResult); err == nil && len(cachedResult) > 0 {
 		return cachedResult, nil
@@ -191,6 +192,6 @@ func (s *APIEndpointService) ValidateEndpoint(route, method string) (*EndpointDe
 
 // InvalidateUserCache 清除用户端点缓存
 func (s *APIEndpointService) InvalidateUserCache(ctx context.Context, userID string) {
-	cacheKey := fmt.Sprintf("user_endpoints:%s", userID)
+	cacheKey := fmt.Sprintf(constants.UserEndpointsKeyFormat, userID)
 	_ = s.cache.Delete(ctx, cacheKey)
 }

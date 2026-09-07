@@ -253,7 +253,8 @@ func (s *macHistoryQueryServiceImpl) GetVendor(ctx context.Context, macAddress s
 	oui := normalized[:6] // AABBCC格式
 
 	// Redis缓存键
-	cacheKey := fmt.Sprintf("mac:vendor:%s", oui)
+	// D-102-3: fmt.Sprintf 改 constants.MacVendorKeyFormat
+	cacheKey := fmt.Sprintf(constants.MacVendorKeyFormat, oui)
 
 	// 尝试从缓存获取（如果cache可用）
 	if s.cache != nil {
