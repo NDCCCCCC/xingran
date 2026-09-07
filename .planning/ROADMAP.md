@@ -37,7 +37,7 @@ update_trigger: v1.31 ROADMAP 创建 — 12 类别 29 requirements → 7 phases�
 ## Phases
 
 - [x] **Phase 102: 机械常量化（缓存键 / 状态 / 分页）** — captcha 12 处 + 10 模块 ~35 处内联 cache key、12 处 status 字面量、分页双口径全部收敛具名常量/单一权威，行为等价
-- [ ] **Phase 103: 缓存闭包收敛 base 单一权威** — mac_history/heatmap、asset reconciliation、rpa selector 三域 legacy GetOrSet 与手写 cache-aside 迁 base.GetOrSetJSON[T] + invariants 扫描扩口
+- [x] **Phase 103: 缓存闭包收敛 base 单一权威** — mac_history/heatmap、asset reconciliation、rpa selector 三域 legacy GetOrSet 与手写 cache-aside 迁 base.GetOrSetJSON[T] + invariants 扫描扩口 (completed 2026-09-07)
 - [ ] **Phase 104: handler 层架构收敛（wire 契约 + 样板去重）** — 错误响应契约单一权威 + operations 14 handler 收敛（含 server_room 漂移修复）+ monitor 双 handler 去重
 - [ ] **Phase 105: 前端 CRUD 收敛 apiFactory** — adDomain/knowledge/duty/workorder 19 处手写五件套迁移 createResourceApi，invariants 基线归零
 - [ ] **Phase 106: 前端映射统一与类型卫生** — 选项/Tag 颜色映射收敛 status.ts / 模块共享 constants + `as any` 11 处收窄 + 无理由 eslint-disable 72 处清零

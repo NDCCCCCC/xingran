@@ -38,10 +38,10 @@ status: defined
 
 ### CONV — 缓存闭包收敛 base 单一权威
 
-- [ ] **CONV-01**: mac_history_query_service.go 4 处 legacy `GetOrSet(func() (interface{}, error))`（:307,432,835）+ :259-281 手写 Get/Set cache-aside + heatmap_service.go:118 迁移 `base.GetOrSetJSON[T]`
-- [ ] **CONV-02**: asset/reconciliation_service.go:799-820 GetByWorkstation 手写读穿透（GetJSON 短路 + Marshal + Set）迁移 `base.GetOrSetJSON[T]`
-- [ ] **CONV-03**: rpa/selector_learner.go:169-174,226 GetBestSelector/SaveSelector 手写 JSON cache-aside 迁移 `base.GetOrSetJSON[T]`
-- [ ] **CONV-04**: `cache_invariants_92_test.go` 扫描口径扩展至 services 根 / asset / rpa 包（interface{} 闭包式 GetOrSet 硬失败），守护新收敛面不回潮
+- [x] **CONV-01**: mac_history_query_service.go 4 处 legacy `GetOrSet(func() (interface{}, error))`（:307,432,835）+ :259-281 手写 Get/Set cache-aside + heatmap_service.go:118 迁移 `base.GetOrSetJSON[T]`
+- [x] **CONV-02**: asset/reconciliation_service.go:799-820 GetByWorkstation 手写读穿透（GetJSON 短路 + Marshal + Set）迁移 `base.GetOrSetJSON[T]`
+- [x] **CONV-03**: rpa/selector_learner.go:169-174,226 GetBestSelector/SaveSelector 手写 JSON cache-aside 迁移 `base.GetOrSetJSON[T]`
+- [x] **CONV-04**: `cache_invariants_92_test.go` 扫描口径扩展至 services 根 / asset / rpa 包（interface{} 闭包式 GetOrSet 硬失败），守护新收敛面不回潮
 
 ### WIRE — 错误响应契约统一
 
@@ -111,10 +111,10 @@ status: defined
 | CACHE-02 | Phase 102 | Pending |
 | STATUS-01 | Phase 102 | Complete |
 | PAGI-01 | Phase 102 | Pending |
-| CONV-01 | Phase 103 | Pending |
-| CONV-02 | Phase 103 | Pending |
-| CONV-03 | Phase 103 | Pending |
-| CONV-04 | Phase 103 | Pending |
+| CONV-01 | Phase 103 | Complete |
+| CONV-02 | Phase 103 | Complete |
+| CONV-03 | Phase 103 | Complete |
+| CONV-04 | Phase 103 | Complete |
 | WIRE-01 | Phase 104 | Pending |
 | HANDLER-01 | Phase 104 | Pending |
 | HANDLER-02 | Phase 104 | Pending |
