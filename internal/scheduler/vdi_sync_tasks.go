@@ -45,7 +45,7 @@ func executeVDIVMSyncTask(ctx context.Context, params map[string]interface{}) er
 func syncAllEnabledVDIServers(ctx context.Context, db *gorm.DB) error {
 	// 查询所有启用的 VDI 服务器
 	var servers []models.VDIServer
-	if err := db.Where("status = ?", 0).Find(&servers).Error; err != nil {
+	if err := db.Where("status = ?", models.VDIServerStatusNormal).Find(&servers).Error; err != nil {
 		return fmt.Errorf("查询 VDI 服务器失败: %w", err)
 	}
 
@@ -82,7 +82,7 @@ func syncSingleVDIServer(ctx context.Context, db *gorm.DB, serverID string) erro
 		return fmt.Errorf("查询 VDI 服务器失败: %w", err)
 	}
 
-	if server.Status != 0 {
+	if server.Status != int(models.VDIServerStatusNormal) {
 		return fmt.Errorf("VDI 服务器未启用: %s", server.Name)
 	}
 

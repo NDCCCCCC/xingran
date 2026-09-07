@@ -124,7 +124,7 @@ func upsertMACHistoryJob(db *gorm.DB, scheduler *Scheduler, jobName, invokeTarge
 		InvokeTarget:   invokeTarget,
 		CronExpression: cronExpression,
 		MisfirePolicy:  models.MisfirePolicyExecuteOnce,
-		Status:         0,
+		Status:         models.JobStatusNormal,
 		NextRunTime:    &nextRunTime,
 		Remark:         &remark,
 	}

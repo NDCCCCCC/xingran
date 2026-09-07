@@ -192,8 +192,8 @@ func RegisterReconciliationTasks(s *Scheduler, db *gorm.DB, cacheSvc cache.Cache
 				JobGroup:       reconciliationJobGroup,
 				InvokeTarget:   fullInvokeTarget,
 				CronExpression: j.cronExpression,
-				MisfirePolicy:  1, // MisfirePolicyImmediately
-				Status:         0, // 0=启用
+				MisfirePolicy:  models.MisfirePolicyImmediately, // MisfirePolicyImmediately
+				Status:         models.JobStatusNormal, // 0=启用
 				NextRunTime:    &nextMinute,
 				Remark:         &j.remark,
 			}

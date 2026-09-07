@@ -40,7 +40,7 @@ func (e *JobExecutor) Execute(ctx context.Context) error {
 		JobGroup:     e.job.JobGroup,
 		InvokeTarget: e.job.InvokeTarget,
 		JobMessage:   "任务开始执行",
-		Status:       0, // 成功
+		Status:       int(models.JobLogStatusSuccess), // 成功
 		StartTime:    &startTime,
 	}
 
@@ -59,7 +59,7 @@ func (e *JobExecutor) Execute(ctx context.Context) error {
 
 	// 保存执行日志
 	if err != nil {
-		jobLog.Status = 1 // 失败
+		jobLog.Status = int(models.JobLogStatusFailure) // 失败
 		errMsg := err.Error()
 		jobLog.ExceptionInfo = &errMsg
 		jobLog.JobMessage = fmt.Sprintf("任务执行失败: %s", errMsg)
@@ -232,7 +232,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 
 	// 从数据库加载所有启用的任务
 	var jobs []models.Job
-	if err := s.db.Where("status = ?", 0).Find(&jobs).Error; err != nil {
+	if err := s.db.Where("status = ?", models.JobStatusNormal).Find(&jobs).Error; err != nil {
 		return fmt.Errorf("加载任务失败: %w", err)
 	}
 
@@ -404,7 +404,7 @@ func (s *Scheduler) StartJob(jobID string) error {
 	}
 
 	// 更新数据库中的状态为正常
-	if err := s.db.Model(&models.Job{}).Where("id = ?", jobID).Update("status", 0).Error; err != nil {
+	if err := s.db.Model(&models.Job{}).Where("id = ?", jobID).Update("status", models.JobStatusNormal).Error; err != nil {
 		s.logger.Errorf("更新任务状态失败: %v", err)
 		return err
 	}
@@ -432,7 +432,7 @@ func (s *Scheduler) StopJob(jobID string) error {
 	delete(s.executors, jobID)
 
 	// 更新数据库中的状态为暂停（不删除任务记录）
-	if err := s.db.Model(&models.Job{}).Where("id = ?", jobID).Update("status", 1).Error; err != nil {
+	if err := s.db.Model(&models.Job{}).Where("id = ?", jobID).Update("status", models.JobStatusPause).Error; err != nil {
 		s.logger.Errorf("更新任务状态失败: %v", err)
 		return err
 	}
@@ -829,7 +829,7 @@ func getTodayDutyMembers(db *gorm.DB, date string) ([]dutyMember, error) {
 		Select("ds.user_id, u.username, u.nickname AS nick_name, dp.pool_name").
 		Joins("LEFT JOIN sys_user AS u ON ds.user_id = u.id").
 		Joins("LEFT JOIN sys_duty_pool AS dp ON ds.pool_id = dp.id").
-		Where("ds.schedule_date = ? AND ds.status = 0", date)
+		Where("ds.schedule_date = ? AND ds.status = ?", date, models.DutyStatusNormal)
 
 	if err := query.Find(&members).Error; err != nil {
 		return nil, err
