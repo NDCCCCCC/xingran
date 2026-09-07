@@ -151,9 +151,61 @@ const (
 
 // 监控模块缓存键
 const (
-	CacheKeyServerInfo  = "monitor:server"      // 服务器信息: monitor:server:{serverKey}
-	CacheKeyCacheStats  = "monitor:cache:stats" // 缓存统计: monitor:cache:stats
-	CacheKeyOnlineUsers = "monitor:online"      // 在线用户: monitor:online
+	CacheKeyServerInfo   = "monitor:server"      // 服务器信息: monitor:server:{serverKey}
+	CacheKeyCacheStats   = "monitor:cache:stats" // 缓存统计: monitor:cache:stats
+	CacheKeyOnlineUsers  = "monitor:online"      // 在线用户: monitor:online
+)
+
+// 通知模块缓存键（D-102-1）
+const (
+	CacheKeyNoticeMyNotices   = "notice:my_notices"   // 我的通知列表: notice:my_notices:{userID}:page:{page}:size:{size}[:status:{status}]
+	CacheKeyNoticeUnreadCount = "notice:unread_count"  // 未读通知数: notice:unread_count:{userID}
+	CacheKeyNoticeDetail      = "notice:detail"        // 通知详情: notice:detail:{noticeID}
+)
+
+// 设置模块缓存键（D-102-1）
+const (
+	CacheKeySettingsUser = "settings:user" // 用户设置: settings:user:{userID}
+)
+
+// 值班模块缓存键（D-102-1）
+const (
+	CacheKeyDutyToday   = "duty:today"   // 今日值班: duty:today
+	CacheKeyDutyMonthly = "duty:monthly" // 月度排班: duty:monthly:{year}:{month}
+	CacheKeyDutyHolidays = "duty:holidays" // 节假日: duty:holidays:{year}
+)
+
+// 工单模块缓存键（D-102-1）
+const (
+	CacheKeyWorkorderMyPending   = "workorder:my_pending"   // 我的待办工单: workorder:my_pending:{userID}[:limit:{limit}]
+	CacheKeyWorkorderStatistics  = "workorder:statistics"   // 工单统计: workorder:statistics
+	CacheKeyWorkorderDetail      = "workorder:detail"       // 工单详情: workorder:detail:{workOrderID}
+)
+
+// 知识库模块缓存键（D-102-1）
+const (
+	CacheKeyKbArticle         = "kb:article"         // 知识库文章: kb:article:{articleID}
+	CacheKeyKbCategoryTree    = "kb:category:tree"    // 知识库分类树: kb:category:tree
+	CacheKeyKbCategoryParent  = "kb:category:parent"  // 知识库父分类: kb:category:parent:{parentID}
+	CacheKeyKbTagsAll         = "kb:tags:all"         // 知识库全部标签: kb:tags:all
+)
+
+// 网络设备模块缓存键（D-102-1）
+const (
+	CacheKeyNetworkDeviceStatistics = "network_device:statistics"  // 设备统计: network_device:statistics
+	CacheKeyNetworkDeviceDept       = "network_device:dept"       // 部门设备: network_device:dept:{deptID}
+	CacheKeyNetworkDeviceCredential = "network_device:credential" // 凭证设备: network_device:credential:{credentialID}
+	CacheKeyNetworkDeviceDetail     = "network_device:detail"     // 设备详情: network_device:detail:{deviceID}
+)
+
+// Widget模块缓存键（D-102-1）
+const (
+	CacheKeyWidgetData = "widget:data" // Widget数据: widget:data:{widgetID}[:{paramsHash}]
+)
+
+// RPA模块缓存键（D-102-1）
+const (
+	CacheKeyRpaSelectorBest = "rpa:selector:best" // RPA最佳选择器: rpa:selector:best:{pageURL}:{elementID}
 )
 
 // ==================== 缓存键构建辅助函数 ====================
@@ -365,6 +417,206 @@ func GetMenuUserAllMenusKey(userID string) string {
 // 返回：menu:user:perms:{userID}
 func GetMenuUserPermissionsKey(userID string) string {
 	return CacheKeyMenuUserPermissions + ":" + userID
+}
+
+// ==================== 通知模块缓存键辅助函数 ====================
+// D-102-1 / D-102-3
+
+// GetNoticeMyNoticesKey 构建"我的通知"列表缓存键
+// 参数：userID 用户ID，page 页码，pageSize 每页条数
+// 返回：notice:my_notices:{userID}:page:{page}:size:{pageSize}
+func GetNoticeMyNoticesKey(userID string, page, pageSize int) string {
+	return fmt.Sprintf("%s:%s:page:%d:size:%d", CacheKeyNoticeMyNotices, userID, page, pageSize)
+}
+
+// GetNoticeMyNoticesStatusKey 构建带状态筛选的"我的通知"列表缓存键
+// 参数：userID 用户ID，page 页码，pageSize 每页条数，status 通知状态
+// 返回：notice:my_notices:{userID}:page:{page}:size:{pageSize}:status:{status}
+func GetNoticeMyNoticesStatusKey(userID string, page, pageSize int, status string) string {
+	return fmt.Sprintf("%s:%s:page:%d:size:%d:status:%s", CacheKeyNoticeMyNotices, userID, page, pageSize, status)
+}
+
+// GetNoticeUnreadCountKey 构建未读通知数缓存键
+// 参数：userID 用户ID
+// 返回：notice:unread_count:{userID}
+func GetNoticeUnreadCountKey(userID string) string {
+	return fmt.Sprintf("%s:%s", CacheKeyNoticeUnreadCount, userID)
+}
+
+// GetNoticeDetailKey 构建通知详情缓存键
+// 参数：noticeID 通知ID
+// 返回：notice:detail:{noticeID}
+func GetNoticeDetailKey(noticeID string) string {
+	return fmt.Sprintf("%s:%s", CacheKeyNoticeDetail, noticeID)
+}
+
+// GetNoticeAllPattern 构建所有通知缓存的失效 pattern
+// 返回：notice:*
+func GetNoticeAllPattern() string {
+	return "notice:*"
+}
+
+// ==================== 设置模块缓存键辅助函数 ====================
+// D-102-1 / D-102-3
+
+// GetSettingsUserKey 构建用户设置缓存键
+// 参数：userID 用户ID
+// 返回：settings:user:{userID}
+func GetSettingsUserKey(userID string) string {
+	return fmt.Sprintf("%s:%s", CacheKeySettingsUser, userID)
+}
+
+// ==================== 值班模块缓存键辅助函数 ====================
+// D-102-1 / D-102-3
+
+// GetDutyMonthlyKey 构建月度值班排班缓存键
+// 参数：year 年份，month 月份
+// 返回：duty:monthly:{year}:{month}
+func GetDutyMonthlyKey(year, month int) string {
+	return fmt.Sprintf("%s:%d:%d", CacheKeyDutyMonthly, year, month)
+}
+
+// GetDutyHolidaysKey 构建节假日缓存键
+// 参数：year 年份
+// 返回：duty:holidays:{year}
+func GetDutyHolidaysKey(year int) string {
+	return fmt.Sprintf("%s:%d", CacheKeyDutyHolidays, year)
+}
+
+// GetDutyAllPattern 构建所有值班缓存的失效 pattern
+// 返回：duty:*
+func GetDutyAllPattern() string {
+	return "duty:*"
+}
+
+// GetDutyHolidaysPattern 构建节假日缓存的失效 pattern
+// 返回：duty:holidays:*
+func GetDutyHolidaysPattern() string {
+	return fmt.Sprintf("%s:*", CacheKeyDutyHolidays)
+}
+
+// ==================== 工单模块缓存键辅助函数 ====================
+// D-102-1 / D-102-3
+
+// GetWorkorderMyPendingKey 构建我的待办工单缓存键（无 limit）
+// 参数：userID 用户ID
+// 返回：workorder:my_pending:{userID}
+func GetWorkorderMyPendingKey(userID string) string {
+	return fmt.Sprintf("%s:%s", CacheKeyWorkorderMyPending, userID)
+}
+
+// GetWorkorderMyPendingLimitKey 构建带 limit 的我的待办工单缓存键
+// 参数：userID 用户ID，limit 返回条数限制
+// 返回：workorder:my_pending:{userID}:limit:{limit}
+func GetWorkorderMyPendingLimitKey(userID string, limit int) string {
+	return fmt.Sprintf("%s:%s:limit:%d", CacheKeyWorkorderMyPending, userID, limit)
+}
+
+// GetWorkorderDetailKey 构建工单详情缓存键
+// 参数：workOrderID 工单ID
+// 返回：workorder:detail:{workOrderID}
+func GetWorkorderDetailKey(workOrderID string) string {
+	return fmt.Sprintf("%s:%s", CacheKeyWorkorderDetail, workOrderID)
+}
+
+// GetWorkorderAllPattern 构建所有工单缓存的失效 pattern
+// 返回：workorder:*
+func GetWorkorderAllPattern() string {
+	return "workorder:*"
+}
+
+// ==================== 知识库模块缓存键辅助函数 ====================
+// D-102-1 / D-102-3
+
+// GetKbArticleKey 构建知识库文章缓存键
+// 参数：articleID 文章ID
+// 返回：kb:article:{articleID}
+func GetKbArticleKey(articleID string) string {
+	return fmt.Sprintf("%s:%s", CacheKeyKbArticle, articleID)
+}
+
+// GetKbCategoryParentKey 构建知识库父分类缓存键
+// 参数：parentID 父分类ID
+// 返回：kb:category:parent:{parentID}
+func GetKbCategoryParentKey(parentID string) string {
+	return fmt.Sprintf("%s:%s", CacheKeyKbCategoryParent, parentID)
+}
+
+// GetKbCategoryStatusKey 根据基础缓存键和状态构建条件后缀缓存键
+// 参数：baseKey 基础缓存键（如 CacheKeyKbCategoryTree），status 分类状态
+// 返回：{baseKey}:status:{status}（如 kb:category:tree:status:1）
+func GetKbCategoryStatusKey(baseKey string, status int) string {
+	return fmt.Sprintf("%s:status:%d", baseKey, status)
+}
+
+// GetKbCategoryPattern 构建知识库分类缓存的失效 pattern
+// 返回：kb:category:*
+func GetKbCategoryPattern() string {
+	return "kb:category:*"
+}
+
+// GetKbArticlePattern 构建知识库文章缓存的失效 pattern
+// 返回：kb:article:*
+func GetKbArticlePattern() string {
+	return fmt.Sprintf("%s:*", CacheKeyKbArticle)
+}
+
+// ==================== 网络设备模块缓存键辅助函数 ====================
+// D-102-1 / D-102-3
+
+// GetNetworkDeviceDeptKey 构建部门设备缓存键
+// 参数：deptID 部门ID
+// 返回：network_device:dept:{deptID}
+func GetNetworkDeviceDeptKey(deptID string) string {
+	return fmt.Sprintf("%s:%s", CacheKeyNetworkDeviceDept, deptID)
+}
+
+// GetNetworkDeviceCredentialKey 构建凭证设备缓存键
+// 参数：credentialID 凭证ID
+// 返回：network_device:credential:{credentialID}
+func GetNetworkDeviceCredentialKey(credentialID string) string {
+	return fmt.Sprintf("%s:%s", CacheKeyNetworkDeviceCredential, credentialID)
+}
+
+// GetNetworkDeviceDetailKey 构建设备详情缓存键
+// 参数：deviceID 设备ID
+// 返回：network_device:detail:{deviceID}
+func GetNetworkDeviceDetailKey(deviceID string) string {
+	return fmt.Sprintf("%s:%s", CacheKeyNetworkDeviceDetail, deviceID)
+}
+
+// GetNetworkDevicePattern 构建所有设备缓存的失效 pattern
+// 返回：network_device:*
+func GetNetworkDevicePattern() string {
+	return "network_device:*"
+}
+
+// ==================== Widget 模块缓存键辅助函数 ====================
+// D-102-1 / D-102-3
+
+// GetWidgetDataKey 构建 Widget 基础数据缓存键
+// 参数：widgetID Widget ID
+// 返回：widget:data:{widgetID}
+func GetWidgetDataKey(widgetID string) string {
+	return fmt.Sprintf("%s:%s", CacheKeyWidgetData, widgetID)
+}
+
+// GetWidgetDataParamsKey 构建带参数哈希的 Widget 数据缓存键
+// %x 动词原样保留，调用方传入 paramsHash[:8]
+// 参数：widgetID Widget ID，paramsHash 参数哈希（前 8 字节）
+// 返回：widget:data:{widgetID}:{paramsHashHex}
+func GetWidgetDataParamsKey(widgetID string, paramsHash []byte) string {
+	return fmt.Sprintf("%s:%s:%x", CacheKeyWidgetData, widgetID, paramsHash)
+}
+
+// ==================== RPA 模块缓存键辅助函数 ====================
+// D-102-1 / D-102-3
+
+// GetRpaSelectorBestKey 构建 RPA 最佳选择器缓存键
+// 参数：pageURL 页面 URL，elementID 元素 ID
+// 返回：rpa:selector:best:{pageURL}:{elementID}
+func GetRpaSelectorBestKey(pageURL, elementID string) string {
+	return fmt.Sprintf("%s:%s:%s", CacheKeyRpaSelectorBest, pageURL, elementID)
 }
 
 // escapeCacheKeyValue escapes colons in cache key values to prevent key collision.
