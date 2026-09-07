@@ -500,7 +500,7 @@ const BuildingManagement: FC = () => {
                   >
                     <span>{building.name}</span>
                     <Tag color={building.status === 0 ? "success" : "error"}>
-                      {building.status === 0 ? "正常" : "1"}
+                      {building.status === 0 ? "正常" : "停用"}
                     </Tag>
                   </div>
                 }
