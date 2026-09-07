@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
@@ -74,7 +75,7 @@ func (c *dockerClientImpl) getBaseURL() (string, error) {
 	if c.dockerHost == "" {
 		return "", fmt.Errorf("Docker 主机地址未配置 (docker_host)")
 	}
-	return fmt.Sprintf("http://%s:%d/v1.40", c.dockerHost, c.dockerPort), nil
+	return fmt.Sprintf("%s://%s:%d/v1.40", constants.HTTPProto, c.dockerHost, c.dockerPort), nil
 }
 
 // makeDockerRequest 发送 Docker API 请求
