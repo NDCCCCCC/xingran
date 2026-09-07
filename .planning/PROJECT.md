@@ -1,10 +1,35 @@
 ---
-last_updated: 2026-09-06
-update_trigger: v1.30 started — V130 缺陷治理（18 项 CACHEDEF/JOBSTAT/V130R + 测试文件入库决策 + 62-HUMAN-UAT 3 场景）
-previous_update: 2026-09-06 v1.29 shipped + archived — 技术债治理 7 相 26 plans 全交付；SHIPPED 后深度复查修复 6 Critical + 10 Warning
+last_updated: 2026-09-07
+update_trigger: v1.31 started — V131 技术债清偿（审计台账 F-06~F-17 全部 12 组 + nilness 观察项）
+previous_update: 2026-09-07 v1.30 shipped + archived — V130 缺陷治理 6 phases / 21 plans 全交付，CI 34057232365 全绿
 ---
 
-## Current Milestone: v1.30 V130 缺陷治理 (Defect Remediation)
+## Current Milestone: v1.31 V131 技术债清偿 (Tech Debt Retirement)
+
+**Goal:** 清偿 2026-09-07 全量技术债务审计台账（`.planning/notes/260907-audit-fix-tech-debt-findings.md`）的全部 12 组未修复项（F-06~F-17）+ 顺带 nilness 观察项，达成：非测试代码 TODO 清零、status/cache-key/分页/协议字面量清零、缓存闭包收敛 base 单一权威、wire 契约统一、skip 测试尽力恢复。
+
+**Target features:**
+- **F-06~F-09 auto 残余**: captcha storageKey 常量化（8 处）/ status 字面量 12 处（job/vdi/duty/workorder）/ cache key 内联 ~35 处注册 cache_keys.go / internal/utils ParsePagination 收敛 pkg/query
+- **F-10 缓存闭包收敛**: mac_history_query_service 4 处 legacy GetOrSet + 手写 cache-aside、asset reconciliation 手写读穿透、rpa selector_learner → base.GetOrSetJSON 单一权威
+- **F-11 wire 契约统一**: operations/base_handler.go 本地 helper 与 pkg/response 收敛（方向 phase 内决策）
+- **F-12 handler 样板收敛**: operations 14 个同构 handler（含 server_room 漂移修复）+ monitor oper/login_log 双 handler
+- **F-13 前端 CRUD 收敛**: adDomainApi/knowledgeApi/dutyApi/workorderApi 19 处手写五件套 → apiFactory（D-14 单参 delete 契约保住）
+- **F-14 前端映射统一**: server-rooms/MACHistory 内联选项、fixStatusColor 双份、11 处内联三元 Tag → status.ts / 模块共享 constants（颜色 token 决策 phase 内定）
+- **F-15 TODO 逐个决策**: 22 处功能占位逐个实现或删除（工单评价 / RPA 扩缩容 / ListSessions / 解锁用户等），非测试代码 TODO 清零
+- **F-16 skip 测试恢复**: HybridAuthenticator interface refactor + 嵌入式 LDAP 基建，尽力恢复 15 处 t.Skip；真实环境依赖落 HUMAN-UAT
+- **F-17 类型卫生**: as any 11 处收窄 + 72 处无理由 eslint-disable 补理由或修复
+- **顺带**: rpa/data_mapper.go:332 nilness（non-nil == nil）排查修复
+
+**锁定决策 (v1.31 init):**
+- **D-01 范围**: 台账 12 组全做（用户确认）；F-15 逐项决策实现或删除、不留兼容壳
+- **D-02 回归纪律**: 行为变更附回归测试；七 gate（go build / go test / 后端 coverage ≥78.33 基线 / 前端 45 dirs / lint / type-check / diff coverage）全程不倒退
+- **D-03 设计决策项**: F-11 wire 契约方向、F-14 颜色 token 选择在 phase 规划时敲定
+- **D-04 范围外**: captcha-background 1=启用语义（QUIRK-80-03-D 锁定非 bug，禁改）；观察项中的有意设计（agent 裸 c.JSON / 三层 adapter / 协议默认值）不动；operlog exclude_paths 继续挂账
+- **D-05 Phase 编号**: 从 Phase 102 续编（v1.30 用 96-101，v1.29 用 89-95）
+
+---
+
+## Current Milestone: v1.30 V130 缺陷治理 (Defect Remediation) — ✅ SHIPPED + ARCHIVED 2026-09-07
 
 **Goal:** 修复 v1.29 期间登记的全部 18 项 V130-CANDIDATES 缺陷候选 + 闭环 2 个 deferred 小项；所有修复附回归测试，使深度复查发现的问题不再带病运行。
 
@@ -694,7 +719,7 @@ in `.planning/REQUIREMENTS.md` history. High-level milestones:
 
 ---
 
-*Last updated: 2026-09-06 — v1.30 V130 缺陷治理 milestone started（18 项 V130-CANDIDATES + 2 顺带项；Phase 编号从 96 续编）。Previous: v1.29 技术债治理 SHIPPED + ARCHIVED 2026-09-06（7 phases / 26 plans / 45 requirements，191 commits，CI run 34007103013 全绿）；SHIPPED 后深度复查修复 6 Critical + 10 Warning（v1.29-DEEP-RECHECK.md），V130-CANDIDATES 即本期输入。Previous: v1.28 SHIPPED + ARCHIVED 2026-09-04（阶段性收口 45.13%）；v1.27 SHIPPED 2026-08-23；v1.26 footer: Last updated: 2026-08-20 — v1.26 后端测试覆盖率优秀 (Backend Test Coverage Excellence) milestone started: 12.8% → ≥70% 加权平均,P0/P1 零测试模块全清,CI coverage 阈值 gate + diff coverage ≥80%;4 phases (71-74) 按 quick-260820-bcs 扫描建议拆分。规划输入: `.planning/quick/260820-backend-test-coverage-scan/SUMMARY.md`。Previous: Combined v1.22-v1.25 SHIPPED + ARCHIVED 2026-08-19 (7 phases / 20 plans / 36 items, audit `passed`); Phase 63 前端工具链自动化 SHIPPED 2026-08-20; v1.21 SHIPPED 2026-08-18 (Phases 57-62).*
+*Last updated: 2026-09-07 — v1.31 V131 技术债清偿 milestone started（audit-fix 台账 F-06~F-17 全部 12 组 + nilness 观察项；Phase 编号从 102 续编；输入 = `.planning/notes/260907-audit-fix-tech-debt-findings.md`）。Previous: v1.30 SHIPPED + ARCHIVED 2026-09-07（6 phases / 21 plans / 18 项 V130-CANDIDATES + 测试入库 + 62-HUMAN-UAT，CI run 34057232365 全绿）。Previous: v1.29 技术债治理 SHIPPED + ARCHIVED 2026-09-06（7 phases / 26 plans / 45 requirements，191 commits，CI run 34007103013 全绿）；SHIPPED 后深度复查修复 6 Critical + 10 Warning（v1.29-DEEP-RECHECK.md）。Previous: v1.28 SHIPPED + ARCHIVED 2026-09-04（阶段性收口 45.13%）；v1.27 SHIPPED 2026-08-23；v1.26 footer: Last updated: 2026-08-20 — v1.26 后端测试覆盖率优秀 milestone started: 12.8% → ≥70% 加权平均,P0/P1 零测试模块全清,CI coverage 阈值 gate + diff coverage ≥80%;4 phases (71-74) 按 quick-260820-bcs 扫描建议拆分。规划输入: `.planning/quick/260820-backend-test-coverage-scan/SUMMARY.md`。Previous: Combined v1.22-v1.25 SHIPPED + ARCHIVED 2026-08-19 (7 phases / 20 plans / 36 items, audit `passed`); Phase 63 前端工具链自动化 SHIPPED 2026-08-20; v1.21 SHIPPED 2026-08-18 (Phases 57-62).*
 
 ---
 
