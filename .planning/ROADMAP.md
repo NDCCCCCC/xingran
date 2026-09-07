@@ -93,7 +93,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 102-03-PLAN.md — CACHE-02 替换面：10 模块 47 调用点替换（含 knowledge :134 条件后缀位）+ TestCacheKeyInlineResidue 内联扫描守护（窄扫 12 文件）
+- [x] 102-03-PLAN.md — CACHE-02 替换面：10 模块 47 调用点替换（含 knowledge :134 条件后缀位）+ TestCacheKeyInlineResidue 内联扫描守护（窄扫 12 文件）
 
 **Notes**: CACHE-02 的 rpa selector（:361）/ mac vendor（:255）键注册与本相后的 Phase 103（CONV-01/03 闭包迁移）同文件族——本相先注册键、103 再迁闭包，顺序不可倒。Wave 结构：Wave 1 = 102-01/102-04/102-05（零文件重叠并行）；Wave 2 = 102-02（依赖 01 的 pkg/constants/cache.go）；Wave 3 = 102-03（依赖 02 注册表）。
 
