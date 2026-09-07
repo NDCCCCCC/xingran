@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -49,13 +50,14 @@ type MACHistoryHeatmapService interface {
 
 type macHistoryHeatmapServiceImpl struct {
 	db         *gorm.DB
-	dataCache  *DataCacheService
+	cache      base.CacheProvider
 	perfConfig *CacheConfigService
 }
 
 // NewMACHistoryHeatmapService 构造函数
-func NewMACHistoryHeatmapService(db *gorm.DB, dataCache *DataCacheService, perfConfig *CacheConfigService) MACHistoryHeatmapService {
-	return &macHistoryHeatmapServiceImpl{db: db, dataCache: dataCache, perfConfig: perfConfig}
+// Phase 103 CONV-01 (D-103-2): dataCache *DataCacheService → cache base.CacheProvider
+func NewMACHistoryHeatmapService(db *gorm.DB, cache base.CacheProvider, perfConfig *CacheConfigService) MACHistoryHeatmapService {
+	return &macHistoryHeatmapServiceImpl{db: db, cache: cache, perfConfig: perfConfig}
 }
 
 // perfCacheTTL 读取 MAC 性能缓存 TTL (复用 15-03 模式)
@@ -111,20 +113,30 @@ func (s *macHistoryHeatmapServiceImpl) QueryHeatmap(ctx context.Context, req *He
 	}
 
 	// Phase 15 PERF-03: cache-aside 装饰
-	if s.dataCache != nil {
-		var cached HeatmapResult
+	// Phase 103 CONV-01 (D-103-9): 收敛 base.GetOrSetJSON，经 getHeatmapWithCache
+	// wrapper 保留既有 fallback 直查语义（cache 层任何错误降级直查，不阻断）
+	if s.cache != nil {
 		cacheKey, keyErr := BuildMACQueryCacheKey("heatmap", req)
 		if keyErr == nil {
-			err := s.dataCache.GetOrSet(ctx, cacheKey, &cached, s.perfCacheTTL(), func() (interface{}, error) {
-				return s.queryHeatmapFromMV(ctx, startTime, endTime, req.TopN)
-			})
-			if err == nil {
-				return &cached, nil
-			}
-			applogger.Warnf("[MAC热力图] 走直查: %v", err)
+			return s.getHeatmapWithCache(ctx, cacheKey, s.perfCacheTTL(), req, startTime, endTime)
 		}
+		applogger.Warnf("[MAC热力图] 缓存键构造失败走直查: %v", keyErr)
 	}
 	return s.queryHeatmapFromMV(ctx, startTime, endTime, req.TopN)
+}
+
+// getHeatmapWithCache 热力图读穿透缓存 wrapper (Phase 103 CONV-01, D-103-9)。
+// fallback 直查语义：cache 层（读/写/unmarshal）任何错误均降级 DB 直查，
+// 与 Phase 15 PERF-03 既有 GetOrSet 失败走直查的行为等价。
+func (s *macHistoryHeatmapServiceImpl) getHeatmapWithCache(ctx context.Context, cacheKey string, ttl time.Duration, req *HeatmapQuery, startTime, endTime time.Time) (*HeatmapResult, error) {
+	result, err := base.GetOrSetJSON[*HeatmapResult](ctx, s.cache, cacheKey, ttl, func() (*HeatmapResult, error) {
+		return s.queryHeatmapFromMV(ctx, startTime, endTime, req.TopN)
+	})
+	if err != nil {
+		applogger.Warnf("[MAC热力图] 走直查: %v", err)
+		return s.queryHeatmapFromMV(ctx, startTime, endTime, req.TopN) // fallback 直查
+	}
+	return result, nil
 }
 
 // queryHeatmapFromMV 从 MV-04 物化视图查询热力图数据
