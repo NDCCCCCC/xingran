@@ -167,7 +167,7 @@ func (a *ADAuthenticator) Name() string {
 // getADConfig 获取AD配置
 func (a *ADAuthenticator) getADConfig(ctx context.Context) (*models.ADConfig, error) {
 	var config models.ADConfig
-	if err := a.db.WithContext(ctx).Where("id = ? AND status = 0", a.configID).First(&config).Error; err != nil {
+	if err := a.db.WithContext(ctx).Where("id = ? AND status = ?", a.configID, models.ADConfigStatusEnabled).First(&config).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrADConfigNotFound
 		}

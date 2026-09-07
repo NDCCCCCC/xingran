@@ -138,7 +138,7 @@ func (f *AuthStrategyFactory) getADConfigID() (string, error) {
 
 	// 2. sys_config中没有配置或配置值为空，尝试使用第一个启用的AD配置
 	var adConfig models.ADConfig
-	err = f.db.Where("status = 0").First(&adConfig).Error
+	err = f.db.Where("status = ?", models.ADConfigStatusEnabled).First(&adConfig).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return "", errors.New("没有找到可用的AD配置，请在AD域管理中添加配置")

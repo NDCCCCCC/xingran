@@ -13,6 +13,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/core/db"
 	"github.com/xingran-next/xingran-go-backend/internal/core/security"
 	"github.com/xingran-next/xingran-go-backend/internal/device"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/scheduler"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
 	"github.com/xingran-next/xingran-go-backend/internal/services/addomain"
@@ -929,7 +930,7 @@ func (c *Core) checkEmptyAccountPoolOnStartup(pool addomain.AccountPool) {
 	var configs []adCfgRow
 	if err := c.GetDB().Table("sys_ad_config").
 		Select("id, config_name").
-		Where("status = 0 AND sync_enabled = true").
+		Where("status = ? AND sync_enabled = true", models.ADConfigStatusEnabled).
 		Find(&configs).Error; err != nil {
 		applogger.Warnf("[启动校验] 查询启用的 AD 配置失败: %v", err)
 		return

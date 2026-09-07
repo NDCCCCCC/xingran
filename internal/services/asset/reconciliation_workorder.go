@@ -208,7 +208,7 @@ func (s *ReconciliationWorkorderService) CreateWorkorderFromException(ctx contex
 			if userErr := s.db.WithContext(ctx).
 				Table("sys_user u").
 				Joins("INNER JOIN sys_user_role ur ON ur.user_id = u.id").
-				Where("ur.role_id = ? AND u.status = ?", roleID, 0). // status=0 启用
+				Where("ur.role_id = ? AND u.status = ?", roleID, models.UserStatusEnabled). // 启用
 				Order("u.created_at ASC").
 				Limit(1).
 				First(&user).Error; userErr == nil {

@@ -56,7 +56,7 @@ func (s *UserADSyncService) SyncUserUpdateToAD(ctx context.Context, userID strin
 
 	// 2. 获取AD配置
 	var adConfig models.ADConfig
-	if err := s.db.WithContext(ctx).Where("sync_enabled = ? AND status = ?", true, 0).First(&adConfig).Error; err != nil {
+	if err := s.db.WithContext(ctx).Where("sync_enabled = ? AND status = ?", true, models.ADConfigStatusEnabled).First(&adConfig).Error; err != nil {
 		return fmt.Errorf("获取AD配置失败: %w", err)
 	}
 	// Phase 36 后 admin_password 为 SM4 密文存储，绑定前必须解密
@@ -249,7 +249,7 @@ func (s *UserADSyncService) BatchMoveUsersToNewOU(ctx context.Context, userIDs [
 
 	// 2. 获取AD配置
 	var adConfig models.ADConfig
-	if err := s.db.WithContext(ctx).Where("sync_enabled = ? AND status = ?", true, 0).First(&adConfig).Error; err != nil {
+	if err := s.db.WithContext(ctx).Where("sync_enabled = ? AND status = ?", true, models.ADConfigStatusEnabled).First(&adConfig).Error; err != nil {
 		return fmt.Errorf("获取AD配置失败: %w", err)
 	}
 	// Phase 36 后 admin_password 为 SM4 密文存储，绑定前必须解密
@@ -424,7 +424,7 @@ func (s *UserADSyncService) SyncManagersToAD(ctx context.Context, userIDs []stri
 	// 1. ADConfig（无启用配置则跳过，返回空 result）
 	var adConfig models.ADConfig
 	if err := s.db.WithContext(ctx).
-		Where("sync_enabled = ? AND status = ?", true, 0).
+		Where("sync_enabled = ? AND status = ?", true, models.ADConfigStatusEnabled).
 		First(&adConfig).Error; err != nil {
 		applogger.Warnf("[AD-MANAGER-SYNC] 未找到启用的 AD 配置，跳过同步: %v", err)
 		return result, nil
@@ -690,7 +690,7 @@ func (s *UserADSyncService) BatchSyncUsersToAD(ctx context.Context, userIDs []st
 	// 1. ADConfig（无启用配置则跳过，返回空 result）
 	var adConfig models.ADConfig
 	if err := s.db.WithContext(ctx).
-		Where("sync_enabled = ? AND status = ?", true, 0).
+		Where("sync_enabled = ? AND status = ?", true, models.ADConfigStatusEnabled).
 		First(&adConfig).Error; err != nil {
 		applogger.Warnf("[AD-BATCH-SYNC] 未找到启用的 AD 配置，跳过同步: %v", err)
 		return result, nil
