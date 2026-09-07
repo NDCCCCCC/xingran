@@ -52,14 +52,14 @@ func newMhq7905(t *testing.T) (*macHistoryQueryServiceImpl, *gorm.DB) {
 	return &macHistoryQueryServiceImpl{db: db, cache: nil}, db
 }
 
-// newMhq7905Cached 缓存装配:MemoryCache + DataCacheService + CacheConfigService。
+// newMhq7905Cached 缓存装配:MemoryCache + fakeMACHistoryCacheProvider + CacheConfigService。
+// Phase 103 CONV-01: cache 字段改持 base.CacheProvider（D-103-19 fixture）。
 func newMhq7905Cached(t *testing.T) (*macHistoryQueryServiceImpl, *cache.MemoryCache, *gorm.DB) {
 	t.Helper()
 	svc, db := newMhq7905(t)
 	mem := cache.NewMemoryCache(1000, 5*time.Minute)
 	t.Cleanup(func() { mem.Close() }) // 单次 Close(QUIRK-P1 已幂等,仍守纪律)
-	svc.cache = mem
-	svc.dataCache = NewDataCacheService(mem)
+	svc.cache = newFakeMACHistoryCacheProvider(mem)
 	svc.perfConfig = NewCacheConfigService(db)
 	return svc, mem, db
 }
@@ -133,14 +133,13 @@ func TestMhq7905_NewConstructors(t *testing.T) {
 	impl, ok := iface.(*macHistoryQueryServiceImpl)
 	require.True(t, ok, "NewMACHistoryQueryService 应返回私有实现")
 	assert.Nil(t, impl.cache, "裸构造 cache 为 nil")
-	assert.Nil(t, impl.dataCache, "裸构造 dataCache 为 nil")
 	assert.Nil(t, impl.perfConfig, "裸构造 perfConfig 为 nil")
 	assert.NotNil(t, impl.db)
 
-	var iface2 MACHistoryQueryService = NewMACHistoryQueryServiceWithCache(db, NewDataCacheService(cache.NewMemoryCache(10, time.Minute)), nil)
+	var iface2 MACHistoryQueryService = NewMACHistoryQueryServiceWithCache(db, newFakeMACHistoryCacheProvider(cache.NewMemoryCache(10, time.Minute)), nil)
 	impl2, ok := iface2.(*macHistoryQueryServiceImpl)
 	require.True(t, ok, "NewMACHistoryQueryServiceWithCache 应返回私有实现")
-	assert.NotNil(t, impl2.dataCache)
+	assert.NotNil(t, impl2.cache)
 	assert.Nil(t, impl2.perfConfig)
 
 	// nil-db 构造本身不 panic(查询路径的 nil-db 行为不属本断言范围,复刻生产装配前提)
@@ -163,9 +162,10 @@ func TestMhq7905_GetVendor_CacheAndDB(t *testing.T) {
 	assert.Equal(t, "Cache Vendor 7905", vendor)
 
 	// 缓存键形态直查
+	// Phase 103 CONV-01: base.GetOrSetJSON 走 JSON 序列化，缓存值为带引号 JSON 字符串
 	cached, err := mem.Get(ctx, "mac:vendor:AABBCC")
 	require.NoError(t, err, "GetVendor 命中后应写缓存键 mac:vendor:<OUI>")
-	assert.Equal(t, "Cache Vendor 7905", cached)
+	assert.Equal(t, `"Cache Vendor 7905"`, cached)
 
 	// 2) 删行后二次调用仍命中(可观察的缓存证据)
 	require.NoError(t, db.Delete(seed).Error)
@@ -182,7 +182,7 @@ func TestMhq7905_GetVendor_CacheAndDB(t *testing.T) {
 	assert.Equal(t, "Unknown Vendor", vendor3)
 	cachedUnknown, err := mem.Get(ctx, "mac:vendor:DDEEFF")
 	require.NoError(t, err)
-	assert.Equal(t, "Unknown Vendor", cachedUnknown, "未知 OUI 也应缓存避免重复查库")
+	assert.Equal(t, `"Unknown Vendor"`, cachedUnknown, "未知 OUI 也应缓存避免重复查库")
 
 	// 4) 短 MAC(<6 位规范化后)→ "Unknown Vendor",不查库不缓存
 	vendor4, err := svc.GetVendor(ctx, "AA:BB")
