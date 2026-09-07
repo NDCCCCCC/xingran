@@ -241,6 +241,11 @@ func TestReconciliationEndpoints_PermissionBoundary(t *testing.T) {
 		CoreInfra: &core.CoreInfra{
 			DB: &db.Database{DB: gormDB, Type: "sqlite"},
 		},
+		// Phase 103 CONV-02: SetupReconciliationRouter 接线访问 core.DataCacheService
+		//（*CoreServices 指针嵌入的字段提升）——未初始化 CoreServices 会 nil panic。
+		// DataCacheService 保持 nil → system.NewCacheProvider(nil) 返回 NoOpCacheProvider，
+		// GetByWorkstation 走直查（与原 core.Cache nil 等价）。
+		CoreServices: &core.CoreServices{},
 	}
 
 	// --- Test 2a: 无 token → 401 ---
