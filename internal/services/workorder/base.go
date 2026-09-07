@@ -180,7 +180,7 @@ func (s *BaseService) GetMyPending(ctx context.Context, req *GetMyPendingRequest
 	// 获取总数
 	if err := query.Model(&models.WorkOrder{}).
 		Where("assignee_id = ?", userID).
-		Where("status IN ?", []int{0, 1}). // 待处理或处理中
+		Where("status IN ?", []int{int(models.WorkOrderStatusPending), int(models.WorkOrderStatusProcessing)}). // 待处理或处理中
 		Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("查询待办工单总数失败: %w", err)
 	}

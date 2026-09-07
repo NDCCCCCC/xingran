@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	operationsmodels "github.com/xingran-next/xingran-go-backend/internal/models/operations"
 	"github.com/xingran-next/xingran-go-backend/internal/services"
 	"github.com/xingran-next/xingran-go-backend/internal/services/asset"
 	"github.com/xingran-next/xingran-go-backend/internal/services/system"
@@ -383,7 +384,7 @@ SELECT COUNT(*)
   JOIN ops_info_points ip ON port.id::text = ip.port_id
  WHERE port.device_id::text != ip.device_id::text
    AND ip.deleted_at IS NULL
-   AND ip.status = 0
+   AND ip.status = ?
    AND ip.device_id IS NOT NULL
    AND EXISTS (SELECT 1 FROM sys_network_device WHERE id::text = ip.device_id)
    AND EXISTS (SELECT 1 FROM sys_device_mac_address WHERE device_id::text = ip.device_id)
@@ -395,7 +396,7 @@ SELECT COUNT(*)
   JOIN ops_info_points ip ON port.id = ip.port_id
  WHERE port.device_id != ip.device_id
    AND ip.deleted_at IS NULL
-   AND ip.status = 0
+   AND ip.status = ?
    AND ip.device_id IS NOT NULL
    AND EXISTS (SELECT 1 FROM sys_network_device WHERE id = ip.device_id)
    AND EXISTS (SELECT 1 FROM sys_device_mac_address WHERE device_id = ip.device_id)
@@ -403,7 +404,7 @@ SELECT COUNT(*)
 	}
 
 	var driftedCount int64
-	err := db.WithContext(ctx).Raw(query).Scan(&driftedCount).Error
+	err := db.WithContext(ctx).Raw(query, operationsmodels.InfoPointStatusNormal).Scan(&driftedCount).Error
 
 	if err != nil {
 		return fmt.Errorf("查询 port_status 漂移失败: %w", err)

@@ -329,7 +329,7 @@ func (s *jobServiceImpl) UpdateStatus(ctx context.Context, id string, status int
 
 	// 根据状态启动或停止任务
 	if s.scheduler != nil {
-		if status == 0 { // 启用
+		if status == int(models.JobStatusNormal) { // 启用
 			if err := s.scheduler.StartJob(id); err != nil {
 				return fmt.Errorf("启动任务失败: %w", err)
 			}
