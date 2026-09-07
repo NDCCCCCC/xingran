@@ -56,13 +56,14 @@ func NewWidgetDataFetcher(db *gorm.DB, cache cache.Cache, endpointService Endpoi
 }
 
 // buildWidgetCacheKey 构建缓存 Key
+// D-102-3: fmt.Sprintf 改 GetXxxKey helper 调用。
 func buildWidgetCacheKey(widgetID string, params map[string]interface{}) string {
 	if len(params) == 0 {
-		return fmt.Sprintf("widget:data:%s", widgetID)
+		return GetWidgetDataKey(widgetID)
 	}
 	paramsJSON, _ := json.Marshal(params)
 	paramsHash := sha256.Sum256(paramsJSON)
-	return fmt.Sprintf("widget:data:%s:%x", widgetID, paramsHash[:8])
+	return GetWidgetDataParamsKey(widgetID, paramsHash[:8])
 }
 
 // widgetDefaultCacheTTL Widget 默认缓存 TTL（per D-06 决定）

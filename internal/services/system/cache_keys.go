@@ -450,6 +450,13 @@ func GetNoticeDetailKey(noticeID string) string {
 	return fmt.Sprintf("%s:%s", CacheKeyNoticeDetail, noticeID)
 }
 
+// GetNoticeMyNoticesPattern 构建"我的通知"列表缓存的失效 pattern
+// 参数：userID 用户ID
+// 返回：notice:my_notices:{userID}:*
+func GetNoticeMyNoticesPattern(userID string) string {
+	return fmt.Sprintf("%s:%s:*", CacheKeyNoticeMyNotices, userID)
+}
+
 // GetNoticeAllPattern 构建所有通知缓存的失效 pattern
 // 返回：notice:*
 func GetNoticeAllPattern() string {

@@ -2,7 +2,6 @@ package system
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
@@ -202,14 +201,13 @@ type noticeListPage struct {
 }
 
 // buildMyNoticesKey 构造"我的通知"列表缓存键（status 过滤为可选尾段）。
-// 两种 fmt.Sprintf 格式串与参数顺序自原 if/else 分支原样搬入，键构造结果
-// 逐字节等价（Redis 现存键迁移后继续命中）。
+// 键构造结果逐字节等价于原 Sprintf 字面量（Redis 现存键迁移后继续命中）。
+// D-102-3: fmt.Sprintf 改 GetXxxKey helper 调用。
 func buildMyNoticesKey(userID string, page, pageSize int, status *string) string {
-	cacheKey := fmt.Sprintf("notice:my_notices:%s:page:%d:size:%d", userID, page, pageSize)
 	if status != nil {
-		cacheKey = fmt.Sprintf("notice:my_notices:%s:page:%d:size:%d:status:%s", userID, page, pageSize, *status)
+		return GetNoticeMyNoticesStatusKey(userID, page, pageSize, *status)
 	}
-	return cacheKey
+	return GetNoticeMyNoticesKey(userID, page, pageSize)
 }
 
 // GetUserNotices 获取我的通知列表（带缓存）
@@ -237,7 +235,7 @@ func (s *noticeCacheService) GetUserNotices(ctx context.Context, userID string, 
 // GetUnreadCount 获取未读通知数量（带缓存）
 func (s *noticeCacheService) GetUnreadCount(ctx context.Context, userID string) (int, error) {
 	return base.GetOrSetJSON(ctx, s.cache,
-		fmt.Sprintf("notice:unread_count:%s", userID),
+		GetNoticeUnreadCountKey(userID),
 		s.GetExpiration("cache.notice.unread_count", 30*time.Second),
 		func() (int, error) { return s.base.GetUnreadCount(ctx, userID) })
 }
@@ -286,19 +284,19 @@ func (s *noticeCacheService) UnignoreNotice(ctx context.Context, noticeID, userI
 
 // InvalidateNoticeCache 失效指定通知的缓存
 func (s *noticeCacheService) InvalidateNoticeCache(ctx context.Context, noticeID string) error {
-	keys := []string{fmt.Sprintf("notice:detail:%s", noticeID)}
+	keys := []string{GetNoticeDetailKey(noticeID)}
 	base.Invalidate(ctx, s.cache, keys, "NOTICE")
 	return nil
 }
 
 // InvalidateUserNoticeCache 失效指定用户的通知缓存
 func (s *noticeCacheService) InvalidateUserNoticeCache(ctx context.Context, userID string) error {
-	base.InvalidatePattern(ctx, s.cache, []string{fmt.Sprintf("notice:my_notices:%s:*", userID), fmt.Sprintf("notice:unread_count:%s", userID)}, "NOTICE")
+	base.InvalidatePattern(ctx, s.cache, []string{GetNoticeMyNoticesPattern(userID), GetNoticeUnreadCountKey(userID)}, "NOTICE")
 	return nil
 }
 
 // InvalidateAllNoticeCache 失效所有通知缓存
 func (s *noticeCacheService) InvalidateAllNoticeCache(ctx context.Context) error {
-	base.InvalidatePattern(ctx, s.cache, []string{"notice:*"}, "NOTICE")
+	base.InvalidatePattern(ctx, s.cache, []string{GetNoticeAllPattern()}, "NOTICE")
 	return nil
 }

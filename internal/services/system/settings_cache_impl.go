@@ -2,7 +2,6 @@ package system
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/services"
@@ -38,7 +37,7 @@ func NewSettingsServiceWithCache(
 // GetUserPreferences 获取用户设置（带缓存）
 func (s *settingsCacheService) GetUserPreferences(ctx context.Context, userID string) (*UserPreferences, error) {
 	return base.GetOrSetJSON(ctx, s.cache,
-		fmt.Sprintf("settings:user:%s", userID),
+		GetSettingsUserKey(userID),
 		s.GetExpiration("cache.settings.user", 15*time.Minute),
 		func() (*UserPreferences, error) { return s.settingsService.GetUserPreferences(ctx, userID) })
 }
@@ -50,7 +49,7 @@ func (s *settingsCacheService) UpdateUserPreferences(ctx context.Context, userID
 	}
 
 	// 清除该用户的设置缓存
-	cacheKey := fmt.Sprintf("settings:user:%s", userID)
+	cacheKey := GetSettingsUserKey(userID)
 	if err := s.cache.Delete(ctx, cacheKey); err != nil {
 		// 记录日志但不影响更新操作
 		applogger.Warnf("[SETTINGS_CACHE] 清除用户设置缓存失败: %v", err)
@@ -61,6 +60,6 @@ func (s *settingsCacheService) UpdateUserPreferences(ctx context.Context, userID
 
 // InvalidateUserSettingsCache 失效用户设置缓存
 func (s *settingsCacheService) InvalidateUserSettingsCache(ctx context.Context, userID string) error {
-	cacheKey := fmt.Sprintf("settings:user:%s", userID)
+	cacheKey := GetSettingsUserKey(userID)
 	return s.cache.Delete(ctx, cacheKey)
 }
