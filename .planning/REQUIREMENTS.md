@@ -105,7 +105,35 @@ status: defined
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (filled by roadmap) | | |
+| CACHE-01 | Phase 102 | Pending |
+| CACHE-02 | Phase 102 | Pending |
+| STATUS-01 | Phase 102 | Pending |
+| PAGI-01 | Phase 102 | Pending |
+| CONV-01 | Phase 103 | Pending |
+| CONV-02 | Phase 103 | Pending |
+| CONV-03 | Phase 103 | Pending |
+| CONV-04 | Phase 103 | Pending |
+| WIRE-01 | Phase 104 | Pending |
+| HANDLER-01 | Phase 104 | Pending |
+| HANDLER-02 | Phase 104 | Pending |
+| FEAPI-01 | Phase 105 | Pending |
+| FEAPI-02 | Phase 105 | Pending |
+| FEAPI-03 | Phase 105 | Pending |
+| FEAPI-04 | Phase 105 | Pending |
+| FEMAP-01 | Phase 106 | Pending |
+| FEMAP-02 | Phase 106 | Pending |
+| FEMAP-03 | Phase 106 | Pending |
+| TS-01 | Phase 106 | Pending |
+| TS-02 | Phase 106 | Pending |
+| TODO-01 | Phase 107 | Pending |
+| TODO-02 | Phase 107 | Pending |
+| TODO-03 | Phase 107 | Pending |
+| TODO-04 | Phase 107 | Pending |
+| TODO-05 | Phase 107 | Pending |
+| TODO-06 | Phase 107 | Pending |
+| NIL-01 | Phase 107 | Pending |
+| SKIP-01 | Phase 108 | Pending |
+| SKIP-02 | Phase 108 | Pending |
 
 ---
-*Requirements defined: 2026-09-07*
+*Requirements defined: 2026-09-07 — Traceability 回填 2026-09-07（29/29 requirements → Phases 102-108，见 ROADMAP.md）*

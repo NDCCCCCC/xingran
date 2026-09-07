@@ -13,30 +13,31 @@ progress:
   percent: 100
 ---
 
-# Project State (v1.30 — milestone workstream)
+# Project State (v1.31 — milestone workstream)
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-06) — v1.30 Current Milestone 段
+See: .planning/PROJECT.md (updated 2026-09-07) — v1.31 Current Milestone 段
 
-**Core value:** 修复 v1.29 期间登记的全部 18 项 V130-CANDIDATES 缺陷候选 + 闭环 2 个 deferred 小项；所有修复附回归测试，使深度复查发现的问题不再带病运行。
+**Core value:** 清偿 2026-09-07 全量技术债务审计台账（F-06~F-17）全部 12 组未修复项 + 顺带 nilness 观察项——非测试代码 TODO 清零、status/cache-key/分页字面量清零、缓存闭包收敛 base 单一权威、wire 契约统一、skip 测试尽力恢复。
 
-**Current focus:** v1.30 ROADMAP 已创建（6 phases 96-101 / 22 requirements 全覆盖）— 待 `/gsd:plan-phase 96`
+**Current focus:** v1.31 ROADMAP 已创建（7 phases 102-108 / 29 requirements 全覆盖）— 待 `/gsd:plan-phase 102`
 
 ## Current Position
 
-Phase: 101 (收口) — EXECUTED
-Plan: 101-01/101-02 done（4222dfa/a1220d6/0005022/d6d3a86/60e7901）
-Status: 全部 6 phases（96-101）执行完毕。七 gate 实测 6/7 过（coverage 78.32% ≥77.5 / 前端 45 dirs / lint 0 errors 1378 warnings / type-check ✓ / go build+test 0 FAIL）；diff coverage 70.72% 如实记 FAIL（stale origin/main 基线横跨 v1.29+v1.30，2026-09-07 push 67c 已同步，后续 diff 域恢复正常）。UAT62-03 passed 带证据链；UAT62-01/02 诚实 pending（runbook 就绪，待真实 PG 人工执行）。
-Last activity: 2026-09-07 — 101 执行完成 + push 12c37d1（CI 34056266515 盯梢中）+ milestone audit 进行中
+Phase: 102 (机械常量化：CACHE/STATUS/PAGI) — PENDING (ready to plan)
+Plan: 0 of TBD in current phase
+Status: v1.31 ROADMAP 刚创建——7 phases（102-108）/ 29 requirements 全覆盖映射完成，Phase 102 待 `/gsd:plan-phase 102`
+Last activity: 2026-09-07 — v1.31 ROADMAP.md 创建 + REQUIREMENTS.md Traceability 回填（29/29）+ STATE.md roadmap 字段更新
 
-Progress: [██████████] 6/6 phases
+Progress: [░░░░░░░░░░] 0/7 phases
 
 ## Milestone Reference
 
-- Roadmap (live/workstream): `.planning/workstreams/milestone/ROADMAP.md`；根摘要: `.planning/ROADMAP.md`
-- Requirements: `.planning/REQUIREMENTS.md`（22 项，Traceability 已回填 phase 映射）
-- 锁定决策: D-01 范围 / D-02 回归纪律（每项附回归测试 + 七 gate 不倒退）/ D-03 设计决策项（V130R-01/02/03 → Phase 97、V130R-09 → Phase 99）/ D-04 范围外 / D-05 Phase 编号 96 起续编
+- Roadmap (live): `.planning/ROADMAP.md`（v1.31，7 phases 102-108）
+- Requirements: `.planning/REQUIREMENTS.md`（12 类别 29 项，Traceability 已回填 phase 映射）
+- 审计台账（输入）: `.planning/notes/260907-audit-fix-tech-debt-findings.md`（F-06~F-17 + 观察项）
+- 锁定决策: D-01 范围（12 组全做；TODO 逐项实现或删除不留兼容壳）/ D-02 回归纪律（行为变更附回归测试 + 七 gate 不倒退，coverage ≥78.33）/ D-03 设计决策项（WIRE-01 契约方向 → Phase 104、FEMAP 颜色 token/漂移归一 → Phase 106）/ D-04 范围外 / D-05 Phase 编号 102 起续编
 
 ## Accumulated Context (carried forward)
 
@@ -87,12 +88,12 @@ Progress: [██████████] 6/6 phases
 
 ## Next Step
 
-v1.30 已 SHIPPED。遗留两件：
-1. **人工验证台账**（用户执行）：UAT62-01/02（真实 PG，runbook `.planning/phases/101-closeout-uat-audit/UAT-RUNBOOK.md`）+ Phase 100 三项真实环境验证（见根 ROADMAP Progress 段台账）
-2. **下一 milestone**：就绪后 `/gsd:new-milestone`（diff coverage 65 行补测已入 v1.30 audit 债台账，可作下一 milestone 候选项）
+v1.31 ROADMAP 就绪。Next: `/gsd:plan-phase 102`（机械常量化：CACHE-01..02 / STATUS-01 / PAGI-01）。
+
+v1.30 遗留人工验证台账（非 v1.31 scope，持续 pending，用户执行）：UAT62-01/02（真实 PG，runbook `.planning/phases/101-closeout-uat-audit/UAT-RUNBOOK.md`）+ Phase 100 三项真实环境验证。
 
 ## Session Continuity
 
-Last session: 2026-09-07 03:08
-Stopped at: Phase 99 plan 99-06 completed (V130R-08/09 gap closure)
+Last session: 2026-09-07
+Stopped at: v1.31 ROADMAP.md + REQUIREMENTS.md Traceability + STATE.md（roadmap 字段）写入完成
 Resume file: None
