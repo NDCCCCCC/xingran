@@ -36,7 +36,7 @@ func NewConfigServiceWithCache(
 // GetByID 获取配置详情（带缓存）
 func (s *configCacheService) GetByID(ctx context.Context, id string) (*models.Config, error) {
 	return base.GetOrSetJSON(ctx, s.cache,
-		fmt.Sprintf("config:id:%s", id),
+		fmt.Sprintf("%s:%s", CacheKeyConfigByID, id),
 		s.GetExpiration(services.CacheConfigConfigByID, 30*time.Minute),
 		func() (*models.Config, error) { return s.configService.GetByID(ctx, id) })
 }
@@ -44,7 +44,7 @@ func (s *configCacheService) GetByID(ctx context.Context, id string) (*models.Co
 // GetByKey 根据配置键获取配置（带缓存）
 func (s *configCacheService) GetByKey(ctx context.Context, configKey string) (*models.Config, error) {
 	return base.GetOrSetJSON(ctx, s.cache,
-		fmt.Sprintf("config:key:%s", configKey),
+		fmt.Sprintf("%s:%s", CacheKeyConfigByKey, configKey),
 		s.GetExpiration(services.CacheConfigConfigByKey, 30*time.Minute),
 		func() (*models.Config, error) { return s.configService.GetByKey(ctx, configKey) })
 }
@@ -52,7 +52,7 @@ func (s *configCacheService) GetByKey(ctx context.Context, configKey string) (*m
 // GetAllConfigs 获取所有配置（带缓存）
 func (s *configCacheService) GetAllConfigs(ctx context.Context) ([]models.Config, error) {
 	return base.GetOrSetJSON(ctx, s.cache,
-		"config:all",
+		CacheKeyConfigAll,
 		s.GetExpiration("cache.config.all", 30*time.Minute),
 		func() ([]models.Config, error) { return s.queryAllConfigs(ctx) })
 }
@@ -70,9 +70,9 @@ func (s *configCacheService) queryAllConfigs(ctx context.Context) ([]models.Conf
 // InvalidateConfigCache 失效配置缓存
 func (s *configCacheService) InvalidateConfigCache(ctx context.Context, id string, configKey string) error {
 	keys := []string{
-		"config:all",
-		fmt.Sprintf("config:key:%s", configKey),
-		fmt.Sprintf("config:id:%s", id),
+		CacheKeyConfigAll,
+		fmt.Sprintf("%s:%s", CacheKeyConfigByKey, configKey),
+		fmt.Sprintf("%s:%s", CacheKeyConfigByID, id),
 	}
 	base.Invalidate(ctx, s.cache, keys, "CONFIG")
 	return nil

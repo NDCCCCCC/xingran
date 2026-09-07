@@ -125,6 +125,7 @@ const (
 	CacheKeyConfigByID  = "config:id"   // 配置详情: config:id:{uuid}
 	CacheKeyConfigByKey = "config:key"  // 配置键: config:key:{configKey}
 	CacheKeyConfigList  = "config:list" // 配置列表: config:list
+	CacheKeyConfigAll   = "config:all"  // 配置全量列表: config:all
 )
 
 // 运维模块缓存键
