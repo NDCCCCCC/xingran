@@ -3,7 +3,6 @@ package asset
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -13,7 +12,6 @@ import (
 	"github.com/lib/pq"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
-	"github.com/xingran-next/xingran-go-backend/pkg/cache"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	"gorm.io/gorm"
@@ -196,9 +194,10 @@ type ReconciliationService interface {
 type reconciliationServiceImpl struct {
 	db *gorm.DB
 
-	// cache R4 启用:GetByWorkstation 通过 CacheProvider.GetOrSet 做 5min TTL 缓存
+	// cache R4 启用:GetByWorkstation 通过 base.GetOrSetJSON 做 5min TTL 缓存
 	// 与 R1 MV 刷新节流对齐 (D-A4-03)。可为 nil(单元测试场景)→ 直查 DB。
-	cache cache.Cache
+	// Phase 103 CONV-02 (D-103-1/D-103-3): cache.Cache → base.CacheProvider
+	cache base.CacheProvider
 
 	// matcher 例外规则匹配器(Phase 45 R4 / D-A4-02 注入)
 	//
@@ -220,11 +219,14 @@ type reconciliationServiceImpl struct {
 // mvExists 显式初始化为 -1(未探测),避免默认零值 0 导致首次查询跳过 probe。
 //
 // R4 (Phase 45) 改造:
-//   - 第二个参数 c (cache.Cache) 注入以支持 GetByWorkstation 的 5min TTL 缓存
+//   - 第二个参数 c 注入以支持 GetByWorkstation 的 5min TTL 缓存
 //   - 第三个参数 matcher 例外规则匹配器(Phase 45 R4 / D-A4-02),nil 时跳过 per-asset 匹配
 //   - 现有调用方 (router.go, reconciliation_router.go) 必须同步更新
 //   - 传 nil 时 GetByWorkstation 降级为直查 DB(单元测试友好)
-func NewReconciliationService(db *gorm.DB, c cache.Cache, matcher ReconciliationExceptionService) ReconciliationService {
+//
+// Phase 103 CONV-02 (D-103-2): c cache.Cache → base.CacheProvider,
+// 由 router/core 层 system.NewCacheProvider(core.DataCacheService) 注入 (D-103-3)。
+func NewReconciliationService(db *gorm.DB, c base.CacheProvider, matcher ReconciliationExceptionService) ReconciliationService {
 	return &reconciliationServiceImpl{db: db, cache: c, matcher: matcher, mvExists: -1}
 }
 
@@ -795,31 +797,49 @@ func (s *reconciliationServiceImpl) GetByWorkstation(ctx context.Context, wsID s
 		return nil, errors.New("工位ID不能为空")
 	}
 
-	// 缓存命中短路
 	cacheKey := GetReconciliationHealthByWorkstationKey(wsID)
-	if s.cache != nil {
-		var cached ByWorkstationResponse
-		if err := s.cache.GetJSON(ctx, cacheKey, &cached); err == nil && cached.Workstation.ID != "" {
-			cached.Visible = false // service 单一职责,handler 重新注入
-			return &cached, nil
+	// cache == nil（单测场景）→ 直查 DB
+	if s.cache == nil {
+		resp, err := s.computeByWorkstation(ctx, wsID)
+		if err != nil {
+			return nil, err
 		}
+		resp.Visible = false
+		return resp, nil
 	}
+	return s.getByWorkstationWithCache(ctx, cacheKey, wsID)
+}
 
-	resp, err := s.computeByWorkstation(ctx, wsID)
+// getByWorkstationWithCache 读穿透缓存 wrapper (Phase 103 CONV-02)。
+//
+// D-103-7 warn-on-set 不阻断语义：cache 层任何错误（读/写）均 warn 日志后
+// 回退 computeByWorkstation 直查——与原手写实现「GetJSON 失败走 DB +
+// Set 失败仅 warn 不阻断」等价；DB 回源结果照常返回。
+// 脏缓存防御（Workstation.ID != ""）由 base.GetOrSetJSON 反序列化语义 +
+// computeByWorkstation 幂等查询覆盖：缓存值为完整 JSON 往返的合法响应。
+func (s *reconciliationServiceImpl) getByWorkstationWithCache(ctx context.Context, cacheKey string, wsID string) (*ByWorkstationResponse, error) {
+	resp, err := base.GetOrSetJSON[*ByWorkstationResponse](ctx, s.cache, cacheKey, reconciliationHealthCacheTTL, func() (*ByWorkstationResponse, error) {
+		return s.computeByWorkstation(ctx, wsID)
+	})
 	if err != nil {
-		return nil, err
-	}
-
-	// 写缓存
-	if s.cache != nil {
-		if data, mErr := json.Marshal(resp); mErr == nil {
-			if setErr := s.cache.Set(ctx, cacheKey, data, reconciliationHealthCacheTTL); setErr != nil {
-				applogger.Warnf("[reconciliation] GetByWorkstation cache set failed wsID=%s: %v", wsID, setErr)
-			}
+		// D-103-7: warn-on-set 不阻断——cache 层错误降级 DB 直查
+		applogger.Warnf("[reconciliation] GetByWorkstation cache 走直查 wsID=%s: %v", wsID, err)
+		resp, err = s.computeByWorkstation(ctx, wsID)
+		if err != nil {
+			return nil, err
+		}
+	} else if resp != nil && resp.Workstation.ID == "" {
+		// 脏缓存防御（原手写 cached.Workstation.ID != "" 检查的等价迁移）：
+		// 缓存反序列化结果缺工位 ID 视为无效，回源重建
+		applogger.Warnf("[reconciliation] GetByWorkstation 脏缓存回源 wsID=%s", wsID)
+		resp, err = s.computeByWorkstation(ctx, wsID)
+		if err != nil {
+			return nil, err
 		}
 	}
-
-	resp.Visible = false
+	if resp != nil {
+		resp.Visible = false // service 单一职责,handler 重新注入
+	}
 	return resp, nil
 }
 
