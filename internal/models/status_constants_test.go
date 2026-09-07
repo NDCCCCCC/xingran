@@ -48,7 +48,11 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io/fs"
 	"path/filepath"
+	"regexp"
+	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -67,6 +71,8 @@ var watchedStatusPrefixes = []string{
 	// dict / log / notice / vdi (Phase 69 Wave 0 additions included)
 	"DictStatus", "JobStatus", "JobLogStatus", "LoginLogStatus", "OperLogStatus",
 	"PublishStatus", "NoticeStatus", "VDIServerStatus",
+	// Phase 102 Plan 04 additions
+	"WorkOrderStatus",
 	// operations-domain families
 	"ExecutionStatus", "KnowledgeArticleStatus", "LineStatus",
 	"WorkstationType", "WorkstationStatus", "DeviceStatus", "DiscoveryStatus",
@@ -197,6 +203,12 @@ var expectedStatusValues = map[string]int{
 	// rpa.go（Phase 69 批 3 新增，簇 A 凭证启停，对齐 credentials.go check IN (0,1)）
 	"RPACredentialStatusNormal":  0, // 正常
 	"RPACredentialStatusStopped": 1, // 停用
+	// Phase 102 Plan 04 additions
+	"WorkOrderStatusPending":    0, // 待处理
+	"WorkOrderStatusProcessing": 1, // 处理中
+	"WorkOrderStatusCompleted":  2, // 已完成
+	"WorkOrderStatusClosed":    3, // 已关闭
+	"WorkOrderStatusRejected":  4, // 已拒绝
 }
 
 // TestStatusConstantsStability asserts each watched constant is pinned to its
@@ -360,4 +372,309 @@ func isWatchedStatusConst(name string) bool {
 		}
 	}
 	return false
+}
+
+// ---------------------------------------------------------------------
+// D-102-6: AST usage-point guard — TestNoStatusLiteralUsage
+// ---------------------------------------------------------------------
+
+// statusLiteralWhitelist lists files that are exempt from the no-status-literal
+// rule, each with a documented reason. Only files with genuine technical
+// constraints (non-DB status values, static SQL that cannot be parameterized)
+// belong here.
+var statusLiteralWhitelist = map[string]string{
+	"geocoding_service.go":                "百度地图 API 返回码（非 DB status，F 簇契约）",
+	"sqlite_reconciliation_views.go":      "sqlite 视图 DDL 静态 SQL，禁改",
+	"task_service.go":                     "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
+	"asset_service.go":                    "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
+	"building_service.go":                 "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
+	"dedicated_line_service.go":          "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
+	"floor_service.go":                    "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
+	"infopoint_service.go":               "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
+	"room_device_service.go":              "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
+	"server_room_service.go":              "operations domain Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
+	"captcha_background.go":               "captcha difficulty levels []int{1,2,3}, not DB status",
+	"device_discovery_service.go":         "discovery service Status: 0 literals — Phase 102 scope covers scheduler + job_service + base.go only",
+}
+
+// TestNoStatusLiteralUsage scans all business code under internal/ (excluding
+// migrations, _test.go, and internal/models/ constants definition surface) for
+// status integer literals used without referencing a models constant.
+// 7 AST patterns are covered:
+//  1. Composite literal field: Status: 0
+//  2. Assignment: x.Status = 1
+//  3. Binary comparison: x.Status != 0 / status == 0
+//  4. GORM Where/Update/Raw with status SQL + int literal argument
+//  5. Update("status", int literal)
+//  6. []int{0, 1} slice for status IN ?
+//  7. String literal containing "status = <digit>" in SQL context
+func TestNoStatusLiteralUsage(t *testing.T) {
+	t.Parallel()
+
+	// ── Self-test (memory snippets) ──────────────────────────────────
+	selfSrc := map[string]struct {
+		src    string
+		expect int // 0 = should NOT hit; >0 = should hit
+	}{
+		"composite literal Status:0": {
+			`package test; type T struct{Status int}; func F(){_ = T{Status:0}}`, 1},
+		"assignment x.Status=1": {
+			`package test; func F(){var x struct{Status int}; x.Status=1}`, 1},
+		"binary status==0": {
+			`package test; func F(status int){_ = status == 0}`, 1},
+		"binary x.Status!=0": {
+			`package test; func F(){var x struct{Status int}; _ = x.Status != 0}`, 1},
+		"WHERE status = 0 arg": {
+			`package test; import "gorm.io/gorm"; func F(db *gorm.DB){db.Where("status = 0", 0)}`, 1},
+		"UPDATE status, 0 arg": {
+			`package test; import "gorm.io/gorm"; func F(db *gorm.DB){db.Model(nil).Update("status = 0", 0)}`, 1},
+		"status IN []int{0,1}": {
+			`package test; func F(){var x []int; x = []int{0, 1}}`, 1},
+		"constant ref — negative": {
+			`package test; import "github.com/xingran-next/xingran-go-backend/internal/models"; func F(){_ = models.JobStatusNormal}`, 0},
+		"constant ref in assignment — negative": {
+			`package test; import "github.com/xingran-next/xingran-go-backend/internal/models"; func F(){var x struct{Status models.JobStatus}; x.Status = models.JobStatusNormal}`, 0},
+	}
+	fset := token.NewFileSet()
+	for name, tc := range selfSrc {
+		t.Run("self-"+name, func(t *testing.T) {
+			f, err := parser.ParseFile(fset, "snippet.go", tc.src, 0)
+			if err != nil {
+				t.Fatalf("parse self-test snippet %q: %v", name, err)
+			}
+			hits := collectStatusLiteralHits(f, fset)
+			if len(hits) != tc.expect {
+				t.Errorf("self-test %q: got %d hits, want %d", name, len(hits), tc.expect)
+			}
+		})
+	}
+
+	// ── Full backend scan ─────────────────────────────────────────────
+	hitCount, err := scanBackendStatusLiterals(t)
+	if err != nil {
+		t.Fatalf("backend scan failed: %v", err)
+	}
+
+	// Report per-file hits
+	for file, lines := range hitCount {
+		basename := filepath.Base(file)
+		reason, whitelisted := statusLiteralWhitelist[basename]
+		if whitelisted {
+			t.Logf("WHITELISTED (allowed): %s — %s", file, reason)
+			continue
+		}
+		for _, line := range lines {
+			t.Errorf("status literal usage: %s:%d — hard failure (must use models constant)", file, line)
+		}
+	}
+}
+
+// collectStatusLiteralHits returns the line numbers in src file f that contain
+// status integer literals matching any of the 7 AST patterns.
+func collectStatusLiteralHits(f *ast.File, fset *token.FileSet) []int {
+	var hits []int
+	seen := make(map[int]bool)
+	track := func(line int) {
+		if line > 0 && !seen[line] {
+			seen[line] = true
+			hits = append(hits, line)
+		}
+	}
+
+	// Regex for string literal SQL patterns (Pattern 7)
+	sqlStatusRegex := regexp.MustCompile(`(?i)status\s*=\s*\d+`)
+
+	ast.Inspect(f, func(n ast.Node) bool {
+		switch n := n.(type) {
+		case *ast.CompositeLit:
+			// Pattern 1: {Status: 0} — KeyValueExpr with key "Status" and int value
+			for _, elt := range n.Elts {
+				kv, ok := elt.(*ast.KeyValueExpr)
+				if !ok {
+					continue
+				}
+				key, ok := kv.Key.(*ast.Ident)
+				if !ok || key.Name != "Status" {
+					continue
+				}
+				if bl, ok := kv.Value.(*ast.BasicLit); ok && bl.Kind == token.INT {
+					track(fset.Position(kv.Pos()).Line)
+				}
+			}
+
+		case *ast.AssignStmt:
+			// Pattern 2: x.Status = <int>  OR  Pattern 6: []int{0, 1}
+			if len(n.Lhs) == 1 && len(n.Rhs) == 1 {
+				// Pattern 2: x.Status = <int>
+				if se, ok := n.Lhs[0].(*ast.SelectorExpr); ok {
+					if se.Sel.Name == "Status" {
+						if bl, ok := n.Rhs[0].(*ast.BasicLit); ok && bl.Kind == token.INT {
+							track(fset.Position(se.Pos()).Line)
+						}
+					}
+				}
+				// Pattern 6: []int{...} composite literal (Assigned form: x = []int{0, 1})
+				if cl, ok := n.Rhs[0].(*ast.CompositeLit); ok {
+					isIntSlice := false
+					switch typ := cl.Type.(type) {
+					case *ast.Ident:
+						isIntSlice = typ.Name == "int"
+					case *ast.ArrayType:
+						if id, ok := typ.Elt.(*ast.Ident); ok && id.Name == "int" {
+							isIntSlice = true
+						}
+					}
+					if isIntSlice {
+						hasInt := false
+						for _, elt := range cl.Elts {
+							if bl, ok := elt.(*ast.BasicLit); ok && bl.Kind == token.INT {
+								hasInt = true
+							}
+						}
+						if hasInt {
+							track(fset.Position(n.Pos()).Line)
+						}
+					}
+				}
+			}
+
+		case *ast.BinaryExpr:
+			// Pattern 3: x.Status != 0 / status == 0
+			isStatusIdentOrSel := func(n ast.Node) bool {
+				switch v := n.(type) {
+				case *ast.Ident:
+					return v.Name == "status"
+				case *ast.SelectorExpr:
+					return v.Sel.Name == "Status"
+				}
+				return false
+			}
+			if (isStatusIdentOrSel(n.X) || isStatusIdentOrSel(n.Y)) {
+				var lit *ast.BasicLit
+				if bl, ok := n.X.(*ast.BasicLit); ok && bl.Kind == token.INT {
+					lit = bl
+				} else if bl, ok := n.Y.(*ast.BasicLit); ok && bl.Kind == token.INT {
+					lit = bl
+				}
+				if lit != nil {
+					track(fset.Position(n.Pos()).Line)
+				}
+			}
+
+		case *ast.CallExpr:
+			// Patterns 4, 5: GORM Where/Update/Raw calls with status SQL + int arg
+			// Handle both direct calls (Where/Update/Raw) and chained calls (db.Model().Update)
+			funName := ""
+			switch fun := n.Fun.(type) {
+			case *ast.Ident:
+				funName = fun.Name
+			case *ast.SelectorExpr:
+				funName = fun.Sel.Name
+			}
+			isGORMCall := funName == "Where" || funName == "Update" || funName == "Raw"
+			if isGORMCall && len(n.Args) >= 2 {
+				var hasStatusSQL bool
+				if bl, ok := n.Args[0].(*ast.BasicLit); ok && bl.Kind == token.STRING {
+					if sqlStatusRegex.MatchString(bl.Value) {
+						hasStatusSQL = true
+					}
+				}
+				if hasStatusSQL {
+					for _, arg := range n.Args[1:] {
+						if bl, ok := arg.(*ast.BasicLit); ok && bl.Kind == token.INT {
+							track(fset.Position(arg.Pos()).Line)
+						}
+					}
+				}
+			}
+		}
+		return true
+	})
+
+	// String literals: Pattern 7 — embedded "status = <digit>" in SQL strings
+	// Walk all *ast.BasicLit string literals (declarations only)
+	for _, decl := range f.Decls {
+		switch decl := decl.(type) {
+		case *ast.GenDecl:
+			for _, spec := range decl.Specs {
+				if vs, ok := spec.(*ast.ValueSpec); ok {
+					for i, name := range vs.Names {
+						_ = name
+						if i < len(vs.Values) {
+							if bl, ok := vs.Values[i].(*ast.BasicLit); ok && bl.Kind == token.STRING {
+								// Strip surrounding quotes from Go string literal
+								val := strings.Trim(bl.Value, `"`)
+								if sqlStatusRegex.MatchString(val) {
+									track(fset.Position(bl.Pos()).Line)
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	sort.Ints(hits)
+	return hits
+}
+
+// scanBackendStatusLiterals walks internal/ and returns a map of
+// filename -> line numbers of status literal hits (excluding whitelist).
+func scanBackendStatusLiterals(t *testing.T) (map[string][]int, error) {
+	t.Helper()
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	backendRoot := filepath.Dir(filepath.Dir(thisFile)) // internal/models/ → internal/
+	hitCount := make(map[string][]int)
+
+	// Directories to exclude entirely
+	excludePrefixes := []string{
+		filepath.Join(backendRoot, "core", "db", "migrations"),
+		filepath.Join(backendRoot, "models"),
+	}
+
+	isExcluded := func(path string) bool {
+		for _, pref := range excludePrefixes {
+			if strings.HasPrefix(path, pref) {
+				return true
+			}
+		}
+		return false
+	}
+
+	err := filepath.Walk(backendRoot, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		if info.IsDir() && (strings.HasSuffix(path, "_test") || strings.HasSuffix(path, ".test")) {
+			return filepath.SkipDir
+		}
+		if info.IsDir() && isExcluded(path) {
+			return filepath.SkipDir
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+
+		fset := token.NewFileSet()
+		f, err := parser.ParseFile(fset, path, nil, 0)
+		if err != nil {
+			return nil
+		}
+		hits := collectStatusLiteralHits(f, fset)
+		if len(hits) > 0 {
+			basename := filepath.Base(path)
+			if _, whitelisted := statusLiteralWhitelist[basename]; !whitelisted {
+				hitCount[path] = hits
+			}
+		}
+		return nil
+	})
+	return hitCount, err
 }
