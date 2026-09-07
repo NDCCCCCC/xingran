@@ -362,6 +362,42 @@ func TestReconciliationService_GetByWorkstationCache(t *testing.T) {
 	_ = resp
 }
 
+// TestReconciliationService_DirtyCacheSelfHeal Phase 103 CONV-02 (WR-04 锁):
+// 缓存命中但 Workstation.ID 为空（脏条目）→ 回源重建 + 失效脏键自愈
+//（等价原实现 compute 后 Set 覆写语义），TTL 窗口内不重复重算。
+func TestReconciliationService_DirtyCacheSelfHeal(t *testing.T) {
+	db := newGapTestDB(t)
+	seedWorkstationHealth(t, db)
+	ctx := context.Background()
+
+	mem := pkgcache.NewMemoryCache(50, time.Minute)
+	dcs := services.NewDataCacheService(mem)
+	svc := NewReconciliationService(db, system.NewCacheProvider(dcs), nil)
+
+	// 预置脏缓存条目：合法 JSON 但 Workstation.ID 为空
+	cacheKey := GetReconciliationHealthByWorkstationKey("ws-1")
+	require.NoError(t, dcs.Set(ctx, cacheKey, &ByWorkstationResponse{}, time.Minute))
+
+	resp, err := svc.GetByWorkstation(ctx, "ws-1", "7d")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, "ws-1", resp.Workstation.ID, "脏缓存应回源重建出真实工位数据")
+
+	// WR-04 锁：脏条目必须被失效（自愈），而非滞留至 TTL 过期
+	_, getErr := mem.Get(ctx, cacheKey)
+	assert.Error(t, getErr, "脏缓存命中后应失效该键（WR-04 自愈）")
+
+	// 二次调用：缓存已失效 → 回源 → 写入干净条目 → 三次调用命中干净缓存
+	resp2, err := svc.GetByWorkstation(ctx, "ws-1", "7d")
+	require.NoError(t, err)
+	assert.Equal(t, "工位A", resp2.Workstation.Name)
+	resp3, err := svc.GetByWorkstation(ctx, "ws-1", "7d")
+	require.NoError(t, err)
+	assert.Equal(t, "工位A", resp3.Workstation.Name)
+	_, getErr2 := mem.Get(ctx, cacheKey)
+	assert.NoError(t, getErr2, "回源后应写入干净缓存条目")
+}
+
 func TestResolveAssetIPChain(t *testing.T) {
 	// 第一级:资产 IP
 	assert.Equal(t, "10.0.0.1", resolveAssetIPChain("10.0.0.1", nil, nil))

@@ -9,7 +9,6 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/config"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
-	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -173,11 +172,14 @@ func (l *selectorLearnerImpl) GetBestSelector(ctx context.Context, pageURL, elem
 
 // getBestSelectorCached 读穿透缓存 wrapper (Phase 103 CONV-03, D-103-8)。
 //
-// best-effort 静默语义（与原手写实现等价）：
-//   - 原实现 cache.Get 失败/Unmarshal 失败 → 静默走 DB；Set 失败 → `_ =` 忽略
-//   - 迁移后 cache 层任何错误（读/写/unmarshal）→ warn 日志后 DB 直查重算，
-//     重算成功照常返回（不向调用方透出 cache 错误）
-//   - DB 查询返回 (nil, nil)（无记录）时同样静默返回，不缓存占位
+// 语义等价说明（WR-01/WR-02 review 修正后的准确口径）：
+//   - base.GetOrSetJSON 透传的错误只可能是 computeBestSelector 的 DB 查询错误
+//     （provider 层读错误吞为 miss、写失败仅 warn），因此 err 直接一次传播
+//     （等价原实现 DB 错误 `查询成功记录失败` 一次返回），不重算
+//   - DB 查询返回 (nil, nil)（无记录）时静默返回，不缓存占位：GetOrSetJSON
+//     会把 nil 序列化为 "null" 写缓存（与原实现 `if best != nil` 语义漂移，
+//     WR-02），故 nil 结果主动失效该键恢复原语义
+//   - cache 读失败被 provider 吞为 miss（原实现 cache.Get err → 静默走 DB 等价）
 //
 // TTL 保持 30*time.Minute 字面量（D-103-12）。
 func (l *selectorLearnerImpl) getBestSelectorCached(ctx context.Context, pageURL, elementID string) (*SelectorRecommendation, error) {
@@ -187,9 +189,11 @@ func (l *selectorLearnerImpl) getBestSelectorCached(ctx context.Context, pageURL
 		return l.computeBestSelector(ctx, pageURL, elementID)
 	})
 	if err != nil {
-		// D-103-8: best-effort 静默——cache 层错误降级 DB 直查重算
-		applogger.Warnf("[selector_learner] GetBestSelector cache 走直查 pageURL=%s elementID=%s: %v", pageURL, elementID, err)
-		return l.computeBestSelector(ctx, pageURL, elementID)
+		return nil, err
+	}
+	if best == nil {
+		// 无记录不缓存占位（等价原实现 `if best != nil` 才 Set）
+		base.Invalidate(ctx, l.cache, []string{cacheKey}, "SelectorLearner")
 	}
 	return best, nil
 }

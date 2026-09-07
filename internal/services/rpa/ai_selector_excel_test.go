@@ -376,6 +376,34 @@ func TestSelectorLearner_RecordAndGetBest(t *testing.T) {
 	require.NoError(t, l.LearnFromExecution(ctx, "e1"))
 }
 
+// TestSelectorLearner_NilResultNotCached Phase 103 CONV-03 (WR-02 锁):
+// 无记录 (nil, nil) 时不得缓存 "null" 占位——GetOrSetJSON 内部会把 nil 写为
+// "null"（30min TTL），wrapper 必须失效该键恢复原实现 `if best != nil` 语义。
+func TestSelectorLearner_NilResultNotCached(t *testing.T) {
+	db := newSelectorTestDB(t)
+	var setKeys, delKeys []string
+	c := &fakeSelectorCache{
+		set: func(_ context.Context, k string, _ interface{}, _ time.Duration) error {
+			setKeys = append(setKeys, k)
+			return nil
+		},
+		delete: func(_ context.Context, k string) error {
+			delKeys = append(delKeys, k)
+			return nil
+		},
+	}
+	l := NewSelectorLearner(db, c, newAICfg("", "", false, false))
+
+	best, err := l.GetBestSelector(context.Background(), "http://p", "none")
+	require.NoError(t, err)
+	assert.Nil(t, best, "无记录应返回 (nil, nil)")
+
+	// GetOrSetJSON 写 "null" 占位后 wrapper 必须失效同一键
+	require.Len(t, setKeys, 1, "GetOrSet 未命中路径应写一次缓存")
+	require.Len(t, delKeys, 1, "nil 结果必须失效占位键（WR-02）")
+	assert.Equal(t, setKeys[0], delKeys[0], "失效键应与写入键一致")
+}
+
 func TestSelectorLearner_ScoreAndAlternatives(t *testing.T) {
 	db := newSelectorTestDB(t)
 	now := time.Now()

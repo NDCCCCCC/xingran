@@ -812,26 +812,24 @@ func (s *reconciliationServiceImpl) GetByWorkstation(ctx context.Context, wsID s
 
 // getByWorkstationWithCache 读穿透缓存 wrapper (Phase 103 CONV-02)。
 //
-// D-103-7 warn-on-set 不阻断语义：cache 层任何错误（读/写）均 warn 日志后
-// 回退 computeByWorkstation 直查——与原手写实现「GetJSON 失败走 DB +
-// Set 失败仅 warn 不阻断」等价；DB 回源结果照常返回。
-// 脏缓存防御（Workstation.ID != ""）由 base.GetOrSetJSON 反序列化语义 +
-// computeByWorkstation 幂等查询覆盖：缓存值为完整 JSON 往返的合法响应。
+// 语义等价说明（WR-01/WR-04 review 修正后的准确口径）：
+//   - base.GetOrSetJSON 透传的错误只可能是 computeByWorkstation 的 DB 查询错误
+//     （provider 层读错误吞为 miss、写失败仅 warn 不阻断——D-103-7 由 provider
+//     内部保证），因此 err 直接一次传播，不重算（避免 DB 故障时 6 步聚合双跑）
+//   - 脏缓存防御：缓存命中但 Workstation.ID == "" 视为无效条目——失效该键后
+//     回源重建（等价原实现 compute 后 Set 覆写的自愈行为）
 func (s *reconciliationServiceImpl) getByWorkstationWithCache(ctx context.Context, cacheKey string, wsID string) (*ByWorkstationResponse, error) {
 	resp, err := base.GetOrSetJSON[*ByWorkstationResponse](ctx, s.cache, cacheKey, reconciliationHealthCacheTTL, func() (*ByWorkstationResponse, error) {
 		return s.computeByWorkstation(ctx, wsID)
 	})
 	if err != nil {
-		// D-103-7: warn-on-set 不阻断——cache 层错误降级 DB 直查
-		applogger.Warnf("[reconciliation] GetByWorkstation cache 走直查 wsID=%s: %v", wsID, err)
-		resp, err = s.computeByWorkstation(ctx, wsID)
-		if err != nil {
-			return nil, err
-		}
-	} else if resp != nil && resp.Workstation.ID == "" {
-		// 脏缓存防御（原手写 cached.Workstation.ID != "" 检查的等价迁移）：
-		// 缓存反序列化结果缺工位 ID 视为无效，回源重建
+		return nil, err
+	}
+	if resp != nil && resp.Workstation.ID == "" {
+		// 脏缓存（原手写 cached.Workstation.ID != "" 检查的等价迁移）：
+		// 失效脏条目 + 回源重建，恢复原 Set 覆写的自愈语义
 		applogger.Warnf("[reconciliation] GetByWorkstation 脏缓存回源 wsID=%s", wsID)
+		base.Invalidate(ctx, s.cache, []string{cacheKey}, "Reconciliation")
 		resp, err = s.computeByWorkstation(ctx, wsID)
 		if err != nil {
 			return nil, err

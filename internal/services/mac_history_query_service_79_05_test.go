@@ -125,6 +125,29 @@ func TestMhq7905_PerfCacheTTL(t *testing.T) {
 		"perfConfig 非 nil 时 GetDuration 对未加载键回 30 分钟兜底(QUIRK-79-05-A)")
 }
 
+// TestMhq7905_CacheErrPropagation Phase 103 CONV-01 (D-103-19, WR-03):
+// 锁错误透传语义——QueryPortHistory/QueryDeviceHistory/QueryConnectionStats
+// 经 base.GetOrSetJSON 透传 provider 错误（fixture getOrSetErr 注入），
+// 不静默吞掉也不二次重算。
+func TestMhq7905_CacheErrPropagation(t *testing.T) {
+	ctx := context.Background()
+	svc, _ := newMhq7905(t)
+
+	injected := assert.AnError
+	impl := svc
+	impl.cache = &fakeMACHistoryCacheProvider{getOrSetErr: injected}
+	impl.perfConfig = nil
+
+	_, err := impl.QueryPortHistory(ctx, &PortHistoryQuery{DeviceID: uuid.New().String(), Current: 1, PageSize: 10})
+	require.ErrorIs(t, err, injected, "port-history: provider 错误必须透传（D-103-6/WR-03）")
+
+	_, err = impl.QueryDeviceHistory(ctx, &DeviceHistoryQuery{DeviceID: uuid.New().String(), Current: 1, PageSize: 10})
+	require.ErrorIs(t, err, injected, "device-history: provider 错误必须透传（D-103-6/WR-03）")
+
+	_, err = impl.QueryConnectionStats(ctx, &ConnectionStatsQuery{StartTime: mhq7905Time(8, 0, 0).Format(time.RFC3339), EndTime: mhq7905Time(12, 0, 0).Format(time.RFC3339)})
+	require.ErrorIs(t, err, injected, "stats: provider 错误必须透传（D-103-6/WR-03）")
+}
+
 // TestMhq7905_NewConstructors 两个构造器(:145-152)装配与接口断言。
 func TestMhq7905_NewConstructors(t *testing.T) {
 	_, db := newMhq7905(t)

@@ -713,7 +713,8 @@ func TestMhh7905_Heatmap(t *testing.T) {
 	})
 
 	t.Run("pg_fake_query_skips_cache_branch", func(t *testing.T) {
-		// dataCache == nil 时应直查(缓存装饰分支关闭)
+		// NoOp provider：GetOrSetJSON 直通 query（无缓存行为），假方言下 query 必失败
+		// Phase 103 CONV-01: 原形态 dataCache == nil 直查 → 现 base.NoOpCacheProvider 等价直通
 		fakeDB, _ := newMhs7905PGFake(t)
 		hm := NewMACHistoryHeatmapService(fakeDB, &base.NoOpCacheProvider{}, nil)
 		_, err := hm.QueryHeatmap(ctx, &HeatmapQuery{StartTime: mhq7905Time(8, 0, 0).Format(time.RFC3339), EndTime: mhq7905Time(12, 0, 0).Format(time.RFC3339)})

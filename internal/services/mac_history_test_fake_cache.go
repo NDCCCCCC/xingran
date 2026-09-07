@@ -24,7 +24,7 @@ import (
 
 // fakeMACHistoryCacheProvider 实现 base.CacheProvider，内部委托 DataCacheService。
 type fakeMACHistoryCacheProvider struct {
-	dataCache *DataCacheService
+	dataCache   *DataCacheService
 	getOrSetErr error // GetOrSet 整体注错；nil=正常
 	deleteErr   error // Delete 注错；nil=正常
 }

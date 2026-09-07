@@ -256,7 +256,10 @@ func (s *macHistoryQueryServiceImpl) GetVendor(ctx context.Context, macAddress s
 	cacheKey := fmt.Sprintf(constants.MacVendorKeyFormat, oui)
 
 	// Phase 103 CONV-01 (D-103-4): 手写 cache-aside 收敛 base.GetOrSetJSON
-	// TTL 24*time.Hour 字面量不变 (D-103-5)；cache 写失败返回 error (D-103-6 严格语义)
+	// TTL 24*time.Hour 字面量不变 (D-103-5)。
+	// 错误语义（WR-03 review 修正口径）：provider 层读错误吞为 miss、写失败仅
+	// warn（D-103-6 的"cache 错误不吞"由 provider GetOrSet 内部保证）；
+	// 本层透传的 err 为 DB 查询错误。
 	// cache == nil（裸装配）时直查 DB，等价原手写分支的 nil 语义
 	if s.cache == nil {
 		return s.lookupVendorFromDB(ctx, oui)
@@ -300,7 +303,8 @@ func (s *macHistoryQueryServiceImpl) QueryPortHistory(ctx context.Context, req *
 	}
 
 	// Phase 15 PERF-03: cache-aside 装饰 (D-12 锁定)
-	// Phase 103 CONV-01 (D-103-6): 收敛 base.GetOrSetJSON 严格语义，cache 写失败返回 error
+	// Phase 103 CONV-01 (D-103-6): 收敛 base.GetOrSetJSON——透传 err 为 DB 查询错误
+	//（provider 层读错误吞为 miss、写失败仅 warn）；TTL s.perfCacheTTL() 不变
 	if s.cache != nil {
 		cacheKey, keyErr := BuildMACQueryCacheKey("port-history", req)
 		if keyErr == nil {
@@ -422,7 +426,8 @@ func (s *macHistoryQueryServiceImpl) QueryDeviceHistory(ctx context.Context, req
 	}
 
 	// Phase 15 PERF-03: cache-aside 装饰 (D-12 锁定)
-	// Phase 103 CONV-01 (D-103-6): 收敛 base.GetOrSetJSON 严格语义，cache 写失败返回 error
+	// Phase 103 CONV-01 (D-103-6): 收敛 base.GetOrSetJSON——透传 err 为 DB 查询错误
+	//（provider 层读错误吞为 miss、写失败仅 warn）；TTL s.perfCacheTTL() 不变
 	if s.cache != nil {
 		cacheKey, keyErr := BuildMACQueryCacheKey("device-history", req)
 		if keyErr == nil {
@@ -822,7 +827,8 @@ func (s *macHistoryQueryServiceImpl) getLongOccupancyThreshold(ctx context.Conte
 // 输出明细（每个MAC×端口的停留时长+flapping计数）+Top-N（按MAC长期占用Top+按端口热门连接Top）
 func (s *macHistoryQueryServiceImpl) QueryConnectionStats(ctx context.Context, req *ConnectionStatsQuery) (*ConnectionStatsResponse, error) {
 	// Phase 15 PERF-03: cache-aside 装饰 (D-12 锁定)
-	// Phase 103 CONV-01 (D-103-6): 收敛 base.GetOrSetJSON 严格语义，cache 写失败返回 error
+	// Phase 103 CONV-01 (D-103-6): 收敛 base.GetOrSetJSON——透传 err 为 DB 查询错误
+	//（provider 层读错误吞为 miss、写失败仅 warn）；TTL s.perfCacheTTL() 不变
 	if s.cache != nil {
 		cacheKey, keyErr := BuildMACQueryCacheKey("stats", req)
 		if keyErr == nil {
