@@ -3,7 +3,6 @@ package workorder
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
@@ -212,7 +211,7 @@ func (s *workOrderCacheServiceImpl) GetMyPending(ctx context.Context, req *GetMy
 	if req != nil {
 		limit = req.Limit
 	}
-	cacheKey := fmt.Sprintf("workorder:my_pending:%s:limit:%d", userID, limit)
+	cacheKey := systemServices.GetWorkorderMyPendingLimitKey(userID, limit)
 
 	type myPendingResult struct {
 		List  []models.WorkOrder
@@ -238,7 +237,7 @@ func (s *workOrderCacheServiceImpl) GetMyPending(ctx context.Context, req *GetMy
 
 // GetStatistics 获取工单统计数据（带缓存）
 func (s *workOrderCacheServiceImpl) GetStatistics(ctx context.Context) (*Statistics, error) {
-	return base.GetOrSetJSON(ctx, s.cache, "workorder:statistics",
+	return base.GetOrSetJSON(ctx, s.cache, systemServices.CacheKeyWorkorderStatistics,
 		s.getExpiration("cache.workorder.statistics", 5*time.Minute),
 		func() (*Statistics, error) { return s.statistics.Get(ctx) })
 }
@@ -247,28 +246,28 @@ func (s *workOrderCacheServiceImpl) GetStatistics(ctx context.Context) (*Statist
 
 // InvalidateWorkOrderCache 失效工单缓存
 func (s *workOrderCacheServiceImpl) InvalidateWorkOrderCache(ctx context.Context, workOrderID string) error {
-	keys := []string{fmt.Sprintf("workorder:detail:%s", workOrderID)}
+	keys := []string{systemServices.GetWorkorderDetailKey(workOrderID)}
 	base.Invalidate(ctx, s.cache, keys, "WORKORDER")
 	return nil
 }
 
 // InvalidateMyPendingCache 失效待办工单缓存
 func (s *workOrderCacheServiceImpl) InvalidateMyPendingCache(ctx context.Context, userID string) error {
-	keys := []string{fmt.Sprintf("workorder:my_pending:%s", userID)}
+	keys := []string{systemServices.GetWorkorderMyPendingKey(userID)}
 	base.Invalidate(ctx, s.cache, keys, "WORKORDER")
 	return nil
 }
 
 // InvalidateStatisticsCache 失效统计缓存
 func (s *workOrderCacheServiceImpl) InvalidateStatisticsCache(ctx context.Context) error {
-	keys := []string{"workorder:statistics"}
+	keys := []string{systemServices.CacheKeyWorkorderStatistics}
 	base.Invalidate(ctx, s.cache, keys, "WORKORDER")
 	return nil
 }
 
 // InvalidateAllWorkOrderCache 失效所有工单缓存
 func (s *workOrderCacheServiceImpl) InvalidateAllWorkOrderCache(ctx context.Context) error {
-	base.InvalidatePattern(ctx, s.cache, []string{"workorder:*"}, "WORKORDER")
+	base.InvalidatePattern(ctx, s.cache, []string{systemServices.GetWorkorderAllPattern()}, "WORKORDER")
 	return nil
 }
 

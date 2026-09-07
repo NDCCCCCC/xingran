@@ -2,7 +2,6 @@ package duty
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -134,14 +133,14 @@ func (s *dutyCacheServiceImpl) GetDutyScheduleList(ctx context.Context, req *ser
 
 // GetTodayDuty 获取今日值班人员（带缓存）
 func (s *dutyCacheServiceImpl) GetTodayDuty(ctx context.Context) ([]services.TodayDutyMember, error) {
-	return base.GetOrSetJSON(ctx, s.cache, "duty:today",
+	return base.GetOrSetJSON(ctx, s.cache, systemServices.CacheKeyDutyToday,
 		s.getExpiration("cache.duty.today", 5*time.Minute),
 		func() ([]services.TodayDutyMember, error) { return s.base.GetTodayDuty(ctx) })
 }
 
 // GetMonthlyDutySchedule 获取月度值班排班（带缓存）
 func (s *dutyCacheServiceImpl) GetMonthlyDutySchedule(ctx context.Context, year int, month int) (map[string][]services.TodayDutyMember, error) {
-	cacheKey := fmt.Sprintf("duty:monthly:%d:%d", year, month)
+	cacheKey := systemServices.GetDutyMonthlyKey(year, month)
 	return base.GetOrSetJSON(ctx, s.cache, cacheKey,
 		s.getExpiration("cache.duty.monthly", 30*time.Minute),
 		func() (map[string][]services.TodayDutyMember, error) { return s.base.GetMonthlyDutySchedule(ctx, year, month) })
@@ -212,7 +211,7 @@ func (s *dutyCacheServiceImpl) CreateHoliday(ctx context.Context, holiday *model
 
 // GetHolidayList 获取节假日列表（带缓存）
 func (s *dutyCacheServiceImpl) GetHolidayList(ctx context.Context, year int) ([]models.Holiday, error) {
-	cacheKey := fmt.Sprintf("duty:holidays:%d", year)
+	cacheKey := systemServices.GetDutyHolidaysKey(year)
 	return base.GetOrSetJSON(ctx, s.cache, cacheKey,
 		s.getExpiration("cache.duty.holidays", 60*time.Minute),
 		func() ([]models.Holiday, error) { return s.base.GetHolidayList(ctx, year) })
@@ -270,35 +269,35 @@ func (s *dutyCacheServiceImpl) UpdateDutyConfig(ctx context.Context, config *mod
 
 // InvalidateTodayDutyCache 失效今日值班缓存
 func (s *dutyCacheServiceImpl) InvalidateTodayDutyCache(ctx context.Context) error {
-	keys := []string{"duty:today"}
+	keys := []string{systemServices.CacheKeyDutyToday}
 	base.Invalidate(ctx, s.cache, keys, "DUTY")
 	return nil
 }
 
 // InvalidateMonthlyScheduleCache 失效指定月份排班缓存
 func (s *dutyCacheServiceImpl) InvalidateMonthlyScheduleCache(ctx context.Context, year, month int) error {
-	keys := []string{fmt.Sprintf("duty:monthly:%d:%d", year, month)}
+	keys := []string{systemServices.GetDutyMonthlyKey(year, month)}
 	base.Invalidate(ctx, s.cache, keys, "DUTY")
 	return nil
 }
 
 // InvalidateAllScheduleCache 失效所有排班缓存
 func (s *dutyCacheServiceImpl) InvalidateAllScheduleCache(ctx context.Context) error {
-	keys := []string{"duty:*"}
+	keys := []string{systemServices.GetDutyAllPattern()}
 	base.InvalidatePattern(ctx, s.cache, keys, "DUTY")
 	return nil
 }
 
 // InvalidateHolidayCache 失效指定年份节假日缓存
 func (s *dutyCacheServiceImpl) InvalidateHolidayCache(ctx context.Context, year int) error {
-	keys := []string{fmt.Sprintf("duty:holidays:%d", year)}
+	keys := []string{systemServices.GetDutyHolidaysKey(year)}
 	base.Invalidate(ctx, s.cache, keys, "DUTY")
 	return nil
 }
 
 // InvalidateAllHolidayCache 失效所有节假日缓存
 func (s *dutyCacheServiceImpl) InvalidateAllHolidayCache(ctx context.Context) error {
-	keys := []string{"duty:holidays:*"}
+	keys := []string{systemServices.GetDutyHolidaysPattern()}
 	base.InvalidatePattern(ctx, s.cache, keys, "DUTY")
 	return nil
 }

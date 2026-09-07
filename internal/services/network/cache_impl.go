@@ -2,7 +2,6 @@ package network
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
@@ -265,21 +264,21 @@ func (s *cacheServiceImpl) UpdateStatusBatch(ctx context.Context, ids []string, 
 
 // GetDeviceStatistics 获取设备统计数据（带缓存）
 func (s *cacheServiceImpl) GetDeviceStatistics(ctx context.Context) (map[string]interface{}, error) {
-	return base.GetOrSetJSON(ctx, s.cache, "network_device:statistics",
+	return base.GetOrSetJSON(ctx, s.cache, systemServices.CacheKeyNetworkDeviceStatistics,
 		s.getExpiration("cache.network_device.statistics", 3*time.Minute),
 		func() (map[string]interface{}, error) { return s.base.GetDeviceStatistics(ctx) })
 }
 
 // GetDevicesByDept 获取指定部门的设备列表（带缓存）
 func (s *cacheServiceImpl) GetDevicesByDept(ctx context.Context, deptID string) ([]models.NetworkDevice, error) {
-	return base.GetOrSetJSON(ctx, s.cache, fmt.Sprintf("network_device:dept:%s", deptID),
+	return base.GetOrSetJSON(ctx, s.cache, systemServices.GetNetworkDeviceDeptKey(deptID),
 		s.getExpiration("cache.network_device.dept", 5*time.Minute),
 		func() ([]models.NetworkDevice, error) { return s.base.GetDevicesByDept(ctx, deptID) })
 }
 
 // GetDevicesByCredential 获取使用指定凭证的设备列表（带缓存）
 func (s *cacheServiceImpl) GetDevicesByCredential(ctx context.Context, credentialID string) ([]models.NetworkDevice, error) {
-	return base.GetOrSetJSON(ctx, s.cache, fmt.Sprintf("network_device:credential:%s", credentialID),
+	return base.GetOrSetJSON(ctx, s.cache, systemServices.GetNetworkDeviceCredentialKey(credentialID),
 		s.getExpiration("cache.network_device.credential", 5*time.Minute),
 		func() ([]models.NetworkDevice, error) { return s.base.GetDevicesByCredential(ctx, credentialID) })
 }
@@ -288,34 +287,34 @@ func (s *cacheServiceImpl) GetDevicesByCredential(ctx context.Context, credentia
 
 // InvalidateDeviceCache 失效指定设备的缓存
 func (s *cacheServiceImpl) InvalidateDeviceCache(ctx context.Context, deviceID string) error {
-	keys := []string{fmt.Sprintf("network_device:detail:%s", deviceID)}
+	keys := []string{systemServices.GetNetworkDeviceDetailKey(deviceID)}
 	base.Invalidate(ctx, s.cache, keys, "NETWORK_DEVICE")
 	return nil
 }
 
 // InvalidateStatisticsCache 失效统计缓存
 func (s *cacheServiceImpl) InvalidateStatisticsCache(ctx context.Context) error {
-	keys := []string{"network_device:statistics"}
+	keys := []string{systemServices.CacheKeyNetworkDeviceStatistics}
 	base.Invalidate(ctx, s.cache, keys, "NETWORK_DEVICE")
 	return nil
 }
 
 // InvalidateDeptCache 失效部门设备缓存
 func (s *cacheServiceImpl) InvalidateDeptCache(ctx context.Context, deptID string) error {
-	keys := []string{fmt.Sprintf("network_device:dept:%s", deptID)}
+	keys := []string{systemServices.GetNetworkDeviceDeptKey(deptID)}
 	base.Invalidate(ctx, s.cache, keys, "NETWORK_DEVICE")
 	return nil
 }
 
 // InvalidateCredentialCache 失效凭证设备缓存
 func (s *cacheServiceImpl) InvalidateCredentialCache(ctx context.Context, credentialID string) error {
-	keys := []string{fmt.Sprintf("network_device:credential:%s", credentialID)}
+	keys := []string{systemServices.GetNetworkDeviceCredentialKey(credentialID)}
 	base.Invalidate(ctx, s.cache, keys, "NETWORK_DEVICE")
 	return nil
 }
 
 // InvalidateAllDeviceCache 失效所有设备缓存
 func (s *cacheServiceImpl) InvalidateAllDeviceCache(ctx context.Context) error {
-	base.InvalidatePattern(ctx, s.cache, []string{"network_device:*"}, "NETWORK_DEVICE")
+	base.InvalidatePattern(ctx, s.cache, []string{systemServices.GetNetworkDevicePattern()}, "NETWORK_DEVICE")
 	return nil
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/xingran-next/xingran-go-backend/internal/config"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"gorm.io/gorm"
 )
 
@@ -358,8 +359,9 @@ func (l *selectorLearnerImpl) calculateScore(stats SelectorStats) float64 {
 }
 
 // getCacheKey 获取缓存键
+// D-102-3: fmt.Sprintf 改 systemServices.GetRpaSelectorBestKey helper
 func (l *selectorLearnerImpl) getCacheKey(pageURL, elementID string) string {
-	return fmt.Sprintf("rpa:selector:best:%s:%s", pageURL, elementID)
+	return systemServices.GetRpaSelectorBestKey(pageURL, elementID)
 }
 
 // markSelectorForUpdate 标记选择器需要更新
