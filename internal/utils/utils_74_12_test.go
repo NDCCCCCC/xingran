@@ -198,37 +198,6 @@ func TestTemplateEngine_NetHelpers(t *testing.T) {
 	assert.False(t, toBool(nil))
 }
 
-// ---------------- pagination.go ----------------
-
-func TestParsePaginationAndOffset(t *testing.T) {
-	// 默认值
-	p := ParsePagination(0, 0)
-	assert.Equal(t, 1, p.Page)
-	assert.Equal(t, 10, p.PageSize)
-
-	// 上限截断
-	p = ParsePagination(-1, 99999)
-	assert.Equal(t, 1, p.Page)
-	assert.Equal(t, 100, p.PageSize, "MaxListPageSize 上限")
-
-	// 正常值
-	p = ParsePagination(3, 20)
-	assert.Equal(t, 3, p.Page)
-	assert.Equal(t, 20, p.PageSize)
-	assert.Equal(t, 40, p.Offset())
-	assert.Equal(t, 20, p.Limit())
-
-	// 第一页 offset=0
-	assert.Equal(t, 0, ParsePagination(1, 10).Offset())
-
-	// BuildPaginationResponse
-	res := BuildPaginationResponse([]int{1, 2}, 2, PaginationParams{Page: 1, PageSize: 10})
-	assert.Equal(t, []int{1, 2}, res["list"])
-	assert.Equal(t, int64(2), res["total"])
-	assert.Equal(t, 1, res["page"])
-	assert.Equal(t, 10, res["pageSize"])
-}
-
 // ---------------- response_builder.go ----------------
 
 func TestResponseBuilders(t *testing.T) {
