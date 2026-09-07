@@ -15,4 +15,22 @@ const (
 
 	// CaptchaVerifiedKeyFormat 验证码验证键格式
 	CaptchaVerifiedKeyFormat = "captcha:verified:%s"
+
+	// CaptchaRateLimitKeyFormat 验证码限流键格式
+	CaptchaRateLimitKeyFormat = "captcha:rate:%s"
+
+	// CaptchaDataKeyFormat 验证码数据键格式
+	CaptchaDataKeyFormat = "captcha:data:%s"
+
+	// CaptchaAttemptsKeyFormat 验证码尝试次数键格式
+	CaptchaAttemptsKeyFormat = "captcha:attempts:%s"
+
+	// LoginFailKeyFormat 登录失败计数键格式
+	LoginFailKeyFormat = "login:fail:%s"
+
+	// CaptchaBgListKeyFormat 验证码背景图列表键格式
+	CaptchaBgListKeyFormat = "captcha:bg:list:%s:%d"
+
+	// CaptchaCachePoolPrefixFormat 验证码缓存池前缀格式
+	CaptchaCachePoolPrefixFormat = "captcha:cache:pool:%s:%d"
 )
