@@ -89,7 +89,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 102-02-PLAN.md — CACHE-02 注册面：cache_keys.go 8 模块 + pkg/constants 根包 2 格式 + 等价快照（含 D-102-1 落点二分修订披露）
+- [x] 102-02-PLAN.md — CACHE-02 注册面：cache_keys.go 8 模块 + pkg/constants 根包 2 格式 + 等价快照（含 D-102-1 落点二分修订披露）
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
