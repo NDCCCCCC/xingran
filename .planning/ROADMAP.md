@@ -78,9 +78,16 @@ Phase 108 (SKIP 测试恢复；独立，建议最后在稳定代码上恢复测�
   3. 分页单口径：`internal/utils/pagination.go` ParsePagination（cap=MaxListPageSize）收敛到 `pkg/query.NormalizePagination`，全部调用方行为不变（逐调用方核对清单落盘，历史分叉差异点注释自证）（PAGI-01）
   4. 回归纪律：常量化为行为等价重构；`go build ./...` + `go test ./...` 0 失败，七 gate 不倒退
 
-**Plans**: TBD
+**Plans**: 5 plans（3 waves）
 
-**Notes**: CACHE-02 的 rpa selector（:361）/ mac vendor（:255）键注册与本相后的 Phase 103（CONV-01/03 闭包迁移）同文件族——本相先注册键、103 再迁闭包，顺序不可倒。
+Plans:
+- [ ] 102-01-PLAN.md — CACHE-01：captcha 键族常量化（pkg/constants 6 常量 + 16 位点替换 + 等价快照测试）
+- [ ] 102-02-PLAN.md — CACHE-02 注册面：cache_keys.go 8 模块 + pkg/constants 根包 2 格式 + 等价快照（含 D-102-1 落点二分修订披露）
+- [ ] 102-03-PLAN.md — CACHE-02 替换面：10 模块 46 调用点替换 + TestCacheKeyInlineResidue 内联扫描守护（窄扫 12 文件）
+- [ ] 102-04-PLAN.md — STATUS-01：status 位点替换（含新暴露 raw SQL 2 处）+ TestNoStatusLiteralUsage AST 扫描 + WorkOrderStatus 值锁补登记
+- [ ] 102-05-PLAN.md — PAGI-01：file_handler 迁移 NormalizePaginationWithMax(cap=100) + utils/pagination.go 整文件删除 + 调用方核对清单
+
+**Notes**: CACHE-02 的 rpa selector（:361）/ mac vendor（:255）键注册与本相后的 Phase 103（CONV-01/03 闭包迁移）同文件族——本相先注册键、103 再迁闭包，顺序不可倒。Wave 结构：Wave 1 = 102-01/102-04/102-05（零文件重叠并行）；Wave 2 = 102-02（依赖 01 的 pkg/constants/cache.go）；Wave 3 = 102-03（依赖 02 注册表）。
 
 ---
 
@@ -211,7 +218,7 @@ Phase 108 (SKIP 测试恢复；独立，建议最后在稳定代码上恢复测�
 
 | Phase | Status | Plans | Requirements | Started | Completed |
 |-------|--------|-------|--------------|---------|-----------|
-| Phase 102 机械常量化（缓存键/状态/分页） | Not started | 0/TBD | CACHE-01..02 + STATUS-01 + PAGI-01 | - | - |
+| Phase 102 机械常量化（缓存键/状态/分页） | Planned (5 plans) | 0/5 | CACHE-01..02 + STATUS-01 + PAGI-01 | - | - |
 | Phase 103 缓存闭包收敛 base 单一权威 | Not started | 0/TBD | CONV-01..04 | - | - |
 | Phase 104 handler 层架构收敛（wire+handler） | Not started | 0/TBD | WIRE-01 + HANDLER-01..02 | - | - |
 | Phase 105 前端 CRUD 收敛 apiFactory | Not started | 0/TBD | FEAPI-01..04 | - | - |
