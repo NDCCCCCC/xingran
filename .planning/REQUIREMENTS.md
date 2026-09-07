@@ -1,118 +1,111 @@
 ---
-milestone: v1.30
-status: shipped（2026-09-07 归档至 milestones/v1.30-REQUIREMENTS.md；22/22 traceability 见 milestones/v1.30-MILESTONE-AUDIT.md 与 phases/101-closeout-uat-audit/TRACEABILITY-FINAL.md）
+milestone: v1.31
+status: defined
 ---
 
-> **本文件为 v1.30 milestone 快照（已 SHIPPED）。** 下一 milestone 启动时由 /gsd:new-milestone 重写。
+# Requirements: XingRan-Next — Milestone v1.31 V131 技术债清偿 (Tech Debt Retirement)
 
-# Requirements: XingRan-Next — Milestone v1.30 V130 缺陷治理
-
-**Defined:** 2026-09-06
-**Core Value:** 修复 v1.29 期间登记的全部 18 项 V130-CANDIDATES 缺陷候选 + 闭环 2 个 deferred 小项；所有修复附回归测试，使深度复查发现的问题不再带病运行。
+**Defined:** 2026-09-07
+**Core Value:** 清偿 2026-09-07 全量技术债务审计台账的全部 12 组未修复项（F-06~F-17）+ 顺带 nilness 观察项，达成：非测试代码 TODO 清零、status/cache-key/分页/协议字面量清零、缓存闭包收敛 base 单一权威、wire 契约统一、skip 测试尽力恢复。
 
 **输入来源:**
-- `.planning/milestones/v1.29-REQUIREMENTS.md` V130-CANDIDATES 段（CACHEDEF-01..05 + JOBSTAT-01）
-- `.planning/milestones/v1.29-DEEP-RECHECK.md`（V130R-01..12）
-- `.planning/STATE.md` v1.29 Deferred Items（TESTFILE / 62-HUMAN-UAT）
+- `.planning/notes/260907-audit-fix-tech-debt-findings.md`（F-06~F-09 not-attempted + F-10~F-17 manual-only + 观察项）
+- `.planning/PROJECT.md` v1.31 段（D-01~D-05 锁定决策）
 
-**锁定决策 (v1.30 init):**
-- **D-01 范围**: 18 项全做 + 2 顺带项；不引入新业务功能（2026-09-06 修订：JOBSTAT-01 经 Phase 96 discuss 死代码分析重定性为**删除处置**，修复项 18→17，详见 96-CONTEXT.md）
-- **D-02 回归纪律**: 所有修复属行为变更，每项附回归测试（v1.29 D-05 例外条款同款纪律）；七 gate（go build / go test / 后端 coverage ≥77.5 / 前端 45 dirs / lint / type-check / diff coverage）全程不倒退
-- **D-03 设计决策项**: V130R-01/02/03/09 的技术方案在 phase 规划时敲定
-- **D-04 范围外**: WSNOTICE-01 已提前修复；operlog exclude_paths 继续挂账；前端覆盖率不推新目标
-- **D-05 Phase 编号**: 从 Phase 96 起续编
+**锁定决策 (v1.31 init):**
+- **D-01 范围**: 台账 12 组全做；F-15 逐项决策实现或删除、不留兼容壳
+- **D-02 回归纪律**: 行为变更附回归测试；七 gate（go build / go test / 后端 coverage ≥78.33 基线 / 前端 45 dirs / lint / type-check / diff coverage）全程不倒退
+- **D-03 设计决策项**: WIRE-01 wire 契约方向、FEMAP-03 颜色 token 选择在 phase 规划时敲定
+- **D-04 范围外**: captcha-background 1=启用语义（QUIRK-80-03-D 锁定非 bug，禁改）；观察项中的有意设计（agent 裸 c.JSON / 三层 adapter / 协议默认值）不动；operlog exclude_paths 继续挂账
+- **D-05 Phase 编号**: 从 Phase 102 续编（v1.30 用 96-101，v1.29 用 89-95）
 
-## v1.30 Requirements
+## v1.31 Requirements
 
-### CACHEDEF — 缓存缺陷修复
+### CACHE — 缓存键残余常量化
 
-- [ ] **CACHEDEF-01**: `system/department_cache_impl.go:74-102` — `GetSelectDataWithCache` 写键与 `InvalidateDeptCache` 失效模式统一（现写裸键 `"dept:tree"` 与 `cache:` 前缀模式永不匹配），失效真正命中；附回归测试
-- [ ] **CACHEDEF-02**: `system/config_cache_impl.go:71-118` — 单条 Delete 失效补齐 `config:id:<id>`，已删配置不再能经详情接口从缓存读回（30min 窗口消除，`config_router.go:17` 生产可达）；附回归测试
-- [ ] **CACHEDEF-03**: `duty/duty_cache_impl.go:333-344` — `parseInt` 的 `len(s) >= 4` 前置修复（2 字符月份切片不再恒返回 0），`GenerateSchedule`/`ManualDuty` 后月度排班缓存失效生效（`duty_handler.go:325` 生产可达）；附回归测试
-- [ ] **CACHEDEF-04**: `workorder/workorder_cache_impl.go:207-234` — 待办缓存键补入 Limit 维度，不同 limit 不再共享同一缓存；附回归测试
-- [ ] **CACHEDEF-05**: `monitor/cache_service.go:766-771` — `key[:6] == "xingran:"` 切片长度修正（6 字节比 8 字节字面量恒 false），前缀剥离真正生效；附回归测试
+- [ ] **CACHE-01**: `internal/core/captcha.go`（:297,326,361,367,419,426 storageKey / :503,529 failKey）与 `internal/core/captcha_background.go`（:146,243,295,310 list/pool key）共 12 处内联缓存键收敛为包内具名常量（或注册 cache_keys.go），行为等价
+- [ ] **CACHE-02**: notice（:208,210）/ settings（:53,64）/ duty（:144,215,273,287,301）/ workorder（:215,264,271）/ knowledge（:129-134,223,230,244）/ network（:298,319）/ api_endpoint（:63,194）/ mac vendor（:255）/ widget（:59-65）/ rpa selector（:361）等模块 ~35 处内联 cache key 注册进 cache_keys.go 或模块级注册表并引用；失效 pattern 字符串同步具名化
 
-### JOBSTAT — 看板统计缺陷
+### STATUS — 状态字面量清零
 
-- [ ] **JOBSTAT-01**（2026-09-06 Phase 96 discuss 重定性：**死代码删除处置**）: `internal/api/v1/job_utils.go` — 分析结论：GetJobStatistics 无任何生产调用方（仅定义 + api_v1_tail_80_03_test.go 测试引用），源自初始脚手架（ea528c6）从未接线路由；生产看板实际走 `/monitor/jobs/logs/statistics` → `jobLogService.Statistics`（全时段统计，无「今日」语义），「生产看板缺陷」前提不成立。处置：整个 `job_utils.go` 删除（GetJobStatistics + 同为死代码的 FormatDuration）连同对应测试，原时区日界缺陷随文件删除消解，不修不测
+- [ ] **STATUS-01**: 剩余 12 处 status 字面量全部引用 models 具名常量：workorder/base.go:183（`[]int{0,1}`）、scheduler/job_service.go:331、scheduler/cron.go:43,62,235,407,435,832、scheduler/vdi_sync_tasks.go:48,85、workorder_tasks.go:195,328,451、reconciliation_tasks.go:196、mac_history_tasks.go:127、mac_history_matview_tasks.go:56（按实际常量存在性逐处核对；geocoding 百度 API 白名单豁免）
 
-### BACKUPFIX — config_backup 恢复链加固
+### PAGI — 分页口径归一
 
-- [ ] **V130R-01**: `config_restore_task_service.go:82,163-171` — 超时路径互斥原子化：ExecuteCustom 返回后 worker 不再向设备推送、背对背新恢复窗口消除、RestoreResult 数据竞争修复、10min 总预算分段（方案 phase 规划时敲定：分段子 context 预算或超时后确认任务真终止）；附回归测试
-- [ ] **V130R-02**: `network_router.go:45` — RecoverStaleRunningTasks 实例归属过滤：多实例/滚动重启下不误杀其他实例在途任务、不致终态翻转（方案 phase 敲定：grace period >RestoreConfigTimeout 或实例标识列）；附回归测试
-- [ ] **V130R-03**: `backup_handler.go:283-284` — 业务错误码语义化：「存在进行中恢复任务」映射 409/400、「备份不属于目标设备」映射 400，不再经 HandleServiceError 统一 500（需 pkg/response 业务错误类型体系，设计 phase 敲定）；附回归测试
+- [ ] **PAGI-01**: `internal/utils/pagination.go` ParsePagination（cap=MaxListPageSize）收敛到 `pkg/query.NormalizePagination` 单一口径，调用方行为不变（差异点注释自证历史分叉，收敛时逐调用方核对）
 
-### CACHEKEY — 缓存键安全与迁移收尾
+### CONV — 缓存闭包收敛 base 单一权威
 
-- [ ] **V130R-04**: `system/user_cache_impl.go:172-216` + `role_cache_impl.go:51-78` — buildListCacheKey 键值转义或参数集哈希，`Username="bob:status:1"` 与 `Username="bob"+Status=1` 不再碰撞污染；附回归测试
-- [ ] **V130R-05**: duty/knowledge/network/workorder 四 cache_impl 残留 11 处 interface{} 闭包 GetOrSet + 4 个平行 getExpiration 迁 base 泛型函数族（cache_invariants_92_test warning 档清零）；附回归测试
+- [ ] **CONV-01**: mac_history_query_service.go 4 处 legacy `GetOrSet(func() (interface{}, error))`（:307,432,835）+ :259-281 手写 Get/Set cache-aside + heatmap_service.go:118 迁移 `base.GetOrSetJSON[T]`
+- [ ] **CONV-02**: asset/reconciliation_service.go:799-820 GetByWorkstation 手写读穿透（GetJSON 短路 + Marshal + Set）迁移 `base.GetOrSetJSON[T]`
+- [ ] **CONV-03**: rpa/selector_learner.go:169-174,226 GetBestSelector/SaveSelector 手写 JSON cache-aside 迁移 `base.GetOrSetJSON[T]`
+- [ ] **CONV-04**: `cache_invariants_92_test.go` 扫描口径扩展至 services 根 / asset / rpa 包（interface{} 闭包式 GetOrSet 硬失败），守护新收敛面不回潮
 
-### OPSFIX — operations 口径统一
+### WIRE — 错误响应契约统一
 
-- [ ] **V130R-06**: asset/building List Total 口径收紧（`.Table()` 起链不含软删过滤 → repo `Model(new(T))` 对齐）+ OVR 台账补记 + 软删环境分页器验证；附回归测试
-- [ ] **V130R-07**: `floor_service.go:140-178` — 换楼同步乱序修复（乐观条件 WHERE building_id=旧值 或队列串行化）+ First 失败不再静默吞掉 + OVR 补记；附回归测试
-- [ ] **V130R-08**: orgId「部门+全部子部门」筛选抽共享 helper 统一四条件口径（workstation/infopoint 三条件形式漏匹配 ancestors 中段修复，6+ 处复制粘贴收敛）；附回归测试
-- [ ] **V130R-09**: 分页 clamp 三口径收敛（pagination_helper 10..10000 / requests.GetPagination 10..100 / pkg/query ..200）+ internal/constants 与 pkg/constants 双包合并（consolidation 方案 phase 敲定，base/service.go 注释自认刻意保留处一并处置）；附回归测试
+- [ ] **WIRE-01**: operations/base_handler.go:10-25 本地 handleJSONBinding/handleServiceError 与 `pkg/response/handler_helpers.go` 合并为单一权威，operations 14 handler 全量切换；wire 契约方向（CodeParamError/CodeServerError vs http.Status*+BusinessError 409）在 phase 规划敲定后全仓一致；响应格式回归测试覆盖
 
-### FEFIX — 前端契约修复
+### HANDLER — Handler 样板收敛
 
-- [ ] **V130R-10**: `rpaApi.ts`（8 处）/`vdiApi.ts`（2 处）工厂 spread 幽灵方法处置——omit 或 apiFactory invariants 增加「新增方法须有后端路由」对照断言（当前零调用方，潜伏 404 面）；附回归测试
-- [ ] **V130R-11**: `rpaApi.ts` 大面积后端不存在端点契约对齐专项（scriptApi/scheduleApi/variableApi/templateApi/notificationApi/statisticsApi 全族等）——补路由或裁剪死方法，前后端对账清单落盘；附守卫
-- [ ] **V130R-12**: `src/lib/api/networkApi.ts` 平行下载链收敛到权威 download.ts + downloadFilePost 补 JSON 错误体检测（200+JSON 错误不再存成 .xlsx）+ apiFactory invariants readdirSync 改递归扫描；附回归测试
+- [ ] **HANDLER-01**: operations 14 个同构 CRUD handler（wall/server_room/floor/door/building/room_device/floor_plan_text/dedicated_line/location_alias/infopoint/workstation/workstation_device/asset/asset_component）样板收敛（泛型 helper 或等价方案）；server_room List:101-103 与 Statistics:37 的手写错误路径漂移一并修复
+- [ ] **HANDLER-02**: monitor oper_log_handler.go:54-160 与 login_log_handler.go:49-157 五方法复制去重；login 侧手写 `response.Error(apperrors.InternalServerError(err))` 统一走 HandleServiceError
 
-### CLOSEOUT — 收口
+### FEAPI — 前端 CRUD 收敛 apiFactory
 
-- [ ] **TESTFILE-01**: 4 个未跟踪测试文件（`internal/models/rpa/rpa_model_methods_test.go` / `internal/pkg/cache/manager_coverage_test.go` / `internal/pkg/system/sysmetrics_common_test.go` / `internal/pkg/system/sysmetrics_windows_test.go`）入库决策落地——入库补 gate 或明确排除归档（95-02 Pitfall 4 选项 c 口径终结）
-- [ ] **UAT62-01**: Migrate176 R1/R2→R5 就地升级 schema 校验回退——带旧结构 MV 的真实 PG 上启动验证（62-HUMAN-UAT 场景 1，归档于 `.planning/milestones/v1.29-phases/` 前身 `.planning/workstreams/milestone/phases/62-ai-internal-core-db/62-HUMAN-UAT.md`）
-- [ ] **UAT62-02**: Advisory lock 双实例并发迁移保护——第二实例跳过迁移块 WARN 且正常启动（62-HUMAN-UAT 场景 2）
-- [ ] **UAT62-03**: 空库首启 admin 种子凭据告警——默认凭据 WARN / env 覆盖 / salt 非默认（62-HUMAN-UAT 场景 3）
+- [ ] **FEAPI-01**: adDomainApi.ts:261,295,385 三处手写 update/delete 五件套迁移 createResourceApi（D-14 单参 delete 契约保持，invariants 基线同步归零）
+- [ ] **FEAPI-02**: knowledgeApi.ts:174,179,228,245,250 五处迁移（同上约束）
+- [ ] **FEAPI-03**: dutyApi.ts:193,198,233,275,279 五处迁移（同上约束）
+- [ ] **FEAPI-04**: workorderApi.ts:429,434,532,582,587 六处迁移（同上约束）
 
-## v1.31+ Requirements (future)
+### FEMAP — 前端选项/颜色映射统一
 
-（v1.30 未定义 future 需求；历史候选见各归档 milestone 的 Future 段）
+- [ ] **FEMAP-01**: server-rooms/index.tsx:653-654,417-418 与 MACHistoryPage.tsx:654-655 内联 正常/停用 选项+Tag → `constants/status.ts` NORMAL_STOP_OPTIONS / NORMAL_STOP_TAG_CONFIG
+- [ ] **FEMAP-02**: fix-suggestion fixStatusColor/fixStatusLabel 双份拷贝（index.tsx:68-75 vs FixSuggestionDetailDrawer.tsx:22-29）抽模块共享 constants，漂移（orange vs magenta）按 phase 决策归一
+- [ ] **FEMAP-03**: 11 处内联 `status === 0 ? "success" : "error"` 三元 Tag（DashboardList:215、assets:387、FloorCardView:67-68、menu:110、email-config:268-269、api-config:252-253、FloorView3D:90-91、BuildingView3D:183-184、ad-domain/configs:253,474、exception-rules:285）统一 NORMAL_STOP_TAG_CONFIG；success/green token 选择 phase 规划敲定
+
+### TODO — 非测试代码 TODO 清零
+
+- [ ] **TODO-01**: workorder 域：评价功能占位（workorder_router.go:65）——实现或删除+落档理由
+- [ ] **TODO-02**: RPA 域：扩缩容配置读取/持久化（worker_handler.go:260,279）、ListSessions（credential_handler.go:154）、回滚逻辑（error_handling.go:311）、selector_learner 使用情况提取/通知机制（:235,367）、task_service 部门 ID（:296）——逐项实现或删除+落档理由
+- [ ] **TODO-03**: system/monitor 域：config 缓存刷新（config_service.go:257）、解锁用户逻辑（login_log_handler.go:194）、oper_log follow-up（:213）、init_data 未用函数（:638）——逐项实现或删除+落档理由
+- [ ] **TODO-04**: 基础设施域：core.go:911 Redis 接入、device_discovery_service.go:662、agent/server/handlers.go:304、reconciliation_exception.go:578 R3+ 缓存失效——逐项实现或删除+落档理由
+- [ ] **TODO-05**: 前端 6 处：LayoutToolbar Widget 选择器/仪表盘设置（:132,139）、useGeocoding 逆解析（:131）、WorkstationView 编辑（:73）、assets 编辑（:582）、AIScriptEditor AI 生成（:97）——逐项实现或删除+落档理由
+- [ ] **TODO-06**: 决策表落盘（每项：实现 / 删除 + 理由），非测试代码 TODO 计数归零（grep 守护进 CI 或 invariants）
+
+### SKIP — Skip 测试恢复
+
+- [ ] **SKIP-01**: HybridAuthenticator interface 化 refactor（具体类型 LocalAuthenticator/ADAuthenticator 依赖解耦），恢复 hybrid_authenticator_test.go 5 处 t.Skip
+- [ ] **SKIP-02**: ad_authenticator_test ×5 / authenticator_test / user_sync_service_test 等 10 处 skip：能以嵌入式基建（v1.27 addomain 嵌入式 LDAP 先例 + sqlite :memory:）恢复的恢复；确需真实 LDAP/DB 环境的落 HUMAN-UAT 决策表
+
+### TS — 前端类型卫生
+
+- [ ] **TS-01**: 11 处 `as any` 类型收窄：window 注入（HubeiMap:490 / HubeiMapGL:481）用 declare global 声明合并；customRequest（ExcelImport:261 / FileUpload:259）用正确 UploadRequest 签名；login:28 / WidgetRenderer:41 / assets:255 / EditModal:182 等逐处收窄
+- [ ] **TS-02**: 72 处无理由 eslint-disable（VirtualMachineList ×5、useRoleActions ×3、buildings/info-points/mac ×6、externals.d.ts/helpers/ParamsEditor/CronSelector ×8 及 ~31 文件散布）补理由注释或修复根因移除 disable
+
+### NIL — 观察项排查
+
+- [ ] **NIL-01**: rpa/data_mapper.go:332 nilness（impossible condition: non-nil == nil）根因排查：死代码则删除，真 bug 则修复 + 回归测试
+
+## Future Requirements (deferred)
+
+- **operlog exclude_paths** 细化治理 — 继续挂账（v1.29 D-05 起）
+- **LDAP InsecureSkipVerify** 生产证书配置 — 安全事项独立立项（CLAUDE.md 已知）
+- **agent/server 裸 c.JSON** 响应包装统一 — 疑为 agent 协议有意设计，需 agent 协议演化时一并处理
+- **三层 adapter 彻底合并**（cache_adapter / adapter / data_cache_service）— 架构定性已完成（base 单一权威），物理合并等退役窗口
+- **协议默认值回退常量化**（agent/config.go:25、cmd/agent/main.go:29、rpa-worker config.go:211、baidu API URL、cors TrimPrefix）— low 值，随域 phase 顺带
 
 ## Out of Scope
 
-| 排除项 | 理由 |
-|--------|------|
-| WSNOTICE-01（WS 双读者竞态 + origin 前缀绕过） | 已于 2026-09-06 v1.29 深度复查提前修复（503c162 + 6a44659） |
-| operlog exclude_paths 白名单 | 独立 deferred pending todo，与缺陷治理不重叠 |
-| 新业务功能 | v1.30 锁定为缺陷治理 |
-| 前端覆盖率推新目标 | v1.28 已阶段性收口 45.13%（D-04） |
-| CACHEDEF/V130R 之外的新扫描发现的缺陷 | 登记新 candidates，不顺手扩scope |
+- **captcha-background 1=启用语义** — QUIRK-80-03-D 就地锁定（gorm default:1），后端前端一致，非 bug；禁止套用 0=启用共享常量
+- **超时字面量模块私有命名常量**（~120 处）— 约定允许的模块局部配置，不强制入 pkg/constants
+- **新业务功能** — 本期为纯技术债清偿
+- **前端覆盖率新目标** — v1.28 已收口 45.13%，gate 维持不倒退即可
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CACHEDEF-01 | Phase 96 | Pending |
-| CACHEDEF-02 | Phase 96 | Pending |
-| CACHEDEF-03 | Phase 96 | Pending |
-| CACHEDEF-04 | Phase 96 | Pending |
-| CACHEDEF-05 | Phase 96 | Pending |
-| JOBSTAT-01 | Phase 96 | Delete（重定性删除处置，2026-09-06 discuss） |
-| V130R-01 | Phase 97 | Pending |
-| V130R-02 | Phase 97 | Pending |
-| V130R-03 | Phase 97 | Pending |
-| V130R-04 | Phase 98 | Pending |
-| V130R-05 | Phase 98 | Pending |
-| V130R-06 | Phase 99 | Pending |
-| V130R-07 | Phase 99 | Pending |
-| V130R-08 | Phase 99 | Pending |
-| V130R-09 | Phase 99 | Pending |
-| V130R-10 | Phase 100 | Pending |
-| V130R-11 | Phase 100 | Pending |
-| V130R-12 | Phase 100 | Pending |
-| TESTFILE-01 | Phase 101 | Pending |
-| UAT62-01 | Phase 101 | Pending |
-| UAT62-02 | Phase 101 | Pending |
-| UAT62-03 | Phase 101 | Pending |
-
-**Coverage:**
-- v1.30 requirements: 22 total
-- Mapped to phases: 22（Phase 96: 6 / Phase 97: 3 / Phase 98: 2 / Phase 99: 4 / Phase 100: 3 / Phase 101: 4）
-- Unmapped: 0 ✓
+| (filled by roadmap) | | |
 
 ---
-*Requirements defined: 2026-09-06*
-*Last updated: 2026-09-06 — ROADMAP 创建后 Traceability 回填（22/22 → Phase 96-101）*
+*Requirements defined: 2026-09-07*
