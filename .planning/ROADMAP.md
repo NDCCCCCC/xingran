@@ -83,7 +83,7 @@ Phase 108 (SKIP 测试恢复；独立，建议最后在稳定代码上恢复测�
 Plans:
 - [ ] 102-01-PLAN.md — CACHE-01：captcha 键族常量化（pkg/constants 6 常量 + 16 位点替换 + 等价快照测试）
 - [ ] 102-02-PLAN.md — CACHE-02 注册面：cache_keys.go 8 模块 + pkg/constants 根包 2 格式 + 等价快照（含 D-102-1 落点二分修订披露）
-- [ ] 102-03-PLAN.md — CACHE-02 替换面：10 模块 46 调用点替换 + TestCacheKeyInlineResidue 内联扫描守护（窄扫 12 文件）
+- [ ] 102-03-PLAN.md — CACHE-02 替换面：10 模块 47 调用点替换（含 knowledge :134 条件后缀位）+ TestCacheKeyInlineResidue 内联扫描守护（窄扫 12 文件）
 - [ ] 102-04-PLAN.md — STATUS-01：status 位点替换（含新暴露 raw SQL 2 处）+ TestNoStatusLiteralUsage AST 扫描 + WorkOrderStatus 值锁补登记
 - [ ] 102-05-PLAN.md — PAGI-01：file_handler 迁移 NormalizePaginationWithMax(cap=100) + utils/pagination.go 整文件删除 + 调用方核对清单
 

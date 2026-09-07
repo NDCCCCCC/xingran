@@ -48,14 +48,14 @@
 | ID | Description | Research Support |
 |----|-------------|------------------|
 | CACHE-01 | captcha.go（storageKey/failKey）与 captcha_background.go（list/pool key）12 处内联缓存键收敛具名常量，行为等价 | 实跑核实为 **16 个直接 Sprintf 位点 + 4 个派生构造点**、6 种键格式（行号清单见 §CACHE-01 清单）；注册目标 pkg/constants/cache.go（D-102-2）；先例 idiom 已在 captcha.go:385/450/491/512 就位 |
-| CACHE-02 | 10 模块 ~35 处内联 cache key 及失效 pattern 注册具名常量并引用 | 实跑核实为 **46 个调用点 / 33 种键格式（含 pattern）**（行号清单见 §CACHE-02 清单）；发现 **services 根包 2 文件因 import 环无法引用 cache_keys.go**，须按 D-102-2 先例落 pkg/constants（详见 §关键约束）；rpa selector / mac vendor 键本相只注册不迁闭包 |
+| CACHE-02 | 10 模块 ~35 处内联 cache key 及失效 pattern 注册具名常量并引用 | 实跑核实为 **47 个调用点 / 33 种键格式（含 pattern）**（行号清单见 §CACHE-02 清单）；发现 **services 根包 2 文件因 import 环无法引用 cache_keys.go**，须按 D-102-2 先例落 pkg/constants（详见 §关键约束）；rpa selector / mac vendor 键本相只注册不迁闭包 |
 | STATUS-01 | 剩余 12 处 status 字面量全部引用 models 具名常量；AST 锁全程绿；白名单外 grep 无残留 | 实跑核实为 **21 个位点全部映射既有常量、零新增**（清单见 §STATUS 清单）；新暴露位点 1 处（base.go:191）按 D-102-6 口径顺带清；migrations archive 须入扫描排除表 |
 | PAGI-01 | internal/utils ParsePagination 收敛 pkg/query 单一口径，调用方行为不变，逐调用方核对清单落盘 | 语义逐行等价已证（见 §PAGI 证据）；生产调用方**仅 file_handler.go:160 一处**（全仓 grep 实证）；file_handler_test.go + file_service_test.go 既有测试网在位 |
 </phase_requirements>
 
 ## Summary
 
-本相是纯后端**行为等价**重构，全部工作量在既有代码内部，不安装任何新包、不引入任何新外部依赖。研究以审计台账（F-06~F-09）行号为起点做了全量 grep 实跑核对，结论：**台账行号存在小幅漂移（±1~7 行）且系统性低估位点数**——captcha 实为 16 个直接位点（台账 12）、CACHE-02 实为 46 调用点/33 格式（台账 ~35）、STATUS 实为 21 位点（台账 12~16）。所有位点均已定位并逐处给出映射目标，执行时以本研究清单为准，不再依赖台账行号。
+本相是纯后端**行为等价**重构，全部工作量在既有代码内部，不安装任何新包、不引入任何新外部依赖。研究以审计台账（F-06~F-09）行号为起点做了全量 grep 实跑核对，结论：**台账行号存在小幅漂移（±1~7 行）且系统性低估位点数**——captcha 实为 16 个直接位点（台账 12）、CACHE-02 实为 47 调用点/33 格式（台账 ~35）、STATUS 实为 21 位点（台账 12~16）。所有位点均已定位并逐处给出映射目标，执行时以本研究清单为准，不再依赖台账行号。
 
 三项关键发现影响规划：
 
@@ -170,7 +170,7 @@ go build ./...   # 基线已实测全绿（BUILD_EXIT=0，2026-09-07）
 
 **测试文件注意**：captcha_78_01_test.go / captcha_background_78_01_test.go / core_74_08_test.go 内嵌键字面量（如 "captcha:cache:pool:circle:1:1"）——键值不变则测试自然绿，**最小 diff 纪律下不改测试字面量**。
 
-### CACHE-02：10 模块内联键（33 格式 / 46 调用点）
+### CACHE-02：10 模块内联键（33 格式 / 47 调用点）
 
 | # | 模块 | 文件 | 位点（实跑行号） | 键格式（含 pattern） |
 |---|------|------|------------------|----------------------|
@@ -178,14 +178,14 @@ go build ./...   # 基线已实测全绿（BUILD_EXIT=0，2026-09-07）
 | 2 | settings | internal/services/system/settings_cache_impl.go | :41, :53, :64 | `settings:user:%s` |
 | 3 | duty | internal/services/duty/duty_cache_impl.go | :137, :144, :215, :273, :280, :287, :294, :301 | `duty:today`、`duty:monthly:%d:%d`、`duty:holidays:%d`、pattern `duty:*`、pattern `duty:holidays:*` |
 | 4 | workorder | internal/services/workorder/workorder_cache_impl.go | :215, :241, :250, :257, :264, :271 | `workorder:my_pending:%s:limit:%d`、`workorder:statistics`、`workorder:detail:%s`、`workorder:my_pending:%s`、pattern `workorder:*` |
-| 5 | knowledge | internal/services/knowledge/knowledge_cache_impl.go | :91, :129, :131, :180, :223, :230, :237, :244 | `kb:article:%s`、`kb:category:tree`、`kb:category:parent:%s`、`kb:tags:all`、pattern `kb:category:*`、pattern `kb:article:*` |
+| 5 | knowledge | internal/services/knowledge/knowledge_cache_impl.go | :91, :129, :131, :134, :180, :223, :230, :237, :244 | `kb:article:%s`、`kb:category:tree`、`kb:category:parent:%s`、`"%s:status:%d"`（:134 条件后缀，复用已计数 base 格式）、`kb:tags:all`、pattern `kb:category:*`、pattern `kb:article:*` |
 | 6 | network | internal/services/network/cache_impl.go | :268, :275, :282, :291, :298, :305, :312, :319 | `network_device:statistics`、`network_device:dept:%s`、`network_device:credential:%s`、`network_device:detail:%s`、pattern `network_device:*` |
 | 7 | api_endpoint | internal/services/api_endpoint_service.go（**根包→pkg/constants**） | :63, :194 | `user_endpoints:%s` |
 | 8 | mac vendor | internal/services/mac_history_query_service.go（**根包→pkg/constants**；Phase 103 只注册不迁闭包） | :256 | `mac:vendor:%s` |
 | 9 | widget | internal/services/system/widget_data_fetcher.go | :61, :65（buildWidgetCacheKey 内） | `widget:data:%s`、`widget:data:%s:%x`（**%x 动词须原样保留**） |
 | 10 | rpa selector | internal/services/rpa/selector_learner.go（Phase 103 只注册不迁闭包） | :362 | `rpa:selector:best:%s:%s` |
 
-> 与台账行号差异：mac vendor :255→实跑 :256；rpa :361→实跑 :362（各漂移 1 行）；duty/workorder/knowledge/network 的台账清单均为子集（实跑多出 plain-literal 键与 pattern 位点）。TTL 解析全部经 `GetExpiration(configKey, default)` / `getExpiration(...)`（逐文件实读核实），**键替换不触及 TTL 表达式**；`user_endpoints`/`mac:vendor` 无失效调用（纯读缓存）。
+> 与台账行号差异：mac vendor :255→实跑 :256；rpa :361→实跑 :362（各漂移 1 行）；duty/workorder/knowledge/network 的台账清单均为子集（实跑多出 plain-literal 键与 pattern 位点）。**knowledge :134 位点**：`GetKnowledgeCategoryList` 的条件键后缀拼接（`cacheKey = fmt.Sprintf("%s:status:%d", cacheKey, *req.Status)`），产出真实缓存键并在 :137 传入 GetOrSetJSON——计入调用点数（47），其格式复用已计数 base 格式故格式数仍为 33（对照 notice 模块 status 变体 :210 为完整独立格式已单列）。TTL 解析全部经 `GetExpiration(configKey, default)` / `getExpiration(...)`（逐文件实读核实），**键替换不触及 TTL 表达式**；`user_endpoints`/`mac:vendor` 无失效调用（纯读缓存）。
 
 **范围外同病位点（扫描面之外，规划时知情即可，默认不动）**：
 - `operations/floor_cache_impl.go:50,:71` `floor:building:%s`——**已有注册常量** `CacheKeyFloorByBuilding`（cache_keys.go:140）却仍内联，属"已注册未引用"残留，非本相清单（D-102-7 窄扫口径）；若 planner 愿纳为顺带清零需同步扩 D-102-7 扫描面。
@@ -215,7 +215,7 @@ go build ./...   # 基线已实测全绿（BUILD_EXIT=0，2026-09-07）
 | 17 | services/workorder/base.go:191 | 同上（**台账漏列，D-102-6 全后端口径顺带清**） | 同 #16 | 同 #16 |
 | — | services/operations/geocoding_service.go:333 | `if baiduResp.Status != 0` | **白名单**（百度 API 返回码，非 DB status） | D-102-6 白名单表首条：`geocoding_service.go + 原因` |
 
-**既有常量坐标** [VERIFIED: grep internal/models]：`log.go:71-72` JobStatusNormal=0/JobStatusPause=1；`log.go:94-95` JobLogStatusSuccess=0/JobLogStatusFailure=1；`duty.go:25` DutyStatusNormal=0；`vdi.go:51-52` VDIServerStatusNormal=0/Stopped=1；`workorder.go:17-21` WorkOrderStatus 0..4 全族。全部已登记于 `status_constants_test.go` expectedStatusValues（值锁全程绿的前提是**不动 models**）。
+**既有常量坐标** [VERIFIED: grep internal/models]：`log.go:71-72` JobStatusNormal=0/JobStatusPause=1；`log.go:94-95` JobLogStatusSuccess=0/JobLogStatusFailure=1；`duty.go:25` DutyStatusNormal=0；`vdi.go:51-52` VDIServerStatusNormal=0/Stopped=1；`workorder.go:17-21` WorkOrderStatus 0..4 全族。（WorkOrderStatus 族的值锁登记状态见 PATTERNS §SP-6：未入 watched 表，由 102-04 Task 3 补登记。）
 
 **扫描器必须排除/豁免的面**（广谱扫描实测发现）：
 - `internal/core/db/migrations/archive/applied/*.go`——**大量 `Status: 0` / `Where("status = 0")` 位点**，是已归档迁移历史，禁改禁扫（改之破坏迁移完整性）。
@@ -255,7 +255,7 @@ go build ./...   # 基线已实测全绿（BUILD_EXIT=0，2026-09-07）
 ```
 [Phase 102 数据流：常量注册 → 引用替换 → 守护锁定]
 ------------------------------------------------------------------
- 原字面量（16+46+21 位点）                    新真相源（注册）
+ 原字面量（16+47+21 位点）                    新真相源（注册）
  ┌──────────────────────────┐   D-102-2    ┌─────────────────────────┐
  │ internal/core/captcha*.go ├─────────────►│ pkg/constants/cache.go   │
  └──────────────────────────┘              │  (+6 captcha 格式)       │
@@ -419,7 +419,7 @@ var statusLiteralWhitelist = map[string]string{
 
 ### Pitfall 6：扫描器误伤 / 漏报失衡
 **What goes wrong:** 全后端 status 扫描误伤 migrations archive、difficulties 数组、SNMP 类别码（实测均存在）；或 cache-key 扫描把 Phase 103 待迁的闭包位点（selector_learner:169-174/226 手写 cache-aside 内的键）提前硬失败，制造临时豁免表。
-**How to avoid:** §STATUS 清单的排除/豁免表 + D-102-7 窄扫 12 文件（selector_learner 只扫 :362 键构造函数所在键字面量，**扫描器按"键格式形态字面量"匹配，天然不含 :169-174 的 Get/Set 调用**——键格式串仍会命中，属预期：本相注册后该文件键字面量同样清零，不产生豁免项）。
+**How to avoid:** §STATUS 清单的排除/豁免表 + D-102-7 窄扫 12 文件（selector_learner 只扫 :362 键构造函数所在键字面量，**扫描器按"键格式形态字面量"匹配，天然不含 :169-174 的 Get/Set 调用**——键格式串仍会命中，属预期：本相注册后该文件键字面量同样清零，不产生豁免项）。扫描器匹配规则须防误伤：剥离格式动词后分段校验（见 102-03 Task 3 精确口径），排除错误消息串（含空格段）与纯动词串（`"%s:%d"` 全空段）。
 **Warning signs:** 守护测试在干净主干上红；或白名单表出现"临时性"条目。
 
 ### Pitfall 7：TTL/configKey 顺改动
@@ -499,17 +499,20 @@ for _, tc := range cases {
 
 ## Open Questions
 
-1. **reconciliation_tasks.go:195 的 `MisfirePolicy: 1`（紧邻 #12 位点）**
+1. **reconciliation_tasks.go:195 的 `MisfirePolicy: 1`（紧邻 #12 位点）（RESOLVED）**
    - What we know: 同一复合字面量内的非 status 数值字面量；既有常量 `models.MisfirePolicyImmediately`（log.go:62）存在；workorder_tasks/mac 任务同构处均已用常量。
    - What's unclear: 是否算 STATUS-01"顺带清"范畴（审计未列、非 status 语义、扫描器不会捕获）。
    - Recommendation: **纳入**（1 行、零风险、与同族代码一致性对齐，属"执行中新暴露位点按同规则顺带清"的合理外延）；若 planner 严守字面 scope 则留 Phase 103+，两可皆不阻塞。
-2. **floor_cache_impl.go:50/:71 已注册未引用的内联键**
+   - **处置（planner，2026-09-07）**：纳入——102-04 Task 1 顺带清 1 行（替换前核对常量值 == 1）。
+2. **floor_cache_impl.go:50/:71 已注册未引用的内联键（RESOLVED）**
    - What we know: `CacheKeyFloorByBuilding` 常量已存在（cache_keys.go:140），两处内联 Sprintf 与之同值。
    - What's unclear: 是否扩入 D-102-7 扫描面（CONTEXT 窄扫口径未含 operations）。
    - Recommendation: 默认不动（守 D-102-7）；planner 若纳入需同步扩扫描面文件清单并在 plan 中声明口径变更。
-3. **两个扫描守护测试的放置包**
+   - **处置（planner，2026-09-07）**：默认不动（守 D-102-7 窄扫 12 文件；Phase 103 CONV-04 扩口）。
+3. **两个扫描守护测试的放置包（RESOLVED）**
    - What we know: discretion 区域。cache-key 等价测试横跨 pkg/constants 与 services/system 两宿主包。
    - Recommendation: 等价测试拆两处（pkg/constants/cache_102_test.go + internal/services/system/cache_keys_102_test.go）；cache-key 内联扫描与 status 使用点扫描各置一文件（前者可入 internal/services/system 与 invariants_92 同包复用 runtime.Caller 手法，后者入 internal/models/status_constants_test.go 同文件扩展——D-102-6 明文"同文件扩展"）。
+   - **处置（planner，2026-09-07）**：按建议落地——等价测试拆 pkg/constants/cache_102_test.go（102-01/102-02）+ internal/services/system/cache_keys_102_test.go（102-02）；cache-key 内联扫描入 cache_keys_102_test.go（102-03）；status 使用点扫描入 status_constants_test.go 同文件扩展（102-04）。
 
 ## Environment Availability
 
@@ -606,5 +609,5 @@ for _, tc := range cases {
 - 守护测试设计（AST 形态/排除表）：HIGH——6 种形态全部来自实测位点归纳，宿主骨架同款在位
 - 执行细节映射（int 转换口径等）：MEDIUM——编译器即时反馈域，无行为风险
 
-**Research date:** 2026-09-07
+**Research date:** 2026-09-07（2026-09-07 checker 修订轮增补 knowledge :134 条件后缀位点，调用点总数 46→47）
 **Valid until:** 2026-10-07（稳定域——纯仓内重构，无外部漂移源；若主干在规划前有新提交，执行时按 D-102-7/广谱 grep 复核新暴露位点即可）
