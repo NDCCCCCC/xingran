@@ -8,6 +8,8 @@ import (
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/xingran-next/xingran-go-backend/internal/utils"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
+	"github.com/xingran-next/xingran-go-backend/pkg/query"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
@@ -157,9 +159,11 @@ func (h *FileHandler) List(c *gin.Context) {
 		return
 	}
 
-	pagination := utils.ParsePagination(req.Page, req.PageSize)
+	// 历史分叉自证：本端点 cap=100（constants.MaxListPageSize），刻意不用 NormalizePagination 默认 cap=200
+	current, pageSize := query.NormalizePaginationWithMax(req.Page, req.PageSize, constants.MaxListPageSize)
+	offset := (current - 1) * pageSize
 
-	files, total, err := h.service.ListFiles(c.Request.Context(), req.BusinessType, req.UserID, pagination.Offset(), pagination.Limit())
+	files, total, err := h.service.ListFiles(c.Request.Context(), req.BusinessType, req.UserID, offset, pageSize)
 	if err != nil {
 		response.Error(c, response.ErrServerError, err.Error())
 		return
@@ -170,7 +174,7 @@ func (h *FileHandler) List(c *gin.Context) {
 		result = append(result, buildFileResponse(file, h.service.GetFileURL(file)))
 	}
 
-	response.Success(c, utils.BuildListResponse(result, total, pagination.Page, pagination.PageSize))
+	response.Success(c, utils.BuildListResponse(result, total, current, pageSize))
 }
 
 // BatchDelete 批量删除文件
