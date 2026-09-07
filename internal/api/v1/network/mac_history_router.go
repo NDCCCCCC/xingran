@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	mac_history_query_service "github.com/xingran-next/xingran-go-backend/internal/services"
+	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
@@ -16,7 +17,12 @@ func SetupMACHistoryRouter(r *gin.RouterGroup, core *core.Core) {
 	historyHandler := NewMACHistoryHandler(historyQueryService)
 
 	// Phase 15 PERF-04: 热力图 handler + 路由
-	heatmapService := mac_history_query_service.NewMACHistoryHeatmapService(core.GetDB(), nil, nil)
+	// Phase 103 CONV-01 (D-103-20): 接线改为 system.NewCacheProvider 注入 base.CacheProvider
+	heatmapService := mac_history_query_service.NewMACHistoryHeatmapService(
+		core.GetDB(),
+		system.NewCacheProvider(core.DataCacheService),
+		core.CacheConfigService,
+	)
 	heatmapHandler := NewMACHistoryHeatmapHandler(heatmapService)
 
 	// 注册路由

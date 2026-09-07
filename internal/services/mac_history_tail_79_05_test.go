@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
 	"gorm.io/gorm"
 	"gorm.io/gorm/callbacks"
@@ -54,7 +55,7 @@ func newMhs7905(t *testing.T) (*gorm.DB, MACHistoryService, PartitionService, MA
 
 	mem := cache.NewMemoryCache(1000, 5*time.Minute)
 	t.Cleanup(func() { mem.Close() })
-	heatmap := NewMACHistoryHeatmapService(db, NewDataCacheService(mem), NewCacheConfigService(db))
+	heatmap := NewMACHistoryHeatmapService(db, newFakeMACHistoryCacheProvider(mem), NewCacheConfigService(db))
 
 	return db,
 		NewMACHistoryService(db),
@@ -691,7 +692,7 @@ func TestMhh7905_Heatmap(t *testing.T) {
 
 	t.Run("pg_fake_mv_query_fails_wrapped", func(t *testing.T) {
 		fakeDB, captured := newMhs7905PGFake(t)
-		hm := NewMACHistoryHeatmapService(fakeDB, nil, nil)
+		hm := NewMACHistoryHeatmapService(fakeDB, &base.NoOpCacheProvider{}, nil)
 
 		impl, ok := hm.(*macHistoryHeatmapServiceImpl)
 		require.True(t, ok)
@@ -714,7 +715,7 @@ func TestMhh7905_Heatmap(t *testing.T) {
 	t.Run("pg_fake_query_skips_cache_branch", func(t *testing.T) {
 		// dataCache == nil 时应直查(缓存装饰分支关闭)
 		fakeDB, _ := newMhs7905PGFake(t)
-		hm := NewMACHistoryHeatmapService(fakeDB, nil, nil)
+		hm := NewMACHistoryHeatmapService(fakeDB, &base.NoOpCacheProvider{}, nil)
 		_, err := hm.QueryHeatmap(ctx, &HeatmapQuery{StartTime: mhq7905Time(8, 0, 0).Format(time.RFC3339), EndTime: mhq7905Time(12, 0, 0).Format(time.RFC3339)})
 		require.Error(t, err)
 	})
@@ -725,7 +726,7 @@ func newMhs7905Heatmap(t *testing.T, db *gorm.DB) *macHistoryHeatmapServiceImpl 
 	t.Helper()
 	mem := cache.NewMemoryCache(100, time.Minute)
 	t.Cleanup(func() { mem.Close() })
-	svc := NewMACHistoryHeatmapService(db, NewDataCacheService(mem), NewCacheConfigService(db))
+	svc := NewMACHistoryHeatmapService(db, newFakeMACHistoryCacheProvider(mem), NewCacheConfigService(db))
 	impl, ok := svc.(*macHistoryHeatmapServiceImpl)
 	require.True(t, ok)
 	return impl

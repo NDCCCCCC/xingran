@@ -247,8 +247,13 @@ func TestSetupMACHistoryRouter_BindsCorrectHandlers(t *testing.T) {
 		"SetupMACHistoryRouter must construct history handler")
 	assert.Contains(t, src, "heatmapHandler := NewMACHistoryHeatmapHandler(heatmapService)",
 		"SetupMACHistoryRouter must construct heatmap handler")
-	assert.Contains(t, src, "NewMACHistoryHeatmapService(core.GetDB(), nil, nil)",
-		"SetupMACHistoryRouter must instantiate heatmap service with nil provider args (perf passthrough)")
+	// Phase 103 CONV-01: 接线改为 system.NewCacheProvider(core.DataCacheService) + core.CacheConfigService（多行调用形态）
+	assert.Contains(t, src, "NewMACHistoryHeatmapService(",
+		"SetupMACHistoryRouter must instantiate heatmap service")
+	assert.Contains(t, src, "system.NewCacheProvider(core.DataCacheService)",
+		"SetupMACHistoryRouter must pass CacheProvider from system.NewCacheProvider(core.DataCacheService)")
+	assert.Contains(t, src, "core.CacheConfigService",
+		"SetupMACHistoryRouter must pass core.CacheConfigService as perfConfig")
 }
 
 // TestSetupTopologyRouter_Registers6Endpoints asserts SetupTopologyRouter
