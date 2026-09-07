@@ -18,6 +18,7 @@ import (
 	"gorm.io/gorm/schema"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	services "github.com/xingran-next/xingran-go-backend/internal/services"
 	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/xingran-next/xingran-go-backend/internal/websocket"
 	pkgcache "github.com/xingran-next/xingran-go-backend/pkg/cache"
@@ -343,7 +344,10 @@ func TestReconciliationService_GetByWorkstationCache(t *testing.T) {
 	ctx := context.Background()
 
 	mem := pkgcache.NewMemoryCache(50, time.Minute)
-	svc := NewReconciliationService(db, mem, nil)
+	// Phase 103 CONV-02: NewReconciliationService 入参改 base.CacheProvider，
+	// 测试经 system.NewCacheProvider(services root DataCacheService) 适配（B6）。
+	// asset 包 import services root + system 不成环（二者均不回 import asset）。
+	svc := NewReconciliationService(db, system.NewCacheProvider(services.NewDataCacheService(mem)), nil)
 
 	resp, err := svc.GetByWorkstation(ctx, "ws-1", "7d")
 	require.NoError(t, err)

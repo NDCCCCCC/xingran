@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/services/asset"
+	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 )
 
 // SetupReconciliationRouter 设置资产对账(异常列表)读端点路由
@@ -30,8 +31,9 @@ import (
 func SetupReconciliationRouter(r *gin.RouterGroup, core *core.Core) {
 	// R4:Cache 注入支持 GetByWorkstation 的 5min TTL 缓存
 	// R4 (Phase 45 / D-A4-02):exceptionSvc 注入用于 per-asset exception rule 命中
+	// Phase 103 CONV-02 (D-103-20): core.Cache → system.NewCacheProvider(core.DataCacheService)
 	exceptionSvc := asset.NewReconciliationExceptionService(core.DB.GetDB())
-	svc := asset.NewReconciliationService(core.DB.GetDB(), core.Cache, exceptionSvc)
+	svc := asset.NewReconciliationService(core.DB.GetDB(), system.NewCacheProvider(core.DataCacheService), exceptionSvc)
 	handler := NewReconciliationHandler(svc).WithCore(core)
 
 	r.POST("/exception/list", handler.ListExceptions)

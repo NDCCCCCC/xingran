@@ -615,8 +615,9 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			// R4 (Phase 45) — 跨模块注入 ReconciliationService 到 WorkstationHandler
 			// GetByID 内根据 hasReconciliationPerm 决定是否拉对账健康度 (D-A1-01/03)
 			// Phase 45 R4: 注入 exceptionSvc 用于 per-asset 命中 (D-A4-02)
+			// Phase 103 CONV-02 (D-103-20): core.Cache → systemServices.NewCacheProvider(core.DataCacheService)
 			exceptionSvcForWs := asset.NewReconciliationExceptionService(core.DB.GetDB())
-			reconciliationSvc := asset.NewReconciliationService(core.DB.GetDB(), core.Cache, exceptionSvcForWs)
+			reconciliationSvc := asset.NewReconciliationService(core.DB.GetDB(), systemServices.NewCacheProvider(core.DataCacheService), exceptionSvcForWs)
 			workstationHandler := operations.NewWorkstationHandler(workstationService).
 				WithCore(core).
 				WithReconciliationService(reconciliationSvc)
