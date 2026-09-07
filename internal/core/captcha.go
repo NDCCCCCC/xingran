@@ -246,7 +246,7 @@ func (s *CaptchaService) GenerateCaptcha(ctx context.Context, clientIP string) (
 
 	// IP限流检查 - 从数据库读取限制次数
 	ipRateLimit := s.getIPRateLimit(ctx)
-	rateLimitKey := fmt.Sprintf("captcha:rate:%s", clientIP)
+	rateLimitKey := fmt.Sprintf(constants.CaptchaRateLimitKeyFormat, clientIP)
 
 	var count int64
 	var err error
@@ -294,14 +294,14 @@ func (s *CaptchaService) GenerateCaptcha(ctx context.Context, clientIP string) (
 		}
 
 		// 存储验证码到缓存
-		storageKey := fmt.Sprintf("captcha:data:%s", captchaID)
+		storageKey := fmt.Sprintf(constants.CaptchaDataKeyFormat, captchaID)
 		err = s.cache.Set(ctx, storageKey, code, expireDuration)
 		if err != nil {
 			return nil, fmt.Errorf("存储验证码失败: %w", err)
 		}
 
 		// 存储验证次数
-		attemptsKey := fmt.Sprintf("captcha:attempts:%s", captchaID)
+		attemptsKey := fmt.Sprintf(constants.CaptchaAttemptsKeyFormat, captchaID)
 		_ = s.cache.SetInt(ctx, attemptsKey, 0, expireDuration)
 
 		response = &captcha.CaptchaResponse{
@@ -323,14 +323,14 @@ func (s *CaptchaService) GenerateCaptcha(ctx context.Context, clientIP string) (
 			YPos:  sliderData["yPos"].(int),
 			Token: sliderData["token"].(string),
 		}
-		storageKey := fmt.Sprintf("captcha:data:%s", captchaID)
+		storageKey := fmt.Sprintf(constants.CaptchaDataKeyFormat, captchaID)
 		err = s.cache.SetJSON(ctx, storageKey, verifyData, expireDuration)
 		if err != nil {
 			return nil, fmt.Errorf("存储验证码失败: %w", err)
 		}
 
 		// 存储验证次数
-		attemptsKey := fmt.Sprintf("captcha:attempts:%s", captchaID)
+		attemptsKey := fmt.Sprintf(constants.CaptchaAttemptsKeyFormat, captchaID)
 		_ = s.cache.SetInt(ctx, attemptsKey, 0, expireDuration)
 
 		response = &captcha.CaptchaResponse{
@@ -353,18 +353,18 @@ func (s *CaptchaService) VerifyCaptcha(ctx context.Context, captchaID, input str
 	}
 
 	// 检查验证次数
-	attemptsKey := fmt.Sprintf("captcha:attempts:%s", captchaID)
+	attemptsKey := fmt.Sprintf(constants.CaptchaAttemptsKeyFormat, captchaID)
 	attempts, _ := s.cache.GetInt(ctx, attemptsKey)
 
 	if attempts >= s.config.MaxAttempts {
 		// 超过最大验证次数，删除验证码
-		storageKey := fmt.Sprintf("captcha:data:%s", captchaID)
+		storageKey := fmt.Sprintf(constants.CaptchaDataKeyFormat, captchaID)
 		_ = s.cache.Delete(ctx, storageKey)
 		_ = s.cache.Delete(ctx, attemptsKey)
 		return fmt.Errorf("验证码已失效，请重新获取")
 	}
 
-	storageKey := fmt.Sprintf("captcha:data:%s", captchaID)
+	storageKey := fmt.Sprintf(constants.CaptchaDataKeyFormat, captchaID)
 
 	switch s.config.Enabled {
 	case captcha.CaptchaTypeNormal:
@@ -412,18 +412,18 @@ func (s *CaptchaService) VerifySliderCaptcha(ctx context.Context, captchaID stri
 	}
 
 	// 检查验证次数
-	attemptsKey := fmt.Sprintf("captcha:attempts:%s", captchaID)
+	attemptsKey := fmt.Sprintf(constants.CaptchaAttemptsKeyFormat, captchaID)
 	attempts, _ := s.cache.GetInt(ctx, attemptsKey)
 
 	if attempts >= s.config.MaxAttempts {
-		storageKey := fmt.Sprintf("captcha:data:%s", captchaID)
+		storageKey := fmt.Sprintf(constants.CaptchaDataKeyFormat, captchaID)
 		_ = s.cache.Delete(ctx, storageKey)
 		_ = s.cache.Delete(ctx, attemptsKey)
 		return fmt.Errorf("验证码已失效，请重新获取")
 	}
 
 	// 获取存储的验证数据
-	storageKey := fmt.Sprintf("captcha:data:%s", captchaID)
+	storageKey := fmt.Sprintf(constants.CaptchaDataKeyFormat, captchaID)
 	var verifyData SliderVerifyData
 	err := s.cache.GetJSON(ctx, storageKey, &verifyData)
 	if err != nil {
@@ -500,7 +500,7 @@ func (s *CaptchaService) CheckLoginLock(ctx context.Context, username string) er
 
 // RecordLoginFailure 记录登录失败
 func (s *CaptchaService) RecordLoginFailure(ctx context.Context, username string) error {
-	failKey := fmt.Sprintf("login:fail:%s", username)
+	failKey := fmt.Sprintf(constants.LoginFailKeyFormat, username)
 	count, err := s.cache.Increment(ctx, failKey)
 	if err == nil && count == 1 {
 		// 首次失败，设置过期时间为1小时
@@ -526,7 +526,7 @@ func (s *CaptchaService) RecordLoginFailure(ctx context.Context, username string
 
 // ClearLoginFailure 清除登录失败记录（登录成功时调用）
 func (s *CaptchaService) ClearLoginFailure(ctx context.Context, username string) {
-	failKey := fmt.Sprintf("login:fail:%s", username)
+	failKey := fmt.Sprintf(constants.LoginFailKeyFormat, username)
 	_ = s.cache.Delete(ctx, failKey)
 }
 
