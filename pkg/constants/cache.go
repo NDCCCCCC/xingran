@@ -34,3 +34,12 @@ const (
 	// CaptchaCachePoolPrefixFormat 验证码缓存池前缀格式
 	CaptchaCachePoolPrefixFormat = "captcha:cache:pool:%s:%d"
 )
+
+// 根包服务缓存键格式（D-102-1 修订：root→system import环豁免，落点同D-102-2 captcha先例）
+const (
+	// UserEndpointsKeyFormat 用户可访问端点缓存键格式
+	UserEndpointsKeyFormat = "user_endpoints:%s"
+
+	// MacVendorKeyFormat MAC厂商缓存键格式
+	MacVendorKeyFormat = "mac:vendor:%s"
+)

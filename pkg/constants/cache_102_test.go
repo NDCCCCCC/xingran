@@ -30,3 +30,24 @@ func TestCaptchaCacheKeyEquivalence(t *testing.T) {
 		})
 	}
 }
+
+// TestRootServiceCacheKeyEquivalence 根包2格式等价快照测试：D-102-1修订 + D-102-2
+// 期望列 = 原字面量快照，被测列 = 常量本身
+// api_endpoint_service.go:63 / mac_history_query_service.go:256 调用点已确认
+func TestRootServiceCacheKeyEquivalence(t *testing.T) {
+	cases := []struct {
+		name string
+		want string
+		got  string
+	}{
+		{"UserEndpointsKeyFormat", "user_endpoints:%s", UserEndpointsKeyFormat},
+		{"MacVendorKeyFormat", "mac:vendor:%s", MacVendorKeyFormat},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, tc.got,
+				"常量 %s 值漂移：期望 %q，实际 %q", tc.name, tc.want, tc.got)
+		})
+	}
+}
