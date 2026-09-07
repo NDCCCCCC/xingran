@@ -18,6 +18,7 @@ import (
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/xingran-next/xingran-go-backend/internal/services/topology"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 	"github.com/xuri/excelize/v2"
 )
@@ -640,7 +641,7 @@ func (h *NetworkExportHandler) getPaginationParams(req *ExportRequest) (int, int
 		}
 		pageSize := req.PageSize
 		if pageSize < 1 {
-			pageSize = 10
+			pageSize = constants.DefaultPageSize
 		}
 		return current, pageSize
 	case ExportModeAll:

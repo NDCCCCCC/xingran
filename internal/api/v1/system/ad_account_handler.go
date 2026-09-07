@@ -10,6 +10,7 @@ import (
 	addomainServices "github.com/xingran-next/xingran-go-backend/internal/services/addomain"
 	"github.com/xingran-next/xingran-go-backend/internal/utils"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
@@ -17,14 +18,15 @@ import (
 // ADAccountHandler AD 服务账号池管理 Handler（Phase 36）
 //
 // 端点列表（全部 POST，与项目约定一致）：
-//   POST /list       列表（分页）
-//   POST /create     新增
-//   POST /update     更新
-//   POST /delete     删除
-//   POST /enable     启用
-//   POST /disable    停用
-//   POST /unlock     立即解锁（强制 reason ≥10 字符 + 操作者）
-//   POST /stats      池状态摘要
+//
+//	POST /list       列表（分页）
+//	POST /create     新增
+//	POST /update     更新
+//	POST /delete     删除
+//	POST /enable     启用
+//	POST /disable    停用
+//	POST /unlock     立即解锁（强制 reason ≥10 字符 + 操作者）
+//	POST /stats      池状态摘要
 type ADAccountHandler struct {
 	pool addomainServices.AccountPool
 	core *core.Core
@@ -77,8 +79,12 @@ func (h *ADAccountHandler) List(c *gin.Context) {
 		response.Error(c, 400, "请求参数错误: "+err.Error())
 		return
 	}
-	if req.Page < 1 { req.Page = 1 }
-	if req.PageSize < 1 || req.PageSize > 200 { req.PageSize = 20 }
+	if req.Page < 1 {
+		req.Page = constants.DefaultCurrent
+	}
+	if req.PageSize < 1 || req.PageSize > 200 {
+		req.PageSize = 20
+	}
 
 	list, total, err := h.pool.ListAll(c.Request.Context(), req.ConfigID, req.Page, req.PageSize, req.Status)
 	if err != nil {
@@ -142,7 +148,9 @@ func (h *ADAccountHandler) Update(c *gin.Context) {
 		return
 	}
 
-	if req.Username != "" { existing.Username = req.Username }
+	if req.Username != "" {
+		existing.Username = req.Username
+	}
 	if req.Password != "" {
 		// 服务端 SM4 加密（复用 core.SM4Cipher）
 		encryptedPwd, err := h.core.SM4Cipher.Encrypt(req.Password)

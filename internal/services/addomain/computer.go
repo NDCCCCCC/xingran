@@ -9,6 +9,7 @@ import (
 	"github.com/go-ldap/ldap/v3"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -77,13 +78,13 @@ func (s *ComputerService) List(ctx context.Context, req *ComputerListRequest) ([
 // normalizePagination 设置默认分页参数
 func (s *ComputerService) normalizePagination(req *ComputerListRequest) {
 	if req.Current <= 0 {
-		req.Current = 1
+		req.Current = constants.DefaultCurrent
 	}
 	if req.PageSize <= 0 {
-		req.PageSize = 10
+		req.PageSize = constants.DefaultPageSize
 	}
 	if req.PageSize > 100 {
-		req.PageSize = 100
+		req.PageSize = constants.MaxListPageSize
 	}
 }
 

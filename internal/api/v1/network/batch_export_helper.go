@@ -17,14 +17,15 @@ import (
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/xingran-next/xingran-go-backend/internal/services/topology"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 	"github.com/xuri/excelize/v2"
 )
 
 // BatchExportRequest 批量导出请求
 type BatchExportRequest struct {
-	EntityTypes []string                 `json:"entityTypes" binding:"required,min=1,max=9"`
-	Filters     map[string]interface{}  `json:"filters"`
+	EntityTypes []string               `json:"entityTypes" binding:"required,min=1,max=9"`
+	Filters     map[string]interface{} `json:"filters"`
 }
 
 // entityExportConfig 实体导出配置
@@ -80,7 +81,7 @@ func (h *NetworkExportHandler) BatchExport(c *gin.Context) {
 		// 创建导出请求
 		exportReq := ExportRequest{
 			ExportMode: ExportModeFiltered,
-			Current:    1,
+			Current:    constants.DefaultCurrent,
 			PageSize:   maxExportRows,
 			Filters:    req.Filters,
 		}

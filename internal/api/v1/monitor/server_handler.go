@@ -8,6 +8,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	monitorServices "github.com/xingran-next/xingran-go-backend/internal/services/monitor"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 	responseHelpers "github.com/xingran-next/xingran-go-backend/pkg/response"
@@ -50,15 +51,15 @@ func (h *ServerHandler) GetServerInfo(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		req.Current = 1
-		req.PageSize = 10
+		req.Current = constants.DefaultCurrent
+		req.PageSize = constants.DefaultPageSize
 	}
 
 	if req.Current <= 0 {
-		req.Current = 1
+		req.Current = constants.DefaultCurrent
 	}
 	if req.PageSize <= 0 {
-		req.PageSize = 10
+		req.PageSize = constants.DefaultPageSize
 	}
 
 	servers, total, err := h.serverService.GetServerInfo(c.Request.Context(), monitorServices.ServerInfoParams{
@@ -172,15 +173,15 @@ func (h *ServerHandler) GetSystemMetricsHistory(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		req.Current = 1
-		req.PageSize = 100
+		req.Current = constants.DefaultCurrent
+		req.PageSize = constants.MaxListPageSize
 	}
 
 	if req.Current <= 0 {
-		req.Current = 1
+		req.Current = constants.DefaultCurrent
 	}
 	if req.PageSize <= 0 {
-		req.PageSize = 100
+		req.PageSize = constants.MaxListPageSize
 	}
 
 	var serverID string

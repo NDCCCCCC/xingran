@@ -7,6 +7,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	vdiServices "github.com/xingran-next/xingran-go-backend/internal/services/vdi"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
@@ -79,10 +80,10 @@ func (h *VDIServerHandler) List(c *gin.Context) {
 
 	// 设置默认分页参数
 	if params.Page <= 0 {
-		params.Page = 1
+		params.Page = constants.DefaultCurrent
 	}
 	if params.PageSize <= 0 {
-		params.PageSize = 10
+		params.PageSize = constants.DefaultPageSize
 	}
 
 	result, err := h.serverService.ListServers(c.Request.Context(), params.Page, params.PageSize, params.OrderByColumn, params.IsAsc)

@@ -8,6 +8,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/topology"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 	"gorm.io/gorm"
 )
@@ -175,17 +176,17 @@ func (h *TopologyHandler) ListRules(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		// 如果是空请求体或解析失败，使用默认值
 		req = topology.ListFilterRulesParams{
-			Current:  1,
+			Current:  constants.DefaultCurrent,
 			PageSize: 10,
 		}
 	}
 
 	// 设置默认分页值
 	if req.Current < 1 {
-		req.Current = 1
+		req.Current = constants.DefaultCurrent
 	}
 	if req.PageSize < 1 || req.PageSize > 100 {
-		req.PageSize = 10
+		req.PageSize = constants.DefaultPageSize
 	}
 
 	result, err := h.filterRuleService.List(c.Request.Context(), req)

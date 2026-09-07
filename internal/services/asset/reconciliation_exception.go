@@ -16,6 +16,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"github.com/xingran-next/xingran-go-backend/internal/services/operations"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 )
 
 // ============================================================================
@@ -265,7 +266,7 @@ func (s *reconciliationExceptionServiceImpl) List(ctx context.Context, params *E
 	}
 	pageSize := params.PageSize
 	if pageSize <= 0 {
-		pageSize = 10
+		pageSize = constants.DefaultPageSize
 	}
 
 	// 基础查询

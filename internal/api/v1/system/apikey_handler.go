@@ -7,6 +7,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
@@ -254,20 +255,20 @@ func (h *APIKeyHandler) ListUsageLogs(c *gin.Context) {
 	if err := c.ShouldBindJSON(&params); err != nil {
 		// 使用默认值
 		params = systemServices.ListUsageLogsParams{
-			Current:  1,
+			Current:  constants.DefaultCurrent,
 			PageSize: 20,
 		}
 	}
 
 	// 应用分页限制（最大100条每页）
 	if params.Current < 1 {
-		params.Current = 1
+		params.Current = constants.DefaultCurrent
 	}
 	if params.PageSize < 1 {
 		params.PageSize = 20
 	}
 	if params.PageSize > 100 {
-		params.PageSize = 100
+		params.PageSize = constants.MaxListPageSize
 	}
 
 	// 设置API密钥ID

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"gorm.io/gorm"
 )
 
@@ -40,8 +41,8 @@ type APINotificationConfigListParams struct {
 // DefaultAPINotificationConfigListParams 默认列表参数
 func DefaultAPINotificationConfigListParams() APINotificationConfigListParams {
 	return APINotificationConfigListParams{
-		Current:  1,
-		PageSize: 10,
+		Current:  constants.DefaultCurrent,
+		PageSize: constants.DefaultPageSize,
 	}
 }
 

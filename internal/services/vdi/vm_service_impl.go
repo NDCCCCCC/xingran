@@ -624,10 +624,10 @@ func (s *vmServiceImpl) ListVMs(ctx context.Context, req *ListVMRequest, userID 
 
 	// 设置默认分页参数
 	if req.Page <= 0 {
-		req.Page = 1
+		req.Page = constants.DefaultCurrent
 	}
 	if req.PageSize <= 0 || req.PageSize > 100 {
-		req.PageSize = 10
+		req.PageSize = constants.DefaultPageSize
 	}
 
 	// 构建查询

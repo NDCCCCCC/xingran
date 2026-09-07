@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 )
 
 // PageResult 分页结果
@@ -25,8 +26,8 @@ type ListParams struct {
 func DefaultListParams() ListParams {
 	return ListParams{
 		BaseListRequest: base.BaseListRequest{
-			Current:  1,
-			PageSize: 10,
+			Current:  constants.DefaultCurrent,
+			PageSize: constants.DefaultPageSize,
 		},
 	}
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
@@ -40,16 +41,16 @@ type DeviceHistoryQuery struct {
 
 // MACHistoryRecord MAC历史记录响应
 type MACHistoryRecord struct {
-	ID                 string      `json:"id"`
-	DeviceID           string      `json:"deviceId"`
-	DeviceNameSnapshot string      `json:"deviceNameSnapshot"`
-	MACAddress         string      `json:"macAddress"`
-	InterfaceName      string      `json:"interfaceName"`
-	VLANID             *int        `json:"vlanId,omitempty"`
-	EventType          string      `json:"eventType"`
-	FirstSeen          time.Time   `json:"firstSeen"`
-	LastSeen           time.Time   `json:"lastSeen"`
-	CollectedAt        time.Time   `json:"collectedAt"`
+	ID                 string    `json:"id"`
+	DeviceID           string    `json:"deviceId"`
+	DeviceNameSnapshot string    `json:"deviceNameSnapshot"`
+	MACAddress         string    `json:"macAddress"`
+	InterfaceName      string    `json:"interfaceName"`
+	VLANID             *int      `json:"vlanId,omitempty"`
+	EventType          string    `json:"eventType"`
+	FirstSeen          time.Time `json:"firstSeen"`
+	LastSeen           time.Time `json:"lastSeen"`
+	CollectedAt        time.Time `json:"collectedAt"`
 }
 
 // MACHistoryListQuery 通用MAC历史列表查询请求（支持过滤+分页）
@@ -77,10 +78,10 @@ type MACHistoryQueryResult struct {
 
 // ConnectionStatsQuery 连接时长统计查询请求
 type ConnectionStatsQuery struct {
-	MACAddress string `json:"macAddress,omitempty"` // 可选，留空统计所有MAC
+	MACAddress string `json:"macAddress,omitempty"`         // 可选，留空统计所有MAC
 	StartTime  string `json:"startTime" binding:"required"` // RFC3339，必填
 	EndTime    string `json:"endTime" binding:"required"`   // RFC3339，必填
-	TopN       int    `json:"topN,omitempty"`        // 默认10
+	TopN       int    `json:"topN,omitempty"`               // 默认10
 }
 
 // ConnectionStatsDetail 连接时长统计明细
@@ -91,9 +92,9 @@ type ConnectionStatsDetail struct {
 	Interface       string    `json:"interface"`
 	FirstSeen       time.Time `json:"firstSeen"`
 	LastSeen        time.Time `json:"lastSeen"`
-	Duration        int64     `json:"duration"`       // 秒
+	Duration        int64     `json:"duration"` // 秒
 	EventCount      int       `json:"eventCount"`
-	FlappingCount   int       `json:"flappingCount"`  // event_type='moved'计数
+	FlappingCount   int       `json:"flappingCount"`   // event_type='moved'计数
 	IsLongOccupancy bool      `json:"isLongOccupancy"` // duration > threshold
 }
 
@@ -293,7 +294,7 @@ func (s *macHistoryQueryServiceImpl) QueryPortHistory(ctx context.Context, req *
 
 	// 设置默认值
 	if req.Current < 1 {
-		req.Current = 1
+		req.Current = constants.DefaultCurrent
 	}
 	if req.PageSize < 1 {
 		req.PageSize = 20
@@ -418,7 +419,7 @@ func (s *macHistoryQueryServiceImpl) QueryDeviceHistory(ctx context.Context, req
 
 	// 设置默认值
 	if req.Current < 1 {
-		req.Current = 1
+		req.Current = constants.DefaultCurrent
 	}
 	if req.PageSize < 1 {
 		req.PageSize = 20
@@ -548,7 +549,7 @@ func (s *macHistoryQueryServiceImpl) QueryHistory(ctx context.Context, req *MACH
 
 	// 默认值
 	if req.Current < 1 {
-		req.Current = 1
+		req.Current = constants.DefaultCurrent
 	}
 	if req.PageSize < 1 {
 		req.PageSize = 20

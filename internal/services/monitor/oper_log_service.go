@@ -6,6 +6,7 @@ import (
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"gorm.io/gorm"
 )
 
@@ -59,8 +60,8 @@ type OperLogListParams struct {
 func DefaultOperLogListParams() OperLogListParams {
 	return OperLogListParams{
 		BaseListRequest: base.BaseListRequest{
-			Current:  1,
-			PageSize: 10,
+			Current:  constants.DefaultCurrent,
+			PageSize: constants.DefaultPageSize,
 		},
 	}
 }

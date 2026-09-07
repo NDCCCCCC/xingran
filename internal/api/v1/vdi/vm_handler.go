@@ -8,6 +8,7 @@ import (
 	vdiServices "github.com/xingran-next/xingran-go-backend/internal/services/vdi"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 	"gorm.io/gorm"
 )
@@ -77,10 +78,10 @@ func (h *VMHandler) List(c *gin.Context) {
 
 	// 设置默认分页参数
 	if req.Page <= 0 {
-		req.Page = 1
+		req.Page = constants.DefaultCurrent
 	}
 	if req.PageSize <= 0 {
-		req.PageSize = 10
+		req.PageSize = constants.DefaultPageSize
 	}
 
 	// Extract data scope info from Gin context (set by DataScopePermission middleware)

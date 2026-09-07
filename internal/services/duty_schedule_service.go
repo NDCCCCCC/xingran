@@ -7,6 +7,7 @@ import (
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"gorm.io/gorm"
 )
 
@@ -200,7 +201,7 @@ func (s *DutyScheduleService) GetDutyScheduleList(ctx context.Context, req *Duty
 
 	// 分页查询
 	if req.Current == 0 {
-		req.Current = 1
+		req.Current = constants.DefaultCurrent
 	}
 	if req.PageSize == 0 {
 		req.PageSize = 20

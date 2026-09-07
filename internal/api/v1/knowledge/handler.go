@@ -7,6 +7,7 @@ import (
 	knowledgeServices "github.com/xingran-next/xingran-go-backend/internal/services/knowledge"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
@@ -293,7 +294,7 @@ func (h *ArticleHandler) Search(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		// 使用默认值
 		if req.PageSize <= 0 {
-			req.PageSize = 100
+			req.PageSize = constants.MaxListPageSize
 		}
 		if req.PageNum < 0 {
 			req.PageNum = 0

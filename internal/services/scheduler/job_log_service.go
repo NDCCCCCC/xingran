@@ -8,6 +8,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"github.com/xingran-next/xingran-go-backend/internal/services/common"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"gorm.io/gorm"
 )
 
@@ -75,10 +76,10 @@ func (s *jobLogServiceImpl) Create(ctx context.Context, log *models.JobLog) erro
 func (s *jobLogServiceImpl) List(ctx context.Context, params *JobLogListParams) (*common.PageResult, error) {
 	// 设置默认值
 	if params.Current <= 0 {
-		params.Current = 1
+		params.Current = constants.DefaultCurrent
 	}
 	if params.PageSize <= 0 {
-		params.PageSize = 10
+		params.PageSize = constants.DefaultPageSize
 	}
 
 	// 构建查询条件

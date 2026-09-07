@@ -6,6 +6,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	monitorServices "github.com/xingran-next/xingran-go-backend/internal/services/monitor"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
@@ -52,8 +53,8 @@ func (h *LoginLogHandler) List(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		req = LoginLogListRequest{
 			BaseListRequest: base.BaseListRequest{
-				Current:  1,
-				PageSize: 10,
+				Current:  constants.DefaultCurrent,
+				PageSize: constants.DefaultPageSize,
 			},
 		}
 	}

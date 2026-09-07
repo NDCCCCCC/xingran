@@ -8,6 +8,7 @@ import (
 
 	"github.com/xingran-next/xingran-go-backend/internal/models/system/requests"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	"github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
@@ -216,7 +217,7 @@ func WarmUpUserCache(userSvc UserService) WarmUpFunc {
 		// 获取所有用户列表并缓存
 		params := requests.UserListParams{
 			BaseListRequest: base.BaseListRequest{
-				Current:  1,
+				Current:  constants.DefaultCurrent,
 				PageSize: 1000,
 			},
 		}
@@ -234,7 +235,7 @@ func WarmUpRoleCache(roleSvc RoleService) WarmUpFunc {
 		// 获取所有角色列表并缓存
 		params := requests.RoleListParams{
 			BaseListRequest: base.BaseListRequest{
-				Current:  1,
+				Current:  constants.DefaultCurrent,
 				PageSize: 1000,
 			},
 		}
@@ -276,7 +277,7 @@ func WarmUpPostCache(postSvc PostService) WarmUpFunc {
 		// 获取所有岗位列表并缓存
 		params := requests.PostListParams{
 			BaseListRequest: base.BaseListRequest{
-				Current:  1,
+				Current:  constants.DefaultCurrent,
 				PageSize: 1000,
 			},
 		}
