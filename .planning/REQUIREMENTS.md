@@ -9,10 +9,12 @@ status: defined
 **Core Value:** 清偿 2026-09-07 全量技术债务审计台账的全部 12 组未修复项（F-06~F-17）+ 顺带 nilness 观察项，达成：非测试代码 TODO 清零、status/cache-key/分页/协议字面量清零、缓存闭包收敛 base 单一权威、wire 契约统一、skip 测试尽力恢复。
 
 **输入来源:**
+
 - `.planning/notes/260907-audit-fix-tech-debt-findings.md`（F-06~F-09 not-attempted + F-10~F-17 manual-only + 观察项）
 - `.planning/PROJECT.md` v1.31 段（D-01~D-05 锁定决策）
 
 **锁定决策 (v1.31 init):**
+
 - **D-01 范围**: 台账 12 组全做；F-15 逐项决策实现或删除、不留兼容壳
 - **D-02 回归纪律**: 行为变更附回归测试；七 gate（go build / go test / 后端 coverage ≥78.33 基线 / 前端 45 dirs / lint / type-check / diff coverage）全程不倒退
 - **D-03 设计决策项**: WIRE-01 wire 契约方向、FEMAP-03 颜色 token 选择在 phase 规划时敲定
@@ -28,7 +30,7 @@ status: defined
 
 ### STATUS — 状态字面量清零
 
-- [ ] **STATUS-01**: 剩余 12 处 status 字面量全部引用 models 具名常量：workorder/base.go:183（`[]int{0,1}`）、scheduler/job_service.go:331、scheduler/cron.go:43,62,235,407,435,832、scheduler/vdi_sync_tasks.go:48,85、workorder_tasks.go:195,328,451、reconciliation_tasks.go:196、mac_history_tasks.go:127、mac_history_matview_tasks.go:56（按实际常量存在性逐处核对；geocoding 百度 API 白名单豁免）
+- [x] **STATUS-01**: 剩余 12 处 status 字面量全部引用 models 具名常量：workorder/base.go:183（`[]int{0,1}`）、scheduler/job_service.go:331、scheduler/cron.go:43,62,235,407,435,832、scheduler/vdi_sync_tasks.go:48,85、workorder_tasks.go:195,328,451、reconciliation_tasks.go:196、mac_history_tasks.go:127、mac_history_matview_tasks.go:56（按实际常量存在性逐处核对；geocoding 百度 API 白名单豁免）
 
 ### PAGI — 分页口径归一
 
@@ -107,7 +109,7 @@ status: defined
 |-------------|-------|--------|
 | CACHE-01 | Phase 102 | Pending |
 | CACHE-02 | Phase 102 | Pending |
-| STATUS-01 | Phase 102 | Pending |
+| STATUS-01 | Phase 102 | Complete |
 | PAGI-01 | Phase 102 | Pending |
 | CONV-01 | Phase 103 | Pending |
 | CONV-02 | Phase 103 | Pending |

@@ -36,7 +36,7 @@ update_trigger: v1.31 ROADMAP 创建 — 12 类别 29 requirements → 7 phases�
 
 ## Phases
 
-- [ ] **Phase 102: 机械常量化（缓存键 / 状态 / 分页）** — captcha 12 处 + 10 模块 ~35 处内联 cache key、12 处 status 字面量、分页双口径全部收敛具名常量/单一权威，行为等价
+- [x] **Phase 102: 机械常量化（缓存键 / 状态 / 分页）** — captcha 12 处 + 10 模块 ~35 处内联 cache key、12 处 status 字面量、分页双口径全部收敛具名常量/单一权威，行为等价
 - [ ] **Phase 103: 缓存闭包收敛 base 单一权威** — mac_history/heatmap、asset reconciliation、rpa selector 三域 legacy GetOrSet 与手写 cache-aside 迁 base.GetOrSetJSON[T] + invariants 扫描扩口
 - [ ] **Phase 104: handler 层架构收敛（wire 契约 + 样板去重）** — 错误响应契约单一权威 + operations 14 handler 收敛（含 server_room 漂移修复）+ monitor 双 handler 去重
 - [ ] **Phase 105: 前端 CRUD 收敛 apiFactory** — adDomain/knowledge/duty/workorder 19 处手写五件套迁移 createResourceApi，invariants 基线归零
@@ -63,7 +63,7 @@ Phase 108 (SKIP 测试恢复；独立，建议最后在稳定代码上恢复测�
 
 ## Phase Details
 
-### Phase 102: 机械常量化（缓存键 / 状态 / 分页）
+**Status**: Completed (2026-09-07) — All 5 plans done (102-01 through 102-05)
 
 **Goal**: 后端残余硬编码清零——captcha 12 处 + notice/settings/duty/workorder/knowledge/network/api_endpoint/mac vendor/widget/rpa selector ~35 处内联 cache key（含失效 pattern）注册具名常量、12 处 status 字面量全部引用 models 具名常量、internal/utils ParsePagination 收敛 pkg/query 单一口径。全部行为等价，无业务语义变化。
 
@@ -83,9 +83,9 @@ Phase 108 (SKIP 测试恢复；独立，建议最后在稳定代码上恢复测�
 Plans:
 **Wave 1**
 
-- [ ] 102-01-PLAN.md — CACHE-01：captcha 键族常量化（pkg/constants 6 常量 + 16 位点替换 + 等价快照测试）
-- [ ] 102-04-PLAN.md — STATUS-01：status 位点替换（含新暴露 raw SQL 2 处）+ TestNoStatusLiteralUsage AST 扫描 + WorkOrderStatus 值锁补登记
-- [ ] 102-05-PLAN.md — PAGI-01：file_handler 迁移 NormalizePaginationWithMax(cap=100) + utils/pagination.go 整文件删除 + 调用方核对清单
+- [x] 102-01-PLAN.md — CACHE-01：captcha 键族常量化（pkg/constants 6 常量 + 16 位点替换 + 等价快照测试）
+- [x] 102-04-PLAN.md — STATUS-01：status 位点替换（含新暴露 raw SQL 2 处）+ TestNoStatusLiteralUsage AST 扫描 + WorkOrderStatus 值锁补登记
+- [x] 102-05-PLAN.md — PAGI-01：file_handler 迁移 NormalizePaginationWithMax(cap=100) + utils/pagination.go 整文件删除 + 调用方核对清单
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -226,7 +226,7 @@ Plans:
 
 | Phase | Status | Plans | Requirements | Started | Completed |
 |-------|--------|-------|--------------|---------|-----------|
-| Phase 102 机械常量化（缓存键/状态/分页） | Planned (5 plans) | 0/5 | CACHE-01..02 + STATUS-01 + PAGI-01 | - | - |
+| Phase 102 机械常量化（缓存键/状态/分页） | Completed (5 plans) | 5/5 | CACHE-01..02 + STATUS-01 + PAGI-01 | 2026-09-07 | 2026-09-07 |
 | Phase 103 缓存闭包收敛 base 单一权威 | Not started | 0/TBD | CONV-01..04 | - | - |
 | Phase 104 handler 层架构收敛（wire+handler） | Not started | 0/TBD | WIRE-01 + HANDLER-01..02 | - | - |
 | Phase 105 前端 CRUD 收敛 apiFactory | Not started | 0/TBD | FEAPI-01..04 | - | - |
