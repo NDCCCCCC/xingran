@@ -4,11 +4,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/services/rpa"
+	"github.com/xingran-next/xingran-go-backend/internal/services/system"
 )
 
 // SetupPublicWorkerRouter 设置公开的 Worker 路由（不需要认证）
 func SetupPublicWorkerRouter(r *gin.RouterGroup, core *core.Core) {
-	services := rpa.NewServiceGroup(core.GetDB(), core.Config, core.NoticeHub, core.Cache, nil)
+	// Phase 103 CONV-03 (D-103-20): 第 6 参数注入 base.CacheProvider
+	services := rpa.NewServiceGroup(core.GetDB(), core.Config, core.NoticeHub, core.Cache, nil, system.NewCacheProvider(core.DataCacheService))
 	handler := NewWorkerHandler(services.WorkerService, core)
 
 	// Worker 注册接口（公开，允许匿名访问）
@@ -21,7 +23,8 @@ func SetupPublicWorkerRouter(r *gin.RouterGroup, core *core.Core) {
 
 // SetupRPARouter 设置 RPA 路由（统一入口）
 func SetupRPARouter(r *gin.RouterGroup, core *core.Core) {
-	services := rpa.NewServiceGroup(core.GetDB(), core.Config, core.NoticeHub, core.Cache, nil)
+	// Phase 103 CONV-03 (D-103-20): 第 6 参数注入 base.CacheProvider
+	services := rpa.NewServiceGroup(core.GetDB(), core.Config, core.NoticeHub, core.Cache, nil, system.NewCacheProvider(core.DataCacheService))
 	excelService := rpa.NewRPAExcelService(core.GetDB())
 
 	// 任务路由

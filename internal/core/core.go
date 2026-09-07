@@ -1052,7 +1052,8 @@ func (c *Core) registerRPATasks() {
 		}
 
 		// 获取 RPA 服务
-		rpaServices := rpa.NewServiceGroup(c.GetDB(), c.Config, c.NoticeHub, c.Cache, c.SM4Cipher)
+		// Phase 103 CONV-03 (D-103-20): 第 6 参数注入 base.CacheProvider
+		rpaServices := rpa.NewServiceGroup(c.GetDB(), c.Config, c.NoticeHub, c.Cache, c.SM4Cipher, system.NewCacheProvider(c.DataCacheService))
 
 		// 执行 RPA 任务
 		req := &rpa.ExecuteTaskRequest{

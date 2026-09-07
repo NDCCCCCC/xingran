@@ -19,7 +19,7 @@ import (
 
 	"github.com/xingran-next/xingran-go-backend/internal/config"
 	rpamodels "github.com/xingran-next/xingran-go-backend/internal/models/rpa"
-	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 )
 
 // =====================================================================
@@ -229,11 +229,35 @@ func TestErrorAnalyzer_AnalyzeFailure_FallbackToLocal(t *testing.T) {
 }
 
 // fakeSelectorCache selector_learner 用缓存假实现。
+// Phase 103 CONV-03: 改造为满足 base.CacheProvider（9 方法）——Get/Set/Delete
+// 保留可注入闭包行为供 GetBestSelector 缓存路径断言，其余方法 NoOp。
 type fakeSelectorCache struct {
-	cache.Cache
 	get    func(ctx context.Context, key string) (string, error)
 	set    func(ctx context.Context, key string, val interface{}, ttl time.Duration) error
 	delete func(ctx context.Context, key string) error
+}
+
+var _ base.CacheProvider = (*fakeSelectorCache)(nil) // 编译期断言
+
+// GetOrSet 读穿透：Get 命中（可注入 get 闭包）→ Unmarshal 到 dest；
+// 未命中 → 执行 query，经 set 闭包记录写缓存（可注入），再 Unmarshal 回 dest。
+func (f *fakeSelectorCache) GetOrSet(ctx context.Context, key string, dest interface{}, expiration time.Duration, query func() (interface{}, error)) error {
+	cached, getErr := f.Get(ctx, key)
+	if getErr == nil && cached != "" {
+		if json.Unmarshal([]byte(cached), dest) == nil {
+			return nil
+		}
+	}
+	result, err := query()
+	if err != nil {
+		return err
+	}
+	_ = f.Set(ctx, key, result, expiration)
+	data, mErr := json.Marshal(result)
+	if mErr != nil {
+		return mErr
+	}
+	return json.Unmarshal(data, dest)
 }
 
 func (f *fakeSelectorCache) Get(ctx context.Context, key string) (string, error) {
@@ -253,6 +277,23 @@ func (f *fakeSelectorCache) Delete(ctx context.Context, key string) error {
 		return f.delete(ctx, key)
 	}
 	return nil
+}
+func (f *fakeSelectorCache) DeleteByPattern(ctx context.Context, pattern string) error { return nil }
+func (f *fakeSelectorCache) MGet(ctx context.Context, keys ...string) (map[string]string, error) {
+	return nil, nil
+}
+func (f *fakeSelectorCache) MDelete(ctx context.Context, keys ...string) error { return nil }
+func (f *fakeSelectorCache) Exists(ctx context.Context, key string) (bool, error) {
+	return false, nil
+}
+func (f *fakeSelectorCache) SetTTL(ctx context.Context, key string, expiration time.Duration) error {
+	return nil
+}
+func (f *fakeSelectorCache) GetTTL(ctx context.Context, key string) (time.Duration, error) {
+	return 0, nil
+}
+func (f *fakeSelectorCache) GetStats(ctx context.Context) (*base.CacheStats, error) {
+	return nil, nil
 }
 
 func newSelectorTestDB(t *testing.T) *gorm.DB {
@@ -533,7 +574,7 @@ func TestRPAExcelService_InterventionsAndReports(t *testing.T) {
 func TestServiceGroup(t *testing.T) {
 	db := newTaskTestDB(t)
 	cfg := newAICfg("", "", false, false)
-	sg := NewServiceGroup(db, cfg, nil, &fakePlainCache{}, &fakeRPACipher{})
+	sg := NewServiceGroup(db, cfg, nil, &fakePlainCache{}, &fakeRPACipher{}, &base.NoOpCacheProvider{})
 	require.NotNil(t, sg.TaskService)
 	require.NotNil(t, sg.WorkerService)
 	require.NotNil(t, sg.ExecutionService)

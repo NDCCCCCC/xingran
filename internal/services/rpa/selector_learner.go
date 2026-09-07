@@ -2,14 +2,14 @@ package rpa
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/xingran-next/xingran-go-backend/internal/config"
-	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	systemServices "github.com/xingran-next/xingran-go-backend/internal/services/system"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -26,13 +26,14 @@ type SelectorLearner interface {
 // selectorLearnerImpl 选择器学习服务实现
 type selectorLearnerImpl struct {
 	db     *gorm.DB
-	cache  cache.Cache
+	cache  base.CacheProvider
 	config *config.Config
 	mu     sync.RWMutex
 }
 
 // NewSelectorLearner 创建选择器学习服务
-func NewSelectorLearner(db *gorm.DB, cache cache.Cache, cfg *config.Config) SelectorLearner {
+// Phase 103 CONV-03 (D-103-2): cache cache.Cache → cache base.CacheProvider
+func NewSelectorLearner(db *gorm.DB, cache base.CacheProvider, cfg *config.Config) SelectorLearner {
 	return &selectorLearnerImpl{
 		db:     db,
 		cache:  cache,
@@ -122,8 +123,8 @@ func (l *selectorLearnerImpl) RecordSuccess(ctx context.Context, record *Selecto
 	}
 
 	// 清除缓存
-	cacheKey := l.getCacheKey(record.PageURL, record.ElementID)
-	_ = l.cache.Delete(ctx, cacheKey)
+	// Phase 103 CONV-03 (D-103-14): cache.Delete → base.Invalidate（nil 防护 + 统一日志）
+	base.Invalidate(ctx, l.cache, []string{l.getCacheKey(record.PageURL, record.ElementID)}, "SelectorLearner")
 
 	return nil
 }
@@ -165,15 +166,37 @@ func (l *selectorLearnerImpl) RecordFailure(ctx context.Context, record *Selecto
 
 // GetBestSelector 获取最佳选择器
 func (l *selectorLearnerImpl) GetBestSelector(ctx context.Context, pageURL, elementID string) (*SelectorRecommendation, error) {
-	// 先检查缓存
-	cacheKey := l.getCacheKey(pageURL, elementID)
-	if cached, err := l.cache.Get(ctx, cacheKey); err == nil {
-		var result SelectorRecommendation
-		if err := json.Unmarshal([]byte(cached), &result); err == nil {
-			return &result, nil
-		}
-	}
+	// Phase 103 CONV-03 (D-103-8): 手写 JSON cache-aside 收敛 getBestSelectorCached
+	// wrapper，best-effort 静默语义保留（cache 层任何错误 → nil, nil 视为 miss）
+	return l.getBestSelectorCached(ctx, pageURL, elementID)
+}
 
+// getBestSelectorCached 读穿透缓存 wrapper (Phase 103 CONV-03, D-103-8)。
+//
+// best-effort 静默语义（与原手写实现等价）：
+//   - 原实现 cache.Get 失败/Unmarshal 失败 → 静默走 DB；Set 失败 → `_ =` 忽略
+//   - 迁移后 cache 层任何错误（读/写/unmarshal）→ warn 日志后 DB 直查重算，
+//     重算成功照常返回（不向调用方透出 cache 错误）
+//   - DB 查询返回 (nil, nil)（无记录）时同样静默返回，不缓存占位
+//
+// TTL 保持 30*time.Minute 字面量（D-103-12）。
+func (l *selectorLearnerImpl) getBestSelectorCached(ctx context.Context, pageURL, elementID string) (*SelectorRecommendation, error) {
+	cacheKey := l.getCacheKey(pageURL, elementID)
+
+	best, err := base.GetOrSetJSON[*SelectorRecommendation](ctx, l.cache, cacheKey, 30*time.Minute, func() (*SelectorRecommendation, error) {
+		return l.computeBestSelector(ctx, pageURL, elementID)
+	})
+	if err != nil {
+		// D-103-8: best-effort 静默——cache 层错误降级 DB 直查重算
+		applogger.Warnf("[selector_learner] GetBestSelector cache 走直查 pageURL=%s elementID=%s: %v", pageURL, elementID, err)
+		return l.computeBestSelector(ctx, pageURL, elementID)
+	}
+	return best, nil
+}
+
+// computeBestSelector DB 直查最佳选择器（原 GetBestSelector 主体查询逻辑）。
+// 返回 (nil, nil) 表示无记录；DB 查询错误透传。
+func (l *selectorLearnerImpl) computeBestSelector(ctx context.Context, pageURL, elementID string) (*SelectorRecommendation, error) {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 
@@ -218,13 +241,6 @@ func (l *selectorLearnerImpl) GetBestSelector(ctx context.Context, pageURL, elem
 		if score > maxScore {
 			maxScore = score
 			best = rec
-		}
-	}
-
-	// 缓存结果
-	if best != nil {
-		if data, err := json.Marshal(best); err == nil {
-			_ = l.cache.Set(ctx, cacheKey, string(data), 30*time.Minute)
 		}
 	}
 

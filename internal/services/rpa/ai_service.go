@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/xingran-next/xingran-go-backend/internal/config"
-	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	"gorm.io/gorm"
 )
 
@@ -57,7 +57,8 @@ type aiServiceImpl struct {
 }
 
 // NewAIService 创建 AI 服务
-func NewAIService(cfg *config.Config, db *gorm.DB, cache cache.Cache) AIService {
+// Phase 103 CONV-03 (D-103-20): cache cache.Cache → cacheProvider base.CacheProvider
+func NewAIService(cfg *config.Config, db *gorm.DB, cacheProvider base.CacheProvider) AIService {
 	// 创建脚本生成客户端
 	generatorClient := NewAIClient(
 		cfg.RPA.AI.Generator.BaseURL,
@@ -81,7 +82,7 @@ func NewAIService(cfg *config.Config, db *gorm.DB, cache cache.Cache) AIService 
 		generatorClient: generatorClient,
 		agentClient:     agentClient,
 		errorAnalyzer:   NewErrorAnalyzer(cfg),
-		selectorLearner: NewSelectorLearner(db, cache, cfg),
+		selectorLearner: NewSelectorLearner(db, cacheProvider, cfg),
 	}
 }
 
