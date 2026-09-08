@@ -115,7 +115,7 @@ Plans:
   4. invariants 扩口：`cache_invariants_92_test.go` 扫描口径扩展至 services 根 / asset / rpa 包，interface{} 闭包式 GetOrSet 硬失败，扫描全绿（CONV-04）
   5. 回归纪律：`go test ./internal/services/...` 0 失败，七 gate 不倒退
 
-**Plans**: TBD
+**Plans**: 4 plans (4 waves)
 
 ---
 
@@ -134,9 +134,9 @@ Plans:
   3. monitor 双 handler 去重：oper_log_handler.go:54-160 与 login_log_handler.go:49-157 五方法复制去重；login 侧手写 `response.Error(apperrors.InternalServerError(err))` 统一走 HandleServiceError（HANDLER-02）
   4. 回归纪律：响应契约行为变更附回归测试；operlog 全覆盖约定不回退（收敛后写端点 `operlog.Record` 调用点逐一核对）；七 gate 不倒退
 
-**Plans**: TBD
+**Plans**: 4 plans (4 waves)
 
-**Notes**: D-03 设计决策项（wire 契约方向）在本相 plan-phase 前置 discuss 敲定。本相去重后的 login_log_handler.go 由 Phase 107 再决策 TODO-03 解锁用户项（同文件顺序）。
+**Notes**: 本相去重后的 login_log_handler.go 由 Phase 107 再决策 TODO-03 解锁用户项（同文件顺序）。
 
 ---
 
@@ -155,7 +155,7 @@ Plans:
   3. 契约零破坏：单参 delete 契约（D-14）保持；全部 export 函数签名（含返回类型注解）不变，消费文件 diff 为 0
   4. 回归纪律：type-check / lint / vitest 全绿，前端 45 dirs gate 不倒退
 
-**Plans**: TBD
+**Plans**: 4 plans (4 waves)
 
 ---
 
@@ -175,7 +175,7 @@ Plans:
   4. eslint-disable 卫生：72 处无理由 disable（VirtualMachineList/useRoleActions/buildings/info-points/mac/externals.d.ts/helpers/ParamsEditor/CronSelector 等 ~31 文件）逐处补理由注释或修复根因移除，无理由 disable 计数归零（TS-02）
   5. 回归纪律：type-check / lint / vitest 全绿，前端 45 dirs + 覆盖率 gate 不倒退
 
-**Plans**: TBD
+**Plans**: 4 plans (4 waves)
 **UI hint**: yes
 
 ---
@@ -196,7 +196,7 @@ Plans:
   4. NIL-01 闭环：rpa/data_mapper.go:332 non-nil == nil 根因查明——死代码则删除，真 bug 则修复 + 回归测试
   5. 回归纪律：每项「实现」类决策附回归测试；七 gate 不倒退
 
-**Plans**: TBD
+**Plans**: 4 plans (4 waves)
 **UI hint**: yes
 
 **Notes**: 本相是 D-01「逐项决策、不留兼容壳」的主要落点——plan-phase 时按域拆 plan，每项决策可追溯（决策表 + commit）。体量最大（22 处 + 决策表 + 守护），预留 escalation 空间。
@@ -218,7 +218,7 @@ Plans:
   3. HUMAN-UAT 决策表：确需真实 LDAP/DB 环境的 skip 逐项落 HUMAN-UAT 台账（项 / 不可自动化原因 / owner / 前置条件），无静默遗留
   4. 回归纪律：恢复的测试 `-count=10` 无 flake；后端 coverage ≥78.33 基线不倒退（预期净增），七 gate 全绿
 
-**Plans**: TBD
+**Plans**: 4 plans (4 waves)
 
 ---
 
