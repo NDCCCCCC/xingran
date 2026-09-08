@@ -163,7 +163,7 @@ const Exceptions = () => {
   // 同步 URL → 表单初值
   useEffect(() => {
     form.setFieldsValue(filterValues);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reason: initializing form with filterValues from URL params; no reactive deps needed (setFieldsValue is stable)
   }, []);
 
   // 拼装 listParams

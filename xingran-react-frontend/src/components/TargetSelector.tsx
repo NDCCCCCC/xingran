@@ -88,7 +88,7 @@ const TargetSelector: FC<TargetSelectorProps> = ({
       // 指定用户
       loadUsers();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reason: targetType is the only trigger; dependent callbacks (loadDepts/loadUsers) are stable useCallback refs
   }, [targetType]);
 
   // 部门树选中变化

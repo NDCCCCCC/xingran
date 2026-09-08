@@ -102,10 +102,10 @@ const WARNING_WHITELIST: Record<string, number> = {
   // —— 部分委托文件的 KEEP 残留（delete 统一保持单参 post 直调：既有测试锁定
   //    单参契约，工厂 delete 传 {} 属 wire 级 body 变更——D-14 零改动红线）——
   noticeApi: 0, // admin notices 标准形状已委托；剩余 publish/withdraw/read/ignore 等全异构（非 CRUD 后缀）
-  adDomainApi: 3, // deleteADConfig 单参直调 KEEP + updateADGroup/updateADUser（groups/users 异构族 KEEP）；configs/mappings/ou-group 其余标准形状已委托
-  knowledgeApi: 5, // articles update/delete、categories delete、tags update/delete（update 直调 + delete 单参直调）；createKnowledgeArticle plain literal 不在模板口径
-  dutyApi: 5, // pools update/delete、schedules delete、holidays update/delete；create/update 异构（memberIds/Omit idiom）与 plain literal list 不在模板口径
-  workorderApi: 6, // orders update/delete、categories delete、periodic update/delete、comments/list 子资源列表；create/update 异构请求类型与 batchDelete plain literal 不在模板口径
+  adDomainApi: 1, // deleteADConfig 单参直调 KEEP（D-14）；configs/mappings/ou-group 其余标准形状已委托
+  knowledgeApi: 3, // deleteKnowledgeArticle/category/tag 单参直调 KEEP（D-14）；articles update/tag update 已委托
+  dutyApi: 3, // deleteDutyPool/schedule/holiday 单参直调 KEEP（D-14）；pools update/holidays update 已委托
+  workorderApi: 4, // deleteWorkOrder/category/PeriodicTemplate 单参直调 KEEP（D-14）；orders update/periodic update 已委托
   // —— Phase 100 D-100-8 递归扫描新纳管的 src/lib/api/ 子目录（0 也要显式登记）——
   "api/networkApi": 0, // post 类 write* 包装全为 plain-literal URL 不含 CRUD 后缀;exportMACHistory/batchExport 为薄壳调用 download.ts,不满足「单 return 直调传输函数」口径（D-100-6 收敛后归 download 域）
   "api/macHeatmapApi": 0, // 单函数 plain-literal URL,无 CRUD 后缀模板形状

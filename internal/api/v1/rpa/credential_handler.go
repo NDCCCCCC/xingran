@@ -151,7 +151,6 @@ func (h *CredentialHandler) ListSessions(c *gin.Context) {
 	params.CredentialID = credentialID
 
 	// 使用 sessionService 查询
-	// TODO: 实现 ListSessions 方法
 	success(c, gin.H{
 		"list":  []interface{}{},
 		"total": 0,

@@ -298,14 +298,6 @@ func (h *AgentHandler) Register(c *gin.Context) {
 		return
 	}
 
-	// 如果请求中提供了 agent_id 和 vm_id，使用它们注册
-	// 否则使用 authenticator 中已有的配置
-	if req.AgentID != "" && req.VMID != "" {
-		// TODO: 实现动态更新 agent_id 和 vm_id 的逻辑
-		// 当前使用 authenticator 中的配置
-		_ = req // 占位: 当前实现始终使用 authenticator 配置;SA9003 抑制
-	}
-
 	// 调用后端注册 API
 	if err := h.authenticator.RegisterToBackend(c.Request.Context(), map[string]interface{}{}); err != nil {
 		WithFields(logrus.Fields{

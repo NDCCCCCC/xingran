@@ -17,7 +17,7 @@
 /** 状态下拉选项（自带类型，不反向 import 页面类型，避免循环依赖） */
 export interface StatusOption {
   label: string;
-  value: number;
+  value: number | string;
 }
 
 /** 状态标签配置（与 options 的 value 集合一一对应） */
@@ -65,4 +65,52 @@ export const WORKSTATION_STATUS_TAG_CONFIG: StatusTagConfig = {
   0: { text: "空闲", color: "success" },
   1: { text: "占用", color: "error" },
   2: { text: "维护", color: "warning" },
+};
+
+// 对齐 fixSuggestionApi.FixStatus: pending/accepted/rejected/applied/rolled_back/failed
+// 消费方: asset/reconciliation/fix-suggestion
+export const FIX_STATUS_OPTIONS: StatusOption[] = [
+  { label: "待处理", value: "pending" },
+  { label: "已接受", value: "accepted" },
+  { label: "已拒绝", value: "rejected" },
+  { label: "已应用", value: "applied" },
+  { label: "已回滚", value: "rolled_back" },
+  { label: "失败", value: "failed" },
+];
+
+// rolled_back color: "orange" — Phase 106 FEMAP-01 unification (index.tsx correct, Drawer had "magenta")
+export const FIX_STATUS_TAG_CONFIG: Record<string, { text: string; color: string }> = {
+  pending: { text: "待处理", color: "gold" },
+  accepted: { text: "已接受", color: "blue" },
+  rejected: { text: "已拒绝", color: "default" },
+  applied: { text: "已应用", color: "green" },
+  rolled_back: { text: "已回滚", color: "orange" },
+  failed: { text: "失败", color: "red" },
+};
+
+// 对齐 MACHistoryRecord.status: 0=正常, 1=停用 (与 NORMAL_STOP 语义相同)
+// 消费方: network/mac/history
+// 注意: MAC 历史页面使用字面颜色 "green"/"red"（非 Ant Design 语义色），保持一致
+export const MAC_HISTORY_STATUS_OPTIONS: StatusOption[] = [
+  { label: "正常", value: 0 },
+  { label: "停用", value: 1 },
+];
+
+export const MAC_HISTORY_STATUS_TAG_CONFIG: StatusTagConfig = {
+  0: { text: "正常", color: "green" },
+  1: { text: "停用", color: "red" },
+};
+
+// 对齐 MACRecord.macType: dynamic/static/secure
+// 消费方: network/mac
+export const MAC_TYPE_OPTIONS: StatusOption[] = [
+  { label: "动态", value: "dynamic" },
+  { label: "静态", value: "static" },
+  { label: "安全", value: "secure" },
+];
+
+export const MAC_TYPE_TAG_CONFIG: Record<string, { text: string; color: string }> = {
+  dynamic: { text: "动态", color: "blue" },
+  static: { text: "静态", color: "green" },
+  secure: { text: "安全", color: "orange" },
 };

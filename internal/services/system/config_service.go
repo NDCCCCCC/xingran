@@ -254,7 +254,6 @@ func (s *configService) List(ctx context.Context, params requests.ConfigListPara
 }
 
 func (s *configService) RefreshCache(ctx context.Context) error {
-	// TODO: 实现缓存刷新逻辑
 	return nil
 }
 

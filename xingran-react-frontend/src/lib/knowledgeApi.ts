@@ -171,7 +171,7 @@ export function updateKnowledgeArticle(
   id: string,
   data: KnowledgeArticleUpdateRequest
 ): Promise<BaseResponse<{ message: string }>> {
-  return post(`/knowledge/articles/${id}/update`, data);
+  return articleCrud.update(id, data) as Promise<BaseResponse<{ message: string }>>;
 }
 
 export function deleteKnowledgeArticle(id: string): Promise<BaseResponse<{ message: string }>> {
@@ -238,11 +238,13 @@ export function createKnowledgeTag(data: { tagName: string }): Promise<BaseRespo
   return post("/knowledge/tags", data);
 }
 
+const tagCrud = createResourceApi<KnowledgeTag>({ basePath: "/knowledge/tags" });
+
 export function updateKnowledgeTag(
   id: string,
   data: { tagName: string }
 ): Promise<BaseResponse<{ message: string }>> {
-  return post(`/knowledge/tags/${id}/update`, data);
+  return tagCrud.update(id, data) as Promise<BaseResponse<{ message: string }>>;
 }
 
 export function deleteKnowledgeTag(id: string): Promise<BaseResponse<{ message: string }>> {

@@ -32,7 +32,7 @@ function App() {
     if (allMenus.length > 0) {
       routeConfigManager.initialize(allMenus);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reason: allMenus.length is intentionally the only trigger; routeConfigManager.initialize is stable and should not re-run on menu metadata changes
   }, [allMenus.length]);
 
   return (

@@ -27,14 +27,9 @@ func AssertAuthResult(t *testing.T, result *AuthResult, err error, expectedUser 
 	}
 }
 
-// setupTestDB 创建测试数据库
-// 注意：实际使用时需要配置测试数据库连接
+// setupTestDB creates a test database for authenticator tests.
 func setupTestDB(t *testing.T) *gorm.DB {
-	// TODO: 配置测试数据库
-	// 返回一个测试数据库实例
-	// 临时返回nil，实际使用时需要实现
-	t.Skip("测试数据库配置未实现")
-	return nil
+	return setupSecurityTestDB(t)
 }
 
 // mockAuthenticator Mock认证器（用于测试）

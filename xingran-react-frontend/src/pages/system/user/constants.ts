@@ -6,7 +6,7 @@ import { ENABLE_DISABLE_OPTIONS, ENABLE_DISABLE_TAG_CONFIG } from "@/constants/s
 
 export interface SelectOption {
   label: string;
-  value: number;
+  value: number | string;
 }
 
 // 性别选项（Phase 69 DICT-03: 降级为静态 fallback——下拉已迁 useDict("sys_user_sex")，

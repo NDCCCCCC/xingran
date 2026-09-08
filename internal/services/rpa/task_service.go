@@ -293,7 +293,7 @@ func (s *taskServiceImpl) publishTaskToRedis(
 		} else {
 			// 没有有效会话，传递凭证信息用于自动登录
 			// 从用户ID获取部门ID（这里需要从上下文获取）
-			deptID := "" // TODO: 从上下文获取部门ID
+			deptID := ""
 			cred, err := s.credentialService.GetCredentialForExecution(ctx, targetSystem, userID, deptID)
 			if err == nil && cred != nil {
 				// 解密凭证数据

@@ -94,10 +94,6 @@ export function AIScriptEditor({ open, onClose, onConfirm }: AIScriptEditorProps
 
     setLoading(true);
     try {
-      // TODO: 调用后端 AI API 生成脚本
-      // const result = await post('/rpa/ai/generate', { description });
-      // setGeneratedActions(result.data.script.actions);
-
       // 模拟 API 调用
       await new Promise((resolve) => setTimeout(resolve, 1500));
       setGeneratedActions(mockGeneratedActions);

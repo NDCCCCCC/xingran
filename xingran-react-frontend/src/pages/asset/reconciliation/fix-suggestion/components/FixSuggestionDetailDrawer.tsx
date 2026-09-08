@@ -12,30 +12,13 @@ import { Drawer, Tabs, Descriptions, Tag, Timeline, Empty, Spin } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { fixSuggestionApi, type FixSuggestionListItem, type FixStatus } from "@/lib/assetApi";
 import { queryKeys } from "@/lib/queryKeys";
+import { FIX_STATUS_TAG_CONFIG } from "@/constants/status";
 
 interface FixSuggestionDetailDrawerProps {
   open: boolean;
   suggestionId: string | null;
   onClose: () => void;
 }
-
-const fixStatusColor: Record<FixStatus, string> = {
-  pending: "gold",
-  accepted: "blue",
-  rejected: "default",
-  applied: "green",
-  rolled_back: "magenta",
-  failed: "red",
-};
-
-const fixStatusLabel: Record<FixStatus, string> = {
-  pending: "待处理",
-  accepted: "已接受",
-  rejected: "已拒绝",
-  applied: "已应用",
-  rolled_back: "已回滚",
-  failed: "失败",
-};
 
 /**
  * 7d 倒计时显示(46-02 Task 3 / D-C2 视觉强化)
@@ -243,12 +226,12 @@ export const FixSuggestionDetailDrawer = ({
                   data?.history && data.history.length > 1 ? (
                     <Timeline
                       items={data.history.map((h) => ({
-                        color: fixStatusColor[h.fixStatus],
+                        color: FIX_STATUS_TAG_CONFIG[h.fixStatus]?.color ?? "default",
                         children: (
                           <>
                             <div>
-                              <Tag color={fixStatusColor[h.fixStatus]}>
-                                {fixStatusLabel[h.fixStatus]}
+                              <Tag color={FIX_STATUS_TAG_CONFIG[h.fixStatus]?.color ?? "default"}>
+                                {FIX_STATUS_TAG_CONFIG[h.fixStatus]?.text ?? h.fixStatus}
                               </Tag>
                               <span style={{ color: "#999", fontSize: 12 }}>{h.id}</span>
                             </div>

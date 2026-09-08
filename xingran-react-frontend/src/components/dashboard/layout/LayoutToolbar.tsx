@@ -129,14 +129,12 @@ export const LayoutToolbar: React.FC<LayoutToolbarProps> = ({
     if (onAddWidget) {
       onAddWidget();
     } else {
-      // TODO: 打开Widget选择器
       message.info("Widget选择器功能待实现");
     }
   };
 
   // 打开设置
   const handleOpenSettings = () => {
-    // TODO: 打开仪表盘设置
     message.info("仪表盘设置功能待实现");
   };
 

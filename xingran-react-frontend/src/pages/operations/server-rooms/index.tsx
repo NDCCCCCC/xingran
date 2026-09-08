@@ -48,6 +48,7 @@ import ExcelImport from "@/components/shared/ExcelImport";
 import ExcelExport from "@/components/shared/ExcelExport";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { StatisticsCards } from "@/components/operations/StatisticsCards";
+import { NORMAL_STOP_TAG_CONFIG } from "@/constants/status";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -414,8 +415,9 @@ const ServerRoomManagement: FC = () => {
                     }}
                   >
                     <span>{room.name}</span>
-                    <Tag color={room.status === 0 ? "success" : "error"}>
-                      {room.status === 0 ? "正常" : "停用"}
+                    <Tag color={NORMAL_STOP_TAG_CONFIG[room.status]?.color ?? "default"}>
+                      {NORMAL_STOP_TAG_CONFIG[room.status]?.text ??
+                        (room.status === 0 ? "正常" : "停用")}
                     </Tag>
                   </div>
                 }
