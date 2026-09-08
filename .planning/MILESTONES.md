@@ -1,5 +1,37 @@
 # Milestones
 
+## v1.31 V131 技术债清偿 (Tech Debt Retirement) — ✅ SHIPPED 2026-09-08
+
+**Phases**: 7 (Phases 102-108) | **Plans**: 25 | **Status**: shipped
+
+**Stats**: 2026-09-07 → 2026-09-08（2 天）· All 7 phases complete
+
+**Delivered**:
+
+- Phase 102 机械常量化：CACHE-01 captcha 12 处键具名化 / CACHE-02 10 模块 47 调用点收敛 / STATUS-01 12 处 status 字面量清零 / PAGI-01 分页口径归一（pagination.go 删除）— 5 plans，3 waves
+- Phase 103 缓存闭包收敛：mac_history/reconciliation/selector 三域 legacy GetOrSet + 手写 cache-aside 全迁 base.GetOrSetJSON[T] + invariants 扩口至 services root/asset/rpa — 4 plans，21 D-truths 全 verified
+- Phase 104 handler 层架构收敛：pkg/response/handler_helpers.go 重写（BusinessError→apperrors）/ 14 operations handler 全量切换 / MonitorLogHandler[T] 泛型去重 / server_room 漂移修复 — 4 plans，8 commits
+- Phase 105 前端 CRUD 收敛：adDomainApi 3 / knowledgeApi 5 / dutyApi 5 / workorderApi 6 共 19 处手写五件套迁移 createResourceApi，apiFactory invariants 基线归零 — 4 plans
+- Phase 106 前端映射统一：server-rooms/MACHistory 选项+Tag → NORMAL_STOP_OPTIONS/TAG_CONFIG / fixStatusColor 双份统一（orange vs magenta 归一）/ 11 处内联三元 Tag 收束 / 11 处 `as any` 收窄 / 72 处 eslint-disable 补理由 — 4 plans
+- Phase 107 TODO 清零：22 处非测试代码 TODO 逐项实现或删除（D-01 不留兼容壳）+ 决策表落盘 + grep 守护进 CI / rpa/data_mapper nilness 闭环 — 4 plans
+- Phase 108 skip 测试恢复：HybridAuthenticator interface 化（hybrid_authenticator_test 5 处 skip 恢复）/ 嵌入式基建恢复 ad_authenticator 等 10 处 skip / HUMAN-UAT 决策表落档 — 4 plans
+
+**Key accomplishments**:
+
+1. ✅ Cache key literals zeroed: 68 constants + 38 helpers registered; 47 call sites replaced; 12-file scan 0 violations
+2. ✅ Status literals zeroed: 21+ sites replaced; `TestNoStatusLiteralUsage` AST guard active; WorkOrderStatus value locked
+3. ✅ Pagination single authority: `utils.ParsePagination` eliminated; `pagination.go` deleted; `NormalizePaginationWithMax` sole entry
+4. ✅ Cache closure single authority: mac_history + reconciliation + selector on `base.GetOrSetJSON[T]`; Phase 92+103 dual-generation invariants active
+5. ✅ Wire contract unified: operations 14 handler + monitor dual handler all use `pkg/response/handler_helpers.go`
+6. ✅ Frontend CRUD single authority: 19 sites across 4 API files migrated to `createResourceApi`
+7. ✅ Type hygiene: 11 `as any` narrowed; 72 eslint-disable justified; 11 Tag sites unified
+8. ✅ TODO zero: 22 non-test-code TODOs resolved; decision table on record; grep guard active
+9. ✅ Skip tests recovered: HybridAuthenticator interface refactor; 15 skip sites addressed (5 recovered + 10 UAT table)
+
+**Audit**: [v1.31-ROADMAP.md](milestones/v1.31-ROADMAP.md) | [v1.31-REQUIREMENTS.md](milestones/v1.31-REQUIREMENTS.md)
+
+---
+
 ## v1.30 V130 缺陷治理 (Defect Remediation) — ✅ SHIPPED 2026-09-07
 
 **Phases**: 6 (Phases 96-101) | **Plans**: 21 | **Status**: shipped
