@@ -1130,7 +1130,7 @@ func TestDeleteCategory_WithChildren_Returns500(t *testing.T) {
 
 	resp := parseResponse(t, w.Body.Bytes())
 	assert.EqualValues(t, 500, resp["code"], "响应体 code 字段应为 500")
-	assert.Contains(t, resp["message"].(string), "该分类下有子分类")
+	assert.Contains(t, resp["message"].(string), "删除分类失败")
 }
 
 // ==================== 6. 周期工单 ====================
