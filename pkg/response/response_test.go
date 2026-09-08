@@ -206,32 +206,30 @@ func TestHandleServiceError(t *testing.T) {
 	c, _ := newRouterCtx(t, "")
 	require.True(t, HandleServiceError(c, nil, "测试"))
 
-	// QUIRK: HandleServiceError 用 Error(c, http.StatusInternalServerError, ...)
-	// 但 Error 接 int → toAppError 把 int 视作 Code 而非 HTTPStatus,
-	// 实际 HTTPStatus 落到 400(D-12 不修)。
+	// Plain error → Error(c, err, "写失败") → apperrors.ServerError → HTTPStatus=500
 	c2, w2 := newRouterCtx(t, "")
 	require.False(t, HandleServiceError(c2, errors.New("boom"), "写"))
-	assert.Equal(t, http.StatusBadRequest, w2.Code)
+	assert.Equal(t, http.StatusInternalServerError, w2.Code)
 }
 
-// TestHandleServiceErrorWithBusinessError V130R-03 D-04: BusinessError 携带语义化 HTTP status。
+// TestHandleServiceErrorWithBusinessError V130R-03 D-104-4: apperrors.AppError carries business code.
 func TestHandleServiceErrorWithBusinessError(t *testing.T) {
 	// 400: 备份不属于目标设备
 	c400, w400 := newRouterCtx(t, "")
-	err400 := &BusinessError{HTTPStatus: 400, Code: 400001, Message: "备份不属于目标设备"}
+	err400 := apperrors.NewWithHTTPStatus(400001, 400, "备份不属于目标设备")
 	require.False(t, HandleServiceError(c400, err400, "恢复"))
 	assert.Equal(t, http.StatusBadRequest, w400.Code)
 	got400 := decodeResp(t, w400)
-	assert.Equal(t, 400, got400.Code)
+	assert.Equal(t, 400001, got400.Code) // D-104-4: Response.code carries business code
 	assert.Contains(t, got400.Message, "备份不属于目标设备")
 
 	// 409: 进行中恢复任务冲突
 	c409, w409 := newRouterCtx(t, "")
-	err409 := &BusinessError{HTTPStatus: 409, Code: 409001, Message: "该设备存在进行中的恢复任务"}
+	err409 := apperrors.NewWithHTTPStatus(409001, 409, "该设备存在进行中的恢复任务")
 	require.False(t, HandleServiceError(c409, err409, "恢复"))
 	assert.Equal(t, http.StatusConflict, w409.Code)
 	got409 := decodeResp(t, w409)
-	assert.Equal(t, 409, got409.Code)
+	assert.Equal(t, 409001, got409.Code) // D-104-4: Response.code carries business code
 	assert.Contains(t, got409.Message, "进行中")
 }
 

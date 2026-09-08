@@ -532,8 +532,8 @@ func TestBuildingHandler_Geocode_EmptyAddressBranchUnreachable(t *testing.T) {
 	// Body with address="" still fails binding:"required".
 	w := doBuildingRequest(h, http.MethodPost, "/buildings/geocode", `{"address":""}`)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-	// Message is from binding validator, not from "地址" missing branch.
-	assert.Contains(t, w.Body.String(), "参数错误")
+	// Message is from binding validator (D-104-3: binding error passes through err.Error())
+	assert.Contains(t, w.Body.String(), "Address")
 }
 
 // TestBuildingHandler_Geocode_BindErrorBypassesBinding documents that when JSON
