@@ -6,6 +6,7 @@ import (
 
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/xingran-next/xingran-go-backend/internal/core/security"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"gorm.io/gorm"
@@ -89,6 +90,9 @@ func setupTestDBForSync(t *testing.T) *gorm.DB {
 	}
 
 	// Create sys_role table
+	// 列名对齐 models.Role（role_key/role_sort/menu_check_strictly/dept_check_strictly）——
+	// 旧定义用 role_code 导致 db.Create(&models.Role{}) 静默失败（no column named role_key），
+	// RoleAssignment 类测试一直在测空 roleID 分支。
 	err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS sys_role (
 			id TEXT PRIMARY KEY,
@@ -99,10 +103,12 @@ func setupTestDBForSync(t *testing.T) *gorm.DB {
 			updated_by TEXT,
 			version INTEGER DEFAULT 1,
 			role_name TEXT NOT NULL,
-			role_code TEXT,
-			sort_order INTEGER DEFAULT 0,
-			status INTEGER DEFAULT 0,
+			role_key TEXT,
+			role_sort INTEGER DEFAULT 0,
 			data_scope INTEGER DEFAULT 1,
+			menu_check_strictly BOOLEAN DEFAULT 1,
+			dept_check_strictly BOOLEAN DEFAULT 1,
+			status INTEGER DEFAULT 0,
 			remark TEXT DEFAULT ''
 		)
 	`).Error
@@ -195,12 +201,12 @@ func TestUserSyncService_SyncUserFromAD_UpdateExisting(t *testing.T) {
 
 	// 先创建一个用户
 	existingUser := &models.User{
-		Username:    "existinguser",
-		AuthSource:  "ad",
-		ADUsername:  stringPtr("existinguser"),
-		Nickname:    stringPtr("Old Nickname"),
-		Email:       stringPtr("old@example.com"),
-		Status:      models.UserStatusEnabled,
+		Username:   "existinguser",
+		AuthSource: "ad",
+		ADUsername: stringPtr("existinguser"),
+		Nickname:   stringPtr("Old Nickname"),
+		Email:      stringPtr("old@example.com"),
+		Status:     models.UserStatusEnabled,
 	}
 	db.Create(existingUser)
 
@@ -429,4 +435,34 @@ func TestUserSyncService_SyncUserFromAD_TableDrivenTests(t *testing.T) {
 // 辅助函数
 func stringPtr(s string) *string {
 	return &s
+}
+
+// TestUserSyncService_AssignRolesBatch 覆盖 assignRolesBatch 的多值 INSERT 循环体
+// （含 datetime('now') placeholders 构造行）。验证：批量插入 + ON CONFLICT 幂等重放。
+func TestUserSyncService_AssignRolesBatch(t *testing.T) {
+	db := setupTestDBForSync(t)
+	service := NewUserSyncService(db, security.NewPasswordManager(nil), nil)
+
+	role := &models.Role{RoleName: "Batch Role", Status: models.RoleStatusEnabled}
+	require.NoError(t, db.Create(role).Error)
+
+	u1 := &models.User{Username: "batchu1", Password: "x", Status: models.UserStatusEnabled}
+	u2 := &models.User{Username: "batchu2", Password: "x", Status: models.UserStatusEnabled}
+	require.NoError(t, db.Create(u1).Error)
+	require.NoError(t, db.Create(u2).Error)
+
+	// 空入参早退（不产生 SQL）
+	assert.NoError(t, service.assignRolesBatch(db, nil, role.ID))
+	assert.NoError(t, service.assignRolesBatch(db, []string{u1.ID}, ""))
+
+	// 首次批量分配：两个用户各一行
+	assert.NoError(t, service.assignRolesBatch(db, []string{u1.ID, u2.ID}, role.ID))
+	var count int64
+	require.NoError(t, db.Model(&models.UserRole{}).Where("role_id = ?", role.ID).Count(&count).Error)
+	assert.Equal(t, int64(2), count)
+
+	// 幂等重放：ON CONFLICT DO NOTHING，行数不变
+	assert.NoError(t, service.assignRolesBatch(db, []string{u1.ID, u2.ID}, role.ID))
+	require.NoError(t, db.Model(&models.UserRole{}).Where("role_id = ?", role.ID).Count(&count).Error)
+	assert.Equal(t, int64(2), count)
 }

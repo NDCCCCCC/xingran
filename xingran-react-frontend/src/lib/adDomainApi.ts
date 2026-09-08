@@ -233,8 +233,6 @@ function withDefaultPagination<T extends { current?: number; pageSize?: number }
 // Phase 94 D-05/D-08: 标准 CRUD 形状函数委托共享工厂（导出签名零变化；
 // 全部 list 委托保留 withDefaultPagination 前置调用——Pitfall 5，直接透传即丢默认分页）
 const configCrud = createResourceApi<ADConfig>({ basePath: "/ad-domain/configs" });
-const groupCrud = createResourceApi<ADGroup>({ basePath: "/ad-domain/groups" });
-const userCrud = createResourceApi<ADUser>({ basePath: "/ad-domain/users" });
 
 export function getADConfigList(
   params: ADConfigListRequest = {}
@@ -294,14 +292,16 @@ export function getADGroupDetail(id: string): Promise<BaseResponse<ADGroup>> {
   return get(`/ad-domain/groups/${id}`);
 }
 
+// KEEP 例外（Phase 94）：请求体 { configId, ...data } 与 ADGroup 实体字段
+// （adConfigId）解耦，且后端 DTO 是 json:"configId" binding:"required"——
+// 走 factory 的 Partial<CreatePayload<T>> 约束会迫使 wire 字段改名为
+// adConfigId，导致后端 400。保持直接 post()。
 export function updateADGroup(
   id: string,
-  adConfigId: string,
+  configId: string,
   data: ADGroupUpdateRequest
 ): Promise<BaseResponse<{ message: string }>> {
-  return groupCrud.update(id, { adConfigId, ...data }) as Promise<
-    BaseResponse<{ message: string }>
-  >;
+  return post(`/ad-domain/groups/${id}/update`, { configId, ...data });
 }
 
 export function getADGroupMembers(
@@ -386,14 +386,14 @@ export function getADUserDetail(id: string, configId: string): Promise<BaseRespo
   return post(`/ad-domain/users/${id}`, { configId });
 }
 
+// KEEP 例外（Phase 94）：同 updateADGroup——后端 DTO 是 configId 而非实体字段
+// adConfigId，factory 类型约束会迫使 wire 字段改名导致后端 400。保持直接 post()。
 export function updateADUser(
   id: string,
-  adConfigId: string,
+  configId: string,
   data: ADUserUpdateRequest
 ): Promise<BaseResponse<{ message: string }>> {
-  return userCrud.update(id, { adConfigId, update: data } as unknown as Parameters<
-    typeof userCrud.update
-  >[1]) as Promise<BaseResponse<{ message: string }>>;
+  return post(`/ad-domain/users/${id}/update`, { configId, update: data });
 }
 
 export function moveADUser(

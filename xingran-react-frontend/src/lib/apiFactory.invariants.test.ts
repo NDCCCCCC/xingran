@@ -102,7 +102,7 @@ const WARNING_WHITELIST: Record<string, number> = {
   // —— 部分委托文件的 KEEP 残留（delete 统一保持单参 post 直调：既有测试锁定
   //    单参契约，工厂 delete 传 {} 属 wire 级 body 变更——D-14 零改动红线）——
   noticeApi: 0, // admin notices 标准形状已委托；剩余 publish/withdraw/read/ignore 等全异构（非 CRUD 后缀）
-  adDomainApi: 1, // deleteADConfig 单参直调 KEEP（D-14）；configs/mappings/ou-group 其余标准形状已委托
+  adDomainApi: 3, // deleteADConfig 单参直调 KEEP（D-14）；updateADGroup/updateADUser 亦 KEEP——wire 字段 configId 与实体 adConfigId 解耦（后端 DTO json:"configId" binding:"required"），factory 的 Partial<CreatePayload<T>> 约束会迫使字段改名致后端 400；configs/mappings/ou-group 其余标准形状已委托
   knowledgeApi: 3, // deleteKnowledgeArticle/category/tag 单参直调 KEEP（D-14）；articles update/tag update 已委托
   dutyApi: 3, // deleteDutyPool/schedule/holiday 单参直调 KEEP（D-14）；pools update/holidays update 已委托
   workorderApi: 4, // deleteWorkOrder/category/PeriodicTemplate 单参直调 KEEP（D-14）；orders update/periodic update 已委托

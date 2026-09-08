@@ -5,22 +5,25 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/core/db"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	monitorServices "github.com/xingran-next/xingran-go-backend/internal/services/monitor"
+	"github.com/xingran-next/xingran-go-backend/pkg/cache"
+	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 )
 
 // mockLoginLogService implements monitorServices.LoginLogService via function fields
@@ -105,8 +108,8 @@ func TestLoginLog_List_Seeded(t *testing.T) {
 	mock := &mockLoginLogService{
 		ListFunc: func(ctx context.Context, params monitorServices.LoginLogListParams) (*monitorServices.PageResult, error) {
 			return &monitorServices.PageResult{
-				List:     []models.LoginLog{{Username: "alice"}, {Username: "bob"}},
-				Total:    2, Current: 1, PageSize: 10,
+				List:  []models.LoginLog{{Username: "alice"}, {Username: "bob"}},
+				Total: 2, Current: 1, PageSize: 10,
 			}, nil
 		},
 	}
@@ -252,6 +255,28 @@ func TestLoginLog_UnlockUser_Success(t *testing.T) {
 	c.Params = gin.Params{{Key: "username", Value: "alice"}}
 	h.UnlockUser(c)
 	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+// TestLoginLog_UnlockUser_DeletesCacheLockKey 覆盖 core.Cache 非 nil 分支：
+// 解锁必须真正删除 Redis 锁定键（constants.LoginLockKeyFormat），否则只是空响应。
+func TestLoginLog_UnlockUser_DeletesCacheLockKey(t *testing.T) {
+	mock := &mockLoginLogService{}
+	memCache := cache.NewMemoryCache(16, time.Minute)
+	h := NewLoginLogHandler(mock).WithCore(&core.Core{
+		CoreInfra:    &core.CoreInfra{DB: &db.Database{}, Cache: memCache},
+		CoreServices: &core.CoreServices{},
+	})
+
+	lockKey := fmt.Sprintf(constants.LoginLockKeyFormat, "bob")
+	require.NoError(t, memCache.Set(context.Background(), lockKey, "1", 0))
+
+	c, w := newTestCtxLL("POST", "/", nil)
+	c.Params = gin.Params{{Key: "username", Value: "bob"}}
+	h.UnlockUser(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	_, err := memCache.Get(context.Background(), lockKey)
+	assert.Error(t, err, "解锁后登录锁定键应已删除")
 }
 
 func TestLoginLog_WithCore(t *testing.T) {
