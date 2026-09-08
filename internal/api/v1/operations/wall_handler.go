@@ -41,11 +41,11 @@ func (h *WallHandler) WithCore(core *core.Core) *WallHandler {
 // @Router /ops/walls [post]
 func (h *WallHandler) Create(c *gin.Context) {
 	var wall operationsmodels.Wall
-	if !handleJSONBinding(c, &wall) {
+	if !response.HandleJSONBinding(c, &wall) {
 		return
 	}
 
-	if !handleServiceError(c, h.service.Create(c.Request.Context(), &wall), "创建") {
+	if !response.HandleServiceError(c, h.service.Create(c.Request.Context(), &wall), "创建") {
 		return
 	}
 
@@ -66,12 +66,12 @@ func (h *WallHandler) Create(c *gin.Context) {
 // @Router /ops/walls/list [post]
 func (h *WallHandler) List(c *gin.Context) {
 	var req requests.WallListRequest
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	result, err := h.service.List(c.Request.Context(), req)
-	if !handleServiceError(c, err, "查询") {
+	if !response.HandleServiceError(c, err, "查询") {
 		return
 	}
 
@@ -116,12 +116,12 @@ func (h *WallHandler) GetByID(c *gin.Context) {
 func (h *WallHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var wall operationsmodels.Wall
-	if !handleJSONBinding(c, &wall) {
+	if !response.HandleJSONBinding(c, &wall) {
 		return
 	}
 
 	wall.ID = id
-	if !handleServiceError(c, h.service.Update(c.Request.Context(), &wall), "更新") {
+	if !response.HandleServiceError(c, h.service.Update(c.Request.Context(), &wall), "更新") {
 		return
 	}
 
@@ -143,7 +143,7 @@ func (h *WallHandler) Update(c *gin.Context) {
 // @Router /ops/walls/{id}/delete [post]
 func (h *WallHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
-	if !handleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
+	if !response.HandleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
 		return
 	}
 
@@ -164,7 +164,7 @@ func (h *WallHandler) Delete(c *gin.Context) {
 // @Router /ops/walls/batch [post]
 func (h *WallHandler) BatchOperation(c *gin.Context) {
 	var req requests.WallBatchOperationRequest
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -173,7 +173,7 @@ func (h *WallHandler) BatchOperation(c *gin.Context) {
 		return
 	}
 
-	if !handleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
+	if !response.HandleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
 		return
 	}
 

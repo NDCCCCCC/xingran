@@ -67,11 +67,11 @@ func (h *RoomDeviceHandler) SearchRoomDeviceOptions(c *gin.Context) {
 // @Router /ops/roomDevice [post]
 func (h *RoomDeviceHandler) Create(c *gin.Context) {
 	var device operations.OpsRoomDevice
-	if !handleJSONBinding(c, &device) {
+	if !response.HandleJSONBinding(c, &device) {
 		return
 	}
 
-	if !handleServiceError(c, h.service.Create(c.Request.Context(), &device), "创建") {
+	if !response.HandleServiceError(c, h.service.Create(c.Request.Context(), &device), "创建") {
 		return
 	}
 
@@ -92,7 +92,7 @@ func (h *RoomDeviceHandler) Create(c *gin.Context) {
 // @Router /ops/roomDevice/list [post]
 func (h *RoomDeviceHandler) List(c *gin.Context) {
 	var req requests.RoomDeviceListRequest
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -143,12 +143,12 @@ func (h *RoomDeviceHandler) GetByID(c *gin.Context) {
 func (h *RoomDeviceHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var device operations.OpsRoomDevice
-	if !handleJSONBinding(c, &device) {
+	if !response.HandleJSONBinding(c, &device) {
 		return
 	}
 
 	device.ID = id
-	if !handleServiceError(c, h.service.Update(c.Request.Context(), &device), "更新") {
+	if !response.HandleServiceError(c, h.service.Update(c.Request.Context(), &device), "更新") {
 		return
 	}
 
@@ -170,7 +170,7 @@ func (h *RoomDeviceHandler) Update(c *gin.Context) {
 // @Router /ops/roomDevice/{id}/delete [post]
 func (h *RoomDeviceHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
-	if !handleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
+	if !response.HandleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
 		return
 	}
 
@@ -191,13 +191,13 @@ func (h *RoomDeviceHandler) Delete(c *gin.Context) {
 // @Router /ops/roomDevice/batch [post]
 func (h *RoomDeviceHandler) BatchOperation(c *gin.Context) {
 	var req requests.RoomDeviceBatchOperationRequest
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	switch req.Action {
 	case "delete":
-		if !handleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
+		if !response.HandleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
 			return
 		}
 	default:

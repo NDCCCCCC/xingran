@@ -90,7 +90,7 @@ func (h *WorkstationHandler) GetWorkstationDeptOptions(c *gin.Context) {
 // 修复 info-points/index.tsx「所属工位」下拉用 pageSize:1000 + filterOption 客户端截断的 bug。
 //
 // D-05: typed bind；bind 失败降级为零值请求继续查询（零值 request = 空过滤全列表，
-// 与迁移前 bind 失败降级空 map 语义一致；不用 handleJSONBinding 的 400 路径）。
+// 与迁移前 bind 失败降级空 map 语义一致；不用 response.HandleJSONBinding 的 400 路径）。
 func (h *WorkstationHandler) SearchWorkstationOptions(c *gin.Context) {
 	var req requests.WorkstationListRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -117,11 +117,11 @@ func (h *WorkstationHandler) SearchWorkstationOptions(c *gin.Context) {
 // @Router /ops/workstation [post]
 func (h *WorkstationHandler) Create(c *gin.Context) {
 	var workstation models.Workstation
-	if !handleJSONBinding(c, &workstation) {
+	if !response.HandleJSONBinding(c, &workstation) {
 		return
 	}
 
-	if !handleServiceError(c, h.service.Create(c.Request.Context(), &workstation), "创建") {
+	if !response.HandleServiceError(c, h.service.Create(c.Request.Context(), &workstation), "创建") {
 		return
 	}
 
@@ -142,7 +142,7 @@ func (h *WorkstationHandler) Create(c *gin.Context) {
 // @Router /ops/workstation/list [post]
 func (h *WorkstationHandler) List(c *gin.Context) {
 	// D-05: typed bind；bind 失败降级为零值请求继续查询（零值 request = 空过滤
-	// 全列表，与迁移前 bind 失败降级空 map 语义一致；不用 handleJSONBinding 的
+	// 全列表，与迁移前 bind 失败降级空 map 语义一致；不用 response.HandleJSONBinding 的
 	// 400 路径，与现状不符）。
 	var req requests.WorkstationListRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -258,12 +258,12 @@ func (h *WorkstationHandler) hasReconciliationPerm(c *gin.Context) bool {
 func (h *WorkstationHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var workstation models.Workstation
-	if !handleJSONBinding(c, &workstation) {
+	if !response.HandleJSONBinding(c, &workstation) {
 		return
 	}
 
 	workstation.ID = id
-	if !handleServiceError(c, h.service.Update(c.Request.Context(), &workstation), "更新") {
+	if !response.HandleServiceError(c, h.service.Update(c.Request.Context(), &workstation), "更新") {
 		return
 	}
 
@@ -285,7 +285,7 @@ func (h *WorkstationHandler) Update(c *gin.Context) {
 // @Router /ops/workstation/{id}/delete [post]
 func (h *WorkstationHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
-	if !handleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
+	if !response.HandleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
 		return
 	}
 
@@ -310,13 +310,13 @@ func (h *WorkstationHandler) BatchOperation(c *gin.Context) {
 		Action string   `json:"action"`
 	}
 
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	switch req.Action {
 	case "delete":
-		if !handleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
+		if !response.HandleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
 			return
 		}
 	default:
@@ -344,11 +344,11 @@ func (h *WorkstationHandler) BatchUpdatePositions(c *gin.Context) {
 		Items []opsServices.PositionUpdateItem `json:"items" binding:"required"`
 	}
 
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
-	if !handleServiceError(c, h.service.BatchUpdatePositions(c.Request.Context(), req.Items), "批量更新位置") {
+	if !response.HandleServiceError(c, h.service.BatchUpdatePositions(c.Request.Context(), req.Items), "批量更新位置") {
 		return
 	}
 

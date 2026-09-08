@@ -68,7 +68,7 @@ func (h *WorkstationDeviceHandler) GetByWorkstation(c *gin.Context) {
 // @Router /ops/workstation-device/manual [post]
 func (h *WorkstationDeviceHandler) AddManual(c *gin.Context) {
 	var req opsServices.AddDeviceRequest
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -183,7 +183,7 @@ func (h *WorkstationDeviceHandler) GetPhysicalDevices(c *gin.Context) {
 // @Router /ops/workstation-device/{id}/set-primary-and-save [post]
 func (h *WorkstationDeviceHandler) SetPrimaryAndSave(c *gin.Context) {
 	var req opsServices.SetPrimaryAndSaveRequest
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -211,7 +211,7 @@ func (h *WorkstationDeviceHandler) SyncAD(c *gin.Context) {
 	var req struct {
 		WorkstationID string `json:"workstation_id" binding:"required"`
 	}
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -239,7 +239,7 @@ func (h *WorkstationDeviceHandler) SyncAsset(c *gin.Context) {
 	var req struct {
 		WorkstationID string `json:"workstation_id" binding:"required"`
 	}
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -272,7 +272,7 @@ func (h *WorkstationDeviceHandler) Update(c *gin.Context) {
 	}
 
 	var req opsServices.UpdateDeviceRequest
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 

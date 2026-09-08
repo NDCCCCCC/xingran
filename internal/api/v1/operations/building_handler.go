@@ -76,11 +76,11 @@ func NewBuildingHandlerWithCore(service opsServices.BuildingService, core *core.
 // @Router /ops/building [post]
 func (h *BuildingHandler) Create(c *gin.Context) {
 	var building operations.OpsBuilding
-	if !handleJSONBinding(c, &building) {
+	if !response.HandleJSONBinding(c, &building) {
 		return
 	}
 
-	if !handleServiceError(c, h.service.Create(c.Request.Context(), &building), "创建") {
+	if !response.HandleServiceError(c, h.service.Create(c.Request.Context(), &building), "创建") {
 		return
 	}
 
@@ -101,12 +101,12 @@ func (h *BuildingHandler) Create(c *gin.Context) {
 // @Router /ops/building/list [post]
 func (h *BuildingHandler) List(c *gin.Context) {
 	var params map[string]interface{}
-	if !handleJSONBinding(c, &params) {
+	if !response.HandleJSONBinding(c, &params) {
 		return
 	}
 
 	result, err := h.service.List(c.Request.Context(), params)
-	if !handleServiceError(c, err, "查询") {
+	if !response.HandleServiceError(c, err, "查询") {
 		return
 	}
 
@@ -151,12 +151,12 @@ func (h *BuildingHandler) GetByID(c *gin.Context) {
 func (h *BuildingHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var building operations.OpsBuilding
-	if !handleJSONBinding(c, &building) {
+	if !response.HandleJSONBinding(c, &building) {
 		return
 	}
 
 	building.ID = id
-	if !handleServiceError(c, h.service.Update(c.Request.Context(), &building), "更新") {
+	if !response.HandleServiceError(c, h.service.Update(c.Request.Context(), &building), "更新") {
 		return
 	}
 
@@ -178,7 +178,7 @@ func (h *BuildingHandler) Update(c *gin.Context) {
 // @Router /ops/building/{id}/delete [post]
 func (h *BuildingHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
-	if !handleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
+	if !response.HandleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
 		return
 	}
 
@@ -203,13 +203,13 @@ func (h *BuildingHandler) BatchOperation(c *gin.Context) {
 		Action string   `json:"action"`
 	}
 
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	switch req.Action {
 	case "delete":
-		if !handleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
+		if !response.HandleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
 			return
 		}
 	default:
@@ -251,7 +251,7 @@ type GeocodeResponse struct {
 // @Router /ops/building/geocode [post]
 func (h *BuildingHandler) Geocode(c *gin.Context) {
 	var req GeocodeRequest
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -262,7 +262,7 @@ func (h *BuildingHandler) Geocode(c *gin.Context) {
 
 	// 调用地理编码服务
 	lng, lat, err := h.geocodingService.Geocode(c.Request.Context(), req.Address)
-	if !handleServiceError(c, err, "地址解析") {
+	if !response.HandleServiceError(c, err, "地址解析") {
 		return
 	}
 

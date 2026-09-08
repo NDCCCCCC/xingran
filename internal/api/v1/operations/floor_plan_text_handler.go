@@ -41,11 +41,11 @@ func (h *FloorPlanTextHandler) WithCore(core *core.Core) *FloorPlanTextHandler {
 // @Router /ops/floor-plan-texts [post]
 func (h *FloorPlanTextHandler) Create(c *gin.Context) {
 	var text operationsmodels.FloorPlanText
-	if !handleJSONBinding(c, &text) {
+	if !response.HandleJSONBinding(c, &text) {
 		return
 	}
 
-	if !handleServiceError(c, h.service.Create(c.Request.Context(), &text), "创建") {
+	if !response.HandleServiceError(c, h.service.Create(c.Request.Context(), &text), "创建") {
 		return
 	}
 
@@ -66,7 +66,7 @@ func (h *FloorPlanTextHandler) Create(c *gin.Context) {
 // @Router /ops/floor-plan-texts/list [post]
 func (h *FloorPlanTextHandler) List(c *gin.Context) {
 	var req requests.FloorPlanTextListRequest
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -117,12 +117,12 @@ func (h *FloorPlanTextHandler) GetByID(c *gin.Context) {
 func (h *FloorPlanTextHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var text operationsmodels.FloorPlanText
-	if !handleJSONBinding(c, &text) {
+	if !response.HandleJSONBinding(c, &text) {
 		return
 	}
 
 	text.ID = id
-	if !handleServiceError(c, h.service.Update(c.Request.Context(), &text), "更新") {
+	if !response.HandleServiceError(c, h.service.Update(c.Request.Context(), &text), "更新") {
 		return
 	}
 
@@ -144,7 +144,7 @@ func (h *FloorPlanTextHandler) Update(c *gin.Context) {
 // @Router /ops/floor-plan-texts/{id}/delete [post]
 func (h *FloorPlanTextHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
-	if !handleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
+	if !response.HandleServiceError(c, h.service.Delete(c.Request.Context(), id), "删除") {
 		return
 	}
 
@@ -165,13 +165,13 @@ func (h *FloorPlanTextHandler) Delete(c *gin.Context) {
 // @Router /ops/floor-plan-texts/batch [post]
 func (h *FloorPlanTextHandler) BatchOperation(c *gin.Context) {
 	var req requests.FloorPlanTextBatchOperationRequest
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
 	switch req.Action {
 	case "delete":
-		if !handleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
+		if !response.HandleServiceError(c, h.service.BatchDelete(c.Request.Context(), req.IDs), "批量删除") {
 			return
 		}
 	default:

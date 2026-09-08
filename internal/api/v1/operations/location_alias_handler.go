@@ -99,7 +99,7 @@ func (h *LocationAliasHandler) List(c *gin.Context) {
 // Create 新建 alias(写操作,触发 validateAlias 三级校验)
 func (h *LocationAliasHandler) Create(c *gin.Context) {
 	var req opsServices.LocationAliasCreateRequest
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
@@ -122,7 +122,7 @@ func (h *LocationAliasHandler) Create(c *gin.Context) {
 func (h *LocationAliasHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	var req opsServices.LocationAliasUpdateRequest
-	if !handleJSONBinding(c, &req) {
+	if !response.HandleJSONBinding(c, &req) {
 		return
 	}
 
