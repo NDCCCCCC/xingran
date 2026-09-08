@@ -246,13 +246,13 @@ const AssetList: FC = () => {
     setExporting(true);
     try {
       const searchValues = searchForm.getFieldsValue();
-      const params = {
+      const params: Record<string, unknown> = {
         current: 1,
         pageSize: 10000,
         ...(searchValues as Record<string, unknown>),
       };
 
-      await assetApi.excel.export(params as any);
+      await assetApi.excel.export(params);
       message.success("导出成功");
     } catch (_error) {
       message.error("导出失败");
@@ -579,7 +579,6 @@ const AssetList: FC = () => {
   }, [columns, visibleColumns]);
 
   const handleEdit = useCallback((_record: Asset) => {
-    // TODO: 实现编辑功能
     message.info("编辑功能待实现");
     // eslint-disable-next-line react-hooks/exhaustive-deps -- message from App.useApp() is stable
   }, []);

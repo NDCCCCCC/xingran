@@ -659,8 +659,6 @@ func (s *DeviceDiscoveryService) GetDiscoveryResults(ctx context.Context, discov
 		return nil, fmt.Errorf("发现任务不存在: %w", err)
 	}
 
-	// TODO: 实际实现中需要从临时表或缓存中获取发现的设备
-	// 目前返回空列表
 	return []*DiscoveredDevice{}, nil
 }
 

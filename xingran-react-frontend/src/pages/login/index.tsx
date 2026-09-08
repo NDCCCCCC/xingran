@@ -25,14 +25,15 @@ import "./login.css";
  */
 function extractLoginErrorMessage(error: unknown): string {
   if (!error) return "登录失败，请重试";
-  const anyError = error as any;
-  const respData = anyError?.response?.data;
+  // Type-narrow unknown error via duck-typed property access.
+  // The error shape is: { response?: { data?: { message?: string; msg?: string } }; message?: string }
+  const respData = (error as { response?: { data?: Record<string, unknown> } })?.response?.data;
   if (respData && typeof respData === "object") {
     if (typeof respData.message === "string" && respData.message) return respData.message;
     if (typeof respData.msg === "string" && respData.msg) return respData.msg;
   }
-  if (typeof anyError?.message === "string" && anyError.message) {
-    return anyError.message;
+  if (typeof (error as { message?: unknown })?.message === "string") {
+    return (error as { message: string }).message;
   }
   return "登录失败，请重试";
 }

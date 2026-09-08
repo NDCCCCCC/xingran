@@ -157,6 +157,8 @@ export interface ManualDutyRequest {
 // 含 memberIds 与工厂 CreatePayload 不同构，保持原样直调 post）
 const dutyPoolCrud = createResourceApi<DutyPool>({ basePath: "/duty/pools" });
 
+const holidayCrud = createResourceApi<Holiday>({ basePath: "/duty/holidays" });
+
 export function getDutyPoolList(
   params: DutyPoolListRequest
 ): Promise<BaseResponse<PageResponse<DutyPool>>> {
@@ -190,7 +192,7 @@ export function updateDutyPool(
   id: string,
   data: DutyPoolUpdateRequest
 ): Promise<BaseResponse<{ message: string }>> {
-  return post(`/duty/pools/${id}/update`, data);
+  return dutyPoolCrud.update(id, data) as Promise<BaseResponse<{ message: string }>>;
 }
 
 export function deleteDutyPool(id: string): Promise<BaseResponse<{ message: string }>> {
@@ -272,7 +274,7 @@ export function updateHoliday(
   id: string,
   data: Partial<Omit<Holiday, "id" | "createdAt" | "createdBy">>
 ): Promise<BaseResponse<{ message: string }>> {
-  return post(`/duty/holidays/${id}/update`, data);
+  return holidayCrud.update(id, data) as Promise<BaseResponse<{ message: string }>>;
 }
 
 export function deleteHoliday(id: string): Promise<BaseResponse<{ message: string }>> {

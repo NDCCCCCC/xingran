@@ -426,7 +426,7 @@ export function updateWorkOrder(
   id: string,
   data: WorkOrderUpdateRequest
 ): Promise<BaseResponse<{ message: string }>> {
-  return post(`/workorder/orders/${id}/update`, data);
+  return orderCrud.update(id, data) as Promise<BaseResponse<{ message: string }>>;
 }
 
 export function deleteWorkOrder(id: string): Promise<BaseResponse<{ message: string }>> {
@@ -579,7 +579,7 @@ export function updatePeriodicTemplate(
   id: string,
   data: UpdatePeriodicTemplateRequest
 ): Promise<BaseResponse<{ message: string }>> {
-  return post(`/workorder/periodic/templates/${id}/update`, data);
+  return periodicCrud.update(id, data) as Promise<BaseResponse<{ message: string }>>;
 }
 
 export function deletePeriodicTemplate(id: string): Promise<BaseResponse<{ message: string }>> {

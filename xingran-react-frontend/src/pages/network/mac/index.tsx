@@ -41,6 +41,7 @@ import NetworkExport from "@/components/shared/NetworkExport";
 import { BatchExportModal } from "@/components/shared";
 import { DeptSidebar } from "@/components/operations/DeptSidebar";
 import { MACEventsTimeline } from "@/components/network";
+import { MAC_TYPE_TAG_CONFIG } from "@/constants/status";
 
 const { Option } = Select;
 const { Content } = Layout;
@@ -301,8 +302,11 @@ const MACAddressPage: FC = () => {
       width: 100,
       render: (macType: string) => {
         const option = macTypeOptions.find((o) => o.value === macType);
-        const color = macType === "dynamic" ? "blue" : macType === "static" ? "green" : "orange";
-        return <Tag color={color}>{option?.label || macType}</Tag>;
+        return (
+          <Tag color={MAC_TYPE_TAG_CONFIG[macType]?.color ?? "default"}>
+            {option?.label || macType}
+          </Tag>
+        );
       },
     },
     {

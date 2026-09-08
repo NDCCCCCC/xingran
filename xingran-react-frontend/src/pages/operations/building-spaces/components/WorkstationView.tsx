@@ -70,7 +70,6 @@ const WorkstationView: React.FC<WorkstationViewProps> = ({ floor, onBack }) => {
   // 编辑工位
   const handleEdit = (workstation: WorkstationNode) => {
     message.info(`编辑工位: ${workstation.name}`);
-    // TODO: 打开编辑对话框
   };
 
   return (

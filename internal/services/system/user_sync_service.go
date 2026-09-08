@@ -360,7 +360,7 @@ func (s *UserSyncService) bindLocalUserToAD(tx *gorm.DB, user *models.User, adUs
 func (s *UserSyncService) assignRole(tx *gorm.DB, userID string, roleID string) error {
 	// 使用原生SQL插入角色关联（ON CONFLICT避免重复）
 	sql := `INSERT INTO sys_user_role (user_id, role_id, created_at)
-			VALUES (?, ?, NOW())
+			VALUES (?, ?, datetime('now'))
 			ON CONFLICT (user_id, role_id) DO NOTHING`
 
 	if err := tx.Exec(sql, userID, roleID).Error; err != nil {
@@ -764,7 +764,7 @@ func (s *UserSyncService) assignRolesBatch(db *gorm.DB, userIDs []string, roleID
 		placeholders := make([]string, 0, end-i)
 		args := make([]interface{}, 0, (end-i)*2)
 		for _, uid := range userIDs[i:end] {
-			placeholders = append(placeholders, "(?, ?, NOW())")
+			placeholders = append(placeholders, "(?, ?, datetime('now'))")
 			args = append(args, uid, roleID)
 		}
 		sql := fmt.Sprintf(

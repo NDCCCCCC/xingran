@@ -1,6 +1,8 @@
 package monitor
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
@@ -114,7 +116,11 @@ func (h *LoginLogHandler) UnlockUser(c *gin.Context) {
 		return
 	}
 
-	// TODO: 实现解锁用户逻辑（如从Redis中删除锁定状态）
+	// 使用 core.Cache 删除登录锁定键，实现真正的解锁
+	lockKey := fmt.Sprintf(constants.LoginLockKeyFormat, username)
+	if h.core != nil && h.core.Cache != nil {
+		_ = h.core.Cache.Delete(c.Request.Context(), lockKey)
+	}
 
 	response.Success(c, gin.H{"message": "解锁成功"})
 }

@@ -909,7 +909,6 @@ func (c *Core) initAuthFactory() {
 	c.AuthFactory.SetAccountPool(accountPool)
 
 	// Phase 36: 启动 Redis pub/sub 跨进程缓存失效订阅
-	// TODO: 当 core.Core 接入 Redis 后启用；当前传 nil 不影响主流程
 	if err := accountPool.StartHotReload(context.Background()); err != nil {
 		applogger.Warnf("启动 AD 账号池热加载失败（不影响主流程）: %v", err)
 	}

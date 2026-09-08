@@ -63,6 +63,7 @@ import { MACEventsTimeline } from "@/components/network";
 import { EmptyStateWithAction, ErrorAlertWithRetry } from "@/components/shared";
 import { useMenuStore } from "@/store/menuStore";
 import { EVENT_LABEL, EVENT_TAG_COLOR } from "@/components/network/macEventMeta";
+import { MAC_HISTORY_STATUS_TAG_CONFIG } from "@/constants/status";
 
 const { RangePicker } = DatePicker;
 const { useBreakpoint } = Grid;
@@ -287,8 +288,9 @@ const MACHistoryPage: React.FC = () => {
         key: "status",
         width: 80,
         render: (_: unknown, record: MACHistoryRecord) => (
-          <Tag color={record.status === 0 ? "green" : "red"}>
-            {record.status === 0 ? "正常" : "停用"}
+          <Tag color={MAC_HISTORY_STATUS_TAG_CONFIG[record.status]?.color ?? "default"}>
+            {MAC_HISTORY_STATUS_TAG_CONFIG[record.status]?.text ??
+              (record.status === 0 ? "正常" : "停用")}
           </Tag>
         ),
       },
@@ -527,8 +529,9 @@ const MACHistoryPage: React.FC = () => {
                   >
                     {EVENT_LABEL[record.eventType as keyof typeof EVENT_LABEL] ?? record.eventType}
                   </Tag>
-                  <Tag color={record.status === 0 ? "green" : "red"}>
-                    {record.status === 0 ? "正常" : "停用"}
+                  <Tag color={MAC_HISTORY_STATUS_TAG_CONFIG[record.status]?.color ?? "default"}>
+                    {MAC_HISTORY_STATUS_TAG_CONFIG[record.status]?.text ??
+                      (record.status === 0 ? "正常" : "停用")}
                   </Tag>
                 </Space>
               }

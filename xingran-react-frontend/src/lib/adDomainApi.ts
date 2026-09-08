@@ -292,6 +292,10 @@ export function getADGroupDetail(id: string): Promise<BaseResponse<ADGroup>> {
   return get(`/ad-domain/groups/${id}`);
 }
 
+// KEEP 例外（Phase 94）：请求体 { configId, ...data } 与 ADGroup 实体字段
+// （adConfigId）解耦，且后端 DTO 是 json:"configId" binding:"required"——
+// 走 factory 的 Partial<CreatePayload<T>> 约束会迫使 wire 字段改名为
+// adConfigId，导致后端 400。保持直接 post()。
 export function updateADGroup(
   id: string,
   configId: string,
@@ -382,6 +386,8 @@ export function getADUserDetail(id: string, configId: string): Promise<BaseRespo
   return post(`/ad-domain/users/${id}`, { configId });
 }
 
+// KEEP 例外（Phase 94）：同 updateADGroup——后端 DTO 是 configId 而非实体字段
+// adConfigId，factory 类型约束会迫使 wire 字段改名导致后端 400。保持直接 post()。
 export function updateADUser(
   id: string,
   configId: string,

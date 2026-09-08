@@ -11,11 +11,7 @@ import (
 
 // TestLocalAuthenticator_Authenticate_Success 测试正常登录场景
 func TestLocalAuthenticator_Authenticate_Success(t *testing.T) {
-	// 使用测试数据库
 	db := setupTestDB(t)
-	if db == nil {
-		t.Skip("测试数据库未配置")
-	}
 
 	pwdMgr := NewPasswordManager(nil)
 	auth := NewLocalAuthenticator(db, pwdMgr)
@@ -41,9 +37,6 @@ func TestLocalAuthenticator_Authenticate_Success(t *testing.T) {
 // TestLocalAuthenticator_Authenticate_UserNotFound 测试用户不存在场景
 func TestLocalAuthenticator_Authenticate_UserNotFound(t *testing.T) {
 	db := setupTestDB(t)
-	if db == nil {
-		t.Skip("测试数据库未配置")
-	}
 
 	pwdMgr := NewPasswordManager(nil)
 	auth := NewLocalAuthenticator(db, pwdMgr)
@@ -61,9 +54,6 @@ func TestLocalAuthenticator_Authenticate_UserNotFound(t *testing.T) {
 // TestLocalAuthenticator_Authenticate_InvalidPassword 测试密码错误场景
 func TestLocalAuthenticator_Authenticate_InvalidPassword(t *testing.T) {
 	db := setupTestDB(t)
-	if db == nil {
-		t.Skip("测试数据库未配置")
-	}
 
 	pwdMgr := NewPasswordManager(nil)
 	auth := NewLocalAuthenticator(db, pwdMgr)
@@ -84,9 +74,6 @@ func TestLocalAuthenticator_Authenticate_InvalidPassword(t *testing.T) {
 // TestLocalAuthenticator_Authenticate_UserDisabled 测试用户被禁用场景
 func TestLocalAuthenticator_Authenticate_UserDisabled(t *testing.T) {
 	db := setupTestDB(t)
-	if db == nil {
-		t.Skip("测试数据库未配置")
-	}
 
 	pwdMgr := NewPasswordManager(nil)
 	auth := NewLocalAuthenticator(db, pwdMgr)
@@ -107,9 +94,6 @@ func TestLocalAuthenticator_Authenticate_UserDisabled(t *testing.T) {
 // TestLocalAuthenticator_Authenticate_SM3PasswordVerification 测试SM3密码验证逻辑
 func TestLocalAuthenticator_Authenticate_SM3PasswordVerification(t *testing.T) {
 	db := setupTestDB(t)
-	if db == nil {
-		t.Skip("测试数据库未配置")
-	}
 
 	pwdMgr := NewPasswordManager(nil)
 	auth := NewLocalAuthenticator(db, pwdMgr)
@@ -147,9 +131,6 @@ func TestLocalAuthenticator_Authenticate_SM3PasswordVerification(t *testing.T) {
 // TestLocalAuthenticator_Name 测试认证器名称
 func TestLocalAuthenticator_Name(t *testing.T) {
 	db := setupTestDB(t)
-	if db == nil {
-		t.Skip("测试数据库未配置")
-	}
 
 	pwdMgr := NewPasswordManager(nil)
 	auth := NewLocalAuthenticator(db, pwdMgr)
@@ -160,9 +141,6 @@ func TestLocalAuthenticator_Name(t *testing.T) {
 // TestLocalAuthenticator_TableDrivenTests 表格驱动测试（多场景测试）
 func TestLocalAuthenticator_TableDrivenTests(t *testing.T) {
 	db := setupTestDB(t)
-	if db == nil {
-		t.Skip("测试数据库未配置")
-	}
 
 	pwdMgr := NewPasswordManager(nil)
 	auth := NewLocalAuthenticator(db, pwdMgr)

@@ -51,37 +51,9 @@ import {
 } from "@/lib/assetApi";
 import { queryKeys } from "@/lib/queryKeys";
 import { useMenuStore } from "@/store/menuStore";
+import { FIX_STATUS_OPTIONS, FIX_STATUS_TAG_CONFIG } from "@/constants/status";
 import { FixSuggestionDetailDrawer } from "./components/FixSuggestionDetailDrawer";
 import { RollbackModal } from "./components/RollbackModal";
-
-/**
- * 状态机颜色映射(D-D2 视觉强化 / 46-02 Task 3 锁定)
- *
- * 6 种状态:
- *   - pending     黄色  待处理
- *   - accepted    蓝色  已接受(未应用)
- *   - rejected    灰色  已拒绝
- *   - applied     绿色  已应用(可回滚)
- *   - rolled_back 橙色  已回滚(从 applied 恢复)
- *   - failed      红色  失败
- */
-const fixStatusColor: Record<FixStatus, string> = {
-  pending: "gold",
-  accepted: "blue",
-  rejected: "default",
-  applied: "green",
-  rolled_back: "orange",
-  failed: "red",
-};
-
-const fixStatusLabel: Record<FixStatus, string> = {
-  pending: "待处理",
-  accepted: "已接受",
-  rejected: "已拒绝",
-  applied: "已应用",
-  rolled_back: "已回滚",
-  failed: "失败",
-};
 
 const FixSuggestion = () => {
   const { message } = App.useApp();
@@ -143,7 +115,7 @@ const FixSuggestion = () => {
 
   useEffect(() => {
     form.setFieldsValue(filterValues);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reason: initializing form with filterValues from URL params; no reactive deps needed (setFieldsValue is stable)
   }, []);
 
   // 拼装 listParams(primitive deps 避免无限循环)
@@ -379,7 +351,11 @@ const FixSuggestion = () => {
       key: "fixStatus",
       width: 90,
       sorter: true,
-      render: (v: FixStatus) => <Tag color={fixStatusColor[v]}>{fixStatusLabel[v]}</Tag>,
+      render: (v: FixStatus) => (
+        <Tag color={FIX_STATUS_TAG_CONFIG[v]?.color ?? "default"}>
+          {FIX_STATUS_TAG_CONFIG[v]?.text ?? v}
+        </Tag>
+      ),
     },
     {
       title: "创建时间",
@@ -446,7 +422,7 @@ const FixSuggestion = () => {
             </Button>
           );
         }
-        return <Tag>{fixStatusLabel[record.fixStatus]}</Tag>;
+        return <Tag>{FIX_STATUS_TAG_CONFIG[record.fixStatus]?.text ?? record.fixStatus}</Tag>;
       },
     },
   ];
@@ -506,7 +482,7 @@ const FixSuggestion = () => {
               style={{ width: 140 }}
               showSearch
               onSearch={() => undefined}
-              options={Object.entries(fixStatusLabel).map(([value, label]) => ({ value, label }))}
+              options={FIX_STATUS_OPTIONS}
             />
           </Form.Item>
           <Form.Item name="conflictType" label="冲突类型">

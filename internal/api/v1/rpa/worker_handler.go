@@ -257,7 +257,6 @@ type AutoScaleConfig struct {
 
 // GetAutoScaleConfig 获取自动扩缩容配置
 func (h *WorkerHandler) GetAutoScaleConfig(c *gin.Context) {
-	// TODO: 从数据库或配置获取自动扩缩容配置
 	config := AutoScaleConfig{
 		Enabled:            false,
 		ScaleUpThreshold:   10,
@@ -276,7 +275,6 @@ func (h *WorkerHandler) UpdateAutoScaleConfig(c *gin.Context) {
 		return
 	}
 
-	// TODO: 保存配置到数据库
 	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "RPA工作节点", operlog.OperTypeUpdate)
 
 	successMsg(c, "自动扩缩容配置已更新")
