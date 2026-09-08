@@ -237,7 +237,8 @@ func TestOperLog_Clean_Error(t *testing.T) {
 }
 
 func TestOperLog_WithCore(t *testing.T) {
-	h := &OperLogHandler{}
+	mock := &mockOperLogService{}
+	h := NewOperLogHandler(mock)
 	result := h.WithCore(&core.Core{CoreInfra: &core.CoreInfra{}})
 	assert.Same(t, h, result)
 }

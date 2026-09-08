@@ -3,6 +3,7 @@ package monitor
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
+	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/services/base"
 	monitorServices "github.com/xingran-next/xingran-go-backend/internal/services/monitor"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
@@ -11,20 +12,28 @@ import (
 	"github.com/xingran-next/xingran-go-backend/pkg/response"
 )
 
-// LoginLogHandler 登录日志处理器
+// LoginLogHandler 登录日志处理器 — embeds MonitorLogHandler for Delete/BatchDelete.
 type LoginLogHandler struct {
-	service monitorServices.LoginLogService
-	core    *core.Core
+	*MonitorLogHandler[models.LoginLog] // shared Delete/BatchDelete
+	svc                               monitorServices.LoginLogService
 }
 
-// NewLoginLogHandler 创建登录日志处理器实例
-func NewLoginLogHandler(service monitorServices.LoginLogService) *LoginLogHandler {
-	return &LoginLogHandler{service: service}
+// NewLoginLogHandler creates a LoginLogHandler.
+func NewLoginLogHandler(svc monitorServices.LoginLogService) *LoginLogHandler {
+	h := &LoginLogHandler{svc: svc}
+	h.MonitorLogHandler = NewMonitorLogHandler[models.LoginLog](
+		svc, // logMutator
+		"登录日志",
+		operlog.OperTypeDelete,
+		operlog.OperTypeBatch,
+		true, // needOperlog=true: LoginLog delete calls operlog
+	)
+	return h
 }
 
-// WithCore 注入 core 依赖（用于操作日志埋点），链式调用
+// WithCore injects core dependency.
 func (h *LoginLogHandler) WithCore(core *core.Core) *LoginLogHandler {
-	h.core = core
+	h.MonitorLogHandler.WithCore(core)
 	return h
 }
 
@@ -32,24 +41,15 @@ func (h *LoginLogHandler) WithCore(core *core.Core) *LoginLogHandler {
 type LoginLogListRequest struct {
 	base.BaseListRequest
 	Username  *string `json:"username,omitempty"`
-	IPAddr    *string `json:"ipaddr,omitempty"`
-	Status    *int    `json:"status,omitempty"`
+	IPAddr   *string `json:"ipaddr,omitempty"`
+	Status   *int    `json:"status,omitempty"`
 	BeginTime *string `json:"beginTime,omitempty"`
-	EndTime   *string `json:"endTime,omitempty"`
+	EndTime  *string `json:"endTime,omitempty"`
 }
 
 // List 查询登录日志列表
-// @Summary 查询登录日志列表
-// @Description 分页查询登录日志列表
-// @Tags 登录日志
-// @Accept json
-// @Produce json
-// @Param request body LoginLogListRequest true "查询条件"
-// @Success 200 {object} response.Response{data=response.PageResponse}
-// @Router /monitor/login-logs/list [post]
 func (h *LoginLogHandler) List(c *gin.Context) {
 	var req LoginLogListRequest
-	// 允许空的请求体，设置默认值
 	if err := c.ShouldBindJSON(&req); err != nil {
 		req = LoginLogListRequest{
 			BaseListRequest: base.BaseListRequest{
@@ -61,14 +61,14 @@ func (h *LoginLogHandler) List(c *gin.Context) {
 
 	params := monitorServices.LoginLogListParams{
 		BaseListRequest: req.BaseListRequest,
-		Username:        req.Username,
-		IPAddr:          req.IPAddr,
-		Status:          req.Status,
-		BeginTime:       req.BeginTime,
-		EndTime:         req.EndTime,
+		Username:       req.Username,
+		IPAddr:         req.IPAddr,
+		Status:         req.Status,
+		BeginTime:      req.BeginTime,
+		EndTime:        req.EndTime,
 	}
 
-	result, err := h.service.List(c.Request.Context(), params)
+	result, err := h.svc.List(c.Request.Context(), params)
 	if err != nil {
 		response.Error(c, apperrors.InternalServerError(err))
 		return
@@ -78,14 +78,6 @@ func (h *LoginLogHandler) List(c *gin.Context) {
 }
 
 // GetByID 获取登录日志详情
-// @Summary 获取登录日志详情
-// @Description 根据ID获取登录日志详情
-// @Tags 登录日志
-// @Accept json
-// @Produce json
-// @Param id path string true "登录日志ID"
-// @Success 200 {object} response.Response
-// @Router /monitor/login-logs/:id [post]
 func (h *LoginLogHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -93,7 +85,7 @@ func (h *LoginLogHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	loginLog, err := h.service.GetByID(c.Request.Context(), id)
+	loginLog, err := h.svc.GetByID(c.Request.Context(), id)
 	if err != nil {
 		response.Error(c, apperrors.InternalServerError(err))
 		return
@@ -102,71 +94,9 @@ func (h *LoginLogHandler) GetByID(c *gin.Context) {
 	response.Success(c, loginLog)
 }
 
-// Delete 删除登录日志
-// @Summary 删除登录日志
-// @Description 删除指定登录日志
-// @Tags 登录日志
-// @Accept json
-// @Produce json
-// @Param id path string true "登录日志ID"
-// @Success 200 {object} response.Response
-// @Router /monitor/login-logs/:id/delete [post]
-func (h *LoginLogHandler) Delete(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
-		response.Error(c, apperrors.ParamMissing("ID"))
-		return
-	}
-
-	if err := h.service.Delete(c.Request.Context(), id); err != nil {
-		response.Error(c, apperrors.InternalServerError(err))
-		return
-	}
-
-	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "登录日志", operlog.OperTypeDelete)
-
-	response.Success(c, nil)
-}
-
-// BatchDelete 批量删除登录日志
-// @Summary 批量删除登录日志
-// @Description 批量删除多个登录日志
-// @Tags 登录日志
-// @Accept json
-// @Produce json
-// @Param request body object{ids=[]string} true "ID列表"
-// @Success 200 {object} response.Response
-// @Router /monitor/login-logs/batch-delete [post]
-func (h *LoginLogHandler) BatchDelete(c *gin.Context) {
-	var req struct {
-		IDs []string `json:"ids" binding:"required,min=1"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, apperrors.Wrap(err, apperrors.CodeParamError, "请求参数错误"))
-		return
-	}
-
-	if err := h.service.BatchDelete(c.Request.Context(), req.IDs); err != nil {
-		response.Error(c, apperrors.InternalServerError(err))
-		return
-	}
-
-	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "登录日志", operlog.OperTypeBatch)
-
-	response.Success(c, nil)
-}
-
 // Clean 清空登录日志
-// @Summary 清空登录日志
-// @Description 清空所有登录日志
-// @Tags 登录日志
-// @Accept json
-// @Produce json
-// @Success 200 {object} response.Response
-// @Router /monitor/login-logs/clean [post]
 func (h *LoginLogHandler) Clean(c *gin.Context) {
-	if err := h.service.Clean(c.Request.Context()); err != nil {
+	if err := h.svc.Clean(c.Request.Context()); err != nil {
 		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
@@ -176,15 +106,7 @@ func (h *LoginLogHandler) Clean(c *gin.Context) {
 	response.Success(c, gin.H{"message": "清空成功"})
 }
 
-// UnlockUser 解锁用户
-// @Summary 解锁用户
-// @Description 解锁被锁定的用户
-// @Tags 登录日志
-// @Accept json
-// @Produce json
-// @Param username path string true "用户名"
-// @Success 200 {object} response.Response
-// @Router /monitor/login-logs/unlock/:username [post]
+// UnlockUser 解锁用户 — Phase 107 TODO-03 placeholder, not part of handler deduplication
 func (h *LoginLogHandler) UnlockUser(c *gin.Context) {
 	username := c.Param("username")
 	if username == "" {

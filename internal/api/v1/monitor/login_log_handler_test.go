@@ -255,7 +255,8 @@ func TestLoginLog_UnlockUser_Success(t *testing.T) {
 }
 
 func TestLoginLog_WithCore(t *testing.T) {
-	h := &LoginLogHandler{}
+	mock := &mockLoginLogService{}
+	h := NewLoginLogHandler(mock)
 	result := h.WithCore(&core.Core{CoreInfra: &core.CoreInfra{}})
 	assert.Same(t, h, result)
 }
