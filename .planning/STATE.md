@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.30
 milestone_name: milestone
-status: executing
-stopped_at: Phase 104 complete (all 4 plans committed)
-last_updated: "2026-09-08T03:30:00Z"
+status: All waves executed
+stopped_at: Phase 105 context gathered
+last_updated: "2026-09-08T04:26:11.820Z"
 last_activity: 2026-09-08
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
-  percent: 33
+  completed_phases: 1
+  total_plans: 8
+  completed_plans: 7
+  percent: 17
 ---
 
 # Project State (v1.31 — milestone workstream)
@@ -36,6 +36,7 @@ Progress: [██░░░░░░░░] 1/6 phases
 ## Phase 104 Summary
 
 8 commits (cf10eb0 → dfe1053):
+
 - Wave 1: pkg/response/handler_helpers.go rewrite; BusinessError → apperrors migration; dead files deleted
 - Wave 2: 14 operations handlers switched to pkg helpers; server_room drift fixed
 - Wave 3: MonitorLogHandler[T] generic created; oper/login_log handlers refactored
@@ -103,6 +104,6 @@ v1.30 遗留人工验证台账（非 v1.31 scope，持续 pending，用户执行
 
 ## Session Continuity
 
-Last session: 2026-09-08T02:12:19.287Z
-Stopped at: Phase 104 context gathered
-Resume file: .planning/phases/104-handler-wire/104-CONTEXT.md
+Last session: 2026-09-08T04:26:11.814Z
+Stopped at: Phase 105 context gathered
+Resume file: .planning/phases/105-crud-factory-convergence/105-CONTEXT.md
