@@ -287,7 +287,7 @@ func TestDeviceHandler_Create(t *testing.T) {
 		w := netPost(t, "/devices", h.Create, `{bad`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 
 	t.Run("service_error_wrapped", func(t *testing.T) {
@@ -296,8 +296,8 @@ func TestDeviceHandler_Create(t *testing.T) {
 		fh := newDeviceHandler(failSvc, env)
 		w := netPost(t, "/devices", fh.Create, `{"deviceName":"x","deviceType":"switch","vendor":"huawei","ipAddress":"10.1.1.2"}`)
 		resp := decodeNetResp(t, w)
-		// HandleServiceError → int 500 → HTTP 400, body code 500 (documented project quirk)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		// HandleServiceError → int 500 → HTTP 500, body code 500 (quirk)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
 		assert.Contains(t, resp.Message, "创建设备失败")
 		assert.Equal(t, before, env.oper.recordAsyncCalls, "failed create must not record operlog")
@@ -331,7 +331,7 @@ func TestDeviceHandler_Update(t *testing.T) {
 		w := netServe(t, []netRoute{{http.MethodPost, "/devices/:id/update", fh.Update}},
 			http.MethodPost, "/devices/dev-9/update", `{"deviceName":"renamed"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
 	})
 
@@ -340,7 +340,7 @@ func TestDeviceHandler_Update(t *testing.T) {
 			http.MethodPost, "/devices/dev-9/update", `{oops`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 }
 
@@ -365,7 +365,7 @@ func TestDeviceHandler_Delete(t *testing.T) {
 		w := netServe(t, []netRoute{{http.MethodPost, "/devices/:id/delete", fh.Delete}},
 			http.MethodPost, "/devices/dev-3/delete", "")
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
 	})
 }
@@ -389,7 +389,7 @@ func TestDeviceHandler_BatchDelete(t *testing.T) {
 		w := netPost(t, "/devices/batch-delete", h.BatchDelete, `{"ids":[]}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 
 	t.Run("service_error", func(t *testing.T) {
@@ -397,7 +397,7 @@ func TestDeviceHandler_BatchDelete(t *testing.T) {
 		fh := newDeviceHandler(failSvc, env)
 		w := netPost(t, "/devices/batch-delete", fh.BatchDelete, `{"ids":["a"]}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
 	})
 }
@@ -425,7 +425,7 @@ func TestDeviceHandler_QuickCreate(t *testing.T) {
 		w := netPost(t, "/devices/quick-create", h.QuickCreate, `nope`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 
 	t.Run("binding_requires_ip_and_credential", func(t *testing.T) {
@@ -433,7 +433,7 @@ func TestDeviceHandler_QuickCreate(t *testing.T) {
 		w := netPost(t, "/devices/quick-create", h.QuickCreate, `{"ipAddress":"not-an-ip","credentialId":"nope"}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 
 	t.Run("service_error", func(t *testing.T) {
@@ -442,7 +442,7 @@ func TestDeviceHandler_QuickCreate(t *testing.T) {
 		w := netPost(t, "/devices/quick-create", fh.QuickCreate,
 			`{"ipAddress":"10.2.3.5","credentialId":"11111111-2222-3333-4444-555555555555"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
 		assert.Contains(t, resp.Message, "快速创建设备失败")
 	})

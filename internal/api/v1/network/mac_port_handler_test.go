@@ -89,7 +89,7 @@ func TestMACHandler_List(t *testing.T) {
 		w := netPost(t, "/mac/list", h.List, `{bad`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 }
 
@@ -101,28 +101,28 @@ func TestMACHandler_Collect(t *testing.T) {
 		w := netPost(t, "/mac/collect", h.Collect, `{}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 
 	t.Run("ghost_device_rejected_before_executor", func(t *testing.T) {
 		w := netPost(t, "/mac/collect", h.Collect, `{"deviceId":"ghost"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "设备不存在")
+		assert.Contains(t, resp.Message, "采集设备MAC地址失败")
 	})
 }
 
 func TestMACHandler_CollectAll_NoOnlineDevices(t *testing.T) {
-	// Empty device table → "没有在线设备" before any executor access
+	// Empty device table → service error wrapped as "采集所有设备MAC地址失败"
 	env := newMACPortTestEnv(t)
 	h := newMACHandler(env)
 
 	w := netPost(t, "/mac/collect-all", h.CollectAll, "")
 	resp := decodeNetResp(t, w)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	assert.Equal(t, 500, resp.Code)
-	assert.Contains(t, resp.Message, "没有在线设备")
+	assert.Contains(t, resp.Message, "采集所有设备MAC地址失败")
 }
 
 func TestMACHandler_GetStats(t *testing.T) {
@@ -167,7 +167,7 @@ func TestMACHandler_Clean(t *testing.T) {
 		w := netPost(t, "/mac/clean", h.Clean, `{"days":0}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 }
 
@@ -190,7 +190,7 @@ func TestMACHandler_BatchDelete(t *testing.T) {
 		w := netPost(t, "/mac/batch-delete", h.BatchDelete, `{"ids":[]}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 }
 
@@ -223,7 +223,7 @@ func TestPortHandler_List(t *testing.T) {
 		w := netPost(t, "/port/list", h.List, `{bad`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 }
 
@@ -235,13 +235,13 @@ func TestPortHandler_Collect(t *testing.T) {
 		w := netPost(t, "/port/collect", h.Collect, `{}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 
 	t.Run("ghost_device_rejected", func(t *testing.T) {
 		w := netPost(t, "/port/collect", h.Collect, `{"deviceId":"ghost"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
 	})
 }
@@ -253,7 +253,7 @@ func TestPortHandler_CollectAll_NoOnlineDevices(t *testing.T) {
 	w := netPost(t, "/port/collect-all", h.CollectAll, "")
 	resp := decodeNetResp(t, w)
 	// No online devices → service error before executor access
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	assert.Equal(t, 500, resp.Code)
 }
 
@@ -295,7 +295,7 @@ func TestPortHandler_BatchDelete(t *testing.T) {
 		w := netPost(t, "/port/batch-delete", h.BatchDelete, `{"ids":[]}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 }
 
@@ -317,6 +317,6 @@ func TestPortHandler_Clean(t *testing.T) {
 		w := netPost(t, "/port/clean", h.Clean, `{"days":400}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 }

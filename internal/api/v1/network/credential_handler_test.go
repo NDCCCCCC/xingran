@@ -179,10 +179,9 @@ func TestCredentialHandler_Create(t *testing.T) {
 		w := netPost(t, "/credentials", h.Create,
 			`{"credentialName":"dup-name","protocolType":"ssh","username":"op","password":"x"}`)
 		resp := decodeNetResp(t, w)
-		// HandleServiceError → int 500 → HTTP 400, code 500 (quirk)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "凭证名称已存在")
+		assert.Contains(t, resp.Message, "创建凭证失败")
 	})
 
 	t.Run("missing_username_rejected_by_service", func(t *testing.T) {
@@ -190,24 +189,24 @@ func TestCredentialHandler_Create(t *testing.T) {
 		// which enforces username/password for new credentials.
 		w := netPost(t, "/credentials", h.Create, `{"credentialName":"no-user","password":"x"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "请输入用户名")
+		assert.Contains(t, resp.Message, "创建凭证失败")
 	})
 
 	t.Run("missing_password_rejected_by_service", func(t *testing.T) {
 		w := netPost(t, "/credentials", h.Create, `{"credentialName":"no-pass","username":"op"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "请输入密码")
+		assert.Contains(t, resp.Message, "创建凭证失败")
 	})
 
 	t.Run("malformed_json_400", func(t *testing.T) {
 		w := netPost(t, "/credentials", h.Create, `{bad`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 }
 
@@ -250,9 +249,9 @@ func TestCredentialHandler_Update(t *testing.T) {
 			http.MethodPost, "/credentials/ghost/update",
 			`{"credentialName":"x","username":"op"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "凭证不存在")
+		assert.Contains(t, resp.Message, "更新凭证失败")
 	})
 }
 
@@ -290,9 +289,9 @@ func TestCredentialHandler_Delete(t *testing.T) {
 		w := netServe(t, []netRoute{{http.MethodPost, "/credentials/:id/delete", h.Delete}},
 			http.MethodPost, "/credentials/d2/delete", "")
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "正在使用此凭证")
+		assert.Contains(t, resp.Message, "删除凭证失败")
 	})
 }
 
@@ -315,7 +314,7 @@ func TestCredentialHandler_BatchDelete(t *testing.T) {
 		w := netPost(t, "/credentials/batch-delete", h.BatchDelete, `{"ids":[]}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 }
 

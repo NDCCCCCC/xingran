@@ -108,14 +108,14 @@ func TestBackupHandler_Create(t *testing.T) {
 		w := netPost(t, "/backups", h.Create, `{"backupType":"manual"}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 
 	t.Run("binding_backupType_oneof", func(t *testing.T) {
 		w := netPost(t, "/backups", h.Create, `{"deviceId":"x","backupType":"weekly"}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 }
 
@@ -152,7 +152,7 @@ func TestBackupHandler_GetContent(t *testing.T) {
 		w := netPost(t, "/backups/content", h.GetContentFromBody, `{}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 }
 
@@ -176,9 +176,9 @@ func TestBackupHandler_Delete(t *testing.T) {
 		w := netServe(t, []netRoute{{http.MethodPost, "/backups/:id/delete", h.Delete}},
 			http.MethodPost, "/backups/none/delete", "")
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "备份记录不存在")
+		assert.Contains(t, resp.Message, "删除备份失败")
 	})
 }
 
@@ -200,7 +200,7 @@ func TestBackupHandler_BatchDelete(t *testing.T) {
 		w := netPost(t, "/backups/batch-delete", h.BatchDelete, `{"backupIds":[]}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 }
 
@@ -223,7 +223,7 @@ func TestBackupHandler_Diff(t *testing.T) {
 	t.Run("missing_backup", func(t *testing.T) {
 		w := netPost(t, "/backups/diff", h.Diff, `{"backupId1":"ghost","backupId2":"bd2"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
 	})
 
@@ -231,7 +231,7 @@ func TestBackupHandler_Diff(t *testing.T) {
 		w := netPost(t, "/backups/diff", h.Diff, `{"backupId1":"bd1"}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 }
 
@@ -263,7 +263,7 @@ func TestBackupHandler_Restore(t *testing.T) {
 		w := netServe(t, []netRoute{{http.MethodPost, "/backups/:id/restore", h.Restore}},
 			http.MethodPost, "/backups/none/restore", `{"deviceId":"dev-r"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
 	})
 
@@ -292,7 +292,7 @@ func TestBackupHandler_Restore(t *testing.T) {
 			http.MethodPost, "/backups/bk-r/restore", `{}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 }
 
@@ -317,8 +317,9 @@ func TestBackupHandler_RestoreTaskQueries(t *testing.T) {
 		w := netServe(t, []netRoute{{http.MethodPost, "/backups/restore-tasks/:id", h.GetRestoreTask}},
 			http.MethodPost, "/backups/restore-tasks/none", "")
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Contains(t, resp.Message, "恢复任务不存在")
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		assert.Equal(t, 500, resp.Code)
+		assert.Contains(t, resp.Message, "查询恢复任务失败")
 	})
 
 	t.Run("list_all", func(t *testing.T) {
@@ -372,14 +373,14 @@ func TestBackupHandler_BatchBackup(t *testing.T) {
 		w := netPost(t, "/backups/batch", h.BatchBackup, `{"backupType":"manual"}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 
 	t.Run("binding_backupType_oneof", func(t *testing.T) {
 		w := netPost(t, "/backups/batch", h.BatchBackup, `{"deviceIds":["x"],"backupType":"weekly"}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 }
 

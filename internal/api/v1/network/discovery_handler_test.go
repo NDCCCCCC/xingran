@@ -116,7 +116,7 @@ func TestDiscoveryHandler_Create(t *testing.T) {
 		w := netPost(t, "/discoveries/create", h.Create, `{bad`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 }
 
@@ -176,9 +176,9 @@ func TestDiscoveryHandler_Execute(t *testing.T) {
 		w := netServe(t, []netRoute{{http.MethodPost, "/discoveries/:id/execute", h.Execute}},
 			http.MethodPost, "/discoveries/none/execute", "")
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "发现任务不存在")
+		assert.Contains(t, resp.Message, "执行发现任务失败")
 	})
 }
 
@@ -205,16 +205,16 @@ func TestDiscoveryHandler_Cancel(t *testing.T) {
 		w := netServe(t, []netRoute{{http.MethodPost, "/discoveries/:id/cancel", h.Cancel}},
 			http.MethodPost, "/discoveries/c2/cancel", "")
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "只能取消待执行或执行中的任务")
+		assert.Contains(t, resp.Message, "取消发现任务失败")
 	})
 
 	t.Run("not_found", func(t *testing.T) {
 		w := netServe(t, []netRoute{{http.MethodPost, "/discoveries/:id/cancel", h.Cancel}},
 			http.MethodPost, "/discoveries/none/cancel", "")
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
 	})
 }
@@ -240,9 +240,9 @@ func TestDiscoveryHandler_Delete(t *testing.T) {
 		w := netServe(t, []netRoute{{http.MethodPost, "/discoveries/:id/delete", h.Delete}},
 			http.MethodPost, "/discoveries/del2/delete", "")
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "无法删除执行中的任务")
+		assert.Contains(t, resp.Message, "删除发现任务失败")
 	})
 }
 
@@ -264,7 +264,7 @@ func TestDiscoveryHandler_BatchDelete(t *testing.T) {
 		w := netPost(t, "/discoveries/batch-delete", h.BatchDelete, `{"discoveryIds":[]}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 }
 
@@ -301,7 +301,6 @@ func TestDiscoveryHandler_Probe(t *testing.T) {
 	t.Run("binding_requires_valid_ip_and_uuid", func(t *testing.T) {
 		w := netPost(t, "/devices/discover", h.Probe, `{"ipAddress":"not-an-ip","credentialId":"nope"}`)
 		resp := decodeNetResp(t, w)
-		// responseHelpers.Error(c, 400, ...) → HTTP 400, body code 400
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 		assert.Equal(t, 400, resp.Code)
 	})

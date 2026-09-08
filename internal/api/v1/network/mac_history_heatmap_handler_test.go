@@ -131,7 +131,7 @@ func TestMACHistoryHandler_QueryPortHistory(t *testing.T) {
 		w := netPost(t, "/history/port", h.QueryPortHistory, `{}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 
 	t.Run("service_error", func(t *testing.T) {
@@ -139,7 +139,7 @@ func TestMACHistoryHandler_QueryPortHistory(t *testing.T) {
 		fh := newHistoryHandler(fail)
 		w := netPost(t, "/history/port", fh.QueryPortHistory, `{"deviceId":"dev-1","current":1,"pageSize":20}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
 		assert.Contains(t, resp.Message, "查询端口MAC历史记录失败")
 	})
@@ -164,7 +164,7 @@ func TestMACHistoryHandler_QueryDeviceHistory(t *testing.T) {
 		w := netPost(t, "/history/device", h.QueryDeviceHistory, `{}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 
 	t.Run("service_error", func(t *testing.T) {
@@ -172,7 +172,7 @@ func TestMACHistoryHandler_QueryDeviceHistory(t *testing.T) {
 		fh := newHistoryHandler(fail)
 		w := netPost(t, "/history/device", fh.QueryDeviceHistory, `{"deviceId":"d","current":1,"pageSize":20}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
 	})
 }
@@ -198,7 +198,7 @@ func TestMACHistoryHandler_QueryConnectionStats(t *testing.T) {
 		w := netPost(t, "/history/stats", h.QueryConnectionStats, `{}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 
 	t.Run("service_error", func(t *testing.T) {
@@ -207,7 +207,7 @@ func TestMACHistoryHandler_QueryConnectionStats(t *testing.T) {
 		w := netPost(t, "/history/stats", fh.QueryConnectionStats,
 			`{"startTime":"2026-08-01T00:00:00Z","endTime":"2026-08-21T00:00:00Z"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
 	})
 }
@@ -232,7 +232,7 @@ func TestMACHistoryHandler_GetVendor(t *testing.T) {
 		w := netPost(t, "/history/vendor", h.GetVendor, `{}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 
 	t.Run("service_error", func(t *testing.T) {
@@ -240,7 +240,7 @@ func TestMACHistoryHandler_GetVendor(t *testing.T) {
 		fh := newHistoryHandler(fail)
 		w := netPost(t, "/history/vendor", fh.GetVendor, `{"mac":"AA:BB:CC"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
 	})
 }
@@ -269,7 +269,7 @@ func TestMACHistoryHandler_QueryHistory(t *testing.T) {
 		w := netPost(t, "/history/list", h.QueryHistory, `{"pageSize":0}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 
 	t.Run("service_error", func(t *testing.T) {
@@ -277,7 +277,7 @@ func TestMACHistoryHandler_QueryHistory(t *testing.T) {
 		fh := newHistoryHandler(fail)
 		w := netPost(t, "/history/list", fh.QueryHistory, `{"current":1,"pageSize":10}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
 	})
 }

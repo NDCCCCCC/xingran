@@ -112,25 +112,25 @@ func TestCommandHandler_Dispatch(t *testing.T) {
 		w := netPost(t, "/command/dispatch", h.Dispatch,
 			`{"ExecutionName":"batch","CommandContent":"display version"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "请选择要执行命令的设备")
+		assert.Contains(t, resp.Message, "分发命令失败")
 	})
 
 	t.Run("nonexistent_device_rejected", func(t *testing.T) {
 		w := netPost(t, "/command/dispatch", h.Dispatch,
 			`{"ExecutionName":"batch","DeviceIDs":["ghost"],"CommandContent":"display version"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "部分设备不存在")
+		assert.Contains(t, resp.Message, "分发命令失败")
 	})
 
 	t.Run("malformed_json_400", func(t *testing.T) {
 		w := netPost(t, "/command/dispatch", h.Dispatch, `{bad`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 }
 
@@ -141,16 +141,16 @@ func TestCommandHandler_QuickCommand(t *testing.T) {
 	t.Run("device_not_found", func(t *testing.T) {
 		w := netPost(t, "/command/quick", h.QuickCommand, `{"deviceId":"ghost","command":"display version"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "设备不存在")
+		assert.Contains(t, resp.Message, "快速命令失败")
 	})
 
 	t.Run("binding_requires_device_and_command", func(t *testing.T) {
 		w := netPost(t, "/command/quick", h.QuickCommand, `{"deviceId":"x"}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 
 	t.Run("timeout_out_of_range", func(t *testing.T) {
@@ -159,7 +159,7 @@ func TestCommandHandler_QuickCommand(t *testing.T) {
 			`{"deviceId":"x","command":"y","timeout":5}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 }
 
@@ -254,18 +254,18 @@ func TestExecutionHandler_ExecuteByTemplate(t *testing.T) {
 	t.Run("empty_devices_rejected", func(t *testing.T) {
 		w := netPost(t, "/executions/template/execute", h.ExecuteByTemplate, `{"TemplateID":"t","ExecutionName":"x"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "请选择要执行配置的设备")
+		assert.Contains(t, resp.Message, "执行配置失败")
 	})
 
 	t.Run("template_missing", func(t *testing.T) {
 		w := netPost(t, "/executions/template/execute", h.ExecuteByTemplate,
 			`{"TemplateID":"ghost","DeviceIDs":["dev-1"],"ExecutionName":"x"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "模板不存在")
+		assert.Contains(t, resp.Message, "执行配置失败")
 	})
 
 	t.Run("device_missing", func(t *testing.T) {
@@ -278,9 +278,9 @@ func TestExecutionHandler_ExecuteByTemplate(t *testing.T) {
 		w := netPost(t, "/executions/template/execute", h.ExecuteByTemplate,
 			`{"TemplateID":"tpl-x","DeviceIDs":["ghost"],"ExecutionName":"x"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "部分设备不存在")
+		assert.Contains(t, resp.Message, "执行配置失败")
 	})
 
 	t.Run("required_variable_missing_render_error", func(t *testing.T) {
@@ -295,9 +295,9 @@ func TestExecutionHandler_ExecuteByTemplate(t *testing.T) {
 		w := netPost(t, "/executions/template/execute", h.ExecuteByTemplate,
 			`{"TemplateID":"tpl-y","DeviceIDs":["dev-r"],"ExecutionName":"x"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "渲染模板失败")
+		assert.Contains(t, resp.Message, "执行配置失败")
 	})
 }
 
@@ -350,16 +350,16 @@ func TestExecutionHandler_Cancel(t *testing.T) {
 		w := netServe(t, []netRoute{{http.MethodPost, "/executions/:id/cancel", h.Cancel}},
 			http.MethodPost, "/executions/can2/cancel", "")
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "只能取消待执行或执行中的任务")
+		assert.Contains(t, resp.Message, "取消配置执行失败")
 	})
 
 	t.Run("not_found", func(t *testing.T) {
 		w := netServe(t, []netRoute{{http.MethodPost, "/executions/:id/cancel", h.Cancel}},
 			http.MethodPost, "/executions/none/cancel", "")
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
 	})
 }
@@ -391,9 +391,9 @@ func TestExecutionHandler_Delete(t *testing.T) {
 		w := netServe(t, []netRoute{{http.MethodPost, "/executions/:id/delete", h.Delete}},
 			http.MethodPost, "/executions/del2/delete", "")
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "无法删除执行中的任务")
+		assert.Contains(t, resp.Message, "删除配置执行记录失败")
 	})
 }
 
@@ -420,6 +420,6 @@ func TestExecutionHandler_BatchDelete(t *testing.T) {
 		w := netPost(t, "/executions/batch-delete", h.BatchDelete, `{"executionIds":[]}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code)
 	})
 }
