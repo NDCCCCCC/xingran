@@ -1,8 +1,6 @@
 package operations
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
@@ -34,7 +32,7 @@ func (h *ServerRoomHandler) WithCore(core *core.Core) *ServerRoomHandler {
 func (h *ServerRoomHandler) Statistics(c *gin.Context) {
 	result, err := h.service.Statistics(c.Request.Context())
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.HandleServiceError(c, err, "统计")
 		return
 	}
 	response.Success(c, result)
@@ -48,7 +46,7 @@ func (h *ServerRoomHandler) SearchServerRoomOptions(c *gin.Context) {
 	}
 	result, err := h.service.SearchServerRoomOptions(c.Request.Context(), params)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.HandleServiceError(c, err, "查询")
 		return
 	}
 	response.Success(c, result)
@@ -98,7 +96,7 @@ func (h *ServerRoomHandler) List(c *gin.Context) {
 
 	result, err := h.service.List(c.Request.Context(), req)
 	if err != nil {
-		response.Error(c, apperrors.InternalServerErrorWithMsg("查询失败"))
+		response.HandleServiceError(c, err, "查询")
 		return
 	}
 
