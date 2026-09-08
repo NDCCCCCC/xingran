@@ -284,7 +284,7 @@ func TestServerRoomHandler_Statistics_Error(t *testing.T) {
 	h := NewServerRoomHandler(svc).WithCore(newTestCore(t))
 	r := newServerRoomRouter(h)
 	w := httpDo(r, http.MethodPost, "/serverRooms/statistics", "")
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 func TestServerRoomHandler_SearchServerRoomOptions_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -323,7 +323,7 @@ func TestServerRoomHandler_SearchServerRoomOptions_Error(t *testing.T) {
 	h := NewServerRoomHandler(svc).WithCore(newTestCore(t))
 	r := newServerRoomRouter(h)
 	w := httpDo(r, http.MethodPost, "/serverRooms/search-options", `{}`)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 func TestServerRoomHandler_WithCore_NilSafe(t *testing.T) {
 	var h *ServerRoomHandler
