@@ -2,16 +2,19 @@ package response
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 )
 
 // HandleJSONBinding 统一处理 JSON 绑定
 // 返回 true 表示绑定成功，false 表示绑定失败
+//
+// D-104-3: binding 错误透传 err.Error()（含 gin validator 字段名）
 func HandleJSONBinding(c *gin.Context, obj interface{}) bool {
 	if err := c.ShouldBindJSON(obj); err != nil {
-		Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		// D-104-3: pass through err.Error() — gin validator includes field name
+		Error(c, apperrors.Wrap(err, apperrors.CodeParamError, err.Error()))
 		return false
 	}
 	return true
@@ -20,34 +23,20 @@ func HandleJSONBinding(c *gin.Context, obj interface{}) bool {
 // HandleServiceError 统一处理服务层错误
 // 返回 true 表示没有错误，false 表示有错误
 //
-// D-04: BusinessError 携带语义化 HTTP status，业务冲突返回 409/400，
-// 不再统一返回 500。
+// D-104-4: apperrors.AppError 携带业务码(.Code)，使用其内置业务文案
+// D-104-5: 裸内部错误使用 operation+"失败"，不泄露 err.Error() 到前端
 func HandleServiceError(c *gin.Context, err error, operation string) bool {
-	if err != nil {
-		// D-04: BusinessError carries semantic HTTP status.
-		// 直接调用 c.JSON 以保留语义化 HTTPStatus，避免 Error() -> toAppError 把 int 误当 error code。
-		if be, ok := err.(*BusinessError); ok {
-			now := time.Now().Unix()
-			var requestID string
-			if rid, ok := c.Get("request_id"); ok {
-				if s, ok := rid.(string); ok {
-					requestID = s
-				}
-			}
-			// D-04: BusinessError → HTTPStatus (409/400) + 业务码放 Data
-			c.JSON(be.HTTPStatus, Response{
-				Code:      be.HTTPStatus, // HTTP status 作为 code（success=0，error=HTTP status）
-				Message:   operation + "失败: " + be.Message,
-				Data:      map[string]int{"bizCode": be.Code}, // 业务码放 Data 里
-				RequestID: requestID,
-				Timestamp: now,
-			})
-			return false
-		}
-		Error(c, http.StatusInternalServerError, operation+"失败: "+err.Error())
-		return false
+	if err == nil {
+		return true
 	}
-	return true
+	// D-104-4: apperrors.AppError — use its built-in business message
+	if apperrors.IsAppError(err) {
+		Error(c, err)
+	} else {
+		// D-104-5: bare internal error — no err detail leaked to client
+		Error(c, err, operation+"失败")
+	}
+	return false
 }
 
 // HandleIDParam 从路径参数中获取 ID

@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/xingran-next/xingran-go-backend/internal/models"
-	"github.com/xingran-next/xingran-go-backend/pkg/response"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 )
 
 // TestV130R03_DeviceMismatchReturns400 V130R-03: 跨设备恢复 → BusinessError{HTTPStatus:400, Code:400001}
@@ -45,10 +45,10 @@ func TestV130R03_DeviceMismatchReturns400(t *testing.T) {
 	_, err := taskSvc.StartRestore(context.Background(), bk.ID, "dev-other", "tester")
 	require.Error(t, err)
 
-	be, ok := err.(*response.BusinessError)
-	require.True(t, ok, "err must be *response.BusinessError, got %T", err)
+	be, ok := err.(*apperrors.AppError)
+	require.True(t, ok, "err must be *apperrors.AppError, got %T", err)
 	assert.Equal(t, 400, be.HTTPStatus, "cross-device must return 400")
-	assert.Equal(t, 400001, be.Code, "cross-device must return biz code 400001")
+	assert.Equal(t, apperrors.ErrorCode(400001), be.Code, "cross-device must return biz code 400001")
 	assert.Contains(t, be.Message, "备份不属于目标设备")
 }
 
@@ -93,10 +93,10 @@ func TestV130R03_DuplicateRestoreReturns409(t *testing.T) {
 	_, err := taskSvc.StartRestore(context.Background(), bk.ID, "dev-conflict", "tester")
 	require.Error(t, err)
 
-	be, ok := err.(*response.BusinessError)
-	require.True(t, ok, "err must be *response.BusinessError, got %T", err)
+	be, ok := err.(*apperrors.AppError)
+	require.True(t, ok, "err must be *apperrors.AppError, got %T", err)
 	assert.Equal(t, 409, be.HTTPStatus, "duplicate restore must return 409")
-	assert.Equal(t, 409001, be.Code, "duplicate restore must return biz code 409001")
+	assert.Equal(t, apperrors.ErrorCode(409001), be.Code, "duplicate restore must return biz code 409001")
 	assert.Contains(t, be.Message, "进行中")
 }
 
@@ -106,6 +106,6 @@ func TestV130R03_PlainErrorNotBusinessError(t *testing.T) {
 	// tests that a plain fmt.Errorf still works for other error paths.
 	// Here we just assert that a non-BusinessError error type is not intercepted.
 	err := errors.New("some other error")
-	_, ok := err.(*response.BusinessError)
+	_, ok := err.(*apperrors.AppError)
 	assert.False(t, ok, "plain error should not be BusinessError")
 }

@@ -14,7 +14,7 @@ import (
 	"github.com/xingran-next/xingran-go-backend/pkg/constants"
 	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"github.com/xingran-next/xingran-go-backend/pkg/query"
-	"github.com/xingran-next/xingran-go-backend/pkg/response"
+	apperrors "github.com/xingran-next/xingran-go-backend/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -73,11 +73,7 @@ func (s *ConfigRestoreTaskService) StartRestore(ctx context.Context, backupID, d
 	}
 	if backup.DeviceID != deviceID {
 		// V130R-03 D-04: 跨设备拒绝 → 400
-		return nil, &response.BusinessError{
-			HTTPStatus: 400,
-			Code:       400001,
-			Message:    "备份不属于目标设备，仅限恢复到备份源设备",
-		}
+		return nil, apperrors.NewWithHTTPStatus(400001, 400, "备份不属于目标设备，仅限恢复到备份源设备")
 	}
 
 	// ② 同设备互斥（D-08）：并发恢复交叉下发比慢更有害（Enqueue 去重先例）
@@ -90,11 +86,7 @@ func (s *ConfigRestoreTaskService) StartRestore(ctx context.Context, backupID, d
 		First(&existing).Error
 	if err == nil {
 		// V130R-03 D-04: 活跃任务冲突 → 409
-		return nil, &response.BusinessError{
-			HTTPStatus: 409,
-			Code:       409001,
-			Message:    "该设备存在进行中的恢复任务",
-		}
+		return nil, apperrors.NewWithHTTPStatus(409001, 409, "该设备存在进行中的恢复任务")
 	}
 
 	// ③ 创建任务（pending）。同设备活跃唯一索引（migration 212，v129-recheck C-1）
@@ -109,11 +101,7 @@ func (s *ConfigRestoreTaskService) StartRestore(ctx context.Context, backupID, d
 	if err := s.db.WithContext(ctx).Create(task).Error; err != nil {
 		if isDuplicateActiveRestoreErr(err) {
 			// V130R-03 D-04: 唯一索引冲突 → 409（与活跃任务冲突同义）
-			return nil, &response.BusinessError{
-				HTTPStatus: 409,
-				Code:       409001,
-				Message:    "该设备存在进行中的恢复任务",
-			}
+			return nil, apperrors.NewWithHTTPStatus(409001, 409, "该设备存在进行中的恢复任务")
 		}
 		return nil, fmt.Errorf("创建恢复任务失败: %w", err)
 	}
