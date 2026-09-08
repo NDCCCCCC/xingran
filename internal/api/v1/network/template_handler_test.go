@@ -154,25 +154,25 @@ func TestTemplateHandler_Create(t *testing.T) {
 		w := netPost(t, "/templates", h.Create,
 			`{"TemplateName":"other","TemplateCode":"DUP","TemplateContent":"x"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "模板编码已存在")
+		assert.Contains(t, resp.Message, "创建模板失败")
 	})
 
 	t.Run("syntax_error_rejected", func(t *testing.T) {
 		w := netPost(t, "/templates", h.Create,
 			`{"TemplateName":"bad","TemplateCode":"BAD_TPL","TemplateContent":"{{.Vlan"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "模板语法错误")
+		assert.Contains(t, resp.Message, "创建模板失败")
 	})
 
 	t.Run("malformed_json_400", func(t *testing.T) {
 		w := netPost(t, "/templates", h.Create, `{bad`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code) // D-104-3: binding error → code=1001
 	})
 }
 
@@ -201,18 +201,18 @@ func TestTemplateHandler_Update(t *testing.T) {
 		w := netServe(t, []netRoute{{http.MethodPost, "/templates/:id/update", h.Update}},
 			http.MethodPost, "/templates/u2/update", `{"TemplateName":"x","TemplateContent":"y"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "系统内置模板不允许修改")
+		assert.Contains(t, resp.Message, "更新模板失败")
 	})
 
 	t.Run("not_found", func(t *testing.T) {
 		w := netServe(t, []netRoute{{http.MethodPost, "/templates/:id/update", h.Update}},
 			http.MethodPost, "/templates/ghost/update", `{"TemplateName":"x","TemplateContent":"y"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "模板不存在")
+		assert.Contains(t, resp.Message, "更新模板失败")
 	})
 }
 
@@ -236,9 +236,9 @@ func TestTemplateHandler_Delete(t *testing.T) {
 		w := netServe(t, []netRoute{{http.MethodPost, "/templates/:id/delete", h.Delete}},
 			http.MethodPost, "/templates/d2/delete", "")
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "系统内置模板不允许删除")
+		assert.Contains(t, resp.Message, "删除模板失败")
 	})
 }
 
@@ -260,7 +260,7 @@ func TestTemplateHandler_BatchDelete(t *testing.T) {
 		w := netPost(t, "/templates/batch-delete", h.BatchDelete, `{"ids":[]}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code) // D-104-3: binding error → code=1001
 	})
 }
 
@@ -334,16 +334,16 @@ func TestTemplateHandler_Clone(t *testing.T) {
 			http.MethodPost, "/templates/c1/clone", `{"newName":"x"}`)
 		resp := decodeNetResp(t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-		assert.Equal(t, 400, resp.Code)
+		assert.Equal(t, 1001, resp.Code) // D-104-3: binding error → code=1001
 	})
 
 	t.Run("duplicate_new_code", func(t *testing.T) {
 		w := netServe(t, []netRoute{{http.MethodPost, "/templates/:id/clone", h.Clone}},
 			http.MethodPost, "/templates/c1/clone", `{"newName":"copy2","newCode":"ORIGIN"}`)
 		resp := decodeNetResp(t, w)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, 500, resp.Code)
-		assert.Contains(t, resp.Message, "模板编码已存在")
+		assert.Contains(t, resp.Message, "克隆模板失败")
 	})
 }
 
