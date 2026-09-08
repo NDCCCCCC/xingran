@@ -465,11 +465,16 @@
   letter-spacing: 0.05em;
 }
 
-/* ---------- 移动端响应 ---------- */
+/* ---------- 移动端响应 ----------
+ * 高视口（>800px）下原 min-height:100vh + justify-content:center 会让表单
+ * 漂浮在大片空白中间（375x1280 时上方/下方各 ~408px 白），出现"全白"观感。
+ * 改为：从顶部开始布局（justify-content:flex-start），面板保持填满视口
+ * 但表单不再被死板居中，而是固定到顶部 ~10vh 位置，剩余高度可滚动。 */
 @media (max-width: 1023px) {
   .login-container {
     padding: 0;
     background: #ffffff;
+    align-items: flex-start;
   }
 
   .login-brand {
@@ -477,10 +482,11 @@
   }
 
   .login-panel {
-    padding: 40px 28px;
+    padding: 10vh 28px 40px;
     min-height: 100vh;
     border-radius: 0;
     box-shadow: none;
+    justify-content: flex-start;
   }
 
   .login-header__title {
