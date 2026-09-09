@@ -5,13 +5,27 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
+
+// tlsInsecureWarnOnce records a one-time SECURITY warning when REDIS_TLS_INSECURE_SKIP_VERIFY=true.
+var tlsInsecureWarnOnce sync.Once
+
+func logTLSInsecureSkipOnce() {
+	tlsInsecureWarnOnce.Do(func() {
+		logger.Warnf(
+			"[SECURITY] REDIS_TLS_INSECURE_SKIP_VERIFY=true: TLS certificate verification is disabled. " +
+				"This is INSECURE and must only be used in internal networks with self-signed certificates.",
+		)
+	})
+}
 
 const (
 	dialTimeout  = 10 * time.Second
@@ -30,9 +44,16 @@ type RedisCache struct {
 func NewRedisCache(config *CacheConfig, keyPrefix string) (*RedisCache, error) {
 	tlsCfg := (*tls.Config)(nil)
 	if config.TLS {
-		// 托管 Redis (Upstash 等) 强制 TLS;InsecureSkipVerify 与现有 LDAPS 路径一致,
-		// 待生产化时统一替换为受信 CA 池 — 单独跟踪,不在本 quick task scope。
-		tlsCfg = &tls.Config{InsecureSkipVerify: true}
+		// TLS-01: REDIS_TLS_INSECURE_SKIP_VERIFY env var, default false (strict).
+		// D-02: 生产默认拒绝自签证书;内网可 export REDIS_TLS_INSECURE_SKIP_VERIFY=true。
+		insecureSkip := strings.EqualFold(os.Getenv("REDIS_TLS_INSECURE_SKIP_VERIFY"), "true")
+		tlsCfg = &tls.Config{
+			InsecureSkipVerify: strings.EqualFold(os.Getenv("REDIS_TLS_INSECURE_SKIP_VERIFY"), "true"),
+			MinVersion:         tls.VersionTLS12,
+		}
+		if insecureSkip {
+			logTLSInsecureSkipOnce()
+		}
 	}
 
 	rdb := redis.NewClient(&redis.Options{
