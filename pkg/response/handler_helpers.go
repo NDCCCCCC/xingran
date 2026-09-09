@@ -50,7 +50,12 @@ func HandleIDParam(c *gin.Context) (string, bool) {
 }
 
 // HandleGetByID 通用的 GetByID 处理逻辑
-// 需要提供一个函数来根据 ID 获取实体
+// 返回 true 表示成功，false 表示失败（参数缺失或 getter 错误）
+//
+// HANDLER-05 (Phase 112): use apperrors.NewWithHTTPStatus to force HTTP 404 on not-found.
+// The previous Error(c, http.StatusNotFound, ...) call hit toAppError `case int:` which
+// hardcodes HTTPStatus=400. NewWithHTTPStatus bypasses the Code default (CodeRecordNotFound
+// DefaultHTTPStatus returns 400 in 1000-1020 range). GUARD-04 test asserts HTTP 404.
 func HandleGetByID(c *gin.Context, getter func(string) (interface{}, error), notFoundMessage string) bool {
 	id, ok := HandleIDParam(c)
 	if !ok {
@@ -59,7 +64,7 @@ func HandleGetByID(c *gin.Context, getter func(string) (interface{}, error), not
 
 	entity, err := getter(id)
 	if err != nil {
-		Error(c, http.StatusNotFound, notFoundMessage)
+		Error(c, apperrors.NewWithHTTPStatus(apperrors.CodeRecordNotFound, http.StatusNotFound, notFoundMessage))
 		return false
 	}
 

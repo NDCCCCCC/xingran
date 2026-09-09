@@ -384,7 +384,7 @@ func TestWorkstationHandler_Statistics_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 
-// TestWorkstationHandler_Statistics_Error
+// TestWorkstationHandler_Statistics_Error — HANDLER-03 (Phase 112): migrated to HandleServiceError.
 func TestWorkstationHandler_Statistics_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &mockWorkstationService{
@@ -395,7 +395,8 @@ func TestWorkstationHandler_Statistics_Error(t *testing.T) {
 	h := newWorkstationHandler(svc).WithCore(newTestCore(t))
 	r := newWorkstationRouter(h)
 	w := httpDo(r, http.MethodPost, "/workstations/statistics", `{}`)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.NotContains(t, w.Body.String(), "stats err")
 }
 
 // TestWorkstationHandler_GetWorkstationDeptOptions_Success
@@ -431,7 +432,7 @@ func TestWorkstationHandler_GetWorkstationDeptOptions_BindError(t *testing.T) {
 	assert.True(t, called)
 }
 
-// TestWorkstationHandler_GetWorkstationDeptOptions_Error — int-first-arg quirk.
+// TestWorkstationHandler_GetWorkstationDeptOptions_Error — HANDLER-03 (Phase 112): migrated to HandleServiceError.
 func TestWorkstationHandler_GetWorkstationDeptOptions_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &mockWorkstationService{
@@ -442,7 +443,8 @@ func TestWorkstationHandler_GetWorkstationDeptOptions_Error(t *testing.T) {
 	h := newWorkstationHandler(svc).WithCore(newTestCore(t))
 	r := newWorkstationRouter(h)
 	w := httpDo(r, http.MethodPost, "/workstations/dept-options", `{}`)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.NotContains(t, w.Body.String(), "dept err")
 }
 
 // TestWorkstationHandler_SearchWorkstationOptions_Success
@@ -476,7 +478,7 @@ func TestWorkstationHandler_SearchWorkstationOptions_InvalidJSON(t *testing.T) {
 	assert.True(t, called)
 }
 
-// TestWorkstationHandler_SearchWorkstationOptions_Error
+// TestWorkstationHandler_SearchWorkstationOptions_Error — HANDLER-03 (Phase 112): migrated to HandleServiceError.
 func TestWorkstationHandler_SearchWorkstationOptions_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &mockWorkstationService{
@@ -487,7 +489,8 @@ func TestWorkstationHandler_SearchWorkstationOptions_Error(t *testing.T) {
 	h := newWorkstationHandler(svc).WithCore(newTestCore(t))
 	r := newWorkstationRouter(h)
 	w := httpDo(r, http.MethodPost, "/workstations/search-options", `{}`)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.NotContains(t, w.Body.String(), "opt err")
 }
 
 // TestWorkstationHandler_GetFloorWorkstationsAll_Success — V130R-09 D-03-6/07:

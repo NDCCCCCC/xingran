@@ -2,7 +2,6 @@ package operations
 
 import (
 	"encoding/json"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/api/v1/operations/requests"
@@ -54,8 +53,7 @@ func (h *WorkstationHandler) Statistics(c *gin.Context) {
 	var params map[string]interface{}
 	_ = c.ShouldBindJSON(&params)
 	result, err := h.service.Statistics(c.Request.Context(), params)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !response.HandleServiceError(c, err, "查询统计数据") {
 		return
 	}
 	response.Success(c, result)
@@ -79,8 +77,7 @@ func (h *WorkstationHandler) GetWorkstationDeptOptions(c *gin.Context) {
 		req.OrgID = ""
 	}
 	result, err := h.service.GetWorkstationDeptOptions(c.Request.Context(), req.OrgID)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !response.HandleServiceError(c, err, "查询工位部门下拉选项") {
 		return
 	}
 	response.Success(c, result)
@@ -97,8 +94,7 @@ func (h *WorkstationHandler) SearchWorkstationOptions(c *gin.Context) {
 		req = requests.WorkstationListRequest{}
 	}
 	result, err := h.service.SearchWorkstationOptions(c.Request.Context(), req)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !response.HandleServiceError(c, err, "查询工位下拉选项") {
 		return
 	}
 	response.Success(c, result)

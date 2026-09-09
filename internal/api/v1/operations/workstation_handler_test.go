@@ -3,6 +3,7 @@ package operations
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -212,4 +213,75 @@ func TestWorkstationHandler_HasReconciliationPerm_NoUserID(t *testing.T) {
 	c, _ := gin.CreateTestContext(httptest.NewRecorder())
 	got := h.hasReconciliationPerm(c)
 	assert.False(t, got, "no user_id should return false")
+}
+
+// mockWorkstationServiceForStatisticsError is a minimal mock for WorkstationService
+// that allows injecting a SQL error for the Statistics method (used by GUARD-06 tests).
+type mockWorkstationServiceForStatisticsError struct {
+	StatisticsErr error
+}
+
+func (m *mockWorkstationServiceForStatisticsError) Create(_ context.Context, _ *models.Workstation) error {
+	return nil
+}
+func (m *mockWorkstationServiceForStatisticsError) Update(_ context.Context, _ *models.Workstation) error {
+	return nil
+}
+func (m *mockWorkstationServiceForStatisticsError) Delete(_ context.Context, _ string) error {
+	return nil
+}
+func (m *mockWorkstationServiceForStatisticsError) GetByID(_ context.Context, _ string) (*models.Workstation, error) {
+	return nil, nil
+}
+func (m *mockWorkstationServiceForStatisticsError) List(_ context.Context, _ requests.WorkstationListRequest) (*opsServices.PageResult, error) {
+	return nil, nil
+}
+func (m *mockWorkstationServiceForStatisticsError) BatchDelete(_ context.Context, _ []string) error {
+	return nil
+}
+func (m *mockWorkstationServiceForStatisticsError) Statistics(_ context.Context, _ map[string]interface{}) (*opsServices.WorkstationStatisticsResult, error) {
+	return nil, m.StatisticsErr
+}
+func (m *mockWorkstationServiceForStatisticsError) BatchUpdatePositions(_ context.Context, _ []opsServices.PositionUpdateItem) error {
+	return nil
+}
+func (m *mockWorkstationServiceForStatisticsError) GetWorkstationDeptOptions(_ context.Context, _ string) ([]opsServices.DeptOption, error) {
+	return nil, nil
+}
+func (m *mockWorkstationServiceForStatisticsError) SearchWorkstationOptions(_ context.Context, _ requests.WorkstationListRequest) ([]opsServices.DropdownOption, error) {
+	return nil, nil
+}
+func (m *mockWorkstationServiceForStatisticsError) GetFloorWorkstationsAll(_ context.Context, _ string) ([]models.Workstation, error) {
+	return nil, nil
+}
+
+// TestWorkstationStatistics_ErrorBody_DoesNotLeakSQL is a GUARD-06 regression test:
+// When the service returns a SQL error, the handler must NOT leak SQL keywords
+// in the HTTP response body. Phase 112 HANDLER-03 migrated to HandleServiceError which
+// sanitizes the body — this test now PASSES (GREEN).
+func TestWorkstationStatistics_ErrorBody_DoesNotLeakSQL(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	svc := &mockWorkstationServiceForStatisticsError{
+		StatisticsErr: errors.New("SELECT * FROM sys_workstation WHERE id = $1"),
+	}
+	coreInst := newTestCoreForHandler(t)
+	h := NewWorkstationHandler(svc).WithCore(coreInst)
+
+	r := gin.New()
+	r.POST("/statistics", h.Statistics)
+
+	req := httptest.NewRequest(http.MethodPost, "/statistics", strings.NewReader("{}"))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	// Note: HTTP status may be 400 due to the pre-existing int-as-first-arg quirk.
+	// The core GUARD-06 assertion is that the response body does NOT contain SQL keywords.
+	body := w.Body.String()
+	sqlKeywords := []string{"SELECT", "UPDATE", "INSERT", "DELETE", "FROM", "WHERE",
+		"ERROR", "syntax", "relation", "does not exist"}
+	for _, kw := range sqlKeywords {
+		assert.NotContains(t, body, kw,
+			"Error response should not leak SQL keyword '%s' in body: %s", kw, body)
+	}
 }

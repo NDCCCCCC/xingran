@@ -366,7 +366,8 @@ func TestFloorHandler_Statistics_Success(t *testing.T) {
 	assert.Contains(t, w.Body.String(), `"total":3`)
 }
 
-// TestFloorHandler_Statistics_Error — same int-as-first-arg quirk as building handler.
+// TestFloorHandler_Statistics_Error — HANDLER-02 (Phase 112): migrated to HandleServiceError.
+// HTTP status is 500 (not 400) — the int-first-arg quirk is closed.
 func TestFloorHandler_Statistics_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &mockFloorService{
@@ -377,7 +378,8 @@ func TestFloorHandler_Statistics_Error(t *testing.T) {
 	h := newFloorHandler(svc).WithCore(newTestCore(t))
 	r := newFloorRouter(h)
 	w := httpDo(r, http.MethodPost, "/floors/statistics", "")
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.NotContains(t, w.Body.String(), "stats fail")
 }
 
 // TestFloorHandler_SearchFloorOptions_Success
@@ -411,7 +413,8 @@ func TestFloorHandler_SearchFloorOptions_InvalidJSON(t *testing.T) {
 	assert.True(t, called)
 }
 
-// TestFloorHandler_SearchFloorOptions_Error — same int-as-first-arg quirk.
+// TestFloorHandler_SearchFloorOptions_Error — HANDLER-02 (Phase 112): migrated to HandleServiceError.
+// HTTP status is 500 (not 400) — the int-first-arg quirk is closed.
 func TestFloorHandler_SearchFloorOptions_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &mockFloorService{
@@ -422,7 +425,8 @@ func TestFloorHandler_SearchFloorOptions_Error(t *testing.T) {
 	h := newFloorHandler(svc).WithCore(newTestCore(t))
 	r := newFloorRouter(h)
 	w := httpDo(r, http.MethodPost, "/floors/search-options", `{}`)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.NotContains(t, w.Body.String(), "opt fail")
 }
 
 // TestFloorHandler_WithCore_NilSafe
@@ -450,6 +454,32 @@ func TestFloorHandler_SearchFloorOptions_ResponseShape(t *testing.T) {
 	assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.Equal(t, 0, resp.Code)
 	assert.Len(t, resp.Data, 1)
+}
+
+// TestFloorStatistics_ErrorBody_DoesNotLeakSQL is a GUARD-06 regression test:
+// When the service returns a SQL error, the handler must NOT leak SQL keywords
+// in the HTTP response body. Phase 112 HANDLER-02 migrated to HandleServiceError which
+// sanitizes the body — this test now PASSES (GREEN).
+func TestFloorStatistics_ErrorBody_DoesNotLeakSQL(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	svc := &mockFloorService{
+		StatisticsFunc: func(_ context.Context) (*opsServices.FloorStatisticsResult, error) {
+			return nil, errors.New("SELECT * FROM sys_floor WHERE id = $1")
+		},
+	}
+	h := newFloorHandler(svc).WithCore(newTestCore(t))
+	r := newFloorRouter(h)
+	w := httpDo(r, http.MethodPost, "/floors/statistics", "")
+
+	// Note: HTTP status may be 400 due to the pre-existing int-as-first-arg quirk.
+	// The core GUARD-06 assertion is that the response body does NOT contain SQL keywords.
+	body := w.Body.String()
+	sqlKeywords := []string{"SELECT", "UPDATE", "INSERT", "DELETE", "FROM", "WHERE",
+		"ERROR", "syntax", "relation", "does not exist"}
+	for _, kw := range sqlKeywords {
+		assert.NotContains(t, body, kw,
+			"Error response should not leak SQL keyword '%s' in body: %s", kw, body)
+	}
 }
 
 // ensure strings is referenced (used in router comment indirectly)
