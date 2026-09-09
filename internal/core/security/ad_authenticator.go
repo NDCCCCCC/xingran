@@ -5,6 +5,9 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"os"
+	"strings"
+	"sync"
 
 	"github.com/go-ldap/ldap/v3"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
@@ -13,6 +16,15 @@ import (
 	"github.com/xingran-next/xingran-go-backend/pkg/ldaputils"
 	"gorm.io/gorm"
 )
+
+// tlsInsecureWarnOnce records a one-time SECURITY warning when AD_AUTH_TLS_INSECURE_SKIP_VERIFY=true.
+var tlsInsecureWarnOnce sync.Once
+
+func logADTLSInsecureSkipOnce() {
+	tlsInsecureWarnOnce.Do(func() {
+		applogger.Warnf("[SECURITY] AD_AUTH_TLS_INSECURE_SKIP_VERIFY=true: TLS certificate verification is disabled for AD authentication. This is INSECURE and must only be used in internal networks with self-signed certificates.")
+	})
+}
 
 // ADAuthenticator AD域控认证器
 // 使用LDAP绑定验证实现AD域控账号认证
@@ -177,9 +189,20 @@ func (a *ADAuthenticator) getADConfig(ctx context.Context) (*models.ADConfig, er
 }
 
 // dialConnection 根据配置建立LDAP连接
+//
+// TLS-02 fix: InsecureSkipVerify 不再硬编码 true，而是读环境变量
+// AD_AUTH_TLS_INSECURE_SKIP_VERIFY (默认 false = 严格校验)。
+// 生产部署默认拒绝自签证书，杜绝 MITM；
+// 需要兼容自签证书的内网部署可显式 export AD_AUTH_TLS_INSECURE_SKIP_VERIFY=true。
 func (a *ADAuthenticator) dialConnection(config *models.ADConfig, address string) (*ldap.Conn, error) {
+	insecureSkip := strings.EqualFold(os.Getenv("AD_AUTH_TLS_INSECURE_SKIP_VERIFY"), "true")
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify: true, // TODO: 生产环境应配置证书
+		InsecureSkipVerify: insecureSkip,
+		MinVersion:        tls.VersionTLS12,
+	}
+	if insecureSkip {
+		// 仅在启用时记录一次安全告警（避免每次连接都告警污染日志，但不能完全静默）
+		logADTLSInsecureSkipOnce()
 	}
 
 	switch {
