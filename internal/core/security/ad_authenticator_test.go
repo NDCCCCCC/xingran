@@ -4,8 +4,15 @@ import (
 	"context"
 	"errors"
 	"net"
+	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
+
+	"go/ast"
+	"go/parser"
+	"go/token"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -418,4 +425,80 @@ func TestADAuthenticator_IntegrationTest(t *testing.T) {
 	// 4. 验证结果
 
 	t.Skip("集成测试需要真实AD环境配置")
+}
+
+// TestADAuthenticator_TLSConfig_StrictByDefault GUARD-02: Regression test
+// for TLS InsecureSkipVerify secure default.
+//
+// RED baseline: ad_authenticator.go:182 hardcodes InsecureSkipVerify=true (INSECURE)
+// GREEN after Phase 110 TLS-02: env-var control, default InsecureSkipVerify=false (SECURE)
+//
+// This test uses AST pattern matching to verify that dialConnection does NOT
+// hardcode InsecureSkipVerify:true in the tls.Config construction. A secure
+// implementation must either use env-var control or explicit false default.
+func TestADAuthenticator_TLSConfig_StrictByDefault(t *testing.T) {
+	// Read the source file
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller(0) failed")
+	}
+	// ad_authenticator.go is in the same package directory
+	srcPath := filepath.Join(filepath.Dir(filename), "ad_authenticator.go")
+	src, err := os.ReadFile(srcPath)
+	if err != nil {
+		t.Fatalf("os.ReadFile(%s) failed: %v", srcPath, err)
+	}
+
+	// Parse the file into AST
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, srcPath, src, parser.AllErrors)
+	if err != nil {
+		t.Fatalf("parser.ParseFile failed: %v", err)
+	}
+
+	// Find dialConnection function
+	var dialConn *ast.FuncDecl
+	for _, decl := range file.Decls {
+		if fn, ok := decl.(*ast.FuncDecl); ok && fn.Name.Name == "dialConnection" {
+			dialConn = fn
+			break
+		}
+	}
+	require.NotNil(t, dialConn, "dialConnection function not found")
+
+	// Inspect every CompositeLit in the function body that contains
+	// a field named "InsecureSkipVerify" with a constant value of true.
+	// If found, the code is INSECURE (RED state).
+	hardcodedInsecureTrue := false
+	ast.Inspect(dialConn, func(n ast.Node) bool {
+		lit, ok := n.(*ast.CompositeLit)
+		if !ok {
+			return true
+		}
+		for _, elt := range lit.Elts {
+			kv, ok := elt.(*ast.KeyValueExpr)
+			if !ok {
+				continue
+			}
+			key, ok := kv.Key.(*ast.Ident)
+			if !ok || key.Name != "InsecureSkipVerify" {
+				continue
+			}
+			val, ok := kv.Value.(*ast.Ident)
+			if !ok {
+				continue
+			}
+			if val.Name == "true" {
+				hardcodedInsecureTrue = true
+			}
+		}
+		return true
+	})
+
+	// SECURE default: InsecureSkipVerify should NOT be hardcoded to true.
+	// The implementation should use env-var control or explicit false.
+	assert.False(t, hardcodedInsecureTrue,
+		"dialConnection tls.Config InsecureSkipVerify must not be hardcoded to true; "+
+			"expected env-var control with default false (secure by default). "+
+			"See ad_authenticator.go:182")
 }
