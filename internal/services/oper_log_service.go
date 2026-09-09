@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/models"
 	"github.com/xingran-next/xingran-go-backend/internal/utils/operlog"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -65,9 +66,9 @@ func (s *operLogService) RecordAsync(db *gorm.DB, title string, businessType int
 
 	// 异步写入数据库，不影响响应速度
 	go func() {
+		defer func() { if r := recover(); r != nil { applogger.Errorf("[OPER-LOG] RecordAsync panic 已恢复: panic=%v", r) } }()
 		if err := db.Create(operLog).Error; err != nil {
-			// 静默处理日志记录失败
-			_ = err
+			applogger.Errorf("[OPER-LOG] 异步记录操作日志失败: %v", err)
 		}
 	}()
 }
@@ -138,9 +139,9 @@ func (s *operLogService) RecordFromGinContext(c *gin.Context, db *gorm.DB, title
 
 	// 异步写入数据库，不影响响应速度
 	go func() {
+		defer func() { if r := recover(); r != nil { applogger.Errorf("[OPER-LOG] RecordFromGinContext panic 已恢复: panic=%v", r) } }()
 		if err := s.RecordOperLog(context.Background(), db, operLog); err != nil {
-			// 静默处理日志记录失败
-			_ = err
+			applogger.Errorf("[OPER-LOG] 异步记录操作日志失败: %v", err)
 		}
 	}()
 }
