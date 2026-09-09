@@ -312,7 +312,59 @@ git push origin --force --all
 
 ---
 
-## 7. 变更日志
+## 7. V132 TLS/Origin 选项（v1.32 新增）
+
+以下环境变量控制 TLS 证书验证和 CORS 跨域策略。所有默认为安全值（验证启用、来源受限）。
+
+### 7.1 环境变量清单
+
+| 环境变量 | 默认值 | 何时设为 `true` | 安全风险 |
+|---------|--------|----------------|---------|
+| `LDAP_TLS_INSECURE_SKIP_VERIFY` | `false` | 内网 LDAP/AD 使用自签证书时 | 禁用 TLS 验证，MITM 攻击风险 |
+| `AD_AUTH_TLS_INSECURE_SKIP_VERIFY` | `false` | 内网 AD 认证使用自签证书时 | 禁用 TLS 验证，MITM 攻击风险 |
+| `REDIS_TLS_INSECURE_SKIP_VERIFY` | `false` | 内网 Redis 使用自签证书时（如 Upstash TLS） | 禁用 TLS 验证，MITM 攻击风险 |
+| `EMAIL_TLS_INSECURE_SKIP_VERIFY` | `false` | 内网 SMTP 服务器使用自签证书时 | 禁用 TLS 验证，MITM 攻击风险 |
+| `WS_ALLOW_ALL_ORIGINS` | `false` | 仅开发环境调试 WebSocket 时 | 允许任意来源，生产禁用 |
+
+### 7.2 YAML 配置项
+
+| 配置路径 | 类型 | 说明 |
+|---------|------|------|
+| `server.allowed_origins` | `[]string` | 允许的 WebSocket/CORS 来源列表（Phase 110 TLS-04 新增） |
+| `security.ad_legacy_aes_key` | `string` | AD 旧版 AES 密钥，**生产必须配置**（Phase 110 相关） |
+
+### 7.3 MUST SET in production
+
+以下项目在生产环境**必须正确配置**，否则无法启动或存在安全风险：
+
+| 项目 | 要求 | 风险 |
+|------|------|------|
+| `server.allowed_origins` | 必须配置具体来源，禁止仅填 `*` | 任意来源访问，XSS 攻击风险 |
+| `AD_LEGACY_AES_KEY` | 必须设置，非空字符串 | 留空导致 AD 认证相关功能异常 |
+| 所有 `_INSECURE_SKIP_VERIFY` | **禁止**在有公共 CA 的生产环境设为 `true` | 禁用 TLS 验证，MITM 攻击风险 |
+| `WS_ALLOW_ALL_ORIGINS` | **禁止**在生产环境设为 `true` | 任意来源访问，XSS 攻击风险 |
+
+### 7.4 内网兼容（自签证书场景）
+
+在内网部署中，如果 LDAP/AD/Redis/SMTP 使用自签名 TLS 证书，需将对应 `_INSECURE_SKIP_VERIFY` 环境变量设为 `true`：
+
+```bash
+# 内网自签证书场景示例
+LDAP_TLS_INSECURE_SKIP_VERIFY=true
+AD_AUTH_TLS_INSECURE_SKIP_VERIFY=true
+REDIS_TLS_INSECURE_SKIP_VERIFY=true
+EMAIL_TLS_INSECURE_SKIP_VERIFY=true
+```
+
+**安全前提**：内网环境本身已可信（交换机/路由器受控），才可跳过 TLS 验证。公网环境绝对不可。
+
+### 7.5 安全警告
+
+设置任何 `_INSECURE_SKIP_VERIFY` 为 `true` 会禁用 TLS 证书验证，**允许中间人攻击（MITM）**。仅在完全可信的内网环境中使用自签名证书时，才可启用。
+
+---
+
+## 8. 变更日志
 
 | 日期 | 变更 | 提交者 |
 |------|------|--------|
@@ -320,7 +372,7 @@ git push origin --force --all
 
 ---
 
-## 8. 相关文档
+## 9. 相关文档
 
 - [部署/生产部署指南](deployment.md) — 主部署文档
 - [架构/安全和认证设计（国密）](../architecture/安全和认证设计（国密）.md) — 国密算法设计
