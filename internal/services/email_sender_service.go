@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/mail"
 	"net/smtp"
+	"os"
 	"strings"
 	"time"
 
@@ -198,10 +199,14 @@ func (s *EmailSenderService) sendEmail(host string, port int, username, password
 }
 
 // sendWithTLS 使用SSL/TLS发送邮件
+// EMAIL_TLS_INSECURE_SKIP_VERIFY (默认 false = 严格校验)。
+// 生产部署默认拒绝自签证书,杜绝 MITM;
+// 需要兼容自签证书的内网部署可显式 export EMAIL_TLS_INSECURE_SKIP_VERIFY=true。
 func (s *EmailSenderService) sendWithTLS(addr, username, password, fromAddress string, toAddresses []string, content []byte) error {
 	// 创建TLS配置
+	insecureSkip := strings.EqualFold(os.Getenv("EMAIL_TLS_INSECURE_SKIP_VERIFY"), "true")
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify: false,
+		InsecureSkipVerify: insecureSkip,
 		ServerName:         strings.Split(addr, ":")[0],
 	}
 
@@ -268,8 +273,9 @@ func (s *EmailSenderService) sendWithSTARTTLS(addr, username, password, fromAddr
 
 	// 检查是否支持STARTTLS
 	if ok, _ := client.Extension("STARTTLS"); ok {
+		insecureSkip := strings.EqualFold(os.Getenv("EMAIL_TLS_INSECURE_SKIP_VERIFY"), "true")
 		tlsConfig := &tls.Config{
-			InsecureSkipVerify: false,
+			InsecureSkipVerify: insecureSkip,
 			ServerName:         strings.Split(addr, ":")[0],
 		}
 		if startTLSErr := client.StartTLS(tlsConfig); startTLSErr != nil {
