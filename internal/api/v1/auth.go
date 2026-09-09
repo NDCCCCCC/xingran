@@ -596,6 +596,11 @@ func recordLoginLog(c *gin.Context, core *core.Core, username string, nickname *
 	}
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				applogger.Errorf("[GOR-04] login log goroutine panic recovered (user: %s, ip: %s, status: %d, panic: %v)", username, clientIP, status, r)
+			}
+		}()
 		if err := core.DB.GetDB().Create(&loginLog).Error; err != nil {
 			applogger.Errorf("记录登录日志失败 (user: %s, ip: %s, status: %d): %v", username, clientIP, status, err)
 		}

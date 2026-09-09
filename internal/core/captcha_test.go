@@ -1,15 +1,18 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/xingran-next/xingran-go-backend/pkg/cache"
 	"github.com/xingran-next/xingran-go-backend/pkg/captcha"
+	applogger "github.com/xingran-next/xingran-go-backend/pkg/logger"
 )
 
 // mockCache is a test double for cache.Cache that allows per-method injection.
@@ -91,15 +94,14 @@ var _ cache.Cache = (*mockCache)(nil)
 // verification, the verification STILL returns an error (fail-closed) and
 // does NOT expose Increment infrastructure details to the client.
 //
-// RED baseline:  captcha.go:379,439,445  use  _, _ = s.cache.Increment(...)
-//                which silently ignores failures.  No SECURITY warn is emitted.
-//                This test FAILS because the missing warn log is the security issue.
+// Baseline:    captcha.go:379,439,445 used  _, _ = s.cache.Increment(...)
+//              which silently ignored failures.  No SECURITY warn was emitted.
 //
-// GREEN after:   Phase 111 CAP-01 logs a SECURITY warn on Increment failure
-//                AND verification remains fail-closed.  This test PASSES.
+// After:       Phase 111 CAP-01 logs a [SECURITY] warn on Increment failure
+//              AND verification remains fail-closed.  This test PASSES.
 //
-// TODO-111: extend this test to also assert that a SECURITY warn log was
-//           emitted after CAP-01 is implemented.
+// Extended:     GUARD-08 now also asserts [SECURITY] warn log was emitted
+//              using applogger output capture.
 func TestCaptcha_Increment_Failure_FailsClosed(t *testing.T) {
 	captchaID := "test-captcha-id"
 
@@ -126,6 +128,12 @@ func TestCaptcha_Increment_Failure_FailsClosed(t *testing.T) {
 		},
 	}
 
+	// Redirect applogger output to buffer for SECURITY warn assertion (CAP-01).
+	var logBuf bytes.Buffer
+	restore := applogger.SetTestBuffer(&logBuf)
+	defer restore()
+	applogger.GetLogger().SetLevel(logrus.WarnLevel)
+
 	svc := &CaptchaService{
 		db:    nil,
 		cache: mockCache,
@@ -140,6 +148,7 @@ func TestCaptcha_Increment_Failure_FailsClosed(t *testing.T) {
 
 	// Call VerifyCaptcha with a WRONG code so the Increment path is reached.
 	// storedCode ("1234") != input ("wrong")  →  Increment is called  →  fails  →  returns "captcha error"
+	logBuf.Reset()
 	err := svc.VerifyCaptcha(context.Background(), captchaID, "wrong", "127.0.0.1")
 
 	// Assert Increment was actually called (proving we exercised the Increment failure path).
@@ -154,13 +163,12 @@ func TestCaptcha_Increment_Failure_FailsClosed(t *testing.T) {
 	assert.NotContains(t, err.Error(), "connection",
 		"Error must not expose Increment infrastructure details to client")
 
-	// RED/GREEN differentiation: in RED state Increment failure is silently ignored
-	// (no warn log).  After CAP-01, Phase 111 must emit a SECURITY warn when
-	// Increment fails.  This assertion documents the expected post-fix behavior:
-	//
-	//   assert.True(t, securityWarnEmitted,
-	//       "SECURITY warn must be logged when Increment fails (CAP-01)")
-	//
-	// TODO-111: uncomment the above assertion and implement log capture once
-	// Phase 111 CAP-01 adds the SECURITY warn to captcha.go:379,439,445.
+	// CAP-01: SECURITY warn must be emitted when Increment fails.
+	logOutput := logBuf.String()
+	assert.Contains(t, logOutput, "[SECURITY]",
+		"SECURITY warn must be logged when Increment fails (CAP-01)")
+	assert.Contains(t, logOutput, "captcha increment failed",
+		"Log must mention 'captcha increment failed'")
+	assert.Contains(t, logOutput, "fail-closed",
+		"Log must mention 'fail-closed' to document the security guarantee")
 }

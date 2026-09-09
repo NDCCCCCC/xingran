@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -213,6 +214,22 @@ func GetLogger() *logrus.Logger {
 func fallbackToStdLogger() {
 	logrus.SetOutput(os.Stdout)
 	logrus.SetLevel(logrus.InfoLevel)
+}
+
+// SetTestBuffer redirects GetLogger() output to a buffer for test log capture.
+// Returns a restore function that resets output to the original writer.
+// Initializes the logger if not yet initialized (so tests work without Init).
+// Usage:
+//   restore := SetTestBuffer(&buf)
+//   defer restore()
+func SetTestBuffer(buf *bytes.Buffer) func() {
+	l := GetLogger() // ensures log is initialized
+	origOut := l.Out
+
+	l.SetOutput(buf)
+	return func() {
+		l.SetOutput(origOut)
+	}
 }
 
 // WithFields 创建带有字段的新日志记录器

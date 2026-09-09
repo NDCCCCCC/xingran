@@ -376,7 +376,10 @@ func (s *CaptchaService) VerifyCaptcha(ctx context.Context, captchaID, input str
 
 		if storedCode != input {
 			// 增加失败次数
-			_, _ = s.cache.Increment(ctx, attemptsKey)
+			// CAP-01 D-03: fail-closed 安全保证 — Increment 失败仍记录 SECURITY warn，验证仍返回错误
+			if _, err := s.cache.Increment(ctx, attemptsKey); err != nil {
+				applogger.Warnf("[SECURITY] captcha increment failed (key=%s): %v — fail-closed: rejecting verification", attemptsKey, err)
+			}
 			return fmt.Errorf("验证码错误")
 		}
 
@@ -436,13 +439,19 @@ func (s *CaptchaService) VerifySliderCaptcha(ctx context.Context, captchaID stri
 
 	// 验证滑动位置是否在容差范围内
 	if abs(xPos-expectedX) > tolerance {
-		_, _ = s.cache.Increment(ctx, attemptsKey)
+		// CAP-01 D-03: fail-closed 安全保证 — Increment 失败仍记录 SECURITY warn，验证仍返回错误
+		if _, err := s.cache.Increment(ctx, attemptsKey); err != nil {
+			applogger.Warnf("[SECURITY] captcha increment failed (key=%s): %v — fail-closed: rejecting verification", attemptsKey, err)
+		}
 		return fmt.Errorf("验证失败，位置不正确")
 	}
 
 	// 验证token
 	if token == "" || token != verifyData.Token {
-		_, _ = s.cache.Increment(ctx, attemptsKey)
+		// CAP-01 D-03: fail-closed 安全保证 — Increment 失败仍记录 SECURITY warn，验证仍返回错误
+		if _, err := s.cache.Increment(ctx, attemptsKey); err != nil {
+			applogger.Warnf("[SECURITY] captcha increment failed (key=%s): %v — fail-closed: rejecting verification", attemptsKey, err)
+		}
 		return fmt.Errorf("验证失败，token无效")
 	}
 
