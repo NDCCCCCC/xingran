@@ -184,6 +184,13 @@ func (cm *ConnectionManager) StartHealthMonitor(ctx context.Context, interval ti
 						"error": err.Error(),
 					}).Warn("Health check failed")
 					go func() {
+						defer func() {
+							if r := recover(); r != nil {
+								WithFields(logrus.Fields{
+									"panic": r,
+								}).Error("handleReconnect goroutine panic 已恢复")
+							}
+						}()
 						if err := cm.Reconnect(context.Background()); err != nil {
 							WithFields(logrus.Fields{
 								"error":           err.Error(),
@@ -194,6 +201,13 @@ func (cm *ConnectionManager) StartHealthMonitor(ctx context.Context, interval ti
 				}
 			} else {
 				go func() {
+					defer func() {
+						if r := recover(); r != nil {
+							WithFields(logrus.Fields{
+								"panic": r,
+							}).Error("cleanupConnection goroutine panic 已恢复")
+						}
+					}()
 					if err := cm.Reconnect(context.Background()); err != nil {
 						WithFields(logrus.Fields{
 							"error":           err.Error(),
