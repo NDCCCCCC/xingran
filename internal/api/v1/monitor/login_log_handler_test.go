@@ -344,6 +344,30 @@ func TestLoginLog_DB_List_Seeded(t *testing.T) {
 	assert.EqualValues(t, 3, data["total"])
 }
 
+// TestLoginLog_Clean_NilCore_DoesNotPanic GUARD-05: verifies LoginLogHandler.Clean
+// does NOT panic when h.core is nil. Current RED state: line 106 dereferences
+// h.core.OperLogService without nil guard, causing panic. After Phase 112 HANDLER-04
+// adds the guard this test will PASS.
+func TestLoginLog_Clean_NilCore_DoesNotPanic(t *testing.T) {
+	mock := &mockLoginLogService{}
+	// Inject nil core — simulate handler wired with no Core dependency
+	h := NewLoginLogHandler(mock).WithCore(nil)
+
+	c, _ := newTestCtxLL("POST", "/clean", nil)
+
+	didPanic := false
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				didPanic = true
+			}
+		}()
+		h.Clean(c)
+	}()
+
+	require.False(t, didPanic, "Clean must not panic when core is nil")
+}
+
 func parseRespLL(t *testing.T, body []byte) map[string]interface{} {
 	t.Helper()
 	var resp map[string]interface{}
