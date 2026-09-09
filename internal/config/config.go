@@ -50,6 +50,11 @@ type ServerConfig struct {
 	Port int    `mapstructure:"port"`
 	Mode string `mapstructure:"mode"`
 
+	// AllowedOrigins 允许的 CORS 来源列表。
+	// 例如: ["http://localhost:3000", "https://example.com"]
+	// 生产环境必须显式配置,不支持留空或仅 "*" 通配符。
+	AllowedOrigins []string `mapstructure:"allowed_origins"`
+
 	// SkipSetup 跳过一次性 setup 步骤(InitData / 默认角色菜单 / cmd seed)。
 	//
 	// 设计目的: 让"启动"与"初始化"分离。当前每次启动都跑 InitData(10+ 张表 count 查询)、

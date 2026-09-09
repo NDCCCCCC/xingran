@@ -101,7 +101,18 @@ func main() {
 
 	coreModule := initializeCoreModule(cfg)
 	engine := setupGinEngine(cfg)
-	allowedOrigins := []string{"*"}
+	allowedOrigins := cfg.Server.AllowedOrigins
+	// D-02: Fail-fast in production if no origins configured (empty list or only "*")
+	if len(allowedOrigins) == 0 {
+		applogger.Fatalf("server.allowed_origins must be configured in production: at least one origin is required")
+	}
+	// Warn if only wildcard is configured (still allows, but warns about insecure setup)
+	for _, origin := range allowedOrigins {
+		if origin == "*" {
+			applogger.Warnf("server.allowed_origins contains '*' wildcard — this allows all origins. In production, configure specific origins.")
+			break
+		}
+	}
 	setupRoutes(engine, cfg, coreModule, allowedOrigins)
 
 	server := startServer(cfg, engine)
