@@ -585,3 +585,34 @@ func TestBuildingHandler_NewBuildingHandlerWithCore(t *testing.T) {
 	h := NewBuildingHandlerWithCore(svc, c)
 	assert.NotNil(t, h)
 }
+
+// TestBuildingStatistics_ErrorBody_DoesNotLeakSQL is a GUARD-06 regression test:
+// When the service returns a SQL error, the handler must NOT leak SQL keywords
+// (SELECT/UPDATE/INSERT/DELETE/FROM/WHERE/syntax/relation/does not exist) in the
+// HTTP response body. Phase 112 HANDLER-01 will switch to HandleServiceError
+// which sanitizes the body. Currently the handler calls
+// response.Error(c, http.StatusInternalServerError, err.Error()) directly,
+// so a SQL error like "SELECT * FROM sys_building WHERE id = $1" leaks into
+// the response and this test FAILS (RED). After Phase 112 fix it will PASS (GREEN).
+func TestBuildingStatistics_ErrorBody_DoesNotLeakSQL(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	svc := &mockBuildingService{
+		StatisticsFunc: func(_ context.Context, _ map[string]interface{}) (*opsServices.BuildingStatisticsResult, error) {
+			return nil, errors.New("SELECT * FROM sys_building WHERE id = $1")
+		},
+	}
+	h := newTestBuildingHandler(svc, nil, newBuildingHandlerCore(t))
+
+	w := doBuildingRequest(h, http.MethodPost, "/buildings/statistics", `{}`)
+
+	// Note: HTTP status may be 400 due to the pre-existing int-as-first-arg quirk
+	// (response.Error with int message). The core GUARD-06 assertion is that the
+	// response body does NOT contain SQL keywords.
+	body := w.Body.String()
+	sqlKeywords := []string{"SELECT", "UPDATE", "INSERT", "DELETE", "FROM", "WHERE",
+		"ERROR", "syntax", "relation", "does not exist"}
+	for _, kw := range sqlKeywords {
+		assert.NotContains(t, body, kw,
+			"Error response should not leak SQL keyword '%s' in body: %s", kw, body)
+	}
+}

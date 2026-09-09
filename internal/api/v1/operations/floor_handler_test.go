@@ -452,5 +452,33 @@ func TestFloorHandler_SearchFloorOptions_ResponseShape(t *testing.T) {
 	assert.Len(t, resp.Data, 1)
 }
 
+// TestFloorStatistics_ErrorBody_DoesNotLeakSQL is a GUARD-06 regression test:
+// When the service returns a SQL error, the handler must NOT leak SQL keywords
+// in the HTTP response body. Phase 112 HANDLER-02 will switch to HandleServiceError.
+// Currently the handler calls response.Error(c, http.StatusInternalServerError,
+// err.Error()) directly, so a SQL error leaks and this test FAILS (RED).
+// After Phase 112 fix it will PASS (GREEN).
+func TestFloorStatistics_ErrorBody_DoesNotLeakSQL(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	svc := &mockFloorService{
+		StatisticsFunc: func(_ context.Context) (*opsServices.FloorStatisticsResult, error) {
+			return nil, errors.New("SELECT * FROM sys_floor WHERE id = $1")
+		},
+	}
+	h := newFloorHandler(svc).WithCore(newTestCore(t))
+	r := newFloorRouter(h)
+	w := httpDo(r, http.MethodPost, "/floors/statistics", "")
+
+	// Note: HTTP status may be 400 due to the pre-existing int-as-first-arg quirk.
+	// The core GUARD-06 assertion is that the response body does NOT contain SQL keywords.
+	body := w.Body.String()
+	sqlKeywords := []string{"SELECT", "UPDATE", "INSERT", "DELETE", "FROM", "WHERE",
+		"ERROR", "syntax", "relation", "does not exist"}
+	for _, kw := range sqlKeywords {
+		assert.NotContains(t, body, kw,
+			"Error response should not leak SQL keyword '%s' in body: %s", kw, body)
+	}
+}
+
 // ensure strings is referenced (used in router comment indirectly)
 var _ = strings.HasSuffix
