@@ -1,8 +1,6 @@
 package operations
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
@@ -32,8 +30,7 @@ func (h *FloorHandler) WithCore(core *core.Core) *FloorHandler {
 // Statistics 楼层统计(读操作,不记操作日志)
 func (h *FloorHandler) Statistics(c *gin.Context) {
 	result, err := h.service.Statistics(c.Request.Context())
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !response.HandleServiceError(c, err, "查询统计数据") {
 		return
 	}
 	response.Success(c, result)
@@ -47,8 +44,7 @@ func (h *FloorHandler) SearchFloorOptions(c *gin.Context) {
 		params = map[string]interface{}{}
 	}
 	result, err := h.service.SearchFloorOptions(c.Request.Context(), params)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !response.HandleServiceError(c, err, "查询楼层下拉选项") {
 		return
 	}
 	response.Success(c, result)
@@ -98,8 +94,7 @@ func (h *FloorHandler) List(c *gin.Context) {
 	}
 
 	result, err := h.service.List(c.Request.Context(), params)
-	if err != nil {
-		response.Error(c, apperrors.InternalServerErrorWithMsg("查询失败"))
+	if !response.HandleServiceError(c, err, "查询楼层列表") {
 		return
 	}
 

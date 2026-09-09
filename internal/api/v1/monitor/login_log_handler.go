@@ -97,13 +97,21 @@ func (h *LoginLogHandler) GetByID(c *gin.Context) {
 }
 
 // Clean 清空登录日志
+//
+// HANDLER-04 (Phase 112): mirror OperLogHandler.Clean three-way nil guard at
+// oper_log_handler.go:117-119. Without the guard, h.core.OperLogService panics
+// when h.core is nil (e.g. handler wired via WithCore(nil) in tests). GUARD-05
+// test asserts no panic. operlog.Record itself is nil-safe for operLogSvc/db
+// (operlog.go:229-231) but cannot protect against h.core dereference.
 func (h *LoginLogHandler) Clean(c *gin.Context) {
 	if err := h.svc.Clean(c.Request.Context()); err != nil {
 		response.Error(c, apperrors.InternalServerError(err))
 		return
 	}
 
-	operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "登录日志", operlog.OperTypeClean)
+	if h.core != nil && h.core.OperLogService != nil && h.core.GetDB() != nil {
+		operlog.Record(c, h.core.OperLogService, h.core.GetDB(), "登录日志", operlog.OperTypeClean)
+	}
 
 	response.Success(c, gin.H{"message": "清空成功"})
 }

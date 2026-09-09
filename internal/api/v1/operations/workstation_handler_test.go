@@ -257,10 +257,8 @@ func (m *mockWorkstationServiceForStatisticsError) GetFloorWorkstationsAll(_ con
 
 // TestWorkstationStatistics_ErrorBody_DoesNotLeakSQL is a GUARD-06 regression test:
 // When the service returns a SQL error, the handler must NOT leak SQL keywords
-// in the HTTP response body. Phase 112 HANDLER-03 will switch to HandleServiceError.
-// Currently the handler calls response.Error(c, http.StatusInternalServerError,
-// err.Error()) directly, so a SQL error leaks and this test FAILS (RED).
-// After Phase 112 fix it will PASS (GREEN).
+// in the HTTP response body. Phase 112 HANDLER-03 migrated to HandleServiceError which
+// sanitizes the body — this test now PASSES (GREEN).
 func TestWorkstationStatistics_ErrorBody_DoesNotLeakSQL(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &mockWorkstationServiceForStatisticsError{

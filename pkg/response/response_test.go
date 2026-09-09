@@ -253,15 +253,13 @@ func TestHandleGetByID(t *testing.T) {
 	c, _ := newRouterCtx(t, "")
 	require.False(t, HandleGetByID(c, func(string) (interface{}, error) { return nil, nil }, "未找到"))
 
-	// getter 报错 → false
-	// QUIRK: HandleGetByID 用 Error(c, http.StatusNotFound, ...) 但 Error 接 int
-	// → toAppError 把 int 视作 Code 而非 HTTPStatus,实际 HTTPStatus 落到 400。
+	// getter 报错 → false (HANDLER-05 fix: returns HTTP 404 via NewWithHTTPStatus)
 	c2, w2 := newRouterCtx(t, "")
 	c2.Params = gin.Params{{Key: "id", Value: "abc"}}
 	require.False(t, HandleGetByID(c2, func(string) (interface{}, error) {
 		return nil, errors.New("nf")
 	}, "未找到"))
-	assert.Equal(t, http.StatusBadRequest, w2.Code)
+	assert.Equal(t, http.StatusNotFound, w2.Code)
 
 	// 成功 → true
 	c3, w3 := newRouterCtx(t, "")

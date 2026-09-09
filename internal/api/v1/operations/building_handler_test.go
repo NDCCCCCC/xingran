@@ -444,11 +444,8 @@ func TestBuildingHandler_Statistics_Success(t *testing.T) {
 	assert.Contains(t, w.Body.String(), `"total":10`)
 }
 
-// TestBuildingHandler_Statistics_Error documents a quirk in Statistics handler:
-// it calls response.Error(c, http.StatusInternalServerError, err.Error()) with an
-// int first arg; response.toAppError's `case int` branch hard-codes HTTPStatus to
-// 400, so service errors surface as 400 instead of 500. Per D-12 we do NOT fix
-// this — only document.
+// TestBuildingHandler_Statistics_Error — HANDLER-01 (Phase 112): migrated to HandleServiceError.
+// HTTP status is 500 (not 400) — the int-first-arg quirk is closed.
 func TestBuildingHandler_Statistics_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &mockBuildingService{
@@ -459,8 +456,8 @@ func TestBuildingHandler_Statistics_Error(t *testing.T) {
 	h := newTestBuildingHandler(svc, nil, newBuildingHandlerCore(t))
 
 	w := doBuildingRequest(h, http.MethodPost, "/buildings/statistics", `{}`)
-	// Quirky: int first arg in response.Error → 400 (per toAppError case int).
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.NotContains(t, w.Body.String(), "stats fail")
 }
 
 // TestBuildingHandler_SearchBuildingOptions_Success
@@ -496,9 +493,8 @@ func TestBuildingHandler_SearchBuildingOptions_InvalidJSON(t *testing.T) {
 	assert.True(t, called)
 }
 
-// TestBuildingHandler_SearchBuildingOptions_Error documents the same int-as-first-arg
-// quirk as Statistics — service errors surface as 400 (see toAppError case int).
-// Per D-12: not fixed.
+// TestBuildingHandler_SearchBuildingOptions_Error — HANDLER-01 (Phase 112): migrated to HandleServiceError.
+// HTTP status is 500 (not 400) — the int-first-arg quirk is closed.
 func TestBuildingHandler_SearchBuildingOptions_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &mockBuildingService{
@@ -509,7 +505,8 @@ func TestBuildingHandler_SearchBuildingOptions_Error(t *testing.T) {
 	h := newTestBuildingHandler(svc, nil, newBuildingHandlerCore(t))
 
 	w := doBuildingRequest(h, http.MethodPost, "/buildings/search-options", `{}`)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.NotContains(t, w.Body.String(), "opt fail")
 }
 
 // TestBuildingHandler_Geocode_BindError
@@ -589,11 +586,8 @@ func TestBuildingHandler_NewBuildingHandlerWithCore(t *testing.T) {
 // TestBuildingStatistics_ErrorBody_DoesNotLeakSQL is a GUARD-06 regression test:
 // When the service returns a SQL error, the handler must NOT leak SQL keywords
 // (SELECT/UPDATE/INSERT/DELETE/FROM/WHERE/syntax/relation/does not exist) in the
-// HTTP response body. Phase 112 HANDLER-01 will switch to HandleServiceError
-// which sanitizes the body. Currently the handler calls
-// response.Error(c, http.StatusInternalServerError, err.Error()) directly,
-// so a SQL error like "SELECT * FROM sys_building WHERE id = $1" leaks into
-// the response and this test FAILS (RED). After Phase 112 fix it will PASS (GREEN).
+// HTTP response body. Phase 112 HANDLER-01 migrated to HandleServiceError which
+// sanitizes the body — this test now PASSES (GREEN).
 func TestBuildingStatistics_ErrorBody_DoesNotLeakSQL(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &mockBuildingService{

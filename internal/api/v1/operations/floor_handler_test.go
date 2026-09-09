@@ -366,7 +366,8 @@ func TestFloorHandler_Statistics_Success(t *testing.T) {
 	assert.Contains(t, w.Body.String(), `"total":3`)
 }
 
-// TestFloorHandler_Statistics_Error — same int-as-first-arg quirk as building handler.
+// TestFloorHandler_Statistics_Error — HANDLER-02 (Phase 112): migrated to HandleServiceError.
+// HTTP status is 500 (not 400) — the int-first-arg quirk is closed.
 func TestFloorHandler_Statistics_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &mockFloorService{
@@ -377,7 +378,8 @@ func TestFloorHandler_Statistics_Error(t *testing.T) {
 	h := newFloorHandler(svc).WithCore(newTestCore(t))
 	r := newFloorRouter(h)
 	w := httpDo(r, http.MethodPost, "/floors/statistics", "")
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.NotContains(t, w.Body.String(), "stats fail")
 }
 
 // TestFloorHandler_SearchFloorOptions_Success
@@ -411,7 +413,8 @@ func TestFloorHandler_SearchFloorOptions_InvalidJSON(t *testing.T) {
 	assert.True(t, called)
 }
 
-// TestFloorHandler_SearchFloorOptions_Error — same int-as-first-arg quirk.
+// TestFloorHandler_SearchFloorOptions_Error — HANDLER-02 (Phase 112): migrated to HandleServiceError.
+// HTTP status is 500 (not 400) — the int-first-arg quirk is closed.
 func TestFloorHandler_SearchFloorOptions_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &mockFloorService{
@@ -422,7 +425,8 @@ func TestFloorHandler_SearchFloorOptions_Error(t *testing.T) {
 	h := newFloorHandler(svc).WithCore(newTestCore(t))
 	r := newFloorRouter(h)
 	w := httpDo(r, http.MethodPost, "/floors/search-options", `{}`)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.NotContains(t, w.Body.String(), "opt fail")
 }
 
 // TestFloorHandler_WithCore_NilSafe
@@ -454,10 +458,8 @@ func TestFloorHandler_SearchFloorOptions_ResponseShape(t *testing.T) {
 
 // TestFloorStatistics_ErrorBody_DoesNotLeakSQL is a GUARD-06 regression test:
 // When the service returns a SQL error, the handler must NOT leak SQL keywords
-// in the HTTP response body. Phase 112 HANDLER-02 will switch to HandleServiceError.
-// Currently the handler calls response.Error(c, http.StatusInternalServerError,
-// err.Error()) directly, so a SQL error leaks and this test FAILS (RED).
-// After Phase 112 fix it will PASS (GREEN).
+// in the HTTP response body. Phase 112 HANDLER-02 migrated to HandleServiceError which
+// sanitizes the body — this test now PASSES (GREEN).
 func TestFloorStatistics_ErrorBody_DoesNotLeakSQL(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &mockFloorService{

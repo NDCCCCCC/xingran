@@ -1,8 +1,6 @@
 package operations
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/xingran-next/xingran-go-backend/internal/core"
 	"github.com/xingran-next/xingran-go-backend/internal/models/operations"
@@ -36,8 +34,7 @@ func (h *BuildingHandler) Statistics(c *gin.Context) {
 	var params map[string]interface{}
 	_ = c.ShouldBindJSON(&params)
 	result, err := h.service.Statistics(c.Request.Context(), params)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !response.HandleServiceError(c, err, "查询统计数据") {
 		return
 	}
 	response.Success(c, result)
@@ -51,8 +48,7 @@ func (h *BuildingHandler) SearchBuildingOptions(c *gin.Context) {
 		params = map[string]interface{}{}
 	}
 	result, err := h.service.SearchBuildingOptions(c.Request.Context(), params)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if !response.HandleServiceError(c, err, "查询楼宇下拉选项") {
 		return
 	}
 	response.Success(c, result)
