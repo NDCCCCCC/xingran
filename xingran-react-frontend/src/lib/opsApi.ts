@@ -103,6 +103,15 @@ export const workstationApi = {
     );
     return res.data?.list ?? [];
   },
+
+  // Sprint 1 Fix #4 (Vercel async-parallel): 批量楼层工位计数,
+  // 替代 BuildingView3D 原来的 1+N workstationApi.list(pageSize:1) 模式
+  countsByFloor: async (floorIds: string[]): Promise<{ counts: Record<string, number> }> => {
+    const res = await post<{ counts: Record<string, number> }>("/ops/workstation/counts-by-floor", {
+      floorIds,
+    });
+    return { counts: res.data?.counts ?? {} };
+  },
 };
 
 // ==================== 工位部门物理位置映射 (Phase 39) ====================

@@ -33,6 +33,7 @@ type mockWorkstationService struct {
 	GetWorkstationDeptOptionsFunc func(ctx context.Context, orgID string) ([]opsServices.DeptOption, error)
 	SearchWorkstationOptionsFunc  func(ctx context.Context, req requests.WorkstationListRequest) ([]opsServices.DropdownOption, error)
 	GetFloorWorkstationsAllFunc   func(ctx context.Context, floorId string) ([]models.Workstation, error)
+	CountsByFloorFunc             func(ctx context.Context, floorIds []string) (*opsServices.CountsByFloorResult, error)
 }
 
 func (m *mockWorkstationService) Create(ctx context.Context, w *models.Workstation) error {
@@ -101,6 +102,12 @@ func (m *mockWorkstationService) GetFloorWorkstationsAll(ctx context.Context, fl
 	}
 	return nil, errNotImplemented
 }
+func (m *mockWorkstationService) CountsByFloor(ctx context.Context, floorIds []string) (*opsServices.CountsByFloorResult, error) {
+	if m.CountsByFloorFunc != nil {
+		return m.CountsByFloorFunc(ctx, floorIds)
+	}
+	return nil, errNotImplemented
+}
 
 func newWorkstationRouter(h *WorkstationHandler) *gin.Engine {
 	return mountRouter([]routeMount{
@@ -115,6 +122,7 @@ func newWorkstationRouter(h *WorkstationHandler) *gin.Engine {
 		{http.MethodPost, "/workstations/dept-options", h.GetWorkstationDeptOptions},
 		{http.MethodPost, "/workstations/search-options", h.SearchWorkstationOptions},
 		{http.MethodGet, "/workstations/:floorId/workstations-all", h.GetFloorWorkstationsAll},
+		{http.MethodPost, "/workstations/counts-by-floor", h.CountsByFloor},
 	})
 }
 
@@ -536,6 +544,76 @@ func TestWorkstationHandler_GetFloorWorkstationsAll_Error(t *testing.T) {
 	r := newWorkstationRouter(h)
 	w := httpDo(r, http.MethodGet, "/workstations/floor-1/workstations-all", "")
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// TestWorkstationHandler_CountsByFloor_Success — Sprint 1 Fix #4 (Vercel async-parallel):
+// 批量端点 success path，验证所有请求的 floorId 均在响应中（含 count=0 的）。
+func TestWorkstationHandler_CountsByFloor_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	svc := &mockWorkstationService{
+		CountsByFloorFunc: func(_ context.Context, floorIds []string) (*opsServices.CountsByFloorResult, error) {
+			assert.ElementsMatch(t, []string{"f1", "f2", "f3"}, floorIds)
+			return &opsServices.CountsByFloorResult{Counts: map[string]int{"f1": 5, "f2": 0, "f3": 3}}, nil
+		},
+	}
+	h := newWorkstationHandler(svc).WithCore(newTestCore(t))
+	r := newWorkstationRouter(h)
+	w := httpDo(r, http.MethodPost, "/workstations/counts-by-floor", `{"floorIds":["f1","f2","f3"]}`)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), `"f1":5`)
+	assert.Contains(t, w.Body.String(), `"f2":0`)
+	assert.Contains(t, w.Body.String(), `"f3":3`)
+}
+
+// TestWorkstationHandler_CountsByFloor_Empty — 空 floorIds 数组。
+func TestWorkstationHandler_CountsByFloor_Empty(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	called := false
+	svc := &mockWorkstationService{
+		CountsByFloorFunc: func(_ context.Context, floorIds []string) (*opsServices.CountsByFloorResult, error) {
+			called = true
+			assert.Empty(t, floorIds)
+			return &opsServices.CountsByFloorResult{Counts: map[string]int{}}, nil
+		},
+	}
+	h := newWorkstationHandler(svc).WithCore(newTestCore(t))
+	r := newWorkstationRouter(h)
+	w := httpDo(r, http.MethodPost, "/workstations/counts-by-floor", `{"floorIds":[]}`)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.True(t, called)
+}
+
+// TestWorkstationHandler_CountsByFloor_BindError — 无效 JSON。
+func TestWorkstationHandler_CountsByFloor_BindError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	called := false
+	svc := &mockWorkstationService{
+		CountsByFloorFunc: func(_ context.Context, floorIds []string) (*opsServices.CountsByFloorResult, error) {
+			called = true
+			assert.Empty(t, floorIds) // fallback
+			return &opsServices.CountsByFloorResult{Counts: map[string]int{}}, nil
+		},
+	}
+	h := newWorkstationHandler(svc).WithCore(newTestCore(t))
+	r := newWorkstationRouter(h)
+	w := httpDo(r, http.MethodPost, "/workstations/counts-by-floor", `not-json`)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.True(t, called)
+}
+
+// TestWorkstationHandler_CountsByFloor_Error — service 错误走 HandleServiceError。
+func TestWorkstationHandler_CountsByFloor_Error(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	svc := &mockWorkstationService{
+		CountsByFloorFunc: func(_ context.Context, _ []string) (*opsServices.CountsByFloorResult, error) {
+			return nil, errors.New("count err")
+		},
+	}
+	h := newWorkstationHandler(svc).WithCore(newTestCore(t))
+	r := newWorkstationRouter(h)
+	w := httpDo(r, http.MethodPost, "/workstations/counts-by-floor", `{"floorIds":["f1"]}`)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.NotContains(t, w.Body.String(), "count err")
 }
 
 // TestWorkstationHandler_WithCore_NilSafe

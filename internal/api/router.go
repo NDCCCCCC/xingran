@@ -629,6 +629,7 @@ func SetupRouter(r *gin.RouterGroup, core *core.Core, allowedOrigins []string) {
 			workstations.POST("/dropdown-options", workstationHandler.SearchWorkstationOptions)
 			workstations.POST("/batch", workstationHandler.BatchOperation)
 			workstations.POST("/positions", workstationHandler.BatchUpdatePositions)
+			workstations.POST("/counts-by-floor", workstationHandler.CountsByFloor)
 			workstations.POST("/:id", workstationHandler.GetByID)
 			workstations.POST("/:id/update", workstationHandler.Update)
 			workstations.POST("/:id/delete", workstationHandler.Delete)

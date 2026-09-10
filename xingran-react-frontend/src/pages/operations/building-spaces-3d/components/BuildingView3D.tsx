@@ -11,8 +11,8 @@ import { floorApi, workstationApi, buildingApi } from "@/lib/opsApi";
 import type { Floor } from "@/types/operations";
 import { handleApiError } from "@/utils/errorHandler";
 import { convertApiWorkstations } from "../utils";
-import BuildingModel3D from "./BuildingModel3D";
-import FloorPlan3D from "./FloorPlan3D";
+// Use lazy wrappers from BuildingScene so Three.js stays out of the initial bundle.
+import { BuildingModel3DLazy, FloorPlan3DLazy } from "@/components/three/BuildingScene";
 
 // ============ 类型定义 ============
 
@@ -87,35 +87,16 @@ const BuildingView3D: React.FC = () => {
 
         const floorList = result.data?.list || [];
 
-        // 获取每层楼的工位数量
-        const floorsWithCount = await Promise.all(
-          floorList.map(async (floor: Floor) => {
-            try {
-              const wsResult = await workstationApi.list({
-                floorCode: floor.id,
-                current: 1,
-                pageSize: 1,
-              });
-              return {
-                id: floor.id,
-                name: floor.name || "",
-                code: floor.code,
-                floorNo: String(floor.floorNo),
-                status: floor.status,
-                workstationCount: wsResult.data?.total || 0,
-              };
-            } catch {
-              return {
-                id: floor.id,
-                name: floor.name || "",
-                code: floor.code,
-                floorNo: String(floor.floorNo),
-                status: floor.status,
-                workstationCount: 0,
-              };
-            }
-          })
-        );
+        // Sprint 1 Fix #4: 批量获取楼层工位数量，替代原来的 1+N 模式
+        const countsResult = await workstationApi.countsByFloor(floorList.map((f: Floor) => f.id));
+        const floorsWithCount = floorList.map((floor: Floor) => ({
+          id: floor.id,
+          name: floor.name || "",
+          code: floor.code,
+          floorNo: String(floor.floorNo),
+          status: floor.status,
+          workstationCount: countsResult.counts[floor.id] ?? 0,
+        }));
 
         setFloors(floorsWithCount);
       } catch (error) {
@@ -349,7 +330,7 @@ const BuildingPanel: React.FC<BuildingPanelProps> = ({
 
     {/* 3D 楼宇模型 */}
     <div style={styles.modelContainer}>
-      <BuildingModel3D
+      <BuildingModel3DLazy
         floors={floors}
         onFloorClick={onFloorClick}
         selectedFloorId={selectedFloorId}
@@ -383,7 +364,7 @@ const FloorPlanPanel: React.FC<FloorPlanPanelProps> = ({ floor, workstations, lo
         <EmptyView message="该楼层暂无工位" />
       ) : (
         <div style={{ height: "100%", width: "100%" }}>
-          <FloorPlan3D workstations={workstations} />
+          <FloorPlan3DLazy workstations={workstations} />
         </div>
       )}
     </div>

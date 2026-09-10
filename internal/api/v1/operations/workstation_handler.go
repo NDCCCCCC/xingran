@@ -83,6 +83,31 @@ func (h *WorkstationHandler) GetWorkstationDeptOptions(c *gin.Context) {
 	response.Success(c, result)
 }
 
+// CountsByFloor 批量获取楼层工位数量(READ,一个 SQL 替代前端 N+1 模式)
+// @Summary 批量楼层工位计数
+// @Description 接收 floorId 数组,返回各楼层工位数量 map(0=正常,软删除排除)
+// @Tags 运维管理
+// @Accept json
+// @Produce json
+// @Param request body object{floorIds=[]string} true "楼层ID列表"
+// @Success 200 {object} response.Response{data=opsServices.CountsByFloorResult}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /ops/workstation/counts-by-floor [post]
+func (h *WorkstationHandler) CountsByFloor(c *gin.Context) {
+	var req struct {
+		FloorIDs []string `json:"floorIds"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		req.FloorIDs = []string{}
+	}
+	result, err := h.service.CountsByFloor(c.Request.Context(), req.FloorIDs)
+	if !response.HandleServiceError(c, err, "查询楼层工位数量") {
+		return
+	}
+	response.Success(c, result)
+}
+
 // SearchWorkstationOptions 工位下拉数据源(name LIKE 模糊 + floorId/floorCode/status/type/orgId 筛选,LIMIT 50,读操作不写操作日志)
 // 修复 info-points/index.tsx「所属工位」下拉用 pageSize:1000 + filterOption 客户端截断的 bug。
 //

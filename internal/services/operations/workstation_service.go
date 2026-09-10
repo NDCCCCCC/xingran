@@ -32,6 +32,11 @@ func validateTableName(tableName string) bool {
 	return allowedTables[tableName]
 }
 
+// CountsByFloorResult 批量楼层工位计数结果
+type CountsByFloorResult struct {
+	Counts map[string]int `json:"counts"` // floorId -> workstation count
+}
+
 // WorkstationService 工位服务接口。
 //
 // D-05（Phase 91-02）：List 与 SearchWorkstationOptions 的参数从
@@ -57,6 +62,8 @@ type WorkstationService interface {
 	SearchWorkstationOptions(ctx context.Context, req requests.WorkstationListRequest) ([]DropdownOption, error)
 	// GetFloorWorkstationsAll 楼层全部工位(CAD/3D/平面图全集专用,无分页;V130R-09 D-03-6/D-03-7)。
 	GetFloorWorkstationsAll(ctx context.Context, floorId string) ([]models.Workstation, error)
+	// CountsByFloor 批量获取各楼层工位数量(READ,一个 SQL GROUP BY floor_id,替代前端 N+1 模式)。
+	CountsByFloor(ctx context.Context, floorIds []string) (*CountsByFloorResult, error)
 }
 
 // DeptOption 工位编辑"所属部门"下拉选项(union: orgId 子孙 + alias 映射)
@@ -508,4 +515,33 @@ func (s *workstationService) SearchWorkstationOptions(ctx context.Context, req r
 		return nil, err
 	}
 	return result, nil
+}
+
+// CountsByFloor 批量获取各楼层工位数量(READ,一个 SQL GROUP BY floor_id)。
+// 0=正常工位(status=enabled),软删除排除;空 floorIds 返回空 map。
+func (s *workstationService) CountsByFloor(ctx context.Context, floorIds []string) (*CountsByFloorResult, error) {
+	counts := make(map[string]int)
+	for _, id := range floorIds {
+		counts[id] = 0 // 初始化:确保所有请求的 floorId 都有键(哪怕 count=0)
+	}
+	if len(floorIds) == 0 {
+		return &CountsByFloorResult{Counts: counts}, nil
+	}
+	var results []struct {
+		FloorID string `gorm:"column:floor_id"`
+		Count   int    `gorm:"column:cnt"`
+	}
+	err := s.db.WithContext(ctx).
+		Model(&models.Workstation{}).
+		Select("floor_id, COUNT(*) AS cnt").
+		Where("floor_id IN ? AND status = ? AND deleted_at IS NULL", floorIds, models.WorkstationStatusAvailable).
+		Group("floor_id").
+		Scan(&results).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range results {
+		counts[r.FloorID] = r.Count
+	}
+	return &CountsByFloorResult{Counts: counts}, nil
 }
