@@ -1,10 +1,44 @@
 ---
-last_updated: 2026-09-07
-update_trigger: v1.31 started — V131 技术债清偿（审计台账 F-06~F-17 全部 12 组 + nilness 观察项）
-previous_update: 2026-09-07 v1.30 shipped + archived — V130 缺陷治理 6 phases / 21 plans 全交付，CI 34057232365 全绿
+last_updated: 2026-09-09
+update_trigger: v1.32 started — V132 审计驱动的安全与可靠性收尾（TLS 环境变量化 + 裸 goroutine 守护 + 8 项回归守护前置）
+previous_update: 2026-09-08 v1.31 shipped + archived — V131 技术债清偿 7 phases / 25 plans / 29 requirements 全交付
 ---
 
-## Current Milestone: v1.31 V131 技术债清偿 (Tech Debt Retirement)
+## Current Milestone: v1.32 V132 审计驱动的安全与可靠性收尾 (Audit-Driven Security & Reliability)
+
+**Goal:** 基于 2026-09-09 全量后端审计报告（`.planning/reviews/20260909-backend-audit.md`）的 18 项 P0/P1 风险 + 4 项 Phase 104/107/108 MUST-FIX + 6 项新发现并发风险，按用户决策（范围=P0+P1+回归守护；TLS 选项=环境变量；回归守护=Phase 109 前置）分 5 个 phase 收尾：
+- **Phase 109 回归守护前置（独立）** — 8 项回归守护测试先于修复落地，作为后续修复的安全网
+- **Phase 110 P0 安全 TLS 环境变量化** — Redis / AD authenticator / WebSocket CORS 等 TLS/Origin 选项化（默认严格，内网可显式放宽）
+- **Phase 111 P0 并发裸 goroutine 守护** — 4 个裸 goroutine 加 panic recover + detached ctx；captcha increment fail-closed
+- **Phase 112 P1 handler 收敛补丁** — Phase 104 收敛不彻底的 3 个 handler 端点（err.Error 泄漏）+ login_log nil guard + HandleGetByID HTTP 状态修复
+- **Phase 113 部署文档同步** — 把所有 TLS/Origin 选项 env 写入 docs/deployment/secret-management.md，加"MUST SET"清单
+
+**Target features:**
+- **GUARD-01..08**: 8 项回归守护测试（Redis TLS 默认严格、ADA authenticator TLS、main allowedOrigins 非通配、HandleGetByID 404、login_log nil 不 panic、operations Statistics 不泄漏 SQL、OperLog 异步 panic recover、captcha increment fail-closed）
+- **TLS-01..03**: Redis TLS / AD authenticator TLS / WebSocket CORS 三处 InsecureSkipVerify 全部走 env 控制（默认 false，内网可选 true）
+- **GOR-01..04**: OperLog 异步 / AD dept sync / connection_manager reconnect / auth login log 4 处裸 goroutine 加 `defer recover()` + detached context
+- **CAP-01**: captcha.go Increment 失败记录 warn 日志或强制 fail-closed（防暴力破解防护静默失效）
+- **HANDLER-01..03**: operations building/floor/workstation handler 的 Statistics/Search*Options 端点全部迁到 HandleServiceError；login_log_handler.Clean 加 nil guard；HandleGetByID 改用 ErrNotFound
+- **DOC-01**: secret-management.md 新增 TLS/Origin env 部署清单 + 内网兼容说明
+
+**锁定决策 (v1.32 init):**
+- **D-01 范围**: P0 安全 + P0 并发 + P1 handler 收敛 + 8 项回归守护；P2 清理（panic 改 error / 硬删除改软删除）不在本期范围（独立 milestone 候选）
+- **D-02 TLS 选项实现**: 全部走环境变量（沿用现有 LDAP_TLS_INSECURE_SKIP_VERIFY 模式，新增 REDIS_TLS_INSECURE_SKIP_VERIFY / WS_ALLOW_ALL_ORIGINS 等），默认 false（严格校验），内网部署可显式置 true 兼容自签证书
+- **D-03 回归纪律**: 8 项回归守护作为 Phase 109 前置独立 phase 落地，先测试后修复；每个修复必须有对应回归测试已存在（红→绿 路径）
+- **D-04 七 gate 不倒退**: go build / go test / 后端 coverage ≥78.33 基线 / 前端 45 dirs / lint / type-check / diff coverage 全程保持绿；新增 8 项 invariants 测试纳入 diff coverage gate
+- **D-05 范围外**: P2 清理（panic 改 error / 硬删除改软删除）；agent 裸 c.JSON（已锁定为有意设计）；operlog exclude_paths 继续挂账
+- **D-06 Phase 编号**: 从 Phase 109 续编（v1.31 用 102-108，v1.30 用 96-101，v1.29 用 89-95）
+
+**规划输入:**
+- `.planning/reviews/20260909-backend-audit.md`（2026-09-09 全量后端审计报告，1,068 文件，6 个并行 Explore agent 全量扫描）
+- 06-12 vs v1.31 对比：27 项历史问题 24 FIXED + 3 PARTIAL
+- 新发现 18 项风险中 P0=7 + P1=4 + P2=7
+
+**范围边界:** 仅 P0 安全/P0 并发/P1 handler 收敛 + 8 项回归守护；P2 清理推到下个 milestone；不引入新业务功能；所有修复必须有回归测试守护。
+
+---
+
+## Current Milestone: v1.31 V131 技术债清偿 (Tech Debt Retirement) — ✅ SHIPPED + ARCHIVED 2026-09-08
 
 **Goal:** 清偿 2026-09-07 全量技术债务审计台账（`.planning/notes/260907-audit-fix-tech-debt-findings.md`）的全部 12 组未修复项（F-06~F-17）+ 顺带 nilness 观察项，达成：非测试代码 TODO 清零、status/cache-key/分页/协议字面量清零、缓存闭包收敛 base 单一权威、wire 契约统一、skip 测试尽力恢复。
 

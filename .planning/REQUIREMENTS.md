@@ -1,141 +1,119 @@
 ---
-milestone: v1.31
+milestone: v1.32
 status: defined
+defined: 2026-09-09
 ---
 
-# Requirements: XingRan-Next — Milestone v1.31 V131 技术债清偿 (Tech Debt Retirement)
+# Requirements: XingRan-Next — Milestone v1.32 V132 审计驱动的安全与可靠性收尾 (Audit-Driven Security & Reliability)
 
-**Defined:** 2026-09-07
-**Core Value:** 清偿 2026-09-07 全量技术债务审计台账的全部 12 组未修复项（F-06~F-17）+ 顺带 nilness 观察项，达成：非测试代码 TODO 清零、status/cache-key/分页/协议字面量清零、缓存闭包收敛 base 单一权威、wire 契约统一、skip 测试尽力恢复。
+**Defined:** 2026-09-09
+**Core Value:** 基于 2026-09-09 全量后端审计报告（`.planning/reviews/20260909-backend-audit.md`）的 18 项 P0/P1 风险 + 4 项 Phase 104/107/108 MUST-FIX + 6 项新发现并发风险，按用户决策（范围=P0+P1+回归守护；TLS 选项=环境变量；回归守护=Phase 109 前置）分 5 个 phase 收尾：Phase 109 回归守护前置 → Phase 110 P0 安全 TLS 环境变量化 → Phase 111 P0 并发裸 goroutine 守护 → Phase 112 P1 handler 收敛补丁 → Phase 113 部署文档同步。
 
 **输入来源:**
+- `.planning/reviews/20260909-backend-audit.md`（2026-09-09 全量后端审计报告）
+- `.planning/PROJECT.md` v1.32 段（D-01~D-06 锁定决策）
+- 历史审计：`.planning/reviews/20260612-backend-code-review.md`（v1.31 对比基线）
 
-- `.planning/notes/260907-audit-fix-tech-debt-findings.md`（F-06~F-09 not-attempted + F-10~F-17 manual-only + 观察项）
-- `.planning/PROJECT.md` v1.31 段（D-01~D-05 锁定决策）
+**锁定决策 (v1.32 init):**
 
-**锁定决策 (v1.31 init):**
-
-- **D-01 范围**: 台账 12 组全做；F-15 逐项决策实现或删除、不留兼容壳
-- **D-02 回归纪律**: 行为变更附回归测试；七 gate（go build / go test / 后端 coverage ≥78.33 基线 / 前端 45 dirs / lint / type-check / diff coverage）全程不倒退
-- **D-03 设计决策项**: WIRE-01 wire 契约方向、FEMAP-03 颜色 token 选择在 phase 规划时敲定
-- **D-04 范围外**: captcha-background 1=启用语义（QUIRK-80-03-D 锁定非 bug，禁改）；观察项中的有意设计（agent 裸 c.JSON / 三层 adapter / 协议默认值）不动；operlog exclude_paths 继续挂账
-- **D-05 Phase 编号**: 从 Phase 102 续编（v1.30 用 96-101，v1.29 用 89-95）
-
-## v1.31 Requirements
-
-### CACHE — 缓存键残余常量化
-
-- [ ] **CACHE-01**: `internal/core/captcha.go`（:297,326,361,367,419,426 storageKey / :503,529 failKey）与 `internal/core/captcha_background.go`（:146,243,295,310 list/pool key）共 12 处内联缓存键收敛为包内具名常量（或注册 cache_keys.go），行为等价
-- [ ] **CACHE-02**: notice（:208,210）/ settings（:53,64）/ duty（:144,215,273,287,301）/ workorder（:215,264,271）/ knowledge（:129-134,223,230,244）/ network（:298,319）/ api_endpoint（:63,194）/ mac vendor（:255）/ widget（:59-65）/ rpa selector（:361）等模块 ~35 处内联 cache key 注册进 cache_keys.go 或模块级注册表并引用；失效 pattern 字符串同步具名化
-
-### STATUS — 状态字面量清零
-
-- [x] **STATUS-01**: 剩余 12 处 status 字面量全部引用 models 具名常量：workorder/base.go:183（`[]int{0,1}`）、scheduler/job_service.go:331、scheduler/cron.go:43,62,235,407,435,832、scheduler/vdi_sync_tasks.go:48,85、workorder_tasks.go:195,328,451、reconciliation_tasks.go:196、mac_history_tasks.go:127、mac_history_matview_tasks.go:56（按实际常量存在性逐处核对；geocoding 百度 API 白名单豁免）
-
-### PAGI — 分页口径归一
-
-- [ ] **PAGI-01**: `internal/utils/pagination.go` ParsePagination（cap=MaxListPageSize）收敛到 `pkg/query.NormalizePagination` 单一口径，调用方行为不变（差异点注释自证历史分叉，收敛时逐调用方核对）
-
-### CONV — 缓存闭包收敛 base 单一权威
-
-- [x] **CONV-01**: mac_history_query_service.go 4 处 legacy `GetOrSet(func() (interface{}, error))`（:307,432,835）+ :259-281 手写 Get/Set cache-aside + heatmap_service.go:118 迁移 `base.GetOrSetJSON[T]`
-- [x] **CONV-02**: asset/reconciliation_service.go:799-820 GetByWorkstation 手写读穿透（GetJSON 短路 + Marshal + Set）迁移 `base.GetOrSetJSON[T]`
-- [x] **CONV-03**: rpa/selector_learner.go:169-174,226 GetBestSelector/SaveSelector 手写 JSON cache-aside 迁移 `base.GetOrSetJSON[T]`
-- [x] **CONV-04**: `cache_invariants_92_test.go` 扫描口径扩展至 services 根 / asset / rpa 包（interface{} 闭包式 GetOrSet 硬失败），守护新收敛面不回潮
-
-### WIRE — 错误响应契约统一
-
-- [ ] **WIRE-01**: operations/base_handler.go:10-25 本地 handleJSONBinding/handleServiceError 与 `pkg/response/handler_helpers.go` 合并为单一权威，operations 14 handler 全量切换；wire 契约方向（CodeParamError/CodeServerError vs http.Status*+BusinessError 409）在 phase 规划敲定后全仓一致；响应格式回归测试覆盖
-
-### HANDLER — Handler 样板收敛
-
-- [ ] **HANDLER-01**: operations 14 个同构 CRUD handler（wall/server_room/floor/door/building/room_device/floor_plan_text/dedicated_line/location_alias/infopoint/workstation/workstation_device/asset/asset_component）样板收敛（泛型 helper 或等价方案）；server_room List:101-103 与 Statistics:37 的手写错误路径漂移一并修复
-- [ ] **HANDLER-02**: monitor oper_log_handler.go:54-160 与 login_log_handler.go:49-157 五方法复制去重；login 侧手写 `response.Error(apperrors.InternalServerError(err))` 统一走 HandleServiceError
-
-### FEAPI — 前端 CRUD 收敛 apiFactory
-
-- [ ] **FEAPI-01**: adDomainApi.ts:261,295,385 三处手写 update/delete 五件套迁移 createResourceApi（D-14 单参 delete 契约保持，invariants 基线同步归零）
-- [ ] **FEAPI-02**: knowledgeApi.ts:174,179,228,245,250 五处迁移（同上约束）
-- [ ] **FEAPI-03**: dutyApi.ts:193,198,233,275,279 五处迁移（同上约束）
-- [ ] **FEAPI-04**: workorderApi.ts:429,434,532,582,587 六处迁移（同上约束）
-
-### FEMAP — 前端选项/颜色映射统一
-
-- [ ] **FEMAP-01**: server-rooms/index.tsx:653-654,417-418 与 MACHistoryPage.tsx:654-655 内联 正常/停用 选项+Tag → `constants/status.ts` NORMAL_STOP_OPTIONS / NORMAL_STOP_TAG_CONFIG
-- [ ] **FEMAP-02**: fix-suggestion fixStatusColor/fixStatusLabel 双份拷贝（index.tsx:68-75 vs FixSuggestionDetailDrawer.tsx:22-29）抽模块共享 constants，漂移（orange vs magenta）按 phase 决策归一
-- [ ] **FEMAP-03**: 11 处内联 `status === 0 ? "success" : "error"` 三元 Tag（DashboardList:215、assets:387、FloorCardView:67-68、menu:110、email-config:268-269、api-config:252-253、FloorView3D:90-91、BuildingView3D:183-184、ad-domain/configs:253,474、exception-rules:285）统一 NORMAL_STOP_TAG_CONFIG；success/green token 选择 phase 规划敲定
-
-### TODO — 非测试代码 TODO 清零
-
-- [ ] **TODO-01**: workorder 域：评价功能占位（workorder_router.go:65）——实现或删除+落档理由
-- [ ] **TODO-02**: RPA 域：扩缩容配置读取/持久化（worker_handler.go:260,279）、ListSessions（credential_handler.go:154）、回滚逻辑（error_handling.go:311）、selector_learner 使用情况提取/通知机制（:235,367）、task_service 部门 ID（:296）——逐项实现或删除+落档理由
-- [ ] **TODO-03**: system/monitor 域：config 缓存刷新（config_service.go:257）、解锁用户逻辑（login_log_handler.go:194）、oper_log follow-up（:213）、init_data 未用函数（:638）——逐项实现或删除+落档理由
-- [ ] **TODO-04**: 基础设施域：core.go:911 Redis 接入、device_discovery_service.go:662、agent/server/handlers.go:304、reconciliation_exception.go:578 R3+ 缓存失效——逐项实现或删除+落档理由
-- [ ] **TODO-05**: 前端 6 处：LayoutToolbar Widget 选择器/仪表盘设置（:132,139）、useGeocoding 逆解析（:131）、WorkstationView 编辑（:73）、assets 编辑（:582）、AIScriptEditor AI 生成（:97）——逐项实现或删除+落档理由
-- [ ] **TODO-06**: 决策表落盘（每项：实现 / 删除 + 理由），非测试代码 TODO 计数归零（grep 守护进 CI 或 invariants）
-
-### SKIP — Skip 测试恢复
-
-- [ ] **SKIP-01**: HybridAuthenticator interface 化 refactor（具体类型 LocalAuthenticator/ADAuthenticator 依赖解耦），恢复 hybrid_authenticator_test.go 5 处 t.Skip
-- [ ] **SKIP-02**: ad_authenticator_test ×5 / authenticator_test / user_sync_service_test 等 10 处 skip：能以嵌入式基建（v1.27 addomain 嵌入式 LDAP 先例 + sqlite :memory:）恢复的恢复；确需真实 LDAP/DB 环境的落 HUMAN-UAT 决策表
-
-### TS — 前端类型卫生
-
-- [ ] **TS-01**: 11 处 `as any` 类型收窄：window 注入（HubeiMap:490 / HubeiMapGL:481）用 declare global 声明合并；customRequest（ExcelImport:261 / FileUpload:259）用正确 UploadRequest 签名；login:28 / WidgetRenderer:41 / assets:255 / EditModal:182 等逐处收窄
-- [ ] **TS-02**: 72 处无理由 eslint-disable（VirtualMachineList ×5、useRoleActions ×3、buildings/info-points/mac ×6、externals.d.ts/helpers/ParamsEditor/CronSelector ×8 及 ~31 文件散布）补理由注释或修复根因移除 disable
-
-### NIL — 观察项排查
-
-- [ ] **NIL-01**: rpa/data_mapper.go:332 nilness（impossible condition: non-nil == nil）根因排查：死代码则删除，真 bug 则修复 + 回归测试
-
-## Future Requirements (deferred)
-
-- **operlog exclude_paths** 细化治理 — 继续挂账（v1.29 D-05 起）
-- **LDAP InsecureSkipVerify** 生产证书配置 — 安全事项独立立项（CLAUDE.md 已知）
-- **agent/server 裸 c.JSON** 响应包装统一 — 疑为 agent 协议有意设计，需 agent 协议演化时一并处理
-- **三层 adapter 彻底合并**（cache_adapter / adapter / data_cache_service）— 架构定性已完成（base 单一权威），物理合并等退役窗口
-- **协议默认值回退常量化**（agent/config.go:25、cmd/agent/main.go:29、rpa-worker config.go:211、baidu API URL、cors TrimPrefix）— low 值，随域 phase 顺带
-
-## Out of Scope
-
-- **captcha-background 1=启用语义** — QUIRK-80-03-D 就地锁定（gorm default:1），后端前端一致，非 bug；禁止套用 0=启用共享常量
-- **超时字面量模块私有命名常量**（~120 处）— 约定允许的模块局部配置，不强制入 pkg/constants
-- **新业务功能** — 本期为纯技术债清偿
-- **前端覆盖率新目标** — v1.28 已收口 45.13%，gate 维持不倒退即可
-
-## Traceability
-
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| CACHE-01 | Phase 102 | Pending |
-| CACHE-02 | Phase 102 | Pending |
-| STATUS-01 | Phase 102 | Complete |
-| PAGI-01 | Phase 102 | Pending |
-| CONV-01 | Phase 103 | Complete |
-| CONV-02 | Phase 103 | Complete |
-| CONV-03 | Phase 103 | Complete |
-| CONV-04 | Phase 103 | Complete |
-| WIRE-01 | Phase 104 | Pending |
-| HANDLER-01 | Phase 104 | Pending |
-| HANDLER-02 | Phase 104 | Pending |
-| FEAPI-01 | Phase 105 | Pending |
-| FEAPI-02 | Phase 105 | Pending |
-| FEAPI-03 | Phase 105 | Pending |
-| FEAPI-04 | Phase 105 | Pending |
-| FEMAP-01 | Phase 106 | Pending |
-| FEMAP-02 | Phase 106 | Pending |
-| FEMAP-03 | Phase 106 | Pending |
-| TS-01 | Phase 106 | Pending |
-| TS-02 | Phase 106 | Pending |
-| TODO-01 | Phase 107 | Pending |
-| TODO-02 | Phase 107 | Pending |
-| TODO-03 | Phase 107 | Pending |
-| TODO-04 | Phase 107 | Pending |
-| TODO-05 | Phase 107 | Pending |
-| TODO-06 | Phase 107 | Pending |
-| NIL-01 | Phase 107 | Pending |
-| SKIP-01 | Phase 108 | Pending |
-| SKIP-02 | Phase 108 | Pending |
+- **D-01 范围**: P0 安全 + P0 并发 + P1 handler 收敛 + 8 项回归守护；P2 清理（panic 改 error / 硬删除改软删除）不在本期
+- **D-02 TLS 选项实现**: 全部走环境变量（沿用现有 LDAP_TLS_INSECURE_SKIP_VERIFY 模式，新增 REDIS_TLS_INSECURE_SKIP_VERIFY / WS_ALLOW_ALL_ORIGINS 等），默认 false（严格校验），内网部署可显式置 true 兼容自签证书
+- **D-03 回归纪律**: 8 项回归守护作为 Phase 109 前置独立 phase 落地，先测试后修复；每个修复必须有对应回归测试已存在（红→绿 路径）
+- **D-04 七 gate 不倒退**: go build / go test / 后端 coverage ≥78.33 基线 / 前端 45 dirs / lint / type-check / diff coverage 全程保持绿；新增 8 项 invariants 测试纳入 diff coverage gate
+- **D-05 范围外**: P2 清理（panic 改 error / 硬删除改软删除）；agent 裸 c.JSON（已锁定为有意设计）；operlog exclude_paths 继续挂账
+- **D-06 Phase 编号**: 从 Phase 109 续编
 
 ---
-*Requirements defined: 2026-09-07 — Traceability 回填 2026-09-07（29/29 requirements → Phases 102-108，见 ROADMAP.md）*
+
+## v1.32 Requirements
+
+### GUARD — 回归守护前置（Phase 109 独立）
+
+> 8 项回归守护测试先于修复落地，作为后续修复 phase 的"安全网"——确保红→绿路径清晰可验证。
+
+- [ ] **GUARD-01**: `pkg/cache/redis_test.go` 新增 `TestRedis_TLSConfig_NotInsecureByDefault` —— 当 `config.TLS=true` 且未设置 `REDIS_TLS_INSECURE_SKIP_VERIFY` 时，`tls.Config.InsecureSkipVerify == false`（Phase 110 红→绿基线）
+- [ ] **GUARD-02**: `internal/core/security/ad_authenticator_test.go` 新增 `TestADAAuthenticator_TLSConfig_StrictByDefault` —— `dialConnection` 默认构造的 `tls.Config.InsecureSkipVerify == false`，除非显式设置（Phase 110 红→绿基线）
+- [ ] **GUARD-03**: `cmd/main_test.go` 新增 `TestMain_AllowedOrigins_FromConfig_NotWildcard` —— 当 `server.allowed_origins` 已配置时，启动入口不会传入 `[]string{"*"}`；空配置触发 fail-fast（Phase 110 红→绿基线）
+- [ ] **GUARD-04**: `pkg/response/handler_helpers_test.go` 新增 `TestHandleGetByID_Returns404_NotBadRequest` —— 当 getter 返回 error 时，HTTP status = 404 而非 400（Phase 112 红→绿基线）
+- [ ] **GUARD-05**: `internal/api/v1/monitor/login_log_handler_test.go` 新增 `TestLoginLog_Clean_NilCore_DoesNotPanic` —— 当 `h.core == nil` 或 `h.core.OperLogService == nil` 时，`Clean` 优雅降级不 panic（Phase 112 红→绿基线）
+- [ ] **GUARD-06**: `internal/api/v1/operations/{building,floor,workstation}_handler_test.go` 新增 `TestStatistics_ErrorBody_DoesNotLeakSQL` —— 当底层 service 返回 SQL 错误时，响应 body 不包含 "SELECT/UPDATE/INSERT/DELETE" 等关键字（Phase 112 红→绿基线）
+- [ ] **GUARD-07**: `internal/services/oper_log_service_test.go` 新增 `TestOperLog_Async_DoesNotPanicOnDBError` —— DB 写入 panic 时 goroutine 自我 recover，进程不崩溃（Phase 111 红→绿基线）
+- [ ] **GUARD-08**: `internal/core/captcha_test.go` 新增 `TestCaptcha_Increment_Failure_FailsClosed` —— 当 Redis Increment 失败时，验证码校验 fail-closed（拒绝通过）而非 fail-open（Phase 111 红→绿基线）
+
+### TLS — TLS 选项环境变量化（Phase 110）
+
+> D-02 锁定：所有 TLS 跳过校验走环境变量，默认 false（严格校验），内网可显式置 true 兼容。
+
+- [ ] **TLS-01**: `pkg/cache/redis.go` — `NewRedisCache` 当 `config.TLS=true` 时，读取 `REDIS_TLS_INSECURE_SKIP_VERIFY`（默认 false）；true 时置 `InsecureSkipVerify=true` 并记录一次性 SECURITY warn（与 LDAP 一致模式）
+- [ ] **TLS-02**: `internal/core/security/ad_authenticator.go:181-183` — `dialConnection` 移除硬编码 `InsecureSkipVerify: true`，改为读取 `AD_AUTH_TLS_INSECURE_SKIP_VERIFY`（默认 false）；true 时 warn 一次
+- [ ] **TLS-03**: `internal/services/email_sender_service.go` — 当前硬编码 `InsecureSkipVerify: false` 已安全，但增加 env 支持（`EMAIL_TLS_INSECURE_SKIP_VERIFY`，默认 false），与 LDAP/Redis 一致模式
+- [ ] **TLS-04**: `cmd/main.go` — 移除 `allowedOrigins := []string{"*"}` 硬编码；从 `config.Server.AllowedOrigins` 读取；空配置或仅 `*` 时 fail-fast（生产环境强校验）
+- [ ] **TLS-05**: `pkg/middleware/cors.go` — 允许 `*` 通配配置项，但新增 `WS_ALLOW_ALL_ORIGINS` 环境变量覆盖（默认 false = 严格白名单）
+- [ ] **TLS-06**: 文档同步：`docs/deployment/secret-management.md` 新增"MUST SET in production" + "内网兼容"两段说明
+
+### GOR — 裸 goroutine 守护（Phase 111）
+
+> D-03 锁定：所有裸 goroutine 必须有 `defer recover()` + detached context（HTTP ctx 启动后即取消，不适合异步任务）。
+
+- [ ] **GOR-01**: `internal/services/oper_log_service.go:67,140` — `RecordAsync` 的 `go func()` 加 `defer recover()` + 错误日志；panic 时记录 SECURITY 级日志而非静默
+- [ ] **GOR-02**: `internal/api/v1/system/ad_dept_sync_handler.go:99` — `SyncDeptStructureToAD` 启动异步时使用 `context.WithTimeout(context.Background(), ADSyncTimeout)` + `defer recover()`；不使用 `c.Request.Context()`（HTTP 返回后已取消）
+- [ ] **GOR-03**: `internal/agent/server/connection_manager.go:186,196` — `handleReconnect` / `cleanupConnection` 启动的 goroutine 加 `defer recover()` + 状态日志
+- [ ] **GOR-04**: `internal/api/v1/auth.go:598` — 登录日志异步写入的 `go func()` 加 `defer recover()`；失败时记录 warn 而非 panic 进程崩溃
+
+### CAP — Captcha Increment Fail-Closed（Phase 111）
+
+- [ ] **CAP-01**: `internal/core/captcha.go:379,439,445` — `s.cache.Increment(ctx, key, 1)` 失败时记录 SECURITY warn 日志；推荐改为同步 DB 兜底计数（无 DB fallback 时强制 fail-closed — 拒绝通过而非放行）
+
+### HANDLER — Phase 104 收敛补丁（Phase 112）
+
+> Phase 104 已统一 14 个 operations handler 的 CRUD 路径，但 Statistics / Search*Options 端点仍泄漏 `err.Error()`。
+
+- [ ] **HANDLER-01**: `internal/api/v1/operations/building_handler.go:40,55` — `Statistics` / `SearchBuildingOptions` 改用 `HandleServiceError`；删除 `response.Error(c, http.StatusInternalServerError, err.Error())` 直接泄漏
+- [ ] **HANDLER-02**: `internal/api/v1/operations/floor_handler.go:36,51` — `Statistics` / `SearchFloorOptions` 同样收敛；`List:102` 的 `apperrors.InternalServerErrorWithMsg("查询失败")` 丢弃 err 改为 `HandleServiceError`
+- [ ] **HANDLER-03**: `internal/api/v1/operations/workstation_handler.go:58,83,101` — `Statistics` / `GetWorkstationDeptOptions` / `SearchWorkstationOptions` 同样收敛
+- [ ] **HANDLER-04**: `internal/api/v1/monitor/login_log_handler.go:106` — `Clean` 加 `h.core != nil && h.core.OperLogService != nil && h.core.GetDB() != nil` 三重 nil guard（与 OperLogHandler.Clean 对称）
+- [ ] **HANDLER-05**: `pkg/response/handler_helpers.go:62` — `HandleGetByID` 改用 `apperrors.New(http.StatusNotFound, ErrNotFound, notFoundMessage)` 或专门的 `ErrNotFound` 常量；当前 int 传入 `toAppError` 把 404 当业务码处理 → HTTP 400
+
+### DOC — 部署文档同步（Phase 113）
+
+- [ ] **DOC-01**: `docs/deployment/secret-management.md` 新增"V132 TLS/Origin 选项"章节：
+  - `LDAP_TLS_INSECURE_SKIP_VERIFY`（沿用）
+  - `AD_AUTH_TLS_INSECURE_SKIP_VERIFY`（新增）
+  - `AD_LEGACY_AES_KEY`（沿用 + MUST SET 提示）
+  - `REDIS_TLS_INSECURE_SKIP_VERIFY`（新增）
+  - `EMAIL_TLS_INSECURE_SKIP_VERIFY`（新增）
+  - `WS_ALLOW_ALL_ORIGINS`（新增）
+  - 内网部署兼容性说明 + 生产环境 MUST NOT SET 警告
+
+---
+
+## 范围外（锁定 D-05）
+
+- **P2 清理**: `connection_pool.go:87,105` 负引用计数 panic → 改 error 返回；`ad_ldap_client.go:33` / `vdi/config.go:28` / `column_config_service.go:159,165` panic → error；`addomain/sync.go:618` / `vdi/vm_service_impl.go:322` 硬删除 → 软删除
+- **agent 裸 c.JSON**: 已锁定为有意设计，禁改
+- **operlog exclude_paths**: 继续挂账
+- **菜单类 C 权限继承**: PARTIAL 状态接受，不在本期修复
+
+---
+
+## 回归纪律
+
+每个修复提交必须：
+1. 引用对应的 GUARD-N 测试 ID（Phase 109 前置已存在）
+2. 修复 commit 中明确说明"红→绿"路径
+3. 附七 gate 验证（go build / go test / coverage / lint / type-check）
+4. 新增的 invariants 测试纳入 diff coverage gate
+
+---
+
+## 进度追踪
+
+| Phase | 标题 | Requirements | Status |
+|-------|------|--------------|--------|
+| 109 | 回归守护前置 | GUARD-01..08 | ⏳ PENDING |
+| 110 | P0 安全 TLS 环境变量化 | TLS-01..06 | ⏳ PENDING |
+| 111 | P0 并发裸 goroutine 守护 | GOR-01..04 + CAP-01 | ⏳ PENDING |
+| 112 | P1 handler 收敛补丁 | HANDLER-01..05 | ⏳ PENDING |
+| 113 | 部署文档同步 | DOC-01 | ⏳ PENDING |
+
+**Total:** 5 phases / 22 requirements
