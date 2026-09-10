@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react";
 import type { FC } from "react";
 import { Card, Row, Col, Statistic, Table, Tag, Button } from "antd";
 import { ClusterOutlined, ReloadOutlined, DatabaseOutlined } from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
 import { post } from "@/lib/api";
 import { formatDateTime } from "@/utils/datetime";
 import { createSorter } from "@/utils/tableHelpers";
@@ -39,72 +39,54 @@ interface LoginLog {
   loginTime: string;
 }
 
-const Dashboard: FC = () => {
-  const [metrics, setMetrics] = useState<ServerMetrics | null>(null);
-  const [servers, setServers] = useState<SystemInfo[]>([]);
-  const [recentLogs, setRecentLogs] = useState<LoginLog[]>([]);
-  const [loading, setLoading] = useState(false);
-  const isInitialMount = useRef(true);
+/** Sprint 1 Fix #5 (Vercel audit): 3 parallel useQuery calls with refetchInterval=30s
+ *  replacing the old useEffect + setInterval pattern. */
+const useServerDashboard = () => {
+  const metrics = useQuery({
+    queryKey: ["monitor", "server-metrics", "current"],
+    queryFn: () => post<ServerMetrics>("/monitor/server-metrics/current", {}).then((r) => r.data),
+    refetchInterval: 30_000,
+    staleTime: 25_000,
+    refetchOnWindowFocus: false,
+  });
 
-  // 刷新数据 - 直接定义，避免 useCallback 的依赖问题
-  // 遵循 Vercel React Best Practices: 将事件处理逻辑直接放在事件处理器中
-  const refreshData = async () => {
-    // 不是初始加载时才显示 loading
-    if (!isInitialMount.current) {
-      setLoading(true);
-    }
-    try {
-      const [metricsResult, serversResult, logsResult] = await Promise.all([
-        post<ServerMetrics>("/monitor/server-metrics/current", {}),
-        post<PageResponse<SystemInfo>>("/monitor/server-info/list", { current: 1, pageSize: 10 }),
-        post<PageResponse<LoginLog>>("/monitor/login-logs/list", { current: 1, pageSize: 5 }),
-      ]);
-      setMetrics(metricsResult.data || null);
-      setServers(serversResult.data?.list || []);
-      setRecentLogs(logsResult.data?.list || []);
-    } catch (error) {
-      console.error("刷新数据失败:", error);
-    } finally {
-      setLoading(false);
-      isInitialMount.current = false;
-    }
+  const servers = useQuery({
+    queryKey: ["monitor", "server-info", "list"],
+    queryFn: () =>
+      post<PageResponse<SystemInfo>>("/monitor/server-info/list", { current: 1, pageSize: 10 }).then(
+        (r) => r.data?.list ?? []
+      ),
+    refetchInterval: 30_000,
+    staleTime: 25_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const logs = useQuery({
+    queryKey: ["monitor", "login-logs", "list"],
+    queryFn: () =>
+      post<PageResponse<LoginLog>>("/monitor/login-logs/list", { current: 1, pageSize: 5 }).then(
+        (r) => r.data?.list ?? []
+      ),
+    refetchInterval: 30_000,
+    staleTime: 25_000,
+    refetchOnWindowFocus: false,
+  });
+
+  return {
+    metrics: metrics.data ?? null,
+    servers: servers.data ?? [],
+    recentLogs: logs.data ?? [],
+    loading: metrics.isLoading,
+    refresh: () => {
+      void metrics.refetch();
+      void servers.refetch();
+      void logs.refetch();
+    },
   };
+};
 
-  useEffect(() => {
-    // 初始加载
-    // 遵循 Vercel React Best Practices: 移除不必要的 setTimeout，直接并行加载数据
-    let isMounted = true;
-
-    Promise.all([
-      post<ServerMetrics>("/monitor/server-metrics/current", {}),
-      post<PageResponse<SystemInfo>>("/monitor/server-info/list", { current: 1, pageSize: 10 }),
-      post<PageResponse<LoginLog>>("/monitor/login-logs/list", { current: 1, pageSize: 5 }),
-    ])
-      .then(([metricsResult, serversResult, logsResult]) => {
-        if (isMounted) {
-          setMetrics(metricsResult.data || null);
-          setServers(serversResult.data?.list || []);
-          setRecentLogs(logsResult.data?.list || []);
-          isInitialMount.current = false;
-        }
-      })
-      .catch((error) => {
-        console.error("初始加载失败:", error);
-        if (isMounted) {
-          isInitialMount.current = false;
-        }
-      });
-
-    // 设置定时刷新（每30秒）
-    const interval = setInterval(() => {
-      refreshData();
-    }, 30000);
-
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
-  }, []); // 空依赖数组 - 只在组件挂载时执行一次
+const Dashboard: FC = () => {
+  const { metrics, servers, recentLogs, loading, refresh } = useServerDashboard();
 
   // 格式化内存大小
   const formatMemorySize = (bytes: number): string => {
@@ -186,7 +168,7 @@ const Dashboard: FC = () => {
     <div className="p-6">
       <div className="mb-6 flex justify-between items-center">
         <h1 className="text-2xl font-bold">监控仪表盘</h1>
-        <Button type="primary" icon={<ReloadOutlined />} loading={loading} onClick={refreshData}>
+        <Button type="primary" icon={<ReloadOutlined />} loading={loading} onClick={refresh}>
           刷新
         </Button>
       </div>

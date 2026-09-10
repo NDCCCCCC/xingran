@@ -18,7 +18,14 @@
 import { lazy, Suspense, forwardRef, type ComponentProps, type ComponentRef } from "react";
 import { Spin } from "antd";
 
-const ReactECharts = lazy(() => import("echarts-for-react"));
+// Bundle echarts-for-react AND the echarts side-effect registration (echarts.use([...]))
+// into a single lazy chunk so the ~376KB echarts core is never in the initial bundle.
+// echarts.use([...]) is idempotent — calling it multiple times is safe.
+const ReactECharts = lazy(() =>
+  Promise.all([import("echarts-for-react"), import("@/lib/echarts")]).then(([echartsReact]) => ({
+    default: echartsReact.default,
+  }))
+);
 
 // `echarts-for-react` exports a default React component. We accept the same
 // props the original accepts (ComponentProps on the lazy module).

@@ -3,16 +3,20 @@
  *
  * 获取和管理Widget数据
  *
- * 修复历史:
- *   - P1-H1 (前端审查): fetchData 无 AbortController, 组件卸载后异步回调
- *     仍会 setState 导致内存泄漏。加 mountedRef 守卫。
- *   - P0-3 (前端审查): useBatchWidgetData 的 widgets 数组依赖不稳定,
- *     用 ref + length 稳定化。
+ * Sprint 1 Fix #5 (Vercel audit): migrated from manual setInterval + useState
+ * to React Query useQuery with refetchInterval. Enables automatic request
+ * deduplication across component instances — multiple widgets with the same
+ * queryKey share one network request.
+ *
+ * The dashboardStore L1 cache is kept as a write-through so any code that
+ * reads directly from the store keeps working.
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { dataFetcher } from "@/components/dashboard/utils/dataFetcher";
+import { queryKeys } from "@/lib/queryKeys";
 import type { WidgetConfig } from "@/types/dashboard";
 
 interface UseWidgetDataOptions {
@@ -34,10 +38,26 @@ interface UseWidgetDataResult<T = unknown> {
   error: string | null;
 
   /** 刷新数据 */
-  refresh: () => Promise<void>;
+  refresh: () => void;
 
   /** 是否正在刷新 */
   isRefreshing: boolean;
+}
+
+/** Data fetcher wrapped so it matches the useQuery<T> contract. */
+async function fetchWidgetData<T>(
+  widget: WidgetConfig,
+  _getCachedWidgetData: (id: string) => unknown | null,
+  cacheWidgetData: (id: string, data: unknown) => void
+): Promise<T | null> {
+  if (!widget.enabled) return null;
+
+  const result = await dataFetcher.fetch<T>(widget.dataSource);
+  if (result.error) throw new Error(result.error);
+
+  // Write-through L1 cache so store subscribers keep working
+  cacheWidgetData(widget.id, result.data);
+  return result.data;
 }
 
 /**
@@ -48,121 +68,41 @@ export function useWidgetData<T = unknown>(
   options?: UseWidgetDataOptions
 ): UseWidgetDataResult<T> {
   const { getCachedWidgetData, cacheWidgetData } = useDashboardStore();
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // P1-H1: mounted 守卫,组件卸载后不再 setState
-  const mountedRef = useRef(true);
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
+  const refreshInterval = options?.refreshInterval ?? widget.refreshInterval ?? 60;
+  const disabled = options?.disabled ?? false;
 
-  // 使用ref存储最新的值，避免闭包陷阱
-  const widgetRef = useRef(widget);
-  const optionsRef = useRef(options ?? {});
-  const disabledRef = useRef(options?.disabled ?? false);
-
-  // 使用useEffect来更新ref，而不是在render中
-  useEffect(() => {
-    widgetRef.current = widget;
-    optionsRef.current = options ?? {};
-    disabledRef.current = options?.disabled ?? false;
-  });
-
-  // 获取刷新间隔 - 稳定的引用
-  const refreshInterval = useMemo(() => {
-    return options?.refreshInterval ?? widget.refreshInterval ?? 60;
-  }, [widget.refreshInterval, options?.refreshInterval]);
-
-  // 获取数据
-  const fetchData = useCallback(
-    async (showLoading = true) => {
-      const currentWidget = widgetRef.current;
-      const isDisabled = disabledRef.current;
-
-      if (isDisabled || !currentWidget.enabled) {
-        return;
-      }
-
-      try {
-        if (showLoading) {
-          setLoading(true);
-        } else {
-          setIsRefreshing(true);
-        }
-        setError(null);
-
-        // 尝试从缓存获取
-        const cached = getCachedWidgetData(currentWidget.id);
-        if (cached && !showLoading) {
-          if (mountedRef.current) {
-            setData(cached as T);
-            setIsRefreshing(false);
-          }
-          return;
-        }
-
-        // 从数据源获取
-        const result = await dataFetcher.fetch<T>(currentWidget.dataSource);
-
-        // P1-H1: 卸载后丢弃结果,不再 setState
-        if (!mountedRef.current) return;
-
-        if (result.error) {
-          setError(result.error);
-        } else {
-          setData(result.data);
-          // 缓存数据
-          cacheWidgetData(currentWidget.id, result.data);
-        }
-      } catch (err) {
-        if (mountedRef.current) {
-          setError((err as Error).message);
-        }
-      } finally {
-        if (mountedRef.current) {
-          setLoading(false);
-          setIsRefreshing(false);
-        }
-      }
-    },
-    [getCachedWidgetData, cacheWidgetData]
+  // Stable fetch function — reads current widget from the dataSource param so
+  // callers can vary widget content without breaking queryKey identity. The
+  // queryKey includes widget.id which is what React Query uses for deduplication.
+  const queryFn = useCallback(
+    () =>
+      fetchWidgetData<T>(widget, getCachedWidgetData, cacheWidgetData),
+    // widget.id is embedded in the queryKey so this dependency is stable enough;
+    // widget.dataSource changes only when the widget type changes (rare, intentional).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [widget.id, widget.enabled, widget.dataSource, getCachedWidgetData, cacheWidgetData]
   );
 
-  // 手动刷新
-  const refresh = useCallback(async () => {
-    await fetchData(false);
-  }, [fetchData]);
+  const queryKey = queryKeys.widget.data(widget.id, widget.dataSource);
 
-  // 初始加载和自动刷新
-  useEffect(() => {
-    if (options?.disabled || !widget.enabled) return;
+  const query = useQuery({
+    queryKey,
+    queryFn,
+    enabled: !disabled && widget.enabled,
+    refetchInterval: disabled ? false : refreshInterval * 1000,
+    // staleTime just under refetchInterval so background refresh feels instant
+    staleTime: (refreshInterval - 5) * 1000,
+    refetchOnWindowFocus: false,
+  });
 
-    // 初始加载
-    fetchData(true);
-
-    // 设置自动刷新
-    const interval = refreshInterval * 1000;
-    if (interval > 0) {
-      const timer = setInterval(() => {
-        fetchData(false);
-      }, interval);
-
-      return () => clearInterval(timer);
-    }
-  }, [widget.enabled, widget.id, options?.disabled, refreshInterval, fetchData]);
-
+  // Map React Query shape to the legacy return shape
   return {
-    data,
-    loading,
-    error,
-    refresh,
-    isRefreshing,
+    data: (query.data as T | null) ?? null,
+    loading: query.isLoading,
+    error: query.error?.message ?? null,
+    refresh: query.refetch,
+    isRefreshing: query.isFetching && !query.isLoading,
   };
 }
 
@@ -173,60 +113,49 @@ export function useBatchWidgetData(
   widgets: WidgetConfig[],
   options?: UseWidgetDataOptions
 ): Record<string, unknown> {
-  const [dataMap, setDataMap] = useState<Record<string, unknown>>({});
-  const [loading, setLoading] = useState(true);
+  const { cacheWidgetData } = useDashboardStore();
 
-  // P0-3: 用 ref 保存最新的 widgets 数组,避免数组引用抖动导致 effect 反复重建
-  const widgetsRef = useRef(widgets);
-  // P1-H1: mounted 守卫
-  const mountedRef = useRef(true);
+  // Compute these outside useQuery so the hook is always called (hooks rules).
+  // When disabled or empty, we pass enabled:false so the query never fires.
+  const enabledWidgets = widgets.filter((w) => w.enabled);
+  const isDisabled = options?.disabled ?? false;
+  const effectiveWidgets = isDisabled ? [] : enabledWidgets;
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
+  const minInterval =
+    effectiveWidgets.reduce((min, w) => Math.min(min, w.refreshInterval ?? 60), 60) * 1000;
 
-  useEffect(() => {
-    if (options?.disabled) return;
+  const queryKey = queryKeys.widget.polling(
+    effectiveWidgets.map((w) => w.id),
+    minInterval
+  );
 
-    const fetchAll = async () => {
-      setLoading(true);
+  // Always call useQuery (hooks rules) — enabled:false when no widgets to fetch.
+  const query = useQuery({
+    queryKey,
+    queryFn: async () => {
+      // Empty batch guard — check again inside queryFn (parallel-safe).
+      if (effectiveWidgets.length === 0) return {};
       const results: Record<string, unknown> = {};
-
       await Promise.all(
-        widgetsRef.current.map(async (widget) => {
+        effectiveWidgets.map(async (widget) => {
           try {
             const result = await dataFetcher.fetch(widget.dataSource);
-            results[widget.id] = result.data;
+            if (!result.error) {
+              cacheWidgetData(widget.id, result.data);
+              results[widget.id] = result.data;
+            }
           } catch {
-            results[widget.id] = null;
+            // swallow — widget-level error doesn't break the batch
           }
         })
       );
+      return results;
+    },
+    enabled: effectiveWidgets.length > 0,
+    refetchInterval: minInterval > 0 ? minInterval : false,
+    staleTime: minInterval - 5000,
+    refetchOnWindowFocus: false,
+  });
 
-      // P1-H1: 卸载后丢弃结果
-      if (!mountedRef.current) return;
-      setDataMap(results);
-      setLoading(false);
-    };
-
-    fetchAll();
-
-    // 自动刷新 — 用 ref 计算最小间隔,不依赖 widgets 数组引用
-    const interval =
-      widgetsRef.current.reduce((min, w) => {
-        const wi = w.refreshInterval ?? 60;
-        return wi < min ? wi : min;
-      }, 60) * 1000;
-
-    if (interval > 0) {
-      const timer = setInterval(fetchAll, interval);
-      return () => clearInterval(timer);
-    }
-    // 依赖 widgets.length 而非 widgets 引用; 内容变化由 ref 捕获
-  }, [widgets.length, options?.disabled]);
-
-  return { dataMap, loading };
+  return { dataMap: (query.data as Record<string, unknown>) ?? {}, loading: query.isLoading };
 }

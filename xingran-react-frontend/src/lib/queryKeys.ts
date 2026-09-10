@@ -41,6 +41,17 @@ export const queryKeys = {
     byLocation: (locationId: string) => ["location-alias", "by-location", locationId] as const,
     list: (params?: Record<string, unknown>) => ["location-alias", "list", params ?? {}] as const,
   },
+  // Sprint 1 Fix #5 (Vercel audit): widget polling → React Query
+  widget: {
+    all: ["widget"] as const,
+    /** 单个 widget 数据 (from dataFetcher) */
+    data: (widgetId: string, dataSource: unknown) =>
+      ["widget", "data", widgetId, dataSource] as const,
+    /** 批量 widget 数据 polling (from dashboardService) */
+    polling: (widgetIds: string[], interval: number) =>
+      ["widget", "polling", widgetIds, interval] as const,
+  },
+
   // Phase 42 R1: 资产对账观测底座 — Dashboard + 异常列表
   reconciliation: {
     all: ["reconciliation"] as const,

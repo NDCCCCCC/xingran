@@ -2,7 +2,6 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.tsx";
 import { initEncryptionConfig } from "@/lib/api";
-import "@/lib/echarts"; // ECharts 按需加载配置
 
 /**
  * 初始化应用

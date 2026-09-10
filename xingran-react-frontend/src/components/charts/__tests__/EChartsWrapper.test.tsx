@@ -15,6 +15,10 @@ vi.mock("echarts-for-react", () => ({
   ),
 }));
 
+// Side-effect import inside the lazy Promise.all — must be mocked as no-op
+// so the dynamic import resolves instead of throwing in the vitest environment.
+vi.mock("@/lib/echarts", () => ({}));
+
 import EChartsWrapper from "../EChartsWrapper";
 
 describe("components/charts/EChartsWrapper", () => {
