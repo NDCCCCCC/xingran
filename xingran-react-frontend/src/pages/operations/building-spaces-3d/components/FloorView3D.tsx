@@ -17,7 +17,8 @@ import {
   getWorkstationStatusColorCSS,
   getWorkstationTypeColorCSS,
 } from "../utils";
-import FloorPlan3D from "./FloorPlan3D";
+// Use lazy wrapper from BuildingScene so Three.js stays out of the initial bundle.
+import { FloorPlan3DLazy } from "@/components/three/BuildingScene";
 
 // ============ 类型定义 ============
 
@@ -120,7 +121,7 @@ const FloorView3D: React.FC = () => {
           <>
             <FloorDescriptions floor={selectedFloor} />
             <WorkstationStatsCard stats={stats} />
-            <FloorPlan3D
+            <FloorPlan3DLazy
               workstations={workstations}
               onWorkstationClick={() => {
                 // 工位点击事件处理

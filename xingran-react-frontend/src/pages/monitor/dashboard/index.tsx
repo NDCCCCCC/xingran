@@ -53,9 +53,10 @@ const useServerDashboard = () => {
   const servers = useQuery({
     queryKey: ["monitor", "server-info", "list"],
     queryFn: () =>
-      post<PageResponse<SystemInfo>>("/monitor/server-info/list", { current: 1, pageSize: 10 }).then(
-        (r) => r.data?.list ?? []
-      ),
+      post<PageResponse<SystemInfo>>("/monitor/server-info/list", {
+        current: 1,
+        pageSize: 10,
+      }).then((r) => r.data?.list ?? []),
     refetchInterval: 30_000,
     staleTime: 25_000,
     refetchOnWindowFocus: false,

@@ -25,8 +25,13 @@ describe("getIconComponent", () => {
     expect(screen.getByRole("img", { hidden: true })).toBeTruthy();
   });
 
-  it("未知图标名返回 undefined", () => {
-    expect(getIconComponent("NoSuchIconExists")).toBeUndefined();
+  it("未知图标名返回 null Suspense fallback (动态导入失败即静默)", () => {
+    // 动态导入失败的图标返回 Suspense(→ null)，不抛错也不返回 undefined
+    const node = getIconComponent("NoSuchIconExists");
+    expect(node).toBeTruthy();
+    // Suspense wrapper is returned; rendered output is null
+    const { container } = render(node as React.ReactElement);
+    expect(container.innerHTML).toBe("");
   });
 
   it("fullIconNameMap 映射路径可命中（CloudServerOutlined → server）", () => {

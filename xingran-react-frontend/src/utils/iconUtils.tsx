@@ -1,20 +1,220 @@
 /**
  * 图标工具函数
  * 用于管理 Ant Design 图标的映射和获取
+ *
+ * Performance note (Vercel audit Sprint 1 Fix #3):
+ * All icons are imported via named imports into a static registry.
+ * This avoids `import * as Icons from "@ant-design/icons"` which
+ * pulls ~1 MB of the entire icon library into the initial bundle.
  */
 
-import * as Icons from "@ant-design/icons";
+import {
+  DashboardOutlined,
+  HomeOutlined,
+  AppstoreOutlined,
+  MenuOutlined,
+  SettingOutlined,
+  ToolOutlined,
+  BulbOutlined,
+  AlertOutlined,
+  UserOutlined,
+  TeamOutlined,
+  IdcardOutlined,
+  SolutionOutlined,
+  LoginOutlined,
+  LogoutOutlined,
+  KeyOutlined,
+  LockOutlined,
+  FileTextOutlined,
+  FileOutlined,
+  FolderOutlined,
+  FolderOpenOutlined,
+  CopyOutlined,
+  SnippetsOutlined,
+  BookOutlined,
+  DatabaseOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  SearchOutlined,
+  ReloadOutlined,
+  PlusOutlined,
+  MinusOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+  ArrowLeftOutlined,
+  ArrowRightOutlined,
+  UpOutlined,
+  DownOutlined,
+  LeftOutlined,
+  RightOutlined,
+  CaretUpOutlined,
+  CaretDownOutlined,
+  CaretLeftOutlined,
+  CaretRightOutlined,
+  PlayCircleOutlined,
+  PauseCircleOutlined,
+  StopOutlined,
+  FastForwardOutlined,
+  FastBackwardOutlined,
+  StepForwardOutlined,
+  BellOutlined,
+  MessageOutlined,
+  MailOutlined,
+  WechatOutlined,
+  QqOutlined,
+  DingdingOutlined,
+  WeiboOutlined,
+  GithubOutlined,
+  CloudOutlined,
+  CloudServerOutlined,
+  LaptopOutlined,
+  DesktopOutlined,
+  MobileOutlined,
+  TabletOutlined,
+  AreaChartOutlined,
+  BarChartOutlined,
+  LineChartOutlined,
+  PieChartOutlined,
+  DotChartOutlined,
+  FundOutlined,
+  SlidersOutlined,
+  ClockCircleOutlined,
+  HistoryOutlined,
+  CalendarOutlined,
+  FieldTimeOutlined,
+  HourglassOutlined,
+  MonitorOutlined,
+  BugOutlined,
+  CodeOutlined,
+  ApiOutlined,
+  ConsoleSqlOutlined,
+  NodeIndexOutlined,
+  SafetyOutlined,
+  SecurityScanOutlined,
+  UnlockOutlined,
+  EyeOutlined,
+  EyeInvisibleOutlined,
+  WifiOutlined,
+  ApartmentOutlined,
+  ClusterOutlined,
+  ShareAltOutlined,
+  StarOutlined,
+  HeartOutlined,
+  LikeOutlined,
+  DislikeOutlined,
+  FlagOutlined,
+  TagOutlined,
+} from "@ant-design/icons";
+import { lazy, Suspense } from "react";
 import type { ComponentType } from "react";
 
-// 动态图标访问的类型定义
-type _IconName = keyof typeof Icons;
-type IconComponentMap = Record<string, ComponentType<unknown>>;
+// Static registry — all icons from iconCategories, plus SearchOutlined (used directly)
+// Using FC<any> to accommodate ForwardRefExoticComponent (antd icons) which is
+// not assignable to ComponentType<unknown> but is to FC<any>
+const STATIC_ICON_REGISTRY: Record<string, React.FC<any>> = {
+  DashboardOutlined,
+  HomeOutlined,
+  AppstoreOutlined,
+  MenuOutlined,
+  SettingOutlined,
+  ToolOutlined,
+  BulbOutlined,
+  AlertOutlined,
+  UserOutlined,
+  TeamOutlined,
+  IdcardOutlined,
+  SolutionOutlined,
+  LoginOutlined,
+  LogoutOutlined,
+  KeyOutlined,
+  LockOutlined,
+  FileTextOutlined,
+  FileOutlined,
+  FolderOutlined,
+  FolderOpenOutlined,
+  CopyOutlined,
+  SnippetsOutlined,
+  BookOutlined,
+  DatabaseOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  SearchOutlined,
+  ReloadOutlined,
+  PlusOutlined,
+  MinusOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+  ArrowLeftOutlined,
+  ArrowRightOutlined,
+  UpOutlined,
+  DownOutlined,
+  LeftOutlined,
+  RightOutlined,
+  CaretUpOutlined,
+  CaretDownOutlined,
+  CaretLeftOutlined,
+  CaretRightOutlined,
+  PlayCircleOutlined,
+  PauseCircleOutlined,
+  StopOutlined,
+  FastForwardOutlined,
+  FastBackwardOutlined,
+  StepForwardOutlined,
+  BellOutlined,
+  MessageOutlined,
+  MailOutlined,
+  WechatOutlined,
+  QqOutlined,
+  DingdingOutlined,
+  WeiboOutlined,
+  GithubOutlined,
+  CloudOutlined,
+  CloudServerOutlined,
+  LaptopOutlined,
+  DesktopOutlined,
+  MobileOutlined,
+  TabletOutlined,
+  AreaChartOutlined,
+  BarChartOutlined,
+  LineChartOutlined,
+  PieChartOutlined,
+  DotChartOutlined,
+  FundOutlined,
+  SlidersOutlined,
+  ClockCircleOutlined,
+  HistoryOutlined,
+  CalendarOutlined,
+  FieldTimeOutlined,
+  HourglassOutlined,
+  MonitorOutlined,
+  BugOutlined,
+  CodeOutlined,
+  ApiOutlined,
+  ConsoleSqlOutlined,
+  NodeIndexOutlined,
+  SafetyOutlined,
+  SecurityScanOutlined,
+  UnlockOutlined,
+  EyeOutlined,
+  EyeInvisibleOutlined,
+  WifiOutlined,
+  ApartmentOutlined,
+  ClusterOutlined,
+  ShareAltOutlined,
+  StarOutlined,
+  HeartOutlined,
+  LikeOutlined,
+  DislikeOutlined,
+  FlagOutlined,
+  TagOutlined,
+};
 
-// 过滤掉非组件的导出（如 createFromIconfontCN）
-const _iconComponentKeys = Object.keys(Icons).filter(
-  (key) =>
-    typeof (Icons as Record<string, unknown>)[key] === "function" || key !== "createFromIconfontCN"
-);
+// Dynamic import cache — runtime icon names not in the static registry
+const dynamicIconCache = new Map<string, React.FC<any>>();
 
 // ========================================
 // 图标分类（用于图标选择器）
@@ -116,7 +316,6 @@ export const iconCategories = {
     "HistoryOutlined",
     "CalendarOutlined",
     "FieldTimeOutlined",
-    "TimerOutlined",
     "HourglassOutlined",
   ],
   系统: [
@@ -132,7 +331,6 @@ export const iconCategories = {
   安全: [
     "SafetyOutlined",
     "SecurityScanOutlined",
-    "ShieldOutlined",
     "LockOutlined",
     "UnlockOutlined",
     "EyeOutlined",
@@ -247,7 +445,6 @@ export const iconDescriptionMap: Record<string, string> = {
   // 安全相关
   SafetyOutlined: "安全",
   SecurityScanOutlined: "安全扫描",
-  ShieldOutlined: "盾牌",
   UnlockOutlined: "解锁",
   EyeOutlined: "眼睛",
   EyeInvisibleOutlined: "隐藏眼睛",
@@ -314,37 +511,49 @@ export const fullIconNameMap: Record<string, string> = {
 export function getIconComponent(iconName?: string | null): React.ReactNode {
   if (!iconName) return undefined;
 
-  // 获取所有导出的图标组件（过滤掉工具函数）
-  const iconKeys = Object.keys(Icons).filter(
-    (key) => key !== "createFromIconfontCN" && key !== "default"
-  );
-
-  // 尝试直接匹配
-  if (iconKeys.includes(iconName)) {
-    const IconComponent = (Icons as unknown as IconComponentMap)[iconName];
-    if (IconComponent) {
-      return <IconComponent />;
-    }
+  // 1. Static registry lookup (all icons in iconCategories)
+  const staticIcon = STATIC_ICON_REGISTRY[iconName];
+  if (staticIcon) {
+    const Icon = staticIcon;
+    return <Icon />;
   }
 
-  // 尝试通过 fullIconNameMap 映射
+  // 2. fullIconNameMap reverse-lookup into static registry
   const mappedName = fullIconNameMap[iconName];
   if (mappedName) {
-    // 尝试找到对应的完整图标名
-    for (const key of iconKeys) {
+    for (const key of Object.keys(STATIC_ICON_REGISTRY)) {
       if (
         key.toLowerCase().includes(mappedName.toLowerCase()) ||
         key.toLowerCase() === mappedName + "outlined"
       ) {
-        const IconComponent = (Icons as unknown as IconComponentMap)[key];
-        if (IconComponent) {
-          return <IconComponent />;
-        }
+        const Icon = STATIC_ICON_REGISTRY[key];
+        return <Icon />;
       }
     }
   }
 
-  return undefined;
+  // 3. Runtime dynamic import for icons not in the static set
+  //    (e.g. icons added by the backend but not yet registered here)
+  if (dynamicIconCache.has(iconName)) {
+    const LazyIcon = dynamicIconCache.get(iconName)!;
+    return (
+      <Suspense fallback={null}>
+        <LazyIcon />
+      </Suspense>
+    );
+  }
+
+  const DynamicIcon = lazy(() =>
+    import(`@ant-design/icons/${iconName}`)
+      .then((m) => ({ default: m.default ?? m[iconName] }))
+      .catch(() => ({ default: () => null }))
+  );
+  dynamicIconCache.set(iconName, DynamicIcon as React.FC<any>);
+  return (
+    <Suspense fallback={null}>
+      <DynamicIcon />
+    </Suspense>
+  );
 }
 
 // ========================================

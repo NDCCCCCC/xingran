@@ -60,10 +60,9 @@ describe("hooks/useWidgetData", () => {
   });
 
   it("disabled=true 不抛错", () => {
-    const { result } = renderHook(
-      () => useWidgetData(mockWidget, { disabled: true }),
-      { wrapper: makeWrapper() }
-    );
+    const { result } = renderHook(() => useWidgetData(mockWidget, { disabled: true }), {
+      wrapper: makeWrapper(),
+    });
     expect(result.current.data).toBeNull();
   });
 
@@ -92,10 +91,9 @@ describe("hooks/useBatchWidgetData", () => {
   });
 
   it("disabled=true 不抛错", () => {
-    const { result } = renderHook(
-      () => useBatchWidgetData([mockWidget], { disabled: true }),
-      { wrapper: makeWrapper() }
-    );
+    const { result } = renderHook(() => useBatchWidgetData([mockWidget], { disabled: true }), {
+      wrapper: makeWrapper(),
+    });
     expect(typeof result.current.dataMap).toBe("object");
   });
 });

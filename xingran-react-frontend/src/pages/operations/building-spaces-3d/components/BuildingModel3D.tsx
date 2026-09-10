@@ -303,3 +303,10 @@ const BuildingModel3D: React.FC<BuildingModel3DProps> = ({
 };
 
 export default BuildingModel3D;
+
+// Lazy wrapper — keeps Three.js ecosystem out of the initial bundle.
+// Used by BuildingView3D via BuildingScene.tsx re-export.
+import { lazy } from "react";
+export const BuildingModel3DLazy = lazy(() =>
+  import("./BuildingModel3D").then((m) => ({ default: m.default }))
+);

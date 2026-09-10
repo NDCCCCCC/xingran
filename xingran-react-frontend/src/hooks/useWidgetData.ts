@@ -76,8 +76,7 @@ export function useWidgetData<T = unknown>(
   // callers can vary widget content without breaking queryKey identity. The
   // queryKey includes widget.id which is what React Query uses for deduplication.
   const queryFn = useCallback(
-    () =>
-      fetchWidgetData<T>(widget, getCachedWidgetData, cacheWidgetData),
+    () => fetchWidgetData<T>(widget, getCachedWidgetData, cacheWidgetData),
     // widget.id is embedded in the queryKey so this dependency is stable enough;
     // widget.dataSource changes only when the widget type changes (rare, intentional).
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -681,3 +681,10 @@ const styles = {
 };
 
 export default FloorPlan3D;
+
+// Lazy wrapper — keeps Three.js ecosystem out of the initial bundle.
+// Used by FloorView3D via BuildingScene.tsx re-export.
+import { lazy } from "react";
+export const FloorPlan3DLazy = lazy(() =>
+  import("./FloorPlan3D").then((m) => ({ default: m.default }))
+);
