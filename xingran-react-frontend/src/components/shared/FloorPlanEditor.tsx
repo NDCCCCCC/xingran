@@ -395,7 +395,14 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
         {horizontalLines}
       </g>
     );
-  }, [showGrid, viewState.scale, viewState.offsetX, viewState.offsetY, containerSize.width, containerSize.height]);
+  }, [
+    showGrid,
+    viewState.scale,
+    viewState.offsetX,
+    viewState.offsetY,
+    containerSize.width,
+    containerSize.height,
+  ]);
 
   /**
    * 渲染工位
