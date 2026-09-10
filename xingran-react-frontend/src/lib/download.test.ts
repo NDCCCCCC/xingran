@@ -52,6 +52,10 @@ vi.mock("@/utils/authHelpers", () => ({
   getAuthHeaders: vi.fn(),
 }));
 
+vi.mock("@/store/authStore", () => ({
+  getTokenManager: () => ({ isAuthenticated: () => true }),
+}));
+
 import { blobAxios, downloadFile, downloadFilePost, triggerBrowserDownload } from "./download";
 
 /** blobAxios 的测试视型:暴露 mock 的 get/post 与请求拦截器注册点 */

@@ -455,6 +455,6 @@ describe("useWidgetPolling", () => {
       wrapper,
     });
     await waitFor(() => expect(mocks.getBatchWidgetData).toHaveBeenCalledWith(["w1"]));
-    expect(result.current.loading).toBe(false);
+    await waitFor(() => expect(result.current.loading).toBe(false));
   });
 });

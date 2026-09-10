@@ -41,7 +41,7 @@ const defaultColumns: ColumnConfig[] = [
   { key: "remark", label: "备注", visible: false, order: 4 },
 ];
 
-const CACHE_KEY = "column_config:test-page";
+const CACHE_KEY = "column_config:v1:test-page";
 
 function renderColumnConfig(overrides: { enableCache?: boolean } = {}) {
   return renderHook(() =>

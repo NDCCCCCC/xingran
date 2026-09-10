@@ -56,6 +56,10 @@ vi.mock("@/utils/authHelpers", () => ({
   getAuthHeaders: vi.fn(),
 }));
 
+vi.mock("@/store/authStore", () => ({
+  getTokenManager: () => ({ isAuthenticated: () => true }),
+}));
+
 vi.mock("@/utils/dualLevelCache", () => ({
   getDualLevelCache: () => ({
     get: h.mockCacheGet,
