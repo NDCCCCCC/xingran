@@ -388,7 +388,10 @@ describe("useWidgetPolling", () => {
 
   it("挂载即拉取未缓存 widget 并写回缓存", async () => {
     mocks.getBatchWidgetData.mockResolvedValue(new Map([["w1", { value: 1 }]]));
-    const { result } = renderHook(() => useWidgetPolling({ widgetIds: ["w1"], interval: 60 }));
+    const { wrapper } = createQueryWrapper();
+    const { result } = renderHook(() => useWidgetPolling({ widgetIds: ["w1"], interval: 60 }), {
+      wrapper,
+    });
 
     await waitFor(() => expect(mocks.getBatchWidgetData).toHaveBeenCalledWith(["w1"]));
     await waitFor(() => expect(result.current.lastRefreshTime).not.toBeNull());
@@ -400,14 +403,20 @@ describe("useWidgetPolling", () => {
   });
 
   it("空 widgetIds 不触发请求", async () => {
-    const { result } = renderHook(() => useWidgetPolling({ widgetIds: [], interval: 60 }));
+    const { wrapper } = createQueryWrapper();
+    const { result } = renderHook(() => useWidgetPolling({ widgetIds: [], interval: 60 }), {
+      wrapper,
+    });
     expect(mocks.getBatchWidgetData).not.toHaveBeenCalled();
     expect(result.current.loading).toBe(false);
   });
 
   it("pause/resume 切换 isPaused", async () => {
     mocks.getBatchWidgetData.mockResolvedValue(new Map());
-    const { result } = renderHook(() => useWidgetPolling({ widgetIds: ["w1"], interval: 60 }));
+    const { wrapper } = createQueryWrapper();
+    const { result } = renderHook(() => useWidgetPolling({ widgetIds: ["w1"], interval: 60 }), {
+      wrapper,
+    });
 
     act(() => result.current.pause());
     expect(result.current.isPaused).toBe(true);
@@ -415,9 +424,12 @@ describe("useWidgetPolling", () => {
     expect(result.current.isPaused).toBe(false);
   });
 
-  it("refresh 强制清缓存重拉,失败不抛错", async () => {
+  it("refresh 触发重拉,失败不抛错", async () => {
     mocks.getBatchWidgetData.mockResolvedValue(new Map([["w1", { v: 1 }]]));
-    const { result } = renderHook(() => useWidgetPolling({ widgetIds: ["w1"], interval: 60 }));
+    const { wrapper } = createQueryWrapper();
+    const { result } = renderHook(() => useWidgetPolling({ widgetIds: ["w1"], interval: 60 }), {
+      wrapper,
+    });
     await waitFor(() => expect(mocks.getBatchWidgetData).toHaveBeenCalledWith(["w1"]));
 
     mocks.getBatchWidgetData.mockClear();
@@ -434,20 +446,15 @@ describe("useWidgetPolling", () => {
     }
   });
 
-  it("缓存未过期(带 timestamp)时跳过请求", async () => {
-    // useWidgetPolling 只信任带 timestamp 字段的缓存对象
-    useDashboardStore.getState().cacheWidgetData("w1", { timestamp: Date.now() });
-    const { result } = renderHook(() => useWidgetPolling({ widgetIds: ["w1"], interval: 60 }));
-
-    await act(async () => {
-      await vi.waitFor(
-        () => {
-          // 初始 fetchData 已执行完毕,不应发起批量请求
-        },
-        { timeout: 300 }
-      );
+  it("widgetIds 非空且 React Query 启用:挂载即拉取", async () => {
+    // useWidgetPolling 新实现下: React Query 控制轮询,无独立"缓存跳过"概念
+    // (dashboardStore L1 只写不读 — React Query 用自己的 staleTime)
+    mocks.getBatchWidgetData.mockResolvedValue(new Map());
+    const { wrapper } = createQueryWrapper();
+    const { result } = renderHook(() => useWidgetPolling({ widgetIds: ["w1"], interval: 60 }), {
+      wrapper,
     });
-    expect(mocks.getBatchWidgetData).not.toHaveBeenCalled();
+    await waitFor(() => expect(mocks.getBatchWidgetData).toHaveBeenCalledWith(["w1"]));
     expect(result.current.loading).toBe(false);
   });
 });
