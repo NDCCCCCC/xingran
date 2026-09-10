@@ -2,7 +2,7 @@
  * FloorPlanEditor 缩放和平移逻辑 Hook
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, startTransition } from "react";
 import type { ViewState } from "./FloorPlanEditor.types";
 import { DEFAULT_SCALE, MIN_SCALE, MAX_SCALE, GRID_SIZE } from "./FloorPlanEditor.constants";
 
@@ -96,11 +96,13 @@ export function usePanZoom(options: UsePanZoomOptions): UsePanZoomReturn {
 
   // 平移移动
   const handlePanMove = useCallback((clientX: number, clientY: number) => {
-    setViewState((prev) => ({
-      ...prev,
-      offsetX: clientX - prev.dragStartX,
-      offsetY: clientY - prev.dragStartY,
-    }));
+    startTransition(() => {
+      setViewState((prev) => ({
+        ...prev,
+        offsetX: clientX - prev.dragStartX,
+        offsetY: clientY - prev.dragStartY,
+      }));
+    });
   }, []);
 
   // 结束平移
@@ -131,21 +133,25 @@ export function usePanZoom(options: UsePanZoomOptions): UsePanZoomReturn {
 
         const scaleChange = newScale / viewState.scale;
 
-        setViewState((prev) => ({
-          ...prev,
-          scale: newScale,
-          offsetX: mouseX - (mouseX - prev.offsetX) * scaleChange,
-          offsetY: mouseY - (mouseY - prev.offsetY) * scaleChange,
-        }));
+        startTransition(() => {
+          setViewState((prev) => ({
+            ...prev,
+            scale: newScale,
+            offsetX: mouseX - (mouseX - prev.offsetX) * scaleChange,
+            offsetY: mouseY - (mouseY - prev.offsetY) * scaleChange,
+          }));
+        });
       } else {
         // 滚轮平移（带吸附）
         e.preventDefault();
         const delta = GRID_SIZE;
-        setViewState((prev) => ({
-          ...prev,
-          offsetX: prev.offsetX - (e.deltaX > 0 ? delta : e.deltaX < 0 ? -delta : 0),
-          offsetY: prev.offsetY - (e.deltaY > 0 ? delta : e.deltaY < 0 ? -delta : 0),
-        }));
+        startTransition(() => {
+          setViewState((prev) => ({
+            ...prev,
+            offsetX: prev.offsetX - (e.deltaX > 0 ? delta : e.deltaX < 0 ? -delta : 0),
+            offsetY: prev.offsetY - (e.deltaY > 0 ? delta : e.deltaY < 0 ? -delta : 0),
+          }));
+        });
       }
     },
     [containerRef, viewState.scale]

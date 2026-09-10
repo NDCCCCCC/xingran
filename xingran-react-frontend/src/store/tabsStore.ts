@@ -153,11 +153,10 @@ export const useTabsStore = create<TabsStore>()(
 
       // 设置激活标签
       setActiveTab: (key: string) => {
-        const { history } = get();
-        set({
+        set((state) => ({
           activeTab: key,
-          history: [...history.filter((k) => k !== key), key],
-        });
+          history: [...state.history.filter((k) => k !== key), key],
+        }));
       },
 
       // 关闭其他标签

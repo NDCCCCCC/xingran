@@ -7,7 +7,7 @@
  * - 激活标签样式（底部蓝色指示条，与侧边栏保持一致）
  */
 
-import { useRef, useState, useMemo, useEffect, useCallback } from "react";
+import { useRef, useState, useMemo, useEffect, useCallback, startTransition } from "react";
 import { Tabs, Dropdown, Button } from "antd";
 import type { MenuProps } from "antd";
 import { useTabs } from "@/store/tabsStore";
@@ -117,7 +117,9 @@ const TabBar: FC = () => {
   const updateScrollState = useCallback(() => {
     const state = checkScrollState(scrollContainerRef.current);
 
-    setScrollState(state);
+    startTransition(() => {
+      setScrollState(state);
+    });
   }, []);
 
   // 初始化和监听滚动状态
@@ -328,8 +330,8 @@ const TabBar: FC = () => {
 
     if (contextMenuState.visible) {
       document.addEventListener("click", handleGlobalClick);
-      document.addEventListener("scroll", handleScroll, true);
-      window.addEventListener("resize", handleScroll);
+      document.addEventListener("scroll", handleScroll, { capture: true, passive: true });
+      window.addEventListener("resize", handleScroll, { passive: true });
 
       return () => {
         document.removeEventListener("click", handleGlobalClick);
