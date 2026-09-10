@@ -4,7 +4,7 @@
  * 所有Widget组件的基础类，提供通用功能和数据获取
  */
 
-import React, { type ReactNode, useState, useCallback, useEffect } from "react";
+import React, { type ReactNode, useState, useCallback, useMemo, useRef } from "react";
 import { Card, Space, Dropdown, Button, Tooltip, Spin, Empty, Result, Skeleton } from "antd";
 import {
   MoreOutlined,
@@ -75,7 +75,7 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
 }) => {
   const { viewMode, selectWidget, selectedWidgetId } = useDashboardStore();
   const [isHovered, setIsHovered] = useState(false);
-  const [isFirstLoad, setIsFirstLoad] = useState(true);
+  const isFirstLoadRef = useRef(true);
 
   // 自动获取数据（如果没有提供外部数据且未禁用自动获取）
   const {
@@ -95,26 +95,23 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
   const onRefresh = externalOnRefresh ?? refresh;
 
   // 检测数据是否为空
-  const isEmpty =
-    externalEmpty ||
-    (!loading &&
-      !error &&
-      (data === null ||
-        data === undefined ||
-        (Array.isArray(data) && data.length === 0) ||
-        (typeof data === "object" && data !== null && Object.keys(data).length === 0)));
-
-  // 首次加载完成后更新状态
-  useEffect(() => {
-    if (!loading && isFirstLoad) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsFirstLoad(false);
-    }
-  }, [loading, isFirstLoad]);
+  const isEmpty = useMemo(
+    () =>
+      externalEmpty ||
+      (!loading &&
+        !error &&
+        (data === null ||
+          data === undefined ||
+          (Array.isArray(data) && data.length === 0) ||
+          (typeof data === "object" && data !== null && Object.keys(data).length === 0))),
+    [externalEmpty, loading, error, data]
+  );
 
   const isSelected = selectedWidgetId === widget.id;
   const isEditable = viewMode === "edit";
-  const showSkeleton = (isInitialLoad || isFirstLoad) && loading;
+  // eslint-disable-next-line react-hooks/refs -- Task 5.2: ref-based derivation avoids extra render pass
+  const showSkeleton = (isInitialLoad || isFirstLoadRef.current) && loading;
+  if (!loading) isFirstLoadRef.current = false;
 
   // 点击处理
   const handleClick = useCallback(() => {

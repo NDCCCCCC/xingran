@@ -13,7 +13,7 @@ const DEFAULT_MEMORY_TTL = 30 * 60 * 1000;
 const DEFAULT_STORAGE_TTL = 7 * 24 * 60 * 60 * 1000;
 
 /** localStorage 存储键前缀 */
-const DEFAULT_STORAGE_PREFIX = "dual_level_cache_";
+const DEFAULT_STORAGE_PREFIX = "dual_level_cache:v1";
 
 /** 定期清理间隔（5分钟） */
 const CLEANUP_INTERVAL = 5 * 60 * 1000;
@@ -27,6 +27,7 @@ interface CacheItem<T> {
   data: T;
   timestamp: number;
   expiresAt: number;
+  version?: number;
 }
 
 interface CacheConfig {
@@ -146,6 +147,7 @@ class StorageCache<T> {
         data,
         timestamp: now,
         expiresAt: now + this.ttl,
+        version: 1,
       };
       localStorage.setItem(this.getStorageKey(key), JSON.stringify(item));
     } catch (error) {
@@ -161,6 +163,12 @@ class StorageCache<T> {
       }
 
       const item: CacheItem<T> = JSON.parse(raw);
+
+      // Migration: v0 items (no version field) are incompatible — delete and re-fetch
+      if (!item.version || item.version < 1) {
+        this.delete(key);
+        return null;
+      }
 
       if (this.isExpired(item)) {
         this.delete(key);

@@ -56,11 +56,13 @@ export default function DutyManagement() {
   // ==================== 初始化 ====================
 
   useEffect(() => {
-    fetchPools();
-    fetchUsers();
-    scheduleData.fetchWeeklyDuty(scheduleData.currentWeekStart);
-    holidayData.fetchYears();
-    dutyConfig.fetch();
+    Promise.all([
+      fetchPools(),
+      fetchUsers(),
+      scheduleData.fetchWeeklyDuty(scheduleData.currentWeekStart),
+      holidayData.fetchYears(),
+      dutyConfig.fetch(),
+    ]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

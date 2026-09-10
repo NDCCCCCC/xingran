@@ -17,6 +17,7 @@
 import axios from "axios";
 import type { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import { getAccessToken } from "@/utils/authHelpers";
+import { getTokenManager } from "@/store/authStore";
 
 // 专用于文件下载的 axios 实例：
 // - 复用与主 API 客户端相同的 baseURL（去掉硬编码 /api/v1/ 前缀）
@@ -31,7 +32,21 @@ export const blobAxios: AxiosInstance = axios.create({
 });
 
 blobAxios.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
-  const token = await getAccessToken();
+  // Fast path: check cached token synchronously before async call
+  const tokenManager = getTokenManager();
+  const hasToken = tokenManager.isAuthenticated();
+
+  let token: string | null = null;
+  if (hasToken) {
+    // Token is cached synchronously; getAccessToken() is fast path (sync check + optional refresh)
+    try {
+      token = await getAccessToken();
+    } catch {
+      // Token unavailable, skip header injection
+    }
+  }
+  // else: no token yet, skip header injection without awaiting
+
   if (token && config.headers) {
     config.headers.set("Authorization", `Bearer ${token}`);
   }

@@ -30,7 +30,11 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({ widget, display, onEdi
   const { data, loading, error, refresh } = useWidgetData(widget);
   // 构建ECharts配置
   const option = useMemo<EChartsOption>(() => {
-    if (!data || typeof data !== "object") {
+    // Show empty state for falsy values: null, undefined, 0
+    if (!data) {
+      return getEmptyOption();
+    }
+    if (typeof data !== "object") {
       return getEmptyOption();
     }
 

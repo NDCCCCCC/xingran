@@ -18,7 +18,7 @@ export interface UseColumnConfigOptions {
   enableCache?: boolean;
 }
 
-const CACHE_PREFIX = "column_config";
+const CACHE_PREFIX = "column_config:v1";
 const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
 
 // localStorage 缓存工具函数

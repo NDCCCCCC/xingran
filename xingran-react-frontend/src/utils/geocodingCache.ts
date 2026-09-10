@@ -10,6 +10,7 @@ interface CacheItem<T> {
   data: T;
   timestamp: number;
   expiresAt: number;
+  version?: number;
 }
 
 // 缓存配置
@@ -26,7 +27,7 @@ interface CacheConfig {
 const DEFAULT_CONFIG: CacheConfig = {
   memoryTTL: 30 * 60 * 1000, // 30分钟
   storageTTL: 7 * 24 * 60 * 60 * 1000, // 7天
-  storagePrefix: "baidu_geocoding_",
+  storagePrefix: "baidu_geocoding:v1",
 };
 
 // 内存缓存存储
@@ -109,6 +110,7 @@ class StorageCache<T> {
         data,
         timestamp: now,
         expiresAt: now + this.ttl,
+        version: 1,
       };
       localStorage.setItem(this.getStorageKey(key), JSON.stringify(item));
     } catch (e) {
@@ -123,6 +125,12 @@ class StorageCache<T> {
       if (!raw) return null;
 
       const item: CacheItem<T> = JSON.parse(raw);
+
+      // Migration: v0 items (no version field) are incompatible — delete and re-fetch
+      if (!item.version || item.version < 1) {
+        this.delete(key);
+        return null;
+      }
 
       // 检查是否过期
       if (Date.now() > item.expiresAt) {

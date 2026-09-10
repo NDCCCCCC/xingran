@@ -91,8 +91,7 @@ const ConfigExecutionPage: FC = () => {
 
   // 打开执行模态框时加载设备和模板
   const openExecuteModal = async () => {
-    await loadDevices();
-    await loadTemplates();
+    await Promise.all([loadDevices(), loadTemplates()]);
     openExecuteModalBase();
   };
 

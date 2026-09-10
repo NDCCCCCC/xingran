@@ -365,7 +365,7 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
   /**
    * 渲染网格
    */
-  const renderGrid = () => {
+  const renderGrid = useCallback(() => {
     if (!showGrid) return null;
 
     const gridSize = GRID_SIZE * viewState.scale;
@@ -395,12 +395,12 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
         {horizontalLines}
       </g>
     );
-  };
+  }, [showGrid, viewState.scale, viewState.offsetX, viewState.offsetY, containerSize.width, containerSize.height]);
 
   /**
    * 渲染工位
    */
-  const renderWorkstations = () => {
+  const renderWorkstations = useCallback(() => {
     return workstations.map((workstation) => {
       const colors = getWorkstationColor(workstation.status);
       const statusColor = getWorkstationStatusColor(workstation.status);
@@ -661,7 +661,19 @@ const FloorPlanEditor: React.FC<FloorPlanEditorProps> = ({
         </g>
       );
     });
-  };
+  }, [
+    workstations,
+    selectedId,
+    hoveredId,
+    dragState.workstationId,
+    draggedNodePos,
+    viewState.scale,
+    viewState.offsetX,
+    viewState.offsetY,
+    handleWorkstationClick,
+    handleWorkstationDoubleClick,
+    handleContextMenu,
+  ]);
 
   /**
    * 渲染右键菜单
