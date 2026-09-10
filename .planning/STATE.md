@@ -2,16 +2,55 @@
 gsd_state_version: 1.0
 milestone: v1.32
 milestone_name: audit-driven-security-reliability
-status: executing
-stopped_at: Phase 109-112 PUSHED to origin/main (commit 27cec0b); CI run 34441255759 in progress; Phase 113 (DOC-01) pending deployment doc sync
-last_updated: "2026-09-09T13:05:00.000Z"
+status: SHIPPED
+stopped_at: v1.32 SHIPPED 2026-09-10 — 5 phases (109-113), 21 plans, 32 plans done, 100%
+last_updated: "2026-09-10T05:30:00.000Z"
 progress:
   total_phases: 9
-  completed_phases: 5
+  completed_phases: 9
   total_plans: 21
   completed_plans: 32
-  percent: 56
+  percent: 100
 ---
+
+# Project State (v1.32 — Audit-Driven Security & Reliability)
+
+## Project Reference
+
+See: `.planning/PROJECT.md` — v1.32 Current Milestone 段
+
+## Current Position
+
+**v1.32 SHIPPED 2026-09-10** — All 5 phases (109-113) on origin/main, CI green
+
+## v1.32 Shipped Summary
+
+| Phase | Title | Requirements | Status |
+|-------|-------|--------------|--------|
+| 109 | 回归守护前置 (GUARD-01..08 invariants 测试) | 8 | ✅ SHIPPED 2026-09-09 |
+| 110 | P0 安全 TLS 环境变量化 (Redis/AD auth/WS CORS + 文档) | TLS-01..06 | ✅ SHIPPED 2026-09-09 |
+| 111 | P0 并发裸 goroutine 守护 + Captcha fail-closed | GOR-01..04 + CAP-01 | ✅ SHIPPED 2026-09-09 |
+| 112 | P1 handler 收敛补丁 (HANDLER-01..05) | 5 | ✅ SHIPPED 2026-09-09 |
+| 113 | 部署文档同步 (V132 TLS/Origin 章节 + MUST SET + 内网兼容) | DOC-01 + TLS-06 | ✅ SHIPPED (as part of Phase 110) |
+
+**总计**: 22 requirements, 21 plans, 32 sub-plans
+
+## Code State
+
+- origin/main HEAD: `73cb8cc` (Phase 109-112 code + planning artifacts)
+- Predecessor: `27cec0b` (Phase 109-112 code only, prior planning push)
+- Predecessor: `58fbf1c` (prior v1.31 SHIPPED baseline)
+
+## Branch Protection (post-ship)
+
+- required_status_checks: backend, frontend ✅
+- required_pull_request_reviews: **disabled** (single-person project per user decision)
+- enforce_admins: enabled
+- Direct push to main allowed (CI gates still active)
+
+## Next Step
+
+v1.32 SHIPPED. Next: define v1.33 scope in `.planning/PROJECT.md` or take a break.
 
 # Project State (v1.32 — Audit-Driven Security & Reliability)
 
