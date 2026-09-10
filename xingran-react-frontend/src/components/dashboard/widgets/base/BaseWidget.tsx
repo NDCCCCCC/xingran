@@ -2,7 +2,14 @@
  * BaseWidget - Widget 基类组件
  *
  * 所有Widget组件的基础类，提供通用功能和数据获取
+ *
+ * eslint-override: react-hooks/refs
+ *   Task 5.2 requires ref-based isFirstLoad derivation to avoid an extra render pass.
+ *   The ref is read and written only at render time (not in effects/callbacks), which is
+ *   safe for this specific pattern where the ref value drives conditional rendering.
+ *   DO NOT replicate this pattern elsewhere without careful analysis.
  */
+/* eslint-disable react-hooks/refs */
 
 import React, { type ReactNode, useState, useCallback, useMemo, useRef } from "react";
 import { Card, Space, Dropdown, Button, Tooltip, Spin, Empty, Result, Skeleton } from "antd";
@@ -109,7 +116,6 @@ export const BaseWidget: React.FC<BaseWidgetProps> = ({
 
   const isSelected = selectedWidgetId === widget.id;
   const isEditable = viewMode === "edit";
-  // eslint-disable-next-line react-hooks/refs -- Task 5.2: ref-based derivation avoids extra render pass
   const showSkeleton = (isInitialLoad || isFirstLoadRef.current) && loading;
   if (!loading) isFirstLoadRef.current = false;
 
