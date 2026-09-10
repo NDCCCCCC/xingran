@@ -241,7 +241,7 @@ export function getNextRunTimes(expression: string, count: number = 5): Date[] {
     const hasSeconds = parts.length === 6;
 
     // 解析 cron 表达式，必须正确传递 hasSeconds 参数
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
     const schedule = later.parse.cron(normalizedExpression, hasSeconds);
 
     // 使用 later.schedule(schedule).next(count) 一次性获取多次执行时间

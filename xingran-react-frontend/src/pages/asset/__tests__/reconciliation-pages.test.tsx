@@ -1,4 +1,3 @@
-/* eslint-disable no-restricted-syntax -- 测试 fixture 需要内网 IP 字面量 */
 /**
  * Phase 88 Batch16 — asset/reconciliation 子页面渲染(exceptions/exception-rules)
  * renderPage 模式: 真实 hooks + QueryClient + @/lib/api 端点 mock

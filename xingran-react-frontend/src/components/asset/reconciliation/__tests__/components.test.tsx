@@ -1,4 +1,3 @@
-/* eslint-disable no-restricted-syntax -- 测试 fixture 需要内网 IP 字面量 */
 /**
  * Phase 88 Batch17b — components/asset/reconciliation (ExceptionRuleForm/MatchTestPanel)
  */
