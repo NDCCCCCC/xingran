@@ -85,7 +85,7 @@ Each task was committed atomically:
 
 ## Files Created/Deleted
 
-- `xingran-react-frontend/src/pages/operations/building-spaces-3d/__tests__/hubei-map-cleanup.test.tsx` - [新建] MAP3D-05 cleanup spy 测试（211 行，3 用例；fake 地图 + function 形态构造器 mock + 突变校验留痕注释）
+- `xingran-react-frontend/src/pages/operations/building-spaces-3d/__tests__/hubei-map-cleanup.test.tsx` - [新建] MAP3D-05 cleanup spy 测试（214 行，3 用例；fake 地图 + function 形态构造器 mock + 突变校验留痕注释）
 - `xingran-react-frontend/src/pages/operations/building-spaces-3d/components/BuildingMarkers.tsx` - [删除] 107 行（@uiw/react-baidu-map 消费方，零外部引用）
 - `xingran-react-frontend/src/pages/operations/building-spaces-3d/components/CityMarkers.tsx` - [删除] 144 行（同上）
 
