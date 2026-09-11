@@ -1,7 +1,37 @@
 ---
-last_updated: 2026-09-09
-update_trigger: v1.32 started — V132 审计驱动的安全与可靠性收尾（TLS 环境变量化 + 裸 goroutine 守护 + 8 项回归守护前置）
-previous_update: 2026-09-08 v1.31 shipped + archived — V131 技术债清偿 7 phases / 25 plans / 29 requirements 全交付
+last_updated: 2026-09-11
+update_trigger: v1.33 started — V133 前端性能治理（2 HIGH + 8 MEDIUM + 12 LOW findings + 死代码清理，审计输入 20260911-frontend-perf-audit.md）
+previous_update: 2026-09-09 v1.32 started — V132 审计驱动的安全与可靠性收尾（TLS 环境变量化 + 裸 goroutine 守护 + 8 项回归守护前置）
+---
+
+## Current Milestone: v1.33 V133 前端性能治理 (Frontend Performance Remediation)
+
+**Goal:** 修复 2026-09-11 前端全量性能审计报告（`.planning/reviews/20260911-frontend-perf-audit.md`）发现的全部 33 项 findings（2 HIGH + 8 MEDIUM + 3 次级 MEDIUM + 12 LOW，Vercel React Best Practices 57 规则审计，4 并行代理 Grep+Read 确认）+ 8 项死代码/依赖清理，消除用户可感知卡顿（地图聚类 O(n²)、dashboard N² 重渲染级联、键击整表重渲），selector 迁移收尾，附带修复 2 个正确性 bug（"0" 渲染 / VariablesModal 6 列）。
+
+**Target features:**
+- **H-2 地图聚类**: HubeiMap/HubeiMapGL O(n²) 双循环 + 内层 pointToOverlayPixel 地图 API 调用 → Map 预计算 + 像素网格分桶，两份复制算法合并共享
+- **H-1 dashboard 级联**: useWidgetData selector 化 + L1 缓存移出响应式 state（noticeStore P1-M4 先例）+ dashboard 模块 9 处整店订阅收敛
+- **SELECTOR 收尾**: useTabs/useLayout 内部 selector 化 + 路由层 RouteGuard/DynamicRoutes + 3D 页 5 处 visualizationStore，共 26 处 `useXxxStore()` 整店订阅
+- **BUNDLE**: ExcelImportLazy 推广至 9 个静态调用点 + iconUtils 假动态导入删除（bare specifier 运行时必失败，兼功能修复）+ 路由 glob 排除 modals/components/hooks + echarts 注释修正
+- **RENDER**: 7 处 columns 工厂 useMemo 化（monitor/job 受控搜索每键击整表重渲最高优先）+ 5+ 大数据页 Table virtual 补齐 + MACHeatmapChart mobile 分支 memo + DoorElement snapCoord
+- **DATA**: VDI 服务器列表 react-query 化（4 处重复请求）+ 菜单 sessionStorage hydrate-then-revalidate 消除整页门控 + useColumnConfig 缓存短路
+- **正确性顺带**: "0" 渲染 ×2（monthlyFee/area 改 `!= null`）、VariablesModal 同一 3 列定义重复渲染 6 列 bug、CADFloorPlanEditor updater stale closure
+- **死代码/依赖**: useTabSync / components/dashboard/DashboardView / BuildingMarkers+CityMarkers（连带 @uiw/react-baidu-map 依赖移除）/ operations barrel / getWorkstationStats / _detailColumns / cron-parser+@react-spring/three+maath 依赖移除 / vite.config react-markdown 注释修正
+
+**锁定决策 (v1.33 init):**
+- **D-01 范围**: 用户确认全量 33 findings + 8 死代码清理，不分批 defer
+- **D-02 七 gate 不倒退**: go build / go test / 后端 coverage ≥78.33 基线 / 前端 45 dirs / lint / type-check / diff coverage 全程保持绿
+- **D-03 bundle 基线不倒退**: size-limit 门禁（entry gzip 1MB / 全量 2.5MB）保持；改动不得推高 entry
+- **D-04 回归纪律**: 行为变更（正确性 bug 修复 / 缓存语义变更）附回归测试；纯性能重构（selector 化 / useMemo / Map 索引）以现有测试零回归为准
+- **D-05 复用范本**: info-points:603 Map 索引 / executions:112 columns useMemo / useRouteTabs selector 风格 / noticeStore P1-M4 缓存出 state 四个既有正确范本为准
+- **D-06 Phase 编号**: 从 Phase 114 续编（v1.32 用 109-113，v1.31 用 102-108）
+
+**规划输入:**
+- `.planning/reviews/20260911-frontend-perf-audit.md`（2026-09-11 前端全量性能审计，590 文件，4 并行代理按规则类别扫描）
+- 前序背景: quick task `260911-m76-fix-frontend-perf-audit-findings`（同日 PR #19 已合并）修了构建配置/WS 轮询/部分 selector/串行瀑布/CAD 渲染 6 批次；本审计在其 merge 后的工作树上扫描，33+8 项 findings 经抽查（useWidgetData:70 整店订阅 / HubeiMap:267 O(n²) / iconUtils:547 假动态导入 / ExcelImport 静态 9 点 / useTabSync 存活 / 4 僵尸依赖）确认全部残留
+
+**范围边界:** 仅前端性能修复 + 死代码/依赖清理 + 顺带正确性 bug；不引入新业务功能；不改后端；不推前端覆盖率新目标（v1.28 已收口）。
+
 ---
 
 ## Current Milestone: v1.32 V132 审计驱动的安全与可靠性收尾 (Audit-Driven Security & Reliability)
