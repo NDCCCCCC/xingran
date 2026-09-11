@@ -48,49 +48,67 @@ const makeFakeMap = () => ({
 
 /**
  * fake BMapGL namespace：Boundary 空结果 → 组件走 addFallbackMask 分支，fake 全兜住。
- * 注意：组件以 `new BMapGL.Xxx(...)` 构造——实现必须用 function 形式（箭头函数
- * 不可构造，new 时抛 "is not a constructor"）。
+ * 注意两点（缺一必炸）：
+ *  - 组件以 `new BMapGL.Xxx(...)` 构造——实现必须是 function/class 形态（箭头函数
+ *    不可 new，new 时抛 "is not a constructor"）；
+ *  - 构造器实现必须写成独立 function 表达式再以标识符传入 vi.fn——内联
+ *    `vi.fn(function () {...})` 会被 lint-staged 的 eslint --fix
+ *    (prefer-arrow-callback) 静默改写回箭头形态，导致全量套件下必红。
  */
-const makeFakeGLNamespace = (fakeMap: ReturnType<typeof makeFakeMap>) => ({
-  Map: vi.fn(() => {
+const makeFakeGLNamespace = (fakeMap: ReturnType<typeof makeFakeMap>) => {
+  const MapCtor = function () {
     return fakeMap;
-  }),
-  Point: vi.fn((lng: number, lat: number) => {
+  };
+  const PointCtor = function (lng: number, lat: number) {
     return { lng, lat };
-  }),
-  Pixel: vi.fn((x: number, y: number) => {
+  };
+  const PixelCtor = function (x: number, y: number) {
     return { x, y };
-  }),
-  Size: vi.fn((w: number, h: number) => {
+  };
+  const SizeCtor = function (w: number, h: number) {
     return { width: w, height: h };
-  }),
-  Icon: vi.fn(() => {
+  };
+  const IconCtor = function () {
     return {};
-  }),
-  Marker: vi.fn(() => {
+  };
+  const MarkerCtor = function () {
     return { addEventListener: vi.fn() };
-  }),
-  InfoWindow: vi.fn(() => {
+  };
+  const InfoWindowCtor = function () {
     return { setContent: vi.fn(), open: vi.fn(), close: vi.fn() };
-  }),
-  Polygon: vi.fn(() => {
+  };
+  const PolygonCtor = function () {
     return {};
-  }),
-  Boundary: vi.fn(() => {
+  };
+  const BoundaryCtor = function () {
     return {
       get: (_query: string, cb: (rs: { boundaries: string[] }) => void) => cb({ boundaries: [] }),
     };
-  }),
-  ZoomControl: vi.fn(() => {
+  };
+  const ZoomControlCtor = function () {
     return {};
-  }),
-  ScaleControl: vi.fn(() => {
+  };
+  const ScaleControlCtor = function () {
     return {};
-  }),
-  NavigationControl: vi.fn(() => {
+  };
+  const NavigationControlCtor = function () {
     return {};
-  }),
-});
+  };
+  return {
+    Map: vi.fn(MapCtor),
+    Point: vi.fn(PointCtor),
+    Pixel: vi.fn(PixelCtor),
+    Size: vi.fn(SizeCtor),
+    Icon: vi.fn(IconCtor),
+    Marker: vi.fn(MarkerCtor),
+    InfoWindow: vi.fn(InfoWindowCtor),
+    Polygon: vi.fn(PolygonCtor),
+    Boundary: vi.fn(BoundaryCtor),
+    ZoomControl: vi.fn(ZoomControlCtor),
+    ScaleControl: vi.fn(ScaleControlCtor),
+    NavigationControl: vi.fn(NavigationControlCtor),
+  };
+};
 
 /** fake BMap namespace（与 GL 同构，无 ZoomControl） */
 const makeFakeBMapNamespace = (fakeMap: ReturnType<typeof makeFakeMap>) => {
