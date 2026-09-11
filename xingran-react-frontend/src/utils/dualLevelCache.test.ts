@@ -135,6 +135,49 @@ describe("DualLevelCache", () => {
     expect(tableSpy).toHaveBeenCalled();
   });
 
+  it("v1 迁移：localStorage 写入无 version 字段的 v0 条目，读取时触发迁移删除（dualLevelCache.ts:167-171）", () => {
+    // dualLevelCache.ts StorageCache.get() 检测到 !item.version || item.version < 1
+    // 时视为 v0 不兼容条目，调用 delete(key) 并返回 null
+    const v0Item = JSON.stringify({
+      data: "stale-value",
+      timestamp: Date.now(),
+      expiresAt: Date.now() + 100000,
+    });
+    localStorage.setItem(PREFIX + "legacy-key", v0Item);
+    // 缓存中不存在（v0 被判定为无效）
+    expect(cache.get("legacy-key")).toBeNull();
+    // v0 条目已被删除
+    expect(localStorage.getItem(PREFIX + "legacy-key")).toBeNull();
+  });
+
+  it("StorageCache.set() localStorage 写入异常时静默（dualLevelCache.ts:154）", () => {
+    vi.spyOn(localStorage, "setItem").mockImplementationOnce(() => {
+      throw new Error("QuotaExceededError");
+    });
+    expect(() => cache.set("full", "data")).not.toThrow();
+  });
+
+  it("StorageCache.clear() Object.keys 异常时静默（dualLevelCache.ts:193）", () => {
+    vi.spyOn(Object, "keys").mockImplementationOnce(() => {
+      throw new Error("keys failed");
+    });
+    expect(() => cache.clear()).not.toThrow();
+  });
+
+  it("StorageCache.cleanup() 遍历中单项损坏时删除该项（dualLevelCache.ts:206）", () => {
+    // Write a valid + expired item + a broken JSON item
+    cache.set("good", "v1");
+    vi.advanceTimersByTime(11_000);
+    localStorage.setItem(PREFIX + "broken", "not-json{");
+    cache.cleanup();
+    expect(localStorage.getItem(PREFIX + "good")).toBeNull();
+    expect(localStorage.getItem(PREFIX + "broken")).toBeNull();
+  });
+
+  // Skipped: destroy() clearInterval error branch (dualLevelCache.ts:245) — the
+  // clearInterval spy approach fails under fake timers; destroy() is tested via
+  // clearDualLevelCache singleton test and doesn't need additional coverage here.
+
   it("单例：getDualLevelCache 复用实例，clearDualLevelCache 销毁", () => {
     clearDualLevelCache();
     const a = getDualLevelCache<string>();

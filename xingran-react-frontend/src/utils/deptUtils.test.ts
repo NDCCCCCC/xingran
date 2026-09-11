@@ -161,3 +161,94 @@ describe("dedupTreeByKey（同 key 去重）", () => {
     expect(dedupTreeByKey([{ value: undefined, key: undefined }])).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// WeakMap 缓存命中测试（Sprint 2B 新增 — 模块级 WeakMap 缓存同一引用）
+// ---------------------------------------------------------------------------
+describe("WeakMap 缓存命中（Sprint 2B）", () => {
+  it("filterExternalOrgDepts: 同一引用第二次调用返回缓存结果（缓存命中分支）", () => {
+    const nodes: DeptLikeNode[] = [
+      { id: "A", isExternalOrg: 1, children: [{ id: "A1" }] },
+      { id: "B", isExternalOrg: 0, children: [{ id: "B1", isExternalOrg: 1 }] },
+    ];
+    // 第一次调用建立缓存
+    const r1 = filterExternalOrgDepts(nodes);
+    // 第二次调用同一引用 → 命中 _filterCache 分支（deptUtils.ts:69-70）
+    const r2 = filterExternalOrgDepts(nodes);
+    // 缓存命中结果与新鲜计算结果一致
+    expect(r2.map((n) => n.id)).toEqual(["A", "B"]);
+    // 验证返回的是同一引用（缓存命中）
+    expect(r2).toBe(r1);
+  });
+
+  it("findDeptNode: 同一引用第二次查找相同 id 命中 idCache 分支（deptUtils.ts:102-103）", () => {
+    const tree: DeptLikeNode[] = [
+      { id: "1", children: [{ id: "1-1", children: [{ id: "1-1-1" }] }] },
+      { id: "2" },
+    ];
+    // 第一次查找建立 idCache
+    const first = findDeptNode(tree, "1-1-1");
+    expect(first?.id).toBe("1-1-1");
+    // 第二次查找同一引用+同 id → 命中 idCache.has(id) 分支
+    const cached = findDeptNode(tree, "1-1-1");
+    expect(cached).toBe(first);
+  });
+
+  it("collectDescendantIds: 同一引用第二次收集相同 id 命中 idCache 分支（deptUtils.ts:131-132）", () => {
+    const tree: DeptLikeNode[] = [
+      { id: "root", children: [{ id: "c1", children: [{ id: "g1" }] }, { id: "c2" }] },
+    ];
+    // 第一次收集建立 idCache
+    const r1 = collectDescendantIds(tree, "root");
+    expect(r1).toEqual(["root", "c1", "g1", "c2"]);
+    // 第二次同一引用+同 id → 命中 idCache.has(id) 分支
+    const cached = collectDescendantIds(tree, "root");
+    expect(cached).toEqual(["root", "c1", "g1", "c2"]);
+    expect(cached).toBe(r1);
+  });
+
+  it("trimTitleToLastSegment: 同一引用第二次调用命中 _trimTitleCache（deptUtils.ts:185-186）", () => {
+    const nodes = [{ title: "A / B / C", children: [{ title: "A / B / D" }] }];
+    const r1 = trimTitleToLastSegment(nodes);
+    const r2 = trimTitleToLastSegment(nodes);
+    expect(r2).toBe(r1);
+    expect(r1[0].title).toBe("C");
+    expect(r1[0].children?.[0].title).toBe("D");
+  });
+
+  it("toFullPathTree: 同一引用第二次调用命中 _fullPathCache（deptUtils.ts:291-292）", () => {
+    const tree = [{ id: "1", deptName: "集团", children: [{ id: "2", deptName: "分公司" }] }];
+    const r1 = toFullPathTree(tree);
+    const r2 = toFullPathTree(tree);
+    expect(r2).toBe(r1);
+    expect(r1[0].title).toBe("集团");
+    expect(r1[0].children?.[0].title).toBe("集团 / 分公司");
+  });
+
+  it("toFullPathTree: 同引用不同 startFromLevel 互不干扰（Symbol.for key 隔离）", () => {
+    const tree = [{ id: "1", deptName: "集团", children: [{ id: "2", deptName: "分公司" }] }];
+    const r1 = toFullPathTree(tree, { startFromLevel: 1 });
+    const r2 = toFullPathTree(tree, { startFromLevel: 2 });
+    expect(r1).not.toBe(r2);
+    // startFromLevel=1: 顶级 title=集团
+    expect(r1[0].title).toBe("集团");
+    // startFromLevel=2: 顶级不受影响，但子孙丢弃了 ancestors[0]
+    expect(r2[0].children?.[0].title).toBe("分公司");
+  });
+
+  it("toShortNameDataNode: 同一引用第二次调用命中 _shortNameCache（deptUtils.ts:337-338）", () => {
+    const tree = [{ id: "1", deptName: "集团", children: [{ id: "2", deptName: "分公司" }] }];
+    const r1 = toShortNameDataNode(tree);
+    const r2 = toShortNameDataNode(tree);
+    expect(r2).toBe(r1);
+    expect(r1[0].title).toBe("集团");
+  });
+
+  it("dedupTreeByKey: 同一引用第二次调用命中 _dedupCache（deptUtils.ts:370-371）", () => {
+    const nodes = [{ value: "1", children: [{ value: "2" }] }, { value: "2" }, { value: "3" }];
+    const r1 = dedupTreeByKey(nodes);
+    const r2 = dedupTreeByKey(nodes);
+    expect(r2).toBe(r1);
+    expect(r1.map((n) => n.value)).toEqual(["1", "3"]);
+  });
+});

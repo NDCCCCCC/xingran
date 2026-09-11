@@ -17,6 +17,7 @@ const h = vi.hoisted(() => {
   return {
     createConfigs,
     mockGetAccessToken: vi.fn<() => Promise<string>>(),
+    mockGetTokenManager: vi.fn<() => { isAuthenticated: () => boolean }>(),
   };
 });
 
@@ -53,7 +54,9 @@ vi.mock("@/utils/authHelpers", () => ({
 }));
 
 vi.mock("@/store/authStore", () => ({
-  getTokenManager: () => ({ isAuthenticated: () => true }),
+  getTokenManager: h.mockGetTokenManager.mockImplementation(() => ({
+    isAuthenticated: () => true,
+  })),
 }));
 
 import { blobAxios, downloadFile, downloadFilePost, triggerBrowserDownload } from "./download";
@@ -120,6 +123,32 @@ beforeEach(() => {
 });
 
 describe("blobAxios 请求拦截器 (T-94-01)", () => {
+  it("isAuthenticated=false 时跳过 getAccessToken 调用（fast-path Sprint 2A）", async () => {
+    // Sprint 2A 新增 fast-path：token 未缓存时直接跳过 await getAccessToken()
+    // 不注入 Authorization header（无 token 可用）
+    const headersMap = new Map<string, string>();
+    const config: InterceptableConfig = {
+      url: "/ops/building/template",
+      headers: {
+        set: (k, v) => {
+          headersMap.set(k, v);
+        },
+        get: (k) => headersMap.get(k) ?? null,
+      },
+    };
+
+    // Override isAuthenticated for this call only (does not affect other tests)
+    h.mockGetTokenManager.mockReturnValueOnce({ isAuthenticated: () => false });
+
+    const interceptor = getRequestInterceptor();
+    await interceptor(config);
+
+    // getAccessToken should NOT be called when isAuthenticated=false (fast-path skip)
+    expect(h.mockGetAccessToken).not.toHaveBeenCalled();
+    // No Authorization header injected
+    expect(headersMap.has("Authorization")).toBe(false);
+  });
+
   it("异步 getAccessToken resolve tok 后注入 Authorization: Bearer tok", async () => {
     const headersMap = new Map<string, string>();
     const config: InterceptableConfig = {
