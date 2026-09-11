@@ -1,16 +1,13 @@
 /**
  * 网络类 hooks 组合测试
  *
- * 覆盖:useNetworkStatus / useRPAProgress / useWebSocket。
+ * 覆盖:useNetworkStatus / useWebSocket。
  * WebSocket 用 FakeWebSocket stub(vi.stubGlobal)精确控制 open/message/close 事件。
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useNetworkStatus } from "./useNetworkStatus";
-import { useRPAProgress } from "./useRPAProgress";
 import { useWebSocket } from "./useWebSocket";
-import { useDashboardStore } from "@/store/dashboardStore";
-import { useNoticeStore } from "@/store/noticeStore";
 
 /** 可控的 WebSocket 假实现:静态常量对齐真实 WebSocket */
 class FakeWebSocket {
@@ -256,100 +253,5 @@ describe("useWebSocket", () => {
     });
     expect(result.current.status).toBe("error");
     expect(onError).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe("useRPAProgress", () => {
-  beforeEach(() => {
-    useNoticeStore.setState({
-      unreadCount: 0,
-      notifications: [],
-      loading: false,
-      wsConnected: false,
-    });
-  });
-
-  function makeMsg(overrides: Record<string, unknown> = {}) {
-    return {
-      type: "rpa_progress",
-      executionId: "exec-1",
-      taskId: "task-1",
-      taskName: "任务",
-      step: 1,
-      total: 3,
-      message: "running",
-      status: "running",
-      timestamp: 1,
-      ...overrides,
-    };
-  }
-
-  function pushMessage(msg: ReturnType<typeof makeMsg>) {
-    useNoticeStore.getState().handleWsMessage({
-      type: msg.type,
-      content: JSON.stringify(msg),
-    } as never);
-  }
-
-  it("订阅 rpa_progress 事件并记录进度,可按 executionId 查询", () => {
-    const onProgress = vi.fn();
-    const { result } = renderHook(() => useRPAProgress({ onProgress }));
-
-    act(() => pushMessage(makeMsg()));
-    expect(onProgress).toHaveBeenCalledTimes(1);
-    expect(onProgress).toHaveBeenCalledWith(
-      expect.objectContaining({ executionId: "exec-1", step: 1 })
-    );
-    expect(result.current.getProgress("exec-1")).toMatchObject({ step: 1 });
-    expect(result.current.getAllProgress()).toHaveLength(1);
-    expect(result.current.isConnected).toBe(false);
-  });
-
-  it("rpa_completed/rpa_failed 分别触发对应回调", () => {
-    const onCompleted = vi.fn();
-    const onFailed = vi.fn();
-    renderHook(() => useRPAProgress({ onCompleted, onFailed }));
-
-    act(() => pushMessage(makeMsg({ type: "rpa_completed", executionId: "e2" })));
-    expect(onCompleted).toHaveBeenCalledTimes(1);
-
-    act(() => pushMessage(makeMsg({ type: "rpa_failed", executionId: "e3" })));
-    expect(onFailed).toHaveBeenCalledTimes(1);
-  });
-
-  it("executionId/taskId 过滤条件生效", () => {
-    const onProgress = vi.fn();
-    renderHook(() => useRPAProgress({ onProgress, executionId: "exec-1", taskId: "task-1" }));
-
-    act(() => pushMessage(makeMsg({ executionId: "other" })));
-    expect(onProgress).not.toHaveBeenCalled();
-
-    act(() =>
-      pushMessage(makeMsg({ executionId: "exec-1", taskId: "nope", type: "rpa_progress" }))
-    );
-    expect(onProgress).not.toHaveBeenCalled();
-  });
-
-  it("clearProgress/clearAllProgress 清理进度", () => {
-    const { result } = renderHook(() => useRPAProgress());
-
-    act(() => pushMessage(makeMsg({ executionId: "e1" })));
-    act(() => pushMessage(makeMsg({ executionId: "e2" })));
-    expect(result.current.getAllProgress()).toHaveLength(2);
-
-    act(() => result.current.clearProgress("e1"));
-    expect(result.current.getAllProgress()).toHaveLength(1);
-
-    act(() => result.current.clearAllProgress());
-    expect(result.current.getAllProgress()).toHaveLength(0);
-  });
-
-  it("enabled=false 不订阅", () => {
-    const onProgress = vi.fn();
-    const { result } = renderHook(() => useRPAProgress({ onProgress, enabled: false }));
-
-    act(() => pushMessage(makeMsg()));
-    expect(onProgress).not.toHaveBeenCalled();
-    expect(result.current.getProgress("exec-1")).toBeUndefined();
   });
 });

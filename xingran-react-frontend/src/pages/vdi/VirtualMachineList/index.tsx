@@ -45,7 +45,6 @@ const hasPermission = (permissions: string[], perm: string) => permissions.inclu
 
 const VirtualMachineList: React.FC = () => {
   const navigate = useNavigate();
-  const { user: _user } = useAuthStore();
   // Use permissions from menuStore (loaded via /system/my-menus/permissions)
   // authStore user.permissions is NOT populated from the login API
   const menuPermissions = useMenuStore((state) => state.permissions);
