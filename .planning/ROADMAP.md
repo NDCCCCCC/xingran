@@ -46,7 +46,7 @@
   4. map 级 zoomend/tiltend 事件监听在组件卸载后不再触发（effect cleanup removeEventListener 生效）
   5. BuildingMarkers.tsx / CityMarkers.tsx 死组件已删除、全库无引用（为 Phase 120 的 @uiw/react-baidu-map 依赖移除解锁）
 
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 **Wave 1**
@@ -55,7 +55,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 114-02-PLAN.md — HubeiMap/HubeiMapGL 改造：单遍预计算 + 共享函数消费 + 5 filter useMemo + 事件 cleanup
+- [x] 114-02-PLAN.md — HubeiMap/HubeiMapGL 改造：单遍预计算 + 共享函数消费 + 5 filter useMemo + 事件 cleanup
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -157,7 +157,7 @@ Phases execute in numeric order: 114 → 115 → 116 → 117 → 118 → 119 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 114. map3d-clustering | 1/3 | In Progress|  |
+| 114. map3d-clustering | 2/3 | In Progress|  |
 | 115. selector-completion | 0/TBD | Not started | - |
 | 116. dashboard-cascade | 0/TBD | Not started | - |
 | 117. render-columns-and-bugfix | 0/TBD | Not started | - |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.33
 milestone_name: 前端性能治理 (Frontend Performance Remediation)
 status: executing
-stopped_at: v1.33 started（审计报告落盘 + PROJECT.md 更新完成，requirements/roadmap 待生成）
-last_updated: "2026-09-11T18:02:53.724Z"
+stopped_at: Completed 114-02-PLAN.md
+last_updated: "2026-09-11T18:20:22.620Z"
 last_activity: 2026-09-11
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: `.planning/PROJECT.md` — v1.33 Current Milestone 段
 ## Current Position
 
 Phase: 114 (map3d-clustering（地图聚类 O(n²) 消除）) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-09-11
 
@@ -68,16 +68,19 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Session Continuity
 
-Last session: 2026-09-11T18:01:40.334Z
-Stopped at: v1.33 started（审计报告落盘 + PROJECT.md 更新完成，requirements/roadmap 待生成）
+Last session: 2026-09-11T18:20:22.614Z
+Stopped at: Completed 114-02-PLAN.md
 
 ## Performance Metrics
 
 | Phase | Plan | Duration | Notes |
 |-------|------|----------|-------|
 | Phase 114 P01 | 11min | 2 tasks | 2 files |
+| Phase 114 P02 | 12min | 2 tasks | 2 files |
 
 ## Decisions
 
 - [Phase ?]: 114-01: 聚类共享函数独立 cluster.ts 落位（桶=threshold、3×3 邻域、下标升序、保留 sqrt 严格小于），与旧 O(n²) 逐位一致由参考实现对照测试锁定
 - [Phase ?]: 114-01: cluster.ts 零 SDK 依赖（仅 BuildingItem 类型 + utils 两函数），像素投影剥离到调用方单遍预计算 Map<id,pixel>
+- [Phase 114]: 114-02: 两组件聚类改单遍预计算 Map<id,pixel> + clusterBuildings 消费，n² 地图 API 调用归零；有坐标过滤保留 effect 内保层级+坐标输入集语义
+- [Phase 114]: 114-02: HubeiMap 渲染体 5 道 filter 收敛 useMemo [buildings]，两组件 zoomend/tiltend 提升 effect 作用域具名 handler 并补同引用 cleanup
