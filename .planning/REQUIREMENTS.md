@@ -10,6 +10,7 @@ defined: 2026-09-11
 **Core Value:** 修复 2026-09-11 前端全量性能审计报告（`.planning/reviews/20260911-frontend-perf-audit.md`）全部 33 项 findings（2 HIGH + 8 MEDIUM + 3 次级 MEDIUM + 12 LOW）+ 8 项死代码/依赖清理，消除用户可感知卡顿（地图聚类 O(n²)、dashboard N² 重渲染级联、键击整表重渲），selector 迁移收尾，附带修复 3 个正确性 bug。
 
 **输入来源:**
+
 - `.planning/reviews/20260911-frontend-perf-audit.md`（2026-09-11 前端全量性能审计，590 文件，4 并行代理按 Vercel React Best Practices 57 规则扫描）
 - `.planning/PROJECT.md` v1.33 段（D-01~D-06 锁定决策）
 - 前序背景: quick task `260911-m76`（PR #19）修了相邻 6 批次；本审计为其 merge 后全面扫描，findings 经抽查确认全部残留
@@ -30,8 +31,8 @@ defined: 2026-09-11
 ### MAP3D — 3D 地图性能（H-2 全库最重 JS 热点）
 
 - [ ] **MAP3D-01**: 地图聚类消除 O(n²) 双循环——单遍预计算 `Map<id,pixel>`，内层只做像素距离比较，消除内层 `new BMapGL.Point()` + `pointToOverlayPixel` 地图 API 调用（HubeiMap.tsx:267-318 与 HubeiMapGL 同步修复）
-- [ ] **MAP3D-02**: 聚类按 40px 像素网格分桶（spatial hash）降为近 O(n)；n=1000 楼宇、缩放切换时无主线程长任务（秒级卡死清零）
-- [ ] **MAP3D-03**: HubeiMap/HubeiMapGL 两份复制聚类算法合并为共享工具函数（单一实现 + 单元测试）
+- [x] **MAP3D-02**: 聚类按 40px 像素网格分桶（spatial hash）降为近 O(n)；n=1000 楼宇、缩放切换时无主线程长任务（秒级卡死清零）
+- [x] **MAP3D-03**: HubeiMap/HubeiMapGL 两份复制聚类算法合并为共享工具函数（单一实现 + 单元测试）
 - [ ] **MAP3D-04**: HubeiMap 渲染体 5 道全量 filter（664/667/672/676/705）收敛为 useMemo 一次计算 `{level1, level2, withCoords}`（deps `[buildings]`）
 - [ ] **MAP3D-05**: map 级事件监听（zoomend/tiltend）补 effect cleanup（removeEventListener）
 - [ ] **MAP3D-06**: 死组件 BuildingMarkers.tsx / CityMarkers.tsx 删除（连带 DEAD-02 的 @uiw/react-baidu-map 依赖移除）
@@ -116,8 +117,8 @@ Phase 映射由 roadmapper 填充（2026-09-12，`.planning/ROADMAP.md` Phases 1
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | MAP3D-01 | Phase 114 | Pending |
-| MAP3D-02 | Phase 114 | Pending |
-| MAP3D-03 | Phase 114 | Pending |
+| MAP3D-02 | Phase 114 | Complete |
+| MAP3D-03 | Phase 114 | Complete |
 | MAP3D-04 | Phase 114 | Pending |
 | MAP3D-05 | Phase 114 | Pending |
 | MAP3D-06 | Phase 114 | Pending |
@@ -155,6 +156,7 @@ Phase 映射由 roadmapper 填充（2026-09-12，`.planning/ROADMAP.md` Phases 1
 | DEAD-03 | Phase 120 | Pending |
 
 **Coverage:**
+
 - v1.33 requirements: 38 total
 - Mapped to phases: 38（Phase 114-120，每项恰好映射一个 phase）
 - Unmapped: 0 ✓
