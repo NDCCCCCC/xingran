@@ -47,6 +47,13 @@ const { Option } = Select;
 const { Content } = Layout;
 const { useBreakpoint } = Grid;
 
+// 模块级静态选项（Phase m76-js-misc 6.3）
+const MAC_TYPE_OPTIONS = [
+  { label: "动态", value: "dynamic" },
+  { label: "静态", value: "static" },
+  { label: "安全", value: "secure" },
+];
+
 const MACAddressPage: FC = () => {
   const { message } = App.useApp();
   const breakpoint = useBreakpoint();
@@ -249,11 +256,6 @@ const MACAddressPage: FC = () => {
   };
 
   // MAC类型选项
-  const macTypeOptions = [
-    { label: "动态", value: "dynamic" },
-    { label: "静态", value: "static" },
-    { label: "安全", value: "secure" },
-  ];
 
   // 表格列(2026-06-30 quick:移除"设备名称"列,信息密度低)
   const columns: ColumnsType<DeviceMACAddress> = [
@@ -301,7 +303,7 @@ const MACAddressPage: FC = () => {
       key: "macType",
       width: 100,
       render: (macType: string) => {
-        const option = macTypeOptions.find((o) => o.value === macType);
+        const option = MAC_TYPE_OPTIONS.find((o) => o.value === macType);
         return (
           <Tag color={MAC_TYPE_TAG_CONFIG[macType]?.color ?? "default"}>
             {option?.label || macType}
@@ -446,7 +448,7 @@ const MACAddressPage: FC = () => {
                   style={{ width: 120 }}
                   onSearch={() => {}}
                 >
-                  {macTypeOptions.map((opt) => (
+                  {MAC_TYPE_OPTIONS.map((opt) => (
                     <Option key={opt.value} value={opt.value}>
                       {opt.label}
                     </Option>

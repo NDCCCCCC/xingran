@@ -65,7 +65,8 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [hoveredBuildings, setHoveredBuildings] = useState<BuildingItem[]>([]);
-  const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null);
+  // tooltip 坐标用 ref 而非 state：鼠标每移动一像素都会更新，避免每像素触发重渲染（Phase m76-js-misc 6.4）
+  const tooltipPositionRef = useRef<{ x: number; y: number } | null>(null);
   const [selectedCluster, setSelectedCluster] = useState<ClusterGroup | null>(null);
   const [currentZoom, setCurrentZoom] = useState(8); // 当前缩放级别
 
@@ -427,13 +428,13 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
   // 显示悬停提示
   const showTooltip = (buildings: BuildingItem[], point: { x: number; y: number }) => {
     setHoveredBuildings(buildings);
-    setTooltipPosition({ x: point.x, y: point.y });
+    tooltipPositionRef.current = { x: point.x, y: point.y };
   };
 
   // 隐藏悬停提示
   const hideTooltip = () => {
     setHoveredBuildings([]);
-    setTooltipPosition(null);
+    tooltipPositionRef.current = null;
   };
 
   // 显示单个楼宇信息
@@ -559,13 +560,13 @@ const HubeiMap: React.FC<HubeiMapProps> = ({ buildings }) => {
         }}
       />
 
-      {/* 悬停提示 */}
-      {hoveredBuildings.length > 0 && tooltipPosition && (
+      {/* 悬停提示：hoveredBuildings 控制显隐（state），position 从 ref 读取避免每像素重渲染 */}
+      {hoveredBuildings.length > 0 && tooltipPositionRef.current && (
         <div
           style={{
             position: "absolute",
-            left: tooltipPosition.x,
-            top: tooltipPosition.y,
+            left: tooltipPositionRef.current.x,
+            top: tooltipPositionRef.current.y,
             transform: "translate(-50%, -100%)",
             marginTop: -10,
             background: "white",

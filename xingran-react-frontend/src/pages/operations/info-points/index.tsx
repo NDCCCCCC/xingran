@@ -60,6 +60,9 @@ const { Option } = Select;
 const { TextArea } = Input;
 const { Content } = Layout;
 
+// 模块级静态映射（Phase m76-js-misc 6.3）
+const INFO_POINT_STATUS_MAP: Record<number, string> = { 0: "正常", 1: "故障", 2: "停用" };
+
 type ViewMode = "table" | "card";
 
 interface WorkstationOption {
@@ -610,8 +613,7 @@ const InfoPointManagement: FC = () => {
   };
 
   const getStatusText = (status: number) => {
-    const statusMap = { 0: "正常", 1: "故障", 2: "停用" };
-    return statusMap[status as keyof typeof statusMap] || "未知";
+    return INFO_POINT_STATUS_MAP[status] || "未知";
   };
 
   const columns: ColumnsType<InfoPoint> = [
