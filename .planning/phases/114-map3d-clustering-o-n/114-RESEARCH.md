@@ -392,20 +392,23 @@ it("可选：性能冒烟——1000 点合成夹具 < 宽松预算（如 500ms�
 | A4 | 人工性能验证（n=1000 缩放切换）在开发机可用浏览器 + `VITE_BAIDU_MAP_AK` 完成（项目日常即依赖该 AK）[ASSUMED] | Validation Architecture | 退化为人工 review + 单测性能冒烟，验收弱化但不阻塞 |
 | A5 | index.tsx 的 `buildings` state 引用仅在 mount 后变化一次（useCallback deps [] 且 effect 只跑一次）[VERIFIED: index.tsx:39-68 代码审查] | MAP3D-04 | useMemo deps `[buildings]` 失效 → 重算增多，无正确性风险 |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **共享函数落位：独立 `cluster.ts` 还是并入 `utils.ts`？**
    - What we know: CONTEXT.md 建议"落位 building-spaces-3d/ 下 utils（与既有 utils.ts 同目录）"；utils.ts 在 Phase 120 还会被 DEAD-01 删 calculateWorkstationStats。
    - What's unclear: 无实质分歧——同目录已满足 CONTEXT 意图。
    - Recommendation: 独立 `cluster.ts`（约 50 行专用逻辑 + 类型，避免与 Phase 120 的 utils.ts 改动同文件翻动）；planner 可二选一，均合规。
+   - **RESOLVED:** 采用独立 `cluster.ts`——已在 114-01（Plan 01）落地。
 
 2. **MAP3D-04 的 useMemo 是否顺带喂给聚类 effect（`currentZoom === 10 ? buildings : level1`）？**
    - What we know: success criteria 3 只要求渲染体 5 道 filter 收敛；聚类 effect 的过滤在 effect 内（deps 含 currentZoom）。
    - Recommendation: 顺带复用（零成本、消掉 HubeiMap.tsx:254-257 与 utils.ts:138-140 的重复），但不得改变过滤语义（Pitfall 6）。
+   - **RESOLVED:** 顺带复用 `currentZoom === 10 ? buildings : level1`，过滤语义不动——落地于 114-02（Plan 02 Task 2 action(3)）。
 
 3. **性能冒烟单测预算取值**
    - What we know: MAP3D-02 的正式验收是"人工性能验证 + 一致性单测"（REQUIREMENTS 回归纪律段）；自动性能断言非必需。
    - Recommendation: 若加，预算放宽到 500ms/1000 点量级防 CI flake；旧算法在同夹具下是秒级，断言仍有区分度。
+   - **RESOLVED:** 取 500ms 宽松预算/1000 点——落地为 114-01（Plan 01 Task 1 行为条款）。
 
 ## Environment Availability
 
