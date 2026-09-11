@@ -1,119 +1,127 @@
 ---
-milestone: v1.32
+milestone: v1.33
 status: defined
-defined: 2026-09-09
+defined: 2026-09-11
 ---
 
-# Requirements: XingRan-Next — Milestone v1.32 V132 审计驱动的安全与可靠性收尾 (Audit-Driven Security & Reliability)
+# Requirements: XingRan-Next — Milestone v1.33 V133 前端性能治理 (Frontend Performance Remediation)
 
-**Defined:** 2026-09-09
-**Core Value:** 基于 2026-09-09 全量后端审计报告（`.planning/reviews/20260909-backend-audit.md`）的 18 项 P0/P1 风险 + 4 项 Phase 104/107/108 MUST-FIX + 6 项新发现并发风险，按用户决策（范围=P0+P1+回归守护；TLS 选项=环境变量；回归守护=Phase 109 前置）分 5 个 phase 收尾：Phase 109 回归守护前置 → Phase 110 P0 安全 TLS 环境变量化 → Phase 111 P0 并发裸 goroutine 守护 → Phase 112 P1 handler 收敛补丁 → Phase 113 部署文档同步。
+**Defined:** 2026-09-11
+**Core Value:** 修复 2026-09-11 前端全量性能审计报告（`.planning/reviews/20260911-frontend-perf-audit.md`）全部 33 项 findings（2 HIGH + 8 MEDIUM + 3 次级 MEDIUM + 12 LOW）+ 8 项死代码/依赖清理，消除用户可感知卡顿（地图聚类 O(n²)、dashboard N² 重渲染级联、键击整表重渲），selector 迁移收尾，附带修复 3 个正确性 bug。
 
 **输入来源:**
-- `.planning/reviews/20260909-backend-audit.md`（2026-09-09 全量后端审计报告）
-- `.planning/PROJECT.md` v1.32 段（D-01~D-06 锁定决策）
-- 历史审计：`.planning/reviews/20260612-backend-code-review.md`（v1.31 对比基线）
+- `.planning/reviews/20260911-frontend-perf-audit.md`（2026-09-11 前端全量性能审计，590 文件，4 并行代理按 Vercel React Best Practices 57 规则扫描）
+- `.planning/PROJECT.md` v1.33 段（D-01~D-06 锁定决策）
+- 前序背景: quick task `260911-m76`（PR #19）修了相邻 6 批次；本审计为其 merge 后全面扫描，findings 经抽查确认全部残留
 
-**锁定决策 (v1.32 init):**
+**锁定决策 (v1.33 init):**
 
-- **D-01 范围**: P0 安全 + P0 并发 + P1 handler 收敛 + 8 项回归守护；P2 清理（panic 改 error / 硬删除改软删除）不在本期
-- **D-02 TLS 选项实现**: 全部走环境变量（沿用现有 LDAP_TLS_INSECURE_SKIP_VERIFY 模式，新增 REDIS_TLS_INSECURE_SKIP_VERIFY / WS_ALLOW_ALL_ORIGINS 等），默认 false（严格校验），内网部署可显式置 true 兼容自签证书
-- **D-03 回归纪律**: 8 项回归守护作为 Phase 109 前置独立 phase 落地，先测试后修复；每个修复必须有对应回归测试已存在（红→绿 路径）
-- **D-04 七 gate 不倒退**: go build / go test / 后端 coverage ≥78.33 基线 / 前端 45 dirs / lint / type-check / diff coverage 全程保持绿；新增 8 项 invariants 测试纳入 diff coverage gate
-- **D-05 范围外**: P2 清理（panic 改 error / 硬删除改软删除）；agent 裸 c.JSON（已锁定为有意设计）；operlog exclude_paths 继续挂账
-- **D-06 Phase 编号**: 从 Phase 109 续编
-
----
-
-## v1.32 Requirements
-
-### GUARD — 回归守护前置（Phase 109 独立）
-
-> 8 项回归守护测试先于修复落地，作为后续修复 phase 的"安全网"——确保红→绿路径清晰可验证。
-
-- [ ] **GUARD-01**: `pkg/cache/redis_test.go` 新增 `TestRedis_TLSConfig_NotInsecureByDefault` —— 当 `config.TLS=true` 且未设置 `REDIS_TLS_INSECURE_SKIP_VERIFY` 时，`tls.Config.InsecureSkipVerify == false`（Phase 110 红→绿基线）
-- [ ] **GUARD-02**: `internal/core/security/ad_authenticator_test.go` 新增 `TestADAAuthenticator_TLSConfig_StrictByDefault` —— `dialConnection` 默认构造的 `tls.Config.InsecureSkipVerify == false`，除非显式设置（Phase 110 红→绿基线）
-- [ ] **GUARD-03**: `cmd/main_test.go` 新增 `TestMain_AllowedOrigins_FromConfig_NotWildcard` —— 当 `server.allowed_origins` 已配置时，启动入口不会传入 `[]string{"*"}`；空配置触发 fail-fast（Phase 110 红→绿基线）
-- [ ] **GUARD-04**: `pkg/response/handler_helpers_test.go` 新增 `TestHandleGetByID_Returns404_NotBadRequest` —— 当 getter 返回 error 时，HTTP status = 404 而非 400（Phase 112 红→绿基线）
-- [ ] **GUARD-05**: `internal/api/v1/monitor/login_log_handler_test.go` 新增 `TestLoginLog_Clean_NilCore_DoesNotPanic` —— 当 `h.core == nil` 或 `h.core.OperLogService == nil` 时，`Clean` 优雅降级不 panic（Phase 112 红→绿基线）
-- [ ] **GUARD-06**: `internal/api/v1/operations/{building,floor,workstation}_handler_test.go` 新增 `TestStatistics_ErrorBody_DoesNotLeakSQL` —— 当底层 service 返回 SQL 错误时，响应 body 不包含 "SELECT/UPDATE/INSERT/DELETE" 等关键字（Phase 112 红→绿基线）
-- [ ] **GUARD-07**: `internal/services/oper_log_service_test.go` 新增 `TestOperLog_Async_DoesNotPanicOnDBError` —— DB 写入 panic 时 goroutine 自我 recover，进程不崩溃（Phase 111 红→绿基线）
-- [ ] **GUARD-08**: `internal/core/captcha_test.go` 新增 `TestCaptcha_Increment_Failure_FailsClosed` —— 当 Redis Increment 失败时，验证码校验 fail-closed（拒绝通过）而非 fail-open（Phase 111 红→绿基线）
-
-### TLS — TLS 选项环境变量化（Phase 110）
-
-> D-02 锁定：所有 TLS 跳过校验走环境变量，默认 false（严格校验），内网可显式置 true 兼容。
-
-- [ ] **TLS-01**: `pkg/cache/redis.go` — `NewRedisCache` 当 `config.TLS=true` 时，读取 `REDIS_TLS_INSECURE_SKIP_VERIFY`（默认 false）；true 时置 `InsecureSkipVerify=true` 并记录一次性 SECURITY warn（与 LDAP 一致模式）
-- [ ] **TLS-02**: `internal/core/security/ad_authenticator.go:181-183` — `dialConnection` 移除硬编码 `InsecureSkipVerify: true`，改为读取 `AD_AUTH_TLS_INSECURE_SKIP_VERIFY`（默认 false）；true 时 warn 一次
-- [ ] **TLS-03**: `internal/services/email_sender_service.go` — 当前硬编码 `InsecureSkipVerify: false` 已安全，但增加 env 支持（`EMAIL_TLS_INSECURE_SKIP_VERIFY`，默认 false），与 LDAP/Redis 一致模式
-- [ ] **TLS-04**: `cmd/main.go` — 移除 `allowedOrigins := []string{"*"}` 硬编码；从 `config.Server.AllowedOrigins` 读取；空配置或仅 `*` 时 fail-fast（生产环境强校验）
-- [ ] **TLS-05**: `pkg/middleware/cors.go` — 允许 `*` 通配配置项，但新增 `WS_ALLOW_ALL_ORIGINS` 环境变量覆盖（默认 false = 严格白名单）
-- [ ] **TLS-06**: 文档同步：`docs/deployment/secret-management.md` 新增"MUST SET in production" + "内网兼容"两段说明
-
-### GOR — 裸 goroutine 守护（Phase 111）
-
-> D-03 锁定：所有裸 goroutine 必须有 `defer recover()` + detached context（HTTP ctx 启动后即取消，不适合异步任务）。
-
-- [ ] **GOR-01**: `internal/services/oper_log_service.go:67,140` — `RecordAsync` 的 `go func()` 加 `defer recover()` + 错误日志；panic 时记录 SECURITY 级日志而非静默
-- [ ] **GOR-02**: `internal/api/v1/system/ad_dept_sync_handler.go:99` — `SyncDeptStructureToAD` 启动异步时使用 `context.WithTimeout(context.Background(), ADSyncTimeout)` + `defer recover()`；不使用 `c.Request.Context()`（HTTP 返回后已取消）
-- [ ] **GOR-03**: `internal/agent/server/connection_manager.go:186,196` — `handleReconnect` / `cleanupConnection` 启动的 goroutine 加 `defer recover()` + 状态日志
-- [ ] **GOR-04**: `internal/api/v1/auth.go:598` — 登录日志异步写入的 `go func()` 加 `defer recover()`；失败时记录 warn 而非 panic 进程崩溃
-
-### CAP — Captcha Increment Fail-Closed（Phase 111）
-
-- [ ] **CAP-01**: `internal/core/captcha.go:379,439,445` — `s.cache.Increment(ctx, key, 1)` 失败时记录 SECURITY warn 日志；推荐改为同步 DB 兜底计数（无 DB fallback 时强制 fail-closed — 拒绝通过而非放行）
-
-### HANDLER — Phase 104 收敛补丁（Phase 112）
-
-> Phase 104 已统一 14 个 operations handler 的 CRUD 路径，但 Statistics / Search*Options 端点仍泄漏 `err.Error()`。
-
-- [ ] **HANDLER-01**: `internal/api/v1/operations/building_handler.go:40,55` — `Statistics` / `SearchBuildingOptions` 改用 `HandleServiceError`；删除 `response.Error(c, http.StatusInternalServerError, err.Error())` 直接泄漏
-- [ ] **HANDLER-02**: `internal/api/v1/operations/floor_handler.go:36,51` — `Statistics` / `SearchFloorOptions` 同样收敛；`List:102` 的 `apperrors.InternalServerErrorWithMsg("查询失败")` 丢弃 err 改为 `HandleServiceError`
-- [ ] **HANDLER-03**: `internal/api/v1/operations/workstation_handler.go:58,83,101` — `Statistics` / `GetWorkstationDeptOptions` / `SearchWorkstationOptions` 同样收敛
-- [ ] **HANDLER-04**: `internal/api/v1/monitor/login_log_handler.go:106` — `Clean` 加 `h.core != nil && h.core.OperLogService != nil && h.core.GetDB() != nil` 三重 nil guard（与 OperLogHandler.Clean 对称）
-- [ ] **HANDLER-05**: `pkg/response/handler_helpers.go:62` — `HandleGetByID` 改用 `apperrors.New(http.StatusNotFound, ErrNotFound, notFoundMessage)` 或专门的 `ErrNotFound` 常量；当前 int 传入 `toAppError` 把 404 当业务码处理 → HTTP 400
-
-### DOC — 部署文档同步（Phase 113）
-
-- [ ] **DOC-01**: `docs/deployment/secret-management.md` 新增"V132 TLS/Origin 选项"章节：
-  - `LDAP_TLS_INSECURE_SKIP_VERIFY`（沿用）
-  - `AD_AUTH_TLS_INSECURE_SKIP_VERIFY`（新增）
-  - `AD_LEGACY_AES_KEY`（沿用 + MUST SET 提示）
-  - `REDIS_TLS_INSECURE_SKIP_VERIFY`（新增）
-  - `EMAIL_TLS_INSECURE_SKIP_VERIFY`（新增）
-  - `WS_ALLOW_ALL_ORIGINS`（新增）
-  - 内网部署兼容性说明 + 生产环境 MUST NOT SET 警告
+- **D-01 范围**: 用户确认全量 33 findings + 8 死代码清理，不分批 defer
+- **D-02 七 gate 不倒退**: go build / go test / 后端 coverage ≥78.33 基线 / 前端 45 dirs / lint / type-check / diff coverage 全程保持绿
+- **D-03 bundle 基线不倒退**: size-limit 门禁（entry gzip 1MB / 全量 2.5MB）保持；改动不得推高 entry
+- **D-04 回归纪律**: 行为变更（BUGFIX-01..03 / DATA-02 缓存语义 / BUNDLE-02 功能修复）附回归测试；纯性能重构（selector 化 / useMemo / Map 索引）以现有测试零回归为准
+- **D-05 复用范本**: info-points:603 Map 索引 / executions:112 columns useMemo / useRouteTabs:45 selector 风格 / noticeStore P1-M4 缓存出 state 四个既有正确范本为准
+- **D-06 Phase 编号**: 从 Phase 114 续编（v1.32 用 109-113）
 
 ---
 
-## 范围外（锁定 D-05）
+## v1.33 Requirements
 
-- **P2 清理**: `connection_pool.go:87,105` 负引用计数 panic → 改 error 返回；`ad_ldap_client.go:33` / `vdi/config.go:28` / `column_config_service.go:159,165` panic → error；`addomain/sync.go:618` / `vdi/vm_service_impl.go:322` 硬删除 → 软删除
-- **agent 裸 c.JSON**: 已锁定为有意设计，禁改
-- **operlog exclude_paths**: 继续挂账
-- **菜单类 C 权限继承**: PARTIAL 状态接受，不在本期修复
+### MAP3D — 3D 地图性能（H-2 全库最重 JS 热点）
 
----
+- [ ] **MAP3D-01**: 地图聚类消除 O(n²) 双循环——单遍预计算 `Map<id,pixel>`，内层只做像素距离比较，消除内层 `new BMapGL.Point()` + `pointToOverlayPixel` 地图 API 调用（HubeiMap.tsx:267-318 与 HubeiMapGL 同步修复）
+- [ ] **MAP3D-02**: 聚类按 40px 像素网格分桶（spatial hash）降为近 O(n)；n=1000 楼宇、缩放切换时无主线程长任务（秒级卡死清零）
+- [ ] **MAP3D-03**: HubeiMap/HubeiMapGL 两份复制聚类算法合并为共享工具函数（单一实现 + 单元测试）
+- [ ] **MAP3D-04**: HubeiMap 渲染体 5 道全量 filter（664/667/672/676/705）收敛为 useMemo 一次计算 `{level1, level2, withCoords}`（deps `[buildings]`）
+- [ ] **MAP3D-05**: map 级事件监听（zoomend/tiltend）补 effect cleanup（removeEventListener）
+- [ ] **MAP3D-06**: 死组件 BuildingMarkers.tsx / CityMarkers.tsx 删除（连带 DEAD-02 的 @uiw/react-baidu-map 依赖移除）
 
-## 回归纪律
+### DASH — Dashboard 重渲染级联（H-1）
 
-每个修复提交必须：
-1. 引用对应的 GUARD-N 测试 ID（Phase 109 前置已存在）
-2. 修复 commit 中明确说明"红→绿"路径
-3. 附七 gate 验证（go build / go test / coverage / lint / type-check）
-4. 新增的 invariants 测试纳入 diff coverage gate
+- [ ] **DASH-01**: `useWidgetData`（hooks/useWidgetData.ts:70,115）改字段 selector 订阅（`s => s.cacheWidgetData` 等，action 引用稳定），widget memo 恢复有效性
+- [ ] **DASH-02**: widget 数据 L1 缓存移出响应式 state（dashboardStore.ts:405-412 模块级 Map + getState 读写，noticeStore P1-M4 先例）或写入前数据比较跳过无变化写入
+- [ ] **DASH-03**: dashboard 模块 9 处整店订阅改 selector（dashboard-system index.tsx:30 / DashboardHome:19 / DashboardList:47 / DashboardView:36 / DashboardEdit:43 / edit.tsx:41 / view.tsx:31 / WidgetEditor:33 / DashboardSettings:30）
+- [ ] **DASH-04**: DashboardGrid.tsx:42,49 移除 useWindowSize 订阅（改 `useState(() => clientWidth)` 初始化一次）+ gridProps（layouts 包装/containerPadding/handleLayoutChange）useMemo 化
 
----
+### SELECTOR — Zustand selector 收尾（26 处整店订阅）
+
+- [ ] **SELECTOR-01**: `useTabs`（tabsStore.ts:310-326，解构 14 字段）内部改逐字段 selector（useRouteTabs:45-48 范本）
+- [ ] **SELECTOR-02**: `useLayout`（layoutStore.ts:287-299，解构 10 字段）内部改逐字段 selector
+- [ ] **SELECTOR-03**: 路由层 RouteGuard.tsx:33 / DynamicRoutes.tsx:105-106 改 selector 订阅（仅取所需字段，防 menuStore loading/lastFetchTime 变化重渲整页）
+- [ ] **SELECTOR-04**: 3D 页 5 处 visualizationStore 整店订阅改 selector（building-spaces-3d index:36 / HubeiMap:73 / HubeiMapGL:86 / BuildingView3D:59 / FloorView3D:59）
+- [ ] **SELECTOR-05**: 其余 action-only 整店订阅清理（my-notices/detail:19 / profile:47 / login:47-48 / my-duty:64 / DashboardScopeSelector:25）
+
+### BUNDLE — Bundle 优化
+
+- [ ] **BUNDLE-01**: ExcelImport 懒加载口径统一——9 个静态调用点（assets/buildings/server-rooms/room-devices/info-points/floors/dedicated-lines/dept/user）迁 ExcelImportLazy，或反向删除 Lazy 包装；二选一不留两套（phase 内定方向）
+- [ ] **BUNDLE-02**: iconUtils.tsx:546-550 假动态导入删除（bare specifier Vite 不可分析、运行时必失败被 catch 静默吞掉）；静态注册表为准，兼菜单图标功能修复，附回归测试
+- [ ] **BUNDLE-03**: 路由 glob（componentLoader.tsx:34-47）排除 `**/modals/**`、`**/components/**`、`**/hooks/**`，phantom chunk 清零（knowledge/articles/modals 等）
+- [ ] **BUNDLE-04**: EChartsWrapper.tsx:22-28 误导性注释修正，或升级真懒加载（`@/lib/echarts` 挪进 wrapper 内同一 Promise.all）
+
+### RENDER — 渲染性能
+
+- [ ] **RENDER-01**: 7 处 columns 工厂静态化/useMemo 化（monitor/job:95,103 受控搜索键击整表重渲最高优先 / monitor/logs:203 / system/dict:463 / DetailDrawer:25 / executions:122 / VariablesModal:31 / LocationAliasDrawer:156；executions:112-118 范本）
+- [ ] **RENDER-02**: 5+ 大数据页补 Table `virtual` + `scroll.y`（monitor/logs:370 / asset/reconciliation/exceptions:509 / network/devices / network/ports / operations/info-points；对照 assets:716 等 4 个已启用页）
+- [ ] **RENDER-03**: MACHeatmapChart.tsx:118 移动端分支 top-k spread+sort 提 useMemo（desktop 分支已正确）
+- [ ] **RENDER-04**: DoorElement.tsx:162,170,185,188 hingePoint/openEndPoint 补 snapCoord 精度处理（对齐 94-95 既有机制）
+
+### DATA — 数据获取
+
+- [ ] **DATA-01**: VDI 服务器列表 4 处裸调用（VirtualMachineList:136,468,484,653）归一 react-query `queryKey: ['vdi','servers']`（共享缓存去重）
+- [ ] **DATA-02**: 菜单+权限带版本号持久化 sessionStorage，hydrate-then-revalidate 先渲染外壳再补拉，消除硬刷新整页门控（DynamicRoutes:190 InitializingFallback）；缓存语义变更附回归测试
+- [ ] **DATA-03**: useColumnConfig.ts:122-135 缓存新鲜时 early-return（消除无条件网络请求）
+- [ ] **DATA-04**: useHolidayData.ts:126-127 双独立 GET 改 Promise.all
+
+### BUGFIX — 正确性修复（行为变更，附回归测试）
+
+- [ ] **BUGFIX-01**: dedicated-lines/index.tsx:494（monthlyFee）+ FloorCardView.tsx:82（area）值为 0 时渲染字面 "0" 修复（改 `!= null &&`）
+- [ ] **BUGFIX-02**: VariablesModal.tsx:31-53 同一 3 列定义重复渲染 6 列 bug 修复（去重列定义）
+- [ ] **BUGFIX-03**: CADFloorPlanEditor.tsx:870-1028 updater 内 stale closure 修复（读 `prev.snapToGrid`/`prev.gridSize`，从 deps 删除 floorPlanData）
+
+### MISC — JS 性能杂项
+
+- [ ] **MISC-01**: useWorkstationView.ts:63-76 批量更新建 `Map<id,item>` 索引（拖拽 O(全集×批量) → O(全集)）
+- [ ] **MISC-02**: TargetSelector.tsx:101-108 filterOption 建 Map 索引替代 find（每键击 O(n²) → O(n)）
+- [ ] **MISC-03**: useTableManager.ts:172 useRef 急切 sessionStorage 读改惰性初始化（24 个列表页共享）
+- [ ] **MISC-04**: TabBar.tsx:118-136,339 scroll 状态值比较，无变化跳过 setState
+- [ ] **MISC-05**: workstations/index.tsx:657-666 expandedRowRender 内联回调 useCallback 化（HealthCard/WorkstationDeviceTable memo 生效）
+
+### DEAD — 死代码与依赖卫生
+
+- [ ] **DEAD-01**: 死代码删除：hooks/useTabSync.ts（含其测试）/ components/dashboard/DashboardView.tsx（含 useWidgetPolling 消费链核对）/ building-spaces-3d/utils.ts getWorkstationStats / executions/index.tsx:122 `_detailColumns` / components/operations/index.ts barrel
+- [ ] **DEAD-02**: 僵尸依赖移除：cron-parser / @react-spring/three / maath / @uiw/react-baidu-map（依赖 MAP3D-06 先行）
+- [ ] **DEAD-03**: vite.config.ts:23,169-171 react-markdown 过时注释修正
+
+## 范围外（锁定 D-01/D-06）
+
+| 项 | 理由 |
+|----|------|
+| 后端任何修改 | v1.33 仅前端；后端问题已在 v1.32 收尾 |
+| 前端覆盖率推新目标 | v1.28 已收口 45.13% |
+| 新业务功能 | 性能治理里程碑，不引入功能 |
+| captcha barrel / layout 三布局 lazy 化 | 审计 LOW 可选项，收益小（entry 几十 KB），留观察 |
+| lib/api.ts SM2/SM4 双 await Promise.all 化 | 本地同步计算，收益可忽略 |
+| `server-*` Next.js 规则 | Vite SPA 不适用 |
+
+## 回归纪律（锁定 D-04）
+
+- **行为变更（红→绿）**: BUGFIX-01..03 / BUNDLE-02（iconUtils 功能修复）/ DATA-02（菜单缓存语义）——每个修复先有失败的测试再修复
+- **纯性能重构（零回归）**: MAP3D/DASH/SELECTOR/BUNDLE-01/03/04/RENDER/DATA-01/03/04/MISC/DEAD——现有测试全绿 + 新增单元测试覆盖共享工具（MAP3D-03 聚类函数 / MISC-01/02 Map 索引）
+- **gate 全程**: D-02 七 gate + D-03 size-limit；MAP3D-02 性断言以"无秒级长任务"人工验证 + 聚类结果一致性单元测试守护
 
 ## 进度追踪
 
-| Phase | 标题 | Requirements | Status |
-|-------|------|--------------|--------|
-| 109 | 回归守护前置 | GUARD-01..08 | ⏳ PENDING |
-| 110 | P0 安全 TLS 环境变量化 | TLS-01..06 | ⏳ PENDING |
-| 111 | P0 并发裸 goroutine 守护 | GOR-01..04 + CAP-01 | ⏳ PENDING |
-| 112 | P1 handler 收敛补丁 | HANDLER-01..05 | ⏳ PENDING |
-| 113 | 部署文档同步 | DOC-01 | ⏳ PENDING |
+由 roadmapper 填写 phase 映射。
 
-**Total:** 5 phases / 22 requirements
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| （待 roadmap 生成后填充） | | |
+
+**Coverage:**
+- v1.33 requirements: 38 total
+- Mapped to phases: 0（待 roadmap）
+- Unmapped: 38 ⚠️
+
+---
+*Requirements defined: 2026-09-11*
+*Last updated: 2026-09-11 after initial definition*
